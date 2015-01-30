@@ -157,7 +157,7 @@ static inline void msm_arch_idle(void)
 
 static bool msm_pm_is_L1_writeback(void)
 {
-	u32 sel = 0, cache_id;
+	u32 sel = 0, cache_id = 0;
 
 	asm volatile ("mcr p15, 2, %[ccselr], c0, c0, 0\n\t"
 		      "isb\n\t"
@@ -165,7 +165,7 @@ static bool msm_pm_is_L1_writeback(void)
 		      :[ccsidr]"=r" (cache_id)
 		      :[ccselr]"r" (sel)
 		     );
-	return cache_id & BIT(31);
+	return cache_id & BIT(30);
 }
 
 static enum msm_pm_time_stats_id msm_pm_swfi(bool from_idle)
