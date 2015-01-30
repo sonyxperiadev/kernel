@@ -60,8 +60,6 @@
 #include <mach/sdio_al.h>
 #include <mach/msm_bus.h>
 
-#include <mach/board-sony_shinano-wifi.h>
-
 #include "msm_sdcc.h"
 #include "msm_sdcc_dml.h"
 
@@ -80,8 +78,6 @@
 
 #define MSM_MMC_BUS_VOTING_DELAY	200 /* msecs */
 #define INVALID_TUNING_PHASE		-1
-
-#define MSM_SDCC_PM_QOS_TIMEOUT		10000 /* usecs */
 
 #if defined(CONFIG_DEBUG_FS)
 static void msmsdcc_dbg_createhost(struct msmsdcc_host *);
@@ -203,9 +199,8 @@ static void msmsdcc_pm_qos_update_latency(struct msmsdcc_host *host, int vote)
 		pm_qos_update_request(&host->pm_qos_req_dma,
 				host->cpu_dma_latency);
 	else
-		pm_qos_update_request_timeout(&host->pm_qos_req_dma,
-				host->cpu_dma_latency,
-				MSM_SDCC_PM_QOS_TIMEOUT);
+		pm_qos_update_request(&host->pm_qos_req_dma,
+					PM_QOS_DEFAULT_VALUE);
 }
 
 #ifdef CONFIG_MMC_MSM_SPS_SUPPORT
@@ -527,11 +522,6 @@ msmsdcc_request_end(struct msmsdcc_host *host, struct mmc_request *mrq)
 	/* Clear current request information as current request has ended */
 	memset(&host->curr, 0, sizeof(struct msmsdcc_curr_req));
 
-	if (host->disable_mciclk_pwrsave) {
-		host->disable_mciclk_pwrsave = 0;
-		msmsdcc_set_pwrsave(host->mmc, 1);
-	}
-
 	/*
 	 * Need to drop the host lock here; mmc_request_done may call
 	 * back into the driver...
@@ -704,11 +694,6 @@ msmsdcc_dma_complete_tlet(unsigned long data)
 			memset(&host->curr, 0, sizeof(struct msmsdcc_curr_req));
 			spin_unlock_irqrestore(&host->lock, flags);
 
-			if (host->disable_mciclk_pwrsave) {
-				host->disable_mciclk_pwrsave = 0;
-				msmsdcc_set_pwrsave(host->mmc, 1);
-			}
-
 			mmc_request_done(host->mmc, mrq);
 			return;
 		} else if (mrq->data->stop && ((mrq->sbc && mrq->data->error)
@@ -863,11 +848,6 @@ static void msmsdcc_sps_complete_tlet(unsigned long data)
 			 */
 			memset(&host->curr, 0, sizeof(struct msmsdcc_curr_req));
 			spin_unlock_irqrestore(&host->lock, flags);
-
-			if (host->disable_mciclk_pwrsave) {
-				host->disable_mciclk_pwrsave = 0;
-				msmsdcc_set_pwrsave(host->mmc, 1);
-			}
 
 			mmc_request_done(host->mmc, mrq);
 			return;
@@ -1484,11 +1464,6 @@ msmsdcc_data_err(struct msmsdcc_host *host, struct mmc_data *data,
 	/* Dummy CMD52 is not needed when CMD53 has errors */
 	if (host->dummy_52_needed)
 		host->dummy_52_needed = 0;
-
-	if (host->disable_mciclk_pwrsave) {
-		host->disable_mciclk_pwrsave = 0;
-		msmsdcc_set_pwrsave(host->mmc, 1);
-	}
 }
 
 static int
@@ -2353,10 +2328,6 @@ card_ejected:
 	if (mrq->data) {
 		mrq->data->error = -error;
 		mrq->data->bytes_xfered = 0;
-	}
-	if (host->disable_mciclk_pwrsave) {
-		host->disable_mciclk_pwrsave = 0;
-		msmsdcc_set_pwrsave(host->mmc, 1);
 	}
 	mmc_request_done(mmc, mrq);
 }
@@ -5819,6 +5790,7 @@ static struct mmc_platform_data *msmsdcc_populate_pdata(struct device *dev)
 		pdata->disable_cmd23 = true;
 	of_property_read_u32(np, "qcom,dat1-mpm-int",
 					&pdata->mpm_sdiowakeup_int);
+
 	return pdata;
 err:
 	return NULL;
@@ -6108,9 +6080,10 @@ msmsdcc_probe(struct platform_device *pdev)
 	mmc->caps2 |= MMC_CAP2_PACKED_WR_CONTROL;
 	mmc->caps2 |= (MMC_CAP2_BOOTPART_NOACC | MMC_CAP2_DETECT_ON_ERR);
 	mmc->caps2 |= MMC_CAP2_SANITIZE;
+	mmc->caps2 |= MMC_CAP2_CACHE_CTRL;
+	mmc->caps2 |= MMC_CAP2_POWEROFF_NOTIFY;
 	mmc->caps2 |= MMC_CAP2_STOP_REQUEST;
 	mmc->caps2 |= MMC_CAP2_ASYNC_SDIO_IRQ_4BIT_MODE;
-	mmc->caps2 |= MMC_CAP2_INIT_BKOPS;
 
 	if (plat->nonremovable)
 		mmc->caps |= MMC_CAP_NONREMOVABLE;
@@ -6268,6 +6241,7 @@ msmsdcc_probe(struct platform_device *pdev)
 	mmc->clk_scaling.up_threshold = 35;
 	mmc->clk_scaling.down_threshold = 5;
 	mmc->clk_scaling.polling_delay_ms = 100;
+	mmc->caps2 |= MMC_CAP2_CLK_SCALE;
 
 	pr_info("%s: Qualcomm MSM SDCC-core %pr %pr,%d dma %d dmacrcri %d\n",
 		mmc_hostname(mmc), core_memres, core_irqres,
@@ -6701,11 +6675,10 @@ msmsdcc_runtime_suspend(struct device *dev)
 		 */
 		pm_runtime_get_noresume(dev);
 		/* If there is pending detect work abort runtime suspend */
-		if (unlikely(work_busy(&mmc->detect.work))) {
+		if (unlikely(work_busy(&mmc->detect.work)))
 			rc = -EAGAIN;
-		} else {
+		else
 			rc = mmc_suspend_host(mmc);
-		}
 		pm_runtime_put_noidle(dev);
 
 		if (!rc) {
