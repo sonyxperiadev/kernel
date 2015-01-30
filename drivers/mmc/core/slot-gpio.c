@@ -49,7 +49,7 @@ out:
 #ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
 void mmc_gpio_prepare_suspend(struct mmc_host *host, bool pending_detect)
 {
-	struct mmc_gpio *ctx = host->slot.handler_priv;
+	struct mmc_gpio *ctx = host->hotplug.handler_priv;
 	if (!ctx)
 		return;
 
@@ -62,7 +62,7 @@ EXPORT_SYMBOL(mmc_gpio_prepare_suspend);
 #ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
 bool mmc_gpio_is_pending_detect(struct mmc_host *host)
 {
-	struct mmc_gpio *ctx = host->slot.handler_priv;
+	struct mmc_gpio *ctx = host->hotplug.handler_priv;
 	if (!ctx)
 		return false;
 

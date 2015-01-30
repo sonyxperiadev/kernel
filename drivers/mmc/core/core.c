@@ -40,7 +40,7 @@
 #include <linux/mmc/sd.h>
 
 #ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
-#include <linux/mmc/slot-gpio.h>
+#include <linux/mmc/cd-gpio.h>
 #endif
 
 #include "core.h"
@@ -3909,7 +3909,7 @@ int mmc_pm_notify(struct notifier_block *notify_block,
 #endif
 		}
 #ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
-		mmc_gpio_prepare_suspend(host, pending_detect);
+		mmc_cd_prepare_suspend(host, pending_detect);
 #endif
 
 		if (!host->bus_ops || host->bus_ops->suspend)
@@ -3934,7 +3934,7 @@ int mmc_pm_notify(struct notifier_block *notify_block,
 		host->rescan_disable = 0;
 		spin_unlock_irqrestore(&host->lock, flags);
 #ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
-		if (!mmc_gpio_is_pending_detect(host))
+		if (!mmc_cd_is_pending_detect(host))
 			break; /* IRQ should be triggered if CD changed */
 #endif
 		mmc_detect_change(host, 0);
