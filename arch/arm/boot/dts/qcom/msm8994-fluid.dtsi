@@ -328,6 +328,7 @@
 };
 
 &mdss_hdmi_tx {
+	status = "disabled";
 	pinctrl-names = "hdmi_hpd_active", "hdmi_ddc_active",
 				"hdmi_cec_active", "hdmi_active",
 				"hdmi_sleep";
