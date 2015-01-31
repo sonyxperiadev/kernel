@@ -73,6 +73,7 @@
 #define MDP_IMGTYPE2_START 0x10000
 #define MSMFB_DRIVER_VERSION	0xF9E8D701
 
+#ifdef __KERNEL__
 /* HW Revisions for different MDSS targets */
 #define MDSS_GET_MAJOR(rev)		((rev) >> 28)
 #define MDSS_GET_MINOR(rev)		(((rev) >> 16) & 0xFFF)
@@ -102,6 +103,7 @@
 #define MDSS_MDP_HW_REV_109	MDSS_MDP_REV(1, 9, 0) /* 8994 v2.0 */
 #define MDSS_MDP_HW_REV_110	MDSS_MDP_REV(1, 10, 0) /* 8992 v1.0 */
 #define MDSS_MDP_HW_REV_200	MDSS_MDP_REV(2, 0, 0) /* 8092 v1.0 */
+#endif
 
 enum {
 	NOTIFY_UPDATE_INIT,
