@@ -84,8 +84,8 @@ static void input_pass_event(struct input_dev *dev,
 
 	handle = rcu_dereference(dev->grab);
 #ifdef CONFIG_MACH_SONY_EAGLE /*erikcas: temp debug */
-»       if (code==0x2fe || code==0x210 || code==114 || code==115 || code==116)
-»       »       pr_info("%s():type=%d, code=%d , value=%d\n ", __func__, type, code, value);
+       if (code==0x2fe || code==0x210 || code==114 || code==115 || code==116)
+              pr_info("%s():type=%d, code=%d , value=%d\n ", __func__, type, code, value);
 #endif
 	if (handle)
 		handle->handler->event(handle, type, code, value);
@@ -602,10 +602,10 @@ static void input_dev_release_keys(struct input_dev *dev)
 			    __test_and_clear_bit(code, dev->key)) {
 				input_pass_event(dev, EV_KEY, code, 0);
 #else
-»       »       »       /*Bypass camrea snapshot and focus event*/
-»       »       »       if (is_event_supported(code, dev->keybit, KEY_MAX) &&
-»       »       »           __test_and_clear_bit(code, dev->key)&& (code!=528 && code!=766)) {
-»       »       »       »       input_pass_event(dev, EV_KEY, code, 0);	
+                     /*Bypass camrea snapshot and focus event*/
+                     if (is_event_supported(code, dev->keybit, KEY_MAX) &&
+                         __test_and_clear_bit(code, dev->key)&& (code!=528 && code!=766)) {
+                            input_pass_event(dev, EV_KEY, code, 0);	
 #endif
 			}
 		}
@@ -1828,7 +1828,7 @@ static void input_cleanse_bitmasks(struct input_dev *dev)
 int input_register_device(struct input_dev *dev)
 {
 #ifdef CONFIG_MACH_SONY_EAGLE
-»       static atomic_t input_no = ATOMIC_INIT(2);
+       static atomic_t input_no = ATOMIC_INIT(2);
 #else
 	static atomic_t input_no = ATOMIC_INIT(0);
 #endif	
@@ -1868,16 +1868,16 @@ int input_register_device(struct input_dev *dev)
 		dev->setkeycode = input_default_setkeycode;
 		
 #ifdef CONFIG_MACH_SONY_EAGLE
-»       if(sysfs_streq(dev->name, "lightsensor-level")){
-»       »       dev_set_name(&dev->dev, "input0");
-»       }
-»       else if(sysfs_streq(dev->name, "proximity")){
-»       »       dev_set_name(&dev->dev, "input1");
-»       }
-»       else{
-»       »       dev_set_name(&dev->dev, "input%ld",
-»       »       »            (unsigned long) atomic_inc_return(&input_no) - 1);
-»       }
+       if(sysfs_streq(dev->name, "lightsensor-level")){
+              dev_set_name(&dev->dev, "input0");
+       }
+       else if(sysfs_streq(dev->name, "proximity")){
+              dev_set_name(&dev->dev, "input1");
+       }
+       else{
+              dev_set_name(&dev->dev, "input%ld",
+                          (unsigned long) atomic_inc_return(&input_no) - 1);
+       }
 #else
                 dev_set_name(&dev->dev, "input%ld",
                              (unsigned long) atomic_inc_return(&input_no) - 1);
