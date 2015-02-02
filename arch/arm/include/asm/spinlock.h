@@ -129,7 +129,7 @@ static inline void arch_spin_lock(arch_spinlock_t *lock)
 			: "cc");
 			isb();
 		}
-
+#endif
 		__asm__ __volatile__(
 		    "mrc    p15, 7, %0, c15, c0, 5\n"
 		    : "=r" (tmp)
@@ -153,6 +153,7 @@ static inline void arch_spin_lock(arch_spinlock_t *lock)
 		    : "cc");
 		isb();
 
+#ifdef CONFIG_MSM_KRAIT_WFE_FIXUP
 		if (msm_krait_need_wfe_fixup) {
 			tmp |= 0x10000;
 			__asm__ __volatile__(
@@ -163,8 +164,6 @@ static inline void arch_spin_lock(arch_spinlock_t *lock)
 			isb();
 			local_irq_restore(flags);
 		}
-#else
-		wfe();
 #endif
 		lockval.tickets.owner = ACCESS_ONCE(lock->tickets.owner);
 	}
