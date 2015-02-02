@@ -56,6 +56,8 @@
 #define I2C_ADDR_READ_L		0x51
 #define I2C_ADDR_READ_H		0x57
 
+static bool is_pn544 = 0;
+
 struct pn547_dev {
 	wait_queue_head_t read_wq;
 	struct mutex read_mutex;
@@ -152,9 +154,7 @@ static ssize_t pn547_dev_read(struct file *filp, char __user *buf,
 	struct pn547_dev *pn547_dev = filp->private_data;
 	char tmp[MAX_BUFFER_SIZE] = {0, };
 	int ret = 0;
-#ifdef CONFIG_NFC_PN544
 	int readingWatchdog = 0;
-#endif
 
 	if (count > MAX_BUFFER_SIZE)
 		count = MAX_BUFFER_SIZE;
@@ -168,10 +168,7 @@ static ssize_t pn547_dev_read(struct file *filp, char __user *buf,
 
 	mutex_lock(&pn547_dev->read_mutex);
 
-#ifdef CONFIG_NFC_PN544
 wait_irq:
-#endif
-
 	if (!gpio_get_value(pn547_dev->irq_gpio)) {
 		atomic_set(&pn547_dev->read_flag, 0);
 		if (filp->f_flags & O_NONBLOCK) {
@@ -205,19 +202,17 @@ wait_irq:
 	/* Read data */
 	ret = i2c_master_recv(pn547_dev->client, tmp, count);
 
-#ifdef CONFIG_NFC_PN544
 	/* If bad frame(from 0x51 to 0x57) is received from pn65n,
 	* we need to read again after waiting that IRQ is down.
 	* if data is not ready, pn65n will send from 0x51 to 0x57. */
-	if ((I2C_ADDR_READ_L <= tmp[0] && tmp[0] <= I2C_ADDR_READ_H)
-		&& readingWatchdog < MAX_TRY_I2C_READ) {
+	if (is_pn544 && ((I2C_ADDR_READ_L <= tmp[0] && tmp[0] <= I2C_ADDR_READ_H)
+		&& readingWatchdog < MAX_TRY_I2C_READ)) {
 		pr_warn("%s: data is not ready yet.data = 0x%x, cnt=%d\n",
 			__func__, tmp[0], readingWatchdog);
 		usleep_range(2000, 2000); /* sleep 2ms to wait for IRQ */
 		readingWatchdog++;
 		goto wait_irq;
 	}
-#endif
 
 #if NFC_DEBUG
 	pr_info("pn547: i2c_master_recv\n");
@@ -402,6 +397,8 @@ static int pn547_parse_dt(struct device *dev,
 		of_property_read_u32(np, "nxp,firm-expander-gpio",
 			&pdata->firm_gpio);
 
+	is_pn544 = of_property_read_bool(np, "nxp,use_pn544");
+
 	pr_info("%s: irq : %d, ven : %d, firm : %d, pvdd_en : %d\n",
 			__func__, pdata->irq_gpio, pdata->ven_gpio,
 			pdata->firm_gpio, pdata->pvdd_en_gpio);
@@ -528,11 +525,7 @@ static int pn547_probe(struct i2c_client *client,
 	mutex_init(&pn547_dev->read_mutex);
 
 	pn547_dev->pn547_device.minor = MISC_DYNAMIC_MINOR;
-#ifdef CONFIG_NFC_PN547
 	pn547_dev->pn547_device.name = "pn547";
-#else
-	pn547_dev->pn547_device.name = "pn544";
-#endif
 	pn547_dev->pn547_device.fops = &pn547_dev_fops;
 
 	ret = misc_register(&pn547_dev->pn547_device);
