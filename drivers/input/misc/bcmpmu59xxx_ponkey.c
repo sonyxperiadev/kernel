@@ -39,6 +39,9 @@
 #ifdef CONFIG_CRASH_NOTES
 #include <asm/crash_notes.h>
 #endif
+#ifdef CONFIG_BRCM_SECURE_WATCHDOG
+#include <linux/broadcom/kona_sec_wd.h>
+#endif
 
 struct bcmpmu_ponkey {
 	struct input_dev *idev;
@@ -237,7 +240,10 @@ static void bcmpmu_ponkey_isr(u32 irq, void *data)
 		   make sure the caches are clean and stop. */
 		if (bcmpmu->read_dev(bcmpmu, PMU_REG_PONKEYCTRL6, &val) == 0) {
 			if (val & PONKEY_SMART_RST_EN_MASK) {
+				/* One last pat */
+				sec_wd_touch();
 				/* The other online cores */
+				local_irq_disable();
 				smp_send_stop();
 				/* This core */
 				cpu_stop(smp_processor_id());
@@ -404,18 +410,6 @@ static int bcmpmu59xxx_ponkey_probe(struct platform_device *pdev)
 	if (__ponkey_init_timer_func(bcmpmu, PKEY_TIMER_T2, pkey->t2)) {
 		error =  -EINVAL;
 		goto out_input;
-	}
-	if (bcmpmu->read_dev(bcmpmu, PMU_REG_ENV8, &val))
-		return -EINVAL;
-
-	/* Do T3 NOP when NOT charing and No soft reset
-	* This is workaround need to be removed after
-	* we get real fix
-	*/
-	if ((is_charging_state() || (val & ENV8_UBPD_WAKE)) &&
-			!is_soft_reset()) {
-		pkey->t3->action = PKEY_ACTION_NOP;
-		pr_info("Charging mode clear T3 action\n");
 	}
 	if (__ponkey_init_timer_func(bcmpmu, PKEY_TIMER_T3, pkey->t3)) {
 		error =  -EINVAL;
