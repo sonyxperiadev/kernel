@@ -932,7 +932,7 @@ static int mdss_mdp_image_setup(struct mdss_mdp_pipe *pipe,
 			pipe->mfd->panel_info->pdest == DISPLAY_1)
 			dst_xy = ((pipe->mixer->height -
 				   (pipe->dst.y + pipe->dst.h)) << 16) |
-				pipe->dst.x;
+				(pipe->mixer->width - pipe->dst.x - pipe->dst.w);
 		else
 			dst_xy = (pipe->dst.y << 16) | pipe->dst.x;
 	} else
