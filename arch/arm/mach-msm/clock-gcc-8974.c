@@ -2438,6 +2438,11 @@ static struct clk_lookup msm_clocks_gcc_8974[] = {
 	CLK_LOOKUP_OF("bus_clk",      gcc_ce2_axi_clk,     "qcedev.0"),
 	CLK_LOOKUP_OF("core_clk_src", ce2_clk_src,         "qcedev.0"),
 
+	CLK_LOOKUP_OF("core_clk",     gcc_ce2_clk,         "qcrypto.0"),
+	CLK_LOOKUP_OF("iface_clk",    gcc_ce2_ahb_clk,     "qcrypto.0"),
+	CLK_LOOKUP_OF("bus_clk",      gcc_ce2_axi_clk,     "qcrypto.0"),
+	CLK_LOOKUP_OF("core_clk_src", ce2_clk_src,         "qcrypto.0"),
+
 	CLK_LOOKUP_OF("core_clk", gcc_ce2_clk, "fd440000.qcom,qcrypto"),
 	CLK_LOOKUP_OF("iface_clk", gcc_ce2_ahb_clk, "fd440000.qcom,qcrypto"),
 	CLK_LOOKUP_OF("bus_clk", gcc_ce2_axi_clk, "fd440000.qcom,qcrypto"),
