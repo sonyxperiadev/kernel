@@ -323,6 +323,7 @@ struct sensor_event_queue {
 };
 
 struct event_device {
+	char name[32];
 	struct miscdevice cdev;
 	wait_queue_head_t wq;
 	struct sensor_event_queue ev_queue;
@@ -1967,7 +1968,6 @@ static int em718x_setup_cdev(struct em718x *em718x)
 {
 	static int dev_index;
 	int rc;
-	char name[32];
 	struct sensor_event *ev = devm_kzalloc(&em718x->client->dev,
 			(WAKE_EVENT_Q_SIZE + EVENT_Q_SIZE) * sizeof(*ev),
 			GFP_KERNEL);
@@ -1975,13 +1975,14 @@ static int em718x_setup_cdev(struct em718x *em718x)
 	if (!ev)
 		return -ENOMEM;
 
-	scnprintf(name, sizeof(name), "em718x-%d", dev_index);
+	scnprintf(em718x->ev_device.name, sizeof(em718x->ev_device.name),
+			"em718x-%d", dev_index);
 
 	em718x->ev_device.ev_queue.ev = ev;
 	em718x->ev_device.ev_queue.queue_size = EVENT_Q_SIZE;
 	init_waitqueue_head(&em718x->ev_device.wq);
 	em718x->ev_device.cdev.minor = MISC_DYNAMIC_MINOR;
-	em718x->ev_device.cdev.name = name;
+	em718x->ev_device.cdev.name = em718x->ev_device.name;
 	em718x->ev_device.cdev.fops = &em718x_fops;
 	em718x->ev_device.em718x = em718x;
 	rc = misc_register(&em718x->ev_device.cdev);
@@ -1991,15 +1992,17 @@ static int em718x_setup_cdev(struct em718x *em718x)
 		return rc;
 	}
 	dev_info(&em718x->client->dev, "%s: misc_device %s added\n",
-				__func__, name);
+				__func__, em718x->ev_device.cdev.name);
 
-	scnprintf(name, sizeof(name), "em718x-wake-%d", dev_index);
+	scnprintf(em718x->wake_ev_device.name,
+			sizeof(em718x->wake_ev_device.name),
+			"em718x-wake-%d", dev_index);
 
 	em718x->wake_ev_device.ev_queue.ev = ev + EVENT_Q_SIZE;
 	em718x->wake_ev_device.ev_queue.queue_size = WAKE_EVENT_Q_SIZE;
 	init_waitqueue_head(&em718x->wake_ev_device.wq);
 	em718x->wake_ev_device.cdev.minor = MISC_DYNAMIC_MINOR;
-	em718x->wake_ev_device.cdev.name = name;
+	em718x->wake_ev_device.cdev.name = em718x->wake_ev_device.name;
 	em718x->wake_ev_device.cdev.fops = &em718x_fops;
 	em718x->wake_ev_device.em718x = em718x;
 	rc = misc_register(&em718x->wake_ev_device.cdev);
@@ -2009,7 +2012,7 @@ static int em718x_setup_cdev(struct em718x *em718x)
 		misc_deregister(&em718x->ev_device.cdev);
 	}
 	dev_info(&em718x->client->dev, "%s: misc_device %s added\n",
-				__func__, name);
+				__func__, em718x->wake_ev_device.cdev.name);
 	dev_index++;
 	return rc;
 }
