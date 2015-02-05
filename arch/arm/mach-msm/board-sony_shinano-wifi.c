@@ -28,6 +28,8 @@ void (*sdc_status_cb)(int card_present, void *dev);
 static struct regulator *wifi_batfet;
 static int batfet_ena;
 
+static char *intf_macaddr = NULL;
+
 #define WIFI_POWER_PMIC_GPIO 18
 #define WIFI_IRQ_GPIO 67
 
@@ -208,7 +210,7 @@ static struct resource shinano_wifi_resources[] = {
 };
 
 #define ETHER_ADDR_LEN    6
-#define FILE_WIFI_MACADDR "/persist/wifi/.macaddr"
+#define FILE_WIFI_MACADDR "/sys/devices/platform/bcmdhd_wlan/macaddr"
 
 static inline int xdigit (char c)
 {
@@ -357,6 +359,29 @@ random_mac:
 	return 0;
 }
 
+static ssize_t macaddr_show(struct device *dev, struct device_attribute *attr,
+				char *buf)
+{
+	return sprintf(buf, "%s", intf_macaddr);
+}
+
+static ssize_t macaddr_store(struct device *dev, struct device_attribute *attr,
+				const char *buf, size_t count)
+{
+	return snprintf(intf_macaddr, count, "%s\n", buf);
+}
+
+DEVICE_ATTR(macaddr, 0644, macaddr_show, macaddr_store);
+
+static struct attribute *wifi_attrs[] = {
+	&dev_attr_macaddr.attr,
+	NULL
+};
+
+static struct attribute_group wifi_attr_grp = {
+	.attrs = wifi_attrs,
+};
+
 struct wifi_platform_data shinano_wifi_control = {
 	.mem_prealloc	= shinano_wifi_mem_prealloc,
 	.set_power	= shinano_wifi_set_power,
@@ -382,6 +407,13 @@ static int __init shinano_wifi_init(void)
 	shinano_wifi.resource->start = gpio_to_irq(WIFI_IRQ_GPIO);
 	shinano_wifi.resource->end = gpio_to_irq(WIFI_IRQ_GPIO);
 	platform_device_register(&shinano_wifi);
+
+	intf_macaddr = kzalloc(20*(sizeof(char)), GFP_KERNEL);
+	if (sysfs_create_group(&shinano_wifi.dev.kobj, &wifi_attr_grp) < 0) {
+		pr_err("%s: Unable to create sysfs\n", __func__);
+		kfree(intf_macaddr);
+	}
+
 	return 0;
 }
 
