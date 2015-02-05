@@ -406,7 +406,7 @@ static int __devinit msm_vidc_probe(struct platform_device *pdev)
 		goto err_core_init;
 	}
 	if (core->hfi_type == VIDC_HFI_Q6) {
-		dprintk(VIDC_ERR, "Q6 hfi device probe called\n");
+		dprintk(VIDC_DBG, "Q6 hfi device probe called\n");
 		nr += MSM_VIDC_MAX_DEVICES;
 		core->id = MSM_VIDC_CORE_Q6;
 	} else {
