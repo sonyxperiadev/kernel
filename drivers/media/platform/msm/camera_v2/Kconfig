@@ -208,6 +208,12 @@ config s5k4e1
 		and QSXGA snapshot at 15 fps.
 		This sensor driver does not support auto focus.
 
+config OV7695
+	bool "Sensor OV7695 (YUV VGA)"
+	depends on MSMB_CAMERA
+	---help---
+		OmniVision VGA Bayer Sensor
+
 config OV12830
 	bool "OmniVision OV12830 (BAYER 12MP)"
 	depends on MSMB_CAMERA

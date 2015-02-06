@@ -8,6 +8,7 @@ obj-$(CONFIG_MSM_CAMERA_SENSOR) += msm_sensor_init.o msm_sensor_driver.o msm_sen
 obj-$(CONFIG_IMX134) += imx134.o
 obj-$(CONFIG_IMX135) += imx135.o
 obj-$(CONFIG_IMX188) += imx188.o
+obj-$(CONFIG_OV7695) += ov7695.o
 obj-$(CONFIG_OV8825) += ov8825.o
 obj-$(CONFIG_OV8865) += ov8865.o
 obj-$(CONFIG_s5k4e1) += s5k4e1.o
