@@ -1010,7 +1010,7 @@ static const struct attribute *lm3630_attrs[] = {
 	NULL,
 };
 
-static int __devinit lm3630_probe(struct i2c_client *client,
+static int lm3630_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
 {
 	struct i2c_adapter *adapter = to_i2c_adapter(client->dev.parent);
@@ -1100,7 +1100,7 @@ err_alloc_data_failed:
 	return rc;
 }
 
-static int __devexit lm3630_remove(struct i2c_client *client)
+static int lm3630_remove(struct i2c_client *client)
 {
 	struct lm3630_data *lm = i2c_get_clientdata(client);
 
@@ -1223,7 +1223,7 @@ static struct i2c_driver lm3630_driver = {
 		.pm = &lm3630_pm,
 	},
 	.probe = lm3630_probe,
-	.remove = __devexit_p(lm3630_remove),
+	.remove = lm3630_remove,
 	.shutdown = lm3630_shutdown,
 	.id_table = lm3630_id,
 };
