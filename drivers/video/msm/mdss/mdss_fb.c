@@ -1317,18 +1317,14 @@ static int mdss_fb_blank_sub(int blank_mode, struct fb_info *info,
 			complete(&mfd->no_update.comp);
 
 			mfd->op_enable = false;
-#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+
 			pdata = dev_get_platdata(&mfd->pdev->dev);
-#endif
 			mutex_lock(&mfd->bl_lock);
 			if (mdss_panel_is_power_off(req_power_state)) {
 				/* Stop Display thread */
 				if (mfd->disp_thread)
 					mdss_fb_stop_disp_thread(mfd);
 				mdss_fb_set_backlight(mfd, 0);
-#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
-				pdata->set_backlight(pdata, mfd->bl_level);
-#endif
 				mfd->bl_updated = 0;
 			}
 			mfd->panel_power_state = req_power_state;

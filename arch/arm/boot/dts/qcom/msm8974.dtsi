@@ -277,11 +277,11 @@
 		qcom,sw-power-collapse;
 	};
 
-	qcom,vidc {
-		compatible = "qcom,msm-vidc";
-		qcom,hfi = "q6";
-		qcom,max-hw-load = <243000>; /* 1080p @ 30 */
-	};
+//	qcom,vidc {
+//		compatible = "qcom,msm-vidc";
+//		qcom,hfi = "q6";
+//		qcom,max-hw-load = <243000>; /* 1080p @ 30 */
+//	};
 
 	qcom,wfd {
 		compatible = "qcom,msm-wfd";
