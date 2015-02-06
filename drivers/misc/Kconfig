@@ -35,6 +35,27 @@ config SONY_JPROBE_LMK_HOOK
 	  This is needed as JPROBE registered at memory shrink routine
 	  doesn't provide enough information in its arguments.
 
+config SONY_JPROBE_SUSPEND
+	tristate "Idd suspend jprobe driver"
+	depends on KPROBES && m
+	select SONY_JPROBE_SUSPEND_HOOK
+	default n
+	help
+	  If you say yes here you will get idd suspend_jprobe module
+	  that monitors when system enters/exits suspend. Buffer is exported in
+	  /sys/kernel/idd_jprobe_suspend path. This will be compiled as module
+	  only.
+
+config SONY_JPROBE_SUSPEND_HOOK
+	bool "Idd suspend jprobe hook"
+	depends on SONY_JPROBE_SUSPEND
+	default n
+	help
+	  If you say yes here you will add idd suspend_jprobe hook
+	  that is required if you want to use jprobe for suspend.
+	  This is needed as JPROBE registered at suspend routine
+	  doesn't provide enough precision of suspend/resume time.
+
 
 config SENSORS_LIS3LV02D
 	tristate
