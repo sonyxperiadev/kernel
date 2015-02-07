@@ -391,9 +391,6 @@ struct qpnp_somc_params {
 	unsigned int		stepchg_ibatmax_ma_under_step;
 	struct delayed_work	stepchg_work;
 	bool			stepchg_mode;
-	bool			enable_llk;
-	int			discharging_for_llk;
-	int			batt_id;
 	int			high_volt_chg_wait_cnt;
 	int			high_volt_chg_mode;
 	bool			chg_pause_need_clr_chg_faild;
@@ -1407,8 +1404,7 @@ qpnp_arb_stop_work(struct work_struct *work)
 	struct qpnp_chg_chip *chip = container_of(dwork,
 				struct qpnp_chg_chip, arb_stop_work);
 
-	if (!chip->chg_done &&
-		!chip->somc_params.discharging_for_llk)
+	if (!chip->chg_done)
 		qpnp_chg_charge_en(chip, !chip->charging_disabled);
 	qpnp_chg_force_run_on_batt(chip, chip->charging_disabled);
 }
@@ -2098,8 +2094,6 @@ qpnp_batt_property_is_writeable(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CAPACITY:
 	case POWER_SUPPLY_PROP_ENABLE_SHUTDOWN_AT_LOW_BATTERY:
 	case POWER_SUPPLY_PROP_BATT_AGING:
-	case POWER_SUPPLY_PROP_ENABLE_LLK:
-	case POWER_SUPPLY_PROP_BATT_ID:
 		return 1;
 	default:
 		break;
@@ -2227,8 +2221,6 @@ static enum power_supply_property msm_batt_power_props[] = {
 	POWER_SUPPLY_PROP_VOLTAGE_OCV,
 	POWER_SUPPLY_PROP_ENABLE_SHUTDOWN_AT_LOW_BATTERY,
 	POWER_SUPPLY_PROP_BATT_AGING,
-	POWER_SUPPLY_PROP_ENABLE_LLK,
-	POWER_SUPPLY_PROP_BATT_ID,
 };
 
 static char *pm_power_supplied_to[] = {
@@ -2416,8 +2408,7 @@ get_prop_batt_status(struct qpnp_chg_chip *chip)
 	if (charging_path == QPNP_CHG_PATH_NONE ||
 		chip->charging_disabled ||
 		chip->somc_params.chg_failed ||
-		chip->somc_params.ovp_chg_dis ||
-		chip->somc_params.discharging_for_llk)
+		chip->somc_params.ovp_chg_dis)
 		goto status_exit;
 
 	health = get_prop_batt_health(chip);
@@ -2527,8 +2518,7 @@ get_prop_capacity(struct qpnp_chg_chip *chip)
 				&& !chip->resuming_charging
 				&& !chip->charging_disabled
 				&& chip->soc_resume_limit
-				&& soc <= chip->soc_resume_limit
-				&& !sp->discharging_for_llk) {
+				&& soc <= chip->soc_resume_limit) {
 			pr_debug("resuming charging at %d%% soc\n", soc);
 			chip->resuming_charging = true;
 			qpnp_chg_irq_wake_enable(&chip->chg_fastchg);
@@ -2816,12 +2806,6 @@ qpnp_batt_power_get_property(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_BATT_AGING:
 		val->intval = chip->somc_params.batt_aging;
-		break;
-	case POWER_SUPPLY_PROP_ENABLE_LLK:
-		val->intval = chip->somc_params.enable_llk;
-		break;
-	case POWER_SUPPLY_PROP_BATT_ID:
-		val->intval = chip->somc_params.batt_id;
 		break;
 	default:
 		return -EINVAL;
@@ -3723,8 +3707,7 @@ qpnp_chg_detect_weak_charger(struct qpnp_chg_chip *chip,
 	struct qpnp_somc_params *sp = &chip->somc_params;
 	enum qpnp_chg_chg_path prev_path = sp->prev_charging_path;
 
-	if (!chip->somc_params.enable_report_charger_state ||
-		chip->somc_params.discharging_for_llk)
+	if (!chip->somc_params.enable_report_charger_state)
 		return;
 
 	pr_debug("path: %d -> %d\n", prev_path, charging_path);
@@ -4165,8 +4148,7 @@ qpnp_chg_aicl_work(struct work_struct *work)
 	if (chip->somc_params.disabled_rb_detect_cnt)
 		chip->somc_params.disabled_rb_detect_cnt--;
 
-	if (!chip->somc_params.aicl_period_cnt &&
-		!chip->somc_params.discharging_for_llk)
+	if (!chip->somc_params.aicl_period_cnt)
 		qpnp_chg_somc_aicl(chip, usb_present, dc_present,
 					charging_path);
 
@@ -4204,56 +4186,6 @@ qpnp_chg_pause_chg(struct qpnp_chg_chip *chip, int pause)
 	return qpnp_chg_masked_write(chip, chip->chgr_base + CHGR_CHG_CTRL,
 			CHGR_CHG_PAUSE,
 			pause ? CHGR_CHG_PAUSE : 0, 1);
-}
-
-static void
-qpnp_llk_check(struct qpnp_chg_chip *chip)
-{
-	int soc = 0;
-	union power_supply_propval ret = {0,};
-	int wa_llk = chip->somc_params.discharging_for_llk;
-
-	if (!qpnp_chg_is_usb_chg_plugged_in(chip) &&
-		!qpnp_chg_is_dc_chg_plugged_in(chip)) {
-		chip->somc_params.discharging_for_llk = false;
-		pr_info("stopping worker usb/dc disconnected");
-		goto llk_check_exit;
-	}
-
-	if (!chip->bms_psy)
-		chip->bms_psy = power_supply_get_by_name("bms");
-
-	if (!chip->bms_psy)
-		goto out;
-
-	chip->bms_psy->get_property(chip->bms_psy,
-		POWER_SUPPLY_PROP_CAPACITY, &ret);
-	soc = ret.intval;
-
-	if (soc >= CHG_LLK_STOP_CAPACITY)
-		chip->somc_params.discharging_for_llk = true;
-	else if (soc <= CHG_LLK_START_CAPACITY)
-		chip->somc_params.discharging_for_llk = false;
-
-llk_check_exit:
-	if (chip->somc_params.discharging_for_llk)
-		qpnp_chg_charge_en(chip, 0);
-	else
-		qpnp_chg_charge_en(chip, !chip->charging_disabled);
-
-	if (wa_llk != chip->somc_params.discharging_for_llk) {
-		pr_info("%s charging\n",
-			chip->somc_params.discharging_for_llk ?
-			"Stop" : "Start");
-		power_supply_changed(&chip->batt_psy);
-	}
-
-	pr_debug("soc=%d dischg_llk=%d dischg=%d\n",
-		soc, chip->somc_params.discharging_for_llk,
-		chip->charging_disabled);
-
-out:
-	return;
 }
 
 static void
@@ -4327,9 +4259,6 @@ health_check_work_exit:
 
 	pr_debug("target=%d vbat=%d wa_rb=%d\n",
 		target_mv, vbat_mv, chip->somc_params.workaround_prevent_rb);
-
-	if (chip->somc_params.enable_llk)
-		qpnp_llk_check(chip);
 
 	return;
 }
@@ -4420,8 +4349,7 @@ qpnp_chg_set_appropriate_battery_current(struct qpnp_chg_chip *chip)
 
 	if (!chip->somc_params.batt_aging && chip->somc_params.stepchg_mode)
 		chg_current = chip->somc_params.stepchg_ibatmax_ma_under_step;
-
-	if (!chip->somc_params.batt_id)
+	else
 		chg_current = OTHERS_DEFAULT_IBATMAX_MA;
 
 	if (chip->bat_is_cool)
@@ -4809,8 +4737,7 @@ qpnp_eoc_work(struct work_struct *work)
 	int capacity;
 
 	pm_stay_awake(chip->dev);
-	if (!chip->somc_params.discharging_for_llk)
-		qpnp_chg_charge_en(chip, !chip->charging_disabled);
+	qpnp_chg_charge_en(chip, !chip->charging_disabled);
 
 	rc = qpnp_chg_read(chip, &batt_sts, INT_RT_STS(chip->bat_if_base), 1);
 	if (rc) {
@@ -5459,13 +5386,6 @@ qpnp_batt_power_set_property(struct power_supply *psy,
 			else
 				chip->somc_params.batt_aging = true;
 		}
-		break;
-	case POWER_SUPPLY_PROP_ENABLE_LLK:
-		chip->somc_params.enable_llk = !!val->intval;
-		break;
-	case POWER_SUPPLY_PROP_BATT_ID:
-		chip->somc_params.batt_id = val->intval;
-		qpnp_chg_set_appropriate_battery_current(chip);
 		break;
 	default:
 		return -EINVAL;
@@ -6819,7 +6739,6 @@ qpnp_charger_probe(struct spmi_device *spmi)
 			qpnp_health_check_work);
 	INIT_DELAYED_WORK(&chip->somc_params.stepchg_work,
 			qpnp_stepchg_work);
-	chip->somc_params.batt_id = -EINVAL;
 
 	if (chip->bat_if_base) {
 		chip->batt_psy.name = "battery";
