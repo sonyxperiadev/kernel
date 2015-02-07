@@ -924,6 +924,10 @@
 	status = "ok";
 };
 
+&vph_pwr_vreg {
+	status = "ok";
+};
+
 &slim_msm {
 	taiko_codec {
 		qcom,cdc-micbias-ldoh-v = <0x3>;
