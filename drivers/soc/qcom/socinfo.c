@@ -208,6 +208,8 @@ static union {
 	struct socinfo_v10 v10;
 } *socinfo;
 
+static int msm8994v1;
+
 static struct msm_soc_info cpu_of_id[] = {
 
 	/* 7x01 IDs */
@@ -1093,6 +1095,9 @@ static int __init socinfo_init_sysfs(void)
 	struct soc_device *soc_dev;
 	struct soc_device_attribute *soc_dev_attr;
 
+	if (msm8994v1 == 1)
+		panic("MSM8994 V1 no longer supported");
+
 	if (!socinfo) {
 		pr_err("%s: No socinfo found!\n", __func__);
 		return -ENODEV;
@@ -1231,6 +1236,15 @@ static void socinfo_print(void)
 	}
 }
 
+static inline void check_msm8994_version(void)
+{
+	if (SOCINFO_VERSION_MAJOR(socinfo->v1.version) == 1) {
+		pr_err("MSM8994 V1 no longer supported\n");
+		msm8994v1 = 1;
+		WARN_ON(1);
+	}
+}
+
 int __init socinfo_init(void)
 {
 	static bool socinfo_init_done;
@@ -1314,6 +1328,9 @@ int __init socinfo_init(void)
 	socinfo_print();
 	arch_read_hardware_id = msm_read_hardware_id;
 	socinfo_init_done = true;
+
+	if (cur_cpu == MSM_CPU_8994)
+		check_msm8994_version();
 
 	return 0;
 }
