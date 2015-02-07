@@ -659,7 +659,7 @@
        qcom,qcedev@fd440000 {
 		compatible = "qcom,qcedev";
 		reg = <0xfd440000 0x20000>,
-		      <0xfd444000 0x1b000>;
+		      <0xfd444000 0x8000>;
 		reg-names = "crypto-base","crypto-bam-base";
 		interrupts = <0 236 0>;
 		qcom,bam-pipe-pair = <1>;
@@ -673,10 +673,10 @@
 				<56 512 3936000 393600>;
 	};
 
-        qcom,qcrypto@fd440000 {
+        qcom,qcrypto@fd444000 {
 		compatible = "qcom,qcrypto";
 		reg = <0xfd440000 0x20000>,
-		      <0xfd444000 0x1b000>;
+		      <0xfd444000 0x8000>;
 		reg-names = "crypto-base","crypto-bam-base";
 		interrupts = <0 236 0>;
 		qcom,bam-pipe-pair = <2>;
