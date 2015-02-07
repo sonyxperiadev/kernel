@@ -2662,12 +2662,24 @@ static int try_set_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 		pdata = &enable;
 		break;
 	case V4L2_CID_MPEG_VIDC_VIDEO_PERF_MODE:
+		if (inst->fmts[CAPTURE_PORT]->fourcc != V4L2_PIX_FMT_H264 &&
+			inst->fmts[CAPTURE_PORT]->fourcc !=
+			V4L2_PIX_FMT_H264_NO_SC) {
+			dprintk(VIDC_ERR, "Control 0x%x only valid for H264\n",
+				ctrl->id);
+			rc = -ENOTSUPP;
+			break;
+		}
 		property_id = HAL_CONFIG_VENC_PERF_MODE;
 		venc_mode.mode = ctrl->val;
 		pdata = &venc_mode;
 		msm_dcvs_enc_set_power_save_mode(inst,
 			venc_mode.mode ==
 			V4L2_MPEG_VIDC_VIDEO_PERF_POWER_SAVE);
+		if (venc_mode.mode ==
+			V4L2_MPEG_VIDC_VIDEO_PERF_POWER_SAVE) {
+			inst->flags |= VIDC_POWER_SAVE;
+		}
 		break;
 	case V4L2_CID_MPEG_VIDC_VIDEO_HIER_B_NUM_LAYERS:
 		if (inst->fmts[CAPTURE_PORT]->fourcc != V4L2_PIX_FMT_HEVC) {
