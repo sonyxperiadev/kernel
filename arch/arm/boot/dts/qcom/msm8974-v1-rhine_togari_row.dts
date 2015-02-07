@@ -24,9 +24,11 @@
 / {
 	model = "SoMC Togari ROW";
 	compatible = "somc,togari-row", "qcom,msm8974";
-	qcom,msm-id = <126 8 0>,
-		      <185 8 0>,
-		      <186 8 0>;
+	qcom,board-id = <8 0>;
+
+	qcom,msm-id = <126 0>,
+		      <185 0>,
+		      <186 0>;
 };
 
 &soc {
