@@ -59,6 +59,7 @@
 #define I2C_ADDR_READ_H		0x57
 
 static bool is_pn544 = 0;
+static bool skip_addr_check = 0;
 
 struct pn547_dev {
 	wait_queue_head_t read_wq;
@@ -441,6 +442,8 @@ static int pn547_parse_dt(struct device *dev,
 
 	is_pn544 = of_property_read_bool(np, "nxp,use_pn544");
 
+	skip_addr_check = of_property_read_bool(np, "nxp,skip_addr_check");
+
 	buf = of_get_property(np, "nxp,dwld_enb_cfg", NULL);
 	if (buf != NULL)
 		for (i = 0; i < MAX_GPIOMUX_SET_SIZE; i++)
@@ -642,6 +645,9 @@ static int pn547_probe(struct i2c_client *client,
 	enable_irq_wake(pn547_dev->clk_req_irq);
 #endif
 
+	if (skip_addr_check)
+		goto end;
+
 	gpio_set_value(pn547_dev->ven_gpio, 1);
 	usleep_range(10000, 11000);
 
@@ -668,7 +674,7 @@ static int pn547_probe(struct i2c_client *client,
 		pr_err("%s : fail to get i2c addr\n", __func__);
 		goto err_request_irq_failed;
 	}
-
+end:
 	pr_info("%s : success\n", __func__);
 	return 0;
 
