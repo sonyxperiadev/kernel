@@ -48,8 +48,10 @@
 #endif
 
 #include <mach/board-nfc.h>
+#include <mach/gpiomux.h>
 
 #define MAX_BUFFER_SIZE		512
+#define MAX_GPIOMUX_SET_SIZE	4
 
 #define NFC_DEBUG 0
 #define MAX_TRY_I2C_READ	10
@@ -67,6 +69,8 @@ struct pn547_dev {
 	unsigned int ven_gpio;
 	unsigned int firm_gpio;
 	unsigned int irq_gpio;
+	int firm_gpio_en_cfg[4];
+	int firm_gpio_dis_cfg[4];
 
 	atomic_t irq_enabled;
 	atomic_t read_flag;
@@ -147,6 +151,32 @@ static irqreturn_t pn547_dev_clk_req_irq_handler(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 #endif
+
+static int pn547_dev_gpio_cfg_update(struct pn547_dev *d, int gpio,
+				     int *newcfg, int *oldcfg)
+{
+	int ret;
+
+	ret = msm_gpiomux_write(gpio,
+				GPIOMUX_ACTIVE,
+				(struct gpiomux_setting *)newcfg,
+				(struct gpiomux_setting *)oldcfg);
+	if (ret < 0) {
+		pr_err("%s: error: GPIOMUX_ACTIVE->%d\n",
+						__func__, ret);
+		goto err;
+	}
+
+	ret = msm_gpiomux_write(gpio,
+				GPIOMUX_SUSPENDED,
+				(struct gpiomux_setting *)newcfg,
+				(struct gpiomux_setting *)oldcfg);
+	if (ret < 0)
+		pr_err("%s: error: GPIOMUX_SUSPENDED->%d\n",
+						__func__, ret);
+err:
+	return ret;
+}
 
 static ssize_t pn547_dev_read(struct file *filp, char __user *buf,
 			      size_t count, loff_t *offset)
@@ -303,6 +333,7 @@ static long pn547_dev_ioctl(struct file *filp,
 			   unsigned int cmd, unsigned long arg)
 {
 	struct pn547_dev *pn547_dev = filp->private_data;
+	int ret = 0;
 
 	switch (cmd) {
 	case PN547_SET_PWR:
@@ -359,6 +390,14 @@ static long pn547_dev_ioctl(struct file *filp,
 			return -EINVAL;
 		}
 		break;
+	case PN547_SET_GPIO:
+		ret = pn547_dev_gpio_cfg_update(pn547_dev,
+			pn547_dev->firm_gpio,
+			pn547_dev->firm_gpio_en_cfg,
+			pn547_dev->firm_gpio_dis_cfg);
+		if (ret < 0)
+			return ret;
+		break;
 	default:
 		pr_err("%s bad ioctl %u\n", __func__, cmd);
 		return -EINVAL;
@@ -381,6 +420,9 @@ static int pn547_parse_dt(struct device *dev,
 	struct pn547_i2c_platform_data *pdata)
 {
 	struct device_node *np = dev->of_node;
+	const unsigned char *buf;
+	int i;
+
 	pdata->irq_gpio = of_get_named_gpio_flags(np, "nxp,irq_gpio",
 		0, &pdata->irq_gpio_flags);
 
@@ -398,6 +440,20 @@ static int pn547_parse_dt(struct device *dev,
 			&pdata->firm_gpio);
 
 	is_pn544 = of_property_read_bool(np, "nxp,use_pn544");
+
+	buf = of_get_property(np, "nxp,dwld_enb_cfg", NULL);
+	if (buf != NULL)
+		for (i = 0; i < MAX_GPIOMUX_SET_SIZE; i++)
+			pdata->firm_gpio_en_cfg[i] = (buf[i * 4] << 3) +
+				(buf[i * 4 + 1] << 2) + (buf[i * 4 + 2] << 1) +
+				buf[i * 4 + 3];
+
+	buf = of_get_property(np, "nxp,dwld_dis_cfg", NULL);
+	if (buf != NULL)
+		for (i = 0; i < MAX_GPIOMUX_SET_SIZE; i++)
+			pdata->firm_gpio_dis_cfg[i] = (buf[i * 4] << 3) +
+				(buf[i * 4 + 1] << 2) + (buf[i * 4 + 2] << 1) +
+				buf[i * 4 + 3];
 
 	pr_info("%s: irq : %d, ven : %d, firm : %d, pvdd_en : %d\n",
 			__func__, pdata->irq_gpio, pdata->ven_gpio,
@@ -519,6 +575,14 @@ static int pn547_probe(struct i2c_client *client,
 	pn547_dev->clk_req_irq = platform_data->clk_req_irq;
 #endif
 	pn547_dev->client = client;
+
+	memcpy(&platform_data->firm_gpio_en_cfg,
+		&pn547_dev->firm_gpio_en_cfg,
+		sizeof(platform_data->firm_gpio_en_cfg));
+
+	memcpy(&platform_data->firm_gpio_dis_cfg,
+		&pn547_dev->firm_gpio_dis_cfg,
+		sizeof(platform_data->firm_gpio_dis_cfg));
 
 	/* init mutex and queues */
 	init_waitqueue_head(&pn547_dev->read_wq);
