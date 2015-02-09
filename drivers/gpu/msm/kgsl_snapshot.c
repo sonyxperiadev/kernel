@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -661,8 +661,7 @@ int kgsl_device_snapshot(struct kgsl_device *device,
 		return -ENOMEM;
 	}
 
-	BUG_ON(!kgsl_pwrctrl_isenabled(device));
-
+	BUG_ON(!kgsl_state_is_awake(device));
 	/* increment the hang count for good book keeping */
 	device->snapshot_faultcount++;
 
