@@ -750,9 +750,6 @@ static int mdss_fb_probe(struct platform_device *pdev)
 		break;
 	}
 
-	if (mfd->mdp.splash_init_fnc)
-		mfd->mdp.splash_init_fnc(mfd);
-
 #ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 	if ((mfd->panel_info->type == MIPI_VIDEO_PANEL) ||
 		(mfd->panel_info->type == MIPI_CMD_PANEL))
@@ -786,6 +783,9 @@ static int mdss_fb_probe(struct platform_device *pdev)
 		}
 	}
 #endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
+
+	if (mfd->mdp.splash_init_fnc)
+		mfd->mdp.splash_init_fnc(mfd);
 
 	INIT_DELAYED_WORK(&mfd->idle_notify_work, __mdss_fb_idle_notify_work);
 
