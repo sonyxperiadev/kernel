@@ -18,6 +18,20 @@ DEFINE_MSM_MUTEX(imx188_mut);
 static struct msm_sensor_ctrl_t imx188_s_ctrl;
 
 static struct msm_sensor_power_setting imx188_power_setting[] = {
+#ifdef CONFIG_MACH_SONY_TIANCHI
+	{
+		.seq_type = SENSOR_GPIO,
+		.seq_val = SENSOR_GPIO_STANDBY,
+		.config_val = GPIO_OUT_HIGH,
+		.delay = 1,
+	},
+	{
+		.seq_type = SENSOR_GPIO,
+		.seq_val = SENSOR_GPIO_VIO,
+		.config_val = GPIO_OUT_HIGH,
+		.delay = 1,
+	},
+#endif
 	{
 		.seq_type = SENSOR_VREG,
 		.seq_val = CAM_VIO,
