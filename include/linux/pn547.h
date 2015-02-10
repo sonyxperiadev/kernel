@@ -29,11 +29,16 @@
  */
 #define PN547_SET_PWR	_IOW(PN547_MAGIC, 0x01, unsigned int)
 
+/* ioctl for fwdl gpio */
+#define PN547_SET_GPIO	0
+
 struct pn547_i2c_platform_data {
 	void (*conf_gpio) (void);
 	int irq_gpio;
 	int ven_gpio;
 	int firm_gpio;
+	int firm_gpio_en_cfg[4];
+	int firm_gpio_dis_cfg[4];
 #ifdef CONFIG_NFC_PN547_CLOCK_REQUEST
 	int clk_req_gpio;
 	int clk_req_irq;

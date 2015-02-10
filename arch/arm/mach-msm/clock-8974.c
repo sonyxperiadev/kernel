@@ -4934,7 +4934,7 @@ static struct clk_lookup msm_clocks_8974_common[] __initdata = {
 	CLK_LOOKUP("xo",    cxo_pil_mss_clk.c,        "fc880000.qcom,mss"),
 	CLK_LOOKUP("xo",       cxo_wlan_clk.c, "fb000000.qcom,wcnss-wlan"),
 	CLK_LOOKUP("rf_clk",         cxo_a2.c, "fb000000.qcom,wcnss-wlan"),
-	CLK_LOOKUP("nfc_clk",    cxo_a2_pin.c,                   "6-0028"),
+	CLK_LOOKUP("nfc_clk",    cxo_a2_pin.c,                   "2-0028"),
 	CLK_LOOKUP("felica_clk", cxo_a2_pin.c,                   "6-0029"),
 	CLK_LOOKUP("xo", cxo_pil_pronto_clk.c,     "fb21b000.qcom,pronto"),
 	CLK_LOOKUP("xo",       cxo_dwc3_clk.c,                 "msm_dwc3"),

@@ -133,8 +133,8 @@
 		qcom,i2c-src-freq = <50000000>;
 		qcom,master-id = <86>;
 		status = "ok";
-		nfc@28 {
-			compatible = "nxp,pn544";
+		pn547@28 {
+			compatible = "nxp,pn547";
 			reg = <0x28>;
 			interrupt-parent = <&msmgpio>;
 			interrupts = <59 0x0>;
@@ -142,8 +142,10 @@
 			nxp,irq_gpio = <&msmgpio 59 0x00>;
 			nxp,dwld_en = <&msmgpio 77 0x00>;
 			nxp,ven = <&pm8941_gpios 23 0x01>;
-			gpio_fwdl_enable = <0 0 0 2>;
-			gpio_fwdl_disable = <0 0 1 0>;
+			nxp,dwld_enb_cfg = <0 0 0 2>;
+			nxp,dwld_dis_cfg = <0 0 1 0>;
+			nxp,use_pn544;
+			nxp,skip_addr_check;
 		};
 	};
 
