@@ -25,6 +25,10 @@
 #define CDBG(fmt, args...) pr_debug(fmt, ##args)
 #endif
 
+#ifdef CONFIG_MACH_SONY_EAGLE
+int cci_camera_source = 0;
+#endif
+
 DEFINE_MSM_MUTEX(msm_eeprom_mutex);
 
 
@@ -340,6 +344,18 @@ static int read_eeprom_memory(struct msm_eeprom_ctrl_t *e_ctrl,
 			}
 			memptr += emap[j].mem.valid_size;
 		}
+#ifdef CONFIG_MACH_SONY_EAGLE
+		/*Bug1095,guanyi,EEPROM S*/
+		if(j==0){/*After A1 for AWB and AF,A3 A5 A7 for lsc*/
+		eb_info->i2c_slaveaddr=0xA3;
+		e_ctrl->i2c_client.cci_client->sid = eb_info->i2c_slaveaddr >> 1;
+		}
+		else{
+		eb_info->i2c_slaveaddr=eb_info->i2c_slaveaddr+2;
+		e_ctrl->i2c_client.cci_client->sid = eb_info->i2c_slaveaddr >> 1;
+		}
+		//pr_err("new id =0x%x \n",e_ctrl->i2c_client.cci_client->sid);
+#endif
 		if (emap[j].pageen.valid_size) {
 			e_ctrl->i2c_client.addr_type = emap[j].pageen.addr_t;
 			rc = e_ctrl->i2c_client.i2c_func_tbl->i2c_write(
@@ -910,6 +926,14 @@ static int msm_eeprom_platform_probe(struct platform_device *pdev)
 	int j = 0;
 	uint32_t temp;
 
+#ifdef CONFIG_MACH_SONY_EAGLE
+/*AF DATA S*/
+	uint16_t infinity_dac_t;
+	uint16_t macro_dac_t;
+	uint16_t starting_dac_t;
+	uint16_t a1=0;
+	uint16_t a2=0;
+#endif
 	struct msm_camera_cci_client *cci_client = NULL;
 	struct msm_eeprom_ctrl_t *e_ctrl = NULL;
 	struct msm_eeprom_board_info *eb_info = NULL;
@@ -1032,6 +1056,29 @@ static int msm_eeprom_platform_probe(struct platform_device *pdev)
 		     e_ctrl->cal_data.mapdata[j]);
 
 	e_ctrl->is_supported |= msm_eeprom_match_crc(&e_ctrl->cal_data);
+#ifdef CONFIG_MACH_SONY_EAGLE
+                infinity_dac_t=(uint16_t)(e_ctrl->cal_data.mapdata[0xD0] << 8) |
+                  e_ctrl->cal_data.mapdata[0xD1];
+                macro_dac_t=(uint16_t)(e_ctrl->cal_data.mapdata[0xD4] << 8) |
+                  e_ctrl->cal_data.mapdata[0xD5];
+        if ((e_ctrl->cal_data.mapdata[0]==0x53)||(e_ctrl->cal_data.mapdata[0]==0x73)){
+                cci_camera_source = 1;
+                a1=(uint16_t)(e_ctrl->cal_data.mapdata[0xE0] << 8)|
+                     e_ctrl->cal_data.mapdata[0xE1];
+                a2=(uint16_t)(e_ctrl->cal_data.mapdata[0xEA] << 8)|
+                     e_ctrl->cal_data.mapdata[0xEB];
+                starting_dac_t=(infinity_dac_t)-((a1<<7)/a2);
+                pr_err("AF infinity_dac=0x%X, macro_dac=0x%X, starting_dac=0x%X\n",infinity_dac_t,macro_dac_t,starting_dac_t);
+                pr_err("Camera eeprom 1st IMX009, GC006\n");
+        }
+        else if ((e_ctrl->cal_data.mapdata[0]==0x4C)||(e_ctrl->cal_data.mapdata[0]==0x6C)){
+                cci_camera_source = 2;
+         starting_dac_t=(uint16_t)(e_ctrl->cal_data.mapdata[0xD2] << 8) |
+                  e_ctrl->cal_data.mapdata[0xD3];
+                pr_err("AF infinity_dac=0x%X, macro_dac=0x%X, starting_dac=0x%X\n",infinity_dac_t,macro_dac_t,starting_dac_t);
+                pr_err("Camera eeprom 2st LI005, GC006\n");
+        }
+#endif
 
 	rc = msm_camera_power_down(power_info, e_ctrl->eeprom_device_type,
 		&e_ctrl->i2c_client);
