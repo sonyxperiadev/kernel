@@ -1835,7 +1835,8 @@ int _suspend(struct kgsl_device *device)
 {
 	int ret = 0;
 
-	if (KGSL_STATE_SUSPEND == device->state)
+	if ((KGSL_STATE_SUSPEND == device->state) ||
+		(KGSL_STATE_NONE == device->state))
 		return ret;
 
 	/* drain to prevent from more commands being submitted */
