@@ -440,7 +440,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 			     anon_other * (long)(PAGE_SIZE / 1024));
 		lowmem_deathpending_timeout = jiffies + HZ;
 #ifdef CONFIG_SONY_JPROBE_LMK_HOOK
-		scnprintf(jprobe_buf, JPROBE_LINE_SZ, "%d %s %d %s %d %d",
+		scnprintf(jprobe_buf, JPROBE_LINE_SZ, "%d \"%s\" %d \"%s\" %d %d",
 			current->pid, current->comm, selected->pid,
 			selected->comm, selected_oom_score_adj,
 			selected_tasksize);
@@ -490,7 +490,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 			lowmem_deathpending_timeout = jiffies + HZ;
 			send_sig(SIGKILL, selected[i].task, 0);
 #ifdef CONFIG_SONY_JPROBE_LMK_HOOK
-			scnprintf(jprobe_buf, JPROBE_LINE_SZ, "%d %s %d %s %d %d",
+			scnprintf(jprobe_buf, JPROBE_LINE_SZ, "%d \"%s\" %d \"%s\" %d %d",
 				current->pid, current->comm, selected->pid,
 				selected->comm, selected_oom_score_adj,
 				selected_tasksize);
