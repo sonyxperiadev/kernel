@@ -1820,6 +1820,8 @@ static int msm_vfe_iommu_fault_handler(struct iommu_domain *domain,
 
 	if (token) {
 		vfe_dev = (struct vfe_device *)token;
+		vfe_dev->hw_info->vfe_ops.axi_ops.halt(vfe_dev, 0);
+		msm_isp_stats_disable(vfe_dev);
 		if (!vfe_dev->buf_mgr || !vfe_dev->buf_mgr->ops) {
 			pr_err("%s:%d] buf_mgr %p\n", __func__,
 				__LINE__, vfe_dev->buf_mgr);
