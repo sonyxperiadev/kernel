@@ -468,6 +468,7 @@ struct mdss_panel_info {
 #endif
 
 	uint32_t panel_dead;
+	u32 panel_force_dead;
 	u32 panel_orientation;
 	bool dynamic_switch_pending;
 	bool is_lpm_mode;
