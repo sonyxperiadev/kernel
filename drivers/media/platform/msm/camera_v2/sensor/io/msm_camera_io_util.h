@@ -21,6 +21,10 @@
 #define NO_SET_RATE -1
 #define INIT_RATE -2
 
+#ifdef CONFIG_MACH_SONY_EAGLE
+extern int gpio69_count;
+#endif
+
 void msm_camera_io_w(u32 data, void __iomem *addr);
 void msm_camera_io_w_mb(u32 data, void __iomem *addr);
 u32 msm_camera_io_r(void __iomem *addr);

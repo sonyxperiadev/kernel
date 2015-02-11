@@ -19,6 +19,12 @@ static struct msm_sensor_ctrl_t imx134_s_ctrl;
 static struct msm_sensor_power_setting imx134_power_setting[] = {
 	{
 		.seq_type = SENSOR_VREG,
+		.seq_val = CAM_VIO, /*I2C-Pull-Up*/
+		.config_val = 0,
+		.delay = 0,
+	},
+	{
+		.seq_type = SENSOR_VREG,
 		.seq_val = CAM_VDIG,
 		.config_val = 0,
 		.delay = 0,
@@ -30,10 +36,22 @@ static struct msm_sensor_power_setting imx134_power_setting[] = {
 		.delay = 0,
 	},
 	{
-		.seq_type = SENSOR_VREG,
-		.seq_val = CAM_VIO,
-		.config_val = 0,
+		.seq_type = SENSOR_GPIO,
+		.seq_val = SENSOR_GPIO_VIO, /*VIF*/
+		.config_val = GPIO_OUT_LOW,
 		.delay = 0,
+	},
+	{
+		.seq_type = SENSOR_GPIO,
+		.seq_val = SENSOR_GPIO_VIO, /*VIF*/
+		.config_val = GPIO_OUT_HIGH,
+		.delay = 1,
+	},
+	{
+		.seq_type = SENSOR_CLK,
+		.seq_val = SENSOR_CAM_MCLK,
+		.config_val = 24000000,
+		.delay = 1,
 	},
 	{
 		.seq_type = SENSOR_VREG,
@@ -43,32 +61,26 @@ static struct msm_sensor_power_setting imx134_power_setting[] = {
 	},
 	{
 		.seq_type = SENSOR_GPIO,
-		.seq_val = SENSOR_GPIO_RESET,
-		.config_val = GPIO_OUT_LOW,
-		.delay = 1,
-	},
-	{
-		.seq_type = SENSOR_GPIO,
-		.seq_val = SENSOR_GPIO_RESET,
-		.config_val = GPIO_OUT_HIGH,
-		.delay = 30,
-	},
-	{
-		.seq_type = SENSOR_GPIO,
 		.seq_val = SENSOR_GPIO_STANDBY,
 		.config_val = GPIO_OUT_LOW,
-		.delay = 1,
+		.delay = 0,
 	},
 	{
 		.seq_type = SENSOR_GPIO,
 		.seq_val = SENSOR_GPIO_STANDBY,
 		.config_val = GPIO_OUT_HIGH,
-		.delay = 30,
+		.delay = 0,
 	},
 	{
-		.seq_type = SENSOR_CLK,
-		.seq_val = SENSOR_CAM_MCLK,
-		.config_val = 0,
+		.seq_type = SENSOR_GPIO,
+		.seq_val = SENSOR_GPIO_RESET,
+		.config_val = GPIO_OUT_LOW,
+		.delay = 0,
+	},
+	{
+		.seq_type = SENSOR_GPIO,
+		.seq_val = SENSOR_GPIO_RESET,
+		.config_val = GPIO_OUT_HIGH,
 		.delay = 1,
 	},
 	{
@@ -112,7 +124,7 @@ static struct msm_camera_i2c_client imx134_sensor_i2c_client = {
 };
 
 static const struct of_device_id imx134_dt_match[] = {
-	{.compatible = "sne,imx134", .data = &imx134_s_ctrl},
+	{.compatible = "qcom,imx134", .data = &imx134_s_ctrl},
 	{}
 };
 
@@ -120,7 +132,7 @@ MODULE_DEVICE_TABLE(of, imx134_dt_match);
 
 static struct platform_driver imx134_platform_driver = {
 	.driver = {
-		.name = "sne,imx134",
+		.name = "qcom,imx134",
 		.owner = THIS_MODULE,
 		.of_match_table = imx134_dt_match,
 	},
