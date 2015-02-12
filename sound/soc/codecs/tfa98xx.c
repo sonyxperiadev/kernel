@@ -77,23 +77,23 @@ static const char *const speaker_type_text[] = {
 	"Speakerphone", "Voicecall", "FM"};
 
 static const struct soc_enum speaker_type_enum =
-	SOC_ENUM_SINGLE_EXT(8, speaker_type_text);
+	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(speaker_type_text), speaker_type_text);
 
 static const char *const speaker_channel_text[] = {"Top", "Bottom", "Both"};
 static const struct soc_enum speaker_channel_enum =
-	SOC_ENUM_SINGLE_EXT(3, speaker_channel_text);
+	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(speaker_channel_text), speaker_channel_text);
 
 static const char *const speaker_lr_text[] = {"Normal", "Swap"};
 static const struct soc_enum speaker_lr_enum =
-	SOC_ENUM_SINGLE_EXT(2, speaker_lr_text);
+	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(speaker_lr_text), speaker_lr_text);
 
 static const char *const speaker_bypass_dsp_text[] = {"Off", "On"};
 static const struct soc_enum speaker_bypass_dsp_enum =
-	SOC_ENUM_SINGLE_EXT(2, speaker_bypass_dsp_text);
+	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(speaker_bypass_dsp_text), speaker_bypass_dsp_text);
 
 static const char *const speaker_synced_text[] = {"Unsynced", "Synced"};
 static const struct soc_enum speaker_synced_enum =
-	SOC_ENUM_SINGLE_EXT(2, speaker_synced_text);
+	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(speaker_synced_text), speaker_synced_text);
 
 #define TOP_I2C_ADDRESS  0x68
 #define BOTTOM_I2C_ADDRESS  0x6A
@@ -1679,6 +1679,36 @@ static int tfa98xx_codec_put_speaker_amp_control(
 	return 0;
 }
 
+static int tfa98xx_startup(struct snd_pcm_substream *substream,
+		struct snd_soc_dai *dai)
+{
+	return 0;
+}
+
+static void tfa98xx_shutdown(struct snd_pcm_substream *substream,
+		struct snd_soc_dai *dai)
+{
+	return;
+}
+
+static int tfa98xx_hw_params(struct snd_pcm_substream *substream,
+			     struct snd_pcm_hw_params *params,
+			     struct snd_soc_dai *dai)
+{
+	return 0;
+}
+
+static int tfa98xx_set_dai_fmt(struct snd_soc_dai *codec_dai, unsigned int fmt)
+{
+	return 0;
+}
+
+static int tfa98xx_set_dai_sysclk(struct snd_soc_dai *codec_dai,
+				  int clk_id, unsigned int freq, int dir)
+{
+	return 0;
+}
+
 
 static const struct snd_kcontrol_new tfa98xx_snd_controls[] = {
 	SOC_ENUM_EXT("TFA98XX_CHANNEL",
@@ -1712,6 +1742,14 @@ static const struct snd_kcontrol_new tfa98xx_snd_controls[] = {
 		tfa98xx_codec_put_speaker_amp_control),
 };
 
+static const struct snd_soc_dai_ops tfa98xx_ops = {
+	.hw_params = tfa98xx_hw_params,
+	.startup = tfa98xx_startup,
+	.shutdown = tfa98xx_shutdown,
+	.set_fmt = tfa98xx_set_dai_fmt,
+	.set_sysclk = tfa98xx_set_dai_sysclk,
+};
+
 static struct snd_soc_dai_driver tfa98xx_dais[] = {
 	{
 		.name = "tfa98xx-rx",
@@ -1722,9 +1760,9 @@ static struct snd_soc_dai_driver tfa98xx_dais[] = {
 			.rates = SNDRV_PCM_RATE_8000_48000,
 			.formats = SNDRV_PCM_FMTBIT_S16_LE,
 		},
+		.ops = &tfa98xx_ops,
 	},
 };
-
 
 static int tfa98xx_codec_probe(struct snd_soc_codec *codec)
 {
