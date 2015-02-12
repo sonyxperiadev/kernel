@@ -177,10 +177,10 @@
 
 &mdss_hdmi_tx {
 	/* rhine doesn't use hpd-5v */
-	qcom,hdmi-tx-supply-names = "hpd-gdsc", "core-vdda", "core-vcc";
-	qcom,hdmi-tx-min-voltage-level = <0 1800000 1800000>;
-	qcom,hdmi-tx-max-voltage-level = <0 1800000 1800000>;
-	qcom,hdmi-tx-peak-current = <0 300000 0>;
+	qcom,supply-names = "hpd-gdsc", "core-vdda", "core-vcc";
+	qcom,min-voltage-level = <0 1800000 1800000>;
+	qcom,max-voltage-level = <0 1800000 1800000>;
+	qcom,enable-load = <0 300000 0>;
 };
 
 &pm8941_gpios {
