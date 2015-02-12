@@ -3194,6 +3194,8 @@ static int mdss_panel_parse_dt(struct device_node *np,
 		spec_pdata->dsi_seq_hack = of_property_read_bool(next,
 						"somc,dsi-restart-hack");
 
+		mdss_panel_parse_te_params(next, pinfo);
+
 		break;
 	}
 	return 0;
