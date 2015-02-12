@@ -76,6 +76,7 @@ static bool display_onoff_state;
 static unsigned char panel_id[1];
 static int lcm_first_boot = 0;
 bool alt_panelid_cmd;
+static bool needs_complete_init = false;
 static bool mdss_panel_flip_ud = false;
 static int mdss_dsi_panel_detect(struct mdss_panel_data *pdata);
 static int mdss_panel_parse_dt(struct device_node *np,
@@ -1546,6 +1547,11 @@ static int mdss_dsi_panel_disp_on(struct mdss_panel_data *pdata)
 
 	mipi = &pdata->panel_info.mipi;
 
+	if (unlikely(needs_complete_init)) {
+		mdss_dsi_panel_on(pdata);
+		needs_complete_init = false;
+	}
+
 	if ((spec_pdata->cabc_on_cmds.cmd_cnt && spec_pdata->cabc_enabled) ||
 		(ctrl_pdata->on_cmds.cmd_cnt && spec_pdata->disp_on_in_hs)) {
 		pr_debug("%s: delay after entering video mode\n", __func__);
@@ -1822,6 +1828,7 @@ static u32 ts_diff_ms(struct timespec lhs, struct timespec rhs)
 
 static void update_fps_data(struct fps_data *fps)
 {
+	return;
 	if (mutex_trylock(&fps->fps_lock)) {
 		u32 fpks = 0;
 		u32 ms_since_last = 0;
@@ -3193,6 +3200,9 @@ static int mdss_panel_parse_dt(struct device_node *np,
 
 		spec_pdata->dsi_seq_hack = of_property_read_bool(next,
 						"somc,dsi-restart-hack");
+
+		needs_complete_init = of_property_read_bool(next,
+						"somc,needs-complete-init");
 
 		mdss_panel_parse_te_params(next, pinfo);
 
