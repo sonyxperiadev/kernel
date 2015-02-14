@@ -107,6 +107,7 @@
 		somc,disp-en-off-post = <0>;
 		somc,pw-off-rst-b-seq = <0 10>;
 		somc,pw-down-period = <200>;
+		somc,needs-complete-init;
 
 		somc,mdss-dsi-pre-uv-command = [23 01 00 00 00 00 02 B0 04];
 		somc,mdss-dsi-uv-command = [06 01 00 00 00 00 01 DA
@@ -451,6 +452,7 @@
 		somc,disp-en-off-post = <5>;
 		somc,pw-off-rst-b-seq = <0 20>;
 		somc,pw-down-period = <200>;
+		somc,needs-complete-init;
 
 		somc,mdss-dsi-u-rev = <0 0x4>;
 		somc,mdss-dsi-v-rev = <1 0x2>;
@@ -792,6 +794,8 @@
 		somc,disp-en-off-post = <0>;
 		somc,pw-off-rst-b-seq = <0 10>;
 		somc,pw-down-period = <200>;
+		somc,needs-complete-init;
+
 		somc,chenge-fps-command = [15 01 00 00 00 00 02 FF 05
 				15 01 00 00 00 00 02 02 8E
 				15 01 00 00 00 00 02 FF 00];
@@ -898,6 +902,8 @@
 		somc,disp-en-off-post = <0>;
 		somc,pw-off-rst-b-seq = <0 10>;
 		somc,pw-down-period = <200>;
+		somc,needs-complete-init;
+
 		somc,chenge-fps-command = [15 01 00 00 00 00 02 FF 05
 				15 01 00 00 00 00 02 02 8E
 				15 01 00 00 00 00 02 FF 00];

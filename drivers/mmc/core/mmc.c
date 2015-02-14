@@ -44,6 +44,10 @@ static const unsigned int tacc_mant[] = {
 	35,	40,	45,	50,	55,	60,	70,	80,
 };
 
+static const unsigned char prod_name_hynix_HBG4e_05[] = {
+	0x48, 0x42, 0x47, 0x34, 0x65, 0x05, /* HBG4e\x05 */
+};
+
 #define UNSTUFF_BITS(resp,start,size)					\
 	({								\
 		const int __size = size;				\
@@ -585,8 +589,19 @@ static int mmc_read_ext_csd(struct mmc_card *card, u8 *ext_csd)
 			card->ext_csd.data_tag_unit_size = 0;
 		}
 
-		card->ext_csd.max_packed_writes =
-			ext_csd[EXT_CSD_MAX_PACKED_WRITES];
+		/*
+		 * HBG4e\x05:
+		 * Limit the number of max write packed CMD for SkHynix eMMC 5.0
+		 */
+		if (card->cid.manfid == CID_MANFID_HYNIX &&
+			card->ext_csd.rev == 7 &&
+			!strncmp(card->cid.prod_name, prod_name_hynix_HBG4e_05,
+					 sizeof(prod_name_hynix_HBG4e_05))) {
+			card->ext_csd.max_packed_writes = 8;
+		} else {
+			card->ext_csd.max_packed_writes =
+				ext_csd[EXT_CSD_MAX_PACKED_WRITES];
+		}
 		card->ext_csd.max_packed_reads =
 			ext_csd[EXT_CSD_MAX_PACKED_READS];
 	} else {
@@ -1047,8 +1062,11 @@ static int mmc_select_hs200(struct mmc_card *card, u8 *ext_csd)
 
 	/* switch to HS200 mode if bus width set successfully */
 	err = mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
+#ifndef CONFIG_MMC_DEV_DRV_STR_TYPE4
 				EXT_CSD_HS_TIMING, 2, 0);
-
+#else
+				EXT_CSD_HS_TIMING, 66, 0); /* for ShinanoR2 */
+#endif
 	if (err && err != -EBADMSG) {
 		pr_err("%s: HS200 switch failed\n",
 			mmc_hostname(host));
@@ -1150,7 +1168,11 @@ static int mmc_select_hs400(struct mmc_card *card, u8 *ext_csd)
 
 	/* Switch to HS400 mode if bus width set successfully */
 	err = mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
-				 EXT_CSD_HS_TIMING, 3, 0);
+#ifndef CONFIG_MMC_DEV_DRV_STR_TYPE4
+				EXT_CSD_HS_TIMING, 3, 0);
+#else
+				EXT_CSD_HS_TIMING, 67, 0); /* for ShinanoR2 */
+#endif
 	if (err && err != -EBADMSG) {
 		pr_err("%s: Setting HS_TIMING to HS400 failed (err:%d)\n",
 			mmc_hostname(host), err);
@@ -1421,6 +1443,14 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 		err = mmc_decode_cid(card);
 		if (err)
 			goto free_card;
+
+#ifdef CONFIG_MMC_DISABLE_STOP_REQUEST_SKHYNIX
+		if (card->cid.manfid == CID_MANFID_HYNIX &&
+			!strncmp(card->cid.prod_name, prod_name_hynix_HBG4e_05,
+					 sizeof(prod_name_hynix_HBG4e_05))) {
+			host->caps2 &= ~MMC_CAP2_STOP_REQUEST;
+		}
+#endif
 	}
 
 	/*

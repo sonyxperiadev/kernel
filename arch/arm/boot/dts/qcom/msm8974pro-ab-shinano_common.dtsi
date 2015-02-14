@@ -13,6 +13,22 @@
  */
 
 &soc {
+	ramoops {
+		compatible = "ramoops";
+		status = "ok";
+
+		android,ramoops-buffer-start = <0x7fe00000>;
+		android,ramoops-buffer-size = <0x100000>;
+		android,ramoops-console-size = <0x80000>;
+		android,ramoops-record-size = <0x7F800>;
+		android,ramoops-annotate-size = <0x800>;
+		android,ramoops-dump-oops = <0x1>;
+		android,ramoops-hole {
+			 compatible = "qcom,msm-contig-mem";
+			 qcom,memblock-reserve = <0x3e9e0000 0x100000>;
+		};
+	};
+
 	qcom,hdmi_tx@fd922100 {
 		status = "ok";
 	};
@@ -177,10 +193,10 @@
 
 &mdss_hdmi_tx {
 	/* rhine doesn't use hpd-5v */
-	qcom,hdmi-tx-supply-names = "hpd-gdsc", "core-vdda", "core-vcc";
-	qcom,hdmi-tx-min-voltage-level = <0 1800000 1800000>;
-	qcom,hdmi-tx-max-voltage-level = <0 1800000 1800000>;
-	qcom,hdmi-tx-peak-current = <0 300000 0>;
+	qcom,supply-names = "hpd-gdsc", "core-vdda", "core-vcc";
+	qcom,min-voltage-level = <0 1800000 1800000>;
+	qcom,max-voltage-level = <0 1800000 1800000>;
+	qcom,enable-load = <0 300000 0>;
 };
 
 &pm8941_gpios {
@@ -776,6 +792,7 @@
 
 &mdss_fb0 {
 	qcom,memory-reservation-size = <0x1000000>; /* size 16MB */
+	qcom,mdss-fb-splash-logo-enabled;
 };
 
 &pm8941_vadc {
