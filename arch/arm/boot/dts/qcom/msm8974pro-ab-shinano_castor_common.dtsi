@@ -809,7 +809,7 @@
 
 &sdcc3 {
 	qcom,sup-voltages = <1800 2950>;
-	somc,use-for-wifi;
+	qcom,wifi-control-func;
 	status = "ok";
 };
 
