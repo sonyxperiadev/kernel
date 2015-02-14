@@ -148,6 +148,81 @@ static struct msm_sensor_power_setting imx134_seagull_power_setting[] = {
 	},
 };
 
+static struct msm_sensor_power_setting imx134_eagle_power_setting[] = {
+	{
+		.seq_type = SENSOR_VREG,
+		.seq_val = CAM_VIO, /*I2C-Pull-Up*/
+		.config_val = 0,
+		.delay = 0,
+	},
+	{
+		.seq_type = SENSOR_VREG,
+		.seq_val = CAM_VDIG,
+		.config_val = 0,
+		.delay = 0,
+	},
+	{
+		.seq_type = SENSOR_VREG,
+		.seq_val = CAM_VANA,
+		.config_val = 0,
+		.delay = 0,
+	},
+	{
+		.seq_type = SENSOR_GPIO,
+		.seq_val = SENSOR_GPIO_VIO, /*VIF*/
+		.config_val = GPIO_OUT_LOW,
+		.delay = 0,
+	},
+	{
+		.seq_type = SENSOR_GPIO,
+		.seq_val = SENSOR_GPIO_VIO, /*VIF*/
+		.config_val = GPIO_OUT_HIGH,
+		.delay = 1,
+	},
+	{
+		.seq_type = SENSOR_CLK,
+		.seq_val = SENSOR_CAM_MCLK,
+		.config_val = 24000000,
+		.delay = 1,
+	},
+	{
+		.seq_type = SENSOR_VREG,
+		.seq_val = CAM_VAF,
+		.config_val = 0,
+		.delay = 0,
+	},
+	{
+		.seq_type = SENSOR_GPIO,
+		.seq_val = SENSOR_GPIO_STANDBY,
+		.config_val = GPIO_OUT_LOW,
+		.delay = 0,
+	},
+	{
+		.seq_type = SENSOR_GPIO,
+		.seq_val = SENSOR_GPIO_STANDBY,
+		.config_val = GPIO_OUT_HIGH,
+		.delay = 0,
+	},
+	{
+		.seq_type = SENSOR_GPIO,
+		.seq_val = SENSOR_GPIO_RESET,
+		.config_val = GPIO_OUT_LOW,
+		.delay = 0,
+	},
+	{
+		.seq_type = SENSOR_GPIO,
+		.seq_val = SENSOR_GPIO_RESET,
+		.config_val = GPIO_OUT_HIGH,
+		.delay = 1,
+	},
+	{
+		.seq_type = SENSOR_I2C_MUX,
+		.seq_val = 0,
+		.config_val = 0,
+		.delay = 0,
+	},
+};
+
 static struct v4l2_subdev_info imx134_subdev_info[] = {
 	{
 		.code = V4L2_MBUS_FMT_SBGGR10_1X10,
@@ -213,6 +288,11 @@ static int __init imx134_init_module(void)
 					imx134_seagull_power_setting;
 		imx134_s_ctrl.power_setting_array.size =
 					ARRAY_SIZE(imx134_seagull_power_setting);
+	} else if (of_machine_is_compatible("somc,eagle")) {
+		imx134_s_ctrl.power_setting_array.power_setting =
+					imx134_eagle_power_setting;
+		imx134_s_ctrl.power_setting_array.size =
+					ARRAY_SIZE(imx134_eagle_power_setting);
 	} else {
 		imx134_s_ctrl.power_setting_array.power_setting =
 					imx134_power_setting;
