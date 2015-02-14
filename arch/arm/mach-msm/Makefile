@@ -309,6 +309,8 @@ ifdef CONFIG_MACH_SONY_FLAMINGO
 	obj-$(CONFIG_MACH_SONY_FLAMINGO) += board-8226.o board-8226-yukon_flamingo-gpiomux.o board-sony_yukon-nfc.o  bms-batterydata-flamingo.o
 else ifdef CONFIG_MACH_SONY_EAGLE
         obj-$(CONFIG_MACH_SONY_EAGLE) += board-8226.o board-8226-yukon_eagle-gpiomux.o board-sony_yukon-nfc.o bms-batterydata-eagle.o
+else ifdef CONFIG_MACH_SONY_TIANCHI_DSDS
+	obj-$(CONFIG_MACH_SONY_TIANCHI_DSDS) += board-8226.o board-8226-yukon_tianchi-gpiomux.o board-sony_yukon-nfc.o bms-batterydata-mari.o bms-batterydata-marie.o bms-batterydata-oem.o
 else ifdef CONFIG_MACH_SONY_TIANCHI
 	obj-$(CONFIG_MACH_SONY_TIANCHI) += board-8226.o board-8226-yukon_tianchi-gpiomux.o board-sony_yukon-nfc.o bms-batterydata-mari.o bms-batterydata-marie.o bms-batterydata-oem.o
 else ifdef CONFIG_MACH_SONY_SEAGULL
