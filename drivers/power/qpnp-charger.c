@@ -2492,6 +2492,7 @@ get_prop_capacity(struct qpnp_chg_chip *chip)
 {
 	union power_supply_propval ret = {0,};
 	int battery_status, bms_status, soc, charger_in;
+	struct qpnp_somc_params *sp = &chip->somc_params;
 
 	if (chip->fake_battery_soc >= 0)
 		return chip->fake_battery_soc;
