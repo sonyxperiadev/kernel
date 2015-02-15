@@ -185,7 +185,6 @@ static struct msm_gpiomux_config msm_lcd_configs[] __initdata = {
 			[GPIOMUX_SUSPENDED] = &lcd_vsn_sus_cfg,
 		},
 	},
-#ifdef CONFIG_MACH_SONY_TIANCHI_DSDS
 	{
 		.gpio = 36,
 		.settings = {
@@ -193,7 +192,6 @@ static struct msm_gpiomux_config msm_lcd_configs[] __initdata = {
 			[GPIOMUX_SUSPENDED] = &lcd_rst_sus_cfg,
 		},
 	},
-#endif
 };
 
 static struct msm_gpiomux_config msm_blsp_configs[] __initdata = {
