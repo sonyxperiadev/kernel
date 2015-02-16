@@ -49,7 +49,7 @@ static ssize_t jprobe_attr_show(struct kobject *kobj,
 }
 
 static struct kobj_attribute jprobe_attribute =
-	__ATTR(probe, 0660, jprobe_attr_show, NULL);
+	__ATTR(probe, 0444, jprobe_attr_show, NULL);
 
 static struct attribute *attrs[] = {
 	&jprobe_attribute.attr,
