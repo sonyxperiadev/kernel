@@ -71,7 +71,7 @@ MODULE_ALIAS("mmc:block");
 #define PACKED_TRIGGER_MAX_ELEMENTS	5000
 
 #define MMC_BLK_MAX_RETRIES 5 /* max # of retries before aborting a command */
-#define MMC_SANITIZE_REQ_TIMEOUT 240000 /* msec */
+#define MMC_SANITIZE_REQ_TIMEOUT (60*60*1000) /* 1 hour in msec */
 #define MMC_EXTRACT_INDEX_FROM_ARG(x) ((x & 0x00FF0000) >> 16)
 #define MMC_BLK_UPDATE_STOP_REASON(stats, reason)			\
 	do {								\
@@ -1399,13 +1399,6 @@ retry:
 			goto out;
 	}
 
-	if (mmc_can_sanitize(card)) {
-		trace_mmc_blk_erase_start(EXT_CSD_SANITIZE_START, 0, 0);
-		err = mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
-				 EXT_CSD_SANITIZE_START, 1,
-				 MMC_SANITIZE_REQ_TIMEOUT);
-		trace_mmc_blk_erase_end(EXT_CSD_SANITIZE_START, 0, 0);
-	}
 out_retry:
 	if (err && !mmc_blk_reset(md, card->host, type))
 		goto retry;
@@ -1425,7 +1418,8 @@ static int mmc_blk_issue_flush(struct mmc_queue *mq, struct request *req)
 	int ret = 0;
 
 	ret = mmc_flush_cache(card);
-	if (ret == -ETIMEDOUT) {
+	if (ret == -ETIMEDOUT &&
+	    (card->quirks & MMC_QUIRK_RETRY_FLUSH_TIMEOUT)) {
 		pr_info("%s: %s: requeue flush request after timeout",
 				req->rq_disk->disk_name, __func__);
 		spin_lock_irq(q->queue_lock);
@@ -3213,6 +3207,8 @@ static const struct mmc_fixup blk_fixups[] =
 	/* Some INAND MCP devices advertise incorrect timeout values */
 	MMC_FIXUP("SEM04G", 0x45, CID_OEMID_ANY, add_quirk_mmc,
 		  MMC_QUIRK_INAND_DATA_TIMEOUT),
+	MMC_FIXUP(CID_NAME_ANY, CID_MANFID_HYNIX, CID_OEMID_ANY, add_quirk_mmc,
+		  MMC_QUIRK_RETRY_FLUSH_TIMEOUT),
 
 	END_FIXUP
 };

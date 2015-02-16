@@ -159,7 +159,7 @@ static bool speaker_amp_control_on;
 
 void tfa98xx_speaker_amp_enable(void)
 {
-	pr_info("speaker_amp_control_enable:%d speaker_amp_control_on:%d\n",
+	pr_debug("speaker_amp_control_enable:%d speaker_amp_control_on:%d\n",
 		speaker_amp_control_enable, speaker_amp_control_on);
 	if (speaker_amp_control_enable != false
 		&& speaker_amp_control_on == false){
@@ -173,7 +173,7 @@ static void set_speaker_amp_control_enable(bool enable)
 	if (speaker_amp_control_on == true && enable == false) {
 		tfa98xx_disable();
 		speaker_amp_control_on = false;
-		pr_info("%s speaker_amp disable\n", __func__);
+		pr_debug("%s speaker_amp disable\n", __func__);
 	}
 	speaker_amp_control_enable = enable;
 }
@@ -868,7 +868,7 @@ static int stereo_speaker_warm_on(
 	int ready;
 	int timeout;
 
-	pr_info("%s\n", __func__);
+	pr_debug("%s\n", __func__);
 	for (h = 0; h < 2; h++) {
 		err = Tfa98xx_Powerdown(handles[h], 0);
 		if (err != Tfa98xx_Error_Ok)
@@ -938,7 +938,7 @@ static void stereo_speaker_off(void)
 	unsigned short status = 0;
 	int timeout;
 
-	pr_info("%s\n", __func__);
+	pr_debug("%s\n", __func__);
 	for (h = 0; h < 2; h++) {
 		err = Tfa98xx_SetMute(handles[h], Tfa98xx_Mute_Amplifier);
 		if (err != Tfa98xx_Error_Ok)
@@ -1064,7 +1064,7 @@ static int mono_speaker_warm_on(
 	int ready;
 	int timeout;
 
-	pr_info("%s\n", __func__);
+	pr_debug("%s\n", __func__);
 	err = Tfa98xx_Powerdown(handles[channel], 0);
 	if (err != Tfa98xx_Error_Ok)
 		pr_err("%s: Tfa98xx_Powerdown failed\n", __func__);
@@ -1123,7 +1123,7 @@ static void mono_speaker_off(int channel)
 	unsigned short status = 0;
 	int timeout;
 
-	pr_info("%s channel:%d\n", __func__, channel);
+	pr_debug("%s channel:%d\n", __func__, channel);
 
 	err = Tfa98xx_SetMute(handles[channel], Tfa98xx_Mute_Amplifier);
 	if (err != Tfa98xx_Error_Ok)
@@ -1164,7 +1164,7 @@ static void mono_speaker_off(int channel)
 static int bypass_dsp_speaker_on(int channel)
 {
 	enum Tfa98xx_Error err = Tfa98xx_Error_Ok;
-	pr_info("%s channel:%d\n", __func__, channel);
+	pr_debug("%s channel:%d\n", __func__, channel);
 
 	err = Tfa98xx_Powerdown(handles[channel], 0);
 	if (err != Tfa98xx_Error_Ok)
@@ -1189,7 +1189,7 @@ static void bypass_dsp_speaker_off(int channel)
 	if (err != Tfa98xx_Error_Ok)
 		pr_err("%s: tfa98xx_unbypass_dsp failed\n", __func__);
 
-	pr_info("%s channel:%d\n", __func__, channel);
+	pr_debug("%s channel:%d\n", __func__, channel);
 	err = Tfa98xx_SetMute(handles[channel], Tfa98xx_Mute_Amplifier);
 	if (err != Tfa98xx_Error_Ok)
 		pr_err("%s: Tfa98xx_SetMute failed, h=%d\n",
@@ -1219,13 +1219,13 @@ static int tfa98xx_enable(void)
 		&& speaker_channel <= SPEAKER_CHANNEL_BOTH
 		&& speaker_lr >= 0
 		&& speaker_lr <= SPEAKER_LR_SWAP)
-		pr_info("%s type:%s channel:%s lr:%s\n",
+		pr_debug("%s type:%s channel:%s lr:%s\n",
 			__func__,
 			speaker_type_text[speaker_type],
 			speaker_channel_text[speaker_channel],
 			speaker_lr_text[speaker_lr]);
 	else
-		pr_info("%s type:%d channel:%d lr:%d\n",
+		pr_debug("%s type:%d channel:%d lr:%d\n",
 			__func__, speaker_type, speaker_channel, speaker_lr);
 
 	if (speaker_type_now != speaker_type
@@ -1239,11 +1239,11 @@ static int tfa98xx_enable(void)
 	if (speaker_type == SPEAKER_TYPE_VOICECALL) {
 		config_ptr[TOP] = &config_data[AMP_RECEIVER];
 		config_ptr[BOTTOM] = NULL;
-		pr_info("config_ptr = AMP_RECEIVER");
+		pr_debug("config_ptr = AMP_RECEIVER");
 	} else {
 		config_ptr[TOP] = &config_data[AMP_TOP];
 		config_ptr[BOTTOM] = &config_data[AMP_BOTTOM];
-		pr_info("config_ptr = AMP_Normal");
+		pr_debug("config_ptr = AMP_Normal");
 	}
 
 	if (speaker_type >= 0 && speaker_type < SPEAKER_TYPE_MAX) {
@@ -1287,7 +1287,7 @@ static int tfa98xx_enable(void)
 				__func__, err);
 		}
 		if ((status1 & TFA98XX_STATUSREG_ACS_MSK) != 0) {
-			pr_info("cold start %04x\n", status1);
+			pr_debug("cold start %04x\n", status1);
 			ret = mono_speaker_on(
 				TOP,
 				speaker_ptr[TOP],
@@ -1295,7 +1295,7 @@ static int tfa98xx_enable(void)
 				preset_ptr[TOP],
 				eq_ptr[TOP]);
 		} else {
-			pr_info("warm start %04x param_change %d\n",
+			pr_debug("warm start %04x param_change %d\n",
 				status1, param_change);
 			ret = mono_speaker_warm_on(
 				TOP,
@@ -1318,7 +1318,7 @@ static int tfa98xx_enable(void)
 				__func__, err);
 		}
 		if ((status1 & TFA98XX_STATUSREG_ACS_MSK) != 0) {
-			pr_info("cold start %04x\n", status1);
+			pr_debug("cold start %04x\n", status1);
 			ret = mono_speaker_on(
 				BOTTOM,
 				speaker_ptr[BOTTOM],
@@ -1326,7 +1326,7 @@ static int tfa98xx_enable(void)
 				preset_ptr[BOTTOM],
 				eq_ptr[BOTTOM]);
 		} else {
-			pr_info("warm start %04x param_change %d\n",
+			pr_debug("warm start %04x param_change %d\n",
 				status1, param_change);
 			ret = mono_speaker_warm_on(
 				BOTTOM,
@@ -1356,7 +1356,7 @@ static int tfa98xx_enable(void)
 		}
 		if ((status1 & TFA98XX_STATUSREG_ACS_MSK) != 0
 			|| (status2 & TFA98XX_STATUSREG_ACS_MSK) != 0) {
-			pr_info("cold start %04x %04x\n", status1, status2);
+			pr_debug("cold start %04x %04x\n", status1, status2);
 			ret = stereo_speaker_on(
 				speaker_ptr,
 				config_ptr,
@@ -1364,10 +1364,10 @@ static int tfa98xx_enable(void)
 				eq_ptr);
 		} else {
 			if ((speaker_lr != speaker_lr_now) && !param_change) {
-				pr_info("speaker LR change %d\n", speaker_lr);
+				pr_debug("speaker LR change %d\n", speaker_lr);
 				ret = set_speaker_lr(handles, speaker_lr);
 			}
-			pr_info("warm start %04x %04x param_change %d\n",
+			pr_debug("warm start %04x %04x param_change %d\n",
 				status1, status2, param_change);
 			ret = stereo_speaker_warm_on(
 				param_change,
@@ -1511,7 +1511,7 @@ static void change_stereo_speaker_lr(int speaker_lr)
 	unsigned short status = 0;
 	int timeout;
 
-	pr_info("%s\n", __func__);
+	pr_debug("%s\n", __func__);
 	for (h = 0; h < 2; h++) {
 		err = Tfa98xx_SetMute(handles[h], Tfa98xx_Mute_Amplifier);
 		if (err != Tfa98xx_Error_Ok)
@@ -1556,7 +1556,7 @@ static int tfa98xx_codec_get_speaker_type_control(
 			struct snd_kcontrol *kcontrol,
 			struct snd_ctl_elem_value *ucontrol)
 {
-	pr_info("%s\n", __func__);
+	pr_debug("%s\n", __func__);
 	ucontrol->value.integer.value[0] = speaker_type;
 	return 0;
 }
@@ -1565,7 +1565,7 @@ static int tfa98xx_codec_put_speaker_type_control(
 			struct snd_kcontrol *kcontrol,
 			struct snd_ctl_elem_value *ucontrol)
 {
-	pr_info("%s %ld\n", __func__, ucontrol->value.integer.value[0]);
+	pr_debug("%s %ld\n", __func__, ucontrol->value.integer.value[0]);
 	speaker_type = ucontrol->value.integer.value[0];
 
 	if (speaker_amp_control_on && speaker_type >= 0) {
@@ -1581,7 +1581,7 @@ static int tfa98xx_codec_get_speaker_channel_control(
 			struct snd_kcontrol *kcontrol,
 			struct snd_ctl_elem_value *ucontrol)
 {
-	pr_info("%s\n", __func__);
+	pr_debug("%s\n", __func__);
 	ucontrol->value.integer.value[0] = speaker_channel;
 	return 0;
 }
@@ -1590,7 +1590,7 @@ static int tfa98xx_codec_put_speaker_channel_control(
 			struct snd_kcontrol *kcontrol,
 			struct snd_ctl_elem_value *ucontrol)
 {
-	pr_info("%s %ld\n", __func__, ucontrol->value.integer.value[0]);
+	pr_debug("%s %ld\n", __func__, ucontrol->value.integer.value[0]);
 	speaker_channel = ucontrol->value.integer.value[0];
 	return 0;
 }
@@ -1600,7 +1600,7 @@ static int tfa98xx_codec_get_speaker_lr_control(
 			struct snd_kcontrol *kcontrol,
 			struct snd_ctl_elem_value *ucontrol)
 {
-	pr_info("%s\n", __func__);
+	pr_debug("%s\n", __func__);
 	ucontrol->value.integer.value[0] = speaker_lr;
 	return 0;
 }
@@ -1609,7 +1609,7 @@ static int tfa98xx_codec_put_speaker_lr_control(
 			struct snd_kcontrol *kcontrol,
 			struct snd_ctl_elem_value *ucontrol)
 {
-	pr_info("%s %ld\n", __func__, ucontrol->value.integer.value[0]);
+	pr_debug("%s %ld\n", __func__, ucontrol->value.integer.value[0]);
 	speaker_lr = ucontrol->value.integer.value[0];
 	if (speaker_amp_control_on
 		&& speaker_channel == BOTH
@@ -1625,7 +1625,7 @@ static int tfa98xx_codec_get_speaker_bypass_dsp_control(
 			struct snd_kcontrol *kcontrol,
 			struct snd_ctl_elem_value *ucontrol)
 {
-	pr_info("%s\n", __func__);
+	pr_debug("%s\n", __func__);
 	ucontrol->value.integer.value[0] = speaker_bypass_dsp;
 	return 0;
 }
@@ -1634,7 +1634,7 @@ static int tfa98xx_codec_put_speaker_bypass_dsp_control(
 			struct snd_kcontrol *kcontrol,
 			struct snd_ctl_elem_value *ucontrol)
 {
-	pr_info("%s %ld\n", __func__, ucontrol->value.integer.value[0]);
+	pr_debug("%s %ld\n", __func__, ucontrol->value.integer.value[0]);
 	speaker_bypass_dsp = ucontrol->value.integer.value[0];
 	return 0;
 }
@@ -1643,7 +1643,7 @@ static int tfa98xx_codec_get_speaker_synced_control(
 			struct snd_kcontrol *kcontrol,
 			struct snd_ctl_elem_value *ucontrol)
 {
-	pr_info("%s\n", __func__);
+	pr_debug("%s\n", __func__);
 	ucontrol->value.integer.value[0] = speaker_synced;
 	return 0;
 }
@@ -1652,7 +1652,7 @@ static int tfa98xx_codec_put_speaker_synced_control(
 			struct snd_kcontrol *kcontrol,
 			struct snd_ctl_elem_value *ucontrol)
 {
-	pr_info("%s %ld\n", __func__, ucontrol->value.integer.value[0]);
+	pr_debug("%s %ld\n", __func__, ucontrol->value.integer.value[0]);
 	speaker_synced = ucontrol->value.integer.value[0];
 	return 0;
 }
@@ -1662,7 +1662,7 @@ static int tfa98xx_codec_get_speaker_amp_control(
 			struct snd_kcontrol *kcontrol,
 			struct snd_ctl_elem_value *ucontrol)
 {
-	pr_info("%s\n", __func__);
+	pr_debug("%s\n", __func__);
 	return 0;
 }
 
@@ -1670,7 +1670,7 @@ static int tfa98xx_codec_put_speaker_amp_control(
 			struct snd_kcontrol *kcontrol,
 			struct snd_ctl_elem_value *ucontrol)
 {
-	pr_info("%s %ld\n", __func__, ucontrol->value.integer.value[0]);
+	pr_debug("%s %ld\n", __func__, ucontrol->value.integer.value[0]);
 	if (ucontrol->value.integer.value[0] == 0)
 		set_speaker_amp_control_enable(false);
 	else
