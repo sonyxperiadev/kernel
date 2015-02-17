@@ -168,11 +168,6 @@ static struct gpiomux_setting gpio_spi_cs2_config = {
 	.pull = GPIOMUX_PULL_DOWN,
 };
 
-static struct gpiomux_setting gpio_spi_config = {
-	.func = GPIOMUX_FUNC_1,
-	.drv = GPIOMUX_DRV_12MA,
-	.pull = GPIOMUX_PULL_NONE,
-};
 static struct gpiomux_setting gpio_spi_susp_config = {
 	.func = GPIOMUX_FUNC_GPIO,
 	.drv = GPIOMUX_DRV_2MA,
@@ -194,6 +189,13 @@ static struct msm_gpiomux_config msm_eth_configs[] = {
 	},
 };
 #endif
+
+
+static struct gpiomux_setting gpio_spi_config = {
+	.func = GPIOMUX_FUNC_1,
+	.drv = GPIOMUX_DRV_12MA,
+	.pull = GPIOMUX_PULL_NONE,
+};
 
 static struct gpiomux_setting gpio_suspend_config[] = {
 	{
