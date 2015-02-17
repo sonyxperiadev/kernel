@@ -524,8 +524,8 @@ static int msm_rpm_add_kvp_data_common(struct msm_rpm_request *handle,
 	if (probe_status)
 		return probe_status;
 
-	if (!handle) {
-		pr_err("%s(): Invalid handle\n", __func__);
+	if (!handle || !data) {
+		pr_err("%s(): Invalid handle/data\n", __func__);
 		return -EINVAL;
 	}
 
