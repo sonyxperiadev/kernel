@@ -174,7 +174,7 @@ kernelconfig: $(KERNEL_OUT) $(KERNEL_CONFIG)
 ## Install it
 INSTALLED_KERNEL_TARGET ?= $(PRODUCT_OUT)/kernel
 
-DTB_FILES := $(shell find -L $(KERNEL_OUT)/arch/arm/boot/ -name "*.dtb")
+DTB_FILES := $(shell find -L $(KERNEL_OUT)/arch/arm/boot/dts/ -name "*.dtb")
 DTBS := $(foreach dtb,$(DTB_FILES),$(PRODUCT_OUT)/dtbs/$(notdir $(dtb)))
 $(DTBS) : $(DTB_FILES) | $(ACP)
 	$(hide) @mkdir -p $(PRODUCT_OUT)/dtbs
