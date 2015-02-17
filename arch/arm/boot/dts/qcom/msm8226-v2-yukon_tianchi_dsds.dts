@@ -15,8 +15,9 @@
  */
 
 /dts-v1/;
-/include/ "msm8226-v2.dtsi"
-/include/ "msm8226-yukon_tianchi.dtsi"
+
+#include "msm8226-v2.dtsi"
+#include "msm8226-yukon_tianchi.dtsi"
 
 / {
 	model = "SOMC TIANCHI_DSDS";
