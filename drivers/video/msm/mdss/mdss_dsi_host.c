@@ -1602,12 +1602,14 @@ static int mdss_dsi_cmd_dma_tx(struct mdss_dsi_ctrl_pdata *ctrl,
 	ctrl->dma_size = ALIGN(tp->len, SZ_4K);
 
 
+	ctrl->mdss_util->iommu_lock();
 	if (ctrl->mdss_util->iommu_attached()) {
 		int ret = msm_iommu_map_contig_buffer(tp->dmap,
 				ctrl->mdss_util->get_iommu_domain(domain), 0,
 				ctrl->dma_size, SZ_4K, 0, &(ctrl->dma_addr));
 		if (IS_ERR_VALUE(ret)) {
 			pr_err("unable to map dma memory to iommu(%d)\n", ret);
+			ctrl->mdss_util->iommu_unlock();
 			return -ENOMEM;
 		}
 		ctrl->dmap_iommu_map = true;
@@ -1696,6 +1698,7 @@ static int mdss_dsi_cmd_dma_tx(struct mdss_dsi_ctrl_pdata *ctrl,
 	ctrl->dma_addr = 0;
 	ctrl->dma_size = 0;
 end:
+	ctrl->mdss_util->iommu_unlock();
 	return ret;
 }
 
@@ -1940,6 +1943,7 @@ int mdss_dsi_cmdlist_commit(struct mdss_dsi_ctrl_pdata *ctrl, int from_mdp)
 	struct dcs_cmd_req *req;
 	struct mdss_panel_info *pinfo;
 	struct mdss_rect *roi = NULL;
+	bool use_iommu = false;
 	int ret = -EINVAL;
 	int rc = 0;
 
@@ -2013,6 +2017,7 @@ int mdss_dsi_cmdlist_commit(struct mdss_dsi_ctrl_pdata *ctrl, int from_mdp)
 			mutex_unlock(&ctrl->cmd_mutex);
 			return rc;
 		}
+		use_iommu = true;
 	}
 
 	if (req->flags & CMD_REQ_HS_MODE)
@@ -2026,7 +2031,7 @@ int mdss_dsi_cmdlist_commit(struct mdss_dsi_ctrl_pdata *ctrl, int from_mdp)
 	if (req->flags & CMD_REQ_HS_MODE)
 		mdss_dsi_set_tx_power_mode(1, &ctrl->panel_data);
 
-	if (ctrl->mdss_util->iommu_ctrl)
+	if (use_iommu)
 		ctrl->mdss_util->iommu_ctrl(0);
 
 	mdss_dsi_clk_ctrl(ctrl, DSI_ALL_CLKS, 0);
