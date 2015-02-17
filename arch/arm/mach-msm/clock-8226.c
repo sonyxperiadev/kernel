@@ -3578,6 +3578,11 @@ static struct clk_lookup msm_clocks_8226[] = {
 	CLK_LOOKUP("bus_clk",      gcc_ce1_axi_clk.c, "fd404000.qcom,qcrypto"),
 	CLK_LOOKUP("core_clk_src", ce1_clk_src.c,     "fd404000.qcom,qcrypto"),
 
+	CLK_LOOKUP("core_clk",     gcc_ce1_clk.c,     "fd400000.qcom,qcrypto"),
+	CLK_LOOKUP("iface_clk",    gcc_ce1_ahb_clk.c, "fd400000.qcom,qcrypto"),
+	CLK_LOOKUP("bus_clk",      gcc_ce1_axi_clk.c, "fd400000.qcom,qcrypto"),
+	CLK_LOOKUP("core_clk_src", ce1_clk_src.c,     "fd400000.qcom,qcrypto"),
+
 	/* DSI PLL clocks */
 	CLK_LOOKUP("",		dsi_vco_clk_8226.c,                  ""),
 	CLK_LOOKUP("",		analog_postdiv_clk_8226.c,         ""),
