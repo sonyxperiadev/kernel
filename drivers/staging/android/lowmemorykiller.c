@@ -440,10 +440,14 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 			     anon_other * (long)(PAGE_SIZE / 1024));
 		lowmem_deathpending_timeout = jiffies + HZ;
 #ifdef CONFIG_SONY_JPROBE_LMK_HOOK
-		scnprintf(jprobe_buf, JPROBE_LINE_SZ, "%d \"%s\" %d \"%s\" %d %d",
+		scnprintf(jprobe_buf, JPROBE_LINE_SZ, "%d \"%s\" %d \"%s\" %d %d %d %d %d %d",
 			current->pid, current->comm, selected->pid,
 			selected->comm, selected_oom_score_adj,
-			selected_tasksize);
+			selected_tasksize,
+			other_free,
+			other_file,
+			cma_free,
+			cma_file);
 #endif
 		send_sig(SIGKILL, selected, 0);
 		this_cpu_inc(lmk_stats.kill_count);
