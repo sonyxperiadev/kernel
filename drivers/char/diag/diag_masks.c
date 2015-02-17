@@ -385,7 +385,7 @@ void diag_send_log_mask_update(struct diag_smd_info *smd_info, int equip_id)
 			send_once = 0;
 			break;
 		default:
-			pr_err("diag: In %s, invalid status %d", __func__,
+			pr_err("diag: In %s, invalid status %d\n", __func__,
 				 driver->log_status);
 			mutex_unlock(&driver->diag_cntl_mutex);
 			return;
