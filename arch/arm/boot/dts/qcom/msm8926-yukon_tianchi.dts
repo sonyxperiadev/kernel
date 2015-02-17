@@ -30,3 +30,7 @@
 		      <200 0x10001>,
 		      <224 0x10001>;
 };
+
+&mdss_fb0 {
+	qcom,mdss-fb-splash-logo-enabled;
+};
