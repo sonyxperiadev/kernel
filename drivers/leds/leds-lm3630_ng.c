@@ -748,7 +748,7 @@ static ssize_t lm3630_cabc_show(struct device *ldev,
 
 static struct device_attribute led_ctl_attr[] = {
 	__ATTR(fsc, 0600, lm3630_fsc_show, lm3630_fsc_set),
-	__ATTR(pwm, 0600, lm3630_pwm_show, NULL),
+	__ATTR(pwm, 0400, lm3630_pwm_show, NULL),
 	__ATTR(cabc, 0660, lm3630_cabc_show, lm3630_cabc_store),
 	__ATTR_NULL,
 };
