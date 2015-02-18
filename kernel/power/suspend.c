@@ -251,6 +251,8 @@ static int suspend_enter(suspend_state_t state, bool *wakeup)
 #define JPROBE_LINE_SZ  80
 static char jprobe_buf[JPROBE_LINE_SZ];
 static struct timespec jprobe_ts;
+static long int jprobe_total_suspended_ms = 0;
+static long int jprobe_total_resumed_ms = 0;
 noinline void idd_jprobe_suspend_hook(char *buf)
 {
 	asm("");
@@ -291,11 +293,15 @@ int suspend_devices_and_enter(suspend_state_t state)
 	{
 		struct timespec now;
 		struct timespec delta;
+		long int delta_ms;
 
 		get_monotonic_boottime(&now);
 		delta = timespec_sub(now, jprobe_ts);
 		jprobe_ts = now;
-		scnprintf(jprobe_buf, JPROBE_LINE_SZ, "suspended after %ld.%09ld s", delta.tv_sec, delta.tv_nsec);
+		delta_ms = delta.tv_sec * 1000 + delta.tv_nsec / 1000000;
+		jprobe_total_resumed_ms += delta_ms;
+		scnprintf(jprobe_buf, JPROBE_LINE_SZ, "suspended %ld %ld %ld",
+			delta_ms, jprobe_total_suspended_ms, jprobe_total_resumed_ms);
 		idd_jprobe_suspend_hook(jprobe_buf);
 	}
 #endif
@@ -313,11 +319,15 @@ int suspend_devices_and_enter(suspend_state_t state)
 	{
 		struct timespec now;
 		struct timespec delta;
+		long int delta_ms;
 
 		get_monotonic_boottime(&now);
 		delta = timespec_sub(now, jprobe_ts);
 		jprobe_ts = now;
-		scnprintf(jprobe_buf, JPROBE_LINE_SZ, "resumed after %ld.%09ld s", delta.tv_sec, delta.tv_nsec);
+		delta_ms = delta.tv_sec * 1000 + delta.tv_nsec / 1000000;
+		jprobe_total_suspended_ms += delta_ms;
+		scnprintf(jprobe_buf, JPROBE_LINE_SZ, "resumed %ld %ld %ld",
+			delta_ms, jprobe_total_suspended_ms, jprobe_total_resumed_ms);
 		idd_jprobe_suspend_hook(jprobe_buf);
 	}
 #endif
