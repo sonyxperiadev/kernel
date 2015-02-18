@@ -55,7 +55,7 @@
 //#define STK_POLL_PS
 //#define STK_POLL_ALS		/* ALS interrupt is valid only when STK_PS_INT_MODE = 1	or 4*/
 //#define STK_TUNE0
-#define STK_DEBUG_PRINTF
+//#define STK_DEBUG_PRINTF
 //#define SPREADTRUM_PLATFORM
 //#define STK_ALS_FIR
 //#define STK_IRS
