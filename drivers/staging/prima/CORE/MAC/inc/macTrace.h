@@ -47,6 +47,9 @@
 #include "aniGlobal.h"
 
 
+eHalStatus pe_AcquireGlobalLock( tAniSirLim *psPe);
+eHalStatus pe_ReleaseGlobalLock( tAniSirLim *psPe);
+
 #ifdef TRACE_RECORD
 
 #define MAC_TRACE_GET_MODULE_ID(data) ((data >> 8) & 0xff)
@@ -65,8 +68,6 @@ tANI_U8* macTraceGetWdaMsgString( tANI_U16 wdaMsg );
 tANI_U8* macTraceGetSmeMsgString( tANI_U16 smeMsg );
 tANI_U8* macTraceGetModuleString( tANI_U8 moduleId);
 tANI_U8* macTraceGetInfoLogString( tANI_U16 infoLog );
-eHalStatus pe_AcquireGlobalLock( tAniSirLim *psPe);
-eHalStatus pe_ReleaseGlobalLock( tAniSirLim *psPe);
 
 tANI_U8* macTraceGetHDDWlanConnState(tANI_U16 connState);
 
@@ -81,6 +82,29 @@ tANI_U8* macTraceGetLimSmeState(tANI_U16 limState);
 tANI_U8* macTraceGetLimMlmState(tANI_U16 mlmState);
 tANI_U8* macTraceGetTLState(tANI_U16 tlState);
 
+#else
+#define macTraceReset(x)
+#define macTrace(x, y, z, a)
+#define macTraceNew(x, y, z, a, b)
+#define macTraceGetCfgMsgString( x ) (tANI_U8*)"TRACE_DIS"
+#define macTraceGetLimMsgString( x ) (tANI_U8*)"TRACE_DIS"
+#define macTraceGetWdaMsgString( x ) (tANI_U8*)"TRACE_DIS"
+#define macTraceGetSmeMsgString( x ) (tANI_U8*)"TRACE_DIS"
+#define macTraceGetModuleString( x ) (tANI_U8*)"TRACE_DIS"
+#define macTraceGetInfoLogString( x ) (tANI_U8*)"TRACE_DIS"
+
+#define macTraceGetHDDWlanConnState( x ) (tANI_U8*)"TRACE_DIS"
+
+#ifdef WLAN_FEATURE_P2P_DEBUG
+#define macTraceGetP2PConnState( x )
+#endif
+
+#define macTraceGetNeighbourRoamState(x) (tANI_U8*)"TRACE_DIS"
+#define macTraceGetcsrRoamState(x) (tANI_U8*)"TRACE_DIS"
+#define macTraceGetcsrRoamSubState(x) (tANI_U8*)"TRACE_DIS"
+#define macTraceGetLimSmeState(x) (tANI_U8*)"TRACE_DIS"
+#define macTraceGetLimMlmState(x) (tANI_U8*)"TRACE_DIS"
+#define macTraceGetTLState(x) (tANI_U8*)"TRACE_DIS"
 #endif
 
 #endif
