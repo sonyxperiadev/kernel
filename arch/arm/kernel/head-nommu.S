@@ -62,7 +62,7 @@ ENTRY(stext)
 	adr	lr, BSYM(__after_proc_init)	@ return (PIC) address
  ARM(	add	pc, r10, #PROCINFO_INITFUNC	)
  THUMB(	add	r12, r10, #PROCINFO_INITFUNC	)
- THUMB(	mov	pc, r12				)
+ THUMB(	ret	r12				)
 ENDPROC(stext)
 
 /*

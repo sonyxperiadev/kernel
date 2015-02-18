@@ -1,3 +1,4 @@
+#include <asm/assembler.h>
 #include <asm/unwind.h>
 
 #if __LINUX_ARM_ARCH__ >= 6
