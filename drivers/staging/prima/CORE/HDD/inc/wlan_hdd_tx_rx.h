@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -18,25 +18,11 @@
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
  */
+
 /*
- * Copyright (c) 2012, The Linux Foundation. All rights reserved.
- *
- * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
- *
- *
- * Permission to use, copy, modify, and/or distribute this software for
- * any purpose with or without fee is hereby granted, provided that the
- * above copyright notice and this permission notice appear in all
- * copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
- * WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
- * AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
- * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
- * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
- * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
- * PERFORMANCE OF THIS SOFTWARE.
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 #if !defined( WLAN_HDD_TX_RX_H )
@@ -66,6 +52,8 @@
 #ifdef FEATURE_WLAN_WAPI
 #define HDD_ETHERTYPE_WAI                  ( 0x88b4 )
 #endif
+#define HDD_ETHERTYPE_ARP                  ( 0x0806 )
+#define HDD_ETHERTYPE_ARP_SIZE               42
 
 #define HDD_80211_HEADER_LEN      24
 #define HDD_80211_HEADER_QOS_CTL  2
@@ -80,6 +68,53 @@
 #define HDD_DEST_ADDR_OFFSET      6
 
 #define HDD_MAC_HDR_SIZE          6
+
+#define HDD_PSB_CFG_INVALID                   0xFF
+#define HDD_PSB_CHANGED                       0xFF
+#define SME_QOS_UAPSD_CFG_BK_CHANGED_MASK     0xF1
+#define SME_QOS_UAPSD_CFG_BE_CHANGED_MASK     0xF2
+#define SME_QOS_UAPSD_CFG_VI_CHANGED_MASK     0xF4
+#define SME_QOS_UAPSD_CFG_VO_CHANGED_MASK     0xF8
+
+/* WLAN_DHCP_DEBUG */
+#define RX_PATH     ( 0 )
+#define TX_PATH     ( 1 )
+
+#define BOOTP_SERVER_PORT        ( 67 )
+#define BOOTP_CLIENT_PORT        ( 68 )
+
+#define ETH_TYPE_OFFSET       ( 12 )
+#define ETH_TYPE_IP_PKT       ( 0x0800 )
+#define BOOTP_MSG_OFFSET      ( 42 )
+#define BOOTP_REQUEST_MSG     ( 1 )
+#define BOOTP_RESPONSE_MSG    ( 2 )
+
+#define DHCPDISCOVER  ( 1 )
+#define DHCPOFFER     ( 2 )
+#define DHCPREQUEST   ( 3 )
+#define DHCPACK       ( 5 )
+#define DHCPNAK       ( 6 )
+#define DHCPRELEASE   ( 7 )
+#define DHCPINFORM    ( 8 )
+
+#define SKB_MIN_LENGTH   ( 35 )
+#define PROTOCOL_OFFSET  ( 9 )
+#define UDP_PROTOCOL     ( 17 )
+
+#define UDP_SRC_PORT_OFFSET           ( 34 )
+#define UDP_DEST_PORT_OFFSET          ( 36 )
+
+#define DHCP_OPTION53                  ( 0x35 )
+#define DHCP_OPTION53_LENGTH           ( 1 )
+#define DHCP_OPTION53_OFFSET           ( 0x11A )
+#define DHCP_OPTION53_LENGTH_OFFSET    ( 0x11B )
+#define DHCP_OPTION53_STATUS_OFFSET    ( 0x11C )
+/* WLAN_DHCP_DEBUG */
+
+
+
+
+
 /*--------------------------------------------------------------------------- 
   Type declarations
   -------------------------------------------------------------------------*/ 
@@ -262,5 +297,32 @@ VOS_STATUS hdd_Ibss_GetStaId(hdd_station_ctx_t *pHddStaCtx,
   @return    : VOS_STATUS_SUCCESS/VOS_STATUS_E_FAILURE
   ===========================================================================*/
 void hdd_tx_rx_pkt_cnt_stat_timer_handler( void *pAdapter);
+
+/**============================================================================
+  @brief hdd_flush_ibss_tx_queues() -
+                    Flush tx queues in IBSS mode
+  @param pAdapter: Hdd adapter
+  @param STAId:    Sta index
+  @return    : VOS_STATUS_SUCCESS/VOS_STATUS_E_FAILURE
+  ===========================================================================*/
+void hdd_flush_ibss_tx_queues( hdd_adapter_t *pAdapter, v_U8_t STAId);
+
+/**=========================================================================
+  @brief hdd_wmm_acquire_access_required()-
+                   Determine whether wmm ac acquire access is required
+  @param pAdapter  : pointer to Adapter context
+  @param acType    : AC
+  @return          : void
+   ========================================================================*/
+void hdd_wmm_acquire_access_required(hdd_adapter_t *pAdapter,
+                                     WLANTL_ACEnumType acType);
+
+/**=========================================================================
+  @brief hdd_dump_dhcp_pkt()- For printing DHCP logs
+  @param skb     : pointer to skb
+  @param path    : path direction
+  @return        : void
+   ========================================================================*/
+void hdd_dump_dhcp_pkt(struct sk_buff *skb, int path);
 
 #endif    // end #if !defined( WLAN_HDD_TX_RX_H )

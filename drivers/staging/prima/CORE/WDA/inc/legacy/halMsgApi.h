@@ -1,25 +1,5 @@
 /*
- * Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
- *
- * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
- *
- *
- * Permission to use, copy, modify, and/or distribute this software for
- * any purpose with or without fee is hereby granted, provided that the
- * above copyright notice and this permission notice appear in all
- * copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
- * WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
- * AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
- * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
- * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
- * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
- * PERFORMANCE OF THIS SOFTWARE.
- */
-/*
- * Copyright (c) 2012, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2014 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -40,7 +20,12 @@
  */
 
 /*
- * */
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ */
+
+
 #ifndef _HALMSGAPI_H_
 #define _HALMSGAPI_H_
 
@@ -293,11 +278,12 @@ typedef struct
 
     /*if this is a P2P Capable Sta*/
     tANI_U8     p2pCapableSta;
-
+    tANI_U32    currentOperChan;
 #ifdef WLAN_FEATURE_11AC
     tANI_U8    vhtCapable;
     tANI_U8    vhtTxChannelWidthSet;
     tANI_U8    vhtTxBFCapable;
+    tANI_U8    vhtTxMUBformeeCapable;
 #endif
 
     tANI_U8    htLdpcCapable;
@@ -873,13 +859,11 @@ typedef struct
     tANI_U16 paramChangeBitmap;
 }tUpdateBeaconParams, *tpUpdateBeaconParams;
 
-#ifdef WLAN_FEATURE_11AC
 typedef struct 
 {
    tANI_U16   opMode;
    tANI_U16  staId;
 }tUpdateVHTOpMode, *tpUpdateVHTOpMode;
-#endif
 
 //HAL MSG: SIR_HAL_UPDATE_CF_IND
 typedef struct
@@ -924,6 +908,15 @@ typedef struct
 }tUpdateDtimParams, *tpUpdateDtimParams;
 */
 
+typedef enum
+{
+    eHAL_CHANNEL_SWITCH_SOURCE_SCAN,
+    eHAL_CHANNEL_SWITCH_SOURCE_LISTEN,
+    eHAL_CHANNEL_SWITCH_SOURCE_MCC,
+    eHAL_CHANNEL_SWITCH_SOURCE_CSA,
+    eHAL_CHANNEL_SWITCH_SOURCE_MAX = 0x7fffffff
+} eHalChanSwitchSource;
+
 
 //HAL MSG: SIR_HAL_CHNL_SWITCH_REQ
 typedef struct
@@ -940,6 +933,8 @@ typedef struct
     tSirMacAddr selfStaMacAddr;
                         //the request has power constraints, this should be applied only to that session
 #endif
+    eHalChanSwitchSource channelSwitchSrc;
+
     /* VO Wifi comment: BSSID is needed to identify which session issued this request. As the 
        request has power constraints, this should be applied only to that session */
     /* V IMP: Keep bssId field at the end of this msg. It is used to mantain backward compatbility
@@ -1270,7 +1265,7 @@ typedef struct sEnterBmpsParams
     //if association is based on ProbeRsp instead of beacon.
     tANI_U8 dtimPeriod;
 
-    // For CCX and 11R Roaming
+    // For ESE and 11R Roaming
     tANI_U8  bRssiFilterEnable;
     tANI_U32 rssiFilterPeriod;
     tANI_U32 numBeaconPerRssiAverage;
@@ -1302,6 +1297,12 @@ typedef struct sMaxTxPowerParams
     tPowerdBm  power;
 }tMaxTxPowerParams, *tpMaxTxPowerParams;
 
+typedef struct sMaxTxPowerPerBandParams
+{
+    eCsrBand   bandInfo;
+    tPowerdBm  power;
+}tMaxTxPowerPerBandParams, *tpMaxTxPowerPerBandParams;
+
 typedef struct sAddStaSelfParams
 {
    tSirMacAddr selfMacAddr;
@@ -1321,6 +1322,11 @@ typedef struct sDelStaSelfParams
    tANI_U32 status;
 }tDelStaSelfParams, *tpDelStaSelfParams;
 
+typedef struct
+{
+    tSirMacAddr macAddr;
+} tSpoofMacAddrReqParams, *tpSpoofMacAddrReqParams;
+
 typedef struct sP2pPsParams
 {
    tANI_U8   opp_ps;
@@ -1332,6 +1338,9 @@ typedef struct sP2pPsParams
    tANI_U8   psSelection;
 }tP2pPsParams, *tpP2pPsParams;
 
+#define HAL_MAX_SUPP_CHANNELS 128
+#define HAL_MAX_SUPP_OPER_CLASSES 32
+
 typedef struct sTdlsLinkEstablishParams
 {
    tANI_U16  staIdx;
@@ -1339,8 +1348,26 @@ typedef struct sTdlsLinkEstablishParams
    tANI_U8   uapsdQueues;
    tANI_U8   maxSp;
    tANI_U8   isBufsta;
+   tANI_U8   isOffChannelSupported;
+   tANI_U8   peerCurrOperClass;
+   tANI_U8   selfCurrOperClass;
+   tANI_U8   validChannelsLen;
+   tANI_U8   validChannels[HAL_MAX_SUPP_CHANNELS];
+   tANI_U8   validOperClassesLen;
+   tANI_U8   validOperClasses[HAL_MAX_SUPP_OPER_CLASSES];
    tANI_U32  status;
 }tTdlsLinkEstablishParams, *tpTdlsLinkEstablishParams;
+
+// tdlsoffchan
+typedef struct sTdlsChanSwitchParams
+{
+   tANI_U16  staIdx;
+   tANI_U8   tdlsOffCh;        // Target Off Channel
+   tANI_U8   tdlsOffChBwOffset;// Target Off Channel Bandwidth offset
+   tANI_U8   tdlsSwMode;     // TDLS Off Channel Mode
+   tANI_U8   operClass;      //Operating class corresponding to target channel
+   tANI_U32  status;
+}tTdlsChanSwitchParams, *tpTdlsChanSwitchParams;
 
 static inline void halGetTxTSFtimer(tpAniSirGlobal pMac, 
                                                 tSirMacTimeStamp *pTime)

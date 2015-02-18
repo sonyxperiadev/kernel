@@ -1,25 +1,5 @@
 /*
- * Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
- *
- * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
- *
- *
- * Permission to use, copy, modify, and/or distribute this software for
- * any purpose with or without fee is hereby granted, provided that the
- * above copyright notice and this permission notice appear in all
- * copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
- * WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
- * AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
- * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
- * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
- * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
- * PERFORMANCE OF THIS SOFTWARE.
- */
-/*
- * Copyright (c) 2012, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -40,7 +20,12 @@
  */
 
 /*
- * Airgo Networks, Inc proprietary. All rights reserved.
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ */
+
+/*
  * This file limProcessAssocReqFrame.cc contains the code
  * for processing Re/Association Request Frame.
  * Author:        Chandra Modumudi
@@ -69,6 +54,9 @@
 #include "limAdmitControl.h"
 #include "palApi.h"
 #include "limSessionUtils.h"
+#ifdef WLAN_FEATURE_11W
+#include "wniCfgAp.h"
+#endif
 
 
 #include "vos_types.h"
@@ -101,8 +89,8 @@ limConvertSupportedChannels(tpAniSirGlobal pMac,
 
     if(assocReq->supportedChannels.length >= SIR_MAX_SUPPORTED_CHANNEL_LIST)
     {
-        limLog(pMac, LOG1, FL("Number of supported channels:%d is more than MAX"),
-                              assocReq->supportedChannels.length);
+        limLog(pMac, LOG1, FL("Number of supported channels:%d is more than "
+               "MAX"), assocReq->supportedChannels.length);
         pMlmAssocInd->supportedChannels.numChnl = 0;
         return;
     }
@@ -160,7 +148,8 @@ limConvertSupportedChannels(tpAniSirGlobal pMac,
 
     pMlmAssocInd->supportedChannels.numChnl = (tANI_U8) index;
    PELOG2(limLog(pMac, LOG2,
-        FL("Send AssocInd to WSM: spectrum ON, minPwr %d, maxPwr %d, numChnl %d"),
+        FL("Send AssocInd to WSM: spectrum ON, minPwr %d, maxPwr %d, "
+           "numChnl %d"),
         pMlmAssocInd->powerCap.minTxPower,
         pMlmAssocInd->powerCap.maxTxPower,
         pMlmAssocInd->supportedChannels.numChnl);)
@@ -205,6 +194,10 @@ limProcessAssocReqFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,
     tSirMacRateSet  basicRates;
     tANI_U8 i = 0, j = 0;
     tANI_BOOLEAN pmfConnection = eANI_BOOLEAN_FALSE;
+#ifdef WLAN_FEATURE_11W
+    tPmfSaQueryTimerId timerId;
+    tANI_U32 retryInterval;
+#endif
 
     limGetPhyMode(pMac, &phyMode, psessionEntry);
 
@@ -213,13 +206,41 @@ limProcessAssocReqFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,
     pHdr = WDA_GET_RX_MAC_HEADER(pRxPacketInfo);
     framelen = WDA_GET_RX_PAYLOAD_LEN(pRxPacketInfo);
 
-   if (psessionEntry->limSystemRole == eLIM_STA_ROLE || psessionEntry->limSystemRole == eLIM_BT_AMP_STA_ROLE )
-   {
-        limLog(pMac, LOGE, FL("received unexpected ASSOC REQ subType=%d for role=%d"),
-               subType, psessionEntry->limSystemRole);
-        limPrintMacAddr(pMac, pHdr->sa, LOGE);
+    limLog(pMac, LOG1, FL("Received %s Req Frame on sessionid: %d systemrole %d"
+          " limMlmState %d from: "MAC_ADDRESS_STR),
+          (LIM_ASSOC == subType) ? "Assoc" : "ReAssoc",
+          psessionEntry->peSessionId, psessionEntry->limSystemRole,
+          psessionEntry->limMlmState, MAC_ADDR_ARRAY(pHdr->sa));
+
+    if (psessionEntry->limSystemRole == eLIM_STA_ROLE || psessionEntry->limSystemRole == eLIM_BT_AMP_STA_ROLE )
+    {
+        limLog(pMac, LOGE, FL("received unexpected ASSOC REQ on sessionid: %d "
+              "sys subType=%d for role=%d from: "MAC_ADDRESS_STR),
+              psessionEntry->peSessionId,
+              subType, psessionEntry->limSystemRole, MAC_ADDR_ARRAY(pHdr->sa));
         sirDumpBuf(pMac, SIR_LIM_MODULE_ID, LOG3,
         WDA_GET_RX_MPDU_DATA(pRxPacketInfo), framelen);
+        return;
+    }
+
+    /*
+     * If a STA is already present in DPH and it
+     * is initiating a Assoc re-transmit, do not
+     * process it. This can happen when first Assoc Req frame
+     * is received but ACK lost at STA side. The ACK for this
+     * dropped Assoc Req frame should be sent by HW. Host simply
+     * does not process it once the entry for the STA is already
+     * present in DPH.
+     */
+    pStaDs = dphLookupHashEntry(pMac, pHdr->sa, &peerIdx,
+                             &psessionEntry->dph.dphHashTable);
+    if ((NULL != pStaDs) && (pHdr->fc.retry > 0))
+    {
+        limLog(pMac, LOGE,
+            FL("STA is initiating Assoc Req after ACK lost.So, do not Process"
+             "sessionid: %d sys subType=%d for role=%d from: "MAC_ADDRESS_STR),
+                psessionEntry->peSessionId, subType,
+                 psessionEntry->limSystemRole, MAC_ADDR_ARRAY(pHdr->sa));
         return;
     }
 
@@ -230,33 +251,33 @@ limProcessAssocReqFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,
     {
         // Received Re/Assoc Req frame from a BC/MC address
         // Log error and ignore it
-        if (subType == LIM_ASSOC)
-            limLog(pMac, LOGW, FL("received Assoc frame from a BC/MC address "MAC_ADDRESS_STR),
-                   MAC_ADDR_ARRAY(pHdr->sa));
-        else
-            limLog(pMac, LOGW, FL("received ReAssoc frame from a BC/MC address "MAC_ADDRESS_STR),
-                   MAC_ADDR_ARRAY(pHdr->sa));
+        limLog(pMac, LOGE, FL("Received %s Req on sessionid: %d frame from a "
+        "BC/MC address"MAC_ADDRESS_STR),
+        (LIM_ASSOC == subType) ? "Assoc" : "ReAssoc",
+        psessionEntry->peSessionId,
+        MAC_ADDR_ARRAY(pHdr->sa));
         return;
     }
-    limLog(pMac, LOGW, FL("Received AssocReq Frame: "MAC_ADDRESS_STR), MAC_ADDR_ARRAY(pHdr->sa));
 
     sirDumpBuf(pMac, SIR_LIM_MODULE_ID, LOG2, (tANI_U8 *) pBody, framelen);
 
     if (vos_mem_compare((tANI_U8* ) pHdr->sa, (tANI_U8 *) pHdr->da,
                         (tANI_U8) (sizeof(tSirMacAddr))))
     {
+        limLog(pMac, LOGE, FL("Rejected Assoc Req frame Since same mac as"
+                              " SAP/GO"));
         limSendAssocRspMgmtFrame(pMac,
                     eSIR_MAC_UNSPEC_FAILURE_STATUS,
                     1,
                     pHdr->sa,
                     subType, 0,psessionEntry);
-        limLog(pMac, LOGE, FL("Rejected Assoc Req frame Since same mac as SAP/GO"));
         return ;
     }
 
     // If TKIP counter measures active send Assoc Rsp frame to station with eSIR_MAC_MIC_FAILURE_REASON
     if ((psessionEntry->bTkipCntrMeasActive) && (psessionEntry->limSystemRole == eLIM_AP_ROLE))
     {
+        limLog(pMac, LOGE, FL("TKIP counter measure is active"));
         limSendAssocRspMgmtFrame(pMac,
                                     eSIR_MAC_MIC_FAILURE_REASON,
                                     1,
@@ -282,8 +303,8 @@ limProcessAssocReqFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,
 
     if (status != eSIR_SUCCESS)
     {
-        limLog(pMac, LOGW, FL("Parse error AssocRequest, length=%d from "),framelen);
-        limPrintMacAddr(pMac, pHdr->sa, LOGW);
+        limLog(pMac, LOGW, FL("Parse error AssocRequest, length=%d from "MAC_ADDRESS_STR),
+                             framelen, MAC_ADDR_ARRAY(pHdr->sa));
         limSendAssocRspMgmtFrame(pMac, eSIR_MAC_UNSPEC_FAILURE_STATUS, 1, pHdr->sa, subType, 0, psessionEntry);
         goto error;
     }
@@ -291,7 +312,8 @@ limProcessAssocReqFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,
     pAssocReq->assocReqFrame = vos_mem_malloc(framelen);
     if ( NULL == pAssocReq->assocReqFrame )
     {
-        limLog(pMac, LOGE, FL("Unable to allocate memory for the assoc req, length=%d from "),framelen);
+        limLog(pMac, LOGE, FL("Unable to allocate memory for the assoc req, "
+                              "length=%d from "),framelen);
         goto error;
     }
     
@@ -310,6 +332,11 @@ limProcessAssocReqFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,
                                pAssocReq,
                                &localCapabilities,psessionEntry) == false)
     {
+        limLog(pMac, LOGW, FL("local caps mismatch received caps"));
+        limLog(pMac, LOGW, FL("Received %s Req with unsupported "
+        "capabilities from"MAC_ADDRESS_STR),
+        (LIM_ASSOC == subType) ? "Assoc" : "ReAssoc",
+        MAC_ADDR_ARRAY(pHdr->sa));
         /**
          * Capabilities of requesting STA does not match with
          * local capabilities. Respond with 'unsupported capabilities'
@@ -322,17 +349,6 @@ limProcessAssocReqFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,
                         pHdr->sa,
                         subType, 0,psessionEntry);
 
-        limLog(pMac, LOGW, FL("local caps 0x%x received 0x%x"), localCapabilities, pAssocReq->capabilityInfo);
-
-        // Log error
-        if (subType == LIM_ASSOC)
-            limLog(pMac, LOGW,
-               FL("received Assoc req with unsupported capabilities "MAC_ADDRESS_STR),
-                  MAC_ADDR_ARRAY(pHdr->sa));
-        else
-            limLog(pMac, LOGW,
-                   FL("received ReAssoc req with unsupported capabilities "MAC_ADDRESS_STR),
-                   MAC_ADDR_ARRAY(pHdr->sa));
         goto error;
     }
 
@@ -340,6 +356,12 @@ limProcessAssocReqFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,
 
     if (limCmpSSid(pMac, &pAssocReq->ssId, psessionEntry) == false)
     {
+        limLog(pMac, LOGW, FL("Received %s Req with unmatched ssid ( Received"
+        " SSID: %.*s current SSID: %.*s ) from "MAC_ADDRESS_STR),
+        (LIM_ASSOC == subType) ? "Assoc" : "ReAssoc", pAssocReq->ssId.length,
+        pAssocReq->ssId.ssId, psessionEntry->ssId.length,
+        psessionEntry->ssId.ssId, MAC_ADDR_ARRAY(pHdr->sa));
+
         /**
          * Received Re/Association Request with either
          * Broadcast SSID OR with SSID that does not
@@ -352,14 +374,6 @@ limProcessAssocReqFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,
                              pHdr->sa,
                              subType, 0,psessionEntry);
 
-        // Log error
-        if (subType == LIM_ASSOC)
-            limLog(pMac, LOGW,
-                   FL("received Assoc req with unmatched SSID from "));
-        else
-            limLog(pMac, LOGW,
-                   FL("received ReAssoc req with unmatched SSID from "));
-        limPrintMacAddr(pMac, pHdr->sa, LOGW);
         goto error;
     }
 
@@ -383,6 +397,10 @@ limProcessAssocReqFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,
     }
     if (limCheckRxBasicRates(pMac, basicRates, psessionEntry) == false)
     {
+        limLog(pMac, LOGW, FL("Received %s Req with unsupported "
+        "rates from"MAC_ADDRESS_STR),
+        (LIM_ASSOC == subType) ? "Assoc" : "ReAssoc",
+        MAC_ADDR_ARRAY(pHdr->sa));
         /**
          * Requesting STA does not support ALL BSS basic
          * rates. Respond with 'basic rates not supported'
@@ -395,14 +413,6 @@ limProcessAssocReqFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,
                     pHdr->sa,
                     subType, 0,psessionEntry);
 
-        // Log error
-        if (subType == LIM_ASSOC)
-            limLog(pMac, LOGW,
-               FL("received Assoc req with unsupported rates from "));
-        else
-            limLog(pMac, LOGW,
-               FL("received ReAssoc req with unsupported rates from"));
-        limPrintMacAddr(pMac, pHdr->sa, LOGW);
         goto error;
     }
 
@@ -411,9 +421,10 @@ limProcessAssocReqFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,
        (psessionEntry->dot11mode == WNI_CFG_DOT11_MODE_11G_ONLY) &&
        ((!pAssocReq->extendedRatesPresent ) || (pAssocReq->HTCaps.present)))
     {
+        limLog(pMac, LOGE, FL("SOFTAP was in 11G only mode, rejecting legacy "
+                              "STA : "MAC_ADDRESS_STR),MAC_ADDR_ARRAY(pHdr->sa));
         limSendAssocRspMgmtFrame( pMac, eSIR_MAC_CAPABILITIES_NOT_SUPPORTED_STATUS, 
                                   1, pHdr->sa, subType, 0, psessionEntry );
-        limLog(pMac, LOGE, FL("SOFTAP was in 11G only mode, rejecting legacy STA's"));
         goto error;
 
     }//end if phyMode == 11G_only
@@ -422,9 +433,10 @@ limProcessAssocReqFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,
        (psessionEntry->dot11mode == WNI_CFG_DOT11_MODE_11N_ONLY) && 
        (!pAssocReq->HTCaps.present))
     {
+        limLog(pMac, LOGE, FL("SOFTAP was in 11N only mode, rejecting legacy "
+                              "STA : "MAC_ADDRESS_STR),MAC_ADDR_ARRAY(pHdr->sa));
         limSendAssocRspMgmtFrame( pMac, eSIR_MAC_CAPABILITIES_NOT_SUPPORTED_STATUS, 
                                   1, pHdr->sa, subType, 0, psessionEntry );
-        limLog(pMac, LOGE, FL("SOFTAP was in 11N only mode, rejecting legacy STA's"));
         goto error;
     }//end if PhyMode == 11N_only
 
@@ -444,19 +456,19 @@ limProcessAssocReqFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,
                 /* One or more required information elements are missing, log the peers error */
                 if (!pAssocReq->powerCapabilityPresent)
                 {
-                    if(subType == LIM_ASSOC)
-                       limLog(pMac, LOG1, FL("LIM Info: Missing Power capability IE in assoc request"));
-                    else
-                       limLog(pMac, LOG1, FL("LIM Info: Missing Power capability IE in Reassoc request"));
+                    limLog(pMac, LOG1, FL("LIM Info: Missing Power capability "
+                    "IE in %s Req from "MAC_ADDRESS_STR),
+                    (LIM_ASSOC == subType) ? "Assoc" : "ReAssoc",
+                    MAC_ADDR_ARRAY(pHdr->sa));
                 }
                 if (!pAssocReq->supportedChannelsPresent)
                 {
-                    if(subType == LIM_ASSOC)
-                        limLog(pMac, LOG1, FL("LIM Info: Missing Supported channel IE in assoc request"));
-                    else
-                        limLog(pMac, LOG1, FL("LIM Info: Missing Supported channel IE in Reassoc request"));
+                    limLog(pMac, LOGW, FL("LIM Info: Missing Supported channel "
+                    "IE in %s Req from "MAC_ADDRESS_STR),
+                    (LIM_ASSOC == subType) ? "Assoc" : "ReAssoc",
+                    MAC_ADDR_ARRAY(pHdr->sa));
+
                 }
-                limPrintMacAddr(pMac, pHdr->sa, LOG1);
             }
             else
             {
@@ -464,20 +476,20 @@ limProcessAssocReqFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,
                 status = limIsDot11hPowerCapabilitiesInRange(pMac, pAssocReq, psessionEntry);
                 if (eSIR_SUCCESS != status)
                 {
-                    if (subType == LIM_ASSOC)
-                        limLog(pMac, LOGW, FL("LIM Info: Association MinTxPower(STA) > MaxTxPower(AP)"));
-                    else
-                        limLog(pMac, LOGW, FL("LIM Info: Reassociation MinTxPower(STA) > MaxTxPower(AP)"));
-                    limPrintMacAddr(pMac, pHdr->sa, LOGW);
+                    limLog(pMac, LOGW, FL("LIM Info: MinTxPower(STA) > "
+                    "MaxTxPower(AP) in %s Req from "MAC_ADDRESS_STR),
+                    (LIM_ASSOC == subType) ? "Assoc" : "ReAssoc",
+                    MAC_ADDR_ARRAY(pHdr->sa));
+
                 }
                 status = limIsDot11hSupportedChannelsValid(pMac, pAssocReq);
                 if (eSIR_SUCCESS != status)
                 {
-                    if (subType == LIM_ASSOC)
-                        limLog(pMac, LOGW, FL("LIM Info: Association wrong supported channels (STA)"));
-                    else
-                        limLog(pMac, LOGW, FL("LIM Info: Reassociation wrong supported channels (STA)"));
-                    limPrintMacAddr(pMac, pHdr->sa, LOGW);
+                    limLog(pMac, LOGW, FL("LIM Info: wrong supported "
+                    "channels (STA) in %s Req from "MAC_ADDRESS_STR),
+                    (LIM_ASSOC == subType) ? "Assoc" : "ReAssoc",
+                    MAC_ADDR_ARRAY(pHdr->sa));
+
                 }
                 /* IEs are valid, use them if needed */
             }
@@ -497,6 +509,11 @@ limProcessAssocReqFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,
 
     if ( (pAssocReq->HTCaps.present) && (limCheckMCSSet(pMac, pAssocReq->HTCaps.supportedMCSSet) == false))
     {
+         limLog(pMac, LOGW, FL("received %s req with unsupported"
+         "MCS Rate Set from "MAC_ADDRESS_STR),
+         (LIM_ASSOC == subType) ? "Assoc" : "ReAssoc",
+         MAC_ADDR_ARRAY(pHdr->sa));
+
         /**
          * Requesting STA does not support ALL BSS MCS basic Rate set rates.
          * Spec does not define any status code for this scenario.
@@ -508,14 +525,6 @@ limProcessAssocReqFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,
                     pHdr->sa,
                     subType, 0,psessionEntry);
 
-        // Log error
-        if (subType == LIM_ASSOC)
-            limLog(pMac, LOGW,
-               FL("received Assoc req with unsupported MCS Rate Set from "));
-        else
-            limLog(pMac, LOGW,
-               FL("received ReAssoc req with unsupported MCS Rate Set from"));
-        limPrintMacAddr(pMac, pHdr->sa, LOGW);
         goto error;
     }
 
@@ -531,6 +540,8 @@ limProcessAssocReqFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,
 
         if (!pAssocReq->extendedRatesPresent && val)
         {
+            limLog(pMac, LOGW, FL("Rejecting Re/Assoc req from 11b STA: "
+            MAC_ADDRESS_STR),MAC_ADDR_ARRAY(pHdr->sa));
             /**
              * Received Re/Association Request from
              * 11b STA when 11g only policy option
@@ -544,8 +555,6 @@ limProcessAssocReqFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,
                            pHdr->sa,
                            subType, 0,psessionEntry);
 
-            limLog(pMac, LOGW, FL("Rejecting Re/Assoc req from 11b STA: "));
-            limPrintMacAddr(pMac, pHdr->sa, LOGW);
             
 #ifdef WLAN_DEBUG    
             pMac->lim.gLim11bStaAssocRejectCount++;
@@ -565,6 +574,10 @@ limProcessAssocReqFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,
 
         if ((pMac->lim.gWmmApsd.apsdEnable == 0) && (qInfo->ac_be || qInfo->ac_bk || qInfo->ac_vo || qInfo->ac_vi))
         {
+            limLog(pMac, LOGW,
+                   FL("Rejecting Re/Assoc req from STA: "MAC_ADDRESS_STR),
+                   MAC_ADDR_ARRAY(pHdr->sa));
+            limLog(pMac, LOGE, FL("APSD not enabled, qosInfo - 0x%x"), *qInfo);
 
             /**
              * Received Re/Association Request from
@@ -579,10 +592,6 @@ limProcessAssocReqFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,
                            pHdr->sa,
                            subType, 0,psessionEntry);
 
-            limLog(pMac, LOGW,
-                   FL("Rejecting Re/Assoc req from STA: "));
-            limPrintMacAddr(pMac, pHdr->sa, LOGW);
-            limLog(pMac, LOGE, FL("APSD not enabled, qosInfo - 0x%x"), *qInfo);
             goto error;
         }
     }
@@ -654,8 +663,8 @@ limProcessAssocReqFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,
             && psessionEntry->pLimStartBssReq->rsnIE.length)
         {
             limLog(pMac, LOGE,
-                   FL("AP supports RSN enabled authentication"));
-
+                   FL("RSN enabled auth, Re/Assoc req from STA: "MAC_ADDRESS_STR),
+                       MAC_ADDR_ARRAY(pHdr->sa));
             if(pAssocReq->rsnPresent)
             {
                 if(pAssocReq->rsn.length)
@@ -673,6 +682,10 @@ limProcessAssocReqFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,
                         if(eSIR_SUCCESS != (status = limCheckRxRSNIeMatch(pMac, Dot11fIERSN, psessionEntry,
                                                                           pAssocReq->HTCaps.present, &pmfConnection)))
                         {
+                            limLog(pMac, LOGW, FL("Rejecting Re/Assoc req from "
+                                                  "STA: "MAC_ADDRESS_STR),
+                                                    MAC_ADDR_ARRAY(pHdr->sa));
+
                             /* some IE is not properly sent */
                             /* received Association req frame with RSN IE but length is 0 */
                             limSendAssocRspMgmtFrame(
@@ -682,14 +695,16 @@ limProcessAssocReqFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,
                                            pHdr->sa,
                                            subType, 0,psessionEntry);
 
-                            limLog(pMac, LOGW, FL("Rejecting Re/Assoc req from STA: "));
-                            limPrintMacAddr(pMac, pHdr->sa, LOGW);
                             goto error;
 
                         }
                     }
                     else
                     {
+                        limLog(pMac, LOGW, FL("Rejecting Re/Assoc req from "
+                                              "STA: "MAC_ADDRESS_STR),
+                                              MAC_ADDR_ARRAY(pHdr->sa));
+
                         /* received Association req frame with RSN IE version wrong */
                         limSendAssocRspMgmtFrame(
                                        pMac,
@@ -697,15 +712,14 @@ limProcessAssocReqFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,
                                        1,
                                        pHdr->sa,
                                        subType, 0,psessionEntry);
-
-                        limLog(pMac, LOGW, FL("Rejecting Re/Assoc req from STA: "));
-                        limPrintMacAddr(pMac, pHdr->sa, LOGW);
                         goto error;
 
                     }
                 }
                 else
                 {
+                    limLog(pMac, LOGW, FL("Rejecting Re/Assoc req from STA:"
+                     MAC_ADDRESS_STR),MAC_ADDR_ARRAY(pHdr->sa));
                     /* received Association req frame with RSN IE but length is 0 */
                     limSendAssocRspMgmtFrame(
                                    pMac,
@@ -714,8 +728,6 @@ limProcessAssocReqFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,
                                    pHdr->sa,
                                    subType, 0,psessionEntry);
 
-                    limLog(pMac, LOGW, FL("Rejecting Re/Assoc req from STA: "));
-                    limPrintMacAddr(pMac, pHdr->sa, LOGW);
                     goto error;
                     
                 }
@@ -732,6 +744,8 @@ limProcessAssocReqFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,
                     /* check the groupwise and pairwise cipher suites */
                     if(eSIR_SUCCESS != (status = limCheckRxWPAIeMatch(pMac, Dot11fIEWPA, psessionEntry, pAssocReq->HTCaps.present)))
                     {
+                        limLog(pMac, LOGW, FL("Rejecting Re/Assoc req from "
+                              "STA: "MAC_ADDRESS_STR),MAC_ADDR_ARRAY(pHdr->sa));
                         /* received Association req frame with WPA IE but mismatch */
                         limSendAssocRspMgmtFrame(
                                        pMac,
@@ -739,15 +753,14 @@ limProcessAssocReqFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,
                                        1,
                                        pHdr->sa,
                                        subType, 0,psessionEntry);
-
-                        limLog(pMac, LOGW, FL("Rejecting Re/Assoc req from STA: "));
-                        limPrintMacAddr(pMac, pHdr->sa, LOGW);
                         goto error;
 
                     }
                 }
                 else
                 {
+                    limLog(pMac, LOGW, FL("Rejecting Re/Assoc req from STA: "
+                    MAC_ADDRESS_STR),MAC_ADDR_ARRAY(pHdr->sa));
                     /* received Association req frame with invalid WPA IE */
                     limSendAssocRspMgmtFrame(
                                    pMac,
@@ -756,8 +769,6 @@ limProcessAssocReqFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,
                                    pHdr->sa,
                                    subType, 0,psessionEntry);
 
-                    limLog(pMac, LOGW, FL("Rejecting Re/Assoc req from STA: "));
-                    limPrintMacAddr(pMac, pHdr->sa, LOGW);
                     goto error;
                 }/* end - if(pAssocReq->wpa.length) */
             } /* end - if(pAssocReq->wpaPresent) */
@@ -812,15 +823,11 @@ limProcessAssocReqFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,
                      eSIR_MAC_STA_NOT_PRE_AUTHENTICATED_REASON, //=9
                      pHdr->sa, psessionEntry, FALSE);
 
-            // Log error
-            if (subType == LIM_ASSOC)
-                limLog(pMac, LOGW,
-                       FL("received Assoc req from STA that does not have pre-auth context "MAC_ADDRESS_STR),
-                       MAC_ADDR_ARRAY(pHdr->sa));
-            else
-                limLog(pMac, LOGW,
-                       FL("received ReAssoc req from STA that does not have pre-auth context "
-                       MAC_ADDRESS_STR), MAC_ADDR_ARRAY(pHdr->sa));
+            limLog(pMac, LOGW, FL("received %s req on sessionid: %d from STA "
+            "that does not have pre-auth context"MAC_ADDRESS_STR),
+            (LIM_ASSOC == subType) ? "Assoc" : "ReAssoc",
+            psessionEntry->peSessionId,
+            MAC_ADDR_ARRAY(pHdr->sa));
             goto error;
         }
 
@@ -848,14 +855,16 @@ limProcessAssocReqFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,
 #ifdef WLAN_DEBUG    
                 pMac->lim.gLimNumAssocReqDropInvldState++;
 #endif
-                limLog(pMac, LOG1, FL("received Assoc req in state %X from "), pStaDs->mlmStaContext.mlmState);
+                limLog(pMac, LOG1, FL("received Assoc req in state "
+                   "%d from "), pStaDs->mlmStaContext.mlmState);
             }
             else
             {     
 #ifdef WLAN_DEBUG    
                 pMac->lim.gLimNumReassocReqDropInvldState++;
 #endif
-                limLog(pMac, LOG1, FL("received ReAssoc req in state %X from "), pStaDs->mlmStaContext.mlmState);
+                limLog(pMac, LOG1, FL("received ReAssoc req in state %d"
+                            " from "), pStaDs->mlmStaContext.mlmState);
             }
             limPrintMacAddr(pMac, pHdr->sa, LOG1);
             limPrintMlmState(pMac, LOG1, (tLimMlmStates) pStaDs->mlmStaContext.mlmState);
@@ -863,15 +872,68 @@ limProcessAssocReqFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,
             goto error;
         } // if (pStaDs->mlmStaContext.mlmState != eLIM_MLM_LINK_ESTABLISHED_STATE)
 
-           /* STA sent association Request frame while already in
-            * 'associated' state and no change in the capability
-            *  so drop the frame */
+        /* STA sent association Request frame while already in
+         * 'associated' state */
+
+#ifdef WLAN_FEATURE_11W
+        limLog(pMac, LOG1, FL("Re/Assoc request from station that is already associated"));
+        limLog(pMac, LOG1, FL("PMF enabled %d, SA Query state %d"), pStaDs->rmfEnabled,
+               pStaDs->pmfSaQueryState);
+        if (pStaDs->rmfEnabled)
+        {
+            switch (pStaDs->pmfSaQueryState)
+            {
+
+            // start SA Query procedure, respond to Association Request
+            // with try again later
+            case DPH_SA_QUERY_NOT_IN_PROGRESS:
+                /*
+                 * We should reset the retry counter before we start
+                 * the SA query procedure, otherwise in next set of SA query
+                 * procedure we will end up using the stale value.
+                 */
+                pStaDs->pmfSaQueryRetryCount = 0;
+                limSendAssocRspMgmtFrame(pMac, eSIR_MAC_TRY_AGAIN_LATER, 1,
+                                         pHdr->sa, subType, pStaDs, psessionEntry);
+                limSendSaQueryRequestFrame(
+                    pMac, (tANI_U8 *)&(pStaDs->pmfSaQueryCurrentTransId),
+                    pHdr->sa, psessionEntry);
+                pStaDs->pmfSaQueryStartTransId = pStaDs->pmfSaQueryCurrentTransId;
+                pStaDs->pmfSaQueryCurrentTransId++;
+
+                // start timer for SA Query retry
+                if (tx_timer_activate(&pStaDs->pmfSaQueryTimer) != TX_SUCCESS)
+                {
+                    limLog(pMac, LOGE, FL("PMF SA Query timer activation failed!"));
+                    goto error;
+                }
+
+                pStaDs->pmfSaQueryState = DPH_SA_QUERY_IN_PROGRESS;
+                goto error;
+
+            // SA Query procedure still going, respond to Association
+            // Request with try again later
+            case DPH_SA_QUERY_IN_PROGRESS:
+                limSendAssocRspMgmtFrame(pMac, eSIR_MAC_TRY_AGAIN_LATER, 1,
+                                         pHdr->sa, subType, 0, psessionEntry);
+                goto error;
+
+            // SA Query procedure timed out, accept Association Request
+            // normally
+             case DPH_SA_QUERY_TIMED_OUT:
+                pStaDs->pmfSaQueryState = DPH_SA_QUERY_NOT_IN_PROGRESS;
+                break;
+            }
+        }
+#endif
+
+        /* no change in the capability so drop the frame */
         if ((VOS_TRUE == vos_mem_compare(&pStaDs->mlmStaContext.capabilityInfo,
                                           &pAssocReq->capabilityInfo,
                                           sizeof(tSirMacCapabilityInfo)))&&
                                          (subType == LIM_ASSOC))
         {
-            limLog(pMac, LOGE, FL(" Received Assoc req in state %X STAid=%d"),
+            limLog(pMac, LOGE, FL(" Received Assoc req in state %d STAid=%d"),
                                        pStaDs->mlmStaContext.mlmState,peerIdx);
             goto error;
         }
@@ -957,12 +1019,8 @@ limProcessAssocReqFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,
     /**
      * STA is Associated !
      */
-    if (subType == LIM_ASSOC)
-        limLog(pMac, LOGW, FL("received Assoc req successful "MAC_ADDRESS_STR),
-               MAC_ADDR_ARRAY(pHdr->sa));
-    else
-        limLog(pMac, LOGW, FL("received ReAssoc req successful"MAC_ADDRESS_STR),
-               MAC_ADDR_ARRAY(pHdr->sa));
+    limLog(pMac, LOGE, FL("Received %s Req  successful from "MAC_ADDRESS_STR),
+    (LIM_ASSOC == subType) ? "Assoc" : "ReAssoc", MAC_ADDR_ARRAY(pHdr->sa));
 
     /**
      * AID for this association will be same as the peer Index used in DPH table.
@@ -995,9 +1053,9 @@ limProcessAssocReqFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,
     {
         // Could not add hash table entry at DPH
         limLog(pMac, LOGE,
-           FL("could not add hash entry at DPH for aid=%d, MacAddr:"),
-           peerIdx);
-        limPrintMacAddr(pMac, pHdr->sa, LOGE);
+           FL("could not add hash entry at DPH for aid=%d, MacAddr:"
+           MAC_ADDRESS_STR),
+           peerIdx,MAC_ADDR_ARRAY(pHdr->sa));
 
         // Release AID
         limReleasePeerIdx(pMac, peerIdx, psessionEntry);
@@ -1038,7 +1096,6 @@ sendIndToSme:
             pStaDs->propCapability &= pAssocReq->propIEinfo.capability;
     }
 
-    pStaDs->mlmStaContext.mlmState = eLIM_MLM_WT_ASSOC_CNF_STATE;
     pStaDs->valid                  = 0;
     pStaDs->mlmStaContext.authType = authType;
     pStaDs->staType = STA_ENTRY_PEER;
@@ -1129,9 +1186,9 @@ if (limPopulateMatchingRateSet(pMac,
     {
         // Could not update hash table entry at DPH with rateset
         limLog(pMac, LOGE,
-           FL("could not update hash entry at DPH for aid=%d, MacAddr:"),
-           peerIdx);
-        limPrintMacAddr(pMac, pHdr->sa, LOGE);
+           FL("could not update hash entry at DPH for aid=%d, MacAddr: "
+           MAC_ADDRESS_STR),
+           peerIdx, MAC_ADDR_ARRAY(pHdr->sa));
 
                 // Release AID
         limReleasePeerIdx(pMac, peerIdx, psessionEntry);
@@ -1184,14 +1241,15 @@ if (limPopulateMatchingRateSet(pMac,
                  * Received Re/Association Request from
                  * STA when UPASD is not supported.
                  */
-                limLog( pMac, LOGE, FL( "AP do not support UPASD REASSOC Failed" ));
-                limRejectAssociation(pMac, pHdr->sa,
-                                     subType, true, authType, peerIdx, true,
-                                     (tSirResultCodes) eSIR_MAC_WME_REFUSED_STATUS, psessionEntry);
+               limLog( pMac, LOGE, FL( "AP do not support UAPSD so reply "
+                                       "to STA accordingly" ));
+               /* update UAPSD and send it to LIM to add STA */
+               pStaDs->qos.capability.qosInfo.acbe_uapsd = 0;
+               pStaDs->qos.capability.qosInfo.acbk_uapsd = 0;
+               pStaDs->qos.capability.qosInfo.acvo_uapsd = 0;
+               pStaDs->qos.capability.qosInfo.acvi_uapsd = 0;
+               pStaDs->qos.capability.qosInfo.maxSpLen =   0;
 
-
-                pAssocReq = psessionEntry->parsedAssocReq[pStaDs->assocId];
-                goto error;
             }
             else
             {
@@ -1217,6 +1275,35 @@ if (limPopulateMatchingRateSet(pMac,
 
 #ifdef WLAN_FEATURE_11W
     pStaDs->rmfEnabled = (pmfConnection) ? 1 : 0;
+    pStaDs->pmfSaQueryState = DPH_SA_QUERY_NOT_IN_PROGRESS;
+    timerId.fields.sessionId = psessionEntry->peSessionId;
+    timerId.fields.peerIdx = peerIdx;
+    if (wlan_cfgGetInt(pMac, WNI_CFG_PMF_SA_QUERY_RETRY_INTERVAL,
+                       &retryInterval) != eSIR_SUCCESS)
+    {
+        limLog(pMac, LOGE, FL("Could not retrieve PMF SA Query retry interval value"));
+        limRejectAssociation(pMac, pHdr->sa,
+                             subType, true, authType,
+                             peerIdx, false,
+                             (tSirResultCodes) eSIR_MAC_UNSPEC_FAILURE_STATUS, psessionEntry);
+        goto error;
+    }
+    if (WNI_CFG_PMF_SA_QUERY_RETRY_INTERVAL_APMIN > retryInterval)
+    {
+        retryInterval = WNI_CFG_PMF_SA_QUERY_RETRY_INTERVAL_APDEF;
+    }
+    if (tx_timer_create(&pStaDs->pmfSaQueryTimer, "PMF SA Query timer",
+                        limPmfSaQueryTimerHandler, timerId.value,
+                        SYS_MS_TO_TICKS((retryInterval * 1024) / 1000),
+                        0, TX_NO_ACTIVATE) != TX_SUCCESS)
+    {
+        limLog(pMac, LOGE, FL("could not create PMF SA Query timer"));
+        limRejectAssociation(pMac, pHdr->sa,
+                             subType, true, authType,
+                             peerIdx, false,
+                             (tSirResultCodes) eSIR_MAC_UNSPEC_FAILURE_STATUS, psessionEntry);
+        goto error;
+    }
 #endif
 
     // BTAMP: Storing the parsed assoc request in the psessionEntry array
@@ -1239,7 +1326,8 @@ if (limPopulateMatchingRateSet(pMac,
         // BTAMP: Add STA context at HW - issue WDA_ADD_STA_REQ to HAL
         if (limAddSta(pMac, pStaDs, false, psessionEntry) != eSIR_SUCCESS)
         {
-            limLog(pMac, LOGE, FL("could not Add STA with assocId=%d"), pStaDs->assocId);
+            limLog(pMac, LOGE, FL("could not Add STA with assocId=%d"),
+                                  pStaDs->assocId);
             limRejectAssociation( pMac, pStaDs->staAddr, pStaDs->mlmStaContext.subType,
                                   true, pStaDs->mlmStaContext.authType, pStaDs->assocId, true,
                                   (tSirResultCodes) eSIR_MAC_UNSPEC_FAILURE_STATUS, psessionEntry);
@@ -1261,7 +1349,8 @@ if (limPopulateMatchingRateSet(pMac,
             pStaDs->mlmStaContext.mlmState = eLIM_MLM_WT_ASSOC_DEL_STA_RSP_STATE;
             if(limDelSta(pMac, pStaDs, true, psessionEntry) != eSIR_SUCCESS)
             {
-                limLog(pMac, LOGE, FL("could not DEL STA with assocId=%d staId %d"), pStaDs->assocId, pStaDs->staIndex);
+                limLog(pMac, LOGE, FL("could not DEL STA with assocId=%d staId %d"),
+                                       pStaDs->assocId, pStaDs->staIndex);
                 limRejectAssociation( pMac, pStaDs->staAddr, pStaDs->mlmStaContext.subType, true, pStaDs->mlmStaContext.authType,
                                       pStaDs->assocId, true,(tSirResultCodes) eSIR_MAC_UNSPEC_FAILURE_STATUS, psessionEntry);
 
@@ -1277,7 +1366,8 @@ if (limPopulateMatchingRateSet(pMac,
             /* use the same AID, already allocated */
             if (limAddSta(pMac, pStaDs, false, psessionEntry) != eSIR_SUCCESS)
             {
-                    limLog( pMac, LOGE, FL( "AP do not support UPASD REASSOC Failed" ));
+                    limLog( pMac, LOGE, FL( "AP do not support UPASD "
+                                            "REASSOC Failed"));
                     limRejectAssociation( pMac, pStaDs->staAddr, pStaDs->mlmStaContext.subType, true, pStaDs->mlmStaContext.authType,
                                           pStaDs->assocId, true,(tSirResultCodes) eSIR_MAC_WME_REFUSED_STATUS, psessionEntry);
 
@@ -1352,7 +1442,6 @@ void limSendMlmAssocInd(tpAniSirGlobal pMac, tpDphHashNode pStaDs, tpPESession p
 
     // Get the phyMode
     limGetPhyMode(pMac, &phyMode, psessionEntry);
- 
     // Extract pre-auth context for the peer BTAMP-STA, if any.
  
     // Determiine if its Assoc or ReAssoc Request
@@ -1360,6 +1449,11 @@ void limSendMlmAssocInd(tpAniSirGlobal pMac, tpDphHashNode pStaDs, tpPESession p
         subType = LIM_REASSOC;
     else 
         subType = LIM_ASSOC;
+
+    limLog(pMac, LOG1, FL("Sessionid %d ssid %s subtype %d Associd %d staAddr "
+    MAC_ADDRESS_STR), psessionEntry->peSessionId, pAssocReq->ssId.ssId,
+    subType,pStaDs->assocId,MAC_ADDR_ARRAY(pStaDs->staAddr));
+
     if (subType == LIM_ASSOC || subType == LIM_REASSOC)
     {
         temp  = sizeof(tLimMlmAssocInd);
@@ -1392,7 +1486,8 @@ void limSendMlmAssocInd(tpAniSirGlobal pMac, tpDphHashNode pStaDs, tpPESession p
         }
         if (pAssocReq->rsnPresent && (NULL == wpsIe))
         {
-            limLog(pMac, LOG2, FL("Assoc Req RSN IE len = %d"), pAssocReq->rsn.length);
+            limLog(pMac, LOG2, FL("Assoc Req RSN IE len = %d"),
+                                    pAssocReq->rsn.length);
             pMlmAssocInd->rsnIE.length = 2 + pAssocReq->rsn.length;
             pMlmAssocInd->rsnIE.rsnIEdata[0] = SIR_MAC_RSN_EID;
             pMlmAssocInd->rsnIE.rsnIEdata[1] = pAssocReq->rsn.length;
@@ -1418,7 +1513,8 @@ void limSendMlmAssocInd(tpAniSirGlobal pMac, tpDphHashNode pStaDs, tpPESession p
         {
             if((pMlmAssocInd->rsnIE.length + pAssocReq->wpa.length) >= SIR_MAC_MAX_IE_LENGTH)
             {
-                PELOGE(limLog(pMac, LOGE, FL("rsnIEdata index out of bounds %d"), pMlmAssocInd->rsnIE.length);)
+                PELOGE(limLog(pMac, LOGE, FL("rsnIEdata index out of bounds %d"),
+                                              pMlmAssocInd->rsnIE.length);)
                 vos_mem_free(pMlmAssocInd);
                 return;
             }
@@ -1445,7 +1541,8 @@ void limSendMlmAssocInd(tpAniSirGlobal pMac, tpDphHashNode pStaDs, tpPESession p
         {
 
             if (wlan_cfgGetInt(pMac, (tANI_U16) WNI_CFG_WME_ENABLED, &tmp) != eSIR_SUCCESS)
-                 limLog(pMac, LOGP, FL("wlan_cfgGetInt failed for id %d"), WNI_CFG_WME_ENABLED );
+                 limLog(pMac, LOGP, FL("wlan_cfgGetInt failed for id %d"),
+                                                WNI_CFG_WME_ENABLED );
 
             /* check whether AP is enabled with WMM */
             if(tmp)
@@ -1478,7 +1575,8 @@ void limSendMlmAssocInd(tpAniSirGlobal pMac, tpDphHashNode pStaDs, tpPESession p
         pMlmReassocInd = vos_mem_malloc(temp);
         if (NULL == pMlmReassocInd)
         {
-            limLog(pMac, LOGP, FL("call to AllocateMemory failed for pMlmReassocInd"));
+            limLog(pMac, LOGP, FL("call to AllocateMemory failed for "
+                                  "pMlmReassocInd"));
             limReleasePeerIdx(pMac, pStaDs->assocId, psessionEntry);
             return;
         }
@@ -1504,7 +1602,8 @@ void limSendMlmAssocInd(tpAniSirGlobal pMac, tpDphHashNode pStaDs, tpPESession p
 
         if (pAssocReq->rsnPresent && (NULL == wpsIe))
         {
-            limLog(pMac, LOG2, FL("Assoc Req: RSN IE length = %d"), pAssocReq->rsn.length);
+            limLog(pMac, LOG2, FL("Assoc Req: RSN IE length = %d"),
+                                            pAssocReq->rsn.length);
             pMlmReassocInd->rsnIE.length = 2 + pAssocReq->rsn.length;
             pMlmReassocInd->rsnIE.rsnIEdata[0] = SIR_MAC_RSN_EID;
             pMlmReassocInd->rsnIE.rsnIEdata[1] = pAssocReq->rsn.length;
@@ -1521,7 +1620,8 @@ void limSendMlmAssocInd(tpAniSirGlobal pMac, tpDphHashNode pStaDs, tpPESession p
             pMlmReassocInd->supportedChannels.numChnl = (tANI_U8)(pAssocReq->supportedChannels.length / 2);
 
             limLog(pMac, LOG1,
-                FL("Sending Reassoc Ind: spectrum ON, minPwr %d, maxPwr %d, numChnl %d"),
+                FL("Sending Reassoc Ind: spectrum ON, minPwr %d, "
+                   "maxPwr %d, numChnl %d"),
                 pMlmReassocInd->powerCap.minTxPower,
                 pMlmReassocInd->powerCap.maxTxPower,
                 pMlmReassocInd->supportedChannels.numChnl);
@@ -1541,7 +1641,8 @@ void limSendMlmAssocInd(tpAniSirGlobal pMac, tpDphHashNode pStaDs, tpPESession p
         /* This check is to avoid extra Sec IEs present incase of WPS */
         if (pAssocReq->wpaPresent && (NULL == wpsIe))
         {
-            limLog(pMac, LOG2, FL("Received WPA IE length in Assoc Req is %d"), pAssocReq->wpa.length);
+            limLog(pMac, LOG2, FL("Received WPA IE length in Assoc Req is %d"),
+                                   pAssocReq->wpa.length);
             pMlmReassocInd->rsnIE.rsnIEdata[pMlmReassocInd->rsnIE.length] = SIR_MAC_WPA_EID;
             pMlmReassocInd->rsnIE.rsnIEdata[pMlmReassocInd->rsnIE.length + 1] = pAssocReq->wpa.length;
             vos_mem_copy(&pMlmReassocInd->rsnIE.rsnIEdata[pMlmReassocInd->rsnIE.length + 2],
@@ -1564,7 +1665,8 @@ void limSendMlmAssocInd(tpAniSirGlobal pMac, tpDphHashNode pStaDs, tpPESession p
         {
 
             if (wlan_cfgGetInt(pMac, (tANI_U16) WNI_CFG_WME_ENABLED, &tmp) != eSIR_SUCCESS)
-                 limLog(pMac, LOGP, FL("wlan_cfgGetInt failed for id %d"), WNI_CFG_WME_ENABLED );
+                 limLog(pMac, LOGP, FL("wlan_cfgGetInt failed for id %d"),
+                                                    WNI_CFG_WME_ENABLED );
 
             /* check whether AP is enabled with WMM */
             if(tmp)

@@ -1,25 +1,5 @@
 /*
- * Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
- *
- * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
- *
- *
- * Permission to use, copy, modify, and/or distribute this software for
- * any purpose with or without fee is hereby granted, provided that the
- * above copyright notice and this permission notice appear in all
- * copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
- * WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
- * AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
- * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
- * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
- * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
- * PERFORMANCE OF THIS SOFTWARE.
- */
-/*
- * Copyright (c) 2012, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -40,9 +20,13 @@
  */
 
 /*
- *
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ */
 
- * Airgo Networks, Inc proprietary. All rights reserved.
+/*
+ *
  * Author:      Sandesh Goel
 
  * Date:        02/25/02
@@ -191,6 +175,17 @@
 //DPH Hash Index for BSS(STA's Peer) on station.
 
 #define DPH_STA_HASH_INDEX_PEER   1
+
+
+#ifdef WLAN_FEATURE_11W
+//DPH PMF SA Query state for station
+
+#define DPH_SA_QUERY_NOT_IN_PROGRESS      1
+
+#define DPH_SA_QUERY_IN_PROGRESS          2
+
+#define DPH_SA_QUERY_TIMED_OUT            3
+#endif
 
 
 typedef struct sDphRateBasedCtr
@@ -618,9 +613,18 @@ typedef struct sDphHashNode
     tANI_U8  vhtBeamFormerCapable;
 #endif
 
+#ifdef WLAN_FEATURE_11W
+    tANI_U8  pmfSaQueryState;
+    tANI_U8  pmfSaQueryRetryCount;
+    tANI_U16 pmfSaQueryCurrentTransId;
+    tANI_U16 pmfSaQueryStartTransId;
+    TX_TIMER pmfSaQueryTimer;
+#endif
+
     tANI_U8 htLdpcCapable;
     tANI_U8 vhtLdpcCapable;
-
+    /* key installed for this STA or not in the firmware */
+    tANI_U8 isKeyInstalled;
     /* When a station with already an existing dph entry tries to 
 
      * associate again, the old dph entry will be zeroed out except 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -18,25 +18,11 @@
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
  */
+
 /*
- * Copyright (c) 2012, The Linux Foundation. All rights reserved.
- *
- * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
- *
- *
- * Permission to use, copy, modify, and/or distribute this software for
- * any purpose with or without fee is hereby granted, provided that the
- * above copyright notice and this permission notice appear in all
- * copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
- * WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
- * AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
- * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
- * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
- * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
- * PERFORMANCE OF THIS SOFTWARE.
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /** ------------------------------------------------------------------------- * 
@@ -44,9 +30,6 @@
     \file csrLinkList.c
   
     Implementation for the Common link list interfaces.
-  
-  
-    Copyright (C) 2006 Airgo Networks, Incorporated 
    ========================================================================== */
 
 #include "palApi.h"
@@ -54,6 +37,8 @@
 #include "vos_lock.h"
 #include "vos_memory.h"
 #include "vos_trace.h"
+
+#include "vos_timer.h"
 
 ANI_INLINE_FUNCTION void csrListInit(tListElem *pList)
 {
@@ -274,7 +259,7 @@ eHalStatus csrLLOpen( tHddHandle hHdd, tDblLinkList *pList )
     if ( LIST_FLAG_OPEN != pList->Flag ) 
     {
         pList->Count = 0;
-
+        pList->cmdTimeoutTimer = NULL;
         vosStatus = vos_lock_init(&pList->Lock);
 
         if(VOS_IS_STATUS_SUCCESS(vosStatus))
@@ -353,6 +338,12 @@ void csrLLInsertHead( tDblLinkList *pList, tListElem *pEntry, tANI_BOOLEAN fInte
         if(fInterlocked)
         {
             csrLLUnlock(pList);
+        }
+        if ( pList->cmdTimeoutTimer && pList->cmdTimeoutDuration )
+        {
+            /* timer to detect pending command in activelist*/
+            vos_timer_start( pList->cmdTimeoutTimer,
+                pList->cmdTimeoutDuration);
         }
     }
 }
@@ -582,6 +573,10 @@ tANI_BOOLEAN csrLLRemoveEntry( tDblLinkList *pList, tListElem *pEntryToRemove, t
         if ( fInterlocked ) 
         {
             csrLLUnlock( pList );
+        }
+        if ( pList->cmdTimeoutTimer )
+        {
+           vos_timer_stop(pList->cmdTimeoutTimer);
         }
     }
 

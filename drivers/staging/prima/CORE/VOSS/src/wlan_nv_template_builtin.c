@@ -1,31 +1,30 @@
 /*
- * Copyright (c) 2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2014 The Linux Foundation. All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
- *    * Redistributions of source code must retain the above copyright
- *      notice, this list of conditions and the following disclaimer.
- *    * Redistributions in binary form must reproduce the above
- *      copyright notice, this list of conditions and the following
- *      disclaimer in the documentation and/or other materials provided
- *      with the distribution.
- *    * Neither the name of The Linux Foundation nor the names of its
- *      contributors may be used to endorse or promote products derived
- *      from this software without specific prior written permission.
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
- *THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED
- *WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- *MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT
- *ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS
- *BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- *CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- *SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
- *BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- *WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
- *OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
- *IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Permission to use, copy, modify, and/or distribute this software for
+ * any purpose with or without fee is hereby granted, provided that the
+ * above copyright notice and this permission notice appear in all
+ * copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
+ * WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
+ * AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
+ * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+ * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+ * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE.
  */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ */
+
 /*===========================================================================
                        EDIT HISTORY FOR FILE
 
@@ -134,7 +133,7 @@
 
 
 static int enumNoOfFieldArray[INDEX_ENUM_BUILTIN_MAX] =
-     {7,1,9,5,80,14,3,55};
+     {7,1,9,5,40,14,3,55};
 
 _NV_TEMPLATE_ENUM NvEnumsBuiltIn[/*INDEX_ENUM_MAX*/][ENUM_ENTRIES_MAX] = {
    { // INDEX_ENUM_ALL
@@ -216,6 +215,9 @@ _NV_TEMPLATE_ENUM NvEnumsBuiltIn[/*INDEX_ENUM_MAX*/][ENUM_ENTRIES_MAX] = {
       {"ck",RF_CHAN_132,0,{nul}},
       {"cl",RF_CHAN_136,0,{nul}},
       {"cm",RF_CHAN_140,0,{nul}},
+#ifdef FEATURE_WLAN_CH144
+      {"kt",RF_CHAN_144,0,{nul}},
+#endif /* FEATURE_WLAN_CH144 */
       {"cn",RF_CHAN_149,0,{nul}},
       {"co",RF_CHAN_153,0,{nul}},
       {"cp",RF_CHAN_157,0,{nul}},
@@ -252,6 +254,9 @@ _NV_TEMPLATE_ENUM NvEnumsBuiltIn[/*INDEX_ENUM_MAX*/][ENUM_ENTRIES_MAX] = {
       {"dk",RF_CHAN_BOND_130,0,{nul}},
       {"dl",RF_CHAN_BOND_134,0,{nul}},
       {"dm",RF_CHAN_BOND_138,0,{nul}},
+#ifdef FEATURE_WLAN_CH144
+      {"ku",RF_CHAN_BOND_142,0,{nul}},
+#endif /* FEATURE_WLAN_CH144 */
       {"dn",RF_CHAN_BOND_151,0,{nul}},
       {"do",RF_CHAN_BOND_155,0,{nul}},
       {"dp",RF_CHAN_BOND_159,0,{nul}},
@@ -424,6 +429,13 @@ _NV_TEMPLATE_ENUM NvEnumsBuiltIn[/*INDEX_ENUM_MAX*/][ENUM_ENTRIES_MAX] = {
 
 
 int getEnumNoOfFields(int enumIdx){
+#ifdef FEATURE_WLAN_CH144
+   enumNoOfFieldArray[4] = enumNoOfFieldArray[4] + 1;
+#endif
+   enumNoOfFieldArray[4] = enumNoOfFieldArray[4] + 36;
+#ifdef FEATURE_WLAN_CH144
+   enumNoOfFieldArray[4] = enumNoOfFieldArray[4] + 1;
+#endif
 #ifdef WLAN_FEATURE_11AC
    enumNoOfFieldArray[7] = enumNoOfFieldArray[7] + 17;
 #ifdef WCN_PRONTO
@@ -446,261 +458,265 @@ static int tableNoOfFieldArray[TABLE_BUILTIN_MAX] =
 _NV_TEMPLATE_TABLE NvTablesBuiltIn[/*TABLES_MAX*/][TABLE_ENTRIES_MAX] = {
    { // TABLE_sHalNv
       {"jz",_TABLE_IDX(TABLE_sNvFields),SINGULAR,0,0,0,
-         ((int)&(nvDefaults.fields) - (int)&nvDefaults),"fields"},
+         ((char *)&(nvDefaults.fields) - (char *)&nvDefaults),"fields"},
       {"jm",_TABLE_IDX(TABLE_tRateGroupPwr),(ARRAY_1),
          ((FIELD_SIZE_TYPE_BIT(FIELD_SIZE_IDX_ENUM))|
          (FIELD_SIZE_VALUE_BITS(INDEX_ENUM_NUM_RF_SUBBANDS))),0,0,
-         ((int)&(nvDefaults.tables.pwrOptimum[0]) - (int)&nvDefaults.tables),
+         ((char *)&(nvDefaults.tables.pwrOptimum[0]) - (char *)&nvDefaults.tables),
          "pwrOptimum"},
       {"dx",_TABLE_IDX(TABLE_sRegulatoryChannel),(ARRAY_1),
          ((FIELD_SIZE_TYPE_BIT(FIELD_SIZE_IDX_ENUM))|
          (FIELD_SIZE_VALUE_BITS(INDEX_ENUM_NUM_RF_CHANNELS))),0,0,
-         ((int)&(nvDefaults.tables.regDomains[0].channels[0]) -
-          (int)&nvDefaults.tables.regDomains[0]),"channels"},
+         ((char *)&(nvDefaults.tables.regDomains[0].channels[0]) -
+          (char *)&nvDefaults.tables.regDomains[0]),"channels"},
       {"jn",_TABLE_IDX(TABLE_sRegulatoryDomains),(ARRAY_1),
          ((FIELD_SIZE_TYPE_BIT(FIELD_SIZE_IDX_ENUM))|
          (FIELD_SIZE_VALUE_BITS(INDEX_ENUM_NUM_REG_DOMAINS))),0,0,
-         ((int)&(nvDefaults.tables.regDomains[0]) - (int)&nvDefaults.tables),
+         ((char *)&(nvDefaults.tables.regDomains[0]) - (char *)&nvDefaults.tables),
          "regDomains"},
       {"jo",_TABLE_IDX(TABLE_sDefaultCountry),SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables.defaultCountryTable) -
-          (int)&nvDefaults.tables),"defaultCountryTable"},
+         ((char *)&(nvDefaults.tables.defaultCountryTable) -
+          (char *)&nvDefaults.tables),"defaultCountryTable"},
       {"jp",_TABLE_IDX(TABLE_tTpcPowerTable),(ARRAY_1),
          ((FIELD_SIZE_TYPE_BIT(FIELD_SIZE_IDX_ENUM))|
          (FIELD_SIZE_VALUE_BITS(INDEX_ENUM_NUM_RF_CHANNELS))),0,0,
-         ((int)&(nvDefaults.tables.plutCharacterized[0]) -
-          (int)&nvDefaults.tables),"plutCharacterized"},
+         ((char *)&(nvDefaults.tables.plutCharacterized[0]) -
+          (char *)&nvDefaults.tables),"plutCharacterized"},
       {"jr",_TABLE_IDX(TABLE_tRateGroupPwrVR),(ARRAY_1),
          ((FIELD_SIZE_TYPE_BIT(FIELD_SIZE_IDX_ENUM))|
          (FIELD_SIZE_VALUE_BITS(INDEX_ENUM_NUM_RF_SUBBANDS))),0,0,
-         ((int)&(nvDefaults.tables.pwrOptimum_virtualRate[0]) -
-          (int)&nvDefaults.tables),"pwrOptimum_virtualRate"},
+         ((char *)&(nvDefaults.tables.pwrOptimum_virtualRate[0]) -
+          (char *)&nvDefaults.tables),"pwrOptimum_virtualRate"},
       {"js",_TABLE_IDX(TABLE_sFwConfig),SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables.fwConfig) - (int)&nvDefaults.tables),
+         ((char *)&(nvDefaults.tables.fwConfig) - (char *)&nvDefaults.tables),
          "fwConfig"},
       {"jt",_TABLE_IDX(TABLE_sRssiChannelOffsets),(_ADD_SIZE1(2)|ARRAY_1),
          ((FIELD_SIZE_TYPE_BIT(FIELD_SIZE_IDX_INT))|(FIELD_SIZE_VALUE_BITS(2))),
-         0,0,((int)&(nvDefaults.tables.rssiChanOffsets[0]) -
-          (int)&nvDefaults.tables),"rssiChanOffsets"},
+         0,0,((char *)&(nvDefaults.tables.rssiChanOffsets[0]) -
+          (char *)&nvDefaults.tables),"rssiChanOffsets"},
       {"er",_TABLE_IDX(TABLE_sCalData),SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables.hwCalValues.calData) -
-          (int)&nvDefaults.tables.hwCalValues),"calData"},
+         ((char *)&(nvDefaults.tables.hwCalValues.calData) -
+          (char *)&nvDefaults.tables.hwCalValues),"calData"},
       {"ju",_TABLE_IDX(TABLE_sHwCalValues),SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables.hwCalValues) - (int)&nvDefaults.tables),
+         ((char *)&(nvDefaults.tables.hwCalValues) - (char *)&nvDefaults.tables),
          "hwCalValues"},
       {"jx",_TABLE_IDX(TABLE_sOfdmCmdPwrOffset),SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables.ofdmCmdPwrOffset) - (int)&nvDefaults.tables),
+         ((char *)&(nvDefaults.tables.ofdmCmdPwrOffset) - (char *)&nvDefaults.tables),
          "ofdmCmdPwrOffset"},
       {"jy",_TABLE_IDX(TABLE_sTxBbFilterMode),SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables.txbbFilterMode) - (int)&nvDefaults.tables),
+         ((char *)&(nvDefaults.tables.txbbFilterMode) - (char *)&nvDefaults.tables),
          "txbbFilterMode"},
       {"j0",_TABLE_IDX(TABLE_sNvTables),SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables) - (int)&nvDefaults),"tables"},
+         ((char *)&(nvDefaults.tables) - (char *)&nvDefaults),"tables"},
       {{nul}, 0, 0, 0, 0, 0, 0,{nul}},
    }, // TABLE_sHalNv
 
    { // TABLE_sNvFields
-      {"ap",_ID_U16,SINGULAR,0,0,0,((int)&(nvDefaults.fields.productId) -
-          (int)&nvDefaults.fields),"productId"},
-      {"aq",_ID_U8,SINGULAR,0,0,0,((int)&(nvDefaults.fields.productBands) -
-          (int)&nvDefaults.fields),"productBands"},
-      {"ar",_ID_U8,SINGULAR,0,0,0,((int)&(nvDefaults.fields.wlanNvRevId) -
-          (int)&nvDefaults.fields),"wlanNvRevId"},
-      {"as",_ID_U8,SINGULAR,0,0,0,((int)&(nvDefaults.fields.numOfTxChains) -
-          (int)&nvDefaults.fields),"numOfTxChains"},
-      {"at",_ID_U8,SINGULAR,0,0,0,((int)&(nvDefaults.fields.numOfRxChains) -
-          (int)&nvDefaults.fields),"numOfRxChains"},
+      {"ap",_ID_U16,SINGULAR,0,0,0,((char *)&(nvDefaults.fields.productId) -
+          (char *)&nvDefaults.fields),"productId"},
+      {"aq",_ID_U8,SINGULAR,0,0,0,((char *)&(nvDefaults.fields.productBands) -
+          (char *)&nvDefaults.fields),"productBands"},
+      {"ar",_ID_U8,SINGULAR,0,0,0,((char *)&(nvDefaults.fields.wlanNvRevId) -
+          (char *)&nvDefaults.fields),"wlanNvRevId"},
+      {"as",_ID_U8,SINGULAR,0,0,0,((char *)&(nvDefaults.fields.numOfTxChains) -
+          (char *)&nvDefaults.fields),"numOfTxChains"},
+      {"at",_ID_U8,SINGULAR,0,0,0,((char *)&(nvDefaults.fields.numOfRxChains) -
+          (char *)&nvDefaults.fields),"numOfRxChains"},
       {"au",_ID_U8,(_ADD_SIZE1(NV_FIELD_MAC_ADDR_SIZE)|ARRAY_1),
          ((FIELD_SIZE_TYPE_BIT(FIELD_SIZE_IDX_INT))|
          (FIELD_SIZE_VALUE_BITS(NV_FIELD_MAC_ADDR_SIZE))),0,0,
-         ((int)&(nvDefaults.fields.macAddr[0]) - (int)&nvDefaults.fields),
+         ((char *)&(nvDefaults.fields.macAddr[0]) - (char *)&nvDefaults.fields),
          "macAddr"},
       {"av",_ID_U8,(_ADD_SIZE1(NV_FIELD_MAC_ADDR_SIZE)|ARRAY_1),
          ((FIELD_SIZE_TYPE_BIT(FIELD_SIZE_IDX_INT))|
          (FIELD_SIZE_VALUE_BITS(NV_FIELD_MAC_ADDR_SIZE))),0,0,
-         ((int)&(nvDefaults.fields.macAddr2[0]) - (int)&nvDefaults.fields),
+         ((char *)&(nvDefaults.fields.macAddr2[0]) - (char *)&nvDefaults.fields),
          "macAddr2"},
       {"aw",_ID_U8,(_ADD_SIZE1(NV_FIELD_MAC_ADDR_SIZE)|ARRAY_1),
          ((FIELD_SIZE_TYPE_BIT(FIELD_SIZE_IDX_INT))|
          (FIELD_SIZE_VALUE_BITS(NV_FIELD_MAC_ADDR_SIZE))),0,0,
-         ((int)&(nvDefaults.fields.macAddr3[0]) - (int)&nvDefaults.fields),
+         ((char *)&(nvDefaults.fields.macAddr3[0]) - (char *)&nvDefaults.fields),
          "macAddr3"},
       {"ax",_ID_U8,(_ADD_SIZE1(NV_FIELD_MAC_ADDR_SIZE)|ARRAY_1),
          ((FIELD_SIZE_TYPE_BIT(FIELD_SIZE_IDX_INT))|
          (FIELD_SIZE_VALUE_BITS(NV_FIELD_MAC_ADDR_SIZE))),0,0,
-         ((int)&(nvDefaults.fields.macAddr4[0]) - (int)&nvDefaults.fields),
+         ((char *)&(nvDefaults.fields.macAddr4[0]) - (char *)&nvDefaults.fields),
          "macAddr4"},
       {"ay",_ID_U8,(_ADD_SIZE1(NV_FIELD_MFG_SN_SIZE)|ARRAY_1),
          ((FIELD_SIZE_TYPE_BIT(FIELD_SIZE_IDX_INT))|
          (FIELD_SIZE_VALUE_BITS(NV_FIELD_MFG_SN_SIZE))),0,0,
-         ((int)&(nvDefaults.fields.mfgSN[0]) - (int)&nvDefaults.fields),"mfgSN"}
+         ((char *)&(nvDefaults.fields.mfgSN[0]) - (char *)&nvDefaults.fields),"mfgSN"}
          ,
-      {"az",_ID_U8,SINGULAR,0,0,0,((int)&(nvDefaults.fields.couplerType) -
-          (int)&nvDefaults.fields),"couplerType"},
-      {"a0",_ID_U8,SINGULAR,0,0,0,((int)&(nvDefaults.fields.nvVersion) -
-          (int)&nvDefaults.fields),"nvVersion"},
+      {"az",_ID_U8,SINGULAR,0,0,0,((char *)&(nvDefaults.fields.couplerType) -
+          (char *)&nvDefaults.fields),"couplerType"},
+      {"a0",_ID_U8,SINGULAR,0,0,0,((char *)&(nvDefaults.fields.nvVersion) -
+          (char *)&nvDefaults.fields),"nvVersion"},
       {{nul}, 0, 0, 0, 0, 0, 0,{nul}},
    }, // TABLE_sNvFields
 
    { // TABLE_sRegulatoryChannel
       {"dv",_ID_U8,SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables.regDomains[0].channels[0].enabled) -
-          (int)&nvDefaults.tables.regDomains[0].channels[0]),"enabled"},
+         ((char *)&(nvDefaults.tables.regDomains[0].channels[0].enabled) -
+          (char *)&nvDefaults.tables.regDomains[0].channels[0]),"enabled"},
       {"dw",_ID_S8,SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables.regDomains[0].channels[0].pwrLimit) -
-          (int)&nvDefaults.tables.regDomains[0].channels[0]),"pwrLimit"},
+         ((char *)&(nvDefaults.tables.regDomains[0].channels[0].pwrLimit) -
+          (char *)&nvDefaults.tables.regDomains[0].channels[0]),"pwrLimit"},
       {{nul}, 0, 0, 0, 0, 0, 0,{nul}},
    }, // TABLE_sRegulatoryChannel
 
    { // TABLE_sRssiChannelOffsets
       {"d1",_ID_S16,(ARRAY_1),((FIELD_SIZE_TYPE_BIT(FIELD_SIZE_IDX_ENUM))|
          (FIELD_SIZE_VALUE_BITS(INDEX_ENUM_NUM_RF_CHANNELS))),0,0,
-         ((int)&(nvDefaults.tables.rssiChanOffsets[0].bRssiOffset[0]) -
-          (int)&nvDefaults.tables.rssiChanOffsets[0]),"bRssiOffset"},
+         ((char *)&(nvDefaults.tables.rssiChanOffsets[0].bRssiOffset[0]) -
+          (char *)&nvDefaults.tables.rssiChanOffsets[0]),"bRssiOffset"},
       {"d2",_ID_S16,(ARRAY_1),((FIELD_SIZE_TYPE_BIT(FIELD_SIZE_IDX_ENUM))|
          (FIELD_SIZE_VALUE_BITS(INDEX_ENUM_NUM_RF_CHANNELS))),0,0,
-         ((int)&(nvDefaults.tables.rssiChanOffsets[0].gnRssiOffset[0]) -
-          (int)&nvDefaults.tables.rssiChanOffsets[0]),"gnRssiOffset"},
+         ((char *)&(nvDefaults.tables.rssiChanOffsets[0].gnRssiOffset[0]) -
+          (char *)&nvDefaults.tables.rssiChanOffsets[0]),"gnRssiOffset"},
       {{nul}, 0, 0, 0, 0, 0, 0,{nul}},
    }, // TABLE_sRssiChannelOffsets
 
    { // TABLE_sCalData
       {"ea",_ID_U16,SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables.hwCalValues.calData.psSlpTimeOvrHd2G) -
-          (int)&nvDefaults.tables.hwCalValues.calData),"psSlpTimeOvrHd2G"},
+         ((char *)&(nvDefaults.tables.hwCalValues.calData.psSlpTimeOvrHd2G) -
+          (char *)&nvDefaults.tables.hwCalValues.calData),"psSlpTimeOvrHd2G"},
       {"eb",_ID_U16,SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables.hwCalValues.calData.psSlpTimeOvrHd5G) -
-          (int)&nvDefaults.tables.hwCalValues.calData),"psSlpTimeOvrHd5G"},
+         ((char *)&(nvDefaults.tables.hwCalValues.calData.psSlpTimeOvrHd5G) -
+          (char *)&nvDefaults.tables.hwCalValues.calData),"psSlpTimeOvrHd5G"},
       {"ec",_ID_U16,SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables.hwCalValues.calData.psSlpTimeOvrHdxLNA5G) -
-          (int)&nvDefaults.tables.hwCalValues.calData),"psSlpTimeOvrHdxLNA5G"},
+         ((char *)&(nvDefaults.tables.hwCalValues.calData.psSlpTimeOvrHdxLNA5G) -
+          (char *)&nvDefaults.tables.hwCalValues.calData),"psSlpTimeOvrHdxLNA5G"},
       {"ed",_ID_U8,SINGULAR,0,0,0,
-         (((int)&(nvDefaults.tables.hwCalValues.calData.psSlpTimeOvrHdxLNA5G) +
-          sizeof(uint16)) - (int)&nvDefaults.tables.hwCalValues.calData),
+         (((char *)&(nvDefaults.tables.hwCalValues.calData.psSlpTimeOvrHdxLNA5G) +
+          sizeof(uint16)) - (char *)&nvDefaults.tables.hwCalValues.calData),
          "nv_TxBBFSel9MHz"},
       {"ee",_ID_U8,SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables.hwCalValues.calData.hwParam2) -
-          (int)&nvDefaults.tables.hwCalValues.calData),"hwParam2"},
+         ((char *)&(nvDefaults.tables.hwCalValues.calData.hwParam2) -
+          (char *)&nvDefaults.tables.hwCalValues.calData),"hwParam2"},
       {"ef",_ID_U16,SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables.hwCalValues.calData.custom_tcxo_reg8) -
-          (int)&nvDefaults.tables.hwCalValues.calData),"custom_tcxo_reg8"},
+         ((char *)&(nvDefaults.tables.hwCalValues.calData.custom_tcxo_reg8) -
+          (char *)&nvDefaults.tables.hwCalValues.calData),"custom_tcxo_reg8"},
       {"eg",_ID_U16,SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables.hwCalValues.calData.custom_tcxo_reg9) -
-          (int)&nvDefaults.tables.hwCalValues.calData),"custom_tcxo_reg9"},
+         ((char *)&(nvDefaults.tables.hwCalValues.calData.custom_tcxo_reg9) -
+          (char *)&nvDefaults.tables.hwCalValues.calData),"custom_tcxo_reg9"},
       {"eh",_ID_U32,SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables.hwCalValues.calData.hwParam3) -
-          (int)&nvDefaults.tables.hwCalValues.calData),"hwParam3"},
+         ((char *)&(nvDefaults.tables.hwCalValues.calData.hwParam3) -
+          (char *)&nvDefaults.tables.hwCalValues.calData),"hwParam3"},
       {"ei",_ID_U32,SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables.hwCalValues.calData.hwParam4) -
-          (int)&nvDefaults.tables.hwCalValues.calData),"hwParam4"},
+         ((char *)&(nvDefaults.tables.hwCalValues.calData.hwParam4) -
+          (char *)&nvDefaults.tables.hwCalValues.calData),"hwParam4"},
       {"ej",_ID_U32,SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables.hwCalValues.calData.hwParam5) -
-          (int)&nvDefaults.tables.hwCalValues.calData),"hwParam5"},
+         ((char *)&(nvDefaults.tables.hwCalValues.calData.hwParam5) -
+          (char *)&nvDefaults.tables.hwCalValues.calData),"hwParam5"},
       {"ek",_ID_U32,SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables.hwCalValues.calData.hwParam6) -
-          (int)&nvDefaults.tables.hwCalValues.calData),"hwParam6"},
+         ((char *)&(nvDefaults.tables.hwCalValues.calData.hwParam6) -
+          (char *)&nvDefaults.tables.hwCalValues.calData),"hwParam6"},
       {"el",_ID_U32,SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables.hwCalValues.calData.hwParam7) -
-          (int)&nvDefaults.tables.hwCalValues.calData),"hwParam7"},
+         ((char *)&(nvDefaults.tables.hwCalValues.calData.hwParam7) -
+          (char *)&nvDefaults.tables.hwCalValues.calData),"hwParam7"},
       {"em",_ID_U32,SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables.hwCalValues.calData.hwParam8) -
-          (int)&nvDefaults.tables.hwCalValues.calData),"hwParam8"},
+         ((char *)&(nvDefaults.tables.hwCalValues.calData.hwParam8) -
+          (char *)&nvDefaults.tables.hwCalValues.calData),"hwParam8"},
       {"en",_ID_U32,SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables.hwCalValues.calData.hwParam9) -
-          (int)&nvDefaults.tables.hwCalValues.calData),"hwParam9"},
+         ((char *)&(nvDefaults.tables.hwCalValues.calData.hwParam9) -
+          (char *)&nvDefaults.tables.hwCalValues.calData),"hwParam9"},
       {"eo",_ID_U32,SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables.hwCalValues.calData.hwParam10) -
-          (int)&nvDefaults.tables.hwCalValues.calData),"hwParam10"},
+         ((char *)&(nvDefaults.tables.hwCalValues.calData.hwParam10) -
+          (char *)&nvDefaults.tables.hwCalValues.calData),"hwParam10"},
       {"ep",_ID_U32,SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables.hwCalValues.calData.hwParam11) -
-          (int)&nvDefaults.tables.hwCalValues.calData),"hwParam11"},
+         ((char *)&(nvDefaults.tables.hwCalValues.calData.hwParam11) -
+          (char *)&nvDefaults.tables.hwCalValues.calData),"hwParam11"},
       {{nul}, 0, 0, 0, 0, 0, 0,{nul}},
    }, // TABLE_sCalData
 
    { // TABLE_sTxBbFilterMode
       {"es",_ID_U32,SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables.txbbFilterMode.txFirFilterMode) -
-          (int)&nvDefaults.tables.txbbFilterMode),"txFirFilterMode"},
+         ((char *)&(nvDefaults.tables.txbbFilterMode.txFirFilterMode) -
+          (char *)&nvDefaults.tables.txbbFilterMode),"txFirFilterMode"},
       {{nul}, 0, 0, 0, 0, 0, 0,{nul}},
    }, // TABLE_sTxBbFilterMode
 
    { // TABLE_sOfdmCmdPwrOffset
       {"et",_ID_S16,SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables.ofdmCmdPwrOffset.ofdmPwrOffset) -
-          (int)&nvDefaults.tables.ofdmCmdPwrOffset),"ofdmPwrOffset"},
+         ((char *)&(nvDefaults.tables.ofdmCmdPwrOffset.ofdmPwrOffset) -
+          (char *)&nvDefaults.tables.ofdmCmdPwrOffset),"ofdmPwrOffset"},
       {"eu",_ID_S16,SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables.ofdmCmdPwrOffset.rsvd) -
-          (int)&nvDefaults.tables.ofdmCmdPwrOffset),"rsvd"},
+         ((char *)&(nvDefaults.tables.ofdmCmdPwrOffset.rsvd) -
+          (char *)&nvDefaults.tables.ofdmCmdPwrOffset),"rsvd"},
       {{nul}, 0, 0, 0, 0, 0, 0,{nul}},
    }, // TABLE_sOfdmCmdPwrOffset
 
    { // TABLE_sDefaultCountry
       {"if",_ID_U8,SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables.defaultCountryTable.regDomain) -
-          (int)&nvDefaults.tables.defaultCountryTable),"regDomain"},
+         ((char *)&(nvDefaults.tables.defaultCountryTable.regDomain) -
+          (char *)&nvDefaults.tables.defaultCountryTable),"regDomain"},
       {"ig",_ID_U8,(_ADD_SIZE1(NV_FIELD_COUNTRY_CODE_SIZE)|ARRAY_1),
          ((FIELD_SIZE_TYPE_BIT(FIELD_SIZE_IDX_INT))|
          (FIELD_SIZE_VALUE_BITS(NV_FIELD_COUNTRY_CODE_SIZE))),0,0,
-         ((int)&(nvDefaults.tables.defaultCountryTable.countryCode[0]) -
-          (int)&nvDefaults.tables.defaultCountryTable),"countryCode"},
+         ((char *)&(nvDefaults.tables.defaultCountryTable.countryCode[0]) -
+          (char *)&nvDefaults.tables.defaultCountryTable),"countryCode"},
       {{nul}, 0, 0, 0, 0, 0, 0,{nul}},
    }, // TABLE_sDefaultCountry
 
    { // TABLE_sFwConfig
-      {"ih",_ID_U8,SINGULAR,0,0,0,((int)&(nvDefaults.tables.fwConfig.skuID) -
-          (int)&nvDefaults.tables.fwConfig),"skuID"},
-      {"ii",_ID_U8,SINGULAR,0,0,0,((int)&(nvDefaults.tables.fwConfig.tpcMode2G)
-          - (int)&nvDefaults.tables.fwConfig),"tpcMode2G"},
-      {"ij",_ID_U8,SINGULAR,0,0,0,((int)&(nvDefaults.tables.fwConfig.tpcMode5G)
-          - (int)&nvDefaults.tables.fwConfig),"tpcMode5G"},
-      {"ik",_ID_U8,SINGULAR,0,0,0,((int)&(nvDefaults.tables.fwConfig.configItem1)
-          - (int)&nvDefaults.tables.fwConfig),"configItem1"},
-      {"il",_ID_U8,SINGULAR,0,0,0,((int)&(nvDefaults.tables.fwConfig.xPA2G) -
-          (int)&nvDefaults.tables.fwConfig),"xPA2G"},
-      {"im",_ID_U8,SINGULAR,0,0,0,((int)&(nvDefaults.tables.fwConfig.xPA5G) -
-          (int)&nvDefaults.tables.fwConfig),"xPA5G"},
+      {"ih",_ID_U8,SINGULAR,0,0,0,((char *)&(nvDefaults.tables.fwConfig.skuID) -
+          (char *)&nvDefaults.tables.fwConfig),"skuID"},
+      {"ii",_ID_U8,SINGULAR,0,0,0,((char *)&(nvDefaults.tables.fwConfig.tpcMode2G)
+          - (char *)&nvDefaults.tables.fwConfig),"tpcMode2G"},
+      {"ij",_ID_U8,SINGULAR,0,0,0,((char *)&(nvDefaults.tables.fwConfig.tpcMode5G)
+          - (char *)&nvDefaults.tables.fwConfig),"tpcMode5G"},
+      {"ik",_ID_U8,SINGULAR,0,0,0,
+         ((char *)&(nvDefaults.tables.fwConfig.configItem1) -
+          (char *)&nvDefaults.tables.fwConfig),"configItem1"},
+      {"il",_ID_U8,SINGULAR,0,0,0,((char *)&(nvDefaults.tables.fwConfig.xPA2G) -
+          (char *)&nvDefaults.tables.fwConfig),"xPA2G"},
+      {"im",_ID_U8,SINGULAR,0,0,0,((char *)&(nvDefaults.tables.fwConfig.xPA5G) -
+          (char *)&nvDefaults.tables.fwConfig),"xPA5G"},
       {"in",_ID_U8,SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables.fwConfig.extPaCtrl0Polarity) -
-          (int)&nvDefaults.tables.fwConfig),"extPaCtrl0Polarity"},
+         ((char *)&(nvDefaults.tables.fwConfig.extPaCtrl0Polarity) -
+          (char *)&nvDefaults.tables.fwConfig),"extPaCtrl0Polarity"},
       {"io",_ID_U8,SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables.fwConfig.extPaCtrl1Polarity) -
-          (int)&nvDefaults.tables.fwConfig),"extPaCtrl1Polarity"},
-      {"ip",_ID_U8,SINGULAR,0,0,0,((int)&(nvDefaults.tables.fwConfig.xLNA2G) -
-          (int)&nvDefaults.tables.fwConfig),"xLNA2G"},
-      {"iq",_ID_U8,SINGULAR,0,0,0,((int)&(nvDefaults.tables.fwConfig.xLNA5G) -
-          (int)&nvDefaults.tables.fwConfig),"xLNA5G"},
-      {"ir",_ID_U8,SINGULAR,0,0,0,((int)&(nvDefaults.tables.fwConfig.xCoupler2G)
-          - (int)&nvDefaults.tables.fwConfig),"xCoupler2G"},
-      {"is",_ID_U8,SINGULAR,0,0,0,((int)&(nvDefaults.tables.fwConfig.xCoupler5G)
-          - (int)&nvDefaults.tables.fwConfig),"xCoupler5G"},
-      {"it",_ID_U8,SINGULAR,0,0,0,((int)&(nvDefaults.tables.fwConfig.xPdet2G) -
-          (int)&nvDefaults.tables.fwConfig),"xPdet2G"},
-      {"iu",_ID_U8,SINGULAR,0,0,0,((int)&(nvDefaults.tables.fwConfig.xPdet5G) -
-          (int)&nvDefaults.tables.fwConfig),"xPdet5G"},
+         ((char *)&(nvDefaults.tables.fwConfig.extPaCtrl1Polarity) -
+          (char *)&nvDefaults.tables.fwConfig),"extPaCtrl1Polarity"},
+      {"ip",_ID_U8,SINGULAR,0,0,0,((char *)&(nvDefaults.tables.fwConfig.xLNA2G) -
+          (char *)&nvDefaults.tables.fwConfig),"xLNA2G"},
+      {"iq",_ID_U8,SINGULAR,0,0,0,((char *)&(nvDefaults.tables.fwConfig.xLNA5G) -
+          (char *)&nvDefaults.tables.fwConfig),"xLNA5G"},
+      {"ir",_ID_U8,SINGULAR,0,0,0,((char *)&(nvDefaults.tables.fwConfig.xCoupler2G)
+          - (char *)&nvDefaults.tables.fwConfig),"xCoupler2G"},
+      {"is",_ID_U8,SINGULAR,0,0,0,((char *)&(nvDefaults.tables.fwConfig.xCoupler5G)
+          - (char *)&nvDefaults.tables.fwConfig),"xCoupler5G"},
+      {"it",_ID_U8,SINGULAR,0,0,0,((char *)&(nvDefaults.tables.fwConfig.xPdet2G) -
+          (char *)&nvDefaults.tables.fwConfig),"xPdet2G"},
+      {"iu",_ID_U8,SINGULAR,0,0,0,((char *)&(nvDefaults.tables.fwConfig.xPdet5G) -
+          (char *)&nvDefaults.tables.fwConfig),"xPdet5G"},
       {"iv",_ID_U8,SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables.fwConfig.enableDPD2G) -
-          (int)&nvDefaults.tables.fwConfig),"enableDPD2G"},
+         ((char *)&(nvDefaults.tables.fwConfig.enableDPD2G) -
+          (char *)&nvDefaults.tables.fwConfig),"enableDPD2G"},
       {"iw",_ID_U8,SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables.fwConfig.enableDPD5G) -
-          (int)&nvDefaults.tables.fwConfig),"enableDPD5G"},
+         ((char *)&(nvDefaults.tables.fwConfig.enableDPD5G) -
+          (char *)&nvDefaults.tables.fwConfig),"enableDPD5G"},
       {"ix",_ID_U8,SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables.fwConfig.pdadcSelect2G) -
-          (int)&nvDefaults.tables.fwConfig),"pdadcSelect2G"},
+         ((char *)&(nvDefaults.tables.fwConfig.pdadcSelect2G) -
+          (char *)&nvDefaults.tables.fwConfig),"pdadcSelect2G"},
       {"iy",_ID_U8,SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables.fwConfig.pdadcSelect5GLow) -
-          (int)&nvDefaults.tables.fwConfig),"pdadcSelect5GLow"},
+         ((char *)&(nvDefaults.tables.fwConfig.pdadcSelect5GLow) -
+          (char *)&nvDefaults.tables.fwConfig),"pdadcSelect5GLow"},
       {"iz",_ID_U8,SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables.fwConfig.pdadcSelect5GMid) -
-          (int)&nvDefaults.tables.fwConfig),"pdadcSelect5GMid"},
+         ((char *)&(nvDefaults.tables.fwConfig.pdadcSelect5GMid) -
+          (char *)&nvDefaults.tables.fwConfig),"pdadcSelect5GMid"},
       {"i0",_ID_U8,SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables.fwConfig.pdadcSelect5GHigh) -
-          (int)&nvDefaults.tables.fwConfig),"pdadcSelect5GHigh"},
-      {"i1",_ID_U32,SINGULAR,0,0,0,((int)&(nvDefaults.tables.fwConfig.configItem2)
-          - (int)&nvDefaults.tables.fwConfig),"configItem2"},
-      {"i2",_ID_U32,SINGULAR,0,0,0,((int)&(nvDefaults.tables.fwConfig.configItem3)
-          - (int)&nvDefaults.tables.fwConfig),"configItem3"},
-      {"i3",_ID_U32,SINGULAR,0,0,0,((int)&(nvDefaults.tables.fwConfig.configItem4)
-          - (int)&nvDefaults.tables.fwConfig),"configItem4"},
+         ((char *)&(nvDefaults.tables.fwConfig.pdadcSelect5GHigh) -
+          (char *)&nvDefaults.tables.fwConfig),"pdadcSelect5GHigh"},
+      {"i1",_ID_U32,SINGULAR,0,0,0,
+         ((char *)&(nvDefaults.tables.fwConfig.configItem2) -
+          (char *)&nvDefaults.tables.fwConfig),"configItem2"},
+      {"i2",_ID_U32,SINGULAR,0,0,0,
+         ((char *)&(nvDefaults.tables.fwConfig.configItem3) -
+          (char *)&nvDefaults.tables.fwConfig),"configItem3"},
+      {"i3",_ID_U32,SINGULAR,0,0,0,
+         ((char *)&(nvDefaults.tables.fwConfig.configItem4) -
+          (char *)&nvDefaults.tables.fwConfig),"configItem4"},
       {{nul}, 0, 0, 0, 0, 0, 0,{nul}},
    }, // TABLE_sFwConfig
 
@@ -710,16 +726,16 @@ _NV_TEMPLATE_TABLE NvTablesBuiltIn[/*TABLES_MAX*/][TABLE_ENTRIES_MAX] = {
          (FIELD_SIZE_VALUE_BITS(INDEX_ENUM_NUM_PHY_MAX_TX_CHAINS))),
          ((FIELD_SIZE_TYPE_BIT(FIELD_SIZE_IDX_INT))|
          (FIELD_SIZE_VALUE_BITS(TPC_MEM_POWER_LUT_DEPTH))),0,
-         ((int)&(nvDefaults.tables.plutCharacterized[0]) -
-          (int)&nvDefaults.tables.plutCharacterized[0]),"tTpcPowerTable"},
+         ((char *)&(nvDefaults.tables.plutCharacterized[0]) -
+          (char *)&nvDefaults.tables.plutCharacterized[0]),"tTpcPowerTable"},
       {{nul}, 0, 0, 0, 0, 0, 0,{nul}},
    }, // TABLE_tTpcPowerTable
 
    { // TABLE_tRateGroupPwr
       {"kb",_ID_U32,(ARRAY_1),((FIELD_SIZE_TYPE_BIT(FIELD_SIZE_IDX_ENUM))|
          (FIELD_SIZE_VALUE_BITS(INDEX_ENUM_NUM_HAL_PHY_RATES))),0,0,
-         ((int)&(nvDefaults.tables.pwrOptimum[0]) -
-          (int)&nvDefaults.tables.pwrOptimum[0]),"tRateGroupPwr"},
+         ((char *)&(nvDefaults.tables.pwrOptimum[0]) -
+          (char *)&nvDefaults.tables.pwrOptimum[0]),"tRateGroupPwr"},
       {{nul}, 0, 0, 0, 0, 0, 0,{nul}},
    }, // TABLE_tRateGroupPwr
 
@@ -727,8 +743,9 @@ _NV_TEMPLATE_TABLE NvTablesBuiltIn[/*TABLES_MAX*/][TABLE_ENTRIES_MAX] = {
       {"kd",_ID_U32,(_ADD_SIZE1(NUM_RF_VR_RATE)|ARRAY_1),
          ((FIELD_SIZE_TYPE_BIT(FIELD_SIZE_IDX_INT))|
          (FIELD_SIZE_VALUE_BITS(NUM_RF_VR_RATE))),0,0,
-         ((int)&(nvDefaults.tables.pwrOptimum_virtualRate[0]) -
-          (int)&nvDefaults.tables.pwrOptimum_virtualRate[0]),"tRateGroupPwrVR"},
+         ((char *)&(nvDefaults.tables.pwrOptimum_virtualRate[0]) -
+          (char *)&nvDefaults.tables.pwrOptimum_virtualRate[0]),"tRateGroupPwrVR"},
+
       {{nul}, 0, 0, 0, 0, 0, 0,{nul}},
    }, // TABLE_tRateGroupPwrVR
 
@@ -736,30 +753,30 @@ _NV_TEMPLATE_TABLE NvTablesBuiltIn[/*TABLES_MAX*/][TABLE_ENTRIES_MAX] = {
       {"dx",_TABLE_IDX(TABLE_sRegulatoryChannel),(ARRAY_1),
          ((FIELD_SIZE_TYPE_BIT(FIELD_SIZE_IDX_ENUM))|
          (FIELD_SIZE_VALUE_BITS(INDEX_ENUM_NUM_RF_CHANNELS))),0,0,
-         ((int)&(nvDefaults.tables.regDomains[0].channels[0]) -
-          (int)&nvDefaults.tables.regDomains[0]),"channels"},
+         ((char *)&(nvDefaults.tables.regDomains[0].channels[0]) -
+          (char *)&nvDefaults.tables.regDomains[0]),"channels"},
       {"dy",_ID_U32,(ARRAY_1),((FIELD_SIZE_TYPE_BIT(FIELD_SIZE_IDX_ENUM))|
          (FIELD_SIZE_VALUE_BITS(INDEX_ENUM_NUM_RF_SUBBANDS))),0,0,
-         ((int)&(nvDefaults.tables.regDomains[0].antennaGain[0]) -
-          (int)&nvDefaults.tables.regDomains[0]),"antennaGain"},
+         ((char *)&(nvDefaults.tables.regDomains[0].antennaGain[0]) -
+          (char *)&nvDefaults.tables.regDomains[0]),"antennaGain"},
       {"dz",_ID_U32,(ARRAY_1),((FIELD_SIZE_TYPE_BIT(FIELD_SIZE_IDX_ENUM))|
          (FIELD_SIZE_VALUE_BITS(INDEX_ENUM_NUM_2_4GHZ_CHANNELS))),0,0,
-         ((int)&(nvDefaults.tables.regDomains[0].bRatePowerOffset[0]) -
-          (int)&nvDefaults.tables.regDomains[0]),"bRatePowerOffset"},
+         ((char *)&(nvDefaults.tables.regDomains[0].bRatePowerOffset[0]) -
+          (char *)&nvDefaults.tables.regDomains[0]),"bRatePowerOffset"},
       {"d0",_ID_U32,(ARRAY_1),((FIELD_SIZE_TYPE_BIT(FIELD_SIZE_IDX_ENUM))|
          (FIELD_SIZE_VALUE_BITS(INDEX_ENUM_NUM_RF_CHANNELS))),0,0,
-         ((int)&(nvDefaults.tables.regDomains[0].gnRatePowerOffset[0]) -
-          (int)&nvDefaults.tables.regDomains[0]),"gnRatePowerOffset"},
+         ((char *)&(nvDefaults.tables.regDomains[0].gnRatePowerOffset[0]) -
+          (char *)&nvDefaults.tables.regDomains[0]),"gnRatePowerOffset"},
       {{nul}, 0, 0, 0, 0, 0, 0,{nul}},
    }, // TABLE_sRegulatoryDomains
 
    { // TABLE_sHwCalValues
       {"eq",_ID_U32,SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables.hwCalValues.validBmap) -
-          (int)&nvDefaults.tables.hwCalValues),"validBmap"},
+         ((char *)&(nvDefaults.tables.hwCalValues.validBmap) -
+          (char *)&nvDefaults.tables.hwCalValues),"validBmap"},
       {"er",_TABLE_IDX(TABLE_sCalData),SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables.hwCalValues.calData) -
-          (int)&nvDefaults.tables.hwCalValues),"calData"},
+         ((char *)&(nvDefaults.tables.hwCalValues.calData) -
+          (char *)&nvDefaults.tables.hwCalValues),"calData"},
       {{nul}, 0, 0, 0, 0, 0, 0,{nul}},
    }, // TABLE_sHwCalValues
 
@@ -767,55 +784,55 @@ _NV_TEMPLATE_TABLE NvTablesBuiltIn[/*TABLES_MAX*/][TABLE_ENTRIES_MAX] = {
       {"jm",_TABLE_IDX(TABLE_tRateGroupPwr),(ARRAY_1),
          ((FIELD_SIZE_TYPE_BIT(FIELD_SIZE_IDX_ENUM))|
          (FIELD_SIZE_VALUE_BITS(INDEX_ENUM_NUM_RF_SUBBANDS))),0,0,
-         ((int)&(nvDefaults.tables.pwrOptimum[0]) - (int)&nvDefaults.tables),
+         ((char *)&(nvDefaults.tables.pwrOptimum[0]) - (char *)&nvDefaults.tables),
          "pwrOptimum"},
       {"jn",_TABLE_IDX(TABLE_sRegulatoryDomains),(ARRAY_1),
          ((FIELD_SIZE_TYPE_BIT(FIELD_SIZE_IDX_ENUM))|
          (FIELD_SIZE_VALUE_BITS(INDEX_ENUM_NUM_REG_DOMAINS))),0,0,
-         ((int)&(nvDefaults.tables.regDomains[0]) - (int)&nvDefaults.tables),
+         ((char *)&(nvDefaults.tables.regDomains[0]) - (char *)&nvDefaults.tables),
          "regDomains"},
       {"jo",_TABLE_IDX(TABLE_sDefaultCountry),SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables.defaultCountryTable) -
-          (int)&nvDefaults.tables),"defaultCountryTable"},
+         ((char *)&(nvDefaults.tables.defaultCountryTable) -
+          (char *)&nvDefaults.tables),"defaultCountryTable"},
       {"jp",_TABLE_IDX(TABLE_tTpcPowerTable),(ARRAY_1),
          ((FIELD_SIZE_TYPE_BIT(FIELD_SIZE_IDX_ENUM))|
          (FIELD_SIZE_VALUE_BITS(INDEX_ENUM_NUM_RF_CHANNELS))),0,0,
-         ((int)&(nvDefaults.tables.plutCharacterized[0]) -
-          (int)&nvDefaults.tables),"plutCharacterized"},
+         ((char *)&(nvDefaults.tables.plutCharacterized[0]) -
+          (char *)&nvDefaults.tables),"plutCharacterized"},
       {"jq",_ID_S16,(ARRAY_1),((FIELD_SIZE_TYPE_BIT(FIELD_SIZE_IDX_ENUM))|
          (FIELD_SIZE_VALUE_BITS(INDEX_ENUM_NUM_RF_CHANNELS))),0,0,
-         ((int)&(nvDefaults.tables.plutPdadcOffset[0]) -
-          (int)&nvDefaults.tables),"plutPdadcOffset"},
+         ((char *)&(nvDefaults.tables.plutPdadcOffset[0]) -
+          (char *)&nvDefaults.tables),"plutPdadcOffset"},
       {"jr",_TABLE_IDX(TABLE_tRateGroupPwrVR),(ARRAY_1),
          ((FIELD_SIZE_TYPE_BIT(FIELD_SIZE_IDX_ENUM))|
          (FIELD_SIZE_VALUE_BITS(INDEX_ENUM_NUM_RF_SUBBANDS))),0,0,
-         ((int)&(nvDefaults.tables.pwrOptimum_virtualRate[0]) -
-          (int)&nvDefaults.tables),"pwrOptimum_virtualRate"},
+         ((char *)&(nvDefaults.tables.pwrOptimum_virtualRate[0]) -
+          (char *)&nvDefaults.tables),"pwrOptimum_virtualRate"},
       {"js",_TABLE_IDX(TABLE_sFwConfig),SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables.fwConfig) - (int)&nvDefaults.tables),
+         ((char *)&(nvDefaults.tables.fwConfig) - (char *)&nvDefaults.tables),
          "fwConfig"},
       {"jt",_TABLE_IDX(TABLE_sRssiChannelOffsets),(_ADD_SIZE1(2)|ARRAY_1),
          ((FIELD_SIZE_TYPE_BIT(FIELD_SIZE_IDX_INT))|(FIELD_SIZE_VALUE_BITS(2))),
-         0,0,((int)&(nvDefaults.tables.rssiChanOffsets[0]) -
-          (int)&nvDefaults.tables),"rssiChanOffsets"},
+         0,0,((char *)&(nvDefaults.tables.rssiChanOffsets[0]) -
+          (char *)&nvDefaults.tables),"rssiChanOffsets"},
       {"ju",_TABLE_IDX(TABLE_sHwCalValues),SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables.hwCalValues) - (int)&nvDefaults.tables),
+         ((char *)&(nvDefaults.tables.hwCalValues) - (char *)&nvDefaults.tables),
          "hwCalValues"},
       {"jv",_ID_S16,(ARRAY_1),((FIELD_SIZE_TYPE_BIT(FIELD_SIZE_IDX_ENUM))|
          (FIELD_SIZE_VALUE_BITS(INDEX_ENUM_NUM_RF_CHANNELS))),0,0,
-         ((int)&(nvDefaults.tables.antennaPathLoss[0]) -
-          (int)&nvDefaults.tables),"antennaPathLoss"},
+         ((char *)&(nvDefaults.tables.antennaPathLoss[0]) -
+          (char *)&nvDefaults.tables),"antennaPathLoss"},
       {"jw",_ID_S16,(ARRAY_2),((FIELD_SIZE_TYPE_BIT(FIELD_SIZE_IDX_ENUM))|
          (FIELD_SIZE_VALUE_BITS(INDEX_ENUM_NUM_802_11_MODES))),
          ((FIELD_SIZE_TYPE_BIT(FIELD_SIZE_IDX_ENUM))|
          (FIELD_SIZE_VALUE_BITS(INDEX_ENUM_NUM_RF_CHANNELS))),0,
-         ((int)&(nvDefaults.tables.pktTypePwrLimits[0][0]) -
-          (int)&nvDefaults.tables),"pktTypePwrLimits"},
+         ((char *)&(nvDefaults.tables.pktTypePwrLimits[0][0]) -
+          (char *)&nvDefaults.tables),"pktTypePwrLimits"},
       {"jx",_TABLE_IDX(TABLE_sOfdmCmdPwrOffset),SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables.ofdmCmdPwrOffset) - (int)&nvDefaults.tables),
+         ((char *)&(nvDefaults.tables.ofdmCmdPwrOffset) - (char *)&nvDefaults.tables),
          "ofdmCmdPwrOffset"},
       {"jy",_TABLE_IDX(TABLE_sTxBbFilterMode),SINGULAR,0,0,0,
-         ((int)&(nvDefaults.tables.txbbFilterMode) - (int)&nvDefaults.tables),
+         ((char *)&(nvDefaults.tables.txbbFilterMode) - (char *)&nvDefaults.tables),
          "txbbFilterMode"},
       {{nul}, 0, 0, 0, 0, 0, 0,{nul}},
    }, // TABLE_sNvTables

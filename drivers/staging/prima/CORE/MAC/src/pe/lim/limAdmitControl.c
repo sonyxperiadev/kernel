@@ -1,25 +1,5 @@
 /*
- * Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
- *
- * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
- *
- *
- * Permission to use, copy, modify, and/or distribute this software for
- * any purpose with or without fee is hereby granted, provided that the
- * above copyright notice and this permission notice appear in all
- * copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
- * WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
- * AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
- * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
- * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
- * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
- * PERFORMANCE OF THIS SOFTWARE.
- */
-/*
- * Copyright (c) 2012, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -40,7 +20,12 @@
  */
 
 /*
- * Airgo Networks, Inc proprietary. All rights reserved.
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ */
+
+/*
  * This file contains TSPEC and STA admit control related functions
  * NOTE: applies only to AP builds
  *
@@ -569,7 +554,7 @@ void limTspecDelete(tpAniSirGlobal pMac, tpLimTspecInfo pInfo)
         return;
         //pierre
     limLog(pMac, ADMIT_CONTROL_LOGLEVEL, FL("tspec entry = %d"), pInfo->idx);
-    limLog(pMac, ADMIT_CONTROL_LOGLEVEL, FL("delete tspec %08X"),pInfo);
+    limLog(pMac, ADMIT_CONTROL_LOGLEVEL, FL("delete tspec %p"), pInfo);
     pInfo->inuse = 0;
 
     // clear the hcca/parameterized queue indicator
@@ -1149,7 +1134,8 @@ limSendHalMsgDelTs(
   tANI_U16       staIdx,
   tANI_U8         tspecIdx,
   tSirDeltsReqInfo delts,
-  tANI_U8        sessionId)
+  tANI_U8        sessionId,
+  tANI_U8        *bssId)
 {
   tSirMsgQ msg;
   tpDelTsParams pDelTsParam;
@@ -1169,6 +1155,7 @@ limSendHalMsgDelTs(
   //filling message parameters.
   pDelTsParam->staIdx = staIdx;
   pDelTsParam->tspecIdx = tspecIdx;
+  vos_mem_copy(&pDelTsParam->bssId, bssId, sizeof(tSirMacAddr));
 
   PELOGW(limLog(pMac, LOGW, FL("calling wdaPostCtrlMsg()"));)
   MTRACE(macTraceMsgTx(pMac, sessionId, msg.type));

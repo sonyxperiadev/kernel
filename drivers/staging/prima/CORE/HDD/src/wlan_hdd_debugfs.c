@@ -1,49 +1,142 @@
 /*
- * Copyright (c) 2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above
- *       copyright notice, this list of conditions and the following
- *       disclaimer in the documentation and/or other materials provided
- *       with the distribution.
- *     * Neither the name of The Linux Foundation nor the names of its
- *       contributors may be used to endorse or promote products derived
- *       from this software without specific prior written permission.
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
- * THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED
- * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS
- * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
- * BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
- * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
- * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Permission to use, copy, modify, and/or distribute this software for
+ * any purpose with or without fee is hereby granted, provided that the
+ * above copyright notice and this permission notice appear in all
+ * copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
+ * WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
+ * AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
+ * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+ * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+ * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 #ifdef WLAN_OPEN_SOURCE
 #include <wlan_hdd_includes.h>
 #include <wlan_hdd_wowl.h>
 
+#define MAX_USER_COMMAND_SIZE_WOWL_ENABLE 8
 #define MAX_USER_COMMAND_SIZE_WOWL_PATTERN 512
 #define MAX_USER_COMMAND_SIZE_FRAME 4096
+
+static ssize_t wcnss_wowenable_write(struct file *file,
+               const char __user *buf, size_t count, loff_t *ppos)
+{
+    hdd_adapter_t *pAdapter = (hdd_adapter_t *)file->private_data;
+
+    char cmd[MAX_USER_COMMAND_SIZE_WOWL_ENABLE + 1];
+    char *sptr, *token;
+    v_U8_t wow_enable = 0;
+    v_U8_t wow_mp = 0;
+    v_U8_t wow_pbm = 0;
+
+    if ((NULL == pAdapter) || (WLAN_HDD_ADAPTER_MAGIC != pAdapter->magic))
+    {
+        VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_FATAL,
+                  "%s: Invalid adapter or adapter has invalid magic.",
+                  __func__);
+
+        return -EINVAL;
+    }
+
+    if (!sme_IsFeatureSupportedByFW(WOW))
+    {
+        VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+                  "%s: Wake-on-Wireless feature is not supported "
+                  "in firmware!", __func__);
+
+        return -EINVAL;
+    }
+
+    if (count > MAX_USER_COMMAND_SIZE_WOWL_ENABLE)
+    {
+        VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+                  "%s: Command length is larger than %d bytes.",
+                  __func__, MAX_USER_COMMAND_SIZE_WOWL_ENABLE);
+
+        return -EINVAL;
+    }
+
+    /* Get command from user */
+    if (copy_from_user(cmd, buf, count))
+        return -EFAULT;
+    cmd[count] = '\0';
+    sptr = cmd;
+
+    /* Get enable or disable wow */
+    token = strsep(&sptr, " ");
+    if (!token)
+        return -EINVAL;
+    if (kstrtou8(token, 0, &wow_enable))
+        return -EINVAL;
+
+    /* Disable wow */
+    if (!wow_enable) {
+        if (!hdd_exit_wowl(pAdapter, eWOWL_EXIT_USER))
+        {
+          VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+                    "%s: hdd_exit_wowl failed!", __func__);
+
+          return -EFAULT;
+        }
+
+        return count;
+    }
+
+    /* Get enable or disable magic packet mode */
+    token = strsep(&sptr, " ");
+    if (!token)
+        return -EINVAL;
+    if (kstrtou8(token, 0, &wow_mp))
+        return -EINVAL;
+    if (wow_mp > 1)
+        wow_mp = 1;
+
+    /* Get enable or disable pattern byte matching mode */
+    token = strsep(&sptr, " ");
+    if (!token)
+        return -EINVAL;
+    if (kstrtou8(token, 0, &wow_pbm))
+        return -EINVAL;
+    if (wow_pbm > 1)
+        wow_pbm = 1;
+
+    if (!hdd_enter_wowl(pAdapter, wow_mp, wow_pbm))
+    {
+      VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+                "%s: hdd_enter_wowl failed!", __func__);
+
+      return -EFAULT;
+    }
+
+    return count;
+}
 
 static ssize_t wcnss_wowpattern_write(struct file *file,
                const char __user *buf, size_t count, loff_t *ppos)
 {
     hdd_adapter_t *pAdapter = (hdd_adapter_t *)file->private_data;
 
-    char cmd[MAX_USER_COMMAND_SIZE_WOWL_PATTERN];
+    char cmd[MAX_USER_COMMAND_SIZE_WOWL_PATTERN + 1];
     char *sptr, *token;
     v_U8_t pattern_idx = 0;
     v_U8_t pattern_offset = 0;
     char *pattern_buf;
+    char *pattern_mask;
 
     if ((NULL == pAdapter) || (WLAN_HDD_ADAPTER_MAGIC != pAdapter->magic))
     {
@@ -62,8 +155,8 @@ static ssize_t wcnss_wowpattern_write(struct file *file,
 
         return -EINVAL;
     }
-    /*take count as ending  into consideration*/
-    if (count >=  MAX_USER_COMMAND_SIZE_WOWL_PATTERN)
+
+    if (count > MAX_USER_COMMAND_SIZE_WOWL_PATTERN)
     {
         VOS_TRACE( VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
                    "%s: Command length is larger than %d bytes.",
@@ -105,10 +198,17 @@ static ssize_t wcnss_wowpattern_write(struct file *file,
         return -EINVAL;
 
     pattern_buf = token;
-    pattern_buf[strlen(pattern_buf) - 1] = '\0';
+
+    /* Get pattern mask */
+    token = strsep(&sptr, " ");
+    if (!token)
+        return -EINVAL;
+
+    pattern_mask = token;
+    pattern_mask[strlen(pattern_mask) - 1] = '\0';
 
     hdd_add_wowl_ptrn_debugfs(pAdapter, pattern_idx, pattern_offset,
-                              pattern_buf);
+                              pattern_buf, pattern_mask);
 
     return count;
 }
@@ -117,7 +217,7 @@ static ssize_t wcnss_patterngen_write(struct file *file,
                const char __user *buf, size_t count, loff_t *ppos)
 {
     hdd_adapter_t *pAdapter = (hdd_adapter_t *)file->private_data;
-    hdd_context_t *pHddCtx = WLAN_HDD_GET_CTX(pAdapter);
+    hdd_context_t *pHddCtx;
     tSirAddPeriodicTxPtrn *addPeriodicTxPtrnParams;
     tSirDelPeriodicTxPtrn *delPeriodicTxPtrnParams;
 
@@ -137,6 +237,8 @@ static ssize_t wcnss_patterngen_write(struct file *file,
         return -EINVAL;
     }
 
+    pHddCtx = WLAN_HDD_GET_CTX(pAdapter);
+
     if (!sme_IsFeatureSupportedByFW(WLAN_PERIODIC_TX_PTRN))
     {
         VOS_TRACE( VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
@@ -147,15 +249,23 @@ static ssize_t wcnss_patterngen_write(struct file *file,
     }
 
     /* Get command from user */
-    if (count < MAX_USER_COMMAND_SIZE_FRAME)
-        cmd = vos_mem_malloc(count);
+    if (count <= MAX_USER_COMMAND_SIZE_FRAME)
+        cmd = vos_mem_malloc(count + 1);
     else
     {
         VOS_TRACE( VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
-                   "%s: Command length is larger than d% bytes.",
+                   "%s: Command length is larger than %d bytes.",
                    __func__, MAX_USER_COMMAND_SIZE_FRAME);
 
         return -EINVAL;
+    }
+
+    if (!cmd)
+    {
+        VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+                  "%s: Memory allocation for cmd failed!", __func__);
+
+        return -EFAULT;
     }
 
     if (copy_from_user(cmd, buf, count))
@@ -189,11 +299,20 @@ static ssize_t wcnss_patterngen_write(struct file *file,
     if (kstrtou8(token, 0, &pattern_duration))
         goto failure;
 
-    /* Delete pattern using index if duration is 0*/
+    /* Delete pattern using index if duration is 0 */
     if (!pattern_duration)
     {
         delPeriodicTxPtrnParams =
             vos_mem_malloc(sizeof(tSirDelPeriodicTxPtrn));
+        if (!delPeriodicTxPtrnParams)
+        {
+            VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+                      "%s: Memory allocation for delPeriodicTxPtrnParams "
+                      "failed!", __func__);
+
+            vos_mem_free(cmd);
+            return -EFAULT;
+        }
 
         delPeriodicTxPtrnParams->ucPatternIdBitmap = 1 << pattern_idx;
         vos_mem_copy(delPeriodicTxPtrnParams->macAddress,
@@ -221,7 +340,7 @@ static ssize_t wcnss_patterngen_write(struct file *file,
         VOS_TRACE( VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
                    "%s: Not in Connected state!", __func__);
 
-        return -EINVAL;
+        goto failure;
     }
 
     /* Get pattern */
@@ -253,6 +372,15 @@ static ssize_t wcnss_patterngen_write(struct file *file,
     }
 
     addPeriodicTxPtrnParams = vos_mem_malloc(sizeof(tSirAddPeriodicTxPtrn));
+    if (!addPeriodicTxPtrnParams)
+    {
+        VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+                  "%s: Memory allocation for addPeriodicTxPtrnParams "
+                  "failed!", __func__);
+
+        vos_mem_free(cmd);
+        return -EFAULT;
+    }
 
     addPeriodicTxPtrnParams->ucPtrnId = pattern_idx;
     addPeriodicTxPtrnParams->usPtrnIntervalMs = pattern_duration * 500;
@@ -287,7 +415,7 @@ static ssize_t wcnss_patterngen_write(struct file *file,
 
 failure:
     vos_mem_free(cmd);
-    return EINVAL;
+    return -EINVAL;
 }
 
 static int wcnss_debugfs_open(struct inode *inode, struct file *file)
@@ -299,6 +427,13 @@ static int wcnss_debugfs_open(struct inode *inode, struct file *file)
 
     return 0;
 }
+
+static const struct file_operations fops_wowenable = {
+    .write = wcnss_wowenable_write,
+    .open = wcnss_debugfs_open,
+    .owner = THIS_MODULE,
+    .llseek = default_llseek,
+};
 
 static const struct file_operations fops_wowpattern = {
     .write = wcnss_wowpattern_write,
@@ -320,6 +455,10 @@ VOS_STATUS hdd_debugfs_init(hdd_adapter_t *pAdapter)
     pHddCtx->debugfs_phy = debugfs_create_dir("wlan_wcnss", 0);
 
     if (NULL == pHddCtx->debugfs_phy)
+        return VOS_STATUS_E_FAILURE;
+
+    if (NULL == debugfs_create_file("wow_enable", S_IRUSR | S_IWUSR,
+        pHddCtx->debugfs_phy, pAdapter, &fops_wowenable))
         return VOS_STATUS_E_FAILURE;
 
     if (NULL == debugfs_create_file("wow_pattern", S_IRUSR | S_IWUSR,

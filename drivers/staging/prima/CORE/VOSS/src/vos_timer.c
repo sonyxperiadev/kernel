@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -18,25 +18,11 @@
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
  */
+
 /*
- * Copyright (c) 2012, The Linux Foundation. All rights reserved.
- *
- * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
- *
- *
- * Permission to use, copy, modify, and/or distribute this software for
- * any purpose with or without fee is hereby granted, provided that the
- * above copyright notice and this permission notice appear in all
- * copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
- * WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
- * AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
- * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
- * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
- * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
- * PERFORMANCE OF THIS SOFTWARE.
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /**=========================================================================
@@ -46,19 +32,6 @@
   \brief virtual Operating System Servies (vOS)
 
    Definitions for vOSS Timer services
-<<<<<<< HEAD:CORE/VOSS/src/vos_timer.c
-  
-   Copyright 2008 (c) Qualcomm, Incorporated.  All Rights Reserved.
-   
-   Qualcomm Confidential and Proprietary.
-  
-=======
-
-   Copyright 2008 (c) Qualcomm Technologies, Inc.  All Rights Reserved.
-
-   Qualcomm Technologies Confidential and Proprietary.
-
->>>>>>> f7413b6... wlan: voss: remove obsolete "INTEGRATED_SOC" featurization:prima/CORE/VOSS/src/vos_timer.c
   ========================================================================*/
 
 /* $Header$ */
@@ -116,30 +89,27 @@ static void tryAllowingSleep( VOS_TIMER_TYPE type )
 
 
 /*----------------------------------------------------------------------------
-  
-  \brief  vos_linux_timer_callback() - internal vos entry point which is 
-          called when the timer interval expires 
 
-  This function in turn calls the vOS client callback and changes the 
-  state of the timer from running (ACTIVE) to expired (INIT). 
-  
-  
-  \param uTimerID - return value of the timeSetEvent() from the 
-      vos_timer_start() API which 
+  \brief  vos_linux_timer_callback() - internal vos entry point which is
+          called when the timer interval expires
 
-  \param dwUser - this is supplied by the fourth parameter of the timeSetEvent()
-      which is the timer structure being passed as the userData
+  This function in turn calls the vOS client callback and changes the
+  state of the timer from running (ACTIVE) to expired (INIT).
 
-  \param uMsg - Reserved / Not Used
 
-  \param dw1  - Reserved / Not Used
+  \param data - pointer to the timer control block which describes the
+                timer that expired
 
-  \param dw2  - Reserved / Not Used
-  
   \return  nothing
+
+  Note: function signature is defined by the Linux kernel.  The fact
+  that the argument is "unsigned long" instead of "void *" is
+  unfortunately imposed upon us.  But we can safely pass a pointer via
+  this parameter for LP32 and LP64 architectures.
+
   --------------------------------------------------------------------------*/
 
-static void vos_linux_timer_callback ( v_U32_t data ) 
+static void vos_linux_timer_callback (unsigned long data)
 {
    vos_timer_t *timer = ( vos_timer_t *)data; 
    vos_msg_t msg;
@@ -207,7 +177,14 @@ static void vos_linux_timer_callback ( v_U32_t data )
 
    tryAllowingSleep( type );
 
-   VOS_ASSERT( callback ); 
+   if (callback == NULL)
+   {
+       VOS_ASSERT(0);
+       VOS_TRACE(VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_ERROR,
+                 "%s: No TIMER callback, Could not enqueue timer to any queue",
+                 __func__);
+       return;
+   }
 
    // If timer has expired then call vos_client specific callback 
    if ( vos_sched_is_tx_thread( threadId ) )
@@ -217,8 +194,9 @@ static void vos_linux_timer_callback ( v_U32_t data )
          
       //Serialize to the Tx thread
       sysBuildMessageHeader( SYS_MSG_ID_TX_TIMER, &msg );
-      msg.bodyptr  = callback;
-      msg.bodyval  = (v_U32_t)userData; 
+      msg.callback = callback;
+      msg.bodyptr  = userData;
+      msg.bodyval  = 0;
        
       if(vos_tx_mq_serialize( VOS_MQ_ID_SYS, &msg ) == VOS_STATUS_SUCCESS)
          return;
@@ -230,8 +208,9 @@ static void vos_linux_timer_callback ( v_U32_t data )
          
       //Serialize to the Rx thread
       sysBuildMessageHeader( SYS_MSG_ID_RX_TIMER, &msg );
-      msg.bodyptr  = callback;
-      msg.bodyval  = (v_U32_t)userData; 
+      msg.callback = callback;
+      msg.bodyptr  = userData;
+      msg.bodyval  = 0;
        
       if(vos_rx_mq_serialize( VOS_MQ_ID_SYS, &msg ) == VOS_STATUS_SUCCESS)
          return;
@@ -243,8 +222,9 @@ static void vos_linux_timer_callback ( v_U32_t data )
                     
       // Serialize to the MC thread
       sysBuildMessageHeader( SYS_MSG_ID_MC_TIMER, &msg );
-      msg.bodyptr  = callback;
-      msg.bodyval  = (v_U32_t)userData; 
+      msg.callback = callback;
+      msg.bodyptr  = userData;
+      msg.bodyval  = 0;
        
       if(vos_mq_post_message( VOS_MQ_ID_SYS, &msg ) == VOS_STATUS_SUCCESS)
         return;
@@ -457,7 +437,7 @@ VOS_STATUS vos_timer_init_debug( vos_timer_t *timer, VOS_TIMER_TYPE timerType,
     if(VOS_STATUS_SUCCESS != vosStatus)
     {
          VOS_TRACE(VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_ERROR, 
-             "%s: Unable to insert node into List vosStatus %d\n", __func__, vosStatus);
+             "%s: Unable to insert node into List vosStatus %d", __func__, vosStatus);
     }
    
    // set the various members of the timer structure 

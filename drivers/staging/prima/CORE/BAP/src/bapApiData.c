@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -18,25 +18,11 @@
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
  */
+
 /*
- * Copyright (c) 2012, The Linux Foundation. All rights reserved.
- *
- * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
- *
- *
- * Permission to use, copy, modify, and/or distribute this software for
- * any purpose with or without fee is hereby granted, provided that the
- * above copyright notice and this permission notice appear in all
- * copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
- * WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
- * AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
- * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
- * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
- * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
- * PERFORMANCE OF THIS SOFTWARE.
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /*===========================================================================
@@ -329,7 +315,7 @@ WLANBAP_XlateTxDataPkt
     v_PVOID_t                pHddHdl; /* Handle to return BSL context in */
     v_U16_t                  headerLength;  /* The 802.3 frame length*/
     v_U16_t                  protoType = WLANBAP_BT_AMP_TYPE_DATA;  /* The protocol type bytes*/
-    v_U32_t                  value = 0;
+    uintptr_t                value = 0;
     /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
 
  
@@ -462,7 +448,7 @@ WLANBAP_XlateTxDataPkt
 
     /*Set the logical link handle as user data so that we can retrieve it on 
       Tx Complete */
-    value = (v_U32_t)hciACLHeader.logLinkHandle;
+    value = (uintptr_t)hciACLHeader.logLinkHandle;
     vos_pkt_set_user_data_ptr( vosDataBuff, VOS_PKT_USER_DATA_ID_BAP,
                                (v_VOID_t *)value);
 
@@ -965,12 +951,12 @@ WLANBAP_TxCompCB
   VOS_STATUS     wTxSTAtus 
 )
 {
-    VOS_STATUS    vosStatus; 
-    ptBtampHandle bapHdl;  /* holds ptBtampHandle value returned  */ 
-    ptBtampContext bapContext; /* Holds the btampContext value returned */ 
+    VOS_STATUS    vosStatus;
+    ptBtampHandle bapHdl;  /* holds ptBtampHandle value returned  */
+    ptBtampContext bapContext; /* Holds the btampContext value returned */
     v_PVOID_t     pHddHdl; /* Handle to return BSL context in */
     v_PVOID_t      pvlogLinkHandle = NULL;
-    v_U32_t       value;
+    uintptr_t       value;
 
     WLANBAP_HCIACLHeaderType hciACLHeader;
 
@@ -1023,7 +1009,7 @@ WLANBAP_TxCompCB
     vos_pkt_get_user_data_ptr( vosDataBuff, VOS_PKT_USER_DATA_ID_BAP,
                                &pvlogLinkHandle);
 
-    value = (v_U32_t)pvlogLinkHandle;
+    value = (uintptr_t)pvlogLinkHandle;
     hciACLHeader.logLinkHandle = value;
 
 #ifdef BAP_DEBUG

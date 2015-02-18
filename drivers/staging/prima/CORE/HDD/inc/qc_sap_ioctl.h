@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -18,25 +18,11 @@
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
  */
+
 /*
- * Copyright (c) 2012, The Linux Foundation. All rights reserved.
- *
- * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
- *
- *
- * Permission to use, copy, modify, and/or distribute this software for
- * any purpose with or without fee is hereby granted, provided that the
- * above copyright notice and this permission notice appear in all
- * copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
- * WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
- * AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
- * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
- * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
- * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
- * PERFORMANCE OF THIS SOFTWARE.
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 #ifndef _QC_SAP_IOCTL_H_
@@ -105,78 +91,6 @@ typedef enum {
     eQC_WPS_ASSOC_RSP_IE
 } eQCWPSType;
 
-typedef struct s_CommitConfig {
-
-    tSSIDInfo SSIDinfo;
-
-    u_int32_t beacon_int;       /* Beacon Interval */
-
-    tQcPhyMode hw_mode;         /* Wireless Mode */
-
-    u_int32_t channel;          /* Operation channel */
-
-    u_int32_t max_num_sta;      /* maximum number of STAs in station table */
-
-    u_int32_t dtim_period;      /* dtim interval */
-    u_int32_t max_listen_interval;
-
-    enum {
-        QC_ACCEPT_UNLESS_DENIED = 0,
-        QC_DENY_UNLESS_ACCEPTED = 1,
-    } qc_macaddr_acl;
-    
-    struct qc_mac_acl_entry *accept_mac; /* MAC filtering */
-    u_int32_t num_accept_mac;
-    struct qc_mac_acl_entry *deny_mac;   /* MAC filtering */
-    u_int32_t num_deny_mac;
-
-    u_int32_t ap_table_max_size;
-    u_int32_t ap_table_expiration_time;
-
-    int qcsap80211d;
-
-    u_int32_t countryCode[3];  //it ignored if [0] is 0.
-
-    u_int32_t ht_op_mode_fixed;
-    
-    /*HT capability information to enable/diabale protection
-     *           bit15   bit14   bit13   bit12 bit11 bit10    bit9 bit8
-     * (overlap) from11a from11b from11g Ht20  NonGf LsigTxop Rifs OBSS   
-     * bit7    bit6    bit5    bit4 bit3  bit2     bit1 bit0
-     * from11a from11b from11g ht20 nonGf lsigTxop rifs obss*/
-    u_int16_t ht_capab;
-
-    u_int32_t qcsap80211n;
-
-    eQcAuthType authType;
-
-    u_int8_t privacy;
-
-    u_int8_t set_ieee8021x;
-
-    u_int8_t RSNWPAReqIE[QCSAP_MAX_OPT_IE];     //If not null, it has the IE byte stream for RSN/WPA
-    u_int16_t RSNWPAReqIELength;  //The byte count in the pRSNReqIE/ WPAIE
-
-    u_int8_t wps_state; //wps_state - disbaled/not configured, configured
-} s_CommitConfig_t;
-
-
-/*
- * MLME state manipulation request.  QCSAP_MLME_ASSOC
- * is used for station mode only.  The other types are used for station or ap mode.
- */
-struct sQcSapreq_mlme {
-    u_int8_t    im_op;          /* operation to perform */
-#define QCSAP_MLME_ASSOC        1       /* associate station */
-#define QCSAP_MLME_DISASSOC     2       /* disassociate station */
-#define QCSAP_MLME_DEAUTH       3       /* deauthenticate station */
-#define QCSAP_MLME_AUTHORIZE    4       /* authorize station */
-#define QCSAP_MLME_UNAUTHORIZE  5       /* unauthorize station */
-#define QCSAP_MLME_MICFAILURE   6       /* TKIP MICFAILURE */
-    u_int16_t   im_reason;      /* 802.11 reason code */
-    u_int8_t    im_macaddr[QCSAP_ADDR_LEN];
-};
-
 
 /*
  * Retrieve the WPA/RSN information element for an associated station.
@@ -226,7 +140,6 @@ typedef struct
 #define QCSAP_IOCTL_SETPARAM          (SIOCIWFIRSTPRIV+0)
 #define QCSAP_IOCTL_GETPARAM          (SIOCIWFIRSTPRIV+1)
 #define QCSAP_IOCTL_COMMIT            (SIOCIWFIRSTPRIV+2)
-#define QCSAP_IOCTL_SETMLME           (SIOCIWFIRSTPRIV+3)
 
 #define QCSAP_IOCTL_GET_STAWPAIE      (SIOCIWFIRSTPRIV+4)
 #define QCSAP_IOCTL_SETWPAIE          (SIOCIWFIRSTPRIV+5)
@@ -236,7 +149,6 @@ typedef struct
 #define QCSAP_IOCTL_GET_CHANNEL       (SIOCIWFIRSTPRIV+9)
 #define QCSAP_IOCTL_ASSOC_STA_MACADDR (SIOCIWFIRSTPRIV+10)
 #define QCSAP_IOCTL_DISASSOC_STA      (SIOCIWFIRSTPRIV+11)
-#define QCSAP_IOCTL_AP_STATS          (SIOCIWFIRSTPRIV+12)
 #define QCSAP_IOCTL_GET_STATS         (SIOCIWFIRSTPRIV+13)
 #define QCSAP_IOCTL_CLR_STATS         (SIOCIWFIRSTPRIV+14)
 
@@ -256,7 +168,9 @@ typedef struct
 #define QCSAP_IOCTL_SET_TX_POWER        (SIOCIWFIRSTPRIV+20) 
 #define QCSAP_IOCTL_GET_STA_INFO        (SIOCIWFIRSTPRIV+21)
 #define QCSAP_IOCTL_SET_MAX_TX_POWER    (SIOCIWFIRSTPRIV+22)
-#define QCSAP_IOCTL_DATAPATH_SNAP_SHOT        (SIOCIWFIRSTPRIV+23)
+#define QCSAP_IOCTL_DATAPATH_SNAP_SHOT  (SIOCIWFIRSTPRIV+23)
+#define QCSAP_IOCTL_SET_TRAFFIC_MONITOR (SIOCIWFIRSTPRIV+24)
+#define QCSAP_IOCTL_AP_STATS            (SIOCIWFIRSTPRIV+25) // get routines should be odd numbered
 
 #define MAX_VAR_ARGS         7
 #define QCSAP_IOCTL_PRIV_GET_SOFTAP_LINK_SPEED (SIOCIWFIRSTPRIV + 31)
@@ -264,12 +178,12 @@ typedef struct
 enum { 
     QCSAP_PARAM_MAX_ASSOC = 1,
     QCSAP_PARAM_GET_WLAN_DBG = 4,
-    QCSAP_PARAM_MODULE_DOWN_IND = 5,
     QCSAP_PARAM_CLR_ACL = 6,
     QCSAP_PARAM_ACL_MODE = 7,
     QCSAP_PARAM_HIDE_SSID = 8,
     QCSAP_PARAM_AUTO_CHANNEL = 9,
     QCSAP_PARAM_SET_MC_RATE = 10,
+    QCSAP_PARAM_SET_AUTO_CHANNEL = 11,
 };
 
 int iw_softap_get_channel_list(struct net_device *dev, 

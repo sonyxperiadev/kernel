@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -18,25 +18,11 @@
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
  */
+
 /*
- * Copyright (c) 2012, The Linux Foundation. All rights reserved.
- *
- * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
- *
- *
- * Permission to use, copy, modify, and/or distribute this software for
- * any purpose with or without fee is hereby granted, provided that the
- * above copyright notice and this permission notice appear in all
- * copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
- * WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
- * AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
- * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
- * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
- * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
- * PERFORMANCE OF THIS SOFTWARE.
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /**=========================================================================
@@ -142,8 +128,9 @@ WDI_Status WDI_DS_TxPacket(void *pContext,
   wpt_uint8      ucSwFrameTXXlation;
   wpt_uint8      ucUP;
   wpt_uint8      ucTypeSubtype;
+  wpt_uint8      isEapol;
   wpt_uint8      alignment;
-  wpt_uint8      ucTxFlag;
+  wpt_uint32     ucTxFlag;
   wpt_uint8      ucProtMgmtFrame;
   wpt_uint8*     pSTAMACAddress;
   wpt_uint8*     pAddr2MACAddress;
@@ -172,6 +159,7 @@ WDI_Status WDI_DS_TxPacket(void *pContext,
   ucSwFrameTXXlation = pTxMetadata->fdisableFrmXlt;
   ucTypeSubtype = pTxMetadata->typeSubtype;
   ucUP = pTxMetadata->fUP;
+  isEapol = pTxMetadata->isEapol;
   ucTxFlag = pTxMetadata->txFlags;
   ucProtMgmtFrame = pTxMetadata->fProtMgmtFrame;
   pSTAMACAddress = &(pTxMetadata->fSTAMACAddress[0]);
@@ -218,9 +206,13 @@ WDI_Status WDI_DS_TxPacket(void *pContext,
 
   alignment = 0;
   WDI_DS_PrepareBDHeader(pFrame, ucSwFrameTXXlation, alignment);
-
+  if (pTxMetadata->isEapol)
+  {
+    WPAL_TRACE( eWLAN_MODULE_DAL_CTRL, eWLAN_PAL_TRACE_LEVEL_INFO,
+              "Packet Length is %d\n", pTxMetadata->fPktlen);
+  }
   wdiStatus = WDI_FillTxBd(pContext, ucTypeSubtype, pSTAMACAddress, pAddr2MACAddress,
-    &ucUP, 1, pvBDHeader, ucTxFlag /* No ACK */, ucProtMgmtFrame, 0, &staId);
+    &ucUP, 1, pvBDHeader, ucTxFlag /* No ACK */, ucProtMgmtFrame, 0, isEapol, &staId);
 
   if(WDI_STATUS_SUCCESS != wdiStatus)
   {

@@ -1,25 +1,5 @@
 /*
- * Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
- *
- * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
- *
- *
- * Permission to use, copy, modify, and/or distribute this software for
- * any purpose with or without fee is hereby granted, provided that the
- * above copyright notice and this permission notice appear in all
- * copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
- * WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
- * AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
- * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
- * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
- * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
- * PERFORMANCE OF THIS SOFTWARE.
- */
-/*
- * Copyright (c) 2012, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2014 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -39,10 +19,14 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/**=========================================================================
-* Copyright (c) 2013 Qualcomm Atheros, Inc.
-* All Rights Reserved.
-* Qualcomm Atheros Confidential and Proprietary.
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ */
+
+/*
+
   \file  macTrace.c
 
   \brief implementation for trace related APIs
@@ -72,11 +56,9 @@
 #include "csrInternal.h"
 #include "limGlobal.h"
 #include "wlan_qct_tl.h"
+#include "vos_trace.h"
 
 #ifdef TRACE_RECORD
-static tTraceRecord gTraceTbl[MAX_TRACE_RECORDS];
-static tTraceData gTraceData;
-static tpTraceCb traceCBTable[VOS_MODULE_ID_MAX];
 
 /* ---------------------------------------------------------------------------
     \fn macTraceGetHDDWlanConnState
@@ -516,8 +498,8 @@ tANI_U8* macTraceGetSmeMsgString( tANI_U16 smeMsg )
         CASE_RETURN_STRING(eWNI_SME_FT_AGGR_QOS_REQ);
         CASE_RETURN_STRING(eWNI_SME_FT_AGGR_QOS_RSP);
 #endif
-#if defined FEATURE_WLAN_CCX
-        CASE_RETURN_STRING(eWNI_SME_CCX_ADJACENT_AP_REPORT);
+#if defined FEATURE_WLAN_ESE
+        CASE_RETURN_STRING(eWNI_SME_ESE_ADJACENT_AP_REPORT);
 #endif
         CASE_RETURN_STRING(eWNI_SME_REGISTER_MGMT_FRAME_REQ);
         CASE_RETURN_STRING(eWNI_SME_COEX_IND);
@@ -526,6 +508,7 @@ tANI_U8* macTraceGetSmeMsgString( tANI_U16 smeMsg )
 #endif // FEATURE_WLAN_SCAN_PNO
         CASE_RETURN_STRING(eWNI_SME_TX_PER_HIT_IND);
         CASE_RETURN_STRING(eWNI_SME_CHANGE_COUNTRY_CODE);
+        CASE_RETURN_STRING(eWNI_SME_GENERIC_CHANGE_COUNTRY_CODE);
         CASE_RETURN_STRING(eWNI_SME_PRE_SWITCH_CHL_IND);
         CASE_RETURN_STRING(eWNI_SME_POST_SWITCH_CHL_IND);
         CASE_RETURN_STRING(eWNI_SME_MAX_ASSOC_EXCEEDED);
@@ -541,6 +524,10 @@ tANI_U8* macTraceGetSmeMsgString( tANI_U16 smeMsg )
         CASE_RETURN_STRING(eWNI_SME_MSG_TYPES_END);
         CASE_RETURN_STRING(eWNI_SME_GET_ROAM_RSSI_REQ);
         CASE_RETURN_STRING(eWNI_SME_GET_ROAM_RSSI_RSP);
+        CASE_RETURN_STRING(eWNI_SME_GET_TSM_STATS_REQ);
+        CASE_RETURN_STRING(eWNI_SME_GET_TSM_STATS_RSP);
+        CASE_RETURN_STRING(eWNI_SME_HT40_OBSS_SCAN_IND);
+        CASE_RETURN_STRING(eWNI_SME_HT40_STOP_OBSS_SCAN_IND);
         default:
             return( (tANI_U8*)"UNKNOWN" );
             break;
@@ -688,7 +675,7 @@ tANI_U8* macTraceGetWdaMsgString( tANI_U16 wdaMsg )
         CASE_RETURN_STRING(WDA_TIMER_CHIP_MONITOR_TIMEOUT);
         CASE_RETURN_STRING(WDA_TIMER_TRAFFIC_ACTIVITY_REQ);
         CASE_RETURN_STRING(WDA_TIMER_ADC_RSSI_STATS);
-#ifdef FEATURE_WLAN_CCX
+#ifdef FEATURE_WLAN_ESE
         CASE_RETURN_STRING(WDA_TSM_STATS_REQ);
         CASE_RETURN_STRING(WDA_TSM_STATS_RSP);
 #endif
@@ -789,13 +776,15 @@ tANI_U8* macTraceGetWdaMsgString( tANI_U16 wdaMsg )
 #ifdef WLAN_FEATURE_11AC
         CASE_RETURN_STRING(WDA_UPDATE_OP_MODE);
 #endif
+#ifdef FEATURE_WLAN_BATCH_SCAN
+        CASE_RETURN_STRING(WDA_SET_BATCH_SCAN_REQ);
+        CASE_RETURN_STRING(WDA_TRIGGER_BATCH_SCAN_RESULT_IND);
+#endif
         default:
             return((tANI_U8*) "UNKNOWN" );
             break;
     }
 }
-
-
 
 tANI_U8* macTraceGetLimMsgString( tANI_U16 limMsg )
 {
@@ -827,7 +816,6 @@ tANI_U8* macTraceGetLimMsgString( tANI_U16 limMsg )
         CASE_RETURN_STRING(SIR_LIM_PROBE_HB_FAILURE_TIMEOUT);
         CASE_RETURN_STRING(SIR_LIM_ADDTS_RSP_TIMEOUT );
         CASE_RETURN_STRING(SIR_LIM_LINK_TEST_DURATION_TIMEOUT );
-        CASE_RETURN_STRING(SIR_LIM_HASH_MISS_THRES_TIMEOUT  );
         CASE_RETURN_STRING(SIR_LIM_CNF_WAIT_TIMEOUT         );
         CASE_RETURN_STRING(SIR_LIM_KEEPALIVE_TIMEOUT        );
         CASE_RETURN_STRING(SIR_LIM_UPDATE_OLBC_CACHEL_TIMEOUT );
@@ -847,8 +835,8 @@ tANI_U8* macTraceGetLimMsgString( tANI_U16 limMsg )
 #endif
         CASE_RETURN_STRING(SIR_LIM_BEACON_GEN_IND );
         CASE_RETURN_STRING(SIR_LIM_PERIODIC_PROBE_REQ_TIMEOUT);
-#ifdef FEATURE_WLAN_CCX
-        CASE_RETURN_STRING(SIR_LIM_CCX_TSM_TIMEOUT);
+#ifdef FEATURE_WLAN_ESE
+        CASE_RETURN_STRING(SIR_LIM_ESE_TSM_TIMEOUT);
 #endif
         CASE_RETURN_STRING(SIR_LIM_DISASSOC_ACK_TIMEOUT);
         CASE_RETURN_STRING(SIR_LIM_DEAUTH_ACK_TIMEOUT);
@@ -860,9 +848,6 @@ tANI_U8* macTraceGetLimMsgString( tANI_U16 limMsg )
             break;
     }
 }
-
-
-
 
 tANI_U8* macTraceGetCfgMsgString( tANI_U16 cfgMsg )
 {
@@ -901,152 +886,20 @@ tANI_U8* macTraceGetModuleString( tANI_U8 moduleId  )
     //return gVosTraceInfo[moduleId].moduleNameStr;
 }
 
-
-
-
-
-
-
-
-
-
-void macTraceInit(tpAniSirGlobal pMac)
-{
-    tANI_U8 i;
-    gTraceData.head = INVALID_TRACE_ADDR;
-    gTraceData.tail = INVALID_TRACE_ADDR;
-    gTraceData.num = 0;
-    gTraceData.enable = TRUE;
-    gTraceData.dumpCount = DEFAULT_TRACE_DUMP_COUNT;
-    gTraceData.numSinceLastDump = 0;
-
-    for(i=0; i<VOS_MODULE_ID_MAX; i++)
-        traceCBTable[i] = NULL;
-
-}
-
-
-
-
-
 void macTraceReset(tpAniSirGlobal pMac)
 {
 }
-
 
 void macTrace(tpAniSirGlobal pMac,  tANI_U8 code, tANI_U8 session, tANI_U32 data)
 {
     //Today macTrace is being invoked by PE only, need to remove this function once PE is migrated to using new trace API.
     macTraceNew(pMac, VOS_MODULE_ID_PE, code, session, data);
-
-#if 0
-    tpTraceRecord rec = NULL;
-
-    //limLog(pMac, LOGE, "mac Trace code: %d, data: %x, head: %d, tail: %d\n",  code, data, gTraceData.head, gTraceData.tail);
-
-    if(!gTraceData.enable)
-        return;
-    gTraceData.num++;
-
-    if (gTraceData.head == INVALID_TRACE_ADDR)
-    {
-        /* first record */
-        gTraceData.head = 0;
-        gTraceData.tail = 0;
-    }
-    else
-    {
-        /* queue is not empty */
-        tANI_U32 tail = gTraceData.tail + 1;
-
-        if (tail == MAX_TRACE_RECORDS)
-            tail = 0;
-
-        if (gTraceData.head == tail)
-        {
-            /* full */
-            if (++gTraceData.head == MAX_TRACE_RECORDS)
-                gTraceData.head = 0;
-        }
-
-        gTraceData.tail = tail;
-    }
-
-    rec = &gTraceTbl[gTraceData.tail];
-    rec->code = code;
-    rec->session = session;
-    rec->data = data;
-    rec->time = vos_timer_get_system_time();
-    rec->module =  VOS_MODULE_ID_PE;
-    gTraceData.numSinceLastDump ++;
-
-    if(gTraceData.numSinceLastDump == gTraceData.dumpCount)
-        {
-            limLog(pMac, LOGE, "Trace Dump last %d traces\n",  gTraceData.dumpCount);
-            macTraceDumpAll(pMac, 0, 0, gTraceData.dumpCount);
-            gTraceData.numSinceLastDump = 0;
-        }
-    #endif
-
 }
-
-
 
 void macTraceNew(tpAniSirGlobal pMac, tANI_U8 module, tANI_U8 code, tANI_U8 session, tANI_U32 data)
 {
-    tpTraceRecord rec = NULL;
-
-    //limLog(pMac, LOGE, "mac Trace code: %d, data: %x, head: %d, tail: %d\n",  code, data, gTraceData.head, gTraceData.tail);
-
-    if(!gTraceData.enable)
-        return;
-    //If module is not registered, don't record for that module.
-    if(traceCBTable[module] == NULL)
-        return;
-    pe_AcquireGlobalLock( &pMac->lim );
-
-    gTraceData.num++;
-
-    if (gTraceData.head == INVALID_TRACE_ADDR)
-    {
-        /* first record */
-        gTraceData.head = 0;
-        gTraceData.tail = 0;
-    }
-    else
-    {
-        /* queue is not empty */
-        tANI_U32 tail = gTraceData.tail + 1;
-
-        if (tail == MAX_TRACE_RECORDS)
-            tail = 0;
-
-        if (gTraceData.head == tail)
-        {
-            /* full */
-            if (++gTraceData.head == MAX_TRACE_RECORDS)
-                gTraceData.head = 0;
-        }
-
-        gTraceData.tail = tail;
-    }
-
-    rec = &gTraceTbl[gTraceData.tail];
-    rec->code = code;
-    rec->session = session;
-    rec->data = data;
-    rec->time = vos_timer_get_system_time();
-    rec->module =  module;
-    gTraceData.numSinceLastDump ++;
-    pe_ReleaseGlobalLock( &pMac->lim );
-
+    vos_trace(module, code, session, data);
 }
-
-
-
-
-
-
 
 tANI_U8* macTraceMsgString(tpAniSirGlobal pMac, tANI_U32 msgType)
 {
@@ -1069,89 +922,5 @@ tANI_U8* macTraceMsgString(tpAniSirGlobal pMac, tANI_U32 msgType)
                 return ((tANI_U8*)"Unknown MsgType");
     }
 }
-
-
-
-
-
-
-void macTraceDumpAll(tpAniSirGlobal pMac, tANI_U8 code, tANI_U8 session, tANI_U32 count)
-{
-    tpTraceRecord pRecord;
-    tANI_S32 i, tail;
-
-
-    if(!gTraceData.enable)
-    {
-        VOS_TRACE( VOS_MODULE_ID_SYS, VOS_TRACE_LEVEL_ERROR, "Tracing Disabled \n");
-        return;
-    }
-
-    VOS_TRACE( VOS_MODULE_ID_SYS, VOS_TRACE_LEVEL_ERROR,
-                            "Total Records: %d, Head: %d, Tail: %d\n", gTraceData.num, gTraceData.head, gTraceData.tail);
-
-    pe_AcquireGlobalLock( &pMac->lim );
-    if (gTraceData.head != INVALID_TRACE_ADDR)
-    {
-
-        i = gTraceData.head;
-        tail = gTraceData.tail;
-
-        if (count)
-        {
-            if (count > gTraceData.num)
-                count = gTraceData.num;
-            if (count > MAX_TRACE_RECORDS)
-                count = MAX_TRACE_RECORDS;
-            if(tail >= (count + 1))
-            {
-                i = tail - count + 1;
-            }
-            else
-            {
-                i = MAX_TRACE_RECORDS - ((count + 1) - tail);
-            }
-        }
-
-        pRecord = &gTraceTbl[i];
-
-        for (;;)
-        {
-            if (   (code == 0 || (code == pRecord->code)) &&
-                    (traceCBTable[pRecord->module] != NULL))
-                traceCBTable[pRecord->module](pMac, pRecord, (tANI_U16)i);
-
-            if (i == tail)
-                break;
-            i += 1;
-
-            if (i == MAX_TRACE_RECORDS)
-            {
-                i = 0;
-                pRecord = &gTraceTbl[0];
-            }
-            else
-                pRecord += 1;
-        }
-        gTraceData.numSinceLastDump = 0;
-
-    }
-    pe_ReleaseGlobalLock( &pMac->lim );
-
-}
-
-
-void macTraceCfg(tpAniSirGlobal pMac, tANI_U32 enable, tANI_U32 dumpCount, tANI_U32 code, tANI_U32 session)
-{
-    gTraceData.enable = (tANI_U8)enable;
-    gTraceData.dumpCount= (tANI_U16)dumpCount;
-    gTraceData.numSinceLastDump = 0;
-}
-
-void macTraceRegister( tpAniSirGlobal pMac, VOS_MODULE_ID moduleId,    tpTraceCb traceCb)
-{
-    traceCBTable[moduleId] = traceCb;
-}
-
 
 #endif

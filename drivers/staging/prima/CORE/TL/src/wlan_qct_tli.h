@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -18,26 +18,14 @@
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
  */
+
 /*
- * Copyright (c) 2012, The Linux Foundation. All rights reserved.
- *
- * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
- *
- *
- * Permission to use, copy, modify, and/or distribute this software for
- * any purpose with or without fee is hereby granted, provided that the
- * above copyright notice and this permission notice appear in all
- * copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
- * WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
- * AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
- * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
- * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
- * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
- * PERFORMANCE OF THIS SOFTWARE.
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
+
+
 
 
 #ifndef WLAN_QCT_TLI_H
@@ -184,12 +172,15 @@ when        who    what, where, why
 #define WLANTL_80211_DATA_TYPE         0x02
 #define WLANTL_80211_DATA_QOS_SUBTYPE  0x08
 #define WLANTL_80211_NULL_QOS_SUBTYPE  0x0C
+#define WLANTL_80211_MGMT_ACTION_SUBTYPE  0x0D
+#define WLANTL_80211_MGMT_ACTION_NO_ACK_SUBTYPE  0x0E
 
 /*Defines for internal utility functions */
 #define WLANTL_FRAME_TYPE_BCAST 0xff
 #define WLANTL_FRAME_TYPE_MCAST 0x01
 #define WLANTL_FRAME_TYPE_UCAST 0x00
 
+#define WLANTL_FRAME_TYPESUBTYPE_MASK 0x3F
 
 /*-------------------------------------------------------------------------
   BT-AMP related definition - !!! should probably be moved to BT-AMP header
@@ -254,6 +245,7 @@ when        who    what, where, why
   ((WLANTL_BT_AMP_TYPE_AR == usType) || (WLANTL_BT_AMP_TYPE_SEC == usType) || \
    (WLANTL_BT_AMP_TYPE_LS_REQ == usType) || (WLANTL_BT_AMP_TYPE_LS_REP == usType))
 
+#define WLANTL_CACHE_TRACE_WATERMARK 100
 /*---------------------------------------------------------------------------
   TL signals for TX thread
 ---------------------------------------------------------------------------*/
@@ -266,7 +258,8 @@ typedef enum
    and TL is low on resources*/
   WLANTL_TX_RES_NEEDED  = 1,
 
-  /* Forwarding RX cached frames */
+  /* Forwarding RX cached frames. This is not used anymore as it is
+     replaced by WLANTL_RX_FWD_CACHED in RX thread*/
   WLANTL_TX_FWD_CACHED  = 2,
 
   /* Serialized STAID AC Indication */
@@ -281,8 +274,25 @@ typedef enum
   /* Serialized Snapshot request indication */
   WLANTL_TX_SNAPSHOT = 6,
 
+  /* Detected a fatal error issue SSR */
+  WLANTL_TX_FATAL_ERROR = 7,
+
+  WLANTL_TX_FW_DEBUG = 8,
+
   WLANTL_TX_MAX
 }WLANTL_TxSignalsType;
+
+
+/*---------------------------------------------------------------------------
+  TL signals for RX thread
+---------------------------------------------------------------------------*/
+typedef enum
+{
+
+  /* Forwarding RX cached frames */
+  WLANTL_RX_FWD_CACHED  = 0,
+
+}WLANTL_RxSignalsType;
 
 /*---------------------------------------------------------------------------
   STA Event type
@@ -318,7 +328,8 @@ typedef enum
 ---------------------------------------------------------------------------*/
 typedef VOS_STATUS (*WLANTL_STAFuncType)( v_PVOID_t     pAdapter,
                                           v_U8_t        ucSTAId,
-                                          vos_pkt_t**   pvosDataBuff);
+                                          vos_pkt_t**   pvosDataBuff,
+                                          v_BOOL_t      bForwardIAPPwithLLC);
 
 /*---------------------------------------------------------------------------
   STA FSM Entry type
@@ -331,32 +342,38 @@ typedef struct
 /* Receive in connected state - only EAPOL or WAI*/
 VOS_STATUS WLANTL_STARxConn( v_PVOID_t     pAdapter,
                              v_U8_t        ucSTAId,
-                             vos_pkt_t**   pvosDataBuff );
+                             vos_pkt_t**   pvosDataBuff,
+                             v_BOOL_t      bForwardIAPPwithLLC);
 
 /* Transmit in connected state - only EAPOL or WAI*/
 VOS_STATUS WLANTL_STATxConn( v_PVOID_t     pAdapter,
                              v_U8_t        ucSTAId,
-                             vos_pkt_t**   pvosDataBuff );
+                             vos_pkt_t**   pvosDataBuff,
+                             v_BOOL_t      bForwardIAPPwithLLC);
 
 /* Receive in authenticated state - all data allowed*/
 VOS_STATUS WLANTL_STARxAuth( v_PVOID_t     pAdapter,
                              v_U8_t        ucSTAId,
-                             vos_pkt_t**   pvosDataBuff );
+                             vos_pkt_t**   pvosDataBuff,
+                             v_BOOL_t      bForwardIAPPwithLLC);
 
 /* Transmit in authenticated state - all data allowed*/
 VOS_STATUS WLANTL_STATxAuth( v_PVOID_t     pAdapter,
                              v_U8_t        ucSTAId,
-                             vos_pkt_t**   pvosDataBuff );
+                             vos_pkt_t**   pvosDataBuff,
+                             v_BOOL_t      bForwardIAPPwithLLC);
 
 /* Receive in disconnected state - no data allowed*/
 VOS_STATUS WLANTL_STARxDisc( v_PVOID_t     pAdapter,
                              v_U8_t        ucSTAId,
-                             vos_pkt_t**   pvosDataBuff );
+                             vos_pkt_t**   pvosDataBuff,
+                             v_BOOL_t      bForwardIAPPwithLLC);
 
 /* Transmit in disconnected state - no data allowed*/
 VOS_STATUS WLANTL_STATxDisc( v_PVOID_t     pAdapter,
                              v_U8_t        ucSTAId,
-                             vos_pkt_t**   pvosDataBuff );
+                             vos_pkt_t**   pvosDataBuff,
+                             v_BOOL_t      bForwardIAPPwithLLC);
 
 /* TL State Machine */
 STATIC const WLANTL_STAFsmEntryType tlSTAFsm[WLANTL_STA_MAX_STATE] =
@@ -470,6 +487,18 @@ typedef struct
 }WLANTL_UAPSDInfoType;
 
 /*---------------------------------------------------------------------------
+  per-STA cache info
+---------------------------------------------------------------------------*/
+typedef struct
+{
+  v_U16_t               cacheSize;
+  v_TIME_t              cacheInitTime;
+  v_TIME_t              cacheDoneTime;
+  v_TIME_t              cacheClearTime;
+}WLANTL_CacheInfoType;
+
+
+/*---------------------------------------------------------------------------
   STA Client type
 ---------------------------------------------------------------------------*/
 typedef struct
@@ -477,13 +506,6 @@ typedef struct
   /* Flag that keeps track of registration; only one STA with unique
      ID allowed */
   v_U8_t                        ucExists;
-
-  /*The flag controls the Rx path for the station - as long as there are
-    packets at sta level that need to be fwd-ed the Rx path will be blocked,
-    it will become unblocked only when the cached frames were fwd-ed;
-    while the rx path is blocked all rx-ed frames for that STA will be cached
-    */
-  v_U8_t                        ucRxBlocked;
 
   /* Function pointer to the receive packet handler from HDD */
   WLANTL_STARxCBType            pfnSTARx;
@@ -590,8 +612,10 @@ typedef struct
   /*Begining of the cached packets chain*/
   vos_pkt_t*                 vosEndCachedFrame;
 
-
+  WLANTL_CacheInfoType       tlCacheInfo;
   /* LWM related fields */
+
+  v_BOOL_t  enableCaching;
 
   //current station is slow. LWM mode is enabled.
   v_BOOL_t ucLwmModeEnabled;
@@ -655,6 +679,20 @@ typedef struct
   v_U8_t ptkInstalled;
 
   v_U32_t       linkCapacity;
+
+#ifdef WLAN_FEATURE_LINK_LAYER_STATS
+
+  /* Value of the averaged Data RSSI for this station */
+  v_S7_t                        rssiDataAvg;
+
+  /* Value of the averaged Data RSSI for this station in BMPS */
+  v_S7_t                        rssiDataAvgBmps;
+
+  /* Value of the Alpha to calculate Data RSSI average */
+  v_S7_t                        rssiDataAlpha;
+
+  WLANTL_InterfaceStatsType         interfaceStats;
+#endif
 }WLANTL_STAClientType;
 
 /*---------------------------------------------------------------------------
@@ -1343,7 +1381,8 @@ WLANTL_Translate80211To8023Header
   v_U16_t         usActualHLen,
   v_U8_t          ucHeaderLen,
   WLANTL_CbType*  pTLCb,
-  v_U8_t          ucSTAId
+  v_U8_t          ucSTAId,
+  v_BOOL_t	  bForwardIAPPwithLLC
 );
 
 /*==========================================================================

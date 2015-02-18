@@ -1,25 +1,5 @@
 /*
- * Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
- *
- * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
- *
- *
- * Permission to use, copy, modify, and/or distribute this software for
- * any purpose with or without fee is hereby granted, provided that the
- * above copyright notice and this permission notice appear in all
- * copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
- * WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
- * AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
- * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
- * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
- * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
- * PERFORMANCE OF THIS SOFTWARE.
- */
-/*
- * Copyright (c) 2012, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -40,7 +20,15 @@
  */
 
 /*
- * Airgo Networks, Inc proprietary. All rights reserved.
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ */
+
+
+
+
+/*
  * This file limIbssPeerMgmt.cc contains the utility functions
  * LIM uses to maintain peers in IBSS.
  * Author:        Chandra Modumudi
@@ -1337,10 +1325,11 @@ limIbssDelBssRsp(
         goto end;
     }
 
+    limIbssDelete(pMac,psessionEntry);
+
     dphHashTableClassInit(pMac, &psessionEntry->dph.dphHashTable);
     limDeletePreAuthList(pMac);
 
-    limIbssDelete(pMac,psessionEntry);
     psessionEntry->limMlmState = eLIM_MLM_IDLE_STATE;
 
     MTRACE(macTrace(pMac, TRACE_CODE_MLM_STATE, psessionEntry->peSessionId, psessionEntry->limMlmState));
@@ -1386,7 +1375,7 @@ __limIbssSearchAndDeletePeer(tpAniSirGlobal    pMac,
       pTempNextNode = pTempNode->next;
 
       /* Delete the STA with MAC address */
-      if (palEqualMemory( pMac->hHdd, (tANI_U8 *) macAddr,
+      if (vos_mem_compare( (tANI_U8 *) macAddr,
                (tANI_U8 *) &pTempNode->peerMacAddr,
                sizeof(tSirMacAddr)) )
       {
@@ -1415,7 +1404,7 @@ __limIbssSearchAndDeletePeer(tpAniSirGlobal    pMac,
             else
                pPrevNode->next = pTempNode->next;
 
-            palFreeMemory(pMac->hHdd, pTempNode);
+            vos_mem_free(pTempNode);
             pMac->lim.gLimNumIbssPeers--;
 
             pTempNode = pTempNextNode;
@@ -1424,6 +1413,16 @@ __limIbssSearchAndDeletePeer(tpAniSirGlobal    pMac,
       }
       pPrevNode = pTempNode;
       pTempNode = pTempNextNode;
+   }
+   /*
+    * if it is the last peer walking out, we better
+    * we set IBSS state to inactive.
+    */
+   if (0 == pMac->lim.gLimNumIbssPeers)
+   {
+       VOS_TRACE(VOS_MODULE_ID_PE, VOS_TRACE_LEVEL_INFO,
+            "Last STA from IBSS walked out");
+       psessionEntry->limIbssActive = false;
    }
 }
 
@@ -1471,7 +1470,8 @@ limIbssCoalesce(
                                   MAC_ADDR_ARRAY(currentBssId), MAC_ADDR_ARRAY(pHdr->bssId));
 
     /* Check for IBSS Coalescing only if Beacon is from different BSS */
-    if ( !vos_mem_compare(currentBssId, pHdr->bssId, sizeof( tSirMacAddr )))
+    if ( !vos_mem_compare(currentBssId, pHdr->bssId, sizeof( tSirMacAddr ))
+          && psessionEntry->isCoalesingInIBSSAllowed)
     {
        /*
         * If STA entry is already available in the LIM hash table, then it is
@@ -1510,6 +1510,12 @@ limIbssCoalesce(
        ibss_bss_delete(pMac,psessionEntry);
        return eSIR_SUCCESS;
     }
+    else
+    {
+       if (!vos_mem_compare(currentBssId, pHdr->bssId, sizeof( tSirMacAddr )))
+           return eSIR_LIM_IGNORE_BEACON;
+    }
+
 
     // STA in IBSS mode and SSID matches with ours
     pPeerNode = ibss_peer_find(pMac, pHdr->sa);
@@ -1519,16 +1525,18 @@ limIbssCoalesce(
         tANI_U32      frameLen;
         tSirRetStatus retCode;
 
-        /** Limit the Max number of IBSS Peers allowed as the max number of STA's allowed
+        /*
+         * Limit the Max number of IBSS Peers allowed as the max
+         * number of STA's allowed
+         * pMac->lim.gLimNumIbssPeers will be increamented after exiting
+         * this function. so we will add additional 1 to compare against
+         * pMac->lim.gLimIbssStaLimit
          */
-#ifndef ANI_SIR_IBSS_PEER_CACHINGT
-        if (pMac->lim.gLimNumIbssPeers >
-              (pMac->lim.gLimIbssStaLimit - IBSS_STATIONS_USED_DURING_INIT))
+        if ((pMac->lim.gLimNumIbssPeers+1) >= pMac->lim.gLimIbssStaLimit)
         {
             PELOGE(limLog(pMac, LOGE, FL("**** MAX STA LIMIT HAS REACHED ****"));)
             return eSIR_LIM_MAX_STA_REACHED_ERROR;
         }
-#endif
         PELOGW(limLog(pMac, LOGW, FL("IBSS Peer node does not exist, adding it***"));)
         frameLen = sizeof(tLimIbssPeerNode) + ieLen - sizeof(tANI_U32);
 

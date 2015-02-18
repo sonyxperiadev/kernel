@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+ *
+ * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -17,28 +17,18 @@
  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
- */
-* Copyright (c) 2012, The Linux Foundation. All rights reserved.
-*
-* Previously licensed under the ISC license by Qualcomm Atheros, Inc.
-*
-*
-* Permission to use, copy, modify, and/or distribute this software for
-* any purpose with or without fee is hereby granted, provided that the
-* above copyright notice and this permission notice appear in all
-* copies.
-*
-* THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
-* WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
-* WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
-* AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
-* DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
-* PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
-* TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-* PERFORMANCE OF THIS SOFTWARE.
+ *
+
+ *
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ *
 
 *
-* Woodside Networks, Inc proprietary. All rights reserved.
+
+*
+*
 * This is the data definition file for the CFG module.
 * Author:         Kevin Nguyen
 * Date:           03/18/02
@@ -2459,10 +2449,10 @@ NIM
 WNI_CFG_BLOCK_ACK_ENABLED    I    4    8
 V    RW    NP RESTART
 LIM
-0    3    0
+0    3    2
 V    RW    NP RESTART
 LIM
-0    3    0
+0    3    2
 
 #ENUM DELAYED 0
 #ENUM IMMEDIATE 1
@@ -2858,10 +2848,10 @@ LIM
 WNI_CFG_VHT_CSN_BEAMFORMEE_ANT_SUPPORTED  I    4    19
 V    RW    NP    
 LIM
-0    3    0
+0    4    0
 V    RW    NP    
 LIM
-0    3    0
+0    4    0
 
 *
 * Number of Sounding Dimensions indicates Number
@@ -3476,7 +3466,7 @@ LIM
 * Delete all Rx BA sessions in 2.4 GHz
 * when BTC requests to disable agg.
 *
-WNI_CFG_DEL_ALL_RX_BA_SESSIONS_2_4_G_BTC I    4    7
+WNI_CFG_DEL_ALL_RX_TX_BA_SESSIONS_2_4_G_BTC I    4    7
 V    RW    NP
 LIM
 0    1    0
@@ -4608,5 +4598,435 @@ HAL
 V    RW    NP
 HAL
 3   50    10
+*
+*
+
+* ATH Enable/Disable
+*
+WNI_CFG_ATH_DISABLE	I    4    7
+V    RW    NP
+NONE
+0   1    0
+V    RW    NP
+NONE
+0   1    0
+* BTC Active WLAN Len
+*
+WNI_CFG_BTC_ACTIVE_WLAN_LEN    I    4    7
+V    RW    NP
+HAL
+0    250000    60000
+V    RW    NP
+HAL
+0    250000    60000
+*
+*
+
+* BTC Active BT Len
+*
+WNI_CFG_BTC_ACTIVE_BT_LEN    I    4    7
+V    RW    NP
+HAL
+0    250000    90000
+V    RW    NP
+HAL
+0    250000    90000
+*
+*
+
+* BTC SAP Active WLAN Len
+*
+WNI_CFG_BTC_SAP_ACTIVE_WLAN_LEN    I    4    7
+V    RW    NP
+HAL
+0    250000    30000
+V    RW    NP
+HAL
+0    250000    30000
+*
+*
+
+* BTC SAP Active BT Len
+*
+WNI_CFG_BTC_SAP_ACTIVE_BT_LEN    I    4    7
+V    RW    NP
+HAL
+0    250000    30000
+V    RW    NP
+HAL
+0    250000    30000
+*
+*
+
+* RMC action period frequency (milli seconds)
+*
+WNI_CFG_RMC_ACTION_PERIOD_FREQUENCY    I    4    7
+V    RW    NP
+HAL
+0   0xFFFFFFFF    300
+V    RW    NP
+HAL
+0   0xFFFFFFFF    300
+*
+*
+
+* Rssi probe interval (milli seconds)
+*
+WNI_CFG_ASD_PROBE_INTERVAL    I    4    7
+V    RW    NP
+HAL
+10    100    50
+V    RW    NP
+HAL
+10    100    50
+*
+*
+
+*Rssi threshold to trigger probing and slecting
+*
+WNI_CFG_ASD_TRIGGER_THRESHOLD    I    4    7
+V    RW    NP
+HAL
+0    120     45
+V    RW    NP
+HAL
+0    120    45
+*
+*
+
+*Rssi Hysteresis threshold for RSSI-RTT
+*
+WNI_CFG_ASD_RTT_RSSI_HYST_THRESHOLD    I    4    7
+V    RW    NP
+HAL
+0    100    0
+V    RW    NP
+HAL
+0    100    0
+*
+*
+
+* Debug p2p remain on channel
+*
+WNI_CFG_DEBUG_P2P_REMAIN_ON_CHANNEL    I    4    7
+V    RW    NP
+NONE
+0    1    0
+V    RW    NP
+NONE
+0    1    0
+
+* BTC CTS2S during SCO
+*
+WNI_CFG_BTC_CTS2S_DURING_SCO    I    4    7
+V    RW    NP
+HAL
+0    1     0
+V    RW    NP
+HAL
+0    1     0
+*
+*
+
+*************************************
+* Feature:   Channel Bonding 2.4G
+*************************************
+
+WNI_CFG_CHANNEL_BONDING_24G    I    4    12
+V    RW    NP    RESTART
+LIM
+0    1     0
+V    RW    NP    RESTART
+LIM
+0    1     0
+
+*
+*  OBSS PASSIVE Channel Time (TU)
+*
+
+WNI_CFG_OBSS_HT40_SCAN_PASSIVE_DWELL_TIME    I    4    9
+V    RW    NP
+NONE
+5    1000    20
+V    RW    NP
+NONE
+5    1000    20
+
+*
+*  OBSS ACTIVE Channel Time (TU)
+*
+
+WNI_CFG_OBSS_HT40_SCAN_ACTIVE_DWELL_TIME    I    4    9
+V    RW    NP
+NONE
+10    1000    10
+V    RW    NP
+NONE
+10    1000    10
+
+*
+*  OBSS SCAN WIDTH TRIGGER Interval (TU)
+*
+
+WNI_CFG_OBSS_HT40_SCAN_WIDTH_TRIGGER_INTERVAL    I    4    9
+V    RW    NP
+NONE
+10    900    200
+V    RW    NP
+NONE
+10    900    200
+
+*
+*  OBSS SCAN passive total per chanenl (TU)
+*
+
+WNI_CFG_OBSS_HT40_SCAN_PASSIVE_TOTAL_PER_CHANNEL    I    4    9
+V    RW    NP
+NONE
+200    10000    200
+V    RW    NP
+NONE
+200    10000    200
+
+*
+*  OBSS SCAN active total per Channel (TU)
+*
+
+WNI_CFG_OBSS_HT40_SCAN_ACTIVE_TOTAL_PER_CHANNEL    I    4    9
+V    RW    NP
+NONE
+20    10000    20
+V    RW    NP
+NONE
+20    10000    20
+
+*
+*  OBSS Width Channel Transition Delay Factor
+*
+
+WNI_CFG_OBSS_HT40_WIDTH_CHANNEL_TRANSITION_DELAY_FACTOR  I    4    9
+V    RW    NP
+NONE
+5    100    5
+V    RW    NP
+NONE
+5    100    5
+
+*
+*  OBSS SCAN Activity Threshold(TU)
+*
+
+WNI_CFG_OBSS_HT40_SCAN_ACTIVITY_THRESHOLD    I    4    9
+V    RW    NP
+NONE
+0    100    25
+V    RW    NP
+NONE
+0    100    25
+
+*
+* TDLS Off Channel Implementation
+*
+WNI_CFG_TDLS_OFF_CHANNEL_ENABLED I 4 7
+V    RW    NP
+LIM
+0    1     0
+V    RW    NP
+LIM
+0    1     0
+
+*
+* PMF SA Query Maximum Retries
+*
+
+WNI_CFG_PMF_SA_QUERY_MAX_RETRIES    I    4    1
+V    RW   NP RESTART
+NONE
+0    20   5
+V    RW   NP RESTART
+NONE
+0    20   5
+
+*
+* PMF SA Query Retry Interval (in TUs)
+*
+
+WNI_CFG_PMF_SA_QUERY_RETRY_INTERVAL    I    4    1
+V    RW   NP RESTART
+NONE
+10    2000 200
+V    RW   NP RESTART
+NONE
+10    2000 200
+
+* RA filter enable/disable
+*
+WNI_CFG_RA_FILTER_ENABLE    I    4    7
+V    RW    NP
+HAL
+0    1     0
+V    RW    NP
+HAL
+0    1     0
+*
+*
+
+* RA filter rate interval
+*
+WNI_CFG_RA_RATE_LIMIT_INTERVAL    I    4    7
+V    RW    NP
+HAL
+0    60     60
+V    RW     NP
+HAL
+0    60     60
+
+* BTC Fatal HID sniff block
+*
+WNI_CFG_BTC_FATAL_HID_NSNIFF_BLK_GUIDANCE    I    4    7
+V    RW    NP
+HAL
+0    2    2
+V    RW    NP
+HAL
+0    2    2
+*
+*
+
+* BTC Critical HID sniff block
+*
+WNI_CFG_BTC_CRITICAL_HID_NSNIFF_BLK_GUIDANCE    I    4    7
+V    RW    NP
+HAL
+0    1    1
+V    RW    NP
+HAL
+0    1    1
+*
+*
+
+* BTC DYN A2DP tx Q threshold
+*
+WNI_CFG_BTC_DYN_A2DP_TX_QUEUE_THOLD    I    4    7
+V    RW    NP
+HAL
+0    1    0
+V    RW    NP
+HAL
+0    1    0
+*
+*
+
+* BTC DYN OPP tx Q threshold
+*
+WNI_CFG_BTC_DYN_OPP_TX_QUEUE_THOLD    I    4    7
+V    RW    NP
+HAL
+0    3    1
+V    RW    NP
+HAL
+0    3    1
+*
+*
+
+*
+*TDLS WMM Mode
+*
+*
+WNI_CFG_TDLS_WMM_MODE_ENABLED   I   4   7
+V    RW    NP
+LIM
+0    1    0
+V    RW    NP
+LIM
+0    1    0
+
+WNI_CFG_MAX_UAPSD_CONSEC_SP    I    4    7
+V    RW    NP
+HAL
+0    100     10
+V    RW    NP
+HAL
+0    100     10
+*
+*
+
+WNI_CFG_MAX_UAPSD_CONSEC_RX_CNT    I    4    7
+V    RW    NP
+HAL
+0    100     10
+V    RW    NP
+HAL
+0    100     10
+*
+*
+
+WNI_CFG_MAX_UAPSD_CONSEC_TX_CNT    I    4    7
+V    RW    NP
+HAL
+0    100     10
+V    RW    NP
+HAL
+0    100     10
+*
+*
+
+WNI_CFG_MAX_UAPSD_CONSEC_TX_CNT_MEAS_WINDOW    I    4    7
+V    RW    NP
+HAL
+0    100     10
+V    RW    NP
+HAL
+0    100     10
+*
+*
+
+WNI_CFG_MAX_UAPSD_CONSEC_RX_CNT_MEAS_WINDOW    I    4    7
+V    RW    NP
+HAL
+0    100     10
+V    RW    NP
+HAL
+0    100     10
+*
+*
+
+WNI_CFG_MAX_PSPOLL_IN_WMM_UAPSD_PS_MODE    I    4    7
+V    RW    NP
+HAL
+0    255     0
+V    RW    NP
+HAL
+0    255     0
+*
+*
+
+WNI_CFG_MAX_UAPSD_INACTIVITY_INTERVALS    I    4    7
+V    RW    NP
+HAL
+0    255     20
+V    RW    NP
+HAL
+0    255     20
+*
+*
+
+WNI_CFG_ENABLE_DYNAMIC_WMMPS    I    4    7
+V    RW    NP
+HAL
+0    1     1
+V    RW    NP
+HAL
+0    1     1
+*
+*
+
+WNI_CFG_BURST_MODE_BE_TXOP_VALUE    I    4    7
+V    RW    NP
+HAL
+0    12288    0
+V    RW    NP
+HAL
+0    12288    0
 *
 *

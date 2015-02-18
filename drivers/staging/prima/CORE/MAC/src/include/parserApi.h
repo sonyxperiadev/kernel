@@ -1,25 +1,5 @@
 /*
- * Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
- *
- * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
- *
- *
- * Permission to use, copy, modify, and/or distribute this software for
- * any purpose with or without fee is hereby granted, provided that the
- * above copyright notice and this permission notice appear in all
- * copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
- * WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
- * AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
- * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
- * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
- * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
- * PERFORMANCE OF THIS SOFTWARE.
- */
-/*
- * Copyright (c) 2012, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2014 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -40,7 +20,12 @@
  */
 
 /*
- * Airgo Networks, Inc proprietary. All rights reserved.
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ */
+
+/*
  * This file parserApi.h contains the definitions used
  * for parsing received 802.11 frames
  * Author:        Chandra Modumudi
@@ -65,6 +50,13 @@
 
 #define IS_24G_CH(__chNum) ((__chNum > 0) && (__chNum < 14))
 #define IS_5G_CH(__chNum) ((__chNum >= 36) && (__chNum <= 165))
+
+#define SIZE_OF_FIXED_PARAM 12
+#define SIZE_OF_TAG_PARAM_NUM 1
+#define SIZE_OF_TAG_PARAM_LEN 1
+#define RSNIEID 0x30
+#define RSNIE_CAPABILITY_LEN 2
+#define DEFAULT_RSNIE_CAP_VAL 0x00
 
 typedef struct sSirCountryInformation
 {
@@ -114,8 +106,8 @@ typedef struct sSirProbeRespBeacon
 #ifdef WLAN_FEATURE_VOWIFI_11R
     tANI_U8                   mdie[SIR_MDIE_SIZE];
 #endif
-#ifdef FEATURE_WLAN_CCX
-    tDot11fIECCXTxmitPower    ccxTxPwr;
+#ifdef FEATURE_WLAN_ESE
+    tDot11fIEESETxmitPower    eseTxPwr;
     tDot11fIEQBSSLoad         QBSSLoad;
 #endif
     tANI_U8                   ssidPresent;
@@ -153,7 +145,7 @@ typedef struct sSirProbeRespBeacon
     tANI_U8                   WiderBWChanSwitchAnnPresent;
     tDot11fIEWiderBWChanSwitchAnn WiderBWChanSwitchAnn;
 #endif
-
+    tDot11fIEOBSSScanParameters OBSSScanParameters;
 } tSirProbeRespBeacon, *tpSirProbeRespBeacon;
 
 // probe Request structure
@@ -250,10 +242,10 @@ typedef struct sSirAssocRsp
     tDot11fIERICDataDesc      RICData[2];
 #endif
 
-#ifdef FEATURE_WLAN_CCX
+#ifdef FEATURE_WLAN_ESE
     tANI_U8                   num_tspecs;
-    tDot11fIEWMMTSPEC         TSPECInfo[SIR_CCX_MAX_TSPEC_IES];
-    tSirMacCCXTSMIE           tsmIE;
+    tDot11fIEWMMTSPEC         TSPECInfo[SIR_ESE_MAX_TSPEC_IES];
+    tSirMacESETSMIE           tsmIE;
 #endif
 
     tANI_U8                   suppRatesPresent;
@@ -268,7 +260,7 @@ typedef struct sSirAssocRsp
     tANI_U8                   mdiePresent;
     tANI_U8                   ricPresent;
 #endif
-#ifdef FEATURE_WLAN_CCX
+#ifdef FEATURE_WLAN_ESE
     tANI_U8                   tspecPresent;
     tANI_U8                   tsmPresent;
 #endif    
@@ -276,7 +268,34 @@ typedef struct sSirAssocRsp
     tDot11fIEVHTCaps          VHTCaps;
     tDot11fIEVHTOperation     VHTOperation;
 #endif
+    tDot11fIEExtCap           ExtCap;
+    tDot11fIEOBSSScanParameters OBSSScanParameters;
+    tSirQosMapSet QosMapSet;
 } tSirAssocRsp, *tpSirAssocRsp;
+
+#if defined(FEATURE_WLAN_ESE_UPLOAD)
+// Structure to hold Ese Beacon report mandatory IEs
+typedef struct sSirEseBcnReportMandatoryIe
+{
+    tSirMacSSid           ssId;
+    tSirMacRateSet        supportedRates;
+    tSirMacFHParamSet     fhParamSet;
+    tSirMacDsParamSetIE   dsParamSet;
+    tSirMacCfParamSet     cfParamSet;
+    tSirMacIBSSParams     ibssParamSet;
+    tSirMacTim            tim;
+    tSirMacRRMEnabledCap  rmEnabledCapabilities;
+
+    tANI_U8               ssidPresent;
+    tANI_U8               suppRatesPresent;
+    tANI_U8               fhParamPresent;
+    tANI_U8               dsParamsPresent;
+    tANI_U8               cfPresent;
+    tANI_U8               ibssParamPresent;
+    tANI_U8               timPresent;
+    tANI_U8               rrmPresent;
+} tSirEseBcnReportMandatoryIe, *tpSirEseBcnReportMandatoryIe;
+#endif /* FEATURE_WLAN_ESE_UPLOAD */
 
 tANI_U8
 sirIsPropCapabilityEnabled(struct sAniSirGlobal *pMac, tANI_U32 bitnum);
@@ -373,6 +392,15 @@ sirParseBeaconIE(struct sAniSirGlobal *pMac,
                  tANI_U8                    *pPayload,
                  tANI_U32                    payloadLength);
 
+#if defined(FEATURE_WLAN_ESE_UPLOAD)
+tSirRetStatus
+sirFillBeaconMandatoryIEforEseBcnReport(tpAniSirGlobal    pMac,
+                                        tANI_U8          *pPayload,
+                                        const tANI_U32    payloadLength,
+                                        tANI_U8         **outIeBuf,
+                                        tANI_U32         *pOutIeLen);
+#endif /* FEATURE_WLAN_ESE_UPLOAD */
+
 tSirRetStatus
 sirConvertBeaconFrame2Struct(struct sAniSirGlobal *pMac,
                              tANI_U8 *pBeaconFrame,
@@ -401,6 +429,11 @@ sirConvertDeltsReq2Struct(struct sAniSirGlobal *pMac,
                           tANI_U8 *frame,
                           tANI_U32 len,
                           tSirDeltsReqInfo *delTs);
+tSirRetStatus
+sirConvertQosMapConfigureFrame2Struct(tpAniSirGlobal    pMac,
+                          tANI_U8               *pFrame,
+                          tANI_U32               nFrame,
+                          tSirQosMapSet      *pQosMapSet);
 
 #ifdef ANI_SUPPORT_11H
 tSirRetStatus
@@ -708,10 +741,19 @@ void PopulateDot11fWMM(tpAniSirGlobal      pMac,
 
 void PopulateDot11fWMMCaps(tDot11fIEWMMCaps *pCaps);
 
-#ifdef FEATURE_WLAN_CCX
+#if defined(FEATURE_WLAN_ESE)
+// Fill the ESE version IE
+void PopulateDot11fESEVersion(tDot11fIEESEVersion *pESEVersion);
+// Fill the Radio Management Capability
+void PopulateDot11fESERadMgmtCap(tDot11fIEESERadMgmtCap *pESERadMgmtCap);
+// Fill the CCKM IE
+tSirRetStatus PopulateDot11fESECckmOpaque( tpAniSirGlobal pMac,
+                                           tpSirCCKMie    pCCKMie,
+                                           tDot11fIEESECckmOpaque *pDot11f );
+
 void PopulateDot11TSRSIE(tpAniSirGlobal  pMac,
-                               tSirMacCCXTSRSIE     *pOld,
-                               tDot11fIECCXTrafStrmRateSet  *pDot11f,
+                               tSirMacESETSRSIE     *pOld,
+                               tDot11fIEESETrafStrmRateSet  *pDot11f,
                                tANI_U8 rate_length);
 void PopulateDot11fReAssocTspec(tpAniSirGlobal pMac, tDot11fReAssocRequest *pReassoc, tpPESession psessionEntry);
 #endif
@@ -834,7 +876,7 @@ int FindIELocation( tpAniSirGlobal pMac,
 
 #ifdef WLAN_FEATURE_11AC
 tSirRetStatus
-PopulateDot11fVHTCaps(tpAniSirGlobal  pMac, tDot11fIEVHTCaps *pDot11f);
+PopulateDot11fVHTCaps(tpAniSirGlobal  pMac, tDot11fIEVHTCaps *pDot11f, tAniBool isProbeRspAssocRspBeacon );
 
 tSirRetStatus
 PopulateDot11fVHTOperation(tpAniSirGlobal  pMac, tDot11fIEVHTOperation  *pDot11f);
@@ -843,7 +885,8 @@ tSirRetStatus
 PopulateDot11fVHTExtBssLoad(tpAniSirGlobal  pMac, tDot11fIEVHTExtBssLoad   *pDot11f);
 
 tSirRetStatus
-PopulateDot11fExtCap(tpAniSirGlobal pMac, tDot11fIEExtCap * pDot11f);
+PopulateDot11fExtCap(tpAniSirGlobal pMac, tDot11fIEExtCap * pDot11f,
+                            tPESession *sessionEntry);
 
 tSirRetStatus
 PopulateDot11fOperatingMode(tpAniSirGlobal pMac, tDot11fIEOperatingMode *pDot11f, tpPESession psessionEntry );
@@ -853,3 +896,12 @@ PopulateDot11fWiderBWChanSwitchAnn(tpAniSirGlobal pMac,
                                    tDot11fIEWiderBWChanSwitchAnn *pDot11f,
                                    tpPESession psessionEntry);
 #endif
+
+void PopulateDot11fTimeoutInterval( tpAniSirGlobal pMac,
+                                    tDot11fIETimeoutInterval *pDot11f,
+                                    tANI_U8 type, tANI_U32 value );
+
+tSirRetStatus ValidateAndRectifyIEs(tpAniSirGlobal pMac,
+                                    tANI_U8 *pMgmtFrame,
+                                    tANI_U32 nFrameBytes,
+                                    tANI_U32 *nMissingRsnBytes);

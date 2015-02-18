@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2014 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -18,26 +18,15 @@
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
  */
+
 /*
- * Copyright (c) 2012, The Linux Foundation. All rights reserved.
- *
- * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
- *
- *
- * Permission to use, copy, modify, and/or distribute this software for
- * any purpose with or without fee is hereby granted, provided that the
- * above copyright notice and this permission notice appear in all
- * copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
- * WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
- * AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
- * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
- * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
- * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
- * PERFORMANCE OF THIS SOFTWARE.
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
+
+
+
 
 #ifndef WLAN_QCT_WDA_H
 #define WLAN_QCT_WDA_H
@@ -143,6 +132,9 @@ typedef enum
   eWDA_AUTH_TYPE_UNKNOWN = eCSR_AUTH_TYPE_FAILED,
 }WDA_AuthType;
 
+#define IS_FW_IN_TX_PATH_FEATURE_ENABLE ((WDI_getHostWlanFeatCaps(FW_IN_TX_PATH)) & (WDA_getFwWlanFeatCaps(FW_IN_TX_PATH)))
+#define IS_MUMIMO_BFORMEE_CAPABLE ((WDI_getHostWlanFeatCaps(MU_MIMO)) & (WDA_getFwWlanFeatCaps(MU_MIMO)))
+#define IS_FEATURE_BCN_FLT_DELTA_ENABLE ((WDI_getHostWlanFeatCaps(BCN_IE_FLT_DELTA)) & (WDA_getFwWlanFeatCaps(BCN_IE_FLT_DELTA)))
 /*--------------------------------------------------------------------------
   Utilities
  --------------------------------------------------------------------------*/
@@ -154,6 +146,7 @@ typedef enum
  */
 #define IS_MCC_SUPPORTED (WDA_IsWcnssWlanReportedVersionGreaterThanOrEqual( 0, 1, 1, 0))
 #define IS_FEATURE_SUPPORTED_BY_FW(featEnumValue) (!!WDA_getFwWlanFeatCaps(featEnumValue))
+#define IS_FEATURE_SUPPORTED_BY_DRIVER(featEnumValue) (!!WDA_getHostWlanFeatCaps(featEnumValue))
 
 #ifdef WLAN_ACTIVEMODE_OFFLOAD_FEATURE
 #define IS_ACTIVEMODE_OFFLOAD_FEATURE_ENABLE ((WDA_getFwWlanFeatCaps(WLANACTIVE_OFFLOAD)) & (WDI_getHostWlanFeatCaps(WLANACTIVE_OFFLOAD)))
@@ -167,6 +160,8 @@ typedef enum
 #define IS_ROAM_SCAN_OFFLOAD_FEATURE_ENABLE 0
 #endif
 
+#define IS_DYNAMIC_WMM_PS_ENABLED ((WDI_getHostWlanFeatCaps(DYNAMIC_WMM_PS)) & (WDA_getFwWlanFeatCaps(DYNAMIC_WMM_PS)))
+
 /* Check if heartbeat offload is enabled */
 #define IS_IBSS_HEARTBEAT_OFFLOAD_FEATURE_ENABLE ((WDI_getHostWlanFeatCaps(IBSS_HEARTBEAT_OFFLOAD)) & (WDA_getFwWlanFeatCaps(IBSS_HEARTBEAT_OFFLOAD)))
 
@@ -175,6 +170,69 @@ typedef enum
 #else
 #define IS_ADVANCE_TDLS_ENABLE 0
 #endif
+#define IS_HT40_OBSS_SCAN_FEATURE_ENABLE ((WDA_getFwWlanFeatCaps(HT40_OBSS_SCAN)) & (WDI_getHostWlanFeatCaps(HT40_OBSS_SCAN)))
+
+typedef enum {
+    MODE_11A        = 0,   /* 11a Mode */
+    MODE_11G        = 1,   /* 11b/g Mode */
+    MODE_11B        = 2,   /* 11b Mode */
+    MODE_11GONLY    = 3,   /* 11g only Mode */
+    MODE_11NA_HT20   = 4,  /* 11a HT20 mode */
+    MODE_11NG_HT20   = 5,  /* 11g HT20 mode */
+    MODE_11NA_HT40   = 6,  /* 11a HT40 mode */
+    MODE_11NG_HT40   = 7,  /* 11g HT40 mode */
+    MODE_11AC_VHT20 = 8,
+    MODE_11AC_VHT40 = 9,
+    MODE_11AC_VHT80 = 10,
+//    MODE_11AC_VHT160 = 11,
+    MODE_11AC_VHT20_2G = 11,
+    MODE_11AC_VHT40_2G = 12,
+    MODE_11AC_VHT80_2G = 13,
+    MODE_UNKNOWN    = 14,
+    MODE_MAX        = 14
+} WLAN_PHY_MODE;
+
+#define WLAN_HAL_CHAN_FLAG_HT40_PLUS   6
+#define WLAN_HAL_CHAN_FLAG_PASSIVE     7
+#define WLAN_HAL_CHAN_ADHOC_ALLOWED    8
+#define WLAN_HAL_CHAN_AP_DISABLED      9
+#define WLAN_HAL_CHAN_FLAG_DFS         10
+#define WLAN_HAL_CHAN_FLAG_ALLOW_HT    11  /* HT is allowed on this channel */
+#define WLAN_HAL_CHAN_FLAG_ALLOW_VHT   12  /* VHT is allowed on this channel */
+
+#define WDA_SET_CHANNEL_FLAG(pwda_channel,flag) do { \
+        (pwda_channel)->channel_info |=  (1 << flag);      \
+     } while(0)
+
+#define WDA_SET_CHANNEL_MODE(pwda_channel,val) do { \
+     (pwda_channel)->channel_info &= 0xffffffc0;            \
+     (pwda_channel)->channel_info |= (val);                 \
+     } while(0)
+
+#define WDA_SET_CHANNEL_MAX_POWER(pwda_channel,val) do { \
+     (pwda_channel)->reg_info_1 &= 0xffff00ff;           \
+     (pwda_channel)->reg_info_1 |= ((val&0xff) << 8);    \
+     } while(0)
+
+#define WDA_SET_CHANNEL_REG_POWER(pwda_channel,val) do { \
+     (pwda_channel)->reg_info_1 &= 0xff00ffff;           \
+     (pwda_channel)->reg_info_1 |= ((val&0xff) << 16);   \
+     } while(0)
+#define WDA_SET_CHANNEL_MIN_POWER(pwlan_hal_update_channel,val) do { \
+     (pwlan_hal_update_channel)->reg_info_1 &= 0xffffff00;           \
+     (pwlan_hal_update_channel)->reg_info_1 |= (val&0xff);           \
+     } while(0)
+#define WDA_SET_CHANNEL_ANTENNA_MAX(pwlan_hal_update_channel,val) do { \
+     (pwlan_hal_update_channel)->reg_info_2 &= 0xffffff00;             \
+     (pwlan_hal_update_channel)->reg_info_2 |= (val&0xff);             \
+     } while(0)
+#define WDA_SET_CHANNEL_REG_CLASSID(pwlan_hal_update_channel,val) do { \
+     (pwlan_hal_update_channel)->reg_info_1 &= 0x00ffffff;             \
+     (pwlan_hal_update_channel)->reg_info_1 |= ((val&0xff) << 24);     \
+     } while(0)
+
+#define WDA_IS_MCAST_FLT_ENABLE_IN_FW (WDA_getFwWlanFeatCaps(WLAN_MCADDR_FLT))
+
 /*--------------------------------------------------------------------------
   Definitions for Data path APIs
  --------------------------------------------------------------------------*/
@@ -330,6 +388,7 @@ typedef struct
     */
    tANI_U8    ucUseBaBitmap ;
    tANI_U8    bssIdx;
+   tANI_U32   currentOperChan;
    tANI_U32   framesTxed[STACFG_MAX_TC];
 }tWdaStaInfo, *tpWdaStaInfo ;
 
@@ -345,11 +404,31 @@ typedef struct
    /* Traffic Stats timer */
    TX_TIMER trafficStatsTimer ;
 }tWdaTimers ;
+
 #ifdef WLAN_SOFTAP_VSTA_FEATURE
 #define WDA_MAX_STA    (41)
 #else
 #define WDA_MAX_STA    (16)
 #endif
+typedef enum
+{
+   WDA_ADDSTA_REQ_NO_MEM = 0,
+   WDA_ADDSTA_REQ_WDI_FAIL = 1,
+   WDA_ADDSTA_RSP_NO_MEM = 2,
+   WDA_ADDSTA_RSP_WDI_FAIL = 3,
+   WDA_ADDSTA_MAX
+} WDA_AddSelfStaFailReasonDebug;
+
+/*AddSelfSta Request and Response Debug*/
+typedef struct
+{
+   wpt_uint8            wdiAddStaSelfStaReqCounter;
+   wpt_uint8            wdiAddStaSelfStaRspCounter;
+   wpt_uint8            wdiAddStaSelfStaFailCounter;
+   wpt_uint8            ucSTASelfIdx; /* received SelfStaIdx*/
+   wpt_uint8            wdaAddSelfStaFailReason;
+} tWDA_AddSelfStaDebugParams;
+
 typedef struct
 {
    v_PVOID_t            pVosContext;             /* global VOSS context*/
@@ -409,13 +488,16 @@ typedef struct
    tSirLinkState        linkState;
    /* set, when BT AMP session is going on */
    v_BOOL_t             wdaAmpSessionOn;
-   v_U32_t              VosPacketToFree;
    v_BOOL_t             needShutdown;
    v_BOOL_t             wdiFailed;
    v_BOOL_t             wdaTimersCreated;
+   uintptr_t            VosPacketToFree;
 
    /* Event to wait for WDA stop on FTM mode */
    vos_event_t          ftmStopDoneEvent;
+
+   tWDA_AddSelfStaDebugParams wdaAddSelfStaParams;
+
 } tWDA_CbContext ; 
 
 typedef struct
@@ -430,7 +512,7 @@ typedef struct
  * open WDA context
  */ 
 
-VOS_STATUS WDA_open(v_PVOID_t pVosContext, v_PVOID_t pOSContext, 
+VOS_STATUS WDA_open(v_PVOID_t pVosContext, v_PVOID_t devHandle,
                                               tMacOpenParameters *pMacParams ) ;
 
 /*
@@ -508,7 +590,7 @@ VOS_STATUS WDA_TxPacket(tWDA_CbContext *pWDA,
                                     pWDATxRxCompFunc pCompFunc,
                                     void *pData,
                                     pWDAAckFnTxComp pAckTxComp, 
-                                    tANI_U8 txFlag);
+                                    tANI_U32 txFlag);
 
 /*
  * FUNCTION: WDA_PostMsgApi
@@ -690,6 +772,9 @@ tBssSystemRole wdaGetGlobalSystemRole(tpAniSirGlobal pMac);
 #  define WDA_GET_OFFLOADSCANLEARN(pRxMeta) (((WDI_DS_RxMetaInfoType*)(pRxMeta))->offloadScanLearn)
 /* WDA_GET_ROAMCANDIDATEIND **************************************************/
 #  define WDA_GET_ROAMCANDIDATEIND(pRxMeta) (((WDI_DS_RxMetaInfoType*)(pRxMeta))->roamCandidateInd)
+#endif
+#ifdef WLAN_FEATURE_EXTSCAN
+#define WDA_GET_EXTSCANFULLSCANRESIND(pRxMeta) (((WDI_DS_RxMetaInfoType*)(pRxMeta))->extscanBuffer)
 #endif
 /* WDA_GET_RX_RSSI_DB ********************************************************/
 // Volans RF
@@ -943,7 +1028,7 @@ tSirRetStatus uMacPostCtrlMsg(void* pSirGlobal, tSirMbMsg* pMb);
 #define WDA_EXCLUDE_UNENCRYPTED_IND    SIR_HAL_EXCLUDE_UNENCRYPTED_IND
 #endif
 
-#ifdef FEATURE_WLAN_CCX
+#ifdef FEATURE_WLAN_ESE
 #define WDA_TSM_STATS_REQ              SIR_HAL_TSM_STATS_REQ
 #define WDA_TSM_STATS_RSP              SIR_HAL_TSM_STATS_RSP
 #endif
@@ -1005,6 +1090,11 @@ tSirRetStatus uMacPostCtrlMsg(void* pSirGlobal, tSirMbMsg* pMb);
 
 #define WDA_SET_MAX_TX_POWER_REQ       SIR_HAL_SET_MAX_TX_POWER_REQ
 #define WDA_SET_MAX_TX_POWER_RSP       SIR_HAL_SET_MAX_TX_POWER_RSP
+
+#define WDA_SET_MAX_TX_POWER_PER_BAND_REQ \
+        SIR_HAL_SET_MAX_TX_POWER_PER_BAND_REQ
+#define WDA_SET_MAX_TX_POWER_PER_BAND_RSP \
+        SIR_HAL_SET_MAX_TX_POWER_PER_BAND_RSP
 
 #define WDA_SEND_MSG_COMPLETE          SIR_HAL_SEND_MSG_COMPLETE 
 
@@ -1106,9 +1196,63 @@ tSirRetStatus uMacPostCtrlMsg(void* pSirGlobal, tSirMbMsg* pMb);
 #define WDA_ADD_PERIODIC_TX_PTRN_IND    SIR_HAL_ADD_PERIODIC_TX_PTRN_IND
 #define WDA_DEL_PERIODIC_TX_PTRN_IND    SIR_HAL_DEL_PERIODIC_TX_PTRN_IND
 
+#ifdef FEATURE_WLAN_BATCH_SCAN
+#define WDA_SET_BATCH_SCAN_REQ            SIR_HAL_SET_BATCH_SCAN_REQ
+#define WDA_SET_BATCH_SCAN_RSP            SIR_HAL_SET_BATCH_SCAN_RSP
+#define WDA_STOP_BATCH_SCAN_IND           SIR_HAL_STOP_BATCH_SCAN_IND
+#define WDA_TRIGGER_BATCH_SCAN_RESULT_IND SIR_HAL_TRIGGER_BATCH_SCAN_RESULT_IND
+#endif
+#define WDA_RATE_UPDATE_IND         SIR_HAL_RATE_UPDATE_IND
+
+
+#define WDA_HT40_OBSS_SCAN_IND   SIR_HAL_HT40_OBSS_SCAN_IND
+#define WDA_HT40_OBSS_STOP_SCAN_IND SIR_HAL_HT40_OBSS_STOP_SCAN_IND
+
+#define WDA_GET_BCN_MISS_RATE_REQ        SIR_HAL_BCN_MISS_RATE_REQ
+
+#ifdef WLAN_FEATURE_LINK_LAYER_STATS
+#define WDA_LINK_LAYER_STATS_CLEAR_REQ         SIR_HAL_LL_STATS_CLEAR_REQ
+#define WDA_LINK_LAYER_STATS_SET_REQ           SIR_HAL_LL_STATS_SET_REQ
+#define WDA_LINK_LAYER_STATS_GET_REQ           SIR_HAL_LL_STATS_GET_REQ
+#define WDA_LINK_LAYER_STATS_RESULTS_RSP       SIR_HAL_LL_STATS_RESULTS_RSP
+#endif /* WLAN_FEATURE_LINK_LAYER_STATS */
+
+#ifdef FEATURE_WLAN_TDLS
+// tdlsoffchan
+#define WDA_SET_TDLS_CHAN_SWITCH_REQ           SIR_HAL_TDLS_CHAN_SWITCH_REQ
+#define WDA_SET_TDLS_CHAN_SWITCH_REQ_RSP       SIR_HAL_TDLS_CHAN_SWITCH_REQ_RSP
+#endif
 tSirRetStatus wdaPostCtrlMsg(tpAniSirGlobal pMac, tSirMsgQ *pMsg);
 
-eHalStatus WDA_SetRegDomain(void * clientCtxt, v_REGDOMAIN_t regId);
+eHalStatus WDA_SetRegDomain(void * clientCtxt, v_REGDOMAIN_t regId,
+                                               tAniBool sendRegHint);
+
+#ifdef WLAN_FEATURE_EXTSCAN
+#define WDA_EXTSCAN_GET_CAPABILITIES_REQ       SIR_HAL_EXTSCAN_GET_CAPABILITIES_REQ
+#define WDA_EXTSCAN_GET_CAPABILITIES_RSP    SIR_HAL_EXTSCAN_GET_CAPABILITIES_RSP
+#define WDA_EXTSCAN_START_REQ                  SIR_HAL_EXTSCAN_START_REQ
+#define WDA_EXTSCAN_START_RSP                  SIR_HAL_EXTSCAN_START_RSP
+#define WDA_EXTSCAN_STOP_REQ                   SIR_HAL_EXTSCAN_STOP_REQ
+#define WDA_EXTSCAN_STOP_RSP                   SIR_HAL_EXTSCAN_STOP_RSP
+#define WDA_EXTSCAN_SET_BSSID_HOTLIST_REQ      SIR_HAL_EXTSCAN_SET_BSS_HOTLIST_REQ
+#define WDA_EXTSCAN_SET_BSSID_HOTLIST_RSP      SIR_HAL_EXTSCAN_SET_BSS_HOTLIST_RSP
+#define WDA_EXTSCAN_RESET_BSSID_HOTLIST_REQ    SIR_HAL_EXTSCAN_RESET_BSS_HOTLIST_REQ
+#define WDA_EXTSCAN_RESET_BSSID_HOTLIST_RSP    SIR_HAL_EXTSCAN_RESET_BSS_HOTLIST_RSP
+#define WDA_EXTSCAN_SET_SIGNF_RSSI_CHANGE_REQ  SIR_HAL_EXTSCAN_SET_SIGNF_RSSI_CHANGE_REQ
+#define WDA_EXTSCAN_SET_SIGNF_RSSI_CHANGE_RSP  SIR_HAL_EXTSCAN_SET_SIGNF_RSSI_CHANGE_RSP
+#define WDA_EXTSCAN_RESET_SIGNF_RSSI_CHANGE_REQ  SIR_HAL_EXTSCAN_RESET_SIGNF_RSSI_CHANGE_REQ
+#define WDA_EXTSCAN_RESET_SIGNF_RSSI_CHANGE_RSP  SIR_HAL_EXTSCAN_RESET_SIGNF_RSSI_CHANGE_RSP
+#define WDA_EXTSCAN_GET_CACHED_RESULTS_REQ    SIR_HAL_EXTSCAN_GET_CACHED_RESULTS_REQ
+#define WDA_EXTSCAN_GET_CACHED_RESULTS_RSP    SIR_HAL_EXTSCAN_GET_CACHED_RESULTS_RSP
+
+#define WDA_EXTSCAN_PROGRESS_IND            SIR_HAL_EXTSCAN_PROGRESS_IND
+#define WDA_EXTSCAN_SCAN_AVAILABLE_IND      SIR_HAL_EXTSCAN_SCAN_AVAILABLE_IND
+#define WDA_EXTSCAN_SCAN_RESULT_IND         SIR_HAL_EXTSCAN_SCAN_RESULT_IND
+#define WDA_EXTSCAN_BSSID_HOTLIST_RESULT_IND SIR_HAL_EXTSCAN_HOTLIST_MATCH_IND
+#define WDA_EXTSCAN_SIGNF_RSSI_RESULT_IND    SIR_HAL_EXTSCAN_SIGNF_WIFI_CHANGE_IND
+#endif /* WLAN_FEATURE_EXTSCAN */
+
+#define WDA_SPOOF_MAC_ADDR_REQ               SIR_HAL_SPOOF_MAC_ADDR_REQ
 
 #define HAL_USE_BD_RATE2_FOR_MANAGEMENT_FRAME 0x40 // Bit 6 will be used to control BD rate for Management frames
 
@@ -1144,6 +1288,8 @@ eHalStatus WDA_SetRegDomain(void * clientCtxt, v_REGDOMAIN_t regId);
 
 v_BOOL_t WDA_IsHwFrameTxTranslationCapable(v_PVOID_t pVosGCtx, 
                                                       tANI_U8 staIdx);
+
+v_BOOL_t WDA_IsSelfSTA(v_PVOID_t pVosGCtx,tANI_U8 staIdx);
 
 #  define WDA_EnableUapsdAcParams(vosGCtx, staId, uapsdInfo) \
          WDA_SetUapsdAcParamsReq(vosGCtx, staId, uapsdInfo)
@@ -1378,7 +1524,7 @@ WDA_DS_BuildTxPacketInfo
   v_U8_t          typeSubtype,
   v_PVOID_t       pAddr2,
   v_U8_t          uTid,
-  v_U8_t          txFlag,
+  v_U32_t          txFlag,
   v_U32_t         timeStamp,
   v_U8_t          ucIsEapol,
   v_U8_t          ucUP
@@ -1857,9 +2003,10 @@ tANI_U8 WDA_getFwWlanFeatCaps(tANI_U8 featEnumValue);
   PARAMETERS
     pMac : upper MAC context pointer
     displaySnapshot : Display DXE snapshot option
-    enableStallDetect : Enable stall detect feature
-                        This feature will take effect to data performance
-                        Not integrate till fully verification
+    debugFlags      : Enable stall detect features
+                      defined by WPAL_DeviceDebugFlags
+                      These features may effect
+                      data performance.
 
   RETURN VALUE
     NONE
@@ -1869,7 +2016,7 @@ void WDA_TransportChannelDebug
 (
   tpAniSirGlobal pMac,
   v_BOOL_t       displaySnapshot,
-  v_BOOL_t       toggleStallDetect
+  v_U8_t         debugFlags
 );
 
 /*==========================================================================
@@ -1900,5 +2047,4 @@ void WDA_TrafficStatsTimerActivate(wpt_boolean activate);
 
 ===========================================================================*/
 void WDA_SetEnableSSR(v_BOOL_t enableSSR);
-
 #endif

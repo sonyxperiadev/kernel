@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -18,25 +18,11 @@
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
  */
+
 /*
- * Copyright (c) 2012, The Linux Foundation. All rights reserved.
- *
- * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
- *
- *
- * Permission to use, copy, modify, and/or distribute this software for
- * any purpose with or without fee is hereby granted, provided that the
- * above copyright notice and this permission notice appear in all
- * copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
- * WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
- * AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
- * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
- * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
- * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
- * PERFORMANCE OF THIS SOFTWARE.
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /******************************************************************************
@@ -191,6 +177,7 @@ typedef struct sPmcInfo
     tANI_BOOLEAN pmcReady; /*whether eWNI_SME_SYS_READY_IND has been sent to PE or not */
     tANI_BOOLEAN wowlEnabled;  /* TRUE if WoWL is enabled */
     tANI_BOOLEAN wowlModeRequired; /* TRUE if device should go to WOWL on entering BMPS */
+    tWowlExitSource wowlExitSrc; /*WoWl exiting because of wakeup pkt or user explicitly disabling WoWL*/
     void (*enterWowlCallbackRoutine) (void *callbackContext, eHalStatus status); /* routine to call for wowl request */ 
     void *enterWowlCallbackContext;/* value to be passed as parameter to routine specified above */
     tSirSmeWowlEnterParams wowlEnterParams; /* WOWL mode configuration */
@@ -221,6 +208,17 @@ typedef struct sPmcInfo
     v_BOOL_t    ImpsReqTimerFailed;
     tANI_U8     ImpsReqFailCnt;
     tANI_U8     ImpsReqTimerfailCnt;
+
+#ifdef FEATURE_WLAN_BATCH_SCAN
+   /*HDD callback to be called after receiving SET BATCH SCAN RSP from FW*/
+   hddSetBatchScanReqCallback setBatchScanReqCallback;
+   void * setBatchScanReqCallbackContext;
+   /*HDD callback to be called after receiving BATCH SCAN iRESULT IND from FW*/
+   hddTriggerBatchScanResultIndCallback batchScanResultCallback;
+   void * batchScanResultCallbackContext;
+#endif
+
+
 } tPmcInfo, *tpPmcInfo;
 
 

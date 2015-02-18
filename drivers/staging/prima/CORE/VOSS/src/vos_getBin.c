@@ -1,25 +1,5 @@
 /*
- * Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
- *
- * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
- *
- *
- * Permission to use, copy, modify, and/or distribute this software for
- * any purpose with or without fee is hereby granted, provided that the
- * above copyright notice and this permission notice appear in all
- * copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
- * WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
- * AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
- * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
- * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
- * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
- * PERFORMANCE OF THIS SOFTWARE.
- */
-/*
- * Copyright (c) 2012, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2014 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -39,14 +19,12 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-/**=============================================================================
-  vos_getBin.c
-  \brief
-  Description...
-   Copyright (c) 2012-2013 Qualcomm Atheros, Inc.
-   All Rights Reserved.
-   Qualcomm Atheros Confidential and Proprietary.
-  ==============================================================================*/
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ */
+
 /* $HEADER$ */
 /**-----------------------------------------------------------------------------
   Include files
@@ -124,7 +102,7 @@ VOS_STATUS vos_get_binary_blob( VOS_BINARY_ID binaryId,
        if ( !VOS_IS_STATUS_SUCCESS( VosSts ))
        {
           VOS_TRACE(VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_ERROR,
-                                    "%s : vos_open failed\n",__func__);
+                                    "%s : vos_open failed",__func__);
 
           return VOS_STATUS_E_FAILURE;
        }
@@ -158,7 +136,7 @@ tVOS_CONCURRENCY_MODE vos_get_concurrency_mode( void )
     return con_mode;
 }
 
-v_BOOL_t vos_concurrent_sessions_running(void)
+v_BOOL_t vos_concurrent_open_sessions_running(void)
 {
     v_U8_t i=0;
     v_U8_t j=0;
@@ -172,11 +150,48 @@ v_BOOL_t vos_concurrent_sessions_running(void)
        {
           for (i=0; i < VOS_MAX_NO_OF_MODE; i++)
           {
-             j += pHddCtx->no_of_sessions[i];
+              j += pHddCtx->no_of_open_sessions[i];
           }
        }
     }
 
     return (j>1);
+}
+
+/**---------------------------------------------------------------------------
+ *
+ *   \brief vos_max_concurrent_connections_reached()
+ *
+ *   This function checks for presence of concurrency where more than
+ *   one connection exists and it returns TRUE if the max concurrency is
+ *   reached.
+ *
+ *   Example:
+ *   STA + STA (wlan0 and wlan1 are connected) - returns TRUE
+ *   STA + STA (wlan0 connected and wlan1 disconnected) - returns FALSE
+ *   DUT with P2P-GO + P2P-CLIENT connection) - returns TRUE
+ *
+ *   \param  - None
+ *
+ *   \return - VOS_TRUE or VOS_FALSE
+ *
+ * --------------------------------------------------------------------------*/
+v_BOOL_t vos_max_concurrent_connections_reached (void)
+{
+    v_U8_t i = 0, j = 0;
+    hdd_context_t *pHddCtx;
+    v_CONTEXT_t pVosContext = vos_get_global_context(VOS_MODULE_ID_HDD, NULL);
+
+    if (NULL != pVosContext) {
+        pHddCtx = vos_get_context(VOS_MODULE_ID_HDD, pVosContext);
+        if (NULL != pHddCtx) {
+            for (i = 0; i < VOS_MAX_NO_OF_MODE; i++)
+                j += pHddCtx->no_of_active_sessions[i];
+
+            return (j > (pHddCtx->cfg_ini->gMaxConcurrentActiveSessions - 1));
+       }
+    }
+
+    return VOS_FALSE;
 }
 

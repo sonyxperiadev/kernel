@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -18,25 +18,11 @@
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
  */
+
 /*
- * Copyright (c) 2012, The Linux Foundation. All rights reserved.
- *
- * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
- *
- *
- * Permission to use, copy, modify, and/or distribute this software for
- * any purpose with or without fee is hereby granted, provided that the
- * above copyright notice and this permission notice appear in all
- * copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
- * WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
- * AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
- * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
- * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
- * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
- * PERFORMANCE OF THIS SOFTWARE.
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 /*===========================================================================
@@ -170,7 +156,7 @@ tSirRetStatus uMacPostCtrlMsg(void* pSirGlobal, tSirMbMsg* pMb)
    msg.type = pMb->type;
    msg.bodyval = 0;
 
-   WDALOG3(wdaLog(pMac, LOG3, FL("msgType %d, msgLen %d\n" ),
+   WDALOG3(wdaLog(pMac, LOG3, FL("msgType %d, msgLen %d" ),
         pMb->type, pMb->msgLen));
 
    // copy the message from host buffer to firmware buffer
@@ -182,7 +168,7 @@ tSirRetStatus uMacPostCtrlMsg(void* pSirGlobal, tSirMbMsg* pMb)
    pMbLocal = vos_mem_malloc(pMb->msgLen);
    if ( NULL == pMbLocal )
    {
-      WDALOGE( wdaLog(pMac, LOGE, FL("Buffer Allocation failed!\n")));
+      WDALOGE( wdaLog(pMac, LOGE, FL("Buffer Allocation failed!")));
       return eSIR_FAILURE;
    }
 
@@ -208,12 +194,15 @@ tSirRetStatus uMacPostCtrlMsg(void* pSirGlobal, tSirMbMsg* pMb)
       break;
 
    case SIR_PTT_MSG_TYPES_BEGIN:
+      WDALOGW( wdaLog(pMac, LOGW, FL("%s:%d: message type = 0x%X"),
+               __func__, __LINE__, msg.type));
+      vos_mem_free(msg.bodyptr);
       break;
 
 
    default:
       WDALOGW( wdaLog(pMac, LOGW, FL("Unknown message type = "
-             "0x%X\n"),
+             "0x%X"),
              msg.type));
 
       // Release the memory.
@@ -244,8 +233,6 @@ tBssSystemRole wdaGetGlobalSystemRole(tpAniSirGlobal pMac)
       VOS_ASSERT(0);
       return eSYSTEM_UNKNOWN_ROLE;
    }
-   WDALOG1( wdaLog(pMac, LOG1, FL(" returning  %d role\n"),
-             wdaContext->wdaGlobalSystemRole));
    return  wdaContext->wdaGlobalSystemRole;
 }
 

@@ -1,25 +1,5 @@
 /*
- * Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
- *
- * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
- *
- *
- * Permission to use, copy, modify, and/or distribute this software for
- * any purpose with or without fee is hereby granted, provided that the
- * above copyright notice and this permission notice appear in all
- * copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
- * WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
- * AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
- * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
- * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
- * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
- * PERFORMANCE OF THIS SOFTWARE.
- */
-/*
- * Copyright (c) 2012, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -39,6 +19,11 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ */
 
 #ifndef WLAN_QCT_DXE_I_H
 #define WLAN_QCT_DXE_I_H
@@ -50,9 +35,6 @@
   @brief 
                
    This file contains the external API exposed by the wlan data transfer abstraction layer module.
-   Copyright (c) 2011 Qualcomm Technologies, Inc.
-   All Rights Reserved.
-   Qualcomm Technologies Confidential and Proprietary
 ========================================================================*/
 
 /*===========================================================================
@@ -98,28 +80,20 @@ when           who        what, where, why
 /* Start with base address */
 
 #ifdef WCN_PRONTO
-#define WLANDXE_CCU_DXE_INT_SELECT       0xfb2050dc
-#define WLANDXE_CCU_DXE_INT_SELECT_STAT  0xfb2050e0
-#define WLANDXE_CCU_ASIC_INT_ENABLE      0xfb2050e4
+#define WLANDXE_CCU_DXE_INT_SELECT        0x2050dc
+#define WLANDXE_CCU_DXE_INT_SELECT_STAT   0x2050e0
+#define WLANDXE_CCU_ASIC_INT_ENABLE       0x2050e4
+#define WLANDXE_CCU_SOFT_RESET            0x204010
+#define WLANDXE_BMU_AVAILABLE_BD_PDU_LOCAL 0x80260
 #else
-#define WLANDXE_CCU_DXE_INT_SELECT       0x03200b10
-#define WLANDXE_CCU_DXE_INT_SELECT_STAT  0x03200b14
-#define WLANDXE_CCU_ASIC_INT_ENABLE      0x03200b18
+#define WLANDXE_CCU_DXE_INT_SELECT        0x200b10
+#define WLANDXE_CCU_DXE_INT_SELECT_STAT   0x200b14
+#define WLANDXE_CCU_ASIC_INT_ENABLE       0x200b18
 #endif
 
-#ifdef PAL_OS_TYPE_BMP
-#define WLANDXE_WCNSS_BASE_ADDRESS        0xCDD00000
-#else
-#ifdef WCN_PRONTO
-#define WLANDXE_WCNSS_BASE_ADDRESS        0xfb000000
-#else
-#define WLANDXE_WCNSS_BASE_ADDRESS        0x03000000
-#endif
-#endif /* PAL_OS_TYPE_BMP */
+#define WLANDXE_BMU_AVAILABLE_BD_PDU      0x80084
 
-#define WLANDXE_BMU_AVAILABLE_BD_PDU     (WLANDXE_WCNSS_BASE_ADDRESS + 0x80084)
-
-#define WLANDXE_REGISTER_BASE_ADDRESS    (WLANDXE_WCNSS_BASE_ADDRESS + 0x202000)
+#define WLANDXE_REGISTER_BASE_ADDRESS     0x202000
 
 /* Common over the channels register addresses */
 #define WALNDEX_DMA_CSR_ADDRESS          (WLANDXE_REGISTER_BASE_ADDRESS + 0x00)
@@ -184,6 +158,37 @@ when           who        what, where, why
 #define WLANDXE_DMA_CH_TSTMP_REG         0x003C
 
 /* Common CSR Register Contorol mask and offset */
+#ifdef WCN_PRONTO
+#define WLANDXE_DMA_CSR_RESERVED_MASK         0xFFFF0000
+#define WLANDXE_DMA_CSR_RESERVED_OFFSET       0x10
+#define WLANDXE_DMA_CSR_RESERVED_DEFAULT      0x0
+
+#define WLANDXE_DMA_CSR_H2H_SYNC_EN_MASK      0x8000
+#define WLANDXE_DMA_CSR_H2H_SYNC_EN_OFFSET    0x0F
+#define WLANDXE_DMA_CSR_H2H_SYNC_EN_DEFAULT   0x0
+
+#define WLANDXE_DMA_CSR_PAUSED_MASK           0x4000
+#define WLANDXE_DMA_CSR_PAUSED_OFFSET         0x0E
+#define WLANDXE_DMA_CSR_PAUSED_DEFAULT        0x0
+
+#define WLANDXE_DMA_CSR_ECTR_EN_MASK          0x2000
+#define WLANDXE_DMA_CSR_ECTR_EN_OFFSET        0x0D
+#define WLANDXE_DMA_CSR_ECTR_EN_DEFAULT       0x2000
+
+#define WLANDXE_DMA_CSR_B2H_TSTMP_OFF_MASK    0x1F00
+#define WLANDXE_DMA_CSR_B2H_TSTMP_OFF_OFFSET  0x08
+#define WLANDXE_DMA_CSR_B2H_TSTMP_OFF_DEFAULT 0x0F00
+
+#define WLANDXE_DMA_CSR_H2B_TSTMP_OFF_MASK    0xF8
+#define WLANDXE_DMA_CSR_H2B_TSTMP_OFF_OFFSET  0x03
+#define WLANDXE_DMA_CSR_H2B_TSTMP_OFF_DEFAULT 0x28
+
+#define WLANDXE_DMA_CSR_TSTMP_EN_MASK         0x04
+#define WLANDXE_DMA_CSR_TSTMP_EN_OFFSET       0x02
+#define WLANDXE_DMA_CSR_TSTMP_EN_DEFAULT      0x0
+
+#define WLANDXE_DMA_CCU_DXE_RESET_MASK        0x4
+#else
 #define WLANDXE_DMA_CSR_RESERVED_MASK         0xFFFE0000
 #define WLANDXE_DMA_CSR_RESERVED_OFFSET       0x11
 #define WLANDXE_DMA_CSR_RESERVED_DEFAULT      0x0
@@ -215,6 +220,7 @@ when           who        what, where, why
 #define WLANDXE_DMA_CSR_RESET_MASK            0x4
 #define WLANDXE_DMA_CSR_RESET_OFFSET          0x2
 #define WLANDXE_DMA_CSR_RESET_DEFAULT         0x0
+#endif /* WCN_PRONTO */
 
 #define WLANDXE_DMA_CSR_PAUSE_MASK            0x2
 #define WLANDXE_DMA_CSR_PAUSE_OFFSET          0x1
@@ -223,7 +229,11 @@ when           who        what, where, why
 #define WLANDXE_DMA_CSR_EN_MASK               0x1
 #define WLANDXE_DMA_CSR_EN_OFFSET             0x0
 #define WLANDXE_DMA_CSR_EN_DEFAULT            0x0
-#define WLANDXE_DMA_CSR_DEFAULT               0x4E50
+
+/* DXE CSR Master enable register value */
+#define WLANDXE_CSR_DEFAULT_ENABLE            (WLANDXE_DMA_CSR_H2H_SYNC_EN_MASK | \
+                                               WLANDXE_DMA_CSR_ECTR_EN_MASK | \
+                                               WLANDXE_DMA_CSR_EN_MASK)
 
 /* Channel CTRL Register Control mask and offset */
 #define WLANDXE_CH_CTRL_RSVD_MASK             0x80000000
@@ -377,6 +387,8 @@ when           who        what, where, why
 #define WLANDXE_CH_STAT_INT_DONE_MASK   0x00008000
 #define WLANDXE_CH_STAT_INT_ERR_MASK    0x00004000
 #define WLANDXE_CH_STAT_INT_ED_MASK     0x00002000
+#define WLANDXE_CH_STAT_ERR_CODE_MASK   0x000007c0
+#define WLANDXE_CH_STAT_ERR_CODE_OFFSET (6)
 
 #define WLANDXE_CH_STAT_MASKED_MASK     0x00000008
 #define WLANDXE_CH_STAT_ENABLED_MASK    0x00000001
@@ -394,6 +406,37 @@ when           who        what, where, why
 #define WLANDXE_INT_MASK_CHAN_6          0x00000040
 
 #define WLANDXE_TX_LOW_RES_THRESHOLD     (5)
+
+typedef enum {
+   WLANDXE_ERROR_NONE                = 0,
+   WLANDXE_ERROR_SAHB_ERR            = 1,
+   WLANDXE_ERROR_H2H_RD_BUS_ERR      = 2,
+   WLANDXE_ERROR_H2H_WR_BUS_ERR      = 3,
+   WLANDXE_ERROR_PRG_INV_XTYPE       = 4,
+   WLANDXE_ERROR_BERR_POPWQ          = 5,
+   WLANDXE_ERROR_BERR_PUSHWQ         = 6,
+   WLANDXE_ERROR_BERR_RLSS           = 7,
+   WLANDXE_ERROR_BERR_GETPDU         = 8,
+   WLANDXE_ERROR_PRG_INV_WQ          = 9,
+   WLANDXE_ERROR_PRG_INV_H2H_SRC_QID = 10,
+   WLANDXE_ERROR_PRG_INV_H2H_DST_QID = 11,
+   WLANDXE_ERROR_PRG_INV_B2H_SRC_QID = 12,
+   WLANDXE_ERROR_PRG_INV_B2H_DST_QID = 13,
+   WLANDXE_ERROR_PRG_INV_B2H_SRC_IDX = 14,
+   WLANDXE_ERROR_PRG_INV_H2B_SRC_QID = 15,
+   WLANDXE_ERROR_PRG_INV_H2B_DST_QID = 16,
+   WLANDXE_ERROR_PRG_INV_H2B_DST_IDX = 17,
+   WLANDXE_ERROR_PRG_INV_H2B_SZ      = 18,
+   WLANDXE_ERROR_PRG_INV_SADR        = 19,
+   WLANDXE_ERROR_PRG_INV_DADR        = 20,
+   WLANDXE_ERROR_PRG_INV_EDADR       = 21,
+   WLANDXE_ERROR_PRG_INV_SRC_WQID    = 22,
+   WLANDXE_ERROR_PRG_INV_DST_WQID    = 23,
+   WLANDXE_ERROR_PRG_XTYPE_MSMTCH    = 24,
+   WLANDXE_ERROR_PKT_ERR             = 25,
+   WLANDXE_ERROR_ABORT               = 26,
+   WLANDXE_ERROR_PDU_CNT_OVFL        = 27,
+}WLANDXE_ErrorCode;
 
 /* DXE Descriptor Endian swap macro */
 #ifdef WLANDXE_ENDIAN_SWAP_ENABLE
@@ -501,7 +544,7 @@ typedef struct
    void                            *nextCtrlBlk;
    wpt_packet                      *xfrFrame;  
    WLANDXE_DescType                *linkedDesc;
-   unsigned int                    linkedDescPhyAddr;
+   wpt_uint32                       linkedDescPhyAddr;
    wpt_uint32                       ctrlBlkOrder;
 #ifdef FEATURE_R33D
    wpt_uint32                       shadowBufferVa;
@@ -588,7 +631,7 @@ typedef struct
    WLANDXE_DescType               *descriptorAllocation;
 #endif
    WLANDXE_DescType               *DescBottomLoc;
-   unsigned int                    descBottomLocPhyAddr;
+   wpt_uint32                      descBottomLocPhyAddr;
    wpt_uint32                      numDesc;
    wpt_uint32                      numFreeDesc;
    wpt_uint32                      numRsvdDesc;
@@ -596,6 +639,7 @@ typedef struct
    wpt_uint32                      numFragmentCurrentChain;
    wpt_uint32                      numFrameBeforeInt;
    wpt_uint32                      numTotalFrame;
+   wpt_uint32                      doneIntDisabled;
    wpt_mutex                       dxeChannelLock;
    wpt_boolean                     hitLowResource;
    WLANDXE_ChannelConfigType       channelConfig;
@@ -644,6 +688,11 @@ typedef struct
    wpt_boolean                     rxPalPacketUnavailable;
    wpt_boolean                     driverReloadInProcessing;
    wpt_boolean                     smsmToggled;
+   wpt_boolean                     txRingsEmpty;
+#ifdef WLAN_DXE_LOW_RESOURCE_TIMER
+   wpt_timer                       rxResourceAvailableTimer;
+#endif
+   wpt_timer                       dxeSSRTimer;
 } WLANDXE_CtrlBlkType;
 
 /*==========================================================================

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -18,25 +18,11 @@
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
  */
+
 /*
- * Copyright (c) 2012, The Linux Foundation. All rights reserved.
- *
- * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
- *
- *
- * Permission to use, copy, modify, and/or distribute this software for
- * any purpose with or without fee is hereby granted, provided that the
- * above copyright notice and this permission notice appear in all
- * copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
- * WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
- * AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
- * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
- * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
- * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
- * PERFORMANCE OF THIS SOFTWARE.
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
  */
 
 #ifdef FEATURE_OEM_DATA_SUPPORT
@@ -66,7 +52,7 @@
 
   This function also reports the results to the user space
 
-  \return - 0 for success, non zero for failure
+  \return - eHalStatus enumeration
 
 -----------------------------------------------------------------------------------------------*/
 static eHalStatus hdd_OemDataReqCallback(tHalHandle hHal, 
@@ -88,12 +74,12 @@ static eHalStatus hdd_OemDataReqCallback(tHalHandle hHal,
     if(oemDataReqStatus == eOEM_DATA_REQ_FAILURE)
     {
         snprintf(buffer, IW_CUSTOM_MAX, "QCOM: OEM-DATA-REQ-FAILED");
-        hddLog(LOGW, "%s: oem data req %d failed\n", __func__, oemDataReqID);
+        hddLog(LOGW, "%s: oem data req %d failed", __func__, oemDataReqID);
     }
     else if(oemDataReqStatus == eOEM_DATA_REQ_INVALID_MODE)
     {
         snprintf(buffer, IW_CUSTOM_MAX, "QCOM: OEM-DATA-REQ-INVALID-MODE");
-        hddLog(LOGW, "%s: oem data req %d failed because the driver is in invalid mode (IBSS|BTAMP|AP)\n", __func__, oemDataReqID);
+        hddLog(LOGW, "%s: oem data req %d failed because the driver is in invalid mode (IBSS|BTAMP|AP)", __func__, oemDataReqID);
     }
     else
     {
@@ -131,7 +117,8 @@ int iw_get_oem_data_rsp(
         union iwreq_data *wrqu,
         char *extra)
 {
-    eHalStatus                            status = eHAL_STATUS_SUCCESS;
+    int                                   rc = 0;
+    eHalStatus                            status;
     struct iw_oem_data_rsp*               pHddOemDataRsp;
     tOemDataRsp*                          pSmeOemDataRsp;
 
@@ -148,28 +135,29 @@ int iw_get_oem_data_rsp(
     {
         //get the oem data response from sme
         status = sme_getOemDataRsp(WLAN_HDD_GET_HAL_CTX(pAdapter), &pSmeOemDataRsp);
-        if(status != eHAL_STATUS_SUCCESS)
+        if (status != eHAL_STATUS_SUCCESS)
         {
-            hddLog(LOGE, "%s: failed in sme_getOemDataRsp\n", __func__);
+            hddLog(LOGE, "%s: failed in sme_getOemDataRsp", __func__);
+            rc = -EIO;
             break;
         }
         else
         {
-            if(pSmeOemDataRsp != NULL)
+            if (pSmeOemDataRsp != NULL)
             {
                 pHddOemDataRsp = (struct iw_oem_data_rsp*)(extra);
                 vos_mem_copy(pHddOemDataRsp->oemDataRsp, pSmeOemDataRsp->oemDataRsp, OEM_DATA_RSP_SIZE); 
             }
             else
             {
-                hddLog(LOGE, "%s: pSmeOemDataRsp = NULL\n", __func__);
-                status = eHAL_STATUS_FAILURE;
+                hddLog(LOGE, "%s: pSmeOemDataRsp = NULL", __func__);
+                rc = -EIO;
                 break;
             }
         }
     } while(0);
 
-    return eHAL_STATUS_SUCCESS;
+    return rc;
 }
 
 /**--------------------------------------------------------------------------------------------
@@ -194,6 +182,7 @@ int iw_set_oem_data_req(
         union iwreq_data *wrqu,
         char *extra)
 {
+    int rc = 0;
     eHalStatus status = eHAL_STATUS_SUCCESS;
     struct iw_oem_data_req *pOemDataReq = NULL;
     tOemDataReqConfig oemDataReqConfig;
@@ -212,35 +201,49 @@ int iw_set_oem_data_req(
 
     do
     {
-        if(NULL != wrqu->data.pointer)
+        if (NULL != wrqu->data.pointer)
         {
             pOemDataReq = (struct iw_oem_data_req *)wrqu->data.pointer;
         }
 
-        if(pOemDataReq == NULL)
+        if (pOemDataReq == NULL)
         {
-            hddLog(LOGE, "in %s oemDataReq == NULL\n", __func__);
-            status = eHAL_STATUS_FAILURE;
+            hddLog(LOGE, "in %s oemDataReq == NULL", __func__);
+            rc = -EIO;
             break;
         }
 
         vos_mem_zero(&oemDataReqConfig, sizeof(tOemDataReqConfig));
 
-        vos_mem_copy((&oemDataReqConfig)->oemDataReq, pOemDataReq->oemDataReq, OEM_DATA_REQ_SIZE);
-    
+        if (copy_from_user((&oemDataReqConfig)->oemDataReq,
+                           pOemDataReq->oemDataReq, OEM_DATA_REQ_SIZE))
+        {
+            VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_FATAL,
+                      "%s: copy_from_user() failed!", __func__);
+            rc = -EFAULT;
+            break;
+        }
+
         status = sme_OemDataReq(WLAN_HDD_GET_HAL_CTX(pAdapter), 
                                                 pAdapter->sessionId,
                                                 &oemDataReqConfig, 
                                                 &oemDataReqID, 
                                                 &hdd_OemDataReqCallback, 
                                                 dev);
+        if (status != eHAL_STATUS_SUCCESS)
+        {
+            VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+                      "%s: sme_OemDataReq status %d", __func__, status);
+            rc = -EFAULT;
+            break;
+        }
     
         pwextBuf->oemDataReqID = oemDataReqID;
         pwextBuf->oemDataReqInProgress = TRUE;
 
     } while(0);
-    
-    return status;
+
+    return rc;
 }
 
 

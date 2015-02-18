@@ -1,23 +1,30 @@
 /*
-  * Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
-  *
-  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
-  *
-  *
-  * Permission to use, copy, modify, and/or distribute this software for
-  * any purpose with or without fee is hereby granted, provided that the
-  * above copyright notice and this permission notice appear in all
-  * copies.
-  *
-  * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
-  * WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
-  * WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
-  * AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
-  * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
-  * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
-  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-  * PERFORMANCE OF THIS SOFTWARE.
-*/
+ * Copyright (c) 2014 The Linux Foundation. All rights reserved.
+ *
+ * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
+ *
+ *
+ * Permission to use, copy, modify, and/or distribute this software for
+ * any purpose with or without fee is hereby granted, provided that the
+ * above copyright notice and this permission notice appear in all
+ * copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
+ * WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
+ * AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
+ * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+ * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+ * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This file was originally distributed by Qualcomm Atheros, Inc.
+ * under proprietary terms before Copyright ownership was assigned
+ * to the Linux Foundation.
+ */
+
 #if !defined( __VOS_TYPES_H )
 #define __VOS_TYPES_H
 
@@ -27,10 +34,6 @@
   \brief virtual Operating System Servies (vOS)
 
    Basic type definitions
-
-   Copyright 2008 (c) Qualcomm Technologies, Inc.
-   All Rights Reserved.
-   Qualcomm Technologies Confidential and Proprietary.
   ========================================================================*/
 
 /* $Header$ */
@@ -103,6 +106,8 @@ typedef enum
    VOS_MODULE_ID_TL         = 1,
    VOS_MODULE_ID_WDI        = 2,
    // 3 & 4 are unused for historical purposes
+   VOS_MODULE_ID_RSV3       = 3,
+   VOS_MODULE_ID_RSV4       = 4,
    VOS_MODULE_ID_HDD        = 5,
    VOS_MODULE_ID_SME        = 6,
    VOS_MODULE_ID_PE         = 7,
@@ -112,6 +117,8 @@ typedef enum
    VOS_MODULE_ID_SAP        = 11,
    VOS_MODULE_ID_HDD_SOFTAP = 12,
    VOS_MODULE_ID_PMC        = 13,
+   VOS_MODULE_ID_HDD_DATA   = 14,
+   VOS_MODULE_ID_HDD_SAP_DATA   = 15,
 
    // not a real module ID.  This is used to identify the maxiumum
    // number of VOS_MODULE_IDs and should always be at the END of
@@ -399,19 +406,19 @@ VOS_INLINE_FN v_VOID_t vos_set_macaddr_broadcast( v_MACADDR_t *pMacAddr )
 
 /*----------------------------------------------------------------------------
   
-  \brief vos_atomic_set_U32() - set a U32 variable atomically 
-  
-  \param pTarget - pointer to the v_U32_t to set.
-  
-  \param value - the value to set in the v_U32_t variable.
-  
-  \return This function returns the value previously in the v_U32_t before
+  \brief vos_atomic_set() - set a variable atomically
+
+  \param pTarget - pointer to the variable to set.
+
+  \param value - the value to set in the  variable.
+
+  \return This function returns the value previously in the uintptr_t before
           the new value is set.
-    
+
   \sa vos_atomic_increment_U32(), vos_atomic_decrement_U32()
   
   --------------------------------------------------------------------------*/                                                 
-v_U32_t vos_atomic_set_U32( v_U32_t *pTarget, v_U32_t value );
+uintptr_t vos_atomic_set( uintptr_t *pTarget, uintptr_t value );
 
 
 // TODO: the below function is a stub to perform atomic set on a BYTE
