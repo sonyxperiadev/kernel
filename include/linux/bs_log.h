@@ -9,7 +9,7 @@
 #define LOG_LEVEL_D 7
 
 #ifndef LOG_LEVEL
-#define LOG_LEVEL LOG_LEVEL_I
+#define LOG_LEVEL LOG_LEVEL_E
 #endif
 
 #ifndef MODULE_TAG
