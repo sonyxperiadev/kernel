@@ -27,7 +27,7 @@ ENTRY(ecard_loader_read)
 		mov	r1, r0
 		CPSR2SPSR(r0)
 		mov	lr, pc
-		mov	pc, r2
+		ret	r2
 		ldmfd	sp!, {r4 - r12, pc}
 
 @ Purpose: call an expansion card loader to reset the card

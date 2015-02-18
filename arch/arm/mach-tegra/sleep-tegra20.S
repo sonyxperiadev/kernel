@@ -38,7 +38,7 @@ ENTRY(tegra20_hotplug_shutdown)
 	/* Put this CPU down */
 	cpu_id	r0
 	bl	tegra20_cpu_shutdown
-	mov	pc, lr			@ should never get here
+	ret	lr			@ should never get here
 ENDPROC(tegra20_hotplug_shutdown)
 
 /*
@@ -56,7 +56,7 @@ ENDPROC(tegra20_hotplug_shutdown)
  */
 ENTRY(tegra20_cpu_shutdown)
 	cmp	r0, #0
-	moveq	pc, lr			@ must not be called for CPU 0
+	reteq	lr			@ must not be called for CPU 0
 	mov32	r1, TEGRA_PMC_VIRT + PMC_SCRATCH41
 	mov	r12, #CPU_RESETTABLE
 	str	r12, [r1]
@@ -77,7 +77,7 @@ ENTRY(tegra20_cpu_shutdown)
 	cpu_id	r3
 	cmp	r3, r0
 	beq	.
-	mov	pc, lr
+	ret	lr
 ENDPROC(tegra20_cpu_shutdown)
 #endif
 
@@ -124,7 +124,7 @@ ENTRY(tegra_pen_lock)
 	cmpeq	r12, r0			@ !turn == cpu?
 	beq	1b			@ while !turn == cpu && flag[!cpu] == 1
 
-	mov	pc, lr			@ locked
+	ret	lr			@ locked
 ENDPROC(tegra_pen_lock)
 
 ENTRY(tegra_pen_unlock)
@@ -136,7 +136,7 @@ ENTRY(tegra_pen_unlock)
 	addne	r2, r3, #PMC_SCRATCH39
 	mov	r12, #0
 	str	r12, [r2]
-	mov     pc, lr
+	ret     lr
 ENDPROC(tegra_pen_unlock)
 
 /*
@@ -149,7 +149,7 @@ ENTRY(tegra20_cpu_clear_resettable)
 	mov32	r1, TEGRA_PMC_VIRT + PMC_SCRATCH41
 	mov	r12, #CPU_NOT_RESETTABLE
 	str	r12, [r1]
-	mov	pc, lr
+	ret	lr
 ENDPROC(tegra20_cpu_clear_resettable)
 
 /*
@@ -162,7 +162,7 @@ ENTRY(tegra20_cpu_set_resettable_soon)
 	mov32	r1, TEGRA_PMC_VIRT + PMC_SCRATCH41
 	mov	r12, #CPU_RESETTABLE_SOON
 	str	r12, [r1]
-	mov	pc, lr
+	ret	lr
 ENDPROC(tegra20_cpu_set_resettable_soon)
 
 /*
@@ -177,7 +177,7 @@ ENTRY(tegra20_cpu_is_resettable_soon)
 	cmp	r12, #CPU_RESETTABLE_SOON
 	moveq	r0, #1
 	movne	r0, #0
-	mov	pc, lr
+	ret	lr
 ENDPROC(tegra20_cpu_is_resettable_soon)
 
 /*
