@@ -35,7 +35,7 @@ ENTRY(tegra30_hotplug_shutdown)
 	/* Powergate this CPU */
 	mov	r0, #TEGRA30_POWER_HOTPLUG_SHUTDOWN
 	bl	tegra30_cpu_shutdown
-	mov	pc, lr			@ should never get here
+	ret	lr			@ should never get here
 ENDPROC(tegra30_hotplug_shutdown)
 
 /*
@@ -50,7 +50,7 @@ ENDPROC(tegra30_hotplug_shutdown)
 ENTRY(tegra30_cpu_shutdown)
 	cpu_id	r3
 	cmp	r3, #0
-	moveq	pc, lr		@ Must never be called for CPU 0
+	reteq	lr		@ Must never be called for CPU 0
 
 	ldr	r12, =TEGRA_FLOW_CTRL_VIRT
 	cpu_to_csr_reg r1, r3
@@ -121,7 +121,7 @@ ENTRY(tegra30_sleep_cpu_secondary_finish)
 	mov	r0, #0                          @ power mode flags (!hotplug)
 	bl	tegra30_cpu_shutdown
 	mov	r0, #1                          @ never return here
-	mov	pc, r7
+	ret	r7
 ENDPROC(tegra30_sleep_cpu_secondary_finish)
 
 /*

@@ -71,7 +71,7 @@ ENTRY(iwmmxt_task_enable)
 	@ CP0 and CP1 accessible?
 	XSC(tst	r2, #0x3)
 	PJ4(tst	r2, #0xf)
-	movne	pc, lr				@ if so no business here
+	retne	lr				@ if so no business here
 	@ enable access to CP0 and CP1
 	XSC(orr	r2, r2, #0x3)
 	XSC(mcr	p15, 0, r2, c15, c1, 0)
@@ -132,7 +132,7 @@ concan_dump:
 	wstrd	wR15, [r1, #MMX_WR15]
 
 2:	teq	r0, #0				@ anything to load?
-	moveq	pc, lr
+	reteq	lr
 
 concan_load:
 
@@ -165,9 +165,9 @@ concan_load:
 	@ clear CUP/MUP (only if r1 != 0)
 	teq	r1, #0
 	mov 	r2, #0
-	moveq	pc, lr
+	reteq	lr
 	tmcr	wCon, r2
-	mov	pc, lr
+	ret	lr
 
 /*
  * Back up Concan regs to save area and disable access to them
@@ -253,7 +253,7 @@ ENTRY(iwmmxt_task_copy)
 	mov	r3, lr				@ preserve return address
 	bl	concan_dump
 	msr	cpsr_c, ip			@ restore interrupt mode
-	mov	pc, r3
+	ret	r3
 
 /*
  * Restore Concan state from given memory address
@@ -289,7 +289,7 @@ ENTRY(iwmmxt_task_restore)
 	mov	r3, lr				@ preserve return address
 	bl	concan_load
 	msr	cpsr_c, ip			@ restore interrupt mode
-	mov	pc, r3
+	ret	r3
 
 /*
  * Concan handling on task switch
@@ -311,7 +311,7 @@ ENTRY(iwmmxt_task_switch)
 	add	r3, r0, #TI_IWMMXT_STATE	@ get next task Concan save area
 	ldr	r2, [r2]			@ get current Concan owner
 	teq	r2, r3				@ next task owns it?
-	movne	pc, lr				@ no: leave Concan disabled
+	retne	lr				@ no: leave Concan disabled
 
 1:	@ flip Concan access
 	XSC(eor	r1, r1, #0x3)
@@ -338,7 +338,7 @@ ENTRY(iwmmxt_task_release)
 	eors	r0, r0, r1			@ if equal...
 	streq	r0, [r3]			@ then clear ownership
 	msr	cpsr_c, r2			@ restore interrupts
-	mov	pc, lr
+	ret	lr
 
 	.data
 concan_owner:
