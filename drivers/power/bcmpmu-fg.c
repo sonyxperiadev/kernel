@@ -252,6 +252,8 @@ static enum power_supply_property bcmpmu_fg_props[] = {
 	POWER_SUPPLY_PROP_HEALTH,
 	POWER_SUPPLY_PROP_FULL_BAT,
 	POWER_SUPPLY_PROP_MODEL_NAME,
+	POWER_SUPPLY_PROP_CHARGE_FULL,
+	POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN,
 };
 
 struct bcmpmu_fg_status_flags {
@@ -3690,6 +3692,12 @@ static int bcmpmu_fg_get_properties(struct power_supply *psy,
 			val->strval = fg->bdata->batt_prop->model;
 		else
 			val->strval = "Li-Ion Battery";
+		break;
+	case POWER_SUPPLY_PROP_CHARGE_FULL:
+		val->intval = (fg->capacity_info.full_charge * 10) / 36;
+		break;
+	case POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN:
+		val->intval = (fg->capacity_info.max_design * 10) / 36;
 		break;
 	default:
 		BUG_ON(1);
