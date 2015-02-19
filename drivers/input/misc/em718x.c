@@ -354,7 +354,6 @@ struct em718x {
 	struct event_device ev_device;
 	struct event_device wake_ev_device;
 	u8 status_reported;
-	struct data_3d tilt_acc;
 	int fifo_size;
 	s64 irq_time;
 	s64 last_samle_t;
@@ -1075,13 +1074,6 @@ static int step_cntr_get_32(struct em718x *em718x, int *ext_steps, int idx)
 	return -EINVAL;
 }
 
-static int tilt_get_acc(struct em718x *em718x, struct data_3d *acc)
-{
-	int rc = smbus_read_byte_block(em718x->client,
-			RX_TILT_ACC_REG, (void *)acc, sizeof(*acc));
-	return rc;
-}
-
 static void em718x_handle_event_queued(struct em718x *em718x,
 		struct event_device *ev_dev)
 {
@@ -1295,21 +1287,15 @@ static void em718x_process_amgf(struct em718x *em718x,
 						&ev);
 				break;
 			case F_TILT:
-				(void)tilt_get_acc(em718x, &em718x->tilt_acc);
-				dev_dbg(dev, "feature-%d: tilt (%d) %d %d %d\n",
-						i, val,
-						em718x->tilt_acc.x,
-						em718x->tilt_acc.y,
-						-em718x->tilt_acc.z);
+				dev_dbg(dev, "feature-%d: tilt (%d)\n",
+						i, val);
 				if (val == 0) {
 					dev_dbg(dev, "Skip it\n");
 					break;
 				}
 				ev.type = SENSOR_TYPE_TILT_WRIST |
 						SENSOR_TYPE_WAKE_UP;
-				ev.d[0] = em718x->tilt_acc.x;
-				ev.d[1] = em718x->tilt_acc.y;
-				ev.d[2] = -em718x->tilt_acc.z;
+				ev.d[0] = 1;
 				em718x_queue_event(em718x,
 						&em718x->wake_ev_device, &ev);
 				break;
@@ -1326,6 +1312,7 @@ static void em718x_process_amgf(struct em718x *em718x,
 				ev.d[0] = !val;
 				em718x_queue_event(em718x,
 						&em718x->wake_ev_device, &ev);
+				break;
 			default:
 				dev_dbg(dev, "feature-%d: ?? value %d\n", i,
 						val);
