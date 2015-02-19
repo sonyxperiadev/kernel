@@ -6595,14 +6595,14 @@ qpnp_charger_probe(struct spmi_device *spmi)
 		goto fail_chg_enable;
 	}
 
-#ifndef CONFIG_MACH_SONY_YUKON
-	chip->ext_vbus_psy = power_supply_get_by_name("ext-vbus");
-	if (!chip->ext_vbus_psy) {
-		pr_err("ext-vbus supply not found deferring probe\n");
-		rc = -EPROBE_DEFER;
-		goto fail_chg_enable;
+	if (!of_machine_is_compatible("qcom,msm8926")) {
+		chip->ext_vbus_psy = power_supply_get_by_name("ext-vbus");
+		if (!chip->ext_vbus_psy) {
+			pr_err("ext-vbus supply not found deferring probe\n");
+			rc = -EPROBE_DEFER;
+			goto fail_chg_enable;
+		}
 	}
-#endif
 
 	mutex_init(&chip->jeita_configure_lock);
 	mutex_init(&chip->batfet_vreg_lock);
