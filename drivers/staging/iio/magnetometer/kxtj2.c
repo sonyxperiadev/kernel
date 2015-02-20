@@ -663,7 +663,7 @@ static irqreturn_t yas_trigger_handler(int irq, void *p)
 static int yas_data_rdy_trigger_set_state(struct iio_trigger *trig,
 		bool state)
 {
-	struct iio_dev *indio_dev = trig->private_data;
+	struct iio_dev *indio_dev = iio_trigger_get_drvdata(trig);
 	yas_set_pseudo_irq(indio_dev, state);
 	return 0;
 }
@@ -693,7 +693,8 @@ static int yas_probe_trigger(struct iio_dev *indio_dev)
 	}
 	st->trig->dev.parent = &st->client->dev;
 	st->trig->ops = &yas_trigger_ops;
-	st->trig->private_data = indio_dev;
+	iio_trigger_set_drvdata(st->trig, indio_dev);
+
 	ret = iio_trigger_register(st->trig);
 	if (ret)
 		goto error_free_trig;
