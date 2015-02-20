@@ -926,19 +926,16 @@ static void yas_work_func(struct work_struct *work)
 	schedule_delayed_work(&st->work, msecs_to_jiffies(delay));
 }
 
-#define YAS_ACCELEROMETER_INFO_MASK			\
-	(IIO_CHAN_INFO_SCALE_SHARED_BIT |		\
-	 IIO_CHAN_INFO_CALIBSCALE_SEPARATE_BIT |	\
-	 IIO_CHAN_INFO_CALIBBIAS_SEPARATE_BIT)
-
-#define YAS_ACCELEROMETER_CHANNEL(axis)		\
-{							\
-	.type = IIO_ACCEL,				\
-	.modified = 1,					\
-	.channel2 = IIO_MOD_##axis,			\
-	.info_mask = YAS_ACCELEROMETER_INFO_MASK,	\
-	.scan_index = YAS_SCAN_ACCEL_##axis,		\
-	.scan_type = IIO_ST('s', 32, 32, 0)		\
+#define YAS_ACCELEROMETER_CHANNEL(axis)				\
+{								\
+	.type = IIO_ACCEL,					\
+	.modified = 1,						\
+	.channel2 = IIO_MOD_##axis,				\
+	.info_mask_separate = BIT(IIO_CHAN_INFO_CALIBSCALE) |	\
+				BIT(IIO_CHAN_INFO_CALIBBIAS),	\
+	.info_mask_shared_by_type = BIT(IIO_CHAN_INFO_SCALE),	\
+	.scan_index = YAS_SCAN_ACCEL_##axis,			\
+	.scan_type = IIO_ST('s', 32, 32, 0)			\
 }
 
 static const struct iio_chan_spec yas_channels[] = {

@@ -1300,14 +1300,14 @@ static void yas_work_func(struct work_struct *work)
 	schedule_delayed_work(&st->work, msecs_to_jiffies(delay));
 }
 
-#define YAS_MAGNETOMETER_CHANNEL(axis)		\
-{							\
-	.type = IIO_MAGN,				\
-	.modified = 1,					\
-	.channel2 = IIO_MOD_##axis,			\
-	.info_mask = IIO_CHAN_INFO_SCALE_SHARED_BIT,	\
-	.scan_index = YAS_SCAN_MAGN_##axis,		\
-	.scan_type = IIO_ST('s', 32, 32, 0)		\
+#define YAS_MAGNETOMETER_CHANNEL(axis)				\
+{								\
+	.type = IIO_MAGN,					\
+	.modified = 1,						\
+	.channel2 = IIO_MOD_##axis,				\
+	.info_mask_shared_by_type = BIT(IIO_CHAN_INFO_SCALE),	\
+	.scan_index = YAS_SCAN_MAGN_##axis,			\
+	.scan_type = IIO_ST('s', 32, 32, 0)			\
 }
 
 static const struct iio_chan_spec yas_channels[] = {
