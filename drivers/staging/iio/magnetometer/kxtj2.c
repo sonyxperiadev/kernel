@@ -723,7 +723,7 @@ static const struct iio_buffer_setup_ops yas_buffer_setup_ops = {
 static void yas_remove_buffer(struct iio_dev *indio_dev)
 {
 	iio_buffer_unregister(indio_dev);
-	iio_sw_rb_free(indio_dev->buffer);
+	iio_kfifo_free(indio_dev->buffer);
 };
 
 static int yas_probe_buffer(struct iio_dev *indio_dev)
@@ -731,7 +731,7 @@ static int yas_probe_buffer(struct iio_dev *indio_dev)
 	int ret;
 	struct iio_buffer *buffer;
 
-	buffer = iio_sw_rb_allocate(indio_dev);
+	buffer = iio_kfifo_allocate(indio_dev);
 	if (!buffer) {
 		ret = -ENOMEM;
 		goto error_ret;
@@ -750,7 +750,7 @@ static int yas_probe_buffer(struct iio_dev *indio_dev)
 	return 0;
 
 error_free_buf:
-	iio_sw_rb_free(indio_dev->buffer);
+	iio_kfifo_free(indio_dev->buffer);
 error_ret:
 	return ret;
 }
