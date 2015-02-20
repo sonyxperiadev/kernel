@@ -278,6 +278,7 @@
 		compatible = "qcom,msm-vidc";
 		qcom,hfi = "q6";
 		qcom,max-hw-load = <108000>; /* 720p @ 30 * 1  */
+		status = "disabled";
 	};
 
 	qcom,wfd {

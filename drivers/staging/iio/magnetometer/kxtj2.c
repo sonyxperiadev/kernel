@@ -34,12 +34,12 @@
 #include <linux/earlysuspend.h>
 #endif
 
-#include "buffer.h"
-#include "iio.h"
-#include "ring_sw.h"
-#include "sysfs.h"
-#include "trigger.h"
-#include "trigger_consumer.h"
+#include <linux/iio/buffer.h>
+#include <linux/iio/iio.h>
+#include <linux/iio/sysfs.h>
+#include <linux/iio/kfifo_buf.h>
+#include <linux/iio/trigger.h>
+#include <linux/iio/trigger_consumer.h>
 #include "yas.h"
 
 #define YAS_RANGE_2G                                                         (0)
@@ -653,7 +653,7 @@ static irqreturn_t yas_trigger_handler(int irq, void *p)
 		*(s64 *)(((phys_addr_t)acc + len
 					+ sizeof(s64) - 1) & ~(sizeof(s64) - 1))
 			= pf->timestamp;
-	buffer->access->store_to(buffer, (u8 *)acc, pf->timestamp);
+	iio_push_to_buffers(indio_dev, (u8 *)acc);
 
 	iio_trigger_notify_done(indio_dev->trig);
 	kfree(acc);
@@ -663,7 +663,7 @@ static irqreturn_t yas_trigger_handler(int irq, void *p)
 static int yas_data_rdy_trigger_set_state(struct iio_trigger *trig,
 		bool state)
 {
-	struct iio_dev *indio_dev = trig->private_data;
+	struct iio_dev *indio_dev = iio_trigger_get_drvdata(trig);
 	yas_set_pseudo_irq(indio_dev, state);
 	return 0;
 }
@@ -684,7 +684,7 @@ static int yas_probe_trigger(struct iio_dev *indio_dev)
 		ret = -ENOMEM;
 		goto error_ret;
 	}
-	st->trig = iio_allocate_trigger("%s-dev%d",
+	st->trig = iio_trigger_alloc("%s-dev%d",
 			indio_dev->name,
 			indio_dev->id);
 	if (!st->trig) {
@@ -693,14 +693,15 @@ static int yas_probe_trigger(struct iio_dev *indio_dev)
 	}
 	st->trig->dev.parent = &st->client->dev;
 	st->trig->ops = &yas_trigger_ops;
-	st->trig->private_data = indio_dev;
+	iio_trigger_set_drvdata(st->trig, indio_dev);
+
 	ret = iio_trigger_register(st->trig);
 	if (ret)
 		goto error_free_trig;
 	return 0;
 
 error_free_trig:
-	iio_free_trigger(st->trig);
+	iio_trigger_free(st->trig);
 error_dealloc_pollfunc:
 	iio_dealloc_pollfunc(indio_dev->pollfunc);
 error_ret:
@@ -711,7 +712,7 @@ static void yas_remove_trigger(struct iio_dev *indio_dev)
 {
 	struct yas_state *st = iio_priv(indio_dev);
 	iio_trigger_unregister(st->trig);
-	iio_free_trigger(st->trig);
+	iio_trigger_free(st->trig);
 	iio_dealloc_pollfunc(indio_dev->pollfunc);
 }
 
@@ -724,7 +725,7 @@ static const struct iio_buffer_setup_ops yas_buffer_setup_ops = {
 static void yas_remove_buffer(struct iio_dev *indio_dev)
 {
 	iio_buffer_unregister(indio_dev);
-	iio_sw_rb_free(indio_dev->buffer);
+	iio_kfifo_free(indio_dev->buffer);
 };
 
 static int yas_probe_buffer(struct iio_dev *indio_dev)
@@ -732,7 +733,7 @@ static int yas_probe_buffer(struct iio_dev *indio_dev)
 	int ret;
 	struct iio_buffer *buffer;
 
-	buffer = iio_sw_rb_allocate(indio_dev);
+	buffer = iio_kfifo_allocate(indio_dev);
 	if (!buffer) {
 		ret = -ENOMEM;
 		goto error_ret;
@@ -751,7 +752,7 @@ static int yas_probe_buffer(struct iio_dev *indio_dev)
 	return 0;
 
 error_free_buf:
-	iio_sw_rb_free(indio_dev->buffer);
+	iio_kfifo_free(indio_dev->buffer);
 error_ret:
 	return ret;
 }
@@ -759,7 +760,7 @@ error_ret:
 static ssize_t yas_position_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
-	struct iio_dev *indio_dev = dev_get_drvdata(dev);
+	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct yas_state *st = iio_priv(indio_dev);
 	int ret;
 	mutex_lock(&st->lock);
@@ -773,7 +774,7 @@ static ssize_t yas_position_show(struct device *dev,
 static ssize_t yas_position_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
 {
-	struct iio_dev *indio_dev = dev_get_drvdata(dev);
+	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct yas_state *st = iio_priv(indio_dev);
 	int ret, position;
 	sscanf(buf, "%d\n", &position);
@@ -788,7 +789,7 @@ static ssize_t yas_position_store(struct device *dev,
 static ssize_t yas_sampling_frequency_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
-	struct iio_dev *indio_dev = dev_get_drvdata(dev);
+	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct yas_state *st = iio_priv(indio_dev);
 	return sprintf(buf, "%d\n", st->sampling_frequency);
 }
@@ -797,7 +798,7 @@ static ssize_t yas_sampling_frequency_store(struct device *dev,
 		struct device_attribute *attr,
 		const char *buf, size_t count)
 {
-	struct iio_dev *indio_dev = dev_get_drvdata(dev);
+	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct yas_state *st = iio_priv(indio_dev);
 	int ret, data;
 	ret = kstrtoint(buf, 10, &data);
@@ -820,7 +821,7 @@ static ssize_t yas_selftest_show(struct device *dev,
 				struct device_attribute *attr, char *buf)
 {				
 	
-	struct iio_dev *indio_dev = dev_get_drvdata(dev);
+	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct yas_state *st = iio_priv(indio_dev);
 	int err=0;
 
@@ -874,7 +875,7 @@ static int yas_read_raw(struct iio_dev *indio_dev,
 	mutex_lock(&st->lock);
 
 	switch (mask) {
-	case 0:
+	case IIO_CHAN_INFO_RAW:
 		*val = st->compass_data[chan->channel2 - IIO_MOD_X];
 		ret = IIO_VAL_INT;
 		break;
@@ -927,19 +928,16 @@ static void yas_work_func(struct work_struct *work)
 	schedule_delayed_work(&st->work, msecs_to_jiffies(delay));
 }
 
-#define YAS_ACCELEROMETER_INFO_MASK			\
-	(IIO_CHAN_INFO_SCALE_SHARED_BIT |		\
-	 IIO_CHAN_INFO_CALIBSCALE_SEPARATE_BIT |	\
-	 IIO_CHAN_INFO_CALIBBIAS_SEPARATE_BIT)
-
-#define YAS_ACCELEROMETER_CHANNEL(axis)		\
-{							\
-	.type = IIO_ACCEL,				\
-	.modified = 1,					\
-	.channel2 = IIO_MOD_##axis,			\
-	.info_mask = YAS_ACCELEROMETER_INFO_MASK,	\
-	.scan_index = YAS_SCAN_ACCEL_##axis,		\
-	.scan_type = IIO_ST('s', 32, 32, 0)		\
+#define YAS_ACCELEROMETER_CHANNEL(axis)				\
+{								\
+	.type = IIO_ACCEL,					\
+	.modified = 1,						\
+	.channel2 = IIO_MOD_##axis,				\
+	.info_mask_separate = BIT(IIO_CHAN_INFO_CALIBSCALE) |	\
+				BIT(IIO_CHAN_INFO_CALIBBIAS),	\
+	.info_mask_shared_by_type = BIT(IIO_CHAN_INFO_SCALE),	\
+	.scan_index = YAS_SCAN_ACCEL_##axis,			\
+	.scan_type = IIO_ST('s', 32, 32, 0)			\
 }
 
 static const struct iio_chan_spec yas_channels[] = {
@@ -1005,7 +1003,7 @@ static int yas_probe(struct i2c_client *i2c, const struct i2c_device_id *id)
 	this_client = i2c;
 	printk("[CCI]%s: yas_kionix_accel_probe start ---\n", __FUNCTION__);
 
-	indio_dev = iio_allocate_device(sizeof(*st));
+	indio_dev = iio_device_alloc(sizeof(*st));
 	if (!indio_dev) {
 		ret = -ENOMEM;
 		goto error_ret;
@@ -1081,7 +1079,7 @@ error_free_dev:
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	unregister_early_suspend(&st->sus);
 #endif
-	iio_free_device(indio_dev);
+	iio_device_free(indio_dev);
 error_ret:
 	i2c_set_clientdata(i2c, NULL);
 	this_client = NULL;
@@ -1102,7 +1100,7 @@ static int yas_remove(struct i2c_client *i2c)
 		iio_device_unregister(indio_dev);
 		yas_remove_trigger(indio_dev);
 		yas_remove_buffer(indio_dev);
-		iio_free_device(indio_dev);
+		iio_device_free(indio_dev);
 		this_client = NULL;
 	}
 	return 0;
@@ -1111,7 +1109,7 @@ static int yas_remove(struct i2c_client *i2c)
 #ifdef CONFIG_PM_SLEEP
 static int yas_suspend(struct device *dev)
 {
-	struct iio_dev *indio_dev = dev_get_drvdata(dev);
+	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct yas_state *st = iio_priv(indio_dev);
 	if (atomic_read(&st->pseudo_irq_enable))
 		cancel_delayed_work_sync(&st->work);
@@ -1121,7 +1119,7 @@ static int yas_suspend(struct device *dev)
 
 static int yas_resume(struct device *dev)
 {
-	struct iio_dev *indio_dev = dev_get_drvdata(dev);
+	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct yas_state *st = iio_priv(indio_dev);
 	st->acc.set_enable(1);
 	if (atomic_read(&st->pseudo_irq_enable))
