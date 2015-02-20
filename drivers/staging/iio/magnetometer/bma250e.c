@@ -758,7 +758,7 @@ static int yas_read_raw(struct iio_dev *indio_dev,
 	mutex_lock(&st->lock);
 
 	switch (mask) {
-	case 0:
+	case IIO_CHAN_INFO_RAW:
 		*val = st->compass_data[chan->channel2 - IIO_MOD_X];
 		ret = IIO_VAL_INT;
 		break;
