@@ -653,7 +653,7 @@ static irqreturn_t yas_trigger_handler(int irq, void *p)
 		*(s64 *)(((phys_addr_t)acc + len
 					+ sizeof(s64) - 1) & ~(sizeof(s64) - 1))
 			= pf->timestamp;
-	buffer->access->store_to(buffer, (u8 *)acc, pf->timestamp);
+	iio_push_to_buffers(indio_dev, (u8 *)acc);
 
 	iio_trigger_notify_done(indio_dev->trig);
 	kfree(acc);
