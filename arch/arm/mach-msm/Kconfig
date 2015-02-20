@@ -982,6 +982,7 @@ config MSM_DMA_TEST
 
 config WIFI_CONTROL_FUNC
 	bool "Enable WiFi control function abstraction"
+	default y if BCMDHD_SDIO
 	help
 	  Enables Power/Reset/Carddetect function abstraction
 
