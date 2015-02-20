@@ -34,12 +34,11 @@
 #include <linux/earlysuspend.h>
 #endif
 
-#include "buffer.h"
-#include "iio.h"
-#include "ring_sw.h"
-#include "sysfs.h"
-#include "trigger.h"
-#include "trigger_consumer.h"
+#include <linux/iio/buffer.h>
+#include <linux/iio/iio.h>
+#include <linux/iio/sysfs.h>
+#include <linux/iio/trigger.h>
+#include <linux/iio/trigger_consumer.h>
 #include "yas.h"
 
 #define YAS_RANGE_2G                                                         (0)
@@ -759,7 +758,7 @@ error_ret:
 static ssize_t yas_position_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
-	struct iio_dev *indio_dev = dev_get_drvdata(dev);
+	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct yas_state *st = iio_priv(indio_dev);
 	int ret;
 	mutex_lock(&st->lock);
@@ -773,7 +772,7 @@ static ssize_t yas_position_show(struct device *dev,
 static ssize_t yas_position_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
 {
-	struct iio_dev *indio_dev = dev_get_drvdata(dev);
+	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct yas_state *st = iio_priv(indio_dev);
 	int ret, position;
 	sscanf(buf, "%d\n", &position);
@@ -788,7 +787,7 @@ static ssize_t yas_position_store(struct device *dev,
 static ssize_t yas_sampling_frequency_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
-	struct iio_dev *indio_dev = dev_get_drvdata(dev);
+	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct yas_state *st = iio_priv(indio_dev);
 	return sprintf(buf, "%d\n", st->sampling_frequency);
 }
@@ -797,7 +796,7 @@ static ssize_t yas_sampling_frequency_store(struct device *dev,
 		struct device_attribute *attr,
 		const char *buf, size_t count)
 {
-	struct iio_dev *indio_dev = dev_get_drvdata(dev);
+	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct yas_state *st = iio_priv(indio_dev);
 	int ret, data;
 	ret = kstrtoint(buf, 10, &data);
@@ -820,7 +819,7 @@ static ssize_t yas_selftest_show(struct device *dev,
 				struct device_attribute *attr, char *buf)
 {				
 	
-	struct iio_dev *indio_dev = dev_get_drvdata(dev);
+	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct yas_state *st = iio_priv(indio_dev);
 	int err=0;
 
@@ -1111,7 +1110,7 @@ static int yas_remove(struct i2c_client *i2c)
 #ifdef CONFIG_PM_SLEEP
 static int yas_suspend(struct device *dev)
 {
-	struct iio_dev *indio_dev = dev_get_drvdata(dev);
+	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct yas_state *st = iio_priv(indio_dev);
 	if (atomic_read(&st->pseudo_irq_enable))
 		cancel_delayed_work_sync(&st->work);
@@ -1121,7 +1120,7 @@ static int yas_suspend(struct device *dev)
 
 static int yas_resume(struct device *dev)
 {
-	struct iio_dev *indio_dev = dev_get_drvdata(dev);
+	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
 	struct yas_state *st = iio_priv(indio_dev);
 	st->acc.set_enable(1);
 	if (atomic_read(&st->pseudo_irq_enable))

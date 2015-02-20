@@ -34,12 +34,12 @@
 #include <linux/earlysuspend.h>
 #endif
 
-#include "buffer.h"
-#include "iio.h"
-#include "ring_sw.h"
-#include "sysfs.h"
-#include "trigger.h"
-#include "trigger_consumer.h"
+#include <linux/iio/buffer.h>
+#include <linux/iio/iio.h>
+#include <linux/iio/sysfs.h>
+#include <linux/iio/trigger.h>
+#include <linux/iio/trigger_consumer.h>
+
 #include "yas.h"
 
 #define YAS_RANGE_2G                                                         (0)
