@@ -1006,7 +1006,7 @@ static int yas_probe_trigger(struct iio_dev *indio_dev)
 		ret = -ENOMEM;
 		goto error_ret;
 	}
-	st->trig = iio_allocate_trigger("%s-dev%d",
+	st->trig = iio_trigger_alloc("%s-dev%d",
 			indio_dev->name,
 			indio_dev->id);
 	if (!st->trig) {
@@ -1022,7 +1022,7 @@ static int yas_probe_trigger(struct iio_dev *indio_dev)
 	return 0;
 
 error_free_trig:
-	iio_free_trigger(st->trig);
+	iio_trigger_free(st->trig);
 error_dealloc_pollfunc:
 	iio_dealloc_pollfunc(indio_dev->pollfunc);
 error_ret:
@@ -1033,7 +1033,7 @@ static void yas_remove_trigger(struct iio_dev *indio_dev)
 {
 	struct yas_state *st = iio_priv(indio_dev);
 	iio_trigger_unregister(st->trig);
-	iio_free_trigger(st->trig);
+	iio_trigger_free(st->trig);
 	iio_dealloc_pollfunc(indio_dev->pollfunc);
 }
 
@@ -1450,7 +1450,7 @@ static int yas_probe(struct i2c_client *i2c, const struct i2c_device_id *id)
 	mag_sensor_power_on(i2c);
 	printk("[CCI]%s: yas533_probe start ---\n", __FUNCTION__);
 	
-	indio_dev = iio_allocate_device(sizeof(*st));
+	indio_dev = iio_device_alloc(sizeof(*st));
 	if (!indio_dev) {
 		ret = -ENOMEM;
 		goto error_ret;
@@ -1522,7 +1522,7 @@ error_free_dev:
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	unregister_early_suspend(&st->sus);
 #endif
-	iio_free_device(indio_dev);
+	iio_device_free(indio_dev);
 error_ret:
 	i2c_set_clientdata(i2c, NULL);
 	this_client = NULL;
@@ -1543,7 +1543,7 @@ static int yas_remove(struct i2c_client *i2c)
 		iio_device_unregister(indio_dev);
 		yas_remove_trigger(indio_dev);
 		yas_remove_buffer(indio_dev);
-		iio_free_device(indio_dev);
+		iio_device_free(indio_dev);
 		this_client = NULL;
 	}
 	return 0;
