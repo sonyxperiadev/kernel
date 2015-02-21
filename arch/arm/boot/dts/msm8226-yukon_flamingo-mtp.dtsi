@@ -11,7 +11,6 @@
  */
 
 /include/ "msm8226-yukon_common.dtsi"
-/include/ "msm8226-camera-sensor-mtp.dtsi"
 /include/ "dsi-panel-flamingo.dtsi"
 
 &soc {
