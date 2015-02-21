@@ -43,8 +43,8 @@
 	};
 
 
-	/delete-node/ i2c@f9926000;
 	/delete-node/ spi@f9923000;
+
 
 	i2c@f9924000 { /* BLSP1 QUP2 */
 		#address-cells = <1>;
@@ -80,8 +80,8 @@
 		sensortek@48 {
 			compatible = "sensortek,stk3x1x";
 			reg = <0x48>;
-			stkvdd-supply = <&pm8226_l19>;/* PERI-BJ-Add_Regular_Optimum_feature-00+ */
-			sensortek,vdd-current-level = <1 120>;/* PERI-BJ-Add_Regular_Optimum_feature-00+ */
+			stkvdd-supply = <&pm8226_l19>;
+			sensortek,vdd-current-level = <1 120>;
 			sensortek,slave-addr = <0x48>;
 			sensortek,int_pin = <&msmgpio 65 0x00>;
 			sensortek,state_reg = <0x0>;
@@ -91,10 +91,6 @@
 			sensortek,wait_reg = <0x7>;
 			sensortek,ps_thd_h = <0x370>;//880
 			sensortek,ps_thd_l = <0x33E>;//830
-			sensortek,ps_thd_h_dp = <0x3D4>;//980
-			sensortek,ps_thd_l_dp = <0x3A2>;//930
-			sensortek,ps_thd_h_sp = <0x370>;//880
-			sensortek,ps_thd_l_sp = <0x33E>;//830
 			sensortek,transmittance = <0x2BC>;//700
 		};
 
@@ -106,6 +102,22 @@
 			bosch,vdd-current-level = <1 255>;
 		};
 	};
+
+	i2c@f9925000 { /* BLSP1 QUP3 */
+		cell-index = <3>;
+		pn547@28 {
+			compatible = "nxp,pn547";
+			reg = <0x28>;
+			interrupt-parent = <&msmgpio>;
+			interrupts = <21 0x2>;
+			nxp,irq_gpio = <&msmgpio 21 0>;
+			nxp,ven = <&msmgpio 23 0>;
+			nxp,dwld_en = <&msmgpio 20 0>;
+			nxp,use_pn544;
+		};
+	};
+
+	/delete-node/ i2c@f9926000;
 
 	i2c@f9927000 { /* BLSP1 QUP5 */
 		synaptics@20 {
@@ -127,9 +139,8 @@
 		cypress@24 {
 			compatible = "cy,cyttsp4_i2c_adapter";
 			reg = <0x24>;
-			/* GPIO 38, high-to-low edge triggered */
-			interrupts = <17 0x2008>;
 			interrupt-parent = <&msmgpio>;
+			interrupts = <17 0x2008>;
 			cy,adapter_id = "cyttsp4_i2c_adapter";
 			vdd-supply = <&pm8226_l19>;
 			vcc_i2c-supply = <&pm8226_l6>;
@@ -150,18 +161,17 @@
 				/* CY_CORE_EWG_TAP_TAP | CY_CORE_EWG_TWO_FINGER_SLIDE */
 				cy,easy_wakeup_gesture = <3>;
 				cy,btn_keys = <102 /* KEY_HOME */
-					       139 /* KEY_MENU */
-					       158 /* KEY_BACK */
-					       217 /* KEY_SEARCH */
-					       114 /* KEY_VOLUMEDOWN */
-					       115 /* KEY_VOLUMEUP */
-					       212 /* KEY_CAMERA */
-					       116>; /* KEY_POWER */
+						139 /* KEY_MENU */
+						158 /* KEY_BACK */
+						217 /* KEY_SEARCH */
+						114 /* KEY_VOLUMEDOWN */
+						115 /* KEY_VOLUMEUP */
+						212 /* KEY_CAMERA */
+						116>; /* KEY_POWER */
 				cy,btn_keys-tag = <0>;
 
 				cy,mt {
 					cy,name = "cyttsp4_mt";
-
 					cy,inp_dev_name = "cyttsp4_mt";
 					/* CY_MT_FLAG_FLIP | CY_MT_FLAG_INV_X | CY_MT_FLAG_INV_Y */
 					cy,flags = <0x8>;
@@ -198,25 +208,9 @@
 				};
 			};
 		};
-		
 	};
 
-	i2c@f9925000 { /* BLSP1 QUP3 */
-		cell-index = <3>;
-		pn547@28 {
-			compatible = "nxp,pn547";
-			reg = <0x28>;
-			interrupt-parent = <&msmgpio>;
-			interrupts = <21 0x2>;
-			nxp,irq_gpio = <&msmgpio 21 0>;
-			nxp,ven = <&msmgpio 23 0>;
-			nxp,dwld_en = <&msmgpio 20 0>;
-			nxp,use_pn544;
-		};
-	};
-	
 	gpio_keys {
-
 		camera_focus {
 			gpios = <&msmgpio 49 0x1>;
 		};
@@ -332,12 +326,11 @@
 	};
 
 	gpio@c200 { /* GPIO 3 */
-		/* FIH HWID settings */
-		qcom,mode = <0>;		/* Digital input */
+		qcom,mode = <0>;		/* QPNP_PIN_MODE_DIG_IN */
 		qcom,output-type = <1>;	/* OPEN_DRAIN_NMOS logic */
-		qcom,pull = <5>;		/* QPNP_PIN_PULL_NO*/
+		qcom,pull = <5>;		/* QPNP_PIN_PULL_NO */
 		qcom,out-strength = <3>;/* QPNP_PIN_OUT_STRENGTH_HIGH */
-		qcom,src-sel = <0>;		/* Function constant */
+		qcom,src-sel = <0>;		/* QPNP_PIN_SEL_FUNC_1 */
 		qcom,master-en = <0>;	/* Disable GPIO */
 	};
 
@@ -345,7 +338,6 @@
 	};
 
 	gpio@c400 { /* GPIO 5 */
-		/* FIH HWID settings */
 		qcom,mode = <0>;		/* Digital input */
 		qcom,output-type = <1>;	/* OPEN_DRAIN_NMOS logic */
 		qcom,pull = <5>;		/* QPNP_PIN_PULL_NO*/
@@ -355,7 +347,6 @@
 	};
 
 	gpio@c500 { /* GPIO 6 */
-		/* FIH HWID settings */
 		qcom,mode = <0>;		/* Digital input */
 		qcom,output-type = <1>;	/* OPEN_DRAIN_NMOS logic */
 		qcom,pull = <5>;		/* QPNP_PIN_PULL_NO*/
@@ -372,8 +363,8 @@
 };
 
 &pm8226_mpps {
-	mpp@a600 { /* MPP 7 */
-		/* FIH HWID settings */
+	mpp@a700 { /* MPP 8 */
+		/* PA_THERM1 config */
 		qcom,mode = <4>; /* AIN input */
 		qcom,invert = <1>; /* Enable MPP */
 		qcom,ain-route = <2>; /* AMUX 7 */

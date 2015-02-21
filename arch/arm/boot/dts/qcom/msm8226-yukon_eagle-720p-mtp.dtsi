@@ -14,6 +14,104 @@
 /include/ "dsi-panel-eagle.dtsi"
 
 &soc {
+	spi@f9923000 {
+		ethernet-switch@3 {
+			compatible = "micrel,ks8851";
+			reg = <3>;
+			interrupt-parent = <&msmgpio>;
+			interrupts = <115 0x8>;
+			spi-max-frequency = <4800000>;
+			rst-gpio = <&msmgpio 114 0>;
+			vdd-io-supply = <&pm8226_lvs1>;
+			vdd-phy-supply = <&pm8226_lvs1>;
+		};
+	};
+
+	i2c@f9924000 { /* BLSP1 QUP2 */
+		#address-cells = <1>;
+		#size-cells = <0>;
+		cell-index = <2>;
+		compatible = "qcom,i2c-qup";
+		reg = <0xf9924000 0x1000>;
+		reg-names = "qup_phys_addr";
+		interrupts = <0 96 0>;
+		interrupt-names = "qup_err_intr";
+		qcom,i2c-bus-freq = <400000>;
+		qcom,i2c-src-freq = <19200000>;
+
+		yas532@2e {
+			compatible = "qcom,yas532";
+			reg = <0x2e>;
+			vdd-supply = <&pm8226_l19>;
+			vddio-supply = <&pm8226_lvs1>;
+		};
+
+		kxtj2@0f {
+			compatible = "qcom,kxtj2";
+			reg = <0x0f>;
+			vdd-supply = <&pm8226_l19>;
+			vddio-supply = <&pm8226_lvs1>;
+			interrupt-parent = <&msmgpio>;
+			interrupts = <49 0x2>;
+			int-gpio = <&msmgpio 49 0x00>;
+		};
+
+		bma250e@19 {
+			compatible = "qcom,bma250e";
+			reg = <0x19>;
+			vdd-supply = <&pm8226_l19>;
+			vddio-supply = <&pm8226_lvs1>;
+		};
+
+		mmc3416x@30 {
+			compatible = "qcom,mmc3416x";
+			reg = <0x30>;
+			vdd-supply = <&pm8226_l19>;
+			vddio-supply = <&pm8226_lvs1>;
+		};
+
+		sensortek@48 {
+			compatible = "sensortek,stk3x1x";
+			reg = <0x48>;
+			stkvdd-supply = <&pm8226_l19>;
+			sensortek,vdd-current-level = <1 120>;
+			sensortek,slave-addr = <0x48>;
+			sensortek,int_pin = <&msmgpio 65 0x00>;
+			sensortek,state_reg = <0x0>;
+			sensortek,psctrl_reg = <0x33>;
+			sensortek,alsctrl_reg = <0x39>;
+			sensortek,ledctrl_reg = <0xFF>;
+			sensortek,wait_reg = <0x9>;
+			sensortek,ps_thd_h = <0x6A4>;//1700
+			sensortek,ps_thd_l = <0x5DC>;//1500
+			sensortek,transmittance = <0x458>;//1112
+		};
+	};
+
+	i2c@f9925000 { /* BLSP1 QUP3 */
+		cell-index = <3>;
+		nfc-nci@0e {
+			compatible = "qcom,nfc-nci";
+			reg = <0x0e>;
+			qcom,irq-gpio = <&msmgpio 21 0x00>;
+			qcom,dis-gpio = <&msmgpio 20 0x00>;
+			qcom,clk-src = "BBCLK2";
+			qcom,clk-en-gpio = <&msmgpio 0 0x00>;
+			interrupt-parent = <&msmgpio>;
+			interrupts = <21 0>;
+			qcom,clk-gpio = <&pm8226_gpios 3 0>;
+		};
+
+		pn547@28 {
+			compatible = "nxp,pn547";
+			reg = <0x28>;
+			nxp,ven = <&msmgpio 20 0x00>;
+			nxp,irq_gpio = <&msmgpio 21 0x00>;
+			nxp,dwld_en = <&msmgpio 22 0x00>;
+			interrupt-parent = <&msmgpio>;
+			interrupts = <21 0x2>;
+		};
+	};
 
 	/delete-node/ i2c@f9926000;
 
@@ -33,10 +131,11 @@
 			synaptics,power-down;
 			synaptics,disable-gpios;
 		};
+
 		cypress@24 {
 			compatible = "cy,cyttsp4_i2c_adapter";
 			reg = <0x24>;
-			interrupt-patent = <&msmgpio>;
+			interrupt-parent = <&msmgpio>;
 			interrupts = <17 0x8>;
 			cy,adapter_id = "cyttsp4_i2c_adapter";
 			vdd-supply = <&pm8226_l19>;
@@ -107,90 +206,18 @@
 		};
 	};
 
-	i2c@f9924000 { /* BLSP1 QUP2 */
-		#address-cells = <1>;
-		#size-cells = <0>;
-		cell-index = <2>;
-		compatible = "qcom,i2c-qup";
-		reg = <0xf9924000 0x1000>;
-		reg-names = "qup_phys_addr";
-		interrupts = <0 96 0>;
-		interrupt-names = "qup_err_intr";
-		qcom,i2c-bus-freq = <400000>;
-		qcom,i2c-src-freq = <19200000>;
-
-		yas532@2e {
-			compatible = "qcom,yas532";
-			reg = <0x2e>;
-			vdd-supply = <&pm8226_l19>;
-			vddio-supply = <&pm8226_lvs1>;
-		};
-		kxtj2@0f {
-			compatible = "qcom,kxtj2";
-			reg = <0x0f>;
-			vdd-supply = <&pm8226_l19>;
-			vddio-supply = <&pm8226_lvs1>;
-			interrupt-parent = <&msmgpio>;
-			interrupts = <49 0x2>;
-			int-gpio = <&msmgpio 49 0x00>;
-		};
-		bma250e@19 {
-			compatible = "qcom,bma250e";
-			reg = <0x19>;
-			vdd-supply = <&pm8226_l19>;
-			vddio-supply = <&pm8226_lvs1>;
-		};
-		mmc3416x@30 {
-			compatible = "qcom,mmc3416x";
-			reg = <0x30>;
-			vdd-supply = <&pm8226_l19>;
-			vddio-supply = <&pm8226_lvs1>;
-		};
-		sensortek@48 {
-			compatible = "sensortek,stk3x1x";
-			reg = <0x48>;
-			stkvdd-supply = <&pm8226_l19>;
-			sensortek,vdd-current-level = <1 120>;
-			sensortek,slave-addr = <0x48>;
-			sensortek,int_pin = <&msmgpio 65 0x00>;
-			sensortek,state_reg = <0x0>;
-			sensortek,psctrl_reg = <0x33>;
-			sensortek,alsctrl_reg = <0x39>;
-			sensortek,ledctrl_reg = <0xFF>;
-			sensortek,wait_reg = <0x9>;
-			sensortek,ps_thd_h = <0x6A4>;//1700
-			sensortek,ps_thd_l = <0x5DC>;//1500
-			sensortek,transmittance = <0x458>;//1112
-		};
-	};
-
-	i2c@f9925000 { /* BLSP1 QUP3 */
-		cell-index = <3>;
-		nfc-nci@0e {
-			compatible = "qcom,nfc-nci";
-			reg = <0x0e>;
-			qcom,irq-gpio = <&msmgpio 21 0x00>;
-			qcom,dis-gpio = <&msmgpio 20 0x00>;
-			qcom,clk-src = "BBCLK2";
-			qcom,clk-en-gpio = <&msmgpio 0 0x00>;
-			interrupt-parent = <&msmgpio>;
-			interrupts = <21 0>;
-			qcom,clk-gpio = <&pm8226_gpios 3 0>;
-		};
-	};
-
-	spi@f9923000 {
-		ethernet-switch@3 {
-			compatible = "micrel,ks8851";
-			reg = <3>;
-			interrupt-parent = <&msmgpio>;
-			interrupts = <115 0x8>;
-			spi-max-frequency = <4800000>;
-			rst-gpio = <&msmgpio 114 0>;
-			vdd-io-supply = <&pm8226_lvs1>;
-			vdd-phy-supply = <&pm8226_lvs1>;
-		};
-	};
+        i2c_1: i2c@f9924000 { /* BLSP-1 QUP-2 */
+                cell-index = <1>;
+                compatible = "qcom,i2c-qup";
+                reg = <0xf9924000 0x1000>;
+                #address-cells = <1>;
+                #size-cells = <0>;
+                reg-names = "qup_phys_addr";
+                interrupts = <0 96 0>;
+                interrupt-names = "qup_err_intr";
+		qcom,i2c-bus-freq = <384000>;
+                qcom,i2c-src-freq = <19200000>;
+        };
 
 	sound {
 		qcom,audio-routing =
@@ -228,30 +255,6 @@
 		qcom,cdc-vdd-spkr-gpios = <&pm8226_gpios 2 0>;
 	};
 
-        i2c_1: i2c@f9924000 { /* BLSP-1 QUP-2 */
-                cell-index = <1>;
-                compatible = "qcom,i2c-qup";
-                reg = <0xf9924000 0x1000>;
-                #address-cells = <1>; 
-                #size-cells = <0>;
-                reg-names = "qup_phys_addr";
-                interrupts = <0 96 0>;
-                interrupt-names = "qup_err_intr";
-		qcom,i2c-bus-freq = <384000>;
-                qcom,i2c-src-freq = <19200000>;
-        };
-       
-       i2c@f9925000 { /* BLSP-1 QUP-3 */
-       pn547@28 {
-			compatible = "nxp,pn547";
-			reg = <0x28>;
-			nxp,ven = <&msmgpio 20 0x00>;
-			nxp,irq_gpio = <&msmgpio 21 0x00>;
-			nxp,dwld_en = <&msmgpio 22 0x00>;
-			interrupt-parent = <&msmgpio>;
-			interrupts = <21 0x2>;
-		};
-       };
 	spi_0: spi@f9923000 { /* BLSP1 QUP1 */
 		compatible = "qcom,spi-qup-v2";
 		status = "disabled";
