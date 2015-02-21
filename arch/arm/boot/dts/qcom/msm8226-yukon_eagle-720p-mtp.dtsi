@@ -11,8 +11,6 @@
  */
 
 /include/ "msm8226-yukon_common.dtsi"
-/include/ "msm8226-yukon_eagle-camera-sensor-mtp.dtsi"
-
 /include/ "dsi-panel-eagle.dtsi"
 
 &soc {
