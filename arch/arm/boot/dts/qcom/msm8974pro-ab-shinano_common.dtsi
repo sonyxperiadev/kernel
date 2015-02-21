@@ -792,7 +792,6 @@
 
 &mdss_fb0 {
 	qcom,memory-reservation-size = <0x1000000>; /* size 16MB */
-	qcom,mdss-fb-splash-logo-enabled;
 };
 
 &pm8941_vadc {
