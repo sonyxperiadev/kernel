@@ -15,7 +15,7 @@
 	dsi_novatek_jdi_720_cmd: somc,novatek_jdi_720p_cmd_panel {
 		qcom,mdss-dsi-panel-name = "jdi novatek 720p cmd";
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
-		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
+		qcom,mdss-dsi-panel-type = "dsi_video_mode";
 		qcom,mdss-dsi-panel-destination = "display_1";
 		qcom,mdss-dsi-panel-framerate = <60>;
 		qcom,mdss-dsi-virtual-channel-id = <0>;
@@ -58,7 +58,7 @@
 		qcom,mdss-dsi-on-command = [05 01 00 00 00 00 01 29];
 		qcom,mdss-dsi-off-command = [05 01 00 00 00 00 01 28
 				05 01 00 00 64 00 01 10];
-		qcom,mdss-dsi-on-command-state = "dsi_hs_mode";
+		qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
 		qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
 
 		qcom,mdss-dsi-h-sync-pulse = <1>;
@@ -69,12 +69,6 @@
 		qcom,mdss-dsi-lane-1-state;
 		qcom,mdss-dsi-lane-2-state;
 		qcom,mdss-dsi-lane-3-state;
-		qcom,mdss-dsi-te-pin-select = <1>;
-		qcom,mdss-dsi-wr-mem-start = <0x2c>;
-		qcom,mdss-dsi-wr-mem-continue = <0x3c>;
-		qcom,mdss-dsi-te-dcs-command = <1>;
-		qcom,mdss-dsi-te-check-enable;
-		qcom,mdss-dsi-te-using-te-pin;
 		qcom,mdss-dsi-panel-timings = [7A 1A 12 00 3E 42 16 20 14 03 04 00];
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-t-clk-post = <0x11>;
@@ -355,7 +349,7 @@
 	dsi_novatek_sharp_720_cmd: somc,novatek_sharp_720p_cmd_panel {
 		qcom,mdss-dsi-panel-name = "sharp novatek 720p cmd";
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
-		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
+		qcom,mdss-dsi-panel-type = "dsi_video_mode";
 		qcom,mdss-dsi-panel-destination = "display_1";
 		qcom,mdss-dsi-panel-framerate = <60>;
 		qcom,mdss-dsi-virtual-channel-id = <0>;
@@ -402,7 +396,7 @@
 		qcom,mdss-dsi-on-command = [05 01 00 00 00 00 01 29];
 		qcom,mdss-dsi-off-command = [05 01 00 00 00 00 01 28
 				05 01 00 00 C8 00 01 10];
-		qcom,mdss-dsi-on-command-state = "dsi_hs_mode";
+		qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
 		qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
 
 		qcom,mdss-dsi-h-sync-pulse = <1>;
@@ -413,12 +407,6 @@
 		qcom,mdss-dsi-lane-1-state;
 		qcom,mdss-dsi-lane-2-state;
 		qcom,mdss-dsi-lane-3-state;
-		qcom,mdss-dsi-te-pin-select = <1>;
-		qcom,mdss-dsi-wr-mem-start = <0x2c>;
-		qcom,mdss-dsi-wr-mem-continue = <0x3c>;
-		qcom,mdss-dsi-te-dcs-command = <1>;
-		qcom,mdss-dsi-te-check-enable;
-		qcom,mdss-dsi-te-using-te-pin;
 		qcom,mdss-dsi-panel-timings = [7A 1A 12 00 3E 42 16 20 14 03 04 00];
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-t-clk-post = <0x11>;
@@ -702,7 +690,7 @@
 	dsi_default_gpio_0: somc,novatek_default_panel_0 {
 		qcom,mdss-dsi-panel-name = "default novatek 720p cmd 0";
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
-		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
+		qcom,mdss-dsi-panel-type = "dsi_video_mode";
 		qcom,mdss-dsi-panel-destination = "display_1";
 		qcom,mdss-dsi-panel-framerate = <60>;
 		qcom,mdss-dsi-virtual-channel-id = <0>;
@@ -745,7 +733,7 @@
 		qcom,mdss-dsi-on-command = [05 01 00 00 00 00 01 29];
 		qcom,mdss-dsi-off-command = [05 01 00 00 00 00 01 28
 				05 01 00 00 64 00 01 10];
-		qcom,mdss-dsi-on-command-state = "dsi_hs_mode";
+		qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
 		qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
 
 		qcom,mdss-dsi-h-sync-pulse = <1>;
@@ -756,12 +744,6 @@
 		qcom,mdss-dsi-lane-1-state;
 		qcom,mdss-dsi-lane-2-state;
 		qcom,mdss-dsi-lane-3-state;
-		qcom,mdss-dsi-te-pin-select = <1>;
-		qcom,mdss-dsi-wr-mem-start = <0x2c>;
-		qcom,mdss-dsi-wr-mem-continue = <0x3c>;
-		qcom,mdss-dsi-te-dcs-command = <1>;
-		qcom,mdss-dsi-te-check-enable;
-		qcom,mdss-dsi-te-using-te-pin;
 		qcom,mdss-dsi-panel-timings = [7A 1A 12 00 3E 42 16 20 14 03 04 00];
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-t-clk-post = <0x11>;
@@ -810,7 +792,7 @@
 	dsi_default_gpio_1: somc,novatek_default_panel_1 {
 		qcom,mdss-dsi-panel-name = "default novatek 720p cmd 1";
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
-		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
+		qcom,mdss-dsi-panel-type = "dsi_video_mode";
 		qcom,mdss-dsi-panel-destination = "display_1";
 		qcom,mdss-dsi-panel-framerate = <60>;
 		qcom,mdss-dsi-virtual-channel-id = <0>;
@@ -853,7 +835,7 @@
 		qcom,mdss-dsi-on-command = [05 01 00 00 00 00 01 29];
 		qcom,mdss-dsi-off-command = [05 01 00 00 00 00 01 28
 				05 01 00 00 64 00 01 10];
-		qcom,mdss-dsi-on-command-state = "dsi_hs_mode";
+		qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
 		qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
 
 		qcom,mdss-dsi-h-sync-pulse = <1>;
@@ -864,12 +846,6 @@
 		qcom,mdss-dsi-lane-1-state;
 		qcom,mdss-dsi-lane-2-state;
 		qcom,mdss-dsi-lane-3-state;
-		qcom,mdss-dsi-te-pin-select = <1>;
-		qcom,mdss-dsi-wr-mem-start = <0x2c>;
-		qcom,mdss-dsi-wr-mem-continue = <0x3c>;
-		qcom,mdss-dsi-te-dcs-command = <1>;
-		qcom,mdss-dsi-te-check-enable;
-		qcom,mdss-dsi-te-using-te-pin;
 		qcom,mdss-dsi-panel-timings = [7A 1A 12 00 3E 42 16 20 14 03 04 00];
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-t-clk-post = <0x11>;

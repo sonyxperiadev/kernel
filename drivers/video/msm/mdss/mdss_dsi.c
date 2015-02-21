@@ -1162,14 +1162,6 @@ static int mdss_dsi_ctrl_probe(struct platform_device *pdev)
 		goto error_pan_node;
 	}
 
-#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
-	if (ctrl_pdata->panel_data.panel_info.cont_splash_enabled &&
-		ctrl_pdata->spec_pdata->pcc_data.pcc_sts & PCC_STS_UD) {
-		ctrl_pdata->pcc_setup(&ctrl_pdata->panel_data);
-		ctrl_pdata->spec_pdata->pcc_data.pcc_sts &= ~PCC_STS_UD;
-	}
-#endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
-
 	pr_debug("%s: Dsi Ctrl->%d initialized\n", __func__, index);
 	return 0;
 
