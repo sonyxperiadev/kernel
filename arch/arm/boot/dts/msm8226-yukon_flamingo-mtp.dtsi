@@ -108,31 +108,6 @@
 		qcom,cdc-mclk-gpios = <&pm8226_gpios 1 0>;
 		qcom,cdc-vdd-spkr-gpios = <&pm8226_gpios 2 0>;
 	};
-
-	ram_console {
-		compatible = "qcom,ram-console";
-		qcom,memory-fixed = <0x3f200000 0x40000>;
-	};
-
-	last_radio_log {
-		compatible = "qcom,last-radio-log";
-		qcom,memory-fixed = <0x3f240000 0x40000>;
-	};
-
-	ramdumpinfo {
-		compatible = "qcom,ramdumpinfo";
-		qcom,memory-fixed = <0x3f280000 0x0200>;
-	};
-
-	productinfo {
-		compatible = "qcom,productinfo";
-		qcom,memory-fixed = <0x3f280200 0x0200>;
-	};
-
-	restart_parameters {
-		compatible = "qcom,restart-parameters";
-		qcom,memory-fixed = <0x3f2C0000 0x40000>;
-	};
 };
 
 
