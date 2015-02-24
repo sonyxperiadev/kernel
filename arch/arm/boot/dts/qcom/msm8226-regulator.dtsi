@@ -129,10 +129,13 @@
 			compatible = "qcom,rpm-smd-regulator";
 			regulator-name = "8226_s1_corner";
 			qcom,set = <3>;
-			regulator-min-microvolt = <1>;
+			regulator-min-microvolt = <5>;
 			regulator-max-microvolt = <7>;
 			qcom,use-voltage-corner;
 			qcom,consumer-supplies = "vdd_dig", "";
+			proxy-supply = <&pm8226_s1_corner>;
+			qcom,proxy-consumer-voltage = <7 7>;
+                        qcom,proxy-consumer-enable;
 		};
 		pm8226_s1_corner_ao: regulator-s1-corner-ao {
 			compatible = "qcom,rpm-smd-regulator";
