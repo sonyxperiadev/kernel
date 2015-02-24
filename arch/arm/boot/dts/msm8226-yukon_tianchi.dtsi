@@ -16,6 +16,7 @@
 
 /include/ "msm8226-yukon_common.dtsi"
 /include/ "dsi-panel-tianchi.dtsi"
+/include/ "msm8226-yukon_tianchi-camera-sensor.dtsi"
 
 &soc {
 

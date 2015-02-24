@@ -17,7 +17,6 @@
 /dts-v1/;
 /include/ "msm8926.dtsi"
 /include/ "msm8226-yukon_tianchi.dtsi"
-/include/ "msm8226-yukon_tianchi-camera-sensor.dtsi"
 
 / {
 	model = "SOMC TIANCHI";
