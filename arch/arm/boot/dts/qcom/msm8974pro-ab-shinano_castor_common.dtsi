@@ -808,6 +808,10 @@
 };
 
 &sdcc3 {
+	interrupts = <0 1>;
+	interrupt-map = <0 &intc 0 127 0
+	                1 &intc 0 223 0>;
+	interrupt-names = "core_irq", "bam_irq";
 	qcom,sup-voltages = <1800 2950>;
 	qcom,wifi-control-func;
 	status = "ok";
