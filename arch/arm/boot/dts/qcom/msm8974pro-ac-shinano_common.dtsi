@@ -12,7 +12,7 @@
  * GNU General Public License for more details.
  */
 
-/include/ "msm8974pro-ab-shinano_common.dtsi"
+#include "msm8974pro-ab-shinano_common.dtsi"
 
 &soc {
 };

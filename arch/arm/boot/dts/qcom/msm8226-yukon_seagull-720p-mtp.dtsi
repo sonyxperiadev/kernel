@@ -11,8 +11,8 @@
  * GNU General Public License for more details.
  */
 
-/include/ "msm8226-yukon_common.dtsi"
-/include/ "dsi-panel-seagull.dtsi"
+#include "msm8226-yukon_common.dtsi"
+#include "dsi-panel-seagull.dtsi"
 
 / {
 	aliases {

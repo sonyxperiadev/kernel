@@ -10,8 +10,8 @@
  * GNU General Public License for more details.
  */
 
-/include/ "msm8226-yukon_common.dtsi"
-/include/ "dsi-panel-eagle.dtsi"
+#include "msm8226-yukon_common.dtsi"
+#include "dsi-panel-eagle.dtsi"
 
 &soc {
 	spi@f9923000 {
@@ -360,8 +360,8 @@
 		qcom,rpull-up-kohm = <100>;
 		qcom,vref-batt-therm = <1800000>;
 
-		/include/ "batterydata-palladium.dtsi"
-		/include/ "batterydata-mtp-3000mah.dtsi"
+		#include "batterydata-palladium.dtsi"
+		#include "batterydata-mtp-3000mah.dtsi"
 	};
 };
 
