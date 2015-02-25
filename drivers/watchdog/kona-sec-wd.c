@@ -30,6 +30,8 @@
 #include <linux/io.h>
 #include <mach/sram_config.h>
 #include <plat/cdc.h>
+#include <asm/fiq.h>
+#include <linux/broadcom/kona_sec_wd.h>
 
 #define SEC_EXIT_NORMAL			1
 #define SEC_WD_TAP_DELAY		12000
@@ -187,25 +189,59 @@ int is_soft_reset_boot(void)
 
 int is_power_on_reset(void)
 {
-	unsigned int *reset_reason = (unsigned int *)
-		ioremap(SRAM_RST_REASON_BASE, 0x4);
-	unsigned int rst;
+	u32 reg;
+	int pon_rst;
 
-	pr_debug("%s: reset_reason 0x%x\n", __func__, *reset_reason);
+	reg = readl(KONA_ROOT_RST_VA + ROOT_RST_MGR_REG_RSTSTS_OFFSET);
+	pon_rst = (reg & ROOT_RST_MGR_REG_RSTSTS_PORRST_DET_MASK)
+		>> ROOT_RST_MGR_REG_RSTSTS_PORRST_DET_SHIFT;
 
-	rst = (*reset_reason) & RST_REASON_MASK;
+	return pon_rst;
+}
 
-	iounmap(reset_reason);
-	if (rst == POWERON_RESET)
-		return 1;
-	else
-		return 0;
+static struct fiq_handler fh = {
+		.name = "sec_wd_fiq"
+};
 
+static DEFINE_PER_CPU(struct pt_regs, sec_wd_fiq_regs);
+
+/*
+ * sec_wd_fiq_reg_setup: Called on each CPU to set up FIQ handler regs
+ * input: unused
+ * output: none
+ * return: none
+ */
+static void sec_wd_fiq_reg_setup(void *info)
+{
+	/* NB - secure code may mean handler doesn't see these registers */
+	struct pt_regs r;
+	get_fiq_regs(&r);
+	r.ARM_sp = (unsigned long) (&__get_cpu_var(sec_wd_fiq_regs));
+	set_fiq_regs(&r);
+}
+
+asmlinkage void sec_wd_fiq(struct pt_regs *regs)
+{
+	/* If we come in through our assembler, we're on the original SVC
+	 * mode stack, with nothing extra pushed. Good for unwinding, bad if
+	 * the stack was broken.
+	 */
+	int err = 0;
+	/*
+	 * We could be in big trouble if we ever try to claim any spinlocks
+	 * that were held at the instant the FIQ triggered. die() makes some
+	 * effort to avoid problems with printk(), but try a bit harder to
+	 * bust some more locks here.
+	 */
+	console_verbose();
+	die("secure watchdog FIQ", regs, err);
+	panic("secure watchdog FIQ");
 }
 
 static int sec_wd_probe(struct platform_device *pdev)
 {
 	struct sec_wd_core_st *swdc = &sec_wd_core;
+	int ret;
 
 	swdc->sec_wd_enabled_mode = 0;
 
@@ -229,6 +265,17 @@ static int sec_wd_probe(struct platform_device *pdev)
 			printk(KERN_ALERT "___sec_wd_probe:alloc workqueue failed\n");
 			return -ENOMEM;
 		}
+
+		ret = claim_fiq(&fh);
+		if (0 > ret) {
+			printk(KERN_ERR "%s:%d claim_fiq failed err=%d\n",
+				__func__, __LINE__, ret);
+			return ret;
+		}
+		on_each_cpu(sec_wd_fiq_reg_setup, NULL, true);
+		set_fiq_handler(&sec_wd_fiq_handler,
+		&sec_wd_fiq_handler_end - &sec_wd_fiq_handler);
+
 	} else
 		printk(KERN_ALERT "_______disabling Sec watchdog_______\n");
 
@@ -239,7 +286,7 @@ static int sec_wd_probe(struct platform_device *pdev)
 unsigned int sec_wd_activate(void)
 {
 	struct sec_wd_core_st *swdc = &sec_wd_core;
-	printk(KERN_ALERT "initializing secure watchdog....");
+	printk(KERN_ALERT "initializing secure watchdog....\n");
 	swdc->is_sec_wd_on = SEC_WD_ENABLE;
 	printk(KERN_ALERT "Active\n");
 	secure_api_call(SSAPI_ACTIVATE_SEC_WATCHDOG, 0, 0, 0, 0);

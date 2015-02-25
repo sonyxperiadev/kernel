@@ -32,5 +32,6 @@ void sec_wd_resume(void);
 void sec_wd_enable(void);
 void sec_wd_disable(void);
 unsigned int is_sec_wd_enabled(void);
-
+void sec_wd_fiq_handler();
+void sec_wd_fiq_handler_end();
 #endif

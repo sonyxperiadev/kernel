@@ -424,6 +424,7 @@ config WD_TAPPER
 
 config BRCM_SECURE_WATCHDOG
        tristate "secure watchdog"
+	select FIQ
        ---help---
        Secure watchdog, detect
        task or interrupt hung.
