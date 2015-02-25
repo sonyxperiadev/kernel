@@ -373,12 +373,6 @@
 	qcom,battery-data = <&mtp_batterydata>;
 };
 
-&slim_msm {
-	tapan_codec {
-		qcom,cdc-micbias1-ext-cap;
-	};
-};
-
 &mdss_dsi0 {
 	qcom,dsi-pref-prim-pan = <&dsi_innolux_qhd_vid>;
 };

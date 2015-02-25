@@ -388,6 +388,12 @@
 	qcom,clamp-soc-max-count = <0>;
 };
 
+&slim_msm {
+	tapan_codec {
+		qcom,cdc-micbias1-ext-cap;
+	};
+};
+
 &mdss_mdp {
 	qcom,mdss-pref-prim-intf = "dsi";
 	batfet-supply = <&pm8226_chg_batif>;
