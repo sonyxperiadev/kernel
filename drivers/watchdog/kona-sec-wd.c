@@ -164,6 +164,10 @@ EXPORT_SYMBOL(sec_wd_disable);
 static int sec_wd_panic_event(struct notifier_block *this,
 		unsigned long event, void *ptr)
 {
+       struct sec_wd_core_st *swdc = &sec_wd_core;
+       if (swdc->is_sec_wd_on == SEC_WD_DISABLE)
+               return NOTIFY_DONE;
+
 	secure_api_call(SSAPI_DISABLE_SEC_WATCHDOG, 0, 0, 0, 0);
 	return NOTIFY_DONE;
 }
@@ -171,6 +175,10 @@ static int sec_wd_panic_event(struct notifier_block *this,
 static int sec_wd_reboot_event(struct notifier_block *this,
 		unsigned long event, void *ptr)
 {
+       struct sec_wd_core_st *swdc = &sec_wd_core;
+       if (swdc->is_sec_wd_on == SEC_WD_DISABLE)
+               return NOTIFY_DONE;
+
 	secure_api_call(SSAPI_DISABLE_SEC_WATCHDOG, 0, 0, 0, 0);
 	return NOTIFY_DONE;
 }
@@ -243,41 +251,34 @@ static int sec_wd_probe(struct platform_device *pdev)
 	struct sec_wd_core_st *swdc = &sec_wd_core;
 	int ret;
 
-	swdc->sec_wd_enabled_mode = 0;
+	swdc->sec_wd_enabled_mode = 1;
+	swdc->sec_wd_panic_block.notifier_call = sec_wd_panic_event;
+	swdc->sec_wd_panic_block.priority = INT_MAX;
 
-	if (is_soft_reset_boot() || is_power_on_reset()) {
-		swdc->sec_wd_enabled_mode = 1;
-		swdc->sec_wd_panic_block.notifier_call = sec_wd_panic_event;
-		swdc->sec_wd_panic_block.priority = INT_MAX;
+	swdc->sec_wd_reboot_block.notifier_call = sec_wd_reboot_event;
+	swdc->sec_wd_reboot_block.priority = INT_MAX;
+	swdc->is_sec_wd_on = SEC_WD_DISABLE;
+	swdc->cdc_error_count = 0;
+	swdc->sec_pat_retry = 0;
 
-		swdc->sec_wd_reboot_block.notifier_call = sec_wd_reboot_event;
-		swdc->sec_wd_reboot_block.priority = INT_MAX;
-		swdc->is_sec_wd_on = SEC_WD_DISABLE;
-		swdc->cdc_error_count = 0;
-		swdc->sec_pat_retry = 0;
-
-		atomic_notifier_chain_register(&panic_notifier_list,
-				&swdc->sec_wd_panic_block);
-		blocking_notifier_chain_register(&reboot_notifier_list,
-				&swdc->sec_wd_reboot_block);
-		swdc->sec_wd_wq = create_singlethread_workqueue("sec_wd_wq");
-		if (!(swdc->sec_wd_wq)) {
-			printk(KERN_ALERT "___sec_wd_probe:alloc workqueue failed\n");
-			return -ENOMEM;
-		}
-
-		ret = claim_fiq(&fh);
-		if (0 > ret) {
-			printk(KERN_ERR "%s:%d claim_fiq failed err=%d\n",
-				__func__, __LINE__, ret);
-			return ret;
-		}
-		on_each_cpu(sec_wd_fiq_reg_setup, NULL, true);
-		set_fiq_handler(&sec_wd_fiq_handler,
-		&sec_wd_fiq_handler_end - &sec_wd_fiq_handler);
-
-	} else
-		printk(KERN_ALERT "_______disabling Sec watchdog_______\n");
+	atomic_notifier_chain_register(&panic_notifier_list,
+	&swdc->sec_wd_panic_block);
+	blocking_notifier_chain_register(&reboot_notifier_list,
+	&swdc->sec_wd_reboot_block);
+	swdc->sec_wd_wq = create_singlethread_workqueue("sec_wd_wq");
+	if (!(swdc->sec_wd_wq)) {
+		printk(KERN_ALERT "___sec_wd_probe:alloc workqueue failed\n");
+		return -ENOMEM;
+	}
+	ret = claim_fiq(&fh);
+	if (0 > ret) {
+		printk(KERN_ERR "%s:%d claim_fiq failed err=%d\n",
+		__func__, __LINE__, ret);
+		return ret;
+	}
+	on_each_cpu(sec_wd_fiq_reg_setup, NULL, true);
+	set_fiq_handler(&sec_wd_fiq_handler,
+	&sec_wd_fiq_handler_end - &sec_wd_fiq_handler);
 
 	printk(KERN_ALERT "_______sec_wd_probe succesfull_______\n");
 	return 0;
