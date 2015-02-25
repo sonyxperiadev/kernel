@@ -342,12 +342,6 @@
 	qcom,duty-cycle-100p;
 };
 
-&slim_msm {
-	tapan_codec {
-		qcom,cdc-micbias1-ext-cap;
-	};
-};
-
 &rpm_bus {
 	rpm-regulator-ldoa28 {
 		pm8226_l28: regulator-l28 {

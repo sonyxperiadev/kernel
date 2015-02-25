@@ -421,12 +421,6 @@
 	qcom,btc-disabled = <1>;
 };
 
-&slim_msm {
-	tapan_codec {
-		qcom,cdc-micbias1-ext-cap;
-	};
-};
-
 &mdss_dsi0 {
 	qcom,platform-enable-gpio = <&msmgpio 52 0>;
 	qcom,dsi-pref-prim-pan = <&dsi_nt35521_720_vid_truly63>;
