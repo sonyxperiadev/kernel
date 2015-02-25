@@ -33,7 +33,7 @@
 
 #define SEC_EXIT_NORMAL			1
 #define SEC_WD_TAP_DELAY		12000
-#define SSAPI_ACTIVATE_SEC_WATCHDOG     0x01000006
+#define SSAPI_ACTIVATE_SEC_WATCHDOG     0x0100000A
 #define SSAPI_ENABLE_SEC_WATCHDOG       0x01000007
 #define SSAPI_DISABLE_SEC_WATCHDOG      0x01000008
 #define SSAPI_PAT_SEC_WATCHDOG		0x01000009
@@ -79,7 +79,7 @@ static void sec_wd_pat(struct work_struct *work)
 		do_gettimeofday(&swdc->
 		trk_sec_wd.trk_sec_wd_pat[SEC_WD_PAT_BEGIN]);
 		printk(KERN_ALERT "patting watchdog\n");
-		secure_api_call_local(SSAPI_PAT_SEC_WATCHDOG);
+		secure_api_call(SSAPI_PAT_SEC_WATCHDOG, 0, 0, 0, 0);
 		swdc->is_sec_pat_done = SEC_WD_PAT_DONE;
 		do_gettimeofday(&swdc->
 		trk_sec_wd.trk_sec_wd_pat[SEC_WD_PAT_DONE]);
@@ -101,45 +101,6 @@ static void init_patter(void)
 	msecs_to_jiffies(SEC_WD_TAP_DELAY));
 }
 
-void sec_wd_suspend(void)
-{
-	int ret;
-	struct sec_wd_core_st *swdc = &sec_wd_core;
-
-	if (swdc->is_sec_wd_on == SEC_WD_DISABLE)
-		return;
-
-	ret = secure_api_call_local(SSAPI_DISABLE_SEC_WATCHDOG);
-	if (ret == 1) {
-		swdc->is_sec_wd_on = SEC_WD_DISABLE;
-		do_gettimeofday(&swdc->
-		trk_sec_wd.trk_sec_wd_on[SEC_WD_DISABLE]);
-		printk(KERN_ALERT "___suspend:disabling secure watchdog...done\n");
-	} else {
-		printk(KERN_ALERT "___suspend:disabling secure watchdog...fail\n");
-	}
-}
-EXPORT_SYMBOL(sec_wd_suspend);
-
-void sec_wd_resume(void)
-{
-	int ret;
-	struct sec_wd_core_st *swdc = &sec_wd_core;
-
-	if (swdc->is_sec_wd_on == SEC_WD_ENABLE)
-		return;
-
-	ret = secure_api_call_local(SSAPI_ENABLE_SEC_WATCHDOG);
-	if (ret == 1) {
-		swdc->is_sec_wd_on = SEC_WD_ENABLE;
-		do_gettimeofday(&swdc->trk_sec_wd.trk_sec_wd_on[SEC_WD_ENABLE]);
-		printk(KERN_ALERT "___resume:enabling secure watchdog...done\n");
-	} else {
-		printk(KERN_ERR "___resume:enabling secure watchdog...fail\n");
-	}
-}
-EXPORT_SYMBOL(sec_wd_resume);
-
 void sec_wd_enable(void)
 {
 	int ret;
@@ -148,7 +109,7 @@ void sec_wd_enable(void)
 	if (swdc->is_sec_wd_on == SEC_WD_ENABLE)
 		return;
 
-	ret = secure_api_call(SSAPI_ENABLE_SEC_WATCHDOG, 0, 0, 0, 0);
+	ret = secure_api_call_local(SSAPI_ENABLE_SEC_WATCHDOG);
 	if (ret == 1) {
 		swdc->is_sec_wd_on = SEC_WD_ENABLE;
 		do_gettimeofday(&swdc->trk_sec_wd.trk_sec_wd_on[SEC_WD_ENABLE]);
@@ -185,8 +146,7 @@ void sec_wd_disable(void)
 	no work function is running anywhere in the system.
 	this is the safest place to disabled watchdog. */
 
-	ret = secure_api_call(SSAPI_DISABLE_SEC_WATCHDOG,
-	0, 0, 0, 0);
+	ret = secure_api_call_local(SSAPI_DISABLE_SEC_WATCHDOG);
 
 	if (ret == 1) {
 		do_gettimeofday(&swdc->
@@ -243,7 +203,7 @@ int is_power_on_reset(void)
 
 }
 
-static int __devinit sec_wd_probe(struct platform_device *pdev)
+static int sec_wd_probe(struct platform_device *pdev)
 {
 	struct sec_wd_core_st *swdc = &sec_wd_core;
 
@@ -295,7 +255,7 @@ unsigned int is_sec_wd_enabled(void)
 }
 EXPORT_SYMBOL(is_sec_wd_enabled);
 
-static int __devexit sec_wd_remove(struct platform_device *pdev);
+static int sec_wd_remove(struct platform_device *pdev);
 
 
 static const struct of_device_id sec_wd_match[] = {
@@ -310,10 +270,10 @@ static struct platform_driver sec_wd_pltfm_driver = {
 	   .of_match_table = sec_wd_match,
 		   },
 	.probe = sec_wd_probe,
-	.remove = __devexit_p(sec_wd_remove),
+	.remove = sec_wd_remove,
 };
 
-static int __devexit sec_wd_remove(struct platform_device *pdev)
+static int sec_wd_remove(struct platform_device *pdev)
 {
 	if (is_sec_wd_enabled())
 		sec_wd_disable();
