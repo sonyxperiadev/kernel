@@ -388,6 +388,10 @@
 	qcom,clamp-soc-max-count = <0>;
 };
 
+&vph_pwr_vreg {
+	status = "ok";
+};
+
 &slim_msm {
 	tapan_codec {
 		qcom,cdc-micbias1-ext-cap;
