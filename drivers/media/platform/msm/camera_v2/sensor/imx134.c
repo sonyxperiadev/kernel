@@ -10,7 +10,11 @@
  * GNU General Public License for more details.
  *
  */
+#include <linux/of.h>
+
 #include "msm_sensor.h"
+#include "sony_imx134_power_settings.h"
+
 #define IMX134_SENSOR_NAME "imx134"
 DEFINE_MSM_MUTEX(imx134_mut);
 
@@ -144,6 +148,17 @@ static int __init imx134_init_module(void)
 {
 	int32_t rc = 0;
 	pr_debug("%s:%d\n", __func__, __LINE__);
+	if (of_machine_is_compatible("somc,seagull")) {
+		imx134_s_ctrl.power_setting_array.power_setting =
+					imx134_seagull_power_setting;
+		imx134_s_ctrl.power_setting_array.size =
+					ARRAY_SIZE(imx134_seagull_power_setting);
+	} else {
+		imx134_s_ctrl.power_setting_array.power_setting =
+					imx134_power_setting;
+		imx134_s_ctrl.power_setting_array.size =
+					ARRAY_SIZE(imx134_power_setting);
+	}
 	rc = platform_driver_probe(&imx134_platform_driver,
 		imx134_platform_probe);
 	if (!rc)
@@ -166,8 +181,6 @@ static void __exit imx134_exit_module(void)
 
 static struct msm_sensor_ctrl_t imx134_s_ctrl = {
 	.sensor_i2c_client = &imx134_sensor_i2c_client,
-	.power_setting_array.power_setting = imx134_power_setting,
-	.power_setting_array.size = ARRAY_SIZE(imx134_power_setting),
 	.msm_sensor_mutex = &imx134_mut,
 	.sensor_v4l2_subdev_info = imx134_subdev_info,
 	.sensor_v4l2_subdev_info_size = ARRAY_SIZE(imx134_subdev_info),
