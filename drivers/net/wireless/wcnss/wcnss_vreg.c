@@ -422,6 +422,17 @@ fail:
 
 }
 
+static inline void wcnss_vregs_put(void)
+{
+	int i;
+
+	for (i = (ARRAY_SIZE(iris_vregs_riva)-1); i >= 0; i--)
+		regulator_put(iris_vregs_riva[i].regulator);
+
+	for (i = (ARRAY_SIZE(iris_vregs_pronto)-1); i >= 0; i--)
+		regulator_put(iris_vregs_pronto[i].regulator);
+}
+
 static void wcnss_iris_vregs_off(enum wcnss_hw_type hw_type)
 {
 	switch (hw_type) {
@@ -498,10 +509,18 @@ int wcnss_wlan_power(struct device *dev,
 {
 	int rc = 0;
 	enum wcnss_hw_type hw_type = wcnss_hardware_type();
+	static bool wcnss_power_state;
+
+	if (unlikely(wcnss_power_state && on)) {
+		pr_debug("%s: Already powered up, \
+			 freeing vregs.\n", __func__);
+		wcnss_vregs_put();
+	}
 
 	if (on) {
 		down(&wcnss_power_on_lock);
 		/* RIVA regulator settings */
+		if (!wcnss_power_state)
 		rc = wcnss_core_vregs_on(dev, hw_type);
 		if (rc)
 			goto fail_wcnss_on;
@@ -524,6 +543,7 @@ int wcnss_wlan_power(struct device *dev,
 		wcnss_iris_vregs_off(hw_type);
 		wcnss_core_vregs_off(hw_type);
 	}
+	wcnss_power_state = (on == WCNSS_WLAN_SWITCH_ON ? true : false);
 
 	return rc;
 
