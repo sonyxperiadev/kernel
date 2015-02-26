@@ -665,6 +665,13 @@ static int msm_eeprom_get_dt_data(struct msm_eeprom_ctrl_t *e_ctrl)
 		kfree(gpio_array);
 	}
 
+#ifdef CONFIG_SONY_CAMERA
+	rc = of_property_read_u32(of_node, "somc,cam-mclk-rate",
+		(u32*) &power_info->clk_info[SENSOR_CAM_MCLK].clk_rate);
+	if (rc < 0)
+		pr_warn("%s: can't read cam-mclk-rate, using default.",
+								__func__);
+#endif
 	return rc;
 ERROR4:
 	kfree(gpio_array);
