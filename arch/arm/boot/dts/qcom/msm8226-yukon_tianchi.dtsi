@@ -394,3 +394,7 @@
 &mdss_dsi0 {
 	qcom,dsi-pref-prim-pan = <&dsi_novatek_jdi>;
 };
+
+&mdss_fb0 {
+        qcom,mdss-fb-splash-logo-enabled;
+};

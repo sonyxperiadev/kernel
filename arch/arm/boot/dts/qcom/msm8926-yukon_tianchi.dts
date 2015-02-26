@@ -24,7 +24,3 @@
 	compatible = "somc,tianchi", "qcom,msm8926", "qcom,mtp";
 	qcom,board-id = <8 0>;
 };
-
-&mdss_fb0 {
-	qcom,mdss-fb-splash-logo-enabled;
-};
