@@ -87,6 +87,8 @@
 		qcom,cam-power-seq-val		="sensor_gpio_cam_vddio_v1p8";
 		qcom,cam-power-seq-cfg-val	= <1>;
 		qcom,cam-power-seq-delay	= <20>;
+
+		somc,cam-mclk-rate		= <24000000>;
 		};
 
 	qcom,camera@34 {
