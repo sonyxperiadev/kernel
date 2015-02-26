@@ -259,6 +259,14 @@
 };
 
 &rpm_bus {
+	rpm-regulator-ldoa5 {
+		pm8226_l5: regulator-l5 {
+			regulator-min-microvolt = <1100000>;
+			regulator-max-microvolt = <1100000>;
+			qcom,init-voltage = <1100000>;
+		};
+	};
+
 	rpm-regulator-smpa3 {
 		pm8226_s3: regulator-s3 {
 			regulator-min-microvolt = <1100000>;

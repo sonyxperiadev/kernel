@@ -62,123 +62,6 @@ static struct msm_sensor_power_setting imx188_power_setting[] = {
 	},
 };
 
-static struct msm_sensor_power_setting imx188_seagull_power_setting[] = {
-	{
-		.seq_type = SENSOR_GPIO, /*CAM_VAA_V2P8: GPIO_69 - LOW*/
-		.seq_val = SENSOR_GPIO_CAM_VAA_V2P8,
-		.config_val = GPIO_OUT_LOW,
-		.delay = 0,
-	},
-	{
-		.seq_type = SENSOR_GPIO, /*CAM_VAA_V2P8: GPIO_69 - HIGH*/
-		.seq_val = SENSOR_GPIO_CAM_VAA_V2P8,
-		.config_val = GPIO_OUT_HIGH,
-		.delay = 1,
-	},
-	{
-		.seq_type = SENSOR_VREG, /*VREG_L26*/
-		.seq_val = CAM_VDIG,
-		.config_val = 0,
-		.delay = 1,
-	},
-	{
-		.seq_type = SENSOR_GPIO, /*CAM_VDDIO_V1P8: GPIO_112 - LOW*/
-		.seq_val = SENSOR_GPIO_CAM_VDDIO_V1P8,
-		.config_val = GPIO_OUT_LOW,
-		.delay = 0,
-	},
-	{
-		.seq_type = SENSOR_GPIO, /*CAM_VDDIO_V1P8: GPIO_112 - HIGH*/
-		.seq_val = SENSOR_GPIO_CAM_VDDIO_V1P8,
-		.config_val = GPIO_OUT_HIGH,
-		.delay = 1,
-	},
-	{
-		.seq_type = SENSOR_GPIO, /*CAM_1.1M_RSTN: GPIO_28 - LOW*/
-		.seq_val = SENSOR_GPIO_RESET1,
-		.config_val = GPIO_OUT_LOW,
-		.delay = 0,
-	},
-	{
-		.seq_type = SENSOR_GPIO,  /*CAM_1.1M_RSTN: GPIO_28 - HIGH*/
-		.seq_val = SENSOR_GPIO_RESET1,
-		.config_val = GPIO_OUT_HIGH,
-		.delay = 1,
-	},
-	{
-		.seq_type = SENSOR_CLK,  /*CAM_MCLK*/
-		.seq_val = SENSOR_CAM_MCLK,
-		.config_val = 24000000,
-		.delay = 2,
-	},
-	{
-		.seq_type = SENSOR_I2C_MUX,
-		.seq_val = 0,
-		.config_val = 0,
-		.delay = 0,
-	},
-};
-
-static struct msm_sensor_power_setting imx188_tianchi_power_setting[] = {
-
-	{
-		.seq_type = SENSOR_GPIO,
-		.seq_val = SENSOR_GPIO_STANDBY,
-		.config_val = GPIO_OUT_HIGH,
-		.delay = 1,
-	},
-	{
-		.seq_type = SENSOR_GPIO,
-		.seq_val = SENSOR_GPIO_VIO,
-		.config_val = GPIO_OUT_HIGH,
-		.delay = 1,
-	},
-
-	{
-		.seq_type = SENSOR_VREG,
-		.seq_val = CAM_VIO,
-		.config_val = 0,
-		.delay = 0,
-	},
-	{
-		.seq_type = SENSOR_VREG,
-		.seq_val = CAM_VDIG,
-		.config_val = 0,
-		.delay = 0,
-	},
-	{
-		.seq_type = SENSOR_VREG,
-		.seq_val = CAM_VANA,
-		.config_val = 0,
-		.delay = 0,
-	},
-	{
-		.seq_type = SENSOR_GPIO,
-		.seq_val = SENSOR_GPIO_RESET,
-		.config_val = GPIO_OUT_LOW,
-		.delay = 1,
-	},
-	{
-		.seq_type = SENSOR_GPIO,
-		.seq_val = SENSOR_GPIO_RESET,
-		.config_val = GPIO_OUT_HIGH,
-		.delay = 30,
-	},
-	{
-		.seq_type = SENSOR_CLK,
-		.seq_val = SENSOR_CAM_MCLK,
-		.config_val = 24000000,
-		.delay = 1,
-	},
-	{
-		.seq_type = SENSOR_I2C_MUX,
-		.seq_val = 0,
-		.config_val = 0,
-		.delay = 0,
-	},
-};
-
-
 static struct v4l2_subdev_info imx188_subdev_info[] = {
 	{
 		.code   = V4L2_MBUS_FMT_SRGGB10_1X10,
@@ -255,6 +138,7 @@ static int __init imx188_init_module(void)
 		imx188_s_ctrl.power_setting_array.size =
 					ARRAY_SIZE(imx188_power_setting);
 	}
+
 	rc = platform_driver_probe(&imx188_platform_driver,
 		imx188_platform_probe);
 	if (!rc)
@@ -276,8 +160,6 @@ static void __exit imx188_exit_module(void)
 
 static struct msm_sensor_ctrl_t imx188_s_ctrl = {
 	.sensor_i2c_client = &imx188_sensor_i2c_client,
-	.power_setting_array.power_setting = imx188_power_setting,
-	.power_setting_array.size = ARRAY_SIZE(imx188_power_setting),
 	.msm_sensor_mutex = &imx188_mut,
 	.sensor_v4l2_subdev_info = imx188_subdev_info,
 	.sensor_v4l2_subdev_info_size = ARRAY_SIZE(imx188_subdev_info),
