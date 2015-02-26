@@ -90,7 +90,7 @@
 		};
 
 	qcom,camera@34 {
-		compatible = "qcom,imx134";
+		compatible = "sne,imx134";
 		reg = <0x34>;
 		qcom,slave-id = <0x20 0x0016 0x134>;
 		qcom,csiphy-sd-index = <0>;
