@@ -10,7 +10,11 @@
  * GNU General Public License for more details.
  *
  */
+#include <linux/of.h>
+
 #include "msm_sensor.h"
+#include "sony_imx134_power_settings.h"
+
 #define IMX134_SENSOR_NAME "imx134"
 DEFINE_MSM_MUTEX(imx134_mut);
 
@@ -69,150 +73,6 @@ static struct msm_sensor_power_setting imx134_power_setting[] = {
 		.seq_type = SENSOR_CLK,
 		.seq_val = SENSOR_CAM_MCLK,
 		.config_val = 0,
-		.delay = 1,
-	},
-	{
-		.seq_type = SENSOR_I2C_MUX,
-		.seq_val = 0,
-		.config_val = 0,
-		.delay = 0,
-	},
-};
-
-static struct msm_sensor_power_setting imx134_seagull_power_setting[] = {
-	{
-		.seq_type = SENSOR_GPIO, /*CAM_VAA_V2P8: GPIO_69 - LOW*/
-		.seq_val = SENSOR_GPIO_CAM_VAA_V2P8,
-		.config_val = GPIO_OUT_LOW,
-		.delay = 0,
-	},
-	{
-		.seq_type = SENSOR_GPIO, /*CAM_VAA_V2P8: GPIO_69 - HIGH*/
-		.seq_val = SENSOR_GPIO_CAM_VAA_V2P8,
-		.config_val = GPIO_OUT_HIGH,
-		.delay = 0,
-	},
-	{
-		.seq_type = SENSOR_VREG, /*VREG_L5*/
-		.seq_val = CAM_VDIG,
-		.config_val = 0,
-		.delay = 1,
-	},
-	{
-		.seq_type = SENSOR_GPIO, /*CAM_VDDIO_V1P8: GPIO_112 - LOW*/
-		.seq_val = SENSOR_GPIO_CAM_VDDIO_V1P8,
-		.config_val = GPIO_OUT_LOW,
-		.delay = 0,
-	},
-	{
-		.seq_type = SENSOR_GPIO, /*CAM_VDDIO_V1P8: GPIO_112 - HIGH*/
-		.seq_val = SENSOR_GPIO_CAM_VDDIO_V1P8,
-		.config_val = GPIO_OUT_HIGH,
-		.delay = 1,
-	},
-	{
-		.seq_type = SENSOR_CLK,  /*CAM_MCLK*/
-		.seq_val = SENSOR_CAM_MCLK,
-		.config_val = 24000000,
-		.delay = 2,
-	},
-	{
-		.seq_type = SENSOR_GPIO, /*CAM_8M_RSTN: GPIO_36 - LOW*/
-		.seq_val = SENSOR_GPIO_RESET,
-		.config_val = GPIO_OUT_LOW,
-		.delay = 0,
-	},
-	{
-		.seq_type = SENSOR_GPIO,  /*CAM_8M_RSTN: GPIO_36 - HIGH*/
-		.seq_val = SENSOR_GPIO_RESET,
-		.config_val = GPIO_OUT_HIGH,
-		.delay = 1,
-	},
-	{
-		.seq_type = SENSOR_GPIO, /*CAM_VDDAF_V2P8: GPIO_111 - LOW*/
-		.seq_val = SENSOR_GPIO_CAM_VDDAF_V2P8,
-		.config_val = GPIO_OUT_LOW,
-		.delay = 0,
-	},
-	{
-		.seq_type = SENSOR_GPIO, /*CAM_VDDAF_V2P8: GPIO_111 - HIGH*/
-		.seq_val = SENSOR_GPIO_CAM_VDDAF_V2P8,
-		.config_val = GPIO_OUT_HIGH,
-		.delay = 15,
-	},
-	{
-		.seq_type = SENSOR_I2C_MUX,
-		.seq_val = 0,
-		.config_val = 0,
-		.delay = 0,
-	},
-};
-
-static struct msm_sensor_power_setting imx134_eagle_power_setting[] = {
-	{
-		.seq_type = SENSOR_VREG,
-		.seq_val = CAM_VIO, /*I2C-Pull-Up*/
-		.config_val = 0,
-		.delay = 0,
-	},
-	{
-		.seq_type = SENSOR_VREG,
-		.seq_val = CAM_VDIG,
-		.config_val = 0,
-		.delay = 0,
-	},
-	{
-		.seq_type = SENSOR_VREG,
-		.seq_val = CAM_VANA,
-		.config_val = 0,
-		.delay = 0,
-	},
-	{
-		.seq_type = SENSOR_GPIO,
-		.seq_val = SENSOR_GPIO_VIO, /*VIF*/
-		.config_val = GPIO_OUT_LOW,
-		.delay = 0,
-	},
-	{
-		.seq_type = SENSOR_GPIO,
-		.seq_val = SENSOR_GPIO_VIO, /*VIF*/
-		.config_val = GPIO_OUT_HIGH,
-		.delay = 1,
-	},
-	{
-		.seq_type = SENSOR_CLK,
-		.seq_val = SENSOR_CAM_MCLK,
-		.config_val = 24000000,
-		.delay = 1,
-	},
-	{
-		.seq_type = SENSOR_VREG,
-		.seq_val = CAM_VAF,
-		.config_val = 0,
-		.delay = 0,
-	},
-	{
-		.seq_type = SENSOR_GPIO,
-		.seq_val = SENSOR_GPIO_STANDBY,
-		.config_val = GPIO_OUT_LOW,
-		.delay = 0,
-	},
-	{
-		.seq_type = SENSOR_GPIO,
-		.seq_val = SENSOR_GPIO_STANDBY,
-		.config_val = GPIO_OUT_HIGH,
-		.delay = 0,
-	},
-	{
-		.seq_type = SENSOR_GPIO,
-		.seq_val = SENSOR_GPIO_RESET,
-		.config_val = GPIO_OUT_LOW,
-		.delay = 0,
-	},
-	{
-		.seq_type = SENSOR_GPIO,
-		.seq_val = SENSOR_GPIO_RESET,
-		.config_val = GPIO_OUT_HIGH,
 		.delay = 1,
 	},
 	{
@@ -321,8 +181,6 @@ static void __exit imx134_exit_module(void)
 
 static struct msm_sensor_ctrl_t imx134_s_ctrl = {
 	.sensor_i2c_client = &imx134_sensor_i2c_client,
-	.power_setting_array.power_setting = imx134_power_setting,
-	.power_setting_array.size = ARRAY_SIZE(imx134_power_setting),
 	.msm_sensor_mutex = &imx134_mut,
 	.sensor_v4l2_subdev_info = imx134_subdev_info,
 	.sensor_v4l2_subdev_info_size = ARRAY_SIZE(imx134_subdev_info),
