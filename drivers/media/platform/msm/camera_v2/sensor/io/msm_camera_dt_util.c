@@ -443,12 +443,14 @@ int msm_camera_get_dt_power_setting_data(struct device_node *of_node,
 				ps[i].seq_val = SENSOR_GPIO_STANDBY;
 			else if (!strcmp(seq_name, "sensor_gpio_vdig"))
 				ps[i].seq_val = SENSOR_GPIO_VDIG;
+#ifdef CONFIG_SONY_CAMERA
 			else if (!strcmp(seq_name, "sensor_gpio_cam_vaa_v2p8"))
 				ps[i].seq_val = SENSOR_GPIO_CAM_VAA_V2P8;
 			else if (!strcmp(seq_name, "sensor_gpio_cam_vddio_v1p8"))
 				ps[i].seq_val = SENSOR_GPIO_CAM_VDDIO_V1P8;
 			else if (!strcmp(seq_name, "sensor_gpio_cam_vddaf_v2p8"))
 				ps[i].seq_val = SENSOR_GPIO_CAM_VDDAF_V2P8;
+#endif
 			else
 				rc = -EILSEQ;
 			break;

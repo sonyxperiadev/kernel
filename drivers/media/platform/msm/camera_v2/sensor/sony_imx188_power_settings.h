@@ -16,6 +16,12 @@
 
 #include "msm_sensor.h"
 
+#ifndef CONFIG_SONY_CAMERA
+#define SENSOR_GPIO_CAM_VAA_V2P8        -1
+#define SENSOR_GPIO_CAM_VDDIO_V1P8      -1
+#define SENSOR_GPIO_RESET1		-1
+#endif
+
 static struct msm_sensor_power_setting imx188_tianchi_power_setting[] = {
 	{
 		.seq_type = SENSOR_GPIO,
