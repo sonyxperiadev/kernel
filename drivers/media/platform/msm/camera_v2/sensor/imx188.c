@@ -122,7 +122,7 @@ static int __init imx188_init_module(void)
 {
 	int32_t rc = 0;
 	pr_info("%s:%d\n", __func__, __LINE__);
-	if (of_machine_is_compatible("somc,tianchi")) {
+	if (of_machine_is_compatible("somc,tianchi")||of_machine_is_compatible("somc,tianchi_dsds")) {
 		imx188_s_ctrl.power_setting_array.power_setting =
 					imx188_tianchi_power_setting;
 		imx188_s_ctrl.power_setting_array.size =
