@@ -78,6 +78,8 @@
 		qcom,cam-power-seq-val		= "cam_vio","cam_vdig", "cam_vana","cam_vaf";
 		qcom,cam-power-seq-cfg-val	= <0 0 0 0 >;
 		qcom,cam-power-seq-delay	= <0 0 0 0>;
+
+		somc,cam-mclk-rate = <24000000>;
  
  	};
     qcom,camera@20 {
