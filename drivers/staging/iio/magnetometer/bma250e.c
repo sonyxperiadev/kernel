@@ -884,7 +884,6 @@ static int yas_probe(struct i2c_client *i2c, const struct i2c_device_id *id)
 	int ret, i;
 
 	this_client = i2c;
-	printk("[CCI]%s: yas_bosch_accel_probe start ---\n", __FUNCTION__);
 
 	indio_dev = iio_allocate_device(sizeof(*st));
 	if (!indio_dev) {
@@ -946,7 +945,6 @@ static int yas_probe(struct i2c_client *i2c, const struct i2c_device_id *id)
 		ret = -EFAULT;
 		goto error_driver_term;
 	}
-	printk("[CCI]%s: yas_bosch_accel_probe end ---\n", __FUNCTION__);
 	
 	return 0;
 

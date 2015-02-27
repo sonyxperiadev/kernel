@@ -1753,7 +1753,6 @@ static int __devinit kionix_accel_probe(struct i2c_client *client,
 	    gpio_request(ACCEL_GPIO_INT, KIONIX_ACCEL_IRQ); 
 	    gpio_direction_input(ACCEL_GPIO_INT);
 	}
-	printk("[CCI]%s: kionix_accel_probe start ---\n", __FUNCTION__);
 
 	if (!i2c_check_functionality(client->adapter,
 				I2C_FUNC_I2C | I2C_FUNC_SMBUS_BYTE_DATA)) {
@@ -1928,7 +1927,6 @@ static int __devinit kionix_accel_probe(struct i2c_client *client,
 	INIT_DELAYED_WORK(&acceld->accel_work, kionix_accel_work);
 	init_waitqueue_head(&acceld->wqh_suspend);
 
-	printk("[CCI]%s: kionix_accel_probe irq=%d\n", __FUNCTION__, client->irq);
 
 	if (acceld->accel_drdy) {
 		err = request_threaded_irq(client->irq, NULL, kionix_accel_isr, \
@@ -1964,7 +1962,6 @@ static int __devinit kionix_accel_probe(struct i2c_client *client,
 	register_early_suspend(&acceld->early_suspend);
 #endif /* CONFIG_HAS_EARLYSUSPEND */
 
-	printk("[CCI]%s: kionix_accel_probe end ---\n", __FUNCTION__);
 
 	return 0;
 
@@ -2031,7 +2028,6 @@ static struct i2c_driver kionix_accel_driver = {
 uint8_t g_compass_product_id=0;
 static int __init kionix_accel_init(void)
 {
-    printk("[CCI]kionix_accel_init: compass pid=0x%02x\n", g_compass_product_id);
     if(g_compass_product_id==6)
 	return i2c_add_driver(&kionix_accel_driver);
     else

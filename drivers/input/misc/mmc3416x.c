@@ -454,37 +454,37 @@ printk(KERN_INFO "%s: mag power on start\n", __func__);
 	//get power and set voltage level
 	reg_l19 = regulator_get(&client->dev, "vdd");
 	if (IS_ERR(reg_l19)) {
-		printk("[CCI]%s: Regulator get failed vdd rc=%ld\n", __FUNCTION__, PTR_ERR(reg_l19));
+		printk("%s: Regulator get failed vdd rc=%ld\n", __FUNCTION__, PTR_ERR(reg_l19));
 	}
 	if (regulator_count_voltages(reg_l19) > 0) {
 		error = regulator_set_voltage(reg_l19,  2850000, 2850000);
 		if (error) {
-			printk("[CCI]%s: regulator set_vtg vdd failed rc=%d\n", __FUNCTION__, error);
+			printk("%s: regulator set_vtg vdd failed rc=%d\n", __FUNCTION__, error);
 		}
 	}
 
 	reg_lvs1 = regulator_get(&client->dev,"vddio");
 	if (IS_ERR(reg_lvs1)){
-		printk("[CCI]could not get vddio lvs1, rc = %ld\n", PTR_ERR(reg_lvs1));
+		printk("could not get vddio lvs1, rc = %ld\n", PTR_ERR(reg_lvs1));
 		}
 
 	//enable power
 
 	error = regulator_set_optimum_mode(reg_l19, 100000);
 	if (error < 0) {
-		printk("[CCI]%s: Regulator vdd set_opt failed rc=%d\n", __FUNCTION__, error);
+		printk("%s: Regulator vdd set_opt failed rc=%d\n", __FUNCTION__, error);
 		regulator_put(reg_l19);
 	}
 
 	error = regulator_enable(reg_l19);
 	if (error) {
-		printk("[CCI]%s: Regulator vdd enable failed rc=%d\n", __FUNCTION__, error);
+		printk("%s: Regulator vdd enable failed rc=%d\n", __FUNCTION__, error);
 		regulator_put(reg_l19);
 	}
 
 	error = regulator_enable(reg_lvs1);
 	if (error) {
-		printk("[CCI]%s: enable vddio lvs1 failed, rc=%d\n", __FUNCTION__, error);
+		printk("%s: enable vddio lvs1 failed, rc=%d\n", __FUNCTION__, error);
 		regulator_put(reg_lvs1);
 	}
 
@@ -501,7 +501,6 @@ static int mmc3416x_probe(struct i2c_client *client, const struct i2c_device_id 
 	int res = 0;
 
 	mag_sensor_power_on(client);
-	printk("[CCI]%s: mmc3416x_probe start ---\n", __FUNCTION__);
 
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
 		pr_err("%s: functionality check failed\n", __FUNCTION__);
@@ -582,8 +581,6 @@ static int mmc3416x_probe(struct i2c_client *client, const struct i2c_device_id 
 	}
 
 	mutex_init(&lock);
-
-	printk("[CCI]%s: mmc3416x_probe end ---\n", __FUNCTION__);
 
 	return 0;
 

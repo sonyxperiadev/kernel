@@ -1003,7 +1003,6 @@ static int yas_probe(struct i2c_client *i2c, const struct i2c_device_id *id)
 	int ret, i;
 
 	this_client = i2c;
-	printk("[CCI]%s: yas_kionix_accel_probe start ---\n", __FUNCTION__);
 
 	indio_dev = iio_allocate_device(sizeof(*st));
 	if (!indio_dev) {
@@ -1065,7 +1064,6 @@ static int yas_probe(struct i2c_client *i2c, const struct i2c_device_id *id)
 		ret = -EFAULT;
 		goto error_driver_term;
 	}
-	printk("[CCI]%s: yas_kionix_accel_probe end ---\n", __FUNCTION__);
 	
 	return 0;
 
@@ -1167,8 +1165,8 @@ static int __init yas_initialize(void)
 	return i2c_add_driver(&yas_driver);
 	else
 	{
-		printk("[CCI]yas_initialize: yas_kionix_accel not installed, compass=%d---\n", g_iio_compass_product_id);
-	       return 0;
+		printk("yas_initialize: yas_kionix_accel not installed, compass=%d---\n", g_iio_compass_product_id);
+		return 0;
 	}
 }
 

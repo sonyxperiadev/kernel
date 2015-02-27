@@ -559,7 +559,6 @@ static int yas_set_enable(int enable)
         int gpio = 0;
 
         gpio = gpio_get_value(GEOMAGNETIC_RSTN_GPIO);
-	printk("%s: [CCI]gpio_tlmm_config => pin(%d), GPIO_CFG_OUTPUT, HL=%d, GPIO_CFG_2MA\n", __FUNCTION__, GEOMAGNETIC_RSTN_GPIO, gpio);
 	
 	if (!driver.initialized)
 		return YAS_ERROR_INITIALIZE;
@@ -571,11 +570,11 @@ static int yas_set_enable(int enable)
             {
 	        if(gpio_request(GEOMAGNETIC_RSTN_GPIO,"geomagnetic-rstn") < 0)
 	        {
-		        printk(KERN_ERR "%s: [CCI]gpio_request geomagnetic-rstn", __FUNCTION__);
+		        printk(KERN_ERR "%s: gpio_request geomagnetic-rstn", __FUNCTION__);
 	        }
 	        if(gpio_direction_output(GEOMAGNETIC_RSTN_GPIO, 1) < 0)
 	        {
-		        printk(KERN_ERR "%s: [CCI]gpio_direction_output geomagnetic-rstn", __FUNCTION__);
+		        printk(KERN_ERR "%s: gpio_direction_output geomagnetic-rstn", __FUNCTION__);
 	        }
             }
 		if (driver.cbk.device_open(YAS_TYPE_MAG) < 0)
@@ -1385,37 +1384,37 @@ printk(KERN_INFO "%s: mag power on start\n", __func__);
 	//get power and set voltage level
 	reg_l19 = regulator_get(&client->dev, "vdd");
 	if (IS_ERR(reg_l19)) {
-		printk("[CCI]%s: Regulator get failed vdd rc=%ld\n", __FUNCTION__, PTR_ERR(reg_l19));
+		printk("%s: Regulator get failed vdd rc=%ld\n", __FUNCTION__, PTR_ERR(reg_l19));
 	}
 	if (regulator_count_voltages(reg_l19) > 0) {
 		error = regulator_set_voltage(reg_l19,  2850000, 2850000);
 		if (error) {
-			printk("[CCI]%s: regulator set_vtg vdd failed rc=%d\n", __FUNCTION__, error);
+			printk("%s: regulator set_vtg vdd failed rc=%d\n", __FUNCTION__, error);
 		}
 	}
 
 	reg_lvs1 = regulator_get(&client->dev,"vddio");
 	if (IS_ERR(reg_lvs1)){
-		printk("[CCI]could not get vddio lvs1, rc = %ld\n", PTR_ERR(reg_lvs1));
+		printk("could not get vddio lvs1, rc = %ld\n", PTR_ERR(reg_lvs1));
 		}
 
 	//enable power
 
 	error = regulator_set_optimum_mode(reg_l19, 100000);
 	if (error < 0) {
-		printk("[CCI]%s: Regulator vdd set_opt failed rc=%d\n", __FUNCTION__, error);
+		printk("%s: Regulator vdd set_opt failed rc=%d\n", __FUNCTION__, error);
 		regulator_put(reg_l19);
 	}
 
 	error = regulator_enable(reg_l19);
 	if (error) {
-		printk("[CCI]%s: Regulator vdd enable failed rc=%d\n", __FUNCTION__, error);
+		printk("%s: Regulator vdd enable failed rc=%d\n", __FUNCTION__, error);
 		regulator_put(reg_l19);
 	}
 
 	error = regulator_enable(reg_lvs1);
 	if (error) {
-		printk("[CCI]%s: enable vddio lvs1 failed, rc=%d\n", __FUNCTION__, error);
+		printk("%s: enable vddio lvs1 failed, rc=%d\n", __FUNCTION__, error);
 		regulator_put(reg_lvs1);
 	}
 
@@ -1424,17 +1423,17 @@ printk(KERN_INFO "%s: mag power on end\n", __func__);
 	error = gpio_tlmm_config(GPIO_CFG(GEOMAGNETIC_RSTN_GPIO, 0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
 	if(error < 0)
 	{
-		printk(KERN_ERR "%s: [CCI]gpio_tlmm_config geomagnetic-rstn, err=%d", __FUNCTION__, error);
+		printk(KERN_ERR "%s: gpio_tlmm_config geomagnetic-rstn, err=%d", __FUNCTION__, error);
 	}
 	error = gpio_request(GEOMAGNETIC_RSTN_GPIO,"geomagnetic-rstn");
 	if(error < 0)
 	{
-		printk(KERN_ERR "%s: [CCI]gpio_request geomagnetic-rstn, err=%d", __FUNCTION__, error);
+		printk(KERN_ERR "%s: gpio_request geomagnetic-rstn, err=%d", __FUNCTION__, error);
 	}
 	error = gpio_direction_output(GEOMAGNETIC_RSTN_GPIO, 1);
 	if(error < 0)
 	{
-		printk(KERN_ERR "%s: [CCI]gpio_direction_output geomagnetic-rstn, err=%d", __FUNCTION__, error);
+		printk(KERN_ERR "%s: gpio_direction_output geomagnetic-rstn, err=%d", __FUNCTION__, error);
 	}
 
 	mdelay(3);// delay 3 ms for power ready when issue first I2C command
@@ -1449,7 +1448,6 @@ static int yas_probe(struct i2c_client *i2c, const struct i2c_device_id *id)
 
 	this_client = i2c;
 	mag_sensor_power_on(i2c);
-	printk("[CCI]%s: yas533_probe start ---\n", __FUNCTION__);
 	
 	indio_dev = iio_allocate_device(sizeof(*st));
 	if (!indio_dev) {
@@ -1507,7 +1505,6 @@ static int yas_probe(struct i2c_client *i2c, const struct i2c_device_id *id)
 		ret = -EFAULT;
 		goto error_driver_term;
 	}
-	printk("[CCI]%s: yas533_probe end ---\n", __FUNCTION__);
 	
 	return 0;
 
