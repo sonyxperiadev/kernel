@@ -13,6 +13,10 @@
  */
 
 &soc {
+        ramoops {
+                status = "ok";
+	};
+
 	/* I2C : BLSP8 */
 	i2c@f9964000 {
 		cell-index = <8>;

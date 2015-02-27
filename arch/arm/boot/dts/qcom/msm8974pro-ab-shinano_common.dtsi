@@ -15,7 +15,7 @@
 &soc {
 	ramoops {
 		compatible = "ramoops";
-		status = "ok";
+		status = "disable";
 
 		android,ramoops-buffer-start = <0x7fe00000>;
 		android,ramoops-buffer-size = <0x100000>;
