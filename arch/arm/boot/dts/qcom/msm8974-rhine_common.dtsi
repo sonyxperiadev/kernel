@@ -723,10 +723,6 @@
 	};
 };
 
-&sdhc_1 {
-	qcom,bus-speed-mode = "DDR_1p8v";
-};
-
 &sdhc_2 {
 	qcom,pad-drv-on = <0x4 0x2 0x2>; /* 10mA, 6mA, 6mA */
 	qcom,vdd-current-level = <400000 400000>;
