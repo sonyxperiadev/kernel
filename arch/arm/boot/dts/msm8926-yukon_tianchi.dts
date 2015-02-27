@@ -15,7 +15,7 @@
  */
 
 /dts-v1/;
-/include/ "msm8926.dtsi"
+/include/ "msm8926-v1.dtsi"
 /include/ "msm8226-yukon_tianchi.dtsi"
 
 / {
