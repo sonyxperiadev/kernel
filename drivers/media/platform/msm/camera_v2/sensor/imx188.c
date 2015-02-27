@@ -12,6 +12,8 @@
  *
  */
 #include "msm_sensor.h"
+#include "sony_imx188_power_settings.h"
+
 #define IMX188_SENSOR_NAME "imx188"
 DEFINE_MSM_MUTEX(imx188_mut);
 
