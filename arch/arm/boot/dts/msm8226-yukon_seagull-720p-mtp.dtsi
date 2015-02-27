@@ -396,8 +396,6 @@
 };
 
 &pm8226_chg {
-	status = "ok";
-
 	qcom,vddmax-mv = <4350>;
 	qcom,vddsafe-mv = <4380>;
 	qcom,ibatterm-ma = <100>;
@@ -414,30 +412,6 @@
 	qcom,ibatmax-cool-ma = <900>;
 	qcom,batt-hot-percentage = <25>;
 	qcom,btc-disabled = <1>;
-
-	qcom,chgr@1000 {
-		status = "ok";
-	};
-
-	qcom,buck@1100 {
-		status = "ok";
-	};
-
-	qcom,bat-if@1200 {
-		status = "ok";
-	};
-
-	qcom,usb-chgpth@1300 {
-		status = "ok";
-	};
-
-	qcom,boost@1500 {
-		status = "ok";
-	};
-
-	qcom,chg-misc@1600 {
-		status = "ok";
-	};
 };
 
 &slim_msm {
