@@ -17,18 +17,13 @@
 
 /dts-v1/;
 
-#include "msm8974-v1.dtsi"
-#include "msm8974-mtp.dtsi"
+#include "msm8974-v1-mtp.dts"
 #include "msm8974-rhine_togari_row.dtsi"
 
 / {
 	model = "SoMC Togari ROW";
 	compatible = "somc,togari-row", "qcom,msm8974";
 	qcom,board-id = <8 0>;
-
-	qcom,msm-id = <126 0>,
-		      <185 0>,
-		      <186 0>;
 };
 
 &soc {
@@ -41,8 +36,4 @@
 	i2c@f9928000 {
 		qcom,i2c-src-freq = <19200000>;
 	};
-};
-
-&pm8941_chg {
-	qcom,charging-disabled;
 };

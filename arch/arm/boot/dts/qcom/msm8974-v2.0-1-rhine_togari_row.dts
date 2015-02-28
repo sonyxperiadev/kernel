@@ -17,20 +17,11 @@
 
 /dts-v1/;
 
-#include "msm8974-v2.0-1.dtsi"
-#include "msm8974-mtp.dtsi"
+#include "msm8974-v2.0-1-mtp.dts"
 #include "msm8974-rhine_togari_row.dtsi"
 
 / {
 	model = "SoMC Togari ROW";
 	compatible = "somc,togari-row", "qcom,msm8974";
 	qcom,board-id = <8 0>;
-
-	qcom,msm-id = <126 0x20000>,
-		      <185 0x20000>,
-		      <186 0x20000>;
-};
-
-&pm8941_chg {
-	qcom,bpd-detection = "bpd_thm";
 };
