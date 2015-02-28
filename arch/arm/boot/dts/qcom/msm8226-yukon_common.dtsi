@@ -388,6 +388,26 @@
 	qcom,clamp-soc-max-count = <0>;
 };
 
+&vph_pwr_vreg {
+	status = "ok";
+};
+
+&slim_msm {
+	tapan_codec {
+		qcom,cdc-micbias1-ext-cap;
+
+		/*
+		 * Yukon has external spkrdrv supply. Give a dummy
+		 * supply to make codec driver's happy.
+		 */
+		cdc-vdd-spkdrv-supply = <&vph_pwr_vreg>;
+		qcom,cdc-vdd-spkdrv-voltage = <0 0>;
+		qcom,cdc-vdd-spkdrv-current = <0>;
+
+		qcom,cdc-on-demand-supplies = "cdc-vdd-spkdrv";
+	};
+};
+
 &mdss_mdp {
 	qcom,mdss-pref-prim-intf = "dsi";
 	batfet-supply = <&pm8226_chg_batif>;

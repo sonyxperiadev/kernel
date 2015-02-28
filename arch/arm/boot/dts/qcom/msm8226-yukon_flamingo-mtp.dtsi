@@ -279,12 +279,6 @@
 	qcom,init-voltage = <1800000>;
 };
 
-&slim_msm {
-	tapan_codec {
-		qcom,cdc-micbias1-ext-cap;
-	};
-};
-
 &mdss_dsi0 {
 	qcom,dsi-pref-prim-pan = <&dsi_truly_hx8379c_fwvga_vid>;
 	vdddsi-supply = <&pm8226_lvs1>;
