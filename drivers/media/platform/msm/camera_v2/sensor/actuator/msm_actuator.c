@@ -117,7 +117,11 @@ static void msm_actuator_parse_i2c_params(struct msm_actuator_ctrl_t *a_ctrl,
 					i2c_byte2 = (value & 0xFF00) >> 8;
 				}
 			} else {
+#ifdef CONFIG_MACH_SONY_EAGLE
+				i2c_byte1 = ((value & 0x0300) >> 8) | 0xF4;
+#else
 				i2c_byte1 = (value & 0xFF00) >> 8;
+#endif
 				i2c_byte2 = value & 0xFF;
 			}
 		} else {
