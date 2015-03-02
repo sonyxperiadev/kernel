@@ -28,7 +28,7 @@
 
 static struct dsi_clk_desc dsi_pclk;
 
-static void mdss_dsi_phy_sw_reset(unsigned char *ctrl_base)
+void mdss_dsi_phy_sw_reset(unsigned char *ctrl_base)
 {
 	/* start phy sw reset */
 	MIPI_OUTP(ctrl_base + 0x12c, 0x0001);
@@ -83,7 +83,7 @@ void mdss_dsi_phy_disable(struct mdss_dsi_ctrl_pdata *ctrl)
 	wmb();
 }
 
-static void mdss_dsi_phy_init(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
+void mdss_dsi_phy_init(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 {
 	struct mdss_dsi_phy_ctrl *pd;
 	int i, off, ln, offset;
@@ -931,18 +931,10 @@ static int mdss_dsi_core_power_ctrl(struct mdss_dsi_ctrl_pdata *ctrl,
 		}
 
 		/*
-		 * Phy software reset should not be done for idle screen power
-		 * collapse use-case. Issue a phy software reset only when
-		 * unblanking the panel.
+		 * Phy and controller setup is needed if coming out of idle
+		 * power collapse with clamps enabled.
 		 */
-		if (pdata->panel_info.blank_state == MDSS_PANEL_BLANK_BLANK)
-			mdss_dsi_phy_sw_reset(ctrl->ctrl_base);
-
-		/*
-		 * Phy and controller setup need not be done during bootup
-		 * when continuous splash screen is enabled.
-		 */
-		if (!pdata->panel_info.cont_splash_enabled) {
+		if (ctrl->mmss_clamp) {
 			mdss_dsi_phy_init(ctrl);
 			mdss_dsi_ctrl_setup(ctrl);
 		}
