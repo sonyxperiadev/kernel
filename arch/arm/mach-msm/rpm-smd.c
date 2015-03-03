@@ -1311,16 +1311,12 @@ EXPORT_SYMBOL(msm_rpm_send_message_noirq);
  */
 int msm_rpm_enter_sleep(bool print, const struct cpumask *cpumask)
 {
-	int ret = 0;
-
 	if (standalone)
 		return 0;
 
-	ret = smd_mask_receive_interrupt(msm_rpm_data.ch_info, true, cpumask);
-	if (!ret)
-		msm_rpm_flush_requests(print);
+	msm_rpm_flush_requests(print);
 
-	return ret;
+	return smd_mask_receive_interrupt(msm_rpm_data.ch_info, true, cpumask);
 }
 EXPORT_SYMBOL(msm_rpm_enter_sleep);
 

@@ -1452,7 +1452,9 @@ msmsdcc_data_err(struct msmsdcc_host *host, struct mmc_data *data,
 				data->error = -ETIMEDOUT;
 		}
 		/* In case of DATA CRC/timeout error, execute tuning again */
+#ifndef CONFIG_WIFI_CONTROL_FUNC
 		if (host->tuning_needed && !host->tuning_in_progress)
+#endif
 			host->tuning_done = false;
 
 	} else if (status & MCI_RXOVERRUN) {
@@ -1811,11 +1813,14 @@ static void msmsdcc_do_cmdirq(struct msmsdcc_host *host, uint32_t status)
 		pr_err("%s: CMD%d: Command CRC error\n",
 			mmc_hostname(host->mmc), cmd->opcode);
 		msmsdcc_dump_sdcc_state(host);
+
+#ifndef CONFIG_WIFI_CONTROL_FUNC
 		/* Execute full tuning in case of CRC errors */
 		host->saved_tuning_phase = INVALID_TUNING_PHASE;
 		if (host->tuning_needed)
 			host->tuning_done = false;
 		cmd->error = -EILSEQ;
+#endif
 	}
 
 	if (!cmd->error) {
@@ -4273,7 +4278,9 @@ kfree:
 out:
 	spin_lock_irqsave(&host->lock, flags);
 	host->tuning_in_progress = 0;
+#ifndef CONFIG_WIFI_CONTROL_FUNC
 	if (!rc)
+#endif
 		host->tuning_done = true;
 	spin_unlock_irqrestore(&host->lock, flags);
 exit:
@@ -5795,8 +5802,10 @@ static struct mmc_platform_data *msmsdcc_populate_pdata(struct device *dev)
 	if (of_get_property(np, "qcom,disable-cmd23", NULL))
 		pdata->disable_cmd23 = true;
 #ifdef CONFIG_WIFI_CONTROL_FUNC
-	if (of_get_property(np, "qcom,wifi-control-func", NULL))
+	if (of_get_property(np, "qcom,wifi-control-func", NULL)) {
 		pdata->wifi_control_func = true;
+		pdata->built_in = 1;
+	}
 #endif
 	of_property_read_u32(np, "qcom,dat1-mpm-int",
 					&pdata->mpm_sdiowakeup_int);
@@ -6182,6 +6191,7 @@ msmsdcc_probe(struct platform_device *pdev)
 	if (plat->wifi_control_func) {
 		plat->register_status_notify = wcf_status_register;
 		plat->status = wcf_status;
+		mmc->pm_flags |= MMC_PM_IGNORE_PM_NOTIFY | MMC_PM_KEEP_POWER;
 	}
 #endif
 
@@ -6672,6 +6682,11 @@ msmsdcc_runtime_suspend(struct device *dev)
 		rc = 0;
 		goto out;
 	}
+
+#ifdef CONFIG_WIFI_CONTROL_FUNC
+	host->mmc->pm_flags |= MMC_PM_KEEP_POWER;
+	pr_debug("%s: Enter WIFI suspend\n", __func__);
+#endif
 
 	pr_debug("%s: %s: start\n", mmc_hostname(mmc), __func__);
 	if (mmc) {
