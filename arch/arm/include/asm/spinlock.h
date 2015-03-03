@@ -130,7 +130,6 @@ static inline void arch_spin_lock(arch_spinlock_t *lock)
 			isb();
 		}
 #endif
-#ifndef CONFIG_ARCH_MSM8226
 		__asm__ __volatile__(
 		    "mrc    p15, 7, %0, c15, c0, 5\n"
 		    : "=r" (tmp)
@@ -143,9 +142,9 @@ static inline void arch_spin_lock(arch_spinlock_t *lock)
 		    : "r" (tmp)
 		    : "cc");
 		isb();
-#endif
+
 		wfe();
-#ifndef CONFIG_ARCH_MSM8226
+
 		tmp &= ~(0x1);
 		__asm__ __volatile__(
 		    "mcr   p15, 7, %0, c15, c0, 5\n"
@@ -153,7 +152,7 @@ static inline void arch_spin_lock(arch_spinlock_t *lock)
 		    : "r" (tmp)
 		    : "cc");
 		isb();
-#endif
+
 #ifdef CONFIG_MSM_KRAIT_WFE_FIXUP
 		if (msm_krait_need_wfe_fixup) {
 			tmp |= 0x10000;
