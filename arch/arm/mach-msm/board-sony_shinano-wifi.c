@@ -22,13 +22,18 @@
 
 #include <mach/board-sony_shinano-wifi.h>
 
+#include <../drivers/mmc/host/msm_sdcc.h>
+
 static unsigned int g_wifi_detect;
 static void *sdc_dev;
 void (*sdc_status_cb)(int card_present, void *dev);
+static void *wifi_mmc_host;
 static struct regulator *wifi_batfet;
 static int batfet_ena;
 
 static char *intf_macaddr = NULL;
+
+extern void sdio_ctrl_power(struct mmc_host *card, bool onoff);
 
 #define WIFI_POWER_PMIC_GPIO 18
 #define WIFI_IRQ_GPIO 67
@@ -132,6 +137,7 @@ int wcf_status_register(void (*cb)(int card_present, void *dev), void *dev)
 
 	sdc_status_cb = cb;
 	sdc_dev = dev;
+	wifi_mmc_host = ((struct msmsdcc_host *)dev)->mmc;
 
 	return 0;
 }
@@ -180,6 +186,8 @@ int shinano_wifi_set_power(int on)
 			batfet_ena = 0;
 		}
 	}
+
+	sdio_ctrl_power((struct mmc_host *)wifi_mmc_host, on);
 	return 0;
 }
 
