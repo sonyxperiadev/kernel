@@ -255,11 +255,11 @@ static size_t syslog_partial;
 
 /* index and sequence number of the first record stored in the buffer */
 static u64 log_first_seq;
-static u32 log_first_idx;
+
 
 /* index and sequence number of the next record to store in the buffer */
 static u64 log_next_seq;
-static u32 log_next_idx;
+
 
 /* the next printk record to write to the console */
 static u64 console_seq;
@@ -285,14 +285,26 @@ static char __initdata __log_buf[__LOG_BUF_LEN] __aligned(LOG_ALIGN);
 #else
 static char __log_buf[__LOG_BUF_LEN] __aligned(LOG_ALIGN);
 #endif
+
+
+/* we have to maintain two non-cached indexes. */
+#define LOG_INDEX_SPACE	8
+
 /*
  * In the case of CONFIG_LOGBUF_NONCACHE,
  * we need __log_buf till we can perform
  * dma_alloc_coherent. So this is a valid
  * reference. Thus __refdata.
  * */
-char *log_buf __refdata = __log_buf;
-u32 log_buf_len = __LOG_BUF_LEN;
+char *log_buf __refdata = (char*) &__log_buf[0] + LOG_INDEX_SPACE;
+unsigned int *log_buf_index __refdata = (unsigned int*) &__log_buf[0];
+u32 log_buf_len = __LOG_BUF_LEN - LOG_INDEX_SPACE;
+
+/* let us make it a part of log buffer itself,
+so to bring minimal amount of change.  */
+#define log_first_idx  *log_buf_index
+#define log_next_idx  *(log_buf_index+1)
+
 
 /* cpu currently holding logbuf_lock */
 static volatile unsigned int logbuf_cpu = UINT_MAX;
@@ -3141,6 +3153,8 @@ static int __init non_cached_log_buf(void){
 		}
 		log_buf = v;
 		memcpy(v, __log_buf, log_next_idx);
+		log_buf_index = (unsigned int*) log_buf;
+		log_buf = log_buf + LOG_INDEX_SPACE;
 		printk(KERN_INFO "Switched to non-cached __log_buf\n");
 	} else {
 		v = (void *)__get_free_pages(GFP_KERNEL,
@@ -3152,6 +3166,8 @@ static int __init non_cached_log_buf(void){
 		}
 		log_buf = v;
 		memcpy(v, __log_buf, log_next_idx);
+		log_buf_index = (unsigned int*) log_buf;
+		log_buf = log_buf + LOG_INDEX_SPACE;
 		printk(KERN_INFO "__log_buf cacheable\n");
 	}
 	return 0;
