@@ -92,6 +92,7 @@
 		somc,disp-en-off-post = <200>;
 		somc,pw-off-rst-seq = <0 5>;
 		somc,pw-down-period = <100>;
+		somc,needs-complete-init;
 
 		somc,mdss-dsi-pre-uv-command = [23 01 00 00 00 00 02 B0 04];
 		somc,mdss-dsi-uv-command = [06 01 00 00 00 00 01 DA
@@ -442,6 +443,7 @@
 		somc,disp-en-off-post = <200>;
 		somc,pw-off-rst-seq = <0 5>;
 		somc,pw-down-period = <100>;
+		somc,needs-complete-init;
 
 		somc,mdss-dsi-pre-uv-command = [23 01 00 00 00 00 02 B0 04];
 		somc,mdss-dsi-uv-command = [06 01 00 00 00 00 01 DA
@@ -776,6 +778,7 @@
 		somc,disp-en-off-post = <200>;
 		somc,pw-off-rst-seq = <0 0>;
 		somc,pw-down-period = <100>;
+		somc,needs-complete-init;
 
 		somc,mdss-dsi-pre-uv-command = [23 01 00 00 00 00 02 B0 04];
 		somc,mdss-dsi-uv-command = [06 01 00 00 00 00 01 DA
@@ -1108,6 +1111,7 @@
 		somc,pw-on-rst-seq = <1 15>;
 		somc,pw-off-rst-seq = <0 0>;
 		somc,pw-down-period = <100>;
+		somc,needs-complete-init;
 
 		somc,mdss-dsi-pre-uv-command = [23 01 00 00 00 00 02 B0 04];
 		somc,mdss-dsi-uv-command = [06 01 00 00 00 00 01 DA
@@ -1364,10 +1368,10 @@
 		somc,te-c-payload-num = <1>;
 	};
 
-	dsi_novatek_auo_1080_cmd: somc,novatek_auo_1080p_cmd_panel {
-		qcom,mdss-dsi-panel-name = "auo novatek 1080p cmd";
+	dsi_novatek_auo_1080_vid: somc,novatek_auo_1080p_video_panel {
+		qcom,mdss-dsi-panel-name = "auo novatek 1080p vid";
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
-		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
+		qcom,mdss-dsi-panel-type = "dsi_video_mode";
 		qcom,mdss-dsi-panel-destination = "display_1";
 		qcom,mdss-dsi-panel-framerate = <60>;
 		qcom,mdss-dsi-virtual-channel-id = <0>;
@@ -1411,7 +1415,7 @@
 		qcom,mdss-dsi-off-command = [15 01 00 00 00 00 02 FF 10
 				05 01 00 00 00 00 01 28
 				05 01 00 00 64 00 01 10];
-		qcom,mdss-dsi-on-command-state = "dsi_hs_mode";
+		qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
 		qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
 
 		qcom,mdss-dsi-h-sync-pulse = <1>;
@@ -1422,12 +1426,6 @@
 		qcom,mdss-dsi-lane-1-state;
 		qcom,mdss-dsi-lane-2-state;
 		qcom,mdss-dsi-lane-3-state;
-		qcom,mdss-dsi-te-pin-select = <1>;
-		qcom,mdss-dsi-wr-mem-start = <0x2c>;
-		qcom,mdss-dsi-wr-mem-continue = <0x3c>;
-		qcom,mdss-dsi-te-dcs-command = <1>;
-		qcom,mdss-dsi-te-check-enable;
-		qcom,mdss-dsi-te-using-te-pin;
 		qcom,mdss-dsi-panel-timings = [E6 38 26 00 68 6E 2A 3C 2C 03 04 00];
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-t-clk-post = <0x21>;
@@ -1452,8 +1450,8 @@
 				00 c2 ef 00 00 00 00 01 ff
 				00 c2 ef 00 00 00 00 01 ff
 				00 02 45 00 00 00 00 01 97];
-		somc,mdss-dsi-disp-on-in-hs = <0>;
-		somc,mdss-dsi-wait-time-before-on-cmd = <100>;
+		somc,mdss-dsi-disp-on-in-hs = <1>;
+		somc,mdss-dsi-wait-time-before-on-cmd = <150>;
 		somc,lcd-id = <1>;
 		somc,lcd-id-adc = <1236000 1395000>;
 		somc,disp-en-on-post = <20>;
@@ -1461,6 +1459,7 @@
 		somc,disp-en-off-post = <70>;
 		somc,pw-off-rst-seq = <0 0>;
 		somc,pw-down-period = <100>;
+		somc,needs-complete-init;
 
 		somc,mdss-dsi-pre-uv-command = [23 01 00 00 00 00 02 B0 04];
 		somc,mdss-dsi-uv-command = [06 01 00 00 00 00 01 DA
@@ -1693,28 +1692,6 @@
 			0x00 0xDF 0x04 0x07 0x00 0x03 0x8000 0x5a00 0x5200
 			0x00 0xE0 0x00 0x03 0x00 0x03 0x8000 0x5400 0x4d00
 			0xFF 0x00 0x00 0x3B 0x00 0x3B 0x8000 0x8000 0x8000>;
-
-		somc,chenge-fps-command = [15 01 00 00 00 00 02 FF 24
-				15 01 00 00 00 00 02 92 92
-				15 01 00 00 00 00 02 FF 10
-				39 01 00 00 00 00 03 44 03 00];
-		somc,chenge-fps-default = <0x92>;
-		somc,display-clock = <17330000>;
-		somc,driver-ic-vbp = <48>;
-		somc,driver-ic-vfp = <6>;
-		somc,chenge-fps-cmds-num = <1>;
-		somc,chenge-fps-payload-num = <1>;
-
-		somc,chenge-wait-update = <0>;
-		somc,chenge-wait-on = <0 0>;
-		somc,chenge-wait-off = <0 0>;
-		somc,chenge-wait-cmds-num = <0 0>;
-		somc,fps-threshold = <47400>;
-		somc,te-c-update = <1>;
-		somc,te-c-mode-60fps = <0x03 0x00>;
-		somc,te-c-mode-45fps = <0x04 0xFF>;
-		somc,te-c-cmds-num = <3>;
-		somc,te-c-payload-num = <1>;
 	};
 
 	dsi_default_gpio_0: somc,default_panel_0 {

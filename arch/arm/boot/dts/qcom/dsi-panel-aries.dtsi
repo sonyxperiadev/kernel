@@ -12,8 +12,8 @@
  */
 
 &mdss_mdp {
-	dsi_novatek_jdi_720_cmd: somc,novatek_jdi_720p_cmd_panel {
-		qcom,mdss-dsi-panel-name = "jdi novatek 720p cmd";
+	dsi_novatek_jdi_720_vid: somc,novatek_jdi_720p_video_panel {
+		qcom,mdss-dsi-panel-name = "jdi novatek 720p vid";
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
 		qcom,mdss-dsi-panel-type = "dsi_video_mode";
 		qcom,mdss-dsi-panel-destination = "display_1";
@@ -335,20 +335,10 @@
 			0x00 0xDF 0x04 0x07 0x00 0x03 0x8000 0x5a00 0x5200
 			0x00 0xE0 0x00 0x03 0x00 0x03 0x8000 0x5400 0x4d00
 			0xFF 0x00 0x00 0x3B 0x00 0x3B 0x8000 0x8000 0x8000>;
-
-		somc,chenge-fps-command = [15 01 00 00 00 00 02 FF 05
-				15 01 00 00 00 00 02 02 8E
-				15 01 00 00 00 00 02 FF 00];
-		somc,chenge-fps-default = <0x8E>;
-		somc,display-clock = <11000000>;
-		somc,driver-ic-vbp = <2>;
-		somc,driver-ic-vfp = <6>;
-		somc,chenge-fps-cmds-num = <1>;
-		somc,chenge-fps-payload-num = <1>;
 	};
 
-	dsi_novatek_sharp_720_cmd: somc,novatek_sharp_720p_cmd_panel {
-		qcom,mdss-dsi-panel-name = "sharp novatek 720p cmd";
+	dsi_novatek_sharp_720_vid: somc,novatek_sharp_720p_video_panel {
+		qcom,mdss-dsi-panel-name = "sharp novatek 720p vid";
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
 		qcom,mdss-dsi-panel-type = "dsi_video_mode";
 		qcom,mdss-dsi-panel-destination = "display_1";
@@ -677,20 +667,10 @@
 			0x00 0xDF 0x04 0x07 0x00 0x03 0x8000 0x5a00 0x5200
 			0x00 0xE0 0x00 0x03 0x00 0x03 0x8000 0x5400 0x4d00
 			0xFF 0x00 0x00 0x3B 0x00 0x3B 0x8000 0x8000 0x8000>;
-
-		somc,chenge-fps-command = [15 01 00 00 00 00 02 FF 05
-				15 01 00 00 00 00 02 02 8E
-				15 01 00 00 00 00 02 FF 00];
-		somc,chenge-fps-default = <0x8E>;
-		somc,display-clock = <11000000>;
-		somc,driver-ic-vbp = <2>;
-		somc,driver-ic-vfp = <6>;
-		somc,chenge-fps-cmds-num = <1>;
-		somc,chenge-fps-payload-num = <1>;
 	};
 
 	dsi_default_gpio_0: somc,novatek_default_panel_0 {
-		qcom,mdss-dsi-panel-name = "default novatek 720p cmd 0";
+		qcom,mdss-dsi-panel-name = "default novatek 720p vid 0";
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
 		qcom,mdss-dsi-panel-type = "dsi_video_mode";
 		qcom,mdss-dsi-panel-destination = "display_1";
@@ -780,20 +760,10 @@
 		somc,pw-off-rst-b-seq = <0 10>;
 		somc,pw-down-period = <200>;
 		somc,needs-complete-init;
-
-		somc,chenge-fps-command = [15 01 00 00 00 00 02 FF 05
-				15 01 00 00 00 00 02 02 8E
-				15 01 00 00 00 00 02 FF 00];
-		somc,chenge-fps-default = <0x8E>;
-		somc,display-clock = <11000000>;
-		somc,driver-ic-vbp = <2>;
-		somc,driver-ic-vfp = <6>;
-		somc,chenge-fps-cmds-num = <1>;
-		somc,chenge-fps-payload-num = <1>;
 	};
 
 	dsi_default_gpio_1: somc,novatek_default_panel_1 {
-		qcom,mdss-dsi-panel-name = "default novatek 720p cmd 1";
+		qcom,mdss-dsi-panel-name = "default novatek 720p vid 1";
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
 		qcom,mdss-dsi-panel-type = "dsi_video_mode";
 		qcom,mdss-dsi-panel-destination = "display_1";
@@ -883,15 +853,5 @@
 		somc,pw-off-rst-b-seq = <0 10>;
 		somc,pw-down-period = <200>;
 		somc,needs-complete-init;
-
-		somc,chenge-fps-command = [15 01 00 00 00 00 02 FF 05
-				15 01 00 00 00 00 02 02 8E
-				15 01 00 00 00 00 02 FF 00];
-		somc,chenge-fps-default = <0x8E>;
-		somc,display-clock = <11000000>;
-		somc,driver-ic-vbp = <2>;
-		somc,driver-ic-vfp = <6>;
-		somc,chenge-fps-cmds-num = <1>;
-		somc,chenge-fps-payload-num = <1>;
 	};
 };
