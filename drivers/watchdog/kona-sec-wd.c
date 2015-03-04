@@ -95,6 +95,16 @@ static void sec_wd_pat(struct work_struct *work)
 	}
 }
 
+void sec_wd_touch(void)
+{
+	struct sec_wd_core_st *swdc = &sec_wd_core;	
+	if (swdc->is_sec_wd_on == SEC_WD_ENABLE) {
+		printk(KERN_ALERT "____touch the secure watchdog <prolonged path>___\n");
+		secure_api_call(SSAPI_PAT_SEC_WATCHDOG, 0, 0, 0, 0);
+	}
+}
+EXPORT_SYMBOL(sec_wd_touch);
+
 static void init_patter(void)
 {
 	struct sec_wd_core_st *swdc = &sec_wd_core;
