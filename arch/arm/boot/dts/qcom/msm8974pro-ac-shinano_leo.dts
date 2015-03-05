@@ -20,7 +20,6 @@
 #include "msm8974pro-ac-pm8941.dtsi"
 #include "msm8974-mtp.dtsi"
 #include "msm8974pro-ac-shinano_common.dtsi"
-#include "msm8974pro-ac-shinano_leo_common.dtsi"
 #include "msm8974pro-ac-shinano_leo.dtsi"
 #include "dsi-panel-leo.dtsi"
 

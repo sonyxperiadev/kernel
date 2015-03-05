@@ -15,23 +15,6 @@
  */
 
 &soc {
-	/* I2C : BLSP6 */
-	i2c@f9928000 {
-		nfc@28 {
-			compatible = "nxp,pn547";
-			reg = <0x28>;
-			interrupt-parent = <&msmgpio>;
-			interrupts = <24 0x1>;
-			nxp,pvdd_en = <&pm8941_gpios 34 0x01>;
-			nxp,irq_gpio = <&msmgpio 24 0x00>;
-			nxp,dwld_en = <&msmgpio 57 0x00>;
-			nxp,ven = <&pm8941_mpps 2 0x01>;
-			dynamic_config;
-			configure_gpio = <&pm8941_gpios 33 0x00>;
-			configure_mpp = <&pm8941_mpps 2 0x00>;
-		};
-	};
-
 	/* I2C : BLSP11 */
 	i2c@f9967000 {
 		ad7146@2f {
@@ -98,12 +81,6 @@
 &sdcc2 {
 	qcom,bus-speed-mode = "SDR12", "SDR25", "SDR50", "DDR50";
 	qcom,current-limit = <400>;
-	qcom,pad-drv-on = <0x7 0x2 0x2>; /* 16mA, 6mA, 6mA */
-};
-
-&sdhc_2 {
-	qcom,vdd-current-level = <400000 400000>;
-	qcom,pad-drv-on = <0x7 0x2 0x2>; /* 16mA, 6mA, 6mA */
 };
 
 &spmi_bus {

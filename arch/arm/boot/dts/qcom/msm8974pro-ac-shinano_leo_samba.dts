@@ -20,8 +20,7 @@
 #include "msm8974pro-ac-pm8941.dtsi"
 #include "msm8974-mtp.dtsi"
 #include "msm8974pro-ac-shinano_common.dtsi"
-#include "msm8974pro-ac-shinano_leo_common.dtsi"
-#include "msm8974pro-ac-shinano_leo_samba.dtsi"
+#include "msm8974pro-ac-shinano_leo.dtsi"
 #include "dsi-panel-leo.dtsi"
 
 / {
@@ -38,4 +37,16 @@
 		      <218 0x10000>;
 	somc,space-no = "1280-4897",
 			"1284-1688";
+};
+
+&soc {
+	oneseg_tuner: vj190 {
+		compatible = "sony,vj190";
+		interrupt-parent = <&msmgpio>;
+		interrupts = <68 0>;
+		gpios =
+			<&msmgpio 14 0>, /* TUNER_POWER */
+			<&msmgpio 13 0>, /* TUNER_RESET */
+			<&msmgpio 68 0>; /* TUNER_INT */
+	};
 };
