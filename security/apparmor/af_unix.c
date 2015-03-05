@@ -31,32 +31,31 @@ static inline int unix_fs_perm(int op, u32 mask, struct aa_label *label,
 	if (unconfined(label) || !LABEL_MEDIATES(label, AA_CLASS_FILE))
 		return 0;
 
+	mask &= NET_FS_PERMS;
 	if (!u->path.dentry) {
 		struct path_cond cond = { };
 		struct file_perms perms = { };
 		struct aa_profile *profile;
 
-		/* socket path has been cleared because it is being shutdown */
-		/* TODO: fix flags */
-		if (!(flags & PATH_MEDIATE_DELETED))
-			return -EACCES;
-		/* Mediate at original socket location */
-		/* TODO: ns disconnected paths */
-		/* TODO: after switch to newer audit provide deleted/shutdown
-		 *       message as part of audit info
+		/* socket path has been cleared because it is being shutdown
+		 * can only fall back to original sun_path request
 		 */
 		return fn_for_each_confined(label, profile,
+			((flags | profile->path_flags) & PATH_MEDIATE_DELETED) ?
 				__aa_path_perm(op, profile,
-					       u->addr->name->sun_path,
-					       mask, &cond, flags, &perms));
+					       u->addr->name->sun_path, mask,
+					       &cond, flags, &perms) :
+				aa_audit_file(profile, &nullperms, op, mask,
+					      u->addr->name->sun_path, NULL,
+					      cond.uid, "Failed name lookup - "
+					      "deleted entry", -EACCES));
 	} else {
 		/* the sunpath may not be valid for this ns so use the path */
 		struct path_cond cond = { u->path.dentry->d_inode->i_uid,
 					  u->path.dentry->d_inode->i_mode
 		};
 
-		return aa_path_perm(op, label, &u->path, flags, mask & NET_FS_PERMS,
-				    &cond);
+		return aa_path_perm(op, label, &u->path, flags, mask, &cond);
 	}
 
 	return 0;
