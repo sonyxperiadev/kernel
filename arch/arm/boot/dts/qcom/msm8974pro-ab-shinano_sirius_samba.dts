@@ -20,8 +20,7 @@
 #include "msm8974pro-ab-pm8941.dtsi"
 #include "msm8974-mtp.dtsi"
 #include "msm8974pro-ab-shinano_common.dtsi"
-#include "msm8974pro-ab-shinano_sirius_common.dtsi"
-#include "msm8974pro-ab-shinano_sirius_samba.dtsi"
+#include "msm8974pro-ab-shinano_sirius.dtsi"
 #include "dsi-panel-sirius.dtsi"
 
 / {
@@ -30,4 +29,32 @@
         qcom,board-id = <8 1>;
 	somc,space-no = "1278-9584",
 			"1278-9462";
+};
+
+
+&soc {
+	oneseg_tuner: vj180 {
+		compatible = "sony,vj180";
+		gpios = <&msmgpio 14 0>, /* TUNER_POWER */
+			<&msmgpio 13 0>; /* TUNER_RESET */
+	};
+};
+
+&spmi_bus {
+	qcom,pm8941@1 {
+		qcom,leds@d800 {
+			qcom,wled_0 {
+				qcom,full-scale-seg@0 {
+					threshold = <1023>;
+					curr = <5>;
+					coef = <4>;
+				};
+				qcom,full-scale-seg@1 {
+					threshold = <2047>;
+					curr = <10>;
+					coef = <2>;
+				};
+			};
+		};
+	};
 };
