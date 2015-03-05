@@ -3849,6 +3849,7 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 	int scan_assoc_time = DHD_SCAN_ASSOC_ACTIVE_TIME;
 	int scan_unassoc_time = DHD_SCAN_UNASSOC_ACTIVE_TIME;
 	int scan_passive_time = DHD_SCAN_PASSIVE_TIME;
+	uint forced_band = WLC_BAND_2G;
 	char buf[WLC_IOCTL_SMLEN];
 	char *ptr;
 	uint32 listen_interval = CUSTOM_LISTEN_INTERVAL; /* Default Listen Interval in Beacons */
@@ -4310,7 +4311,8 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 		sizeof(scan_unassoc_time), TRUE, 0);
 	dhd_wl_ioctl_cmd(dhd, WLC_SET_SCAN_PASSIVE_TIME, (char *)&scan_passive_time,
 		sizeof(scan_passive_time), TRUE, 0);
-
+    dhd_wl_ioctl_cmd(dhd, WLC_SET_BAND, (char *)& forced_band,
+                                        sizeof(forced_band), TRUE, 0);
 #ifdef ARP_OFFLOAD_SUPPORT
 	/* Set and enable ARP offload feature for STA only  */
 #if defined(SOFTAP)
