@@ -2715,7 +2715,7 @@
 			qcom,smdpkt-dev-name = "smd_sns_adsp";
 		};
 
-		qcom,smdpkt-cxm-qmi-port-8064 {
+		smdpkt_cxm_wcnss: qcom,smdpkt-cxm-qmi-port-8064 {
 			qcom,smdpkt-remote = "wcnss";
 			qcom,smdpkt-port-name = "CXM_QMI_PORT_8064";
 			qcom,smdpkt-dev-name = "smd_cxm_qmi";
