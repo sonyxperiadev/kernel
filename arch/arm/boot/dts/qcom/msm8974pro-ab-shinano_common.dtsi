@@ -1247,3 +1247,5 @@
 /delete-node/ &smdtty_apps_riva_ant_cmd;
 /delete-node/ &smdtty_apps_riva_ant_data;
 /delete-node/ &smdtty_apps_riva_bt_acl;
+/delete-node/ &smdpkt_cxm_wcnss;
+/delete-node/ &ipc_router_wcnss_xprt;
