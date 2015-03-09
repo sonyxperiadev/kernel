@@ -294,6 +294,7 @@ struct mdss_panel_specific_pdata {
 	struct dsi_panel_cmds pre_uv_read_cmds;
 	struct dsi_panel_cmds uv_read_cmds;
 	struct mdss_pcc_data pcc_data;
+	struct mdp_pa_cfg picadj_data;
 
 	struct mdss_panel_power_seq on_seq;
 	struct mdss_panel_power_seq off_seq;
