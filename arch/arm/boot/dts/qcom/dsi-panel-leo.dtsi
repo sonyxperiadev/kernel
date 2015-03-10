@@ -92,7 +92,6 @@
 		somc,disp-en-off-post = <200>;
 		somc,pw-off-rst-seq = <0 5>;
 		somc,pw-down-period = <100>;
-		somc,needs-complete-init;
 
 		somc,mdss-dsi-pre-uv-command = [23 01 00 00 00 00 02 B0 04];
 		somc,mdss-dsi-uv-command = [06 01 00 00 00 00 01 DA
@@ -443,7 +442,6 @@
 		somc,disp-en-off-post = <200>;
 		somc,pw-off-rst-seq = <0 5>;
 		somc,pw-down-period = <100>;
-		somc,needs-complete-init;
 
 		somc,mdss-dsi-pre-uv-command = [23 01 00 00 00 00 02 B0 04];
 		somc,mdss-dsi-uv-command = [06 01 00 00 00 00 01 DA
@@ -778,7 +776,6 @@
 		somc,disp-en-off-post = <200>;
 		somc,pw-off-rst-seq = <0 0>;
 		somc,pw-down-period = <100>;
-		somc,needs-complete-init;
 
 		somc,mdss-dsi-pre-uv-command = [23 01 00 00 00 00 02 B0 04];
 		somc,mdss-dsi-uv-command = [06 01 00 00 00 00 01 DA
@@ -1111,7 +1108,6 @@
 		somc,pw-on-rst-seq = <1 15>;
 		somc,pw-off-rst-seq = <0 0>;
 		somc,pw-down-period = <100>;
-		somc,needs-complete-init;
 
 		somc,mdss-dsi-pre-uv-command = [23 01 00 00 00 00 02 B0 04];
 		somc,mdss-dsi-uv-command = [06 01 00 00 00 00 01 DA
@@ -1459,7 +1455,6 @@
 		somc,disp-en-off-post = <70>;
 		somc,pw-off-rst-seq = <0 0>;
 		somc,pw-down-period = <100>;
-		somc,needs-complete-init;
 
 		somc,mdss-dsi-pre-uv-command = [23 01 00 00 00 00 02 B0 04];
 		somc,mdss-dsi-uv-command = [06 01 00 00 00 00 01 DA
