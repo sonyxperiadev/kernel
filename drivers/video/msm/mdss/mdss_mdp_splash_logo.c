@@ -19,7 +19,10 @@
 #include <linux/memblock.h>
 #include <linux/bootmem.h>
 #include <linux/iommu.h>
+#include <linux/of_address.h>
 #include <linux/fb.h>
+#include <linux/mm.h>
+#include <asm/page.h>
 
 #include "mdss_fb.h"
 #include "mdss_mdp.h"
@@ -188,6 +191,22 @@ void mdss_mdp_release_splash_pipe(struct msm_fb_data_type *mfd)
 	sinfo->splash_pipe_allocated = false;
 }
 
+/*
+ * In order to free reseved memory from bootup we are not
+ * able to call the __init free functions, as we could be
+ * passed the init boot sequence. As a reult we need to
+ * free this memory ourselves using the
+ * free_reeserved_page() function.
+ */
+void mdss_free_bootmem(u32 mem_addr, u32 size)
+{
+	unsigned long pfn_start, pfn_end, pfn_idx;
+	pfn_start = mem_addr >> PAGE_SHIFT;
+	pfn_end = (mem_addr + size) >> PAGE_SHIFT;
+	for (pfn_idx = pfn_start; pfn_idx < pfn_end; pfn_idx++)
+		free_reserved_page(pfn_to_page(pfn_idx));
+}
+
 int mdss_mdp_splash_cleanup(struct msm_fb_data_type *mfd,
 					bool use_borderfill)
 {
@@ -242,8 +261,8 @@ int mdss_mdp_splash_cleanup(struct msm_fb_data_type *mfd,
 		/* Give back the reserved memory to the system */
 		memblock_free(mdp5_data->splash_mem_addr,
 					mdp5_data->splash_mem_size);
-		free_bootmem_late(mdp5_data->splash_mem_addr,
-				 mdp5_data->splash_mem_size);
+		mdss_free_bootmem(mdp5_data->splash_mem_addr,
+					mdp5_data->splash_mem_size);
 	}
 
 	mdss_mdp_footswitch_ctrl_splash(0);
@@ -543,25 +562,51 @@ static __ref int mdss_mdp_splash_parse_dt(struct msm_fb_data_type *mfd)
 	struct mdss_overlay_private *mdp5_mdata = mfd_to_mdp5_data(mfd);
 	int len = 0, rc = 0;
 	u32 offsets[2];
+	struct device_node *pnode, *child_node;
 
 	mfd->splash_info.splash_logo_enabled =
 				of_property_read_bool(pdev->dev.of_node,
 				"qcom,mdss-fb-splash-logo-enabled");
 
 	of_find_property(pdev->dev.of_node, "qcom,memblock-reserve", &len);
-	if (len < 1) {
-		pr_debug("mem reservation for splash screen fb not present\n");
-		rc = -EINVAL;
-		goto error;
-	}
+	if (len) {
+		len = len / sizeof(u32);
 
-	len = len / sizeof(u32);
-
-	rc = of_property_read_u32_array(pdev->dev.of_node,
+		rc = of_property_read_u32_array(pdev->dev.of_node,
 			"qcom,memblock-reserve", offsets, len);
-	if (rc) {
-		pr_debug("error reading mem reserve settings for fb\n");
-		goto error;
+		if (rc) {
+			pr_err("error reading mem reserve settings for fb\n");
+			goto error;
+		}
+	} else {
+		child_node = of_get_child_by_name(pdev->dev.of_node,
+					"qcom,cont-splash-memory");
+		if (!child_node) {
+			pr_err("splash mem child node is not present\n");
+			rc = -EINVAL;
+			goto error;
+		}
+
+		pnode = of_parse_phandle(child_node, "linux,contiguous-region",
+					0);
+		if (pnode != NULL) {
+			const u32 *addr;
+			u64 size;
+			addr = of_get_address(pnode, 0, &size, NULL);
+			if (!addr) {
+				pr_err("failed to parse the splash memory address\n");
+				of_node_put(pnode);
+				rc = -EINVAL;
+				goto error;
+			}
+			offsets[0] = (u32) of_read_ulong(addr, 2);
+			offsets[1] = (u32) size;
+			of_node_put(pnode);
+		} else {
+			pr_err("mem reservation for splash screen fb not present\n");
+			rc = -EINVAL;
+			goto error;
+		}
 	}
 
 	if (!memblock_is_reserved(offsets[0])) {
@@ -581,8 +626,8 @@ error:
 		pr_debug("mem reservation not reqd if cont splash disabled\n");
 		memblock_free(mdp5_mdata->splash_mem_addr,
 					mdp5_mdata->splash_mem_size);
-		free_bootmem_late(mdp5_mdata->splash_mem_addr,
-				 mdp5_mdata->splash_mem_size);
+		mdss_free_bootmem(mdp5_mdata->splash_mem_addr,
+					mdp5_mdata->splash_mem_size);
 	} else if (rc && mfd->panel_info->cont_splash_enabled) {
 		pr_err("no rsvd mem found in DT for splash screen\n");
 	} else {
