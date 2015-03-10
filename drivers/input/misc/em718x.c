@@ -1364,8 +1364,7 @@ static void em718x_step_counter_sync_locked(struct em718x *em718x)
 			dev_dbg(dev, "Skip it\n");
 			break;
 		}
-		ev.time =  ktime_to_ns(ktime_get()) -
-				ktime_to_ns(ktime_get_monotonic_offset());
+		ev.time =  ktime_to_ns(ktime_get());
 		ev.type = SENSOR_TYPE_STEP;
 		ev.d[0] = val;
 		em718x_queue_event(em718x, &em718x->ev_device, &ev);
@@ -1404,8 +1403,7 @@ static irqreturn_t em718x_irq_handler(int irq, void *handle)
 
 	mutex_lock(&em718x->lock);
 
-	em718x->irq_time = ktime_to_ns(ktime_get()) -
-			ktime_to_ns(ktime_get_monotonic_offset());
+	em718x->irq_time = ktime_to_ns(ktime_get());
 
 	rc = smbus_read_byte_block(em718x->client, R8_EV_STATUS,
 			(u8 *)&status, sizeof(status));
