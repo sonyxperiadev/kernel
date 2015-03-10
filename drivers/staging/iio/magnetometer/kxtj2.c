@@ -104,8 +104,6 @@
 #define YAS_DATA_CTRL_0HZ                                                 (0x08)
 #define YAS_XOUT_L                                                        (0x06)
 
-#define YAS_SELF_TEST                                                 (0x3a)
-
 struct yas_odr {
 	int delay;
 	uint8_t odr;
@@ -165,7 +163,6 @@ static int yas_get_enable(void);
 static int yas_set_enable(int enable);
 static int yas_get_position(void);
 static int yas_set_position(int position);
-static int yas_self_test(void);
 static int yas_measure(struct yas_data *raw, int num);
 static int yas_ext(int32_t cmd, void *result);
 
@@ -358,28 +355,6 @@ yas_set_position(int position)
 	return YAS_NO_ERROR;
 }
 
-/*When 0xCA is written to this register, the MEMS self-test function is enabled.  
-Writing 0x00 to this register will return the accelerometer to normal operation.*/
-static int
-yas_self_test(void)
-{
-	int err=0;
-	if (!module.initialized)
-		return YAS_ERROR_INITIALIZE;
-
-	//if(acceld->accel_drdy == 0) 
-        err = yas_write_reg(YAS_SELF_TEST, 0xca);
-
-	if (err < 0) return err;
-	
-	module.cbk.usleep(100000);
-
-	err = yas_write_reg(YAS_SELF_TEST,0);
-	if (err < 0) return err;	
-
-	return YAS_NO_ERROR;
-}
-
 #define KIONIX_AUTO_CAL
 #ifdef KIONIX_AUTO_CAL
 #define Sensitivity_def	1024	//	
@@ -502,7 +477,6 @@ yas_acc_driver_init(struct yas_acc_driver *f)
 	f->set_enable = yas_set_enable;
 	f->get_position = yas_get_position;
 	f->set_position = yas_set_position;
-	f->self_test = yas_self_test;
 	f->measure = yas_measure;
 	f->ext = yas_ext;
 	module.cbk = f->callback;
@@ -810,36 +784,6 @@ static ssize_t yas_sampling_frequency_store(struct device *dev,
 	return count;
 }
 
-static ssize_t yas_ping(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{
-
-	return sprintf(buf, "0x0f:0x%02x\n", accel_product_id);
-}
-
-static ssize_t yas_selftest_show(struct device *dev,
-				struct device_attribute *attr, char *buf)
-{				
-	
-	struct iio_dev *indio_dev = dev_to_iio_dev(dev);
-	struct yas_state *st = iio_priv(indio_dev);
-	int err=0;
-
-		err = st->acc.set_enable(1);
-		mdelay(20); // delay 20 msec
-		err = st->acc.set_delay(5);
-		mdelay(20); // delay 20 msec
-
-		mutex_lock(&st->lock);
-		err = st->acc.self_test();
-		mutex_unlock(&st->lock);
-
-		if (err<0)
-			return sprintf(buf,"KXTJ2 Self-Test FAIL!\n" );
-		else
-			return sprintf(buf, "KXTJ2 Self-Test PASS!\n" );
-}
-
 static int yas_write_raw(struct iio_dev *indio_dev,
 		struct iio_chan_spec const *chan,
 		int val,
@@ -952,16 +896,10 @@ static IIO_DEVICE_ATTR(sampling_frequency, S_IRUSR|S_IWUSR,
 		yas_sampling_frequency_store, 0);
 static IIO_DEVICE_ATTR(position, S_IRUSR|S_IWUSR,
 		yas_position_show, yas_position_store, 0);
-static IIO_DEVICE_ATTR(ping, S_IRUGO|S_IWUSR|S_IWGRP,
-		yas_ping, NULL, 0);
-static IIO_DEVICE_ATTR(selftest, S_IRUGO,
-		yas_selftest_show, NULL, 0);
 
 static struct attribute *yas_attributes[] = {
 	&iio_dev_attr_sampling_frequency.dev_attr.attr,
 	&iio_dev_attr_position.dev_attr.attr,
-	&iio_dev_attr_ping.dev_attr.attr,
-	&iio_dev_attr_selftest.dev_attr.attr,
 	NULL
 };
 static const struct attribute_group yas_attribute_group = {
