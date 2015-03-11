@@ -26,7 +26,10 @@
 	compatible = "somc,amami-row", "qcom,msm8974";
 	qcom,board-id = <8 0>;
 
-	qcom,msm-id = <126 0x20002>,
+	qcom,msm-id = <126 0x20001>,
+		      <185 0x20001>,
+		      <186 0x20001>,
+		      <126 0x20002>,
 		      <185 0x20002>,
 		      <186 0x20002>;
 };
