@@ -325,6 +325,8 @@ static int shinano_wifi_get_mac_addr(unsigned char *buf)
 				macbin[3], macbin[4], macbin[5]);
 
 		memcpy(buf, macbin, ETHER_ADDR_LEN);
+	} else {
+		goto random_mac;
 	}
 
 	filp_close(fp, NULL);
