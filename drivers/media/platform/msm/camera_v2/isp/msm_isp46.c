@@ -274,6 +274,7 @@ static void msm_vfe46_init_hardware_reg(struct vfe_device *vfe_dev)
 	msm_camera_io_w_mb(0xE1FFFFFF, vfe_dev->vfe_base + 0x60);
 	msm_camera_io_w(0xFFFFFFFF, vfe_dev->vfe_base + 0x64);
 	msm_camera_io_w_mb(0xFFFFFFFF, vfe_dev->vfe_base + 0x68);
+	msm_camera_io_w_mb(0x1, vfe_dev->vfe_base + 0x58);
 }
 
 static void msm_vfe46_clear_status_reg(struct vfe_device *vfe_dev)
@@ -340,9 +341,11 @@ static void msm_vfe46_process_error_status(struct vfe_device *vfe_dev)
 {
 	uint32_t error_status1 = vfe_dev->error_info.error_mask1;
 
-	if (error_status1 & (1 << 0))
+	if (error_status1 & (1 << 0)) {
 		pr_err("%s: camif error status: 0x%x\n",
 			__func__, vfe_dev->error_info.camif_status);
+		msm_camera_io_dump_2(vfe_dev->vfe_base + 0x3D0, 0x30);
+	}
 	if (error_status1 & (1 << 1))
 		pr_err("%s: stats bhist overwrite\n", __func__);
 	if (error_status1 & (1 << 2))
