@@ -241,7 +241,9 @@ static void bcmpmu_ponkey_isr(u32 irq, void *data)
 		if (bcmpmu->read_dev(bcmpmu, PMU_REG_PONKEYCTRL6, &val) == 0) {
 			if (val & PONKEY_SMART_RST_EN_MASK) {
 				/* One last pat */
+#ifdef CONFIG_BRCM_SECURE_WATCHDOG
 				sec_wd_touch();
+#endif
 				/* The other online cores */
 				local_irq_disable();
 				smp_send_stop();
