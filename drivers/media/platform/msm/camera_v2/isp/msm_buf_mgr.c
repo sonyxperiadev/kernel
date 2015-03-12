@@ -131,6 +131,7 @@ static int msm_isp_prepare_isp_buf(struct msm_isp_buf_mgr *buf_mgr,
 	struct msm_isp_buffer_mapped_info *mapped_info;
 	struct buffer_cmd *buf_pending = NULL;
 	int domain_num;
+	unsigned long flags;
 
 	if (buf_mgr->secure_enable == NON_SECURE_MODE)
 		domain_num = buf_mgr->iommu_domain_num;
@@ -167,7 +168,9 @@ static int msm_isp_prepare_isp_buf(struct msm_isp_buf_mgr *buf_mgr,
 		}
 
 		buf_pending->mapped_info = mapped_info;
+		spin_lock_irqsave(&buf_mgr->bufq_list_lock, flags);
 		list_add_tail(&buf_pending->list, &buf_mgr->buffer_q);
+		spin_unlock_irqrestore(&buf_mgr->bufq_list_lock, flags);
 	}
 	buf_info->num_planes = qbuf_buf->num_planes;
 	return 0;
@@ -189,6 +192,7 @@ static void msm_isp_unprepare_v4l2_buf(
 	struct msm_isp_buffer_mapped_info *mapped_info;
 	struct buffer_cmd *buf_pending = NULL;
 	int domain_num;
+	unsigned long flags;
 
 	if (buf_mgr->secure_enable == NON_SECURE_MODE)
 		domain_num = buf_mgr->iommu_domain_num;
@@ -197,22 +201,26 @@ static void msm_isp_unprepare_v4l2_buf(
 
 	for (i = 0; i < buf_info->num_planes; i++) {
 		mapped_info = &buf_info->mapped_info[i];
-
+		spin_lock_irqsave(&buf_mgr->bufq_list_lock, flags);
 		list_for_each_entry(buf_pending, &buf_mgr->buffer_q, list) {
 			if (!buf_pending)
 				break;
 
 			if (buf_pending->mapped_info == mapped_info) {
+				list_del_init(&buf_pending->list);
+				kfree(buf_pending);
+				spin_unlock_irqrestore(
+					&buf_mgr->bufq_list_lock, flags);
 				ion_unmap_iommu(buf_mgr->client,
 					mapped_info->handle,
 					domain_num, 0);
 				ion_free(buf_mgr->client, mapped_info->handle);
-
-				list_del_init(&buf_pending->list);
-				kfree(buf_pending);
+				spin_lock_irqsave(
+					&buf_mgr->bufq_list_lock, flags);
 				break;
 			}
 		}
+		spin_unlock_irqrestore(&buf_mgr->bufq_list_lock, flags);
 	}
 	return;
 }
@@ -352,7 +360,7 @@ static int msm_isp_get_buf(struct msm_isp_buf_mgr *buf_mgr, uint32_t id,
 	uint32_t bufq_handle, struct msm_isp_buffer **buf_info)
 {
 	int rc = -1;
-	unsigned long flags;
+	unsigned long flags, irq_state;
 	struct msm_isp_buffer *temp_buf_info;
 	struct msm_isp_bufq *bufq = NULL;
 	struct vb2_buffer *vb2_buf = NULL;
@@ -399,7 +407,9 @@ static int msm_isp_get_buf(struct msm_isp_buf_mgr *buf_mgr, uint32_t id,
 		list_for_each_entry(temp_buf_info, &bufq->head, list) {
 			if (temp_buf_info->state ==
 					MSM_ISP_BUFFER_STATE_QUEUED) {
-
+					spin_lock_irqsave(
+						&buf_mgr->bufq_list_lock,
+						irq_state);
 					list_for_each_entry(buf_pending,
 						&buf_mgr->buffer_q, list) {
 					if (!buf_pending)
@@ -421,6 +431,8 @@ static int msm_isp_get_buf(struct msm_isp_buf_mgr *buf_mgr, uint32_t id,
 						break;
 					}
 				}
+				spin_unlock_irqrestore(
+					&buf_mgr->bufq_list_lock, irq_state);
 				break;
 			}
 		}
@@ -430,7 +442,8 @@ static int msm_isp_get_buf(struct msm_isp_buf_mgr *buf_mgr, uint32_t id,
 			bufq->session_id, bufq->stream_id);
 		if (vb2_buf) {
 			if (vb2_buf->v4l2_buf.index < bufq->num_bufs) {
-
+				spin_lock_irqsave(
+					&buf_mgr->bufq_list_lock, irq_state);
 				list_for_each_entry(buf_pending,
 						&buf_mgr->buffer_q, list) {
 					if (!buf_pending)
@@ -452,6 +465,8 @@ static int msm_isp_get_buf(struct msm_isp_buf_mgr *buf_mgr, uint32_t id,
 						break;
 					}
 				}
+				spin_unlock_irqrestore(
+					&buf_mgr->bufq_list_lock, irq_state);
 			} else {
 				pr_err("%s: Incorrect buf index %d\n",
 					__func__, vb2_buf->v4l2_buf.index);
@@ -898,6 +913,7 @@ static int msm_isp_release_bufq(struct msm_isp_buf_mgr *buf_mgr,
 {
 	struct msm_isp_bufq *bufq = NULL;
 	int rc = -1;
+	mutex_lock(&buf_mgr->lock);
 	bufq = msm_isp_get_bufq(buf_mgr, bufq_handle);
 	if (!bufq) {
 		pr_err("Invalid bufq release\n");
@@ -908,6 +924,7 @@ static int msm_isp_release_bufq(struct msm_isp_buf_mgr *buf_mgr,
 
 	kfree(bufq->bufs);
 	msm_isp_free_buf_handle(buf_mgr, bufq_handle);
+	mutex_unlock(&buf_mgr->lock);
 	return 0;
 }
 
@@ -1224,6 +1241,7 @@ int msm_isp_create_isp_buf_mgr(
 	buf_mgr->secure_enable = NON_SECURE_MODE;
 	buf_mgr->attach_state = MSM_ISP_BUF_MGR_DETACH;
 	mutex_init(&buf_mgr->lock);
+	spin_lock_init(&buf_mgr->bufq_list_lock);
 
 	for (i = 0; i < MAX_PROTECTION_MODE; i++)
 		for (j = 0; j < MAX_IOMMU_CTX; j++)
