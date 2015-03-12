@@ -21,6 +21,7 @@
 
 #include <linux/sysfs.h>
 #include <linux/kobject.h>
+#include <linux/platform_device.h>
 
 #define CPU_QUIET_NAME_LEN 16
 
@@ -39,6 +40,7 @@ struct cpuquiet_driver {
 	char			name[CPU_QUIET_NAME_LEN];
 	int (*quiesence_cpu)	(unsigned int cpunumber, bool sync);
 	int (*wake_cpu)		(unsigned int cpunumber, bool sync);
+	int			avg_hotplug_latency_ms;
 };
 
 extern int cpuquiet_register_governor(struct cpuquiet_governor *gov);
@@ -47,6 +49,12 @@ extern int cpuquiet_quiesence_cpu(unsigned int cpunumber, bool sync);
 extern int cpuquiet_wake_cpu(unsigned int cpunumber, bool sync);
 extern int cpuquiet_register_driver(struct cpuquiet_driver *drv);
 extern void cpuquiet_unregister_driver(struct cpuquiet_driver *drv);
+extern int cpuquiet_get_avg_hotplug_latency(void);
+extern int cpuquiet_cpu_up(unsigned int cpunumber, bool sync);
+extern int cpuquiet_cpu_down(unsigned int cpunumber, bool sync);
+extern int cpuquiet_remove_common(struct platform_device *pdev);
+extern int cpuquiet_probe_common(struct platform_device *pdev);
+extern int cpuquiet_probe_common_post(struct platform_device *pdev);
 extern int cpuquiet_add_group(struct attribute_group *attrs);
 extern void cpuquiet_remove_group(struct attribute_group *attrs);
 extern void cpuquiet_device_busy(void);
