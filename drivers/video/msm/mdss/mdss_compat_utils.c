@@ -2593,11 +2593,15 @@ int mdss_compat_overlay_ioctl(struct fb_info *info, unsigned int cmd,
 		}
 		ov32 = compat_ptr(arg);
 		ret = __from_user_mdp_overlay(ov, ov32);
-		if (ret)
+
+		if (ret) {
 			pr_err("%s: compat mdp overlay failed\n", __func__);
-		else
+		} else {
 			ret = mdss_fb_do_ioctl(info, cmd, (unsigned long) ov);
-		ret = __to_user_mdp_overlay(ov32, ov);
+
+			if (!ret)
+				ret = __to_user_mdp_overlay(ov32, ov);
+		}
 		break;
 	case MSMFB_OVERLAY_SET:
 		ov = compat_alloc_user_space(sizeof(*ov));
@@ -2612,7 +2616,9 @@ int mdss_compat_overlay_ioctl(struct fb_info *info, unsigned int cmd,
 			pr_err("%s: compat mdp overlay failed\n", __func__);
 		} else {
 			ret = mdss_fb_do_ioctl(info, cmd, (unsigned long) ov);
-			ret = __to_user_mdp_overlay(ov32, ov);
+
+			if (!ret)
+				ret = __to_user_mdp_overlay(ov32, ov);
 		}
 		break;
 	case MSMFB_OVERLAY_PREPARE:
