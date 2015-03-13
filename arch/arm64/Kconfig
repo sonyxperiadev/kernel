@@ -951,6 +951,8 @@ config SETEND_EMULATION
 
 endif
 
+source "drivers/cpuquiet/Kconfig"
+
 endmenu
 
 menu "Boot options"
