@@ -28,7 +28,7 @@
 
 static struct cpuquiet_driver *cpuquiet_curr_driver;
 
-#ifdef CONFIG_CPUQUIET_STATS
+#ifdef CONFIG_CPU_QUIET_STATS
 struct cpuquiet_cpu_stat {
 	cputime64_t time_up_total;
 	u64 last_update;
@@ -36,7 +36,7 @@ struct cpuquiet_cpu_stat {
 	struct kobject cpu_kobject;
 };
 
-struct cpuquiet_cpu_stat *stats;
+static struct cpuquiet_cpu_stat *stats;
 
 struct cpu_attribute {
 	struct attribute attr;
@@ -113,7 +113,7 @@ int cpuquiet_quiesence_cpu(unsigned int cpunumber, bool sync)
 	if (cpuquiet_curr_driver && cpuquiet_curr_driver->quiesence_cpu)
 		err = cpuquiet_curr_driver->quiesence_cpu(cpunumber, sync);
 
-#ifdef CONFIG_CPUQUIET_STATS
+#ifdef CONFIG_CPU_QUIET_STATS
 	if (!err)
 		stats_update(stats + cpunumber, 0);
 #endif
@@ -129,7 +129,7 @@ int cpuquiet_wake_cpu(unsigned int cpunumber, bool sync)
 	if (cpuquiet_curr_driver && cpuquiet_curr_driver->wake_cpu)
 		err = cpuquiet_curr_driver->wake_cpu(cpunumber, sync);
 
-#ifdef CONFIG_CPUQUIET_STATS
+#ifdef CONFIG_CPU_QUIET_STATS
 	if (!err)
 		stats_update(stats + cpunumber, 1);
 #endif
@@ -137,6 +137,35 @@ int cpuquiet_wake_cpu(unsigned int cpunumber, bool sync)
 	return err;
 }
 EXPORT_SYMBOL(cpuquiet_wake_cpu);
+
+int cpuquiet_get_avg_hotplug_latency(void)
+{
+	if (cpuquiet_curr_driver)
+		return cpuquiet_curr_driver->avg_hotplug_latency_ms;
+	return 0;
+}
+
+int cpuquiet_get_cpus(bool use_max)
+{
+	if (!cpuquiet_curr_driver)
+		return -ENXIO;
+
+	if (use_max)
+		return cpuquiet_curr_driver->max_cpus;
+
+	return cpuquiet_curr_driver->min_cpus;
+}
+
+void cpuquiet_set_cpus(bool use_max, int cpus)
+{
+	if (!cpuquiet_curr_driver)
+		return;
+
+	if (use_max)
+		cpuquiet_curr_driver->max_cpus = cpus;
+	else
+		cpuquiet_curr_driver->min_cpus = cpus;
+}
 
 int cpuquiet_register_driver(struct cpuquiet_driver *drv)
 {
@@ -147,14 +176,14 @@ int cpuquiet_register_driver(struct cpuquiet_driver *drv)
 	if (!drv)
 		return -EINVAL;
 
-#ifdef CONFIG_CPUQUIET_STATS
+#ifdef CONFIG_CPU_QUIET_STATS
 	stats = kzalloc(nr_cpu_ids * sizeof(*stats), GFP_KERNEL);
 	if (!stats)
 		return -ENOMEM;
 #endif
 
 	for_each_possible_cpu(cpu) {
-#ifdef CONFIG_CPUQUIET_STATS
+#ifdef CONFIG_CPU_QUIET_STATS
 		u64 cur_jiffies = get_jiffies_64();
 		stats[cpu].last_update = cur_jiffies;
 		if (cpu_online(cpu))
@@ -163,7 +192,7 @@ int cpuquiet_register_driver(struct cpuquiet_driver *drv)
 		dev = get_cpu_device(cpu);
 		if (dev) {
 			cpuquiet_add_dev(dev, cpu);
-#ifdef CONFIG_CPUQUIET_STATS
+#ifdef CONFIG_CPU_QUIET_STATS
 			cpuquiet_cpu_kobject_init(&stats[cpu].cpu_kobject,
 					&ktype_cpu_stats, "stats", cpu);
 #endif
@@ -204,7 +233,7 @@ void cpuquiet_unregister_driver(struct cpuquiet_driver *drv)
 	cpuquiet_curr_driver = NULL;
 
 	for_each_possible_cpu(cpu) {
-#ifdef CONFIG_CPUQUIET_STATS
+#ifdef CONFIG_CPU_QUIET_STATS
 		kobject_put(&stats[cpu].cpu_kobject);
 #endif
 		cpuquiet_remove_dev(cpu);

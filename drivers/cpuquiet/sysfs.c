@@ -56,7 +56,7 @@ static ssize_t show_current_governor(char *buf)
 
 static ssize_t store_current_governor(const char *buf, size_t count)
 {
-	char name[CPUQUIET_NAME_LEN];
+	char name[CPU_QUIET_NAME_LEN];
 	struct cpuquiet_governor *gov;
 	int len = count, ret = -EINVAL;
 

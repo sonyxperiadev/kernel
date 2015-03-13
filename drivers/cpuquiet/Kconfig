@@ -1,16 +1,16 @@
-menu "CPUQUIET Framework"
+menu "CPUQuiet hotplugging framework"
 
-config CPUQUIET_FRAMEWORK
-	bool "Cpuquiet framework"
+config CPU_QUIET
+	bool "CpuQuiet framework"
 	help
 	  Cpuquiet implements pluggable policies for forcing cpu cores into a
 	  quiescent state. Appropriate policies will save power without hurting
 	  performance.
 
 
-if CPUQUIET_FRAMEWORK
+if CPU_QUIET
 
-config CPUQUIET_STATS
+config CPU_QUIET_STATS
 	bool "per CPU statistics"
 	default n
 	help
@@ -19,7 +19,7 @@ config CPUQUIET_STATS
 
 	  If in doubt say N.
 
-config CPUQUIET_GOVERNOR_USERSPACE
+config CPU_QUIET_GOVERNOR_USERSPACE
 	bool "userspace"
 	default n
 	help
@@ -28,7 +28,7 @@ config CPUQUIET_GOVERNOR_USERSPACE
 
 	  If in doubt say N.
 
-config CPUQUIET_GOVERNOR_BALANCED
+config CPU_QUIET_GOVERNOR_BALANCED
 	bool "balanced"
 	default n
 	depends on CPU_FREQ
@@ -39,7 +39,7 @@ config CPUQUIET_GOVERNOR_BALANCED
 
 	  If in doubt say N.
 
-config CPUQUIET_GOVERNOR_RUNNABLE
+config CPU_QUIET_GOVERNOR_RUNNABLE
 	bool "runnable threads"
 	default n
 	help
@@ -51,31 +51,42 @@ config CPUQUIET_GOVERNOR_RUNNABLE
 
 choice
 	prompt "Default CPUQuiet governor"
-	default CPUQUIET_DEFAULT_GOV_USERSPACE
+	default CPU_QUIET_DEFAULT_GOV_USERSPACE
 	help
 	  This option sets which CPUQuiet governor shall be loaded at
 	  startup. If in doubt, select 'userspace'.
 
-config CPUQUIET_DEFAULT_GOV_USERSPACE
+config CPU_QUIET_DEFAULT_GOV_USERSPACE
 	bool "userspace"
-	select CPUQUIET_GOVERNOR_USERSPACE
+	select CPU_QUIET_GOVERNOR_USERSPACE
 	help
 	  Use the CPUQuiet governor 'userspace' as default.
 
-config CPUQUIET_DEFAULT_GOV_BALANCED
+config CPU_QUIET_DEFAULT_GOV_BALANCED
 	bool "balanced"
-	select CPUQUIET_GOVERNOR_BALANCED
+	select CPU_QUIET_GOVERNOR_BALANCED
 	depends on CPU_FREQ
 	help
 	  Use the CPUQuiet governor 'balanced' as default.
 
-config CPUQUIET_DEFAULT_GOV_RUNNABLE
+config CPU_QUIET_DEFAULT_GOV_RUNNABLE
 	bool "runnable threads"
-	select CPUQUIET_GOVERNOR_RUNNABLE
+	select CPU_QUIET_GOVERNOR_RUNNABLE
 	help
 	  Use the CPUQuiet governor 'runnable threads' as default.
 
 endchoice
+
+config CPU_QUIET_MSM
+	bool "MSM CPUquiet Driver"
+	depends on HOTPLUG_CPU && ARCH_MSM
+	default n
+	help
+	  This is the CPUquiet driver for MSM SoCs. It supports
+	  automatic hotplugging of CPU cores using the CPUquiet
+	  governor.
+
+	  If unsure, say N.
 
 endif
 endmenu
