@@ -41,6 +41,8 @@ struct cpuquiet_driver {
 	int (*quiesence_cpu)	(unsigned int cpunumber, bool sync);
 	int (*wake_cpu)		(unsigned int cpunumber, bool sync);
 	int			avg_hotplug_latency_ms;
+	int			max_cpus;
+	int			min_cpus;
 };
 
 extern int cpuquiet_register_governor(struct cpuquiet_governor *gov);
@@ -50,6 +52,8 @@ extern int cpuquiet_wake_cpu(unsigned int cpunumber, bool sync);
 extern int cpuquiet_register_driver(struct cpuquiet_driver *drv);
 extern void cpuquiet_unregister_driver(struct cpuquiet_driver *drv);
 extern int cpuquiet_get_avg_hotplug_latency(void);
+extern int cpuquiet_get_cpus(bool want_max);
+extern void cpuquiet_set_cpus(bool want_max, int cpus);
 extern int cpuquiet_cpu_up(unsigned int cpunumber, bool sync);
 extern int cpuquiet_cpu_down(unsigned int cpunumber, bool sync);
 extern int cpuquiet_remove_common(struct platform_device *pdev);

@@ -145,6 +145,28 @@ int cpuquiet_get_avg_hotplug_latency(void)
 	return 0;
 }
 
+int cpuquiet_get_cpus(bool use_max)
+{
+	if (!cpuquiet_curr_driver)
+		return -ENXIO;
+
+	if (use_max)
+		return cpuquiet_curr_driver->max_cpus;
+
+	return cpuquiet_curr_driver->min_cpus;
+}
+
+void cpuquiet_set_cpus(bool use_max, int cpus)
+{
+	if (!cpuquiet_curr_driver)
+		return;
+
+	if (use_max)
+		cpuquiet_curr_driver->max_cpus = cpus;
+	else
+		cpuquiet_curr_driver->min_cpus = cpus;
+}
+
 int cpuquiet_register_driver(struct cpuquiet_driver *drv)
 {
 	int err = -EBUSY;
