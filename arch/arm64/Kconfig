@@ -1033,6 +1033,8 @@ config ARM64_VHE
 	  at runtime, and does not affect processors that do not
 	  implement this feature.
 
+source "drivers/cpuquiet/Kconfig"
+
 endmenu
 
 menu "ARMv8.2 architectural features"
