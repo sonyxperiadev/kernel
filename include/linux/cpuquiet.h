@@ -22,10 +22,10 @@
 #include <linux/sysfs.h>
 #include <linux/kobject.h>
 
-#define CPUQUIET_NAME_LEN 16
+#define CPU_QUIET_NAME_LEN 16
 
 struct cpuquiet_governor {
-	char			name[CPUQUIET_NAME_LEN];
+	char			name[CPU_QUIET_NAME_LEN];
 	struct list_head	governor_list;
 	int (*start)		(void);
 	void (*stop)		(void);
@@ -36,7 +36,7 @@ struct cpuquiet_governor {
 };
 
 struct cpuquiet_driver {
-	char			name[CPUQUIET_NAME_LEN];
+	char			name[CPU_QUIET_NAME_LEN];
 	int (*quiesence_cpu)	(unsigned int cpunumber, bool sync);
 	int (*wake_cpu)		(unsigned int cpunumber, bool sync);
 };
