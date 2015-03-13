@@ -54,7 +54,7 @@ static void __exit exit_usermode(void)
 }
 
 MODULE_LICENSE("GPL");
-#ifdef CONFIG_CPUQUIET_DEFAULT_GOV_USERSPACE
+#ifdef CONFIG_CPU_QUIET_DEFAULT_GOV_USERSPACE
 fs_initcall(init_usermode);
 #else
 module_init(init_usermode);
