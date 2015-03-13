@@ -672,6 +672,8 @@ endif
 
 source "drivers/cpuidle/Kconfig"
 
+source "drivers/cpuquiet/Kconfig"
+
 endmenu
 
 source "net/Kconfig"
