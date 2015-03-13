@@ -27,13 +27,15 @@
 #include <linux/kernel.h>
 #include <linux/cpuquiet.h>
 #include <linux/cpumask.h>
+#include <linux/delay.h>
 #include <linux/module.h>
 #include <linux/cpufreq.h>
-#include <linux/pm_qos.h>
+#include <linux/pm.h>
 #include <linux/jiffies.h>
 #include <linux/slab.h>
 #include <linux/cpu.h>
 #include <linux/sched.h>
+#include <linux/suspend.h>
 #include <linux/tick.h>
 #include <linux/workqueue.h>
 #include <asm/cputime.h>
@@ -89,6 +91,7 @@ static struct workqueue_struct *rqbalance_wq;
 static struct delayed_work rqbalance_work;
 static RQBALANCE_STATE rqbalance_state;
 static struct kobject *rqbalance_kobject;
+static struct notifier_block pm_notifier_block;
 
 static void calculate_load_timer(unsigned long data)
 {
@@ -591,6 +594,39 @@ static int rqbalance_sysfs(void)
 	return err;
 }
 
+static void rqbalance_kickstart(void)
+{
+	struct cpufreq_freqs initial_freq;
+
+	/*FIXME: Kick start the state machine by faking a freq notification*/
+	initial_freq.new = cpufreq_get(0);
+	if (initial_freq.new != 0)
+		balanced_cpufreq_transition(NULL, CPUFREQ_RESUMECHANGE,
+						&initial_freq);
+}
+
+int rqbalance_pm_notify(struct notifier_block *notify_block,
+				unsigned long mode, void *unused)
+{
+	switch (mode) {
+	case PM_HIBERNATION_PREPARE:
+	case PM_SUSPEND_PREPARE:
+		rqbalance_state = IDLE;
+		cancel_delayed_work_sync(&rqbalance_work);
+		break;
+	case PM_POST_SUSPEND:
+	case PM_POST_HIBERNATION:
+	case PM_POST_RESTORE:
+		cpuquiet_wake_cpu(1, false);
+		cpuquiet_wake_cpu(2, false);
+		cpuquiet_wake_cpu(3, false);
+		rqbalance_kickstart();
+		break;
+	}
+
+	return NOTIFY_OK;
+}
+
 static void rqbalance_stop(void)
 {
 	/*
@@ -599,6 +635,8 @@ static void rqbalance_stop(void)
 	*/
 	cpufreq_unregister_notifier(&balanced_cpufreq_nb,
 		CPUFREQ_TRANSITION_NOTIFIER);
+
+	unregister_pm_notifier(&pm_notifier_block);
 
 	/* now we can force the governor to be idle */
 	rqbalance_state = IDLE;
@@ -616,7 +654,6 @@ static int rqbalance_start(void)
 {
 	int err, count;
 	struct cpufreq_frequency_table *table;
-	struct cpufreq_freqs initial_freq;
 
 	err = rqbalance_sysfs();
 	if (err)
@@ -650,11 +687,7 @@ static int rqbalance_start(void)
 	init_timer(&load_timer);
 	load_timer.function = calculate_load_timer;
 
-	/*FIXME: Kick start the state machine by faking a freq notification*/
-	initial_freq.new = cpufreq_get(0);
-	if (initial_freq.new != 0)
-		balanced_cpufreq_transition(NULL, CPUFREQ_RESUMECHANGE,
-						&initial_freq);
+	rqbalance_kickstart();
 
 	rq_data = kzalloc(sizeof(struct runqueue_data), GFP_KERNEL);
 	if (rq_data == NULL) {
@@ -669,6 +702,9 @@ static int rqbalance_start(void)
 	INIT_DEFERRABLE_WORK(&rq_data->work, rq_work_fn);
 
 	start_rq_work();
+
+	pm_notifier_block.notifier_call = rqbalance_pm_notify;
+	register_pm_notifier(&pm_notifier_block);
 
 	return 0;
 }
