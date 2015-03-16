@@ -4,7 +4,7 @@
  * Copyright (C) 2015 AngeloGioacchino Del Regno <kholk11@gmail.com>
  *
  * May contain portions of code by NVIDIA CORPORATION
- * Derived from cpuquiet-msm
+ * Derived from cpuquiet-x86
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

@@ -197,6 +197,7 @@ static unsigned int count_slow_cpus(unsigned int limit)
  * There are two ladders here for hysteresis. We do not want to offline
  * and online a CPU repeatedly. Thus, the down thresholds are *lower*
  * than the corresponding up threshold.
+ * NOTE: size of both arrays shall be the same.
  */
 static unsigned int nr_run_thresholds[] = {
 /*      1,	2,	3,	4 (target on-line num of cpus) */
@@ -546,6 +547,57 @@ static void delay_callback(struct cpuquiet_attribute *attr)
 	}
 }
 
+ssize_t store_thresholds(struct cpuquiet_attribute *cattr,
+				const char *buf, size_t count)
+{
+	const char *i;
+	uint8_t j;
+	size_t sz = sizeof(nr_run_thresholds) /
+			sizeof(nr_run_thresholds[0]);
+	unsigned int *array;
+
+	if (!strncmp(cattr->attr.name, "nr_run", sizeof("nr_run")))
+		array = nr_run_thresholds;
+	else
+		array = nr_down_run_thresholds;
+
+	for (i = buf, j = 0; *i && (j < sz); j++) {
+		int read = 0;
+		unsigned int val = 0;
+
+		sscanf(i, "%u%n", &val, &read);
+		if (!read)
+			break;
+
+		i += read;
+		array[j] = val;
+	}
+
+	return count;
+}
+
+ssize_t show_thresholds(struct cpuquiet_attribute *cattr,
+					char *buf)
+{
+	int i;
+	char *temp = buf;
+	size_t sz = sizeof(nr_run_thresholds) /
+			sizeof(nr_run_thresholds[0]);
+	unsigned int *array;
+
+	if (!strncmp(cattr->attr.name, "nr_run", sizeof("nr_run")))
+		array = nr_run_thresholds;
+	else
+		array = nr_down_run_thresholds;
+
+	for (i = 0; i < sz; i++) {
+		temp += sprintf(temp, "%u ", array[i]);
+	}
+
+	temp += sprintf(temp, "\n");
+	return temp - buf;
+}
+
 CPQ_BASIC_ATTRIBUTE(balance_level, 0644, uint);
 CPQ_BASIC_ATTRIBUTE(idle_bottom_freq, 0644, uint);
 CPQ_BASIC_ATTRIBUTE(idle_top_freq, 0644, uint);
@@ -553,6 +605,11 @@ CPQ_BASIC_ATTRIBUTE(load_sample_rate, 0644, uint);
 CPQ_BASIC_ATTRIBUTE(userspace_suspend_state, 0644, uint);
 CPQ_ATTRIBUTE(up_delay, 0644, ulong, delay_callback);
 CPQ_ATTRIBUTE(down_delay, 0644, ulong, delay_callback);
+
+CPQ_ATTRIBUTE_CUSTOM(nr_down_run_thresholds, 0644,
+			show_thresholds, store_thresholds);
+CPQ_ATTRIBUTE_CUSTOM(nr_run_thresholds, 0644,
+			show_thresholds, store_thresholds);
 
 static struct attribute *rqbalance_attributes[] = {
 	&balance_level_attr.attr,
@@ -562,6 +619,8 @@ static struct attribute *rqbalance_attributes[] = {
 	&up_delay_attr.attr,
 	&down_delay_attr.attr,
 	&load_sample_rate_attr.attr,
+	&nr_down_run_thresholds_attr.attr,
+	&nr_run_thresholds_attr.attr,
 	NULL,
 };
 
