@@ -23,7 +23,7 @@
 	/* Updated chip ID */
 	qcom,chipid = <0x03030001>;
 
-	qcom,initial-pwrlevel = <2>;
+	qcom,initial-pwrlevel = <3>;
 
 	/* Updated bus bandwidth requirements */
 	qcom,msm-bus,vectors-KBps =
