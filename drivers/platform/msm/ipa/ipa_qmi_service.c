@@ -21,7 +21,6 @@
 #include <linux/uaccess.h>
 #include <soc/qcom/subsystem_restart.h>
 #include <linux/ipa.h>
-#include <linux/vmalloc.h>
 
 #include "ipa_qmi_service.h"
 #include "ipa_ram_mmap.h"
@@ -792,7 +791,7 @@ static void ipa_qmi_service_init_worker(struct work_struct *work)
 	IPAWANDBG("IPA A7 QMI init OK :>>>>\n");
 
 	/* start the QMI msg cache */
-	ipa_qmi_ctx = vzalloc(sizeof(*ipa_qmi_ctx));
+	ipa_qmi_ctx = kzalloc(sizeof(*ipa_qmi_ctx), GFP_KERNEL);
 	if (!ipa_qmi_ctx) {
 		IPAWANERR(":kzalloc err.\n");
 		return;
@@ -801,7 +800,6 @@ static void ipa_qmi_service_init_worker(struct work_struct *work)
 	ipa_svc_workqueue = create_singlethread_workqueue("ipa_A7_svc");
 	if (!ipa_svc_workqueue) {
 		IPAWANERR("Creating ipa_A7_svc workqueue failed\n");
-		vfree(ipa_qmi_ctx);
 		return;
 	}
 
@@ -865,7 +863,6 @@ destroy_qmi_handle:
 destroy_ipa_A7_svc_wq:
 	destroy_workqueue(ipa_svc_workqueue);
 	ipa_svc_workqueue = NULL;
-	vfree(ipa_qmi_ctx);
 	return;
 }
 
@@ -932,7 +929,7 @@ void ipa_qmi_service_exit(void)
 
 	/* clean the QMI msg cache */
 	if (ipa_qmi_ctx != NULL) {
-		vfree(ipa_qmi_ctx);
+		kfree(ipa_qmi_ctx);
 		ipa_qmi_ctx = NULL;
 	}
 	ipa_svc_handle = 0;
