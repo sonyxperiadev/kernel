@@ -706,7 +706,7 @@ static int hdmi_vco_set_rate(struct clk *c, unsigned long rate)
 		REG_W(0xDB, hdmi_phy_base + HDMI_PHY_ANA_CFG0);
 		REG_W(0x43, hdmi_phy_base + HDMI_PHY_ANA_CFG1);
 		REG_W(0x02, hdmi_phy_base + HDMI_PHY_ANA_CFG2);
-		REG_W(0x00, hdmi_phy_base + HDMI_PHY_ANA_CFG3);
+		REG_W(0xFF, hdmi_phy_base + HDMI_PHY_ANA_CFG3);
 		REG_W(0x04, hdmi_phy_pll_base + HDMI_UNI_PLL_VREG_CFG);
 		REG_W(0xD0, hdmi_phy_base + HDMI_PHY_DCC_CFG0);
 		REG_W(0x1A, hdmi_phy_base + HDMI_PHY_DCC_CFG1);
