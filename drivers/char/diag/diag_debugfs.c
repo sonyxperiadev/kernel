@@ -834,6 +834,7 @@ static ssize_t diag_dbgfs_read_hsicinfo(struct file *file, char __user *ubuf,
 static ssize_t diag_dbgfs_read_mhiinfo(struct file *file, char __user *ubuf,
 				       size_t count, loff_t *ppos)
 {
+#ifdef CONFIG_DIAGFWD_MHI_BRIDGE
 	char *buf = NULL;
 	int ret = 0;
 	int i = 0;
@@ -898,6 +899,9 @@ static ssize_t diag_dbgfs_read_mhiinfo(struct file *file, char __user *ubuf,
 
 	kfree(buf);
 	return ret;
+#else
+	return -ENXIO;
+#endif
 }
 
 static ssize_t diag_dbgfs_read_bridge(struct file *file, char __user *ubuf,
