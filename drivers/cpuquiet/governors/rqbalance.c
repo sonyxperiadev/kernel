@@ -240,7 +240,7 @@ static void rq_work_fn(struct work_struct *work)
 {
 	unsigned long flags = 0;
 	int64_t cur_time = ktime_to_ns(ktime_get());
-	struct runqueue_sample* sample = NULL;
+	struct runqueue_sample *sample = NULL;
 
 	spin_lock_irqsave(&rq_data->lock, flags);
 	if (unlikely(rq_data->nr_run_sample_count != RQ_SAMPLE_CAPACITY)) {
@@ -279,7 +279,7 @@ unsigned int get_nr_run_avg(void)
 	uint8_t nr_run_sample_count;
 
 	size_t j;
-	struct runqueue_sample* i;
+	struct runqueue_sample *i;
 	unsigned int nr_run = 0;
 	unsigned long flags = 0;
 	int64_t after_time = ktime_to_ns(ktime_get()) - RQ_SAMPLE_TIME_NS;
@@ -293,7 +293,9 @@ unsigned int get_nr_run_avg(void)
 	for (i = nr_run_samples + nr_run_sample_head, j = 0;
 	     j < nr_run_sample_count; ++j) {
 		if (i->sample_time < after_time) {
-			/* This sample is older than the ones we find relevant. */
+			/*
+			 * This sample is older than the ones we find relevant.
+			 */
 			break;
 		}
 
@@ -348,7 +350,9 @@ static CPU_SPEED_BALANCE balanced_speed_balance(void)
 	unsigned int avg_nr_run = get_nr_run_avg();
 	unsigned int nr_run;
 
-	/* First use the up thresholds to see if we need to bring CPUs online. */
+	/*
+	 * First use the up thresholds to see if we need to bring CPUs online.
+	 */
 	pr_debug("%s: Current core count max runqueue: %d\n", __func__,
 		 nr_run_thresholds[nr_cpus - 1]);
 	for (nr_run = nr_cpus; nr_run < ARRAY_SIZE(nr_run_thresholds); ++nr_run) {
@@ -364,7 +368,7 @@ static CPU_SPEED_BALANCE balanced_speed_balance(void)
 	 * the loop above would be a no-op, and we will fall through to this
 	 * down threshold comparison loop.
 	 */
-	for ( ; nr_run > 1; --nr_run) {
+	for (; nr_run > 1; --nr_run) {
 		if (avg_nr_run >= nr_down_run_thresholds[nr_run - 1]) {
 			/* We have fewer things running than our down threshold.
 			   Use one less CPU. */
@@ -416,16 +420,16 @@ static void rqbalance_work_func(struct work_struct *work)
 	CPU_SPEED_BALANCE balance;
 
 	switch (userspace_suspend_state) {
-		case USERSPACE_RUNNING:
-			break;
-		case USERSPACE_LOW_POWER:
+	case USERSPACE_RUNNING:
+		break;
+	case USERSPACE_LOW_POWER:
 		{
-			int i;
-			if (num_online_cpus() == 1)
-				return;
-			for (i = 1; i < nr_cpu_ids; i++)
-				cpu_down(cpu);
+		int i;
+		if (num_online_cpus() == 1)
 			return;
+		for (i = 1; i < nr_cpu_ids; i++)
+			cpu_down(cpu);
+		return;
 		}
 	}
 
@@ -475,9 +479,11 @@ static void rqbalance_work_func(struct work_struct *work)
 	if (cpu < nr_cpu_ids) {
 		last_change_time = now;
 		if (up)
-			/* TODO: If we just put another CPU online, reduce the frequency of
-			 * the CPU since we have increased the overall computational
-			 * power of the processor. */
+			/*
+			 * TODO: If we just put another CPU online, reduce the
+			 * frequency of the CPU since we have increased the
+			 * overall computational power of the processor.
+			 */
 			cpuquiet_wake_cpu(cpu, false);
 		else
 			cpuquiet_quiesence_cpu(cpu, false);
@@ -498,7 +504,8 @@ static int balanced_cpufreq_transition(struct notifier_block *nb,
 			if (cpu_freq >= idle_top_freq) {
 				rqbalance_state = UP;
 				queue_delayed_work(
-					rqbalance_wq, &rqbalance_work, up_delay);
+					rqbalance_wq, &rqbalance_work,
+								up_delay);
 				start_load_timer();
 			} else if (cpu_freq <= idle_bottom_freq) {
 				rqbalance_state = DOWN;
@@ -512,7 +519,8 @@ static int balanced_cpufreq_transition(struct notifier_block *nb,
 			if (cpu_freq >= idle_top_freq) {
 				rqbalance_state = UP;
 				queue_delayed_work(
-					rqbalance_wq, &rqbalance_work, up_delay);
+					rqbalance_wq, &rqbalance_work,
+								up_delay);
 				start_load_timer();
 			}
 			break;
@@ -525,8 +533,8 @@ static int balanced_cpufreq_transition(struct notifier_block *nb,
 			}
 			break;
 		default:
-			pr_err("%s: invalid cpuquiet rqbalance governor "
-				"state %d\n", __func__, rqbalance_state);
+			pr_err("%s: invalid cpuquiet rqbalance governor \
+				state %d\n", __func__, rqbalance_state);
 		}
 	}
 
@@ -590,9 +598,8 @@ ssize_t show_thresholds(struct cpuquiet_attribute *cattr,
 	else
 		array = nr_down_run_thresholds;
 
-	for (i = 0; i < sz; i++) {
+	for (i = 0; i < sz; i++)
 		temp += sprintf(temp, "%u ", array[i]);
-	}
 
 	temp += sprintf(temp, "\n");
 	return temp - buf;
