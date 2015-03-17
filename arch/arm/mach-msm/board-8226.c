@@ -51,6 +51,7 @@
 #include "board-dt.h"
 #include "clock.h"
 #include "platsmp.h"
+#include "sony_board.h"
 
 static struct of_dev_auxdata msm_hsic_host_adata[] = {
 	OF_DEV_AUXDATA("qcom,hsic-host", 0xF9A00000, "msm_hsic_host", NULL),
@@ -76,6 +77,18 @@ static void __init msm8226_reserve(void)
 	of_scan_flat_dt(dt_scan_for_memory_reserve, NULL);
 }
 
+void __init msm8226_clocks_config(void)
+{
+	if (of_machine_is_compatible("somc,eagle"))
+		msm_clock_init(&msm8226_eagle_clock_init_data);
+	else if (of_machine_is_compatible("somc,flamingo"))
+		msm_clock_init(&msm8226_flamingo_clock_init_data);
+	else if (of_machine_is_compatible("somc,seagull"))
+		msm_clock_init(&msm8226_seagull_clock_init_data);
+	else if (of_machine_is_compatible("somc,tianchi")||of_machine_is_compatible("somc,tianchi_dsds"))
+		msm_clock_init(&msm8226_tianchi_clock_init_data);
+}
+
 /*
  * Used to satisfy dependencies for devices that need to be
  * run early or in a particular order. Most likely your device doesn't fall
@@ -92,6 +105,7 @@ void __init msm8226_add_drivers(void)
 	qpnp_regulator_init();
 	spm_regulator_init();
 	msm_gcc_8226_init();
+	msm8226_clocks_config();
 	msm_bus_fabric_init_driver();
 	qup_i2c_init_driver();
 	ncp6335d_regulator_init();
