@@ -117,6 +117,13 @@
 			reg = <0 0x03400000 0 0x2200000>;
 			label = "cont_splash_mem";
 		};
+
+		camera_mem: camera_region@0 {
+			linux,reserve-contiguous-region;
+			linux,reserve-region;
+			reg = <0 0x6400000>;
+			label = "camera_mem";
+		};
 	};
 
 	soc: soc { };
@@ -741,7 +748,6 @@
 		qcom,sec-auxpcm-gpio-sync = <&msmgpio 80 0>;
 		qcom,sec-auxpcm-gpio-din  = <&msmgpio 81 0>;
 		qcom,sec-auxpcm-gpio-dout = <&msmgpio 82 0>;
-		qcom,5-pole-jack;
 	};
 
 	spmi_bus: qcom,spmi@fc4c0000 {
