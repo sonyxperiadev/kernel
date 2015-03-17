@@ -621,6 +621,7 @@ static struct clk_freq_tbl ftbl_camss_gp0_1_clk[] = {
 	F_MM(   10000,    cxo,  16,   1, 120),
 	F_MM(   20000,    cxo,  16,   1,  50),
 	F_MM( 6000000,  gpll0,  10,   1,  10),
+	F_MM( 8000000,  gpll0,  15,   1,   5),
 	F_MM(12000000,  gpll0,  10,   1,   5),
 	F_MM(13000000,  gpll0,  10,  13,  60),
 	F_MM(24000000,  gpll0,   5,   1,   5),
@@ -2317,6 +2318,8 @@ static struct clk_lookup msm_camera_clocks_8974_only[] = {
 	CLK_LOOKUP_OF("cam_src_clk", mmss_gp1_clk_src, "1.qcom,camera"),
 	CLK_LOOKUP_OF("cam_clk", camss_gp0_clk, "0.qcom,camera"),
 	CLK_LOOKUP_OF("cam_clk", camss_gp1_clk, "1.qcom,camera"),
+	CLK_LOOKUP_OF("cam_src_clk", mmss_gp0_clk_src, "20.qcom,camera"),
+	CLK_LOOKUP_OF("cam_clk", camss_gp0_clk, "20.qcom, camera"),
 };
 
 static struct clk_lookup msm_clocks_mmss_8974[] = {
