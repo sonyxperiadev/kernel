@@ -460,7 +460,7 @@ static int bh1721fvc_get_luxvalue(struct bh1721fvc_data *bh1721fvc, u16 *value)
 
 	if (retry == 10) {
 		pr_err("%s : I2C read failed.. retry %d\n", __func__, retry);
-		return -EIO;
+		BUG();
 	}
 
 	mutex_lock(&bh1721fvc->data_lock);
