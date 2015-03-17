@@ -1,0 +1,185 @@
+/*
+ * Copyright (c) 2013, The Linux Foundation. All rights reserved.
+ * Copyright(C) 2013 Foxconn International Holdings, Ltd. All rights.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+&cci {
+	actuator2: qcom,actuator@18 {
+		cell-index = <6>;
+		reg = <0x18>;
+		compatible = "qcom,actuator";
+		qcom,cci-master = <0>;
+	};
+
+	eeprom2: qcom,eeprom@18 {
+		cell-index = <0>;
+		reg = <0x18 0x0>;
+		qcom,eeprom-name = "imx134_Sony";
+		compatible	= "qcom,eeprom";
+		qcom,slave-addr = <0xa0>;
+		qcom,cci-master = <0>;
+		qcom,num-blocks = <8>;
+	
+		qcom,page0	=	<0 0x00 1 0x00 1 1>;
+		qcom,pageen0	=	<0 0x00 1 0x01 1 10>;
+		qcom,saddr0	=	<0xa0>;
+		qcom,poll0	=	<0 0x00 1 0x01 1 1>;
+		qcom,mem0	= <256 0x00 1 0x00 1 0>;
+		
+		qcom,page1	=	<0 0x00 1 0x00 1 1>;
+		qcom,pageen1	=	<0 0x00 1 0x01 1 10>;
+		qcom,saddr1	=	<0xa2>;
+		qcom,poll1	=	<0 0x00 1 0x01 1 1>;
+		qcom,mem1	= <256 0x00 1 0x00 1 0>;
+		
+		qcom,page2	=	<0 0x00 1 0x00 1 1>;
+		qcom,pageen2	=	<0 0x00 1 0x01 1 10>;
+		qcom,saddr2	=	<0xa4>;
+		qcom,poll2	=	<0 0x00 1 0x01 1 1>;
+		qcom,mem2	= <256 0x00 1 0x00 1 0>;
+		
+		qcom,page3	=	<0 0x00 1 0x00 1 1>;
+		qcom,pageen3	=	<0 0x00 1 0x01 1 10>;
+		qcom,saddr3	=	<0xa6>;
+		qcom,poll3	=	<0 0x00 1 0x01 1 1>;
+		qcom,mem3	= <256 0x00 1 0x00 1 0>;
+		
+		qcom,page4	=	<0 0x00 1 0x00 1 1>;
+		qcom,pageen4	=	<0 0x00 1 0x01 1 10>;
+		qcom,saddr4	=	<0xa8>;
+		qcom,poll4	=	<0 0x00 1 0x01 1 1>;
+		qcom,mem4	= <256 0x00 1 0x00 1 0>;
+		
+		qcom,page5	=	<0 0x00 1 0x00 1 1>;
+		qcom,pageen5	=	<0 0x00 1 0x01 1 10>;
+		qcom,saddr5	=	<0xaa>;
+		qcom,poll5	=	<0 0x00 1 0x01 1 1>;
+		qcom,mem5	= <256 0x00 1 0x00 1 0>;
+		
+		qcom,page6	=	<0 0x00 1 0x00 1 1>;
+		qcom,pageen6	=	<0 0x00 1 0x01 1 10>;
+		qcom,saddr6	=	<0xac>;
+		qcom,poll6	=	<0 0x00 1 0x01 1 1>;
+		qcom,mem6	= <256 0x00 1 0x00 1 0>;
+		
+		qcom,page7	=	<0 0x00 1 0x00 1 1>;
+		qcom,pageen7	=	<0 0x00 1 0x01 1 10>;
+		qcom,saddr7	=	<0xae>;
+		qcom,poll7	=	<0 0x00 1 0x01 1 1>;
+		qcom,mem7	= <256 0x00 1 0x00 1 0>;
+	
+		cam_vdig-supply 		= <&pm8226_l5>;
+		qcom,cam-vreg-name		= "cam_vdig";
+		qcom,cam-vreg-type		= <0>;
+		qcom,cam-vreg-min-voltage	= <1100000 0>;
+		qcom,cam-vreg-max-voltage	= <1100000 0>;
+		qcom,cam-vreg-op-mode		= <1050000 0>;
+				
+		qcom,gpio-no-mux = <0>;
+		gpios = <&msmgpio 112 0>;
+		qcom,gpio-cam-vddio-v1p8 = <0>;
+		qcom,gpio-req-tbl-num = <0>;
+		qcom,gpio-req-tbl-flags = <0>;
+		qcom,gpio-req-tbl-label = "CAM_VDDIO_V1P8";
+		
+		qcom,cam-power-seq-type 	= "sensor_gpio";    
+		qcom,cam-power-seq-val		="sensor_gpio_cam_vddio_v1p8";
+		qcom,cam-power-seq-cfg-val	= <1>;
+		qcom,cam-power-seq-delay	= <20>;
+
+		somc,cam-mclk-rate		= <24000000>;
+		};
+
+	qcom,camera@34 {
+		compatible = "sne,imx134";
+		reg = <0x34>;
+		qcom,slave-id = <0x20 0x0016 0x134>;
+		qcom,csiphy-sd-index = <0>;
+		qcom,csid-sd-index = <0>;
+		qcom,actuator-src = <&actuator2>;
+		qcom,eeprom-src = <&eeprom2>;
+		qcom,led-flash-src = <&led_flash0>;
+		qcom,mount-angle = <90>;
+		qcom,sensor-name = "imx134";
+		cam_vdig-supply = <&pm8226_l5>;
+		qcom,cam-vreg-name = "cam_vdig";					 
+		qcom,cam-vreg-type = <0>;
+		qcom,cam-vreg-min-voltage = <1100000>;
+		qcom,cam-vreg-max-voltage = <1100000>;
+		qcom,cam-vreg-op-mode = <1050000>;
+		qcom,gpio-no-mux = <0>;
+		gpios = <&msmgpio 26 0>,
+			<&msmgpio 36 0>,
+			<&msmgpio 69 0>,
+			<&msmgpio 111 0>,
+			<&msmgpio 112 0>;
+		qcom,gpio-reset = <1>;
+		qcom,gpio-cam-vaa-v2p8 = <2>;
+		qcom,gpio-cam-vddaf-v2p8 = <3>;
+		qcom,gpio-cam-vddio-v1p8 = <4>;
+		qcom,gpio-req-tbl-num = <0 1 2 3 4 >;
+		qcom,gpio-req-tbl-flags = <1 0 0 0 0 >;
+		qcom,gpio-req-tbl-label = "CAMIF_MCLK",
+			"CAM_RESET1",
+		    "CAM_VAA_V2P8",
+			"CAM_VDDAF_V2P8",
+			"CAM_VDDIO_V1P8";
+		qcom,csi-lane-assign = <0x4320>;
+		qcom,csi-lane-mask = <0x1F>;
+		qcom,csi-phy-sel = <0>;
+		qcom,sensor-position = <0>;
+		qcom,sensor-mode = <0>;
+		qcom,sensor-type = <0>;
+		qcom,cci-master = <0>;
+		qcom,actuator-cam-name = <3>;
+		qcom,actuator-vcm-pwd = <111>;
+		qcom,actuator-vcm-enable = <1>;
+	};
+
+	qcom,camera@6e {
+		compatible = "qcom,imx188";
+		reg = <0x6e>;
+		qcom,slave-id = <0x6E 0x0000 0x188>;
+		qcom,csiphy-sd-index = <1>;
+		qcom,csid-sd-index = <1>;
+		qcom,mount-angle = <270>;
+		qcom,sensor-name = "imx188";
+		cam_vdig-supply = <&pm8226_l26>;
+		qcom,cam-vreg-name = "cam_vdig";
+		qcom,cam-vreg-type = <0>;
+		qcom,cam-vreg-min-voltage = <1200000>;
+		qcom,cam-vreg-max-voltage = <1200000>;
+		qcom,cam-vreg-op-mode = <1200000>;
+		qcom,gpio-no-mux = <0>;
+		gpios = <&msmgpio 27 0>,
+			    <&msmgpio 28 0>,
+			    <&msmgpio 69 0>,
+				<&msmgpio 112 0>;
+		qcom,gpio-reset1 = <1>;
+		qcom,gpio-cam-vaa-v2p8 = <2>;
+		qcom,gpio-cam-vddio-v1p8 = <3>;		
+		qcom,gpio-req-tbl-num = <0 1 2 3>;
+		qcom,gpio-req-tbl-flags = <1 0 0 0>;
+		qcom,gpio-req-tbl-label = "CAMIF_MCLK",
+				"CAM_RESET",
+				"CAM_VAA_V2P8",
+				"CAM_VDDIO_V1P8";
+		qcom,csi-lane-assign = <0x4320>;
+		qcom,csi-lane-mask = <0x3>;
+		qcom,sensor-position = <1>;
+		qcom,sensor-mode = <1>;
+		qcom,sensor-type = <0>;
+		qcom,cci-master = <0>;
+		status = "ok";
+	};		
+	
+};
