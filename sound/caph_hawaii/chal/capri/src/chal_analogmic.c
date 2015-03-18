@@ -327,7 +327,7 @@ void chal_audio_mic_pwrctrl(CHAL_HANDLE handle, _Bool pwronoff)
 		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_VRX1, reg_val);
 
 		/* a must (50ms) to remove bias glitch per asic sequence */
-		usleep_range(50000, 50500);
+		usleep_range(60000, 60500);
 
 		/* Set i_VREF_FastSettle (0) */
 		reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VREF);
@@ -494,7 +494,7 @@ void chal_audio_hs_mic_pwrctrl(CHAL_HANDLE handle, _Bool pwronoff)
 		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_VRX1, reg_val);
 
 		/* a must (50ms) to remove bias glitch per asic sequence */
-		usleep_range(50000, 50500);
+		usleep_range(60000, 60500);
 
 		/* Set i_VREF_FastSettle (0) */
 		reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VREF);
