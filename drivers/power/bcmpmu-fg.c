@@ -3090,17 +3090,36 @@ static void bcmpmu_fg_cal_low_batt_algo(struct bcmpmu_fg_data *fg)
 	if (!fg->pdata->disable_full_charge_learning &&
 			(abs(cap_delta) <= FG_LOW_BAT_CAP_DELTA_LIMIT) &&
 			fg->flags.fully_charged) {
+		u64 temp_cap_delta;
 		int tfact = bcmpmu_fg_get_temp_factor(fg);
 		pr_fg(FLOW, "%s: temperature factor = %d\n", __func__, tfact);
-		cap_full_charge = (((fg->capacity_info.full_charge *
-					tfact) / 1000) *
-					(100 + (u64)cap_delta));
+
+		/* cap_full_charge = (((fg->capacity_info.full_charge *
+		 *		tfact) / 1000) *
+		 *			(100 + cap_delta));
+		 */
+		cap_full_charge = fg->capacity_info.full_charge * tfact;
+		cap_full_charge = div64_u64(cap_full_charge, 1000);
+		cap_full_charge = cap_full_charge * (100 + cap_delta);
+
 		pr_fg(FLOW, "%s..cap_fc %llu\n", __func__, cap_full_charge);
-		cap_full_charge = (cap_full_charge * 1000) / tfact;
+
+		/* cap_full_charge = (cap_full_charge * 1000) / tfact; */
+		cap_full_charge = (cap_full_charge * 1000);
+		cap_full_charge = div64_u64(cap_full_charge, tfact);
+
 		pr_fg(FLOW, "tfact %d cap_fc %llu\n", tfact, cap_full_charge);
-		cap_full_charge = div_s64(cap_full_charge, 100);
-		cap_delta = ((100 * cap_full_charge) /
-			fg->capacity_info.max_design) - 100;
+		cap_full_charge = div64_u64(cap_full_charge, 100);
+
+
+		/* cap_delta = ((100 * cap_full_charge) /
+		 *	fg->capacity_info.max_design) - 100;
+		 */
+		temp_cap_delta = (100 * cap_full_charge);
+		temp_cap_delta = div64_u64(temp_cap_delta,
+			fg->capacity_info.max_design);
+		cap_delta = (int)(temp_cap_delta - 100);
+
 		pr_fg(FLOW, "cap_delta %d cap_fc %llu\n",
 				cap_delta, cap_full_charge);
 		pr_fg(FLOW, "Before full_charge update, cap_mAs: %d per: %d\n",
