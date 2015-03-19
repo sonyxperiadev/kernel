@@ -47,6 +47,7 @@ obj-$(CONFIG_MSM_MMCC_8996) += mmcc-msm8996.o
 obj-$(CONFIG_KPSS_XCC) += kpss-xcc.o
 obj-$(CONFIG_QCOM_HFPLL) += hfpll.o
 obj-$(CONFIG_KRAITCC) += krait-cc.o
+obj-$(CONFIG_QCOM_A53) += clk-a53.o
 
 
 obj-$(CONFIG_MSM_VIDEOCC_SDM845) += videocc-sdm845.o
