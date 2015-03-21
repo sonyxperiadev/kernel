@@ -160,6 +160,12 @@ config QCOM_HFPLL
 	  Say Y if you want to support CPU frequency scaling on devices
 	  such as MSM8974, APQ8084, etc.
 
+config KRAIT_CLOCKS
+	bool
+	select KRAIT_L2_ACCESSORS
+
+
+
 config MSM_GCC_SDM845
 	tristate "SDM845 Global Clock Controller"
 	depends on COMMON_CLK_QCOM
