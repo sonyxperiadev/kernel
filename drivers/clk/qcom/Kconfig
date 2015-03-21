@@ -93,6 +93,10 @@ config IPQ_GCC_8074
 	  i2c, USB, SD/eMMC, etc. Select this for the root clock
 	  of ipq8074.
 
+config KRAIT_CLOCKS
+	bool
+	select KRAIT_L2_ACCESSORS
+
 config MSM_GCC_8660
 	tristate "MSM8660 Global Clock Controller"
 	depends on COMMON_CLK_QCOM
