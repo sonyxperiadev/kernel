@@ -20,11 +20,6 @@
 &soc {
 	/* BLSP2 */
 	i2c_2: i2c@f9924000 {
-		synaptics_clearpad@2c {
-			preset_x_max = <1079>;
-			preset_y_max = <1919>;
-			preset_n_bytes_per_object = <8>;
-		};
 		maxim_max1187x_tsc@48 {
 			compatible = "maxim,max1187x_tsc";
 			reg = <0x48>;
@@ -57,7 +52,6 @@
 			touch_pressure_enabled = <1>;
 			touch_size_enabled = <0>;
 			touch_orientation_enabled = <0>;
-			glove_enabled = <0>;
 			report_pen_as_finger = <1>;
 			wakeup_gesture_support = <0>;
 			wakeup_gesture_timeout = <0>;
