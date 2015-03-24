@@ -86,12 +86,12 @@ int __init mm_v3d_init(void)
 	dvfs_param.tur_low = 60;
 	dvfs_param.st_low = 55;
 #else
-	dvfs_param.eco_high = 0;
-	dvfs_param.nor_high = 80;
-	dvfs_param.nor_low = 0;
-	dvfs_param.tur_high = 80;
-	dvfs_param.tur_low = 45;
-	dvfs_param.st_low = 45;
+	dvfs_param.eco_high = 80;
+	dvfs_param.nor_high = 85;
+	dvfs_param.nor_low = 50;
+	dvfs_param.tur_high = 90;
+	dvfs_param.tur_low = 60;
+	dvfs_param.st_low = 55;
 #endif
 	dvfs_param.dvfs_bulk_job_cnt = 0;
 	v3d_device->fmwk_handle =
