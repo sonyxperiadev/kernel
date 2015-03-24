@@ -40,3 +40,13 @@ config MSM_ADRENO_DEFAULT_GOVERNOR
 	default "msm-adreno-tz" if DEVFREQ_GOV_MSM_ADRENO_TZ
 	default "simple_ondemand"
 	depends on MSM_KGSL
+
+config MSM_ADRENO_USES_OLD_FIRMWARE
+	bool "Mantain compatibility with old Adreno firmwares"
+	default y
+	---help---
+	  Select this if you need to use old Adreno firmwares
+	  not supporting CP_WAIT_FOR_ME and/or CP_COND_EXEC cmds.
+	  This is to retain compatibility with older software.
+
+	  If you experience GPU faults at boot, say Y.
