@@ -281,7 +281,7 @@ static unsigned int _adreno_iommu_set_pt_v1(struct adreno_ringbuffer *rb,
 	unsigned int ttbr0, tlbiall, tlbstatus, tlbsync, mmu_ctrl;
 
 	cmds += adreno_add_idle_cmds(adreno_dev, cmds);
-
+#ifndef CONFIG_MSM_ADRENO_USES_OLD_FIRMWARE
 	/* set flag that indicates whether pt switch is required*/
 	cmds += _adreno_mmu_set_pt_update_condition(rb, cmds, ptname);
 	*cmds++ = cp_type3_packet(CP_COND_EXEC, 4);
@@ -295,6 +295,7 @@ static unsigned int _adreno_iommu_set_pt_v1(struct adreno_ringbuffer *rb,
 	/* Exec count to be filled later */
 	cond_exec_ptr = cmds;
 	cmds++;
+#endif
 	for (i = 0; i < num_iommu_units; i++) {
 		if (ADRENO_FEATURE(adreno_dev, ADRENO_HAS_REG_TO_REG_CMDS)) {
 			int count = 1;
@@ -453,10 +454,14 @@ static unsigned int _adreno_iommu_set_pt_v1(struct adreno_ringbuffer *rb,
 		*cmds++ = cp_type3_packet(CP_WAIT_FOR_ME, 1);
 		*cmds++ = 0;
 	}
+#ifndef CONFIG_MSM_ADRENO_USES_OLD_FIRMWARE
 	/* Exec count ordinal of CP_COND_EXEC packet */
 	*cond_exec_ptr = (cmds - cond_exec_ptr - 1);
+#endif
 	cmds += adreno_add_idle_cmds(adreno_dev, cmds);
+#ifndef CONFIG_MSM_ADRENO_USES_OLD_FIRMWARE
 	cmds += _adreno_iommu_pt_update_pid_to_mem(rb, cmds, ptname);
+#endif
 
 	return cmds - cmds_orig;
 }
