@@ -242,6 +242,7 @@ static int msm_dai_stub_dev_probe(struct platform_device *pdev)
 	}
 
 	pdev->id = id;
+	dev_set_name(&pdev->dev, "%s.%d", "msm-dai-stub-dev", id);
 
 	pr_debug("%s: dev name %s, id:%d\n", __func__,
 		 dev_name(&pdev->dev), pdev->id);
