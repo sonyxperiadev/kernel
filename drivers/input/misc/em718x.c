@@ -330,6 +330,12 @@ struct event_device {
 	struct em718x *em718x;
 };
 
+struct sensor_request {
+	u32 rate;
+	bool report;
+	int fifo_size;
+};
+
 struct em718x {
 	struct i2c_client *client;
 	int irq_gpio;
@@ -341,7 +347,6 @@ struct em718x {
 	u8 algo_ctl;
 	u8 enabled_sns;
 	u8 suspend_enabled_sns;
-	u32 sns_rate[SNS_CNT];
 	struct feature_desc f_desc[MAX_FEATURES_ACTIVE];
 	struct firmware fw;
 	struct wake_lock w_lock;
@@ -354,11 +359,14 @@ struct em718x {
 	struct event_device ev_device;
 	struct event_device wake_ev_device;
 	u8 status_reported;
-	int fifo_size;
 	s64 irq_time;
 	s64 last_samle_t;
 	u32 acc_rate_ns;
 	u8 mcal_status;
+	struct sensor_request sns_req[SNS_CNT];
+	struct sensor_request sns_state[SNS_CNT];
+	struct mutex ctl_lock;
+	struct work_struct sns_ctl_work;
 };
 
 static int smbus_read_byte(struct i2c_client *client,
@@ -484,7 +492,7 @@ static int em718x_update_run_mode(struct em718x *em718x)
 {
 	int i;
 	for (i = SNS_QUATERNION + 1; i < SNS_CNT; i++) {
-		if (em718x->sns_rate[i])
+		if (em718x->sns_state[i].rate)
 			return em718x_standby(em718x, false);
 	}
 	return em718x_standby(em718x, true);
@@ -500,14 +508,14 @@ static int em718x_update_event_ena_reg(struct em718x *em718x,
 	for (i = 0; i < SNS_CNT; i++) {
 		if (enabled_sensors & (1 << i)) {
 			rpt_ena_reg |= em718x_sns_ctl[i].bit_mask;
-			if (i > SNS_GYRO && em718x->sns_rate[i]) {
-				u8 reg = em718x->sns_rate[i] | (1 << 7);
+			if (i > SNS_GYRO && em718x->sns_state[i].rate) {
+				u8 reg = em718x->sns_state[i].rate | (1 << 7);
 				smbus_write_byte(em718x->client,
 						ctl[i].rate_set_reg, reg);
 			}
 		} else {
-			if (i > SNS_GYRO && em718x->sns_rate[i]) {
-				u8 reg = em718x->sns_rate[i] & ~(1 << 7);
+			if (i > SNS_GYRO && em718x->sns_state[i].rate) {
+				u8 reg = em718x->sns_state[i].rate & ~(1 << 7);
 				smbus_write_byte(em718x->client,
 						ctl[i].rate_set_reg, reg);
 			}
@@ -519,6 +527,7 @@ static int em718x_update_event_ena_reg(struct em718x *em718x,
 static int em718x_set_sensor_report(struct em718x *em718x,
 		enum em718x_sensors sns, bool enable)
 {
+	int rc;
 	struct device *dev = &em718x->client->dev;
 	if (enable) {
 		em718x->enabled_sns |= 1 << sns;
@@ -530,8 +539,12 @@ static int em718x_set_sensor_report(struct em718x *em718x,
 		dev_dbg(dev, "%s: '%s' disable report\n",
 				__func__, sns_id[sns]);
 	}
-	return em718x->suspend_prepared ? 0 :
-		em718x_update_event_ena_reg(em718x, em718x->enabled_sns);
+	if (em718x->suspend_prepared)
+		return 0;
+	rc = em718x_update_event_ena_reg(em718x, em718x->enabled_sns);
+	if (!rc)
+		em718x->sns_state[sns].report = enable;
+	return rc;
 }
 
 static unsigned long acc_actual_rate_ns(struct em718x *em718x)
@@ -549,7 +562,7 @@ static unsigned long acc_actual_rate_ns(struct em718x *em718x)
 		{500, 1000000},
 		{1000, 500000},
 	};
-	u32 bw = em718x->sns_rate[SNS_ACC] / 2;
+	u32 bw = em718x->sns_state[SNS_ACC].rate / 2;
 	size_t i;
 	for (i = 0; i < ARRAY_SIZE(supported_filter_bw) - 1; i++) {
 		if (bw <= supported_filter_bw[i].bw_hz)
@@ -581,7 +594,7 @@ static int em718x_set_sensor_rate(struct em718x *em718x,
 			rate_to_appy);
 	rc = smbus_write_byte(em718x->client, ctl->rate_set_reg, rate_to_appy);
 	if (!rc) {
-		em718x->sns_rate[sns] = rate;
+		em718x->sns_state[sns].rate = rate;
 		if (sns == SNS_ACC)
 			em718x->acc_rate_ns = acc_actual_rate_ns(em718x);
 		rc = em718x_update_run_mode(em718x);
@@ -827,7 +840,6 @@ static ssize_t em718x_set_rate(struct device *dev,
 	struct em718x *em718x = dev_get_drvdata(dev);
 	char id[32];
 	u32 rate;
-	int rc;
 	size_t i;
 
 	if (2 != sscanf(buf, "%32s %u", id, &rate))
@@ -835,15 +847,16 @@ static ssize_t em718x_set_rate(struct device *dev,
 
 	for (i = 0; i < ARRAY_SIZE(sns_id); i++) {
 		if (!strcmp(id, sns_id[i])) {
-			mutex_lock(&em718x->lock);
-			rc = em718x_set_sensor_rate(em718x, i, rate);
-			mutex_unlock(&em718x->lock);
-			goto exit;
+			mutex_lock(&em718x->ctl_lock);
+			if (em718x->sns_state[i].rate != rate) {
+				em718x->sns_req[i].rate = rate;
+				schedule_work(&em718x->sns_ctl_work);
+			}
+			mutex_unlock(&em718x->ctl_lock);
+			return count;
 		}
 	}
-	rc = -EINVAL;
-exit:
-	return rc ? rc : count;
+	return -EINVAL;
 }
 
 static DEVICE_ATTR(rate, S_IRUGO | S_IWUSR,
@@ -873,24 +886,24 @@ static ssize_t em718x_set_report_enable(struct device *dev,
 	struct em718x *em718x = dev_get_drvdata(dev);
 	char id[32];
 	u32 enable;
-	int rc;
 	size_t i;
 
 	if (2 != sscanf(buf, "%32s %u", id, &enable))
 		return -EINVAL;
 
+	enable = !!enable;
 	for (i = 0; i < ARRAY_SIZE(sns_id); i++) {
 		if (!strcmp(id, sns_id[i])) {
-			mutex_lock(&em718x->lock);
-			rc = em718x_set_sensor_report(em718x, i, !!enable);
-			mutex_unlock(&em718x->lock);
-			goto exit;
+			mutex_lock(&em718x->ctl_lock);
+			if (em718x->sns_state[i].report != enable) {
+				em718x->sns_req[i].report = enable;
+				schedule_work(&em718x->sns_ctl_work);
+			}
+			mutex_unlock(&em718x->ctl_lock);
+			return count;
 		}
 	}
-	rc = -EINVAL;
-exit:
-	return rc ? rc : count;
-
+	return -EINVAL;
 }
 
 static DEVICE_ATTR(report, S_IRUGO | S_IWUSR,
@@ -938,8 +951,32 @@ static int em718x_fifo_size_set(struct em718x *em718x, int fifo_size)
 		dev_err(&em718x->client->dev, "%s: failed: no ack\n", __func__);
 		return -EIO;
 	}
-	em718x->fifo_size = fifo_size;
+	em718x->sns_state[SNS_ACC].fifo_size = fifo_size;
 	return 0;
+}
+
+static void sensor_control_work(struct work_struct *work)
+{
+	struct em718x *em718x = container_of(work, struct em718x, sns_ctl_work);
+	size_t i;
+
+	mutex_lock(&em718x->lock);
+	mutex_lock(&em718x->ctl_lock);
+	for (i = 0; i < ARRAY_SIZE(em718x->sns_req); i++) {
+		struct sensor_request *rq = &em718x->sns_req[i];
+		struct sensor_request *state = &em718x->sns_state[i];
+
+		if (state->rate != rq->rate)
+			(void)em718x_set_sensor_rate(em718x, i, rq->rate);
+
+		if (i == SNS_ACC && (rq->fifo_size || state->fifo_size))
+			(void)em718x_fifo_size_set(em718x, rq->fifo_size);
+
+		if (state->report != rq->report)
+			(void)em718x_set_sensor_report(em718x, i, rq->report);
+	}
+	mutex_unlock(&em718x->ctl_lock);
+	mutex_unlock(&em718x->lock);
 }
 
 static ssize_t em718x_get_fifo_size(struct device *dev,
@@ -947,7 +984,8 @@ static ssize_t em718x_get_fifo_size(struct device *dev,
 			char *buf)
 {
 	struct em718x *em718x = dev_get_drvdata(dev);
-	return scnprintf(buf, PAGE_SIZE, "%d", em718x->fifo_size);
+	return scnprintf(buf, PAGE_SIZE, "%d",
+			em718x->sns_state[SNS_ACC].fifo_size);
 }
 
 static ssize_t em718x_set_fifo_size(struct device *dev,
@@ -963,11 +1001,14 @@ static ssize_t em718x_set_fifo_size(struct device *dev,
 		return rc;
 	if (fifo_size > FIFO_SIZE_MAX)
 		return -EINVAL;
-	mutex_lock(&em718x->lock);
-	rc = em718x_fifo_size_set(em718x, fifo_size);
-	mutex_unlock(&em718x->lock);
-	return rc ? rc : count;
 
+	mutex_lock(&em718x->ctl_lock);
+	if (em718x->sns_state[SNS_ACC].fifo_size || fifo_size) {
+		em718x->sns_req[SNS_ACC].fifo_size = fifo_size;
+		schedule_work(&em718x->sns_ctl_work);
+	}
+	mutex_unlock(&em718x->ctl_lock);
+	return count;
 }
 
 static DEVICE_ATTR(fifo_size, S_IRUGO | S_IWUSR,
@@ -1128,7 +1169,8 @@ static void drain_fifo(struct em718x *em718x)
 					sizeof(acc), (u8 *)&acc))
 			break;
 
-		if (!acc.t || !enabled(em718x, SNS_ACC) || !em718x->fifo_size) {
+		if (!acc.t || !enabled(em718x, SNS_ACC) ||
+					!em718x->sns_state[SNS_ACC].fifo_size) {
 			if (samples) {
 				ev = &p->ev[p->widx];
 				ev->type = SENSOR_TYPE_ACC |
@@ -1199,7 +1241,7 @@ static void em718x_process_amgf(struct em718x *em718x,
 	ev.time = em718x->irq_time;
 
 	if ((ev_status & EV_ACC) && enabled(em718x, SNS_ACC)) {
-		if (em718x->fifo_size) {
+		if (em718x->sns_state[SNS_ACC].fifo_size) {
 			drain_fifo(em718x);
 		} else {
 			dev_vdbg(dev, "acc[%u] %d, %d, %d\n", amgf->acc.t,
@@ -1472,6 +1514,7 @@ exit:
 				em718x->wake_ev_device.ev_queue.wakeups);
 	}
 	mutex_unlock(&em718x->lock);
+	flush_work(&em718x->sns_ctl_work);
 	return IRQ_HANDLED;
 }
 
@@ -1760,7 +1803,6 @@ static void em718x_reset_work_func(struct work_struct *work)
 	struct device *dev = &em718x->client->dev;
 	int rc;
 	u8 status;
-	size_t i;
 
 	dev_dbg(&em718x->client->dev, "%s\n", __func__);
 
@@ -1789,16 +1831,10 @@ static void em718x_reset_work_func(struct work_struct *work)
 	em718x_parameters_apply(em718x);
 	em718x_parse_features(em718x);
 
-	for (i = 0; i < ARRAY_SIZE(sns_id); i++) {
-		rc = em718x_set_sensor_rate(em718x, i, em718x->sns_rate[i]);
-		if (rc)
-			goto exit;
-	}
-	rc = em718x_update_event_ena_reg(em718x, em718x->enabled_sns);
-	if (rc)
-		goto exit;
-
-	em718x_fifo_size_set(em718x, em718x->fifo_size);
+	mutex_lock(&em718x->ctl_lock);
+	memset(em718x->sns_state, 0, sizeof(em718x->sns_state));
+	schedule_work(&em718x->sns_ctl_work);
+	mutex_unlock(&em718x->ctl_lock);
 
 	dev_info(dev, "reset finished with no errors\n");
 exit_rescheduled:
@@ -2022,7 +2058,9 @@ static int em718x_probe(struct i2c_client *client,
 	i2c_set_clientdata(client, em718x);
 	em718x->client = client;
 	INIT_DELAYED_WORK(&em718x->reset_work, em718x_reset_work_func);
+	INIT_WORK(&em718x->sns_ctl_work, sensor_control_work);
 	mutex_init(&em718x->lock);
+	mutex_init(&em718x->ctl_lock);
 	wake_lock_init(&em718x->w_lock, WAKE_LOCK_SUSPEND, dev_name(dev));
 	rc = em718x_check_id(em718x);
 	if (rc)
