@@ -71,11 +71,13 @@ struct user_pt_regs {
 	__u64		pstate;
 };
 
+#if defined (__LP64__)
 struct user_fpsimd_state {
 	__uint128_t	vregs[32];
 	__u32		fpsr;
 	__u32		fpcr;
 };
+#endif
 
 struct user_hwdebug_state {
 	__u32		dbg_info;
