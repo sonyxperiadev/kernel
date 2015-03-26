@@ -27,7 +27,8 @@
 /* wait for at most 2 vsync for lowest refresh rate (24hz) */
 #define KOFF_TIMEOUT msecs_to_jiffies(84)
 
-#define STOP_TIMEOUT(hz) msecs_to_jiffies((1000 / hz) * (VSYNC_EXPIRE_TICK + 2))
+#define STOP_TIMEOUT(hz) \
+	msecs_to_jiffies(2 * (1000 / hz) * (VSYNC_EXPIRE_TICK + 2))
 #define POWER_COLLAPSE_TIME msecs_to_jiffies(100)
 
 static DEFINE_MUTEX(cmd_clk_mtx);
@@ -128,6 +129,7 @@ static int mdss_mdp_cmd_tearcheck_cfg(struct mdss_mdp_ctl *ctl,
 	struct mdss_mdp_pp_tear_check *te = NULL;
 	struct mdss_panel_info *pinfo;
 	u32 vsync_clk_speed_hz, total_lines, vclks_line, cfg = 0;
+	u32 vporch, height = 0;
 	char __iomem *pingpong_base;
 	struct mdss_mdp_cmd_ctx *ctx = ctl->priv_data;
 
@@ -166,6 +168,12 @@ static int mdss_mdp_cmd_tearcheck_cfg(struct mdss_mdp_ctl *ctl,
 
 		cfg |= vclks_line;
 
+		vporch = pinfo->lcdc.v_back_porch +
+			 pinfo->lcdc.v_front_porch +
+			 pinfo->lcdc.v_pulse_width;
+
+		height = (pinfo->yres + vporch) * 2;
+
 		pr_debug("%s: yres=%d vclks=%x height=%d init=%d rd=%d start=%d\n",
 			__func__, pinfo->yres, vclks_line, te->sync_cfg_height,
 			 te->vsync_init_val, te->rd_ptr_irq, te->start_pos);
@@ -181,8 +189,7 @@ static int mdss_mdp_cmd_tearcheck_cfg(struct mdss_mdp_ctl *ctl,
 	mdss_mdp_pingpong_write(pingpong_base,
 		MDSS_MDP_REG_PP_SYNC_CONFIG_VSYNC, cfg);
 	mdss_mdp_pingpong_write(pingpong_base,
-		MDSS_MDP_REG_PP_SYNC_CONFIG_HEIGHT,
-		te ? te->sync_cfg_height : 0);
+		MDSS_MDP_REG_PP_SYNC_CONFIG_HEIGHT, height);
 	mdss_mdp_pingpong_write(pingpong_base,
 		MDSS_MDP_REG_PP_VSYNC_INIT_VAL,
 		te ? te->vsync_init_val : 0);
@@ -963,6 +970,24 @@ int mdss_mdp_cmd_kickoff(struct mdss_mdp_ctl *ctl, void *arg)
 	mb();
 	MDSS_XLOG(ctl->num,  atomic_read(&ctx->koff_cnt), ctx->clk_enabled,
 						ctx->rdptr_enabled);
+
+	if (!__mdss_mdp_cmd_is_panel_power_on_interactive(ctx)) {
+		if (ctl->mfd) {
+			struct mdss_panel_data *pdata;
+			pdata = dev_get_platdata(&ctl->mfd->pdev->dev);
+			if (!pdata) {
+				pr_err("no panel connected\n");
+				return -ENODEV;
+			}
+
+			if (pdata->intf_ready)
+				pdata->intf_ready(pdata);
+		}
+		ctx->panel_power_state = MDSS_PANEL_POWER_ON;
+		if (sctx)
+			sctx->panel_power_state = MDSS_PANEL_POWER_ON;
+	}
+
 	return 0;
 }
 

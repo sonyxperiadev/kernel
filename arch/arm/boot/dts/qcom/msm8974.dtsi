@@ -1,4 +1,5 @@
 /* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2013 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -109,6 +110,13 @@
 			linux,reserve-region;
 			linux,remove-completely;
 			reg = <0xfa00000 0x500000>;
+		};
+
+		camera_mem: camera_region@0 {
+			linux,reserve-contiguous-region;
+			linux,reserve-region;
+			reg = <0 0x6400000>;
+			label = "camera_mem";
 		};
 	};
 
@@ -714,6 +722,9 @@
 
 		qcom,cdc-mclk-gpios = <&pm8941_gpios 15 0>;
 		qcom,taiko-mclk-clk-freq = <9600000>;
+
+		qcom,hdmi-audio-rx;
+
 		qcom,prim-auxpcm-gpio-clk  = <&msmgpio 65 0>;
 		qcom,prim-auxpcm-gpio-sync = <&msmgpio 66 0>;
 		qcom,prim-auxpcm-gpio-din  = <&msmgpio 67 0>;
@@ -1495,6 +1506,7 @@
 			target-dev = <&cpubw>;
 			cpu-to-dev-map =
 				<  300000  572 >,
+				<  345600  762 >,
 				<  422400 1144 >,
 				<  652800 1525 >,
 				<  883200 2342 >,
@@ -1507,6 +1519,7 @@
 			target-dev = <&cache>;
 			cpu-to-dev-map =
 				<  300000  300000 >,
+				<  345600  345600 >,
 				<  422400  422400 >,
 				<  652800  499200 >,
 				<  883200  576000 >,
@@ -1531,6 +1544,7 @@
 			 <&clock_krait clk_krait3_clk>;
 		qcom,cpufreq-table =
 			<  300000 >,
+			<  345600 >,
 			<  422400 >,
 			<  652800 >,
 			<  729600 >,
@@ -1927,7 +1941,7 @@
 		qcom,ssctl-instance-id = <0x12>;
 		qcom,firmware-name = "modem";
 		qcom,pil-self-auth;
-		qcom,mba-image-is-not-elf;
+		//qcom,mba-image-is-not-elf;
 
 		/* GPIO inputs from mss */
 		qcom,gpio-err-fatal = <&smp2pgpio_ssr_smp2p_1_in 0 0>;
@@ -2204,7 +2218,7 @@
         qcom,qcedev@fd440000 {
 		compatible = "qcom,qcedev";
 		reg = <0xfd440000 0x20000>,
-		      <0xfd444000 0x1b000>;
+		      <0xfd444000 0x8000>;
 		reg-names = "crypto-base","crypto-bam-base";
 		interrupts = <0 236 0>;
 		qcom,bam-pipe-pair = <1>;
@@ -2219,36 +2233,15 @@
 		qcom,ce-opp-freq = <100000000>;
 	};
 
-        qcom,qcrypto@fd440000 {
+        qcom,qcrypto@fd444000 {
 		compatible = "qcom,qcrypto";
 		reg = <0xfd440000 0x20000>,
-		      <0xfd444000 0x1b000>;
+		      <0xfd444000 0x8000>;
 		reg-names = "crypto-base","crypto-bam-base";
 		interrupts = <0 236 0>;
 		qcom,bam-pipe-pair = <2>;
 		qcom,ce-hw-instance = <1>;
 		qcom,ce-device = <0>;
-		qcom,clk-mgmt-sus-res;
-                qcom,msm-bus,name = "qcrypto-noc";
-		qcom,msm-bus,num-cases = <2>;
-		qcom,msm-bus,num-paths = <1>;
-		qcom,use-sw-aes-cbc-ecb-ctr-algo;
-		qcom,use-sw-aes-xts-algo;
-		qcom,use-sw-ahash-algo;
-		qcom,msm-bus,vectors-KBps =
-				<56 512 0 0>,
-				<56 512 3936000 393600>;
-		qcom,ce-opp-freq = <100000000>;
-	};
-        qcom,qcrypto1@fd440000 {
-		compatible = "qcom,qcrypto";
-		reg = <0xfd440000 0x20000>,
-		      <0xfd444000 0x1b000>;
-		reg-names = "crypto-base","crypto-bam-base";
-		interrupts = <0 236 0>;
-		qcom,bam-pipe-pair = <0>;
-		qcom,ce-hw-instance = <1>;
-		qcom,ce-device = <1>;
 		qcom,clk-mgmt-sus-res;
                 qcom,msm-bus,name = "qcrypto-noc";
 		qcom,msm-bus,num-cases = <2>;

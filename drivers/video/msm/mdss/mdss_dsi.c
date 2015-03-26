@@ -1,4 +1,5 @@
 /* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2013-2014, Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -201,6 +202,7 @@ end:
 	return ret;
 }
 
+#ifndef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 static int mdss_dsi_panel_power_on(struct mdss_panel_data *pdata)
 {
 	int ret = 0;
@@ -268,6 +270,7 @@ error:
 	}
 	return ret;
 }
+#endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 
 static int mdss_dsi_panel_power_lp(struct mdss_panel_data *pdata, int enable)
 {
@@ -280,12 +283,19 @@ static int mdss_dsi_panel_power_ctrl(struct mdss_panel_data *pdata,
 {
 	int ret;
 	struct mdss_panel_info *pinfo;
+	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
 
 	if (pdata == NULL) {
 		pr_err("%s: Invalid input data\n", __func__);
 		return -EINVAL;
 	}
 
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
+						panel_data);
+
+	return ctrl_pdata->spec_pdata->panel_power_on(pdata, power_state);
+#else
 	pinfo = &pdata->panel_info;
 	pr_debug("%s: cur_power_state=%d req_power_state=%d\n", __func__,
 		pinfo->panel_power_state, power_state);
@@ -326,6 +336,7 @@ static int mdss_dsi_panel_power_ctrl(struct mdss_panel_data *pdata,
 		pinfo->panel_power_state = power_state;
 
 	return ret;
+#endif
 }
 
 static void mdss_dsi_put_dt_vreg_data(struct device *dev,
@@ -532,6 +543,22 @@ static int mdss_dsi_get_panel_cfg(char *panel_cfg,
 	rc = strlcpy(panel_cfg, pan_cfg->arg_cfg,
 		     sizeof(pan_cfg->arg_cfg));
 	return rc;
+}
+
+static int mdss_dsi_intf_ready(struct mdss_panel_data *pdata)
+{
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	struct mdss_dsi_ctrl_pdata *ctrl_pdata;
+
+	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
+				panel_data);
+	if (!ctrl_pdata) {
+		pr_err("%s: Invalid input data\n", __func__);
+		return -EINVAL;
+	}
+	ctrl_pdata->spec_pdata->disp_on(pdata);
+#endif
+	return 0;
 }
 
 static int mdss_dsi_off(struct mdss_panel_data *pdata, int power_state)
@@ -1346,6 +1373,11 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 		ctrl_pdata->ctrl_state |= CTRL_STATE_MDP_ACTIVE;
 		if (ctrl_pdata->on_cmds.link_state == DSI_HS_MODE)
 			rc = mdss_dsi_unblank(pdata);
+#if (defined(CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL) && defined(CONFIG_MACH_SONY_YUKON))
+		if (ctrl_pdata->spec_pdata->disp_on_in_hs
+			&& ctrl_pdata->spec_pdata->disp_on)
+			rc = ctrl_pdata->spec_pdata->disp_on(pdata);
+#endif
 		break;
 	case MDSS_EVENT_BLANK:
 		power_state = (int) (unsigned long) arg;
@@ -1544,8 +1576,19 @@ static int mdss_dsi_ctrl_probe(struct platform_device *pdev)
 			pr_err("%s: FAILED: cannot alloc dsi ctrl\n",
 			       __func__);
 			rc = -ENOMEM;
+			return rc;
+		}
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+		ctrl_pdata->spec_pdata = devm_kzalloc(&pdev->dev,
+			sizeof(struct mdss_panel_specific_pdata),
+			GFP_KERNEL);
+		if (!ctrl_pdata->spec_pdata) {
+			pr_err("%s: FAILED: cannot alloc spec pdata\n",
+				__func__);
+			rc = -ENOMEM;
 			goto error_no_mem;
 		}
+#endif
 		platform_set_drvdata(pdev, ctrl_pdata);
 	}
 	ctrl_pdata->mdss_util = util;
@@ -1644,6 +1687,7 @@ static int mdss_dsi_ctrl_probe(struct platform_device *pdev)
 		}
 		disable_irq(gpio_to_irq(ctrl_pdata->disp_te_gpio));
 	}
+
 	pr_debug("%s: Dsi Ctrl->%d initialized\n", __func__, index);
 	return 0;
 
@@ -1655,6 +1699,9 @@ error_vreg:
 		mdss_dsi_put_dt_vreg_data(&pdev->dev,
 			&ctrl_pdata->power_data[i]);
 error_no_mem:
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	devm_kfree(&pdev->dev, ctrl_pdata->spec_pdata);
+#endif
 	devm_kfree(&pdev->dev, ctrl_pdata);
 
 	return rc;
@@ -1687,6 +1734,110 @@ static int mdss_dsi_ctrl_remove(struct platform_device *pdev)
 	msm_dss_iounmap(&ctrl_pdata->ctrl_io);
 	return 0;
 }
+
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+int mdss_dsi_panel_power_detect(struct platform_device *pdev, int enable)
+{
+#ifdef CONFIG_MACH_SONY_RHINE
+	int ret;
+	static struct regulator *vdd_vreg;
+
+	pr_debug("%s: enable=%d\n", __func__, enable);
+	if (!vdd_vreg) {
+		vdd_vreg = devm_regulator_get(&pdev->dev, "vdd");
+		if (IS_ERR(vdd_vreg)) {
+			pr_err("could not get 8941_lvs3, rc = %ld\n",
+					PTR_ERR(vdd_vreg));
+			return -ENODEV;
+		}
+	}
+
+	if (enable) {
+		ret = regulator_set_optimum_mode(vdd_vreg, 100000);
+		if (ret < 0) {
+			pr_err("%s: vdd_vreg set regulator mode failed.\n",
+						       __func__);
+			return ret;
+		}
+
+		ret = regulator_enable(vdd_vreg);
+		if (ret) {
+			pr_err("%s: Failed to enable regulator.\n", __func__);
+			return ret;
+		}
+
+		msleep(50);
+		wmb();
+	} else {
+		ret = regulator_disable(vdd_vreg);
+		if (ret) {
+			pr_err("%s: Failed to disable regulator.\n", __func__);
+			return ret;
+		}
+
+		ret = regulator_set_optimum_mode(vdd_vreg, 100);
+		if (ret < 0) {
+			pr_err("%s: vdd_vreg set regulator mode failed.\n",
+						       __func__);
+			return ret;
+		}
+
+		msleep(20);
+		devm_regulator_put(vdd_vreg);
+	}
+	return 0;
+#endif /* CONFIG_MACH_SONY_RHINE */
+#ifdef CONFIG_MACH_SONY_YUKON
+	int ret;
+	static struct regulator *vddio_vreg;
+
+	if (!vddio_vreg) {
+
+		vddio_vreg = devm_regulator_get(&pdev->dev, "vddio");
+		if (IS_ERR(vddio_vreg)) {
+			pr_err("could not get 8941_lvs3, rc = %ld\n",
+					PTR_ERR(vddio_vreg));
+			return -ENODEV;
+		}
+	}
+
+	if (enable) {
+		ret = regulator_set_optimum_mode(vddio_vreg, 100000);
+		if (ret < 0) {
+			pr_err("%s: vdd_vreg set regulator mode failed.\n",
+						       __func__);
+			return ret;
+		}
+
+		ret = regulator_enable(vddio_vreg);
+		if (ret) {
+			pr_err("%s: Failed to enable regulator.\n", __func__);
+			return ret;
+		}
+
+		msleep(50);
+		wmb();
+	} else {
+		ret = regulator_disable(vddio_vreg);
+		if (ret) {
+			pr_err("%s: Failed to disable regulator.\n", __func__);
+			return ret;
+		}
+
+		ret = regulator_set_optimum_mode(vddio_vreg, 100);
+		if (ret < 0) {
+			pr_err("%s: vdd_vreg set regulator mode failed.\n",
+						       __func__);
+			return ret;
+		}
+
+		usleep_range(9000, 10000);
+		devm_regulator_put(vddio_vreg);
+	}
+	return 0;
+#endif
+}
+#endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 
 struct device dsi_dev;
 
@@ -1798,8 +1949,17 @@ int dsi_panel_device_register(struct device_node *pan_node,
 	struct mdss_panel_info *pinfo = &(ctrl_pdata->panel_data.panel_info);
 	struct device_node *dsi_ctrl_np = NULL;
 	struct platform_device *ctrl_pdev = NULL;
+	struct mdss_panel_specific_pdata *spec_pdata = NULL;
 	const char *data;
 	struct resource *res;
+
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	spec_pdata = ctrl_pdata->spec_pdata;
+	if (!spec_pdata) {
+		pr_err("%s: Invalid input data\n", __func__);
+		return -EINVAL;
+	}
+#endif
 
 	mipi  = &(pinfo->mipi);
 
@@ -1832,7 +1992,7 @@ int dsi_panel_device_register(struct device_node *pan_node,
 	data = of_get_property(ctrl_pdev->dev.of_node,
 		"qcom,platform-strength-ctrl", &len);
 	if ((!data) || (len != 2)) {
-		pr_err("%s:%d, Unable to read Phy Strength ctrl settings\n",
+		pr_info("%s:%d, Unable to read Phy Strength ctrl settings\n",
 			__func__, __LINE__);
 		return -EINVAL;
 	}
@@ -1869,13 +2029,13 @@ int dsi_panel_device_register(struct device_node *pan_node,
 	data = of_get_property(ctrl_pdev->dev.of_node,
 		"qcom,platform-lane-config", &len);
 	if ((!data) || (len != 45)) {
-		pr_err("%s:%d, Unable to read Phy lane configure settings\n",
+		pr_info("%s:%d, Unable to read Phy lane configure settings\n",
 			__func__, __LINE__);
-		return -EINVAL;
-	}
-	for (i = 0; i < len; i++) {
-		pinfo->mipi.dsi_phy_db.lanecfg[i] =
-			data[i];
+	} else {
+		for (i = 0; i < len; i++) {
+			pinfo->mipi.dsi_phy_db.lanecfg[i] =
+				data[i];
+		}
 	}
 
 	rc = of_property_read_u32(ctrl_pdev->dev.of_node,
@@ -1977,6 +2137,16 @@ int dsi_panel_device_register(struct device_node *pan_node,
 	}
 
 	ctrl_pdata->panel_data.event_handler = mdss_dsi_event_handler;
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	ctrl_pdata->panel_data.intf_ready = mdss_dsi_intf_ready;
+	ctrl_pdata->panel_data.detect = spec_pdata->detect;
+	ctrl_pdata->panel_data.update_panel = spec_pdata->update_panel;
+	ctrl_pdata->panel_data.panel_pdev = ctrl_pdev;
+	ctrl_pdata->cabc_off_cmds = spec_pdata->cabc_off_cmds[DEFAULT_CMDS];
+	ctrl_pdata->cabc_late_off_cmds =
+				spec_pdata->cabc_late_off_cmds[DEFAULT_CMDS];
+	ctrl_pdata->off_cmds = spec_pdata->off_cmds[DEFAULT_CMDS];
+#endif
 
 	if (ctrl_pdata->status_mode == ESD_REG ||
 			ctrl_pdata->status_mode == ESD_REG_NT35596)

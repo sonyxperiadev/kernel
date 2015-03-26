@@ -19,6 +19,7 @@ obj-$(CONFIG_INPUT_ATI_REMOTE2)		+= ati_remote2.o
 obj-$(CONFIG_INPUT_ATLAS_BTNS)		+= atlas_btns.o
 obj-$(CONFIG_INPUT_BFIN_ROTARY)		+= bfin_rotary.o
 obj-$(CONFIG_INPUT_BMA150)		+= bma150.o
+obj-$(CONFIG_INPUT_BU520X1NVX)		+= bu520x1nvx.o
 obj-$(CONFIG_INPUT_CM109)		+= cm109.o
 obj-$(CONFIG_INPUT_CMA3000)		+= cma3000_d0x.o
 obj-$(CONFIG_INPUT_CMA3000_I2C)		+= cma3000_d0x_i2c.o
@@ -85,4 +86,7 @@ ifeq ($(CONFIG_BOSCH_BMA2X2_ENABLE_INT2),y)
 	EXTRA_CFLAGS += -DBMA2X2_ENABLE_INT2
 endif
 
+obj-$(CONFIG_SENSORS_BMG160)		+= bmg160_driver.o bmg160.o
+obj-$(CONFIG_SENSORS_BMM050)		+= bmm050_driver.o bmm050.o
 obj-$(CONFIG_SENSORS_MC3430)	+= mc3xxx.o
+obj-$(CONFIG_INPUT_KIONIX_ACCEL)	+= kionix_accel.o

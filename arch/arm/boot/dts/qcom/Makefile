@@ -1,33 +1,31 @@
 ifeq ($(CONFIG_OF),y)
 
-dtb-$(CONFIG_ARCH_MSM8974) += msm8974-v1-cdp.dtb \
-	msm8974-v1-fluid.dtb \
-	msm8974-v1-liquid.dtb \
-	msm8974-v1-mtp.dtb \
-	msm8974-v1-rumi.dtb \
-	msm8974-v1-sim.dtb \
-	msm8974-v2.0-1-cdp.dtb \
-	msm8974-v2.0-1-fluid.dtb \
-	msm8974-v2.0-1-liquid.dtb \
-	msm8974-v2.0-1-mtp.dtb \
-	apq8074-v2.0-1-cdp.dtb \
-	apq8074-v2.0-1-liquid.dtb \
-	apq8074-v2.0-1-dragonboard.dtb \
-	apq8074-v2.2-cdp.dtb \
-	apq8074-v2.2-liquid.dtb \
-	apq8074-v2.2-dragonboard.dtb \
-	msm8974-v2.2-cdp.dtb \
-	msm8974-v2.2-fluid.dtb \
-	msm8974-v2.2-liquid.dtb \
-	msm8974-v2.2-mtp.dtb \
-	msm8974pro-ab-pm8941-cdp.dtb \
-	msm8974pro-ab-pm8941-fluid.dtb \
-	msm8974pro-ab-pm8941-liquid.dtb \
-	msm8974pro-ab-pm8941-mtp.dtb \
-	msm8974pro-ac-pm8941-cdp.dtb \
-	msm8974pro-ac-pm8941-liquid.dtb \
-	msm8974pro-ac-pm8941-mtp.dtb \
-	msm8974pro-ac-pma8084-pm8941-mtp.dtb
+# MSM8974
+dtb-$(CONFIG_MACH_SONY_SIRIUS)		+= msm8974pro-ab-shinano_sirius.dtb
+dtb-$(CONFIG_MACH_SONY_CASTOR)		+= msm8974pro-ab-shinano_castor.dtb
+dtb-$(CONFIG_MACH_SONY_CASTOR_WINDY) 	+= apq8074pro-ab-shinano_castor_windy.dtb
+dtb-$(CONFIG_MACH_SONY_LEO)		+= msm8974pro-ac-shinano_leo.dtb
+dtb-$(CONFIG_MACH_SONY_ARIES)		+= msm8974pro-ac-shinano_aries.dtb
+dtb-$(CONFIG_MACH_SONY_SCORPION)	+= msm8974pro-ac-shinano_scorpion.dtb
+dtb-$(CONFIG_MACH_SONY_SCORPION_WINDY)	+= apq8074pro-ac-shinano_scorpion_windy.dtb
+dtb-$(CONFIG_MACH_SONY_HONAMI_ROW)	+= msm8974-v1-rhine_honami_row.dtb
+dtb-$(CONFIG_MACH_SONY_HONAMI_ROW)	+= msm8974-v2.0-1-rhine_honami_row.dtb
+dtb-$(CONFIG_MACH_SONY_HONAMI_ROW)	+= msm8974-v2.2-rhine_honami_row.dtb
+dtb-$(CONFIG_MACH_SONY_TOGARI_ROW)	+= msm8974-v1-rhine_togari_row.dtb
+dtb-$(CONFIG_MACH_SONY_TOGARI_ROW)	+= msm8974-v2.0-1-rhine_togari_row.dtb
+dtb-$(CONFIG_MACH_SONY_TOGARI_ROW)	+= msm8974-v2.2-rhine_togari_row.dtb
+dtb-$(CONFIG_MACH_SONY_AMAMI_ROW)	+= msm8974-v2.0-1-rhine_amami_row.dtb
+dtb-$(CONFIG_MACH_SONY_AMAMI_ROW)	+= msm8974-v2.2-rhine_amami_row.dtb
+
+# MSM8226
+dtb-$(CONFIG_MACH_SONY_EAGLE)	+= msm8926-yukon_eagle-720p-mtp.dtb
+dtb-$(CONFIG_MACH_SONY_FLAMINGO)+= msm8926-yukon_flamingo-8926ss_ap.dtb
+dtb-$(CONFIG_MACH_SONY_TIANCHI) += msm8926-yukon_tianchi.dtb
+dtb-$(CONFIG_MACH_SONY_TIANCHI) += msm8226-v1-yukon_tianchi_dsds.dtb
+dtb-$(CONFIG_MACH_SONY_TIANCHI) += msm8226-v2-yukon_tianchi_dsds.dtb
+dtb-$(CONFIG_MACH_SONY_SEAGULL) += msm8926-yukon_seagull-720p-mtp.dtb
+
+# Other
 dtb-$(CONFIG_ARCH_MSM8909) += msm8909-sim.dtb \
 	msm8909-rumi.dtb \
 	msm8909-qrd-skua.dtb \
@@ -77,51 +75,6 @@ dtb-$(CONFIG_ARCH_MSM8916) += msm8916-sim.dtb \
 	msm8936-mtp-wcd9306.dtb \
 	msmtellurium-sim.dtb \
 	msmtellurium-rumi.dtb
-dtb-$(CONFIG_ARCH_MSM8226) += msm8226-sim.dtb \
-	msm8226-fluid.dtb \
-	msm8226-v1-cdp.dtb \
-	msm8226-v1-w-cdp.dtb \
-	msm8226-v1-mtp.dtb \
-	msm8226-v1-w-mtp.dtb \
-	msm8226-v1-qrd-evt.dtb \
-	msm8226-v1-qrd-dvt.dtb \
-	msm8226-v2-720p-cdp.dtb \
-	msm8226-v2-320p-w-cdp.dtb \
-	msm8226-v2-1080p-cdp.dtb \
-	msm8226-v2-720p-mtp.dtb \
-	msm8226-v2-320p-w-mtp.dtb \
-	msm8226-v2-1080p-mtp.dtb \
-	msm8226-v2-qrd-evt.dtb \
-	msm8226-v2-qrd-dvt.dtb \
-	msm8926-v1-720p-cdp.dtb \
-	msm8926-v1-1080p-cdp.dtb \
-	msm8926-v1-720p-mtp.dtb \
-	msm8926-v1-1080p-mtp.dtb \
-	msm8926-v1-qrd.dtb \
-	msm8926-v1-qrd-skug.dtb \
-	msm8926-v1-qrd-skug-pvt.dtb \
-	msm8926-v2-720p-cdp.dtb \
-	msm8926-v2-1080p-cdp.dtb \
-	msm8926-v2-1080p-ext-buck-cdp.dtb \
-	msm8926-v2-720p-mtp.dtb \
-	msm8926-v2-1080p-mtp.dtb \
-	msm8926-v2-1080p-ext-buck-mtp.dtb \
-	msm8926-v2-qrd.dtb \
-	msm8926-v2-qrd-skug.dtb \
-	msm8926-v2-qrd-skug-pvt.dtb \
-	msm8226-v1-qrd-skuf.dtb \
-	msm8226-v2-qrd-skuf.dtb \
-	apq8026-v1-xpm.dtb \
-	apq8026-v1-cdp.dtb \
-	apq8026-v1-mtp.dtb \
-	apq8026-v1-w-mtp.dtb \
-	apq8026-v2-xpm.dtb \
-	apq8026-v2-720p-cdp.dtb \
-	apq8026-v2-320p-w-cdp.dtb \
-	apq8026-v2-1080p-cdp.dtb \
-	apq8026-v2-720p-mtp.dtb \
-	apq8026-v2-320p-w-mtp.dtb \
-	apq8026-v2-1080p-mtp.dtb
 dtb-$(CONFIG_ARCH_MSM8610) += msm8610-rumi.dtb \
 	msm8610-v1-cdp.dtb \
 	msm8610-v2-cdp.dtb \
