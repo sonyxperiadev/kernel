@@ -22,6 +22,7 @@
 #include <linux/of_platform.h>
 #include <linux/poll.h>
 #include <linux/slab.h>
+#include <linux/spinlock.h>
 #include <linux/suspend.h>
 #include <linux/wakelock.h>
 #include <linux/workqueue.h>
@@ -319,7 +320,7 @@ struct sensor_event_queue {
 	int widx;
 	struct sensor_event *ev;
 	int queue_size;
-	int wakeups;
+	spinlock_t lock;
 };
 
 struct event_device {
@@ -1115,29 +1116,47 @@ static int step_cntr_get_32(struct em718x *em718x, int *ext_steps, int idx)
 	return -EINVAL;
 }
 
-static void em718x_handle_event_queued(struct em718x *em718x,
-		struct event_device *ev_dev)
+static void em718x_queue_event(struct em718x *em718x, struct sensor_event *ev)
 {
+	unsigned long flags;
+	struct event_device *ev_dev = &em718x->ev_device;
 	struct sensor_event_queue *p = &ev_dev->ev_queue;
-	int widx = (p->widx + 1) % p->queue_size;
+	int widx;
+
+	spin_lock_irqsave(&p->lock, flags);
+	widx = (p->widx + 1) % p->queue_size;
 
 	if (p->ridx == widx) {
 		dev_warn(&em718x->client->dev, "fifo overrun\n");
-		if (p->ev[widx].type & SENSOR_TYPE_WAKE_UP)
-			p->wakeups--;
 		p->ridx = (p->ridx + 1) % p->queue_size;
 	}
-	if (p->ev[p->widx].type & SENSOR_TYPE_WAKE_UP)
-		p->wakeups++;
+	p->ev[p->widx] = *ev;
 	p->widx = widx;
+	spin_unlock_irqrestore(&p->lock, flags);
+	wake_up_interruptible(&ev_dev->wq);
 }
 
-static void em718x_queue_event(struct em718x *em718x,
-		struct event_device *ev_dev, struct sensor_event *ev)
+static void em718x_queue_event_wake(struct em718x *em718x,
+	struct sensor_event *ev)
 {
+	unsigned long flags;
+	struct event_device *ev_dev = &em718x->wake_ev_device;
 	struct sensor_event_queue *p = &ev_dev->ev_queue;
+	int widx;
+
+	spin_lock_irqsave(&p->lock, flags);
+	widx = (p->widx + 1) % p->queue_size;
+
+	if (p->ridx == widx) {
+		dev_warn(&em718x->client->dev, "fifo overrun\n");
+		p->ridx = (p->ridx + 1) % p->queue_size;
+	}
 	p->ev[p->widx] = *ev;
-	em718x_handle_event_queued(em718x, ev_dev);
+	p->widx = widx;
+	if (!wake_lock_active(&em718x->w_lock))
+		wake_lock(&em718x->w_lock);
+	spin_unlock_irqrestore(&p->lock, flags);
+	wake_up_interruptible(&ev_dev->wq);
 }
 
 static void drain_fifo(struct em718x *em718x)
@@ -1148,7 +1167,7 @@ static void drain_fifo(struct em718x *em718x)
 	s64 irq_t;
 	u16 samples_left;
 	u16 sample_seq_no;
-	struct sensor_event *ev;
+	struct sensor_event ev;
 	s64 ns = em718x->acc_rate_ns;
 	int ev_type;
 
@@ -1162,7 +1181,6 @@ static void drain_fifo(struct em718x *em718x)
 	(void)smbus_write_byte(em718x->client, R8_ALGO_CTL, em718x->algo_ctl);
 
 	for (first = true, samples = 0;;) {
-		struct sensor_event_queue *p = &em718x->ev_device.ev_queue;
 		struct data_3d acc;
 
 		if (big_block_read(em718x->client, RX_ACC_DATA,
@@ -1172,12 +1190,9 @@ static void drain_fifo(struct em718x *em718x)
 		if (!acc.t || !enabled(em718x, SNS_ACC) ||
 					!em718x->sns_state[SNS_ACC].fifo_size) {
 			if (samples) {
-				ev = &p->ev[p->widx];
-				ev->type = SENSOR_TYPE_ACC |
+				ev.type = SENSOR_TYPE_ACC |
 						SENSOR_FLUSH_COMPLETE;
-				em718x_handle_event_queued(em718x,
-						&em718x->ev_device);
-				wake_up_interruptible(&em718x->ev_device.wq);
+				em718x_queue_event(em718x, &ev);
 				dev_dbg(dev,
 					"acc flush complete, %d samples\n",
 					samples);
@@ -1195,9 +1210,6 @@ static void drain_fifo(struct em718x *em718x)
 				goto skip;
 			}
 
-			ev = &p->ev[p->widx];
-			ev->type = ev_type;
-
 			if (first) {
 				first = false;
 				irq_t = irq_t - (samples_left - 1) * ns;
@@ -1211,10 +1223,6 @@ static void drain_fifo(struct em718x *em718x)
 				}
 			}
 
-			ev->time = irq_t;
-			ev->d[0] = acc.x;
-			ev->d[1] = acc.y;
-			ev->d[2] = -acc.z;
 			em718x->last_samle_t = irq_t;
 
 			dev_vdbg(dev, "acc[%u, %u, %lld] %d, %d, %d\n",
@@ -1223,7 +1231,12 @@ static void drain_fifo(struct em718x *em718x)
 			irq_t += ns;
 			samples++;
 
-			em718x_handle_event_queued(em718x, &em718x->ev_device);
+			ev.type = ev_type;
+			ev.time = irq_t;
+			ev.d[0] = acc.x;
+			ev.d[1] = acc.y;
+			ev.d[2] = -acc.z;
+			em718x_queue_event(em718x, &ev);
 		}
 skip:
 		smbus_write_byte(em718x->client, R8_FIFO_ACK_REG, 0);
@@ -1250,7 +1263,7 @@ static void em718x_process_amgf(struct em718x *em718x,
 			ev.d[0] = amgf->acc.x;
 			ev.d[1] = amgf->acc.y;
 			ev.d[2] = -amgf->acc.z;
-			em718x_queue_event(em718x, &em718x->ev_device, &ev);
+			em718x_queue_event(em718x, &ev);
 		}
 	}
 	if (ev_status & EV_MAG) {
@@ -1267,7 +1280,7 @@ static void em718x_process_amgf(struct em718x *em718x,
 			ev.type = SENSOR_TYPE_CALSCORE;
 			ev.d[0] = cal_status >> 5;
 			ev.d[1] = cal_status & 0x1f;
-			em718x_queue_event(em718x, &em718x->ev_device, &ev);
+			em718x_queue_event(em718x, &ev);
 		}
 
 		if (enabled(em718x, SNS_MAG)) {
@@ -1280,7 +1293,7 @@ static void em718x_process_amgf(struct em718x *em718x,
 			ev.d[0] = amgf->mag.x;
 			ev.d[1] = amgf->mag.y;
 			ev.d[2] = -amgf->mag.z;
-			em718x_queue_event(em718x, &em718x->ev_device, &ev);
+			em718x_queue_event(em718x, &ev);
 		}
 
 	}
@@ -1291,7 +1304,7 @@ static void em718x_process_amgf(struct em718x *em718x,
 		ev.d[0] = -amgf->gyro.x;
 		ev.d[1] = -amgf->gyro.y;
 		ev.d[2] = amgf->gyro.z;
-		em718x_queue_event(em718x, &em718x->ev_device, &ev);
+		em718x_queue_event(em718x, &ev);
 	}
 	if (ev_status & EV_FEATURE) {
 		int i;
@@ -1325,8 +1338,7 @@ static void em718x_process_amgf(struct em718x *em718x,
 				}
 				ev.type = SENSOR_TYPE_STEP;
 				ev.d[0] = val;
-				em718x_queue_event(em718x, &em718x->ev_device,
-						&ev);
+				em718x_queue_event(em718x, &ev);
 				break;
 			case F_TILT:
 				dev_dbg(dev, "feature-%d: tilt (%d)\n",
@@ -1338,8 +1350,7 @@ static void em718x_process_amgf(struct em718x *em718x,
 				ev.type = SENSOR_TYPE_TILT_WRIST |
 						SENSOR_TYPE_WAKE_UP;
 				ev.d[0] = 1;
-				em718x_queue_event(em718x,
-						&em718x->wake_ev_device, &ev);
+				em718x_queue_event_wake(em718x, &ev);
 				break;
 			case F_ANY_MOTION:
 				if (!(val & ~1)) {
@@ -1352,8 +1363,7 @@ static void em718x_process_amgf(struct em718x *em718x,
 				ev.type = SENSOR_TYPE_AMD |
 						SENSOR_TYPE_WAKE_UP;
 				ev.d[0] = !val;
-				em718x_queue_event(em718x,
-						&em718x->wake_ev_device, &ev);
+				em718x_queue_event_wake(em718x, &ev);
 				break;
 			default:
 				dev_dbg(dev, "feature-%d: ?? value %d\n", i,
@@ -1409,8 +1419,7 @@ static void em718x_step_counter_sync_locked(struct em718x *em718x)
 		ev.time =  ktime_to_ns(ktime_get_boottime());
 		ev.type = SENSOR_TYPE_STEP;
 		ev.d[0] = val;
-		em718x_queue_event(em718x, &em718x->ev_device, &ev);
-		wake_up_interruptible(&em718x->ev_device.wq);
+		em718x_queue_event(em718x, &ev);
 	}
 }
 
@@ -1432,7 +1441,7 @@ static void em718x_process_q(struct em718x *em718x,
 		ev.d[1] = quat->d[1];
 		ev.d[2] = quat->d[2];
 		ev.d[3] = quat->d[3];
-		em718x_queue_event(em718x, &em718x->ev_device, &ev);
+		em718x_queue_event(em718x, &ev);
 	}
 }
 
@@ -1477,7 +1486,7 @@ static irqreturn_t em718x_irq_handler(int irq, void *handle)
 		ev.time =  em718x->irq_time;
 		ev.type = SENSOR_TYPE_STATUS;
 		ev.d[0] = status.s[3];
-		em718x_queue_event(em718x, &em718x->ev_device, &ev);
+		em718x_queue_event(em718x, &ev);
 		dev_dbg(dev, "sensor status updated 0x%02x\n", status.s[3]);
 		em718x->status_reported = status.s[3];
 	}
@@ -1498,21 +1507,7 @@ static irqreturn_t em718x_irq_handler(int irq, void *handle)
 		if (!rc)
 			em718x_process_amgf(em718x, &amgf, status.event_status);
 	}
-
-	if (em718x->ev_device.ev_queue.ridx !=  em718x->ev_device.ev_queue.widx)
-		wake_up_interruptible(&em718x->ev_device.wq);
-
-	if (em718x->wake_ev_device.ev_queue.ridx !=
-				em718x->wake_ev_device.ev_queue.widx)
-		wake_up_interruptible(&em718x->wake_ev_device.wq);
 exit:
-	if (em718x->ev_device.ev_queue.wakeups +
-				em718x->wake_ev_device.ev_queue.wakeups) {
-		wake_lock(&em718x->w_lock);
-		dev_dbg(dev, "%d wakeups in queue\n",
-				em718x->ev_device.ev_queue.wakeups +
-				em718x->wake_ev_device.ev_queue.wakeups);
-	}
 	mutex_unlock(&em718x->lock);
 	flush_work(&em718x->sns_ctl_work);
 	return IRQ_HANDLED;
@@ -1902,44 +1897,44 @@ static ssize_t em718x_cdev_read(struct file *filp, char __user *buf,
 			container_of(c, struct event_device, cdev);
 	struct em718x *em718x = ev_dev->em718x;
 	struct sensor_event_queue *p = &ev_dev->ev_queue;
-	int wakeups;
+	unsigned long flags;
 
 	if (!c)
 		return -ENODEV;
 
-	mutex_lock(&em718x->lock);
+	spin_lock_irqsave(&p->lock, flags);
 
 	while (p->ridx == p->widx) {
-		mutex_unlock(&em718x->lock);
+		spin_unlock_irqrestore(&p->lock, flags);
 
 		if (filp->f_flags & O_NONBLOCK)
 			return -EAGAIN;
 		if (wait_event_interruptible(ev_dev->wq, p->ridx != p->widx))
 			return -ERESTARTSYS;
-		mutex_lock(&em718x->lock);
+		spin_lock_irqsave(&p->lock, flags);
 	}
 
-	wakeups = p->wakeups;
-
-	for (len = 0; size > sizeof(p->ev[0]) && p->ridx != p->widx;
+	for (len = 0; size >= sizeof(p->ev[0]) && p->ridx != p->widx;
 			len += sizeof(p->ev[0])) {
+		struct sensor_event ev = p->ev[p->ridx];
 
-		if (copy_to_user(buf + len, &p->ev[p->ridx],
-				sizeof(p->ev[0]))) {
+		size -= sizeof(p->ev[0]);
+		p->ridx = (p->ridx + 1) % p->queue_size;
+
+		spin_unlock_irqrestore(&p->lock, flags);
+		if (copy_to_user(buf + len, &ev, sizeof(ev))) {
 			len = -EFAULT;
 			break;
 		}
-		if (p->ev[p->ridx].type & SENSOR_TYPE_WAKE_UP)
-			p->wakeups--;
-		size -= sizeof(p->ev[0]);
-		p->ridx = (p->ridx + 1) % p->queue_size;
+		spin_lock_irqsave(&p->lock, flags);
 	}
-	if (wakeups && !(em718x->ev_device.ev_queue.wakeups +
-				em718x->wake_ev_device.ev_queue.wakeups)) {
+	if ((ev_dev == &em718x->wake_ev_device) &&
+			(ev_dev->ev_queue.ridx == ev_dev->ev_queue.widx) &&
+			wake_lock_active(&em718x->w_lock)) {
 		wake_unlock(&em718x->w_lock);
 		dev_dbg(&em718x->client->dev, "removing wake lock\n");
 	}
-	mutex_unlock(&em718x->lock);
+	spin_unlock_irqrestore(&p->lock, flags);
 	return len;
 }
 
@@ -1950,19 +1945,19 @@ static unsigned int em718x_cdev_poll(struct file *filp,
 	struct miscdevice *c = filp->private_data;
 	struct event_device *ev_dev =
 			container_of(c, struct event_device, cdev);
-	struct em718x *em718x = ev_dev->em718x;
 	struct sensor_event_queue *p = &ev_dev->ev_queue;
+	unsigned long flags;
 
 	if (!c)
 		return 0;
 
 	poll_wait(filp, &ev_dev->wq, pt);
-	mutex_lock(&em718x->lock);
+	spin_lock_irqsave(&p->lock, flags);
 	if (p->ridx != p->widx)
 		mask = POLLIN | POLLRDNORM;
 	else
 		mask = 0;
-	mutex_unlock(&em718x->lock);
+	spin_unlock_irqrestore(&p->lock, flags);
 	return mask;
 }
 
@@ -2006,6 +2001,7 @@ static int em718x_setup_cdev(struct em718x *em718x)
 	em718x->ev_device.cdev.name = em718x->ev_device.name;
 	em718x->ev_device.cdev.fops = &em718x_fops;
 	em718x->ev_device.em718x = em718x;
+	spin_lock_init(&em718x->ev_device.ev_queue.lock);
 	rc = misc_register(&em718x->ev_device.cdev);
 	if (rc) {
 		dev_err(&em718x->client->dev, "%s: misc_register error %d\n",
@@ -2026,6 +2022,7 @@ static int em718x_setup_cdev(struct em718x *em718x)
 	em718x->wake_ev_device.cdev.name = em718x->wake_ev_device.name;
 	em718x->wake_ev_device.cdev.fops = &em718x_fops;
 	em718x->wake_ev_device.em718x = em718x;
+	spin_lock_init(&em718x->wake_ev_device.ev_queue.lock);
 	rc = misc_register(&em718x->wake_ev_device.cdev);
 	if (rc) {
 		dev_err(&em718x->client->dev, "%s: misc_register error %d\n",
