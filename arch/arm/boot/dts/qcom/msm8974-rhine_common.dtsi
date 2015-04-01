@@ -680,7 +680,7 @@
 				label = "rgb";
 				linux,name = "led:rgb_red";
 				qcom,mode = "pwm";
-				qcom,pwm-channel = <6>;
+				pwms = <&pm8941_pwm_7 0 0>;
 				qcom,pwm-us = <1000>;
 				qcom,max-current = <12>;
 				qcom,default-state = "off";
@@ -692,7 +692,7 @@
 				label = "rgb";
 				linux,name = "led:rgb_green";
 				qcom,mode = "pwm";
-				qcom,pwm-channel = <5>;
+				pwms = <&pm8941_pwm_6 0 0>;
 				qcom,pwm-us = <1000>;
 				qcom,max-current = <12>;
 				qcom,default-state = "off";
@@ -704,7 +704,7 @@
 				label = "rgb";
 				linux,name = "led:rgb_blue";
 				qcom,mode = "pwm";
-				qcom,pwm-channel = <4>;
+				pwms = <&pm8941_pwm_5 0 0>;
 				qcom,pwm-us = <1000>;
 				qcom,max-current = <12>;
 				qcom,default-state = "off";
