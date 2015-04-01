@@ -23,7 +23,8 @@
 		qcom,ion-heap@26 { /* MODEM HEAP */
 			compatible = "qcom,msm-ion-reserve";
 			reg = <26>;
-			linux,contiguous-region = <&modem_mem>;
+			qcom,heap-align = <0x1000>;
+			qcom,memory-fixed = <0x08000000 0x5100000>;
                         qcom,ion-heap-type = "DMA";
 		};
 	};

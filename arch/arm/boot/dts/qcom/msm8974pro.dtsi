@@ -44,15 +44,6 @@
 			label = "tz_apps";
 
 		};
-
-		modem_mem: modem_region@0x8000000 {
-			linux,reserve-contiguous-region;
-			linux,reserve-region;
-			linux,remove-completely;
-			reg = <0x8000000 0x5200000>;
-			label = "modem_mem";
-
-		};
         };
 };
 
@@ -1651,10 +1642,6 @@
 
 	qcom,lpass@fe200000 {
 		linux,contiguous-region = <&alt_peripheral_mem>;
-	};
-
-	qcom,mss@fc880000 {
-		linux,contiguous-region = <&modem_mem>;
 	};
 
 	qcom,venus@fdce0000 {
