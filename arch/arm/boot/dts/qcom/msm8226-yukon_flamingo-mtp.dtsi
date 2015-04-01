@@ -131,11 +131,6 @@
 	reg = <0x08000000 0x7500000>;
 };
 
-&peripheral_mem {
-	/* TODO: Check me! "Add 1M from 0x3f200000 for restart_parameters" */
-	reg = <0x3f200000 0x100000>;
-}
-
 &spmi_bus {
 	qcom,pm8226@0 {
 		qcom,leds@a100 {
