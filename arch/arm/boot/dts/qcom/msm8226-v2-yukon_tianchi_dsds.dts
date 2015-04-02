@@ -17,6 +17,9 @@
 /dts-v1/;
 
 #include "msm8226-v2.dtsi"
+#include "msm8226-memory.dtsi"
+#include "msm8226-qseecom.dtsi"
+#include "msm8226-sharedmem.dtsi"
 #include "msm8226-yukon_tianchi.dtsi"
 
 / {
