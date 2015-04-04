@@ -1578,7 +1578,9 @@ static int pp_hist_setup(u32 *op, u32 block, struct mdss_mdp_mixer *mix)
 		goto error;
 	}
 
-	mutex_lock(&hist_info->hist_mutex);
+	if (!mutex_is_locked(&hist_info->hist_mutex))
+		mutex_lock(&hist_info->hist_mutex);
+
 	spin_lock_irqsave(&hist_info->hist_lock, flag);
 	if (hist_info->col_en) {
 		*op |= op_flags;
