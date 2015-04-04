@@ -17,9 +17,14 @@
 		#size-cells = <1>;
 		reg = <0xf9089000 0x1000>;
 		qcom,name = "core0";
+		qcom,cpu = <&CPU0>;
 		qcom,core-id = <0>;
 		qcom,saw2-ver-reg = <0xfd0>;
 		qcom,saw2-cfg = <0x00>;
+		qcom,saw2-avs-ctl = <0>;
+		qcom,saw2-avs-hysteresis = <0>;
+		qcom,saw2-avs-limit = <0>;
+		qcom,saw2-avs-dly = <0>;
 		qcom,saw2-spm-dly= <0x3c102800>;
 		qcom,saw2-spm-ctl = <0x8>;
 		qcom,saw2-spm-cmd-wfi = [60 03 60 0b 0f];
@@ -35,9 +40,14 @@
 		#size-cells = <1>;
 		reg = <0xf9099000 0x1000>;
 		qcom,name = "core1";
+		qcom,cpu = <&CPU1>;
 		qcom,core-id = <1>;
 		qcom,saw2-ver-reg = <0xfd0>;
 		qcom,saw2-cfg = <0x00>;
+		qcom,saw2-avs-ctl = <0>;
+		qcom,saw2-avs-hysteresis = <0>;
+		qcom,saw2-avs-limit = <0>;
+		qcom,saw2-avs-dly = <0>;
 		qcom,saw2-spm-dly= <0x3c102800>;
 		qcom,saw2-spm-ctl = <0x8>;
 		qcom,saw2-spm-cmd-wfi = [60 03 60 0b 0f];
@@ -53,9 +63,14 @@
 		#size-cells = <1>;
 		reg = <0xf90a9000 0x1000>;
 		qcom,name = "core2";
+		qcom,cpu = <&CPU2>;
 		qcom,core-id = <2>;
 		qcom,saw2-ver-reg = <0xfd0>;
 		qcom,saw2-cfg = <0x00>;
+		qcom,saw2-avs-ctl = <0>;
+		qcom,saw2-avs-hysteresis = <0>;
+		qcom,saw2-avs-limit = <0>;
+		qcom,saw2-avs-dly = <0>;
 		qcom,saw2-spm-dly= <0x3c102800>;
 		qcom,saw2-spm-ctl = <0x8>;
 		qcom,saw2-spm-cmd-wfi = [60 03 60 0b 0f];
@@ -71,9 +86,14 @@
 		#size-cells = <1>;
 		reg = <0xf90b9000 0x1000>;
 		qcom,name = "core3";
+		qcom,cpu = <&CPU3>;
 		qcom,core-id = <3>;
 		qcom,saw2-ver-reg = <0xfd0>;
 		qcom,saw2-cfg = <0x00>;
+		qcom,saw2-avs-ctl = <0>;
+		qcom,saw2-avs-hysteresis = <0>;
+		qcom,saw2-avs-limit = <0>;
+		qcom,saw2-avs-dly = <0>;
 		qcom,saw2-spm-dly= <0x3c102800>;
 		qcom,saw2-spm-ctl = <0x8>;
 		qcom,saw2-spm-cmd-wfi = [60 03 60 0b 0f];
@@ -92,6 +112,10 @@
 		qcom,core-id = <0xffff>; /* L2/APCS SAW */
 		qcom,saw2-ver-reg = <0xfd0>;
 		qcom,saw2-cfg = <0x14>;
+		qcom,saw2-avs-ctl = <0>;
+		qcom,saw2-avs-hysteresis = <0>;
+		qcom,saw2-avs-limit = <0>;
+		qcom,saw2-avs-dly = <0>;
 		qcom,saw2-spm-dly= <0x3c102800>;
 		qcom,saw2-spm-ctl = <0x0>;
 		qcom,saw2-pmic-data0 = <0x02030080>;
@@ -100,7 +124,8 @@
 		qcom,vctl-port = <0x0>;
 		qcom,phase-port = <0x1>;
 		qcom,pfm-port = <0x2>;
-		qcom,cpu-vctl-mask = <0xf>;
+		//qcom,cpu-vctl-mask = <0xf>;
+		qcom,cpu-vctl-list = <&CPU0 &CPU1 &CPU2 &CPU3>;
 		qcom,saw2-spm-cmd-ret = [00 03 00 0f];
 		qcom,saw2-spm-cmd-gdhs = [00 20 32 6b c0 e0 d0 42 03 50
 				4e 02 02 d0 e0 c0 22 6b 02 32 50 0f];
@@ -121,6 +146,7 @@
 			label = "system";
 			qcom,spm-device-names = "l2";
 			qcom,default-level = <0>;
+			qcom,cpu = <&CPU0 &CPU1 &CPU2 &CPU3>;
 
 			qcom,pm-cluster-level@0 {
 				reg = <0>;
@@ -164,7 +190,7 @@
 				qcom,ss-power = <315>;
 				qcom,energy-overhead = <1027150>;
 				qcom,time-overhead = <2400>;
-				qcom,min-child-idx = <2>;
+				qcom,min-child-idx = <3>;
 				qcom,notify-rpm;
 				qcom,last-core-only;
 			};
