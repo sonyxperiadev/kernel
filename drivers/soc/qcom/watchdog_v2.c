@@ -355,6 +355,7 @@ static struct notifier_block wdog_cpu_pm_nb = {
 static struct device *dev;
 static int wdog_init_done;
 
+#ifndef CONFIG_HARDLOCKUP_DETECTOR
 void touch_nmi_watchdog(void)
 {
 	unsigned long long ns;
@@ -374,6 +375,7 @@ void touch_nmi_watchdog(void)
 	touch_softlockup_watchdog();
 }
 EXPORT_SYMBOL(touch_nmi_watchdog);
+#endif
 
 static int msm_watchdog_remove(struct platform_device *pdev)
 {
