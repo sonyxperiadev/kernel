@@ -626,7 +626,7 @@ static int em718x_parameters_read(struct em718x *em718x, u32 *buf, int from,
 			if (rc)
 				goto exit;
 			if (ack == from) {
-				dev_info(&em718x->client->dev, "%s: ack %d\n",
+				dev_dbg(&em718x->client->dev, "%s: ack %d\n",
 						__func__, i);
 				goto acked;
 			}
@@ -682,7 +682,7 @@ static int em718x_parameter_load(struct em718x *em718x, u32 val, int addr)
 			goto exit;
 
 		if (ack == addr) {
-			dev_info(&em718x->client->dev,
+			dev_dbg(&em718x->client->dev,
 				"%s: 0x%08x -> 0x%02x ack 0x%02x\n", __func__,
 				val, addr & 0x7f, ack);
 			goto exit;
