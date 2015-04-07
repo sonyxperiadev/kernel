@@ -572,6 +572,21 @@ static ssize_t hdmi_rda_cec_enable_compliance(struct device *dev,
 		return -EPERM;
 	}
 
+	/* This is workaround for fixing Google CTS fail:
+	 * "android.permission.cts.FileSystemPermissionTest-
+	 * testReadingSysFilesDoesntFail"
+	 * This test program will read enable_compliance file.
+	 * This will cause this register is accessed.
+	 * Phone crash when access this register during clock
+	 * is disable.
+	 * If hdmi panel power is off, then hdmi clock is disable.
+	 * So if hdmi panel power is off, return error.
+	 */
+	ret = hdmi_tx_is_HDMI_panel_power_on(dev);
+	if (ret <= 0) {
+		DEV_ERR("%s: HDMI clock is not enable\n", __func__);
+		return -EPERM;
+	}
 	spin_lock_irqsave(&cec_ctrl->lock, flags);
 	ret = snprintf(buf, PAGE_SIZE, "%d\n",
 		cec_ctrl->compliance_response_enabled);
@@ -732,6 +747,11 @@ static ssize_t hdmi_wta_cec_msg(struct device *dev,
 		return -EPERM;
 	}
 
+	rc =  hdmi_tx_is_HDMI_panel_power_on(dev);
+	if (rc <= 0) {
+		DEV_ERR("%s: HDMI clock is not enable\n", __func__);
+		return -EPERM;
+	}
 	spin_lock_irqsave(&cec_ctrl->lock, flags);
 	if (cec_ctrl->compliance_response_enabled) {
 		spin_unlock_irqrestore(&cec_ctrl->lock, flags);
@@ -802,6 +822,8 @@ int hdmi_cec_isr(void *input)
 	cec_intr = DSS_REG_R_ND(io, HDMI_CEC_INT);
 
 	if (!cec_ctrl->cec_enabled) {
+		if (cec_intr)
+			DEV_ERR("%s: cec is not enabled.\n", __func__);
 		DSS_REG_W(io, HDMI_CEC_INT, cec_intr);
 		return 0;
 	}

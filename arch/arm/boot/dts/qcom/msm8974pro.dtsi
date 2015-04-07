@@ -1,4 +1,5 @@
 /* Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2013 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1652,10 +1653,6 @@
 		linux,contiguous-region = <&alt_peripheral_mem>;
 	};
 
-	qcom,mss@fc880000 {
-		linux,contiguous-region = <&modem_mem>;
-	};
-
 	qcom,venus@fdce0000 {
 		linux,contiguous-region = <&alt_peripheral_mem>;
 	};
@@ -1670,7 +1667,6 @@
 	/* Updated chip ID */
 	qcom,chipid = <0x03030002>;
 	qcom,msm-bus,num-cases = <14>;
-	qcom,bus-control;
 	qcom,initial-pwrlevel = <3>;
 
 	/* Updated bus bandwidth requirements */
@@ -1908,6 +1904,8 @@
 
 &gdsc_venus {
 	qcom,skip-logic-collapse;
+	qcom,retain-periph;
+	qcom,retain-mem;
 };
 
 &sdhc_1 {

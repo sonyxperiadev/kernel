@@ -2687,6 +2687,13 @@ wcnss_trigger_config(struct platform_device *pdev)
 		goto fail_gpio_res;
 	}
 
+	/* power up the WCNSS */
+	ret = wcnss_wlan_power(&pdev->dev, &penv->wlan_config,
+					WCNSS_WLAN_SWITCH_ON,
+					&penv->iris_xo_mode_set);
+	if (ret)
+		dev_err(&pdev->dev, "WCNSS Power-up failed.\n");
+
 	/* allocate resources */
 	penv->mmio_res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
 							"wcnss_mmio");

@@ -37,6 +37,7 @@
 		qcom,mdss-clk-levels = <92310000 100000000
 				    133330000 177780000 200000000>;
 		qcom,max-mixer-width = <2048>;
+
 		qcom,mdss-mdp-reg-offset = <0x00000100>;
 		qcom,max-bandwidth-low-kbps = <1100000>;
 		qcom,max-bandwidth-high-kbps = <1660000>;
@@ -104,7 +105,10 @@
 		mdss_fb0: qcom,mdss_fb_primary {
 			cell-index = <0>;
 			compatible = "qcom,mdss-fb";
-			qcom,memblock-reserve = <0x03200000 0xFA0000>;
+			qcom,memblock-reserve = <0x03400000 0xFA0000>;
+			qcom,cont-splash-memory {
+				linux,contiguous-region = <&cont_splash_mem>;
+			};
 		};
 
 		mdss_fb1: qcom,mdss_fb_wfd {

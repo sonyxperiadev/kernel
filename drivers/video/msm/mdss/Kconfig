@@ -4,6 +4,15 @@ config FB_MSM_MDSS_WRITEBACK
 	The MDSS Writeback Panel provides support for routing the output of
 	MDSS frame buffer driver and MDP processing to memory.
 
+config FB_MSM_MDSS_SPECIFIC_PANEL
+	depends on FB_MSM_MDSS
+	bool
+	prompt "MDSS Specific panel"
+	default n
+	---help---
+	The MDSS Specific Panel provides support for specific panel driver
+	file.
+
 config FB_MSM_MDSS_HDMI_PANEL
 	depends on FB_MSM_MDSS
 	bool "MDSS HDMI Tx Panel"
@@ -62,3 +71,12 @@ config FB_MSM_MDSS_XLOG_DEBUG
 	features to: Dump MDSS registers during driver errors, panic
 	driver during fatal errors and enable some display-driver logging
 	into an internal buffer (this avoids logging overhead).
+
+config FB_MSM_MDSS_HDMI_MHL_SII8620_8061
+	depends on FB_MSM_MDSS_HDMI_PANEL
+	bool 'MHL SII8620 and SII8061 support '
+	default n
+	---help---
+	Support the HDMI to MHL1/2/3 conversion.
+	MHL (Mobile High-Definition Link) technology
+	uses USB connector to output HDMI content

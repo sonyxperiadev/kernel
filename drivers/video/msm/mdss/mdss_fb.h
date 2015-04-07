@@ -1,4 +1,5 @@
 /* Copyright (c) 2008-2015, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2014 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -20,6 +21,7 @@
 #include <linux/types.h>
 #include <linux/notifier.h>
 #include <linux/leds.h>
+#include <linux/workqueue.h>
 
 #include "mdss_panel.h"
 #include "mdss_mdp_splash_logo.h"
@@ -332,6 +334,15 @@ struct msm_fb_data_type {
 	enum dyn_mode_switch_state switch_state;
 	u32 switch_new_mode;
 	struct mutex switch_lock;
+
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	/* speed up wakeup */
+	/* do unblank (>150ms) on own kworker
+	 * so we don't starve other works
+	 */
+	struct workqueue_struct *unblank_kworker;
+	struct work_struct unblank_work;
+#endif
 };
 
 static inline void mdss_fb_update_notify_update(struct msm_fb_data_type *mfd)
