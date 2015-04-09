@@ -56,6 +56,7 @@ ENTRY(memmove)
 	CALGN(	add	pc, r4, ip		)
 
 	PLD(	pld	[r1, #-4]		)
+#ifdef CONFIG_ARCH_MSM8226
 2:	PLD(	subs	r2, r2, #192		)
 	PLD(	pld	[r1, #-68]		)
 	PLD(	pld	[r1, #-132]		)
@@ -63,12 +64,29 @@ ENTRY(memmove)
 	PLD(	pld	[r1, #-196]		)
 
 3:	PLD(	pld	[r1, #-260]		)
+#else
+	PLD(	pld	[r1, #-68]		)
+	PLD(	pld	[r1, #-132]		)
+	PLD(	pld	[r1, #-196]		)
+	PLD(	pld	[r1, #-260]		)
+	PLD(	pld	[r1, #-324]		)
+2:	PLD(	subs	r2, r2, #512		)
+	PLD(	pld	[r1, #-388]		)
+	PLD(	pld	[r1, #-452]		)
+	PLD(	blt	4f			)
+	PLD(	pld	[r1, #-516]		)
 
+3:	PLD(	pld	[r1, #-580]		)
+#endif
 4:		ldmdb	r1!, {r3, r4, r5, r6, r7, r8, ip, lr}
 		subs	r2, r2, #32
 		stmdb	r0!, {r3, r4, r5, r6, r7, r8, ip, lr}
 		bge	3b
+#ifdef CONFIG_ARCH_MSM8226
 	PLD(	cmn	r2, #192		)
+#else
+	PLD(	cmn	r2, #512		)
+#endif
 	PLD(	bge	4b			)
 
 5:		ands	ip, r2, #28
@@ -140,12 +158,27 @@ ENTRY(memmove)
 11:		stmfd	sp!, {r5 - r9}
 
 	PLD(	pld	[r1, #-4]		)
+#ifdef CONFIG_ARCH_MSM8226
 	PLD(	subs	r2, r2, #192		)
 	PLD(	pld	[r1, #-68]		)
 	PLD(	pld	[r1, #-132]		)
 	PLD(	blt	13f			)
 	PLD(	pld	[r1, #-196]		)
 12:	PLD(	pld	[r1, #-260]		)
+#else
+	PLD(	pld	[r1, #-4]		)
+	PLD(	pld	[r1, #-68]		)
+	PLD(	pld	[r1, #-132]		)
+	PLD(	pld	[r1, #-196]		)
+	PLD(	pld	[r1, #-260]		)
+	PLD(	pld	[r1, #-324]		)
+	PLD(	subs	r2, r2, #512		)
+	PLD(	pld	[r1, #-388]		)
+	PLD(	pld	[r1, #-452]		)
+	PLD(	blt	13f			)
+	PLD(	pld	[r1, #-516]		)
+12:	PLD(	pld	[r1, #-580]		)
+#endif
 13:		ldmdb   r1!, {r7, r8, r9, ip}
 		mov     lr, r3, push #\push
 		subs    r2, r2, #32
@@ -167,7 +200,11 @@ ENTRY(memmove)
 		orr     r4, r4, r3, pull #\pull
 		stmdb   r0!, {r4 - r9, ip, lr}
 		bge	12b
+#ifdef CONFIG_ARCH_MSM8226
 	PLD(	cmn	r2, #192		)
+#else
+	PLD(	cmn	r2, #512		)
+#endif
 	PLD(	bge	13b			)
 
 		ldmfd	sp!, {r5 - r9}
