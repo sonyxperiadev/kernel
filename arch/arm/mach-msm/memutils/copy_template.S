@@ -90,6 +90,7 @@
 	CALGN(	add	pc, r4, ip		)
 
 	PLD(	pld	[r1, #0]		)
+#ifdef CONFIG_ARCH_MSM8226
 2:	PLD(	subs	r2, r2, #192		)
 	/* R2 is now -480 offset from the size passed in*/
 	PLD(	pld	[r1, #64]		)
@@ -102,6 +103,25 @@
 		subs	r2, r2, #32
 		bge	3b
 	PLD(	cmn	r2, #192		)
+#else
+	PLD(	pld	[r1, #64]		)
+	PLD(	pld	[r1, #128]		)
+	PLD(	pld	[r1, #192]		)
+	PLD(	pld	[r1, #256]		)
+	PLD(	pld	[r1, #320]		)
+2:	PLD(	subs	r2, r2, #512		)
+	/* R2 is now -800 offset from the size passed in*/
+	PLD(	pld	[r1, #384]		)
+	PLD(	blt	4f			)
+	PLD(	pld	[r1, #448]		)
+	PLD(	pld	[r1, #512]		)
+
+3:	PLD(	pld	[r1, #576]		)
+4:	PLD(	ldstr8w	r1, r0, r3, r4, r5, r6, r7, r8, ip, lr, abort=20f )
+		subs	r2, r2, #32
+		bge	3b
+	PLD(	cmn	r2, #512		)
+#endif
 	PLD(	bge	4b			)
 
 5:		ands	ip, r2, #28
@@ -189,11 +209,25 @@
 11:		stmfd	sp!, {r5 - r9}
 
 	PLD(	pld	[r1, #0]		)
+#ifdef CONFIG_ARCH_MSM8226
 	PLD(	subs	r2, r2, #128		)
 	PLD(	pld	[r1, #64]		)
 	PLD(	blt	13f			)
 	PLD(	pld	[r1, #128]		)
 12:	PLD(	pld	[r1, #192]		)
+#else
+ 	PLD(	pld	[r1, #0]		)
+ 	PLD(	pld	[r1, #64]		)
+	PLD(	pld	[r1, #128]		)
+	PLD(	pld	[r1, #192]		)
+	PLD(	pld	[r1, #256]		)
+	PLD(	pld	[r1, #320]		)
+	PLD(	subs	r2, r2, #448		)
+	PLD(	pld	[r1, #384]		)
+	PLD(	blt	13f			)
+	PLD(	pld	[r1, #448]		)
+12:	PLD(	pld	[r1, #512]		)
+#endif
 13:		ldr4w	r1, r4, r5, r6, r7, abort=19f
 		mov	r3, lr, pull #\pull
 		subs	r2, r2, #32
@@ -215,7 +249,11 @@
 		orr	ip, ip, lr, push #\push
 		str8w	r0, r3, r4, r5, r6, r7, r8, r9, ip, , abort=19f
 		bge	12b
+#ifdef CONFIG_ARCH_MSM8226
 	PLD(	cmn	r2, #128		)
+#else
+	PLD(	cmn	r2, #448		)
+#endif
 	PLD(	bge	13b			)
 
 		ldmfd	sp!, {r5 - r9}
