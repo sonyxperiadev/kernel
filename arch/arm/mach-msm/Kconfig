@@ -408,9 +408,6 @@ config  ARCH_MSM_CORTEXMP
 	select MSM_SMP
 	bool
 
-config  MSM_KRAIT_WFE_FIXUP
-	bool
-
 config  ARCH_MSM_CORTEX_A5
 	bool
 
