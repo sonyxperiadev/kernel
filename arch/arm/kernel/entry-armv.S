@@ -1052,7 +1052,7 @@ __kuser_helper_end:
  * SP points to a minimal amount of processor-private memory, the address
  * of which is copied into r0 for the mode specific abort handler.
  */
-	.macro	vector_stub, name, mode, fixup, correction=0
+	.macro	vector_stub, name, mode, correction=0
 	.align	5
 
 vector_\name:
@@ -1081,18 +1081,6 @@ vector_\name:
 	and	lr, lr, #0x0f
  THUMB(	adr	r0, 1f			)
  THUMB(	ldr	lr, [r0, lr, lsl #2]	)
-	.if	\fixup
-#ifdef CONFIG_MSM_KRAIT_WFE_FIXUP
-	ldr	r0, .krait_fixup
-	ldr	r0, [r0]
-	cmp	r0, #0
-	beq	10f
-	mrc	p15, 7, r0, c15, c0, 5
-	orr	r0, r0, #0x10000
-	mcr	p15, 7, r0, c15, c0, 5
-10:	isb
-#endif
-	.endif
 	mov	r0, sp
  ARM(	ldr	lr, [pc, lr, lsl #2]	)
 	movs	pc, lr			@ branch to handler in SVC mode
@@ -1117,7 +1105,7 @@ vector_rst:
 /*
  * Interrupt dispatcher
  */
-	vector_stub	irq, IRQ_MODE, 1, 4
+	vector_stub	irq, IRQ_MODE, 4
 
 	.long	__irq_usr			@  0  (USR_26 / USR_32)
 	.long	__irq_invalid			@  1  (FIQ_26 / FIQ_32)
@@ -1140,7 +1128,7 @@ vector_rst:
  * Data abort dispatcher
  * Enter in ABT mode, spsr = USR CPSR, lr = USR PC
  */
-	vector_stub	dabt, ABT_MODE, 0, 8
+	vector_stub	dabt, ABT_MODE, 8
 
 	.long	__dabt_usr			@  0  (USR_26 / USR_32)
 	.long	__dabt_invalid			@  1  (FIQ_26 / FIQ_32)
@@ -1163,7 +1151,7 @@ vector_rst:
  * Prefetch abort dispatcher
  * Enter in ABT mode, spsr = USR CPSR, lr = USR PC
  */
-	vector_stub	pabt, ABT_MODE, 0, 4
+	vector_stub	pabt, ABT_MODE, 4
 
 	.long	__pabt_usr			@  0 (USR_26 / USR_32)
 	.long	__pabt_invalid			@  1 (FIQ_26 / FIQ_32)
@@ -1186,7 +1174,7 @@ vector_rst:
  * Undef instr entry dispatcher
  * Enter in UND mode, spsr = SVC/USR CPSR, lr = SVC/USR PC
  */
-	vector_stub	und, UND_MODE, 0
+	vector_stub	und, UND_MODE
 
 	.long	__und_usr			@  0 (USR_26 / USR_32)
 	.long	__und_invalid			@  1 (FIQ_26 / FIQ_32)
@@ -1229,9 +1217,6 @@ vector_addrexcptn:
  */
 vector_fiq:
 	subs	pc, lr, #4
-
-.krait_fixup:
-	.word	msm_krait_need_wfe_fixup
 
 	.globl	vector_fiq_offset
 	.equ	vector_fiq_offset, vector_fiq
