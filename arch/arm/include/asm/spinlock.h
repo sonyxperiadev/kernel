@@ -37,11 +37,9 @@ extern int msm_krait_need_wfe_fixup;
 #endif
 
 /*
- * The fixup involves disabling FIQs during execution of the WFE instruction.
- * This could potentially lead to deadlock if a thread is trying to acquire a
- * spinlock which is being released from an FIQ. This should not be a problem
- * because FIQs are handled by the secure environment and do not directly
- * manipulate spinlocks.
+ * The fixup involves disabling interrupts during execution of the WFE
+ * instruction. This could potentially lead to deadlock if a thread is trying
+ * to acquire a spinlock which is being released from an interrupt context.
  */
 #ifdef CONFIG_MSM_KRAIT_WFE_FIXUP
 #define WFE_SAFE(fixup, tmp) 				\
@@ -49,7 +47,7 @@ extern int msm_krait_need_wfe_fixup;
 "	cmp	" fixup ", #0\n"			\
 "	wfeeq\n"					\
 "	beq	10f\n"					\
-"	cpsid   f\n"					\
+"	cpsid	if\n"					\
 "	mrc	p15, 7, " fixup ", c15, c0, 5\n"	\
 "	bic	" fixup ", " fixup ", #0x10000\n"	\
 "	mcr	p15, 7, " fixup ", c15, c0, 5\n"	\
@@ -110,8 +108,7 @@ static inline void arch_spin_lock(arch_spinlock_t *lock)
 
 	while (lockval.tickets.next != lockval.tickets.owner) {
 		if (msm_krait_need_wfe_fixup) {
-			local_save_flags(flags);
-			local_fiq_disable();
+			local_irq_save(flags);
 			__asm__ __volatile__(
 			"mrc	p15, 7, %0, c15, c0, 5\n"
 			: "=r" (tmp)
