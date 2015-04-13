@@ -21,7 +21,7 @@
 #include <linux/platform_device.h>
 #include <mach/gpio.h>
 #include <mach/gpiomux.h>
-#include <mach/msm_serial_hs_lite.h>
+#include <linux/platform_data/qcom-serial_hs_lite.h>
 
 #define IR_REMOTE_POWER_WAIT_US        100
 #define IR_REMOTE_POWER_WAIT_MAX_US    200
