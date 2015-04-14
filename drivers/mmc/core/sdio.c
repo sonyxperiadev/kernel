@@ -1279,3 +1279,19 @@ int sdio_reset_comm(struct mmc_card *card)
 	return mmc_power_restore_host(card->host);
 }
 EXPORT_SYMBOL(sdio_reset_comm);
+
+#if defined(CONFIG_BCMDHD_SDIO)
+void sdio_ctrl_power(struct mmc_host *host, bool onoff)
+{
+	mmc_claim_host(host);
+	if (onoff)
+		mmc_power_up(host);
+	else
+		mmc_power_off(host);
+
+	/* Wait at least 1 ms according to SD spec */
+	mmc_delay(1);
+	mmc_release_host(host);
+}
+EXPORT_SYMBOL(sdio_ctrl_power);
+#endif
