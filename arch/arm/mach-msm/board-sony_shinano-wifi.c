@@ -22,7 +22,7 @@
 
 #include <mach/board-sony_shinano-wifi.h>
 
-#include <../drivers/mmc/host/msm_sdcc.h>
+#include <../drivers/mmc/host/sdhci-pltfm.h>
 
 static unsigned int g_wifi_detect;
 static void *sdc_dev;
@@ -137,7 +137,7 @@ int wcf_status_register(void (*cb)(int card_present, void *dev), void *dev)
 
 	sdc_status_cb = cb;
 	sdc_dev = dev;
-	wifi_mmc_host = ((struct msmsdcc_host *)dev)->mmc;
+	wifi_mmc_host = ((struct sdhci_host *)dev)->mmc;
 
 	return 0;
 }
