@@ -445,6 +445,16 @@
 	};
 };
 
+&sdcc1 {
+	qcom,bus-speed-mode = "DDR50", "DDR_1p8v";
+};
+
+&sdcc2 {
+	qcom,bus-speed-mode = "SDR12", "SDR25", "SDR50", "DDR50";
+	qcom,current-limit = <400>;
+	qcom,pad-drv-on = <0x2 0x2 0x2>; /* 6mA, 6mA, 6mA */
+};
+
 &sdhc_1 {
 	qcom,clk-rates = <400000 20000000 25000000 50000000 100000000>;
 	qcom,bus-speed-mode = "DDR_1p8v";

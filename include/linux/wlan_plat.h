@@ -15,6 +15,8 @@
 #ifndef _LINUX_WLAN_PLAT_H_
 #define _LINUX_WLAN_PLAT_H_
 
+#define WLAN_PLAT_NODFS_FLAG	0x01
+
 struct wifi_platform_data {
 	int (*set_power)(int val);
 	int (*set_reset)(int val);
