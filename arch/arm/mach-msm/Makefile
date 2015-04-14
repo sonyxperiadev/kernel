@@ -82,7 +82,7 @@ else
 	obj-$(CONFIG_ARCH_MSM8974) += board-8974-gpiomux.o board-sony_shinano-nfc.o bms-batterydata-oem.o
 endif
 
-obj-$(CONFIG_MACH_SONY_SHINANO) += board-sony_shinano-wifi.o board-sony_shinano-hw.o board-sony_shinano-gpiomux-ref.o
+obj-$(CONFIG_MACH_SONY_SHINANO) += board-sony_shinano-hw.o board-sony_shinano-gpiomux-ref.o
 obj-$(CONFIG_MACH_SONY_RHINE) += board-sony_rhine-gpiomux-ref.o
 obj-$(CONFIG_ARCH_MSM8974) += sony_gpiomux.o
 
@@ -114,3 +114,5 @@ obj-$(CONFIG_ARCH_MSM8974) += msm_mpmctr.o
 obj-$(CONFIG_PERFMAP) += perfmap.o
 
 obj-$(CONFIG_HAS_MACH_MEMUTILS) += memutils/
+
+obj-$(CONFIG_WIFI_CONTROL_FUNC) +=board-sony_shinano-wifi.o
