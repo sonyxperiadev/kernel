@@ -174,10 +174,12 @@ kernelconfig: $(KERNEL_OUT) $(KERNEL_CONFIG)
 ## Install it
 INSTALLED_KERNEL_TARGET ?= $(PRODUCT_OUT)/kernel
 
-DTB_FILES := $(shell find -L $(KERNEL_OUT)/arch/arm/boot/dts/ -name "*.dtb")
-DTBS := $(foreach dtb,$(DTB_FILES),$(PRODUCT_OUT)/dtbs/$(notdir $(dtb)))
-$(DTBS) : $(DTB_FILES) | $(ACP)
-	$(hide) @mkdir -p $(PRODUCT_OUT)/dtbs
+DTB_DIR := $(KERNEL_OUT)/arch/arm/boot
+DTB_FILES := $(shell find -L $(DTB_DIR) -name "*.dtb")
+DTB_OUT_DIR := $(PRODUCT_OUT)/dtbs
+DTBS := $(foreach dtb,$(DTB_FILES),$(DTB_OUT_DIR)/$(notdir $(dtb)))
+$(DTB_OUT_DIR)/%.dtb : $(DTB_DIR)/%.dtb | $(ACP)
+	$(hide) @mkdir -p $(DTB_OUT_DIR)
 	$(transform-prebuilt-to-target)
 
 file := $(INSTALLED_KERNEL_TARGET)
