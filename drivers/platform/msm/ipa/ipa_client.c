@@ -730,7 +730,7 @@ int ipa_uc_state_check(void)
 		return -EFAULT;
 	}
 
-	if (!ipa_ctx->uc_ctx.uc_loaded) {
+	if (!atomic_read(&ipa_ctx->uc_ctx.uc_loaded)) {
 		IPAERR("uC is not loaded\n");
 		return -EFAULT;
 	}
@@ -2011,7 +2011,7 @@ static void ipa_uc_response_hdlr(enum ipa_irq_type interrupt,
 
 	if (ipa_ctx->uc_ctx.uc_sram_mmio->responseOp ==
 			IPA_HW_2_CPU_RESPONSE_INIT_COMPLETED) {
-		ipa_ctx->uc_ctx.uc_loaded = true;
+		atomic_set(&ipa_ctx->uc_ctx.uc_loaded, 1);
 		IPADBG("IPA uC loaded\n");
 	} else if (ipa_ctx->uc_ctx.uc_sram_mmio->responseOp ==
 		   IPA_HW_2_CPU_RESPONSE_CMD_COMPLETED) {
@@ -2132,7 +2132,7 @@ int ipa_uc_reset_pipe(enum ipa_client_type ipa_client)
 		return 0;
 	}
 
-	if (!ipa_ctx->uc_ctx.uc_loaded) {
+	if (!atomic_read(&ipa_ctx->uc_ctx.uc_loaded)) {
 		IPADBG("uC is not loaded\n");
 		return 0;
 	}
@@ -2234,7 +2234,7 @@ int ipa_uc_notify_clk_state(bool enabled)
 		return 0;
 	}
 
-	if (!ipa_ctx->uc_ctx.uc_loaded) {
+	if (!atomic_read(&ipa_ctx->uc_ctx.uc_loaded)) {
 		IPADBG("uC is not loaded\n");
 		return 0;
 	}

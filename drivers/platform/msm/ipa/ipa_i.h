@@ -767,7 +767,7 @@ struct ipa_controller;
  */
 struct ipa_uc_ctx {
 	bool uc_inited;
-	bool uc_loaded;
+	atomic_t uc_loaded;
 	bool uc_failed;
 	struct mutex uc_lock;
 	struct completion uc_completion;
