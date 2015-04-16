@@ -1535,7 +1535,7 @@ static int cpufreq_governor_interactive(struct cpufreq_policy *policy,
 			return 0;
 		}
 
-		tunables = get_tunables(ppol);
+		tunables = restore_tunables(policy);
 		if (!tunables) {
 			tunables = alloc_tunable(policy);
 			if (IS_ERR(tunables))
