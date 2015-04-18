@@ -211,7 +211,7 @@
 			compatible = "qcom,msm-ion-reserve";
 			reg = <20>;
 			qcom,heap-align = <0x1000>;
-			qcom,memory-reservation-type = "EBI1"; /* reserve EBI memory */
+			linux,contiguous-region = <&camera_mem>;
 			qcom,ion-heap-type = "CARVEOUT";
 		};
 	};

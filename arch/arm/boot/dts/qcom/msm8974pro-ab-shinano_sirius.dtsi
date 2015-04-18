@@ -359,12 +359,6 @@
 		};
 	};
 
-	qcom,ion {
-		qcom,ion-heap@20 { /* CAMERA HEAP */
-			qcom,memory-fixed = <0xb8714000 0x6400000>;
-		};
-	};
-
 	gpio_keys {
 		camera_snapshot {
 			label = "camera_snapshot";
@@ -393,6 +387,10 @@
 			debounce-interval = <10>;
 		};
 	};
+};
+
+&camera_mem {
+	reg = <0xb8714000 0x6400000>;
 };
 
 &pm8941_chg {
