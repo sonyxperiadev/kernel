@@ -553,6 +553,8 @@ static inline bool of_property_read_bool(const struct device_node *np,
 	 * 0 will be treated as "true" by the DT framework.
 	 */
 	WARN_ON(prop && prop->length);
+	if (prop && prop->length)
+		pr_err("!!!!!!!!!!!!!!!!!!DT!!!!!!!!!!!!!!!! propname: %s\n", propname);
 
 	return prop ? true : false;
 }
