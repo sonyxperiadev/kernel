@@ -509,12 +509,6 @@
 		};
 	};
 
-	qcom,ion {
-		qcom,ion-heap@20 { /* CAMERA HEAP */
-			qcom,memory-fixed = <0xd8514000 0x6400000>;
-		};
-	};
-
 	gpio_keys {
 		sim_det {
 			label = "sim-detection";
@@ -530,6 +524,10 @@
 		compatible = "rohm,bu520x1nvx";
 		gpios = <&pm8941_gpios 36 0x1>;
 	};
+};
+
+&camera_mem {
+	reg = <0xd8514000 0x6400000>;
 };
 
 &pm8941_chg {

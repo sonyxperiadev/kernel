@@ -268,7 +268,6 @@
 		compatible = "qca,ar6004-hsic";
 		qcom,msm-bus,name = "wlan";
 		qcom,msm-bus,num-cases = <5>;
-		qcom,msm-bus,active-only = <0>;
 		qcom,msm-bus,num-paths = <1>;
 		qcom,msm-bus,vectors-KBps =
 				<85 512 0 0>,

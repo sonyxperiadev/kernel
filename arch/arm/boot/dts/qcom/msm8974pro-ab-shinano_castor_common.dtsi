@@ -450,12 +450,6 @@
 		};
 	};
 
-	qcom,ion {
-		qcom,ion-heap@20 { /* CAMERA HEAP */
-			qcom,memory-fixed = <0xb8514000 0x6400000>;
-		};
-	};
-
 	bu520x1nvx {
 		compatible = "rohm,bu520x1nvx";
 		gpios = <&pm8941_gpios 36 0x1>;
@@ -464,6 +458,10 @@
 	nxp,tfa98xx-codec {
 		compatible = "nxp,tfa98xx-codec";
 	};
+};
+
+&camera_mem {
+	reg = <0xb8514000 0x6400000>;
 };
 
 &pm8941_lsid0 {
