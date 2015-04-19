@@ -120,6 +120,8 @@
 			];
 		qcom,mdss-dsi-off-command-state = "DSI_LP_MODE";
 		qcom,mdss-dsi-lp11-init;
+		qcom,cont-splash-enabled;
+
 		somc,mdss-dsi-pcc-table-size = <2>;
 		somc,mdss-dsi-pcc-table = <
 				0x00 0x01 0x10 0x13 0x28 0x2B 0x8000 0x7400 0x8000
@@ -129,8 +131,9 @@
 		somc,mdss-dsi-picadj-hue = <0>;
 		somc,mdss-dsi-picadj-val = <5>;
 		somc,mdss-dsi-picadj-cont = <5>;
-
-
+	        somc,first-boot-aware;
+	        somc,panel-id-read-cmds;
+	        somc,panel-pwron-reset;
 	};
 
 	dsi_ofilm_hx8379c_fwvga_vid: qcom,mdss_dsi_ofilm_hx8379c_fwvga_video {
@@ -249,5 +252,9 @@
 			];
 		qcom,mdss-dsi-off-command-state = "DSI_LP_MODE";
 		qcom,mdss-dsi-lp11-init;
+		qcom,cont-splash-enabled;
+	        somc,first-boot-aware;
+	        somc,panel-id-read-cmds;
+	        somc,panel-pwron-reset;
 	};
 };
