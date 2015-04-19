@@ -13,9 +13,9 @@
 
 &mdss_mdp {
 	dsi_default_gpio_0: somc,default_panel_0 {
-		qcom,mdss-dsi-panel-name = "default cmd 0";
+		qcom,mdss-dsi-panel-name = "default vid 0";
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
-		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
+		qcom,mdss-dsi-panel-type = "dsi_video_mode";
 		qcom,mdss-dsi-panel-destination = "display_1";
 		qcom,mdss-dsi-panel-framerate = <60>;
 		qcom,mdss-dsi-virtual-channel-id = <0>;
@@ -50,7 +50,7 @@
 				05 01 00 00 00 00 01 29];
 		qcom,mdss-dsi-off-command = [05 01 00 00 14 00 01 28
 				05 01 00 00 50 00 01 10];
-		qcom,mdss-dsi-on-command-state = "dsi_hs_mode";
+		qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
 		qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
 		qcom,mdss-dsi-h-sync-pulse = <1>;
 		qcom,mdss-dsi-traffic-mode = "non_burst_sync_event";
@@ -88,8 +88,8 @@
 				00 c2 ef 00 00 00 00 01 ff
 				00 c2 ef 00 00 00 00 01 ff
 				00 02 00 00 00 00 00 01 97];
-		somc,mdss-dsi-disp-on-in-hs = <0>;
-		somc,mdss-dsi-wait-time-before-on-cmd = <100>;
+		somc,mdss-dsi-disp-on-in-hs = <1>;
+		somc,mdss-dsi-wait-time-before-on-cmd = <150>;
 		somc,lcd-id = <0>;
 		somc,lcd-id-adc = <0 0x7fffffff>;
 		somc,disp-en-on-pre = <5>;
@@ -329,20 +329,12 @@
 			0x00 0xDF 0x04 0x07 0x00 0x03 0x8000 0x8000 0x8000
 			0x00 0xE0 0x00 0x03 0x00 0x03 0x8000 0x8000 0x8000
 			0xFF 0x00 0x00 0x3B 0x00 0x3B 0x8000 0x8000 0x8000>;
-
-		somc,chenge-fps-command = [23 01 00 00 00 00 02 C6 79];
-		somc,chenge-fps-default = <0x79>;
-		somc,display-clock = <14000000>;
-		somc,driver-ic-vbp = <4>;
-		somc,driver-ic-vfp = <8>;
-		somc,chenge-fps-cmds-num = <0>;
-		somc,chenge-fps-payload-num = <1>;
 	};
 
 	dsi_default_gpio_1: somc,default_panel_1 {
-		qcom,mdss-dsi-panel-name = "default cmd 1";
+		qcom,mdss-dsi-panel-name = "default vid 1";
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
-		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
+		qcom,mdss-dsi-panel-type = "dsi_video_mode";
 		qcom,mdss-dsi-panel-destination = "display_1";
 		qcom,mdss-dsi-panel-framerate = <60>;
 		qcom,mdss-dsi-virtual-channel-id = <0>;
@@ -377,7 +369,7 @@
 				05 01 00 00 00 00 01 29];
 		qcom,mdss-dsi-off-command = [05 01 00 00 14 00 01 28
 				05 01 00 00 50 00 01 10];
-		qcom,mdss-dsi-on-command-state = "dsi_hs_mode";
+		qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
 		qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
 		qcom,mdss-dsi-h-sync-pulse = <1>;
 		qcom,mdss-dsi-traffic-mode = "non_burst_sync_event";
@@ -415,8 +407,8 @@
 				00 c2 ef 00 00 00 00 01 ff
 				00 c2 ef 00 00 00 00 01 ff
 				00 02 00 00 00 00 00 01 97];
-		somc,mdss-dsi-disp-on-in-hs = <0>;
-		somc,mdss-dsi-wait-time-before-on-cmd = <100>;
+		somc,mdss-dsi-disp-on-in-hs = <1>;
+		somc,mdss-dsi-wait-time-before-on-cmd = <150>;
 		somc,lcd-id = <1>;
 		somc,lcd-id-adc = <0 0x7fffffff>;
 		somc,disp-en-on-pre = <5>;
@@ -656,13 +648,5 @@
 			0x00 0xDF 0x04 0x07 0x00 0x03 0x8000 0x8000 0x8000
 			0x00 0xE0 0x00 0x03 0x00 0x03 0x8000 0x8000 0x8000
 			0xFF 0x00 0x00 0x3B 0x00 0x3B 0x8000 0x8000 0x8000>;
-
-		somc,chenge-fps-command = [23 01 00 00 00 00 02 C6 79];
-		somc,chenge-fps-default = <0x79>;
-		somc,display-clock = <14000000>;
-		somc,driver-ic-vbp = <4>;
-		somc,driver-ic-vfp = <8>;
-		somc,chenge-fps-cmds-num = <0>;
-		somc,chenge-fps-payload-num = <1>;
 	};
 };
