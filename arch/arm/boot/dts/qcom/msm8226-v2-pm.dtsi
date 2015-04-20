@@ -108,7 +108,7 @@
 		#address-cells = <1>;
 		#size-cells = <1>;
 		reg = <0xf9012000 0x1000>;
-		qcom,name = "system-l2";
+		qcom,name = "l2";
 		qcom,core-id = <0xffff>; /* L2/APCS SAW */
 		qcom,saw2-ver-reg = <0xfd0>;
 		qcom,saw2-cfg = <0x14>;
