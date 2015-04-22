@@ -242,7 +242,7 @@ void dw8250_do_pm(struct uart_port *port, unsigned int state,
 		if ((private_data->power_save_enable) &&
 				(port->irq == BCM_INT_ID_UART2)) {
 			pinmux_set_pin_config(&uartb3_config[0]);
-			ret = gpio_direction_input(GPIO_PIN47);
+			ret = gpio_direction_output(GPIO_PIN47, 1);
 			if (ret)
 				pr_err("UART: GPIO: direction_input failed\n");
 		} else if ((private_data->power_save_enable) &&

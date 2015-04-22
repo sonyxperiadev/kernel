@@ -23,6 +23,7 @@
 #include <linux/sched.h>
 #include <linux/slab.h>
 #include <linux/io.h>
+#include <mach/io_map.h>
 #include <linux/version.h>
 #include <linux/interrupt.h>
 #include <asm/irq.h>
@@ -32,7 +33,8 @@
 #include <linux/delay.h>
 #include <linux/pm_wakeup.h>
 #include <linux/spinlock.h>
-
+#include <mach/chip_pinmux.h>
+#include <mach/pinmux.h>
 #include <linux/of.h>
 #include <linux/of_irq.h>
 #include <linux/of_platform.h>
@@ -41,9 +43,11 @@
 #include <linux/kernel.h>
 #include <linux/miscdevice.h>
 
+
 #ifndef BCM_GPS_GEO_FENCE_HOST_WAKE_ASSERT
-#define BCM_GPS_GEO_FENCE_HOST_WAKE_ASSERT 0
+#define BCM_GPS_GEO_FENCE_HOST_WAKE_ASSERT 1
 #endif
+
 #ifndef BCM_GPS_GEO_FENCE_HOST_WAKE_DEASSERT
 #define BCM_GPS_GEO_FENCE_HOST_WAKE_DEASSERT \
 		(!(BCM_GPS_GEO_FENCE_HOST_WAKE_ASSERT))
@@ -88,6 +92,33 @@ struct bcm_gps_entry_struct {
 
 struct bcm_gps_entry_struct *gps_g;
 
+static struct pin_config uartb3_config[2] = {
+	{
+		.name = PN_UBRTSN,
+		.func = PF_GPIO47,
+		.reg.b = {
+			.drv_sth = 3,
+			.input_dis = 0,
+			.slew_rate_ctrl = 0,
+			.pull_up = 0,
+			.pull_dn = 0,
+			.hys_en = 0,
+		},
+	},
+	{
+		.name = PN_UBRTSN,
+		.func = PF_UB3RTSN,
+		.reg.b = {
+			.drv_sth = 3,
+			.input_dis = 0,
+			.slew_rate_ctrl = 0,
+			.pull_up = 1,
+			.pull_dn = 0,
+			.hys_en = 0,
+		},
+	},
+};
+
 /* Structure to exchange data between driver and the user */
 struct command_par {
 		unsigned long param1;     /**< extra parameter for the target */
@@ -106,7 +137,6 @@ static irqreturn_t bcm_gps_host_wake_isr(int irq, void *dev)
 	unsigned int host_wake;
 	unsigned long flags;
 	struct bcm_gps_entry_struct *priv;
-
 	priv = (struct bcm_gps_entry_struct *)dev;
 	if (priv == NULL) {
 		pr_err(
@@ -118,11 +148,12 @@ static irqreturn_t bcm_gps_host_wake_isr(int irq, void *dev)
 
 	host_wake = gpio_get_value(
 			priv->pdata->host_wake_gpio);
-	if (BCM_GPS_GEO_FENCE_HOST_WAKE_ASSERT == host_wake)
+	if (BCM_GPS_GEO_FENCE_HOST_WAKE_ASSERT == host_wake) {
 		__pm_stay_awake(priv->host_wake_ws);
-	else
+		pinmux_set_pin_config(&uartb3_config[1]);
+	} else {
 		__pm_relax(priv->host_wake_ws);
-	/*printk(KERN_DEBUG "%s host_wake 0 : %x\n", __func__, host_wake);*/
+	}
 	spin_unlock_irqrestore(&priv->pgps->bcm_gps_lock, flags);
 	pr_debug("%s GPS:Exiting.\n", __func__);
 	return IRQ_HANDLED;
@@ -457,6 +488,7 @@ static int bcm_gps_remove(struct platform_device *pdev)
 		kfree(gps_g);
 		gps_g = NULL;
 	}
+	pinmux_set_pin_config(&uartb3_config[0]);
 	pr_debug("%s GPS:Exiting.\n", __func__);
 	return 0;
 }
