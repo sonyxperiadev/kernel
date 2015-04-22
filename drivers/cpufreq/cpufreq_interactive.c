@@ -1602,24 +1602,29 @@ static int cpufreq_governor_interactive(struct cpufreq_policy *policy,
 		if (!tunables->hispeed_freq)
 			tunables->hispeed_freq = policy->max;
 
-		ppol = per_cpu(polinfo, policy->cpu);
-		ppol->policy = policy;
-		ppol->target_freq = policy->cur;
-		ppol->freq_table = freq_table;
-		ppol->floor_freq = ppol->target_freq;
-		ppol->floor_validate_time = ktime_to_us(ktime_get());
-		ppol->hispeed_validate_time = ppol->floor_validate_time;
-		ppol->min_freq = policy->min;
-		ppol->reject_notification = true;
-		down_write(&ppol->enable_sem);
-		del_timer_sync(&ppol->policy_timer);
-		del_timer_sync(&ppol->policy_slack_timer);
-		ppol->policy_timer.data = policy->cpu;
-		ppol->last_evaluated_jiffy = get_jiffies_64();
-		cpufreq_interactive_timer_start(tunables, policy->cpu);
-		ppol->governor_enabled = 1;
-		up_write(&ppol->enable_sem);
-		ppol->reject_notification = false;
+		for_each_cpu(j, policy->cpus) {
+			pcpu = &per_cpu(cpuinfo, j);
+			pcpu->policy = policy;
+			pcpu->target_freq = policy->cur;
+			pcpu->freq_table = freq_table;
+			pcpu->floor_freq = pcpu->target_freq;
+			pcpu->floor_validate_time =
+				ktime_to_us(ktime_get());
+			pcpu->local_fvtime = pcpu->floor_validate_time;
+			pcpu->hispeed_validate_time =
+				pcpu->floor_validate_time;
+			pcpu->local_hvtime = pcpu->floor_validate_time;
+			pcpu->min_freq = policy->min;
+			pcpu->reject_notification = true;
+			down_write(&pcpu->enable_sem);
+			del_timer_sync(&pcpu->cpu_timer);
+			del_timer_sync(&pcpu->cpu_slack_timer);
+			pcpu->last_evaluated_jiffy = get_jiffies_64();
+			cpufreq_interactive_timer_start(tunables, j);
+			pcpu->governor_enabled = 1;
+			up_write(&pcpu->enable_sem);
+			pcpu->reject_notification = false;
+		}
 
 		mutex_unlock(&gov_lock);
 		break;
@@ -1661,7 +1666,20 @@ static int cpufreq_governor_interactive(struct cpufreq_policy *policy,
 			ppol->min_freq = policy->min;
 		}
 
-		up_read(&ppol->enable_sem);
+			spin_lock_irqsave(&pcpu->target_freq_lock, flags);
+			if (policy->max < pcpu->target_freq)
+				pcpu->target_freq = policy->max;
+			else if (policy->min > pcpu->target_freq)
+				pcpu->target_freq = policy->min;
+
+			spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
+
+			if (policy->min < pcpu->min_freq)
+				cpufreq_interactive_timer_resched(j, true);
+			pcpu->min_freq = policy->min;
+
+			up_read(&pcpu->enable_sem);
+		}
 
 		break;
 	}
