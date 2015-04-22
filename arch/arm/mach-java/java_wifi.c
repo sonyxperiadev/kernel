@@ -739,35 +739,6 @@ static ssize_t show_module_name(struct device_driver *driver, char *buf)
 
 static DRIVER_ATTR(module_name, S_IRUGO, show_module_name, NULL);
 
-static void mac_address_string(unsigned char* str, unsigned char* result)
-{
-	sprintf(result, "%02X:%02X:%02X:%02X:%02X:%02X",
-				str[0], str[1],str[2], str[3],str[4], str[5]);
-}
-
-static ssize_t show_mac_address(struct device_driver *driver, char *buf)
-{
-	unsigned char mac[IFHWADDRLEN * 3];
-	mac_address_string(hawaii_mac_addr, mac);
-	return scnprintf(buf, PAGE_SIZE, "%s\n", mac);
-}
-static ssize_t store_mac_address(struct device_driver *driver, char *buf)
-{
-	unsigned char mac[IFHWADDRLEN * 3];
-
-	if(sscanf(buf, "%2x:%2x:%2x:%2x:%2x:%2x",
-			&hawaii_mac_addr[0], &hawaii_mac_addr[1],
-			&hawaii_mac_addr[2], &hawaii_mac_addr[3],
-			&hawaii_mac_addr[4], &hawaii_mac_addr[5]) != 6)
-		printk(KERN_INFO "%s: Argument invalid\n", __func__);
-	else
-	{
-		mac_address_string(hawaii_mac_addr, mac);
-		printk(KERN_INFO "%s: mac address set %s\n", __func__, mac);
-	}
-	return strlen(buf);
-}
-static DRIVER_ATTR(mac_address, S_IWUGO | S_IRUGO , show_mac_address, store_mac_address);
 
 static int bcm_wifi_pltfm_probe(struct platform_device *pdev)
 {
@@ -823,10 +794,6 @@ const char *prop;
 
 	/* Setup attributes to read from sysfs */
 	if (driver_create_file(pdev->dev.driver, &driver_attr_module_name)) {
-		printk(KERN_ERR "Error writing to dev_attr file\n");
-		return -EINVAL;
-	}
-	if (driver_create_file(pdev->dev.driver, &driver_attr_mac_address)) {
 		printk(KERN_ERR "Error writing to dev_attr file\n");
 		return -EINVAL;
 	}

@@ -225,7 +225,7 @@ extern void dhd_pktfilter_offload_delete(dhd_pub_t *dhd, int id);
 #ifdef READ_MACADDR
 extern int dhd_read_macaddr(struct dhd_info *dhd, struct ether_addr *mac);
 #else
-static inline int dhd_read_macaddr(struct dhd_info *dhd, struct ether_addr *mac) { return 0; }
+static inline int dhd_read_macaddr(struct dhd_info *dhd) { return 0; }
 #endif
 #ifdef WRITE_MACADDR
 extern int dhd_write_macaddr(struct ether_addr *mac);
