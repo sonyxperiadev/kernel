@@ -169,3 +169,10 @@ config ARM_TEGRA124_CPUFREQ
 	help
 	  This adds the CPUFreq driver support for Tegra124 SOCs.
 
+config ARM_TEGRA210_CPUFREQ
+	bool "Tegra210 CPUFreq support"
+	depends on ARCH_TEGRA
+	select PM_OPP
+	default y
+	help
+	  This adds the CPUFreq driver support for Tegra210 SOCs.
