@@ -60,6 +60,11 @@ void *wifi_get_country_code(char *ccode) { return NULL; }
 #endif /* CONFIG_WIFI_CONTROL_FUNC */
 #endif 
 
+#ifdef GET_CUSTOM_MAC_ENABLE
+#define MACADDR_BUF_LEN 64
+#define MACADDR_PATH "/data/misc/wifi/.mac.info"
+#endif /* GET_CUSTOM_MAC_ENABLE */
+
 #if defined(OOB_INTR_ONLY)
 
 #if defined(BCMLXSDMMC)
@@ -173,6 +178,46 @@ dhd_customer_gpio_wlan_ctrl(int onoff)
 }
 
 #ifdef GET_CUSTOM_MAC_ENABLE
+int somc_get_mac_address(unsigned char *buf)
+{
+	int ret = -EINVAL;
+	int len;
+	unsigned char macaddr_buf[MACADDR_BUF_LEN];
+	void *fp = NULL;
+	struct ether_addr eth;
+
+	if (!buf)
+		return -EINVAL;
+
+	fp = dhd_os_open_image(MACADDR_PATH);
+	if (!fp) {
+		WL_ERROR(("%s: file open error\n", __FUNCTION__));
+		goto err;
+	}
+
+	len = dhd_os_get_image_block(macaddr_buf, MACADDR_BUF_LEN, fp);
+	if (len <= 0 || MACADDR_BUF_LEN <= len) {
+		WL_ERROR(("%s: file read error\n", __FUNCTION__));
+		goto err;
+	}
+	macaddr_buf[len] = '\0';
+
+	/* convert mac address */
+	ret = !bcm_ether_atoe(macaddr_buf, &eth);
+	if (ret) {
+		WL_ERROR(("%s: convert mac value fail\n", __FUNCTION__));
+		goto err;
+	}
+
+	memcpy(buf, eth.octet, ETHER_ADDR_LEN);
+err:
+	if (fp)
+		dhd_os_close_image(fp);
+	return ret;
+}
+#endif
+
+#ifdef GET_CUSTOM_MAC_ENABLE
 /* Function to get custom MAC address */
 int
 dhd_custom_get_mac_address(unsigned char *buf)
@@ -186,7 +231,7 @@ dhd_custom_get_mac_address(unsigned char *buf)
 	/* Customer access to MAC address stored outside of DHD driver */
 #if (defined(CUSTOMER_HW2) || defined(CUSTOMER_HW10)) && (LINUX_VERSION_CODE >= \
 	KERNEL_VERSION(2, 6, 35))
-	ret = wifi_get_mac_addr(buf);
+	ret = somc_get_mac_address(buf);
 #endif
 
 #ifdef EXAMPLE_GET_MAC
