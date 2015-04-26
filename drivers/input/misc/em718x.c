@@ -750,7 +750,7 @@ static ssize_t parameters_bin_read(struct file *data_file,
 
 	mutex_lock(&em718x->ctl_lock);
 	em718x->parameter_r.pos = pos;
-	em718x->parameter_r.num = count;
+	em718x->parameter_r.num = count / sizeof(u32);
 	em718x->parameter_r.pending = true;
 	post_control_work_locked(em718x);
 	mutex_unlock(&em718x->ctl_lock);
@@ -775,7 +775,7 @@ static ssize_t parameters_bin_write(struct file *data_file,
 
 	mutex_lock(&em718x->ctl_lock);
 	em718x->parameter_w.pos = pos;
-	em718x->parameter_w.num = count;
+	em718x->parameter_w.num = count / sizeof(u32);
 	em718x->parameter_w.pending = true;
 	memcpy(em718x->parameter_w.buf, buf, count);
 	post_control_work_locked(em718x);
