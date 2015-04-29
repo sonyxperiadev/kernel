@@ -22,7 +22,6 @@
 #include <linux/of_platform.h>
 #include <linux/poll.h>
 #include <linux/slab.h>
-#include <linux/spinlock.h>
 #include <linux/suspend.h>
 #include <linux/wakelock.h>
 #include <linux/workqueue.h>
@@ -320,7 +319,7 @@ struct sensor_event_queue {
 	int widx;
 	struct sensor_event *ev;
 	int queue_size;
-	spinlock_t lock;
+	struct mutex lock;
 };
 
 struct event_device {
@@ -1173,12 +1172,11 @@ static int step_cntr_get_32(struct em718x *em718x, int *ext_steps, int idx)
 
 static void em718x_queue_event(struct em718x *em718x, struct sensor_event *ev)
 {
-	unsigned long flags;
 	struct event_device *ev_dev = &em718x->ev_device;
 	struct sensor_event_queue *p = &ev_dev->ev_queue;
 	int widx;
 
-	spin_lock_irqsave(&p->lock, flags);
+	mutex_lock(&p->lock);
 	widx = (p->widx + 1) % p->queue_size;
 
 	if (p->ridx == widx) {
@@ -1187,19 +1185,18 @@ static void em718x_queue_event(struct em718x *em718x, struct sensor_event *ev)
 	}
 	p->ev[p->widx] = *ev;
 	p->widx = widx;
-	spin_unlock_irqrestore(&p->lock, flags);
+	mutex_unlock(&p->lock);
 	wake_up_interruptible(&ev_dev->wq);
 }
 
 static void em718x_queue_event_wake(struct em718x *em718x,
 	struct sensor_event *ev)
 {
-	unsigned long flags;
 	struct event_device *ev_dev = &em718x->wake_ev_device;
 	struct sensor_event_queue *p = &ev_dev->ev_queue;
 	int widx;
 
-	spin_lock_irqsave(&p->lock, flags);
+	mutex_lock(&p->lock);
 	widx = (p->widx + 1) % p->queue_size;
 
 	if (p->ridx == widx) {
@@ -1210,7 +1207,7 @@ static void em718x_queue_event_wake(struct em718x *em718x,
 	p->widx = widx;
 	if (!wake_lock_active(&em718x->w_lock))
 		wake_lock(&em718x->w_lock);
-	spin_unlock_irqrestore(&p->lock, flags);
+	mutex_unlock(&p->lock);
 	wake_up_interruptible(&ev_dev->wq);
 }
 
@@ -1956,21 +1953,22 @@ static ssize_t em718x_cdev_read(struct file *filp, char __user *buf,
 			container_of(c, struct event_device, cdev);
 	struct em718x *em718x = ev_dev->em718x;
 	struct sensor_event_queue *p = &ev_dev->ev_queue;
-	unsigned long flags;
 
 	if (!c)
 		return -ENODEV;
 
-	spin_lock_irqsave(&p->lock, flags);
+	mutex_lock(&p->lock);
 
 	while (p->ridx == p->widx) {
-		spin_unlock_irqrestore(&p->lock, flags);
 
-		if (filp->f_flags & O_NONBLOCK)
-			return -EAGAIN;
-		if (wait_event_interruptible(ev_dev->wq, p->ridx != p->widx))
-			return -ERESTARTSYS;
-		spin_lock_irqsave(&p->lock, flags);
+		if (filp->f_flags & O_NONBLOCK) {
+			len = -EAGAIN;
+			goto exit;
+		}
+		if (wait_event_interruptible(ev_dev->wq, p->ridx != p->widx)) {
+			len = -ERESTARTSYS;
+			goto exit;
+		}
 	}
 
 	for (len = 0; size >= sizeof(p->ev[0]) && p->ridx != p->widx;
@@ -1979,12 +1977,10 @@ static ssize_t em718x_cdev_read(struct file *filp, char __user *buf,
 		size -= sizeof(p->ev[0]);
 		p->ridx = (p->ridx + 1) % p->queue_size;
 
-		spin_unlock_irqrestore(&p->lock, flags);
 		if (copy_to_user(buf + len, &ev, sizeof(ev))) {
 			len = -EFAULT;
 			goto exit;
 		}
-		spin_lock_irqsave(&p->lock, flags);
 	}
 	if ((ev_dev == &em718x->wake_ev_device) &&
 			(ev_dev->ev_queue.ridx == ev_dev->ev_queue.widx) &&
@@ -1992,8 +1988,8 @@ static ssize_t em718x_cdev_read(struct file *filp, char __user *buf,
 		wake_unlock(&em718x->w_lock);
 		dev_dbg(&em718x->client->dev, "removing wake lock\n");
 	}
-	spin_unlock_irqrestore(&p->lock, flags);
 exit:
+	mutex_unlock(&p->lock);
 	return len;
 }
 
@@ -2005,18 +2001,17 @@ static unsigned int em718x_cdev_poll(struct file *filp,
 	struct event_device *ev_dev =
 			container_of(c, struct event_device, cdev);
 	struct sensor_event_queue *p = &ev_dev->ev_queue;
-	unsigned long flags;
 
 	if (!c)
 		return 0;
 
 	poll_wait(filp, &ev_dev->wq, pt);
-	spin_lock_irqsave(&p->lock, flags);
+	mutex_lock(&p->lock);
 	if (p->ridx != p->widx)
 		mask = POLLIN | POLLRDNORM;
 	else
 		mask = 0;
-	spin_unlock_irqrestore(&p->lock, flags);
+	mutex_unlock(&p->lock);
 	return mask;
 }
 
@@ -2060,7 +2055,7 @@ static int em718x_setup_cdev(struct em718x *em718x)
 	em718x->ev_device.cdev.name = em718x->ev_device.name;
 	em718x->ev_device.cdev.fops = &em718x_fops;
 	em718x->ev_device.em718x = em718x;
-	spin_lock_init(&em718x->ev_device.ev_queue.lock);
+	mutex_init(&em718x->ev_device.ev_queue.lock);
 	rc = misc_register(&em718x->ev_device.cdev);
 	if (rc) {
 		dev_err(&em718x->client->dev, "%s: misc_register error %d\n",
@@ -2081,7 +2076,7 @@ static int em718x_setup_cdev(struct em718x *em718x)
 	em718x->wake_ev_device.cdev.name = em718x->wake_ev_device.name;
 	em718x->wake_ev_device.cdev.fops = &em718x_fops;
 	em718x->wake_ev_device.em718x = em718x;
-	spin_lock_init(&em718x->wake_ev_device.ev_queue.lock);
+	mutex_init(&em718x->wake_ev_device.ev_queue.lock);
 	rc = misc_register(&em718x->wake_ev_device.cdev);
 	if (rc) {
 		dev_err(&em718x->client->dev, "%s: misc_register error %d\n",
