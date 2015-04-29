@@ -230,7 +230,6 @@
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
 		qcom,platform-reset-gpio = <&msmgpio 25 0>;
 		qcom,mdss-dsi-reset-sequence = <1 1>, <0 10>, <1 150>;
-                qcom,cont-splash-enabled;
 		somc,panel-id = [ff];
 		somc,pwr-positive5-gpio = <&msmgpio 2 0>;
 		somc,pwr-negative5-gpio = <&msmgpio 3 0>;
@@ -312,7 +311,6 @@
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
 		qcom,platform-reset-gpio = <&msmgpio 25 0>;
 		qcom,mdss-dsi-reset-sequence = <1 1>, <0 10>, <1 150>;
-                qcom,cont-splash-enabled;
 		somc,panel-id = [61];
 		somc,pwr-positive5-gpio = <&msmgpio 2 0>;
 		somc,pwr-negative5-gpio = <&msmgpio 3 0>;
@@ -590,7 +588,6 @@
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
 		qcom,platform-reset-gpio = <&msmgpio 25 0>;
 		qcom,mdss-dsi-reset-sequence = <0 1>, <0 10>, <1 150>;
-                qcom,cont-splash-enabled;
 		somc,panel-id = [63];
 		somc,pwr-positive5-gpio = <&msmgpio 2 0>;
 		somc,pwr-negative5-gpio = <&msmgpio 3 0>;
@@ -672,7 +669,6 @@
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
 		qcom,platform-reset-gpio = <&msmgpio 25 0>;
 		qcom,mdss-dsi-reset-sequence = <0 1>, <0 10>, <1 150>;
-                qcom,cont-splash-enabled;
 		somc,panel-id = [64];
 		somc,pwr-positive5-gpio = <&msmgpio 2 0>;
 		somc,pwr-negative5-gpio = <&msmgpio 3 0>;
@@ -933,7 +929,6 @@
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
 		qcom,platform-reset-gpio = <&msmgpio 25 0>;
 		qcom,mdss-dsi-reset-sequence = <1 1>, <0 10>, <1 150>;
-                qcom,cont-splash-enabled;
 		somc,panel-id = [65];
 		somc,pwr-positive5-gpio = <&msmgpio 2 0>;
 		somc,pwr-negative5-gpio = <&msmgpio 3 0>;
@@ -1016,7 +1011,6 @@
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
 		qcom,platform-reset-gpio = <&msmgpio 25 0>;
 		qcom,mdss-dsi-reset-sequence = <1 1>, <0 10>, <1 150>;
-                qcom,cont-splash-enabled;
 		somc,panel-id = [66];
 		somc,pwr-positive5-gpio = <&msmgpio 2 0>;
 		somc,pwr-negative5-gpio = <&msmgpio 3 0>;
