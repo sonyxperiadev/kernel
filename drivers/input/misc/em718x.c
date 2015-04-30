@@ -1961,6 +1961,7 @@ static ssize_t em718x_cdev_read(struct file *filp, char __user *buf,
 
 	while (p->ridx == p->widx) {
 
+		mutex_unlock(&p->lock);
 		if (filp->f_flags & O_NONBLOCK) {
 			len = -EAGAIN;
 			goto exit;
@@ -1969,6 +1970,7 @@ static ssize_t em718x_cdev_read(struct file *filp, char __user *buf,
 			len = -ERESTARTSYS;
 			goto exit;
 		}
+		mutex_lock(&p->lock);
 	}
 
 	for (len = 0; size >= sizeof(p->ev[0]) && p->ridx != p->widx;
