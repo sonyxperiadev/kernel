@@ -503,7 +503,7 @@ done:
 	return result;
 }
 
-static void remap_cal_data(struct cal_block_data *cal_block)
+static int remap_cal_data(struct cal_block_data *cal_block)
 {
 	int ret = 0;
 
@@ -518,7 +518,7 @@ static void remap_cal_data(struct cal_block_data *cal_block)
 		}
 	}
 done:
-	return;
+	return ret;
 }
 
 static int q6asm_unmap_cal_memory(struct cal_block_data *cal_block)
@@ -605,7 +605,12 @@ int send_asm_custom_topology(struct audio_client *ac)
 
 	pr_debug("%s: Sending cal_index %d\n", __func__, ASM_CUSTOM_TOP_CAL);
 
-	remap_cal_data(cal_block);
+	result = remap_cal_data(cal_block);
+	if (result) {
+		pr_err("%s: Remap_cal_data failed for cal %d!\n",
+			__func__, ASM_CUSTOM_TOP_CAL);
+		goto unlock;
+	}
 	q6asm_add_hdr_custom_topology(ac, &asm_top.hdr, sizeof(asm_top), TRUE);
 	atomic_set(&ac->mem_state, -1);
 	asm_top.hdr.opcode = ASM_CMD_ADD_TOPOLOGIES;
