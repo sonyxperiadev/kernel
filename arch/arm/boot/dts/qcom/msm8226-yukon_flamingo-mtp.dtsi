@@ -125,6 +125,12 @@
 		qcom,cdc-mclk-gpios = <&pm8226_gpios 1 0>;
 		qcom,cdc-vdd-spkr-gpios = <&pm8226_gpios 2 0>;
 	};
+
+	qcom,wcnss-wlan@fb000000 {
+		/delete-property/ qcom,has-48mhz-xo;
+		qcom,has-autodetect-xo;
+		qcom,wcnss-adc_tm = <&pm8226_adc_tm>;
+	};
 };
 
 &modem_mem {
