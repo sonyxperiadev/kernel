@@ -4624,7 +4624,7 @@ nla_policy qca_wlan_vendor_attr[QCA_WLAN_VENDOR_ATTR_MAX+1] =
 };
 
 static int wlan_hdd_cfg80211_firmware_roaming(struct wiphy *wiphy,
-            struct wireless_dev *wdev, const const void *data, int data_len)
+            struct wireless_dev *wdev, const void *data, int data_len)
 {
 
     u8 bssid[6]                                 = {0};
