@@ -356,3 +356,7 @@
 	qcom,mdss-pref-prim-intf = "dsi";
 	batfet-supply = <&pm8226_chg_batif>;
 };
+
+&mdss_fb0 {
+        qcom,mdss-fb-splash-logo-enabled;
+};

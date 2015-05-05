@@ -377,23 +377,6 @@
 	qcom,dsi-pref-prim-pan = <&dsi_innolux_qhd_vid>;
 };
 
-&dsi_innolux_qhd_vid {
-	somc,no-vsn-gpio;
-	somc,no-vsp-gpio;
-	somc,panel-id-read-cmds;
-	qcom,mdss-pan-flip-ud;
-	qcom,cont-splash-disabled;
-};
-
-&dsi_truly_qhd_vid {
-	somc,no-vsn-gpio;
-	somc,no-vsp-gpio;
-	somc,panel-id-read-cmds;
-	qcom,mdss-pan-flip-ud;
-	qcom,cont-splash-disabled;
-};
-
-
 &pm8226_adc_tm {
 	/* Channel Node */
 	chan@30 {

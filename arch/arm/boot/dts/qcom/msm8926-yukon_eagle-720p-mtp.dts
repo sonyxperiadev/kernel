@@ -22,7 +22,3 @@
 	compatible = "qcom,msm8926-mtp", "qcom,msm8926", "qcom,mtp", "somc,eagle";
 	qcom,board-id = <8 0>;
 };
-
-&mdss_fb0 {
-	qcom,mdss-fb-splash-logo-enabled;
-};

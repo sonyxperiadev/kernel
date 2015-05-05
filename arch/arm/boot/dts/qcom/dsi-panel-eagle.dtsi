@@ -232,6 +232,11 @@
 		somc,mdss-dsi-picadj-hue = <0>;
 		somc,mdss-dsi-picadj-val = <20>;
 		somc,mdss-dsi-picadj-cont = <0>;
+		somc,no-vsn-gpio;
+		somc,no-vsp-gpio;
+		somc,panel-id-read-cmds;
+		qcom,mdss-pan-flip-ud;
+		qcom,cont-splash-disabled;
 	};
 
 	dsi_truly_qhd_vid: qcom,mdss_dsi_truly_qhd_video {
@@ -573,6 +578,11 @@
 		somc,dric-gpio = <&msmgpio 23 0>;
 		somc,driver-ic = <1>;
 		somc,panel-id = [FF];
+		somc,no-vsn-gpio;
+		somc,no-vsp-gpio;
+		somc,panel-id-read-cmds;
+		qcom,mdss-pan-flip-ud;
+		qcom,cont-splash-disabled;
 	};
 };
 
