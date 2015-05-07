@@ -50,6 +50,7 @@
 #include <linux/uaccess.h>
 #include <linux/module.h>
 #include <linux/ratelimit.h>
+#include <linux/vmalloc.h>
 
 
 /* number of characters left in xmit buffer before select has we have room */
@@ -1603,8 +1604,8 @@ static void n_tty_close(struct tty_struct *tty)
 	if (tty->link)
 		n_tty_packet_mode_flush(tty);
 
-	kfree(ldata->read_buf);
-	kfree(ldata->echo_buf);
+	vfree(ldata->read_buf);
+	vfree(ldata->echo_buf);
 	kfree(ldata);
 	tty->disc_data = NULL;
 }
@@ -1634,10 +1635,13 @@ static int n_tty_open(struct tty_struct *tty)
 	raw_spin_lock_init(&ldata->read_lock);
 
 	/* These are ugly. Currently a malloc failure here can panic */
-	ldata->read_buf = kzalloc(N_TTY_BUF_SIZE, GFP_KERNEL);
-	ldata->echo_buf = kzalloc(N_TTY_BUF_SIZE, GFP_KERNEL);
+	ldata->read_buf = vmalloc(N_TTY_BUF_SIZE);
+	ldata->echo_buf = vmalloc(N_TTY_BUF_SIZE);
 	if (!ldata->read_buf || !ldata->echo_buf)
 		goto err_free_bufs;
+
+	memset(ldata->read_buf, 0, N_TTY_BUF_SIZE);
+	memset(ldata->echo_buf, 0, N_TTY_BUF_SIZE);
 
 	tty->disc_data = ldata;
 	reset_buffer_flags(tty->disc_data);
@@ -1651,8 +1655,8 @@ static int n_tty_open(struct tty_struct *tty)
 
 	return 0;
 err_free_bufs:
-	kfree(ldata->read_buf);
-	kfree(ldata->echo_buf);
+	vfree(ldata->read_buf);
+	vfree(ldata->echo_buf);
 	kfree(ldata);
 err:
 	return -ENOMEM;
