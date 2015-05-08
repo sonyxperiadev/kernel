@@ -614,11 +614,24 @@
 };
 
 &sdcc2 {
+	interrupts = <0 1>;
+	interrupt-map = <0 &intc 0 125 0
+			1 &intc 0 220 0>;
+	interrupt-names = "core_irq", "bam_irq";
+
+	qcom,sup-voltages = <1800 2950>;
+	vdd-io-supply = <&pm8941_s3>;
+	qcom,vdd-io-voltage-level = <1800000 1800000>;
+	qcom,vdd-io-current-level = <6 22000>;
+	qcom,wifi-control-func;
+
 	/delete-property/ vdd-supply;
 	/delete-property/ qcom,vdd-voltage-level;
 	/delete-property/ qcom,vdd-current-level;
 	/delete-property/ cd-gpios;
 	/delete-property/ qcom,dat1-mpm-int;
+
+	status = "ok";
 };
 
 &sdcc3 {
@@ -656,18 +669,17 @@
 	qcom,vdd-io-voltage-level = <1800000 2950000>;
 	qcom,vdd-io-current-level = <6 22000>;
 
-	qcom,clk-rates = <400000 20000000 25000000 40000000 50000000 100000000>;
 	qcom,msm-bus,num-cases = <9>;
+	qcom,msm-bus,num-paths = <1>;
 	qcom,msm-bus,vectors-KBps = <79 512 0 0>, /* No vote */
 			<79 512 1600 3200>,    /* 400 KB/s*/
 			<79 512 80000 160000>, /* 20 MB/s */
 			<79 512 100000 200000>, /* 25 MB/s */
-			<79 512 160000 320000>, /* 40 MB/s */
 			<79 512 200000 400000>, /* 50 MB/s */
 			<79 512 400000 800000>, /* 100 MB/s */
 			<79 512 800000 1600000>, /* 200 MB/s */
 			<79 512 2048000 4096000>; /* Max. bandwidth */
-	qcom,bus-bw-vectors-bps = <0 400000 20000000 25000000 40000000 50000000 100000000 200000000 4294967295>;
+	qcom,bus-bw-vectors-bps = <0 400000 20000000 25000000 50000000 100000000 200000000 4294967295>;
 
 	status = "ok";
 };
