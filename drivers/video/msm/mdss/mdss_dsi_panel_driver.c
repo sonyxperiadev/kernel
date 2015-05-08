@@ -444,14 +444,14 @@ static int mdss_dsi_panel_reset_seq(struct mdss_panel_data *pdata, int enable)
 	if (alt_panelid_cmd)
 	{
 		if (enable) {
-			msleep(1);
+			usleep_range(1000, 1000);
 			if (gpio_is_valid(spec_pdata->disp_p5)) {
 				gpio_direction_output((spec_pdata->disp_p5), 1);
-				msleep(1);
+				usleep_range(1000, 1000);
 			}
 			if (gpio_is_valid(spec_pdata->disp_n5)) {
 				gpio_direction_output((spec_pdata->disp_n5), 1);
-				msleep(10);
+				usleep_range(10000, 10000);
 			}
 
 			if (ctrl_pdata->ctrl_state & CTRL_STATE_PANEL_INIT) {
@@ -464,11 +464,11 @@ static int mdss_dsi_panel_reset_seq(struct mdss_panel_data *pdata, int enable)
 			msleep(150);
 		} else {
 			gpio_direction_output(ctrl_pdata->rst_gpio, 0);
-			msleep(1);
+			usleep_range(1000, 1000);
 			gpio_direction_output(spec_pdata->disp_n5, 0);
-			msleep(1);
+			usleep_range(1000, 1000);
 			gpio_direction_output(spec_pdata->disp_p5, 0);
-			msleep(10);
+			usleep_range(10000, 10000);
 		}
 	} else {
 		mdss_dsi_panel_set_gpio_seq(ctrl_pdata->rst_gpio,
