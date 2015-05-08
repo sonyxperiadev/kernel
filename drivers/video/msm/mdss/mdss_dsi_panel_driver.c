@@ -78,6 +78,8 @@ static unsigned char panel_id[1];
 static int lcm_first_boot = 0;
 bool alt_panelid_cmd;
 static bool mdss_panel_flip_ud = false;
+static bool mdss_force_pcc = false;
+
 static int mdss_dsi_panel_detect(struct mdss_panel_data *pdata);
 static int mdss_panel_parse_dt(struct device_node *np,
 				struct mdss_dsi_ctrl_pdata *ctrl_pdata,
@@ -2097,8 +2099,10 @@ static int mdss_dsi_panel_pcc_setup(struct mdss_panel_data *pdata)
 				panel_data);
 
 	pcc_data = &ctrl_pdata->spec_pdata->pcc_data;
-	if (!pcc_data->color_tbl)
+	if (!pcc_data->color_tbl) {
+		pr_err("pcc -- color_tbl is NULL!!!!!!!!!\n");
 		goto exit;
+	}
 
 	mdss_dsi_op_mode_config(DSI_CMD_MODE, pdata);
 	if (ctrl_pdata->spec_pdata->pre_uv_read_cmds.cmds)
@@ -2110,8 +2114,12 @@ static int mdss_dsi_panel_pcc_setup(struct mdss_panel_data *pdata)
 		pcc_data->u_data = CENTER_U_DATA;
 		pcc_data->v_data = CENTER_V_DATA;
 	}
-	if (pcc_data->u_data == 0 && pcc_data->v_data == 0)
-		goto exit;
+	if (pcc_data->u_data == 0 && pcc_data->v_data == 0) {
+		pr_err("%s: U/V Data is invalid.\n");
+			if (!mdss_force_pcc)
+				goto exit;
+		pr_info("%s: PCC force flag found. Forcing calibration.\n");
+	}
 
 	memset(&pcc_config, 0, sizeof(struct mdp_pcc_cfg_data));
 
@@ -2134,8 +2142,10 @@ static int mdss_dsi_panel_pcc_setup(struct mdss_panel_data *pdata)
 	}
 
 	ret = find_color_area(&pcc_config, pcc_data);
-	if (ret)
+	if (ret) {
+		pr_err("pcc: Can't find color area!!!!\n");
 		goto exit;
+	}
 
 	if (pcc_data->color_tbl[pcc_data->tbl_idx].color_type != UNUSED) {
 		pcc_config.block = MDP_LOGICAL_BLOCK_DISP_0;
@@ -3439,7 +3449,7 @@ static int mdss_panel_parse_dt(struct device_node *np,
 		spec_pdata->pcc_data.tbl_size =
 			(!rc ? tmp : 0);
 
-		if (of_find_property(next, "somc,mdss-dsi-pcc-table", NULL)) {
+		if (of_property_read_bool(next, "somc,mdss-dsi-pcc-table")) {
 			spec_pdata->pcc_data.color_tbl =
 				kzalloc(spec_pdata->pcc_data.tbl_size *
 					sizeof(struct mdss_pcc_color_tbl),
@@ -3464,6 +3474,9 @@ static int mdss_panel_parse_dt(struct device_node *np,
 			}
 			spec_pdata->pcc_data.pcc_sts |= PCC_STS_UD;
 		}
+
+		mdss_force_pcc = of_property_read_bool(next,
+						"somc,mdss-dsi-pcc-force-cal");
 
 		rc = of_property_read_u32(next, "somc,mdss-dsi-use-picadj", &tmp);
 		spec_pdata->picadj_data.flags = !rc ? MDP_PP_OPS_ENABLE : 0;
