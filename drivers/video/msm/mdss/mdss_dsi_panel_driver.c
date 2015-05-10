@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -253,6 +253,7 @@ u32 mdss_dsi_panel_cmd_read(struct mdss_dsi_ctrl_pdata *ctrl, char cmd0,
 
 	return 0;
 }
+
 static void mdss_dsi_panel_cmds_send(struct mdss_dsi_ctrl_pdata *ctrl,
 			struct dsi_panel_cmds *pcmds)
 {
@@ -273,6 +274,8 @@ static void mdss_dsi_panel_cmds_send(struct mdss_dsi_ctrl_pdata *ctrl,
 	/*Panel ON/Off commands should be sent in DSI Low Power Mode*/
 	if (pcmds->link_state == DSI_LP_MODE)
 		cmdreq.flags  |= CMD_REQ_LP_MODE;
+	else if (pcmds->link_state == DSI_HS_MODE)
+		cmdreq.flags |= CMD_REQ_HS_MODE;
 
 	cmdreq.rlen = 0;
 	cmdreq.cb = NULL;
@@ -541,7 +544,7 @@ static struct dsi_cmd_desc set_col_page_addr_cmd[] = {
 };
 
 static void mdss_dsi_send_col_page_addr(struct mdss_dsi_ctrl_pdata *ctrl,
-					struct mdss_rect *roi, int unicast)
+				struct mdss_rect *roi, int unicast)
 {
 	struct dcs_cmd_req cmdreq;
 
