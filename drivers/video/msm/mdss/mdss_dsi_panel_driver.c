@@ -3456,7 +3456,7 @@ static int mdss_panel_parse_dt(struct device_node *np,
 		spec_pdata->pcc_data.tbl_size =
 			(!rc ? tmp : 0);
 
-		if (of_property_read_bool(next, "somc,mdss-dsi-pcc-table")) {
+		if (of_find_property(next, "somc,mdss-dsi-pcc-table", NULL)) {
 			spec_pdata->pcc_data.color_tbl =
 				kzalloc(spec_pdata->pcc_data.tbl_size *
 					sizeof(struct mdss_pcc_color_tbl),
