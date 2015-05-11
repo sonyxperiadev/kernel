@@ -3417,6 +3417,9 @@ static int mdss_panel_parse_dt(struct device_node *np,
 		mdss_dsi_parse_dcs_cmds(next, &spec_pdata->id_read_cmds,
 			"somc,mdss-dsi-id-read-command", NULL);
 
+		pinfo->mipi.force_clk_lane_hs = of_property_read_bool(np,
+			"qcom,mdss-dsi-force-clock-lane-hs");
+
 		rc = of_property_read_u32_array(next,
 			"somc,mdss-phy-size-mm", res, 2);
 		if (rc)
