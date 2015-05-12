@@ -133,7 +133,7 @@
 			compatible = "em718x-hub";
 			reg = <0x28>;
 			gpio-irq-pin = <111>;
-			firmware = "em718x/Sony_BMI055_AK09911_pedometerSOMC_tiltSOMC-di02.1.4.8831-2.fw";
+			firmware = "em718x/Sony_BMI055_AK09911_pedometerSOMC_tiltSOMC-di02.1.4.8831-3.fw";
 			feat0-type = "amd";
 			feat0-flag = <3>;
 			feat1-type = "step";
