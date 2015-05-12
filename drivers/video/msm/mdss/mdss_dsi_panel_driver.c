@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -253,6 +253,7 @@ u32 mdss_dsi_panel_cmd_read(struct mdss_dsi_ctrl_pdata *ctrl, char cmd0,
 
 	return 0;
 }
+
 static void mdss_dsi_panel_cmds_send(struct mdss_dsi_ctrl_pdata *ctrl,
 			struct dsi_panel_cmds *pcmds)
 {
@@ -273,6 +274,8 @@ static void mdss_dsi_panel_cmds_send(struct mdss_dsi_ctrl_pdata *ctrl,
 	/*Panel ON/Off commands should be sent in DSI Low Power Mode*/
 	if (pcmds->link_state == DSI_LP_MODE)
 		cmdreq.flags  |= CMD_REQ_LP_MODE;
+	else if (pcmds->link_state == DSI_HS_MODE)
+		cmdreq.flags |= CMD_REQ_HS_MODE;
 
 	cmdreq.rlen = 0;
 	cmdreq.cb = NULL;
@@ -541,7 +544,7 @@ static struct dsi_cmd_desc set_col_page_addr_cmd[] = {
 };
 
 static void mdss_dsi_send_col_page_addr(struct mdss_dsi_ctrl_pdata *ctrl,
-					struct mdss_rect *roi, int unicast)
+				struct mdss_rect *roi, int unicast)
 {
 	struct dcs_cmd_req cmdreq;
 
@@ -2747,9 +2750,10 @@ static int mdss_dsi_parse_panel_features(struct device_node *np,
 //	pinfo->cont_splash_enabled = of_property_read_bool(np,
 //		"qcom,cont-splash-enabled");
 
+	pinfo->partial_update_supported = of_property_read_bool(np,
+		"qcom,partial-update-enabled");
 	if (pinfo->mipi.mode == DSI_CMD_MODE) {
-		pinfo->partial_update_enabled = of_property_read_bool(np,
-				"qcom,partial-update-enabled");
+		pinfo->partial_update_enabled = pinfo->partial_update_supported;
 		pr_info("%s: partial_update_enabled=%d\n", __func__,
 					pinfo->partial_update_enabled);
 		if (pinfo->partial_update_enabled) {
@@ -3413,6 +3417,9 @@ static int mdss_panel_parse_dt(struct device_node *np,
 		mdss_dsi_parse_dcs_cmds(next, &spec_pdata->id_read_cmds,
 			"somc,mdss-dsi-id-read-command", NULL);
 
+		pinfo->mipi.force_clk_lane_hs = of_property_read_bool(np,
+			"qcom,mdss-dsi-force-clock-lane-hs");
+
 		rc = of_property_read_u32_array(next,
 			"somc,mdss-phy-size-mm", res, 2);
 		if (rc)
@@ -3449,7 +3456,7 @@ static int mdss_panel_parse_dt(struct device_node *np,
 		spec_pdata->pcc_data.tbl_size =
 			(!rc ? tmp : 0);
 
-		if (of_property_read_bool(next, "somc,mdss-dsi-pcc-table")) {
+		if (of_find_property(next, "somc,mdss-dsi-pcc-table", NULL)) {
 			spec_pdata->pcc_data.color_tbl =
 				kzalloc(spec_pdata->pcc_data.tbl_size *
 					sizeof(struct mdss_pcc_color_tbl),
@@ -3878,6 +3885,7 @@ exit_lcd_id:
 
 	pinfo->dynamic_switch_pending = false;
 	pinfo->is_lpm_mode = false;
+	pinfo->esd_rdy = false;
 
 	ctrl_pdata->on = mdss_dsi_panel_on;
 	ctrl_pdata->off = mdss_dsi_panel_off;

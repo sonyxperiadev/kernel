@@ -351,6 +351,7 @@ struct mdss_pp_res_type {
 static DEFINE_MUTEX(mdss_pp_mutex);
 static struct mdss_pp_res_type *mdss_pp_res;
 
+static int pp_hist_stop_wrapper(struct msm_fb_data_type *mfd);
 static u32 pp_hist_read(char __iomem *v_addr,
 				struct pp_hist_col_info *hist_info);
 static int pp_hist_setup(u32 *op, u32 block, struct mdss_mdp_mixer *mix);
@@ -457,7 +458,7 @@ inline int linear_map(int in, int *out, int in_max, int out_max)
 {
 	if (in < 0 || !out || in_max <= 0 || out_max <= 0)
 		return -EINVAL;
-	*out = ((in * out_max) / in_max);
+	*out = ((2 * (in * out_max) + in_max) / (2 * in_max));
 	pr_debug("in = %d, out = %d, in_max = %d, out_max = %d\n",
 		in, *out, in_max, out_max);
 	if ((in > 0) && (*out == 0))
@@ -1736,10 +1737,6 @@ static int pp_dspp_setup(u32 disp_num, struct mdss_mdp_mixer *mixer)
 		ad_flags = 0;
 	}
 
-	/* call calibration specific processing here */
-	if (ctl->mfd->calib_mode)
-		goto flush_exit;
-
 	/* nothing to update */
 	if ((!flags) && (!(opmode)) && (!ad_flags))
 		goto dspp_exit;
@@ -1802,7 +1799,6 @@ static int pp_dspp_setup(u32 disp_num, struct mdss_mdp_mixer *mixer)
 opmode_config:
 	pp_dspp_opmode_config(ctl, dspp_num, pp_sts, mdata->mdp_rev, &opmode);
 
-flush_exit:
 	if (ad_hw) {
 		mutex_lock(&ad->lock);
 		ad_flags = ad->reg_sts;
@@ -2198,6 +2194,7 @@ int mdss_mdp_pp_overlay_init(struct msm_fb_data_type *mfd)
 	}
 
 	mfd->mdp.ad_calc_bl = pp_ad_calc_bl;
+	mfd->mdp.stop_histogram = pp_hist_stop_wrapper;
 	return 0;
 }
 
@@ -2228,12 +2225,10 @@ static int pp_ad_calc_bl(struct msm_fb_data_type *mfd, int bl_in, int *bl_out,
 		return -EPERM;
 	}
 
-	if (!ad->bl_mfd || !ad->bl_mfd->panel_info ||
-		!ad->bl_att_lut) {
-		pr_err("Invalid ad info: bl_mfd = 0x%p, ad->bl_mfd->panel_info = 0x%p, bl_att_lut = 0x%p\n",
+	if (!ad->bl_mfd || !ad->bl_mfd->panel_info) {
+		pr_err("Invalid ad info: bl_mfd = 0x%p, ad->bl_mfd->panel_info = 0x%p\n",
 			ad->bl_mfd,
-			(!ad->bl_mfd) ? NULL : ad->bl_mfd->panel_info,
-			ad->bl_att_lut);
+			(!ad->bl_mfd) ? NULL : ad->bl_mfd->panel_info);
 		mutex_unlock(&ad->lock);
 		return -EINVAL;
 	}
@@ -3610,6 +3605,11 @@ exit:
 	return ret;
 }
 
+static int pp_hist_stop_wrapper(struct msm_fb_data_type *mfd)
+{
+	return mdss_mdp_hist_stop(mfd->index + MDP_LOGICAL_BLOCK_DISP_0);
+}
+
 int mdss_mdp_hist_stop(u32 block)
 {
 	int i, ret = 0;
@@ -3838,7 +3838,7 @@ static int pp_hist_collect(struct mdp_histogram_data *hist,
 				struct pp_hist_col_info *hist_info,
 				char __iomem *ctl_base, u32 expect_sum)
 {
-	int kick_ret, wait_ret, ret = 0;
+	int kick_ret = 1, wait_ret, ret = 0;
 	u32 timeout, sum;
 	char __iomem *v_base;
 	unsigned long flag;
@@ -3870,7 +3870,8 @@ static int pp_hist_collect(struct mdp_histogram_data *hist,
 			pipe = container_of(res, struct mdss_mdp_pipe, pp_res);
 			pipe->params_changed++;
 		}
-		kick_ret = wait_for_completion_killable_timeout(
+		if (!is_hist_v2)
+			kick_ret = wait_for_completion_killable_timeout(
 				&(hist_info->first_kick), timeout /
 					HIST_KICKOFF_WAIT_FRACTION);
 		if (kick_ret != 0)
@@ -4598,7 +4599,7 @@ int mdss_mdp_ad_input(struct msm_fb_data_type *mfd,
 	mutex_lock(&ad->lock);
 	if ((!PP_AD_STATE_IS_INITCFG(ad->state) &&
 			!PP_AD_STS_IS_DIRTY(ad->sts)) &&
-			!input->mode == MDSS_AD_MODE_CALIB) {
+			(input->mode != MDSS_AD_MODE_CALIB)) {
 		pr_warn("AD not initialized or configured.\n");
 		ret = -EPERM;
 		goto error;
@@ -4657,6 +4658,7 @@ int mdss_mdp_ad_input(struct msm_fb_data_type *mfd,
 			mdss_fb_set_backlight(mfd, bl);
 			mutex_unlock(&mfd->bl_lock);
 			mutex_lock(&ad->lock);
+			mfd->calib_mode_bl = bl;
 		} else {
 			pr_warn("should be in calib mode\n");
 		}
@@ -5016,10 +5018,10 @@ static int mdss_mdp_ad_setup(struct msm_fb_data_type *mfd)
 			/* Clear state and regs when going to off state*/
 			ad->sts = 0;
 			ad->sts |= PP_AD_STS_DIRTY_VSYNC;
-			ad->state &= !PP_AD_STATE_INIT;
-			ad->state &= !PP_AD_STATE_CFG;
-			ad->state &= !PP_AD_STATE_DATA;
-			ad->state &= !PP_AD_STATE_BL_LIN;
+			ad->state &= ~PP_AD_STATE_INIT;
+			ad->state &= ~PP_AD_STATE_CFG;
+			ad->state &= ~PP_AD_STATE_DATA;
+			ad->state &= ~PP_AD_STATE_BL_LIN;
 			ad->ad_data = 0;
 			ad->ad_data_mode = 0;
 			ad->last_bl = 0;
