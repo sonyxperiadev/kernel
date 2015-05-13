@@ -149,8 +149,15 @@ config ARM_SPEAR_CPUFREQ
 	  This adds the CPUFreq driver support for SPEAr SOCs.
 
 config CPU_FREQ_MSM
-        bool
-        depends on CPU_FREQ && ARCH_MSM
-        default y
-        help
-          This enables the CPUFreq driver for Qualcomm CPUs.
+	bool
+	depends on CPU_FREQ && ARCH_MSM
+	default y
+	help
+	  This enables the CPUFreq driver for Qualcomm CPUs.
+
+config ARM_TEGRA20_CPUFREQ
+	bool "Tegra20 CPUFreq support"
+	depends on ARCH_TEGRA
+	default y
+	help
+	  This adds the CPUFreq driver support for Tegra20 SOCs.
