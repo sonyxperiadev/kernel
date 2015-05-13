@@ -2600,15 +2600,15 @@ unsigned long sched_get_busy(int cpu)
 	if (!rq->notifier_sent) {
 		u64 load_at_cur_freq;
 
-		load_at_cur_freq = scale_load_to_freq(load, cpu_max_freq(cpu),
-							 cpu_cur_freq(cpu));
+		load_at_cur_freq = scale_load_to_freq(load, rq->max_freq,
+								 rq->cur_freq);
 		if (load_at_cur_freq > sched_ravg_window)
 			load_at_cur_freq = sched_ravg_window;
 		load = scale_load_to_freq(load_at_cur_freq,
-				 cpu_cur_freq(cpu), cpu_max_possible_freq(cpu));
+					 rq->cur_freq, rq->max_possible_freq);
 	} else {
-		load = scale_load_to_freq(load, cpu_max_freq(cpu),
-					 cpu_max_possible_freq(cpu));
+		load = scale_load_to_freq(load, rq->max_freq,
+						 rq->max_possible_freq);
 		rq->notifier_sent = 0;
 	}
 
