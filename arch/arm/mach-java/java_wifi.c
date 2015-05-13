@@ -380,6 +380,13 @@ static void bcm_sdiowl_term(void)
 
 #define WLAN_STATIC_SCAN_BUF0		5
 #define WLAN_STATIC_SCAN_BUF1		6
+#define WLAN_STATIC_DHD_WLFC_INFO	8
+#define WLAN_STATIC_DHD_WLFC_HANGER	12
+
+#define WLAN_SCAN_BUF_SIZE		(64 * 1024)
+#define WLAN_STATIC_DHD_WLFC_INFO_SIZE		(24 * 1024)
+#define WLAN_STATIC_DHD_WLFC_HANGER_SIZE	(64 * 1024)
+
 #define PREALLOC_WLAN_SEC_NUM		4
 #define PREALLOC_WLAN_BUF_NUM		160
 #define PREALLOC_WLAN_SECTION_HEADER	24
@@ -407,8 +414,10 @@ static struct wlan_mem_prealloc wlan_mem_array[PREALLOC_WLAN_SEC_NUM] = {
 	{NULL, (WLAN_SECTION_SIZE_3 + PREALLOC_WLAN_SECTION_HEADER)}
 };
 
-void *wlan_static_scan_buf0;
-void *wlan_static_scan_buf1;
+void *wlan_static_scan_buf0 = NULL;
+void *wlan_static_scan_buf1 = NULL;
+void *wlan_static_dhd_wlfc_info = NULL;
+void *wlan_static_dhd_wlfc_hanger = NULL;
 
 static void *hawaii_wifi_mem_prealloc(int section, unsigned long size)
 {
@@ -418,6 +427,27 @@ static void *hawaii_wifi_mem_prealloc(int section, unsigned long size)
 		return wlan_static_scan_buf0;
 	if (section == WLAN_STATIC_SCAN_BUF1)
 		return wlan_static_scan_buf1;
+
+	if (section == WLAN_STATIC_DHD_WLFC_INFO)  {
+		if (size > WLAN_STATIC_DHD_WLFC_INFO_SIZE) {
+			pr_err("request DHD_WLFC_INFO size(%lu) is bigger than"
+				" static size(%d).\n",
+				size, WLAN_STATIC_DHD_WLFC_INFO_SIZE);
+			return NULL;
+		}
+		return wlan_static_dhd_wlfc_info;
+	}
+
+	if (section == WLAN_STATIC_DHD_WLFC_HANGER)  {
+		if (size > WLAN_STATIC_DHD_WLFC_HANGER_SIZE) {
+			pr_err("request DHD_WLFC_HANGER size(%lu) is bigger than"
+				" static size(%d).\n",
+				size, WLAN_STATIC_DHD_WLFC_HANGER_SIZE);
+			return NULL;
+		}
+		return wlan_static_dhd_wlfc_hanger;
+	}
+
 	if ((section < 0) || (section > PREALLOC_WLAN_SEC_NUM))
 		return NULL;
 
@@ -455,18 +485,50 @@ int __init hawaii_init_wifi_mem(void)
 		if (!wlan_mem_array[i].mem_ptr)
 			goto err_mem_alloc;
 	}
-	wlan_static_scan_buf0 = kmalloc(65536, GFP_KERNEL);
-	if (!wlan_static_scan_buf0)
+	wlan_static_scan_buf0 = kmalloc(WLAN_SCAN_BUF_SIZE, GFP_KERNEL);
+	if (!wlan_static_scan_buf0) {
+		pr_err("Failed to alloc wlan_static_scan_buf0\n");
 		goto err_mem_alloc;
-	wlan_static_scan_buf1 = kmalloc(65536, GFP_KERNEL);
-	if (!wlan_static_scan_buf1)
-		goto err_mem_alloc;
+	}
 
-	printk(KERN_ERR "%s: WIFI MEM Allocated\n", __func__);
+	wlan_static_scan_buf1 = kmalloc(WLAN_SCAN_BUF_SIZE, GFP_KERNEL);
+	if (!wlan_static_scan_buf1) {
+		pr_err("Failed to alloc wlan_static_scan_buf1\n");
+		goto err_mem_alloc;
+	}
+
+	wlan_static_dhd_wlfc_info = kmalloc(WLAN_STATIC_DHD_WLFC_INFO_SIZE,
+			GFP_KERNEL);
+	if (!wlan_static_dhd_wlfc_info) {
+		pr_err("Failed to alloc wlan_static_dhd_wlfc_info\n");
+		goto err_mem_alloc;
+	}
+
+	wlan_static_dhd_wlfc_hanger = kmalloc(WLAN_STATIC_DHD_WLFC_HANGER_SIZE,
+		GFP_KERNEL);
+	if (!wlan_static_dhd_wlfc_hanger) {
+		pr_err("Failed to alloc wlan_static_dhd_wlfc_hanger\n");
+		goto err_mem_alloc;
+	}
+
+	pr_err("%s: WIFI MEM Allocated\n", __FUNCTION__);
 	return 0;
 
 err_mem_alloc:
+	if (wlan_static_dhd_wlfc_info)
+		kfree(wlan_static_dhd_wlfc_info);
+
+	if (wlan_static_dhd_wlfc_hanger)
+		kfree(wlan_static_dhd_wlfc_hanger);
+
+	if (wlan_static_scan_buf1)
+		kfree(wlan_static_scan_buf1);
+
+	if (wlan_static_scan_buf0)
+		kfree(wlan_static_scan_buf0);
+
 	pr_err("Failed to mem_alloc for WLAN\n");
+
 	for (j = 0; j < i; j++)
 		kfree(wlan_mem_array[j].mem_ptr);
 

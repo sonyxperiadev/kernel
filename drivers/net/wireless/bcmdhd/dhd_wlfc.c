@@ -319,7 +319,7 @@ dhd_wlfc_dump(dhd_pub_t *dhdp, struct bcmstrbuf *strbuf)
 	hang-er: noun, a contrivance on which things are hung, as a hook.
 */
 static void*
-dhd_wlfc_hanger_create(osl_t *osh, int max_items)
+dhd_wlfc_hanger_create(dhd_pub_t *dhd, int max_items)
 {
 	int i;
 	wlfc_hanger_t* hanger;
@@ -327,9 +327,10 @@ dhd_wlfc_hanger_create(osl_t *osh, int max_items)
 	/* allow only up to a specific size for now */
 	ASSERT(max_items == WLFC_HANGER_MAXITEMS);
 
-	if ((hanger = (wlfc_hanger_t*)MALLOC(osh, WLFC_HANGER_SIZE(max_items))) == NULL)
+	if ((hanger = (wlfc_hanger_t*)DHD_OS_PREALLOC(dhd, DHD_PREALLOC_DHD_WLFC_HANGER,
+		WLFC_HANGER_SIZE(max_items))) == NULL) {
 		return NULL;
-
+	}
 	memset(hanger, 0, WLFC_HANGER_SIZE(max_items));
 	hanger->max_items = max_items;
 
@@ -340,12 +341,12 @@ dhd_wlfc_hanger_create(osl_t *osh, int max_items)
 }
 
 static int
-dhd_wlfc_hanger_delete(osl_t *osh, void* hanger)
+dhd_wlfc_hanger_delete(dhd_pub_t *dhd, void* hanger)
 {
 	wlfc_hanger_t* h = (wlfc_hanger_t*)hanger;
 
 	if (h) {
-		MFREE(osh, h, WLFC_HANGER_SIZE(h->max_items));
+		DHD_OS_PREFREE(dhd, h, WLFC_HANGER_SIZE(h->max_items));
 		return BCME_OK;
 	}
 	return BCME_BADARG;
@@ -2293,7 +2294,8 @@ dhd_wlfc_enable(dhd_pub_t *dhd)
 		return BCME_OK;
 
 	/* allocate space to track txstatus propagated from firmware */
-	dhd->wlfc_state = MALLOC(dhd->osh, sizeof(athost_wl_status_info_t));
+	dhd->wlfc_state = DHD_OS_PREALLOC(dhd, DHD_PREALLOC_DHD_WLFC_INFO,
+		sizeof(athost_wl_status_info_t));
 	if (dhd->wlfc_state == NULL)
 		return BCME_NOMEM;
 
@@ -2306,9 +2308,10 @@ dhd_wlfc_enable(dhd_pub_t *dhd)
 	wlfc->dhdp = dhd;
 
 	wlfc->hanger =
-		dhd_wlfc_hanger_create(dhd->osh, WLFC_HANGER_MAXITEMS);
+		dhd_wlfc_hanger_create(dhd, WLFC_HANGER_MAXITEMS);
 	if (wlfc->hanger == NULL) {
-		MFREE(dhd->osh, dhd->wlfc_state, sizeof(athost_wl_status_info_t));
+		DHD_OS_PREFREE(dhd, dhd->wlfc_state,
+			sizeof(athost_wl_status_info_t));
 		dhd->wlfc_state = NULL;
 		DHD_ERROR(("Failed to malloc dhd->wlfc_state\n"));
 		return BCME_NOMEM;
@@ -2490,10 +2493,11 @@ dhd_wlfc_deinit(dhd_pub_t *dhd)
 	}
 #endif
 	/* delete hanger */
-	dhd_wlfc_hanger_delete(dhd->osh, wlfc->hanger);
+	dhd_wlfc_hanger_delete(dhd, wlfc->hanger);
 
 	/* free top structure */
-	MFREE(dhd->osh, dhd->wlfc_state, sizeof(athost_wl_status_info_t));
+	DHD_OS_PREFREE(dhd, dhd->wlfc_state,
+		sizeof(athost_wl_status_info_t));
 	dhd->wlfc_state = NULL;
 	dhd_os_wlfc_unblock(dhd);
 
