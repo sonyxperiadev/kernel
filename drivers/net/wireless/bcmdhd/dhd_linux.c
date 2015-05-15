@@ -5724,10 +5724,13 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 			kfree(eventmask_msg);
 			goto done;
 		}
+#if !defined(CONFIG_MACH_SONY_SCORPION) ||
+		!defined(CONFIG_MACH_SONY_SCORPION_WINDY)
 	} else if (ret2 < 0 && ret2 != BCME_UNSUPPORTED) {
 		DHD_ERROR(("%s read event mask ext failed %d\n", __FUNCTION__, ret2));
 		kfree(eventmask_msg);
 		goto done;
+#endif
 	} /* unsupported is ok */
 	kfree(eventmask_msg);
 
