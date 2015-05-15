@@ -1,6 +1,7 @@
 /* [kernel/drivers/video/msm/mdss/mhl_sii8620_8061_drv/mhl_platform_base.c]
  *
- * Copyright (c) 2014 Sony Mobile Communications Inc.
+ * Copyright (C) 2013 Sony Mobile Communications AB.
+ * Copyright (C) 2013 Silicon Image Inc.
  *
  * Author: [Hirokuni Kawasaki <hirokuni.kawaaki@sonymobile.com>]
  *
@@ -12,30 +13,18 @@
 
 #include <linux/module.h>
 #include <linux/clk.h>
+#include <linux/platform_device.h>
 #include <linux/usb/msm_hsusb.h>
 #include <linux/gpio.h>
 #include <linux/of_gpio.h>
 #include <linux/of_platform.h>
 #include <linux/delay.h>
 
-#include <mdss_hdmi_mhl.h>
-
+#include "mhl_common.h"
 #include "mhl_platform.h"
 
 #define MHL_DRIVER_NAME "sii8620"
 #define COMPATIBLE_NAME "qcom,mhl-sii8620"
-
-/*
- *Following is for unit test config
- */
-#ifndef UNIT_TEST
-/*todo : must be changed to use dts file*/
-#define GPIO_MHL_SWITCH_SEL_1 10
-#define GPIO_MHL_SWITCH_SEL_2 11
-#else
-#define GPIO_MHL_SWITCH_SEL_1 10
-#define GPIO_MHL_SWITCH_SEL_2 11
-#endif
 
 /*gpio*/
 static int int_gpio;
@@ -55,32 +44,14 @@ static void *context_cb;
 static int (*device_discovery_cb)(void *context_cb);
 static void *usb_ctx;
 static struct i2c_client *mhl_i2c_client;
-struct clk *mhl_clk_base;
-struct platform_device *hdmi_pdev;
-struct msm_hdmi_mhl_ops hdmi_mhl_ops;
+static struct clk *mhl_clk;
 
 enum gpio_direction_types {
 	GPIO_OUTPUT,
 	GPIO_INPUT
 };
 
-/* It should be removed later */
-#ifdef MHL_PMIC_VMIN_SET
 extern int qpnp_chg_notify_mhl_state(int state);
-#endif
-
-static void mhl_pf_external_notify(int data)
-{
-	/* noitfy charger of mhl status */
-#ifdef MHL_PMIC_VMIN_SET
-	qpnp_chg_notify_mhl_state(data);
-#endif
-
-	notify_usb_online(usb_ctx, data);
-
-	/* notify HDMI Driver of change of HDMI Clock. */
-	hdmi_mhl_ops.set_upstream_hpd(hdmi_pdev, (uint8_t)data);
-}
 
 static bool mhl_pf_is_switch_to_usb(void)
 {
@@ -95,21 +66,25 @@ int mhl_pf_get_gpio_num_int(void)
 {
 	return int_gpio;
 }
+EXPORT_SYMBOL(mhl_pf_get_gpio_num_int);
 
 int mhl_pf_get_gpio_num_pwr(void)
 {
 	return pwr_gpio;
 }
+EXPORT_SYMBOL(mhl_pf_get_gpio_num_pwr);
 
 int mhl_pf_get_gpio_num_rst(void)
 {
 	return rst_gpio;
 }
+EXPORT_SYMBOL(mhl_pf_get_gpio_num_rst);
 
 int mhl_pf_get_gpio_num_fw_wake(void)
 {
 	return fw_wake_gpio;
 }
+EXPORT_SYMBOL(mhl_pf_get_gpio_num_fw_wake);
 
 int mhl_pf_get_irq_number(void)
 {
@@ -126,8 +101,9 @@ EXPORT_SYMBOL(mhl_pf_get_i2c_client);
 
 struct clk *mhl_pf_get_mhl_clk(void)
 {
-	return mhl_clk_base;
+	return mhl_clk;
 }
+EXPORT_SYMBOL(mhl_pf_get_mhl_clk);
 
 
 /**
@@ -167,7 +143,7 @@ int mhl_pf_switch_to_usb(void)
 		 */
 		/*return MHL_FAIL;*/
 	} else {
-		mhl_pf_external_notify(0);
+		notify_usb_online(usb_ctx, 0);
 	}
 
 	return MHL_SUCCESS;
@@ -200,7 +176,9 @@ void mhl_pf_switch_register_cb(int (*device_discovery)(void *context),
 		rc = device_discovery_cb(context_cb);
 		if (rc == MHL_USB_INUSE) {
 			if (notify_usb_online) {
-				mhl_pf_external_notify(1);
+				/* Found MHL device */
+				qpnp_chg_notify_mhl_state(1);
+				notify_usb_online(usb_ctx, 1);
 			}
 		}
 	}
@@ -265,7 +243,9 @@ static int mhl_pf_switch_device_discovery(void *data,
 		rc = device_discovery_cb(context_cb);
 		if (rc == MHL_USB_INUSE) {
 			if (notify_usb_online) {
-				mhl_pf_external_notify(1);
+				/* Found MHL device */
+				qpnp_chg_notify_mhl_state(1);
+				notify_usb_online(usb_ctx, 1);
 			}
 		}
 	} else {
@@ -455,7 +435,6 @@ static int mhl_tx_get_dt_data(struct device *dev_)
 	int rc = 0;
 	struct device_node *of_node = NULL;
 	struct platform_device *op = NULL;
-	struct device_node *hdmi_tx_node = NULL;
 
 	of_node = dev_->of_node;
 	if (!of_node) {
@@ -469,8 +448,8 @@ static int mhl_tx_get_dt_data(struct device *dev_)
 		goto error;
 	}
 
-	mhl_clk_base = clk_get(&op->dev, "");
-	if (!mhl_clk_base) {
+	mhl_clk = clk_get(&op->dev, "");
+	if (!mhl_clk) {
 		pr_err("%s: invalid clk\n", __func__);
 		goto error;
 	}
@@ -481,25 +460,9 @@ static int mhl_tx_get_dt_data(struct device *dev_)
 		goto error;
 	}
 
-	/* parse phandle for hdmi tx */
-	hdmi_tx_node = of_parse_phandle(of_node, "qcom,hdmi-tx-map", 0);
-	if (!hdmi_tx_node) {
-		pr_err("%s: can't find hdmi phandle\n", __func__);
-		goto error;
-	}
-
-	hdmi_pdev = of_find_device_by_node(hdmi_tx_node);
-	if (!hdmi_pdev) {
-		pr_err("%s: can't find the device by hdmi_tx_node\n", __func__);
-		goto error;
-	}
-	pr_debug("%s: hdmi_pdev [0X%x]\n",
-	       __func__, (unsigned int)hdmi_pdev);
-
 	return 0;
 error:
 	pr_err("%s: ret due to err\n", __func__);
-	hdmi_pdev = NULL;
 	return rc;
 } /* mhl_tx_get_dt_data */
 
@@ -548,39 +511,17 @@ static int mhl_i2c_probe(struct i2c_client *client,
 		goto failed_probe;
 	}
 
-	rc = mhl_pf_init();
-	if (rc < 0) {
-		pr_err("%s:failed mhl_pf_init\n", __func__);
-		return rc;
-	}
-
-	rc = mhl_platform_power_init();
-	if (rc < 0) {
-		pr_err("%s:failed mhl_platform_power_init\n", __func__);
-		return rc;
-	}
-
-	rc = msm_hdmi_register_mhl(hdmi_pdev,
-				   &hdmi_mhl_ops, NULL);
-	if (rc) {
-		pr_err("%s: register with hdmi failed\n", __func__);
-		return rc;
-	}
-
 	return 0;
 
 failed_probe:
 	mhl_pf_swtich_resource_free();
-	hdmi_pdev = NULL;
+
 	return rc;
 }
 
 static int mhl_i2c_remove(struct i2c_client *client)
 {
 	pr_debug("%s:\n", __func__);
-
-	mhl_platform_power_exit();
-	mhl_pf_exit();
 
 	/*
 	 * All gpio will be released. All release needing gpio
@@ -589,8 +530,6 @@ static int mhl_i2c_remove(struct i2c_client *client)
 	mhl_pf_gpio_config_release();
 
 	mhl_pf_swtich_resource_free();
-
-	hdmi_pdev = NULL;
 
 	return 0;
 }
