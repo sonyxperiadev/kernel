@@ -1132,26 +1132,18 @@ static struct clk_freq_tbl ftbl_gcc_sdcc1_apps_clk_pro[] = {
 
 /* For SDCC1 on MSM8974 v2 and SDCC[2-4] on all MSM8974 */
 static struct clk_freq_tbl ftbl_gcc_sdcc1_4_apps_clk[] = {
-#ifndef CONFIG_MMC_SDHCI_MIMO
 	F(   144000,    cxo,  16,   3,  25),
 	F(   400000,    cxo,  12,   1,   4),
 	F( 20000000,  gpll0,  15,   1,   2),
 	F( 25000000,  gpll0,  12,   1,   2),
-	F( 50000000,  gpll0,  12,   0,   0),
-	F(100000000,  gpll0,   6,   0,   0),
-	F(200000000,  gpll0,   3,   0,   0),
-	F_END
-#else
-	F(   144000,    cxo,  16,   3,  25),
-	F(   400000,    cxo,  12,   1,   4),
-	F( 20000000,  gpll0,  15,   1,   2),
-	F( 25000000,  gpll0,  12,   1,   2),
+#if defined(CONFIG_MACH_SONY_SCORPION) || \
+    defined(CONFIG_MACH_SONY_SCORPION_WINDY)
 	F( 40000000,  gpll0,  15,   0,   0),
+#endif
 	F( 50000000,  gpll0,  12,   0,   0),
 	F(100000000,  gpll0,   6,   0,   0),
 	F(200000000,  gpll0,   3,   0,   0),
 	F_END
-#endif
 };
 
 static struct rcg_clk sdcc1_apps_clk_src = {
