@@ -3101,6 +3101,14 @@ static void sdhci_set_default_hw_caps(struct sdhci_msm_host *msm_host,
 				CORE_VENDOR_SPEC_CAPABILITIES0);
 	}
 
+	/* Advertise 3.3v, 3.0v, 1.8v features for Sony Scorpion */
+	if ((of_machine_is_compatible("somc,scorpion-windy") ||
+	     of_machine_is_compatible("somc,scorpion-row")) &&
+	    strcmp(host->hw_name, "msm_sdcc.3") == 0)
+		caps |= (CORE_3_3V_SUPPORT |
+			CORE_3_0V_SUPPORT |
+			CORE_1_8V_SUPPORT);
+
 	/*
 	 * SDCC 5 controller with major version 1, minor version 0x34 and later
 	 * with HS 400 mode support will use CM DLL instead of CDC LP 533 DLL.
