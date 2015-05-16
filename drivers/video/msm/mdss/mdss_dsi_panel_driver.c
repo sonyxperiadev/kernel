@@ -214,10 +214,12 @@ static struct dsi_cmd_desc dcs_read_cmd = {
 };
 
 static char dcs_cmd_DA[2] = {0xDA, 0x00}; /* DTYPE_DCS_READ */
+#if 0
 static struct dsi_cmd_desc dcs_read_cmd_DA = {
 	{DTYPE_DCS_READ, 1, 0, 1, 20, sizeof(dcs_cmd_DA)},
 	dcs_cmd_DA
 };
+#endif
 
 static void panel_id_store(int data)
 {
@@ -833,6 +835,7 @@ static ssize_t mdss_dsi_panel_vsyncs_per_ksecs_store(struct device *dev,
 exit:
 	return ret;
 #endif
+	return 0;
 }
 
 static ssize_t mdss_dsi_panel_interval_ms_show(struct device *dev,
@@ -1466,8 +1469,8 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 {
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
 	struct mdss_panel_specific_pdata *spec_pdata = NULL;
-	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
-	struct mdss_mdp_ctl *ctl = mdata->ctl_off;
+	//struct mdss_data_type *mdata = mdss_mdp_get_mdata();
+	//struct mdss_mdp_ctl *ctl = mdata->ctl_off;
 	struct mdss_panel_info *pinfo = NULL;
 
 	if (pdata == NULL) {
@@ -1542,6 +1545,7 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 }
 #endif
 
+#if 0
 static int mdss_dsi_panel_low_power_config(struct mdss_panel_data *pdata,
 	int enable)
 {
@@ -1569,6 +1573,7 @@ static int mdss_dsi_panel_low_power_config(struct mdss_panel_data *pdata,
 	pr_debug("%s:-\n", __func__);
 	return 0;
 }
+#endif
 
 static void cabc_work_fn(struct work_struct *work)
 {
@@ -1690,7 +1695,7 @@ static int mdss_dsi_panel_power_on_ex(struct mdss_panel_data *pdata, int enable)
 					(spec_pdata->down_period - kt) *
 					1000 + 100);
 		}
-		
+
 		for (i = 0; !ret && (i < DSI_MAX_PM); i++) {
 			if (DSI_CORE_PM == i)
 				continue;
@@ -1759,7 +1764,7 @@ static int mdss_dsi_panel_power_on_ex(struct mdss_panel_data *pdata, int enable)
 				pr_err("%s: Failed to disable vregs.ret=%d\n",
 					__func__, ret);
 		}
-		
+
 		if (spec_pdata->down_period)
 			down = (u32)ktime_to_ms(ktime_get_boottime());
 		display_power_on = 0;
@@ -2103,7 +2108,7 @@ static int mdss_dsi_panel_pcc_setup(struct mdss_panel_data *pdata)
 
 	pcc_data = &ctrl_pdata->spec_pdata->pcc_data;
 	if (!pcc_data->color_tbl) {
-		pr_err("pcc -- color_tbl is NULL!!!!!!!!!\n");
+		pr_err("%s: pcc -- color_tbl is NULL!!!!!!!!!\n", __func__);
 		goto exit;
 	}
 
@@ -2118,10 +2123,10 @@ static int mdss_dsi_panel_pcc_setup(struct mdss_panel_data *pdata)
 		pcc_data->v_data = CENTER_V_DATA;
 	}
 	if (pcc_data->u_data == 0 && pcc_data->v_data == 0) {
-		pr_err("%s: U/V Data is invalid.\n");
+		pr_err("%s: U/V Data is invalid.\n", __func__);
 			if (!mdss_force_pcc)
 				goto exit;
-		pr_info("%s: PCC force flag found. Forcing calibration.\n");
+		pr_info("%s: PCC force flag found. Forcing calibration.\n", __func__);
 	}
 
 	memset(&pcc_config, 0, sizeof(struct mdp_pcc_cfg_data));
@@ -2146,7 +2151,7 @@ static int mdss_dsi_panel_pcc_setup(struct mdss_panel_data *pdata)
 
 	ret = find_color_area(&pcc_config, pcc_data);
 	if (ret) {
-		pr_err("pcc: Can't find color area!!!!\n");
+		pr_err("%s: pcc: Can't find color area!!!!\n", __func__);
 		goto exit;
 	}
 
@@ -2155,16 +2160,16 @@ static int mdss_dsi_panel_pcc_setup(struct mdss_panel_data *pdata)
 		pcc_config.ops = MDP_PP_OPS_ENABLE | MDP_PP_OPS_WRITE;
 		ret = mdss_mdp_pcc_config(&pcc_config, &copyback);
 		if (ret != 0)
-			pr_err("failed by settings of pcc data.\n");
+			pr_err("%s: failed by settings of pcc data.\n", __func__);
 	}
 
 	if (pinfo->rev_u[1] != 0 && pinfo->rev_v[1] != 0)
-		pr_info("%s (%d):(ru[0], ru[1])=(%d, %d), (rv[0], rv[1])=(%d, %d)",
+		pr_info("%s: (%d):(ru[0], ru[1])=(%d, %d), (rv[0], rv[1])=(%d, %d)",
 			__func__, __LINE__,
 			pinfo->rev_u[0], pinfo->rev_u[1],
 			pinfo->rev_v[0], pinfo->rev_v[1]);
 
-	pr_info("%s (%d):ct=%d area=%d ud=%d vd=%d r=0x%08X g=0x%08X b=0x%08X",
+	pr_info("%s: (%d):ct=%d area=%d ud=%d vd=%d r=0x%08X g=0x%08X b=0x%08X",
 		__func__, __LINE__,
 		pcc_data->color_tbl[pcc_data->tbl_idx].color_type,
 		pcc_data->color_tbl[pcc_data->tbl_idx].area_num,
@@ -3029,7 +3034,7 @@ static int mdss_panel_parse_dt(struct device_node *np,
 			pinfo->panel_id_name = panel_name;
 			pinfo->panel_name[0] = '\0';
 			pr_info("%s: Panel Name = %s\n", __func__, panel_name);
-			strlcpy(&pinfo->panel_name[0], panel_name, 
+			strlcpy(&pinfo->panel_name[0], panel_name,
 							MDSS_MAX_PANEL_LEN);
 		}
 
@@ -3718,7 +3723,7 @@ int mdss_dsi_panel_init(struct device_node *node,
 	struct mdss_panel_info *pinfo;
 	bool cont_splash_enabled;
 	//bool partial_update_enabled;
-	
+
 	struct mdss_panel_specific_pdata *spec_pdata = NULL;
 
 	if (!node || !ctrl_pdata) {
@@ -3766,7 +3771,7 @@ int mdss_dsi_panel_init(struct device_node *node,
 	if (gpio_is_valid(vsn_gpio)) {
 		rc = gpio_request(vsn_gpio, "lcd_vsn");
 		if (rc)
-			dev_warn(&virtdev, 
+			dev_warn(&virtdev,
 			   "%s: Error requesting VSN GPIO %d\n",
 					__func__, rc);
 		gpio_direction_output(vsn_gpio, 0);
