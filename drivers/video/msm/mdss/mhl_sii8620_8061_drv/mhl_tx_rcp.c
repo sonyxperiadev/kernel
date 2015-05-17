@@ -177,7 +177,7 @@ struct rcp_info {
 
 static struct rcp_info s_rcp_info = {0};
 
-static ssize_t mhl_tx_rcp_mouse_mode(struct device *dev,
+static ssize_t mhl_tx_rcp_mouse_mode_store(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
 	sscanf(buf, "%d", &mouse_mode);
@@ -185,7 +185,13 @@ static ssize_t mhl_tx_rcp_mouse_mode(struct device *dev,
 	return count;
 }
 
-static ssize_t mhl_tx_rcp_mouse_move_distance_dx(struct device *dev,
+static ssize_t mhl_tx_rcp_mouse_mode_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", mouse_mode);
+}
+
+static ssize_t mhl_tx_rcp_mouse_move_distance_dx_store(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
 	sscanf(buf, "%d", &mouse_move_distance_dx);
@@ -194,13 +200,25 @@ static ssize_t mhl_tx_rcp_mouse_move_distance_dx(struct device *dev,
 	return count;
 }
 
-static ssize_t mhl_tx_rcp_mouse_move_distance_dy(struct device *dev,
+static ssize_t mhl_tx_rcp_mouse_move_distance_dx_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", mouse_move_distance_dx);
+}
+
+static ssize_t mhl_tx_rcp_mouse_move_distance_dy_store(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
 	sscanf(buf, "%d", &mouse_move_distance_dy);
 	pr_debug("%s: mouse_move_distance_dy = %d\n",
 		 __func__, mouse_move_distance_dy);
 	return count;
+}
+
+static ssize_t mhl_tx_rcp_mouse_move_distance_dy_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", mouse_move_distance_dy);
 }
 
 static void mhl_tx_rcp_key_release_timer(unsigned long data)
@@ -347,11 +365,14 @@ static void mhl_tx_rcp_common_resource_free(void)
 }
 /* ----------------------- global functions -----------------------*/
 static DEVICE_ATTR(mouse_move_distance_dx, 0660,
-				NULL, mhl_tx_rcp_mouse_move_distance_dx);
+				mhl_tx_rcp_mouse_move_distance_dx_show,
+				mhl_tx_rcp_mouse_move_distance_dx_store);
 static DEVICE_ATTR(mouse_move_distance_dy, 0660,
-				NULL, mhl_tx_rcp_mouse_move_distance_dy);
+				mhl_tx_rcp_mouse_move_distance_dy_show,
+				mhl_tx_rcp_mouse_move_distance_dy_store);
 static DEVICE_ATTR(mouse_mode, 0660,
-				NULL, mhl_tx_rcp_mouse_mode);
+				mhl_tx_rcp_mouse_mode_show,
+				mhl_tx_rcp_mouse_mode_store);
 
 int mhl_tx_rcp_init(struct device *parent)
 {

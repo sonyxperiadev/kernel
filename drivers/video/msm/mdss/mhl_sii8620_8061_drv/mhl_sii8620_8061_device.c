@@ -1919,10 +1919,10 @@ void mhl_device_set_cbus_mode(CBUS_MODE_TYPE mode)
 	cbus_mode = mode;
 }
 
-static ssize_t mhl_device_sysfs_rda_aksv(struct device *dev,
-	struct device_attribute *attr, char *buf)
+static ssize_t mhl_device_sysfs_rda_aksv_store(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
 {
-	ssize_t ret, rc;
+	ssize_t ret;
 	uint8_t aksv[5];
 
 	ret = mhl_pf_read_reg_block(REG_PAGE_0_AKSV_1,
@@ -1935,15 +1935,49 @@ static ssize_t mhl_device_sysfs_rda_aksv(struct device *dev,
 		mhl_pf_chip_power_off();
 	}
 
-	rc = snprintf(buf, PAGE_SIZE, "%02X%02X%02X%02X%02X\n",
-			aksv[4], aksv[3], aksv[2], aksv[1], aksv[0]);
 	pr_info("%s: '%02X%02X%02X%02X%02X'\n", __func__,
 				aksv[4], aksv[3], aksv[2], aksv[1], aksv[0]);
 
-	return rc;
-} /* mhl_device_tx_sysfs_rda_aksv */
+	return count;
+} /* mhl_device_tx_sysfs_rda_aksv_store */
 
-static ssize_t mhl_device_sysfs_rda_tmds(struct device *dev,
+static ssize_t mhl_device_sysfs_rda_aksv_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	ssize_t ret;
+	uint8_t aksv[5];
+
+	ret = mhl_pf_read_reg_block(REG_PAGE_0_AKSV_1,
+			ARRAY_SIZE(aksv), aksv);
+
+	return snprintf(buf, PAGE_SIZE, "%02X%02X%02X%02X%02X\n",
+			aksv[4], aksv[3], aksv[2], aksv[1], aksv[0]);
+	
+} /* mhl_device_tx_sysfs_rda_aksv_show */
+
+static ssize_t mhl_device_sysfs_rda_tmds_store(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	ssize_t ret;
+	int8_t  tmds_status;
+
+	if (!mhl_pf_is_chip_power_on()) {
+		/* tmds is off. */
+		pr_info("%s: '%s'\n", __func__, "OFF");
+	} else {
+		ret = mhl_pf_read_reg_block(REG_PAGE_6_TPI_SC,
+			1, &tmds_status);
+		/* read tmds status */
+		if (((tmds_status & 0x10) == 0) && (ret == 0))
+			pr_info("%s: '%s'\n", __func__, "ON");
+		else
+			pr_info("%s: '%s'\n", __func__, "OFF");
+	}
+
+	return count;
+} /* mhl_device_sysfs_rda_tmds_store */
+
+static ssize_t mhl_device_sysfs_rda_tmds_show(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
 	ssize_t rc, ret;
@@ -1952,22 +1986,17 @@ static ssize_t mhl_device_sysfs_rda_tmds(struct device *dev,
 	if (!mhl_pf_is_chip_power_on()) {
 		/* tmds is off. */
 		rc = snprintf(buf, PAGE_SIZE, "OFF\n");
-		pr_info("%s: '%s'\n", __func__, "OFF");
 	} else {
 		ret = mhl_pf_read_reg_block(REG_PAGE_6_TPI_SC,
 			1, &tmds_status);
 		/* read tmds status */
-		if (((tmds_status & 0x10) == 0) && (ret == 0)) {
+		if (((tmds_status & 0x10) == 0) && (ret == 0))
 			rc = snprintf(buf, PAGE_SIZE, "ON\n");
-			pr_info("%s: '%s'\n", __func__, "ON");
-		} else {
+		else
 			rc = snprintf(buf, PAGE_SIZE, "OFF\n");
-			pr_info("%s: '%s'\n", __func__, "OFF");
-		}
 	}
-
 	return rc;
-} /* mhl_device_sysfs_rda_tmds */
+} /* mhl_device_sysfs_rda_tmds_show */
 
 static ssize_t mhl_device_hdcp_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
@@ -2076,8 +2105,10 @@ bool mhl_device_is_cbusb_executing(void)
 }
 
 #ifndef UNIT_TEST
-static DEVICE_ATTR(aksv, 0664, mhl_device_sysfs_rda_aksv, NULL);
-static DEVICE_ATTR(tmds, 0664, mhl_device_sysfs_rda_tmds, NULL);
+static DEVICE_ATTR(aksv, 0664, mhl_device_sysfs_rda_aksv_show,
+                               mhl_device_sysfs_rda_aksv_store);
+static DEVICE_ATTR(tmds, 0664, mhl_device_sysfs_rda_tmds_show,
+                               mhl_device_sysfs_rda_tmds_store);
 static DEVICE_ATTR(hdcp, 0660, mhl_device_hdcp_show, mhl_device_hdcp_store);
 static int mhl_device_sysfs_init(struct device *parent)
 {
