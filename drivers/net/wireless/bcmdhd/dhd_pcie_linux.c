@@ -49,7 +49,11 @@
 #include <dhd_pcie.h>
 #include <dhd_linux.h>
 #if defined (CONFIG_ARCH_MSM)
+#ifdef CONFIG_64BIT
+#include <linux/msm_pcie.h>
+#else
 #include <mach/msm_pcie.h>
+#endif
 #endif
 
 #define PCI_CFG_RETRY 		10
