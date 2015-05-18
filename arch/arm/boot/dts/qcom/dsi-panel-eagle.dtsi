@@ -230,8 +230,8 @@
 		somc,mdss-dsi-use-picadj = <1>;
 		somc,mdss-dsi-picadj-sat = <6648>;
 		somc,mdss-dsi-picadj-hue = <0>;
-		somc,mdss-dsi-picadj-val = <20>;
-		somc,mdss-dsi-picadj-cont = <0>;
+		somc,mdss-dsi-picadj-val = <10>;
+		somc,mdss-dsi-picadj-cont = <5>;
 		somc,no-vsn-gpio;
 		somc,no-vsp-gpio;
 		somc,panel-id-read-cmds;
