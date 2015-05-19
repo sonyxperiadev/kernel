@@ -236,6 +236,7 @@ void bluesleep_sleep_wakeup(void)
 static int bluesleep_rfkill_set_power(void *data, bool blocked)
 {
 	int regOnGpio;
+	int ret;
 
 	BT_DBG("Bluetooth device set power\n");
 
@@ -256,8 +257,12 @@ static int bluesleep_rfkill_set_power(void *data, bool blocked)
 				regOnGpio);
 			return 0;
 		}
-		if (bt_batfet)
-			regulator_enable(bt_batfet);
+		if (bt_batfet) {
+			ret = regulator_enable(bt_batfet);
+			if (ret != 0)
+				pr_warn("%s: Can't enable regulator!\n",
+								__func__);
+		}
 		gpio_set_value(bsi->bt_reg_on, 1);
 		gpio_set_value(bsi->ext_wake, 1);
 	} else {
