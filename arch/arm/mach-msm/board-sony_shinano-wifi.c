@@ -165,6 +165,8 @@ static void *shinano_wifi_mem_prealloc(int section, unsigned long size)
 int shinano_wifi_set_power(int on)
 {
 	int gpio = qpnp_pin_map("pm8941-gpio", WIFI_POWER_PMIC_GPIO);
+	int ret;
+
 	if (!wifi_batfet) {
 		wifi_batfet = regulator_get(NULL, "batfet");
 		if (IS_ERR_OR_NULL(wifi_batfet)) {
@@ -175,7 +177,10 @@ int shinano_wifi_set_power(int on)
 	}
 	if (on) {
 		if (!batfet_ena && wifi_batfet) {
-			regulator_enable(wifi_batfet);
+			ret = regulator_enable(wifi_batfet);
+			if (ret != 0)
+				pr_warn("%s: Can't enable batfet regulator!\n",
+								__func__);
 			batfet_ena = 1;
 		}
 	}
