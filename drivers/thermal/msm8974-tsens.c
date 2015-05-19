@@ -24,6 +24,7 @@
 #include <linux/msm_tsens.h>
 #include <linux/err.h>
 #include <linux/of.h>
+#include <linux/sched.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/trace_thermal.h>
