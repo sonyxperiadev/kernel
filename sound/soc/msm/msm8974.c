@@ -672,6 +672,7 @@ static int msm_ext_spkramp_event(struct snd_soc_dapm_widget *w,
 
 }
 
+#ifndef CONFIG_MACH_SONY_SHINANO
 static int msm_ext_spkramp_ultrasound_event(struct snd_soc_dapm_widget *w,
 			     struct snd_kcontrol *k, int event)
 {
@@ -698,6 +699,7 @@ static int msm_ext_spkramp_ultrasound_event(struct snd_soc_dapm_widget *w,
 
 	return 0;
 }
+#endif
 
 static int msm_snd_enable_codec_ext_clk(struct snd_soc_codec *codec, int enable,
 					bool dapm)

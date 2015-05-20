@@ -474,7 +474,8 @@ static int pn547_probe(struct i2c_client *client,
 	if (gpio_is_valid(platform_data->pvdd_en_gpio)) {
 		ret = gpio_request(platform_data->pvdd_en_gpio, "nfc_pvdd_en");
 		if (ret)
-			pr_warn("%s: Failed to request nfc_pvdd_en GPIO\n");
+			pr_warn("%s: Failed to request nfc_pvdd_en GPIO\n",
+								 __func__);
 	}
 
 	pn547_dev = kzalloc(sizeof(*pn547_dev), GFP_KERNEL);
@@ -622,7 +623,6 @@ err_get_clock:
 #endif
 	kfree(pn547_dev);
 err_exit:
-err_pvdd_en:
 	gpio_free(platform_data->pvdd_en_gpio);
 #ifdef CONFIG_NFC_PN547_CLOCK_REQUEST
 	gpio_free(platform_data->clk_req_gpio);

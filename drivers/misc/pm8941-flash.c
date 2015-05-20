@@ -442,7 +442,7 @@ static ssize_t pm8941_set_mode(struct device *ldev,
 
 	if (data->scheduled) {
 		mutex_unlock(&data->lock);
-		flush_delayed_work_sync(&data->dwork);
+		flush_delayed_work(&data->dwork);
 		mutex_lock(&data->lock);
 	} else {
 		rc = pm_reg_masked_write(data, STROBE_CONTROL,
