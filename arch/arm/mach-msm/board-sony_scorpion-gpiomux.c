@@ -1102,9 +1102,100 @@ static struct msm_gpiomux_config shinano_all_configs[] __initdata = {
 	},
 };
 
+struct msm_gpiomux_config scorpion_windy_conf[] __initdata = {
+	{ /* NC */
+		.gpio = 9,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &gpio_2ma_no_pull_in,
+			[GPIOMUX_SUSPENDED] = &gpio_2ma_no_pull_in,
+		},
+	},
+	{ /* NC */
+		.gpio = 97,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &gpio_2ma_no_pull_out_low,
+			[GPIOMUX_SUSPENDED] = &gpio_2ma_pull_down_in,
+		},
+	},
+	{ /* NC */
+		.gpio = 98,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &gpio_2ma_no_pull_out_low,
+			[GPIOMUX_SUSPENDED] = &gpio_2ma_pull_down_in,
+		},
+	},
+	{ /* NC */
+		.gpio = 99,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &gpio_2ma_no_pull_out_low,
+			[GPIOMUX_SUSPENDED] = &gpio_2ma_pull_down_in,
+		},
+	},
+	{ /* NC */
+		.gpio = 108,
+		.settings = { [GPIOMUX_SUSPENDED] = &unused_gpio, },
+	},
+	{ /* NC */
+		.gpio = 120,
+		.settings = { [GPIOMUX_SUSPENDED] = &unused_gpio, },
+	},
+	{ /* NC */
+		.gpio = 121,
+		.settings = { [GPIOMUX_SUSPENDED] = &unused_gpio, },
+	},
+	{ /* NC */
+		.gpio = 133,
+		.settings = { [GPIOMUX_SUSPENDED] = &unused_gpio, },
+	},
+	{ /* NC */
+		.gpio = 134,
+		.settings = { [GPIOMUX_SUSPENDED] = &unused_gpio, },
+	},
+	{ /* WGR_SSBI1_TX_GPS */
+		.gpio = 135,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &gpio_2ma_follow_qct,
+			[GPIOMUX_SUSPENDED] = &gpio_2ma_follow_qct,
+		},
+	},
+	{ /* NC */
+		.gpio = 138,
+		.settings = { [GPIOMUX_SUSPENDED] = &unused_gpio, },
+	},
+	{ /* NC */
+		.gpio = 139,
+		.settings = { [GPIOMUX_SUSPENDED] = &unused_gpio, },
+	},
+	{ /* NC */
+		.gpio = 140,
+		.settings = { [GPIOMUX_SUSPENDED] = &unused_gpio, },
+	},
+	{ /* NC */
+		.gpio = 141,
+		.settings = { [GPIOMUX_SUSPENDED] = &unused_gpio, },
+	},
+	{ /* NC */
+		.gpio = 142,
+		.settings = { [GPIOMUX_SUSPENDED] = &unused_gpio, },
+	},
+	{ /* NC */
+		.gpio = 143,
+		.settings = { [GPIOMUX_SUSPENDED] = &unused_gpio, },
+	},
+};
+
 void __init msm_8974_init_gpiomux(void)
 {
 	int rc;
+	struct msm_gpiomux_configs base, diff;
+
+	if (of_machine_is_compatible("somc,scorpion-windy")) {
+		base.cfg = shinano_all_configs;
+		base.ncfg = ARRAY_SIZE(shinano_all_configs);
+		diff.cfg = scorpion_windy_conf;
+		diff.ncfg = ARRAY_SIZE(scorpion_windy_conf);
+		overwrite_configs(&base, &diff);
+	}
 
 	rc = sony_init_gpiomux(shinano_all_configs,
 			ARRAY_SIZE(shinano_all_configs));

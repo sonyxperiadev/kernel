@@ -497,18 +497,10 @@ config MACH_SONY_SCORPION
 	bool "Sony Mobile Scorpion"
 	select MACH_SONY_SHINANO
 	help
-	  Support for the SONY Mobile Scorpion device.
-	  It is based on QCOM MSM8974 AC chipset.
-	  If you enable this config,
-	  Please use SONY Mobile source tree.
-
-config MACH_SONY_SCORPION_WINDY
-	depends on ARCH_MSM8974
-	bool "Sony Mobile Scorpion Windy"
-	select MACH_SONY_SHINANO
-	help
-	  Support for the SONY Mobile Scorpion Windy device.
-	  It is based on QCOM APQ8074 AC chipset.
+	  Support for the SONY Mobile Scorpion and
+	  Scorpion Windy device.
+	  It is based on QCOM MSM8974 AC (or APQ8074 AC
+	  for Windy device) chipset.
 	  If you enable this config,
 	  Please use SONY Mobile source tree.
 

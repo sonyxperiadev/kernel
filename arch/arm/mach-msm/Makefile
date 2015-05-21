@@ -70,8 +70,6 @@ else ifdef CONFIG_MACH_SONY_ARIES
 	obj-$(CONFIG_MACH_SONY_ARIES) += board-sony_aries-gpiomux.o bms-batterydata-aries.o board-sony_shinano-nfc.o
 else ifdef CONFIG_MACH_SONY_SCORPION
 	obj-$(CONFIG_MACH_SONY_SCORPION) += board-sony_scorpion-gpiomux.o bms-batterydata-scorpion.o board-sony_shinano-nfc.o
-else ifdef CONFIG_MACH_SONY_SCORPION_WINDY
-	obj-$(CONFIG_MACH_SONY_SCORPION_WINDY) += board-sony_scorpion_windy-gpiomux.o bms-batterydata-scorpion.o board-sony_shinano-nfc.o
 else ifdef CONFIG_MACH_SONY_TOGARI_ROW
 	obj-$(CONFIG_MACH_SONY_TOGARI_ROW) += board-sony_togari_row-gpiomux.o bms-batterydata-burton.o
 else ifdef CONFIG_MACH_SONY_HONAMI_ROW
