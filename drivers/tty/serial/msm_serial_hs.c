@@ -1064,7 +1064,20 @@ static void msm_hs_set_termios(struct uart_port *uport,
 	msm_hs_write(uport, UART_DM_IMR, 0);
 
 	MSM_HS_DBG("Entering %s\n", __func__);
+
+#ifdef CONFIG_MACH_SONY_SHINANO
+	/*
+	 * Clear the Rx Ready Ctl bit - This ensures that
+	 * flow control lines stop the other side from sending
+	 * data while we change the parameters
+	 */
+	data = msm_hs_read(uport, UART_DM_MR1);
+	/* disable auto ready-for-receiving */
+	data &= ~UARTDM_MR1_RX_RDY_CTL_BMSK;
+	msm_hs_write(uport, UART_DM_MR1, data);
+#else
 	msm_hs_disable_flow_control(uport, true);
+#endif
 
 	/*
 	 * Disable Rx channel of UARTDM
@@ -1191,6 +1204,11 @@ unsigned int msm_hs_tx_empty(struct uart_port *uport)
 	unsigned int data;
 	unsigned int ret = 0;
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
+
+	if (msm_uport->pm_state != MSM_HS_PM_ACTIVE) {
+		MSM_HS_WARN("%s(): Failed.Clocks are OFF\n", __func__);
+		return -1;
+	}
 
 	msm_hs_resource_vote(msm_uport);
 	data = msm_hs_read(uport, UART_DM_SR);
@@ -1964,6 +1982,11 @@ void msm_hs_set_mctrl(struct uart_port *uport,
 
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
 
+	if (msm_uport->pm_state != MSM_HS_PM_ACTIVE) {
+		MSM_HS_WARN("%s(): Failed.Clocks are OFF\n", __func__);
+		return;
+	}
+
 	msm_hs_resource_vote(msm_uport);
 	spin_lock_irqsave(&uport->lock, flags);
 	msm_hs_set_mctrl_locked(uport, mctrl);
@@ -2179,7 +2202,9 @@ void msm_hs_resource_off(struct msm_hs_port *msm_uport)
 	unsigned int data;
 
 	MSM_HS_DBG("%s(): begin", __func__);
+#ifndef CONFIG_MACH_SONY_SHINANO
 	msm_hs_disable_flow_control(uport, false);
+#endif
 	if (msm_uport->rx.flush == FLUSH_NONE)
 		msm_hs_disconnect_rx(uport);
 
@@ -2194,8 +2219,10 @@ void msm_hs_resource_off(struct msm_hs_port *msm_uport)
 		msm_hs_write(uport, UART_DM_DMEN, data);
 		sps_tx_disconnect(msm_uport);
 	}
+#ifndef CONFIG_MACH_SONY_SHINANO
 	if (!atomic_read(&msm_uport->client_req_state))
 		msm_hs_enable_flow_control(uport, false);
+#endif
 }
 
 void msm_hs_resource_on(struct msm_hs_port *msm_uport)
@@ -2225,6 +2252,12 @@ void msm_hs_resource_on(struct msm_hs_port *msm_uport)
 void msm_hs_request_clock_off(struct uart_port *uport)
 {
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
+
+	if (msm_uport->pm_state != MSM_HS_PM_ACTIVE) {
+		MSM_HS_WARN("%s(): Failed.Clocks are OFF\n", __func__);
+		return;
+	}
+
 	/* Set the flag to disable flow control and wakeup irq */
 	if (msm_uport->obs)
 		atomic_set(&msm_uport->client_req_state, 1);
@@ -2540,8 +2573,9 @@ static int msm_hs_startup(struct uart_port *uport)
 
 	/* Assume no flow control, unless termios sets it */
 	msm_uport->flow_control = false;
+#ifndef CONFIG_MACH_SONY_SHINANO
 	msm_hs_disable_flow_control(uport, true);
-
+#endif
 
 	/* Reset TX */
 	msm_hs_write(uport, UART_DM_CR, RESET_TX);
