@@ -457,18 +457,10 @@ config MACH_SONY_CASTOR
 	bool "Sony Mobile Castor"
 	select MACH_SONY_SHINANO
 	help
-	  Support for the SONY Mobile Castor device.
-	  It is based on QCOM MSM8974 AB chipset.
-	  If you enable this config,
-	  Please use SONY Mobile source tree.
-
-config MACH_SONY_CASTOR_WINDY
-	depends on ARCH_MSM8974
-	bool "Sony Mobile Castor Windy"
-	select MACH_SONY_SHINANO
-	help
-	  Support for the SONY Mobile Castor Windy device.
-	  It is based on QCOM APQ8074 AB chipset.
+	  Support for the SONY Mobile Castor and
+	  Castor Windy device.
+	  It is based on QCOM MSM8974 AB (or APQ8074 AB
+	  for Windy device) chipset.
 	  If you enable this config,
 	  Please use SONY Mobile source tree.
 
