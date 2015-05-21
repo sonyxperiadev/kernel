@@ -25,6 +25,8 @@
  *  2007-Jan-24  Motorola        Added mbm_handle_ioi() call to ISR.
  *  2009-Aug-10  Motorola        Changed "add_timer" to "mod_timer" to solve
  *                               race when flurry of queued work comes in.
+ *  2015-Mai-21  Humberto Borba  Added clock flow control for serial voting
+ *                               (new PM runtime framework).
  */
 
 #define pr_fmt(fmt)	"Bluetooth: %s: " fmt, __func__
@@ -99,6 +101,7 @@ struct bluesleep_info {
 	struct uart_port *uport;
 	struct wake_lock wake_lock;
 	int irq_polarity;
+	int uart_port_is_open;
 	int has_ext_wake;
 };
 
@@ -200,6 +203,7 @@ static void hsuart_power(int on)
 	} else {
 		msm_hs_set_mctrl(bsi->uport, 0);
 		msm_hs_request_clock_off(bsi->uport);
+		bsi->uart_port_is_open = 0;
 	}
 }
 
@@ -484,6 +488,12 @@ static int bluesleep_start(void)
 
 	mod_timer(&tx_timer, jiffies + (TX_TIMER_INTERVAL*HZ));
 
+	if (!bsi->uart_port_is_open) {
+		BT_INFO("UART port is open. Set initial clock vote ON!");
+		msm_hs_request_clock_on(bsi->uport);
+		bsi->uart_port_is_open = 1;
+	}
+
 	/* assert BT_WAKE */
 	if (debug_mask & DEBUG_BTWAKE)
 		pr_info("BT WAKE: set to wake\n");
@@ -672,7 +682,7 @@ static int bluesleep_probe(struct platform_device *pdev)
 	}
 
 	bsi->irq_polarity = POLARITY_LOW;/*low edge (falling edge)*/
-
+	bsi->uart_port_is_open = 0;
 	wake_lock_init(&bsi->wake_lock, WAKE_LOCK_SUSPEND, "bluesleep");
 	clear_bit(BT_SUSPEND, &flags);
 
