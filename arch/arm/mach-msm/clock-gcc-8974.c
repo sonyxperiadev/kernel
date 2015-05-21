@@ -1136,8 +1136,7 @@ static struct clk_freq_tbl ftbl_gcc_sdcc1_4_apps_clk[] = {
 	F(   400000,    cxo,  12,   1,   4),
 	F( 20000000,  gpll0,  15,   1,   2),
 	F( 25000000,  gpll0,  12,   1,   2),
-#if defined(CONFIG_MACH_SONY_SCORPION) || \
-    defined(CONFIG_MACH_SONY_SCORPION_WINDY)
+#if defined(CONFIG_MACH_SONY_SCORPION)
 	F( 40000000,  gpll0,  15,   0,   0),
 #endif
 	F( 50000000,  gpll0,  12,   0,   0),
