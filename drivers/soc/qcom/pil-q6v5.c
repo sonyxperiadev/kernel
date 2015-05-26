@@ -420,6 +420,10 @@ static int __pil_q6v55_reset(struct pil_desc *pil)
 	val |= QDSP6v55_LDO_BYP;
 	writel_relaxed(val, drv->reg_base + QDSP6SS_PWR_CTL);
 
+	/* Remove QMC_MEM clamp */
+	val &= ~QDSP6v55_CLAMP_QMC_MEM;
+	writel_relaxed(val, drv->reg_base + QDSP6SS_PWR_CTL);
+
 	if (drv->qdsp6v56_1_3) {
 		/* Deassert memory peripheral sleep and L2 memory standby */
 		val = readl_relaxed(drv->reg_base + QDSP6SS_PWR_CTL);
