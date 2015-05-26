@@ -101,6 +101,9 @@ static int __load_fw(struct venus_hfi_device *device);
 static void __unload_fw(struct venus_hfi_device *device);
 static int __tzbsp_set_video_state(enum tzbsp_video_state state);
 
+static void venus_hfi_clock_adjust(struct venus_hfi_device *device);
+static int venus_hfi_reduce_clocks(struct venus_hfi_device *device);
+
 
 /**
  * Utility function to enforce some of our assumptions.  Spam calls to this
@@ -1566,6 +1569,7 @@ static int __scale_clocks(struct venus_hfi_device *device,
 {
 	int rc = 0;
 
+	mutex_lock(&device->clock_lock);
 	if (device->res->clock_freq_tbl.clk_prof_entries &&
 			device->res->allowed_clks_tbl)
 		rc = __scale_clocks_cycles_per_mb(device,
@@ -1574,6 +1578,7 @@ static int __scale_clocks(struct venus_hfi_device *device,
 		rc = __scale_clocks_load(device, load, data, instant_bitrate);
 	else
 		dprintk(VIDC_DBG, "Clock scaling is not supported\n");
+	mutex_unlock(&device->clock_lock);
 
 	return rc;
 }
@@ -3471,6 +3476,7 @@ static void __process_sys_error(struct venus_hfi_device *device)
 
 static void __flush_debug_queue(struct venus_hfi_device *device, u8 *packet)
 {
+	struct hfi_msg_sys_coverage_packet *pkt = NULL;
 	bool local_packet = false;
 	enum vidc_msg_prio log_level = VIDC_FW;
 
@@ -3498,8 +3504,8 @@ static void __flush_debug_queue(struct venus_hfi_device *device, u8 *packet)
 	}
 
 	while (!__iface_dbgq_read(device, packet)) {
-		struct hfi_msg_sys_coverage_packet *pkt =
-			(struct hfi_msg_sys_coverage_packet *) packet;
+		venus_hfi_clock_adjust(device);
+		pkt = (struct hfi_msg_sys_coverage_packet *) packet;
 		if (pkt->packet_type == HFI_MSG_SYS_COV) {
 			int stm_size = 0;
 			stm_size = stm_log_inv_ts(0, 0,
@@ -3532,6 +3538,143 @@ static struct hal_session *__get_session(struct venus_hfi_device *device,
 	return NULL;
 }
 
+static int venus_hfi_reduce_clocks(struct venus_hfi_device *device)
+{
+	int rc = 0;
+	struct clock_info *cl;
+
+	if (!device) {
+		dprintk(VIDC_ERR, "%s: Invalid args\n", __func__);
+		return -EINVAL;
+	}
+
+	venus_hfi_for_each_clock(device, cl) {
+		if (cl->count) { /* has_scaling */
+			unsigned long rate = __get_clock_rate(cl, 0,
+					device->codecs_enabled);
+			rc = clk_set_rate(cl->clk, rate);
+			if (rc) {
+				dprintk(VIDC_ERR,
+					"%s: Failed to set clock rate %lu %s: %d\n",
+					__func__, rate, cl->name, rc);
+				break;
+			} else {
+				dprintk(VIDC_DBG,
+					"%s: set clock rate %lu on %s\n",
+					__func__, rate, cl->name);
+			}
+		}
+	}
+
+	return rc;
+}
+
+static int venus_hfi_increase_clocks(struct venus_hfi_device *device)
+{
+	int rc = 0;
+	struct clock_info *cl;
+
+	if (!device) {
+		dprintk(VIDC_ERR, "%s: Invalid args\n", __func__);
+		return -EINVAL;
+	}
+
+	venus_hfi_for_each_clock(device, cl) {
+		if (cl->count) { /* has_scaling */
+			unsigned long rate = __get_clock_rate(cl,
+					device->clk_load,
+					device->codecs_enabled);
+			rc = clk_set_rate(cl->clk, rate);
+			if (rc) {
+				dprintk(VIDC_ERR,
+					"%s: Failed to set clock rate %lu %s: %d\n",
+					__func__, rate, cl->name, rc);
+				break;
+			} else {
+				dprintk(VIDC_DBG,
+					"%s: set clock rate %lu on %s\n",
+					__func__, rate, cl->name);
+			}
+		}
+	}
+
+	return rc;
+}
+
+#define HFI_CTRL_STATUS_CLK_DOWN        0x200
+#define HFI_CTRL_INIT_CLK_DOWN          0x2
+#define POLL_TRIALS                     100
+
+static void venus_hfi_clock_adjust(struct venus_hfi_device *device)
+{
+	int rc = 0, i = 0;
+	u32 ctrl_status = 0, ctrl_init = 0;
+
+	if (!device) {
+		dprintk(VIDC_ERR, "%s: invalid argsn\n", __func__);
+		return;
+	}
+
+	if (!device->power_enabled)
+		return;
+
+	/* check if venus firmware requested to reduce clock rate */
+	ctrl_status = __read_register(device,
+					VIDC_CPU_CS_SCIACMDARG0);
+	if (!(ctrl_status & HFI_CTRL_STATUS_CLK_DOWN))
+		return;
+
+	/* avoid other threads to change the clock rate */
+	mutex_lock(&device->clock_lock);
+
+	/* firmware requested to reduce clock rate */
+	rc = venus_hfi_reduce_clocks(device);
+	if (rc) {
+		dprintk(VIDC_ERR, "%s: Clocks reduce failed\n", __func__);
+		goto unlock;
+	}
+
+	/* update firmware that driver reduced clock rate */
+	ctrl_init = __read_register(device, VIDC_CTRL_INIT);
+	ctrl_init |= HFI_CTRL_INIT_CLK_DOWN;
+	venus_hfi_write_register(device, VIDC_CTRL_INIT, ctrl_init);
+
+	/* check if firmware asking to increase clock rate back to normal */
+	while (i < POLL_TRIALS) {
+		ctrl_status = __read_register(device,
+						VIDC_CPU_CS_SCIACMDARG0);
+		if (!(ctrl_status & HFI_CTRL_STATUS_CLK_DOWN)) {
+			dprintk(VIDC_DBG,
+				"%s: increase clock rate to normal\n",
+				__func__);
+			break;
+		}
+		i++;
+		usleep(i);
+	}
+	if (i == POLL_TRIALS) {
+		dprintk(VIDC_WARN,
+			"%s: firmware not requesting to increase clock rate back to normal\n",
+			__func__);
+	}
+
+	/* update firmware that increasing clock rate back to normal */
+	ctrl_init &= ~HFI_CTRL_INIT_CLK_DOWN;
+	venus_hfi_write_register(device, VIDC_CTRL_INIT, ctrl_init);
+
+	/* increase clock rate back to normal */
+	rc = venus_hfi_increase_clocks(device);
+	if (rc) {
+		dprintk(VIDC_ERR, "%s: Clocks increase failed\n", __func__);
+		goto unlock;
+	}
+
+unlock:
+	mutex_unlock(&device->clock_lock);
+
+	return;
+}
+
 static int __response_handler(struct venus_hfi_device *device)
 {
 	struct msm_vidc_cb_info *packets;
@@ -3541,6 +3684,12 @@ static int __response_handler(struct venus_hfi_device *device)
 
 	if (!device || device->state != VENUS_STATE_INIT)
 		return 0;
+
+	/*
+	 * check for clock adjust request from firmware
+	 * for every interrupt
+	 */
+	venus_hfi_clock_adjust(device);
 
 	packets = device->response_pkt;
 
@@ -3575,9 +3724,16 @@ static int __response_handler(struct venus_hfi_device *device)
 	/* Bleed the msg queue dry of packets */
 	while (!__iface_msgq_read(device, raw_packet)) {
 		void **session_id = NULL;
-		struct msm_vidc_cb_info *info = &packets[packet_count++];
+		struct msm_vidc_cb_info *info = NULL;
 		struct vidc_hal_sys_init_done sys_init_done = {0};
 		int rc = 0;
+		/*
+		 * check for clock adjust request from firmware
+		 * as often as possible
+		 */
+		venus_hfi_clock_adjust(device);
+
+		info = &packets[packet_count++];
 
 		rc = hfi_process_msg_packet(device->device_id,
 			(struct vidc_hal_msg_pkt_hdr *)raw_packet, info);
@@ -3905,12 +4061,14 @@ static inline void __disable_unprepare_clks(struct venus_hfi_device *device)
 		return;
 	}
 
+	mutex_lock(&device->clock_lock);
 	venus_hfi_for_each_clock_reverse(device, cl) {
 		usleep_range(100, 500);
 		dprintk(VIDC_DBG, "Clock: %s disable and unprepare\n",
 				cl->name);
 		clk_disable_unprepare(cl->clk);
 	}
+	mutex_unlock(&device->clock_lock);
 }
 
 static inline int __prepare_enable_clks(struct venus_hfi_device *device)
@@ -3922,6 +4080,7 @@ static inline int __prepare_enable_clks(struct venus_hfi_device *device)
 		return -EINVAL;
 	}
 
+	mutex_lock(&device->clock_lock);
 	venus_hfi_for_each_clock(device, cl) {
 		/*
 		 * For the clocks we control, set the rate prior to preparing
@@ -3952,6 +4111,7 @@ static inline int __prepare_enable_clks(struct venus_hfi_device *device)
 		if (rc) {
 			dprintk(VIDC_ERR, "Failed to enable clocks\n");
 			cl_fail = cl;
+			mutex_unlock(&device->clock_lock);
 			goto fail_clk_enable;
 		}
 
@@ -3959,17 +4119,21 @@ static inline int __prepare_enable_clks(struct venus_hfi_device *device)
 		dprintk(VIDC_DBG, "Clock: %s prepared and enabled\n", cl->name);
 	}
 
+	mutex_unlock(&device->clock_lock);
+
 	__write_register(device, VIDC_WRAPPER_CLOCK_CONFIG, 0);
 	__write_register(device, VIDC_WRAPPER_CPU_CLOCK_CONFIG, 0);
 	return rc;
 
 fail_clk_enable:
+	mutex_lock(&device->clock_lock);
 	venus_hfi_for_each_clock_reverse_continue(device, cl, c) {
 		usleep_range(100, 500);
 		dprintk(VIDC_ERR, "Clock: %s disable and unprepare\n",
 			cl->name);
 		clk_disable_unprepare(cl->clk);
 	}
+	mutex_unlock(&device->clock_lock);
 
 	return rc;
 }
@@ -4758,6 +4922,7 @@ static struct venus_hfi_device *__add_device(u32 device_id,
 		INIT_LIST_HEAD(&hal_ctxt.dev_head);
 
 	mutex_init(&hdevice->lock);
+	mutex_init(&hdevice->clock_lock);
 	INIT_LIST_HEAD(&hdevice->list);
 	INIT_LIST_HEAD(&hdevice->sess_head);
 	list_add_tail(&hdevice->list, &hal_ctxt.dev_head);
