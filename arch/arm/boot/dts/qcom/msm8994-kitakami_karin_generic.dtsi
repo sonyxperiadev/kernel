@@ -1,0 +1,128 @@
+/* arch/arm/boot/dts/qcom/msm8994-kitakami_karin_generic.dtsi
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+/*
+ * Copyright (C) 2014 Sony Mobile Communications Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2, as
+ * published by the Free Software Foundation.
+ */
+
+&soc {
+	/* I2C : BLSP2 */
+	i2c@f9924000 {
+		nfc@28 {
+			compatible = "nxp,pn547";
+			reg = <0x28>;
+			interrupt-parent = <&msm_gpio>;
+			interrupts = <29 0x1>;
+			nxp,irq_gpio = <&msm_gpio 29 0x00>;
+			nxp,dwld_en = <&msm_gpio 30 0x00>;
+			nxp,ven = <&pm8994_gpios 7 0x01>;
+			qcom,clk-src = "BBCLK2";
+			qcom,clk-gpio = <&pm8994_gpios 10 0x00>;
+			clocks = <&clock_rpm clk_bb_clk2_pin>;
+			clock-names = "nfc_clk";
+			pinctrl-names = "pn547-active", "pn547-inactive";
+			pinctrl-0 = <&msm_gpio_29_nfc_act &msm_gpio_30_act>;
+			pinctrl-1 = <&msm_gpio_29_nfc_sus &msm_gpio_30_sus>;
+		};
+	};
+};
+
+&pm8994_gpios {
+	/* GPIO_9: NC */
+	gpio@c800 {
+		qcom,master-en = <0>;		/* Disable */
+		status = "ok";
+	};
+};
+
+&pmi8994_gpios {
+	/* GPIO_3: NC */
+	gpio@c200 {
+		qcom,master-en = <0>;		/* Disable */
+		status = "ok";
+	};
+
+	/* GPIO_4: NC */
+	gpio@c300 {
+		qcom,master-en = <0>;		/* Disable */
+		status = "ok";
+	};
+};
+
+&tlmm_pinmux {
+	/* GPIO_39: NC */
+	msm_gpio_39 {
+		qcom,pin-func = <0>;
+		msm_gpio_39_def: default {
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	/* GPIO_93: NC */
+	msm_gpio_93 {
+		qcom,pin-func = <0>;
+		msm_gpio_93_def: default {
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	/* GPIO_94: NC */
+	msm_gpio_94 {
+		qcom,pin-func = <0>;
+		msm_gpio_94_def: default {
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	/* GPIO_95: NC */
+	msm_gpio_95 {
+		qcom,pin-func = <0>;
+		msm_gpio_95_def: default {
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	/* GPIO_96: NC */
+	msm_gpio_96 {
+		qcom,pin-func = <0>;
+		msm_gpio_96_def: default {
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	/* GPIO_102: NC */
+	msm_gpio_102 {
+		qcom,pin-func = <0>;
+		msm_gpio_102_def: default {
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+};
+
+&somc_pinctrl {
+	pinctrl-2 = <&msm_gpio_142_def>;
+};
