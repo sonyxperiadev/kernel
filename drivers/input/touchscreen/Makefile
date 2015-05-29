@@ -90,3 +90,4 @@ obj-$(CONFIG_INPUT_MT_WRAPPER)		+= input_mt_wrapper.o
 obj-$(CONFIG_TOUCHSCREEN_IT7260_I2C)	+= it7258_ts_i2c.o
 obj-$(CONFIG_TOUCHSCREEN_ELAN_EKTF3135)	+= ektf2k.o
 obj-$(CONFIG_TOUCHSCREEN_CYPRESS_CYTTSP4)	+= cyttsp4/
+obj-$(CONFIG_TOUCHSCREEN_MAXIM_STI)	+= maxim_sti.o

@@ -359,6 +359,18 @@ config TOUCHSCREEN_MAX11801
 	  To compile this driver as a module, choose M here: the
 	  module will be called max11801_ts.
 
+config TOUCHSCREEN_MAXIM_STI
+	tristate "Maxim SmartTouch Imager touchscreen"
+	depends on SPI_MASTER
+	help
+	  Say Y here if you want to enable support for
+	  Maxim SmartTouch Imager touchscreen in SPI mode.
+
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called maxim_sti.
+
 config TOUCHSCREEN_MCS5000
 	tristate "MELFAS MCS-5000 touchscreen"
 	depends on I2C
