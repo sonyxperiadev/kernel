@@ -1,0 +1,346 @@
+/* arch/arm/boot/dts/qcom/msm8994-kitakami_satsuki_common.dtsi
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+/*
+ * Copyright (C) 2015 Sony Mobile Communications Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2, as
+ * published by the Free Software Foundation.
+ */
+
+&soc {
+	/delete-node/ qcom,qseecom@6500000;
+	qcom,qseecom@e900000 {
+		compatible = "qcom,qseecom";
+		reg = <0xe900000 0x1900000>;
+		reg-names = "secapp-region";
+		qcom,disk-encrypt-pipe-pair = <2>;
+		qcom,file-encrypt-pipe-pair = <0>;
+		qcom,support-multiple-ce-hw-instance;
+		qcom,hlos-num-ce-hw-instances = <2>;
+		qcom,hlos-ce-hw-instance = <1 2>;
+		qcom,qsee-ce-hw-instance = <0>;
+		qcom,msm-bus,name = "qseecom-noc";
+		qcom,msm-bus,num-cases = <4>;
+		qcom,msm-bus,num-paths = <1>;
+		qcom,support-fde;
+		qcom,support-pfe;
+		qcom,no-clock-support;
+		qcom,msm-bus,vectors-KBps =
+				<55 512 0 0>,
+				<55 512 0 0>,
+				<55 512 120000 1200000>,
+				<55 512 393600 3936000>;
+		clock-names = "core_clk", "ufs_core_clk_src", "ufs_core_clk",
+			"ufs_bus_clk", "ufs_iface_clk";
+		clocks = <&clock_rpm clk_qseecom_ce1_clk>,
+			<&clock_gcc clk_ufs_axi_clk_src>,
+			<&clock_gcc clk_gcc_ufs_axi_clk>,
+			<&clock_gcc clk_gcc_sys_noc_ufs_axi_clk>,
+			 <&clock_gcc clk_gcc_ufs_ahb_clk>;
+		qcom,ce-opp-freq = <171430000>;
+	};
+
+	/* I2C : BLSP6 */
+	i2c@f9928000 {
+		synaptics_clearpad@2c {
+			num_sensor_rx = <23>;
+			num_sensor_tx = <13>;
+			preset_x_max = <2159>;
+			preset_y_max = <3839>;
+			cover_tag_x_max = <1080>;
+			cover_tag_y_max = <1920>;
+			convert_cover_win_size = <1>;
+		};
+	};
+
+	tlmm_pinmux: pinctrl@fd510000 {
+		pmx_sdc2_clk {
+			sdc2_clk_on: clk_on {
+				drive-strength = <10>; /* 10 MA */
+			};
+		};
+
+		pmx_sdc2_cmd {
+			sdc2_cmd_on: cmd_on {
+				drive-strength = <10>; /* 10 MA */
+			};
+		};
+
+		pmx_sdc2_data {
+			sdc2_data_on: data_on {
+				drive-strength = <10>; /* 10 MA */
+			};
+		};
+	};
+
+	slim_msm: slim@fe12f000 {
+		tomtom_codec {
+			qcom,cdc-micbias-cfilt1-mv = <1940>;
+			qcom,cdc-dmic_clk_drv_strength = <4>;
+		};
+	};
+
+};
+
+&pm8994_l14 {
+	regulator-min-microvolt = <1850000>;
+	regulator-max-microvolt = <1850000>;
+	qcom,init-voltage = <1850000>;
+};
+
+&pm8994_gpios {
+	/* GPIO_8: (TRAY_DET) */
+	gpio@c700 {
+		qcom,master-en = <0>;		/* Disable */
+		status = "ok";
+	};
+};
+
+&spmi_bus {
+	qcom,pmi8994@3 {
+		qcom,leds@d000 {
+			status = "okay";
+			qcom,rgb_sync = <1>;
+
+			qcom,rgb_0 {
+				somc,pwm-channel = <2>;
+				qcom,pwm-max-value = <154>;
+				linux,name = "led:rgb_red";
+				linux,default-trigger = "none";
+			};
+			qcom,rgb_1 {
+				somc,pwm-channel = <1>;
+				qcom,pwm-max-value = <511>;
+				linux,name = "led:rgb_green";
+				linux,default-trigger = "none";
+			};
+			qcom,rgb_2 {
+				somc,pwm-channel = <0>;
+				qcom,pwm-max-value = <460>;
+				linux,name = "led:rgb_blue";
+				linux,default-trigger = "none";
+			};
+		};
+		qcom,leds@d800 {
+			qcom,ilim-ma = <660>;
+			qcom,fs-curr-ua = <24000>;
+			somc,calc-curr;
+			somc,init-br = <800>;
+			somc-s1,br-power-save = <131>;
+			qcom,led-strings-list = [00 01 02];
+		};
+	};
+};
+
+&pmi8994_gpios {
+	/* GPIO_3: NC (TUNER_ANT_SW_EN) */
+	gpio@c200 {
+		qcom,master-en = <0>;		/* Disable */
+		status = "ok";
+	};
+
+	/* GPIO_4: NC (TUNER_ANT_SW1) */
+	gpio@c300 {
+		qcom,master-en = <0>;		/* Disable */
+		status = "ok";
+	};
+
+	/* GPIO_5: NC (USB_HOST_VBUS_EN) */
+	gpio@c400 {
+		qcom,master-en = <0>;		/* Disable */
+		status = "ok";
+	};
+
+};
+
+&tlmm_pinmux {
+	/* GPIO_41: NC */
+	msm_gpio_41 {
+		qcom,pin-func = <0>;
+		msm_gpio_41_def: default {
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+			/delete-property/ bias-pull-up;
+			/delete-property/ input-enable;
+		};
+	};
+
+	/* GPIO_77: NC */
+	msm_gpio_77 {
+		qcom,pin-func = <0>;
+		msm_gpio_77_def: default {
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+			/delete-property/ input-enable;
+		};
+	};
+
+	/* GPIO_87: 4K_DISP_DCDC_EN */
+	msm_gpio_87 {
+		qcom,pin-func = <0>;
+		msm_gpio_87_def: default {
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	/* GPIO_100: TRAY_DET */
+	msm_gpio_100 {
+		qcom,pins = <&gp 100>;
+		qcom,num-grp-pins = <1>;
+		label = "msm_gpio_100";
+		qcom,pin-func = <0>;
+		msm_gpio_100_act: active {
+			drive-strength = <2>;
+			bias-pull-up;
+			input-enable;
+		};
+		msm_gpio_100_sus: suspend {
+			drive-strength = <2>;
+			bias-pull-up;
+			input-enable;
+		};
+		msm_gpio_100_def: default {
+			drive-strength = <2>;
+			bias-pull-up;
+			input-enable;
+		};
+	};
+
+	/* GPIO_107: NC */
+	msm_gpio_107 {
+		qcom,pin-func = <0>;
+		msm_gpio_107_def: default {
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	/* GPIO_122: NC */
+	msm_gpio_122 {
+		qcom,pin-func = <0>;
+		msm_gpio_122_def: default {
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+};
+
+&labibb {
+	qpnp-labibb-mode = "lcd";
+	qcom,qpnp-ibb-discharge-resistor = <32>;
+};
+
+&lab_regulator {
+	qcom,qpnp-lab-limit-maximum-current = <400>;
+};
+
+&ibb_regulator {
+	qcom,qpnp-ibb-limit-maximum-current = <900>;
+};
+
+&kitakami_panel_power_supply {
+	qcom,panel-supply-entry@0 {
+		qcom,supply-min-voltage = <1850000>;
+		qcom,supply-max-voltage = <1850000>;
+	};
+};
+
+&somc_pinctrl {
+	pinctrl-1 = <&msm_gpio_49_def &msm_gpio_50_def &msm_gpio_51_def &msm_gpio_116_def &msm_gpio_117_def &msm_gpio_118_def
+		     &msm_gpio_121_def &msm_gpio_123_def &msm_gpio_124_def &msm_gpio_125_def &msm_gpio_126_def &msm_gpio_127_def
+		     &msm_gpio_130_def &msm_gpio_132_def &msm_gpio_133_def &msm_gpio_142_def &msm_gpio_143_def>;
+};
+
+&mdss_fb0 {
+	linux,contiguous-region = <&fb_mem>;
+};
+
+&mdss_dsi0 {
+	qcom,dsi-pref-prim-pan = <&dsi_dual_0_default_gpio_0>;
+	pinctrl-names = "mdss_default", "mdss_sleep";
+	pinctrl-0 = <&msm_gpio_10_act &msm_gpio_56_act &msm_gpio_78_act>;
+	pinctrl-1 = <&msm_gpio_10_sus &msm_gpio_56_sus &msm_gpio_78_sus>;
+	qcom,dsi-panel-bias-vreg;
+	qcom,platform-reset-gpio = <&msm_gpio 78 0>;
+	somc,platform-disp-dcdc-en-gpio = <&msm_gpio 87 0>;
+	/delete-property/ qcom,platform-enable-gpio;
+	qcom,platform-regulator-settings = [];
+	qcom,platform-lane-config = [];
+};
+
+&mdss_dsi1 {
+	status = "ok";
+	qcom,dsi-pref-prim-pan = <&dsi_dual_1_default_gpio_0>;
+	qcom,platform-regulator-settings = [];
+	qcom,platform-lane-config = [];
+};
+
+/ {
+	kitakami_satsuki_batterydata: qcom,battery-data {
+		#include "batterydata-kitakami-satsuki-send.dtsi"
+	};
+};
+
+&pmi8994_fg {
+	qcom,battery-data = <&kitakami_satsuki_batterydata>;
+	qcom,fg-iterm-ma = <175>;
+	qcom,fg-chg-iterm-ma = <175>;
+};
+
+&pmi8994_charger {
+	qcom,fastchg-current-ma = <2300>;
+	somc,fastchg-warm-current-ma = <1000>;
+	somc,fastchg-cool-current-ma = <1000>;
+	qcom,iterm-ma = <200>;
+	qcom,precharging-timeout-mins = <24>;
+	qcom,charging-timeout-mins = <768>;
+	somc,usb-9v-current-max = <1600>;
+	somc,thermal-engine-fastchg-current = <2300 2100 1800 1100 900 700 500 400 300 300 300 300 300 0 0>;
+	somc,thermal-mitigation-usb-9v = <1500 1400 1300 1000 1000 1000 900 900 700 500 400 300 300 0 0>;
+	somc,thermal-mitigation-usb-5v = <1500 1500 1500 1500 1500 1500 1500 1500 1200 900 700 500 300 0 0>;
+	somc,limit-usb-5v-level = <12>;
+};
+
+&sdhc_2 {
+	interrupt-map-mask = <0x3>;
+	cd-gpios = <&msm_gpio 100 0x0>;
+	qcom,clk-rates = <400000 20000000 25000000 40000000 50000000 80000000
+				100000000 200000000>;
+	qcom,msm-bus,num-cases = <10>;
+	qcom,msm-bus,vectors-KBps = <81 512 0 0>, /* No vote */
+			<81 512 1600 3200>,    /* 400 KB/s*/
+			<81 512 80000 160000>, /* 20 MB/s */
+			<81 512 100000 200000>, /* 25 MB/s */
+			<81 512 160000 320000>, /* 40 MB/s */
+			<81 512 200000 400000>, /* 50 MB/s */
+			<81 512 320000 640000>, /* 80 MB/s */
+			<81 512 400000 800000>, /* 100 MB/s */
+			<81 512 800000 800000>, /* 200 MB/s */
+			<81 512 2048000 4096000>; /* Max. bandwidth */
+	qcom,bus-bw-vectors-bps = <0 400000 20000000 25000000 40000000 50000000
+					80000000 100000000 200000000 4294967295>;
+};
+
+&qsecom_mem {
+	reg = <0 0 0 0x1900000>;
+};
+
+&removed_regions {
+	reg = <0 0x06A00000 0 0x9800000>;
+};
