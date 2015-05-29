@@ -1,0 +1,148 @@
+/* arch/arm/boot/dts/qcom/apq8094-kitakami_karin_windy.dtsi
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+/*
+ * Copyright (C) 2014 Sony Mobile Communications Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2, as
+ * published by the Free Software Foundation.
+ */
+
+&soc {
+	/* I2C : BLSP2 */
+	i2c@f9924000 {
+		nfc@28 {
+			compatible = "nxp,pn547";
+			reg = <0x28>;
+			interrupt-parent = <&msm_gpio>;
+			interrupts = <29 0x1>;
+			nxp,irq_gpio = <&msm_gpio 29 0x00>;
+			nxp,dwld_en = <&msm_gpio 30 0x00>;
+			nxp,ven = <&pm8994_gpios 7 0x01>;
+			qcom,clk-src = "BBCLK2";
+			qcom,clk-gpio = <&pm8994_gpios 10 0x00>;
+			clocks = <&clock_rpm clk_bb_clk2_pin>;
+			clock-names = "nfc_clk";
+			pinctrl-names = "pn547-active", "pn547-inactive";
+			pinctrl-0 = <&msm_gpio_29_nfc_act &msm_gpio_30_act>;
+			pinctrl-1 = <&msm_gpio_29_nfc_sus &msm_gpio_30_sus>;
+		};
+	};
+
+	/* I2C : BLSP11 */
+	i2c@f9967000 {
+		/delete-node/ ad7146@2f;
+	};
+
+	sim_detect  {
+		compatible = "sim-detect";
+
+		sim1_det {
+			status = "disabled";
+		};
+	};
+};
+
+&pm8994_gpios {
+	/* GPIO_9: NC */
+	gpio@c800 {
+		qcom,master-en = <0>;		/* Disable */
+		status = "ok";
+	};
+
+	/* GPIO_12: NC */
+	gpio@cb00 {
+		qcom,master-en = <0>;		/* Disable */
+		status = "ok";
+	};
+};
+
+&pmi8994_gpios {
+	/* GPIO_3: NC */
+	gpio@c200 {
+		qcom,master-en = <0>;		/* Disable */
+		status = "ok";
+	};
+
+	/* GPIO_4: NC */
+	gpio@c300 {
+		qcom,master-en = <0>;		/* Disable */
+		status = "ok";
+	};
+};
+
+&pm8994_l1 {
+	status = "disabled";
+};
+
+&pm8994_l19 {
+	status = "disabled";
+};
+
+&tlmm_pinmux {
+	/* GPIO_97: NC (UIM1_DATA) */
+	msm_gpio_97 {
+		qcom,pins = <&gp 97>;
+		qcom,num-grp-pins = <1>;
+		label = "msm_gpio_97";
+		qcom,pin-func = <0>;
+		msm_gpio_97_def: default {
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	/* GPIO_98: NC (UIM1_CLK) */
+	msm_gpio_98 {
+		qcom,pins = <&gp 98>;
+		qcom,num-grp-pins = <1>;
+		label = "msm_gpio_98";
+		qcom,pin-func = <0>;
+		msm_gpio_98_def: default {
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	/* GPIO_99: NC (UIM1_RST) */
+	msm_gpio_99 {
+		qcom,pins = <&gp 99>;
+		qcom,num-grp-pins = <1>;
+		label = "msm_gpio_99";
+		qcom,pin-func = <0>;
+		msm_gpio_99_def: default {
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	/* GPIO_100: NC (UIM1_PRESENT) */
+	msm_gpio_100 {
+		qcom,pin-func = <0>;
+		msm_gpio_100_def: default {
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+			/delete-property/ bias-pull-up;
+			/delete-property/ input-enable;
+		};
+	};
+};
+
+&somc_pinctrl {
+	pinctrl-2 = <&msm_gpio_97_def &msm_gpio_98_def &msm_gpio_99_def &msm_gpio_123_def &msm_gpio_125_def
+		     &msm_gpio_131_def &msm_gpio_136_def &msm_gpio_137_def &msm_gpio_138_def &msm_gpio_139_def
+		     &msm_gpio_140_def &msm_gpio_141_def &msm_gpio_144_def &msm_gpio_145_def>;
+};
