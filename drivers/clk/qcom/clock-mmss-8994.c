@@ -554,6 +554,7 @@ static struct clk_freq_tbl ftbl_cpp_clk_src_v2[] = {
 	F_MM( 100000000,     mmsscc_gpll0,    6,    0,     0),
 	F_MM( 200000000,     mmsscc_gpll0,    3,    0,     0),
 	F_MM( 320000000,  mmpll0_out_main,  2.5,    0,     0),
+	F_MM( 384000000,  mmpll4_out_main,  2.5,    0,     0),
 	F_MM( 480000000,  mmpll4_out_main,    2,    0,     0),
 	F_MM( 600000000,     mmsscc_gpll0,    1,    0,     0),
 	F_MM( 640000000,  mmpll4_out_main,  1.5,    0,     0),
