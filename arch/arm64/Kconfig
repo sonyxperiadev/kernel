@@ -246,6 +246,79 @@ config ARCH_XGENE
 	help
 	  This enables support for AppliedMicro X-Gene SOC Family
 
+config ARCH_SONY_KITAKAMI
+	bool "Sony Mobile kitakami platform"
+	depends on ARCH_MSM8994
+	help
+	  Support for the SONY Mobile Kitakami platform
+	  which is based on QCOM MSM8994 chipset.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
+config MACH_SONY_IVY
+	bool "Sony Mobile Ivy"
+	depends on ARCH_SONY_KITAKAMI
+	help
+	  Support for the SONY Mobile Ivy device
+	  which is based on SONY Kitakami platform.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
+config MACH_SONY_IVY_DSDS
+	bool "Sony Mobile Ivy Dsds"
+	depends on ARCH_SONY_KITAKAMI
+	help
+	  Support for the SONY Mobile Ivy Dsds device
+	  which is based on SONY Kitakami platform.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
+config MACH_SONY_KARIN
+	bool "Sony Mobile Karin"
+	depends on ARCH_SONY_KITAKAMI
+	help
+	  Support for the SONY Mobile Karin device
+	  which is based on SONY Kitakami platform.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
+config MACH_SONY_KARIN_WINDY
+	bool "Sony Mobile Karin Windy"
+	depends on ARCH_SONY_KITAKAMI
+	help
+	  Support for the SONY Mobile Karin Windy device
+	  which is based on SONY Kitakami platform.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
+config MACH_SONY_SUMIRE
+    bool "Sony Mobile Sumire"
+    depends on ARCH_SONY_KITAKAMI
+    help
+      Support for the SONY Mobile Sumire device
+      which is based on SONY Kitakami R2 platform.
+      If you enable this config,
+      please use SONY Mobile device tree.
+
+config MACH_SONY_SUMIRE_DSDS
+    bool "Sony Mobile Sumire Dsds"
+    depends on ARCH_SONY_KITAKAMI
+    help
+      Support for the SONY Mobile Sumire Dsds device
+      which is based on SONY Kitakami R2 platform.
+      If you enable this config,
+      please use SONY Mobile device tree.
+
+config MACH_SONY_SUZURAN
+    bool "Sony Mobile Suzuran"
+    depends on ARCH_SONY_KITAKAMI
+    help
+      Support for the SONY Mobile Suzuran device
+      which is based on SONY Kitakami R2 platform.
+      If you enable this config,
+      please use SONY Mobile device tree.
+
+
 endmenu
 
 menu "Bus support"

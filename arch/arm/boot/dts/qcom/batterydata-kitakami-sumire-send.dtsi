@@ -1,0 +1,67 @@
+/* Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+/*
+ * Copyright (C) 2015 Sony Mobile Communications Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2, as
+ * published by the Free Software Foundation.
+ */
+
+qcom,kitakami-sumire-send {
+	qcom,max-voltage-uv = <4350000>;
+	qcom,v-cutoff-uv = <3400000>;
+	qcom,chg-term-ua = <100000>;
+	somc,step-charge-en = <1>;
+	somc,step-charge-threshold = <65>;
+	somc,step-charge-current-ma = <2100>;
+	qcom,batt-id-kohm = <222>;
+	qcom,battery-type = "1294-1249";
+	qcom,chg-rslow-comp-c1 = <2527374>;
+	qcom,chg-rslow-comp-c2 = <2713627>;
+	qcom,chg-rs-to-rslow = <1327194>;
+	qcom,chg-rslow-comp-thr = <0x99>;
+	qcom,fg-profile-data = [
+		 DF 83 80 7C
+		 8C 80 30 76
+		 4B 83 F6 5C
+		 A0 82 89 8D
+		 04 82 2A 99
+		 ED B6 5C C2
+		 5D 12 C7 82
+		 E5 78 15 77
+		 DE 70 27 83
+		 81 79 D5 85
+		 0A 81 5D 82
+		 C5 92 8E AF
+		 7C B9 7D 12
+		 D7 0B 08 5A
+		 CE 6E 4A FC
+		 6C 2A E6 3F
+		 CF 30 00 00
+		 8E 35 8E 3B
+		 C5 3E 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 F7 71 DD 70
+		 4B 77 AD 73
+		 F6 76 C0 69
+		 52 74 91 79
+		 C9 76 83 69
+		 CF 78 85 C0
+		 0C 1C 5A 00
+		 4D A0 71 0C
+		 28 00 FF 36
+		 F0 11 30 03
+		 00 00 00 0C
+	];
+};

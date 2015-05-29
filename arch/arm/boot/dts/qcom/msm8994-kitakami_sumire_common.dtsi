@@ -1,0 +1,289 @@
+/* arch/arm/boot/dts/qcom/msm8994-kitakami_sumire_common.dtsi
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+/*
+ * Copyright (C) 2015 Sony Mobile Communications Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2, as
+ * published by the Free Software Foundation.
+ */
+
+&soc {
+	/delete-node/ qcom,qseecom@6500000;
+	qcom,qseecom@e700000 {
+		compatible = "qcom,qseecom";
+		reg = <0xe700000 0x1900000>;
+		reg-names = "secapp-region";
+		qcom,disk-encrypt-pipe-pair = <2>;
+		qcom,file-encrypt-pipe-pair = <0>;
+		qcom,support-multiple-ce-hw-instance;
+		qcom,hlos-num-ce-hw-instances = <2>;
+		qcom,hlos-ce-hw-instance = <1 2>;
+		qcom,qsee-ce-hw-instance = <0>;
+		qcom,msm-bus,name = "qseecom-noc";
+		qcom,msm-bus,num-cases = <4>;
+		qcom,msm-bus,num-paths = <1>;
+		qcom,support-fde;
+		qcom,support-pfe;
+		qcom,no-clock-support;
+		qcom,msm-bus,vectors-KBps =
+				<55 512 0 0>,
+				<55 512 0 0>,
+				<55 512 120000 1200000>,
+				<55 512 393600 3936000>;
+		clock-names = "core_clk", "ufs_core_clk_src", "ufs_core_clk",
+			      "ufs_bus_clk", "ufs_iface_clk";
+		clocks = <&clock_rpm clk_qseecom_ce1_clk>,
+                         <&clock_gcc clk_ufs_axi_clk_src>,
+                         <&clock_gcc clk_gcc_ufs_axi_clk>,
+                         <&clock_gcc clk_gcc_sys_noc_ufs_axi_clk>,
+			 <&clock_gcc clk_gcc_ufs_ahb_clk>;
+		qcom,ce-opp-freq = <171430000>;
+	};
+
+	tlmm_pinmux: pinctrl@fd510000 {
+		pmx_sdc2_clk {
+			sdc2_clk_on: clk_on {
+				drive-strength = <10>; /* 10 MA */
+			};
+		};
+
+		pmx_sdc2_cmd {
+			sdc2_cmd_on: cmd_on {
+				drive-strength = <10>; /* 10 MA */
+			};
+		};
+
+		pmx_sdc2_data {
+			sdc2_data_on: data_on {
+				drive-strength = <10>; /* 10 MA */
+			};
+		};
+	};
+};
+
+&pm8994_gpios {
+	/* GPIO_8: (TRAY_DET) */
+	gpio@c700 {
+		qcom,master-en = <0>;		/* Disable */
+		status = "ok";
+	};
+};
+
+&pmi8994_gpios {
+	/* GPIO_3: NC (TUNER_ANT_SW_EN) */
+	gpio@c200 {
+		qcom,master-en = <0>;		/* Disable */
+		status = "ok";
+	};
+
+	/* GPIO_4: NC (TUNER_ANT_SW1) */
+	gpio@c300 {
+		qcom,master-en = <0>;		/* Disable */
+		status = "ok";
+	};
+
+	/* GPIO_5: NC */
+	gpio@c400 {
+		qcom,master-en = <0>;		/* Disable */
+		status = "ok";
+	};
+};
+
+&pm8994_l19 {
+	status = "disabled";
+};
+
+&spmi_bus {
+	qcom,pmi8994@3 {
+		qcom,leds@d000 {
+			status = "okay";
+			qcom,rgb_sync = <1>;
+
+			qcom,rgb_0 {
+				somc,pwm-channel = <2>;
+				qcom,pwm-max-value = <154>;
+				linux,name = "led:rgb_red";
+				linux,default-trigger = "none";
+			};
+			qcom,rgb_1 {
+				somc,pwm-channel = <1>;
+				qcom,pwm-max-value = <511>;
+				linux,name = "led:rgb_green";
+				linux,default-trigger = "none";
+			};
+			qcom,rgb_2 {
+				somc,pwm-channel = <0>;
+				qcom,pwm-max-value = <460>;
+				linux,name = "led:rgb_blue";
+				linux,default-trigger = "none";
+			};
+		};
+		qcom,leds@d800 {
+			qcom,ilim-ma = <660>;
+			qcom,fs-curr-ua = <24000>;
+			somc,calc-curr;
+			somc,init-br = <1638>;
+			somc-s1,br-power-save = <131>;
+			qcom,led-strings-list = [00 01];
+		};
+	};
+};
+
+&tlmm_pinmux {
+	/* GPIO_9: USB_SHELL_SEL */
+	msm_gpio_9 {
+		qcom,pin-func = <0>;
+		msm_gpio_9_def: default {
+			drive-strength = <2>;
+			bias-disable;
+			output-high;
+			/delete-property/ output-low;
+		};
+	};
+
+	/* GPIO_41: NC */
+	msm_gpio_41 {
+		qcom,pin-func = <0>;
+		msm_gpio_41_def: default {
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+			/delete-property/ bias-pull-up;
+			/delete-property/ input-enable;
+		};
+	};
+
+	/* GPIO_77: NC */
+	msm_gpio_77 {
+		qcom,pin-func = <0>;
+		msm_gpio_77_def: default {
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+			/delete-property/ input-enable;
+		};
+	};
+
+	/* GPIO_100: TRAY_DET */
+	msm_gpio_100 {
+		qcom,pins = <&gp 100>;
+		qcom,num-grp-pins = <1>;
+		label = "msm_gpio_100";
+		qcom,pin-func = <0>;
+		msm_gpio_100_act: active {
+			drive-strength = <2>;
+			bias-pull-up;
+			input-enable;
+		};
+		msm_gpio_100_sus: suspend {
+			drive-strength = <2>;
+			bias-pull-up;
+			input-enable;
+		};
+		msm_gpio_100_def: default {
+			drive-strength = <2>;
+			bias-pull-up;
+			input-enable;
+		};
+	};
+
+	/* GPIO_107: NC */
+	msm_gpio_107 {
+		qcom,pin-func = <0>;
+		msm_gpio_107_def: default {
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	/* GPIO_122: NC */
+	msm_gpio_122 {
+		qcom,pin-func = <0>;
+		msm_gpio_122_def: default {
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+};
+
+&somc_pinctrl {
+	pinctrl-1 = <&msm_gpio_49_def &msm_gpio_50_def &msm_gpio_51_def &msm_gpio_125_def &msm_gpio_130_def
+		     &msm_gpio_132_def &msm_gpio_133_def &msm_gpio_142_def &msm_gpio_143_def>;
+};
+
+&hsphy0 {
+       qcom,hsphy-init = <0x00FBDFA7>;
+       qcom,hsphy-init-host = <0x00FBC7A7>;
+};
+
+&mdss_dsi0 {
+	/delete-property/ qcom,platform-enable-gpio;
+};
+
+/{
+	kitakami_sumire_batterydata: qcom,battery-data {
+		#include "batterydata-kitakami-sumire-send.dtsi"
+	};
+};
+
+&pmi8994_fg {
+	qcom,battery-data = <&kitakami_sumire_batterydata>;
+	qcom,fg-iterm-ma = <150>;
+};
+
+&pmi8994_charger {
+	qcom,fastchg-current-ma = <1500>;
+	somc,fastchg-warm-current-ma = <700>;
+	somc,fastchg-cool-current-ma = <700>;
+	qcom,iterm-ma = <150>;
+	qcom,precharging-timeout-mins = <24>;
+	qcom,charging-timeout-mins = <768>;
+	somc,step-charge-en = <1>;
+	somc,step-charge-threshold = <65>;
+	somc,step-charge-current-ma = <2100>;
+	somc,thermal-engine-fastchg-current = <2100 1950 1800 1100 900 700 500 400 300 300 300 300 300 0 0>;
+	somc,thermal-mitigation-usb-9v = <1500 1400 1300 1000 1000 1000 1000 1000 1200 900 700 500 300 0 0>;
+	somc,thermal-mitigation-usb-5v = <1500 1500 1500 1500 1500 1500 1500 1500 1200 900 700 500 300 0 0>;
+	somc,limit-usb-5v-level = <8>;
+	somc,charge-full-design = <2987000>;
+};
+
+&sdhc_2 {
+	interrupt-map-mask = <0x3>;
+	cd-gpios = <&msm_gpio 100 0x0>;
+	qcom,clk-rates = <400000 20000000 25000000 40000000 50000000 80000000
+				100000000 200000000>;
+	qcom,msm-bus,num-cases = <10>;
+	qcom,msm-bus,vectors-KBps = <81 512 0 0>, /* No vote */
+			<81 512 1600 3200>,    /* 400 KB/s*/
+			<81 512 80000 160000>, /* 20 MB/s */
+			<81 512 100000 200000>, /* 25 MB/s */
+			<81 512 160000 320000>, /* 40 MB/s */
+			<81 512 200000 400000>, /* 50 MB/s */
+			<81 512 320000 640000>, /* 80 MB/s */
+			<81 512 400000 800000>, /* 100 MB/s */
+			<81 512 800000 800000>, /* 200 MB/s */
+			<81 512 2048000 4096000>; /* Max. bandwidth */
+	qcom,bus-bw-vectors-bps = <0 400000 20000000 25000000 40000000 50000000
+					80000000 100000000 200000000 4294967295>;
+};
+
+&qsecom_mem {
+	reg = <0 0 0 0x1900000>;
+};
+
+&removed_regions {
+	reg = <0 0x06300000 0 0x9D00000>;
+};
