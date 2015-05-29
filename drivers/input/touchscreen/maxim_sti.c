@@ -50,7 +50,7 @@
 #define INPUT_ENABLE_DISABLE  0
 #define SUSPEND_POWER_OFF     0
 #define CPU_BOOST             0
-#define SONY_CPU_BOOST        1
+#define SONY_CPU_BOOST        0
 #define FB_CALLBACK           0
 #define HI02                  1
 #define CFG_FILE_NAME_MAX     64
@@ -1584,7 +1584,7 @@ nl_process_driver_msg(struct dev_data *dd, u16 msg_id, u16 msg_len, void *msg)
 				input_set_drvdata(dd->input_dev[i], dd);
 			}
 #endif
-#ifdef SONY_CPU_BOOST
+#if SONY_CPU_BOOST
 			if (i == 0)
 				input_set_capability(dd->input_dev[i], EV_SW,
 						     SW_TOUCH_ACTIVITY);
@@ -1923,7 +1923,7 @@ static irqreturn_t irq_handler(int irq, void *context)
 	*/
 	dd->last_irq_jiffies = jiffies;
 #endif
-#ifdef SONY_CPU_BOOST
+#if SONY_CPU_BOOST
 	if (dd->boost && likely(dd->input_dev[0])) {
 		input_event(dd->input_dev[0], EV_SW, SW_TOUCH_ACTIVITY, 1);
 		input_mt_sync(dd->input_dev[0]);
