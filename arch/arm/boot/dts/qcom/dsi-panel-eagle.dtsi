@@ -581,7 +581,6 @@
 		somc,no-vsn-gpio;
 		somc,no-vsp-gpio;
 		somc,panel-id-read-cmds;
-		qcom,mdss-pan-flip-ud;
 		qcom,cont-splash-disabled;
 	};
 };
