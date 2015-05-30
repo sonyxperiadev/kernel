@@ -199,6 +199,13 @@ static struct gpiomux_setting lcd_rst_sus_cfg = {
 
 static struct msm_gpiomux_config msm_lcd_configs[] __initdata = {
 	{
+		.gpio = 23,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &lcd_rst_act_cfg,
+			[GPIOMUX_SUSPENDED] = &lcd_rst_sus_cfg,
+		},
+	},
+	{
 		.gpio = 25,		/* LCD Reset */
 		.settings = {
 			[GPIOMUX_ACTIVE]    = &lcd_rst_act_cfg,
