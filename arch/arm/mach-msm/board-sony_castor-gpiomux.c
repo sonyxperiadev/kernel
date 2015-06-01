@@ -1109,7 +1109,7 @@ static struct msm_gpiomux_config shinano_all_configs[] __initdata = {
 	},
 };
 
-struct msm_gpiomux_config scorpion_windy_conf[] __initdata = {
+struct msm_gpiomux_config castor_windy_conf[] __initdata = {
 	{ /* NC(UIM1_DETECT) */
 		.gpio = 9,
 		.settings = {
@@ -1211,7 +1211,7 @@ void __init msm_8974_init_gpiomux(void)
 	if (of_machine_is_compatible("somc,castor-windy")) {
 		base.cfg = shinano_all_configs;
 		base.ncfg = ARRAY_SIZE(shinano_all_configs);
-		diff.cfg = scorpion_windy_conf;
+		diff.cfg = castor_windy_conf;
 		diff.ncfg = ARRAY_SIZE(castor_windy_conf);
 		overwrite_configs(&base, &diff);
 	}
