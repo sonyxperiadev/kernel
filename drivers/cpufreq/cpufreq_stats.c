@@ -626,7 +626,7 @@ static void cpufreq_stats_create_table(unsigned int cpu)
 {
 	struct cpufreq_policy *policy;
 	struct cpufreq_frequency_table *table;
-	int i, count = 0;
+	int i, cpu_num, count = 0;
 	/*
 	 * "likely(!policy)" because normally cpufreq_stats will be registered
 	 * before cpufreq driver
@@ -640,16 +640,17 @@ static void cpufreq_stats_create_table(unsigned int cpu)
 		for (i = 0; table[i].frequency != CPUFREQ_TABLE_END; i++) {
 			unsigned int freq = table[i].frequency;
 
-			if (freq == CPUFREQ_ENTRY_INVALID)
-				continue;
-			count++;
+			if (freq != CPUFREQ_ENTRY_INVALID)
+				count++;
 		}
 
 		if (!per_cpu(all_cpufreq_stats, cpu))
 			cpufreq_allstats_create(cpu, table, count);
 
-		if (!per_cpu(cpufreq_power_stats, cpu))
-			cpufreq_powerstats_create(cpu, table, count);
+		for_each_possible_cpu(cpu_num) {
+			if (!per_cpu(cpufreq_power_stats, cpu))
+				cpufreq_powerstats_create(cpu, table, count);
+		}
 
 		__cpufreq_stats_create_table(policy, table, count);
 	}
