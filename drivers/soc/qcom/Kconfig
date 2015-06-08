@@ -978,4 +978,13 @@ config MSM_CACHE_M4M_ERP64_PANIC_ON_UE
          Say 'Y' here to cause kernel panic when uncorrectable cache/M4M errors
          are detected.
 
+config MSM_BAM_DMUX
+	bool "BAM Data Mux Driver"
+	depends on SPS
+	help
+	  Support Muxed Data Channels over BAM interface.
+	  BAM has a limited number of pipes.  This driver
+	  provides a means to support more logical channels
+	  via muxing than BAM could without muxing.
+
 source "drivers/soc/qcom/memshare/Kconfig"
