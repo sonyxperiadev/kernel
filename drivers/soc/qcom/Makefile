@@ -108,3 +108,4 @@ obj-$(CONFIG_WCD_DSP_GLINK) += wcd-dsp-glink.o
 obj-$(CONFIG_QCOM_SMCINVOKE) += smcinvoke.o
 obj-$(CONFIG_QCOM_EARLY_RANDOM)	+= early_random.o
 obj-$(CONFIG_QCOM_CX_IPEAK) += cx_ipeak.o
+obj-$(CONFIG_MSM_BAM_DMUX) += bam_dmux.o

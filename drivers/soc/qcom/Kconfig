@@ -940,4 +940,13 @@ config QCOM_CX_IPEAK
 	  clients are going to cross their thresholds then Cx ipeak hw module will raise
 	  an interrupt to cDSP block to throttle cDSP fmax.
 
+config MSM_BAM_DMUX
+	bool "BAM Data Mux Driver"
+	depends on SPS
+	help
+	  Support Muxed Data Channels over BAM interface.
+	  BAM has a limited number of pipes.  This driver
+	  provides a means to support more logical channels
+	  via muxing than BAM could without muxing.
+
 source "drivers/soc/qcom/memshare/Kconfig"
