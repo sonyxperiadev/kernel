@@ -188,6 +188,10 @@ static struct wcd9xxx_mbhc_config mbhc_cfg = {
 	.use_vddio_meas = true,
 	.enable_anc_mic_detect = false,
 	.hw_jack_type = SIX_POLE_JACK,
+#ifdef CONFIG_ARCH_SONY_KITAKAMI
+	.insert_detect_plug_type = DETECT_NO_PLUG_TYPE,
+	.insert_detect_comp_vth = MBHC_COMP_V_0P875_VDD,
+#endif
 };
 
 static struct afe_clk_cfg mi2s_tx_clk = {

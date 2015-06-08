@@ -50,4 +50,14 @@ struct pn547_i2c_platform_data {
 	bool dynamic_config;
 };
 
+#if defined(CONFIG_ARM) && defined (CONFIG_ARCH_MSM)
+int board_nfc_parse_dt(struct device *dev,
+		struct pn547_i2c_platform_data *pdata);
+int board_nfc_hw_lag_check(struct i2c_client *d,
+		struct pn547_i2c_platform_data *pdata);
+#else
+#define board_nfc_parse_dt(x, ...) 0
+#define board_nfc_hw_lag_check(x, ...) 0
+#endif
+
 #endif

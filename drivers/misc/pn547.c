@@ -47,8 +47,6 @@
 #include <linux/clk.h>
 #endif
 
-#include <mach/board-nfc.h>
-
 #define MAX_BUFFER_SIZE		512
 
 #define NFC_DEBUG 0

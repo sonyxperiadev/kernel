@@ -10,7 +10,9 @@
 * Licensed under the GPL version 2 or later.
 */
 
+#ifndef CONFIG_ARM64
 #include <asm/system.h>
+#endif
 #include <linux/delay.h>
 #include <linux/device.h>
 #include <linux/err.h>

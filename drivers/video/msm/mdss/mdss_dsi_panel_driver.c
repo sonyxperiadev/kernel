@@ -22,6 +22,7 @@
 #include <linux/leds.h>
 #include <linux/qpnp/pwm.h>
 #include <linux/err.h>
+#include <linux/regulator/consumer.h>
 
 #include "mdss_mdp.h"
 #include "mdss_dsi.h"
@@ -3661,6 +3662,7 @@ error:
 int mdss_dsi_panel_gpios(struct device_node *node,
 		struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 {
+#ifndef CONFIG_ARM64
 	struct mdss_panel_specific_pdata *spec_pdata = ctrl_pdata->spec_pdata;
 	int rc = 0;
 
@@ -3708,6 +3710,10 @@ int mdss_dsi_panel_gpios(struct device_node *node,
 						__func__, __LINE__);
 
 	return rc;
+#else
+	return 0;
+#endif
+
 }
 
 int mdss_dsi_panel_init(struct device_node *node,
