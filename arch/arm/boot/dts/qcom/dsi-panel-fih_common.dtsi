@@ -238,8 +238,6 @@
 		somc,panel-id-read-cmds;
 		somc,alt-panelid-cmd;
 		somc,dsi-restart-hack;
-		somc,no-vsn-gpio;
-		somc,no-vsp-gpio;
 	};
 
 	dsi_nt35521_720_vid_jdi61: qcom,mdss_dsi_nt35521_720p_video_jdi61 {
@@ -319,8 +317,6 @@
 		somc,panel-id-read-cmds;
 		somc,alt-panelid-cmd;
 		somc,dsi-restart-hack;
-		somc,no-vsn-gpio;
-		somc,no-vsp-gpio;
 	};
 
 	dsi_nt35521_720_vid_truly63: qcom,mdss_dsi_nt35521_720p_video_truly63 {
@@ -596,8 +592,6 @@
 		somc,panel-id-read-cmds;
 		somc,alt-panelid-cmd;
 		somc,dsi-restart-hack;
-		somc,no-vsn-gpio;
-		somc,no-vsp-gpio;
 	};
 
 	dsi_nt35521_720_vid_truly64: qcom,mdss_dsi_nt35521_720p_video_truly64 {
@@ -677,8 +671,6 @@
 		somc,panel-id-read-cmds;
 		somc,alt-panelid-cmd;
 		somc,dsi-restart-hack;
-		somc,no-vsn-gpio;
-		somc,no-vsp-gpio;
 	};
 
 	dsi_nt35521_720_vid_innolux65: qcom,mdss_dsi_nt35521_720p_video_innolux65 {
@@ -918,7 +910,6 @@
 		qcom,mdss-dsi-lane-1-state;
 		qcom,mdss-dsi-lane-2-state;
 		qcom,mdss-dsi-lane-3-state;
-//		qcom,mdss-dsi-panel-timings = [93 1F 17 00 2F 2E 1C 21 26 03 04 00]; //420Mbps
 		qcom,mdss-dsi-panel-timings = [94 20 14 00 46 4A 1A 24 18 03 04 00]; //514Mbsp
 		qcom,mdss-dsi-t-clk-post = <0x20>;
 		qcom,mdss-dsi-t-clk-pre = <0x2D>;
@@ -937,8 +928,6 @@
 		somc,dsi-restart-hack;
 		somc,panel-detect = <1>;
 		somc,panel-id-read-cmds;
-		somc,no-vsn-gpio;
-		somc,no-vsp-gpio;
 	};
 
 	dsi_nt35521_720_vid_innolux66: qcom,mdss_dsi_nt35521_720p_video_innolux66 {
@@ -1018,7 +1007,5 @@
 		somc,alt-panelid-cmd;
 		somc,dsi-restart-hack;
 		somc,panel-id-read-cmds;
-		somc,no-vsn-gpio;
-		somc,no-vsp-gpio;
 	};
 };

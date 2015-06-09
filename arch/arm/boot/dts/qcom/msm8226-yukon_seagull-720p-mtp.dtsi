@@ -12,7 +12,7 @@
  */
 
 #include "msm8226-yukon_common.dtsi"
-#include "dsi-panel-seagull.dtsi"
+#include "dsi-panel-fih_common.dtsi"
 
 / {
 	aliases {
