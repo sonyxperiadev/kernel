@@ -24,6 +24,9 @@
 #include <linux/regulator/consumer.h>
 #include <linux/leds-qpnp-wled.h>
 #include <linux/clk.h>
+#ifdef CONFIG_REGULATOR_QPNP_LABIBB_SOMC
+#include <linux/regulator/qpnp-labibb-regulator.h>
+#endif
 
 #include "mdss.h"
 #include "mdss_panel.h"
@@ -41,6 +44,10 @@ static int mdss_dsi_labibb_vreg_init(struct platform_device *pdev)
 {
 	struct mdss_dsi_ctrl_pdata *ctrl = NULL;
 	int rc;
+#ifdef CONFIG_REGULATOR_QPNP_LABIBB_SOMC
+	int min_uV, max_uV = 0;
+	struct mdss_panel_specific_pdata *spec_pdata = NULL;
+#endif
 
 	ctrl = platform_get_drvdata(pdev);
 	if (!ctrl) {
@@ -70,6 +77,54 @@ static int mdss_dsi_labibb_vreg_init(struct platform_device *pdev)
 
 	pr_debug("%s: lab=%p ibb=%p\n", __func__,
 				ctrl->lab, ctrl->ibb);
+
+#ifdef CONFIG_REGULATOR_QPNP_LABIBB_SOMC
+	spec_pdata = ctrl->spec_pdata;
+	if (!spec_pdata) {
+		pr_err("%s: Invalid panel data\n", __func__);
+		return -EINVAL;
+	}
+
+	/*
+	 * Set lab/ibb voltage.
+	 */
+	min_uV = spec_pdata->lab_output_voltage;
+	max_uV = min_uV;
+	rc = regulator_set_voltage(ctrl->lab, min_uV, max_uV);
+	if (rc) {
+		pr_err("%s: Unable to configure of lab voltage.\n", __func__);
+		return rc;
+	}
+	min_uV = spec_pdata->ibb_output_voltage;
+	max_uV = min_uV;
+	rc = regulator_set_voltage(ctrl->ibb, min_uV, max_uV);
+	if (rc) {
+		pr_err("%s: Unable to configure of ibb voltage.\n", __func__);
+		return rc;
+	}
+
+	/**
+	 * Set lab/ibb current max
+	 */
+	if (spec_pdata->lab_current_max_enable) {
+		rc = qpnp_lab_set_current_max(ctrl->lab,
+				spec_pdata->lab_current_max);
+		if (rc) {
+			pr_err("%s: Unable to configure of lab current_max.\n",
+								__func__);
+			return rc;
+		}
+	}
+	if (spec_pdata->ibb_current_max_enable) {
+		rc = qpnp_ibb_set_current_max(ctrl->ibb,
+				spec_pdata->ibb_current_max);
+		if (rc) {
+			pr_err("%s: Unable to configure of ibb current_max.\n",
+								__func__);
+			return rc;
+		}
+	}
+#endif /* CONFIG_REGULATOR_QPNP_LABIBB_SOMC */
 
 	return 0;
 }
@@ -147,6 +202,9 @@ static int mdss_dsi_regulator_init(struct platform_device *pdev)
 
 	mdss_dsi_labibb_vreg_init(pdev);
 
+#ifdef CONFIG_REGULATOR_QPNP_LABIBB_SOMC
+	ctrl_pdata->spec_pdata->vreg_ctrl = mdss_dsi_labibb_vreg_ctrl;
+#endif
 	return rc;
 }
 

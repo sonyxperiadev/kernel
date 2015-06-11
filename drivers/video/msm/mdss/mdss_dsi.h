@@ -334,6 +334,15 @@ struct mdss_panel_specific_pdata {
 	struct mdss_panel_power_seq off_seq;
 	u32 down_period;
 	u32 new_vfp;
+#ifdef CONFIG_REGULATOR_QPNP_LABIBB_SOMC
+	u32 lab_output_voltage;
+	u32 ibb_output_voltage;
+	u32 lab_current_max;
+	u32 ibb_current_max;
+	bool lab_current_max_enable;
+	bool ibb_current_max_enable;
+	int (*vreg_ctrl) (struct mdss_dsi_ctrl_pdata *ctrl, int enable);
+#endif
 };
 #endif
 
