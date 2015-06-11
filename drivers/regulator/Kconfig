@@ -600,6 +600,12 @@ config REGULATOR_QPNP_LABIBB
 	  negative boost regulator. LAB/IBB regulators can also be used
 	  together for LCD or AMOLED.
 
+config REGULATOR_QPNP_LABIBB_SOMC
+	bool "QPNP LAB/IBB SoMC implementation"
+	depends on REGULATOR_QPNP_LABIBB
+	help
+	  Say Y here to use SoMC QPNP LAB/IBB implementation in QTI driver.
+
 config REGULATOR_SPM
 	bool "SPM regulator driver"
 	depends on SPMI && OF_SPMI
