@@ -475,6 +475,18 @@ config QPNP_FG
 	  fuel gauge. The state of charge is reported through a BMS power
 	  supply property and also sends uevents when the capacity is updated.
 
+config QPNP_SMBCHARGER_EXTENSION
+	tristate "QPNP SMB Charger driver: SoMC extensions"
+	depends on QPNP_SMBCHARGER
+	help
+	  Say Y here to enable extensional SMB charger functions.
+
+config QPNP_FG_EXTENSION
+	tristate "QPNP Fuel gauge driver: SoMC extensions"
+	depends on QPNP_FG
+	help
+	  Say Y here to enable extensional fuel gauge functions.
+
 config PM8921_BMS
 	tristate "PM8921 Battery Monitoring System driver"
 	depends on MFD_PM8921_CORE
