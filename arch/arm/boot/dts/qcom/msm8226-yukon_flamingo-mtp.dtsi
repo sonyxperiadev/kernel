@@ -282,6 +282,10 @@
 	qcom,init-voltage = <1800000>;
 };
 
+&mdss_mdp {
+	somc,dric-gpio = <&msmgpio 27 0>;
+};
+
 &mdss_dsi0 {
 	qcom,dsi-pref-prim-pan = <&dsi_truly_hx8379c_fwvga_vid>;
 	vdddsi-supply = <&pm8226_lvs1>;

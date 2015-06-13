@@ -1144,7 +1144,7 @@ static void hdmi_edid_add_sink_3d_format(struct hdmi_edid_sink_data *sink_data,
 static void hdmi_edid_add_sink_video_format(struct hdmi_edid_ctrl *edid_ctrl,
 	u32 video_format)
 {
-	struct msm_hdmi_mode_timing_info timing = {0};
+	struct msm_hdmi_mode_timing_info *timing;
 	u32 ret;
 	u32 supported;
 	int i;
@@ -1156,22 +1156,22 @@ static void hdmi_edid_add_sink_video_format(struct hdmi_edid_ctrl *edid_ctrl,
 	if (video_format == HDMI_VFRMT_3840x2160p24_16_9_CEA_VIC)
 		video_format = HDMI_VFRMT_3840x2160p24_16_9;
 
+//	timing = hdmi_get_supported_mode(timing,
+//			edid_ctrl->init_data.ds_data, *(video_format)++);
+//	supported = timing != NULL;
+	supported = 0;
+
 	if (video_format >= HDMI_VFRMT_MAX) {
 		DEV_ERR("%s: video format: %s is not supported\n", __func__,
 			msm_hdmi_mode_2string(video_format));
 		return;
 	}
 
-	ret = hdmi_get_supported_mode(&timing,
-			edid_ctrl->init_data.ds_data,
-			video_format);
-	supported = timing.supported;
-
 	DEV_DBG("%s: EDID: format: %d [%s], %s\n", __func__,
 		video_format, msm_hdmi_mode_2string(video_format),
 		supported ? "Supported" : "Not-Supported");
 
-	if (!ret && supported) {
+	if (supported) {
 		/* avoid multi registration */
 		for (i = 0; i < sink_data->num_of_elements; ++i) {
 			if (video_format == sink_data->disp_mode_list[i])

@@ -12,7 +12,6 @@
  */
 
 &mdss_mdp {
-	qcom,mdss-ib-factor = <19 10>;
 	dsi_renesas_sharp_1080_vid: somc,renesas_sharp_1080p_panel {
 		qcom,mdss-dsi-panel-name = "sharp renesas 1080p video";
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
@@ -90,8 +89,6 @@
 		qcom,cont-splash-enabled;
 
 		somc,driver-ic = <0>;
-		somc,dric-gpio = <&msmgpio 26 0>;
-		somc,mul-channel-scaling = <3>;
 		somc,mdss-phy-size-mm = <64 114>;
 		somc,mdss-dsi-lane-config = [00 c2 ef 00 00 00 00 01 75
 				00 c2 ef 00 00 00 00 01 75
@@ -244,8 +241,6 @@
 		qcom,cont-splash-enabled;
 
 		somc,driver-ic = <0>;
-		somc,dric-gpio = <&msmgpio 26 0>;
-		somc,mul-channel-scaling = <3>;
 		somc,mdss-phy-size-mm = <64 114>;
 		somc,mdss-dsi-lane-config = [00 c2 ef 00 00 00 00 01 75
 				00 c2 ef 00 00 00 00 01 75
@@ -409,8 +404,6 @@
 		qcom,cont-splash-enabled;
 
 		somc,driver-ic = <0>;
-		somc,dric-gpio = <&msmgpio 26 0>;
-		somc,mul-channel-scaling = <3>;
 		somc,mdss-phy-size-mm = <64 114>;
 		somc,mdss-dsi-lane-config = [00 c2 ef 00 00 00 00 01 75
 				00 c2 ef 00 00 00 00 01 75
@@ -960,8 +953,6 @@
 		qcom,cont-splash-enabled;
 
 		somc,driver-ic = <1>;
-		somc,dric-gpio = <&msmgpio 26 0>;
-		somc,mul-channel-scaling = <3>;
 		somc,mdss-phy-size-mm = <64 114>;
 		somc,mdss-dsi-lane-config = [00 c2 ef 00 00 00 00 01 75
 				00 c2 ef 00 00 00 00 01 75
@@ -1507,8 +1498,6 @@
 		qcom,cont-splash-enabled;
 
 		somc,driver-ic = <1>;
-		somc,dric-gpio = <&msmgpio 26 0>;
-		somc,mul-channel-scaling = <3>;
 		somc,mdss-phy-size-mm = <64 114>;
 		somc,mdss-dsi-lane-config = [00 c2 ef 00 00 00 00 01 75
 				00 c2 ef 00 00 00 00 01 75
@@ -1692,8 +1681,6 @@
 		qcom,cont-splash-enabled;
 
 		somc,driver-ic = <1>;
-		somc,dric-gpio = <&msmgpio 26 0>;
-		somc,mul-channel-scaling = <3>;
 		somc,mdss-phy-size-mm = <64 114>;
 		somc,mdss-dsi-lane-config = [00 c2 ef 00 00 00 00 01 75
 				00 c2 ef 00 00 00 00 01 75
@@ -1866,8 +1853,6 @@
 		qcom,cont-splash-enabled;
 
 		somc,driver-ic = <0>;
-		somc,dric-gpio = <&msmgpio 26 0>;
-		somc,mul-channel-scaling = <3>;
 		somc,mdss-phy-size-mm = <64 114>;
 		somc,mdss-dsi-lane-config = [00 c2 ef 00 00 00 00 01 75
 				00 c2 ef 00 00 00 00 01 75
@@ -1961,8 +1946,6 @@
 		qcom,cont-splash-enabled;
 
 		somc,driver-ic = <0>;
-		somc,dric-gpio = <&msmgpio 26 0>;
-		somc,mul-channel-scaling = <3>;
 		somc,mdss-phy-size-mm = <64 114>;
 		somc,mdss-dsi-lane-config = [00 c2 ef 00 00 00 00 01 75
 				00 c2 ef 00 00 00 00 01 75

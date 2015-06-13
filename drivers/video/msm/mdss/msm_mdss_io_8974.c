@@ -276,6 +276,11 @@ static void mdss_dsi_20nm_phy_regulator_enable(struct mdss_dsi_ctrl_pdata
 		MIPI_OUTP(ctrl_pdata->phy_io.base + MDSS_DSI_DSIPHY_LDO_CNTRL,
 			0x1d);
 	} else {
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+		/* Regulator ctrl - TEST */
+		MIPI_OUTP(phy_io_base + MDSS_DSI_DSIPHY_REGULATOR_TEST,
+			pd->regulator[5]);
+#endif
 		MIPI_OUTP(phy_io_base + MDSS_DSI_DSIPHY_REGULATOR_CTRL_1,
 			pd->regulator[1]);
 		MIPI_OUTP(phy_io_base + MDSS_DSI_DSIPHY_REGULATOR_CTRL_2,

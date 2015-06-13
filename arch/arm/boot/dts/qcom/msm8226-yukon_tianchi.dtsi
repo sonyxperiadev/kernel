@@ -354,6 +354,12 @@
         status = "ok";
 };
 
+&mdss_mdp {
+	somc,vsn-gpio = <&msmgpio 23 0>;
+	somc,vsp-gpio = <&msmgpio 22 0>;
+	somc,dric-gpio = <&msmgpio 114 0>;
+};
+
 &mdss_dsi0 {
 	qcom,dsi-pref-prim-pan = <&dsi_novatek_jdi>;
 };

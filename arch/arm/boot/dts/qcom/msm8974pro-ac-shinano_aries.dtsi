@@ -520,6 +520,11 @@
 	};
 };
 
+&mdss_mdp {
+	somc,dric-gpio = <&msmgpio 26 0>;
+	somc,mul-channel-scaling = <3>;
+};
+
 &mdss_dsi0 {
 	qcom,platform-enable-gpio = <&msmgpio 78 0>;
 };

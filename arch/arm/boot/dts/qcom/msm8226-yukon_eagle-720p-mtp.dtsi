@@ -373,6 +373,10 @@
 	qcom,battery-data = <&mtp_batterydata>;
 };
 
+&mdss_mdp {
+	somc,dric-gpio = <&msmgpio 23 0>;
+};
+
 &mdss_dsi0 {
 	qcom,dsi-pref-prim-pan = <&dsi_innolux_qhd_vid>;
 };

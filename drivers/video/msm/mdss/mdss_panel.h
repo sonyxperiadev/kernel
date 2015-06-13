@@ -218,7 +218,40 @@ enum mdss_intf_events {
 	MDSS_EVENT_DSI_PANEL_STATUS,
 	MDSS_EVENT_DSI_DYNAMIC_SWITCH,
 	MDSS_EVENT_DSI_RECONFIG_CMD,
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	MDSS_EVENT_DISP_ON,
+#endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 };
+
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+struct change_fps_rtn_pos {
+	int num;
+	int *pos;
+};
+
+struct change_fps {
+	bool enable;
+	u32 disp_clk;
+	u32 dric_vbp;
+	u32 dric_vfp;
+	bool rtn_adj;
+	struct change_fps_rtn_pos rtn_pos;
+	bool te_c_update;
+	u32 threshold;
+	u32 te_c_60fps[2];
+	u32 te_c_45fps[2];
+	u32 te_c_pos[2];
+
+	u32 wait_on_60fps;
+	u32 wait_on_45fps;
+	u32 wait_off_60fps;
+	u32 wait_off_45fps;
+	u32 wait_on_cmds_num;
+	u32 wait_off_cmds_num;
+
+	bool susres_mode;
+};
+#endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 
 struct lcd_panel_info {
 	u32 h_back_porch;
@@ -239,27 +272,7 @@ struct lcd_panel_info {
 	/* Pad height */
 	u32 yres_pad;
 #ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
-	u32 fps_default;
-	u32 display_clock;
-	u32 driver_ic_vbp;
-	u32 driver_ic_vfp;
-	u32 chenge_wait_update;
-	u32 chenge_wait_on_60fps;
-	u32 chenge_wait_on_45fps;
-	u32 chenge_wait_off_60fps;
-	u32 chenge_wait_off_45fps;
-	u32 chenge_wait_on_cmds_num;
-	u32 chenge_wait_off_cmds_num;
-	u32 fps_threshold;
-	u32 te_c_update;
-	u32 te_c_mode_60fps_0;
-	u32 te_c_mode_60fps_1;
-	u32 te_c_mode_45fps_0;
-	u32 te_c_mode_45fps_1;
-	u32 te_c_cmds_num;
-	u32 te_c_payload_num;
-	u32 chenge_fps_cmds_num;
-	u32 chenge_fps_payload_num;
+	struct change_fps chg_fps;
 #endif
 };
 
@@ -490,6 +503,7 @@ struct mdss_panel_info {
 
 #ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 	const char *panel_id_name;
+	int dsi_master;
 #endif
 };
 
@@ -500,6 +514,10 @@ struct mdss_panel_data {
 #ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 	int (*intf_ready) (struct mdss_panel_data *pdata);
 	struct platform_device *panel_pdev;
+	void (*crash_counter_reset) (void);
+	void (*blackscreen_det) (struct mdss_panel_data *pdata);
+	void (*fff_time_update) (struct mdss_panel_data *pdata);
+	bool resume_started;
 #endif
 
 	/**
@@ -518,6 +536,7 @@ struct mdss_panel_data {
 #ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 	int (*detect) (struct mdss_panel_data *pdata);
 	int (*update_panel) (struct mdss_panel_data *pdata);
+
 #endif
 	struct mdss_panel_data *next;
 };

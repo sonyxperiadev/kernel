@@ -20,9 +20,6 @@
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
 		qcom,platform-reset-gpio = <&msmgpio 25 0>;
 		qcom,platform-te-gpio = <&msmgpio 24 0>;
-		somc,vsn-gpio = <&msmgpio 23 0>;
-		somc,vsp-gpio = <&msmgpio 22 0>;
-		somc,dric-gpio = <&msmgpio 114 0>;
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 		somc,mdss-dsi-id-read-command = [06 01 00 01 05 00 02 A1 00];
 		somc,panel-id = [12 66 03 22];
@@ -108,9 +105,6 @@
 		qcom,mdss-dsi-pan-fps-update = "dfps_suspend_resume_mode";
 		qcom,platform-reset-gpio = <&msmgpio 25 0>;
 		qcom,platform-te-gpio = <&msmgpio 24 0>;
-		somc,vsn-gpio = <&msmgpio 23 0>;
-		somc,vsp-gpio = <&msmgpio 22 0>;
-		somc,dric-gpio = <&msmgpio 114 0>;
 		qcom,mdss-dsi-underflow-color = <0x0>;
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 		somc,mdss-dsi-id-read-command = [06 01 00 01 05 00 02 A1 00];
@@ -214,9 +208,6 @@
 		qcom,mdss-dsi-pan-fps-update = "dfps_suspend_resume_mode";
 		qcom,platform-reset-gpio = <&msmgpio 25 0>;
 		qcom,platform-te-gpio = <&msmgpio 24 0>;
-		somc,vsn-gpio = <&msmgpio 23 0>;
-		somc,vsp-gpio = <&msmgpio 22 0>;
-		somc,dric-gpio = <&msmgpio 114 0>;
 		qcom,mdss-dsi-underflow-color = <0x0>;
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 		somc,mdss-dsi-id-read-command = [06 01 00 01 05 00 01 A1];
@@ -303,9 +294,6 @@
 		qcom,mdss-dsi-pan-fps-update = "dfps_suspend_resume_mode";
 		qcom,platform-reset-gpio = <&msmgpio 25 0>;
 		qcom,platform-te-gpio = <&msmgpio 24 0>;
-		somc,vsn-gpio = <&msmgpio 23 0>;
-		somc,vsp-gpio = <&msmgpio 22 0>;
-		somc,dric-gpio = <&msmgpio 114 0>;
 		qcom,mdss-dsi-underflow-color = <0x0>;
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 		somc,mdss-dsi-id-read-command = [06 01 00 01 06 00 01 A1];

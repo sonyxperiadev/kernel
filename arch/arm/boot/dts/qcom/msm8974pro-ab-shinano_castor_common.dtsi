@@ -644,6 +644,12 @@
 	qcom,memory-reservation-size = <0x1200000>; /* size 19MB */
 };
 
+&mdss_mdp {
+	qcom,mdss-ib-factor = <11 5>;
+	somc,dric-gpio = <&msmgpio 26 0>;
+	somc,mul-channel-scaling = <3>;
+};
+
 &mdss_dsi0 {
 	vdd-supply = <>;
 	qcom,platform-enable-gpio = <&pm8941_gpios 20 0>;

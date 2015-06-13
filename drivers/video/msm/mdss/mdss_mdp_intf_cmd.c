@@ -68,6 +68,10 @@ struct mdss_mdp_cmd_ctx {
 
 struct mdss_mdp_cmd_ctx mdss_mdp_cmd_ctx_list[MAX_SESSIONS];
 
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+static bool disp_on_in_hs;
+#endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
+
 static int mdss_mdp_cmd_do_notifier(struct mdss_mdp_cmd_ctx *ctx);
 
 static bool __mdss_mdp_cmd_is_panel_power_off(struct mdss_mdp_cmd_ctx *ctx)
@@ -677,6 +681,10 @@ static int mdss_mdp_cmd_wait4pingpong(struct mdss_mdp_ctl *ctl, void *arg)
 	if (rc <= 0) {
 		u32 status, mask;
 
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+		if (pdata->blackscreen_det)
+			pdata->blackscreen_det(pdata);
+#endif
 		mask = BIT(MDSS_MDP_IRQ_PING_PONG_COMP + ctx->pp_num);
 		status = mask & readl_relaxed(ctl->mdata->mdp_base +
 				MDSS_MDP_REG_INTR_STATUS);
@@ -813,6 +821,10 @@ static int mdss_mdp_cmd_panel_on(struct mdss_mdp_ctl *ctl,
 		WARN(rc, "intf %d tearcheck enable error (%d)\n",
 				ctl->intf_num, rc);
 
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+		disp_on_in_hs = true;
+#endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
+
 		ctx->panel_power_state = MDSS_PANEL_POWER_ON;
 		if (sctx)
 			sctx->panel_power_state = MDSS_PANEL_POWER_ON;
@@ -935,6 +947,9 @@ int mdss_mdp_cmd_kickoff(struct mdss_mdp_ctl *ctl, void *arg)
 {
 	struct mdss_mdp_ctl *sctl = NULL;
 	struct mdss_mdp_cmd_ctx *ctx, *sctx = NULL;
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	int rc = 0;
+#endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 
 	ctx = (struct mdss_mdp_cmd_ctx *) ctl->intf_ctx[MASTER_CTX];
 	if (!ctx) {
@@ -1047,6 +1062,14 @@ int mdss_mdp_cmd_kickoff(struct mdss_mdp_ctl *ctl, void *arg)
 		if (sctx)
 			sctx->panel_power_state = MDSS_PANEL_POWER_ON;
 	}
+
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	if (disp_on_in_hs) {
+		rc = mdss_mdp_ctl_intf_event(ctl, MDSS_EVENT_DISP_ON, NULL);
+		WARN(rc, "intf %d disp on error (%d)\n", ctl->intf_num, rc);
+		disp_on_in_hs = false;
+	}
+#endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 
 	return 0;
 }

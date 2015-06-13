@@ -746,6 +746,11 @@
 	qcom,memory-reservation-size = <0x1200000>; /* size 19MB */
 };
 
+&mdss_mdp {
+	somc,dric-gpio = <&msmgpio 26 0>;
+	somc,mul-channel-scaling = <3>;
+};
+
 &usb3 {
 	current_system_max_limit = <1800>;
 };

@@ -1795,7 +1795,7 @@ status_error:
 		force_labibb_regulator_disable(labibb);
 		/* shutdown */
 		do {
-			rc = qpnp_pon_dvdd_shutdown();
+			rc = -EINVAL; //qpnp_pon_dvdd_shutdown();
 			if (rc) {
 				pr_debug("%s: qpnp_pon_dvdd_shutdown failed rc=%d\n",
 						__func__, rc);

@@ -179,6 +179,11 @@
 	qcom,memory-reservation-size = <0x1000000>; /* size 16MB */
 };
 
+&mdss_mdp {
+	qcom,mdss-ib-factor = <2 1>;		/* 2 times  */
+	somc,dric-gpio = <&msmgpio 26 0>;
+};
+
 &mdss_dsi0 {
 	qcom,dsi-pref-prim-pan = <&dsi_renesas_default>;
 	qcom,platform-enable-gpio = <&msmgpio 46 1>;

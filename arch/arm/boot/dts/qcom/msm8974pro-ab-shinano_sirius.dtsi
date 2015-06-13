@@ -525,3 +525,9 @@
 &pm8941_l11 {
 	status = "ok";
 };
+
+&mdss_mdp {
+	qcom,mdss-ib-factor = <19 10>;
+	somc,dric-gpio = <&msmgpio 26 0>;
+	somc,mul-channel-scaling = <3>;
+};
