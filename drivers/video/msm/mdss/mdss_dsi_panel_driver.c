@@ -111,8 +111,10 @@ enum {
 	CLR_DATA_UV_PARAM_TYPE_RENE_SR
 };
 
+#ifdef CONFIG_REGULATOR_QPNP_LABIBB_SOMC
 #define QPNP_REGULATOR_VSP_V_5P4V	5400000
 #define QPNP_REGULATOR_VSN_V_M5P4V	5400000
+#endif
 
 static int __init lcdid_adc_setup(char *str)
 {
@@ -2458,6 +2460,7 @@ int mdss_dsi_panel_disp_en(struct mdss_panel_data *pdata, int enable)
 		gpio_set_value(ctrl_pdata->disp_en_gpio, enable);
 	}
 
+#ifdef CONFIG_REGULATOR_QPNP_LABIBB_SOMC
 	if (ctrl_pdata->panel_bias_vreg) {
 		pr_debug("%s: panel bias vreg. ndx = %d\n",
 		       __func__, ctrl_pdata->ndx);
@@ -2468,6 +2471,7 @@ int mdss_dsi_panel_disp_en(struct mdss_panel_data *pdata, int enable)
 						(enable) ? "on":"off");
 		}
 	}
+#endif
 	if (pw_seq->disp_en_post)
 		usleep_range(pw_seq->disp_en_post * 1000,
 				pw_seq->disp_en_post * 1000 + 100);
@@ -3768,6 +3772,7 @@ static int mdss_panel_parse_dt(struct device_node *np,
 		rc = of_property_read_u32(next, "somc,pw-down-period", &tmp);
 		spec_pdata->down_period = !rc ? tmp : 0;
 
+#ifdef CONFIG_REGULATOR_QPNP_LABIBB_SOMC
 		spec_pdata->lab_output_voltage = QPNP_REGULATOR_VSP_V_5P4V;
 		rc = of_property_read_u32(np, "somc,lab-output-voltage", &tmp);
 		if (!rc) {
@@ -3797,6 +3802,7 @@ static int mdss_panel_parse_dt(struct device_node *np,
 			if (!rc)
 				spec_pdata->ibb_current_max = tmp;
 		}
+#endif
 
 		rc = of_property_read_u32_array(next,
 			"somc,mdss-dsi-u-rev", res, 2);
