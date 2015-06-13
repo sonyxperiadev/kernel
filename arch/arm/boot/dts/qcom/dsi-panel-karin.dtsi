@@ -20,6 +20,7 @@
 &mdss_mdp {
 	somc,dric-gpio = <&msm_gpio 56 0>;
 	somc,mul-channel-scaling = <3>;
+	somc,postpwron-no-reset-quirk;
 
 	dsi_dual_0_tianma_gpio_1: somc,dual_0_tianma_panel_1 {
 		qcom,mdss-dsi-panel-name = "8";

@@ -18,7 +18,6 @@
 		qcom,mdss-dsi-panel-type = "dsi_video_mode";
 		somc,driver-ic = <0>;
 		somc,panel-id = [FF];
-		somc,dric-gpio = <&msmgpio 27 0>;
 		qcom,rst-gpio = <&msmgpio 25 0>;
 		qcom,mdss-dsi-panel-width = <480>;
 		qcom,mdss-dsi-panel-height = <854>;
@@ -143,7 +142,6 @@
 		qcom,mdss-dsi-panel-type = "dsi_video_mode";
 		somc,driver-ic = <1>;
 		somc,panel-id = [FF];
-		somc,dric-gpio = <&msmgpio 27 0>;
 		qcom,rst-gpio = <&msmgpio 25 0>;
 		qcom,mdss-dsi-panel-width = <480>;
 		qcom,mdss-dsi-panel-height = <854>;

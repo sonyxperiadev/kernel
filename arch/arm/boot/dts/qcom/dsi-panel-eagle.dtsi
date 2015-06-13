@@ -216,7 +216,6 @@
 		qcom,mdss-pan-physical-height-dimension = <104>;
 
 		qcom,platform-reset-gpio = <&msmgpio 25 0>;
-		somc,dric-gpio = <&msmgpio 23 0>;
 		somc,driver-ic = <0>;
 		somc,panel-id = [FF];
 		somc,mdss-dsi-pcc-table-size = <6>;
@@ -232,11 +231,8 @@
 		somc,mdss-dsi-picadj-hue = <0>;
 		somc,mdss-dsi-picadj-val = <10>;
 		somc,mdss-dsi-picadj-cont = <5>;
-		somc,no-vsn-gpio;
-		somc,no-vsp-gpio;
 		somc,panel-id-read-cmds;
 		qcom,mdss-pan-flip-ud;
-		qcom,cont-splash-disabled;
 	};
 
 	dsi_truly_qhd_vid: qcom,mdss_dsi_truly_qhd_video {
@@ -575,13 +571,9 @@
 		qcom,mdss-dsi-init-delay-us = <1>;
 
 		qcom,platform-reset-gpio = <&msmgpio 25 0>;
-		somc,dric-gpio = <&msmgpio 23 0>;
 		somc,driver-ic = <1>;
 		somc,panel-id = [FF];
-		somc,no-vsn-gpio;
-		somc,no-vsp-gpio;
 		somc,panel-id-read-cmds;
-		qcom,cont-splash-disabled;
 	};
 };
 
