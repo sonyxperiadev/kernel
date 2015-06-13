@@ -782,6 +782,7 @@
 	qcom,battery-data = <&kitakami_batterydata>;
 	qcom,vbat-estimate-diff-mv = <200>;
 	qcom,fg-chg-iterm-ma = <150>;
+	qcom,fg-cc-cv-threshold-mv = <4340>;
 };
 
 &slim_msm {
@@ -1046,6 +1047,16 @@
 &pmi8994_haptics {
 	status = "ok";
 	qcom,vmax-mv = <3100>;
+};
+
+&lab_regulator {
+	interrupts = <0x3 0xde 0x0>;
+	interrupt-names = "lab_vreg_not_ok_interrupt";
+};
+
+&ibb_regulator {
+	interrupts = <0x3 0xdc 0x0>;
+	interrupt-names = "ibb_vreg_not_ok_interrupt";
 };
 
 &mdss_fb0 {
@@ -3109,6 +3120,7 @@
 	somc,thermal-mitigation-usb-9v = <1800 1800 1800 1800 1800 1800 1400 1000 700 500 400 300 300 300 0>;
 	somc,thermal-mitigation-dc-5v = <1000 1000 1000 900 800 700 700 700 700 700 700 500 300 300 0>;
 	gpio_id_low = <&pmi8994_mpps 1 0>;
+	qcom,autoadjust-vfloat;
 };
 
 &usb_ehci {
