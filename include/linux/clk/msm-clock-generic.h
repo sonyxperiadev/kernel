@@ -243,30 +243,35 @@ struct mux_div_ops {
 /*
  * struct mux_div_clk - combined mux/divider clock
  * @priv
-		parameters needed by ops
+ *		parameters needed by ops
  * @safe_freq
-		when switching rates from A to B, the mux div clock will
-		instead switch from A -> safe_freq -> B. This allows the
-		mux_div clock to change rates while enabled, even if this
-		behavior is not supported by the parent clocks.
-
-		If changing the rate of parent A also causes the rate of
-		parent B to change, then safe_freq must be defined.
-
-		safe_freq is expected to have a source clock which is always
-		on and runs at only one rate.
+ *		when switching rates from A to B, the mux div clock will
+ *		instead switch from A -> safe_freq -> B. This allows the
+ *		mux_div clock to change rates while enabled, even if this
+ *		behavior is not supported by the parent clocks.
+ *
+ *		If changing the rate of parent A also causes the rate of
+ *		parent B to change, then safe_freq must be defined.
+ *
+ *		safe_freq is expected to have a source clock which is always
+ *		on and runs at only one rate.
+ * @safe_freqs
+ *		list of safe frequencies which should be considered while
+ *		switching from A->safe_freq->B.
+ * @safe_num
+ *		Number of safe frequencies.
  * @parents
-		list of parents and mux indicies
+ *		list of parents and mux indicies
  * @ops
-		function pointers for hw specific operations
+ *		function pointers for hw specific operations
  * @src_sel
-		the mux index which will be used if the clock is enabled.
+ *		the mux index which will be used if the clock is enabled.
  * @try_get_rate
-		Set if you need the mux to directly jump to a source
-		that is at the desired rate currently.
+ *		Set if you need the mux to directly jump to a source
+ *		that is at the desired rate currently.
  * @force_enable_md
-		Set if the mux-div needs to be force enabled/disabled during
-		clk_enable/disable.
+ *		Set if the mux-div needs to be force enabled/disabled during
+ *		clk_enable/disable.
  */
 
 struct mux_div_clk {
@@ -296,6 +301,8 @@ struct mux_div_clk {
 	u32				safe_div;
 	struct clk			*safe_parent;
 	unsigned long			safe_freq;
+	unsigned long                   *safe_freqs;
+	int                             safe_num;
 	bool				try_get_rate;
 	bool				force_enable_md;
 };
