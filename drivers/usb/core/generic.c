@@ -21,6 +21,10 @@
 #include <linux/usb/hcd.h>
 #include "usb.h"
 
+#ifdef CONFIG_USB_HOST_EXTRA_NOTIFICATION
+#include <linux/usb/host_ext_event.h>
+#endif
+
 static inline const char *plural(int n)
 {
 	return (n == 1 ? "" : "s");
@@ -137,10 +141,14 @@ int usb_choose_configuration(struct usb_device *udev)
 			best = c;
 	}
 
-	if (insufficient_power > 0)
+	if (insufficient_power > 0) {
 		dev_info(&udev->dev, "rejected %d configuration%s "
 			"due to insufficient available bus power\n",
 			insufficient_power, plural(insufficient_power));
+#ifdef CONFIG_USB_HOST_EXTRA_NOTIFICATION
+		host_send_uevent(USB_HOST_EXT_EVENT_INSUFFICIENT_POWER);
+#endif
+	}
 
 	if (best) {
 		i = best->desc.bConfigurationValue;

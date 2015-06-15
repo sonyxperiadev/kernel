@@ -11,6 +11,11 @@
  * GNU General Public License for more details.
  *
  */
+/*
+ * NOTE: This file has been modified by Sony Mobile Communications Inc.
+ * Modifications are Copyright (c) 2014 Sony Mobile Communications Inc,
+ * and licensed under the license of the file.
+ */
 
 #include <linux/module.h>
 #include <linux/kernel.h>
@@ -29,6 +34,9 @@
 static int override_phy_init;
 module_param(override_phy_init, int, S_IRUGO|S_IWUSR);
 MODULE_PARM_DESC(override_phy_init, "Override HSPHY Init Seq");
+static int override_phy_init_host;
+module_param(override_phy_init_host, int, S_IRUGO|S_IWUSR);
+MODULE_PARM_DESC(override_phy_init_host, "Override HSPHY Init Seq for Host");
 
 
 #define PORT_OFFSET(i) ((i == 0) ? 0x0 : ((i == 1) ? 0x6c : 0x88))
@@ -129,12 +137,29 @@ MODULE_PARM_DESC(override_phy_init, "Override HSPHY Init Seq");
 #define USB_HSPHY_1P8_VOL_MAX			1800000 /* uV */
 #define USB_HSPHY_1P8_HPM_LOAD			19000	/* uA */
 
+#define USB_PHY_TXFSLSTUNE0		0x03C00000	/* 22:25 */
+#define USB_PHY_TXRESTUNE0		0x00300000	/* 20:21 */
+#define USB_PHY_TXHSXVTUNE0		0x000C0000	/* 18:19 */
+#define USB_PHY_TXRISETUNE0		0x00030000	/* 16:17 */
+#define USB_PHY_TXPREEMPAMPTUNE0	0x0000C000	/* 14:15 */
+#define USB_PHY_TXPREEMPPULSETUNE0	0x00002000	/* 13:13 */
+#define USB_PHY_TXVREFTUNE0		0x00001E00	/*  9:12 */
+#define USB_PHY_SQRXTUNE0		0x000001C0	/*  6: 8 */
+#define USB_PHY_OTGTUNE0		0x00000038	/*  3: 5 */
+#define USB_PHY_COMPDISTUNE0		0x00000007	/*  0: 2 */
+
+#define msm_usb_read_phy_param(base, mask)\
+			msm_usb_read_reg_field((base),\
+						PARAMETER_OVERRIDE_X_REG(0), \
+						(mask))
+
 struct msm_hsphy {
 	struct usb_phy		phy;
 	void __iomem		*base;
 	void __iomem		*tcsr;
 	void __iomem		*csr;
 	int			hsphy_init_seq;
+	int			hsphy_init_seq_host;
 	bool			set_pllbtune;
 	u32			core_ver;
 
@@ -142,6 +167,7 @@ struct msm_hsphy {
 	bool			sleep_clk_reset;
 
 	struct regulator	*vdd;
+	struct regulator	*vddcx;
 	struct regulator	*vdda33;
 	struct regulator	*vdda18;
 	int			vdd_levels[3]; /* none, low, high */
@@ -169,6 +195,10 @@ static int msm_hsusb_config_vdd(struct msm_hsphy *phy, int high)
 		dev_err(phy->phy.dev, "unable to set voltage for hsusb vdd\n");
 		return ret;
 	}
+
+	if (phy->vddcx)
+		regulator_set_voltage(phy->vddcx, phy->vdd_levels[min],
+					phy->vdd_levels[2]);
 
 	dev_dbg(phy->phy.dev, "%s: min_vol:%d max_vol:%d\n", __func__,
 		phy->vdd_levels[min], phy->vdd_levels[2]);
@@ -259,6 +289,17 @@ put_vdda18_lpm:
 	return rc < 0 ? rc : 0;
 }
 
+static inline u32 msm_usb_read_reg_field(void *base,
+					  u32 offset,
+					  const u32 mask)
+{
+	u32 shift = find_first_bit((void *)&mask, 32);
+	u32 val = readl_relaxed(base + offset);
+	val &= mask;		/* clear other bits */
+	val >>= shift;
+	return val;
+}
+
 static void msm_usb_write_readback(void *base, u32 offset,
 					const u32 mask, u32 val)
 {
@@ -317,6 +358,68 @@ static int msm_hsphy_reset(struct usb_phy *uphy)
 	return 0;
 }
 
+static void msm_hsphy_param_output(struct usb_phy *uphy)
+{
+	struct msm_hsphy *phy = container_of(uphy, struct msm_hsphy, phy);
+
+	dev_dbg(uphy->dev, "TXFSLSTUNE0       \t0x%02x\n",
+		msm_usb_read_phy_param(phy->base, USB_PHY_TXFSLSTUNE0));
+	dev_dbg(uphy->dev, "TXRESTUNE0        \t0x%02x\n",
+		msm_usb_read_phy_param(phy->base, USB_PHY_TXRESTUNE0));
+	dev_dbg(uphy->dev, "TXHSXVTUNE0       \t0x%02x\n",
+		msm_usb_read_phy_param(phy->base, USB_PHY_TXHSXVTUNE0));
+	dev_dbg(uphy->dev, "TXRISETUNE0       \t0x%02x\n",
+		msm_usb_read_phy_param(phy->base, USB_PHY_TXRISETUNE0));
+	dev_dbg(uphy->dev, "TXPREEMPAMPTUNE0  \t0x%02x\n",
+		msm_usb_read_phy_param(phy->base, USB_PHY_TXPREEMPAMPTUNE0));
+	dev_dbg(uphy->dev, "TXPREEMPPULSETUNE0\t0x%02x\n",
+		msm_usb_read_phy_param(phy->base,
+						USB_PHY_TXPREEMPPULSETUNE0));
+	dev_dbg(uphy->dev, "TXVREFTUNE0       \t0x%02x\n",
+		msm_usb_read_phy_param(phy->base, USB_PHY_TXVREFTUNE0));
+	dev_dbg(uphy->dev, "SQRXTUNE0         \t0x%02x\n",
+		msm_usb_read_phy_param(phy->base, USB_PHY_SQRXTUNE0));
+	dev_dbg(uphy->dev, "OTGTUNE0          \t0x%02x\n",
+		msm_usb_read_phy_param(phy->base, USB_PHY_OTGTUNE0));
+	dev_dbg(uphy->dev, "COMPDISTUNE0      \t0x%02x\n",
+		msm_usb_read_phy_param(phy->base, USB_PHY_COMPDISTUNE0));
+}
+
+static int msm_hsphy_set_params(struct usb_phy *uphy)
+{
+	struct msm_hsphy *phy = container_of(uphy, struct msm_hsphy, phy);
+	bool host = uphy->flags & PHY_HOST_MODE;
+	int hsphy_init_seq;
+
+	/*
+	 * write HSPHY init value to QSCRATCH reg to set HSPHY parameters like
+	 * VBUS valid threshold, disconnect valid threshold, DC voltage level,
+	 * preempasis and rise/fall time.
+	 */
+	if (host) {
+		if (override_phy_init_host)
+			phy->hsphy_init_seq_host = override_phy_init_host;
+		hsphy_init_seq = phy->hsphy_init_seq_host;
+	} else {
+		if (override_phy_init)
+			phy->hsphy_init_seq = override_phy_init;
+		hsphy_init_seq = phy->hsphy_init_seq;
+	}
+
+	if (!hsphy_init_seq)
+		return 0;
+
+	dev_info(uphy->dev, "set phy param for %s value=0x%08x\n",
+						host ? "host" : "peripheral",
+						hsphy_init_seq & 0x03FFFFFF);
+	msm_usb_write_readback(phy->base,
+					PARAMETER_OVERRIDE_X_REG(0), 0x03FFFFFF,
+					hsphy_init_seq & 0x03FFFFFF);
+	msm_hsphy_param_output(uphy);
+
+	return 0;
+}
+
 static int msm_hsphy_init(struct usb_phy *uphy)
 {
 	struct msm_hsphy *phy = container_of(uphy, struct msm_hsphy, phy);
@@ -360,17 +463,7 @@ static int msm_hsphy_init(struct usb_phy *uphy)
 		writel_relaxed(val, phy->base + HS_PHY_CTRL_COMMON_REG);
 	}
 
-	/*
-	 * write HSPHY init value to QSCRATCH reg to set HSPHY parameters like
-	 * VBUS valid threshold, disconnect valid threshold, DC voltage level,
-	 * preempasis and rise/fall time.
-	 */
-	if (override_phy_init)
-		phy->hsphy_init_seq = override_phy_init;
-	if (phy->hsphy_init_seq)
-		msm_usb_write_readback(phy->base,
-					PARAMETER_OVERRIDE_X_REG(0), 0x03FFFFFF,
-					phy->hsphy_init_seq & 0x03FFFFFF);
+	msm_hsphy_set_params(uphy);
 
 	return 0;
 }
@@ -606,18 +699,7 @@ static int msm_hsphy_set_suspend(struct usb_phy *uphy, int suspend)
 							OTGDISABLE0, 0);
 			}
 		}
-		/*
-		 * write HSPHY init value to QSCRATCH reg to set HSPHY
-		 * parameters like VBUS valid threshold, disconnect valid
-		 * threshold, DC voltage level,preempasis and rise/fall time
-		 */
-		if (override_phy_init)
-			phy->hsphy_init_seq = override_phy_init;
-		if (phy->hsphy_init_seq)
-			msm_usb_write_readback(phy->base,
-					PARAMETER_OVERRIDE_X_REG(0),
-					0x03FFFFFF,
-					phy->hsphy_init_seq & 0x03FFFFFF);
+		msm_hsphy_set_params(uphy);
 	}
 
 	phy->suspended = !!suspend; /* double-NOT coerces to bool value */
@@ -796,6 +878,15 @@ static int msm_hsphy_probe(struct platform_device *pdev)
 		goto err_ret;
 	}
 
+	if (of_get_property(dev->of_node, "vddcx-supply", NULL)) {
+		phy->vddcx = devm_regulator_get(dev, "vddcx");
+		if (IS_ERR(phy->vddcx)) {
+			dev_err(dev, "unable to get vddcx supply\n");
+			ret = PTR_ERR(phy->vddcx);
+			goto err_ret;
+		}
+	}
+
 	phy->vdda33 = devm_regulator_get(dev, "vdda33");
 	if (IS_ERR(phy->vdda33)) {
 		dev_err(dev, "unable to get vdda33 supply\n");
@@ -821,6 +912,13 @@ static int msm_hsphy_probe(struct platform_device *pdev)
 		dev_err(dev, "unable to enable the hsusb vdd_dig\n");
 		goto unconfig_hs_vdd;
 	}
+	if (phy->vddcx) {
+		ret = regulator_enable(phy->vddcx);
+		if (ret) {
+			dev_err(dev, "unable to enable vddcx\n");
+			goto unconfig_hs_vdd;
+		}
+	}
 
 	ret = msm_hsusb_ldo_enable(phy, 1);
 	if (ret) {
@@ -843,6 +941,10 @@ static int msm_hsphy_probe(struct platform_device *pdev)
 		dev_dbg(dev, "unable to read hsphy init seq\n");
 	else if (!phy->hsphy_init_seq)
 		dev_warn(dev, "hsphy init seq cannot be 0. Using POR value\n");
+
+	if (of_property_read_u32(dev->of_node, "qcom,hsphy-init-host",
+					&phy->hsphy_init_seq_host))
+		dev_dbg(dev, "unable to read hsphy init seq for host\n");
 
 	if (of_property_read_u32(dev->of_node, "qcom,num-ports",
 					&phy->num_ports))
@@ -881,6 +983,7 @@ static int msm_hsphy_probe(struct platform_device *pdev)
 	phy->phy.reset			= msm_hsphy_reset;
 	/*FIXME: this conflicts with dwc3_otg */
 	/*phy->phy.type			= USB_PHY_TYPE_USB2; */
+	phy->phy.set_params		= msm_hsphy_set_params;
 
 	ret = usb_add_phy_dev(&phy->phy);
 	if (ret)
@@ -894,6 +997,8 @@ disable_clk:
 disable_hs_ldo:
 	msm_hsusb_ldo_enable(phy, 0);
 disable_hs_vdd:
+	if (phy->vddcx)
+		regulator_disable(phy->vddcx);
 	regulator_disable(phy->vdd);
 unconfig_hs_vdd:
 	msm_hsusb_config_vdd(phy, 0);
@@ -915,6 +1020,8 @@ static int msm_hsphy_remove(struct platform_device *pdev)
 	if (phy->vdda_force_on)
 		msm_hsusb_ldo_enable(phy, 0);
 	msm_hsusb_ldo_enable(phy, 0);
+	if (phy->vddcx)
+		regulator_disable(phy->vddcx);
 	regulator_disable(phy->vdd);
 	msm_hsusb_config_vdd(phy, 0);
 	if (!phy->suspended)
