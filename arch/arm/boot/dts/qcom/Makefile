@@ -22,6 +22,9 @@ dtb-$(CONFIG_MACH_SONY_KEYAKI)          += msm8996-v3-pmi8996-tone-keyaki_generi
 dtb-$(CONFIG_MACH_SONY_SUZU)            += msm8956-v1.1-loire-suzu_generic.dtb
 dtb-$(CONFIG_MACH_SONY_KUGO)            += msm8956-v1.1-loire-kugo_generic.dtb
 
+# MSM8939/MSM8936
+dtb-$(CONFIG_MACH_SONY_TULIP)		+= msm8939-kanuti_tulip.dtb
+
 ifneq ($(CONFIG_ARCH_SONY_TONE),y)
 dtb-$(CONFIG_ARCH_MSM8996) += msm8996-v2-pmi8994-cdp.dtb \
 	msm8996-v2-pmi8994-mtp.dtb \
