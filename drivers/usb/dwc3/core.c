@@ -102,6 +102,9 @@ void dwc3_set_mode(struct dwc3 *dwc, u32 mode)
 			dwc3_writel(dwc->regs, DWC3_GFLADJ, reg);
 		}
 	}
+
+	/* Set hsphy init params */
+	usb_phy_set_params(dwc->usb2_phy);
 }
 
 /**
