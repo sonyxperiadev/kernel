@@ -3317,16 +3317,16 @@ static int mdss_panel_parse_dt(struct device_node *np,
 			}
 			if (!strcmp(pdest, "display_1")) {
 				pinfo->pdest = DISPLAY_1;
-				if (of_property_read_bool(np, "somc,mdss-dsi-master"))
-					pinfo->dsi_master = DISPLAY_1;
-				else
+				if (of_property_read_bool(np, "somc,mdss-dsi-slave"))
 					pinfo->dsi_master = DISPLAY_2;
+				else
+					pinfo->dsi_master = DISPLAY_1;
 			} else if (!strcmp(pdest, "display_2")) {
 				pinfo->pdest = DISPLAY_2;
-				if (of_property_read_bool(np, "somc,mdss-dsi-master"))
-					pinfo->dsi_master = DISPLAY_2;
-				else
+				if (of_property_read_bool(np, "somc,mdss-dsi-slave"))
 					pinfo->dsi_master = DISPLAY_1;
+				else
+					pinfo->dsi_master = DISPLAY_2;
 			} else {
 				pr_debug("%s: incorrect pdest. Set Default\n",
 					__func__);

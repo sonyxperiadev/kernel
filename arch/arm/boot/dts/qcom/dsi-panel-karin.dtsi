@@ -100,6 +100,7 @@
 				02 00 ef 40 00 00 00 01 ff
 				00 00 00 80 00 00 00 01 97];
 		somc,dsi-index = <0>;
+		somc,mdss-dsi-slave;
 		somc,lcd-id = <1>;
 		somc,lcd-id-adc = <215000 256000>;
 		somc,disp-en-on-pre = <20>;
@@ -204,7 +205,6 @@
 				02 00 ef 40 00 00 00 01 ff
 				00 00 00 80 00 00 00 01 97];
 		somc,dsi-index = <1>;
-		somc,mdss-dsi-master;
 		somc,lcd-id = <1>;
 		somc,lcd-id-adc = <215000 256000>;
 		somc,lab-output-voltage = <5100000>;
@@ -537,6 +537,7 @@
 				02 00 ef 40 00 00 00 01 ff
 				00 00 00 80 00 00 00 01 97];
 		somc,dsi-index = <0>;
+		somc,mdss-dsi-slave;
 		somc,lcd-id = <1>;
 		somc,lcd-id-adc = <0 57000>;
 		somc,disp-en-on-pre = <5>;
@@ -644,7 +645,6 @@
 				02 00 ef 40 00 00 00 01 ff
 				00 00 00 80 00 00 00 01 97];
 		somc,dsi-index = <1>;
-		somc,mdss-dsi-master;
 		somc,lcd-id = <1>;
 		somc,lcd-id-adc = <0 57000>;
 		somc,lab-output-voltage = <5400000>;
@@ -976,6 +976,7 @@
 				02 00 ef 40 00 00 00 01 ff
 				00 00 00 80 00 00 00 01 97];
 		somc,dsi-index = <0>;
+		somc,mdss-dsi-slave;
 		somc,lcd-id = <0>;
 		somc,lcd-id-adc = <0 0x7fffffff>;
 		somc,disp-en-on-pre = <5>;
@@ -1070,6 +1071,7 @@
 				02 00 ef 40 00 00 00 01 ff
 				00 00 00 80 00 00 00 01 97];
 		somc,dsi-index = <0>;
+		somc,mdss-dsi-slave;
 		somc,lcd-id = <1>;
 		somc,lcd-id-adc = <0 0x7fffffff>;
 		somc,disp-en-on-pre = <5>;
@@ -1163,7 +1165,6 @@
 				02 00 ef 40 00 00 00 01 ff
 				00 00 00 80 00 00 00 01 97];
 		somc,dsi-index = <1>;
-		somc,mdss-dsi-master;
 		somc,lcd-id = <0>;
 		somc,lcd-id-adc = <0 0x7fffffff>;
 		somc,lab-output-voltage = <5400000>;
@@ -1253,7 +1254,6 @@
 				02 00 ef 40 00 00 00 01 ff
 				00 00 00 80 00 00 00 01 97];
 		somc,dsi-index = <1>;
-		somc,mdss-dsi-master;
 		somc,lcd-id = <1>;
 		somc,lcd-id-adc = <0 0x7fffffff>;
 		somc,lab-output-voltage = <5400000>;
