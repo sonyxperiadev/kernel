@@ -3851,8 +3851,6 @@ error:
 int mdss_dsi_panel_gpios(struct device_node *node,
 		struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 {
-#ifndef CONFIG_ARM64
-	/* TODO: Migrate TLMM conf to device-specific GPIOMUX / Pinctrl */
 	struct mdss_panel_specific_pdata *spec_pdata = ctrl_pdata->spec_pdata;
 	int rc = 0;
 
@@ -3864,16 +3862,6 @@ int mdss_dsi_panel_gpios(struct device_node *node,
 		rc = gpio_request(spec_pdata->disp_p5, "disp_p5");
 		if (rc)
 			pr_warn("Error requesting P5 GPIO\n");
-
-		rc = gpio_tlmm_config(GPIO_CFG(
-			spec_pdata->disp_p5, 0,
-			GPIO_CFG_OUTPUT,
-			GPIO_CFG_PULL_DOWN,
-			GPIO_CFG_2MA),
-			GPIO_CFG_ENABLE);
-		if (rc)
-			pr_err("Unable to configure P5 GPIO TLMM\n");
-
 	} else
 		pr_warn("%s:%d Unable to get valid DISP P5 GPIO\n",
 						__func__, __LINE__);
@@ -3886,24 +3874,11 @@ int mdss_dsi_panel_gpios(struct device_node *node,
 		rc = gpio_request(spec_pdata->disp_n5, "disp_n5");
 		if (rc)
 			pr_warn("Error requesting N5 GPIO\n");
-
-		rc = gpio_tlmm_config(GPIO_CFG(
-			spec_pdata->disp_n5, 0,
-			GPIO_CFG_OUTPUT,
-			GPIO_CFG_PULL_DOWN,
-			GPIO_CFG_2MA),
-			GPIO_CFG_ENABLE);
-		if (rc)
-			pr_err("Unable to configure N5 GPIO TLMM\n");
 	} else
 		pr_warn("%s:%d Unable to get valid DISP N5 GPIO\n",
 						__func__, __LINE__);
 
 	return rc;
-#else
-	return 0;
-#endif
-
 }
 
 static int mdss_dsi_panel_create_fs(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
@@ -4071,7 +4046,7 @@ exit_lcd_id:
 	alt_panelid_cmd = of_property_read_bool(node,
 						"somc,alt-panelid-cmd");
 	if (alt_panelid_cmd)
-		mdss_dsi_panel_gpios(node, ctrl_pdata);
+		mdss_dsi_panel_gpios(parent, ctrl_pdata);
 
 	rc = mdss_panel_parse_dt(node, ctrl_pdata,
 		spec_pdata->driver_ic, index, NULL);
