@@ -20,7 +20,7 @@
 #include <linux/miscdevice.h>
 #include <linux/clearpad.h>
 #include <linux/input/evdt_helper.h>
-#include <mach/gpio.h>
+#include <linux/of_gpio.h>
 #include <linux/ctype.h>
 #include <linux/firmware.h>
 #include <linux/slab.h>
