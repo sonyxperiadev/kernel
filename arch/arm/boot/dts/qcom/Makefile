@@ -10,6 +10,9 @@ dtb-$(CONFIG_MACH_SONY_KARIN)		+= msm8994-v2.1-kitakami_karin_generic.dtb
 dtb-$(CONFIG_MACH_SONY_KARIN_WINDY)	+= apq8094-v2.0-kitakami_karin_windy.dtb
 dtb-$(CONFIG_MACH_SONY_KARIN_WINDY)	+= apq8094-v2.1-kitakami_karin_windy.dtb
 
+# MSM8939/MSM8916
+dtb-$(CONFIG_MACH_SONY_TULIP)		+= msm8939-kanuti_tulip.dtb
+
 # MSM8974
 dtb-$(CONFIG_MACH_SONY_SIRIUS)		+= msm8974pro-ab-shinano_sirius.dtb
 dtb-$(CONFIG_MACH_SONY_CASTOR)		+= msm8974pro-ab-shinano_castor.dtb
@@ -45,44 +48,6 @@ dtb-$(CONFIG_ARCH_MSM8909) += msm8909-sim.dtb \
 	msm8909-1gb-qrd-skua.dtb \
 	msm8909-1gb-cdp.dtb \
 	msm8909-1gb-mtp.dtb
-dtb-$(CONFIG_ARCH_MSM8916) += msm8916-sim.dtb \
-	msm8916-rumi.dtb \
-	msm8916-cdp.dtb \
-	msm8916-cdp-smb1360.dtb \
-	msm8916-mtp.dtb \
-	msm8916-512mb-mtp.dtb \
-	msm8916-mtp-smb1360.dtb \
-	msm8916-512mb-mtp-smb1360.dtb \
-	msm8916-512mb-qrd-skui.dtb \
-	msm8916-qrd-skuh.dtb \
-	msm8916-qrd-skuhf.dtb \
-	msm8916-qrd-skui.dtb \
-	msm8916-qrd-skuic.dtb \
-	msm8916-qrd-skuid.dtb \
-	msm8916-512mb-qrd-skuid.dtb \
-	msm8916-512mb-qrd-skuh.dtb \
-	msm8916-qrd-skut1.dtb \
-	msm8916-qrd-skut2.dtb \
-	msm8916-qrd-skut3.dtb \
-	apq8016-mtp.dtb \
-	apq8016-mtp-smb1360.dtb \
-	msm8939-sim.dtb \
-	msm8939-rumi.dtb \
-	msm8939-qrd-skuk.dtb \
-	msm8939-cdp.dtb \
-	msm8939-cdp-jdi.dtb \
-	msm8939-mtp.dtb \
-	msm8939-mtp-jdi.dtb \
-	msm8939-mtp-smb1360.dtb \
-	msm8939-mtp-wcd9306.dtb \
-	msm8936-qrd-skuk.dtb \
-	msm8936-cdp.dtb \
-	msm8936-cdp-smb1360.dtb \
-	msm8936-mtp.dtb \
-	msm8936-mtp-smb1360.dtb \
-	msm8936-mtp-wcd9306.dtb \
-	msmtellurium-sim.dtb \
-	msmtellurium-rumi.dtb
 dtb-$(CONFIG_ARCH_MSM8610) += msm8610-rumi.dtb \
 	msm8610-v1-cdp.dtb \
 	msm8610-v2-cdp.dtb \
