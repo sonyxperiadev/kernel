@@ -21,6 +21,9 @@
 		qcom,rst-gpio = <&msmgpio 25 0>;
 		qcom,mdss-dsi-panel-width = <480>;
 		qcom,mdss-dsi-panel-height = <854>;
+		qcom,mdss-pan-physical-width-dimension = <56>;
+		qcom,mdss-pan-physical-height-dimension = <99>;
+		somc,mdss-phy-size-mm = <56 99>;
 		qcom,mdss-dsi-bpp = <24>;
 		qcom,mdss-dsi-panel-destination = "display_1";
 		qcom,mdss-dsi-h-front-porch = <32>; 
@@ -145,6 +148,9 @@
 		qcom,rst-gpio = <&msmgpio 25 0>;
 		qcom,mdss-dsi-panel-width = <480>;
 		qcom,mdss-dsi-panel-height = <854>;
+		qcom,mdss-pan-physical-width-dimension = <56>;
+		qcom,mdss-pan-physical-height-dimension = <99>;
+		somc,mdss-phy-size-mm = <56 99>;
 		qcom,mdss-dsi-bpp = <24>;
 		qcom,mdss-dsi-panel-destination = "display_1";
 		qcom,mdss-dsi-h-front-porch = <32>; 

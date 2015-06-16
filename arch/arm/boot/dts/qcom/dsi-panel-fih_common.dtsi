@@ -27,6 +27,7 @@
 		qcom,mdss-dsi-stream = <0>;
 		qcom,mdss-pan-physical-width-dimension = <65>;
 		qcom,mdss-pan-physical-height-dimension = <116>;
+		somc,mdss-phy-size-mm = <65 116>;
 		qcom,mdss-dsi-panel-width = <720>;
 		qcom,mdss-dsi-panel-height = <1280>;
 		qcom,mdss-dsi-h-front-porch = <232>; //514Mbps
@@ -251,6 +252,7 @@
 		qcom,mdss-dsi-stream = <0>;
 		qcom,mdss-pan-physical-width-dimension = <65>;
 		qcom,mdss-pan-physical-height-dimension = <116>;
+		somc,mdss-phy-size-mm = <65 116>;
 		qcom,mdss-dsi-panel-width = <720>;
 		qcom,mdss-dsi-panel-height = <1280>;
 		qcom,mdss-dsi-h-front-porch = <232>; //514Mbps
@@ -330,6 +332,7 @@
 		qcom,mdss-dsi-stream = <0>;
 		qcom,mdss-pan-physical-width-dimension = <65>;
 		qcom,mdss-pan-physical-height-dimension = <116>;
+		somc,mdss-phy-size-mm = <65 116>;
 		qcom,mdss-dsi-panel-width = <720>;
 		qcom,mdss-dsi-panel-height = <1280>;
 
@@ -605,6 +608,7 @@
 		qcom,mdss-dsi-stream = <0>;
 		qcom,mdss-pan-physical-width-dimension = <65>;
 		qcom,mdss-pan-physical-height-dimension = <116>;
+		somc,mdss-phy-size-mm = <65 116>;
 		qcom,mdss-dsi-panel-width = <720>;
 		qcom,mdss-dsi-panel-height = <1280>;
 
@@ -684,6 +688,7 @@
 		qcom,mdss-dsi-stream = <0>;
 		qcom,mdss-pan-physical-width-dimension = <65>;
 		qcom,mdss-pan-physical-height-dimension = <116>;
+		somc,mdss-phy-size-mm = <65 116>;
 		qcom,mdss-dsi-panel-width = <720>;
 		qcom,mdss-dsi-panel-height = <1280>;
 		qcom,mdss-dsi-h-front-porch = <232>; //514Mbps
@@ -941,6 +946,7 @@
 		qcom,mdss-dsi-stream = <0>;
 		qcom,mdss-pan-physical-width-dimension = <65>;
 		qcom,mdss-pan-physical-height-dimension = <116>;
+		somc,mdss-phy-size-mm = <65 116>;
 		qcom,mdss-dsi-panel-width = <720>;
 		qcom,mdss-dsi-panel-height = <1280>;
 		qcom,mdss-dsi-h-front-porch = <232>; //514Mbps

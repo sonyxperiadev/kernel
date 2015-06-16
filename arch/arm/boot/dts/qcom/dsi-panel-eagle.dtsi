@@ -214,6 +214,7 @@
 		qcom,mdss-dsi-reset-sequence = <1 1>, <0 1>, <1 20>;
 		qcom,mdss-pan-physical-width-dimension = <59>;
 		qcom,mdss-pan-physical-height-dimension = <104>;
+		somc,mdss-phy-size-mm = <59 104>;
 
 		qcom,platform-reset-gpio = <&msmgpio 25 0>;
 		somc,driver-ic = <0>;
@@ -567,6 +568,7 @@
 		qcom,mdss-dsi-reset-sequence = <1 1>, <0 1>, <1 6>;
 		qcom,mdss-pan-physical-width-dimension = <59>;
 		qcom,mdss-pan-physical-height-dimension = <104>;
+		somc,mdss-phy-size-mm = <59 104>;
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-init-delay-us = <1>;
 
