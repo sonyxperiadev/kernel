@@ -11,6 +11,7 @@ obj-$(CONFIG_OV5645) += ov7695.o
 obj-$(CONFIG_GC0310) += gc0310.o
 
 obj-$(CONFIG_GC0339) += gc0339.o
+obj-$(CONFIG_IMX134) += imx134.o
 obj-$(CONFIG_IMX135) += imx135.o
 obj-$(CONFIG_IMX188) += imx188.o
 obj-$(CONFIG_OV7695) += ov7695.o
