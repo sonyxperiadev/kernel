@@ -202,6 +202,37 @@ config GC0339
 		Preview and snapshot resolution shall be 640*480 at 30 fps,
 		It does not support auto focus.
 
+config IMX135
+	bool "Sensor IMX135 (BAYER 12M)"
+	depends on MSMB_CAMERA
+	---help---
+		Sony 12 MP Bayer Sensor with auto focus, uses
+		4 mipi lanes, preview config = 2104 x 1560 at 49 fps,
+		snapshot config = 4208 x 3120 at 24 fps,
+		Video HDR support.
+
+config IMX188
+	bool "Sensor IMX188 (BAYER 1.07MP)"
+	depends on MSMB_CAMERA
+	---help---
+		Sony 1.07MP Bayer Sensor, supports 1 mipi lane,
+		preview and snapshot config at 1280*720 at 30 fps,
+		This sensor driver does not support auto focus.
+
+config OV7695
+	bool "Sensor OV7695 (YUV VGA)"
+	depends on MSMB_CAMERA
+	---help---
+		OmniVision VGA Bayer Sensor
+
+config S5K5E2
+	bool "Sensor s5k5eayx (BAYER 5MP)"
+	depends on MSMB_CAMERA
+	---help---
+		Samsung 5 MP BAYER Sensor. It uses 2 mipi lanes,
+		supports 960P preview at 30 fps
+		and 2560x1920 snapshot at 15 fps.
+
 config GC0310
 	bool "Sensor GC0310 (YUV .3M)"
 	depends on MSMB_CAMERA
