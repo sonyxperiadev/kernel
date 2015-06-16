@@ -690,6 +690,28 @@ static void msm_gpiomux_sdc3_install(void)
 static void msm_gpiomux_sdc3_install(void) {}
 #endif /* CONFIG_MMC_MSM_SDC3_SUPPORT */
 
+static struct gpiomux_setting display_drv_active = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_DOWN,
+	.dir = GPIO_CFG_OUTPUT,
+};
+
+static struct msm_gpiomux_config seagull_display_configs[] __initdata = {
+	{ /* Positive 5 (V+) */
+		.gpio	  = 2,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &display_drv_active,
+		},
+	},
+	{ /* Negative 5 (V-) */
+		.gpio	  = 3,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &display_drv_active,
+		},
+	},
+};
+
 void __init msm8226_init_gpiomux(void)
 {
 	int rc;
@@ -728,6 +750,8 @@ void __init msm8226_init_gpiomux(void)
 	msm_gpiomux_install(audio_act_cfgs,
 			ARRAY_SIZE(audio_act_cfgs));
 	msm_gpiomux_install(&cam_front_det, 1);
+
+	msm_gpiomux_install(seagull_display_configs, 1);
 
 	if (of_board_is_cdp() || of_board_is_mtp() || of_board_is_xpm())
 		msm_gpiomux_install(usb_otg_sw_configs,
