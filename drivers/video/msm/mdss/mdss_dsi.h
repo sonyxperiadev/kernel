@@ -323,7 +323,7 @@ struct mdss_panel_specific_pdata {
 	struct dsi_panel_cmds off_cmds[MAX_CMDS];
 	struct dsi_panel_cmds id_read_cmds;
 
-	int (*panel_power_on) (struct mdss_panel_data *pdata, int enable);
+	int (*panel_power_ctrl) (struct mdss_panel_data *pdata, int enable);
 	int (*disp_on) (struct mdss_panel_data *pdata);
 	int (*detect) (struct mdss_panel_data *pdata);
 	int (*update_panel) (struct mdss_panel_data *pdata);
