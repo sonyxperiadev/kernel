@@ -349,7 +349,7 @@ static int mdss_dsi_panel_power_ctrl(struct mdss_panel_data *pdata,
 	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 						panel_data);
 
-	return ctrl_pdata->spec_pdata->panel_power_on(pdata, power_state);
+	return ctrl_pdata->spec_pdata->panel_power_ctrl(pdata, power_state);
 #else
 	pinfo = &pdata->panel_info;
 	pr_debug("%s: cur_power_state=%d req_power_state=%d\n", __func__,
