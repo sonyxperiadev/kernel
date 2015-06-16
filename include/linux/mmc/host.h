@@ -519,6 +519,7 @@ struct mmc_host {
 		ktime_t		start_busy;
 		bool		cq_is_busy_started;
 		bool		enable;
+		bool		scale_down_in_low_wr_load;
 		bool		initialized;
 		bool		in_progress;
 		/* freq. transitions are not allowed in invalid state */
