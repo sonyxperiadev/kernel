@@ -131,12 +131,6 @@ static struct gpiomux_setting gpio_spi_susp_config = {
 	.pull = GPIOMUX_PULL_DOWN,
 };
 
-static struct gpiomux_setting gpio_spi_cs_eth_config = {
-	.func = GPIOMUX_FUNC_4,
-	.drv = GPIOMUX_DRV_6MA,
-	.pull = GPIOMUX_PULL_DOWN,
-};
-
 static struct gpiomux_setting wcnss_5wire_suspend_cfg = {
 	.func = GPIOMUX_FUNC_GPIO,
 	.drv  = GPIOMUX_DRV_2MA,
@@ -165,6 +159,45 @@ static struct gpiomux_setting gpio_i2c_config = {
 	.func = GPIOMUX_FUNC_3,
 	.drv = GPIOMUX_DRV_2MA,
 	.pull = GPIOMUX_PULL_NONE,
+};
+
+static struct gpiomux_setting pn544_int_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_NONE,
+	.dir = GPIOMUX_IN,
+};
+static struct gpiomux_setting pn544_ven_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_NONE,
+	.dir = GPIOMUX_OUT_LOW,
+};
+static struct gpiomux_setting pn544_firm_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_NONE,
+	.dir = GPIOMUX_OUT_LOW,
+};
+static struct msm_gpiomux_config pn544_configs[] __initdata = {
+	{
+		.gpio = 22,
+		.settings = {
+			[GPIOMUX_ACTIVE] = &pn544_firm_cfg,
+		},
+	},
+	{
+		.gpio = 20,
+		.settings = {
+			[GPIOMUX_ACTIVE] = &pn544_ven_cfg,
+		},
+	},
+	{
+		.gpio = 21,
+		.settings = {
+			[GPIOMUX_ACTIVE] = &pn544_int_cfg,
+		},
+	},
 };
 
 static struct msm_gpiomux_config msm_keypad_configs[] __initdata = {
@@ -293,12 +326,6 @@ static struct msm_gpiomux_config msm_blsp_configs[] __initdata = {
 		.settings = {
 			[GPIOMUX_ACTIVE] = &gpio_i2c_config,
 			[GPIOMUX_SUSPENDED] = &gpio_i2c_config,
-		},
-	},
-	{
-		.gpio      = 22,		/* BLSP1 QUP1 SPI_CS_ETH */
-		.settings = {
-			[GPIOMUX_SUSPENDED] = &gpio_spi_cs_eth_config,
 		},
 	},
 	{					/*  NFC   */
@@ -705,6 +732,9 @@ void __init msm8226_init_gpiomux(void)
 	msm_gpiomux_install(elan_ektf3135_io_configs,
 				ARRAY_SIZE(elan_ektf3135_io_configs));
 #endif
+
+	msm_gpiomux_install(pn544_configs,
+			ARRAY_SIZE(pn544_configs));
 
 	msm_gpiomux_install_nowrite(msm_lcd_configs,
 			ARRAY_SIZE(msm_lcd_configs));
