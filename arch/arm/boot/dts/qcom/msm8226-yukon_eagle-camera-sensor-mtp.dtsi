@@ -18,34 +18,35 @@
 		compatible = "qcom,actuator";
 		qcom,cci-master = <0>;
 	};
+
 	eeprom0: qcom,eeprom@a1 {
- 		cell-index = <0>;
+		cell-index = <0>;
 		reg = <0xa1 0x0>;
 		qcom,eeprom-name = "imx134_eeprom";
- 		compatible	= "qcom,eeprom";
+		compatible	= "qcom,eeprom";
 		qcom,slave-addr	= <0xa1>;
- 		qcom,cci-master	= <0>;
+		qcom,cci-master	= <0>;
 		qcom,num-blocks	= <4>;
  
- 		qcom,page0	=   <0 0x00 1 0x00 1 1>;
- 		qcom,pageen0	=   <0 0x00 1 0x01 1 10>;
- 		qcom,poll0	=   <0 0x00 1 0x01 1 1>;
- 		qcom,mem0	= <256 0x00 1 0x00 1 0>;
+		qcom,page0	=   <0 0x00 1 0x00 1 1>;
+		qcom,pageen0	=   <0 0x00 1 0x01 1 10>;
+		qcom,poll0	=   <0 0x00 1 0x01 1 1>;
+		qcom,mem0	= <256 0x00 1 0x00 1 0>;
 
- 		qcom,page1	=   <0 0x00 1 0x00 1 1>;
- 		qcom,pageen1	=   <0 0x00 1 0x01 1 10>;
- 		qcom,poll1	=   <0 0x00 1 0x01 1 1>;
- 		qcom,mem1	= <256 0x00 1 0x00 1 0>;
+		qcom,page1	=   <0 0x00 1 0x00 1 1>;
+		qcom,pageen1	=   <0 0x00 1 0x01 1 10>;
+		qcom,poll1	=   <0 0x00 1 0x01 1 1>;
+		qcom,mem1	= <256 0x00 1 0x00 1 0>;
  
- 		qcom,page2	=   <0 0x00 1 0x00 1 1>;
- 		qcom,pageen2	=   <0 0x00 1 0x01 1 10>;
- 		qcom,poll2	=   <0 0x00 1 0x01 1 1>;
- 		qcom,mem2	= <256 0x00 1 0x00 1 0>;
+		qcom,page2	=   <0 0x00 1 0x00 1 1>;
+		qcom,pageen2	=   <0 0x00 1 0x01 1 10>;
+		qcom,poll2	=   <0 0x00 1 0x01 1 1>;
+		qcom,mem2	= <256 0x00 1 0x00 1 0>;
  
- 		qcom,page3	=   <0 0x00 1 0x00 1 1>;
- 		qcom,pageen3	=   <0 0x00 1 0x01 1 10>;
- 		qcom,poll3	=   <0 0x00 1 0x01 1 1>;
- 		qcom,mem3	= <256 0x00 1 0x00 1 0>;
+		qcom,page3	=   <0 0x00 1 0x00 1 1>;
+		qcom,pageen3	=   <0 0x00 1 0x01 1 10>;
+		qcom,poll3	=   <0 0x00 1 0x01 1 1>;
+		qcom,mem3	= <256 0x00 1 0x00 1 0>;
 
 		cam_vdig-supply = <&pm8226_l5>;
 		cam_vio-supply = <&pm8226_lvs1>;
@@ -78,10 +79,9 @@
 		qcom,cam-power-seq-val		= "cam_vio","cam_vdig", "cam_vana","cam_vaf";
 		qcom,cam-power-seq-cfg-val	= <0 0 0 0 >;
 		qcom,cam-power-seq-delay	= <0 0 0 0>;
-
-		somc,cam-mclk-rate = <24000000>;
  
- 	};
+	};
+
     qcom,camera@20 {
 		compatible = "sne,imx134";
 		reg = <0x20>;
