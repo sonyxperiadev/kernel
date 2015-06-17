@@ -80,6 +80,7 @@
 		qcom,cam-power-seq-cfg-val	= <0 0 0 0 >;
 		qcom,cam-power-seq-delay	= <0 0 0 0>;
  
+		somc,power-extra-gpio = <69>;
 	};
 
     qcom,camera@20 {
