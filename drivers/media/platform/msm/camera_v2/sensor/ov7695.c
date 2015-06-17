@@ -37,6 +37,17 @@ static struct msm_sensor_power_setting ov7695_power_setting[] = {
 		.config_val = 0,
 		.delay = 1,
 	},
+	{	.seq_type = SENSOR_VREG,
+		.seq_val = CAM_VAF,		//use CAM_VAF for new CAM_VDDIO in RITA
+		.config_val = 0,
+		.delay = 0,
+	},
+	{
+		.seq_type = SENSOR_GPIO,
+		.seq_val = SENSOR_GPIO_VIO,
+		.config_val = GPIO_OUT_HIGH,
+		.delay = 0,
+	},
 	{
 		.seq_type = SENSOR_VREG,  ///only USE for i2c pull high
 		.seq_val = CAM_VIO,
