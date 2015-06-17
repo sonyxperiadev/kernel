@@ -15,6 +15,10 @@
 #include "msm_camera_i2c_mux.h"
 #include "msm_cci.h"
 
+#ifdef CONFIG_SONY_CAMERA
+#include <linux/of_gpio.h>
+#endif
+
 #define CAM_SENSOR_PINCTRL_STATE_SLEEP "cam_suspend"
 #define CAM_SENSOR_PINCTRL_STATE_DEFAULT "cam_default"
 /*#define CONFIG_MSM_CAMERA_DT_DEBUG*/
@@ -834,6 +838,9 @@ int msm_camera_init_gpio_pin_tbl(struct device_node *of_node,
 	uint16_t gpio_array_size)
 {
 	int rc = 0, val = 0;
+#ifdef CONFIG_SONY_CAMERA
+	struct msm_camera_specific_conf *spec_conf = NULL;
+#endif
 
 	gconf->gpio_num_info = kzalloc(sizeof(struct msm_camera_gpio_num_info),
 		GFP_KERNEL);
@@ -842,6 +849,14 @@ int msm_camera_init_gpio_pin_tbl(struct device_node *of_node,
 		rc = -ENOMEM;
 		return rc;
 	}
+
+#ifdef CONFIG_SONY_CAMERA
+	spec_conf = gconf->spec_conf;
+	if (!spec_conf) {
+		pr_err("%s: Invalid input data\n", __func__);
+		return -EINVAL;
+	};
+#endif
 
 	rc = of_property_read_u32(of_node, "qcom,gpio-vana", &val);
 	if (rc != -EINVAL) {
@@ -1161,6 +1176,20 @@ int msm_camera_init_gpio_pin_tbl(struct device_node *of_node,
 		CDBG("%s qcom,gpio-cam-vddio-v1p8 %d\n", __func__,
 			gconf->gpio_num_info->gpio_num[SENSOR_GPIO_CAM_VDDIO_V1P8]);
 	}
+
+	rc = of_property_read_u32(of_node, "somc,power-extra-gpio", &val);
+	if (rc != -EINVAL) {
+		if (rc < 0) {
+			pr_err("%s:%d read power-extra-gpio failed rc %d\n",
+				__func__, __LINE__, rc);
+			goto ERROR;
+		}
+		spec_conf->power_extra_gpio = val;
+		CDBG("%s somc,power-extra-gpio %d\n", __func__,
+				spec_conf->power_extra_gpio);
+	} else {
+		rc = 0;
+	}
 #endif /* CONFIG_SONY_CAMERA */
 
 	return rc;
@@ -1350,6 +1379,9 @@ int msm_camera_power_up(struct msm_camera_power_ctrl_t *ctrl,
 {
 	int rc = 0, index = 0, no_gpio = 0, ret = 0;
 	struct msm_sensor_power_setting *power_setting = NULL;
+#ifdef CONFIG_SONY_CAMERA
+	struct msm_camera_specific_conf *spec_conf = NULL;
+#endif
 
 	CDBG("%s:%d\n", __func__, __LINE__);
 	if (!ctrl || !sensor_i2c_client) {
@@ -1360,6 +1392,15 @@ int msm_camera_power_up(struct msm_camera_power_ctrl_t *ctrl,
 	if (ctrl->gpio_conf->cam_gpiomux_conf_tbl != NULL) {
 		pr_err("%s:%d mux install\n", __func__, __LINE__);
 	}
+
+#ifdef CONFIG_SONY_CAMERA
+	spec_conf = ctrl->gpio_conf->spec_conf;
+	if (!spec_conf) {
+		pr_err("%s: Invalid input data\n", __func__);
+		return -EINVAL;
+	};
+#endif
+
 	ret = msm_camera_pinctrl_init(ctrl);
 	if (ret < 0) {
 		pr_err("%s:%d Initialization of pinctrl failed\n",
@@ -1380,6 +1421,10 @@ int msm_camera_power_up(struct msm_camera_power_ctrl_t *ctrl,
 			pr_err("%s:%d cannot set pin to active state",
 				__func__, __LINE__);
 	}
+#ifdef CONFIG_SONY_CAMERA
+	if (spec_conf->power_extra_gpio)
+		gpio_set_value_cansleep(spec_conf->power_extra_gpio, 1);
+#endif
 	for (index = 0; index < ctrl->power_setting_size; index++) {
 		CDBG("%s index %d\n", __func__, index);
 		power_setting = &ctrl->power_setting[index];
@@ -1573,6 +1618,9 @@ int msm_camera_power_down(struct msm_camera_power_ctrl_t *ctrl,
 	int index = 0, ret = 0;
 	struct msm_sensor_power_setting *pd = NULL;
 	struct msm_sensor_power_setting *ps;
+#ifdef CONFIG_SONY_CAMERA
+	struct msm_camera_specific_conf *spec_conf = NULL;
+#endif
 
 	CDBG("%s:%d\n", __func__, __LINE__);
 	if (!ctrl || !sensor_i2c_client) {
@@ -1583,7 +1631,17 @@ int msm_camera_power_down(struct msm_camera_power_ctrl_t *ctrl,
 	if (device_type == MSM_CAMERA_PLATFORM_DEVICE)
 		sensor_i2c_client->i2c_func_tbl->i2c_util(
 			sensor_i2c_client, MSM_CCI_RELEASE);
+#ifdef CONFIG_SONY_CAMERA
+	spec_conf = ctrl->gpio_conf->spec_conf;
+	if (!spec_conf) {
+		pr_err("%s: Invalid input data\n", __func__);
+		return -EINVAL;
+	};
 
+	if (spec_conf->power_extra_gpio)
+		gpio_set_value_cansleep(spec_conf->power_extra_gpio,
+							GPIOF_OUT_INIT_LOW);
+#endif
 	for (index = 0; index < ctrl->power_down_setting_size; index++) {
 		CDBG("%s index %d\n", __func__, index);
 		pd = &ctrl->power_down_setting[index];

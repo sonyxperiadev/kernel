@@ -564,6 +564,16 @@ static int msm_eeprom_get_dt_data(struct msm_eeprom_ctrl_t *e_ctrl)
 	gpio_array_size = of_gpio_count(of_node);
 	CDBG("%s gpio count %d\n", __func__, gpio_array_size);
 
+#ifdef CONFIG_SONY_CAMERA
+	gconf->spec_conf = kzalloc(
+			sizeof(struct msm_camera_gpio_conf), GFP_KERNEL);
+	if (!gconf->spec_conf) {
+		pr_err("%s: spec_conf allocation failed!!!\n", __func__);
+		rc = -ENOMEM;
+		goto ERROR_SPEC;
+	}
+#endif
+
 	if (gpio_array_size) {
 		gpio_array = kzalloc(sizeof(uint16_t) * gpio_array_size,
 			GFP_KERNEL);
@@ -606,6 +616,10 @@ ERROR4:
 	kfree(gpio_array);
 ERROR3:
 	kfree(power_info->gpio_conf);
+#ifdef CONFIG_SONY_CAMERA
+ERROR_SPEC:
+	kfree(gconf->spec_conf);
+#endif
 ERROR2:
 	kfree(power_info->cam_vreg);
 ERROR1:
@@ -1024,7 +1038,6 @@ static int msm_eeprom_platform_probe(struct platform_device *pdev)
 	power_info->clk_info = cam_8974_clk_info;
 	power_info->clk_info_size = ARRAY_SIZE(cam_8974_clk_info);
 	power_info->dev = &pdev->dev;
-
 
 	rc = of_property_read_u32(of_node, "qcom,i2c-freq-mode",
 		&eb_info->i2c_freq_mode);

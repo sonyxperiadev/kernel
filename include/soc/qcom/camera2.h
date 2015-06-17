@@ -79,6 +79,12 @@ struct msm_camera_gpio_num_info {
 	uint8_t valid[SENSOR_GPIO_MAX];
 };
 
+#ifdef CONFIG_SONY_CAMERA
+struct msm_camera_specific_conf {
+	int power_extra_gpio;
+};
+#endif
+
 struct msm_camera_gpio_conf {
 	void *cam_gpiomux_conf_tbl;
 	uint8_t cam_gpiomux_conf_tbl_size;
@@ -94,6 +100,10 @@ struct msm_camera_gpio_conf {
 	uint32_t *camera_on_table;
 	uint8_t camera_on_table_size;
 	struct msm_camera_gpio_num_info *gpio_num_info;
+#ifdef CONFIG_SONY_CAMERA
+	struct msm_camera_specific_conf *spec_conf;
+#endif
+
 };
 
 struct msm_camera_power_ctrl_t {

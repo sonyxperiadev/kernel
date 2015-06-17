@@ -238,6 +238,16 @@ static int32_t msm_sensor_get_dt_data(struct device_node *of_node,
 	}
 	gconf = sensordata->power_info.gpio_conf;
 
+#ifdef CONFIG_SONY_CAMERA
+	gconf->spec_conf = kzalloc(
+			sizeof(struct msm_camera_gpio_conf), GFP_KERNEL);
+	if (!gconf->spec_conf) {
+		pr_err("%s: spec_conf allocation failed!!!\n", __func__);
+		rc = -ENOMEM;
+		goto FREE_SPEC;
+	}
+#endif
+
 	gpio_array_size = of_gpio_count(of_node);
 	CDBG("%s gpio count %d\n", __func__, gpio_array_size);
 
@@ -347,6 +357,8 @@ FREE_GPIO_REQ_TBL:
 	kfree(s_ctrl->sensordata->power_info.gpio_conf->cam_gpio_req_tbl);
 FREE_GPIO_CONF:
 	kfree(s_ctrl->sensordata->power_info.gpio_conf);
+FREE_SPEC:
+	kfree(s_ctrl->sensordata->power_info.gpio_conf->spec_conf);
 FREE_PS:
 	kfree(s_ctrl->sensordata->power_info.power_setting);
 	kfree(s_ctrl->sensordata->power_info.power_down_setting);
