@@ -316,6 +316,22 @@
                         pm8226_flash0: qcom,flash_0 {
                                 qcom,current = <550>;
                         };
+
+			pm8226_flash1: qcom,flash_1 {
+				qcom,max-current = <1000>;
+				qcom,default-state = "off";
+				qcom,headroom = <3>;
+				qcom,duration = <1280>;
+				qcom,clamp-curr = <200>;
+				qcom,startup-dly = <3>;
+				qcom,safety-timer;
+				linux,default-trigger =
+					"flash1_trigger";
+				label = "flash";
+				qcom,id = <2>;
+				linux,name = "led:flash_1";
+				qcom,current = <625>;
+			};
                 };
 
 		qcom,leds@d800 {
@@ -429,4 +445,8 @@
 &mdss_dsi0 {
 	qcom,platform-enable-gpio = <&msmgpio 52 0>;
 	qcom,dsi-pref-prim-pan = <&dsi_nt35521_720_vid_truly63>;
+};
+
+&cci {
+	vcc_i2c-supply = <&pm8226_lvs1>;
 };
