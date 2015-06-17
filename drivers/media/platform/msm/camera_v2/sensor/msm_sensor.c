@@ -357,8 +357,10 @@ FREE_GPIO_REQ_TBL:
 	kfree(s_ctrl->sensordata->power_info.gpio_conf->cam_gpio_req_tbl);
 FREE_GPIO_CONF:
 	kfree(s_ctrl->sensordata->power_info.gpio_conf);
+#ifdef CONFIG_SONY_CAMERA
 FREE_SPEC:
 	kfree(s_ctrl->sensordata->power_info.gpio_conf->spec_conf);
+#endif
 FREE_PS:
 	kfree(s_ctrl->sensordata->power_info.power_setting);
 	kfree(s_ctrl->sensordata->power_info.power_down_setting);
