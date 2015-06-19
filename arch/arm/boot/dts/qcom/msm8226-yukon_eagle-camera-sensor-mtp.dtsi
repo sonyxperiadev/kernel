@@ -27,7 +27,7 @@
 		qcom,slave-addr	= <0xa1>;
 		qcom,cci-master	= <0>;
 		qcom,num-blocks	= <4>;
- 
+
 		qcom,page0	=   <0 0x00 1 0x00 1 1>;
 		qcom,pageen0	=   <0 0x00 1 0x01 1 10>;
 		qcom,poll0	=   <0 0x00 1 0x01 1 1>;
@@ -37,12 +37,12 @@
 		qcom,pageen1	=   <0 0x00 1 0x01 1 10>;
 		qcom,poll1	=   <0 0x00 1 0x01 1 1>;
 		qcom,mem1	= <256 0x00 1 0x00 1 0>;
- 
+
 		qcom,page2	=   <0 0x00 1 0x00 1 1>;
 		qcom,pageen2	=   <0 0x00 1 0x01 1 10>;
 		qcom,poll2	=   <0 0x00 1 0x01 1 1>;
 		qcom,mem2	= <256 0x00 1 0x00 1 0>;
- 
+
 		qcom,page3	=   <0 0x00 1 0x00 1 1>;
 		qcom,pageen3	=   <0 0x00 1 0x01 1 10>;
 		qcom,poll3	=   <0 0x00 1 0x01 1 1>;
@@ -57,7 +57,6 @@
 		qcom,cam-vreg-min-voltage = <1050000 0 2850000 2800000>;
 		qcom,cam-vreg-max-voltage = <1050000 0 2850000 2800000>;
 		qcom,cam-vreg-op-mode = <1050000 0 2850000 2800000>;
- 
 
 		qcom,gpio-no-mux = <0>;
 		gpios =  <&msmgpio 26 0>,
@@ -73,17 +72,16 @@
 			"CAM_RESET1",
 			"CAM_STANDBY",
 			"CAM_IFVDD";/*VIF*/
- 
 
 		qcom,cam-power-seq-type		= "sensor_vreg","sensor_vreg","sensor_vreg","sensor_vreg";
 		qcom,cam-power-seq-val		= "cam_vio","cam_vdig", "cam_vana","cam_vaf";
 		qcom,cam-power-seq-cfg-val	= <0 0 0 0 >;
 		qcom,cam-power-seq-delay	= <0 0 0 0>;
- 
+
 		somc,power-extra-gpio = <69>;
 	};
 
-    qcom,camera@20 {
+	qcom,camera@20 {
 		compatible = "sne,imx134";
 		reg = <0x20>;
 		qcom,slave-id = <0x20 0x0016 0x0134>;
@@ -125,7 +123,7 @@
 		status = "ok";
 	};
 
-    qcom,camera@42 {
+	qcom,camera@42 {
 		compatible = "shinetech,gc0339";
 		reg = <0x42>;
 		qcom,slave-id = <0x42 0x0 0xc8>;

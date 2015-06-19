@@ -100,20 +100,23 @@ static struct msm_sensor_power_setting s5k5e2_power_setting[] = {
 
 static struct v4l2_subdev_info s5k5e2_subdev_info[] = {
 	{
-		.code   = V4L2_MBUS_FMT_SGRBG10_1X10,
+		.code = V4L2_MBUS_FMT_SGRBG10_1X10,
 		.colorspace = V4L2_COLORSPACE_JPEG,
-		.fmt    = 1,
-		.order    = 0,
+		.fmt = 1,
+		.order = 0,
 	},
 };
 
 static const struct i2c_device_id s5k5e2_i2c_id[] = {
-	{S5K5E2_SENSOR_NAME, (kernel_ulong_t)&s5k5e2_s_ctrl},
+	{
+		S5K5E2_SENSOR_NAME,
+		(kernel_ulong_t)&s5k5e2_s_ctrl
+	},
 	{ }
 };
 
 static int32_t msm_s5k5e2_i2c_probe(struct i2c_client *client,
-	const struct i2c_device_id *id)
+		const struct i2c_device_id *id)
 {
 	return msm_sensor_i2c_probe(client, id, &s5k5e2_s_ctrl);
 }
@@ -131,8 +134,11 @@ static struct msm_camera_i2c_client s5k5e2_sensor_i2c_client = {
 };
 
 static const struct of_device_id s5k5e2_dt_match[] = {
-	{.compatible = "qcom,s5k5e2", .data = &s5k5e2_s_ctrl},
-	{}
+	{
+		.compatible = "qcom,s5k5e2",
+		.data = &s5k5e2_s_ctrl
+	},
+	{ }
 };
 
 MODULE_DEVICE_TABLE(of, s5k5e2_dt_match);
@@ -199,7 +205,8 @@ module_exit(s5k5e2_exit_module);
 MODULE_DESCRIPTION("s5k5e2");
 MODULE_LICENSE("GPL v2");
 
-static ssize_t s5k5e2_read_version_attr(struct device *dev,struct device_attribute *attr, char *buf)
+static ssize_t s5k5e2_read_version_attr(struct device *dev,
+		struct device_attribute *attr, char *buf)
 {
 	struct msm_sensor_ctrl_t *s_ctrl;
 	int32_t power_flag = 0;
@@ -210,8 +217,7 @@ static ssize_t s5k5e2_read_version_attr(struct device *dev,struct device_attribu
 	pr_err("get driver addr =%x \n",(uint32_t)dev_get_drvdata(dev));
 	s_ctrl = &s5k5e2_s_ctrl;
 
-	if(s_ctrl->sensor_state != MSM_SENSOR_POWER_UP)
-	{
+	if (s_ctrl->sensor_state != MSM_SENSOR_POWER_UP) {
 		s_ctrl->func_tbl->sensor_power_up(s_ctrl);
 		power_flag =1;
 	}
@@ -220,15 +226,13 @@ static ssize_t s5k5e2_read_version_attr(struct device *dev,struct device_attribu
 			s_ctrl->sensor_i2c_client,
 			0x0002,
 			&version, MSM_CAMERA_I2C_WORD_DATA);
-	if (rc < 0) {
+
+	if (rc < 0)
 		pr_err("%s: %s: read id failed\n", __func__,
 			s_ctrl->sensordata->sensor_name);
-	}
 
-	if(power_flag == 1)
-	{
+	if (power_flag == 1)
 		s_ctrl->func_tbl->sensor_power_down(s_ctrl);
-	}
 
 	 return sprintf(buf, "%x\n", version);
 }
@@ -246,28 +250,27 @@ static ssize_t s5k5e2_read_vendor_attr(struct device *dev,struct device_attribut
 	int32_t rc = 0;
 	uint16_t version = 0;
 
-
 	s_ctrl = &s5k5e2_s_ctrl;
 
-	if(s_ctrl->sensor_state != MSM_SENSOR_POWER_UP)
-	{
+	if (s_ctrl->sensor_state != MSM_SENSOR_POWER_UP) {
 		s_ctrl->func_tbl->sensor_power_up(s_ctrl);
 		power_flag =1;
 	}
+
 	rc = s_ctrl->sensor_i2c_client->i2c_func_tbl->i2c_write_conf_tbl(
-							s_ctrl->sensor_i2c_client,
-							s5k5e2_read_eeprom,
-							sizeof(s5k5e2_read_eeprom), MSM_CAMERA_I2C_BYTE_DATA);
+					s_ctrl->sensor_i2c_client,
+					s5k5e2_read_eeprom,
+					sizeof(s5k5e2_read_eeprom),
+					MSM_CAMERA_I2C_BYTE_DATA);
 	msleep(5);
 	rc = s_ctrl->sensor_i2c_client->i2c_func_tbl->i2c_read(
 					s_ctrl->sensor_i2c_client,
 					0x0A06,
 					&version, MSM_CAMERA_I2C_BYTE_DATA);
 	pr_err("%s: %x: version\n", __func__,		version		);
-	if(power_flag == 1)
-	{
+
+	if (power_flag == 1)
 		s_ctrl->func_tbl->sensor_power_down(s_ctrl);
-	}
 
 	 return sprintf(buf, "%x\n", version);
 }

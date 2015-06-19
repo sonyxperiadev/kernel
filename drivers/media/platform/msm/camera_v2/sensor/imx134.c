@@ -93,12 +93,15 @@ static struct v4l2_subdev_info imx134_subdev_info[] = {
 };
 
 static const struct i2c_device_id imx134_i2c_id[] = {
-	{IMX134_SENSOR_NAME, (kernel_ulong_t)&imx134_s_ctrl},
+	{
+		IMX134_SENSOR_NAME,
+		(kernel_ulong_t)&imx134_s_ctrl
+	},
 	{ }
 };
 
 static int32_t msm_imx134_i2c_probe(struct i2c_client *client,
-	const struct i2c_device_id *id)
+		const struct i2c_device_id *id)
 {
 	return msm_sensor_i2c_probe(client, id, &imx134_s_ctrl);
 }
@@ -116,8 +119,11 @@ static struct msm_camera_i2c_client imx134_sensor_i2c_client = {
 };
 
 static const struct of_device_id imx134_dt_match[] = {
-	{.compatible = "sne,imx134", .data = &imx134_s_ctrl},
-	{}
+	{
+		.compatible = "sne,imx134",
+		.data = &imx134_s_ctrl
+	},
+	{ }
 };
 
 MODULE_DEVICE_TABLE(of, imx134_dt_match);

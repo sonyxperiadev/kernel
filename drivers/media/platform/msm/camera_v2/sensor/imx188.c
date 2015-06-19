@@ -68,20 +68,23 @@ static struct msm_sensor_power_setting imx188_power_setting[] = {
 
 static struct v4l2_subdev_info imx188_subdev_info[] = {
 	{
-		.code   = V4L2_MBUS_FMT_SRGGB10_1X10,
+		.code = V4L2_MBUS_FMT_SRGGB10_1X10,
 		.colorspace = V4L2_COLORSPACE_JPEG,
-		.fmt    = 1,
-		.order    = 0,
+		.fmt = 1,
+		.order = 0,
 	},
 };
 
 static const struct i2c_device_id imx188_i2c_id[] = {
-	{IMX188_SENSOR_NAME, (kernel_ulong_t)&imx188_s_ctrl},
+	{
+		IMX188_SENSOR_NAME,
+		(kernel_ulong_t)&imx188_s_ctrl
+	},
 	{ }
 };
 
 static int32_t imx188_i2c_probe(struct i2c_client *client,
-	const struct i2c_device_id *id)
+		const struct i2c_device_id *id)
 {
 	return msm_sensor_i2c_probe(client, id, &imx188_s_ctrl);
 }
@@ -99,8 +102,11 @@ static struct msm_camera_i2c_client imx188_sensor_i2c_client = {
 };
 
 static const struct of_device_id imx188_dt_match[] = {
-	{.compatible = "qcom,imx188", .data = &imx188_s_ctrl},
-	{}
+	{
+		.compatible = "qcom,imx188",
+		.data = &imx188_s_ctrl
+	},
+	{ }
 };
 
 MODULE_DEVICE_TABLE(of, imx188_dt_match);
@@ -126,7 +132,8 @@ static int __init imx188_init_module(void)
 {
 	int32_t rc = 0;
 	pr_info("%s:%d\n", __func__, __LINE__);
-	if (of_machine_is_compatible("somc,tianchi")||of_machine_is_compatible("somc,tianchi_dsds")) {
+	if (of_machine_is_compatible("somc,tianchi") ||
+		of_machine_is_compatible("somc,tianchi_dsds")) {
 		imx188_s_ctrl.power_setting_array.power_setting =
 					imx188_tianchi_power_setting;
 		imx188_s_ctrl.power_setting_array.size =

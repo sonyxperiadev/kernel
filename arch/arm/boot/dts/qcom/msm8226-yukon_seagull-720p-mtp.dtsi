@@ -312,10 +312,10 @@
 
 &spmi_bus {
 	qcom,pm8226@1 {
-                qcom,leds@d300 {
-                        pm8226_flash0: qcom,flash_0 {
-                                qcom,current = <550>;
-                        };
+		qcom,leds@d300 {
+			pm8226_flash0: qcom,flash_0 {
+				qcom,current = <550>;
+			};
 
 			pm8226_flash1: qcom,flash_1 {
 				qcom,max-current = <1000>;
@@ -332,7 +332,7 @@
 				linux,name = "led:flash_1";
 				qcom,current = <625>;
 			};
-                };
+	};
 
 		qcom,leds@d800 {
 			status = "disabled";

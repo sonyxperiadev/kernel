@@ -31,99 +31,99 @@ DEFINE_MSM_MUTEX(gc0339_mut);
 static struct msm_sensor_ctrl_t gc0339_s_ctrl;
 
 static struct msm_sensor_power_setting gc0339_power_setting[] = {
-		{//1.PDN "L"
-			.seq_type = SENSOR_GPIO,
-			.seq_val = SENSOR_GPIO_STANDBY,
-			.config_val = GPIO_OUT_LOW,
-			.delay = 0,
-		},
-		{//2. MCLK
-			.seq_type = SENSOR_CLK,
-			.seq_val = SENSOR_CAM_MCLK,
-			.config_val = 24000000,
-			.delay = 1,
-		},
-		{//3. LVS
-			.seq_type = SENSOR_VREG,
-			.seq_val = CAM_VIO,
-			.config_val = 0,
-			.delay = 0,
-		},
-		{//4.VANA
-			.seq_type = SENSOR_VREG,
-			.seq_val = CAM_VANA,
-			.config_val = 0,
-			.delay = 0,
-		},
-		{//5. MVDD
-			.seq_type = SENSOR_GPIO,
-			.seq_val = SENSOR_GPIO_VIO,
-			.config_val = GPIO_OUT_HIGH,
-			.delay = 0,
-		},
-		{//6. Reset "L"
-			.seq_type = SENSOR_GPIO,
-			.seq_val = SENSOR_GPIO_RESET,
-			.config_val = GPIO_OUT_LOW,
-			.delay = 0,
-		},
-		{//7. Reset "H"
-			.seq_type = SENSOR_GPIO,
-			.seq_val = SENSOR_GPIO_RESET,
-			.config_val = GPIO_OUT_HIGH,
-			.delay = 1,
-		},
+	{//1.PDN "L"
+		.seq_type = SENSOR_GPIO,
+		.seq_val = SENSOR_GPIO_STANDBY,
+		.config_val = GPIO_OUT_LOW,
+		.delay = 0,
+	},
+	{//2. MCLK
+		.seq_type = SENSOR_CLK,
+		.seq_val = SENSOR_CAM_MCLK,
+		.config_val = 24000000,
+		.delay = 1,
+	},
+	{//3. LVS
+		.seq_type = SENSOR_VREG,
+		.seq_val = CAM_VIO,
+		.config_val = 0,
+		.delay = 0,
+	},
+	{//4.VANA
+		.seq_type = SENSOR_VREG,
+		.seq_val = CAM_VANA,
+		.config_val = 0,
+		.delay = 0,
+	},
+	{//5. MVDD
+		.seq_type = SENSOR_GPIO,
+		.seq_val = SENSOR_GPIO_VIO,
+		.config_val = GPIO_OUT_HIGH,
+		.delay = 0,
+	},
+	{//6. Reset "L"
+		.seq_type = SENSOR_GPIO,
+		.seq_val = SENSOR_GPIO_RESET,
+		.config_val = GPIO_OUT_LOW,
+		.delay = 0,
+	},
+	{//7. Reset "H"
+		.seq_type = SENSOR_GPIO,
+		.seq_val = SENSOR_GPIO_RESET,
+		.config_val = GPIO_OUT_HIGH,
+		.delay = 1,
+	},
 };
 
 static struct msm_sensor_power_setting gc0339_power_down_setting [] = {
-		{//8. MCLK
-			.seq_type = SENSOR_CLK,
-			.seq_val = SENSOR_CAM_MCLK,
-			.config_val = 24000000,
-			.delay = 0,
-		},
-		{//7. MVDD
-			.seq_type = SENSOR_GPIO,
-			.seq_val = SENSOR_GPIO_VIO,
-			.config_val = GPIO_OUT_HIGH,
-			.delay = 0,
-		},
-		{//6. LVS
-			.seq_type = SENSOR_VREG,
-			.seq_val = CAM_VIO,
-			.config_val = 0,
-			.delay = 0,
-		},
-		{//5.VANA
-			.seq_type = SENSOR_VREG,
-			.seq_val = CAM_VANA,
-			.config_val = 0,
-			.delay = 0,
-		},
-		{//4. Reset "L"
-			.seq_type = SENSOR_GPIO,
-			.seq_val = SENSOR_GPIO_RESET,
-			.config_val = GPIO_OUT_LOW,
-			.delay = 0,
-		},
-		{//3.PDN "H"
-			.seq_type = SENSOR_GPIO,
-			.seq_val = SENSOR_GPIO_STANDBY,
-			.config_val = GPIO_OUT_HIGH,
-			.delay = 0,
-		},
-		{//2. Reset "H"
-			.seq_type = SENSOR_GPIO,
-			.seq_val = SENSOR_GPIO_RESET,
-			.config_val = GPIO_OUT_HIGH,
-			.delay = 0,
-		},
-		{//1. Reset "L"
-			.seq_type = SENSOR_GPIO,
-			.seq_val = SENSOR_GPIO_RESET,
-			.config_val = GPIO_OUT_LOW,
-			.delay = 0,
-		},
+	{//8. MCLK
+		.seq_type = SENSOR_CLK,
+		.seq_val = SENSOR_CAM_MCLK,
+		.config_val = 24000000,
+		.delay = 0,
+	},
+	{//7. MVDD
+		.seq_type = SENSOR_GPIO,
+		.seq_val = SENSOR_GPIO_VIO,
+		.config_val = GPIO_OUT_HIGH,
+		.delay = 0,
+	},
+	{//6. LVS
+		.seq_type = SENSOR_VREG,
+		.seq_val = CAM_VIO,
+		.config_val = 0,
+		.delay = 0,
+	},
+	{//5.VANA
+		.seq_type = SENSOR_VREG,
+		.seq_val = CAM_VANA,
+		.config_val = 0,
+		.delay = 0,
+	},
+	{//4. Reset "L"
+		.seq_type = SENSOR_GPIO,
+		.seq_val = SENSOR_GPIO_RESET,
+		.config_val = GPIO_OUT_LOW,
+		.delay = 0,
+	},
+	{//3.PDN "H"
+		.seq_type = SENSOR_GPIO,
+		.seq_val = SENSOR_GPIO_STANDBY,
+		.config_val = GPIO_OUT_HIGH,
+		.delay = 0,
+	},
+	{//2. Reset "H"
+		.seq_type = SENSOR_GPIO,
+		.seq_val = SENSOR_GPIO_RESET,
+		.config_val = GPIO_OUT_HIGH,
+		.delay = 0,
+	},
+	{//1. Reset "L"
+		.seq_type = SENSOR_GPIO,
+		.seq_val = SENSOR_GPIO_RESET,
+		.config_val = GPIO_OUT_LOW,
+		.delay = 0,
+	},
 };
 
 
@@ -136,13 +136,16 @@ static struct v4l2_subdev_info gc0339_subdev_info[] = {
 	},
 };
 static int32_t msm_gc0339_i2c_probe(struct i2c_client *client,
-	const struct i2c_device_id *id)
+		const struct i2c_device_id *id)
 {
 	return msm_sensor_i2c_probe(client, id, &gc0339_s_ctrl);
 }
 
 static const struct i2c_device_id gc0339_i2c_id[] = {
-	{GC0339_SENSOR_NAME, (kernel_ulong_t)&gc0339_s_ctrl},
+	{
+		GC0339_SENSOR_NAME,
+		(kernel_ulong_t)&gc0339_s_ctrl
+	},
 	{ }
 };
 
@@ -162,10 +165,9 @@ int32_t gc0339_match_id(struct msm_sensor_ctrl_t *s_ctrl)
 {
 	int32_t rc = 0;
 	uint16_t chipid = 0;
-    pr_info("%s:E", __func__);
+	pr_info("%s:E", __func__);
 	if (!s_ctrl) {
-		pr_err("%s:%d failed: %p\n",
-			__func__, __LINE__, s_ctrl);
+		pr_err("%s:%d failed: %p\n", __func__, __LINE__, s_ctrl);
 		return -EINVAL;
 	}
 
@@ -176,9 +178,9 @@ int32_t gc0339_match_id(struct msm_sensor_ctrl_t *s_ctrl)
 		MSM_CAMERA_I2C_BYTE_DATA);
 
 	rc = s_ctrl->sensor_i2c_client->i2c_func_tbl->i2c_read(
-			s_ctrl->sensor_i2c_client,
-			s_ctrl->sensordata->slave_info->sensor_id_reg_addr,
-			&chipid, MSM_CAMERA_I2C_BYTE_DATA);
+		s_ctrl->sensor_i2c_client,
+		s_ctrl->sensordata->slave_info->sensor_id_reg_addr,
+		&chipid, MSM_CAMERA_I2C_BYTE_DATA);
 
 	CDBG("%s: read id: 0x%x\n", __func__, chipid);
 
@@ -460,8 +462,11 @@ static struct msm_sensor_ctrl_t gc0339_s_ctrl = {
 };
 
 static const struct of_device_id gc0339_dt_match[] = {
-	{.compatible = "shinetech,gc0339", .data = &gc0339_s_ctrl},
-	{}
+	{
+		.compatible = "shinetech,gc0339",
+		.data = &gc0339_s_ctrl
+	},
+	{ }
 };
 
 
@@ -549,10 +554,10 @@ static int __init gc0339_init_module(void)
 static void __exit gc0339_exit_module(void)
 {
 	if (gc0339_s_ctrl.pdev) {
-	msm_sensor_free_sensor_data(&gc0339_s_ctrl);
-	platform_driver_unregister(&gc0339_platform_driver);
+		msm_sensor_free_sensor_data(&gc0339_s_ctrl);
+		platform_driver_unregister(&gc0339_platform_driver);
 	} else
-	i2c_del_driver(&gc0339_i2c_driver);
+		i2c_del_driver(&gc0339_i2c_driver);
 	return;
 }
 
