@@ -219,6 +219,25 @@ config IMX188
 		preview and snapshot config at 1280*720 at 30 fps,
 		This sensor driver does not support auto focus.
 
+config IMX200
+	bool "Sensor IMX200/IMX220 (RGBW 20.7MP)"
+	depends on MSMB_CAMERA
+	---help---
+		Sony 20.7MP Exmor RS RGBW Stacked CMOS Sensor,
+		4 MIPI lanes, snapshot config = 5248x3936 12FPS,
+		or 16:9-only (not full resolution) 30FPS.
+		Video output formats: RAW10/8 ATR14/2 COMP8/6;
+		Video HDR support.
+		Supports focuser, depending on module.
+
+config ZFRONT
+	bool "Sensor: Sony Z-series front camera"
+	depends on MSMB_CAMERA
+	---help---
+		BAYER sensor found in Sony Xperia Z series
+		devices. Various modules supported.
+		TODO: Find sensor models!!!
+
 config OV7695
 	bool "Sensor OV7695 (YUV VGA)"
 	depends on MSMB_CAMERA

@@ -21,6 +21,7 @@
 #include "msm8974-mtp.dtsi"
 #include "msm8974pro-ac-shinano_common.dtsi"
 #include "msm8974pro-ac-shinano_aries.dtsi"
+#include "msm8974pro-ac-camera-sensor-aries.dtsi"
 #include "dsi-panel-aries.dtsi"
 
 / {

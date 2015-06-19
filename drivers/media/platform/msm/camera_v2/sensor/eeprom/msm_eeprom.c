@@ -25,6 +25,9 @@ DEFINE_MSM_MUTEX(msm_eeprom_mutex);
 #ifdef CONFIG_COMPAT
 static struct v4l2_file_operations msm_eeprom_v4l2_subdev_fops;
 #endif
+#ifdef CONFIG_SONY_CAMERA
+static struct sony_camera_eeprom *sony_eeprom;
+#endif
 /**
   * msm_eeprom_verify_sum - verify crc32 checksum
   * @mem:	data buffer
@@ -258,6 +261,7 @@ static const struct v4l2_subdev_internal_ops msm_eeprom_internal_ops = {
 	.open = msm_eeprom_open,
 	.close = msm_eeprom_close,
 };
+
 /**
   * read_eeprom_memory() - read map data into buffer
   * @e_ctrl:	eeprom control struct
@@ -364,6 +368,23 @@ static int read_eeprom_memory(struct msm_eeprom_ctrl_t *e_ctrl,
 			}
 		}
 	}
+#ifdef CONFIG_SONY_CAMERA
+	switch (e_ctrl->cci_master) {
+	case 0:
+		sony_eeprom->data_rear = block->mapdata;
+		pr_debug("EEPROM: data_rear: %s\n", sony_eeprom->data_rear);
+		break;
+	case 1:
+		sony_eeprom->data_front = block->mapdata;
+		pr_debug("EEPROM: data_front: %s\n", sony_eeprom->data_front);
+		break;
+	default:
+		pr_warn("%s: WARNING: not saving data to sony_eeprom!!\n",
+								__func__);
+		pr_warn("%s: DEBUG: cci_master is %d. Are you sure?\n",
+					__func__, e_ctrl->cci_master);
+	};
+#endif
 	return rc;
 }
 /**
@@ -1384,9 +1405,32 @@ static struct spi_driver msm_eeprom_spi_driver = {
 	.remove = msm_eeprom_spi_remove,
 };
 
+#ifdef CONFIG_SONY_CAMERA
+uint8_t* sony_eeprom_get_data(int cci_master)
+{
+	switch (cci_master) {
+	case 0:
+		return sony_eeprom->data_rear;
+	case 1:
+		return sony_eeprom->data_front;
+	default:
+		return '\0';
+	};
+}
+#endif
+
 static int __init msm_eeprom_init_module(void)
 {
 	int rc = 0;
+#ifdef CONFIG_SONY_CAMERA
+	sony_eeprom = kzalloc(sizeof(*sony_eeprom), GFP_KERNEL);
+	if (!sony_eeprom) {
+		pr_err("%s: sony_eeprom kzalloc failed!!!\n",
+							__func__);
+		kzfree(sony_eeprom);
+		return -ENOMEM;
+	};
+#endif
 	CDBG("%s E\n", __func__);
 	rc = platform_driver_probe(&msm_eeprom_platform_driver,
 		msm_eeprom_platform_probe);
@@ -1401,6 +1445,9 @@ static void __exit msm_eeprom_exit_module(void)
 	platform_driver_unregister(&msm_eeprom_platform_driver);
 	spi_unregister_driver(&msm_eeprom_spi_driver);
 	i2c_del_driver(&msm_eeprom_i2c_driver);
+#ifdef CONFIG_SONY_CAMERA
+	kzfree(sony_eeprom);
+#endif
 }
 
 module_init(msm_eeprom_init_module);

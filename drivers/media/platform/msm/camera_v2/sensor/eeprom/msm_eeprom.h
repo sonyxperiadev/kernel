@@ -46,4 +46,13 @@ struct msm_eeprom_ctrl_t {
 	uint32_t subdev_id;
 };
 
+#ifdef CONFIG_SONY_CAMERA
+struct sony_camera_eeprom {
+	uint8_t *data_rear;
+	uint8_t *data_front;
+};
+
+uint8_t* sony_eeprom_get_data(int cci_master);
+#endif
+
 #endif
