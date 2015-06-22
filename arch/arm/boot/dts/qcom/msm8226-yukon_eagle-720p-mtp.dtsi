@@ -259,6 +259,10 @@
 		compatible = "qcom,spi-qup-v2";
 		status = "disabled";
 	};
+
+	vol_down {
+		gpios = <&msmgpio 109 0x1>;
+	};
 };
 
 &rpm_bus {
