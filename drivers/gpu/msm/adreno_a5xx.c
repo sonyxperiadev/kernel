@@ -476,6 +476,9 @@ static void a5xx_regulator_disable(struct adreno_device *adreno_dev)
 	unsigned int reg;
 	struct kgsl_device *device = KGSL_DEVICE(adreno_dev);
 
+	if (adreno_is_a510(adreno_dev))
+		return;
+
 	/* If feature is not supported or not enabled */
 	if (!ADRENO_FEATURE(adreno_dev, ADRENO_SPTP_PC) ||
 		!test_bit(ADRENO_SPTP_PC_CTRL, &adreno_dev->pwrctrl_flag)) {
@@ -2503,7 +2506,8 @@ static int a5xx_microcode_read(struct adreno_device *adreno_dev)
 	if (ret)
 		return ret;
 
-	_load_regfile(adreno_dev);
+	if (!adreno_is_a510(adreno_dev))
+		_load_regfile(adreno_dev);
 
 	return ret;
 }
