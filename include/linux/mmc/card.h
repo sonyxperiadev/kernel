@@ -286,6 +286,8 @@ struct mmc_bkops_stats {
 	bool			print_stats;
 	unsigned int bkops_level[BKOPS_NUM_OF_SEVERITY_LEVELS];
 	bool			ignore_card_bkops_status;
+	unsigned int	auto_start;
+	unsigned int	auto_stop;
 };
 
 /**
