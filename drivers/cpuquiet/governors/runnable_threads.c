@@ -38,7 +38,7 @@ static unsigned int sample_rate = 200;	  /* msec */
 #define NR_FSHIFT      (1 << NR_FSHIFT_EXP)
 /* avg run threads * 8 (e.g., 11 = 1.375 threads) */
 static unsigned int default_thresholds[] = {
-	10, 18, 20, UINT_MAX
+	10, 14, 20, UINT_MAX
 };
 
 static unsigned int nr_run_last;
