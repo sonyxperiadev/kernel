@@ -21,6 +21,7 @@
 #include "msm8974-mtp.dtsi"
 #include "msm8974pro-ac-shinano_common.dtsi"
 #include "msm8974pro-ac-shinano_leo.dtsi"
+#include "msm8974pro-ab-camera-sensor-leo.dtsi"
 #include "dsi-panel-leo.dtsi"
 
 / {

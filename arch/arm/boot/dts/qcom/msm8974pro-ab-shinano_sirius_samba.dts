@@ -21,6 +21,7 @@
 #include "msm8974-mtp.dtsi"
 #include "msm8974pro-ab-shinano_common.dtsi"
 #include "msm8974pro-ab-shinano_sirius.dtsi"
+#include "msm8974pro-ab-camera-sensor-sirius.dtsi"
 #include "dsi-panel-sirius.dtsi"
 
 / {

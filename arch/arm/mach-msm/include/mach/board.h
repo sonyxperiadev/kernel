@@ -36,6 +36,12 @@
 #define RF_TYPE_48 0x30
 #define RF_TYPE_49 0x31
 
+#ifdef CONFIG_SONY_CAMERA
+#define CAM_GPIO_MAX	14
+#else
+#define CAM_GPIO_MAX	10
+#endif
+
 struct msm_camera_io_ext {
 	uint32_t mdcphy;
 	uint32_t mdcsz;
@@ -192,8 +198,8 @@ struct msm_gpio_set_tbl {
 };
 
 struct msm_camera_gpio_num_info {
-	uint16_t gpio_num[10];
-	uint8_t valid[10];
+	uint16_t gpio_num[CAM_GPIO_MAX];
+	uint8_t valid[CAM_GPIO_MAX];
 };
 
 struct msm_camera_gpio_conf {

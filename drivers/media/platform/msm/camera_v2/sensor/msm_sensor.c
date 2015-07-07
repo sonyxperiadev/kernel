@@ -21,6 +21,16 @@
 #undef CDBG
 #define CDBG(fmt, args...) pr_debug(fmt, ##args)
 
+#ifdef CONFIG_MACH_SONY_FLAMINGO
+uint16_t s5k5e2_version = 0;
+
+static struct msm_camera_i2c_reg_conf s5k5e2_read_eeprom[] = {
+	{0x0A00 ,0x04},
+	{0x0A02 ,0x02},
+	{0x0A00 ,0x01},
+};
+#endif
+
 static struct v4l2_file_operations msm_sensor_v4l2_subdev_fops;
 static void msm_sensor_adjust_mclk(struct msm_camera_power_ctrl_t *ctrl)
 {
@@ -238,6 +248,16 @@ static int32_t msm_sensor_get_dt_data(struct device_node *of_node,
 	}
 	gconf = sensordata->power_info.gpio_conf;
 
+#ifdef CONFIG_SONY_CAMERA
+	gconf->spec_conf = kzalloc(
+			sizeof(struct msm_camera_gpio_conf), GFP_KERNEL);
+	if (!gconf->spec_conf) {
+		pr_err("%s: spec_conf allocation failed!!!\n", __func__);
+		rc = -ENOMEM;
+		goto FREE_SPEC;
+	}
+#endif
+
 	gpio_array_size = of_gpio_count(of_node);
 	CDBG("%s gpio count %d\n", __func__, gpio_array_size);
 
@@ -347,6 +367,10 @@ FREE_GPIO_REQ_TBL:
 	kfree(s_ctrl->sensordata->power_info.gpio_conf->cam_gpio_req_tbl);
 FREE_GPIO_CONF:
 	kfree(s_ctrl->sensordata->power_info.gpio_conf);
+#ifdef CONFIG_SONY_CAMERA
+FREE_SPEC:
+	kfree(s_ctrl->sensordata->power_info.gpio_conf->spec_conf);
+#endif
 FREE_PS:
 	kfree(s_ctrl->sensordata->power_info.power_setting);
 	kfree(s_ctrl->sensordata->power_info.power_down_setting);
@@ -1516,6 +1540,42 @@ int32_t msm_sensor_platform_probe(struct platform_device *pdev,
 		return rc;
 	}
 
+#ifdef CONFIG_MACH_SONY_FLAMINGO
+	rc = strcmp(s_ctrl->sensordata->sensor_name,"s5k5e2");
+	if (rc == 0) {
+		rc = s_ctrl->sensor_i2c_client->i2c_func_tbl->i2c_write_conf_tbl(
+						s_ctrl->sensor_i2c_client,
+						s5k5e2_read_eeprom,
+						ARRAY_SIZE(s5k5e2_read_eeprom),
+						MSM_CAMERA_I2C_BYTE_DATA);
+		msleep(5);
+		rc = s_ctrl->sensor_i2c_client->i2c_func_tbl->i2c_read(
+					s_ctrl->sensor_i2c_client,
+					0x0A06,
+					&s5k5e2_version,
+					MSM_CAMERA_I2C_BYTE_DATA);
+		pr_info("%s: camera s5k5e2_version = 0x%x\n",
+					__func__, s5k5e2_version);
+	}
+	v4l2_subdev_init(&s_ctrl->msm_sd.sd,
+		s_ctrl->sensor_v4l2_subdev_ops);
+	snprintf(s_ctrl->msm_sd.sd.name,
+		sizeof(s_ctrl->msm_sd.sd.name), "%s",
+		s_ctrl->sensordata->sensor_name);
+	if (s5k5e2_version == 0x16)
+		snprintf(s_ctrl->sensordata->sensor_info->sensor_name,
+			sizeof(s_ctrl->sensordata->sensor_info->sensor_name),
+			"%s_chicony",
+			s_ctrl->sensordata->sensor_name);
+	else
+		snprintf(s_ctrl->sensordata->sensor_info->sensor_name,
+			sizeof(s_ctrl->sensordata->sensor_info->sensor_name),
+			"%s",
+			s_ctrl->sensordata->sensor_name);
+
+	pr_info("%s: %s probe succeeded\n", __func__,
+		s_ctrl->sensordata->sensor_info->sensor_name);
+#else
 	pr_info("%s %s probe succeeded\n", __func__,
 		s_ctrl->sensordata->sensor_name);
 	v4l2_subdev_init(&s_ctrl->msm_sd.sd,
@@ -1523,6 +1583,7 @@ int32_t msm_sensor_platform_probe(struct platform_device *pdev,
 	snprintf(s_ctrl->msm_sd.sd.name,
 		sizeof(s_ctrl->msm_sd.sd.name), "%s",
 		s_ctrl->sensordata->sensor_name);
+#endif
 	v4l2_set_subdevdata(&s_ctrl->msm_sd.sd, pdev);
 	s_ctrl->msm_sd.sd.flags |= V4L2_SUBDEV_FL_HAS_DEVNODE;
 	media_entity_init(&s_ctrl->msm_sd.sd.entity, 0, NULL, 0);
