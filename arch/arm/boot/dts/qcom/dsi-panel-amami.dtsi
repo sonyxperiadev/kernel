@@ -480,6 +480,8 @@
 
 		somc,panel-detect = <1>;
 		somc,driver-ic = <4>;
+		qcom,mdss-pan-physical-width-dimension = <53>;
+		qcom,mdss-pan-physical-height-dimension = <94>;
 		somc,mdss-phy-size-mm = <53 94>;
 		somc,mdss-dsi-lane-config = [00 c2 45 00 00 00 00 01 75
 				00 c2 45 00 00 00 00 01 75
@@ -958,6 +960,8 @@
 		somc,pw-off-rst-seq = <0 10>;
 
 		somc,driver-ic = <4>;
+		qcom,mdss-pan-physical-width-dimension = <53>;
+		qcom,mdss-pan-physical-height-dimension = <94>;
 		somc,mdss-phy-size-mm = <53 94>;
 		somc,mdss-dsi-lane-config = [00 c2 45 00 00 00 00 01 75
 				00 c2 45 00 00 00 00 01 75
@@ -1573,6 +1577,8 @@
 		somc,pw-off-rst-seq = <0 10>;
 
 		somc,driver-ic = <4>;
+		qcom,mdss-pan-physical-width-dimension = <53>;
+		qcom,mdss-pan-physical-height-dimension = <94>;
 		somc,mdss-phy-size-mm = <53 94>;
 		somc,mdss-dsi-lane-config = [00 c2 45 00 00 00 00 01 75
 				00 c2 45 00 00 00 00 01 75
@@ -2188,6 +2194,8 @@
 		somc,pw-off-rst-seq = <0 10>;
 
 		somc,driver-ic = <4>;
+		qcom,mdss-pan-physical-width-dimension = <53>;
+		qcom,mdss-pan-physical-height-dimension = <94>;
 		somc,mdss-phy-size-mm = <53 94>;
 		somc,mdss-dsi-lane-config = [00 c2 45 00 00 00 00 01 75
 				00 c2 45 00 00 00 00 01 75

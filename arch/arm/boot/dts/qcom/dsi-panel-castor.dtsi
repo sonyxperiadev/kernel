@@ -58,6 +58,8 @@
 		qcom,cont-splash-enabled;
 
 		somc,driver-ic = <3>;
+		qcom,mdss-pan-physical-width-dimension = <217>;
+		qcom,mdss-pan-physical-height-dimension = <135>;
 		somc,mdss-phy-size-mm = <217 135>;
 		somc,mdss-dsi-lane-config = [00 c2 ef 00 00 00 00 01 ff
 			00 c2 ef 00 00 00 00 01 ff
@@ -119,6 +121,8 @@
 		qcom,cont-splash-enabled;
 
 		somc,driver-ic = <3>;
+		qcom,mdss-pan-physical-width-dimension = <217>;
+		qcom,mdss-pan-physical-height-dimension = <135>;
 		somc,mdss-phy-size-mm = <217 135>;
 		somc,mdss-dsi-lane-config = [00 c2 ef 00 00 00 00 01 ff
 			00 c2 ef 00 00 00 00 01 ff
@@ -183,6 +187,8 @@
 		qcom,cont-splash-enabled;
 
 		somc,driver-ic = <3>;
+		qcom,mdss-pan-physical-width-dimension = <217>;
+		qcom,mdss-pan-physical-height-dimension = <135>;
 		somc,mdss-phy-size-mm = <217 136>;
 		somc,mdss-dsi-lane-config = [00 c2 ef 00 00 00 00 01 75
 			00 c2 ef 00 00 00 00 01 75
@@ -244,6 +250,8 @@
 		qcom,cont-splash-enabled;
 
 		somc,driver-ic = <3>;
+		qcom,mdss-pan-physical-width-dimension = <217>;
+		qcom,mdss-pan-physical-height-dimension = <135>;
 		somc,mdss-phy-size-mm = <217 135>;
 		somc,mdss-dsi-lane-config = [00 c2 ef 00 00 00 00 01 75
 			00 c2 ef 00 00 00 00 01 75
@@ -305,6 +313,8 @@
 		qcom,cont-splash-enabled;
 
 		somc,driver-ic = <3>;
+		qcom,mdss-pan-physical-width-dimension = <217>;
+		qcom,mdss-pan-physical-height-dimension = <135>;
 		somc,mdss-phy-size-mm = <217 135>;
 		somc,mdss-dsi-lane-config = [00 c2 ef 00 00 00 00 01 75
 			00 c2 ef 00 00 00 00 01 75
