@@ -145,6 +145,8 @@
 		somc,pw-on-rst-seq = <0 10>, <1 10>;
 		somc,pw-off-rst-seq = <0 10>;
 		somc,driver-ic = <0>;
+		qcom,mdss-pan-physical-width-dimension = <80>;
+		qcom,mdss-pan-physical-height-dimension = <143>;
 		somc,mdss-phy-size-mm = <80 143>;
 		somc,mdss-dsi-lane-config = [00 c2 ef 00 00 00 00 01 75
 				00 c2 ef 00 00 00 00 01 75
@@ -286,6 +288,8 @@
 		somc,disp-en-on-pre = <25>;
 		somc,pw-on-rst-seq = <0 10>, <1 10>;
 		somc,pw-off-rst-seq = <0 10>;
+		qcom,mdss-pan-physical-width-dimension = <80>;
+		qcom,mdss-pan-physical-height-dimension = <143>;
 		somc,mdss-phy-size-mm = <80 143>;
 		somc,mdss-dsi-lane-config = [00 c2 ef 00 00 00 00 01 75
 				00 c2 ef 00 00 00 00 01 75
@@ -486,6 +490,8 @@
 		somc,disp-en-on-pre = <25>;
 		somc,pw-on-rst-seq = <0 10>, <1 10>;
 		somc,pw-off-rst-seq = <0 10>;
+		qcom,mdss-pan-physical-width-dimension = <80>;
+		qcom,mdss-pan-physical-height-dimension = <143>;
 		somc,mdss-phy-size-mm = <80 143>;
 		somc,mdss-dsi-lane-config = [00 c2 ef 00 00 00 00 01 75
 				00 c2 ef 00 00 00 00 01 75
@@ -1026,6 +1032,8 @@
 
 		qcom,mdss-brightness-max-level = <255>;
 		somc,driver-ic = <1>;
+		qcom,mdss-pan-physical-width-dimension = <80>;
+		qcom,mdss-pan-physical-height-dimension = <143>;
 		somc,mdss-phy-size-mm = <80 143>;
 		somc,mdss-dsi-lane-config = [00 02 ef 00 00 00 00 01 ff
 				00 02 ef 00 00 00 00 01 ff
@@ -1502,6 +1510,8 @@
 		somc,disp-en-on-post = <10>;
 		somc,pw-on-rst-seq = <1 10>, <0 10>, <1 25>;
 		somc,pw-off-rst-seq = <0 10>;
+		qcom,mdss-pan-physical-width-dimension = <80>;
+		qcom,mdss-pan-physical-height-dimension = <143>;
 		somc,mdss-phy-size-mm = <80 143>;
 		somc,mdss-dsi-lane-config = [00 02 ef 00 00 00 00 01 ff
 				00 02 ef 00 00 00 00 01 ff
