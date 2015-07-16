@@ -126,6 +126,7 @@ static int mdss_dsi_labibb_vreg_init(struct platform_device *pdev)
 	return 0;
 }
 
+#ifndef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 static int mdss_dsi_labibb_vreg_ctrl(struct mdss_dsi_ctrl_pdata *ctrl,
 							int enable)
 {
@@ -169,6 +170,7 @@ static int mdss_dsi_labibb_vreg_ctrl(struct mdss_dsi_ctrl_pdata *ctrl,
 
 	return 0;
 }
+#endif
 
 static int mdss_dsi_regulator_init(struct platform_device *pdev)
 {
@@ -205,6 +207,7 @@ static int mdss_dsi_regulator_init(struct platform_device *pdev)
 	return rc;
 }
 
+#ifndef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 static int mdss_dsi_panel_power_off(struct mdss_panel_data *pdata)
 {
 	int ret = 0;
@@ -257,7 +260,6 @@ end:
 	return ret;
 }
 
-#ifndef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 static int mdss_dsi_panel_power_on(struct mdss_panel_data *pdata)
 {
 	int ret = 0;
@@ -325,20 +327,23 @@ error:
 	}
 	return ret;
 }
-#endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 
 static int mdss_dsi_panel_power_lp(struct mdss_panel_data *pdata, int enable)
 {
 	/* Panel power control when entering/exiting lp mode */
 	return 0;
 }
+#endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 
 static int mdss_dsi_panel_power_ctrl(struct mdss_panel_data *pdata,
 	int power_state)
 {
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
+#else
 	int ret;
 	struct mdss_panel_info *pinfo;
-	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
+#endif
 
 	if (pdata == NULL) {
 		pr_err("%s: Invalid input data\n", __func__);
@@ -1973,7 +1978,6 @@ int mdss_dsi_panel_power_detect(struct platform_device *pdev, int enable)
 		msleep(20);
 		devm_regulator_put(vdd_vreg);
 	}
-	return 0;
 #endif /* CONFIG_MACH_SONY_RHINE */
 #ifdef CONFIG_MACH_SONY_YUKON
 	int ret;
@@ -2022,8 +2026,8 @@ int mdss_dsi_panel_power_detect(struct platform_device *pdev, int enable)
 		usleep_range(9000, 10000);
 		devm_regulator_put(vddio_vreg);
 	}
-	return 0;
 #endif
+	return 0;
 }
 #endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 

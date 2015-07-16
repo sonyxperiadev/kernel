@@ -53,9 +53,14 @@
 #define C1_B_Cb		1	/* B/Cb */
 #define C0_G_Y		0	/* G/luma */
 
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+/* wait for at most 2 vsync for lowest refresh rate (24hz) */
+#define KOFF_TIMEOUT msecs_to_jiffies(84)
+#else
 /* wait for 300ms to take into account scheduling related delays
  * This number is empirical*/
 #define KOFF_TIMEOUT msecs_to_jiffies(300)
+#endif
 
 #define OVERFETCH_DISABLE_TOP		BIT(0)
 #define OVERFETCH_DISABLE_BOTTOM	BIT(1)

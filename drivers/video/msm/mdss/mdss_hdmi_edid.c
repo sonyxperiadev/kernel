@@ -1144,8 +1144,7 @@ static void hdmi_edid_add_sink_3d_format(struct hdmi_edid_sink_data *sink_data,
 static void hdmi_edid_add_sink_video_format(struct hdmi_edid_ctrl *edid_ctrl,
 	u32 video_format)
 {
-	struct msm_hdmi_mode_timing_info *timing;
-	u32 ret;
+	// struct msm_hdmi_mode_timing_info *timing;
 	u32 supported;
 	int i;
 	struct hdmi_edid_sink_data *sink_data = &edid_ctrl->sink_data;
