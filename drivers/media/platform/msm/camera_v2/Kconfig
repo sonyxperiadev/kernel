@@ -202,6 +202,14 @@ config GC0339
 		Preview and snapshot resolution shall be 640*480 at 30 fps,
 		It does not support auto focus.
 
+config IMX132
+	bool "Sensor IMX132 (BAYER 2.4MP)"
+	depends on MSMB_CAMERA
+	---help---
+		Sony 2.4MP Bayer CMOS sensor, 2 MIPI lanes,
+		preview and snapshot config at 1920x1080 60FPS.
+		This sensor driver does not support auto focus.
+
 config IMX135
 	bool "Sensor IMX135 (BAYER 12M)"
 	depends on MSMB_CAMERA
@@ -229,14 +237,6 @@ config IMX200
 		Video output formats: RAW10/8 ATR14/2 COMP8/6;
 		Video HDR support.
 		Supports focuser, depending on module.
-
-config ZFRONT
-	bool "Sensor: Sony Z-series front camera"
-	depends on MSMB_CAMERA
-	---help---
-		BAYER sensor found in Sony Xperia Z series
-		devices. Various modules supported.
-		TODO: Find sensor models!!!
 
 config OV7695
 	bool "Sensor OV7695 (YUV VGA)"
