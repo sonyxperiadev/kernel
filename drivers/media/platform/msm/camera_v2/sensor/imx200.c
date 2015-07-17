@@ -95,6 +95,13 @@ static int32_t imx200_sensor_match_id(struct msm_sensor_ctrl_t *s_ctrl)
 		return 0;
 	}
 
+	if (!strncmp(snsdata->alt_sensor_name,
+			eepdata, SONY_SENSOR_NAME_LEN)) {
+		pr_info("%s: Alt-sensor name matches with eeprom!\n",
+							__func__);
+		return 0;
+	}
+
 	pr_err("%s: No match. EEPROM data: %s\n", __func__, eepdata);
 #endif
 	return -EINVAL;

@@ -157,6 +157,13 @@ static int32_t msm_sensor_get_dt_data(struct device_node *of_node,
 		goto FREE_SENSORDATA;
 	}
 
+#ifdef CONFIG_SONY_CAMERA
+	rc = of_property_read_string(of_node, "qcom,alt-sensor-name",
+		&sensordata->alt_sensor_name);
+	if (rc < 0)
+		pr_warn("%s: Failed to get alt-sensor name\n", __func__);
+#endif
+
 	rc = of_property_read_u32(of_node, "qcom,cci-master",
 		&s_ctrl->cci_i2c_master);
 	CDBG("%s qcom,cci-master %d, rc %d\n", __func__, s_ctrl->cci_i2c_master,

@@ -91,6 +91,9 @@ struct msm_camera_power_ctrl_t {
 
 struct msm_camera_sensor_board_info {
 	const char *sensor_name;
+#ifdef CONFIG_SONY_CAMERA
+	const char *alt_sensor_name;
+#endif
 	const char *eeprom_name;
 	const char *actuator_name;
 	const char *ois_name;
