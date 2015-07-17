@@ -312,7 +312,7 @@ static void usb_wwan_in_work(struct work_struct *w)
 
 		if (count < len) {
 			dev_dbg(&port->dev,
-				"%s: len:%lu count:%lu n_read:%lu\n", __func__,
+				"%s: len:%d count:%d n_read:%d\n", __func__,
 				len, count, portdata->n_read);
 			portdata->n_read += count;
 			port->throttled = true;
