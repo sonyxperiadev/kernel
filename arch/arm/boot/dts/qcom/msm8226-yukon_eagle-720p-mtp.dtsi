@@ -67,7 +67,9 @@
 			compatible = "qcom,mmc3416x";
 			reg = <0x30>;
 			vdd-supply = <&pm8226_l19>;
-			vddio-supply = <&pm8226_lvs1>;
+			vio-supply = <&pm8226_lvs1>;
+			memsic,dir = "obverse-x-axis-forward";
+			memsic,auto-report;
 		};
 
 		sensortek@48 {
