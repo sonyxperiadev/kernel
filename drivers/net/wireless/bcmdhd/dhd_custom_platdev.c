@@ -539,6 +539,7 @@ static struct cntry_locales_custom bcm4356_pcie_translate_sta_dfs_table[] = {
 	{"BR", "BR", 4},
 	{"CA", "US", 176},   /* Previousely was CA/31 */
 	{"CH", "CH", 4},
+	{"CN", "CN", 24},
 	{"CY", "CY", 4},
 	{"CZ", "CZ", 4},
 	{"DE", "DE", 7},
