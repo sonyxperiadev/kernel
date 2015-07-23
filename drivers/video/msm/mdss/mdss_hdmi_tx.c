@@ -2282,10 +2282,10 @@ static int hdmi_tx_core_on(struct hdmi_tx_ctrl *hdmi_ctrl)
 			__func__, rc);
 		goto disable_core_power;
 	}
-#endif
 	return rc;
 disable_core_power:
 	hdmi_tx_enable_power(hdmi_ctrl, HDMI_TX_CORE_PM, 0);
+#endif
 	return rc;
 } /* hdmi_tx_core_on */
 

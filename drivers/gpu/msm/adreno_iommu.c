@@ -13,6 +13,7 @@
 #include "adreno.h"
 #include "kgsl_sharedmem.h"
 
+#ifndef CONFIG_MSM_ADRENO_USES_OLD_FIRMWARE
 /**
  * _adreno_mmu_set_pt_update_condition() - Generate commands to setup a
  * flag to indicate whether pt switch is required or not by comparing
@@ -168,6 +169,7 @@ static unsigned int _adreno_iommu_pt_update_pid_to_mem(
 
 	return cmds - cmds_orig;
 }
+#endif // CONFIG_MSM_ADRENO_USES_OLD_FIRMWARE
 
 static unsigned int _adreno_iommu_set_pt_v0(struct kgsl_device *device,
 					unsigned int *cmds_orig,
@@ -272,7 +274,9 @@ static unsigned int _adreno_iommu_set_pt_v1(struct adreno_ringbuffer *rb,
 	uint64_t ttbr0_val = 0;
 	unsigned int reg_pt_val;
 	unsigned int *cmds = cmds_orig;
+#ifndef CONFIG_MSM_ADRENO_USES_OLD_FIRMWARE
 	unsigned int *cond_exec_ptr;
+#endif
 	int i;
 	unsigned int ttbr0, tlbiall, tlbstatus, tlbsync, mmu_ctrl;
 
