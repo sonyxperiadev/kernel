@@ -51,7 +51,7 @@
 #define SUSPEND_POWER_OFF     0
 #define CPU_BOOST             0
 #define SONY_CPU_BOOST        0
-#define FB_CALLBACK           0
+#define FB_CALLBACK           1
 #define HI02                  1
 #define CFG_FILE_NAME_MAX     64
 #define FORCE_NO_DECONFIG     1
