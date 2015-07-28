@@ -10,6 +10,9 @@
  * GNU General Public License for more details.
  */
 
+#include "msm8939-pinctrl.dtsi"
+#include "msm8939-camera-sensor-tulip.dtsi"
+
 &soc {
 	i2c@78b9000 { /* BLSP1 QUP5 */
 		tsc@24 {
@@ -448,12 +451,6 @@
 &mdss_dsi1 {
 	vddio-supply = <&pm8916_l16>;
 	qcom,platform-regulator-settings = [02 09 03 00 20 00 01];
-};
-
-&cci {
-	qcom,camera@0 {
-		qcom,led-flash-src = <&led_flash0>;
-	};
 };
 
 &pm8916_mpps {
