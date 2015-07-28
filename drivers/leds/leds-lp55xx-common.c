@@ -18,6 +18,9 @@
 #include <linux/i2c.h>
 #include <linux/leds.h>
 #include <linux/module.h>
+#include <linux/slab.h>
+#include <linux/gpio.h>
+#include <linux/of_gpio.h>
 #include <linux/platform_data/leds-lp55xx.h>
 
 #include "leds-lp55xx-common.h"
@@ -164,6 +167,7 @@ static int lp55xx_init_led(struct lp55xx_led *led,
 	led->led_current = pdata->led_config[chan].led_current;
 	led->max_current = pdata->led_config[chan].max_current;
 	led->chan_nr = pdata->led_config[chan].chan_nr;
+	led->cdev.default_trigger = pdata->led_config[chan].default_trigger;
 
 	if (led->chan_nr >= max_channel) {
 		dev_err(dev, "Use channel numbers between 0 and %d\n",
@@ -206,6 +210,7 @@ static void lp55xx_firmware_loaded(const struct firmware *fw, void *context)
 {
 	struct lp55xx_chip *chip = context;
 	struct device *dev = &chip->cl->dev;
+	enum lp55xx_engine_index idx = chip->engine_idx;
 
 	if (!fw) {
 		dev_err(dev, "firmware request failed\n");
@@ -215,6 +220,7 @@ static void lp55xx_firmware_loaded(const struct firmware *fw, void *context)
 	/* handling firmware data is chip dependent */
 	mutex_lock(&chip->lock);
 
+	chip->engines[idx - 1].mode = LP55XX_ENGINE_LOAD;
 	chip->fw = fw;
 	if (chip->cfg->firmware_cb)
 		chip->cfg->firmware_cb(chip);
@@ -405,18 +411,17 @@ int lp55xx_init_device(struct lp55xx_chip *chip)
 	if (!pdata || !cfg)
 		return -EINVAL;
 
-	if (pdata->setup_resources) {
-		ret = pdata->setup_resources();
+	if (gpio_is_valid(pdata->enable_gpio)) {
+		ret = devm_gpio_request_one(dev, pdata->enable_gpio,
+					    GPIOF_DIR_OUT, "lp5523_enable");
 		if (ret < 0) {
-			dev_err(dev, "setup resoure err: %d\n", ret);
+			dev_err(dev, "cannot get enable_gpio. err: %d\n", ret);
 			goto err;
 		}
-	}
 
-	if (pdata->enable) {
-		pdata->enable(0);
+		gpio_set_value(pdata->enable_gpio, 0);
 		usleep_range(1000, 2000); /* Keep enable down at least 1ms */
-		pdata->enable(1);
+		gpio_set_value(pdata->enable_gpio, 1);
 		usleep_range(1000, 2000); /* 500us abs min. */
 	}
 
@@ -457,11 +462,8 @@ void lp55xx_deinit_device(struct lp55xx_chip *chip)
 	if (chip->clk)
 		clk_disable_unprepare(chip->clk);
 
-	if (pdata->enable)
-		pdata->enable(0);
-
-	if (pdata->release_resources)
-		pdata->release_resources();
+	if (gpio_is_valid(pdata->enable_gpio))
+		gpio_set_value(pdata->enable_gpio, 0);
 }
 EXPORT_SYMBOL_GPL(lp55xx_deinit_device);
 
@@ -553,6 +555,61 @@ void lp55xx_unregister_sysfs(struct lp55xx_chip *chip)
 	sysfs_remove_group(&dev->kobj, &lp55xx_engine_attr_group);
 }
 EXPORT_SYMBOL_GPL(lp55xx_unregister_sysfs);
+
+int lp55xx_of_populate_pdata(struct device *dev, struct device_node *np)
+{
+	struct device_node *child;
+	struct lp55xx_platform_data *pdata;
+	struct lp55xx_led_config *cfg;
+	int num_channels;
+	int i = 0;
+
+	pdata = devm_kzalloc(dev, sizeof(*pdata), GFP_KERNEL);
+	if (!pdata) {
+		pr_err("%s: Cannot allocate pdata!\n", __func__);
+		return -ENOMEM;
+	}
+
+	num_channels = of_get_child_count(np);
+	if (num_channels == 0) {
+		pr_err("%s: no LED channels\n", __func__);
+		return -EINVAL;
+	}
+
+	cfg = devm_kzalloc(dev, sizeof(*cfg) * num_channels, GFP_KERNEL);
+	if (!cfg) {
+		pr_err("%s: cannot allocate cfg!\n", __func__);
+		return -ENOMEM;
+	}
+
+	pdata->led_config = &cfg[0];
+	pdata->num_channels = num_channels;
+
+	for_each_child_of_node(np, child) {
+		cfg[i].chan_nr = i;
+
+		of_property_read_string(child, "chan-name", &cfg[i].name);
+		of_property_read_u8(child, "led-cur", &cfg[i].led_current);
+		of_property_read_u8(child, "max-cur", &cfg[i].max_current);
+		cfg[i].default_trigger =
+			of_get_property(child, "linux,default-trigger", NULL);
+
+		i++;
+	}
+
+	of_property_read_string(np, "label", &pdata->label);
+	of_property_read_u8(np, "ti,clock-mode", &pdata->clock_mode);
+
+	pdata->enable_gpio = of_get_named_gpio(np, "ti,enable-gpio", 0);
+
+	/* LP8501 specific */
+	of_property_read_u8(np, "ti,pwr-sel", (u8 *)&pdata->pwr_sel);
+
+	dev->platform_data = pdata;
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(lp55xx_of_populate_pdata);
 
 MODULE_AUTHOR("Milo Kim <milo.kim@ti.com>");
 MODULE_DESCRIPTION("LP55xx Common Driver");
