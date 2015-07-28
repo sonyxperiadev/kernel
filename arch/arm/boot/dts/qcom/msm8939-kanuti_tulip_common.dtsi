@@ -214,32 +214,32 @@
 		lp5562@30 {
 			compatible = "ti,lp5562";
 			reg = <0x30>;
-			enable-gpio = <&msm_gpio 32 0>;
 			pinctrl-names = "tlmm_lp5562_active","tlmm_lp5562_suspend";
 			pinctrl-0 = <&lp5562_active>;
 			pinctrl-1 = <&lp5562_suspend>;
-			clock-mode = /bits/8 <2>;
+			ti,enable-gpio = <&msm_gpio 32 0>;
+			ti,clock-mode = /bits/8 <2>;
 
 			chan0 {
-				chan-name = "R";
+				chan-name = "led:rgb_red";
 				led-cur = /bits/ 8 <0x20>;
 				max-cur = /bits/ 8 <0x60>;
 			};
 
 			chan1 {
-				chan-name = "G";
+				chan-name = "led:rgb_green";
 				led-cur = /bits/ 8 <0x20>;
 				max-cur = /bits/ 8 <0x60>;
 			};
 
 			chan2 {
-				chan-name = "B";
+				chan-name = "led:rgb_blue";
 				led-cur = /bits/ 8 <0x20>;
 				max-cur = /bits/ 8 <0x60>;
 			};
 
 			chan3 {
-				chan-name = "W";
+				chan-name = "led:rgb_white";
 				led-cur = /bits/ 8 <0x20>;
 				max-cur = /bits/ 8 <0x60>;
 			};
