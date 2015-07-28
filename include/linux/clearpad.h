@@ -22,6 +22,8 @@
 #define CLEARPADI2C_NAME "clearpad-i2c"
 #define CLEARPAD_RMI_DEV_NAME "clearpad-rmi-dev"
 
+#define SYN_PCA_BLOCK_SIZE	16
+
 enum clearpad_funcarea_kind_e {
 	SYN_FUNCAREA_INSENSIBLE,
 	SYN_FUNCAREA_POINTER,
@@ -89,5 +91,16 @@ struct clearpad_data_t {
 	struct platform_device *rmi_dev;
 #endif
 };
+
+struct clearpad_ioctl_pca_info {
+	u16 block_pos;
+	u8 data[SYN_PCA_BLOCK_SIZE];
+};
+
+#define SYN_PCA_IOCTL_MAGIC	0xCC
+#define SYN_PCA_IOCTL_GET \
+	_IOWR(SYN_PCA_IOCTL_MAGIC, 1, struct clearpad_ioctl_pca_info *)
+#define SYN_PCA_IOCTL_SET \
+	_IOW(SYN_PCA_IOCTL_MAGIC, 2, struct clearpad_ioctl_pca_info *)
 
 #endif

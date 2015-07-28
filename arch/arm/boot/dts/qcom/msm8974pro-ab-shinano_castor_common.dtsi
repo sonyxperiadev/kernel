@@ -70,7 +70,7 @@
 			preset_x_max = <1919>;
 			preset_y_max = <1199>;
 			preset_n_fingers = <10>;
-			por_delay_after = <200>;
+			delay_after_hw_reset = <200>;
 			wakeup_gesture_supported = <1>;
 			wakeup_gesture_large_panel = <1>;
 			wakeup_gesture_lpm_disabled = <0>;
