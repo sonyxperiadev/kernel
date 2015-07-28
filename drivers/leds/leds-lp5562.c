@@ -17,6 +17,10 @@
 #include <linux/leds.h>
 #include <linux/module.h>
 #include <linux/mutex.h>
+#include <linux/of.h>
+#include <linux/wakelock.h>
+#include <linux/pm.h>
+#include <linux/pinctrl/consumer.h>
 #include <linux/platform_data/leds-lp55xx.h>
 #include <linux/slab.h>
 
@@ -101,6 +105,8 @@
 #define LP5562_CMD_RUN			0x2A
 #define LP5562_CMD_DIRECT		0x3F
 #define LP5562_PATTERN_OFF		0
+
+struct wake_lock leds_lp5562_wakelock;
 
 static inline void lp5562_wait_opmode_done(void)
 {
@@ -509,18 +515,58 @@ static struct lp55xx_device_config lp5562_cfg = {
 	.dev_attr_group     = &lp5562_group,
 };
 
+static int led_pinctrl_configure(struct lp55xx_chip *chip, bool active)
+{
+	struct pinctrl_state *set_state;
+	int ret;
+
+	if (active) {
+		set_state = pinctrl_lookup_state(chip->led_pinctrl,
+						"tlmm_lp5562_active");
+		if (IS_ERR(set_state)) {
+			pr_err("%s: cannot get lp5562 pinctrl active state\n",
+								__func__);
+			return PTR_ERR(set_state);
+		}
+	} else {
+		set_state = pinctrl_lookup_state(chip->led_pinctrl,
+						"tlmm_lp5562_suspend");
+		if (IS_ERR(set_state)) {
+			pr_err("%s: cannot get lp5562 pinctrl sleep state\n",
+								__func__);
+			return PTR_ERR(set_state);
+		}
+	}
+
+	ret = pinctrl_select_state(chip->led_pinctrl, set_state);
+	if (ret) {
+		pr_err("%s: cannot set lp5562 pinctrl active state\n",
+								__func__);
+		return ret;
+	}
+
+	return 0;
+}
+
 static int lp5562_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
 {
 	int ret;
 	struct lp55xx_chip *chip;
 	struct lp55xx_led *led;
-	struct lp55xx_platform_data *pdata = client->dev.platform_data;
+	struct lp55xx_platform_data *pdata;
+	struct device_node *np = client->dev.of_node;
 
-	if (!pdata) {
+	if (!dev_get_platdata(&client->dev) && !np) {
 		dev_err(&client->dev, "no platform data\n");
 		return -EINVAL;
 	}
+
+	ret = lp55xx_of_populate_pdata(&client->dev, np);
+	if (ret != 0)
+		return ret;
+
+	pdata = dev_get_platdata(&client->dev);
 
 	chip = devm_kzalloc(&client->dev, sizeof(*chip), GFP_KERNEL);
 	if (!chip)
@@ -553,6 +599,23 @@ static int lp5562_probe(struct i2c_client *client,
 		goto err_register_sysfs;
 	}
 
+	/* Get pinctrl if target uses pinctrl */
+	chip->led_pinctrl = devm_pinctrl_get(&client->dev);
+	if (IS_ERR_OR_NULL(chip->led_pinctrl)) {
+		dev_err(&client->dev, "Failed to get pinctrl\n");
+	} else {
+		ret = led_pinctrl_configure(chip, true);
+		if (ret) {
+			dev_err(&client->dev,
+				"cannot set lp5562 pinctrl active state\n");
+		}
+	}
+
+	wake_lock_init(&leds_lp5562_wakelock,
+				WAKE_LOCK_SUSPEND, "leds-lp55xx");
+
+	pr_info("%s: Initialized.\n", __func__);
+
 	return 0;
 
 err_register_sysfs:
@@ -573,9 +636,50 @@ static int lp5562_remove(struct i2c_client *client)
 	lp55xx_unregister_sysfs(chip);
 	lp55xx_unregister_leds(led, chip);
 	lp55xx_deinit_device(chip);
+	wake_lock_destroy(&leds_lp5562_wakelock);
 
 	return 0;
 }
+
+#ifdef CONFIG_PM_SLEEP
+static int lp5562_suspend(struct device *dev)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct lp55xx_led *led = i2c_get_clientdata(client);
+	int ret;
+
+	if (led->chip->led_pinctrl) {
+		ret = led_pinctrl_configure(led->chip, false);
+		if (ret) {
+			pr_err("%s: failed to put the pin in suspend state\n",
+								__func__);
+			return ret;
+		}
+	}
+
+	return 0;
+}
+
+static int lp5562_resume(struct device *dev)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct lp55xx_led *led = i2c_get_clientdata(client);
+	int ret;
+
+	if (led->chip->led_pinctrl) {
+		ret = led_pinctrl_configure(led->chip, true);
+		if (ret) {
+			pr_err("%s: failed to put the pin in resume state\n",
+								__func__);
+			return ret;
+		}
+	}
+
+	return 0;
+}
+
+static SIMPLE_DEV_PM_OPS(lp5562_pm, lp5562_suspend, lp5562_resume);
+#endif
 
 static const struct i2c_device_id lp5562_id[] = {
 	{ "lp5562", 0 },
@@ -583,9 +687,23 @@ static const struct i2c_device_id lp5562_id[] = {
 };
 MODULE_DEVICE_TABLE(i2c, lp5562_id);
 
+#ifdef CONFIG_OF
+static const struct of_device_id of_lp5562_leds_match[] = {
+	{ .compatible = "ti,lp5562" },
+	{},
+};
+MODULE_DEVICE_TABLE(of, of_lp5562_leds_match);
+#endif
+
 static struct i2c_driver lp5562_driver = {
 	.driver = {
 		.name	= "lp5562",
+#ifdef CONFIG_PM
+		.pm = &lp5562_pm,
+#endif
+#ifdef CONFIG_OF
+		.of_match_table = of_match_ptr(of_lp5562_leds_match),
+#endif
 	},
 	.probe		= lp5562_probe,
 	.remove		= lp5562_remove,
