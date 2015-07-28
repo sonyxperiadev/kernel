@@ -365,6 +365,9 @@
 };
 
 &spi_0 {
+	/delete-property/ pinctrl-names;
+	/delete-property/ pinctrl-0;
+	/delete-property/ pinctrl-1;
 	status = "disabled";
 };
 
@@ -443,7 +446,7 @@
 	vddio-supply = <&pm8916_l16>;
 
 	qcom,platform-regulator-settings = [04 09 03 00 20 00 01];
-	qcom,dsi-pref-prim-pan = <&dsi_nt35521_720_vid_truly>;
+	qcom,dsi-pref-prim-pan = <&dsi_nt35521_720_vid_truly63>;
 	qcom,platform-te-gpio = <&msm_gpio 24 0>;
 	qcom,platform-bklight-en-gpio = <&msm_gpio 10 0>;
 };
