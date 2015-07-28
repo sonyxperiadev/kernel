@@ -27,7 +27,7 @@
 			touch_vdd-supply = <&pm8941_l22>;
 			touch_vio-supply = <&pm8941_s3>;
 			synaptics,irq_gpio = <&msmgpio 86 0x00>;
-			gpio_reset = <85>;
+			synaptics,reset_gpio = <&msmgpio 85 0>;
 			reset_l2h = <0>;
 			chip_id = <0x38>;
 			num_sensor_rx = <26>;
@@ -42,7 +42,7 @@
 			preset_x_max = <719>;
 			preset_y_max = <1279>;
 			preset_n_fingers = <10>;
-			por_delay_after = <200>;
+			delay_after_hw_reset = <200>;
 			wakeup_gesture_supported = <1>;
 			wakeup_gesture_lpm_disabled = <1>;
 			wakeup_gesture_timeout = <2000>;

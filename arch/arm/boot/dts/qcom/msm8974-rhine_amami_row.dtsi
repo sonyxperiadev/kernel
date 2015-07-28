@@ -35,7 +35,7 @@
 			preset_x_max = <719>;
 			preset_y_max = <1279>;
 			preset_n_bytes_per_object = <5>;
-			por_delay_after = <200>;
+			delay_after_hw_reset = <200>;
 			wakeup_gesture_supported = <0>;
 			wakeup_gesture_timeout = <0>;
 		};

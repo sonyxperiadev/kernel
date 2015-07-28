@@ -145,6 +145,7 @@
 			preset_x_max = <1079>;
 			preset_y_max = <1919>;
 			preset_n_fingers = <10>;
+			synaptics,use-pinctrl;
 			pinctrl-names = "irq_gpio-active", "irq_gpio-suspend",
 					"reset_gpio-active", "reset_gpio-suspend",
 					"reset_gpio-reset";
