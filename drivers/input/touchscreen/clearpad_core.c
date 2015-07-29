@@ -4418,8 +4418,10 @@ static int clearpad_touch_config_dt(struct clearpad_t *this)
 
 	this->gpio_reset = of_get_named_gpio(devnode,
 						"synaptics,reset_gpio", 0);
-	if (!gpio_is_valid(this->gpio_reset))
+	if (!gpio_is_valid(this->gpio_reset)) {
 		dev_warn(&this->pdev->dev, "no gpio_reset config\n");
+		this->gpio_reset = 0;
+	}
 
 	this->use_pinctrl = of_property_read_bool(devnode,
 						"synaptics,use-pinctrl");
