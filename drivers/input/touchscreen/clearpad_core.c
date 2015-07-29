@@ -3477,7 +3477,7 @@ static int clearpad_command_open(struct clearpad_t *this,
 	} else {
 		this->flash.buffer_size = image_size;
 		dev_info(&this->pdev->dev,
-			"prepared buffer size=%<u\n", this->flash.buffer_size);
+			"prepared buffer size=%u\n", this->flash.buffer_size);
 	}
 	UNLOCK(this);
 	return rc;
