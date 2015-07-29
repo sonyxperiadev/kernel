@@ -2,21 +2,20 @@
  * lp855x.h - TI LP8556 Backlight Driver
  *
  * Copyright (C) 2011 Texas Instruments
- * Copyright (c) 2014 Sony Mobile Communications Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  *
  */
+/*
+ * NOTE: This file has been modified by Sony Mobile Communications Inc.
+ * Modifications are Copyright (c) 2014 Sony Mobile Communications Inc,
+ * and licensed under the license of the file.
+ */
 
 #ifndef _LP855X_H
 #define _LP855X_H
-
-enum lp855x_brightness_ctrl_mode {
-	PWM_BASED = 1,
-	REGISTER_BASED,
-};
 
 struct lp855x_pwm_data {
 	void (*pwm_set_intensity) (int brightness, int max_brightness);
@@ -47,17 +46,17 @@ struct lp855x_rom_data {
 struct lp855x_platform_data {
 	const char *name;
 	const char *default_trigger;
-	enum lp855x_brightness_ctrl_mode mode;
 	u8 device_control;
 	int initial_brightness;
+	unsigned int period_ns;
 	int max_brightness;
 	struct lp855x_pwm_data pwm_data;
 	u8 load_new_rom_data;
 	int size_program;
 	struct lp855x_rom_data *rom_data;
-	u8 cfg3;
+	u8 slope_reg;
 	unsigned gpio_bl_enable;
-	bool bl_on_in_boot;
+	bool bl_enable_valid;
 };
 
 #endif
