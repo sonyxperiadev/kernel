@@ -122,6 +122,7 @@
 
 	/* I2C : BLSP11 */
 	i2c@f9967000 {
+		status = "ok";
 		ti_lp855x@2c {
 			compatible = "ti,lp8557";
 			reg = <0x2c>;

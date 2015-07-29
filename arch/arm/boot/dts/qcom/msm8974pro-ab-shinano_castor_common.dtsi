@@ -103,7 +103,7 @@
 	/* I2C : BLSP11 */
 	i2c@f9967000 {
 		ti_lp855x@2c {
-			compatible = "Texas Instruments,lp855x";
+			compatible = "ti,lp8556";
 			reg = <0x2c>;
 			status = "ok";
 			bl_enable = <&msmgpio 69 0>;
