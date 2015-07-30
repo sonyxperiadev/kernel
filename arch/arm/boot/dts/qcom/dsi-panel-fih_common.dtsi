@@ -1233,6 +1233,8 @@
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
 		qcom,mdss-dsi-reset-sequence = <1 1>, <0 10>, <1 150>;
 		somc,panel-id = [71];
+		somc,panel-detect = <1>;
+		somc,driver-ic = <4>;
 		somc,alt-panelid-cmd;
 		somc,panel-id-read-cmds;
 	};
@@ -1309,6 +1311,8 @@
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
 		qcom,mdss-dsi-reset-sequence = <1 1>, <0 10>, <1 150>;
 		somc,panel-id = [72];
+		somc,panel-detect = <1>;
+		somc,driver-ic = <4>;
 		somc,alt-panelid-cmd;
 		somc,panel-id-read-cmds;
 	};
@@ -1584,6 +1588,8 @@
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
 		qcom,mdss-dsi-reset-sequence = <1 1>, <0 10>, <1 150>;
 		somc,panel-id = [73];
+		somc,panel-detect = <1>;
+		somc,driver-ic = <4>;
 		somc,alt-panelid-cmd;
 		somc,panel-id-read-cmds;
 	};
@@ -1663,6 +1669,8 @@
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
 		qcom,mdss-dsi-reset-sequence = <1 1>, <0 10>, <1 150>;
 		somc,panel-id = [74];
+		somc,panel-detect = <1>;
+		somc,driver-ic = <4>;
 		somc,alt-panelid-cmd;
 		somc,panel-id-read-cmds;
 	};
