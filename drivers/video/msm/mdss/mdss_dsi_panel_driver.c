@@ -288,7 +288,7 @@ static void mdss_dsi_panel_cmds_send(struct mdss_dsi_ctrl_pdata *ctrl,
 	mdss_dsi_cmdlist_put(ctrl, &cmdreq);
 }
 
-static char led_pwm1[2] = {0x51, 0x0};	/* DTYPE_DCS_WRITE1 */
+static char led_pwm1[2] = {0x51, 0xFF};	/* DTYPE_DCS_WRITE1 */
 static struct dsi_cmd_desc backlight_cmd = {
 	{DTYPE_DCS_WRITE1, 1, 0, 0, 1, sizeof(led_pwm1)},
 	led_pwm1
@@ -1921,6 +1921,9 @@ static int mdss_dsi_panel_detect(struct mdss_panel_data *pdata)
 	np = of_parse_phandle(
 			pdata->panel_pdev->dev.of_node,
 			"qcom,dsi-pref-prim-pan", 0);
+
+	if (of_machine_is_compatible("somc,tulip"))
+		ctrl_pdata->rx_buf.data[0] = ctrl_pdata->rx_buf.data[2];
 
 	rc = mdss_panel_parse_dt(np, ctrl_pdata,
 		spec_pdata->driver_ic, 0, ctrl_pdata->rx_buf.data);
