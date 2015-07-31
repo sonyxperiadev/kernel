@@ -280,7 +280,7 @@
 
 /* GPU overrides */
 &msm_gpu {
-	qcom,initial-pwrlevel = <4>;
+	qcom,initial-pwrlevel = <5>;
 	qcom,msm-bus,num-cases = <10>;
 	qcom,msm-bus,vectors-KBps =
 		<26 512 0 0>,

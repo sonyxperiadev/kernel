@@ -55,7 +55,7 @@
 
 		qcom,chipid = <0x04030000>;
 
-		qcom,initial-pwrlevel = <2>;
+		qcom,initial-pwrlevel = <3>;
 
 		qcom,idle-timeout = <8>; //<HZ/12>
 		qcom,strtstp-sleepwake;
