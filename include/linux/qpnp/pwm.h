@@ -185,6 +185,11 @@ static inline int pwm_config_us(struct pwm_device *pwm,
 }
 #endif
 
+/*
+ * synchronized enable of multiple pwm instances
+ */
+int pwm_enable_synchronized(struct pwm_device **pwms, size_t num);
+
 /* Standard APIs supported */
 /*
  * pwm_request - request a PWM device
