@@ -43,8 +43,18 @@ struct cpuquiet_platform_info {
 extern int cpuquiet_init(struct cpuquiet_platform_info *plat_info);
 extern int cpuquiet_register_governor(struct cpuquiet_governor *gov);
 extern void cpuquiet_unregister_governor(struct cpuquiet_governor *gov);
-extern int cpuquiet_quiesce_cpu(unsigned int cpunumber, bool sync);
-extern int cpuquiet_wake_cpu(unsigned int cpunumber, bool sync);
+extern int cpuquiet_wake_quiesce_cpu(unsigned int cpunumber, bool sync,
+								bool up);
+
+static inline int cpuquiet_quiesce_cpu(unsigned int cpunumber, bool sync)
+{
+	return cpuquiet_wake_quiesce_cpu(cpunumber, sync, false);
+}
+
+static inline int cpuquiet_wake_cpu(unsigned int cpunumber, bool sync)
+{
+	return cpuquiet_wake_quiesce_cpu(cpunumber, sync, true);
+}
 
 #ifdef CONFIG_CPU_QUIET_STATS
 /* Sysfs support */
