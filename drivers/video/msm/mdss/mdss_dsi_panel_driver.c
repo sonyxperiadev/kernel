@@ -322,19 +322,19 @@ static void mdss_dsi_panel_bklt_dcs(struct mdss_dsi_ctrl_pdata *ctrl,
 
 static int mdss_dsi_request_gpios(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 {
-	int rc = 0;
+	int rc;
 
 	if (gpio_is_valid(ctrl_pdata->disp_en_gpio)) {
 		rc = gpio_request(ctrl_pdata->disp_en_gpio,
 						"disp_enable");
-		if (rc) {
+		if (rc && rc != -EBUSY) {
 			pr_err("request disp_en gpio failed, rc=%d\n",
 				       rc);
 			goto disp_en_gpio_err;
 		}
 	}
 	rc = gpio_request(ctrl_pdata->rst_gpio, "disp_rst_n");
-	if (rc) {
+	if (rc && rc != -EBUSY) {
 		pr_err("request reset gpio failed, rc=%d\n",
 			rc);
 		goto rst_gpio_err;
@@ -342,7 +342,7 @@ static int mdss_dsi_request_gpios(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 	if (gpio_is_valid(ctrl_pdata->bklt_en_gpio)) {
 		rc = gpio_request(ctrl_pdata->bklt_en_gpio,
 						"bklt_enable");
-		if (rc) {
+		if (rc && rc != -EBUSY) {
 			pr_err("request bklt gpio failed, rc=%d\n",
 				       rc);
 			goto bklt_en_gpio_err;
@@ -350,13 +350,13 @@ static int mdss_dsi_request_gpios(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 	}
 	if (gpio_is_valid(ctrl_pdata->mode_gpio)) {
 		rc = gpio_request(ctrl_pdata->mode_gpio, "panel_mode");
-		if (rc) {
+		if (rc && rc != -EBUSY) {
 			pr_err("request panel mode gpio failed,rc=%d\n",
 								rc);
 			goto mode_gpio_err;
 		}
 	}
-	return rc;
+	return 0;
 
 mode_gpio_err:
 	if (gpio_is_valid(ctrl_pdata->bklt_en_gpio))
