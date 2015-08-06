@@ -79,16 +79,16 @@ static unsigned long lowmem_deathpending_timeout;
 
 static int test_task_flag(struct task_struct *p, int flag)
 {
-	struct task_struct *t = p;
+	struct task_struct *t;
 
-	do {
+	for_each_thread(p, t) {
 		task_lock(t);
 		if (test_tsk_thread_flag(t, flag)) {
 			task_unlock(t);
 			return 1;
 		}
 		task_unlock(t);
-	} while_each_thread(p, t);
+	}
 
 	return 0;
 }
@@ -342,7 +342,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	rcu_read_lock();
 #ifdef CONFIG_ANDROID_LMK_ADJ_RBTREE
 	for (tsk = pick_first_task();
-		tsk != pick_last_task();
+		tsk != pick_last_task() && tsk != NULL;
 		tsk = pick_next_from_adj_tree(tsk)) {
 #else
 	for_each_process(tsk) {
