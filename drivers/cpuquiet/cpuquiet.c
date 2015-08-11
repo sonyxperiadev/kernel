@@ -69,7 +69,7 @@ static int update_core_config(unsigned int cpunumber, bool up)
 	return ret;
 }
 
-int cpuquiet_cpu_down(unsigned int cpunumber, bool sync)
+static int cpuquiet_cpu_down(unsigned int cpunumber, bool sync)
 {
 	unsigned long timeout = msecs_to_jiffies(hotplug_timeout);
 	int err = 0;
@@ -88,9 +88,8 @@ int cpuquiet_cpu_down(unsigned int cpunumber, bool sync)
 	else
 		return -ETIMEDOUT;
 }
-EXPORT_SYMBOL(cpuquiet_cpu_down);
 
-int cpuquiet_cpu_up(unsigned int cpunumber, bool sync)
+static int cpuquiet_cpu_up(unsigned int cpunumber, bool sync)
 {
 	unsigned long timeout = msecs_to_jiffies(hotplug_timeout);
 	int err = 0;
@@ -109,7 +108,56 @@ int cpuquiet_cpu_up(unsigned int cpunumber, bool sync)
 	else
 		return -ETIMEDOUT;
 }
-EXPORT_SYMBOL(cpuquiet_cpu_up);
+
+int cpuquiet_quiesce_cpu(unsigned int cpunumber, bool sync)
+{
+	int err = -EPERM;
+	ktime_t before, after;
+	u64 delta;
+
+	mutex_lock(&cpuquiet_lock);
+
+	/*
+	 * If sync is false, we will not be collecting hotplug overhead
+	 * and this value should be ignored.
+	 */
+	before = ktime_get();
+	err = cpuquiet_cpu_down(cpunumber, sync);
+	after = ktime_get();
+	delta = (u64) ktime_to_us(ktime_sub(after, before));
+
+	mutex_unlock(&cpuquiet_lock);
+
+	if (!err)
+		cpuquiet_stats_update(cpunumber, false, delta);
+
+	return err;
+}
+
+int cpuquiet_wake_cpu(unsigned int cpunumber, bool sync)
+{
+	int err = -EPERM;
+	ktime_t before, after;
+	u64 delta;
+
+	mutex_lock(&cpuquiet_lock);
+
+	/*
+	 * If sync is false, we will not be collecting hotplug overhead
+	 * and this value should be ignored.
+	 */
+	before = ktime_get();
+	err = cpuquiet_cpu_up(cpunumber, sync);
+	after = ktime_get();
+	delta = (u64) ktime_to_us(ktime_sub(after, before));
+
+	mutex_unlock(&cpuquiet_lock);
+
+	if (!err)
+		cpuquiet_stats_update(cpunumber, true, delta);
+
+	return err;
+}
 
 static void __cpuinit cpuquiet_work_func(struct work_struct *work)
 {
