@@ -1038,7 +1038,7 @@ int mmc_add_host(struct mmc_host *host)
 	host->clk_scaling.up_threshold = 35;
 	host->clk_scaling.down_threshold = 5;
 	host->clk_scaling.polling_delay_ms = 100;
-	host->clk_scaling.scale_down_in_low_wr_load = false;
+	host->clk_scaling.scale_down_in_low_wr_load = true;
 
 	err = sysfs_create_group(&host->class_dev.kobj, &clk_scaling_attr_grp);
 	if (err)
