@@ -504,6 +504,10 @@
 			};
 		};
 		qcom,leds@d800 {
+                        qcom,wled_0 {
+                                label = "wled";
+                                linux,name = "wled:backlight";
+			};
 			qcom,fs-curr-ua = <24000>;
 			somc,calc-curr;
 			somc,init-br = <1638>;
