@@ -1,17 +1,13 @@
 ifeq ($(CONFIG_OF),y)
 
 # MSM8994
-dtb-$(CONFIG_MACH_SONY_IVY)		+= msm8994-v1-kitakami_ivy_generic.dtb		\
-					   msm8994-v2.0-kitakami_ivy_generic.dtb	\
+dtb-$(CONFIG_MACH_SONY_IVY)		+= msm8994-v2.0-kitakami_ivy_generic.dtb	\
 					   msm8994-v2.1-kitakami_ivy_generic.dtb
-dtb-$(CONFIG_MACH_SONY_IVY_DSDS)	+= msm8994-v1-kitakami_ivy_dsds.dtb		\
-					   msm8994-v2.0-kitakami_ivy_dsds.dtb		\
+dtb-$(CONFIG_MACH_SONY_IVY_DSDS)	+= msm8994-v2.0-kitakami_ivy_dsds.dtb		\
 					   msm8994-v2.1-kitakami_ivy_dsds.dtb
-dtb-$(CONFIG_MACH_SONY_KARIN)		+= msm8994-v1-kitakami_karin_generic.dtb	\
-					   msm8994-v2.0-kitakami_karin_generic.dtb	\
+dtb-$(CONFIG_MACH_SONY_KARIN)		+= msm8994-v2.0-kitakami_karin_generic.dtb	\
 					   msm8994-v2.1-kitakami_karin_generic.dtb
-dtb-$(CONFIG_MACH_SONY_KARIN_WINDY)	+= apq8094-v1-kitakami_karin_windy.dtb		\
-					   apq8094-v2.0-kitakami_karin_windy.dtb	\
+dtb-$(CONFIG_MACH_SONY_KARIN_WINDY)	+= apq8094-v2.0-kitakami_karin_windy.dtb	\
 					   apq8094-v2.1-kitakami_karin_windy.dtb
 
 # MSM8939/MSM8916
@@ -25,10 +21,8 @@ dtb-$(CONFIG_MACH_SONY_LEO)		+= msm8974pro-ac-shinano_leo.dtb
 dtb-$(CONFIG_MACH_SONY_ARIES)		+= msm8974pro-ac-shinano_aries.dtb
 dtb-$(CONFIG_MACH_SONY_SCORPION)	+= msm8974pro-ac-shinano_scorpion.dtb
 dtb-$(CONFIG_MACH_SONY_SCORPION)	+= apq8074pro-ac-shinano_scorpion_windy.dtb
-dtb-$(CONFIG_MACH_SONY_HONAMI_ROW)	+= msm8974-v1-rhine_honami_row.dtb
 dtb-$(CONFIG_MACH_SONY_HONAMI_ROW)	+= msm8974-v2.0-1-rhine_honami_row.dtb
 dtb-$(CONFIG_MACH_SONY_HONAMI_ROW)	+= msm8974-v2.2-rhine_honami_row.dtb
-dtb-$(CONFIG_MACH_SONY_TOGARI_ROW)	+= msm8974-v1-rhine_togari_row.dtb
 dtb-$(CONFIG_MACH_SONY_TOGARI_ROW)	+= msm8974-v2.0-1-rhine_togari_row.dtb
 dtb-$(CONFIG_MACH_SONY_TOGARI_ROW)	+= msm8974-v2.2-rhine_togari_row.dtb
 dtb-$(CONFIG_MACH_SONY_AMAMI_ROW)	+= msm8974-v2.0-1-rhine_amami_row.dtb
@@ -38,8 +32,7 @@ dtb-$(CONFIG_MACH_SONY_AMAMI_ROW)	+= msm8974-v2.2-rhine_amami_row.dtb
 dtb-$(CONFIG_MACH_SONY_EAGLE)	+= msm8926-yukon_eagle-720p-mtp.dtb
 dtb-$(CONFIG_MACH_SONY_FLAMINGO)+= msm8926-yukon_flamingo-8926ss_ap.dtb
 dtb-$(CONFIG_MACH_SONY_TIANCHI) += msm8926-yukon_tianchi.dtb
-dtb-$(CONFIG_MACH_SONY_TIANCHI) += msm8226-v1-yukon_tianchi_dsds.dtb
-dtb-$(CONFIG_MACH_SONY_TIANCHI) += msm8226-v2-yukon_tianchi_dsds.dtb
+dtb-$(CONFIG_MACH_SONY_TIANCHI) += msm8226-yukon_tianchi_dsds.dtb
 dtb-$(CONFIG_MACH_SONY_SEAGULL) += msm8926-yukon_seagull-720p-mtp.dtb
 
 # Other
