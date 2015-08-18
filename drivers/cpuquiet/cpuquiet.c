@@ -50,8 +50,6 @@ static void cpuquiet_work_func(struct work_struct *work);
 
 static int update_core_config(unsigned int cpunumber, bool up)
 {
-	int ret = 0;
-
 	mutex_lock(&cpuquiet_cpu_lock);
 
 	if (up) {
@@ -66,7 +64,7 @@ static int update_core_config(unsigned int cpunumber, bool up)
 
 	mutex_unlock(&cpuquiet_cpu_lock);
 
-	return ret;
+	return 0;
 }
 
 static int cpu_in_wanted_state(unsigned int cpunumber, bool up)
