@@ -16,7 +16,7 @@
 # Android makefile to build kernel as a part of Android Build
 
 ifeq ($(BUILD_KERNEL),true)
-ifeq ($(filter-out amami aries castor eagle flamingo honami leo scorpion seagull sirius tianchi tianchi_dsds togari,$(TARGET_DEVICE)),)
+ifeq ($(filter-out amami aries castor castor_windy eagle flamingo honami ivy karin karin_windy leo scorpion scorpion_windy seagull sirius tianchi tianchi_dsds togari tulip,$(TARGET_DEVICE)),)
 
 KERNEL_SRC := $(call my-dir)
 # kernel configuration - mandatory:
@@ -49,11 +49,15 @@ ifeq ($(KERNEL_HEADER_DEFCONFIG),)
 KERNEL_HEADER_DEFCONFIG := $(KERNEL_DEFCONFIG)
 endif
 
-TARGET_PREBUILT_INT_KERNEL_TYPE := zImage
+ifeq ($(TARGET_USES_UNCOMPRESSED_KERNEL),true)
+    TARGET_PREBUILT_INT_KERNEL_TYPE := Image
+else
+    TARGET_PREBUILT_INT_KERNEL_TYPE := zImage
+endif
 
 TARGET_PREBUILT_INT_KERNEL := $(KERNEL_OUT)/arch/$(KERNEL_ARCH)/boot/$(TARGET_PREBUILT_INT_KERNEL_TYPE)
 
-KERNEL_DTB := $(KERNEL_OUT)/arch/arm/boot/dts
+KERNEL_DTB := $(KERNEL_OUT)/arch/$(KERNEL_ARCH)/boot/dts
 KERNEL_DTB_OUT := $(PRODUCT_OUT)/dtbs
 
 # Clear this first to prevent accidental poisoning from env
