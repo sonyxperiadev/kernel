@@ -329,13 +329,13 @@ static int cpuquiet_probe(struct platform_device *pdev)
 #ifdef CONFIG_QPU_QUIET_STATS
 	err = cpuquiet_register_attrs(&cpuquiet_attrs_group);
 	if (err)
-		goto unreg_driver;
+		goto unreg_devices;
 #endif
 
 	return 0;
 
 #ifdef CONFIG_QPU_QUIET_STATS
-unreg_driver:
+unreg_devices:
 	cpuquiet_unregister_devices();
 #endif
 remove_max:
