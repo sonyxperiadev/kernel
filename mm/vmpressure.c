@@ -174,8 +174,12 @@ static unsigned long vmpressure_calc_pressure(unsigned long scanned,
 static unsigned long vmpressure_account_stall(unsigned long pressure,
 				unsigned long stall, unsigned long scanned)
 {
-	unsigned long scale =
-		((vmpressure_scale_max - pressure) * stall) / scanned;
+	unsigned long scale;
+
+	if (pressure < 70)
+		return pressure;
+
+	scale = ((vmpressure_scale_max - pressure) * stall) / scanned;
 
 	return pressure + scale;
 }
