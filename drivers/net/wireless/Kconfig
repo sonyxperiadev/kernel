@@ -394,4 +394,6 @@ source "drivers/net/wireless/ti/Kconfig"
 source "drivers/net/wireless/zd1211rw/Kconfig"
 source "drivers/net/wireless/mwifiex/Kconfig"
 
+source "drivers/net/wireless/controlfnc/Kconfig"
+
 endif # WLAN

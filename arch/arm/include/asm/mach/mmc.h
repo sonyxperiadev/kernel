@@ -170,6 +170,9 @@ struct mmc_platform_data {
 	bool disable_cmd23;
 	u32 cpu_dma_latency;
 	struct msm_mmc_bus_voting_data *msm_bus_voting_data;
+#ifdef CONFIG_WIFI_CONTROL_FUNC
+	bool wifi_control_func;
+#endif
 };
 
 #endif
