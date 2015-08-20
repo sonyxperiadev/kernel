@@ -113,4 +113,6 @@ source "drivers/net/wireless/cnss/Kconfig"
 source "drivers/net/wireless/cnss_utils/Kconfig"
 source "drivers/net/wireless/cnss_genl/Kconfig"
 
+source "drivers/net/wireless/controlfnc/Kconfig"
+
 endif # WLAN
