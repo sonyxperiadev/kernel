@@ -908,17 +908,6 @@ config MSM_DMA_TEST
 	  Intended to be compiled as a module.  Provides a device node
 	  and ioctls for testing the MSM dma system.
 
-config WIFI_CONTROL_FUNC
-	bool "Enable WiFi control function abstraction"
-	help
-	  Enables Power/Reset/Carddetect function abstraction
-
-config WIFI_MEM_PREALLOC
-	depends on WIFI_CONTROL_FUNC
-	bool "Preallocate memory for WiFi buffers"
-	help
-	  Preallocates memory buffers for WiFi driver
-
 config SURF_FFA_GPIO_KEYPAD
 	bool "MSM SURF/FFA GPIO keypad"
 	depends on INPUT_GPIO = "y"

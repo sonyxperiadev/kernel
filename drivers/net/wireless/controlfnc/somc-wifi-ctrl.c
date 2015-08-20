@@ -20,8 +20,6 @@
 #include <linux/skbuff.h>
 #include <linux/wlan_plat.h>
 
-#include <mach/board-sony_shinano-wifi.h>
-
 #include <../drivers/mmc/host/msm_sdcc.h>
 
 static unsigned int g_wifi_detect;

@@ -1,0 +1,11 @@
+config WIFI_CONTROL_FUNC
+	bool "Enable WiFi control function abstraction"
+	help
+	  Enables Power/Reset/Carddetect function abstraction
+
+config WIFI_MEM_PREALLOC
+	depends on WIFI_CONTROL_FUNC
+	bool "Preallocate memory for WiFi buffers"
+	help
+	  Preallocates memory buffers for WiFi driver
+
