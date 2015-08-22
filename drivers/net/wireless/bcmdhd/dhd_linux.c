@@ -456,6 +456,10 @@ typedef struct dhd_info {
 #endif
 	unsigned int unit;
 	struct notifier_block pm_notifier;
+#if defined(BCMPCIE) && defined(CONFIG_WIFI_CONTROL_FUNC)
+	bool register_if_done;
+#endif
+
 #ifdef SAR_SUPPORT
 	struct notifier_block sar_notifier;
 	s32 sar_enable;
@@ -4261,6 +4265,14 @@ dhd_open(struct net_device *net)
 	}
 
 	if (ifidx == 0) {
+
+#if defined(BCMPCIE) && defined(CONFIG_WIFI_CONTROL_FUNC)
+		if (!dhd->register_if_done) {
+			DHD_ERROR(("%s: Registering interface has not done yet\n", __FUNCTION__));
+			return -1;
+		}
+#endif
+
 		atomic_set(&dhd->pend_8021x_cnt, 0);
 #if defined(WL_CFG80211)
 		if (!dhd_download_fw_on_driverload) {
@@ -4539,6 +4551,10 @@ dhd_remove_if(dhd_pub_t *dhdpub, int ifidx, bool need_rtnl_lock)
 					unregister_netdevice(ifp->net);
 			}
 			ifp->net = NULL;
+#if defined(BCMPCIE) && defined(CONFIG_WIFI_CONTROL_FUNC)
+			if (ifidx == 0)
+				dhdinfo->register_if_done = FALSE;
+#endif
 		}
 #ifdef DHD_WMF
 		dhd_wmf_cleanup(dhdpub, ifidx);
@@ -6130,6 +6146,22 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 		DHD_ERROR(("%s wl ampdu_hostreorder failed %d\n", __FUNCTION__, ret2));
 		if (ret2 != BCME_UNSUPPORTED)
 			ret = ret2;
+#if defined(BCMPCIE) && defined(CONFIG_WIFI_CONTROL_FUNC)
+		if (ret == BCME_NOTDOWN) {
+			uint wl_down = 1;
+			ret2 = dhd_wl_ioctl_cmd(dhd, WLC_DOWN, (char *)&wl_down,
+				sizeof(wl_down), TRUE, 0);
+			DHD_ERROR(("%s ampdu_hostreorder fail WL_DOWN : %d, hostreorder :%d\n",
+				__FUNCTION__, ret2, hostreorder));
+
+			bcm_mkiovar("ampdu_hostreorder", (char *)&hostreorder, 4,
+				iovbuf, sizeof(iovbuf));
+			ret2 = dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0);
+			DHD_ERROR(("%s wl ampdu_hostreorder. ret --> %d\n", __FUNCTION__, ret2));
+			if (ret2 != BCME_UNSUPPORTED)
+					ret = ret2;
+		}
+#endif
 		if (ret2 != BCME_OK)
 			hostreorder = 0;
 	}
@@ -6603,6 +6635,9 @@ dhd_register_if(dhd_pub_t *dhdp, int ifidx, bool need_rtnl_lock)
 
 	/* Ok, link into the network layer... */
 	if (ifidx == 0) {
+#if defined(BCMPCIE) && defined(CONFIG_WIFI_CONTROL_FUNC)
+		dhd->register_if_done = FALSE;
+#endif
 		/*
 		 * device functions for the primary interface only
 		 */
@@ -6688,12 +6723,16 @@ dhd_register_if(dhd_pub_t *dhdp, int ifidx, bool need_rtnl_lock)
 #endif /* OEM_ANDROID && BCMLXSDMMC && (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27)) */
 
 #if defined(BCMPCIE)
+#if defined(CONFIG_WIFI_CONTROL_FUNC)
+		dhd->register_if_done = TRUE;
+#else
 	if (ifidx == 0) {
 		if (!dhd_download_fw_on_driverload) {
 			dhd_net_bus_devreset(net, TRUE);
 			wifi_platform_set_power(dhdp->info->adapter, FALSE, WIFI_TURNOFF_DELAY);
 		}
 	}
+#endif
 #endif /* BCMPCIE */
 
 	return 0;
