@@ -376,6 +376,18 @@ dhdpcie_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 		"(good PCI location)\n", pdev->bus->number,
 		PCI_SLOT(pdev->devfn), pdev->vendor, pdev->device);
 
+#if defined (BCMPCIE) && defined(CONFIG_WIFI_CONTROL_FUNC)
+	if (msm_pcie_pm_control(MSM_PCIE_RESUME, pdev->bus->number, pdev, NULL, 0)) {
+		DHD_ERROR(("%s Failed to resume PCIE link\n", __FUNCTION__));
+		return -ENODEV;
+	}
+
+	if (msm_pcie_recover_config(pdev)) {
+		DHD_ERROR(("%s Failed to recover PCIE config\n", __FUNCTION__));
+		return -ENODEV;
+	}
+#endif
+
 	if (dhdpcie_init (pdev)) {
 		DHD_ERROR(("%s: PCIe Enumeration failed\n", __FUNCTION__));
 		return -ENODEV;
