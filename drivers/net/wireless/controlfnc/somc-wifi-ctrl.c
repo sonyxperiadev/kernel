@@ -1,4 +1,4 @@
-/* arch/arm/mach-msm/board-sony_shinano-wifi.c
+/*
  *
  * Copyright (C) 2013 Sony Mobile Communications AB.
  * Copyright (C) 2013 LGE, Inc
@@ -12,14 +12,22 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
-
-#include <asm/gpio.h>
-#include <asm/mach/mmc.h>
+#include <linux/gpio.h>
 #include <linux/qpnp/pin.h>
 #include <linux/regulator/consumer.h>
 #include <linux/skbuff.h>
 #include <linux/wlan_plat.h>
-
+#include <linux/kernel.h>
+#include <linux/slab.h>
+#include <linux/delay.h>
+#include <linux/pinctrl/consumer.h>
+#include <linux/msm_pcie.h>
+#include <linux/platform_device.h>
+#include <linux/of_gpio.h>
+#include <linux/module.h>
+#include <linux/fs.h>
+#if defined(CONFIG_BCMDHD_SDIO)
+#include <asm/mach/mmc.h>
 #include <../drivers/mmc/host/msm_sdcc.h>
 
 static unsigned int g_wifi_detect;
@@ -28,90 +36,155 @@ void (*sdc_status_cb)(int card_present, void *dev);
 static void *wifi_mmc_host;
 static struct regulator *wifi_batfet;
 static int batfet_ena;
+extern void sdio_ctrl_power(struct mmc_host *card, bool onoff);
+#endif
 
 static char *intf_macaddr = NULL;
 
-extern void sdio_ctrl_power(struct mmc_host *card, bool onoff);
 
 #define WIFI_POWER_PMIC_GPIO 18
 #define WIFI_IRQ_GPIO 67
 
 /* These definitions need to be aligned with bcmdhd */
 #define WLAN_STATIC_SCAN_BUF 5
+#define WLAN_STATIC_DHD_INFO_BUF 7
+#define WLAN_STATIC_DHD_IF_FLOW_LKUP 9
+#define WLAN_STATIC_DHD_PKTID_MAP 12
+
 #define ESCAN_BUF_SIZE (64 * 1024) /* for WIPHY_ESCAN0 */
+#define PREALLOC_WLAN_SEC_NUM 4
+#define PREALLOC_WLAN_BUF_NUM 160
+#define PREALLOC_WLAN_SECTION_HEADER 24
 
-#define PREALLOC_WLAN_NUMBER_OF_SECTIONS	4
-#define PREALLOC_WLAN_NUMBER_OF_BUFFERS		160
-#define PREALLOC_WLAN_SECTION_HEADER		24
+#define WLAN_DHD_INFO_BUF_SIZE (24 * 1024)
+#define WLAN_DHD_IF_FLOW_LKUP_SIZE (36 * 1024)
 
-#define WLAN_SECTION_SIZE_0 (PREALLOC_WLAN_NUMBER_OF_BUFFERS * 128)  /* for PROT */
-#define WLAN_SECTION_SIZE_1 (PREALLOC_WLAN_NUMBER_OF_BUFFERS * 128)  /* for RXBUF */
-#define WLAN_SECTION_SIZE_2 (PREALLOC_WLAN_NUMBER_OF_BUFFERS * 512)  /* for DATABUF */
-#define WLAN_SECTION_SIZE_3 (PREALLOC_WLAN_NUMBER_OF_BUFFERS * 1024) /* for OSL_BUF */
+#define DHD_PKTIDMAP_FIFO_MAX 4
+#define WLAN_MAX_PKTID_ITEMS (8192)
+#define WLAN_DHD_PKTID_MAP_HDR_SIZE (20 + 4 * (WLAN_MAX_PKTID_ITEMS + 1))
+#define WLAN_DHD_PKTID_MAP_ITEM_SIZE (48)
+#define WLAN_DHD_PKTID_MAP_SIZE (WLAN_DHD_PKTID_MAP_HDR_SIZE + \
+	(DHD_PKTIDMAP_FIFO_MAX * (WLAN_MAX_PKTID_ITEMS + 1) * \
+	WLAN_DHD_PKTID_MAP_ITEM_SIZE))
+
+#define WLAN_SECTION_SIZE_0 (PREALLOC_WLAN_BUF_NUM * 128)  /* for PROT */
+#define WLAN_SECTION_SIZE_1 0                              /* for RXBUF */
+#define WLAN_SECTION_SIZE_2 0                              /* for DATABUF */
+#define WLAN_SECTION_SIZE_3 (PREALLOC_WLAN_BUF_NUM * 1024) /* for OSL_BUF */
 
 /* These definitions are copied from bcmdhd */
-#define DHD_SKB_HDRSIZE 336
-#define DHD_SKB_1PAGE_BUFSIZE ((PAGE_SIZE * 1) - DHD_SKB_HDRSIZE)
-#define DHD_SKB_2PAGE_BUFSIZE ((PAGE_SIZE * 2) - DHD_SKB_HDRSIZE)
-#define DHD_SKB_4PAGE_BUFSIZE ((PAGE_SIZE * 4) - DHD_SKB_HDRSIZE)
+#define DHD_SKB_1PAGE_BUFSIZE (PAGE_SIZE * 1)
+#define DHD_SKB_2PAGE_BUFSIZE (PAGE_SIZE * 2)
+#define DHD_SKB_4PAGE_BUFSIZE (PAGE_SIZE * 4)
 
-#define WLAN_SKB_BUF_NUM 17 /* 8 for 1PAGE, 8 for 2PAGE, 1 for 4PAGE */
+#define DHD_SKB_1PAGE_BUF_NUM 0
+#define DHD_SKB_2PAGE_BUF_NUM 64
+#define DHD_SKB_4PAGE_BUF_NUM 0
+
+#define WLAN_SKB_1_2PAGE_BUF_NUM ((DHD_SKB_1PAGE_BUF_NUM) + \
+	(DHD_SKB_2PAGE_BUF_NUM))
+#define WLAN_SKB_BUF_NUM ((WLAN_SKB_1_2PAGE_BUF_NUM) + \
+	(DHD_SKB_4PAGE_BUF_NUM))
 
 static struct sk_buff *wlan_static_skb[WLAN_SKB_BUF_NUM];
 
-typedef struct wifi_mem_prealloc_struct {
-	    void *mem_ptr;
-	    unsigned long size;
-} wifi_mem_prealloc_t;
+struct wifi_mem_prealloc {
+	void *mem_ptr;
+	unsigned long size;
+};
 
-static wifi_mem_prealloc_t wifi_mem_array[PREALLOC_WLAN_NUMBER_OF_SECTIONS] = {
+static struct wifi_mem_prealloc wifi_mem_array[PREALLOC_WLAN_SEC_NUM] = {
 	{ NULL, (WLAN_SECTION_SIZE_0 + PREALLOC_WLAN_SECTION_HEADER) },
 	{ NULL, (WLAN_SECTION_SIZE_1 + PREALLOC_WLAN_SECTION_HEADER) },
 	{ NULL, (WLAN_SECTION_SIZE_2 + PREALLOC_WLAN_SECTION_HEADER) },
 	{ NULL, (WLAN_SECTION_SIZE_3 + PREALLOC_WLAN_SECTION_HEADER) }
 };
 
-static void *wlan_static_scan_buf;
+struct bcmdhd_platform_data {
+	struct platform_device *pdev;
+	struct pinctrl *pinctrl;
+	struct pinctrl_state *gpio_state_active;
+	struct pinctrl_state *gpio_state_suspend;
+	unsigned int wlan_reg_on;
+	unsigned int pci_number;
+};
 
-static int shinano_wifi_init_mem(void)
+static struct bcmdhd_platform_data *bcmdhd_data;
+
+static void *wlan_static_scan_buf;
+static void *wlan_static_dhd_info_buf;
+static void *wlan_static_if_flow_lkup;
+static void *wlan_static_dhd_pktid_map;
+
+
+static int somc_wifi_init_mem(void)
 {
 	int i;
 	for (i = 0; i < WLAN_SKB_BUF_NUM; i++)
 		wlan_static_skb[i] = NULL;
 
-	for (i = 0; i < 8; i++) {
+	for (i = 0; i < DHD_SKB_1PAGE_BUF_NUM; i++) {
 		wlan_static_skb[i] = dev_alloc_skb(DHD_SKB_1PAGE_BUFSIZE);
 		if (!wlan_static_skb[i])
 			goto err_skb_alloc;
 	}
 
-	for (; i < 16; i++) {
+	for (i = DHD_SKB_1PAGE_BUF_NUM; i < WLAN_SKB_1_2PAGE_BUF_NUM; i++) {
 		wlan_static_skb[i] = dev_alloc_skb(DHD_SKB_2PAGE_BUFSIZE);
 		if (!wlan_static_skb[i])
 			goto err_skb_alloc;
 	}
 
-	wlan_static_skb[i] = dev_alloc_skb(DHD_SKB_4PAGE_BUFSIZE);
-	if (!wlan_static_skb[i])
-		goto err_skb_alloc;
+	for (i = 0; i < PREALLOC_WLAN_SEC_NUM; i++) {
+		if (wifi_mem_array[i].size > 0) {
+			wifi_mem_array[i].mem_ptr =
+				kzalloc(wifi_mem_array[i].size, GFP_KERNEL);
 
-	for (i = 0; i < PREALLOC_WLAN_NUMBER_OF_SECTIONS; i++) {
-		wifi_mem_array[i].mem_ptr =
-			kmalloc(wifi_mem_array[i].size, GFP_KERNEL);
-		if (!wifi_mem_array[i].mem_ptr)
-			goto err_mem_alloc;
+			if (!wifi_mem_array[i].mem_ptr)
+				goto err_mem_alloc;
+		}
 	}
 
-	wlan_static_scan_buf = kmalloc(ESCAN_BUF_SIZE, GFP_KERNEL);
-	if (!wlan_static_scan_buf)
+	wlan_static_scan_buf = kzalloc(ESCAN_BUF_SIZE, GFP_KERNEL);
+	if (!wlan_static_scan_buf) {
+		printk("%s: failed to allocate wlan_static_scan_buf\n",
+			__func__);
 		goto err_mem_alloc;
+	}
 
+	wlan_static_dhd_info_buf = kzalloc(WLAN_DHD_INFO_BUF_SIZE, GFP_KERNEL);
+	if (!wlan_static_dhd_info_buf) {
+		printk("%s: failed to allocate wlan_static_dhd_info_buf\n",
+			__func__);
+		goto err_mem_alloc;
+	}
+
+	wlan_static_if_flow_lkup = kzalloc(WLAN_DHD_IF_FLOW_LKUP_SIZE,
+		GFP_KERNEL);
+	if (!wlan_static_if_flow_lkup) {
+		printk("%s: failed to allocate wlan_static_if_flow_lkup\n",
+			__func__);
+		goto err_mem_alloc;
+	}
+	wlan_static_dhd_pktid_map = kzalloc(WLAN_DHD_PKTID_MAP_SIZE,
+		GFP_KERNEL);
+	if (!wlan_static_dhd_pktid_map) {
+		printk("%s: failed to allocate wlan_static_dhd_pktid_map\n",
+			__func__);
+		goto err_mem_alloc;
+	}
+
+	printk("%s: Wi-Fi static memory allocated\n", __func__);
 	return 0;
 
 err_mem_alloc:
-	printk(KERN_ERR "%s: failed to allocate mem_alloc\n", __func__);
+	kzfree(wlan_static_dhd_pktid_map);
+	kzfree(wlan_static_if_flow_lkup);
+	kzfree(wlan_static_dhd_info_buf);
+	kzfree(wlan_static_scan_buf);
+	printk("%s: failed to allocate mem_alloc\n", __func__);
 	for (i--; i >= 0; i--) {
-		kfree(wifi_mem_array[i].mem_ptr);
+		kzfree(wifi_mem_array[i].mem_ptr);
 		wifi_mem_array[i].mem_ptr = NULL;
 	}
 
@@ -126,6 +199,7 @@ err_skb_alloc:
 	return -ENOMEM;
 }
 
+#if defined(CONFIG_BCMDHD_SDIO)
 int wcf_status_register(void (*cb)(int card_present, void *dev), void *dev)
 {
 	pr_info("%s\n", __func__);
@@ -145,23 +219,55 @@ unsigned int wcf_status(struct device *dev)
 	pr_info("%s: wifi_detect = %d\n", __func__, g_wifi_detect);
 	return g_wifi_detect;
 }
+#endif
 
-static void *shinano_wifi_mem_prealloc(int section, unsigned long size)
+static void *somc_wifi_mem_prealloc(int section, unsigned long size)
 {
-	if (section == PREALLOC_WLAN_NUMBER_OF_SECTIONS)
+	if (section == PREALLOC_WLAN_SEC_NUM)
 		return wlan_static_skb;
 	if (section == WLAN_STATIC_SCAN_BUF)
 		return wlan_static_scan_buf;
 
-	if ((section < 0) || (section > PREALLOC_WLAN_NUMBER_OF_SECTIONS))
+	if (section == WLAN_STATIC_DHD_INFO_BUF) {
+		if (size > WLAN_DHD_INFO_BUF_SIZE) {
+			printk("%s: request DHD_INFO size(%lu) is bigger than"
+				" static size(%d).\n", __func__, size,
+				WLAN_DHD_INFO_BUF_SIZE);
+			return NULL;
+		}
+		return wlan_static_dhd_info_buf;
+	}
+
+	if (section == WLAN_STATIC_DHD_IF_FLOW_LKUP)  {
+		if (size > WLAN_DHD_IF_FLOW_LKUP_SIZE) {
+			printk("%s: request DHD_IF_FLOW size(%lu) is bigger"
+				" than static size(%d).\n", __func__, size,
+				WLAN_DHD_IF_FLOW_LKUP_SIZE);
+			return NULL;
+		}
+		return wlan_static_if_flow_lkup;
+	}
+
+	if (section == WLAN_STATIC_DHD_PKTID_MAP)  {
+		if (size > WLAN_DHD_PKTID_MAP_SIZE) {
+			printk("%s: request DHD_PKTID size(%lu) is"
+				" bigger than static size(%d).\n", __func__,
+				size, WLAN_DHD_PKTID_MAP_SIZE);
+			return NULL;
+		}
+		return wlan_static_dhd_pktid_map;
+	}
+
+	if ((section < 0) || (section > PREALLOC_WLAN_SEC_NUM))
 		return NULL;
 	if (size > wifi_mem_array[section].size)
 		return NULL;
 	return wifi_mem_array[section].mem_ptr;
 }
 
-int shinano_wifi_set_power(int on)
+int somc_wifi_set_power(int on)
 {
+#if defined(CONFIG_BCMDHD_SDIO)
 	int gpio = qpnp_pin_map("pm8941-gpio", WIFI_POWER_PMIC_GPIO);
 	int ret;
 
@@ -191,34 +297,143 @@ int shinano_wifi_set_power(int on)
 	}
 
 	sdio_ctrl_power((struct mmc_host *)wifi_mmc_host, on);
+#else
+	gpio_set_value(bcmdhd_data->wlan_reg_on, on);
+#endif
 	return 0;
+
 }
 
-static int shinano_wifi_set_reset(int on)
+static int somc_wifi_set_reset(int on)
 {
 	return 0;
 }
 
-int shinano_wifi_set_carddetect(int val)
+int somc_wifi_set_carddetect(int present)
 {
-	g_wifi_detect = val;
+#if defined(CONFIG_BCMDHD_SDIO)
+	g_wifi_detect = present;
 
 	if (sdc_status_cb)
-		sdc_status_cb(val, sdc_dev);
+		sdc_status_cb(present, sdc_dev);
 	else
 		printk(KERN_WARNING "%s: Nobody to notify\n", __func__);
 	return 0;
+#else
+	int ret = 0;
+	if (present)
+		ret = msm_pcie_enumerate(bcmdhd_data->pci_number);
+	return ret;
+#endif
 }
 
-static struct resource shinano_wifi_resources[] = {
-	[0] = {
-		.name	= "bcmdhd_wlan_irq",
-		.start	= 0,
-		.end	= 0,
-		.flags	= IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHLEVEL |
-			  IORESOURCE_IRQ_SHAREABLE,
-	},
-};
+int somc_wifi_init(struct platform_device *pdev)
+{
+	int ret, ret_sus, gpio;
+	struct pinctrl *pinctrl;
+	struct pinctrl_state *lookup_state;
+
+	bcmdhd_data = kzalloc(sizeof(*bcmdhd_data), GFP_KERNEL);
+	if (!bcmdhd_data) {
+		dev_err(&pdev->dev, "%s: no memory\n", __func__);
+		ret = -ENOMEM;
+		goto err_alloc_bcmdhd_data;
+	}
+
+	bcmdhd_data->pdev = pdev;
+	pinctrl = devm_pinctrl_get(&pdev->dev);
+	if (IS_ERR(pinctrl)) {
+		dev_err(&pdev->dev, "%s: pinctrl not defined\n", __func__);
+		ret = PTR_ERR(pinctrl);
+		goto err_pinctrl;
+	}
+	bcmdhd_data->pinctrl = pinctrl;
+
+	lookup_state = pinctrl_lookup_state(pinctrl, PINCTRL_STATE_DEFAULT);
+	if (IS_ERR_OR_NULL(lookup_state)) {
+		dev_err(&pdev->dev, "%s: pinctrl lookup failed for default\n",
+			__func__);
+		ret = PTR_ERR(lookup_state);
+		goto err_pinctrl;
+	}
+	bcmdhd_data->gpio_state_active = lookup_state;
+
+	lookup_state = pinctrl_lookup_state(pinctrl, PINCTRL_STATE_SLEEP);
+	if (IS_ERR_OR_NULL(lookup_state)) {
+		dev_err(&pdev->dev, "%s: pinctrl lookup failed for sleep\n",
+			__func__);
+		ret = PTR_ERR(lookup_state);
+		goto err_pinctrl;
+	}
+	bcmdhd_data->gpio_state_suspend = lookup_state;
+
+	ret = pinctrl_select_state(bcmdhd_data->pinctrl,
+		bcmdhd_data->gpio_state_active);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: failed to select active state\n",
+			__func__);
+		goto err_pinctrl;
+	}
+
+	gpio = of_get_gpio(pdev->dev.of_node, 0);
+	if (!gpio_is_valid(gpio)) {
+		dev_err(&pdev->dev, "%s: invalid gpio #%s: %d\n",
+			__func__, "wlan-reg-on", gpio);
+		ret = -ENXIO;
+		goto err_gpio;
+	}
+	bcmdhd_data->wlan_reg_on = gpio;
+
+	ret = gpio_request(bcmdhd_data->wlan_reg_on,
+			"wlan-reg-on");
+	if (ret) {
+		dev_err(&pdev->dev, "%s: request err %s: %d\n",
+			__func__, "wlan-reg-on", ret);
+		goto err_gpio;
+	}
+
+	ret = of_property_read_u32(pdev->dev.of_node, "wlan-pci-number",
+		&bcmdhd_data->pci_number);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "%s: failed to find PCI number %d %d \n",
+			__func__, ret, bcmdhd_data->pci_number);
+		goto err_gpio_request;
+	}
+
+	return 0;
+
+err_gpio_request:
+	gpio_free(bcmdhd_data->wlan_reg_on);
+err_gpio:
+	ret_sus = pinctrl_select_state(bcmdhd_data->pinctrl,
+			bcmdhd_data->gpio_state_suspend);
+	if (ret_sus)
+		dev_err(&pdev->dev, "%s: failed to select suspend state\n",
+			__func__);
+err_pinctrl:
+	kzfree(bcmdhd_data);
+err_alloc_bcmdhd_data:
+	return ret;
+}
+EXPORT_SYMBOL(somc_wifi_init);
+
+void somc_wifi_deinit(struct platform_device *pdev)
+{
+	if (bcmdhd_data) {
+		if (gpio_is_valid(bcmdhd_data->wlan_reg_on))
+			gpio_free(bcmdhd_data->wlan_reg_on);
+		if (!IS_ERR_OR_NULL(bcmdhd_data->pinctrl) &&
+			!IS_ERR_OR_NULL(bcmdhd_data->gpio_state_suspend)) {
+			int ret = pinctrl_select_state(bcmdhd_data->pinctrl,
+				bcmdhd_data->gpio_state_suspend);
+			if (ret)
+				dev_err(&pdev->dev, "%s: failed to select"
+					" suspend state\n", __func__);
+		}
+		kzfree(bcmdhd_data);
+	}
+}
+EXPORT_SYMBOL(somc_wifi_deinit);
 
 #define ETHER_ADDR_LEN    6
 #define FILE_WIFI_MACADDR "/sys/devices/platform/bcmdhd_wlan/macaddr"
@@ -280,7 +495,7 @@ struct ether_addr * ether_aton (const char *asc)
 	return ether_aton_r(asc, &addr);
 }
 
-static int shinano_wifi_get_mac_addr(unsigned char *buf)
+static int somc_wifi_get_mac_addr(unsigned char *buf)
 {
 	int ret = 0;
 
@@ -393,39 +608,58 @@ static struct attribute_group wifi_attr_grp = {
 	.attrs = wifi_attrs,
 };
 
-struct wifi_platform_data shinano_wifi_control = {
-	.mem_prealloc	= shinano_wifi_mem_prealloc,
-	.set_power	= shinano_wifi_set_power,
-	.set_reset	= shinano_wifi_set_reset,
-	.set_carddetect	= shinano_wifi_set_carddetect,
-	.get_mac_addr	= shinano_wifi_get_mac_addr,
+struct wifi_platform_data somc_wifi_control = {
+	.set_power	= somc_wifi_set_power,
+#if defined(CONFIG_BCMDHD_SDIO)
+	.set_reset	= somc_wifi_set_reset,
+#endif
+	.set_carddetect	= somc_wifi_set_carddetect,
+	.mem_prealloc	= somc_wifi_mem_prealloc,
+	.get_mac_addr	= somc_wifi_get_mac_addr,
 };
 
-static struct platform_device shinano_wifi = {
-	.name		= "bcmdhd_wlan",
-	.id		= -1,
-	.num_resources	= ARRAY_SIZE(shinano_wifi_resources),
-	.resource	= shinano_wifi_resources,
-	.dev		= {
-		.platform_data = &shinano_wifi_control,
+EXPORT_SYMBOL(somc_wifi_control);
+
+#if defined(CONFIG_BCMDHD_SDIO)
+static struct resource somc_wifi_resources[] = {
+	[0] = {
+		.name	= "bcmdhd_wlan_irq",
+		.start	= 0,
+		.end	= 0,
+		.flags	= IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHLEVEL |
+			  IORESOURCE_IRQ_SHAREABLE,
 	},
 };
 
-static int __init shinano_wifi_init(void)
+static struct platform_device somc_wifi = {
+	.name		= "bcmdhd_wlan",
+	.id		= -1,
+	.num_resources	= ARRAY_SIZE(somc_wifi_resources),
+	.resource	= somc_wifi_resources,
+	.dev		= {
+		.platform_data = &somc_wifi_control,
+	},
+};
+#endif
+
+static int __init somc_wifi_init_on_boot(void)
 {
-	if (shinano_wifi_init_mem())
+	if (somc_wifi_init_mem())
 		return -ENOMEM;
-	shinano_wifi.resource->start = gpio_to_irq(WIFI_IRQ_GPIO);
-	shinano_wifi.resource->end = gpio_to_irq(WIFI_IRQ_GPIO);
-	platform_device_register(&shinano_wifi);
+#if defined(CONFIG_BCMDHD_SDIO)
+	somc_wifi.resource->start = gpio_to_irq(WIFI_IRQ_GPIO);
+	somc_wifi.resource->end = gpio_to_irq(WIFI_IRQ_GPIO);
+	platform_device_register(&somc_wifi);
 
 	intf_macaddr = kzalloc(20*(sizeof(char)), GFP_KERNEL);
-	if (sysfs_create_group(&shinano_wifi.dev.kobj, &wifi_attr_grp) < 0) {
+	if (sysfs_create_group(&somc_wifi.dev.kobj, &wifi_attr_grp) < 0) {
 		pr_err("%s: Unable to create sysfs\n", __func__);
 		kfree(intf_macaddr);
 	}
-
+#endif
 	return 0;
 }
 
-device_initcall(shinano_wifi_init);
+device_initcall(somc_wifi_init_on_boot);
+
+MODULE_LICENSE("GPL v2");

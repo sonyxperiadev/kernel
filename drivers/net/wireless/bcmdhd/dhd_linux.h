@@ -61,7 +61,7 @@ struct wifi_platform_data {
 	void *(*mem_prealloc)(int section, unsigned long size);
 	int (*get_mac_addr)(unsigned char *buf);
 	int (*get_wake_irq)(void);
-	void *(*get_country_code)(char *ccode, u32 flags);
+	void *(*get_country_code)(char *ccode);
 #ifdef CONFIG_PARTIALRESUME
 #define WIFI_PR_INIT			0
 #define WIFI_PR_NOTIFY_RESUME		1
