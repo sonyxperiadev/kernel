@@ -16,8 +16,6 @@
 #include <mach/board.h>
 #include <mach/gpio.h>
 #include <mach/gpiomux.h>
-#include "board-sony_shinano-hw.h"
-#include "board-sony_leo-gpiomux-diff.h"
 #include "sony_gpiomux.h"
 
 static struct gpiomux_setting unused_gpio = {
@@ -1107,16 +1105,11 @@ static struct msm_gpiomux_config shinano_all_configs[] __initdata = {
 
 void __init msm_8974_init_gpiomux(void)
 {
-	int rc, hw;
+	int rc;
 	struct msm_gpiomux_configs base;
 
 	base.cfg = shinano_all_configs;
 	base.ncfg = ARRAY_SIZE(shinano_all_configs);
-
-	hw = get_sony_hw();
-
-	if (hw == HW_LEO_SAMBA)
-		overwrite_configs(&base, &leo_samba_gpiomux_cfgs);
 
 	rc = sony_init_gpiomux(shinano_all_configs,
 			ARRAY_SIZE(shinano_all_configs));

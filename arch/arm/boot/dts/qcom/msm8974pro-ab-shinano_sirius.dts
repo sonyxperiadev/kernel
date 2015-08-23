@@ -28,6 +28,4 @@
 	model = "SoMC Sirius ROW";
 	compatible = "somc,sirius-row", "qcom,msm8974";
         qcom,board-id = <8 0>;
-	somc,space-no = "1276-9754",	/* Gina */
-			"1278-9570";	/* Rita */
 };
