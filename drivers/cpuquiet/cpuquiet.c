@@ -25,9 +25,14 @@
 #include <linux/pm_qos.h>
 #include <linux/sched.h>
 
+#include "cpuquiet.h"
+
+#define DEFAULT_AVG_HOTPLUG_LATENCY_MS	2
 #define DEFAULT_HOTPLUG_DELAY_MS	100
 
 static DEFINE_MUTEX(cpuquiet_cpu_lock);
+
+static bool cpuquiet_devices_initialized;
 
 static struct workqueue_struct *cpuquiet_wq;
 static struct work_struct cpuquiet_work;
@@ -38,6 +43,8 @@ static unsigned long hotplug_timeout;
 
 static struct cpumask cr_online_requests;
 static struct cpumask cr_offline_requests;
+
+static struct platform_device *cpuquiet_pdev;
 
 static void cpuquiet_work_func(struct work_struct *work);
 
@@ -186,8 +193,94 @@ static struct attribute_group cpuquiet_attrs_group = {
 };
 #endif /* CONFIG_CPU_QUIET_STATS */
 
-int cpuquiet_probe_common(struct platform_device *pdev)
+
+unsigned int cpuquiet_get_avg_hotplug_latency(void)
 {
+	struct cpuquiet_platform_info *plat_info;
+
+	if (!cpuquiet_pdev)
+		return DEFAULT_AVG_HOTPLUG_LATENCY_MS;
+
+	plat_info = dev_get_platdata(&cpuquiet_pdev->dev);
+
+	/*
+	 * Our cpuquiet platform device should have been initialized with a
+	 * valid struct cpuquiet_platform_info
+	 */
+	BUG_ON(!plat_info);
+	return plat_info->avg_hotplug_latency_ms;
+}
+
+/**
+ * cpuquiet_cpu_devices_initialized - checks if all cpuquiet devs initialized
+ *
+ * Assumes that it's called while holding the cpuquiet_lock
+ */
+bool cpuquiet_cpu_devices_initialized(void)
+{
+	return cpuquiet_devices_initialized;
+}
+
+static int cpuquiet_register_devices(void)
+{
+	int err = 0;
+	unsigned int cpu;
+	struct device *dev;
+
+	mutex_lock(&cpuquiet_lock);
+
+	err = cpuquiet_sysfs_init();
+	if (err)
+		goto out_sysfs_init;
+
+	for_each_possible_cpu(cpu) {
+		dev = get_cpu_device(cpu);
+		if (dev) {
+			err = cpuquiet_add_dev(dev, cpu);
+			if (err)
+				goto out_add_dev;
+		}
+	}
+	cpuquiet_devices_initialized = true;
+
+	err = cpuquiet_stats_init();
+	if (err)
+		goto out_add_dev;
+
+	cpuquiet_switch_governor(cpuquiet_get_first_governor());
+	mutex_unlock(&cpuquiet_lock);
+
+	return 0;
+
+out_add_dev:
+	for_each_possible_cpu(cpu)
+		cpuquiet_remove_dev(cpu);
+out_sysfs_init:
+	mutex_unlock(&cpuquiet_lock);
+
+	return err;
+}
+
+static void cpuquiet_unregister_devices(void)
+{
+	unsigned int cpu;
+
+	mutex_lock(&cpuquiet_lock);
+	/* stop current governor first */
+	cpuquiet_switch_governor(NULL);
+	for_each_possible_cpu(cpu)
+		cpuquiet_remove_dev(cpu);
+	cpuquiet_devices_initialized = false;
+
+	cpuquiet_stats_exit();
+	cpuquiet_sysfs_exit();
+	mutex_unlock(&cpuquiet_lock);
+}
+
+static int cpuquiet_probe(struct platform_device *pdev)
+{
+	int err;
+
 	init_waitqueue_head(&wait_cpu);
 
 	/*
@@ -206,35 +299,84 @@ int cpuquiet_probe_common(struct platform_device *pdev)
 	cpumask_clear(&cr_online_requests);
 	cpumask_clear(&cr_offline_requests);
 
-	if (pm_qos_add_notifier(PM_QOS_MIN_ONLINE_CPUS, &minmax_cpus_notifier))
+	err = pm_qos_add_notifier(PM_QOS_MIN_ONLINE_CPUS,
+						&minmax_cpus_notifier);
+	if (err) {
 		pr_err("Failed to register min cpus PM QoS notifier\n");
-	if (pm_qos_add_notifier(PM_QOS_MAX_ONLINE_CPUS, &minmax_cpus_notifier))
+		goto destroy_wq;
+	}
+	err = pm_qos_add_notifier(PM_QOS_MAX_ONLINE_CPUS,
+						&minmax_cpus_notifier);
+	if (err) {
 		pr_err("Failed to register max cpus PM QoS notifier\n");
+		goto remove_min;
+	}
 
-	return 0;
-}
-EXPORT_SYMBOL(cpuquiet_probe_common);
+	err = cpuquiet_register_devices();
+	if (err)
+		goto remove_max;
 
-#ifdef CONFIG_CPU_QUIET_STATS
-int cpuquiet_probe_common_post(struct platform_device *pdev)
-{
-
-	int err;
+#ifdef CONFIG_QPU_QUIET_STATS
 	err = cpuquiet_register_attrs(&cpuquiet_attrs_group);
 	if (err)
-		cpuquiet_remove_common(pdev);
-	return err;
-}
-EXPORT_SYMBOL(cpuquiet_probe_common_post);
+		goto unreg_driver;
 #endif
 
-int cpuquiet_remove_common(struct platform_device *pdev)
-{
+	return 0;
+
+#ifdef CONFIG_QPU_QUIET_STATS
+unreg_driver:
+	cpuquiet_unregister_devices();
+#endif
+remove_max:
+	pm_qos_remove_notifier(PM_QOS_MAX_ONLINE_CPUS, &minmax_cpus_notifier);
+remove_min:
+	pm_qos_remove_notifier(PM_QOS_MIN_ONLINE_CPUS, &minmax_cpus_notifier);
+destroy_wq:
 	destroy_workqueue(cpuquiet_wq);
+
+	return err;
+}
+
+static int cpuquiet_remove(struct platform_device *pdev)
+{
+
 #ifdef CONFIG_CPU_QUIET_STATS
 	cpuquiet_unregister_attrs(&cpuquiet_attrs_group);
 #endif
+	pm_qos_remove_notifier(PM_QOS_MAX_ONLINE_CPUS, &minmax_cpus_notifier);
+	pm_qos_remove_notifier(PM_QOS_MIN_ONLINE_CPUS, &minmax_cpus_notifier);
+	cpuquiet_unregister_devices();
+	destroy_workqueue(cpuquiet_wq);
 
 	return 0;
 }
-EXPORT_SYMBOL(cpuquiet_remove_common);
+
+static struct platform_driver cpuquiet_platdrv __refdata = {
+	.driver = {
+		.name	= "cpuquiet",
+	},
+	.probe		= cpuquiet_probe,
+	.remove		= cpuquiet_remove,
+};
+module_platform_driver(cpuquiet_platdrv);
+
+/*
+ * Requires a plat_info with all fields filled in
+ */
+int cpuquiet_init(struct cpuquiet_platform_info *plat_info)
+{
+	struct platform_device_info devinfo = {
+		.name = "cpuquiet",
+		.data = plat_info,
+		.size_data = sizeof(*plat_info),
+	};
+
+	if (!plat_info || plat_info->avg_hotplug_latency_ms <= 0)
+		return -EINVAL;
+
+	cpuquiet_pdev = platform_device_register_full(&devinfo);
+
+	return 0;
+}
+EXPORT_SYMBOL(cpuquiet_init);

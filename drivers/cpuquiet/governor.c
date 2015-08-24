@@ -81,7 +81,8 @@ int cpuquiet_register_governor(struct cpuquiet_governor *gov)
 	if (cpuquiet_find_governor(gov->name) == NULL) {
 		ret = 0;
 		list_add_tail(&gov->governor_list, &cpuquiet_governors);
-		if (!cpuquiet_curr_governor && cpuquiet_get_driver())
+		if (!cpuquiet_curr_governor &&
+					cpuquiet_cpu_devices_initialized())
 			cpuquiet_switch_governor(gov);
 	}
 	mutex_unlock(&cpuquiet_lock);

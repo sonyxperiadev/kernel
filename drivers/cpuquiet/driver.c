@@ -28,7 +28,6 @@
 #include "cpuquiet.h"
 
 DEFINE_MUTEX(cpuquiet_lock);
-static struct cpuquiet_driver *cpuquiet_curr_driver;
 
 #ifdef CONFIG_CPU_QUIET_STATS
 struct cpuquiet_cpu_stat {
@@ -125,7 +124,7 @@ static struct attribute_group stats_group = {
 	.attrs = stats_attrs,
 };
 
-static int cpuquiet_stats_init(void)
+int cpuquiet_stats_init(void)
 {
 	unsigned int cpu;
 	int ret = 0;
@@ -149,14 +148,16 @@ static int cpuquiet_stats_init(void)
 
 	return ret;
 }
+EXPORT_SYMBOL(cpuquiet_stats_init);
 
-static void cpuquiet_stats_exit(void)
+void cpuquiet_stats_exit(void)
 {
 	cpuquiet_unregister_cpu_attrs(&stats_group);
 	kfree(stats);
 }
+EXPORT_SYMBOL(cpuquiet_stats_exit);
 
-static void stats_update(unsigned int cpu, bool up, u64 trans_overhead_us)
+void cpuquiet_stats_update(unsigned int cpu, bool up, u64 trans_overhead_us)
 {
 	unsigned long flags;
 
@@ -164,20 +165,7 @@ static void stats_update(unsigned int cpu, bool up, u64 trans_overhead_us)
 	__stats_update(cpu, up, trans_overhead_us);
 	spin_unlock_irqrestore(&stats_lock, flags);
 }
-#else
-static inline int cpuquiet_stats_init(void)
-{
-	return 0;
-}
-
-static inline void cpuquiet_stats_exit(void)
-{
-}
-
-static inline void stats_update(unsigned int cpu, bool up,
-		u64 trans_overhead_us)
-{
-}
+EXPORT_SYMBOL(cpuquiet_stats_update);
 #endif
 
 int cpuquiet_quiesce_cpu(unsigned int cpunumber, bool sync)
@@ -187,20 +175,20 @@ int cpuquiet_quiesce_cpu(unsigned int cpunumber, bool sync)
 	u64 delta;
 
 	mutex_lock(&cpuquiet_lock);
-	if (cpuquiet_curr_driver && cpuquiet_curr_driver->quiesce_cpu) {
-		/*
-		 * If sync is false, we will not be collecting hotplug overhead
-		 * and this value should be ignored.
-		 */
-		before = ktime_get();
-		err = cpuquiet_curr_driver->quiesce_cpu(cpunumber, sync);
-		after = ktime_get();
-		delta = (u64) ktime_to_us(ktime_sub(after, before));
-	}
+
+	/*
+	 * If sync is false, we will not be collecting hotplug overhead
+	 * and this value should be ignored.
+	 */
+	before = ktime_get();
+	err = cpuquiet_cpu_down(cpunumber, sync);
+	after = ktime_get();
+	delta = (u64) ktime_to_us(ktime_sub(after, before));
+
 	mutex_unlock(&cpuquiet_lock);
 
 	if (!err)
-		stats_update(cpunumber, false, delta);
+		cpuquiet_stats_update(cpunumber, false, delta);
 
 	return err;
 }
@@ -213,103 +201,21 @@ int cpuquiet_wake_cpu(unsigned int cpunumber, bool sync)
 	u64 delta;
 
 	mutex_lock(&cpuquiet_lock);
-	if (cpuquiet_curr_driver && cpuquiet_curr_driver->wake_cpu) {
-		/*
-		 * If sync is false, we will not be collecting hotplug overhead
-		 * and this value should be ignored.
-		 */
-		before = ktime_get();
-		err = cpuquiet_curr_driver->wake_cpu(cpunumber, sync);
-		after = ktime_get();
-		delta = (u64) ktime_to_us(ktime_sub(after, before));
-	}
+
+	/*
+	 * If sync is false, we will not be collecting hotplug overhead
+	 * and this value should be ignored.
+	 */
+	before = ktime_get();
+	err = cpuquiet_cpu_up(cpunumber, sync);
+	after = ktime_get();
+	delta = (u64) ktime_to_us(ktime_sub(after, before));
+
 	mutex_unlock(&cpuquiet_lock);
 
 	if (!err)
-		stats_update(cpunumber, true, delta);
+		cpuquiet_stats_update(cpunumber, true, delta);
 
 	return err;
 }
 EXPORT_SYMBOL(cpuquiet_wake_cpu);
-
-struct cpuquiet_driver *cpuquiet_get_driver(void)
-{
-	return cpuquiet_curr_driver;
-}
-
-int cpuquiet_get_avg_hotplug_latency(void)
-{
-	if (cpuquiet_curr_driver)
-		return cpuquiet_curr_driver->avg_hotplug_latency_ms;
-	return 0;
-}
-
-int cpuquiet_register_driver(struct cpuquiet_driver *drv)
-{
-	int err = 0;
-	unsigned int cpu;
-	struct device *dev;
-
-	if (!drv)
-		return -EINVAL;
-
-	mutex_lock(&cpuquiet_lock);
-	if (cpuquiet_curr_driver) {
-		err = -EBUSY;
-		goto out_busy;
-	}
-
-	err = cpuquiet_sysfs_init();
-	if (err)
-		goto out_busy;
-
-	for_each_possible_cpu(cpu) {
-		dev = get_cpu_device(cpu);
-		if (dev) {
-			err = cpuquiet_add_dev(dev, cpu);
-			if (err)
-				goto out_add_dev;
-		}
-	}
-
-	err = cpuquiet_stats_init();
-	if (err)
-		goto out_add_dev;
-
-	cpuquiet_curr_driver = drv;
-	cpuquiet_switch_governor(cpuquiet_get_first_governor());
-	mutex_unlock(&cpuquiet_lock);
-
-	return 0;
-
-out_add_dev:
-	for_each_possible_cpu(cpu)
-		cpuquiet_remove_dev(cpu);
-out_busy:
-	mutex_unlock(&cpuquiet_lock);
-
-	return err;
-}
-EXPORT_SYMBOL(cpuquiet_register_driver);
-
-void cpuquiet_unregister_driver(struct cpuquiet_driver *drv)
-{
-	unsigned int cpu;
-
-	if (drv != cpuquiet_curr_driver) {
-		WARN(1, "invalid cpuquiet_unregister_driver(%s)\n",
-			drv->name);
-		return;
-	}
-
-	mutex_lock(&cpuquiet_lock);
-	/* stop current governor first */
-	cpuquiet_switch_governor(NULL);
-	cpuquiet_curr_driver = NULL;
-	for_each_possible_cpu(cpu)
-		cpuquiet_remove_dev(cpu);
-	cpuquiet_stats_exit();
-	cpuquiet_sysfs_exit();
-	mutex_unlock(&cpuquiet_lock);
-}
-EXPORT_SYMBOL(cpuquiet_unregister_driver);
