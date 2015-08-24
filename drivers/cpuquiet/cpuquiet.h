@@ -28,12 +28,18 @@ extern struct cpuquiet_governor *cpuquiet_find_governor(const char *str);
 extern int cpuquiet_switch_governor(struct cpuquiet_governor *gov);
 extern struct cpuquiet_governor *cpuquiet_get_first_governor(void);
 extern struct cpuquiet_driver *cpuquiet_get_driver(void);
+extern unsigned int cpuquiet_get_avg_hotplug_latency(void);
+extern bool cpuquiet_cpu_devices_initialized(void);
 
 #ifdef CONFIG_CPU_QUIET_STATS
 extern int cpuquiet_sysfs_init(void);
 extern void cpuquiet_sysfs_exit(void);
 extern int cpuquiet_add_dev(struct device *dev, unsigned int cpu);
 extern void cpuquiet_remove_dev(unsigned int cpu);
+extern int cpuquiet_stats_init(void);
+extern void cpuquiet_stats_exit(void);
+extern void cpuquiet_stats_update(unsigned int cpu, bool up,
+		u64 trans_overhead_us);
 #else
 static inline int cpuquiet_sysfs_init(void)
 {
@@ -50,6 +56,20 @@ static inline int cpuquiet_add_dev(struct device *dev, unsigned int cpu)
 }
 
 static inline void cpuquiet_remove_dev(unsigned int cpu)
+{
+}
+
+static inline int cpuquiet_stats_init(void)
+{
+	return 0;
+}
+
+static inline void cpuquiet_stats_exit(void)
+{
+}
+
+static inline void cpuquiet_stats_update(unsigned int cpu, bool up,
+		u64 trans_overhead_us)
 {
 }
 #endif
