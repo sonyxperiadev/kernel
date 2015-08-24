@@ -25,6 +25,8 @@
 #include <linux/cpu.h>
 #include <linux/sched.h>
 
+#include "../cpuquiet.h"
+
 static struct work_struct runnables_work;
 static struct timer_list runnables_timer;
 
