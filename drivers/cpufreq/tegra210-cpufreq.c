@@ -19,6 +19,7 @@
 #include <linux/clk.h>
 #include <linux/clk-provider.h>
 #include <linux/cpufreq.h>
+#include <linux/cpuquiet.h>
 #include <linux/err.h>
 #include <linux/init.h>
 #include <linux/kernel.h>
@@ -395,6 +396,11 @@ static struct platform_driver tegra210_cpufreq_platdrv = {
 	.remove		= tegra210_cpufreq_remove,
 };
 
+static struct cpuquiet_platform_info tegra_plat_info = {
+	.plat_name = "tegra",
+	.avg_hotplug_latency_ms = 2,
+};
+
 static int __init tegra_cpufreq_init(void)
 {
 	int ret;
@@ -412,6 +418,8 @@ static int __init tegra_cpufreq_init(void)
 		platform_driver_unregister(&tegra210_cpufreq_platdrv);
 		return PTR_ERR(pdev);
 	}
+
+	cpuquiet_init(&tegra_plat_info);
 
 	return 0;
 }
