@@ -233,6 +233,7 @@ int cpuquiet_add_dev(struct device *device, unsigned int cpu)
 	err = kobject_init_and_add(&dev->kobj, &ktype_cpuquiet_cpu,
 				&device->kobj, "cpuquiet");
 	if (err) {
+		cpuquiet_cpu_devices[cpu] = NULL;
 		kfree(dev);
 		return err;
 	}
