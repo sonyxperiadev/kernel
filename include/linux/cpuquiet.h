@@ -44,7 +44,7 @@ struct cpuquiet_platform_info {
 	unsigned int	avg_hotplug_latency_ms;
 };
 
-extern int cpuquiet_init(struct cpuquiet_platform_info *plat_info);
+extern int cpuquiet_init(const struct cpuquiet_platform_info *plat_info);
 extern int cpuquiet_register_governor(struct cpuquiet_governor *gov);
 extern void cpuquiet_unregister_governor(struct cpuquiet_governor *gov);
 
