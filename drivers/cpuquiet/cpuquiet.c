@@ -230,7 +230,7 @@ static struct attribute_group cpuquiet_attrs_group = {
 
 unsigned int cpuquiet_get_avg_hotplug_latency(void)
 {
-	struct cpuquiet_platform_info *plat_info;
+	const struct cpuquiet_platform_info *plat_info;
 
 	if (!cpuquiet_pdev)
 		return DEFAULT_AVG_HOTPLUG_LATENCY_MS;
@@ -400,7 +400,7 @@ module_platform_driver(cpuquiet_platdrv);
  *
  * @plat_info: A valid struct containing info for current platform
  */
-int cpuquiet_init(struct cpuquiet_platform_info *plat_info)
+int cpuquiet_init(const struct cpuquiet_platform_info *plat_info)
 {
 	struct platform_device_info devinfo = {
 		.name = "cpuquiet",
