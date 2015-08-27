@@ -267,6 +267,10 @@ static int cpuquiet_register_devices(void)
 	if (err)
 		goto out_sysfs_init;
 
+	err = cpuquiet_stats_init();
+	if (err)
+		goto out_add_dev;
+
 	for_each_possible_cpu(cpu) {
 		dev = get_cpu_device(cpu);
 		if (dev) {
@@ -276,10 +280,6 @@ static int cpuquiet_register_devices(void)
 		}
 	}
 	cpuquiet_devices_initialized = true;
-
-	err = cpuquiet_stats_init();
-	if (err)
-		goto out_add_dev;
 
 	cpuquiet_switch_governor(cpuquiet_get_first_governor());
 	mutex_unlock(&cpuquiet_lock);
@@ -302,9 +302,9 @@ static void cpuquiet_unregister_devices(void)
 	mutex_lock(&cpuquiet_lock);
 	/* stop current governor first */
 	cpuquiet_switch_governor(NULL);
+	cpuquiet_devices_initialized = false;
 	for_each_possible_cpu(cpu)
 		cpuquiet_remove_dev(cpu);
-	cpuquiet_devices_initialized = false;
 
 	cpuquiet_stats_exit();
 	cpuquiet_sysfs_exit();
@@ -378,9 +378,9 @@ static int cpuquiet_remove(struct platform_device *pdev)
 #ifdef CONFIG_CPU_QUIET_STATS
 	cpuquiet_unregister_attrs(&cpuquiet_attrs_group);
 #endif
+	cpuquiet_unregister_devices();
 	pm_qos_remove_notifier(PM_QOS_MAX_ONLINE_CPUS, &minmax_cpus_notifier);
 	pm_qos_remove_notifier(PM_QOS_MIN_ONLINE_CPUS, &minmax_cpus_notifier);
-	cpuquiet_unregister_devices();
 	destroy_workqueue(cpuquiet_wq);
 
 	return 0;
