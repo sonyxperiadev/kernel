@@ -396,7 +396,7 @@ static struct platform_driver tegra210_cpufreq_platdrv = {
 	.remove		= tegra210_cpufreq_remove,
 };
 
-static struct cpuquiet_platform_info tegra_plat_info = {
+static const struct cpuquiet_platform_info tegra_plat_info = {
 	.plat_name = "tegra",
 	.avg_hotplug_latency_ms = 2,
 };
