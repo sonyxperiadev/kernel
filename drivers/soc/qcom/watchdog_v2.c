@@ -444,6 +444,31 @@ static struct notifier_block wdog_cpu_pm_nb = {
 	.notifier_call = wdog_cpu_pm_notify,
 };
 
+static struct device *dev;
+static int wdog_init_done;
+
+#ifndef CONFIG_HARDLOCKUP_DETECTOR
+void touch_nmi_watchdog(void)
+{
+	unsigned long long ns;
+	unsigned long delay_time;
+	struct msm_watchdog_data *wdog_dd =
+			(struct msm_watchdog_data *)dev_get_drvdata(dev);
+
+	if (!wdog_dd || !wdog_init_done)
+		return;
+
+	delay_time = msecs_to_jiffies(wdog_dd->pet_time);
+
+	ns = sched_clock() - wdog_dd->last_pet;
+	if (nsecs_to_jiffies(ns) > delay_time)
+		pet_watchdog(wdog_dd);
+
+	touch_softlockup_watchdog();
+}
+EXPORT_SYMBOL(touch_nmi_watchdog);
+#endif
+
 static int msm_watchdog_remove(struct platform_device *pdev)
 {
 	struct msm_watchdog_data *wdog_dd =
@@ -736,6 +761,8 @@ static void init_watchdog_data(struct msm_watchdog_data *wdog_dd)
 		enable_percpu_irq(wdog_dd->bark_irq, 0);
 	if (ipi_opt_en)
 		cpu_pm_register_notifier(&wdog_cpu_pm_nb);
+	dev = wdog_dd->dev;
+	wdog_init_done = 1;
 	dev_info(wdog_dd->dev, "MSM Watchdog Initialized\n");
 	return;
 }
