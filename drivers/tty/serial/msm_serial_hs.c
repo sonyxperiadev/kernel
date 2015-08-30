@@ -1365,11 +1365,10 @@ static void msm_hs_submit_tx_locked(struct uart_port *uport)
 	int ret;
 
 	if (uart_circ_empty(tx_buf) || uport->state->port.tty->stopped) {
+		tx->dma_in_flight = false;
 		msm_hs_stop_tx_locked(uport);
 		return;
 	}
-
-	tx->dma_in_flight = true;
 
 	tx_count = uart_circ_chars_pending(tx_buf);
 
@@ -1849,7 +1848,6 @@ static void msm_serial_hs_tx_work(struct kthread_work *work)
 	else
 		MSM_HS_DBG("%s:circ buffer is empty\n", __func__);
 
-	tx->dma_in_flight = false;
 	wake_up(&msm_uport->tx.wait);
 
 	uport->icount.tx += tx->tx_count;
@@ -1981,7 +1979,6 @@ void msm_hs_set_mctrl(struct uart_port *uport,
 				    unsigned int mctrl)
 {
 	unsigned long flags;
-
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
 
 	if (msm_uport->pm_state != MSM_HS_PM_ACTIVE) {
@@ -2271,7 +2268,6 @@ EXPORT_SYMBOL(msm_hs_request_clock_off);
 void msm_hs_request_clock_on(struct uart_port *uport)
 {
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
-
 	msm_hs_resource_vote(UARTDM_TO_MSM(uport));
 
 	__pm_stay_awake(&msm_uport->ws);
