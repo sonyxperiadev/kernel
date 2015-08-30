@@ -95,7 +95,6 @@ static unsigned int  idle_bottom_freq[MAX_CLUSTERS];
 static unsigned int  idle_top_freq[MAX_CLUSTERS];
 static unsigned int  num_of_cores[MAX_CLUSTERS];
 static unsigned long up_delay;
-static unsigned long idle_delay;
 static unsigned long down_delay;
 static unsigned long last_change_time;
 static unsigned int  load_sample_rate = 20; /* msec */
@@ -726,7 +725,6 @@ CPQ_BASIC_ATTRIBUTE(balance_level, 0644, uint);
 CPQ_BASIC_ATTRIBUTE(load_sample_rate, 0644, uint);
 CPQ_BASIC_ATTRIBUTE(userspace_suspend_state, 0644, uint);
 CPQ_ATTRIBUTE(up_delay, 0644, ulong, delay_callback);
-CPQ_ATTRIBUTE(idle_delay, 0644, ulong, delay_callback);
 CPQ_ATTRIBUTE(down_delay, 0644, ulong, delay_callback);
 
 CPQ_ATTRIBUTE_CUSTOM(idle_bottom_freq, 0644,
@@ -742,7 +740,6 @@ static struct attribute *rqbalance_attributes[] = {
 	&balance_level_attr.attr,
 	&userspace_suspend_state_attr.attr,
 	&up_delay_attr.attr,
-	&idle_delay_attr.attr,
 	&down_delay_attr.attr,
 	&load_sample_rate_attr.attr,
 	&idle_bottom_freq_attr.attr,
@@ -907,7 +904,6 @@ static int rqbalance_start(void)
 	INIT_DELAYED_WORK(&rqbalance_work, rqbalance_work_func);
 
 	up_delay = msecs_to_jiffies(UPCORE_DELAY_MS);
-	idle_delay = msecs_to_jiffies(FAIR_DELAY_MS);
 	down_delay = msecs_to_jiffies(DNCORE_DELAY_MS);
 
 	err = rqbalance_get_package_info();
