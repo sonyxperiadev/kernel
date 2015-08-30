@@ -1979,7 +1979,6 @@ void msm_hs_set_mctrl(struct uart_port *uport,
 				    unsigned int mctrl)
 {
 	unsigned long flags;
-
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
 
 	if (msm_uport->pm_state != MSM_HS_PM_ACTIVE) {
@@ -2269,7 +2268,6 @@ EXPORT_SYMBOL(msm_hs_request_clock_off);
 void msm_hs_request_clock_on(struct uart_port *uport)
 {
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
-
 	msm_hs_resource_vote(UARTDM_TO_MSM(uport));
 
 	__pm_stay_awake(&msm_uport->ws);
