@@ -21,6 +21,7 @@
 
 #include "mdss_fb.h"
 #include "mdss_cec_abstract.h"
+#include "mdss_hdmi_util.h"
 
 #define MAX_CEC_CLIENTS 4
 
@@ -658,6 +659,14 @@ static ssize_t cec_wta_msg(struct device *dev,
 		ret = -EINVAL;
 		goto end;
 	}
+
+#ifdef CONFIG_FB_MSM_MDSS_HDMI_PANEL
+	ret = hdmi_tx_is_HDMI_panel_power_on(dev);
+	if (ret <= 0) {
+		DEV_ERR("%s: HDMI clock is not enable\n", __func__);
+		return -EPERM;
+	}
+#endif
 
 	spin_lock_irqsave(&ctl->lock, flags);
 	if (ctl->compliance_enabled) {

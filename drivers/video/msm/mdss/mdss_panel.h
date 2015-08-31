@@ -32,6 +32,11 @@ struct panel_id {
 /* worst case prefill lines for all chipsets including all vertical blank */
 #define MDSS_MDP_MAX_PREFILL_FETCH 25
 
+#define OVERRIDE_CFG	"override"
+#define SIM_PANEL	"sim"
+#define SIM_SW_TE_PANEL	"sim-swte"
+#define SIM_HW_TE_PANEL	"sim-hwte"
+
 /* panel type list */
 #define NO_PANEL		0xffff	/* No Panel */
 #define MDDI_PANEL		1	/* MDDI */
@@ -116,6 +121,21 @@ struct mdss_rect {
 	u16 y;
 	u16 w;
 	u16 h;
+};
+
+/*
+ * enum sim_panel_modes - Different panel modes for simulator panels
+ *
+ * @SIM_MODE:		Disables all host reads for video mode simulator panels.
+ * @SIM_SW_TE_MODE:	Disables all host reads and genereates the SW TE. Used
+ *                      for cmd mode simulator panels.
+ * @SIM_HW_TE_MODE:	Disables all host reads and expects TE from hardware
+ *                      (terminator card). Used for cmd mode simulator panels.
+ */
+enum {
+	SIM_MODE = 1,
+	SIM_SW_TE_MODE,
+	SIM_HW_TE_MODE,
 };
 
 #define MDSS_MAX_PANEL_LEN      256
@@ -225,7 +245,40 @@ enum mdss_intf_events {
 	MDSS_EVENT_DSI_DYNAMIC_SWITCH,
 	MDSS_EVENT_DSI_RECONFIG_CMD,
 	MDSS_EVENT_DSI_RESET_WRITE_PTR,
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	MDSS_EVENT_DISP_ON,
+#endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 };
+
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+struct change_fps_rtn_pos {
+	int num;
+	int *pos;
+};
+
+struct change_fps {
+	bool enable;
+	u32 disp_clk;
+	u32 dric_vbp;
+	u32 dric_vfp;
+	bool rtn_adj;
+	struct change_fps_rtn_pos rtn_pos;
+	bool te_c_update;
+	u32 threshold;
+	u32 te_c_60fps[2];
+	u32 te_c_45fps[2];
+	u32 te_c_pos[2];
+
+	u32 wait_on_60fps;
+	u32 wait_on_45fps;
+	u32 wait_off_60fps;
+	u32 wait_off_45fps;
+	u32 wait_on_cmds_num;
+	u32 wait_off_cmds_num;
+
+	bool susres_mode;
+};
+#endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 
 struct lcd_panel_info {
 	u32 h_back_porch;
@@ -245,6 +298,9 @@ struct lcd_panel_info {
 	u32 xres_pad;
 	/* Pad height */
 	u32 yres_pad;
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	struct change_fps chg_fps;
+#endif
 };
 
 
@@ -322,6 +378,10 @@ struct mipi_panel_info {
 	char lp11_init;
 	u32  init_delay;
 	u32  post_init_delay;
+
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	int input_fpks;
+#endif
 };
 
 struct edp_panel_info {
@@ -348,19 +408,12 @@ struct lvds_panel_info {
 };
 
 enum {
-	DSC_PATH_1P1D,
-	DSC_PATH_MERGE_1P1D,
-	DSC_PATH_SPLIT_1P2D
-};
-
-enum {
 	COMPRESSION_NONE,
 	COMPRESSION_DSC,
 	COMPRESSION_FBC
 };
 
 struct dsc_desc {
-	int data_path_model;		/* multiplex + split_panel */
 	int ich_reset_value;
 	int ich_reset_override;
 	int initial_lines;
@@ -514,9 +567,30 @@ struct mdss_panel_info {
 	u32 panel_orientation;
 	bool dynamic_switch_pending;
 	bool is_lpm_mode;
-	bool is_split_display;
+	bool is_split_display; /* two DSIs in one display, pp split or not */
+
+	/*
+	 * index[0] = left layer mixer, value of 0 not valid
+	 * index[1] = right layer mixer, 0 is possible
+	 *
+	 * Ex(1): 1080x1920 display using single DSI and single lm, [1080 0]
+	 * Ex(2): 1440x2560 display using two DSIs and two lms,
+	 *        each with 720x2560, [720 0]
+	 * Ex(3): 1440x2560 display using single DSI w/ compression and
+	 *        single lm, [1440 0]
+	 * Ex(4): 1440x2560 display using single DSI w/ compression and
+	 *        two lms, [720 720]
+	 * Ex(5): 1080x1920 display using single DSI and two lm, [540 540]
+	 * Ex(6): 1080x1920 display using single DSI and two lm,
+	 *        [880 400] - not practical but possible
+	 */
+	u32 lm_widths[2];
 
 	bool is_prim_panel;
+
+	/* refer sim_panel_modes enum for different modes */
+	u8 sim_panel_mode;
+
 	bool is_pluggable;
 	bool is_cec_supported;
 
@@ -527,7 +601,14 @@ struct mdss_panel_info {
 	char panel_name[MDSS_MAX_PANEL_LEN];
 	struct mdss_mdp_pp_tear_check te;
 
+	/*
+	 * Value of 2 only when single DSI is configured with 2 DSC
+	 * encoders. When 2 encoders are used, currently both use
+	 * same configuration.
+	 */
+	u8 dsc_enc_total; /* max 2 */
 	struct dsc_desc dsc;
+
 	struct lcd_panel_info lcdc;
 	struct fbc_panel_info fbc;
 	struct mipi_panel_info mipi;
@@ -537,12 +618,39 @@ struct mdss_panel_info {
 	bool is_dba_panel;
 	/* debugfs structure for the panel */
 	struct mdss_panel_debugfs_info *debugfs_info;
+
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	const char *panel_id_name;
+	int dsi_master;
+	int disp_on_in_hs;
+	int wait_time_before_on_cmd;
+
+	u32 rev_u[2], rev_v[2]; /* ROI */
+
+	/* physical size in mm */
+	__u32 width;
+	__u32 height;
+#endif
 };
 
 struct mdss_panel_data {
 	struct mdss_panel_info panel_info;
 	void (*set_backlight) (struct mdss_panel_data *pdata, u32 bl_level);
 	unsigned char *mmss_cc_base;
+
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	struct platform_device *panel_pdev;
+
+	int (*intf_ready) (struct mdss_panel_data *pdata);
+	void (*crash_counter_reset) (void);
+	void (*blackscreen_det) (struct mdss_panel_data *pdata);
+	void (*fff_time_update) (struct mdss_panel_data *pdata);
+
+	int (*detect) (struct mdss_panel_data *pdata);
+	int (*update_panel) (struct mdss_panel_data *pdata);
+
+	bool resume_started;
+#endif
 
 	/**
 	 * event_handler() - callback handler for MDP core events
@@ -656,6 +764,14 @@ static inline int mdss_panel_get_htotal(struct mdss_panel_info *pinfo, bool
 	return adj_xres + pinfo->lcdc.h_back_porch +
 		pinfo->lcdc.h_front_porch +
 		pinfo->lcdc.h_pulse_width;
+}
+
+static inline bool is_dsc_compression(struct mdss_panel_info *pinfo)
+{
+	if (pinfo)
+		return (pinfo->compression_mode == COMPRESSION_DSC);
+
+	return false;
 }
 
 int mdss_register_panel(struct platform_device *pdev,
@@ -775,6 +891,18 @@ struct mdss_panel_cfg *mdss_panel_intf_type(int intf_val);
  */
 bool mdss_is_ready(void);
 int mdss_rect_cmp(struct mdss_rect *rect1, struct mdss_rect *rect2);
+
+struct msm_fb_data_type;
+#if defined(CONFIG_DEBUG_FS) && defined(CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL)
+void mipi_dsi_panel_create_debugfs(struct msm_fb_data_type *mfd);
+bool mdss_dsi_panel_flip_ud(void);
+#else
+static inline void mipi_dsi_panel_create_debugfs(struct msm_fb_data_type *mfd)
+{
+	/* empty */
+}
+#endif
+
 #ifdef CONFIG_FB_MSM_MDSS
 int mdss_panel_debugfs_init(struct mdss_panel_info *panel_info,
 		char const *panel_name);

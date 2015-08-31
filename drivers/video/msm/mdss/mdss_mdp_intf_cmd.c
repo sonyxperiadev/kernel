@@ -27,7 +27,8 @@
 /* wait for at most 2 vsync for lowest refresh rate (24hz) */
 #define KOFF_TIMEOUT msecs_to_jiffies(84)
 
-#define STOP_TIMEOUT(hz) msecs_to_jiffies((1000 / hz) * (VSYNC_EXPIRE_TICK + 2))
+#define STOP_TIMEOUT(hz) \
+	msecs_to_jiffies(2 * (1000 / hz) * (VSYNC_EXPIRE_TICK + 2))
 #define POWER_COLLAPSE_TIME msecs_to_jiffies(100)
 
 static DEFINE_MUTEX(cmd_clk_mtx);
@@ -66,6 +67,10 @@ struct mdss_mdp_cmd_ctx {
 };
 
 struct mdss_mdp_cmd_ctx mdss_mdp_cmd_ctx_list[MAX_SESSIONS];
+
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+static bool disp_on_in_hs;
+#endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 
 static int mdss_mdp_cmd_do_notifier(struct mdss_mdp_cmd_ctx *ctx);
 
@@ -177,6 +182,7 @@ static int mdss_mdp_cmd_tearcheck_cfg(struct mdss_mdp_mixer *mixer,
 	struct mdss_mdp_pp_tear_check *te = NULL;
 	struct mdss_panel_info *pinfo;
 	u32 vsync_clk_speed_hz, total_lines, vclks_line, cfg = 0;
+	u32 vporch, height = 0;
 	char __iomem *pingpong_base;
 	struct mdss_mdp_ctl *ctl = ctx->ctl;
 	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
@@ -216,6 +222,13 @@ static int mdss_mdp_cmd_tearcheck_cfg(struct mdss_mdp_mixer *mixer,
 
 		cfg |= vclks_line;
 
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+		vporch = pinfo->lcdc.v_back_porch +
+			 pinfo->lcdc.v_front_porch +
+			 pinfo->lcdc.v_pulse_width;
+
+		height = (pinfo->yres + vporch) * 2;
+#endif
 		pr_debug("%s: yres=%d vclks=%x height=%d init=%d rd=%d start=%d\n",
 			__func__, pinfo->yres, vclks_line, te->sync_cfg_height,
 			 te->vsync_init_val, te->rd_ptr_irq, te->start_pos);
@@ -231,8 +244,7 @@ static int mdss_mdp_cmd_tearcheck_cfg(struct mdss_mdp_mixer *mixer,
 	mdss_mdp_pingpong_write(pingpong_base,
 		MDSS_MDP_REG_PP_SYNC_CONFIG_VSYNC, cfg);
 	mdss_mdp_pingpong_write(pingpong_base,
-		MDSS_MDP_REG_PP_SYNC_CONFIG_HEIGHT,
-		te ? te->sync_cfg_height : 0);
+		MDSS_MDP_REG_PP_SYNC_CONFIG_HEIGHT, height);
 	mdss_mdp_pingpong_write(pingpong_base,
 		MDSS_MDP_REG_PP_VSYNC_INIT_VAL,
 		te ? te->vsync_init_val : 0);
@@ -259,6 +271,7 @@ static int mdss_mdp_cmd_tearcheck_setup(struct mdss_mdp_cmd_ctx *ctx,
 	int rc = 0;
 	struct mdss_mdp_mixer *mixer;
 	struct mdss_mdp_ctl *ctl = ctx->ctl;
+	struct mdss_panel_info *pinfo = &ctl->panel_data->panel_info;
 
 	mixer = mdss_mdp_mixer_get(ctl, MDSS_MDP_MIXER_MUX_LEFT);
 	if (mixer) {
@@ -267,7 +280,8 @@ static int mdss_mdp_cmd_tearcheck_setup(struct mdss_mdp_cmd_ctx *ctx,
 			goto err;
 	}
 
-	if (!(ctl->opmode & MDSS_MDP_CTL_OP_PACK_3D_ENABLE)) {
+	if (!(ctl->opmode & MDSS_MDP_CTL_OP_PACK_3D_ENABLE) &&
+	    !is_dsc_compression(pinfo)) {
 		mixer = mdss_mdp_mixer_get(ctl, MDSS_MDP_MIXER_MUX_RIGHT);
 		if (mixer)
 			rc = mdss_mdp_cmd_tearcheck_cfg(mixer, ctx, enable);
@@ -578,14 +592,14 @@ static int mdss_mdp_cmd_add_vsync_handler(struct mdss_mdp_ctl *ctl,
 	spin_unlock_irqrestore(&ctx->clk_lock, flags);
 
 	if (enable_rdptr) {
-		if (ctl->panel_data->panel_info.is_split_display)
+		if (ctl->mfd->split_mode == MDP_DUAL_LM_DUAL_DISPLAY)
 			mutex_lock(&cmd_clk_mtx);
 
 		mdss_mdp_cmd_clk_on(ctx);
 		if (sctx)
 			mdss_mdp_cmd_clk_on(sctx);
 
-		if (ctl->panel_data->panel_info.is_split_display)
+		if (ctl->mfd->split_mode == MDP_DUAL_LM_DUAL_DISPLAY)
 			mutex_unlock(&cmd_clk_mtx);
 	}
 
@@ -681,6 +695,10 @@ static int mdss_mdp_cmd_wait4pingpong(struct mdss_mdp_ctl *ctl, void *arg)
 	if (rc <= 0) {
 		u32 status, mask;
 
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+		if (pdata->blackscreen_det)
+			pdata->blackscreen_det(pdata);
+#endif
 		mask = BIT(MDSS_MDP_IRQ_PING_PONG_COMP + ctx->pp_num);
 		status = mask & readl_relaxed(ctl->mdata->mdp_base +
 				MDSS_MDP_REG_INTR_STATUS);
@@ -819,9 +837,19 @@ static int mdss_mdp_cmd_panel_on(struct mdss_mdp_ctl *ctl,
 		rc = mdss_mdp_ctl_intf_event(ctl, MDSS_EVENT_PANEL_ON, NULL);
 		WARN(rc, "intf %d panel on error (%d)\n", ctl->intf_num, rc);
 
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+		if (ctl->panel_data->panel_info.disp_on_in_hs) {
+			disp_on_in_hs = true;
+		} else {
+			rc = mdss_mdp_tearcheck_enable(ctl, true);
+			WARN(rc, "intf %d tearcheck enable error (%d)\n",
+					ctl->intf_num, rc);
+		}
+#else
 		rc = mdss_mdp_tearcheck_enable(ctl, true);
 		WARN(rc, "intf %d tearcheck enable error (%d)\n",
 				ctl->intf_num, rc);
+#endif
 
 		ctx->panel_power_state = MDSS_PANEL_POWER_ON;
 		if (sctx)
@@ -945,6 +973,9 @@ int mdss_mdp_cmd_kickoff(struct mdss_mdp_ctl *ctl, void *arg)
 {
 	struct mdss_mdp_ctl *sctl = NULL;
 	struct mdss_mdp_cmd_ctx *ctx, *sctx = NULL;
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	int rc = 0;
+#endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 
 	ctx = (struct mdss_mdp_cmd_ctx *) ctl->intf_ctx[MASTER_CTX];
 	if (!ctx) {
@@ -1040,6 +1071,36 @@ int mdss_mdp_cmd_kickoff(struct mdss_mdp_ctl *ctl, void *arg)
 	mb();
 	MDSS_XLOG(ctl->num,  atomic_read(&ctx->koff_cnt), ctx->clk_enabled,
 						ctx->rdptr_enabled);
+
+	if (!__mdss_mdp_cmd_is_panel_power_on_interactive(ctx)) {
+		if (ctl->mfd) {
+			struct mdss_panel_data *pdata;
+			pdata = dev_get_platdata(&ctl->mfd->pdev->dev);
+			if (!pdata) {
+				pr_err("no panel connected\n");
+				return -ENODEV;
+			}
+
+			if (pdata->intf_ready)
+				pdata->intf_ready(pdata);
+		}
+		ctx->panel_power_state = MDSS_PANEL_POWER_ON;
+		if (sctx)
+			sctx->panel_power_state = MDSS_PANEL_POWER_ON;
+	}
+
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	if (disp_on_in_hs) {
+		rc = mdss_mdp_ctl_intf_event(ctl, MDSS_EVENT_DISP_ON, NULL);
+		WARN(rc, "intf %d disp on error (%d)\n", ctl->intf_num, rc);
+		disp_on_in_hs = false;
+
+		rc = mdss_mdp_tearcheck_enable(ctl, true);
+		WARN(rc, "intf %d tearcheck enable error (%d)\n",
+				ctl->intf_num, rc);
+	}
+#endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
+
 	return 0;
 }
 
