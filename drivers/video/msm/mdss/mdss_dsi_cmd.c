@@ -750,6 +750,47 @@ struct dcs_cmd_req *mdss_dsi_cmdlist_get(struct mdss_dsi_ctrl_pdata *ctrl,
 	return req;
 }
 
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+#define __UNLOCK 0
+#define __LOCK   1
+static int mdss_dsi_cmd_lock(struct mdss_dsi_ctrl_pdata *ctrl,
+			     struct dcs_cmd_list *clist,
+			     int lock)
+{
+	struct dcs_cmd_req cmdreq;
+	struct dcs_cmd_req *req;
+	int ret = 0;
+
+	if (!ctrl->spec_pdata->lock_cmds.cmd_cnt)
+		goto out;
+
+	if (lock) {
+		cmdreq.cmds = ctrl->spec_pdata->lock_cmds.cmds;
+		cmdreq.cmds_cnt = ctrl->spec_pdata->lock_cmds.cmd_cnt;
+	} else {
+		cmdreq.cmds = ctrl->spec_pdata->unlock_cmds.cmds;
+		cmdreq.cmds_cnt = ctrl->spec_pdata->unlock_cmds.cmd_cnt;
+	}
+	cmdreq.flags = CMD_REQ_COMMIT;
+	cmdreq.rlen = 0;
+	cmdreq.cb = NULL;
+
+	req = &clist->list[clist->put];
+	*req = cmdreq;
+	clist->put++;
+	clist->put %= CMD_REQ_MAX;
+	clist->tot++;
+
+	pr_debug("%s: tot=%d put=%d get=%d lock=%d\n", __func__,
+		 clist->tot, clist->put, clist->get, lock);
+
+	ret = ctrl->cmdlist_commit(ctrl, 0);
+
+out:
+	return ret;
+}
+#endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
+
 int mdss_dsi_cmdlist_put(struct mdss_dsi_ctrl_pdata *ctrl,
 				struct dcs_cmd_req *cmdreq)
 {
@@ -760,6 +801,11 @@ int mdss_dsi_cmdlist_put(struct mdss_dsi_ctrl_pdata *ctrl,
 	mutex_lock(&ctrl->cmd_mutex);
 	mutex_lock(&ctrl->cmdlist_mutex);
 	clist = &ctrl->cmdlist;
+
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	mdss_dsi_cmd_lock(ctrl, clist, __UNLOCK);
+#endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
+
 	req = &clist->list[clist->put];
 	*req = *cmdreq;
 	clist->put++;
@@ -785,6 +831,11 @@ int mdss_dsi_cmdlist_put(struct mdss_dsi_ctrl_pdata *ctrl,
 		else
 			ret = ctrl->cmdlist_commit(ctrl, 0);
 	}
+
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	mdss_dsi_cmd_lock(ctrl, clist, __LOCK);
+#endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
+
 	mutex_unlock(&ctrl->cmd_mutex);
 
 	return ret;

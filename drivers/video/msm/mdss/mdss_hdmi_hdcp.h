@@ -56,6 +56,8 @@ void *hdmi_hdcp2p2_init(struct hdmi_hdcp_init_data *init_data);
 void hdmi_hdcp_deinit(void *input);
 void hdmi_hdcp2p2_deinit(void *input);
 
+void hdmi_hdcp_aksv(u8 aksv[5], void *input);
+
 struct hdmi_hdcp_ops *hdmi_hdcp_start(void *input);
 struct hdmi_hdcp_ops *hdmi_hdcp2p2_start(void *input);
 
