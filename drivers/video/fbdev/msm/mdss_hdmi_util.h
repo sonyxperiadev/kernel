@@ -507,6 +507,9 @@ int hdmi_tx_setup_tmds_clk_rate(u32 pixel_freq, u32 out_format, bool dc_enable);
 /* todo: Fix this. Right now this is defined in mdss_hdmi_tx.c */
 void *hdmi_get_featuredata_from_sysfs_dev(struct device *device, u32 type);
 
+/* get hdmi panel power is on or not*/
+ssize_t hdmi_tx_is_HDMI_panel_power_on(struct device *device);
+
 /* DDC */
 void hdmi_ddc_config(struct hdmi_tx_ddc_ctrl *);
 int hdmi_ddc_isr(struct hdmi_tx_ddc_ctrl *, u32 version);

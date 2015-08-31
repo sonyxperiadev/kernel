@@ -730,6 +730,9 @@ enum mdss_mdp_pingpong_index {
 #define MDSS_MDP_DSC_0_OFFSET				0x80000
 #define MDSS_MDP_DSC_1_OFFSET				0x80400
 
+#define MDSS_MDP_DSC_0_OFFSET				0x80000
+#define MDSS_MDP_DSC_1_OFFSET				0x80400
+
 #define MDSS_MDP_REG_DSC_COMMON_MODE			0x000
 #define MDSS_MDP_REG_DSC_ENC				0x004
 #define MDSS_MDP_REG_DSC_PICTURE			0x008

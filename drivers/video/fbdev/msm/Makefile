@@ -32,7 +32,11 @@ obj-$(CONFIG_DEBUG_FS) += mdss_debug.o mdss_debug_xlog.o
 endif
 
 mdss-dsi-objs := mdss_dsi.o mdss_dsi_host.o mdss_dsi_cmd.o mdss_dsi_status.o
+ifeq ($(CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL),y)
+obj-y += somc_panel/
+else
 mdss-dsi-objs += mdss_dsi_panel.o
+endif
 mdss-dsi-objs += msm_mdss_io_8974.o
 mdss-dsi-objs += mdss_dsi_phy.o
 mdss-dsi-objs += mdss_dsi_phy_v3.o
