@@ -30,7 +30,11 @@
 #define DEFAULT_AVG_HOTPLUG_LATENCY_MS	2
 #define DEFAULT_HOTPLUG_TIMEOUT_MS	100
 
+unsigned int cpuquiet_nr_max_cpus;
+unsigned int cpuquiet_nr_min_cpus;
+
 static DEFINE_MUTEX(cpuquiet_cpu_lock);
+DEFINE_MUTEX(cpuquiet_min_max_cpus_lock);
 
 static bool cpuquiet_devices_initialized;
 
@@ -47,6 +51,11 @@ static struct cpumask cr_offline_requests;
 static struct platform_device *cpuquiet_pdev;
 
 static void cpuquiet_work_func(struct work_struct *work);
+
+void cpuquiet_queue_work(void)
+{
+	queue_work(cpuquiet_wq, &cpuquiet_work);
+}
 
 /**
  * update_core_config - queues the work of onlining/offlining cpus
@@ -148,9 +157,19 @@ static void __cpuinit cpuquiet_work_func(struct work_struct *work)
 	unsigned int cpu;
 	int nr_cpus;
 	struct cpumask online, offline, cpu_online;
-	int max_cpus = pm_qos_request(PM_QOS_MAX_ONLINE_CPUS) ? :
-				num_present_cpus();
-	int min_cpus = pm_qos_request(PM_QOS_MIN_ONLINE_CPUS);
+	int max_cpus, min_cpus;
+
+	mutex_lock(&cpuquiet_min_max_cpus_lock);
+
+	max_cpus = min_t(unsigned int,
+				pm_qos_request(PM_QOS_MAX_ONLINE_CPUS) ? :
+							num_present_cpus(),
+				cpuquiet_nr_max_cpus);
+	min_cpus = max_t(unsigned int,
+				pm_qos_request(PM_QOS_MIN_ONLINE_CPUS),
+				cpuquiet_nr_min_cpus);
+
+	mutex_unlock(&cpuquiet_min_max_cpus_lock);
 
 	mutex_lock(&cpuquiet_cpu_lock);
 
@@ -345,6 +364,10 @@ static int cpuquiet_probe(struct platform_device *pdev)
 		pr_err("Failed to register max cpus PM QoS notifier\n");
 		goto remove_min;
 	}
+
+	cpuquiet_nr_max_cpus = pm_qos_request(PM_QOS_MAX_ONLINE_CPUS) ? :
+							num_present_cpus();
+	cpuquiet_nr_min_cpus = pm_qos_request(PM_QOS_MIN_ONLINE_CPUS);
 
 	err = cpuquiet_register_devices();
 	if (err)
