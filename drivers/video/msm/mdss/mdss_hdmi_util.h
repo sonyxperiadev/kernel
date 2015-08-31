@@ -266,6 +266,9 @@ const char *msm_hdmi_mode_2string(u32 mode);
 /* todo: Fix this. Right now this is defined in mdss_hdmi_tx.c */
 void *hdmi_get_featuredata_from_sysfs_dev(struct device *device, u32 type);
 
+/* get hdmi panel power is on or not*/
+ssize_t hdmi_tx_is_HDMI_panel_power_on(struct device *device);
+
 /* DDC */
 void hdmi_ddc_config(struct hdmi_tx_ddc_ctrl *);
 int hdmi_ddc_isr(struct hdmi_tx_ddc_ctrl *);
