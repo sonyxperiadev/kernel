@@ -890,7 +890,7 @@ static void rqbalance_stop(void)
 
 static int rqbalance_start(void)
 {
-	int err, i, max_sys_cpus = 0;
+	int err, i, max_cpu_id = 0;
 
 	err = rqbalance_sysfs();
 	if (err)
@@ -911,10 +911,11 @@ static int rqbalance_start(void)
 		return err;
 
 	for_each_possible_cpu(i)
-		max_sys_cpus++;
+		max_cpu_id++;
 
 	/* Set value as target MAX on-line number of CPUs */
-	nr_run_thresholds[max_sys_cpus - 1] = UINT_MAX;
+	if (nr_run_thresholds[max_cpu_id] != UINT_MAX)
+		nr_run_thresholds[max_cpu_id] = UINT_MAX;
 
 	/* HACK: Adjust dual-core thresholds for non-HMP SoCs */
 	if (!soc_is_hmp) {
