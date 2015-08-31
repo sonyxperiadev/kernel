@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -55,9 +55,10 @@ int msm_dsi_init(void)
 	if (!dsi_host_private) {
 		dsi_host_private = kzalloc(sizeof(struct dsi_host_v2_private),
 					GFP_KERNEL);
-		if (!dsi_host_private)
+		if (!dsi_host_private) {
+			pr_err("fail to alloc dsi host private data\n");
 			return -ENOMEM;
-
+		}
 	}
 
 	return 0;
@@ -143,7 +144,6 @@ void msm_dsi_error(unsigned char *ctrl_base)
 static void msm_dsi_set_irq_mask(struct mdss_dsi_ctrl_pdata *ctrl, u32 mask)
 {
 	u32 intr_ctrl;
-
 	intr_ctrl = MIPI_INP(dsi_host_private->dsi_base + DSI_INT_CTRL);
 	intr_ctrl |= mask;
 	MIPI_OUTP(dsi_host_private->dsi_base + DSI_INT_CTRL, intr_ctrl);
@@ -152,7 +152,6 @@ static void msm_dsi_set_irq_mask(struct mdss_dsi_ctrl_pdata *ctrl, u32 mask)
 static void msm_dsi_clear_irq_mask(struct mdss_dsi_ctrl_pdata *ctrl, u32 mask)
 {
 	u32 intr_ctrl;
-
 	intr_ctrl = MIPI_INP(dsi_host_private->dsi_base + DSI_INT_CTRL);
 	intr_ctrl &= ~mask;
 	MIPI_OUTP(dsi_host_private->dsi_base + DSI_INT_CTRL, intr_ctrl);
@@ -252,16 +251,17 @@ int msm_dsi_irq_init(struct device *dev, int irq_no,
 	msm_dsi_ahb_ctrl(0);
 
 	ret = devm_request_irq(dev, irq_no, msm_dsi_isr_handler,
-				IRQF_DISABLED, "DSI", ctrl);
+				0x0, "DSI", ctrl);
 	if (ret) {
-		pr_err("%s request_irq() failed!\n", __func__);
+		pr_err("msm_dsi_irq_init request_irq() failed!\n");
 		return ret;
 	}
 
 	dsi_hw = kzalloc(sizeof(struct mdss_hw), GFP_KERNEL);
-	if (!dsi_hw)
+	if (!dsi_hw) {
+		pr_err("no mem to save hw info: kzalloc fail\n");
 		return -ENOMEM;
-
+	}
 	ctrl->dsi_hw = dsi_hw;
 
 	dsi_hw->irq_info = kzalloc(sizeof(struct irq_info), GFP_KERNEL);
@@ -298,7 +298,6 @@ static void msm_dsi_release_cmd_engine(struct mdss_dsi_ctrl_pdata *ctrl)
 {
 	unsigned char *ctrl_base = dsi_host_private->dsi_base;
 	u32 dsi_ctrl;
-
 	if (ctrl->panel_mode == DSI_VIDEO_MODE) {
 		dsi_ctrl = MIPI_INP(ctrl_base + DSI_CTRL);
 		dsi_ctrl &= ~0x04;
@@ -401,7 +400,7 @@ void msm_dsi_host_init(struct mdss_panel_data *pdata)
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
 	struct mipi_panel_info *pinfo;
 
-	pr_debug("%s\n", __func__);
+	pr_debug("msm_dsi_host_init\n");
 
 	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
@@ -515,7 +514,7 @@ void msm_dsi_host_init(struct mdss_panel_data *pdata)
 	dsi_ctrl |= BIT(0);	/* enable dsi */
 	MIPI_OUTP(ctrl_base + DSI_CTRL, dsi_ctrl);
 
-	wmb(); /* ensure write is finished before progressing */
+	wmb();
 }
 
 void dsi_set_tx_power_mode(int mode)
@@ -538,21 +537,21 @@ void msm_dsi_sw_reset(void)
 	u32 dsi_ctrl;
 	unsigned char *ctrl_base = dsi_host_private->dsi_base;
 
-	pr_debug("%s\n", __func__);
+	pr_debug("msm_dsi_sw_reset\n");
 
 	dsi_ctrl = MIPI_INP(ctrl_base + DSI_CTRL);
 	dsi_ctrl &= ~0x01;
 	MIPI_OUTP(ctrl_base + DSI_CTRL, dsi_ctrl);
-	wmb(); /* ensure write is finished before progressing */
+	wmb();
 
 	/* turn esc, byte, dsi, pclk, sclk, hclk on */
 	MIPI_OUTP(ctrl_base + DSI_CLK_CTRL, 0x23f);
-	wmb(); /* ensure write is finished before progressing */
+	wmb();
 
 	MIPI_OUTP(ctrl_base + DSI_SOFT_RESET, 0x01);
-	wmb(); /* ensure write is finished before progressing */
+	wmb();
 	MIPI_OUTP(ctrl_base + DSI_SOFT_RESET, 0x00);
-	wmb(); /* ensure write is finished before progressing */
+	wmb();
 }
 
 void msm_dsi_controller_cfg(int enable)
@@ -560,7 +559,7 @@ void msm_dsi_controller_cfg(int enable)
 	u32 dsi_ctrl, status;
 	unsigned char *ctrl_base = dsi_host_private->dsi_base;
 
-	pr_debug("%s\n", __func__);
+	pr_debug("msm_dsi_controller_cfg\n");
 
 	/* Check for CMD_MODE_DMA_BUSY */
 	if (readl_poll_timeout((ctrl_base + DSI_STATUS),
@@ -596,7 +595,7 @@ void msm_dsi_controller_cfg(int enable)
 		dsi_ctrl &= ~0x01;
 
 	MIPI_OUTP(ctrl_base + DSI_CTRL, dsi_ctrl);
-	wmb(); /* ensure write is finished before progressing */
+	wmb();
 }
 
 void msm_dsi_op_mode_config(int mode, struct mdss_panel_data *pdata)
@@ -604,7 +603,7 @@ void msm_dsi_op_mode_config(int mode, struct mdss_panel_data *pdata)
 	u32 dsi_ctrl;
 	unsigned char *ctrl_base = dsi_host_private->dsi_base;
 
-	pr_debug("%s\n", __func__);
+	pr_debug("msm_dsi_op_mode_config\n");
 
 	dsi_ctrl = MIPI_INP(ctrl_base + DSI_CTRL);
 
@@ -625,7 +624,7 @@ void msm_dsi_op_mode_config(int mode, struct mdss_panel_data *pdata)
 	pr_debug("%s: dsi_ctrl=%x\n", __func__, dsi_ctrl);
 
 	MIPI_OUTP(ctrl_base + DSI_CTRL, dsi_ctrl);
-	wmb(); /* ensure write is finished before progressing */
+	wmb();
 }
 
 int msm_dsi_cmd_dma_tx(struct mdss_dsi_ctrl_pdata *ctrl,
@@ -657,10 +656,10 @@ int msm_dsi_cmd_dma_tx(struct mdss_dsi_ctrl_pdata *ctrl,
 
 	MIPI_OUTP(ctrl_base + DSI_DMA_CMD_OFFSET, addr);
 	MIPI_OUTP(ctrl_base + DSI_DMA_CMD_LENGTH, len);
-	wmb(); /* ensure write is finished before progressing */
+	wmb();
 
 	MIPI_OUTP(ctrl_base + DSI_CMD_MODE_DMA_SW_TRIGGER, 0x01);
-	wmb(); /* ensure write is finished before progressing */
+	wmb();
 
 	rc = wait_for_completion_timeout(&ctrl->dma_comp,
 				msecs_to_jiffies(DSI_DMA_CMD_TIMEOUT_MS));
@@ -721,6 +720,7 @@ static int msm_dsi_cmds_tx(struct mdss_dsi_ctrl_pdata *ctrl,
 	int len;
 	int rc = 0;
 
+
 	tp = &ctrl->tx_buf;
 	mdss_dsi_buf_init(tp);
 	cm = cmds;
@@ -753,8 +753,7 @@ static int msm_dsi_cmds_tx(struct mdss_dsi_ctrl_pdata *ctrl,
 			}
 
 			if (dchdr->wait)
-				usleep_range(dchdr->wait * 1000,
-					     dchdr->wait * 1000);
+				usleep_range(dchdr->wait * 1000, dchdr->wait * 1000);
 
 			mdss_dsi_buf_init(tp);
 			len = 0;
@@ -949,7 +948,6 @@ int msm_dsi_cmds_rx(struct mdss_dsi_ctrl_pdata *ctrl,
 			struct dsi_cmd_desc *cmds, int rlen)
 {
 	int rc;
-
 	if (rlen <= DSI_MAX_PKT_SIZE)
 		rc = msm_dsi_cmds_rx_1(ctrl, cmds, rlen);
 	else
@@ -1102,7 +1100,7 @@ static int msm_dsi_on(struct mdss_panel_data *pdata)
 	unsigned char *ctrl_base = dsi_host_private->dsi_base;
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
 
-	pr_debug("%s\n", __func__);
+	pr_debug("msm_dsi_on\n");
 
 	pinfo = &pdata->panel_info;
 
@@ -1203,7 +1201,7 @@ static int msm_dsi_on(struct mdss_panel_data *pdata)
 		tmp = MIPI_INP(ctrl_base + DSI_LANE_CTRL);
 		tmp |= (1<<28);
 		MIPI_OUTP(ctrl_base + DSI_LANE_CTRL, tmp);
-		wmb(); /* ensure write is finished before progressing */
+		wmb();
 	}
 
 	msm_dsi_op_mode_config(mipi->mode, pdata);
@@ -1238,7 +1236,7 @@ static int msm_dsi_off(struct mdss_panel_data *pdata)
 	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
 
-	pr_debug("%s\n", __func__);
+	pr_debug("msm_dsi_off\n");
 	mutex_lock(&ctrl_pdata->mutex);
 	msm_dsi_clear_irq(ctrl_pdata, ctrl_pdata->dsi_irq_mask);
 	msm_dsi_controller_cfg(0);
@@ -1330,7 +1328,7 @@ static int msm_dsi_read_status(struct mdss_dsi_ctrl_pdata *ctrl)
 	memset(&cmdreq, 0, sizeof(cmdreq));
 	cmdreq.cmds = ctrl->status_cmds.cmds;
 	cmdreq.cmds_cnt = ctrl->status_cmds.cmd_cnt;
-	cmdreq.flags = CMD_REQ_COMMIT | CMD_REQ_RX;
+	cmdreq.flags = CMD_REQ_COMMIT | CMD_CLK_CTRL | CMD_REQ_RX;
 	cmdreq.rlen = 1;
 	cmdreq.cb = NULL;
 	cmdreq.rbuf = ctrl->status_buf.data;
@@ -1417,9 +1415,9 @@ static int msm_dsi_bta_status_check(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 	/* BTA trigger */
 	MIPI_OUTP(dsi_host_private->dsi_base + DSI_CMD_MODE_BTA_SW_TRIGGER,
 									0x01);
-	wmb(); /* ensure write is finished before progressing */
+	wmb();
 	ret = wait_for_completion_killable_timeout(&ctrl_pdata->bta_comp,
-									HZ/10);
+									msecs_to_jiffies(100));
 	msm_dsi_clear_irq(ctrl_pdata, DSI_INTR_BTA_DONE_MASK);
 	msm_dsi_clk_ctrl(&ctrl_pdata->panel_data, 0);
 	mutex_unlock(&ctrl_pdata->cmd_mutex);
@@ -1683,6 +1681,7 @@ static int msm_dsi_probe(struct platform_device *pdev)
 		ctrl_pdata = devm_kzalloc(&pdev->dev,
 			sizeof(struct mdss_dsi_ctrl_pdata), GFP_KERNEL);
 		if (!ctrl_pdata) {
+			pr_err("%s: FAILED: cannot alloc dsi ctrl\n", __func__);
 			rc = -ENOMEM;
 			goto error_no_mem;
 		}
@@ -1828,8 +1827,8 @@ error_no_mem:
 static int msm_dsi_remove(struct platform_device *pdev)
 {
 	int i;
-	struct mdss_dsi_ctrl_pdata *ctrl_pdata = platform_get_drvdata(pdev);
 
+	struct mdss_dsi_ctrl_pdata *ctrl_pdata = platform_get_drvdata(pdev);
 	if (!ctrl_pdata) {
 		pr_err("%s: no driver data\n", __func__);
 		return -ENODEV;
@@ -1858,7 +1857,7 @@ static struct platform_driver msm_dsi_v2_driver = {
 	.remove = msm_dsi_remove,
 	.shutdown = NULL,
 	.driver = {
-		.name = "qcom,dsi-panel-v2",
+		.name = "msm_dsi_v2",
 		.of_match_table = msm_dsi_v2_dt_match,
 	},
 };

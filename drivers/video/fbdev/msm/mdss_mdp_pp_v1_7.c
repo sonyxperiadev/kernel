@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -348,6 +348,7 @@ static void pp_opmode_config(int location, struct pp_sts_type *pp_sts,
 		pr_err("Invalid block type %d\n", location);
 		break;
 	}
+	return;
 }
 
 static int pp_hist_lut_get_config(char __iomem *base_addr, void *cfg_data,
@@ -412,8 +413,10 @@ static int pp_hist_lut_get_config(char __iomem *base_addr, void *cfg_data,
 	}
 
 	data = kzalloc(sz, GFP_KERNEL);
-	if (!data)
+	if (!data) {
+		pr_err("allocation failed for hist_lut size %d\n", sz);
 		return -ENOMEM;
+	}
 
 	for (i = 0; i < ENHIST_LUT_ENTRIES; i += 2) {
 		temp = readl_relaxed(hist_addr);
@@ -750,10 +753,11 @@ static int pp_gamut_get_config(char __iomem *base_addr, void *cfg_data,
 		}
 	}
 	/* allocate for c0 and c1c2 tables */
-	gamut_tbl = kzalloc((sz * 2), GFP_KERNEL);
-	if (!gamut_tbl)
+	gamut_tbl = kzalloc((sz * 2) , GFP_KERNEL);
+	if (!gamut_tbl) {
+		pr_err("failed to alloc table of sz %d\n", sz);
 		return -ENOMEM;
-
+	}
 	gamut_c0 = gamut_tbl;
 	gamut_c1c2 = gamut_c0 + tbl_sz;
 	writel_relaxed(GAMUT_CLK_GATING_INACTIVE, base_addr + GAMUT_CLK_CTRL);
@@ -786,7 +790,7 @@ static int pp_gamut_get_config(char __iomem *base_addr, void *cfg_data,
 		   * sizeof(u32);
 	if (sz < sz_scale) {
 		kfree(gamut_tbl);
-		gamut_tbl = kzalloc(sz_scale, GFP_KERNEL);
+		gamut_tbl = kzalloc(sz_scale , GFP_KERNEL);
 		if (!gamut_tbl) {
 			pr_err("failed to alloc scale tbl size %d\n",
 			       sz_scale);
@@ -905,8 +909,8 @@ static int pp_gamut_set_config(char __iomem *base_addr,
 		writel_relaxed(val, (base_addr + GAMUT_TABLE_INDEX));
 
 		writel_relaxed(gamut_data->c1_c2_data[i][0],
-				base_addr + GAMUT_TABLE_LOWER_GB);
-		for (j = 0; j < gamut_data->tbl_size[i] - 1; j++) {
+			       base_addr + GAMUT_TABLE_LOWER_GB);
+		for (j = 0; j < gamut_data->tbl_size[i] - 1 ; j++) {
 			gamut_val = gamut_data->c1_c2_data[i][j + 1];
 			gamut_val = (gamut_val << 32) |
 					gamut_data->c0_data[i][j];
@@ -914,7 +918,7 @@ static int pp_gamut_set_config(char __iomem *base_addr,
 					base_addr + GAMUT_TABLE_UPPER_R);
 		}
 		writel_relaxed(gamut_data->c0_data[i][j],
-				base_addr + GAMUT_TABLE_UPPER_R);
+					base_addr + GAMUT_TABLE_UPPER_R);
 		if ((i >= MDP_GAMUT_SCALE_OFF_TABLE_NUM) ||
 				(!gamut_data->map_en))
 			continue;
@@ -1168,7 +1172,6 @@ static void pp_pa_set_mem_col(char __iomem *base_addr,
 	u32 fol_p0_off = 0, fol_p2_off = 0;
 	char __iomem *mem_col_p0_addr = NULL;
 	char __iomem *mem_col_p2_addr = NULL;
-
 	if (block_type == DSPP) {
 		skin_p0_off = PA_DSPP_MEM_COL_SKIN_P0_OFF;
 		skin_p2_off = PA_DSPP_MEM_COL_SKIN_P2_OFF;
@@ -1417,7 +1420,6 @@ static void pp_pa_get_mem_col(char __iomem *base_addr,
 	u32 fol_p0_off = 0, fol_p2_off = 0;
 	char __iomem *mem_col_p0_addr = NULL;
 	char __iomem *mem_col_p2_addr = NULL;
-
 	if (block_type == DSPP) {
 		skin_p0_off = PA_DSPP_MEM_COL_SKIN_P0_OFF;
 		skin_p2_off = PA_DSPP_MEM_COL_SKIN_P2_OFF;
@@ -1834,6 +1836,7 @@ static int pp_igc_get_config(char __iomem *base_addr, void *cfg_data,
 	/* Allocate for c0c1 and c2 tables */
 	c0c1_data = kzalloc(sz * 2, GFP_KERNEL);
 	if (!c0c1_data) {
+		pr_err("allocation failed for c0c1 size %d\n", sz * 2);
 		ret = -ENOMEM;
 		goto exit;
 	}
@@ -1963,7 +1966,6 @@ static int pp_pgc_get_config(char __iomem *base_addr, void *cfg_data,
 	struct mdp_pgc_lut_data *pgc_data = NULL;
 	struct mdp_pgc_lut_data_v1_7  pgc_lut_data_v17;
 	struct mdp_pgc_lut_data_v1_7  *pgc_data_v17 = &pgc_lut_data_v17;
-
 	if (!base_addr || !cfg_data) {
 		pr_err("invalid params base_addr %pK cfg_data %pK block_type %d\n",
 		      base_addr, cfg_data, block_type);
@@ -1993,9 +1995,10 @@ static int pp_pgc_get_config(char __iomem *base_addr, void *cfg_data,
 		return -EFAULT;
 	}
 	c0_data = kzalloc(sz * 3, GFP_KERNEL);
-	if (!c0_data)
+	if (!c0_data) {
+		pr_err("memory allocation failure sz %d", sz * 3);
 		return -ENOMEM;
-
+	}
 	c1_data = c0_data + PGC_LUT_ENTRIES;
 	c2_data = c1_data + PGC_LUT_ENTRIES;
 	c0 = base_addr + PGC_C0_LUT_INDEX;

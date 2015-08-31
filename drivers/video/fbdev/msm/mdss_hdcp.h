@@ -1,4 +1,4 @@
-/* Copyright (c) 2012, 2014-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012, 2014-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -10,21 +10,19 @@
  * GNU General Public License for more details.
  */
 
-#ifndef __MDSS_HDCP_H__
-#define __MDSS_HDCP_H__
+#ifndef __MDSS_HDMI_HDCP_H__
+#define __MDSS_HDMI_HDCP_H__
 
+#include "mdss_hdmi_util.h"
+#include "mdss_dp.h"
 #include <video/msm_hdmi_modes.h>
 #include <soc/qcom/scm.h>
-#include <linux/hdcp_qseecom.h>
-#include "mdss_hdmi_util.h"
 
 #define HDCP_SRM_CHECK_FAIL 29
-#define MAX_DEVICES_SUPPORTED 127
-#define RECV_ID_SIZE 5
 
 enum hdcp_client_id {
 	HDCP_CLIENT_HDMI,
-	HDCP_CLIENT_MAX,
+	HDCP_CLIENT_DP,
 };
 
 enum hdcp_states {
@@ -50,6 +48,7 @@ struct hdcp_init_data {
 	struct hdmi_tx_ddc_ctrl *ddc_ctrl;
 	u8 sink_rx_status;
 	u16 *version;
+	void *dp_data;
 	u32 phy_addr;
 	u32 hdmi_tx_ver;
 	struct msm_hdmi_mode_timing_info *timing;
@@ -67,21 +66,19 @@ struct hdcp_ops {
 	void (*off)(void *hdcp_ctrl);
 };
 
-struct hdcp_client_ops {
-	void (*notify_lvl_change)(void *client_ctx, int min_lvl);
-	void (*srm_cb)(void *client_ctx);
-};
-
 void *hdcp_1x_init(struct hdcp_init_data *init_data);
 void hdcp_1x_deinit(void *input);
 
 void *hdmi_hdcp2p2_init(struct hdcp_init_data *init_data);
 void hdmi_hdcp2p2_deinit(void *input);
 
+void *dp_hdcp2p2_init(struct hdcp_init_data *init_data);
+void dp_hdcp2p2_deinit(void *input);
+
 struct hdcp_ops *hdcp_1x_start(void *input);
 struct hdcp_ops *hdmi_hdcp2p2_start(void *input);
+struct hdcp_ops *dp_hdcp2p2_start(void *input);
 
 const char *hdcp_state_name(enum hdcp_states hdcp_state);
-void hdcp_1x_set_enc(void *input, bool enc);
 
-#endif /* __MDSS_HDCP_H__ */
+#endif /* __MDSS_HDMI_HDCP_H__ */

@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2016, 2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -73,7 +73,7 @@
  * 0b01 Photo
  * 0b10 Cinema
  * 0b11 Game
- */
+*/
 #define CONFIG_CN_BITS(bits, byte) \
 		(byte = (byte & ~(BIT(4) | BIT(5))) |\
 			((bits & (BIT(0) | BIT(1))) << 4))
@@ -588,7 +588,7 @@ static int hdmi_panel_setup_infoframe(struct hdmi_panel *panel)
 	int rc = 0;
 
 	if (!panel) {
-		pr_err("invalid panel data\n");
+		pr_err("invalid input\n");
 		rc = -EINVAL;
 		goto end;
 	}
@@ -649,7 +649,7 @@ static int hdmi_panel_setup_scrambler(struct hdmi_panel *panel)
 	struct mdss_panel_info *pinfo = NULL;
 
 	if (!panel) {
-		pr_err("invalid panel data\n");
+		pr_err("invalid input\n");
 		return -EINVAL;
 	}
 
@@ -661,7 +661,7 @@ static int hdmi_panel_setup_scrambler(struct hdmi_panel *panel)
 
 	pinfo = panel->data->pinfo;
 	if (!pinfo) {
-		pr_err("invalid panel info\n");
+		pr_err("invalid panel data\n");
 		return -EINVAL;
 	}
 
@@ -785,14 +785,14 @@ static int hdmi_panel_power_on(void *input)
 	struct msm_hdmi_mode_timing_info *info;
 
 	if (!panel) {
-		pr_err("invalid panel data\n");
+		pr_err("invalid input\n");
 		rc = -EINVAL;
 		goto err;
 	}
 
 	pinfo = panel->data->pinfo;
 	if (!pinfo) {
-		pr_err("invalid panel info\n");
+		pr_err("invalid panel data\n");
 		rc = -EINVAL;
 		goto err;
 	}
@@ -880,7 +880,7 @@ void *hdmi_panel_init(struct hdmi_panel_init_data *data)
 	struct hdmi_panel *panel = NULL;
 
 	if (!data) {
-		pr_err("invalid panel init data\n");
+		pr_err("invalid input\n");
 		goto end;
 	}
 

@@ -1,4 +1,5 @@
-/* Copyright (c) 2013-2014, 2016-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2014, 2016, The Linux Foundation. All rights reserved.
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
  * only version 2 as published by the Free Software Foundation.
@@ -260,10 +261,8 @@ struct mdp3_dma {
 	struct completion vsync_comp;
 	struct completion dma_comp;
 	struct completion histo_comp;
-	struct kernfs_node *hist_event_sd;
 	struct mdp3_notification vsync_client;
 	struct mdp3_notification dma_notifier_client;
-	struct mdp3_notification retire_client;
 
 	struct mdp3_dma_output_config output_config;
 	struct mdp3_dma_source source_config;
@@ -286,7 +285,6 @@ struct mdp3_dma {
 	struct mdp3_rect roi;
 
 	u32 lut_sts;
-	u32 hist_events;
 	struct fb_cmap *gc_cmap;
 	struct fb_cmap *hist_cmap;
 
@@ -331,9 +329,6 @@ struct mdp3_dma {
 
 	void (*vsync_enable)(struct mdp3_dma *dma,
 			struct mdp3_notification *vsync_client);
-
-	void (*retire_enable)(struct mdp3_dma *dma,
-			struct mdp3_notification *retire_client);
 
 	void (*dma_done_notifier)(struct mdp3_dma *dma,
 			struct mdp3_notification *dma_client);
@@ -391,5 +386,4 @@ void mdp3_dma_callback_enable(struct mdp3_dma *dma, int type);
 
 void mdp3_dma_callback_disable(struct mdp3_dma *dma, int type);
 
-void mdp3_hist_intr_notify(struct mdp3_dma *dma);
 #endif /* MDP3_DMA_H */

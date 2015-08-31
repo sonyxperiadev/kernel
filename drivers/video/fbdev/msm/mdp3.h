@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2014, 2016-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2014, 2016, The Linux Foundation. All rights reserved.
  * Copyright (C) 2007 Google Incorporated
  *
  * This program is free software; you can redistribute it and/or modify
@@ -29,14 +29,10 @@
 #define MDP_CORE_CLK_RATE_SUPER_SVS	200000000
 #define MDP_CORE_CLK_RATE_MAX	307200000
 
-#define CLK_FUDGE_NUM		12
-#define CLK_FUDGE_DEN		10
-
 /* PPP cant work at SVS for panel res above qHD */
 #define SVS_MAX_PIXEL		(540 * 960)
 
-#define KOFF_TIMEOUT_MS 84
-#define KOFF_TIMEOUT msecs_to_jiffies(KOFF_TIMEOUT_MS)
+#define KOFF_TIMEOUT msecs_to_jiffies(84)
 #define WAIT_DMA_TIMEOUT msecs_to_jiffies(84)
 
 /*
@@ -45,9 +41,6 @@
  */
 #define MDP_SMART_BLIT                 0xC0000000
 
-#define BITS_PER_BYTE 8
-#define MDP_IMGTYPE_LIMIT1 0x100
-#define BITS_TO_BYTES(x) DIV_ROUND_UP(x, BITS_PER_BYTE)
 
 enum  {
 	MDP3_CLK_AHB,
@@ -77,8 +70,7 @@ enum {
 };
 
 /* Keep DSI entry in sync with mdss
- * which is being used by DSI 6G
- */
+ which is being used by DSI 6G */
 enum {
 	MDP3_CLIENT_DMA_P,
 	MDP3_CLIENT_DSI = 1,
@@ -173,7 +165,6 @@ struct mdp3_hw_resource {
 	bool allow_iommu_update;
 	struct ion_handle *ion_handle;
 	struct mutex iommu_lock;
-	struct mutex fs_idle_pc_lock;
 
 	struct mdp3_dma dma[MDP3_DMA_MAX];
 	struct mdp3_intf intf[MDP3_DMA_OUTPUT_SEL_MAX];
@@ -208,11 +199,6 @@ struct mdp3_hw_resource {
 	bool solid_fill_vote_en;
 	struct list_head reg_bus_clist;
 	struct mutex reg_bus_lock;
-
-	u32 max_bw;
-
-	u8 ppp_formats[BITS_TO_BYTES(MDP_IMGTYPE_LIMIT1)];
-	u8 dma_formats[BITS_TO_BYTES(MDP_IMGTYPE_LIMIT1)];
 };
 
 struct mdp3_img_data {
@@ -231,7 +217,6 @@ struct mdp3_img_data {
 	struct dma_buf *srcp_dma_buf;
 	struct dma_buf_attachment *srcp_attachment;
 	struct sg_table *srcp_table;
-	struct sg_table *tab_clone;
 };
 
 extern struct mdp3_hw_resource *mdp3_res;
@@ -276,13 +261,7 @@ u64 mdp3_clk_round_off(u64 clk_rate);
 
 void mdp3_calc_dma_res(struct mdss_panel_info *panel_info, u64 *clk_rate,
 		u64 *ab, u64 *ib, uint32_t bpp);
-void mdp3_clear_irq(u32 interrupt_mask);
-int mdp3_enable_panic_ctrl(void);
 
-int mdp3_layer_pre_commit(struct msm_fb_data_type *mfd,
-	struct file *file, struct mdp_layer_commit_v1 *commit);
-int mdp3_layer_atomic_validate(struct msm_fb_data_type *mfd,
-	struct file *file, struct mdp_layer_commit_v1 *commit);
 
 #define MDP3_REG_WRITE(addr, val) writel_relaxed(val, mdp3_res->mdp_base + addr)
 #define MDP3_REG_READ(addr) readl_relaxed(mdp3_res->mdp_base + addr)

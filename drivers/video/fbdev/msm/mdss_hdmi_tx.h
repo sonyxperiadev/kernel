@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2016, 2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -13,6 +13,8 @@
 #ifndef __MDSS_HDMI_TX_H__
 #define __MDSS_HDMI_TX_H__
 
+#include <linux/switch.h>
+#include <linux/msm_mdp_ext.h>
 #include "mdss_hdmi_util.h"
 #include "mdss_hdmi_panel.h"
 #include "mdss_cec_core.h"
@@ -47,9 +49,6 @@ struct hdmi_tx_platform_data {
 	/* bitfield representing each module's pin state */
 	u64 pin_states;
 	bool pluggable;
-	struct clk *hdmi_pclk_rcg;
-	struct clk *ext_hdmi_pixel_clk;
-	u32 max_pclk_freq_khz;
 };
 
 struct hdmi_tx_pinctrl {
@@ -92,6 +91,7 @@ struct hdmi_tx_ctrl {
 	struct msm_ext_disp_audio_setup_params audio_params;
 	struct msm_ext_disp_init_data ext_audio_data;
 	struct work_struct fps_work;
+	struct mdp_hdr_stream_ctrl hdr_ctrl;
 
 	spinlock_t hpd_state_lock;
 
@@ -102,7 +102,6 @@ struct hdmi_tx_ctrl {
 	u32 hdmi_tx_major_version;
 	u32 max_pclk_khz;
 	u32 hpd_state;
-	bool hpd_notif_state;
 	u32 hpd_off_pending;
 	u32 hpd_feature_on;
 	u32 hpd_initialized;
@@ -113,11 +112,15 @@ struct hdmi_tx_ctrl {
 	u32 edid_buf_size;
 	u32 s3d_mode;
 
+	u8 aksv[5];
+	//enum hdmi_hdcp_state hdcp_status;
+
 	u8 timing_gen_on;
 	u8 mhl_hpd_on;
 	u8 hdcp_status;
 	u8 spd_vendor_name[9];
 	u8 spd_product_description[17];
+	u8 curr_hdr_state;
 
 	bool hdcp_feature_on;
 	bool hpd_disabled;
@@ -144,6 +147,7 @@ struct hdmi_tx_ctrl {
 	char disp_switch_name[MAX_SWITCH_NAME_SIZE];
 
 	u64 actual_clk_rate;
+	bool pll_update_enable;
 
 	/* pre/post is done in the context without tx_lock */
 	hdmi_tx_evt_handler pre_evt_handler[MDSS_EVENT_MAX - 1];

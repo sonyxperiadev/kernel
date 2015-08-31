@@ -1,4 +1,4 @@
-/* Copyright (c) 2016, 2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -19,6 +19,7 @@
 #include <linux/mutex.h>
 #include <linux/iopoll.h>
 #include <linux/types.h>
+#include <linux/extcon.h>
 #include <linux/gcd.h>
 
 #include "mdss_hdmi_audio.h"
@@ -108,7 +109,7 @@ static void hdmi_audio_get_acr_param(u32 pclk, u32 fs,
 	u32 div, mul;
 
 	if (!acr) {
-		pr_err("invalid audio acr data\n");
+		pr_err("invalid data\n");
 		return;
 	}
 
@@ -148,7 +149,7 @@ static void hdmi_audio_acr_enable(struct hdmi_audio *audio)
 	u32 acr_pkt_ctl, aud_pkt_ctl2, acr_reg_cts, acr_reg_n;
 
 	if (!audio) {
-		pr_err("invalid audio data\n");
+		pr_err("invalid input\n");
 		return;
 	}
 
@@ -160,7 +161,7 @@ static void hdmi_audio_acr_enable(struct hdmi_audio *audio)
 	hdmi_audio_get_acr_param(pclk * HDMI_KHZ_TO_HZ, sample_rate, &acr);
 	hdmi_audio_get_audio_sample_rate(&sample_rate);
 
-	layout = (params->num_of_channels == AUDIO_CHANNEL_2) ? 0 : 1;
+	layout = AUDIO_CHANNEL_2 == params->num_of_channels ? 0 : 1;
 
 	pr_debug("n=%u, cts=%u, layout=%u\n", acr.n, acr.cts, layout);
 
@@ -265,7 +266,7 @@ static void hdmi_audio_infoframe_setup(struct hdmi_audio *audio, bool enabled)
 	u32 check_sum, sample_present;
 
 	if (!audio) {
-		pr_err("invalid audio data\n");
+		pr_err("invalid input\n");
 		return;
 	}
 
@@ -287,7 +288,7 @@ static void hdmi_audio_infoframe_setup(struct hdmi_audio *audio, bool enabled)
 	down_mix           = audio->params.down_mix;
 	sample_present     = audio->params.sample_present;
 
-	layout = (audio->params.num_of_channels == AUDIO_CHANNEL_2) ? 0 : 1;
+	layout = AUDIO_CHANNEL_2 == audio->params.num_of_channels ? 0 : 1;
 	aud_pck_ctrl_2_reg = BIT(0) | (layout << 1);
 	DSS_REG_W(io, HDMI_AUDIO_PKT_CTRL2, aud_pck_ctrl_2_reg);
 
@@ -332,7 +333,7 @@ static int hdmi_audio_on(void *ctx, u32 pclk,
 	int rc = 0;
 
 	if (!audio) {
-		pr_err("invalid audio data\n");
+		pr_err("invalid input\n");
 		rc = -EINVAL;
 		goto end;
 	}
@@ -358,7 +359,7 @@ static void hdmi_audio_off(void *ctx)
 	struct hdmi_audio *audio = ctx;
 
 	if (!audio) {
-		pr_err("invalid audio data\n");
+		pr_err("invalid input\n");
 		return;
 	}
 
@@ -373,7 +374,7 @@ static void hdmi_audio_reset(void *ctx)
 	struct hdmi_audio *audio = ctx;
 
 	if (!audio) {
-		pr_err("invalid audio data\n");
+		pr_err("invalid input\n");
 		return;
 	}
 
@@ -407,7 +408,6 @@ void *hdmi_audio_register(struct hdmi_audio_init_data *data)
 	data->ops->on     = hdmi_audio_on;
 	data->ops->off    = hdmi_audio_off;
 	data->ops->reset  = hdmi_audio_reset;
-
 end:
 	return audio;
 }

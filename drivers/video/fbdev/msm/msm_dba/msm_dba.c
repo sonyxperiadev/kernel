@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015,2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -22,7 +22,7 @@
 #include <linux/err.h>
 
 #include <video/msm_dba.h>
-#include <msm_dba_internal.h>
+#include "msm_dba_internal.h"
 
 static DEFINE_MUTEX(register_mutex);
 
