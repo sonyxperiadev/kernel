@@ -914,7 +914,7 @@ static int rqbalance_start(void)
 		max_sys_cpus++;
 
 	/* Set value as target MAX on-line number of CPUs */
-	nr_run_thresholds[max_sys_cpus - 1] = UINT_MAX;
+	nr_run_thresholds[max_sys_cpus] = UINT_MAX;
 
 	/* HACK: Adjust dual-core thresholds for non-HMP SoCs */
 	if (!soc_is_hmp) {
