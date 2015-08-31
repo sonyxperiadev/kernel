@@ -29,7 +29,11 @@ obj-$(CONFIG_FB_MSM_MDSS_MDP3) += dsi-v2.o
 endif
 
 mdss-dsi-objs := mdss_dsi.o mdss_dsi_host.o mdss_dsi_cmd.o mdss_dsi_status.o
+ifeq ($(CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL),y)
+obj-y += somc_panel/
+else
 mdss-dsi-objs += mdss_dsi_panel.o
+endif
 mdss-dsi-objs += msm_mdss_io_8974.o
 mdss-dsi-objs += mdss_dsi_phy.o
 obj-$(CONFIG_FB_MSM_MDSS) += mdss-dsi.o

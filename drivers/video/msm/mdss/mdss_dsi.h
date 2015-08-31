@@ -22,6 +22,7 @@
 
 #include "mdss_panel.h"
 #include "mdss_dsi_cmd.h"
+#include "mdss_fb.h"
 
 #define MMSS_SERDES_BASE_PHY 0x04f01000 /* mmss (De)Serializer CFG */
 
@@ -194,6 +195,7 @@ enum dsi_pm_type {
 #define DSI_CMD_TRIGGER_SW		0x04
 #define DSI_CMD_TRIGGER_SW_SEOF		0x05	/* cmd dma only */
 #define DSI_CMD_TRIGGER_SW_TE		0x06
+#define DSI_CMD_TRIGGER_OVER_RANG	0x07
 
 #define DSI_VIDEO_TERM  BIT(16)
 #define DSI_MDP_TERM    BIT(8)
@@ -420,6 +422,9 @@ struct mdss_dsi_ctrl_pdata {
 	bool refresh_clk_rate; /* flag to recalculate clk_rate */
 	struct dss_module_power panel_power_data;
 	struct dss_module_power power_data[DSI_MAX_PM]; /* for 8x10 */
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	struct mdss_panel_specific_pdata *spec_pdata;
+#endif
 	u32 dsi_irq_mask;
 	struct mdss_hw *dsi_hw;
 	struct mdss_intf_recovery *recovery;
@@ -436,7 +441,6 @@ struct mdss_dsi_ctrl_pdata {
 
 	struct dsi_panel_cmds video2cmd;
 	struct dsi_panel_cmds cmd2video;
-
 	struct dcs_cmd_list cmdlist;
 	struct completion dma_comp;
 	struct completion mdp_comp;
@@ -784,4 +788,7 @@ static inline bool mdss_dsi_cmp_panel_reg(struct dsi_buf status_buf,
 	return status_buf.data[i] == status_val[i];
 }
 
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+#include "somc_panel/somc_panel_exts.h"
+#endif
 #endif /* MDSS_DSI_H */

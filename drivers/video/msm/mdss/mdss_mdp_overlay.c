@@ -1441,6 +1441,10 @@ int mdss_mdp_overlay_start(struct msm_fb_data_type *mfd)
 	struct mdss_overlay_private *mdp5_data = mfd_to_mdp5_data(mfd);
 	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
 	struct mdss_mdp_ctl *ctl = mdp5_data->ctl;
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	struct msm_fb_backup_type *fb_backup = &mfd->msm_fb_backup;
+	uint32_t flags;
+#endif /* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 
 	pr_debug("starting fb%d overlay called from %pS\n", mfd->index,
 		__builtin_return_address(0));
@@ -1456,7 +1460,13 @@ int mdss_mdp_overlay_start(struct msm_fb_data_type *mfd)
 		if (rc) {
 			pr_debug("empty kickoff on fb%d during cont splash\n",
 					mfd->index);
+#ifndef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 			return 0;
+#else
+			flags = fb_backup->disp_commit.flags;
+			if (flags & MDP_DISPLAY_COMMIT_OVERLAY)
+				return 0;
+#endif /* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 		}
 	} else if (mdata->handoff_pending) {
 		pr_warn("fb%d: commit while splash handoff pending\n",
@@ -3306,6 +3316,9 @@ static int mdss_mdp_hw_cursor_pipe_update(struct msm_fb_data_type *mfd,
 	size_t size = 0;
 	dma_addr_t iova = 0;
 	unsigned long buf_size = 0;
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	static char *pre_img_data;
+#endif /* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 
 	ret = mutex_lock_interruptible(&mdp5_data->ov_lock);
 	if (ret)
@@ -3356,7 +3369,12 @@ static int mdss_mdp_hw_cursor_pipe_update(struct msm_fb_data_type *mfd,
 	}
 
 	size = img->width * img->height * 4;
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL /* REMOVEME???? */
+	if ((size != mfd->cursor_buf_size) || (pre_img_data != img->data)) {
+		pre_img_data = (char *)(img->data);
+#else
 	if (size != mfd->cursor_buf_size) {
+#endif /* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 		pr_debug("allocating cursor mem size:%zd\n", size);
 
 		if (!ion_client) {

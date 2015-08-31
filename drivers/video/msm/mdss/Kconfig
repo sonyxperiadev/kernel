@@ -71,3 +71,5 @@ config FB_MSM_MDSS_HDMI_MHL_SII8620_8061
 	Support the HDMI to MHL1/2/3 conversion.
 	MHL (Mobile High-Definition Link) technology
 	uses USB connector to output HDMI content
+
+source "drivers/video/msm/mdss/somc_panel/Kconfig"
