@@ -21,7 +21,10 @@
 
 #include <linux/device.h>
 
+extern unsigned int cpuquiet_nr_min_cpus;
+extern unsigned int cpuquiet_nr_max_cpus;
 extern struct mutex cpuquiet_lock;
+extern struct mutex cpuquiet_min_max_cpus_lock;
 extern struct cpuquiet_governor *cpuquiet_curr_governor;
 extern struct list_head cpuquiet_governors;
 extern struct cpuquiet_governor *cpuquiet_find_governor(const char *str);
@@ -30,6 +33,7 @@ extern struct cpuquiet_governor *cpuquiet_get_first_governor(void);
 extern struct cpuquiet_driver *cpuquiet_get_driver(void);
 extern unsigned int cpuquiet_get_avg_hotplug_latency(void);
 extern bool cpuquiet_cpu_devices_initialized(void);
+extern void cpuquiet_queue_work(void);
 
 #ifdef CONFIG_CPU_QUIET_STATS
 extern int cpuquiet_sysfs_init(void);
