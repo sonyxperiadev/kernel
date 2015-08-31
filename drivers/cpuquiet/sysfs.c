@@ -17,6 +17,7 @@
  */
 
 #include <linux/kernel.h>
+#include <linux/pm_qos.h>
 #include <linux/sysfs.h>
 #include <linux/slab.h>
 #include <linux/cpu.h>
@@ -112,13 +113,84 @@ static ssize_t show_available_governors(struct cpuquiet_attribute *cattr,
 	return ret;
 }
 
+static ssize_t show_nr_min_cpus(struct cpuquiet_attribute *cattr, char *buf)
+{
+	return sprintf(buf, "%u\n", cpuquiet_nr_min_cpus);
+}
+
+static ssize_t show_nr_max_cpus(struct cpuquiet_attribute *cattr, char *buf)
+{
+	return sprintf(buf, "%u\n", cpuquiet_nr_max_cpus);
+}
+
+static ssize_t store_nr_cpus(struct cpuquiet_attribute *cattr,
+					const char *buf, size_t count, bool max)
+{
+	ssize_t ret = 0;
+	unsigned int new_nr_cpus, new_min_cpus, new_max_cpus;
+
+	ret = sscanf(buf, "%u", &new_nr_cpus);
+	if (ret != 1)
+		return -EINVAL;
+
+	if (new_nr_cpus < 1 || new_nr_cpus > num_present_cpus()) {
+		pr_err("%s: CPU number limit must be in valid range [%d, %d]\n",
+					__func__, 1, num_present_cpus());
+		return -EINVAL;
+	}
+
+	mutex_lock(&cpuquiet_min_max_cpus_lock);
+
+	if (max) {
+		new_min_cpus = cpuquiet_nr_min_cpus;
+		new_max_cpus = new_nr_cpus;
+	} else {
+		new_min_cpus = new_nr_cpus;
+		new_max_cpus = cpuquiet_nr_max_cpus;
+	}
+
+	if (new_max_cpus < new_min_cpus) {
+		pr_err("%s: nr_max_cpus cannot be less than nr_min_cpus\n",
+								__func__);
+		mutex_unlock(&cpuquiet_min_max_cpus_lock);
+		return -EINVAL;
+	}
+
+	if (max)
+		cpuquiet_nr_max_cpus = new_nr_cpus;
+	else
+		cpuquiet_nr_min_cpus = new_nr_cpus;
+
+	mutex_unlock(&cpuquiet_min_max_cpus_lock);
+
+	cpuquiet_queue_work();
+
+	return ret;
+}
+
+static ssize_t store_nr_min_cpus(struct cpuquiet_attribute *cattr,
+					const char *buf, size_t count)
+{
+	return store_nr_cpus(cattr, buf, count, false);
+}
+
+static ssize_t store_nr_max_cpus(struct cpuquiet_attribute *cattr,
+					const char *buf, size_t count)
+{
+	return store_nr_cpus(cattr, buf, count, true);
+}
+
 CPQ_ATTRIBUTE(current_governor, 0644, show_current_governor,
 			store_current_governor);
 CPQ_ATTRIBUTE(available_governors, 0444, show_available_governors, NULL);
+CPQ_ATTRIBUTE(nr_min_cpus, 0644, show_nr_min_cpus, store_nr_min_cpus);
+CPQ_ATTRIBUTE(nr_max_cpus, 0644, show_nr_max_cpus, store_nr_max_cpus);
 
 static struct attribute *cpuquiet_default_attrs[] = {
 	&current_governor_attr.attr,
 	&available_governors_attr.attr,
+	&nr_min_cpus_attr.attr,
+	&nr_max_cpus_attr.attr,
 	NULL,
 };
 
