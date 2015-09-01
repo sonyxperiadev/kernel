@@ -350,18 +350,14 @@ static int cpuquiet_probe(struct platform_device *pdev)
 	if (err)
 		goto remove_max;
 
-#ifdef CONFIG_QPU_QUIET_STATS
 	err = cpuquiet_register_attrs(&cpuquiet_attrs_group);
 	if (err)
 		goto unreg_devices;
-#endif
 
 	return 0;
 
-#ifdef CONFIG_QPU_QUIET_STATS
 unreg_devices:
 	cpuquiet_unregister_devices();
-#endif
 remove_max:
 	pm_qos_remove_notifier(PM_QOS_MAX_ONLINE_CPUS, &minmax_cpus_notifier);
 remove_min:
@@ -375,9 +371,7 @@ destroy_wq:
 static int cpuquiet_remove(struct platform_device *pdev)
 {
 
-#ifdef CONFIG_CPU_QUIET_STATS
 	cpuquiet_unregister_attrs(&cpuquiet_attrs_group);
-#endif
 	cpuquiet_unregister_devices();
 	pm_qos_remove_notifier(PM_QOS_MAX_ONLINE_CPUS, &minmax_cpus_notifier);
 	pm_qos_remove_notifier(PM_QOS_MIN_ONLINE_CPUS, &minmax_cpus_notifier);
