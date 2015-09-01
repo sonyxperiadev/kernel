@@ -28,7 +28,7 @@
 #include "cpuquiet.h"
 
 #define DEFAULT_AVG_HOTPLUG_LATENCY_MS	2
-#define DEFAULT_HOTPLUG_DELAY_MS	100
+#define DEFAULT_HOTPLUG_TIMEOUT_MS	100
 
 static DEFINE_MUTEX(cpuquiet_cpu_lock);
 
@@ -307,7 +307,7 @@ static int cpuquiet_probe(struct platform_device *pdev)
 
 	INIT_WORK(&cpuquiet_work, cpuquiet_work_func);
 
-	hotplug_timeout = DEFAULT_HOTPLUG_DELAY_MS;
+	hotplug_timeout = DEFAULT_HOTPLUG_TIMEOUT_MS;
 	cpumask_clear(&cr_online_requests);
 	cpumask_clear(&cr_offline_requests);
 
