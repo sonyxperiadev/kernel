@@ -232,6 +232,17 @@ config LEDS_LP5562
 	  Driver provides direct control via LED class and interface for
 	  programming the engines.
 
+config LEDS_LP855X
+	tristate "LED Support for LP855x Backlight Driver I2C chip"
+	depends on LEDS_CLASS
+	depends on I2C
+	help
+	  This option enables support for LEDs connected to LP855X
+	  Lighting Management Unit (LMU) also known as Backlight Driver.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called leds-lp855x.
+
 config LEDS_LP8788
 	tristate "LED support for the TI LP8788 PMIC"
 	depends on LEDS_CLASS
