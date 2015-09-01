@@ -1,5 +1,5 @@
 /*
- * Derived from drivers/cpuquiet/cpuquiet-tegra.c
+ * drivers/cpuquiet/cpuquiet.c - Core cpuquiet functionality
  *
  * Copyright (c) 2012-2013 NVIDIA CORPORATION.  All rights reserved.
  *
@@ -48,6 +48,12 @@ static struct platform_device *cpuquiet_pdev;
 
 static void cpuquiet_work_func(struct work_struct *work);
 
+/**
+ * update_core_config - queues the work of onlining/offlining cpus
+ *
+ * @cpunumber: number of cpu to bring up/down
+ * @up: whether we want to bring the cpu up or down
+ */
 static int update_core_config(unsigned int cpunumber, bool up)
 {
 	mutex_lock(&cpuquiet_cpu_lock);
@@ -75,6 +81,15 @@ static int cpu_in_wanted_state(unsigned int cpunumber, bool up)
 		return !cpu_online(cpunumber);
 }
 
+/**
+ * cpuquiet_cpu_up_down - brings cpu up/down
+ *
+ * @cpunumber: number of cpu to bring up/down
+ * @sync: whether or not we are collecting hotplug overhead
+ * @up: whether we want to bring the cpu up or down
+ *
+ * Returns 0 on success, ETIMEDOUT on timeout (or other error)
+ */
 static int cpuquiet_cpu_up_down(unsigned int cpunumber, bool sync, bool up)
 {
 	unsigned long timeout = msecs_to_jiffies(hotplug_timeout);
@@ -121,6 +136,12 @@ int cpuquiet_wake_quiesce_cpu(unsigned int cpunumber, bool sync, bool up)
 	return err;
 }
 
+/**
+ * cpuquiet_work_func - does work of bringing CPUs up/down
+ *
+ * @cr_online_requests: specifies which CPUs to be brought online
+ * @cr_offline_requests: specifies which CPUs to be taken offline
+ */
 static void __cpuinit cpuquiet_work_func(struct work_struct *work)
 {
 	int count = -1;
@@ -176,6 +197,9 @@ static void __cpuinit cpuquiet_work_func(struct work_struct *work)
 	wake_up_interruptible(&wait_cpu);
 }
 
+/**
+ * minmax_cpus_notify - callback on changing the min/max number of CPUs
+ */
 static int minmax_cpus_notify(struct notifier_block *nb, unsigned long n,
 				void *p)
 {
@@ -371,8 +395,10 @@ static struct platform_driver cpuquiet_platdrv __refdata = {
 };
 module_platform_driver(cpuquiet_platdrv);
 
-/*
- * Requires a plat_info with all fields filled in
+/**
+ * cpuquiet_init - Initializes the cpuquiet module
+ *
+ * @plat_info: A valid struct containing info for current platform
  */
 int cpuquiet_init(struct cpuquiet_platform_info *plat_info)
 {
