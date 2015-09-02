@@ -88,6 +88,7 @@ ifeq ($(CONFIG_BOSCH_BMA2X2_ENABLE_INT2),y)
 	EXTRA_CFLAGS += -DBMA2X2_ENABLE_INT2
 endif
 
+obj-$(CONFIG_SENSORS_BMM050)		+= bmm050_driver.o bmm050.o
 obj-$(CONFIG_SENSORS_MC3430)	+= mc3xxx.o
 obj-$(CONFIG_INPUT_KIONIX_ACCEL)	+= kionix_accel.o
 obj-$(CONFIG_SENSORS_ISL29044A)	+= isl29044a.o
