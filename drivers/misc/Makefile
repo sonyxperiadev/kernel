@@ -60,6 +60,7 @@ obj-$(CONFIG_UID_CPUTIME) += uid_cputime.o
 obj-$(CONFIG_TSIF) += msm_tsif.o
 obj-$(CONFIG_HAPTIC_ISA1200)		+= isa1200.o
 obj-$(CONFIG_PM8941_FLASH) += pm8941-flash.o
+obj-$(CONFIG_PMI8994_FLASH) += pmi8994-flash.o
 obj-$(CONFIG_QSEECOM) += qseecom.o
 ifdef CONFIG_COMPAT
 obj-$(CONFIG_QSEECOM) += compat_qseecom.o

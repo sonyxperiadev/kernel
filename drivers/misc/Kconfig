@@ -580,6 +580,13 @@ config PM8941_FLASH
 	  This option enables device driver support for the flash
 	  on PM8941.
 
+config PMI8994_FLASH
+	tristate "Flash support for PMI8994"
+	depends on SPMI && OF_SPMI
+	help
+	  This option enables device driver support for the flash
+	  on PMI8994.
+
 config QSEECOM
 	tristate "Qualcomm Secure Execution Communicator driver"
 	help
