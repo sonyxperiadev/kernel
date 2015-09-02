@@ -35,7 +35,7 @@ obj-$(CONFIG_ARCH_MDM9630) += board-9630.o board-9630-gpiomux.o
 obj-$(CONFIG_MSM_PP2S_FEMTO) += pp2s.o
 obj-$(CONFIG_ARCH_MSM8909) += board-8909.o
 obj-$(CONFIG_ARCH_MSM8916) += board-8916.o
-obj-$(CONFIG_ARCH_MSM8226) += board-8226.o board-8226-gpiomux.o
+obj-$(CONFIG_ARCH_MSM8226) += board-8226.o 
 obj-$(CONFIG_ARCH_MSM8226) += clock-8226.o clock-mdss-8974.o
 obj-$(CONFIG_ARCH_MSM8610) += board-8610.o board-8610-gpiomux.o
 obj-$(CONFIG_ARCH_MSM8610) += clock-8610.o
@@ -45,6 +45,20 @@ obj-$(CONFIG_ARCH_MDM9640) += board-9640.o
 obj-$(CONFIG_ARCH_MDMFERRUM) += board-8909.o
 obj-$(CONFIG_ARCH_MSMVPIPA) += board-vpipa.o
 obj-$(CONFIG_MSM_PM) += ext-buck-control.o
+
+ifdef CONFIG_MACH_SONY_FLAMINGO
+	obj-$(CONFIG_MACH_SONY_FLAMINGO) += board-sony_yukon_flamingo-gpiomux.o bms-batterydata-flamingo.o
+else ifdef CONFIG_MACH_SONY_EAGLE
+        obj-$(CONFIG_MACH_SONY_EAGLE) += board-sony_yukon_eagle-gpiomux.o bms-batterydata-eagle.o
+else ifdef CONFIG_MACH_SONY_TIANCHI
+	obj-$(CONFIG_MACH_SONY_TIANCHI) += board-sony_yukon_tianchi-gpiomux.o bms-batterydata-tianchi.o
+else ifdef CONFIG_MACH_SONY_SEAGULL
+	obj-$(CONFIG_MACH_SONY_SEAGULL) += board-sony_yukon_seagull-gpiomux.o bms-batterydata-seagull.o
+else
+	obj-$(CONFIG_ARCH_MSM8226) += board-8226-gpiomux.o bms-batterydata-oem.o
+endif
+
+obj-$(CONFIG_MACH_SONY_YUKON) += board-sony_yukon-nfc.o
 
 ifdef CONFIG_MACH_SONY_SIRIUS
 	obj-$(CONFIG_MACH_SONY_SIRIUS) += board-sony_shinano_sirius-gpiomux.o bms-batterydata-sirius.o

@@ -1,0 +1,708 @@
+/* Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013 Sony Mobile Communications AB.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+/ {
+	memory {
+		cont_splash_mem: cont_splash_mem@0 {
+			linux,reserve-contiguous-region;
+			linux,reserve,region;
+			reg = <0 0x03400000 0 0xFA0000>;
+			label = "cont_splash_mem";
+		};
+	};
+
+        aliases {
+                /* smdtty devices */
+                smd1 = &smdtty_apps_fm;
+                smd2 = &smdtty_apps_riva_bt_acl;
+                smd3 = &smdtty_apps_riva_bt_cmd;
+                smd4 = &smdtty_mbalbridge;
+                smd5 = &smdtty_apps_riva_ant_cmd;
+                smd6 = &smdtty_apps_riva_ant_data;
+                smd7 = &smdtty_data1;
+                smd11 = &smdtty_data11;
+                smd21 = &smdtty_data21;
+                smd27 = &smdtty_gps_nmea;
+                smd36 = &smdtty_loopback;
+        };
+};
+
+&soc {
+	serial@f991f000 {
+		status = "ok";
+	};
+
+	gpio_keys {
+		compatible = "gpio-keys";
+		input-name = "gpio-keys";
+		camera_focus {
+			label = "camera_focus";
+			gpios = <&msmgpio 108 0x1>;
+			linux,input-type = <1>;
+			linux,code = <0x210>;
+			gpio-key,wakeup;
+			debounce-interval = <15>;
+		};
+
+		camera_snapshot {
+			label = "camera_snapshot";
+			gpios = <&msmgpio 107 0x1>;
+			linux,input-type = <1>;
+			linux,code = <0x2fe>;
+			gpio-key,wakeup;
+			debounce-interval = <15>;
+		};
+
+		vol_down {
+			label = "volume_down";
+			gpios = <&msmgpio 106 0x1>;
+			linux,input-type = <1>;
+			linux,code = <114>;
+			gpio-key,wakeup;
+			debounce-interval = <15>;
+		};
+	};
+
+       led_flash0: qcom,camera-led-flash {
+               cell-index = <0>;
+               compatible = "qcom,camera-led-flash";
+               qcom,flash-type = <1>;
+               qcom,flash-source = <&pm8226_flash0>;
+               qcom,torch-source = <&pm8226_torch>;
+       };
+
+        qcom,wcnss-wlan@fb000000 {
+		qcom,has-48mhz-xo;
+		/delete-property/ qcom,has-autodetect-xo;
+		/delete-property/ qcom,wcnss-adc_tm;
+	};
+
+	qcom,cpp@fda04000 {
+		qcom,min-clock-rate = <266670000>;
+	};
+
+	qcom,ispif@fda0A000 {
+		clock-names = "ispif_ahb_clk",
+			"csi0_src_clk", "csi0_clk",
+			"csi0_pix_clk", "csi0_rdi_clk",
+			"csi1_src_clk", "csi1_clk",
+			"csi1_pix_clk", "csi1_rdi_clk",
+			"csi2_src_clk", "csi2_clk",
+			"csi2_pix_clk", "csi2_rdi_clk",
+			"csi3_src_clk", "csi3_clk",
+			"csi3_pix_clk", "csi3_rdi_clk",
+			"vfe0_clk_src", "camss_vfe_vfe0_clk", "camss_csi_vfe0_clk",
+			"vfe1_clk_src", "camss_vfe_vfe1_clk", "camss_csi_vfe1_clk";
+		qcom,clock-rates = <0
+			200000000 0 0 0
+			200000000 0 0 0
+			200000000 0 0 0
+			200000000 0 0 0
+			266670000 0 0
+			266670000 0 0>;
+	};
+
+	qcom,vfe@fda10000 {
+		ds-entries = <17>;
+		ds-regs = <0xBD8 0xBDC 0xBE0 0xBE4 0xBE8
+			   0xBEC 0xBF0 0xBF4 0xBF8 0xBFC 0xC00
+			   0xC04 0xC08 0xC0C 0xC10 0xC14 0xC18>;
+		ds-settings = <0xCCCC1111 0xCCCC1111 0xCCCC1111
+				0xCCCC1111 0xCCCC1111 0xCCCC1111
+				0xCCCC1111 0xCCCC1111 0xCCCC1111
+				0xCCCC1111 0xCCCC1111 0xCCCC1111
+				0xCCCC1111 0xCCCC1111 0xCCCC1111
+				0xCCCC1111 0x00000103>;
+		max-clk-nominal = <266670000>;
+		max-clk-turbo =   <320000000>;
+	};
+
+       qcom,smdtty {
+               compatible = "qcom,smdtty";
+
+               smdtty_apps_fm: qcom,smdtty-apps-fm {
+                       qcom,smdtty-remote = "wcnss";
+                       qcom,smdtty-port-name = "APPS_FM";
+               };
+
+               smdtty_apps_riva_bt_acl: smdtty-apps-riva-bt-acl {
+                       qcom,smdtty-remote = "wcnss";
+                       qcom,smdtty-port-name = "APPS_RIVA_BT_ACL";
+               };
+
+               smdtty_apps_riva_bt_cmd: qcom,smdtty-apps-riva-bt-cmd {
+                       qcom,smdtty-remote = "wcnss";
+                       qcom,smdtty-port-name = "APPS_RIVA_BT_CMD";
+               };
+
+               smdtty_mbalbridge: qcom,smdtty-mbalbridge {
+                       qcom,smdtty-remote = "modem";
+                       qcom,smdtty-port-name = "MBALBRIDGE";
+               };
+
+               smdtty_apps_riva_ant_cmd: smdtty-apps-riva-ant-cmd {
+                       qcom,smdtty-remote = "wcnss";
+                       qcom,smdtty-port-name = "APPS_RIVA_ANT_CMD";
+               };
+
+               smdtty_apps_riva_ant_data: smdtty-apps-riva-ant-data {
+                       qcom,smdtty-remote = "wcnss";
+                       qcom,smdtty-port-name = "APPS_RIVA_ANT_DATA";
+               };
+
+               smdtty_data1: qcom,smdtty-data1 {
+                       qcom,smdtty-remote = "modem";
+                       qcom,smdtty-port-name = "DATA1";
+               };
+
+               smdtty_data11: qcom,smdtty-data11 {
+                       qcom,smdtty-remote = "modem";
+                       qcom,smdtty-port-name = "DATA11";
+               };
+
+               smdtty_data21: qcom,smdtty-data21 {
+                       qcom,smdtty-remote = "modem";
+                       qcom,smdtty-port-name = "DATA21";
+               };
+
+               smdtty_gps_nmea: smdtty-gpsnmea {
+                       qcom,smdtty-remote = "modem";
+                       qcom,smdtty-port-name = "GPSNMEA";
+               };
+
+               smdtty_loopback: smdtty-loopback {
+                       qcom,smdtty-remote = "modem";
+                       qcom,smdtty-port-name = "LOOPBACK";
+                       qcom,smdtty-dev-name = "LOOPBACK_TTY";
+               };
+       };
+
+       qcom,smdpkt {
+               compatible = "qcom,smdpkt";
+
+               qcom,smdpkt-data5-cntl {
+                       qcom,smdpkt-remote = "modem";
+                       qcom,smdpkt-port-name = "DATA5_CNTL";
+                       qcom,smdpkt-dev-name = "smdcntl0";
+               };
+
+               qcom,smdpkt-data6-cntl {
+                       qcom,smdpkt-remote = "modem";
+                       qcom,smdpkt-port-name = "DATA6_CNTL";
+                       qcom,smdpkt-dev-name = "smdcntl1";
+               };
+
+               qcom,smdpkt-data7-cntl {
+                       qcom,smdpkt-remote = "modem";
+                       qcom,smdpkt-port-name = "DATA7_CNTL";
+                       qcom,smdpkt-dev-name = "smdcntl2";
+               };
+
+               qcom,smdpkt-data8-cntl {
+                       qcom,smdpkt-remote = "modem";
+                       qcom,smdpkt-port-name = "DATA8_CNTL";
+                       qcom,smdpkt-dev-name = "smdcntl3";
+               };
+
+               qcom,smdpkt-data9-cntl {
+                       qcom,smdpkt-remote = "modem";
+                       qcom,smdpkt-port-name = "DATA9_CNTL";
+                       qcom,smdpkt-dev-name = "smdcntl4";
+               };
+
+               qcom,smdpkt-data12-cntl {
+                       qcom,smdpkt-remote = "modem";
+                       qcom,smdpkt-port-name = "DATA12_CNTL";
+                       qcom,smdpkt-dev-name = "smdcntl5";
+               };
+
+               qcom,smdpkt-data13-cntl {
+                       qcom,smdpkt-remote = "modem";
+                       qcom,smdpkt-port-name = "DATA13_CNTL";
+                       qcom,smdpkt-dev-name = "smdcntl6";
+               };
+
+               qcom,smdpkt-data14-cntl {
+                       qcom,smdpkt-remote = "modem";
+                       qcom,smdpkt-port-name = "DATA14_CNTL";
+                       qcom,smdpkt-dev-name = "smdcntl7";
+               };
+
+               qcom,smdpkt-data15-cntl {
+                       qcom,smdpkt-remote = "modem";
+                       qcom,smdpkt-port-name = "DATA15_CNTL";
+                       qcom,smdpkt-dev-name = "smdcntl9";
+               };
+
+               qcom,smdpkt-data16-cntl {
+                       qcom,smdpkt-remote = "modem";
+                       qcom,smdpkt-port-name = "DATA16_CNTL";
+                       qcom,smdpkt-dev-name = "smdcntl10";
+               };
+
+               qcom,smdpkt-data17-cntl {
+                       qcom,smdpkt-remote = "modem";
+                       qcom,smdpkt-port-name = "DATA17_CNTL";
+                       qcom,smdpkt-dev-name = "smdcntl11";
+               };
+
+               qcom,smdpkt-data22 {
+                       qcom,smdpkt-remote = "modem";
+                       qcom,smdpkt-port-name = "DATA22";
+                       qcom,smdpkt-dev-name = "smd22";
+               };
+
+               qcom,smdpkt-data23-cntl {
+                       qcom,smdpkt-remote = "modem";
+                       qcom,smdpkt-port-name = "DATA23_CNTL";
+                       qcom,smdpkt-dev-name = "smdcnt_rev0";
+               };
+
+               qcom,smdpkt-data24-cntl {
+                       qcom,smdpkt-remote = "modem";
+                       qcom,smdpkt-port-name = "DATA24_CNTL";
+                       qcom,smdpkt-dev-name = "smdcnt_rev1";
+               };
+
+               qcom,smdpkt-data25-cntl {
+                       qcom,smdpkt-remote = "modem";
+                       qcom,smdpkt-port-name = "DATA25_CNTL";
+                       qcom,smdpkt-dev-name = "smdcnt_rev2";
+               };
+
+               qcom,smdpkt-data26-cntl {
+                       qcom,smdpkt-remote = "modem";
+                       qcom,smdpkt-port-name = "DATA26_CNTL";
+                       qcom,smdpkt-dev-name = "smdcnt_rev3";
+               };
+
+               qcom,smdpkt-data27-cntl {
+                       qcom,smdpkt-remote = "modem";
+                       qcom,smdpkt-port-name = "DATA27_CNTL";
+                       qcom,smdpkt-dev-name = "smdcnt_rev4";
+               };
+
+               qcom,smdpkt-data28-cntl {
+                       qcom,smdpkt-remote = "modem";
+                       qcom,smdpkt-port-name = "DATA28_CNTL";
+                       qcom,smdpkt-dev-name = "smdcnt_rev5";
+               };
+
+               qcom,smdpkt-data29-cntl {
+                       qcom,smdpkt-remote = "modem";
+                       qcom,smdpkt-port-name = "DATA29_CNTL";
+                       qcom,smdpkt-dev-name = "smdcnt_rev6";
+               };
+
+               qcom,smdpkt-data30-cntl {
+                       qcom,smdpkt-remote = "modem";
+                       qcom,smdpkt-port-name = "DATA30_CNTL";
+                       qcom,smdpkt-dev-name = "smdcnt_rev7";
+               };
+
+               qcom,smdpkt-data31-cntl {
+                       qcom,smdpkt-remote = "modem";
+                       qcom,smdpkt-port-name = "DATA31_CNTL";
+                       qcom,smdpkt-dev-name = "smdcnt_rev8";
+               };
+
+               qcom,smdpkt-apr-apps2 {
+                       qcom,smdpkt-remote = "adsp";
+                       qcom,smdpkt-port-name = "apr_apps2";
+                       qcom,smdpkt-dev-name = "apr_apps2";
+               };
+
+               qcom,smdpkt-data40-cntl {
+                       qcom,smdpkt-remote = "modem";
+                       qcom,smdpkt-port-name = "DATA40_CNTL";
+                       qcom,smdpkt-dev-name = "smdcntl8";
+               };
+
+               qcom,smdpkt-sensor_adsp {
+                       qcom,smdpkt-remote = "adsp";
+                       qcom,smdpkt-port-name = "SENSOR";
+                       qcom,smdpkt-dev-name = "smd_sns_adsp";
+               };
+
+               smdpkt_cxm_wcnss: qcom,smdpkt-cxm-qmi-port-8064 {
+                       qcom,smdpkt-remote = "wcnss";
+                       qcom,smdpkt-port-name = "CXM_QMI_PORT_8064";
+                       qcom,smdpkt-dev-name = "smd_cxm_qmi";
+               };
+
+               qcom,smdpkt-smd_test_framework {
+                       qcom,smdpkt-remote = "adsp";
+                       qcom,smdpkt-port-name = "TESTFRAMEWORK";
+                       qcom,smdpkt-dev-name = "smd_test_framework";
+               };
+
+               qcom,smdpkt-smd_logging_0 {
+                       qcom,smdpkt-remote = "adsp";
+                       qcom,smdpkt-port-name = "LOGGING";
+                       qcom,smdpkt-dev-name = "smd_logging_0";
+               };
+
+               qcom,smdpkt-smd_data_0 {
+                       qcom,smdpkt-remote = "adsp";
+                       qcom,smdpkt-port-name = "DATA";
+                       qcom,smdpkt-dev-name = "smd_data_0";
+               };
+
+               qcom,smdpkt-apr {
+                       qcom,smdpkt-remote = "adsp";
+                       qcom,smdpkt-port-name = "apr";
+                       qcom,smdpkt-dev-name = "apr";
+               };
+
+               qcom,smdpkt-loopback {
+                       qcom,smdpkt-remote = "modem";
+                       qcom,smdpkt-port-name = "LOOPBACK";
+                       qcom,smdpkt-dev-name = "smd_pkt_loopback";
+               };
+       };
+
+       qcom,avtimer {
+               compatible = "qcom,avtimer";
+               reg = <0xfe053008 0x4>,
+                       <0xfe05300c 0x4>;
+               reg-names = "avtimer_lsb_addr", "avtimer_msb_addr";
+       };
+};
+
+&rpm_bus {
+	rpm-regulator-ldoa3 {
+		pm8226_l3: regulator-l3 {
+			regulator-max-microvolt = <1337500>;
+                };
+
+		pm8226_l3_ao: regulator-3-ao {
+			regulator-max-microvolt = <1337500>;
+		};
+
+		pm8226_l3_so: regulator-l3-so {
+			regulator-max-microvolt = <1337500>;
+		};
+	};
+
+        rpm-regulator-smpa1 {
+                pm8226_s1_corner: regulator-s1-corner {
+			regulator-min-microvolt = <5>;
+			proxy-supply = <&pm8226_s1_corner>;
+			qcom,proxy-consumer-voltage = <7 7>;
+			qcom,proxy-consumer-enable;
+		};
+	};
+
+       /*
+        * vph_pwr_vreg represents the unregulated battery voltage supply
+        * VPH_PWR that is present whenever the device is powered on.
+        */
+       vph_pwr_vreg: vph_pwr_vreg {
+		compatible = "regulator-fixed";
+		status = "disabled";
+		regulator-name = "vph_pwr";
+		regulator-always-on;
+       };
+};
+
+&usb_otg {
+	#address-cells = <0>;
+	interrupt-parent = <&usb_otg>;
+	interrupts = <0 1 2>;
+	#interrupt-cells = <1>;
+	interrupt-map-mask = <0xffffffff>;
+	interrupt-map = <0 &intc 0 134 0
+			1 &intc 0 140 0
+			2 &spmi_bus 0x0 0x0 0x9 0x0>;
+	interrupt-names = "core_irq", "async_irq", "pmic_id_irq";
+
+	qcom,hsusb-otg-mode = <3>;
+	vbus_otg-supply = <&pm8226_chg_otg>;
+};
+
+&sdhc_1 {
+	vdd-supply = <&pm8226_l17>;
+	qcom,vdd-voltage-level = <2950000 2950000>;
+	qcom,vdd-current-level = <800 500000>;
+
+	vdd-io-supply = <&pm8226_l6>;
+	qcom,vdd-io-always-on;
+	qcom,vdd-io-voltage-level = <1800000 1800000>;
+	qcom,vdd-io-current-level = <250 154000>;
+
+	qcom,pad-pull-on = <0x0 0x3 0x3>; /* no-pull, pull-up, pull-up */
+	qcom,pad-pull-off = <0x0 0x3 0x3>; /* no-pull, pull-up, pull-up */
+	qcom,pad-drv-on = <0x4 0x4 0x4>; /* 10mA, 10mA, 10mA */
+	qcom,pad-drv-off = <0x0 0x0 0x0>; /* 2mA, 2mA, 2mA */
+
+	qcom,clk-rates = <400000 25000000 50000000 100000000 200000000>;
+	qcom,bus-speed-mode = "HS200_1p8v", "DDR_1p8v";
+	qcom,nonremovable;
+
+	status = "ok";
+};
+
+&sdhc_2 {
+	vdd-supply = <&pm8226_l18>;
+	qcom,vdd-voltage-level = <2950000 2950000>;
+	qcom,vdd-current-level = <9000 800000>;
+
+	vdd-io-supply = <&pm8226_l21>;
+	qcom,vdd-io-voltage-level = <1800000 2950000>;
+	qcom,vdd-io-current-level = <6 22000>;
+
+	qcom,pad-pull-on = <0x0 0x3 0x3>; /* no-pull, pull-up, pull-up */
+	qcom,pad-pull-off = <0x0 0x3 0x3>; /* no-pull, pull-up, pull-up */
+	qcom,pad-drv-on = <0x4 0x4 0x4>; /* 10mA, 10mA, 10mA */
+	qcom,pad-drv-off = <0x0 0x0 0x0>; /* 2mA, 2mA, 2mA */
+
+	qcom,clk-rates = <400000 25000000 50000000 100000000 200000000>;
+
+	#address-cells = <0>;
+	interrupt-parent = <&sdhc_2>;
+	interrupts = <0 1 2>;
+	#interrupt-cells = <1>;
+	interrupt-map-mask = <0xffffffff>;
+	interrupt-map = <0 &intc 0 125 0
+			1 &intc 0 221 0
+			2 &msmgpio 38 0x3>;
+	interrupt-names = "hc_irq", "pwr_irq", "status_irq";
+	cd-gpios = <&msmgpio 38 0x1>;
+
+	status = "ok";
+};
+
+&spmi_bus {
+	qcom,pm8226@0 {
+		qcom,power-on@800 {
+			qcom,pon_2 {
+				linux,code = <115>;
+			};
+		};
+
+		qcom,leds@a100 {
+			status = "okay";
+			qcom,led_mpp_2 {
+				label = "mpp";
+				linux,name = "led:rgb_blue";
+				linux,default-trigger = "none";
+				qcom,default-state = "off";
+				qcom,max-current = <40>;
+				qcom,current-setting = <5>;
+				qcom,id = <6>;
+				qcom,mode = "pwm";
+				qcom,pwm-us = <1000>;
+				qcom,source-sel = <14>;
+				qcom,mode-ctrl = <0x60>;
+				pwms = <&pm8226_pwm_4 0 0>;
+				qcom,start-idx = <1>;
+				qcom,ramp-step-ms = <120>;
+				qcom,duty-pcts = [00 00 00 00 00
+						00 00 00 00 00
+						50 00 00 00 00
+						00 00 00 00 00
+						00];
+				qcom,use-blink;
+			};
+		};
+
+		qcom,leds@a300 {
+			status = "okay";
+			qcom,led_mpp_4 {
+				label = "mpp";
+				linux,name = "led:rgb_green";
+				linux,default-trigger = "none";
+				qcom,default-state = "off";
+				qcom,max-current = <40>;
+				qcom,current-setting = <5>;
+				qcom,id = <6>;
+				qcom,mode = "pwm";
+				qcom,pwm-us = <1000>;
+				qcom,source-sel = <8>;
+				qcom,mode-ctrl = <0x60>;
+				pwms = <&pm8226_pwm_1 0 0>;
+				qcom,start-idx = <1>;
+				qcom,ramp-step-ms = <120>;
+				qcom,duty-pcts = [00 00 00 00 00
+						00 00 00 00 00
+						50 00 00 00 00
+						00 00 00 00 00
+						00];
+				qcom,use-blink;
+			};
+		};
+
+		qcom,leds@a500 {
+			status = "okay";
+			qcom,led_mpp_6 {
+				label = "mpp";
+				linux,name = "led:rgb_red";
+				linux,default-trigger = "none";
+				qcom,default-state = "off";
+				qcom,max-current = <40>;
+				qcom,current-setting = <5>;
+				qcom,id = <6>;
+				qcom,mode = "pwm";
+				qcom,pwm-us = <1000>;
+				qcom,mode-ctrl = <0x60>;
+				qcom,source-sel = <10>;
+				pwms = <&pm8226_pwm_6 0 0>;
+				qcom,start-idx = <1>;
+				qcom,ramp-step-ms = <120>;
+				qcom,duty-pcts = [00 00 00 00 00
+						00 00 00 00 00
+						50 00 00 00 00
+						00 00 00 00 00
+						00];
+				qcom,use-blink;
+			};
+		};
+
+	};
+
+	qcom,pm8226@1 {
+                qcom,leds@d300 {
+                        status = "okay";
+                };
+
+		qcom,leds@d800 {
+			status = "okay";
+			qcom,wled_0 {
+				label = "wled";
+				linux,name = "wled:backlight";
+				linux,default-trigger = "none";
+				qcom,cs-out-en;
+				qcom,op-fdbck = <1>;
+				qcom,default-state = "on";
+				qcom,max-current = <20>;
+				qcom,ctrl-delay-us = <0>;
+				qcom,boost-curr-lim = <3>;
+				qcom,cp-sel = <0>;
+				qcom,switch-freq = <11>;
+				qcom,ovp-val = <0>;
+				qcom,num-strings = <1>;
+				qcom,id = <0>;
+			};
+		};
+
+		qcom,vibrator@c000 {
+			status = "okay";
+			qcom,vib-timeout-ms = <15000>;
+			qcom,vib-vtg-level-mV = <3100>;
+		};
+	};
+};
+
+&pm8226_gpios {
+	/* GPIO_1: PMIC_AUDIO_REF_CLLK*/
+	/* Follow QCT */
+	gpio@c000 {
+		/* XO_PMIC_CDC_MCLK enable for tapan codec */
+		qcom,mode = <1>;		/* Digital output */
+		qcom,output-type = <0>;		/* CMOS logic */
+		qcom,pull = <5>;		/* QPNP_PIN_PULL_NO*/
+		qcom,vin-sel = <3>;		/* QPNP_PIN_VIN3 */
+		qcom,out-strength = <3>;	/* QPNP_PIN_OUT_STRENGTH_HIGH */
+		qcom,src-sel = <2>;		/* QPNP_PIN_SEL_FUNC_1 */
+		qcom,master-en = <1>;		/* Enable GPIO */
+	};
+};
+
+&pm8226_mpps {
+	mpp@a000 { /* MPP 1 */
+	};
+
+	mpp@a100 { /* MPP 2 */
+	};
+
+	mpp@a200 { /* MPP 3 */
+	};
+
+	mpp@a300 { /* MPP 4 */
+	};
+
+	mpp@a400 { /* MPP 5 */
+		/* PA_THERM0 config */
+		qcom,mode = <4>; /* AIN input */
+		qcom,invert = <1>; /* Enable MPP */
+		qcom,ain-route = <0>; /* AMUX 5 */
+		qcom,master-en = <1>;
+		qcom,src-sel = <0>; /* Function constant */
+	};
+
+	mpp@a500 { /* MPP 6 */
+	};
+
+	mpp@a600 { /* MPP 7 */
+	};
+
+	mpp@a700 { /* MPP 8 */
+	};
+};
+
+&pm8226_vadc {
+	chan@14 {
+		label = "pa_therm0";
+		reg = <0x14>;
+		qcom,decimation = <0>;
+		qcom,pre-div-channel-scaling = <0>;
+		qcom,calibration-type = "ratiometric";
+		qcom,scale-function = <2>;
+		qcom,hw-settle-time = <2>;
+		qcom,fast-avg-setup = <0>;
+	};
+};
+
+&pm8226_bms {
+	status = "ok";
+	qcom,enable-fcc-learning;
+	qcom,min-fcc-learning-soc = <20>;
+	qcom,min-fcc-ocv-pc = <30>;
+	qcom,min-fcc-learning-samples = <5>;
+	qcom,fcc-resolution = <10>;
+
+	qcom,clamp-soc-max-count = <0>;
+};
+
+&vph_pwr_vreg {
+	status = "ok";
+};
+
+&slim_msm {
+	tapan_codec {
+		qcom,cdc-micbias1-ext-cap;
+
+		/*
+		 * Yukon has external spkrdrv supply. Give a dummy
+		 * supply to make codec driver's happy.
+		 */
+		cdc-vdd-spkdrv-supply = <&vph_pwr_vreg>;
+		qcom,cdc-vdd-spkdrv-voltage = <0 0>;
+		qcom,cdc-vdd-spkdrv-current = <0>;
+
+		qcom,cdc-on-demand-supplies = "cdc-vdd-spkdrv";
+	};
+};
+
+&mdss_mdp {
+	qcom,mdss-pref-prim-intf = "dsi";
+	batfet-supply = <&pm8226_chg_batif>;
+};
+
+&mdss_fb0 {
+	qcom,memblock-reserve = <0x03400000 0xFA0000>;
+        qcom,mdss-fb-splash-logo-enabled;
+	qcom,cont-splash-memory {
+		linux,contiguous-region = <&cont_splash_mem>;
+	};
+};
