@@ -1,0 +1,237 @@
+/* arch/arm/boot/dts/qcom/msm8974pro-ab-shinano_sirius.dtsi
+ *
+ * Copyright (C) 2013 Sony Mobile Communications Inc.
+ *
+ * Author: Shougo Watanabe <Shougo.X.Watanabe@sonymobile.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+&soc {
+	/* I2C : BLSP8 */
+	i2c@f9964000 {
+		maxim_max1187x_tsc@48 {
+			compatible = "maxim,max1187x_tsc";
+			reg = <0x48>;
+			interrupt-parent = <&msmgpio>;
+			interrupts = <86 0x2>;
+			touch_vdd-supply = <&pm8941_l22>;
+			touch_vdd-supply_name = "touch_vdd";
+			gpio_tirq = <86>;
+			gpio_reset = <85>;
+			reset_l2h = <1>;
+			enable_resume_por = <1>;
+			defaults_allow = <0>;
+			default_config_id = <0>;
+			default_chip_id = <0>;
+			fw_name = "touch_chip_id_0x%02x_config_id_0x%%04x.bin";
+			i2c_words = <128>;
+			coordinate_settings = <0x4>;
+			panel_margin_xl = <0>;
+			lcd_x = <1080>;
+			panel_margin_xh = <0>;
+			panel_margin_yl = <0>;
+			lcd_y = <1920>;
+			panel_margin_yh = <0>;
+			num_sensor_x = <20>;
+			num_sensor_y = <34>;
+			button_code0 = <0>;
+			button_code1 = <0>;
+			button_code2 = <0>;
+			button_code3 = <0>;
+			touch_pressure_enabled = <1>;
+			touch_size_enabled = <0>;
+			touch_orientation_enabled = <0>;
+			glove_enabled = <0>;
+			report_pen_as_finger = <1>;
+			wakeup_gesture_support = <1>;
+			wakeup_gesture_timeout = <2000>;
+			wakeup_gesture {
+				double_tap {
+					gesture_code = <0x0102>;
+					event_00 {
+						type = <2>; /* LOG */
+						message = "=== DOUBLE TAP ===";
+					};
+					event_01 {
+						type = <1>; /* KEY */
+						code = <116>; /* KEY_POWER */
+						down = <1>;
+					};
+					event_02 {
+						type = <1>; /* KEY */
+						code = <116>; /* KEY_POWER */
+						down = <0>;
+					};
+					event_03 {
+						type = <99>; /* END */
+					};
+				};
+			};
+		};
+	};
+
+	gpio_keys {
+		camera_snapshot {
+			label = "camera_snapshot";
+			gpios = <&pm8941_gpios 3 0x1>;
+			linux,input-type = <1>;
+			linux,code = <0x2fe>;
+			gpio-key,wakeup;
+			debounce-interval = <15>;
+		};
+
+		camera_focus {
+			label = "camera_focus";
+			gpios = <&pm8941_gpios 4 0x1>;
+			linux,input-type = <1>;
+			linux,code = <0x210>;
+			gpio-key,wakeup;
+			debounce-interval = <15>;
+		};
+
+		sim_det {
+			label = "sim-detection";
+			gpios = <&msmgpio 9 0x0>;
+			linux,input-type = <5>;
+			linux,code = <7>;
+			gpio-key,wakeup;
+			debounce-interval = <10>;
+		};
+	};
+};
+
+&camera_mem {
+	reg = <0xb8714000 0x6400000>;
+};
+
+&pm8941_chg {
+	qcom,ibatmax-ma = <1600>;
+	qcom,ibatterm-ma = <160>;
+	qcom,ibatsafe-ma = <1600>;
+	qcom,maxinput-dc-ma = <1800>;
+	qcom,maxinput-usb-ma = <1500>;
+	qcom,maxinput-usb-mv = <6500>;
+	qcom,thermal-mitigation = <1600 1600 1100 900 700 500 300 200 100 0>;
+	qcom,ibatmax-warm-ma = <900>;
+	qcom,ibatmax-cool-ma = <900>;
+	qcom,step-thresh-soc = <101>;
+	qcom,ibatmax-ma-under-step = <1600>;
+};
+
+&pm8941_bms {
+	qcom,chg-term-ua = <160000>;
+	qcom,fcc-resolution = <14>;
+};
+
+&pm8941_lsid0 {
+	pm8941_iadc: iadc@3600 {
+		qcom,rsense = <10000000>;
+	};
+};
+
+&pm8941_gpios {
+	/* GPIO_20: LCD_DCDC_EN */
+	gpio@d300 {
+		qcom,src-sel = <0>;		/* GPIO */
+		qcom,mode = <1>;		/* Out */
+		qcom,output-type = <0>;		/* CMOS */
+		qcom,vin-sel = <2>;		/* S3 */
+		qcom,out-strength = <1>;	/* Low */
+		qcom,invert = <0>;		/* Low */
+		qcom,master-en = <1>;		/* Enable */
+		somc,keep_high_at_init;
+		status = "ok";
+	};
+
+	/* GPIO_27: FLASH_LED_NOW */
+	gpio@da00 {
+		qcom,src-sel = <2>;		/* Alternate function 1 */
+		qcom,mode = <0>;		/* In */
+		qcom,vin-sel = <2>;		/* S3 */
+		qcom,pull = <4>;		/* PD */
+		qcom,master-en = <1>;		/* Enable */
+		status = "ok";
+	};
+};
+
+&sdcc1 {
+	qcom,bus-speed-mode = "DDR50", "DDR_1p8v";
+};
+
+&sdcc2 {
+	qcom,bus-speed-mode = "SDR12", "SDR25", "SDR50", "DDR50";
+	qcom,current-limit = <400>;
+	qcom,pad-drv-on = <0x2 0x2 0x2>; /* 6mA, 6mA, 6mA */
+};
+
+&sdhc_1 {
+	qcom,clk-rates = <400000 20000000 25000000 50000000 100000000>;
+	qcom,bus-speed-mode = "DDR_1p8v";
+	qcom,vdd-always-on;
+};
+
+&spmi_bus {
+	qcom,pm8941@1 {
+		qcom,vib@c000 {
+			qcom,qpnp-vib-vtg-level-mV = <2900>;
+		};
+
+		qcom,leds@d000 {
+			qcom,rgb_0 {
+				qcom,pwm-max-value = <200>;
+			};
+
+			qcom,rgb_1 {
+				qcom,pwm-max-value = <511>;
+			};
+
+			qcom,rgb_2 {
+				qcom,pwm-max-value = <341>;
+			};
+		};
+
+		qcom,leds@d300 {
+			status = "okay";
+		};
+
+		qcom,leds@d800 {
+			status = "okay";
+			qcom,wled_0 {
+				label = "wled";
+				linux,name = "wled:backlight";
+				linux,default-trigger = "bkl-trigger";
+				qcom,cs-out-en;
+				qcom,cabc-en = <0>;
+				qcom,op-fdbck = <0>;
+				qcom,default-state = "on";
+				qcom,max-current = <20>;
+				qcom,ctrl-delay-us = <0>;
+				qcom,boost-curr-lim = <3>;
+				qcom,cp-sel = <0>;
+				qcom,switch-freq = <2>;
+				qcom,ovp-val = <2>;
+				qcom,num-strings = <2>;
+				qcom,id = <0>;
+			};
+		};
+	};
+};
+
+/* Regulator config */
+&pm8941_l11 {
+	status = "ok";
+};
+
+&mdss_mdp {
+	qcom,mdss-ib-factor = <19 10>;
+	somc,dric-gpio = <&msmgpio 26 0>;
+	somc,mul-channel-scaling = <3>;
+};
