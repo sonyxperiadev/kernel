@@ -856,6 +856,13 @@ config SENSORS_BMG160
 	help
 	  BMG160 Gyroscope Driver implemented by Bosch-Sensortec.
 
+config SENSORS_BMM050
+	tristate "BMM050 Magnetic Sensor Driver"
+	depends on I2C
+	default n
+	help
+	  BMM050 Magnetic Sensor Driver implemented by Bosch-Sensortec.
+
 config SIG_MOTION
 	tristate "support significant motion sensor function"
 	depends on SENSORS_BMA2X2  && ( SENSORS_BMA2X2_ENABLE_INT1 || SENSORS_BMA2X2_ENABLE_INT2)
