@@ -56,11 +56,18 @@ else ifdef CONFIG_MACH_SONY_ARIES
 	obj-$(CONFIG_MACH_SONY_ARIES) += board-sony_shinano_aries-gpiomux.o bms-batterydata-aries.o
 else ifdef CONFIG_MACH_SONY_SCORPION
 	obj-$(CONFIG_MACH_SONY_SCORPION) += board-sony_shinano_scorpion-gpiomux.o bms-batterydata-scorpion.o
+else ifdef CONFIG_MACH_SONY_TOGARI_ROW
+	obj-$(CONFIG_MACH_SONY_TOGARI_ROW) += board-sony_rhine_togari_row-gpiomux.o bms-batterydata-togari.o
+else ifdef CONFIG_MACH_SONY_HONAMI_ROW
+	obj-$(CONFIG_MACH_SONY_HONAMI_ROW) += board-sony_rhine_honami_row-gpiomux.o bms-batterydata-honami.o
+else ifdef CONFIG_MACH_SONY_AMAMI_ROW
+	obj-$(CONFIG_MACH_SONY_AMAMI_ROW) += board-sony_rhine_amami_row-gpiomux.o bms-batterydata-amami.o
 else
 	obj-$(CONFIG_ARCH_MSM8974) += board-8974-gpiomux.o bms-batterydata-oem.o
 endif
 
 obj-$(CONFIG_MACH_SONY_SHINANO) += board-sony_shinano-gpiomux-ref.o board-sony_shinano-nfc.o
+obj-$(CONFIG_MACH_SONY_RHINE) += board-sony_rhine-gpiomux-ref.o
 obj-$(CONFIG_ARCH_MSM8974) += sony_gpiomux.o
 
 CFLAGS_msm_vibrator.o += -Idrivers/staging/android
