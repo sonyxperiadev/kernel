@@ -9,6 +9,13 @@ dtb-$(CONFIG_MACH_SONY_ARIES)		+= msm8974pro-ac-shinano_aries.dtb
 dtb-$(CONFIG_MACH_SONY_SCORPION)	+= msm8974pro-ac-shinano_scorpion.dtb
 dtb-$(CONFIG_MACH_SONY_SCORPION)	+= apq8074pro-ac-shinano_scorpion_windy.dtb
 
+dtb-$(CONFIG_MACH_SONY_HONAMI_ROW)	+= msm8974-v2.0-1-rhine_honami_row.dtb
+dtb-$(CONFIG_MACH_SONY_HONAMI_ROW)	+= msm8974-v2.2-rhine_honami_row.dtb
+dtb-$(CONFIG_MACH_SONY_TOGARI_ROW)	+= msm8974-v2.0-1-rhine_togari_row.dtb
+dtb-$(CONFIG_MACH_SONY_TOGARI_ROW)	+= msm8974-v2.2-rhine_togari_row.dtb
+dtb-$(CONFIG_MACH_SONY_AMAMI_ROW)	+= msm8974-v2.0-1-rhine_amami_row.dtb
+dtb-$(CONFIG_MACH_SONY_AMAMI_ROW)	+= msm8974-v2.2-rhine_amami_row.dtb
+
 # Other
 dtb-$(CONFIG_ARCH_MSM8909) += msm8909-sim.dtb \
 	msm8909-rumi.dtb \
