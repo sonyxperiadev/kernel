@@ -849,6 +849,13 @@ config SENSORS_BMA2X2_ENABLE_INT2
 	 acceleration sensors BMA255/BMA254/BMA355/BMA250E/BMA222E/BMA280.
 	 Can only open if you do NOT open interrupt INT1 support
 
+config SENSORS_BMG160
+	tristate "BMG160 Gyroscope Driver"
+	depends on I2C
+	default n
+	help
+	  BMG160 Gyroscope Driver implemented by Bosch-Sensortec.
+
 config SIG_MOTION
 	tristate "support significant motion sensor function"
 	depends on SENSORS_BMA2X2  && ( SENSORS_BMA2X2_ENABLE_INT1 || SENSORS_BMA2X2_ENABLE_INT2)
