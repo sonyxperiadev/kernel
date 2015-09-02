@@ -666,6 +666,13 @@ config NFC_PN544
 	help
 	  This option enables support for PN544.
 
+config IR_REMOTE
+	bool "MAXQ614 IR Remote control"
+	default n
+	help
+	  This option enables device driver support for IR remote control
+	  device.
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"
