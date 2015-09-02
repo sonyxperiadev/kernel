@@ -1244,4 +1244,6 @@ config TOUCHSCREEN_ST
 
 source "drivers/input/touchscreen/st/Kconfig"
 
+source "drivers/input/touchscreen/cyttsp4/Kconfig"
+
 endif
