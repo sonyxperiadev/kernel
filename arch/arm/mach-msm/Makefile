@@ -25,10 +25,10 @@ obj-$(CONFIG_ARCH_FSM9900) += clock-fsm9900.o
 obj-$(CONFIG_ARCH_FSM9900) += rfic-fsm9900.o bbif-fsm9900.o
 obj-$(CONFIG_ARCH_FSM9010) += board-fsm9010.o
 obj-$(CONFIG_QPNP_BMS) += bms-batterydata.o bms-batterydata-desay.o
-obj-$(CONFIG_QPNP_BMS) += bms-batterydata-oem.o bms-batterydata-qrd-4v35-2000mah.o bms-batterydata-qrd-4v2-1300mah.o
+obj-$(CONFIG_QPNP_BMS) += bms-batterydata-qrd-4v35-2000mah.o bms-batterydata-qrd-4v2-1300mah.o
 obj-$(CONFIG_ARCH_APQ8084) += board-8084.o board-8084-gpiomux.o
 obj-$(CONFIG_ARCH_APQ8084) += clock-8084.o clock-mdss-8974.o
-obj-$(CONFIG_ARCH_MSM8974) += board-8974.o board-8974-gpiomux.o
+obj-$(CONFIG_ARCH_MSM8974) += board-8974.o
 obj-$(CONFIG_ARCH_MSM8974) += clock-rpm-8974.o clock-gcc-8974.o clock-mmss-8974.o clock-lpass-8974.o clock-mdss-8974.o
 obj-$(CONFIG_KRAIT_REGULATOR) += krait-regulator.o  krait-regulator-pmic.o
 obj-$(CONFIG_ARCH_MDM9630) += board-9630.o board-9630-gpiomux.o
@@ -45,6 +45,23 @@ obj-$(CONFIG_ARCH_MDM9640) += board-9640.o
 obj-$(CONFIG_ARCH_MDMFERRUM) += board-8909.o
 obj-$(CONFIG_ARCH_MSMVPIPA) += board-vpipa.o
 obj-$(CONFIG_MSM_PM) += ext-buck-control.o
+
+ifdef CONFIG_MACH_SONY_SIRIUS
+	obj-$(CONFIG_MACH_SONY_SIRIUS) += board-sony_shinano_sirius-gpiomux.o bms-batterydata-sirius.o
+else ifdef CONFIG_MACH_SONY_CASTOR
+	obj-$(CONFIG_MACH_SONY_CASTOR) += board-sony_shinano_castor-gpiomux.o bms-batterydata-castor.o
+else ifdef CONFIG_MACH_SONY_LEO
+	obj-$(CONFIG_MACH_SONY_LEO) += board-sony_shinano_leo-gpiomux.o bms-batterydata-leo.o
+else ifdef CONFIG_MACH_SONY_ARIES
+	obj-$(CONFIG_MACH_SONY_ARIES) += board-sony_shinano_aries-gpiomux.o bms-batterydata-aries.o
+else ifdef CONFIG_MACH_SONY_SCORPION
+	obj-$(CONFIG_MACH_SONY_SCORPION) += board-sony_shinano_scorpion-gpiomux.o bms-batterydata-scorpion.o
+else
+	obj-$(CONFIG_ARCH_MSM8974) += board-8974-gpiomux.o bms-batterydata-oem.o
+endif
+
+obj-$(CONFIG_MACH_SONY_SHINANO) += board-sony_shinano-gpiomux-ref.o board-sony_shinano-nfc.o
+obj-$(CONFIG_ARCH_MSM8974) += sony_gpiomux.o
 
 CFLAGS_msm_vibrator.o += -Idrivers/staging/android
 

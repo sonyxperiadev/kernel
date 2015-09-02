@@ -173,6 +173,7 @@ config ARCH_FSM9900
 	select ARCH_SUPPORTS_MSI
 	select MIGHT_HAVE_PCI
 	select MSM_IRQ
+	select HAVE_NMI_WATCHDOG if MSM_WATCHDOG_V2
 
 config ARCH_FSM9010
 	bool "FSM9010"
@@ -432,6 +433,67 @@ config MSM_REMOTE_SPINLOCK_LDREX
 	bool
 config MSM_REMOTE_SPINLOCK_SFPB
 	bool
+
+config MACH_SONY_SHINANO
+	depends on ARCH_MSM8974
+	bool "Sony Mobile Shinano"
+	help
+	  Support for the SONY Mobile Rhine board.
+	  It is based on QCOM MSM8974 AB chipset.
+
+config MACH_SONY_SIRIUS
+	depends on ARCH_MSM8974
+	bool "Sony Mobile Sirius"
+	select MACH_SONY_SHINANO
+	help
+	  Support for the SONY Mobile Sirius device.
+	  It is based on QCOM MSM8974 AB chipset.
+	  If you enable this config,
+	  Please use SONY Mobile source tree.
+
+config MACH_SONY_CASTOR
+	depends on ARCH_MSM8974
+	bool "Sony Mobile Castor"
+	select MACH_SONY_SHINANO
+	help
+	  Support for the SONY Mobile Castor and
+	  Castor Windy device.
+	  It is based on QCOM MSM8974 AB (or APQ8074 AB
+	  for Windy device) chipset.
+	  If you enable this config,
+	  Please use SONY Mobile source tree.
+
+config MACH_SONY_LEO
+	depends on ARCH_MSM8974
+	bool "Sony Mobile Leo"
+	select MACH_SONY_SHINANO
+	help
+	  Support for the SONY Mobile Leo device.
+	  It is based on QCOM MSM8974 AC chipset.
+	  If you enable this config,
+	  Please use SONY Mobile source tree.
+
+config MACH_SONY_ARIES
+	depends on ARCH_MSM8974
+	bool "Sony Mobile Aries"
+	select MACH_SONY_SHINANO
+	help
+	  Support for the SONY Mobile Aries device.
+	  It is based on QCOM MSM8974 AC chipset.
+	  If you enable this config,
+	  Please use SONY Mobile source tree.
+
+config MACH_SONY_SCORPION
+	depends on ARCH_MSM8974
+	bool "Sony Mobile Scorpion"
+	select MACH_SONY_SHINANO
+	help
+	  Support for the SONY Mobile Scorpion and
+	  Scorpion Windy device.
+	  It is based on QCOM MSM8974 AC (or APQ8074 AC
+	  for Windy device) chipset.
+	  If you enable this config,
+	  Please use SONY Mobile source tree.
 
 config MSM_STACKED_MEMORY
 	bool "Stacked Memory"
@@ -755,17 +817,6 @@ config MSM_DMA_TEST
 	help
 	  Intended to be compiled as a module.  Provides a device node
 	  and ioctls for testing the MSM dma system.
-
-config WIFI_CONTROL_FUNC
-	bool "Enable WiFi control function abstraction"
-	help
-	  Enables Power/Reset/Carddetect function abstraction
-
-config WIFI_MEM_PREALLOC
-	depends on WIFI_CONTROL_FUNC
-	bool "Preallocate memory for WiFi buffers"
-	help
-	  Preallocates memory buffers for WiFi driver
 
 config SURF_FFA_GPIO_KEYPAD
 	bool "MSM SURF/FFA GPIO keypad"

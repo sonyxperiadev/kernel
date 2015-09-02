@@ -1,33 +1,15 @@
 ifeq ($(CONFIG_OF),y)
 
-dtb-$(CONFIG_ARCH_MSM8974) += msm8974-v1-cdp.dtb \
-	msm8974-v1-fluid.dtb \
-	msm8974-v1-liquid.dtb \
-	msm8974-v1-mtp.dtb \
-	msm8974-v1-rumi.dtb \
-	msm8974-v1-sim.dtb \
-	msm8974-v2.0-1-cdp.dtb \
-	msm8974-v2.0-1-fluid.dtb \
-	msm8974-v2.0-1-liquid.dtb \
-	msm8974-v2.0-1-mtp.dtb \
-	apq8074-v2.0-1-cdp.dtb \
-	apq8074-v2.0-1-liquid.dtb \
-	apq8074-v2.0-1-dragonboard.dtb \
-	apq8074-v2.2-cdp.dtb \
-	apq8074-v2.2-liquid.dtb \
-	apq8074-v2.2-dragonboard.dtb \
-	msm8974-v2.2-cdp.dtb \
-	msm8974-v2.2-fluid.dtb \
-	msm8974-v2.2-liquid.dtb \
-	msm8974-v2.2-mtp.dtb \
-	msm8974pro-ab-pm8941-cdp.dtb \
-	msm8974pro-ab-pm8941-fluid.dtb \
-	msm8974pro-ab-pm8941-liquid.dtb \
-	msm8974pro-ab-pm8941-mtp.dtb \
-	msm8974pro-ac-pm8941-cdp.dtb \
-	msm8974pro-ac-pm8941-liquid.dtb \
-	msm8974pro-ac-pm8941-mtp.dtb \
-	msm8974pro-ac-pma8084-pm8941-mtp.dtb
+# MSM8974
+dtb-$(CONFIG_MACH_SONY_SIRIUS)		+= msm8974pro-ab-shinano_sirius.dtb
+dtb-$(CONFIG_MACH_SONY_CASTOR)		+= msm8974pro-ab-shinano_castor.dtb
+dtb-$(CONFIG_MACH_SONY_CASTOR)	 	+= apq8074pro-ab-shinano_castor_windy.dtb
+dtb-$(CONFIG_MACH_SONY_LEO)		+= msm8974pro-ac-shinano_leo.dtb
+dtb-$(CONFIG_MACH_SONY_ARIES)		+= msm8974pro-ac-shinano_aries.dtb
+dtb-$(CONFIG_MACH_SONY_SCORPION)	+= msm8974pro-ac-shinano_scorpion.dtb
+dtb-$(CONFIG_MACH_SONY_SCORPION)	+= apq8074pro-ac-shinano_scorpion_windy.dtb
+
+# Other
 dtb-$(CONFIG_ARCH_MSM8909) += msm8909-sim.dtb \
 	msm8909-rumi.dtb \
 	msm8909-qrd-skua.dtb \
