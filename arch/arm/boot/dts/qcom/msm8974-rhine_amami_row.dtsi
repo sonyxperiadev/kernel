@@ -1,0 +1,177 @@
+/* arch/arm/boot/dts/qcom/msm8974-rhine_amami_row.dtsi
+ *
+ * Copyright (C) 2013-2014 Sony Mobile Communications AB.
+ *
+ * Author: Kouhei Fujiya <Kouhei.X.Fujiya@sonymobile.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+#include "dsi-panel-amami.dtsi"
+#include "msm8974-rhine_common.dtsi"
+#include "msm8974-camera-sensor-amami_row.dtsi"
+
+&soc {
+	/* BLSP2 */
+	i2c_2: i2c@f9924000 {
+		synaptics_clearpad@2c {
+			chip_id = <0x35>;
+			num_sensor_rx = <20>;
+			num_sensor_tx = <10>;
+			charger_supported = <0>;
+			pen_supported = <0>;
+			glove_supported = <0>;
+			cover_supported = <0>;
+			touch_pressure_enabled = <1>;
+			touch_size_enabled = <0>;
+			touch_orientation_enabled = <0>;
+			preset_x_max = <719>;
+			preset_y_max = <1279>;
+			preset_n_bytes_per_object = <5>;
+			delay_after_hw_reset = <200>;
+			wakeup_gesture_supported = <0>;
+			wakeup_gesture_timeout = <0>;
+		};
+	};
+
+	gpio_keys {
+		compatible = "gpio-keys";
+		input-name = "gpio-keys";
+		interrupt-parent = <&msmgpio>;
+		interrupts = <9 0>;
+
+		camera_snapshot {
+			label = "camera_snapshot";
+			gpios = <&pm8941_gpios 3 0x1>;
+			linux,input-type = <1>;
+			linux,code = <0x2fe>;
+			gpio-key,wakeup;
+			debounce-interval = <15>;
+		};
+
+		camera_focus {
+			label = "camera_focus";
+			gpios = <&pm8941_gpios 4 0x1>;
+			linux,input-type = <1>;
+			linux,code = <0x210>;
+			gpio-key,wakeup;
+			debounce-interval = <15>;
+		};
+	};
+};
+
+&pm8941_chg {
+	qcom,ibatmax-ma = <1300>;
+	qcom,ibatterm-ma = <115>;
+	qcom,ibatsafe-ma = <1300>;
+	qcom,maxinput-dc-ma = <1300>;
+	qcom,maxinput-usb-ma = <1300>;
+	qcom,ibatmax-warm-ma = <650>;
+	qcom,ibatmax-cool-ma = <650>;
+	qcom,thermal-mitigation = <1300 1300 1100 900 700 500 300 200 100 0>;
+};
+
+&pm8941_bms {
+	qcom,chg-term-ua = <115000>;
+};
+
+&pm8941_gpios {
+	/* GPIO_3: SNAPSHOT */
+	gpio@c200 {
+		qcom,src-sel = <0>;		/* GPIO */
+		qcom,mode = <0>;		/* In */
+		qcom,vin-sel = <2>;		/* S3 */
+		qcom,pull = <0>;		/* PU */
+		qcom,master-en = <1>;		/* Enable */
+		status = "ok";
+	};
+
+	/* GPIO_4: FOCUS */
+	gpio@c300 {
+		qcom,src-sel = <0>;		/* GPIO */
+		qcom,mode = <0>;		/* In */
+		qcom,vin-sel = <2>;		/* S3 */
+		qcom,pull = <0>;		/* PU */
+		qcom,master-en = <1>;		/* Enable */
+		status = "ok";
+	};
+
+	/* GPIO_27: FLASH_LED_NOW */
+	gpio@da00 {
+		qcom,src-sel = <2>;		/* Alternate function 1 */
+		qcom,mode = <0>;		/* In */
+		qcom,vin-sel = <2>;		/* S3 */
+		qcom,pull = <4>;		/* PD */
+		qcom,master-en = <1>;		/* Enable */
+		status = "ok";
+	};
+
+};
+
+&spmi_bus {
+	qcom,pm8941@0 {
+		iadc@3600 {
+			qcom,rsense = <10000000>;
+		};
+	};
+
+	qcom,pm8941@1 {
+		qcom,leds@d800 {
+			qcom,wled_0 {
+				qcom,default-br = <1000>;
+			};
+		};
+
+		qcom,leds@d000 {
+			qcom,rgb_0 {
+				qcom,pwm-max-value = <170>;
+			};
+
+			qcom,rgb_1 {
+				qcom,pwm-max-value = <170>;
+			};
+
+			qcom,rgb_2 {
+				qcom,pwm-max-value = <170>;
+			};
+		};
+
+		qcom,leds@d300 {
+			status = "okay";
+		};
+	};
+};
+
+&pm8941_flash0 {
+	qcom,clamp-curr = <15>;
+};
+
+&pm8941_torch {
+	qcom,clamp-curr = <15>;
+};
+
+/* Regulator config */
+&pm8941_l23 {
+	regulator-min-microvolt = <2800000>;
+	regulator-max-microvolt = <2800000>;
+	qcom,init-enable = <0>;
+	qcom,init-voltage = <2800000>;
+	status = "ok";
+};
+
+&pm8941_mvs1 { /* VREG_OTG */
+	qcom,ocp-enable = <1>;
+};
+
+&mdss_dsi0 {
+	qcom,dsi-pref-prim-pan = <&dsi_novatek_default>;
+	qcom,platform-enable-gpio = <&msmgpio 58 1>;
+	qcom,platform-te-gpio = <&msmgpio 12 1>;
+};

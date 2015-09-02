@@ -1,0 +1,168 @@
+/* arch/arm/boot/dts/qcom/msm8974-rhine_togari_row.dtsi
+ *
+ * Copyright (C) 2013-2014 Sony Mobile Communications AB.
+ *
+ * Author: Kouhei Fujiya <Kouhei.X.Fujiya@sonymobile.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+#include "dsi-panel-togari.dtsi"
+#include "msm8974-rhine_common.dtsi"
+#include "msm8974-camera-sensor-togari_row.dtsi"
+
+&soc {
+	/* BLSP2 */
+	i2c_2: i2c@f9924000 {
+		maxim_max1187x_tsc@48 {
+			compatible = "maxim,max1187x_tsc";
+			reg = <0x48>;
+			interrupt-parent = <&msmgpio>;
+			interrupts = <61 0x2>;
+			touch_vdd-supply = <&pm8941_l22>;
+			touch_vdd-supply_name = "touch_vdd";
+			gpio_tirq = <61>;
+			gpio_reset = <85>;
+			reset_l2h = <0>;
+			enable_resume_por = <0>;
+			defaults_allow = <0>;
+			default_config_id = <0>;
+			default_chip_id = <0>;
+			fw_name = "touch_chip_id_0x%02x_config_id_0x%%04x.bin";
+			i2c_words = <128>;
+			coordinate_settings = <0x4>;
+			panel_margin_xl = <0>;
+			lcd_x = <1080>;
+			panel_margin_xh = <0>;
+			panel_margin_yl = <0>;
+			lcd_y = <1920>;
+			panel_margin_yh = <0>;
+			num_sensor_x = <24>;
+			num_sensor_y = <40>;
+			button_code0 = <0>;
+			button_code1 = <0>;
+			button_code2 = <0>;
+			button_code3 = <0>;
+			touch_pressure_enabled = <1>;
+			touch_size_enabled = <0>;
+			touch_orientation_enabled = <0>;
+			report_pen_as_finger = <1>;
+			wakeup_gesture_support = <0>;
+			wakeup_gesture_timeout = <0>;
+		};
+	};
+
+	gpio_keys {
+		compatible = "gpio-keys";
+		input-name = "gpio-keys";
+		interrupt-parent = <&msmgpio>;
+		interrupts = <9 0>;
+
+		camera_snapshot {
+			status = "disabled";
+		};
+
+		camera_focus {
+			status = "disabled";
+		};
+	};
+};
+
+&pm8941_chg {
+	qcom,ibatmax-ma = <2000>;
+	qcom,ibatterm-ma = <150>;
+	qcom,ibatsafe-ma = <2000>;
+	qcom,maxinput-dc-ma = <1800>;
+	qcom,maxinput-usb-ma = <1500>;
+	qcom,ibatmax-warm-ma = <900>;
+	qcom,ibatmax-cool-ma = <900>;
+	qcom,thermal-mitigation = <2000 1500 1100 900 700 500 300 200 100 0>;
+	qcom,warm-disable-charging;
+};
+
+&pm8941_bms {
+	qcom,fcc-resolution = <13>;
+	qcom,chg-term-ua = <150000>;
+};
+
+&pm8941_gpios {
+
+	/* GPIO_3: NC (SNAPSHOT) */
+	gpio@c200 {
+		qcom,master-en = <0>;		/* Disable */
+		status = "ok";
+	};
+
+	/* GPIO_4: NC (FOCUS) */
+	gpio@c300 {
+		qcom,master-en = <0>;		/* Disable */
+		status = "ok";
+	};
+
+	/* GPIO_27: NC (FLASH_LED_NOW) */
+	gpio@da00 {
+		qcom,master-en = <0>;		/* Disable */
+		status = "ok";
+	};
+
+};
+
+&spmi_bus {
+	qcom,pm8941@0 {
+		iadc@3600 {
+			qcom,rsense = <10000000>;
+		};
+		vadc@3100 {
+			qcom,use-old-batt-therm-table;
+		};
+	};
+
+	qcom,pm8941@1 {
+		qcom,leds@d000 {
+			qcom,rgb_0 {
+				qcom,pwm-max-value = <31>;
+			};
+
+			qcom,rgb_1 {
+				qcom,pwm-max-value = <32>;
+			};
+
+			qcom,rgb_2 {
+				qcom,pwm-max-value = <24>;
+			};
+		};
+	};
+};
+
+&sdhc_2 {
+	qcom,pad-drv-on = <0x7 0x2 0x2>; /* 16mA, 6mA, 6mA */
+};
+
+/* Regulator config */
+&pm8941_l23 {
+	regulator-min-microvolt = <2800000>;
+	regulator-max-microvolt = <2800000>;
+	qcom,init-enable = <0>;
+	qcom,init-voltage = <2800000>;
+	status = "ok";
+};
+
+&mdss_fb0 {
+	qcom,memory-reservation-size = <0x1000000>; /* size 16MB */
+};
+
+&mdss_mdp {
+	somc,dric-gpio = <&msmgpio 26 0>;
+};
+
+&mdss_dsi0 {
+	qcom,dsi-pref-prim-pan = <&dsi_renesas_default>;
+	qcom,platform-enable-gpio = <&msmgpio 46 1>;
+};
