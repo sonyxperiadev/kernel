@@ -579,12 +579,15 @@ static void lm3630_led_brightness(struct led_classdev *led_cdev,
 	struct lm3630_data *lm = dev_get_drvdata(dev);
 	struct lm3630_intf *intf = ldev_to_intf(led_cdev);
 	enum lm3630_control_bank b;
+	enum led_brightness value_scaled;
 	int rc;
 
 	if (value <= LED_OFF)
 		value = 0;
 	else if (value >= LED_FULL)
 		value = 255;
+
+	value_scaled = (value + 255) / 2;
 
 	dev_dbg(dev, "%s: brightness %d -> %d\n", led_cdev->name,
 			intf->brightness, value);
@@ -600,7 +603,7 @@ static void lm3630_led_brightness(struct led_classdev *led_cdev,
 	for (b = LM3630_CBNKA; b < LM3630_BANK_NUM; b++) {
 		if (!(intf->banks & (1 << b)))
 			continue;
-		if (lm3630_write(lm, value, REG_BRIGHT_A + b))
+		if (lm3630_write(lm, value == 0 ? value : value_scaled, REG_BRIGHT_A + b))
 			break;
 	}
 
