@@ -4,6 +4,7 @@
  *
  * Copyright (c) 2008 Google Inc.
  * Copyright (c) 2007-2015, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2013 Sony Mobile Communications AB.
  * Modified: Nick Pelly <npelly@google.com>
  *
  * All source code in this file is licensed under the following license
@@ -66,6 +67,7 @@
 #include <linux/platform_data/msm_serial_hs.h>
 #include <linux/msm-bus.h>
 
+#include <linux/bcm43xx_bt_lpm.h>
 #include "msm_serial_hs_hwreg.h"
 #define UART_SPS_CONS_PERIPHERAL 0
 #define UART_SPS_PROD_PERIPHERAL 1
@@ -220,6 +222,8 @@ struct msm_hs_port {
 	atomic_t clk_count;
 	struct msm_hs_wakeup wakeup;
 	struct wakeup_source ws;
+
+	void (*exit_lpm_cb)(struct uart_port *);
 
 	struct dentry *loopback_dir;
 	struct work_struct clock_off_w; /* work for actual clock off */
@@ -1163,8 +1167,6 @@ static void msm_hs_set_termios(struct uart_port *uport,
 	 * UART Core would trigger RFR if it is not having any space with
 	 * RX FIFO.
 	 */
-	/* Pulling RFR line high */
-	msm_hs_write(uport, UART_DM_CR, RFR_LOW);
 	data = msm_hs_read(uport, UART_DM_MR1);
 	data &= ~(UARTDM_MR1_CTS_CTL_BMSK | UARTDM_MR1_RX_RDY_CTL_BMSK);
 	if (c_cflag & CRTSCTS) {
@@ -1758,6 +1760,9 @@ static void msm_hs_start_tx_locked(struct uart_port *uport)
 		return;
 	}
 
+	if (msm_uport->exit_lpm_cb)
+		msm_uport->exit_lpm_cb(uport);
+
 	if (!tx->dma_in_flight) {
 		tx->dma_in_flight = true;
 		queue_kthread_work(&msm_uport->tx.kworker,
@@ -1956,6 +1961,7 @@ void msm_hs_set_mctrl(struct uart_port *uport,
 				    unsigned int mctrl)
 {
 	unsigned long flags;
+
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
 
 	msm_hs_resource_vote(msm_uport);
@@ -2597,6 +2603,7 @@ deinit_ws:
 free_uart_irq:
 	free_irq(uport->irq, msm_uport);
 unvote_exit:
+	wakeup_source_trash(&msm_uport->ws);
 	msm_hs_resource_unvote(msm_uport);
 	MSM_HS_ERR("%s(): Error return\n", __func__);
 	return ret;
@@ -2745,6 +2752,10 @@ struct msm_serial_hs_platform_data
 		MSM_HS_ERR("Error: Invalid UART BAM RX EP Pipe Index.\n");
 		return ERR_PTR(-EINVAL);
 	}
+
+#ifdef CONFIG_MACH_SONY_SHINANO
+	pdata->exit_lpm_cb = bcm_bt_lpm_exit_lpm_locked;
+#endif
 
 	MSM_HS_DBG("tx_ep_pipe_index:%d rx_ep_pipe_index:%d\n"
 		"tx_gpio:%d rx_gpio:%d rfr_gpio:%d cts_gpio:%d",
@@ -3259,6 +3270,14 @@ static int msm_hs_probe(struct platform_device *pdev)
 	msm_uport->bam_rx_ep_pipe_index =
 			pdata->bam_rx_ep_pipe_index;
 	msm_uport->wakeup.enabled = true;
+
+	if (pdata == NULL) {
+		dev_warn(&pdev->dev, "msm_hs_probe() pdata is null\n");
+		msm_uport->exit_lpm_cb = NULL;
+	} else {
+		dev_dbg(&pdev->dev, "msm_hs_probe() set exit_lpm_cb\n");
+		msm_uport->exit_lpm_cb = pdata->exit_lpm_cb;
+	}
 
 	uport->iotype = UPIO_MEM;
 	uport->fifosize = 64;
