@@ -673,6 +673,14 @@ config IR_REMOTE
 	  This option enables device driver support for IR remote control
 	  device.
 
+config AD7146
+	tristate "AD7146 proximity driver"
+	depends on I2C
+	default n
+	help
+	  If you say yes here you get support for the AD7146 chip.
+	  This is used as a proximity sensor.
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"
