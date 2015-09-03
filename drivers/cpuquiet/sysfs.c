@@ -25,8 +25,6 @@
 
 #include "cpuquiet.h"
 
-DEFINE_MUTEX(cpuquiet_lock);
-
 struct cpuquiet_cpu_stat {
 	u64 time_up;
 	u64 time_down;
