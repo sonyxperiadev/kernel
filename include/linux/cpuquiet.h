@@ -70,7 +70,6 @@ static inline int cpuquiet_wake_cpu(unsigned int cpunumber, bool sync)
 	return cpuquiet_wake_quiesce_cpu(cpunumber, sync, true);
 }
 
-#ifdef CONFIG_CPU_QUIET_STATS
 /* Sysfs support */
 struct cpuquiet_attribute {
 	struct attribute attr;
@@ -129,7 +128,5 @@ extern ssize_t store_ulong_attribute(struct cpuquiet_attribute *cattr,
 
 extern int cpuquiet_register_cpu_attrs(struct attribute_group *attrs);
 extern void cpuquiet_unregister_cpu_attrs(struct attribute_group *attrs);
-
-#endif
 
 #endif
