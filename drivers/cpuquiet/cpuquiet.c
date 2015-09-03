@@ -33,6 +33,7 @@
 unsigned int cpuquiet_nr_max_cpus;
 unsigned int cpuquiet_nr_min_cpus;
 
+DEFINE_MUTEX(cpuquiet_lock);
 static DEFINE_MUTEX(cpuquiet_cpu_lock);
 DEFINE_MUTEX(cpuquiet_min_max_cpus_lock);
 
