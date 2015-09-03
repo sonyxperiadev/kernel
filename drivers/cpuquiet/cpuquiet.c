@@ -234,7 +234,6 @@ static struct notifier_block minmax_cpus_notifier = {
 	.notifier_call = minmax_cpus_notify,
 };
 
-#ifdef CONFIG_CPU_QUIET_STATS
 CPQ_SIMPLE_ATTRIBUTE(hotplug_timeout, 0644, ulong);
 
 static struct attribute *cpuquiet_attrs[] = {
@@ -245,8 +244,6 @@ static struct attribute *cpuquiet_attrs[] = {
 static struct attribute_group cpuquiet_attrs_group = {
 	.attrs = cpuquiet_attrs,
 };
-#endif /* CONFIG_CPU_QUIET_STATS */
-
 
 unsigned int cpuquiet_get_avg_hotplug_latency(void)
 {
