@@ -234,17 +234,6 @@ static struct notifier_block minmax_cpus_notifier = {
 	.notifier_call = minmax_cpus_notify,
 };
 
-CPQ_SIMPLE_ATTRIBUTE(hotplug_timeout, 0644, ulong);
-
-static struct attribute *cpuquiet_attrs[] = {
-	&hotplug_timeout_attr.attr,
-	NULL,
-};
-
-static struct attribute_group cpuquiet_attrs_group = {
-	.attrs = cpuquiet_attrs,
-};
-
 unsigned int cpuquiet_get_avg_hotplug_latency(void)
 {
 	const struct cpuquiet_platform_info *plat_info;
@@ -371,14 +360,8 @@ static int cpuquiet_probe(struct platform_device *pdev)
 	if (err)
 		goto remove_max;
 
-	err = cpuquiet_register_attrs(&cpuquiet_attrs_group);
-	if (err)
-		goto unreg_devices;
-
 	return 0;
 
-unreg_devices:
-	cpuquiet_unregister_devices();
 remove_max:
 	pm_qos_remove_notifier(PM_QOS_MAX_ONLINE_CPUS, &minmax_cpus_notifier);
 remove_min:
@@ -392,7 +375,6 @@ destroy_wq:
 static int cpuquiet_remove(struct platform_device *pdev)
 {
 
-	cpuquiet_unregister_attrs(&cpuquiet_attrs_group);
 	cpuquiet_unregister_devices();
 	pm_qos_remove_notifier(PM_QOS_MAX_ONLINE_CPUS, &minmax_cpus_notifier);
 	pm_qos_remove_notifier(PM_QOS_MIN_ONLINE_CPUS, &minmax_cpus_notifier);
