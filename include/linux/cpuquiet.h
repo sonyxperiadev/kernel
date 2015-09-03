@@ -127,9 +127,6 @@ extern ssize_t show_ulong_attribute(struct cpuquiet_attribute *cattr,
 extern ssize_t store_ulong_attribute(struct cpuquiet_attribute *cattr,
 				const char *buf, size_t count);
 
-extern int cpuquiet_register_attrs(struct attribute_group *attrs);
-extern void cpuquiet_unregister_attrs(struct attribute_group *attrs);
-
 extern int cpuquiet_register_cpu_attrs(struct attribute_group *attrs);
 extern void cpuquiet_unregister_cpu_attrs(struct attribute_group *attrs);
 
