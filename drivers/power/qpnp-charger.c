@@ -6627,13 +6627,14 @@ qpnp_charger_probe(struct spmi_device *spmi)
 		goto fail_chg_enable;
 	}
 
-	if (!of_machine_is_compatible("qcom,msm8926")) {
-		chip->ext_vbus_psy = power_supply_get_by_name("ext-vbus");
-		if (!chip->ext_vbus_psy) {
-			pr_err("ext-vbus supply not found deferring probe\n");
-			rc = -EPROBE_DEFER;
-			goto fail_chg_enable;
-		}
+	if (!of_machine_is_compatible("qcom,msm8926") &&
+		!of_machine_is_compatible("qcom,msm8226")) {
+			chip->ext_vbus_psy = power_supply_get_by_name("ext-vbus");
+			if (!chip->ext_vbus_psy) {
+				pr_err("ext-vbus supply not found deferring probe\n");
+				rc = -EPROBE_DEFER;
+				goto fail_chg_enable;
+			}
 	}
 
 	mutex_init(&chip->jeita_configure_lock);
