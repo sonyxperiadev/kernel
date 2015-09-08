@@ -2309,6 +2309,18 @@ static struct clk_lookup msm_camera_clocks_8974pro_only[] = {
 	CLK_LOOKUP_OF("cam_clk", camss_mclk0_clk, "0.qcom,camera"),
 	CLK_LOOKUP_OF("cam_clk", camss_mclk1_clk, "1.qcom,camera"),
 	CLK_LOOKUP_OF("cam_clk", camss_mclk2_clk, "2.qcom,camera"),
+
+	/* Sony Camera */
+	CLK_LOOKUP_OF("cam_src_clk", mclk0_clk_src, "20.qcom,camera"),
+	CLK_LOOKUP_OF("cam_clk", camss_mclk0_clk, "20.qcom,camera"),
+	CLK_LOOKUP_OF("cam_src_clk", mclk2_clk_src, "6c.qcom,camera"),
+	CLK_LOOKUP_OF("cam_clk", camss_mclk2_clk, "6c.qcom,camera"),
+
+	/* Sony EEPROM */
+	CLK_LOOKUP_OF("cam_src_clk", mmss_gp0_clk_src, "a0.qcom,eeprom"),
+	CLK_LOOKUP_OF("cam_clk", camss_gp0_clk, "a0.qcom,eeprom"),
+	CLK_LOOKUP_OF("cam_src_clk", mmss_gp0_clk_src, "a1.qcom,eeprom"),
+	CLK_LOOKUP_OF("cam_clk", camss_gp0_clk, "a1.qcom,eeprom"),
 };
 
 static struct clk_lookup msm_camera_clocks_8974_only[] = {
@@ -2318,8 +2330,18 @@ static struct clk_lookup msm_camera_clocks_8974_only[] = {
 	CLK_LOOKUP_OF("cam_src_clk", mmss_gp1_clk_src, "1.qcom,camera"),
 	CLK_LOOKUP_OF("cam_clk", camss_gp0_clk, "0.qcom,camera"),
 	CLK_LOOKUP_OF("cam_clk", camss_gp1_clk, "1.qcom,camera"),
-	CLK_LOOKUP_OF("cam_src_clk", mmss_gp0_clk_src, "20.qcom,camera"),
-	CLK_LOOKUP_OF("cam_clk", camss_gp0_clk, "20.qcom, camera"),
+
+	/* Sony Camera */
+	CLK_LOOKUP_OF("cam_src_clk", mclk0_clk_src, "20.qcom,camera"),
+	CLK_LOOKUP_OF("cam_clk", camss_mclk0_clk, "20.qcom,camera"),
+	CLK_LOOKUP_OF("cam_src_clk", mclk2_clk_src, "6c.qcom,camera"),
+	CLK_LOOKUP_OF("cam_clk", camss_mclk2_clk, "6c.qcom,camera"),
+
+	/* Sony EEPROM */
+	CLK_LOOKUP_OF("cam_src_clk", mmss_gp0_clk_src, "a0.qcom,eeprom"),
+	CLK_LOOKUP_OF("cam_clk", camss_gp0_clk, "a0.qcom,eeprom"),
+	CLK_LOOKUP_OF("cam_src_clk", mmss_gp0_clk_src, "a1.qcom,eeprom"),
+	CLK_LOOKUP_OF("cam_clk", camss_gp0_clk, "a1.qcom,eeprom"),
 };
 
 static struct clk_lookup msm_clocks_mmss_8974[] = {
