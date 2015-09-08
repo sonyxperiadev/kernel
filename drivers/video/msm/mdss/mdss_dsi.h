@@ -304,6 +304,7 @@ struct mdss_panel_power_seq {
 };
 
 struct mdss_panel_specific_pdata {
+	bool disp_on_in_boot;
 	bool detected;
 	int driver_ic;
 	int32_t lcd_id;

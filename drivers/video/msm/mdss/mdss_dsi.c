@@ -881,6 +881,11 @@ int mdss_dsi_pinctrl_set_state(
 	struct pinctrl_state *pin_state;
 	int rc = -EFAULT;
 
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	if (ctrl_pdata->spec_pdata->disp_on_in_boot)
+		return 0;
+#endif
+
 	if (IS_ERR_OR_NULL(ctrl_pdata->pin_res.pinctrl))
 		return PTR_ERR(ctrl_pdata->pin_res.pinctrl);
 
