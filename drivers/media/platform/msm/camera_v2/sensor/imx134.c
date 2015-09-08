@@ -159,7 +159,8 @@ static int __init imx134_init_module(void)
 					imx134_seagull_power_setting;
 		imx134_s_ctrl.power_setting_array.size =
 					ARRAY_SIZE(imx134_seagull_power_setting);
-	} else if (of_machine_is_compatible("somc,eagle")) {
+	} else if (of_machine_is_compatible("somc,eagle") ||
+			of_machine_is_compatible("somc,eagle_dsds")) {
 		imx134_s_ctrl.power_setting_array.power_setting =
 					imx134_eagle_power_setting;
 		imx134_s_ctrl.power_setting_array.size =

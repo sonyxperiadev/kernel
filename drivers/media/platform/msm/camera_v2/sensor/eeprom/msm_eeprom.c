@@ -344,7 +344,8 @@ static int read_eeprom_memory(struct msm_eeprom_ctrl_t *e_ctrl,
 			}
 			memptr += emap[j].mem.valid_size;
 		}
-		if (of_machine_is_compatible("somc,eagle")) {
+		if (of_machine_is_compatible("somc,eagle") ||
+				of_machine_is_compatible("somc,eagle_dsds")) {
 			if (j == 0) {
 				/*After A1 for AWB and AF,A3 A5 A7 for lsc*/
 				eb_info->i2c_slaveaddr = 0xA3;
