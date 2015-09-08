@@ -1119,5 +1119,6 @@ config TOUCHSCREEN_ELAN_EKTF3135
 	  module will be called synaptics_dsx_i2c.
 
 source "drivers/input/touchscreen/cyttsp4/Kconfig"
+source "drivers/input/touchscreen/cyttsp5/Kconfig"
 
 endif
