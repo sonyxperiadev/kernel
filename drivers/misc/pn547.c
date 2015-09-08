@@ -524,7 +524,7 @@ static int pn547_probe(struct i2c_client *client,
 	mutex_init(&pn547_dev->read_mutex);
 
 	pn547_dev->pn547_device.minor = MISC_DYNAMIC_MINOR;
-	pn547_dev->pn547_device.name = "pn547";
+	pn547_dev->pn547_device.name = "pn54x";
 	pn547_dev->pn547_device.fops = &pn547_dev_fops;
 
 	ret = misc_register(&pn547_dev->pn547_device);
