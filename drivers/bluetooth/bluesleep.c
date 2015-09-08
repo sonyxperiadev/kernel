@@ -55,6 +55,7 @@
 #include <linux/gpio.h>
 #include <linux/of_gpio.h>
 #include <linux/serial_core.h>
+#include <linux/pinctrl/consumer.h>
 #include <linux/platform_data/msm_serial_hs.h>
 #include <linux/regulator/consumer.h>
 
@@ -104,6 +105,15 @@ struct bluesleep_info {
 	int uart_port_is_open;
 	int has_ext_wake;
 };
+
+struct bt_pinctrl_data {
+	struct pinctrl *pinctrl;
+	struct pinctrl_state *gpio_state_active;
+	struct pinctrl_state *gpio_state_suspend;
+	bool has_pinctl;
+};
+
+static struct bt_pinctrl_data *pinctrl_data;
 
 static struct regulator *bt_batfet;
 static bool bt_enabled;
@@ -496,6 +506,7 @@ static int bluesleep_start(void)
 	if (!bsi->uart_port_is_open) {
 		BT_INFO("UART port is open. Set initial clock vote ON!");
 		msm_hs_request_clock_on(bsi->uport);
+		BT_INFO("msm_hs_request_clock_on ... done");
 		bsi->uart_port_is_open = 1;
 	}
 
@@ -632,6 +643,59 @@ static int bluesleep_probe(struct platform_device *pdev)
 	struct resource *res;
 	int ret, rc;
 
+	struct pinctrl *pinctrl;
+	struct pinctrl_state *lookup_state;
+
+	pinctrl_data = kzalloc(sizeof(*pinctrl_data), GFP_KERNEL);
+	if (!pinctrl_data) {
+		dev_err(&pdev->dev, "%s(): no memory\n", __func__);
+		ret = -ENOMEM;
+		return ret;
+	}
+
+	pinctrl_data->has_pinctl = false;
+
+	pinctrl = devm_pinctrl_get(&pdev->dev);
+	if (IS_ERR(pinctrl)) {
+		dev_err(&pdev->dev, "%s: pinctrl not defined\n",
+			__func__);
+		ret = PTR_ERR(pinctrl);
+	} else {
+		pinctrl_data->has_pinctl = true;
+	}
+
+	if (pinctrl_data->has_pinctl) {
+
+		pr_info("bluesleep in pinctl mode\n");
+		pinctrl_data->pinctrl = pinctrl;
+
+		lookup_state = pinctrl_lookup_state(pinctrl, PINCTRL_STATE_DEFAULT);
+		if (IS_ERR_OR_NULL(lookup_state)) {
+			dev_err(&pdev->dev, "%s(): pinctrl lookup failed for default\n",
+			__func__);
+			ret = PTR_ERR(lookup_state);
+			return ret;
+		}
+		pinctrl_data->gpio_state_active = lookup_state;
+
+		lookup_state = pinctrl_lookup_state(pinctrl, PINCTRL_STATE_SLEEP);
+		if (IS_ERR_OR_NULL(lookup_state)) {
+			dev_err(&pdev->dev, "%s(): pinctrl lookup failed for sleep\n",
+			__func__);
+			ret = PTR_ERR(lookup_state);
+			return ret;
+		}
+		pinctrl_data->gpio_state_suspend = lookup_state;
+
+		ret = pinctrl_select_state(pinctrl_data->pinctrl,
+			pinctrl_data->gpio_state_active);
+		if (ret) {
+			dev_err(&pdev->dev, "%s(): Failed to select active state\n",
+				__func__);
+			return ret;
+		}
+	}
+
 	bsi = kzalloc(sizeof(struct bluesleep_info), GFP_KERNEL);
 	if (!bsi)
 		return -ENOMEM;
@@ -686,7 +750,7 @@ static int bluesleep_probe(struct platform_device *pdev)
 		goto free_bt_ext_wake;
 	}
 
-	bsi->irq_polarity = POLARITY_LOW;/*low edge (falling edge)*/
+	bsi->irq_polarity = POLARITY_LOW;//low edge (falling edge)
 	bsi->uart_port_is_open = 0;
 	wake_lock_init(&bsi->wake_lock, WAKE_LOCK_SUSPEND, "bluesleep");
 	clear_bit(BT_SUSPEND, &flags);
@@ -698,6 +762,11 @@ static int bluesleep_probe(struct platform_device *pdev)
 	ret = request_irq(bsi->host_wake_irq, bluesleep_hostwake_isr,
 			IRQF_DISABLED | IRQF_TRIGGER_FALLING,
 			"bluetooth hostwake", NULL);
+
+	if (ret  < 0) {
+		BT_ERR("Couldn't acquire BT_HOST_WAKE IRQ");
+		goto free_bt_ext_wake;
+	}
 
 	bt_rfkill = rfkill_alloc("bluesleep Bluetooth", &pdev->dev,
 				RFKILL_TYPE_BLUETOOTH, &bluesleep_rfkill_ops,
@@ -719,11 +788,6 @@ static int bluesleep_probe(struct platform_device *pdev)
 		goto  free_bt_ext_wake;
 	}
 
-	if (ret  < 0) {
-		BT_ERR("Couldn't acquire BT_HOST_WAKE IRQ");
-		goto free_bt_ext_wake;
-	}
-
 	return 0;
 
 free_bt_ext_wake:
@@ -737,6 +801,18 @@ free_bsi:
 
 static int bluesleep_remove(struct platform_device *pdev)
 {
+
+	int ret;
+	
+	if (pinctrl_data->has_pinctl){
+		ret = pinctrl_select_state(pinctrl_data->pinctrl,
+					pinctrl_data->gpio_state_suspend);
+		if (ret) {
+			dev_warn(&pdev->dev, "%s(): Failed to select suspend state",
+				__func__);
+		}
+	}
+
 	free_irq(bsi->host_wake_irq, NULL);
 	gpio_free(bsi->host_wake);
 	gpio_free(bsi->ext_wake);
