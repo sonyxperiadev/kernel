@@ -1,0 +1,71 @@
+/* Copyright (c) 2013, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+/dts-v1/;
+#include "msm8226-v2.dtsi"
+#include "msm8226-memory.dtsi"
+#include "msm8226-qseecom.dtsi"
+#include "msm8226-sharedmem.dtsi"
+#include "msm8226-yukon_eagle-720p-mtp.dtsi"
+#include "msm8226-yukon_eagle-camera-sensor-mtp.dtsi"
+
+/ {
+	model = "Qualcomm MSM 8226v2 MTP";
+	compatible = "qcom,msm8226-mtp", "qcom,msm8226", "qcom,mtp", "somc,eagle_dsds";
+	qcom,board-id = <8 0>;
+
+	memory {
+		alt_peripheral_mem: peripheral_region@8000000 {
+			linux,reserve-contiguous-region;
+			linux,reserve-region;
+			linux,remove-completely;
+			reg = <0x08000000 0x5c00000>;
+			label = "peripheral_mem";
+		};
+	};
+
+};
+
+&modem_mem {
+	status = "disabled";
+};
+
+&peripheral_mem {
+	status = "disabled";
+};
+
+&qsecom_mem {
+	linux,memory-limit = <0x0>;
+};
+
+&clock_gcc {
+	compatible = "qcom,gcc-8226-v2";
+};
+
+&soc {
+	qcom,mdss_dsi@fd922800 {
+		/delete-property/ qcom,platform-te-gpio;
+	};
+
+	qcom,spi@f9923000 {
+		status = "disabled";
+	};
+
+	qcom,pronto@fb21b000 {
+		linux,contiguous-region = <&alt_peripheral_mem>;
+	};
+};
+
+&usb_otg {
+	/delete-property/ qcom,hsusb-otg-disable-reset;
+	qcom,ahb-async-bridge-bypass;
+};
