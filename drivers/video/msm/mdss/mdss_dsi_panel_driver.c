@@ -457,6 +457,10 @@ static int mdss_dsi_panel_reset_seq(struct mdss_panel_data *pdata, int enable)
 	{
 		if (enable) {
 			usleep_range(1000, 1000);
+			if (gpio_is_valid(ctrl_pdata->bklt_en_gpio)) {
+				gpio_set_value(ctrl_pdata->bklt_en_gpio, 1);
+				usleep_range(500, 1000);
+			}
 			if (gpio_is_valid(spec_pdata->disp_p5)) {
 				gpio_direction_output(spec_pdata->disp_p5, 1);
 				usleep_range(1000, 1000);
@@ -476,6 +480,8 @@ static int mdss_dsi_panel_reset_seq(struct mdss_panel_data *pdata, int enable)
 			gpio_direction_output(ctrl_pdata->rst_gpio, 1);
 			msleep(150);
 		} else {
+			gpio_set_value(ctrl_pdata->bklt_en_gpio, 0);
+			usleep_range(1000, 1000);
 			gpio_direction_output(ctrl_pdata->rst_gpio, 0);
 			usleep_range(1000, 1000);
 			gpio_direction_output(spec_pdata->disp_n5, 0);
