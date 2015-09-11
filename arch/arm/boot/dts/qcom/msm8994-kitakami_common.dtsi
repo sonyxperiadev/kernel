@@ -46,22 +46,19 @@
 		reg = <0xf995e000 0x1000>,
 		      <0xf9944000 0x19000>;
 		reg-names = "core_mem", "bam_mem";
-		interrupt-names = "core_irq", "bam_irq", "wakeup_irq";
+		interrupt-names = "core_irq", "bam_irq";
 		#address-cells = <0>;
 		interrupt-parent = <&blsp2_uart2>;
-		interrupts = <0 1 2>;
+		interrupts = <0 1>;
 		#interrupt-cells = <1>;
 		interrupt-map-mask = <0xffffffff>;
 		interrupt-map = <0 &intc 0 114 0
-				1 &intc 0 239 0
-				2 &msm_gpio 111 0>;
+				1 &intc 0 239 0>;
 		qcom,bam-tx-ep-pipe-index = <2>;
 		qcom,bam-rx-ep-pipe-index = <3>;
-		pinctrl-names = "default", "sleep", "wake_irq_default", "wake_irq_sleep";
+		pinctrl-names = "default", "sleep";
 		pinctrl-0 = <&msm_gpio_45_act &msm_gpio_46_act &msm_gpio_47_act &msm_gpio_48_act>;
 		pinctrl-1 = <&msm_gpio_45_sus &msm_gpio_46_sus &msm_gpio_47_sus &msm_gpio_48_sus>;
-		pinctrl-2 = <&msm_gpio_111_act>;
-		pinctrl-3 = <&msm_gpio_111_sus>;
 		qcom,msm-obs;
 		status = "ok";
 	};
@@ -73,6 +70,19 @@
 		pinctrl-names = "default", "sleep";
 		pinctrl-0 = <&msm_gpio_91_act &msm_gpio_110_act>;
 		pinctrl-1 = <&msm_gpio_91_sus &msm_gpio_110_sus>;
+	};
+
+	bluesleep {
+		compatible = "qcom,bluesleep";
+		bt_ext_wake = <&msm_gpio 110 0>;
+		bt_host_wake = <&msm_gpio 111 0>;
+		bt_reg_on = <&msm_gpio 91 0>;
+		interrupt-parent = <&msm_gpio>;
+		interrupts = <111 0>;
+		interrupt-names = "host_wake";
+		pinctrl-names = "default", "sleep";
+		pinctrl-0 = <&msm_gpio_91_act &msm_gpio_110_act &msm_gpio_111_act>;
+		pinctrl-1 = <&msm_gpio_91_sus &msm_gpio_110_sus &msm_gpio_111_sus>;
 	};
 
 	/* I2C : BLSP2 */
