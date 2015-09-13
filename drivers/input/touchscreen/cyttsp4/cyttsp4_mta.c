@@ -1,5 +1,5 @@
 /*
- * cyttsp4_mtb.c
+ * cyttsp4_mta.c
  * Cypress TrueTouch(TM) Standard Product V4 Multi-touch module.
  * For use with Cypress Txx4xx parts.
  * Supported parts include:
@@ -28,8 +28,6 @@
  */
 
 #include <linux/input.h>
-#include <linux/input/mt.h>
-#include <linux/version.h>
 #include <linux/cyttsp4_core.h>
 
 #include "cyttsp4_mt_common.h"
@@ -37,50 +35,44 @@
 static void cyttsp4_final_sync(struct input_dev *input, int max_slots,
 		int mt_sync_count, unsigned long *ids)
 {
-	int t;
+	if (mt_sync_count)
+		input_sync(input);
+}
 
-	for (t = 0; t < max_slots; t++) {
-		if (test_bit(t, ids))
-			continue;
-		input_mt_slot(input, t);
-		input_mt_report_slot_state(input, MT_TOOL_FINGER, false);
-	}
-
-	input_sync(input);
+static void cyttsp4_input_sync(struct input_dev *input)
+{
+	input_mt_sync(input);
 }
 
 static void cyttsp4_input_report(struct input_dev *input, int sig,
-		int t, int type)
+		 int t, int type)
 {
-	input_mt_slot(input, t);
+	if (type == CY_OBJ_STANDARD_FINGER || type == CY_OBJ_GLOVE) {
+		input_report_key(input, BTN_TOOL_FINGER, CY_BTN_PRESSED);
+		input_report_key(input, BTN_TOOL_PEN, CY_BTN_RELEASED);
+	} else if (type == CY_OBJ_STYLUS) {
+		input_report_key(input, BTN_TOOL_PEN, CY_BTN_PRESSED);
+		input_report_key(input, BTN_TOOL_FINGER, CY_BTN_RELEASED);
+	}
+	input_report_key(input, BTN_TOUCH, CY_BTN_PRESSED);
 
-	if (type == CY_OBJ_STANDARD_FINGER || type == CY_OBJ_GLOVE)
-		input_mt_report_slot_state(input, MT_TOOL_FINGER, true);
-	else if (type == CY_OBJ_STYLUS)
-		input_mt_report_slot_state(input, MT_TOOL_PEN, true);
+	input_report_abs(input, sig, t);
 }
 
 static void cyttsp4_report_slot_liftoff(struct cyttsp4_mt_data *md,
 		int max_slots)
 {
-	int t;
+	input_report_key(md->input, BTN_TOUCH, CY_BTN_RELEASED);
+	input_report_key(md->input, BTN_TOOL_FINGER, CY_BTN_RELEASED);
+	input_report_key(md->input, BTN_TOOL_PEN, CY_BTN_RELEASED);
 
-	if (md->num_prv_rec == 0)
-		return;
-
-	for (t = 0; t < max_slots; t++) {
-		input_mt_slot(md->input, t);
-		input_mt_report_slot_state(md->input,
-			MT_TOOL_FINGER, false);
-	}
 }
 
 static int cyttsp4_input_register_device(struct input_dev *input, int max_slots)
 {
-	input_set_abs_params(input, ABS_MT_TOOL_TYPE,
-			0, MT_TOOL_MAX, 0, 0);
-
-	input_mt_init_slots(input, max_slots, 0);
+	__set_bit(BTN_TOUCH, input->keybit);
+	__set_bit(BTN_TOOL_FINGER, input->keybit);
+	__set_bit(BTN_TOOL_PEN, input->keybit);
 	return input_register_device(input);
 }
 
@@ -88,7 +80,7 @@ void cyttsp4_init_function_ptrs(struct cyttsp4_mt_data *md)
 {
 	md->mt_function.report_slot_liftoff = cyttsp4_report_slot_liftoff;
 	md->mt_function.final_sync = cyttsp4_final_sync;
-	md->mt_function.input_sync = NULL;
+	md->mt_function.input_sync = cyttsp4_input_sync;
 	md->mt_function.input_report = cyttsp4_input_report;
 	md->mt_function.input_register_device = cyttsp4_input_register_device;
 }

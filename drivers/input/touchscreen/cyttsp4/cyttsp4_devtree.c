@@ -39,6 +39,9 @@
 #include <linux/cyttsp4_proximity.h>
 #include <linux/cyttsp4_platform.h>
 
+#include <linux/pinctrl/consumer.h>
+#include <linux/of_gpio.h>
+
 #include "cyttsp4_regs.h"
 #include "cyttsp4_devtree.h"
 
@@ -97,7 +100,7 @@ static u16 *create_and_get_u16_array(struct device_node *dev_node,
 		return NULL;
 
 	sz = len / sizeof(u32);
-//	pr_debug("%s: %s size:%d\n", __func__, name, sz);
+	pr_debug("%s: %s size:%d\n", __func__, name, sz);
 
 	val_array = kzalloc(sz * sizeof(u16), GFP_KERNEL);
 	if (val_array == NULL) {
@@ -506,7 +509,7 @@ static struct touch_settings *create_and_get_touch_setting(
 	if (IS_ERR_OR_NULL(data))
 		return (void *)data;
 
-//	pr_debug("%s: Touch setting:'%s' size:%d\n", __func__, name, size);
+	pr_debug("%s: Touch setting:'%s' size:%d\n", __func__, name, size);
 
 	setting = kzalloc(sizeof(*setting), GFP_KERNEL);
 	if (setting == NULL) {
@@ -582,19 +585,8 @@ static struct cyttsp4_core_platform_data *create_and_get_core_pdata(
 		goto fail;
 	}
 
-	/* Required fields */
-	rc = of_property_read_u32(core_node, "cy,irq_gpio", &value);
-	if (rc)
-		goto fail_free;
-	pdata->irq_gpio = value;
-
-	/* Optional fields */
-	/* rst_gpio is optional since a platform may use
-	 * power cycling instead of using the XRES pin
-	 */
-	rc = of_property_read_u32(core_node, "cy,rst_gpio", &value);
-	if (!rc)
-		pdata->rst_gpio = value;
+	pdata->irq_gpio = of_get_named_gpio(core_node, "gpios", 1);
+	pdata->rst_gpio = of_get_named_gpio(core_node, "gpios", 0);
 
 	rc = of_property_read_u32(core_node, "cy,level_irq_udelay", &value);
 	if (!rc)
@@ -621,19 +613,16 @@ static struct cyttsp4_core_platform_data *create_and_get_core_pdata(
 		if (IS_ERR(pdata->sett[i])) {
 			rc = PTR_ERR(pdata->sett[i]);
 			goto fail_free_sett;
-		}
-#if 0
-		else if (pdata->sett[i] == NULL)
+		} else if (pdata->sett[i] == NULL)
 			pr_debug("%s: No data for setting '%s'\n", __func__,
 				touch_setting_names[i]);
-#endif
 	}
-#if 0
+
 	pr_debug("%s: irq_gpio:%d rst_gpio:%d level_irq_udelay:%d\n"
 		"max_xfer_len:%d flags:%d easy_wakeup_gesture:%d\n", __func__,
 		pdata->irq_gpio, pdata->rst_gpio, pdata->level_irq_udelay,
 		pdata->max_xfer_len, pdata->flags, pdata->easy_wakeup_gesture);
-#endif
+
 	pdata->xres = cyttsp4_xres;
 	pdata->init = cyttsp4_init;
 	pdata->power = cyttsp4_power;
@@ -642,18 +631,13 @@ static struct cyttsp4_core_platform_data *create_and_get_core_pdata(
 #endif
 	pdata->irq_stat = cyttsp4_irq_stat;
 
-#ifdef CONFIG_TOUCHSCREEN_CYPRESS_CYTTSP4_PLATFORM_YUKON
 	pdata->loader_pdata = &_cyttsp4_loader_platform_data;
-#else
-        pdata->loader_pdata = &_cyttsp4_loader_platform_data_vy58;
-#endif
 
 	return pdata;
 
 fail_free_sett:
 	for (i--; i >= 0; i--)
 		free_touch_setting(pdata->sett[i]);
-fail_free:
 	kfree(pdata);
 fail:
 	return ERR_PTR(rc);
@@ -711,6 +695,36 @@ fail:
 	return rc;
 }
 
+static bool	pinctrl_init( struct device *dev )
+{
+	struct pinctrl		*ts_pinctrl;
+	struct pinctrl_state	*gpio_state_active /*, *gpio_state_suspend */;
+	int			ret;
+
+	/* Get pinctrl if target uses pinctrl */
+	ts_pinctrl	= devm_pinctrl_get( dev );
+
+	if (IS_ERR_OR_NULL(ts_pinctrl)) {
+		printk( "%s: Target does not use pinctrl\n",__func__ );
+		return	false;
+	}
+
+	gpio_state_active	= pinctrl_lookup_state( ts_pinctrl, "pmx_ts_active" );
+
+	if(IS_ERR_OR_NULL( gpio_state_active)) {
+		printk( "&s: Can not get ts default pinstate\n",__func__ );
+		return	false;
+	}
+
+	ret	= pinctrl_select_state( ts_pinctrl, gpio_state_active );
+
+	if (ret){
+		printk( "%s: can not set pins\n",__func__ );
+		return	false;
+	}
+	return	true;
+}
+
 int cyttsp4_devtree_register_devices(struct device *adap_dev)
 {
 	struct device_node *core_node, *dev_node;
@@ -720,6 +734,11 @@ int cyttsp4_devtree_register_devices(struct device *adap_dev)
 
 	if (!adap_dev->of_node)
 		return 0;
+
+	if( !pinctrl_init( adap_dev ) )
+		printk( "&s: pinctrl_init() failed!!!\n",__func__ );
+	else
+		printk( "%s: set Pin-Control done\n",__func__ );
 
 	rc = of_property_read_string(adap_dev->of_node, "cy,adapter_id",
 			&adap_id);

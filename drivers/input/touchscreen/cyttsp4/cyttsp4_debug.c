@@ -87,9 +87,6 @@ static void cyttsp4_pr_buf_op_mode(struct device *dev, u8 *pr_buf,
 	int total_size = si->si_ofs.mode_size
 			+ (cur_touch * si->si_ofs.tch_rec_size);
 	u8 num_btns = si->si_ofs.num_btns;
-	/**/
-	struct cyttsp4_debug_data *dd = dev_get_drvdata(dev);
-	/**/
 
 	pr_buf[0] = 0;
 	for (i = k = 0; i < si->si_ofs.mode_size && i < max; i++, k += 3)
@@ -109,12 +106,8 @@ static void cyttsp4_pr_buf_op_mode(struct device *dev, u8 *pr_buf,
 					si->btn_rec_data[i]);
 		total_size += num_btns * si->si_ofs.btn_rec_size + 1;
 	}
-
-/**/
-	if(dd->ttsp->core->dbg_msg_level & 0x2)
-		pr_info("%s=%s%s\n", "cyttsp4_OpModeData", pr_buf,
-				total_size <= max ? "" : CY_PR_TRUNCATED);
-/**/
+	// pr_info("%s=%s%s\n", "cyttsp4_OpModeData", pr_buf,
+	//		total_size <= max ? "" : CY_PR_TRUNCATED);
 }
 
 static void cyttsp4_debug_print(struct device *dev, u8 *pr_buf, u8 *sptr,
@@ -124,9 +117,6 @@ static void cyttsp4_debug_print(struct device *dev, u8 *pr_buf, u8 *sptr,
 	int elem_size = sizeof("XX ") - 1;
 	int max = (CY_MAX_PRBUF_SIZE - 1) / elem_size;
 	int limit = size < max ? size : max;
-	/**/
-	struct cyttsp4_debug_data *dd = dev_get_drvdata(dev);
-	/**/
 
 	if (limit < 0)
 		limit = 0;
@@ -135,11 +125,8 @@ static void cyttsp4_debug_print(struct device *dev, u8 *pr_buf, u8 *sptr,
 	for (i = j = 0; i < limit; i++, j += elem_size)
 		scnprintf(pr_buf + j, CY_MAX_PRBUF_SIZE - j, "%02X ", sptr[i]);
 
-/**/
-	if(dd->ttsp->core->dbg_msg_level & 0x2)
-		pr_info("%s[0..%d]=%s%s\n", data_name, size ? size - 1 : 0, pr_buf,
-				size <= max ? "" : CY_PR_TRUNCATED);
-/**/
+	pr_info("%s[0..%d]=%s%s\n", data_name, size ? size - 1 : 0, pr_buf,
+			size <= max ? "" : CY_PR_TRUNCATED);
 }
 
 static void cyttsp4_debug_formated(struct device *dev, u8 *pr_buf,
@@ -155,19 +142,13 @@ static void cyttsp4_debug_formated(struct device *dev, u8 *pr_buf,
 	u8 data_name[] = "touch[99]";
 	int max_print_length = 18;
 	int i;
-	/**/
-	struct cyttsp4_debug_data *dd = dev_get_drvdata(dev);
-	/**/
 
 	/* xy_mode */
 	cyttsp4_debug_print(dev, pr_buf, si->xy_mode, mode_size, "xy_mode");
 
 	/* xy_data */
 	if (rep_len > max_print_length) {
-		/**/
-		if(dd->ttsp->core->dbg_msg_level & 0x2)
-			pr_info("xy_data[0..%d]:\n", rep_len);
-		/**/
+		pr_info("xy_data[0..%d]:\n", rep_len);
 		for (i = 0; i < rep_len - max_print_length;
 				i += max_print_length) {
 			cyttsp4_debug_print(dev, pr_buf, si->xy_data + i,
@@ -246,10 +227,7 @@ static int cyttsp4_xy_worker(struct cyttsp4_debug_data *dd)
 	}
 
 	/* Interrupt */
-	/**/
-	if(dd->ttsp->core->dbg_msg_level & 0x2)
-		pr_info("Interrupt(%u)\n", dd->interrupt_count);
-	/**/
+	// pr_info("Interrupt(%u)\n", dd->interrupt_count);
 
 	if (formated_output)
 		cyttsp4_debug_formated(dev, dd->pr_buf, si, num_cur_rec);
@@ -271,10 +249,8 @@ static int cyttsp4_xy_worker(struct cyttsp4_debug_data *dd)
 		cyttsp4_debug_print(dev, dd->pr_buf, dd->monitor.sensor_data,
 				150, "cyttsp4_sensor_monitor");
 	}
-	/**/
-	if(dd->ttsp->core->dbg_msg_level & 0x2)
-		pr_info("\n");
-	/**/
+
+	// pr_info("\n");
 
 	dev_vdbg(dev, "%s: done\n", __func__);
 
@@ -407,7 +383,7 @@ static int cyttsp4_debug_probe(struct cyttsp4_device *ttsp)
 	int rc;
 
 	dev_info(dev, "%s: startup\n", __func__);
-//	dev_dbg(dev, "%s: debug on\n", __func__);
+	dev_dbg(dev, "%s: debug on\n", __func__);
 	dev_vdbg(dev, "%s: verbose debug on\n", __func__);
 
 	/* get context and debug print buffers */

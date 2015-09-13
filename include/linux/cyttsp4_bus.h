@@ -39,6 +39,7 @@
 #include <linux/types.h>
 #include <linux/limits.h>
 
+
 extern struct bus_type cyttsp4_bus_type;
 
 struct cyttsp4_driver;
@@ -87,16 +88,6 @@ struct cyttsp4_core {
 	char const *adap_id;
 	struct device dev;
 	struct cyttsp4_adapter *adap;
-	/**/
-	int enable_touch;
-	/**/
-	/**/
-	int dbg_msg_level;
-	/**/
-	int cci_hwid;
-	int enable_vreg_l27;
-	u8 panel_info;
-	u8 sillicon_id;
 };
 #define to_cyttsp4_core(d) container_of(d, struct cyttsp4_core, dev)
 
@@ -112,6 +103,8 @@ struct cyttsp4_device {
 	char const *core_id;
 	struct device dev;
 	struct cyttsp4_core *core;
+	int	upgrade_step;
+	bool	upgrade_now;
 };
 #define to_cyttsp4_device(d) container_of(d, struct cyttsp4_device, dev)
 
