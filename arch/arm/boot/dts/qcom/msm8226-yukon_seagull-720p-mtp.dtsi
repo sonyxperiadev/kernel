@@ -37,12 +37,6 @@
                };
        };
 
-	fih_hwid {
-		compatible = "fih,hwid";
-		qcom,hwid-vadc = <&pm8226_vadc>;
-	};
-
-
 	/delete-node/ spi@f9923000;
 
 
@@ -149,6 +143,8 @@
 			cy,core {
 				cy,name = "cyttsp4_core";
 				cy,id = "main_ttsp_core";
+
+				gpios = <&msmgpio 16 0>, <&msmgpio 17 0>;
 
 				cy,irq_gpio = <17>;
 				cy,rst_gpio = <16>;
@@ -332,7 +328,7 @@
 				linux,name = "led:flash_1";
 				qcom,current = <625>;
 			};
-	};
+		};
 
 		qcom,leds@d800 {
 			status = "disabled";

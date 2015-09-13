@@ -25,17 +25,14 @@
 			pinctrl-names = "pmx_ts_active","pmx_ts_suspend";
 			pinctrl-0 = <&ts_int_active &ts_reset_active>;
 			pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
-			vdda-supply = <&pm8916_l17>;
-			vddio_EVM-supply = <&pm8916_l6>;
-			vddio_PD1-supply = <&pm8916_l16>;
-			vddio_DEFAULT-supply = <&pm8916_l6>;
-			qcom,module_adc-vadc = <&pm8916_vadc>;
+			vdd-supply = <&pm8916_l17>;
+			vcc_i2c-supply = <&pm8916_l6>;
 
 			cy,core {
 				cy,name = "cyttsp4_core";
 				cy,id = "main_ttsp_core";
 
-				gpios = <&msm_gpio 12 0>, <&msm_gpio 13 0>, <&msm_gpio 52 0>, <&msm_gpio 60 0>;
+				gpios = <&msm_gpio 12 0>, <&msm_gpio 13 0>;
 
 				cy,irq_gpio = <13>;
 				cy,rst_gpio = <12>;
@@ -295,7 +292,7 @@
 			reg = <0x60>;
 			interrupt-parent = <&msm_gpio>;
 			interrupts = <113 0x2>;
-			pinctrl-names = "pls_active","pls_suspend";				
+			pinctrl-names = "pls_active","pls_suspend";
 			pinctrl-0 = <&cm_int_active>;
 			pinctrl-1 = <&cm_int_suspend>;
 			intr = <&msm_gpio 113 0>;
@@ -309,15 +306,15 @@
 			vcc_i2c-supply = <&pm8916_l6>;
 			cm36286,vdd_power = < 2850000 2850000 15000 >;
 			cm36286,i2c_power = < 1800000 1800000 15000 >;
-			
+
 			/* CM36686_ALS_IT_160ms | CM36686_ALS_PERS_4 */
 			/* 0x40 | 0x8  */
 			cm36286,ls_cmd = <0x48>;
-			
+
 			/* CM36686_PS_IT_1T | CM36686_PS_DR_1_40 | CM36686_PS_PERS_2 */
 			/* 0 | 0 | 0x10 */
 			cm36286,ps_conf1_val = <0x10>;
-			
+
 			/* CM36686_PS_MS_NORMAL | CM36686_LED_I_75 */
 			/* 0 | 0x100 */
 			cm36286,ps_conf3_val = <0x100>;
@@ -354,6 +351,8 @@
 	sound {
 		qcom,msm-mclk-freq = <9600000>;
 		qcom,msm-mbhc-hphl-swh = <1>;
+		/delete-property/ cdc_lines_quat_ext_act;
+		/delete-property/ cdc_lines_quat_ext_sus;
 
 		qcom,cdc-vdd-spkr-pd-gpios = <&msm_gpio 116 0>;
 		qcom,cdc-vdd-rcv-pd-gpios = <&msm_gpio 49 0>;
@@ -562,7 +561,7 @@
 			bias-disable;
 		};
 	};
-		
+
 	tlmm_lp5562 { /* LED IC lp5562 */
 		qcom,pins = <&gp 32>;
 		qcom,pin-func = <0>;
