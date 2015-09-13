@@ -42,13 +42,6 @@ static struct cyttsp4_touch_firmware cyttsp4_firmware = {
 	.ver = cyttsp4_ver,
 	.vsize = ARRAY_SIZE(cyttsp4_ver),
 };
-
-static struct cyttsp4_touch_firmware cyttsp4_firmware_vy58 = {
-	.img = cyttsp4_img_vy58,
-	.size = ARRAY_SIZE(cyttsp4_img_vy58),
-	.ver = cyttsp4_ver_vy58,
-	.vsize = ARRAY_SIZE(cyttsp4_ver_vy58),
-};
 #else
 static struct cyttsp4_touch_firmware cyttsp4_firmware = {
 	.img = NULL,
@@ -58,20 +51,11 @@ static struct cyttsp4_touch_firmware cyttsp4_firmware = {
 };
 #endif
 
-/* [Optical][Touch] Implement FW upgrade, 20130808, Del Start */
-//#ifdef CONFIG_TOUCHSCREEN_CYPRESS_CYTTSP4_PLATFORM_TTCONFIG_UPGRADE
-/* [Optical][Touch] Implement FW upgrade, 20130808, Del End */
-#ifndef CONFIG_TOUCHSCREEN_CYPRESS_CYTTSP4_PLATFORM_YUKON
+#ifdef CONFIG_TOUCHSCREEN_CYPRESS_CYTTSP4_PLATFORM_TTCONFIG_UPGRADE
 #include "cyttsp4_params.h"
 static struct touch_settings cyttsp4_sett_param_regs = {
 	.data = (uint8_t *)&cyttsp4_param_regs[0],
 	.size = ARRAY_SIZE(cyttsp4_param_regs),
-	.tag = 0,
-};
-
-static struct touch_settings cyttsp4_sett_param_regs_vy58 = {
-	.data = (uint8_t *)&cyttsp4_param_regs_vy58[0],
-	.size = ARRAY_SIZE(cyttsp4_param_regs_vy58),
 	.tag = 0,
 };
 
@@ -81,30 +65,11 @@ static struct touch_settings cyttsp4_sett_param_size = {
 	.tag = 0,
 };
 
-static struct touch_settings cyttsp4_sett_param_size_vy58 = {
-	.data = (uint8_t *)&cyttsp4_param_size_vy58[0],
-	.size = ARRAY_SIZE(cyttsp4_param_size_vy58),
-	.tag = 0,
-};
-
 static struct cyttsp4_touch_config cyttsp4_ttconfig = {
 	.param_regs = &cyttsp4_sett_param_regs,
 	.param_size = &cyttsp4_sett_param_size,
 	.fw_ver = ttconfig_fw_ver,
 	.fw_vsize = ARRAY_SIZE(ttconfig_fw_ver),
-};
-
-static struct cyttsp4_touch_config cyttsp4_ttconfig_vy58 = {
-	.param_regs = &cyttsp4_sett_param_regs_vy58,
-	.param_size = &cyttsp4_sett_param_size_vy58,
-	.fw_ver = ttconfig_fw_ver_vy58,
-	.fw_vsize = ARRAY_SIZE(ttconfig_fw_ver_vy58),
-};
-
-struct cyttsp4_loader_platform_data _cyttsp4_loader_platform_data_vy58 = {
-	.fw = &cyttsp4_firmware_vy58,
-	.ttconfig = &cyttsp4_ttconfig_vy58,
-	.flags = CY_LOADER_FLAG_NONE,
 };
 #else
 static struct cyttsp4_touch_config cyttsp4_ttconfig = {
@@ -147,10 +112,11 @@ int cyttsp4_init(struct cyttsp4_core_platform_data *pdata,
 	int rc = 0;
 
 	if (on) {
-		rc = gpio_request(rst_gpio, "cyttsp_rst_gpio");
+
+		rc = gpio_request(rst_gpio, NULL);
 		if (rc < 0) {
 			gpio_free(rst_gpio);
-			rc = gpio_request(rst_gpio, "cyttsp_rst_gpio");
+			rc = gpio_request(rst_gpio, NULL);
 		}
 		if (rc < 0) {
 			dev_err(dev,
@@ -163,7 +129,7 @@ int cyttsp4_init(struct cyttsp4_core_platform_data *pdata,
 					__func__, rst_gpio);
 				gpio_free(rst_gpio);
 			} else {
-				rc = gpio_request(irq_gpio, "cyttsp_irq_gpio");
+				rc = gpio_request(irq_gpio, NULL);
 				if (rc < 0) {
 					gpio_free(irq_gpio);
 					rc = gpio_request(irq_gpio,

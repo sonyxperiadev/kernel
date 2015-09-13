@@ -58,10 +58,6 @@ struct cyttsp4_i2c {
 	struct mutex lock;
 };
 
-/* [OPT] change circuit design after DVT2 phase, 20131008, Add Start */
-struct regulator *vreg_l27;
-/* [OPT] change circuit design after DVT2 phase, 20131008, Add End */
-
 static int cyttsp4_i2c_read_block_data(struct cyttsp4_i2c *ts_i2c, u16 addr,
 		int length, void *values, int max_xfer)
 {
@@ -187,16 +183,15 @@ static int cyttsp4_i2c_probe(struct i2c_client *client,
 	struct device *dev = &client->dev;
 	const struct of_device_id *match;
 	char const *adap_id;
-	int rc;
-	/* [Optical][Touch] Touch driver bring up, 20130717, add start */
 	struct regulator *vdd;
 	struct regulator *vcc;
+	struct regulator *vreg_l27;
+	int rc;
 	int retval;
-	/* [Optical][Touch] Touch driver bring up, 20130717, add end */
 
 	dev_info(dev, "%s: Starting %s probe...\n", __func__, CYTTSP4_I2C_NAME);
 
-//	dev_dbg(dev, "%s: debug on\n", __func__);
+	dev_dbg(dev, "%s: debug on\n", __func__);
 	dev_vdbg(dev, "%s: verbose debug on\n", __func__);
 
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
@@ -232,56 +227,54 @@ static int cyttsp4_i2c_probe(struct i2c_client *client,
 	i2c_set_clientdata(client, ts_i2c);
 	dev_set_drvdata(&client->dev, ts_i2c);
 
-//	dev_dbg(dev, "%s: add adap='%s' (CYTTSP4_I2C_NAME=%s)\n", __func__,
-//		ts_i2c->id, CYTTSP4_I2C_NAME);
+	dev_dbg(dev, "%s: add adap='%s' (CYTTSP4_I2C_NAME=%s)\n", __func__,
+		ts_i2c->id, CYTTSP4_I2C_NAME);
 
-	/* [Optical][Touch] Touch driver bring up, 20130717, Add Start */
 	vdd = regulator_get(&client->dev, "vdd");
 	if (IS_ERR(vdd)) {
 		printk("%s: Failed to get vdd regulator\n", __func__);
-	}
-	retval = regulator_set_voltage(vdd, 2850000, 2850000);
-	if(retval)
-		printk("%s: regulator_set_voltage vdd falied!\n", __func__);
-	else{
-		retval = regulator_enable(vdd);
-		if(retval)
-			printk("%s: regulator_enable vdd falied!\n", __func__);
+	} else {
+		retval = regulator_set_voltage(vdd, 2800000, 2850000);
+		if(retval) {
+			printk("%s: regulator_set_voltage vdd falied!\n", __func__);
+		} else {
+			retval = regulator_set_optimum_mode(vdd, 15000);
+			if (retval < 0) {
+				printk("%s: regulator_set_optimum_mode vdd falied!\n", __func__);
+			} else {
+				retval = regulator_enable(vdd);
+				if(retval)
+					printk("%s: regulator_enable vdd falied!\n", __func__);
+			}
+		}
 	}
 
-	retval = 0;
 	vcc = regulator_get(&client->dev, "vcc_i2c");
 	if (IS_ERR(vcc)) {
 		printk("%s: Failed to get vcc regulator\n", __func__);
+	} else {
+		retval = regulator_enable(vcc);
+		if(retval)
+		printk("%s: regulator_enable vcc falied!\n", __func__);
 	}
 
-	retval = regulator_enable(vcc);
-	if(retval)
-		printk("%s: regulator_enable vcc falied!\n", __func__);
-
 	vreg_l27 = regulator_get(&client->dev, "vdd_l27");
-	if (IS_ERR(vreg_l27))
-	{
-		printk("[TP] regulator_get(8226_l27) vreg_l27 fail.\n");
+	if (IS_ERR(vreg_l27)) {
+		printk("%s: Failed to get vreg_127 regulator\n", __func__);
 	} else {
-		retval = regulator_set_voltage(vreg_l27,  2100000, 2100000);
-		if (retval) {
-			printk("[TP] regulator set_voltage failed rc=%d\n", retval);
+		retval = regulator_set_voltage(vreg_l27,  2050000, 2100000);
+		if(retval) {
+			printk("%s: regulator_set_voltage vreg_l27 falied!\n", __func__);
+		} else {
+			retval = regulator_set_optimum_mode(vreg_l27, 15000);
+			if (retval < 0) {
+				printk("%s: regulator_set_optimum_mode vreg_l27 falied!\n", __func__);
+			} else {
+				retval = regulator_enable(vreg_l27);
+				if(retval)
+					printk("%s: regulator_enable vreg_l27 falied!\n", __func__);
+			}
 		}
-
-		retval = regulator_set_optimum_mode(vreg_l27, 15000);
-		if (retval < 0) {
-			printk("[TP] regulator 8226_l27 set_optimum_mode failed rc=%d\n", retval);
-			regulator_put(vreg_l27);
-		}
-
-		retval = regulator_enable(vreg_l27);
-		if (retval)
-		{
-			printk("[TP] regulator_enable(8226_l27) vreg_l27 fail.\n");
-			regulator_put(vreg_l27);
-		}
-		/* [Optical][Touch] Touch driver bring up, 20130717, Add End */
 	}
 
 	pm_runtime_enable(&client->dev);
