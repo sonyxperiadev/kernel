@@ -90,14 +90,6 @@ static void cyttsp4_initialize_core(struct cyttsp4_core *core,
 	core->id = core_info->id;
 	core->adap_id = core_info->adap_id;
 	core->dev.platform_data = core_info->platform_data;
-	/**/
-	core->enable_touch = 1;
-	/**/
-	/**/
-	core->dbg_msg_level = 0;
-	/**/
-	core->cci_hwid = 0;
-	core->enable_vreg_l27 = 0;
 }
 
 static void _cyttsp4_reinitialize_core(struct cyttsp4_core *core)
@@ -128,12 +120,10 @@ static int _cyttsp4_register_dev(struct cyttsp4_device *pdev,
 	dev_set_name(&pdev->dev, "%s.%s", pdev->name,  core->id);
 
 	ret = device_register(&pdev->dev);
-#if 0
 	dev_dbg(&pdev->dev,
 		"%s: Registering device '%s'. Parent at '%s', err = %d\n",
 		 __func__, dev_name(&pdev->dev),
 		 dev_name(pdev->dev.parent), ret);
-#endif
 	if (ret) {
 		dev_err(&pdev->dev, "%s: failed to register device, err %d\n",
 			__func__, ret);
@@ -175,12 +165,10 @@ static int _cyttsp4_register_core(struct cyttsp4_core *pdev,
 	dev_set_name(&pdev->dev, "%s.%s", pdev->id,  adap->id);
 
 	ret = device_register(&pdev->dev);
-#if 0
 	dev_dbg(&pdev->dev,
 		"%s: Registering device '%s'. Parent at '%s', err = %d\n",
 		 __func__, dev_name(&pdev->dev),
 		 dev_name(pdev->dev.parent), ret);
-#endif
 	if (ret) {
 		dev_err(&pdev->dev, "%s: failed to register device, err %d\n",
 			__func__, ret);
@@ -356,7 +344,7 @@ int cyttsp4_register_device(struct cyttsp4_device_info const *dev_info)
 	}
 	cyttsp4_initialize_device(dev, dev_info);
 	list_add(&dev->node, &cyttsp4_dev_list);
-//	pr_debug("%s: '%s' added to cyttsp4_dev_list\n", __func__, dev->name);
+	pr_debug("%s: '%s' added to cyttsp4_dev_list\n", __func__, dev->name);
 	core = find_core_with_driver(dev->core_id);
 	if (core)
 		ret = _cyttsp4_register_dev(dev, core);
@@ -475,7 +463,7 @@ int cyttsp4_add_adapter(char const *id, struct cyttsp4_ops const *ops,
 	a->write = ops->write;
 	a->dev = parent;
 	list_add(&a->node, &adapter_list);
-//	dev_dbg(parent, "%s: '%s' added to adapter_list\n", __func__, id);
+	dev_dbg(parent, "%s: '%s' added to adapter_list\n", __func__, id);
 	rescan_cores(a);
 fail:
 	mutex_unlock(&core_lock);
@@ -546,8 +534,8 @@ static int cyttsp4_device_match(struct device *dev, struct device_driver *drv)
 	}
 	match = 0;
 exit:
-//	dev_dbg(dev, "%s: %s matching '%s' driver\n", __func__,
-//			match ? "is" : "isn't", drv->name);
+	dev_dbg(dev, "%s: %s matching '%s' driver\n", __func__,
+			match ? "is" : "isn't", drv->name);
 	return match;
 }
 
@@ -719,7 +707,7 @@ int cyttsp4_register_driver(struct cyttsp4_driver *drv)
 	if (drv->remove)
 		drv->driver.remove = cyttsp4_drv_remove;
 	ret = driver_register(&drv->driver);
-//	pr_debug("%s: '%s' returned %d\n", __func__, drv->driver.name, ret);
+	pr_debug("%s: '%s' returned %d\n", __func__, drv->driver.name, ret);
 	return ret;
 }
 EXPORT_SYMBOL_GPL(cyttsp4_register_driver);
