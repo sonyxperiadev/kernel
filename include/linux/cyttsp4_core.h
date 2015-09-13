@@ -36,6 +36,7 @@
 #include <linux/stringify.h>
 
 #define CYTTSP4_CORE_NAME "cyttsp4_core"
+#define CYTTSP4_DETECT_HW
 
 #define CY_DRIVER_NAME TTDA
 #define CY_DRIVER_MAJOR 02
@@ -68,10 +69,6 @@ __stringify(CY_DRIVER_NAME)		    \
 #define CY_TOUCH_SETTINGS_MAX 32
 #define CY_TOUCH_SETTINGS_PARAM_REGS 6
 
-/* [OPY] for distinguish different Sillicon ID, 20131004, Add Start */
-#define IC_442	0
-#define IC_445	1
-/* [OPY] for distinguish different Sillicon ID, 20131004, Add End */
 enum cyttsp4_core_platform_flags {
 	CY_CORE_FLAG_NONE = 0x00,
 	CY_CORE_FLAG_WAKE_ON_GESTURE = 0x01,
@@ -148,10 +145,5 @@ extern void cyttsp4_pr_buf(struct device *dev, u8 *pr_buf, u8 *dptr, int size,
 #else
 #define cyttsp4_pr_buf(a, b, c, d, e) do { } while (0)
 #endif
-
-/**/
-int cyttsp4_core_early_suspend(void);
-int cyttsp4_core_lately_resume(void);
-/**/
 
 #endif /* _LINUX_CYTTSP4_CORE_H */

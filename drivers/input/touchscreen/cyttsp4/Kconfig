@@ -63,6 +63,29 @@ config TOUCHSCREEN_CYPRESS_CYTTSP4_I2C
           Say Y here to enable I2C bus interface to TTSP
           touchscreen controller.
 
+config TOUCHSCREEN_CYPRESS_CYTTSP4_SPI
+	tristate "Cypress TrueTouch Gen4 SPI"
+	depends on TOUCHSCREEN_CYPRESS_CYTTSP4
+	select SPI
+	default n
+	help
+	  Cypress TrueTouch(tm) Standard Product Generation4
+	  SPI bus interface.
+
+	  Say Y here to enable SPI bus interface to TTSP
+	  touchscreen controller.
+
+config TOUCHSCREEN_CYPRESS_CYTTSP4_MT_A
+	tristate "Cypress TrueTouch Gen4 MultiTouch Protocol A"
+	depends on TOUCHSCREEN_CYPRESS_CYTTSP4
+	default n
+	help
+	  Cypress TrueTouch(tm) Standard Product Generation4
+	  MutliTouch Protocol A support.
+
+	  Say Y here to enable MutiTouch touch reporting
+	  using protocol A.
+
 config TOUCHSCREEN_CYPRESS_CYTTSP4_MT_B
         tristate "Cypress TrueTouch Gen4 MultiTouch Protocol B"
         depends on TOUCHSCREEN_CYPRESS_CYTTSP4
@@ -74,10 +97,30 @@ config TOUCHSCREEN_CYPRESS_CYTTSP4_MT_B
           Say Y here to enable MutiTouch touch reporting
           using protocol B.
 
+config TOUCHSCREEN_CYPRESS_CYTTSP4_BUTTON
+        tristate "Cypress TrueTouch Gen4 MultiTouch CapSense Button"
+        depends on TOUCHSCREEN_CYPRESS_CYTTSP4
+        default n
+        help
+          Cypress TrueTouch(tm) Standard Product Generation4
+          CapSense driver.
+
+          Say Y here to enable CapSense reporting.
+
+config TOUCHSCREEN_CYPRESS_CYTTSP4_PROXIMITY
+        tristate "Cypress TrueTouch Gen4 Proximity"
+        depends on TOUCHSCREEN_CYPRESS_CYTTSP4
+        default n
+        help
+          Cypress TrueTouch(tm) Standard Product Generation4
+          Proximity driver.
+
+          Say Y here to enable proximity reporting.
+
 config TOUCHSCREEN_CYPRESS_CYTTSP4_DEVICE_ACCESS
         tristate "Cypress TrueTouch Gen4 MultiTouch Device Access"
         depends on TOUCHSCREEN_CYPRESS_CYTTSP4
-        default m
+        default n
         help
           Cypress TrueTouch(tm) Standard Product Generation4
           Device access module.
@@ -103,7 +146,7 @@ config TOUCHSCREEN_CYPRESS_CYTTSP4_TEST_DEVICE_ACCESS_API
 config TOUCHSCREEN_CYPRESS_CYTTSP4_LOADER
         tristate "Cypress TrueTouch Gen4 MultiTouch Loader"
         depends on TOUCHSCREEN_CYPRESS_CYTTSP4
-        default m
+        default n
         help
           Cypress TrueTouch(tm) Standard Product Generation4
           FW Loader module.
@@ -148,14 +191,6 @@ config TOUCHSCREEN_CYPRESS_CYTTSP4_MANUAL_TTCONFIG_UPGRADE
         help
           Provides a SysFs interface to upgrade TrueTouch
           Configuration with a binary configuration file.
-
-config TOUCHSCREEN_CYPRESS_CYTTSP4_PLATFORM_YUKON
-	bool "Yukon: Disable cyttsp4 in-kernel firmware"
-	depends on TOUCHSCREEN_CYPRESS_CYTTSP4_LOADER
-	default n
-	help
-	  Say Y to make sure we won't overwrite the
-	  ts firmware with something bad on Yukon.
 
 config TOUCHSCREEN_CYPRESS_CYTTSP4_DEBUG_MODULE
         tristate "Cypress TrueTouch Gen4 MultiTouch Debug Module"

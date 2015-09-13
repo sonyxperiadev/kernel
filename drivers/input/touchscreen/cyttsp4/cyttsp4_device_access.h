@@ -37,7 +37,7 @@
 #define CYTTSP4_TCH_PARAM_SIZE_BLK_SZ 128
 
 /* Timeout values in ms. */
-#define CY_DA_REQUEST_EXCLUSIVE_TIMEOUT	500
+#define CY_DA_REQUEST_EXCLUSIVE_TIMEOUT	5000
 
 struct cyttsp4_device_access_platform_data {
 	char const *device_access_dev_name;
@@ -62,6 +62,13 @@ enum cyttsp4_scan_data_type {
 	CY_BAL_RAW,
 	CY_BAL_BASE,
 	CY_BAL_DIFF,
+	CY_BUT_RAW,
+};
+
+enum cyttsp4_idac_type {
+	CY_MUT_SCAN,
+	CY_SELF_SCAN,
+	CY_BTN_SCAN,
 };
 
 #endif /* _LINUX_CYTTSP4_DEVICE_ACCESS_H */
