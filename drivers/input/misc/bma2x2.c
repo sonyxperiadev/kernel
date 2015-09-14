@@ -1375,6 +1375,8 @@ static const struct interrupt_map_t int_map[] = {
 #define POLL_INTERVAL_MAX_MS	10000
 #define POLL_DEFAULT_INTERVAL_MS 200
 
+static bool skip_pwr_ctl;
+
 struct bma2x2_type_map_t {
 
 	/*! bma2x2 sensor chip id */
@@ -6791,6 +6793,9 @@ static int bma2x2_power_ctl(struct bma2x2_data *data, bool on)
 	int ret = 0;
 	int err = 0;
 
+	if (skip_pwr_ctl)
+		return 0;
+
 	if (!on && data->power_enabled) {
 		ret = regulator_disable(data->vdd);
 		if (ret) {
@@ -6840,11 +6845,10 @@ static int bma2x2_power_init(struct bma2x2_data *data)
 	if (IS_ERR(data->vdd)) {
 		ret = PTR_ERR(data->vdd);
 		dev_err(&data->bma2x2_client->dev,
-			"Regulator get failed vdd ret=%d\n", ret);
-		return ret;
-	}
-
-	if (regulator_count_voltages(data->vdd) > 0) {
+			"%s: Regulator get failed vdd ret=%d\n",
+			__func__, ret);
+		skip_pwr_ctl = true;
+	} else if (regulator_count_voltages(data->vdd) > 0) {
 		ret = regulator_set_voltage(data->vdd,
 				BMA2x2_VDD_MIN_UV,
 				BMA2x2_VDD_MAX_UV);
@@ -6860,11 +6864,10 @@ static int bma2x2_power_init(struct bma2x2_data *data)
 	if (IS_ERR(data->vio)) {
 		ret = PTR_ERR(data->vio);
 		dev_err(&data->bma2x2_client->dev,
-			"Regulator get failed vio ret=%d\n", ret);
-		goto reg_vdd_set;
-	}
-
-	if (regulator_count_voltages(data->vio) > 0) {
+			"%s: Regulator get failed vio ret=%d\n",
+			__func__, ret);
+		skip_pwr_ctl = true;
+	} else if (regulator_count_voltages(data->vio) > 0) {
 		ret = regulator_set_voltage(data->vio,
 				BMA2x2_VIO_MIN_UV,
 				BMA2x2_VIO_MAX_UV);
@@ -6879,7 +6882,6 @@ static int bma2x2_power_init(struct bma2x2_data *data)
 
 reg_vio_put:
 	regulator_put(data->vio);
-reg_vdd_set:
 	if (regulator_count_voltages(data->vdd) > 0)
 		regulator_set_voltage(data->vdd, 0, BMA2x2_VDD_MAX_UV);
 reg_vdd_put:
