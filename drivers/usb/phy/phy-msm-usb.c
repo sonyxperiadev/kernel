@@ -2846,6 +2846,10 @@ static const char *chg_to_string(enum usb_chg_type chg_type)
 	}
 }
 
+#ifdef CONFIG_MACH_SONY_TULIP
+static int external_chg_type = 0;
+#endif
+
 #define MSM_CHG_DCD_TIMEOUT		(750 * HZ/1000) /* 750 msec */
 #define MSM_CHG_DCD_POLL_TIME		(50 * HZ/1000) /* 50 msec */
 #define MSM_CHG_PRIMARY_DET_TIME	(50 * HZ/1000) /* TVDPSRC_ON */
@@ -2998,7 +3002,18 @@ static void msm_chg_detect_work(struct work_struct *w)
 	}
 
 	queue_delayed_work(motg->otg_wq, &motg->chg_work, delay);
+
+#ifdef CONFIG_MACH_SONY_TULIP
+	external_chg_type = motg->chg_type;
+#endif
 }
+
+#ifdef CONFIG_MACH_SONY_TULIP
+int get_chg_type(void)
+{
+	return external_chg_type;
+}
+#endif
 
 #define VBUS_INIT_TIMEOUT	msecs_to_jiffies(5000)
 
