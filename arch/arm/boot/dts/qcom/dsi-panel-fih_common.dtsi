@@ -224,6 +224,17 @@
 		somc,panel-id-read-cmds;
 		somc,alt-panelid-cmd;
 		somc,dsi-restart-hack;
+		somc,mdss-dsi-pcc-table-size = <3>;
+		somc,mdss-dsi-pcc-table = <
+			0x12 0x00 0x00 0x09 0x00 0x09 0x6A3F 0x69B0 0x8000
+			0x13 0x00 0x00 0x13 0x0A 0x13 0x74A0 0x75C0 0x8000
+			0x13 0x00 0x0A 0x13 0x00 0x09 0x74F0 0x75F0 0x8000>;
+		somc,mdss-dsi-pcc-force-cal;
+		somc,mdss-dsi-use-picadj = <1>;
+		somc,mdss-dsi-picadj-sat = <6663>;
+		somc,mdss-dsi-picadj-hue = <0>;
+		somc,mdss-dsi-picadj-val = <0>;
+		somc,mdss-dsi-picadj-cont = <0>;
 	};
 
 	dsi_nt35521_720_vid_jdi61: qcom,mdss_dsi_nt35521_720p_video_jdi61 {
@@ -297,6 +308,17 @@
 		somc,panel-id-read-cmds;
 		somc,alt-panelid-cmd;
 		somc,dsi-restart-hack;
+		somc,mdss-dsi-pcc-table-size = <3>;
+		somc,mdss-dsi-pcc-table = <
+			0x12 0x00 0x00 0x09 0x00 0x09 0x6A3F 0x69B0 0x8000
+			0x13 0x00 0x00 0x13 0x0A 0x13 0x74A0 0x75C0 0x8000
+			0x13 0x00 0x0A 0x13 0x00 0x09 0x74F0 0x75F0 0x8000>;
+		somc,mdss-dsi-pcc-force-cal;
+		somc,mdss-dsi-use-picadj = <1>;
+		somc,mdss-dsi-picadj-sat = <6663>;
+		somc,mdss-dsi-picadj-hue = <0>;
+		somc,mdss-dsi-picadj-val = <0>;
+		somc,mdss-dsi-picadj-cont = <0>;
 	};
 
 	dsi_nt35521_720_vid_truly63: qcom,mdss_dsi_nt35521_720p_video_truly63 {
