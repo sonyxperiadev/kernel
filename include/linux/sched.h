@@ -1085,6 +1085,7 @@ struct ravg {
 	u32 sum_history[RAVG_HIST_SIZE_MAX];
 #ifdef CONFIG_SCHED_FREQ_INPUT
 	u32 curr_window, prev_window;
+	u16 active_windows;
 #endif
 };
 
@@ -1802,10 +1803,16 @@ extern void thread_group_cputime_adjusted(struct task_struct *p, cputime_t *ut, 
 
 extern int task_free_register(struct notifier_block *n);
 extern int task_free_unregister(struct notifier_block *n);
-#ifdef CONFIG_SCHED_FREQ_INPUT
+
+struct sched_load {
+	unsigned long prev_load;
+	unsigned long new_task_load;
+};
+
+#if defined(CONFIG_SCHED_FREQ_INPUT)
 extern int sched_set_window(u64 window_start, unsigned int window_size);
 extern unsigned long sched_get_busy(int cpu);
-extern void sched_get_cpus_busy(unsigned long *busy,
+extern void sched_get_cpus_busy(struct sched_load *busy,
 				const struct cpumask *query_cpus);
 extern void sched_set_io_is_busy(int val);
 #else
@@ -1817,8 +1824,8 @@ static inline unsigned long sched_get_busy(int cpu)
 {
 	return 0;
 }
-static inline void sched_get_cpus_busy(unsigned long *busy,
-				const struct cpumask *query_cpus) {};
+static inline void sched_get_cpus_busy(struct sched_load *busy,
+				       const struct cpumask *query_cpus) {};
 static inline void sched_set_io_is_busy(int val) {};
 #endif
 
