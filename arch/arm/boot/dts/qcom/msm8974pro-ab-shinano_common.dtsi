@@ -197,18 +197,6 @@
 		/delete-property/ linux,contiguous-region;
 	};
 
-	qcom,cci@fda0C000 {
-		qcom,cci-master0 {
-			qcom,hw-thigh = <22>;
-			qcom,hw-tlow = <33>;
-		};
-
-		qcom,cci-master1 {
-			qcom,hw-thigh = <22>;
-			qcom,hw-tlow = <33>;
-		};
-	};
-
 	nxp,tfa98xx-codec {
 		compatible = "nxp,tfa98xx-codec";
 	};
@@ -297,92 +285,6 @@
 		compatible = "qcom,msm-pcm-dsp";
 		qcom,msm-pcm-dsp-id = <3>;
 		qcom,msm-pcm-dsee;
-	};
-
-	qcom,cci@fda0C000 {
-		qcom,camera@20 {
-			compatible = "qcom,sony_camera_0";
-			reg = <0x20 0x0>;
-			status = "ok";
-			qcom,slave-id = <0x20 0x0 0x0000>;
-			qcom,csiphy-sd-index = <0>;
-			qcom,csid-sd-index = <0>;
-			qcom,mount-angle = <270>;
-			qcom,sensor-name = "sony_camera_0";
-			cam_vdig-supply = <&pm8941_l3>;
-			cam_vana-supply = <&pm8941_l17>;
-			cam_vio-supply = <&pm8941_lvs2>;
-			cam_vaf-supply = <&pm8941_l23>;
-			qcom,cam-vreg-name = "cam_vdig", "cam_vana", "cam_vio",
-					     "cam_vaf";
-			qcom,cam-vreg-type = <0 0 1 0>;
-			qcom,cam-vreg-min-voltage = <1200000 2700000 0 2800000>;
-			qcom,cam-vreg-max-voltage = <1200000 2700000 0 2800000>;
-			qcom,cam-vreg-op-mode = <105000 85600 0 300000>;
-			qcom,gpio-no-mux = <0>;
-			gpios = <&msmgpio 15 0>,
-				<&msmgpio 94 0>;
-			qcom,gpio-reset = <1>;
-			qcom,gpio-req-tbl-num = <0 1>;
-			qcom,gpio-req-tbl-flags = <1 0>;
-			qcom,gpio-req-tbl-label = "CAMIF_MCLK",
-						  "CAM_RESET1";
-			qcom,gpio-set-tbl-num = <1 1>;
-			qcom,gpio-set-tbl-flags = <0 2>;
-			qcom,gpio-set-tbl-delay = <1 1000>;
-			qcom,csi-lane-assign = <0x4320>;
-			qcom,csi-lane-mask = <0x1F>;
-			qcom,sensor-position = <0>;
-			qcom,sensor-mode = <1>;
-			qcom,cci-master = <0>;
-			sony,i2c_addr = <0x20>;
-			sony,eeprom_addr = <0xA0>;
-			sony,eeprom_type = <0>;
-			sony,eeprom_max_len = <2048>;
-			sony,gpio_af = <0>;
-			sony,subdev_code = <0x3007>;
-		};
-
-		qcom,camera@6c {
-			compatible = "qcom,sony_camera_1";
-			reg = <0x6c 0x0>;
-			status = "ok";
-			qcom,slave-id = <0x6c 0x0000 0x0000>;
-			qcom,csiphy-sd-index = <2>;
-			qcom,csid-sd-index = <2>;
-			qcom,mount-angle = <270>;
-			qcom,sensor-name = "sony_camera_1";
-			cam_vdig-supply = <&pm8941_l3>;
-			cam_vana-supply = <&pm8941_l17>;
-			cam_vio-supply = <&pm8941_lvs2>;
-			qcom,cam-vreg-name = "cam_vdig", "cam_vana", "cam_vio";
-			qcom,cam-vreg-type = <0 0 1>;
-			qcom,cam-vreg-min-voltage = <1200000 2700000 0>;
-			qcom,cam-vreg-max-voltage = <1200000 2700000 0>;
-			qcom,cam-vreg-op-mode = <105000 85600 0>;
-			qcom,gpio-no-mux = <0>;
-			gpios = <&msmgpio 17 0>,
-				<&msmgpio 18 0>;
-			qcom,gpio-reset = <1>;
-			qcom,gpio-req-tbl-num = <0 1>;
-			qcom,gpio-req-tbl-flags = <1 0>;
-			qcom,gpio-req-tbl-label = "CAMIF_MCLK",
-						  "CAM_RESET1";
-			qcom,gpio-set-tbl-num = <1 1>;
-			qcom,gpio-set-tbl-flags = <0 2>;
-			qcom,gpio-set-tbl-delay = <1 1000>;
-			qcom,csi-lane-assign = <0x4320>;
-			qcom,csi-lane-mask = <0x7>;
-			qcom,sensor-position = <1>;
-			qcom,sensor-mode = <1>;
-			qcom,cci-master = <1>;
-			sony,i2c_addr = <0x6c>;
-			sony,eeprom_addr = <0xA0>;
-			sony,eeprom_type = <0>;
-			sony,eeprom_max_len = <1024>;
-			sony,gpio_af = <0>;
-			sony,subdev_code = <0x3007>;
-		};
 	};
 
 	sdcc1: qcom,sdcc@f9824000 {
