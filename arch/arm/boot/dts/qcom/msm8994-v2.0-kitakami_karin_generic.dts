@@ -27,6 +27,7 @@
 #include "msm8994-kitakami_r1_common.dtsi"
 #include "msm8994-kitakami_karin_common.dtsi"
 #include "msm8994-kitakami_karin_generic.dtsi"
+#include "msm8994-kitakami_karin_camera.dtsi"
 #include "dsi-panel-karin.dtsi"
 
 / {
