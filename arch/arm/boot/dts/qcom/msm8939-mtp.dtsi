@@ -11,7 +11,7 @@
  */
 
 #include "msm8939-pinctrl.dtsi"
-#include "msm8939-camera-sensor-mtp.dtsi"
+/*#include "msm8939-camera-sensor-mtp.dtsi"*/
 
 &soc {
 	i2c@78b9000 { /* BLSP1 QUP5 */
