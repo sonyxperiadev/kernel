@@ -45,7 +45,7 @@
 		qcom,cam-vreg-max-voltage = <1200000 0 2700000>;
 		qcom,cam-vreg-op-mode = <105000 0 85600>;
 		qcom,gpio-no-mux = <0>;
-		gpios = <&msm_gpio 15 0>, <&msm_gpio 94 0>;
+		gpios = <&msmgpio 15 0>, <&msmgpio 94 0>;
 		qcom,gpio-reset = <1>;
 		qcom,gpio-req-tbl-num = <0 1>;
 		qcom,gpio-req-tbl-flags = <1 0>;
@@ -56,10 +56,10 @@
 		status = "ok";
 	};
 
-	qcom,camera@1 {
+	qcom,camera@2 {
 		cell-index = <1>;
 		compatible = "qcom,camera";
-		reg = <0x1>;
+		reg = <0x2>;
 		qcom,csiphy-sd-index = <2>;
 		qcom,csid-sd-index = <2>;
 		qcom,mount-angle = <0>;
@@ -71,7 +71,7 @@
 		qcom,cam-vreg-max-voltage = <1200000 0 2700000>;
 		qcom,cam-vreg-op-mode = <105000 0 85600>;
 		qcom,gpio-no-mux = <0>;
-		gpios = <&msm_gpio 15 0>, <&msm_gpio 104 0>;
+		gpios = <&msmgpio 17 0>, <&msmgpio 18 0>;
 		qcom,gpio-reset = <1>;
 		qcom,gpio-req-tbl-num = <0 1>;
 		qcom,gpio-req-tbl-flags = <1 0>;
