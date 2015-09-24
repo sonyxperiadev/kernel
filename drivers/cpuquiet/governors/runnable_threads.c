@@ -46,8 +46,6 @@ static unsigned int nr_run_hysteresis = 2;	     /* 1 / 2 thread */
 static unsigned int default_threshold_level = 4;	/* 1 / 4 thread */
 static unsigned int nr_run_thresholds[NR_CPUS];
 
-static DEFINE_MUTEX(runnables_lock);
-
 struct runnables_avg_sample {
 	u64 previous_integral;
 	unsigned int avg;
@@ -221,14 +219,10 @@ static void runnables_sysfs_exit(void)
 
 static void runnables_stop(void)
 {
-	mutex_lock(&runnables_lock);
-
 	runnables_enabled = false;
 	del_timer_sync(&runnables_timer);
 	cancel_work_sync(&runnables_work);
 	runnables_sysfs_exit();
-
-	mutex_unlock(&runnables_lock);
 }
 
 static int runnables_start(void)
