@@ -127,8 +127,6 @@ int cpuquiet_wake_quiesce_cpu(unsigned int cpunumber, bool sync, bool up)
 	ktime_t before, after;
 	u64 delta;
 
-	mutex_lock(&cpuquiet_lock);
-
 	/*
 	 * If sync is false, we will not be collecting hotplug overhead
 	 * and this value should be ignored.
@@ -137,8 +135,6 @@ int cpuquiet_wake_quiesce_cpu(unsigned int cpunumber, bool sync, bool up)
 	err = cpuquiet_cpu_up_down(cpunumber, sync, up);
 	after = ktime_get();
 	delta = (u64) ktime_to_us(ktime_sub(after, before));
-
-	mutex_unlock(&cpuquiet_lock);
 
 	if (!err)
 		cpuquiet_stats_update(cpunumber, up, delta);
