@@ -306,6 +306,33 @@ config MACH_SONY_KARIN_WINDY
 	  If you enable this config,
 	  please use SONY Mobile device tree.
 
+config MACH_SONY_SUMIRE
+    bool "Sony Mobile Sumire"
+    depends on ARCH_SONY_KITAKAMI
+    help
+      Support for the SONY Mobile Sumire device
+      which is based on SONY Kitakami R2 platform.
+      If you enable this config,
+      please use SONY Mobile device tree.
+
+config MACH_SONY_SUMIRE_DSDS
+    bool "Sony Mobile Sumire Dsds"
+    depends on ARCH_SONY_KITAKAMI
+    help
+      Support for the SONY Mobile Sumire Dsds device
+      which is based on SONY Kitakami R2 platform.
+      If you enable this config,
+      please use SONY Mobile device tree.
+
+config MACH_SONY_SUZURAN
+    bool "Sony Mobile Suzuran"
+    depends on ARCH_SONY_KITAKAMI
+    help
+      Support for the SONY Mobile Suzuran device
+      which is based on SONY Kitakami R2 platform.
+      If you enable this config,
+      please use SONY Mobile device tree.
+
 
 endmenu
 
