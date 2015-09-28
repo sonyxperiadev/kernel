@@ -892,6 +892,14 @@ config SENSORS_BMI058
 	 If you say yes here, you get support for Bosch Sensortec's
 	 sensor driver of BMI058.
 
+config FPC1145_TEE
+	tristate "FPC1145 fingerprint driver"
+	default n
+	depends on SPI
+	help
+	  Say Y here if you want to enable the FPC1145 tee fingerprint
+	  sensor driver.
+
 config SENSORS_MC3430
 	tristate "MC3430 acceleration sensor support"
 	depends on I2C
