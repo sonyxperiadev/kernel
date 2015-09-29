@@ -1,0 +1,196 @@
+/* arch/arm/boot/dts/qcom/msm8994-kitakami_sumire_dsds.dtsi
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+/*
+ * Copyright (C) 2015 Sony Mobile Communications Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2, as
+ * published by the Free Software Foundation.
+ */
+
+&soc {
+	/* I2C : BLSP2 */
+	i2c@f9924000 {
+		nfc@28 {
+			compatible = "nxp,pn547";
+			reg = <0x28>;
+			interrupt-parent = <&msm_gpio>;
+			interrupts = <29 0x1>;
+			nxp,irq_gpio = <&msm_gpio 29 0x00>;
+			nxp,dwld_en = <&msm_gpio 30 0x00>;
+			nxp,ven = <&pm8994_gpios 7 0x01>;
+			qcom,clk-src = "BBCLK2";
+			qcom,clk-gpio = <&pm8994_gpios 10 0x00>;
+			clocks = <&clock_rpm clk_bb_clk2_pin>;
+			clock-names = "nfc_clk";
+			pinctrl-names = "pn547-active", "pn547-inactive";
+			pinctrl-0 = <&msm_gpio_29_nfc_act &msm_gpio_30_act>;
+			pinctrl-1 = <&msm_gpio_29_nfc_sus &msm_gpio_30_sus>;
+		};
+	};
+
+	sim_detect {
+		compatible = "sim-detect";
+		interrupt-parent = <&msm_gpio>;
+		interrupts = <52 0>;
+
+		sim2_det {
+			label = "sim2-detection";
+			gpios = <&msm_gpio 52 0x0>;
+			debounce-interval = <10>;
+		};
+	};
+
+	tlmm_pinmux: pinctrl@fd510000 {
+		pmx_sdc2_clk {
+			sdc2_clk_on: clk_on {
+				drive-strength = <12>; /* 12 MA */
+			};
+		};
+
+		pmx_sdc2_cmd {
+			sdc2_cmd_on: cmd_on {
+				drive-strength = <6>; /* 6 MA */
+			};
+		};
+
+		pmx_sdc2_data {
+			sdc2_data_on: data_on {
+				drive-strength = <6>; /* 6 MA */
+			};
+		};
+	};
+};
+
+/{
+	kitakami_sumire_dsds_batterydata: qcom,battery-data {
+		#include "batterydata-kitakami-sumire-lg.dtsi"
+	};
+};
+
+&pmi8994_fg {
+	qcom,battery-data = <&kitakami_sumire_dsds_batterydata>;
+};
+
+&pmi8994_charger {
+	/delete-property/ somc,step-charge-en;
+	/delete-property/ somc,step-charge-threshold;
+	/delete-property/ somc,step-charge-current-ma;
+};
+
+&pm8994_gpios {
+	/* GPIO_8: SD_CARD_DET1_N */
+	gpio@c700 {
+		qcom,src-sel = <0>;		/* GPIO */
+		qcom,mode = <0>;		/* In */
+		qcom,vin-sel = <2>;		/* S4 */
+		qcom,pull = <5>;		/* NP */
+		qcom,master-en = <1>;		/* Enable */
+		status = "ok";
+	};
+
+	/* GPIO_9: NC (TUNER_INT) */
+	gpio@c800 {
+		qcom,master-en = <0>;		/* Disable */
+		status = "ok";
+	};
+};
+
+&tlmm_pinmux {
+	/* GPIO_39: NC */
+	msm_gpio_39 {
+		qcom,pin-func = <0>;
+		msm_gpio_39_def: default {
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	/* GPIO_52: TRAY_DET */
+	msm_gpio_52 {
+		qcom,pin-func = <0>;
+		msm_gpio_52_def: default {
+			drive-strength = <2>;
+			bias-pull-up;
+			input-enable;
+			/delete-property/ bias-disable;
+			/delete-property/ output-low;
+		};
+	};
+
+	/* GPIO_93: NC */
+	msm_gpio_93 {
+		qcom,pin-func = <0>;
+		msm_gpio_93_def: default {
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	/* GPIO_94: NC */
+	msm_gpio_94 {
+		qcom,pin-func = <0>;
+		msm_gpio_94_def: default {
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	/* GPIO_95: NC */
+	msm_gpio_95 {
+		qcom,pin-func = <0>;
+		msm_gpio_95_def: default {
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	/* GPIO_96: NC */
+	msm_gpio_96 {
+		qcom,pin-func = <0>;
+		msm_gpio_96_def: default {
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	/* GPIO_102: NC */
+	msm_gpio_102 {
+		qcom,pin-func = <0>;
+		msm_gpio_102_def: default {
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+};
+
+&sdhc_2 {
+	cd-gpios = <&pm8994_gpios 8 0x1>;
+	qcom,clk-rates = <400000 20000000 25000000 50000000 100000000 200000000>;
+	qcom,msm-bus,num-cases = <8>;
+	qcom,msm-bus,vectors-KBps = <81 512 0 0>, /* No vote */
+			<81 512 1600 3200>,    /* 400 KB/s*/
+			<81 512 80000 160000>, /* 20 MB/s */
+			<81 512 100000 200000>, /* 25 MB/s */
+			<81 512 200000 400000>, /* 50 MB/s */
+			<81 512 400000 800000>, /* 100 MB/s */
+			<81 512 800000 800000>, /* 200 MB/s */
+			<81 512 2048000 4096000>; /* Max. bandwidth */
+	qcom,bus-bw-vectors-bps = <0 400000 20000000 25000000 50000000
+					100000000 200000000 4294967295>;
+};
