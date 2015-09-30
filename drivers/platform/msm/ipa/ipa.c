@@ -2849,6 +2849,7 @@ static void ipa_sps_process_irq(struct work_struct *work)
 
 	/* release IPA clocks */
 	ipa_sps_process_irq_schedule_rel();
+	ipa_dec_release_wakelock();
 	spin_unlock_irqrestore(&ipa_ctx->sps_pm.lock, flags);
 }
 
@@ -2941,6 +2942,7 @@ static void sps_event_cb(enum sps_callback_case event, void *param)
 				ipa_ctx->sps_pm.res_granted = true;
 				*ready = true;
 			} else {
+				ipa_inc_acquire_wakelock();
 				queue_work(ipa_ctx->sps_power_mgmt_wq,
 					   &ipa_sps_process_irq_work);
 				*ready = false;
