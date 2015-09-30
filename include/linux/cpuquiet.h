@@ -44,7 +44,15 @@ struct cpuquiet_platform_info {
 	unsigned int	avg_hotplug_latency_ms;
 };
 
+#ifdef CONFIG_CPU_QUIET
 extern int cpuquiet_init(const struct cpuquiet_platform_info *plat_info);
+#else
+static inline int cpuquiet_init(const struct cpuquiet_platform_info *plat_info)
+{
+	return -ENOTSUPP;
+}
+#endif
+
 extern int cpuquiet_register_governor(struct cpuquiet_governor *gov);
 extern void cpuquiet_unregister_governor(struct cpuquiet_governor *gov);
 
