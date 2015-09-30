@@ -94,7 +94,7 @@
 		];
 
 		qcom,mdss-dsi-off-command = [
-		        05 01 00 00 96 00 02 28 00 /* display off */
+			05 01 00 00 96 00 02 28 00 /* display off */
 			05 01 00 00 96 00 02 10 00 /* enter sleep */];
 		qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
 		qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
@@ -224,7 +224,7 @@
 			29 01 00 00 00 00 02 00 00
 			29 01 00 00 00 00 11
 			E1 00 0c 11 0E 07 0e 08 05 0C 0e 0a 00 06 0e 06 00
-			29 01 00 00 00 00 00 00 00
+			29 01 00 00 00 00 02 00 00
 			29 01 00 00 00 00 11
 			E2 00 0c 11 0E 07 0e 08 05 0C 0e 0a 00 06 0e 06 00
 			29 01 00 00 00 00 02 00 80
@@ -318,4 +318,3 @@
 		somc,panel-id-read-cmds;
 	};
 };
-
