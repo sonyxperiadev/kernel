@@ -332,7 +332,7 @@ audit:
 static int path_flags(struct aa_profile *profile, struct path *path)
 {
 	return profile->path_flags |
-		S_ISDIR(path->dentry->d_inode->i_mode) ? PATH_IS_DIR : 0;
+		(S_ISDIR(path->dentry->d_inode->i_mode) ? PATH_IS_DIR : 0);
 }
 
 int aa_remount(struct aa_label *label, struct path *path, unsigned long flags,
