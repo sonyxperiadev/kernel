@@ -135,6 +135,11 @@ int __init sony_init_gpiomux(struct msm_gpiomux_config *configs,
 			gpiomux_merge_setting(c, s);
 	}
 
+	if (of_machine_is_compatible("somc,honami-row") ||
+	    of_machine_is_compatible("somc,togari-row") ||
+	    of_machine_is_compatible("somc,amami-row"))
+		msm_tlmm_misc_reg_write(TLMM_SPARE_REG, 0x5);
+
 	/* Install product-all merged configuration */
 	msm_gpiomux_install(configs, nconfigs);
 
