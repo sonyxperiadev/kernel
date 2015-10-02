@@ -227,6 +227,31 @@
 		};
 	};
 
+	qcom,cpp@fda04000 {
+		qcom,min-clock-rate = <266670000>;
+	};
+
+	qcom,ispif@fda0A000 {
+		clock-names = "ispif_ahb_clk",
+			"csi0_src_clk", "csi0_clk",
+			"csi0_pix_clk", "csi0_rdi_clk",
+			"csi1_src_clk", "csi1_clk",
+			"csi1_pix_clk", "csi1_rdi_clk",
+			"csi2_src_clk", "csi2_clk",
+			"csi2_pix_clk", "csi2_rdi_clk",
+			"csi3_src_clk", "csi3_clk",
+			"csi3_pix_clk", "csi3_rdi_clk",
+			"vfe0_clk_src", "camss_vfe_vfe0_clk", "camss_csi_vfe0_clk",
+			"vfe1_clk_src", "camss_vfe_vfe1_clk", "camss_csi_vfe1_clk";
+		qcom,clock-rates = <0
+			200000000 0 0 0
+			200000000 0 0 0
+			200000000 0 0 0
+			200000000 0 0 0
+			266670000 0 0
+			266670000 0 0>;
+	};
+
 	qcom,vfe@fda10000 {
 		ds-entries = <17>;
 		ds-regs = <0xBD8 0xBDC 0xBE0 0xBE4 0xBE8
@@ -238,8 +263,8 @@
 				0xCCCC1111 0xCCCC1111 0xCCCC1111
 				0xCCCC1111 0xCCCC1111 0xCCCC1111
 				0xCCCC1111 0x00000103>;
-		max-clk-nominal = <400000000>;
-		max-clk-turbo = <533330000>;
+		max-clk-nominal = <266670000>;
+		max-clk-turbo =   <320000000>;
 	};
 
 	qcom,vfe@fda14000 {
@@ -282,8 +307,8 @@
 				0xCCCC1111 0xCCCC1111 0xCCCC1111
 				0xCCCC1111 0xCCCC1111 0xCCCC1111
 				0xCCCC1111 0x00000103>;
-		max-clk-nominal = <400000000>;
-		max-clk-turbo = <533330000>;
+		max-clk-nominal = <266670000>;
+		max-clk-turbo =   <320000000>;
 	};
 
 	sound {
