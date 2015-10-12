@@ -147,10 +147,10 @@
 
 /* Regulator config */
 &pm8941_l23 {
-	regulator-min-microvolt = <2600000>;
-	regulator-max-microvolt = <2600000>;
+	regulator-min-microvolt = <2800000>;
+	regulator-max-microvolt = <2800000>;
 	qcom,init-enable = <0>;
-	qcom,init-voltage = <2600000>;
+	qcom,init-voltage = <2800000>;
 	status = "ok";
 };
 
