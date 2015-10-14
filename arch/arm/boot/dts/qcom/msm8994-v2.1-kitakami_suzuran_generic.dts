@@ -27,6 +27,7 @@
 #include "msm8994-kitakami_r2_common.dtsi"
 #include "msm8994-kitakami_suzuran_common.dtsi"
 #include "msm8994-kitakami_suzuran_generic.dtsi"
+#include "msm8994-kitakami_suzuran_camera.dtsi"
 #include "dsi-panel-suzuran.dtsi"
 
 / {
