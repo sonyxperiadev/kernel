@@ -20,6 +20,7 @@
 &mdss_mdp {
 	somc,dric-gpio = <&msm_gpio 56 0>;
 	somc,mul-channel-scaling = <3>;
+        somc,postpwron-no-reset-quirk;
 
 	dsi_jdi_novatek_fullhd_cmd: somc,jdi_novatek_fullhd_cmd_panel {
 		qcom,mdss-dsi-panel-name = "7";
