@@ -27,6 +27,7 @@
 #include "msm8994-kitakami_r2_common.dtsi"
 #include "msm8994-kitakami_sumire_common.dtsi"
 #include "msm8994-kitakami_sumire_generic.dtsi"
+#include "msm8994-kitakami_sumire_camera.dtsi"
 #include "dsi-panel-sumire.dtsi"
 
 / {
