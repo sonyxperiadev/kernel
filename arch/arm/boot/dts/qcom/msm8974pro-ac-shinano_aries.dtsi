@@ -185,23 +185,8 @@
 			};
 		};
 
-		somc,leds@d300 {
+		qcom,leds@d300 {
 			status = "okay";
-			compatible = "somc,pm8941-flash";
-			reg = <0xd300 0x100>;
-			label = "flash";
-			torch-supply = <&pm8941_boost>;
-			flash-supply = <&pm8941_chg_boost>;
-			somc,headroom = <2>;
-			somc,clamp-curr-mA = <13>;
-			somc,startup-dly = <3>;
-			somc,hw-strobe-config = <3>;
-			somc,mask-enable = <1>;
-			somc,vph-pwr-droop {
-				somc,enable = <0>;
-				somc,threshold = <0>;
-				somc,debounce-time = <2>;
-			};
 		};
 
 		qcom,leds@d800 {

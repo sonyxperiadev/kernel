@@ -1284,6 +1284,34 @@
 	};
 };
 
+/delete-node/ &pm8941_flash1;
+
+&pm8941_flash0 {
+	qcom,headroom = <2>;
+	qcom,startup-dly = <2>;
+	qcom,duration = <1280>;
+	qcom,safety-timer;
+	qcom,default-led-trigger = "flash0_trigger";
+	qcom,clamp-curr = <0>;
+	qcom,current = <0x4F>;
+	qcom,max-current =  <0x4F>;
+	qcom,id = <1>;
+	flash-boost-supply = <&pm8941_chg_boost>;
+};
+
+&pm8941_torch {
+	qcom,headroom = <0>;
+	qcom,startup-dly = <2>;
+	qcom,duration = <12>;
+	qcom,default-led-trigger = "torch_trigger";
+	qcom,clamp-curr = <0>;
+	qcom,current = <0xF>;
+	qcom,max-current = <0xF>;
+	qcom,id = <1>;
+	torch-boost-supply = <&pm8941_boost>;
+	qcom,torch-enable;
+};
+
 &slim_msm {
 	taiko_codec {
 		qcom,cdc-micbias-ldoh-v = <0x3>;

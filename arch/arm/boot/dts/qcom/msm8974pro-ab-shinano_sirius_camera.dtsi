@@ -16,6 +16,16 @@
  * Modifications are licensed under the License.
  */
 
+&soc {
+        led_flash0: qcom,camera-flash {
+                cell-index = <0>;
+                compatible = "qcom,camera-flash";
+                qcom,flash-type = <1>;
+		qcom,torch-source = <&pm8941_torch>;
+                qcom,flash-source = <&pm8941_flash0>;
+        };
+};
+
 &cci {
 	actuator0: qcom,actuator@0 {
 		cell-index = <0>;
