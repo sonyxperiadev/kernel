@@ -573,13 +573,6 @@ config HAPTIC_ISA1200
 	help
 	  The ISA1200 is a high performance enhanced haptic driver.
 
-config PM8941_FLASH
-	tristate "Flash support for PM8941"
-	depends on SPMI && OF_SPMI
-	help
-	  This option enables device driver support for the flash
-	  on PM8941.
-
 config PMI8994_FLASH
 	tristate "Flash support for PMI8994"
 	depends on SPMI && OF_SPMI
