@@ -82,9 +82,8 @@
 		qcom,sensor-position = <1>;
 		qcom,sensor-mode = <1>;
 		qcom,cci-master = <1>;
+		status = "ok";
 		clock-names = "cam_src_clk", "cam_clk";
-
-		status="disable";
 	};
 
 	eeprom1: qcom,eeprom@a1 {
