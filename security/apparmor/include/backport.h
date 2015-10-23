@@ -17,4 +17,7 @@
 #ifndef __AA_BACKPORT_H
 #define __AA_BACKPORT_H
 
+/* 3.12 backport emulate commit b18825a7c8e37a7cf6abb97a12a6ad71af160de7 */
+#define d_is_positive(D) ((D)->d_inode)
+
 #endif /* __AA_BACKPORT_H */
