@@ -3047,7 +3047,11 @@ dhd_rx_frame(dhd_pub_t *dhdp, int ifidx, void *pktbuf, int numpkt, uint8 chan,
 #endif
 
 #ifdef DHD_DONOT_FORWARD_BCMEVENT_AS_NETWORK_PKT
+#ifdef DHD_USE_STATIC_CTRLBUF
+			PKTFREE_STATIC(dhdp->osh, pktbuf, FALSE);
+#else
 			PKTFREE(dhdp->osh, pktbuf, FALSE);
+#endif /* DHD_USE_STATIC_CTRLBUF */
 			continue;
 #endif /* DHD_DONOT_FORWARD_BCMEVENT_AS_NETWORK_PKT */
 		} else {
@@ -7200,7 +7204,7 @@ dhd_os_set_ioctl_resp_timeout(unsigned int timeout_msec)
 }
 
 int
-dhd_os_ioctl_resp_wait(dhd_pub_t *pub, uint *condition, bool *pending)
+dhd_os_ioctl_resp_wait(dhd_pub_t *pub, uint *condition)
 {
 	dhd_info_t * dhd = (dhd_info_t *)(pub->info);
 	int timeout;
@@ -7231,7 +7235,7 @@ dhd_os_ioctl_resp_wake(dhd_pub_t *pub)
 }
 
 int
-dhd_os_d3ack_wait(dhd_pub_t *pub, uint *condition, bool *pending)
+dhd_os_d3ack_wait(dhd_pub_t *pub, uint *condition)
 {
 	dhd_info_t * dhd = (dhd_info_t *)(pub->info);
 	int timeout;
