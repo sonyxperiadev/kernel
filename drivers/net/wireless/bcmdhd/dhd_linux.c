@@ -827,8 +827,11 @@ static int dhd_sar_callback(struct notifier_block *nfb, unsigned long action, vo
 	s32 txpower;
 	int ret;
 
-	if (dhd->pub.busstate == DHD_BUS_DOWN)
-		return NOTIFY_DONE;
+	if (dhd->pub.busstate == DHD_BUS_DOWN || dhd->pub.up == 0) {
+		DHD_ERROR(("%s Not ready, Bus state %d firmware state %d\n",
+		       __FUNCTION__, dhd->pub.busstate, dhd->pub.up));
+		return NOTIFY_BAD;
+	}
 
 	if (data) {
 		/* if data != NULL then we expect that the notifier passed
@@ -4631,8 +4634,11 @@ dhd_init_logstrs_array(dhd_event_log_t *temp)
 		return BCME_OK;
 	}
 	kflags = in_atomic() ? GFP_ATOMIC : GFP_KERNEL;
-	set_fs(KERNEL_DS);
+
+	/* Save previous address limit first and then change to KERNEL_DS address limit */
 	fs = get_fs();
+	set_fs(KERNEL_DS);
+
 	filep = filp_open(logstrs_path, O_RDONLY, 0);
 	if (IS_ERR(filep)) {
 		DHD_ERROR(("Failed to open the file logstrs.bin in %s, %s\n",  __FUNCTION__, logstrs_path));
@@ -4746,7 +4752,10 @@ fail:
 	}
 	if (!IS_ERR(filep))
 		filp_close(filep, NULL);
+
+	/* Restore previous address limit */
 	set_fs(fs);
+
 	temp->fmts = NULL;
 	return -1;
 }
@@ -9918,6 +9927,10 @@ int dhd_os_socram_dump(struct net_device *dev, uint32 *dump_size)
 	int ret = BCME_OK;
 	dhd_info_t *dhd = *(dhd_info_t **)netdev_priv(dev);
 	dhd_pub_t *dhdp = &dhd->pub;
+
+	if (dhdp->busstate == DHD_BUS_DOWN) {
+		return BCME_ERROR;
+	}
 	ret = dhd_common_socram_dump(dhdp);
 	if (ret == BCME_OK) {
 		*dump_size = dhdp->soc_ram_length;
