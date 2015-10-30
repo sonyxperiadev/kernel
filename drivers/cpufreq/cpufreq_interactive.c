@@ -1628,7 +1628,10 @@ static int cpufreq_governor_interactive(struct cpufreq_policy *policy,
 			del_timer_sync(&pcpu->cpu_timer);
 			del_timer_sync(&pcpu->cpu_slack_timer);
 			pcpu->last_evaluated_jiffy = get_jiffies_64();
-			cpufreq_interactive_timer_start(tunables, j);
+			if (pcpu->governor_enabled != 1)
+				cpufreq_interactive_timer_start(tunables, j);
+			else
+				WARN(1, "GOV_START is called without GOV_STOP\n");
 			pcpu->governor_enabled = 1;
 			up_write(&pcpu->enable_sem);
 			pcpu->reject_notification = false;
