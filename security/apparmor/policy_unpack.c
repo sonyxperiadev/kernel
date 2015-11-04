@@ -24,10 +24,19 @@
 #include "include/apparmor.h"
 #include "include/audit.h"
 #include "include/context.h"
+#include "include/crypto.h"
 #include "include/match.h"
+#include "include/path.h"
 #include "include/policy.h"
 #include "include/policy_unpack.h"
-#include "include/sid.h"
+
+#define K_ABI_MASK 0x3ff
+#define FORCE_COMPLAIN_FLAG 0x800
+#define VERSION_CMP(OP, X, Y) (((X) & K_ABI_MASK) OP ((Y) & K_ABI_MASK))
+
+#define v5	5	/* base version */
+#define v6	6	/* per entry policydb mediation check */
+#define v7	7	/* full network masking */
 
 /*
  * The AppArmor interface treats data as a type byte followed by the
@@ -70,13 +79,13 @@ struct aa_ext {
 static void audit_cb(struct audit_buffer *ab, void *va)
 {
 	struct common_audit_data *sa = va;
-	if (sa->aad->iface.target) {
-		struct aa_profile *name = sa->aad->iface.target;
+	if (aad(sa)->target) {
+		const struct aa_profile *name = aad(sa)->target;
 		audit_log_format(ab, " name=");
 		audit_log_untrustedstring(ab, name->base.hname);
 	}
-	if (sa->aad->iface.pos)
-		audit_log_format(ab, " offset=%ld", sa->aad->iface.pos);
+	if (aad(sa)->iface.pos)
+		audit_log_format(ab, " offset=%ld", aad(sa)->iface.pos);
 }
 
 /**
@@ -92,20 +101,16 @@ static void audit_cb(struct audit_buffer *ab, void *va)
 static int audit_iface(struct aa_profile *new, const char *name,
 		       const char *info, struct aa_ext *e, int error)
 {
-	struct aa_profile *profile = __aa_current_profile();
-	struct common_audit_data sa;
-	struct apparmor_audit_data aad = {0,};
-	sa.type = LSM_AUDIT_DATA_NONE;
-	sa.aad = &aad;
+	struct aa_profile *profile = labels_profile(aa_current_raw_label());
+	DEFINE_AUDIT_DATA(sa, LSM_AUDIT_DATA_NONE, 0);
 	if (e)
-		aad.iface.pos = e->pos - e->start;
-	aad.iface.target = new;
-	aad.name = name;
-	aad.info = info;
-	aad.error = error;
+		aad(&sa)->iface.pos = e->pos - e->start;
+	aad(&sa)->target = new;
+	aad(&sa)->name = name;
+	aad(&sa)->info = info;
+	aad(&sa)->error = error;
 
-	return aa_audit(AUDIT_APPARMOR_STATUS, profile, GFP_KERNEL, &sa,
-			audit_cb);
+	return aa_audit(AUDIT_APPARMOR_STATUS, profile, &sa, audit_cb);
 }
 
 /* test if read will be in packed data bounds */
@@ -190,6 +195,19 @@ static bool unpack_nameX(struct aa_ext *e, enum aa_code code, const char *name)
 
 fail:
 	e->pos = pos;
+	return 0;
+}
+
+static bool unpack_u16(struct aa_ext *e, u16 *data, const char *name)
+{
+	if (unpack_nameX(e, AA_U16, name)) {
+		if (!inbounds(e, sizeof(u16)))
+			return 0;
+		if (data)
+			*data = le16_to_cpu(get_unaligned((u16 *) e->pos));
+		e->pos += sizeof(u16);
+		return 1;
+	}
 	return 0;
 }
 
@@ -290,6 +308,9 @@ static int unpack_strdup(struct aa_ext *e, char **string, const char *name)
 	return res;
 }
 
+#define DFA_VALID_PERM_MASK		0xffffffff
+#define DFA_VALID_PERM2_MASK		0xffffffff
+
 /**
  * verify_accept - verify the accept tables of a dfa
  * @dfa: dfa to verify accept tables of (NOT NULL)
@@ -331,8 +352,10 @@ static struct aa_dfa *unpack_dfa(struct aa_ext *e)
 		/*
 		 * The dfa is aligned with in the blob to 8 bytes
 		 * from the beginning of the stream.
+		 * alignment adjust needed by dfa unpack
 		 */
-		size_t sz = blob - (char *)e->start;
+		size_t sz = blob - (char *) e->start -
+			((e->pos - e->start) & 7);
 		size_t pad = ALIGN(sz, 8) - sz;
 		int flags = TO_ACCEPT1_FLAG(YYTD_DATA32) |
 			TO_ACCEPT2_FLAG(YYTD_DATA32);
@@ -471,6 +494,7 @@ static struct aa_profile *unpack_profile(struct aa_ext *e)
 {
 	struct aa_profile *profile = NULL;
 	const char *name = NULL;
+	size_t size = 0;
 	int i, error = -EPROTO;
 	kernel_cap_t tmpcap;
 	u32 tmp;
@@ -488,6 +512,9 @@ static struct aa_profile *unpack_profile(struct aa_ext *e)
 	/* profile renaming is optional */
 	(void) unpack_str(e, &profile->rename, "rename");
 
+	/* attachment string is optional */
+	(void) unpack_str(e, &profile->attach, "attach");
+
 	/* xmatch is optional and may be NULL */
 	profile->xmatch = unpack_dfa(e);
 	if (IS_ERR(profile->xmatch)) {
@@ -502,17 +529,24 @@ static struct aa_profile *unpack_profile(struct aa_ext *e)
 		profile->xmatch_len = tmp;
 	}
 
+	/* disconnected attachment string is optional */
+	(void) unpack_str(e, &profile->disconnected, "disconnected");
+
 	/* per profile debug flags (complain, audit) */
 	if (!unpack_nameX(e, AA_STRUCT, "flags"))
 		goto fail;
 	if (!unpack_u32(e, &tmp, NULL))
 		goto fail;
-	if (tmp)
-		profile->flags |= PFLAG_HAT;
+	if (tmp & PACKED_FLAG_HAT)
+		profile->label.flags |= FLAG_HAT;
 	if (!unpack_u32(e, &tmp, NULL))
 		goto fail;
-	if (tmp)
+	if (tmp == PACKED_MODE_COMPLAIN || (e->version & FORCE_COMPLAIN_FLAG))
 		profile->mode = APPARMOR_COMPLAIN;
+	else if (tmp == PACKED_MODE_KILL)
+		profile->mode = APPARMOR_KILL;
+	else if (tmp == PACKED_MODE_UNCONFINED)
+		profile->mode = APPARMOR_UNCONFINED;
 	if (!unpack_u32(e, &tmp, NULL))
 		goto fail;
 	if (tmp)
@@ -522,11 +556,9 @@ static struct aa_profile *unpack_profile(struct aa_ext *e)
 		goto fail;
 
 	/* path_flags is optional */
-	if (unpack_u32(e, &profile->path_flags, "path_flags"))
-		profile->path_flags |= profile->flags & PFLAG_MEDIATE_DELETED;
-	else
+	if (!unpack_u32(e, &profile->path_flags, "path_flags"))
 		/* set a default value if path_flags field is not present */
-		profile->path_flags = PFLAG_MEDIATE_DELETED;
+		profile->path_flags = PATH_MEDIATE_DELETED;
 
 	if (!unpack_u32(e, &(profile->caps.allow.cap[0]), NULL))
 		goto fail;
@@ -564,6 +596,37 @@ static struct aa_profile *unpack_profile(struct aa_ext *e)
 	if (!unpack_rlimits(e, profile))
 		goto fail;
 
+	size = unpack_array(e, "net_allowed_af");
+	if (size) {
+
+		for (i = 0; i < size; i++) {
+			/* discard extraneous rules that this kernel will
+			 * never request
+			 */
+			if (i >= AF_MAX) {
+				u16 tmp;
+				if (!unpack_u16(e, &tmp, NULL) ||
+				    !unpack_u16(e, &tmp, NULL) ||
+				    !unpack_u16(e, &tmp, NULL))
+					goto fail;
+				continue;
+			}
+			if (!unpack_u16(e, &profile->net.allow[i], NULL))
+				goto fail;
+			if (!unpack_u16(e, &profile->net.audit[i], NULL))
+				goto fail;
+			if (!unpack_u16(e, &profile->net.quiet[i], NULL))
+				goto fail;
+		}
+		if (!unpack_nameX(e, AA_ARRAYEND, NULL))
+			goto fail;
+	}
+	if (VERSION_CMP(<, e->version, v7)) {
+		/* old policy always allowed these too */
+		profile->net.allow[AF_UNIX] = 0xffff;
+		profile->net.allow[AF_NETLINK] = 0xffff;
+	}
+
 	if (unpack_nameX(e, AA_STRUCT, "policydb")) {
 		/* generic policy dfa - optional and may be NULL */
 		profile->policy.dfa = unpack_dfa(e);
@@ -592,11 +655,15 @@ static struct aa_profile *unpack_profile(struct aa_ext *e)
 		error = PTR_ERR(profile->file.dfa);
 		profile->file.dfa = NULL;
 		goto fail;
+	} else if (profile->file.dfa) {
+		if (!unpack_u32(e, &profile->file.start, "dfa_start"))
+			/* default start state */
+			profile->file.start = DFA_START;
+	} else if (profile->policy.dfa &&
+		   profile->policy.start[AA_CLASS_FILE]) {
+		profile->file.dfa = aa_get_dfa(profile->policy.dfa);
+		profile->file.start = profile->policy.start[AA_CLASS_FILE];
 	}
-
-	if (!unpack_u32(e, &profile->file.start, "dfa_start"))
-		/* default start state */
-		profile->file.start = DFA_START;
 
 	if (!unpack_trans_table(e, profile))
 		goto fail;
@@ -612,7 +679,7 @@ fail:
 	else if (!name)
 		name = "unknown";
 	audit_iface(profile, name, "failed to unpack profile", e, error);
-	aa_put_profile(profile);
+	aa_free_profile(profile);
 
 	return ERR_PTR(error);
 }
@@ -620,29 +687,43 @@ fail:
 /**
  * verify_head - unpack serialized stream header
  * @e: serialized data read head (NOT NULL)
+ * @required: whether the header is required or optional
  * @ns: Returns - namespace if one is specified else NULL (NOT NULL)
  *
  * Returns: error or 0 if header is good
  */
-static int verify_header(struct aa_ext *e, const char **ns)
+static int verify_header(struct aa_ext *e, int required, const char **ns)
 {
 	int error = -EPROTONOSUPPORT;
+	const char *name = NULL;
+	*ns = NULL;
+
 	/* get the interface version */
 	if (!unpack_u32(e, &e->version, "version")) {
-		audit_iface(NULL, NULL, "invalid profile format", e, error);
-		return error;
+		if (required) {
+			audit_iface(NULL, NULL, "invalid profile format", e,
+				    error);
+			return error;
+		}
 	}
 
-	/* check that the interface version is currently supported */
-	if (e->version != 5) {
-		audit_iface(NULL, NULL, "unsupported interface version", e,
-			    error);
+	/* Check that the interface version is currently supported.
+	 * if not specified use previous version
+	 * Mask off everything that is not kernel abi version
+	 */
+	if (VERSION_CMP(<, e->version, v5) && VERSION_CMP(>, e->version, v7)) {
+		audit_iface(NULL, NULL, "unsupported interface version",
+			    e, error);
 		return error;
 	}
 
 	/* read the namespace if present */
-	if (!unpack_str(e, ns, "namespace"))
-		*ns = NULL;
+	if (unpack_str(e, &name, "namespace")) {
+		if (*ns && strcmp(*ns, name))
+			audit_iface(NULL, NULL, "invalid ns change", e, error);
+		else if (!*ns)
+			*ns = name;
+	}
 
 	return 0;
 }
@@ -691,18 +772,40 @@ static int verify_profile(struct aa_profile *profile)
 	return 0;
 }
 
+void aa_load_ent_free(struct aa_load_ent *ent)
+{
+	if (ent) {
+		aa_put_profile(ent->rename);
+		aa_put_profile(ent->old);
+		aa_put_profile(ent->new);
+		kzfree(ent);
+	}
+}
+
+struct aa_load_ent *aa_load_ent_alloc(void)
+{
+	struct aa_load_ent *ent = kzalloc(sizeof(*ent), GFP_KERNEL);
+	if (ent)
+		INIT_LIST_HEAD(&ent->list);
+	return ent;
+}
+
 /**
- * aa_unpack - unpack packed binary profile data loaded from user space
+ * aa_unpack - unpack packed binary profile(s) data loaded from user space
  * @udata: user data copied to kmem  (NOT NULL)
  * @size: the size of the user data
+ * @lh: list to place unpacked profiles in a aa_repl_ws
  * @ns: Returns namespace profile is in if specified else NULL (NOT NULL)
  *
- * Unpack user data and return refcounted allocated profile or ERR_PTR
+ * Unpack user data and return refcounted allocated profile(s) stored in
+ * @lh in order of discovery, with the list chain stored in base.list
+ * or error
  *
- * Returns: profile else error pointer if fails to unpack
+ * Returns: profile(s) on @lh else error pointer if fails to unpack
  */
-struct aa_profile *aa_unpack(void *udata, size_t size, const char **ns)
+int aa_unpack(void *udata, size_t size, struct list_head *lh, const char **ns)
 {
+	struct aa_load_ent *tmp, *ent;
 	struct aa_profile *profile = NULL;
 	int error;
 	struct aa_ext e = {
@@ -711,20 +814,49 @@ struct aa_profile *aa_unpack(void *udata, size_t size, const char **ns)
 		.pos = udata,
 	};
 
-	error = verify_header(&e, ns);
-	if (error)
-		return ERR_PTR(error);
+	*ns = NULL;
+	while (e.pos < e.end) {
+		void *start;
+		error = verify_header(&e, e.pos == e.start, ns);
+		if (error)
+			goto fail;
 
-	profile = unpack_profile(&e);
-	if (IS_ERR(profile))
-		return profile;
+		start = e.pos;
+		profile = unpack_profile(&e);
+		if (IS_ERR(profile)) {
+			error = PTR_ERR(profile);
+			goto fail;
+		}
 
-	error = verify_profile(profile);
-	if (error) {
-		aa_put_profile(profile);
-		profile = ERR_PTR(error);
+		error = verify_profile(profile);
+		if (error)
+			goto fail_profile;
+
+		error = aa_calc_profile_hash(profile, e.version, start,
+					     e.pos - start);
+		if (error)
+			goto fail_profile;
+
+		ent = aa_load_ent_alloc();
+		if (!ent) {
+			error = -ENOMEM;
+			goto fail_profile;
+		}
+
+		ent->new = profile;
+		list_add_tail(&ent->list, lh);
 	}
 
-	/* return refcount */
-	return profile;
+	return 0;
+
+fail_profile:
+	aa_put_profile(profile);
+
+fail:
+	list_for_each_entry_safe(ent, tmp, lh, list) {
+		list_del_init(&ent->list);
+		aa_load_ent_free(ent);
+	}
+
+	return error;
 }
