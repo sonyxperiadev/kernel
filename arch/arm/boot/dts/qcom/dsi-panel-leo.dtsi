@@ -73,6 +73,8 @@
 
 		somc,driver-ic = <0>;
 		somc,touch-reset-gpio = <&msmgpio 85 0>;
+		qcom,mdss-pan-physical-width-dimension = <64>;
+		qcom,mdss-pan-physical-height-dimension = <114>;
 		somc,mdss-phy-size-mm = <64 114>;
 		somc,mdss-dsi-lane-config = [00 c2 ef 00 00 00 00 01 ff
 				00 c2 ef 00 00 00 00 01 ff
@@ -421,6 +423,8 @@
 
 		somc,driver-ic = <0>;
 		somc,touch-reset-gpio = <&msmgpio 85 0>;
+		qcom,mdss-pan-physical-width-dimension = <64>;
+		qcom,mdss-pan-physical-height-dimension = <114>;
 		somc,mdss-phy-size-mm = <64 114>;
 		somc,mdss-dsi-lane-config = [00 c2 ef 00 00 00 00 01 ff
 				00 c2 ef 00 00 00 00 01 ff
@@ -751,6 +755,8 @@
 
 		somc,driver-ic = <0>;
 		somc,touch-reset-gpio = <&msmgpio 85 0>;
+		qcom,mdss-pan-physical-width-dimension = <64>;
+		qcom,mdss-pan-physical-height-dimension = <114>;
 		somc,mdss-phy-size-mm = <64 114>;
 		somc,mdss-dsi-lane-config = [00 c2 ef 00 00 00 00 01 ff
 				00 c2 ef 00 00 00 00 01 ff
@@ -1061,6 +1067,8 @@
 
 		somc,driver-ic = <0>;
 		somc,touch-reset-gpio = <&msmgpio 85 0>;
+		qcom,mdss-pan-physical-width-dimension = <64>;
+		qcom,mdss-pan-physical-height-dimension = <114>;
 		somc,mdss-phy-size-mm = <64 114>;
 		somc,mdss-dsi-lane-config = [00 c2 ef 00 00 00 00 01 ff
 				00 c2 ef 00 00 00 00 01 ff
@@ -1384,6 +1392,8 @@
 
 		somc,driver-ic = <0>;
 		somc,touch-reset-gpio = <&msmgpio 85 0>;
+		qcom,mdss-pan-physical-width-dimension = <64>;
+		qcom,mdss-pan-physical-height-dimension = <114>;
 		somc,mdss-phy-size-mm = <64 114>;
 		somc,mdss-dsi-lane-config = [00 c2 ef 00 00 00 00 01 ff
 				00 c2 ef 00 00 00 00 01 ff
@@ -1694,6 +1704,8 @@
 
 		somc,driver-ic = <0>;
 		somc,touch-reset-gpio = <&msmgpio 85 0>;
+		qcom,mdss-pan-physical-width-dimension = <64>;
+		qcom,mdss-pan-physical-height-dimension = <114>;
 		somc,mdss-phy-size-mm = <64 114>;
 		somc,mdss-dsi-lane-config = [00 c2 ef 00 00 00 00 01 ff
 				00 c2 ef 00 00 00 00 01 ff
@@ -1773,6 +1785,8 @@
 
 		somc,driver-ic = <0>;
 		somc,touch-reset-gpio = <&msmgpio 85 0>;
+		qcom,mdss-pan-physical-width-dimension = <64>;
+		qcom,mdss-pan-physical-height-dimension = <114>;
 		somc,mdss-phy-size-mm = <64 114>;
 		somc,mdss-dsi-lane-config = [00 c2 ef 00 00 00 00 01 ff
 				00 c2 ef 00 00 00 00 01 ff
