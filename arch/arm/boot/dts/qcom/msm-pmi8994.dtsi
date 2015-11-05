@@ -470,7 +470,7 @@
 
 				qcom,qpnp-ibb-min-voltage = <1400000>;
 				qcom,qpnp-ibb-step-size = <100000>;
-				qcom,qpnp-ibb-slew-rate = <2000000>;
+				qcom,qpnp-ibb-slew-rate = <2000>;
 				qcom,qpnp-ibb-use-default-voltage;
 				qcom,qpnp-ibb-init-voltage = <5500000>;
 				qcom,qpnp-ibb-init-amoled-voltage = <4000000>;
