@@ -127,12 +127,12 @@
 			compatible = "ti,lp8557";
 			reg = <0x2c>;
 			status = "ok";
-			linux,name = "wled:backlight";
+			linux,name = "lp8557";
 			linux,default-trigger = "bkl-trigger";
 			mode = "register based";
 			chip_name = "lp8557";
-			max_br = <0x0FF>;
-			init_br = <0x66>;
+			max_br = <0xFF>;
+			init_br = <0x83>;
 			somc-s1,br-power-save = <0x83>;
 			slope_reg = <0x00>;
 			dev-ctrl = <0x01>;
