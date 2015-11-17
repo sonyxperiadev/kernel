@@ -377,6 +377,10 @@
                        <0xfe05300c 0x4>;
                reg-names = "avtimer_lsb_addr", "avtimer_msb_addr";
        };
+
+	qcom,mss@fc880000 {
+		qcom,mba-load-to-phys;
+	};
 };
 
 &rpm_bus {
