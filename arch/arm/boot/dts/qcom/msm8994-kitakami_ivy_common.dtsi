@@ -30,6 +30,7 @@
 			qcom,high-threshold-uamp = <1500000>;
 			qcom,soc-low-threshold = <5>;
 		};
+	};
 };
 
 &pm8994_gpios {
