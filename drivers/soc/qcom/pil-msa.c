@@ -443,7 +443,7 @@ int pil_mss_reset_load_mba(struct pil_desc *pil)
 	int ret, count;
 	const u8 *data;
 
-	mbadev = drv->non_elf_image ? pil->dev : &md->mba_mem_dev;
+	mbadev = drv->load_to_phys ? pil->dev : &md->mba_mem_dev;
 
 	fw_name_p = drv->non_elf_image ? fw_name_legacy : fw_name;
 	/* Load and authenticate mba image */
@@ -514,7 +514,7 @@ static int pil_msa_auth_modem_mdt(struct pil_desc *pil, const u8 *metadata,
 	int ret;
 	DEFINE_DMA_ATTRS(attrs);
 
-	mbadev = q6_drv->non_elf_image ? pil->dev : &drv->mba_mem_dev;
+	mbadev = q6_drv->load_to_phys ? pil->dev : &drv->mba_mem_dev;
 
 	drv->mba_mem_dev.coherent_dma_mask =
 		DMA_BIT_MASK(sizeof(dma_addr_t) * 8);
@@ -610,7 +610,7 @@ static int pil_msa_mba_auth(struct pil_desc *pil)
 	int ret;
 	s32 status;
 
-	mbadev = q6_drv->non_elf_image ? pil->dev : &drv->mba_mem_dev;
+	mbadev = q6_drv->load_to_phys ? pil->dev : &drv->mba_mem_dev;
 
 	/* Wait for all segments to be authenticated or an error to occur */
 	ret = readl_poll_timeout(drv->rmb_base + RMB_MBA_STATUS, status,

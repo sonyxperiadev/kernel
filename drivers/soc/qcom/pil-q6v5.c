@@ -489,6 +489,9 @@ struct q6v5_data *pil_q6v5_init(struct platform_device *pdev)
 	drv->non_elf_image = of_property_read_bool(pdev->dev.of_node,
 						"qcom,mba-image-is-not-elf");
 
+	drv->load_to_phys = of_property_read_bool(pdev->dev.of_node,
+						"qcom,mba-load-to-phys");
+
 	drv->override_acc = of_property_read_bool(pdev->dev.of_node,
 						"qcom,override-acc");
 
