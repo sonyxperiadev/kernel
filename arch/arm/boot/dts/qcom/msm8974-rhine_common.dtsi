@@ -348,6 +348,10 @@
 	qcom,msm-thermal {
 		qcom,pmic-sw-mode-regs = "vdd_dig";
 	};
+
+	qcom,mss@fc880000 {
+		qcom,mba-load-to-phys;
+	};
 };
 
 &peripheral_mem {
