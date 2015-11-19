@@ -194,7 +194,6 @@
 	};
 
 	qcom,mss@fc880000 {
-		/delete-property/ linux,contiguous-region;
 		qcom,mba-load-to-phys;
 	};
 
