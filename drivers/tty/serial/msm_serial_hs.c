@@ -2339,8 +2339,12 @@ static void msm_hs_unconfig_uart_gpios(struct uart_port *uport)
 	struct platform_device *pdev = to_platform_device(uport->dev);
 	const struct msm_serial_hs_platform_data *pdata =
 					pdev->dev.platform_data;
+	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
 
-	if (pdata) {
+	if (!IS_ERR_OR_NULL(msm_uport->pinctrl)) {
+		pinctrl_select_state(msm_uport->pinctrl,
+				msm_uport->gpio_state_suspend);
+	} else if (pdata) {
 		if (gpio_is_valid(pdata->uart_tx_gpio))
 			gpio_free(pdata->uart_tx_gpio);
 		if (gpio_is_valid(pdata->uart_rx_gpio))
