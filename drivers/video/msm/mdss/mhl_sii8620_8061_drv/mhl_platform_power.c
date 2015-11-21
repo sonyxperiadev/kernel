@@ -1,38 +1,24 @@
 /* kernel/drivers/video/msm/mdss/mhl_sii8620_8061_drv/mhl_platform_power.c
  *
- * Copyright (C) 2013 Sony Mobile Communications AB.
- * Copyright (C) 2013 Silicon Image Inc.
- *
- * Author: [Ryousuke Satou <Ryousuke.X.Satou@sonymobile.com>]
- *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2, as
  * published by the Free Software Foundation; either version 2
  * of the License, or (at your option) any later version.
  */
+/*
+ * Copyright (C) 2014 Sony Mobile Communications Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2, as
+ * published by the Free Software Foundation.
+ */
 
-#include <linux/module.h>
-#include <linux/input.h>
-#include <linux/string.h>
 #include <linux/power_supply.h>
 #include <linux/slab.h>
 #include <linux/delay.h>
+
 #include "mhl_platform.h"
-#include "mhl_defs.h"
 
-/* sysfs debug on */
-/* #define MHL_PWR_DEBUG_ON */
-
-/* Current */
-#define CURRENT_100MA			100000
-#define CURRENT_500MA			500000
-#define CURRENT_700MA			700000
-#define CURRENT_900MA			900000
-#define CURRENT_1500MA			1500000
-#define CURRENT_2000MA			2000000
-
-/* VMIN */
-#define VMIN_MHL				4300000
 
 static	bool vbus_active;
 static	int	 mhl_mode;
@@ -41,163 +27,9 @@ static	int	 max_current_val;
 static	int	 max_current;
 static	struct	power_supply	mhl_psy;
 static	struct device *mhl_dev;
+#ifdef MHL_PMIC_VMIN_SET
 static	struct	power_supply	*batt_psy;
-
-/***** debug function start *****/
-#ifdef MHL_PWR_DEBUG_ON
-static	uint8_t			devcap_sysfs[DEVCAP_SIZE];
-
-/* MHL_VERSION */
-static ssize_t mhl_platform_power_mhlver_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{
-	return snprintf(buf, sizeof(buf), "%x\n",
-		devcap_sysfs[DEVCAP_OFFSET_MHL_VERSION]);
-}
-
-static ssize_t mhl_platform_power_mhlver_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t count)
-{
-	int		get_data;
-
-	sscanf(buf, "%x", &get_data);
-	devcap_sysfs[DEVCAP_OFFSET_MHL_VERSION] = (uint8_t)get_data;
-	pr_debug("set to MHL_VERSION < 0x%x\n",
-		devcap_sysfs[DEVCAP_OFFSET_MHL_VERSION]);
-
-	return count;
-}
-
-/* DEV_CAT */
-static ssize_t mhl_platform_power_devcap_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{
-	return snprintf(buf, sizeof(buf), "%x\n",
-		devcap_sysfs[DEVCAP_OFFSET_DEV_CAT]);
-}
-
-static ssize_t mhl_platform_power_devcap_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t count)
-{
-	int		get_data;
-
-	sscanf(buf, "%x", &get_data);
-	devcap_sysfs[DEVCAP_OFFSET_DEV_CAT] = (uint8_t)get_data;
-	pr_debug("%x\n", devcap_sysfs[DEVCAP_OFFSET_DEV_CAT]);
-
-	return count;
-}
-
-/* current_val */
-static ssize_t mhl_platform_power_current_max_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{
-	return snprintf(buf, sizeof(int), "%x\n", current_val);
-}
-
-static ssize_t mhl_platform_power_current_max_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t count)
-{
-	int get_data;
-	int ret;
-
-	sscanf(buf, "%x", &get_data);
-
-	if (get_data == 0) {
-		/* set to 0mA */
-		mhl_platform_power_stop_charge();
-	} else if (get_data == 1) {
-		/* set to 500mA */
-		ret = mhl_platform_power_start_charge(NULL);
-		if (ret < 0)
-			pr_debug("failed. set to max_current.\n ");
-	} else if (get_data == 2) {
-		/* set to XXXmA */
-		ret = mhl_platform_power_start_charge(devcap_sysfs);
-		if (ret < 0)
-			pr_debug("failed. set to max_current.\n ");
-	} else
-		pr_debug("not set to max_current.\n ");
-
-	return count;
-}
-
-static DEVICE_ATTR(charge_mhlver,
-			0660,
-			mhl_platform_power_mhlver_show,
-			mhl_platform_power_mhlver_store);
-
-static DEVICE_ATTR(charge_devcap,
-			0660,
-			mhl_platform_power_devcap_show,
-			mhl_platform_power_devcap_store);
-
-static DEVICE_ATTR(charge_max_current,
-			0660,
-			mhl_platform_power_current_max_show,
-			mhl_platform_power_current_max_store);
-
-static int mhl_platform_power_debug_init(struct device *dev)
-{
-	int rc = -1;
-
-	pr_debug("%s: called\n", __func__);
-
-	dev->class = class_create(THIS_MODULE, "mhl_power");
-	if (IS_ERR(dev->class)) {
-		pr_err("%s:failed class creation\n", __func__);
-		return rc;
-	}
-
-	rc = device_create_file(dev,
-				&dev_attr_charge_mhlver);
-	if (rc) {
-		pr_err("%s: failed to create file for charge_mhlver\n",
-			__func__);
-		return rc;
-	}
-
-	rc = device_create_file(dev,
-				&dev_attr_charge_devcap);
-	if (rc) {
-		pr_err("%s: failed to create file for charge_devcap\n",
-			__func__);
-		return rc;
-	}
-
-	rc = device_create_file(dev,
-		&dev_attr_charge_max_current);
-	if (rc) {
-		pr_err("%s: failed to create file for charge_max_current\n",
-			__func__);
-		return rc;
-	}
-
-	return 0;
-}
-
-static void mhl_platform_power_debug_release(struct device *dev)
-{
-	pr_debug("%s: called\n", __func__);
-
-	device_remove_file(dev, &dev_attr_charge_mhlver);
-	device_remove_file(dev, &dev_attr_charge_devcap);
-	device_remove_file(dev, &dev_attr_charge_max_current);
-	class_destroy(dev->class);
-}
-
-#else
-
-static int mhl_platform_power_debug_init(struct device *parent)
-{
-	return 0;
-}
-
-static void mhl_platform_power_debug_release(struct device *dev)
-{
-}
 #endif
-/***** debug function end *****/
 
 static char *mhl_pm_power_supplied_to[] = {
 	"usb",
@@ -304,7 +136,7 @@ static int mhl_power_property_is_writeable(struct power_supply *psy,
 	return 0;
 }
 
-static int __init mhl_platform_power_init(void)
+int mhl_platform_power_init(void)
 {
 	int ret = 0;
 
@@ -312,8 +144,8 @@ static int __init mhl_platform_power_init(void)
 
 	current_val = 0;
 	vbus_active = false;
-	max_current_val	 = CURRENT_500MA;
-	max_current  = CURRENT_500MA;
+	max_current_val	 = 0;
+	max_current  = 0;
 	mhl_mode = 0;
 
 	/* create device */
@@ -345,13 +177,6 @@ static int __init mhl_platform_power_init(void)
 		goto failed_error;
 	}
 
-	/* debug function */
-	ret = mhl_platform_power_debug_init(mhl_dev);
-	if (ret < 0) {
-		pr_err("%s:failed mhl_platform_power_debug_init\n", __func__);
-		goto failed_error;
-	}
-
 	return ret;
 
 failed_error:
@@ -359,7 +184,7 @@ failed_error:
 	return ret;
 }
 
-static void __exit mhl_platform_power_exit(void)
+void mhl_platform_power_exit(void)
 {
 	pr_debug("%s: called\n", __func__);
 
@@ -368,10 +193,9 @@ static void __exit mhl_platform_power_exit(void)
 	max_current_val = 0;
 	max_current = 0;
 	mhl_mode = 0;
+#ifdef MHL_PMIC_VMIN_SET
 	batt_psy = NULL;
-
-	/* debug function */
-	mhl_platform_power_debug_release(mhl_dev);
+#endif
 
 	/* unregist power_supply */
 	power_supply_unregister(&mhl_psy);
@@ -383,139 +207,61 @@ static void __exit mhl_platform_power_exit(void)
 
 void mhl_platform_power_stop_charge(void)
 {
+	if (!mhl_mode) {
+		pr_err("%s: mhl_mode disabled.\n", __func__);
+		return;
+	}
+
 	current_val = 0;
 	max_current_val = 0;
 	max_current = 0;
 	mhl_mode = 0;
+
+	if (!vbus_active) {
+		pr_err("%s: vbus_active disabled.\n", __func__);
+		return;
+	}
+
 	pr_debug("%s: max_current=%d\n", __func__, max_current);
 	power_supply_changed(&mhl_psy);
 }
 EXPORT_SYMBOL(mhl_platform_power_stop_charge);
 
-int mhl_platform_power_start_charge(char *devcap)
+/*
+ * set set_current to max_current.
+ */
+void mhl_platform_power_start_charge(int set_current)
 {
-	int mhl_version;
-	int dev_type;
-	int pow;
-	int plim;
 	union power_supply_propval current_temp;
-	int rty_cnt;
 
 	pr_debug("%s: called\n", __func__);
 
-	/* pre discovery */
-	if (!devcap) {
-		/* acquire "the chager driver's power_supply" to change VMIN */
-		if (!batt_psy) {
-			/* maximum 1 seconds retry. The time could be enough. */
-			/* fail safe for getting the battery instance. */
-			/* As far as usng ko object install way,  */
-			/* probably, the battery object of kernel */
-			/* could exist. */
-			for (rty_cnt = 0; rty_cnt < 10; rty_cnt++) {
-				batt_psy = power_supply_get_by_name("battery");
-				if (batt_psy)
-					break;
-				pr_warn("%s:try to get battery instance again %x",
-					__func__, rty_cnt);
-				msleep(100);
-			}
+#ifdef MHL_PMIC_VMIN_SET
+	/* acquire "the chager driver's power_supply" to change VMIN */
+	if (!batt_psy) {
+		/* maximum 1 seconds retry. The time could be enough. */
+		/* fail safe for getting the battery instance. */
+		/* As far as usng ko object install way,  */
+		/* probably, the battery object of kernel */
+		/* could exist. */
+		int rty_cnt;
+		for (rty_cnt = 0; rty_cnt < 10; rty_cnt++) {
+			batt_psy = power_supply_get_by_name("battery");
+			if (batt_psy)
+				break;
+			pr_warn("%s:try to get battery instance again %x",
+				__func__, rty_cnt);
+			msleep(100);
 		}
-
-		max_current_val = CURRENT_500MA;
-		max_current = CURRENT_500MA;
-		mhl_mode = 1;
-		pr_info("%s: max_current=%d\n", __func__, max_current);
-		current_temp.intval = max_current;
-		mhl_power_set_property(&mhl_psy,
-			POWER_SUPPLY_PROP_CURRENT_MAX,
-			&current_temp);
-		return 0;
 	}
+#endif
 
-	/* after discovery */
-	mhl_version = devcap[DEVCAP_OFFSET_MHL_VERSION] &
-		MHL_VER_MASK_MAJOR;
-	dev_type = devcap[DEVCAP_OFFSET_DEV_CAT] &
-		MHL_DEV_CATEGORY_MASK_DEV_TYPE;
-	pow = devcap[DEVCAP_OFFSET_DEV_CAT] &
-		MHL_DEV_CATEGORY_MASK_POW;
-	plim = devcap[DEVCAP_OFFSET_DEV_CAT] &
-		MHL_DEV_CATEGORY_MASK_PLIM;
-
-	pr_debug("%s: MHL_VERSION=0x%x DEV_CAT=0x%x\n",
-				__func__, devcap[DEVCAP_OFFSET_MHL_VERSION],
-				devcap[DEVCAP_OFFSET_DEV_CAT]);
-	pr_debug("%s: mhl_version=0x%x dev_type=0x%x pow=0x%x plim=0x%x\n",
-				__func__, mhl_version, dev_type, pow, plim);
-
-	/* check POW */
-	if (pow == MHL_DEV_CATEGORY_POW_BIT) {
-		/* check MHL ver */
-		if (mhl_version == MHL_DEV_MHL_VER_10) {
-			pr_debug("%s: mhl ver=1.0\n", __func__);
-			/* check device type */
-			if ((dev_type == MHL_DEV_CAT_DONGLE) ||
-				(dev_type == MHL_DEV_CAT_SINK)) {
-
-				max_current = CURRENT_500MA;
-				pr_info("%s: max_current=500mA\n", __func__);
-			} else
-				return -EINVAL;
-		} else {
-			pr_debug("%s: mhl ver >= 2\n", __func__);
-
-			/* check PLIM */
-			if (plim == MHL_DEV_CAT_PLIM_500) {
-				max_current = CURRENT_500MA;
-				pr_info("%s: max_current=500mA\n", __func__);
-			} else if (plim == MHL_DEV_CAT_PLIM_900) {
-				max_current = CURRENT_900MA;
-				pr_info("%s: max_current=900mA\n", __func__);
-			} else if (plim == MHL_DEV_CAT_PLIM_1500) {
-				max_current = CURRENT_1500MA;
-				pr_info("%s: max_current=1500mA\n", __func__);
-			} else if (plim == MHL_DEV_CAT_PLIM_100) {
-				max_current = CURRENT_100MA;
-				pr_info("%s: max_current=100mA\n", __func__);
-			} else if (plim == MHL_DEV_CAT_PLIM_2000) {
-
-				/* check device type(Direct Attach) */
-				if (dev_type == MHL_DEV_CAT_DIRECT_SINK) {
-					pr_debug("%s:dev type =Direct Attach\n",
-								__func__);
-					/* Though MHL spec says
-					that the device can offer 2000 mA
-					at least,
-					the current max is set to 1500 mA
-					due to hw limitation. */
-					max_current = CURRENT_1500MA;
-					pr_info("%s: max_current=1500mA\n",
-								__func__);
-				} else {
-					pr_debug("%s:dev type =other\n",
-								__func__);
-					max_current = CURRENT_1500MA;
-					pr_info("%s: max_current=1500mA\n",
-								__func__);
-				}
-			} else
-				return -EINVAL;
-		}
-	} else
-		max_current = 0;
-
+	max_current = set_current;
+	mhl_mode = 1;
+	pr_info("%s: current=%dmA\n", __func__, max_current/1000);
 	current_temp.intval = max_current;
 	mhl_power_set_property(&mhl_psy,
 		POWER_SUPPLY_PROP_CURRENT_MAX,
 		&current_temp);
-
-	pr_debug("%s: max_current=%d\n", __func__, max_current);
-
-	return 0;
 }
 EXPORT_SYMBOL(mhl_platform_power_start_charge);
-
-module_init(mhl_platform_power_init);
-module_exit(mhl_platform_power_exit);
-MODULE_LICENSE("GPL");

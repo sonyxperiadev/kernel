@@ -1,26 +1,29 @@
 /* [kernel/drivers/video/msm/mdss/mhl_sii8620_8061_drv/mhl_platform_base.c]
  *
- * Copyright (C) 2013 Sony Mobile Communications AB.
- * Copyright (C) 2013 Silicon Image Inc.
- *
- * Author: [Hirokuni Kawasaki <hirokuni.kawaaki@sonymobile.com>]
- *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2, as
  * published by the Free Software Foundation; either version 2
  * of the License, or (at your option) any later version.
  */
+/*
+ * Copyright (C) 2014 Sony Mobile Communications Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2, as
+ * published by the Free Software Foundation.
+ */
 
 #include <linux/module.h>
 #include <linux/clk.h>
-#include <linux/platform_device.h>
 #include <linux/usb/msm_hsusb.h>
 #include <linux/gpio.h>
 #include <linux/of_gpio.h>
 #include <linux/of_platform.h>
 #include <linux/delay.h>
+#include <linux/wakelock.h>
 
-#include "mhl_common.h"
+#include <mdss_hdmi_mhl.h>
+
 #include "mhl_platform.h"
 
 #define MHL_DRIVER_NAME "sii8620"
@@ -28,11 +31,11 @@
 
 /*gpio*/
 static int int_gpio;
-static int pwr_gpio;
 static int rst_gpio;
 static int switch_sel_1_gpio;
 static int switch_sel_2_gpio;
 static int fw_wake_gpio;
+static int mhl_clock_gpio;
 
 /*irq*/
 static int irq_number;
@@ -44,47 +47,130 @@ static void *context_cb;
 static int (*device_discovery_cb)(void *context_cb);
 static void *usb_ctx;
 static struct i2c_client *mhl_i2c_client;
-static struct clk *mhl_clk;
+struct clk *mhl_clk_base;
+struct platform_device *hdmi_pdev;
+struct msm_hdmi_mhl_ops hdmi_mhl_ops;
+static bool is_manual_switched_mhl;
 
 enum gpio_direction_types {
 	GPIO_OUTPUT,
 	GPIO_INPUT
 };
 
-extern int qpnp_chg_notify_mhl_state(int state);
+/* Stark */
+#define STARK_USB		0x00
+#define STARK_MHL		0x01
+
+/* wakelock */
+static struct wake_lock mhl_wl;
+
+static void mhl_lock(struct wake_lock *lock)
+{
+	if (!wake_lock_active(lock)) {
+		wake_lock(lock);
+		pr_debug("%s: wakelock : lock",
+			__func__);
+	} else {
+		pr_warn("%s: wakelock : already locked",
+			__func__);
+	}
+}
+
+static void mhl_unlock(struct wake_lock *lock)
+{
+	if (wake_lock_active(lock)) {
+		wake_unlock(lock);
+		pr_debug("%s: wakelock : unlock",
+			__func__);
+	} else {
+		pr_warn("%s: wakelock : already unlocked",
+			__func__);
+	}
+}
+
+/* It should be removed later */
+#ifdef MHL_PMIC_VMIN_SET
+extern int somc_chg_notify_mhl_state(int state);
+#endif
+
+static void mhl_pf_external_notify(int data)
+{
+	/* noitfy charger of mhl status */
+#ifdef MHL_PMIC_VMIN_SET
+	somc_chg_notify_mhl_state(data);
+#endif
+
+	notify_usb_online(usb_ctx, data);
+
+	/* notify HDMI Driver of change of HDMI Clock. */
+	hdmi_mhl_ops.set_upstream_hpd(hdmi_pdev, (uint8_t)data);
+}
 
 static bool mhl_pf_is_switch_to_usb(void)
 {
-	if ((gpio_get_value(GPIO_MHL_SWITCH_SEL_1) == 0) &&
-		(gpio_get_value(GPIO_MHL_SWITCH_SEL_2) == 0))
+	if ((gpio_get_value(switch_sel_1_gpio) == 0) &&
+		(gpio_get_value(switch_sel_2_gpio) == 0))
 		return true;
 	else
 		return false;
+}
+
+static bool mhl_pf_is_switch_to_mhl(void)
+{
+	if ((gpio_get_value(switch_sel_1_gpio) == 1) &&
+		(gpio_get_value(switch_sel_2_gpio) == 1))
+		return true;
+	else
+		return false;
+}
+
+/*
+ * @sw: 1 switches to mhl. 0 switches to usb.
+ */
+static void mhl_pf_switch_to_mhl_or_usb(int sw)
+{
+	/* switch gpio to MHL/USB from USB/MHL */
+	/* todo : must use dtsi for gpio */
+	gpio_set_value(switch_sel_1_gpio, sw);
+	gpio_set_value(switch_sel_2_gpio, sw);
+	pr_debug("%s: gpio(%d) : %d", __func__,
+			 switch_sel_1_gpio,
+			 gpio_get_value(switch_sel_1_gpio));
+	pr_debug("%s: gpio(%d) : %d", __func__,
+			 switch_sel_2_gpio,
+			 gpio_get_value(switch_sel_2_gpio));
+
+	/* wakelock */
+	if (sw == STARK_USB)
+		mhl_unlock(&mhl_wl);
+	else if (sw == STARK_MHL)
+		mhl_lock(&mhl_wl);
+	else
+		pr_err("%s: wakelock : sw unknown",
+			__func__);
+
+	msleep(20);
 }
 
 int mhl_pf_get_gpio_num_int(void)
 {
 	return int_gpio;
 }
-EXPORT_SYMBOL(mhl_pf_get_gpio_num_int);
-
-int mhl_pf_get_gpio_num_pwr(void)
-{
-	return pwr_gpio;
-}
-EXPORT_SYMBOL(mhl_pf_get_gpio_num_pwr);
 
 int mhl_pf_get_gpio_num_rst(void)
 {
 	return rst_gpio;
 }
-EXPORT_SYMBOL(mhl_pf_get_gpio_num_rst);
 
 int mhl_pf_get_gpio_num_fw_wake(void)
 {
 	return fw_wake_gpio;
 }
-EXPORT_SYMBOL(mhl_pf_get_gpio_num_fw_wake);
+
+int mhl_pf_get_gpio_num_mhl_clock(void)
+{
+	return mhl_clock_gpio;
+}
 
 int mhl_pf_get_irq_number(void)
 {
@@ -101,9 +187,8 @@ EXPORT_SYMBOL(mhl_pf_get_i2c_client);
 
 struct clk *mhl_pf_get_mhl_clk(void)
 {
-	return mhl_clk;
+	return mhl_clk_base;
 }
-EXPORT_SYMBOL(mhl_pf_get_mhl_clk);
 
 
 /**
@@ -118,18 +203,9 @@ int mhl_pf_switch_to_usb(void)
 	if (mhl_pf_is_switch_to_usb())
 		return MHL_SUCCESS;
 
-	/* switch gpio to USB from MHL */
-	/* todo : must use dtsi for gpio */
-	gpio_set_value(GPIO_MHL_SWITCH_SEL_1, 0);
-	gpio_set_value(GPIO_MHL_SWITCH_SEL_2, 0);
-	pr_debug("%s: gpio(%d) : %d", __func__,
-			 GPIO_MHL_SWITCH_SEL_1,
-			 gpio_get_value(GPIO_MHL_SWITCH_SEL_1));
-	pr_debug("%s: gpio(%d) : %d", __func__,
-			 GPIO_MHL_SWITCH_SEL_2,
-			 gpio_get_value(GPIO_MHL_SWITCH_SEL_2));
+	mhl_pf_switch_to_mhl_or_usb(STARK_USB);
 
-	msleep(20);
+	is_manual_switched_mhl = false;
 
 	if (!notify_usb_online) {
 		pr_warn("%s: no notify_usb_online registration\n", __func__);
@@ -143,12 +219,39 @@ int mhl_pf_switch_to_usb(void)
 		 */
 		/*return MHL_FAIL;*/
 	} else {
-		notify_usb_online(usb_ctx, 0);
+		mhl_pf_external_notify(0);
 	}
 
 	return MHL_SUCCESS;
 }
 EXPORT_SYMBOL(mhl_pf_switch_to_usb);
+
+int mhl_pf_switch_to_mhl(void)
+{
+	pr_debug("%s:", __func__);
+	isDiscoveryCalled = true;
+
+	if (mhl_pf_is_switch_to_mhl()) {
+		pr_debug("%s: Already MHL", __func__);
+		return MHL_SUCCESS;
+	}
+
+	mhl_pf_switch_to_mhl_or_usb(STARK_MHL);
+
+	/*
+	 * This function is called when switched to MHL
+	 * forcibly without Discovery.
+	 * It is judged that it was switched to MHL forcibly
+	 * by this flag.
+	 */
+	is_manual_switched_mhl = true;
+
+	if (notify_usb_online)
+		mhl_pf_external_notify(1);
+
+	return MHL_SUCCESS;
+}
+EXPORT_SYMBOL(mhl_pf_switch_to_mhl);
 
 /**
  * mhl_pf_switch_register_cb: register
@@ -176,9 +279,7 @@ void mhl_pf_switch_register_cb(int (*device_discovery)(void *context),
 		rc = device_discovery_cb(context_cb);
 		if (rc == MHL_USB_INUSE) {
 			if (notify_usb_online) {
-				/* Found MHL device */
-				qpnp_chg_notify_mhl_state(1);
-				notify_usb_online(usb_ctx, 1);
+				mhl_pf_external_notify(1);
 			}
 		}
 	}
@@ -203,6 +304,40 @@ static void mhl_pf_swtich_resource_free(void)
 	kfree(mhl_info);
 }
 
+bool mhl_pf_check_vbus(void)
+{
+	if (!mhl_info) {
+		pr_warn("%s: usb_ext_notification already removed\n",
+			__func__);
+		return false;
+	}
+
+	if (!mhl_info->check_vbus) {
+		pr_warn("%s: check_vbus is not registered\n", __func__);
+		return false;
+	}
+
+	return mhl_info->check_vbus(usb_ctx);
+}
+EXPORT_SYMBOL(mhl_pf_check_vbus);
+
+void mhl_pf_source_vbus_control(bool on)
+{
+	if (!mhl_info) {
+		pr_warn("%s: usb_ext_notification already removed\n",
+			__func__);
+		return;
+	}
+
+	if (!mhl_info->vbus_control) {
+		pr_warn("%s: vbus_control is not registered\n", __func__);
+		return;
+	}
+
+	mhl_info->vbus_control(usb_ctx, on);
+}
+EXPORT_SYMBOL(mhl_pf_source_vbus_control);
+
 static int mhl_pf_switch_device_discovery(void *data,
 					int id,
 					void (*usb_notify_cb)(void *, int),
@@ -210,6 +345,12 @@ static int mhl_pf_switch_device_discovery(void *data,
 {
 	int rc = MHL_USB_NON_INUSE;
 	pr_info("%s()\n", __func__);
+
+	if (is_manual_switched_mhl) {
+		pr_debug("%s: discovery is returned in 0 (id=%d)\n",
+			__func__, id);
+		return MHL_USB_INUSE;
+	}
 
 	if (id) {
 		/* todo : this logic can be reused in 8620? */
@@ -225,27 +366,15 @@ static int mhl_pf_switch_device_discovery(void *data,
 	isDiscoveryCalled = true;
 	usb_ctx = ctx;
 
-	/* switch gpio to MHL from USB */
-	/* todo : must use dtsi for gpio */
-	gpio_set_value(GPIO_MHL_SWITCH_SEL_1, 1);
-	gpio_set_value(GPIO_MHL_SWITCH_SEL_2, 1);
-	pr_debug("%s: gpio(%d) : %d", __func__,
-			 GPIO_MHL_SWITCH_SEL_1,
-			 gpio_get_value(GPIO_MHL_SWITCH_SEL_1));
-	pr_debug("%s: gpio(%d) : %d", __func__,
-			 GPIO_MHL_SWITCH_SEL_2,
-			 gpio_get_value(GPIO_MHL_SWITCH_SEL_2));
+	mhl_pf_switch_to_mhl_or_usb(STARK_MHL);
 
-	msleep(20);
 	if (!notify_usb_online)
 		notify_usb_online = usb_notify_cb;
 	if (device_discovery_cb) {
 		rc = device_discovery_cb(context_cb);
 		if (rc == MHL_USB_INUSE) {
 			if (notify_usb_online) {
-				/* Found MHL device */
-				qpnp_chg_notify_mhl_state(1);
-				notify_usb_online(usb_ctx, 1);
+				mhl_pf_external_notify(1);
 			}
 		}
 	} else {
@@ -311,8 +440,6 @@ static void mhl_pf_gpio_config_release(void)
 {
 	if (int_gpio >= 0)
 		gpio_free((unsigned int)int_gpio);
-	if (pwr_gpio >= 0)
-		gpio_free((unsigned int)pwr_gpio);
 	if (rst_gpio >= 0)
 		gpio_free((unsigned int)rst_gpio);
 	if (switch_sel_1_gpio >= 0)
@@ -328,27 +455,12 @@ static int mhl_pf_gpio_config_init(void)
 	int res = -1;
 	pr_debug("%s()\n", __func__);
 
-	/* reset */
-	res = mhl_set_gpio("mhl-rst-gpio", rst_gpio, GPIO_OUTPUT, 0);
-	if (res)
-		goto error;
+	/*
+	 * msm_gpios (int,rst,fw_wake) are initialized by system.
+	 */
 
-	/* interrupt */
-	res = mhl_set_gpio("mhl-intr-gpio", int_gpio, GPIO_INPUT, 0);
-	if (res)
-		goto error;
 	irq_number = gpio_to_irq(int_gpio);
 	pr_debug("%s:irq_number:%d\n", __func__, irq_number);
-
-	/* fw wake */
-	res = mhl_set_gpio("mhl-fw-wake-gpio", fw_wake_gpio, GPIO_OUTPUT, 0);
-	if (res)
-		goto error;
-
-	/* power */
-	res = mhl_set_gpio("mhl-pwr-gpio", pwr_gpio, GPIO_OUTPUT, 0);
-	if (res)
-		goto error;
 
 	/* switch sel 1 */
 	res = mhl_set_gpio("mhl-switch-sel-1-gpio",
@@ -360,6 +472,12 @@ static int mhl_pf_gpio_config_init(void)
 	/* switch sel 2 */
 	res = mhl_set_gpio("mhl-switch-sel-2-gpio",
 			switch_sel_2_gpio, GPIO_OUTPUT, 0);
+	if (res)
+		goto error;
+
+	/* mhl clock */
+	res = mhl_set_gpio("mhl-clk-gpio",
+			mhl_clock_gpio, GPIO_OUTPUT, 0);
 	if (res)
 		goto error;
 
@@ -381,14 +499,6 @@ static int get_gpios_from_device_tree(struct device_node *of_node)
 		goto error;
 	}
 	pr_debug("%s():int_gpio:%d\n", __func__, int_gpio);
-
-	/* 1.0V Power */
-	pwr_gpio = of_get_named_gpio(of_node, "mhl-pwr-gpio", 0);
-	if (pwr_gpio < 0) {
-		pr_err("%s: Can't get mhl-pwr-gpio\n", __func__);
-		goto error;
-	}
-	pr_debug("%s():pwr_gpio:%d\n", __func__, pwr_gpio);
 
 	/* RESET */
 	rst_gpio = of_get_named_gpio(of_node, "mhl-rst-gpio", 0);
@@ -423,6 +533,15 @@ static int get_gpios_from_device_tree(struct device_node *of_node)
 		goto error;
 	}
 	pr_debug("%s():fw_wake_gpio:%d\n", __func__, fw_wake_gpio);
+
+	/* MHL Clock */
+	mhl_clock_gpio = of_get_named_gpio(of_node, "mhl-clk-gpio", 0);
+	if (mhl_clock_gpio < 0) {
+		pr_err("%s: Can't get mhl_clock_gpio\n", __func__);
+		goto error;
+	}
+	pr_debug("%s():mhl_clock_gpio:%d\n", __func__, mhl_clock_gpio);
+
 	return 0;
 
 error:
@@ -435,6 +554,7 @@ static int mhl_tx_get_dt_data(struct device *dev_)
 	int rc = 0;
 	struct device_node *of_node = NULL;
 	struct platform_device *op = NULL;
+	struct device_node *hdmi_tx_node = NULL;
 
 	of_node = dev_->of_node;
 	if (!of_node) {
@@ -448,8 +568,8 @@ static int mhl_tx_get_dt_data(struct device *dev_)
 		goto error;
 	}
 
-	mhl_clk = clk_get(&op->dev, "");
-	if (!mhl_clk) {
+	mhl_clk_base = clk_get(dev_, "mhl_clk");
+	if (!mhl_clk_base) {
 		pr_err("%s: invalid clk\n", __func__);
 		goto error;
 	}
@@ -460,9 +580,25 @@ static int mhl_tx_get_dt_data(struct device *dev_)
 		goto error;
 	}
 
+	/* parse phandle for hdmi tx */
+	hdmi_tx_node = of_parse_phandle(of_node, "qcom,hdmi-tx-map", 0);
+	if (!hdmi_tx_node) {
+		pr_err("%s: can't find hdmi phandle\n", __func__);
+		goto error;
+	}
+
+	hdmi_pdev = of_find_device_by_node(hdmi_tx_node);
+	if (!hdmi_pdev) {
+		pr_err("%s: can't find the device by hdmi_tx_node\n", __func__);
+		goto error;
+	}
+	pr_debug("%s: hdmi_pdev [0X%p]\n",
+	       __func__, hdmi_pdev);
+
 	return 0;
 error:
 	pr_err("%s: ret due to err\n", __func__);
+	hdmi_pdev = NULL;
 	return rc;
 } /* mhl_tx_get_dt_data */
 
@@ -476,11 +612,12 @@ static int mhl_i2c_probe(struct i2c_client *client,
 	mhl_info = NULL;
 	isDiscoveryCalled = false;
 	notify_usb_online = NULL;
-
 	device_discovery_cb = NULL;
 	context_cb = NULL;
-
+	is_manual_switched_mhl = false;
 	mhl_i2c_client = client;
+
+	wake_lock_init(&mhl_wl, WAKE_LOCK_SUSPEND, "mhl");
 
 	mhl_info = kzalloc(sizeof(*mhl_info), GFP_KERNEL);
 	if (!mhl_info) {
@@ -511,17 +648,41 @@ static int mhl_i2c_probe(struct i2c_client *client,
 		goto failed_probe;
 	}
 
+	rc = mhl_pf_init();
+	if (rc < 0) {
+		pr_err("%s:failed mhl_pf_init\n", __func__);
+		return rc;
+	}
+
+	rc = mhl_platform_power_init();
+	if (rc < 0) {
+		pr_err("%s:failed mhl_platform_power_init\n", __func__);
+		return rc;
+	}
+
+	rc = msm_hdmi_register_mhl(hdmi_pdev,
+				   &hdmi_mhl_ops, NULL);
+	if (rc) {
+		pr_err("%s: register with hdmi failed\n", __func__);
+		return rc;
+	}
+
 	return 0;
 
 failed_probe:
+	wake_lock_destroy(&mhl_wl);
 	mhl_pf_swtich_resource_free();
-
+	hdmi_pdev = NULL;
 	return rc;
 }
 
 static int mhl_i2c_remove(struct i2c_client *client)
 {
 	pr_debug("%s:\n", __func__);
+
+	wake_lock_destroy(&mhl_wl);
+	mhl_platform_power_exit();
+	mhl_pf_exit();
 
 	/*
 	 * All gpio will be released. All release needing gpio
@@ -531,7 +692,17 @@ static int mhl_i2c_remove(struct i2c_client *client)
 
 	mhl_pf_swtich_resource_free();
 
+	hdmi_pdev = NULL;
+
 	return 0;
+}
+
+static void mhl_i2c_shutdown(struct i2c_client *client)
+{
+	pr_debug("%s:\n", __func__);
+
+	if (mhl_pf_is_chip_power_on())
+		mhl_pf_chip_power_off();
 }
 
 static struct i2c_device_id mhl_sii_i2c_id[] = {
@@ -552,6 +723,7 @@ static struct i2c_driver mhl_sii_i2c_driver = {
 	},
 	.probe = mhl_i2c_probe,
 	.remove =  mhl_i2c_remove,
+	.shutdown = mhl_i2c_shutdown,
 	.id_table = mhl_sii_i2c_id,
 };
 
