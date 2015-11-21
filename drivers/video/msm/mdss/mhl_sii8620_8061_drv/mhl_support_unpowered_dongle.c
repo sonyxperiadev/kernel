@@ -15,8 +15,6 @@
 #include "mhl_cbus_control.h"
 #include "mhl_defs.h"
 
-#ifdef MHL_SUPPORT_UNPOWERED_DONGLE
-
 #define TSRC_VBUS_CBUS_STABLE	150	/* width 100ms-1000ms */
 #define VBUS_CBUS_INTERVAL	50	/* observation interval */
 #define VBUS_STABLE_TIME	300	/* width 100ms-1000ms */
@@ -320,16 +318,3 @@ void mhl_unpowered_sysfs_release(void)
 	device_remove_file(&dev, &dev_attr_discovery_disable);
 	device_unregister(&dev);
 }
-
-#else  /* MHL_SUPPORT_UNPOWERED_DONGLE */
-
-void mhl_unpowered_power_off(void) {}
-bool mhl_unpowered_is_vbus_disabled(void) { return false; }
-void mhl_unpowered_disconnection(void) {}
-void mhl_unpowered_detected_1k(void) {}
-void mhl_unpowered_start(void) {}
-void mhl_unpowered_init(struct device *dev) {}
-void mhl_unpowered_sysfs_release(void) {}
-
-void mhl_unpowered_notify_devcap_read_done(void) {}
-#endif /* MHL_SUPPORT_UNPOWERED_DONGLE */

@@ -38,8 +38,8 @@
 #define BITS_HPD_CTRL_PUSH_PULL_HIGH	(BITS_GPIO_01_HPD_HIGH | 0x30)
 #define BITS_HPD_CTRL_OPEN_DRAIN_HIGH (BITS_GPIO_01_HPD_HIGH | 0x70)
 
-#ifdef MHL_UPSTREAM_HPD_PUSH_PULL
-#ifdef MHL_HPD_UPSTREAM_HDMI_IS_HIGH_TRIGGER
+#ifdef CONFIG_MHL_UPSTREAM_HPD_PUSH_PULL
+#ifdef CONFIG_MHL_HPD_UPSTREAM_HDMI_IS_HIGH_TRIGGER
 /* push pull and high trigger */
 #define BITS_HPD_CTRL_ACTIVE    (BIT_HPD_CTRL_HPD_DS_SIGNAL | BITS_HPD_CTRL_PUSH_PULL_HIGH)
 #define BITS_HPD_CTRL_DEACTIVE  BITS_HPD_CTRL_PUSH_PULL_LOW
@@ -49,7 +49,7 @@
 #define BITS_HPD_CTRL_DEACTIVE  BITS_HPD_CTRL_PUSH_PULL_HIGH
 #endif
 #else
-#ifdef MHL_HPD_UPSTREAM_HDMI_IS_HIGH_TRIGGER
+#ifdef CONFIG_MHL_HPD_UPSTREAM_HDMI_IS_HIGH_TRIGGER
 /* open drain and high trigger */
 #define BITS_HPD_CTRL_ACTIVE    (BIT_HPD_CTRL_HPD_DS_SIGNAL | BITS_HPD_CTRL_OPEN_DRAIN_HIGH)
 #define BITS_HPD_CTRL_DEACTIVE  BITS_HPD_CTRL_OPEN_DRAIN_LOW
@@ -113,6 +113,18 @@
 
 #define VAL_M3_CTRL_MHL1_2_VALUE (BIT_M3_CTRL_SW_MHL3_SEL \
 			| BIT_M3_CTRL_ENC_TMDS)
+
+/* Drive strength registers configuration */
+#define MHL2_DRIVE_STRENGTH_DP_CTL1	0xFE
+#define MHL2_DRIVE_STRENGTH_DP_CTL6	0x2A
+#define MHL2_DRIVE_STRENGTH_DP_CTL7	0x08
+#define MHL2_DRIVE_STRENGTH_DP_CTL8	0x00
+#define MHL2_DRIVE_STRENGTH_COC_CTL1	0x07
+#define MHL3_DRIVE_STRENGTH_DP_CTL1	0xA2
+#define MHL3_DRIVE_STRENGTH_DP_CTL6	0x02
+#define MHL3_DRIVE_STRENGTH_DP_CTL7	0x08
+#define MHL3_DRIVE_STRENGTH_DP_CTL8	0x00
+#define MHL3_DRIVE_STRENGTH_COC_CTL1	0xBC
 
 static uint8_t mhl2_dp_ctl1;
 static uint8_t mhl2_dp_ctl6;
@@ -509,7 +521,7 @@ static void mhl_discovery_timer_func(void *callback_param)
 
 static void params_init_for_ready_to_mhl_connection(void)
 {
-#ifndef SUPPORT_CHG_TIMING
+#ifndef CONFIG_SUPPORT_CHG_TIMING
 	/* chage(pre discovery) */
 	mhl_platform_power_start_charge(CURRENT_500MA);
 #endif
@@ -646,7 +658,7 @@ static int int_disc_isr(uint8_t int_disc_status)
 								__func__);
 			imp_zero_cnt = 0;
 
-#ifdef SUPPORT_CHG_TIMING
+#ifdef CONFIG_SUPPORT_CHG_TIMING
 			mhl_platform_power_start_charge(CURRENT_500MA);
 #endif
 
@@ -721,7 +733,7 @@ static int int_disc_isr(uint8_t int_disc_status)
 			pr_debug("%s: impedance count=%x\n",
 				__func__, imp_zero_cnt);
 
-#ifdef SUPPORT_CHG_TIMING
+#ifdef CONFIG_SUPPORT_CHG_TIMING
 			mhl_platform_power_stop_charge();
 #endif
 
@@ -1799,7 +1811,7 @@ static void regs_init_for_ready_to_tmds_connection(void)
 	mhl_pf_write_reg(REG_HDCP2X_INTR0, 0xFF);
 	mhl_pf_write_reg(REG_INTR1, 0xFF);
 
-#ifdef MHL_HPD_UPSTREAM_HDMI_IS_HIGH_TRIGGER
+#ifdef CONFIG_MHL_HPD_UPSTREAM_HDMI_IS_HIGH_TRIGGER
 	mhl_pf_write_reg(REG_SYS_CTRL1,
 			 BIT_SYS_CTRL1_BLOCK_DDC_BY_HPD
 			 |BIT_SYS_CTRL1_TX_CONTROL_HDMI);

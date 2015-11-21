@@ -22,7 +22,7 @@
 #include <linux/delay.h>
 #include <linux/wakelock.h>
 
-#include <mdss_hdmi_mhl.h>
+#include "../mdss_hdmi_mhl.h"
 
 #include "mhl_platform.h"
 
@@ -442,10 +442,6 @@ static void mhl_pf_gpio_config_release(void)
 		gpio_free((unsigned int)int_gpio);
 	if (rst_gpio >= 0)
 		gpio_free((unsigned int)rst_gpio);
-	if (switch_sel_1_gpio >= 0)
-		gpio_free((unsigned int)switch_sel_1_gpio);
-	if (switch_sel_2_gpio >= 0)
-		gpio_free((unsigned int)switch_sel_2_gpio);
 	if (fw_wake_gpio >= 0)
 		gpio_free((unsigned int)fw_wake_gpio);
 }
@@ -461,19 +457,6 @@ static int mhl_pf_gpio_config_init(void)
 
 	irq_number = gpio_to_irq(int_gpio);
 	pr_debug("%s:irq_number:%d\n", __func__, irq_number);
-
-	/* switch sel 1 */
-	res = mhl_set_gpio("mhl-switch-sel-1-gpio",
-						switch_sel_1_gpio,
-						GPIO_OUTPUT, 0);
-	if (res)
-		goto error;
-
-	/* switch sel 2 */
-	res = mhl_set_gpio("mhl-switch-sel-2-gpio",
-			switch_sel_2_gpio, GPIO_OUTPUT, 0);
-	if (res)
-		goto error;
 
 	/* mhl clock */
 	res = mhl_set_gpio("mhl-clk-gpio",
