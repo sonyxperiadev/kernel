@@ -47,6 +47,14 @@
 #include <linux/irq.h>
 #include <soc/qcom/scm.h>
 
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+#include <linux/gpio.h>
+#include <linux/of_gpio.h>
+ #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
+ #include <linux/qpnp/qpnp-smbcharger_extension.h>
+ #endif
+#endif
+
 #include "dwc3_otg.h"
 #include "core.h"
 #include "gadget.h"
@@ -239,6 +247,24 @@ struct dwc3_msm {
 	int  pwr_event_irq;
 	atomic_t                in_p3;
 	unsigned int		lpm_to_suspend_delay;
+
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+	struct work_struct	ocp_work;
+	struct wake_lock	id_wakelock;
+
+	bool			ext_switching;
+	bool			ext_bsv;
+
+	struct qpnp_vadc_chip	*vadc_usb_dp;
+	struct qpnp_vadc_chip	*vadc_usb_dm;
+
+	/* mhl switch to USB2 when nothing is connected */
+	int			mhl_switch_sel1_gpio;
+	int			mhl_switch_sel2_gpio;
+	int			usb_shell_sel_gpio;
+
+	struct wakeup_source	wakeup_source_vbus;
+#endif
 };
 
 #define USB_HSPHY_3P3_VOL_MIN		3050000 /* uV */
@@ -259,6 +285,60 @@ struct dwc3_msm {
 static struct usb_ext_notification *usb_ext;
 
 static void dwc3_pwr_event_handler(struct dwc3_msm *mdwc);
+
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+#define USB_ID_WAKE_LOCK_TIMEOUT	(3 * HZ)
+#define MHL_SWITCH_PORT_USB1	0
+#define MHL_SWITCH_PORT_USB2	1
+#define MHL_SWITCH_PORT_MHL	2
+
+static void dwc3_select_mhl_switch(struct dwc3_msm *mdwc, int port)
+{
+	if (!gpio_is_valid(mdwc->mhl_switch_sel1_gpio) ||
+				!gpio_is_valid(mdwc->mhl_switch_sel2_gpio)) {
+		dev_dbg(mdwc->dev, "%s: mhl switch sel gpio is not set\n",
+								__func__);
+		return;
+	}
+
+	if (!gpio_is_valid(mdwc->usb_shell_sel_gpio))
+		dev_dbg(mdwc->dev, "%s: usb_shell_sel is not set\n",
+								__func__);
+	switch (port) {
+	case MHL_SWITCH_PORT_USB1:
+		gpio_set_value(mdwc->mhl_switch_sel1_gpio, 0);
+		gpio_set_value(mdwc->mhl_switch_sel2_gpio, 0);
+		dev_info(mdwc->dev, "%s: mhl switch to USB1\n", __func__);
+		if (gpio_is_valid(mdwc->usb_shell_sel_gpio)) {
+			gpio_set_value(mdwc->usb_shell_sel_gpio, 0);
+			dev_dbg(mdwc->dev, "%s: usb_shell_sel switch to low\n",
+							__func__);
+		}
+		break;
+	case MHL_SWITCH_PORT_USB2:
+		gpio_set_value(mdwc->mhl_switch_sel1_gpio, 0);
+		gpio_set_value(mdwc->mhl_switch_sel2_gpio, 1);
+		dev_info(mdwc->dev, "%s: mhl switch to USB2\n", __func__);
+		if (gpio_is_valid(mdwc->usb_shell_sel_gpio)) {
+			gpio_set_value(mdwc->usb_shell_sel_gpio, 1);
+			dev_dbg(mdwc->dev, "%s: usb_shell_sel switch to high\n",
+							__func__);
+		}
+		break;
+	case MHL_SWITCH_PORT_MHL:
+		gpio_set_value(mdwc->mhl_switch_sel1_gpio, 1);
+		gpio_set_value(mdwc->mhl_switch_sel2_gpio, 1);
+		dev_info(mdwc->dev, "%s: mhl switch to MHL\n", __func__);
+		break;
+	default:
+		gpio_set_value(mdwc->mhl_switch_sel1_gpio, 0);
+		gpio_set_value(mdwc->mhl_switch_sel2_gpio, 0);
+		dev_err(mdwc->dev, "%s: invalid value=%d, switch to USB1\n",
+							__func__, port);
+		break;
+	}
+}
+#endif
 
 /**
  *
@@ -948,6 +1028,68 @@ static void dwc3_restart_usb_work(struct work_struct *w)
 	mdwc->in_restart = false;
 }
 
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+static bool msm_dwc3_check_vbus(void *ctx)
+{
+	struct dwc3_msm *mdwc = ctx;
+
+	if (!mdwc) {
+		pr_err("%s: DWC3 driver already removed\n", __func__);
+		return false;
+	}
+
+	pr_debug("%s: vbus_active:%d\n", __func__, mdwc->vbus_active);
+	return mdwc->vbus_active;
+}
+
+static void msm_dwc3_vbus_control(void *ctx, bool on)
+{
+	struct dwc3_msm *mdwc = ctx;
+	struct dwc3	*dwc;
+
+	if (!mdwc) {
+		pr_err("%s: DWC3 driver already removed\n", __func__);
+		return;
+	}
+
+	dwc = platform_get_drvdata(mdwc->dwc3);
+	if (!dwc) {
+		pr_err("%s: Failed to get dwc device\n", __func__);
+		return;
+	}
+
+	pr_info("%s: source vbus %s\n", __func__, on ? "start" : "stop");
+
+	if (!dwc->dotg->vbus_otg) {
+		dwc->dotg->vbus_otg = devm_regulator_get(dwc->dev->parent,
+								"vbus_dwc3");
+		if (!dwc->dotg->vbus_otg) {
+			pr_err("%s: Cannot get vbus_otg\n", __func__);
+			return;
+		}
+	}
+
+	if (on) {
+		if (!regulator_is_enabled(dwc->dotg->vbus_otg)) {
+			__pm_stay_awake(&mdwc->wakeup_source_vbus);
+			if (regulator_enable(dwc->dotg->vbus_otg)) {
+				pr_err("%s: unable to enable vbus_otg\n",
+					__func__);
+				__pm_relax(&mdwc->wakeup_source_vbus);
+			}
+		}
+	} else {
+		if (regulator_is_enabled(dwc->dotg->vbus_otg)) {
+			if (regulator_disable(dwc->dotg->vbus_otg))
+				pr_err("%s: unable to disable vbus_otg\n",
+					__func__);
+			else if (mdwc->wakeup_source_vbus.active)
+				__pm_wakeup_event(&mdwc->wakeup_source_vbus, 100);
+		}
+	}
+}
+#endif
+
 /**
  * Reset USB peripheral connection
  * Inform OTG for Vbus LOW followed by Vbus HIGH notification.
@@ -990,6 +1132,10 @@ int msm_register_usb_ext_notification(struct usb_ext_notification *info)
 	}
 
 	usb_ext = info;
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+	usb_ext->vbus_control = msm_dwc3_vbus_control;
+	usb_ext->check_vbus = msm_dwc3_check_vbus;
+#endif
 	return 0;
 }
 EXPORT_SYMBOL(msm_register_usb_ext_notification);
@@ -1362,6 +1508,10 @@ static const char *chg_to_string(enum dwc3_chg_type chg_type)
 	case DWC3_DCP_CHARGER:		return "USB_DCP_CHARGER";
 	case DWC3_CDP_CHARGER:		return "USB_CDP_CHARGER";
 	case DWC3_PROPRIETARY_CHARGER:	return "USB_PROPRIETARY_CHARGER";
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+	case DWC3_PROPRIETARY_1000MA:	return "USB_PROPRIETARY_1000MA";
+	case DWC3_PROPRIETARY_500MA:	return "USB_PROPRIETARY_500MA";
+#endif
 	case DWC3_FLOATED_CHARGER:	return "USB_FLOATED_CHARGER";
 	default:			return "UNKNOWN_CHARGER";
 	}
@@ -1371,6 +1521,109 @@ static const char *chg_to_string(enum dwc3_chg_type chg_type)
 #define DWC3_CHG_DCD_MAX_RETRIES	6 /* Tdcd_tmout = 6 * 100 msec */
 #define DWC3_CHG_PRIMARY_DET_TIME	(50 * HZ/1000) /* TVDPSRC_ON */
 #define DWC3_CHG_SECONDARY_DET_TIME	(50 * HZ/1000) /* TVDMSRC_ON */
+
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+static int
+get_prop_usb_dp_voltage_now(struct dwc3_msm *mdwc)
+{
+	int rc = 0;
+	struct qpnp_vadc_result results;
+
+	if (IS_ERR_OR_NULL(mdwc->vadc_usb_dp)) {
+		mdwc->vadc_usb_dp = qpnp_get_vadc(mdwc->dev, "usb_dp");
+		if (IS_ERR(mdwc->vadc_usb_dp))
+			return PTR_ERR(mdwc->vadc_usb_dp);
+	}
+
+	rc = qpnp_vadc_read(mdwc->vadc_usb_dp, USB_DP, &results);
+	if (rc) {
+		pr_err("Unable to read usb_dp rc=%d\n", rc);
+		return 0;
+	} else {
+		return results.physical;
+	}
+}
+
+static int
+get_prop_usb_dm_voltage_now(struct dwc3_msm *mdwc)
+{
+	int rc = 0;
+	struct qpnp_vadc_result results;
+
+	if (IS_ERR_OR_NULL(mdwc->vadc_usb_dm)) {
+		mdwc->vadc_usb_dm = qpnp_get_vadc(mdwc->dev, "usb_dm");
+		if (IS_ERR(mdwc->vadc_usb_dm))
+			return PTR_ERR(mdwc->vadc_usb_dm);
+	}
+
+	rc = qpnp_vadc_read(mdwc->vadc_usb_dm, USB_DM, &results);
+	if (rc) {
+		pr_err("Unable to read usb_dm rc=%d\n", rc);
+		return 0;
+	} else {
+		return results.physical;
+	}
+}
+
+static int
+get_prop_proprietary_charger(struct dwc3_msm *mdwc)
+{
+	#define IN_RANGE(val, hi, lo) ((hi >= val) && (val >= lo))
+	struct {
+		struct {
+			int hi;
+			int lo;
+		} dp, dm;
+		int type;
+		char *name;
+	} chgs[] = {
+		{{3600000, 3000000}, {3600000, 3000000},
+				DWC3_PROPRIETARY_CHARGER, "Sony"},
+		{{3000000, 2400000}, {3000000, 2400000},
+				DWC3_PROPRIETARY_CHARGER, "Proprietary 12w"},
+		{{3000000, 2400000}, {2300000, 1700000},
+				DWC3_PROPRIETARY_CHARGER, "Proprietary 10w"},
+		{{2300000, 1700000}, {3000000, 2400000},
+				DWC3_PROPRIETARY_1000MA, "Proprietary 5w"},
+		{{2300000, 1700000}, {2300000, 1700000},
+				DWC3_PROPRIETARY_500MA, "Proprietary 2.5w"},
+	};
+	int dp, dm;
+	int ret;
+	int i;
+
+	dp = get_prop_usb_dp_voltage_now(mdwc);
+	if (IS_ERR_VALUE(dp)) {
+		dev_err(mdwc->dev, "%s: read D+ voltage fail\n", __func__);
+		return dp;
+	}
+
+	dm = get_prop_usb_dm_voltage_now(mdwc);
+	if (IS_ERR_VALUE(dm)) {
+		dev_err(mdwc->dev, "%s: read D- voltage fail\n", __func__);
+		return dm;
+	}
+
+	ret = DWC3_INVALID_CHARGER;
+	for (i = 0; i < (sizeof(chgs) / sizeof(chgs[0])); i++) {
+		if (IN_RANGE(dp, chgs[i].dp.hi, chgs[i].dp.lo) &&
+				IN_RANGE(dm, chgs[i].dm.hi, chgs[i].dm.lo)) {
+			dev_dbg(mdwc->dev, "%s: %s charger, D+=%d, D-=%d\n",
+					__func__, chgs[i].name, dp, dm);
+			ret = chgs[i].type;
+			break;
+		}
+	}
+
+	if (ret == DWC3_INVALID_CHARGER) {
+		dev_warn(mdwc->dev, "%s: voltage not in range, D+=%d, D-=%d\n",
+							__func__, dp, dm);
+		ret = -ERANGE;
+	}
+
+	return ret;
+}
+#endif
 
 static void dwc3_chg_detect_work(struct work_struct *w)
 {
@@ -1392,12 +1645,24 @@ static void dwc3_chg_detect_work(struct work_struct *w)
 		is_dcd = dwc3_chg_check_dcd(mdwc);
 		tmout = ++mdwc->dcd_retries == DWC3_CHG_DCD_MAX_RETRIES;
 		if (is_dcd || tmout) {
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+			int chg_type;
+#endif
 			if (is_dcd)
 				dcd = true;
 			else
 				dcd = false;
 			dwc3_chg_disable_dcd(mdwc);
 			usleep_range(1000, 1200);
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+			chg_type = get_prop_proprietary_charger(mdwc);
+			if (!IS_ERR_VALUE(chg_type)) {
+				mdwc->charger.chg_type = chg_type;
+				mdwc->chg_state = USB_CHG_STATE_DETECTED;
+				delay = 0;
+				break;
+			}
+#endif
 			if (dwc3_chg_det_check_linestate(mdwc)) {
 				mdwc->charger.chg_type =
 						DWC3_PROPRIETARY_CHARGER;
@@ -1657,6 +1922,10 @@ static int dwc3_msm_suspend(struct dwc3_msm *mdwc)
 	dcp = ((mdwc->charger.chg_type == DWC3_DCP_CHARGER) ||
 	      (mdwc->charger.chg_type == DWC3_PROPRIETARY_CHARGER) ||
 	      (mdwc->charger.chg_type == DWC3_FLOATED_CHARGER));
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+	dcp = dcp || (mdwc->charger.chg_type == DWC3_PROPRIETARY_1000MA) ||
+	      (mdwc->charger.chg_type == DWC3_PROPRIETARY_500MA);
+#endif
 	if (dcp) {
 		mdwc->hs_phy->flags |= PHY_CHARGER_CONNECTED;
 		mdwc->ss_phy->flags |= PHY_CHARGER_CONNECTED;
@@ -1802,6 +2071,10 @@ static int dwc3_msm_resume(struct dwc3_msm *mdwc)
 	dcp = ((mdwc->charger.chg_type == DWC3_DCP_CHARGER) ||
 	      (mdwc->charger.chg_type == DWC3_PROPRIETARY_CHARGER) ||
 	      (mdwc->charger.chg_type == DWC3_FLOATED_CHARGER));
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+	dcp = dcp ||(mdwc->charger.chg_type == DWC3_PROPRIETARY_1000MA) ||
+	      (mdwc->charger.chg_type == DWC3_PROPRIETARY_500MA);
+#endif
 	if (dcp) {
 		mdwc->hs_phy->flags |= PHY_CHARGER_CONNECTED;
 		mdwc->ss_phy->flags |= PHY_CHARGER_CONNECTED;
@@ -2296,6 +2569,15 @@ static int dwc3_msm_power_get_property_usb(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_HEALTH:
 		val->intval = mdwc->health_status;
 		break;
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+	case POWER_SUPPLY_PROP_CHARGER_TYPE:
+		if (psy->type == POWER_SUPPLY_TYPE_USB_HVDCP) {
+			val->strval = "USB_HVDCP_CHARGER";
+		} else {
+			val->strval = chg_to_string(mdwc->charger.chg_type);
+		}
+		break;
+#endif
 	default:
 		return -EINVAL;
 	}
@@ -2316,8 +2598,13 @@ static int dwc3_msm_power_set_property_usb(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_USB_OTG:
 		/* Let OTG know about ID detection */
 		mdwc->id_state = val->intval ? DWC3_ID_GROUND : DWC3_ID_FLOAT;
-		if (mdwc->otg_xceiv)
+		if (mdwc->otg_xceiv) {
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+			wake_lock_timeout(&mdwc->id_wakelock,
+				USB_ID_WAKE_LOCK_TIMEOUT);
+#endif
 			queue_work(system_nrt_wq, &mdwc->id_work);
+		}
 
 		break;
 	case POWER_SUPPLY_PROP_SCOPE:
@@ -2339,6 +2626,25 @@ static int dwc3_msm_power_set_property_usb(struct power_supply *psy,
 		dbg_event(0xFF, "RM PuDwn", val->intval);
 		dwc3_msm_remove_pulldown(mdwc, mdwc->rm_pulldown);
 		break;
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+	case POWER_SUPPLY_PROP_USBIN_DET:
+		dev_dbg(mdwc->dev, "%s: notify ext_bsv event %d\n",
+							__func__, val->intval);
+		mdwc->ext_bsv = val->intval ? true : false;
+		if (mdwc->otg_xceiv && !mdwc->ext_inuse &&
+					!mdwc->ext_switching &&
+					mdwc->ext_xceiv.id) {
+			if (val->intval)
+				/* connect D+- to phy if VBUS is hi */
+				dwc3_select_mhl_switch(mdwc,
+							MHL_SWITCH_PORT_USB1);
+			else
+				/* ground D+- if VBUS is lo */
+				dwc3_select_mhl_switch(mdwc,
+							MHL_SWITCH_PORT_USB2);
+		}
+		return 0;
+#endif
 	/* Process PMIC notification in PRESENT prop */
 	case POWER_SUPPLY_PROP_PRESENT:
 		dev_dbg(mdwc->dev, "%s: notify xceiv event\n", __func__);
@@ -2367,6 +2673,19 @@ static int dwc3_msm_power_set_property_usb(struct power_supply *psy,
 		mdwc->current_max = val->intval;
 		break;
 	case POWER_SUPPLY_PROP_TYPE:
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+		if (mdwc->otg_xceiv) {
+			if ((mdwc->ext_inuse || mdwc->ext_switching) &&
+			    (POWER_SUPPLY_TYPE_UNKNOWN != val->intval))
+				return 0;
+		}
+		/* If it already received a notification of HVDCP,
+		 * skip this setting of power_supply to avoid overwrite by DCP.
+		 */
+		if (psy->type == POWER_SUPPLY_TYPE_USB_HVDCP &&
+				val->intval == POWER_SUPPLY_TYPE_USB_DCP)
+			return 0;
+#endif
 		psy->type = val->intval;
 
 		switch (psy->type) {
@@ -2374,6 +2693,9 @@ static int dwc3_msm_power_set_property_usb(struct power_supply *psy,
 			mdwc->charger.chg_type = DWC3_SDP_CHARGER;
 			break;
 		case POWER_SUPPLY_TYPE_USB_DCP:
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+			if (dotg->charger->chg_type == DWC3_INVALID_CHARGER)
+#endif
 			mdwc->charger.chg_type = DWC3_DCP_CHARGER;
 			break;
 		case POWER_SUPPLY_TYPE_USB_HVDCP:
@@ -2390,6 +2712,22 @@ static int dwc3_msm_power_set_property_usb(struct power_supply *psy,
 			mdwc->charger.chg_type = DWC3_INVALID_CHARGER;
 			break;
 		}
+
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+		/* set INVALID_CHARGER to start the charger detection and
+		 * kick the ID detection because qpnp-smbcharger reports
+		 * FLOATED charger and Powered MHL as POWER_SUPPLY_TYPE_USB
+		 * in other than SDP.
+		 */
+		if ((mdwc->charger.chg_type == DWC3_SDP_CHARGER) &&
+				(mdwc->chg_state != USB_CHG_STATE_DETECTED)) {
+			dev_dbg(mdwc->dev, "%s: SDP/MHL/FLOATED\n", __func__);
+			mdwc->charger.chg_type = DWC3_INVALID_CHARGER;
+			wake_lock_timeout(&mdwc->id_wakelock,
+						USB_ID_WAKE_LOCK_TIMEOUT);
+			queue_work(system_nrt_wq, &mdwc->id_work);
+		}
+#endif
 
 		if (mdwc->charger.chg_type != DWC3_INVALID_CHARGER)
 			mdwc->chg_state = USB_CHG_STATE_DETECTED;
@@ -2427,9 +2765,14 @@ static void dwc3_msm_external_power_changed(struct power_supply *psy)
 		dwc3_start_chg_det(&mdwc->charger, false);
 		mdwc->ext_vbus_psy->get_property(mdwc->ext_vbus_psy,
 					POWER_SUPPLY_PROP_CURRENT_MAX, &ret);
+#ifndef CONFIG_SONY_USB_EXTENSIONS
 		power_supply_set_current_limit(&mdwc->usb_psy, ret.intval);
+#endif
 	}
 
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+	power_supply_set_current_limit(&mdwc->usb_psy, ret.intval);
+#endif
 	power_supply_set_online(&mdwc->usb_psy, ret.intval);
 	power_supply_changed(&mdwc->usb_psy);
 }
@@ -2464,6 +2807,9 @@ static enum power_supply_property dwc3_msm_pm_power_props_usb[] = {
 	POWER_SUPPLY_PROP_SCOPE,
 	POWER_SUPPLY_PROP_VOLTAGE_NOW,
 	POWER_SUPPLY_PROP_HEALTH,
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+	POWER_SUPPLY_PROP_CHARGER_TYPE,
+#endif
 };
 
 static void dwc3_init_adc_work(struct work_struct *w);
@@ -2472,6 +2818,9 @@ static void dwc3_ext_notify_online(void *ctx, int on)
 {
 	struct dwc3_msm *mdwc = ctx;
 	bool notify_otg = false;
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+	int ext_inused = 0;
+#endif
 
 	if (!mdwc) {
 		pr_err("%s: DWC3 driver already removed\n", __func__);
@@ -2483,13 +2832,28 @@ static void dwc3_ext_notify_online(void *ctx, int on)
 	if (!mdwc->ext_vbus_psy)
 		mdwc->ext_vbus_psy = power_supply_get_by_name("ext-vbus");
 
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+	ext_inused = mdwc->ext_inuse;
+#endif
+
 	mdwc->ext_inuse = on;
 	if (on) {
 		/* force OTG to exit B-peripheral state */
 		mdwc->ext_xceiv.bsv = false;
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+		/*
+		 * In race condition, ID value might not be updated
+		 * even through ID pin is switched to MHL
+		 */
+		mdwc->ext_xceiv.id = DWC3_ID_FLOAT;
+#endif
 		notify_otg = true;
 		dwc3_start_chg_det(&mdwc->charger, false);
-	} else {
+	} else
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+	if (ext_inused)
+#endif
+	{
 		/* external client offline; tell OTG about cached ID/BSV */
 		if (mdwc->ext_xceiv.id != mdwc->id_state) {
 			mdwc->ext_xceiv.id = mdwc->id_state;
@@ -2499,9 +2863,32 @@ static void dwc3_ext_notify_online(void *ctx, int on)
 		mdwc->ext_xceiv.bsv = mdwc->vbus_active;
 		notify_otg |= mdwc->vbus_active;
 	}
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+	else {
+		dev_dbg(mdwc->dev, "%s: not inused, ignore a disconnection\n",
+								__func__);
+		return;
+	}
+#endif
 
 	if (mdwc->ext_vbus_psy)
 		power_supply_set_present(mdwc->ext_vbus_psy, on);
+
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+	if (!mdwc->id_state && !on && ext_inused) {
+		dev_info(mdwc->dev, "%s: There may be unhandled ID GND\n",
+								__func__);
+		wake_lock_timeout(&mdwc->id_wakelock, USB_ID_WAKE_LOCK_TIMEOUT);
+		queue_work(system_nrt_wq, &mdwc->id_work);
+		return;
+	}
+
+	if (mdwc->id_state && !on && ext_inused && !mdwc->ext_xceiv.bsv) {
+		dev_info(mdwc->dev, "%s: MHL was removed\n", __func__);
+		/* ground D+- when MHL was removed */
+		dwc3_select_mhl_switch(mdwc, MHL_SWITCH_PORT_USB2);
+	}
+#endif
 
 	if (notify_otg)
 		queue_delayed_work(system_nrt_wq, &mdwc->resume_work, 0);
@@ -2516,9 +2903,31 @@ static void dwc3_id_work(struct work_struct *w)
 	if (!mdwc->ext_inuse && usb_ext) {
 		if (mdwc->pmic_id_irq)
 			disable_irq(mdwc->pmic_id_irq);
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+		else
+			mdwc->ext_switching = true;
 
+		if (mdwc->ext_xceiv.bsv || mdwc->ext_bsv) {
+			if ((mdwc->charger.chg_type == DWC3_DCP_CHARGER) &&
+							!mdwc->id_state) {
+				dev_info(mdwc->dev, "request APSD rerun\n");
+				dwc3_select_mhl_switch(mdwc,
+							MHL_SWITCH_PORT_USB2);
+				somc_chg_apsd_rerun_request();
+			}
+
+			dev_dbg(mdwc->dev,
+				"%s: interpret ID as ID_GND, bsv=%d, id=%d\n",
+				__func__, mdwc->ext_xceiv.bsv, mdwc->id_state);
+			ret = usb_ext->notify(usb_ext->ctxt, DWC3_ID_GROUND,
+					dwc3_ext_notify_online, mdwc);
+		} else
+			ret = usb_ext->notify(usb_ext->ctxt, mdwc->id_state,
+					dwc3_ext_notify_online, mdwc);
+#else
 		ret = usb_ext->notify(usb_ext->ctxt, mdwc->id_state,
 				      dwc3_ext_notify_online, mdwc);
+#endif
 		dev_dbg(mdwc->dev, "%s: external handler returned %d\n",
 			__func__, ret);
 
@@ -2530,6 +2939,10 @@ static void dwc3_id_work(struct work_struct *w)
 			local_irq_restore(flags);
 			enable_irq(mdwc->pmic_id_irq);
 		}
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+		else
+			mdwc->ext_switching = false;
+#endif
 
 		mdwc->ext_inuse = (ret == 0);
 	}
@@ -2538,9 +2951,33 @@ static void dwc3_id_work(struct work_struct *w)
 		/* MHL cable: stop peripheral */
 		mdwc->ext_xceiv.id = DWC3_ID_FLOAT;
 		mdwc->ext_xceiv.bsv = false;
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+	} else if (mdwc->ext_xceiv.bsv || mdwc->ext_bsv) {
+		if (mdwc->ext_xceiv.id == DWC3_ID_FLOAT) {
+			dev_dbg(mdwc->dev, "%s: ignore FLOAT\n", __func__);
+			return;
+		}
+		dev_info(mdwc->dev, "%s: force FLOAT when bsv\n", __func__);
+		mdwc->ext_xceiv.id = DWC3_ID_FLOAT;
+#endif
 	} else {
 		/* A cable: start host */
 		mdwc->ext_xceiv.id = mdwc->id_state;
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+		dev_dbg(mdwc->dev, "%s: set id=%d\n", __func__,
+						mdwc->ext_xceiv.id);
+		if (!mdwc->ext_xceiv.id) {
+			/* connect D+- to phy when detect ID_GND */
+			dwc3_select_mhl_switch(mdwc, MHL_SWITCH_PORT_USB1);
+		} else if (!mdwc->ext_xceiv.bsv) {
+			/* ground D+- when detect ID_FLOAT.
+			 * but do not ground it if VBUS is high because the
+			 * charger detection may be using it.
+			 * D+- will be grounded when VBUS is deasserted.
+			 */
+			dwc3_select_mhl_switch(mdwc, MHL_SWITCH_PORT_USB2);
+		}
+#endif
 	}
 
 	dbg_event(0xFF, "RW (id)", 0);
@@ -2557,6 +2994,9 @@ static irqreturn_t dwc3_pmic_id_irq(int irq, void *data)
 	id = !!irq_read_line(irq);
 	if (mdwc->id_state != id) {
 		mdwc->id_state = id;
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+		wake_lock_timeout(&mdwc->id_wakelock, USB_ID_WAKE_LOCK_TIMEOUT);
+#endif
 		queue_work(system_nrt_wq, &mdwc->id_work);
 	}
 
@@ -2579,6 +3019,39 @@ static int dwc3_cpu_notifier_cb(struct notifier_block *nfb,
 	return NOTIFY_OK;
 }
 
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+/**
+ * dwc3_ocp_work - workqueue function.
+ *
+ * @w: Pointer to the dwc3 ocp workqueue
+ *
+ * NOTE: After ocp, resume and notify the event to OTG.
+ */
+static void dwc3_ocp_work(struct work_struct *w)
+{
+	struct dwc3_msm *mdwc = container_of(w, struct dwc3_msm, ocp_work);
+
+	pr_info("%s: receive ocp notification\n", __func__);
+	if (!mdwc->ext_inuse) { /* notify OTG */
+		mdwc->ext_xceiv.ocp = true;
+		dwc3_resume_work(&mdwc->resume_work.work);
+	}
+}
+
+/**
+ * dwc3_ocp_notification - ocp notification callback from regulator.
+ * @ctxt: Pointer to the dwc3 context
+ *
+ * NOTE: This runs in interrupt context.
+ */
+static void dwc3_ocp_notification(void *ctxt)
+{
+	struct dwc3_msm *mdwc = (struct dwc3_msm *)ctxt;
+
+	queue_work(system_nrt_wq, &mdwc->ocp_work);
+}
+#endif
+
 static void dwc3_adc_notification(enum qpnp_tm_state state, void *ctx)
 {
 	struct dwc3_msm *mdwc = ctx;
@@ -2600,6 +3073,9 @@ static void dwc3_adc_notification(enum qpnp_tm_state state, void *ctx)
 		mdwc->adc_param.state_request = ADC_TM_HIGH_THR_ENABLE;
 	}
 
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+	wake_lock_timeout(&mdwc->id_wakelock, USB_ID_WAKE_LOCK_TIMEOUT);
+#endif
 	dwc3_id_work(&mdwc->id_work);
 
 	/* re-arm ADC interrupt */
@@ -2897,6 +3373,11 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 	INIT_DELAYED_WORK(&mdwc->init_adc_work, dwc3_init_adc_work);
 	init_completion(&mdwc->ext_chg_wait);
 
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+	INIT_WORK(&mdwc->ocp_work, dwc3_ocp_work);
+	wake_lock_init(&mdwc->id_wakelock, WAKE_LOCK_SUSPEND, "id_wakelock");
+#endif
+
 	/*
 	 * This regulator needs to be turned on to remove pull down on Dp and
 	 * Dm lines to detect charger type properly.
@@ -3193,6 +3674,24 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev,
 			"unable to read platform data qdss tx fifo size\n");
 
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+	/* mhl switch to usb2 */
+	mdwc->mhl_switch_sel1_gpio = of_get_named_gpio(node,
+						"mhl_switch_sel1_gpio", 0);
+	mdwc->mhl_switch_sel2_gpio = of_get_named_gpio(node,
+						"mhl_switch_sel2_gpio", 0);
+	if (!gpio_is_valid(mdwc->mhl_switch_sel1_gpio) ||
+				!gpio_is_valid(mdwc->mhl_switch_sel2_gpio))
+		dev_info(&pdev->dev, "MHL switch is not enabled\n");
+
+	mdwc->usb_shell_sel_gpio = of_get_named_gpio(node,
+						"usb_shell_sel_gpio", 0);
+	if (!gpio_is_valid(mdwc->usb_shell_sel_gpio))
+		dev_dbg(&pdev->dev, "usb_shell_sel is not supported\n");
+
+	wakeup_source_init(&mdwc->wakeup_source_vbus, "wakeup_source_vbus");
+#endif
+
 	dwc3_set_notifier(&dwc3_msm_notify_event);
 
 	/* Assumes dwc3 is the only DT child of dwc3-msm */
@@ -3321,6 +3820,11 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 		}
 
 		mdwc->ext_xceiv.ext_block_reset = dwc3_msm_block_reset;
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+		mdwc->ext_xceiv.ext_ocp_notification.notify =
+						dwc3_ocp_notification;
+		mdwc->ext_xceiv.ext_ocp_notification.ctxt = mdwc;
+#endif
 		ret = dwc3_set_ext_xceiv(mdwc->otg_xceiv->otg,
 						&mdwc->ext_xceiv);
 		if (ret || !mdwc->ext_xceiv.notify_ext_events) {
@@ -3372,8 +3876,13 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 		enable_irq(mdwc->pmic_id_irq);
 		local_irq_save(flags);
 		mdwc->id_state = !!irq_read_line(mdwc->pmic_id_irq);
-		if (mdwc->id_state == DWC3_ID_GROUND)
+		if (mdwc->id_state == DWC3_ID_GROUND) {
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+			wake_lock_timeout(&mdwc->id_wakelock,
+				USB_ID_WAKE_LOCK_TIMEOUT);
+#endif
 			queue_work(system_nrt_wq, &mdwc->id_work);
+		}
 		local_irq_restore(flags);
 		enable_irq_wake(mdwc->pmic_id_irq);
 	}
@@ -3390,6 +3899,9 @@ disable_vbus:
 	if (!IS_ERR_OR_NULL(mdwc->vbus_otg))
 		regulator_disable(mdwc->vbus_otg);
 put_psupply:
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+	wakeup_source_trash(&mdwc->wakeup_source_vbus);
+#endif
 	if (mdwc->usb_psy.dev)
 		power_supply_unregister(&mdwc->usb_psy);
 disable_ref_clk:
@@ -3491,10 +4003,43 @@ static int dwc3_msm_remove(struct platform_device *pdev)
 	clk_disable_unprepare(mdwc->xo_clk);
 	clk_put(mdwc->xo_clk);
 
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+	wake_lock_destroy(&mdwc->id_wakelock);
+	wakeup_source_trash(&mdwc->wakeup_source_vbus);
+#endif
+
 	dwc3_msm_config_gdsc(mdwc, 0);
 
 	return 0;
 }
+
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+static void dwc3_msm_shutdown(struct platform_device *pdev)
+{
+	struct dwc3_msm *mdwc = platform_get_drvdata(pdev);
+
+	msm_dwc3_vbus_control(mdwc, false);
+
+	if (!mdwc->ext_xceiv.bsv && !mdwc->ext_bsv) {
+		struct dwc3 *dwc = platform_get_drvdata(mdwc->dwc3);
+		struct regulator *vbus_rec = devm_regulator_get(
+						dwc->dev->parent, "vbus_rec");
+		if (!vbus_rec) {
+			dev_err(mdwc->dev, "failed to get vbus_rec\n");
+		} else {
+			int rc;
+			msleep(20);
+			rc = regulator_enable(vbus_rec);
+			if (!rc) {
+				msleep(20);
+				regulator_disable(vbus_rec);
+			}
+		}
+	}
+
+	msleep(200);
+}
+#endif
 
 #ifdef CONFIG_PM_SLEEP
 static int dwc3_msm_pm_suspend(struct device *dev)
@@ -3620,6 +4165,9 @@ MODULE_DEVICE_TABLE(of, of_dwc3_matach);
 static struct platform_driver dwc3_msm_driver = {
 	.probe		= dwc3_msm_probe,
 	.remove		= dwc3_msm_remove,
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+	.shutdown	= dwc3_msm_shutdown,
+#endif
 	.driver		= {
 		.name	= "msm-dwc3",
 		.pm	= &dwc3_msm_dev_pm_ops,

@@ -26,12 +26,127 @@
 #include "xhci.h"
 
 #define VBUS_REG_CHECK_DELAY	(msecs_to_jiffies(1000))
-#define MAX_INVALID_CHRGR_RETRY 3
+#define MAX_INVALID_CHRGR_RETRY 5
 static int max_chgr_retry_count = MAX_INVALID_CHRGR_RETRY;
 module_param(max_chgr_retry_count, int, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(max_chgr_retry_count, "Max invalid charger retry count");
 
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+#define DWC3_OTG_TIME_NO_DEVICE (10000)
+#define DWC3_OTG_STOP_HOST_RETRY_MAX (10)
+static unsigned int no_device_timeout;
+module_param(no_device_timeout, uint, S_IRUSR | S_IWUSR);
+static unsigned int stop_host_retry_max;
+module_param(stop_host_retry_max, uint, S_IRUSR | S_IWUSR);
+
+static bool no_device_timeout_enable;
+module_param(no_device_timeout_enable, bool, S_IRUSR | S_IWUSR);
+static bool not_use_sw_chg_det;
+module_param(not_use_sw_chg_det, bool, S_IRUSR | S_IWUSR);
+#endif
+
 static void dwc3_otg_notify_host_mode(struct usb_otg *otg, int host_mode);
+
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+static void dwc3_otg_start_no_device_work(struct dwc3_otg *dotg, bool start);
+
+static int dwc3_otg_stop_host_function(struct dwc3 *dwc, bool force_stop)
+{
+	int ret;
+	struct power_supply *psy;
+
+	psy = power_supply_get_by_name("battery");
+	if (psy) {
+		union power_supply_propval val;
+		if (force_stop)
+			val.intval = 1;
+		else
+			val.intval = 0;
+		ret = psy->set_property(psy,
+			POWER_SUPPLY_PROP_STOP_USB_HOST_FUNCTION, &val);
+	} else {
+		dev_err(dwc->dev, "cannot get by name battery");
+		ret = -ENODEV;
+	}
+
+	return ret;
+}
+
+static void dwc3_otg_no_device_work(struct work_struct *w)
+{
+	struct dwc3_otg *dotg = container_of(w, struct dwc3_otg,
+						no_device_work.work);
+	struct dwc3 *dwc = dotg->dwc;
+	int ret;
+
+	dev_dbg(dwc->dev, "time up\n");
+
+	if (dotg->retry_count < stop_host_retry_max) {
+		ret = dwc3_otg_stop_host_function(dwc, false);
+		if (ret == -EBUSY) {
+			/* retry */
+			dwc3_otg_start_no_device_work(dotg, true);
+			dotg->retry_count++;
+		}
+	} else {
+		dev_dbg(dwc->dev, "retry count over\n");
+		dwc3_otg_stop_host_function(dwc, true);
+	}
+
+	return;
+}
+
+static void dwc3_otg_start_no_device_work(struct dwc3_otg *dotg, bool start)
+{
+	struct dwc3 *dwc = dotg->dwc;
+
+	dev_dbg(dwc->dev, "%s: start = %d\n", __func__, start);
+
+	if (start)
+		schedule_delayed_work(&dotg->no_device_work,
+				msecs_to_jiffies(no_device_timeout));
+	else
+		cancel_delayed_work(&dotg->no_device_work);
+}
+
+static int dwc3_usbdev_notify(struct notifier_block *self,
+					unsigned long action, void *priv)
+{
+	struct dwc3_otg *dotg = container_of(self, struct dwc3_otg, usbdev_nb);
+	struct dwc3 *dwc = dotg->dwc;
+	struct usb_device *udev = priv;
+
+	switch (action) {
+	case USB_DEVICE_ADD:
+		if (udev->parent && !udev->parent->parent) {
+			if (!dotg->device_count)
+				dwc3_otg_start_no_device_work(dotg, false);
+
+			dotg->device_count++;
+			dev_dbg(dwc->dev,
+				"%s: add device. count = %d\n",
+				__func__, dotg->device_count);
+		}
+		break;
+	case USB_DEVICE_REMOVE:
+		if (udev->parent && !udev->parent->parent) {
+			dotg->device_count--;
+			if (!dotg->device_count)
+				dwc3_otg_start_no_device_work(dotg, true);
+
+			dev_dbg(dwc->dev,
+				"%s: remove device. count  = %d\n",
+				__func__, dotg->device_count);
+		}
+		break;
+	default:
+		dev_dbg(dwc->dev, "%s: unhandled event=%lu\n",
+						__func__, action);
+		break;
+	}
+	return 0;
+}
+#endif
 
 /**
  * dwc3_otg_start_host -  helper function for starting/stoping the host controller driver.
@@ -68,6 +183,19 @@ static int dwc3_otg_start_host(struct usb_otg *otg, int on)
 
 		dwc3_otg_notify_host_mode(otg, on);
 		usb_phy_notify_connect(dotg->dwc->usb2_phy, USB_SPEED_HIGH);
+
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+		/* register ocp notification */
+		if (ext_xceiv && ext_xceiv->ext_ocp_notification.notify) {
+			ret = regulator_register_ocp_notification(
+					dotg->vbus_otg,
+					&ext_xceiv->ext_ocp_notification);
+			if (ret)
+				dev_err(otg->phy->dev,
+					"unable to register ocp\n");
+		}
+#endif
+
 		ret = regulator_enable(dotg->vbus_otg);
 		if (ret) {
 			dev_err(otg->phy->dev, "unable to enable vbus_otg\n");
@@ -75,6 +203,9 @@ static int dwc3_otg_start_host(struct usb_otg *otg, int on)
 			return ret;
 		}
 
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+		usleep(10000);
+#endif
 		dwc3_set_mode(dwc, DWC3_GCTL_PRTCAP_HOST);
 
 		/*
@@ -101,6 +232,23 @@ static int dwc3_otg_start_host(struct usb_otg *otg, int on)
 		 */
 		pm_runtime_disable(&dwc->xhci->dev);
 
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+		/*
+		 * WORKAROUND: avoids entering a suspend state, because PMIC
+		 * is damaged by known issue when attempt to suspend.
+		 */
+		wake_lock(&dotg->host_wakelock);
+
+		if (no_device_timeout_enable) {
+			dotg->no_device_timeout_enabled = 1;
+			dotg->device_count = 0;
+			dotg->retry_count = 0;
+			dotg->usbdev_nb.notifier_call = dwc3_usbdev_notify;
+			usb_register_notify(&dotg->usbdev_nb);
+			dwc3_otg_start_no_device_work(dotg, true);
+		}
+#endif
+
 		hcd = platform_get_drvdata(dwc->xhci);
 		otg->host = &hcd->self;
 
@@ -115,11 +263,40 @@ static int dwc3_otg_start_host(struct usb_otg *otg, int on)
 		}
 
 		dbg_event(0xFF, "StHost get", 0);
+
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+		/* unregister ocp notification */
+		if (ext_xceiv && ext_xceiv->ext_ocp_notification.notify) {
+			ret = regulator_register_ocp_notification(
+					dotg->vbus_otg, NULL);
+			if (ret)
+				dev_err(otg->phy->dev,
+					"unable to unregister ocp\n");
+		}
+#endif
+
 		pm_runtime_get(dwc->dev);
 		usb_phy_notify_disconnect(dotg->dwc->usb2_phy, USB_SPEED_HIGH);
 		dwc3_otg_notify_host_mode(otg, on);
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+		if (dotg->no_device_timeout_enabled) {
+			dotg->no_device_timeout_enabled = 0;
+			dwc3_otg_start_no_device_work(dotg, false);
+			usb_unregister_notify(&dotg->usbdev_nb);
+		}
+
+		/* WORKAROUND: delays execution of the block-reset because it
+		 * causes HWWD if ext_xceive access the HW during block reset.
+		 */
+		usleep(10000);
+
+		if (wake_lock_active(&dotg->host_wakelock))
+			wake_unlock(&dotg->host_wakelock);
+#endif
 		otg->host = NULL;
 		platform_device_del(dwc->xhci);
+
+
 
 		/*
 		 * Perform USB hardware RESET (both core reset and DBM reset)
@@ -345,6 +522,14 @@ static void dwc3_ext_event_notify(struct usb_otg *otg,
 			clear_bit(B_SESS_VLD, &dotg->inputs);
 		}
 
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+		if (ext_xceiv->ocp) {
+			dev_dbg(phy->dev, "XCVR: OCP set\n");
+			ext_xceiv->ocp = false;
+			set_bit(A_VBUS_DROP_DET, &dotg->inputs);
+		}
+#endif
+
 		if (!init) {
 			init = true;
 			if (!work_busy(&dotg->sm_work.work))
@@ -407,6 +592,9 @@ static int dwc3_otg_set_power(struct usb_phy *phy, unsigned mA)
 	if (dotg->charger->charging_disabled)
 		return 0;
 
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+	if (not_use_sw_chg_det)
+#endif
 	if (dotg->charger->chg_type != DWC3_INVALID_CHARGER) {
 		dev_dbg(phy->dev,
 			"SKIP setting power supply type again,chg_type = %d\n",
@@ -423,6 +611,13 @@ static int dwc3_otg_set_power(struct usb_phy *phy, unsigned mA)
 		power_supply_type = POWER_SUPPLY_TYPE_USB_DCP;
 	else
 		power_supply_type = POWER_SUPPLY_TYPE_UNKNOWN;
+
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+	if (dotg->charger->chg_type == DWC3_PROPRIETARY_CHARGER ||
+	    dotg->charger->chg_type == DWC3_PROPRIETARY_1000MA ||
+	    dotg->charger->chg_type == DWC3_PROPRIETARY_500MA)
+		power_supply_type = POWER_SUPPLY_TYPE_USB_DCP;
+#endif
 
 	power_supply_set_supply_type(dotg->psy, power_supply_type);
 
@@ -490,6 +685,22 @@ void dwc3_otg_init_sm(struct dwc3_otg *dotg)
 		set_bit(B_SESS_VLD, &dotg->inputs);
 }
 
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+static void dwc3_otg_set_invalid_charger(struct usb_phy *phy)
+{
+	struct power_supply *psy;
+
+	psy = power_supply_get_by_name("battery");
+	if (psy) {
+		const union power_supply_propval ret = {1,};
+		psy->set_property(psy,
+			POWER_SUPPLY_PROP_INVALID_CHARGER, &ret);
+	} else {
+		dev_err(phy->dev, "couldn't get battery power supply\n");
+	}
+}
+#endif
+
 /**
  * dwc3_otg_sm_work - workqueue function.
  *
@@ -553,6 +764,9 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 					charger->chg_type =
 							DWC3_INVALID_CHARGER;
 			}
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+			dwc3_otg_set_power(phy, 0);
+#endif
 		} else if (test_bit(B_SESS_VLD, &dotg->inputs)) {
 			dev_dbg(phy->dev, "b_sess_vld\n");
 			if (charger) {
@@ -566,6 +780,20 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 					dbg_event(0xFF, "PROPCHG put", 0);
 					pm_runtime_put_sync(phy->dev);
 					break;
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+				case DWC3_PROPRIETARY_1000MA:
+					dev_dbg(phy->dev, "lpm, DCP charger\n");
+					dwc3_otg_set_power(phy,
+							DWC3_1000MA_CHG_MAX);
+					pm_runtime_put_sync(phy->dev);
+					break;
+				case DWC3_PROPRIETARY_500MA:
+					dev_dbg(phy->dev, "lpm, DCP charger\n");
+					dwc3_otg_set_power(phy,
+							DWC3_500MA_CHG_MAX);
+					pm_runtime_put_sync(phy->dev);
+					break;
+#endif
 				case DWC3_CDP_CHARGER:
 					dwc3_otg_set_power(phy,
 							DWC3_IDEV_CHG_MAX);
@@ -596,13 +824,21 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 					if (dotg->charger_retry_count ==
 						max_chgr_retry_count) {
 						dwc3_otg_set_power(phy, 0);
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+						dwc3_otg_set_invalid_charger(phy);
+#endif
 						dbg_event(0xFF, "FLCHG put", 0);
 						pm_runtime_put_sync(phy->dev);
 						break;
 					}
 					charger->start_detection(dotg->charger,
 									false);
-
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+					delay = msecs_to_jiffies(100 *
+						dotg->charger_retry_count);
+					work = 1;
+					break;
+#endif
 				default:
 					dev_dbg(phy->dev, "chg_det started\n");
 					charger->start_detection(charger, true);
@@ -663,6 +899,12 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 			phy->state = OTG_STATE_B_IDLE;
 			dotg->vbus_retry_count = 0;
 			work = 1;
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+			clear_bit(A_VBUS_DROP_DET, &dotg->inputs);
+		} else if (test_bit(A_VBUS_DROP_DET, &dotg->inputs)) {
+			dev_dbg(phy->dev, "vbus_drop_det\n");
+			/* staying on here until exit from A-Device */
+#endif
 		} else {
 			phy->state = OTG_STATE_A_HOST;
 			ret = dwc3_otg_start_host(&dotg->otg, 1);
@@ -704,6 +946,14 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 			phy->state = OTG_STATE_B_IDLE;
 			dotg->vbus_retry_count = 0;
 			work = 1;
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+			clear_bit(A_VBUS_DROP_DET, &dotg->inputs);
+		} else if (test_bit(A_VBUS_DROP_DET, &dotg->inputs)) {
+			dev_dbg(phy->dev, "vbus_drop_det\n");
+			dwc3_otg_start_host(&dotg->otg, 0);
+			phy->state = OTG_STATE_A_IDLE;
+			work = 1;
+#endif
 		} else {
 			dev_dbg(phy->dev, "still in a_host state. Resuming root hub.\n");
 			dbg_event(0xFF, "AHOST put", 0);
@@ -763,6 +1013,16 @@ int dwc3_otg_init(struct dwc3 *dwc)
 	init_completion(&dotg->dwc3_xcvr_vbus_init);
 	INIT_DELAYED_WORK(&dotg->sm_work, dwc3_otg_sm_work);
 
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+	wake_lock_init(&dotg->host_wakelock, WAKE_LOCK_SUSPEND,
+							"host_wakelock");
+	INIT_DELAYED_WORK(&dotg->no_device_work, dwc3_otg_no_device_work);
+
+	no_device_timeout = DWC3_OTG_TIME_NO_DEVICE;
+	stop_host_retry_max = DWC3_OTG_STOP_HOST_RETRY_MAX;
+	no_device_timeout_enable = true;
+#endif
+
 	dbg_event(0xFF, "OTGInit get", 0);
 	pm_runtime_get(dwc->dev);
 
@@ -784,6 +1044,9 @@ void dwc3_otg_exit(struct dwc3 *dwc)
 		if (dotg->charger)
 			dotg->charger->start_detection(dotg->charger, false);
 		cancel_delayed_work_sync(&dotg->sm_work);
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+		wake_lock_destroy(&dotg->host_wakelock);
+#endif
 		dbg_event(0xFF, "OTGExit put", 0);
 		pm_runtime_put(dwc->dev);
 		dwc->dotg = NULL;
