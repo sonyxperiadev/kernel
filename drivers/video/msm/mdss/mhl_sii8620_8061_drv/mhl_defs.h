@@ -71,9 +71,9 @@ typedef union {
 #define MHL_DEV_ACTIVE					0x04
 
 /* Version that this chip supports */
-#define MHL_VER_MAJOR						MHL_VERSION_MAJOR
-#define MHL_VER_MINOR						MHL_VERSION_MINOR
-#define MHL_VERSION							(MHL_VER_MAJOR | MHL_VER_MINOR)
+#define MHL_VER_MAJOR						0x30
+#define MHL_VER_MINOR						0
+#define MHL_VERSION						(MHL_VER_MAJOR | MHL_VER_MINOR)
 
 /* MHL Version mask */
 #define MHL_VER_MASK_MAJOR					0xF0

@@ -1,12 +1,15 @@
+# Base MHL drivers for platform glue
 obj-y += mhl_platform_base.o
 obj-y += mhl_platform_power.o
+obj-y += mhl_platform.o
+obj-y += mhl_platform_i2c.o
 
-obj-m +=  mhl_sii8620_8061_drv.o
+# MHL SII8620/SII8061 chip support
+obj-y += mhl_sii8620_8061_device.o mhl_sii8620_device_edid.o
+obj-y += mhl_driver.o mhl_tx.o mhl_tx_rcp.o
+obj-y += mhl_lib_edid.o mhl_lib_infoframe.o mhl_lib_timer.o
+obj-y += mhl_cbus_control.o mhl_cbus_write_burst.o
 
-mhl_sii8620_8061_drv-objs := mhl_sii8620_8061_device.o mhl_sii8620_device_edid.o  mhl_platform.o  mhl_tx.o mhl_platform_i2c.o mhl_lib_edid.o mhl_cbus_control.o mhl_tx_rcp.o mhl_lib_infoframe.o mhl_lib_timer.o mhl_cbus_write_burst.o mhl_support_unpowered_dongle.o
 
-#Make ko object for development
-debug: mhl_sii8620_8061_device.c mhl_sii8620_device_edid.c mhl_platform.c mhl_tx.c mhl_platform_i2c.c mhl_lib_edid.c mhl_cbus_control.c mhl_tx_rcp.c mhl_lib_infoframe.c mhl_lib_timer.c mhl_cbus_write_burst.c mhl_support_unpowered_dongle.c
-	$(MAKE) -C ${KERNELPATH} M=$(PWD) modules
-clean:
-	$(MAKE) -C ${KERNELPATH} M=$(PWD) clean
+obj-$(CONFIG_MHL_SUPPORT_UNPOWERED_DONGLE)+= mhl_support_unpowered_dongle.o
+obj-$(CONFIG_MHL_BIST)			  += mhl_sii8620_bist.o

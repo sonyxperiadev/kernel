@@ -1613,7 +1613,7 @@ static void mhl_check_av_link_status(uint8_t xstatus_1)
 static void mhl3_specific_init(void)
 {
 	/* Even in MHL3 mode, TPI:1A[0] controls DVI vs. HDMI */
-#ifdef MHL_HPD_UPSTREAM_HDMI_IS_HIGH_TRIGGER
+#ifdef CONFIG_MHL_HPD_UPSTREAM_HDMI_IS_HIGH_TRIGGER
 	mhl_pf_write_reg(REG_SYS_CTRL1,
 		BIT_SYS_CTRL1_BLOCK_DDC_BY_HPD);
 #else
