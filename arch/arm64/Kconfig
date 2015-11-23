@@ -336,6 +336,23 @@ config MACH_SONY_SUZURAN
       If you enable this config,
       please use SONY Mobile device tree.
 
+config MACH_SONY_SATSUKI
+    bool "Sony Mobile Satsuki"
+    depends on ARCH_SONY_KITAKAMI
+    help
+      Support for the SONY Mobile Satsuki device
+      which is based on SONY Kitakami R2 platform.
+      If you enable this config,
+      please use SONY Mobile device tree.
+
+config MACH_SONY_SATSUKI_DSDS
+    bool "Sony Mobile Satsuki Dsds"
+    depends on ARCH_SONY_KITAKAMI
+    help
+      Support for the SONY Mobile Satsuki Dsds device
+      which is based on SONY Kitakami R2 platform.
+      If you enable this config,
+      please use SONY Mobile device tree.
 
 endmenu
 
