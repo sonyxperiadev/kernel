@@ -76,6 +76,29 @@ static struct msm_gpiomux_config msm_eth_configs[] = {
 };
 #endif
 
+static struct gpiomux_setting sim2_det_actv_cfg = {
+	.func = GPIOMUX_FUNC_1,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_UP,
+	.dir = GPIOMUX_IN,
+};
+static struct gpiomux_setting sim2_det_susp_cfg = {
+	.func = GPIOMUX_FUNC_1,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_NONE,
+	.dir = GPIOMUX_IN,
+};
+
+static struct msm_gpiomux_config msm8226_sim_det_configs[] __initdata = {
+	{
+		.gpio      = 56,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &sim2_det_actv_cfg,
+			[GPIOMUX_SUSPENDED] = &sim2_det_susp_cfg,
+		},
+	},
+};
+
 static struct gpiomux_setting synaptics_int_act_cfg = {
 	.func = GPIOMUX_FUNC_GPIO,
 	.drv = GPIOMUX_DRV_8MA,
@@ -727,7 +750,10 @@ void __init msm8226_init_gpiomux(void)
 	msm_gpiomux_install(&sd_card_det, 1);
 	msm_gpiomux_install(msm_synaptics_configs,
 				ARRAY_SIZE(msm_synaptics_configs));
-
+	if (of_machine_is_compatible("somc,eagle_dsds")) {
+		msm_gpiomux_install(msm8226_sim_det_configs,
+			ARRAY_SIZE(msm8226_sim_det_configs));
+	}
 	msm_gpiomux_install_nowrite(msm_lcd_configs,
 			ARRAY_SIZE(msm_lcd_configs));
 
