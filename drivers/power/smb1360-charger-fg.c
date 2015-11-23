@@ -1002,6 +1002,20 @@ static int smb1360_get_prop_batt_status(struct smb1360_chip *chip)
 		return POWER_SUPPLY_STATUS_CHARGING;
 }
 
+static int smb1360_get_prop_charging_status(struct smb1360_chip *chip)
+{
+	int rc;
+	u8 reg = 0;
+
+	rc = smb1360_read(chip, STATUS_3_REG, &reg);
+	if (rc) {
+		pr_err("Couldn't read STATUS_3_REG rc=%d\n", rc);
+		return 0;
+	}
+
+	return (reg & CHG_EN_BIT) ? 1 : 0;
+}
+
 static int smb1360_get_prop_charge_type(struct smb1360_chip *chip)
 {
 	int rc;
@@ -2213,6 +2227,7 @@ static int usbin_uv_handler(struct smb1360_chip *chip, u8 rt_stat)
 	}
 
 	return 0;
+#endif
 }
 
 static int aicl_done_handler(struct smb1360_chip *chip, u8 rt_stat)
@@ -2228,7 +2243,6 @@ static int aicl_done_handler(struct smb1360_chip *chip, u8 rt_stat)
 	}
 
 	return 0;
-#endif
 }
 
 static int chg_inhibit_handler(struct smb1360_chip *chip, u8 rt_stat)
