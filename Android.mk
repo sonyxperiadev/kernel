@@ -16,7 +16,7 @@
 # Android makefile to build kernel as a part of Android Build
 
 ifeq ($(BUILD_KERNEL),true)
-ifeq ($(filter-out amami aries castor castor_windy eagle flamingo honami ivy karin karin_windy leo scorpion scorpion_windy seagull sirius sumire suzuran tianchi tianchi_dsds togari tulip,$(TARGET_DEVICE)),)
+ifeq ($(filter-out amami aries castor castor_windy eagle flamingo honami ivy karin karin_windy leo satsuki scorpion scorpion_windy seagull sirius sumire suzuran tianchi tianchi_dsds togari tulip,$(TARGET_DEVICE)),)
 
 KERNEL_SRC := $(call my-dir)
 # kernel configuration - mandatory:
