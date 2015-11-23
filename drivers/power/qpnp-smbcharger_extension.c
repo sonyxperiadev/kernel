@@ -30,6 +30,7 @@
 #include <linux/of_gpio.h>
 #include <linux/delay.h>
 #include <linux/input.h>
+#include <linux/qpnp/qpnp-smbcharger_extension.h>
 
 #include "qpnp-smbcharger_extension.h"
 
@@ -112,44 +113,100 @@ module_param_cb(start_id_polling, &start_id_polling_ops, &start_id_polling,
 #define ADPT_ALLOWANCE_MASK		SMB_MASK(2, 0)
 #define USBIN_ADPT_ALLOW_9V		0x3
 #define USBIN_ADPT_ALLOW_5V_TO_9V	0x2
-int somc_chg_apsd_wait_rerun(struct device *dev, u16 misc_base, u16 usb_base)
+#define APSD_LOWERED_TIMEOUT_MS		1000
+int somc_chg_apsd_wait_rerun(struct chg_somc_params *params, bool wait_comp)
 {
 	int rc, count;
 	u8 reg;
 
-	rc = somc_chg_sec_masked_write(dev, usb_base + USBIN_CHGR_CFG,
+	pr_info("APSD rerun(%d)\n", wait_comp);
+	if (wait_comp) {
+		INIT_COMPLETION(params->apsd.src_det_lowered);
+		params->apsd.rerun_wait_irq = true;
+	}
+
+	pr_debug("Allow only 9V chargers\n");
+	rc = somc_chg_sec_masked_write(params->dev,
+			*params->usb_chgpth_base + USBIN_CHGR_CFG,
 			ADPT_ALLOWANCE_MASK, USBIN_ADPT_ALLOW_9V);
 	if (rc) {
-		dev_err(dev, "Can't set 9v rc=%d\n", rc);
-		return rc;
-	} else {
-		rc = somc_chg_sec_masked_write(dev, usb_base + USBIN_CHGR_CFG,
-				ADPT_ALLOWANCE_MASK,
-				USBIN_ADPT_ALLOW_5V_TO_9V);
-		if (rc) {
-			dev_err(dev, "Can't set 5/9v unreg rc=%d\n", rc);
-			return rc;
-		}
+		dev_err(params->dev, "Can't set 9v rc=%d\n", rc);
+		goto abort;
 	}
-	if (somc_chg_is_usb_present(dev)) {
-		for (count = 0; count < READ_LOOP_NUM; count++) {
-			rc = somc_chg_read(dev, &reg, misc_base
-					+ IDEV_STS, 1);
-			if (rc) {
-				dev_err(dev, "Can't read src status rc = %d\n"
-						, rc);
-			} else {
-				pr_debug("SRC_DETECT_STS = 0x%02x\n", reg);
-				if (!reg)
-					msleep(APSD_DETECT_INTERVAL);
-				else
-					break;
-			}
+
+	if (wait_comp) {
+		rc = wait_for_completion_interruptible_timeout(
+				&params->apsd.src_det_lowered,
+				msecs_to_jiffies(APSD_LOWERED_TIMEOUT_MS));
+		if (rc <= 0)
+			pr_info("no src_det falling=%d\n", rc);
+	}
+
+	pr_debug("Allow 5V-9V\n");
+	rc = somc_chg_sec_masked_write(params->dev,
+			*params->usb_chgpth_base + USBIN_CHGR_CFG,
+			ADPT_ALLOWANCE_MASK,
+			USBIN_ADPT_ALLOW_5V_TO_9V);
+	if (rc) {
+		dev_err(params->dev, "Can't set 5/9v unreg rc=%d\n", rc);
+		goto abort;
+	}
+
+	if (!somc_chg_is_usb_present(params->dev)) {
+		pr_debug("usb not connected\n");
+		goto abort;
+	}
+
+	if (wait_comp)
+		params->apsd.rerun_wait_irq = false;
+
+	for (count = 0; count < READ_LOOP_NUM; count++) {
+		rc = somc_chg_read(params->dev, &reg, *params->misc_base
+				+ IDEV_STS, 1);
+		if (rc) {
+			dev_err(params->dev, "Can't read src status rc = %d\n"
+					, rc);
+		} else {
+			pr_debug("SRC_DETECT_STS = 0x%02x\n", reg);
+			if (!reg)
+				msleep(APSD_DETECT_INTERVAL);
+			else
+				break;
 		}
 	}
 	return rc;
+
+abort:
+	if (wait_comp)
+		params->apsd.rerun_wait_irq = false;
+	return rc;
 }
-EXPORT_SYMBOL(somc_chg_apsd_wait_rerun);
+
+int somc_chg_apsd_rerun_request(void)
+{
+	struct chg_somc_params *params = chg_params;
+
+	if (!params || !params->apsd.wq) {
+		pr_err("failed to request APSD rerun\n");
+		return -ENODEV;
+	}
+
+	dev_dbg(params->dev, "request APSD rerun\n");
+	queue_work(params->apsd.wq, &params->apsd.rerun_request_work);
+
+	return 0;
+}
+EXPORT_SYMBOL(somc_chg_apsd_rerun_request);
+
+static void somc_chg_apsd_rerun_work(struct work_struct *work)
+{
+	struct somc_apsd *apsd = container_of(work, struct somc_apsd,
+							rerun_request_work);
+	struct chg_somc_params *params = container_of(apsd,
+						struct chg_somc_params, apsd);
+
+	somc_chg_apsd_wait_rerun(params, false);
+}
 
 int somc_chg_notify_mhl_state(int state)
 {
@@ -505,12 +562,11 @@ static struct device_attribute somc_chg_attrs[] = {
 	__ATTR(usb_hvdcp_sts,		S_IRUGO, somc_chg_param_show, NULL),
 	__ATTR(usb_cmd_il,		S_IRUGO, somc_chg_param_show, NULL),
 	__ATTR(iusb_max,		S_IRUGO, somc_chg_param_show, NULL),
-	__ATTR(usb_cfg,			S_IRUGO, somc_chg_param_show, NULL),
 	__ATTR(idc_max,			S_IRUGO, somc_chg_param_show, NULL),
-	__ATTR(dc_trim11,		S_IRUGO, somc_chg_param_show, NULL),
 	__ATTR(otg_int,			S_IRUGO, somc_chg_param_show, NULL),
 	__ATTR(misc_int,		S_IRUGO, somc_chg_param_show, NULL),
-	__ATTR(trim_option,		S_IRUGO, somc_chg_param_show, NULL),
+	__ATTR(misc_idev_sts,		S_IRUGO, somc_chg_param_show, NULL),
+	__ATTR(vfloat_adjust_trim,	S_IRUGO, somc_chg_param_show, NULL),
 	__ATTR(usb_max_current,		S_IRUGO, somc_chg_param_show, NULL),
 	__ATTR(dc_max_current,		S_IRUGO, somc_chg_param_show, NULL),
 	__ATTR(usb_target_current,	S_IRUGO, somc_chg_param_show, NULL),
@@ -522,8 +578,6 @@ static struct device_attribute somc_chg_attrs[] = {
 	__ATTR(mhl_state,		S_IRUGO, somc_chg_param_show, NULL),
 	__ATTR(weak_state,		S_IRUGO, somc_chg_param_show, NULL),
 	__ATTR(aicl_keep_state,		S_IRUGO, somc_chg_param_show, NULL),
-	__ATTR(chg_debug_mask,		S_IRUGO|S_IWUSR, somc_chg_param_show,
-							somc_chg_param_store),
 	__ATTR(bat_temp_status,		S_IRUGO, somc_chg_param_show, NULL),
 	__ATTR(therm_miti_usb5v,	S_IRUGO|S_IWUSR,
 					somc_chg_therm_show_tb,
@@ -537,6 +591,10 @@ static struct device_attribute somc_chg_attrs[] = {
 	__ATTR(fast_chg_current,	S_IRUGO|S_IWUSR,
 					somc_chg_therm_show_tb,
 					somc_chg_therm_store_tb),
+	__ATTR(limit_usb5v_level,	S_IRUGO|S_IWUSR, somc_chg_param_show,
+							somc_chg_param_store),
+	__ATTR(apsd_rerun_delay_ms,	S_IRUGO|S_IWUSR, somc_chg_param_show,
+							somc_chg_param_store),
 };
 
 #define FV_STS_ADDR		0xC
@@ -555,6 +613,7 @@ static struct device_attribute somc_chg_attrs[] = {
 #define DC_TRIM11_ADDR		0xFB
 #define TRIM_OPTIONS_15_8_ADDR	0xF5
 #define TRIM_OPTIONS_7_0	0xF6
+#define VFLOAT_ADJUST_TRIM	0xFE
 static ssize_t somc_chg_param_show(struct device *dev,
 				struct device_attribute *attr,
 				char *buf)
@@ -571,7 +630,7 @@ static ssize_t somc_chg_param_show(struct device *dev,
 		if (ret)
 			dev_err(dev, "Can't read FV_STS: %d\n", ret);
 		else
-			size = scnprintf(buf, PAGE_SIZE, "0x%X\n", reg);
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
 		break;
 	case ATTR_FV_CFG:
 		ret = somc_chg_read(dev, &reg,
@@ -579,7 +638,7 @@ static ssize_t somc_chg_param_show(struct device *dev,
 		if (ret)
 			dev_err(dev, "Can't read FV_CFG: %d\n", ret);
 		else
-			size = scnprintf(buf, PAGE_SIZE, "0x%X\n", reg);
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
 		break;
 	case ATTR_FCC_CFG:
 		ret = somc_chg_read(dev, &reg,
@@ -587,7 +646,7 @@ static ssize_t somc_chg_param_show(struct device *dev,
 		if (ret)
 			dev_err(dev, "Can't read FCC_CFG: %d\n", ret);
 		else
-			size = scnprintf(buf, PAGE_SIZE, "0x%X\n", reg);
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
 		break;
 	case ATTR_ICHG_STS:
 		ret = somc_chg_read(dev, &reg,
@@ -595,7 +654,7 @@ static ssize_t somc_chg_param_show(struct device *dev,
 		if (ret)
 			dev_err(dev, "Can't read ICHG_STS: %d\n", ret);
 		else
-			size = scnprintf(buf, PAGE_SIZE, "0x%X\n", reg);
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
 		break;
 	case ATTR_CHGR_STS:
 		ret = somc_chg_read(dev, &reg,
@@ -603,7 +662,7 @@ static ssize_t somc_chg_param_show(struct device *dev,
 		if (ret)
 			dev_err(dev, "Can't read CHGR_STS: %d\n", ret);
 		else
-			size = scnprintf(buf, PAGE_SIZE, "0x%X\n", reg);
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
 		break;
 	case ATTR_CHGR_INT:
 		ret = somc_chg_read(dev, &reg,
@@ -611,7 +670,7 @@ static ssize_t somc_chg_param_show(struct device *dev,
 		if (ret)
 			dev_err(dev, "Can't read CHGR_INT: %d\n", ret);
 		else
-			size = scnprintf(buf, PAGE_SIZE, "0x%X\n", reg);
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
 		break;
 	case ATTR_BAT_IF_INT:
 		ret = somc_chg_read(dev, &reg,
@@ -619,7 +678,7 @@ static ssize_t somc_chg_param_show(struct device *dev,
 		if (ret)
 			dev_err(dev, "Can't read BAT_IF_INT: %d\n", ret);
 		else
-			size = scnprintf(buf, PAGE_SIZE, "0x%X\n", reg);
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
 		break;
 	case ATTR_BAT_IF_CFG:
 		ret = somc_chg_read(dev, &reg,
@@ -627,7 +686,7 @@ static ssize_t somc_chg_param_show(struct device *dev,
 		if (ret)
 			dev_err(dev, "Can't read BAT_IF_CFG: %d\n", ret);
 		else
-			size = scnprintf(buf, PAGE_SIZE, "0x%X\n", reg);
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
 		break;
 	case ATTR_USB_INT:
 		ret = somc_chg_read(dev, &reg,
@@ -635,7 +694,7 @@ static ssize_t somc_chg_param_show(struct device *dev,
 		if (ret)
 			dev_err(dev, "Can't read USB_INT: %d\n", ret);
 		else
-			size = scnprintf(buf, PAGE_SIZE, "0x%X\n", reg);
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
 		break;
 	case ATTR_DC_INT:
 		ret = somc_chg_read(dev, &reg,
@@ -643,7 +702,7 @@ static ssize_t somc_chg_param_show(struct device *dev,
 		if (ret)
 			dev_err(dev, "Can't read DC_INT: %d\n", ret);
 		else
-			size = scnprintf(buf, PAGE_SIZE, "0x%X\n", reg);
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
 		break;
 	case ATTR_USB_ICL_STS:
 		ret = somc_chg_read(dev, &reg,
@@ -659,7 +718,7 @@ static ssize_t somc_chg_param_show(struct device *dev,
 					"Can't read USB_ICL_STS2: %d\n", ret);
 			else
 				size = scnprintf(buf, PAGE_SIZE,
-						"0x%X%02X\n", reg, reg2);
+						"0x%02X%02X\n", reg, reg2);
 		}
 		break;
 	case ATTR_USB_APSD_DG:
@@ -669,7 +728,7 @@ static ssize_t somc_chg_param_show(struct device *dev,
 			dev_err(dev, "Can't read USB_APSD_DG: %d\n",
 					ret);
 		else
-			size = scnprintf(buf, PAGE_SIZE, "0x%X\n", reg);
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
 		break;
 	case ATTR_USB_RID_STS:
 		ret = somc_chg_read(dev, &reg,
@@ -678,7 +737,7 @@ static ssize_t somc_chg_param_show(struct device *dev,
 			dev_err(dev, "Can't read USB_RID_STS: %d\n",
 					ret);
 		else
-			size = scnprintf(buf, PAGE_SIZE, "0x%X\n", reg);
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
 		break;
 	case ATTR_USB_HVDCP_STS:
 		ret = somc_chg_read(dev, &reg,
@@ -687,7 +746,7 @@ static ssize_t somc_chg_param_show(struct device *dev,
 			dev_err(dev, "Can't read USB_HVDCP_STS: %d\n",
 					ret);
 		else
-			size = scnprintf(buf, PAGE_SIZE, "0x%X\n", reg);
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
 		break;
 	case ATTR_USB_CMD_IL:
 		ret = somc_chg_read(dev, &reg,
@@ -696,7 +755,7 @@ static ssize_t somc_chg_param_show(struct device *dev,
 			dev_err(dev, "Can't read USB_CMD_IL: %d\n",
 					ret);
 		else
-			size = scnprintf(buf, PAGE_SIZE, "0x%X\n", reg);
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
 		break;
 	case ATTR_IUSB_MAX:
 		ret = somc_chg_get_iusb_max(dev, &current_step);
@@ -705,14 +764,6 @@ static ssize_t somc_chg_param_show(struct device *dev,
 		else
 			size = scnprintf(buf, PAGE_SIZE, "%d\n", ret);
 		break;
-	case ATTR_USB_CFG:
-		ret = somc_chg_read(dev, &reg,
-			*chg_params->usb_chgpth_base + USB_CFG_ATTR, 1);
-		if (ret)
-			dev_err(dev, "Can't read USB_CFG: %d\n", ret);
-		else
-			size = scnprintf(buf, PAGE_SIZE, "0x%X\n", ret);
-		break;
 	case ATTR_IDC_MAX:
 		ret = somc_chg_get_dc_current_max(dev);
 		if (!ret)
@@ -720,21 +771,13 @@ static ssize_t somc_chg_param_show(struct device *dev,
 		else
 			size = scnprintf(buf, PAGE_SIZE, "%d\n", ret);
 		break;
-	case ATTR_DC_TRIM11:
-		ret = somc_chg_read(dev, &reg,
-			*chg_params->dc_chgpth_base + DC_TRIM11_ADDR, 1);
-		if (ret)
-			dev_err(dev, "Can't read DC_TRIM11: %d\n", ret);
-		else
-			size = scnprintf(buf, PAGE_SIZE, "0x%X\n", reg);
-		break;
 	case ATTR_OTG_INT:
 		ret = somc_chg_read(dev, &reg,
 			*chg_params->otg_base + RT_STS, 1);
 		if (ret)
 			dev_err(dev, "Can't read OTG_INT: %d\n", ret);
 		else
-			size = scnprintf(buf, PAGE_SIZE, "0x%X\n", reg);
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
 		break;
 	case ATTR_MISC_INT:
 		ret = somc_chg_read(dev, &reg,
@@ -742,24 +785,24 @@ static ssize_t somc_chg_param_show(struct device *dev,
 		if (ret)
 			dev_err(dev, "Can't read MISC_INT: %d\n", ret);
 		else
-			size = scnprintf(buf, PAGE_SIZE, "0x%X\n", reg);
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
 		break;
-	case ATTR_TRIM_OPTION:
+	case ATTR_MISC_IDEV_STS:
 		ret = somc_chg_read(dev, &reg,
-			*chg_params->misc_base + TRIM_OPTIONS_15_8_ADDR, 1);
-		if (ret) {
-			dev_err(dev, "Can't read TRIM_OPTION15_8: %d\n",
-					ret);
-		} else {
-			ret = somc_chg_read(dev, &reg2,
-				*chg_params->misc_base + TRIM_OPTIONS_7_0, 1);
-			if (ret)
-				dev_err(dev,
-					"Can't read TRIM_OPTION7_0: %d\n", ret);
-			else
-				size = scnprintf(buf, PAGE_SIZE,
-						"0x%X%02X\n", reg, reg2);
-		}
+			*chg_params->misc_base + IDEV_STS, 1);
+		if (ret)
+			dev_err(dev, "Can't read MISC_IDEV_STS: %d\n", ret);
+		else
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
+		break;
+	case ATTR_VFLOAT_ADJUST_TRIM:
+		ret = somc_chg_read(dev, &reg,
+			*chg_params->misc_base + VFLOAT_ADJUST_TRIM, 1);
+		if (ret)
+			dev_err(dev,
+				"Can't read VFLOAT_ADJUST_TRIM: %d\n", ret);
+		else
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
 		break;
 	case ATTR_USB_MAX_CURRENT:
 		size = scnprintf(buf, PAGE_SIZE, "%d\n",
@@ -778,11 +821,11 @@ static ssize_t somc_chg_param_show(struct device *dev,
 				*chg_params->dc_target_current_ma);
 		break;
 	case ATTR_USB_SUSPENDED:
-		size = scnprintf(buf, PAGE_SIZE, "%d\n",
+		size = scnprintf(buf, PAGE_SIZE, "0x%02X\n",
 				*chg_params->usb_suspended);
 		break;
 	case ATTR_DC_SUSPENDED:
-		size = scnprintf(buf, PAGE_SIZE, "%d\n",
+		size = scnprintf(buf, PAGE_SIZE, "0x%02X\n",
 				*chg_params->dc_suspended);
 		break;
 	case ATTR_USB_ONLINE:
@@ -804,13 +847,17 @@ static ssize_t somc_chg_param_show(struct device *dev,
 		size = scnprintf(buf, PAGE_SIZE, "%d\n",
 				chg_params->aicl_keep_state);
 		break;
-	case ATTR_CHG_DEBUG_MASK:
-		size = scnprintf(buf, PAGE_SIZE, "%d\n",
-				*chg_params->chg_debug_mask);
-		break;
 	case ATTR_BAT_TEMP_STATUS:
 		size = scnprintf(buf, PAGE_SIZE, "%d\n",
 				chg_params->temp.status);
+		break;
+	case ATTR_LIMIT_USB_5V_LEVEL:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n",
+				chg_params->thermal.limit_usb5v_lvl);
+		break;
+	case ATTR_APSD_RERUN_CHECK_DELAY_MS:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n",
+				chg_params->apsd.delay_ms);
 		break;
 	default:
 		size = 0;
@@ -847,10 +894,25 @@ static ssize_t somc_chg_param_store(struct device *dev,
 	int ret;
 
 	switch (off) {
-	case ATTR_CHG_DEBUG_MASK:
-		ret = kstrtoint(buf, 10, chg_params->chg_debug_mask);
+	case ATTR_LIMIT_USB_5V_LEVEL:
+		ret = kstrtoint(buf, 10, &chg_params->thermal.limit_usb5v_lvl);
 		if (ret) {
-			pr_err("Can't write CHG_DEBUG_MASK: %d\n", ret);
+			pr_err("Can't write limit_usb5v_lvl: %d\n", ret);
+			return ret;
+		}
+		somc_chg_current_change_mutex_lock(chg_params->dev);
+		somc_chg_therm_set_hvdcp_en(chg_params);
+		ret =
+		  somc_chg_set_thermal_limited_usb_current_max(chg_params->dev);
+		if (ret < 0)
+			pr_err("Couldn't set usb current max ret = %d\n", ret);
+		somc_chg_current_change_mutex_unlock(chg_params->dev);
+		break;
+	case ATTR_APSD_RERUN_CHECK_DELAY_MS:
+		ret = kstrtoint(buf, 10, &chg_params->apsd.delay_ms);
+		if (ret) {
+			pr_err("Can't write APSD_RERUN_CHECKDELAY_MS: %d\n",
+					ret);
 			return ret;
 		}
 		break;
@@ -940,15 +1002,71 @@ static int somc_chg_aicl_get_keeped_iusb_max(void)
 #define MHL_USBIN_LOWER_THRESHOLD_MV	4570
 #define SDP_USBIN_UPPER_THRESHOLD_MV	4750
 #define SDP_USBIN_LOWER_THRESHOLD_MV	4650
-#define USBIN_UPPER_THRESHOLD_MV	4500
-#define USBIN_LOWER_THRESHOLD_MV	4450
+#define USBIN_KEEP_RANGE_MV		50
+#define AICL_VOLTAGE_NOW_THRESHOLD_MV	4200
+#define USBIN_UNPLUG_THRESHOLD_4400_MV	4400
+#define USBIN_UNPLUG_THRESHOLD_3800_MV	3800
 #define AICL_VBUS_VBAT_DIFF_MV		200
-static int somc_chg_aicl_get_adjusted_iusb_max(int usbin, int iusb_max_step)
+static int somc_chg_aicl_get_adjusted_iusb_max_with_thresh(
+		bool other_chargers, int upper_thresh, int lower_thresh,
+		int voltage_now, int usbin, int iusb_max_step)
 {
 	int ma = *chg_params->usb_max_current_ma;
+	const int h_upper_thresh = USBIN_UNPLUG_THRESHOLD_4400_MV +
+		USBIN_KEEP_RANGE_MV * 2;
+	const int h_lower_thresh = USBIN_UNPLUG_THRESHOLD_4400_MV +
+		USBIN_KEEP_RANGE_MV;
+	const int l_upper_thresh = USBIN_UNPLUG_THRESHOLD_3800_MV +
+		USBIN_KEEP_RANGE_MV * 2;
+	const int l_lower_thresh = USBIN_UNPLUG_THRESHOLD_3800_MV +
+		USBIN_KEEP_RANGE_MV;
+	const int usb_max_current_ma = *chg_params->usb_max_current_ma;
+	const int usb_target_current_ma = *chg_params->usb_target_current_ma;
+
+	if (other_chargers) {
+		if ((voltage_now >= AICL_VOLTAGE_NOW_THRESHOLD_MV &&
+			usbin < h_lower_thresh) ||
+			(voltage_now < AICL_VOLTAGE_NOW_THRESHOLD_MV &&
+			usbin < l_lower_thresh) ||
+			usbin - voltage_now < lower_thresh ||
+			usb_max_current_ma > usb_target_current_ma)
+				ma = somc_chg_aicl_get_decreased_iusb_max(
+								iusb_max_step);
+		else if ((voltage_now >= AICL_VOLTAGE_NOW_THRESHOLD_MV &&
+			usbin >= h_upper_thresh &&
+			usb_max_current_ma < usb_target_current_ma) ||
+			(voltage_now < AICL_VOLTAGE_NOW_THRESHOLD_MV &&
+			usbin - voltage_now >= upper_thresh &&
+			usbin >= l_upper_thresh &&
+			usb_max_current_ma < usb_target_current_ma))
+				ma = somc_chg_aicl_get_increased_iusb_max(
+								iusb_max_step);
+		else
+			ma = somc_chg_aicl_get_keeped_iusb_max();
+	} else {
+		if (usbin < lower_thresh ||
+			usb_max_current_ma > usb_target_current_ma ||
+			(usbin - voltage_now) < AICL_VBUS_VBAT_DIFF_MV)
+				ma = somc_chg_aicl_get_decreased_iusb_max(
+								iusb_max_step);
+		else if (usbin > upper_thresh &&
+			usb_max_current_ma < usb_target_current_ma)
+				ma = somc_chg_aicl_get_increased_iusb_max(
+								iusb_max_step);
+		else
+			ma = somc_chg_aicl_get_keeped_iusb_max();
+	}
+
+	return ma;
+}
+
+static int somc_chg_aicl_get_iusb_max_to_set(int usbin, int iusb_max_step)
+{
+	int ma;
 	int lower_thresh, upper_thresh;
 	int therm_ma;
 	int voltage_now = somc_chg_get_vbat_mv();
+	bool other_chargers = false;
 
 	if (somc_chg_is_charging_hvdcp(chg_params)) {
 		upper_thresh = QC_USBIN_UPPER_THRESHOLD_MV;
@@ -960,28 +1078,22 @@ static int somc_chg_aicl_get_adjusted_iusb_max(int usbin, int iusb_max_step)
 		upper_thresh = SDP_USBIN_UPPER_THRESHOLD_MV;
 		lower_thresh = SDP_USBIN_LOWER_THRESHOLD_MV;
 	} else {
-		upper_thresh = USBIN_UPPER_THRESHOLD_MV;
-		lower_thresh = USBIN_LOWER_THRESHOLD_MV;
+		other_chargers = true;
+		upper_thresh = AICL_VBUS_VBAT_DIFF_MV +
+			USBIN_KEEP_RANGE_MV * 2;
+		lower_thresh = AICL_VBUS_VBAT_DIFF_MV + USBIN_KEEP_RANGE_MV;
 	}
 
 	pr_debug("upper_thresh=%d lower_thresh=%d\n",
 					upper_thresh, lower_thresh);
 
-	if (usbin < lower_thresh ||
-		*chg_params->usb_max_current_ma >
-		*chg_params->usb_target_current_ma ||
-		(usbin - voltage_now) < AICL_VBUS_VBAT_DIFF_MV)
-			ma = somc_chg_aicl_get_decreased_iusb_max(
-							iusb_max_step);
-	else if (usbin > upper_thresh &&
-		*chg_params->usb_max_current_ma <
-		*chg_params->usb_target_current_ma)
-		ma = somc_chg_aicl_get_increased_iusb_max(iusb_max_step);
-	else
-		ma = somc_chg_aicl_get_keeped_iusb_max();
+	ma = somc_chg_aicl_get_adjusted_iusb_max_with_thresh(
+			other_chargers, upper_thresh, lower_thresh,
+			voltage_now, usbin, iusb_max_step);
 
 	therm_ma = somc_chg_calc_thermal_limited_current(chg_params,
 			*chg_params->usb_target_current_ma, TYPE_USB);
+
 	if (ma > therm_ma)
 		ma = therm_ma;
 
@@ -1004,7 +1116,7 @@ static void somc_chg_aicl_adjust_iusb_max(void)
 	if (last_step == IUSB_STEP_ERR)
 		goto aicl_err;
 
-	current_ma = somc_chg_aicl_get_adjusted_iusb_max(usbin, last_step);
+	current_ma = somc_chg_aicl_get_iusb_max_to_set(usbin, last_step);
 	if (current_ma < 0)
 		goto aicl_err;
 
@@ -1322,38 +1434,49 @@ void somc_chg_temp_read_temp_threshold(void)
 }
 
 #define VFLOAT_STS_REG		0x0C
-void somc_chg_temp_status_transition(u8 temp)
+static void somc_chg_temp_work(struct work_struct *work)
 {
+	struct somc_temp_state *temp = container_of(work,
+						struct somc_temp_state,
+						work);
+	struct chg_somc_params *params = container_of(temp,
+					struct chg_somc_params, temp);
 	int status;
 	int thresh;
 	int ret;
 	u8 reg;
 
-	status = somc_chg_temp_get_status(temp);
-	chg_params->temp.status = status;
+	status = somc_chg_temp_get_status(params->temp.temp_val);
+	params->temp.status = status;
 	thresh = somc_chg_temp_get_temp_hys_threshold(status);
 
 	if (status != TEMP_STATUS_NORMAL)
 		somc_chg_temp_set_temp_threshold(status, thresh);
 
-	if (chg_params->temp.prev_status != TEMP_STATUS_NORMAL &&
-		chg_params->temp.prev_status != status)
+	if (params->temp.prev_status != TEMP_STATUS_NORMAL &&
+		params->temp.prev_status != status)
 		somc_chg_temp_set_temp_threshold_default(
-				chg_params->temp.prev_status);
+				params->temp.prev_status);
 
-	ret = somc_chg_read(chg_params->dev, &reg,
-		*chg_params->chgr_base + VFLOAT_STS_REG, 1);
+	ret = somc_chg_read(params->dev, &reg,
+		*params->chgr_base + VFLOAT_STS_REG, 1);
 	if (ret)
 		pr_err("Can't read VFLOAT_STS: %d\n", ret);
 
 	pr_info("temp status:%d->%d thresh:%d vfloat_sts:0x%x\n",
-		chg_params->temp.prev_status, status, thresh, reg);
+		params->temp.prev_status, status, thresh, reg);
 
-	somc_chg_current_change_mutex_lock(chg_params->dev);
-	somc_chg_therm_set_fastchg_current(chg_params);
-	somc_chg_current_change_mutex_unlock(chg_params->dev);
+	somc_chg_current_change_mutex_lock(params->dev);
+	somc_chg_therm_set_fastchg_current(params);
+	somc_chg_current_change_mutex_unlock(params->dev);
 
-	chg_params->temp.prev_status = chg_params->temp.status;
+	params->temp.prev_status = params->temp.status;
+}
+
+void somc_chg_temp_status_transition(struct chg_somc_params *params, u8 reg)
+{
+	params->temp.temp_val = reg;
+	schedule_work(&params->temp.work);
 }
 
 #define SOMC_CHG_USBID_POLLING_INTERVAL_MS	(1600)
@@ -1562,6 +1685,54 @@ void somc_chg_usbin_notify_changed(struct chg_somc_params *params,
 		somc_chg_usbid_stop_polling(params);
 }
 
+#define RID_STS			0xB
+#define RID_MASK		0xF
+#define RID_STS_RID_GND		0x0
+#define RID_STS_RID_FLOAT	BIT(3)
+#define RID_STS_RID_A		BIT(2)
+#define RID_STS_RID_B		BIT(1)
+#define RID_STS_RID_C		BIT(0)
+/*
+ * When the RID was changed from RID_A to RID_GND, the PMIC is desensitized
+ * against VBUS and it can recover by boosting the VBUS once.
+ */
+void somc_chg_usbin_recover_vbus_detection(struct chg_somc_params *params)
+{
+	struct somc_usb_id *usb_id = &params->usb_id;
+	u8 reg;
+	u8 prev_rid_sts;
+	int ret;
+
+	ret = somc_chg_read(params->dev, &reg,
+				*params->usb_chgpth_base + RID_STS, 1);
+	if (ret) {
+		pr_err("Can't read RID_STS: %d\n", ret);
+		return;
+	}
+
+	prev_rid_sts = usb_id->rid_sts;
+	usb_id->rid_sts = reg & RID_MASK;
+	pr_debug("RID_STS: %02x -> %02x\n", prev_rid_sts, usb_id->rid_sts);
+
+	if (!usb_id->otg_vreg.rdesc->ops->is_enabled(usb_id->otg_vreg.rdev) &&
+					(prev_rid_sts == RID_STS_RID_A) &&
+					(usb_id->rid_sts == RID_STS_RID_GND)) {
+		pr_info("Recover VBUS detection\n");
+		__pm_stay_awake(&usb_id->wakeup_otg_en);
+
+		if (usb_id->otg_vreg.rdesc->ops->enable(
+						usb_id->otg_vreg.rdev)) {
+			pr_err("unable to enable vbus_otg\n");
+		} else {
+			msleep(20);
+			if (usb_id->otg_vreg.rdesc->ops->disable(
+						usb_id->otg_vreg.rdev))
+				pr_err("unable to disable vbus_otg\n");
+		}
+		__pm_relax(&usb_id->wakeup_otg_en);
+	}
+}
+
 #define VOLTAGE_CHECK_DELAY_MS 5000
 void somc_chg_voltage_check_start(struct chg_somc_params *params)
 {
@@ -1611,6 +1782,54 @@ static void somc_chg_voltage_check_work(struct work_struct *work)
 		schedule_delayed_work(&params->vol_check.work,
 				msecs_to_jiffies(VOLTAGE_CHECK_DELAY_MS));
 	somc_chg_current_change_mutex_unlock(params->dev);
+}
+
+#define SRC_DET_STS	BIT(2)
+#define UV_STS		BIT(0)
+static bool somc_chg_is_usb_uv_hvdcp(struct chg_somc_params *params)
+{
+	int rc, hvdcp = 0;
+	u8 reg;
+
+	hvdcp = somc_chg_is_charging_hvdcp(params);
+
+	rc = somc_chg_read(params->dev, &reg,
+			*params->usb_chgpth_base + RT_STS, 1);
+	if (rc < 0)
+		pr_err("Can't read RT_STS: %d\n", rc);
+
+	pr_debug("UV_STS=%d, SRC_DET_STS=%d, hvdcp=%d\n",
+			!!(reg & UV_STS), !!(reg & SRC_DET_STS), hvdcp);
+
+	return !!((reg & UV_STS) && (reg & SRC_DET_STS) && hvdcp);
+}
+
+static void somc_chg_apsd_rerun_check_work(struct work_struct *work)
+{
+	struct delayed_work *dwork = to_delayed_work(work);
+	struct somc_apsd *apsd = container_of(dwork,
+			struct somc_apsd, rerun_work);
+	struct chg_somc_params *params = container_of(apsd,
+			struct chg_somc_params, apsd);
+	int rc;
+
+	if (somc_chg_is_usb_uv_hvdcp(params)) {
+		rc = somc_chg_apsd_wait_rerun(params, true);
+		if (rc)
+			dev_err(params->dev, "APSD rerun error rc=%d\n", rc);
+	}
+}
+
+#define RERUN_DELAY_MS		500
+void somc_chg_apsd_rerun_check(struct chg_somc_params *params)
+{
+	cancel_delayed_work_sync(&params->apsd.rerun_work);
+	pr_info("apsd_rerun check start\n");
+	if (params->apsd.wq && somc_chg_is_usb_uv_hvdcp(params))
+		queue_delayed_work(params->apsd.wq, &params->apsd.rerun_work,
+				params->apsd.delay_ms ?
+				msecs_to_jiffies(params->apsd.delay_ms) :
+				msecs_to_jiffies(RERUN_DELAY_MS));
 }
 
 int somc_chg_invalid_is_state(struct chg_somc_params *params)
@@ -1666,7 +1885,11 @@ void somc_chg_init(struct chg_somc_params *params)
 
 	INIT_DELAYED_WORK(&params->vol_check.work,
 						somc_chg_voltage_check_work);
-
+	params->apsd.wq = create_singlethread_workqueue("chg_apsd");
+	INIT_WORK(&params->apsd.rerun_request_work,
+			somc_chg_apsd_rerun_work);
+	INIT_DELAYED_WORK(&params->apsd.rerun_work,
+			somc_chg_apsd_rerun_check_work);
 	memset(&params->usb_ocp.ocp_notification, 0,
 				sizeof(params->usb_ocp.ocp_notification));
 	spin_lock_init(&params->usb_ocp.ocp_lock);
@@ -1681,9 +1904,11 @@ void somc_chg_init(struct chg_somc_params *params)
 
 	wakeup_source_init(&usb_id->wakeup_source_id_polling,
 					"wakeup_source_id_polling");
+	wakeup_source_init(&usb_id->wakeup_otg_en, "wakeup_otg_en");
 
 	usb_id->user_request_polling = false;
 	usb_id->avoid_first_usbid_change = false;
+	usb_id->rid_sts = RID_STS_RID_FLOAT;
 
 	id_polling_state = false;
 	start_id_polling = false;
@@ -1692,6 +1917,7 @@ void somc_chg_init(struct chg_somc_params *params)
 
 	INIT_DELAYED_WORK(&params->chg_key.remove_work,
 			somc_chg_remove_work);
+	INIT_WORK(&params->temp.work, somc_chg_temp_work);
 	INIT_DELAYED_WORK(&params->power_supply_changed_work,
 		somc_chg_power_supply_changed_work);
 }
@@ -1700,6 +1926,7 @@ int somc_chg_register(struct device *dev, struct chg_somc_params *params)
 {
 	struct somc_usb_id *usb_id = &params->usb_id;
 	int ret;
+	u8 reg;
 
 	chg_params = params;
 	somc_chg_create_sysfs_entries(dev);
@@ -1722,12 +1949,21 @@ int somc_chg_register(struct device *dev, struct chg_somc_params *params)
 						usb_id->gpio_id_low);
 	}
 
+	ret = somc_chg_read(params->dev, &reg,
+				*params->usb_chgpth_base + RID_STS, 1);
+	if (!ret)
+		usb_id->rid_sts = reg & RID_MASK;
+	else
+		dev_err(dev, "Can't read RID_STS: %d\n", ret);
+
 	somc_chg_temp_read_temp_threshold();
 
 	somc_chg_disable_hw_aicl();
 	wake_lock_init(&chg_params->aicl_wakelock, WAKE_LOCK_SUSPEND,
 							"sw_aicl_wakelock");
 	INIT_DELAYED_WORK(&chg_params->aicl_work, somc_chg_aicl_work);
+	wake_lock_init(&chg_params->unplug_wakelock, WAKE_LOCK_SUSPEND,
+							"unplug_wakelock");
 
 	/* register input device */
 	params->chg_key.unplug_key = input_allocate_device();
@@ -1766,6 +2002,8 @@ void somc_chg_unregister(struct device *dev, struct chg_somc_params *params)
 	cancel_delayed_work_sync(&usb_id->start_polling_delay);
 	cancel_delayed_work_sync(&params->power_supply_changed_work);
 	destroy_workqueue(usb_id->polling_wq);
+	if (params->apsd.wq)
+		destroy_workqueue(params->apsd.wq);
 
 	if (gpio_is_valid(usb_id->gpio_id_low)) {
 		gpio_direction_input(usb_id->gpio_id_low);
@@ -1779,8 +2017,10 @@ void somc_chg_unregister(struct device *dev, struct chg_somc_params *params)
 		switch_dev_unregister(&params->swdev_weak);
 
 	wakeup_source_trash(&usb_id->wakeup_source_id_polling);
+	wakeup_source_trash(&usb_id->wakeup_otg_en);
 
 	wake_lock_destroy(&chg_params->aicl_wakelock);
+	wake_lock_destroy(&chg_params->unplug_wakelock);
 }
 
 int somc_chg_check_soc(struct power_supply *bms_psy,
@@ -1816,6 +2056,51 @@ int somc_chg_check_soc(struct power_supply *bms_psy,
 	somc_chg_current_change_mutex_unlock(params->dev);
 
 	return 0;
+}
+
+bool somc_chg_therm_is_not_charge(struct chg_somc_params *params, int therm_lvl)
+{
+	if (!*params->thermal.levels ||
+	    therm_lvl >= *params->thermal.levels) {
+		pr_err("Invalid thermal level.\n");
+		return false;
+	}
+
+	return !params->thermal.current_ma[therm_lvl];
+}
+
+#define CHGPTH_CFG		0xF4
+#define HVDCP_EN_BIT		BIT(3)
+void somc_chg_therm_set_hvdcp_en(struct chg_somc_params *params)
+{
+	int rc, therm_lvl = *params->thermal.lvl_sel;
+	u8 reg, enable = 0;
+
+	if (!*params->thermal.levels ||
+	    therm_lvl >= *params->thermal.levels) {
+		pr_err("Invalid thermal level.\n");
+		return;
+	}
+
+	rc = somc_chg_read(params->dev, &reg,
+			*params->usb_chgpth_base + CHGPTH_CFG, 1);
+	if (rc < 0) {
+		dev_err(params->dev, "Can't read CHGPTH_CFG: %d\n", rc);
+		return;
+	}
+
+	if (therm_lvl < params->thermal.limit_usb5v_lvl)
+		enable = HVDCP_EN_BIT;
+
+	if ((reg & HVDCP_EN_BIT) != enable) {
+		rc = somc_chg_sec_masked_write(params->dev,
+				*params->usb_chgpth_base + CHGPTH_CFG,
+				HVDCP_EN_BIT, enable);
+		if (rc < 0)
+			dev_err(params->dev,
+				"Couldn't %s HVDCP rc=%d\n",
+				enable ? "enable" : "disable", rc);
+	}
 }
 
 static int somc_chg_therm_get_therm_mitigation(struct chg_somc_params *params,
@@ -2116,6 +2401,25 @@ do {									\
 				" property rc = %d\n", rc);		\
 } while (0)
 
+void somc_chg_set_step_charge_params(struct device *dev,
+		struct chg_somc_params *params, struct device_node *node)
+{
+	int rc = 0;
+
+	params->step_chg.enabled =
+		of_property_read_bool(node, "somc,step-charge-en");
+	OF_PROP_READ(dev, node,
+		params->step_chg.thresh,
+		"step-charge-threshold", rc, 1);
+	OF_PROP_READ(dev, node,
+		params->step_chg.current_ma,
+		"step-charge-current-ma", rc, 1);
+	dev_dbg(params->dev, "step charge:enabled=%d thresh=%d current_ma=%d",
+		params->step_chg.enabled, params->step_chg.thresh,
+		params->step_chg.current_ma);
+	return;
+}
+
 int somc_chg_smb_parse_dt(struct device *dev,
 			struct chg_somc_params *params,
 			struct device_node *node)
@@ -2134,14 +2438,7 @@ int somc_chg_smb_parse_dt(struct device *dev,
 		params->fastchg.cool_current_ma,
 		"fastchg-cool-current-ma", rc, 1);
 
-	params->step_chg.enabled =
-		of_property_read_bool(node, "somc,step-charge-en");
-	OF_PROP_READ(dev, node,
-		params->step_chg.thresh,
-		"step-charge-threshold", rc, 1);
-	OF_PROP_READ(dev, node,
-		params->step_chg.current_ma,
-		"step-charge-current-ma", rc, 1);
+	somc_chg_set_step_charge_params(dev, params, node);
 
 	OF_PROP_READ(dev, node,
 		params->vol_check.usb_9v_current_max,
@@ -2167,6 +2464,13 @@ int somc_chg_smb_parse_dt(struct device *dev,
 
 	params->enable_sdp_cdp_weak_notification = of_property_read_bool(node,
 				"somc,enable-sdp-cdp-weak-notification");
+
+	OF_PROP_READ(dev, node,
+		params->thermal.limit_usb5v_lvl,
+		"limit-usb-5v-level", rc, 1);
+
+	params->limit_charge.llk_fake_capacity = of_property_read_bool(node,
+					"somc,enable-llk-fake-capacity");
 
 	return 0;
 }
@@ -2203,6 +2507,26 @@ int somc_chg_shutdown_lowbatt(struct power_supply *bms_psy)
 	return 0;
 }
 
+#define FULL_CAPACITY		100
+#define DECIMAL_CEIL		100
+int somc_llk_get_capacity(struct chg_somc_params *params, int capacity)
+{
+	int ceil, magni;
+
+	if (params->limit_charge.llk_fake_capacity &&
+	    params->limit_charge.enable_llk &&
+	    params->limit_charge.llk_socmax) {
+		magni = FULL_CAPACITY * DECIMAL_CEIL /
+					params->limit_charge.llk_socmax;
+		capacity *= magni;
+		ceil = (capacity % DECIMAL_CEIL) ? 1 : 0;
+		capacity = capacity / DECIMAL_CEIL + ceil;
+		if (capacity > FULL_CAPACITY)
+			capacity = FULL_CAPACITY;
+	}
+	return capacity;
+}
+
 void somc_llk_usbdc_present_chk(struct chg_somc_params *params)
 {
 	if (!*params->usb_present && !*params->dc_present)
@@ -2218,6 +2542,11 @@ enum somc_charge_type somc_llk_check(struct chg_somc_params *params)
 	union power_supply_propval ret = {0,};
 	struct power_supply *bms_psy;
 
+	bms_psy = somc_chg_get_bms_psy();
+	if (!bms_psy) {
+		pr_err("bms supply not found\n");
+		return NO_LLK;
+	}
 	if (params->limit_charge.enable_llk) {
 		if (params->limit_charge.llk_socmax
 			 <= params->limit_charge.llk_socmin) {
@@ -2227,18 +2556,15 @@ enum somc_charge_type somc_llk_check(struct chg_somc_params *params)
 			return NO_LLK;
 		}
 	} else {
-		return NO_LLK;
+		if (params->limit_charge.llk_socmax_flg == true) {
+			params->limit_charge.llk_socmax_flg = false;
+			return CHG_ON;
+		} else {
+			return NO_LLK;
+		}
 	}
-
-	bms_psy = somc_chg_get_bms_psy();
-	if (!bms_psy) {
-		pr_err("bms supply not found\n");
-		return NO_LLK;
-	}
-
 	bms_psy->get_property(bms_psy, POWER_SUPPLY_PROP_CAPACITY, &ret);
 	soc = ret.intval;
-
 	if (soc >= params->limit_charge.llk_socmax) {
 		retcode = CHG_OFF;
 		params->limit_charge.llk_socmax_flg = true;
@@ -2254,4 +2580,56 @@ enum somc_charge_type somc_llk_check(struct chg_somc_params *params)
 		retcode = CHG_OFF;
 	}
 	return retcode;
+}
+
+#define BM_CFG				0xF3
+#define BAT_FET_CFG			BIT(5)
+#define CHGR_CFG2			0xFC
+#define CHG_EN_COMMAND_BIT		BIT(6)
+void somc_batfet_open(struct device *dev, bool open)
+{
+	int rc;
+	u8 reg_bat_fet, reg_chg_en;
+
+	if (open) {
+		reg_bat_fet = BAT_FET_CFG;
+		reg_chg_en = 0;
+	} else {
+		reg_bat_fet = 0;
+		reg_chg_en = CHG_EN_COMMAND_BIT;
+	}
+
+	rc = somc_chg_sec_masked_write(dev, *chg_params->bat_if_base + BM_CFG,
+			BAT_FET_CFG, reg_bat_fet);
+	if (rc < 0) {
+		pr_err("BAT_FET_CFG write error rc = %d\n", rc);
+	} else {
+
+		rc = somc_chg_sec_masked_write(dev,
+				*chg_params->chgr_base + CHGR_CFG2,
+				CHG_EN_COMMAND_BIT, reg_chg_en);
+		if (rc < 0)
+			pr_err("CHG_EN_COMMAND_BIT write error rc = %d\n", rc);
+	}
+}
+
+#define UNPLUG_WAKE_PERIOD		(3 * HZ)
+void somc_unplug_wakelock(void)
+{
+	wake_lock_timeout(&chg_params->unplug_wakelock, UNPLUG_WAKE_PERIOD);
+}
+
+#define VFLOAT_CMP_CFG_REG		0xF5
+int somc_chg_get_fv_cmp_cfg(struct chg_somc_params *params)
+{
+	int ret;
+	u8 reg;
+
+	ret = somc_chg_read(params->dev, &reg,
+		*params->chgr_base + VFLOAT_CMP_CFG_REG, 1);
+	if (ret) {
+		dev_err(params->dev, "Can't read VFLOAT_CMP_CFG: %d\n", ret);
+		return ret;
+	}
+	return (int)reg;
 }

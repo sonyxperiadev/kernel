@@ -23,6 +23,7 @@
 #include <linux/power_supply.h>
 #include <linux/printk.h>
 #include <linux/delay.h>
+#include <linux/of.h>
 
 #include "qpnp-fg_extension.h"
 
@@ -94,14 +95,111 @@ void somc_fg_set_slope_limiter(struct device *dev)
 
 #define FULL_PERCENT		0xFF
 #define FULL_CAPACITY		100
-#define DECIMAL_CEIL		1000
-int somc_fg_ceil_capacity(u8 cap)
+#define EQUAL_MAGNIFICATION	100
+int somc_fg_ceil_capacity(struct fg_somc_params *params, u8 cap)
 {
 	int capacity = cap * FULL_CAPACITY * DECIMAL_CEIL / FULL_PERCENT;
-	int ceil = (capacity % DECIMAL_CEIL) ? 1 : 0;
+	int ceil;
 
+	params->capacity = capacity;
+
+	if (params->aging_mode)
+		capacity = capacity
+			* params->soc_magnification / EQUAL_MAGNIFICATION;
+	ceil = (capacity % DECIMAL_CEIL) ? 1 : 0;
 	capacity = capacity / DECIMAL_CEIL + ceil;
+
+	if (capacity > FULL_CAPACITY)
+		capacity = FULL_CAPACITY;
+
 	return capacity;
+}
+
+#define VFLOAT_AGING_MV		4300
+#define VFLOAT_CMP_SUB_5_VAL		0x5
+#define VFLOAT_MV		4350
+#define VFLOAT_CMP_SUB_8_VAL		0x8
+static int somc_fg_aging_setting(struct fg_somc_params *params,
+				struct device *dev, u8 threshold, bool mode)
+{
+	int rc = 0;
+	union power_supply_propval prop;
+	union power_supply_propval val;
+
+	if (mode) {
+		prop.intval = VFLOAT_AGING_MV;
+		val.intval = VFLOAT_CMP_SUB_5_VAL;
+	} else {
+		prop.intval = VFLOAT_MV;
+		val.intval = VFLOAT_CMP_SUB_8_VAL;
+	}
+	rc = somc_fg_set_resume_soc(dev, threshold);
+	if (rc) {
+		pr_err("couldn't write RESUME_SOC rc=%d\n", rc);
+		return rc;
+	}
+	if (!params->batt_psy)
+		params->batt_psy = power_supply_get_by_name("battery");
+
+	if (params->batt_psy) {
+		rc = params->batt_psy->set_property(params->batt_psy,
+				POWER_SUPPLY_PROP_FV_CFG, &prop);
+		if (rc) {
+			pr_err("couldn't set_property FV_CFG rc=%d\n", rc);
+			return rc;
+		}
+		rc = params->batt_psy->set_property(params->batt_psy,
+				POWER_SUPPLY_PROP_FV_CMP_CFG, &val);
+		if (rc) {
+			pr_err("couldn't write FV_CMP_CFG rc=%d\n", rc);
+			return rc;
+		}
+	} else {
+		pr_err("battery supply not found\n");
+		return -EINVAL;
+	}
+	return rc;
+}
+
+bool somc_fg_aging_mode_check(struct fg_somc_params *params,
+				int64_t learned_cc_uah, int nom_cap_uah)
+{
+	int learned_soh = learned_cc_uah * EQUAL_MAGNIFICATION / nom_cap_uah;
+
+	if (learned_soh <= params->vfloat_arrangement_threshold &&
+	    params->vfloat_arrangement)
+		return true;
+
+	return false;
+}
+
+#define RESUME_SOC_AGING_VAL		0xEF
+void somc_fg_set_aging_mode(struct fg_somc_params *params, struct device *dev,
+			int64_t learned_cc_uah, int nom_cap_uah, int thresh)
+{
+	int rc;
+
+	if (somc_fg_aging_mode_check(params, learned_cc_uah, nom_cap_uah)) {
+		if (params->aging_mode)
+			return;
+		pr_info("start aging mode\n");
+		rc = somc_fg_aging_setting(params,
+					dev, RESUME_SOC_AGING_VAL, true);
+		if (rc)
+			pr_err("failed aging setting rc=%d\n", rc);
+		else
+			params->aging_mode = true;
+	} else {
+		if (!params->aging_mode)
+			return;
+		pr_info("stop aging mode\n");
+		rc = somc_fg_aging_setting(params,
+			dev, thresh, false);
+		if (rc)
+			pr_err("failed aging setting rc=%d\n", rc);
+		else
+			params->aging_mode = false;
+	}
 }
 
 static void batt_log_work(struct work_struct *work)
@@ -121,29 +219,46 @@ static ssize_t somc_fg_param_store(struct device *dev,
 				const char *buf, size_t count);
 
 static struct device_attribute somc_fg_attrs[] = {
-	__ATTR(profile_loaded,		S_IRUGO, somc_fg_param_show, NULL),
 	__ATTR(latest_soc,		S_IRUGO, somc_fg_param_show, NULL),
 	__ATTR(soc_int,			S_IRUGO, somc_fg_param_show, NULL),
 	__ATTR(batt_int,		S_IRUGO, somc_fg_param_show, NULL),
 	__ATTR(usb_ibat_max,		S_IRUGO, somc_fg_param_show, NULL),
-	__ATTR(memif_int,		S_IRUGO, somc_fg_param_show, NULL),
-	__ATTR(fg_debug_mask,		S_IRUGO|S_IWUSR, somc_fg_param_show,
-							somc_fg_param_store),
 	__ATTR(output_batt_log,		S_IRUGO|S_IWUSR, somc_fg_param_show,
 							somc_fg_param_store),
-	__ATTR(temp_period_update_ms,	S_IRUGO|S_IWUSR, somc_fg_param_show,
+	__ATTR(period_update_ms,	S_IRUGO|S_IWUSR, somc_fg_param_show,
 							somc_fg_param_store),
 	__ATTR(battery_soc,		S_IRUGO, somc_fg_param_show, NULL),
 	__ATTR(cc_soc,			S_IRUGO, somc_fg_param_show, NULL),
 	__ATTR(soc_system,		S_IRUGO, somc_fg_param_show, NULL),
 	__ATTR(soc_monotonic,	S_IRUGO, somc_fg_param_show, NULL),
+	__ATTR(learned_soh,	S_IRUGO|S_IWUSR, somc_fg_param_show,
+							somc_fg_param_store),
+	__ATTR(batt_params,		S_IRUGO, somc_fg_param_show, NULL),
+	__ATTR(capacity,		S_IRUGO, somc_fg_param_show, NULL),
+	__ATTR(vbat_predict,		S_IRUGO, somc_fg_param_show, NULL),
+	__ATTR(rslow,			S_IRUGO, somc_fg_param_show, NULL),
+	__ATTR(soc_cutoff,		S_IRUGO, somc_fg_param_show, NULL),
+	__ATTR(soc_full,		S_IRUGO, somc_fg_param_show, NULL),
 };
+
+static void somc_fg_add_decimal_point(u32 num, int ceil, char *value, int size)
+{
+	u32 high_num, low_num;
+
+	if (!ceil)
+		return;
+
+	high_num = num / ceil;
+	low_num = num % ceil;
+	scnprintf(value, size, "%d.%d", high_num, low_num);
+}
 
 #define SRAM_BASE_ADDR		0x400
 #define LATEST_SOC_ADDR		0x1CA
 #define FG_ADC_USR_IBAT_MAX	0x4259
 #define INT_STS			0x10
 #define ITEMS_PER_LINE		4
+#define DECIMAL_NUM_SIZE	15
 static ssize_t somc_fg_param_show(struct device *dev,
 				struct device_attribute *attr,
 				char *buf)
@@ -153,32 +268,23 @@ static ssize_t somc_fg_param_show(struct device *dev,
 	u8 data[ITEMS_PER_LINE];
 	u8 reg;
 	int rc = 0;
-
-	if (!fg_params->batt_psy)
-		fg_params->batt_psy = power_supply_get_by_name("battery");
-
-	if (!fg_params->batt_psy)
-		return -EINVAL;
+	char decimal_num[DECIMAL_NUM_SIZE];
 
 	switch (off) {
-	case ATTR_PROFILE_LOADED:
-		size = scnprintf(buf, PAGE_SIZE, "%d\n",
-				*fg_params->profile_loaded);
-		break;
 	case ATTR_LATEST_SOC:
 		rc = somc_fg_mem_read(dev, data,
 				SRAM_BASE_ADDR + LATEST_SOC_ADDR, 1, 0, 0);
 		if (rc)
 			pr_err("Can't read LATEST_SOC: %d\n", rc);
 		else
-			size = scnprintf(buf, PAGE_SIZE, "0x%X\n", data[0]);
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", data[0]);
 		break;
 	case ATTR_SOC_INT:
 		rc = somc_fg_read(dev, &reg, *fg_params->soc_base + INT_STS, 1);
 		if (rc)
 			pr_err("Can't read SOC_INT_RT_STS: %d\n", rc);
 		else
-			size = scnprintf(buf, PAGE_SIZE, "0x%X\n", reg);
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
 		break;
 	case ATTR_BATT_INT:
 		rc = somc_fg_read(dev, &reg,
@@ -186,49 +292,91 @@ static ssize_t somc_fg_param_show(struct device *dev,
 		if (rc)
 			pr_err("Can't read BATT_INT_RT_STS: %d\n", rc);
 		else
-			size = scnprintf(buf, PAGE_SIZE, "0x%X\n", reg);
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
 		break;
 	case ATTR_USB_IBAT_MAX:
 		rc = somc_fg_read(dev, &reg, FG_ADC_USR_IBAT_MAX, 1);
 		if (rc)
 			pr_err("Can't read USB_IBAT_MAX: %d\n", rc);
 		else
-			size = scnprintf(buf, PAGE_SIZE, "0x%X\n", reg);
-		break;
-	case ATTR_MEMIF_INT:
-		rc = somc_fg_read(dev, &reg, *fg_params->mem_base + INT_STS, 1);
-		if (rc)
-			pr_err("Can't read MEMIF_INT_RT_STS: %d\n", rc);
-		else
-			size = scnprintf(buf, PAGE_SIZE, "0x%X\n", reg);
-		break;
-	case ATTR_FG_DEBUG_MASK:
-		size = scnprintf(buf, PAGE_SIZE, "%d\n",
-					*fg_params->fg_debug_mask);
+			size = scnprintf(buf, PAGE_SIZE, "0x%02X\n", reg);
 		break;
 	case ATTR_OUTPUT_BATT_LOG:
 		size = scnprintf(buf, PAGE_SIZE, "%d\n",
 					fg_params->output_batt_log);
 		break;
-	case ATTR_TEMP_PERIOD_UPDATE_MS:
+	case ATTR_PERIOD_UPDATE_MS:
 		size = scnprintf(buf, PAGE_SIZE, "%d\n",
-					fg_params->temp_period_update_ms);
+					fg_params->period_update_ms);
 		break;
 	case ATTR_BATTERY_SOC:
-		size = scnprintf(buf, PAGE_SIZE, "%d\n",
-					*fg_params->battery_soc);
+		somc_fg_add_decimal_point(*fg_params->battery_soc,
+				DECIMAL_CEIL,
+				decimal_num, DECIMAL_NUM_SIZE);
+		size = scnprintf(buf, PAGE_SIZE, "%s\n", decimal_num);
 		break;
 	case ATTR_CC_SOC:
-		size = scnprintf(buf, PAGE_SIZE, "%d\n",
-					*fg_params->cc_soc);
+		somc_fg_add_decimal_point(*fg_params->cc_soc,
+				DECIMAL_CEIL,
+				decimal_num, DECIMAL_NUM_SIZE);
+		size = scnprintf(buf, PAGE_SIZE, "%s\n", decimal_num);
 		break;
 	case ATTR_SOC_SYSTEM:
-		size = scnprintf(buf, PAGE_SIZE, "%d\n",
-					*fg_params->soc_system);
+		somc_fg_add_decimal_point(*fg_params->soc_system,
+				DECIMAL_CEIL,
+				decimal_num, DECIMAL_NUM_SIZE);
+		size = scnprintf(buf, PAGE_SIZE, "%s\n", decimal_num);
 		break;
 	case ATTR_SOC_MONOTONIC:
+		somc_fg_add_decimal_point(*fg_params->soc_monotonic,
+				DECIMAL_CEIL,
+				decimal_num, DECIMAL_NUM_SIZE);
+		size = scnprintf(buf, PAGE_SIZE, "%s\n", decimal_num);
+		break;
+	case ATTR_LEARNED_SOH:
 		size = scnprintf(buf, PAGE_SIZE, "%d\n",
-					*fg_params->soc_monotonic);
+				fg_params->vfloat_arrangement_threshold);
+		break;
+	case ATTR_BATT_PARAMS:
+		{
+			union power_supply_propval prop_type = {0,};
+			union power_supply_propval prop_res = {0,};
+
+			fg_params->bms_psy->get_property(fg_params->bms_psy,
+				POWER_SUPPLY_PROP_BATTERY_TYPE, &prop_type);
+			fg_params->bms_psy->get_property(fg_params->bms_psy,
+				POWER_SUPPLY_PROP_RESISTANCE_ID, &prop_res);
+			size = scnprintf(buf, PAGE_SIZE, "%s/%d/%d/0x%02X\n",
+					prop_type.strval,
+					prop_res.intval,
+					fg_params->integrity_bit,
+					(int)fg_params->soc_restart);
+		}
+		break;
+	case ATTR_CAPACITY:
+		somc_fg_add_decimal_point(fg_params->capacity,
+				DECIMAL_CEIL,
+				decimal_num, DECIMAL_NUM_SIZE);
+		size = scnprintf(buf, PAGE_SIZE, "%s\n", decimal_num);
+		break;
+	case ATTR_VBAT_PREDICT:
+		size = scnprintf(buf, PAGE_SIZE, "0x%04X\n",
+				fg_params->vbat_predict);
+		break;
+	case ATTR_RSLOW:
+		size = scnprintf(buf, PAGE_SIZE, "%lld\n", fg_params->rslow);
+		break;
+	case ATTR_SOC_CUTOFF:
+		somc_fg_add_decimal_point(fg_params->soc_cutoff,
+				DECIMAL_CEIL,
+				decimal_num, DECIMAL_NUM_SIZE);
+		size = scnprintf(buf, PAGE_SIZE, "%s\n", decimal_num);
+		break;
+	case ATTR_SOC_FULL:
+		somc_fg_add_decimal_point(fg_params->soc_full,
+				DECIMAL_CEIL,
+				decimal_num, DECIMAL_NUM_SIZE);
+		size = scnprintf(buf, PAGE_SIZE, "%s\n", decimal_num);
 		break;
 	default:
 		size = 0;
@@ -246,13 +394,6 @@ static ssize_t somc_fg_param_store(struct device *dev,
 	int ret;
 
 	switch (off) {
-	case ATTR_FG_DEBUG_MASK:
-		ret = kstrtoint(buf, 10, fg_params->fg_debug_mask);
-		if (ret) {
-			pr_err("Can't write FG_DEBUG_MASK: %d\n", ret);
-			return ret;
-		}
-		break;
 	case ATTR_OUTPUT_BATT_LOG:
 		ret = kstrtoint(buf, 10, &fg_params->output_batt_log);
 		if (ret) {
@@ -264,10 +405,18 @@ static ssize_t somc_fg_param_store(struct device *dev,
 			msecs_to_jiffies(fg_params->output_batt_log * 1000));
 		}
 		break;
-	case ATTR_TEMP_PERIOD_UPDATE_MS:
-		ret = kstrtoint(buf, 10, &fg_params->temp_period_update_ms);
+	case ATTR_PERIOD_UPDATE_MS:
+		ret = kstrtoint(buf, 10, &fg_params->period_update_ms);
 		if (ret) {
-			pr_err("Can't write TEMP_PERIOD_UPDATE_MS: %d\n", ret);
+			pr_err("Can't write PERIOD_UPDATE_MS: %d\n", ret);
+			return ret;
+		}
+		break;
+	case ATTR_LEARNED_SOH:
+		ret = kstrtoint(buf, 10,
+				&fg_params->vfloat_arrangement_threshold);
+		if (ret) {
+			pr_err("Can't write LEARNED_SOH: %d\n", ret);
 			return ret;
 		}
 		break;
@@ -317,4 +466,41 @@ int somc_fg_register(struct device *dev, struct fg_somc_params *params)
 void somc_fg_unregister(struct device *dev)
 {
 	somc_fg_remove_sysfs_entries(dev);
+}
+
+#define OF_PROP_READ(dev, node, prop, dt_property, retval, optional)	\
+do {									\
+	if (retval)							\
+		break;							\
+	if (optional)							\
+		prop = 0;						\
+									\
+	retval = of_property_read_u32(node,				\
+					"somc," dt_property	,	\
+					&prop);				\
+									\
+	if ((retval == -EINVAL) && optional)				\
+		retval = 0;						\
+	else if (retval)						\
+		dev_err(dev, "Error reading " #dt_property		\
+				" property rc = %d\n", rc);		\
+} while (0)
+
+int somc_chg_fg_of_init(struct fg_somc_params *params,
+			struct device *dev,
+			struct device_node *node)
+{
+	int rc = 0;
+
+	if (!node) {
+		dev_err(dev, "device tree info. missing\n");
+		return -EINVAL;
+	}
+	params->vfloat_arrangement = of_property_read_bool(node,
+				"somc,vfloat-arrangement");
+	OF_PROP_READ(dev, node, params->vfloat_arrangement_threshold,
+		"vfloat-arrangement-threshold", rc, 1);
+	OF_PROP_READ(dev, node, params->soc_magnification,
+		"soc-magnification", rc, 1);
+	return 0;
 }

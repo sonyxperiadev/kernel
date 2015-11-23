@@ -19,6 +19,7 @@
 
 #include <linux/switch.h>
 #include <linux/wakelock.h>
+#include <linux/qpnp/qpnp-smbcharger_extension.h>
 
 struct qpnp_vadc_chip;
 struct delayed_work;
@@ -45,12 +46,11 @@ enum {
 	ATTR_USB_HVDCP_STS,
 	ATTR_USB_CMD_IL,
 	ATTR_IUSB_MAX,
-	ATTR_USB_CFG,
 	ATTR_IDC_MAX,
-	ATTR_DC_TRIM11,
 	ATTR_OTG_INT,
 	ATTR_MISC_INT,
-	ATTR_TRIM_OPTION,
+	ATTR_MISC_IDEV_STS,
+	ATTR_VFLOAT_ADJUST_TRIM,
 	ATTR_USB_MAX_CURRENT,
 	ATTR_DC_MAX_CURRENT,
 	ATTR_USB_TARGET_CURRENT,
@@ -62,12 +62,13 @@ enum {
 	ATTR_MHL_STATE,
 	ATTR_WEAK_STATE,
 	ATTR_AICL_KEEP_STATE,
-	ATTR_CHG_DEBUG_MASK,
 	ATTR_BAT_TEMP_STATUS,
 	ATTR_USB_5V,
 	ATTR_USB_9V,
 	ATTR_DC_5V,
 	ATTR_FASTCHG_CURRENT,
+	ATTR_LIMIT_USB_5V_LEVEL,
+	ATTR_APSD_RERUN_CHECK_DELAY_MS,
 };
 
 enum somc_charge_type {
@@ -79,6 +80,11 @@ enum llk_charge_Status {
 	NO_LLK,
 	CHG_OFF,
 	CHG_ON,
+};
+
+struct somc_smbchg_regulator {
+	struct regulator_desc	*rdesc;
+	struct regulator_dev	*rdev;
 };
 
 struct somc_usb_id {
@@ -95,11 +101,14 @@ struct somc_usb_id {
 	bool			user_request_polling;
 	bool			avoid_first_usbid_change;
 	struct wakeup_source	wakeup_source_id_polling;
+	u8			rid_sts;
+	struct wakeup_source	wakeup_otg_en;
 
 	/* Follwoings are pointers from qpnp-smbcharger */
 	void			*ctx;
 	bool			*otg_present;
 	int			*change_irq;
+	struct somc_smbchg_regulator	otg_vreg;
 };
 
 struct somc_usb_ocp {
@@ -115,6 +124,8 @@ struct somc_temp_state {
 	int			warm_thresh;
 	int			cool_thresh;
 	bool			thresh_read_comp;
+	struct work_struct	work;
+	u8			temp_val;
 };
 
 struct somc_vol_check {
@@ -152,6 +163,7 @@ struct somc_thermal_mitigation {
 	unsigned int		*usb_9v;
 	unsigned int		*dc_5v;
 	unsigned int		*current_ma;
+	int			limit_usb5v_lvl;
 };
 
 struct somc_chg_key {
@@ -163,7 +175,17 @@ struct somc_limit_charge {
 	int			enable_llk;
 	int			llk_socmax;
 	int			llk_socmin;
-	bool		llk_socmax_flg;
+	bool			llk_socmax_flg;
+	bool			llk_fake_capacity;
+};
+
+struct somc_apsd {
+	struct workqueue_struct	*wq;
+	struct work_struct	rerun_request_work;
+	struct delayed_work	rerun_work;
+	int			delay_ms;
+	bool			rerun_wait_irq;
+	struct completion	src_det_lowered;
 };
 
 struct chg_somc_params {
@@ -198,6 +220,9 @@ struct chg_somc_params {
 	bool			enable_sdp_cdp_weak_notification;
 	struct switch_dev	swdev_weak;
 	struct delayed_work	power_supply_changed_work;
+	struct wake_lock	unplug_wakelock;
+	struct somc_apsd	apsd;
+	int			fv_cmp_cfg;
 
 	/* Follwoings are pointers from qpnp-smbcharger */
 	struct device		*dev;
@@ -219,7 +244,6 @@ struct chg_somc_params {
 	bool			*usb_present;
 	bool			*dc_present;
 
-	int			*chg_debug_mask;
 	const int		*usb_current_table;
 	const int		*dc_current_table;
 
@@ -255,16 +279,19 @@ int somc_chg_otg_regulator_register_ocp_notification(
 			struct regulator_dev *rdev,
 			struct regulator_ocp_notification *notification);
 int somc_chg_otg_regulator_ocp_notify(struct chg_somc_params *params);
-int somc_chg_apsd_wait_rerun(struct device *dev, u16 misc_base, u16 usb_base);
+int somc_chg_apsd_wait_rerun(struct chg_somc_params *params, bool wait_comp);
+void somc_chg_apsd_rerun_check(struct chg_somc_params *params);
 
 void somc_chg_temp_read_temp_threshold(void);
-void somc_chg_temp_status_transition(u8 reg);
+void somc_chg_temp_status_transition(struct chg_somc_params *params, u8 reg);
 
 bool somc_chg_usbid_is_change_irq_enabled(struct chg_somc_params *params);
 void somc_chg_usbid_notify_disconnection(struct chg_somc_params *params);
 int somc_chg_usbid_is_otg_present(struct chg_somc_params *params,
 								u16 usbid_val);
-
+bool somc_chg_therm_is_not_charge(struct chg_somc_params *params,
+			int therm_lvl);
+void somc_chg_therm_set_hvdcp_en(struct chg_somc_params *params);
 int somc_chg_calc_thermal_limited_current(
 			struct chg_somc_params *params,
 			int current_ma,
@@ -293,9 +320,16 @@ int somc_chg_shutdown_lowbatt(struct power_supply *bms_psy);
 int somc_chg_usb_en_usr(struct device *dev, bool enable);
 int somc_chg_dc_en_usr(struct device *dev, bool enable);
 enum somc_charge_type somc_llk_check(struct chg_somc_params *params);
+int somc_llk_get_capacity(struct chg_somc_params *params, int capacity);
 void somc_llk_usbdc_present_chk(struct chg_somc_params *params);
 void somc_chg_usbin_notify_changed(struct chg_somc_params *params,
 			bool usb_present);
 int somc_chg_usbid_stop_id_polling_host_function(struct chg_somc_params *params,
 			int force_stop);
+void somc_chg_usbin_recover_vbus_detection(struct chg_somc_params *params);
+void somc_batfet_open(struct device *dev, bool open);
+void somc_unplug_wakelock(void);
+void somc_chg_set_step_charge_params(struct device *dev,
+		struct chg_somc_params *params, struct device_node *node);
+int somc_chg_get_fv_cmp_cfg(struct chg_somc_params *params);
 #endif /* __QPNP_SMBCHARGER_EXTENSION */
