@@ -2935,7 +2935,9 @@ static void dwc3_id_work(struct work_struct *w)
 				dev_info(mdwc->dev, "request APSD rerun\n");
 				dwc3_select_mhl_switch(mdwc,
 							MHL_SWITCH_PORT_USB2);
+ #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
 				somc_chg_apsd_rerun_request();
+ #endif
 			}
 
 			dev_dbg(mdwc->dev,
