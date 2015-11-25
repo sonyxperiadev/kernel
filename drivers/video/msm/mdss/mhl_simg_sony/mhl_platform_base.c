@@ -90,7 +90,11 @@ static void mhl_unlock(struct wake_lock *lock)
 
 /* It should be removed later */
 #ifdef MHL_PMIC_VMIN_SET
-extern int somc_chg_notify_mhl_state(int state);
+ #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
+ extern int somc_chg_notify_mhl_state(int state);
+ #else
+ #define somc_chg_notify_mhl_state(x)
+ #endif
 #endif
 
 static void mhl_pf_external_notify(int data)
