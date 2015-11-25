@@ -1230,6 +1230,8 @@ static struct snd_soc_dai_driver msm_fe_dais[] = {
 
 static int msm_fe_dai_dev_probe(struct platform_device *pdev)
 {
+	if (pdev->dev.of_node)
+		dev_set_name(&pdev->dev, "%s", "msm-dai-fe");
 
 	dev_dbg(&pdev->dev, "%s: dev name %s\n", __func__,
 		dev_name(&pdev->dev));

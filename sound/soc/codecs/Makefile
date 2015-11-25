@@ -67,7 +67,7 @@ snd-soc-twl6040-objs := twl6040.o
 snd-soc-uda134x-objs := uda134x.o
 snd-soc-uda1380-objs := uda1380.o
 snd-soc-wcd9310-objs := wcd9310.o wcd9310-tables.o
-snd-soc-wcd9320-objs := wcd9320.o wcd9320-tables.o
+snd-soc-wcd9320-objs := wcd9320.o wcd9320-tables.o wcdcal-hwdep.o
 snd-soc-wcd9306-objs := wcd9306.o wcd9306-tables.o wcdcal-hwdep.o
 snd-soc-wcd9330-objs := wcd9330.o wcd9330-tables.o wcdcal-hwdep.o
 snd-soc-wcd9xxx-objs := wcd9xxx-resmgr.o wcd9xxx-mbhc.o wcd9xxx-common.o
@@ -133,6 +133,7 @@ snd-soc-wm9705-objs := wm9705.o
 snd-soc-wm9712-objs := wm9712.o
 snd-soc-wm9713-objs := wm9713.o
 snd-soc-wm-hubs-objs := wm_hubs.o
+snd-soc-tfa98xx-objs := tfa98xx.o  hal/src/NXP_I2C.o tfa/src/initTfa9890.o tfa/src/Tfa98xx.o
 
 snd-soc-msm-stub-objs := msm_stub.o
 obj-$(CONFIG_SND_SOC_MSM_HDMI_CODEC_RX) := msm_hdmi_codec_rx.o
@@ -270,6 +271,7 @@ obj-$(CONFIG_SND_SOC_WM9713)	+= snd-soc-wm9713.o
 obj-$(CONFIG_SND_SOC_WM_ADSP)	+= snd-soc-wm-adsp.o
 obj-$(CONFIG_SND_SOC_WM_HUBS)	+= snd-soc-wm-hubs.o
 obj-$(CONFIG_SND_SOC_MSM_STUB)  += snd-soc-msm-stub.o
+obj-$(CONFIG_SND_SOC_TFA98XX)	+= snd-soc-tfa98xx.o
 
 # Amp
 obj-$(CONFIG_SND_SOC_MAX9877)	+= snd-soc-max9877.o

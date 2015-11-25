@@ -1,0 +1,43 @@
+config MHL_DEVICE_ID
+	hex "MHL Device ID"
+	depends on MHL_SIMG_SONY
+	default 30
+
+config MHL_UPSTREAM_HPD_PUSH_PULL
+	bool "MHL: Set upstream HPD pin mode"
+	depends on MHL_SIMG_SONY
+	default y
+	help
+	  Say Y to this entry if your upstream HPD is push
+	  pull mode, otherwise, say N for open drain mode.
+
+config MHL_HPD_UPSTREAM_HDMI_IS_HIGH_TRIGGER
+	bool "MHL: Upstream HPD high trigger"
+	depends on MHL_SIMG_SONY
+	default y
+	help
+	  Say Y to this entry if HPD is active high,
+	  otherwise, say N for active low.
+
+config MHL_SUPPORT_UNPOWERED_DONGLE
+	bool "MHL: Support not powered dongle"
+	depends on MHL_SIMG_SONY
+	default n
+	help
+	  Support MHL dongle without external power.
+	  This means that the device shall be capable of
+	  providing power to the MHL dongle from its own.
+
+config MHL_BIST
+	bool "MHL: Add Built-In Self Test"
+	depends on MHL_SIMG_SONY
+	default n
+	help
+	  Add BIST support to the driver.
+	  This will add a self test at driver/hw init time.
+	  If unsure, say N.
+
+config SUPPORT_CHG_TIMING
+	bool "MHL: Support charge timing"
+	depends on MHL_SIMG_SONY
+	default n

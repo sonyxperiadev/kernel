@@ -4669,6 +4669,25 @@ int voc_start_playback(uint32_t set, uint16_t port_id)
 			break;
 		}
 	}
+	return ret;
+}
+
+int voc_get_tx_device_mute(uint32_t session_id)
+{
+	struct voice_data *v = voice_get_session(session_id);
+	int ret = 0;
+
+	if (v == NULL) {
+		pr_err("%s: invalid session_id 0x%x\n", __func__, session_id);
+
+		return -EINVAL;
+	}
+
+	mutex_lock(&v->lock);
+
+	ret = v->dev_tx.dev_mute;
+
+	mutex_unlock(&v->lock);
 
 	return ret;
 }

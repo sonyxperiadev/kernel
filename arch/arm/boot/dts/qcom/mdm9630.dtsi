@@ -1040,28 +1040,6 @@
 			qcom,prim-i2s-gpio-dout = <&msmgpio 14 0>;
 			qcom,prim-i2s-gpio-sclk = <&msmgpio 15 0>;
 			qcom,prim-i2s-gpio-mclk = <&msmgpio 71 0>;
-		asoc-platform = <&pcm0>, <&voip>, <&voice>, <&host_pcm>,
-				<&loopback>, <&hostless>, <&pcm_dtmf>,
-				<&afe>, <&routing>, <&compr>;
-		asoc-platform-names = "msm-pcm-dsp.0", "msm-voip-dsp", "msm-pcm-voice",
-				"msm-voice-host-pcm", "msm-pcm-loopback",
-				"msm-pcm-hostless", "msm-pcm-dtmf", "msm-pcm-afe",
-				"msm-pcm-routing", "msm-compr-dsp";
-		asoc-cpu = <&dai_pri_auxpcm>, <&dai_mi2s>,
-			<&dtmf_tx>, <&rx_cap_tx>, <&rx_pb_rx>,
-			<&tx_cap_tx>, <&tx_pb_rx>, <&afe_pcm_rx>,
-			<&afe_pcm_tx>, <&afe_proxy_rx>, <&afe_proxy_tx>,
-			<&incall_record_rx>, <&incall_record_tx>,
-			<&incall_music_rx>;
-		asoc-cpu-names = "msm-dai-q6-auxpcm.1", "msm-dai-q6-mi2s.0",
-				"msm-dai-stub-dev.4", "msm-dai-stub-dev.5",
-				"msm-dai-stub-dev.6", "msm-dai-stub-dev.7",
-				"msm-dai-stub-dev.8", "msm-dai-q6-dev.224",
-				"msm-dai-q6-dev.225", "msm-dai-q6-dev.241",
-				"msm-dai-q6-dev.240", "msm-dai-q6-dev.32771",
-				"msm-dai-q6-dev.32772", "msm-dai-q6-dev.32773";
-		asoc-codec = <&stub_codec>;
-		asoc-codec-names = "msm-stub-codec.1";
 	};
 
 	qcom,msm-adsp-loader {
@@ -1069,28 +1047,28 @@
 		qcom,adsp-state = <0>;
 	};
 
-	pcm0: qcom,msm-pcm {
+	qcom,msm-pcm {
 		compatible = "qcom,msm-pcm-dsp";
 		qcom,msm-pcm-dsp-id = <0>;
 	};
 
-	routing: qcom,msm-pcm-routing {
+	qcom,msm-pcm-routing {
 		compatible = "qcom,msm-pcm-routing";
 	};
 
-	compr: qcom,msm-compr-dsp {
+	qcom,msm-compr-dsp {
 		compatible = "qcom,msm-compr-dsp";
 	};
 
-	voip: qcom,msm-voip-dsp {
+	qcom,msm-voip-dsp {
 		compatible = "qcom,msm-voip-dsp";
 	};
 
-	voice: qcom,msm-pcm-voice {
+	qcom,msm-pcm-voice {
 		compatible = "qcom,msm-pcm-voice";
 	};
 
-	stub_codec: qcom,msm-stub-codec {
+	qcom,msm-stub-codec {
 		compatible = "qcom,msm-stub-codec";
 	};
 
@@ -1098,45 +1076,45 @@
 		compatible = "qcom,msm-dai-fe";
 	};
 
-	afe: qcom,msm-pcm-afe {
+	qcom,msm-pcm-afe {
 		compatible = "qcom,msm-pcm-afe";
 	};
 
-	hostless: qcom,msm-pcm-hostless {
+	qcom,msm-pcm-hostless {
 		compatible = "qcom,msm-pcm-hostless";
 	};
 
-	host_pcm: qcom,msm-voice-host-pcm {
+	qcom,msm-voice-host-pcm {
 		compatible = "qcom,msm-voice-host-pcm";
 	};
 
-	loopback: qcom,msm-pcm-loopback {
+	qcom,msm-pcm-loopback {
 		compatible = "qcom,msm-pcm-loopback";
 	};
 
 	qcom,msm-dai-stub {
 		compatible = "qcom,msm-dai-stub";
-		dtmf_tx: qcom,msm-dai-stub-dtmf-tx {
+		qcom,msm-dai-stub-dtmf-tx {
 			compatible = "qcom,msm-dai-stub-dev";
 			qcom,msm-dai-stub-dev-id = <4>;
 		};
 
-		rx_cap_tx: qcom,msm-dai-stub-host-rx-capture-tx {
+		qcom,msm-dai-stub-host-rx-capture-tx {
 			compatible = "qcom,msm-dai-stub-dev";
 			qcom,msm-dai-stub-dev-id = <5>;
 		};
 
-		rx_pb_rx: qcom,msm-dai-stub-host-rx-playback-rx {
+		qcom,msm-dai-stub-host-rx-playback-rx {
 			compatible = "qcom,msm-dai-stub-dev";
 			qcom,msm-dai-stub-dev-id = <6>;
 	       };
 
-		tx_cap_tx: qcom,msm-dai-stub-host-tx-capture-tx {
+		qcom,msm-dai-stub-host-tx-capture-tx {
 			compatible = "qcom,msm-dai-stub-dev";
 			qcom,msm-dai-stub-dev-id = <7>;
 		};
 
-		tx_pb_rx: qcom,msm-dai-stub-host-tx-playback-rx {
+		qcom,msm-dai-stub-host-tx-playback-rx {
 			compatible = "qcom,msm-dai-stub-dev";
 			qcom,msm-dai-stub-dev-id = <8>;
 		};
@@ -1144,43 +1122,43 @@
 
 	qcom,msm-dai-q6 {
 		compatible = "qcom,msm-dai-q6";
-		afe_pcm_rx: qcom,msm-dai-q6-be-afe-pcm-rx {
+		qcom,msm-dai-q6-be-afe-pcm-rx {
 			compatible = "qcom,msm-dai-q6-dev";
 			qcom,msm-dai-q6-dev-id = <224>;
 		};
 
-		afe_pcm_tx: qcom,msm-dai-q6-be-afe-pcm-tx {
+		qcom,msm-dai-q6-be-afe-pcm-tx {
 			compatible = "qcom,msm-dai-q6-dev";
 			qcom,msm-dai-q6-dev-id = <225>;
 		};
 
-		afe_proxy_rx: qcom,msm-dai-q6-afe-proxy-rx {
+		qcom,msm-dai-q6-afe-proxy-rx {
 			compatible = "qcom,msm-dai-q6-dev";
 			qcom,msm-dai-q6-dev-id = <241>;
 		};
 
-		afe_proxy_tx: qcom,msm-dai-q6-afe-proxy-tx {
+		qcom,msm-dai-q6-afe-proxy-tx {
 			compatible = "qcom,msm-dai-q6-dev";
 			qcom,msm-dai-q6-dev-id = <240>;
 		};
 
-		incall_record_rx: qcom,msm-dai-q6-incall-record-rx {
+		qcom,msm-dai-q6-incall-record-rx {
 			compatible = "qcom,msm-dai-q6-dev";
 			qcom,msm-dai-q6-dev-id = <32771>;
 		};
 
-		incall_record_tx: qcom,msm-dai-q6-incall-record-tx {
+		qcom,msm-dai-q6-incall-record-tx {
 			compatible = "qcom,msm-dai-q6-dev";
 			qcom,msm-dai-q6-dev-id = <32772>;
 		};
 
-		incall_music_rx: qcom,msm-dai-q6-incall-music-rx {
+		qcom,msm-dai-q6-incall-music-rx {
 			compatible = "qcom,msm-dai-q6-dev";
 			qcom,msm-dai-q6-dev-id = <32773>;
 		};
 	};
 
-	pcm_dtmf: qcom,msm-pcm-dtmf {
+	qcom,msm-pcm-dtmf {
 		compatible = "qcom,msm-pcm-dtmf";
 	};
 
@@ -1188,7 +1166,7 @@
 		compatible = "qcom,msm-stub-codec";
 	};
 
-	dai_pri_auxpcm: qcom,msm-pri-auxpcm {
+	qcom,msm-pri-auxpcm {
 		compatible = "qcom,msm-auxpcm-dev";
 		qcom,msm-cpudai-auxpcm-mode = <0>, <0>;
 		qcom,msm-cpudai-auxpcm-sync = <1>, <1>;
@@ -1203,7 +1181,7 @@
 
 	qcom,msm-dai-mi2s {
 		compatible = "qcom,msm-dai-mi2s";
-		dai_mi2s: qcom,msm-dai-q6-mi2s-prim {
+		qcom,msm-dai-q6-mi2s-prim {
 			compatible = "qcom,msm-dai-q6-mi2s";
 			qcom,msm-dai-q6-mi2s-dev-id = <0>;
 			qcom,msm-mi2s-rx-lines = <2>;

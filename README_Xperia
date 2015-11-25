@@ -1,0 +1,56 @@
+Configuration files can be found in arch/arm/configs.
+
+    Xperia Z2 D6502/D6503/D6543/L50w       => shinano_sirius_defconfig
+    Xperia Z2 Tablet SGP521/SGP541         => shinano_castor_defconfig
+    Xperia Z2 Tablet SGP551                => shinano_castor_brazil_defconfig
+    Xperia Z2 Tablet SGP511/SGP512         => shinano_castor_windy_defconfig
+    Xperia Z3 D6603/D6653/D6643            => shinano_leo_defconfig
+    Xperia Z3 Compact D5803/D5833          => shinano_aries_defconfig
+    Xperia Z3 Tablet Compact SGP621/SGP641 => shinano_scorpion_defconfig
+    Xperia Z3 Tablet Compact SGP611/SGP612 => shinano_scorpion_windy_defconfig
+
+
+How to build your kernel:
+
+  Prerequisites:
+
+    * ramdisk.img - root fs
+
+    * mkbootimg - boot.img generator
+
+    * dtbTool - DTB combiner
+      You can obtain it from various trusted sites including https://www.codeaurora.org/
+
+    * The ARM cross-compiler
+      We recommend getting the CodeSourcery Lite compiler.
+      Or, you can also use prebuild executable binary which is included in
+      standard Android tree.
+
+
+  Step 1: Build Your Kernel (zImage)
+    $ cd kernel
+
+    $ export ARCH=arm
+
+    $ export CROSS_COMPILE=/opt/arm-2010q1/bin/arm-none-eabi-
+      NOTE: Please set the location and the prefix of the ARM cross-compiler.
+
+    $ make shinano_leo_defconfig
+      NOTE: Please set a configuration file you want to build.
+
+    $ make
+
+    You can see arch/arm/boot/zImage if you succeed in building the kernel.
+
+
+  Step 2: Prepare Device Tree Image (dt.img)
+    (In the Linux Kernel directory)
+    $ dtbTool -o dt.img -s 2048 -p scripts/dtc/ arch/arm/boot/
+
+
+  Step 3: Assembling the boot.img
+    (In the Linux Kernel directory)
+    $ mkbootimg --cmdline "androidboot.hardware=qcom user_debug=31 msm_rtb.filter=0xb7 ehci-hcd.park=3 dwc3.maximum_speed=high dwc3_msm.prop_chg_detect=Y" \
+      --base 0x00000000 --kernel arch/arm/boot/zImage --ramdisk ramdisk.img \
+      --ramdisk_offset 0x02000000 -o boot.img --dt dt.img --tags_offset 0x01E00000
+

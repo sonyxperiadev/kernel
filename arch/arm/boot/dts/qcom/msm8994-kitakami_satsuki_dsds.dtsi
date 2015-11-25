@@ -1,0 +1,186 @@
+/* arch/arm/boot/dts/qcom/msm8994-kitakami_satsuki_dsds.dtsi
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+/*
+ * Copyright (C) 2015 Sony Mobile Communications Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2, as
+ * published by the Free Software Foundation.
+ */
+
+&soc {
+	/* I2C : BLSP2 */
+	i2c@f9924000 {
+		nfc@28 {
+			compatible = "nxp,pn547";
+			reg = <0x28>;
+			interrupt-parent = <&msm_gpio>;
+			interrupts = <29 0x1>;
+			nxp,irq_gpio = <&msm_gpio 29 0x00>;
+			nxp,dwld_en = <&msm_gpio 30 0x00>;
+			nxp,ven = <&pm8994_gpios 7 0x01>;
+			qcom,clk-src = "BBCLK2";
+			qcom,clk-gpio = <&pm8994_gpios 10 0x00>;
+			clocks = <&clock_rpm clk_bb_clk2_pin>;
+			clock-names = "nfc_clk";
+			pinctrl-names = "pn547-active", "pn547-inactive";
+			pinctrl-0 = <&msm_gpio_29_nfc_act &msm_gpio_30_act>;
+			pinctrl-1 = <&msm_gpio_29_nfc_sus &msm_gpio_30_sus>;
+		};
+	};
+
+	sim_detect {
+		compatible = "sim-detect";
+		interrupt-parent = <&msm_gpio>;
+		interrupts = <52 0>;
+
+		sim2_det {
+			label = "sim2-detection";
+			gpios = <&msm_gpio 52 0x0>;
+			debounce-interval = <10>;
+		};
+	};
+
+	tlmm_pinmux: pinctrl@fd510000 {
+		pmx_sdc2_clk {
+			sdc2_clk_on: clk_on {
+				drive-strength = <12>; /* 12 MA */
+			};
+		};
+
+		pmx_sdc2_cmd {
+			sdc2_cmd_on: cmd_on {
+				drive-strength = <6>; /* 6 MA */
+			};
+		};
+
+		pmx_sdc2_data {
+			sdc2_data_on: data_on {
+				drive-strength = <6>; /* 6 MA */
+			};
+		};
+	};
+};
+
+&pm8994_gpios {
+	/* GPIO_8: SD_CARD_DET1_N */
+	gpio@c700 {
+		qcom,src-sel = <0>;		/* GPIO */
+		qcom,mode = <0>;		/* In */
+		qcom,vin-sel = <2>;		/* S4 */
+		qcom,pull = <5>;		/* NP */
+		qcom,master-en = <1>;		/* Enable */
+		status = "ok";
+	};
+
+	/* GPIO_9: NC (TUNER_INT) */
+	gpio@c800 {
+		qcom,master-en = <0>;		/* Disable */
+		status = "ok";
+	};
+};
+
+&tlmm_pinmux {
+	/* GPIO_39: NC */
+	msm_gpio_39 {
+		qcom,pin-func = <0>;
+		msm_gpio_39_def: default {
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	/* GPIO_52: TRAY_DET */
+	msm_gpio_52 {
+		qcom,pins = <&gp 52>;
+		qcom,num-grp-pins = <1>;
+		label = "msm_gpio_52";
+		qcom,pin-func = <0>;
+		msm_gpio_52_def: default {
+			drive-strength = <2>;
+			bias-pull-up;
+			input-enable;
+			/delete-property/ bias-disable;
+			/delete-property/ output-low;
+		};
+	};
+
+	/* GPIO_77: NC (Reserved for MHL_SPI_DVLD) */
+	msm_gpio_77 {
+		qcom,pins = <&gp 77>;
+		qcom,num-grp-pins = <1>;
+		label = "msm_gpio_77";
+		qcom,pin-func = <0>;
+		msm_gpio_77_def: default {
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+			/delete-property/ input-enable;
+		};
+	};
+
+	/* GPIO_93: NC */
+	msm_gpio_93 {
+		qcom,pin-func = <0>;
+		msm_gpio_93_def: default {
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	/* GPIO_94: NC (TSIF_EN) */
+	msm_gpio_94 {
+		qcom,pin-func = <0>;
+		msm_gpio_94_def: default {
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	/* GPIO_95: NC (TSIF_DATA) */
+	msm_gpio_95 {
+		qcom,pin-func = <0>;
+		msm_gpio_95_def: default {
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	/* GPIO_96: NC (TSIF_SYNC) */
+	msm_gpio_96 {
+		qcom,pin-func = <0>;
+		msm_gpio_96_def: default {
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	/* GPIO_102: NC (TUNER_PWR_EN) */
+	msm_gpio_102 {
+		qcom,pin-func = <0>;
+		msm_gpio_102_def: default {
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+};
+
+&sdhc_2 {
+	cd-gpios = <&pm8994_gpios 8 0x1>;
+	/delete-property/ qcom,nonremovable;
+};

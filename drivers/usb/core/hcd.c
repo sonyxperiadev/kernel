@@ -2681,6 +2681,10 @@ void usb_remove_hcd(struct usb_hcd *hcd)
 	hcd->driver->stop(hcd);
 	hcd->state = HC_STATE_HALT;
 
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+	clear_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags);
+#endif
+
 	/* In case the HCD restarted the timer, stop it again. */
 	clear_bit(HCD_FLAG_POLL_RH, &hcd->flags);
 	del_timer_sync(&hcd->rh_timer);

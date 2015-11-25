@@ -1136,6 +1136,9 @@ static struct clk_freq_tbl ftbl_gcc_sdcc1_4_apps_clk[] = {
 	F(   400000,    cxo,  12,   1,   4),
 	F( 20000000,  gpll0,  15,   1,   2),
 	F( 25000000,  gpll0,  12,   1,   2),
+#if defined(CONFIG_MACH_SONY_SCORPION)
+	F( 40000000,  gpll0,  15,   0,   0),
+#endif
 	F( 50000000,  gpll0,  12,   0,   0),
 	F(100000000,  gpll0,   6,   0,   0),
 	F(200000000,  gpll0,   3,   0,   0),
@@ -2380,7 +2383,9 @@ static struct clk_lookup msm_clocks_gcc_8974[] = {
 	CLK_LOOKUP_OF("dma_bam_pclk", gcc_bam_dma_ahb_clk, "msm_sps"),
 	CLK_LOOKUP_OF("iface_clk", gcc_blsp1_ahb_clk, "f991f000.serial"),
 	CLK_LOOKUP_OF("iface_clk", gcc_blsp1_ahb_clk, "f9924000.i2c"),
+	CLK_LOOKUP_OF("iface_clk", gcc_blsp1_ahb_clk, "f9926000.i2c"),
 	CLK_LOOKUP_OF("iface_clk", gcc_blsp1_ahb_clk, "f991e000.serial"),
+	CLK_LOOKUP_OF("iface_clk", gcc_blsp1_ahb_clk, "f9922000.serial"),
 	CLK_LOOKUP_OF("core_clk", gcc_blsp1_qup1_i2c_apps_clk, "f9923000.i2c"),
 	CLK_LOOKUP_OF("iface_clk", gcc_blsp1_ahb_clk, "f9923000.i2c"),
 	CLK_LOOKUP_OF("core_clk", gcc_blsp1_qup2_i2c_apps_clk, "f9924000.i2c"),
@@ -2389,7 +2394,7 @@ static struct clk_lookup msm_clocks_gcc_8974[] = {
 	CLK_LOOKUP_OF("iface_clk", gcc_blsp1_ahb_clk, "f9923000.spi"),
 	CLK_LOOKUP_OF("core_clk", gcc_blsp1_qup3_i2c_apps_clk, ""),
 	CLK_LOOKUP_OF("core_clk", gcc_blsp1_qup3_spi_apps_clk, ""),
-	CLK_LOOKUP_OF("core_clk", gcc_blsp1_qup4_i2c_apps_clk, ""),
+	CLK_LOOKUP_OF("core_clk", gcc_blsp1_qup4_i2c_apps_clk, "f9926000.i2c"),
 	CLK_LOOKUP_OF("core_clk", gcc_blsp1_qup4_spi_apps_clk, ""),
 	CLK_LOOKUP_OF("core_clk", gcc_blsp1_qup5_i2c_apps_clk, ""),
 	CLK_LOOKUP_OF("core_clk", gcc_blsp1_qup5_spi_apps_clk, ""),
@@ -2400,15 +2405,18 @@ static struct clk_lookup msm_clocks_gcc_8974[] = {
 	CLK_LOOKUP_OF("core_clk", gcc_blsp1_uart3_apps_clk, "f991f000.serial"),
 	CLK_LOOKUP_OF("core_clk", gcc_blsp1_uart4_apps_clk, ""),
 	CLK_LOOKUP_OF("core_clk", gcc_blsp1_uart5_apps_clk, ""),
-	CLK_LOOKUP_OF("core_clk", gcc_blsp1_uart6_apps_clk, ""),
+	CLK_LOOKUP_OF("core_clk", gcc_blsp1_uart6_apps_clk, "f9922000.serial"),
 
+	CLK_LOOKUP_OF("iface_clk", gcc_blsp2_ahb_clk, "f9964000.i2c"),
 	CLK_LOOKUP_OF("iface_clk", gcc_blsp2_ahb_clk, "f9967000.i2c"),
 	CLK_LOOKUP_OF("iface_clk", gcc_blsp2_ahb_clk, "f9966000.spi"),
+	CLK_LOOKUP_OF("iface_clk", gcc_blsp2_ahb_clk, "f9960000.serial"),
 	CLK_LOOKUP_OF("iface_clk", gcc_blsp2_ahb_clk, "f995e000.serial"),
 	CLK_LOOKUP_OF("iface_clk", gcc_blsp2_ahb_clk, "f995d000.uart"),
+	CLK_LOOKUP_OF("iface_clk", gcc_blsp2_ahb_clk, "f9968000.i2c"),
 	CLK_LOOKUP_OF("core_clk", gcc_blsp2_qup1_i2c_apps_clk, ""),
 	CLK_LOOKUP_OF("core_clk", gcc_blsp2_qup1_spi_apps_clk, ""),
-	CLK_LOOKUP_OF("core_clk", gcc_blsp2_qup2_i2c_apps_clk, ""),
+	CLK_LOOKUP_OF("core_clk", gcc_blsp2_qup2_i2c_apps_clk, "f9964000.i2c"),
 	CLK_LOOKUP_OF("core_clk", gcc_blsp2_qup2_spi_apps_clk, ""),
 	CLK_LOOKUP_OF("core_clk", gcc_blsp2_qup3_i2c_apps_clk, ""),
 	CLK_LOOKUP_OF("core_clk", gcc_blsp2_qup3_spi_apps_clk, ""),
@@ -2416,12 +2424,12 @@ static struct clk_lookup msm_clocks_gcc_8974[] = {
 	CLK_LOOKUP_OF("core_clk", gcc_blsp2_qup5_i2c_apps_clk, "f9967000.i2c"),
 	CLK_LOOKUP_OF("core_clk", gcc_blsp2_qup4_spi_apps_clk, "f9966000.spi"),
 	CLK_LOOKUP_OF("core_clk", gcc_blsp2_qup5_spi_apps_clk, ""),
-	CLK_LOOKUP_OF("core_clk", gcc_blsp2_qup6_i2c_apps_clk, ""),
+	CLK_LOOKUP_OF("core_clk", gcc_blsp2_qup6_i2c_apps_clk, "f9968000.i2c"),
 	CLK_LOOKUP_OF("core_clk", gcc_blsp2_qup6_spi_apps_clk, ""),
 	CLK_LOOKUP_OF("core_clk", gcc_blsp2_uart1_apps_clk, "f995d000.uart"),
 	CLK_LOOKUP_OF("core_clk", gcc_blsp2_uart2_apps_clk, "f995e000.serial"),
 	CLK_LOOKUP_OF("core_clk", gcc_blsp2_uart3_apps_clk, ""),
-	CLK_LOOKUP_OF("core_clk", gcc_blsp2_uart4_apps_clk, ""),
+	CLK_LOOKUP_OF("core_clk", gcc_blsp2_uart4_apps_clk, "f9960000.serial"),
 	CLK_LOOKUP_OF("core_clk", gcc_blsp2_uart5_apps_clk, ""),
 	CLK_LOOKUP_OF("core_clk", gcc_blsp2_uart6_apps_clk, ""),
 
@@ -2437,6 +2445,11 @@ static struct clk_lookup msm_clocks_gcc_8974[] = {
 	CLK_LOOKUP_OF("iface_clk",    gcc_ce2_ahb_clk,     "qcedev.0"),
 	CLK_LOOKUP_OF("bus_clk",      gcc_ce2_axi_clk,     "qcedev.0"),
 	CLK_LOOKUP_OF("core_clk_src", ce2_clk_src,         "qcedev.0"),
+
+	CLK_LOOKUP_OF("core_clk",     gcc_ce2_clk,         "qcrypto.0"),
+	CLK_LOOKUP_OF("iface_clk",    gcc_ce2_ahb_clk,     "qcrypto.0"),
+	CLK_LOOKUP_OF("bus_clk",      gcc_ce2_axi_clk,     "qcrypto.0"),
+	CLK_LOOKUP_OF("core_clk_src", ce2_clk_src,         "qcrypto.0"),
 
 	CLK_LOOKUP_OF("core_clk", gcc_ce2_clk, "fd440000.qcom,qcrypto"),
 	CLK_LOOKUP_OF("iface_clk", gcc_ce2_ahb_clk, "fd440000.qcom,qcrypto"),
@@ -2542,8 +2555,8 @@ static struct clk_lookup msm_clocks_gcc_8974[] = {
 
 static struct clk_lookup msm_clocks_gcc_8974_only[] = {
 	/* Camera Sensor clocks */
-	CLK_LOOKUP_OF("cam_src_clk", gp1_clk_src, "2.qcom,camera"),
-	CLK_LOOKUP_OF("cam_clk", gcc_gp1_clk, "2.qcom,camera"),
+	CLK_LOOKUP_OF("cam_src_clk", gp1_clk_src, "1.qcom,camera"),
+	CLK_LOOKUP_OF("cam_clk", gcc_gp1_clk, "1.qcom,camera"),
 };
 
 static struct clk *qup_i2c_clks[][2] = {

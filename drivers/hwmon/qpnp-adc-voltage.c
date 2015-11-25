@@ -105,7 +105,7 @@
 #define QPNP_VADC_CONV_TIME_MIN					1000
 #define QPNP_VADC_CONV_TIME_MAX					1100
 #define QPNP_ADC_COMPLETION_TIMEOUT				HZ
-#define QPNP_VADC_ERR_COUNT					20
+#define QPNP_VADC_ERR_COUNT					1000
 #define QPNP_OP_MODE_SHIFT					3
 
 #define QPNP_VADC_THR_LSB_MASK(val)				(val & 0xff)
@@ -170,6 +170,7 @@ static struct qpnp_vadc_scale_fn vadc_scale_fn[] = {
 	[SCALE_QRD_BATT_THERM] = {qpnp_adc_scale_qrd_batt_therm},
 	[SCALE_QRD_SKUAA_BATT_THERM] = {qpnp_adc_scale_qrd_skuaa_batt_therm},
 	[SCALE_SMB_BATT_THERM] = {qpnp_adc_scale_smb_batt_therm},
+	[SCALE_EMMC_THERM] = {qpnp_adc_scale_emmc_therm},
 	[SCALE_QRD_SKUG_BATT_THERM] = {qpnp_adc_scale_qrd_skug_batt_therm},
 	[SCALE_QRD_SKUH_BATT_THERM] = {qpnp_adc_scale_qrd_skuh_batt_therm},
 	[SCALE_NCP_03WF683_THERM] = {qpnp_adc_scale_therm_ncp03},

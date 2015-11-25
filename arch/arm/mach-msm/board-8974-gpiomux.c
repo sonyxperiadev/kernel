@@ -1471,6 +1471,9 @@ void __init msm_8974_init_gpiomux(void)
 		msm_gpiomux_install(msm_eth_configs, \
 			ARRAY_SIZE(msm_eth_configs));
 #endif
+	// Enable 8Mhz mclk for camera
+	msm_tlmm_misc_reg_write(TLMM_SPARE_REG, 0x5);
+
 	msm_gpiomux_install(msm_blsp_configs, ARRAY_SIZE(msm_blsp_configs));
 	msm_gpiomux_install(msm_blsp2_uart7_configs,
 			 ARRAY_SIZE(msm_blsp2_uart7_configs));

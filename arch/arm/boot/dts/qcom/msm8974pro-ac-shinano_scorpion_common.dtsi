@@ -1,0 +1,421 @@
+/* arch/arm/boot/dts/qcom/msm8974pro-ac-shinano_scorpion_common.dtsi
+ *
+ * Copyright (C) 2014 Sony Mobile Communications Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+&soc {
+        ramoops {
+                android,ramoops-buffer-start = <0xdff00000>;
+        };
+
+	/* I2C : BLSP8 */
+	i2c@f9964000 {
+		synaptics_clearpad@2c {
+			compatible = "synaptics,clearpad";
+			reg = <0x2c>;
+			interrupt-parent = <&msmgpio>;
+			interrupts = <86 0x2>;
+			touch_vdd-supply = <&pm8941_l22>;
+			touch_vio-supply = <&pm8941_s3>;
+			synaptics,irq_gpio = <&msmgpio 86 0x00>;
+			chip_id = <0x39>;
+			num_sensor_rx = <41>;
+			num_sensor_tx = <27>;
+			charger_supported = <0>;
+			pen_supported = <0>;
+			glove_supported = <1>;
+			cover_supported = <0>;
+			touch_pressure_enabled = <1>;
+			touch_size_enabled = <0>;
+			touch_orientation_enabled = <0>;
+			preset_x_max = <1199>;
+			preset_y_max = <1919>;
+			preset_n_fingers = <10>;
+			delay_after_hw_reset = <200>;
+			wakeup_gesture_supported = <1>;
+			wakeup_gesture_large_panel = <1>;
+			wakeup_gesture_lpm_disabled = <1>;
+			wakeup_gesture_timeout = <2000>;
+			wakeup_gesture {
+				double_tap {
+					gesture_code = <0x0003>;
+					event_00 {
+						type = <2>; /* LOG */
+						message = "=== DOUBLE TAP ===";
+					};
+					event_01 {
+						type = <1>; /* KEY */
+						code = <116>; /* KEY_POWER */
+						down = <1>;
+					};
+					event_02 {
+						type = <1>; /* KEY */
+						code = <116>; /* KEY_POWER */
+						down = <0>;
+					};
+					event_03 {
+						type = <99>; /* END */
+					};
+				};
+			};
+		};
+	};
+
+	/* I2C : BLSP11 */
+	i2c@f9967000 {
+		ti_lp855x@2c {
+			compatible = "ti,lp8556";
+			reg = <0x2c>;
+			status = "ok";
+			bl_enable = <&msmgpio 69 0>;
+			linux,name = "lp8556";
+			linux,default-trigger = "bkl-trigger";
+			mode = "register based";
+			chip_name = "lp8556";
+			max_br = <0xff>;
+			init_br = <0x33>;
+			cfg3_reg = <0x5e>;
+			fast_ctrl;
+			eprom@98 {
+				addr = <0x98>;
+				data = <0x16>;
+			};
+			eprom@9e {
+				addr = <0x9e>;
+				data = <0x22>;
+			};
+			eprom@a0 {
+				addr = <0xa0>;
+				data = <0xff>;
+			};
+			eprom@a1 {
+				addr = <0xa1>;
+				data = <0x5f>;
+			};
+			eprom@a2 {
+				addr = <0xa2>;
+				data = <0x20>;
+			};
+			eprom@a4 {
+				addr = <0xa4>;
+				data = <0x72>;
+			};
+			eprom@a5 {
+				addr = <0xa5>;
+				data = <0x34>;
+			};
+			eprom@a6 {
+				addr = <0xa6>;
+				data = <0x80>;
+			};
+			eprom@a7 {
+				addr = <0xa7>;
+				data = <0xf7>;
+			};
+			eprom@a8 {
+				addr = <0xa8>;
+				data = <0x24>;
+			};
+			eprom@a9 {
+				addr = <0xa9>;
+				data = <0xa0>;
+			};
+			eprom@aa {
+				addr = <0xaa>;
+				data = <0x0f>;
+			};
+			eprom@ae {
+				addr = <0xae>;
+				data = <0x0f>;
+			};
+		};
+
+		ad7146@2f {
+			compatible = "AD,ad7146";
+			interrupt-parent = <&spmi_bus>;
+			reg = <0x2f 0>;
+			interrupts = <0x0 0xc8 0x0>; /* PM8941 GPIO 9 */
+			interrupt-name = "ad7146_irq_gpio";
+			prox_vdd-supply = <&pm8941_l19>;
+			prox_vdd-supply_name = "prox_vdd";
+			AD,irq_gpio = <&pm8941_gpios 9 0x00>;
+			pad,amb_comp_ctrl0 = <0x00FB>;
+			pad,amb_comp_ctrl1 = <0x0401>;
+			pad,amb_comp_ctrl2 = <0x04F0>;
+			pad,mod_freq_ctrl = <0x0D00>;
+			pad,stage0-connect1 = <0x3B7F>;
+			pad,stage0-connect2 = <0x1FFF>;
+			pad,stage0-afe = <0x0003>;
+			pad,stage0-sensitivity = <0x5454>;
+			pad,stage0-offset_l = <0x000A>;
+			pad,stage0-offset_h = <0x0070>;
+			pad,stage0-offset_l_clamp = <0x0070>;
+			pad,stage0-offset_h_clamp = <0x000A>;
+			pad,stage0-hysterisis = <10>;
+			pad,stage1-connect1 = <0x3FFF>;
+			pad,stage1-connect2 = <0x06FF>;
+			pad,stage1-afe = <0x0500>;
+			pad,stage1-sensitivity = <0x5454>;
+			pad,stage1-offset_l = <0x000A>;
+			pad,stage1-offset_h = <0x0040>;
+			pad,stage1-offset_l_clamp = <0x0040>;
+			pad,stage1-offset_h_clamp = <0x000A>;
+			pad,stage1-hysterisis = <15>;
+			status = "ok";
+		};
+	};
+
+	gpio_keys {
+		sim_det {
+			label = "sim-detection";
+			gpios = <&msmgpio 9 0x0>;
+			linux,input-type = <5>;
+			linux,code = <7>;
+			gpio-key,wakeup;
+			debounce-interval = <10>;
+		};
+	};
+
+	bu520x1nvx {
+		compatible = "rohm,bu520x1nvx";
+		gpios = <&pm8941_gpios 36 0x1>;
+	};
+};
+
+&camera_mem {
+	reg = <0xd8514000 0x6400000>;
+};
+
+&pm8941_chg {
+	qcom,ibatmax-ma = <3000>;
+	qcom,ibatterm-ma = <225>;
+	qcom,ibatsafe-ma = <3000>;
+	qcom,maxinput-dc-ma = <1800>;
+	qcom,maxinput-usb-ma = <1800>;
+	qcom,maxinput-usb-mv = <13000>;
+	qcom,thermal-mitigation = <3000 2500 2000 1500 1100 800 500 300 100 0>;
+	qcom,ibatmax-warm-ma = <2300>;
+	qcom,ibatmax-cool-ma = <2300>;
+	qcom,step-thresh-soc = <101>;
+	qcom,ibatmax-ma-under-step = <3000>;
+};
+
+&pm8941_bms {
+	qcom,chg-term-ua = <225000>;
+	qcom,fcc-resolution = <20>;
+
+	qcom,battery-vendor-name = "TDK", "SEND", "SANYO-PANASONIC", "LG", "5TH";
+	qcom,battery-vendor-adc-min = <1450 1330 1230 1110 960>;
+	qcom,battery-vendor-adc-max = <1550 1430 1330 1210 1060>;
+	qcom,battery-vendor-select = <0 1 0 0 0>;
+};
+
+&pm8941_lsid0 {
+	pm8941_iadc: iadc@3600 {
+		qcom,rsense = <10000000>;
+	};
+};
+
+&pm8941_gpios {
+	/* GPIO_3: NC */
+	gpio@c200 {
+		qcom,master-en = <0>;		/* Disable */
+		status = "ok";
+	};
+
+	/* GPIO_4: NC */
+	gpio@c300 {
+		qcom,master-en = <0>;		/* Disable */
+		status = "ok";
+	};
+
+	/* GPIO_9: P_SENSOR_INT_N */
+	gpio@c800 {
+		qcom,src-sel = <0>;		/* GPIO */
+		qcom,mode = <0>;		/* In */
+		qcom,vin-sel = <2>;		/* S3 */
+		qcom,pull = <0>;		/* PU */
+		qcom,master-en = <1>;		/* Enable */
+		status = "ok";
+	};
+
+	/* GPIO_20: LCD_DCDC_EN */
+	gpio@d300 {
+		qcom,src-sel = <0>;		/* GPIO */
+		qcom,mode = <1>;		/* Out */
+		qcom,output-type = <0>;		/* CMOS */
+		qcom,vin-sel = <2>;		/* S3 */
+		qcom,out-strength = <1>;	/* Low */
+		qcom,invert = <0>;		/* Low */
+		qcom,master-en = <1>;		/* Enable */
+		somc,keep_high_at_init;
+		status = "ok";
+	};
+
+	/* GPIO_27: NC */
+	gpio@da00 {
+		qcom,master-en = <0>;		/* Disable */
+		status = "ok";
+	};
+
+	/* GPIO_36: ACC_COVER_OPEN */
+	gpio@e300 {
+		qcom,src-sel = <0>;		/* GPIO */
+		qcom,mode = <0>;		/* In */
+		qcom,vin-sel = <2>;		/* S3 */
+		qcom,pull = <0>;		/* PU */
+		qcom,master-en = <1>;		/* Enable */
+		status = "ok";
+	};
+};
+
+&sdcc2 {
+	interrupts = <0 1>;
+	interrupt-map = <0 &intc 0 125 0
+			1 &intc 0 220 0>;
+	interrupt-names = "core_irq", "bam_irq";
+
+	qcom,sup-voltages = <1800 2950>;
+	vdd-io-supply = <&pm8941_s3>;
+	qcom,vdd-io-voltage-level = <1800000 1800000>;
+	qcom,vdd-io-current-level = <6 22000>;
+	qcom,wifi-control-func;
+
+	/delete-property/ vdd-supply;
+	/delete-property/ qcom,vdd-voltage-level;
+	/delete-property/ qcom,vdd-current-level;
+	/delete-property/ cd-gpios;
+	/delete-property/ qcom,dat1-mpm-int;
+
+	status = "ok";
+};
+
+&sdcc3 {
+	status = "disabled";
+};
+
+&sdhc_1 {
+	qcom,pad-pull-on = <0x0 0x3 0x3 0x1>; /* no-pull, pull-up, pull-up, pull-down */
+	qcom,pad-pull-off = <0x0 0x3 0x3 0x1>; /* no-pull, pull-up, pull-up, pull-down */
+	/delete-property/ qcom,vdd-always-on;
+};
+
+&sdhc_2 {
+	status = "disabled";
+};
+
+&sdhc_3 {
+	#address-cells = <0>;
+	interrupt-parent = <&sdhc_3>;
+	interrupts = <0 1 2>;
+	#interrupt-cells = <1>;
+	interrupt-map-mask = <0xffffffff>;
+	interrupt-map = <0 &intc 0 127 0
+			1 &intc 0 224 0
+			2 &msmgpio 62 0x3>;
+	interrupt-names = "hc_irq", "pwr_irq", "status_irq";
+	cd-gpios = <&msmgpio 62 0x1>;
+
+	vdd-supply = <&pm8941_l21>;
+	vdd-io-supply = <&pm8941_l13>;
+
+	qcom,vdd-voltage-level = <2950000 2950000>;
+	qcom,vdd-current-level = <9000 800000>;
+
+	qcom,vdd-io-voltage-level = <1800000 2950000>;
+	qcom,vdd-io-current-level = <6 22000>;
+
+	qcom,msm-bus,num-cases = <9>;
+	qcom,msm-bus,num-paths = <1>;
+	qcom,msm-bus,vectors-KBps = <79 512 0 0>, /* No vote */
+			<79 512 1600 3200>,    /* 400 KB/s*/
+			<79 512 80000 160000>, /* 20 MB/s */
+			<79 512 100000 200000>, /* 25 MB/s */
+			<79 512 200000 400000>, /* 50 MB/s */
+			<79 512 400000 800000>, /* 100 MB/s */
+			<79 512 800000 1600000>, /* 200 MB/s */
+			<79 512 2048000 4096000>; /* Max. bandwidth */
+	qcom,bus-bw-vectors-bps = <0 400000 20000000 25000000 50000000 100000000 200000000 4294967295>;
+
+	status = "ok";
+};
+
+&spmi_bus {
+	qcom,pm8941@1 {
+		qcom,vib@c000 {
+			qcom,qpnp-vib-vtg-level-mV = <3100>;
+		};
+
+		qcom,leds@d800 {
+			status = "disabled";
+			qcom,wled_0 {
+				label = "wled";
+				linux,name = "wled:backlight";
+				linux,default-trigger = "bkl-trigger";
+				qcom,cs-out-en;
+				qcom,cabc-en = <0>;
+				qcom,op-fdbck = <0>;
+				qcom,default-state = "on";
+				qcom,max-current = <20>;
+				qcom,ctrl-delay-us = <0>;
+				qcom,boost-curr-lim = <3>;
+				qcom,cp-sel = <0>;
+				qcom,switch-freq = <2>;
+				qcom,ovp-val = <2>;
+				qcom,num-strings = <2>;
+				qcom,id = <0>;
+			};
+		};
+
+		qcom,leds@d000 {
+			status = "okay";
+			qcom,rgb_sync = <1>;
+
+			qcom,rgb_0 {
+				qcom,pwm-max-value = <160>;
+			};
+
+			qcom,rgb_1 {
+				qcom,pwm-max-value = <270>;
+			};
+
+			qcom,rgb_2 {
+				qcom,pwm-max-value = <220>;
+			};
+		};
+	};
+};
+
+&pm8941_l13 {
+	regulator-min-microvolt = <2950000>;
+	regulator-max-microvolt = <2950000>;
+};
+
+&pm8941_l19 {
+	regulator-min-microvolt = <2850000>;
+	regulator-max-microvolt = <2850000>;
+	qcom,init-voltage = <2850000>;
+	status = "ok";
+};
+
+&mdss_fb0 {
+	qcom,memory-reservation-size = <0x1200000>; /* size 19MB */
+};
+
+&mdss_mdp {
+	somc,dric-gpio = <&msmgpio 26 0>;
+	somc,mul-channel-scaling = <3>;
+};
+
+&usb3 {
+	current_system_max_limit = <1800>;
+};

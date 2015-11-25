@@ -3128,6 +3128,14 @@ static void sdhci_set_default_hw_caps(struct sdhci_msm_host *msm_host,
 
 	caps = readl_relaxed(host->ioaddr + SDHCI_CAPABILITIES);
 
+	/* Advertise 3.3v, 3.0v, 1.8v features for Sony Scorpion */
+	if ((of_machine_is_compatible("somc,scorpion-windy") ||
+	     of_machine_is_compatible("somc,scorpion-row")) &&
+	    strcmp(host->hw_name, "msm_sdcc.3") == 0)
+		caps |= (CORE_3_3V_SUPPORT |
+			CORE_3_0V_SUPPORT |
+			CORE_1_8V_SUPPORT);
+
 	/*
 	 * Starting with SDCC 5 controller (core major version = 1)
 	 * controller won't advertise 3.0v, 1.8v and 8-bit features
@@ -3467,8 +3475,8 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 				MMC_CAP2_DETECT_ON_ERR);
 	msm_host->mmc->caps2 |= MMC_CAP2_CACHE_CTRL;
 	msm_host->mmc->caps2 |= MMC_CAP2_FULL_PWR_CYCLE;
-	msm_host->mmc->caps2 |= MMC_CAP2_CLK_SCALE;
 	msm_host->mmc->caps2 |= MMC_CAP2_STOP_REQUEST;
+	msm_host->mmc->caps2 |= MMC_CAP2_INIT_BKOPS;
 	msm_host->mmc->caps2 |= MMC_CAP2_ASYNC_SDIO_IRQ_4BIT_MODE;
 	msm_host->mmc->pm_caps |= MMC_PM_KEEP_POWER | MMC_PM_WAKE_SDIO_IRQ;
 	msm_host->mmc->caps2 |= MMC_CAP2_CORE_PM;

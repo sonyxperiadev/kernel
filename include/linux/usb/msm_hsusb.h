@@ -655,6 +655,10 @@ struct msm_hsic_peripheral_platform_data {
  */
 struct usb_ext_notification {
 	int (*notify)(void *, int, void (*)(void *, int online), void *);
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+	bool (*check_vbus)(void *);
+	void (*vbus_control)(void *, bool);
+#endif
 	void *ctxt;
 };
 #ifdef CONFIG_USB_BAM

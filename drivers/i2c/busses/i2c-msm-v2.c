@@ -408,6 +408,7 @@ struct i2c_msm_clk_div_fld {
  */
 static struct i2c_msm_clk_div_fld i2c_msm_clk_div_map[] = {
 	{KHz(100), 124, 62},
+	{KHz(355),  32, 16},
 	{KHz(400),  28, 14},
 	{KHz(1000),  8,  5},
 };

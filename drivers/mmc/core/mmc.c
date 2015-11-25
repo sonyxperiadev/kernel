@@ -1046,7 +1046,11 @@ static int mmc_select_hs200(struct mmc_card *card, u8 *ext_csd)
 
 	/* switch to HS200 mode if bus width set successfully */
 	err = mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
+#ifndef CONFIG_MMC_DEV_DRV_STR_TYPE4
 				EXT_CSD_HS_TIMING, 2, 0);
+#else
+				EXT_CSD_HS_TIMING, 66, 0); /* for ShinanoR2 */
+#endif
 
 	if (err && err != -EBADMSG) {
 		pr_err("%s: HS200 switch failed\n",
@@ -1149,7 +1153,11 @@ static int mmc_select_hs400(struct mmc_card *card, u8 *ext_csd)
 
 	/* Switch to HS400 mode if bus width set successfully */
 	err = mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
+#ifndef CONFIG_MMC_DEV_DRV_STR_TYPE4
 				 EXT_CSD_HS_TIMING, 3, 0);
+#else
+				 EXT_CSD_HS_TIMING, 67, 0); /* for ShinanoR2 */
+#endif
 	if (err && err != -EBADMSG) {
 		pr_err("%s: Setting HS_TIMING to HS400 failed (err:%d)\n",
 			mmc_hostname(host), err);

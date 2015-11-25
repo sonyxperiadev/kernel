@@ -1,6 +1,7 @@
 config ARM
 	bool
 	default y
+	select ARCH_USE_BUILTIN_BSWAP
 	select ARCH_BINFMT_ELF_RANDOMIZE_PIE
 	select ARCH_HAS_ATOMIC64_DEC_IF_POSITIVE
 	select ARCH_HAVE_CUSTOM_GPIO_H
@@ -2264,6 +2265,8 @@ config CPU_FREQ_S3C24XX_DEBUGFS
 endif
 
 source "drivers/cpuidle/Kconfig"
+
+source "drivers/cpuquiet/Kconfig"
 
 endmenu
 

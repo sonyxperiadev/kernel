@@ -100,6 +100,7 @@ enum wcd9xxx_mbhc_plug_type {
 	PLUG_TYPE_HIGH_HPH,
 	PLUG_TYPE_GND_MIC_SWAP,
 	PLUG_TYPE_ANC_HEADPHONE,
+	PLUG_TYPE_STEREO_MICROPHONE,
 };
 
 enum wcd9xxx_mbhc_micbias_type {
@@ -119,6 +120,18 @@ enum hw_jack_type {
 	FOUR_POLE_JACK = 0,
 	FIVE_POLE_JACK,
 	SIX_POLE_JACK,
+};
+
+enum wcd9xxx_insert_detect_plug_type {
+	DETECT_NC_PLUG_TYPE = 0,
+	DETECT_NO_PLUG_TYPE,
+};
+
+enum wcd9xxx_insert_detect_comp_vth_type {
+	MBHC_COMP_OFF = 0,
+	MBHC_COMP_V_0P9_VDD,
+	MBHC_COMP_V_0P875_VDD,
+	MBHC_COMP_V_0P925_VDD,
 };
 
 enum wcd9xx_mbhc_micbias_enable_bits {
@@ -275,6 +288,8 @@ struct wcd9xxx_mbhc_config {
 	bool use_vddio_meas;
 	bool enable_anc_mic_detect;
 	enum hw_jack_type hw_jack_type;
+	enum wcd9xxx_insert_detect_plug_type insert_detect_plug_type;
+	enum wcd9xxx_insert_detect_comp_vth_type insert_detect_comp_vth;
 	int key_code[8];
 };
 
@@ -397,8 +412,8 @@ struct wcd9xxx_mbhc {
 	u32 rco_clk_rate;
 
 	bool update_z;
-
 	u8   scaling_mux_in;
+
 	/* Holds codec specific interrupt mapping */
 	const struct wcd9xxx_mbhc_intr *intr_ids;
 

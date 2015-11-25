@@ -97,6 +97,15 @@ enum battery_type {
 	BATT_QRD_4V2_1300MAH,
 };
 
+enum battery_vendor {
+	BATT_VENDOR_TDK = 0,
+	BATT_VENDOR_SEND,
+	BATT_VENDOR_SANYO,
+	BATT_VENDOR_LG,
+	BATT_VENDOR_5TH,
+	BATT_VENDOR_NUM,
+};
+
 /**
  * struct bms_battery_data -
  * @fcc:		full charge capacity (mAmpHour)
@@ -141,6 +150,15 @@ struct bms_battery_data {
 	int			batt_id_kohm;
 	int			fastchg_current_ma;
 	int			fg_cc_cv_threshold_mv;
+	unsigned int		aging_fcc;
+	struct single_row_lut	*aging_fcc_temp_lut;
+	struct pc_temp_ocv_lut	*aging_pc_temp_ocv_lut;
+	struct sf_lut		*aging_rbatt_sf_lut;
+	int			aging_default_rbatt_mohm;
+	int			aging_flat_ocv_threshold_uv;
+	int			r_sense_uohm;
+	int			ocv_high_threshold_uv;
+	int			ocv_low_threshold_uv;
 	const char		*battery_type;
 };
 
@@ -156,7 +174,8 @@ struct bms_battery_data {
 	defined(CONFIG_QPNP_VM_BMS)
 extern struct bms_battery_data  palladium_1500_data;
 extern struct bms_battery_data  desay_5200_data;
-extern struct bms_battery_data  oem_batt_data;
+extern struct bms_battery_data  *bms_batt_data;
+extern int bms_batt_data_num;
 extern struct bms_battery_data QRD_4v35_2000mAh_data;
 extern struct bms_battery_data  qrd_4v2_1300mah_data;
 
