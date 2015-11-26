@@ -198,6 +198,7 @@ struct lp855x_device_config {
 	u8 reg_slope_mask;
 	u8 reg_devicectrl;
 	u8 reg_devicectrl_mask;
+	u8 reg_brt;
 	int (*pre_init_device)(struct lp855x *);
 	int (*post_init_device)(struct lp855x *);
 	int (*resume_init)(struct lp855x *);
@@ -248,7 +249,7 @@ static int lp855x_write_brightness(struct lp855x *lp,
 		brightness = (brightness * lp->bl_scale) / 100;
 	if (is_8bit) {
 		ret = lp855x_write_byte(lp,
-			LP855X_BRIGHTNESS_CTRL, (u8)brightness);
+			lp->cfg->reg_brt, (u8)brightness);
 	} else {
 		val = (u8)((brightness << LP8557_BRTLO_SHFT)
 			& LP8557_BRTLO_MASK);
@@ -613,17 +614,19 @@ static struct lp855x_device_config lp855x_dev_cfg = {
 	.reg_slope_mask = SLOPE_FILTER_MASK,
 	.reg_devicectrl = LP855X_DEVICE_CTRL,
 	.reg_devicectrl_mask = BL_CTL_MASK,
+	.reg_brt = LP855X_BRIGHTNESS_CTRL,
 	.pre_init_device = lp855x_bl_off,
 	.post_init_device = lp855x_bl_on,
 	.resume_init = lp855x_resume_init,
 };
 
 static struct lp855x_device_config lp8557_dev_cfg = {
-	.is_8bit_brightness = false,
+	.is_8bit_brightness = true,
 	.reg_slope = STEP_CTRL,
 	.reg_slope_mask = STEP_SLOPE_FILTER_MASK,
 	.reg_devicectrl = LP8557_BL_CMD,
 	.reg_devicectrl_mask = LP8557_BL_MASK,
+	.reg_brt = LP8557_BRTHI,
 	.pre_init_device = lp8557_bl_off,
 	.post_init_device = lp8557_bl_on,
 	.resume_init = NULL,
