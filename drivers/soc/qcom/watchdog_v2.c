@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -14,9 +14,9 @@
 #include <linux/kernel.h>
 #include <linux/io.h>
 #include <linux/delay.h>
-#include <linux/workqueue.h>
 #include <linux/slab.h>
 #include <linux/jiffies.h>
+#include <linux/kthread.h>
 #include <linux/mutex.h>
 #include <linux/sched.h>
 #include <linux/interrupt.h>
@@ -26,6 +26,7 @@
 #include <linux/cpu.h>
 #include <linux/cpu_pm.h>
 #include <linux/platform_device.h>
+#include <linux/sched/rt.h>
 #include <soc/qcom/scm.h>
 #include <soc/qcom/memory_dump.h>
 #include <soc/qcom/watchdog.h>
@@ -42,12 +43,14 @@
 
 #define WDOG_ABSENT	0
 
+#define EN		0
+#define UNMASKED_INT_EN 1
+
 #define MASK_SIZE		32
 #define SCM_SET_REGSAVE_CMD	0x2
 #define SCM_SVC_SEC_WDOG_DIS	0x7
 #define MAX_CPU_CTX_SIZE	2048
 
-static struct workqueue_struct *wdog_wq;
 static struct msm_watchdog_data *wdog_data;
 
 static int cpu_idle_pc_state[NR_CPUS];
@@ -63,18 +66,20 @@ struct msm_watchdog_data {
 	unsigned int bark_irq;
 	unsigned int bite_irq;
 	bool do_ipi_ping;
+	bool wakeup_irq_enable;
 	unsigned long long last_pet;
 	unsigned min_slack_ticks;
 	unsigned long long min_slack_ns;
 	void *scm_regsave;
 	cpumask_t alive_mask;
 	struct mutex disable_lock;
-	struct work_struct init_dogwork_struct;
-	struct delayed_work dogwork_struct;
 	bool irq_ppi;
 	struct msm_watchdog_data __percpu **wdog_cpu_dd;
 	struct notifier_block panic_blk;
 	bool enabled;
+	struct task_struct *watchdog_task;
+	struct timer_list pet_timer;
+	struct completion pet_complete;
 };
 
 /*
@@ -101,9 +106,6 @@ module_param(WDT_HZ, long, 0);
 static int ipi_opt_en;
 module_param(ipi_opt_en, int, 0);
 
-static void pet_watchdog_work(struct work_struct *work);
-static void init_watchdog_work(struct work_struct *work);
-
 static void dump_cpu_alive_mask(struct msm_watchdog_data *wdog_dd)
 {
 	static char alive_mask_buf[MASK_SIZE];
@@ -119,6 +121,12 @@ static int msm_watchdog_suspend(struct device *dev)
 	if (!enable)
 		return 0;
 	__raw_writel(1, wdog_dd->base + WDT0_RST);
+	if (wdog_dd->wakeup_irq_enable) {
+		/* Make sure register write is complete before proceeding */
+		mb();
+		wdog_dd->last_pet = sched_clock();
+		return 0;
+	}
 	__raw_writel(0, wdog_dd->base + WDT0_EN);
 	mb();
 	wdog_dd->enabled = false;
@@ -132,6 +140,13 @@ static int msm_watchdog_resume(struct device *dev)
 			(struct msm_watchdog_data *)dev_get_drvdata(dev);
 	if (!enable)
 		return 0;
+	if (wdog_dd->wakeup_irq_enable) {
+		__raw_writel(1, wdog_dd->base + WDT0_RST);
+		/* Make sure register write is complete before proceeding */
+		mb();
+		wdog_dd->last_pet = sched_clock();
+		return 0;
+	}
 	__raw_writel(1, wdog_dd->base + WDT0_EN);
 	__raw_writel(1, wdog_dd->base + WDT0_RST);
 	mb();
@@ -172,26 +187,12 @@ static void wdog_disable(struct msm_watchdog_data *wdog_dd)
 	smp_mb();
 	atomic_notifier_chain_unregister(&panic_notifier_list,
 						&wdog_dd->panic_blk);
-	cancel_delayed_work_sync(&wdog_dd->dogwork_struct);
+	del_timer_sync(&wdog_dd->pet_timer);
 	/* may be suspended after the first write above */
 	__raw_writel(0, wdog_dd->base + WDT0_EN);
 	mb();
 	wdog_dd->enabled = false;
 	pr_info("MSM Apps Watchdog deactivated.\n");
-}
-
-struct wdog_disable_work_data {
-	struct work_struct work;
-	struct completion complete;
-	struct msm_watchdog_data *wdog_dd;
-};
-
-static void wdog_disable_work(struct work_struct *work)
-{
-	struct wdog_disable_work_data *work_data =
-		container_of(work, struct wdog_disable_work_data, work);
-	wdog_disable(work_data->wdog_dd);
-	complete(&work_data->complete);
 }
 
 static ssize_t wdog_disable_get(struct device *dev,
@@ -212,7 +213,6 @@ static ssize_t wdog_disable_set(struct device *dev,
 {
 	int ret;
 	u8 disable;
-	struct wdog_disable_work_data work_data;
 	struct msm_watchdog_data *wdog_dd = dev_get_drvdata(dev);
 
 	ret = kstrtou8(buf, 10, &disable);
@@ -244,11 +244,7 @@ static ssize_t wdog_disable_set(struct device *dev,
 			mutex_unlock(&wdog_dd->disable_lock);
 			return -EIO;
 		}
-		work_data.wdog_dd = wdog_dd;
-		init_completion(&work_data.complete);
-		INIT_WORK_ONSTACK(&work_data.work, wdog_disable_work);
-		queue_work(wdog_wq, &work_data.work);
-		wait_for_completion(&work_data.complete);
+		wdog_disable(wdog_dd);
 		mutex_unlock(&wdog_dd->disable_lock);
 	} else {
 		pr_err("invalid operation, only disable = 1 supported\n");
@@ -309,24 +305,37 @@ static void ping_other_cpus(struct msm_watchdog_data *wdog_dd)
 	}
 }
 
-static void pet_watchdog_work(struct work_struct *work)
+static void pet_task_wakeup(unsigned long data)
 {
-	unsigned long delay_time;
-	struct delayed_work *delayed_work = to_delayed_work(work);
-	struct msm_watchdog_data *wdog_dd = container_of(delayed_work,
-						struct msm_watchdog_data,
-							dogwork_struct);
-	delay_time = msecs_to_jiffies(wdog_dd->pet_time);
-	if (enable) {
-		if (wdog_dd->do_ipi_ping)
-			ping_other_cpus(wdog_dd);
-		pet_watchdog(wdog_dd);
+	struct msm_watchdog_data *wdog_dd =
+		(struct msm_watchdog_data *)data;
+	complete(&wdog_dd->pet_complete);
+}
+
+static __ref int watchdog_kthread(void *arg)
+{
+	struct msm_watchdog_data *wdog_dd =
+		(struct msm_watchdog_data *)arg;
+	unsigned long delay_time = 0;
+	struct sched_param param = {.sched_priority = MAX_RT_PRIO-1};
+
+	sched_setscheduler(current, SCHED_FIFO, &param);
+	while (!kthread_should_stop()) {
+		while (wait_for_completion_interruptible(
+			&wdog_dd->pet_complete) != 0)
+			;
+		INIT_COMPLETION(wdog_dd->pet_complete);
+		if (enable) {
+			delay_time = msecs_to_jiffies(wdog_dd->pet_time);
+			if (wdog_dd->do_ipi_ping)
+				ping_other_cpus(wdog_dd);
+			pet_watchdog(wdog_dd);
+		}
+		/* Check again before scheduling *
+		 * Could have been changed on other cpu */
+		mod_timer(&wdog_dd->pet_timer, jiffies + delay_time);
 	}
-	/* Check again before scheduling *
-	 * Could have been changed on other cpu */
-	if (enable)
-		queue_delayed_work(wdog_wq,
-				&wdog_dd->dogwork_struct, delay_time);
+	return 0;
 }
 
 static int wdog_cpu_pm_notify(struct notifier_block *self,
@@ -380,7 +389,6 @@ EXPORT_SYMBOL(touch_nmi_watchdog);
 
 static int msm_watchdog_remove(struct platform_device *pdev)
 {
-	struct wdog_disable_work_data work_data;
 	struct msm_watchdog_data *wdog_dd =
 			(struct msm_watchdog_data *)platform_get_drvdata(pdev);
 
@@ -389,18 +397,15 @@ static int msm_watchdog_remove(struct platform_device *pdev)
 
 	mutex_lock(&wdog_dd->disable_lock);
 	if (enable) {
-		work_data.wdog_dd = wdog_dd;
-		init_completion(&work_data.complete);
-		INIT_WORK_ONSTACK(&work_data.work, wdog_disable_work);
-		queue_work(wdog_wq, &work_data.work);
-		wait_for_completion(&work_data.complete);
+		wdog_disable(wdog_dd);
 	}
 	mutex_unlock(&wdog_dd->disable_lock);
 	device_remove_file(wdog_dd->dev, &dev_attr_disable);
 	if (wdog_dd->irq_ppi)
 		free_percpu(wdog_dd->wdog_cpu_dd);
 	printk(KERN_INFO "MSM Watchdog Exit - Deactivated\n");
-	destroy_workqueue(wdog_wq);
+	del_timer_sync(&wdog_dd->pet_timer);
+	kthread_stop(wdog_dd->watchdog_task);
 	kfree(wdog_dd);
 	return 0;
 }
@@ -541,12 +546,10 @@ out0:
 }
 
 
-static void init_watchdog_work(struct work_struct *work)
+static void init_watchdog_data(struct msm_watchdog_data *wdog_dd)
 {
-	struct msm_watchdog_data *wdog_dd = container_of(work,
-						struct msm_watchdog_data,
-							init_dogwork_struct);
 	unsigned long delay_time;
+	uint32_t val;
 	int error;
 	u64 timeout;
 	int ret;
@@ -594,9 +597,18 @@ static void init_watchdog_work(struct work_struct *work)
 	atomic_notifier_chain_register(&panic_notifier_list,
 				       &wdog_dd->panic_blk);
 	mutex_init(&wdog_dd->disable_lock);
-	queue_delayed_work(wdog_wq, &wdog_dd->dogwork_struct,
-			delay_time);
-	__raw_writel(1, wdog_dd->base + WDT0_EN);
+	init_completion(&wdog_dd->pet_complete);
+	wake_up_process(wdog_dd->watchdog_task);
+	init_timer(&wdog_dd->pet_timer);
+	wdog_dd->pet_timer.data = (unsigned long)wdog_dd;
+	wdog_dd->pet_timer.function = pet_task_wakeup;
+	wdog_dd->pet_timer.expires = jiffies + delay_time;
+	add_timer(&wdog_dd->pet_timer);
+
+	val = BIT(EN);
+	if (wdog_dd->wakeup_irq_enable)
+		val |= BIT(UNMASKED_INT_EN);
+	__raw_writel(val, wdog_dd->base + WDT0_EN);
 	__raw_writel(1, wdog_dd->base + WDT0_RST);
 	wdog_dd->last_pet = sched_clock();
 	wdog_dd->enabled = true;
@@ -691,6 +703,9 @@ static int msm_wdog_dt_to_pdata(struct platform_device *pdev,
 								__func__);
 		return -ENXIO;
 	}
+	pdata->wakeup_irq_enable = of_property_read_bool(node,
+							 "qcom,wakeup-enable");
+
 	pdata->irq_ppi = irq_is_percpu(pdata->bark_irq);
 	dump_pdata(pdata);
 	return 0;
@@ -700,12 +715,6 @@ static int msm_watchdog_probe(struct platform_device *pdev)
 {
 	int ret;
 	struct msm_watchdog_data *wdog_dd;
-
-	wdog_wq = alloc_workqueue("wdog", WQ_HIGHPRI, 0);
-	if (!wdog_wq) {
-		pr_err("Failed to allocate watchdog workqueue\n");
-		return -EIO;
-	}
 
 	if (!pdev->dev.of_node || !enable)
 		return -ENODEV;
@@ -720,12 +729,15 @@ static int msm_watchdog_probe(struct platform_device *pdev)
 	wdog_dd->dev = &pdev->dev;
 	platform_set_drvdata(pdev, wdog_dd);
 	cpumask_clear(&wdog_dd->alive_mask);
-	INIT_WORK(&wdog_dd->init_dogwork_struct, init_watchdog_work);
-	INIT_DELAYED_WORK(&wdog_dd->dogwork_struct, pet_watchdog_work);
-	queue_work(wdog_wq, &wdog_dd->init_dogwork_struct);
+	wdog_dd->watchdog_task = kthread_create(watchdog_kthread, wdog_dd,
+			"msm_watchdog");
+	if (IS_ERR(wdog_dd->watchdog_task)) {
+		ret = PTR_ERR(wdog_dd->watchdog_task);
+		goto err;
+	}
+	init_watchdog_data(wdog_dd);
 	return 0;
 err:
-	destroy_workqueue(wdog_wq);
 	kzfree(wdog_dd);
 	return ret;
 }
