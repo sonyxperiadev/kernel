@@ -175,15 +175,6 @@
 			/delete-property/ qcom,mode;
 		};
         };
-
-	i2c@f9926000 {
-		qcom,i2c-src-freq = <19200000>;
-		qcom,master-id = <86>;
-	};
-
-	i2c@f9927000 {
-		qcom,master-id = <86>;
-	};
 };
 
 &pm8226_gpios {
@@ -288,19 +279,4 @@
 
 &mdss_dsi0 {
 	qcom,dsi-pref-prim-pan = <&dsi_truly_hx8379c_fwvga_vid>;
-	vdddsi-supply = <&pm8226_lvs1>;
-	qcom,panel-supply-entries {
-		qcom,panel-supply-entry@2 {
-			reg = <2>;
-			qcom,supply-name = "vdddsi";
-			qcom,supply-min-voltage = <1800000>;
-			qcom,supply-max-voltage = <1800000>;
-			qcom,supply-enable-load = <100000>;
-			qcom,supply-disable-load = <100>;
-			qcom,supply-pre-on-sleep = <0>;
-			qcom,supply-post-on-sleep = <0>;
-			qcom,supply-pre-off-sleep = <0>;
-			qcom,supply-post-off-sleep = <0>;
-		};
-	};
 };
