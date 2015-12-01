@@ -131,6 +131,19 @@
 		qcom,has-autodetect-xo;
 		qcom,wcnss-adc_tm = <&pm8226_adc_tm>;
 	};
+
+	i2c@f9925000 {
+		qcom,master-id = <86>;
+	};
+
+	i2c@f9926000 {
+		qcom,i2c-src-freq = <19200000>;
+		qcom,master-id = <86>;
+	};
+
+	i2c@f9927000 {
+		qcom,master-id = <86>;
+	};
 };
 
 &modem_mem {
@@ -175,15 +188,6 @@
 			/delete-property/ qcom,mode;
 		};
         };
-
-	i2c@f9926000 {
-		qcom,i2c-src-freq = <19200000>;
-		qcom,master-id = <86>;
-	};
-
-	i2c@f9927000 {
-		qcom,master-id = <86>;
-	};
 };
 
 &pm8226_gpios {
