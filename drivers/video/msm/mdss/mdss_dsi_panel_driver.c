@@ -75,6 +75,7 @@ static int lcd_id;
 static int vsn_gpio, vsp_gpio;
 static uint32_t lcdid_adc;
 static bool adc_det;
+static bool gpio_req;
 static bool display_on_in_boot;
 static bool display_onoff_state;
 static unsigned char panel_id[1];
@@ -323,6 +324,14 @@ static int mdss_dsi_request_gpios(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 {
 	int rc = 0;
 
+	if (gpio_is_valid(ctrl_pdata->spec_pdata->disp_dcdc_en_gpio)) {
+		rc = gpio_request(ctrl_pdata->spec_pdata->disp_dcdc_en_gpio,
+						"disp_dcdc_en_gpio");
+		if (rc) {
+			pr_err("request disp_dcdc_en gpio failed, rc=%d\n", rc);
+			goto disp_dcdc_en_gpio_err;
+		}
+	}
 	if (gpio_is_valid(ctrl_pdata->disp_en_gpio)) {
 		rc = gpio_request(ctrl_pdata->disp_en_gpio,
 						"disp_enable");
@@ -366,6 +375,9 @@ rst_gpio_err:
 	if (gpio_is_valid(ctrl_pdata->disp_en_gpio))
 		gpio_free(ctrl_pdata->disp_en_gpio);
 disp_en_gpio_err:
+	if (gpio_is_valid(ctrl_pdata->spec_pdata->disp_dcdc_en_gpio))
+		gpio_free(ctrl_pdata->spec_pdata->disp_dcdc_en_gpio);
+disp_dcdc_en_gpio_err:
 	return rc;
 }
 
@@ -382,6 +394,9 @@ static void mdss_dsi_free_gpios(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 
 	if (gpio_is_valid(ctrl_pdata->mode_gpio))
 		gpio_free(ctrl_pdata->mode_gpio);
+
+	if (gpio_is_valid(ctrl_pdata->spec_pdata->disp_dcdc_en_gpio))
+		gpio_free(ctrl_pdata->spec_pdata->disp_dcdc_en_gpio);
 }
 
 static void mdss_dsi_panel_set_gpio_seq(
@@ -399,6 +414,7 @@ static void mdss_dsi_panel_set_gpio_seq(
 
 static int mdss_dsi_panel_reset_seq(struct mdss_panel_data *pdata, int enable)
 {
+	int rc;
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
 	struct mdss_panel_specific_pdata *spec_pdata = NULL;
 	struct mdss_panel_info *pinfo;
@@ -427,7 +443,14 @@ static int mdss_dsi_panel_reset_seq(struct mdss_panel_data *pdata, int enable)
 	pr_debug("%s: enable=%d\n", __func__, enable);
 	pinfo = &ctrl_pdata->panel_data.panel_info;
 
-	mdss_dsi_request_gpios(ctrl_pdata);
+	if (!gpio_req) {
+		rc = mdss_dsi_request_gpios(ctrl_pdata);
+		if (rc) {
+			pr_err("gpio request failed\n");
+			return rc;
+		}
+		gpio_req = true;
+	}
 
 	pw_seq = (enable) ? &ctrl_pdata->spec_pdata->on_seq :
 				&ctrl_pdata->spec_pdata->off_seq;
@@ -2563,11 +2586,30 @@ int mdss_dsi_panel_disp_en(struct mdss_panel_data *pdata, int enable)
 
 	pr_info("%s: enable = %d\n", __func__, enable);
 
-	rc = mdss_dsi_request_gpios(ctrl_pdata);
-	if (rc)
-		pr_err("gpio request failed\n");
+	if (!gpio_req) {
+		rc = mdss_dsi_request_gpios(ctrl_pdata);
+		if (rc) {
+			pr_err("gpio request failed\n");
+			return rc;
+		}
+		gpio_req = true;
+	}
 
 	pw_seq = (enable) ? &spec_pdata->on_seq : &spec_pdata->off_seq;
+
+	if (gpio_is_valid(spec_pdata->disp_dcdc_en_gpio)) {
+		if (enable) {
+			if (pw_seq->disp_dcdc_en_pre)
+				usleep_range(pw_seq->disp_dcdc_en_pre * 1000,
+					pw_seq->disp_dcdc_en_pre * 1000 + 100);
+
+			gpio_set_value(spec_pdata->disp_dcdc_en_gpio, enable);
+
+			if (pw_seq->disp_dcdc_en_post)
+				usleep_range(pw_seq->disp_dcdc_en_post * 1000,
+					pw_seq->disp_dcdc_en_post * 1000 + 100);
+		}
+	}
 
 	if (pw_seq->disp_en_pre)
 		usleep_range(pw_seq->disp_en_pre * 1000,
@@ -2589,6 +2631,20 @@ int mdss_dsi_panel_disp_en(struct mdss_panel_data *pdata, int enable)
 	if (pw_seq->disp_en_post)
 		usleep_range(pw_seq->disp_en_post * 1000,
 				pw_seq->disp_en_post * 1000 + 100);
+
+	if (gpio_is_valid(spec_pdata->disp_dcdc_en_gpio)) {
+		if (!enable) {
+			if (pw_seq->disp_dcdc_en_pre)
+				usleep_range(pw_seq->disp_dcdc_en_pre * 1000,
+					pw_seq->disp_dcdc_en_pre * 1000 + 100);
+
+			gpio_set_value(spec_pdata->disp_dcdc_en_gpio, enable);
+
+			if (pw_seq->disp_dcdc_en_post)
+				usleep_range(pw_seq->disp_dcdc_en_post * 1000,
+					pw_seq->disp_dcdc_en_post * 1000 + 100);
+		}
+	}
 
 	return 0;
 }
