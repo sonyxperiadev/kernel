@@ -13,10 +13,6 @@
  */
 
 &soc {
-        ramoops {
-                android,ramoops-buffer-start = <0xdff00000>;
-        };
-
 	/* I2C : BLSP8 */
 	i2c@f9964000 {
 		synaptics_clearpad@2c {
