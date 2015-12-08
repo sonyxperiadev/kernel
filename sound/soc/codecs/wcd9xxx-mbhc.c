@@ -5270,7 +5270,6 @@ static int wcd9xxx_detect_impedance(struct wcd9xxx_mbhc *mbhc, uint32_t *zl,
 				    uint32_t *zr)
 {
 	int i;
-	int ret = 0;
 	int valid_z = 0;
 	u8 micb_mbhc_val;
 	s16 l[3], r[3];
