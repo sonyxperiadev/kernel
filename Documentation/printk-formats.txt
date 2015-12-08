@@ -55,13 +55,20 @@ Struct Resources:
 	For printing struct resources. The 'R' and 'r' specifiers result in a
 	printed resource with ('R') or without ('r') a decoded flags member.
 
-Physical addresses:
+Physical addresses types phys_addr_t:
 
-	%pa	0x01234567 or 0x0123456789abcdef
+	%pa[p]	0x01234567 or 0x0123456789abcdef
 
 	For printing a phys_addr_t type (and its derivatives, such as
 	resource_size_t) which can vary based on build options, regardless of
 	the width of the CPU data path. Passed by reference.
+
+DMA addresses types dma_addr_t:
+
+	%pad	0x01234567 or 0x0123456789abcdef
+
+	For printing a dma_addr_t type which can vary based on build options,
+	regardless of the width of the CPU data path. Passed by reference.
 
 Raw buffer as a hex string:
 	%*ph	00 01 02  ...  3f
@@ -135,6 +142,15 @@ UUID/GUID addresses:
 
 	Where no additional specifiers are used the default little endian
 	order with lower case hex characters will be printed.
+
+dentry names:
+	%pd{,2,3,4}
+	%pD{,2,3,4}
+
+	For printing dentry name; if we race with d_move(), the name might be
+	a mix of old and new ones, but it won't oops.  %pd dentry is a safer
+	equivalent of %s dentry->d_name.name we used to use, %pd<n> prints
+	n last components.  %pD does the same thing for struct file.
 
 struct va_format:
 
