@@ -24,11 +24,9 @@
 / {
 	model = "SoMC Honami ROW";
 	compatible = "somc,honami-row", "qcom,msm8974";
-	qcom,board-id = <8 0>;
-
-	qcom,msm-id = <126 0x20000>,
-		      <185 0x20000>,
-		      <186 0x20000>;
+	qcom,msm-id = <126 8 0x20000>,
+		      <185 8 0x20000>,
+		      <186 8 0x20000>;
 };
 
 &pm8941_chg {
