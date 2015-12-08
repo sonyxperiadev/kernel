@@ -72,11 +72,14 @@ config FB_MSM_MDSS_XLOG_DEBUG
 	driver during fatal errors and enable some display-driver logging
 	into an internal buffer (this avoids logging overhead).
 
-config FB_MSM_MDSS_HDMI_MHL_SII8620_8061
+config MHL_SIMG_SONY
 	depends on FB_MSM_MDSS_HDMI_PANEL
-	bool 'MHL SII8620 and SII8061 support '
+	bool 'MHL SII8620+SII8061 for SONY boards'
 	default n
 	---help---
 	Support the HDMI to MHL1/2/3 conversion.
 	MHL (Mobile High-Definition Link) technology
-	uses USB connector to output HDMI content
+	uses USB connector to output HDMI content.
+	This driver is specific to Sony boards (Xperia).
+
+source "drivers/video/msm/mdss/mhl_simg_sony/Kconfig"

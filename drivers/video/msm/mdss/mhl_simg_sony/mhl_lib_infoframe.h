@@ -1,4 +1,4 @@
-/* kernel/drivers/video/msm/mdss/mhl_sii8620_8061_drv/mhl_lib_infoframe.h
+/* vendor/semc/hardware/mhl/mhl_sii8620_8061_drv/mhl_lib_infoframe.h
  *
  * Copyright (C) 2013 Sony Mobile Communications AB.
  * Copyright (C) 2013 Silicon Image Inc.
@@ -14,28 +14,32 @@
 #ifndef __MHL_INFOFRAME_LIB_H__
 #define __MHL_INFOFRAME_LIB_H__
 
-#include <linux/module.h>
-#include <linux/clk.h>
-#include <linux/of_platform.h>
-#include <linux/err.h>
-#include <linux/of_gpio.h>
-#include <linux/delay.h>
-#include <linux/slab.h>
 #include "si_infoframe.h"
+
+struct SI_PACK_THIS_STRUCT incoming_timing_t {
+	uint32_t calculated_pixel_clock;
+	uint16_t h_total;
+	uint16_t v_total;
+	uint16_t columns;
+	uint16_t rows;
+	uint16_t field_rate;
+	uint8_t mhl3_vic;
+};
 
 void print_vic_modes(uint8_t vic);
 
-int is_valid_vsif(vendor_specific_info_frame_t *vsif);
-int is_valid_avif(avi_info_frame_t *avif);
+int is_valid_vsif(union vsif_mhl3_or_hdmi_u *vsif);
+int is_valid_avif(struct avi_info_frame_t *avif);
 
-uint8_t calculate_avi_info_frame_checksum(hw_avi_payload_t *payload);
+uint8_t calculate_avi_info_frame_checksum(union hw_avi_payload_t *payload);
 uint8_t calculate_generic_checksum(uint8_t *info_frame_data,
 				   uint8_t checksum,
 				   uint8_t length);
 
 uint32_t find_pixel_clock_from_AVI_VIC(uint8_t vic);
 uint32_t find_pixel_clock_from_HDMI_VIC(uint8_t vic);
-uint32_t find_pixel_clock_from_totals(uint16_t h_total, uint16_t v_total);
+uint32_t find_timings_clock_from_totals(
+	struct incoming_timing_t *p_timing);
 
 uint8_t hdmi_vic_to_mhl3_vic(uint8_t vic);
 
