@@ -52,6 +52,9 @@
 #include <linux/gpio.h>
 #include <linux/of_gpio.h>
 #include <asm/setup.h>
+ #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
+ #include <linux/qpnp/qpnp-smbcharger_extension.h>
+ #endif
 #endif
 
 #include "dwc3_otg.h"
