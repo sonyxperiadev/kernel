@@ -75,6 +75,7 @@ static int lcd_id;
 static int vsn_gpio, vsp_gpio;
 static uint32_t lcdid_adc;
 static bool adc_det;
+static bool gpio_req;
 static bool display_on_in_boot;
 static bool display_onoff_state;
 static unsigned char panel_id[1];
@@ -399,6 +400,7 @@ static void mdss_dsi_panel_set_gpio_seq(
 
 static int mdss_dsi_panel_reset_seq(struct mdss_panel_data *pdata, int enable)
 {
+	int rc;
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
 	struct mdss_panel_specific_pdata *spec_pdata = NULL;
 	struct mdss_panel_info *pinfo;
@@ -427,7 +429,14 @@ static int mdss_dsi_panel_reset_seq(struct mdss_panel_data *pdata, int enable)
 	pr_debug("%s: enable=%d\n", __func__, enable);
 	pinfo = &ctrl_pdata->panel_data.panel_info;
 
-	mdss_dsi_request_gpios(ctrl_pdata);
+	if (!gpio_req) {
+		rc = mdss_dsi_request_gpios(ctrl_pdata);
+		if (rc) {
+			pr_err("gpio request failed\n");
+			return rc;
+		}
+		gpio_req = true;
+	}
 
 	pw_seq = (enable) ? &ctrl_pdata->spec_pdata->on_seq :
 				&ctrl_pdata->spec_pdata->off_seq;
@@ -2547,9 +2556,14 @@ int mdss_dsi_panel_disp_en(struct mdss_panel_data *pdata, int enable)
 
 	pr_info("%s: enable = %d\n", __func__, enable);
 
-	rc = mdss_dsi_request_gpios(ctrl_pdata);
-	if (rc)
-		pr_err("gpio request failed\n");
+	if (!gpio_req) {
+		rc = mdss_dsi_request_gpios(ctrl_pdata);
+		if (rc) {
+			pr_err("gpio request failed\n");
+			return rc;
+		}
+		gpio_req = true;
+	}
 
 	pw_seq = (enable) ? &spec_pdata->on_seq : &spec_pdata->off_seq;
 
