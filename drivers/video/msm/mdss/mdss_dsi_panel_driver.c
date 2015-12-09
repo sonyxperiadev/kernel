@@ -324,14 +324,6 @@ static int mdss_dsi_request_gpios(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 {
 	int rc = 0;
 
-	if (gpio_is_valid(ctrl_pdata->spec_pdata->disp_dcdc_en_gpio)) {
-		rc = gpio_request(ctrl_pdata->spec_pdata->disp_dcdc_en_gpio,
-						"disp_dcdc_en_gpio");
-		if (rc) {
-			pr_err("request disp_dcdc_en gpio failed, rc=%d\n", rc);
-			goto disp_dcdc_en_gpio_err;
-		}
-	}
 	if (gpio_is_valid(ctrl_pdata->disp_en_gpio)) {
 		rc = gpio_request(ctrl_pdata->disp_en_gpio,
 						"disp_enable");
@@ -375,9 +367,6 @@ rst_gpio_err:
 	if (gpio_is_valid(ctrl_pdata->disp_en_gpio))
 		gpio_free(ctrl_pdata->disp_en_gpio);
 disp_en_gpio_err:
-	if (gpio_is_valid(ctrl_pdata->spec_pdata->disp_dcdc_en_gpio))
-		gpio_free(ctrl_pdata->spec_pdata->disp_dcdc_en_gpio);
-disp_dcdc_en_gpio_err:
 	return rc;
 }
 
@@ -394,9 +383,6 @@ static void mdss_dsi_free_gpios(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 
 	if (gpio_is_valid(ctrl_pdata->mode_gpio))
 		gpio_free(ctrl_pdata->mode_gpio);
-
-	if (gpio_is_valid(ctrl_pdata->spec_pdata->disp_dcdc_en_gpio))
-		gpio_free(ctrl_pdata->spec_pdata->disp_dcdc_en_gpio);
 }
 
 static void mdss_dsi_panel_set_gpio_seq(
@@ -2597,20 +2583,6 @@ int mdss_dsi_panel_disp_en(struct mdss_panel_data *pdata, int enable)
 
 	pw_seq = (enable) ? &spec_pdata->on_seq : &spec_pdata->off_seq;
 
-	if (gpio_is_valid(spec_pdata->disp_dcdc_en_gpio)) {
-		if (enable) {
-			if (pw_seq->disp_dcdc_en_pre)
-				usleep_range(pw_seq->disp_dcdc_en_pre * 1000,
-					pw_seq->disp_dcdc_en_pre * 1000 + 100);
-
-			gpio_set_value(spec_pdata->disp_dcdc_en_gpio, enable);
-
-			if (pw_seq->disp_dcdc_en_post)
-				usleep_range(pw_seq->disp_dcdc_en_post * 1000,
-					pw_seq->disp_dcdc_en_post * 1000 + 100);
-		}
-	}
-
 	if (pw_seq->disp_en_pre)
 		usleep_range(pw_seq->disp_en_pre * 1000,
 				pw_seq->disp_en_pre * 1000 + 100);
@@ -2631,20 +2603,6 @@ int mdss_dsi_panel_disp_en(struct mdss_panel_data *pdata, int enable)
 	if (pw_seq->disp_en_post)
 		usleep_range(pw_seq->disp_en_post * 1000,
 				pw_seq->disp_en_post * 1000 + 100);
-
-	if (gpio_is_valid(spec_pdata->disp_dcdc_en_gpio)) {
-		if (!enable) {
-			if (pw_seq->disp_dcdc_en_pre)
-				usleep_range(pw_seq->disp_dcdc_en_pre * 1000,
-					pw_seq->disp_dcdc_en_pre * 1000 + 100);
-
-			gpio_set_value(spec_pdata->disp_dcdc_en_gpio, enable);
-
-			if (pw_seq->disp_dcdc_en_post)
-				usleep_range(pw_seq->disp_dcdc_en_post * 1000,
-					pw_seq->disp_dcdc_en_post * 1000 + 100);
-		}
-	}
 
 	return 0;
 }
