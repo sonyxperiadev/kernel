@@ -411,7 +411,7 @@
 		interrupts = <0 123 0>, <0 138 0>;
 		interrupt-names = "hc_irq", "pwr_irq";
 		qcom,clk-rates = <400000 20000000 25000000 50000000 100000000 200000000>;
-		qcom,bus-speed-mode = "HS200_1p8v", "DDR_1p8v";
+		qcom,bus-speed-mode = "HS400_1p8v", "HS200_1p8v", "DDR_1p8v";
 		qcom,cpu-dma-latency-us = <200>;
 
 		qcom,msm-bus,name = "sdhc1";
