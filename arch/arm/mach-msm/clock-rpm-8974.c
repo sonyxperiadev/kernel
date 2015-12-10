@@ -160,6 +160,7 @@ static struct clk_lookup msm_clocks_rpm_8974[] = {
 	CLK_LOOKUP_OF("mmssnoc_ahb", mmssnoc_ahb_clk, "fd8c0000.qcom,mmsscc"),
 
 	CLK_LOOKUP("",                cxo_d1.c,             "f9967000.i2c"),
+	CLK_LOOKUP("mhl_clk",         cxo_d1.c,             "f9967000.i2c"),
 	CLK_LOOKUP_OF("xo",        cxo_otg_clk,                  "msm_otg"),
 	CLK_LOOKUP_OF("xo",  cxo_pil_lpass_clk,      "fe200000.qcom,lpass"),
 	CLK_LOOKUP_OF("xo",    cxo_pil_mss_clk,        "fc880000.qcom,mss"),
