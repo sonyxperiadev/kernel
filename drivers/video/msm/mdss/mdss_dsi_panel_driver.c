@@ -367,6 +367,7 @@ rst_gpio_err:
 	if (gpio_is_valid(ctrl_pdata->disp_en_gpio))
 		gpio_free(ctrl_pdata->disp_en_gpio);
 disp_en_gpio_err:
+	gpio_req = false;
 	return rc;
 }
 
@@ -383,6 +384,8 @@ static void mdss_dsi_free_gpios(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 
 	if (gpio_is_valid(ctrl_pdata->mode_gpio))
 		gpio_free(ctrl_pdata->mode_gpio);
+
+	gpio_req = false;
 }
 
 static void mdss_dsi_panel_set_gpio_seq(
