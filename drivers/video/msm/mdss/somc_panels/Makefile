@@ -1,0 +1,8 @@
+#
+# Makefile for the SoMC panels drivers overlay
+#
+
+obj-$(CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL)	+= panel_driver.o
+obj-$(CONFIG_DEBUG_FS)				+= panel_debugfs.o
+
+

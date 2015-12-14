@@ -24,8 +24,8 @@
 #include <linux/err.h>
 #include <linux/regulator/consumer.h>
 
-#include "mdss_mdp.h"
-#include "mdss_dsi.h"
+#include "../mdss_mdp.h"
+#include "../mdss_dsi.h"
 #include "mdss_dsi_panel_debugfs.h"
 
 #define DT_CMD_HDR 		6
