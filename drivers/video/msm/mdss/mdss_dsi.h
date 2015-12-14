@@ -327,6 +327,9 @@ struct poll_ctrl {
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata;
 
 	struct esd_reg_status_ctrl esd;
+
+	void (*schedule) (struct mdss_dsi_ctrl_pdata *ctrl_pdata);
+	void (*cancel) (struct mdss_dsi_ctrl_pdata *ctrl_pdata);
 };
 
 struct mdss_panel_specific_pdata {
