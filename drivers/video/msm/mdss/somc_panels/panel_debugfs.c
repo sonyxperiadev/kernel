@@ -35,11 +35,12 @@
 #include <linux/uaccess.h>
 #include <linux/poll.h>
 
-#include "mdss_dsi.h"
-#include "mdss_dsi_panel_debugfs.h"
-#include "mdss_fb.h"
-#include "mdss_mdp.h"
-#include "mdss_mdp_hwio.h"
+#include "../mdss_dsi.h"
+#include "../mdss_fb.h"
+#include "../mdss_mdp.h"
+#include "../mdss_mdp_hwio.h"
+
+#include "panel_debugfs.h"
 
 static char *res_buf;
 static int buf_sz;
