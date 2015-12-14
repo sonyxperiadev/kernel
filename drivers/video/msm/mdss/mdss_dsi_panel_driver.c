@@ -26,6 +26,7 @@
 
 #include "mdss_mdp.h"
 #include "mdss_dsi.h"
+#include "mdss_dsi_panel_debugfs.h"
 
 #define DT_CMD_HDR 		6
 #define MIN_REFRESH_RATE	30
@@ -41,6 +42,12 @@
 #define CHANGE_FPS_MAX 		63
 
 #define DMS_SUPPORTED 0
+
+/*
+ * Needed intervals to boot first time for all panels
+ * which require very high bandwidth.
+ */
+#define FIRST_POLL_REG_INTERVAL 20000
 
 struct device virtdev;
 
@@ -96,6 +103,7 @@ static int mdss_dsi_panel_picadj_setup(struct mdss_panel_data *pdata);
 static void vsync_handler(struct mdss_mdp_ctl *ctl, ktime_t t);
 
 struct mdss_mdp_vsync_handler vs_handle;
+struct poll_ctrl *polling;
 
 /* pcc data infomation */
 #define PANEL_SKIP_ID			0xff
@@ -1377,6 +1385,48 @@ error:
 	return -ENODEV;
 }
 
+static void mdss_dsi_panel_poll_worker_scheduling(
+		struct mdss_dsi_ctrl_pdata *ctrl_pdata)
+{
+	struct mdss_panel_info *pinfo = NULL;
+
+	if (ctrl_pdata == NULL) {
+		pr_err("%s: Invalid input data\n", __func__);
+		return;
+	}
+
+	pinfo = &ctrl_pdata->panel_data.panel_info;
+
+	if (pinfo->dsi_master == pinfo->pdest) {
+		if (polling->enable && display_onoff_state) {
+			polling->ctrl_pdata = ctrl_pdata;
+			schedule_delayed_work(
+				&polling->poll_working,
+				msecs_to_jiffies(polling->intervals));
+		}
+	}
+}
+
+static void mdss_dsi_panel_poll_worker_canceling(
+		struct mdss_dsi_ctrl_pdata *ctrl_pdata)
+{
+	struct mdss_panel_info *pinfo = NULL;
+
+	if (ctrl_pdata == NULL) {
+		pr_err("%s: Invalid input data\n", __func__);
+		return;
+	}
+
+	pinfo = &ctrl_pdata->panel_data.panel_info;
+
+	if (pinfo->dsi_master == pinfo->pdest) {
+		if (polling->enable) {
+			cancel_delayed_work_sync(&polling->poll_working);
+			polling->ctrl_pdata = NULL;
+		}
+	}
+}
+
 static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 {
 	struct mipi_panel_info *mipi;
@@ -1454,6 +1504,8 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 		display_onoff_state = true;
 		pr_info("%s: ctrl=%p ndx=%d\n", __func__,
 					ctrl_pdata, ctrl_pdata->ndx);
+
+		mdss_dsi_panel_poll_worker_scheduling(ctrl_pdata);
 	}
 #if DMS_SUPPORTED
 set_fps:
@@ -1503,6 +1555,8 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 		if (!spec_pdata->init_from_begin)
 			return 0;
 	}
+
+	mdss_dsi_panel_poll_worker_canceling(ctrl_pdata);
 
 	if (pinfo->dcs_cmd_by_left) {
 		if (ctrl_pdata->ndx != DSI_CTRL_LEFT)
@@ -1671,6 +1725,8 @@ static int mdss_dsi_panel_disp_on(struct mdss_panel_data *pdata)
 		mdss_dsi_panel_cmds_send(ctrl_pdata, &ctrl_pdata->on_cmds);
 		display_onoff_state = true;
 		pr_info("%s: ctrl=%p ndx=%d\n", __func__, ctrl_pdata, ctrl_pdata->ndx);
+
+		mdss_dsi_panel_poll_worker_scheduling(ctrl_pdata);
 	}
 	if (spec_pdata->cabc_deferred_on_cmds.cmd_cnt &&
 				spec_pdata->cabc_enabled) {
@@ -4115,6 +4171,27 @@ static int mdss_panel_parse_dt(struct device_node *np,
 			pinfo->rev_v[1] = res[1];
 		}
 
+		spec_pdata->polling.enable = of_property_read_bool(
+						next, "somc,poll-enable");
+
+		if (spec_pdata->polling.enable &&
+			pinfo->dsi_master == pinfo->pdest) {
+			rc = of_property_read_u32(next,
+					"somc,poll-intervals", &tmp);
+			spec_pdata->polling.intervals =
+					(!rc ? tmp : 10000);
+
+			rc = of_property_read_u32(next,
+					"somc,poll-esd-reg-adress", &tmp);
+			spec_pdata->polling.esd.reg =
+					(!rc ? tmp : 0x0a);
+
+			rc = of_property_read_u32(next,
+					"somc,poll-esd-reg-val", &tmp);
+			spec_pdata->polling.esd.correct_val =
+					(!rc ? tmp : 0x9C);
+		}
+
 		spec_pdata->pwron_reset = of_property_read_bool(next,
 					"somc,panel-pwron-reset");
 
@@ -4205,6 +4282,118 @@ error:
 	return rc;
 }
 
+/*
+ * send_panel_on_seq() - Sends on sequence.
+ */
+static int send_panel_on_seq(struct mdss_mdp_ctl *ctl,
+				struct mdss_dsi_ctrl_pdata *ctrl_pdata)
+{
+	int ret;
+	struct mdss_panel_data *pdata = ctl->panel_data;
+
+	if (!ctl || !pdata) {
+		pr_err("%s: Invalid panel data\n", __func__);
+		return -EINVAL;
+	}
+
+	ret = ctrl_pdata->on(pdata);
+
+	if (ctrl_pdata->spec_pdata->disp_on_in_hs) {
+		if (ctrl_pdata->spec_pdata->disp_on)
+			ret = ctrl_pdata->spec_pdata->disp_on(pdata);
+	}
+
+	if (ret)
+		pr_err("%s: Failed to send display on sequence\n", __func__);
+
+	pr_debug("%s: Display on sequence completed\n", __func__);
+	return ret;
+}
+
+/*
+ * check_dric_reg_status() - Checks value correct or not
+ */
+static int check_esd_status(void)
+{
+	int rc = 0;
+	char rbuf;
+
+	panel_cmd_read(polling->ctrl_pdata, &(polling->esd.dsi),
+			NULL, &rbuf, polling->esd.nbr_bytes_to_read);
+
+	if (polling->esd.correct_val != rbuf) {
+		pr_err("%s:Target reg value isn't correct rbuf = 0x%02x\n",
+			__func__, rbuf);
+
+		rc = -EINVAL;
+	}
+
+	return rc;
+}
+
+/*
+ * check_poll_status() - Checks polling status
+ */
+static int check_poll_status(void)
+{
+	if (!polling) {
+		pr_err("%s: Invalid poll worker\n", __func__);
+		return -EINVAL;
+	}
+
+	if (!polling->ctrl_pdata) {
+		pr_err("%s: Polling Disable\n", __func__);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+/*
+ * poll_panel_status() - Reads panel register.
+ * @work  : driver ic status data
+ */
+static void poll_panel_status(struct work_struct *work)
+{
+	int rc = 0;
+	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
+	struct mdss_mdp_ctl *ctl = mdata->ctl_off;
+
+	rc = check_poll_status();
+	if (rc)
+		return;
+
+	rc = check_esd_status();
+	if (rc)
+		send_panel_on_seq(ctl,
+				polling->ctrl_pdata);
+	else
+		schedule_delayed_work(&polling->poll_working,
+				msecs_to_jiffies(polling->intervals));
+}
+
+#define POLL_REG_BYTE_TO_READ 1
+static struct dsi_ctrl_hdr poll_reg_dchdr = {
+	DTYPE_DCS_READ, 1, 0, 1, 5, 1};
+int mdss_dsi_panel_poll_init(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
+{
+	polling = NULL;
+
+	if (ctrl_pdata) {
+		polling = &(ctrl_pdata->spec_pdata->polling);
+		INIT_DELAYED_WORK(&(polling->poll_working), poll_panel_status);
+
+		polling->esd.dsi.payload = &polling->esd.reg;
+		polling->esd.nbr_bytes_to_read = POLL_REG_BYTE_TO_READ;
+		polling->esd.dsi.dchdr = poll_reg_dchdr;
+
+	} else {
+		pr_err("%s: Invalid panel data\n", __func__);
+	}
+
+	return 0;
+}
+
 int mdss_dsi_panel_init(struct device_node *node,
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata,
 	bool cmd_cfg_cont_splash)
@@ -4215,6 +4404,7 @@ int mdss_dsi_panel_init(struct device_node *node,
 	struct platform_device *ctrl_pdev = NULL;
 	struct platform_device *pdev;
 	struct mdss_panel_info *pinfo;
+	//struct poll_ctrl *polling = NULL;
 	bool cont_splash_enabled;
 	u32 index;
 
@@ -4356,6 +4546,11 @@ exit_lcd_id:
 		goto error;
 	}
 
+	polling = &spec_pdata->polling;
+
+	if ((pinfo->dsi_master == pinfo->pdest) && polling->enable)
+		mdss_dsi_panel_poll_init(ctrl_pdata);
+
 	cont_splash_enabled = spec_pdata->disp_on_in_boot;
 
 	if (!cont_splash_enabled) {
@@ -4369,8 +4564,16 @@ exit_lcd_id:
 				__func__, __LINE__);
 
 		ctrl_pdata->panel_data.panel_info.cont_splash_enabled = 1;
-		if (pinfo->dsi_master == pinfo->pdest)
+		if (pinfo->dsi_master == pinfo->pdest) {
 			display_onoff_state = true;
+
+			if (polling->enable) {
+				rc = polling->intervals;
+				polling->intervals = FIRST_POLL_REG_INTERVAL;
+				mdss_dsi_panel_poll_worker_scheduling(ctrl_pdata);
+				polling->intervals = rc;
+			}
+		}
 	}
 
 	if (!adc_det) {

@@ -34,4 +34,7 @@ struct first_frame_flushed_det {
 	wait_queue_head_t wait_queue;
 };
 
+u32 panel_cmd_read(struct mdss_dsi_ctrl_pdata *ctrl,
+		struct dsi_cmd_desc *cmds, void (*fxn)(int),
+		char *rbuf, int len);
 #endif /* MDSS_DSI_PANEL_DEBUGFS_H */
