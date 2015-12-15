@@ -481,6 +481,7 @@
 
 		somc,panel-detect = <1>;
 		somc,driver-ic = <4>;
+		somc,panel-id-read-cmds;
 		qcom,mdss-pan-physical-width-dimension = <53>;
 		qcom,mdss-pan-physical-height-dimension = <94>;
 		somc,mdss-phy-size-mm = <53 94>;
