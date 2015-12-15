@@ -313,6 +313,25 @@ struct mdss_panel_power_seq {
 	int *rst_b_seq;
 };
 
+struct esd_reg_status_ctrl {
+	u8 reg;
+	u8 correct_val;
+	int nbr_bytes_to_read;
+	struct dsi_cmd_desc dsi;
+};
+
+struct poll_ctrl {
+	bool enable;
+	int intervals;
+	struct delayed_work poll_working;
+	struct mdss_dsi_ctrl_pdata *ctrl_pdata;
+
+	struct esd_reg_status_ctrl esd;
+
+	void (*schedule) (struct mdss_dsi_ctrl_pdata *ctrl_pdata);
+	void (*cancel) (struct mdss_dsi_ctrl_pdata *ctrl_pdata);
+};
+
 struct mdss_panel_specific_pdata {
 	bool disp_on_in_boot;
 	bool detected;
@@ -343,6 +362,8 @@ struct mdss_panel_specific_pdata {
 	struct dsi_panel_cmds init_cmds;
 	struct dsi_panel_cmds off_cmds[MAX_CMDS];
 	struct dsi_panel_cmds id_read_cmds;
+
+	struct poll_ctrl polling;
 
 	int (*panel_power_ctrl) (struct mdss_panel_data *pdata, int enable);
 	int (*disp_on) (struct mdss_panel_data *pdata);
@@ -644,6 +665,8 @@ int mdss_panel_get_dst_fmt(u32 bpp, char mipi_mode, u32 pixel_packing,
 				char *dst_format);
 
 #ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+int mdss_dsi_panel_disp_en(struct mdss_panel_data *pdata, int enable);
+int mdss_dsi_panel_poll_init(struct mdss_dsi_ctrl_pdata *ctrl_pdata);
 int mdss_dsi_panel_fps_data_update(struct msm_fb_data_type *mfd);
 int mdss_dsi_pinctrl_set_state(struct mdss_dsi_ctrl_pdata *ctrl_pdata,
 					bool active);
