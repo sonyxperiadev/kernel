@@ -4026,7 +4026,7 @@ static void dwc3_msm_shutdown(struct platform_device *pdev)
 		struct dwc3 *dwc = platform_get_drvdata(mdwc->dwc3);
 		struct regulator *vbus_rec = devm_regulator_get(
 						dwc->dev->parent, "vbus_rec");
-		if (!vbus_rec) {
+		if (IS_ERR_OR_NULL(vbus_rec)) {
 			dev_err(mdwc->dev, "failed to get vbus_rec\n");
 		} else {
 			int rc;
