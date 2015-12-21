@@ -1451,11 +1451,15 @@ static int hdmi_tx_init_panel_info(struct hdmi_tx_ctrl *hdmi_ctrl)
 	pinfo->lcdc.h_back_porch = timing.back_porch_h;
 	pinfo->lcdc.h_front_porch = timing.front_porch_h;
 	pinfo->lcdc.h_pulse_width = timing.pulse_width_h;
+#ifndef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 	pinfo->lcdc.h_polarity = timing.active_low_h;
+#endif
 	pinfo->lcdc.v_back_porch = timing.back_porch_v;
 	pinfo->lcdc.v_front_porch = timing.front_porch_v;
 	pinfo->lcdc.v_pulse_width = timing.pulse_width_v;
+#ifndef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 	pinfo->lcdc.v_polarity = timing.active_low_v;
+#endif
 
 	pinfo->type = DTV_PANEL;
 	pinfo->pdest = DISPLAY_2;

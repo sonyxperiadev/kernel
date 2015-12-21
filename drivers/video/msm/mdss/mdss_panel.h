@@ -297,10 +297,11 @@ struct lcd_panel_info {
 	u32 xres_pad;
 	/* Pad height */
 	u32 yres_pad;
-	u32 h_polarity;
-	u32 v_polarity;
 #ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 	struct change_fps chg_fps;
+#else
+	u32 h_polarity;
+	u32 v_polarity;
 #endif
 };
 

@@ -3394,6 +3394,7 @@ static void mdss_fb_var_to_panelinfo(struct fb_var_screeninfo *var,
 	pinfo->lcdc.h_back_porch = var->left_margin;
 	pinfo->lcdc.h_pulse_width = var->hsync_len;
 
+#ifndef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 	if (var->sync & FB_SYNC_HOR_HIGH_ACT)
 		pinfo->lcdc.h_polarity = 0;
 	else
@@ -3403,6 +3404,7 @@ static void mdss_fb_var_to_panelinfo(struct fb_var_screeninfo *var,
 		pinfo->lcdc.v_polarity = 0;
 	else
 		pinfo->lcdc.v_polarity = 1;
+#endif
 
 	/*
 	 * if greater than 1M, then rate would fall below 1mhz which is not
