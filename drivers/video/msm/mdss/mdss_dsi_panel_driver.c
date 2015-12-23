@@ -22,6 +22,7 @@
 #include <linux/leds.h>
 #include <linux/qpnp/pwm.h>
 #include <linux/err.h>
+#include <linux/string.h>
 #include <linux/regulator/consumer.h>
 
 #include "mdss_mdp.h"
@@ -262,7 +263,7 @@ u32 mdss_dsi_panel_cmd_read(struct mdss_dsi_ctrl_pdata *ctrl, char cmd0,
 	return 0;
 }
 static void mdss_dsi_panel_cmds_send(struct mdss_dsi_ctrl_pdata *ctrl,
-			struct dsi_panel_cmds *pcmds)
+			struct dsi_panel_cmds *pcmds, u32 flags)
 {
 	struct dcs_cmd_req cmdreq;
 	struct mdss_panel_info *pinfo;
@@ -276,7 +277,7 @@ static void mdss_dsi_panel_cmds_send(struct mdss_dsi_ctrl_pdata *ctrl,
 	memset(&cmdreq, 0, sizeof(cmdreq));
 	cmdreq.cmds = pcmds->cmds;
 	cmdreq.cmds_cnt = pcmds->cmd_cnt;
-	cmdreq.flags = CMD_REQ_COMMIT;
+	cmdreq.flags = flags;
 
 	/*Panel ON/Off commands should be sent in DSI Low Power Mode*/
 	if (pcmds->link_state == DSI_LP_MODE)
@@ -716,6 +717,7 @@ static void mdss_dsi_panel_switch_mode(struct mdss_panel_data *pdata,
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
 	struct mipi_panel_info *mipi;
 	struct dsi_panel_cmds *pcmds;
+	u32 flags = 0;
 
 	if (pdata == NULL) {
 		pr_err("%s: Invalid input data\n", __func__);
@@ -732,14 +734,29 @@ static void mdss_dsi_panel_switch_mode(struct mdss_panel_data *pdata,
 	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
 
-	if (mode == DSI_CMD_MODE)
-		pcmds = &ctrl_pdata->video2cmd;
-	else
-		pcmds = &ctrl_pdata->cmd2video;
+	if (mipi->dms_mode != DYNAMIC_MODE_RESOLUTION_SWITCH_IMMEDIATE) {
+		if (mode == SWITCH_TO_CMD_MODE)
+			pcmds = &ctrl_pdata->video2cmd;
+		else
+			pcmds = &ctrl_pdata->cmd2video;
+	} else if ((mipi->dms_mode ==
+				DYNAMIC_MODE_RESOLUTION_SWITCH_IMMEDIATE)
+			&& pdata->current_timing
+			&& !list_empty(&pdata->timings_list)) {
+		struct dsi_panel_timing *pt;
 
-	mdss_dsi_panel_cmds_send(ctrl_pdata, pcmds);
+		pt = container_of(pdata->current_timing,
+				struct dsi_panel_timing, timing);
 
-	return;
+		pr_debug("%s: sending switch commands\n", __func__);
+		pcmds = &pt->switch_cmds;
+		flags |= CMD_REQ_DMA_TPG;
+	} else {
+		pr_warn("%s: Invalid mode switch attempted\n", __func__);
+		return;
+	}
+
+	mdss_dsi_panel_cmds_send(ctrl_pdata, pcmds, flags);
 }
 
 static void mdss_dsi_panel_bl_ctrl(struct mdss_panel_data *pdata,
@@ -1423,13 +1440,14 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 	if ((pinfo->mipi.dms_mode == DYNAMIC_MODE_SWITCH_IMMEDIATE) &&
 			(pinfo->mipi.boot_mode != pinfo->mipi.mode)) {
 		mdss_dsi_panel_cmds_send(ctrl_pdata,
-					&ctrl_pdata->post_dms_on_cmds);
+					&ctrl_pdata->post_dms_on_cmds, CMD_REQ_COMMIT);
 		goto set_fps;
 	}
 #endif
 	if (spec_pdata->einit_cmds.cmd_cnt) {
 		pr_debug("%s: early init sequence\n", __func__);
-		mdss_dsi_panel_cmds_send(ctrl_pdata, &spec_pdata->einit_cmds);
+		mdss_dsi_panel_cmds_send(ctrl_pdata,
+			&spec_pdata->einit_cmds, CMD_REQ_COMMIT);
 		if (spec_pdata->reset)
 			spec_pdata->reset(pdata, 1);
 	}
@@ -1438,19 +1456,21 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 					(spec_pdata->cabc_enabled == 1)) {
 		pr_debug("%s: early CABC-on sequence\n", __func__);
 		mdss_dsi_panel_cmds_send(ctrl_pdata,
-			&spec_pdata->cabc_early_on_cmds);
+			&spec_pdata->cabc_early_on_cmds, CMD_REQ_COMMIT);
 		spec_pdata->cabc_active = 1;
 	}
 
 	if (spec_pdata->init_cmds.cmd_cnt) {
 		pr_debug("%s: init (exit sleep) sequence\n", __func__);
-		mdss_dsi_panel_cmds_send(ctrl_pdata, &spec_pdata->init_cmds);
+		mdss_dsi_panel_cmds_send(ctrl_pdata,
+			&spec_pdata->init_cmds, CMD_REQ_COMMIT);
 	}
 
 	if (ctrl_pdata->on_cmds.cmd_cnt && !spec_pdata->disp_on_in_hs) {
 		mdss_dsi_panel_wait_change(ctrl_pdata, true);
 		pr_debug("%s: panel on sequence (in low speed)\n", __func__);
-		mdss_dsi_panel_cmds_send(ctrl_pdata, &ctrl_pdata->on_cmds);
+		mdss_dsi_panel_cmds_send(ctrl_pdata,
+			&ctrl_pdata->on_cmds, CMD_REQ_COMMIT);
 		display_onoff_state = true;
 		pr_info("%s: ctrl=%p ndx=%d\n", __func__,
 					ctrl_pdata, ctrl_pdata->ndx);
@@ -1466,7 +1486,7 @@ set_fps:
 			pr_debug("%s: change fps sequence --- rtn = 0x%x\n",
 				__func__, rtn);
 			mdss_dsi_panel_cmds_send(ctrl_pdata,
-						&ctrl_pdata->fps_cmds);
+						&ctrl_pdata->fps_cmds, CMD_REQ_COMMIT);
 		}
 	}
 end:
@@ -1524,7 +1544,7 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 		if (ctrl_pdata->off_cmds.cmd_cnt) {
 			mdss_dsi_panel_wait_change(ctrl_pdata, false);
 			mdss_dsi_panel_cmds_send(ctrl_pdata,
-						&ctrl_pdata->off_cmds);
+						&ctrl_pdata->off_cmds, CMD_REQ_COMMIT);
 			display_onoff_state = false;
 		}
 	}
@@ -1533,10 +1553,10 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 		pr_debug("%s: sending display off\n", __func__);
 		if (ctrl_pdata->cabc_off_cmds.cmd_cnt)
 			mdss_dsi_panel_cmds_send(ctrl_pdata,
-				&ctrl_pdata->cabc_off_cmds);
+				&ctrl_pdata->cabc_off_cmds, CMD_REQ_COMMIT);
 		if (ctrl_pdata->cabc_late_off_cmds.cmd_cnt)
 			mdss_dsi_panel_cmds_send(ctrl_pdata,
-				&ctrl_pdata->cabc_late_off_cmds);
+				&ctrl_pdata->cabc_late_off_cmds, CMD_REQ_COMMIT);
 		spec_pdata->cabc_active = 0;
 	}
 
@@ -1617,7 +1637,7 @@ static void cabc_work_fn(struct work_struct *work)
 
 	pr_debug("%s: CABC deferred sequence\n", __func__);
 	mdss_dsi_panel_cmds_send(ctrl_pdata,
-		&spec_pdata->cabc_deferred_on_cmds);
+		&spec_pdata->cabc_deferred_on_cmds, CMD_REQ_COMMIT);
 	spec_pdata->cabc_active = 1;
 	pr_debug("%s: CABC deferred sequence sent\n", __func__);
 }
@@ -1660,7 +1680,8 @@ static int mdss_dsi_panel_disp_on(struct mdss_panel_data *pdata)
 
 	if (spec_pdata->cabc_on_cmds.cmd_cnt && spec_pdata->cabc_enabled) {
 		pr_debug("%s: CABC on sequence\n", __func__);
-		mdss_dsi_panel_cmds_send(ctrl_pdata, &spec_pdata->cabc_on_cmds);
+		mdss_dsi_panel_cmds_send(ctrl_pdata,
+			&spec_pdata->cabc_on_cmds, CMD_REQ_COMMIT);
 		spec_pdata->cabc_active = 1;
 	}
 
@@ -1668,7 +1689,8 @@ static int mdss_dsi_panel_disp_on(struct mdss_panel_data *pdata)
 		pr_debug("%s: panel on sequence (in high speed)\n", __func__);
 		mdss_dsi_panel_wait_change(ctrl_pdata, true);
 		mdss_dsi_set_tx_power_mode(0, pdata);
-		mdss_dsi_panel_cmds_send(ctrl_pdata, &ctrl_pdata->on_cmds);
+		mdss_dsi_panel_cmds_send(ctrl_pdata,
+			&ctrl_pdata->on_cmds, CMD_REQ_COMMIT);
 		display_onoff_state = true;
 		pr_info("%s: ctrl=%p ndx=%d\n", __func__, ctrl_pdata, ctrl_pdata->ndx);
 	}
@@ -2261,8 +2283,8 @@ static int mdss_dsi_panel_pcc_setup(struct mdss_panel_data *pdata)
 
 	mdss_dsi_op_mode_config(DSI_CMD_MODE, pdata);
 	if (ctrl_pdata->spec_pdata->pre_uv_read_cmds.cmds)
-		mdss_dsi_panel_cmds_send(
-			ctrl_pdata, &ctrl_pdata->spec_pdata->pre_uv_read_cmds);
+		mdss_dsi_panel_cmds_send(ctrl_pdata,
+			&ctrl_pdata->spec_pdata->pre_uv_read_cmds, CMD_REQ_COMMIT);
 	if (ctrl_pdata->spec_pdata->uv_read_cmds.cmds) {
 		get_uv_data(ctrl_pdata, &pcc_data->u_data, &pcc_data->v_data);
 		pcc_data->u_data = CENTER_U_DATA;
@@ -2895,6 +2917,17 @@ static void mdss_dsi_parse_dms_config(struct device_node *np,
 	/* default mode is suspend_resume */
 	pinfo->mipi.dms_mode = DYNAMIC_MODE_SWITCH_SUSPEND_RESUME;
 	data = of_get_property(np, "qcom,dynamic-mode-switch-type", NULL);
+	if (data && !strcmp(data, "dynamic-resolution-switch-immediate")) {
+		if (!list_empty(&ctrl->panel_data.timings_list))
+			pinfo->mipi.dms_mode =
+				DYNAMIC_MODE_RESOLUTION_SWITCH_IMMEDIATE;
+		else
+			pinfo->mipi.dms_mode =
+				DYNAMIC_MODE_SWITCH_DISABLED;
+
+		goto exit;
+	}
+
 	if (data && !strcmp(data, "dynamic-switch-immediate"))
 		pinfo->mipi.dms_mode = DYNAMIC_MODE_SWITCH_IMMEDIATE;
 	else
@@ -3658,7 +3691,9 @@ static int mdss_panel_parse_dt(struct device_node *np,
 			pinfo->dsi_master = DISPLAY_1;
 		}
 
-		mdss_dsi_panel_parse_display_timings(next, &ctrl_pdata->panel_data);
+		rc = mdss_dsi_panel_parse_display_timings(next, &ctrl_pdata->panel_data);
+		if (rc)
+			return rc;
 
 		rc = of_property_read_u32(next,
 			"qcom,mdss-dsi-underflow-color", &tmp);
