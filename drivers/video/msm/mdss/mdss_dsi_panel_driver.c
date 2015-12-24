@@ -3877,12 +3877,6 @@ static int mdss_panel_parse_dt(struct device_node *np,
 			pinfo->mode_gpio_state = MODE_GPIO_NOT_VALID;
 		}
 
-		rc = of_property_read_u32(next,
-			"qcom,mdss-dsi-panel-framerate", &tmp);
-		pinfo->mipi.frame_rate = !rc ? tmp : 60;
-		pinfo->mipi.input_fpks = pinfo->mipi.frame_rate * 1000;
-		rc = of_property_read_u32(next,
-			"qcom,mdss-dsi-panel-clockrate", &tmp);
 		pinfo->clk_rate = !rc ? tmp : 0;
 		data = of_get_property(next,
 			"qcom,mdss-dsi-panel-timings", &len);
