@@ -3062,9 +3062,11 @@ static int mdss_dsi_parse_panel_features(struct device_node *np,
 //	pinfo->cont_splash_enabled = of_property_read_bool(np,
 //		"qcom,cont-splash-enabled");
 
+	pinfo->partial_update_supported = of_property_read_bool(np,
+		"qcom,partial-update-enabled");
+
 	if (pinfo->mipi.mode == DSI_CMD_MODE) {
-		pinfo->partial_update_enabled = of_property_read_bool(np,
-				"qcom,partial-update-enabled");
+		pinfo->partial_update_enabled = pinfo->partial_update_supported;
 		pr_info("%s: partial_update_enabled=%d\n", __func__,
 					pinfo->partial_update_enabled);
 		ctrl->set_col_page_addr = mdss_dsi_set_col_page_addr;
