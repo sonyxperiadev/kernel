@@ -50,8 +50,8 @@ extern int sysctl_legacy_va_layout;
 #endif
 
 #ifdef CONFIG_HAVE_ARCH_MMAP_RND_BITS
-extern int mmap_rnd_bits_min;
-extern int mmap_rnd_bits_max;
+extern const int mmap_rnd_bits_min;
+extern const int mmap_rnd_bits_max;
 extern int mmap_rnd_bits __read_mostly;
 #endif
 #ifdef CONFIG_HAVE_ARCH_MMAP_RND_COMPAT_BITS
