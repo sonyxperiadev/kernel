@@ -178,6 +178,7 @@ static void __cpuinit cpuquiet_work_func(struct work_struct *work)
 	/* always keep CPU0 online */
 	cpumask_set_cpu(0, &online);
 	cpu_online = *cpu_online_mask;
+	cpumask_clear_cpu(0, &offline);
 
 	if (max_cpus < min_cpus)
 		max_cpus = min_cpus;
