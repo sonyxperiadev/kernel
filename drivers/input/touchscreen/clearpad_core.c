@@ -4652,12 +4652,12 @@ static int clearpad_pm_suspend(struct device *dev)
 	unsigned long flags;
 	int rc = 0;
 
-	spin_lock_irqsave(&this->slock, flags);
 	if (unlikely(this->dev_busy)) {
 		dev_info(dev, "Busy to suspend\n");
-		spin_unlock_irqrestore(&this->slock, flags);
 		return -EBUSY;
 	}
+
+	spin_lock_irqsave(&this->slock, flags);
 	this->dev_busy = true;
 	spin_unlock_irqrestore(&this->slock, flags);
 
