@@ -4166,7 +4166,13 @@ static ssize_t clearpad_screen_status_store(struct device *dev,
 
 	LOCK(this);
 
-	sscanf(buf, "%d", &this->screen_status);
+	if (sscanf(buf, "%d", &this->screen_status) != 1) {
+		dev_err(&this->pdev->dev, "%s: %s sscanf failed ",
+						__func__, attr->attr.name);
+		UNLOCK(this);
+		return -EINVAL;
+	}
+
 	dev_dbg(&this->pdev->dev, "%s: screen_status = %d\n", __func__,
 				this->screen_status);
 
