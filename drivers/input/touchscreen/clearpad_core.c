@@ -3393,17 +3393,20 @@ static irqreturn_t clearpad_threaded_handler(int irq, void *dev_id)
 	do {
 		(void)clearpad_process_irq(this);
 
-		spin_lock_irqsave(&this->slock, flags);
 		if (likely(!this->irq_pending)) {
+			spin_lock_irqsave(&this->slock, flags);
 			this->dev_busy = false;
 			spin_unlock_irqrestore(&this->slock, flags);
 			break;
 		}
+
+		spin_lock_irqsave(&this->slock, flags);
 		this->irq_pending = false;
-		dev_info(&this->pdev->dev, "Touch irq pending\n");
 		spin_unlock_irqrestore(&this->slock, flags);
 
+		dev_info(&this->pdev->dev, "Touch irq pending\n");
 	} while (true);
+
 	return IRQ_HANDLED;
 }
 
