@@ -304,10 +304,12 @@ int somc_wifi_set_power(int on)
 
 }
 
+#if defined(CONFIG_BCMDHD_SDIO)
 static int somc_wifi_set_reset(int on)
 {
 	return 0;
 }
+#endif
 
 int somc_wifi_set_carddetect(int present)
 {
@@ -601,6 +603,7 @@ static ssize_t macaddr_store(struct device *dev, struct device_attribute *attr,
 
 DEVICE_ATTR(macaddr, 0644, macaddr_show, macaddr_store);
 
+#if defined(CONFIG_BCMDHD_SDIO)
 static struct attribute *wifi_attrs[] = {
 	&dev_attr_macaddr.attr,
 	NULL
@@ -609,6 +612,7 @@ static struct attribute *wifi_attrs[] = {
 static struct attribute_group wifi_attr_grp = {
 	.attrs = wifi_attrs,
 };
+#endif
 
 struct wifi_platform_data somc_wifi_control = {
 	.set_power	= somc_wifi_set_power,
