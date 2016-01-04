@@ -745,10 +745,11 @@ static inline enum power_supply_type get_usb_supply_type(int type)
 static void read_usb_type(struct smbchg_chip *chip, char **usb_type_name,
 				enum power_supply_type *usb_supply_type)
 {
-	int rc, type;
-	u8 reg;
-
+	int type;
+	u8 reg = 0;
 #ifndef CONFIG_QPNP_SMBCHARGER_EXTENSION
+	int rc;
+
 	rc = smbchg_read(chip, &reg, chip->misc_base + IDEV_STS, 1);
 	if (rc < 0) {
 		dev_err(chip->dev, "Couldn't read status 5 rc = %d\n", rc);
@@ -1689,7 +1690,10 @@ static int smbchg_set_usb_current_max(struct smbchg_chip *chip,
 		break;
 	}
 #endif
+
+#ifndef CONFIG_QPNP_SMBCHARGER_EXTENSION
 out:
+#endif
 	pr_smb(PR_STATUS, "usb type = %s current set to %d mA\n",
 			usb_type_name, chip->usb_max_current_ma);
 	return rc;
@@ -1886,6 +1890,7 @@ out:
 	return rc;
 }
 
+#ifndef CONFIG_QPNP_SMBCHARGER_EXTENSION
 static int smbchg_parallel_usb_charging_en(struct smbchg_chip *chip, bool en)
 {
 	struct power_supply *parallel_psy = get_parallel_psy(chip);
@@ -1910,6 +1915,7 @@ static int smbchg_sw_esr_pulse_en(struct smbchg_chip *chip, bool en)
 	rc = smbchg_parallel_usb_charging_en(chip, !en);
 	return rc;
 }
+#endif
 
 #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
 int somc_chg_set_fastchg_current(struct device *dev, int current_ma)
@@ -3024,6 +3030,7 @@ static void smbchg_vfloat_adjust_check(struct smbchg_chip *chip)
 	schedule_delayed_work(&chip->vfloat_adjust_work, 0);
 }
 
+#ifndef CONFIG_QPNP_SMBCHARGER_EXTENSION
 #define FV_STS_REG			0xC
 #define AICL_INPUT_STS_BIT		BIT(6)
 static bool smbchg_is_input_current_limited(struct smbchg_chip *chip)
@@ -3106,6 +3113,7 @@ static void smbchg_soc_changed(struct smbchg_chip *chip)
 {
 	smbchg_cc_esr_wa_check(chip);
 }
+#endif
 
 #define DC_AICL_CFG			0xF3
 #define MISC_TRIM_OPT_15_8		0xF5
@@ -3283,7 +3291,10 @@ static void smbchg_aicl_deglitch_wa_check(struct smbchg_chip *chip)
 #define LOADING_BATT_TYPE	"Loading Battery Data"
 static int smbchg_config_chg_battery_type(struct smbchg_chip *chip)
 {
-	int rc = 0, max_voltage_uv = 0, fastchg_ma = 0, ret = 0;
+	int rc = 0, ret = 0;
+#ifndef CONFIG_QPNP_SMBCHARGER_EXTENSION
+	int max_voltage_uv = 0, fastchg_ma = 0;
+#endif
 	struct device_node *batt_node, *profile_node;
 	struct device_node *node = chip->spmi->dev.of_node;
 	union power_supply_propval prop = {0,};
@@ -3398,12 +3409,14 @@ static void smbchg_external_power_changed(struct power_supply *psy)
 				struct smbchg_chip, batt_psy);
 	union power_supply_propval prop = {0,};
 	int rc, current_limit = 0, soc;
+#ifndef CONFIG_QPNP_SMBCHARGER_EXTENSION
 	enum power_supply_type usb_supply_type;
 	char *usb_type_name = "null";
-#ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
+#else
 	int llkflg;
 	int last_current_limit = 0;
 	int current_ma = 0;
+	soc = 0;
 #endif
 
 	if (chip->bms_psy_name)
@@ -3486,7 +3499,9 @@ static void smbchg_external_power_changed(struct power_supply *psy)
 #endif
 	mutex_unlock(&chip->current_change_lock);
 
+#ifndef CONFIG_QPNP_SMBCHARGER_EXTENSION
 skip_current_for_non_sdp:
+#endif
 	smbchg_vfloat_adjust_check(chip);
 
 	power_supply_changed(&chip->batt_psy);
