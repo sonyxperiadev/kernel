@@ -4699,7 +4699,7 @@ static int clearpad_pm_resume(struct device *dev)
 #endif
 	(void)(rc ? rc : clearpad_resume(&this->pdev->dev));
 
-	return 0;
+	return rc;
 }
 
 static int clearpad_pm_suspend_noirq(struct device *dev)
