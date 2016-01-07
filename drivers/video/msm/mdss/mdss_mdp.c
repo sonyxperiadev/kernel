@@ -1231,6 +1231,9 @@ static inline void __mdss_mdp_reg_access_clk_enable(
 	if (enable) {
 		mdss_update_reg_bus_vote(mdata->reg_bus_clt,
 				VOTE_INDEX_LOW);
+		if (mdss_has_quirk(mdata, MDSS_QUIRK_MIN_BUS_VOTE))
+				mdss_bus_scale_set_quota(MDSS_HW_RT,
+					SZ_1M, SZ_1M);
 		mdss_bus_rt_bw_vote(true);
 		mdss_mdp_clk_update(MDSS_CLK_AHB, 1);
 		mdss_mdp_clk_update(MDSS_CLK_AXI, 1);
@@ -1244,6 +1247,8 @@ static inline void __mdss_mdp_reg_access_clk_enable(
 		mdss_mdp_clk_update(MDSS_CLK_AXI, 0);
 		mdss_mdp_clk_update(MDSS_CLK_AHB, 0);
 		mdss_bus_rt_bw_vote(false);
+		if (mdss_has_quirk(mdata, MDSS_QUIRK_MIN_BUS_VOTE))
+			mdss_bus_scale_set_quota(MDSS_HW_RT, 0, 0);
 		mdss_update_reg_bus_vote(mdata->reg_bus_clt,
 				VOTE_INDEX_DISABLE);
 	}
@@ -1324,6 +1329,9 @@ int mdss_iommu_ctrl(int enable)
 		 */
 		if (mdata->iommu_ref_cnt == 0) {
 			mdss_bus_rt_bw_vote(true);
+			if (mdss_has_quirk(mdata, MDSS_QUIRK_MIN_BUS_VOTE))
+				mdss_bus_scale_set_quota(MDSS_HW_RT,
+					 SZ_1M, SZ_1M);
 			rc = mdss_smmu_attach(mdata);
 		}
 		mdata->iommu_ref_cnt++;
@@ -1333,6 +1341,10 @@ int mdss_iommu_ctrl(int enable)
 			if (mdata->iommu_ref_cnt == 0) {
 				rc = mdss_smmu_detach(mdata);
 				mdss_bus_rt_bw_vote(false);
+				if (mdss_has_quirk(mdata,
+					MDSS_QUIRK_MIN_BUS_VOTE))
+					mdss_bus_scale_set_quota(MDSS_HW_RT,
+								0, 0);
 			}
 		} else {
 			pr_err("unbalanced iommu ref\n");
