@@ -838,6 +838,14 @@
 				qcom,default-state = "off";
 				qcom,id = <3>;
 				linux,default-trigger = "none";
+				qcom,start-idx = <1>;
+				qcom,ramp-step-ms = <120>;
+				qcom,duty-pcts = [00 00 00 00 00
+						00 00 00 00 00
+						50 00 00 00 00
+						00 00 00 00 00
+						00];
+				qcom,use-blink;
 			};
 
 			qcom,rgb_1 {
@@ -850,6 +858,14 @@
 				qcom,default-state = "off";
 				qcom,id = <4>;
 				linux,default-trigger = "none";
+				qcom,start-idx = <1>;
+				qcom,ramp-step-ms = <120>;
+				qcom,duty-pcts = [00 00 00 00 00
+						00 00 00 00 00
+						50 00 00 00 00
+						00 00 00 00 00
+						00];
+				qcom,use-blink;
 			};
 
 			qcom,rgb_2 {
@@ -862,6 +878,14 @@
 				qcom,default-state = "off";
 				qcom,id = <5>;
 				linux,default-trigger = "none";
+				qcom,start-idx = <1>;
+				qcom,ramp-step-ms = <120>;
+				qcom,duty-pcts = [00 00 00 00 00
+						00 00 00 00 00
+						50 00 00 00 00
+						00 00 00 00 00
+						00];
+				qcom,use-blink;
 			};
 		};
 
