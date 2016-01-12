@@ -1,0 +1,170 @@
+/* arch/arm/boot/dts/qcom/msm8994-kitakami_r2_common.dtsi
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+/*
+ * Copyright (C) 2015 Sony Mobile Communications Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2, as
+ * published by the Free Software Foundation.
+ */
+
+&soc {
+	/* SPI : BLSP1 */
+	spi@f9923000 {
+		spi-max-frequency = <5000000>;
+		pinctrl-0 = <&msm_gpio_0_act &msm_gpio_1_act &msm_gpio_2_def &msm_gpio_3_act>;
+		pinctrl-1 = <&msm_gpio_0_sus &msm_gpio_1_sus &msm_gpio_2_def &msm_gpio_3_sus>;
+		status = "ok";
+	};
+};
+
+&pm8994_mpps {
+	/* MPP_5: FLASH_THERM */
+	mpp@a400 {
+		qcom,mode = <4>;		/* AIN */
+		qcom,ain-route = <0>;		/* AMUX 5 */
+		qcom,master-en = <1>;		/* Enable */
+		status = "ok";
+	};
+};
+
+&pm8994_l3 {
+	regulator-min-microvolt = <1100000>;
+	regulator-max-microvolt = <1100000>;
+	qcom,init-voltage = <1100000>;
+};
+
+&pm8994_l17 {
+	regulator-min-microvolt = <2200000>;
+	regulator-max-microvolt = <2200000>;
+	qcom,init-voltage = <2200000>;
+};
+
+&pm8994_l32 {
+	regulator-min-microvolt = <1800000>;
+	regulator-max-microvolt = <1800000>;
+	qcom,init-enable = <0>;
+	qcom,init-voltage = <1800000>;
+	qcom,init-ldo-mode = <1>;
+	qcom,init-pin-ctrl-enable = <0>;
+	qcom,init-pin-ctrl-mode = <0>;
+	status = "ok";
+};
+
+&mdss_dsi0 {
+	qcom,dsi-pref-prim-pan = <&dsi_default_gpio_0>;
+	pinctrl-names = "mdss_default", "mdss_sleep";
+	pinctrl-0 = <&msm_gpio_10_act &msm_gpio_56_act &msm_gpio_78_act>;
+	pinctrl-1 = <&msm_gpio_10_sus &msm_gpio_56_sus &msm_gpio_78_sus>;
+	qcom,dsi-panel-bias-vreg;
+	qcom,platform-reset-gpio = <&msm_gpio 78 0>;
+	qcom,platform-regulator-settings = [];
+	qcom,platform-lane-config = [];
+};
+
+&mdss_dsi1 {
+	status = "disabled";
+};
+
+&tlmm_pinmux {
+	/* GPIO_0: FP_SPI_MOSI */
+	msm_gpio_0 {
+		qcom,pin-func = <1>;
+		msm_gpio_0_act: active {
+			drive-strength = <2>;
+			bias-disable;
+		};
+		msm_gpio_0_sus: suspend {
+			drive-strength = <2>;
+			bias-disable;
+		};
+		msm_gpio_0_def: default {
+			drive-strength = <2>;
+			bias-disable;
+		};
+	};
+
+	/* GPIO_1: FP_SPI_MISO */
+	msm_gpio_1 {
+		qcom,pin-func = <1>;
+		msm_gpio_1_act: active {
+			drive-strength = <2>;
+			bias-pull-down;
+			/delete-property/ bias-disable;
+		};
+		msm_gpio_1_sus: suspend {
+			drive-strength = <2>;
+			bias-pull-down;
+			/delete-property/ bias-disable;
+		};
+		msm_gpio_1_def: default {
+			drive-strength = <2>;
+			bias-pull-down;
+			/delete-property/ bias-disable;
+		};
+	};
+
+	/* GPIO_2: FP_SPI_CS1_N */
+	msm_gpio_2 {
+		qcom,pins = <&gp 2>;
+		qcom,num-grp-pins = <1>;
+		label = "msm_gpio_2";
+		qcom,pin-func = <1>;
+		msm_gpio_2_def: default {
+			drive-strength = <2>;
+			bias-disable;
+		};
+	};
+
+	/* GPIO_3: FP_SPI_CLK */
+	msm_gpio_3 {
+		qcom,pin-func = <1>;
+		msm_gpio_3_act: active {
+			drive-strength = <2>;
+			bias-disable;
+		};
+		msm_gpio_3_sus: suspend {
+			drive-strength = <2>;
+			bias-disable;
+		};
+		msm_gpio_3_def: default {
+			drive-strength = <2>;
+			bias-disable;
+		};
+	};
+
+	/* GPIO_89: FP_RESET_N */
+	msm_gpio_89 {
+		qcom,pin-func = <0>;
+		msm_gpio_89_def: default {
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	/* GPIO_90: FP_INT */
+	msm_gpio_90 {
+		qcom,pin-func = <0>;
+		msm_gpio_90_def: default {
+			drive-strength = <2>;
+			bias-pull-down;
+			input-enable;
+			/delete-property/ bias-disable;
+			/delete-property/ output-low;
+		};
+	};
+};
+
+&usb3 {
+	usb_shell_sel_gpio = <&msm_gpio 9 0>;
+};

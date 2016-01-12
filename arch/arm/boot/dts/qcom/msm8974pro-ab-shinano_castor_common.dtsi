@@ -1,0 +1,392 @@
+/* arch/arm/boot/dts/qcom/msm8974pro-ab-shinano_castor_common.dtsi
+ *
+ * Copyright (C) 2013 Sony Mobile Communications Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+&soc {
+	/* UART : BLSP7 */
+	uart@f995d000 {
+		interrupt-names = "core_irq", "bam_irq", "wakeup_irq";
+		interrupts = <0 1 2>;
+		interrupt-map = <0 &intc 0 113 0
+				 1 &intc 0 239 0
+				 2 &msmgpio 42 0>;
+	};
+
+	/* UART : BLSP10 */
+	serial@f9960000 {
+		compatible = "qcom,msm-lsuart-v14-irda";
+		reg = <0xf9960000 0x1000>;
+		interrupts = <0 116 0>;
+		qcom,config-gpio = <1>;
+		qcom,tx-gpio = <&msmgpio 53 0x00>;
+		qcom,rx-gpio = <&msmgpio 54 0x00>;
+		status = "ok";
+	};
+
+	ir-remote@1 {
+		compatible = "somc,ir-remote-device";
+		reg = <0x1>;
+		ir_remote_en = <&pm8941_mpps 5 0x00>;
+		status = "ok";
+	};
+
+	/* I2C : BLSP2 */
+	i2c@f9924000 {
+		cell-index = <2>;
+		qcom,i2c-bus-freq = <355000>;
+		status = "ok";
+	};
+
+	/* I2C : BLSP8 */
+	i2c@f9964000 {
+		synaptics_clearpad@2c {
+			compatible = "synaptics,clearpad";
+			reg = <0x2c>;
+			interrupt-parent = <&msmgpio>;
+			interrupts = <86 0x2>;
+			touch_vdd-supply = <&pm8941_l22>;
+			touch_vio-supply = <&pm8941_lvs3>;
+			synaptics,irq_gpio = <&msmgpio 86 0x00>;
+			chip_id = <0x37>;
+			num_sensor_rx = <46>;
+			num_sensor_tx = <26>;
+			charger_supported = <1>;
+			pen_supported = <0>;
+			glove_supported = <0>;
+			cover_supported = <0>;
+			touch_pressure_enabled = <1>;
+			touch_size_enabled = <0>;
+			touch_orientation_enabled = <0>;
+			preset_x_max = <1919>;
+			preset_y_max = <1199>;
+			preset_n_fingers = <10>;
+			delay_after_hw_reset = <200>;
+			wakeup_gesture_supported = <1>;
+			wakeup_gesture_large_panel = <1>;
+			wakeup_gesture_lpm_disabled = <0>;
+			wakeup_gesture_timeout = <2000>;
+			wakeup_gesture {
+				double_tap {
+					gesture_code = <0x0001>;
+					event_00 {
+						type = <2>; /* LOG */
+						message = "=== DOUBLE TAP ===";
+					};
+					event_01 {
+						type = <1>; /* KEY */
+						code = <116>; /* KEY_POWER */
+						down = <1>;
+					};
+					event_02 {
+						type = <1>; /* KEY */
+						code = <116>; /* KEY_POWER */
+						down = <0>;
+					};
+					event_03 {
+						type = <99>; /* END */
+					};
+				};
+			};
+		};
+	};
+
+	/* I2C : BLSP11 */
+	i2c@f9967000 {
+		ti_lp855x@2c {
+			compatible = "ti,lp8556";
+			reg = <0x2c>;
+			status = "ok";
+			bl_enable = <&msmgpio 69 0>;
+			linux,name = "lp8556";
+			linux,default-trigger = "bkl-trigger";
+			mode = "register based";
+			chip_name = "lp8556";
+			max_br = <0xff>;
+			init_br = <0x3f>;
+			cfg3_reg = <0x5e>;
+			eprom@98 {
+				addr = <0x98>;
+				data = <0x16>;
+			};
+			eprom@9e {
+				addr = <0x9e>;
+				data = <0x22>;
+			};
+			eprom@a0 {
+				addr = <0xa0>;
+				data = <0xff>;
+			};
+			eprom@a1 {
+				addr = <0xa1>;
+				data = <0x3f>;
+			};
+			eprom@a2 {
+				addr = <0xa2>;
+				data = <0x20>;
+			};
+			eprom@a4 {
+				addr = <0xa4>;
+				data = <0x02>;
+			};
+			eprom@a5 {
+				addr = <0xa5>;
+				data = <0x04>;
+			};
+			eprom@a6 {
+				addr = <0xa6>;
+				data = <0x80>;
+			};
+			eprom@a7 {
+				addr = <0xa7>;
+				data = <0xf7>;
+			};
+			eprom@a8 {
+				addr = <0xa8>;
+				data = <0x24>;
+			};
+			eprom@a9 {
+				addr = <0xa9>;
+				data = <0x80>;
+			};
+			eprom@aa {
+				addr = <0xaa>;
+				data = <0x0f>;
+			};
+			eprom@ae {
+				addr = <0xae>;
+				data = <0x0f>;
+			};
+		};
+	};
+
+	bu520x1nvx {
+		compatible = "rohm,bu520x1nvx";
+		gpios = <&pm8941_gpios 36 0x1>;
+	};
+
+	nxp,tfa98xx-codec {
+		compatible = "nxp,tfa98xx-codec";
+	};
+};
+
+&camera_mem {
+	reg = <0xb8514000 0x6400000>;
+};
+
+&pm8941_lsid0 {
+	pm8941_iadc: iadc@3600 {
+		qcom,rsense = <10000000>;
+	};
+};
+
+&pm8941_chg {
+	qcom,ibatmax-ma = <3000>;
+	qcom,ibatterm-ma = <300>;
+	qcom,ibatsafe-ma = <3000>;
+	qcom,maxinput-dc-ma = <1800>;
+	qcom,maxinput-usb-ma = <1800>;
+	qcom,maxinput-usb-mv = <13000>;
+	qcom,thermal-mitigation = <3000 2500 2000 1500 1100 800 500 300 100 0>;
+	qcom,ibatmax-warm-ma = <1800>;
+	qcom,ibatmax-cool-ma = <1800>;
+	qcom,step-thresh-soc = <101>;
+	qcom,ibatmax-ma-under-step = <3000>;
+};
+
+&pm8941_bms {
+	qcom,chg-term-ua = <300000>;
+	qcom,fcc-resolution = <26>;
+};
+
+&pm8941_gpios {
+	/* GPIO_3: NC */
+	gpio@c200 {
+		qcom,master-en = <0>;		/* Disable */
+		status = "ok";
+	};
+
+	/* GPIO_4: NC */
+	gpio@c300 {
+		qcom,master-en = <0>;		/* Disable */
+		status = "ok";
+	};
+
+	/* GPIO_9: P_SENSOR_INT_N */
+	gpio@c800 {
+		qcom,src-sel = <0>;		/* GPIO */
+		qcom,mode = <0>;		/* In */
+		qcom,vin-sel = <2>;		/* S3 */
+		qcom,pull = <0>;		/* PU */
+		qcom,master-en = <1>;		/* Enable */
+		status = "ok";
+	};
+
+	/* GPIO_19: NC (DISP_RESET_N) */
+	gpio@d200 {
+		qcom,master-en = <0>;		/* Disable */
+		status = "ok";
+		/delete-property/ qcom,invert;
+		/delete-property/ somc,keep_high_at_init;
+	};
+
+	/* GPIO_20: LCD_DCDC_EN */
+	gpio@d300 {
+		qcom,src-sel = <0>;		/* GPIO */
+		qcom,mode = <1>;		/* Out */
+		qcom,output-type = <0>;		/* CMOS */
+		qcom,vin-sel = <2>;		/* S3 */
+		qcom,out-strength = <1>;	/* Low */
+		qcom,invert = <0>;		/* Low */
+		qcom,master-en = <1>;		/* Enable */
+		somc,keep_high_at_init;
+		status = "ok";
+	};
+
+	/* GPIO_25: P_SENSE_CNTL */
+	gpio@d800 {
+		qcom,src-sel = <0>;		/* GPIO */
+		qcom,mode = <1>;		/* Out */
+		qcom,output-type = <1>;		/* OpenDrain NMOS */
+		qcom,vin-sel = <0>;		/* VPH */
+		qcom,out-strength = <1>;	/* Low */
+		qcom,invert = <1>;		/* High */
+		qcom,master-en = <1>;		/* Enable */
+		status = "ok";
+	};
+
+	/* GPIO_36: ACC_COVER_OPEN */
+	gpio@e300 {
+		qcom,src-sel = <0>;		/* GPIO */
+		qcom,mode = <0>;		/* In */
+		qcom,vin-sel = <2>;		/* S3 */
+		qcom,pull = <0>;		/* PU */
+		qcom,master-en = <1>;		/* Enable */
+		status = "ok";
+	};
+};
+
+&pm8941_mpps {
+	/* MPP_3: TXDAC0_VREF */
+	/* Follow QCT */
+
+	/* MPP_5: IR_REMOTE_EN */
+	mpp@a400 {
+		qcom,src-sel = <0>;		/* GPIO */
+		qcom,mode = <1>;		/* DOUT */
+		qcom,vin-sel = <2>;		/* S3 */
+		qcom,invert = <0>;		/* Low */
+		qcom,master-en = <1>;		/* Enable */
+		status = "ok";
+	};
+};
+
+&sdhc_1 {
+	qcom,clk-rates = <400000 20000000 25000000 50000000 100000000>;
+	qcom,bus-speed-mode = "DDR_1p8v";
+	qcom,vdd-always-on;
+};
+
+&spmi_bus {
+	qcom,pm8941@1 {
+		qcom,vib@c000 {
+			qcom,qpnp-vib-vtg-level-mV = <3100>;
+		};
+
+		qcom,leds@d800 {
+			status = "disabled";
+		};
+
+		qcom,leds@d000 {
+			qcom,rgb_0 {
+				qcom,pwm-max-value = <74>;
+			};
+
+			qcom,rgb_1 {
+				qcom,pwm-max-value = <70>;
+			};
+
+			qcom,rgb_2 {
+				qcom,pwm-max-value = <40>;
+			};
+		};
+
+	};
+};
+
+/* Regulator config */
+&pm8941_l9 {
+	status = "disabled";
+};
+
+&pm8941_l11 {
+	status = "ok";
+};
+
+&pm8941_l14 {
+	status = "disabled";
+};
+
+&pm8941_l15 {
+	status = "disabled";
+};
+
+&pm8941_l18 {
+	regulator-always-on;
+};
+
+&pm8941_l19 {
+	regulator-min-microvolt = <2850000>;
+	regulator-max-microvolt = <2850000>;
+	qcom,init-voltage = <2850000>;
+	status = "ok";
+};
+
+&pm8941_lvs1 {
+	regulator-always-on;
+};
+
+&usb3 {
+	current_system_max_limit = <1800>;
+};
+
+&mdss_fb0 {
+	qcom,memory-reservation-size = <0x1200000>; /* size 19MB */
+};
+
+&mdss_mdp {
+	qcom,mdss-ib-factor = <11 5>;
+	somc,dric-gpio = <&msmgpio 26 0>;
+	somc,mul-channel-scaling = <3>;
+};
+
+&mdss_dsi0 {
+	vdd-supply = <>;
+	qcom,platform-enable-gpio = <&pm8941_gpios 20 0>;
+
+	qcom,panel-supply-entries {
+		qcom,panel-supply-entry@0 {
+			reg = <0>;
+			qcom,supply-name = "vddio";
+			qcom,supply-min-voltage = <1800000>;
+			qcom,supply-max-voltage = <1800000>;
+			qcom,supply-enable-load = <100000>;
+			qcom,supply-disable-load = <100>;
+			qcom,supply-pre-on-sleep = <0>;
+			qcom,supply-post-on-sleep = <0>;
+			qcom,supply-pre-off-sleep = <0>;
+			qcom,supply-post-off-sleep = <0>;
+		};
+
+		/delete-node/ qcom,panel-supply-entry@1;
+	};
+};
