@@ -134,7 +134,7 @@ phase2:
 	ldr	r0, =TRAMPOLINE_VA
 	adr	r1, target
 	bfi	r0, r1, #0, #PAGE_SHIFT
-	mov	pc, r0
+	ret	r0
 
 target:	@ We're now in the trampoline code, switch page tables
 	mcrr	p15, 4, r2, r3, c2
