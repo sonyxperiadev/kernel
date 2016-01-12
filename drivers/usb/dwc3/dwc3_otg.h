@@ -1,7 +1,7 @@
 /**
  * dwc3_otg.h - DesignWare USB3 DRD Controller OTG
  *
- * Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -22,6 +22,15 @@
 #include <linux/usb/otg.h>
 #include "power.h"
 
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+#include <linux/regulator/consumer.h>
+#include <linux/wakelock.h>
+#include <linux/notifier.h>
+
+#define DWC3_1000MA_CHG_MAX 1000
+#define DWC3_500MA_CHG_MAX 500
+#endif
+
 #define DWC3_IDEV_CHG_MAX 1500
 
 struct dwc3_charger;
@@ -29,7 +38,6 @@ struct dwc3_charger;
 /**
  * struct dwc3_otg: OTG driver data. Shared by HCD and DCD.
  * @otg: USB OTG Transceiver structure.
- * @irq: IRQ number assigned for HSUSB controller.
  * @regs: ioremapped register base address.
  * @sm_work: OTG state machine work.
  * @charger: DWC3 external charger detector
@@ -37,7 +45,6 @@ struct dwc3_charger;
  */
 struct dwc3_otg {
 	struct usb_otg		otg;
-	int			irq;
 	struct dwc3		*dwc;
 	void __iomem		*regs;
 	struct regulator	*vbus_otg;
@@ -52,6 +59,15 @@ struct dwc3_otg {
 	struct completion	dwc3_xcvr_vbus_init;
 	int			charger_retry_count;
 	int			vbus_retry_count;
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+ #define A_VBUS_DROP_DET 3
+	struct wake_lock	host_wakelock;
+	struct notifier_block	usbdev_nb;
+	int			device_count;
+	struct delayed_work	no_device_work;
+	unsigned int		retry_count;
+	bool			no_device_timeout_enabled;
+#endif
 };
 
 /**
@@ -73,6 +89,10 @@ enum dwc3_chg_type {
 	DWC3_DCP_CHARGER,
 	DWC3_CDP_CHARGER,
 	DWC3_PROPRIETARY_CHARGER,
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+	DWC3_PROPRIETARY_1000MA,
+	DWC3_PROPRIETARY_500MA,
+#endif
 	DWC3_FLOATED_CHARGER,
 };
 
@@ -108,8 +128,10 @@ enum dwc3_id_state {
 /* external transceiver that can perform connect/disconnect monitoring in LPM */
 struct dwc3_ext_xceiv {
 	enum dwc3_id_state	id;
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+	bool			ocp;
+#endif
 	bool			bsv;
-	bool			otg_capability;
 
 	/* to notify OTG about LPM exit event, provided by OTG */
 	void	(*notify_ext_events)(struct usb_otg *otg,
@@ -117,6 +139,10 @@ struct dwc3_ext_xceiv {
 	/* for block reset USB core */
 	void	(*ext_block_reset)(struct dwc3_ext_xceiv *ext_xceiv,
 					bool core_reset);
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+	/* to register ocp_notification */
+	struct regulator_ocp_notification ext_ocp_notification;
+#endif
 };
 
 /* for external transceiver driver */

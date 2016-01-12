@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -33,6 +33,7 @@
 #include <linux/of_address.h>
 #include <linux/of_platform.h>
 #include <linux/dma-contiguous.h>
+#include <linux/dma-buf.h>
 #include <linux/iommu.h>
 #include <linux/kref.h>
 #include <linux/sort.h>
@@ -520,6 +521,7 @@ static int context_alloc(struct fastrpc_apps *me, uint32_t kernel,
 		goto bail;
 
 	INIT_HLIST_NODE(&ctx->hn);
+	hlist_add_fake(&ctx->hn);
 	ctx->apps = me;
 	ctx->fdata = fdata;
 	ctx->pra = (remote_arg_t *)(&ctx[1]);
@@ -773,6 +775,53 @@ static int get_page_list(uint32_t kernel, struct smq_invoke_ctx *ctx)
 	return err;
 }
 
+static inline int is_overlapped_outbuf(struct smq_invoke_ctx *ctx, int oix)
+{
+	int inbufs, outbufs;
+
+	inbufs = REMOTE_SCALARS_INBUFS(ctx->sc);
+	outbufs = REMOTE_SCALARS_OUTBUFS(ctx->sc);
+	if (!ctx->overps[oix]->mstart)
+		return 1;
+	oix = oix + 1;
+	if ((oix < inbufs + outbufs) && !ctx->overps[oix]->mstart &&
+			ctx->overps[oix]->raix < inbufs)
+		return 1;
+	return 0;
+}
+
+static int clear_user_outbufs(struct smq_invoke_ctx *ctx)
+{
+	remote_arg_t *pra = ctx->pra;
+	remote_arg_t *rpra = ctx->rpra;
+	uintptr_t ptr, end;
+	int oix, err = 0;
+	int inbufs = REMOTE_SCALARS_INBUFS(ctx->sc);
+	int outbufs = REMOTE_SCALARS_OUTBUFS(ctx->sc);
+
+	for (oix = 0; oix < inbufs + outbufs; ++oix) {
+		int i = ctx->overps[oix]->raix;
+		if ((i < inbufs) || (pra[i].buf.pv != rpra[i].buf.pv) ||
+			is_overlapped_outbuf(ctx, oix))
+			continue;
+		VERIFY(err, 0 == clear_user(rpra[i].buf.pv,
+				(rpra[i].buf.len < 8) ? rpra[i].buf.len : 8));
+		if (err)
+			goto bail;
+		ptr = buf_page_start(rpra[i].buf.pv) + PAGE_SIZE;
+		end = (uintptr_t)rpra[i].buf.pv + rpra[i].buf.len;
+		for (; ptr < end; ptr += PAGE_SIZE) {
+			VERIFY(err, 0 == clear_user((void *)ptr,
+					((end - ptr) < 8) ? end - ptr : 8));
+			if (err)
+				goto bail;
+		}
+	}
+
+ bail:
+	return err;
+}
+
 static int get_args(uint32_t kernel, struct smq_invoke_ctx *ctx,
 			remote_arg_t *upra)
 {
@@ -905,8 +954,14 @@ static int get_args(uint32_t kernel, struct smq_invoke_ctx *ctx,
 		rlen -= mlen;
 	}
 
-	for (i = 0; i < inbufs; ++i) {
-		if (rpra[i].buf.len)
+	if (!kernel) {
+		VERIFY(err, 0 == clear_user_outbufs(ctx));
+		if (err)
+			goto bail;
+	}
+	for (oix = 0; oix < inbufs + outbufs; ++oix) {
+		int i = ctx->overps[oix]->raix;
+		if (rpra[i].buf.len && ctx->overps[oix]->mstart)
 			dmac_flush_range(rpra[i].buf.pv,
 				  (char *)rpra[i].buf.pv + rpra[i].buf.len);
 	}
@@ -989,8 +1044,11 @@ static void inv_args_pre(uint32_t sc, remote_arg_t *rpra)
 	}
 }
 
-static void inv_args(uint32_t sc, remote_arg_t *rpra, int used)
+static void inv_args(struct smq_invoke_ctx *ctx)
 {
+	uint32_t sc = ctx->sc;
+	remote_arg_t *rpra = ctx->rpra;
+	int used = ctx->obuf.used;
 	int i, inbufs, outbufs;
 	int inv = 0;
 
@@ -1254,13 +1312,13 @@ static int fastrpc_internal_invoke(struct fastrpc_apps *me, uint32_t mode,
 
 	inv_args_pre(ctx->sc, ctx->rpra);
 	if (FASTRPC_MODE_SERIAL == mode)
-		inv_args(ctx->sc, ctx->rpra, ctx->obuf.used);
+		inv_args(ctx);
 	VERIFY(err, 0 == fastrpc_invoke_send(me, kernel, invoke->handle,
 						ctx->sc, ctx, &ctx->obuf));
 	if (err)
 		goto bail;
 	if (FASTRPC_MODE_PARALLEL == mode)
-		inv_args(ctx->sc, ctx->rpra, ctx->obuf.used);
+		inv_args(ctx);
  wait:
 	if (kernel)
 		wait_for_completion(&ctx->work);

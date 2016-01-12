@@ -175,6 +175,18 @@
 			qcom,adc-vdd-reference = <1800>;
 			qcom,vadc-poll-eoc;
 			qcom,vadc-meas-int-mode;
+			qcom,pmic-revid = <&pmi8994_revid>;
+
+			chan@d {
+				label = "chg_temp";
+				reg = <0xd>;
+				qcom,decimation = <0>;
+				qcom,pre-div-channel-scaling = <0>;
+				qcom,calibration-type = "absolute";
+				qcom,scale-function = <16>;
+				qcom,hw-settle-time = <0>;
+				qcom,fast-avg-setup = <0>;
+			};
 		};
 
 		pmi8994_charger: qcom,qpnp-smbcharger {
@@ -196,6 +208,8 @@
 			qcom,parallel-usb-min-current-ma = <1400>;
 			qcom,parallel-usb-9v-min-current-ma = <900>;
 			qcom,parallel-allowed-lowering-ma = <500>;
+			qcom,autoadjust-vfloat;
+			qcom,pmic-revid = <&pmi8994_revid>;
 
 			qcom,chgr@1000 {
 				reg = <0x1000 0x100>;
@@ -304,6 +318,8 @@
 			qcom,cycle-counter-low-soc = <15>;
 			qcom,cycle-counter-high-soc = <85>;
 			qcom,capacity-learning-on;
+			qcom,fg-cc-cv-threshold-mv = <4340>;
+			qcom,pmic-revid = <&pmi8994_revid>;
 
 			qcom,fg-soc@4000 {
 				status = "okay";
