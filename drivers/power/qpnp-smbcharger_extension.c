@@ -517,7 +517,7 @@ static bool somc_chg_is_charger_type_same(const char *type)
 		rc = chg_params->usb_psy->get_property(chg_params->usb_psy,
 			POWER_SUPPLY_PROP_CHARGER_TYPE, &prop);
 		if (rc < 0)
-			pr_err("Couldn't read charger type: %d\n", rc);
+			pr_debug("Couldn't read charger type: %d\n", rc);
 		else if (strcmp(prop.strval, type) == 0)
 			ret = true;
 	}
