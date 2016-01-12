@@ -11,6 +11,7 @@
  *
  */
 
+#include <linux/cpu.h>
 #include <linux/delay.h>
 #include <linux/err.h>
 #include <linux/init.h>
@@ -63,7 +64,7 @@ static void *emergency_dload_mode_addr;
 static bool scm_dload_supported;
 
 static int dload_set(const char *val, struct kernel_param *kp);
-static int download_mode = 1;
+static int download_mode;
 module_param_call(download_mode, dload_set, param_get_int,
 			&download_mode, 0644);
 static int panic_prep_restart(struct notifier_block *this,
@@ -116,11 +117,6 @@ static void set_dload_mode(int on)
 		pr_err("Failed to set secure DLOAD mode: %d\n", ret);
 
 	dload_mode_enabled = on;
-}
-
-static bool get_dload_mode(void)
-{
-	return dload_mode_enabled;
 }
 
 static void enable_emergency_dload_mode(void)
@@ -225,11 +221,7 @@ static void msm_restart_prepare(const char *cmd)
 			(in_panic || restart_mode == RESTART_DLOAD));
 #endif
 
-	/* Hard reset the PMIC unless memory contents must be maintained. */
-	if (get_dload_mode() || (cmd != NULL && cmd[0] != '\0'))
-		qpnp_pon_system_pwr_off(PON_POWER_OFF_WARM_RESET);
-	else
-		qpnp_pon_system_pwr_off(PON_POWER_OFF_HARD_RESET);
+	qpnp_pon_system_pwr_off(PON_POWER_OFF_WARM_RESET);
 
 	if (cmd != NULL) {
 		if (!strncmp(cmd, "bootloader", 10)) {
@@ -238,6 +230,8 @@ static void msm_restart_prepare(const char *cmd)
 			__raw_writel(0x77665502, restart_reason);
 		} else if (!strcmp(cmd, "rtc")) {
 			__raw_writel(0x77665503, restart_reason);
+		} else if (!strncmp(cmd, "s1bootloader", 12)) {
+			__raw_writel(0x6f656d53, restart_reason);
 		} else if (!strncmp(cmd, "oem-", 4)) {
 			unsigned long code;
 			int ret;
@@ -356,6 +350,19 @@ static void do_msm_poweroff(void)
 	return;
 }
 
+static int msm_reboot_call(struct notifier_block *this,
+			   unsigned long code, void *_cmd)
+{
+	if (code == SYS_DOWN)
+		disable_nonboot_cpus();
+
+	return NOTIFY_DONE;
+}
+
+static struct notifier_block msm_reboot_notifier = {
+	.notifier_call = msm_reboot_call,
+};
+
 static int msm_restart_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -387,6 +394,9 @@ static int msm_restart_probe(struct platform_device *pdev)
 	}
 
 #endif
+
+	register_reboot_notifier(&msm_reboot_notifier);
+
 	np = of_find_compatible_node(NULL, NULL,
 				"qcom,msm-imem-restart_reason");
 	if (!np) {

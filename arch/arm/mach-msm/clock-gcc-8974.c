@@ -2438,6 +2438,11 @@ static struct clk_lookup msm_clocks_gcc_8974[] = {
 	CLK_LOOKUP_OF("bus_clk",      gcc_ce2_axi_clk,     "qcedev.0"),
 	CLK_LOOKUP_OF("core_clk_src", ce2_clk_src,         "qcedev.0"),
 
+	CLK_LOOKUP_OF("core_clk",     gcc_ce2_clk,         "qcrypto.0"),
+	CLK_LOOKUP_OF("iface_clk",    gcc_ce2_ahb_clk,     "qcrypto.0"),
+	CLK_LOOKUP_OF("bus_clk",      gcc_ce2_axi_clk,     "qcrypto.0"),
+	CLK_LOOKUP_OF("core_clk_src", ce2_clk_src,         "qcrypto.0"),
+
 	CLK_LOOKUP_OF("core_clk", gcc_ce2_clk, "fd440000.qcom,qcrypto"),
 	CLK_LOOKUP_OF("iface_clk", gcc_ce2_ahb_clk, "fd440000.qcom,qcrypto"),
 	CLK_LOOKUP_OF("bus_clk", gcc_ce2_axi_clk, "fd440000.qcom,qcrypto"),
@@ -2542,8 +2547,8 @@ static struct clk_lookup msm_clocks_gcc_8974[] = {
 
 static struct clk_lookup msm_clocks_gcc_8974_only[] = {
 	/* Camera Sensor clocks */
-	CLK_LOOKUP_OF("cam_src_clk", gp1_clk_src, "2.qcom,camera"),
-	CLK_LOOKUP_OF("cam_clk", gcc_gp1_clk, "2.qcom,camera"),
+	CLK_LOOKUP_OF("cam_src_clk", gp1_clk_src, "1.qcom,camera"),
+	CLK_LOOKUP_OF("cam_clk", gcc_gp1_clk, "1.qcom,camera"),
 };
 
 static struct clk *qup_i2c_clks[][2] = {

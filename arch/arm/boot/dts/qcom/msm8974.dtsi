@@ -2204,7 +2204,7 @@
         qcom,qcedev@fd440000 {
 		compatible = "qcom,qcedev";
 		reg = <0xfd440000 0x20000>,
-		      <0xfd444000 0x1b000>;
+		      <0xfd444000 0x8000>;
 		reg-names = "crypto-base","crypto-bam-base";
 		interrupts = <0 236 0>;
 		qcom,bam-pipe-pair = <1>;
@@ -2219,36 +2219,15 @@
 		qcom,ce-opp-freq = <100000000>;
 	};
 
-        qcom,qcrypto@fd440000 {
+        qcom,qcrypto@fd444000 {
 		compatible = "qcom,qcrypto";
 		reg = <0xfd440000 0x20000>,
-		      <0xfd444000 0x1b000>;
+		      <0xfd444000 0x8000>;
 		reg-names = "crypto-base","crypto-bam-base";
 		interrupts = <0 236 0>;
 		qcom,bam-pipe-pair = <2>;
 		qcom,ce-hw-instance = <1>;
 		qcom,ce-device = <0>;
-		qcom,clk-mgmt-sus-res;
-                qcom,msm-bus,name = "qcrypto-noc";
-		qcom,msm-bus,num-cases = <2>;
-		qcom,msm-bus,num-paths = <1>;
-		qcom,use-sw-aes-cbc-ecb-ctr-algo;
-		qcom,use-sw-aes-xts-algo;
-		qcom,use-sw-ahash-algo;
-		qcom,msm-bus,vectors-KBps =
-				<56 512 0 0>,
-				<56 512 3936000 393600>;
-		qcom,ce-opp-freq = <100000000>;
-	};
-        qcom,qcrypto1@fd440000 {
-		compatible = "qcom,qcrypto";
-		reg = <0xfd440000 0x20000>,
-		      <0xfd444000 0x1b000>;
-		reg-names = "crypto-base","crypto-bam-base";
-		interrupts = <0 236 0>;
-		qcom,bam-pipe-pair = <0>;
-		qcom,ce-hw-instance = <1>;
-		qcom,ce-device = <1>;
 		qcom,clk-mgmt-sus-res;
                 qcom,msm-bus,name = "qcrypto-noc";
 		qcom,msm-bus,num-cases = <2>;
@@ -2727,7 +2706,7 @@
 			qcom,smdpkt-dev-name = "smd_sns_adsp";
 		};
 
-		qcom,smdpkt-cxm-qmi-port-8064 {
+		smdpkt_cxm_wcnss: qcom,smdpkt-cxm-qmi-port-8064 {
 			qcom,smdpkt-remote = "wcnss";
 			qcom,smdpkt-port-name = "CXM_QMI_PORT_8064";
 			qcom,smdpkt-dev-name = "smd_cxm_qmi";

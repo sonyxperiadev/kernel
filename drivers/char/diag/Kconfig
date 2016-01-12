@@ -29,4 +29,10 @@ config DIAGFWD_BRIDGE_CODE
 	bool "Enable QSC/9K DIAG traffic over SMUX/HSIC"
 	help
 	 SMUX/HSIC Transport Layer for DIAG Router
+
+config DIAGFWD_MHI_BRIDGE
+	default n
+	bool "Enable QSC DIAG traffic over MHI"
+	help
+	 MHI Transport Layer for DIAG Router
 endmenu

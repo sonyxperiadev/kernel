@@ -557,6 +557,7 @@
 			<0xff 298>,  /* msm_iommu_nonsecure_irq */
 			<0xff 302>,  /* coresight-tmc-etr */
 			<0xff 303>,  /* int_msi */
+			<0xff 304>,  /* int_a */
 			<0xff 310>,  /* int_pls_err */
 			<0xff 311>,  /* int_aer_legacy */
 			<0xff 313>,  /* int_pls_link_down */
