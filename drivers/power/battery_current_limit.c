@@ -49,6 +49,11 @@
 			goto _exit; \
 	} while (0)
 
+#ifdef CONFIG_MSM_BCL_SOMC_CTL
+#define SOC_THRESHOLD_MIN 0
+#define SOC_THRESHOLD_MAX 100
+#endif /* CONFIG_MSM_BCL_SOMC_CTL */
+
 /*
  * Battery Current Limit Enable or Not
  */
@@ -219,11 +224,17 @@ static void __ref bcl_handle_hotplug(struct work_struct *work)
 	if (cpumask_empty(bcl_cpu_online_mask))
 		bcl_update_online_mask();
 
+#ifdef CONFIG_MSM_BCL_SOMC_CTL
+	if (bcl_soc_state == BCL_LOW_THRESHOLD
+		&& bcl_ibat_state == BCL_HIGH_THRESHOLD)
+		bcl_hotplug_request = bcl_soc_hotplug_mask;
+#else
 	if  (bcl_soc_state == BCL_LOW_THRESHOLD
 		|| bcl_vph_state == BCL_LOW_THRESHOLD)
 		bcl_hotplug_request = bcl_soc_hotplug_mask;
 	else if (bcl_ibat_state == BCL_HIGH_THRESHOLD)
 		bcl_hotplug_request = bcl_hotplug_mask;
+#endif
 	else
 		bcl_hotplug_request = 0;
 
@@ -299,9 +310,14 @@ static int bcl_cpufreq_callback(struct notifier_block *nfb,
 
 	switch (event) {
 	case CPUFREQ_INCOMPATIBLE:
+#ifdef CONFIG_MSM_BCL_SOMC_CTL
+		if (bcl_ibat_state == BCL_HIGH_THRESHOLD
+			&& bcl_soc_state == BCL_LOW_THRESHOLD) {
+#else
 		if (bcl_vph_state == BCL_LOW_THRESHOLD
 			|| bcl_ibat_state == BCL_HIGH_THRESHOLD
 			|| bcl_soc_state == BCL_LOW_THRESHOLD) {
+#endif
 			max_freq = (gbcl->bcl_monitor_type
 				== BCL_IBAT_MONITOR_TYPE) ? gbcl->btm_freq_max
 				: gbcl->bcl_p_freq_max;
@@ -894,6 +910,10 @@ show_bcl(ibat_state, bcl_ibat_state, "%d\n")
 show_bcl(hotplug_mask, bcl_hotplug_mask, "%d\n")
 show_bcl(hotplug_soc_mask, bcl_soc_hotplug_mask, "%d\n")
 show_bcl(hotplug_status, bcl_hotplug_request, "%d\n")
+#ifdef CONFIG_MSM_BCL_SOMC_CTL
+show_bcl(soc_threshold, soc_low_threshold, "%d\n")
+show_bcl(soc_state, bcl_soc_state, "%d\n")
+#endif /* CONFIG_MSM_BCL_SOMC_CTL */
 
 static ssize_t
 mode_show(struct device *dev, struct device_attribute *attr, char *buf)
@@ -1250,6 +1270,34 @@ static ssize_t hotplug_soc_mask_store(struct device *dev,
 
 	return count;
 }
+
+#ifdef CONFIG_MSM_BCL_SOMC_CTL
+static ssize_t soc_threshold_store(struct device *dev,
+					struct device_attribute *attr,
+					const char *buf, size_t count)
+{
+	int ret = 0;
+	int val = 0;
+
+	ret = convert_to_int(buf, &val);
+	if (ret)
+		goto error;
+
+	if (SOC_THRESHOLD_MIN > val || SOC_THRESHOLD_MAX < val) {
+		ret = -EINVAL;
+		goto error;
+	}
+
+	soc_low_threshold = val;
+	pr_debug("Updated soc_low_threshold to %d\n",
+		soc_low_threshold);
+
+	return count;
+
+error:
+	return ret;
+}
+#endif /* CONFIG_MSM_BCL_SOMC_CTL */
 /*
  * BCL device attributes
  */
@@ -1292,6 +1340,11 @@ static struct device_attribute btm_dev_attr[] = {
 	__ATTR(hotplug_mask, 0644, hotplug_mask_show, hotplug_mask_store),
 	__ATTR(hotplug_soc_mask, 0644, hotplug_soc_mask_show,
 		hotplug_soc_mask_store),
+#ifdef CONFIG_MSM_BCL_SOMC_CTL
+	__ATTR(soc_threshold, 0644, soc_threshold_show,
+		soc_threshold_store),
+	__ATTR(soc_state, 0444, soc_state_show, NULL),
+#endif /* CONFIG_MSM_BCL_SOMC_CTL */
 };
 
 static int create_bcl_sysfs(struct bcl_context *bcl)

@@ -465,6 +465,12 @@ config QPNP_SMBCHARGER
 	  The driver also offers relevant information to userspace via the
 	  power supply framework.
 
+config QPNP_SMBCHARGER_EXTENSION
+	tristate "QPNP SMB Charger SoMC extension"
+	depends on QPNP_SMBCHARGER
+	help
+	  Say Y here to enable SoMC extensions to SMB Charger functions.
+
 config QPNP_FG
 	tristate "QPNP fuel gauge driver"
 	depends on SPMI
@@ -474,6 +480,12 @@ config QPNP_FG
 	  battery fuel gauging and state of charge of battery connected to the
 	  fuel gauge. The state of charge is reported through a BMS power
 	  supply property and also sends uevents when the capacity is updated.
+
+config QPNP_FG_EXTENSION
+	tristate "QPNP fuel gauge SoMC extension"
+	depends on QPNP_FG
+	help
+	  Say Y here to enable SoMC extensions to fuel gauge functions.
 
 config PM8921_BMS
 	tristate "PM8921 Battery Monitoring System driver"
@@ -562,6 +574,13 @@ config MSM_BCL_PERIPHERAL_CTL
 	  Say Y here to enable this BCL PMIC peripheral driver. This driver
 	  provides routines to configure and monitor the BCL
 	  PMIC peripheral.
+
+config MSM_BCL_SOMC_CTL
+	bool "BCL driver SoMC extensions"
+	depends on BATTERY_BCL
+	depends on MSM_BCL_PERIPHERAL_CTL
+	help
+	  Say Y here to enable control with new condition.
 
 source "drivers/power/reset/Kconfig"
 

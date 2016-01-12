@@ -25,6 +25,7 @@
 #include <sound/soc.h>
 #include <sound/initval.h>
 #include <sound/soc-dpcm.h>
+#include "codecs/tfa98xx_if.h"
 
 static int soc_compr_open(struct snd_compr_stream *cstream)
 {
@@ -602,6 +603,10 @@ exit:
 			goto out;
 	}
 
+#ifdef CONFIG_MACH_SONY_SHINANO
+	if (stream == SNDRV_PCM_STREAM_PLAYBACK)
+                tfa98xx_speaker_amp_enable();
+#endif
 	dpcm_dapm_stream_event(fe, stream, SND_SOC_DAPM_STREAM_START);
 
 	fe->dpcm[stream].state = SND_SOC_DPCM_STATE_PREPARE;

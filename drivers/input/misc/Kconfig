@@ -373,6 +373,15 @@ config INPUT_KXTJ9_POLLED_MODE
 	help
 	  Say Y here if you need accelerometer to work in polling mode.
 
+config INPUT_KIONIX_ACCEL
+        tristate "KIONIX_ACCEL"
+        depends on I2C && SYSFS
+        help
+          If you say yes here you get support for the Kionix digital 3-axis
+          accelerometer.
+          This driver can also be built as a module. If so, the module will be
+          called kionix_accel.
+
 config INPUT_POWERMATE
 	tristate "Griffin PowerMate and Contour Jog support"
 	depends on USB_ARCH_HAS_HCD
@@ -480,6 +489,15 @@ config INPUT_GPIO
 	tristate "GPIO driver support"
 	help
 	  Say Y here if you want to support gpio based keys, wheels etc...
+
+config INPUT_BU520X1NVX
+	tristate "BU520X1NVX driver support"
+	default n
+	help
+	  Say Y here
+	  if you want to
+	  support BU520X1NVX
+	  as bipolar detection device.
 
 config INPUT_ISA1200_FF_MEMLESS
 	tristate "ISA1200 haptic ff-memless support"
@@ -788,6 +806,16 @@ config SENSORS_CAPELLA_CM36283
 	  To compile this driver as a module, choose M here: the
 	  module will be called CM36283.
 
+config SENSORS_CAPELLA_CM36686
+	tristate "CM36686 proximity and light sensor"
+	depends on I2C
+	help
+	  Say Y here to enable the CM36686 Proximity
+	  Sensor with Ambient Light Sensor.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called CM36686.
+
 config SENSORS_BMA2X2
 	tristate "BMA2x2 acceleration sensor support"
 	depends on I2C
@@ -811,6 +839,20 @@ config SENSORS_BMA2X2_ENABLE_INT2
 	 acceleration sensors BMA255/BMA254/BMA355/BMA250E/BMA222E/BMA280.
 	 Can only open if you do NOT open interrupt INT1 support
 
+config SENSORS_BMG160
+	tristate "BMG160 Gyroscope Driver"
+	depends on I2C
+	default n
+	help
+	  BMG160 Gyroscope Driver implemented by Bosch-Sensortec.
+
+config SENSORS_BMM050
+	tristate "BMM050 Magnetic Sensor Driver"
+	depends on I2C
+	default n
+	help
+	  BMM050 Magnetic Sensor Driver implemented by Bosch-Sensortec.
+
 config SIG_MOTION
 	tristate "support significant motion sensor function"
 	depends on SENSORS_BMA2X2  && ( SENSORS_BMA2X2_ENABLE_INT1 || SENSORS_BMA2X2_ENABLE_INT2)
@@ -829,6 +871,14 @@ config SENSORS_BMI058
 	help
 	 If you say yes here, you get support for Bosch Sensortec's
 	 sensor driver of BMI058.
+
+config FPC1145_TEE
+	tristate "FPC1145 fingerprint driver"
+	default n
+	depends on SPI
+	help
+	  Say Y here if you want to enable the FPC1145 tee fingerprint
+	  sensor driver.
 
 config SENSORS_MC3430
 	tristate "MC3430 acceleration sensor support"

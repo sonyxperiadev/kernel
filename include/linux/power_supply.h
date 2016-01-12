@@ -4,6 +4,7 @@
  *  Copyright © 2007  Anton Vorontsov <cbou@mail.ru>
  *  Copyright © 2004  Szabolcs Gyurko
  *  Copyright © 2003  Ian Molton <spyro@f2s.com>
+ *  Copyright (C) 2013-2014 Sony Mobile Communications AB.
  *
  *  Modified: 2004, Oct     Szabolcs Gyurko
  *
@@ -95,6 +96,7 @@ enum power_supply_property {
 	POWER_SUPPLY_PROP_PRESENT,
 	POWER_SUPPLY_PROP_ONLINE,
 	POWER_SUPPLY_PROP_AUTHENTIC,
+	POWER_SUPPLY_PROP_BATTERY_CHARGING_ENABLED,
 	POWER_SUPPLY_PROP_CHARGING_ENABLED,
 	POWER_SUPPLY_PROP_TECHNOLOGY,
 	POWER_SUPPLY_PROP_CYCLE_COUNT,
@@ -113,6 +115,7 @@ enum power_supply_property {
 	POWER_SUPPLY_PROP_VCHG_LOOP_DBC_BYPASS,
 	POWER_SUPPLY_PROP_CURRENT_NOW,
 	POWER_SUPPLY_PROP_CURRENT_AVG,
+	POWER_SUPPLY_PROP_CURRENT_SYSTEM_MAX,
 	POWER_SUPPLY_PROP_POWER_NOW,
 	POWER_SUPPLY_PROP_POWER_AVG,
 	POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN,
@@ -120,6 +123,8 @@ enum power_supply_property {
 	POWER_SUPPLY_PROP_CHARGE_FULL,
 	POWER_SUPPLY_PROP_CHARGE_EMPTY,
 	POWER_SUPPLY_PROP_CHARGE_NOW,
+	POWER_SUPPLY_PROP_CHARGE_NOW_RAW,
+	POWER_SUPPLY_PROP_CHARGE_NOW_ERROR,
 	POWER_SUPPLY_PROP_CHARGE_AVG,
 	POWER_SUPPLY_PROP_CHARGE_COUNTER,
 	POWER_SUPPLY_PROP_CHARGE_COUNTER_SHADOW,
@@ -141,11 +146,14 @@ enum power_supply_property {
 	POWER_SUPPLY_PROP_CAPACITY_ALERT_MIN, /* in percents! */
 	POWER_SUPPLY_PROP_CAPACITY_ALERT_MAX, /* in percents! */
 	POWER_SUPPLY_PROP_CAPACITY_LEVEL,
+	POWER_SUPPLY_PROP_CAPACITY_RAW,
 	POWER_SUPPLY_PROP_TEMP,
 	POWER_SUPPLY_PROP_TEMP_ALERT_MIN,
 	POWER_SUPPLY_PROP_TEMP_ALERT_MAX,
 	POWER_SUPPLY_PROP_COOL_TEMP,
 	POWER_SUPPLY_PROP_WARM_TEMP,
+	POWER_SUPPLY_PROP_COLD_TEMP,
+	POWER_SUPPLY_PROP_HOT_TEMP,
 	POWER_SUPPLY_PROP_TEMP_AMBIENT,
 	POWER_SUPPLY_PROP_TEMP_AMBIENT_ALERT_MIN,
 	POWER_SUPPLY_PROP_TEMP_AMBIENT_ALERT_MAX,
@@ -160,13 +168,32 @@ enum power_supply_property {
 	POWER_SUPPLY_PROP_RESISTANCE_CAPACITIVE,
 	/* unit is in ohms due to ID being typically in kohm range */
 	POWER_SUPPLY_PROP_RESISTANCE_ID,
+	POWER_SUPPLY_PROP_RESISTANCE_NOW,
 	/* Local extensions */
+	POWER_SUPPLY_PROP_ENABLE_SHUTDOWN_AT_LOW_BATTERY,
+	POWER_SUPPLY_PROP_BATT_AGING,
+	POWER_SUPPLY_PROP_ENABLE_LLK,
+	POWER_SUPPLY_PROP_BATT_ID,
 	POWER_SUPPLY_PROP_USB_HC,
 	POWER_SUPPLY_PROP_USB_OTG,
 	POWER_SUPPLY_PROP_CHARGE_ENABLED,
 	POWER_SUPPLY_PROP_FLASH_CURRENT_MAX,
 	POWER_SUPPLY_PROP_UPDATE_NOW,
 	POWER_SUPPLY_PROP_ESR_COUNT,
+	POWER_SUPPLY_PROP_SAFETY_TIMER_ENABLE,
+	POWER_SUPPLY_PROP_CHARGE_DONE,
+	POWER_SUPPLY_PROP_FLASH_ACTIVE,
+	POWER_SUPPLY_PROP_FORCE_TLIM,
+	POWER_SUPPLY_PROP_ALLOW_DETECTION,
+	POWER_SUPPLY_PROP_CYCLE_COUNT_ID,
+	POWER_SUPPLY_PROP_USBIN_DET,
+	POWER_SUPPLY_PROP_WIRELESS_DET,
+	POWER_SUPPLY_PROP_INVALID_CHARGER,
+	POWER_SUPPLY_PROP_LLK_SOCMAX,
+	POWER_SUPPLY_PROP_LLK_SOCMIN,
+	POWER_SUPPLY_PROP_STOP_USB_HOST_FUNCTION,
+	POWER_SUPPLY_PROP_FV_CFG,
+	POWER_SUPPLY_PROP_FV_CMP_CFG,
 	/* Local extensions of type int64_t */
 	POWER_SUPPLY_PROP_CHARGE_COUNTER_EXT,
 	/* Properties of type `const char *' */
@@ -174,6 +201,7 @@ enum power_supply_property {
 	POWER_SUPPLY_PROP_MANUFACTURER,
 	POWER_SUPPLY_PROP_SERIAL_NUMBER,
 	POWER_SUPPLY_PROP_BATTERY_TYPE,
+	POWER_SUPPLY_PROP_CHARGER_TYPE,
 };
 
 enum power_supply_type {
@@ -288,6 +316,8 @@ extern int power_supply_set_supply_type(struct power_supply *psy,
 extern int power_supply_set_hi_power_state(struct power_supply *psy, int value);
 extern int power_supply_set_low_power_state(struct power_supply *psy,
 							int value);
+extern int power_supply_set_allow_detection(struct power_supply *psy,
+							int value);
 extern int power_supply_is_system_supplied(void);
 extern int power_supply_register(struct device *parent,
 				 struct power_supply *psy);
@@ -331,6 +361,9 @@ static inline int power_supply_set_hi_power_state(struct power_supply *psy,
 							int value)
 							{ return -ENOSYS; }
 static inline int power_supply_set_low_power_state(struct power_supply *psy,
+							int value)
+							{ return -ENOSYS; }
+static inline int power_supply_set_allow_detection(struct power_supply *psy,
 							int value)
 							{ return -ENOSYS; }
 static inline int power_supply_is_system_supplied(void) { return -ENOSYS; }

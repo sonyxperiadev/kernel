@@ -359,6 +359,18 @@ config TOUCHSCREEN_MAX11801
 	  To compile this driver as a module, choose M here: the
 	  module will be called max11801_ts.
 
+config TOUCHSCREEN_MAXIM_STI
+	tristate "Maxim SmartTouch Imager touchscreen"
+	depends on SPI_MASTER
+	help
+	  Say Y here if you want to enable support for
+	  Maxim SmartTouch Imager touchscreen in SPI mode.
+
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called maxim_sti.
+
 config TOUCHSCREEN_MCS5000
 	tristate "MELFAS MCS-5000 touchscreen"
 	depends on I2C
@@ -518,6 +530,38 @@ config SYNA_MULTI_TOUCH
 	tristate "Synaptics i2c touchscreen(ClearPad 3000) MutilTouch support"
 	depends on TOUCHSCREEN_SYNAPTICS_RMI4_I2C
 	default y
+
+config TOUCHSCREEN_CLEARPAD
+        tristate "Synaptics ClearPad"
+	default n
+        help
+          Say Y here to enable Synaptics ClearPad touchscreen.
+
+config TOUCHSCREEN_CLEARPAD_I2C
+        tristate "Synaptics ClearPad I2C"
+	depends on I2C && TOUCHSCREEN_CLEARPAD
+	default n
+        help
+          Say Y here to enable Synaptics ClearPad I2C touchscreen.
+
+config TOUCHSCREEN_CLEARPAD_RMI_DEV
+        tristate "Synaptics ClearPad RMI Dev"
+	depends on GPIO_SYSFS && TOUCHSCREEN_CLEARPAD && TOUCHSCREEN_CLEARPAD_I2C
+	default n
+        help
+          Say Y here to enable Synaptics ClearPad RMI dev.
+
+config TOUCHSCREEN_MAX1187X
+	tristate "Maxim max1187x Touchscreen"
+	depends on I2C
+	help
+	  Say Y here if you have a Maxim max1187x touchscreen connected
+	  to your system.
+
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called max1187x.
 
 config TOUCHSCREEN_TOUCHRIGHT
 	tristate "Touchright serial touchscreen"
@@ -1043,5 +1087,20 @@ config INPUT_MT_WRAPPER
 	  Say Y here if you want to enable the driver.
 
 	  If unsure, say N.
+
+config TOUCHSCREEN_ELAN_EKTF3135
+	tristate "ELAN EKTF3135 I2C touchscreen"
+	depends on I2C
+	help
+	  Say Y here if you have a ELAN EKTF3135 I2C touchscreen
+	  connected to your system.
+
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called synaptics_dsx_i2c.
+
+source "drivers/input/touchscreen/cyttsp4/Kconfig"
+source "drivers/input/touchscreen/cyttsp5/Kconfig"
 
 endif

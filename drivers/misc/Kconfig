@@ -541,6 +541,12 @@ config SRAM
 	  the genalloc API. It is supposed to be used for small on-chip SRAM
 	  areas found on many SoCs.
 
+config UID_CPUTIME
+	tristate "Per-UID cpu time statistics"
+	depends on PROFILING
+	help
+	  Per UID based cpu time statistics exported to /proc/uid_cputime
+
 config TSIF
 	depends on ARCH_MSM8X60 || ARCH_MSM8960 || ARCH_APQ8064
 	tristate "TSIF (Transport Stream InterFace) support"
@@ -567,6 +573,13 @@ config HAPTIC_ISA1200
 	help
 	  The ISA1200 is a high performance enhanced haptic driver.
 
+config PMI8994_FLASH
+	tristate "Flash support for PMI8994"
+	depends on SPMI && OF_SPMI
+	help
+	  This option enables device driver support for the flash
+	  on PMI8994.
+
 config QSEECOM
 	tristate "Qualcomm Secure Execution Communicator driver"
 	help
@@ -590,6 +603,25 @@ config QPNP_MISC
 	  peripheral. The MISC peripheral holds the USB ID interrupt
 	  and the driver provides an API to check if this interrupt
 	  is available on the current PMIC chip.
+
+config NFC_PN547
+	bool "NXP PN547 NFC Controller Driver"
+	depends on I2C
+	default n
+	help
+	  NXP PN547 Near Field Communication controller support.
+	  This option enables device driver support for the NFC.
+	  It is used by many services. NFC is fully controlled using I2C
+	  to communicate the AP chip.
+
+config NFC_PN547_PMC8974_CLK_REQ
+	bool "NXP PN547 NFC Controller Driver"
+	depends on I2C
+	default n
+	help
+	  PM8941 Clock request for NXP PN547 Near Field
+	  Communication controller support.
+	  This option enables d1 clock for NFC.
 
 config USB_HSIC_SMSC_HUB
 	tristate "Support for HSIC based MSM on-chip SMSC3503 HUB"
@@ -619,6 +651,28 @@ config QCOM_LIQUID_DOCK
 	  This option enables support for the USB and Ethernet ports found on
 	  the docking station of various models of Qualcomm Technology's
 	  LiQUID Mobile Development Platforms.
+
+config NFC_PN544
+	tristate "NFC driver for PN544"
+	default n
+	depends on I2C
+	help
+	  This option enables support for PN544.
+
+config IR_REMOTE
+	bool "MAXQ614 IR Remote control"
+	default n
+	help
+	  This option enables device driver support for IR remote control
+	  device.
+
+config AD7146
+	tristate "AD7146 proximity driver"
+	depends on I2C
+	default n
+	help
+	  If you say yes here you get support for the AD7146 chip.
+	  This is used as a proximity sensor.
 
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"

@@ -1090,8 +1090,7 @@ static int mmc_sdio_power_restore(struct mmc_host *host)
 		/* to query card if 1.8V signalling is supported */
 		host->ocr |= R4_18V_PRESENT;
 
-	ret = mmc_sdio_init_card(host, host->ocr, host->card,
-				mmc_card_keep_power(host));
+	ret = mmc_sdio_init_card(host, host->ocr, host->card, 0);
 	if (!ret && host->sdio_irqs)
 		mmc_signal_sdio_irq(host);
 
@@ -1279,3 +1278,19 @@ int sdio_reset_comm(struct mmc_card *card)
 	return mmc_power_restore_host(card->host);
 }
 EXPORT_SYMBOL(sdio_reset_comm);
+
+void sdio_ctrl_power(struct mmc_host *host, bool onoff)
+{
+	if (host == NULL)
+		return;
+
+	mmc_claim_host(host);
+	if (onoff)
+		mmc_power_up(host);
+	else
+		mmc_power_off(host);
+	/* Wait at least 1 ms according to SD spec */
+	mmc_delay(1);
+	mmc_release_host(host);
+}
+EXPORT_SYMBOL(sdio_ctrl_power);

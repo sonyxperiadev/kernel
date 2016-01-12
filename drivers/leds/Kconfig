@@ -74,6 +74,14 @@ config LEDS_LM3642
 	  white LED.
 
 
+config LEDS_LM3630
+	tristate "LCD Backlight driver for LM3630"
+	depends on LEDS_CLASS
+	depends on I2C
+	help
+	  This option enables support for the LCD backlight connected
+	  to LM3630 LED driver chips accessed via the I2C bus.
+
 config LEDS_LOCOMO
 	tristate "LED Support for Locomo device"
 	depends on LEDS_CLASS
@@ -231,6 +239,17 @@ config LEDS_LP5562
 	  It is 4 channels chip with programmable engines.
 	  Driver provides direct control via LED class and interface for
 	  programming the engines.
+
+config LEDS_LP855X
+	tristate "LED Support for LP855x Backlight Driver I2C chip"
+	depends on LEDS_CLASS
+	depends on I2C
+	help
+	  This option enables support for LEDs connected to LP855X
+	  Lighting Management Unit (LMU) also known as Backlight Driver.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called leds-lp855x.
 
 config LEDS_LP8788
 	tristate "LED support for the TI LP8788 PMIC"

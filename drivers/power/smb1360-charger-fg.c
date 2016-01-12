@@ -29,6 +29,12 @@
 #include <linux/bitops.h>
 #include <linux/qpnp/qpnp-adc.h>
 
+#ifdef CONFIG_MACH_SONY_TULIP
+#include <soc/qcom/smem.h>
+#include <linux/usb/msm_hsusb.h>
+#include <linux/reboot.h>
+#endif
+
 #define _SMB1360_MASK(BITS, POS) \
 	((unsigned char)(((1 << (BITS)) - 1) << (POS)))
 #define SMB1360_MASK(LEFT_BIT_POS, RIGHT_BIT_POS) \
@@ -240,6 +246,71 @@
 #define FG_RESET_THRESHOLD_MV		15
 #define SMB1360_REV_1			0x01
 
+
+#ifdef CONFIG_MACH_SONY_TULIP
+#define BRAIN_WORK_PERIOD_MS		10000
+#define PWR_ON_EVENT_USB_CHG		0x10
+#define MAX_REG_LOOP_CHAR		10
+#define FG_SLEEP_REG			0x04
+#define SLEEP_ALLOW_BIT			BIT(2)
+#define FLT_VTG_CDELTA_REG		0x16
+#define FLT_VTG_MV_MASK			SMB1360_MASK(6, 0)
+#define FLT_VTG_035V_MV			0x23
+#define AUTO_RECHG_EN_BIT		BIT(2)
+#define SOFT_HOT_REG			0x14
+#define SOFT_HOT_MASK			SMB1360_MASK(3, 0)
+#define SOFT_HOT_600MA			BIT(0)
+
+/* Watchdog */
+#define WD_CFG_REG				0x0C
+#define WD_CFG_CTRL_BIT			BIT(0)
+
+/* Wake locking time after charger unplugged */
+#define UNPLUG_WAKELOCK_TIME_SEC	(2 * HZ)
+
+#define RESET_HW_SAFETY			3600*1000	/* ms */
+#define STEAL_SOC			60*1000		/* ms */
+#define SAFTY_TIMER			(108*60*1000)	/* ms */
+#define MAINTENACE60_T			(60*3600*1000)	/* ms */
+#define MAINTENACE200_T			(200*3600*1000)+MAINTENACE60_T /* ms*/
+#define VMAXSEL_MAINTENACE60_DELTA	50
+#define VMAXSEL_MAINTENACE200_DELTA	100
+
+static int is_poc;
+static int call_state;
+static int brain_ms;
+static int reset_counter;
+static int soc_delta;
+static int real_soc;
+static int last_real_soc;
+static int last_report_soc;
+static int steal_soc_counter;
+static bool count_down;
+
+
+struct smb1360_chip *the_chip;
+
+static int usb_chg_boost;
+module_param(usb_chg_boost, int, 0644);
+
+static int vbat_limit_off = 3000;
+static int check_count = 0;
+
+enum chg_sony_state {
+	CSS_GENERAL = 0,
+	CSS_SAFETY_TIMEOUT,
+	CSS_MAINTENANCE_60,
+	CSS_MAINTENANCE_200,
+};
+
+enum next_action {
+	NEXT_ACTION_NONE = 0,
+	NEXT_ACTION_MAN_60_to_200 = 1,
+	NEXT_ACTION_START_NEW_CYCLE = 2,
+	NEXT_ACTION_SAFETY_TIMEOUT = 4,
+};
+#endif
+
 enum {
 	WRKRND_FG_CONFIG_FAIL = BIT(0),
 	WRKRND_BATT_DET_FAIL = BIT(1),
@@ -368,6 +439,15 @@ struct smb1360_chip {
 	struct mutex			charging_disable_lock;
 	struct mutex			current_change_lock;
 	struct mutex			read_write_lock;
+#ifdef CONFIG_MACH_SONY_TULIP
+	struct delayed_work		brain_work;
+	struct wake_lock		unplug_wake_lock;
+	enum chg_sony_state		chg_state;
+	unsigned int			maintenance_timer;
+	unsigned int			safety_timer;
+	bool				resuming_charging;
+	bool				force_batt_full;
+#endif
 };
 
 static int chg_time[] = {
@@ -875,6 +955,9 @@ static int smb1360_get_prop_batt_status(struct smb1360_chip *chip)
 	int rc;
 	u8 reg = 0, chg_type;
 
+	if (!chip->usb_present)
+		return POWER_SUPPLY_STATUS_DISCHARGING;
+
 	if (chip->batt_full)
 		return POWER_SUPPLY_STATUS_FULL;
 
@@ -953,6 +1036,82 @@ static int smb1360_get_prop_batt_health(struct smb1360_chip *chip)
 	return ret.intval;
 }
 
+static int smb1360_tulip_batt_capacity_extension(struct smb1360_chip *chip, int soc)
+{
+	int rc, report_soc;
+	bool soc_pass;
+
+	real_soc = bound(soc, 0, 100);
+	if (chip->batt_full && !chip->resuming_charging) {
+		if ((chip->chg_state == CSS_MAINTENANCE_60 && real_soc < 97) ||
+			(chip->chg_state == CSS_MAINTENANCE_200 && real_soc < 94)) {
+			pr_err("resume charging at soc=%d\n", real_soc);
+			chip->resuming_charging = true;
+			rc = __smb1360_charging_disable(chip, true);
+			if (rc)
+				pr_err("disable charging failed rc=%d\n", rc);
+			rc = __smb1360_charging_disable(chip, false);
+			if (rc)
+				pr_err("enable charging failed rc=%d\n", rc);
+		}
+	}
+
+	if (chip->force_batt_full && !chip->usb_present) {
+		soc_delta = 100 - real_soc;
+		chip->force_batt_full = false;
+		pr_info("assign soc_delta=%d\n", soc_delta);
+	}
+
+	if (chip->usb_present && chip->force_batt_full && !chip->batt_full &&
+		last_real_soc > real_soc && !soc_delta) {
+		if ((chip->chg_state == CSS_MAINTENANCE_60 && real_soc < 96) ||
+			(chip->chg_state == CSS_MAINTENANCE_200 && real_soc < 93)) {
+			soc_delta = 100 - real_soc;
+			chip->force_batt_full = false;
+			pr_debug("%s: chg current can't afford system demand!"
+				 "assign soc_delta=%d\n", __func__, soc_delta);
+		}
+	}
+
+	if (check_count < 3)
+		check_count++;
+	else if (check_count == 3) {
+		check_count++;
+		if (real_soc >= 97 && !soc_delta) {
+			soc_delta = 100 - real_soc;
+			pr_debug("%s: assign soc_delta=%d at beginning\n",
+							__func__, soc_delta);
+			soc_pass = true;
+		}
+	}
+
+	if (soc_delta) {
+		if (real_soc >= 100) {
+			pr_debug("%s: real_soc=%d, clean soc_delta.\n",
+							__func__, real_soc);
+			soc_delta = 0;
+		}
+		if (real_soc > last_real_soc)
+			soc_delta--;
+
+		if (!count_down && real_soc == 0) {
+			pr_debug("%s: start to count down!\n", __func__);
+			count_down = true;
+		}
+	}
+
+	report_soc = real_soc + soc_delta;
+	if (soc_delta && report_soc > last_report_soc && !chip->usb_present && !soc_pass) {
+		soc_delta = soc_delta - (report_soc - last_report_soc);
+		report_soc = real_soc + soc_delta;
+		pr_debug("calib: soc_delta=%d, last_report_soc=%d, report_soc=%d\n", soc_delta, last_report_soc, report_soc);
+	}
+
+	last_real_soc = real_soc;
+	last_report_soc = chip->force_batt_full ? 100 : report_soc;
+	return last_report_soc;
+}
+
 static int smb1360_get_prop_batt_capacity(struct smb1360_chip *chip)
 {
 	u8 reg;
@@ -981,7 +1140,11 @@ static int smb1360_get_prop_batt_capacity(struct smb1360_chip *chip)
 	pr_debug("msys_soc_reg=0x%02x, fg_soc=%d batt_full = %d\n", reg,
 						soc, chip->batt_full);
 
+#ifdef CONFIG_MACH_SONY_TULIP
+	return smb1360_tulip_batt_capacity_extension(chip, soc);
+#else
 	return chip->batt_full ? 100 : bound(soc, 0, 100);
+#endif
 }
 
 static int smb1360_get_prop_chg_full_design(struct smb1360_chip *chip)
@@ -1084,6 +1247,139 @@ static int smb1360_get_prop_current_now(struct smb1360_chip *chip)
 
 	return temp * 1000;
 }
+
+#ifdef CONFIG_MACH_SONY_TULIP
+static void smb1360_get_prop_usb_present(struct smb1360_chip *chip)
+{
+	int rc;
+	u8 reg = 0;
+
+	rc = smb1360_read(chip, IRQ_E_REG, &reg);
+	if (rc < 0)
+		dev_err(chip->dev, "Couldn't read irq E rc = %d\n", rc);
+	else
+		chip->usb_present = (reg & IRQ_E_USBIN_UV_BIT) ? false : true;
+}
+
+static int smb1360_get_prop_float_voltage(struct smb1360_chip *chip)
+{
+	int rc;
+	u8 reg = 0;
+
+	rc = smb1360_read(chip, BATT_CHG_FLT_VTG_REG, &reg);
+	if (rc) {
+		pr_err("Could't read BATT_CHG_FLT_VTG_REG rc=%d\n", rc);
+		return 0;
+	} else
+		pr_debug("BATT_CHG_FLT_VTG_REG = 0x%02x\n", reg);
+
+	return ((reg * VFLOAT_STEP_MV) + MIN_FLOAT_MV);
+}
+
+static int smb1360_get_prop_recharge_threshold(struct smb1360_chip *chip)
+{
+	int rc, rechg_mv;
+	u8 reg = 0;
+
+	rc = smb1360_read(chip, CFG_BATT_CHG_REG, &reg);
+	if (rc) {
+		pr_err("Could't read CFG_BATT_CHG_REG rc=%d\n", rc);
+		return 0;
+	} else
+		pr_debug("BATT_CHG_REG = 0x%02x\n", reg);
+
+	reg = (reg & RECHG_MV_MASK) >> RECHG_MV_SHIFT;
+
+	if (reg == 0x03)
+		rechg_mv = 300;
+	else if (reg == 0x02)
+		rechg_mv = 200;
+	else if (reg == 0x01)
+		rechg_mv = 100;
+	else
+		rechg_mv = 50;
+
+	return rechg_mv;
+}
+
+static int smb1360_get_prop_input_current(struct smb1360_chip *chip)
+{
+	int rc, i;
+	u8 reg = 0;
+
+	rc = smb1360_read(chip, CFG_BATT_CHG_ICL_REG, &reg);
+	if (rc) {
+		pr_err("Could't read CFG_BATT_CHG_ICL_REG rc=%d\n", rc);
+		return 0;
+	} else
+		pr_debug("CFG_BATT_CHG_ICL_REG = 0x%02x\n", reg);
+
+	i = (int)(reg & INPUT_CURR_LIM_MASK);
+	return input_current_limit[i];
+}
+
+static int smb1360_get_prop_input_type(struct smb1360_chip *chip)
+{
+	int rc, input_type;
+	u8 reg = 0;
+
+	rc = smb1360_read(chip, CMD_IL_REG, &reg);
+	if (rc) {
+		pr_err("Could't read CMD_IL_REG rc=%d\n", rc);
+		return 0;
+	} else
+		pr_debug("CMD_IL_REG = 0x%02x\n", reg);
+
+	if (reg & USB_100_BIT)
+		input_type = 100;
+	else if (reg & USB_500_BIT)
+		input_type = 500;
+	else if (reg & USB_AC_BIT)
+		input_type = 1500;
+
+	return input_type;
+}
+
+static int smb1360_get_prop_fast_chg_current(struct smb1360_chip *chip)
+{
+	int rc, current_ma;
+	u8 reg = 0;
+
+	rc = smb1360_read(chip, CHG_CURRENT_REG, &reg);
+	if (rc) {
+		pr_err("Could't read CMD_IL_REG rc=%d\n", rc);
+		return 0;
+	} else
+		pr_debug("CHG_CURRENT_REG = 0x%02x\n", reg);
+
+	current_ma = (int)(reg & FASTCHG_CURR_MASK) >> FASTCHG_CURR_SHIFT;
+	return ((current_ma * 150) + 450);
+}
+
+static void smb1360_get_wd_status(struct smb1360_chip *chip)
+{
+	int rc;
+	u8 reg = 0;
+
+	rc = smb1360_read(chip, WD_CFG_REG, &reg);
+	if (rc)
+		pr_err("Couldn't read WD_CFG_REG rc=%d\n", rc);
+	else
+		pr_info("WD_CFG_REG = 0x%02x\n", reg);
+}
+
+static void smb1360_enable_wd(struct smb1360_chip *chip, bool enable)
+{
+	int rc;
+
+	pr_info("enable watchdog = %d\n", enable);
+	rc = smb1360_masked_write(chip, WD_CFG_REG,
+					WD_CFG_CTRL_BIT,
+					enable ? WD_CFG_CTRL_BIT : 0);
+	if (rc)
+		dev_err(chip->dev, "Couldn't set WD_CFG_CTRL = %d\n", rc);
+}
+#endif
 
 static int smb1360_set_minimum_usb_current(struct smb1360_chip *chip)
 {
@@ -1473,7 +1769,7 @@ static void smb1360_external_power_changed(struct power_supply *psy)
 		if (prop.intval == 0)
 			rc = power_supply_set_online(chip->usb_psy, true);
 	} else {
-		if (prop.intval == 1)
+		if (prop.intval == 1 && !chip->usb_present)
 			rc = power_supply_set_online(chip->usb_psy, false);
 	}
 	if (rc < 0)
@@ -1655,12 +1951,84 @@ static int chg_fastchg_handler(struct smb1360_chip *chip, u8 rt_stat)
 	return 0;
 }
 
+#ifdef CONFIG_MACH_SONY_TULIP
+static int chg_recharge_handler(struct smb1360_chip *chip, u8 rt_stat)
+{
+	int rc;
+
+	pr_info("rt_stat = 0x%02x\n", rt_stat);
+
+	if (!chip->batt_warm) {
+		if (chip->chg_state == CSS_GENERAL) {
+			rc = smb1360_float_voltage_set(chip, chip->vfloat_mv);
+			if (rc)
+				pr_err("Couldn't set float voltage rc = %d\n", rc);
+		}
+	} else {
+		chip->safety_timer = 0;
+		pr_info("We do nothing here because battery is warm\n");
+	}
+
+	return 0;
+}
+
+static void
+check_unplug_wakelock(struct smb1360_chip *chip)
+{
+	pr_debug("Set unplug wake_lock\n");
+	wake_lock_timeout(&chip->unplug_wake_lock,
+			UNPLUG_WAKELOCK_TIME_SEC);
+}
+
+static int tulip_usbin_uv_handler(struct smb1360_chip *chip, u8 rt_stat)
+{
+	bool usb_present = !rt_stat;
+	int rc;
+
+	if (!chip->usb_present &&
+	    usb_present &&
+	    chip->chg_state == CSS_SAFETY_TIMEOUT) {
+		chip->charging_disabled_status = 0;
+		rc = __smb1360_charging_disable(chip, false);
+		if (rc)
+			pr_err("%s: enable charging failed rc = %d\n",
+					__func__, rc);
+	}
+	chip->safety_timer = 0;
+	chip->maintenance_timer = 0;
+	chip->chg_state = CSS_GENERAL;
+
+	if (chip->usb_present && !usb_present) {
+		/* USB removed */
+		check_unplug_wakelock(chip);
+		chip->usb_present = usb_present;
+		power_supply_set_present(chip->usb_psy, usb_present);
+		rc = smb1360_float_voltage_set(chip, chip->vfloat_mv);
+		if (rc)
+			pr_err("Couldn't set float voltage rc = %d\n", rc);
+		pm_relax(chip->dev);
+	}
+
+	if (!chip->usb_present && usb_present) {
+		/* USB inserted */
+		chip->usb_present = usb_present;
+		power_supply_set_present(chip->usb_psy, usb_present);
+		pm_stay_awake(chip->dev);
+	}
+
+	return 0;
+}
+#endif
+
 static int usbin_uv_handler(struct smb1360_chip *chip, u8 rt_stat)
 {
 	bool usb_present = !rt_stat;
 
 	pr_debug("chip->usb_present = %d usb_present = %d\n",
 				chip->usb_present, usb_present);
+#ifdef CONFIG_MACH_SONY_TULIP
+	return tulip_usbin_uv_handler(chip, rt_stat);
+#else
 	if (chip->usb_present && !usb_present) {
 		/* USB removed */
 		chip->usb_present = usb_present;
@@ -1674,6 +2042,7 @@ static int usbin_uv_handler(struct smb1360_chip *chip, u8 rt_stat)
 	}
 
 	return 0;
+#endif
 }
 
 static int chg_inhibit_handler(struct smb1360_chip *chip, u8 rt_stat)
@@ -1716,7 +2085,9 @@ static int empty_soc_handler(struct smb1360_chip *chip, u8 rt_stat)
 			pr_warn_ratelimited("SOC is 0\n");
 		} else {
 			chip->empty_soc = false;
+#ifndef CONFIG_MACH_SONY_TULIP
 			pm_relax(chip->dev);
+#endif
 		}
 	}
 
@@ -2008,6 +2379,9 @@ static struct irq_handler_info handlers[] = {
 			},
 			{
 				.name		= "recharge",
+#ifdef CONFIG_MACH_SONY_TULIP
+				.smb_irq 	= chg_recharge_handler,
+#endif
 			},
 			{
 				.name		= "fast_chg",
@@ -3296,6 +3670,11 @@ static int smb1360_enable(struct smb1360_chip *chip, bool enable)
 	int rc = 0;
 	u8 val = 0, shdn_cmd_polar;
 
+#ifdef CONFIG_MACH_SONY_TULIP
+	smb1360_enable_wd(chip, !enable);
+	smb1360_get_wd_status(chip);
+#endif
+
 	rc = smb1360_read(chip, SHDN_CTRL_REG, &val);
 	if (rc < 0) {
 		dev_err(chip->dev, "Couldn't read 0x1A reg rc = %d\n", rc);
@@ -3394,6 +3773,47 @@ static int smb1360_jeita_init(struct smb1360_chip *chip)
 	return rc;
 }
 
+#ifdef CONFIG_MACH_SONY_TULIP
+static int smb1360_read_reg(struct smb1360_chip *chip, int reg)
+{
+	s32 rc;
+	u8 val;
+
+	mutex_lock(&chip->read_write_lock);
+	rc = __smb1360_read(chip, reg, &val);
+	if (rc < 0) {
+		dev_err(chip->dev, "read failed: reg=%03X, rc=%d\n", reg, rc);
+		goto out;
+	}
+
+	pr_info("the value of reg:%03X is %x\n", reg, val);
+	
+out:
+	mutex_unlock(&chip->read_write_lock);
+	return rc;
+}
+
+static void reset_hw_safety_timer(struct smb1360_chip *chip)
+{
+	int rc = 0;
+
+	pr_info("reset hw safety timer\n");
+	rc = smb1360_masked_write(chip, CFG_SFY_TIMER_CTRL_REG,
+	SAFETY_TIME_DISABLE_BIT, SAFETY_TIME_DISABLE_BIT);
+	if (rc < 0) {
+		pr_err("Couldn't disable safety timer rc = %d\n", rc);
+		return;
+	}
+
+	rc = smb1360_masked_write(chip, CFG_SFY_TIMER_CTRL_REG,
+	SAFETY_TIME_DISABLE_BIT, 0);
+	if (rc < 0) {
+		pr_err("Couldn't enable safety timer rc = %d\n", rc);
+		return;
+	}
+}
+#endif
+
 static int smb1360_hw_init(struct smb1360_chip *chip)
 {
 	int rc;
@@ -3454,8 +3874,11 @@ static int smb1360_hw_init(struct smb1360_chip *chip)
 	rc = smb1360_masked_write(chip, CFG_CHG_MISC_REG,
 					CHG_EN_BY_PIN_BIT
 					| CHG_EN_ACTIVE_LOW_BIT
-					| PRE_TO_FAST_REQ_CMD_BIT,
-					0);
+					| PRE_TO_FAST_REQ_CMD_BIT
+#ifdef CONFIG_MACH_SONY_TULIP
+					| AUTO_RECHG_EN_BIT
+#endif
+					,0);
 	if (rc < 0) {
 		dev_err(chip->dev, "Couldn't set CFG_CHG_MISC_REG rc=%d\n", rc);
 		return rc;
@@ -3709,6 +4132,27 @@ static int smb1360_hw_init(struct smb1360_chip *chip)
 		pr_err("Couldn't configure FG rc=%d\n", rc);
 		return rc;
 	}
+
+#ifdef CONFIG_MACH_SONY_TULIP
+	rc = smb1360_masked_write(chip, FG_SLEEP_REG, SLEEP_ALLOW_BIT,
+					SLEEP_ALLOW_BIT);
+	if (rc)
+		pr_err("Couldn't enable FG sleep allowed mode rc=%d\n", rc);
+	else
+		pr_info("%s: Enable FG sleep allowed mode\n", __func__);
+
+	rc = smb1360_masked_write(chip, FLT_VTG_CDELTA_REG, FLT_VTG_MV_MASK,
+					FLT_VTG_035V_MV);
+	if (rc)
+		pr_err("Failed to write Float Voltage Compensation Delta rc=%d\n", rc);
+
+	rc = smb1360_masked_write(chip, SOFT_HOT_REG, SOFT_HOT_MASK,
+					SOFT_HOT_600MA);
+	if (rc)
+		pr_err("Failed to write SOFT_HOT_CURRENT rc=%d\n", rc);
+
+	reset_hw_safety_timer(chip);
+#endif
 
 	rc = smb1360_charging_disable(chip, USER, !!chip->charging_disabled);
 	if (rc)
@@ -4079,6 +4523,174 @@ static int smb_parse_dt(struct smb1360_chip *chip)
 	return 0;
 }
 
+#ifdef CONFIG_MACH_SONY_TULIP
+int config_safety_time(int safety_time) {
+	struct smb1360_chip *chip = the_chip;
+	int rc, i;
+	u8 reg;
+
+	if (chip->safety_time != -EINVAL) {
+		if (chip->safety_time == 0) {
+			rc = smb1360_masked_write(chip, CFG_SFY_TIMER_CTRL_REG,
+			SAFETY_TIME_DISABLE_BIT, SAFETY_TIME_DISABLE_BIT);
+			if (rc < 0) {
+				dev_err(chip->dev,
+					"Couldn't set safety timer rc = %d\n",
+									rc);
+				return rc;
+			}
+		} else {
+			for (i = 0; i < ARRAY_SIZE(chg_time); i++) {
+				if (chip->safety_time <= chg_time[i]) {
+					reg = i << SAFETY_TIME_MINUTES_SHIFT;
+					break;
+				}
+			}
+			rc = smb1360_masked_write(chip, CFG_SFY_TIMER_CTRL_REG,
+			SAFETY_TIME_DISABLE_BIT | SAFETY_TIME_MINUTES_MASK,
+								reg);
+			if (rc < 0) {
+				dev_err(chip->dev,
+					"Couldn't set safety timer rc = %d\n",
+									rc);
+				return rc;
+			}
+			pr_info("safety_time=%d, reg=%x", chg_time[i], reg);
+		}
+	}
+
+	/* read the setting value of safety time */
+	rc = smb1360_read_reg(chip, CFG_SFY_TIMER_CTRL_REG);
+
+	if (rc >= 0)
+		chip->safety_time =	safety_time;
+
+	return rc;
+}
+
+int get_chg_type(void);
+static void
+brain_work(struct work_struct *work)
+{
+	struct delayed_work *dwork = to_delayed_work(work);
+	struct smb1360_chip *chip = container_of(dwork,
+				struct smb1360_chip, brain_work);
+
+	int rc, chg_type = 0;
+	int local_call_state = call_state;
+	int LOCAL_PERIOD_MS = BRAIN_WORK_PERIOD_MS;
+	enum next_action my_next_action = NEXT_ACTION_NONE;
+	int soc = smb1360_get_prop_batt_capacity(chip);
+	int vbat_mv = smb1360_get_prop_voltage_now(chip) / 1000;
+	int ibat_ma = smb1360_get_prop_current_now(chip) / 1000;
+	int bat_temp = smb1360_get_prop_batt_temp(chip);
+	int chg_status = smb1360_get_prop_batt_status(chip);
+	int rechg = smb1360_get_prop_recharge_threshold(chip);
+	int vdd_max = smb1360_get_prop_float_voltage(chip);
+	int fast_chg = smb1360_get_prop_fast_chg_current(chip);
+	int input_type = smb1360_get_prop_input_type(chip);
+	int input_current = smb1360_get_prop_input_current(chip);
+	int en = smb1360_get_prop_charging_status(chip);
+
+	smb1360_get_prop_usb_present(chip);
+	if (brain_ms)
+		LOCAL_PERIOD_MS = brain_ms;
+	if (chip->usb_present)
+		chg_type = get_chg_type();
+
+	pr_info("Cap=%d, %d, VBAT=%d, IBAT=%d, T=%d, USB=%d, Type=%d BMD=%d, Full=%d,%d Delta=%d\n",
+		soc, real_soc, vbat_mv, ibat_ma, bat_temp, chip->usb_present, chg_type, chip->batt_present,
+		chip->batt_full, chip->force_batt_full, soc_delta);
+	pr_info("vdd_max=%d, rechg=%d, input_ma=%d, input_type=%d, fast_chg=%d time=%d, main=%d, en=%d\n",
+		vdd_max, rechg, input_current, input_type, fast_chg, chip->safety_timer/1000,
+		chip->maintenance_timer/1000, en);
+
+	if (!is_poc) {
+		if (vbat_mv > 1000 && vbat_mv <= vbat_limit_off) {
+			pr_info("Battery voltage is lower than %d. Power down now! \n", vbat_limit_off);
+			msleep(5000);
+			kernel_power_off();
+		}
+	}
+
+	/* safety timer */
+	if (chg_status == POWER_SUPPLY_STATUS_CHARGING && local_call_state == 0) {
+		if (chip->chg_state == CSS_GENERAL && chg_type == USB_DCP_CHARGER) {
+			chip->safety_timer += LOCAL_PERIOD_MS;
+			if (chip->safety_timer >= SAFTY_TIMER) {
+				chip->chg_state = CSS_SAFETY_TIMEOUT;
+				reset_hw_safety_timer(chip);
+				reset_counter = 0;
+				chip->safety_timer = 0;
+			}
+		}
+	}
+
+	/* maintenance */
+	if ((chip->chg_state == CSS_MAINTENANCE_60) ||  (chip->chg_state == CSS_MAINTENANCE_200)) {
+		chip->maintenance_timer += LOCAL_PERIOD_MS;
+		if (chip->chg_state == CSS_MAINTENANCE_60) {
+			if (chip->maintenance_timer >= MAINTENACE60_T) {
+				pr_info("NEXT_ACTION_MAN_60_to_200");
+				my_next_action |= NEXT_ACTION_MAN_60_to_200;
+				chip->chg_state = CSS_MAINTENANCE_200;
+			}
+		} else {
+			if (chip->maintenance_timer >= MAINTENACE200_T) {
+				pr_info("NEXT_ACTION_START_NEW_CYCLE");
+				my_next_action |= NEXT_ACTION_START_NEW_CYCLE;
+				chip->safety_timer = 0;
+				chip->maintenance_timer = 0;
+				chip->chg_state = CSS_GENERAL;
+			}
+		}
+	}
+
+	if (my_next_action & NEXT_ACTION_MAN_60_to_200) {
+		rc = smb1360_float_voltage_set(chip, chip->vfloat_mv - VMAXSEL_MAINTENACE200_DELTA);
+		if (rc)
+			pr_err("Couldn't set float voltage rc = %d\n", rc);
+	} else if (my_next_action & NEXT_ACTION_START_NEW_CYCLE) {
+		rc = smb1360_float_voltage_set(chip, chip->vfloat_mv);
+		if (rc)
+			pr_err("Couldn't set float voltage rc = %d\n", rc);
+
+		rc = __smb1360_charging_disable(chip, true);
+		if (rc)
+			pr_err("disable charging failed rc=%d\n", rc);
+
+		rc = __smb1360_charging_disable(chip, false);
+		if (rc)
+			pr_err("enable charging failed rc=%d\n", rc);
+	}
+
+	if (chip->chg_state != CSS_SAFETY_TIMEOUT)
+		reset_counter += LOCAL_PERIOD_MS;
+
+	if (reset_counter >= RESET_HW_SAFETY) {
+		reset_hw_safety_timer(chip);
+		reset_counter = 0;
+	}
+
+	if (count_down) {
+		if (ibat_ma > 0 && soc_delta > 0 && steal_soc_counter >= STEAL_SOC) {
+			soc_delta--;
+			steal_soc_counter = 0;
+			pr_info("soc_delta=%d\n", soc_delta);
+			if (soc_delta == 0) {
+				pr_info("count_down is finished\n");
+				count_down = false;
+			}
+		}
+		steal_soc_counter += LOCAL_PERIOD_MS;
+	}
+
+	schedule_delayed_work(&chip->brain_work,
+		msecs_to_jiffies(LOCAL_PERIOD_MS));
+	return;
+}
+#endif
+
 static int smb1360_probe(struct i2c_client *client,
 				const struct i2c_device_id *id)
 {
@@ -4153,6 +4765,17 @@ static int smb1360_probe(struct i2c_client *client,
 			"Unable to determine init status rc = %d\n", rc);
 		goto fail_hw_init;
 	}
+
+#ifdef CONFIG_MACH_SONY_TULIP
+	INIT_DELAYED_WORK(&chip->brain_work, brain_work);
+	schedule_delayed_work(&chip->brain_work, 0);
+	wake_lock_init(&chip->unplug_wake_lock,
+			WAKE_LOCK_SUSPEND, "smb1360_unplug_charger");
+	the_chip = chip;
+	chip->safety_timer = 0;
+	chip->maintenance_timer = 0;
+	chip->chg_state = CSS_GENERAL;
+#endif
 
 	chip->batt_psy.name		= "battery";
 	chip->batt_psy.type		= POWER_SUPPLY_TYPE_BATTERY;
@@ -4301,6 +4924,10 @@ static int smb1360_probe(struct i2c_client *client,
 				rc);
 	}
 
+#ifdef CONFIG_MACH_SONY_TULIP
+	config_safety_time(192);
+#endif
+
 	dev_info(chip->dev, "SMB1360 revision=0x%x probe success! batt=%d usb=%d soc=%d\n",
 			chip->revision,
 			smb1360_get_prop_batt_present(chip),
@@ -4320,6 +4947,10 @@ static int smb1360_remove(struct i2c_client *client)
 {
 	struct smb1360_chip *chip = i2c_get_clientdata(client);
 
+#ifdef CONFIG_MACH_SONY_TULIP
+	cancel_delayed_work_sync(&chip->brain_work);
+#endif
+
 	regulator_unregister(chip->otg_vreg.rdev);
 	power_supply_unregister(&chip->batt_psy);
 	mutex_destroy(&chip->charging_disable_lock);
@@ -4336,6 +4967,10 @@ static int smb1360_suspend(struct device *dev)
 	int i, rc;
 	struct i2c_client *client = to_i2c_client(dev);
 	struct smb1360_chip *chip = i2c_get_clientdata(client);
+
+#ifdef CONFIG_MACH_SONY_TULIP
+	cancel_delayed_work_sync(&chip->brain_work);
+#endif
 
 	/* Save the current IRQ config */
 	for (i = 0; i < 3; i++) {
@@ -4406,6 +5041,10 @@ static int smb1360_resume(struct device *dev)
 	} else {
 		mutex_unlock(&chip->irq_complete);
 	}
+
+#ifdef CONFIG_MACH_SONY_TULIP
+	schedule_delayed_work(&chip->brain_work, msecs_to_jiffies(3000));
+#endif
 
 	return 0;
 }

@@ -2,6 +2,7 @@
  * driver.h -- SoC Regulator driver support.
  *
  * Copyright (C) 2007, 2008 Wolfson Microelectronics PLC.
+ * Copyright (C) 2013 Sony Mobile Communications AB.
  *
  * Author: Liam Girdwood <lrg@slimlogic.co.uk>
  *
@@ -84,6 +85,8 @@ enum regulator_status {
  *               The function provides the from and to voltage selector, the
  *               function should return the worst case.
  *
+ * @register_ocp_notification: Register the notification for ocp.
+ *
  * @set_suspend_voltage: Set the voltage for the regulator when the system
  *                       is suspended.
  * @set_suspend_enable: Mark the regulator as enabled when the system is
@@ -144,6 +147,10 @@ struct regulator_ops {
 	/* control and report on bypass mode */
 	int (*set_bypass)(struct regulator_dev *dev, bool enable);
 	int (*get_bypass)(struct regulator_dev *dev, bool *enable);
+
+	/* register ocp notification */
+	int (*register_ocp_notification) (struct regulator_dev *,
+			struct regulator_ocp_notification *notification);
 
 	/* the operations below are for configuration of regulator state when
 	 * its parent PMIC enters a global STANDBY/HIBERNATE state */
