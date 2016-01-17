@@ -533,6 +533,7 @@ static int somc_wifi_get_mac_addr(unsigned char *buf)
 	}
 
 	readlen = kernel_read(fp, fp->f_pos, macasc, 17); // 17 = 12 + 5
+	filp_close(fp, NULL);
 	if (readlen > 0) {
 		unsigned char* macbin;
 		struct ether_addr* convmac = ether_aton( macasc );
@@ -551,9 +552,10 @@ static int somc_wifi_get_mac_addr(unsigned char *buf)
 				macbin[3], macbin[4], macbin[5]);
 
 		memcpy(buf, macbin, ETHER_ADDR_LEN);
+	} else {
+		goto random_mac;
 	}
 
-	filp_close(fp, NULL);
 	return ret;
 
 random_mac:
