@@ -366,6 +366,13 @@
 	qcom,enable-load = <0 300000 0>;
 };
 
+&pm8941_lsid0 {
+	qcom,power-on@800 {
+		qcom,s3-debounce = <8>;
+		qcom,s3-src = "kpdpwr-and-resin";
+	};
+};
+
 &pm8941_chg {
 	/delete-property/ qcom,charging-disabled;
 	/delete-property/ qcom,battery-data;
