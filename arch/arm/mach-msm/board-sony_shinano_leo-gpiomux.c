@@ -1103,13 +1103,110 @@ static struct msm_gpiomux_config shinano_all_configs[] __initdata = {
 	},
 };
 
+#define DSDS_PHONEID_LEN 43
+
+static int dsds_variant __initdata;
+
+static int __init probe_dsds(char *phoneid)
+{
+	if (strlen(phoneid) == DSDS_PHONEID_LEN)
+		dsds_variant = 1;
+	else
+		dsds_variant = 0;
+
+	return 1;
+}
+__setup("oemandroidboot.phoneid=", probe_dsds);
+
+struct msm_gpiomux_config leo_dsds_conf[] __initdata = {
+	{ /* UIM2_DATA */
+		.gpio = 49,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &gpio_2ma_follow_qct,
+			[GPIOMUX_SUSPENDED] = &gpio_2ma_follow_qct,
+		},
+	},
+	{ /* UIM2_CLK */
+		.gpio = 50,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &gpio_2ma_follow_qct,
+			[GPIOMUX_SUSPENDED] = &gpio_2ma_follow_qct,
+		},
+	},
+	{ /* UIM2_RST */
+		.gpio = 51,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &gpio_2ma_follow_qct,
+			[GPIOMUX_SUSPENDED] = &gpio_2ma_follow_qct,
+		},
+	},
+	{ /* UIM2_DETECT */
+		.gpio = 52,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &gpio_2ma_follow_qct,
+			[GPIOMUX_SUSPENDED] = &gpio_2ma_follow_qct,
+		},
+	},
+	{ /* PA_ON0 */
+		.gpio = 105,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &gpio_2ma_no_pull_out_low,
+			[GPIOMUX_SUSPENDED] = &gpio_2ma_no_pull_out_low,
+		},
+	},
+	{ /* PA_ON1 */
+		.gpio = 106,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &gpio_2ma_no_pull_out_low,
+			[GPIOMUX_SUSPENDED] = &gpio_2ma_no_pull_out_low,
+		},
+	},
+	{ /* PA_ON2 */
+		.gpio = 108,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &gpio_2ma_no_pull_out_low,
+			[GPIOMUX_SUSPENDED] = &gpio_2ma_no_pull_out_low,
+		},
+	},
+	{ /* NC */
+		.gpio = 109,
+		.settings = { [GPIOMUX_SUSPENDED] = &unused_gpio, },
+	},
+	{ /* PA_R0 */
+		.gpio = 118,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &gpio_2ma_follow_qct,
+			[GPIOMUX_SUSPENDED] = &gpio_2ma_follow_qct,
+		},
+	},
+	{ /* ANT_SEL0 */
+		.gpio = 120,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &gpio_2ma_no_pull_out_low,
+			[GPIOMUX_SUSPENDED] = &gpio_2ma_no_pull_out_low,
+		},
+	},
+	{ /* ANT_SEL1 */
+		.gpio = 121,
+		.settings = {
+			[GPIOMUX_ACTIVE]    = &gpio_2ma_no_pull_out_low,
+			[GPIOMUX_SUSPENDED] = &gpio_2ma_no_pull_out_low,
+		},
+	},
+};
+
 void __init msm_8974_init_gpiomux(void)
 {
 	int rc;
-	struct msm_gpiomux_configs base;
+	struct msm_gpiomux_configs base, diff;
 
-	base.cfg = shinano_all_configs;
-	base.ncfg = ARRAY_SIZE(shinano_all_configs);
+	if (dsds_variant) {
+		base.cfg = shinano_all_configs;
+		base.ncfg = ARRAY_SIZE(shinano_all_configs);
+		diff.cfg = leo_dsds_conf;
+		diff.ncfg = ARRAY_SIZE(leo_dsds_conf);
+		overwrite_configs(&base, &diff);
+	}
 
 	rc = sony_init_gpiomux(shinano_all_configs,
 			ARRAY_SIZE(shinano_all_configs));
