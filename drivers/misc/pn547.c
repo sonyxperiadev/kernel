@@ -38,6 +38,7 @@
 #include <linux/pn547.h>
 #include <linux/wakelock.h>
 #include <linux/of_gpio.h>
+#include <linux/pinctrl/consumer.h>
 
 #ifdef CONFIG_NFC_PN547_CLOCK_REQUEST
 #include <mach/msm_xo.h>
@@ -48,6 +49,8 @@
 #endif
 
 #define MAX_BUFFER_SIZE		512
+#define MAX_NORMAL_FRAME_SIZE	(255 + 3)
+#define MAX_FIRMDL_FRAME_SIZE	(1023 + 5)
 
 #define NFC_DEBUG 0
 #define MAX_TRY_I2C_READ	10
@@ -55,6 +58,7 @@
 #define I2C_ADDR_READ_H		0x57
 
 static bool is_pn544 = 0;
+static bool nfc_has_pinctrl = false;
 
 struct pn547_dev {
 	wait_queue_head_t read_wq;
@@ -65,6 +69,8 @@ struct pn547_dev {
 	unsigned int ven_gpio;
 	unsigned int firm_gpio;
 	unsigned int irq_gpio;
+	struct pinctrl *pinctrl;
+	enum pn547_state state;
 
 	atomic_t irq_enabled;
 	atomic_t read_flag;
@@ -150,12 +156,22 @@ static ssize_t pn547_dev_read(struct file *filp, char __user *buf,
 			      size_t count, loff_t *offset)
 {
 	struct pn547_dev *pn547_dev = filp->private_data;
-	char tmp[MAX_BUFFER_SIZE] = {0, };
-	int ret = 0;
+	char tmp[MAX_FIRMDL_FRAME_SIZE] = {0, };
+	int ret = 0, maxlen;
 	int readingWatchdog = 0;
+	bool fwdl;
 
-	if (count > MAX_BUFFER_SIZE)
-		count = MAX_BUFFER_SIZE;
+	mutex_lock(&pn547_dev->read_mutex);
+
+	fwdl = pn547_dev->state == PN547_STATE_FWDL;
+	if (nfc_has_pinctrl) {
+		maxlen = fwdl ? MAX_FIRMDL_FRAME_SIZE : MAX_NORMAL_FRAME_SIZE;
+		if (count > maxlen)
+			count = maxlen;
+	} else {
+		if (count > MAX_BUFFER_SIZE)
+			count = MAX_BUFFER_SIZE;
+	}
 
 	pr_debug("%s : reading %zu bytes. irq=%s\n", __func__, count,
 		 gpio_get_value(pn547_dev->irq_gpio) ? "1" : "0");
@@ -163,8 +179,6 @@ static ssize_t pn547_dev_read(struct file *filp, char __user *buf,
 #if NFC_DEBUG
 	pr_info("pn547 : + r\n");
 #endif
-
-	mutex_lock(&pn547_dev->read_mutex);
 
 wait_irq:
 	if (!gpio_get_value(pn547_dev->irq_gpio)) {
@@ -243,8 +257,9 @@ static ssize_t pn547_dev_write(struct file *filp, const char __user *buf,
 			       size_t count, loff_t *offset)
 {
 	struct pn547_dev *pn547_dev;
-	char tmp[MAX_BUFFER_SIZE] = {0, };
-	int ret = 0, retry = 2;
+	char tmp[MAX_FIRMDL_FRAME_SIZE] = {0, };
+	int ret = 0, retry = 5, maxlen;
+	bool fwdl;
 
 	pn547_dev = filp->private_data;
 
@@ -252,8 +267,15 @@ static ssize_t pn547_dev_write(struct file *filp, const char __user *buf,
 	pr_info("pn547 : + w\n");
 #endif
 
-	if (count > MAX_BUFFER_SIZE)
-		count = MAX_BUFFER_SIZE;
+	fwdl = pn547_dev->state == PN547_STATE_FWDL;
+	if (nfc_has_pinctrl) {
+		maxlen = fwdl ? MAX_FIRMDL_FRAME_SIZE : MAX_NORMAL_FRAME_SIZE;
+		if (count > maxlen)
+			count = maxlen;
+	} else {
+		if (count > MAX_BUFFER_SIZE)
+			count = MAX_BUFFER_SIZE;
+	}
 
 	if (copy_from_user(tmp, buf, count)) {
 		pr_err("%s : failed to copy from user space\n", __func__);
@@ -297,10 +319,32 @@ static int pn547_dev_open(struct inode *inode, struct file *filp)
 	return 0;
 }
 
+static int pn547_pinctrl_config(struct pn547_dev *dev, uint8_t active)
+{
+	struct pinctrl_state *state;
+	const char *name = active ? "pn547-active" : "pn547-inactive";
+
+	state = pinctrl_lookup_state(dev->pinctrl, name);
+	if (IS_ERR(state)) {
+		pr_err("%s: pinctrl lookup state failed\n", __func__);
+		return PTR_ERR(state);
+	}
+
+	return pinctrl_select_state(dev->pinctrl, state);
+}
+
 static long pn547_dev_ioctl(struct file *filp,
 			   unsigned int cmd, unsigned long arg)
 {
+	int state, ret = 0;
 	struct pn547_dev *pn547_dev = filp->private_data;
+
+	// Activate pinctrl
+	if (nfc_has_pinctrl) {
+		ret = pn547_pinctrl_config(pn547_dev, 1);
+		if (ret)
+			pr_err("%s: pinctrl failed ON chip\n", __func__);
+	}
 
 	switch (cmd) {
 	case PN547_SET_PWR:
@@ -319,6 +363,7 @@ static long pn547_dev_ioctl(struct file *filp,
 				enable_irq(pn547_dev->client->irq);
 				enable_irq_wake(pn547_dev->client->irq);
 			}
+			state = PN547_STATE_FWDL;
 			pr_info("%s power on with firmware, irq=%d\n", __func__,
 				atomic_read(&pn547_dev->irq_enabled));
 		} else if (arg == 1) {
@@ -333,6 +378,7 @@ static long pn547_dev_ioctl(struct file *filp,
 				enable_irq(pn547_dev->client->irq);
 				enable_irq_wake(pn547_dev->client->irq);
 			}
+			state = PN547_STATE_ON;
 			pr_info("%s power on, irq=%d\n", __func__,
 				atomic_read(&pn547_dev->irq_enabled));
 		} else if (arg == 0) {
@@ -347,6 +393,12 @@ static long pn547_dev_ioctl(struct file *filp,
 			gpio_set_value(pn547_dev->firm_gpio, 0);
 			gpio_set_value_cansleep(pn547_dev->ven_gpio, 0);
 			usleep_range(10000, 10050);
+			state = PN547_STATE_OFF;
+			if (nfc_has_pinctrl) {
+				ret = pn547_pinctrl_config(pn547_dev, 0);
+				if (ret)
+					pr_err("%s: pinctrl failed OFF chip\n", __func__);
+			}
 		} else if (arg == 3) {
 			pr_info("%s Read Cancel\n", __func__);
 			pn547_dev->cancel_read = true;
@@ -361,6 +413,9 @@ static long pn547_dev_ioctl(struct file *filp,
 		pr_err("%s bad ioctl %u\n", __func__, cmd);
 		return -EINVAL;
 	}
+
+	if (pn547_dev->state != state)
+		pn547_dev->state = state;
 
 	return 0;
 }
@@ -420,6 +475,7 @@ static int pn547_probe(struct i2c_client *client,
 	char tmp[4] = {0x20, 0x00, 0x01, 0x01};
 	int addrcnt;
 	struct pn547_i2c_platform_data *platform_data;
+	struct pinctrl *pinctrl;
 	struct pn547_dev *pn547_dev;
 
 	if (client->dev.of_node) {
@@ -429,12 +485,29 @@ static int pn547_probe(struct i2c_client *client,
 			dev_err(&client->dev, "Failed to allocate memory\n");
 			return -ENOMEM;
 		}
+
+		nfc_has_pinctrl = false;
+		pinctrl = devm_pinctrl_get(&client->dev);
+
+		if (IS_ERR(pinctrl)) {
+			dev_err(&client->dev, "%s: pinctrl not defined\n", __func__);
+			ret = PTR_ERR(pinctrl);
+		} else {
+			pr_info("%s : pinctrl is defined\n", __func__);
+			nfc_has_pinctrl = true;
+		}
+
 		err = pn547_parse_dt(&client->dev, platform_data);
-		if (err)
+		if (err) {
+			if (nfc_has_pinctrl)
+				devm_pinctrl_put(pinctrl);
 			return err;
-		err = board_nfc_parse_dt(&client->dev, platform_data);
-		if (err < 0)
-			return err;
+		}
+		if (!nfc_has_pinctrl) {
+			err = board_nfc_parse_dt(&client->dev, platform_data);
+			if (err < 0)
+				return err;
+		}
 	} else {
 		platform_data = client->dev.platform_data;
 	}
@@ -518,6 +591,10 @@ static int pn547_probe(struct i2c_client *client,
 	pn547_dev->clk_req_irq = platform_data->clk_req_irq;
 #endif
 	pn547_dev->client = client;
+	pn547_dev->state = PN547_STATE_UNKNOWN;
+
+	if (nfc_has_pinctrl)
+		pn547_dev->pinctrl = pinctrl;
 
 	/* init mutex and queues */
 	init_waitqueue_head(&pn547_dev->read_wq);
@@ -638,6 +715,7 @@ err_ven:
 static int pn547_remove(struct i2c_client *client)
 {
 	struct pn547_dev *pn547_dev;
+	int ret = 0;
 
 	pn547_dev = i2c_get_clientdata(client);
 #ifdef CONFIG_NFC_PN547_PMC8974_CLK_REQ
@@ -646,6 +724,12 @@ static int pn547_remove(struct i2c_client *client)
 #endif
 	wake_lock_destroy(&pn547_dev->nfc_wake_lock);
 	free_irq(client->irq, pn547_dev);
+	if (nfc_has_pinctrl) {
+		ret = pn547_pinctrl_config(pn547_dev, 0);
+		if (ret)
+			pr_err("%s: pinctrl failed on remove\n", __func__);
+		devm_pinctrl_put(pn547_dev->pinctrl);
+	}
 	misc_deregister(&pn547_dev->pn547_device);
 	mutex_destroy(&pn547_dev->read_mutex);
 	gpio_free(pn547_dev->irq_gpio);
