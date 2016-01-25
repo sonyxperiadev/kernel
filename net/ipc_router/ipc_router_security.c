@@ -302,6 +302,10 @@ int msm_ipc_check_send_permissions(void *data)
 	if (uid_eq(current_euid(), GLOBAL_ROOT_UID))
 		return 1;
 
+	/* ...or it has required NET permissions */
+	if (capable(CAP_NET_RAW) || capable(CAP_NET_BIND_SERVICE))
+		return 1;
+
 	/* Destination has no rules defined, possibly a client. */
 	if (!rule)
 		return 1;
