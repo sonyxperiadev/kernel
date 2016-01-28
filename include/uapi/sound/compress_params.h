@@ -418,9 +418,11 @@ struct snd_codec {
 	__u32 format;
 	__u32 align;
 	union snd_codec_options options;
-	/* reserved[0] is compr_passthr and reserved[1] is flags */
-	__u32 reserved[3];
+	__u32 compr_passthr;
+	__u32 reserved[2];
 } __attribute__((packed, aligned(4)));
+
+#define SND_CODEC_COMPRESS_PASSTHROUGH
 
 /** struct snd_codec_metadata
  * @length: Length of the encoded buffer.
