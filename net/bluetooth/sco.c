@@ -465,7 +465,7 @@ static int sco_sock_bind(struct socket *sock, struct sockaddr *addr, int alen)
 	len = min_t(unsigned int, sizeof(sa), alen);
 	memcpy(&sa, addr, len);
 
-	if (addr_len < sizeof(struct sockaddr_sco))
+	if (alen < sizeof(struct sockaddr_sco))
 		return -EINVAL;
 
 	lock_sock(sk);
