@@ -1382,10 +1382,10 @@ void mdss_fb_set_backlight(struct msm_fb_data_type *mfd, u32 bkl_lvl)
 			mfd->bl_level = bkl_lvl;
 			mfd->bl_level_scaled = temp;
 		}
-#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
-		bl_before = temp;
-#endif /* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 	}
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	bl_before = temp;
+#endif /* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 }
 
 void mdss_fb_update_backlight(struct msm_fb_data_type *mfd)
