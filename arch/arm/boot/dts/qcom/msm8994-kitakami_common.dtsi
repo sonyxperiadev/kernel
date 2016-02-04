@@ -102,6 +102,7 @@
 	/* I2C : BLSP2 */
 	i2c@f9924000 {
 		qcom,clk-freq-out = <355000>;
+		qcom,disable-dma;
 		pinctrl-0 = <&msm_gpio_6_act &msm_gpio_7_act>;
 		pinctrl-1 = <&msm_gpio_6_sus &msm_gpio_7_sus>;
 		status = "ok";
