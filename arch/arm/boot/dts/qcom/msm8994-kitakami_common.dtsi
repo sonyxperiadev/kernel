@@ -215,7 +215,7 @@
 
 	/* I2C : BLSP11 */
 	i2c@f9967000 {
-		qcom,clk-freq-out = <355000>;
+		qcom,clk-freq-out = <400000>;
 		pinctrl-0 = <&msm_gpio_83_act &msm_gpio_84_act>;
 		pinctrl-1 = <&msm_gpio_83_sus &msm_gpio_84_sus>;
 		status = "ok";
