@@ -818,6 +818,30 @@ static void reinit_chip_settings(struct data *ts)
 	dev_dbg(&ts->client->dev, "%s: Exit\n", __func__);
 }
 
+
+static inline void wakeup_gesture_do_init(struct device *dev)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct data *ts = i2c_get_clientdata(client);
+
+	if (ts->pdata->wakeup_gesture_support) {
+		ts->evdt_node = evdt_initialize(dev, ts->input_dev,
+							MXM_WAKEUP_GESTURE);
+		if (!ts->evdt_node) {
+			pr_info("No wakeup_gesture dt\n");
+		} else {
+			dev_info(dev, "Touch Wakeup Feature ON\n");
+			device_init_wakeup(&client->dev, 1);
+			device_set_wakeup_enable(&client->dev, true);
+		}
+	} else {
+		dev_info(dev, "Touch Wakeup Feature OFF\n");
+		device_init_wakeup(&client->dev, 0);
+		device_set_wakeup_enable(&client->dev, false);
+	}
+
+}
+
 static void report_wakeup_gesture(struct data *ts,
 				  struct max1187x_touch_report_header *header)
 {
@@ -1363,6 +1387,34 @@ static ssize_t glove_store(struct device *dev,
 	return ret ? ret : strnlen(buf, PAGE_SIZE);
 }
 
+static ssize_t wakeup_gesture_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct data *ts = i2c_get_clientdata(client);
+
+	return snprintf(buf, PAGE_SIZE, "%u\n",
+			ts->pdata->wakeup_gesture_support);
+}
+
+static ssize_t wakeup_gesture_store(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct data *ts = i2c_get_clientdata(client);
+	u32 temp;
+
+	if (sscanf(buf, "%u", &temp) != 1) {
+		dev_err(dev, "Invalid (%s)", buf);
+		return -EINVAL;
+	}
+	ts->pdata->wakeup_gesture_support = temp;
+
+	wakeup_gesture_do_init(dev);
+
+	return strnlen(buf, PAGE_SIZE);
+}
+
 static struct device_attribute dev_attrs[] = {
 	__ATTR(i2c_reset, S_IWUSR, NULL, i2c_reset_store),
 	__ATTR(por, S_IWUSR, NULL, power_on_reset_store),
@@ -1377,7 +1429,9 @@ static struct device_attribute dev_attrs[] = {
 	__ATTR(config_id, S_IRUGO, config_id_show, NULL),
 	__ATTR(driver_ver, S_IRUGO, driver_ver_show, NULL),
 	__ATTR(command, S_IWUSR, NULL, command_store),
-	__ATTR(glove, S_IRUGO | S_IWUSR, glove_show, glove_store)
+	__ATTR(glove, S_IRUGO | S_IWUSR, glove_show, glove_store),
+	__ATTR(wakeup_gesture, S_IRUGO | S_IWUSR,
+			wakeup_gesture_show, wakeup_gesture_store)
 };
 
 static struct bin_attribute dev_attr_report = {
@@ -2048,6 +2102,7 @@ static struct max1187x_pdata *max1187x_get_platdata_dt(struct device *dev)
 	if (of_property_read_u32(devnode, "wakeup_gesture_timeout",
 		&pdata->wakeup_gesture_timeout)) {
 		dev_warn(dev, "Failed to get property: wakeup_gesture_timeout\n");
+		pdata->wakeup_gesture_timeout = 2000;
 	}
 
 	return pdata;
@@ -2294,17 +2349,7 @@ static int probe(struct i2c_client *client, const struct i2c_device_id *id)
 	}
 	dev_info(dev, "(INIT): Input touch device OK");
 
-	if (ts->pdata->wakeup_gesture_support) {
-		ts->evdt_node = evdt_initialize(dev, ts->input_dev,
-							MXM_WAKEUP_GESTURE);
-		if (!ts->evdt_node) {
-			pr_info("No wakeup_gesture dt\n");
-		} else {
-			dev_info(dev, "(INIT): Touch Wakeup Feature OK\n");
-			device_init_wakeup(&client->dev, 1);
-			device_set_wakeup_enable(&client->dev, false);
-		}
-	}
+	wakeup_gesture_do_init(dev);
 
 	/* Setup IRQ and handler */
 	ret = request_threaded_irq(client->irq,
