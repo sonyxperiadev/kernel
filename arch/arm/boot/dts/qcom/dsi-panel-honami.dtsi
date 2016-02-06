@@ -104,7 +104,7 @@
 				00 02 45 00 00 00 00 01 97];
 		somc,mdss-dsi-disp-on-in-hs = <1>;
 		somc,mdss-dsi-wait-time-before-on-cmd = <120>;
-		qcom,mdss-brightness-max-level = <255>;
+		qcom,mdss-brightness-max-level = <4095>;
 		somc,disp-en-off-pre = <10>;
 		somc,disp-en-off-post = <10>;
 		somc,disp-en-on-pre = <25>;
@@ -201,7 +201,7 @@
 				00 02 45 00 00 00 00 01 97];
 		somc,mdss-dsi-disp-on-in-hs = <1>;
 		somc,mdss-dsi-wait-time-before-on-cmd = <150>;
-		qcom,mdss-brightness-max-level = <255>;
+		qcom,mdss-brightness-max-level = <4095>;
 		somc,disp-en-off-pre = <10>;
 		somc,disp-en-off-post = <10>;
 		somc,disp-en-on-pre = <25>;
@@ -381,7 +381,7 @@
 				00 c2 45 00 00 00 00 01 75
 				00 02 45 00 00 00 00 01 97];
 		somc,mdss-dsi-disp-on-in-hs = <1>;
-		qcom,mdss-brightness-max-level = <255>;
+		qcom,mdss-brightness-max-level = <4095>;
 		somc,mdss-dsi-wait-time-before-on-cmd = <120>;
 
 		somc,mdss-dsi-pre-uv-command = [29 01 00 00 00 00 02 B0 04];
@@ -951,7 +951,7 @@
 		somc,mdss-dsi-disp-on-in-hs = <1>;
 		somc,mdss-dsi-wait-time-before-on-cmd = <120>;
 		somc,mdss-dsi-init-from-begin = <1>;
-		qcom,mdss-brightness-max-level = <255>;
+		qcom,mdss-brightness-max-level = <4095>;
 		somc,disp-en-off-pre = <10>;
 		somc,disp-en-off-post = <10>;
 		somc,disp-en-on-pre = <200>;
@@ -1438,7 +1438,7 @@
 				00 c2 45 00 00 00 00 01 75
 				00 02 45 00 00 00 00 01 97];
 		somc,mdss-dsi-disp-on-in-hs = <1>;
-		qcom,mdss-brightness-max-level = <255>;
+		qcom,mdss-brightness-max-level = <4095>;
 		somc,disp-en-off-pre = <10>;
 		somc,disp-en-off-post = <10>;
 		somc,disp-en-on-pre = <200>;
