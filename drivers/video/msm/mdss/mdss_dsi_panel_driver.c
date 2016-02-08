@@ -3515,6 +3515,10 @@ static int mdss_panel_parse_dt(struct device_node *np,
 			if (driver_ic != tmp)
 				continue;
 
+			rc = of_property_read_u32(next, "somc,dric-only-detect", &res[0]);
+			if (res[0])
+				goto parse;
+
 			data = of_get_property(next, "somc,panel-id", &len);
 			if (!data) {
 				pr_err("%s:%d, panel not read\n",
@@ -3566,7 +3570,7 @@ static int mdss_panel_parse_dt(struct device_node *np,
 				continue;
 			//spec_pdata->driver_ic = tmp;
 		}
-
+parse:
 		panel_name = of_get_property(next,
 			"qcom,mdss-dsi-panel-name", NULL);
 		if (!panel_name) {
