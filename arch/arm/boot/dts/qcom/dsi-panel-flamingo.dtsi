@@ -110,6 +110,7 @@
 		somc,mdss-dsi-picadj-cont = <5>;
 	        somc,first-boot-aware;
 	        somc,panel-id-read-cmds;
+		somc,dric-only-detect;
 	        somc,panel-pwron-reset;
 	};
 
@@ -203,6 +204,7 @@
 		qcom,cont-splash-enabled;
 	        somc,first-boot-aware;
 	        somc,panel-id-read-cmds;
+		somc,dric-only-detect;
 	        somc,panel-pwron-reset;
 	};
 
