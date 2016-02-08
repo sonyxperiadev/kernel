@@ -211,7 +211,7 @@ static void mdss_ensure_kworker_done(struct workqueue_struct *wq)
 	}
 }
 
-static struct input_handler mds_input_handler = {
+static struct input_handler mdss_input_handler = {
 	.event		= mdss_input_event,
 	.connect	= mdss_input_connect,
 	.disconnect	= mdss_input_disconnect,
@@ -1330,6 +1330,11 @@ static int mdss_fb_suspend_sub(struct msm_fb_data_type *mfd)
 		mfd->op_enable = false;
 		fb_set_suspend(mfd->fbi, FBINFO_STATE_SUSPENDED);
 	}
+
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	pwr_pressed = false;
+#endif
+
 exit:
 	return ret;
 }
@@ -1623,9 +1628,6 @@ void mdss_fb_set_backlight(struct msm_fb_data_type *mfd, u32 bkl_lvl)
 			mfd->bl_level = bkl_lvl;
 			mfd->bl_level_scaled = temp;
 		}
-#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
-		bl_before = temp;
-#endif /* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 
 		if (ad_bl_notify_needed)
 			mdss_fb_bl_update_notify(mfd,
@@ -1634,6 +1636,9 @@ void mdss_fb_set_backlight(struct msm_fb_data_type *mfd, u32 bkl_lvl)
 			mdss_fb_bl_update_notify(mfd,
 					NOTIFY_TYPE_BL_UPDATE);
 	}
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	bl_before = temp;
+#endif /* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 }
 
 void mdss_fb_update_backlight(struct msm_fb_data_type *mfd)
@@ -3656,10 +3661,6 @@ static int mdss_fb_check_var(struct fb_var_screeninfo *var,
 		mfd->panel_reconfig = rc;
 	}
 
-#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
-	pwr_pressed = false;
-#endif
-
 	return 0;
 }
 
@@ -4529,7 +4530,7 @@ int __init mdss_fb_init(void)
 		return rc;
 
 #ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
-	if (input_register_handler(&mds_input_handler))
+	if (input_register_handler(&mdss_input_handler))
 		return rc;
 #endif
 
