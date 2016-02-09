@@ -131,6 +131,7 @@
 		qcom,mdss-dsi-t-clk-pre = <0x31>;
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
+		qcom,mdss-brightness-max-level = <4095>;
 		qcom,mdss-dsi-dma-trigger = "trigger_sw";
 		qcom,mdss-dsi-mdp-trigger = "none";
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
@@ -277,6 +278,7 @@
 		qcom,mdss-dsi-t-clk-pre = <0x31>;
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
+		qcom,mdss-brightness-max-level = <4095>;
 		qcom,mdss-dsi-dma-trigger = "trigger_sw";
 		qcom,mdss-dsi-mdp-trigger = "none";
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
@@ -479,6 +481,7 @@
 		qcom,mdss-dsi-t-clk-pre = <0x31>;
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
+		qcom,mdss-brightness-max-level = <4095>;
 		qcom,mdss-dsi-dma-trigger = "trigger_sw";
 		qcom,mdss-dsi-mdp-trigger = "none";
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
@@ -486,7 +489,6 @@
 		qcom,mdss-dsi-pan-fps-update = "dfps_suspend_resume_mode";
 		qcom,mdss-dsi-reset-sequence = <1 20>, <0 200>, <1 20>;
 
-		qcom,mdss-brightness-max-level = <4095>;
 		somc,panel-id = [12 74 20 38];
 		somc,driver-ic = <0>;
 		somc,disp-en-off-pre = <10>;
@@ -1018,6 +1020,7 @@
 		qcom,mdss-dsi-t-clk-pre = <0x37>;
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
+		qcom,mdss-brightness-max-level = <4095>;
 		qcom,mdss-dsi-dma-trigger = "trigger_sw";
 		qcom,mdss-dsi-mdp-trigger = "none";
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
@@ -1036,7 +1039,6 @@
 		somc,pw-on-rst-seq = <1 10>, <0 10>, <1 25>;
 		somc,pw-off-rst-seq = <0 10>;
 
-		qcom,mdss-brightness-max-level = <4095>;
 		somc,driver-ic = <1>;
 		qcom,mdss-pan-physical-width-dimension = <80>;
 		qcom,mdss-pan-physical-height-dimension = <143>;
@@ -1502,6 +1504,7 @@
 		qcom,mdss-dsi-t-clk-pre = <0x37>;
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
+		qcom,mdss-brightness-max-level = <4095>;
 		qcom,mdss-dsi-dma-trigger = "trigger_sw";
 		qcom,mdss-dsi-mdp-trigger = "none";
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
@@ -1528,7 +1531,6 @@
 		somc,mdss-dsi-disp-on-in-hs = <1>;
 		somc,mdss-dsi-wait-time-before-on-cmd = <80>;
 
-		qcom,mdss-brightness-max-level = <4095>;
 		somc,mdss-dsi-pre-uv-command = [23 01 00 00 00 00 02 B0 04];
 		somc,mdss-dsi-uv-command = [04 01 00 00 00 00 01 04];
 		somc,mdss-dsi-uv-param-type = <3>;
