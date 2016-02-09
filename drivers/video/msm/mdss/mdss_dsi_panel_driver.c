@@ -3515,8 +3515,8 @@ static int mdss_panel_parse_dt(struct device_node *np,
 			if (driver_ic != tmp)
 				continue;
 
-			rc = of_property_read_u32(next, "somc,dric-only-detect", &res[0]);
-			if (res[0])
+			rc = of_property_read_bool(next, "somc,dric-only-detect");
+			if (rc)
 				goto parse;
 
 			data = of_get_property(next, "somc,panel-id", &len);
