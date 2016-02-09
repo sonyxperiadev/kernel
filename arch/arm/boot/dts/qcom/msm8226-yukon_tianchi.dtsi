@@ -370,5 +370,5 @@
 };
 
 &mdss_dsi0 {
-	qcom,dsi-pref-prim-pan = <&dsi_novatek_jdi>;
+	qcom,dsi-pref-prim-pan = <&panel_detection>;
 };
