@@ -803,7 +803,7 @@ static int lm3630_add_intf(struct lm3630_data *lm, const char *nm,
 		}
 		intf->ldev.name = nm;
 		intf->ldev.brightness = LED_OFF;
-		/*intf->ldev.default_trigger = "bkl-trigger";*/
+		intf->ldev.default_trigger = "bkl-trigger";
 		intf->ldev.brightness_set = lm3630_led_brightness;
 		lm->intf[bank] = intf;
 		dev_info(dev, "New led '%s'\n", nm);
