@@ -57,10 +57,9 @@
 		bosch@10 {
 			compatible = "bosch,bma2x2";
 			reg = <0x10>;
-			bosch,int_pin = <&msmgpio 63 0x00>;
-			bosch,layout=<0x0>;
-			bmavdd-supply = <&pm8226_l19>;
-			bosch,vdd-current-level = <1 210>;
+			vdd-supply = <&pm8226_l19>;
+			bosch,gpio-int1 = <&msmgpio 63 0>;
+			bosch,place = <0>;
 		};
 
 		bosch@12 {
