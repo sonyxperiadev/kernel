@@ -1162,26 +1162,49 @@
 			};
 		};
 		qcom,leds@d300 {
-			status = "disabled";
+			/* Kitakami platform-wide configuration */
+			qcom,pmic-charger-support;
+			qcom,self-check-enabled;
+			qcom,headroom = <400>;
+			qcom,startup-dly = <128>;
+			qcom,clamp-current = <165>; /* 13.03mA */
+
+			/* Not supported (by choice) features */
+			/delete-node/ qcom,thermal-derate-enabled;
+			/delete-node/ qcom,thermal-derate-threshold;
+			/delete-node/ qcom,thermal-derate-rate;
+			/delete-node/ qcom,current-ramp-enabled;
+			/delete-node/ qcom,ramp_up_step;
+			/delete-node/ qcom,ramp_dn_step;
+			/delete-node/ qcom,headroom-sense-ch0-enabled;
+			/delete-node/ qcom,headroom-sense-ch1-enabled;
+			/delete-node/ qcom,power-detect-enabled;
+
+			/* Warning: Explicitly disabled by SoMC */
+			/delete-node/ qcom,vph-pwr-droop-enabled;
 		};
-		somc,leds@d300 {
-			status = "okay";
-			compatible = "somc,pmi8994-flash";
-			reg = <0xd300 0x100>;
-			label = "flash";
-			somc,headroom = <2>;
-			somc,clamp-curr-mA = <13>;
-			somc,startup-dly = <3>;
-			somc,hw-strobe-config = <3>;
-			somc,mask-enable = <1>;
-			boost-supply = <&pmi8994_boostbypass>;
-			boost-voltage-max = <3600000>;
-			somc,vph-pwr-droop {
-				somc,enable = <0>;
-				somc,threshold = <0>;
-				somc,debounce-time = <2>;
-			};
-		};
+	};
+
+	led_flash0: qcom,camera-flash {
+		cell-index = <0>;
+		compatible = "qcom,camera-flash";
+		qcom,flash-type = <1>;
+		qcom,flash-source = <&pmi8994_flash0>;
+		qcom,torch-source = <&pmi8994_torch0>;
+	};
+};
+
+&pmi8994_flash0 {
+	qcom,max-current = <1000>;
+	qcom,current = <1000>;
+};
+
+&pmi8994_torch0 {
+	qcom,max-current = <200>;
+	qcom,current = <200>;
+	reg0 {
+		regulator-name = "pmi8994_boostbypass";
+		max-voltage = <3600000>;
 	};
 };
 
