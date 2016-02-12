@@ -51,7 +51,7 @@ static int __cpuinit msm_cpuquiet_probe(struct platform_device *pdev)
 		return err;
 	}
 
-#ifdef CONFIG_CPU_QUIET_STATS
+#ifdef CONFIG_CPUQUIET_STATS
 	err = cpuquiet_probe_common_post(pdev);
 	if (err)
 		return err;
