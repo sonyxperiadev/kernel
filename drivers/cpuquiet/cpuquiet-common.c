@@ -161,7 +161,7 @@ static void __cpuinit cpuquiet_work_func(struct work_struct *work)
 	wake_up_interruptible(&wait_cpu);
 }
 
-#ifdef CONFIG_CPU_QUIET_STATS
+#ifdef CONFIG_CPUQUIET_STATS
 static ssize_t show_maxcpus(struct cpuquiet_attribute *cattr, char *buf)
 {
 	return sprintf(buf, "%d\n", cpuquiet_get_cpus(true));
@@ -214,7 +214,7 @@ static struct attribute *cpuquiet_attrs[] = {
 static struct attribute_group cpuquiet_attrs_group = {
 	.attrs = cpuquiet_attrs,
 };
-#endif /* CONFIG_CPU_QUIET_STATS */
+#endif /* CONFIG_CPUQUIET_STATS */
 
 int __cpuinit cpuquiet_probe_common(struct platform_device *pdev)
 {
@@ -244,7 +244,7 @@ int __cpuinit cpuquiet_probe_common(struct platform_device *pdev)
 }
 EXPORT_SYMBOL(cpuquiet_probe_common);
 
-#ifdef CONFIG_CPU_QUIET_STATS
+#ifdef CONFIG_CPUQUIET_STATS
 int cpuquiet_probe_common_post(struct platform_device *pdev)
 {
 
@@ -260,7 +260,7 @@ EXPORT_SYMBOL(cpuquiet_probe_common_post);
 int cpuquiet_remove_common(struct platform_device *pdev)
 {
 	destroy_workqueue(cpuquiet_wq);
-#ifdef CONFIG_CPU_QUIET_STATS
+#ifdef CONFIG_CPUQUIET_STATS
 	cpuquiet_remove_group(&cpuquiet_attrs_group);
 #endif
 
