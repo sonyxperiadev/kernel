@@ -140,7 +140,6 @@
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
-		qcom,mdss-brightness-max-level = <4095>;
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 
 		qcom,mdss-dsi-compression = "fbc";
@@ -237,7 +236,6 @@
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
-		qcom,mdss-brightness-max-level = <4095>;
 
 		qcom,mdss-dsi-compression = "fbc";
 		qcom,mdss-dsi-fbc-ver2-mode;
@@ -389,7 +387,6 @@
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
-		qcom,mdss-brightness-max-level = <4095>;
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 
 		qcom,mdss-dsi-compression = "fbc";
@@ -486,7 +483,6 @@
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
-		qcom,mdss-brightness-max-level = <4095>;
 
 		qcom,mdss-dsi-compression = "fbc";
 		qcom,mdss-dsi-fbc-ver2-mode;
@@ -565,7 +561,6 @@
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
-		qcom,mdss-brightness-max-level = <4095>;
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 
 		somc,mdss-dsi-disp-on-in-hs = <0>;
@@ -1078,7 +1073,6 @@
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
-		qcom,mdss-brightness-max-level = <4095>;
 
 		somc,platform-regulator-settings = [03 03 03 00 20 00 01];
 		somc,mdss-dsi-lane-config = [02 00 EF 00 20 00 00 01 FF
@@ -1200,7 +1194,6 @@
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
-		qcom,mdss-brightness-max-level = <4095>;
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 
 		somc,mdss-dsi-disp-on-in-hs = <0>;
@@ -1453,7 +1446,6 @@
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
-		qcom,mdss-brightness-max-level = <4095>;
 
 		somc,platform-regulator-settings = [03 03 03 00 20 00 01];
 		somc,mdss-dsi-lane-config = [02 00 EF 00 20 00 00 01 FF
@@ -1575,7 +1567,6 @@
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
-		qcom,mdss-brightness-max-level = <4095>;
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 
 		somc,mdss-dsi-disp-on-in-hs = <0>;
@@ -2060,7 +2051,6 @@
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
-		qcom,mdss-brightness-max-level = <4095>;
 
 		somc,platform-regulator-settings = [03 03 03 00 20 00 01];
 		somc,mdss-dsi-lane-config = [02 00 EF 00 20 00 00 01 FF
@@ -2182,7 +2172,6 @@
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
-		qcom,mdss-brightness-max-level = <4095>;
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 
 		somc,mdss-dsi-disp-on-in-hs = <0>;
@@ -2646,7 +2635,6 @@
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
-		qcom,mdss-brightness-max-level = <4095>;
 
 		somc,platform-regulator-settings = [03 03 03 00 20 00 01];
 		somc,mdss-dsi-lane-config = [02 00 EF 00 20 00 00 01 FF
@@ -2768,7 +2756,6 @@
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
-		qcom,mdss-brightness-max-level = <4095>;
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 
 		somc,mdss-dsi-disp-on-in-hs = <0>;
@@ -3206,7 +3193,6 @@
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
-		qcom,mdss-brightness-max-level = <4095>;
 
 		somc,platform-regulator-settings = [03 03 03 00 20 00 01];
 		somc,mdss-dsi-lane-config = [02 00 EF 00 20 00 00 01 FF
@@ -3353,7 +3339,6 @@
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
-		qcom,mdss-brightness-max-level = <4095>;
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 
 		qcom,mdss-dsi-compression = "fbc";
@@ -3455,7 +3440,6 @@
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
-		qcom,mdss-brightness-max-level = <4095>;
 
 		qcom,mdss-dsi-compression = "fbc";
 		qcom,mdss-dsi-fbc-ver2-mode;
@@ -3559,7 +3543,6 @@
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
-		qcom,mdss-brightness-max-level = <4095>;
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 
 		qcom,mdss-dsi-compression = "fbc";
@@ -3661,7 +3644,6 @@
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
-		qcom,mdss-brightness-max-level = <4095>;
 
 		qcom,mdss-dsi-compression = "fbc";
 		qcom,mdss-dsi-fbc-ver2-mode;
