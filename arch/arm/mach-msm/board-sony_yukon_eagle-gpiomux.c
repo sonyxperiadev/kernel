@@ -169,18 +169,6 @@ static struct gpiomux_setting wcnss_5wire_active_cfg = {
 	.pull = GPIOMUX_PULL_DOWN,
 };
 
-static struct gpiomux_setting wcnss_5gpio_suspend_cfg = {
-	.func = GPIOMUX_FUNC_GPIO,
-	.drv  = GPIOMUX_DRV_2MA,
-	.pull = GPIOMUX_PULL_UP,
-};
-
-static struct gpiomux_setting wcnss_5gpio_active_cfg = {
-	.func = GPIOMUX_FUNC_GPIO,
-	.drv  = GPIOMUX_DRV_6MA,
-	.pull = GPIOMUX_PULL_DOWN,
-};
-
 static struct gpiomux_setting gpio_i2c_config = {
 	.func = GPIOMUX_FUNC_3,
 	.drv = GPIOMUX_DRV_2MA,
@@ -396,44 +384,6 @@ static struct msm_gpiomux_config wcnss_5wire_interface[] = {
 		.settings = {
 			[GPIOMUX_ACTIVE]    = &wcnss_5wire_active_cfg,
 			[GPIOMUX_SUSPENDED] = &wcnss_5wire_suspend_cfg,
-		},
-	},
-};
-
-static struct msm_gpiomux_config wcnss_5gpio_interface[] = {
-	{
-		.gpio = 40,
-		.settings = {
-			[GPIOMUX_ACTIVE]    = &wcnss_5gpio_active_cfg,
-			[GPIOMUX_SUSPENDED] = &wcnss_5gpio_suspend_cfg,
-		},
-	},
-	{
-		.gpio = 41,
-		.settings = {
-			[GPIOMUX_ACTIVE]    = &wcnss_5gpio_active_cfg,
-			[GPIOMUX_SUSPENDED] = &wcnss_5gpio_suspend_cfg,
-		},
-	},
-	{
-		.gpio = 42,
-		.settings = {
-			[GPIOMUX_ACTIVE]    = &wcnss_5gpio_active_cfg,
-			[GPIOMUX_SUSPENDED] = &wcnss_5gpio_suspend_cfg,
-		},
-	},
-	{
-		.gpio = 43,
-		.settings = {
-			[GPIOMUX_ACTIVE]    = &wcnss_5gpio_active_cfg,
-			[GPIOMUX_SUSPENDED] = &wcnss_5gpio_suspend_cfg,
-		},
-	},
-	{
-		.gpio = 44,
-		.settings = {
-			[GPIOMUX_ACTIVE]    = &wcnss_5gpio_active_cfg,
-			[GPIOMUX_SUSPENDED] = &wcnss_5gpio_suspend_cfg,
 		},
 	},
 };
