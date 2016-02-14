@@ -1980,6 +1980,11 @@ struct sdhci_msm_pltfm_data *sdhci_msm_populate_pdata(struct device *dev,
 
 	pdata->sdr104_wa = of_property_read_bool(np, "qcom,sdr104-wa");
 
+#ifdef CONFIG_WIFI_CONTROL_FUNC
+	if (of_get_property(np, "somc,use-for-wifi", NULL))
+		pdata->use_for_wifi = true;
+#endif
+
 	return pdata;
 out:
 	return NULL;
@@ -4237,6 +4242,8 @@ static bool sdhci_msm_is_bootdevice(struct device *dev)
 	return true;
 }
 
+extern void somc_wifi_mmc_host_register(struct mmc_host *host);
+
 static int sdhci_msm_probe(struct platform_device *pdev)
 {
 	const struct sdhci_msm_offset *msm_host_offset;
@@ -4708,6 +4715,13 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 	pm_runtime_enable(&pdev->dev);
 	pm_runtime_set_autosuspend_delay(&pdev->dev, MSM_AUTOSUSPEND_DELAY_MS);
 	pm_runtime_use_autosuspend(&pdev->dev);
+
+#ifdef CONFIG_WIFI_CONTROL_FUNC
+	if (msm_host->pdata->use_for_wifi) {
+		msm_host->mmc->caps &= ~MMC_CAP_NEEDS_POLL;
+		somc_wifi_mmc_host_register(msm_host->mmc);
+	}
+#endif
 
 	msm_host->msm_bus_vote.max_bus_bw.show = show_sdhci_max_bus_bw;
 	msm_host->msm_bus_vote.max_bus_bw.store = store_sdhci_max_bus_bw;

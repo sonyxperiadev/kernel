@@ -227,6 +227,10 @@ struct sdhci_msm_host {
 	const struct sdhci_msm_offset *offset;
 	bool core_3_0v_support;
 	bool pltfm_init_done;
+
+#ifdef CONFIG_WIFI_CONTROL_FUNC
+	bool use_for_wifi;
+#endif
 };
 
 extern char *saved_command_line;
