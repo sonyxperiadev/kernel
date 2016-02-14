@@ -258,6 +258,10 @@ struct sdhci_msm_host {
 	int soc_min_rev;
 	struct workqueue_struct *pm_qos_wq;
 	bool need_dll_user_ctl;
+
+#ifdef CONFIG_WIFI_CONTROL_FUNC
+	bool use_for_wifi;
+#endif
 };
 
 extern char *saved_command_line;
