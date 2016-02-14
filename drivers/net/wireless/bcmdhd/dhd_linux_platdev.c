@@ -36,7 +36,7 @@
 #include <dhd_bus.h>
 #include <dhd_linux.h>
 #include <wl_android.h>
-#if defined(BCMPCIE) && defined(CONFIG_WIFI_CONTROL_FUNC)
+#if !defined(CONFIG_MACH_SONY_SHINANO) && defined(CONFIG_WIFI_CONTROL_FUNC)
 #include <linux/wlan_plat.h>
 #include<linux/regulator/consumer.h>
 #include<linux/of_gpio.h>
@@ -265,7 +265,7 @@ static int wifi_plat_dev_drv_probe(struct platform_device *pdev)
 {
 	struct resource *resource;
 	wifi_adapter_info_t *adapter;
-#if defined(BCMPCIE) && defined(CONFIG_WIFI_CONTROL_FUNC)
+#if !defined(CONFIG_MACH_SONY_SHINANO) && defined(CONFIG_WIFI_CONTROL_FUNC)
 	int irq, gpio;
 #endif
 
@@ -275,7 +275,7 @@ static int wifi_plat_dev_drv_probe(struct platform_device *pdev)
 	ASSERT(dhd_wifi_platdata != NULL);
 	ASSERT(dhd_wifi_platdata->num_adapters == 1);
 	adapter = &dhd_wifi_platdata->adapters[0];
-#if defined(BCMPCIE) && defined(CONFIG_WIFI_CONTROL_FUNC)
+#if !defined(CONFIG_MACH_SONY_SHINANO) && defined(CONFIG_WIFI_CONTROL_FUNC)
 	adapter->wifi_plat_data = (void *)&somc_wifi_control;
 #else
 	adapter->wifi_plat_data = (struct wifi_platform_data *)(pdev->dev.platform_data);
@@ -288,7 +288,7 @@ static int wifi_plat_dev_drv_probe(struct platform_device *pdev)
 		adapter->irq_num = resource->start;
 		adapter->intr_flags = resource->flags & IRQF_TRIGGER_MASK;
 	}
-#if defined(BCMPCIE) && defined(CONFIG_WIFI_CONTROL_FUNC)
+#if !defined(CONFIG_MACH_SONY_SHINANO) && defined(CONFIG_WIFI_CONTROL_FUNC)
 	somc_wifi_init(pdev);
 	gpio = of_get_gpio(pdev->dev.of_node, 1);
 	if (gpio < 0) {
@@ -332,7 +332,7 @@ static int wifi_plat_dev_drv_remove(struct platform_device *pdev)
 #endif /* BCMPCIE */
 	}
 
-#if defined(BCMPCIE) && defined(CONFIG_WIFI_CONTROL_FUNC)
+#if !defined(CONFIG_MACH_SONY_SHINANO) && defined(CONFIG_WIFI_CONTROL_FUNC)
 	somc_wifi_deinit(pdev);
 #endif
 	return 0;
@@ -359,7 +359,7 @@ static int wifi_plat_dev_drv_resume(struct platform_device *pdev)
 	return 0;
 }
 
-#if defined(BCMPCIE) && defined(CONFIG_WIFI_CONTROL_FUNC)
+#if defined(CONFIG_WIFI_CONTROL_FUNC)
 static const struct of_device_id wifi_device_dt_match[] = {
 	{ .compatible = "android,bcmdhd_wlan", },
 	{},
@@ -372,7 +372,7 @@ static struct platform_driver wifi_platform_dev_driver = {
 	.resume         = wifi_plat_dev_drv_resume,
 	.driver         = {
 	.name   = WIFI_PLAT_NAME,
-#if defined(BCMPCIE) && defined(CONFIG_WIFI_CONTROL_FUNC)
+#if defined(CONFIG_WIFI_CONTROL_FUNC)
 	.of_match_table = wifi_device_dt_match,
 #endif
 	}
@@ -463,7 +463,7 @@ static int wifi_ctrlfunc_register_drv(void)
 #endif
 
 
-#if defined(BCMPCIE) && defined(CONFIG_WIFI_CONTROL_FUNC)
+#if !defined(CONFIG_MACH_SONY_SHINANO) && defined(CONFIG_WIFI_CONTROL_FUNC)
 	wifi_plat_dev_probe_ret = platform_driver_register(&wifi_platform_dev_driver);
 #endif
 
@@ -474,7 +474,7 @@ static int wifi_ctrlfunc_register_drv(void)
 void wifi_ctrlfunc_unregister_drv(void)
 {
 
-#if defined(BCMPCIE) && defined(CONFIG_WIFI_CONTROL_FUNC)
+#if !defined(CONFIG_MACH_SONY_SHINANO) && defined(CONFIG_WIFI_CONTROL_FUNC)
 	DHD_ERROR(("unregister wifi platform drivers\n"));
 	platform_driver_unregister(&wifi_platform_dev_driver);
 #else
