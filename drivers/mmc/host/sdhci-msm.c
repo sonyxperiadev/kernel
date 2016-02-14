@@ -321,6 +321,9 @@ struct sdhci_msm_pltfm_data {
 	enum pm_qos_req_type cpu_affinity_type;
 	u32 *cpu_affinity_mask;
 	unsigned int cpu_affinity_mask_tbl_sz;
+#ifdef CONFIG_WIFI_CONTROL_FUNC
+	bool use_for_wifi;
+#endif
 };
 
 struct sdhci_msm_bus_vote {
@@ -1685,6 +1688,11 @@ struct sdhci_msm_pltfm_data *sdhci_msm_populate_pdata(struct device *dev,
 		pdata->mpm_sdiowakeup_int = mpm_int;
 	else
 		pdata->mpm_sdiowakeup_int = -1;
+
+#ifdef CONFIG_WIFI_CONTROL_FUNC
+	if (of_get_property(np, "somc,use-for-wifi", NULL))
+		pdata->use_for_wifi = true;
+#endif
 
 	sdhci_msm_populate_affinity(dev, pdata, np);
 
@@ -3102,6 +3110,8 @@ static void sdhci_set_default_hw_caps(struct sdhci_msm_host *msm_host,
 	msm_host->caps_0 = caps;
 }
 
+extern void somc_wifi_mmc_host_register(struct mmc_host *host);
+
 static int sdhci_msm_probe(struct platform_device *pdev)
 {
 	struct sdhci_host *host;
@@ -3454,6 +3464,13 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Add host failed (%d)\n", ret);
 		goto free_cd_gpio;
 	}
+
+#ifdef CONFIG_WIFI_CONTROL_FUNC
+	if (msm_host->pdata->use_for_wifi) {
+		msm_host->mmc->caps &= ~MMC_CAP_NEEDS_POLL;
+		somc_wifi_mmc_host_register(msm_host->mmc);
+	}
+#endif
 
 	msm_host->msm_bus_vote.max_bus_bw.show = show_sdhci_max_bus_bw;
 	msm_host->msm_bus_vote.max_bus_bw.store = store_sdhci_max_bus_bw;
