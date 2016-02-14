@@ -114,6 +114,9 @@ struct sdhci_msm_pltfm_data {
 	u32 ice_clk_max;
 	u32 ice_clk_min;
 	bool core_3_0v_support;
+#ifdef CONFIG_WIFI_CONTROL_FUNC
+	bool use_for_wifi;
+#endif
 };
 
 struct sdhci_msm_bus_vote {
