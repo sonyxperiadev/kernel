@@ -22,15 +22,18 @@
 #include <linux/delay.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/msm_pcie.h>
+#include <linux/mmc/host.h>
 #include <linux/platform_device.h>
 #include <linux/of_gpio.h>
 #include <linux/module.h>
 #include <linux/fs.h>
 #include "dhd_custom_memprealloc.h"
 
-#if defined(CONFIG_BCMDHD_SDIO)
-#include <asm/mach/mmc.h>
+#if defined(CONFIG_MACH_SONY_SHINANO)
 #include <../drivers/mmc/host/msm_sdcc.h>
+
+#define WIFI_POWER_PMIC_GPIO 18
+#define WIFI_IRQ_GPIO 67
 
 static unsigned int g_wifi_detect;
 static void *sdc_dev;
@@ -39,26 +42,7 @@ static void *wifi_mmc_host;
 static struct regulator *wifi_batfet;
 static int batfet_ena;
 extern void sdio_ctrl_power(struct mmc_host *card, bool onoff);
-#endif
 
-static char *intf_macaddr = NULL;
-
-
-#define WIFI_POWER_PMIC_GPIO 18
-#define WIFI_IRQ_GPIO 67
-
-struct bcmdhd_platform_data {
-	struct platform_device *pdev;
-	struct pinctrl *pinctrl;
-	struct pinctrl_state *gpio_state_active;
-	struct pinctrl_state *gpio_state_suspend;
-	unsigned int wlan_reg_on;
-	unsigned int pci_number;
-};
-
-static struct bcmdhd_platform_data *bcmdhd_data;
-
-#if defined(CONFIG_BCMDHD_SDIO)
 int wcf_status_register(void (*cb)(int card_present, void *dev), void *dev)
 {
 	pr_info("%s\n", __func__);
@@ -78,11 +62,35 @@ unsigned int wcf_status(struct device *dev)
 	pr_info("%s: wifi_detect = %d\n", __func__, g_wifi_detect);
 	return g_wifi_detect;
 }
+
+static int somc_wifi_set_reset(int on)
+{
+	return 0;
+}
 #endif
+
+static char *intf_macaddr = NULL;
+static struct mmc_host *wlan_mmc_host;
+
+struct bcmdhd_platform_data {
+	struct platform_device *pdev;
+	struct pinctrl *pinctrl;
+	struct pinctrl_state *gpio_state_active;
+	struct pinctrl_state *gpio_state_suspend;
+	unsigned int wlan_reg_on;
+	unsigned int pci_number;
+};
+
+static struct bcmdhd_platform_data *bcmdhd_data;
+
+void somc_wifi_mmc_host_register(struct mmc_host *host)
+{
+        wlan_mmc_host = host;
+}
 
 int somc_wifi_set_power(int on)
 {
-#if defined(CONFIG_BCMDHD_SDIO)
+#if defined(CONFIG_MACH_SONY_SHINANO)
 	int gpio = qpnp_pin_map("pm8941-gpio", WIFI_POWER_PMIC_GPIO);
 	int ret;
 
@@ -119,14 +127,11 @@ int somc_wifi_set_power(int on)
 
 }
 
-static int somc_wifi_set_reset(int on)
-{
-	return 0;
-}
 
 int somc_wifi_set_carddetect(int present)
 {
 #if defined(CONFIG_BCMDHD_SDIO)
+#if defined(CONFIG_MACH_SONY_SHINANO)
 	g_wifi_detect = present;
 
 	if (sdc_status_cb)
@@ -134,6 +139,11 @@ int somc_wifi_set_carddetect(int present)
 	else
 		printk(KERN_WARNING "%s: Nobody to notify\n", __func__);
 	return 0;
+#else
+	if (wlan_mmc_host)
+		mmc_detect_change(wlan_mmc_host, 0);
+	return 0;
+#endif
 #else
 	int ret = 0;
 	if (present)
@@ -414,18 +424,9 @@ static ssize_t macaddr_store(struct device *dev, struct device_attribute *attr,
 
 DEVICE_ATTR(macaddr, 0644, macaddr_show, macaddr_store);
 
-static struct attribute *wifi_attrs[] = {
-	&dev_attr_macaddr.attr,
-	NULL
-};
-
-static struct attribute_group wifi_attr_grp = {
-	.attrs = wifi_attrs,
-};
-
 struct wifi_platform_data somc_wifi_control = {
 	.set_power	= somc_wifi_set_power,
-#if defined(CONFIG_BCMDHD_SDIO)
+#if defined(CONFIG_MACH_SONY_SHINANO)
 	.set_reset	= somc_wifi_set_reset,
 #endif
 	.set_carddetect	= somc_wifi_set_carddetect,
@@ -435,7 +436,16 @@ struct wifi_platform_data somc_wifi_control = {
 
 EXPORT_SYMBOL(somc_wifi_control);
 
-#if defined(CONFIG_BCMDHD_SDIO)
+#if defined(CONFIG_MACH_SONY_SHINANO)
+static struct attribute *wifi_attrs[] = {
+	&dev_attr_macaddr.attr,
+	NULL
+};
+
+static struct attribute_group wifi_attr_grp = {
+	.attrs = wifi_attrs,
+};
+
 static struct resource somc_wifi_resources[] = {
 	[0] = {
 		.name	= "bcmdhd_wlan_irq",
@@ -455,11 +465,9 @@ static struct platform_device somc_wifi = {
 		.platform_data = &somc_wifi_control,
 	},
 };
-#endif
 
 static int __init somc_wifi_init_on_boot(void)
 {
-#if defined(CONFIG_BCMDHD_SDIO)
 	somc_wifi.resource->start = gpio_to_irq(WIFI_IRQ_GPIO);
 	somc_wifi.resource->end = gpio_to_irq(WIFI_IRQ_GPIO);
 	platform_device_register(&somc_wifi);
@@ -469,10 +477,10 @@ static int __init somc_wifi_init_on_boot(void)
 		pr_err("%s: Unable to create sysfs\n", __func__);
 		kfree(intf_macaddr);
 	}
-#endif
 	return 0;
 }
 
 device_initcall(somc_wifi_init_on_boot);
+#endif
 
 MODULE_LICENSE("GPL v2");
