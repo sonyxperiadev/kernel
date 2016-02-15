@@ -1139,9 +1139,6 @@ static int mdss_fb_probe(struct platform_device *pdev)
 	mdss_fb_set_mdp_sync_pt_threshold(mfd, mfd->panel.type);
 
 #ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
-	if ((mfd->panel_info->type == MIPI_VIDEO_PANEL) ||
-		(mfd->panel_info->type == MIPI_CMD_PANEL))
-		mipi_dsi_panel_create_debugfs(mfd);
 	if (mfd->index == 0) {
 		struct mdss_dsi_ctrl_pdata *ctrl_pdata;
 
