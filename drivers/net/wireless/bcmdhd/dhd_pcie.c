@@ -501,7 +501,7 @@ dhdpcie_dongle_attach(dhd_bus_t *bus)
 			bus->dongle_ram_base = CR4_4360_RAM_BASE;
 			break;
 		case BCM4345_CHIP_ID:
-			bus->dongle_ram_base = CR4_4345_RAM_BASE;
+			bus->dongle_ram_base = CR4_4345_LT_C0_RAM_BASE;
 			break;
 		case BCM43602_CHIP_ID:
 			bus->dongle_ram_base = CR4_43602_RAM_BASE;
