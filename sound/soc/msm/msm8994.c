@@ -86,6 +86,7 @@ struct msm8994_asoc_mach_data {
 	int mclk_gpio;
 	u32 mclk_freq;
 	int us_euro_gpio;
+	int ear_en_gpio;
 	struct msm_pinctrl_info pinctrl_info;
 	void __iomem *pri_mux;
 	void __iomem *sec_mux;
@@ -109,6 +110,7 @@ static int msm_btsco_rate = SAMPLING_RATE_8KHZ;
 static int msm_hdmi_rx_ch = 2;
 static int msm_proxy_rx_ch = 2;
 static int hdmi_rx_sample_rate = SAMPLING_RATE_48KHZ;
+static int pm8994_ear_enable_states;
 static int msm_pri_mi2s_tx_ch = 2;
 
 static struct mutex cdc_mclk_mutex;
@@ -153,6 +155,7 @@ static const char *const proxy_rx_ch_text[] = {"One", "Two", "Three", "Four",
 
 static char const *hdmi_rx_sample_rate_text[] = {"KHZ_48", "KHZ_96",
 					"KHZ_192"};
+static const char *const pm8994_ear_enable_states_text[] = {"Disable", "Enable"};
 static const char *const btsco_rate_text[] = {"8000", "16000"};
 static const struct soc_enum msm_btsco_enum[] = {
 	SOC_ENUM_SINGLE_EXT(2, btsco_rate_text),
@@ -1083,6 +1086,61 @@ static int hdmi_rx_sample_rate_put(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static int pm8994_ear_enable_get(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	int gpio_state = 0;
+
+	switch (pm8994_ear_enable_states) {
+	case 1:
+		gpio_state = 1;
+		break;
+	case 0:
+	default:
+		gpio_state = 0;
+		break;
+	}
+
+	ucontrol->value.integer.value[0] = gpio_state;
+	pr_debug("%s: pm8994_ear_enable_states = %d\n", __func__,
+			pm8994_ear_enable_states);
+
+	return 0;
+}
+
+static int pm8994_ear_enable_put(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	int ret;
+	struct snd_soc_card *card = platform_get_drvdata(spdev);
+	struct msm8994_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
+
+	pr_debug("%s: ucontrol value = %ld\n", __func__,
+			ucontrol->value.integer.value[0]);
+
+	if (pdata->ear_en_gpio >= 0) {
+		ret = gpio_request(pdata->ear_en_gpio, "ear_en_gpio");
+		if (ret) {
+			pr_err("%s: request ear_en_gpio failed, ret:%d\n",
+				__func__, ret);
+			return ret;
+		}
+		switch (ucontrol->value.integer.value[0]) {
+		case 1:
+			gpio_set_value(pdata->ear_en_gpio, 1);
+			break;
+		case 0:
+		default:
+			gpio_set_value(pdata->ear_en_gpio, 0);
+			break;
+		}
+		gpio_free(pdata->ear_en_gpio);
+		pm8994_ear_enable_states = ucontrol->value.integer.value[0];
+	}
+
+	return 0;
+}
+
 static int msm8994_auxpcm_rate_get(struct snd_kcontrol *kcontrol,
 				struct snd_ctl_elem_value *ucontrol)
 {
@@ -1695,6 +1753,7 @@ static const struct soc_enum msm_snd_enum[] = {
 	SOC_ENUM_SINGLE_EXT(8, proxy_rx_ch_text),
 	SOC_ENUM_SINGLE_EXT(3, hdmi_rx_sample_rate_text),
 	SOC_ENUM_SINGLE_EXT(2, vi_feed_ch_text),
+	SOC_ENUM_SINGLE_EXT(2, pm8994_ear_enable_states_text),
 };
 
 static const struct snd_kcontrol_new msm_snd_controls[] = {
@@ -1722,6 +1781,8 @@ static const struct snd_kcontrol_new msm_snd_controls[] = {
 		     msm_btsco_rate_get, msm_btsco_rate_put),
 	SOC_ENUM_EXT("HDMI_RX SampleRate", msm_snd_enum[7],
 			hdmi_rx_sample_rate_get, hdmi_rx_sample_rate_put),
+	SOC_ENUM_EXT("PM8994_Ear_Enable_States", msm_snd_enum[9],
+		pm8994_ear_enable_get, pm8994_ear_enable_put),
 	SOC_ENUM_EXT("SLIM_0_TX Format", msm_snd_enum[4],
 			slim0_tx_bit_format_get, slim0_tx_bit_format_put),
 	SOC_ENUM_EXT("SLIM_0_TX SampleRate", msm_snd_enum[5],
@@ -3542,6 +3603,14 @@ static int msm8994_asoc_machine_probe(struct platform_device *pdev)
 		dev_info(&pdev->dev, "msm8994_prepare_us_euro failed (%d)\n",
 			ret);
 
+	/* Parse EAR_EN info for NX5L2750C */
+	pdata->ear_en_gpio = of_get_named_gpio(pdev->dev.of_node,
+				"qcom,ear-en-gpios", 0);
+	if (pdata->ear_en_gpio < 0)
+		dev_info(&pdev->dev, "property %s not detected in node %s",
+			"qcom,ear-en-gpios",
+			pdev->dev.of_node->full_name);
+
 	/* Parse pinctrl info from devicetree */
 	ret = msm_get_pinctrl(pdev);
 	if (!ret) {
@@ -3575,6 +3644,11 @@ err:
 			__func__, pdata->us_euro_gpio);
 		gpio_free(pdata->us_euro_gpio);
 		pdata->us_euro_gpio = 0;
+	}
+	if (pdata->ear_en_gpio > 0) {
+		dev_dbg(&pdev->dev, "%s initialize ear_en gpio %d\n",
+			__func__, pdata->ear_en_gpio);
+		pdata->ear_en_gpio = 0;
 	}
 	devm_kfree(&pdev->dev, pdata);
 	return ret;
