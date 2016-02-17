@@ -969,7 +969,7 @@ static void __exit exit_rqbalance(void)
 }
 
 MODULE_LICENSE("GPL");
-#ifdef CONFIG_CPU_QUIET_DEFAULT_GOV_RQBALANCE
+#ifdef CONFIG_CPUQUIET_DEFAULT_GOV_RQBALANCE
 fs_initcall(init_rqbalance);
 #else
 module_init(init_rqbalance);
