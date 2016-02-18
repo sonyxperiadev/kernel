@@ -25,20 +25,27 @@
 /* Note: NEVER suspend the runqueue averaging worker! */
 
 #include <linux/kernel.h>
+#include <linux/cpufreq.h>
 #include <linux/cpuquiet.h>
 #include <linux/cpumask.h>
-#include <linux/delay.h>
 #include <linux/module.h>
-#include <linux/cpufreq.h>
-#include <linux/pm.h>
-#include <linux/jiffies.h>
-#include <linux/slab.h>
-#include <linux/cpu.h>
-#include <linux/sched.h>
+#include <linux/pm_qos.h>
+#include <linux/sysfs.h>
 #include <linux/suspend.h>
 #include <linux/tick.h>
-#include <linux/workqueue.h>
-#include <asm/cputime.h>
+#include <linux/jiffies.h>
+#include <linux/cpu.h>
+#include <linux/sched.h>
+
+#include "../cpuquiet.h"
+
+#define CPQ_CUSTOM_ATTRIBUTE(_name, _mode, _show, _store)		\
+	static struct cpuquiet_attribute _name ## _attr = {		\
+		.attr = {.name = __stringify(_name), .mode = _mode },	\
+		.show = _show,						\
+		.store = _store,					\
+		.param = &_name,					\
+	}
 
 #define CPUNAMELEN 8
 
@@ -87,7 +94,7 @@ static DEFINE_PER_CPU(unsigned int, cpu_load);
 static struct timer_list load_timer;
 static bool load_timer_active;
 static bool soc_is_hmp;
-static unsigned int available_clusters;
+static unsigned int available_clusters = 0;
 
 /* configurable parameters */
 static unsigned int  balance_level = 60;
@@ -102,7 +109,6 @@ static unsigned int  userspace_suspend_state = 0;
 static struct workqueue_struct *rqbalance_wq;
 static struct delayed_work rqbalance_work;
 static RQBALANCE_STATE rqbalance_state;
-static struct kobject *rqbalance_kobject;
 static struct notifier_block pm_notifier_block;
 
 static void calculate_load_timer(unsigned long data)
@@ -344,7 +350,7 @@ static void rq_work_fn(struct work_struct *work)
 	spin_unlock_irqrestore(&rq_data->lock, flags);
 }
 
-unsigned int get_nr_run_avg(void)
+static unsigned int get_nr_run_avg(void)
 {
 	struct runqueue_sample nr_run_samples[RQ_SAMPLE_CAPACITY];
 	uint8_t nr_run_sample_head;
@@ -416,7 +422,8 @@ static CPU_SPEED_BALANCE balanced_speed_balance(void)
 	unsigned long balanced_speed = highest_speed * balance_level / 100;
 	unsigned long skewed_speed = balanced_speed / 2;
 	unsigned int nr_cpus = num_online_cpus();
-	unsigned int max_cpus = cpuquiet_get_cpus(true);
+	unsigned int max_cpus = pm_qos_request(PM_QOS_MAX_ONLINE_CPUS) ? : CONFIG_NR_CPUS;
+
 	unsigned int avg_nr_run = get_nr_run_avg();
 	unsigned int nr_run;
 	bool done;
@@ -446,7 +453,6 @@ static CPU_SPEED_BALANCE balanced_speed_balance(void)
 			break;
 		}
 	}
-
 
 	/* Consider when to take a CPU offline.  We need to have at least
 	 * one extra idle CPU, or either of: */
@@ -482,7 +488,7 @@ static void hotplug_smp_final_decision(unsigned int cpu, bool up)
 		 * power of the processor. */
 		cpuquiet_wake_cpu(cpu, false);
 	else
-		cpuquiet_quiesence_cpu(cpu, false);
+		cpuquiet_quiesce_cpu(cpu, false);
 }
 
 static void hotplug_hmp_final_decision(unsigned int cpu, bool up)
@@ -502,13 +508,13 @@ static void hotplug_hmp_final_decision(unsigned int cpu, bool up)
 		    big_cores_on == 0) {
 			cpuquiet_wake_cpu(
 				get_offline_core(CLUSTER_BIG), false);
-			cpuquiet_quiesence_cpu(
+			cpuquiet_quiesce_cpu(
 				get_offline_core(CLUSTER_LITTLE), false);
 			return;
 		};
 		cpuquiet_wake_cpu(cpu, false);
 	} else {
-		cpuquiet_quiesence_cpu(cpu, false);
+		cpuquiet_quiesce_cpu(cpu, false);
 	}
 }
 
@@ -581,7 +587,7 @@ static void rqbalance_work_func(struct work_struct *work)
 		break;
 	default:
 		pr_err("%s: invalid cpuquiet balanced governor state %d\n",
-		       __func__, rqbalance_state);
+			__func__, rqbalance_state);
 	}
 
 	if (!up && ((now - last_change_time) < down_delay))
@@ -658,14 +664,24 @@ static struct notifier_block balanced_cpufreq_nb = {
 	.notifier_call = balanced_cpufreq_transition,
 };
 
-static void delay_callback(struct cpuquiet_attribute *attr)
+static ssize_t store_ulong_delay(struct cpuquiet_attribute *cattr, const char *buf,
+				size_t count)
 {
+	int err;
 	unsigned long val;
 
-	if (attr) {
-		val = (*((unsigned long *)(attr->param)));
-		(*((unsigned long *)(attr->param))) = msecs_to_jiffies(val);
-	}
+	err = kstrtoul(buf, 0, &val);
+	if (err < 0)
+		return err;
+
+	*((unsigned long *)(cattr->param)) = msecs_to_jiffies(val);
+
+	return count;
+}
+
+static ssize_t show_ulong_delay(struct cpuquiet_attribute *cattr, char *buf)
+{
+	return sprintf(buf, "%u\n", jiffies_to_msecs(*((unsigned long *)cattr->param)));
 }
 
 static inline size_t array_size_from_name(const char* name)
@@ -685,7 +701,7 @@ static inline size_t array_size_from_name(const char* name)
 	return -EINVAL;
 }
 
-ssize_t store_uint_array(struct cpuquiet_attribute *cattr,
+static ssize_t store_uint_array(struct cpuquiet_attribute *cattr,
 				const char *buf, size_t count)
 {
 	const char *i;
@@ -707,7 +723,7 @@ ssize_t store_uint_array(struct cpuquiet_attribute *cattr,
 	return count;
 }
 
-ssize_t show_uint_array(struct cpuquiet_attribute *cattr,
+static ssize_t show_uint_array(struct cpuquiet_attribute *cattr,
 					char *buf)
 {
 	int i;
@@ -721,27 +737,28 @@ ssize_t show_uint_array(struct cpuquiet_attribute *cattr,
 	return temp - buf;
 }
 
-CPQ_BASIC_ATTRIBUTE(balance_level, 0644, uint);
-CPQ_BASIC_ATTRIBUTE(load_sample_rate, 0644, uint);
-CPQ_BASIC_ATTRIBUTE(userspace_suspend_state, 0644, uint);
-CPQ_ATTRIBUTE(up_delay, 0644, ulong, delay_callback);
-CPQ_ATTRIBUTE(down_delay, 0644, ulong, delay_callback);
+CPQ_SIMPLE_ATTRIBUTE(balance_level, 0644, uint);
+CPQ_SIMPLE_ATTRIBUTE(load_sample_rate, 0644, uint);
+CPQ_SIMPLE_ATTRIBUTE(userspace_suspend_state, 0644, uint);
+CPQ_CUSTOM_ATTRIBUTE(up_delay, 0644,
+			show_ulong_delay, store_ulong_delay);
+CPQ_CUSTOM_ATTRIBUTE(down_delay, 0644,
+			show_ulong_delay, store_ulong_delay);
+CPQ_CUSTOM_ATTRIBUTE(idle_bottom_freq, 0644,
+			show_uint_array, store_uint_array);
+CPQ_CUSTOM_ATTRIBUTE(idle_top_freq, 0644,
+			show_uint_array, store_uint_array);
+CPQ_CUSTOM_ATTRIBUTE(nr_down_run_thresholds, 0644,
+			show_uint_array, store_uint_array);
+CPQ_CUSTOM_ATTRIBUTE(nr_run_thresholds, 0644,
+			show_uint_array, store_uint_array);
 
-CPQ_ATTRIBUTE_CUSTOM(idle_bottom_freq, 0644,
-			show_uint_array, store_uint_array);
-CPQ_ATTRIBUTE_CUSTOM(idle_top_freq, 0644,
-			show_uint_array, store_uint_array);
-CPQ_ATTRIBUTE_CUSTOM(nr_down_run_thresholds, 0644,
-			show_uint_array, store_uint_array);
-CPQ_ATTRIBUTE_CUSTOM(nr_run_thresholds, 0644,
-			show_uint_array, store_uint_array);
-
-static struct attribute *rqbalance_attributes[] = {
+static struct attribute *rqbalance_attrs[] = {
 	&balance_level_attr.attr,
+	&load_sample_rate_attr.attr,
 	&userspace_suspend_state_attr.attr,
 	&up_delay_attr.attr,
 	&down_delay_attr.attr,
-	&load_sample_rate_attr.attr,
 	&idle_bottom_freq_attr.attr,
 	&idle_top_freq_attr.attr,
 	&nr_down_run_thresholds_attr.attr,
@@ -749,33 +766,19 @@ static struct attribute *rqbalance_attributes[] = {
 	NULL,
 };
 
-static const struct sysfs_ops rqbalance_sysfs_ops = {
-	.show = cpuquiet_auto_sysfs_show,
-	.store = cpuquiet_auto_sysfs_store,
+static struct attribute_group rqbalance_group = {
+	.name = "rqbalance",
+	.attrs = rqbalance_attrs,
 };
 
-static struct kobj_type ktype_rqbalance = {
-	.sysfs_ops = &rqbalance_sysfs_ops,
-	.default_attrs = rqbalance_attributes,
-};
-
-static int rqbalance_sysfs(void)
+static int rqbalance_sysfs_init(void)
 {
-	int err;
+	return cpuquiet_register_attrs(&rqbalance_group);
+}
 
-	rqbalance_kobject = kzalloc(sizeof(*rqbalance_kobject),
-				GFP_KERNEL);
-
-	if (!rqbalance_kobject)
-		return -ENOMEM;
-
-	err = cpuquiet_kobject_init(rqbalance_kobject, &ktype_rqbalance,
-				"rqbalance");
-
-	if (err)
-		kfree(rqbalance_kobject);
-
-	return err;
+static void rqbalance_sysfs_exit(void)
+{
+	cpuquiet_unregister_attrs(&rqbalance_group);
 }
 
 static void rqbalance_kickstart(void)
@@ -822,7 +825,7 @@ int rqbalance_pm_notify(struct notifier_block *notify_block,
 static int rqbalance_get_package_info(void)
 {
 	struct cpufreq_frequency_table *table;
-	int count, i, prev_cluster, cur_cluster;
+	int count, i, prev_cluster = -1, cur_cluster;
 
 	/* Paranoid initialization is needed in some conditions */
 	num_of_cores[CLUSTER_LITTLE] = 0;
@@ -861,6 +864,7 @@ static int rqbalance_get_package_info(void)
 
 	/* TODO: Check if we are effectively using HMP!!! This is NOT OK!!! */
 	soc_is_hmp = (available_clusters > 1) ? true : false;
+	pr_info("rqbalance: running as %s\n", soc_is_hmp ? "hmp" : "smp");
 
 	return 0;
 }
@@ -885,14 +889,14 @@ static void rqbalance_stop(void)
 	stop_rq_work();
 	kfree(rq_data);
 
-	kobject_put(rqbalance_kobject);
+	rqbalance_sysfs_exit();
 }
 
 static int rqbalance_start(void)
 {
 	int err, i, max_cpu_id = 0;
 
-	err = rqbalance_sysfs();
+	err = rqbalance_sysfs_init();
 	if (err)
 		return err;
 
