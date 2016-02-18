@@ -30,6 +30,16 @@ config CPU_QUIET_GOVERNOR_RUNNABLE
 
 	 If in doubt say Y.
 
+config CPU_QUIET_GOVERNOR_RQBALANCE
+	bool "rqbalance"
+	default y
+	help
+	 This governor will scale the number of CPUs online depending on
+	 both CPU load and the number of runnable threads with careful
+	 but simple and precise calculations.
+
+	 If in doubt, say Y.
+
 choice
 	prompt "Default CPUQuiet governor"
 	default CPU_QUIET_DEFAULT_GOV_USERSPACE
@@ -48,6 +58,12 @@ config CPU_QUIET_DEFAULT_GOV_RUNNABLE
 	select CPU_QUIET_GOVERNOR_RUNNABLE
 	help
 	 Use the CPUQuiet governor 'runnable threads' as default.
+
+config CPU_QUIET_DEFAULT_GOV_RQBALANCE
+	bool "rqbalance"
+	select CPU_QUIET_GOVERNOR_RQBALANCE
+	help
+	 Use the CPUQuiet governor 'rqbalance' as default.
 endchoice
 
 endif
