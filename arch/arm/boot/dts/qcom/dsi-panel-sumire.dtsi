@@ -94,6 +94,7 @@
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
+		qcom,mdss-brightness-max-level = <4095>;
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 		qcom,qpnp-lab-limit-maximum-current = <200>;
 		qcom,qpnp-ibb-limit-maximum-current = <800>;
@@ -448,6 +449,7 @@
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
+		qcom,mdss-brightness-max-level = <4095>;
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 		qcom,qpnp-lab-limit-maximum-current = <200>;
 		qcom,qpnp-ibb-limit-maximum-current = <800>;
@@ -802,6 +804,7 @@
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
+		qcom,mdss-brightness-max-level = <4095>;
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 		qcom,qpnp-lab-limit-maximum-current = <200>;
 		qcom,qpnp-ibb-limit-maximum-current = <800>;
@@ -1513,6 +1516,7 @@
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
+		qcom,mdss-brightness-max-level = <4095>;
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 		qcom,qpnp-lab-limit-maximum-current = <200>;
 		qcom,qpnp-ibb-limit-maximum-current = <800>;
@@ -1869,6 +1873,7 @@
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
+		qcom,mdss-brightness-max-level = <4095>;
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 		qcom,qpnp-lab-limit-maximum-current = <200>;
 		qcom,qpnp-ibb-limit-maximum-current = <800>;
@@ -2225,6 +2230,7 @@
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
+		qcom,mdss-brightness-max-level = <4095>;
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 		qcom,qpnp-lab-limit-maximum-current = <200>;
 		qcom,qpnp-ibb-limit-maximum-current = <800>;
@@ -2322,6 +2328,7 @@
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
+		qcom,mdss-brightness-max-level = <4095>;
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 		qcom,qpnp-lab-limit-maximum-current = <200>;
 		qcom,qpnp-ibb-limit-maximum-current = <800>;
