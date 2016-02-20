@@ -27,7 +27,7 @@
 #include <linux/err.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
-#inlcude <linux/wakeup_reason.h>
+#include <linux/wakeup_reason.h>
 
 #include <mach/msm_iomap.h>
 #include <mach/gpiomux.h>
