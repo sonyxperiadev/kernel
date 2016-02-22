@@ -1844,9 +1844,9 @@ static int mdss_dsi_ctrl_probe(struct platform_device *pdev)
 			pr_err("%s: FAILED: cannot alloc dsi ctrl\n",
 			       __func__);
 			rc = -ENOMEM;
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 			return rc;
 		}
-#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 		ctrl_pdata->spec_pdata = devm_kzalloc(&pdev->dev,
 			sizeof(struct mdss_panel_specific_pdata),
 			GFP_KERNEL);
@@ -1854,9 +1854,9 @@ static int mdss_dsi_ctrl_probe(struct platform_device *pdev)
 			pr_err("%s: FAILED: cannot alloc spec pdata\n",
 				__func__);
 			rc = -ENOMEM;
+#endif
 			goto error_no_mem;
 		}
-#endif
 		platform_set_drvdata(pdev, ctrl_pdata);
 	}
 	ctrl_pdata->mdss_util = util;
