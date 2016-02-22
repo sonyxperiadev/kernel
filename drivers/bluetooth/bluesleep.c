@@ -208,8 +208,12 @@ static void hsuart_power(int on)
 	if (test_bit(BT_SUSPEND, &flags))
 		return;
 	if (on) {
-		msm_hs_request_clock_on(bsi->uport);
-		msm_hs_set_mctrl(bsi->uport, TIOCM_RTS);
+		// make sure port is active before enable it.
+		if(bsi->uport->state->port.count)
+		{
+			msm_hs_request_clock_on(bsi->uport);
+			msm_hs_set_mctrl(bsi->uport, TIOCM_RTS);
+		}
 	} else {
 		msm_hs_set_mctrl(bsi->uport, 0);
 		msm_hs_request_clock_off(bsi->uport);
@@ -967,11 +971,15 @@ static const struct file_operations bluesleep_proc_readwrite_fops = {
 	.open	= bluesleep_proc_open,
 	.read   = seq_read,
 	.write  = bluesleep_proc_write,
+	.release = single_release,
+
 };
 static const struct file_operations bluesleep_proc_read_fops = {
 	.owner	= THIS_MODULE,
 	.open	= bluesleep_proc_open,
 	.read   = seq_read,
+	.release = single_release,
+
 };
 
 /**

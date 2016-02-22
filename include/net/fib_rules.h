@@ -23,8 +23,8 @@ struct fib_rule {
 	struct fib_rule __rcu	*ctarget;
 	char			iifname[IFNAMSIZ];
 	char			oifname[IFNAMSIZ];
-	uid_t			uid_start;
-	uid_t			uid_end;
+	kuid_t			uid_start;
+	kuid_t			uid_end;
 	struct rcu_head		rcu;
 	struct net *		fr_net;
 };
