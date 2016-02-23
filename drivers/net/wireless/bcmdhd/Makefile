@@ -181,6 +181,9 @@ ifeq ($(CONFIG_DHD_USE_STATIC_BUF),y)
 endif
 
   DHDCFLAGS += -DDONGLE_ENABLE_ISOLATION
+
+# Debugability - Packet logging
+  DHDCFLAGS += -DD11_STATUS
 endif
 
 # Print 802.1X packets
