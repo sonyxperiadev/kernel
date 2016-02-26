@@ -21,4 +21,8 @@ int mmc_gpio_get_cd(struct mmc_host *host);
 int mmc_gpio_request_cd(struct mmc_host *host, unsigned int gpio);
 void mmc_gpio_free_cd(struct mmc_host *host);
 
+#ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
+void mmc_cd_prepare_suspend(struct mmc_host *host, bool pending_detect);
+bool mmc_cd_is_pending_detect(struct mmc_host *host);
+#endif
 #endif
