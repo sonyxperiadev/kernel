@@ -71,4 +71,5 @@ obj-$(CONFIG_QPNP_MISC) += qpnp-misc.o
 obj-$(CONFIG_QCOM_LIQUID_DOCK)	+= qcom_liquid_dock.o
 obj-$(CONFIG_IR_REMOTE) += ir_remote.o
 obj-$(CONFIG_AD7146) += ad7146.o
+obj-$(CONFIG_LDO_VIBRATOR)	+= ldo_vibrator.o
 obj-y				+= qcom/
