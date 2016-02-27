@@ -507,6 +507,14 @@ config LATTICE_ECP3_CONFIG
 
 	  If unsure, say N.
 
+config LDO_VIBRATOR
+	tristate "LDO Vibrator"
+	default n
+	help
+	  This option enables device driver support for the vibrator
+	  on the LDO line. The vibrator is controlled using the
+	  timed output class.
+
 config SRAM
 	bool "Generic on-chip SRAM driver"
 	depends on HAS_IOMEM
