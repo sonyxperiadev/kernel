@@ -29,8 +29,8 @@ struct cpuquiet_governor *cpuquiet_get_first_governor(void)
 {
 	if (!list_empty(&cpuquiet_governors))
 		return list_entry(cpuquiet_governors.next,
-					struct cpuquiet_governor,
-					governor_list);
+				  struct cpuquiet_governor,
+				  governor_list);
 	else
 		return NULL;
 }
@@ -40,7 +40,7 @@ struct cpuquiet_governor *cpuquiet_find_governor(const char *str)
 	struct cpuquiet_governor *gov;
 
 	list_for_each_entry(gov, &cpuquiet_governors, governor_list)
-		if (!strnicmp(str, gov->name, CPU_QUIET_NAME_LEN))
+		if (!strnicmp(str, gov->name, CPUQUIET_NAME_LEN))
 			return gov;
 
 	return NULL;
@@ -81,13 +81,15 @@ int cpuquiet_register_governor(struct cpuquiet_governor *gov)
 	if (cpuquiet_find_governor(gov->name) == NULL) {
 		ret = 0;
 		list_add_tail(&gov->governor_list, &cpuquiet_governors);
-		if (!cpuquiet_curr_governor && cpuquiet_get_driver())
+		if (!cpuquiet_curr_governor &&
+					cpuquiet_cpu_devices_initialized())
 			cpuquiet_switch_governor(gov);
 	}
 	mutex_unlock(&cpuquiet_lock);
 
 	return ret;
 }
+EXPORT_SYMBOL(cpuquiet_register_governor);
 
 void cpuquiet_unregister_governor(struct cpuquiet_governor *gov)
 {
@@ -100,17 +102,4 @@ void cpuquiet_unregister_governor(struct cpuquiet_governor *gov)
 	list_del(&gov->governor_list);
 	mutex_unlock(&cpuquiet_lock);
 }
-
-void cpuquiet_device_busy(void)
-{
-	if (cpuquiet_curr_governor &&
-			cpuquiet_curr_governor->device_busy_notification)
-		cpuquiet_curr_governor->device_busy_notification();
-}
-
-void cpuquiet_device_free(void)
-{
-	if (cpuquiet_curr_governor &&
-			cpuquiet_curr_governor->device_free_notification)
-		cpuquiet_curr_governor->device_free_notification();
-}
+EXPORT_SYMBOL(cpuquiet_unregister_governor);

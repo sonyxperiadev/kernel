@@ -19,28 +19,23 @@
 #include <linux/mutex.h>
 #include <linux/module.h>
 #include <linux/cpuquiet.h>
-#include <linux/sysfs.h>
-
-static DEFINE_MUTEX(userspace_mutex);
 
 static int governor_set(unsigned int cpu, bool active)
 {
 	int err;
 
-	mutex_lock(&userspace_mutex);
 	if (active)
 		err = cpuquiet_wake_cpu(cpu, true);
 	else
-		err = cpuquiet_quiesence_cpu(cpu, true);
-	mutex_unlock(&userspace_mutex);
+		err = cpuquiet_quiesce_cpu(cpu, true);
 
 	return err;
 }
 
-struct cpuquiet_governor userspace_governor = {
-	.name		= "userspace",
-	.store_active	= governor_set,
-	.owner		= THIS_MODULE,
+static struct cpuquiet_governor userspace_governor = {
+	.name	   = "userspace",
+	.store_active   = governor_set,
+	.owner	  = THIS_MODULE,
 };
 
 static int __init init_usermode(void)

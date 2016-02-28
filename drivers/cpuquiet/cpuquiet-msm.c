@@ -20,71 +20,19 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#include <linux/kernel.h>
-#include <linux/module.h>
-#include <linux/platform_device.h>
-#include <linux/cpu.h>
 #include <linux/cpuquiet.h>
-#include <linux/pm_qos.h>
-#include <linux/sched.h>
 
-#define MSM_AVG_HOTPLUG_LATENCY_MS	2
+#define MSM_AVG_HOTPLUG_LATENCY_MS 2
 
-static struct cpuquiet_driver msm_cpuquiet_driver = {
-	.name			= "msm",
-	.quiesence_cpu		= cpuquiet_cpu_down,
-	.wake_cpu		= cpuquiet_cpu_up,
-	.avg_hotplug_latency_ms	= MSM_AVG_HOTPLUG_LATENCY_MS,
+static struct cpuquiet_platform_info msm_plat_info = {
+	.plat_name = "msm-cpuquiet",
+	.avg_hotplug_latency_ms = MSM_AVG_HOTPLUG_LATENCY_MS,
 };
 
-static int __cpuinit msm_cpuquiet_probe(struct platform_device *pdev)
+static int __init msm_cpuquiet_init(void)
 {
-	int err;
-
-	err = cpuquiet_register_driver(&msm_cpuquiet_driver);
-	if (err)
-		return err;
-
-	err = cpuquiet_probe_common(pdev);
-	if (err) {
-		cpuquiet_unregister_driver(&msm_cpuquiet_driver);
-		return err;
-	}
-
-#ifdef CONFIG_CPU_QUIET_STATS
-	err = cpuquiet_probe_common_post(pdev);
-	if (err)
-		return err;
-#endif
-
-	return err;
-}
-
-static int msm_cpuquiet_remove(struct platform_device *pdev)
-{
-	cpuquiet_remove_common(pdev);
-	cpuquiet_unregister_driver(&msm_cpuquiet_driver);
+	cpuquiet_init(&msm_plat_info);
 
 	return 0;
 }
-
-static struct platform_driver msm_cpuquiet_platdrv __refdata = {
-	.driver = {
-		.name	= "msm-cpuquiet",
-		.owner	= THIS_MODULE,
-	},
-	.probe		= msm_cpuquiet_probe,
-	.remove		= msm_cpuquiet_remove,
-};
-module_platform_driver(msm_cpuquiet_platdrv);
-
-int __init msm_cpuquiet_init(void)
-{
-	struct platform_device_info devinfo = { .name = "msm-cpuquiet", };
-
-	platform_device_register_full(&devinfo);
-
-	return 0;
-}
-EXPORT_SYMBOL(msm_cpuquiet_init);
 late_initcall(msm_cpuquiet_init);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,46 +17,55 @@
  */
 
 #include <linux/kernel.h>
+#include <linux/pm_qos.h>
 #include <linux/sysfs.h>
 #include <linux/slab.h>
+#include <linux/cpu.h>
 #include <linux/cpuquiet.h>
 
 #include "cpuquiet.h"
+
+struct cpuquiet_cpu_stat {
+	u64 time_up;
+	u64 time_down;
+	u64 last_update;
+	u64 hotplug_up_overhead_us;
+	u64 hotplug_down_overhead_us;
+	unsigned int transitions;
+	bool up;
+};
+
+static DEFINE_SPINLOCK(stats_lock);
+static struct cpuquiet_cpu_stat *stats;
 
 struct cpuquiet_dev {
 	unsigned int cpu;
 	struct kobject kobj;
 };
 
-struct cpuquiet_sysfs_attr {
-	struct attribute attr;
-	ssize_t (*show)(char *);
-	ssize_t (*store)(const char *, size_t count);
-};
-
 static struct kobject *cpuquiet_global_kobject;
-struct cpuquiet_dev *cpuquiet_cpu_devices[CONFIG_NR_CPUS];
+static struct cpuquiet_dev *cpuquiet_cpu_devices[CONFIG_NR_CPUS];
 
-static ssize_t show_current_governor(char *buf)
+static ssize_t show_current_governor(struct cpuquiet_attribute *cattr,
+					char *buf)
 {
 	ssize_t ret;
 
 	mutex_lock(&cpuquiet_lock);
-
 	if (cpuquiet_curr_governor)
 		ret = sprintf(buf, "%s\n", cpuquiet_curr_governor->name);
 	else
 		ret = sprintf(buf, "none\n");
-
 	mutex_unlock(&cpuquiet_lock);
 
 	return ret;
 
 }
 
-static ssize_t store_current_governor(const char *buf, size_t count)
+static ssize_t store_current_governor(struct cpuquiet_attribute *cattr,
+					const char *buf, size_t count)
 {
-	char name[CPU_QUIET_NAME_LEN];
+	char name[CPUQUIET_NAME_LEN];
 	struct cpuquiet_governor *gov;
 	int len = count, ret = -EINVAL;
 
@@ -70,7 +79,6 @@ static ssize_t store_current_governor(const char *buf, size_t count)
 
 	mutex_lock(&cpuquiet_lock);
 	gov = cpuquiet_find_governor(name);
-
 	if (gov)
 		ret = cpuquiet_switch_governor(gov);
 	mutex_unlock(&cpuquiet_lock);
@@ -81,7 +89,8 @@ static ssize_t store_current_governor(const char *buf, size_t count)
 		return count;
 }
 
-static ssize_t available_governors_show(char *buf)
+static ssize_t show_available_governors(struct cpuquiet_attribute *cattr,
+					char *buf)
 {
 	ssize_t ret = 0, len;
 	struct cpuquiet_governor *gov;
@@ -97,138 +106,122 @@ static ssize_t available_governors_show(char *buf)
 		*buf = '\n';
 	} else
 		ret = sprintf(buf, "none\n");
-
 	mutex_unlock(&cpuquiet_lock);
 
 	return ret;
 }
 
-struct cpuquiet_sysfs_attr attr_current_governor = __ATTR(current_governor,
-			0644, show_current_governor, store_current_governor);
-struct cpuquiet_sysfs_attr attr_governors = __ATTR_RO(available_governors);
+static ssize_t show_nr_min_cpus(struct cpuquiet_attribute *cattr, char *buf)
+{
+	return sprintf(buf, "%u\n", cpuquiet_nr_min_cpus);
+}
 
+static ssize_t show_nr_max_cpus(struct cpuquiet_attribute *cattr, char *buf)
+{
+	return sprintf(buf, "%u\n", cpuquiet_nr_max_cpus);
+}
+
+static ssize_t store_nr_cpus(struct cpuquiet_attribute *cattr,
+					const char *buf, size_t count, bool max)
+{
+	ssize_t ret = 0;
+	unsigned int new_nr_cpus, new_min_cpus, new_max_cpus;
+
+	ret = sscanf(buf, "%u", &new_nr_cpus);
+	if (ret != 1)
+		return -EINVAL;
+
+	if (new_nr_cpus < 1 || new_nr_cpus > num_present_cpus()) {
+		pr_err("%s: CPU number limit must be in valid range [%d, %d]\n",
+					__func__, 1, num_present_cpus());
+		return -EINVAL;
+	}
+
+	mutex_lock(&cpuquiet_min_max_cpus_lock);
+
+	if (max) {
+		new_min_cpus = cpuquiet_nr_min_cpus;
+		new_max_cpus = new_nr_cpus;
+	} else {
+		new_min_cpus = new_nr_cpus;
+		new_max_cpus = cpuquiet_nr_max_cpus;
+	}
+
+	if (new_max_cpus < new_min_cpus) {
+		pr_err("%s: nr_max_cpus cannot be less than nr_min_cpus\n",
+								__func__);
+		mutex_unlock(&cpuquiet_min_max_cpus_lock);
+		return -EINVAL;
+	}
+
+	if (max)
+		cpuquiet_nr_max_cpus = new_nr_cpus;
+	else
+		cpuquiet_nr_min_cpus = new_nr_cpus;
+
+	mutex_unlock(&cpuquiet_min_max_cpus_lock);
+
+	cpuquiet_queue_work();
+
+	return ret;
+}
+
+static ssize_t store_nr_min_cpus(struct cpuquiet_attribute *cattr,
+					const char *buf, size_t count)
+{
+	return store_nr_cpus(cattr, buf, count, false);
+}
+
+static ssize_t store_nr_max_cpus(struct cpuquiet_attribute *cattr,
+					const char *buf, size_t count)
+{
+	return store_nr_cpus(cattr, buf, count, true);
+}
+
+CPQ_ATTRIBUTE(current_governor, 0644, show_current_governor,
+			store_current_governor);
+CPQ_ATTRIBUTE(available_governors, 0444, show_available_governors, NULL);
+CPQ_ATTRIBUTE(nr_min_cpus, 0644, show_nr_min_cpus, store_nr_min_cpus);
+CPQ_ATTRIBUTE(nr_max_cpus, 0644, show_nr_max_cpus, store_nr_max_cpus);
 
 static struct attribute *cpuquiet_default_attrs[] = {
-	&attr_current_governor.attr,
-	&attr_governors.attr,
-	NULL
+	&current_governor_attr.attr,
+	&available_governors_attr.attr,
+	&nr_min_cpus_attr.attr,
+	&nr_max_cpus_attr.attr,
+	NULL,
 };
 
 static ssize_t cpuquiet_sysfs_show(struct kobject *kobj,
-			struct attribute *attr, char *buf)
+		struct attribute *attr, char *buf)
 {
-	struct cpuquiet_sysfs_attr *cattr =
-			container_of(attr, struct cpuquiet_sysfs_attr, attr);
+	struct cpuquiet_attribute *cattr =
+		container_of(attr, struct cpuquiet_attribute, attr);
 
-	return cattr->show(buf);
+	return cattr->show(cattr, buf);
 }
 
 static ssize_t cpuquiet_sysfs_store(struct kobject *kobj,
-			struct attribute *attr, const char *buf, size_t count)
+		struct attribute *attr, const char *buf, size_t count)
 {
-	struct cpuquiet_sysfs_attr *cattr =
-			container_of(attr, struct cpuquiet_sysfs_attr, attr);
+	struct cpuquiet_attribute *cattr =
+		container_of(attr, struct cpuquiet_attribute, attr);
 
 	if (cattr->store)
-		return cattr->store(buf, count);
+		return cattr->store(cattr, buf, count);
 
 	return -EINVAL;
 }
 
-static const struct sysfs_ops cpuquiet_sysfs_ops = {
+const struct sysfs_ops cpuquiet_sysfs_ops = {
 	.show = cpuquiet_sysfs_show,
 	.store = cpuquiet_sysfs_store,
 };
 
-static struct kobj_type ktype_cpuquiet_sysfs = {
+static struct kobj_type ktype_cpuquiet = {
 	.sysfs_ops = &cpuquiet_sysfs_ops,
 	.default_attrs = cpuquiet_default_attrs,
 };
-
-int cpuquiet_add_group(struct attribute_group *attrs)
-{
-	return sysfs_create_group(cpuquiet_global_kobject, attrs);
-}
-
-void cpuquiet_remove_group(struct attribute_group *attrs)
-{
-	sysfs_remove_group(cpuquiet_global_kobject, attrs);
-}
-
-int cpuquiet_kobject_init(struct kobject *kobj, struct kobj_type *type,
-				char *name)
-{
-	int err;
-
-	err = kobject_init_and_add(kobj, type, cpuquiet_global_kobject, name);
-	if (!err)
-		kobject_uevent(kobj, KOBJ_ADD);
-
-	return err;
-}
-
-int cpuquiet_cpu_kobject_init(struct kobject *kobj, struct kobj_type *type,
-				char *name, int cpu)
-{
-	int err;
-
-	err = kobject_init_and_add(kobj, type, &cpuquiet_cpu_devices[cpu]->kobj,
-					name);
-	if (!err)
-		kobject_uevent(kobj, KOBJ_ADD);
-
-	return err;
-}
-
-int cpuquiet_add_interface(struct device *dev)
-{
-	int err;
-
-	cpuquiet_global_kobject = kzalloc(sizeof(*cpuquiet_global_kobject),
-						GFP_KERNEL);
-	if (!cpuquiet_global_kobject)
-		return -ENOMEM;
-
-	err = kobject_init_and_add(cpuquiet_global_kobject,
-			&ktype_cpuquiet_sysfs, &dev->kobj, "cpuquiet");
-	if (!err)
-		kobject_uevent(cpuquiet_global_kobject, KOBJ_ADD);
-
-	return err;
-}
-
-
-struct cpuquiet_attr {
-	struct attribute attr;
-	ssize_t (*show)(unsigned int, char *);
-	ssize_t (*store)(unsigned int, const char *, size_t count);
-};
-
-
-static ssize_t cpuquiet_state_show(struct kobject *kobj,
-	struct attribute *attr, char *buf)
-{
-	struct cpuquiet_attr *cattr = container_of(attr,
-					struct cpuquiet_attr, attr);
-	struct cpuquiet_dev *dev = container_of(kobj,
-					struct cpuquiet_dev, kobj);
-
-	return cattr->show(dev->cpu, buf);
-}
-
-static ssize_t cpuquiet_state_store(struct kobject *kobj,
-	struct attribute *attr, const char *buf, size_t count)
-{
-	struct cpuquiet_attr *cattr = container_of(attr,
-					struct cpuquiet_attr, attr);
-	struct cpuquiet_dev *dev = container_of(kobj,
-					struct cpuquiet_dev, kobj);
-
-	if (cattr->store)
-		return cattr->store(dev->cpu, buf, count);
-
-	return -EINVAL;
-}
 
 static ssize_t show_active(unsigned int cpu, char *buf)
 {
@@ -252,40 +245,270 @@ static ssize_t store_active(unsigned int cpu, const char *value, size_t count)
 	return count;
 }
 
-struct cpuquiet_attr attr_active = __ATTR(active, 0644, show_active,
-						store_active);
+CPQ_CPU_ATTRIBUTE(active, 0644, show_active, store_active);
 
-static struct attribute *cpuquiet_default_cpu_attrs[] = {
-	&attr_active.attr,
-	NULL
+static struct attribute *cpuquiet_cpu_default_attrs[] = {
+	&active_attr.attr,
+	NULL,
 };
+
+static ssize_t cpuquiet_cpu_sysfs_show(struct kobject *kobj,
+		struct attribute *attr, char *buf)
+{
+	struct cpuquiet_cpu_attribute *cattr =
+		container_of(attr, struct cpuquiet_cpu_attribute, attr);
+	struct cpuquiet_dev *dev =
+		container_of(kobj, struct cpuquiet_dev, kobj);
+
+	return cattr->show(dev->cpu, buf);
+}
+
+static ssize_t cpuquiet_cpu_sysfs_store(struct kobject *kobj,
+		struct attribute *attr, const char *buf, size_t count)
+{
+	struct cpuquiet_cpu_attribute *cattr =
+		container_of(attr, struct cpuquiet_cpu_attribute, attr);
+	struct cpuquiet_dev *dev =
+		container_of(kobj, struct cpuquiet_dev, kobj);
+
+	if (cattr->store)
+		return cattr->store(dev->cpu, buf, count);
+
+	return -EINVAL;
+}
 
 static const struct sysfs_ops cpuquiet_cpu_sysfs_ops = {
-	.show = cpuquiet_state_show,
-	.store = cpuquiet_state_store,
+	.show = cpuquiet_cpu_sysfs_show,
+	.store = cpuquiet_cpu_sysfs_store,
 };
 
-static struct kobj_type ktype_cpuquiet = {
+static struct kobj_type ktype_cpuquiet_cpu = {
 	.sysfs_ops = &cpuquiet_cpu_sysfs_ops,
-	.default_attrs = cpuquiet_default_cpu_attrs,
+	.default_attrs = cpuquiet_cpu_default_attrs,
 };
 
-void cpuquiet_add_dev(struct device *device, unsigned int cpu)
+int cpuquiet_add_dev(struct device *device, unsigned int cpu)
 {
 	struct cpuquiet_dev *dev;
 	int err;
 
 	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
-	dev->cpu = cpu;
+	if (!dev)
+		return -ENOMEM;
+
+	device = get_cpu_device(cpu);
+	dev_info(device, "cpuquiet_add_dev\n");
 	cpuquiet_cpu_devices[cpu] = dev;
-	err = kobject_init_and_add(&dev->kobj, &ktype_cpuquiet,
+	dev->cpu = cpu;
+	err = kobject_init_and_add(&dev->kobj, &ktype_cpuquiet_cpu,
 				&device->kobj, "cpuquiet");
-	if (!err)
-		kobject_uevent(&dev->kobj, KOBJ_ADD);
+	if (err) {
+		cpuquiet_cpu_devices[cpu] = NULL;
+		kfree(dev);
+		return err;
+	}
+	kobject_uevent(&dev->kobj, KOBJ_ADD);
+
+	return 0;
 }
 
 void cpuquiet_remove_dev(unsigned int cpu)
 {
-	if (cpu < CONFIG_NR_CPUS && cpuquiet_cpu_devices[cpu])
+	if (cpuquiet_cpu_devices[cpu])
 		kobject_put(&cpuquiet_cpu_devices[cpu]->kobj);
 }
+
+int cpuquiet_sysfs_init(void)
+{
+	struct device *dev = cpu_subsys.dev_root;
+	int err;
+
+	cpuquiet_global_kobject = kzalloc(sizeof(*cpuquiet_global_kobject),
+						GFP_KERNEL);
+	if (!cpuquiet_global_kobject)
+		return -ENOMEM;
+
+	err = kobject_init_and_add(cpuquiet_global_kobject,
+			&ktype_cpuquiet, &dev->kobj, "cpuquiet");
+	if (err) {
+		kfree(cpuquiet_global_kobject);
+		return err;
+	}
+
+	kobject_uevent(cpuquiet_global_kobject, KOBJ_ADD);
+
+	return 0;
+}
+
+void cpuquiet_sysfs_exit(void)
+{
+	kobject_put(cpuquiet_global_kobject);
+}
+
+int cpuquiet_register_attrs(struct attribute_group *attrs)
+{
+	return sysfs_create_group(cpuquiet_global_kobject, attrs);
+}
+EXPORT_SYMBOL(cpuquiet_register_attrs);
+
+void cpuquiet_unregister_attrs(struct attribute_group *attrs)
+{
+	sysfs_remove_group(cpuquiet_global_kobject, attrs);
+}
+EXPORT_SYMBOL(cpuquiet_unregister_attrs);
+
+int cpuquiet_register_cpu_attrs(struct attribute_group *attrs)
+{
+	int cpu, ret = 0;
+
+	for_each_possible_cpu(cpu) {
+		if (cpuquiet_cpu_devices[cpu]) {
+			ret = sysfs_create_group(
+					&cpuquiet_cpu_devices[cpu]->kobj,
+					attrs);
+			if (ret) {
+				cpuquiet_unregister_cpu_attrs(attrs);
+				return ret;
+			}
+		}
+	}
+
+	return ret;
+}
+EXPORT_SYMBOL(cpuquiet_register_cpu_attrs);
+
+void cpuquiet_unregister_cpu_attrs(struct attribute_group *attrs)
+{
+	int cpu;
+
+	for_each_possible_cpu(cpu) {
+		if (cpuquiet_cpu_devices[cpu])
+			sysfs_remove_group(&cpuquiet_cpu_devices[cpu]->kobj,
+						attrs);
+	}
+}
+EXPORT_SYMBOL(cpuquiet_unregister_cpu_attrs);
+
+static void __stats_update(unsigned int cpu, bool up, u64 trans_overhead_us)
+{
+	struct cpuquiet_cpu_stat *stat = &stats[cpu];
+	u64 cur_jiffies = get_jiffies_64();
+
+	if (stat->up)
+		stat->time_up += cur_jiffies - stat->last_update;
+	else
+		stat->time_down += cur_jiffies - stat->last_update;
+
+	if (stat->up != up) {
+		stat->transitions++;
+		stat->up = up;
+
+		if (up)
+			stat->hotplug_up_overhead_us += trans_overhead_us;
+		else
+			stat->hotplug_down_overhead_us += trans_overhead_us;
+	}
+
+	stat->last_update = cur_jiffies;
+}
+
+static ssize_t show_transitions(unsigned int cpu, char *buf)
+{
+	struct cpuquiet_cpu_stat *stat = &stats[cpu];
+
+	return sprintf(buf, "%u\n", stat->transitions);
+}
+
+static ssize_t show_hp_up(unsigned int cpu, char *buf)
+{
+	struct cpuquiet_cpu_stat *stat = &stats[cpu];
+
+	return sprintf(buf, "%llu\n", stat->hotplug_up_overhead_us);
+}
+
+static ssize_t show_hp_down(unsigned int cpu, char *buf)
+{
+	struct cpuquiet_cpu_stat *stat = &stats[cpu];
+
+	return sprintf(buf, "%llu\n", stat->hotplug_down_overhead_us);
+}
+
+static ssize_t show_overhead_us_in_state(unsigned int cpu, char *buf)
+{
+	struct cpuquiet_cpu_stat *stat = &stats[cpu];
+	u64 up, down;
+	ssize_t len = 0;
+	unsigned long flags;
+
+	spin_lock_irqsave(&stats_lock, flags);
+	__stats_update(cpu, stat->up, 0);
+	up = stat->time_up;
+	down = stat->time_down;
+	spin_unlock_irqrestore(&stats_lock, flags);
+
+	len = sprintf(buf, "up %llu\ndown %llu\n", stat->time_up,
+			stat->time_down);
+
+	return len;
+}
+
+CPQ_CPU_ATTRIBUTE(transitions, 0444, show_transitions, NULL);
+CPQ_CPU_ATTRIBUTE(time_in_state, 0444, show_overhead_us_in_state, NULL);
+CPQ_CPU_ATTRIBUTE(hotplug_up_us, 0444, show_hp_up, NULL);
+CPQ_CPU_ATTRIBUTE(hotplug_down_us, 0444, show_hp_down, NULL);
+
+static struct attribute *stats_attrs[] = {
+	&transitions_attr.attr,
+	&time_in_state_attr.attr,
+	&hotplug_up_us_attr.attr,
+	&hotplug_down_us_attr.attr,
+	NULL,
+};
+
+static struct attribute_group stats_group = {
+	.name = "stats",
+	.attrs = stats_attrs,
+};
+
+int cpuquiet_stats_init(void)
+{
+	unsigned int cpu;
+	int ret = 0;
+
+	stats = kzalloc(sizeof(*stats) * CONFIG_NR_CPUS, GFP_KERNEL);
+	if (!stats)
+		return -ENOMEM;
+
+	for_each_possible_cpu(cpu) {
+		if (cpu_online(cpu)) {
+			stats[cpu].last_update = get_jiffies_64();
+			stats[cpu].up = true;
+			stats[cpu].hotplug_up_overhead_us = 0;
+			stats[cpu].hotplug_down_overhead_us = 0;
+		}
+	}
+
+	ret = cpuquiet_register_cpu_attrs(&stats_group);
+	if (ret)
+		kfree(stats);
+
+	return ret;
+}
+EXPORT_SYMBOL(cpuquiet_stats_init);
+
+void cpuquiet_stats_exit(void)
+{
+	cpuquiet_unregister_cpu_attrs(&stats_group);
+	kfree(stats);
+}
+EXPORT_SYMBOL(cpuquiet_stats_exit);
+
+void cpuquiet_stats_update(unsigned int cpu, bool up, u64 trans_overhead_us)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&stats_lock, flags);
+	__stats_update(cpu, up, trans_overhead_us);
+	spin_unlock_irqrestore(&stats_lock, flags);
+}
+EXPORT_SYMBOL(cpuquiet_stats_update);
