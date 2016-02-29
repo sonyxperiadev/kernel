@@ -1099,6 +1099,7 @@ static int mmc_select_low_voltage(struct mmc_host *host, u32 ocr)
 {
 	int ret = 0;
 
+#ifdef CONFIG_MACH_SONY_SUZURAN
 	if ((host->ocr_avail == MMC_VDD_165_195) && mmc_host_uhs(host) &&
 		((ocr & host->ocr_avail) == 0)) {
 		/* lowest voltage can be selected in mmc_power_cycle */
@@ -1106,6 +1107,7 @@ static int mmc_select_low_voltage(struct mmc_host *host, u32 ocr)
 		host->ocr = 0;
 		ret = 1;
 	}
+#endif
 
 	return ret;
 }
