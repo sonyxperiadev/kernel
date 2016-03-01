@@ -3046,13 +3046,15 @@ static int mdss_dsi_parse_panel_features(struct device_node *np,
 //	pinfo->cont_splash_enabled = of_property_read_bool(np,
 //		"qcom,cont-splash-enabled");
 
+	pinfo->partial_update_supported = of_property_read_bool(np,
+		"qcom,partial-update-enabled");
+
 	if (pinfo->mipi.mode == DSI_CMD_MODE) {
-		pinfo->partial_update_enabled = of_property_read_bool(np,
-				"qcom,partial-update-enabled");
+		pinfo->partial_update_enabled = pinfo->partial_update_supported;
 		pr_info("%s: partial_update_enabled=%d\n", __func__,
 					pinfo->partial_update_enabled);
+		ctrl->set_col_page_addr = mdss_dsi_set_col_page_addr;
 		if (pinfo->partial_update_enabled) {
-			ctrl->set_col_page_addr = mdss_dsi_set_col_page_addr;
 			pinfo->partial_update_roi_merge =
 					of_property_read_bool(np,
 					"qcom,partial-update-roi-merge");
@@ -3867,12 +3869,6 @@ parse:
 			pinfo->mode_gpio_state = MODE_GPIO_NOT_VALID;
 		}
 
-		rc = of_property_read_u32(next,
-			"qcom,mdss-dsi-panel-framerate", &tmp);
-		pinfo->mipi.frame_rate = !rc ? tmp : 60;
-		pinfo->mipi.input_fpks = pinfo->mipi.frame_rate * 1000;
-		rc = of_property_read_u32(next,
-			"qcom,mdss-dsi-panel-clockrate", &tmp);
 		pinfo->clk_rate = !rc ? tmp : 0;
 		data = of_get_property(next,
 			"qcom,mdss-dsi-panel-timings", &len);
