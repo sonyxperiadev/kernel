@@ -1405,7 +1405,7 @@ static int msm_rpm_glink_send_buffer(char *buf, uint32_t size, bool noirq)
 {
 	int ret;
 	unsigned long flags;
-	int timeout = 50;
+	int timeout = 5;
 
 	spin_lock_irqsave(&msm_rpm_data.smd_lock_write, flags);
 	do {
@@ -1419,7 +1419,7 @@ static int msm_rpm_glink_send_buffer(char *buf, uint32_t size, bool noirq)
 				spin_lock_irqsave(
 					&msm_rpm_data.smd_lock_write, flags);
 			} else {
-				udelay(5);
+				udelay(100);
 			}
 			timeout--;
 		} else {
