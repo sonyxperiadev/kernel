@@ -511,6 +511,16 @@ static void create_all_freq_table(void)
 	return;
 }
 
+static void free_all_freq_table(void)
+{
+	if (all_freq_table) {
+		kfree(all_freq_table->freq_table);
+		all_freq_table->freq_table = NULL;
+		kfree(all_freq_table);
+		all_freq_table = NULL;
+	}
+}
+
 static void add_all_freq_table(unsigned int freq)
 {
 	unsigned int size;
@@ -574,7 +584,7 @@ static void cpufreq_allstats_create(unsigned int cpu,
 static int cpufreq_stat_notifier_policy(struct notifier_block *nb,
 		unsigned long val, void *data)
 {
-	int ret, count = 0, i;
+	int ret = 0, count = 0, i;
 	struct cpufreq_policy *policy = data;
 	struct cpufreq_frequency_table *table;
 	unsigned int cpu_num, cpu = policy->cpu;
@@ -701,6 +711,8 @@ static int __init cpufreq_stats_init(void)
 	if (ret)
 		return ret;
 
+	create_all_freq_table();
+
 	for_each_online_cpu(cpu)
 		cpufreq_stats_create_table(cpu);
 
@@ -711,6 +723,7 @@ static int __init cpufreq_stats_init(void)
 				CPUFREQ_POLICY_NOTIFIER);
 		for_each_online_cpu(cpu)
 			cpufreq_stats_free_table(cpu);
+		free_all_freq_table();
 		return ret;
 	}
 
