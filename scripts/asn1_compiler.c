@@ -311,6 +311,9 @@ struct token {
 
 static struct token *token_list;
 static unsigned nr_tokens;
+static _Bool verbose;
+
+#define debug(fmt, ...) do { if (verbose) printf(fmt, ## __VA_ARGS__); } while (0)
 
 static int directive_compare(const void *_key, const void *_pdir)
 {
@@ -322,21 +325,21 @@ static int directive_compare(const void *_key, const void *_pdir)
 	dlen = strlen(dir);
 	clen = (dlen < token->size) ? dlen : token->size;
 
-	//printf("cmp(%*.*s,%s) = ",
+	//debug("cmp(%*.*s,%s) = ",
 	//       (int)token->size, (int)token->size, token->value,
 	//       dir);
 
 	val = memcmp(token->value, dir, clen);
 	if (val != 0) {
-		//printf("%d [cmp]\n", val);
+		//debug("%d [cmp]\n", val);
 		return val;
 	}
 
 	if (dlen == token->size) {
-		//printf("0\n");
+		//debug("0\n");
 		return 0;
 	}
-	//printf("%d\n", (int)dlen - (int)token->size);
+	//debug("%d\n", (int)dlen - (int)token->size);
 	return dlen - token->size; /* shorter -> negative */
 }
 
@@ -515,13 +518,13 @@ static void tokenise(char *buffer, char *end)
 	}
 
 	nr_tokens = tix;
-	printf("Extracted %u tokens\n", nr_tokens);
+	debug("Extracted %u tokens\n", nr_tokens);
 
 #if 0
 	{
 		int n;
 		for (n = 0; n < nr_tokens; n++)
-			printf("Token %3u: '%*.*s'\n",
+			debug("Token %3u: '%*.*s'\n",
 			       n,
 			       (int)token_list[n].size, (int)token_list[n].size,
 			       token_list[n].value);
@@ -542,6 +545,7 @@ int main(int argc, char **argv)
 	ssize_t readlen;
 	FILE *out, *hdr;
 	char *buffer, *p;
+	char *kbuild_verbose;
 	int fd;
 
 	if (argc != 4) {
@@ -549,6 +553,10 @@ int main(int argc, char **argv)
 			argv[0]);
 		exit(2);
 	}
+
+	kbuild_verbose = getenv("KBUILD_VERBOSE");
+	if (kbuild_verbose)
+		verbose = atoi(kbuild_verbose);
 
 	filename = argv[1];
 	outputname = argv[2];
@@ -658,7 +666,7 @@ struct element {
 	unsigned	flags;
 #define ELEMENT_IMPLICIT	0x0001
 #define ELEMENT_EXPLICIT	0x0002
-#define ELEMENT_MARKED		0x0004
+#define ELEMENT_TAG_SPECIFIED	0x0004
 #define ELEMENT_RENDERED	0x0008
 #define ELEMENT_SKIPPABLE	0x0010
 #define ELEMENT_CONDITIONAL	0x0020
@@ -748,11 +756,11 @@ static void build_type_list(void)
 
 	qsort(type_index, nr, sizeof(type_index[0]), type_index_compare);
 
-	printf("Extracted %u types\n", nr_types);
+	debug("Extracted %u types\n", nr_types);
 #if 0
 	for (n = 0; n < nr_types; n++) {
 		struct type *type = type_index[n];
-		printf("- %*.*s\n",
+		debug("- %*.*s\n",
 		       (int)type->name->size,
 		       (int)type->name->size,
 		       type->name->value);
@@ -793,7 +801,7 @@ static void parse(void)
 
 	} while (type++, !(type->flags & TYPE_STOP_MARKER));
 
-	printf("Extracted %u actions\n", nr_actions);
+	debug("Extracted %u actions\n", nr_actions);
 }
 
 static struct element *element_list;
@@ -871,6 +879,7 @@ static struct element *parse_type(struct token **_cursor, struct token *end,
 
 		element->tag &= ~0x1f;
 		element->tag |= strtoul(cursor->value, &p, 10);
+		element->flags |= ELEMENT_TAG_SPECIFIED;
 		if (p - cursor->value != cursor->size)
 			abort();
 		cursor++;
@@ -1284,7 +1293,7 @@ static void render(FILE *out, FILE *hdr)
 	}
 
 	/* We do two passes - the first one calculates all the offsets */
-	printf("Pass 1\n");
+	debug("Pass 1\n");
 	nr_entries = 0;
 	root = &type_list[0];
 	render_element(NULL, root->element, NULL);
@@ -1295,7 +1304,7 @@ static void render(FILE *out, FILE *hdr)
 		e->flags &= ~ELEMENT_RENDERED;
 
 	/* And then we actually render */
-	printf("Pass 2\n");
+	debug("Pass 2\n");
 	fprintf(out, "\n");
 	fprintf(out, "static const unsigned char %s_machine[] = {\n",
 		grammar_name);
@@ -1353,6 +1362,8 @@ static void render_out_of_line_list(FILE *out)
 			render_opcode(out, "ASN1_OP_END_SET_OF%s,\n", act);
 			render_opcode(out, "_jump_target(%u),\n", entry);
 			break;
+		default:
+			break;
 		}
 		if (e->action)
 			render_opcode(out, "_action(ACT_%s),\n",
@@ -1366,7 +1377,7 @@ static void render_out_of_line_list(FILE *out)
  */
 static void render_element(FILE *out, struct element *e, struct element *tag)
 {
-	struct element *ec;
+	struct element *ec, *x;
 	const char *cond, *act;
 	int entry, skippable = 0, outofline = 0;
 
@@ -1390,7 +1401,8 @@ static void render_element(FILE *out, struct element *e, struct element *tag)
 	act = e->action ? "_ACT" : "";
 	switch (e->compound) {
 	case ANY:
-		render_opcode(out, "ASN1_OP_%sMATCH_ANY%s,", cond, act);
+		render_opcode(out, "ASN1_OP_%sMATCH_ANY%s%s,",
+			      cond, act, skippable ? "_OR_SKIP" : "");
 		if (e->name)
 			render_more(out, "\t\t// %*.*s",
 				    (int)e->name->size, (int)e->name->size,
@@ -1425,15 +1437,17 @@ static void render_element(FILE *out, struct element *e, struct element *tag)
 		break;
 	}
 
-	if (e->name)
+	x = tag ?: e;
+	if (x->name)
 		render_more(out, "\t\t// %*.*s",
-			    (int)e->name->size, (int)e->name->size,
-			    e->name->value);
+			    (int)x->name->size, (int)x->name->size,
+			    x->name->value);
 	render_more(out, "\n");
 
 	/* Render the tag */
-	if (!tag)
+	if (!tag || !(tag->flags & ELEMENT_TAG_SPECIFIED))
 		tag = e;
+
 	if (tag->class == ASN1_UNIV &&
 	    tag->tag != 14 &&
 	    tag->tag != 15 &&
@@ -1455,7 +1469,8 @@ dont_render_tag:
 	case TYPE_REF:
 		render_element(out, e->type->type->element, tag);
 		if (e->action)
-			render_opcode(out, "ASN1_OP_ACT,\n");
+			render_opcode(out, "ASN1_OP_%sACT,\n",
+				      skippable ? "MAYBE_" : "");
 		break;
 
 	case SEQUENCE:
@@ -1529,7 +1544,7 @@ dont_render_tag:
 
 	case CHOICE:
 		for (ec = e->children; ec; ec = ec->next)
-			render_element(out, ec, NULL);
+			render_element(out, ec, ec);
 		if (!skippable)
 			render_opcode(out, "ASN1_OP_COND_FAIL,\n");
 		if (e->action)
