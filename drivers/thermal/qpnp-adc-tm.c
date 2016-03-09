@@ -296,6 +296,7 @@ static struct qpnp_adc_tm_reverse_scale_fn adc_tm_rscale_fn[] = {
 	[SCALE_QRD_SKUH_RBATT_THERM] = {qpnp_adc_qrd_skuh_btm_scaler},
 	[SCALE_QRD_SKUT1_RBATT_THERM] = {qpnp_adc_qrd_skut1_btm_scaler},
 	[SCALE_QRD_SKUE_RBATT_THERM] = {qpnp_adc_qrd_skue_btm_scaler},
+	[SCALE_R_USB_ID_DECIDEGC] = {qpnp_adc_usb_scaler_decidegc},
 };
 
 static int32_t qpnp_adc_tm_read_reg(struct qpnp_adc_tm_chip *chip,
@@ -1319,6 +1320,10 @@ static int qpnp_adc_tm_get_trip_temp(struct thermal_zone_device *thermal,
 	if (LR_MUX5_PU2_AMUX_THM2 == adc_tm_sensor->btm_channel_num)
 		rc = qpnp_adc_tm_scale_voltage_therm_emmc(chip->vadc_dev, reg,
 								&result);
+	else if (adc_tm_sensor->btm_channel_num == QPNP_ADC_TM_M0_ADC_CH_SEL_CTL ||
+	    adc_tm_sensor->btm_channel_num == QPNP_ADC_TM_M1_ADC_CH_SEL_CTL)
+		rc = qpnp_adc_tm_scale_voltage_therm_pu2_decidegc(
+						chip->vadc_dev, reg, &result);
 	else
 		rc = qpnp_adc_tm_scale_voltage_therm_pu2(chip->vadc_dev, reg,
 								&result);
@@ -1364,9 +1369,14 @@ static int qpnp_adc_tm_set_trip_temp(struct thermal_zone_device *thermal,
 
 	pr_debug("requested a high - %d and low - %d with trip - %d\n",
 			tm_config.high_thr_temp, tm_config.low_thr_temp, trip);
+
 	if (LR_MUX5_PU2_AMUX_THM2 == adc_tm->vadc_channel_num)
 		rc = qpnp_adc_tm_scale_therm_voltage_emmc(chip->vadc_dev,
 							&tm_config);
+	else if (adc_tm->btm_channel_num == QPNP_ADC_TM_M0_ADC_CH_SEL_CTL ||
+	    adc_tm->btm_channel_num == QPNP_ADC_TM_M1_ADC_CH_SEL_CTL)
+		rc = qpnp_adc_tm_scale_therm_voltage_pu2_decidegc(
+						chip->vadc_dev, &tm_config);
 	else
 		rc = qpnp_adc_tm_scale_therm_voltage_pu2(chip->vadc_dev,
 							&tm_config);
