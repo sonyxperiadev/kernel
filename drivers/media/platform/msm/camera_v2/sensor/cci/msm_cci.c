@@ -1952,7 +1952,55 @@ static int msm_cci_get_clk_info(struct cci_device *cci_dev,
 	return 0;
 }
 
+#define CAM_I2C_VTG_MIN_UV	1800000
+#define CAM_I2C_VTG_MAX_UV	1800000
+#define CAM_I2C_LOAD_UA		10000
 
+#define reg_set_optimum_mode_check(reg, load_uA) \
+		((regulator_count_voltages(reg) > 0) ? \
+		 regulator_set_optimum_mode(reg, load_uA) : 0)
+
+static int cci_enable_i2c_vcc(struct platform_device *pdev)
+{
+	struct regulator *vcc_i2c;
+	int rc;
+
+	vcc_i2c = regulator_get(&pdev->dev, "vcc_i2c");
+	if (IS_ERR(vcc_i2c)){
+		pr_err("%s: Failed to get vcc_i2c regulator\n", __func__);
+		/* Don't fail: it's not required on all devices */
+		return 0;
+	}
+
+	if (regulator_count_voltages(vcc_i2c) > 0) {
+		rc = regulator_set_voltage(vcc_i2c,
+				CAM_I2C_VTG_MIN_UV, CAM_I2C_VTG_MAX_UV);
+		if (rc){
+			pr_err("%s: reg set i2c vtg failed retval =%d\n",
+				__func__, rc);
+			regulator_put(vcc_i2c);
+			return rc;
+		}
+	}
+
+	rc = reg_set_optimum_mode_check(vcc_i2c, CAM_I2C_LOAD_UA);
+	if(rc < 0){
+		pr_err("%s: Regulator vcc_i2c set_opt failed rc=%d\n",
+				__func__, rc);
+		return rc;
+	}
+
+	rc = regulator_enable(vcc_i2c);
+	if(rc){
+		pr_err("%s: Regulator vcc_i2c enable failed rc=%d\n",
+				__func__, rc);
+		reg_set_optimum_mode_check(vcc_i2c, 0);
+		return rc;
+	}
+	usleep_range(1000, 2000);
+
+	return 0;
+}
 
 static int msm_cci_probe(struct platform_device *pdev)
 {
@@ -1964,6 +2012,11 @@ static int msm_cci_probe(struct platform_device *pdev)
 		CDBG("%s: no enough memory\n", __func__);
 		return -ENOMEM;
 	}
+
+	rc = cci_enable_i2c_vcc(pdev);
+	if (rc < 0)
+		return rc;
+
 	mutex_init(&new_cci_dev->mutex);
 	v4l2_subdev_init(&new_cci_dev->msm_sd.sd, &msm_cci_subdev_ops);
 	new_cci_dev->msm_sd.sd.internal_ops = &msm_cci_internal_ops;
