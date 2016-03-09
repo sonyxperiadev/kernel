@@ -778,6 +778,31 @@ static int mdss_dsi_update_panel_config(struct mdss_dsi_ctrl_pdata *ctrl_pdata,
 	return ret;
 }
 
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+static void mdss_dsi_reset_dual_display(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
+{
+	struct mdss_dsi_ctrl_pdata *mctrl_pdata = NULL;
+
+	if (!mdss_dsi_split_display_enabled()) {
+		if (mdss_dsi_pinctrl_set_state(ctrl_pdata, true))
+			pr_debug("reset enable: pinctrl not enabled\n");
+		mdss_dsi_panel_reset(&(ctrl_pdata->panel_data), 1);
+	} else if (ctrl_pdata->ndx == DSI_CTRL_1) {
+		mctrl_pdata = mdss_dsi_get_other_ctrl(ctrl_pdata);
+		if (!mctrl_pdata) {
+			pr_warn("%s: Unable to get other control\n",
+				__func__);
+		} else {
+			if (mdss_dsi_pinctrl_set_state(mctrl_pdata, true))
+				pr_debug("other reset pinctrl not enabled\n");
+			mdss_dsi_panel_reset(&(mctrl_pdata->panel_data), 1);
+		}
+	} else {
+		pr_debug("%s: reset pinctrl not yet\n", __func__);
+	}
+}
+#endif /* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
+
 int mdss_dsi_on(struct mdss_panel_data *pdata)
 {
 	int ret = 0;
@@ -854,9 +879,13 @@ int mdss_dsi_on(struct mdss_panel_data *pdata)
 	 * data lanes for LP11 init
 	 */
 	if (mipi->lp11_init) {
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+		mdss_dsi_reset_dual_display(ctrl_pdata);
+#else
 		if (mdss_dsi_pinctrl_set_state(ctrl_pdata, true))
 			pr_debug("reset enable: pinctrl not enabled\n");
 		mdss_dsi_panel_reset(pdata, 1);
+#endif /* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 	}
 
 	if (mipi->init_delay)
