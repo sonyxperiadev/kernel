@@ -3502,6 +3502,16 @@ static struct clk_lookup msm_clocks_8226[] = {
 	CLK_LOOKUP("iface_clk", camss_vfe_vfe_ahb_clk.c, "fda10000.qcom,vfe"),
 	CLK_LOOKUP("bus_clk", camss_vfe_vfe_axi_clk.c,	 "fda10000.qcom,vfe"),
 
+	CLK_LOOKUP("camss_top_ahb_clk", camss_top_ahb_clk.c,
+					"fda14000.qcom,vfe"),
+	CLK_LOOKUP("vfe_clk_src", vfe0_clk_src.c,	 "fda14000.qcom,vfe"),
+	CLK_LOOKUP("camss_vfe_vfe_clk", camss_vfe_vfe0_clk.c,
+					"fda14000.qcom,vfe"),
+	CLK_LOOKUP("camss_csi_vfe_clk", camss_csi_vfe0_clk.c,
+					"fda14000.qcom,vfe"),
+	CLK_LOOKUP("iface_clk", camss_vfe_vfe_ahb_clk.c, "fda14000.qcom,vfe"),
+	CLK_LOOKUP("bus_clk", camss_vfe_vfe_axi_clk.c,	 "fda14000.qcom,vfe"),
+
 	CLK_LOOKUP("iface_clk", camss_vfe_vfe_ahb_clk.c,
 	"fda44000.qcom,iommu"),
 	CLK_LOOKUP("core_clk", camss_vfe_vfe_axi_clk.c, "fda44000.qcom,iommu"),
@@ -3512,7 +3522,7 @@ static struct clk_lookup msm_clocks_8226[] = {
 	CLK_LOOKUP("iface_clk", camss_jpeg_jpeg_ahb_clk.c,
 						"fda1c000.qcom,jpeg"),
 	CLK_LOOKUP("bus_clk0", camss_jpeg_jpeg_axi_clk.c,
-	"fda1c000.qcom,jpeg"),
+						"fda1c000.qcom,jpeg"),
 	CLK_LOOKUP("camss_top_ahb_clk", camss_top_ahb_clk.c,
 						"fda1c000.qcom,jpeg"),
 
