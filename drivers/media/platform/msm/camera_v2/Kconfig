@@ -113,15 +113,6 @@ config MSM_ISPIF_V1
           of any CID of MSM_CSI22_HEADER can be routed to of pixel
           or raw data interface in VFE.
 
-config IMX134
-	bool "Sensor IMX134 (BAYER 8M)"
-	depends on MSMB_CAMERA
-	---help---
-		Sony 8 MP Bayer Sensor with auto focus, uses
-		4 mipi lanes full resolution @30fps and
-		HFR @60fps and @120fps,
-		Video HDR support.
-
 config IMX132
 	bool "Sensor IMX132 (BAYER 2M)"
 	depends on MSMB_CAMERA
@@ -192,15 +183,6 @@ config SP1628
 		and snapshot. The preview and snapshot resolution shall be
 		1280 * 270. It does not support auto focus. It supports
 		few special effects like mono.
-
-config GC0339
-	bool "Sensor GC0339 (BAYER .3M)"
-	depends on MSMB_CAMERA
-	---help---
-		gc0339 is a Galaxycore .3 MP Bayer Sensor.
-		It supports 1 or 2 mipi lanes.
-		Preview and snapshot resolution shall be 640*480 at 30 fps,
-		It does not support auto focus.
 
 config GC0310
 	bool "Sensor GC0310 (YUV .3M)"

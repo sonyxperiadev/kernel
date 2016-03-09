@@ -92,6 +92,21 @@
 		qcom,cci-master = <0>;
 		clock-names = "cam_src_clk", "cam_clk";
 
-		status="disable";
+		status="disabled";
 	};
+
+	/* disable Qualcomm camera sensors */
+	qcom,camera@6d {
+		status = "disabled";
+	};
+
+	qcom,camera@6f {
+		status = "disabled";
+	};
+};
+
+
+&i2c_freq_100Khz {
+	qcom,hw-thigh = <22>;
+	qcom,hw-tlow = <33>;
 };
