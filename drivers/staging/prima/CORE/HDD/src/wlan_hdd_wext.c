@@ -5429,7 +5429,7 @@ static int __iw_get_char_setnone(struct net_device *dev,
                 }
 
                 tlState = smeGetTLSTAState(hHal, pHddStaCtx->conn_info.staId[0]);
-
+#ifdef TRACE_RECORD
                 buf = scnprintf(extra + len, WE_MAX_STR_LEN - len,
                         "\n HDD Conn State - %s "
                         "\n \n SME State:"
@@ -5449,9 +5449,11 @@ static int __iw_get_char_setnone(struct net_device *dev,
                         macTraceGetTLState(tlState)
                         );
                 len += buf;
+#endif
                 adapter_num++;
             }
 
+#ifdef TRACE_RECORD
             if (pMac) {
                 /* Printing Lim State starting with global lim states */
                 buf = scnprintf(extra + len, WE_MAX_STR_LEN - len,
@@ -5478,14 +5480,13 @@ static int __iw_get_char_setnone(struct net_device *dev,
                         macTraceGetLimSmeState(pMac->lim.gpSession[count].limSmeState),
                         macTraceGetLimMlmState(pMac->lim.gpSession[count].limMlmState)
                         );
-
                         len += buf;
                         check++;
                     }
                     count++;
                 }
             }
-
+#endif
             wrqu->data.length = strlen(extra)+1;
             break;
         }
