@@ -204,10 +204,8 @@ int wifi_platform_get_wake_irq(wifi_adapter_info_t *adapter)
 	if (!adapter || !adapter->wifi_plat_data)
 		return -1;
 	plat_data = adapter->wifi_plat_data;
-#ifdef CONFIG_DHD_WAKE_STATUS
 	if (plat_data->get_wake_irq)
 		return plat_data->get_wake_irq();
-#endif
 	return -1;
 }
 
