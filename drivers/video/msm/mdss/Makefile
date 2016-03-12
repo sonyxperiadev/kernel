@@ -29,10 +29,7 @@ endif
 
 mdss-dsi-objs := mdss_dsi.o mdss_dsi_host.o mdss_dsi_cmd.o mdss_dsi_status.o
 ifeq ($(CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL),y)
-mdss-dsi-objs += mdss_dsi_panel_driver.o
-ifeq ($(CONFIG_DEBUG_FS),y)
-mdss-dsi-objs += mdss_dsi_panel_debugfs.o
-endif
+obj-y += somc_panel/
 else
 mdss-dsi-objs += mdss_dsi_panel.o
 endif

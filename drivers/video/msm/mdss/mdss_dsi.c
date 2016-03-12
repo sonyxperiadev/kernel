@@ -24,7 +24,8 @@
 #include <linux/regulator/consumer.h>
 #include <linux/leds-qpnp-wled.h>
 #include <linux/clk.h>
-#ifdef CONFIG_REGULATOR_QPNP_LABIBB_SOMC
+#if defined (CONFIG_REGULATOR_QPNP_LABIBB_SOMC) && \
+    defined (CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL)
 #include <linux/regulator/qpnp-labibb-regulator.h>
 #endif
 
@@ -41,7 +42,8 @@ static int mdss_dsi_labibb_vreg_init(struct platform_device *pdev)
 {
 	struct mdss_dsi_ctrl_pdata *ctrl = NULL;
 	int rc;
-#ifdef CONFIG_REGULATOR_QPNP_LABIBB_SOMC
+#if defined (CONFIG_REGULATOR_QPNP_LABIBB_SOMC) && \
+    defined (CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL)
 	int min_uV, max_uV = 0;
 	struct mdss_panel_specific_pdata *spec_pdata = NULL;
 #endif
@@ -75,7 +77,8 @@ static int mdss_dsi_labibb_vreg_init(struct platform_device *pdev)
 	pr_debug("%s: lab=%p ibb=%p\n", __func__,
 				ctrl->lab, ctrl->ibb);
 
-#ifdef CONFIG_REGULATOR_QPNP_LABIBB_SOMC
+#if defined (CONFIG_REGULATOR_QPNP_LABIBB_SOMC) && \
+    defined (CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL)
 	spec_pdata = ctrl->spec_pdata;
 	if (!spec_pdata) {
 		pr_err("%s: Invalid panel data\n", __func__);
@@ -199,7 +202,8 @@ static int mdss_dsi_regulator_init(struct platform_device *pdev)
 
 	mdss_dsi_labibb_vreg_init(pdev);
 
-#ifdef CONFIG_REGULATOR_QPNP_LABIBB_SOMC
+#if defined (CONFIG_REGULATOR_QPNP_LABIBB_SOMC) && \
+    defined (CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL)
 	ctrl_pdata->spec_pdata->vreg_ctrl = mdss_dsi_labibb_vreg_ctrl;
 #endif
 	return rc;
@@ -1044,7 +1048,6 @@ static int mdss_dsi_blank(struct mdss_panel_data *pdata, int power_state)
 		__func__, ctrl_pdata, ctrl_pdata->ndx, power_state);
 
 	mdss_dsi_clk_ctrl(ctrl_pdata, DSI_ALL_CLKS, 1);
-
 	if (mdss_panel_is_power_on_lp(power_state)) {
 		pr_debug("%s: low power state requested\n", __func__);
 		if (ctrl_pdata->low_power_config)
@@ -1599,11 +1602,6 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 
 		if (ctrl_pdata->on_cmds.link_state == DSI_LP_MODE)
 			rc = mdss_dsi_unblank(pdata);
-#if (defined(CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL) && defined(CONFIG_MACH_SONY_YUKON))
-		if (ctrl_pdata->spec_pdata->disp_on_in_hs
-			&& ctrl_pdata->spec_pdata->disp_on)
-			rc = ctrl_pdata->spec_pdata->disp_on(pdata);
-#endif
 		break;
 	case MDSS_EVENT_PANEL_ON:
 		ctrl_pdata->ctrl_state |= CTRL_STATE_MDP_ACTIVE;
@@ -1996,7 +1994,7 @@ static int mdss_dsi_ctrl_probe(struct platform_device *pdev)
 #ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 	if (ctrl_pdata->panel_data.panel_info.cont_splash_enabled &&
 		ctrl_pdata->spec_pdata->pcc_data.pcc_sts & PCC_STS_UD) {
-		ctrl_pdata->pcc_setup(&ctrl_pdata->panel_data);
+		ctrl_pdata->spec_pdata->pcc_setup(&ctrl_pdata->panel_data);
 		ctrl_pdata->spec_pdata->pcc_data.pcc_sts &= ~PCC_STS_UD;
 	}
 #endif /* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
@@ -2261,11 +2259,12 @@ int dsi_panel_device_register(struct device_node *pan_node,
 	struct mdss_panel_info *pinfo = &(ctrl_pdata->panel_data.panel_info);
 	struct device_node *dsi_ctrl_np = NULL;
 	struct platform_device *ctrl_pdev = NULL;
-	struct mdss_panel_specific_pdata *spec_pdata = NULL;
 	const char *data;
 	struct resource *res;
 
 #ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	struct mdss_panel_specific_pdata *spec_pdata = NULL;
+
 	spec_pdata = ctrl_pdata->spec_pdata;
 	if (!spec_pdata) {
 		pr_err("%s: Invalid input data\n", __func__);
@@ -2414,11 +2413,11 @@ int dsi_panel_device_register(struct device_node *pan_node,
 						__func__, __LINE__);
 
 #ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
-	ctrl_pdata->spec_pdata->disp_dcdc_en_gpio
+	spec_pdata->disp_dcdc_en_gpio
 		= of_get_named_gpio(ctrl_pdev->dev.of_node,
 			"somc,platform-disp-dcdc-en-gpio", 0);
 
-	if (!gpio_is_valid(ctrl_pdata->spec_pdata->disp_dcdc_en_gpio))
+	if (!gpio_is_valid(spec_pdata->disp_dcdc_en_gpio))
 		pr_err("%s:%d, disp_dcdc_en gpio gpio not specified\n",
 						__func__, __LINE__);
 #endif
@@ -2464,10 +2463,6 @@ int dsi_panel_device_register(struct device_node *pan_node,
 	ctrl_pdata->panel_data.detect = spec_pdata->detect;
 	ctrl_pdata->panel_data.update_panel = spec_pdata->update_panel;
 	ctrl_pdata->panel_data.panel_pdev = ctrl_pdev;
-	ctrl_pdata->cabc_off_cmds = spec_pdata->cabc_off_cmds[DEFAULT_CMDS];
-	ctrl_pdata->cabc_late_off_cmds =
-				spec_pdata->cabc_late_off_cmds[DEFAULT_CMDS];
-	ctrl_pdata->off_cmds = spec_pdata->off_cmds[DEFAULT_CMDS];
 #endif
 
 	if (ctrl_pdata->status_mode == ESD_REG ||

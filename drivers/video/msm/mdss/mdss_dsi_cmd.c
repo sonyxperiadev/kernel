@@ -676,15 +676,15 @@ static int mdss_dsi_cmd_lock(struct mdss_dsi_ctrl_pdata *ctrl,
 	struct dcs_cmd_req *req;
 	int ret = 0;
 
-	if (!ctrl->lock_cmds.cmd_cnt)
+	if (!ctrl->spec_pdata->lock_cmds.cmd_cnt)
 		goto out;
 
 	if (lock) {
-		cmdreq.cmds = ctrl->lock_cmds.cmds;
-		cmdreq.cmds_cnt = ctrl->lock_cmds.cmd_cnt;
+		cmdreq.cmds = ctrl->spec_pdata->lock_cmds.cmds;
+		cmdreq.cmds_cnt = ctrl->spec_pdata->lock_cmds.cmd_cnt;
 	} else {
-		cmdreq.cmds = ctrl->unlock_cmds.cmds;
-		cmdreq.cmds_cnt = ctrl->unlock_cmds.cmd_cnt;
+		cmdreq.cmds = ctrl->spec_pdata->unlock_cmds.cmds;
+		cmdreq.cmds_cnt = ctrl->spec_pdata->unlock_cmds.cmd_cnt;
 	}
 	cmdreq.flags = CMD_REQ_COMMIT;
 	cmdreq.rlen = 0;

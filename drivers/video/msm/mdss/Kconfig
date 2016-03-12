@@ -4,15 +4,6 @@ config FB_MSM_MDSS_WRITEBACK
 	The MDSS Writeback Panel provides support for routing the output of
 	MDSS frame buffer driver and MDP processing to memory.
 
-config FB_MSM_MDSS_SPECIFIC_PANEL
-	depends on FB_MSM_MDSS
-	bool
-	prompt "MDSS Specific panel"
-	default n
-	---help---
-	The MDSS Specific Panel provides support for specific panel driver
-	file.
-
 config FB_MSM_MDSS_HDMI_PANEL
 	depends on FB_MSM_MDSS
 	bool "MDSS HDMI Tx Panel"
@@ -82,4 +73,5 @@ config MHL_SIMG_SONY
 	uses USB connector to output HDMI content.
 	This driver is specific to Sony boards (Xperia).
 
+source "drivers/video/msm/mdss/somc_panel/Kconfig"
 source "drivers/video/msm/mdss/mhl_simg_sony/Kconfig"

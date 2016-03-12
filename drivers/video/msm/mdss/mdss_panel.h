@@ -544,6 +544,8 @@ struct mdss_panel_info {
 #ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 	const char *panel_id_name;
 	int dsi_master;
+	int disp_on_in_hs;
+	int wait_time_before_on_cmd;
 #endif
 };
 
