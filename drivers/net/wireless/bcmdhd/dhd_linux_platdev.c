@@ -301,8 +301,12 @@ static int wifi_plat_dev_drv_probe(struct platform_device *pdev)
 	adapter->irq_num = irq;
 
 	/* need to change the flags according to our requirement */
+#ifdef CONFIG_BCM4356
+	adapter->intr_flags = IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHEDGE;
+#else
 	adapter->intr_flags = IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHLEVEL |
 		IORESOURCE_IRQ_SHAREABLE;
+#endif
 #endif
 
 	wifi_plat_dev_probe_ret = dhd_wifi_platform_load();
