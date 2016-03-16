@@ -62,7 +62,7 @@
 		qcom,mdss-dsi-traffic-mode = "non_burst_sync_event";
 		qcom,mdss-pan-dsi-dst-format = <3>;
 		qcom,mdss-dsi-virtual-channel-id = <0>;
-		qcom,mdss-dsi-color-order = "rgb_swap_bgr";
+		qcom,mdss-dsi-color-order = "rgb_swap_rgb";
 		qcom,mdss-dsi-lane-0-state;
 		qcom,mdss-dsi-lane-1-state;
 		qcom,mdss-dsi-lane-2-state;
@@ -154,7 +154,7 @@
 		qcom,mdss-dsi-traffic-mode = "non_burst_sync_event";
 		qcom,mdss-pan-dsi-dst-format = <3>;
 		qcom,mdss-dsi-virtual-channel-id = <0>;
-		qcom,mdss-dsi-color-order = "rgb_swap_bgr";
+		qcom,mdss-dsi-color-order = "rgb_swap_rgb";
 		qcom,mdss-dsi-lane-0-state;
 		qcom,mdss-dsi-lane-1-state;
 		qcom,mdss-dsi-lane-2-state;
@@ -242,7 +242,7 @@
 		qcom,mdss-dsi-traffic-mode = "non_burst_sync_event";
 		qcom,mdss-pan-dsi-dst-format = <3>;
 		qcom,mdss-dsi-virtual-channel-id = <0>;
-		qcom,mdss-dsi-color-order = "rgb_swap_bgr";
+		qcom,mdss-dsi-color-order = "rgb_swap_rgb";
 		qcom,mdss-dsi-lane-0-state;
 		qcom,mdss-dsi-lane-1-state;
 		qcom,mdss-dsi-lane-2-state;
@@ -352,7 +352,7 @@
 		qcom,mdss-dsi-traffic-mode = "non_burst_sync_event";
 		qcom,mdss-pan-dsi-dst-format = <3>;
 		qcom,mdss-dsi-virtual-channel-id = <0>;
-		qcom,mdss-dsi-color-order = "rgb_swap_bgr";
+		qcom,mdss-dsi-color-order = "rgb_swap_rgb";
 		qcom,mdss-dsi-lane-0-state;
 		qcom,mdss-dsi-lane-1-state;
 		qcom,mdss-dsi-lane-2-state;
@@ -442,7 +442,7 @@
 		qcom,mdss-dsi-traffic-mode = "burst_mode";
 		qcom,mdss-pan-dsi-dst-format = <3>;
 		qcom,mdss-dsi-virtual-channel-id = <0>;
-		qcom,mdss-dsi-color-order = "rgb_swap_bgr";
+		qcom,mdss-dsi-color-order = "rgb_swap_rgb";
 		qcom,mdss-dsi-lane-0-state;
 		qcom,mdss-dsi-lane-1-state;
 		qcom,mdss-dsi-lane-2-state;
