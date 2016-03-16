@@ -125,7 +125,6 @@
 
 		qcom,platform-reset-gpio = <&msmgpio 25 0>;
 		somc,driver-ic = <0>;
-		somc,panel-id = [FF];
 		somc,mdss-dsi-pcc-table-size = <6>;
 		somc,mdss-dsi-pcc-table = <
 			0x00 0x01 0x10 0x13 0x28 0x2B 0x8000 0x7400 0x8000
@@ -139,8 +138,8 @@
 		somc,mdss-dsi-picadj-hue = <0>;
 		somc,mdss-dsi-picadj-val = <10>;
 		somc,mdss-dsi-picadj-cont = <5>;
-		somc,panel-id-read-cmds;
 		qcom,mdss-pan-flip-ud;
+		somc,dric-only-detect;
 	};
 
 	dsi_truly_qhd_vid: qcom,mdss_dsi_truly_qhd_video {
@@ -316,7 +315,6 @@
 
 		qcom,platform-reset-gpio = <&msmgpio 25 0>;
 		somc,driver-ic = <1>;
-		somc,panel-id = [FF];
-		somc,panel-id-read-cmds;
+		somc,dric-only-detect;
 	};
 };
