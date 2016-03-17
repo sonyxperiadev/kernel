@@ -1582,6 +1582,9 @@ void mdss_fb_set_backlight(struct msm_fb_data_type *mfd, u32 bkl_lvl)
 #ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 	/* The bl_before value sets the value just before backlight level */
 	static u32 bl_before;
+
+	if (mfd->splash_info.splash_pipe_allocated)
+		return;
 #endif /* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 
 	if ((((mdss_fb_is_power_off(mfd) && mfd->dcm_state != DCM_ENTER)
