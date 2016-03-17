@@ -166,6 +166,13 @@ void __init sched_clock_register(u64 (*read)(void), int bits,
 	pr_debug("Registered %pF as sched_clock source\n", read);
 }
 
+void __init setup_sched_clock_needs_suspend(u32 (*read)(void), int bits,
+		unsigned long rate)
+{
+	setup_sched_clock(read, bits, rate);
+	cd.needs_suspend = true;
+}
+
 void __init setup_sched_clock(u32 (*read)(void), int bits, unsigned long rate)
 {
 	read_sched_clock_32 = read;

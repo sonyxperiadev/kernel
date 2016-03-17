@@ -1293,18 +1293,24 @@ static void sdhci_set_clock(struct sdhci_host *host, unsigned int clock)
 	int real_div = div, clk_mul = 1;
 	u16 clk = 0;
 	unsigned long timeout;
+#ifndef CONFIG_ARCH_KONA
 	unsigned long flags;
 
 	spin_lock_irqsave(&host->lock, flags);
+#endif
 	if (clock && clock == host->clock)
 		goto ret;
 
 	host->mmc->actual_clock = 0;
 
 	if (host->ops->set_clock) {
+#ifndef CONFIG_ARCH_KONA
 		spin_unlock_irqrestore(&host->lock, flags);
+#endif
 		host->ops->set_clock(host, clock);
+#ifndef CONFIG_ARCH_KONA
 		spin_lock_irqsave(&host->lock, flags);
+#endif
 		if (host->quirks & SDHCI_QUIRK_NONSTANDARD_CLOCK)
 			goto ret;
 	}
@@ -1410,7 +1416,10 @@ clock_set:
 out:
 	host->clock = clock;
 ret:
+#ifndef CONFIG_ARCH_KONA
 	spin_unlock_irqrestore(&host->lock, flags);
+#endif
+	;
 }
 
 static inline unsigned long sdhci_update_clock(struct sdhci_host *host,
@@ -1952,6 +1961,10 @@ static void sdhci_do_set_ios(struct sdhci_host *host, struct mmc_ios *ios)
 	     ios->timing == MMC_TIMING_MMC_HS)
 	    && !(host->quirks & SDHCI_QUIRK_NO_HISPD_BIT))
 		ctrl |= SDHCI_CTRL_HISPD;
+#ifdef CONFIG_MMC_BCM_SD
+       else if (ios->timing == MMC_TIMING_MMC_HS)
+               ctrl |= SDHCI_CTRL_HISPD;
+#endif
 	else
 		ctrl &= ~SDHCI_CTRL_HISPD;
 
@@ -2050,6 +2063,20 @@ static void sdhci_do_set_ios(struct sdhci_host *host, struct mmc_ios *ios)
 		sdhci_writeb(host, ctrl, SDHCI_HOST_CONTROL);
 
 	spin_unlock_irqrestore(&host->lock, flags);
+#ifdef CONFIG_BCM_SDIOWL  // BROADCOM MODIFICATION
+       if (ios->host_reset) {
+               unsigned char reset_flags = 0;
+               if (ios->host_reset & MMC_HOST_RESET_CMD) {
+                       reset_flags |= SDHCI_RESET_CMD;
+               }
+               if (ios->host_reset & MMC_HOST_RESET_DAT) {
+                       reset_flags |= SDHCI_RESET_DATA;
+               }
+               printk(KERN_INFO "%s: performing host reset\n", mmc_hostname(host->mmc));
+               sdhci_reset(host, reset_flags);
+       }
+#endif // BROADCOM MODIFICATION
+
 	/*
 	 * Some (ENE) controllers go apeshit on some ios operation,
 	 * signalling timeout and CRC errors even on CMD0. Resetting
@@ -2609,18 +2636,65 @@ static void sdhci_card_event(struct mmc_host *mmc)
 	spin_lock_irqsave(&host->lock, flags);
 
 	/* Check host->mrq first in case we are runtime suspended */
-	if (host->mrq &&
-	    !(sdhci_readl(host, SDHCI_PRESENT_STATE) & SDHCI_CARD_PRESENT)) {
-		pr_err("%s: Card removed during transfer!\n",
-			mmc_hostname(host->mmc));
-		pr_err("%s: Resetting controller.\n",
-			mmc_hostname(host->mmc));
+	if (host->mrq)	{
+		if (sdhci_readl(host, SDHCI_PRESENT_STATE) &
+			SDHCI_CARD_PRESENT) {
+			pr_err("%s: Card removed during transfer!\n",
+				mmc_hostname(host->mmc));
+			pr_err("%s: Resetting controller.\n",
+				mmc_hostname(host->mmc));
 
-		sdhci_reset(host, SDHCI_RESET_CMD);
-		sdhci_reset(host, SDHCI_RESET_DATA);
+			sdhci_reset(host, SDHCI_RESET_CMD);
+			sdhci_reset(host, SDHCI_RESET_DATA);
 
-		host->mrq->cmd->error = -ENOMEDIUM;
-		tasklet_schedule(&host->finish_tasklet);
+			host->mrq->cmd->error = -ENOMEDIUM;
+			tasklet_schedule(&host->finish_tasklet);
+
+			pr_info("SD Card Removed\n");
+		}
+
+#ifdef CONFIG_MMC_BCM_SD
+		else {
+			/*
+			 * Though we do the same stuff here as above,
+			 * this is seperated out to deal cleanly with
+			 * merge issues and to make this case exceptional.
+			 */
+			pr_err("%s: Card removed & inserted during transfer\n",
+				mmc_hostname(host->mmc));
+			sdhci_reset(host, SDHCI_RESET_CMD);
+			sdhci_reset(host, SDHCI_RESET_DATA);
+
+			/*
+			 * During a request in progress, if we reach here
+			 * it defenitely means that the card had got removed
+			 * at least once during the transfer, though the
+			 * present state says the other way. This can be a
+			 * case of a person with magically quick fingers
+			 * performing multiple card insert/removals. The
+			 * reason why we end up here is because the
+			 * cd interrupt handler is a "threaded irq".
+			 */
+			host->mrq->cmd->error = -ENOMEDIUM;
+			tasklet_schedule(&host->finish_tasklet);
+		}
+	} else {
+		if (!(sdhci_readl(host, SDHCI_PRESENT_STATE) &
+					SDHCI_CARD_PRESENT)) {
+			pr_info("SD Card Removed\n");
+		} else {
+			/*
+			 * Turn ON the SDCLK very early here; We do this
+			 * to handle the case of quick remove-insert.
+			 */
+			unsigned int clock;
+			clock = host->clock;
+			host->clock = 0;
+			sdhci_set_clock(host, clock);
+
+			pr_info("SD Card Inserted\n");
+		}
+#endif
 	}
 
 	spin_unlock_irqrestore(&host->lock, flags);
@@ -2708,7 +2782,19 @@ static void sdhci_tasklet_card(unsigned long param)
 
 	sdhci_card_event(host->mmc);
 
+#ifdef CONFIG_MMC_BCM_SD
+
+       /*
+        * On Java with a delay of 0 results in workqueque
+        * being run on the same CPU,otherwise this results
+        * in SD-card getting the device name as mmcblk0
+        * but for our rpmb driver to work eMMC always
+        * needs to be mmcblk0
+        */
+       mmc_detect_change(host->mmc, msecs_to_jiffies(host->detect_delay));
+#else
 	mmc_detect_change(host->mmc, msecs_to_jiffies(200));
+#endif
 }
 
 static void sdhci_tasklet_finish(unsigned long param)
@@ -3083,6 +3169,7 @@ static irqreturn_t sdhci_irq(int irq, void *dev_id)
 		return IRQ_HANDLED;
 	}
 
+#ifndef CONFIG_ARCH_KONA
 	if (!host->clock && host->mmc->card &&
 	    mmc_card_sdio(host->mmc->card)) {
 		/* SDIO async. interrupt is level-sensitive */
@@ -3105,10 +3192,11 @@ static irqreturn_t sdhci_irq(int irq, void *dev_id)
 		 * accessible hence return from here.
 		 */
 		pr_err_ratelimited("%s: %s: clocks are disabled !!!\n",
-				   mmc_hostname(host->mmc), __func__);
+		                   mmc_hostname(host->mmc), __func__);
 		spin_unlock(&host->lock);
 		return IRQ_HANDLED;
 	}
+#endif
 	intmask = sdhci_readl(host, SDHCI_INT_STATUS);
 
 	if (!intmask || intmask == 0xffffffff) {
@@ -3631,6 +3719,13 @@ int sdhci_add_host(struct sdhci_host *host)
 		mmc_dev(host->mmc)->dma_mask = &host->dma_mask;
 	}
 
+#ifdef CONFIG_MMC_BCM_SD
+       if (host->ops->get_max_clock)
+               host->max_clk = host->ops->get_max_clock(host);
+       else
+               host->max_clk = 0;
+#else
+
 	if (host->version >= SDHCI_SPEC_300)
 		host->max_clk = (caps[0] & SDHCI_CLOCK_V3_BASE_MASK)
 			>> SDHCI_CLOCK_BASE_SHIFT;
@@ -3648,6 +3743,7 @@ int sdhci_add_host(struct sdhci_host *host)
 		}
 		host->max_clk = host->ops->get_max_clock(host);
 	}
+#endif
 
 	/*
 	 * In case of Host Controller v3.00, find out whether clock
@@ -3731,7 +3827,11 @@ int sdhci_add_host(struct sdhci_host *host)
 		mmc->caps &= ~MMC_CAP_CMD23;
 
 	if (caps[0] & SDHCI_CAN_DO_HISPD)
+#ifdef CONFIG_MMC_BCM_SD
 		mmc->caps |= MMC_CAP_SD_HIGHSPEED | MMC_CAP_MMC_HIGHSPEED;
+#else
+        mmc->caps |= MMC_CAP_SD_HIGHSPEED;
+#endif
 
 	/*
 	 * Enable polling on when card detection is broken and no card detect
@@ -3959,7 +4059,11 @@ int sdhci_add_host(struct sdhci_host *host)
 	} else {
 		mmc->max_blk_size = (caps[0] & SDHCI_MAX_BLOCK_MASK) >>
 				SDHCI_MAX_BLOCK_SHIFT;
+#ifdef CONFIG_MMC_BCM_SD
+        if (mmc->max_blk_size > 3) {
+#else
 		if (mmc->max_blk_size >= 3) {
+#endif
 			pr_warning("%s: Invalid maximum block size, "
 				"assuming 512 bytes\n", mmc_hostname(mmc));
 			mmc->max_blk_size = 0;

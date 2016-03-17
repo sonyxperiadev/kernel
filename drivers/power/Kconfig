@@ -298,6 +298,28 @@ config CHARGER_GPIO
 	  This driver can be build as a module. If so, the module will be
 	  called gpio-charger.
 
+config BATTERY_BCM59055
+	tristate "BCM59055 Battery support"
+	depends on MFD_BCM_PMU590XX
+	help
+	  A battery driver for PMU59055.
+
+config BCM_CMP_BATTERY_MULTI
+	tristate "CMP Multi Battery and Power Supply Driver"
+	default n
+	depends on POWER_SUPPLY
+	help
+	  CMP driver for multiple platforms for supplying power supply information
+	  to Power Supply system.
+
+config BCM_CMP_BATTERY_BQ24616
+	tristate "CMP BQ24616 Battery and Power Supply Driver"
+	default n
+	depends on POWER_SUPPLY
+	help
+	  CMP driver based on BQ24616 for supplying battery and power supply
+	  information to Power Supply system.
+
 config CHARGER_MANAGER
 	bool "Battery charger manager for multiple chargers"
 	depends on REGULATOR && RTC_CLASS
@@ -565,6 +587,48 @@ config MSM_BCL_PERIPHERAL_CTL
 
 source "drivers/power/reset/Kconfig"
 
+config POWER_BCMPMU
+	tristate "BCMPMU battery and charger driver"
+	depends on MFD_BCMPMU || MFD_BCM_PMU59056
+	default n
+	help
+	 Say Y to include support of battery and charger drivers for BCM PMUs.
+
+config BCMPMU_EM
+	tristate "BCMPMU charging and gauging driver"
+	depends on MFD_BCMPMU || MFD_BCM_PMU59056
+	default n
+	help
+	 Say Y to include kernel charging and gauging module for BCM PMUs.
+
+config CHARGER_BCMPMU_SPA
+	bool "BCMPMU SPA driver"
+	depends on MFD_BCM_PMU59xxx
+	default n
+	help
+	 Say Y to support SPA charging module for BCM PMUs.
+
+config SEC_CHARGING_FEATURE
+	tristate "Samsung Charging driver"
+	depends on POWER_SUPPLY
+	default n
+	select CHARGER_BCMPMU_SPA
+	help
+	 Say Y to enable Samsung charging drivers.
+
+config BCMPMU_THERMAL_THROTTLE
+	tristate "BCMPMU Thermal Throttling driver"
+	depends on MFD_BCM_PMU59xxx
+	default n
+	help
+	  Say Y to support Thermal Throttling.
+
+config BCMPMU_CHARGER_COOLANT
+	tristate "BCMPMU Charger Coolant driver"
+	depends on MFD_BCM_PMU59xxx && THERMAL
+	default n
+	help
+	  Say Y to support Charger Cooling.
 endif # POWER_SUPPLY
 
 source "drivers/power/avs/Kconfig"

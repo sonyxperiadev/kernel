@@ -972,4 +972,38 @@ config SCx200_ACB
 	  This support is also available as a module.  If so, the module
 	  will be called scx200_acb.
 
+config I2C_BSC
+	tristate "I2C BSC adapter"
+	depends on ARCH_KONA
+	help
+	Enable the i2c adapter on Island.
+
+choice
+	prompt "KONA PMU_BSC Speed"
+	default KONA_PMU_BSC_HS_MODE
+	depends on I2C_BSC
+
+config KONA_PMU_BSC_HS_MODE
+	bool "PMU_BSC speed 3.25MHZ"
+	help
+	  Set PMU_BSC speed to 3.25MHZ
+
+config KONA_PMU_BSC_HS_1MHZ
+	bool "PMU_BSC speed 1MHZ"
+	help
+	  Set PMU_BSC speed to 1MHZ
+
+config KONA_PMU_BSC_HS_1625KHZ
+	bool "PMU_BSC speed 1625KHZ"
+	help
+	  Set PMU_BSC speed to 1625KHZ
+
+endchoice
+
+config I2C_BRCM_SSPI
+	tristate "BRCM SSPI-based I2C"
+	depends on ARCH_KONA
+	help
+	Enable the SSPI-based i2c adapter on Island.
+
 endmenu

@@ -197,6 +197,20 @@ config SPI_IMX
 	  This enables using the Freescale i.MX SPI controllers in master
 	  mode.
 
+config SPI_SSPI_KONA
+	tristate "Broadcom KONA SSPI based SPI controller"
+	depends on (ARCH_KONA && !ARCH_HAWAII && !ARCH_JAVA)
+	help
+	  This enables using the Broadcom SPI controller based on KONA
+	  SSPI module in master mode.
+
+config SPI_SSPI_HAWAII
+	tristate "Broadcom Hawaii SSPI based SPI controller"
+	depends on (ARCH_HAWAII || ARCH_JAVA)
+	help
+	  This enables using the Broadcom SPI controller based on Hawaii
+	  SSPI module in master mode.
+
 config SPI_LM70_LLP
 	tristate "Parallel port adapter for LM70 eval board (DEVELOPMENT)"
 	depends on PARPORT

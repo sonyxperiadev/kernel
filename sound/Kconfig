@@ -90,6 +90,10 @@ source "sound/mips/Kconfig"
 
 source "sound/sh/Kconfig"
 
+if ARCH_JAVA
+source "sound/caph_hawaii/Kconfig"
+endif
+
 # the following will depend on the order of config.
 # here assuming USB is defined before ALSA
 source "sound/usb/Kconfig"

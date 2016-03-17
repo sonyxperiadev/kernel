@@ -30,3 +30,5 @@ obj-$(CONFIG_TEGRA_IOMMU_SMMU) += tegra-smmu.o
 obj-$(CONFIG_EXYNOS_IOMMU) += exynos-iommu.o
 obj-$(CONFIG_SHMOBILE_IOMMU) += shmobile-iommu.o
 obj-$(CONFIG_SHMOBILE_IPMMU) += shmobile-ipmmu.o
+obj-$(CONFIG_BCM_IOMMU_M4U) += bcm_iommu_m4u.o
+obj-$(CONFIG_BCM_IOVMM) += bcm_iovmm.o

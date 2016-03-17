@@ -1,0 +1,664 @@
+/*******************************************************************************
+* Copyright 2013 Broadcom Corporation.	All rights reserved.
+*
+* @file drivers/video/broadcom/lcd/r63311.h
+*
+* Unless you and Broadcom execute a separate written software license agreement
+* governing use of this software, this software is licensed to you under the
+* terms of the GNU General Public License version 2, available at
+* http://www.gnu.org/copyleft/gpl.html (the "GPL").
+*
+* Notwithstanding the above, under no circumstances may you combine this
+* software in any way with any other Broadcom software provided under a license
+* other than the GPL, without Broadcom's express prior written consent.
+*******************************************************************************/
+
+#ifndef __R63311_H__
+#define __R63311_H__
+
+#include "display_drv.h"
+#include "lcd.h"
+
+#define R63311_CMD_DISPOFF	0x28
+#define R63311_CMD_DISPON	0x29
+#define R63311_CMD_SLPIN	0x10
+#define R63311_CMD_SLPOUT	0x11
+#define R63311_CMD_RDID1	0xDA
+#define R63311_CMD_RDID2	0xDB
+#define R63311_CMD_RDID3	0xDC
+
+#define R63311_UPDT_WIN_SEQ_LEN 13 /* (6 + 6 + 1) */
+
+__initdata struct DSI_COUNTER r63311_timing[] = {
+	/* LP Data Symbol Rate Calc - MUST BE FIRST RECORD */
+	{"ESC2LP_RATIO", DSI_C_TIME_ESC2LPDT, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0x0000003F, 1, 1, 0},
+	/* SPEC:  min =  100[us] + 0[UI] */
+	/* SET:   min = 1000[us] + 0[UI]                             <= */
+	{"HS_INIT", DSI_C_TIME_HS, 0,
+		0, 100000, 0, 0, 0, 0, 0, 0, 0x00FFFFFF, 0, 0, 0},
+	/* SPEC:  min = 1[ms] + 0[UI] */
+	/* SET:   min = 1[ms] + 0[UI] */
+	{"HS_WAKEUP", DSI_C_TIME_HS, 0,
+		0, 1000000, 0, 0, 0, 0, 0, 0, 0x00FFFFFF, 0, 0, 0},
+	/* SPEC:  min = 1[ms] + 0[UI] */
+	/* SET:   min = 1[ms] + 0[UI] */
+	{"LP_WAKEUP", DSI_C_TIME_ESC, 0,
+		0, 1000000, 0, 0, 0, 0, 0, 0, 0x00FFFFFF, 1, 1, 0},
+	/* SPEC:  min = 0[ns] +  8[UI] */
+	/* SET:   min = 0[ns] + 12[UI]                               <= */
+	{"HS_CLK_PRE", DSI_C_TIME_HS, 0,
+		0, 0, 12, 0, 0, 0, 0, 0, 0x000001FF, 0, 0, 0},
+	/* SPEC:  min = 38[ns] + 0[UI]   max= 95[ns] + 0[UI] */
+	/* SET:   min = 48[ns] + 0[UI]   max= 95[ns] + 0[UI]         <= */
+	{"HS_CLK_PREPARE", DSI_C_TIME_HS, DSI_C_HAS_MAX,
+		0, 48, 0, 0, 0, 95, 0, 0, 0x000001FF, 0, 0, 0},
+	/* SPEC:  min = 262[ns] + 0[UI] */
+	/* SET:   min = 262[ns] + 0[UI]                              <= */
+	{"HS_CLK_ZERO", DSI_C_TIME_HS, 0,
+		0, 262, 0, 0, 0, 0, 0, 0, 0x000001FF, 0, 0, 0},
+	/* SPEC:  min =  60[ns] + 52[UI] */
+	/* SET:   min =  70[ns] + 52[UI]                             <= */
+	{"HS_CLK_POST", DSI_C_TIME_HS, 0,
+		0, 70, 52, 0, 0, 0, 0, 0, 0x000001FF, 0, 0, 0},
+	/* SPEC:  min =  60[ns] + 0[UI] */
+	/* SET:   min =  70[ns] + 0[UI]                              <= */
+	{"HS_CLK_TRAIL", DSI_C_TIME_HS, 0,
+		0, 70, 0, 0, 0, 0, 0, 0, 0x000001FF, 0, 0, 0},
+	/* SPEC:  min =  50[ns] + 0[UI] */
+	/* SET:   min =  60[ns] + 0[UI]                              <= */
+	{"HS_LPX", DSI_C_TIME_HS, 0,
+		0, 60, 0, 0, 0, 75, 0, 0, 0x000001FF, 0, 0, 0},
+	/* SPEC:  min = 40[ns] + 4[UI]      max= 85[ns] + 6[UI] */
+	/* SET:   min = 50[ns] + 4[UI]      max= 85[ns] + 6[UI]      <= */
+	{"HS_PRE", DSI_C_TIME_HS, DSI_C_HAS_MAX,
+		0, 50, 4, 0, 0, 85, 6, 0, 0x000001FF, 0, 0, 0},
+	/* SPEC:  min = 105[ns] + 6[UI] */
+	/* SET:   min = 105[ns] + 6[UI]                              <= */
+	{"HS_ZERO", DSI_C_TIME_HS, 0,
+		0, 105, 6, 0, 0, 0, 0, 0, 0x000001FF, 0, 0, 0},
+	/* SPEC:  min = max(0[ns]+32[UI],60[ns]+16[UI])  n=4 */
+	/* SET:   min = max(0[ns]+32[UI],60[ns]+16[UI])  n=4 */
+	{"HS_TRAIL", DSI_C_TIME_HS, DSI_C_MIN_MAX_OF_2,
+		0, 0, 32, 60, 16, 0, 0, 0, 0x000001FF, 0, 0, 0},
+	/* SPEC:  min = 100[ns] + 0[UI] */
+	/* SET:   min = 110[ns] + 0[UI]                              <= */
+	{"HS_EXIT", DSI_C_TIME_HS, 0,
+		0, 110, 0, 0, 0, 0, 0, 0, 0x000001FF, 0, 0, 0},
+	/* min = 50[ns] + 0[UI] */
+	/* LP esc counters are speced in LP LPX units.
+	   LP_LPX is calculated by chal_dsi_set_timing
+	   and equals LP data clock */
+	{"LPX", DSI_C_TIME_ESC, 0,
+		1, 0, 0, 0, 0, 0, 0, 0, 0x000000FF, 1, 1, 0},
+	/* min = 4*[Tlpx]  max = 4[Tlpx], set to 4 */
+	{"LP-TA-GO", DSI_C_TIME_ESC, 0,
+		4, 0, 0, 0, 0, 0, 0, 0, 0x000000FF, 1, 1, 0},
+	/* min = 1*[Tlpx]  max = 2[Tlpx], set to 2 */
+	{"LP-TA-SURE", DSI_C_TIME_ESC, 0,
+		2, 0, 0, 0, 0, 0, 0, 0, 0x000000FF, 1, 1, 0},
+	/* min = 5*[Tlpx]  max = 5[Tlpx], set to 5 */
+	{"LP-TA-GET", DSI_C_TIME_ESC, 0,
+		5, 0, 0, 0, 0, 0, 0, 0, 0x000000FF, 1, 1, 0},
+};
+
+__initdata DISPCTRL_REC_T r63311_scrn_on[] = {
+	{DISPCTRL_WR_CMND, R63311_CMD_DISPON},
+	{DISPCTRL_LIST_END, 0}
+};
+
+__initdata DISPCTRL_REC_T r63311_scrn_off[] = {
+	{DISPCTRL_WR_CMND, R63311_CMD_DISPOFF},
+	{DISPCTRL_LIST_END, 0}
+};
+
+__initdata DISPCTRL_REC_T r63311_id[] = {
+	{DISPCTRL_WR_CMND, R63311_CMD_RDID1},
+	{DISPCTRL_WR_DATA, 0x40},
+	{DISPCTRL_WR_CMND, R63311_CMD_RDID2},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_CMND, R63311_CMD_RDID3},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_LIST_END, 0}
+};
+
+__initdata DISPCTRL_REC_T r63311_slp_in[] = {
+	{DISPCTRL_WR_CMND, R63311_CMD_SLPIN},
+	{DISPCTRL_LIST_END, 0}
+};
+
+__initdata DISPCTRL_REC_T r63311_slp_out[] = {
+	{DISPCTRL_WR_CMND, R63311_CMD_SLPOUT},
+	{DISPCTRL_LIST_END, 0}
+};
+
+__initdata DISPCTRL_REC_T r63311_init_panel_cmd[] = {
+	{DISPCTRL_GEN_WR_CMND, 0xB0},
+	{DISPCTRL_WR_DATA, 0x04},
+
+	{DISPCTRL_WR_CMND, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+
+	{DISPCTRL_WR_CMND, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+
+	{DISPCTRL_GEN_WR_CMND, 0xd6},
+	{DISPCTRL_WR_DATA, 0x01},
+
+	{DISPCTRL_GEN_WR_CMND, 0xe1},
+	{DISPCTRL_WR_DATA, 0x03},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+
+	{DISPCTRL_GEN_WR_CMND, 0xe2},
+	{DISPCTRL_WR_DATA, 0x01},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+
+	{DISPCTRL_GEN_WR_CMND, 0xb3},
+	{DISPCTRL_WR_DATA, 0x14},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+
+	{DISPCTRL_GEN_WR_CMND, 0xb4},
+	{DISPCTRL_WR_DATA, 0x0C},
+	{DISPCTRL_WR_DATA, 0x00},
+
+	{DISPCTRL_GEN_WR_CMND, 0xb6},
+	{DISPCTRL_WR_DATA, 0x3A},
+	{DISPCTRL_WR_DATA, 0xB3},
+
+	{DISPCTRL_GEN_WR_CMND, 0xB7},
+	{DISPCTRL_WR_DATA, 0x00},
+
+	{DISPCTRL_GEN_WR_CMND, 0xb9},
+	{DISPCTRL_WR_DATA, 0x0F},
+	{DISPCTRL_WR_DATA, 0x18},
+	{DISPCTRL_WR_DATA, 0x04},
+	{DISPCTRL_WR_DATA, 0x40},
+	{DISPCTRL_WR_DATA, 0x9F},
+	{DISPCTRL_WR_DATA, 0x1F},
+	{DISPCTRL_WR_DATA, 0x80},
+
+	{DISPCTRL_GEN_WR_CMND, 0xba},
+	{DISPCTRL_WR_DATA, 0x0F},
+	{DISPCTRL_WR_DATA, 0x18},
+	{DISPCTRL_WR_DATA, 0x04},
+	{DISPCTRL_WR_DATA, 0x40},
+	{DISPCTRL_WR_DATA, 0x9F},
+	{DISPCTRL_WR_DATA, 0x1F},
+	{DISPCTRL_WR_DATA, 0xD7},
+
+	{DISPCTRL_GEN_WR_CMND, 0xc1},
+	{DISPCTRL_WR_DATA, 0x04},
+	{DISPCTRL_WR_DATA, 0x60},
+	{DISPCTRL_WR_DATA, 0x40},
+	{DISPCTRL_WR_DATA, 0xA0},
+	{DISPCTRL_WR_DATA, 0x98},
+	{DISPCTRL_WR_DATA, 0x30},
+	{DISPCTRL_WR_DATA, 0xE8},
+	{DISPCTRL_WR_DATA, 0xA1},
+	{DISPCTRL_WR_DATA, 0x94},
+	{DISPCTRL_WR_DATA, 0x52},
+	{DISPCTRL_WR_DATA, 0x4A},
+	{DISPCTRL_WR_DATA, 0x93},
+	{DISPCTRL_WR_DATA, 0x5A},
+	{DISPCTRL_WR_DATA, 0x4B},
+	{DISPCTRL_WR_DATA, 0x25},
+	{DISPCTRL_WR_DATA, 0x4A},
+	{DISPCTRL_WR_DATA, 0x29},
+	{DISPCTRL_WR_DATA, 0xA5},
+	{DISPCTRL_WR_DATA, 0xF4},
+	{DISPCTRL_WR_DATA, 0x50},
+	{DISPCTRL_WR_DATA, 0x22},
+	{DISPCTRL_WR_DATA, 0x4C},
+	{DISPCTRL_WR_DATA, 0x01},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x60},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x02},
+	{DISPCTRL_WR_DATA, 0x00},
+
+	{DISPCTRL_GEN_WR_CMND, 0xc2},
+	{DISPCTRL_WR_DATA, 0x30},
+	{DISPCTRL_WR_DATA, 0xF7},
+	{DISPCTRL_WR_DATA, 0x83},
+	{DISPCTRL_WR_DATA, 0x06},
+	{DISPCTRL_WR_DATA, 0x08},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+
+	{DISPCTRL_GEN_WR_CMND, 0xc3},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+
+	{DISPCTRL_GEN_WR_CMND, 0xc4},
+	{DISPCTRL_WR_DATA, 0x70},
+	{DISPCTRL_WR_DATA, 0x01},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x05},
+	{DISPCTRL_WR_DATA, 0x05},
+	{DISPCTRL_WR_DATA, 0x05},
+	{DISPCTRL_WR_DATA, 0x05},
+	{DISPCTRL_WR_DATA, 0x05},
+	{DISPCTRL_WR_DATA, 0x05},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x03},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x03},
+
+	{DISPCTRL_GEN_WR_CMND, 0xc6},
+	{DISPCTRL_WR_DATA, 0x47},
+	{DISPCTRL_WR_DATA, 0x49},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x09},
+	{DISPCTRL_WR_DATA, 0x19},
+	{DISPCTRL_WR_DATA, 0x0E},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x01},
+	{DISPCTRL_WR_DATA, 0x47},
+	{DISPCTRL_WR_DATA, 0x49},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x09},
+	{DISPCTRL_WR_DATA, 0x19},
+	{DISPCTRL_WR_DATA, 0x0E},
+
+	{DISPCTRL_GEN_WR_CMND, 0xc7},
+	{DISPCTRL_WR_DATA, 0x30},
+	{DISPCTRL_WR_DATA, 0x32},
+	{DISPCTRL_WR_DATA, 0x35},
+	{DISPCTRL_WR_DATA, 0x3b},
+	{DISPCTRL_WR_DATA, 0x44},
+	{DISPCTRL_WR_DATA, 0x56},
+	{DISPCTRL_WR_DATA, 0x45},
+	{DISPCTRL_WR_DATA, 0x57},
+	{DISPCTRL_WR_DATA, 0x61},
+	{DISPCTRL_WR_DATA, 0x69},
+	{DISPCTRL_WR_DATA, 0x6e},
+	{DISPCTRL_WR_DATA, 0x77},
+	{DISPCTRL_WR_DATA, 0x30},
+	{DISPCTRL_WR_DATA, 0x32},
+	{DISPCTRL_WR_DATA, 0x35},
+	{DISPCTRL_WR_DATA, 0x3b},
+	{DISPCTRL_WR_DATA, 0x44},
+	{DISPCTRL_WR_DATA, 0x56},
+	{DISPCTRL_WR_DATA, 0x45},
+	{DISPCTRL_WR_DATA, 0x57},
+	{DISPCTRL_WR_DATA, 0x61},
+	{DISPCTRL_WR_DATA, 0x69},
+	{DISPCTRL_WR_DATA, 0x6e},
+	{DISPCTRL_WR_DATA, 0x77},
+
+	{DISPCTRL_GEN_WR_CMND, 0xc8},
+	{DISPCTRL_WR_DATA, 0x2A},
+	{DISPCTRL_WR_DATA, 0x2F},
+	{DISPCTRL_WR_DATA, 0x33},
+	{DISPCTRL_WR_DATA, 0x39},
+	{DISPCTRL_WR_DATA, 0x42},
+	{DISPCTRL_WR_DATA, 0x55},
+	{DISPCTRL_WR_DATA, 0x44},
+	{DISPCTRL_WR_DATA, 0x57},
+	{DISPCTRL_WR_DATA, 0x61},
+	{DISPCTRL_WR_DATA, 0x6b},
+	{DISPCTRL_WR_DATA, 0x6f},
+	{DISPCTRL_WR_DATA, 0x77},
+	{DISPCTRL_WR_DATA, 0x2A},
+	{DISPCTRL_WR_DATA, 0x2F},
+	{DISPCTRL_WR_DATA, 0x33},
+	{DISPCTRL_WR_DATA, 0x39},
+	{DISPCTRL_WR_DATA, 0x42},
+	{DISPCTRL_WR_DATA, 0x55},
+	{DISPCTRL_WR_DATA, 0x44},
+	{DISPCTRL_WR_DATA, 0x57},
+	{DISPCTRL_WR_DATA, 0x61},
+	{DISPCTRL_WR_DATA, 0x6b},
+	{DISPCTRL_WR_DATA, 0x6f},
+	{DISPCTRL_WR_DATA, 0x77},
+
+	{DISPCTRL_GEN_WR_CMND, 0xc9},
+	{DISPCTRL_WR_DATA, 0x0B},
+	{DISPCTRL_WR_DATA, 0x1E},
+	{DISPCTRL_WR_DATA, 0x26},
+	{DISPCTRL_WR_DATA, 0x2E},
+	{DISPCTRL_WR_DATA, 0x3B},
+	{DISPCTRL_WR_DATA, 0x52},
+	{DISPCTRL_WR_DATA, 0x43},
+	{DISPCTRL_WR_DATA, 0x56},
+	{DISPCTRL_WR_DATA, 0x61},
+	{DISPCTRL_WR_DATA, 0x6a},
+	{DISPCTRL_WR_DATA, 0x6C},
+	{DISPCTRL_WR_DATA, 0x77},
+	{DISPCTRL_WR_DATA, 0x0B},
+	{DISPCTRL_WR_DATA, 0x1E},
+	{DISPCTRL_WR_DATA, 0x26},
+	{DISPCTRL_WR_DATA, 0x2E},
+	{DISPCTRL_WR_DATA, 0x3B},
+	{DISPCTRL_WR_DATA, 0x52},
+	{DISPCTRL_WR_DATA, 0x43},
+	{DISPCTRL_WR_DATA, 0x56},
+	{DISPCTRL_WR_DATA, 0x61},
+	{DISPCTRL_WR_DATA, 0x6a},
+	{DISPCTRL_WR_DATA, 0x6C},
+	{DISPCTRL_WR_DATA, 0x77},
+
+	{DISPCTRL_GEN_WR_CMND, 0xca},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x80},
+	{DISPCTRL_WR_DATA, 0x80},
+	{DISPCTRL_WR_DATA, 0x80},
+	{DISPCTRL_WR_DATA, 0x80},
+	{DISPCTRL_WR_DATA, 0x80},
+	{DISPCTRL_WR_DATA, 0x80},
+	{DISPCTRL_WR_DATA, 0x80},
+	{DISPCTRL_WR_DATA, 0x08},
+	{DISPCTRL_WR_DATA, 0x20},
+	{DISPCTRL_WR_DATA, 0x80},
+	{DISPCTRL_WR_DATA, 0x80},
+	{DISPCTRL_WR_DATA, 0x0A},
+	{DISPCTRL_WR_DATA, 0x4A},
+	{DISPCTRL_WR_DATA, 0x37},
+	{DISPCTRL_WR_DATA, 0xA0},
+	{DISPCTRL_WR_DATA, 0x55},
+	{DISPCTRL_WR_DATA, 0xF8},
+	{DISPCTRL_WR_DATA, 0x0C},
+	{DISPCTRL_WR_DATA, 0x0C},
+	{DISPCTRL_WR_DATA, 0x20},
+	{DISPCTRL_WR_DATA, 0x10},
+	{DISPCTRL_WR_DATA, 0x3F},
+	{DISPCTRL_WR_DATA, 0x3F},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x10},
+	{DISPCTRL_WR_DATA, 0x10},
+	{DISPCTRL_WR_DATA, 0x3F},
+	{DISPCTRL_WR_DATA, 0x3F},
+	{DISPCTRL_WR_DATA, 0x3F},
+	{DISPCTRL_WR_DATA, 0x3F},
+
+	{DISPCTRL_GEN_WR_CMND, 0xcb},
+	{DISPCTRL_WR_DATA, 0x5F},
+	{DISPCTRL_WR_DATA, 0xE0},
+	{DISPCTRL_WR_DATA, 0x07},
+	{DISPCTRL_WR_DATA, 0xFA},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0xC0},
+
+	{DISPCTRL_GEN_WR_CMND, 0xcc},
+	{DISPCTRL_WR_DATA, 0x35},
+
+	{DISPCTRL_GEN_WR_CMND, 0xcd},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0xFF},
+
+	{DISPCTRL_GEN_WR_CMND, 0xce},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x06},
+	{DISPCTRL_WR_DATA, 0x08},
+	{DISPCTRL_WR_DATA, 0xC1},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x1E},
+	{DISPCTRL_WR_DATA, 0x04},
+
+	{DISPCTRL_GEN_WR_CMND, 0xcf},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0xC1},
+	{DISPCTRL_WR_DATA, 0x05},
+	{DISPCTRL_WR_DATA, 0x3F},
+
+	{DISPCTRL_GEN_WR_CMND, 0xd0},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x19},
+	{DISPCTRL_WR_DATA, 0x18},
+	{DISPCTRL_WR_DATA, 0x99},
+	{DISPCTRL_WR_DATA, 0x9D},
+	{DISPCTRL_WR_DATA, 0x1D},
+	{DISPCTRL_WR_DATA, 0x01},
+	{DISPCTRL_WR_DATA, 0x8D},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0xBB},
+	{DISPCTRL_WR_DATA, 0x59},
+	{DISPCTRL_WR_DATA, 0xD7},
+	{DISPCTRL_WR_DATA, 0x01},
+
+	{DISPCTRL_GEN_WR_CMND, 0xd1},
+	{DISPCTRL_WR_DATA, 0x20},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x04},
+	{DISPCTRL_WR_DATA, 0x08},
+	{DISPCTRL_WR_DATA, 0x0C},
+	{DISPCTRL_WR_DATA, 0x10},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x3C},
+	{DISPCTRL_WR_DATA, 0x04},
+	{DISPCTRL_WR_DATA, 0x20},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x04},
+	{DISPCTRL_WR_DATA, 0x08},
+	{DISPCTRL_WR_DATA, 0x0C},
+	{DISPCTRL_WR_DATA, 0x10},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x3C},
+	{DISPCTRL_WR_DATA, 0x05},
+	{DISPCTRL_WR_DATA, 0x40},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x32},
+	{DISPCTRL_WR_DATA, 0x31},
+
+	{DISPCTRL_GEN_WR_CMND, 0xd2},
+	{DISPCTRL_WR_DATA, 0x5C},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+
+	{DISPCTRL_GEN_WR_CMND, 0xd3},
+	{DISPCTRL_WR_DATA, 0x1B},
+	{DISPCTRL_WR_DATA, 0x33},
+	{DISPCTRL_WR_DATA, 0xBB},
+	{DISPCTRL_WR_DATA, 0xBB},
+	{DISPCTRL_WR_DATA, 0xB3},
+	{DISPCTRL_WR_DATA, 0x33},
+	{DISPCTRL_WR_DATA, 0x33},
+	{DISPCTRL_WR_DATA, 0x33},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x01},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0xA0},
+	{DISPCTRL_WR_DATA, 0xD8},
+	{DISPCTRL_WR_DATA, 0xA0},
+	{DISPCTRL_WR_DATA, 0x0D},
+	{DISPCTRL_WR_DATA, 0x4b},
+	{DISPCTRL_WR_DATA, 0x33},
+	{DISPCTRL_WR_DATA, 0x33},
+	{DISPCTRL_WR_DATA, 0x22},
+	{DISPCTRL_WR_DATA, 0x70},
+	{DISPCTRL_WR_DATA, 0x02},
+	{DISPCTRL_WR_DATA, 0x4b},
+	{DISPCTRL_WR_DATA, 0x53},
+	{DISPCTRL_WR_DATA, 0x3D},
+	{DISPCTRL_WR_DATA, 0xBF},
+	{DISPCTRL_WR_DATA, 0xDD},
+
+	{DISPCTRL_GEN_WR_CMND, 0xd5},
+	{DISPCTRL_WR_DATA, 0x06},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x01},
+	{DISPCTRL_WR_DATA, 0x20},
+	{DISPCTRL_WR_DATA, 0x01},
+	{DISPCTRL_WR_DATA, 0x20},
+
+	{DISPCTRL_GEN_WR_CMND, 0xd7},
+	{DISPCTRL_WR_DATA, 0x84},
+	{DISPCTRL_WR_DATA, 0xE0},
+	{DISPCTRL_WR_DATA, 0x7F},
+	{DISPCTRL_WR_DATA, 0xA8},
+	{DISPCTRL_WR_DATA, 0xCE},
+	{DISPCTRL_WR_DATA, 0x38},
+	{DISPCTRL_WR_DATA, 0xFC},
+	{DISPCTRL_WR_DATA, 0xC1},
+	{DISPCTRL_WR_DATA, 0x83},
+	{DISPCTRL_WR_DATA, 0xE7},
+	{DISPCTRL_WR_DATA, 0x8F},
+	{DISPCTRL_WR_DATA, 0x1F},
+	{DISPCTRL_WR_DATA, 0x3C},
+	{DISPCTRL_WR_DATA, 0x10},
+	{DISPCTRL_WR_DATA, 0xFA},
+	{DISPCTRL_WR_DATA, 0xC3},
+	{DISPCTRL_WR_DATA, 0x0F},
+	{DISPCTRL_WR_DATA, 0x04},
+	{DISPCTRL_WR_DATA, 0x41},
+	{DISPCTRL_WR_DATA, 0x00},
+
+	{DISPCTRL_GEN_WR_CMND, 0xd8},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x80},
+	{DISPCTRL_WR_DATA, 0x80},
+	{DISPCTRL_WR_DATA, 0x40},
+	{DISPCTRL_WR_DATA, 0x42},
+	{DISPCTRL_WR_DATA, 0x14},
+
+	{DISPCTRL_GEN_WR_CMND, 0xd9},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+
+	{DISPCTRL_GEN_WR_CMND, 0xdd},
+	{DISPCTRL_WR_DATA, 0x10},
+	{DISPCTRL_WR_DATA, 0x8C},
+
+	{DISPCTRL_GEN_WR_CMND, 0xde},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0xFF},
+	{DISPCTRL_WR_DATA, 0x17},
+	{DISPCTRL_WR_DATA, 0x10},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x73},
+
+	{DISPCTRL_WR_CMND, 0x29},
+	{DISPCTRL_SLEEP_MS, 20},
+
+	{DISPCTRL_WR_CMND, 0x11},
+	{DISPCTRL_SLEEP_MS, 120},
+
+	{DISPCTRL_LIST_END, 0}
+};
+
+void r63311_winset(char *msgData, DISPDRV_WIN_t *p_win)
+{
+	int i = 0;
+	msgData[i++] = 5; /* Length of the sequence below */
+	msgData[i++] = MIPI_DCS_SET_COLUMN_ADDRESS;
+	msgData[i++] = (p_win->l & 0xFF00) >> 8;
+	msgData[i++] = (p_win->l & 0x00FF);
+	msgData[i++] = (p_win->r & 0xFF00) >> 8;
+	msgData[i++] = (p_win->r & 0x00FF);
+
+	msgData[i++] = 5; /* Length of the sequence below */
+	msgData[i++] = MIPI_DCS_SET_PAGE_ADDRESS;
+	msgData[i++] = (p_win->t & 0xFF00) >> 8;
+	msgData[i++] = (p_win->t & 0x00FF);
+	msgData[i++] = (p_win->b & 0xFF00) >> 8;
+	msgData[i++] = (p_win->b & 0x00FF);
+	msgData[i++] = 0;
+
+	if (i != R63311_UPDT_WIN_SEQ_LEN)
+		pr_err("r63311_winset msg len incorrect!\n");
+}
+
+__initdata struct lcd_config r63311_cfg = {
+	.name = "R63311",
+	.mode_supp = LCD_VID_ONLY,
+	.phy_timing = &r63311_timing[0],
+	.max_lanes = 4,
+	.max_hs_bps = 800000000,
+	.max_lp_bps = 5000000,
+	.phys_width = 56,
+	.phys_height = 99,
+	.init_cmd_seq = &r63311_init_panel_cmd[0],
+	.init_vid_seq = &r63311_init_panel_cmd[0],
+	.slp_in_seq = &r63311_slp_in[0],
+	.slp_out_seq = &r63311_slp_out[0],
+	.scrn_on_seq = &r63311_scrn_on[0],
+	.scrn_off_seq = &r63311_scrn_off[0],
+	.id_seq = &r63311_id[0],
+	.verify_id = false,
+	.updt_win_fn = r63311_winset,
+	.updt_win_seq_len = R63311_UPDT_WIN_SEQ_LEN,
+	.vid_cmnds = false,
+	.vburst = true,
+	.cont_clk = false,
+	.hs = 20,
+	.hbp = 25,
+	.hfp = 45,
+	.vs = 2,
+	.vbp = 6,
+	.vfp = 2,
+};
+
+#endif

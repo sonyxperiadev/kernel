@@ -135,6 +135,10 @@ fw-shipped-$(CONFIG_USB_SERIAL_XIRCOM) += keyspan_pda/xircom_pgs.fw
 fw-shipped-$(CONFIG_USB_VICAM) += vicam/firmware.fw
 fw-shipped-$(CONFIG_VIDEO_CPIA2) += cpia2/stv0672_vp4.bin
 fw-shipped-$(CONFIG_YAM) += yam/1200.bin yam/9600.bin
+fw-shipped-$(CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_NEW_FW_UPDATE) += \
+				synaptics/PR1640536_09051401.img
+fw-shipped-$(CONFIG_INPUT_EM718X) += em718x/em7180.fw
+fw-shipped-$(CONFIG_INPUT_EM718X_HUB) += em718x/Sony_BMI055_AK09911_pedometerSOMC_tiltSOMC-di02.1.4.8831-3.fw
 
 fw-shipped-all := $(fw-shipped-y) $(fw-shipped-m) $(fw-shipped-)
 

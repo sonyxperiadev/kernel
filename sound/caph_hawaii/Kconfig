@@ -1,0 +1,90 @@
+#/*******************************************************************************************
+#Copyright 2010 Broadcom Corporation.  All rights reserved.                                */
+#
+#Unless you and Broadcom execute a separate written software license agreement
+#governing use of this software, this software is licensed to you under the
+#terms of the GNU General Public License version 2, available at
+#http://www.gnu.org/copyleft/gpl.html (the "GPL").
+#
+#Notwithstanding the above, under no circumstances may you combine this software
+#in any way with any other Broadcom software provided under a license other than
+#the GPL, without Broadcom's express prior written consent.
+#*******************************************************************************************/
+
+config BCM_ALSA_SOUND
+	boolean "Broadcom Hawaii ALSA sound drivers"
+	select SND_PCM
+	select SND_HWDEP
+	depends on SND
+	depends on (ARCH_JAVA || ARCH_HAWAII)
+        default y
+        help
+          Say Y here to activate an ALSA driver frontend to the BRCM endpoint
+
+config MAP_VOIP
+	boolean "Broadcom MAP VOIP"
+        default n
+        help
+         Say Y here to activate an ALSA driver for MAP VOIP
+
+config CAPH_STEREO_IHF
+	boolean "Broadcom CAPH stereo IHF support"
+	depends on ((ARCH_JAVA || ARCH_HAWAII) && BCM_ALSA_SOUND)
+	default n
+	help
+	 Say Y here to activate stereo IHF feature on CAPRI RAY platform
+config BCM_AUDIO_SELFTEST
+	boolean "Broadcom audio selftest driver"
+	depends on BCM_ALSA_SOUND && MFD_BCMPMU
+        default n
+        help
+          Say Y here to activate Brcm Audio selftest
+config ENABLE_VOIF
+	boolean "Broadcom enable VOIF feature"
+        depends on BCM_MODEM
+        default n
+        help
+          Say Y here to activate Brcm voif
+config VOIF_DUPLUX_UL_PCM
+	boolean "Broadcom VOIF support duplex UL PCM"
+        depends on BCM_MODEM
+        default n
+        help
+          Say Y here to enable VOIF duplex UL PCM
+config IHF_EXT_AMPLIFIER
+        boolean "Define if an external amp is used for IHF"
+        depends on BCM_ALSA_SOUND
+        default n
+        help
+          Say Y here to enable the external amp for IHF
+config GPIO_2IN1_SPK
+        boolean "Define if use 2in1 speaker"
+        depends on BCM_ALSA_SOUND
+        default n
+        help
+          Say Y here to use 2in1 speaker
+config AUDIO_S2
+        boolean "Define if S2 featuers are enabled"
+        depends on BCM_ALSA_SOUND
+        default n
+        help
+          Say Y here to enable Audio S2 features
+config AUDIO_FEATURE_SET_DISABLE_ECNS
+	boolean "Broadcom enable BT NREC off feature"
+	depends on BCM_MODEM
+	default n
+	help
+	  Say Y here to activate Brcm BT NREC OFF
+config IHF_TWO_EXT_AMPLIFIER
+        boolean "Define if two external amp is used for IHF"
+        depends on BCM_ALSA_SOUND
+        default n
+        help
+          Say Y here to enable the two external amp for IHF
+config IHF_EXT_PA_TPA2026D2
+        boolean "Define if TPA2026D2 is used for IHF"
+        depends on BCM_ALSA_SOUND
+        default n
+        help
+          Say Y here to enable the two external amp for IHF
+

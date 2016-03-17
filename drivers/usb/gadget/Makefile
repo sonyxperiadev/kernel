@@ -32,8 +32,8 @@ obj-$(CONFIG_USB_LPC32XX)	+= lpc32xx_udc.o
 obj-$(CONFIG_USB_EG20T)		+= pch_udc.o
 obj-$(CONFIG_USB_MV_UDC)	+= mv_udc.o
 mv_udc-y			:= mv_udc_core.o
-obj-$(CONFIG_USB_CI13XXX_MSM_HSIC)	+= ci13xxx_msm_hsic.o
-obj-$(CONFIG_USB_CI13XXX_MSM)	+= ci13xxx_msm.o
+obj-$(CONFIG_USB_CI13XXX_MSM_HSIC)     += ci13xxx_msm_hsic.o
+obj-$(CONFIG_USB_CI13XXX_MSM)  += ci13xxx_msm.o
 obj-$(CONFIG_USB_FUSB300)	+= fusb300_udc.o
 obj-$(CONFIG_USB_MV_U3D)	+= mv_u3d_core.o
 
@@ -43,6 +43,7 @@ obj-$(CONFIG_USB_F_ACM)		+= usb_f_acm.o
 usb_f_ss_lb-y			:= f_loopback.o f_sourcesink.o
 obj-$(CONFIG_USB_F_SS_LB)	+= usb_f_ss_lb.o
 obj-$(CONFIG_USB_U_SERIAL)	+= u_serial.o
+obj-$(CONFIG_USB_DWC_OTG)	+= dwc_otg/
 usb_f_serial-y			:= f_serial.o
 obj-$(CONFIG_USB_F_SERIAL)	+= usb_f_serial.o
 usb_f_obex-y			:= f_obex.o
@@ -67,7 +68,11 @@ g_nokia-y			:= nokia.o
 g_webcam-y			:= webcam.o
 g_ncm-y				:= ncm.o
 g_acm_ms-y			:= acm_ms.o
+ifeq ($(CONFIG_ARCH_KONA), y)
+g_android-y			:= android-bcm.o
+else
 g_android-y			:= android.o
+endif
 g_tcm_usb_gadget-y		:= tcm_usb_gadget.o
 
 obj-$(CONFIG_USB_ZERO)		+= g_zero.o

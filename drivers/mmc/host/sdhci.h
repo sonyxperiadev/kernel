@@ -289,6 +289,14 @@ struct sdhci_ops {
 
 	void	(*set_clock)(struct sdhci_host *host, unsigned int clock);
 
+#ifdef CONFIG_MMC_SDHCI_PLTFM_KONA
+	int (*set_signalling)(struct sdhci_host *host, int sig_vol);
+	int (*clk_enable)(struct sdhci_host *host, int enable);
+	int (*rpm_enabled)(struct sdhci_host *host);
+	int (*set_regulator)(struct sdhci_host *host,
+	                       int power_state);
+#endif
+
 	int		(*enable_dma)(struct sdhci_host *host);
 	unsigned int	(*get_max_clock)(struct sdhci_host *host);
 	unsigned int	(*get_min_clock)(struct sdhci_host *host);

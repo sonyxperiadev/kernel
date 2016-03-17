@@ -181,5 +181,13 @@
 #define etb_unlock(t) \
 	do { etb_writel((t), CS_LAR_KEY, CSMR_LOCKACCESS); } while (0)
 
+#ifdef CONFIG_ARCH_KONA
+struct etb_platform_data {
+	char *tpiu_clk_name;
+	char *pti_clk_name;
+	int (*config_funnels)(void);
+};
+#endif
+
 #endif /* __ASM_HARDWARE_CORESIGHT_H */
 

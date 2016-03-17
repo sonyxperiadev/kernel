@@ -4,6 +4,59 @@
 
 menu "Misc devices"
 
+config SONY_JPROBE_PM
+	tristate "Idd PM jprobe driver"
+	depends on KPROBES && m
+	default n
+	help
+	  If you say yes here you will get idd pm_jprobe module
+	  that traces suspend / resume times. Buffer is exported
+	  in /sys/kernel/idd_jprobe_pm/probe path. This will be
+	  compiled as module only.
+
+config SONY_JPROBE_LMK
+	tristate "Idd low memory killer jprobe driver"
+	depends on KPROBES && m
+	select SONY_JPROBE_LMK_HOOK
+	default n
+	help
+	  If you say yes here you will get idd lowmemkiller_jprobe module
+	  that monitors what tasks were killed. Buffer is exported in
+	  /sys/kernel/idd_jprobe_lmk path. This will be compiled as module
+	  only.
+
+config SONY_JPROBE_LMK_HOOK
+	bool "Idd low memory killer jprobe hook"
+	depends on SONY_JPROBE_LMK
+	default n
+	help
+	  If you say yes here you will add idd lowmemkiller_jprobe hook
+	  that is required if you want to use jprobe for Low memory killer.
+	  This is needed as JPROBE registered at memory shrink routine
+	  doesn't provide enough information in its arguments.
+
+config SONY_JPROBE_SUSPEND
+	tristate "Idd suspend jprobe driver"
+	depends on KPROBES && m
+	select SONY_JPROBE_SUSPEND_HOOK
+	default n
+	help
+	  If you say yes here you will get idd suspend_jprobe module
+	  that monitors when system enters/exits suspend. Buffer is exported in
+	  /sys/kernel/idd_jprobe_suspend path. This will be compiled as module
+	  only.
+
+config SONY_JPROBE_SUSPEND_HOOK
+	bool "Idd suspend jprobe hook"
+	depends on SONY_JPROBE_SUSPEND
+	default n
+	help
+	  If you say yes here you will add idd suspend_jprobe hook
+	  that is required if you want to use jprobe for suspend.
+	  This is needed as JPROBE registered at suspend routine
+	  doesn't provide enough precision of suspend/resume time.
+
+
 config SENSORS_LIS3LV02D
 	tristate
 	depends on INPUT
@@ -50,6 +103,18 @@ config AD525X_DPOT_SPI
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called ad525x_dpot-spi.
+
+config ANDROID_PMEM_LOW_MEMORY_KILLER
+	bool "Low Memory killer for CMA region managed by Pmem driver"
+	default y
+	depends on ANDROID_PMEM && CMA
+	help
+	  Say Y here if you want Android PMEM low memory killer. This
+	  feature heavily depends on the application manager changing
+	  the "oom_adj" values of application processes according to
+	  their importance w.r.t user interaction. Android Activity
+	  Manager does this and so this feature should only ever be
+	  enabled if you are using the kernel with Android.
 
 config ATMEL_PWM
 	tristate "Atmel AT32/AT91 PWM support"
@@ -333,6 +398,14 @@ config ISL29003
 	  This driver can also be built as a module.  If so, the module
 	  will be called isl29003.
 
+config SENSORS_BRCM_VIRTUAL
+	tristate "Broadcom Virtual Sensor driver"
+	default n
+	---help---
+	If you say yes here you get support of multiplexing of sensor drivers
+	on the kernel level. Sensor drivers must implement registration with the
+	virtual sensor driver.
+
 config ISL29020
 	tristate "Intersil ISL29020 ambient light sensor"
 	depends on I2C
@@ -343,6 +416,15 @@ config ISL29020
 	  This driver can also be built as a module.  If so, the module
 	  will be called isl29020.
 
+config SENSORS_ISL29147
+	tristate "insertil isl29147 ambient proximity support"
+	depends on SENSORS_ISL290XX && I2C
+	help
+		If you say yes here you get isl29147 support for intersil
+		ambient proxmity sensors
+		This option will make isl29147 individual registers can be
+		accessed.
+
 config SENSORS_TSL2550
 	tristate "Taos TSL2550 ambient light sensor"
 	depends on I2C && SYSFS
@@ -352,6 +434,30 @@ config SENSORS_TSL2550
 
 	  This driver can also be built as a module.  If so, the module
 	  will be called tsl2550.
+
+config SENSORS_MC3210
+	bool "mCube mc3210 support"
+	default n
+	help
+		If you say yes here you get support for mc3210 sensor
+
+		If you don't need this driver, choose n
+
+config SENSORS_MXC622X
+	bool "Memsic mxc622x accelerometer support"
+	default n
+	help
+		If you say yes here you get support for mxc622x sensor
+
+		If you don't need this driver, choose n
+
+config SENSORS_BMA222
+	bool "Bosch bma222 support"
+	default n
+	help
+	  If you say yes here you get support for BMA222 sensor
+
+	  This driver adds Low Power mode support for Broadcom bluetooth
 
 config SENSORS_BH1780
 	tristate "ROHM BH1780GLI ambient light sensor"
@@ -390,6 +496,218 @@ config HMC6352
 	help
 	  This driver provides support for the Honeywell HMC6352 compass,
 	  providing configuration and heading data via sysfs.
+
+config SENSORS_BH1715
+	tristate "ROHM BH1715 ambient light sensor"
+	depends on I2C && SENSORS_BRCM_VIRTUAL
+	help
+	  If you say yes here you get support for the ROHM BH1715
+	  ambient light sensor.
+
+	  This driver can also be built as a module.  If so, the module
+	  will be called bt1715.
+
+config SENSORS_AL3006
+	tristate "AL3006 Digital Light + Proximity sensor"
+	depends on I2C && SYSFS
+	default n
+	help
+		If you say yes here you get support for DYNE image
+		Digital Light+Proximity sensor AL3006.
+
+		To compile this driver as a module, choose M here: the
+		module will be called al3006.
+
+config SENSORS_TMD2771
+	bool "sensor proximity & light tmd2771 driver"
+	depends on I2C
+	default n
+	help
+	  Say yes here, if you want to include tmd2771 sensor driver.
+	  if you don't need this driver, say N.
+
+config SENSORS_STK31XX
+	bool "sensor proximity & light stk31xx driver"
+	depends on I2C
+	default n
+	help
+	  Say yes here, if you want to
+	  include stk3171 sensor driver.
+	  if you don't need this driver,
+	  say N.
+
+config SENSORS_BH1721FVC
+	bool "bh1721fvc ambient light driver"
+	depends on I2C
+	default n
+	help
+		Say yes here, if you want to include
+		Rohm bh1721fvc sensor driver.
+		if you don't need this driver, say N.
+
+config SENSORS_RPR0410
+	bool "rpr0410 ambient light proximity sensor driver"
+	depends on I2C
+	default n
+	help
+		Say yes here, if you want to include
+		Rohm rpr0410 sensor driver.
+		if you don't need this driver, say N.
+
+config SENSORS_RPR0521
+	bool "rpr0521 ambient light proximity sensor driver"
+	depends on I2C
+	default n
+	help
+		Say yes here, if you want to include
+		Rohm rpr0521 sensor driver.
+		if you don't need this driver, say N.
+
+config SENSORS_HM8001
+	bool "sensor proximity & light hm8001 driver"
+	depends on I2C
+	default n
+	help
+	  Say yes here, if you want to
+	  include hm8001 sensor driver.
+	  if you don't need this driver,
+	  say N.
+
+config SENSORS_AP3216C
+	bool "sensor proximity & light ap3216c driver"
+	depends on I2C
+	default n
+	help
+		Say yes here, if you want to include tmd2771 sensor driver.
+		if you don't need this driver, say N.
+
+config SENSORS_BMP18X
+	tristate "BMP18X digital pressure sensor"
+	depends on (I2C || SPI_MASTER) && SYSFS
+	help
+		If you say yes here you get support for Bosch Sensortec
+		digital pressure sensors BMP085, BMP180 and BMP181.
+
+		To compile this driver as a module, choose M here: the
+		module will be called bmp18x-core.
+
+config SENSORS_BMP18X_I2C
+	tristate "support I2C bus connection"
+	depends on SENSORS_BMP18X && I2C
+	help
+		Say Y here if you want to support Bosch Sensortec digital pressure
+		sensor hooked to an I2C bus.
+
+		To compile this driver as a module, choose M here: the
+		module will be called bmp18x-i2c.
+
+config SENSORS_BMP18X_SPI
+	tristate "support SPI bus connection"
+	depends on SENSORS_BMP18X && SPI_MASTER
+	help
+		Say Y here if you want to support Bosch Sensortec digital pressure
+		sensor hooked to an SPI bus.
+
+		To compile this driver as a module, choose M here: the
+		module will be called bmp18x-spi.
+
+config SENSORS_KXTIK1004
+	tristate "Analog Devices KIONIX KXTIK Three-Axis Digital Accelerometer"
+	depends on I2C && SYSFS
+	help
+	  Say Y or M here if you want to support Bosch Sensortec BMA150
+	  accelerometer.
+	  If unsure, say N.
+
+
+config SENSORS_AMI306
+	tristate "AMI306 Compass Sensors"
+	default n
+	depends on I2C
+	help
+		If you say yes here you get support for
+		AMI306 standalone compass driver provided by Aichi Stell
+
+
+config SENSORS_AK8963
+	tristate "AK8963 compass support"
+	depends on I2C
+	help
+	  If you say yes here you get support for Asahi Kasei's
+	  orientation sensor AK8963.
+
+config SENSORS_BMA2XX
+	tristate "bma2xx acceleration sensor support"
+	depends on I2C
+	help
+	  If you say yes here you get support for Bosch Sensortec's
+	  acceleration sensors BMA2xx.
+
+config SENSORS_MPU3050
+	tristate "MPU3050 gyro sensor"
+	depends on I2C && SENSORS_BRCM_VIRTUAL
+	help
+		Say Y or M here if you have BCMHANA and want to
+		support InvenSense MPU3050 gyro.
+		If unsure, say N.
+
+config SENSORS_AK8975
+	tristate "AK8975 compass support"
+	default n
+	depends on I2C
+	help
+	  If you say yes here you get support for Asahi Kasei's
+	  orientation sensor AK8975.
+
+config SENSORS_ST480
+	tristate "Senodia magnetic&compass support"
+	default n
+	depends on I2C
+	help
+		If you say yes here you get support senodia
+		magnetic/orientation sensor ST480MQ, ST480MB,
+		ST480MF, ST480M*.
+		if unsure, say N.
+
+config SENSORS_AK8975_BRCM
+	tristate "AK8975 compass support"
+	default n
+	depends on I2C && SENSORS_BRCM_VIRTUAL
+	help
+	  If you say yes here you get support for Asahi Kasei's
+	  orientation sensor AK8975.
+
+config SENSORS_GP2AP002
+	tristate "GP2AP002 sensor support"
+	depends on I2C
+	default n
+	help
+	  If you say yes here you get support for Sharp's sensor GP2A.
+
+config SENSORS_BMC150
+	tristate "BMC150 6-axis Accelerometer and Magnetic Sensor Driver"
+	depends on I2C
+	default n
+	help
+	 BMM050 Magnetic Sensor Driver implemented by Bosch-Sensortec.
+
+config INPUT_BMA2x2_ACC_ALERT_INT
+	tristate "BMA255/BMA250E/BMA222E/BMA280 acceleration sensor support"
+	depends on I2C
+	default n
+	help
+	  If you say yes here you get support for Bosch Sensortec's 
+	  acceleration sensors BMA255/BMA250E/BMA222E/BMA280.
+
+config SENSORS_MMC328XMA
+	tristate "Memsic MMC328xMA\MMC3416x\MMC3516x compass"
+	depends on I2C
+	help
+	This driver provides support for the MEMSIC MMC328XMA&MMC3416X&MMC3516X
+	compass which is a 3-axis magnetic sensor and provides an I2C
+	digital output.
+	To compile this driver as a module, choose M here: the
+	module will be called mmc328xma. If unsure, say N here.
 
 config EP93XX_PWM
 	tristate "EP93xx PWM support"
@@ -532,6 +850,237 @@ config LATTICE_ECP3_CONFIG
 
 	  If unsure, say N.
 
+config USB_SWITCH_TSU6111
+	tristate "TSU6111 USB Switch"
+	depends on I2C
+	help
+	  The TSU6111 is a USB port accessory detector and switch.
+	  The TSU6111 is fully controlled using I2C and enables USB data,
+	  stereo and mono audio, video, microphone and UART data to use
+	  a common connector port.
+
+config USB_SWITCH_TSU6721
+	tristate "TSU6721 USB Switch"
+	depends on I2C
+	help
+	  The TSU6721 is a USB port accessory detector and switch.
+	  The TSU6721 is fully controlled using I2C and enables USB data,
+	  stereo and mono audio, video, microphone and UART data to use
+	  a common connector port.
+
+config MFD_RT
+	tristate "Richtek USB Switch"
+	depends on I2C
+	help
+	  The RT8973 is a USB port accessory detector and switch.
+
+config RT8973
+	tristate "Richtek USB Switch"
+	depends on I2C
+	help
+	  The RT8973 is a USB port accessory detector and switch.
+
+config RT_I2C_MUSC
+	tristate "Richtek USB Switch"
+	depends on I2C
+	help
+	  The RT8973 is a USB port accessory detector and switch.
+
+config RT8973_CM_AUTO
+	tristate "Richtek USB Switch"
+	depends on I2C
+	help
+	  The RT8973 is a USB port accessory detector and switch.
+
+config RTMUSC_INT_CONFIG
+	tristate "Richtek USB Switch"
+	depends on I2C
+	help
+	  The RT8973 is a USB port accessory detector and switch.
+
+config RTMUSC_IRQ_NUMBER
+	tristate "Richtek USB Switch"
+	depends on I2C
+	help
+	  The RT8973 is a USB port accessory detector and switch.
+
+config RT_SYSFS_DBG
+	tristate "Richtek USB Switch"
+	depends on I2C
+	help
+	  The RT8973 is a USB port accessory detector and switch.
+
+config RT_SHOW_INFO
+	tristate "Richtek USB Switch"
+	depends on I2C
+	help
+	  The RT8973 is a USB port accessory detector and switch.
+
+config BTHID
+	tristate "Bluetooth HID"
+	depends on HID
+	default n
+	---help---
+	This driver adds support for HID for Broadcom bluetooth
+	devices.
+
+config APANIC_PLABEL
+        string "Android panic dump flash partition label"
+        depends on APANIC_ON_MMC
+        default "kpanic"
+        ---help---
+         If your platform uses a different flash partition label for storing
+         crashdumps, enter it here.
+
+config APANIC_ON_MMC
+	bool "Dump panic info on eMMC"
+	depends on MMCPOLL && BLOCK
+	default y
+	---help---
+	By default apanic works on MTD interface.
+	If your platform has only MMC (ex:- eMMC Flash) based storage and
+	if you want to enable panic to dump kernel panic info to MMC say yes here.
+
+config INTER_PROCESSOR_COMM
+	bool "Inter-Processor Communication driver"
+	default n
+	---help---
+	 Driver which handles communication between host processor and GPU.
+
+config BCM59055_AUDIO
+	tristate "BCM59055 PMU Audio driver"
+	depends on MFD_BCM_PMU590XX
+	---help---
+	 BCM59055 PMU Audio driver
+
+config BCM59055_SARADC
+	tristate "BCM59055 PMU ADC driver"
+	depends on MFD_BCM_PMU590XX
+	---help---
+	 BCM59055 PMU ADC driver
+
+config BCM59055_FUELGAUGE
+	tristate "BCM59055 PMU Fuel Gauge driver"
+	depends on MFD_BCM_PMU590XX
+	---help---
+	 BCM59055 PMU Fuel Gauge driver
+
+config BCM59055_ADC_CHIPSET_API
+	tristate "BCM59055 ADC chipset API driver"
+	depends on BCM59055_SARADC && BCM59055_FUELGAUGE
+	default n
+	---help---
+	 BCM59055 ADC chispet API driver
+
+config BCMPMU_CSAPI_ADC
+	tristate "BCMPMU ADC chipset API driver"
+	depends on SENSORS_BCMPMU
+	default n
+	---help---
+	 BCMPMU ADC chispet API driver (CSAPI_ADC)
+
+config BCM59055_SELFTEST
+        bool "BCM59055 Selftest"
+	depends on MFD_BCM_PMU590XX && BCM59055_AUDIO
+	default n
+        help
+          Selftest support.
+
+config BCMPMU_AUDIO
+        tristate "BCM PMU Audio Driver"
+        depends on (MFD_BCMPMU || MFD_BCM_PMU59xxx || MFD_BCM_PMU59056)
+        help
+          If you say Y to support Audio drive on BCM PMUs.
+
+config BCMPMU_SELFTEST
+        bool "BCM PMU Selftest Driver"
+        depends on MFD_BCMPMU || MFD_BCM_PMU59056
+	default n
+        help
+          If you say Y to support selftest drive on BCM PMUs.
+
+config MONITOR_ADC121C021_I2C
+	tristate "ADC121C021 Battery Monitor"
+	depends on I2C
+	help
+	 Say Y here if you want to support a ADC121C021 battery monitor.
+	 If unsure, say N.
+
+config MONITOR_BQ27541_I2C
+	tristate "BQ27541 Battery Monitor"
+	depends on I2C
+	help
+	 Say Y here if you want to support BQ27541 battery monitor.
+	 If unsure, say N.
+
+config BRALLOC_MEM
+	bool "Broadcom contiguous memory allocator based on CMA"
+	depends on CMA
+	help
+	  This option enables Broadcom's "bralloc" driver to allocate
+	  physically contiguous memory for userspace libraries/applications.
+	  It also provides APIs to handle cache coherency for these regions
+
+config BRALLOC_MEM_STATS
+	bool "Enable bralloc stats in /proc/brallocstat"
+	depends on BRALLOC_MEM && PROC_FS
+	help
+	  This option enables statistics for Bralloc memory driver to be
+	  shown in /proc/brallocstat file
+
+config RECOVERY
+	bool "Android Recovery Support"
+	depends on ARCH_KONA && MMC_BLOCK
+	default n
+
+config BCM_BT_RFKILL
+	bool "BCM BT RFKILL driver support for Bluetooth"
+	depends on RFKILL
+	default n
+	help
+	  This driver adds RFKILL support for Broadcom
+	  Bluetooth. By default it should be set as N.
+	  Say Y here if you want to enable Broadcom
+	  Bluetooth RFKILL.
+
+config BCM_BT_LPM
+	bool "BCM BT Low Power support"
+	default n
+	help
+	  This driver adds Bluetooth low power mode line discipline
+	  support for Broadcom Bluetooth chips. By default it should
+	  be set as N. Say Y if you want to enable Low power mode
+	  functionality.
+	  If not sure, say N.
+
+config BCM_BT_GPS_SELFTEST
+	bool "BRCM GPS test interface for GPS combos"
+	depends on BCM_BT_LPM
+	default n
+	help
+	  Provides GPS manufacturing test interface via BCM_BT_LPM ioctl i/f.
+	  If your platform uses a BCMxxxx BT+GPS chip with N_BRCM_HCI line
+	  discpline, say Y.
+	  If no GPS combo, say N.
+
+config BCM_GPS_KERNEL
+       bool "BCM GPS Kernel Driver"
+       default n
+       help
+         This driver adds kernel level support for GPS application process.
+		 Geofencing feature will be supported with this kernel driver.
+		 Set this Y if GPS chip supports Geofencing feature
+		 If not sure, set N.
+
+config BCM_USERFAULT_HANDLER
+	bool "BCM User fault handler"
+	default n
+	help
+	  This driver would expose debug functionlity for user space to
+	  enable/disable crash on user fault. This could be used to
+	  get full dumps of ram on user fault.
+
+source "drivers/misc/Kconfig.stm"
 config SRAM
 	bool "Generic on-chip SRAM driver"
 	depends on HAS_IOMEM
@@ -630,4 +1179,10 @@ source "drivers/misc/altera-stapl/Kconfig"
 source "drivers/misc/mei/Kconfig"
 source "drivers/misc/vmw_vmci/Kconfig"
 source "drivers/misc/qcom/Kconfig"
+source "drivers/misc/btport/Kconfig"
+source "drivers/misc/emmc_rpmb/Kconfig"
+source "drivers/misc/bmc150/Kconfig"
+source "drivers/misc/cm36xx/Kconfig"
+source "drivers/misc/tmg399x/Kconfig"
+source "drivers/misc/hscdtd00x/Kconfig"
 endmenu

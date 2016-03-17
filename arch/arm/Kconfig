@@ -31,7 +31,7 @@ config ARM
 	select HAVE_DEBUG_KMEMLEAK
 	select HAVE_DMA_API_DEBUG
 	select HAVE_DMA_ATTRS
-	select HAVE_DMA_CONTIGUOUS if MMU
+	select HAVE_DMA_CONTIGUOUS if (MMU && !ARCH_KONA)
 	select HAVE_DYNAMIC_FTRACE if (!XIP_KERNEL)
 	select HAVE_FTRACE_MCOUNT_RECORD if (!XIP_KERNEL)
 	select HAVE_FUNCTION_GRAPH_TRACER if (!THUMB2_KERNEL)
@@ -900,6 +900,25 @@ config ARCH_OMAP1
 	help
 	  Support for older TI OMAP1 (omap7xx, omap15xx or omap16xx)
 
+config ARCH_KONA
+	bool "Broadcom KONA Architecture"
+	depends on MMU
+	select CPU_V7
+	select HAVE_CLK
+	select COMMON_CLKDEV
+	select CLKDEV_LOOKUP
+	select ARM_GIC
+	select HAVE_ARM_SCU if SMP
+	select GENERIC_GPIO
+	select ARCH_REQUIRE_GPIOLIB
+	select GENERIC_TIME
+	select GENERIC_CLOCKEVENTS
+	select ARCH_HAS_CPUFREQ
+		select TICK_ONESHOT
+		select ARM_AMBA
+	help
+	  This enables support for system based on Broadcom KONA architecture
+
 endchoice
 
 menu "Multiple platform selection"
@@ -1005,6 +1024,9 @@ source "arch/arm/plat-omap/Kconfig"
 source "arch/arm/mach-omap1/Kconfig"
 
 source "arch/arm/mach-omap2/Kconfig"
+
+source "arch/arm/mach-java/Kconfig"
+source "arch/arm/plat-kona/Kconfig"
 
 source "arch/arm/mach-orion5x/Kconfig"
 
@@ -1397,6 +1419,15 @@ config PERFMAP
 	depends on ARCH_MSM_KRAIT
         help
           Perfmap: memory mapped interface for performance monitors.
+
+config ARM_ERRATA_782773
+	bool "ARM errata: Updating a translation entry might cause an unexpected translation fault"
+	depends on CPU_V7
+	help
+	  This option enables the workaround for the 782773 Cortex-A9 (all r0,
+	  r2 and r3 revisions) erratum. It might cause MMU exception in case
+	  page table walk happens just after updating the existing
+	  with setting page table in L1 data cache.
 
 endmenu
 

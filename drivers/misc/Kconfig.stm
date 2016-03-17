@@ -1,0 +1,113 @@
+menuconfig STM_TRACE
+       bool "STM MIPI Trace driver"
+       help
+         Simple System Trace Module driver. It allows to use and configure the
+         STM, either from kernel space, or from user space.
+
+if STM_TRACE
+
+config STM_NUMBER_OF_CHANNEL
+       int
+       default 512 if ARCH_U8500
+       default 256
+       help
+         Number Max of channels always a multiple of 256
+
+config STM_PRINTK
+       bool "printk support"
+       depends on STM_TRACE
+       help
+         Duplicate printk output on STM printk channel & activate stm_printk
+
+config STM_PRINTK_CHANNEL
+       int "printk channel"
+       range 0 255
+       depends on STM_PRINTK
+       default 255
+       help
+         STM printk channel number
+
+config STM_FTRACE
+       bool "functions tracing"
+       depends on FTRACE
+       default n
+       help
+         Output function tracing on STM dedicated channel
+
+config STM_FTRACE_CHANNEL
+       int "ftrace channel"
+       range 0 255
+       depends on STM_FTRACE
+       default 254
+       help
+         STM ftrace channel number
+
+config STM_CTX_SWITCH
+       bool "Context switch tracing"
+       depends on CONTEXT_SWITCH_TRACER
+       default n
+       help
+         Output scheduler context switch on STM dedicated channel
+
+config STM_CTX_SWITCH_CHANNEL
+       int "Context switch channel"
+       range 0 255
+       depends on STM_CTX_SWITCH
+       default 253
+       help
+         STM Context switch channel number
+
+config STM_WAKEUP
+       bool "Scheduler wakeup tracing"
+       depends on CONTEXT_SWITCH_TRACER
+       default n
+       help
+         Output scheduler wakeup on STM dedicated channel
+
+config STM_WAKEUP_CHANNEL
+       int "Wakeup channel"
+       range 0 255
+       depends on STM_WAKEUP
+       default 252
+       help
+         STM scheduler wakeup channel number
+
+config STM_STACK_TRACE
+       bool "Stack tracing"
+       depends on STACKTRACE
+       default n
+       help
+         Output stack tracing on STM dedicated channel
+
+config STM_STACK_TRACE_CHANNEL
+       int "Stack trace channel"
+       range 0 255
+       depends on STM_STACK_TRACE
+       default 251
+       help
+         STM stack trace channel number
+
+config STM_TRACE_PRINTK
+       bool "trace printk & binary printk support"
+       depends on TRACING
+       default n
+       help
+         Duplicate trace printk output on STM printk channel
+
+config STM_TRACE_PRINTK_CHANNEL
+       int "trace_printk channel"
+       range 0 255
+       depends on STM_TRACE_PRINTK
+       default 250
+       help
+         STM trace_printk channel number
+
+config STM_TRACE_BPRINTK_CHANNEL
+       int "trace_bprintk channel"
+       range 0 255
+       depends on STM_TRACE_PRINTK
+       default 249
+       help
+         STM trace binary printk channel number
+
+endif

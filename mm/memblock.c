@@ -813,6 +813,22 @@ phys_addr_t __init memblock_alloc(phys_addr_t size, phys_addr_t align)
 	return memblock_alloc_base(size, align, MEMBLOCK_ALLOC_ACCESSIBLE);
 }
 
+phys_addr_t __init memblock_alloc_from_range(phys_addr_t size,
+		phys_addr_t align, phys_addr_t min_addr, phys_addr_t max_addr)
+{
+	phys_addr_t alloc;
+
+	/* align @size to avoid excessive fragmentation on reserved array */
+	size = round_up(size, align);
+
+	alloc = memblock_find_in_range_node(min_addr, max_addr, size, align,
+			MAX_NUMNODES);
+	if (alloc && !memblock_reserve(alloc, size))
+		return alloc;
+
+	return 0;
+}
+
 phys_addr_t __init memblock_alloc_try_nid(phys_addr_t size, phys_addr_t align, int nid)
 {
 	phys_addr_t res = memblock_alloc_nid(size, align, nid);

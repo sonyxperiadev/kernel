@@ -25,6 +25,9 @@ obj-$(CONFIG_MMC_MVSDIO)	+= mvsdio.o
 obj-$(CONFIG_MMC_DAVINCI)       += davinci_mmc.o
 obj-$(CONFIG_MMC_GOLDFISH)	+= android-goldfish.o
 obj-$(CONFIG_MMC_SPI)		+= mmc_spi.o
+obj-$(CONFIG_MMC_SDHCI_PXA)    += sdhci-pxa.o
+obj-$(CONFIG_MMC_SDHCI_PLTFM_KONA)     += sdhci-pltfm-kona.o
+obj-$(CONFIG_MMC_KONA_SDIO_WIFI)    += sdio-wifi.o
 ifeq ($(CONFIG_OF),y)
 obj-$(CONFIG_MMC_SPI)		+= of_mmc_spi.o
 endif
@@ -36,7 +39,6 @@ tmio_mmc_core-y			:= tmio_mmc_pio.o
 tmio_mmc_core-$(subst m,y,$(CONFIG_MMC_SDHI))	+= tmio_mmc_dma.o
 obj-$(CONFIG_MMC_SDHI)		+= sh_mobile_sdhi.o
 obj-$(CONFIG_MMC_CB710)		+= cb710-mmc.o
-obj-$(CONFIG_MMC_CB710)	+= cb710-mmc.o
 obj-$(CONFIG_MMC_VIA_SDMMC)	+= via-sdmmc.o
 obj-$(CONFIG_SDH_BFIN)		+= bfin_sdh.o
 obj-$(CONFIG_MMC_DW)		+= dw_mmc.o

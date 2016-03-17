@@ -142,7 +142,7 @@ static inline u64 __raw_readq_no_log(const volatile void __iomem *addr)
 
 #define __raw_write_logged(v, a, _t)	({ \
 	int _ret; \
-	volatile void __iomem *_a = (a); \
+	volatile void __iomem *_a = (volatile void __iomem *)(a); \
 	void *_addr = (void __force *)(_a); \
 	_ret = uncached_logk(LOGK_WRITEL, _addr); \
 	ETB_WAYPOINT; \
@@ -159,7 +159,7 @@ static inline u64 __raw_readq_no_log(const volatile void __iomem *addr)
 
 #define __raw_read_logged(a, _l, _t)		({ \
 	unsigned _t __a; \
-	const volatile void __iomem *_a = (a); \
+	const volatile void __iomem *_a = (const volatile void __iomem *)(a); \
 	void *_addr = (void __force *)(_a); \
 	int _ret; \
 	_ret = uncached_logk(LOGK_READL, _addr); \

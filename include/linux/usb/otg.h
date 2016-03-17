@@ -62,10 +62,18 @@ struct usb_otg {
 	/* start or continue HNP role switch */
 	int	(*start_hnp)(struct usb_otg *otg);
 
+	/* set_delayed_adp */
+	int     (*set_delayed_adp)(struct usb_otg  *otg);
+
+	/* set SRP required after Vbus goes off */
+	int     (*set_srp_reqd)(struct usb_otg  *otg);
+
 	/* send events to user space */
 	int	(*send_event)(struct usb_otg *otg,
 			enum usb_otg_event event);
 
+	/* Set OTG enable/disable in transceiver */
+	int     (*set_otg_enable)(struct usb_otg *otg, bool enable);
 };
 
 extern const char *usb_otg_state_string(enum usb_otg_state state);

@@ -37,3 +37,10 @@ obj-$(CONFIG_USB_MXS_PHY)		+= phy-mxs-usb.o
 obj-$(CONFIG_USB_RCAR_PHY)		+= phy-rcar-usb.o
 obj-$(CONFIG_USB_ULPI)			+= phy-ulpi.o
 obj-$(CONFIG_USB_ULPI_VIEWPORT)		+= phy-ulpi-viewport.o
+ifeq ($(CONFIG_MFD_BCM_PMU59xxx),y)
+brcmpmu59xxx_otg_xceiv-objs    += bcmpmu59xxx_otg_xceiv.o bcm_otg_adp.o
+obj-$(CONFIG_BCMPMU_OTG_XCEIV) += brcmpmu59xxx_otg_xceiv.o
+else
+brcmpmu_otg_xceiv-objs         += bcmpmu_otg_xceiv.o bcm_otg_adp.o
+obj-$(CONFIG_BCMPMU_OTG_XCEIV) += brcmpmu_otg_xceiv.o
+endif

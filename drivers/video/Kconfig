@@ -2468,6 +2468,8 @@ if FB || SGI_NEWPORT_CONSOLE
 	source "drivers/video/logo/Kconfig"
 endif
 
+source "drivers/video/broadcom/Kconfig" 
+
 config FB_SH_MOBILE_MERAM
 	tristate "SuperH Mobile MERAM read ahead support"
 	depends on (SUPERH || ARCH_SHMOBILE)

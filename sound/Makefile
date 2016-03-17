@@ -1,5 +1,8 @@
 # Makefile for the Linux sound card driver
 #
+ifeq ($(CONFIG_ARCH_JAVA),y)
+obj-$(CONFIG_BCM_ALSA_SOUND) += caph_hawaii/
+endif
 
 obj-$(CONFIG_SOUND) += soundcore.o
 obj-$(CONFIG_SOUND_PRIME) += sound_firmware.o

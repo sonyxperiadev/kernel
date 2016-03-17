@@ -35,5 +35,6 @@
 #define N_TRACESINK	23	/* Trace data routing for MIPI P1149.7 */
 #define N_TRACEROUTER	24	/* Trace data routing for MIPI P1149.7 */
 #define N_SMUX		25	/* Serial MUX */
+#define N_BRCM_HCI	25	/* Broadcom Bluetooth HCI */
 
 #endif /* _UAPI_LINUX_TTY_H */

@@ -1,0 +1,168 @@
+if ARCH_JAVA
+
+menu	"Java SoC based Machine types"
+	depends on ARCH_JAVA
+
+choice
+	prompt "Java SoC based board type"
+
+config  MACH_JAVA_SONY
+		bool "MACH_JAVA_SONY"
+		select MACH_BCM_GARNET
+		help
+		Support for Sonys Broadcom Java based boards
+
+endchoice
+
+source "arch/arm/mach-java/sony/Kconfig"
+
+choice
+	prompt "Java Brooks type"
+	depends on MACH_JAVA_BROOKS
+	default MACH_JAVA_BROOKS_020
+
+	config MACH_JAVA_BROOKS_020
+	  help
+	  Support for Java Brooks
+
+endchoice
+
+config	HAWAII_L2X0_PREFETCH
+	bool "Enable L2 cache prefetching for Hawaii platform"
+	default n
+	help
+	  Say Y if you want to enable L2 cache prefetching
+	  for the Hawaii platform. This enables both, data and
+	  instruction prefetching that have been shown to improve
+	  performance especially in multimedia use cases.
+
+config	DELAYED_PM_INIT
+	depends on ARCH_JAVA
+	bool "Enable support for delayed PM init."
+	default n
+	help
+	  Say Y if you want to enable support for delayed PM init. Android/user
+	  space can complete the PM init by writing to sysfs. Once this trigger
+	  is recieved, all the PIs start changing policies, arm can enter LPM and
+	  arm dfs is allowed.
+
+config	PWRMGR_1P2GHZ_OPS_SET_SELECT
+	depends on ARCH_JAVA && KONA_POWER_MGR
+	bool "Reconfigure the pll for OPS set with Turbo at 1.2GHz"
+	default n
+	help
+	  Say Y if you want to reconfigure the pll for Turbo at 1.2G. All other
+	  ops gets adjusted accordingly. If this is not selected,
+	  default OPP set is with Turbo at 1GHz.
+
+config KONA_AVS
+       bool "Enable AVS driver"
+       default y
+       help
+	Say Y if you want to enable AVS driver
+	AVS driver helps pick the correct voltage table
+	by identifying the silicon type thereby saving
+	power by giving only reqd voltage & not excess.
+
+config KONA_PMU_BSC_CLKPAD_CTRL
+	bool "Kona PMU_BSC CLKPAD Control feature"
+	depends on MFD_BCM_PWRMGR_SW_SEQUENCER
+	default y
+	help
+	   Enable to save the leakage current due to BSC CLKPAD. If enabled
+	   Sequencer will disable the PMU BSC CLK pad at the end of each
+	   i2c transaction which will save the leakage current on the pad pi
+
+config MM_V3D_TIMEOUT_ERRATUM
+	bool "Enable MM V3D timeout erratum workaround"
+	default y
+	help
+	 Say Y to enable MM V3D timeout(HWHAWAII-207) workaround
+	 Refer JIRA DB for more info
+
+config PLL1_8PHASE_OFF_ERRATUM
+	bool "Enable workaround for PLL1 8phase off erratum"
+	default y
+	help
+	 Say Y to enable workaround for PLL1 8phase off erratum (HWHAWAII-73)
+	 Refer JIRA DB for more info
+
+config MM_POWER_OK_ERRATUM
+	bool "Enable MM power ok mask erratum workaround"
+	default y
+	help
+	 Say Y to enable workaround for MM power ok mask erratum(HWRHEA-2272)
+	 Refer JIRA DB for more info
+
+config MM_FREEZE_VAR500M_ERRATUM
+	bool "Disable autogating for Varvdd500M clock to resolve MM freeze"
+	default y
+	help
+	 Say Y to enable workaround for MM freeze with varvdd500 autogating
+	 enabled erratum(HWHAWAII-73)
+	 Refer JIRA DB for more info
+
+config A7_PLL_PWRDWN_ERRATUM
+	bool "Disable A7 PLL pwrdwn while swicthing from A7 PLL to 312Mhz PLL"
+	default y
+	help
+	 Say Y to disable A7 pll pwrdwn during frequency switching.
+	 The work around is for avoiding freeze while switching from A7 PLL to
+	 the 312Mhz PLL. While s/w to 312Mhz, the A7 PLL gets auto powered down,
+	 before s/w process is complete, thereby resulting in a freeze.
+	 WA will disable pwrdwn while switching is in progress and enable later.
+	 Refer to JIRA DB for more information.
+
+config DORMANT_MODE
+	bool "Enable dormant state"
+	depends on BRCM_CDC
+	help
+	Option to enable dormant state for cpuidle and suspend.
+	Dormant mode results in PROC CCU domain voltage
+	being shutoff, resulting in better power
+	savings during idle.
+
+config KONA_SECURE_MONITOR_CALL
+	bool "Execute in non-secure mode using Kona secure monitor"
+	default y
+	help
+	  Select this option if you are running with a bootloader that
+	  has configured the ARM to run in non-secure mode and provides
+	  a secure monitor implementation to access secure registers
+	  and peripherals.
+
+config HAWAII_PTM
+	bool "Enable PTM"
+	depends on ARCH_KONA
+	select ARM_AMBA
+	select OC_ETM
+	help
+	  Say Y here to enable PTM hardware on hawaii.
+
+config BRD_NAME
+	string "customer board name"
+	default "java"
+
+config DISABLE_USBBOOT_NEXTBOOT
+	bool "Disable USB Boot in the next boot"
+	depends on ARCH_JAVA
+	default y
+	help
+	  During Java Bringup when we tried reboot, during the next
+          boot the BootROM was detecting USB and was never timing out
+          This could be because the BIT 29 of usbotgcontrol register
+          was wrongly set to 1. Until we root cuase this and fix it
+          We can enable this workaround only for JAVA
+
+config USE_JAVA_SPINLOCK
+	bool "Use Java specific Spinlock implementation"
+	depends on ARCH_JAVA
+	default y
+	help
+	  Because of the way WFE and SEV are implemented on A7 based Java
+	  there could be issues seen in the spinlocks. Enabling this option
+	  would replace the WFE and SEV with NOP.
+
+endmenu
+
+endif

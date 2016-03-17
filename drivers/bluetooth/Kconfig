@@ -262,4 +262,24 @@ config MSM_BT_POWER
 	  Provides a parameter to switch on/off power from PMIC
 	  to Bluetooth device.
 
+config BCM_LPM_LDISC
+	bool "BCM BT Low Power support"
+	default n
+	help
+	  This driver adds Low Power mode support for Broadcom bluetooth.
+	  This driver uses TTY line discipline to control GPIO.
+
+config BT_HCIUART_BRCM
+	bool "BCM BT Line discipline support Bluez"
+	default n
+	help
+	  This driver adds Line discipline support for Broadcom bluetooth
+
+
+config BCM_BZHW
+	bool "BCM BT Host wake interrrupt handling for Bluez Line discipline"
+	default n
+	help
+	  This driver adds host wake interrupt handling support for Broadcom bluetooth
+
 endmenu

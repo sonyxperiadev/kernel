@@ -138,8 +138,10 @@ static const struct bin_table bin_kern_table[] = {
 	{ CTL_INT,	KERN_COMPAT_LOG,		"compat-log" },
 	{ CTL_INT,	KERN_MAX_LOCK_DEPTH,		"max_lock_depth" },
 	{ CTL_INT,	KERN_PANIC_ON_NMI,		"panic_on_unrecovered_nmi" },
-	{ CTL_INT,	KERN_BOOT_REASON,		"boot_reason" },
-	{ CTL_INT,	KERN_COLD_BOOT,			"cold_boot" },
+#ifndef CONFIG_ARCH_KONA
+	{ CTL_INT,      KERN_BOOT_REASON,               "boot_reason" },
+	{ CTL_INT,      KERN_COLD_BOOT,                 "cold_boot" },
+#endif
 	{}
 };
 
@@ -525,7 +527,9 @@ static const struct bin_table bin_net_ipv6_conf_var_table[] = {
 	{ CTL_INT,	NET_IPV6_ACCEPT_RA_RT_INFO_MAX_PLEN,	"accept_ra_rt_info_max_plen" },
 	{ CTL_INT,	NET_IPV6_PROXY_NDP,			"proxy_ndp" },
 	{ CTL_INT,	NET_IPV6_ACCEPT_SOURCE_ROUTE,		"accept_source_route" },
-	{ CTL_INT,	NET_IPV6_ACCEPT_RA_PREFIX_ROUTE,	"accept_ra_prefix_route" },
+#ifndef CONFIG_ARCH_KONA
+	{ CTL_INT,      NET_IPV6_ACCEPT_RA_PREFIX_ROUTE,        "accept_ra_prefix_route" },
+#endif
 	{}
 };
 

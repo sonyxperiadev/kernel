@@ -35,6 +35,14 @@
 #define DEV_NUMBER 1
 #define REG_ADDR_LIMIT 0xFFFF
 
+static ssize_t rmidev_sysfs_data_show(struct file *data_file,
+		struct kobject *kobj, struct bin_attribute *attributes,
+		char *buf, loff_t pos, size_t count);
+
+static ssize_t rmidev_sysfs_data_store(struct file *data_file,
+		struct kobject *kobj, struct bin_attribute *attributes,
+		char *buf, loff_t pos, size_t count);
+
 static ssize_t rmidev_sysfs_open_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count);
 
@@ -47,11 +55,8 @@ static ssize_t rmidev_sysfs_address_store(struct device *dev,
 static ssize_t rmidev_sysfs_length_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count);
 
-static ssize_t rmidev_sysfs_data_show(struct device *dev,
+static ssize_t rmidev_sysfs_attn_state_show(struct device *dev,
 		struct device_attribute *attr, char *buf);
-
-static ssize_t rmidev_sysfs_data_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t count);
 
 struct rmidev_handle {
 	dev_t dev_no;
@@ -72,22 +77,32 @@ struct rmidev_data {
 	struct rmidev_handle *rmi_dev;
 };
 
+static struct bin_attribute attr_data = {
+	.attr = {
+		.name = "data",
+		.mode = (S_IRUGO | S_IWUGO),
+	},
+	.size = 0,
+	.read = rmidev_sysfs_data_show,
+	.write = rmidev_sysfs_data_store,
+};
+
 static struct device_attribute attrs[] = {
-	__ATTR(open, S_IWUSR | S_IWGRP,
-			NULL,
+	__ATTR(open, S_IWUGO,
+			synaptics_rmi4_show_error,
 			rmidev_sysfs_open_store),
-	__ATTR(release, S_IWUSR | S_IWGRP,
-			NULL,
+	__ATTR(release, S_IWUGO,
+			synaptics_rmi4_show_error,
 			rmidev_sysfs_release_store),
-	__ATTR(address, S_IWUSR | S_IWGRP,
-			NULL,
+	__ATTR(address, S_IWUGO,
+			synaptics_rmi4_show_error,
 			rmidev_sysfs_address_store),
-	__ATTR(length, S_IWUSR | S_IWGRP,
-			NULL,
+	__ATTR(length, S_IWUGO,
+			synaptics_rmi4_show_error,
 			rmidev_sysfs_length_store),
-	__ATTR(data, (S_IWUSR | S_IWGRP),
-			rmidev_sysfs_data_show,
-			rmidev_sysfs_data_store),
+	__ATTR(attn_state, S_IRUGO,
+			rmidev_sysfs_attn_state_show,
+			synaptics_rmi4_store_error),
 };
 
 static int rmidev_major_num;
@@ -97,6 +112,69 @@ static struct class *rmidev_device_class;
 static struct rmidev_handle *rmidev;
 
 static struct completion remove_complete;
+
+static ssize_t rmidev_sysfs_data_show(struct file *data_file,
+		struct kobject *kobj, struct bin_attribute *attributes,
+		char *buf, loff_t pos, size_t count)
+{
+	int retval;
+	unsigned int data_length = rmidev->length;
+
+	if (data_length > (REG_ADDR_LIMIT - rmidev->address))
+		data_length = REG_ADDR_LIMIT - rmidev->address;
+
+	if (count < data_length) {
+		dev_err(&rmidev->rmi4_data->i2c_client->dev,
+				"%s: Not enough space (%d bytes) in buffer\n",
+				__func__, count);
+		return -EINVAL;
+	}
+
+	if (data_length) {
+		retval = rmidev->fn_ptr->read(rmidev->rmi4_data,
+				rmidev->address,
+				(unsigned char *)buf,
+				data_length);
+		if (retval < 0) {
+			dev_err(&rmidev->rmi4_data->i2c_client->dev,
+					"%s: Failed to read data\n",
+					__func__);
+			return retval;
+		}
+	} else {
+		return -EINVAL;
+	}
+
+	return data_length;
+}
+
+static ssize_t rmidev_sysfs_data_store(struct file *data_file,
+		struct kobject *kobj, struct bin_attribute *attributes,
+		char *buf, loff_t pos, size_t count)
+{
+	int retval;
+	unsigned int data_length = rmidev->length;
+
+	if (data_length > (REG_ADDR_LIMIT - rmidev->address))
+		data_length = REG_ADDR_LIMIT - rmidev->address;
+
+	if (data_length) {
+		retval = rmidev->fn_ptr->write(rmidev->rmi4_data,
+				rmidev->address,
+				(unsigned char *)buf,
+				data_length);
+		if (retval < 0) {
+			dev_err(&rmidev->rmi4_data->i2c_client->dev,
+					"%s: Failed to write data\n",
+					__func__);
+			return retval;
+		}
+	} else {
+		return -EINVAL;
+	}
+
+	return count;
+}
 
 static ssize_t rmidev_sysfs_open_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
@@ -168,58 +246,16 @@ static ssize_t rmidev_sysfs_length_store(struct device *dev,
 	return count;
 }
 
-static ssize_t rmidev_sysfs_data_show(struct device *dev,
+static ssize_t rmidev_sysfs_attn_state_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
-	int retval;
-	unsigned int data_length = rmidev->length;
+	int attn_state;
+	const struct synaptics_rmi4_platform_data *platform_data =
+			rmidev->rmi4_data->board;
 
-	if (data_length > (REG_ADDR_LIMIT - rmidev->address))
-		data_length = REG_ADDR_LIMIT - rmidev->address;
+	attn_state = gpio_get_value(platform_data->irq_gpio);
 
-	if (data_length) {
-		retval = rmidev->fn_ptr->read(rmidev->rmi4_data,
-				rmidev->address,
-				(unsigned char *)buf,
-				data_length);
-		if (retval < 0) {
-			dev_err(&rmidev->rmi4_data->i2c_client->dev,
-					"%s: Failed to read data\n",
-					__func__);
-			return retval;
-		}
-	} else {
-		return -EINVAL;
-	}
-
-	return data_length;
-}
-
-static ssize_t rmidev_sysfs_data_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t count)
-{
-	int retval;
-	unsigned int data_length = rmidev->length;
-
-	if (data_length > (REG_ADDR_LIMIT - rmidev->address))
-		data_length = REG_ADDR_LIMIT - rmidev->address;
-
-	if (data_length) {
-		retval = rmidev->fn_ptr->write(rmidev->rmi4_data,
-				rmidev->address,
-				(unsigned char *)buf,
-				data_length);
-		if (retval < 0) {
-			dev_err(&rmidev->rmi4_data->i2c_client->dev,
-					"%s: Failed to write data\n",
-					__func__);
-			return retval;
-		}
-	} else {
-		return -EINVAL;
-	}
-
-	return data_length;
+	return snprintf(buf, PAGE_SIZE, "%u\n", attn_state);
 }
 
 /*
@@ -461,7 +497,7 @@ static void rmidev_device_cleanup(struct rmidev_data *dev_data)
 	return;
 }
 
-static char *rmi_char_devnode(struct device *dev, umode_t *mode)
+static char *rmi_char_devnode(struct device *dev, mode_t *mode)
 {
 	if (!mode)
 		return NULL;
@@ -504,7 +540,7 @@ static int rmidev_init_device(struct synaptics_rmi4_data *rmi4_data)
 	}
 
 	rmidev->fn_ptr =  kzalloc(sizeof(*(rmidev->fn_ptr)), GFP_KERNEL);
-	if (!rmidev->fn_ptr) {
+	if (!rmidev) {
 		dev_err(&rmi4_data->i2c_client->dev,
 				"%s: Failed to alloc mem for fn_ptr\n",
 				__func__);
@@ -607,6 +643,15 @@ static int rmidev_init_device(struct synaptics_rmi4_data *rmi4_data)
 		goto err_sysfs_dir;
 	}
 
+	retval = sysfs_create_bin_file(rmidev->sysfs_dir,
+			&attr_data);
+	if (retval < 0) {
+		dev_err(&rmi4_data->i2c_client->dev,
+				"%s: Failed to create sysfs bin file\n",
+				__func__);
+		goto err_sysfs_bin;
+	}
+
 	for (attr_count = 0; attr_count < ARRAY_SIZE(attrs); attr_count++) {
 		retval = sysfs_create_file(rmidev->sysfs_dir,
 				&attrs[attr_count].attr);
@@ -624,11 +669,12 @@ static int rmidev_init_device(struct synaptics_rmi4_data *rmi4_data)
 	return 0;
 
 err_sysfs_attrs:
-	for (attr_count--; attr_count >= 0; attr_count--) {
-		sysfs_remove_file(&rmi4_data->input_dev->dev.kobj,
-				&attrs[attr_count].attr);
-	}
+	for (attr_count--; attr_count >= 0; attr_count--)
+		sysfs_remove_file(rmidev->sysfs_dir, &attrs[attr_count].attr);
 
+	sysfs_remove_bin_file(rmidev->sysfs_dir, &attr_data);
+
+err_sysfs_bin:
 	kobject_put(rmidev->sysfs_dir);
 
 err_sysfs_dir:
@@ -662,6 +708,8 @@ static void rmidev_remove_device(struct synaptics_rmi4_data *rmi4_data)
 
 	for (attr_count = 0; attr_count < ARRAY_SIZE(attrs); attr_count++)
 		sysfs_remove_file(rmidev->sysfs_dir, &attrs[attr_count].attr);
+
+	sysfs_remove_bin_file(rmidev->sysfs_dir, &attr_data);
 
 	kobject_put(rmidev->sysfs_dir);
 

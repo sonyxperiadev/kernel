@@ -833,9 +833,6 @@ config MSM_DIRECT_SCLK_ACCESS
 	bool "Direct access to the SCLK timer"
 	default n
 
-config IOMMU_API
-       bool
-
 config MSM_GPIOMUX
 	bool
 
