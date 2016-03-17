@@ -116,11 +116,10 @@
 			"csi0_pix_clk", "csi0_rdi_clk",
 			"csi1_src_clk", "csi1_clk",
 			"csi1_pix_clk", "csi1_rdi_clk",
-			"vfe0_clk_src", "camss_vfe_vfe0_clk", "camss_csi_vfe0_clk";
+			"vfe_clk_src", "camss_vfe_vfe_clk", "camss_csi_vfe_clk";
 		qcom,clock-rates = <0
 			200000000 0 0 0
 			200000000 0 0 0
-			266670000 0 0
 			266670000 0 0>;
 	};
 
