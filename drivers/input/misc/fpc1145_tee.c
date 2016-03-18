@@ -29,18 +29,10 @@
  * modify it under the terms of the GNU General Public License Version 2
  * as published by the Free Software Foundation.
  */
-/*
- * Copyright (C) 2015 Sony Mobile Communications Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2, as
- * published by the Free Software Foundation.
- */
 
 #include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/gpio.h>
-#include <linux/input.h>
 #include <linux/interrupt.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -54,7 +46,10 @@
 #define FPC1145_RESET_LOW_US 1000
 #define FPC1145_RESET_HIGH1_US 100
 #define FPC1145_RESET_HIGH2_US 1250
-#define FPC1145_VREG_SETUP_US 100
+#define PWR_ON_STEP_SLEEP 100
+#define PWR_ON_STEP_RANGE1 100
+#define PWR_ON_STEP_RANGE2 900
+#define NUM_PARAMS_REG_ENABLE_SET 2
 
 static const char * const pctl_names[] = {
 	"fpc1145_spi_active",
@@ -87,18 +82,16 @@ struct fpc1145_data {
 	struct clk *iface_clk;
 	struct clk *core_clk;
 	struct regulator *vreg[ARRAY_SIZE(vreg_conf)];
+
 	int irq_gpio;
 	int cs0_gpio;
 	int cs1_gpio;
 	int rst_gpio;
-	struct input_dev *idev;
-	int irq_num;
 	int qup_id;
-	char idev_name[32];
-	int event_type;
-	int event_code;
 	struct mutex lock;
 	bool prepared;
+	bool clocks_enabled;
+	bool clocks_suspended;
 };
 
 static int vreg_setup(struct fpc1145_data *fpc1145, const char *name,
@@ -129,24 +122,18 @@ found:
 		if (regulator_count_voltages(vreg) > 0) {
 			rc = regulator_set_voltage(vreg, vreg_conf[i].vmin,
 					vreg_conf[i].vmax);
-			if (rc) {
+			if (rc)
 				dev_err(dev,
 					"Unable to set voltage on %s, %d\n",
 					name, rc);
-				goto err_exit;
-			}
-
 		}
 		rc = regulator_set_optimum_mode(vreg, vreg_conf[i].ua_load);
-		if (rc < 0) {
+		if (rc < 0)
 			dev_err(dev, "Unable to set current on %s, %d\n",
 					name, rc);
-			goto err_exit;
-		}
 		rc = regulator_enable(vreg);
 		if (rc) {
 			dev_err(dev, "error enabling %s: %d\n", name, rc);
-err_exit:
 			regulator_put(vreg);
 			vreg = NULL;
 		}
@@ -232,7 +219,11 @@ static int set_pipe_ownership(struct fpc1145_data *fpc1145, bool to_tz)
 
 static int set_clks(struct fpc1145_data *fpc1145, bool enable)
 {
-	int rc;
+	int rc = 0;
+	mutex_lock(&fpc1145->lock);
+
+	if (enable == fpc1145->clocks_enabled)
+		goto out;
 
 	if (enable) {
 		rc = clk_set_rate(fpc1145->core_clk,
@@ -242,32 +233,48 @@ static int set_clks(struct fpc1145_data *fpc1145, bool enable)
 					"%s: Error setting clk_rate: %u, %d\n",
 					__func__, fpc1145->spi->max_speed_hz,
 					rc);
-			return rc;
+			goto out;
 		}
 		rc = clk_prepare_enable(fpc1145->core_clk);
 		if (rc) {
 			dev_err(fpc1145->dev,
 					"%s: Error enabling core clk: %d\n",
 					__func__, rc);
-			return rc;
+			goto out;
 		}
+
 		rc = clk_prepare_enable(fpc1145->iface_clk);
 		if (rc) {
 			dev_err(fpc1145->dev,
 					"%s: Error enabling iface clk: %d\n",
 					__func__, rc);
 			clk_disable_unprepare(fpc1145->core_clk);
-			return rc;
+			goto out;
 		}
 		dev_dbg(fpc1145->dev, "%s ok. clk rate %u hz\n", __func__,
 				fpc1145->spi->max_speed_hz);
+
+		fpc1145->clocks_enabled = true;
 	} else {
 		clk_disable_unprepare(fpc1145->iface_clk);
 		clk_disable_unprepare(fpc1145->core_clk);
-		rc = 0;
+		fpc1145->clocks_enabled = false;
 	}
+
+out:
+	mutex_unlock(&fpc1145->lock);
 	return rc;
 }
+
+
+static ssize_t clk_enable_set(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct fpc1145_data *fpc1145 = dev_get_drvdata(dev);
+	return set_clks(fpc1145, (*buf == '1')) ? : count;
+}
+
+static DEVICE_ATTR(clk_enable, S_IWUSR, NULL, clk_enable_set);
 
 /**
  * Will try to select the set of pins (GPIOS) defined in a pin control node of
@@ -316,7 +323,7 @@ exit:
 static ssize_t spi_owner_set(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
-	struct  fpc1145_data *fpc1145 = dev_get_drvdata(dev);
+	struct fpc1145_data *fpc1145 = dev_get_drvdata(dev);
 	int rc;
 	bool to_tz;
 
@@ -332,19 +339,10 @@ static ssize_t spi_owner_set(struct device *dev,
 }
 static DEVICE_ATTR(spi_owner, S_IWUSR, NULL, spi_owner_set);
 
-static ssize_t clk_enable_set(struct device *dev,
-	struct device_attribute *attr, const char *buf, size_t count)
-{
-	struct  fpc1145_data *fpc1145 = dev_get_drvdata(dev);
-	int rc = set_clks(fpc1145, *buf == '1');
-	return rc ? rc : count;
-}
-static DEVICE_ATTR(clk_enable, S_IWUSR, NULL, clk_enable_set);
-
 static ssize_t pinctl_set(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
-	struct  fpc1145_data *fpc1145 = dev_get_drvdata(dev);
+	struct fpc1145_data *fpc1145 = dev_get_drvdata(dev);
 	int rc = select_pin_ctl(fpc1145, buf);
 	return rc ? rc : count;
 }
@@ -361,23 +359,22 @@ static DEVICE_ATTR(pinctl_set, S_IWUSR, NULL, pinctl_set);
 static ssize_t fabric_vote_set(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
-	struct  fpc1145_data *fpc1145 = dev_get_drvdata(dev);
+	struct fpc1145_data *fpc1145 = dev_get_drvdata(dev);
 	int rc = spi_set_fabric(fpc1145, *buf == '1');
 	return rc ? rc : count;
 }
 static DEVICE_ATTR(fabric_vote, S_IWUSR, NULL, fabric_vote_set);
 
-#define NUM_PARAMETERS_ENABLE_SET 2
 static ssize_t regulator_enable_set(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
-	struct  fpc1145_data *fpc1145 = dev_get_drvdata(dev);
+	struct fpc1145_data *fpc1145 = dev_get_drvdata(dev);
 	char op;
 	char name[16];
 	int rc;
 	bool enable;
 
-	if (NUM_PARAMETERS_ENABLE_SET != sscanf(buf, "%15s,%c", name, &op))
+	if (NUM_PARAMS_REG_ENABLE_SET != sscanf(buf, "%15s,%c", name, &op))
 		return -EINVAL;
 	if (op == 'e')
 		enable = true;
@@ -393,7 +390,7 @@ static DEVICE_ATTR(regulator_enable, S_IWUSR, NULL, regulator_enable_set);
 static ssize_t spi_bus_lock_set(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
-	struct  fpc1145_data *fpc1145 = dev_get_drvdata(dev);
+	struct fpc1145_data *fpc1145 = dev_get_drvdata(dev);
 
 	if (!strncmp(buf, "lock", strlen("lock")))
 		spi_bus_lock(fpc1145->spi->master);
@@ -405,7 +402,7 @@ static ssize_t spi_bus_lock_set(struct device *dev,
 }
 static DEVICE_ATTR(bus_lock, S_IWUSR, NULL, spi_bus_lock_set);
 
-static int hw_reset(struct  fpc1145_data *fpc1145)
+static int hw_reset(struct fpc1145_data *fpc1145)
 {
 	int irq_gpio;
 	struct device *dev = fpc1145->dev;
@@ -435,7 +432,7 @@ static ssize_t hw_reset_set(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
 	int rc;
-	struct  fpc1145_data *fpc1145 = dev_get_drvdata(dev);
+	struct fpc1145_data *fpc1145 = dev_get_drvdata(dev);
 
 	if (!strncmp(buf, "reset", strlen("reset")))
 		rc = hw_reset(fpc1145);
@@ -457,7 +454,7 @@ static DEVICE_ATTR(hw_reset, S_IWUSR, NULL, hw_reset_set);
  * @note This function will not send any commands to the sensor it will only
  *       control it "electrically".
  */
-static int device_prepare(struct  fpc1145_data *fpc1145, bool enable)
+static int device_prepare(struct fpc1145_data *fpc1145, bool enable)
 {
 	int rc;
 
@@ -479,46 +476,41 @@ static int device_prepare(struct  fpc1145_data *fpc1145, bool enable)
 		if (rc)
 			goto exit_2;
 
-		usleep_range(100, 1000);
+		usleep_range(PWR_ON_STEP_SLEEP,
+				PWR_ON_STEP_SLEEP + PWR_ON_STEP_RANGE2);
 
 		rc = spi_set_fabric(fpc1145, true);
 		if (rc)
 			goto exit_3;
-		rc = set_clks(fpc1145, true);
-		if (rc)
-			goto exit_4;
 
 		(void)select_pin_ctl(fpc1145, "fpc1145_cs_high");
 		(void)select_pin_ctl(fpc1145, "fpc1145_reset_active");
-		usleep_range(100, 200);
+		usleep_range(PWR_ON_STEP_SLEEP,
+				PWR_ON_STEP_SLEEP + PWR_ON_STEP_RANGE1);
 		(void)select_pin_ctl(fpc1145, "fpc1145_cs_active");
 
 		rc = set_pipe_ownership(fpc1145, true);
 		if (rc)
-			goto exit_5;
+			goto exit_4;
 	} else if (!enable && fpc1145->prepared) {
 		rc = 0;
 		(void)set_pipe_ownership(fpc1145, false);
-exit_5:
-		(void)set_clks(fpc1145, false);
 exit_4:
 		(void)spi_set_fabric(fpc1145, false);
 exit_3:
 		(void)select_pin_ctl(fpc1145, "fpc1145_cs_high");
 		(void)select_pin_ctl(fpc1145, "fpc1145_reset_reset");
-		usleep_range(FPC1145_VREG_SETUP_US,
-				FPC1145_VREG_SETUP_US + 100);
+		usleep_range(PWR_ON_STEP_SLEEP,
+				PWR_ON_STEP_SLEEP + PWR_ON_STEP_RANGE2);
 
-		(void)select_pin_ctl(fpc1145, "fpc1145_cs_low");
-		usleep_range(FPC1145_VREG_SETUP_US,
-				FPC1145_VREG_SETUP_US + 100);
-
-exit_2:
 		(void)vreg_setup(fpc1145, "vdd_ana", false);
-exit_1:
+exit_2:
 		(void)vreg_setup(fpc1145, "vdd_io", false);
-exit:
+exit_1:
 		(void)vreg_setup(fpc1145, "vcc_spi", false);
+exit:
+		(void)select_pin_ctl(fpc1145, "fpc1145_cs_low");
+
 		fpc1145->prepared = false;
 		spi_bus_unlock(fpc1145->spi->master);
 	} else {
@@ -532,7 +524,7 @@ static ssize_t spi_prepare_set(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
 	int rc;
-	struct  fpc1145_data *fpc1145 = dev_get_drvdata(dev);
+	struct fpc1145_data *fpc1145 = dev_get_drvdata(dev);
 
 	if (!strncmp(buf, "enable", strlen("enable")))
 		rc = device_prepare(fpc1145, true);
@@ -544,15 +536,58 @@ static ssize_t spi_prepare_set(struct device *dev,
 }
 static DEVICE_ATTR(spi_prepare, S_IWUSR, NULL, spi_prepare_set);
 
+/**
+ * sysfs node for controlling whether the driver is allowed
+ * to wake up the platform on interrupt.
+ */
+static ssize_t wakeup_enable_set(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	return count;
+}
+static DEVICE_ATTR(wakeup_enable, S_IWUSR, NULL, wakeup_enable_set);
+
+
+/**
+ * sysf node to check the interrupt status of the sensor, the interrupt
+ * handler should perform sysf_notify to allow userland to poll the node.
+ */
+static ssize_t irq_get(struct device *device,
+	struct device_attribute *attribute,
+	char *buffer)
+{
+	struct fpc1145_data *fpc1145 = dev_get_drvdata(device);
+	int irq = gpio_get_value(fpc1145->irq_gpio);
+	return scnprintf(buffer, PAGE_SIZE, "%i\n", irq);
+}
+
+
+/**
+ * writing to the irq node will just drop a printk message
+ * and return success, used for latency measurement.
+ */
+static ssize_t irq_ack(struct device *device,
+	struct device_attribute *attribute,
+	const char *buffer, size_t count)
+{
+	struct fpc1145_data *fpc1145 = dev_get_drvdata(device);
+	dev_dbg(fpc1145->dev, "%s\n", __func__);
+	return count;
+}
+
+static DEVICE_ATTR(irq, S_IRUSR | S_IWUSR, irq_get, irq_ack);
+
 static struct attribute *attributes[] = {
 	&dev_attr_pinctl_set.attr,
-	&dev_attr_clk_enable.attr,
 	&dev_attr_spi_owner.attr,
 	&dev_attr_spi_prepare.attr,
 	&dev_attr_fabric_vote.attr,
 	&dev_attr_regulator_enable.attr,
 	&dev_attr_bus_lock.attr,
 	&dev_attr_hw_reset.attr,
+	&dev_attr_wakeup_enable.attr,
+	&dev_attr_clk_enable.attr,
+	&dev_attr_irq.attr,
 	NULL
 };
 
@@ -563,14 +598,15 @@ static const struct attribute_group attribute_group = {
 static irqreturn_t fpc1145_irq_handler(int irq, void *handle)
 {
 	struct fpc1145_data *fpc1145 = handle;
-	input_event(fpc1145->idev, EV_MSC, MSC_SCAN, ++fpc1145->irq_num);
-	input_sync(fpc1145->idev);
-	dev_dbg(fpc1145->dev, "%s %d\n", __func__, fpc1145->irq_num);
+	dev_dbg(fpc1145->dev, "%s\n", __func__);
+
+	sysfs_notify(&fpc1145->dev->kobj, NULL, dev_attr_irq.attr.name);
+
 	return IRQ_HANDLED;
 }
 
 static int fpc1145_request_named_gpio(struct fpc1145_data *fpc1145,
-		const char *label, int *gpio)
+	const char *label, int *gpio)
 {
 	struct device *dev = fpc1145->dev;
 	struct device_node *np = dev->of_node;
@@ -597,7 +633,7 @@ static int fpc1145_probe(struct spi_device *spi)
 	int irqf;
 	struct device_node *np = dev->of_node;
 	u32 val;
-	const char *idev_name;
+
 	struct fpc1145_data *fpc1145 = devm_kzalloc(dev, sizeof(*fpc1145),
 			GFP_KERNEL);
 	if (!fpc1145) {
@@ -695,39 +731,9 @@ static int fpc1145_probe(struct spi_device *spi)
 	if (rc)
 		goto exit;
 
-	rc = of_property_read_u32(np, "fpc,event-type", &val);
-	fpc1145->event_type = rc < 0 ? EV_MSC : val;
-
-	rc = of_property_read_u32(np, "fpc,event-code", &val);
-	fpc1145->event_code = rc < 0 ? MSC_SCAN : val;
-
-	fpc1145->idev = devm_input_allocate_device(dev);
-	if (!fpc1145->idev) {
-		dev_err(dev, "failed to allocate input device\n");
-		rc = -ENOMEM;
-		goto exit;
-	}
-	input_set_capability(fpc1145->idev, fpc1145->event_type,
-			fpc1145->event_code);
-
-	if (!of_property_read_string(np, "input-device-name", &idev_name)) {
-		fpc1145->idev->name = idev_name;
-	} else {
-		snprintf(fpc1145->idev_name, sizeof(fpc1145->idev_name),
-			"fpc1145@%s", dev_name(dev));
-		fpc1145->idev->name = fpc1145->idev_name;
-	}
-	rc = input_register_device(fpc1145->idev);
-	if (rc) {
-		dev_err(dev, "failed to register input device\n");
-		goto exit;
-	}
-
+	fpc1145->clocks_enabled = false;
+	fpc1145->clocks_suspended = false;
 	irqf = IRQF_TRIGGER_RISING | IRQF_ONESHOT;
-	if (of_property_read_bool(dev->of_node, "fpc,enable-wakeup")) {
-		irqf |= IRQF_NO_SUSPEND;
-		device_init_wakeup(dev, 1);
-	}
 	mutex_init(&fpc1145->lock);
 	rc = devm_request_threaded_irq(dev, gpio_to_irq(fpc1145->irq_gpio),
 			NULL, fpc1145_irq_handler, irqf,
@@ -748,18 +754,17 @@ static int fpc1145_probe(struct spi_device *spi)
 	if (of_property_read_bool(dev->of_node, "fpc,enable-on-boot")) {
 		dev_info(dev, "Enabling hardware\n");
 		(void)device_prepare(fpc1145, true);
+		(void)set_clks(fpc1145, false);
 	}
 
 	dev_info(dev, "%s: ok\n", __func__);
 exit:
-	if (rc)
-		mutex_destroy(&fpc1145->lock);
 	return rc;
 }
 
 static int fpc1145_remove(struct spi_device *spi)
 {
-	struct  fpc1145_data *fpc1145 = dev_get_drvdata(&spi->dev);
+	struct fpc1145_data *fpc1145 = dev_get_drvdata(&spi->dev);
 
 	sysfs_remove_group(&spi->dev.kobj, &attribute_group);
 	mutex_destroy(&fpc1145->lock);
@@ -770,9 +775,33 @@ static int fpc1145_remove(struct spi_device *spi)
 	return 0;
 }
 
+static int fpc1145_suspend(struct device *dev)
+{
+	struct fpc1145_data *fpc1145 = dev_get_drvdata(dev);
+
+	fpc1145->clocks_suspended = fpc1145->clocks_enabled;
+	set_clks(fpc1145, false);
+	return 0;
+}
+
+static int fpc1145_resume(struct device *dev)
+{
+	struct fpc1145_data *fpc1145 = dev_get_drvdata(dev);
+
+	if (fpc1145->clocks_suspended)
+		set_clks(fpc1145, true);
+
+	return 0;
+}
+
+static const struct dev_pm_ops fpc1145_pm_ops = {
+	.suspend = fpc1145_suspend,
+	.resume = fpc1145_resume,
+};
+
 static struct of_device_id fpc1145_of_match[] = {
-	{ .compatible = "fpc1020", },
-	{ .compatible = "fpc1145", },
+	{ .compatible = "fpc,fpc1020", },
+	{ .compatible = "fpc,fpc1145", },
 	{}
 };
 MODULE_DEVICE_TABLE(of, fpc1145_of_match);
@@ -782,9 +811,10 @@ static struct spi_driver fpc1145_driver = {
 		.name	= "fpc1145",
 		.owner	= THIS_MODULE,
 		.of_match_table = fpc1145_of_match,
+		.pm = &fpc1145_pm_ops,
 	},
-	.probe	= fpc1145_probe,
-	.remove	= fpc1145_remove,
+	.probe		= fpc1145_probe,
+	.remove		= fpc1145_remove,
 };
 
 static int __init fpc1145_init(void)
