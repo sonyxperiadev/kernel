@@ -241,7 +241,7 @@
 
 	/* I2C : BLSP11 */
 	i2c@f9967000 {
-		qcom,clk-freq-out = <400000>;
+		qcom,clk-freq-out = <355000>;
 		pinctrl-0 = <&msm_gpio_83_act &msm_gpio_84_act>;
 		pinctrl-1 = <&msm_gpio_83_sus &msm_gpio_84_sus>;
 		status = "ok";
@@ -1114,6 +1114,15 @@
 
 &mdss_mdp {
 	qcom,mdss-pref-prim-intf = "dsi";
+};
+
+&mdss_hdmi_tx {
+	pinctrl-names = "hdmi_hpd_active", "hdmi_ddc_active",
+				"hdmi_active", "hdmi_sleep";
+	pinctrl-0 = <&mdss_hdmi_hpd_active &mdss_hdmi_ddc_suspend>;
+	pinctrl-1 = <&mdss_hdmi_hpd_active &mdss_hdmi_ddc_active>;
+	pinctrl-2 = <&mdss_hdmi_hpd_active &mdss_hdmi_ddc_active>;
+	pinctrl-3 = <&mdss_hdmi_hpd_suspend &mdss_hdmi_ddc_suspend>;
 };
 
 &spmi_bus {
@@ -3248,6 +3257,21 @@
 		qcom,qpnp-ibb-lab-pwrup-delay = <8000>;
 		qcom,qpnp-ibb-lab-pwrdn-delay = <1000>;
 	};
+};
+
+&blsp2_uart2 {
+	/delete-property/ qcom,inject-rx-on-wakeup;
+	/delete-property/ qcom,rx-char-to-inject;
+};
+
+&pcie1_wake_default {
+	/delete-property/ bias-pull-down;
+	bias-pull-up;
+};
+
+&pcie1_wake_sleep {
+	/delete-property/ bias-disable;
+	bias-pull-up;
 };
 
 &pcie1 {
