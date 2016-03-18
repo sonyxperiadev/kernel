@@ -627,31 +627,36 @@ static int fpc1145_request_named_gpio(struct fpc1145_data *fpc1145,
 
 static int fpc1145_probe(struct spi_device *spi)
 {
-	struct device *dev = &spi->dev;
+	struct device *dev;
 	int rc = 0;
 	size_t i;
 	int irqf;
-	struct device_node *np = dev->of_node;
+	struct device_node *np;
+	struct fpc1145_data *fpc1145 = NULL;
 	u32 val;
 
-	struct fpc1145_data *fpc1145 = devm_kzalloc(dev, sizeof(*fpc1145),
-			GFP_KERNEL);
+	dev = &spi->dev;
+	if (dev == NULL) {
+		dev_err(dev, "FATAL: SPI device is NULL!!\n");
+		return -ENODEV;
+	}
+
+	np = dev->of_node;
+	if (!np) {
+		dev_err(dev, "FATAL: DT node not found!!\n");
+		return -EINVAL;
+	}
+
+	fpc1145 = devm_kzalloc(dev, sizeof(*fpc1145), GFP_KERNEL);
 	if (!fpc1145) {
 		dev_err(dev,
 			"failed to allocate memory for struct fpc1145_data\n");
-		rc = -ENOMEM;
-		goto exit;
+		return -ENOMEM;
 	}
 
 	fpc1145->dev = dev;
 	dev_set_drvdata(dev, fpc1145);
 	fpc1145->spi = spi;
-
-	if (!np) {
-		dev_err(dev, "no of node found\n");
-		rc = -EINVAL;
-		goto exit;
-	}
 
 	rc = fpc1145_request_named_gpio(fpc1145, "fpc,gpio_irq",
 			&fpc1145->irq_gpio);
