@@ -269,6 +269,7 @@
 	spi@f9923000 {
 		pinctrl-0 = <&msm_gpio_0_act &msm_gpio_1_act &msm_gpio_3_act>;
 		pinctrl-1 = <&msm_gpio_0_sus &msm_gpio_1_sus &msm_gpio_3_sus>;
+		qcom,shared;
 		status = "ok";
 	};
 
@@ -340,6 +341,35 @@
 		qcom,mbhc-audio-jack-type = "5-pole-jack";
 
 		qcom,hdmi-audio-rx;
+	};
+
+	qcom,sensor-information {
+		/* msm_therm */
+		sensor_information17: qcom,sensor-information@17 {
+			qcom,scaling-factor = <10>;
+		};
+
+		/* emmc_therm */
+		sensor_information18: qcom,sensor-information@18 {
+			qcom,scaling-factor = <10>;
+		};
+
+		/* quiet_therm */
+		sensor_information21: qcom,sensor-information@21 {
+			qcom,alias-name = "bl_therm";
+		};
+
+		sensor_information100: qcom,sensor-information@100 {
+			qcom,sensor-type = "adc";
+			qcom,sensor-name = "bms";
+			qcom,alias-name = "batt_therm";
+			qcom,scaling-factor = <1000>;
+		};
+
+		sensor_information101: qcom,sensor-information@101 {
+			qcom,sensor-type = "adc";
+			qcom,sensor-name = "xo_therm";
+		};
 	};
 
 	ldo_vibrator {
@@ -452,6 +482,8 @@
 		qcom,flash-source = <&pmi8994_flash0 &pmi8994_flash1>;
 		qcom,torch-source = <&pmi8994_torch0 &pmi8994_torch1>;
 	};
+
+	/delete-node/ qcom,cnss@06300000;
 };
 
 &pm8994_gpios {
@@ -1101,6 +1133,7 @@
 &ibb_regulator {
 	interrupts = <0x3 0xdc 0x0>;
 	interrupt-names = "ibb_vreg_not_ok_interrupt";
+	qcom,qpnp-ibb-slew-rate = <2000000>;
 };
 
 /* GPU overrides */
