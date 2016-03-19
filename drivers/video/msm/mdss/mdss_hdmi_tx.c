@@ -2271,13 +2271,13 @@ static int hdmi_tx_core_on(struct hdmi_tx_ctrl *hdmi_ctrl)
 		return -EINVAL;
 	}
 
-#if 0 /* Sony SPECIFIC */
 	rc = hdmi_tx_enable_power(hdmi_ctrl, HDMI_TX_CORE_PM, 1);
 	if (rc) {
 		DEV_ERR("%s: core hdmi_msm_enable_power failed rc = %d\n",
 			__func__, rc);
 		return rc;
 	}
+#if 0 /* Sony SPECIFIC */
 	rc = hdmi_tx_enable_power(hdmi_ctrl, HDMI_TX_CEC_PM, 1);
 	if (rc) {
 		DEV_ERR("%s: cec hdmi_msm_enable_power failed rc = %d\n",
