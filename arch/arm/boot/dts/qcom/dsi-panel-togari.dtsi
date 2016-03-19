@@ -140,6 +140,7 @@
 
 		somc,panel-id = [ff];
 		somc,panel-detect = <1>;
+		somc,panel-id-read-cmds;
 		somc,disp-en-off-pre = <10>;
 		somc,disp-en-off-post = <10>;
 		somc,disp-en-on-pre = <25>;
@@ -1026,6 +1027,7 @@
 
 		somc,panel-id = [ff];
 		somc,panel-detect = <1>;
+		somc,panel-id-read-cmds;
 		somc,disp-en-off-pre = <10>;
 		somc,disp-en-off-post = <10>;
 		somc,disp-en-on-pre = <200>;
