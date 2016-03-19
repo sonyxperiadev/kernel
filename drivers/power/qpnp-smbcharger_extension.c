@@ -1975,7 +1975,7 @@ void somc_chg_voltage_check_start(struct chg_somc_params *params)
 		goto out;
 
 	params->vol_check.is_running = true;
-	pr_info("voltage check start\n");
+	pr_debug("voltage check start\n");
 	schedule_delayed_work(&params->vol_check.work,
 				msecs_to_jiffies(VOLTAGE_CHECK_DELAY_MS));
 
@@ -1988,7 +1988,7 @@ void somc_chg_voltage_check_cancel(struct chg_somc_params *params)
 	somc_chg_current_change_mutex_lock(params->dev);
 	if (params->vol_check.is_running) {
 		params->vol_check.is_running = false;
-		pr_info("voltage check stop\n");
+		pr_debug("voltage check stop\n");
 		cancel_delayed_work_sync(&params->vol_check.work);
 	}
 	params->vol_check.is_hvdcp = false;
@@ -2053,7 +2053,7 @@ static void somc_chg_apsd_rerun_check_work(struct work_struct *work)
 void somc_chg_apsd_rerun_check(struct chg_somc_params *params)
 {
 	cancel_delayed_work_sync(&params->apsd.rerun_work);
-	pr_info("apsd_rerun check start\n");
+	pr_debug("apsd_rerun check start\n");
 	if (params->apsd.wq && somc_chg_is_usb_uv_hvdcp(params))
 		queue_delayed_work(params->apsd.wq, &params->apsd.rerun_work,
 				params->apsd.delay_ms ?
