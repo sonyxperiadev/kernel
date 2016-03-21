@@ -250,6 +250,7 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(fv_cmp_cfg),
 	POWER_SUPPLY_ATTR(safety_timer_expired),
 	POWER_SUPPLY_ATTR(restricted_charging),
+	POWER_SUPPLY_ATTR(allow_hvdcp3),
 	POWER_SUPPLY_ATTR(sub_type),
 	POWER_SUPPLY_ATTR(lrc_enable),
 	POWER_SUPPLY_ATTR(lrc_socmax),
