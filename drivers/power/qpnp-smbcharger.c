@@ -149,6 +149,7 @@ struct smbchg_chip {
 	bool				vbat_above_headroom;
 	bool				force_aicl_rerun;
 	bool				hvdcp3_supported;
+	bool				allow_hvdcp3_detection;
 	bool				restricted_charging;
 	bool				cfg_override_usb_current;
 	u8				original_usbin_allowance;
@@ -5118,6 +5119,30 @@ static int fake_insertion_removal(struct smbchg_chip *chip, bool insertion)
 	return 0;
 }
 
+static void smbchg_handle_hvdcp3_disable(struct smbchg_chip *chip)
+{
+	enum power_supply_type usb_supply_type;
+	char *usb_type_name = "NULL";
+
+	if (chip->allow_hvdcp3_detection)
+		return;
+
+	chip->pulse_cnt = 0;
+
+	if (is_hvdcp_present(chip)) {
+		smbchg_change_usb_supply_type(chip,
+			POWER_SUPPLY_TYPE_USB_HVDCP);
+	} else if (is_usb_present(chip)) {
+		read_usb_type(chip, &usb_type_name, &usb_supply_type);
+		smbchg_change_usb_supply_type(chip, usb_supply_type);
+		if (usb_supply_type == POWER_SUPPLY_TYPE_USB_DCP)
+			schedule_delayed_work(&chip->hvdcp_det_work,
+				msecs_to_jiffies(HVDCP_NOTIFY_MS));
+	} else {
+		smbchg_change_usb_supply_type(chip, POWER_SUPPLY_TYPE_UNKNOWN);
+	}
+}
+
 static int smbchg_prepare_for_pulsing(struct smbchg_chip *chip)
 {
 	int rc = 0;
@@ -5315,6 +5340,9 @@ out:
 		pr_smb(PR_MISC, "HVDCP removed\n");
 		update_usb_status(chip, 0, 0);
 	}
+
+	smbchg_handle_hvdcp3_disable(chip);
+
 	return rc;
 }
 
@@ -5509,6 +5537,8 @@ static int smbchg_unprepare_for_pulsing_lite(struct smbchg_chip *chip)
 	if (rc < 0)
 		pr_err("Couldn't retract HVDCP ICL vote rc=%d\n", rc);
 
+	smbchg_handle_hvdcp3_disable(chip);
+
 	return rc;
 }
 
@@ -5683,6 +5713,7 @@ static enum power_supply_property smbchg_battery_properties[] = {
 	POWER_SUPPLY_PROP_INPUT_CURRENT_LIMITED,
 	POWER_SUPPLY_PROP_RERUN_AICL,
 	POWER_SUPPLY_PROP_RESTRICTED_CHARGING,
+	POWER_SUPPLY_PROP_ALLOW_HVDCP3,
 #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
 	POWER_SUPPLY_PROP_ENABLE_SHUTDOWN_AT_LOW_BATTERY,
 	POWER_SUPPLY_PROP_CHARGE_FULL,
@@ -5834,6 +5865,7 @@ static int smbchg_battery_is_writeable(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_DP_DM:
 	case POWER_SUPPLY_PROP_RERUN_AICL:
 	case POWER_SUPPLY_PROP_RESTRICTED_CHARGING:
+	case POWER_SUPPLY_PROP_ALLOW_HVDCP3:
 #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
 	case POWER_SUPPLY_PROP_ENABLE_SHUTDOWN_AT_LOW_BATTERY:
 	case POWER_SUPPLY_PROP_FV_CFG:
@@ -5846,6 +5878,12 @@ static int smbchg_battery_is_writeable(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_INT_CLD:
 #endif
 		rc = 1;
+		break;
+	case POWER_SUPPLY_PROP_ALLOW_HVDCP3:
+		if (chip->allow_hvdcp3_detection != val->intval) {
+			chip->allow_hvdcp3_detection = !!val->intval;
+			power_supply_changed(&chip->batt_psy);
+		}
 		break;
 	default:
 		rc = 0;
@@ -6023,6 +6061,9 @@ static int smbchg_dc_set_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
 		rc = vote(chip->dc_icl_votable, USER_ICL_VOTER, true,
 				val->intval / 1000);
+		break;
+	case POWER_SUPPLY_PROP_ALLOW_HVDCP3:
+		val->intval = chip->allow_hvdcp3_detection;
 		break;
 	default:
 		return -EINVAL;
@@ -8182,6 +8223,7 @@ static int smbchg_probe(struct spmi_device *spmi)
 		}
 	}
 	chip->psy_registered = true;
+	chip->allow_hvdcp3_detection = true;
 
 	if (chip->cfg_chg_led_support &&
 			chip->schg_version == QPNP_SCHG_LITE) {
