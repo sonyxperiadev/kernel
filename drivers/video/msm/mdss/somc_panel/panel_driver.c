@@ -272,11 +272,13 @@ static int mdss_dsi_request_gpios(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 			goto disp_en_gpio_err;
 		}
 	}
-	rc = gpio_request(ctrl_pdata->rst_gpio, "disp_rst_n");
-	if (rc) {
-		pr_err("request reset gpio failed, rc=%d\n",
-			rc);
-		goto rst_gpio_err;
+	if (gpio_is_valid(ctrl_pdata->rst_gpio)) {
+		rc = gpio_request(ctrl_pdata->rst_gpio, "disp_rst_n");
+		if (rc) {
+			pr_err("request reset gpio failed, rc=%d\n",
+				rc);
+			goto rst_gpio_err;
+		}
 	}
 	if (gpio_is_valid(ctrl_pdata->bklt_en_gpio)) {
 		rc = gpio_request(ctrl_pdata->bklt_en_gpio,
@@ -301,7 +303,8 @@ mode_gpio_err:
 	if (gpio_is_valid(ctrl_pdata->bklt_en_gpio))
 		gpio_free(ctrl_pdata->bklt_en_gpio);
 bklt_en_gpio_err:
-	gpio_free(ctrl_pdata->rst_gpio);
+	if (gpio_is_valid(ctrl_pdata->rst_gpio))
+		gpio_free(ctrl_pdata->rst_gpio);
 rst_gpio_err:
 	if (gpio_is_valid(ctrl_pdata->disp_en_gpio))
 		gpio_free(ctrl_pdata->disp_en_gpio);
@@ -415,8 +418,10 @@ static int mdss_dsi_panel_reset_seq(struct mdss_panel_data *pdata, int enable)
 			gpio_direction_output(ctrl_pdata->rst_gpio, 1);
 			msleep(150);
 		} else {
-			gpio_set_value(ctrl_pdata->bklt_en_gpio, 0);
-			usleep_range(1000, 1000);
+			if (gpio_is_valid(ctrl_pdata->bklt_en_gpio)) {
+				gpio_set_value(ctrl_pdata->bklt_en_gpio, 0);
+				usleep_range(1000, 1000);
+			}
 			gpio_direction_output(ctrl_pdata->rst_gpio, 0);
 			usleep_range(1000, 1000);
 			gpio_direction_output(spec_pdata->disp_n5, 0);
@@ -1367,8 +1372,7 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 	if (spec_pdata->einit_cmds.cmd_cnt) {
 		pr_debug("%s: early init sequence\n", __func__);
 		mdss_dsi_panel_cmds_send(ctrl_pdata, &spec_pdata->einit_cmds);
-		if (spec_pdata->reset)
-			spec_pdata->reset(pdata, 1);
+		//mdss_dsi_panel_reset(pdata, 1);
 	}
 
 	if (spec_pdata->cabc_early_on_cmds.cmd_cnt &&
@@ -4121,6 +4125,11 @@ int mdss_dsi_panel_init(struct device_node *node,
 	if ((!spec_pdata->disp_on_in_boot) || (!index))
 		mdss_dsi_pinctrl_set_state(ctrl_pdata, true);
 
+	alt_panelid_cmd = of_property_read_bool(node,
+						"somc,alt-panelid-cmd");
+	if (alt_panelid_cmd)
+		mdss_dsi_panel_gpios(parent, ctrl_pdata);
+
 	rc = do_panel_detect(&node, ctrl_pdev,
 			ctrl_pdata, alt_panelid_cmd, index);
 	if (rc < 0) {
@@ -4130,11 +4139,6 @@ int mdss_dsi_panel_init(struct device_node *node,
 
 	if (!spec_pdata->disp_on_in_boot)
 		mdss_dsi_pinctrl_set_state(ctrl_pdata, false);
-
-	alt_panelid_cmd = of_property_read_bool(node,
-						"somc,alt-panelid-cmd");
-	if (alt_panelid_cmd)
-		mdss_dsi_panel_gpios(parent, ctrl_pdata);
 
 	rc = mdss_panel_parse_dt(node, ctrl_pdata);
 	if (rc) {
