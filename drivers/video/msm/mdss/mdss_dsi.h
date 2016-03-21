@@ -513,6 +513,8 @@ struct mdss_dsi_ctrl_pdata {
 
 	struct dsi_panel_cmds cabc_off_cmds;
 	struct dsi_panel_cmds cabc_late_off_cmds;
+	struct dsi_panel_cmds lock_cmds;
+	struct dsi_panel_cmds unlock_cmds;
 #endif
 
 	struct dcs_cmd_list cmdlist;
