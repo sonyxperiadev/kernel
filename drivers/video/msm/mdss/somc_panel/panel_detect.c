@@ -316,6 +316,8 @@ static int postdetect_update_panel(struct mdss_panel_data *pdata)
 	ctrl_pdata->pclk_rate = mipi->dsi_pclk_rate;
 	ctrl_pdata->byte_clk_rate = pinfo->clk_rate / 8;
 
+	spec_pdata->reset(pdata, 1);
+
 	if (spec_pdata->cabc_deferred_on_cmds.cmd_cnt)
 		INIT_WORK(&ctrl_pdata->cabc_work, cabc_work_fn);
 
