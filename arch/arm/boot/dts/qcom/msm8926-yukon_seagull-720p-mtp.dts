@@ -20,6 +20,7 @@
 
 / {
 	model = "Qualcomm MSM 8926 MTP";
-	compatible = "qcom,msm8926-mtp", "qcom,msm8926", "qcom,mtp", "somc,seagull";
+	compatible = "qcom,msm8926-mtp", "qcom,msm8926", "qcom,mtp",
+			"somc,seagull", "somc,fih-board";
 	qcom,board-id = <8 0>;
 };
