@@ -304,7 +304,6 @@ static int adc_panel_detect(struct device_node **node,
 	struct device_node *parent;
 	struct device_node *next;
 	u32 res[ADC_PNUM], index, scaling = 1;
-	static const char * panel_name;
 	int rc;
 
 	parent = of_get_parent(*node);
