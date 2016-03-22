@@ -64,6 +64,8 @@
 		qcom,mdss-dsi-panel-framerate = <60>;
 		qcom,platform-reset-gpio = <&msmgpio 25 0>;
 		qcom,mdss-dsi-reset-sequence = <1 10>, <0 10>, <1 120>;
+		somc,pw-off-rst-seq = <0 10>;
+		somc,pw-on-rst-seq = <1 10>, <0 10>, <1 25>;
 		somc,lcm-bl-gpio = <&msmgpio 15 0>;
 		qcom,panel-phy-regulatorSettings = [03 0a 04 00 20 00 01]; /* Regulator settings */
 		qcom,mdss-dsi-panel-timings = [75 18 10 00 3A 3E 14 1A 13 03 04 00];
@@ -112,7 +114,6 @@
 	        somc,first-boot-aware;
 	        somc,panel-id-read-cmds;
 		somc,dric-only-detect;
-	        somc,panel-pwron-reset;
 	};
 
 	dsi_ofilm_hx8379c_fwvga_vid: qcom,mdss_dsi_ofilm_hx8379c_fwvga_video {
@@ -168,6 +169,8 @@
 		qcom,mdss-dsi-panel-framerate = <60>;
 		qcom,platform-reset-gpio = <&msmgpio 25 0>;
 		qcom,mdss-dsi-reset-sequence = <1 10>, <0 10>, <1 120>;
+		somc,pw-off-rst-seq = <0 10>;
+		somc,pw-on-rst-seq = <1 10>, <0 10>, <1 25>;
 		somc,lcm-bl-gpio = <&msmgpio 15 0>;
 		qcom,panel-phy-regulatorSettings = [03 0a 04 00 20 00 01]; /* Regulator settings */
 		qcom,mdss-dsi-panel-timings = [75 18 10 00 3A 3E 14 1A 13 03 04 00];
@@ -207,7 +210,6 @@
 	        somc,first-boot-aware;
 	        somc,panel-id-read-cmds;
 		somc,dric-only-detect;
-	        somc,panel-pwron-reset;
 	};
 
 	dsi_tcl_hx8379c_fwvga_vid: qcom,mdss_dsi_tcl_hx8379c_fwvga_video {
@@ -260,6 +262,8 @@
 		qcom,mdss-dsi-panel-framerate = <60>;
 		qcom,platform-reset-gpio = <&msmgpio 25 0>;
 		qcom,mdss-dsi-reset-sequence = <1 10>, <0 10>, <1 120>;
+		somc,pw-off-rst-seq = <0 10>;
+		somc,pw-on-rst-seq = <1 10>, <0 10>, <1 25>;
 		somc,lcm-bl-gpio = <&msmgpio 15 0>;
 		qcom,panel-phy-regulatorSettings = [03 0a 04 00 20 00 01]; /* Regulator settings */
 		qcom,mdss-dsi-panel-timings = [75 18 10 00 3A 3E 14 1A 13 03 04 00];
@@ -298,6 +302,5 @@
 		qcom,cont-splash-enabled;
 		somc,first-boot-aware;
 		somc,panel-id-read-cmds;
-		somc,panel-pwron-reset;
 	};
 };
