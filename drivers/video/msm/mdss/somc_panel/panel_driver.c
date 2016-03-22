@@ -1461,12 +1461,6 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 	if (pdata->panel_info.dsi_master != pdata->panel_info.pdest)
 		goto skip_off_cmds;
 
-	if (spec_pdata->cabc_deferred_on_cmds.cmd_cnt &&
-			spec_pdata->cabc_active) {
-		pr_debug("%s: killing CABC deferred\n", __func__);
-		cancel_work_sync(&ctrl_pdata->cabc_work);
-	}
-
 	if (ctrl_pdata->off_cmds.cmd_cnt) {
 		mdss_dsi_panel_wait_change(ctrl_pdata, false);
 		mdss_dsi_panel_cmds_send(ctrl_pdata,
@@ -1593,11 +1587,7 @@ static int mdss_dsi_panel_disp_on(struct mdss_panel_data *pdata)
 
 		poll_worker_schedule(ctrl_pdata);
 	}
-	if (spec_pdata->cabc_deferred_on_cmds.cmd_cnt &&
-				spec_pdata->cabc_enabled) {
-		pr_debug("%s: posting CABC deferred\n", __func__);
-		schedule_work(&ctrl_pdata->cabc_work);
-	}
+
 	pr_debug("%s: done\n", __func__);
 
 	return 0;
@@ -3852,10 +3842,6 @@ int mdss_panel_parse_dt(struct device_node *np,
 	mdss_dsi_parse_dcs_cmds(np,
 		&spec_pdata->cabc_late_off_cmds,
 		"somc,mdss-dsi-cabc-late-off-command", NULL);
-
-	mdss_dsi_parse_dcs_cmds(np,
-		&spec_pdata->cabc_deferred_on_cmds,
-		"somc,mdss-dsi-cabc-deferred-on-command", NULL);
 
 	rc = of_property_read_u32(np,
 		"somc,mdss-dsi-cabc-enabled", &tmp);

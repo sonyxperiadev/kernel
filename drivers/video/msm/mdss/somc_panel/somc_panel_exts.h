@@ -120,7 +120,6 @@ struct mdss_panel_specific_pdata {
 
 	struct dsi_panel_cmds cabc_early_on_cmds;
 	struct dsi_panel_cmds cabc_on_cmds;
-	struct dsi_panel_cmds cabc_deferred_on_cmds;
 
 	struct dsi_panel_cmds cabc_off_cmds;
 	struct dsi_panel_cmds cabc_late_off_cmds;

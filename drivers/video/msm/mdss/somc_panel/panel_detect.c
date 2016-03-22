@@ -247,32 +247,6 @@ parse:
 	return rc;
 }
 
-static void cabc_work_fn(struct work_struct *work)
-{
-	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
-	struct mdss_panel_specific_pdata *spec_pdata = NULL;
-
-	if (work == NULL) {
-		pr_err("%s: Invalid input data\n", __func__);
-		return;
-	}
-
-	ctrl_pdata = container_of(work, struct mdss_dsi_ctrl_pdata,
-				cabc_work);
-
-	spec_pdata = ctrl_pdata->spec_pdata;
-	if (!spec_pdata) {
-		pr_err("%s: Invalid input data\n", __func__);
-		return;
-	}
-
-	pr_debug("%s: CABC deferred sequence\n", __func__);
-	mdss_dsi_panel_cmds_send(ctrl_pdata,
-		&spec_pdata->cabc_deferred_on_cmds);
-	spec_pdata->cabc_active = 1;
-	pr_debug("%s: CABC deferred sequence sent\n", __func__);
-}
-
 static int postdetect_update_panel(struct mdss_panel_data *pdata)
 {
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
@@ -319,9 +293,6 @@ static int postdetect_update_panel(struct mdss_panel_data *pdata)
 	ctrl_pdata->byte_clk_rate = pinfo->clk_rate / 8;
 
 	spec_pdata->reset(pdata, 1);
-
-	if (spec_pdata->cabc_deferred_on_cmds.cmd_cnt)
-		INIT_WORK(&ctrl_pdata->cabc_work, cabc_work_fn);
 
 	return 0;
 }

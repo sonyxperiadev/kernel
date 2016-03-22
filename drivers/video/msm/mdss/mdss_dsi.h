@@ -384,7 +384,6 @@ struct mdss_dsi_ctrl_pdata {
 	struct dss_module_power power_data[DSI_MAX_PM];
 #ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 	struct mdss_panel_specific_pdata *spec_pdata;
-	struct work_struct cabc_work;
 #endif
 	u32 dsi_irq_mask;
 	struct mdss_hw *dsi_hw;
