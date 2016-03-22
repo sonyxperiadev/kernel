@@ -66,22 +66,6 @@
 		somc,mdss-dsi-cabc-late-off-command = [39 01 00 00 00 00 03 51 00 00
 				15 01 00 00 00 00 02 55 00
 				15 01 00 00 00 00 02 53 20];
-		somc,mdss-dsi-cabc-deferred-on-command = [23 01 00 00 00 00 02 B0 00
-				29 01 00 00 00 00 08 B9 00 3F 18 18 9F 1F 80
-				29 01 00 00 00 00 08 BA 00 3F 04 40 9F 1F A8
-				29 01 00 00 00 00 1A B8 18 80 18 18 CF 1F 00
-					0C 0F 6C 0F 6C 0F 0C
-					0F DA 6D FF FF 10 7D
-					BC F7 FF FF
-				23 01 00 00 00 00 02 B0 03];
-		somc,mdss-dsi-cabc-deferred-on-v3-command = [23 01 00 00 00 00 02 B0 00
-				29 01 00 00 00 00 08 B9 00 30 18 18 9F 1F 80
-				29 01 00 00 00 00 08 BA 00 30 04 40 9F 1F CC
-				29 01 00 00 00 00 1A B8 18 80 18 18 CF 1F 00
-					0C 14 6C 14 6C 15 0C
-					14 DA 6D FF FF 10 4D
-					81 BB E7 FF
-				23 01 00 00 00 00 02 B0 03];
 		somc,mdss-dsi-cabc-enabled = <1>;
 
 		qcom,mdss-dsi-h-sync-pulse = <1>;
@@ -178,28 +162,9 @@
 		somc,mdss-dsi-cabc-early-on-command = [39 01 00 00 00 00 03 51 0F FF
 				15 01 00 00 00 00 02 53 24
 				15 01 00 00 00 00 02 55 03];
-		somc,mdss-dsi-cabc-early-on-v3-command = [39 01 00 00 00 00 03 51 0F FF
-				15 01 00 00 00 00 02 53 24
-				15 01 00 00 00 00 02 55 03];
 		somc,mdss-dsi-cabc-late-off-command = [39 01 00 00 00 00 03 51 00 00
 				15 01 00 00 00 00 02 55 00
 				15 01 00 00 00 00 02 53 20];
-		somc,mdss-dsi-cabc-deferred-on-command = [23 01 00 00 00 00 02 B0 00
-				29 01 00 00 00 00 08 B9 00 3F 18 18 9F 1F 80
-				29 01 00 00 00 00 08 BA 00 3F 04 40 9F 1F A8
-				29 01 00 00 00 00 1A B8 18 80 18 18 CF 1F 00
-					0C 0F 6C 0F 6C 0F 0C
-					0F DA 6D FF FF 10 7D
-					BC F7 FF FF
-				23 01 00 00 00 00 02 B0 03];
-		somc,mdss-dsi-cabc-deferred-on-v3-command = [23 01 00 00 00 00 02 B0 00
-				29 01 00 00 00 00 08 B9 00 30 18 18 9F 1F 80
-				29 01 00 00 00 00 08 BA 00 30 04 40 9F 1F CC
-				29 01 00 00 00 00 1A B8 18 80 18 18 CF 1F 00
-					0C 14 6C 14 6C 15 0C
-					14 DA 6D FF FF 10 4D
-					81 BB E7 FF
-				23 01 00 00 00 00 02 B0 03];
 		somc,mdss-dsi-cabc-enabled = <1>;
 
 		qcom,mdss-dsi-h-sync-pulse = <1>;
@@ -380,22 +345,6 @@
 		somc,mdss-dsi-cabc-late-off-command = [39 01 00 00 00 00 03 51 00 00
 				15 01 00 00 00 00 02 55 00
 				15 01 00 00 00 00 02 53 20];
-		somc,mdss-dsi-cabc-deferred-on-command = [23 01 00 00 00 00 02 B0 00
-				29 01 00 00 00 00 08 B9 00 3F 18 18 9F 1F 80
-				29 01 00 00 00 00 08 BA 00 3F 04 40 9F 1F A8
-				29 01 00 00 00 00 1A B8 18 80 18 18 CF 1F 00
-					0C 0F 6C 0F 6C 0F 0C
-					0F DA 6D FF FF 10 7D
-					BC F7 FF FF
-				23 01 00 00 00 00 02 B0 03];
-		somc,mdss-dsi-cabc-deferred-on-v3-command = [23 01 00 00 00 00 02 B0 00
-				29 01 00 00 00 00 08 B9 00 30 18 18 9F 1F 80
-				29 01 00 00 00 00 08 BA 00 30 04 40 9F 1F CC
-				29 01 00 00 00 00 1A B8 18 80 18 18 CF 1F 00
-					0C 14 6C 14 6C 15 0C
-					14 DA 6D FF FF 10 4D
-					81 BB E7 FF
-				23 01 00 00 00 00 02 B0 03];
 		somc,mdss-dsi-cabc-enabled = <1>;
 
 		qcom,mdss-dsi-h-sync-pulse = <1>;
