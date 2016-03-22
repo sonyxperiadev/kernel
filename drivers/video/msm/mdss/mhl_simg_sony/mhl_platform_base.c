@@ -133,6 +133,18 @@ static bool mhl_pf_is_switch_to_mhl(void)
  */
 static void mhl_pf_switch_to_mhl_or_usb(int sw)
 {
+	switch (sw) {
+	case STARK_USB:
+		pr_info("%s: Switching to USB\n", __func__);
+		break;
+	case STARK_MHL:
+		pr_info("%s: Switching to MHL\n", __func__);
+		break;
+	default:
+		pr_err("%s: Invalid switch!!!\n", __func__);
+		break;
+	}
+
 	/* switch gpio to MHL/USB from USB/MHL */
 	/* todo : must use dtsi for gpio */
 	gpio_set_value(switch_sel_1_gpio, sw);
@@ -236,7 +248,7 @@ int mhl_pf_switch_to_mhl(void)
 	isDiscoveryCalled = true;
 
 	if (mhl_pf_is_switch_to_mhl()) {
-		pr_debug("%s: Already MHL", __func__);
+		pr_info("%s: Already MHL", __func__);
 		return MHL_SUCCESS;
 	}
 

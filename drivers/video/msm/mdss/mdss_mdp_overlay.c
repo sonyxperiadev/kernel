@@ -3233,6 +3233,9 @@ static int mdss_mdp_hw_cursor_pipe_update(struct msm_fb_data_type *mfd,
 	size_t size = 0;
 	dma_addr_t iova = 0;
 	unsigned long buf_size = 0;
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	static char *pre_img_data;
+#endif /* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 
 	ret = mutex_lock_interruptible(&mdp5_data->ov_lock);
 	if (ret)
@@ -3283,7 +3286,12 @@ static int mdss_mdp_hw_cursor_pipe_update(struct msm_fb_data_type *mfd,
 	}
 
 	size = img->width * img->height * 4;
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL /* REMOVEME???? */
+	if ((size != mfd->cursor_buf_size) || (pre_img_data != img->data)) {
+		pre_img_data = (char *)(img->data);
+#else
 	if (size != mfd->cursor_buf_size) {
+#endif /* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 		pr_debug("allocating cursor mem size:%zd\n", size);
 
 		if (!ion_client) {

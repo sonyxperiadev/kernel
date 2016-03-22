@@ -731,10 +731,18 @@ static int mdss_mdp_cmd_wait4pingpong(struct mdss_mdp_ctl *ctl, void *arg)
 			rc, ctl->num, ctx->pp_timeout_report_cnt);
 		if (ctx->pp_timeout_report_cnt == 0) {
 			MDSS_XLOG_TOUT_HANDLER("mdp", "dsi0_ctrl", "dsi0_phy",
+#ifdef CONFIG_FB_MDSS_SPECIFIC_PANEL
+				"dsi1_ctrl", "dsi1_phy");
+#else
 				"dsi1_ctrl", "dsi1_phy", "panic");
+#endif
 		} else if (ctx->pp_timeout_report_cnt == MAX_RECOVERY_TRIALS) {
 			pr_err("timeout recovery seq failed(%d) ctl=%d, cnt=%d\n",
 				rc, ctl->num, ctx->pp_timeout_report_cnt);
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+			MDSS_XLOG_TOUT_HANDLER("mdp", "dsi0_ctrl", "dsi0_phy",
+					       "dsi1_ctrl", "dsi1_phy", "panic");
+#endif /* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 			mdss_fb_report_panel_dead(ctl->mfd);
 		}
 		ctx->pp_timeout_report_cnt++;
@@ -854,13 +862,19 @@ static int mdss_mdp_cmd_panel_on(struct mdss_mdp_ctl *ctl,
 
 		}
 
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+		if (ctl->panel_data->panel_info.disp_on_in_hs) {
+			disp_on_in_hs = true;
+		} else {
+			rc = mdss_mdp_tearcheck_enable(ctl, true);
+			WARN(rc, "intf %d tearcheck enable error (%d)\n",
+					ctl->intf_num, rc);
+		}
+#else
 		rc = mdss_mdp_tearcheck_enable(ctl, true);
 		WARN(rc, "intf %d tearcheck enable error (%d)\n",
 				ctl->intf_num, rc);
-
-#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
-		disp_on_in_hs = true;
-#endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
+#endif
 
 		ctx->panel_power_state = MDSS_PANEL_POWER_ON;
 		if (sctx)
@@ -1105,6 +1119,10 @@ int mdss_mdp_cmd_kickoff(struct mdss_mdp_ctl *ctl, void *arg)
 		rc = mdss_mdp_ctl_intf_event(ctl, MDSS_EVENT_DISP_ON, NULL);
 		WARN(rc, "intf %d disp on error (%d)\n", ctl->intf_num, rc);
 		disp_on_in_hs = false;
+
+		rc = mdss_mdp_tearcheck_enable(ctl, true);
+		WARN(rc, "intf %d tearcheck enable error (%d)\n",
+				ctl->intf_num, rc);
 	}
 #endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 

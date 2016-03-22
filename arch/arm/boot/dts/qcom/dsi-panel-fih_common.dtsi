@@ -354,6 +354,7 @@
 		qcom,mdss-dsi-underflow-color = <0xff>;
 		qcom,mdss-dsi-border-color = <0>;
 		qcom,mdss-dsi-pixel-packing = "tight";
+		somc,mdss-dsi-id-read-command = [06 01 00 01 05 00 02 A1 00];
 		qcom,mdss-dsi-on-command = [
                         29 01 00 00 00 00 06 F0 55 AA 52 08 00
                         29 01 00 00 00 00 05 FF AA 55 A5 80

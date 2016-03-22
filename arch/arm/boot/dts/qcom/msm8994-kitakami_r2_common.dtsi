@@ -20,11 +20,96 @@
 &soc {
 	/* SPI : BLSP1 */
 	spi@f9923000 {
-		spi-max-frequency = <5000000>;
-		pinctrl-0 = <&msm_gpio_0_act &msm_gpio_1_act &msm_gpio_2_def &msm_gpio_3_act>;
-		pinctrl-1 = <&msm_gpio_0_sus &msm_gpio_1_sus &msm_gpio_2_def &msm_gpio_3_sus>;
+		/delete-property/ qcom,use-pinctrl;
+		pinctrl-0 = <>;
+		pinctrl-1 = <>;
 		status = "ok";
+
+		fpc1145@1 {
+			status = "ok";
+			reg = <1>;
+			compatible = "fpc,fpc1020", "fpc1145";
+			input-device-name = "fpc1020";
+			interrupt-parent = <&msm_gpio>;
+			interrupts = <90 0x0>;
+			fpc,gpio_cs0    = <&msm_gpio 2 0>;
+			fpc,gpio_cs1    = <&msm_gpio 8 0>;
+			fpc,gpio_rst    = <&msm_gpio 89 0>;
+			fpc,gpio_irq    = <&msm_gpio 90 0>;
+			vcc_spi-supply  = <&pm8994_s4>;
+			vdd_ana-supply  = <&pm8994_l32>;
+			vdd_io-supply   = <&pm8994_l32>;
+			fpc,use_fpc2050 = <1>;
+
+			spi-max-frequency = <4800000>;
+			spi-qup-id = <1>;
+			clock-names = "iface_clk", "core_clk";
+			clocks = <&clock_gcc clk_gcc_blsp1_ahb_clk>,
+				<&clock_gcc clk_gcc_blsp1_qup1_spi_apps_clk>;
+
+			pinctrl-names = "fpc1145_spi_active",
+					"fpc1145_reset_reset",
+					"fpc1145_reset_active",
+					"fpc1145_cs_low",
+					"fpc1145_cs_high",
+					"fpc1145_cs_active",
+					"fpc1145_irq_active";
+
+			pinctrl-0 = <&fpc_spi_mosi_active &fpc_spi_miso_active &fpc_spi_clk_active>;
+			pinctrl-1 = <&fpc_reset_reset>;
+			pinctrl-2 = <&fpc_reset_active>;
+			pinctrl-3 = <&fpc_cs_low>;
+			pinctrl-4 = <&fpc_cs_high>;
+			pinctrl-5 = <&fpc_cs_active>;
+			pinctrl-6 = <&fpc_irq_active>;
+		};
 	};
+
+	sound {
+		qcom,audio-routing =
+			"AIF4 VI", "MCLK",
+			"RX_BIAS", "MCLK",
+			"LDO_H", "MCLK",
+			"MADINPUT", "MCLK",
+			"AMIC1", "LDO_H",
+			"LDO_H", "AHC ISNS",
+			"AMIC2", "MIC BIAS2 External",
+			"MIC BIAS2 External", "Headset Mic",
+			"MIC BIAS2 External", "ANCRight Headset Mic",
+			"AMIC3", "MIC BIAS3 External",
+			"MIC BIAS3 External", "ANCLeft Headset Mic",
+			"AMIC4", "LDO_H",
+			"LDO_H", "AHC VSNS",
+			"DMIC1", "MIC BIAS1 External",
+			"MIC BIAS1 External", "Digital Mic1",
+			"DMIC4", "MIC BIAS4 External",
+			"MIC BIAS4 External", "Digital Mic4";
+	};
+
+	qcom,bcl {
+		qcom,ibat-monitor {
+			qcom,low-threshold-uamp = <1000000>;
+			qcom,high-threshold-uamp = <1500000>;
+			qcom,soc-low-threshold = <5>;
+			qcom,vph-high-threshold-uv = <3600000>;
+		};
+	};
+
+	qcom,sensor-information {
+		sensor_information102: qcom,sensor-information@102 {
+			qcom,sensor-type = "adc";
+			qcom,sensor-name = "flash_therm";
+			qcom,scaling-factor = <10>;
+		};
+	};
+};
+
+&sensor_information21 {
+	qcom,scaling-factor = <10>;
+};
+
+&sec_aux_pcm_active {
+	drive-strength = <4>;	/* 4 mA */
 };
 
 &pm8994_mpps {
@@ -76,76 +161,18 @@
 };
 
 &tlmm_pinmux {
-	/* GPIO_0: FP_SPI_MOSI */
-	msm_gpio_0 {
-		qcom,pin-func = <1>;
-		msm_gpio_0_act: active {
-			drive-strength = <2>;
-			bias-disable;
-		};
-		msm_gpio_0_sus: suspend {
-			drive-strength = <2>;
-			bias-disable;
-		};
-		msm_gpio_0_def: default {
-			drive-strength = <2>;
-			bias-disable;
-		};
-	};
-
 	/* GPIO_1: FP_SPI_MISO */
 	msm_gpio_1 {
-		qcom,pin-func = <1>;
-		msm_gpio_1_act: active {
-			drive-strength = <2>;
-			bias-pull-down;
-			/delete-property/ bias-disable;
-		};
-		msm_gpio_1_sus: suspend {
-			drive-strength = <2>;
-			bias-pull-down;
-			/delete-property/ bias-disable;
-		};
 		msm_gpio_1_def: default {
-			drive-strength = <2>;
-			bias-pull-down;
 			/delete-property/ bias-disable;
+			bias-pull-down;
 		};
 	};
 
 	/* GPIO_2: FP_SPI_CS1_N */
 	msm_gpio_2 {
-		qcom,pins = <&gp 2>;
-		qcom,num-grp-pins = <1>;
-		label = "msm_gpio_2";
-		qcom,pin-func = <1>;
-		msm_gpio_2_def: default {
-			drive-strength = <2>;
-			bias-disable;
-		};
-	};
-
-	/* GPIO_3: FP_SPI_CLK */
-	msm_gpio_3 {
-		qcom,pin-func = <1>;
-		msm_gpio_3_act: active {
-			drive-strength = <2>;
-			bias-disable;
-		};
-		msm_gpio_3_sus: suspend {
-			drive-strength = <2>;
-			bias-disable;
-		};
-		msm_gpio_3_def: default {
-			drive-strength = <2>;
-			bias-disable;
-		};
-	};
-
-	/* GPIO_89: FP_RESET_N */
-	msm_gpio_89 {
 		qcom,pin-func = <0>;
-		msm_gpio_89_def: default {
+		msm_gpio_2_def: default {
 			drive-strength = <2>;
 			bias-disable;
 			output-low;
@@ -154,17 +181,135 @@
 
 	/* GPIO_90: FP_INT */
 	msm_gpio_90 {
-		qcom,pin-func = <0>;
 		msm_gpio_90_def: default {
+			/delete-property/ bias-disable;
+			/delete-property/ output-low;
+			bias-pull-down;
+			input-enable;
+		};
+	};
+
+	fpc_spi_mosi_active {
+		qcom,pins = <&gp 0>;
+		qcom,num-grp-pins = <1>;
+		qcom,pin-func = <1>;
+		label = "fpc_spi_mosi_active";
+		fpc_spi_mosi_active: active {
+			drive-strength = <2>;
+			bias-disable;
+		};
+	};
+
+	fpc_spi_miso_active {
+		qcom,pins = <&gp 1>;
+		qcom,num-grp-pins = <1>;
+		qcom,pin-func = <1>;
+		label = "fpc_spi_miso_active";
+		fpc_spi_miso_active: active {
+			drive-strength = <2>;
+			bias-pull-down;
+		};
+	};
+
+	fpc_spi_clk_active {
+		qcom,pins = <&gp 3>;
+		qcom,num-grp-pins = <1>;
+		qcom,pin-func = <1>;
+		label = "fpc_spi_clk_active";
+		fpc_spi_clk_active: active {
+			drive-strength = <2>;
+			bias-disable;
+		};
+	};
+
+	fpc_cs_manual {
+		qcom,pins = <&gp 2>, <&gp 8>;
+		qcom,num-grp-pins = <2>;
+		label = "fpc_cs_manual";
+		qcom,pin-func = <0>;
+		fpc_cs_low: output-low {
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+		fpc_cs_high: output-high {
+			drive-strength = <2>;
+			bias-disable;
+			output-high;
+		};
+	};
+
+	fpc_cs_active {
+		qcom,pins = <&gp 2>, <&gp 8>;
+		qcom,num-grp-pins = <2>;
+		label = "fpc_cs_active";
+		qcom,pin-func = <1>;
+		fpc_cs_active: spi-active {
+			drive-strength = <2>;
+			bias-disable;
+		};
+	};
+
+	fpc_reset {
+		qcom,pins = <&gp 89>;
+		qcom,num-grp-pins = <1>;
+		qcom,pin-func = <0>;
+		label = "fpc_reset";
+		fpc_reset_reset: reset {
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+		fpc_reset_active: active {
+			drive-strength = <2>;
+			bias-disable;
+			output-high;
+		};
+	};
+
+	fpc_irq_active {
+		qcom,pins = <&gp 90>;
+		qcom,num-grp-pins = <1>;
+		qcom,pin-func = <0>;
+		label = "fpc_irq_active";
+		fpc_irq_active: active {
 			drive-strength = <2>;
 			bias-pull-down;
 			input-enable;
-			/delete-property/ bias-disable;
-			/delete-property/ output-low;
 		};
 	};
 };
 
 &usb3 {
 	usb_shell_sel_gpio = <&msm_gpio 9 0>;
+};
+
+&slim_msm {
+	tomtom_codec {
+		qcom,cdc-micbias4-ext-cap;
+	};
+};
+
+&pm8994_vadc {
+	chan@14 {
+		label = "flash_therm";
+		reg = <0x14>;
+		qcom,decimation = <0>;
+		qcom,pre-div-channel-scaling = <0>;
+		qcom,calibration-type = "ratiometric";
+		qcom,scale-function = <15>;
+		qcom,hw-settle-time = <2>;
+		qcom,fast-avg-setup = <0>;
+		qcom,vadc-thermal-node;
+	};
+
+	chan@78 { /* quiet_therm */
+		qcom,scale-function = <15>;
+	};
+};
+
+&pm8994_adc_tm {
+	chan@78 { /* quiet_therm */
+		qcom,scale-function = <8>;
+	};
 };

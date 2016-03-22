@@ -77,7 +77,7 @@ static int mhl_pf_vreg_configure(struct device *dev, int enable)
 {
 	int rc = 0;
 	if (enable) {
-		pr_err("%s: enable\n", __func__);
+		pr_info("%s: Enable MHL_VCC\n", __func__);
 
 		vreg_mhl_vcc = regulator_get(dev, MHL_VCC);
 		if (IS_ERR(vreg_mhl_vcc)) {
@@ -99,7 +99,7 @@ static int mhl_pf_vreg_configure(struct device *dev, int enable)
 		}
 
 	} else {
-		pr_err("%s: disable\n", __func__);
+		pr_info("%s: Disable MHL_VCC\n", __func__);
 		if (!IS_ERR(vreg_mhl_vcc)) {
 			mhl_pf_regulator_handler(vreg_mhl_vcc, dev, __func__, MHL_VCC, 0);
 			regulator_put(vreg_mhl_vcc);

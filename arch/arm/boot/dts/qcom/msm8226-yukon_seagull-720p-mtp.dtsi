@@ -439,6 +439,7 @@
 
 &mdss_dsi0 {
 	qcom,platform-enable-gpio = <&msmgpio 52 0>;
+	qcom,platform-reset-gpio = <&msmgpio 25 0>;
 	qcom,dsi-pref-prim-pan = <&dsi_nt35521_720_vid_truly63>;
 };
 
