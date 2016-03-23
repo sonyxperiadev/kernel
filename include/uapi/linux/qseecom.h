@@ -5,7 +5,7 @@
 #include <linux/ioctl.h>
 
 #define MAX_ION_FD  4
-#ifdef CONFIG_ARCH_MSM8994
+#if defined(CONFIG_ARM64) || defined(CONFIG_64BIT)
 #define MAX_APP_NAME_SIZE  64
 #else
 #define MAX_APP_NAME_SIZE  32
