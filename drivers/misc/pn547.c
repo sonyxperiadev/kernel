@@ -48,9 +48,13 @@
 #include <linux/clk.h>
 #endif
 
-#define MAX_BUFFER_SIZE		512
 #define MAX_NORMAL_FRAME_SIZE	(255 + 3)
-#define MAX_FIRMDL_FRAME_SIZE	(1023 + 5)
+
+#if defined(CONFIG_ARM64) || defined(CONFIG_64BIT)
+#define MAX_FRAME_SIZE	(1023 + 5)
+#else
+#define MAX_FRAME_SIZE	512
+#endif
 
 #define NFC_DEBUG 0
 #define MAX_TRY_I2C_READ	10
@@ -156,7 +160,7 @@ static ssize_t pn547_dev_read(struct file *filp, char __user *buf,
 			      size_t count, loff_t *offset)
 {
 	struct pn547_dev *pn547_dev = filp->private_data;
-	char tmp[MAX_FIRMDL_FRAME_SIZE] = {0, };
+	char tmp[MAX_FRAME_SIZE] = {0, };
 	int ret = 0, maxlen;
 	int readingWatchdog = 0;
 	bool fwdl;
@@ -165,12 +169,12 @@ static ssize_t pn547_dev_read(struct file *filp, char __user *buf,
 
 	fwdl = pn547_dev->state == PN547_STATE_FWDL;
 	if (nfc_has_pinctrl) {
-		maxlen = fwdl ? MAX_FIRMDL_FRAME_SIZE : MAX_NORMAL_FRAME_SIZE;
+		maxlen = fwdl ? MAX_FRAME_SIZE : MAX_NORMAL_FRAME_SIZE;
 		if (count > maxlen)
 			count = maxlen;
 	} else {
-		if (count > MAX_BUFFER_SIZE)
-			count = MAX_BUFFER_SIZE;
+		if (count > MAX_FRAME_SIZE)
+			count = MAX_FRAME_SIZE;
 	}
 
 	pr_debug("%s : reading %zu bytes. irq=%s\n", __func__, count,
@@ -257,7 +261,7 @@ static ssize_t pn547_dev_write(struct file *filp, const char __user *buf,
 			       size_t count, loff_t *offset)
 {
 	struct pn547_dev *pn547_dev;
-	char tmp[MAX_FIRMDL_FRAME_SIZE] = {0, };
+	char tmp[MAX_FRAME_SIZE] = {0, };
 	int ret = 0, retry = 5, maxlen;
 	bool fwdl;
 
@@ -269,12 +273,12 @@ static ssize_t pn547_dev_write(struct file *filp, const char __user *buf,
 
 	fwdl = pn547_dev->state == PN547_STATE_FWDL;
 	if (nfc_has_pinctrl) {
-		maxlen = fwdl ? MAX_FIRMDL_FRAME_SIZE : MAX_NORMAL_FRAME_SIZE;
+		maxlen = fwdl ? MAX_FRAME_SIZE : MAX_NORMAL_FRAME_SIZE;
 		if (count > maxlen)
 			count = maxlen;
 	} else {
-		if (count > MAX_BUFFER_SIZE)
-			count = MAX_BUFFER_SIZE;
+		if (count > MAX_FRAME_SIZE)
+			count = MAX_FRAME_SIZE;
 	}
 
 	if (copy_from_user(tmp, buf, count)) {
