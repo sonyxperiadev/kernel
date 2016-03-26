@@ -731,7 +731,7 @@ static int mdss_mdp_cmd_wait4pingpong(struct mdss_mdp_ctl *ctl, void *arg)
 			rc, ctl->num, ctx->pp_timeout_report_cnt);
 		if (ctx->pp_timeout_report_cnt == 0) {
 			MDSS_XLOG_TOUT_HANDLER("mdp", "dsi0_ctrl", "dsi0_phy",
-#ifdef CONFIG_FB_MDSS_SPECIFIC_PANEL
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 				"dsi1_ctrl", "dsi1_phy");
 #else
 				"dsi1_ctrl", "dsi1_phy", "panic");
