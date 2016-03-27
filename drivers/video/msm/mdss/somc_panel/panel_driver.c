@@ -3673,6 +3673,8 @@ int mdss_panel_parse_dt(struct device_node *np,
 		pinfo->mode_gpio_state = MODE_GPIO_NOT_VALID;
 	}
 
+	pinfo->mipi.input_fpks = pinfo->mipi.frame_rate * 1000;
+
 	rc = of_property_read_u32(np, "qcom,mdss-mdp-transfer-time-us", &tmp);
 	pinfo->mdp_transfer_time_us = (!rc ? tmp : DEFAULT_MDP_TRANSFER_TIME);
 
@@ -3681,15 +3683,6 @@ int mdss_panel_parse_dt(struct device_node *np,
 	rc = of_property_read_u32(np, "qcom,mdss-dsi-init-delay-us",
 			&tmp);
 	pinfo->mipi.init_delay = (!rc ? tmp : 0);
-
-	rc = of_property_read_u32(np,
-		"qcom,mdss-dsi-panel-framerate", &tmp);
-	pinfo->mipi.frame_rate = !rc ? tmp : 60;
-	pinfo->mipi.input_fpks = pinfo->mipi.frame_rate * 1000;
-
-	rc = of_property_read_u32(np,
-		"qcom,mdss-dsi-panel-clockrate", &tmp);
-	pinfo->clk_rate = !rc ? tmp : 0;
 
 	data = of_get_property(np,
 		"somc,platform-regulator-settings", &len);
@@ -3721,13 +3714,6 @@ int mdss_panel_parse_dt(struct device_node *np,
 		"qcom,mdss-dsi-dma-trigger");
 
 	mdss_dsi_parse_lane_swap(np, &(pinfo->mipi.dlane_swap));
-
-	rc = of_property_read_u32(np,
-		"qcom,mdss-dsi-t-clk-pre", &tmp);
-	pinfo->mipi.t_clk_pre = !rc ? tmp : 0x24;
-	rc = of_property_read_u32(np,
-		"qcom,mdss-dsi-t-clk-post", &tmp);
-	pinfo->mipi.t_clk_post = !rc ? tmp : 0x03;
 
 	mdss_dsi_parse_reset_seq(np, pinfo->rst_seq,
 		&(pinfo->rst_seq_len),
