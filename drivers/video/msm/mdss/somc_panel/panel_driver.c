@@ -352,7 +352,7 @@ static int mdss_dsi_panel_reset_seq(struct mdss_panel_data *pdata, int enable)
 		pr_debug("%s:%d, disp_en line not configured\n",
 			   __func__, __LINE__);
 
-	if (!ctrl_pdata->rst_gpio)
+	if (!gpio_is_valid(ctrl_pdata->rst_gpio))
 		pr_debug("%s:%d, reset line not configured\n",
 			   __func__, __LINE__);
 
