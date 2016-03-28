@@ -3703,14 +3703,13 @@ int mdss_panel_parse_dt(struct device_node *np,
 
 	data = of_get_property(np,
 		"somc,mdss-dsi-lane-config", &len);
-	if ((data) && (len == 45)) {
-		for (i = 0; i < len; i++) {
-			pinfo->mipi.dsi_phy_db.lanecfg[i] =
-					data[i];
-		}
-	} else
+	if (!data || len != 45) {
 		pr_err("%s:%d, Unable to read Phy lane configure\n",
 			__func__, __LINE__);
+	} else {
+		for (i = 0; i < len; i++)
+			pinfo->mipi.dsi_phy_db.lanecfg[i] = data[i];
+	}
 
 	mdss_dsi_parse_roi_alignment(np, pinfo);
 
