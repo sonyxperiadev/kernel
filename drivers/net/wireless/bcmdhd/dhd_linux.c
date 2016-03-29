@@ -8640,6 +8640,30 @@ dhd_dev_rtt_capability(struct net_device *dev, rtt_capabilities_t *capa)
 
 	return (dhd_rtt_capability(&dhd->pub, capa));
 }
+
+int
+dhd_dev_rtt_avail_channel(struct net_device *dev, wifi_channel_info *channel_info)
+{
+	dhd_info_t *dhd = *(dhd_info_t **)netdev_priv(dev);
+
+	return (dhd_rtt_avail_channel(&dhd->pub, channel_info));
+}
+
+int
+dhd_dev_rtt_enable_responder(struct net_device *dev, wifi_channel_info *channel_info)
+{
+	dhd_info_t *dhd = *(dhd_info_t **)netdev_priv(dev);
+
+	return (dhd_rtt_enable_responder(&dhd->pub, channel_info));
+}
+
+int dhd_dev_rtt_cancel_responder(struct net_device *dev)
+{
+	dhd_info_t *dhd = *(dhd_info_t **)netdev_priv(dev);
+
+	return (dhd_rtt_cancel_responder(&dhd->pub));
+
+}
 #endif /* RTT_SUPPORT */
 
 #if defined(KEEP_ALIVE)
