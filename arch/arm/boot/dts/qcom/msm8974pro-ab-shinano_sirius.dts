@@ -27,5 +27,5 @@
 / {
 	model = "SoMC Sirius ROW";
 	compatible = "somc,sirius-row", "qcom,msm8974";
-        qcom,board-id = <8 0>;
+        qcom,msm-id = <218 8 0x10000>;
 };
