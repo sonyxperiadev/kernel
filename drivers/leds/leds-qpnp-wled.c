@@ -155,7 +155,8 @@
 #define QPNP_WLED_SC_DLY_MS		20
 
 #define QPNP_WLED_CURR_SCALE_MAX	100
-
+#define QPNP_WLED_BL_SCALE_MAX	1000
+#define QPNP_WLED_BUFF_SIZE	50
 /* output feedback mode */
 enum qpnp_wled_fdbk_op {
 	QPNP_WLED_FDBK_AUTO,
@@ -253,6 +254,8 @@ struct qpnp_wled {
 	int init_br;
 	bool calc_curr;
 	int curr_scale;
+	bool bl_scale_enabled;
+	int bl_scale;
 };
 
 static bool bl_on_in_boot;
@@ -319,6 +322,12 @@ static int qpnp_wled_set_level(struct qpnp_wled *wled, int level)
 		wled->curr_scale != QPNP_WLED_CURR_SCALE_MAX)
 		level = (level * wled->curr_scale) / QPNP_WLED_CURR_SCALE_MAX;
 
+	if (wled->bl_scale_enabled && (wled->bl_scale > 0) &&
+		(wled->bl_scale < QPNP_WLED_BL_SCALE_MAX))
+		level = (level * wled->bl_scale) / QPNP_WLED_BL_SCALE_MAX;
+
+	pr_debug("%s: brightness=%d level=%d\n",
+			__func__, wled->cdev.brightness, level);
 	/* set brightness registers */
 	for (i = 0; i < wled->num_strings; i++) {
 		reg = level & QPNP_WLED_BRIGHT_LSB_MASK;
@@ -656,6 +665,46 @@ static ssize_t qpnp_wled_fs_curr_ua_store(struct device *dev,
 	return count;
 }
 
+static ssize_t qpnp_wled_bl_scale_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct qpnp_wled *wled = dev_get_drvdata(dev);
+	if (!wled->bl_scale_enabled)
+		wled->bl_scale = QPNP_WLED_BL_SCALE_MAX;
+	dev_dbg(&wled->spmi->dev, "%s: bl_scale = %d\n", __func__, wled->bl_scale);
+
+	return snprintf(buf, QPNP_WLED_BUFF_SIZE, "%u\n", wled->bl_scale);
+}
+
+static ssize_t qpnp_wled_bl_scale_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t size)
+{
+	struct qpnp_wled *wled = dev_get_drvdata(dev);
+	unsigned long scale = 0;
+	ssize_t ret = -EINVAL;
+
+	if (!wled->bl_scale_enabled) {
+		wled->bl_scale = QPNP_WLED_BL_SCALE_MAX;
+		dev_err(&wled->spmi->dev, "Sysfs bl_scale is not enabled\n");
+		goto exit;
+	}
+
+	ret = kstrtoul(buf, 10, &scale);
+	if (!ret) {
+		ret = size;
+		if (scale > QPNP_WLED_BL_SCALE_MAX)
+			scale = QPNP_WLED_BL_SCALE_MAX;
+		wled->bl_scale = scale;
+		dev_dbg(&wled->spmi->dev, "%s: bl_scale = %d\n", __func__, wled->bl_scale);
+	} else {
+		dev_err(&wled->spmi->dev, "Failure to set sysfs bl_scale\n");
+		ret = -EINVAL;
+	}
+
+exit:
+	return ret;
+}
+
 /* sysfs attributes exported by wled */
 static struct device_attribute qpnp_wled_attrs[] = {
 	__ATTR(dump_regs, (S_IRUGO | S_IWUSR | S_IWGRP),
@@ -676,6 +725,9 @@ static struct device_attribute qpnp_wled_attrs[] = {
 	__ATTR(ramp_step, (S_IRUGO | S_IWUSR | S_IWGRP),
 			qpnp_wled_ramp_step_show,
 			qpnp_wled_ramp_step_store),
+	__ATTR(bl_scale, (S_IRUGO | S_IWUSR | S_IWGRP),
+			qpnp_wled_bl_scale_show,
+			qpnp_wled_bl_scale_store),
 };
 
 /* worker for setting wled brightness */
@@ -1321,6 +1373,9 @@ static int qpnp_wled_parse_dt(struct qpnp_wled *wled)
 
 	wled->calc_curr = of_property_read_bool(spmi->dev.of_node,
 			"somc,calc-curr");
+	wled->bl_scale_enabled = of_property_read_bool(spmi->dev.of_node,
+			"somc,bl-scale-enabled");
+
 	wled->en_9b_dim_res = of_property_read_bool(spmi->dev.of_node,
 			"qcom,en-9b-dim-res");
 	wled->en_phase_stag = of_property_read_bool(spmi->dev.of_node,
