@@ -250,10 +250,21 @@ struct qpnp_wled {
 	bool en_cabc;
 	bool disp_type_amoled;
 	bool en_ext_pfet_sc_pro;
-
+	int init_br;
 	bool calc_curr;
 	int curr_scale;
 };
+
+static bool bl_on_in_boot;
+static int __init continous_splash_setup(char *str)
+{
+	if (!str)
+		return 0;
+	if (!strncmp(str, "on", 2))
+		bl_on_in_boot = true;
+	return 0;
+}
+__setup("display_status=", continous_splash_setup);
 
 /* helper to read a pmic register */
 static int qpnp_wled_read_reg(struct qpnp_wled *wled, u8 *data, u16 addr)
@@ -1339,6 +1350,16 @@ static int qpnp_wled_parse_dt(struct qpnp_wled *wled)
 
 	wled->en_ext_pfet_sc_pro = of_property_read_bool(spmi->dev.of_node,
 					"qcom,en-ext-pfet-sc-pro");
+
+	wled->init_br = LED_OFF;
+	rc = of_property_read_u32(spmi->dev.of_node,
+					"somc,init-br", &temp_val);
+	if (!rc) {
+		wled->init_br = temp_val;
+	} else if (rc != -EINVAL) {
+		dev_err(&spmi->dev, "Unable to read init brigtness\n");
+		return rc;
+	}
 	return 0;
 }
 
@@ -1420,6 +1441,8 @@ static int qpnp_wled_probe(struct spmi_device *spmi)
 		}
 	}
 
+	if (wled->init_br && !bl_on_in_boot)
+		qpnp_wled_set(&wled->cdev, wled->init_br);
 	return 0;
 
 sysfs_fail:
