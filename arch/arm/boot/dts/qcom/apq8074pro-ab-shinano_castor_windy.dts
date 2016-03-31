@@ -28,5 +28,5 @@
 / {
 	model = "SoMC Castor WINDY";
 	compatible = "somc,castor-windy", "qcom,apq8074";
-	qcom,board-id = <9 0>;
+	qcom,msm-id = <209 9 0x10001>;
 };
