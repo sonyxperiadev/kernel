@@ -17,7 +17,10 @@
 /dts-v1/;
 
 #include "msm8926-v1.dtsi"
-#include "msm8226-yukon_tianchi.dtsi"
+#include "msm8926-yukon_common.dtsi"
+#include "msm8926-yukon_tianchi.dtsi"
+#include "msm8926-yukon_tianchi_camera.dtsi"
+#include "dsi-panel-tianchi.dtsi"
 
 / {
 	model = "SOMC TIANCHI";

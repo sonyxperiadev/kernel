@@ -10,9 +10,6 @@
  * GNU General Public License for more details.
  */
 
-#include "msm8226-yukon_common.dtsi"
-#include "dsi-panel-flamingo.dtsi"
-
 &soc {
        ramoops {
                compatible = "ramoops";

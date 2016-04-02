@@ -15,8 +15,8 @@
  */
 
 #include "dsi-panel-honami.dtsi"
-#include "msm8974-rhine_common.dtsi"
-#include "msm8974-camera-sensor-honami_row.dtsi"
+#include "msm8974-v2.2-rhine_common.dtsi"
+#include "msm8974-v2.2-rhine_honami_camera.dtsi"
 
 &soc {
 	/* BLSP2 */

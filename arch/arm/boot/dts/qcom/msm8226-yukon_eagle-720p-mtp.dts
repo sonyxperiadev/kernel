@@ -15,8 +15,10 @@
 #include "msm8226-memory.dtsi"
 #include "msm8226-qseecom.dtsi"
 #include "msm8226-sharedmem.dtsi"
-#include "msm8226-yukon_eagle-720p-mtp.dtsi"
-#include "msm8226-yukon_eagle-camera-sensor-mtp.dtsi"
+#include "msm8926-yukon_common.dtsi"
+#include "msm8926-yukon_eagle.dtsi"
+#include "msm8926-yukon_eagle_camera.dtsi"
+#include "dsi-panel-eagle.dtsi"
 
 / {
 	model = "Qualcomm MSM 8226v2 MTP";

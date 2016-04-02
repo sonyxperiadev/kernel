@@ -14,10 +14,6 @@
  * Modifications are licensed under the License.
  */
 
-#include "msm8226-yukon_common.dtsi"
-#include "dsi-panel-tianchi.dtsi"
-#include "msm8226-yukon_tianchi-camera-sensor.dtsi"
-
 &soc {
 
 	spi@f9923000 {
