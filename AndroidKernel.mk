@@ -19,9 +19,6 @@ ifeq ($(BUILD_KERNEL),true)
 ifeq ($(filter-out amami aries castor castor_windy eagle flamingo honami ivy karin karin_windy leo satsuki scorpion scorpion_windy seagull sirius sumire suzuran tianchi tianchi_dsds togari tulip,$(TARGET_DEVICE)),)
 
 KERNEL_SRC := $(call my-dir)
-# kernel configuration - mandatory:
-TARGET_KERNEL_CONFIG ?= $(notdir $(wildcard $(KERNEL_SRC)/arch/arm/configs/aosp_*_$(TARGET_DEVICE)_defconfig))
-KERNEL_DEFCONFIG := $(TARGET_KERNEL_CONFIG)
 
 ifeq ($(OUT_DIR),out)
 KERNEL_OUT := $(ANDROID_BUILD_TOP)/$(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ
@@ -37,6 +34,10 @@ else
 KERNEL_ARCH := $(TARGET_KERNEL_ARCH)
 endif
 
+# kernel configuration - mandatory:
+TARGET_KERNEL_CONFIG ?= $(notdir $(wildcard $(KERNEL_SRC)/arch/$(KERNEL_ARCH)/configs/aosp_*_$(TARGET_DEVICE)_defconfig))
+KERNEL_DEFCONFIG := $(TARGET_KERNEL_CONFIG)
+
 TARGET_KERNEL_HEADER_ARCH := $(strip $(TARGET_KERNEL_HEADER_ARCH))
 ifeq ($(TARGET_KERNEL_HEADER_ARCH),)
 KERNEL_HEADER_ARCH := $(KERNEL_ARCH)
@@ -49,10 +50,14 @@ ifeq ($(KERNEL_HEADER_DEFCONFIG),)
 KERNEL_HEADER_DEFCONFIG := $(KERNEL_DEFCONFIG)
 endif
 
-ifeq ($(TARGET_USES_UNCOMPRESSED_KERNEL),true)
-    TARGET_PREBUILT_INT_KERNEL_TYPE := Image
+ifneq ($(BOARD_KERNEL_IMAGE_NAME),)
+  TARGET_PREBUILT_INT_KERNEL_TYPE := $(BOARD_KERNEL_IMAGE_NAME)
 else
+  ifeq ($(TARGET_USES_UNCOMPRESSED_KERNEL),true)
+    TARGET_PREBUILT_INT_KERNEL_TYPE := Image
+  else
     TARGET_PREBUILT_INT_KERNEL_TYPE := zImage
+  endif
 endif
 
 TARGET_PREBUILT_INT_KERNEL := $(KERNEL_OUT)/arch/$(KERNEL_ARCH)/boot/$(TARGET_PREBUILT_INT_KERNEL_TYPE)
