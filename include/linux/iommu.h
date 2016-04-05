@@ -254,6 +254,7 @@ struct iommu_ops {
 	int (*of_xlate)(struct device *dev, struct of_phandle_args *args);
 
 	bool (*is_iova_coherent)(struct iommu_domain *domain, dma_addr_t iova);
+	unsigned long (*get_pgsize_bitmap)(struct iommu_domain *domain);
 	unsigned long pgsize_bitmap;
 };
 
