@@ -302,6 +302,7 @@ struct iommu_ops {
 	bool (*is_attach_deferred)(struct iommu_domain *domain, struct device *dev);
 
 	bool (*is_iova_coherent)(struct iommu_domain *domain, dma_addr_t iova);
+	unsigned long (*get_pgsize_bitmap)(struct iommu_domain *domain);
 	unsigned long pgsize_bitmap;
 };
 
