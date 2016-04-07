@@ -190,6 +190,7 @@ struct smbchg_chip {
 	bool				icl_disabled;
 	u32				wa_flags;
 	int				usb_icl_delta;
+	int				parallel_disable_vbat_uv;
 
 	/* jeita and temperature */
 	bool				batt_hot;
@@ -2053,7 +2054,7 @@ static bool smbchg_is_parallel_usb_ok(struct smbchg_chip *chip,
 {
 	struct power_supply *parallel_psy = get_parallel_psy(chip);
 	union power_supply_propval pval = {0, };
-	int min_current_thr_ma, rc, type;
+	int min_current_thr_ma, rc, type, vbat_uv;
 	int total_current_ma, current_limit_ma, parallel_cl_ma;
 	ktime_t kt_since_last_disable;
 	u8 reg;
@@ -2109,6 +2110,18 @@ static bool smbchg_is_parallel_usb_ok(struct smbchg_chip *chip,
 	if (get_usb_supply_type(type) == POWER_SUPPLY_TYPE_USB_CDP) {
 		pr_smb(PR_STATUS, "CDP adapter, skipping\n");
 		return false;
+	}
+
+	if (chip->parallel_disable_vbat_uv > 0 &&
+		chip->usb_supply_type == POWER_SUPPLY_TYPE_USB_DCP) {
+		set_property_on_fg(chip, POWER_SUPPLY_PROP_UPDATE_NOW, 1);
+		vbat_uv = get_prop_batt_voltage_now(chip);
+		if (vbat_uv > chip->parallel_disable_vbat_uv) {
+			pr_smb(PR_STATUS,
+				"DCP adapter, vbatt_now (%d uV) > parallel_disable_vbat_uv(%d uV), skipping\n",
+				vbat_uv, chip->parallel_disable_vbat_uv);
+			return false;
+		}
 	}
 
 	if (get_usb_supply_type(type) == POWER_SUPPLY_TYPE_USB) {
@@ -2613,8 +2626,11 @@ static int set_usb_current_limit_vote_cb(struct device *dev,
 	effective_id = get_effective_client_id_locked(chip->usb_icl_votable);
 
 	/* disable parallel charging if HVDCP is voting for 300mA */
-	if (effective_id == HVDCP_ICL_VOTER)
+	if (effective_id == HVDCP_ICL_VOTER) {
+		mutex_lock(&chip->parallel.lock);
 		smbchg_parallel_usb_disable(chip);
+		mutex_unlock(&chip->parallel.lock);
+	}
 
 	if (chip->parallel.current_max_ma == 0) {
 		rc = smbchg_set_usb_current_max(chip, icl_ma);
@@ -7012,6 +7028,8 @@ static int smb_parse_dt(struct smbchg_chip *chip)
 			"aicl-rerun-period-s", rc, 1);
 	OF_PROP_READ(chip, chip->vchg_adc_channel,
 				"vchg-adc-channel-id", rc, 1);
+	OF_PROP_READ(chip, chip->parallel_disable_vbat_uv,
+			"parallel-disable-vbat-threshold-uv", rc, 1);
 
 	/* read boolean configuration properties */
 	chip->use_vfloat_adjustments = of_property_read_bool(node,
