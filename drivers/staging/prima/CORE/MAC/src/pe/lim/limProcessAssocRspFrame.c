@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2014 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2015 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -38,7 +38,7 @@
  */
 
 #include "wniApi.h"
-#include "wniCfgSta.h"
+#include "wniCfg.h"
 #include "aniGlobal.h"
 #include "cfgApi.h"
 
@@ -371,9 +371,9 @@ limProcessAssocRspFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tANI_U8 sub
         /// Received unexpected Re/Association Response frame
 
 #ifdef WLAN_FEATURE_VOWIFI_11R_DEBUG
-        PELOG1(limLog(pMac, LOG1,  FL("Recieved Re/Assoc rsp in unexpected "
+        limLog(pMac, LOG1,  FL("Recieved Re/Assoc rsp in unexpected "
             "state %d on session=%d"),
-            psessionEntry->limMlmState, psessionEntry->peSessionId);)
+            psessionEntry->limMlmState, psessionEntry->peSessionId);
 #endif
         // Log error
         if (!pHdr->fc.retry)
@@ -467,7 +467,12 @@ limProcessAssocRspFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tANI_U8 sub
 
         return;
     }
-
+    if(pAssocRsp->ExtCap.present)
+    {
+        limLog(pMac, LOGE, FL("Filling tdls prohibited in session entry"));
+        psessionEntry->tdlsChanSwitProhibited =
+                       pAssocRsp->ExtCap.TDLSChanSwitProhibited ;
+    }
     if(!pAssocRsp->suppRatesPresent)
     {
         PELOGE(limLog(pMac, LOGE, FL("assoc response does not have supported rate set"));)
@@ -547,13 +552,13 @@ limProcessAssocRspFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tANI_U8 sub
             vos_mem_copy(psessionEntry->tspecIes,
                          &pAssocRsp->TSPECInfo[0], psessionEntry->tspecLen);
         }
-        PELOG1(limLog(pMac, LOG1, FL(" Tspec EID present in assoc rsp "));)
+        limLog(pMac, LOG1, FL(" Tspec EID present in assoc rsp "));
     }
     else
     {
         psessionEntry->tspecLen = 0;
         psessionEntry->tspecIes = NULL;
-        PELOG1(limLog(pMac, LOG1, FL(" Tspec EID *NOT* present in assoc rsp "));)
+        limLog(pMac, LOG1, FL(" Tspec EID *NOT* present in assoc rsp "));
     }
 #endif
 
@@ -669,7 +674,7 @@ limProcessAssocRspFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tANI_U8 sub
     if (subType == LIM_REASSOC)
     {
         // Log success
-        PELOG1(limLog(pMac, LOG1, FL("Successfully Reassociated with BSS"));)
+        limLog(pMac, LOG1, FL("Successfully Reassociated with BSS"));
 #ifdef FEATURE_WLAN_ESE
         {
             tANI_U8 cnt = 0;
@@ -787,8 +792,8 @@ limProcessAssocRspFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tANI_U8 sub
     }
 
     // Log success
-    PELOG1(limLog(pMac, LOG1, FL("Successfully Associated with BSS "MAC_ADDRESS_STR),
-           MAC_ADDR_ARRAY(pHdr->sa));)
+    limLog(pMac, LOG1, FL("Successfully Associated with BSS "MAC_ADDRESS_STR),
+           MAC_ADDR_ARRAY(pHdr->sa));
 #ifdef FEATURE_WLAN_ESE
     if(psessionEntry->eseContext.tsm.tsmInfo.state)
     {
@@ -918,7 +923,7 @@ assocReject:
 
     /* CR: vos packet memory is leaked when assoc rsp timeouted/failed. */
     /* notify TL that association is failed so that TL can flush the cached frame  */
-    PELOG1(limLog(pMac, LOG1,  FL("notify TL that association is failed"));)
+    limLog(pMac, LOG1,  FL("notify TL that association is failed"));
     WLANTL_AssocFailed (psessionEntry->staId);
 
     vos_mem_free(pBeaconStruct);

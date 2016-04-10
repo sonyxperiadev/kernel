@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2015 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -157,6 +157,11 @@
 
 #define IS_DOT11_MODE_11B(dot11Mode)  \
             ((dot11Mode == WNI_CFG_DOT11_MODE_11B) ? TRUE : FALSE)
+
+#define IS_BSS_VHT_CAPABLE(vhtCaps) \
+            ((vhtCaps).present && \
+             ((vhtCaps).rxMCSMap != 0xFFFF) && \
+             ((vhtCaps).txMCSMap != 0xFFFF))
 
 /// ANI proprietary Status Codes enum
 /// (present in Management response frames)

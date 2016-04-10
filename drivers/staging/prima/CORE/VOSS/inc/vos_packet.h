@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2014 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -36,9 +36,6 @@
                
    Network Protocol packet/buffer support interfaces 
   
-   Copyright 2008 (c) Qualcomm, Incorporated.  All Rights Reserved.
-   
-   Qualcomm Confidential and Proprietary.
   
   ========================================================================*/
 
@@ -55,6 +52,7 @@
   ------------------------------------------------------------------------*/
 #define VOS_PKT_PROTO_TYPE_EAPOL   0x02
 #define VOS_PKT_PROTO_TYPE_DHCP    0x04
+#define VOS_PKT_PROTO_TYPE_ARP     0x08
 /*-------------------------------------------------------------------------- 
   Type declarations
   ------------------------------------------------------------------------*/
@@ -1136,4 +1134,40 @@ v_U8_t vos_pkt_get_proto_type
    void  *pskb,
    v_U8_t tracking_map
 );
+
+/**
+  @brief vos_get_pkt_head() - Get skb head pointer
+
+  @param
+       pPacket - the voss Packet to operate on
+  @return
+       v_PVOID_t - skb head pointer
+
+*/
+v_PVOID_t vos_get_pkt_head(vos_pkt_t *pPacket);
+
+/**
+
+  @brief vos_get_pkt_end() - Get skb end pointer
+
+  @param
+       pPacket - the voss Packet to operate on
+  @return
+       v_PVOID_t - skb end pointer
+
+*/
+v_PVOID_t vos_get_pkt_end(vos_pkt_t *pPacket);
+
+/**
+
+  @brief vos_recover_tail() - Recover corrupted tail of skb
+
+  @param
+       pPacket - the voss Packet to operate on
+  @return
+       v_VOID_t - None
+
+*/
+v_VOID_t vos_recover_tail(vos_pkt_t *pPacket);
+
 #endif  // !defined( __VOS_PKT_H )

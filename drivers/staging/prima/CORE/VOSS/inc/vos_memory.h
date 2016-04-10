@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2015 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -36,9 +36,6 @@
                
    Memory management functions
   
-   Copyright 2008 (c) Qualcomm, Incorporated.  All Rights Reserved.
-   
-   Qualcomm Confidential and Proprietary.
   
   ========================================================================*/
 
@@ -304,4 +301,32 @@ v_VOID_t vos_mem_dma_free( v_VOID_t *ptr );
   --------------------------------------------------------------------------*/
 v_VOID_t vos_mem_set_dma_ptr(unsigned char *dmaBuffer);
 #endif /* DMA_DIRECT_ACCESS */
+
+
+/*----------------------------------------------------------------------------
+
+  \brief vos_mem_vmalloc() - allocate memory which is virtually contiguous
+
+  Wrapper function for vmalloc
+
+  \param size memory size to be allocated
+
+  \return on success returns starting address of allocated memory or NULL
+
+  --------------------------------------------------------------------------*/
+v_VOID_t * vos_mem_vmalloc(v_SIZE_t size);
+
+/*----------------------------------------------------------------------------
+
+  \brief vos_mem_vfree() - free memory allocated by vmalloc
+
+  Wrapper function for vfree
+
+  \param address starting address of the memory to be freed
+
+  \return Nothing
+
+  --------------------------------------------------------------------------*/
+v_VOID_t vos_mem_vfree(void *addr);
+
 #endif // __VOSS_LOCK_H

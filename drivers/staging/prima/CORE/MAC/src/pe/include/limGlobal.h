@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2015 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -45,7 +45,7 @@
 #include "sirMacPropExts.h"
 #include "sirCommon.h"
 #include "sirDebug.h"
-#include "wniCfgSta.h"
+#include "wniCfg.h"
 #include "csrApi.h"
 #include "sapApi.h"
 #include "dot11f.h"
@@ -357,6 +357,8 @@ typedef struct tLimPreAuthNode
     tANI_U8             fFree:1;
     tANI_U8             rsvd:5;
     TX_TIMER            timer;
+    tANI_U16            seqNo;
+    v_TIME_t            timestamp;
 }tLimPreAuthNode, *tpLimPreAuthNode;
 
 // Pre-authentication table definition
@@ -668,14 +670,6 @@ typedef struct sLimSpecMgmtInfo
     tANI_BOOLEAN       fRadarDetCurOperChan; /* Radar detected in cur oper chan on AP */
     tANI_BOOLEAN       fRadarIntrConfigured; /* Whether radar interrupt has been configured */
 }tLimSpecMgmtInfo, *tpLimSpecMgmtInfo;
-
-#ifdef FEATURE_WLAN_TDLS_INTERNAL
-typedef struct sLimDisResultList
-{
-    struct sLimDisResultList *next ;
-    tSirTdlsPeerInfo tdlsDisPeerInfo ;
-}tLimDisResultList ;
-#endif
 
 #ifdef FEATURE_WLAN_TDLS
 /*

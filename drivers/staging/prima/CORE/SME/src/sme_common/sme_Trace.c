@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -70,6 +70,7 @@ static tANI_U8* smeTraceGetRxMsgString( tANI_U32 code )
         CASE_RETURN_STRING(TRACE_CODE_SME_RX_HDD_ROAM_GET_CONNECTPROFILE);
         CASE_RETURN_STRING(TRACE_CODE_SME_RX_HDD_ROAM_FREE_CONNECTPROFILE);
         CASE_RETURN_STRING(TRACE_CODE_SME_RX_HDD_ROAM_SET_PMKIDCACHE);
+        CASE_RETURN_STRING(TRACE_CODE_SME_RX_HDD_ROAM_DEL_PMKIDCACHE);
         CASE_RETURN_STRING(TRACE_CODE_SME_RX_HDD_GET_CONFIGPARAM);
         CASE_RETURN_STRING(TRACE_CODE_SME_RX_HDD_GET_MODPROFFIELDS);
         CASE_RETURN_STRING(TRACE_CODE_SME_RX_HDD_SET_CONFIG_PWRSAVE);
@@ -133,7 +134,27 @@ static tANI_U8* smeTraceGetRxMsgString( tANI_U32 code )
         CASE_RETURN_STRING(TRACE_CODE_SME_RX_HDD_UPDATE_FTENABLED);
         CASE_RETURN_STRING(TRACE_CODE_SME_RX_HDD_UPDATE_WESMODE);
         CASE_RETURN_STRING(TRACE_CODE_SME_RX_HDD_SET_SCANCTRL);
-
+        CASE_RETURN_STRING(TRACE_CODE_SME_RX_HDD_MSG_DEAUTH_STA);
+#ifdef FEATURE_WLAN_TDLS
+        CASE_RETURN_STRING(TRACE_CODE_SME_RX_HDD_TDLS_LINK_ESTABLISH_PARAM);
+        CASE_RETURN_STRING(TRACE_CODE_SME_RX_HDD_TDLS_CHAN_SWITCH_REQ);
+        CASE_RETURN_STRING(TRACE_CODE_SME_RX_HDD_TDLS_SEND_MGMT_FRAME);
+        CASE_RETURN_STRING(TRACE_CODE_SME_RX_HDD_TDLS_CHANGE_PEER_STA);
+        CASE_RETURN_STRING(TRACE_CODE_SME_RX_HDD_TDLS_ADD_PEER_STA);
+        CASE_RETURN_STRING(TRACE_CODE_SME_RX_HDD_TDLS_DEL_PEER_STA);
+#endif
+        CASE_RETURN_STRING(TRACE_CODE_SME_RX_HDD_PREF_NET_LIST);
+#ifdef FEATURE_WLAN_LPHB
+        CASE_RETURN_STRING(TRACE_CODE_SME_RX_HDD_LPHB_CONFIG_REQ);
+#endif /* FEATURE_WLAN_LPHB */
+        CASE_RETURN_STRING(TRACE_CODE_SME_RX_HDD_EXTSCAN_GET_CAPABILITIES);
+        CASE_RETURN_STRING(TRACE_CODE_SME_RX_HDD_EXTSCAN_START);
+        CASE_RETURN_STRING(TRACE_CODE_SME_RX_HDD_EXTSCAN_STOP);
+        CASE_RETURN_STRING(TRACE_CODE_SME_RX_HDD_EXTSCAN_SET_BSS_HOTLIST);
+        CASE_RETURN_STRING(TRACE_CODE_SME_RX_HDD_EXTSCAN_RESET_BSS_HOTLIST);
+        CASE_RETURN_STRING(TRACE_CODE_SME_RX_HDD_EXTSCAN_SET_SIGNF_CHANGE);
+        CASE_RETURN_STRING(TRACE_CODE_SME_RX_HDD_EXTSCAN_RESET_SIGNF_CHANGE);
+        CASE_RETURN_STRING(TRACE_CODE_SME_RX_HDD_EXTSCAN_GET_CACHED_RESULTS);
         default:
             return( "UNKNOWN" );
             break;
@@ -153,6 +174,17 @@ static tANI_U8* smeTraceGetCommandString( tANI_U32 command )
         CASE_RETURN_STRING(eSmeCommandRemoveKey);
         CASE_RETURN_STRING(eSmeCommandAddStaSession);
         CASE_RETURN_STRING(eSmeCommandDelStaSession);
+        CASE_RETURN_STRING(eSmeCommandPnoReq);
+        CASE_RETURN_STRING(eSmeCommandMacSpoofRequest);
+        CASE_RETURN_STRING(eSmeCommandGetFrameLogRequest);
+#ifdef FEATURE_WLAN_TDLS
+        CASE_RETURN_STRING(eSmeCommandTdlsSendMgmt);
+        CASE_RETURN_STRING(eSmeCommandTdlsAddPeer);
+        CASE_RETURN_STRING(eSmeCommandTdlsDelPeer);
+        CASE_RETURN_STRING(eSmeCommandTdlsLinkEstablish);
+        CASE_RETURN_STRING(eSmeCommandTdlsChannelSwitch);
+#endif
+        CASE_RETURN_STRING(eSmeCommandNanReq);
         CASE_RETURN_STRING(eSmePmcCommandMask);
         CASE_RETURN_STRING(eSmeCommandEnterImps);
         CASE_RETURN_STRING(eSmeCommandExitImps);
@@ -179,17 +211,29 @@ static tANI_U8* smeTraceGetCommandString( tANI_U32 command )
 static void smeTraceDump(tpAniSirGlobal pMac, tpvosTraceRecord pRecord,
                                                             tANI_U16 recIndex)
 {
-    if (TRACE_CODE_SME_COMMAND == pRecord->code)
-    {
-        smsLog(pMac, LOGE, "%04d %012u S%d %-14s %-30s(0x%x)", recIndex,
-                   pRecord->time, pRecord->session, "SME COMMAND:",
-                   smeTraceGetCommandString(pRecord->data), pRecord->data );
-    }
-    else
-    {
-        smsLog(pMac, LOGE, "%04d %012u S%d %-14s %-30s(0x%x)", recIndex,
-                   pRecord->time, pRecord->session, "RX HDD MSG:",
-                   smeTraceGetRxMsgString(pRecord->code), pRecord->data );
+    switch (pRecord->code) {
+        case TRACE_CODE_SME_COMMAND:
+            smsLog(pMac, LOG1, "%04d %012u S%d %-14s %-30s(0x%x)",
+                recIndex, pRecord->time, pRecord->session, "SME COMMAND:",
+                 smeTraceGetCommandString(pRecord->data), pRecord->data);
+            break;
+        case TRACE_CODE_SME_TX_WDA_MSG:
+           smsLog(pMac, LOG1, "%04d %012u S%d %-14s %-30s(0x%x)",
+                recIndex, pRecord->time, pRecord->session, "TX WDA Msg:",
+                macTraceGetWdaMsgString((tANI_U16)pRecord->data),
+                                              pRecord->data);
+            break;
+        case TRACE_CODE_SME_RX_WDA_MSG:
+            smsLog(pMac, LOG1, "%04d %012u S%d %-14s %-30s(0x%x)",
+                recIndex, pRecord->time, pRecord->session, "RX WDA Msg:",
+                macTraceGetSmeMsgString((tANI_U16)pRecord->data),
+                                              pRecord->data);
+            break;
+        default:
+            smsLog(pMac, LOG1, "%04d %012u S%d %-14s %-30s(0x%x)",
+                recIndex, pRecord->time, pRecord->session, "RX HDD MSG:",
+                smeTraceGetRxMsgString(pRecord->code), pRecord->data);
+        break;
     }
 }
 

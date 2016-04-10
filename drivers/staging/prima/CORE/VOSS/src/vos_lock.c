@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2015 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -35,9 +35,6 @@
 
   DEPENDENCIES: 
  
-                Copyright (c) 2007 QUALCOMM Incorporated.
-                All Rights Reserved.
-                Qualcomm Confidential and Proprietary
 ============================================================================*/
 
 /*============================================================================
@@ -52,11 +49,18 @@
 #include "vos_lock.h"
 #include "vos_memory.h"
 #include "vos_trace.h"
+#include "i_vos_diag_core_event.h"
+#include "vos_diag_core_event.h"
+#include <linux/wcnss_wlan.h>
 
 
 /*----------------------------------------------------------------------------
  * Preprocessor Definitions and Constants
  * -------------------------------------------------------------------------*/
+
+#define WIFI_POWER_EVENT_DEFAULT_WAKELOCK_TIMEOUT 0
+#define WIFI_POWER_EVENT_WAKELOCK_TAKEN 0
+#define WIFI_POWER_EVENT_WAKELOCK_RELEASED 1
 
 /*----------------------------------------------------------------------------
  * Type Declarations
@@ -476,4 +480,143 @@ VOS_STATUS vos_spin_lock_destroy(vos_spin_lock_t *pLock)
 {
 
    return VOS_STATUS_SUCCESS;
+}
+
+/*--------------------------------------------------------------------------
+
+  \brief vos_wake_lock_init() - initializes a vOSS wake lock
+
+  \param pLock - the wake lock to initialize
+              name - wakelock name
+
+  \return VOS_STATUS_SUCCESS - wake lock was successfully initialized and
+          is ready to be used.
+  --------------------------------------------------------------------------*/
+VOS_STATUS vos_wake_lock_init(vos_wake_lock_t *pLock, const char *name)
+{
+#if defined(WLAN_OPEN_SOURCE)
+    wake_lock_init(pLock, WAKE_LOCK_SUSPEND, name);
+#endif
+    return VOS_STATUS_SUCCESS;
+}
+
+
+/*--------------------------------------------------------------------------
+ * vos_wake_lock_name() - This function returns the name of the wakelock
+ * @pLock: Pointer to the wakelock
+ *
+ * This function returns the name of the wakelock
+ *
+ * Return: Pointer to the name if it is valid or a default string
+ *
+   --------------------------------------------------------------------------*/
+static const char* vos_wake_lock_name(vos_wake_lock_t *pLock)
+{
+#if !(defined(WLAN_OPEN_SOURCE) && defined(CONFIG_HAS_WAKELOCK))
+    return "UNNAMED_WAKELOCK";
+#else
+    if (pLock->ws.name)
+        return pLock->ws.name;
+    else
+        return "UNNAMED_WAKELOCK";
+#endif
+}
+
+/*--------------------------------------------------------------------------
+
+  \brief vos_wake_lock_acquire() - acquires a wake lock
+
+  \param pLock - the wake lock to acquire
+
+  \return VOS_STATUS_SUCCESS - the wake lock was successfully acquired
+
+  ------------------------------------------------------------------------*/
+VOS_STATUS vos_wake_lock_acquire(vos_wake_lock_t *pLock,
+                                 uint32_t reason)
+{
+    vos_log_wlock_diag(reason, vos_wake_lock_name(pLock),
+                       WIFI_POWER_EVENT_DEFAULT_WAKELOCK_TIMEOUT,
+                       WIFI_POWER_EVENT_WAKELOCK_TAKEN);
+#if defined(WLAN_OPEN_SOURCE)
+    wake_lock(pLock);
+#else
+    wcnss_prevent_suspend();
+#endif
+    return VOS_STATUS_SUCCESS;
+
+}
+
+/*--------------------------------------------------------------------------
+
+  \brief vos_wake_lock_timeout_release() - release a wake lock with a timeout
+
+  \param pLock - the wake lock to release
+         reason - reason for taking wakelock
+
+  \return VOS_STATUS_SUCCESS - the wake lock was successfully released
+
+  ------------------------------------------------------------------------*/
+VOS_STATUS vos_wake_lock_timeout_release(vos_wake_lock_t *pLock,
+                                            v_U32_t msec, uint32_t reason)
+{
+    /* Avoid reporting rx and tx wavelocks
+     * event to diag as it may cause performance
+     * issues.
+     */
+    if (WIFI_POWER_EVENT_WAKELOCK_HOLD_RX != reason)
+    {
+        vos_log_wlock_diag(reason, vos_wake_lock_name(pLock), msec,
+                                   WIFI_POWER_EVENT_WAKELOCK_TAKEN);
+    }
+
+#if defined(WLAN_OPEN_SOURCE)
+    wake_lock_timeout(pLock, msecs_to_jiffies(msec));
+#else
+    /* Do nothing as there is no API in wcnss for timeout*/
+#endif
+   return VOS_STATUS_SUCCESS;
+
+}
+
+/*--------------------------------------------------------------------------
+
+  \brief vos_wake_lock_release() - releases a wake lock
+
+  \param pLock - the wake lock to release
+
+  \return VOS_STATUS_SUCCESS - the lock was successfully released
+
+  ------------------------------------------------------------------------*/
+VOS_STATUS vos_wake_lock_release(vos_wake_lock_t *pLock, uint32_t reason)
+{
+    vos_log_wlock_diag(reason, vos_wake_lock_name(pLock),
+                       WIFI_POWER_EVENT_DEFAULT_WAKELOCK_TIMEOUT,
+                       WIFI_POWER_EVENT_WAKELOCK_RELEASED);
+
+#if defined(WLAN_OPEN_SOURCE)
+    wake_unlock(pLock);
+#else
+    wcnss_allow_suspend();
+#endif
+    return VOS_STATUS_SUCCESS;
+
+
+}
+
+/*--------------------------------------------------------------------------
+
+  \brief vos_wake_lock_destroy() - destroys a wake lock
+
+  \param pLock - the wake lock to destroy
+
+  \return VOS_STATUS_SUCCESS - the lock was successfully destroyed
+
+  ------------------------------------------------------------------------*/
+VOS_STATUS vos_wake_lock_destroy(vos_wake_lock_t *pLock)
+{
+
+#if defined(WLAN_OPEN_SOURCE)
+    wake_lock_destroy(pLock);
+#endif
+    return VOS_STATUS_SUCCESS;
 }

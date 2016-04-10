@@ -795,7 +795,7 @@ v_U32_t btampUnpackTlvAMP_Assoc_Preferred_Channel_List(void * pCtx, v_U8_t *pBuf
     else
     {
         /* Maximum of 5 triplets allowed, based on size of triplets definition */
-        if (tlvlen / 3 > 5)
+        if (tlvlen > 15)
         {
             tlvlen = 15;
         }

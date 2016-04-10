@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -33,8 +33,6 @@
   \file  WLAN_HDD_HOSTAPD_H.h
 
   \brief Linux HDD HOSTAPD include file
-         Copyright 2008-2013 (c) Qualcomm, Incorporated.
-         All Rights Reserved.
   ==========================================================================*/
 
 /*---------------------------------------------------------------------------
@@ -60,7 +58,7 @@ hdd_adapter_t* hdd_wlan_create_ap_dev( hdd_context_t *pHddCtx, tSirMacAddr macAd
 
 VOS_STATUS hdd_register_hostapd(hdd_adapter_t *pAdapter, tANI_U8 rtnl_held);
 
-VOS_STATUS hdd_unregister_hostapd(hdd_adapter_t *pAdapter);
+VOS_STATUS hdd_unregister_hostapd(hdd_adapter_t *pAdapter, tANI_U8 rtnl_held);
 
 eCsrAuthType 
 hdd_TranslateRSNToCsrAuthType( u_int8_t auth_suite[4]);

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2015 The Linux Foundation. All rights reserved.
 *
 * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
 *
@@ -39,10 +39,29 @@
 #include <vos_trace.h>
 #include <wlan_nlink_common.h>
 
+
 int wlan_logging_sock_init_svc(void);
 int wlan_logging_sock_deinit_svc(void);
 int wlan_logging_sock_activate_svc(int log_fe_to_console, int num_buf);
+int wlan_logging_flush_pkt_queue(void);
 int wlan_logging_sock_deactivate_svc(void);
 int wlan_log_to_user(VOS_TRACE_LEVEL log_level, char *to_be_sent, int length);
+int wlan_queue_logpkt_for_app(vos_pkt_t *pPacket, uint32 pkt_type);
+void wlan_process_done_indication(uint8 type, uint32 reason_code);
 
+void wlan_init_log_completion(void);
+int wlan_set_log_completion(uint32 is_fatal,
+                            uint32 indicator,
+                            uint32 reason_code);
+void wlan_get_log_completion(uint32 *is_fatal,
+                             uint32 *indicator,
+                             uint32 *reason_code);
+bool wlan_is_log_report_in_progress(void);
+void wlan_reset_log_report_in_progress(void);
+
+void wlan_deinit_log_completion(void);
+
+void wlan_logging_set_log_level(void);
+
+bool wlan_is_logger_thread(int threadId);
 #endif /* WLAN_LOGGING_SOCK_SVC_H */

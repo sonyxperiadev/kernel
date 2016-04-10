@@ -94,8 +94,7 @@
 #define AGN1223AR_02      8
 #define AGN_EEP_PRODUCT_ID_MAX   8
 
-
-
+#define SIR_SME_MODULE_ID 0x16
 
 /// Start of Sirius/Host message types
 #define WNI_HOST_MSG_START             0x1500
@@ -235,6 +234,7 @@ enum eWniMsgTypes
     eWNI_SME_CLEAR_DFS_CHANNEL_LIST,
     eWNI_SME_PRE_CHANNEL_SWITCH_FULL_POWER,
     eWNI_SME_GET_SNR_REQ,
+    eWNI_SME_LOST_LINK_PARAMS_IND,
     //General Power Save Messages
     eWNI_PMC_MSG_TYPES_BEGIN,
     eWNI_PMC_PWR_SAVE_CFG,
@@ -345,20 +345,6 @@ enum eWniMsgTypes
     //SIR_LIM_MSG_TYPES_BEGIN+0xB0 = 12B0 (which means max of 176 messages and
     //eWNI_SME_TDLS_DEL_STA_RSP = 175.
     //Should fix above issue to enable TDLS_INTERNAL
-#ifdef FEATURE_WLAN_TDLS_INTERNAL
-#error ERROR_TDLS_INTERNAL
-    eWNI_SME_TDLS_DISCOVERY_START_REQ,    
-    eWNI_SME_TDLS_DISCOVERY_START_RSP,    
-    eWNI_SME_TDLS_DISCOVERY_START_IND,    
-    eWNI_SME_TDLS_LINK_START_REQ,    
-    eWNI_SME_TDLS_LINK_START_RSP,    
-    eWNI_SME_TDLS_LINK_START_IND,    
-    eWNI_SME_TDLS_TEARDOWN_REQ,    
-    eWNI_SME_TDLS_TEARDOWN_RSP,    
-    eWNI_SME_TDLS_TEARDOWN_IND,    
-    eWNI_SME_ADD_TDLS_PEER_IND,    
-    eWNI_SME_DELETE_TDLS_PEER_IND,    
-#endif
     eWNI_SME_SET_BCN_FILTER_REQ,
     eWNI_SME_RESET_AP_CAPS_CHANGED,
 #ifdef WLAN_FEATURE_11W
@@ -383,7 +369,16 @@ enum eWniMsgTypes
 #endif /* FEATURE_WLAN_CH_AVOID */
     eWNI_SME_HT40_OBSS_SCAN_IND, /* START and UPDATE OBSS SCAN Indication*/
     eWNI_SME_HT40_STOP_OBSS_SCAN_IND, /* STOP OBSS SCAN indication */
+#ifdef WLAN_FEATURE_AP_HT40_24G
+    eWNI_SME_SET_HT_2040_MODE, /* HT 20/40 indication in SAP case for 2.4GHz*/
+    eWNI_SME_2040_COEX_IND, /* HT20/40 Coex indication in SAP case for 2.4GHz*/
+#endif
     eWNI_SME_MAC_SPOOF_ADDR_IND,
+    eWNI_SME_ENCRYPT_MSG_RSP,
+    eWNI_SME_UPDATE_MAX_RATE_IND,
+    eWNI_SME_NAN_EVENT,
+    eWNI_SME_SET_TDLS_2040_BSSCOEX_REQ,
+    eWNI_SME_DEL_ALL_TDLS_PEERS,
     eWNI_SME_MSG_TYPES_END
 };
 

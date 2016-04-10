@@ -33,9 +33,6 @@
   This software unit holds the implementation of the WLAN Protocol Engine for
   P2P.
 
-  Copyright (c) 2011 QUALCOMM Incorporated.
-  All Rights Reserved.
-  Qualcomm Confidential and Proprietary
 ===========================================================================*/
 
 /*===========================================================================
@@ -89,7 +86,7 @@ extern tSirRetStatus limSetLinkState(
                          tpSetLinkStateCallback callback, void *callbackArg);
 
 static tSirRetStatus limCreateSessionForRemainOnChn(tpAniSirGlobal pMac, tPESession **ppP2pSession);
-eHalStatus limP2PActionCnf(tpAniSirGlobal pMac, tANI_U32 txCompleteSuccess);
+eHalStatus limP2PActionCnf(tpAniSirGlobal pMac, void *pData);
 
 /*----------------------------------------------------------------------------
  *
@@ -673,6 +670,8 @@ void limRemainOnChnRsp(tpAniSirGlobal pMac, eHalStatus status, tANI_U32 *data)
     tANI_U8             sessionId;
     tSirRemainOnChnReq *MsgRemainonChannel = pMac->lim.gpLimRemainOnChanReq;
     tSirMacAddr             nullBssid = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    tANI_U32 txStatus = 0;
+    tSirTxBdStatus txBdStatus = {0};
 
     if ( NULL == MsgRemainonChannel )
     {
@@ -687,9 +686,6 @@ void limRemainOnChnRsp(tpAniSirGlobal pMac, eHalStatus status, tANI_U32 *data)
     //Cleanup Everything
     if(eHAL_STATUS_FAILURE == status)
     {
-       //Deactivate Remain on Channel Timer
-       limDeactivateAndChangeTimer(pMac, eLIM_REMAIN_CHN_TIMER);
-
        //Set the Link State to Idle
        /* get the previous valid LINK state */
        if (limSetLinkState(pMac, eSIR_LINK_IDLE_STATE, nullBssid,
@@ -700,6 +696,7 @@ void limRemainOnChnRsp(tpAniSirGlobal pMac, eHalStatus status, tANI_U32 *data)
 
        pMac->lim.gLimSystemInScanLearnMode = 0;
        pMac->lim.gLimHalScanState = eLIM_HAL_IDLE_SCAN_STATE;
+       SET_LIM_PROCESS_DEFD_MESGS(pMac, true);
     }
 
     /* delete the session */
@@ -725,9 +722,13 @@ void limRemainOnChnRsp(tpAniSirGlobal pMac, eHalStatus status, tANI_U32 *data)
      * indicaiton confirmation with status failure */
     if (pMac->lim.mgmtFrameSessionId != 0xff)
     {
-       limLog(pMac, LOGE,
-              FL("Remain on channel expired, Action frame status failure"));
-       limP2PActionCnf(pMac, 0);
+        limLog(pMac, LOGE,
+                FL("Remain on channel expired, Action frame status failure"));
+
+        if (IS_FEATURE_SUPPORTED_BY_FW(ENHANCED_TXBD_COMPLETION))
+            limP2PActionCnf(pMac, &txBdStatus);
+        else
+            limP2PActionCnf(pMac, &txStatus);
     }
 
     return;
@@ -839,11 +840,37 @@ void limSendSmeMgmtFrameInd(
 } /*** end limSendSmeListenRsp() ***/
 
 
-eHalStatus limP2PActionCnf(tpAniSirGlobal pMac, tANI_U32 txCompleteSuccess)
+eHalStatus limP2PActionCnf(tpAniSirGlobal pMac, void *pData)
 {
-    limLog(pMac, LOG1,
-              FL(" %s txCompleteSuccess %d, Session Id %d"),
-              __func__, txCompleteSuccess, pMac->lim.mgmtFrameSessionId);
+    tANI_U32 txCompleteSuccess;
+    tpSirTxBdStatus pTxBdStatus;
+
+    if (!pData)
+    {
+        limLog(pMac, LOG1,
+                FL(" pData is NULL"));
+        return eHAL_STATUS_FAILURE;
+    }
+
+    if (IS_FEATURE_SUPPORTED_BY_FW(ENHANCED_TXBD_COMPLETION))
+    {
+        pTxBdStatus = (tpSirTxBdStatus) pData;
+        txCompleteSuccess = pTxBdStatus->txCompleteStatus;
+
+        limLog(pMac, LOG1,
+                FL("txCompleteSuccess %d, Token %u, Session Id %d"),
+                txCompleteSuccess, pTxBdStatus->txBdToken,
+                pMac->lim.mgmtFrameSessionId);
+    }
+    else
+    {
+        txCompleteSuccess = *((tANI_U32*) pData);
+
+        limLog(pMac, LOG1,
+                FL(" %s txCompleteSuccess %d, Session Id %d"),
+                __func__, txCompleteSuccess, pMac->lim.mgmtFrameSessionId);
+    }
+
     if (pMac->lim.mgmtFrameSessionId != 0xff)
     {
         /* The session entry might be invalid(0xff) action confirmation received after
@@ -864,6 +891,7 @@ void limSetHtCaps(tpAniSirGlobal pMac, tpPESession psessionEntry, tANI_U8 *pIeSt
     tDot11fIEHTCaps     dot11HtCap;
 
     PopulateDot11fHTCaps(pMac, psessionEntry, &dot11HtCap);
+
     pIe = limGetIEPtr(pMac,pIeStartPtr, nBytes,
                                        DOT11F_EID_HTCAPS,ONE_BYTE);
     limLog( pMac, LOG2, FL("pIe %p dot11HtCap.supportedMCSSet[0]=0x%x"),
@@ -1098,7 +1126,7 @@ void limSendP2PActionFrame(tpAniSirGlobal pMac, tpSirMsgQ pMsg)
             if (pMac->lim.gpLimRemainOnChanReq == NULL)
             {
                 limLog( pMac, LOGE,
-                        FL("Failed to Send Action frame \n"));
+                        FL("Failed to Send Action frame"));
                 limSendSmeRsp(pMac, eWNI_SME_ACTION_FRAME_SEND_CNF,
                               eHAL_STATUS_FAILURE, pMbMsg->sessionId, 0);
                 return;
@@ -1167,7 +1195,7 @@ void limSendP2PActionFrame(tpAniSirGlobal pMac, tpSirMsgQ pMsg)
         else
         {
             limLog(pMac, LOGE,
-                FL("Dropping SA Query frame - Unable to find PE Session \n"));
+                FL("Dropping SA Query frame - Unable to find PE Session "));
             limSendSmeRsp(pMac, eWNI_SME_ACTION_FRAME_SEND_CNF,
                     eHAL_STATUS_FAILURE, pMbMsg->sessionId, 0);
             palPktFree( pMac->hHdd, HAL_TXRX_FRM_802_11_MGMT,
@@ -1226,7 +1254,7 @@ void limSendP2PActionFrame(tpAniSirGlobal pMac, tpSirMsgQ pMsg)
         halstatus = halTxFrameWithTxComplete( pMac, pPacket, (tANI_U16)nBytes,
                         HAL_TXRX_FRM_802_11_MGMT, ANI_TXDIR_TODS,
                         7,/*SMAC_SWBD_TX_TID_MGMT_HIGH */ limTxComplete, pFrame,
-                        limP2PActionCnf, txFlag );
+                        limP2PActionCnf, txFlag, pMac->lim.txBdToken++ );
 
         if ( ! HAL_STATUS_SUCCESS ( halstatus ) )
         {

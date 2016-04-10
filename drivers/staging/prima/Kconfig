@@ -45,8 +45,11 @@ config QCOM_VOWIFI_11R
 	bool "Enable Fast Transition (11r) feature"
 	default n
 
-config CONFIG_ENABLE_LINUX_REG
+config ENABLE_LINUX_REG
 	bool "Enable linux regulatory feature"
 	default n
 
+config QCOM_TDLS
+	bool "Enable TDLS feature"
+	default n
 endif # PRIMA_WLAN || PRONTO_WLAN

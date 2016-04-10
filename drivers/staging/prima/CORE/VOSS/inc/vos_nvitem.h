@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2014 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2015 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -34,9 +34,6 @@
 
   \brief virtual Operating System Services (vOSS): Non-Volatile storage API
 
-   Copyright 2008 (c) Qualcomm, Incorporated.  All Rights Reserved.
-
-   Qualcomm Confidential and Proprietary.
 
   ========================================================================*/
 
@@ -53,6 +50,8 @@
 /* Maximum number of channels per country can be ignored */
 #define MAX_CHANNELS_IGNORE 10
 #define MAX_COUNTRY_IGNORE 5
+
+#define TX_POWER_DEFAULT  30//in dbm
 
 typedef struct sCsrIgnoreChannels
 {
@@ -759,6 +758,14 @@ eNvVersionType vos_nv_getNvVersion
 v_U16_t vos_chan_to_freq(v_U8_t chanNum);
 
 /**------------------------------------------------------------------------
+  \brief vos_freq_to_chan -
+  \param   - input channel frequency to know channel number
+  \return Channel frequency
+  \sa
+  -------------------------------------------------------------------------*/
+v_U8_t vos_freq_to_chan(v_U32_t freq);
+
+/**------------------------------------------------------------------------
   \brief vos_is_nv_country_non_zero -
   \param   NONE
   \return Success if default Country is Non-Zero
@@ -771,6 +778,16 @@ v_BOOL_t vos_is_nv_country_non_zero
 );
 
 /**------------------------------------------------------------------------
+  \brief vos_is_channel_valid_for_vht80 -
+  \param   chan
+  \return TRUE if channel is 80 mhz
+  \sa
+  -------------------------------------------------------------------------*/
+
+v_BOOL_t vos_is_channel_valid_for_vht80(v_U32_t chan);
+
+#ifdef CONFIG_ENABLE_LINUX_REG
+/**------------------------------------------------------------------------
   \brief vos_getCurrentCountryCode -
   \param   countrycode
   \return None
@@ -781,6 +798,8 @@ void vos_getCurrentCountryCode
 (
    tANI_U8 *cc
 );
+#endif
+
 int vos_update_nv_table_from_wiphy_band(void *hdd_ctx,
                                          void *wiphy,v_U8_t nBandCapability);
 

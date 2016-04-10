@@ -40,8 +40,6 @@ DESCRIPTION
   be used by the DAL Control Path Core . 
   
       
-  Copyright (c) 2010 QUALCOMM Incorporated. All Rights Reserved.
-  Qualcomm Confidential and Proprietary
 ===========================================================================*/
 
 

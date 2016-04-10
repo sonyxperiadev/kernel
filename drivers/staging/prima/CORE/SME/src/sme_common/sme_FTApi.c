@@ -30,9 +30,6 @@
 
   \brief Definitions for SME FT APIs
 
-   Copyright 2008 (c) Qualcomm, Incorporated.  All Rights Reserved.
-
-   Qualcomm Confidential and Proprietary.
 
   ========================================================================*/
 
@@ -42,10 +39,7 @@
 #include <smsDebug.h>
 #include <csrInsideApi.h>
 #include <csrNeighborRoam.h>
-
-#ifdef DEBUG_ROAM_DELAY
 #include "vos_utils.h"
-#endif
 
 /*--------------------------------------------------------------------------
   Initialize the FT context. 
@@ -65,9 +59,7 @@ void sme_FTOpen(tHalHandle hHal)
         smsLog(pMac, LOGE, FL("Preauth Reassoc interval Timer allocation failed"));
         return;
     }                 
-#ifdef DEBUG_ROAM_DELAY
     vos_reset_roam_timer_log();
-#endif
 }
 
 /*--------------------------------------------------------------------------
@@ -232,10 +224,8 @@ eHalStatus sme_FTSendUpdateKeyInd(tHalHandle hHal, tCsrRoamSetKey * pFTKeyInfo)
       smsLog(pMac, LOG1, FL("%02x"), pFTKeyInfo->Key[i]);
 #endif
 
-    msgLen  = sizeof( tANI_U16) + sizeof( tANI_U16 ) + 
-       sizeof( pMsg->keyMaterial.length ) + sizeof( pMsg->keyMaterial.edType ) + 
-       sizeof( pMsg->keyMaterial.numKeys ) + sizeof( pMsg->keyMaterial.key );
-                     
+    msgLen = sizeof(tSirFTUpdateKeyInfo);
+
     pMsg = vos_mem_malloc(msgLen);
     if ( NULL == pMsg )
     {
@@ -341,11 +331,12 @@ eHalStatus sme_FTUpdateKey( tHalHandle hHal, tCsrRoamSetKey * pFTKeyInfo )
     switch(pMac->ft.ftSmeContext.FTState)
     {
     case eFT_SET_KEY_WAIT:
-#ifdef DEBUG_ROAM_DELAY
-    //store the PTK send event
-    vos_record_roam_event(e_HDD_SET_PTK_REQ, NULL, 0);
-#endif
-    if (sme_GetFTPreAuthState (hHal) == TRUE)
+      if (pMac->roam.configParam.roamDelayStatsEnabled)
+      {
+          //store the PTK send event
+          vos_record_roam_event(e_HDD_SET_PTK_REQ, NULL, 0);
+      }
+      if (sme_GetFTPreAuthState (hHal) == TRUE)
       {
           status = sme_FTSendUpdateKeyInd(pMac, pFTKeyInfo);
           if (status != 0 )
@@ -482,9 +473,10 @@ void sme_PreauthReassocIntvlTimerCallback(void *context)
     tpAniSirGlobal pMac = (tpAniSirGlobal )context;
     csrNeighborRoamRequestHandoff(pMac);
 #endif
-#ifdef DEBUG_ROAM_DELAY
-    vos_record_roam_event(e_SME_PREAUTH_CALLBACK_HIT, NULL, 0);
-#endif
+    if (pMac->roam.configParam.roamDelayStatsEnabled)
+    {
+        vos_record_roam_event(e_SME_PREAUTH_CALLBACK_HIT, NULL, 0);
+    }
     return;
 }
 

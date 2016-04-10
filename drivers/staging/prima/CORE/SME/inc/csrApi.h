@@ -194,9 +194,26 @@ typedef enum
  */
 typedef enum
 {
-    eCSR_SCAN_ABORT_DEFAULT,
+    eCSR_SCAN_ABORT_DEFAULT = 1,
     eCSR_SCAN_ABORT_DUE_TO_BAND_CHANGE, //Scan aborted due to band change
 }eCsrAbortReason;
+
+typedef enum
+{
+   eCSR_INI_SINGLE_CHANNEL_CENTERED = 0,
+   eCSR_INI_DOUBLE_CHANNEL_HIGH_PRIMARY,
+   eCSR_INI_DOUBLE_CHANNEL_LOW_PRIMARY,
+#ifdef WLAN_FEATURE_11AC
+   eCSR_INI_QUADRUPLE_CHANNEL_20MHZ_LOW_40MHZ_CENTERED,
+   eCSR_INI_QUADRUPLE_CHANNEL_20MHZ_CENTERED_40MHZ_CENTERED,
+   eCSR_INI_QUADRUPLE_CHANNEL_20MHZ_HIGH_40MHZ_CENTERED,
+   eCSR_INI_QUADRUPLE_CHANNEL_20MHZ_LOW_40MHZ_LOW,
+   eCSR_INI_QUADRUPLE_CHANNEL_20MHZ_HIGH_40MHZ_LOW,
+   eCSR_INI_QUADRUPLE_CHANNEL_20MHZ_LOW_40MHZ_HIGH,
+   eCSR_INI_QUADRUPLE_CHANNEL_20MHZ_HIGH_40MHZ_HIGH,
+#endif
+   eCSR_INI_CHANNEL_BONDING_STATE_MAX
+}eIniChanBondState;
 
 #define CSR_SCAN_TIME_DEFAULT       0
 #define CSR_VALUE_IGNORED           0xFFFFFFFF
@@ -483,12 +500,18 @@ typedef enum
     eCSR_ROAM_UNPROT_MGMT_FRAME_IND,
 #endif
 
+#ifdef WLAN_FEATURE_AP_HT40_24G
+    eCSR_ROAM_2040_COEX_INFO_IND,
+#endif
+
 #if defined(FEATURE_WLAN_ESE) && defined(FEATURE_WLAN_ESE_UPLOAD)
     eCSR_ROAM_TSM_IE_IND,
     eCSR_ROAM_CCKM_PREAUTH_NOTIFY,
     eCSR_ROAM_ESE_ADJ_AP_REPORT_IND,
     eCSR_ROAM_ESE_BCN_REPORT_IND,
 #endif /* FEATURE_WLAN_ESE && FEATURE_WLAN_ESE_UPLOAD */
+    eCSR_ROAM_UPDATE_MAX_RATE_IND,
+    eCSR_ROAM_LOST_LINK_PARAMS_IND,
 }eRoamCmdStatus;
 
 
@@ -893,7 +916,7 @@ typedef struct tagCsrRoamProfile
      * It has the IE byte stream for additional IE,
      * which can be WSC IE and/or P2P IE
      */
-    tANI_U8  addIEScan[SIR_MAC_MAX_IE_LENGTH+2];       //Additional IE information.
+    tANI_U8  addIEScan[SIR_MAC_MAX_ADD_IE_LENGTH+2];       //Additional IE information.
     tANI_U32 nAddIEAssocLength;   //The byte count in the pAddIE for assoc
     tANI_U8 *pAddIEAssoc;       //If not null, it has the IE byte stream for additional IE, which can be WSC IE and/or P2P IE
 
@@ -961,6 +984,14 @@ typedef struct tagCsrRoamConnectedProfile
     tANI_BOOLEAN    isESEAssoc;
 #endif
     tANI_U32 dot11Mode;
+
+#ifdef WLAN_FEATURE_11W
+    /* Management Frame Protection */
+    tANI_BOOLEAN MFPEnabled;
+    tANI_U8 MFPRequired;
+    tANI_U8 MFPCapable;
+#endif
+
 }tCsrRoamConnectedProfile;
 
 
@@ -1113,7 +1144,7 @@ typedef struct tagCsrConfigParam
     /*Customer wants to optimize the scan time. Avoiding scans(passive) on DFS
     * channels while swipping through both bands can save some time
     * (apprx 1.3 sec) */
-    tANI_BOOLEAN fEnableDFSChnlScan;
+    tANI_U8 fEnableDFSChnlScan;
 
     //To enable/disable scanning 2.4Ghz channels twice on a single scan request from HDD
     tANI_BOOLEAN fScanTwice;
@@ -1142,7 +1173,7 @@ typedef struct tagCsrConfigParam
 #endif
 #endif
 
-
+    tANI_BOOLEAN ignorePeerErpInfo;
     tANI_U8 scanCfgAgingTime;
 
     tANI_U8   enableTxLdpc;
@@ -1156,6 +1187,14 @@ typedef struct tagCsrConfigParam
     tANI_BOOLEAN sendDeauthBeforeCon;
 
     eCsrBand  scanBandPreference;
+#ifdef WLAN_FEATURE_AP_HT40_24G
+    tANI_BOOLEAN apHT40_24GEnabled;
+    tANI_U32 channelBondingAPMode24GHz; // Use for SAP/P2P GO 2.4GHz channel Bonding
+#endif
+    tANI_U32 nOBSSScanWidthTriggerInterval;
+    tANI_U8 roamDelayStatsEnabled;
+    tANI_BOOLEAN ignorePeerHTopMode;
+    tANI_BOOLEAN disableP2PMacSpoofing;
 }tCsrConfigParam;
 
 //Tush
@@ -1206,9 +1245,13 @@ typedef struct tagCsrRoamInfo
         tSirMicFailureInfo *pMICFailureInfo;
         tCsrRoamConnectedProfile *pConnectedProfile;
         tSirWPSPBCProbeReq *pWPSPBCProbeReq;
+        tSirLostLinkParamsInfo *pLostLinkParams;
     } u;
 
     tANI_BOOLEAN wmmEnabledSta;   //set to true if WMM enabled STA
+#ifdef WLAN_FEATURE_AP_HT40_24G
+    tANI_BOOLEAN HT40MHzIntoEnabledSta; //set to true if 40 MHz Intolerant enabled STA
+#endif
     tANI_U32 dtimPeriod;
 
 #ifdef FEATURE_WLAN_ESE
@@ -1220,6 +1263,11 @@ typedef struct tagCsrRoamInfo
     tSirEseBcnReportRsp *pEseBcnReportRsp;
 #endif /* FEATURE_WLAN_ESE_UPLOAD */
 #endif
+
+#ifdef WLAN_FEATURE_VOWIFI_11R
+    tANI_BOOLEAN is11rAssoc;
+#endif
+
     void* pRemainCtx;
     tANI_U32 rxChan;
 
@@ -1235,6 +1283,9 @@ typedef struct tagCsrRoamInfo
 
     tANI_S8 rxRssi;
     tANI_U32 maxRateFlags;
+#ifdef WLAN_FEATURE_AP_HT40_24G
+    tpSirHT2040CoexInfoInd pSmeHT2040CoexInfoInd;
+#endif
 }tCsrRoamInfo;
 
 typedef struct tagCsrFreqScanInfo
@@ -1260,6 +1311,9 @@ typedef struct sSirSmeAssocIndToUpperLayerCnf
     tSirRSNie            rsnIE;           // RSN IE received from peer
     tSirAddie            addIE;           // Additional IE received from peer, which can be WSC and/or P2P IE
     tANI_U8              reassocReq;      //set to true if reassoc
+#ifdef WLAN_FEATURE_AP_HT40_24G
+    tANI_U8              HT40MHzIntoEnabledSta; //set to true if 40 MHz Intolerant enabled STA
+#endif
 } tSirSmeAssocIndToUpperLayerCnf, *tpSirSmeAssocIndToUpperLayerCnf;
 
 typedef struct tagCsrSummaryStatsInfo
@@ -1386,6 +1440,7 @@ typedef struct tagCsrLinkEstablishParams
 {
     tSirMacAddr peerMac;
     tANI_U8 uapsdQueues;
+    tANI_U8 qos;
     tANI_U8 maxSp;
     tANI_U8 isBufSta;
     tANI_U8 isOffChannelSupported;
@@ -1409,25 +1464,6 @@ typedef struct tagCsrTdlsSendMgmt
 
 }tCsrTdlsSendMgmt;
 
-#ifdef FEATURE_WLAN_TDLS_INTERNAL
-typedef struct tagCsrTdlsDisRequest
-{
-        tSirMacAddr peerMac;
-            tANI_U8 disType;
-}tCsrTdlsDisRequest;
-
-typedef struct tagCsrTdlsSetupRequest
-{
-        tSirMacAddr peerMac;
-            tANI_U8 linkIndex;
-}tCsrTdlsSetupRequest;
-
-typedef struct tagCsrTdlsTeardownRequest
-{
-        tSirMacAddr peerMac;
-            tANI_U8 linkIndex;
-}tCsrTdlsTeardownRequest ;
-#endif
 #endif
 
 typedef void * tScanResultHandle;
@@ -1630,6 +1666,18 @@ typedef void ( *tCsrTsmStatsCallback) (tAniTrafStrmMetrics tsmMetrics, tANI_U32 
 
 ---------------------------------------------------------------------------*/
 typedef void (*tCsrSnrCallback) (v_S7_t snr, tANI_U32 staId, void *pContext);
+
+/*---------------------------------------------------------------------------
+  This is the type for a get current antenna callback to be registered with SME
+  for getting cuurently used antenna index
+
+  \param antennaId to be filled by firmware.
+  \param pContext - any user data given at callback registration.
+  \return None
+
+---------------------------------------------------------------------------*/
+typedef void ( *tCsrAntennaIndexCallback) (int antennaId, void *pContext);
+
 
 #ifdef WLAN_FEATURE_VOWIFI_11R
 eHalStatus csrRoamIssueFTPreauthReq(tHalHandle hHal, tANI_U32 sessionId, tpSirBssDescription pBssDescription);

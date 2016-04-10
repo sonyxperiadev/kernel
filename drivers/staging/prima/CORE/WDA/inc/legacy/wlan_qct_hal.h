@@ -293,7 +293,7 @@ typedef struct sUapsdInfo {
   for UMAC in prima so declared it here */
 #define DPU_FEEDBACK_WPI_UNPROTECTED 0x20   
 #define WLANHAL_RX_IS_UNPROTECTED_WPI_FRAME(_pvBDHeader)  \
-        (DPU_FEEDBACK_WPI_UNPROTECTED == ((WDI_RxBdType *)_pvBDHeader)->dpuFeedback)
+        (DPU_FEEDBACK_WPI_UNPROTECTED == ((WDI_DS_RxMetaInfoType *)_pvBDHeader)->dpuFeedback)
 
 /*==========================================================================
 
@@ -341,7 +341,9 @@ tANI_U8 WLANHAL_RxBD_GetFrameTypeSubType(v_PVOID_t _pvBDHeader, tANI_U16 usFrmCt
 
 #define HAL_RELIABLE_MCAST_REQUESTED_MASK   0x100
 
-#define HAL_USE_BD_RATE_MASK                0x1000
+#define HAL_USE_BD_RATE_1_MASK              0x1000 // bit 12 for BD RATE 1
+#define HAL_USE_BD_RATE_2_MASK              0x2000 // bit 13 for BD RATE 1
+#define HAL_USE_BD_RATE_3_MASK              0x4000 // bit 14 for BD RATE 1
 #define HAL_USE_FW_IN_TX_PATH               0x200 //bit 9 to send via WQ5
 /*==========================================================================
 

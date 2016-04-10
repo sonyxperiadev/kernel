@@ -36,9 +36,6 @@
                
    Definitions for vOSS Events
   
-   Copyright 2008 (c) Qualcomm, Incorporated.  All Rights Reserved.
-   
-   Qualcomm Confidential and Proprietary.
   
   ========================================================================*/
 
@@ -357,7 +354,7 @@ typedef struct
    log_hdr_type                     hdr;
    v_U32_t                          PowerState;
    v_U32_t                          numFreeBd;
-   vos_log_data_stall_channel_type  dxeChannelInfo[4];
+   vos_log_data_stall_channel_type  dxeChannelInfo[8];
 } vos_log_data_stall_type;
 
 /*---------------------------------------------------------------------------
