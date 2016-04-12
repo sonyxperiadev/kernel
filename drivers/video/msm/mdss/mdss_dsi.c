@@ -1170,15 +1170,18 @@ int mdss_dsi_switch_mode(struct mdss_panel_data *pdata, int mode)
 	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 		panel_data);
 
-	if (pinfo->dms_mode != DYNAMIC_MODE_SWITCH_IMMEDIATE) {
-		pr_debug("%s: Dynamic mode switch not enabled.\n", __func__);
+	if ((pinfo->dms_mode != DYNAMIC_MODE_RESOLUTION_SWITCH_IMMEDIATE) &&
+			(pinfo->dms_mode != DYNAMIC_MODE_SWITCH_IMMEDIATE)) {
+		pr_err("%s: Dynamic mode switch not enabled.\n", __func__);
 		return -EPERM;
 	}
 
 	if (mode == MIPI_VIDEO_PANEL) {
-		mode = DSI_VIDEO_MODE;
+		mode = SWITCH_TO_VIDEO_MODE;
 	} else if (mode == MIPI_CMD_PANEL) {
-		mode = DSI_CMD_MODE;
+		mode = SWITCH_TO_CMD_MODE;
+	} else if (mode == SWITCH_RESOLUTION) {
+		pr_debug("Resolution switch mode selected\n");
 	} else {
 		pr_err("Invalid mode selected, mode=%d\n", mode);
 		return -EINVAL;
@@ -1345,6 +1348,7 @@ int mdss_dsi_on(struct mdss_panel_data *pdata)
 		mdss_dsi_phy_sw_reset(ctrl_pdata);
 		mdss_dsi_phy_init(ctrl_pdata);
 		mdss_dsi_ctrl_setup(ctrl_pdata);
+		pr_debug("%s: reset Phy and call ctrl_setup\n", __func__);
 	}
 	ctrl_pdata->ctrl_state |= CTRL_STATE_DSI_ACTIVE;
 
@@ -1556,9 +1560,9 @@ static int mdss_dsi_blank(struct mdss_panel_data *pdata, int power_state)
 		pr_info("%s: switching to %s mode\n", __func__,
 			(pdata->panel_info.mipi.mode ? "video" : "command"));
 		if (pdata->panel_info.type == MIPI_CMD_PANEL) {
-			ctrl_pdata->switch_mode(pdata, DSI_VIDEO_MODE);
+			ctrl_pdata->switch_mode(pdata, SWITCH_TO_VIDEO_MODE);
 		} else if (pdata->panel_info.type == MIPI_VIDEO_PANEL) {
-			ctrl_pdata->switch_mode(pdata, DSI_CMD_MODE);
+			ctrl_pdata->switch_mode(pdata, SWITCH_TO_CMD_MODE);
 #ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 			if (pdata->panel_info.dsi_master == pdata->panel_info.pdest)
 				mdss_dsi_set_tear_off(ctrl_pdata);
@@ -2093,7 +2097,7 @@ int mdss_dsi_register_recovery_handler(struct mdss_dsi_ctrl_pdata *ctrl,
 	return 0;
 }
 
-static int mdss_dsi_clk_refresh(struct mdss_panel_data *pdata)
+int mdss_dsi_clk_refresh(struct mdss_panel_data *pdata)
 {
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
 	struct mdss_panel_info *pinfo = NULL;
@@ -2358,6 +2362,9 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 				queue_delayed_work(ctrl_pdata->workq,
 					&ctrl_pdata->dba_work, HZ);
 		}
+		break;
+	case MDSS_EVENT_PANEL_TIMING_SWITCH:
+		rc = mdss_dsi_panel_timing_switch(ctrl_pdata, arg);
 		break;
 #ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 	case MDSS_EVENT_DISP_ON:

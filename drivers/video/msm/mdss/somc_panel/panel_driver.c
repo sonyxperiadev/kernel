@@ -4333,8 +4333,7 @@ static void mdss_dsi_set_prim_panel(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 }
 
 int mdss_dsi_panel_init(struct device_node *node,
-	struct mdss_dsi_ctrl_pdata *ctrl_pdata,
-	bool cmd_cfg_cont_splash)
+	struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 {
 	int rc = 0;
 	struct device_node *dsi_ctrl_np = NULL;
