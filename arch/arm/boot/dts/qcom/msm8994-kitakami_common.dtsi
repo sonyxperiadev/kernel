@@ -221,12 +221,12 @@
 					};
 					event_01 {
 						type = <1>; /* KEY */
-						code = <116>; /* KEY_POWER */
+						code = <531>; /* TOUCHPAD_ON */
 						down = <1>;
 					};
 					event_02 {
 						type = <1>; /* KEY */
-						code = <116>; /* KEY_POWER */
+						code = <531>; /* TOUCHPAD_ON */
 						down = <0>;
 					};
 					event_03 {
