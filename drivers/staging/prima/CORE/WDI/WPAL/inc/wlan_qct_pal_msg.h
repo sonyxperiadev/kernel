@@ -37,9 +37,6 @@
                
    Definitions for platform dependent. Only work with legacy UMAC.
   
-   Copyright 2010 (c) Qualcomm, Incorporated.  All Rights Reserved.
-   
-   Qualcomm Confidential and Proprietary.
   
   ========================================================================*/
 

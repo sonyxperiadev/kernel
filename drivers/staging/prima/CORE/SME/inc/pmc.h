@@ -31,9 +31,6 @@
 *
 * Description: Power Management Control (PMC) internal definitions.
 *
-* Copyright 2008 (c) Qualcomm, Incorporated.  
-  All Rights Reserved.
-* Qualcomm Confidential and Proprietary.
 *
 ******************************************************************************/
 
@@ -156,9 +153,6 @@ typedef struct sPmcInfo
     void *impsCallbackContext;  /* value to be passed as parameter to routine specified above */
     vos_timer_t hImpsTimer;  /* timer to use with IMPS */
     vos_timer_t hTrafficTimer;  /* timer to measure traffic for BMPS */
-#ifdef FEATURE_WLAN_DIAG_SUPPORT    
-    vos_timer_t hDiagEvtTimer;  /* timer to report PMC state through DIAG event */
-#endif
     vos_timer_t hExitPowerSaveTimer;  /* timer for deferred exiting of power save mode */
     tDblLinkList powerSaveCheckList; /* power save check routine list */
     tDblLinkList requestFullPowerList; /* request full power callback routine list */
@@ -208,6 +202,7 @@ typedef struct sPmcInfo
     v_BOOL_t    ImpsReqTimerFailed;
     tANI_U8     ImpsReqFailCnt;
     tANI_U8     ImpsReqTimerfailCnt;
+    tANI_U8     ImpsRspFailCnt;
 
 #ifdef FEATURE_WLAN_BATCH_SCAN
    /*HDD callback to be called after receiving SET BATCH SCAN RSP from FW*/
@@ -251,13 +246,6 @@ extern eHalStatus pmcStartTrafficTimer (tHalHandle hHal, tANI_U32 expirationTime
 extern void pmcStopTrafficTimer (tHalHandle hHal);
 extern void pmcImpsTimerExpired (tHalHandle hHal);
 extern void pmcTrafficTimerExpired (tHalHandle hHal);
-
-#ifdef FEATURE_WLAN_DIAG_SUPPORT    
-extern eHalStatus pmcStartDiagEvtTimer (tHalHandle hHal);
-extern void pmcStopDiagEvtTimer (tHalHandle hHal);
-extern void pmcDiagEvtTimerExpired (tHalHandle hHal);
-#endif
-
 extern void pmcExitPowerSaveTimerExpired (tHalHandle hHal);
 extern tPmcState pmcGetPmcState (tHalHandle hHal);
 extern const char* pmcGetPmcStateStr(tPmcState state);

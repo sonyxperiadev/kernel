@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2015 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -42,7 +42,7 @@
 #define CCMAPI_H__
 
 //#include "wniCfgAp.h" /* CFG_PARAM_MAX_NUM */
-#include "wniCfgSta.h"
+#include "wniCfg.h"
 #include "halTypes.h"
 
 #define CCM_11B_CHANNEL_END             14

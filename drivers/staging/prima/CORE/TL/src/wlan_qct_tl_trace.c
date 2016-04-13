@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2015 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -52,6 +52,10 @@ static v_U8_t* tlTraceGetEventString(v_U32_t code)
          CASE_RETURN_STRING(TRACE_CODE_TL_QUEUE_CURRENT);
          CASE_RETURN_STRING(TRACE_CODE_TL_REORDER_TIMER_EXP_CB);
          CASE_RETURN_STRING(TRACE_CODE_TL_BA_SESSION_DEL);
+         CASE_RETURN_STRING(TRACE_CODE_TL_ASSOC_FAILED);
+         CASE_RETURN_STRING(TRACE_CODE_TL_FORWARD_CACHED_FRAMES);
+         CASE_RETURN_STRING(TRACE_CODE_TL_FLUSH_CACHED_FRAMES);
+         CASE_RETURN_STRING(TRACE_CODE_TL_CACHE_FRAME);
          default:
                return ("UNKNOWN");
                break;
@@ -60,10 +64,12 @@ static v_U8_t* tlTraceGetEventString(v_U32_t code)
 
 void tlTraceDump(void *pMac, tpvosTraceRecord pRecord, v_U16_t recIndex)
 {
-   TLLOGE( VOS_TRACE (VOS_MODULE_ID_TL, VOS_TRACE_LEVEL_ERROR,
-                       "%04d    %012u  S%-3d    %-14s  %-30s(0x%x)",
-                       recIndex, pRecord->time, pRecord->session, "  TL Event:  ",
-                       tlTraceGetEventString (pRecord->code), pRecord->data));
+   TLLOGE( VOS_TRACE (VOS_MODULE_ID_TL, VOS_TRACE_LEVEL_INFO,
+                       "%04d %012u S%-3d %-14s %-30s(0x%x)",
+                       recIndex, pRecord->time, pRecord->session,
+                       "  TL Event:  ",
+                       tlTraceGetEventString (pRecord->code),
+                       pRecord->data));
 }
 
 void tlTraceInit()

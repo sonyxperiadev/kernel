@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2014 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2015 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -163,7 +163,8 @@ enum qca_nl80211_vendor_subcmds {
     /* Set nodfs_flag */
     QCA_NL80211_VENDOR_SUBCMD_NO_DFS_FLAG = 40,
     /* Get Concurrency Matrix */
-    QCA_NL80211_VENDOR_SUBCMD_GET_CONCURRENCY_MATRIX = 42
+    QCA_NL80211_VENDOR_SUBCMD_GET_CONCURRENCY_MATRIX = 42,
+    QCA_NL80211_VENDOR_SUBCMD_SETBAND = 105,
 };
 
 enum qca_nl80211_vendor_subcmds_index {
@@ -192,6 +193,7 @@ enum qca_nl80211_vendor_subcmds_index {
     QCA_NL80211_VENDOR_SUBCMD_EXTSCAN_RESET_SIGNIFICANT_CHANGE_INDEX,
     /*EXT TDLS*/
     QCA_NL80211_VENDOR_SUBCMD_TDLS_STATE_CHANGE_INDEX,
+    QCA_NL80211_VENDOR_SUBCMD_NAN_INDEX,
 };
 
 enum qca_wlan_vendor_attr
@@ -209,6 +211,8 @@ enum qca_wlan_vendor_attr
      * by enum qca_roaming_policy. */
     QCA_WLAN_VENDOR_ATTR_ROAMING_POLICY = 5,
     QCA_WLAN_VENDOR_ATTR_MAC_ADDR = 6,
+    /* Unsigned 32-bit value from enum qca_set_band. */
+    QCA_WLAN_VENDOR_ATTR_SETBAND_VALUE = 12,
     /* keep last */
     QCA_WLAN_VENDOR_ATTR_AFTER_LAST,
     QCA_WLAN_VENDOR_ATTR_MAX = QCA_WLAN_VENDOR_ATTR_AFTER_LAST - 1,
@@ -317,6 +321,28 @@ enum qca_wlan_vendor_attr_ll_stats_clr
     QCA_WLAN_VENDOR_ATTR_LL_STATS_CLR_AFTER_LAST,
     QCA_WLAN_VENDOR_ATTR_LL_STATS_CLR_MAX       =
                         QCA_WLAN_VENDOR_ATTR_LL_STATS_CLR_AFTER_LAST - 1,
+};
+
+/**
+ * enum qca_wlan_vendor_attr_ll_stats_results_type - ll stats result type
+ *
+ * @QCA_WLAN_VENDOR_ATTR_LL_STATS_TYPE_INVALID: Initial invalid value
+ * @QCA_WLAN_VENDOR_ATTR_LL_STATS_TYPE_RADIO: Link layer stats type radio
+ * @QCA_WLAN_VENDOR_ATTR_LL_STATS_TYPE_IFACE: Link layer stats type interface
+ * @QCA_WLAN_VENDOR_ATTR_LL_STATS_TYPE_PEER: Link layer stats type peer
+ * @QCA_WLAN_VENDOR_ATTR_LL_STATS_TYPE_AFTER_LAST: Last value
+ * @QCA_WLAN_VENDOR_ATTR_LL_STATS_TYPE_MAX: Max value
+ */
+enum qca_wlan_vendor_attr_ll_stats_results_type {
+    QCA_WLAN_VENDOR_ATTR_LL_STATS_TYPE_INVALID = 0,
+
+    QCA_WLAN_VENDOR_ATTR_LL_STATS_TYPE_RADIO = 1,
+    QCA_WLAN_VENDOR_ATTR_LL_STATS_TYPE_IFACE,
+    QCA_WLAN_VENDOR_ATTR_LL_STATS_TYPE_PEER,
+
+    QCA_WLAN_VENDOR_ATTR_LL_STATS_TYPE_AFTER_LAST,
+    QCA_WLAN_VENDOR_ATTR_LL_STATS_TYPE_MAX =
+    QCA_WLAN_VENDOR_ATTR_LL_STATS_TYPE_AFTER_LAST - 1
 };
 
 enum qca_wlan_vendor_attr_ll_stats_results
@@ -544,6 +570,21 @@ enum qca_wlan_vendor_attr_ll_stats_results
      * Otherwise, it is set to 0.
      */
     QCA_WLAN_VENDOR_ATTR_LL_STATS_RESULTS_MORE_DATA,
+
+    /* Unsigned 64bit value */
+    QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_AVERAGE_TSF_OFFSET,
+
+    /* Unsigned 32bit value */
+    QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_LEAKY_AP_DETECTED,
+
+    /* Unsigned 32bit value */
+    QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_LEAKY_AP_AVG_NUM_FRAMES_LEAKED,
+
+    /* Unsigned 32bit value */
+    QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_LEAKY_AP_GUARD_TIME,
+
+    /* Unsigned 32bit value to indicate ll stats result type */
+    QCA_WLAN_VENDOR_ATTR_LL_STATS_TYPE,
 
     /* keep last */
     QCA_WLAN_VENDOR_ATTR_LL_STATS_AFTER_LAST,
@@ -858,6 +899,8 @@ enum qca_wlan_vendor_attr_get_concurrency_matrix {
 #define WIFI_FEATURE_EPR                0x4000   /* Enhanced power reporting */
 #define WIFI_FEATURE_AP_STA             0x8000   /* Support for AP STA
                                                     Concurrency */
+#define WIFI_FEATURE_LINK_LAYER_STATS   0x10000  /* Link layer stats */
+
 /* Add more features here */
 enum qca_wlan_vendor_attr_set_no_dfs_flag
 {
@@ -879,7 +922,7 @@ enum qca_wlan_vendor_attr_set_no_dfs_flag
 
 
 #ifdef FEATURE_WLAN_CH_AVOID
-#define HDD_MAX_AVOID_FREQ_RANGES   4
+#define HDD_MAX_AVOID_FREQ_RANGES   15
 typedef struct sHddAvoidFreqRange
 {
    u32 startFreq;
@@ -975,5 +1018,7 @@ int wlan_hdd_send_avoid_freq_event(hdd_context_t *pHddCtx,
 void wlan_hdd_cfg80211_extscan_callback(void *ctx, const tANI_U16 evType,
                                       void *pMsg);
 #endif /* WLAN_FEATURE_EXTSCAN */
+
+void wlan_hdd_cfg80211_nan_init(hdd_context_t *pHddCtx);
 
 #endif

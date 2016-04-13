@@ -36,8 +36,6 @@
  *  This file contains the external API implemntation exposed by the
  *   wlan device abstarction layer module.
  *
- *   Copyright (c) 2008 QUALCOMM Incorporated. All Rights Reserved.
- *   Qualcomm Confidential and Proprietary
  */
 
 #include "wlan_qct_wdi.h"
@@ -193,6 +191,42 @@ void WDI_DS_MemPoolDestroy(WDI_DS_BdMemPoolType *memPool)
   wpalMemoryFree(memPool->AllocationBitmap);
   wpalMemoryZero(memPool, sizeof(*memPool));
 }
+
+WDI_Status WDI_DS_LoggingMbCreate(WDI_DS_LoggingMbType *pLoggingMailbox, wpt_uint8 size)
+{
+  pLoggingMailbox->pLoggingMbVirtAddress = wpalDmaMemoryAllocate(size,
+          &(pLoggingMailbox->pLoggingMbPhysAddress));
+  if (pLoggingMailbox->pLoggingMbVirtAddress == 0)
+    return WDI_STATUS_E_FAILURE;
+  return WDI_STATUS_SUCCESS;
+}
+
+void *WDI_DS_GetLoggingMbPhyAddr(void *pContext)
+{
+  WDI_DS_ClientDataType *pClientData = WDI_DS_GetDatapathContext(pContext);
+
+  return pClientData->loggingMbContext.pLoggingMbPhysAddress;
+}
+
+void *WDI_DS_GetLoggingMbAddr(void *pContext)
+{
+  WDI_DS_ClientDataType *pClientData = pContext;
+
+  return pClientData->loggingMbContext.pLoggingMbVirtAddress;
+}
+
+void*WDI_DS_GetLoggingSession(void *pContext)
+{
+  WDI_DS_ClientDataType *pClientData = pContext;
+
+  return &pClientData->loggingMbContext.loggingSession;
+}
+
+void WDI_DS_LoggingMbDestroy(WDI_DS_LoggingMbType *pLoggingMailbox)
+{
+  wpalDmaMemoryFree(pLoggingMailbox->pLoggingMbVirtAddress);
+}
+
 /*
  * Allocate chunk memory
  */

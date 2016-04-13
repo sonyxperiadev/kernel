@@ -33,9 +33,6 @@
   \file  BAP_HDD_MISC.h
   
   \brief Linux HDD Adapter Type
-         Copyright 2008 (c) Qualcomm, Incorporated.
-         All Rights Reserved.
-         Qualcomm Confidential and Proprietary.
   
   ==========================================================================*/
   

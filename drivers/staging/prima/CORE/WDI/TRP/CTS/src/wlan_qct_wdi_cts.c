@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2014 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2015 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -42,9 +42,6 @@
   Are listed for each API below.
 
 
-  Copyright (c) 2010-2011 QUALCOMM Incorporated.
-  All Rights Reserved.
-  Qualcomm Confidential and Proprietary
 ===========================================================================*/
 
 /*===========================================================================
@@ -137,6 +134,7 @@ typedef struct
    WCTS_RxMsgCBType       wctsRxMsgCB;
    void*                  wctsRxMsgCBData;
    WCTS_StateType         wctsState;
+   vos_spin_lock_t        wctsStateLock;
    smd_channel_t*         wctsChannel;
    wpt_list               wctsPendingQueue;
    wpt_uint32             wctsMagic;
@@ -168,15 +166,7 @@ typedef struct
 /*----------------------------------------------------------------------------
  * Static Variable Definitions
  * -------------------------------------------------------------------------*/
-#ifdef FEATURE_R33D
-/* R33D will not close SMD port
- * If receive close request from WDI, just pretend as port closed,
- * Store control block info static memory, and reuse next open */
-static WCTS_ControlBlockType  *ctsCB;
 
-/* If port open once, not try to actual open next time */
-static int                     port_open;
-#endif /* FEATURE_R33D */
 /*----------------------------------------------------------------------------
  * Static Function Declarations and Definitions
  * -------------------------------------------------------------------------*/
@@ -561,10 +551,13 @@ WCTS_NotifyCallback
       /* SMD channel was closed from the remote side,
        * this would happen only when Riva crashed and SMD is
        * closing the channel on behalf of Riva */
+      vos_spin_lock_acquire(&pWCTSCb->wctsStateLock);
       pWCTSCb->wctsState = WCTS_STATE_REM_CLOSED;
       WPAL_TRACE(eWLAN_MODULE_DAL_CTRL, eWLAN_PAL_TRACE_LEVEL_INFO,
                  "%s: received SMD_EVENT_CLOSE WLAN driver going down now",
                  __func__);
+      vos_spin_lock_release(&pWCTSCb->wctsStateLock);
+
       /* subsystem restart: shutdown */
       wpalDriverShutdown();
       return;
@@ -575,7 +568,7 @@ WCTS_NotifyCallback
       return;
 
    case SMD_EVENT_REOPEN_READY:
-      WPAL_TRACE(eWLAN_MODULE_DAL_CTRL, eWLAN_PAL_TRACE_LEVEL_ERROR,
+      WPAL_TRACE(eWLAN_MODULE_DAL_CTRL, eWLAN_PAL_TRACE_LEVEL_INFO,
                  "%s: received SMD_EVENT_REOPEN_READY from SMD", __func__);
 
       /* unlike other events which occur when our kernel threads are
@@ -672,19 +665,6 @@ WCTS_OpenTransport
        return (WCTS_HandleType)pWCTSCb;
    }
 
-#ifdef FEATURE_R33D
-   if(port_open)
-   {
-      /* Port open before, not need to open again */
-      /* notified registered client that the channel is open */
-      ctsCB->wctsState = WCTS_STATE_OPEN;
-      ctsCB->wctsNotifyCB((WCTS_HandleType)ctsCB,
-                           WCTS_EVENT_OPEN,
-                           ctsCB->wctsNotifyCBData);
-      return (WCTS_HandleType)ctsCB;
-   }
-#endif /* FEATURE_R33D */
-
    /* allocate a ControlBlock to hold all context */
    pWCTSCb = wpalMemoryAllocate(sizeof(*pWCTSCb));
    if (NULL == pWCTSCb) {
@@ -699,12 +679,6 @@ WCTS_OpenTransport
       values */
    wpalMemoryZero(pWCTSCb, sizeof(*pWCTSCb));
 
-#ifdef FEATURE_R33D
-   smd_init(0);
-   port_open = 1;
-   ctsCB = pWCTSCb;
-#endif /* FEATURE_R33D */
-
    /*Initialise the event*/
    wpalEventInit(&pWCTSCb->wctsEvent);
 
@@ -717,6 +691,7 @@ WCTS_OpenTransport
    /* initialize the remaining fields */
    wpal_list_init(&pWCTSCb->wctsPendingQueue);
    pWCTSCb->wctsMagic   = WCTS_CB_MAGIC;
+   vos_spin_lock_init(&pWCTSCb->wctsStateLock);
    pWCTSCb->wctsState   = WCTS_STATE_OPEN_PENDING;
    pWCTSCb->wctsChannel = NULL;
 
@@ -817,18 +792,6 @@ WCTS_CloseTransport
       return eWLAN_PAL_STATUS_E_INVAL;
    }
 
-#ifdef FEATURE_R33D
-   /* Not actually close port, just pretend */
-   /* notified registered client that the channel is closed */
-   pWCTSCb->wctsState = WCTS_STATE_CLOSED;
-   pWCTSCb->wctsNotifyCB((WCTS_HandleType)pWCTSCb,
-                         WCTS_EVENT_CLOSE,
-                         pWCTSCb->wctsNotifyCBData);
-
-   printk(KERN_ERR "R33D Not need to close");
-   return eWLAN_PAL_STATUS_SUCCESS;
-#endif /* FEATURE_R33D */
-
    /*Free the buffers in the pending queue.*/
    while (eWLAN_PAL_STATUS_SUCCESS ==
           wpal_list_remove_front(&pWCTSCb->wctsPendingQueue, &pNode)) {
@@ -874,7 +837,7 @@ WCTS_CloseTransport
    pWCTSCb->wctsNotifyCB((WCTS_HandleType)pWCTSCb,
                          WCTS_EVENT_CLOSE,
                          pWCTSCb->wctsNotifyCBData);
-
+   vos_spin_lock_destroy(&pWCTSCb->wctsStateLock);
    /* release the resource */
    pWCTSCb->wctsMagic = 0;
    wpalMemoryFree(pWCTSCb);
@@ -996,14 +959,16 @@ WCTS_SendMessage
          to that state.  when we do so, we enable the remote read
          interrupt so that we'll be notified when messages are read
          from the remote end */
-      if (WCTS_STATE_DEFERRED != pWCTSCb->wctsState) {
+      vos_spin_lock_acquire(&pWCTSCb->wctsStateLock);
+      if ((WCTS_STATE_DEFERRED != pWCTSCb->wctsState) &&
+                        (WCTS_STATE_REM_CLOSED != pWCTSCb->wctsState)) {
 
-         /* Mark the state as deferred.
-            Later: We may need to protect wctsState by locks*/
+         /* Mark the state as deferred.*/
          pWCTSCb->wctsState = WCTS_STATE_DEFERRED;
 
          smd_enable_read_intr(pWCTSCb->wctsChannel);
       }
+      vos_spin_lock_release(&pWCTSCb->wctsStateLock);
 
       /*indicate to client that message was placed in deferred queue*/
       return eWLAN_PAL_STATUS_E_RESOURCES;

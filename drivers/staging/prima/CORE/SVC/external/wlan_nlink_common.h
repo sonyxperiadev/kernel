@@ -32,9 +32,6 @@
   message types and definitions that is shared between the user space service
   (e.g. BTC service) and WLAN kernel module.
 
-  Copyright (c) 2009 QUALCOMM Incorporated.
-  All Rights Reserved.
-  Qualcomm Confidential and Proprietary
 
 ===========================================================================*/
 

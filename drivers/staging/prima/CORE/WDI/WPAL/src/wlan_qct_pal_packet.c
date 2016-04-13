@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2015 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -33,9 +33,6 @@
                
    Definitions for platform with VOSS packet support and LA.
   
-   Copyright 2010 (c) Qualcomm, Incorporated.  All Rights Reserved.
-   
-   Qualcomm Confidential and Proprietary.
   
   ========================================================================*/
 
@@ -46,6 +43,7 @@
 #include "vos_packet.h"
 #include "vos_trace.h"
 #include "vos_list.h"
+#include "vos_api.h"
 
 #include <linux/skbuff.h>
 #include "dma-mapping.h"
@@ -180,14 +178,13 @@ wpt_packet * wpalPacketAlloc(wpt_packet_type pktType, wpt_uint32 nPktSize,
                                        nPktSize, 1, VOS_FALSE, 
                                        wpalPacketRXLowResourceCB, usrData);
 
-#ifndef FEATURE_R33D
       /* Reserve the entire raw rx buffer for DXE */
       if( vosStatus == VOS_STATUS_SUCCESS )
       {
         wpalPacketAvailableCB = NULL;
         vosStatus =  vos_pkt_reserve_head_fast( pVosPkt, &pData, nPktSize ); 
       }
-#endif /* FEATURE_R33D */
+
       if((NULL != pVosPkt) && (VOS_STATUS_E_RESOURCES != vosStatus))
       {
          vos_pkt_get_packet_length(pVosPkt, &allocLen);
@@ -443,6 +440,45 @@ wpt_status wpalPacketSetRxLength(wpt_packet *pPkt, wpt_uint32 len)
       return eWLAN_PAL_STATUS_E_INVAL;
    }
 }/*wpalPacketSetRxLength*/
+
+void wpalRecoverTail(wpt_packet *pFrame)
+{
+   // Validate the parameter pointers
+   if (unlikely(NULL == pFrame))
+   {
+      WPAL_TRACE(eWLAN_MODULE_PAL, eWLAN_PAL_TRACE_LEVEL_ERROR,
+                "%s : NULL packet pointer", __func__);
+      return;
+   }
+
+   return vos_recover_tail(WPAL_TO_VOS_PKT(pFrame));
+}
+
+void* wpalGetOSPktHead(wpt_packet *pFrame)
+{
+   // Validate the parameter pointers
+   if (unlikely(NULL == pFrame))
+   {
+      WPAL_TRACE(eWLAN_MODULE_PAL, eWLAN_PAL_TRACE_LEVEL_ERROR,
+                "%s : NULL packet pointer", __func__);
+      return NULL;
+   }
+
+   return vos_get_pkt_head(WPAL_TO_VOS_PKT(pFrame));
+}
+
+void* wpalGetOSPktend(wpt_packet *pFrame)
+{
+   // Validate the parameter pointers
+   if (unlikely(NULL == pFrame))
+   {
+      WPAL_TRACE(eWLAN_MODULE_PAL, eWLAN_PAL_TRACE_LEVEL_ERROR,
+                "%s : NULL packet pointer", __func__);
+      return 0;
+   }
+
+   return vos_get_pkt_end(WPAL_TO_VOS_PKT(pFrame));
+}
 
 /*
   Set of helper functions that will prepare packet for DMA transfer,
@@ -976,3 +1012,65 @@ void wpalPacketStallDumpLog
    return;
 }
 #endif /* FEATURE_WLAN_DIAG_SUPPORT */
+
+/*---------------------------------------------------------------------------
+    wpalLogPktSerialize - Serialize Logging data to logger thread
+
+    Param:
+    wpt_packet pFrame - The packet which contains the logging data.
+                        This packet has to be a VALID packet, as this
+                        API will not do any checks on the validity of
+                        the packet.
+
+    Return:
+        NONE
+
+---------------------------------------------------------------------------*/
+void wpalLogPktSerialize
+(
+   wpt_packet *pFrame
+)
+{
+   WDI_DS_RxMetaInfoType *pRxMetadata;
+   void                  *pBuffer;
+   VOS_STATUS             vosStatus;
+
+   vosStatus = vos_pkt_peek_data(WPAL_TO_VOS_PKT(pFrame), 0, &pBuffer,
+                                 WDI_DS_LOG_PKT_TYPE_LEN);
+
+   if (VOS_IS_STATUS_SUCCESS(vosStatus))
+   {
+      // a VALID packet implies non NULL meta-data
+      pRxMetadata = WDI_DS_ExtractRxMetaData(pFrame);
+      pRxMetadata->loggingData = *((wpt_uint32 *)pBuffer);
+
+      wpalPacketRawTrimHead(pFrame, WDI_DS_LOG_PKT_TYPE_LEN);
+
+      vos_logger_pkt_serialize(WPAL_TO_VOS_PKT(pFrame), pRxMetadata->loggingData);
+   }
+   else
+   {
+      vos_pkt_return_packet(WPAL_TO_VOS_PKT(pFrame));
+   }
+}
+
+/*---------------------------------------------------------------------------
+    wpalFwLogPktSerialize - Serialize Logging data to logger thread
+
+    Param:
+    wpt_packet pFrame - The packet which contains the logging data.
+                        This packet has to be a VALID packet, as this
+                        API will not do any checks on the validity of
+                        the packet.
+
+    Return:
+        NONE
+
+---------------------------------------------------------------------------*/
+void wpalFwLogPktSerialize
+(
+   wpt_packet *pFrame
+)
+{
+    vos_logger_pkt_serialize(WPAL_TO_VOS_PKT(pFrame),LOG_PKT_TYPE_FW_LOG);
+}

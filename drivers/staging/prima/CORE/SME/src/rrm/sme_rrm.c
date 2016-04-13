@@ -31,9 +31,6 @@
   
   \brief implementation for SME RRM APIs
   
-   Copyright 2008 (c) Qualcomm, Incorporated.  All Rights Reserved.
-   
-   Qualcomm Confidential and Proprietary.
   
   ========================================================================*/
 
@@ -230,6 +227,8 @@ static eHalStatus sme_RrmSendBeaconReportXmitInd( tpAniSirGlobal pMac,
                                             ie_len+sizeof(tSirBssDescription));
                if (NULL == pBeaconRep->pBssDescription[msgCounter])
                    break;
+               vos_mem_zero(pBeaconRep->pBssDescription[msgCounter],
+                            ie_len+sizeof(tSirBssDescription));
                vos_mem_copy( pBeaconRep->pBssDescription[msgCounter],
                              pBssDesc,
                              sizeof(tSirBssDescription) );

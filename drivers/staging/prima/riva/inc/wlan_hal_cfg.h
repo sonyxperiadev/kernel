@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013,2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -266,13 +266,22 @@
 #define QWLAN_HAL_CFG_ENABLE_DYNAMIC_WMMPS                   208
 #define QWLAN_HAL_CFG_BURST_MODE_BE_TXOP_VALUE               209
 #define QWLAN_HAL_CFG_ENABLE_DYNAMIC_RA_START_RATE           210
+#define QWLAN_HAL_CFG_BTC_FAST_WLAN_CONN_PREF                211
+#define QWLAN_HAL_CFG_ENABLE_RTSCTS_HTVHT                    212
+#define QWLAN_HAL_CFG_BTC_STATIC_OPP_WLAN_IDLE_WLAN_LEN      213
+#define QWLAN_HAL_CFG_BTC_STATIC_OPP_WLAN_IDLE_BT_LEN        214
+#define QWLAN_HAL_CFG_LINK_FAIL_TX_CNT                       215
+#define QWLAN_HAL_CFG_TOGGLE_ARP_BDRATES                     216
+#define QWLAN_HAL_CFG_OPTIMIZE_CA_EVENT                      217
+#define QWLAN_HAL_CFG_EXT_SCAN_CONC_MODE                     218
+#define QWLAN_HAL_CFG_BAR_WAKEUP_HOST_DISABLE                219
+#define QWLAN_HAL_CFG_SAR_BOFFSET_CORRECTION_ENABLE          220
 
-
-#define QWLAN_HAL_CFG_MAX_PARAMS                             211
+#define QWLAN_HAL_CFG_MAX_PARAMS                             221
 
 
 /* Total number of Integer CFGs. This is used while allocating the memory for TLV */
-#define QWLAN_HAL_CFG_INTEGER_PARAM                     211
+#define QWLAN_HAL_CFG_INTEGER_PARAM                     221
 
 /*-------------------------------------------------------------------------
   Configuration Parameter min, max, defaults
@@ -1041,5 +1050,42 @@
 #define QWLAN_HAL_CFG_ENABLE_DYNAMIC_RA_START_RATE_MIN 0
 #define QWLAN_HAL_CFG_ENABLE_DYNAMIC_RA_START_RATE_MAX 300
 
+/* QWLAN_HAL_CFG_BTC_FAST_WLAN_CONN_PREF */
+#define QWLAN_HAL_CFG_BTC_FAST_WLAN_CONN_PREF_DEF 1
+#define QWLAN_HAL_CFG_BTC_FAST_WLAN_CONN_PREF_MIN 0
+#define QWLAN_HAL_CFG_BTC_FAST_WLAN_CONN_PREF_MAX 1
+
+/* QWLAN_HAL_CFG_ENABLE_RTSCTS_HTVHT */
+/* Bit mask value to enable RTS/CTS for different modes
+ * for 2.4 GHz, HT20 - 0x0001, for 2.4 GHz, HT40 - 0x0002
+ * for 2.4 GHz, VHT20 - 0x0004, for 2.4 GHz, VHT40 - 0x0008
+ * for 5 GHz, HT20 - 0x0100, for 5 GHz, HT40 - 0x0200
+ * for 5 GHz, VHT20 - 0x0400, for 5 GHz, VHT40 - 0x0800
+ * for 5 GHz, VHT80 - 0x1000
+ */
+#define QWLAN_HAL_CFG_ENABLE_RTSCTS_HTVHT_MIN 0x0000
+#define QWLAN_HAL_CFG_ENABLE_RTSCTS_HTVHT_MAX 0x1f0f
+#define QWLAN_HAL_CFG_ENABLE_RTSCTS_HTVHT_DEF 0x0000
+
+/* QWLAN_HAL_CFG_BTC_STATIC_OPP_WLAN_IDLE_WLAN_LEN */
+#define QWLAN_HAL_CFG_BTC_STATIC_OPP_WLAN_IDLE_WLAN_LEN_MIN     0
+#define QWLAN_HAL_CFG_BTC_STATIC_OPP_WLAN_IDLE_WLAN_LEN_MAX     250000
+#define QWLAN_HAL_CFG_BTC_STATIC_OPP_WLAN_IDLE_WLAN_LEN_DEF     40000
+/* QWLAN_HAL_CFG_BTC_STATIC_OPP_WLAN_IDLE_BT_LEN */
+#define QWLAN_HAL_CFG_BTC_STATIC_OPP_WLAN_IDLE_BT_LEN_MIN       0
+#define QWLAN_HAL_CFG_BTC_STATIC_OPP_WLAN_IDLE_BT_LEN_MAX       250000
+#define QWLAN_HAL_CFG_BTC_STATIC_OPP_WLAN_IDLE_BT_LEN_DEF       40000
+/* QWLAN_HAL_CFG_LINK_FAIL_TX_CNT */
+#define QWLAN_HAL_CFG_LINK_FAIL_TX_CNT_MIN    50
+#define QWLAN_HAL_CFG_LINK_FAIL_TX_CNT_MAX    1000
+#define QWLAN_HAL_CFG_LINK_FAIL_TX_CNT_DEF    200
+/*QWLAN_HAL_CFG_TOGGLE_ARP_BDRATES*/
+#define QWLAN_HAL_CFG_TOGGLE_ARP_BDRATES_MIN  0
+#define QWLAN_HAL_CFG_TOGGLE_ARP_BDRATES_MAX  1
+#define QWLAN_HAL_CFG_TOGGLE_ARP_BDRATES_DEF  0
+/* QWLAN_HAL_CFG_OPTIMIZE_CA_EVENT */
+#define QWLAN_HAL_CFG_OPTIMIZE_CA_EVENT_DISABLE  0
+#define QWLAN_HAL_CFG_OPTIMIZE_CA_EVENT_ENABLE   1
+#define QWLAN_HAL_CFG_OPTIMIZE_CA_EVENT_DEFAULT  0
 
 #endif //__WLAN_HAL_CFG_H__

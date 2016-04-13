@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2015 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -70,6 +70,8 @@
 
   --------------------------------------------------------------------------*/
 typedef v_VOID_t ( * sysResponseCback ) ( v_VOID_t *pUserData );
+typedef v_VOID_t ( * sysThreadProbeCback ) ( int threadId );
+
 
 
 
@@ -87,6 +89,7 @@ typedef enum
    SYS_MSG_ID_MC_STOP,
    SYS_MSG_ID_FTM_RSP,
 
+   SYS_MSG_ID_RX_THR_PROBE,
 } SYS_MSG_ID;
 
 /*---------------------------------------------------------------------------

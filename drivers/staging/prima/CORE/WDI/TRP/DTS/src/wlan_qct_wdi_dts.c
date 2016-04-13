@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -36,8 +36,6 @@
  *  This file contains the external API implemntation exposed by the 
  *   wlan device abstarction layer module.
  *
- *   Copyright (c) 2008 QUALCOMM Incorporated. All Rights Reserved.
- *   Qualcomm Confidential and Proprietary
  */
 
 
@@ -48,10 +46,8 @@
 #include "wlan_qct_wdi_dts.h"
 #include "wlan_qct_wdi_dp.h"
 #include "wlan_qct_wdi_sta.h"
-
-#ifdef DEBUG_ROAM_DELAY
 #include "vos_utils.h"
-#endif
+#include "vos_api.h"
 
 static WDTS_TransportDriverTrype gTransportDriver = {
   WLANDXE_Open, 
@@ -63,7 +59,9 @@ static WDTS_TransportDriverTrype gTransportDriver = {
   WLANDXE_ChannelDebug,
   WLANDXE_Stop,
   WLANDXE_Close,
-  WLANDXE_GetFreeTxDataResNumber
+  WLANDXE_GetFreeTxDataResNumber,
+  WLANDXE_SetupLogTransfer,
+  WLANDXE_StartLogTransfer
 };
 
 static WDTS_SetPowerStateCbInfoType gSetPowerStateCbInfo;
@@ -75,6 +73,25 @@ typedef struct
    uint32 tputBpms;  //unit in Bytes per msec = (tputRateX1024x1024)/(8x10X1000) ~= (tputRate*13)
    uint32 tputBpus;  //unit in Bytes per usec: round off to integral value
 }WDTS_RateInfo;
+
+#define WDTS_MAX_NUMBER_OF_RX_PKT 5
+#define WDTS_MAX_PAGE_SIZE 4096
+#define WDTS_MAX_RXDB_DATA_SIZE 128
+
+struct WDTS_RxPktInfo
+{
+    uint8 rx_bd[WDTS_MAX_RXDB_DATA_SIZE];
+    void *pFrame_head;
+    void *pFrame_tail;
+    uint32 pFrame_len;
+};
+
+static struct WDTS_PktInfoBuff
+{
+    struct WDTS_RxPktInfo PktInfo[WDTS_MAX_NUMBER_OF_RX_PKT];
+    uint32 current_count;
+    uint8 current_position;
+}WDTS_Pkt_Data_Buff = { .current_position = 0, .current_count = 0 };
 
 #define WDTS_MAX_RATE_NUM               137
 #define WDTS_MAX_11B_RATE_NUM           8
@@ -414,6 +431,9 @@ wpt_status WDTS_TxPacketComplete(void *pContext, wpt_packet *pFrame, wpt_status 
 
   // Do Sanity checks
   if(NULL == pContext || NULL == pFrame){
+    VOS_TRACE(VOS_MODULE_ID_WDI, VOS_TRACE_LEVEL_WARN,
+                 "%s: Tx complete cannot proceed(%p:%p)",
+                 __func__, pContext, pFrame);
     return eWLAN_PAL_STATUS_E_FAILURE;
   }
 
@@ -452,6 +472,8 @@ wpt_status WDTS_TxPacketComplete(void *pContext, wpt_packet *pFrame, wpt_status 
     // intentional fall-through to handle eapol packet as mgmt
     case WDI_MAC_MGMT_FRAME:
       WDI_DS_MemPoolFree(&(pClientData->mgmtMemPool), pvBDHeader, physBDHeader);
+      VOS_TRACE(VOS_MODULE_ID_WDI, VOS_TRACE_LEVEL_INFO,
+                   "%s: Management frame Tx complete status: %d", __func__, status);
       break;
   }
   WDI_SetBDPointers(pFrame, 0, 0);
@@ -511,6 +533,56 @@ WDTS_GetReplayCounterFromRxBD
 #endif
 }
 
+/* Store RXBD, skb lenght, skb head, and skb end offset to global buffer.
+ * This function should  be invoked when MPDU lenght + MPDU herader Offset
+ * if higher then 3872 bytes.
+ * Parameters:
+ * pFrame:Refernce to PAL frame.
+ * pBDHeader: BD header for PAL Frame.
+ * Return Value: v_VOID_t
+ *
+ */
+v_VOID_t
+WDTS_StoreMetaInfo(wpt_packet *pFrame, wpt_uint8 *pBDHeader)
+{
+    wpt_uint8  usMPDUHLen;
+    wpt_boolean usAsf, usAef, usLsf, usESF;
+    wpt_uint16 usMPDULen;
+    wpt_uint32 usPmiCmd24to25;
+    struct WDTS_RxPktInfo *current_data =
+           &WDTS_Pkt_Data_Buff.PktInfo[WDTS_Pkt_Data_Buff.current_position];
+
+    vos_mem_copy(current_data->rx_bd, (void*)wpalPacketGetRawBuf(pFrame),
+                                                       WDTS_MAX_RXDB_DATA_SIZE);
+
+    usMPDULen = (wpt_uint16)WDI_RX_BD_GET_MPDU_LEN(pBDHeader);
+    usMPDUHLen = (wpt_uint8)WDI_RX_BD_GET_MPDU_H_LEN(pBDHeader);
+    usAsf = (wpt_boolean)WDI_RX_BD_GET_ASF(pBDHeader);
+    usAef = (wpt_boolean)WDI_RX_BD_GET_AEF(pBDHeader);
+    usLsf = (wpt_boolean)WDI_RX_BD_GET_LSF(pBDHeader);
+    usESF = (wpt_boolean)WDI_RX_BD_GET_ESF(pBDHeader);
+    usPmiCmd24to25 = (wpt_uint32)WDI_RX_BD_GET_PMICMD_24TO25(pBDHeader);
+
+    current_data->pFrame_head = wpalGetOSPktHead(pFrame);
+    current_data->pFrame_tail = wpalGetOSPktend(pFrame);
+    current_data->pFrame_len = wpalPacketGetLength(pFrame);
+
+    WDTS_Pkt_Data_Buff.current_count++;
+
+    /* Dump packet info */
+    VOS_TRACE(VOS_MODULE_ID_WDI, VOS_TRACE_LEVEL_ERROR,
+                  "count: %d usMPDULen: 0x%x, usMPDUHLen: 0x%x, usAsf: %x,"
+                  "usAef: %x, usLsf: 0x%x, usESF: 0x%x, usPmiCmd24to25: 0x%x,"
+                  "skb_len: 0x%x",WDTS_Pkt_Data_Buff.current_count, usMPDULen,
+                  usMPDUHLen, usAsf, usAef, usLsf, usESF, usPmiCmd24to25,
+                  current_data->pFrame_len);
+
+    WDTS_Pkt_Data_Buff.current_position++;
+    if(WDTS_Pkt_Data_Buff.current_position >= WDTS_MAX_NUMBER_OF_RX_PKT)
+       WDTS_Pkt_Data_Buff.current_position = 0;
+
+    return;
+}
 
 /* DTS Rx packet function. 
  * This function should be invoked by the transport device to indicate 
@@ -537,6 +609,14 @@ wpt_status WDTS_RxPacket (void *pContext, wpt_packet *pFrame, WDTS_ChannelType c
   // Do Sanity checks
   if(NULL == pContext || NULL == pFrame){
     return eWLAN_PAL_STATUS_E_FAILURE;
+  }
+
+  // Normal DMA transfer does not contain RxBD
+  if (WDTS_CHANNEL_RX_FW_LOG == channel)
+  {
+      wpalFwLogPktSerialize(pFrame);
+
+      return eWLAN_PAL_STATUS_SUCCESS;
   }
 
   /*------------------------------------------------------------------------
@@ -585,6 +665,53 @@ wpt_status WDTS_RxPacket (void *pContext, wpt_packet *pFrame, WDTS_ChannelType c
       ucMPDUHOffset, usMPDUDOffset, usMPDULen, ucMPDUHLen, ucTid,
       WDI_RX_BD_HEADER_SIZE);
 
+  pRxMetadata = WDI_DS_ExtractRxMetaData(pFrame);
+
+  // Special handling for frames which contain logging information
+  if (WDTS_CHANNEL_RX_LOG == channel)
+  {
+      if (VPKT_SIZE_BUFFER_ALIGNED < (usMPDULen+ucMPDUHOffset))
+      {
+          /* Size of the packet tranferred by the DMA engine is
+           * greater than the the memory allocated for the skb
+           * Recover the SKB  case of length is in same memory page
+           */
+          WPAL_TRACE(eWLAN_MODULE_DAL_DATA, eWLAN_PAL_TRACE_LEVEL_FATAL,
+                   "Invalid Frame size, might memory corrupted(%d+%d/%d)",
+                   usMPDULen, ucMPDUHOffset, VPKT_SIZE_BUFFER_ALIGNED);
+
+          // Store RXBD,  skb head, tail and skb lenght in circular buffer
+          WDTS_StoreMetaInfo(pFrame, pBDHeader);
+
+          if ((usMPDULen+ucMPDUHOffset) <= WDTS_MAX_PAGE_SIZE)
+          {
+              wpalRecoverTail(pFrame);
+              wpalPacketFree(pFrame);
+          } else {
+              //Recovery may cause adjoining buffer corruption
+              WPAL_BUG(0);
+          }
+
+          return eWLAN_PAL_STATUS_SUCCESS;
+      }
+
+      /* Firmware should send the Header offset as length
+       * of RxBd and data length should be populated to
+       * the length of total data being sent
+       */
+      wpalPacketSetRxLength(pFrame, usMPDULen+ucMPDUHOffset);
+      wpalPacketRawTrimHead(pFrame, ucMPDUHOffset);
+
+      // Invoke Rx complete callback
+      wpalLogPktSerialize(pFrame);
+
+      return eWLAN_PAL_STATUS_SUCCESS;
+  }
+  else
+  {
+      pRxMetadata->loggingData = 0;
+  }
+
   if(!isFcBd)
   {
       if(usMPDUDOffset <= ucMPDUHOffset || usMPDULen < ucMPDUHLen) {
@@ -609,19 +736,31 @@ wpt_status WDTS_RxPacket (void *pContext, wpt_packet *pFrame, WDTS_ChannelType c
         ucMPDUHOffset = usMPDUDOffset;
       }
 
-      if(VPKT_SIZE_BUFFER_ALIGNED < (usMPDULen+ucMPDUHOffset)){
-        WPAL_TRACE(eWLAN_MODULE_DAL_DATA, eWLAN_PAL_TRACE_LEVEL_FATAL,
+      if (VPKT_SIZE_BUFFER_ALIGNED < (usMPDULen+ucMPDUHOffset))
+      {
+          /* Size of the packet tranferred by the DMA engine is
+           * greater than the the memory allocated for the skb
+           * Recover the SKB  case of length is in same memory page
+           */
+          WPAL_TRACE(eWLAN_MODULE_DAL_DATA, eWLAN_PAL_TRACE_LEVEL_FATAL,
                    "Invalid Frame size, might memory corrupted(%d+%d/%d)",
                    usMPDULen, ucMPDUHOffset, VPKT_SIZE_BUFFER_ALIGNED);
 
-        /* Size of the packet tranferred by the DMA engine is
-         * greater than the the memory allocated for the skb
-         */
-        WPAL_BUG(0);
+          // Store RXBD,  skb head, tail and skb lenght in circular buffer
+          WDTS_StoreMetaInfo(pFrame, pBDHeader);
 
-        wpalPacketFree(pFrame);
-        return eWLAN_PAL_STATUS_SUCCESS;
+          if ((usMPDULen+ucMPDUHOffset) <= WDTS_MAX_PAGE_SIZE)
+          {
+              wpalRecoverTail(pFrame);
+              wpalPacketFree(pFrame);
+          } else {
+              //Recovery may cause adjoining buffer corruption
+              WPAL_BUG(0);
+          }
+
+          return eWLAN_PAL_STATUS_SUCCESS;
       }
+
       if(eWLAN_PAL_STATUS_SUCCESS != wpalPacketSetRxLength(pFrame, usMPDULen+ucMPDUHOffset))
       {
           DTI_TRACE( DTI_TRACE_LEVEL_ERROR, "Invalid Frame Length, Frame dropped..");
@@ -634,9 +773,6 @@ wpt_status WDTS_RxPacket (void *pContext, wpt_packet *pFrame, WDTS_ChannelType c
           wpalPacketFree(pFrame);
           return eWLAN_PAL_STATUS_SUCCESS;
       }
-     
-
-      pRxMetadata = WDI_DS_ExtractRxMetaData(pFrame);
 
       pRxMetadata->fc = isFcBd;
       pRxMetadata->staId = WDI_RX_BD_GET_STA_ID(pBDHeader);
@@ -730,16 +866,10 @@ wpt_status WDTS_RxPacket (void *pContext, wpt_packet *pFrame, WDTS_ChannelType c
       WPAL_PACKET_SET_BD_POINTER(pFrame, pBDHeader);
       WPAL_PACKET_SET_BD_LENGTH(pFrame, sizeof(WDI_RxBdType));
 
-#ifdef DEBUG_ROAM_DELAY
-      //Hack we need to send the frame type, so we are using bufflen as frametype
-      vos_record_roam_event(e_DXE_RX_PKT_TIME, (void *)pFrame, pRxMetadata->type);
-      //Should we use the below check to avoid funciton calls
-      /*
-      if(gRoamDelayMetaInfo.dxe_monitor_tx)
+      if (((WDI_ControlBlockType *)pClientData->pcontext)->roamDelayStatsEnabled)
       {
+          vos_record_roam_event(e_DXE_RX_PKT_TIME, (void *)pFrame, pRxMetadata->type);
       }
-      */
-#endif
       // Invoke Rx complete callback
       pClientData->receiveFrameCB(pClientData->pCallbackContext, pFrame);  
   }
@@ -748,7 +878,6 @@ wpt_status WDTS_RxPacket (void *pContext, wpt_packet *pFrame, WDTS_ChannelType c
       wpalPacketSetRxLength(pFrame, usMPDULen+ucMPDUHOffset);
       wpalPacketRawTrimHead(pFrame, ucMPDUHOffset);
 
-      pRxMetadata = WDI_DS_ExtractRxMetaData(pFrame);
       //flow control related
       pRxMetadata->fc = isFcBd;
       pRxMetadata->mclkRxTimestamp = WDI_RX_BD_GET_TIMESTAMP(pBDHeader);
@@ -809,6 +938,76 @@ wpt_status WDTS_OOResourceNotification(void *pContext, WDTS_ChannelType channel,
 
 }
 
+void WDTS_MbReceiveMsg(void *pContext)
+{
+  tpLoggingMailBox pLoggingMb;
+  WDI_DS_LoggingSessionType *pLoggingSession;
+  wpt_int8 i, noMem = 0;
+  wpt_uint32 totalLen = 0;
+
+  pLoggingMb = (tpLoggingMailBox)WDI_DS_GetLoggingMbAddr(pContext);
+  pLoggingSession = (WDI_DS_LoggingSessionType *)
+                       WDI_DS_GetLoggingSession(pContext);
+
+  for(i = 0; i < MAX_NUM_OF_BUFFER; i++)
+  {
+     pLoggingSession->logBuffAddress[i] = pLoggingMb->logBuffAddress[i];
+     if (!noMem && (pLoggingMb->logBuffLength[i] <= MAX_LOG_BUFFER_LENGTH))
+     {
+        pLoggingSession->logBuffLength[i] = gTransportDriver.setupLogTransfer(
+                                               pLoggingMb->logBuffAddress[i],
+                                               pLoggingMb->logBuffLength[i]);
+     }
+     else
+     {
+        pLoggingSession->logBuffLength[i] = 0;
+        continue;
+     }
+
+     totalLen += pLoggingSession->logBuffLength[i];
+
+     if (pLoggingSession->logBuffLength[i] < pLoggingMb->logBuffLength[i])
+     {
+        noMem = 1;
+     }
+  }
+
+  pLoggingSession->done = pLoggingMb->done;
+  pLoggingSession->logType = pLoggingMb->logType;
+  // Done using Mailbox, zero out the memory.
+  wpalMemoryZero(pLoggingMb, sizeof(tLoggingMailBox));
+
+  if (totalLen)
+  {
+     if (gTransportDriver.startLogTransfer() == eWLAN_PAL_STATUS_SUCCESS)
+        return;
+  }
+
+  // Send Done event to upper layers, since we wont be getting any from DXE
+}
+
+void WDTS_LogRxDone(void *pContext)
+{
+  WDI_DS_LoggingSessionType *pLoggingSession;
+
+  pLoggingSession = (WDI_DS_LoggingSessionType *)
+                       WDI_DS_GetLoggingSession(pContext);
+
+  if (NULL == pContext || pLoggingSession == NULL)
+  {
+    return;
+  }
+  /* check for done and Log type Mgmt frame = 0, QXDM = 1, FW Mem dump = 2 */
+  if (pLoggingSession->done && pLoggingSession->logType <= VALID_FW_LOG_TYPES)
+     vos_process_done_indication(pLoggingSession->logType, 0);
+
+  pLoggingSession->done = 0;
+  pLoggingSession->logType = 0;
+  ((WDI_DS_ClientDataType *)(pContext))->rxLogCB();
+
+  return;
+}
+
 /* DTS open  function. 
  * On open the transport device should initialize itself.
  * Parameters:
@@ -824,6 +1023,7 @@ wpt_status WDTS_openTransport( void *pContext)
   void *pDTDriverContext; 
   WDI_DS_ClientDataType *pClientData;
   WDI_Status sWdiStatus = WDI_STATUS_SUCCESS;
+  WDTS_ClientCallbacks WDTSCb;
 
   pClientData = (WDI_DS_ClientDataType*) wpalMemoryAllocate(sizeof(WDI_DS_ClientDataType));
   if (!pClientData){
@@ -840,8 +1040,13 @@ wpt_status WDTS_openTransport( void *pContext)
      return eWLAN_PAL_STATUS_E_FAILURE;
   }
   WDT_AssignTransportDriverContext(pContext, pDTDriverContext);
-  gTransportDriver.register_client(pDTDriverContext, WDTS_RxPacket, WDTS_TxPacketComplete, 
-    WDTS_OOResourceNotification, (void*)pClientData);
+
+  WDTSCb.rxFrameReadyCB = WDTS_RxPacket;
+  WDTSCb.txCompleteCB = WDTS_TxPacketComplete;
+  WDTSCb.lowResourceCB = WDTS_OOResourceNotification;
+  WDTSCb.receiveMbMsgCB = WDTS_MbReceiveMsg;
+  WDTSCb.receiveLogCompleteCB = WDTS_LogRxDone;
+  gTransportDriver.register_client(pDTDriverContext, WDTSCb, (void*)pClientData);
 
   /* Create a memory pool for Mgmt BDheaders.*/
   sWdiStatus = WDI_DS_MemPoolCreate(&pClientData->mgmtMemPool, WDI_DS_MAX_CHUNK_SIZE, 
@@ -858,6 +1063,10 @@ wpt_status WDTS_openTransport( void *pContext)
   }
 
   wpalMemoryZero(&gDsTrafficStats, sizeof(gDsTrafficStats));
+
+  sWdiStatus = WDI_DS_LoggingMbCreate(&pClientData->loggingMbContext, sizeof(tLoggingMailBox));
+  if (WDI_STATUS_SUCCESS != sWdiStatus)
+    return eWLAN_PAL_STATUS_E_NOMEM;
 
   return eWLAN_PAL_STATUS_SUCCESS;
 
@@ -933,16 +1142,10 @@ wpt_status WDTS_TxPacket(void *pContext, wpt_packet *pFrame)
 #endif
   // Send packet to  Transport Driver. 
   status =  gTransportDriver.xmit(pDTDriverContext, pFrame, channel);
-#ifdef DEBUG_ROAM_DELAY
-   //Hack we need to send the frame type, so we are using bufflen as frametype
-   vos_record_roam_event(e_DXE_FIRST_XMIT_TIME, (void *)pFrame, pTxMetadata->frmType);
-   //Should we use the below check to avoid funciton calls
-   /*
-   if(gRoamDelayMetaInfo.dxe_monitor_tx)
-   {
-   }
-   */
-#endif
+  if (((WDI_ControlBlockType *)pContext)->roamDelayStatsEnabled)
+  {
+      vos_record_roam_event(e_DXE_FIRST_XMIT_TIME, (void *)pFrame, pTxMetadata->frmType);
+  }
   return status;
 }
 
@@ -1070,7 +1273,9 @@ wpt_status WDTS_Close(void *pContext)
   
   /*Destroy the mem pool for mgmt BD headers*/
   WDI_DS_MemPoolDestroy(&pClientData->dataMemPool);
-  
+
+  WDI_DS_LoggingMbDestroy(&pClientData->loggingMbContext);
+
   status =  gTransportDriver.close(pDTDriverContext);
 
   wpalMemoryFree(pClientData);

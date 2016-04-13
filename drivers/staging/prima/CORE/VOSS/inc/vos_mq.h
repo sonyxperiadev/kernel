@@ -156,6 +156,43 @@ typedef enum
   --------------------------------------------------------------------------*/
 VOS_STATUS vos_mq_post_message( VOS_MQ_ID msgQueueId, vos_msg_t *message );
 
+/**--------------------------------------------------------------------------
+  \brief vos_mq_post_message_high_pri() - posts a high priority message to
+           a message queue
+
+  This API allows messages to be posted to the head of a specific message
+  queue. Messages  can be posted to the following message queues:
+
+  <ul>
+    <li> SME
+    <li> PE
+    <li> HAL
+    <li> TL
+  </ul>
+
+  \param msgQueueId - identifies the message queue upon which the message
+         will be posted.
+
+  \param message - a pointer to a message buffer.  Memory for this message
+         buffer is allocated by the caller and free'd by the vOSS after the
+         message is posted to the message queue.  If the consumer of the
+         message needs anything in this message, it needs to copy the contents
+         before returning from the message queue handler.
+
+  \return VOS_STATUS_SUCCESS - the message has been successfully posted
+          to the message queue.
+
+          VOS_STATUS_E_INVAL - The value specified by msgQueueId does not
+          refer to a valid Message Queue Id.
+
+          VOS_STATUS_E_FAULT  - message is an invalid pointer.
+
+          VOS_STATUS_E_FAILURE - the message queue handler has reported
+          an unknown failure.
+  --------------------------------------------------------------------------*/
+
+VOS_STATUS vos_mq_post_message_high_pri(VOS_MQ_ID msgQueueId, vos_msg_t *message);
+
 
 /**---------------------------------------------------------------------------
   

@@ -42,8 +42,6 @@ DESCRIPTION
   by the same name !! 
   
       
-  Copyright (c) 2010 QUALCOMM Incorporated. All Rights Reserved.
-  Qualcomm Confidential and Proprietary
 ===========================================================================*/
 
 

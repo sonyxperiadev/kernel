@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2015 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -64,6 +64,8 @@
 #define ANI_MAX_RADIOS      3
 #define ANI_NL_MSG_OK       0
 #define ANI_NL_MSG_ERROR    -1
+#define INVALID_PID         -1
+
 #define ANI_NL_MSG_OVERHEAD (NLMSG_SPACE(tAniHdr + 4))
 /*
  * Packet Format for READ_REGISTER & WRITE_REGISTER:
@@ -99,6 +101,12 @@ typedef struct sAniNlMsg {
     int radio;                        // unit number of the radio
     tAniHdr wmsg;                     // Airgo Message Header
 } tAniNlHdr;
+typedef struct sAniNlMgmtLogMsg {
+    struct  nlmsghdr nlh;
+    int radio;
+    tAniHdr wmsg;
+    uint32 frameSize;
+} tAniNlLogHdr;
 typedef struct sAniAppRegReq {
     tAniNlModTypes type;              // module id
     int pid;                          // process id

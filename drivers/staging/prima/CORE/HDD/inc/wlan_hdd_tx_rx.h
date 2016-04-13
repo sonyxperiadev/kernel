@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -111,20 +111,30 @@
 #define DHCP_OPTION53_STATUS_OFFSET    ( 0x11C )
 /* WLAN_DHCP_DEBUG */
 
-
-
+#define TID3 0x60
 
 
 /*--------------------------------------------------------------------------- 
   Type declarations
   -------------------------------------------------------------------------*/ 
  
-/*--------------------------------------------------------------------------- 
+/*---------------------------------------------------------------------------
   Function declarations and documenation
-  -------------------------------------------------------------------------*/ 
+  -------------------------------------------------------------------------*/
+/**============================================================================
+  @brief hdd_ibss_hard_start_xmit() - Function registered with the Linux OS for
+  transmitting packets in IBSS mode.
+
+  @param skb      : [in]  pointer to OS packet (sk_buff)
+  @param dev      : [in] pointer to network device
+
+  @return         : NET_XMIT_DROP if packets are dropped
+                  : NET_XMIT_SUCCESS if packet is enqueued succesfully
+  ===========================================================================*/
+extern int hdd_ibss_hard_start_xmit(struct sk_buff *skb, struct net_device *dev);
 
 /**============================================================================
-  @brief hdd_hard_start_xmit() - Function registered with the Linux OS for 
+  @brief hdd_hard_start_xmit() - Function registered with the Linux OS for
   transmitting packets
 
   @param skb      : [in]  pointer to OS packet (sk_buff)
@@ -155,6 +165,26 @@ extern void hdd_tx_timeout(struct net_device *dev);
   @return         : pointer to net_device_stats structure
   ===========================================================================*/
 extern struct net_device_stats* hdd_stats(struct net_device *dev);
+
+/**============================================================================
+  @brief hdd_ibss_init_tx_rx() - Init function to initialize Tx/RX
+  modules in HDD
+
+  @param pAdapter : [in] pointer to adapter context
+  @return         : VOS_STATUS_E_FAILURE if any errors encountered
+                  : VOS_STATUS_SUCCESS otherwise
+  ===========================================================================*/
+extern void hdd_ibss_init_tx_rx( hdd_adapter_t *pAdapter );
+
+/**============================================================================
+  @brief hdd_ibss_deinit_tx_rx() - Deinit function to clean up Tx/RX
+  modules in HDD
+
+  @param pAdapter : [in] pointer to adapter context..
+  @return         : VOS_STATUS_E_FAILURE if any errors encountered.
+                  : VOS_STATUS_SUCCESS otherwise
+  ===========================================================================*/
+extern VOS_STATUS hdd_ibss_deinit_tx_rx( hdd_adapter_t *pAdapter );
 
 /**============================================================================
   @brief hdd_init_tx_rx() - Init function to initialize Tx/RX
@@ -203,6 +233,26 @@ extern VOS_STATUS hdd_tx_complete_cbk( v_VOID_t *vosContext,
                                        VOS_STATUS vosStatusIn );
 
 /**============================================================================
+  @brief hdd_ibss_tx_fetch_packet_cbk() - Callback function invoked by TL to
+  fetch a packet for transmission.
+
+  @param vosContext   : [in] pointer to VOS context
+  @param staId        : [in] Station for which TL is requesting a pkt
+  @param ucAC         : [in] pointer to access category requested by TL
+  @param pVosPacket   : [out] pointer to VOS packet packet pointer
+  @param pPktMetaInfo : [out] pointer to meta info for the pkt
+
+  @return             : VOS_STATUS_E_EMPTY if no packets to transmit
+                      : VOS_STATUS_E_FAILURE if any errors encountered
+                      : VOS_STATUS_SUCCESS otherwise
+  ===========================================================================*/
+extern VOS_STATUS hdd_ibss_tx_fetch_packet_cbk( v_VOID_t *vosContext,
+                                           v_U8_t *pStaId,
+                                           WLANTL_ACEnumType    ucAC,
+                                           vos_pkt_t **ppVosPacket,
+                                           WLANTL_MetaInfoType *pPktMetaInfo );
+
+/**============================================================================
   @brief hdd_tx_fetch_packet_cbk() - Callback function invoked by TL to 
   fetch a packet for transmission.
 
@@ -236,6 +286,8 @@ extern VOS_STATUS hdd_tx_fetch_packet_cbk( v_VOID_t *vosContext,
   =============================================================================*/
 extern VOS_STATUS hdd_tx_low_resource_cbk( vos_pkt_t *pVosPacket, 
                                            v_VOID_t *userData );
+
+extern VOS_STATUS hdd_rx_packet_monitor_cbk(v_VOID_t *vosContext,vos_pkt_t *pVosPacket, int conversion);
 
 /**============================================================================
   @brief hdd_rx_packet_cbk() - Receive callback registered with TL.
@@ -324,5 +376,26 @@ void hdd_wmm_acquire_access_required(hdd_adapter_t *pAdapter,
   @return        : void
    ========================================================================*/
 void hdd_dump_dhcp_pkt(struct sk_buff *skb, int path);
+
+#ifdef FEATURE_WLAN_DIAG_SUPPORT
+/**
+ * wlan_hdd_log_eapol() - Function to check and extract EAPOL params
+ * @skb:               skb data
+ * @event_type:        One of enum wifi_connectivity_events to indicate Tx/Rx
+ *
+ * This function parses the input skb data to get the EAPOL params,if the
+ * packet is EAPOL and store it in the pointer passed as input
+ *
+ * Return: None
+ *
+ */
+void wlan_hdd_log_eapol(struct sk_buff *skb,
+                         uint8_t event_type);
+#else
+static inline void wlan_hdd_log_eapol(struct sk_buff *skb,
+                                      uint8_t event_type)
+{
+}
+#endif /* FEATURE_WLAN_DIAG_SUPPORT */
 
 #endif    // end #if !defined( WLAN_HDD_TX_RX_H )

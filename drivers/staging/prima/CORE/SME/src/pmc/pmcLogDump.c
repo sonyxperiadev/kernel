@@ -31,9 +31,6 @@
 *
 * Description: Implements the dump commands specific to PMC module
 *
-* Copyright 2008 (c) Qualcomm, Incorporated.
-* All Rights Reserved.
-* Qualcomm Confidential and Proprietary.
 *
 ******************************************************************************/
 

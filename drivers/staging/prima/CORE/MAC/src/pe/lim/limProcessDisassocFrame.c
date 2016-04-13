@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2014 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2015 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -39,7 +39,7 @@
 #include "wniApi.h"
 #include "sirApi.h"
 #include "aniGlobal.h"
-#include "wniCfgSta.h"
+#include "wniCfg.h"
 
 #include "utilsApi.h"
 #include "limTypes.h"
@@ -124,11 +124,12 @@ limProcessDisassocFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession
     // Get reasonCode from Disassociation frame body
     reasonCode = sirReadU16(pBody);
 
-    PELOG2(limLog(pMac, LOGE,
-        FL("Received Disassoc frame for Addr: "MAC_ADDRESS_STR"(mlm state=%s, sme state=%d),"
+    limLog(pMac, LOGE,
+        FL("Received Disassoc frame for Addr: "MAC_ADDRESS_STR
+        "(mlm state=%s, sme state=%d),"
         "with reason code %d from "MAC_ADDRESS_STR), MAC_ADDR_ARRAY(pHdr->da),
-        limMlmStateStr(psessionEntry->limMlmState), psessionEntry->limSmeState, reasonCode,
-        MAC_ADDR_ARRAY(pHdr->sa));)
+        limMlmStateStr(psessionEntry->limMlmState), psessionEntry->limSmeState,
+        reasonCode, MAC_ADDR_ARRAY(pHdr->sa));
 
     /**
    * Extract 'associated' context for STA, if any.
@@ -275,8 +276,10 @@ limProcessDisassocFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession
          * and received Disassociation frame. Log and Ignore.
          */
         PELOGE(limLog(pMac, LOGE,
-               FL("received Disassoc frame in state %d from "MAC_ADDRESS_STR),
-               pStaDs->mlmStaContext.mlmState, MAC_ADDR_ARRAY(pHdr->sa));)
+               FL("received Disassoc frame in state %d from "MAC_ADDRESS_STR
+               ",isDisassocDeauthInProgress : %d\n"),
+               pStaDs->mlmStaContext.mlmState, MAC_ADDR_ARRAY(pHdr->sa),
+               pStaDs->isDisassocDeauthInProgress);)
 
         return;
     } 
@@ -329,7 +332,7 @@ limProcessDisassocFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession
         limRestorePreReassocState(pMac,eSIR_SME_REASSOC_REFUSED, reasonCode,psessionEntry);
         return;
     }
-
+    limUpdateLostLinkParams(pMac, psessionEntry, pRxPacketInfo);
     limPostSmeMessage(pMac, LIM_MLM_DISASSOC_IND,
                       (tANI_U32 *) &mlmDisassocInd);
 

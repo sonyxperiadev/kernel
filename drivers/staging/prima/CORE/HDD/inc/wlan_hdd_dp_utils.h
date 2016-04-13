@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -63,6 +63,7 @@ typedef struct hdd_list_s
    hdd_list_node_t anchor;
    v_SIZE_t count;
    v_SIZE_t max_size;
+   int ratelimit_count;
    spinlock_t lock; 
 } hdd_list_t;
 

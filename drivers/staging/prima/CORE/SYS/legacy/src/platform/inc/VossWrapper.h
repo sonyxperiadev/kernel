@@ -38,9 +38,6 @@ extern "C" {
   @brief This header file contains the various structure definitions and
   function prototypes for the RTOS abstraction layer, implemented for VOSS
 
-  Copyright (c) 2008 QUALCOMM Incorporated.
-  All Rights Reserved.
-  Qualcomm Confidential and Proprietary
 ===========================================================================*/
 
 /*===========================================================================

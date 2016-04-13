@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2015 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -35,8 +35,6 @@
   @brief 
                
    This file contains the external API exposed by the wlan data transfer abstraction layer module.
-   Copyright (c) 2008 QUALCOMM Incorporated. All Rights Reserved.
-   Qualcomm Confidential and Proprietary
 ========================================================================*/
 
 /*===========================================================================
@@ -84,6 +82,13 @@ when           who        what, where, why
 /* Default RX OS frame buffer size
  * Size must be same with Vos Packet Size */
 #define WLANDXE_DEFAULT_RX_OS_BUFFER_SIZE  (VPKT_SIZE_BUFFER)
+
+/*reserve 30B of skb buff, to add NL header*/
+#define WLANDXE_NL_HEADER_SZ (30)
+
+/*MAX data transferred in one skb*/
+#define WLANDXE_FW_LOGGING_XFSIZE  (WLANDXE_DEFAULT_RX_OS_BUFFER_SIZE - \
+                                    WLANDXE_NL_HEADER_SZ)
 
 /*The maximum number of packets that can be chained in dxe for the Low 
   priority channel
@@ -174,6 +179,23 @@ typedef WDTS_LowResourceCbType WLANDXE_LowResourceCbType;
 
 /*==========================================================================
   @  Type Name
+  WLANDXE_MbReceiveMsgCbType
+
+  @  Description
+  DXE Mailbox mes receive indiacation
+
+  @  Parameters
+  void
+
+  @  Return
+  void
+===========================================================================*/
+typedef WDTS_MbReceiveMsgType WLANDXE_MbReceiveMsgCbType;
+
+typedef WDTS_RxLogDoneType WLANDXE_RxLogDoneType;
+
+/*==========================================================================
+  @  Type Name
       WLANDXE_SetPowerStateCbType 
 
   @  Description 
@@ -221,9 +243,7 @@ void *WLANDXE_Open
 
   @  Parameters
       pVoid                       pDXEContext : DXE module control block
-      WDTS_RxFrameReadyCbType     rxFrameReadyCB : RX Frame ready CB function pointer
-      WDTS_TxCompleteCbType       txCompleteCB : TX complete CB function pointer
-      WDTS_LowResourceCbType      lowResourceCB : Low DXE resource notification CB function pointer
+      WDTS_ClientCallbacks        WDTSCb : Callbacks to WDTS to indicate various events
       void                       *userContext : DXE Cliennt control block
 
   @  Return
@@ -232,9 +252,7 @@ void *WLANDXE_Open
 wpt_status WLANDXE_ClientRegistration
 (
    void                       *pDXEContext,
-   WDTS_RxFrameReadyCbType     rxFrameReadyCB,
-   WDTS_TxCompleteCbType       txCompleteCB,
-   WDTS_LowResourceCbType      lowResourceCB,
+   WDTS_ClientCallbacks       WDTSCb,
    void                       *userContext
 );
 
@@ -424,54 +442,14 @@ void WLANDXE_ChannelDebug
    wpt_uint8      debugFlags
 );
 
-#ifdef WLANDXE_TEST_CHANNEL_ENABLE
-/*==========================================================================
-  @  Function Name 
-      WLANDXE_UnitTest
-
-  @  Description 
-      Temporary for the DXE module test
-
-  @  Parameters
-      NONE
-
-  @  Return
-      NONE
-
-===========================================================================*/
-void WLANDXE_UnitTestStartDXE
+wpt_uint32 WLANDXE_SetupLogTransfer
 (
-   void
+   wpt_uint64 bufferAddr,
+   wpt_uint32 bufferLen
 );
 
-/*==========================================================================
-  @  Function Name 
-
-  @  Description 
-
-  @  Parameters
-
-  @  Return
-
-===========================================================================*/
-void WLANDXE_UnitTestDataTransfer
+wpt_status WLANDXE_StartLogTransfer
 (
-   void
+void
 );
-
-/*==========================================================================
-  @  Function Name 
-
-  @  Description 
-
-  @  Parameters
-
-  @  Return
-
-===========================================================================*/
-void WLANDXE_UnitTestEventHandle
-(
-   void     *dxeCB
-);
-#endif /* WLANDXE_TEST_CHANNEL_ENABLE */
 #endif /* WLAN_QCT_DXE_H */

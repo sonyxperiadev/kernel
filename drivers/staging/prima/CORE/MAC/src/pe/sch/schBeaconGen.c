@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2015 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -38,7 +38,7 @@
  */
  
 #include "palTypes.h"
-#include "wniCfgSta.h"
+#include "wniCfg.h"
 #include "aniGlobal.h"
 #include "sirMacProtDef.h"
 
@@ -274,7 +274,9 @@ tSirRetStatus schSetFixedBeaconFields(tpAniSirGlobal pMac,tpPESession psessionEn
     ptr    = pMac->sch.schObject.gSchBeaconFrameBegin + offset;
 
     if((psessionEntry->limSystemRole == eLIM_AP_ROLE) 
-        && (psessionEntry->proxyProbeRspEn))
+        && ((psessionEntry->proxyProbeRspEn)
+        || (IS_FEATURE_SUPPORTED_BY_FW(WPS_PRBRSP_TMPL)))
+      )
     {
         /* Initialize the default IE bitmap to zero */
         vos_mem_set(( tANI_U8* )&(psessionEntry->DefProbeRspIeBitmap), (sizeof( tANI_U32 ) * 8), 0);
@@ -336,15 +338,33 @@ tSirRetStatus schSetFixedBeaconFields(tpAniSirGlobal pMac,tpPESession psessionEn
         PopulateDot11fHTCaps( pMac,psessionEntry, &pBcn2->HTCaps );
         PopulateDot11fHTInfo( pMac, &pBcn2->HTInfo, psessionEntry );
     }
+
+#ifdef WLAN_FEATURE_AP_HT40_24G
+    if ((pMac->roam.configParam.apHT40_24GEnabled)
+     && (IS_DOT11_MODE_HT(psessionEntry->dot11mode)))
+    {
+        PopulateDot11fOBSSScanParameters( pMac, &pBcn2->OBSSScanParameters,
+                                                               psessionEntry);
+        /* 10.15.8 Support of DSSS/CCK in 40 MHz, An associated HT STA in
+         * a 20/40 MHz BSS may generate DSSS/CCK transmissions. Set DSSS/CCK
+         * Mode in 40 MHz bit in HT capablity.
+         */
+        pBcn2->HTCaps.dsssCckMode40MHz = 1;
+    }
+#endif
+
+    PopulateDot11fExtCap( pMac, &pBcn2->ExtCap, psessionEntry);
+
 #ifdef WLAN_FEATURE_11AC
     if(psessionEntry->vhtCapability)
     {        
         schLog( pMac, LOGW, FL("Populate VHT IEs in Beacon"));
-        PopulateDot11fVHTCaps( pMac, &pBcn2->VHTCaps, eSIR_TRUE );
-        PopulateDot11fVHTOperation( pMac, &pBcn2->VHTOperation);
+        PopulateDot11fVHTCaps( pMac, &pBcn2->VHTCaps,
+                              psessionEntry->currentOperChannel, eSIR_TRUE );
+        PopulateDot11fVHTOperation( pMac, &pBcn2->VHTOperation,
+                                          psessionEntry->currentOperChannel);
         // we do not support multi users yet
         //PopulateDot11fVHTExtBssLoad( pMac, &bcn2.VHTExtBssLoad);
-        PopulateDot11fExtCap( pMac, &pBcn2->ExtCap, psessionEntry);
         if(psessionEntry->gLimOperatingMode.present)
             PopulateDot11fOperatingMode( pMac, &pBcn2->OperatingMode, psessionEntry );
     }
@@ -398,7 +418,9 @@ tSirRetStatus schSetFixedBeaconFields(tpAniSirGlobal pMac,tpPESession psessionEn
     }
 
     if((psessionEntry->limSystemRole == eLIM_AP_ROLE) 
-        && (psessionEntry->proxyProbeRspEn))
+        && ((psessionEntry->proxyProbeRspEn)
+        || (IS_FEATURE_SUPPORTED_BY_FW(WPS_PRBRSP_TMPL)))
+      )
     {
         /* Can be efficiently updated whenever new IE added  in Probe response in future */
         limUpdateProbeRspTemplateIeBitmapBeacon2(pMac,pBcn2,&psessionEntry->DefProbeRspIeBitmap[0],
@@ -612,6 +634,31 @@ void limUpdateProbeRspTemplateIeBitmapBeacon2(tpAniSirGlobal pMac,
         vos_mem_copy((void *)&prb_rsp->HTInfo, (void *)&beacon2->HTInfo,
                      sizeof(beacon2->HTInfo));
     }
+
+#ifdef WLAN_FEATURE_AP_HT40_24G
+    // Overlapping BSS Scan Parameters IE
+    if (pMac->roam.configParam.apHT40_24GEnabled)
+    {
+        if (beacon2->OBSSScanParameters.present)
+        {
+            SetProbeRspIeBitmap(DefProbeRspIeBitmap,
+                          SIR_MAC_OBSS_SCAN_PARAMETERS_EID);
+            vos_mem_copy((void *)&prb_rsp->OBSSScanParameters,
+                              (void *)&beacon2->OBSSScanParameters,
+                              sizeof(beacon2->OBSSScanParameters));
+        }
+
+        if (beacon2->ExtCap.present)
+        {
+            SetProbeRspIeBitmap(DefProbeRspIeBitmap,
+                        SIR_MAC_EXTENDED_CAPABILITIES_EID);
+            vos_mem_copy((void *)&prb_rsp->ExtCap,
+                              (void *)&beacon2->ExtCap,
+                              sizeof(beacon2->ExtCap));
+
+        }
+    }
+#endif
 
 #ifdef WLAN_FEATURE_11AC
     if(beacon2->VHTCaps.present)

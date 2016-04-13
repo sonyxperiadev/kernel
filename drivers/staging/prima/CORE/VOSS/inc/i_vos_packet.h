@@ -36,9 +36,6 @@
 
    Network Protocol packet/buffer internal include file
 
-   Copyright 2009 (c) Qualcomm, Incorporated.  All Rights Reserved.
-
-   Qualcomm Confidential and Proprietary.
 
   ========================================================================*/
 

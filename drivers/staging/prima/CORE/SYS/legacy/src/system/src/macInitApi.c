@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2015 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -197,7 +197,7 @@ tSirRetStatus macOpen(tHalHandle *pHalHandle, tHddHandle hHdd, tMacOpenParameter
      */
 
     /* Allocate pMac */
-    pMac = vos_mem_malloc(sizeof(tAniSirGlobal));
+    pMac = vos_mem_vmalloc(sizeof(tAniSirGlobal));
     if ( NULL == pMac )
         return eSIR_FAILURE;
 
@@ -219,11 +219,17 @@ tSirRetStatus macOpen(tHalHandle *pHalHandle, tHddHandle hHdd, tMacOpenParameter
     {
         /* Call various PE (and other layer init here) */
         if( eSIR_SUCCESS != logInit(pMac))
+        {
+           vos_mem_vfree(pMac);
            return eSIR_FAILURE;
+        }
 
         /* Call routine to initialize CFG data structures */
         if( eSIR_SUCCESS != cfgInit(pMac) )
+        {
+            vos_mem_vfree(pMac);
             return eSIR_FAILURE;
+        }
 
         sysInitGlobals(pMac);
     }
@@ -253,7 +259,7 @@ tSirRetStatus macClose(tHalHandle hHal)
     logDeinit(pMac);
 
     // Finally, de-allocate the global MAC datastructure:
-    vos_mem_free( pMac );
+    vos_mem_vfree( pMac );
 
     return eSIR_SUCCESS;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013, 2015-2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -215,7 +215,16 @@ static void vos_linux_timer_callback (unsigned long data)
       if(vos_rx_mq_serialize( VOS_MQ_ID_SYS, &msg ) == VOS_STATUS_SUCCESS)
          return;
    }
-   else 
+#ifdef WLAN_LOGGING_SOCK_SVC_ENABLE
+   else if (vos_is_wd_thread(threadId))
+   {
+      VOS_TRACE(VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_INFO,
+                "TIMER callback: running on wd thread");
+      callback(NULL);
+      return;
+   }
+#endif
+   else
    {
       VOS_TRACE( VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_INFO,
           "TIMER callback: running on MC thread");
@@ -228,7 +237,7 @@ static void vos_linux_timer_callback (unsigned long data)
        
       if(vos_mq_post_message( VOS_MQ_ID_SYS, &msg ) == VOS_STATUS_SUCCESS)
         return;
-   }     
+   }
 
    VOS_TRACE(VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_ERROR, 
              "%s: Could not enqueue timer to any queue", __func__);
@@ -400,16 +409,20 @@ void vos_timer_exit()
   
 ---------------------------------------------------------------------------*/
 #ifdef TIMER_MANAGER
-VOS_STATUS vos_timer_init_debug( vos_timer_t *timer, VOS_TIMER_TYPE timerType, 
-                           vos_timer_callback_t callback, v_PVOID_t userData, 
-                           char* fileName, v_U32_t lineNum )
+static inline VOS_STATUS __vos_timer_init_debug(vos_timer_t *timer,
+                        VOS_TIMER_TYPE timerType,
+                        vos_timer_callback_t callback,
+                        v_PVOID_t userData,
+                        bool deferrable,
+                        char* fileName,
+                        v_U32_t lineNum)
 {
    VOS_STATUS vosStatus;
     unsigned long flags;
    // Check for invalid pointer
-   if ((timer == NULL) || (callback == NULL)) 
+   if ((timer == NULL) || (callback == NULL))
    {
-      VOS_TRACE(VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_ERROR, 
+      VOS_TRACE(VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_ERROR,
                 "%s: Null params being passed",__func__);
       VOS_ASSERT(0);
       return VOS_STATUS_E_FAULT;
@@ -417,10 +430,11 @@ VOS_STATUS vos_timer_init_debug( vos_timer_t *timer, VOS_TIMER_TYPE timerType,
 
    timer->ptimerNode = vos_mem_malloc(sizeof(timer_node_t));
 
-   if(timer->ptimerNode == NULL)
+   if (timer->ptimerNode == NULL)
    {
       VOS_TRACE(VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_ERROR, 
-                "%s: Not able to allocate memory for timeNode",__func__);
+                "%s: Not able to allocate memory for timeNode",
+                __func__);
       VOS_ASSERT(0);
       return VOS_STATUS_E_FAULT;
    }
@@ -434,16 +448,78 @@ VOS_STATUS vos_timer_init_debug( vos_timer_t *timer, VOS_TIMER_TYPE timerType,
     spin_lock_irqsave(&vosTimerList.lock, flags);
     vosStatus = hdd_list_insert_front(&vosTimerList, &timer->ptimerNode->pNode);
     spin_unlock_irqrestore(&vosTimerList.lock, flags);
-    if(VOS_STATUS_SUCCESS != vosStatus)
+    if (VOS_STATUS_SUCCESS != vosStatus)
     {
          VOS_TRACE(VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_ERROR, 
-             "%s: Unable to insert node into List vosStatus %d", __func__, vosStatus);
+             "%s: Unable to insert node into List vosStatus %d",
+             __func__, vosStatus);
     }
-   
-   // set the various members of the timer structure 
-   // with arguments passed or with default values
+
+   /* set the various members of the timer structure
+    * with arguments passed or with default values
+    */
    spin_lock_init(&timer->platformInfo.spinlock);
-   init_timer(&(timer->platformInfo.Timer));
+   if(deferrable)
+     init_timer_deferrable(&(timer->platformInfo.Timer));
+   else
+     init_timer(&(timer->platformInfo.Timer));
+   timer->platformInfo.Timer.function = vos_linux_timer_callback;
+   timer->platformInfo.Timer.data = (unsigned long)timer;
+   timer->callback = callback;
+   timer->userData = userData;
+   timer->type = timerType;
+   timer->platformInfo.cookie = LINUX_TIMER_COOKIE;
+   timer->platformInfo.threadID = 0;
+   timer->state = VOS_TIMER_STATE_STOPPED;
+
+   return VOS_STATUS_SUCCESS;
+}
+
+VOS_STATUS vos_timer_init_debug(vos_timer_t *timer,
+                        VOS_TIMER_TYPE timerType,
+                        vos_timer_callback_t callback,
+                        v_PVOID_t userData,
+                        char* fileName,
+                        v_U32_t lineNum)
+{
+   return __vos_timer_init_debug(timer, timerType,
+                     callback, userData, false, fileName, lineNum);
+}
+
+VOS_STATUS vos_timer_init_deferrable_debug(vos_timer_t *timer,
+                        VOS_TIMER_TYPE timerType,
+                        vos_timer_callback_t callback,
+                        v_PVOID_t userData,
+                        char* fileName,
+                        v_U32_t lineNum)
+{
+   return __vos_timer_init_debug(timer, timerType,
+                     callback, userData, true, fileName, lineNum);
+}
+#else
+static inline VOS_STATUS __vos_timer_init(vos_timer_t *timer,
+                           VOS_TIMER_TYPE timerType,
+                           vos_timer_callback_t callback,
+                           v_PVOID_t userData,
+                           bool deferrable)
+{
+   /* Check for invalid pointer */
+   if ((timer == NULL) || (callback == NULL))
+   {
+      VOS_TRACE(VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_ERROR,
+                "%s: Null params being passed",__func__);
+      VOS_ASSERT(0);
+      return VOS_STATUS_E_FAULT;
+   }
+
+   /* set the various members of the timer structure
+    * with arguments passed or with default values
+    */
+   spin_lock_init(&timer->platformInfo.spinlock);
+   if(deferrable)
+     init_timer_deferrable(&(timer->platformInfo.Timer));
+   else
+     init_timer(&(timer->platformInfo.Timer));
    timer->platformInfo.Timer.function = vos_linux_timer_callback;
    timer->platformInfo.Timer.data = (unsigned long)timer;
    timer->callback = callback;
@@ -455,33 +531,23 @@ VOS_STATUS vos_timer_init_debug( vos_timer_t *timer, VOS_TIMER_TYPE timerType,
    
    return VOS_STATUS_SUCCESS;
 }
-#else
-VOS_STATUS vos_timer_init( vos_timer_t *timer, VOS_TIMER_TYPE timerType, 
-                           vos_timer_callback_t callback, v_PVOID_t userData )
+VOS_STATUS vos_timer_init(vos_timer_t *timer,
+                     VOS_TIMER_TYPE timerType,
+                     vos_timer_callback_t callback,
+                     v_PVOID_t userData)
 {
-   // Check for invalid pointer
-   if ((timer == NULL) || (callback == NULL)) 
-   {
-      VOS_TRACE(VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_ERROR, 
-                "%s: Null params being passed",__func__);
-      VOS_ASSERT(0);
-      return VOS_STATUS_E_FAULT;
-   }
-   
-   // set the various members of the timer structure 
-   // with arguments passed or with default values
-   spin_lock_init(&timer->platformInfo.spinlock);
-   init_timer(&(timer->platformInfo.Timer));
-   timer->platformInfo.Timer.function = vos_linux_timer_callback;
-   timer->platformInfo.Timer.data = (unsigned long)timer;
-   timer->callback = callback;
-   timer->userData = userData;
-   timer->type = timerType;
-   timer->platformInfo.cookie = LINUX_TIMER_COOKIE;
-   timer->platformInfo.threadID = 0;
-   timer->state = VOS_TIMER_STATE_STOPPED;
-   
-   return VOS_STATUS_SUCCESS;
+   return __vos_timer_init(timer, timerType,
+                   callback, userData, false);
+
+}
+
+VOS_STATUS vos_timer_init_deferrable(vos_timer_t *timer,
+                     VOS_TIMER_TYPE timerType,
+                     vos_timer_callback_t callback,
+                     v_PVOID_t userData)
+{
+   return __vos_timer_init(timer, timerType,
+                   callback, userData, true);
 }
 #endif
 
@@ -870,3 +936,24 @@ v_TIME_t vos_timer_get_system_time( v_VOID_t )
    do_gettimeofday(&tv);
    return tv.tv_sec*1000 + tv.tv_usec/1000;  
 }
+
+/*--------------------------------------------------------------------------
+
+  \brief vos_timer_is_initialized() - check if timer is initialized or not
+
+  The \a vos_timer_is_initialized() function returns VOS_TRUE if timer is
+  initialized and VOS_FALSE if timer is not initialized
+
+  \returns - VOS_TRUE or VOS_FALSE
+
+  \sa
+
+  ------------------------------------------------------------------------*/
+v_BOOL_t vos_timer_is_initialized(vos_timer_t *timer)
+{
+    if (LINUX_TIMER_COOKIE == timer->platformInfo.cookie)
+        return VOS_TRUE;
+    else
+        return VOS_FALSE;
+}
+

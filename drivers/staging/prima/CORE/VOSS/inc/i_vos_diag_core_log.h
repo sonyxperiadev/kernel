@@ -34,9 +34,6 @@
   
   \brief android-specific definitions for vOSS DIAG logs
   
-   Copyright 2008 (c) Qualcomm, Incorporated.  All Rights Reserved.
-   
-   Qualcomm Confidential and Proprietary.
   
   ========================================================================*/
 

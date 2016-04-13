@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2015 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -68,8 +68,6 @@
 #define CFG_CTL_NTF_HW        (CFG_CTL_NTF_MAC | CFG_CTL_NTF_PHY)
 
 #define CFG_BUF_INDX_MASK     0x00000fff
-#define CFG_SEM_INDX_MASK     0x0000f000
-#define CFG_SEM_INDX_SHIFT    12
 
 
 #endif /* __CFGDEF_H */

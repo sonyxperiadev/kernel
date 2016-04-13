@@ -1,5 +1,5 @@
 
-/* Copyright (c) 2012-2014 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2015 The Linux Foundation. All rights reserved.
 * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
 
 *
@@ -67,6 +67,8 @@
   Commom Type definitons
  ---------------------------------------------------------------------------*/
 
+#define DISA_MAX_PAYLOAD_SIZE   1600
+
 //This is to force compiler to use the maximum of an int ( 4 bytes )
 #define WLAN_HAL_MAX_ENUM_SIZE    0x7FFFFFFF
 #define WLAN_HAL_MSG_TYPE_MAX_ENUM_SIZE    0x7FFF
@@ -127,6 +129,30 @@ typedef tANI_U8 tHalIpv4Addr[4];
 #define WLAN_HAL_EXT_SCAN_MAX_HOTLIST_APS            128
 #define WLAN_HAL_EXT_SCAN_MAX_SIG_CHANGE_APS         64
 #define WLAN_HAL_EXT_SCAN_MAX_RSSI_SAMPLE_SIZE       8
+
+/* For Logging enhancement feature currently max 2 address will be passed */
+/* In future we may pass 3 address and length in suspend mode corner case */
+#define MAX_NUM_OF_BUFFER 3
+
+/* Log types */
+typedef enum
+{
+    MGMT_FRAME_LOGS    = 0,
+    QXDM_LOGGING       = 1,
+    FW_MEMORY_DUMP     = 2
+}tHalFrameLoggingType;
+
+/* Log size */
+typedef enum
+{
+    LOG_SIZE_4K   = 0,
+    LOG_SIZE_8K   = 1,
+    LOG_SIZE_12K  = 2,
+    LOG_SIZE_16K  = 3,
+    LOG_SIZE_32K  = 4,
+    LOG_SIZE_64K  = 5,
+    LOG_SIZE_96K  = 6
+}tHalLogBuffSize;
 
 /* Message types for messages exchanged between WDI and HAL */
 typedef enum
@@ -515,6 +541,36 @@ typedef enum
    WLAN_HAL_TDLS_CHAN_SWITCH_RSP            = 291,
    WLAN_HAL_MAC_SPOOFED_SCAN_REQ            = 292,
    WLAN_HAL_MAC_SPOOFED_SCAN_RSP            = 293,
+   /* LGE DISA encrypt-decrypt Messages */
+   WLAN_HAL_ENCRYPT_DATA_REQ                = 294,
+   WLAN_HAL_ENCRYPT_DATA_RSP                = 295,
+
+   WLAN_HAL_FW_STATS_REQ                    = 296,
+   WLAN_HAL_FW_STATS_RSP                    = 297,
+   WLAN_HAL_FW_LOGGING_INIT_REQ             = 298,
+   WLAN_HAL_FW_LOGGING_INIT_RSP             = 299,
+   WLAN_HAL_GET_FRAME_LOG_REQ               = 300,
+   WLAN_HAL_GET_FRAME_LOG_RSP               = 301,
+
+   /* Monitor Mode */
+   WLAN_HAL_ENABLE_MONITOR_MODE_REQ         = 302,
+   WLAN_HAL_ENABLE_MONITOR_MODE_RSP         = 303,
+
+   WLAN_HAL_DISABLE_MONITOR_MODE_REQ        = 304,
+   WLAN_HAL_DISABLE_MONITOR_MODE_RSP        = 305,
+
+   WLAN_HAL_SET_RTS_CTS_HTVHT_IND           = 306,
+   // FW Logging
+   WLAN_HAL_FATAL_EVENT_LOGGING_REQ         = 307,
+   WLAN_HAL_FATAL_EVENT_LOGGING_RSP         = 308,
+   WLAN_HAL_FW_MEMORY_DUMP_REQ              = 309,
+   WLAN_HAL_FW_MEMORY_DUMP_RSP              = 310,
+   WLAN_HAL_FW_LOGGING_DXE_DONE_IND         = 311,
+   WLAN_HAL_LOST_LINK_PARAMETERS_IND        = 312,
+   WLAN_HAL_SEND_FREQ_RANGE_CONTROL_IND     = 313,
+
+   WLAN_HAL_ANTENNA_DIVERSITY_SELECTION_REQ  = 330,
+   WLAN_HAL_ANTENNA_DIVERSITY_SELECTION_RSP  = 331,
 
    WLAN_HAL_MSG_MAX = WLAN_HAL_MSG_TYPE_MAX_ENUM_SIZE
 }tHalHostMsgType;
@@ -1510,6 +1566,114 @@ typedef PACKED_PRE struct PACKED_POST
    tHalMsgHeader header;
    tHalFinishScanRspParams finishScanRspParams;
 }  tHalFinishScanRspMsg, *tpHalFinishScanRspMsg;
+
+typedef PACKED_PRE struct PACKED_POST
+{
+   tSetStaKeyParams keyParams;
+   uint8 pn[6];
+} tHalEncConfigParams;
+
+typedef PACKED_PRE struct PACKED_POST
+{
+   uint16 length;
+   uint8  data[DISA_MAX_PAYLOAD_SIZE];
+} tHalDisaPayload;
+
+typedef PACKED_PRE struct PACKED_POST
+{
+#ifdef BYTE_ORDER_BIG_ENDIAN
+    uint8   reserved1          : 1;
+    uint8   ackpolicy          : 2;
+    uint8   eosp               : 1;
+    uint8   tid                : 4;
+
+    uint8   appsbufferstate    : 8;
+#else
+    uint8   appsbufferstate    : 8;
+
+    uint8   tid                : 4;
+    uint8   eosp               : 1;
+    uint8   ackpolicy          : 2;
+    uint8   reserved1          : 1;
+#endif
+} tHalQosCtrlFieldType;
+
+typedef PACKED_PRE struct PACKED_POST
+ {
+#ifdef  BYTE_ORDER_BIG_ENDIAN
+    uint16 subtype   : 4;
+    uint16 type      : 2;
+    uint16 protocol  : 2;
+
+    uint16 order     : 1;
+    uint16 wep       : 1;
+    uint16 moredata  : 1;
+    uint16 pm        : 1;
+    uint16 retry     : 1;
+    uint16 morefrag  : 1;
+    uint16 fromds    : 1;
+    uint16 tods      : 1;
+#else
+
+    uint16 tods      : 1;
+    uint16 fromds    : 1;
+    uint16 morefrag  : 1;
+    uint16 retry     : 1;
+    uint16 pm        : 1;
+    uint16 moredata  : 1;
+    uint16 wep       : 1;
+    uint16 order     : 1;
+
+    uint16 protocol  : 2;
+    uint16 type      : 2;
+    uint16 subtype   : 4;
+#endif
+} tHalFrmCtrlType;
+
+typedef PACKED_PRE struct PACKED_POST
+{
+   /* Frame control field */
+   tHalFrmCtrlType fc;
+   /* Duration ID */
+   uint16 usDurationId;
+   /* Address 1 field */
+   uint8 vA1[HAL_MAC_ADDR_LEN];
+   /* Address 2 field */
+   uint8 vA2[HAL_MAC_ADDR_LEN];
+   /* Address 3 field */
+   uint8 vA3[HAL_MAC_ADDR_LEN];
+   /* Sequence control field */
+   uint16 seqNum;
+   /* Optional A4 address */
+   uint8 optvA4[HAL_MAC_ADDR_LEN];
+   /* Optional QOS control field */
+   tHalQosCtrlFieldType usQosCtrl;
+} tHal80211Header;
+
+typedef PACKED_PRE struct PACKED_POST
+{
+   tHal80211Header macHeader;
+   tHalEncConfigParams encParams;
+   tHalDisaPayload data;
+} tSetEncryptedDataParams, *tpSetEncryptedDataParams;
+
+typedef PACKED_PRE struct PACKED_POST
+{
+   tHalMsgHeader header;
+   tSetEncryptedDataParams encryptedDataParams;
+}  tSetEncryptedDataReqMsg, *tpSetEncryptedDataReqMsg;
+
+typedef PACKED_PRE struct PACKED_POST
+{
+   tANI_U32 status;
+   tHalDisaPayload encryptedPayload;
+} tSetEncryptedDataRspParams, *tpSetEncryptedDataRspParams;
+
+typedef PACKED_PRE struct PACKED_POST
+{
+   tHalMsgHeader header;
+   tSetEncryptedDataRspParams encryptedDataRspParams;
+}  tSetEncryptedDataRspMsg, *tpSetEncryptedDataRspMsg;
 
 /*---------------------------------------------------------------------------
   WLAN_HAL_CONFIG_STA_REQ
@@ -3069,6 +3233,57 @@ typedef PACKED_PRE struct PACKED_POST
    tHalMsgHeader  header;
    tHalStatsRspParams statsRspParams;
 } tHalStatsRspMsg, *tpHalStatsRspMsg;
+
+ /*---------------------------------------------------------------------------
+ * WLAN_HAL_SET_RTS_CTS_HTVHT_IND
+ *---------------------------------------------------------------------------*/
+typedef PACKED_PRE struct PACKED_POST
+{
+   tANI_U32 rtsCtsValue;
+}tHalRtsCtsHtvhtIndParams, *tpHalRtsCtsHtvhtIndParams;
+
+typedef PACKED_PRE struct PACKED_POST
+{
+   tHalMsgHeader        header;
+   tHalRtsCtsHtvhtIndParams   rtsCtsHtvhtIndParams;
+} tHalRtsCtsHtvhtIndMsg, *tpHalRtsCtsHtvhtIndMsg;
+
+/*---------------------------------------------------------------------------
+ * WLAN_HAL_FW_STATS_REQ
+ *---------------------------------------------------------------------------*/
+ typedef PACKED_PRE struct PACKED_POST
+{
+   tANI_U32 type;
+}tHalfwStatsReqParams, *tpHalfwStatsReqParams;
+
+typedef PACKED_PRE struct PACKED_POST
+{
+   tHalMsgHeader        header;
+   tHalfwStatsReqParams   fwstatsReqParams;
+} tHalfwStatsReqMsg, *tpHalfwStatsReqMsg;
+
+/*---------------------------------------------------------------------------
+ * WLAN_HAL_FW_STATS_RSP
+ *---------------------------------------------------------------------------*/
+ typedef PACKED_PRE struct PACKED_POST
+{
+   tANI_U32 type;
+   tANI_U32 length;
+   tANI_U8  data[1];
+
+}tHalfwStatsRspParams, *tpHalfwStatsRspParams;
+
+typedef PACKED_PRE struct PACKED_POST
+{
+   tHalMsgHeader        header;
+   tHalfwStatsRspParams   fwstatsRspParams;
+} tHalfwStatsRspMsg, *tpHalfwStatsRspMsg;
+
+typedef enum
+{
+   FW_UBSP_STATS = 1,
+} fwstatstype;
+
 
 /*---------------------------------------------------------------------------
  * WLAN_HAL_SET_LINK_ST_REQ
@@ -5586,6 +5801,7 @@ typedef PACKED_PRE struct PACKED_POST
 #define WLAN_COEX_IND_TYPE_ENABLE_AGGREGATION_IN_2p4 (5)
 #define WLAN_COEX_IND_TYPE_ENABLE_UAPSD (6)
 #define WLAN_COEX_IND_TYPE_DISABLE_UAPSD (7)
+#define WLAN_COEX_IND_TYPE_CXM_FEATURES_NOTIFICATION (8)
 
 typedef PACKED_PRE struct PACKED_POST
 {
@@ -5610,6 +5826,8 @@ typedef PACKED_PRE struct PACKED_POST
 {
    /*Tx Complete Indication Success or Failure*/
    tANI_U32   status;
+   /* Dialog token */
+   tANI_U32   dialogToken;
 }tTxComplParams,*tpTxComplParams;
 
 typedef PACKED_PRE struct PACKED_POST
@@ -5806,6 +6024,8 @@ typedef enum
     eAUTH_TYPE_WAPI_WAI_PSK          = 9,
     eAUTH_TYPE_CCKM_WPA              = 10,
     eAUTH_TYPE_CCKM_RSN              = 11,
+    eAUTH_TYPE_RSN_PSK_SHA256        = 12,
+    eAUTH_TYPE_RSN_8021X_SHA256      = 13,
 
     eAUTH_TYPE_MAX = WLAN_HAL_MAX_ENUM_SIZE
 
@@ -6548,6 +6768,16 @@ typedef enum {
     EXTENDED_SCAN          = 42,
     DYNAMIC_WMM_PS         = 43,
     MAC_SPOOFED_SCAN       = 44,
+    BMU_ERROR_GENERIC_RECOVERY = 45,
+    DISA                   = 46,
+    FW_STATS               = 47,
+    WPS_PRBRSP_TMPL        = 48,
+    BCN_IE_FLT_DELTA       = 49,
+    TDLS_OFF_CHANNEL       = 51,
+    MGMT_FRAME_LOGGING     = 53,
+    ENHANCED_TXBD_COMPLETION = 54,
+    LOGGING_ENHANCEMENT    = 55,
+    ANTENNA_DIVERSITY_SELECTION  = 62,
     MAX_FEATURE_SUPPORTED  = 128,
 } placeHolderInCapBitmap;
 
@@ -6574,6 +6804,8 @@ typedef PACKED_PRE struct PACKED_POST{
 #define IS_TDLS_SCAN_COEXISTENCE_SUPPORTED_BY_HOST ((!!(halMsg_GetHostWlanFeatCaps(TDLS_SCAN_COEXISTENCE))))
 #define IS_DYNAMIC_WMM_PS_SUPPORTED_BY_HOST ((!!(halMsg_GetHostWlanFeatCaps(DYNAMIC_WMM_PS))))
 #define IS_MAC_SPOOF_SCAN_SUPPORTED_BY_HOST ((!!(halMsg_GetHostWlanFeatCaps(MAC_SPOOFED_SCAN))))
+#define IS_NEW_BMU_ERROR_RECOVERY_SUPPORTED_BY_HOST ((!!(halMsg_GetHostWlanFeatCaps(BMU_ERROR_GENERIC_RECOVERY))))
+#define IS_ENHANCED_TXBD_COMPLETION_SUPPORTED_BY_HOST ((!!(halMsg_GetHostWlanFeatCaps(ENHANCED_TXBD_COMPLETION))))
 
 tANI_U8 halMsg_GetHostWlanFeatCaps(tANI_U8 feat_enum_value);
 
@@ -7560,7 +7792,7 @@ typedef PACKED_PRE struct PACKED_POST
  * WLAN_HAL_AVOID_FREQ_RANGE_IND
  *-------------------------------------------------------------------------*/
 
-#define WLAN_HAL_MAX_AVOID_FREQ_RANGE           4
+#define WLAN_HAL_MAX_AVOID_FREQ_RANGE           15
 
 typedef PACKED_PRE struct PACKED_POST
 {
@@ -8274,6 +8506,295 @@ typedef PACKED_PRE struct PACKED_POST
     tHalMsgHeader         header;
     tMacSpoofedScanResp tMacSpoofedScanRespParams;
 }  tMacSpoofedScanRespMsg,  * tpMacSpoofedScanRespMsg;
+/*---------------------------------------------------------------------------
+ *WLAN_HAL_GET_FRAME_LOG_REQ
+ *--------------------------------------------------------------------------*/
+typedef PACKED_PRE struct PACKED_POST
+{
+    tANI_U8 flags;
+}tGetFrameLogReqType, * tpGetFrameLogReqType;
+
+typedef PACKED_PRE struct PACKED_POST
+{
+    tHalMsgHeader               header;
+    tGetFrameLogReqType         tGetFrameLogReqParams;
+} tGetFrameLogReqMsg, * tpGetFrameLogReqMsg;
+
+/*---------------------------------------------------------------------------
+ * WLAN_HAL_GET_FRAME_LOG_RSP
+ *-------------------------------------------------------------------------*/
+typedef PACKED_PRE struct PACKED_POST
+{
+    tANI_U32   status;
+} tGetFrameLogResp, * tpGetFrameLogResp;
+
+typedef PACKED_PRE struct PACKED_POST
+{
+    tHalMsgHeader         header;
+    tGetFrameLogResp      tGetFrameLogRespParams;
+}  tGetFrameLogRespMsg,  * tpGetFrameLogRespMsg;
+
+/*---------------------------------------------------------------------------
+ * WLAN_HAL_FATAL_EVENT_LOGGING_REQ
+ *-------------------------------------------------------------------------*/
+typedef PACKED_PRE struct PACKED_POST
+{
+    tANI_U32 reasonCode;
+}tHalFatalEventLoggingReqParams, *tpHalFatalEventLoggingReqParams;
+
+typedef PACKED_PRE struct PACKED_POST
+{
+    tHalMsgHeader header;
+    tHalFatalEventLoggingReqParams tFatalEventLoggingReqParams;
+}tHalFatalEventLoggingReqMsg, *tpHalFatalEventLoggingReqMsg;
+
+/*---------------------------------------------------------------------------
+ * WLAN_HAL_FATAL_EVENT_LOGGING_RSP
+ *-------------------------------------------------------------------------*/
+typedef PACKED_PRE struct PACKED_POST
+{   tANI_U32 status;
+}tHalFatalEventLoggingRspParams, *tpHalFatalEventLoggingRspParams;
+
+typedef PACKED_PRE struct PACKED_POST
+{
+    tHalMsgHeader header;
+    tHalFatalEventLoggingRspParams tFatalEventLoggingRspParams;
+}tHalFatalEventLoggingRspMsg, *tpHalFatalEventLoggingRspMsg;
+
+/*---------------------------------------------------------------------------
+  * WLAN_HAL_LOST_LINK_PARAMETERS_IND
+  *-------------------------------------------------------------------------*/
+typedef PACKED_PRE struct PACKED_POST
+{
+    tANI_U8  bssIdx;
+    tANI_U8  rssi;
+    tSirMacAddr selfMacAddr;
+    tANI_U32 linkFlCnt;
+    tANI_U32 linkFlTx;
+    tANI_U32 lastDataRate;
+    tANI_U32 rsvd1;
+    tANI_U32 rsvd2;
+}tHalLostLinkParametersIndParams, *tpHalLostLinkParametersIndParams;
+
+typedef PACKED_PRE struct PACKED_POST
+{
+    tHalMsgHeader header;
+    tHalLostLinkParametersIndParams lostLinkParameters;
+}tHalLostLinkParametersIndMsg, *tpHalLostLinkParametersIndMsg;
+
+
+/*---------------------------------------------------------------------------
+ *WLAN_HAL_FW_LOGGING_INIT_REQ
+ *--------------------------------------------------------------------------*/
+typedef PACKED_PRE struct PACKED_POST
+{
+    /* BIT0 - enable frame logging
+     * BIT1 - enableBMUHWtracing
+     * BIT2 - enableQXDMlogging
+     * BIT3 - enableUElogDpuTxp
+     */
+    tANI_U8 enableFlag;
+    tANI_U8 frameType;
+    tANI_U8 frameSize;
+    tANI_U8 bufferMode;
+    /* Host mem address to be used as logmailbox */
+    tANI_U64 logMailBoxAddr;
+    /* firmware will wakeup the host to send logs always */
+    tANI_U8 continuousFrameLogging;
+    /* Logging mail box version */
+    tANI_U8 logMailBoxVer;
+    /* Max ring size in firmware to log msgs when host is suspended state */
+    tANI_U8 maxLogBuffSize;
+    /* when firmware log reaches this threshold and
+     * if host is awake it will push the logs.
+     */
+    tANI_U8 minLogBuffSize;
+    /* Reserved for future purpose */
+    tANI_U32 reserved0;
+    tANI_U32 reserved1;
+    tANI_U32 reserved2;
+}tFWLoggingInitReqType, * tpFWLoggingInitReqType;
+
+typedef PACKED_PRE struct PACKED_POST
+{
+    tHalMsgHeader             header;
+    tFWLoggingInitReqType     tFWLoggingInitReqParams;
+} tHalFWLoggingInitReqMsg, * tpHalFWLoggingInitReqMsg;
+
+/*---------------------------------------------------------------------------
+ * WLAN_HAL_FW_LOGGING_INIT_RSP
+ *-------------------------------------------------------------------------*/
+typedef PACKED_PRE struct PACKED_POST
+{
+    tANI_U32 status;
+    /* FW mail box address */
+    tANI_U64 logMailBoxAddr;
+    /* Logging mail box version */
+    tANI_U8 logMailBoxVer;
+    /* Qshrink is enabled */
+    tANI_BOOLEAN logCompressEnabled;
+    /* Reserved for future purpose */
+    tANI_U32 reserved0;
+    tANI_U32 reserved1;
+    tANI_U32 reserved2;
+} tFWLoggingInitResp, * tpFWLoggingInitResp;
+
+typedef PACKED_PRE struct PACKED_POST
+{
+    tHalMsgHeader         header;
+    tFWLoggingInitResp    tFWLoggingInitRespParams;
+}  tFWLoggingInitRespMsg,  * tpFWLoggingInitRespMsg;
+
+/*---------------------------------------------------------------------------
+ * WLAN_HAL_FW_LOGGING_DXE_DONE_IND
+ *-------------------------------------------------------------------------*/
+typedef PACKED_PRE struct PACKED_POST
+{
+    tANI_U32 status;
+    tANI_U32 logBuffLength[MAX_NUM_OF_BUFFER];
+    tANI_U64 logBuffAddress[MAX_NUM_OF_BUFFER];
+} tFWLoggingDxeDoneInd, * tpFWLoggingDxeDoneInd;
+
+typedef PACKED_PRE struct PACKED_POST
+{
+    tHalMsgHeader         header;
+    tFWLoggingDxeDoneInd    tFWLoggingDxeDoneIndParams;
+}  tFWLoggingDxeDoneIndMsg,  * tpFWLoggingDxeDoneIndMsg;
+
+/*---------------------------------------------------------------------------
+ * Logging mail box structure
+ *-------------------------------------------------------------------------*/
+
+#define MAILBOX_VERSION_V1 0x1
+
+typedef PACKED_PRE struct PACKED_POST
+{
+    /* Logging mail box version */
+    tANI_U8               logMbVersion;
+    /* Current logging buffer address */
+    tANI_U64              logBuffAddress[MAX_NUM_OF_BUFFER];
+    /* Current logging buffer length */
+    tANI_U32              logBuffLength[MAX_NUM_OF_BUFFER];
+    /* Flush reason code  0: Host requested Non zero FW FATAL event*/
+    tANI_U16              reasonCode;
+    /* Log type i.e. Mgmt frame = 0, QXDM = 1, FW Mem dump = 2 */
+    tANI_U8               logType;
+    /* Indicate if Last segment of log is received*/
+    tANI_BOOLEAN          done;
+}tLoggingMailBox, *tpLoggingMailBox;
+
+/*---------------------------------------------------------------------------
+* WLAN_HAL_ENABLE_MONITOR_MODE_REQ
+*-------------------------------------------------------------------------*/
+
+/* only 1 filter is supported as of now */
+#define NUM_FILTERS_SUPPORTED 1
+
+typedef PACKED_PRE struct PACKED_POST
+{
+   tSirMacAddr macAddr;
+   tANI_U8 isA1filteringNeeded;
+   tANI_U8 isA2filteringNeeded;
+   tANI_U8 isA3filteringNeeded;
+}tHalMacFilter, *tpHalMacFilter;
+
+typedef PACKED_PRE struct PACKED_POST
+{
+   tANI_U8 channelNumber;
+   ePhyChanBondState cbState;
+
+   tANI_U32 maxAmpduLen;
+   tANI_U32 maxMpduInAmpduLen;
+
+   tANI_U8 crcCheckEnabled;
+
+   /* value is "1" for this FR. "0" means no filter, RECEIVE ALL PACKETS */
+   tANI_U8 numMacFilters;
+   tHalMacFilter macFilters[NUM_FILTERS_SUPPORTED];
+
+   /* Each bit position maps to IEEE convention of typeSubtype */
+   tANI_U64 typeSubtypeBitmap;
+
+   tANI_U64 reserved;
+
+}tHalEnableMonitorModeReqParams, *tpHalEnableMonitorModeReqParams;
+
+typedef PACKED_PRE struct PACKED_POST
+{
+   tHalMsgHeader header;
+   tHalEnableMonitorModeReqParams enableMonitorModeReqParams;
+}tHalEnableMonitorModeReqMsg, *tpHalEnableMonitorModeReqMsg;
+
+
+/*---------------------------------------------------------------------------
+* WLAN_HAL_ENABLE_MONITOR_MODE_RSP
+*-------------------------------------------------------------------------*/
+
+typedef PACKED_PRE struct PACKED_POST
+{
+   tANI_U32 status;
+}tHalEnableMonitorModeRspParams, *tpHalEnableMonitorModeRspParams;
+
+typedef PACKED_PRE struct PACKED_POST
+{
+   tHalMsgHeader header;
+   tHalEnableMonitorModeRspParams enableMonitorModeRspParams;
+}tHalEnableMonitorModeRspMsg, *tpHalEnableMonitorModeRspMsg;
+
+/*---------------------------------------------------------------------------
+* WLAN_HAL_DISABLE_MONITOR_MODE_REQ
+*-------------------------------------------------------------------------*/
+
+typedef PACKED_PRE struct PACKED_POST
+{
+   tHalMsgHeader header;
+   tANI_U8 resetConfiguration;
+}tHalDisableMonitorModeReqMsg, *tpHalDisableMonitorModeReqMsg;
+
+/*---------------------------------------------------------------------------
+* WLAN_HAL_DISABLE_MONITOR_MODE_RSP
+*-------------------------------------------------------------------------*/
+
+typedef PACKED_PRE struct PACKED_POST
+{
+   tANI_U32 status;
+}tHalDisableMonitorModeRspParams, *tpHalDisableMonitorModeRspParams;
+
+typedef PACKED_PRE struct PACKED_POST
+{
+   tHalMsgHeader header;
+   tHalDisableMonitorModeRspParams disableMonitorModeRspParams;
+}tHalDisableMonitorModeRspMsg, *tpHalDisableMonitorModeRspMsg;
+
+typedef PACKED_PRE struct PACKED_POST
+{
+  tANI_U8   status;
+}tHalAvoidFreqRangeCtrlParam, *tpHalAvoidFreqRangeCtrlParam;
+
+/*---------------------------------------------------------------------------
+* WLAN_HAL_ANTENNA_DIVERSITY_SELECTION_REQ
+*-------------------------------------------------------------------------*/
+typedef PACKED_PRE struct PACKED_POST
+{
+ tANI_U32 reserved;
+}tHalAntennaDiversitySelectionReqParams, *tpHalAntennaDiversitySelectionReqParams;
+
+typedef PACKED_PRE struct PACKED_POST
+{
+ tHalMsgHeader header;
+ tHalAntennaDiversitySelectionReqParams AntDivSelReqParams;
+} tHalAntennaDiversitySelectionReqMsg;
+
+/*---------------------------------------------------------------------------
+* WLAN_HAL_ANTENNA_DIVERSITY_SELECTION_RSP
+*-------------------------------------------------------------------------*/
+
+typedef PACKED_PRE struct PACKED_POST
+{
+ tANI_U16 status;
+ tANI_U32 selectedAntennaId;
+ tANI_U32 reserved;
+}tHalAntennaDiversitySelectionRspParams, *tpHalAntennaDiversitySelectionRspParams;
 
 #if defined(__ANI_COMPILER_PRAGMA_PACK_STACK)
 #pragma pack(pop)

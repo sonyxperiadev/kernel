@@ -619,6 +619,9 @@ typedef struct sDphHashNode
     tANI_U16 pmfSaQueryCurrentTransId;
     tANI_U16 pmfSaQueryStartTransId;
     TX_TIMER pmfSaQueryTimer;
+    v_TIME_t last_unprot_deauth_disassoc;
+    tANI_U8 proct_deauh_disassoc_cnt;
+    v_TIME_t last_assoc_received_time;
 #endif
 
     tANI_U8 htLdpcCapable;
@@ -634,7 +637,7 @@ typedef struct sDphHashNode
      * end of the structure.
 
      */
-
+    tANI_U8 isDisassocDeauthInProgress;
     struct sDphHashNode  *next;
 
 

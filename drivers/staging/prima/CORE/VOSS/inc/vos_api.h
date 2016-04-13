@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2015 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -36,9 +36,6 @@
                
    Header file that inludes all the vOSS API definitions.
   
-   Copyright 2008 (c) Qualcomm, Incorporated.  All Rights Reserved.
-   
-   Qualcomm Confidential and Proprietary.
   
   ========================================================================*/
  /*=========================================================================== 
@@ -78,6 +75,80 @@
 #include <vos_timer.h>
 #include <vos_pack_align.h>
 
+
+/**
+ * enum log_event_type - Type of event initiating bug report
+ * @WLAN_LOG_TYPE_NON_FATAL: Non fatal event
+ * @WLAN_LOG_TYPE_FATAL: Fatal event
+ *
+ * Enum indicating the type of event that is initiating the bug report
+ */
+enum log_event_type {
+	WLAN_LOG_TYPE_NON_FATAL,
+	WLAN_LOG_TYPE_FATAL,
+};
+
+/**
+ * enum log_event_indicator - Module triggering bug report
+ * @WLAN_LOG_INDICATOR_UNUSED: Unused
+ * @WLAN_LOG_INDICATOR_FRAMEWORK: Framework triggers bug report
+ * @WLAN_LOG_INDICATOR_HOST_DRIVER: Host driver triggers bug report
+ * @WLAN_LOG_INDICATOR_FIRMWARE: FW initiates bug report
+ *
+ * Enum indicating the module that triggered the bug report
+ */
+enum log_event_indicator {
+	WLAN_LOG_INDICATOR_UNUSED,
+	WLAN_LOG_INDICATOR_FRAMEWORK,
+	WLAN_LOG_INDICATOR_HOST_DRIVER,
+	WLAN_LOG_INDICATOR_FIRMWARE,
+	WLAN_LOG_INDICATOR_IOCTL
+};
+
+/**
+ * enum log_event_host_reason_code - Reason code for bug report
+ * @WLAN_LOG_REASON_CODE_UNUSED: Unused
+ * @WLAN_LOG_REASON_COMMAND_UNSUCCESSFUL: Command response status from FW
+ * is error
+ * @WLAN_LOG_REASON_ROAM_FAIL: Driver initiated roam has failed
+ * @WLAN_LOG_REASON_THREAD_STUCK: Monitor Health of host threads and report
+ * fatal event if some thread is stuck
+ * @WLAN_LOG_REASON_DATA_STALL: Unable to send/receive data due to low resource
+ * scenario for a prolonged period
+ * @WLAN_LOG_REASON_SME_COMMAND_STUCK: SME command is stuck in SME active queue
+ * @WLAN_LOG_REASON_ZERO_SCAN_RESULTS: Full scan resulted in zero scan results
+ * @WLAN_LOG_REASON_QUEUE_FULL: Defer queue becomes full for a prolonged period
+ * @WLAN_LOG_REASON_POWER_COLLAPSE_FAIL: Unable to allow apps power collapse
+ * for a prolonged period
+ * @WLAN_LOG_REASON_SSR_FAIL: Unable to gracefully complete SSR
+ * @WLAN_LOG_REASON_DISCONNECT_FAIL: Disconnect from Supplicant is not
+ * successful
+ * @WLAN_LOG_REASON_CLEAN_UP_FAIL: Clean up of  TDLS or Pre-Auth Sessions
+ * not successful
+ * @WLAN_LOG_REASON_MALLOC_FAIL: Memory allocation Fails
+ * @WLAN_LOG_REASON_VOS_MSG_UNDER_RUN: VOS Core runs out of message wrapper
+ * @WLAN_LOG_REASON_MSG_POST_FAIL: Unable to post msg
+ *
+ * This enum contains the different reason codes for bug report
+ */
+enum log_event_host_reason_code {
+	WLAN_LOG_REASON_CODE_UNUSED,
+	WLAN_LOG_REASON_COMMAND_UNSUCCESSFUL,
+	WLAN_LOG_REASON_ROAM_FAIL,
+	WLAN_LOG_REASON_THREAD_STUCK,
+	WLAN_LOG_REASON_DATA_STALL,
+	WLAN_LOG_REASON_SME_COMMAND_STUCK,
+	WLAN_LOG_REASON_ZERO_SCAN_RESULTS,
+	WLAN_LOG_REASON_QUEUE_FULL,
+	WLAN_LOG_REASON_POWER_COLLAPSE_FAIL,
+	WLAN_LOG_REASON_SSR_FAIL,
+	WLAN_LOG_REASON_DISCONNECT_FAIL,
+	WLAN_LOG_REASON_CLEAN_UP_FAIL,
+	WLAN_LOG_REASON_MALLOC_FAIL,
+	WLAN_LOG_REASON_VOS_MSG_UNDER_RUN,
+	WLAN_LOG_REASON_MSG_POST_FAIL,
+};
+
 /*------------------------------------------------------------------------- 
   Function declarations and documenation
   ------------------------------------------------------------------------*/
@@ -114,7 +185,9 @@ VOS_STATUS vos_preStart( v_CONTEXT_t vosContext );
 
 VOS_STATUS vos_open( v_CONTEXT_t *pVosContext, void *devHandle );
 
+VOS_STATUS vos_mon_start( v_CONTEXT_t vosContext );
 
+VOS_STATUS vos_mon_stop( v_CONTEXT_t vosContext );
 
 VOS_STATUS vos_start( v_CONTEXT_t vosContext ); 
 
@@ -178,6 +251,16 @@ void vos_set_load_unload_in_progress(VOS_MODULE_ID moduleId, v_U8_t value);
 
 v_U8_t vos_is_reinit_in_progress(VOS_MODULE_ID moduleId, v_VOID_t *moduleContext);
 void vos_set_reinit_in_progress(VOS_MODULE_ID moduleId, v_U8_t value);
+VOS_STATUS vos_logger_pkt_serialize(vos_pkt_t *pPacket, uint32 pkt_type);
+bool vos_is_log_report_in_progress(void);
+void vos_reset_log_report_in_progress(void);
+int vos_set_log_completion(uint32 is_fatal, uint32 indicator, uint32 reason_code);
+void vos_get_log_completion(uint32 *is_fatal, uint32 *indicator, uint32 *reason_code);
+VOS_STATUS vos_fatal_event_logs_req( uint32_t is_fatal, uint32_t indicator,
+                                 uint32_t reason_code, bool waitRequired);
+VOS_STATUS vos_process_done_indication(v_U8_t type, v_U32_t reason_code);
+void vos_send_fatal_event_done(void);
+
 
 /**---------------------------------------------------------------------------
   
@@ -254,9 +337,7 @@ VOS_STATUS vos_alloc_context( v_VOID_t *pVosContext, VOS_MODULE_ID moduleID,
   --------------------------------------------------------------------------*/
 VOS_STATUS vos_free_context( v_VOID_t *pVosContext, VOS_MODULE_ID moduleID,
                              v_VOID_t *pModuleContext );
-                             
 v_BOOL_t vos_is_apps_power_collapse_allowed(void* pHddCtx);
-void vos_abort_mac_scan(tANI_U8 sessionId);
 
 /**
   @brief vos_wlanShutdown() - This API will shutdown WLAN driver
@@ -316,19 +397,44 @@ VOS_STATUS vos_wlanRestart(void);
   This function is called to issue dump commands to Firmware
 
   @param
-       cmd - Command No. to execute
-       arg1 - argument 1 to cmd
-       arg2 - argument 2 to cmd
-       arg3 - argument 3 to cmd
-       arg4 - argument 4 to cmd
+       cmd     -  Command No. to execute
+       arg1    -  argument 1 to cmd
+       arg2    -  argument 2 to cmd
+       arg3    -  argument 3 to cmd
+       arg4    -  argument 4 to cmd
+       async   -  asynchronous event. Don't wait for completion.
   @return
        NONE
 */
 v_VOID_t vos_fwDumpReq(tANI_U32 cmd, tANI_U32 arg1, tANI_U32 arg2,
-                        tANI_U32 arg3, tANI_U32 arg4);
+                        tANI_U32 arg3, tANI_U32 arg4, tANI_U8 async);
+
+v_VOID_t vos_flush_work(struct work_struct *work);
+v_VOID_t vos_flush_delayed_work(struct delayed_work *dwork);
+
+v_VOID_t vos_init_work(struct work_struct *work , void *callbackptr);
+v_VOID_t vos_init_delayed_work(struct delayed_work *dwork , void *callbackptr);
 
 v_U64_t vos_get_monotonic_boottime(void);
 
 VOS_STATUS vos_randomize_n_bytes(void *mac_addr, tANI_U32 n);
 
+v_BOOL_t vos_is_wlan_in_badState(VOS_MODULE_ID moduleId,
+                                 v_VOID_t *moduleContext);
+v_VOID_t  vos_set_roam_delay_stats_enabled(v_U8_t value);
+v_U8_t    vos_get_roam_delay_stats_enabled(v_VOID_t);
+v_U32_t   vos_get_dxeReplenishRXTimerVal(void);
+v_BOOL_t  vos_get_dxeSSREnable(void);
+
+v_U8_t vos_is_fw_logging_enabled(void);
+v_U8_t vos_is_fw_ev_logging_enabled(void);
+
+v_U8_t vos_is_fw_logging_supported(void);
+void vos_set_multicast_logging(uint8_t value);
+v_U8_t vos_is_multicast_logging(void);
+bool vos_is_wakelock_enabled(void);
+v_BOOL_t vos_isUnloadInProgress(void);
+v_BOOL_t vos_isLoadUnloadInProgress(void);
+
+void vos_probe_threads(void);
 #endif // if !defined __VOS_NVITEM_H
