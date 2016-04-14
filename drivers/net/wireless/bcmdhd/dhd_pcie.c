@@ -63,6 +63,8 @@
 
 #define MEMBLOCK	2048		/* Block size used for downloading of dongle image */
 #define MAX_NVRAMBUF_SIZE	6144	/* max nvram buf size */
+#define MAX_WKLK_IDLE_CHECK	3	/* times wake_lock checked before deciding not to suspend */
+
 
 #define ARMCR4REG_BANKIDX	(0x40/sizeof(uint32))
 #define ARMCR4REG_BANKPDA	(0x4C/sizeof(uint32))
@@ -1173,7 +1175,6 @@ int dhd_bus_rxctl(struct dhd_bus *bus, uchar *msg, uint msglen)
 {
 	int timeleft;
 	uint rxlen = 0;
-	bool pending;
 
 	DHD_TRACE(("%s: Enter\n", __FUNCTION__));
 
@@ -1181,7 +1182,7 @@ int dhd_bus_rxctl(struct dhd_bus *bus, uchar *msg, uint msglen)
 		return -EIO;
 
 	/* Wait until control frame is available */
-	timeleft = dhd_os_ioctl_resp_wait(bus->dhd, &bus->rxlen, &pending);
+	timeleft = dhd_os_ioctl_resp_wait(bus->dhd, &bus->rxlen);
 	if (timeleft == 0) {
 		DHD_ERROR(("%s: resumed on timeout\n", __FUNCTION__));
 		bus->ioct_resp.cmn_hdr.request_id = 0;
@@ -1196,9 +1197,6 @@ int dhd_bus_rxctl(struct dhd_bus *bus, uchar *msg, uint msglen)
 		DHD_CTL(("%s: resumed on rxctl frame, got %d\n", __FUNCTION__, rxlen));
 	} else if (timeleft == 0) {
 		DHD_ERROR(("%s: resumed on timeout\n", __FUNCTION__));
-	} else if (pending == TRUE) {
-		DHD_CTL(("%s: canceled\n", __FUNCTION__));
-		return -ERESTARTSYS;
 	} else {
 		DHD_CTL(("%s: resumed for unknown reason?\n", __FUNCTION__));
 	}
@@ -1697,6 +1695,7 @@ dhd_bus_txdata(struct dhd_bus *bus, void *txp, uint8 ifidx)
 {
 	unsigned long flags;
 	int ret = BCME_OK;
+	uint8 status;
 	void *txp_pend = NULL;
 	if (!bus->txmode_push) {
 		uint16 flowid;
@@ -1717,7 +1716,8 @@ dhd_bus_txdata(struct dhd_bus *bus, void *txp, uint8 ifidx)
 
 		if ((flowid >= bus->dhd->num_flow_rings) ||
 			(!flow_ring_node->active) ||
-			(flow_ring_node->status == FLOW_RING_STATUS_DELETE_PENDING)) {
+			((flow_ring_node->status != FLOW_RING_STATUS_OPEN) &&
+				(flow_ring_node->status != FLOW_RING_STATUS_PENDING))) {
 			DHD_INFO(("%s: Dropping pkt flowid %d, status %d active %d\n",
 				__FUNCTION__, flowid, flow_ring_node->status,
 				flow_ring_node->active));
@@ -1731,10 +1731,10 @@ dhd_bus_txdata(struct dhd_bus *bus, void *txp, uint8 ifidx)
 
 		if ((ret = dhd_flow_queue_enqueue(bus->dhd, queue, txp)) != BCME_OK)
 			txp_pend = txp;
-
+		status = flow_ring_node->status;
 		DHD_FLOWRING_UNLOCK(flow_ring_node->lock, flags);
 
-		if (flow_ring_node->status) {
+		if (status != FLOW_RING_STATUS_OPEN) {
 			DHD_INFO(("%s: Enq pkt flowid %d, status %d active %d\n",
 			    __FUNCTION__, flowid, flow_ring_node->status,
 			    flow_ring_node->active));
@@ -1790,10 +1790,12 @@ void
 dhd_bus_update_retlen(dhd_bus_t *bus, uint32 retlen, uint32 pkt_id, uint16 status,
 	uint32 resp_len)
 {
-	bus->rxlen = retlen;
 	bus->ioct_resp.cmn_hdr.request_id = pkt_id;
 	bus->ioct_resp.compl_hdr.status = status;
 	bus->ioct_resp.resp_len = (uint16)resp_len;
+	smp_wmb();
+	bus->rxlen = retlen;
+	smp_wmb();
 }
 
 #if defined(DHD_DEBUG)
@@ -2420,6 +2422,7 @@ int
 dhd_bus_devreset(dhd_pub_t *dhdp, uint8 flag)
 {
 	dhd_bus_t *bus = dhdp->bus;
+	unsigned long flags;
 	int ret = 0;
 #ifdef CONFIG_ARCH_MSM
 	int retry = POWERUP_MAX_RETRY;
@@ -2431,7 +2434,12 @@ dhd_bus_devreset(dhd_pub_t *dhdp, uint8 flag)
 		if (flag == TRUE) {
 			 /* Turn off WLAN */
 			DHD_ERROR(("%s: == Power OFF ==\n", __FUNCTION__));
+			/* Hold Mutex to avoid race condition between watchdog thread
+			 * and dhd_bus_devreset function
+			 */
+			DHD_GENERAL_LOCK(dhdp, flags);
 			bus->dhd->up = FALSE;
+			DHD_GENERAL_UNLOCK(dhdp, flags);
 			if (bus->dhd->busstate != DHD_BUS_DOWN) {
 				if (bus->intr) {
 					dhdpcie_bus_intr_disable(bus);
@@ -2463,7 +2471,6 @@ dhd_bus_devreset(dhd_pub_t *dhdp, uint8 flag)
 				bus->dhd->busstate = DHD_BUS_DOWN;
 			} else {
 				if (bus->intr) {
-					dhdpcie_bus_intr_disable(bus);
 					dhdpcie_free_irq(bus);
 				}
 
@@ -3006,10 +3013,16 @@ dhdpcie_bus_suspend(struct  dhd_bus *bus, bool state)
 {
 
 	int timeleft;
-	bool pending;
+	unsigned long flags;
 	int rc = 0;
+	struct net_device *netdev = NULL;
+	dhd_pub_t *pub = (dhd_pub_t *)(bus->dhd);
+	int idle_retry = 0;
+	int active;
+
 	DHD_INFO(("%s Enter with state :%d\n", __FUNCTION__, state));
 
+	netdev = dhd_idx2net(pub, 0);
 	if (bus->dhd == NULL) {
 		DHD_ERROR(("bus not inited\n"));
 		return BCME_ERROR;
@@ -3033,15 +3046,26 @@ dhdpcie_bus_suspend(struct  dhd_bus *bus, bool state)
 		bus->wait_for_d3_ack = 0;
 		bus->suspended = TRUE;
 		bus->dhd->busstate = DHD_BUS_SUSPEND;
+
+		/* stop all interface network queue. */
+		dhd_bus_stop_queue(bus);
+
 		DHD_OS_WAKE_LOCK_WAIVE(bus->dhd);
 		dhd_os_set_ioctl_resp_timeout(DEFAULT_IOCTL_RESP_TIMEOUT);
 		dhdpcie_send_mb_data(bus, H2D_HOST_D3_INFORM);
-		timeleft = dhd_os_d3ack_wait(bus->dhd, &bus->wait_for_d3_ack, &pending);
+		timeleft = dhd_os_d3ack_wait(bus->dhd, &bus->wait_for_d3_ack);
 		dhd_os_set_ioctl_resp_timeout(IOCTL_RESP_TIMEOUT);
 		DHD_OS_WAKE_LOCK_RESTORE(bus->dhd);
+
 		if (bus->wait_for_d3_ack == 1) {
 			/* Got D3 Ack. Suspend the bus */
-			if (dhd_os_check_wakelock_all(bus->dhd)) {
+			/* To allow threads that got pre-empted to complete. */
+			while ((active = dhd_os_check_wakelock_all(bus->dhd)) &&
+				(idle_retry < MAX_WKLK_IDLE_CHECK)) {
+				msleep(1);
+				idle_retry++;
+			}
+			if (active) {
 				DHD_ERROR(("Suspend failed because of wakelock\n"));
 				bus->dev->current_state = PCI_D3hot;
 				pci_set_master(bus->dev);
@@ -3053,15 +3077,46 @@ dhdpcie_bus_suspend(struct  dhd_bus *bus, bool state)
 				}
 				bus->suspended = FALSE;
 				bus->dhd->busstate = DHD_BUS_DATA;
+
+				/* resume all interface network queue. */
+				dhd_bus_start_queue(bus);
+
 				rc = BCME_ERROR;
 			} else {
 				dhdpcie_bus_intr_disable(bus);
 				rc = dhdpcie_pci_suspend_resume(bus->dev, state);
 			}
+			bus->dhd->d3ackcnt_timeout = 0;
 		} else if (timeleft == 0) {
-			DHD_ERROR(("%s: resumed on timeout\n", __FUNCTION__));
+			bus->dhd->d3ackcnt_timeout++;
+			DHD_ERROR(("%s: resumed on timeout for D3 ACK d3ackcnt_timeout %d \n",
+				__FUNCTION__, bus->dhd->d3ackcnt_timeout));
+			bus->dev->current_state = PCI_D3hot;
+			pci_set_master(bus->dev);
+			rc = pci_set_power_state(bus->dev, PCI_D0);
+			if (rc) {
+				DHD_ERROR(("%s: pci_set_power_state failed:"
+					" current_state[%d], ret[%d]\n",
+					__FUNCTION__, bus->dev->current_state, rc));
+			}
 			bus->suspended = FALSE;
-			bus->dhd->busstate = DHD_BUS_DOWN;
+			DHD_GENERAL_LOCK(bus->dhd, flags);
+			bus->dhd->busstate = DHD_BUS_DATA;
+			DHD_INFO(("fail to suspend, start net device traffic\n"));
+
+			/* resume all interface network queue. */
+			dhd_bus_start_queue(bus);
+
+			DHD_GENERAL_UNLOCK(bus->dhd, flags);
+			if (bus->dhd->d3ackcnt_timeout >= MAX_CNTL_D3ACK_TIMEOUT) {
+				DHD_ERROR(("%s: Event HANG send up "
+					"due to PCIe linkdown\n", __FUNCTION__));
+#ifdef MSM_PCIE_LINKDOWN_RECOVERY
+				bus->islinkdown = TRUE;
+#endif /* MSM_PCIE_LINKDOWN_RECOVERY */
+				bus->dhd->d3ackcnt_timeout = 0;
+				dhd_os_check_hang(bus->dhd, 0, -ETIMEDOUT);
+			}
 			rc = -ETIMEDOUT;
 		} else if (bus->wait_for_d3_ack == DHD_INVALID) {
 			DHD_ERROR(("PCIe link down during suspend"));
@@ -3084,6 +3139,9 @@ dhdpcie_bus_suspend(struct  dhd_bus *bus, bool state)
 		} else {
 			bus->dhd->busstate = DHD_BUS_DATA;
 			dhdpcie_bus_intr_enable(bus);
+
+			/* resume all interface network queue. */
+			dhd_bus_start_queue(bus);
 		}
 	}
 	return rc;
@@ -4286,7 +4344,7 @@ dhd_bus_flow_ring_delete_request(dhd_bus_t *bus, void *arg)
 	flow_ring_node = (flow_ring_node_t *)arg;
 
 	DHD_FLOWRING_LOCK(flow_ring_node->lock, flags);
-	if (flow_ring_node->status & FLOW_RING_STATUS_DELETE_PENDING) {
+	if (flow_ring_node->status == FLOW_RING_STATUS_DELETE_PENDING) {
 		DHD_FLOWRING_UNLOCK(flow_ring_node->lock, flags);
 		DHD_ERROR(("%s :Delete Pending\n", __FUNCTION__));
 		return BCME_ERROR;

@@ -360,6 +360,9 @@ typedef struct dhd_pub {
 	int   hang_was_sent;
 	int   rxcnt_timeout;		/* counter rxcnt timeout to send HANG */
 	int   txcnt_timeout;		/* counter txcnt timeout to send HANG */
+#ifdef BCMPCIE
+	int   d3ackcnt_timeout;
+#endif
 	bool hang_report;		/* enable hang report by default */
 #ifdef WLMEDIA_HTSF
 	uint8 htsfdlystat_sz; /* Size of delay stats, max 255B */
@@ -521,6 +524,7 @@ WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(dhd_workitem_context_t, dhd_get_dhd_workitem_
 #ifdef PNO_SUPPORT
 int dhd_pno_clean(dhd_pub_t *dhd);
 #endif /* PNO_SUPPORT */
+
 /*
  *  Wake locks are an Android power management concept. They are used by applications and services
  *  to request CPU resources.
@@ -690,9 +694,9 @@ extern int dhd_dev_set_whitelist_ssid(struct net_device *dev, wl_ssid_whitelist_
 /* OS independent layer functions */
 extern int dhd_os_proto_block(dhd_pub_t * pub);
 extern int dhd_os_proto_unblock(dhd_pub_t * pub);
-extern int dhd_os_ioctl_resp_wait(dhd_pub_t * pub, uint * condition, bool * pending);
+extern int dhd_os_ioctl_resp_wait(dhd_pub_t * pub, uint * condition);
 extern int dhd_os_ioctl_resp_wake(dhd_pub_t * pub);
-extern int dhd_os_d3ack_wait(dhd_pub_t * pub, uint * condition, bool * pending);
+extern int dhd_os_d3ack_wait(dhd_pub_t * pub, uint * condition);
 extern int dhd_os_d3ack_wake(dhd_pub_t * pub);
 extern struct net_device *dhd_linux_get_primary_netdev(dhd_pub_t *dhdp);
 extern unsigned int dhd_os_get_ioctl_resp_timeout(void);
@@ -809,7 +813,7 @@ extern int dhd_ifidx2hostidx(struct dhd_info *dhd, int ifidx);
 extern int dhd_net2idx(struct dhd_info *dhd, struct net_device *net);
 extern struct net_device * dhd_idx2net(void *pub, int ifidx);
 extern int net_os_send_hang_message(struct net_device *dev);
-extern int wl_host_event(dhd_pub_t *dhd_pub, int *idx, void *pktdata,
+extern int wl_host_event(dhd_pub_t *dhd_pub, int *idx, void *pktdata, size_t pktlen,
                          wl_event_msg_t *, void **data_ptr,  void *);
 extern void wl_event_to_host_order(wl_event_msg_t * evt);
 
@@ -827,6 +831,8 @@ extern int dhd_do_driver_init(struct net_device *net);
 extern int dhd_event_ifadd(struct dhd_info *dhd, struct wl_event_data_if *ifevent,
 	char *name, uint8 *mac);
 extern int dhd_event_ifdel(struct dhd_info *dhd, struct wl_event_data_if *ifevent,
+	char *name, uint8 *mac);
+extern int dhd_event_ifchange(struct dhd_info *dhd, struct wl_event_data_if *ifevent,
 	char *name, uint8 *mac);
 extern struct net_device* dhd_allocate_if(dhd_pub_t *dhdpub, int ifidx, char *name,
 	uint8 *mac, uint8 bssidx, bool need_rtnl_lock);
@@ -950,6 +956,13 @@ extern uint dhd_sdiod_drive_strength;
 
 /* Override to force tx queueing all the time */
 extern uint dhd_force_tx_queueing;
+
+/* Default bcn_timeout value is 4 */
+#define DEFAULT_BCN_TIMEOUT_VALUE        4
+#ifndef CUSTOM_BCN_TIMEOUT_SETTING
+#define CUSTOM_BCN_TIMEOUT_SETTING	DEFAULT_BCN_TIMEOUT_VALUE
+#endif
+
 /* Default KEEP_ALIVE Period is 55 sec to prevent AP from sending Keep Alive probe frame */
 #define DEFAULT_KEEP_ALIVE_VALUE 	55000 /* msec */
 #ifndef CUSTOM_KEEP_ALIVE_SETTING
@@ -1014,8 +1027,10 @@ extern uint dhd_force_tx_queueing;
 #define CUSTOM_RXF_PRIO_SETTING		MAX((CUSTOM_DPC_PRIO_SETTING - 1), 1)
 #endif
 
-#define DEFAULT_WIFI_TURNOFF_DELAY		0
-#define WIFI_TURNOFF_DELAY		DEFAULT_WIFI_TURNOFF_DELAY
+#define DEFAULT_WIFI_TURNOFF_DELAY              0
+#ifndef WIFI_TURNOFF_DELAY
+#define WIFI_TURNOFF_DELAY              DEFAULT_WIFI_TURNOFF_DELAY
+#endif /* WIFI_TURNOFF_DELAY */
 
 #define DEFAULT_WIFI_TURNON_DELAY		200
 #ifndef WIFI_TURNON_DELAY

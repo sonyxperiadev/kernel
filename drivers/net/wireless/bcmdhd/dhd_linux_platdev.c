@@ -67,7 +67,7 @@ struct wifi_platform_data dhd_wlan_control = {0};
 
 static int dhd_wifi_platform_load(void);
 
-extern void* wl_cfg80211_get_dhdp(void);
+extern void *wl_cfg80211_get_dhdp(struct net_device *dev);
 
 #ifdef ENABLE_4335BT_WAR
 extern int bcm_bt_lock(int cookie);
@@ -204,10 +204,8 @@ int wifi_platform_get_wake_irq(wifi_adapter_info_t *adapter)
 	if (!adapter || !adapter->wifi_plat_data)
 		return -1;
 	plat_data = adapter->wifi_plat_data;
-#ifdef CONFIG_DHD_WAKE_STATUS
 	if (plat_data->get_wake_irq)
 		return plat_data->get_wake_irq();
-#endif
 	return -1;
 }
 
@@ -303,8 +301,12 @@ static int wifi_plat_dev_drv_probe(struct platform_device *pdev)
 	adapter->irq_num = irq;
 
 	/* need to change the flags according to our requirement */
+#ifdef CONFIG_BCM4356
+	adapter->intr_flags = IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHEDGE;
+#else
 	adapter->intr_flags = IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHLEVEL |
 		IORESOURCE_IRQ_SHAREABLE;
+#endif
 #endif
 
 	wifi_plat_dev_probe_ret = dhd_wifi_platform_load();
@@ -588,11 +590,6 @@ static int dhd_wifi_platform_load_pcie(void)
 	if (dhd_wifi_platdata == NULL) {
 		err = dhd_bus_register();
 	} else {
-#if !defined(CONFIG_WIFI_CONTROL_FUNC)
-		if (dhd_download_fw_on_driverload) {
-#else
-		{
-#endif
 			/* power up all adapters */
 			for (i = 0; i < dhd_wifi_platdata->num_adapters; i++) {
 				int retry = POWERUP_MAX_RETRY;
@@ -636,17 +633,11 @@ static int dhd_wifi_platform_load_pcie(void)
 					return -ENODEV;
 				}
 			}
-		}
 
 		err = dhd_bus_register();
 
 		if (err) {
 			DHD_ERROR(("%s: pcie_register_driver failed\n", __FUNCTION__));
-#if !defined(CONFIG_WIFI_CONTROL_FUNC)
-			if (dhd_download_fw_on_driverload) {
-#else
-			{
-#endif
 				/* power down all adapters */
 				for (i = 0; i < dhd_wifi_platdata->num_adapters; i++) {
 					adapter = &dhd_wifi_platdata->adapters[i];
@@ -654,7 +645,6 @@ static int dhd_wifi_platform_load_pcie(void)
 					wifi_platform_set_power(adapter,
 						FALSE, WIFI_TURNOFF_DELAY);
 				}
-			}
 		}
 	}
 
