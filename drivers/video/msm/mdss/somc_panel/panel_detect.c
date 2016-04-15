@@ -239,7 +239,12 @@ static int cmd_panel_detect(struct mdss_panel_data *pdata)
 		}
 	}
 parse:
-	pr_info("%s: Panel detected!\n", __func__);
+	if (unlikely(rc != len)) {
+		pr_err("%s: WARNING: Cannot detect panel." \
+			" Falling back to the default entry!\n", __func__);
+		next = np;
+	} else
+		pr_info("%s: Panel detected!\n", __func__);
 
 	spec_pdata->detected = true;
 	rc = mdss_panel_parse_dt(next, ctrl_pdata);
