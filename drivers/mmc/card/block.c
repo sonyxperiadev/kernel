@@ -2805,13 +2805,14 @@ static int mmc_blk_issue_rq(struct mmc_queue *mq, struct request *req)
 		mmc_rpm_hold(host, &card->dev);
 		/* claim host only for the first request */
 		mmc_claim_host(card->host);
+		if (mmc_card_get_bkops_en_manual(card))
+			mmc_stop_bkops(card);
+	}
+
 #ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
 	if (mmc_bus_needs_resume(card->host))
 		mmc_resume_bus(card->host);
 #endif
-		if (mmc_card_get_bkops_en_manual(card))
-			mmc_stop_bkops(card);
-	}
 
 	ret = mmc_blk_part_switch(card, md);
 	if (ret) {
@@ -3322,7 +3323,8 @@ static int mmc_blk_probe(struct mmc_card *card)
 	mmc_fixup_device(card, blk_fixups);
 
 #ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
-	mmc_set_bus_resume_policy(card->host, 1);
+	if (mmc_card_sd(card))
+		mmc_set_bus_resume_policy(card->host, 1);
 #endif
 	if (mmc_add_disk(md))
 		goto out;
