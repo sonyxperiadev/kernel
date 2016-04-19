@@ -32,6 +32,7 @@
 #include <linux/input.h>
 #include <linux/qpnp/qpnp-smbcharger_extension.h>
 
+#include "pmic-voter.h"
 #include "qpnp-smbcharger_extension.h"
 
 struct chg_somc_params *chg_params;
@@ -54,6 +55,17 @@ static void somc_chg_weak_detect_weak_charger(void);
 #define  ID_POLLING_TIMEOUT_MAX			(60000)
 #define  ID_POLLING_WAKE_LOCK_TIMEOUT_EXT	(1000)
 
+enum enable_voters {
+	USER_EN_VOTER,
+	POWER_SUPPLY_EN_VOTER,
+	USB_EN_VOTER,
+	WIRELESS_EN_VOTER,
+	THERMAL_EN_VOTER,
+	OTG_EN_VOTER,
+	WEAK_CHARGER_EN_VOTER,
+	NUM_EN_VOTERS,
+};
+
 static bool force_id_polling_on;
 module_param(force_id_polling_on, bool, S_IRUSR | S_IWUSR);
 
@@ -66,6 +78,29 @@ module_param(id_polling_timeout, uint, S_IRUSR | S_IWUSR);
 static bool start_id_polling;
 static void somc_chg_usbid_start_polling(struct chg_somc_params *params);
 static void somc_chg_usbid_stop_polling(struct chg_somc_params *params);
+
+static bool get_chg_suspend_status(struct chg_somc_params *params, bool is_dc)
+{
+	bool ret = 0;
+
+	if (is_dc)
+		ret = !get_client_vote(params->dc_susp,
+			USER_EN_VOTER) &&
+			!get_client_vote(params->dc_susp,
+			POWER_SUPPLY_EN_VOTER) &&
+			!get_client_vote(params->dc_susp,
+			THERMAL_EN_VOTER);
+	else
+		ret = !get_client_vote(params->usb_susp,
+			USER_EN_VOTER) &&
+			!get_client_vote(params->usb_susp,
+			POWER_SUPPLY_EN_VOTER) &&
+			!get_client_vote(params->usb_susp,
+			THERMAL_EN_VOTER);
+
+	return ret;
+}
+
 static int set_start_id_polling(const char *val, const struct kernel_param *kp)
 {
 	int ret;
@@ -485,7 +520,7 @@ int somc_chg_therm_set_fastchg_current(struct chg_somc_params *params)
 			temp_current_ma = params->step_chg.current_ma;
 		else
 			temp_current_ma =
-				*params->fastchg.current_ma;
+				get_effective_result_locked(params->fcc);
 		break;
 	case TEMP_STATUS_WARM:
 		temp_current_ma = params->fastchg.warm_current_ma;
@@ -836,12 +871,16 @@ static ssize_t somc_chg_param_show(struct device *dev,
 				*chg_params->dc_target_current_ma);
 		break;
 	case ATTR_USB_SUSPENDED:
+		chg_params->usb_suspended =
+			get_chg_suspend_status(chg_params, false);
 		size = scnprintf(buf, PAGE_SIZE, "0x%02X\n",
-				*chg_params->usb_suspended);
+				chg_params->usb_suspended);
 		break;
 	case ATTR_DC_SUSPENDED:
+		chg_params->dc_suspended =
+			get_chg_suspend_status(chg_params, true);
 		size = scnprintf(buf, PAGE_SIZE, "0x%02X\n",
-				*chg_params->dc_suspended);
+				chg_params->dc_suspended);
 		break;
 	case ATTR_USB_ONLINE:
 		size = scnprintf(buf, PAGE_SIZE, "%d\n",
@@ -1339,10 +1378,12 @@ static void somc_chg_aicl_work(struct work_struct *work)
 	if (!*chg_params->usb_present)
 		goto aicl_no_usb_exit;
 
+	chg_params->usb_suspended = get_chg_suspend_status(chg_params, false);
+
 	if (chg_params->last_usb_target_current_ma !=
 		*chg_params->usb_target_current_ma ||
 		chg_params->last_usb_suspended !=
-		*chg_params->usb_suspended ||
+		chg_params->usb_suspended ||
 		chg_params->last_therm_lvl_sel !=
 		*chg_params->thermal.lvl_sel ||
 		chg_params->forced_iusb_dec.stop) {
@@ -1350,7 +1391,7 @@ static void somc_chg_aicl_work(struct work_struct *work)
 			chg_params->last_usb_target_current_ma,
 			*chg_params->usb_target_current_ma,
 			chg_params->last_usb_suspended,
-			*chg_params->usb_suspended,
+			chg_params->usb_suspended,
 			chg_params->last_therm_lvl_sel,
 			*chg_params->thermal.lvl_sel);
 		wake_lock_timeout(&chg_params->aicl_wakelock, AICL_WAKE_PERIOD);
@@ -1358,7 +1399,7 @@ static void somc_chg_aicl_work(struct work_struct *work)
 		somc_chg_set_thermal_limited_iusb_max(IUSBMAX_MIN_0MA);
 		chg_params->last_usb_target_current_ma =
 			*chg_params->usb_target_current_ma;
-		chg_params->last_usb_suspended = *chg_params->usb_suspended;
+		chg_params->last_usb_suspended = chg_params->usb_suspended;
 		chg_params->last_therm_lvl_sel = *chg_params->thermal.lvl_sel;
 		if (chg_params->forced_iusb_dec.stop) {
 			if (chg_params->forced_iusb_dec.safety_soc >
