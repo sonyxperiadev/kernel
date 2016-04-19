@@ -2702,22 +2702,16 @@ int qpnp_ibb_set_current_max(struct regulator *regulator, u32 limit)
 		reg = ARRAY_SIZE(ibb_current_limit_plan) - 1;
 
 	mutex_lock(&(labibb->ibb_vreg.ibb_mutex));
-	rc = qpnp_ibb_unlock_sec_access(labibb);
-	if (rc) {
-		pr_err("unlock ibb secure register failed rc = %d\n", rc);
-		goto _exit;
-	}
 
-	rc = qpnp_labibb_masked_write(labibb, labibb->ibb_base +
+	rc = qpnp_labibb_sec_masked_write(labibb, labibb->ibb_base,
 				REG_IBB_CURRENT_LIMIT,
 				IBB_CURRENT_LIMIT_MASK,
 				reg,
 				1);
 	if (rc)
-		pr_err("%s write register %x failed rc = %d\n",
+		pr_err("%s write secure register %x failed rc = %d\n",
 			__func__, REG_IBB_CURRENT_LIMIT, rc);
 
-_exit:
 	mutex_unlock(&(labibb->ibb_vreg.ibb_mutex));
 	return rc;
 }
