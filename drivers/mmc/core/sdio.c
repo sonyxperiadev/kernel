@@ -29,6 +29,11 @@
 #include "sdio_ops.h"
 #include "sdio_cis.h"
 
+// Sony Kitakami R2
+#if defined(CONFIG_MACH_SONY_SUZURAN) || defined(CONFIG_MACH_SONY_SUMIRE) || defined(CONFIG_MACH_SONY_SATSUKI)
+#define SELECT_LOW_VOLTAGE
+#endif
+
 #ifdef CONFIG_MMC_EMBEDDED_SDIO
 #include <linux/mmc/sdio_ids.h>
 #endif
@@ -1048,7 +1053,7 @@ static int mmc_select_low_voltage(struct mmc_host *host, u32 ocr)
 {
 	int ret = 0;
 
-#ifdef CONFIG_MACH_SONY_SUZURAN
+#if defined(SELECT_LOW_VOLTAGE)
 	if ((host->ocr_avail == MMC_VDD_165_195) && mmc_host_uhs(host) &&
 		((ocr & host->ocr_avail) == 0)) {
 		/* lowest voltage can be selected in mmc_power_cycle */
@@ -1113,11 +1118,11 @@ static int mmc_sdio_power_restore(struct mmc_host *host)
 		/* to query card if 1.8V signalling is supported */
 		host->ocr |= R4_18V_PRESENT;
 
+#if defined(SELECT_LOW_VOLTAGE)
 	ret = mmc_sdio_init_card(host, host->ocr, host->card,
-#ifdef CONFIG_MACH_SONY_SHINANO
-		0);
+				mmc_card_keep_power(host));
 #else
-		mmc_card_keep_power(host));
+	ret = mmc_sdio_init_card(host, host->ocr, host->card, 0);
 #endif
 	if (!ret && host->sdio_irqs)
 		mmc_signal_sdio_irq(host);
