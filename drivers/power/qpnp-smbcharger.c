@@ -283,6 +283,10 @@ struct smbchg_chip {
 #endif
 };
 
+#ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
+	int usb_current_compat;
+#endif
+
 enum qpnp_schg {
 	QPNP_SCHG,
 	QPNP_SCHG_LITE,
@@ -3766,7 +3770,7 @@ static void smbchg_external_power_changed(struct power_supply *psy)
 	smbchg_aicl_deglitch_wa_check(chip);
 	if (chip->bms_psy) {
 		check_battery_type(chip);
-#ifndef CONFIG_QPNP_SMBCHARGBER_EXTENSION
+#ifndef CONFIG_QPNP_SMBCHARGER_EXTENSION
 		soc = get_prop_batt_capacity(chip);
 		if (chip->previous_soc != soc) {
 			chip->previous_soc = soc;
@@ -3812,7 +3816,7 @@ static void smbchg_external_power_changed(struct power_supply *psy)
 #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
 	/* TODO: WARNING: CHECKME!!! */
 	last_current_limit =
-		get_effective_result_locked(chip->usb_icl_votable));
+		get_effective_result_locked(chip->usb_icl_votable);
 
 	current_ma = (last_current_limit > SUSPEND_CURRENT_MA &&
 			current_limit > SUSPEND_CURRENT_MA) ?
@@ -6859,11 +6863,12 @@ static irqreturn_t otg_oc_handler(int irq, void *_chip)
 		chip->otg_enable_time = ktime_get();
 	}
 #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
-	} else {
+	else {
 		dev_err(chip->dev,
 				"OCP triggered %d times; no further retries\n",
 							chip->otg_retries);
 		somc_chg_otg_regulator_ocp_notify(&chip->somc_params);
+	}
 #endif
 	return IRQ_HANDLED;
 }
@@ -8485,35 +8490,38 @@ static int smbchg_probe(struct spmi_device *spmi)
 	chip->somc_params.otg_base = &chip->otg_base;
 	chip->somc_params.usb_max_current_ma = &chip->usb_max_current_ma;
 	chip->somc_params.dc_max_current_ma = &chip->dc_max_current_ma;
-	chip->somc_params.usb_target_current_ma = &chip->usb_target_current_ma;
+	chip->somc_params.usb_target_current_ma = &usb_current_compat;
 	chip->somc_params.dc_target_current_ma = &chip->dc_target_current_ma;
-	chip->somc_params.usb_suspended = &chip->usb_suspended;
-	chip->somc_params.dc_suspended = &chip->dc_suspended;
+	chip->somc_params.usb_suspended = 1;
+	chip->somc_params.dc_suspended = 0;
 	chip->somc_params.usb_online = &chip->usb_online;
 	chip->somc_params.usb_present = &chip->usb_present;
 	chip->somc_params.dc_present = &chip->dc_present;
-	chip->somc_params.usb_current_table = chip->usb_ilim_ma_table;
-	chip->somc_params.dc_current_table = chip->dc_ilim_ma_table;
-	chip->somc_params.usb_current_table_num = chip->usb_ilim_ma_len;
-	chip->somc_params.dc_current_table_num = chip->dc_ilim_ma_len;
+	chip->somc_params.usb_current_table = chip->tables.usb_ilim_ma_table;
+	chip->somc_params.dc_current_table = chip->tables.dc_ilim_ma_table;
+	chip->somc_params.usb_current_table_num = chip->tables.usb_ilim_ma_len;
+	chip->somc_params.dc_current_table_num = chip->tables.dc_ilim_ma_len;
 	chip->somc_params.batt_psy = &chip->batt_psy;
 	chip->somc_params.usb_psy = chip->usb_psy;
 	chip->somc_params.bms_psy_name = chip->bms_psy_name;
 	chip->somc_params.revision = chip->revision;
 	chip->somc_params.psy_registered = &chip->psy_registered;
-	chip->somc_params.fastchg.current_ma =
-			&chip->target_fastchg_current_ma;
+//	chip->somc_params.fastchg.current_ma =
+//			&chip->target_fastchg_current_ma;
 	chip->somc_params.usb_id.ctx = (void *)chip;
 	chip->somc_params.usb_id.otg_present = &chip->otg_present;
 	chip->somc_params.usb_id.change_irq = &chip->usbid_change_irq;
 	chip->somc_params.usb_id.otg_vreg.rdesc = &chip->otg_vreg.rdesc;
 	chip->somc_params.usb_id.otg_vreg.rdev = chip->otg_vreg.rdev;
+	chip->somc_params.fcc = chip->fcc_votable;
+	chip->somc_params.dc_susp = chip->dc_suspend_votable;
+	chip->somc_params.usb_susp = chip->usb_suspend_votable;
 	rc = somc_chg_register(chip->dev, &chip->somc_params);
 	if (rc < 0) {
 		dev_err(&spmi->dev, "somc chg register failed rc = %d\n", rc);
 		goto free_regulator;
 	}
-	rc = smbchg_primary_usb_en(chip, false, REASON_USB, &changed);
+	rc = vote(chip->usb_suspend_votable, USB_EN_VOTER, true, 0);
 	if (rc < 0)
 		dev_err(chip->dev, "Couldn't suspend charger: %d\n", rc);
 #endif

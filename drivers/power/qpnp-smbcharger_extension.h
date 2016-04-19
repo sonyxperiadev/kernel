@@ -143,7 +143,7 @@ struct somc_vol_check {
 struct somc_fastchg_current {
 	int			warm_current_ma;
 	int			cool_current_ma;
-	int			*current_ma;
+//	int			*current_ma;
 };
 
 struct somc_step_chg {
@@ -256,8 +256,8 @@ struct chg_somc_params {
 	int			*dc_max_current_ma;
 	int			*usb_target_current_ma;
 	int			*dc_target_current_ma;
-	int			*usb_suspended;
-	int			*dc_suspended;
+	int			usb_suspended;
+	int			dc_suspended;
 	int			*usb_online;
 	bool			*psy_registered;
 	u8			*revision;
@@ -272,6 +272,11 @@ struct chg_somc_params {
 	/* extension for usb */
 	struct somc_usb_ocp	usb_ocp;
 	struct somc_usb_id	usb_id;
+
+	/* Votables */
+	struct votable *fcc;
+	struct votable *dc_susp;
+	struct votable *usb_susp;
 };
 
 /* qpnp-smbcharger.c */
