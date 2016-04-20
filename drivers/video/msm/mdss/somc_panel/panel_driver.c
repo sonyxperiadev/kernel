@@ -352,7 +352,7 @@ static int mdss_dsi_panel_reset_seq(struct mdss_panel_data *pdata, int enable)
 		pr_debug("%s:%d, disp_en line not configured\n",
 			   __func__, __LINE__);
 
-	if (!ctrl_pdata->rst_gpio)
+	if (!gpio_is_valid(ctrl_pdata->rst_gpio))
 		pr_debug("%s:%d, reset line not configured\n",
 			   __func__, __LINE__);
 
@@ -3579,6 +3579,7 @@ int mdss_panel_parse_dt(struct device_node *np,
 	pinfo->bl_min = !rc ? tmp : 0;
 	rc = of_property_read_u32(np, "qcom,mdss-dsi-bl-max-level", &tmp);
 	pinfo->bl_max = !rc ? tmp : 255;
+	ctrl_pdata->bklt_max = pinfo->bl_max;
 
 	rc = of_property_read_u32(np, "qcom,mdss-dsi-interleave-mode", &tmp);
 	pinfo->mipi.interleave_mode = !rc ? tmp : 0;
@@ -3703,14 +3704,13 @@ int mdss_panel_parse_dt(struct device_node *np,
 
 	data = of_get_property(np,
 		"somc,mdss-dsi-lane-config", &len);
-	if ((data) && (len == 45)) {
-		for (i = 0; i < len; i++) {
-			pinfo->mipi.dsi_phy_db.lanecfg[i] =
-					data[i];
-		}
-	} else
+	if (!data || len != 45) {
 		pr_err("%s:%d, Unable to read Phy lane configure\n",
 			__func__, __LINE__);
+	} else {
+		for (i = 0; i < len; i++)
+			pinfo->mipi.dsi_phy_db.lanecfg[i] = data[i];
+	}
 
 	mdss_dsi_parse_roi_alignment(np, pinfo);
 
