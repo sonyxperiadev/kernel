@@ -62,7 +62,9 @@
 #include <linux/ipc_logging.h>
 #include <asm/irq.h>
 #include <linux/kthread.h>
+#ifndef CONFIG_ARCH_MSM8974
 #include <linux/delay.h>
+#endif
 
 #include <linux/msm-sps.h>
 #include <linux/platform_data/msm_serial_hs.h>
@@ -211,7 +213,9 @@ struct msm_hs_wakeup {
 	unsigned char rx_to_inject;
 	bool enabled;
 	bool freed;
+#ifndef CONFIG_ARCH_MSM8974
 	struct work_struct resume_work;
+#endif
 };
 
 struct msm_hs_port {
@@ -257,7 +261,9 @@ struct msm_hs_port {
 	atomic_t ioctl_count;
 	bool obs; /* out of band sleep flag */
 	atomic_t client_req_state;
+#ifndef CONFIG_ARCH_MSM8974
 	atomic_t wakeup_irq_disabled;
+#endif
 };
 
 static struct of_device_id msm_hs_match_table[] = {
@@ -2197,12 +2203,17 @@ void toggle_wakeup_interrupt(struct msm_hs_port *msm_uport)
 		spin_lock_irqsave(&uport->lock, flags);
 		msm_uport->wakeup.ignore = 1;
 		MSM_HS_DBG("%s(): Enable Wakeup IRQ", __func__);
+#ifndef CONFIG_ARCH_MSM8974
 		atomic_set(&msm_uport->wakeup_irq_disabled, 0);
+#endif
 		enable_irq(msm_uport->wakeup.irq);
 		disable_irq(uport->irq);
 		msm_uport->wakeup.enabled = true;
 		spin_unlock_irqrestore(&uport->lock, flags);
 	} else {
+#ifdef CONFIG_ARCH_MSM8974
+		disable_irq_nosync(msm_uport->wakeup.irq);
+#else
 		spin_lock_irqsave(&uport->lock, flags);
 		if (!atomic_read(&msm_uport->wakeup_irq_disabled)) {
 			disable_irq_nosync(msm_uport->wakeup.irq);
@@ -2212,7 +2223,7 @@ void toggle_wakeup_interrupt(struct msm_hs_port *msm_uport)
 				__func__);
 		}
 		spin_unlock_irqrestore(&uport->lock, flags);
-
+#endif
 		enable_irq(uport->irq);
 		spin_lock_irqsave(&uport->lock, flags);
 		msm_uport->wakeup.enabled = false;
@@ -2308,6 +2319,50 @@ void msm_hs_request_clock_on(struct uart_port *uport)
 }
 EXPORT_SYMBOL(msm_hs_request_clock_on);
 
+#ifdef CONFIG_ARCH_MSM8974
+static irqreturn_t msm_hs_wakeup_isr(int irq, void *dev)
+{
+	unsigned int wakeup = 0;
+	unsigned long flags;
+	struct msm_hs_port *msm_uport = (struct msm_hs_port *)dev;
+	struct uart_port *uport = &msm_uport->uport;
+	struct tty_struct *tty = NULL;
+
+	msm_hs_resource_vote(msm_uport);
+	spin_lock_irqsave(&uport->lock, flags);
+
+	MSM_HS_DBG("%s(): ignore %d\n", __func__,
+			msm_uport->wakeup.ignore);
+	if (msm_uport->wakeup.ignore)
+		msm_uport->wakeup.ignore = 0;
+	else
+		wakeup = 1;
+
+	if (wakeup) {
+		/*
+		 * Port was clocked off during rx, wake up and
+		 * optionally inject char into tty rx
+		 */
+		if (msm_uport->wakeup.inject_rx) {
+			tty = uport->state->port.tty;
+			tty_insert_flip_char(tty->port,
+					     msm_uport->wakeup.rx_to_inject,
+					     TTY_NORMAL);
+			MSM_HS_DBG("%s(): Inject 0x%x", __func__,
+				msm_uport->wakeup.rx_to_inject);
+		}
+	}
+
+	spin_unlock_irqrestore(&uport->lock, flags);
+	msm_hs_resource_unvote(msm_uport);
+
+	if (wakeup && msm_uport->wakeup.inject_rx)
+		tty_flip_buffer_push(tty->port);
+	return IRQ_HANDLED;
+}
+
+#else // Others platforms
+
 static irqreturn_t msm_hs_wakeup_isr(int irq, void *dev)
 {
 	unsigned long flags;
@@ -2374,6 +2429,7 @@ static void msm_hs_wakeup_resume_work(struct work_struct *work)
 		schedule_work(&msm_uport->wakeup.resume_work);
 	}
 }
+#endif // #ifdef CONFIG_ARCH_MSM8974
 
 static const char *msm_hs_type(struct uart_port *port)
 {
@@ -2558,7 +2614,11 @@ static int msm_hs_startup(struct uart_port *uport)
 	if (is_use_low_power_wakeup(msm_uport)) {
 		ret = request_threaded_irq(msm_uport->wakeup.irq, NULL,
 					msm_hs_wakeup_isr,
+#ifdef CONFIG_ARCH_MSM8974
+					IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
+#else
 					IRQF_TRIGGER_HIGH | IRQF_ONESHOT,
+#endif
 					"msm_hs_wakeup", msm_uport);
 		if (unlikely(ret)) {
 			MSM_HS_ERR("%s():Err getting uart wakeup_irq %d\n",
@@ -2672,7 +2732,9 @@ static int msm_hs_startup(struct uart_port *uport)
 	spin_lock_irqsave(&uport->lock, flags);
 	atomic_set(&msm_uport->ioctl_count, 0);
 	atomic_set(&msm_uport->client_req_state, 0);
+#ifndef CONFIG_ARCH_MSM8974
 	atomic_set(&msm_uport->wakeup_irq_disabled, 0);
+#endif
 	msm_hs_start_rx_locked(uport);
 
 	spin_unlock_irqrestore(&uport->lock, flags);
@@ -3201,7 +3263,11 @@ static void  msm_serial_hs_rt_init(struct uart_port *uport)
 
 	MSM_HS_INFO("%s(): Enabling runtime pm", __func__);
 	pm_runtime_set_suspended(uport->dev);
+#ifdef CONFIG_ARCH_MSM8974
+	pm_runtime_set_autosuspend_delay(uport->dev, 100);
+#else
 	pm_runtime_set_autosuspend_delay(uport->dev, 5000);
+#endif
 	pm_runtime_use_autosuspend(uport->dev);
 	mutex_lock(&msm_uport->mtx);
 	msm_uport->pm_state = MSM_HS_PM_SUSPENDED;
@@ -3351,7 +3417,9 @@ static int msm_hs_probe(struct platform_device *pdev)
 	msm_uport->wakeup.inject_rx = pdata->inject_rx_on_wakeup;
 	msm_uport->wakeup.rx_to_inject = pdata->rx_to_inject;
 	msm_uport->obs = pdata->obs;
+#ifndef CONFIG_ARCH_MSM8974
 	INIT_WORK(&msm_uport->wakeup.resume_work, msm_hs_wakeup_resume_work);
+#endif
 
 	msm_uport->bam_tx_ep_pipe_index =
 			pdata->bam_tx_ep_pipe_index;
@@ -3552,7 +3620,9 @@ static void msm_hs_shutdown(struct uart_port *uport)
 				__func__);
 	}
 
+#ifndef CONFIG_ARCH_MSM8974
 	cancel_work_sync(&msm_uport->wakeup.resume_work);
+#endif
 	cancel_delayed_work_sync(&msm_uport->rx.flip_insert_work);
 	flush_workqueue(msm_uport->hsuart_wq);
 
