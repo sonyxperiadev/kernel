@@ -908,6 +908,7 @@
 	qcom,charge-unknown-battery;
 	qcom,usb_dp-vadc = <&pmi8950_vadc>;
 	qcom,usb_dm-vadc = <&pmi8950_vadc>;
+	qcom,usbin-vadc = <&pmi8950_vadc>;
 	qcom,float-voltage-mv = <4300>;
 	qcom,precharging-timeout-mins = <24>;
 	qcom,charging-timeout-mins = <768>;
