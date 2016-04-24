@@ -26,8 +26,24 @@
 
 #include "mdss_fb.h"
 #include "mdss_mdp.h"
-#include "splash.h"
 #include "mdss_mdp_splash_logo.h"
+
+// All devices less than 720p
+#if defined(CONFIG_MACH_SONY_FLAMINGO) || \
+    defined(CONFIG_MACH_SONY_EAGLE)
+#include "splash_240.h"
+// All 720p devices
+#elif defined(CONFIG_MACH_SONY_SEAGULL) || \
+      defined(CONFIG_MACH_SONY_TIANCHI) || \
+      defined(CONFIG_MACH_SONY_TULIP) || \
+      defined(CONFIG_MACH_SONY_AMAMI) || \
+      defined(CONFIG_MACH_SONY_ARIES) || \
+      defined(CONFIG_MACH_SONY_SUZURAN)
+#include "splash_320.h"
+#else
+// All 1080p devices and beyond
+#include "splash_480.h"
+#endif
 
 #define INVALID_PIPE_INDEX 0xFFFF
 #define MAX_FRAME_DONE_COUNT_WAIT 2
