@@ -2789,10 +2789,13 @@ static void sdhci_timeout_timer(unsigned long data)
 		if (!host->mrq->cmd->ignore_timeout) {
 			pr_err("%s: Timeout waiting for hardware interrupt.\n",
 			       mmc_hostname(host->mmc));
-			if (host->data)
+			if (host->data) {
 				sdhci_show_adma_error(host);
-			else
-				sdhci_dumpregs(host);
+			} else {
+				if (host->mmc->card &&
+						!mmc_card_sdio(host->mmc->card))
+					sdhci_dumpregs(host);
+			}
 		}
 
 		if (host->data) {
