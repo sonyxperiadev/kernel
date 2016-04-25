@@ -84,7 +84,7 @@ ifdef CONFIG_QTI_RPMH_API
 	obj-$(CONFIG_QTI_RPM_STATS_LOG) += rpmh_master_stat.o
 endif
 ifdef CONFIG_MSM_RPM_SMD
-	obj-$(CONFIG_QTI_RPM_STATS_LOG) += rpm_master_stat.o
+	obj-$(CONFIG_QTI_RPM_STATS_LOG) += rpm_master_stat.o system_stats.o
 endif
 obj-$(CONFIG_QMP_DEBUGFS_CLIENT) += qmp-debugfs-client.o
 obj-$(CONFIG_MSM_PERFORMANCE) += msm_performance.o
