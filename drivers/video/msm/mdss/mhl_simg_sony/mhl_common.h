@@ -1,4 +1,4 @@
-/* kernel/drivers/video/msm/mdss/mhl_sii8620_8061_drv/mhl_common.h
+/* vendor/semc/hardware/mhl/mhl_sii8620_8061_drv/mhl_common.h
  *
  * Copyright (C) 2013 Sony Mobile Communications AB.
  * Copyright (C) 2013 Silicon Image Inc.
@@ -12,7 +12,9 @@
 #ifndef __MHL_COMMON_H
 #define __MHL_COMMON_H
 
-#include <linux/types.h>
+#include <linux/mhl/mhl.h>
+
+#include "si_8620_regs.h"
 
 /*
  * Used in the unit test build
@@ -21,37 +23,31 @@
 #define static
 #endif
 
-
-/*
- * Debug print
- */
-/* print all debug info */
-/* #define DEBUG_PRINT */
-
-#ifdef DEBUG_PRINT
-#undef pr_debug
-#define pr_debug pr_info
-#endif
-
 /* edid read printing with pr_info level*/
 #define EDID_DATA_DEBUG_PRINT
 
-/*
- * FIXME
- */
-#define EMSC_WORKAROUND
-/* #define HEARTBEAT */
+/* dump all registers */
+/* #ifdef DUMP_ALL_REGS */
+
+/* no use */
+#if 0
+/* HeartBeat */
+/* send periodic GET_STATE and disconnect on heartbeat failure */
+#define DISCONN_HEARTBEAT    2
+/* send periodic GET_STATE */
+#define ISSUE_HEARTBEAT      1
+/* do not send periodic GET_STATE */
+#define DISABLE_HEARTBEAT    0
+#define HEARTBEAT DISABLE_HEARTBEAT
+#endif
+
+/* EMSC */
+/* #define EMSC */
+
 /*
  * other
  */
-#define MHL_UCHAR_MAX 255
-
 #define SI_PACK_THIS_STRUCT __attribute__((__packed__))
 #define MHL_DDC_RESET
-
-enum {
-	MHL_SUCCESS = 0,
-	MHL_FAIL = -1
-};
 
 #endif

@@ -1,4 +1,4 @@
-/* kernel/drivers/video/msm/mdss/mhl_sii8620_8061_drv/mhl_lib_edid.c
+/* vendor/semc/hardware/mhl/mhl_sii8620_8061_drv/mhl_lib_edid.c
  *
  * Copyright (C) 2013 Sony Mobile Communications AB.
  * Copyright (C) 2013 Silicon Image Inc.
@@ -10,11 +10,14 @@
  * published by the Free Software Foundation; either version 2
  * of the License, or (at your option) any later version.
  */
-#include "linux/kernel.h"
-#include "linux/types.h"
-#include "mhl_lib_edid.h"
+#include <linux/kernel.h>
+#include <linux/types.h>
 #include <linux/string.h>
 #include <linux/errno.h>
+
+#include "mhl_common.h"
+#include "mhl_lib_edid.h"
+#include "mhl_sii8620_8061_device.h"
 
 /* Block 0 */
 #define EDID_OFFSET_HEADER_FIRST_00	0x00
@@ -28,15 +31,23 @@
 #define NATIVE_BIT_MASK 0x7F
 
 /* Start of data block collection */
-#define DBC_START_OFFSET 4
+#define MHL_LIB_DBC_START_OFFSET 4
 
-#define VIC_16 MHL_VIC_16_1920x1080p60_16_19
+#define MHL_LIB_MAX_DATA_BLOCK_SIZE 31
 
-#define MAX_DATA_BLOCK_SIZE 31
+#define MATCHED_TIMING_FLAG_LEN_MAX 20
 
-const struct hdmi_edid_video_mode_property_type vga_preferred_disp_info
-= {HDMI_VFRMT_640x480p60_4_3, 640, 480, false, 800, 160, 525, 45,
-		31500, 60000, 25200, 60000, true};
+#define VIC_NUM_MAX MATCHED_TIMING_FLAG_LEN_MAX
+
+#define START_4K_VIC 93
+#define END_4K_VIC 107
+
+static const uint8_t defined_hev_vic[HEV_VIC_MAX_LEN] = {
+	31, 16, 64, 63, 95, 94, 93, 98, 99, 100, 89, 86, 87};
+
+static bool matched_timing_flg[MATCHED_TIMING_FLAG_LEN_MAX] = {
+	false, false, false, false, false, false, false, false, false, false,
+	false, false, false, false, false, false, false, false, false, false};
 
 /* CEA Data Block Tag Codes */
 enum {
@@ -114,13 +125,13 @@ static const uint8_t *hdmi_edid_find_block_v2(
 	 u32 start_offset,
 	 u8 type, u8 *len);
 
-static void hdmi_edid_detail_desc(
-		const u8 *data_buf,
-		u32 *disp_mode,
-		const struct hdmi_edid_video_mode_property_type *hdmi_edid_disp_mode_lut,
-		u32 mode_lut_len,
-		u32 *most_hi_quality_disp_mode_index);
-
+static void mhl_lib_edid_remove_unsupp_detailed_timing(
+			const struct mhl_video_timing_info *support_video,
+			uint8_t support_video_len,
+			uint8_t *detailed_timing);
+static struct mhl_video_timing_info mhl_lib_edid_get_best_support_timing(
+			const struct mhl_video_timing_info *support_video,
+			uint8_t support_video_len);
 
 bool mhl_edid_check_edid_header(uint8_t *pSingleEdidBlock)
 {
@@ -235,78 +246,6 @@ int squash_data_with_prune_0(uint8_t *data, int length)
 	return hit_cnt;
 }
 
-int mhl_edid_parser_remove_vic16_1080p60fps(uint8_t *ext_edid)
-{
-	PCEA_extension_t extension = (PCEA_extension_t)ext_edid;
-	uint8_t db_len;		/*data block length*/
-	uint8_t *db_header;	/* video data block header */
-	uint8_t *svd;		/* short video descriptor */
-	int new_svd_size = 0;
-	int i;
-	int pull_up_size = 0;
-	uint8_t *last_svd_address = NULL;
-
-	/* search video tag code */
-	db_header = (uint8_t *)hdmi_edid_find_block_v2(
-		(const uint8_t *)ext_edid,
-		1,
-		 DBC_START_OFFSET,
-		 VIDEO_DATA_BLOCK,
-		 &db_len);
-
-    new_svd_size = db_len;
-
-	if (db_header == NULL) {
-		pr_debug("%s: no video data block\n", __func__);
-		return MHL_SUCCESS;
-	}
-
-	svd = db_header + 1;
-	for (i = 0; i < db_len; i++) {
-		/* search vic 16 */
-		if ((NATIVE_BIT_MASK & *svd) == VIC_16) {
-			/*
-			 *remove vic 16 from the data block
-			 */
-			pull_up_size++;
-			pr_debug("%s:vic16 1080p60fps is removed : 0x%02x\n", __func__, *svd);
-			*svd = 0x00;
-			/* set last svd address with
-			 * vic 16 pointing address
-			 */
-			new_svd_size--;
-		}
-		svd++;
-	}
-
-	last_svd_address = db_header + db_len - squash_data_with_prune_0(db_header + 1, db_len) + 1;
-
-	/* the vic 16 address is
-	 * overwritten by the followng address
-	 */
-	mhl_lib_edid_remake_ext_blocK(
-		extension,
-		pull_up_size,
-		last_svd_address,
-		new_svd_size);
-
-	/* change the length of the data block */
-	set_data_block_length(
-		db_header,
-		new_svd_size);
-
-	/* checksum */
-	extension->checksum = 0x00;
-	extension->checksum = calculate_generic_checksum(
-		(uint8_t *)extension,
-		 0x00,
-		 sizeof(*extension));
-
-
-
-	return MHL_SUCCESS;
-}
-
 /*
  * svd : short video descriptor
  */
@@ -322,7 +261,7 @@ void mhl_lib_edid_remove_vic_from_svd(uint8_t *ext_edid,
 	db_header = (uint8_t *)hdmi_edid_find_block_v2(
 		(const uint8_t *)ext_edid,
 		1,
-		 DBC_START_OFFSET,
+		 MHL_LIB_DBC_START_OFFSET,
 		 VIDEO_DATA_BLOCK,
 		 &db_len);
 
@@ -348,7 +287,8 @@ void mhl_lib_edid_remove_vic_from_svd(uint8_t *ext_edid,
 					last_svd_address,
 					new_svd_size);
 		}
-	}
+	} else
+		pr_info("%s: VideoDataBlock is nothing!!", __func__);
 }
 
 
@@ -416,47 +356,6 @@ void mhl_lib_edid_set_checksum(uint8_t *one_edid_blk)
 		 sizeof(*one_edid_blk_));
 }
 
-
-
-/* Add hdmi vic to vsd (vendor specific data). this API must be called
- * after remove all hdmi vic and 3d info in vsd. */
-static int mhl_lib_edid_add_hdmi_vic(uint8_t *vsd, uint8_t vsd_size, int hdmi_vic_flag)
-{
-	uint8_t vic_num = 0;
-	int tmp_vic_flag = hdmi_vic_flag;
-
-	if (vsd_size < MHL_MAX_HDMI_BIC_NUM + 14)
-		return -EINVAL;
-
-	if (!vsd)
-		return -EINVAL;
-
-	/* get number of hdmi vic */
-	for ( ; tmp_vic_flag != 0 ; tmp_vic_flag &= tmp_vic_flag - 1 )
-        vic_num++;
-
-	/* hdmi video present */
-	*(vsd + 7) |= 0x20;
-
-	/* hdmi vic number */
-	*(vsd + 13) |= (vic_num << 5);
-
-	{
-		int i;
-		int vsd_cnt = 0;
-
-		for (i = 0; (hdmi_vic_flag != 0); i++) {
-
-			if (hdmi_vic_flag & 0x01)
-				*(vsd + 14 + vsd_cnt++) = i + 1;
-
-			hdmi_vic_flag = hdmi_vic_flag >> 1;
-		}
-	}
-
-	return 14 + vic_num;
-}
-
 static int get_converted_hdmi_vic(uint8_t vic)
 {
 	switch (vic) {
@@ -479,8 +378,11 @@ static bool is_supp_hdmi_vic(uint8_t hdmi_vic, uint8_t *supp_vic, uint8_t supp_v
 
 	for (i = 0; i < supp_vic_size; i++) {
 		int supp_hdmi_vic = get_converted_hdmi_vic(supp_vic[i]);
-		if (hdmi_vic == supp_hdmi_vic)
+		if (hdmi_vic == supp_hdmi_vic) {
+			/* set SOMC support flg */
+			matched_timing_flg[i] = true;
 			return true;
+		}
 	}
 
 	return false;
@@ -640,7 +542,7 @@ void mhl_lib_edid_remove_hdmi_vic_and_3d_from_vsd(
 	data_block_header = (uint8_t *)hdmi_edid_find_block_v2(
 		(const uint8_t *)ext_edid,
 		1,
-		 DBC_START_OFFSET,
+		 MHL_LIB_DBC_START_OFFSET,
 		 VENDOR_SPECIFIC_DATA_BLOCK,
 		 &db_len);
 
@@ -725,6 +627,8 @@ static int mhl_lib_edid_remove_vic(
 
 			if ((NATIVE_BIT_MASK & *svd) == *work_filter++) {
 				remove = false;
+				/* set SOMC support flg */
+				matched_timing_flg[j] = true;
 				break;
 			}
 		}
@@ -878,24 +782,25 @@ static uint8_t calculate_generic_checksum(
  */
 static const uint8_t *edid_data;
 
-void mhl_lib_edid_set_edid(const uint8_t *edid)
+void mhl_lib_edid_init(const uint8_t *edid)
 {
 	edid_data = edid;
+	memset(matched_timing_flg, false, SUPPORT_SOMC_VIDEO_NUM);
 }
 
 
 static const uint8_t *hdmi_edid_find_block_v2(
-	const uint8_t *in_buf,
-	const uint8_t db_num,
-	 u32 start_offset,
-	 u8 type, u8 *len)
+	const uint8_t *in_buffer,
+	const uint8_t db_number,
+	 u32 in_start_offset,
+	 u8 in_type, u8 *p_len)
 {
 	/* the start of data block collection, start of Video Data Block */
-	u32 offset = start_offset;
-	u32 end_dbc_offset = in_buf[2];
-	uint8_t target_db_num = db_num;
+	u32 temp_offset = in_start_offset;
+	u32 end_offset = in_buffer[2];
+	uint8_t target_db_number = db_number;
 
-	*len = 0;
+	*p_len = 0;
 
 	/*
 	 * * edid buffer 1, byte 2 being 4 means no non-DTD/Data block
@@ -903,25 +808,26 @@ static const uint8_t *hdmi_edid_find_block_v2(
 	 * * edid buffer 1, byte 2 being 0 menas no non-DTD/DATA block
 	 *   collection present and no DTD data present.
 	 */
-	if ((end_dbc_offset == 0) || (end_dbc_offset == 4)) {
+	if ((end_offset == 0) || (end_offset == 4)) {
 		pr_warn("EDID: no DTD or non-DTD data present\n");
 		return NULL;
 	}
 
-	while (offset < end_dbc_offset) {
-		u8 block_len = in_buf[offset] & 0x1F;
-		if ((in_buf[offset] >> 5) == type) {
-			*len = block_len;
+	while (temp_offset < end_offset) {
+		u8 block_len = in_buffer[temp_offset] & 0x1F;
+		if ((temp_offset + block_len <= end_offset) &&
+			(in_buffer[temp_offset] >> 5) == in_type) {
+			*p_len = block_len;
 			pr_debug("%s: EDID: type=%d found @ 0x%x w/ len=%d\n",
-				__func__, type, offset, block_len);
+				__func__, in_type, temp_offset, block_len);
 
-			if (--target_db_num <= 0)
-				return in_buf + offset;
+			if (--target_db_number <= 0)
+				return in_buffer + temp_offset;
 		}
-		offset += (uint8_t)(1 + block_len);
+		temp_offset += (uint8_t)(1 + block_len);
 	}
 	pr_debug("%s: EDID: type=%d block not found in EDID block\n",
-		__func__, type);
+		__func__, in_type);
 
 	return NULL;
 } /* hdmi_edid_find_block */
@@ -933,10 +839,10 @@ static bool mhl_lib_is_ieee_reg_id(const uint8_t *ext_edid)
 	const u8 *vsd = NULL;
 	uint8_t cnt = 1;
 
-	while ((vsd = hdmi_edid_find_block_v2((const uint8_t *)ext_edid, cnt++, DBC_START_OFFSET,
+	while ((vsd = hdmi_edid_find_block_v2((const uint8_t *)ext_edid, cnt++, MHL_LIB_DBC_START_OFFSET,
 				   VENDOR_SPECIFIC_DATA_BLOCK, &len))) {
 
-		if (vsd == NULL || len < 3 || len > MAX_DATA_BLOCK_SIZE) {
+		if (vsd == NULL || len < 3 || len > MHL_LIB_MAX_DATA_BLOCK_SIZE) {
 			pr_warn("%s: No/Invalid Vendor Specific Data Block. count = %d\n",
 			  __func__, cnt - 1);
 			return false;
@@ -998,6 +904,24 @@ bool mhl_lib_edid_is_hdmi(void)
 
 }
 
+bool mhl_lib_is_asus_vx239h()
+{
+	if (edid_data == NULL) {
+		pr_debug("%s:edid is null\n", __func__);
+		return false;
+	}
+
+	/* 0x0469(ACI) = ASUS */
+	if ((edid_data[0x08] == 0x04) && (edid_data[0x09] == 0x69)) {
+		if (memcmp(&edid_data[0x5F], "VX279", 5) == 0) {
+			pr_debug("%s():asus vx239h PackedPixel off.\n",
+					__func__);
+			return true;
+		}
+	}
+	return false;
+}
+
 struct std_timing {
 	uint8_t first_byte;
 	uint8_t second_byte;
@@ -1017,10 +941,20 @@ static bool is_supported_std_timing(
 {
 	int i = 0;
 
-	for (i = 0; i < length; i++)
-		if ((first_byte == (video_timing_info + i)->h_pixcel) &&
-			second_byte == (video_timing_info + i)->aspect_refresh)
+	if (length > MATCHED_TIMING_FLAG_LEN_MAX) {
+		pr_err("exceeds flag array max\n");
+		return false;
+	}
+
+	for (i = 0; i < length; i++) {
+		if ((first_byte == (video_timing_info + i)->h_pixel) &&
+			(second_byte ==
+				(video_timing_info + i)->aspect_refresh)) {
+			/* set SOMC support flg */
+			matched_timing_flg[i] = true;
 			return true;
+		}
+	}
 
 	return false;
 }
@@ -1036,6 +970,13 @@ void mhl_lib_edid_remove_standard_timing(
 	uint8_t offset = 0;
 	uint8_t std_timing_cnt = 0;
 	bool is_support = false;
+	/* standard timing max size is 16. It is defined by the */
+	/* specification of standard timing */
+	uint8_t std_timing_tmp[16];
+	uint8_t hit_cnt = 0;
+
+	/* initialize to blank data 0x01 */
+	memset(std_timing_tmp, 0x01, sizeof(std_timing_tmp));
 
 	for (std_timing_cnt = 0; std_timing_cnt < 8; std_timing_cnt++) {
 		is_support = is_supported_std_timing(
@@ -1053,14 +994,15 @@ void mhl_lib_edid_remove_standard_timing(
 				 __func__,
 				 *(std_timing + offset),
 				 *(std_timing + offset + 1));
-
-			/* set blank */
-			*(std_timing + offset) = 0x01;
-			*(std_timing + offset + 1) = 0x01;
+		} else {
+			std_timing_tmp[hit_cnt++] = *(std_timing + offset);
+			std_timing_tmp[hit_cnt++] = *(std_timing + offset + 1);
 		}
 
 		offset += 2;
 	}
+
+	memcpy(std_timing, std_timing_tmp, 16);
 }
 
 void mhl_lib_edid_remove_established_timing(
@@ -1069,14 +1011,34 @@ void mhl_lib_edid_remove_established_timing(
 	uint8_t *est_timing)
 {
 	int i = 0;
+
+	uint8_t est_timing_1 = 0;
+	uint8_t est_timing_2 = 0;
+	uint8_t est_timing_3 = 0;
 	uint8_t est_timing_1_result = 0;
 	uint8_t est_timing_2_result = 0;
 	uint8_t est_timing_3_result = 0;
 
+	if (length > MATCHED_TIMING_FLAG_LEN_MAX) {
+		pr_err("exceeds flag array max\n");
+		return;
+	}
+
 	for (i = 0; i < length; i++) {
-		est_timing_1_result |= *est_timing & (support_video + i)->est_timing_1;
-		est_timing_2_result |= *(est_timing + 1) & (support_video + i)->est_timing_2;
-		est_timing_3_result |= *(est_timing + 2) & (support_video + i)->est_timing_3;
+		est_timing_1 =
+			*est_timing & (support_video + i)->est_timing_1;
+		est_timing_2 =
+			*(est_timing + 1) & (support_video + i)->est_timing_2;
+		est_timing_3 =
+			*(est_timing + 2) & (support_video + i)->est_timing_3;
+
+		if (est_timing_1 | est_timing_2 | est_timing_3)
+			/* set SOMC support flg */
+			matched_timing_flg[i] = true;
+
+		est_timing_1_result |= est_timing_1;
+		est_timing_2_result |= est_timing_2;
+		est_timing_3_result |= est_timing_3;
 	}
 	*est_timing = est_timing_1_result;
 	*(est_timing + 1) = est_timing_2_result;
@@ -1093,27 +1055,47 @@ void mhl_lib_edid_remove_established_timing(
  * edid : the data will replace the current preferred display info
  *  in block 0 (18 byte from 0x36 byte in blk0).
  */
-void mhl_lib_edid_replace_dtd_preferred_disp_info(
-		uint8_t *blk0,
-		const struct hdmi_edid_video_mode_property_type *video_mode_param)
+static void mhl_lib_edid_replace_dtd_preferred_disp_info(
+		uint8_t *preferred_disp_info,
+		const struct mhl_video_timing_info *video_mode_param)
 {
-	uint8_t *disp_info = &blk0[0x36];
+	uint8_t *disp_info = preferred_disp_info;
 	uint32_t h_image_size = 0;
 	uint32_t v_image_size = 0;
-	uint32_t tmp_4_3_v_image_size = 0;
+	uint32_t active_h;
+	uint32_t active_v;
 
 	pr_debug("%s()\n", __func__);
 
-	disp_info[0x0] = (uint8_t)(video_mode_param->pixel_freq & 0x000000FF);
-	disp_info[0x1] = (uint8_t)((video_mode_param->pixel_freq & 0x0000FF00)>>8);
-	disp_info[0x2] = (uint8_t)(video_mode_param->active_h & 0x000000FF);
-	disp_info[0x3] = (uint8_t)(video_mode_param->total_blank_h & 0x000000FF);
-	disp_info[0x4] = (uint8_t)((video_mode_param->active_h & 0x00000F00) >> 4) |
-			(uint8_t)((video_mode_param->total_blank_h & 0x0000FF00) >> 4);
-	disp_info[0x5] = (uint8_t)(video_mode_param->active_v & 0x000000FF);
-	disp_info[0x6] = (uint8_t)(video_mode_param->total_blank_v & 0x000000FF);
-	disp_info[0x7] = (uint8_t)((video_mode_param->active_v & 0x00000F00) >> 4) |
-			(uint8_t)((video_mode_param->total_blank_v & 0x0000FF00) >> 4);
+	if (video_mode_param->active_h > 4095) {
+		active_h = 4095;
+		pr_warn("%s() active_h is over 4095\n", __func__);
+	} else
+		active_h = video_mode_param->active_h;
+
+	if (video_mode_param->active_v > 4095) {
+		active_v = 4095;
+		pr_warn("%s() active_v is over 4095\n", __func__);
+	} else
+		active_v = video_mode_param->active_v;
+
+
+	disp_info[0x0] =
+		(uint8_t)((video_mode_param->pixel_freq_khz1 / 10)
+							& 0x000000FF);
+	disp_info[0x1] =
+		(uint8_t)(((video_mode_param->pixel_freq_khz1 / 10)
+							& 0x0000FF00)>>8);
+	disp_info[0x2] = (uint8_t)(active_h & 0x000000FF);
+	disp_info[0x3] = (uint8_t)(video_mode_param->total_blank_h &
+								0x000000FF);
+	disp_info[0x4] = (uint8_t)((active_h & 0x00000F00) >> 4) |
+		(uint8_t)((video_mode_param->total_blank_h & 0x00000F00) >> 8);
+	disp_info[0x5] = (uint8_t)(active_v & 0x000000FF);
+	disp_info[0x6] = (uint8_t)(video_mode_param->total_blank_v &
+								0x000000FF);
+	disp_info[0x7] = (uint8_t)((active_v & 0x00000F00) >> 4) |
+		(uint8_t)((video_mode_param->total_blank_v & 0x00000F00) >> 8);
 
 	/*
 	 * aspect ratio in original disp info is changed to video_mode_param's one.
@@ -1125,19 +1107,19 @@ void mhl_lib_edid_replace_dtd_preferred_disp_info(
 	/* set original image size of disp info in blk0 */
 	h_image_size = (uint32_t)(((disp_info[0xE] & 0xF0) << 4) | disp_info[0xC]);
 	v_image_size = (uint32_t)(((disp_info[0xE] & 0x0F) << 8) | disp_info[0xD]);
-	tmp_4_3_v_image_size = h_image_size * 3/4;
 
 	if (video_mode_param->aspect_ratio_4_3) {
 		/* 4:3 v size is calculated */
-		if (tmp_4_3_v_image_size < v_image_size)
+		if (h_image_size > (v_image_size * 4 / 3))
 			/* original does not indicate 4:3,
 			 * so the v size is replaced with 4:3 */
-			v_image_size = tmp_4_3_v_image_size;
+			h_image_size = v_image_size * 4 / 3;
 	} else {
 		/* 16:9 v size is calculated */
-		if (!(tmp_4_3_v_image_size > v_image_size))
-			/* v_image_size is probably 4:3, so replace it with 16:19 */
-			v_image_size = h_image_size * 9/16;
+		if (v_image_size > (h_image_size * 9 / 16))
+			/* v_image_size is probably 4:3 */
+			/* so replace it with 16:9 */
+			v_image_size = h_image_size * 9 / 16;
 	}
 
 	disp_info[0xC] = (uint8_t)(h_image_size & 0x00000FF);
@@ -1148,94 +1130,29 @@ void mhl_lib_edid_replace_dtd_preferred_disp_info(
 }
 
 /*
- *
+ * TODO the API should be called after the all edid block filter, otherwise,
+ * prefferred disp info can't contain best video timing.
  */
-bool mhl_lib_edid_is_supp_disp_info_in_one_dtd_blk(
-		const uint8_t *one_descriptor,
-		const struct hdmi_edid_video_mode_property_type *edid,
-		uint32_t mode_lut_len,
-		uint32_t *preferd_disp_index)
+void mhl_lib_edid_remove_and_replace_detailed_timing(
+			const struct mhl_video_timing_info *support_video,
+			uint8_t support_video_len,
+			uint8_t *detailed_timing)
 {
-	u32 disp_mode = 0;
-	hdmi_edid_detail_desc(one_descriptor, &disp_mode, edid, mode_lut_len, preferd_disp_index);
+	struct mhl_video_timing_info best_timing;
 
-	pr_debug("%s:disp_mode = %d (0x%x)\n", __func__, disp_mode, disp_mode);
+	/* remove unsupport detailed_timing except for 1st 18byte descripter */
+	mhl_lib_edid_remove_unsupp_detailed_timing(support_video,
+						support_video_len,
+						detailed_timing);
 
-	if (disp_mode != HDMI_VFRMT_FORCE_32BIT)
-		return true;
+	/* select best timing */
+	best_timing =
+		mhl_lib_edid_get_best_support_timing(support_video,
+						support_video_len);
 
-	return false;
-
-}
-
-/*
- * blk0 : pointer to the head of the block 0
- * edid : support display info
- * mode_lut_len : length of edid (how many instance of the struct are contained.)
- */
-void mhl_lib_edid_replace_unsupport_descriptor_with_dummy(
-		uint8_t *blk0,
-		const struct hdmi_edid_video_mode_property_type *edid,
-		uint32_t mode_lut_len)
-{
-	u32 desc_offset = 0;
-	int i = 0;
-
-	pr_debug("%s()\n", __func__);
-
-	while (4 > i && 0 != blk0[0x36 + desc_offset]) {
-		u32 preferred_disp_mode = 0;
-		bool is_support = false;
-
-		pr_debug("%s: blk0[0x%2x] = 0x%2x\n",
-				__func__,
-				0x36 + desc_offset,
-				blk0[0x36 + desc_offset]);
-
-		is_support = mhl_lib_edid_is_supp_disp_info_in_one_dtd_blk(
-				&blk0[0x36 + desc_offset],
-				edid,
-				mode_lut_len,
-				&preferred_disp_mode);
-
-		if (i == 0) {
-			if (!is_support) {
-				/* VGA is set forcibly since it is mandatory disp */
-				pr_debug("%s: replace with vga preferred disp info \n", __func__);
-				mhl_lib_edid_replace_dtd_preferred_disp_info(
-										blk0,
-										&vga_preferred_disp_info);
-			}
-		} else {
-			if (!is_support) {
-				/* set dummy data here */
-				/* might not need the pull up procedure. comment out.
-				if (i < 3) {
-					pr_debug("%s: 18 * (4 - (i + 1) = %d \n",
-							__func__,
-							18 * (4 - (i + 1)));
-					mhl_lib_edid_pull_up_and_padding(
-							&blk0[0x36 + desc_offset],
-							18 * (4 - (i + 1)),
-							18);
-				}
-
-				memset(&blk0[0x6C], 0x00, 18);
-				blk0[0x6C + 3] = 0x10;
-				*/
-				memset(&blk0[0x36 + desc_offset], 0x00, 18);
-				blk0[0x36 + desc_offset + 0x03] = 0x10;
-
-			} else {
-				pr_debug("%s: supported, cont i : %d\n",
-					__func__, i);
-			}
-		}
-		desc_offset += 0x12;
-		++i;
-	}
-
-	return;
+	/* replace preferred_disp_info with best_timing */
+	mhl_lib_edid_replace_dtd_preferred_disp_info(&detailed_timing[0],
+						&best_timing);
 }
 
 /*
@@ -1252,26 +1169,29 @@ void mhl_lib_edid_replace_unsupport_descriptor_with_dummy(
  * most_hi_quality_disp_mode_index : NULL, then nothing to be done.
  * 				 otherwise most high quality disp info of hdmi_edid_disp_mode_lut is returned.
  */
-static void hdmi_edid_detail_desc(
-		const u8 *data_buf,
-		u32 *disp_mode,
-		const struct hdmi_edid_video_mode_property_type *hdmi_edid_disp_mode_lut,
-		u32 mode_lut_len,
-		u32 *most_hi_quality_disp_mode_index)
+static bool mhl_lib_edid_is_supp_disp_info_in_detailed_timing(
+			const struct mhl_video_timing_info *support_video,
+			uint8_t support_video_len,
+			uint8_t *data_buf)
 {
-	u32	aspect_ratio_4_3    = false;
-	u32	interlaced          = false;
-	u32	active_h            = 0;
-	u32	active_v            = 0;
-	u32	blank_h             = 0;
-	u32	blank_v             = 0;
-	u32	ndx                 = 0;
-	u32	max_num_of_elements = 0;
-	u32	img_size_h          = 0;
-	u32	img_size_v          = 0;
+	uint32_t	interlace_flg       = false;
+	uint32_t	h_active            = 0;
+	uint32_t	v_active            = 0;
+	uint32_t	h_blank             = 0;
+	uint32_t	v_blank             = 0;
+	uint32_t	index               = 0;
+	uint32_t	h_img_size          = 0;
+	uint32_t	v_img_size          = 0;
+	uint32_t	khz_pixel_freq      = 0;
 
 	pr_debug("%s()\n", __func__);
 	PRINT_DATA(data_buf, 18, "data buf")
+
+	if (support_video_len > MATCHED_TIMING_FLAG_LEN_MAX) {
+		pr_err("exceeds flag array max\n");
+		return false;
+	}
+
 
 	/*
 	 * * See VESA Spec
@@ -1281,14 +1201,14 @@ static void hdmi_edid_detail_desc(
 	 * * EDID_TIMING_DESC_H_ACTIVE[0x2]: Relative Offset to the EDID
 	 *   detailed timing descriptors - H active
 	 */
-	active_h = ((((u32)data_buf[0x4] >> 0x4) & 0xF) << 8)
+	h_active = ((((uint32_t)data_buf[0x4] >> 0x4) & 0xF) << 8)
 		| data_buf[0x2];
 
 	/*
 	 * EDID_TIMING_DESC_H_BLANK[0x3]: Relative Offset to the EDID detailed
 	 *   timing descriptors - H blank
 	 */
-	blank_h = (((u32)data_buf[0x4] & 0xF) << 8)
+	h_blank = (((uint32_t)data_buf[0x4] & 0xF) << 8)
 		| data_buf[0x3];
 
 	/*
@@ -1298,14 +1218,14 @@ static void hdmi_edid_detail_desc(
 	 * * EDID_TIMING_DESC_V_ACTIVE[0x5]: Relative Offset to the EDID
 	 *   detailed timing descriptors - V active
 	 */
-	active_v = ((((u32)data_buf[0x7] >> 0x4) & 0xF) << 8)
+	v_active = ((((uint32_t)data_buf[0x7] >> 0x4) & 0xF) << 8)
 		| data_buf[0x5];
 
 	/*
 	 * EDID_TIMING_DESC_V_BLANK[0x6]: Relative Offset to the EDID
 	 * detailed timing descriptors - V blank
 	 */
-	blank_v = (((u32)data_buf[0x7] & 0xF) << 8)
+	v_blank = (((uint32_t)data_buf[0x7] & 0xF) << 8)
 		| data_buf[0x6];
 
 	/*
@@ -1317,18 +1237,10 @@ static void hdmi_edid_detail_desc(
 	 * * EDID_TIMING_DESC_V_IMAGE_SIZE[0xD]: Relative Offset to the EDID
 	 *   detailed timing descriptors - V image size
 	 */
-	img_size_h = ((((u32)data_buf[0xE] >> 0x4) & 0xF) << 8)
+	h_img_size = ((((uint32_t)data_buf[0xE] >> 0x4) & 0xF) << 8)
 		| data_buf[0xC];
-	img_size_v = (((u32)data_buf[0xE] & 0xF) << 8)
+	v_img_size = (((uint32_t)data_buf[0xE] & 0xF) << 8)
 		| data_buf[0xD];
-
-	/*
-	 * aspect ratio as 4:3 if within specificed range , rathaer than being
-	 * absolute value
-	 */
-	aspect_ratio_4_3 = (abs((int)(img_size_h * 3 - img_size_v * 4)) < 5) ? 1 : 0;
-
-	max_num_of_elements = mode_lut_len;
 
 	/*
 	 * EDID_TIMING_DESC_INTERLACE[0x11:7]: Relative Offset to the EDID
@@ -1340,39 +1252,385 @@ static void hdmi_edid_detail_desc(
 	/*
 	 * CEA 861-D: interlaced bit is bit[7] of byte[0x11]
 	 */
-	interlaced = (data_buf[0x11] & 0x80) >> 7;
+	interlace_flg = (data_buf[0x11] & 0x80) >> 7;
 
-	pr_debug("%s: A[%ux%u] B[%ux%u] V[%ux%u] %s\n", __func__,
-		active_h, active_v, blank_h, blank_v, img_size_h, img_size_v,
-		interlaced ? "i" : "p");
+	/*
+	 * Pixel clock: convert to decimal KHz from hex MHz
+	 */
+	khz_pixel_freq = (uint32_t)((data_buf[1] << 8) + data_buf[0]) * 10;
 
-	*disp_mode = HDMI_VFRMT_FORCE_32BIT;
-	while (ndx < max_num_of_elements) {
-		const struct hdmi_edid_video_mode_property_type *edid =
-			hdmi_edid_disp_mode_lut + ndx;
 
-		if ((interlaced    == edid->interlaced)    &&
-			(active_h  == edid->active_h)      &&
-			(blank_h   == edid->total_blank_h) &&
-			(blank_v   == edid->total_blank_v) &&
-			((active_v == edid->active_v) ||
-			(active_v  == (edid->active_v + 1)))) {
-			if (edid->aspect_ratio_4_3 && !aspect_ratio_4_3)
-				/* Aspect ratio 16:9 */
-				*disp_mode = edid->video_code + 1;
-			else
-				/* Aspect ratio 4:3 */
-				*disp_mode = edid->video_code;
+	pr_debug("%s: A[%ux%u] B[%ux%u] V[%ux%u] %s pixel_freq = %d\n",
+		__func__,
+		h_active, v_active, h_blank, v_blank, h_img_size, v_img_size,
+		interlace_flg ? "i" : "p", khz_pixel_freq);
 
-			pr_debug("%s: mode found:%d\n", __func__, *disp_mode);
+	while (index < support_video_len) {
+		const struct mhl_video_timing_info *edid = &support_video[index];
 
-			if (most_hi_quality_disp_mode_index != NULL)
-				*most_hi_quality_disp_mode_index = ndx;
-			else
+		if ((interlace_flg    == edid->interlaced)    &&
+			(h_active  == edid->active_h)      &&
+			(h_blank   == edid->total_blank_h) &&
+			(v_blank   == edid->total_blank_v) &&
+			((v_active == edid->active_v) ||
+			(v_active  == (edid->active_v + 1))) &&
+			((khz_pixel_freq == edid->pixel_freq_khz1) ||
+			(khz_pixel_freq == edid->pixel_freq_khz2))) {
+			/* set SOMC support flg */
+			matched_timing_flg[index] = true;
+			pr_debug("%s: mode found:%d\n", __func__, edid->vic);
+			return true;
+		}
+		++index;
+	}
+
+	return false;
+}
+
+uint32_t mhl_lib_edid_get_16_link_clk(uint32_t pixel_clock)
+{
+	/* note : "10" is not multiplied
+	 * since uint32 does not have enough size */
+	return pixel_clock / 8 * 16;
+}
+
+uint32_t mhl_lib_edid_get_24_link_clk(uint32_t pixel_clock)
+{
+	/* note : "10" is not multiplied
+	 * since uint32 does not have enough size */
+	return pixel_clock / 8 * 24;
+}
+
+/*
+ * Unsupported 4k vic is removed from the input somc_support_vic.
+ * somc_support_vic : input and output for somc support vic.
+ * sink_support_4k_vic sink : support 4k vic. Sink sends the information
+ * with WB.
+ */
+uint8_t mhl_lib_edid_remove_unsupport_4k_vic(
+			struct mhl_video_timing_info *somc_support_vic,
+			uint8_t somc_support_vic_len,
+			const uint8_t *sink_support_4k_vic,
+			uint8_t sink_support_4k_vic_len)
+{
+	int i, j;
+	uint8_t ret_length = 0;
+	bool flg;
+
+	for (i = 0; i < somc_support_vic_len; i++) {
+		if ((somc_support_vic[i].vic >= START_4K_VIC) &&
+			(somc_support_vic[i].vic <= END_4K_VIC)) {
+
+			flg = false;
+			/* serch sink support 4k vic */
+			for (j = 0; j < sink_support_4k_vic_len; j++) {
+				if (sink_support_4k_vic == NULL)
+					break;
+
+				if (somc_support_vic[i].vic ==
+						sink_support_4k_vic[j]) {
+					flg = true;
+					break;
+				}
+			}
+
+			/* if the specific 4k vic is not supported, */
+			/* then the vic is replaced with "0". */
+			/* (only unsuport 4k vic is removed) */
+			if (flg)
+				ret_length++;
+			else {
+				pr_debug("%s: removed from support vic %d\n",
+					__func__, somc_support_vic[i].vic);
+				/* set 0 to remove after */
+				memset(&somc_support_vic[i],
+					0,
+					sizeof(struct mhl_video_timing_info));
+			}
+		} else
+			/* not 4k vic */
+			ret_length++;
+	}
+
+	/* remove 0 element */
+	/* Eg [1, 2, 4, 32, 34, 16, 0, 95] -> [1, 2, 4, 32, 34, 16, 95, 0] */
+	for (i = 0; i < ret_length; i++) {
+		if (somc_support_vic[i].vic != 0)
+			continue;
+
+		for (j = i + 1; j < somc_support_vic_len; j++) {
+			if (somc_support_vic[j].vic != 0) {
+				pr_debug("vic = %d\n", somc_support_vic[j].vic);
+				somc_support_vic[i] =
+						somc_support_vic[j];
+				memset(&somc_support_vic[j],
+					0,
+					sizeof(struct mhl_video_timing_info));
+				break;
+			}
+		}
+	}
+
+	return ret_length;
+}
+
+bool *mhl_lib_edid_get_matched_timing_flg(void)
+{
+	return matched_timing_flg;
+}
+
+/*
+ * Remove unsupported video timing info except for 1st 18 byte descripter
+ * (preferred disp info).
+ * 1st 18 byte descriper is always not chnaged in this API because the 1st
+ * descripter contains SINK device HW dependant information. For example,
+ * phisical display size (h/w) . Such some parameters will be reused even if
+ * video timing info is changed in the 1st descripter.
+ */
+static void mhl_lib_edid_remove_unsupp_detailed_timing(
+			const struct mhl_video_timing_info *support_video,
+			uint8_t support_video_len,
+			uint8_t *detailed_timing)
+{
+	uint32_t desc_offset = 0;
+	int i = 0;
+
+	pr_debug("%s()\n", __func__);
+
+	/* if pixel clock(detailed_timing[0, 1]) is 0, */
+	/* it is considered dummy block. */
+	/* TODO: this is tentative implimentation. */
+	/* please check EDID specifiation. */
+	while (4 > i &&
+		(0 != detailed_timing[desc_offset]) &&
+		(0 != detailed_timing[desc_offset + 1])) {
+		bool is_support = false;
+
+		is_support = mhl_lib_edid_is_supp_disp_info_in_detailed_timing(
+				support_video,
+				support_video_len,
+				&detailed_timing[desc_offset]);
+
+		if (!is_support) {
+			/* preferred display info (i == 0) */
+			/* is not removed here */
+			if (i != 0) {
+				/* remove detailed_timing */
+				memset(&detailed_timing[desc_offset], 0x00, 18);
+				detailed_timing[desc_offset + 0x03] = 0x10;
+			}
+			pr_debug("%s: unsupported, cont i : %d\n",
+							__func__, i);
+		} else
+			pr_debug("%s: supported, cont i : %d\n",
+							__func__, i);
+
+		desc_offset += 18;
+		++i;
+	}
+}
+
+static struct mhl_video_timing_info mhl_lib_edid_get_best_support_timing(
+			const struct mhl_video_timing_info *support_video,
+			uint8_t support_video_len)
+{
+	int i = 0;
+
+	for (i = support_video_len - 1; i >= 0; --i) {
+		if (matched_timing_flg[i])
+			return support_video[i];
+	}
+
+	return support_video[0];
+}
+
+void mhl_lib_edid_remove_unsupp_detailed_timing_from_ext_blk(
+			uint8_t *ext_edid,
+			const struct mhl_video_timing_info *support_video,
+			uint8_t support_video_len)
+{
+	PCEA_extension_t extension = (PCEA_extension_t)ext_edid;
+	uint32_t desc_offset;
+	uint32_t last_pos;
+	int i;
+
+	pr_debug("%s()\n", __func__);
+
+	desc_offset = ext_edid[2];
+
+	if (desc_offset < 4)
+		return;
+
+	last_pos = 127;
+
+	i = 0;
+	while (desc_offset + 18 <= last_pos &&
+		(0 != ext_edid[desc_offset]) &&
+		(0 != ext_edid[desc_offset + 1]) &&
+		i < 6) {
+		bool is_support = false;
+
+		is_support = mhl_lib_edid_is_supp_disp_info_in_detailed_timing(
+				support_video,
+				support_video_len,
+				&ext_edid[desc_offset]);
+
+		if (!is_support) {
+			if (last_pos - (desc_offset + 18) >= 18) {
+				/* timing is not last */
+				/* next timing exists */
+
+				memcpy(&ext_edid[desc_offset], &ext_edid[desc_offset + 18],
+					last_pos - (desc_offset + 18));
+
+				last_pos -= 18;
+			} else
+				/* timing is last */
+				memset(&ext_edid[desc_offset], 0x00, 18);
+
+			pr_debug("%s: unsupported, cont i : %d\n", __func__, i);
+		} else {
+			desc_offset += 18;
+			pr_debug("%s: supported, cont i : %d\n", __func__, i);
+		}
+
+		i++;
+	}
+
+	if (last_pos < 127)
+		memset(&ext_edid[last_pos], 0x00, 127 - last_pos);
+
+	/* check sum */
+	extension->checksum = 0x00;
+	extension->checksum = calculate_generic_checksum(
+		(uint8_t *)extension,
+		 0x00,
+		 sizeof(*extension));
+}
+
+/*
+ * *ext_edid         : pointer to ExtBlock.
+ * *hev_vic_array    : pointer to HEV VIC that you want to insert.
+ *                     must not include non-HEV VIC.
+ * hev_vic_array_len : length of hev_vic_array.
+ *
+ * return true when insert succeeds.
+ */
+bool mhl_lib_edid_insert_hev_vic(
+			uint8_t *ext_edid,
+			uint8_t *hev_vic_array,
+			uint8_t hev_vic_array_len)
+{
+	int i, j;
+	uint8_t *vdb;
+	uint8_t vdb_len;
+	uint8_t insert_array[HEV_VIC_MAX_LEN];
+	uint8_t insert_array_len = 0;
+	uint8_t dtd_offset;
+	uint8_t dtd_tail;
+	uint8_t *check_sum_addr;
+	uint8_t *move_addr;
+	PCEA_extension_t extension = (PCEA_extension_t)ext_edid;
+
+	/* check whether argument is correct */
+	if (ext_edid == NULL) {
+		pr_err("%s: argment error.\n", __func__);
+		return false;
+	}
+
+	/* check insert item */
+	if ((hev_vic_array_len == 0) || (hev_vic_array == NULL)) {
+		pr_info("%s: no insert item.\n", __func__);
+		return false;
+	}
+	if (hev_vic_array_len > HEV_VIC_MAX_LEN) {
+		pr_info("%s: insert item is over %d.\n",
+					__func__, HEV_VIC_MAX_LEN);
+		return false;
+	}
+	for (i = 0; i < hev_vic_array_len; i++) {
+		for (j = 0; j < HEV_VIC_MAX_LEN; j++) {
+			if (hev_vic_array[i] == defined_hev_vic[j])
 				break;
 		}
-		++ndx;
+		if (j >= HEV_VIC_MAX_LEN) {
+			pr_info("%s: non-HEV VIC detect.\n", __func__);
+			return false;
+		}
 	}
-	if (ndx == max_num_of_elements)
-		pr_debug("%s: *no mode* found\n", __func__);
-} /* hdmi_edid_detail_desc */
+
+	/* check whether there is VideoDataBlock */
+	vdb = (uint8_t *)hdmi_edid_find_block_v2(
+		(const uint8_t *)ext_edid,
+		 1,
+		 MHL_LIB_DBC_START_OFFSET,
+		 VIDEO_DATA_BLOCK,
+		 &vdb_len);
+	if ((vdb == NULL) || (vdb_len == 0)) {
+		pr_info("%s: VideoDataBlock is nothing.\n", __func__);
+		return false;
+	}
+
+	/* check whether there is HEV VIC in VideoDataBlock */
+	for (i = 0; i < hev_vic_array_len; i++) {
+		for (j = 1; j <= vdb_len; j++) {
+			if (hev_vic_array[i] == (0x7F & vdb[j]))
+				break;
+		}
+		if (j > vdb_len) {
+			insert_array[insert_array_len++] = hev_vic_array[i];
+			pr_info("%s: insert HEV VIC is %d\n",
+					__func__, insert_array[insert_array_len - 1]);
+		}
+	}
+	if (insert_array_len == 0) {
+		pr_info("%s: insert HEV VIC is nothing.\n", __func__);
+		return false;
+	}
+	if (insert_array_len + vdb_len > VIC_NUM_MAX) {
+		pr_info("%s: too many vic. nothing to do.\n", __func__);
+		return false;
+	}
+
+	/* check whether overflow occurs if insert */
+	dtd_offset = ext_edid[0x02];
+	dtd_tail = dtd_offset + 17;
+	while ((dtd_tail < (EDID_BLOCK_SIZE - 1)) &&
+			((ext_edid[dtd_offset] != 0) &&
+				(ext_edid[dtd_offset + 1] != 0))) {
+		dtd_offset += 18;
+		dtd_tail = dtd_offset + 17;
+	}
+	if ((dtd_offset - 1 + insert_array_len) >= (EDID_BLOCK_SIZE - 1)) {
+		pr_info("%s: overflow occurs, so does not insert.\n",
+				__func__);
+		return false;
+	}
+
+	/* alloc space of insert data */
+	check_sum_addr = ext_edid + EDID_BLOCK_SIZE - 1;
+	move_addr = check_sum_addr - insert_array_len - 1;
+	while (move_addr > (vdb + vdb_len)) {
+		*(move_addr + insert_array_len) = *move_addr;
+		move_addr--;
+	}
+
+	/* insert HEV_VIC to VideoDataBlock */
+	memcpy(vdb + vdb_len + 1, insert_array, insert_array_len);
+
+	/* add insert length to VideoDataBlock */
+	set_data_block_length(vdb, vdb_len + insert_array_len);
+
+	/* add insert length to ByteNumberOffset */
+	ext_edid[0x02] += insert_array_len;
+
+	/* check sum */
+	extension->checksum = 0x00;
+	extension->checksum = calculate_generic_checksum(
+		(uint8_t *)extension,
+		 0x00,
+		 sizeof(*extension));
+
+	/* success */
+	return true;
+}

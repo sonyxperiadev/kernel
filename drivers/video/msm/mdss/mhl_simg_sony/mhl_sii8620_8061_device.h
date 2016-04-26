@@ -1,6 +1,6 @@
-/* kernel/drivers/video/msm/mdss/mhl_sii8620_8061_drv/mhl_sii8620_8061_device.h
+/* vendor/semc/hardware/mhl/mhl_sii8620_8061_drv/mhl_sii8620_8061_device.h
  *
- * Copyright (C) 2013 Sony Mobile Communications AB.
+ * Copyright (C) 2013 Sony Mobile Communications Inc.
  * Copyright (C) 2013 Silicon Image Inc.
  *
  * Author: [Hirokuni Kawasaki <hirokuni.kawaaki@sonymobile.com>]
@@ -13,28 +13,13 @@
 
 #ifndef __MHL_MHL_SII8620_8061_DEVICE_H__
 #define __MHL_MHL_SII8620_8061_DEVICE_H__
-#include <linux/platform_device.h>
-#include "mhl_lib_edid.h"
 
-#define VAL_PAGE_3_M3_CTRL_MHL3_VALUE (BIT_PAGE_3_M3_CTRL_SW_MHL3_SEL \
-						|BIT_PAGE_3_M3_CTRL_M3AV_EN \
-						|BIT_PAGE_3_M3_CTRL_ENC_TMDS \
-						|BIT_PAGE_3_M3_CTRL_MHL3_MASTER_EN)
-#define VAL_PAGE_3_M3_CTRL_PEER_VERSION_PENDING_VALUE VAL_PAGE_3_M3_CTRL_MHL3_VALUE
-
+#include <linux/device.h>
 #define IS_MODE_MHL3 (cbus_mode > CBUS_oCBUS_PEER_IS_MHL1_2)
 #define IS_MODE_HDMI mhl_lib_edid_is_hdmi()
 
-#define REG_PAGE_3_MHL_DP_CTL6                             TX_PAGE_3,0x50
-#define REG_PAGE_3_MHL_DP_CTL7                             TX_PAGE_3,0x51
+#define REG_HDCP1X_LB_BIST			(TX_PAGE_8 | 0x0C)
 
-#define REG_PAGE_7_COC_CTL17                               TX_PAGE_7,0x2A
-#define REG_PAGE_7_COC_CTL18                               TX_PAGE_7,0x2B
-#define REG_PAGE_7_COC_CTL19                               TX_PAGE_7,0x2C
-#define REG_PAGE_7_COC_CTL1A                               TX_PAGE_7,0x2D
-
-#define REG_080C_HDCP1X_LB_BIST				TX_PAGE_8, 0x0C
-#define BIT_080C_HDCP1X_LB_BIST				0x01
 /*
  * core : public. Normally, Outside of device module uses them.
  */
@@ -55,6 +40,10 @@ int  mhl_device_initialize(struct device *dev);
 void mhl_device_release(struct device *dev);
 void mhl_device_isr (void);
 int mhl_sii8620_device_start(void *context);
+void mhl_regs_init_for_ready_to_mhl_connection(void);
+void mhl_device_release_resource(void);
+void mhl_discovery_timer_stop(void);
+void mhl_sii8620_clear_and_mask_interrupts(bool is_exclude_rgnd);
 
 /* some cbus protocol is executing, return true, otherwise false. The
  * detail can be detected with calling mhl_device_get_cbusp_cond(). */
@@ -70,6 +59,7 @@ int mhl_device_get_cbusp_cond(void);
  * e.g. mhl_xxx_device_xxx.c
  */
 /* set or clear cbusp (cbus protocol) condition */
+MHL_DEV_CBUS_P mhl_dev_get_cbusp_cond_processing(MHL_DEV_CBUS_P cbusp);
 void mhl_dev_set_cbusp_cond_processing(MHL_DEV_CBUS_P cbusp);
 void mhl_dev_clear_cbusp_cond_processing(MHL_DEV_CBUS_P cbusp);
 
@@ -92,25 +82,24 @@ int mhl_sii8620_device_edid_read_request(uint8_t block_number);
 
 void mhl_sii8620_device_edid_init(void);
 void mhl_sii8620_device_edid_release(void);
-int mhl_sii8620_device_get_edid_fifo_partial_block(
-	uint8_t start,
-	uint8_t length,
-	uint8_t *edid_buf);
-int mhl_sii8620_device_edid_get_block_number(void);
 int mhl_8620_dev_int_edid_isr(uint8_t int_edid_devcap_status);
 void mhl_device_start_edid_read(void);
 void mhl_sii8620_device_edid_reset_ddc_fifo(void);
-bool mhl_device_edid_is_command_executing(void);
 void mhl_device_edid_set_upstream_edid(void);
 const uint8_t *mhl_device_edid_get_mhlsink_sprt_hev(uint8_t *length);
 void mhl_device_edid_setup_sink_support_hev_vic(uint8_t *vics, uint8_t length);
 void mhl_device_edid_init_edid_done_resource(void);
 void hdcp2_apply_reauthentication(void);
 bool mhl_device_get_hdcp_status(void);
+void shut_down_HDCP2(void);
+uint8_t ok_to_proceed_with_ddc(void);
+void freeze_MHL_connect(void);
+void unfreeze_MHL_connect(void);
+bool get_hdcp_authentication_status(void);
 
 #define SUPPORT_MHL_1_2_VIDEO_NUM 6
 #define SUPPORT_MHL_3_VIDEO_NUM   SUPPORT_MHL_1_2_VIDEO_NUM + 2
-
+#define SUPPORT_SOMC_VIDEO_NUM 8
 
 
 
@@ -126,9 +115,8 @@ void start_hdcp(void);
 /*
  * hpd
  */
-int drive_hpd_high(void);
-int drive_hpd_low(void);
-bool mhl_dev_is_set_hpd(void);
+int activate_hpd(void);
+int deactivate_hpd(void);
 
 
 /*
@@ -165,11 +153,15 @@ int mhl_drv_connection_is_mhl3(void);
 int mhl_device_switch_cbus_mode(CBUS_MODE_TYPE mode_sel);
 bool mhl_device_is_connected(void);
 void peer_specific_init(void);
-void enable_heartbeat(void);
 
 uint8_t qualify_pixel_clock_for_mhl(uint32_t pixel_clock_frequency,
 					   uint8_t bits_per_pixel);
 
+void chip_power_off(void);
 void mhl_device_chip_reset(void);
+
+/* GoogleAnalytics */
+void set_ga_data_from_devcap(char *devcap);
+void set_ga_data_from_edid(uint8_t *edid_buf_read_ptr);
 
 #endif /* __MHL_MHL_SII8620_8061_DEVICE_H__ */

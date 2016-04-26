@@ -1,4 +1,4 @@
-/* kernel/drivers/video/msm/mdss/mhl_sii8620_8061_drv/mhl_defs.h
+/* vendor/semc/hardware/mhl/mhl_sii8620_8061_drv/mhl_defs.h
  *
  * Copyright (C) 2013 Sony Mobile Communications AB.
  * Copyright (C) 2013 Silicon Image Inc.
@@ -72,8 +72,8 @@ typedef union {
 
 /* Version that this chip supports */
 #define MHL_VER_MAJOR						0x30
-#define MHL_VER_MINOR						0x00
-#define MHL_VERSION							(MHL_VER_MAJOR | MHL_VER_MINOR)
+#define MHL_VER_MINOR						0x02
+#define MHL_VERSION						(MHL_VER_MAJOR | MHL_VER_MINOR)
 
 /* MHL Version mask */
 #define MHL_VER_MASK_MAJOR					0xF0
@@ -190,48 +190,48 @@ typedef union {
 
 #define SILICON_IMAGE_ADOPTER_ID			322
 
-typedef enum {
-	MHL_TEST_ADOPTER_ID = 0
-	,burst_id_3D_VIC = 0x0010
-	,burst_id_3D_DTD = 0x0011
-	,burst_id_HEV_VIC = 0x0020
-	,burst_id_HEV_DTDA = 0x0021
-	,burst_id_HEV_DTDB = 0x0022
-	,burst_id_VC_ASSIGN = 0x0038
-	,burst_id_VC_CONFIRM = 0x0039
-	,burst_id_AUD_DELAY = 0x0040
-	,burst_id_ADT_BURSTID = 0x0041
-	,burst_id_BIST_SETUP = 0x0051
-	,burst_id_BIST_RETURN_STAT = 0x0052
-	,burst_id_EMSC_SUPPORT			= 0x0061
-	,burst_id_HID_PAYLOAD			= 0x0062
-	,burst_id_BLK_RCV_BUFFER_INFO	= 0x0063
-	,burst_id_BITS_PER_PIXEL_FMT	= 0x0064
-	,LOCAL_ADOPTER_ID = SILICON_IMAGE_ADOPTER_ID
+enum BurstId_e {
+	MHL_TEST_ADOPTER_ID = 0x0000,
+	burst_id_3D_VIC = 0x0010,
+	burst_id_3D_DTD = 0x0011,
+	burst_id_HEV_VIC = 0x0020,
+	burst_id_HEV_DTDA = 0x0021,
+	burst_id_HEV_DTDB = 0x0022,
+	burst_id_VC_ASSIGN = 0x0038,
+	burst_id_VC_CONFIRM = 0x0039,
+	burst_id_AUD_DELAY = 0x0040,
+	burst_id_ADT_BURSTID = 0x0041,
+	burst_id_BIST_SETUP = 0x0051,
+	burst_id_BIST_RETURN_STAT = 0x0052,
+	burst_id_EMSC_SUPPORT = 0x0061,
+	burst_id_HID_PAYLOAD = 0x0062,
+	burst_id_BLK_RCV_BUFFER_INFO = 0x0063,
+	burst_id_BITS_PER_PIXEL_FMT = 0x0064,
+	adopter_id_RANGE_START = 0x0080,
+	LOCAL_ADOPTER_ID = SILICON_IMAGE_ADOPTER_ID,
+	/* add new burst ID's above here */
 
-	// add new burst ID's above here
+	/* Burst ID's are a 16-bit big-endian quantity. */
+	burst_id_16_BITS_REQUIRED = 0x8000
+};
 
-	/* Burst ID's are a 16-bit big-endian quantity.
-	 * In order for the BURST_ID macro below to allow detection of
-            out-of-range values with KEIL 8051 compiler
-            we must have at least one enumerated value
-            that has one of the bits in the high order byte set.
-        Experimentally, we have found that the KEIL 8051 compiler
-         treats 0xFFFF as a special case (-1 perhaps...),
-         so we use a different value that has some upper bits set
-    */
-    ,burst_id_16_BITS_REQUIRED = 0x8000
-} BurstId_e;
-
-typedef struct SI_PACK_THIS_STRUCT _MHL_high_low_t{
+struct SI_PACK_THIS_STRUCT MHL_high_low_t {
 	uint8_t high;
 	uint8_t low;
-} MHL_high_low_t, *PMHL_high_low_t;
+};
 
-typedef MHL_high_low_t MHL_burst_id_t,*PMHL_burst_id_t;
+struct SI_PACK_THIS_STRUCT MHL_burst_id_t {
+	uint8_t high;
+	uint8_t low;
+};
+
+struct SI_PACK_THIS_STRUCT EMSC_BLK_ADOPT_ID_PAYLD_HDR {
+	struct MHL_burst_id_t burst_id;
+	uint8_t remaining_length;
+};
 
 #define ENDIAN_CONVERT_16(a) ((((uint16_t)(a.high))<<8)|((uint16_t)(a.low)))
-#define BURST_ID(bid) (BurstId_e)(ENDIAN_CONVERT_16(bid))
+#define BURST_ID(bid) ((enum BurstId_e)ENDIAN_CONVERT_16(bid))
 
 #define HIGH_BYTE_16(x) (uint8_t)((x >> 8) & 0xFF)
 #define LOW_BYTE_16(x)  (uint8_t)( x       & 0xFF)
@@ -245,131 +245,163 @@ struct SI_PACK_THIS_STRUCT standard_transport_header_t{
 #define STD_TRANSPORT_HDR_SIZE sizeof(struct SI_PACK_THIS_STRUCT standard_transport_header_t)
 
 struct SI_PACK_THIS_STRUCT block_rcv_buffer_info_t{
-	MHL_burst_id_t	burst_id; /* use the BURST_ID macro to access this */
+	/* use the BURST_ID macro to access this */
+	struct MHL_burst_id_t burst_id;
 	uint8_t blk_rcv_buffer_size_low;
 	uint8_t blk_rcv_buffer_size_high;
 };
 
 // see MHL2.0 spec section 5.9.1.2
-typedef struct SI_PACK_THIS_STRUCT _MHL2_video_descriptor_t {
+struct SI_PACK_THIS_STRUCT MHL2_video_descriptor_t {
 	uint8_t reserved_high;
-	unsigned char frame_sequential:1;    //FB_SUPP
-	unsigned char top_bottom:1;          //TB_SUPP
-	unsigned char left_right:1;          //LR_SUPP
+	unsigned char frame_sequential:1;	/*FB_SUPP*/
+	unsigned char top_bottom:1;		/*TB_SUPP*/
+	unsigned char left_right:1;		/*LR_SUPP*/
 	unsigned char reserved_low:5;
-} MHL2_video_descriptor_t, *PMHL2_video_descriptor_t;
+};
 
-typedef struct SI_PACK_THIS_STRUCT _MHL3_burst_header_t{
-	MHL_burst_id_t burst_id;
+struct MHL3_vdi_l_t {
+	unsigned char frame_sequential:1;	/*FB_SUPP*/
+	unsigned char top_bottom:1;		/*TB_SUPP*/
+	unsigned char left_right:1;		/*LR_SUPP*/
+	unsigned char reserved_low:5;
+};
+
+struct MHL3_vdi_h_t {
+	unsigned char reserved;
+};
+
+/* see MHL3.0 spec section 5.11 */
+struct SI_PACK_THIS_STRUCT MHL3_video_descriptor_t {
+	struct MHL3_vdi_l_t vdi_l;
+	struct MHL3_vdi_h_t vdi_h;
+};
+
+struct SI_PACK_THIS_STRUCT MHL3_burst_header_t {
+	struct MHL_burst_id_t burst_id;
 	uint8_t checksum;
 	uint8_t total_entries;
 	uint8_t sequence_index;
-}MHL3_burst_header_t,*P_MHL3_burst_header_t;
-typedef struct SI_PACK_THIS_STRUCT _MHL2_video_format_data_t {
-	MHL3_burst_header_t	header;
-	uint8_t num_entries_this_burst;
-	MHL2_video_descriptor_t video_descriptors[5];
-} MHL2_video_format_data_t, *PMHL2_video_format_data_t;
+};
 
-typedef struct SI_PACK_THIS_STRUCT _MHL3_hev_vic_descriptor_t {
-	uint8_t	vic_cea861f;
+struct SI_PACK_THIS_STRUCT MHL2_video_format_data_t {
+	struct MHL3_burst_header_t header;
+	uint8_t num_entries_this_burst;
+	struct MHL2_video_descriptor_t video_descriptors[5];
+};
+
+struct SI_PACK_THIS_STRUCT MHL3_hev_vic_descriptor_t {
+	uint8_t vic_cea861f;
 	uint8_t reserved;
-}MHL3_hev_vic_descriptor_t,*PMHL3_hev_vic_descriptor_t;
+};
 
-typedef struct SI_PACK_THIS_STRUCT _MHL3_hev_vic_data_t {
-	MHL3_burst_header_t	header;
+struct SI_PACK_THIS_STRUCT MHL3_hev_vic_data_t {
+	struct MHL3_burst_header_t header;
 	uint8_t num_entries_this_burst;
-	MHL3_hev_vic_descriptor_t video_descriptors[5];
-} MHL3_hev_vic_data_t, *PMHL3_hev_vic_data_t;
+	struct MHL3_hev_vic_descriptor_t video_descriptors[5];
+};
 
-typedef struct SI_PACK_THIS_STRUCT _MHL3_hev_dtd_a_payload_t {
-	MHL_high_low_t	pixel_clock_in_MHz;
-	MHL_high_low_t	h_active_in_pixels;
-	MHL_high_low_t	h_blank_in_pixels;
-	MHL_high_low_t	h_front_porch_in_pixels;
-	MHL_high_low_t	h_sync_width_in_pixels;
-	uint8_t			h_flags;
-} MHL3_hev_dtd_a_payload_t , *PMHL3_hev_dtd_a_payload_t ;
+struct SI_PACK_THIS_STRUCT MHL3_hev_dtd_a_payload_t {
+	struct MHL_high_low_t pixel_clock_in_MHz;
+	struct MHL_high_low_t h_active_in_pixels;
+	struct MHL_high_low_t h_blank_in_pixels;
+	struct MHL_high_low_t h_front_porch_in_pixels;
+	struct MHL_high_low_t h_sync_width_in_pixels;
+	uint8_t h_flags;
+};
 
-typedef struct SI_PACK_THIS_STRUCT _MHL3_hev_dtd_b_payload_t {
-	MHL_high_low_t	v_total_in_lines;
-	uint8_t			v_blank_in_lines; /* note 7 for table 5-16 is wrong for this entry */
-	uint8_t			v_front_porch_in_lines; /* note 7 for table 5-16 is wrong for this entry */
-	uint8_t			v_sync_width_in_lines; /* note 7 for table 5-16 is wrong for this entry */
-	uint8_t			v_refresh_rate_in_fields_per_second;
-	uint8_t			v_flags;
-	uint8_t			reserved[4];
-} MHL3_hev_dtd_b_payload_t , *PMHL3_hev_dtd_b_payload_t ;
+struct SI_PACK_THIS_STRUCT MHL3_hev_dtd_b_payload_t {
+	struct MHL_high_low_t v_total_in_lines;
+	uint8_t v_blank_in_lines;	/* note 7 for table 5-16 is wrong */
+	uint8_t v_front_porch_in_lines;	/* note 7 for table 5-16 is wrong */
+	uint8_t v_sync_width_in_lines;	/* note 7 for table 5-16 is wrong */
+	uint8_t v_refresh_rate_in_fields_per_second;
+	uint8_t v_flags;
+	uint8_t reserved[4];
+};
 
-typedef struct SI_PACK_THIS_STRUCT _MHL3_hev_dtd_a_data_t {
-	MHL3_burst_header_t	header;
-	MHL3_hev_dtd_a_payload_t	payload;
-} MHL3_hev_dtd_a_data_t, *PMHL3_hev_dtd_a_data_t;
+struct SI_PACK_THIS_STRUCT MHL3_hev_dtd_a_data_t {
+	struct MHL3_burst_header_t	header;
+	struct MHL3_hev_dtd_a_payload_t	payload;
+};
 
-typedef struct SI_PACK_THIS_STRUCT _MHL3_hev_dtd_b_data_t {
-	MHL3_burst_header_t	header;
-	MHL3_hev_dtd_b_payload_t payload;
-} MHL3_hev_dtd_b_data_t, *PMHL3_hev_dtd_b_data_t;
+struct SI_PACK_THIS_STRUCT MHL3_hev_dtd_b_data_t {
+	struct MHL3_burst_header_t header;
+	struct MHL3_hev_dtd_b_payload_t payload;
+};
 
-typedef struct SI_PACK_THIS_STRUCT _MHL3_hev_dtd_item_t {
-	MHL3_hev_dtd_a_payload_t a;
-	MHL3_hev_dtd_b_payload_t b;
-}MHL3_hev_dtd_item_t, *PMHL3_hev_dtd_item_t;
+struct SI_PACK_THIS_STRUCT MHL3_hev_dtd_item_t {
+	uint8_t sequence_index;
+	struct MHL3_hev_dtd_a_payload_t a;
+	struct MHL3_hev_dtd_b_payload_t b;
+	struct MHL3_video_descriptor_t _3d_info;
+};
 
-typedef struct SI_PACK_THIS_STRUCT  _MHL3_speaker_allocation_data_block_t{
+struct SI_PACK_THIS_STRUCT MHL3_speaker_allocation_data_block_t {
 	uint8_t cea861f_spkr_alloc[3];
-}MHL3_speaker_allocation_data_block_t,*PMHL3_speaker_allocation_data_block_t;
+};
 
-typedef struct SI_PACK_THIS_STRUCT _MHL3_adt_payload_t{
-	uint8_t	format_flags;
-	union{
-		uint8_t	short_descs[9];
-		MHL3_speaker_allocation_data_block_t spkr_alloc_db[3];
-	}descriptors;
+struct SI_PACK_THIS_STRUCT MHL3_adt_payload_t {
+	uint8_t format_flags;
+	union {
+		uint8_t short_descs[9];
+		struct MHL3_speaker_allocation_data_block_t spkr_alloc_db[3];
+	} descriptors;
 	uint8_t reserved;
-}MHL3_adt_payload_t,*PMHL3_adt_payload_t;
+};
 
-typedef struct SI_PACK_THIS_STRUCT  _MHL3_adt_data_t{
-	MHL3_burst_header_t	header;
-	MHL3_adt_payload_t	payload;
-}MHL3_adt_data_t,*PMHL3_adt_data_t;
+struct SI_PACK_THIS_STRUCT MHL3_audio_delay_burst_t {
+	struct MHL_burst_id_t burst_id;
+	uint8_t checksum;
+	uint8_t delay_h;
+	uint8_t delay_m;
+	uint8_t delay_l;
+	uint8_t reserved[10];
+};
 
-typedef struct SI_PACK_THIS_STRUCT _MHL3_emsc_support_payload_t{
-	 MHL_burst_id_t burst_ids[5];
-}MHL3_emsc_support_payload_t,*PMHL3_emsc_support_payload_t;
+struct SI_PACK_THIS_STRUCT MHL3_adt_data_t {
+	struct MHL3_burst_header_t header;
+	struct MHL3_adt_payload_t payload;
+};
 
-typedef struct SI_PACK_THIS_STRUCT _MHL3_emsc_support_data_t {
-	MHL3_burst_header_t	header;
+struct SI_PACK_THIS_STRUCT MHL3_emsc_support_payload_t {
+	struct MHL_burst_id_t burst_ids[5];
+};
+
+struct SI_PACK_THIS_STRUCT MHL3_emsc_support_data_t {
+	struct MHL3_burst_header_t header;
 	uint8_t num_entries_this_burst;
-	MHL3_emsc_support_payload_t payload;
-}MHL3_emsc_support_data_t, *PMHL3_emsc_support_data_t ;
+	struct MHL3_emsc_support_payload_t payload;
+};
 
 enum view_pixel_fmt_e{
 	VIEW_PIX_FMT_24BPP = 0
 	,VIEW_PIX_FMT_16BPP =1
 };
-typedef struct SI_PACK_THIS_STRUCT _MHL3_bits_per_pixel_fmt_descriptor_t{
-	uint8_t	stream_id;
-	uint8_t	stream_pixel_format;
-}MHL3_bits_per_pixel_fmt_descriptor_t,*PMHL3_bits_per_pixel_fmt_descriptor_t;
 
-typedef struct SI_PACK_THIS_STRUCT _MHL_bits_per_pixel_fmt_data_t{
-	MHL3_burst_header_t	header;
+struct SI_PACK_THIS_STRUCT MHL3_bits_per_pixel_fmt_descriptor_t {
+	uint8_t stream_id;
+	uint8_t stream_pixel_format;
+};
+
+struct SI_PACK_THIS_STRUCT MHL_bits_per_pixel_fmt_data_t {
+	struct MHL3_burst_header_t header;
 	uint8_t num_entries_this_burst;
 
-	/* reserve 5 for use with WRITE_BURST 
-		actual length is variable, indicated by
-		num_entries_this_burst
-	*/
-	MHL3_bits_per_pixel_fmt_descriptor_t descriptors[5]; 
+	/* reserve 5 for use with WRITE_BURST
+	   actual length is variable, indicated by
+	   num_entries_this_burst
+	 */
+	/* todo change this to 1 when WRITE_BURST OPTION is removed */
+	struct MHL3_bits_per_pixel_fmt_descriptor_t descriptors[5];
+};
 
-}MHL_bits_per_pixel_fmt_data_t,*PMHL_bits_per_pixel_fmt_data_t;
-
-typedef union SI_PACK_THIS_STRUCT {
-	MHL2_video_descriptor_t		mhl2_3d_descriptor;
-	MHL3_hev_vic_descriptor_t	mhl3_hev_vic_descriptor;
-	MHL3_hev_dtd_item_t			mhl3_hev_dtd;
-}video_burst_descriptor_u;
+union SI_PACK_THIS_STRUCT video_burst_descriptor_u {
+	struct MHL2_video_descriptor_t mhl2_3d_descriptor;
+	struct MHL3_video_descriptor_t mhl3_3d_descriptor;
+	struct MHL3_hev_vic_descriptor_t mhl3_hev_vic_descriptor;
+	struct MHL3_hev_dtd_item_t mhl3_hev_dtd;
+};
 
 SI_POP_STRUCT_PACKING //)
 
@@ -594,9 +626,11 @@ enum {
 	XDEVSTAT_SIZE
 };
 
-/* XDEVSTAT - Current eCBUS Mode 18.2.2.1 */
+/* XDEVSTAT - Current eCBUS Mode 7.12.2.1 */
+#define MHL_XSTATUS_REG_INTENDED_CBUS_MODE	0x90
 #define MHL_XDS_SLOT_MODE_8BIT				0x00
 #define MHL_XDS_SLOT_MODE_6BIT				0x01
+#define MHL_XDS_ECBUS_S						0x04
 
 #define MHL_XDS_LINK_CLOCK_75MHZ			0x00
 #define MHL_XDS_LINK_CLOCK_150MHZ			0x10
@@ -649,63 +683,41 @@ struct SI_PACK_THIS_STRUCT virt_chan_info {
 
 #define MAX_VC_ENTRIES 3
 struct SI_PACK_THIS_STRUCT tdm_alloc_burst {
-	uint8_t burst_id_h;
-	uint8_t burst_id_l;
-	uint8_t checksum;
-	uint8_t tot_ent;
-	uint8_t seq;
-	uint8_t num_ent;
+	struct MHL3_burst_header_t header;
+	uint8_t num_entries_this_burst;
 	struct virt_chan_info vc_info[MAX_VC_ENTRIES];
 	uint8_t reserved;
 };
 
-struct __attribute__((__packed__)) bist_setup_burst {
-	uint8_t	burst_id_h;
-	uint8_t	burst_id_l;
-	uint8_t	checksum;
-	uint8_t	e_cbus_duration;
-	uint8_t	e_cbus_pattern;
-#define BS_PATTERN_UNSPECIFIED	0x00
-#define BS_PATTERN_PRBS			0x01
-#define BS_PATTERN_FIXED_8		0x02
-#define BS_PATTERN_FIXED_10		0x03
-#define BS_PATTERN_MAX			BS_PATTERN_FIXED_10
-	uint8_t	e_cbus_fixed_h;
-	uint8_t	e_cbus_fixed_l;
-	uint8_t	reserved;
-	uint8_t	avlink_data_rate;
-	uint8_t	avlink_pattern;
-#define BS_AV_PATTERN_UNSPECIFIED	0x00
-#define BS_AV_PATTERN_PRBS			0x01
-#define BS_AV_PATTERN_FIXED_8		0x02
-#define BS_AV_PATTERN_FIXED_10		0x03
-#define BS_AV_PATTERN_MAX			BS_AV_PATTERN_FIXED_10
-	uint8_t	avlink_video_mode;
-	uint8_t	avlink_duration;
-	uint8_t	avlink_fixed_h;
-	uint8_t	avlink_fixed_l;
-	uint8_t	avlink_randomizer;
-	uint8_t	impedance_mode;
-#define IMP_MODE_AV_LINK_TX_LOW		0x00
-#define IMP_MODE_AV_LINK_TX_HIGH	0x01
-#define IMP_MODE_AV_LINK_RX			0x02
-#define IMP_MODE_E_CBUS_D_TX_LOW	0x04
-#define IMP_MODE_E_CBUS_D_TX_HIGH	0x05
-#define IMP_MODE_E_CBUS_D_RX		0x06
-#define IMP_MODE_E_CBUS_S_TX_LOW	0x08
-#define IMP_MODE_E_CBUS_S_TX_HIGH	0x09
-#define IMP_MODE_E_CBUS_S_RX		0x0A
+struct SI_PACK_THIS_STRUCT bist_setup_burst {
+	uint8_t burst_id_h;
+	uint8_t burst_id_l;
+	uint8_t checksum;
+	uint8_t e_cbus_duration;
+	uint8_t e_cbus_pattern;
+	uint8_t e_cbus_fixed_h;
+	uint8_t e_cbus_fixed_l;
+	uint8_t reserved;
+	uint8_t avlink_data_rate;
+	uint8_t avlink_pattern;
+	uint8_t avlink_video_mode;
+	uint8_t avlink_duration;
+	uint8_t avlink_fixed_h;
+	uint8_t avlink_fixed_l;
+	uint8_t avlink_randomizer;
+	uint8_t impedance_mode;
 };
 
-struct __attribute__((__packed__)) bist_return_status_burst {
-	uint8_t	burst_id_h;
-	uint8_t	burst_id_l;
-	uint8_t	checksum;
+/* BIST_RETURN_STAT WRITE_BURST 15.1.2 */
+struct SI_PACK_THIS_STRUCT bist_return_stat_burst {
+	uint8_t burst_id_h;
+	uint8_t burst_id_l;
+	uint8_t checksum;
 	uint8_t reserved[9];
-	uint8_t	e_cbus_stat_h;
-	uint8_t	e_cbus_stat_l;
-	uint8_t	avlink_stat_h;
-	uint8_t	avlink_stat_l;
+	uint8_t e_cbus_stat_h;
+	uint8_t e_cbus_stat_l;
+	uint8_t avlink_stat_h;
+	uint8_t avlink_stat_l;
 };
 
 #endif

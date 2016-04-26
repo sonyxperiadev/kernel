@@ -1,4 +1,4 @@
-/* kernel/drivers/video/msm/mdss/mhl_sii8620_8061_drv/mhl_lib_edid.h
+/* vendor/semc/hardware/mhl/mhl_sii8620_8061_drv/mhl_lib_edid.h
  *
  * Copyright (C) 2013 Sony Mobile Communications AB.
  * Copyright (C) 2013 Silicon Image Inc.
@@ -13,12 +13,7 @@
 #ifndef __MHL_EDID_PARSER_H__
 #define __MHL_EDID_PARSER_H__
 
-#include <linux/types.h>
 #include "si_infoframe.h"
-#include "mhl_defs.h"
-#include "mhl_common.h"
-
-
 
 #define MHL_BLOCK_SIZE			128
 /* EDID BLOCK SIZE */
@@ -85,11 +80,6 @@ typedef struct SI_PACK_THIS_STRUCT _cea_short_descriptor_t {
 	unsigned char VIC		: 7;
 	unsigned char native	: 1;
 } cea_short_descriptor_t, *Pcea_short_descriptor_t;
-
-typedef struct SI_PACK_THIS_STRUCT _MHL_short_desc_t {
-	cea_short_descriptor_t cea_short_desc;
-	MHL2_video_descriptor_t mhl_vid_desc;
-} MHL_short_desc_t, *PMHL_short_desc_t;
 
 typedef struct SI_PACK_THIS_STRUCT _video_data_block_t
 {
@@ -272,73 +262,77 @@ typedef struct SI_PACK_THIS_STRUCT _HDMI_LLC_vsdb_payload_t {
 	/* There must be no fields after here */
 } HDMI_LLC_vsdb_payload_t, *PHDMI_LLC_vsdb_payload_t;
 
-typedef struct SI_PACK_THIS_STRUCT st_3D_structure_all_15_8_t {
-	uint8_t frame_packing	: 1;
-	uint8_t reserved1		: 5;
-	uint8_t top_bottom		: 1;
-	uint8_t reserved2		: 1;
-} _3D_structure_all_15_8_t, *P_3D_structure_all_15_8_t;
+struct SI_PACK_THIS_STRUCT _3D_structure_all_15_8_t {
+	uint8_t frame_packing:1;
+	uint8_t reserved1:5;
+	uint8_t top_bottom:1;
+	uint8_t reserved2:1;
+};
 
-typedef struct SI_PACK_THIS_STRUCT st_3D_structure_all_7_0_t {
-	uint8_t side_by_side	: 1;
-	uint8_t reserved		: 7;
-} _3D_structure_all_7_0_t, *P_3D_structure_all_7_0_t;
+struct SI_PACK_THIS_STRUCT _3D_structure_all_7_0_t {
+	uint8_t side_by_side:1;
+	uint8_t reserved:7;
+};
 
-typedef struct SI_PACK_THIS_STRUCT tag_3D_structure_all_t {
-	_3D_structure_all_15_8_t _3D_structure_all_15_8;
-	_3D_structure_all_7_0_t _3D_structure_all_7_0;
-} _3D_structure_all_t, *P_3D_structure_all_t;
+struct SI_PACK_THIS_STRUCT _3D_structure_all_t {
+	struct _3D_structure_all_15_8_t _3D_structure_all_15_8;
+	struct _3D_structure_all_7_0_t _3D_structure_all_7_0;
+};
 
-typedef struct SI_PACK_THIS_STRUCT tag_3D_mask_t {
+struct SI_PACK_THIS_STRUCT _3D_mask_t {
 	uint8_t _3D_mask_15_8;
 	uint8_t _3D_mask_7_0;
-} _3D_mask_t, *P_3D_mask_t;
+};
 
-typedef struct SI_PACK_THIS_STRUCT tag_2D_VIC_order_3D_structure_t {
-	_3D_structure_e _3D_structure	: 4;	/* definition from info frame */
-	unsigned _2D_VIC_order			: 4;
-} _2D_VIC_order_3D_structure_t, *P_2D_VIC_order_3D_structure_t;
+struct SI_PACK_THIS_STRUCT _2D_VIC_order_3D_structure_t {
+	enum _3D_structure_e _3D_structure:4; /* definition from infoframe */
+	unsigned _2D_VIC_order:4;
+};
 
-typedef struct SI_PACK_THIS_STRUCT tag_3D_detail_t {
-	unsigned char reserved		: 4;
-	unsigned char _3D_detail	: 4;
-} _3D_detail_t, *P_3D_detail_t;
+struct SI_PACK_THIS_STRUCT _3D_detail_t {
+	unsigned char reserved:4;
+	unsigned char _3D_detail:4;
+};
 
-typedef struct SI_PACK_THIS_STRUCT tag_3D_structure_and_detail_entry_sans_byte1_t {
-	_2D_VIC_order_3D_structure_t byte0;
+struct SI_PACK_THIS_STRUCT _3D_structure_and_detail_entry_sans_byte1_t {
+	struct _2D_VIC_order_3D_structure_t byte0;
 	/*see HDMI 1.4 spec w.r.t. contents of 3D_structure_X */
-} _3D_structure_and_detail_entry_sans_byte1_t, *P_3D_structure_and_detail_entry_sans_byte1_t;
+};
 
-typedef struct SI_PACK_THIS_STRUCT tag_3D_structure_and_detail_entry_with_byte1_t {
-	_2D_VIC_order_3D_structure_t byte0;
-	_3D_detail_t byte1;
-} _3D_structure_and_detail_entry_with_byte1_t, *P_3D_structure_and_detail_entry_with_byte1_t;
+struct SI_PACK_THIS_STRUCT _3D_structure_and_detail_entry_with_byte1_t {
+	struct _2D_VIC_order_3D_structure_t byte0;
+	struct _3D_detail_t byte1;
+};
 
-typedef union tag_3D_structure_and_detail_entry_u {
-	_3D_structure_and_detail_entry_sans_byte1_t sans_byte1;
-	_3D_structure_and_detail_entry_with_byte1_t with_byte1;
-} _3D_structure_and_detail_entry_u, *P_3D_structure_and_detail_entry_u;
+union _3D_structure_and_detail_entry_u {
+	struct _3D_structure_and_detail_entry_sans_byte1_t sans_byte1;
+	struct _3D_structure_and_detail_entry_with_byte1_t with_byte1;
+};
 
-typedef struct SI_PACK_THIS_STRUCT _HDMI_3D_sub_block_sans_all_AND_mask_t {
-	_3D_structure_and_detail_entry_u _3D_structure_and_detail_list[1];
-} HDMI_3D_sub_block_sans_all_AND_mask_t,*PHDMI_3D_sub_block_sans_all_AND_mask_t;
+struct SI_PACK_THIS_STRUCT HDMI_3D_sub_block_sans_all_AND_mask_t {
+	union _3D_structure_and_detail_entry_u
+		_3D_structure_and_detail_list[1];
+};
 
-typedef struct SI_PACK_THIS_STRUCT _HDMI_3D_sub_block_sans_mask_t {
-	_3D_structure_all_t _3D_structure_all;
-	_3D_structure_and_detail_entry_u _3D_structure_and_detail_list[1];
-} HDMI_3D_sub_block_sans_mask_t, *PHDMI_3D_sub_block_sans_mask_t;
+struct SI_PACK_THIS_STRUCT HDMI_3D_sub_block_sans_mask_t {
+	struct _3D_structure_all_t _3D_structure_all;
+	union _3D_structure_and_detail_entry_u _3D_structure_and_detail_list[1];
+};
 
-typedef struct SI_PACK_THIS_STRUCT _HDMI_3D_sub_block_with_all_AND_mask_t {
-	_3D_structure_all_t _3D_structure_all;
-	_3D_mask_t _3D_mask;
-	_3D_structure_and_detail_entry_u _3D_structure_and_detail_list[1];
-} HDMI_3D_sub_block_with_all_AND_mask_t, *PHDMI_3D_sub_block_with_all_AND_mask_t;
+struct SI_PACK_THIS_STRUCT HDMI_3D_sub_block_with_all_AND_mask_t {
+	struct _3D_structure_all_t _3D_structure_all;
+	struct _3D_mask_t _3D_mask;
+	union _3D_structure_and_detail_entry_u
+		_3D_structure_and_detail_list[1];
+};
 
-typedef union {
-	HDMI_3D_sub_block_sans_all_AND_mask_t	HDMI_3D_sub_block_sans_all_AND_mask;
-	HDMI_3D_sub_block_sans_mask_t			HDMI_3D_sub_block_sans_mask;
-	HDMI_3D_sub_block_with_all_AND_mask_t	HDMI_3D_sub_block_with_all_AND_mask;
-} HDMI_3D_sub_block_t, *PHDMI_3D_sub_block_t;
+union HDMI_3D_sub_block_t {
+	struct HDMI_3D_sub_block_sans_all_AND_mask_t
+		HDMI_3D_sub_block_sans_all_AND_mask;
+	struct HDMI_3D_sub_block_sans_mask_t HDMI_3D_sub_block_sans_mask;
+	struct HDMI_3D_sub_block_with_all_AND_mask_t
+		HDMI_3D_sub_block_with_all_AND_mask;
+};
 
 typedef struct SI_PACK_THIS_STRUCT _vsdb_t {
 	data_block_header_byte_t header;
@@ -728,9 +722,9 @@ enum EDID_error_codes {
 #define EDID_REV_THREE				0x03
 
 int mhl_edid_parser_get_num_cea_861_extensions(uint8_t *pEdid);
-int mhl_edid_parser_remove_vic16_1080p60fps(uint8_t *ext_edid);
-void mhl_lib_edid_set_edid(const uint8_t *edid);
+void mhl_lib_edid_init(const uint8_t *edid);
 bool mhl_lib_edid_is_hdmi(void);
+bool mhl_lib_is_asus_vx239h(void);
 void mhl_lib_edid_remove_vic_from_svd(uint8_t *ext_edid,
 		uint8_t *not_removed_vic_array,
 		uint8_t not_removed_vic_array_size);
@@ -743,13 +737,41 @@ bool mhl_lib_edid_is_valid_checksum(uint8_t *p_EDID_block_data);
 bool mhl_edid_check_edid_header(uint8_t *pSingleEdidBlock);
 
 /*[vic], [H.Pixel], [Aspect ratio | Refresh Rate]*/
+/* TODO followings is not cared.
+ * Horizontal Border,
+ * Horizontal Sync Offset,
+ * Horizontal Sync Pulse Width,
+ * Vertical Border,
+ * Vertical Sync Offset,
+ * Vertical Sync Pulse Width */
 struct mhl_video_timing_info {
 	uint32_t vic;
-	uint32_t h_pixcel;
+	uint32_t h_pixel;
 	uint32_t aspect_refresh;
 	uint32_t est_timing_1;
 	uint32_t est_timing_2;
 	uint32_t est_timing_3;
+	uint32_t pixel_clk_freq;
+	uint32_t active_h;
+	uint32_t active_v;
+	bool interlaced;
+	uint32_t total_h;
+	uint32_t total_blank_h;
+	uint32_t total_v;
+	uint32_t total_blank_v;
+	/* Must divide by 1000 to get the frequency */
+	uint32_t freq_h1;
+	uint32_t freq_h2;
+	/* Must divide by 1000 to get the frequency */
+	uint32_t freq_v1;
+	uint32_t freq_v2;
+	/* Must divide by 1000 to get the frequency */
+	uint32_t pixel_freq_khz1;
+	uint32_t pixel_freq_khz2;
+	/* Must divide by 1000 to get the frequency */
+	uint32_t refresh_rate1;
+	uint32_t refresh_rate2;
+	bool aspect_ratio_4_3;
 };
 
 void mhl_lib_edid_remove_standard_timing(
@@ -778,142 +800,29 @@ int mhl_lib_edid_replace_hdmi_vic_and_remove_3d(
 #define MHL_BIT_HDMI_VIC_3  (0x01 << 2)
 #define MHL_BIT_HDMI_VIC_4  (0x01 << 3)
 
+#define HEV_VIC_MAX_LEN 13
 
-#define HDMI_VFRMT_UNKNOWN		0
-#define HDMI_VFRMT_640x480p60_4_3	1
-#define HDMI_VFRMT_720x480p60_4_3	2
-#define HDMI_VFRMT_720x480p60_16_9	3
-#define HDMI_VFRMT_1280x720p60_16_9	4
-#define HDMI_VFRMT_1920x1080i60_16_9	5
-#define HDMI_VFRMT_720x480i60_4_3	6
-#define HDMI_VFRMT_1440x480i60_4_3	HDMI_VFRMT_720x480i60_4_3
-#define HDMI_VFRMT_720x480i60_16_9	7
-#define HDMI_VFRMT_1440x480i60_16_9	HDMI_VFRMT_720x480i60_16_9
-#define HDMI_VFRMT_720x240p60_4_3	8
-#define HDMI_VFRMT_1440x240p60_4_3	HDMI_VFRMT_720x240p60_4_3
-#define HDMI_VFRMT_720x240p60_16_9	9
-#define HDMI_VFRMT_1440x240p60_16_9	HDMI_VFRMT_720x240p60_16_9
-#define HDMI_VFRMT_2880x480i60_4_3	10
-#define HDMI_VFRMT_2880x480i60_16_9	11
-#define HDMI_VFRMT_2880x240p60_4_3	12
-#define HDMI_VFRMT_2880x240p60_16_9	13
-#define HDMI_VFRMT_1440x480p60_4_3	14
-#define HDMI_VFRMT_1440x480p60_16_9	15
-#define HDMI_VFRMT_1920x1080p60_16_9	16
-#define HDMI_VFRMT_720x576p50_4_3	17
-#define HDMI_VFRMT_720x576p50_16_9	18
-#define HDMI_VFRMT_1280x720p50_16_9	19
-#define HDMI_VFRMT_1920x1080i50_16_9	20
-#define HDMI_VFRMT_720x576i50_4_3	21
-#define HDMI_VFRMT_1440x576i50_4_3	HDMI_VFRMT_720x576i50_4_3
-#define HDMI_VFRMT_720x576i50_16_9	22
-#define HDMI_VFRMT_1440x576i50_16_9	HDMI_VFRMT_720x576i50_16_9
-#define HDMI_VFRMT_720x288p50_4_3	23
-#define HDMI_VFRMT_1440x288p50_4_3	HDMI_VFRMT_720x288p50_4_3
-#define HDMI_VFRMT_720x288p50_16_9	24
-#define HDMI_VFRMT_1440x288p50_16_9	HDMI_VFRMT_720x288p50_16_9
-#define HDMI_VFRMT_2880x576i50_4_3	25
-#define HDMI_VFRMT_2880x576i50_16_9	26
-#define HDMI_VFRMT_2880x288p50_4_3	27
-#define HDMI_VFRMT_2880x288p50_16_9	28
-#define HDMI_VFRMT_1440x576p50_4_3	29
-#define HDMI_VFRMT_1440x576p50_16_9	30
-#define HDMI_VFRMT_1920x1080p50_16_9	31
-#define HDMI_VFRMT_1920x1080p24_16_9	32
-#define HDMI_VFRMT_1920x1080p25_16_9	33
-#define HDMI_VFRMT_1920x1080p30_16_9	34
-#define HDMI_VFRMT_2880x480p60_4_3	35
-#define HDMI_VFRMT_2880x480p60_16_9	36
-#define HDMI_VFRMT_2880x576p50_4_3	37
-#define HDMI_VFRMT_2880x576p50_16_9	38
-#define HDMI_VFRMT_1920x1250i50_16_9	39
-#define HDMI_VFRMT_1920x1080i100_16_9	40
-#define HDMI_VFRMT_1280x720p100_16_9	41
-#define HDMI_VFRMT_720x576p100_4_3	42
-#define HDMI_VFRMT_720x576p100_16_9	43
-#define HDMI_VFRMT_720x576i100_4_3	44
-#define HDMI_VFRMT_1440x576i100_4_3	HDMI_VFRMT_720x576i100_4_3
-#define HDMI_VFRMT_720x576i100_16_9	45
-#define HDMI_VFRMT_1440x576i100_16_9	HDMI_VFRMT_720x576i100_16_9
-#define HDMI_VFRMT_1920x1080i120_16_9	46
-#define HDMI_VFRMT_1280x720p120_16_9	47
-#define HDMI_VFRMT_720x480p120_4_3	48
-#define HDMI_VFRMT_720x480p120_16_9	49
-#define HDMI_VFRMT_720x480i120_4_3	50
-#define HDMI_VFRMT_1440x480i120_4_3	HDMI_VFRMT_720x480i120_4_3
-#define HDMI_VFRMT_720x480i120_16_9	51
-#define HDMI_VFRMT_1440x480i120_16_9	HDMI_VFRMT_720x480i120_16_9
-#define HDMI_VFRMT_720x576p200_4_3	52
-#define HDMI_VFRMT_720x576p200_16_9	53
-#define HDMI_VFRMT_720x576i200_4_3	54
-#define HDMI_VFRMT_1440x576i200_4_3	HDMI_VFRMT_720x576i200_4_3
-#define HDMI_VFRMT_720x576i200_16_9	55
-#define HDMI_VFRMT_1440x576i200_16_9	HDMI_VFRMT_720x576i200_16_9
-#define HDMI_VFRMT_720x480p240_4_3	56
-#define HDMI_VFRMT_720x480p240_16_9	57
-#define HDMI_VFRMT_720x480i240_4_3	58
-#define HDMI_VFRMT_1440x480i240_4_3	HDMI_VFRMT_720x480i240_4_3
-#define HDMI_VFRMT_720x480i240_16_9	59
-#define HDMI_VFRMT_1440x480i240_16_9	HDMI_VFRMT_720x480i240_16_9
-#define HDMI_VFRMT_1280x720p24_16_9	60
-#define HDMI_VFRMT_1280x720p25_16_9	61
-#define HDMI_VFRMT_1280x720p30_16_9	62
-#define HDMI_VFRMT_1920x1080p120_16_9	63
-#define HDMI_VFRMT_1920x1080p100_16_9	64
-/* Video Identification Codes from 65-127 are reserved for the future */
-#define HDMI_VFRMT_END			127
+uint32_t mhl_lib_edid_get_16_link_clk(uint32_t pixel_clock);
+uint32_t mhl_lib_edid_get_24_link_clk(uint32_t pixel_clock);
+uint8_t mhl_lib_edid_remove_unsupport_4k_vic(
+			struct mhl_video_timing_info *somc_support_vic,
+			uint8_t somc_support_vic_len,
+			const uint8_t *sink_support_4k_vic,
+			uint8_t sink_support_4k_vic_len);
 
-/* extended video formats */
-#define HDMI_VFRMT_3840x2160p30_16_9	(HDMI_VFRMT_END + 1)
-#define HDMI_VFRMT_3840x2160p25_16_9	(HDMI_VFRMT_END + 2)
-#define HDMI_VFRMT_3840x2160p24_16_9	(HDMI_VFRMT_END + 3)
-#define HDMI_VFRMT_4096x2160p24_16_9	(HDMI_VFRMT_END + 4)
-#define HDMI_EVFRMT_END			HDMI_VFRMT_4096x2160p24_16_9
+bool *mhl_lib_edid_get_matched_timing_flg(void);
+void mhl_lib_edid_remove_and_replace_detailed_timing(
+			const struct mhl_video_timing_info *support_video,
+			uint8_t support_video_len,
+			uint8_t *detailed_timing);
 
-/* VESA DMT TIMINGS */
-#define HDMI_VFRMT_1024x768p60_4_3	(HDMI_EVFRMT_END + 1)
-#define HDMI_VFRMT_1280x1024p60_5_4	(HDMI_EVFRMT_END + 2)
-#define HDMI_VFRMT_2560x1600p60_16_9	(HDMI_EVFRMT_END + 3)
-#define VESA_DMT_VFRMT_END		HDMI_VFRMT_2560x1600p60_16_9
-#define HDMI_VFRMT_MAX			(VESA_DMT_VFRMT_END + 1)
-#define HDMI_VFRMT_FORCE_32BIT		0x7FFFFFFF
-
-struct hdmi_edid_video_mode_property_type {
-	u32	video_code;
-	u32	active_h;
-	u32	active_v;
-	u32	interlaced;
-	u32	total_h;
-	u32	total_blank_h;
-	u32	total_v;
-	u32	total_blank_v;
-	/* Must divide by 1000 to get the frequency */
-	u32	freq_h;
-	/* Must divide by 1000 to get the frequency */
-	u32	freq_v;
-	/* Must divide by 1000 to get the frequency */
-	u32	pixel_freq;
-	/* Must divide by 1000 to get the frequency */
-	u32	refresh_rate;
-	u32	aspect_ratio_4_3;
-};
-
-
-void mhl_lib_edid_replace_dtd_preferred_disp_info(
-		uint8_t *blk0,
-		const struct hdmi_edid_video_mode_property_type *edid);
-
-bool mhl_lib_edid_is_supp_disp_info_in_one_dtd_blk(
-		const uint8_t *one_descriptor,
-		const struct hdmi_edid_video_mode_property_type *edid,
-		uint32_t mode_lut_len,
-		uint32_t *preferd_disp_index);
-
-void mhl_lib_edid_replace_unsupport_descriptor_with_dummy(
-		uint8_t *blk0,
-		const struct hdmi_edid_video_mode_property_type *edid,
-		uint32_t mode_lut_len);
-
-extern const struct hdmi_edid_video_mode_property_type vga_preferred_disp_info;
+void mhl_lib_edid_remove_unsupp_detailed_timing_from_ext_blk(
+			uint8_t *ext_edid,
+			const struct mhl_video_timing_info *support_video,
+			uint8_t support_video_len);
+bool mhl_lib_edid_insert_hev_vic(
+			uint8_t *ext_edid,
+			uint8_t *hev_vic_array,
+			uint8_t hev_vic_array_len);
 
 #endif /* __MHL_EDID_PARSER__ */
