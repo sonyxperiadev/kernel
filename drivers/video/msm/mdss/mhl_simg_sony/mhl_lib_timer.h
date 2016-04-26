@@ -1,4 +1,4 @@
-/* kernel/drivers/video/msm/mdss/mhl_sii8620_8061_drv/mhl_lib_timer.h
+/* vendor/semc/hardware/mhl/mhl_sii8620_8061_drv/mhl_lib_timer.h
  *
  * Copyright (C) 2013 Sony Mobile Communications AB.
  * Copyright (C) 2013 Silicon Image Inc.
@@ -11,7 +11,6 @@
 
 #ifndef __MHL_LIB_TIMER_H__
 #define __MHL_LIB_TIMER_H_
-
 
 int mhl_lib_timer_init(void);
 int mhl_lib_timer_create(void (*callback_handler)(void *callback_param),

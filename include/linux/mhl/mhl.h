@@ -1,20 +1,25 @@
 /* kernel/include/linux/mhl/mhl.h
  *
- * Copyright (C) 2013 Sony Mobile Communications AB.
  * Copyright (C) 2013 Silicon Image Inc.
- *
- * Author: [Hirokuni Kawasaki <hirokuni.kawaaki@sonymobile.com>]
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2, as
  * published by the Free Software Foundation; either version 2
  * of the License, or (at your option) any later version.
  */
+/*
+ * Copyright (C) 2014 Sony Mobile Communications Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2, as
+ * published by the Free Software Foundation.
+ */
 
 #ifndef __MHL_H__
 #define __MHL_H__
 
 #include <linux/module.h>
+#include <linux/i2c.h>
 
 /*
  * Debug print
@@ -35,17 +40,16 @@ enum {
 	MHL_FAIL = -1
 };
 
-typedef enum {
-	HPD_CTRL_MODE_ERROR = -1,
-	HPD_CTRL_OPEN_DRAIN,
-	HPD_CTRL_PUSH_PULL
-} hpd_control_mode;
+struct mhl_tx_ctrl {
+	struct i2c_client *i2c_handle;
+	struct class *mhlclass;
+	struct device *pdev;
+};
 
 /***** mhl_platform.c *****/
 void mhl_pf_chip_power_on(void);
 void mhl_pf_chip_power_off(void);
 bool mhl_pf_is_chip_power_on(void);
-hpd_control_mode platform_get_hpd_control_mode(void);
 int is_interrupt_asserted(void);
 const char *mhl_pf_get_device_name(void);
 
@@ -53,9 +57,12 @@ const char *mhl_pf_get_device_name(void);
 int mhl_pf_get_irq_number(void);
 struct i2c_client *mhl_pf_get_i2c_client(void);
 int mhl_pf_switch_to_usb(void);
+int mhl_pf_switch_to_mhl(void);
 void mhl_pf_switch_register_cb(int (*device_discovery)(void *context_cb),
 								void *context);
 void mhl_pf_switch_unregister_cb(void);
+bool mhl_pf_check_vbus(void);
+void mhl_pf_source_vbus_control(bool on);
 
 /***** mhl_platform_i2c.c *****/
 /* when chip pwr is down, the error code is returned. -MHL_I2C_NOT_AVAILABLE */

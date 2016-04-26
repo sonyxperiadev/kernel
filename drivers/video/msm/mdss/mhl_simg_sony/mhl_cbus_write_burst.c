@@ -1,4 +1,4 @@
-/* kernel/drivers/video/msm/mdss/mhl_sii8620_8061_drv/mhl_cbus_write_burst.c
+/* vendor/semc/hardware/mhl/mhl_sii8620_8061_drv/mhl_cbus_write_burst.c
  *
  * Copyright (C) 2013 Sony Mobile Communications AB.
  * Copyright (C) 2013 Silicon Image Inc.
@@ -9,12 +9,10 @@
  * of the License, or (at your option) any later version.
  */
 
-#include "si_8620_regs.h"
+#include "mhl_common.h"
 #include "mhl_sii8620_8061_device.h"
 #include "mhl_cbus_control.h"
-#include "mhl_platform.h"
 #include "mhl_lib_infoframe.h"
-#include "mhl_common.h"
 
 static uint8_t	write_burst_data[MHL_SCRATCHPAD_SIZE];
 static bool	gen2_write_burst_xmit_flag;
@@ -84,11 +82,13 @@ static uint8_t cbus_wb_get_vic(uint8_t *in_hev_vic, uint8_t *out_hev_vic)
 
 static void cbus_wb_handle_scr_data(uint8_t *scrpad)
 {
-	BurstId_e burst_id;
+	enum BurstId_e burst_id;
 	uint8_t length = 0;
 	uint8_t out_data[MHL_SCRATCHPAD_SIZE];
 
-	burst_id = (BurstId_e)(((uint16_t)scrpad[0]<<8)|((uint16_t)scrpad[1]));
+	burst_id = (enum BurstId_e)
+				(((uint16_t)scrpad[0]<<8) |
+				((uint16_t)scrpad[1]));
 
 	pr_debug("%s: BURST_ID: 0x%x\n", __func__, burst_id);
 
@@ -112,7 +112,12 @@ static void cbus_wb_handle_scr_data(uint8_t *scrpad)
 	case burst_id_VC_CONFIRM:
 	case burst_id_AUD_DELAY:
 	case burst_id_ADT_BURSTID:
+		break;
 	case burst_id_BIST_SETUP:
+#if 0 /* FIXME for BIST */
+		mhl_cbus_set_bist_pending_flags(BIST_PENDING_IN_PROGRESS);
+		break;
+#endif
 	case burst_id_BIST_RETURN_STAT:
 	case burst_id_EMSC_SUPPORT:
 	case burst_id_HID_PAYLOAD:
@@ -135,7 +140,7 @@ void cbus_wb_event_handler(uint8_t intr_0)
 
 	if (MHL_INT_DSCR_CHG & intr_0) {
 		pr_debug("%s: got DSCR_CHG\n", __func__);
-		mhl_pf_read_reg_block(REG_PAGE_4_MHL_SCRPAD_0,
+		mhl_pf_read_reg_block(REG_MHL_SCRPAD_0,
 			ARRAY_SIZE(write_burst_data), write_burst_data);
 		cbus_wb_handle_scr_data(write_burst_data);
 	}
@@ -175,24 +180,24 @@ void cbus_wb_request_write_burst(
 
 void cbus_wb_write_gen2_xfifo(uint8_t length, uint8_t *data)
 {
-	mhl_pf_write_reg_block(REG_PAGE_5_MDT_XMIT_WRITE_PORT, length, data);
+	mhl_pf_write_reg_block(REG_MDT_XMIT_WRITE_PORT, length, data);
 	mhl_dev_set_cbusp_cond_processing(DEV_WRITE_BURST_SEND);
 }
 
 void cbus_wb_write_burst_send_done(void)
 {
 	pr_debug("%s: HAWB XFIFO empty. XFIFO_STAT: 0x%02x\n",
-		__func__, mhl_pf_read_reg(REG_PAGE_5_MDT_XFIFO_STAT));
+		__func__, mhl_pf_read_reg(REG_MDT_XFIFO_STAT));
 	mhl_dev_clear_cbusp_cond_processing(DEV_WRITE_BURST_SEND);
 }
 
 void cbus_wb_start_gen2_write_burst(void)
 {
-	mhl_pf_write_reg(REG_PAGE_5_MDT_INT_1_MASK,
+	mhl_pf_write_reg(REG_MDT_INT_1_MASK,
 		 BIT_MDT_RCV_TIMEOUT | BIT_MDT_RCV_SM_ABORT_PKT_RCVD
 		 | BIT_MDT_RCV_SM_ERROR | BIT_MDT_XMIT_TIMEOUT
 		 | BIT_MDT_XMIT_SM_ABORT_PKT_RCVD | BIT_MDT_XMIT_SM_ERROR);
-	mhl_pf_write_reg(REG_PAGE_5_MDT_INT_0_MASK,
+	mhl_pf_write_reg(REG_MDT_INT_0_MASK,
 		 BIT_MDT_XFIFO_EMPTY | BIT_MDT_IDLE_AFTER_HAWB_DISABLE
 		 | BIT_MDT_RFIFO_DATA_RDY);
 }
@@ -202,9 +207,9 @@ void cbus_wb_enable_gen2_write_burst_xmit(void)
 	/* enable Gen2 Write Burst interrupt, MSC and EDID interrupts. */
 	if (!gen2_write_burst_xmit_flag) {
 
-		mhl_pf_write_reg(REG_PAGE_5_MDT_XMIT_CONTROL,
-			 BIT_PAGE_5_MDT_XMIT_CONTROL_MDT_XMIT_EN
-			 |BIT_PAGE_5_MDT_XMIT_CONTROL_MDT_XMIT_FIXED_BURST_LEN
+		mhl_pf_write_reg(REG_MDT_XMIT_CONTROL,
+			 BIT_MDT_XMIT_CONTROL_MDT_XMIT_EN
+			 |BIT_MDT_XMIT_CONTROL_MDT_XMIT_FIXED_BURST_LEN
 			);
 		pr_debug("%s: enabled GEN2 xmit\n", __func__);
 		gen2_write_burst_xmit_flag = true;
@@ -218,7 +223,7 @@ void cbus_wb_disable_gen2_write_burst_xmit(void)
 		* disable Gen2 Write Burst engine to allow
 		* normal CBUS traffic
 		*/
-		mhl_pf_write_reg(REG_PAGE_5_MDT_XMIT_CONTROL, 0);
+		mhl_pf_write_reg(REG_MDT_XMIT_CONTROL, 0);
 		pr_debug("%s: disabled GEN2 xmit\n", __func__);
 		gen2_write_burst_xmit_flag = false;
 	}

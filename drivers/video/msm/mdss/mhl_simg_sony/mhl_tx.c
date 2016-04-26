@@ -1,4 +1,4 @@
-/* kernel/drivers/video/msm/mdss/mhl_sii8620_8061_drv/mhl_tx.c
+/* vendor/semc/hardware/mhl/mhl_sii8620_8061_drv/mhl_tx.c
  *
  * Copyright (C) 2013 Sony Mobile Communications AB.
  * Copyright (C) 2013 Silicon Image Inc.
@@ -12,10 +12,8 @@
  */
 
 #include <linux/interrupt.h>
-#include <linux/kernel.h>
-#include <linux/sched.h>
+
 #include "mhl_common.h"
-#include "mhl_platform.h"
 #include "mhl_sii8620_8061_device.h"
 
 static irqreturn_t mhl_irq_handler(int irq, void *data)

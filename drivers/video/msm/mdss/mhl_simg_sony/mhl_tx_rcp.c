@@ -1,6 +1,6 @@
-/* kernel/drivers/video/msm/mdss/mhl_sii8620_8061_drv/mhl_tx_rcp.c
+/* vendor/semc/hardware/mhl/mhl_sii8620_8061_drv/mhl_tx_rcp.c
  *
- * Copyright (C) 2013 Sony Mobile Communications AB.
+ * Copyright (C) 2013 Sony Mobile Communications Inc.
  * Copyright (C) 2013 Silicon Image Inc.
  *
  * Author: [Karino, Masaharu XA <masaharu.xa.karino@sonymobile.com>]
@@ -17,15 +17,11 @@
 #include <linux/usb/msm_hsusb.h>
 
 #include "mhl_common.h"
-#include "mhl_tx.h"
+#include "mhl_tx_rcp.h"
 
 #define RCP_KEY_RELEASE_TIME1	450
 #define RCP_KEY_RELEASE_TIME2	200
 #define RCP_KEY_INVALID			-1
-
-static int mouse_mode;
-static int mouse_move_distance_dx;
-static int mouse_move_distance_dy;
 
 /* supported RCP key code */
 u16 support_key_code_tbl[] = {
@@ -172,36 +168,9 @@ struct rcp_info {
 
 	struct input_dev *input;
 	struct work_struct key_release_work;
-	struct device dev;
 };
 
 static struct rcp_info s_rcp_info = {0};
-
-static ssize_t mhl_tx_rcp_mouse_mode(struct device *dev,
-	struct device_attribute *attr, const char *buf, size_t count)
-{
-	sscanf(buf, "%d", &mouse_mode);
-	pr_debug("%s: mouse_mode = %d\n", __func__, mouse_mode);
-	return count;
-}
-
-static ssize_t mhl_tx_rcp_mouse_move_distance_dx(struct device *dev,
-	struct device_attribute *attr, const char *buf, size_t count)
-{
-	sscanf(buf, "%d", &mouse_move_distance_dx);
-	pr_debug("%s: mouse_move_distance_dx = %d\n",
-		 __func__, mouse_move_distance_dx);
-	return count;
-}
-
-static ssize_t mhl_tx_rcp_mouse_move_distance_dy(struct device *dev,
-	struct device_attribute *attr, const char *buf, size_t count)
-{
-	sscanf(buf, "%d", &mouse_move_distance_dy);
-	pr_debug("%s: mouse_move_distance_dy = %d\n",
-		 __func__, mouse_move_distance_dy);
-	return count;
-}
 
 static void mhl_tx_rcp_key_release_timer(unsigned long data)
 {
@@ -241,57 +210,10 @@ static void mhl_tx_rcp_key_release_work(struct work_struct *work)
 
 static void mhl_tx_rcp_key_input(u8 key_code, u16 input_key_code)
 {
-	int axis = REL_X, distance = -1;
-	bool mouse_event = false;
 	int key_press = (key_code & 0x80) == 0;
 
 	pr_debug("%s: send key events[%x][%x][%d]\n",
 			__func__, key_code, input_key_code, key_press);
-
-	if (mouse_mode) {
-		switch (input_key_code) {
-		case KEY_UP:
-			axis = REL_Y;
-			distance = -mouse_move_distance_dy;
-			mouse_event = true;
-			break;
-		case KEY_DOWN:
-			axis = REL_Y;
-			distance = mouse_move_distance_dy;
-			mouse_event = true;
-			break;
-		case KEY_LEFT:
-			axis = REL_X;
-			distance = -mouse_move_distance_dx;
-			mouse_event = true;
-			break;
-		case KEY_RIGHT:
-			axis = REL_X;
-			distance = mouse_move_distance_dx;
-			mouse_event = true;
-			break;
-		case KEY_ENTER:
-			axis = -1;
-			distance = 0;
-			mouse_event = true;
-			break;
-		case KEY_BLUE:
-			input_key_code = KEY_EXIT;
-			break;
-		default:
-			break;
-		}
-	}
-
-	if (mouse_event) {
-		if (axis >= 0 && key_press) {
-			input_report_rel(s_rcp_info.input, axis, distance);
-			input_sync(s_rcp_info.input);
-			return;
-		} else {
-			input_key_code = BTN_LEFT;
-		}
-	}
 
 	if (key_press) {
 		mutex_lock(&rcp_key_release_mutex);
@@ -346,64 +268,23 @@ static void mhl_tx_rcp_common_resource_free(void)
 	destroy_workqueue(rcp_key_release_workqueue);
 }
 /* ----------------------- global functions -----------------------*/
-static DEVICE_ATTR(mouse_move_distance_dx, 0660,
-				NULL, mhl_tx_rcp_mouse_move_distance_dx);
-static DEVICE_ATTR(mouse_move_distance_dy, 0660,
-				NULL, mhl_tx_rcp_mouse_move_distance_dy);
-static DEVICE_ATTR(mouse_mode, 0660,
-				NULL, mhl_tx_rcp_mouse_mode);
-
 int mhl_tx_rcp_init(struct device *parent)
 {
 	int rc;
-	struct class *cls = parent->class;
 
-	if (IS_ERR(cls)) {
-		pr_debug("%s: failed to create class", __func__);
-		return -ENOMEM;
-	}
+	rc = mhl_tx_rcp_start();
 
-	s_rcp_info.dev.class = cls;
-	s_rcp_info.dev.parent = parent;
-	dev_set_name(&s_rcp_info.dev, "rcp");
-
-	rc = device_register(&s_rcp_info.dev);
 	if (rc) {
-		pr_err("%s: failed to register device", __func__);
+		pr_err("%s: failed to mhl_tx_rcp_start()\n", __func__);
 		return rc;
 	}
 
-	rc = device_create_file(&s_rcp_info.dev,
-				 &dev_attr_mouse_move_distance_dx);
-	if (rc) {
-		pr_err("%s: failed to create file for mouse dx\n", __func__);
-		return rc;
-	}
-
-	rc = device_create_file(&s_rcp_info.dev,
-				 &dev_attr_mouse_move_distance_dy);
-	if (rc) {
-		pr_err("%s: failed to create file for mouse dy\n", __func__);
-		return rc;
-	}
-
-	rc = device_create_file(&s_rcp_info.dev,
-				 &dev_attr_mouse_mode);
-	if (rc) {
-		pr_err("%s: failed to create file for mouse mode\n", __func__);
-		return rc;
-	}
 	return 0;
 }
 
 void mhl_tx_rcp_release(void)
 {
 	mhl_tx_rcp_stop();
-
-	device_remove_file(&s_rcp_info.dev, &dev_attr_mouse_move_distance_dx);
-	device_remove_file(&s_rcp_info.dev, &dev_attr_mouse_move_distance_dy);
-	device_remove_file(&s_rcp_info.dev, &dev_attr_mouse_mode);
-	device_unregister(&s_rcp_info.dev);
 }
 
 int mhl_tx_rcp_start(void)
@@ -463,12 +344,6 @@ int mhl_tx_rcp_start(void)
 			s_rcp_info.input->keycodesize = sizeof(u16);
 			s_rcp_info.input->keycodemax =
 					ARRAY_SIZE(support_key_code_tbl);
-
-			s_rcp_info.input->evbit[0] = EV_KEY | EV_REP | EV_REL;
-			input_set_capability(s_rcp_info.input, EV_REL, REL_X);
-			input_set_capability(s_rcp_info.input, EV_REL, REL_Y);
-			input_set_capability(s_rcp_info.input, EV_KEY,
-					BTN_LEFT);
 
 			for (i = 0; i < ARRAY_SIZE(support_key_code_tbl); i++) {
 				if (support_key_code_tbl[i] > 1)

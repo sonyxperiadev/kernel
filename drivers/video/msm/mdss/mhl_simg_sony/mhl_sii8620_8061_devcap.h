@@ -1,4 +1,4 @@
-/* kernel/drivers/video/msm/mdss/mhl_sii8620_8061_drv/mhl_sii8620_8061_devcap.h
+/* vendor/semc/hardware/mhl/mhl_sii8620_8061_drv/mhl_sii8620_8061_devcap.h
  *
  * Copyright (C) 2013 Sony Mobile Communications AB.
  * Copyright (C) 2013 Silicon Image Inc.
@@ -13,8 +13,6 @@
 
 #ifndef __MHL_SII8620_8061_DEVCAP_H__
 #define __MHL_SII8620_8061_DEVCAP_H__
-
-#include "mhl_defs.h"
 
 enum tdm_vc_assignments {
 	TDM_VC_CBUS1	= 0,
@@ -34,6 +32,7 @@ enum tdm_vc_assignments {
 					| MHL_DEV_VID_LINK_SUPP_VGA\
 					| MHL_DEV_VID_LINK_SUPP_ISLANDS \
 					| MHL_DEV_VID_LINK_SUPPYCBCR422 \
+					| MHL_DEV_VID_LINK_SUPP_PPIXEL \
 					| MHL_DEV_VID_LINK_SUPPRGB444)
 #define DEVCAP_VAL_AUD_LINK_MODE	(MHL_DEV_AUD_LINK_2CH \
 					| MHL_DEV_AUD_LINK_8CH)
@@ -44,7 +43,7 @@ enum tdm_vc_assignments {
 					| MHL_FEATURE_RAP_SUPPORT	\
 					| MHL_FEATURE_SP_SUPPORT)
 #define DEVCAP_VAL_DEVICE_ID_H		0x04
-#define DEVCAP_VAL_DEVICE_ID_L		0x05
+#define DEVCAP_VAL_DEVICE_ID_L		CONFIG_MHL_DEVICE_ID
 #define DEVCAP_VAL_SCRATCHPAD_SIZE	MHL_SCRATCHPAD_SIZE
 #define DEVCAP_VAL_INT_STAT_SIZE	MHL_INT_AND_STATUS_SIZE
 #define DEVCAP_VAL_RESERVED		0

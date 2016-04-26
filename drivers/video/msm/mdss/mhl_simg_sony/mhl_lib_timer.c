@@ -1,4 +1,4 @@
-/* kernel/drivers/video/msm/mdss/mhl_sii8620_8061_drv/mhl_lib_timer.c
+/* vendor/semc/hardware/mhl/mhl_sii8620_8061_drv/mhl_lib_timer.c
  *
  * Copyright (C) 2013 Sony Mobile Communications AB.
  * Copyright (C) 2013 Silicon Image Inc.
@@ -9,21 +9,11 @@
  * of the License, or (at your option) any later version.
  */
 
-#include <linux/module.h>
-#include <linux/kernel.h>
 #include <linux/slab.h>
-#include <linux/gpio.h>
 #include <linux/hrtimer.h>
-#include <linux/fs.h>
 #include <linux/semaphore.h>
-#include <linux/i2c.h>
-#include <linux/interrupt.h>
-#include <linux/cdev.h>
-#include <linux/stringify.h>
-#include <asm/uaccess.h>
 
-#include "mhl_lib_timer.h"
-#include "mhl_platform.h"
+#include "mhl_common.h"
 
 #define MHL_DRIVER_TIMER_NAME "sii8620_timer"
 #define MSEC_TO_NSEC(x)		(x * 1000000UL)
@@ -96,7 +86,7 @@ static enum hrtimer_restart mhl_tx_timer_handler(struct hrtimer *timer)
 static int is_timer_handle_valid(struct mhl_dev_context *dev_context,
 				 void *timer_handle)
 {
-	struct timer_obj	*timer;
+	struct timer_obj *timer = timer_handle; /* Set to avoid lint warning. */
 
 	list_for_each_entry(timer, &dev_context->timer_list, list_link) {
 		if (timer == timer_handle)
@@ -263,3 +253,4 @@ void mhl_lib_timer_release(void)
 	destroy_workqueue(dev_context->timer_work_queue);
 	dev_context->timer_work_queue = NULL;
 }
+MODULE_LICENSE("GPL");

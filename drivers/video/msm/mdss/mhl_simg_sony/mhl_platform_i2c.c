@@ -1,6 +1,5 @@
 /* kernel/drivers/video/msm/mdss/mhl_sii8620_8061_drv/mhl_platform_i2c.c
  *
- * Copyright (C) 2013 Sony Mobile Communications AB.
  * Copyright (C) 2013 Silicon Image Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -8,24 +7,35 @@
  * published by the Free Software Foundation; either version 2
  * of the License, or (at your option) any later version.
  */
+/*
+ * Copyright (C) 2014 Sony Mobile Communications Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2, as
+ * published by the Free Software Foundation.
+ */
 
 #include <linux/i2c.h>
 #include <linux/slab.h>
 #include <linux/delay.h>
 
 #include "mhl_platform.h"
-#include "mhl_common.h"
+
+static bool mhl_reg_dump_enable;
+module_param(mhl_reg_dump_enable, bool, 0200);
 
 /*i2c adapter*/
 static struct i2c_adapter *i2c_bus_adapter;
 
 #define I2C_RETRY_MAX 10
 
-#ifdef DEBUG_PRINT
 #define MAX_DEBUG_MSG_SIZE	1024
 #define DUMP_I2C_TRANSFER(cnt, page, offset, count, values, write_flag)	\
-	dump_transfer(cnt, TX_INTERFACE_TYPE_I2C, page, offset,	\
-	count, values, write_flag);
+	do { \
+		if (mhl_reg_dump_enable) \
+			dump_transfer(cnt, TX_INTERFACE_TYPE_I2C, page, offset,	\
+					count, values, write_flag); \
+	} while (0)
 enum tx_interface_types {
 	TX_INTERFACE_TYPE_I2C,
 	TX_INTERFACE_TYPE_SPI
@@ -53,16 +63,12 @@ char *find_file_name(const char *path_spec)
 	return pc;
 }
 
-
 static void print_formatted_debug_msg(int level,
 						 char *file_spec,
 						 const char *func_name,
 						 int line_num,
 						 char *fmt, ...)
 {
-#ifdef UNIT_TEST
-	/* nothing to do. */
-#else
 	uint8_t		*msg = NULL;
 	uint8_t		*msg_offset;
 	char		*file_spec_sep = NULL;
@@ -140,16 +146,12 @@ static void print_formatted_debug_msg(int level,
 	printk(msg);
 
 	kfree(msg);
-#endif
 }
 
 static void dump_transfer(void *context, enum tx_interface_types if_type,
 					 u8 page, u8 offset,
 					 u16 count, u8 *values, bool write)
 {
-#ifdef UNIT_TEST
-	/* nothing to do. */
-#else
 	int		buf_size = 64;
 	u16		idx;
 	int		buf_offset;
@@ -209,32 +211,29 @@ static void dump_transfer(void *context, enum tx_interface_types if_type,
 
 	print_formatted_debug_msg(0, NULL, NULL, -1, buf);
 	kfree(buf);
-#endif
 }
-#else
-#define DUMP_I2C_TRANSFER(context, page, offset, count, values, write_flag)
-#endif
 
-int mhl_pf_modify_reg(u8 page, u8 offset,
+int mhl_pf_modify_reg(u16 address,
 					  u8 mask, u8 value)
 {
 	int	reg_value;
 	int	write_status;
 
-	reg_value = mhl_pf_read_reg(page, offset);
+	reg_value = mhl_pf_read_reg(address);
 	if (reg_value < 0)
 		return reg_value;
 
 	reg_value &= ~mask;
 	reg_value |= mask & value;
 
-	write_status = mhl_pf_write_reg(page, offset, reg_value);
+	write_status = mhl_pf_write_reg(address, reg_value);
 
 	if (write_status < 0)
 		return write_status;
 	else
 		return reg_value;
 }
+EXPORT_SYMBOL(mhl_pf_modify_reg);
 
 static inline int platform_write_i2c_block(
 				struct i2c_adapter *i2c_bus,
@@ -303,10 +302,14 @@ static int mhl_pf_write_reg_i2c(u8 page, u8 offset, u8 value)
 	return mhl_pf_write_reg_block_i2c(page, offset, 1, &value);
 }
 
-int mhl_pf_write_reg(u8 page, u8 offset, u8 value)
+int mhl_pf_write_reg(u16 address, u8 value)
 {
+	u8 page = (u8)(address >> 8);
+	u8 offset = (u8)address;
+
 	return mhl_pf_write_reg_i2c(page, offset, value);
 }
+EXPORT_SYMBOL(mhl_pf_write_reg);
 
 static inline int platform_read_i2c_block(struct i2c_adapter *i2c_bus
 								, u8 page
@@ -351,10 +354,14 @@ static inline int platform_read_i2c_block(struct i2c_adapter *i2c_bus
 
 
 
-int mhl_pf_read_reg_block(u8 page, u8 offset,
+int mhl_pf_read_reg_block(u16 address,
 							  u8 count, u8 *values)
 {
 	int						ret;
+
+	u8 page = (u8)(address >> 8);
+	u8 offset = (u8)address;
+
 	ret = platform_read_i2c_block(i2c_bus_adapter
 								, page
 								, offset
@@ -375,26 +382,35 @@ int mhl_pf_read_reg_block(u8 page, u8 offset,
 
 	return ret;
 }
+EXPORT_SYMBOL(mhl_pf_read_reg_block);
 
-
-int mhl_pf_read_reg(u8 page, u8 offset)
+int mhl_pf_read_reg(u16 address)
 {
 	u8		byte_read = 0xFF;
 	int		status;
-	status = mhl_pf_read_reg_block(page,
-									 offset,
+	status = mhl_pf_read_reg_block(address,
 									 1,
 									 &byte_read);
 	return status ? status : byte_read;
 }
+EXPORT_SYMBOL(mhl_pf_read_reg);
 
 void mhl_pf_i2c_init(struct i2c_adapter *adapter)
 {
 	i2c_bus_adapter = adapter;
+#ifdef DEBUG_PRINT
+	mhl_reg_dump_enable = true;
+#else
+	mhl_reg_dump_enable = false;
+#endif
 }
 
-int mhl_pf_write_reg_block(u8 page, u8 offset, u16 count, u8 *values)
+int mhl_pf_write_reg_block(u16 address, u16 count, u8 *values)
 {
+	u8 page = (u8)(address >> 8);
+	u8 offset = (u8)address;
+
 	DUMP_I2C_TRANSFER(NULL, page, offset, count, values, true);
 	return platform_write_i2c_block(i2c_bus_adapter, page, offset, count, values);
 }
+EXPORT_SYMBOL(mhl_pf_write_reg_block);
