@@ -5,7 +5,6 @@
  *
  * Copyright (C) 2012 Alexandra Chin <alexandra.chin@tw.synaptics.com>
  * Copyright (C) 2012 Scott Lin <scott.lin@tw.synaptics.com>
- * Copyright (c) 2014, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,21 +22,13 @@
 #define SYNAPTICS_DS4 (1 << 0)
 #define SYNAPTICS_DS5 (1 << 1)
 #define SYNAPTICS_DSX_DRIVER_PRODUCT (SYNAPTICS_DS4 | SYNAPTICS_DS5)
-#define SYNAPTICS_DSX_DRIVER_VERSION 0x2001
+#define SYNAPTICS_DSX_DRIVER_VERSION 0x2002
 
+#include <linux/hrtimer.h>
+#include <linux/ktime.h>
 #include <linux/version.h>
-#include <linux/debugfs.h>
-
-#if defined(CONFIG_FB)
-#include <linux/notifier.h>
-#include <linux/fb.h>
-#elif defined(CONFIG_HAS_EARLYSUSPEND)
+#ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
-#endif
-#if defined(CONFIG_SECURE_TOUCH)
-#include <linux/completion.h>
-#include <linux/atomic.h>
-#include <linux/clk.h>
 #endif
 
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 38))
@@ -66,14 +57,11 @@
 #define SYNAPTICS_RMI4_F51 (0x51)
 #define SYNAPTICS_RMI4_F54 (0x54)
 #define SYNAPTICS_RMI4_F55 (0x55)
+#define SYNAPTICS_RMI4_FDB (0xdb)
 
 #define SYNAPTICS_RMI4_PRODUCT_INFO_SIZE 2
-#define SYNAPTICS_RMI4_DATE_CODE_SIZE 3
 #define SYNAPTICS_RMI4_PRODUCT_ID_SIZE 10
 #define SYNAPTICS_RMI4_BUILD_ID_SIZE 3
-
-#define F01_PACKAGE_ID_OFFSET 17
-#define PACKAGE_ID_SIZE 4
 
 #define F12_FINGERS_TO_SUPPORT 10
 #define F12_NO_OBJECT_STATUS 0x00
@@ -96,28 +84,18 @@
 #define MASK_2BIT 0x03
 #define MASK_1BIT 0x01
 
-#define PINCTRL_STATE_ACTIVE    "pmx_ts_active"
-#define PINCTRL_STATE_SUSPEND   "pmx_ts_suspend"
-#define PINCTRL_STATE_RELEASE   "pmx_ts_release"
-
-#define SYNA_FW_NAME_MAX_LEN	50
-
 enum exp_fn {
 	RMI_DEV = 0,
-	RMI_F54,
 	RMI_FW_UPDATER,
+	RMI_TEST_REPORTING,
 	RMI_PROXIMITY,
 	RMI_ACTIVE_PEN,
+	RMI_DEBUG,
 	RMI_LAST,
 };
 
-struct synaptics_dsx_hw_interface {
-	struct synaptics_dsx_board_data *board_data;
-	const struct synaptics_dsx_bus_access *bus_access;
-};
-
 /*
- * struct synaptics_rmi4_fn_desc - function descriptor fields in PDT
+ * struct synaptics_rmi4_fn_desc - function descriptor fields in PDT entry
  * @query_base_addr: base address for query registers
  * @cmd_base_addr: base address for command registers
  * @ctrl_base_addr: base address for control registers
@@ -137,9 +115,9 @@ struct synaptics_rmi4_fn_desc {
 /*
  * synaptics_rmi4_fn_full_addr - full 16-bit base addresses
  * @query_base: 16-bit base address for query registers
- * @cmd_base: 16-bit base address for data registers
- * @ctrl_base: 16-bit base address for command registers
- * @data_base: 16-bit base address for control registers
+ * @cmd_base: 16-bit base address for command registers
+ * @ctrl_base: 16-bit base address for control registers
+ * @data_base: 16-bit base address for data registers
  */
 struct synaptics_rmi4_fn_full_addr {
 	unsigned short query_base;
@@ -148,15 +126,34 @@ struct synaptics_rmi4_fn_full_addr {
 	unsigned short data_base;
 };
 
-struct synaptics_rmi4_f12_extra_data {
-	unsigned char data1_offset;
-	unsigned char data15_offset;
-	unsigned char data15_size;
-	unsigned char data15_data[(F12_FINGERS_TO_SUPPORT + 7) / 8];
+/*
+ * struct synaptics_rmi4_f11_extra_data - extra data of F$11
+ * @data38_offset: offset to F11_2D_DATA38 register
+ */
+struct synaptics_rmi4_f11_extra_data {
+	unsigned char data38_offset;
 };
 
 /*
- * struct synaptics_rmi4_fn - function handler data structure
+ * struct synaptics_rmi4_f12_extra_data - extra data of F$12
+ * @data1_offset: offset to F12_2D_DATA01 register
+ * @data4_offset: offset to F12_2D_DATA04 register
+ * @data15_offset: offset to F12_2D_DATA15 register
+ * @data15_size: size of F12_2D_DATA15 register
+ * @data15_data: buffer for reading F12_2D_DATA15 register
+ * @ctrl20_offset: offset to F12_2D_CTRL20 register
+ */
+struct synaptics_rmi4_f12_extra_data {
+	unsigned char data1_offset;
+	unsigned char data4_offset;
+	unsigned char data15_offset;
+	unsigned char data15_size;
+	unsigned char data15_data[(F12_FINGERS_TO_SUPPORT + 7) / 8];
+	unsigned char ctrl20_offset;
+};
+
+/*
+ * struct synaptics_rmi4_fn - RMI function handler
  * @fn_number: function number
  * @num_of_data_sources: number of data sources
  * @num_of_data_points: maximum number of fingers supported
@@ -167,6 +164,7 @@ struct synaptics_rmi4_f12_extra_data {
  * @link: linked list for function handlers
  * @data_size: size of private data
  * @data: pointer to private data
+ * @extra: pointer to extra data
  */
 struct synaptics_rmi4_fn {
 	unsigned char fn_number;
@@ -184,15 +182,13 @@ struct synaptics_rmi4_fn {
 
 /*
  * struct synaptics_rmi4_device_info - device information
- * @version_major: rmi protocol major version number
- * @version_minor: rmi protocol minor version number
- * @manufacturer_id: manufacturer id
- * @product_props: product properties information
- * @product_info: product info array
- * @date_code: device manufacture date
- * @tester_id: tester id array
- * @serial_number: device serial number
- * @product_id_string: device product id
+ * @version_major: RMI protocol major version number
+ * @version_minor: RMI protocol minor version number
+ * @manufacturer_id: manufacturer ID
+ * @product_props: product properties
+ * @product_info: product information
+ * @product_id_string: product ID
+ * @build_id: firmware build ID
  * @support_fn_list: linked list for function handlers
  */
 struct synaptics_rmi4_device_info {
@@ -201,63 +197,75 @@ struct synaptics_rmi4_device_info {
 	unsigned char manufacturer_id;
 	unsigned char product_props;
 	unsigned char product_info[SYNAPTICS_RMI4_PRODUCT_INFO_SIZE];
-	unsigned char date_code[SYNAPTICS_RMI4_DATE_CODE_SIZE];
-	unsigned short tester_id;
-	unsigned short serial_number;
 	unsigned char product_id_string[SYNAPTICS_RMI4_PRODUCT_ID_SIZE + 1];
 	unsigned char build_id[SYNAPTICS_RMI4_BUILD_ID_SIZE];
 	struct list_head support_fn_list;
-	unsigned int package_id;
-	unsigned int package_id_rev;
 };
 
 /*
- * struct synaptics_rmi4_data - rmi4 device instance data
+ * struct synaptics_rmi4_data - RMI4 device instance data
  * @pdev: pointer to platform device
  * @input_dev: pointer to associated input device
  * @hw_if: pointer to hardware interface data
  * @rmi4_mod_info: device information
- * @regulator_vdd: pointer to associated vdd regulator
- * @regulator_add: pointer to associated avdd regulator
- * @rmi4_io_ctrl_mutex: mutex for i2c i/o control
- * @early_suspend: instance to support early suspend power management
- * @current_page: current page in sensor to acess
- * @button_0d_enabled: flag for 0d button support
- * @full_pm_cycle: flag for full power management cycle in early suspend stage
+ * @board_prop_dir: /sys/board_properties directory for virtual key map file
+ * @pwr_reg: pointer to regulator for power control
+ * @bus_reg: pointer to regulator for bus pullup control
+ * @rmi4_reset_mutex: mutex for software reset
+ * @rmi4_report_mutex: mutex for input event reporting
+ * @rmi4_io_ctrl_mutex: mutex for communication interface I/O
+ * @early_suspend: early suspend power management
+ * @current_page: current RMI page for register access
+ * @button_0d_enabled: switch for enabling 0d button support
+ * @full_pm_cycle: switch for enabling full power management cycle
+ * @num_of_tx: number of Tx channels for 2D touch
+ * @num_of_rx: number of Rx channels for 2D touch
+ * @num_of_fingers: maximum number of fingers for 2D touch
+ * @max_touch_width: maximum touch width
+ * @report_enable: input data to report for F$12
+ * @no_sleep_setting: default setting of NoSleep in F01_RMI_CTRL00 register
+ * @intr_mask: interrupt enable mask
+ * @button_txrx_mapping: Tx Rx mapping of 0D buttons
  * @num_of_intr_regs: number of interrupt registers
- * @f01_query_base_addr: query base address for f01
- * @f01_cmd_base_addr: command base address for f01
- * @f01_ctrl_base_addr: control base address for f01
- * @f01_data_base_addr: data base address for f01
+ * @f01_query_base_addr: query base address for f$01
+ * @f01_cmd_base_addr: command base address for f$01
+ * @f01_ctrl_base_addr: control base address for f$01
+ * @f01_data_base_addr: data base address for f$01
+ * @firmware_id: firmware build ID
  * @irq: attention interrupt
- * @sensor_max_x: sensor maximum x value
- * @sensor_max_y: sensor maximum y value
- * @irq_enabled: flag for indicating interrupt enable status
- * @fingers_on_2d: flag to indicate presence of fingers in 2d area
+ * @sensor_max_x: maximum x coordinate for 2D touch
+ * @sensor_max_y: maximum y coordinate for 2D touch
+ * @flash_prog_mode: flag to indicate flash programming mode status
+ * @irq_enabled: flag to indicate attention interrupt enable status
+ * @fingers_on_2d: flag to indicate presence of fingers in 2D area
+ * @suspend: flag to indicate whether in suspend state
  * @sensor_sleep: flag to indicate sleep state of sensor
- * @wait: wait queue for touch data polling in interrupt thread
- * @irq_enable: pointer to irq enable function
+ * @stay_awake: flag to indicate whether to stay awake during suspend
+ * @f11_wakeup_gesture: flag to indicate support for wakeup gestures in F$11
+ * @f12_wakeup_gesture: flag to indicate support for wakeup gestures in F$12
+ * @enable_wakeup_gesture: flag to indicate usage of wakeup gestures
+ * @reset_device: pointer to device reset function
+ * @irq_enable: pointer to interrupt enable function
  */
 struct synaptics_rmi4_data {
 	struct platform_device *pdev;
 	struct input_dev *input_dev;
 	const struct synaptics_dsx_hw_interface *hw_if;
 	struct synaptics_rmi4_device_info rmi4_mod_info;
-	struct regulator *regulator_vdd;
-	struct regulator *regulator_avdd;
+	struct kobject *board_prop_dir;
+	struct regulator *pwr_reg;
+	struct regulator *bus_reg;
 	struct mutex rmi4_reset_mutex;
+	struct mutex rmi4_report_mutex;
 	struct mutex rmi4_io_ctrl_mutex;
-#if defined(CONFIG_FB)
-	struct notifier_block fb_notif;
-#elif defined(CONFIG_HAS_EARLYSUSPEND)
+#ifdef CONFIG_HAS_EARLYSUSPEND
 	struct early_suspend early_suspend;
 #endif
-	struct dentry *dir;
 	unsigned char current_page;
 	unsigned char button_0d_enabled;
 	unsigned char full_pm_cycle;
-	unsigned char num_of_rx;
 	unsigned char num_of_tx;
+	unsigned char num_of_rx;
 	unsigned char num_of_fingers;
 	unsigned char max_touch_width;
 	unsigned char report_enable;
@@ -275,32 +283,27 @@ struct synaptics_rmi4_data {
 	int sensor_max_y;
 	bool flash_prog_mode;
 	bool irq_enabled;
-	bool touch_stopped;
 	bool fingers_on_2d;
+	bool suspend;
 	bool sensor_sleep;
 	bool stay_awake;
-	bool staying_awake;
-	bool fw_updating;
-	bool support_vkeys;
-	bool update_coords;
-	int (*irq_enable)(struct synaptics_rmi4_data *rmi4_data, bool enable);
+	bool f11_wakeup_gesture;
+	bool f12_wakeup_gesture;
+	bool enable_wakeup_gesture;
+	bool wakeup_gesture_active;
+	bool wg_sent;
+	bool wg_ongoing;
+	bool block_until_no_finger;
 	int (*reset_device)(struct synaptics_rmi4_data *rmi4_data);
-
-	struct pinctrl *ts_pinctrl;
-	struct pinctrl_state *pinctrl_state_active;
-	struct pinctrl_state *pinctrl_state_suspend;
-	struct pinctrl_state *pinctrl_state_release;
-	char fw_name[SYNA_FW_NAME_MAX_LEN];
-	bool suspended;
-#if defined(CONFIG_SECURE_TOUCH)
-	atomic_t st_enabled;
-	atomic_t st_pending_irqs;
-	bool st_initialized;
-	struct completion st_powerdown;
-	struct completion st_irq_processed;
-	struct clk *core_clk;
-	struct clk *iface_clk;
-#endif
+	int (*irq_enable)(struct synaptics_rmi4_data *rmi4_data, bool enable,
+			bool attn_only);
+	struct hrtimer hr_timer;
+	struct work_struct poll_work;
+	ktime_t ktime;
+	int poll;
+	unsigned f11_data_28;
+	bool has_large_obj_det;
+	unsigned char large_obj_size;
 };
 
 struct synaptics_dsx_bus_access {
@@ -309,10 +312,13 @@ struct synaptics_dsx_bus_access {
 		unsigned char *data, unsigned short length);
 	int (*write)(struct synaptics_rmi4_data *rmi4_data, unsigned short addr,
 		unsigned char *data, unsigned short length);
-#if defined(CONFIG_SECURE_TOUCH)
-	int (*get)(struct synaptics_rmi4_data *rmi4_data);
-	void (*put)(struct synaptics_rmi4_data *rmi4_data);
-#endif
+};
+
+struct synaptics_dsx_hw_interface {
+	struct synaptics_dsx_board_data *board_data;
+	const struct synaptics_dsx_bus_access *bus_access;
+	int (*bl_hw_init)(struct synaptics_rmi4_data *rmi4_data);
+	int (*ui_hw_init)(struct synaptics_rmi4_data *rmi4_data);
 };
 
 struct synaptics_rmi4_exp_fn {
@@ -333,14 +339,10 @@ int synaptics_rmi4_bus_init(void);
 
 void synaptics_rmi4_bus_exit(void);
 
-void synaptics_rmi4_dsx_new_function(struct synaptics_rmi4_exp_fn *exp_fn_mod,
+void synaptics_rmi4_new_function(struct synaptics_rmi4_exp_fn *exp_fn_module,
 		bool insert);
 
-int synaptics_dsx_fw_updater(unsigned char *fw_data);
-
-int synaptics_dsx_get_dt_coords(struct device *dev, char *name,
-				struct synaptics_dsx_board_data *pdata,
-				struct device_node *node);
+int synaptics_fw_updater(unsigned char *fw_data);
 
 static inline int synaptics_rmi4_reg_read(
 		struct synaptics_rmi4_data *rmi4_data,
@@ -360,16 +362,13 @@ static inline int synaptics_rmi4_reg_write(
 	return rmi4_data->hw_if->bus_access->write(rmi4_data, addr, data, len);
 }
 
-#if defined(CONFIG_SECURE_TOUCH)
-static inline int synaptics_rmi4_bus_get(struct synaptics_rmi4_data *rmi4_data)
+static inline ssize_t synaptics_rmi4_show_error(struct device *dev,
+		struct device_attribute *attr, char *buf)
 {
-	return rmi4_data->hw_if->bus_access->get(rmi4_data);
+	dev_warn(dev, "%s Attempted to read from write-only attribute %s\n",
+			__func__, attr->attr.name);
+	return -EPERM;
 }
-static inline void synaptics_rmi4_bus_put(struct synaptics_rmi4_data *rmi4_data)
-{
-	rmi4_data->hw_if->bus_access->put(rmi4_data);
-}
-#endif
 
 static inline ssize_t synaptics_rmi4_store_error(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
@@ -389,4 +388,5 @@ static inline void hstoba(unsigned char *dest, unsigned short src)
 	dest[0] = src % 0x100;
 	dest[1] = src / 0x100;
 }
+
 #endif

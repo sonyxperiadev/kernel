@@ -508,6 +508,17 @@ config INPUT_PCF50633_PMU
 	 Say Y to include support for delivering  PMU events via  input
 	 layer on NXP PCF50633.
 
+config INPUT_AKM09911
+	tristate "AKM 09911 eCompass"
+	default n
+	depends on I2C
+	help
+	 Say Y here if you want support for the AKM 09911 eCompass
+	 device.
+
+	 To compile this driver as a module, choose M here: the
+	 module will be called akm09911.
+
 config INPUT_PCF8574
 	tristate "PCF8574 Keypad input device"
 	depends on I2C
@@ -836,6 +847,50 @@ config SENSORS_MC3430
 	help
 	 Say Y here if you want to enable the MC3430 acceleration sensor
 	 driver.
+
+config INPUT_EM718X_HUB
+	tristate "EM718x Sensor Hub"
+	depends on I2C
+	default n
+	help
+	  Say Y here if you have a EM Microelectronic 718x Sensor module, and
+	  your board-specific initialization code includes that in its
+	  table of devices.
+
+	  If unsure, say N (but it's safe to say "Y").
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called em718x.
+
+choice
+	prompt "Broadcom Kona Headset drivers"
+	depends on ARCH_KONA
+	optional
+
+config KONA_HEADSET
+	tristate "Kona headset driver"
+        help
+          Activate Kona headset driver
+
+config KONA_HEADSET_MULTI_BUTTON
+	tristate "Kona headset driver with multi button support"
+        help
+          Activate Kona headset driver with multi button support
+
+config HEADSET_PERIODIC_CHECK
+	tristate "Kona headset type periodic check"
+	depends on KONA_HEADSET_MULTI_BUTTON
+        help
+          Activate Kona headset type periodic check support
+
+config KONA_HEADSET_DEFAULT_STATE
+	tristate "Kona headset set default state"
+	depends on KONA_HEADSET_MULTI_BUTTON
+        help
+          Activate Kona headset set default state support
+endchoice
+
+source "drivers/input/misc/em718x/Kconfig"
 
 endif
 

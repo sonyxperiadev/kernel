@@ -619,5 +619,19 @@ config REGULATOR_CPR
 	  suggestions in efuse as initial settings. It converts corner vote
 	  to voltage value before writing to a voltage regulator API, such as
 	  that provided by spm-regulator driver.
+
+config REGULATOR_BCMPMU
+	bool "BCM PMU Regulator"
+	depends on (MFD_BCMPMU || MFD_BCM_PMU59xxx || MFD_BCM_PMU59056)
+	help
+	  This driver supports the voltage regulators provided by
+	  this family of companion chips.
+
+config REGULATOR_TPS728XX
+	bool "TPS28XX Regulator"
+	depends on ARCH_REQUIRE_GPIOLIB
+	help
+	  This driver supports the voltage regulators provided by
+	  TPS728XX.
 endif
 

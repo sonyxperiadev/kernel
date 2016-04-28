@@ -153,6 +153,17 @@ config RTC_DRV_88PM80X
 	  This driver can also be built as a module. If so, the module
 	  will be called rtc-88pm80x.
 
+config RTC_DRV_BCM59055
+	tristate "Broadcom BCM59055 PMU RTC"
+	depends on MFD_BCM_PMU590XX
+	select RTC_ANDROID_ALARM_WORKAROUND
+	help
+	  If you say yes here you will get support for the RTC subsystem
+	  of Broadcom BCM59035 PMU chip
+
+	  This driver can also be built as a module. If so, the module
+	  will be called "rtc-bcm59055".
+
 config RTC_DRV_DS1307
 	tristate "Dallas/Maxim DS1307/37/38/39/40, ST M41T00, EPSON RX-8025"
 	help
@@ -978,6 +989,16 @@ config RTC_DRV_AT32AP700X
 	  Driver for the internal RTC (Realtime Clock) on Atmel AVR32
 	  AT32AP700x family processors.
 
+config RTC_DRV_KONA
+	tristate "KONA RTC"
+	depends on ARCH_KONA
+	default n
+	help
+	  Driver for the internal RTC (Realtime Clock) on Hawaii chipset
+	  It's a fake RTC based on KONA TIMER, actually, this RTC only
+	  works as an alarm device for android, the real time is
+	  not stored here.
+
 config RTC_DRV_AT91RM9200
 	tristate "AT91RM9200 or some AT91SAM9 RTC"
 	depends on ARCH_AT91
@@ -1217,6 +1238,13 @@ config RTC_DRV_PUV3
 
 	  This drive can also be built as a module. If so, the module
 	  will be called rtc-puv3.
+
+config RTC_DRV_BCMPMU
+	tristate "BCM PMU RTC"
+	depends on (MFD_BCMPMU || MFD_BCM_PMU59xxx || MFD_BCM_PMU59056)
+	help
+	  This will enable support for RTC driver
+	  on BCM PMUs platform
 
 config RTC_DRV_LOONGSON1
 	tristate "loongson1 RTC support"

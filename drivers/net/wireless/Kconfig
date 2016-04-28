@@ -362,9 +362,40 @@ config CLD_LL_CORE
 	---help---
 	  Core driver for the Qualcomm QCA6174 Chipset
 
+config BRCM_UNIFIED_DHD_SUPPORT
+	bool "Enable Unified DHD method of Wirless Card detection"
+	help
+	  "Enable Unified DHD method of Wirless Card detection"
+
+config CONFIG_DHD_USE_STATIC_BUF
+	bool "Enable SATIC BUFFER SUPPORT for DHD"
+	help
+	  "Enable SATIC BUFFER SUPPORT for DHD"
+
+config BROADCOM_WIFI_RESERVED_MEM
+	bool "Enable STATIC BUFFER Support for WLAN Driver"
+	help
+	  Enables  STATIC BUFFER Support for WLAN chips
+
+config BYPASS_WIFI_DEVTREE
+	depends on WIFI_CONTROL_FUNC
+	bool "Bypass using device tree for Wifi Platform config"
+	default n
+	help
+	  Enable this feature if Wifi platform params are explicitly
+	  configured in the board-xxx.c file instead of DTS file.
+	  If unsure, about what to enter here assume the default
+	  value of disabled
+
+config TARGET_LOCALE_CHN
+	bool "Enable WAPI support for China"
+	help
+	  Enables WAPI support for China
+
 source "drivers/net/wireless/ath/Kconfig"
 source "drivers/net/wireless/b43/Kconfig"
 source "drivers/net/wireless/b43legacy/Kconfig"
+source "drivers/net/wireless/bcmdhd/Kconfig"
 source "drivers/net/wireless/brcm80211/Kconfig"
 source "drivers/net/wireless/hostap/Kconfig"
 source "drivers/net/wireless/ipw2x00/Kconfig"

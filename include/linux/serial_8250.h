@@ -13,6 +13,8 @@
 
 #include <linux/serial_core.h>
 #include <linux/platform_device.h>
+#include <linux/wakelock.h>
+#include <plat/pi_mgr.h>
 
 /*
  * This is the platform device platform_data structure
@@ -38,6 +40,8 @@ struct plat_serial8250_port {
 	int		(*handle_irq)(struct uart_port *);
 	void		(*pm)(struct uart_port *, unsigned int state,
 			      unsigned old);
+	const unsigned char * clk_name;
+	const unsigned char * port_name;
 	void		(*handle_break)(struct uart_port *);
 };
 
@@ -94,6 +98,43 @@ struct uart_8250_port {
 	unsigned char		msr_saved_flags;
 
 	struct uart_8250_dma	*dma;
+
+#ifdef CONFIG_BRCM_UART_CHANGES
+#if defined(CONFIG_HAS_WAKELOCK)
+	struct wake_lock uart_lock;
+#define WAKELOCK_TIMEOUT_VAL CONFIG_BRCM_UART_WAKELOCK_TIMEOUT
+#endif
+	/*
+	 * Kona PM - QOS service
+ 	 */
+	struct timer_list	rx_shutoff_timer;
+#define RX_SHUTOFF_DELAY_MSECS	3000
+
+#ifdef CONFIG_KONA_PI_MGR
+	struct pi_mgr_qos_node qos_tx_node;
+	struct pi_mgr_qos_node qos_rx_node;
+#else
+	void *qos_tx_node;
+	void *qos_rx_node;
+	/*
+	 * Stubs - If KONA_PI_MGR is not defined let the functions be dummy
+	 * otherwise the code looks ugly with too many #ifdefs
+	 */
+#define pi_mgr_qos_add_request(a,b,c,d) (0)
+#define pi_mgr_qos_request_update(a,b)
+#define PI_MGR_QOS_DEFAULT_VALUE 0
+#define PI_MGR_PI_ID_ARM_SUB_SYSTEM 1
+#endif /* KONA_PI_MGR not defined */
+	unsigned int iir;
+#else /* CONFIG_BRCM_UART_CHANGES not defined */
+	/* Apart from Rhea platforms (i.e island for now) these calls are stubs */
+	void *qos_tx_node;
+	void *qos_rx_node;
+#define pi_mgr_qos_add_request(a,b,c,d) (0)
+#define pi_mgr_qos_request_update(a,b)
+#define PI_MGR_QOS_DEFAULT_VALUE 0
+#define PI_MGR_PI_ID_ARM_SUB_SYSTEM 1
+#endif /* CONFIG_BRCM_UART_CHANGES */
 
 	/* 8250 specific callbacks */
 	int			(*dl_read)(struct uart_8250_port *);

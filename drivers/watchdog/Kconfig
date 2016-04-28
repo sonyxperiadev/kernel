@@ -391,6 +391,46 @@ config RETU_WATCHDOG
 	  To compile this driver as a module, choose M here: the
 	  module will be called retu_wdt.
 
+config KONA_WATCHDOG
+	tristate "KONA Watchdog"
+	depends on ARCH_KONA
+	help
+	  Say Y here if to include support for the watchdog timer
+	  in the KONA architecture.
+	  This driver can be built as a module by choosing M. The module
+	  will be called island_wdt.
+
+	  Say N if you are unsure.
+
+
+config BCM59055_WATCHDOG
+	tristate "BCM59055 Watchdog"
+	depends on MFD_BCM_PMU590XX
+	help
+	  Say Y here if to include support for the watchdog timer
+	  in BCM59055 PMU.
+
+config BCMPMU_WATCHDOG
+	tristate "BCMPMU Watchdog"
+	depends on MFD_BCMPMU
+	help
+	  Say Y here if to include support for the watchdog timer
+	  in BCM PMU.
+
+config WD_TAPPER
+	tristate "Watchdog Petter Enable"
+	help
+	  Say Y here if to enable the WD petter for BCM59055
+
+config BRCM_SECURE_WATCHDOG
+	tristate "secure watchdog"
+	select FIQ
+	---help---
+	Secure watchdog, detect
+	task or interrupt hung.
+	fiq based.
+	say Y to enable
+
 # AVR32 Architecture
 
 config AT32AP700X_WDT

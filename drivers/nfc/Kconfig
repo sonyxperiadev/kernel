@@ -15,6 +15,13 @@ config NFC_PN533
 	  Say Y here to compile support for PN533 devices into the
 	  kernel or say M to compile it as module (pn533).
 
+config BCMI2CNFC
+	bool "Broadcom 2079x NFC Controller Driver"
+	depends on I2C
+	default n
+	help
+	  Broadcom 2079x Near Field Communication Controller Support.
+
 config NFC_WILINK
 	tristate "Texas Instruments NFC WiLink driver"
 	depends on TI_ST && NFC_NCI

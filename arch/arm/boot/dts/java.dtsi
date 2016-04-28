@@ -1,0 +1,247 @@
+/* Generic BCM_21664 Device tree file */
+
+/ {
+	#address-cells = <1>;
+	#size-cells = <1>;
+	compatible = "bcm,java";
+	interrupt-parent = <&gic>;
+
+        clusters {
+                #address-cells = <1>;
+                #size-cells = <0>;
+
+                cluster0: cluster@0 {
+                        reg = <0>;
+                        cores {
+                                #address-cells = <1>;
+                                #size-cells = <0>;
+
+                                core0: core@0 {
+                                        reg = <0>;
+                                };
+                                core1: core@1 {
+                                        reg = <1>;
+                                };
+                                core2: core@2 {
+                                        reg = <2>;
+                                };
+                                core3: core@3 {
+                                        reg = <3>;
+                                };
+                        };
+                };
+        };
+
+
+        cpus {
+                #address-cells = <1>;
+                #size-cells = <0>;
+
+                cpu0: cpu@0 {
+                        device_type = "cpu";
+                        compatible = "arm,cortex-a7";
+                        reg = <0>;
+                        cluster = <&cluster0>;
+                        core = <&core0>;
+                        clock-frequency = <1000000000>;
+			power-gate = <1>;
+                };
+
+                cpu1: cpu@1 {
+                        device_type = "cpu";
+                        compatible = "arm,cortex-a7";
+                        reg = <1>;
+                        cluster = <&cluster0>;
+                        core = <&core1>;
+                        clock-frequency = <1000000000>;
+			power-gate = <1>;
+                };
+
+                cpu2: cpu@2 {
+                        device_type = "cpu";
+                        compatible = "arm,cortex-a7";
+                        reg = <2>;
+                        cluster = <&cluster0>;
+                        core = <&core2>;
+                        clock-frequency = <1000000000>;
+			power-gate = <1>;
+                };
+
+                cpu3: cpu@3 {
+                        device_type = "cpu";
+                        compatible = "arm,cortex-a7";
+                        reg = <3>;
+                        cluster = <&cluster0>;
+                        core = <&core3>;
+                        clock-frequency = <1000000000>;
+			power-gate = <1>;
+                };
+
+        };
+        gic: interrupt-controller@3FE21000 {
+		compatible = "arm,cortex-a15-gic", "arm,cortex-a9-gic";
+                #interrupt-cells = <3>;
+                #address-cells = <0>;
+                interrupt-controller;
+                reg = <0x3FE21000 0x1000>,
+                      <0x3FE22000 0x1000>;
+/*
+		gic-cpuif@1 {
+			compatible = "arm,gic-cpuif";
+			cpuif-id = <0>;
+			cpu = <&cpu0>;
+		};
+*/
+	};
+
+        cci@235308000 {
+                compatible = "arm,cci";
+                reg = <0 0x35308000 0 0x10000>;
+        };
+
+	wd-tapper {
+		compatible = "bcm,wd-tapper";
+	};
+
+	kona_pwmc@3e01a000 {
+		compatible = "bcm,pwmc";
+		reg = <0x3e01a000 0x10>;
+	};
+
+	tmon@0x34008000 {
+		compatible = "bcm,tmon";
+		reg = <0x34008000 0x1000>;
+		interrupts = <0 183 4>;
+	};
+
+	usb-phy@0x3F130000 {
+		compatible = "bcm,usb-phy";
+		reg = <0x3F130000 0x1000
+			0x35004000 0x1000>;
+	};
+
+	usb-hsotgctrl@0x3F130000 {
+		compatible = "bcm,usb-hsotgctrl";
+		reg = <0x3F130000 0x1000
+			0x35004000 0x1000
+			0x34000000 0x1000>;
+		interrupts = <0 128 0x04>;
+	};
+
+	usb-otg@0x3F120000 {
+		compatible = "bcm,dwc-otg";
+		reg = <0x3F120000 0x10000>;
+		interrupts = <0 47 0x04>;
+	};
+
+	uart@3e000000 {
+		compatible = "bcm,uart";
+		reg = <0x3e000000 0x1000>;
+		interrupts = <0 67 0x04>;
+		reg-shift = <2>;
+		reg-io-width = <4>;
+	};
+
+	uart@3e001000 {
+		compatible = "bcm,uart";
+		reg = <0x3e001000 0x1000>;
+		interrupts = <0 66 0x04>;
+		reg-shift = <2>;
+		reg-io-width = <4>;
+	};
+
+	uart@3e002000 {
+		compatible = "bcm,uart";
+		reg = <0x3e002000 0x1000>;
+		interrupts = <0 65 0x04>;
+		reg-shift = <2>;
+		reg-io-width = <4>;
+	};
+
+	i2c0: i2c@3e016000 {
+		compatible = "bcm,bsc-i2c";
+		reg = <0x3e016000 0x1000>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		cell-index = <0>;
+		interrupts = <0 103 0x04>;
+	};
+
+	i2c1: i2c@3e017000 {
+		compatible = "bcm,bsc-i2c";
+		reg = <0x3e017000 0x1000>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		cell-index = <1>;
+		interrupts = <0 102 0x04>;
+	};
+
+	i2c2: i2c@3e018000 {
+		compatible = "bcm,bsc-i2c";
+		reg = <0x3e018000 0x1000>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		cell-index = <2>;
+		interrupts = <0 169 0x04>;
+	};
+
+	i2c3: i2c@3e01c000 {
+		compatible = "bcm,bsc-i2c";
+		reg = <0x3e01c000 0x1000>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		cell-index = <3>;
+		interrupts = <0 170 0x04>;
+	};
+
+	i2c4: i2c@3500d000 {
+		compatible = "bcm,bsc-i2c";
+		reg = <0x3500d000 0x1000>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		cell-index = <4>;
+		interrupts = <0 14 0x04>;
+	};
+
+	spi0: spi@0x3E004000 {
+		compatible = "bcm,spi";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg = <0x3E004000 0x1000>;
+		interrupts = <0 90 0x04>;
+		id = <0>;
+	};
+
+	keypad {
+		compatible = "bcm,bcm_keypad" ;
+		reg = <0x35003800 0x800>;
+	};
+
+	kona-fb {
+		compatible = "bcm,kona-fb";
+		reg = <0x3c200000 0x1000>;
+	};
+
+	kona-fb-2 {
+		compatible = "bcm,kona-fb";
+		reg = <0x3c200000 0x1000>;
+	};
+
+	kona-fb-3 {
+		compatible = "bcm,kona-fb";
+		reg = <0x3c200000 0x1000>;
+	};
+
+	iommu-mm {
+		compatible = "bcm,iommu-m4u";
+		interrupts = <0 181 0>;
+		reg = <0x3500a000 0x1000>;
+	};
+
+	gpio: gpio@35003000 {
+		compatible = "bcm,kona-gpio";
+		reg = <0x35003000 0x800>;
+		#gpio-cells = <2>;
+		gpio-controller;
+	};
+};

@@ -51,6 +51,10 @@ int alarm_cancel(struct alarm *alarm);
 void set_power_on_alarm(long secs, bool enable);
 
 u64 alarm_forward(struct alarm *alarm, ktime_t now, ktime_t interval);
+#ifdef CONFIG_BCM_RTC_ALARM_BOOT
+int alarm_poweron_cancel(void);
+int alarm_poweron_set_alarm(struct timespec new_time);
+#endif
 u64 alarm_forward_now(struct alarm *alarm, ktime_t interval);
 ktime_t alarm_expires_remaining(const struct alarm *alarm);
 

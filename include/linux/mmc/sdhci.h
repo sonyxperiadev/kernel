@@ -179,6 +179,9 @@ struct sdhci_host {
  * the bounce buffer logic when preparing data
  */
 #define SDHCI_QUIRK2_ADMA_SKIP_DATA_ALIGNMENT             (1<<13)
+#define SDHCI_QUIRK2_HOST_MASK_HS_BIT			(1<<4)
+/* Disable the DDR capability for the host */
+#define SDHCI_QUIRK2_HOST_DISABLE_DDR			(1<<1)
 
 	int irq;		/* Device IRQ */
 	void __iomem *ioaddr;	/* Mapped address */
@@ -225,6 +228,8 @@ struct sdhci_host {
 	u8 pwr;			/* Current voltage */
 
 	bool runtime_suspended;	/* Host is runtime suspended */
+
+	struct work_struct wait_for_busy_work; /* work to wait for busy to end */
 
 	struct mmc_request *mrq;	/* Current request */
 	struct mmc_command *cmd;	/* Current command */
@@ -286,6 +291,8 @@ struct sdhci_host {
 	bool disable_sdio_irq_deferred; /* status of disabling sdio irq */
 	u32 auto_cmd_err_sts;
 	struct ratelimit_state dbg_dump_rs;
+	unsigned int detect_delay; /*Delay in msecs for detecting change*/
+
 	unsigned long private[0] ____cacheline_aligned;
 };
 #endif /* LINUX_MMC_SDHCI_H */

@@ -1,0 +1,432 @@
+#
+# Broadcom char driver config
+#
+
+menuconfig BRCM_CHAR_DRIVERS
+	tristate "Broadcom Char Drivers"
+	depends on PROC_FS
+	help
+	  Broadcom's char drivers
+
+config V3D
+	tristate "V3D Driver"
+	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA)
+	default n
+	help
+	 This config enables v3d driver. This driver
+	 accelerates graphics composition and hence
+	 improves the system performance. It is suggested
+	 to keep it enabled.
+
+config VCE
+	tristate "VCE Driver"
+	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA || ARCH_HAWAII || ARCH_JAVA)
+	default n
+	help
+	 This config enables the VCE driver. This driver
+	 accelerates video codec engine and hence improves
+	 the system performance. It is suggested
+	 to keep it enabled.
+
+config BCM_MMUTIL
+	tristate "BCM MM Util Driver"
+	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA)
+	default n
+
+config BRCM_FUSE_LOG
+	tristate "Broadcom FUSE LOG drivers"
+	depends on BRCM_CHAR_DRIVERS
+	default n
+	--help---
+	  Broadcom FUSE LOG drivers
+
+config STM_DEFAULT
+	tristate "STM Driver"
+	depends on BRCM_CHAR_DRIVERS
+	default n
+
+config ISP
+	tristate "ISP Driver"
+	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA || ARCH_HAWAII || ARCH_JAVA)
+	default n
+	help
+	 This config enables the ISP driver. This driver
+	 accelerates ISP related operations and hence
+	 improves the system performance. It is suggested
+	 to keep it enabled.
+
+config ISP2
+	tristate "ISP2 Driver"
+	depends on BRCM_CHAR_DRIVERS && (ARCH_JAVA)
+	default n
+	help
+	 This config enables the ISP2 driver. This driver
+	 accelerates ISP2 related operations and hence
+	 improves the system performance. It is suggested
+	 to keep it enabled.
+
+config JPEGENC
+	tristate "JPEGENC Driver"
+	depends on BRCM_CHAR_DRIVERS && (ARCH_JAVA)
+	default n
+	help
+	 This config enables the JPEGENC driver. This driver
+	 accelerates JPEG encoding process and hence
+	 improves the system performance. It is suggested
+	 to keep it enabled.
+
+config H264
+	tristate "H264 Driver"
+	depends on BRCM_CHAR_DRIVERS && (ARCH_HAWAII || ARCH_JAVA)
+	default n
+
+config UNICAM
+	tristate "UNICAM Driver"
+	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA)
+	default n
+
+config MMDMA
+	tristate "MMDMA Driver"
+	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA || ARCH_HAWAII || ARCH_JAVA)
+	select KONA_VC4LITE
+	default n
+
+config BCMPMU_RPC
+	bool "Enable BCMPMU RPC driver"
+	depends on BRCM_CHAR_DRIVERS
+	depends on MFD_BCM_PMU59xxx
+	depends on SENSORS_BCMPMU
+	default n
+	---help---
+	Select to enable PMU RPC driver to send ADC raw data
+	to Modem.
+
+config BCM_AP_PANIC_ON_CPCRASH
+        bool "Support for crashing AP when CP crashes"
+        default y
+        help
+        If you say Y here, a CP crash will result in AP panic.
+        Debug tool can be used to extract CP dump later.
+
+config BCM_MDMGPIO
+    tristate "MDMGPIO Driver"
+    depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA)
+    default n
+    ---help---
+    Select to build the mdmgpio driver.
+
+config HAWAII_MM
+	tristate "Hawaii MM Driver Framework"
+	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA || ARCH_HAWAII || ARCH_JAVA)
+	default n
+
+config HAWAII_MM_H264
+	tristate "Hawaii MM - H264 Driver"
+	depends on HAWAII_MM
+	default n
+
+config MM_SECURE_DRIVER
+	bool "Multimedia - Driver for secure playback"
+	depends on HAWAII_MM
+	default n
+        help
+          Enable this option if secure multimedia jobs are expected.
+	  Bit 15 of the jobs will indicate whether job is secure of not.
+	  Two new ioctls and secure subdevices for all the subblocks
+	  will be added which will handover the secure job to userspace
+	  to get executed via secure OS.
+
+config BCM_AAA
+    tristate "Android Amxr Audio ('AAA grade-beef') driver"
+    default n
+    ---help---
+    Select to build the generic AAA driver.
+
+config BCM_BSC
+    bool "Board Specific Configuration (BSC) driver support"
+    default y
+    ---help---
+    Say Y to enable the BSC support.
+
+config BCM_GPS_UART
+	int "GPS UART"
+	depends on BCM_GPS
+	--help---
+		GPS UART port no e.g. 0,1,2,3 to be used
+
+config BCM_MODEM
+        bool "Broadcom Modem Driver"
+        depends on BRCM_CHAR_DRIVERS && NET
+	select BRCM_FUSE_LOG
+        default n
+        help
+          Broadcom Modem IPC drivers
+
+config  BCM_NET_WHITELIST_SUPPORT
+	boolean "White list support"
+	depends on BCM_MODEM
+	default N
+	---help---
+		White list support
+
+config  BCM_NET_WHITELIST_DEBUG_SUPPORT
+	boolean "White list support debug"
+	depends on BCM_MODEM
+	default N
+	---help---
+		White list support debug
+
+config BRCM_CP_CRASH_DUMP_EMMC
+	bool "cp crash dump to eMMC"
+	depends on BCM_MODEM && APANIC_ON_MMC
+        default y
+        --help---
+          Say Y to enable the cp crash dump to eMMC support.
+
+config CP_CRASH
+	bool "cp crash without dump"
+	depends on BCM_MODEM && MACH_HAWAII_SS_COMMON
+        default y
+        --help---
+          Say Y to enable cp crash from AP panic handler
+	  without enabling dump, as this option depends
+	  on BCM_MODEM and MACH_HAWAII_SS_COMMON, make sure
+	  to set them.
+
+config BCM_MODEM_DEFER_CP_START
+        bool "Release CP from reset from main image (deferred)"
+        depends on BRCM_CHAR_DRIVERS && NET && BCM_MODEM
+        default n
+        help
+          Causes the main image to release the CP from reset in the case
+          where this is not done already from the loader.
+
+config BRCM_FUSE_VSP
+	#tristate "Broadcom FUSE VSP drivers"
+	boolean "Broadcom FUSE VSP drivers"
+	depends on BRCM_CHAR_DRIVERS && BCM_MODEM
+	default N
+	---help---
+	  Broadcom FUSE VSP drivers
+
+config BCM_SIM_PRESENT
+	bool
+	prompt "Enable SIM operations"
+	default y if BCM_MODEM && ! MACH_JAVA_BROOKS
+	---help---
+	 Say N if you are compiling for Brooks/Tetra
+
+config BCM_SIMLOCK
+	bool "Broadcom SIM lock driver"
+	depends on BCM_MODEM && BCM_SIM_PRESENT
+	default y
+	help
+	  Say Y here to enable the Broadcom back-end for SIM locking.
+	  Otherwise SIM lock will be disabled, unless another mechanism
+	  provides it.
+
+	  If unsure, say N here.
+
+config BCM_IDLE_PROFILER
+	bool "Broadcom Idle Profiler Support"
+	depends on BRCM_CHAR_DRIVERS && ARCH_KONA
+	default n
+	help
+	  Say y to turn on Broadcom idle profiler support
+
+config GPIO_USER_MODE_SUPPORT
+	tristate "Broadcom GPIO User Mode Support"
+	depends on BRCM_CHAR_DRIVERS
+	default n
+	help
+	  Say y to turn on support for GPIO in user mode
+
+config BCM_HEADSET_SW
+   bool "Headset Detection Support"
+   depends on BRCM_CHAR_DRIVERS
+   default y
+   ---help---
+   Say Y to enable headset detection.
+
+config BCM_AMXR
+   bool "Audio Mixer Driver support"
+   depends on BRCM_CHAR_DRIVERS
+   default n
+   ---help---
+   Say Y to enable the Audio Mixer Driver to support interconnecting
+   audio samples between kernel objects.
+
+config BCM_AMXR_CORE
+   tristate "Audio Mixer Driver support"
+   depends on BCM_AMXR
+   default n
+   ---help---
+   Say Y to enable the Audio Mixer Core module.
+
+config BCM_HALAUDIO
+    bool "HAL Audio Driver support"
+    depends on BRCM_CHAR_DRIVERS
+    default n
+    help
+      Say Y to enable HAL Audio Driver support which is used to control
+      audio hardware.
+
+config BCM_HALAUDIO_CORE
+    tristate "HAL Audio core framework support"
+    depends on BRCM_CHAR_DRIVERS && BCM_HALAUDIO
+    default n
+    help
+      Select m to build HAL Audio core framework module which is used to control
+      audio hardware.
+
+config BCM_HALAUDIO_AUDIOH_ISLAND
+    tristate "HAL Audio Audio Hub driver for the Island Chip family"
+    depends on ARCH_ISLAND
+    depends on BRCM_CHAR_DRIVERS
+    depends on BCM_HALAUDIO && BCM_AMXR
+    depends on MAP_SDMA && MAP_AADMA && MAP_SSASW
+    depends on MAP_ISLAND_AUDIOH_CHAL
+    default n
+    help
+      Select m to build the HAL Audio Audio Hub driver.This driver must
+      be built as a loadable module otherwise initialization will fail.
+
+config BCM_HALAUDIO_PCM_ISLAND
+    tristate "HAL Audio PCM driver for the Island Chip family"
+    depends on ARCH_ISLAND
+    depends on BRCM_CHAR_DRIVERS
+    depends on BCM_HALAUDIO && BCM_AMXR
+    depends on MAP_SDMA && MAP_AADMA && MAP_SSASW
+    depends on MAP_ISLAND_PCM_CHAL
+    default n
+    help
+      Select m to build the HAL Audio PCM driver.This driver must
+      be built as a loadable module otherwise initialization will fail.
+
+config BCM_VCP
+    bool "Video Calling driver support"
+    depends on BRCM_CHAR_DRIVERS
+    default n
+    help
+      Say Y to enable VCP driver support which is used to support
+      video calling framework.
+
+config BCM_VCPTEST
+    tristate "Video Calling driver test"
+    depends on BCM_VCP
+    default n
+    help
+      Say Y to enable VCP driver test.
+
+config BCM_GIST
+    tristate "Generic I/O Streaming (GIST)"
+    default n
+    ---help---
+    This utility provides low latency non-blocking reads from and writes to files.
+
+config BCM_SIGMORPH
+    tristate "Audio Packet Processing"
+    default n
+    ---help---
+    Codec Streaming eXtensions interface to attenuate/mix audio
+
+config BCM_HDMI_DET
+    tristate "HDMI detection"
+    default n
+    ---help---
+    Select to build the generic HDMI dectection driver.
+
+config BCM_HDMI_DET_SWITCH
+    bool "HDMI detection switch class extension"
+    depends on BCM_HDMI_DET
+    default n
+    ---help---
+    Say Y to enable the switch class support in the HDMI detection driver,
+    needed for Android HDMI integration.
+
+config BCM_FRAME_PROFILER_SUPPORT
+    bool "Enable frame profiling"
+    depends on ARCH_BCM116X || ARCH_BCMRING
+    default y
+    ---help---
+      Maintain a history of time spent processing frames.
+
+config BCM_WIFI_HDMI
+    tristate "WIFI HDMI"
+    default n
+    ---help---
+      Select to build the WIFI HDMI driver.
+
+config VC_TEST_WIFI_HDMI
+    tristate "Wifi-Hdmi Videocore Service Tester"
+    default n
+    ---help---
+      Select to build the Wifi-Hdmi Videocore Service test driver.
+
+config GPS_IRQ
+	bool "GPS I2C HOSTWAKE"
+	default n
+	--help---
+		If GPS I2C-HOSTWAKE is used
+
+config BCM_RTC_CAL
+	tristate "RTC CAL"
+	depends on BCM_MODEM && (ARCH_RHEA)
+	default n
+	---help---
+	Select to build the RTC CAL driver.
+
+config BRCM_SIM_SECURE_ENABLE
+    boolean "Broadcom SIM Secure Enable"
+    depends on BCM_SIMLOCK
+    default n
+    ---help---
+    Broadcom SIM Secure Enable
+
+config BCM_LOGRAM_HELPER
+    boolean "Broadcom logram helper"
+    default n
+    ---help---
+    Reserves a page of bootmem and stores ramdump address
+
+config NEW_GPSCHIP_I2C
+	bool "GPS I2C NEW COMMUNICATION PROTOCOL"
+	default n
+	--help---
+		If GPS I2C using new comm protocol
+
+config BCM_GPS_CNTIN
+	boolean "Broadcom gps cntin driver"
+	default y
+	---help---
+	Say Y to enable the GPS CNTIN support.
+
+config BCM_SET_CP_LOCK_STATE_SUPPORT
+    boolean "Set CP lock state support"
+    depends on BRCM_CHAR_DRIVERS && BCM_MODEM && !BRCM_SIM_SECURE_ENABLE
+    default n
+    ---help---
+    Set CP lock status directly
+
+config BCM_MMS_BLOCK
+    boolean "Broadcom mms block driver for CTA security requirement"
+    default n
+    ---help---
+    Say Y to enable MMS block function support
+
+config BCM_EMAIL_BLOCK
+    boolean "Broadcom email block driver for CTA security requirement"
+    default n
+    ---help---
+    Say Y to enable email block function support
+
+config BCM_TRACE_LOG
+	bool "Trace log driver"
+	default n
+	---help---
+	Say Y to enable trace logging. When enabled,
+	traces (irq, sched_switch etc) are collected
+	on events and are saved to uncached location
+	in RAM. On the occurence of a system crash or
+	freeze, the RAM buffer can be decoded to get
+	useful information.

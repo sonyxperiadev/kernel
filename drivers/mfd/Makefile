@@ -172,3 +172,7 @@ obj-$(CONFIG_MFD_LM3533)	+= lm3533-core.o lm3533-ctrlbank.o
 obj-$(CONFIG_VEXPRESS_CONFIG)	+= vexpress-config.o vexpress-sysreg.o
 obj-$(CONFIG_MFD_RETU)		+= retu-mfd.o
 obj-$(CONFIG_MFD_AS3711)	+= as3711.o
+obj-$(CONFIG_MFD_S5M_CORE)	+= s5m-core.o s5m-irq.o
+obj-$(CONFIG_MFD_ANATOP)	+= anatop-mfd.o
+obj-$(CONFIG_MFD_BCM_PMU59xxx)	+= bcmpmu59xxx-i2c.o bcmpmu59xxx-core.o bcmpmu59xxx-irq.o bcmpmu59xxx-accy-core.o bcmpmu59xxx-accy-detect.o
+obj-$(CONFIG_IHF_EXT_PA_TPA2026D2)  += tpa2026d2.o

@@ -1,0 +1,8 @@
+config BCM_MM_PWRCTRL
+        bool "BCM Multimedia Power Domain Manager Driver"
+        depends on (ARCH_HAWAII || ARCH_BCM) && BCM_VCODEC
+        default n
+        help
+	  This driver would expose multimedia (codec) specific power domain
+	  functionlity.
+

@@ -145,8 +145,12 @@ obj-$(CONFIG_SENSORS_EPM_ADC)	+= epm_adc.o
 obj-$(CONFIG_SENSORS_QPNP_ADC_VOLTAGE)	+= qpnp-adc-voltage.o qpnp-adc-common.o
 obj-$(CONFIG_SENSORS_QPNP_ADC_CURRENT)	+= qpnp-adc-current.o qpnp-adc-common.o
 obj-$(CONFIG_SENSORS_BOOST_DYNAMIC_CONTROLLER)	+= boost-dynamic-controller.o
+obj-$(CONFIG_SENSORS_KONA)	+= kona-tmon.o kona-thermal.o bcmpmu-thermal.o
+ifeq ($(CONFIG_MFD_BCM_PMU59xxx),y)
+obj-$(CONFIG_SENSORS_BCMPMU)    += bcmpmu59xxx-hwmon.o
+endif
 
 obj-$(CONFIG_PMBUS)		+= pmbus/
-
+obj-$(CONFIG_KONA_TMON) 	+= kona_tmon.o
 ccflags-$(CONFIG_HWMON_DEBUG_CHIP) := -DDEBUG
 

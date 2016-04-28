@@ -366,6 +366,24 @@ config CRYPTO_DEV_QCOM_ICE
 	  To compile this driver as a module, choose M here: the
 	  module will be called ice.
 
+config CRYPTO_DEV_BRCM_SPUM_HASH
+	tristate "Support for BRCM SPUM HASH accelerator."
+	depends on ARCH_KONA && DMAC_PL330
+	select CRYPTO_SHA1
+	select CRYPTO_SHA256
+	select CRYPTO_MD5
+	help
+	 Driver for Rhea SPUM crypto accelerator.
+
+config CRYPTO_DEV_BRCM_SPUM_AES
+	tristate "Support for BRCM SPUM AES accelerator."
+	depends on ARCH_KONA && DMAC_PL330
+	select CRYPTO_AES
+	select CRYPTO_CTR
+	select CRYPTO_XTS
+	help
+	 Driver for Rhea SPUM crypto accelerator.
+
 config CRYPTO_DEV_TEGRA_AES
 	tristate "Support for TEGRA AES hw engine"
 	depends on ARCH_TEGRA

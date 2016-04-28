@@ -86,3 +86,10 @@ ifeq ($(CONFIG_BOSCH_BMA2X2_ENABLE_INT2),y)
 endif
 
 obj-$(CONFIG_SENSORS_MC3430)	+= mc3xxx.o
+ifeq ($(CONFIG_MFD_BCM_PMU59xxx),y)
+endif
+obj-$(CONFIG_KONA_HEADSET) += kona_headset.o
+obj-$(CONFIG_KONA_HEADSET_MULTI_BUTTON) += kona_headset_multi_button.o
+obj-$(CONFIG_INPUT_AKM09911)		+= akm09911.o
+obj-$(CONFIG_INPUT_EMMICRO)	+= em718x/
+obj-$(CONFIG_INPUT_EM718X_HUB)	+= em718x.o

@@ -14,6 +14,36 @@
 #include <linux/serial_8250.h>
 #include <linux/dmaengine.h>
 
+#ifdef CONFIG_BRCM_UART_CHANGES
+#if defined(CONFIG_HAS_WAKELOCK)
+#include <linux/wakelock.h>
+#endif /* CONFIG_HAS_WAKELOCK */
+
+#include <linux/clk.h>
+
+#ifdef CONFIG_KONA_PI_MGR
+#include <mach/pi_mgr.h>
+#include <plat/pi_mgr.h>
+#endif /* CONFIG_KONA_PI_MGR */
+
+#define UART_USR                (0x1F) /* UART status register */
+#define UART_TX_FIFO_LEVEL      (0x20) /* UART Transmit FIFO level register */
+#define UART_RX_FIFO_LEVEL      (0x21) /* UART Receive FIFO level register */
+#define UART_HALT_TX            (0x29) /* UART Halt Tx register */
+#define UART_CONFIG_ID          (0x3D) /* UART Configuration ID register */
+#define UART_COMPONENT_VER      (0x3E) /* UART Component Version register */
+#define UART_PERIPHERAL_ID      (0x3F) /* UART Peripheral PID register */
+#define UART_CONFIG             (0x40) /* UART Configuration register */
+#define UART_IRCR               (0x42) /* UART IrDA Configuration register */
+#define UART_UBABCSR            (0x44) /* UART UBABCSR Auto Baud Detection
+					  Control and State Register */
+#define UART_UBABCNTR           (0x45) /* UART UBABCNTR Auto Baud Detection
+					  Control and State Register */
+#define UART_IIR_TIME_OUT       (0x0C) /* Timeout indication interrupt */
+#define UART_USR_TFE            (0x04) /* Tx Fifo Empty Bit */
+
+#endif /* CONFIG_BRCM_UART_CHANGES */
+
 struct uart_8250_dma {
 	dma_filter_fn		fn;
 	void			*rx_param;

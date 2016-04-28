@@ -5,7 +5,6 @@
  *
  * Copyright (C) 2012 Alexandra Chin <alexandra.chin@tw.synaptics.com>
  * Copyright (C) 2012 Scott Lin <scott.lin@tw.synaptics.com>
- * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,18 +26,22 @@
 #define SYNAPTICS_DSX_DRIVER_VERSION 0x1005
 
 #include <linux/version.h>
-
-#ifdef CONFIG_FB
-#include <linux/notifier.h>
-#include <linux/fb.h>
-#elif defined CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
 #endif
-#include <linux/debugfs.h>
-#if defined(CONFIG_SECURE_TOUCH)
-#include <linux/completion.h>
-#include <linux/atomic.h>
-#include <linux/clk.h>
+
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 38))
+#define KERNEL_ABOVE_2_6_38
+#endif
+
+#ifdef KERNEL_ABOVE_2_6_38
+#define sstrtoul(...) kstrtoul(__VA_ARGS__)
+#else
+#define sstrtoul(...) strict_strtoul(__VA_ARGS__)
+#endif
+
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(3, 7, 0))
+#define KERNEL_ABOVE_3_7
 #endif
 
 #define PDT_PROPS (0x00EF)
@@ -50,7 +53,6 @@
 
 #define SYNAPTICS_RMI4_F01 (0x01)
 #define SYNAPTICS_RMI4_F11 (0x11)
-#define SYNAPTICS_RMI4_F12 (0x12)
 #define SYNAPTICS_RMI4_F1A (0x1a)
 #define SYNAPTICS_RMI4_F34 (0x34)
 #define SYNAPTICS_RMI4_F54 (0x54)
@@ -75,12 +77,6 @@
 #define MASK_2BIT 0x03
 #define MASK_1BIT 0x01
 
-#define NAME_BUFFER_SIZE 256
-
-#define PINCTRL_STATE_ACTIVE	"pmx_ts_active"
-#define PINCTRL_STATE_SUSPEND	"pmx_ts_suspend"
-#define PINCTRL_STATE_RELEASE	"pmx_ts_release"
-
 /*
  * struct synaptics_rmi4_fn_desc - function descriptor fields in PDT
  * @query_base_addr: base address for query registers
@@ -95,12 +91,9 @@ struct synaptics_rmi4_fn_desc {
 	unsigned char cmd_base_addr;
 	unsigned char ctrl_base_addr;
 	unsigned char data_base_addr;
-	unsigned char intr_src_count:3;
-	unsigned char reserved_b3_b4:2;
-	unsigned char version:2;
-	unsigned char reserved_b7:1;
+	unsigned char intr_src_count;
 	unsigned char fn_number;
-} __packed;
+};
 
 /*
  * synaptics_rmi4_fn_full_addr - full 16-bit base addresses
@@ -142,7 +135,6 @@ struct synaptics_rmi4_fn {
 	struct list_head link;
 	int data_size;
 	void *data;
-	void *extra;
 };
 
 /*
@@ -170,10 +162,7 @@ struct synaptics_rmi4_device_info {
 	unsigned char product_id_string[SYNAPTICS_RMI4_PRODUCT_ID_SIZE + 1];
 	unsigned char build_id[SYNAPTICS_RMI4_BUILD_ID_SIZE];
 	unsigned char config_id[3];
-	struct mutex support_fn_list_mutex;
 	struct list_head support_fn_list;
-	unsigned int package_id;
-	unsigned int package_id_rev;
 };
 
 /*
@@ -198,17 +187,11 @@ struct synaptics_rmi4_device_info {
  * @irq: attention interrupt
  * @sensor_max_x: sensor maximum x value
  * @sensor_max_y: sensor maximum y value
- * @disp_maxx: max x value of display
- * @disp_maxy: max y value of display
- * @disp_minx: min x value of display
- * @disp_miny: min y value of display
- * @irq_enabled: flag for indicating interrupt enable status
  * @touch_stopped: flag to stop interrupt thread processing
  * @fingers_on_2d: flag to indicate presence of fingers in 2d area
+ * @sensor_sleep: flag to indicate sleep state of sensor
  * @flip_x: set to TRUE if desired to flip direction on x-axis
  * @flip_y: set to TRUE if desired to flip direction on y-axis
- * @fw_updating: firmware is updating flag
- * @sensor_sleep: flag to indicate sleep state of sensor
  * @wait: wait queue for touch data polling in interrupt thread
  * @i2c_read: pointer to i2c read function
  * @i2c_write: pointer to i2c write function
@@ -219,24 +202,17 @@ struct synaptics_rmi4_data {
 	struct input_dev *input_dev;
 	const struct synaptics_rmi4_platform_data *board;
 	struct synaptics_rmi4_device_info rmi4_mod_info;
-	struct regulator *vdd;
-	struct regulator *vcc_i2c;
+	struct regulator *regulator;
 	struct mutex rmi4_io_ctrl_mutex;
 	struct delayed_work det_work;
 	struct workqueue_struct *det_workqueue;
-#ifdef CONFIG_HAS_EARLYSUSPEND
 	struct early_suspend early_suspend;
-#endif
-	struct dentry *dir;
-	char fw_image_name[NAME_BUFFER_SIZE];
 	unsigned char current_page;
 	unsigned char button_0d_enabled;
 	unsigned char full_pm_cycle;
 	unsigned char num_of_rx;
 	unsigned char num_of_tx;
 	unsigned char num_of_fingers;
-	unsigned char max_touch_width;
-	unsigned char report_enable;
 	unsigned char intr_mask[MAX_INTR_REGISTERS];
 	unsigned short num_of_intr_regs;
 	unsigned short f01_query_base_addr;
@@ -246,47 +222,18 @@ struct synaptics_rmi4_data {
 	int irq;
 	int sensor_max_x;
 	int sensor_max_y;
-	int disp_maxx;
-	int disp_maxy;
-	int disp_minx;
-	int disp_miny;
-	bool irq_enabled;
 	bool touch_stopped;
 	bool fingers_on_2d;
 	bool sensor_sleep;
 	bool flip_x;
 	bool flip_y;
-	bool fw_updating;
-	bool suspended;
 	wait_queue_head_t wait;
-	bool stay_awake;
-	bool staying_awake;
 	int (*i2c_read)(struct synaptics_rmi4_data *pdata, unsigned short addr,
 			unsigned char *data, unsigned short length);
 	int (*i2c_write)(struct synaptics_rmi4_data *pdata, unsigned short addr,
 			unsigned char *data, unsigned short length);
 	int (*irq_enable)(struct synaptics_rmi4_data *rmi4_data, bool enable);
 	int (*reset_device)(struct synaptics_rmi4_data *rmi4_data);
-#ifdef CONFIG_FB
-	struct notifier_block fb_notif;
-#else
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	struct early_suspend early_suspend;
-#endif
-#endif
-	struct pinctrl *ts_pinctrl;
-	struct pinctrl_state *pinctrl_state_active;
-	struct pinctrl_state *pinctrl_state_suspend;
-	struct pinctrl_state *pinctrl_state_release;
-#if defined(CONFIG_SECURE_TOUCH)
-	atomic_t st_enabled;
-	atomic_t st_pending_irqs;
-	bool st_initialized;
-	struct completion st_powerdown;
-	struct completion st_irq_processed;
-	struct clk *core_clk;
-	struct clk *iface_clk;
-#endif
 };
 
 enum exp_fn {
@@ -310,6 +257,14 @@ void synaptics_rmi4_new_function(enum exp_fn fn_type, bool insert,
 		void (*func_remove)(struct synaptics_rmi4_data *rmi4_data),
 		void (*func_attn)(struct synaptics_rmi4_data *rmi4_data,
 				unsigned char intr_mask));
+
+static inline ssize_t synaptics_rmi4_show_error(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	dev_warn(dev, "%s Attempted to read from write-only attribute %s\n",
+			__func__, attr->attr.name);
+	return -EPERM;
+}
 
 static inline ssize_t synaptics_rmi4_store_error(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)

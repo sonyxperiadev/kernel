@@ -96,6 +96,15 @@ config ANDROID_INTF_ALARM_DEV
 	  elapsed realtime, and a non-wakeup alarm on the monotonic clock.
 	  Also exports the alarm interface to user-space.
 
+config BCM_RTC_ALARM_BOOT
+	bool "RTC Alarm Boot"
+	depends on RTC_CLASS
+	default n
+	help
+	  If you say yes then, it provides power-off alarm based on RTC.
+	  The phone will be powered on and ring the alarm.
+	  In the power-on alarm status, the phone will not turn on CP
+	  and be shut down after the alarm is done.
 config SYNC
 	bool "Synchronization framework"
 	default n

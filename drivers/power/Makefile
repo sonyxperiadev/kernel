@@ -16,6 +16,7 @@ obj-$(CONFIG_WM8350_POWER)	+= wm8350_power.o
 obj-$(CONFIG_TEST_POWER)	+= test_power.o
 
 obj-$(CONFIG_BATTERY_88PM860X)	+= 88pm860x_battery.o
+obj-$(CONFIG_BCM_CMP_BATTERY_MULTI) += cmp_battery_multi.o
 obj-$(CONFIG_BATTERY_DS2760)	+= ds2760_battery.o
 obj-$(CONFIG_BATTERY_DS2780)	+= ds2780_battery.o
 obj-$(CONFIG_BATTERY_DS2781)	+= ds2781_battery.o
@@ -73,3 +74,28 @@ obj-$(CONFIG_MSM_BCL_CTL)	+= msm_bcl.o
 obj-$(CONFIG_MSM_BCL_PERIPHERAL_CTL) += bcl_peripheral.o
 obj-$(CONFIG_POWER_RESET)	+= reset/
 obj-y				+= qcom/
+obj-$(CONFIG_BATTERY_BCM59055)	+= bcm59055_battery.o
+obj-$(CONFIG_MONITOR_ADC121C021_I2C)    += adc121c021_driver.o
+obj-$(CONFIG_MONITOR_BQ27541_I2C)       += bq27541.o
+
+ifeq ($(CONFIG_BCM_CMP_BATTERY_MULTI),m)
+obj-m += cmp_battery.o
+cmp_battery-objs += cmp_battery_multi.o
+endif
+ifeq ($(CONFIG_BCM_CMP_BATTERY_BQ24616),m)
+obj-m += cmp_battery.o
+cmp_battery-objs += cmp_battery_bq24616.o
+endif
+ifeq ($(CONFIG_MFD_BCM_PMU59056), y)
+obj-$(CONFIG_POWER_BCMPMU)	+= bcmpmu-batt-56.o bcmpmu-chrgr-56.o
+obj-$(CONFIG_BCMPMU_EM) 	+= bcmpmu-em-56.o
+else
+obj-$(CONFIG_POWER_BCMPMU)	+= bcmpmu-batt.o bcmpmu-chrgr.o
+obj-$(CONFIG_BCMPMU_EM) 	+= bcmpmu-em.o
+endif
+obj-$(CONFIG_MFD_BCM_PMU59xxx) 	+= bcmpmu59xxx-chrgr.o bcmpmu-fg.o
+obj-$(CONFIG_MFD_BCM_PMU59xxx)  += bcmpmu59xxx-acld.o
+obj-$(CONFIG_CHARGER_BCMPMU_SPA) += bcmpmu59xxx-spa-pb.o
+obj-$(CONFIG_SEC_CHARGING_FEATURE) +=spa_power.o spa_ps.o
+obj-$(CONFIG_BCMPMU_THERMAL_THROTTLE) +=bcmpmu59xxx-thermal-throttle.o
+obj-$(CONFIG_BCMPMU_CHARGER_COOLANT)  += bcmpmu-charger-coolant.o

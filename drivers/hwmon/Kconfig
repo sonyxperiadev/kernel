@@ -149,6 +149,17 @@ config SENSORS_ADM1025
 	  This driver can also be built as a module.  If so, the module
 	  will be called adm1025.
 
+config SENSORS_LSM303DLH_INPUT_DEVICE
+	bool "ST LSM303DLH INPUT DEVICE"
+	depends on SENSORS_LSM303DLH
+	default n
+	help
+	  This driver allows device to be used as an input device with
+	  interrupts.
+
+	  Need to be enabled only when input device support
+	  is required.
+
 config SENSORS_ADM1026
 	tristate "Analog Devices ADM1026 and compatibles"
 	depends on I2C
@@ -357,6 +368,13 @@ config SENSORS_DS620
 
 	  This driver can also be built as a module.  If so, the module
 	  will be called ds620.
+
+config SENSORS_KONA
+	tristate "Broadcom SoC Temperature Monitor"
+	depends on ARCH_KONA
+	help
+	  This driver provides support for the temperature monitor found
+	  in Broadcom SoCs based on the Kona architecture.
 
 config SENSORS_DS1621
 	tristate "Dallas Semiconductor DS1621 and DS1625"
@@ -1576,6 +1594,21 @@ config SENSORS_MC13783_ADC
         depends on MFD_MC13XXX
         help
           Support for the A/D converter on MC13783 and MC13892 PMIC.
+
+config SENSORS_BCMPMU
+	tristate "BRCM PMUs HWMON"
+	depends on MFD_BCMPMU || MFD_BCM_PMU59056 || MFD_BCM_PMU59xxx
+	default n
+	help
+	  ADC driver for BRM PMU's
+
+config KONA_TMON
+       bool "enable Kona temperature monitor (TMON) driver"
+       help
+	Say Y if you want to enable kona
+	temperature monitoring.
+	Temperature threshold levels can be set
+	from driver platform data.
 
 if ACPI
 

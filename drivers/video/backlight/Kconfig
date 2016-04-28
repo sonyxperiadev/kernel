@@ -336,6 +336,11 @@ config BACKLIGHT_ADP8860
 	  To compile this driver as a module, choose M here: the module will
 	  be called adp8860_bl.
 
+ config TOUCHKEY_BACKLIGHT
+	tristate "backlight driver"
+	help
+	backlight driver.
+
 config BACKLIGHT_ADP8870
 	tristate "Backlight Driver for ADP8870 using WLED"
 	depends on BACKLIGHT_CLASS_DEVICE && I2C
@@ -347,6 +352,18 @@ config BACKLIGHT_ADP8870
 
 	  To compile this driver as a module, choose M here: the module will
 	  be called adp8870_bl.
+
+config BACKLIGHT_KTD259B
+	tristate "backlight driver"
+	depends on y
+	default n
+	help
+	backlight driver
+
+config BACKLIGHT_TPS61158
+	tristate "backlight driver"
+	help
+	backlight driver
 
 config BACKLIGHT_88PM860X
 	tristate "Backlight Driver for 88PM8606 using WLED"
@@ -374,6 +391,19 @@ config BACKLIGHT_LM3630
 	select REGMAP_I2C
 	help
 	  This supports TI LM3630 Backlight Driver
+	  If your device has LM3630 and
+	  you are sure you want to have this
+	  enabled then say Y.
+
+config BACKLIGHT_LM3630A
+	tristate "Backlight Driver for LM3630A"
+	depends on BACKLIGHT_CLASS_DEVICE && I2C
+	select REGMAP_I2C
+	help
+	  This supports TI LM3630A Backlight Driver
+	  If your device has LM3630A and
+	  you are sure you want to have this
+	  enabled then say Y.
 
 config BACKLIGHT_LM3639
 	tristate "Backlight Driver for LM3639"
@@ -423,6 +453,13 @@ config BACKLIGHT_AS3711
 	depends on BACKLIGHT_CLASS_DEVICE && MFD_AS3711
 	help
 	  If you have an Austrian Microsystems AS3711 say Y to enable the
+	  backlight driver.
+
+config BACKLIGHT_SGM3727
+	tristate "Backlight driver for SGM3727"
+	depends on BACKLIGHT_CLASS_DEVICE
+	help
+	  If your backlight control device is SGM3727, say Y to enable the
 	  backlight driver.
 
 endif # BACKLIGHT_CLASS_DEVICE

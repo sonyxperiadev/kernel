@@ -2,6 +2,7 @@
 # Makefile for the linux kernel.
 #
 
+obj-$(CONFIG_PL330)             += pl330.o
 obj-y				+= firmware.o
 
 obj-$(CONFIG_FIQ_GLUE)		+= fiq_glue.o fiq_glue_setup.o

@@ -100,9 +100,17 @@ ENTRY(cpu_v7_set_pte_ext)
 	tstne	r1, #L_PTE_NONE
 	moveq	r3, #0
 
+#ifdef CONFIG_ARM_ERRATA_782773
+	mrs	r2, cpsr			@ save cpsr
+	cpsid	if				@ disable interrupts
+	mcr	p15, 0, r0, c7, c14, 1		@ clean & invalidate D line
+#endif
  ARM(	str	r3, [r0, #2048]! )
  THUMB(	add	r0, r0, #2048 )
  THUMB(	str	r3, [r0] )
+#ifdef CONFIG_ARM_ERRATA_782773
+	msr	cpsr_c, r2			@ load cpsr
+#endif
 	ALT_SMP(W(nop))
 	ALT_UP (mcr	p15, 0, r0, c7, c10, 1)		@ flush_pte
 #endif

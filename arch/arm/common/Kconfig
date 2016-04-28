@@ -1,6 +1,9 @@
 config ICST
 	bool
 
+config PL330
+	bool
+
 config SA1111
 	bool
 	select DMABOUNCE if !ARCH_PXA

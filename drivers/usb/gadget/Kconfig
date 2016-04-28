@@ -484,6 +484,31 @@ config USB_CI13XXX_MSM_HSIC
 	  dynamically linked module called "ci13xxx_msm_hsic" and force all
 	  gadget drivers to also be dynamically linked.
 
+config USB_GADGET_DWC_OTG
+       tristate "Synopsys DWC_OTG 2.91a"
+       depends on ARCH_KONA
+       help
+          This driver provides USB Device Controller driver for DW_OTG
+ 
+          Say "y" to link the driver statically, or "m" to build a
+          dynamically linked module called "dwc_otg" and to force all
+          gadget drivers to also be dynamically linked.
+
+config USB_DWC_OTG_HOST_MODE
+       boolean "Synopsys DWC_OTG host mode"
+       depends on USB_GADGET_DWC_OTG
+       default n
+       help
+          Say "y" to enable host mode by default. Say "n" to enable
+          device mode by default.
+
+config USB_DWC_OTG
+       tristate "Synopsys USB DWC OTG" 
+       depends on USB_GADGET_DWC_OTG
+       default USB_GADGET
+       select USB_GADGET_SELECTED
+       select USB_GADGET_DUALSPEED
+
 config USB_DWC3_MSM
 	tristate "DesignWare USB3.0 (DRD) Controller for MSM"
 	depends on ARCH_MSM

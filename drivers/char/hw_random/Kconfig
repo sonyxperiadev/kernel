@@ -201,6 +201,15 @@ config HW_RANDOM_VIRTIO
 	  To compile this driver as a module, choose M here: the
 	  module will be called virtio-rng.  If unsure, say N.
 
+config HW_RANDOM_KONA
+	tristate "KONA Random Number Generator support"
+	depends on HW_RANDOM
+	---help---
+	  This driver provides kernel-side support for the Random Number
+	  Generator hardware found on the KONA platform.
+
+	  To compile this driver as a module, choose M here. If unsure, say N.
+
 config HW_RANDOM_TX4939
 	tristate "TX4939 Random Number Generator support"
 	depends on HW_RANDOM && SOC_TX4939

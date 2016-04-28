@@ -272,6 +272,17 @@ void netpoll_rx_enable(struct net_device *dev)
 }
 EXPORT_SYMBOL(netpoll_rx_enable);
 
+int netpoll_free_memory(void)
+{
+	unsigned char free_skbs;
+	unsigned long flags;
+
+	spin_lock_irqsave(&skb_pool.lock, flags);
+	free_skbs = skb_queue_len(&skb_pool);
+	spin_unlock_irqrestore(&skb_pool.lock, flags);
+	return free_skbs<<10;
+}
+
 static void refill_skbs(void)
 {
 	struct sk_buff *skb;

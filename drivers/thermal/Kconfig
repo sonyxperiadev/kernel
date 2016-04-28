@@ -232,4 +232,18 @@ config THERMAL_QPNP_ADC_TM
 	  Disabling the thermal zone device via the mode file results in disabling
 	  the sensor. Also able to set threshold temperature for both hot and cold
 	  and update when a threshold is reached.
+
+config KONA_TMON_THERMAL
+	tristate "Kona TMON thermal driver"
+	depends on THERMAL
+	depends on ARCH_KONA
+	help
+	  Enable this option to include Kona TMON thermal sensor driver.
+
+config BCMPMU_DIETEMP_THERMAL
+	tristate "Bcmpmu59xxx Dietemp thermal driver"
+	depends on THERMAL
+	help
+	  Enable this option to include Bcmpmu59xxx Dietemp thermal sensor
+	  driver.
 endif

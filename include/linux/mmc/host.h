@@ -82,6 +82,13 @@ struct mmc_ios {
 #define MMC_SET_DRIVER_TYPE_A	1
 #define MMC_SET_DRIVER_TYPE_C	2
 #define MMC_SET_DRIVER_TYPE_D	3
+#ifdef   CONFIG_BCM_SDIOWL
+	unsigned char   host_reset;		/* reset host controller */
+
+#define MMC_HOST_RESET_CMD	1
+#define MMC_HOST_RESET_DAT	2
+#define MMC_HOST_RESET_ALL	3
+#endif
 };
 
 /* states to represent load on the host */
@@ -378,6 +385,7 @@ struct mmc_host {
 	struct delayed_work	detect;
 	struct wake_lock	detect_wake_lock;
 	const char		*wlock_name;
+	unsigned char *detect_wake_lock_name;
 	int			detect_change;	/* card detect flag */
 	struct mmc_slot		slot;
 
@@ -411,7 +419,16 @@ struct mmc_host {
 	struct fault_attr	fail_mmc_request;
 #endif
 
-	unsigned int		actual_clock;	/* Actual HC clock rate */
+#ifdef CONFIG_MMC_EMBEDDED_SDIO
+	struct {
+		struct sdio_cis			*cis;
+		struct sdio_cccr		*cccr;
+		struct sdio_embedded_func	*funcs;
+		int				num_funcs;
+	} embedded_sdio_data;
+#endif
+	unsigned int		actual_clock;   /* Actual HC clock rate */
+	bool		card_detect_cap;	/* supports card detection */
 
 	unsigned int		slotno;	/* used for sdio acpi binding */
 

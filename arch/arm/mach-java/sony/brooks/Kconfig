@@ -1,0 +1,19 @@
+config MACH_JAVA_BROOKS
+	depends on MACH_JAVA_SONY
+	select MACH_SONY
+	bool "Brooks 1.0"
+	help
+	  Support for the Sony Brooks 1.0 device.
+
+choice
+
+	prompt "Java Brooks type"
+	depends on MACH_JAVA_BROOKS
+	default MACH_JAVA_BROOKS_020
+
+	config MACH_JAVA_BROOKS_020
+	bool "JAVA BROOKS 020"
+	help
+	  Support for Java Brooks
+
+endchoice
