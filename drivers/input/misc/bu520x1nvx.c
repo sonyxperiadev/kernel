@@ -17,11 +17,13 @@
 #include <linux/gpio.h>
 #include <linux/init.h>
 #include <linux/input.h>
+#include <linux/input/bu520x1nvx.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/of_gpio.h>
+#include <linux/pinctrl/consumer.h>
 #include <linux/platform_device.h>
 #include <linux/pm.h>
 #include <linux/slab.h>
@@ -29,215 +31,511 @@
 #include <linux/types.h>
 
 #define BU520X1NVX_DEV_NAME "bu520x1nvx"
-#define BU520X1NVX_SWITCH_NAME "lid"
+#define BU520X1NVX_SW_LID_NAME "lid"
+#define BU520X1NVX_SW_KEYDOCK_NAME "keyboard_dock"
+#define BU520X1NVX_SWITCH_NUM 2
 
-#define DETECTION_DELAY 50
-#define DETECTION_CYCLES 4
-
-#define DETECT_WORK_DELAY	\
-(jiffies + msecs_to_jiffies(DETECTION_DELAY))
-
-struct bu520x1nvx_drvdata {
-	struct input_dev *input_dev;
-	struct switch_dev switch_dev;
-	int gpio_num;
-
-	atomic_t detect_cycle;
-	atomic_t detection_in_progress;
-	struct mutex lock;
-
-	int current_state;
-
+struct bu520x1nvx_event_data {
+	const struct bu520x1nvx_gpio_event *event;
 	struct timer_list det_timer;
 	struct work_struct det_work;
+	unsigned int timer_debounce;
+	unsigned int irq;
 };
 
-enum bu520x1nvx_switch_state {
+struct bu520x1nvx_drvdata {
+	struct device *dev;
+	struct pinctrl *key_pinctrl;
+	struct input_dev *input_dev;
+	struct switch_dev switch_lid;
+	struct switch_dev switch_keydock;
+	struct mutex lock;
+	atomic_t detection_in_progress;
+	unsigned int n_events;
+	struct bu520x1nvx_event_data data[0];
+};
+
+enum bu520x1nvx_input_state {
 	LID_OPEN,
 	LID_CLOSE,
 };
 
+enum bu520x1nvx_switch_state {
+	SWITCH_OFF,
+	SWITCH_ON,
+};
+
+static void bu520x1nvx_report_input_event(struct input_dev *idev,
+				 const struct bu520x1nvx_gpio_event *event)
+{
+	int gpio_state = (gpio_get_value_cansleep(event->gpio)
+						  ^ event->active_low ?
+						  LID_CLOSE : LID_OPEN);
+
+	dev_dbg(&idev->dev, "%s: value(%d)\n", __func__, gpio_state);
+	input_report_switch(idev, SW_LID, gpio_state);
+	input_sync(idev);
+}
+
+static void bu520x1nvx_report_switch_event(struct switch_dev *switch_dev,
+				 const struct bu520x1nvx_gpio_event *event)
+{
+	int gpio_state = (gpio_get_value_cansleep(event->gpio)
+						  ^ event->active_low ?
+						  SWITCH_ON : SWITCH_OFF);
+
+	dev_dbg(switch_dev->dev, "%s: value(%d)\n", __func__, gpio_state);
+	switch_set_state(switch_dev, gpio_state);
+}
+
+static int bu520x1nvx_get_devtree(struct device *dev,
+				  struct bu520x1nvx_platform_data *pdata)
+{
+	struct device_node *node, *pp = NULL;
+	int i = 0;
+	struct bu520x1nvx_gpio_event *events;
+	u32 reg;
+	int gpio;
+	int ret = -ENODEV;
+
+	node = dev->of_node;
+	if (node == NULL)
+		goto fail;
+
+	memset(pdata, 0, sizeof(*pdata));
+
+	pdata->n_events = 0;
+	pp = NULL;
+	while ((pp = of_get_next_child(node, pp)))
+		pdata->n_events++;
+
+	if (pdata->n_events == 0)
+		goto fail;
+
+	events = kzalloc(pdata->n_events * sizeof(*events), GFP_KERNEL);
+	if (!events) {
+		ret = -ENOMEM;
+		goto fail;
+	}
+
+	while ((pp = of_get_next_child(node, pp))) {
+		enum of_gpio_flags flags;
+
+		if (!of_find_property(pp, "gpios", NULL)) {
+			pdata->n_events--;
+			dev_warn(dev, "Found button without gpios\n");
+			continue;
+		}
+
+		gpio = of_get_gpio_flags(pp, 0, &flags);
+		if (!gpio_is_valid(gpio)) {
+			dev_err(dev, "%s: invalid gpio %d\n", __func__, gpio);
+			goto out_fail;
+		}
+		events[i].gpio = gpio;
+		events[i].active_low = flags & OF_GPIO_ACTIVE_LOW;
+
+		if (!of_property_read_u32(pp, "lid-pin", &reg))
+			events[i].lid_pin = reg;
+
+		events[i].desc = of_get_property(pp, "label", NULL);
+
+		if (of_property_read_u32(pp, "debounce-interval", &reg) == 0)
+			events[i].debounce_interval = reg;
+		i++;
+	}
+	pdata->events = events;
+
+	return 0;
+
+out_fail:
+	kfree(events);
+fail:
+	return ret;
+}
+
 static irqreturn_t bu520x1nvx_isr(int irq, void *data)
 {
-	struct bu520x1nvx_drvdata *ddata = (struct bu520x1nvx_drvdata *)data;
+	struct bu520x1nvx_event_data *edata =
+			(struct bu520x1nvx_event_data *)data;
+	const struct bu520x1nvx_gpio_event *event = edata->event;
+	struct bu520x1nvx_drvdata *ddata = container_of(edata,
+						struct bu520x1nvx_drvdata,
+						data[!event->lid_pin]);
 
-	atomic_set(&ddata->detect_cycle, 0);
+	if (edata->timer_debounce)
+		mod_timer(&edata->det_timer,
+			jiffies + msecs_to_jiffies(edata->timer_debounce));
+	else
+		schedule_work(&edata->det_work);
+
 	atomic_set(&ddata->detection_in_progress, 1);
-
-	mutex_lock(&ddata->lock);
-	switch_set_state(&ddata->switch_dev,
-		gpio_get_value(ddata->gpio_num) ? LID_OPEN : LID_CLOSE);
-	mutex_unlock(&ddata->lock);
-
-	mod_timer(&ddata->det_timer, DETECT_WORK_DELAY);
 
 	return IRQ_HANDLED;
 }
 
 static void bu520x1nvx_det_tmr_func(unsigned long func_data)
 {
-	struct bu520x1nvx_drvdata *ddata =
-		(struct bu520x1nvx_drvdata *)func_data;
+	struct bu520x1nvx_event_data *edata =
+		(struct bu520x1nvx_event_data *)func_data;
 
-	schedule_work(&ddata->det_work);
+	schedule_work(&edata->det_work);
 }
 
 static void bu520x1nvx_det_work(struct work_struct *work)
 {
-	struct bu520x1nvx_drvdata *ddata =
-		container_of(work, struct bu520x1nvx_drvdata, det_work);
-	struct input_dev *idev = ddata->input_dev;
-	int gpio_state = gpio_get_value(ddata->gpio_num);
+	struct bu520x1nvx_event_data *edata =
+		container_of(work, struct bu520x1nvx_event_data, det_work);
+	const struct bu520x1nvx_gpio_event *event = edata->event;
+	struct bu520x1nvx_drvdata *ddata = container_of(edata,
+						struct bu520x1nvx_drvdata,
+						data[!event->lid_pin]);
 
-	if (ddata->current_state == gpio_state) {
-		atomic_inc(&ddata->detect_cycle);
+	if (event->lid_pin) {
+		bu520x1nvx_report_switch_event(&ddata->switch_lid, event);
+		bu520x1nvx_report_input_event(ddata->input_dev, event);
 	} else {
-		atomic_set(&ddata->detect_cycle, 0);
-		ddata->current_state = gpio_state;
+		bu520x1nvx_report_switch_event(&ddata->switch_keydock, event);
 	}
 
-	if (DETECTION_CYCLES > atomic_read(&ddata->detect_cycle)) {
-		mod_timer(&ddata->det_timer, DETECT_WORK_DELAY);
+	atomic_set(&ddata->detection_in_progress, 0);
+}
+
+static int bu520x1nvx_pinctrl_configure(struct bu520x1nvx_drvdata *ddata,
+							bool active)
+{
+	struct pinctrl_state *set_state;
+	int retval;
+
+	if (active) {
+		set_state =
+			pinctrl_lookup_state(ddata->key_pinctrl,
+						"tlmm_bu520x1nvx_active");
+		if (IS_ERR(set_state)) {
+			dev_err(ddata->dev,
+				"cannot get ts pinctrl active state\n");
+			goto lookup_err;
+		}
 	} else {
-		input_report_switch(idev, SW_LID, gpio_state ? 0 : 1);
-		input_sync(idev);
-		atomic_set(&ddata->detect_cycle, 0);
-		atomic_set(&ddata->detection_in_progress, 0);
+		set_state =
+			pinctrl_lookup_state(ddata->key_pinctrl,
+						"tlmm_bu520x1nvx_suspend");
+		if (IS_ERR(set_state)) {
+			dev_err(ddata->dev,
+				"cannot get gpiokey pinctrl sleep state\n");
+			goto lookup_err;
+		}
 	}
+	retval = pinctrl_select_state(ddata->key_pinctrl, set_state);
+	if (retval) {
+		dev_err(ddata->dev,
+				"cannot set ts pinctrl active state\n");
+		goto select_err;
+	}
+
+	return 0;
+
+lookup_err:
+	return PTR_ERR(set_state);
+select_err:
+	return retval;
 }
 
 static int bu520x1nvx_open(struct input_dev *idev)
 {
 	struct bu520x1nvx_drvdata *ddata = input_get_drvdata(idev);
-
-	atomic_set(&ddata->detect_cycle, 0);
-	atomic_set(&ddata->detection_in_progress, 1);
-	mod_timer(&ddata->det_timer, DETECT_WORK_DELAY);
+	struct bu520x1nvx_event_data *edata;
+	const struct bu520x1nvx_gpio_event *event;
+	int i;
 
 	mutex_lock(&ddata->lock);
-	switch_set_state(&ddata->switch_dev,
-		gpio_get_value(ddata->gpio_num) ? LID_OPEN : LID_CLOSE);
+	for (i = 0; i < ddata->n_events; i++) {
+		edata = &ddata->data[i];
+		event = edata->event;
+
+		if (event->lid_pin)
+			bu520x1nvx_report_input_event(ddata->input_dev, event);
+	}
 	mutex_unlock(&ddata->lock);
 
 	return 0;
 }
 
-static int bu520x1nvx_probe(struct platform_device *pdev)
+static int bu520x1nvx_setup_event(struct platform_device *pdev,
+				  struct bu520x1nvx_event_data *edata,
+				  const struct bu520x1nvx_gpio_event *event)
 {
+	const char *desc = event->desc ? event->desc : BU520X1NVX_DEV_NAME;
 	struct device *dev = &pdev->dev;
-	struct bu520x1nvx_drvdata *ddata;
-	struct input_dev *input;
-	int error = 0;
-	int gpio;
-	unsigned int flags;
-	struct device_node *of_node = pdev->dev.of_node;
+	irq_handler_t isr;
+	unsigned long irqflags;
+	int irq, error;
 
-	ddata = kzalloc(sizeof(struct bu520x1nvx_drvdata), GFP_KERNEL);
-	if (!ddata) {
-		dev_err(dev, "failed to allocate drvdata (%s)\n", __func__);
-		error = -ENOMEM;
-		goto fail_kzalloc;
-	}
+	edata->event = event;
 
-	gpio = of_get_gpio_flags(of_node, 0, &flags);
-	if (!gpio_is_valid(gpio)) {
-		dev_err(dev, "%s: invalid gpio %d\n", __func__, gpio);
-		error = -EINVAL;
-		goto fail_gpio_setup;
-	}
-	ddata->gpio_num = gpio;
-
-	error = gpio_request(ddata->gpio_num, "BU520X1NVX_IRQ");
+	error = gpio_request(event->gpio, desc);
 	if (error < 0) {
-		dev_err(dev, "failed to setup gpio (%s)\n",
-			"BU520X1NVX_IRQ");
-		error = -EINVAL;
-		goto fail_gpio_setup;
+		dev_err(dev, "Failed to request GPIO %d, error %d\n",
+			event->gpio, error);
+		goto request_fail;
 	}
 
-	mutex_init(&ddata->lock);
-
-	input = input_allocate_device();
-	if (!input) {
-		dev_err(dev, "failed to allocate input_dev (%s)\n", __func__);
-		error = -ENOMEM;
-		goto fail_input_alloc;
+	error = gpio_direction_input(event->gpio);
+	if (error < 0) {
+		dev_err(dev,
+			"Failed to configure direction for GPIO %d, error %d\n",
+			event->gpio, error);
+		goto fail;
 	}
 
-	ddata->input_dev = input;
+	edata->timer_debounce = event->debounce_interval;
 
-	init_timer(&ddata->det_timer);
-	ddata->det_timer.function = bu520x1nvx_det_tmr_func;
-	ddata->det_timer.data = (unsigned long)ddata;
-
-	platform_set_drvdata(pdev, ddata);
-
-	INIT_WORK(&ddata->det_work, bu520x1nvx_det_work);
-
-	input->name = BU520X1NVX_DEV_NAME;
-	input->open = bu520x1nvx_open;
-
-	input_set_capability(input, EV_SW, SW_LID);
-	input_set_drvdata(input, ddata);
-
-	error = input_register_device(input);
-	if (error) {
-		dev_err(dev, "failed to register device (%s)\n", __func__);
-		goto fail_input_register;
+	irq = gpio_to_irq(event->gpio);
+	if (irq < 0) {
+		error = irq;
+		dev_err(dev,
+			"Unable to get irq number for GPIO %d, error %d\n",
+			event->gpio, error);
+		goto fail;
 	}
+	edata->irq = irq;
 
-	ddata->switch_dev.name = BU520X1NVX_SWITCH_NAME;
-	ddata->switch_dev.state = LID_OPEN;
+	isr = bu520x1nvx_isr;
+	irqflags = IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING;
 
-	error = switch_dev_register(&ddata->switch_dev);
-	if (0 > error)
-		goto fail_switch_reg;
+	INIT_WORK(&edata->det_work, bu520x1nvx_det_work);
 
-	error = request_threaded_irq(gpio_to_irq(ddata->gpio_num),
-			NULL,
-			bu520x1nvx_isr,
-			IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING,
-			BU520X1NVX_DEV_NAME, ddata);
+	setup_timer(&edata->det_timer,
+		    bu520x1nvx_det_tmr_func, (unsigned long)edata);
 
-	if (error) {
-		dev_err(dev, "failed to request irq (%s)\n", __func__);
-		goto fail_request_irq;
+	error = request_any_context_irq(edata->irq, isr, irqflags, desc, edata);
+	if (error < 0) {
+		dev_err(dev, "Unable to claim irq %d; error %d\n",
+			event->irq, error);
+		goto fail;
 	}
-	enable_irq_wake(gpio_to_irq(ddata->gpio_num));
+	enable_irq_wake(edata->irq);
 
 	return 0;
 
-fail_request_irq:
-	switch_dev_unregister(&ddata->switch_dev);
-fail_switch_reg:
-	input_unregister_device(input);
-	goto fail_input_alloc;
-fail_input_register:
-	input_free_device(input);
-fail_input_alloc:
-	mutex_destroy(&ddata->lock);
-	gpio_free(ddata->gpio_num);
-fail_gpio_setup:
-	kzfree(ddata);
-fail_kzalloc:
+fail:
+	if (gpio_is_valid(event->gpio))
+		gpio_free(event->gpio);
+request_fail:
+	return error;
+}
 
+static void bu520x1nvx_remove_event(struct bu520x1nvx_event_data *edata)
+{
+	free_irq(edata->irq, edata);
+	if (edata->timer_debounce)
+		del_timer_sync(&edata->det_timer);
+	cancel_work_sync(&edata->det_work);
+	if (gpio_is_valid(edata->event->gpio))
+		gpio_free(edata->event->gpio);
+}
+
+static int bu520x1nvx_set_input_device(struct bu520x1nvx_drvdata *ddata)
+{
+	struct input_dev *input;
+	int error = 0;
+
+	input = input_allocate_device();
+	if (!input) {
+		dev_err(ddata->dev, "failed to allocate input_dev (%s)\n",
+			__func__);
+		error = -ENOMEM;
+		goto out;
+	}
+	ddata->input_dev = input;
+
+	input_set_drvdata(ddata->input_dev, ddata);
+
+	ddata->input_dev->name = BU520X1NVX_DEV_NAME;
+	ddata->input_dev->open = bu520x1nvx_open;
+
+	error = input_register_device(ddata->input_dev);
+	if (error) {
+		dev_err(ddata->dev, "failed to register device (%s)\n",
+			__func__);
+		goto fail;
+	}
+	input_set_capability(ddata->input_dev, EV_SW, SW_LID);
+
+	goto out;
+
+fail:
+	input_unregister_device(ddata->input_dev);
+out:
+	return error;
+
+}
+
+static int bu520x1nvx_set_switch_device(struct bu520x1nvx_drvdata *ddata,
+					bool lid_pin)
+{
+	int error = 0;
+
+	if (lid_pin) {
+		ddata->switch_lid.name = BU520X1NVX_SW_LID_NAME;
+		ddata->switch_lid.state = SWITCH_OFF;
+		error = switch_dev_register(&ddata->switch_lid);
+		if (error) {
+			dev_err(ddata->dev, "%s cannot regist lid(%d)\n",
+				__func__, error);
+			goto out;
+		}
+	} else {
+		ddata->switch_keydock.name = BU520X1NVX_SW_KEYDOCK_NAME;
+		ddata->switch_keydock.state = SWITCH_OFF;
+		error = switch_dev_register(&ddata->switch_keydock);
+		if (error) {
+			dev_err(ddata->dev, "%s cannot regist keydock(%d)\n",
+				__func__, error);
+			goto fail_switch;
+		}
+	}
+	goto out;
+
+fail_switch:
+	switch_dev_unregister(&ddata->switch_lid);
+out:
+	return error;
+}
+
+static int bu520x1nvx_probe(struct platform_device *pdev)
+{
+	struct bu520x1nvx_platform_data *pdata = pdev->dev.platform_data;
+	struct bu520x1nvx_platform_data alt_pdata;
+	const struct bu520x1nvx_gpio_event *event;
+	struct bu520x1nvx_event_data *edata;
+	struct bu520x1nvx_drvdata *ddata;
+	struct switch_dev *switch_dev;
+	int i = 0;
+	int error = 0;
+	struct pinctrl_state *set_state;
+
+	if (!pdata) {
+		error = bu520x1nvx_get_devtree(&pdev->dev, &alt_pdata);
+		if (error)
+			goto fail;
+		pdata = &alt_pdata;
+	}
+
+	ddata = kzalloc(sizeof(struct bu520x1nvx_drvdata) +
+			pdata->n_events * sizeof(struct bu520x1nvx_event_data),
+			GFP_KERNEL);
+	if (!ddata) {
+		dev_err(&pdev->dev, "failed to allocate drvdata in probe\n");
+		error = -ENOMEM;
+		goto fail;
+	}
+
+	ddata->dev = &pdev->dev;
+	ddata->n_events = pdata->n_events;
+	ddata->key_pinctrl = devm_pinctrl_get(ddata->dev);
+	mutex_init(&ddata->lock);
+
+	platform_set_drvdata(pdev, ddata);
+
+	if (IS_ERR(ddata->key_pinctrl)) {
+		if (PTR_ERR(ddata->key_pinctrl) == -EPROBE_DEFER)
+			goto fail_pinctrl;
+		pr_debug("Target does not use pinctrl\n");
+		ddata->key_pinctrl = NULL;
+	}
+
+	if (ddata->key_pinctrl) {
+		error = bu520x1nvx_pinctrl_configure(ddata, true);
+		if (error) {
+			dev_err(ddata->dev,
+				"cannot set ts pinctrl active state\n");
+			goto fail_pinctrl;
+		}
+	}
+
+	for (i = 0; i < pdata->n_events; i++) {
+		event = &pdata->events[i];
+		edata = &ddata->data[i];
+
+		if (event->lid_pin) {
+			error = bu520x1nvx_set_input_device(ddata);
+			if (error) {
+				dev_err(ddata->dev,
+					"%s cannot set input dev(%d)\n",
+					__func__, error);
+				goto fail_setup_event;
+			}
+		}
+
+		error = bu520x1nvx_set_switch_device(ddata, event->lid_pin);
+		if (error) {
+			dev_err(ddata->dev, "%s cannot set switch dev(%d)\n",
+				__func__, error);
+			goto fail_setup_event;
+		}
+
+		error = bu520x1nvx_setup_event(pdev, edata, event);
+		if (error) {
+			dev_err(ddata->dev, "%s cannot set event error(%d)\n",
+				__func__, error);
+			goto fail_setup_event;
+		}
+
+		if (event->lid_pin)
+			switch_dev = &ddata->switch_lid;
+		else
+			switch_dev = &ddata->switch_keydock;
+
+		bu520x1nvx_report_switch_event(switch_dev, event);
+	}
+
+	return 0;
+
+fail_setup_event:
+	if (ddata->switch_lid.dev)
+		switch_dev_unregister(&ddata->switch_lid);
+	if (ddata->switch_keydock.dev)
+		switch_dev_unregister(&ddata->switch_keydock);
+	if (&ddata->input_dev->dev) {
+		input_unregister_device(ddata->input_dev);
+		input_free_device(ddata->input_dev);
+	}
+	if (ddata->key_pinctrl) {
+		set_state =
+		pinctrl_lookup_state(ddata->key_pinctrl,
+						"tlmm_bu520x1nvx_suspend");
+		if (IS_ERR(set_state))
+			dev_err(ddata->dev, "cannot get pinctrl sleep state\n");
+		else
+			pinctrl_select_state(ddata->key_pinctrl, set_state);
+	}
+	while (--i >= 0)
+		bu520x1nvx_remove_event(&ddata->data[i]);
+	platform_set_drvdata(pdev, NULL);
+fail_pinctrl:
+	mutex_destroy(&ddata->lock);
+	kzfree(ddata);
+fail:
 	return error;
 }
 
 static int bu520x1nvx_remove(struct platform_device *pdev)
 {
+	int i;
 	struct bu520x1nvx_drvdata *ddata = platform_get_drvdata(pdev);
 
-	switch_dev_unregister(&ddata->switch_dev);
-
-	input_unregister_device(ddata->input_dev);
-
+	if (ddata->switch_lid.dev)
+		switch_dev_unregister(&ddata->switch_lid);
+	if (ddata->switch_keydock.dev)
+		switch_dev_unregister(&ddata->switch_keydock);
+	if (&ddata->input_dev->dev)
+		input_unregister_device(ddata->input_dev);
 	mutex_destroy(&ddata->lock);
-
-	free_irq(gpio_to_irq(ddata->gpio_num), ddata);
-
-	gpio_free(ddata->gpio_num);
-
+	for (i = 0; i < ddata->n_events; i++)
+		bu520x1nvx_remove_event(&ddata->data[i]);
+	if (!pdev->dev.platform_data)
+		kfree(ddata->data[0].event);
 	kzfree(ddata);
 
 	return 0;
@@ -246,14 +544,38 @@ static int bu520x1nvx_remove(struct platform_device *pdev)
 static int bu520x1nvx_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	struct bu520x1nvx_drvdata *ddata = platform_get_drvdata(pdev);
+	int ret = 0;
 
-	if (atomic_read(&ddata->detection_in_progress)) {
-		dev_dbg(&pdev->dev, "Lid detection in progress. (%s)\n",
-			__func__);
-		return -EAGAIN;
+	if (ddata->key_pinctrl) {
+		ret = bu520x1nvx_pinctrl_configure(ddata, false);
+		if (ret) {
+			dev_err(&pdev->dev, "failed to put the pin\n");
+			goto out;
+		}
 	}
 
-	return 0;
+	if (atomic_read(&ddata->detection_in_progress)) {
+		dev_dbg(&pdev->dev, "detection in progress. (%s)\n",
+			__func__);
+		ret = -EAGAIN;
+	}
+
+out:
+	return ret;
+}
+
+static int bu520x1nvx_resume(struct platform_device *pdev)
+{
+	struct bu520x1nvx_drvdata *ddata = platform_get_drvdata(pdev);
+	int ret = 0;
+
+	if (ddata->key_pinctrl) {
+		ret = bu520x1nvx_pinctrl_configure(ddata, true);
+		if (ret)
+			dev_err(&pdev->dev, "failed to put the pin\n");
+	}
+
+	return ret;
 }
 
 static struct of_device_id bu520x1nvx_match_table[] = {
@@ -266,6 +588,7 @@ static struct platform_driver bu520x1nvx_driver = {
 	.probe = bu520x1nvx_probe,
 	.remove = bu520x1nvx_remove,
 	.suspend = bu520x1nvx_suspend,
+	.resume = bu520x1nvx_resume,
 	.driver = {
 		.name = BU520X1NVX_DEV_NAME,
 		.owner = THIS_MODULE,
