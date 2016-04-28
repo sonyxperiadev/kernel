@@ -171,7 +171,13 @@
 
 	bu520x1nvx {
 		compatible = "rohm,bu520x1nvx";
-		gpios = <&pm8941_gpios 36 0x1>;
+
+		acc_cover {
+			label = "lid";
+			gpios = <&pm8941_gpios 36 0x1>;
+			lid-pin = <1>;
+			debounce-interval = <50>;
+		};
 	};
 
 	nxp,tfa98xx-codec {
