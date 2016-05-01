@@ -21,7 +21,7 @@
                 cell-index = <0>;
                 compatible = "qcom,camera-flash";
                 qcom,flash-type = <1>;
-		qcom,torch-source = <&pm8941_torch>;
+                qcom,torch-source = <&pm8941_torch>;
                 qcom,flash-source = <&pm8941_flash0>;
         };
 };
