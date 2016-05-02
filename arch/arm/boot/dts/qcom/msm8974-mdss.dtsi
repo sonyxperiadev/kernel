@@ -148,6 +148,12 @@
 
 		qcom,mmss-ulp-clamp-ctrl-offset = <0x14>;
 		qcom,mmss-phyreset-ctrl-offset = <0x108>;
+		clocks = <&clock_mmss clk_mdss_mdp_clk>,
+			 <&clock_mmss clk_mdss_ahb_clk>,
+			 <&clock_mmss clk_mmss_misc_ahb_clk>,
+			 <&clock_mmss clk_mdss_axi_clk>;
+		clock-names = "mdp_core_clk", "iface_clk",
+			"core_mmss_clk", "bus_clk";
 
 		qcom,core-supply-entries {
 			#address-cells = <1>;
@@ -206,6 +212,10 @@
 			vdd-supply = <&pm8941_l22>;
 			vddio-supply = <&pm8941_l12>;
 			qcom,mdss-mdp = <&mdss_mdp>;
+			clocks = <&clock_mmss clk_mdss_byte0_clk>,
+				 <&clock_mmss clk_mdss_pclk0_clk>,
+				 <&clock_mmss clk_mdss_esc0_clk>;
+			clock-names =	"byte_clk", "pixel_clk", "core_clk";
 
 			qcom,platform-reset-gpio = <&pm8941_gpios 19 0>;
 			qcom,platform-enable-gpio = <&msmgpio 58 0>;
@@ -235,6 +245,10 @@
 			vdd-supply = <&pm8941_l22>;
 			vddio-supply = <&pm8941_l12>;
 			qcom,mdss-mdp = <&mdss_mdp>;
+			clocks = <&clock_mmss clk_mdss_byte1_clk>,
+				 <&clock_mmss clk_mdss_pclk1_clk>,
+				 <&clock_mmss clk_mdss_esc1_clk>;
+			clock-names =	"byte_clk", "pixel_clk", "core_clk";
 
 			qcom,platform-strength-ctrl = [ff 06];
 			qcom,platform-bist-ctrl = [00 00 b1 ff 00 00];
