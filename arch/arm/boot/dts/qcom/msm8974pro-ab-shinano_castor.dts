@@ -28,5 +28,6 @@
 / {
 	model = "SoMC Castor ROW";
 	compatible = "somc,castor-row", "qcom,msm8974";
-        qcom,msm-id = <209 8 0x10001>;
+        qcom,msm-id = <209 8 0x10001>, 
+                      <218 8 0x10001>;
 };
