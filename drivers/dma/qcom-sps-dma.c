@@ -207,7 +207,7 @@ static struct dma_chan *qbam_dma_xlate(struct of_phandle_args *dma_spec,
 	/* allocate a channel */
 	qbam_chan = kzalloc(sizeof(*qbam_chan), GFP_KERNEL);
 	if (!qbam_chan) {
-		qbam_err(qbam_dev, "error kmalloc(size:%lu) faild\n",
+		qbam_err(qbam_dev, "error kmalloc(size:%zu) faild\n",
 			 sizeof(*qbam_chan));
 		return NULL;
 	}
@@ -442,7 +442,7 @@ static int qbam_slave_cfg(struct qbam_channel *qbam_chan,
 						  GFP_KERNEL);
 	if (!pipe_cfg->desc.base) {
 		qbam_err(qbam_dev,
-			"error dma_alloc_coherent(desc-sz:%lu * n-descs:%d)\n",
+			"error dma_alloc_coherent(desc-sz:%zu * n-descs:%d)\n",
 			sizeof(struct sps_iovec),
 			qbam_chan->bam_pipe.num_descriptors);
 		return -ENOMEM;
@@ -635,7 +635,7 @@ static int qbam_probe(struct platform_device *pdev)
 
 	qbam_dev = devm_kzalloc(&pdev->dev, sizeof(*qbam_dev), GFP_KERNEL);
 	if (!qbam_dev) {
-		qbam_err(qbam_dev, "error kmalloc(size:%lu) faild",
+		qbam_err(qbam_dev, "error kmalloc(size:%zu) faild",
 			 sizeof(*qbam_dev));
 		return -ENOMEM;
 	}
