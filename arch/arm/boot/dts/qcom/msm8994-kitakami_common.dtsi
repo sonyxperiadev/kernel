@@ -1181,10 +1181,17 @@
 	/* Kernel splash configuration */
 	qcom,memblock-reserve = <0x03401000 0x2200000>;
 	qcom,memory-reservation-size = <0x1000000>; /* size: 16MB */
+
+	/* Temporarily disable the Framebuffer splash for no-boot bug
+	 * on dual-dsi split panel devices. Moreover, this doesn't
+	 * work (but kernel boots) on single-dsi panels.
+	 */
+	/*
 	qcom,mdss-fb-splash-logo-enabled;
 	qcom,cont-splash-memory {
 		linux,contiguous-region = <&cont_splash_mem>;
 	};
+	*/
 };
 
 &mdss_mdp {
