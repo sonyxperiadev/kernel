@@ -101,7 +101,7 @@ int  panel_polling_init(struct mdss_dsi_ctrl_pdata *ctrl_pdata);
 /* Regulators */
 #ifdef CONFIG_SOMC_PANEL_LABIBB
 int somc_panel_vregs_dt(struct device_node *np,
-			struct mdss_dsi_ctrl_pdata *ctrl_pdata)
+			struct mdss_dsi_ctrl_pdata *ctrl_pdata);
 #else
 #define somc_panel_vregs_dt(x, y) 0
 #endif

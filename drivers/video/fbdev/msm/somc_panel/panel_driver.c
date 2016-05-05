@@ -1732,6 +1732,9 @@ static inline int mdss_dsi_panel_power_on_ex(struct mdss_panel_data *pdata)
 	if (pdata->panel_info.pdest != DISPLAY_1)
 		return 0;
 
+	if (spec_pdata->vreg_init)
+		spec_pdata->vreg_init(ctrl_pdata);
+
 	if (spec_pdata->down_period) {
 		u32 kt = (u32)ktime_to_ms(ktime_get());
 		kt = (kt < down_period) ? kt + ~down_period : kt - down_period;
@@ -3823,6 +3826,7 @@ int mdss_panel_parse_dt(struct device_node *np,
 		pinfo->mipi.dst_format =
 			DSI_VIDEO_DST_FORMAT_RGB888;
 	}
+
 	pdest = of_get_property(np,
 		"qcom,mdss-dsi-panel-destination", NULL);
 
@@ -4447,9 +4451,6 @@ int mdss_dsi_panel_init(struct device_node *node,
 		pr_err("%s: CRITICAL: DT parsing failed!!!\n", __func__);
 		goto error;
 	}
-
-	if (spec_pdata->vreg_init)
-		spec_pdata->vreg_init(ctrl_pdata);
 
 	polling = &spec_pdata->polling;
 	if (pinfo->dsi_master == pinfo->pdest) {

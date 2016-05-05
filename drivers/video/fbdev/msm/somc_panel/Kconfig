@@ -8,7 +8,8 @@ config FB_MSM_MDSS_SPECIFIC_PANEL
 	Provides support for panels found in various Sony Xperia devices.
 
 config SOMC_PANEL_LABIBB
-	depends on FB_MSM_MDSS && REGULATOR_QPNP_LABIBB_SOMC
+	depends on FB_MSM_MDSS_SPECIFIC_PANEL && REGULATOR_QPNP_LABIBB_SOMC
+	bool
 	default y
 	---help---
 	LAB/IBB regulators handling for MSM8994 and later generation boards.
