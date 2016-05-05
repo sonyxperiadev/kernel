@@ -720,6 +720,22 @@ static ssize_t store_uint_array(struct cpuquiet_attribute *cattr,
 		((unsigned int*)cattr->param)[j] = val;
 	}
 
+	/* If we are setting nr_run_thresholds ensure
+	   the target MAX is set */
+	if (!strncmp(cattr->attr.name, "nr_run_thresholds",
+				strlen(cattr->attr.name)-2)) {
+		int x, max_cpu_id = 0;
+
+		for_each_possible_cpu(x)
+			max_cpu_id++;
+
+		/* Set value as target MAX on-line number of CPUs */
+		if (((unsigned int*)cattr->param)[max_cpu_id] != UINT_MAX &&
+			max_cpu_id < sz) {
+			((unsigned int*)cattr->param)[max_cpu_id] = UINT_MAX;
+		}
+	}
+
 	return count;
 }
 
