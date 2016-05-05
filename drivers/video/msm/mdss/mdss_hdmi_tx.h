@@ -16,6 +16,7 @@
 #include <linux/switch.h>
 #include "mdss_hdmi_util.h"
 #include "mdss_cec_abstract.h"
+#include "mdss_hdmi_hdcp.h"
 
 #define MAX_SWITCH_NAME_SIZE        5
 
@@ -107,6 +108,8 @@ struct hdmi_tx_ctrl {
 	bool ds_registered;
 	bool audio_ack_enabled;
 	u32 present_hdcp;
+	u8 aksv[5];
+	enum hdmi_hdcp_state hdcp_status;
 
 	u8 spd_vendor_name[9];
 	u8 spd_product_description[17];

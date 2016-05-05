@@ -24,7 +24,7 @@ ENTRY(putc)
 	mov	r0, #0x03		@ SYS_WRITEC
    ARM(	svc	#0x123456	)
  THUMB(	svc	#0xab		)
-	mov	pc, lr
+	ret	lr
 	.align	2
 1:	.word	_GLOBAL_OFFSET_TABLE_ - .
 	.word	semi_writec_buf(GOT)

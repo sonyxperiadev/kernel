@@ -1,4 +1,5 @@
 /* Copyright (c) 2008-2015, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2014 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -334,6 +335,18 @@ struct msm_fb_data_type {
 	struct led_trigger *boot_notification_led;
 
 	int fb_mmap_type;
+
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	bool suspend_avoided;
+
+	/* speed up wakeup */
+	/* do unblank (>150ms) on own kworker
+	 * so we don't starve other works
+	 */
+	struct workqueue_struct *unblank_kworker;
+	struct work_struct unblank_work;
+	bool early_unblank_completed;
+#endif
 
 	/* Following is used for dynamic mode switch */
 	enum dyn_mode_switch_state switch_state;

@@ -117,7 +117,7 @@ config DEVFREQ_GOV_MSM_GPUBW_MON
 
 config DEVFREQ_GOV_MSM_BW_HWMON
 	tristate "HW monitor based governor for device BW"
-	depends on ARCH_MSM_KRAIT || ARCH_MSM_BIMC_BWMON
+	depends on ARCH_MSM_KRAIT || ARCH_MSM_BIMC_BWMON || ARMBW_HWMON
 	help
 	  HW monitor based governor for device to DDR bandwidth voting.
 

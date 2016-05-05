@@ -1,0 +1,153 @@
+/* arch/arm/boot/dts/qcom/msm8994-kitakami_ivy_common.dtsi
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+/*
+ * Copyright (C) 2014 Sony Mobile Communications Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2, as
+ * published by the Free Software Foundation.
+ */
+
+&soc {
+	slim_msm: slim@fe12f000 {
+		tomtom_codec {
+			qcom,cdc-dmic_clk_drv_strength = <2>;
+		};
+	};
+
+	qcom,bcl {
+		qcom,ibat-monitor {
+			qcom,low-threshold-uamp = <1000000>;
+			qcom,high-threshold-uamp = <1500000>;
+			qcom,soc-low-threshold = <5>;
+		};
+	};
+};
+
+&pm8994_gpios {
+	/* GPIO_8: (TRAY_DET) */
+	gpio@c700 {
+		qcom,master-en = <0>;		/* Disable */
+		status = "ok";
+	};
+};
+
+&pmi8994_gpios {
+	/* GPIO_3: NC (TUNER_ANT_SW_EN) */
+	gpio@c200 {
+		qcom,master-en = <0>;		/* Disable */
+		status = "ok";
+	};
+
+	/* GPIO_4: NC (TUNER_ANT_SW1) */
+	gpio@c300 {
+		qcom,master-en = <0>;		/* Disable */
+		status = "ok";
+	};
+};
+
+&pm8994_l19 {
+	status = "disabled";
+};
+
+&spmi_bus {
+	qcom,pmi8994@3 {
+		qcom,leds@d000 {
+			status = "okay";
+			qcom,rgb_sync = <1>;
+
+			qcom,rgb_0 {
+				somc,pwm-channel = <2>;
+				qcom,pwm-max-value = <154>;
+				linux,name = "led:rgb_red";
+				linux,default-trigger = "none";
+			};
+			qcom,rgb_1 {
+				somc,pwm-channel = <1>;
+				qcom,pwm-max-value = <511>;
+				linux,name = "led:rgb_green";
+				linux,default-trigger = "none";
+			};
+			qcom,rgb_2 {
+				somc,pwm-channel = <0>;
+				qcom,pwm-max-value = <460>;
+				linux,name = "led:rgb_blue";
+				linux,default-trigger = "none";
+			};
+		};
+		qcom,leds@d800 {
+			qcom,fs-curr-ua = <24000>;
+			somc,calc-curr;
+			somc,init-br = <1638>;
+			somc-s1,br-power-save = <131>;
+			qcom,led-strings-list = [00 01];
+		};
+	};
+};
+
+&mdss_dsi0 {
+	qcom,dsi-pref-prim-pan = <&dsi_default_gpio_0>;
+	pinctrl-names = "mdss_default", "mdss_sleep";
+	pinctrl-0 = <&msm_gpio_10_act &msm_gpio_56_act &msm_gpio_78_act>;
+	pinctrl-1 = <&msm_gpio_10_sus &msm_gpio_56_sus &msm_gpio_78_sus>;
+	qcom,dsi-panel-bias-vreg;
+	qcom,platform-reset-gpio = <&msm_gpio 78 0>;
+	/delete-property/ qcom,platform-enable-gpio;
+	qcom,platform-regulator-settings = [];
+	qcom,platform-lane-config = [];
+};
+
+&mdss_dsi1 {
+	status = "disabled";
+};
+
+&sdhc_2 {
+	qcom,nonremovable;
+	/delete-property/ cd-gpios;
+};
+
+&somc_pinctrl {
+	pinctrl-1 = <&msm_gpio_115_def &msm_gpio_116_def &msm_gpio_117_def &msm_gpio_126_def &msm_gpio_127_def
+		     &msm_gpio_130_def &msm_gpio_132_def &msm_gpio_133_def &msm_gpio_142_def &msm_gpio_143_def>;
+};
+
+&hsphy0 {
+       qcom,hsphy-init = <0x00FBDFA7>;
+       qcom,hsphy-init-host = <0x00FBC7A7>;
+};
+
+/{
+	kitakami_ivy_batterydata: qcom,battery-data {
+		#include "batterydata-kitakami-ivy-send.dtsi"
+		#include "batterydata-kitakami-ivy-lg.dtsi"
+	};
+};
+
+&pmi8994_fg {
+	qcom,battery-data = <&kitakami_ivy_batterydata>;
+	qcom,fg-iterm-ma = <150>;
+};
+
+&pmi8994_charger {
+	qcom,fastchg-current-ma = <2100>;
+	somc,fastchg-warm-current-ma = <900>;
+	somc,fastchg-cool-current-ma = <900>;
+	qcom,iterm-ma = <150>;
+	qcom,precharging-timeout-mins = <24>;
+	qcom,charging-timeout-mins = <768>;
+	somc,thermal-engine-fastchg-current = <2300 2050 1600 1100 900 700 500 400 300 300 300 300 300 300 0>;
+};
+
+&labibb {
+	somc,vreg-target-chatter-cnt = <3>;
+	somc,vreg-target-chatter-interval = <500>;
+};

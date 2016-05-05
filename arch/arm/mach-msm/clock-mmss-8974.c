@@ -621,6 +621,7 @@ static struct clk_freq_tbl ftbl_camss_gp0_1_clk[] = {
 	F_MM(   10000,    cxo,  16,   1, 120),
 	F_MM(   20000,    cxo,  16,   1,  50),
 	F_MM( 6000000,  gpll0,  10,   1,  10),
+	F_MM( 8000000,  gpll0,  15,   1,   5),
 	F_MM(12000000,  gpll0,  10,   1,   5),
 	F_MM(13000000,  gpll0,  10,  13,  60),
 	F_MM(24000000,  gpll0,   5,   1,   5),
@@ -2308,6 +2309,18 @@ static struct clk_lookup msm_camera_clocks_8974pro_only[] = {
 	CLK_LOOKUP_OF("cam_clk", camss_mclk0_clk, "0.qcom,camera"),
 	CLK_LOOKUP_OF("cam_clk", camss_mclk1_clk, "1.qcom,camera"),
 	CLK_LOOKUP_OF("cam_clk", camss_mclk2_clk, "2.qcom,camera"),
+
+	/* Sony Camera */
+	CLK_LOOKUP_OF("cam_src_clk", mclk0_clk_src, "20.qcom,camera"),
+	CLK_LOOKUP_OF("cam_clk", camss_mclk0_clk, "20.qcom,camera"),
+	CLK_LOOKUP_OF("cam_src_clk", mclk2_clk_src, "6c.qcom,camera"),
+	CLK_LOOKUP_OF("cam_clk", camss_mclk2_clk, "6c.qcom,camera"),
+
+	/* Sony EEPROM */
+	CLK_LOOKUP_OF("cam_src_clk", mmss_gp0_clk_src, "a0.qcom,eeprom"),
+	CLK_LOOKUP_OF("cam_clk", camss_gp0_clk, "a0.qcom,eeprom"),
+	CLK_LOOKUP_OF("cam_src_clk", mmss_gp0_clk_src, "a1.qcom,eeprom"),
+	CLK_LOOKUP_OF("cam_clk", camss_gp0_clk, "a1.qcom,eeprom"),
 };
 
 static struct clk_lookup msm_camera_clocks_8974_only[] = {
@@ -2344,6 +2357,40 @@ static struct clk_lookup msm_clocks_mmss_8974[] = {
 		"fd922800.qcom,mdss_dsi"),
 	CLK_LOOKUP("core_mmss_clk", mmss_misc_ahb_clk.c,
 		"fd922e00.qcom,mdss_dsi"),
+
+	CLK_LOOKUP_OF("byte_clk", mdss_byte0_clk, "0.qcom,mdss_dsi"),
+	CLK_LOOKUP_OF("core_clk", mdss_esc0_clk, "0.qcom,mdss_dsi"),
+	CLK_LOOKUP_OF("iface_clk", mdss_ahb_clk, "0.qcom,mdss_dsi"),
+	CLK_LOOKUP_OF("bus_clk", mdss_axi_clk, "0.qcom,mdss_dsi"),
+	CLK_LOOKUP_OF("pixel_clk", mdss_pclk0_clk, "0.qcom,mdss_dsi"),
+	CLK_LOOKUP_OF("mdp_core_clk", mdss_mdp_clk, "0.qcom,mdss_dsi"),
+	CLK_LOOKUP("core_mmss_clk", mmss_misc_ahb_clk.c, "0.qcom,mdss_dsi"),
+
+	CLK_LOOKUP_OF("byte_clk", mdss_byte0_clk, "5.qcom,mdss_dsi"),
+	CLK_LOOKUP_OF("core_clk", mdss_esc0_clk, "5.qcom,mdss_dsi"),
+	CLK_LOOKUP_OF("iface_clk", mdss_ahb_clk, "5.qcom,mdss_dsi"),
+	CLK_LOOKUP_OF("bus_clk", mdss_axi_clk, "5.qcom,mdss_dsi"),
+	CLK_LOOKUP_OF("pixel_clk", mdss_pclk0_clk, "5.qcom,mdss_dsi"),
+	CLK_LOOKUP_OF("mdp_core_clk", mdss_mdp_clk, "5.qcom,mdss_dsi"),
+	CLK_LOOKUP("core_mmss_clk", mmss_misc_ahb_clk.c, "5.qcom,mdss_dsi"),
+
+	CLK_LOOKUP_OF("byte_clk", mdss_byte0_clk, ""),
+	CLK_LOOKUP_OF("core_clk", mdss_esc0_clk, ""),
+	CLK_LOOKUP_OF("iface_clk", mdss_ahb_clk, ""),
+	CLK_LOOKUP_OF("bus_clk", mdss_axi_clk, ""),
+	CLK_LOOKUP_OF("pixel_clk", mdss_pclk0_clk, ""),
+	CLK_LOOKUP_OF("mdp_core_clk", mdss_mdp_clk, ""),
+	CLK_LOOKUP("core_mmss_clk", mmss_misc_ahb_clk.c, ""),
+
+
+	CLK_LOOKUP_OF("byte_clk", mdss_byte0_clk, "fd9228000.qcom,mdss_dsi_ctrl0"),
+	CLK_LOOKUP_OF("core_clk", mdss_esc0_clk, "fd9228000.qcom,mdss_dsi_ctrl0"),
+	CLK_LOOKUP_OF("iface_clk", mdss_ahb_clk, "fd9228000.qcom,mdss_dsi_ctrl0"),
+	CLK_LOOKUP_OF("bus_clk", mdss_axi_clk, "fd9228000.qcom,mdss_dsi_ctrl0"),
+	CLK_LOOKUP_OF("pixel_clk", mdss_pclk0_clk, "fd9228000.qcom,mdss_dsi_ctrl0"),
+	CLK_LOOKUP_OF("mdp_core_clk", mdss_mdp_clk, "fd9228000.qcom,mdss_dsi_ctrl0"),
+	CLK_LOOKUP("core_mmss_clk", mmss_misc_ahb_clk.c, "fd9228000.qcom,mdss_dsi_ctrl0"),
+
 	CLK_LOOKUP_OF("iface_clk", mdss_ahb_clk, "fd922100.qcom,hdmi_tx"),
 	CLK_LOOKUP_OF("alt_iface_clk", mdss_hdmi_ahb_clk,
 		"fd922100.qcom,hdmi_tx"),

@@ -532,6 +532,14 @@ config LATTICE_ECP3_CONFIG
 
 	  If unsure, say N.
 
+config LDO_VIBRATOR
+	tristate "LDO Vibrator"
+	default n
+	help
+	  This option enables device driver support for the vibrator
+	  on the LDO line. The vibrator is controlled using the
+	  timed output class.
+
 config SRAM
 	bool "Generic on-chip SRAM driver"
 	depends on HAS_IOMEM
@@ -591,6 +599,25 @@ config QPNP_MISC
 	  and the driver provides an API to check if this interrupt
 	  is available on the current PMIC chip.
 
+config NFC_PN547
+	bool "NXP PN547 NFC Controller Driver"
+	depends on I2C
+	default n
+	help
+	  NXP PN547 Near Field Communication controller support.
+	  This option enables device driver support for the NFC.
+	  It is used by many services. NFC is fully controlled using I2C
+	  to communicate the AP chip.
+
+config NFC_PN547_PMC8974_CLK_REQ
+	bool "NXP PN547 NFC Controller Driver"
+	depends on I2C
+	default n
+	help
+	  PM8941 Clock request for NXP PN547 Near Field
+	  Communication controller support.
+	  This option enables d1 clock for NFC.
+
 config USB_HSIC_SMSC_HUB
 	tristate "Support for HSIC based MSM on-chip SMSC3503 HUB"
 	depends on USB_EHCI_MSM_HSIC
@@ -644,6 +671,28 @@ config UID_CPUTIME
 	depends on PROFILING
 	help
 	  Per UID based cpu time statistics exported to /proc/uid_cputime
+
+config NFC_PN544
+	tristate "NFC driver for PN544"
+	default n
+	depends on I2C
+	help
+	  This option enables support for PN544.
+
+config IR_REMOTE
+	bool "MAXQ614 IR Remote control"
+	default n
+	help
+	  This option enables device driver support for IR remote control
+	  device.
+
+config AD7146
+	tristate "AD7146 proximity driver"
+	depends on I2C
+	default n
+	help
+	  If you say yes here you get support for the AD7146 chip.
+	  This is used as a proximity sensor.
 
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"

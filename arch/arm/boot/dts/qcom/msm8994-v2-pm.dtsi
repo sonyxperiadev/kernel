@@ -508,6 +508,7 @@
 			<0xff 109>,  /* ocmem_dm_nonsec_irq */
 			<0xff 126>,  /* bam_irq[0] */
 			<0xff 155>,  /* sdcc_irq[0] */
+			<0xff 159>,  /* mmc2 */
 			<0xff 163>,  /* usb30_ee1_irq */
 			<0xff 164>,  /* sps */
 			<0xff 170>,  /* sdcc_pwr_cmd_irq */
@@ -543,6 +544,7 @@
 			<0xff 215>,  /* fc388000.qcom,cpu-bwmon */
 			<0xff 224>,  /* spdm_bw_hyp */
 			<0xff 240>, /* summary_irq_kpss */
+			<0xff 256>, /* sdhc_3 */
 			<0xff 261>,  /* msm_iommu_global_cfg */
 			<0xff 263>,  /* msm_iommu_global_client */
 			<0xff 268>, /* bam_irq[1] */
@@ -551,12 +553,14 @@
 			<0xff 272>,  /* msm_iommu_secure_irq */
 			<0xff 273>,  /* msm_iommu_nonsecure_irq */
 			<0xff 275>,  /* int_msi */
+			<0xff 280>,  /* mobicore */
 			<0xff 283>,  /* int_pls_err */
 			<0xff 284>,  /* int_aer_legacy */
 			<0xff 286>,  /* int_pls_link_down */
 			<0xff 298>,  /* msm_iommu_nonsecure_irq */
 			<0xff 302>,  /* coresight-tmc-etr */
 			<0xff 303>,  /* int_msi */
+			<0xff 304>,  /* int_a */
 			<0xff 310>,  /* int_pls_err */
 			<0xff 311>,  /* int_aer_legacy */
 			<0xff 313>,  /* int_pls_link_down */

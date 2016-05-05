@@ -843,6 +843,33 @@ void __init hyp_mode_check(void)
 
 void __init __weak init_random_pool(void) { }
 
+/*
+ * HACK: These two functions sets the androidboot.mode=charger based
+ * on the Sony Mobile parameters startup and warmboot.
+ */
+static unsigned long sony_startup;
+
+static int __init sony_param_startup(char *p)
+{
+	if (kstrtoul(p, 16, &sony_startup))
+		return 1;
+	return 0;
+}
+early_param("startup", sony_param_startup);
+
+static int __init sony_param_warmboot(char *p)
+{
+	unsigned long warmboot;
+
+	if (kstrtoul(p, 16, &warmboot))
+		return 1;
+
+	if (!warmboot && (sony_startup & 0x4004))
+		strlcat(boot_command_line, " androidboot.mode=charger", COMMAND_LINE_SIZE);
+	return 0;
+}
+early_param("warmboot", sony_param_warmboot);
+
 void __init setup_arch(char **cmdline_p)
 {
 	const struct machine_desc *mdesc;

@@ -1315,6 +1315,9 @@ int msm_camera_power_up(struct msm_camera_power_ctrl_t *ctrl,
 			pr_err("%s:%d cannot set pin to active state",
 				__func__, __LINE__);
 	}
+	if (of_machine_is_compatible("somc,eagle") ||
+			of_machine_is_compatible("somc,eagle_dsds"))
+		gpio_set_value_cansleep(69, 1);
 	for (index = 0; index < ctrl->power_setting_size; index++) {
 		CDBG("%s index %d\n", __func__, index);
 		power_setting = &ctrl->power_setting[index];
@@ -1520,6 +1523,10 @@ int msm_camera_power_down(struct msm_camera_power_ctrl_t *ctrl,
 	if (device_type == MSM_CAMERA_PLATFORM_DEVICE)
 		sensor_i2c_client->i2c_func_tbl->i2c_util(
 			sensor_i2c_client, MSM_CCI_RELEASE);
+
+	if (of_machine_is_compatible("somc,eagle") ||
+			of_machine_is_compatible("somc,eagle_dsds"))
+		gpio_set_value_cansleep(69, 0);
 
 	for (index = 0; index < ctrl->power_down_setting_size; index++) {
 		CDBG("%s index %d\n", __func__, index);

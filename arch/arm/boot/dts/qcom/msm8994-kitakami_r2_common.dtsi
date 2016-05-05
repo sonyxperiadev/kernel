@@ -1,0 +1,315 @@
+/* arch/arm/boot/dts/qcom/msm8994-kitakami_r2_common.dtsi
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+/*
+ * Copyright (C) 2015 Sony Mobile Communications Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2, as
+ * published by the Free Software Foundation.
+ */
+
+&soc {
+	/* SPI : BLSP1 */
+	spi@f9923000 {
+		/delete-property/ qcom,use-pinctrl;
+		pinctrl-0 = <>;
+		pinctrl-1 = <>;
+		status = "ok";
+
+		fpc1145@1 {
+			status = "ok";
+			reg = <1>;
+			compatible = "fpc,fpc1020", "fpc1145";
+			input-device-name = "fpc1020";
+			interrupt-parent = <&msm_gpio>;
+			interrupts = <90 0x0>;
+			fpc,gpio_cs0    = <&msm_gpio 2 0>;
+			fpc,gpio_cs1    = <&msm_gpio 8 0>;
+			fpc,gpio_rst    = <&msm_gpio 89 0>;
+			fpc,gpio_irq    = <&msm_gpio 90 0>;
+			vcc_spi-supply  = <&pm8994_s4>;
+			vdd_ana-supply  = <&pm8994_l32>;
+			vdd_io-supply   = <&pm8994_l32>;
+			fpc,use_fpc2050 = <1>;
+
+			spi-max-frequency = <4800000>;
+			spi-qup-id = <1>;
+			clock-names = "iface_clk", "core_clk";
+			clocks = <&clock_gcc clk_gcc_blsp1_ahb_clk>,
+				<&clock_gcc clk_gcc_blsp1_qup1_spi_apps_clk>;
+
+			pinctrl-names = "fpc1145_spi_active",
+					"fpc1145_reset_reset",
+					"fpc1145_reset_active",
+					"fpc1145_cs_low",
+					"fpc1145_cs_high",
+					"fpc1145_cs_active",
+					"fpc1145_irq_active";
+
+			pinctrl-0 = <&fpc_spi_mosi_active &fpc_spi_miso_active &fpc_spi_clk_active>;
+			pinctrl-1 = <&fpc_reset_reset>;
+			pinctrl-2 = <&fpc_reset_active>;
+			pinctrl-3 = <&fpc_cs_low>;
+			pinctrl-4 = <&fpc_cs_high>;
+			pinctrl-5 = <&fpc_cs_active>;
+			pinctrl-6 = <&fpc_irq_active>;
+		};
+	};
+
+	sound {
+		qcom,audio-routing =
+			"AIF4 VI", "MCLK",
+			"RX_BIAS", "MCLK",
+			"LDO_H", "MCLK",
+			"MADINPUT", "MCLK",
+			"AMIC1", "LDO_H",
+			"LDO_H", "AHC ISNS",
+			"AMIC2", "MIC BIAS2 External",
+			"MIC BIAS2 External", "Headset Mic",
+			"MIC BIAS2 External", "ANCRight Headset Mic",
+			"AMIC3", "MIC BIAS3 External",
+			"MIC BIAS3 External", "ANCLeft Headset Mic",
+			"AMIC4", "LDO_H",
+			"LDO_H", "AHC VSNS",
+			"DMIC1", "MIC BIAS1 External",
+			"MIC BIAS1 External", "Digital Mic1",
+			"DMIC4", "MIC BIAS4 External",
+			"MIC BIAS4 External", "Digital Mic4";
+	};
+
+	qcom,bcl {
+		qcom,ibat-monitor {
+			qcom,low-threshold-uamp = <1000000>;
+			qcom,high-threshold-uamp = <1500000>;
+			qcom,soc-low-threshold = <5>;
+			qcom,vph-high-threshold-uv = <3600000>;
+		};
+	};
+
+	qcom,sensor-information {
+		sensor_information102: qcom,sensor-information@102 {
+			qcom,sensor-type = "adc";
+			qcom,sensor-name = "flash_therm";
+			qcom,scaling-factor = <10>;
+		};
+	};
+};
+
+&sensor_information21 {
+	qcom,scaling-factor = <10>;
+};
+
+&sec_aux_pcm_active {
+	drive-strength = <4>;	/* 4 mA */
+};
+
+&pm8994_mpps {
+	/* MPP_5: FLASH_THERM */
+	mpp@a400 {
+		qcom,mode = <4>;		/* AIN */
+		qcom,ain-route = <0>;		/* AMUX 5 */
+		qcom,master-en = <1>;		/* Enable */
+		status = "ok";
+	};
+};
+
+&pm8994_l3 {
+	regulator-min-microvolt = <1100000>;
+	regulator-max-microvolt = <1100000>;
+	qcom,init-voltage = <1100000>;
+};
+
+&pm8994_l17 {
+	regulator-min-microvolt = <2200000>;
+	regulator-max-microvolt = <2200000>;
+	qcom,init-voltage = <2200000>;
+};
+
+&pm8994_l32 {
+	regulator-min-microvolt = <1800000>;
+	regulator-max-microvolt = <1800000>;
+	qcom,init-enable = <0>;
+	qcom,init-voltage = <1800000>;
+	qcom,init-ldo-mode = <1>;
+	qcom,init-pin-ctrl-enable = <0>;
+	qcom,init-pin-ctrl-mode = <0>;
+	status = "ok";
+};
+
+&mdss_dsi0 {
+	qcom,dsi-pref-prim-pan = <&dsi_default_gpio_0>;
+	pinctrl-names = "mdss_default", "mdss_sleep";
+	pinctrl-0 = <&msm_gpio_10_act &msm_gpio_56_act &msm_gpio_78_act>;
+	pinctrl-1 = <&msm_gpio_10_sus &msm_gpio_56_sus &msm_gpio_78_sus>;
+	qcom,dsi-panel-bias-vreg;
+	qcom,platform-reset-gpio = <&msm_gpio 78 0>;
+	qcom,platform-regulator-settings = [];
+	qcom,platform-lane-config = [];
+};
+
+&mdss_dsi1 {
+	status = "disabled";
+};
+
+&tlmm_pinmux {
+	/* GPIO_1: FP_SPI_MISO */
+	msm_gpio_1 {
+		msm_gpio_1_def: default {
+			/delete-property/ bias-disable;
+			bias-pull-down;
+		};
+	};
+
+	/* GPIO_2: FP_SPI_CS1_N */
+	msm_gpio_2 {
+		qcom,pin-func = <0>;
+		msm_gpio_2_def: default {
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	/* GPIO_90: FP_INT */
+	msm_gpio_90 {
+		msm_gpio_90_def: default {
+			/delete-property/ bias-disable;
+			/delete-property/ output-low;
+			bias-pull-down;
+			input-enable;
+		};
+	};
+
+	fpc_spi_mosi_active {
+		qcom,pins = <&gp 0>;
+		qcom,num-grp-pins = <1>;
+		qcom,pin-func = <1>;
+		label = "fpc_spi_mosi_active";
+		fpc_spi_mosi_active: active {
+			drive-strength = <2>;
+			bias-disable;
+		};
+	};
+
+	fpc_spi_miso_active {
+		qcom,pins = <&gp 1>;
+		qcom,num-grp-pins = <1>;
+		qcom,pin-func = <1>;
+		label = "fpc_spi_miso_active";
+		fpc_spi_miso_active: active {
+			drive-strength = <2>;
+			bias-pull-down;
+		};
+	};
+
+	fpc_spi_clk_active {
+		qcom,pins = <&gp 3>;
+		qcom,num-grp-pins = <1>;
+		qcom,pin-func = <1>;
+		label = "fpc_spi_clk_active";
+		fpc_spi_clk_active: active {
+			drive-strength = <2>;
+			bias-disable;
+		};
+	};
+
+	fpc_cs_manual {
+		qcom,pins = <&gp 2>, <&gp 8>;
+		qcom,num-grp-pins = <2>;
+		label = "fpc_cs_manual";
+		qcom,pin-func = <0>;
+		fpc_cs_low: output-low {
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+		fpc_cs_high: output-high {
+			drive-strength = <2>;
+			bias-disable;
+			output-high;
+		};
+	};
+
+	fpc_cs_active {
+		qcom,pins = <&gp 2>, <&gp 8>;
+		qcom,num-grp-pins = <2>;
+		label = "fpc_cs_active";
+		qcom,pin-func = <1>;
+		fpc_cs_active: spi-active {
+			drive-strength = <2>;
+			bias-disable;
+		};
+	};
+
+	fpc_reset {
+		qcom,pins = <&gp 89>;
+		qcom,num-grp-pins = <1>;
+		qcom,pin-func = <0>;
+		label = "fpc_reset";
+		fpc_reset_reset: reset {
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+		fpc_reset_active: active {
+			drive-strength = <2>;
+			bias-disable;
+			output-high;
+		};
+	};
+
+	fpc_irq_active {
+		qcom,pins = <&gp 90>;
+		qcom,num-grp-pins = <1>;
+		qcom,pin-func = <0>;
+		label = "fpc_irq_active";
+		fpc_irq_active: active {
+			drive-strength = <2>;
+			bias-pull-down;
+			input-enable;
+		};
+	};
+};
+
+&usb3 {
+	usb_shell_sel_gpio = <&msm_gpio 9 0>;
+};
+
+&slim_msm {
+	tomtom_codec {
+		qcom,cdc-micbias4-ext-cap;
+	};
+};
+
+&pm8994_vadc {
+	chan@14 {
+		label = "flash_therm";
+		reg = <0x14>;
+		qcom,decimation = <0>;
+		qcom,pre-div-channel-scaling = <0>;
+		qcom,calibration-type = "ratiometric";
+		qcom,scale-function = <15>;
+		qcom,hw-settle-time = <2>;
+		qcom,fast-avg-setup = <0>;
+		qcom,vadc-thermal-node;
+	};
+
+	chan@78 { /* quiet_therm */
+		qcom,scale-function = <15>;
+	};
+};
+
+&pm8994_adc_tm {
+	chan@78 { /* quiet_therm */
+		qcom,scale-function = <8>;
+	};
+};

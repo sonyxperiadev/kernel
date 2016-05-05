@@ -1789,6 +1789,11 @@ struct sdhci_msm_pltfm_data *sdhci_msm_populate_pdata(struct device *dev,
 	if (of_get_property(np, "qcom,core_3_0v_support", NULL))
 		pdata->core_3_0v_support = true;
 
+#ifdef CONFIG_WIFI_CONTROL_FUNC
+	if (of_get_property(np, "somc,use-for-wifi", NULL))
+		pdata->use_for_wifi = true;
+#endif
+
 	return pdata;
 out:
 	return NULL;
@@ -3395,6 +3400,14 @@ static void sdhci_set_default_hw_caps(struct sdhci_msm_host *msm_host,
 
 	caps = readl_relaxed(host->ioaddr + SDHCI_CAPABILITIES);
 
+	/* Advertise 3.3v, 3.0v, 1.8v features for Sony Scorpion */
+	if ((of_machine_is_compatible("somc,scorpion-windy") ||
+	     of_machine_is_compatible("somc,scorpion-row")) &&
+	    strcmp(host->hw_name, "msm_sdcc.3") == 0)
+		caps |= (CORE_3_3V_SUPPORT |
+			CORE_3_0V_SUPPORT |
+			CORE_1_8V_SUPPORT);
+
 	/*
 	 * Starting with SDCC 5 controller (core major version = 1)
 	 * controller won't advertise 3.0v, 1.8v and 8-bit features
@@ -3485,6 +3498,8 @@ static void sdhci_msm_cmdq_init(struct sdhci_host *host,
 
 }
 #endif
+
+extern void somc_wifi_mmc_host_register(struct mmc_host *host);
 
 static int sdhci_msm_probe(struct platform_device *pdev)
 {
@@ -3819,8 +3834,8 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 	msm_host->mmc->caps2 |= (MMC_CAP2_BOOTPART_NOACC |
 				MMC_CAP2_DETECT_ON_ERR);
 	msm_host->mmc->caps2 |= MMC_CAP2_CACHE_CTRL;
-	msm_host->mmc->caps2 |= MMC_CAP2_CLK_SCALE;
 	msm_host->mmc->caps2 |= MMC_CAP2_STOP_REQUEST;
+	msm_host->mmc->caps2 |= MMC_CAP2_INIT_BKOPS;
 	msm_host->mmc->caps2 |= MMC_CAP2_ASYNC_SDIO_IRQ_4BIT_MODE;
 	msm_host->mmc->pm_caps |= MMC_PM_KEEP_POWER | MMC_PM_WAKE_SDIO_IRQ;
 	msm_host->mmc->caps2 |= MMC_CAP2_CORE_PM;
@@ -3909,6 +3924,13 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Add host failed (%d)\n", ret);
 		goto free_cd_gpio;
 	}
+
+#ifdef CONFIG_WIFI_CONTROL_FUNC
+	if (msm_host->pdata->use_for_wifi) {
+		msm_host->mmc->caps &= ~MMC_CAP_NEEDS_POLL;
+		somc_wifi_mmc_host_register(msm_host->mmc);
+	}
+#endif
 
 	msm_host->msm_bus_vote.max_bus_bw.show = show_sdhci_max_bus_bw;
 	msm_host->msm_bus_vote.max_bus_bw.store = store_sdhci_max_bus_bw;
@@ -4170,12 +4192,16 @@ skip_enable_host_irq:
 static int sdhci_msm_suspend(struct device *dev)
 {
 	struct sdhci_host *host = dev_get_drvdata(dev);
+#ifndef CONFIG_MMC_BLOCK_DEFERRED_RESUME
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
 	struct sdhci_msm_host *msm_host = pltfm_host->priv;
+#endif
 	int ret = 0;
 
+#ifndef CONFIG_MMC_BLOCK_DEFERRED_RESUME
 	if (gpio_is_valid(msm_host->pdata->status_gpio))
 		mmc_gpio_free_cd(msm_host->mmc);
+#endif
 
 	if (pm_runtime_suspended(dev)) {
 		pr_debug("%s: %s: already runtime suspended\n",
@@ -4191,10 +4217,13 @@ out:
 static int sdhci_msm_resume(struct device *dev)
 {
 	struct sdhci_host *host = dev_get_drvdata(dev);
+#ifndef CONFIG_MMC_BLOCK_DEFERRED_RESUME
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
 	struct sdhci_msm_host *msm_host = pltfm_host->priv;
+#endif
 	int ret = 0;
 
+#ifndef CONFIG_MMC_BLOCK_DEFERRED_RESUME
 	if (gpio_is_valid(msm_host->pdata->status_gpio)) {
 		ret = mmc_gpio_request_cd(msm_host->mmc,
 				msm_host->pdata->status_gpio);
@@ -4202,6 +4231,7 @@ static int sdhci_msm_resume(struct device *dev)
 			pr_err("%s: %s: Failed to request card detection IRQ %d\n",
 					mmc_hostname(host->mmc), __func__, ret);
 	}
+#endif
 
 	if (pm_runtime_suspended(dev)) {
 		pr_debug("%s: %s: runtime suspended, defer system resume\n",
