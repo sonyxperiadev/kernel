@@ -30,19 +30,37 @@
 #include "../mdss_dsi.h"
 #include "somc_panels.h"
 
+static bool vregs_initialized = 0;
+
 static int somc_panel_vregs_init(struct mdss_dsi_ctrl_pdata *ctrl)
 {
 	struct mdss_panel_specific_pdata *spec_pdata = NULL;
-	int min_uV, max_uV = 0;
+	struct dss_vreg *this_vreg = NULL;
+	int rc, min_uV, max_uV = 0;
 
-	if (!ctrl->panel_bias_vreg || !ctrl->lab || !ctrl->ibb) {
-		pr_err("%s: LAB/IBB regulators not supported.\n", __func__);
-		return -EINVAL;
-	}
+	if (vregs_initialized)
+		return 0;
 
 	spec_pdata = ctrl->spec_pdata;
 	if (!spec_pdata) {
 		pr_err("%s: FATAL: NULL SoMC panel data!!\n", __func__);
+		return -EINVAL;
+	}
+
+	for (rc = 0; rc < ctrl->panel_power_data.num_vreg; rc++) {
+		if ((ctrl->lab != NULL) && (ctrl->ibb != NULL))
+			break;
+
+		this_vreg = &ctrl->panel_power_data.vreg_config[rc];
+
+		if (!strcmp(this_vreg->vreg_name, "lab"))
+			ctrl->lab = this_vreg->vreg;
+		else if (!strcmp(this_vreg->vreg_name, "ibb"))
+			ctrl->ibb = this_vreg->vreg;
+	}
+
+	if (!ctrl->lab || !ctrl->ibb) {
+		pr_err("%s: LAB/IBB regulators not supported.\n", __func__);
 		return -EINVAL;
 	}
 
@@ -85,13 +103,17 @@ static int somc_panel_vregs_init(struct mdss_dsi_ctrl_pdata *ctrl)
 			return rc;
 		}
 	}
+
+	vregs_initialized = true;
+
+	return 0;
 }
 
-static int somc_panel_vreg_ctrl(struct mdss_dsi_ctrl_pdata *ctrl, int enable)
+static int somc_panel_vregs_ctrl(struct mdss_dsi_ctrl_pdata *ctrl, int enable)
 {
 	int rc;
 
-	if (!ctrl->panel_bias_vreg || !ctrl->lab || !ctrl->ibb)
+	if (!ctrl->lab || !ctrl->ibb)
 		return -EINVAL;
 
 	pr_debug("%s: ndx=%d enable=%d\n", __func__, ctrl->ndx, enable);
