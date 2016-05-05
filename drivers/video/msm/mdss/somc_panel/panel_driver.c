@@ -3876,7 +3876,7 @@ int mdss_panel_parse_dt(struct device_node *np,
 	}
 
 	/* WORKAROUND:Do it only if we are detecting panel via CMD detection */
-	if (spec_pdata->detect != NULL) {
+	if ((spec_pdata->detect != NULL) && (pinfo->pdest == DISPLAY_1)) {
 		rc = mdss_panel_parse_bl_settings(np, ctrl_pdata);
 		if (rc)
 			pr_err("%s: Error while parsing backlight settings!",
