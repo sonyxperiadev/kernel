@@ -701,6 +701,11 @@ static int msm_vidc_load_clock_voltage_table(
 	if (regulator_scaling)
 		msm_vidc_regulator_scaling = 1;
 
+	if (!regulator_scaling && !reset_clock_control) {
+		pr_info("vidc: disabling clock-voltage handling\n");
+		return 0;
+	}
+
 	num_elements = get_u32_array_num_elements(pdev,
 			"qcom,clock-voltage-tbl");
 	if (num_elements <= 0) {
