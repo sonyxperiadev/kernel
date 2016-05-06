@@ -295,6 +295,7 @@
 		interrupts = <0 44 0>;
 		venus-supply = <&gdsc_venus>;
 		qcom,hfi = "venus";
+		qcom,firmware-name = "venus";
 		qcom,ocmem-size = <524288>; /* 512 * 1024*/
 		qcom,max-hw-load = <1216800>; /* 3840 x 2160 @ 30 + 1080p @ 30*/
 		qcom,dcvs-min-load = <489600>; /* 1080p @ 60fps */
@@ -307,6 +308,7 @@
 	qcom,vidc {
 		compatible = "qcom,msm-vidc";
 		qcom,hfi = "q6";
+		qcom,firmware-name = "venus";
 		qcom,max-hw-load = <243000>; /* 1080p @ 30 */
 	};
 
