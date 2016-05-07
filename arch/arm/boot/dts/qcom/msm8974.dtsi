@@ -164,6 +164,8 @@
 		reg = <0xfc400000 0x4000>;
 		reg-names = "cc_base";
 		vdd_dig-supply = <&pm8841_s2_corner>;
+		clock-names = "xo";
+		clocks = <&clock_rpm clk_cxo_gcc>;
 		#clock-cells = <1>;
 	};
 
@@ -172,6 +174,12 @@
 		reg = <0xfd8c0000 0x40000>;
 		reg-names = "cc_base";
 		vdd_dig-supply = <&pm8841_s2_corner>;
+		clock-names = "xo", "gpll0", "mmssnoc_ahb",
+			"gfx3d_src_clk";
+		clocks = <&clock_rpm clk_cxo_mmss>,
+		         <&clock_gcc clk_gpll0_clk_src>,
+			 <&clock_rpm clk_mmssnoc_ahb_clk>,
+			 <&clock_rpm clk_oxili_gfx3d_clk_src>;
 		#clock-cells = <1>;
 	};
 
@@ -187,8 +195,11 @@
 		compatible = "qcom,cc-debug-8974";
 		reg = <0xfc401880 0x4>;
 		#clock-cells = <1>;
-		clock-names = "kpss_debug_mux";
-		clocks = <&clock_krait clk_kpss_debug_pri_mux>;
+		clock-names = "kpss_debug_mux", "rpm_debug_mux",
+				"mmss_debug_mux";
+		clocks = <&clock_krait clk_kpss_debug_pri_mux>,
+			 <&clock_rpm clk_rpm_debug_mux>,
+			 <&clock_mmss clk_mmss_debug_mux>;
 	};
 
 	wcd9xxx_intc: wcd9xxx-irq {
@@ -300,9 +311,14 @@
 		qcom,max-hw-load = <1216800>; /* 3840 x 2160 @ 30 + 1080p @ 30*/
 		qcom,dcvs-min-load = <489600>; /* 1080p @ 60fps */
 		qcom,dcvs-min-mbperframe = <32400>; /* 4K */
-		clock-names = "core_clk", "iface_clk", "bus_clk", "mem_clk";
 		qcom,clock-configs = <0x3 0x0 0x0 0x0>;
 		qcom,sw-power-collapse;
+
+		clocks = <&clock_mmss clk_venus0_vcodec0_clk>,
+			<&clock_mmss clk_venus0_ahb_clk>,
+			<&clock_mmss clk_venus0_axi_clk>,
+			<&clock_mmss clk_venus0_ocmemnoc_clk>;
+		clock-names = "core_clk", "iface_clk", "bus_clk", "mem_clk";
 	};
 
 	qcom,vidc {
@@ -321,6 +337,10 @@
 		reg = <0xf991f000 0x1000>;
 		interrupts = <0 109 0>;
 		status = "disabled";
+
+		clock-names = "core_clk", "iface_clk";
+		clocks = <&clock_gcc clk_gcc_blsp1_uart3_apps_clk>,
+			<&clock_gcc clk_gcc_blsp1_ahb_clk>;
 	};
 
 	serial@f995e000 {
@@ -328,6 +348,10 @@
 		reg = <0xf995e000 0x1000>;
 		interrupts = <0 114 0>;
 		status = "disabled";
+
+		clock-names = "core_clk", "iface_clk";
+		clocks = <&clock_gcc clk_gcc_blsp2_uart2_apps_clk>,
+			<&clock_gcc clk_gcc_blsp2_ahb_clk>;
 	};
 
 	blsp1_uart1: serial@f991e000 {
@@ -335,6 +359,10 @@
 		reg = <0xf991e000 0x1000>;
 		interrupts = <0 108 0>;
 		status = "disabled";
+
+		clock-names = "core_clk", "iface_clk";
+		clocks = <&clock_gcc clk_gcc_blsp1_uart2_apps_clk>,
+			<&clock_gcc clk_gcc_blsp1_ahb_clk>;
 
 		qcom,msm-bus,name = "serial_uart2";
 		qcom,msm-bus,num-cases = <2>;
@@ -356,6 +384,12 @@
 		HSUSB_1p8-supply = <&pm8941_l6>;
 		HSUSB_3p3-supply = <&pm8941_l24>;
 		qcom,vdd-voltage-level = <1 5 7>;
+
+		clocks = <&clock_gcc clk_gcc_usb_hs_system_clk>,
+			<&clock_gcc  clk_gcc_usb_hs_ahb_clk>,
+			<&clock_gcc  clk_gcc_usb2b_phy_sleep_clk>,
+			<&clock_rpm  clk_cxo_otg_clk>;
+		clock-names = "core_clk", "iface_clk", "sleep_clk", "xo";
 
 		qcom,hsusb-otg-phy-type = <2>;
 		qcom,hsusb-otg-phy-init-seq = <0x63 0x81 0xffffffff>;
@@ -401,6 +435,10 @@
 		reg-names = "hc_mem", "core_mem";
 		interrupts = <0 123 0>, <0 138 0>;
 		interrupt-names = "hc_irq", "pwr_irq";
+		clock-names = "iface_clk", "core_clk";
+		clocks = <&clock_gcc clk_gcc_sdcc1_ahb_clk>,
+			 <&clock_gcc clk_gcc_sdcc1_apps_clk>;
+
 		qcom,clk-rates = <400000 20000000 25000000 50000000 100000000 200000000>;
 		qcom,bus-speed-mode = "HS200_1p8v", "DDR_1p8v";
 		qcom,cpu-dma-latency-us = <200>;
@@ -430,6 +468,10 @@
 		reg-names = "hc_mem", "core_mem";
 		interrupts = <0 125 0>, <0 221 0>;
 		interrupt-names = "hc_irq", "pwr_irq";
+
+		clock-names = "iface_clk", "core_clk";
+		clocks = <&clock_gcc clk_gcc_sdcc2_ahb_clk>,
+			 <&clock_gcc clk_gcc_sdcc2_apps_clk>;
 
 		qcom,clk-rates = <400000 20000000 25000000 50000000 100000000 200000000>;
 		qcom,bus-width = <4>;
@@ -474,6 +516,10 @@
 			<&msmgpio 35 0>; /* DATA3 */
 		qcom,gpio-names = "CLK", "CMD", "DAT0", "DAT1", "DAT2", "DAT3";
 
+		clock-names = "iface_clk", "core_clk";
+		clocks = <&clock_gcc clk_gcc_sdcc3_ahb_clk>,
+			 <&clock_gcc clk_gcc_sdcc3_apps_clk>;
+
 		qcom,clk-rates = <400000 20000000 25000000 50000000 100000000>;
 		qcom,bus-width = <4>;
 		qcom,cpu-dma-latency-us = <200>;
@@ -516,6 +562,10 @@
 			<&msmgpio 92 0>; /* DATA3 */
 		qcom,gpio-names = "CLK", "CMD", "DAT0", "DAT1", "DAT2", "DAT3";
 
+		clock-names = "iface_clk", "core_clk";
+		clocks = <&clock_gcc clk_gcc_sdcc4_ahb_clk>,
+			 <&clock_gcc clk_gcc_sdcc4_apps_clk>;
+
 		qcom,clk-rates = <400000 20000000 25000000 50000000 100000000>;
 		qcom,bus-width = <4>;
 		qcom,cpu-dma-latency-us = <200>;
@@ -541,6 +591,10 @@
 		      <0xf9999000 0xb000>;
 		interrupts = <0 94 0>;
 
+		clocks = <&clock_rpm clk_pnoc_sps_clk>,
+			 <&clock_gcc clk_gcc_bam_dma_ahb_clk>;
+		clock-names = "dfab_clk", "dma_bam_pclk";
+
 		qcom,bam-dma-res-pipes = <6>;
 	};
 
@@ -553,6 +607,11 @@
 		      <0xf9944000 0x19000>;
 		interrupt-names = "spi_irq", "spi_bam_irq";
 		interrupts = <0 104 0>, <0 239 0>;
+
+		clock-names = "iface_clk", "core_clk";
+		clocks = <&clock_gcc clk_gcc_blsp2_ahb_clk>,
+			 <&clock_gcc clk_gcc_blsp2_qup4_spi_apps_clk>;
+
 		spi-max-frequency = <19200000>;
 
 		qcom,gpio-mosi = <&msmgpio 53 0>;
@@ -586,6 +645,10 @@
 			"TSIF0_IRQ",
 			"TSIF1_IRQ",
 			"TSIF_BAM_IRQ";
+
+		clock-names = "iface_clk", "ref_clk";
+		clocks = <&clock_gcc clk_gcc_tsif_ahb_clk>,
+			<&clock_gcc clk_gcc_tsif_ref_clk>;
 
 		qcom,msm-bus,name = "tsif";
 		qcom,msm-bus,num-cases = <2>;
@@ -689,7 +752,6 @@
 
 	sound {
 		compatible = "qcom,msm8974-audio-taiko";
-		qcom,model = "msm8974-taiko-snd-card";
 		reg = <0xfe02b000 0x4>,
 		      <0xfe02c000 0x4>,
 		      <0xfe02d000 0x4>,
@@ -724,6 +786,9 @@
 			"MIC BIAS4 External", "Digital Mic5",
 			"DMIC6", "MIC BIAS4 External",
 			"MIC BIAS4 External", "Digital Mic6";
+
+		clock-names = "osr_clk";
+		clocks = <&clock_rpm clk_div_clk1>;
 
 		qcom,cdc-mclk-gpios = <&pm8941_gpios 15 0>;
 		qcom,taiko-mclk-clk-freq = <9600000>;
@@ -761,6 +826,10 @@
 		reg-names = "qup_phys_addr";
 		interrupts = <0 105 0>;
 		interrupt-names = "qup_err_intr";
+		clock-names = "iface_clk", "core_clk";
+		clocks = <&clock_gcc clk_gcc_blsp2_ahb_clk>,
+			 <&clock_gcc clk_gcc_blsp2_qup5_i2c_apps_clk>;
+
 		qcom,i2c-bus-freq = <100000>;
 		qcom,i2c-src-freq = <19200000>;
 		qcom,scl-gpio = <&msmgpio 84 0>;
@@ -777,6 +846,10 @@
 		reg-names = "qup_phys_addr";
 		interrupts = <0 95 0>;
 		interrupt-names = "qup_err_intr";
+		clock-names = "iface_clk", "core_clk";
+		clocks = <&clock_gcc clk_gcc_blsp1_ahb_clk>,
+			 <&clock_gcc clk_gcc_blsp1_qup1_i2c_apps_clk>;
+
 		qcom,i2c-bus-freq = <100000>;
 		qcom,i2c-src-freq = <19200000>;
 		qcom,scl-gpio = <&msmgpio 3 0>;
@@ -796,6 +869,10 @@
 		interrupt-names = "qup_err_intr";
 		qcom,i2c-bus-freq = <384000>;
 		qcom,i2c-src-freq = <19200000>;
+		clock-names = "iface_clk", "core_clk";
+		clocks = <&clock_gcc clk_gcc_blsp1_ahb_clk>,
+			 <&clock_gcc clk_gcc_blsp1_qup2_i2c_apps_clk>;
+
 		qcom,master-id = <86>;
 		qcom,scl-gpio = <&msmgpio 7 0>;
 		qcom,sda-gpio = <&msmgpio 6 0>;
@@ -810,6 +887,11 @@
 		      <0xf9904000 0x19000>;
 		interrupt-names = "spi_irq", "spi_bam_irq";
 		interrupts = <0 95 0>, <0 238 0>;
+
+		clock-names = "iface_clk", "core_clk";
+		clocks = <&clock_gcc clk_gcc_blsp1_ahb_clk>,
+			 <&clock_gcc clk_gcc_blsp1_qup1_spi_apps_clk>;
+
 		spi-max-frequency = <19200000>;
 
 		qcom,gpio-mosi = <&msmgpio 0 0>;
@@ -848,6 +930,10 @@
 		qcom,hfpll-user-vco-mask = <0x00100000>;
 		qcom,pvs-config-ver = <1>;
 		#clock-cells = <1>;
+
+		clock-names = "hfpll_src", "aux_clk";
+		clocks = <&clock_rpm clk_cxo_a_clk_src>,
+			 <&clock_gcc clk_gpll0_ao_clk_src>;
 
 		qcom,l2-fmax =
 			<          0 0			 >,
@@ -1577,6 +1663,17 @@
 				 0x0 1 &spmi_bus 0x0 0x0 0x9 0x0>;
 		interrupt-names = "hs_phy_irq", "pmic_id_irq";
 
+		clocks = <&clock_gcc clk_gcc_usb30_master_clk>,
+			 <&clock_gcc clk_gcc_sys_noc_usb3_axi_clk>,
+			 <&clock_gcc clk_usb30_mock_utmi_clk_src>,
+			 <&clock_gcc clk_gcc_usb30_mock_utmi_clk>,
+			 <&clock_gcc clk_gcc_usb30_sleep_clk>,
+			 <&clock_rpm clk_diff_clk>,
+			 <&clock_rpm clk_cxo_dwc3_clk>;
+		clock-names = "core_clk", "iface_clk", "utmi_clk",
+				"utmi_clk_src", "sleep_clk",
+				"ref_clk", "xo";
+
 		vbus_dwc3-supply = <&pm8941_mvs1>;
 		vdda33-supply = <&pm8941_l24>;
 		vdda18-supply = <&pm8941_l6>;
@@ -1612,6 +1709,9 @@
 		vdda33-supply = <&pm8941_l24>;
 		qcom,vdd-voltage-level = <1 5 7>;
 		qcom,ext-vbus-id;
+		clocks = <&clock_gcc clk_gcc_usb30_master_clk>,
+			<&clock_gcc clk_gcc_usb2a_phy_sleep_clk>;
+		clock-names = "core_clk", "phy_sleep_clk";
 	};
 
 	ssphy: ssphy@f92f8800 {
@@ -1620,6 +1720,8 @@
 		vdd-supply = <&pm8841_s2_corner>;
 		vdda18-supply = <&pm8941_l6>;
 		qcom,vdd-voltage-level = <1 5 7>;
+		clocks = <&clock_gcc clk_gcc_usb30_master_clk>;
+		clock-names = "core_clk";
 	};
 
 	dbm_1p4: dbm@f92f8000 {
@@ -1637,6 +1739,11 @@
 		HSUSB_3p3-supply = <&pm8941_l24>;
 		qcom,usb2-enable-hsphy2;
 		qcom,usb2-power-budget = <500>;
+
+		clocks = <&clock_gcc clk_gcc_usb_hs_system_clk>,
+			 <&clock_gcc clk_gcc_usb_hs_ahb_clk>,
+			 <&clock_rpm clk_gcc_usb2b_phy_sleep_clk>;
+		clock-names = "core_clk", "iface_clk", "sleep_clk";
 	};
 
 	gdsc_oxili_gx: qcom,gdsc@fd8c4024 {
@@ -1651,6 +1758,13 @@
 		vdd_cx-supply = <&pm8841_s2_corner>;
 		qcom,proxy-reg-names = "vdd_cx";
 		qcom,vdd_cx-uV-uA = <7 100000>;
+
+		clocks = <&clock_gcc clk_gcc_lpass_q6_axi_clk>,
+			 <&clock_rpm clk_cxo_pil_lpass_clk>,
+			 <&clock_gcc clk_gcc_ce1_clk>,
+			 <&clock_gcc clk_gcc_ce1_ahb_clk>,
+			 <&clock_gcc clk_gcc_ce1_axi_clk>,
+			 <&clock_gcc clk_ce1_clk_src>;
 		clock-names = "bus_clk", "xo", "scm_core_clk", "scm_iface_clk",
 				"scm_bus_clk", "scm_core_clk_src";
 		qcom,active-clock-names = "bus_clk";
@@ -1936,6 +2050,12 @@
 		reg-names = "qdsp6_base", "halt_base", "rmb_base",
 			    "restart_reg";
 
+		clock-names = "xo", "iface_clk", "bus_clk", "mem_clk";
+		clocks = <&clock_rpm clk_cxo_pil_mss_clk>,
+			 <&clock_gcc clk_gcc_mss_cfg_ahb_clk>,
+			 <&clock_gcc clk_gcc_mss_q6_bimc_axi_clk>,
+			 <&clock_gcc clk_gcc_boot_rom_ahb_clk>;
+
 		interrupts = <0 24 1>;
 		vdd_mss-supply = <&pm8841_s3>;
 		vdd_cx-supply = <&pm8841_s2_corner>;
@@ -2056,6 +2176,10 @@
 		#size-cells = <1>;
 		ranges = <0x0 0xfec00000 0x180000>;
 
+		clocks = <&clock_rpm clk_ocmemgx_core_clk>,
+			<&clock_mmss clk_ocmemcx_ocmemnoc_clk>;
+		clock-names = "core_clk", "iface_clk";
+
 		partition@0 {
 			reg = <0x0 0x100000>;
 			qcom,ocmem-part-name = "graphics";
@@ -2113,6 +2237,19 @@
 				<55 512 120000 1200000>,
 				<55 512 393600 3936000>;
 		qcom,ce-opp-freq = <100000000>;
+
+		clock-names = "core_clk", "iface_clk", "bus_clk",
+			"core_clk_src", "ce_drv_core_clk",
+			"ce_drv_iface_clk", "ce_drv_bus_clk",
+			"ce_drv_core_clk_src";
+		clocks = <&clock_gcc clk_gcc_ce1_clk>,
+			 <&clock_gcc clk_gcc_ce1_ahb_clk>,
+			 <&clock_gcc clk_gcc_ce1_axi_clk>,
+			 <&clock_gcc clk_ce1_clk_src>,
+			 <&clock_gcc clk_gcc_ce2_clk>,
+			 <&clock_gcc clk_gcc_ce2_ahb_clk>,
+			 <&clock_gcc clk_gcc_ce2_axi_clk>,
+			 <&clock_gcc clk_ce2_clk_src>;
 	};
 
 	qcom,wdt@f9017000 {
@@ -2137,6 +2274,14 @@
 		vdd-supply = <&gdsc_venus>;
 		qcom,proxy-reg-names = "vdd";
 
+		clocks = <&clock_mmss clk_venus0_vcodec0_clk>,
+			<&clock_mmss clk_venus0_ahb_clk>,
+			<&clock_mmss clk_venus0_axi_clk>,
+			<&clock_mmss clk_venus0_ocmemnoc_clk>,
+			<&clock_rpm clk_gcc_ce1_clk>,
+			<&clock_rpm clk_gcc_ce1_ahb_clk>,
+			<&clock_rpm clk_gcc_ce1_axi_clk>,
+			<&clock_rpm clk_ce1_clk_src>;
 		clock-names = "core_clk", "iface_clk", "bus_clk", "mem_clk",
 				"scm_core_clk", "scm_iface_clk", "scm_bus_clk",
 				"scm_core_clk_src";
@@ -2228,6 +2373,13 @@
 		      <0xfd444000 0x8000>;
 		reg-names = "crypto-base","crypto-bam-base";
 		interrupts = <0 236 0>;
+		clock-names = "core_clk", "iface_clk", "bus_clk",
+				"core_clk_src";
+		clocks = <&clock_gcc clk_gcc_ce2_clk>,
+			 <&clock_gcc clk_gcc_ce2_ahb_clk>,
+			 <&clock_gcc clk_gcc_ce2_axi_clk>,
+			 <&clock_gcc clk_ce2_clk_src>;
+
 		qcom,bam-pipe-pair = <1>;
 		qcom,ce-hw-instance = <1>;
 		qcom,ce-device = <0>;
@@ -2246,6 +2398,14 @@
 		      <0xfd444000 0x8000>;
 		reg-names = "crypto-base","crypto-bam-base";
 		interrupts = <0 236 0>;
+
+		clock-names = "core_clk", "iface_clk", "bus_clk",
+				"core_clk_src";
+		clocks = <&clock_gcc clk_gcc_ce2_clk>,
+			 <&clock_gcc clk_gcc_ce2_ahb_clk>,
+			 <&clock_gcc clk_gcc_ce2_axi_clk>,
+			 <&clock_gcc clk_ce2_clk_src>;
+
 		qcom,bam-pipe-pair = <2>;
 		qcom,ce-hw-instance = <1>;
 		qcom,ce-device = <0>;
@@ -2274,6 +2434,9 @@
 		qcom,usb-bam-fifo-baseaddr = <0xf9200000>;
 		qcom,ignore-core-reset-ack;
 		qcom,disable-clk-gating;
+		clocks = <&clock_gcc clk_gcc_usb30_master_clk>,
+			 <&clock_gcc clk_gcc_sys_noc_usb3_axi_clk>;
+		clock-names = "mem_clk", "mem_iface_clk";
 
 		qcom,pipe0 {
 			label = "ssusb-qdss-in-0";
@@ -2474,6 +2637,10 @@
 		reg-names = "qup_phys_addr";
 		interrupts = <0 100 0>;
 		interrupt-names = "qup_err_intr";
+		clock-names = "iface_clk", "core_clk";
+		clocks = <&clock_gcc clk_gcc_blsp1_ahb_clk>,
+			 <&clock_gcc clk_gcc_blsp1_qup6_i2c_apps_clk>;
+
 		qcom,i2c-bus-freq = <400000>;
 		qcom,i2c-src-freq = <19200000>;
 		qcom,scl-gpio = <&msmgpio 30 0>;
