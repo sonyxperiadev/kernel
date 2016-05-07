@@ -277,26 +277,6 @@
 	qcom,mss@fc880000 {
 		qcom,mba-load-to-phys;
 	};
-};
-
-&peripheral_mem {
-	reg = <0x5d00000 0xa200000>;
-};
-
-&mdss_hdmi_tx {
-	/* rhine doesn't use hpd-5v */
-	qcom,supply-names = "hpd-gdsc", "core-vdda", "core-vcc";
-	qcom,min-voltage-level = <0 1800000 1800000>;
-	qcom,max-voltage-level = <0 1800000 1800000>;
-	qcom,enable-load = <0 300000 0>;
-};
-
-&pm8941_lsid0 {
-	qcom,power-on@800 {
-		qcom,s3-debounce = <8>;
-		qcom,s3-src = "kpdpwr-and-resin";
-	};
-
 
 	rhine_panel_power_supply: dsi_panel_pwr_supply {
 		#address-cells = <1>;
@@ -328,6 +308,25 @@
 			qcom,supply-post-off-sleep = <0>;
 		};
 
+	};
+};
+
+&peripheral_mem {
+	reg = <0x5d00000 0xa200000>;
+};
+
+&mdss_hdmi_tx {
+	/* rhine doesn't use hpd-5v */
+	qcom,supply-names = "hpd-gdsc", "core-vdda", "core-vcc";
+	qcom,min-voltage-level = <0 1800000 1800000>;
+	qcom,max-voltage-level = <0 1800000 1800000>;
+	qcom,enable-load = <0 300000 0>;
+};
+
+&pm8941_lsid0 {
+	qcom,power-on@800 {
+		qcom,s3-debounce = <8>;
+		qcom,s3-src = "kpdpwr-and-resin";
 	};
 };
 
