@@ -57,6 +57,8 @@
 		qcom,cci-master = <0>;
 		status = "ok";
 		clock-names = "cam_src_clk", "cam_clk";
+		clocks = <&clock_mmss clk_mclk0_clk_src>,
+			 <&clock_mmss clk_camss_mclk0_clk>;
 	};
 
 	qcom,camera@2 {
@@ -84,6 +86,8 @@
 		qcom,cci-master = <1>;
 		status = "ok";
 		clock-names = "cam_src_clk", "cam_clk";
+		clocks = <&clock_mmss clk_mclk2_clk_src>,
+			 <&clock_mmss clk_camss_mclk2_clk>;
 	};
 
 	eeprom1: qcom,eeprom@a1 {
