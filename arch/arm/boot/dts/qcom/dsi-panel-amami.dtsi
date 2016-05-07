@@ -14,7 +14,7 @@
 &mdss_mdp {
 	dsi_novatek_default: somc,novatek_default_panel {
 		qcom,mdss-dsi-panel-name = "default novatek 720p vid";
-		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;.
+		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
 		qcom,panel-supply-entries = <&rhine_panel_power_supply>;
 		qcom,mdss-dsi-panel-type = "dsi_video_mode";
 		qcom,mdss-dsi-panel-destination = "display_1";

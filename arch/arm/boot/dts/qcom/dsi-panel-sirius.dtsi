@@ -11,9 +11,6 @@
  * GNU General Public License for more details.
  */
 
-&soc {
-
-
 &mdss_mdp {
 	dsi_renesas_sharp_1080_vid: somc,renesas_sharp_1080p_panel {
 		qcom,mdss-dsi-panel-name = "sharp renesas 1080p video";
