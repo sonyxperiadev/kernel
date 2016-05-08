@@ -243,15 +243,37 @@ select_err:
 
 static int bu520x1nvx_open(struct input_dev *idev)
 {
-	struct bu520x1nvx_drvdata *ddata = input_get_drvdata(idev);
+	struct bu520x1nvx_drvdata *ddata;
 	struct bu520x1nvx_event_data *edata;
 	const struct bu520x1nvx_gpio_event *event;
 	int i;
+
+	if (!idev) {
+		pr_err("%s: input device is NULL!\n", __func__);
+		return -EPROBE_DEFER;
+	}
+
+	ddata = input_get_drvdata(idev);
+	if (!ddata) {
+		pr_err("%s: driver data is null!\n", __func__);
+		return -EPROBE_DEFER;
+	}
+
+	if (!ddata->data) {
+		pr_err("%s: no event data!!\n", __func__);
+		return -EPROBE_DEFER;
+	}
 
 	mutex_lock(&ddata->lock);
 	for (i = 0; i < ddata->n_events; i++) {
 		edata = &ddata->data[i];
 		event = edata->event;
+
+		if (!event) {
+			pr_err("%s: No GPIO event!!\n", __func__);
+			mutex_unlock(&ddata->lock);
+			return -EPROBE_DEFER;
+		}
 
 		if (event->lid_pin)
 			bu520x1nvx_report_input_event(ddata->input_dev, event);
