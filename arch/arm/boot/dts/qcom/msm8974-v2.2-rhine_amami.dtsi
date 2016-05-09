@@ -67,6 +67,12 @@
 	};
 };
 
+/{
+	rhine_amami_batterydata: qcom,battery-data {
+		#include "batterydata-rhine-amami.dtsi"
+	};
+};
+
 &pm8941_chg {
 	qcom,ibatmax-ma = <1300>;
 	qcom,ibatterm-ma = <115>;
@@ -79,6 +85,7 @@
 };
 
 &pm8941_bms {
+	qcom,battery-data = <&rhine_amami_batterydata>;
 	qcom,chg-term-ua = <115000>;
 };
 

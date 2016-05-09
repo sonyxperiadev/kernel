@@ -405,7 +405,7 @@
 	qcom,calculate-soc-ms = <30000>;
 	qcom,use-external-rsense;
 	qcom,use-ocv-thresholds;
-	qcom,batt-type = <3>;
+	qcom,batt-type = <0xFF>;
 	qcom,shutdown-soc-valid-limit = <40>;
 	qcom,clamp-soc-max-count = <2>;
 };
