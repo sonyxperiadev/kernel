@@ -3818,44 +3818,6 @@ static int64_t read_battery_id(struct qpnp_bms_chip *chip)
 	return result.physical;
 }
 
-static int select_battery_vendor(struct qpnp_bms_chip *chip)
-{
-	union power_supply_propval ret = {0,};
-	int err = 0, i = 0;
-	int64_t battery_id = read_battery_id(chip);
-	if (battery_id < 0) {
-		pr_err("cannot read battery_id err = %lld\n",
-						battery_id);
-		return battery_id;
-	}
-	for (i = 0; i < chip->somc_params.batt_vendor_num; i++) {
-		if (chip->somc_params.batt_vendor[i].select &&
-			battery_id >=
-				chip->somc_params.batt_vendor[i].adc_min &&
-			battery_id <= chip->somc_params.batt_vendor[i].adc_max)
-			break;
-	}
-	if (i >= chip->somc_params.batt_vendor_num) {
-		pr_info("battery vendor not found\n");
-		i = BATT_VENDOR_SEND;
-	} else {
-		ret.intval = i + 1;
-	}
-	if (chip->batt_psy == NULL)
-		chip->batt_psy = power_supply_get_by_name("battery");
-	if (chip->batt_psy) {
-		err = chip->batt_psy->set_property(chip->batt_psy,
-				POWER_SUPPLY_PROP_BATT_ID, &ret);
-		if (err)
-			pr_err("set_property BATT_ID error\n");
-	}
-	pr_info("battery_id = %lld vendor = %s min = %d max = %d\n",
-		battery_id, chip->somc_params.batt_vendor[i].name,
-		chip->somc_params.batt_vendor[i].adc_min,
-		chip->somc_params.batt_vendor[i].adc_max);
-	return i;
-}
-
 static int set_battery_data(struct qpnp_bms_chip *chip)
 {
 	int64_t battery_id;
@@ -3867,22 +3829,6 @@ static int set_battery_data(struct qpnp_bms_chip *chip)
 		batt_data = &desay_5200_data;
 	} else if (chip->batt_type == BATT_PALLADIUM) {
 		batt_data = &palladium_1500_data;
-	} else if (chip->batt_type == BATT_OEM) {
-		if (!chip->somc_params.batt_vendor_num) {
-			pr_err("No use battery vendor id\n");
-			batt_data = bms_batt_data;
-		} else {
-			rc = select_battery_vendor(chip);
-			if (rc < 0 || rc >= bms_batt_data_num)
-				return rc;
-			batt_data = bms_batt_data + rc;
-			chip->r_sense_uohm =
-				batt_data->r_sense_uohm;
-			chip->ocv_high_threshold_uv =
-				batt_data->ocv_high_threshold_uv;
-			chip->ocv_low_threshold_uv =
-				batt_data->ocv_low_threshold_uv;
-		}
 	} else if (chip->batt_type == BATT_QRD_4V35_2000MAH) {
 		batt_data = &QRD_4v35_2000mAh_data;
 	} else if (chip->batt_type == BATT_QRD_4V2_1300MAH) {
