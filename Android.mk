@@ -225,5 +225,8 @@ kernelconfig: $(KERNEL_OUT_STAMP)
 $(PRODUCT_OUT)/kernel: $(KERNEL_BIN)
 	cp $(KERNEL_BIN) $(PRODUCT_OUT)/kernel
 
+.PHONY: kernel
+kernel: $(PRODUCT_OUT)/kernel
+
 endif # Sony AOSP devices
 endif # BUILD_KERNEL
