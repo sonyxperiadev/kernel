@@ -195,6 +195,12 @@
 	};
 };
 
+/{
+	shinano_castor_batterydata: qcom,battery-data {
+		#include "batterydata-shinano-castor.dtsi"
+	};
+};
+
 &pm8941_chg {
 	qcom,ibatmax-ma = <3000>;
 	qcom,ibatterm-ma = <300>;
@@ -210,6 +216,7 @@
 };
 
 &pm8941_bms {
+	qcom,battery-data = <&shinano_castor_batterydata>;
 	qcom,chg-term-ua = <300000>;
 	qcom,fcc-resolution = <26>;
 };
