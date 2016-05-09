@@ -569,7 +569,7 @@
 	qcom,low-soc-calculate-soc-ms = <1000>;
 	qcom,calculate-soc-ms = <30000>;
 	qcom,use-external-rsense;
-	qcom,batt-type = <3>;
+	qcom,batt-type = <0xff>;
 	qcom,use-ocv-thresholds;
 	qcom,ocv-voltage-high-threshold-uv = <3830000>;
 	qcom,ocv-voltage-low-threshold-uv = <3750000>;
