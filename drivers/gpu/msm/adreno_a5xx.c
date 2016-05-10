@@ -2026,6 +2026,22 @@ static void a5xx_start(struct adreno_device *adreno_dev)
 	/* Set the USE_RETENTION_FLOPS chicken bit */
 	kgsl_regwrite(device, A5XX_CP_CHICKEN_DBG, 0x02000000);
 
+	/*
+	 *  In A5x, CCU can send context_done event of a particular context to
+	 *  UCHE which ultimately reaches CP even when there is valid
+	 *  transaction of that context inside CCU. This can let CP to program
+	 *  config registers, which will make the "valid transaction" inside
+	 *  CCU to be interpreted differently. This can cause gpu fault. This
+	 *  bug is fixed in latest A510 revision. To enable this bug fix -
+	 *  bit[11] of RB_DBG_ECO_CNTL need to be set to 0, default is 1
+	 *  (disable). For older A510 version this bit is unused.
+	 */
+	if (adreno_is_a510(adreno_dev)) {
+		kgsl_regread(device, A5XX_RB_DBG_ECO_CNT, &val);
+		val = (val & (~(1 << 11)));
+		kgsl_regwrite(device, A5XX_RB_DBG_ECO_CNT, val);
+	}
+
 	/* Enable ISDB mode if requested */
 	if (test_bit(ADRENO_DEVICE_ISDB_ENABLED, &adreno_dev->priv)) {
 		if (!kgsl_active_count_get(device)) {
