@@ -94,6 +94,10 @@
 	};
 };
 
+&mdss_dsi {
+	hw-config = "single_dsi";
+};
+
 &mdss_dsi0 {
 	qcom,dsi-pref-prim-pan = <&dsi_default_gpio_0>;
 	pinctrl-names = "mdss_default", "mdss_sleep";

@@ -228,6 +228,10 @@
        qcom,hsphy-init-host = <0x00FBC7A7>;
 };
 
+&mdss_dsi {
+	hw-config = "single_dsi";
+};
+
 &mdss_dsi0 {
 	/delete-property/ qcom,platform-enable-gpio;
 };
