@@ -28,5 +28,6 @@
 / {
 	model = "SoMC Scorpion WINDY";
 	compatible = "somc,scorpion-windy", "qcom,apq8074";
-        qcom,msm-id = <210 9 0x10001>;
+        qcom,msm-id = <194 9 0x10001>,
+                      <210 9 0x10001>;
 };
