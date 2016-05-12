@@ -90,6 +90,8 @@ void __weak arch_cpu_idle(void)
  */
 static void cpu_idle_loop(void)
 {
+	int cpu = smp_processor_id();
+
 	while (1) {
 		tick_nohz_idle_enter();
 
@@ -130,7 +132,7 @@ static void cpu_idle_loop(void)
 		}
 		tick_nohz_idle_exit();
 		schedule_preempt_disabled();
-		if (cpu_is_offline(smp_processor_id()))
+		if (cpu_is_offline(cpu))
 			arch_cpu_idle_dead();
 
 	}
