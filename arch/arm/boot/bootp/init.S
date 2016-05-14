@@ -69,7 +69,7 @@ move:		ldmia	r4!, {r7 - r10}		@ move 32-bytes at a time
 		stmia	r5!, {r7 - r10}
 		subs	r6, r6, #8 * 4
 		bcs	move
-		mov	pc, lr
+		ret	lr
 
 		.size	_start, . - _start
 

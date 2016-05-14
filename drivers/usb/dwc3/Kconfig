@@ -51,4 +51,10 @@ config USB_DWC3_VERBOSE
 	help
 	  Say Y here to enable verbose debugging messages on DWC3 Driver.
 
+config SONY_USB_EXTENSIONS
+	bool "Enable USB driver extensions for SONY"
+	help
+	  Say Y here to enable USB driver extensions for SONY
+	  devices. This will provide custom charger notification
+	  and MHL ID detection.
 endif

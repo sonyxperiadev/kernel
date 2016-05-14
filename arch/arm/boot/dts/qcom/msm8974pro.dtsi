@@ -1652,10 +1652,6 @@
 		linux,contiguous-region = <&alt_peripheral_mem>;
 	};
 
-	qcom,mss@fc880000 {
-		linux,contiguous-region = <&modem_mem>;
-	};
-
 	qcom,venus@fdce0000 {
 		linux,contiguous-region = <&alt_peripheral_mem>;
 	};

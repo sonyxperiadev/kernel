@@ -22,6 +22,10 @@ struct mmc_gpio {
 	int cd_gpio;
 	char *ro_label;
 	bool status;
+#ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
+	bool pending_detect;
+	bool suspended;
+#endif
 	char cd_label[0]; /* Must be last entry */
 };
 
@@ -39,12 +43,40 @@ out:
 	return ret;
 }
 
+#ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
+void mmc_cd_prepare_suspend(struct mmc_host *host, bool pending_detect)
+{
+	struct mmc_gpio *ctx = host->slot.handler_priv;
+
+	if (!ctx)
+		return;
+
+	ctx->suspended = true;
+	ctx->pending_detect = pending_detect;
+}
+EXPORT_SYMBOL(mmc_cd_prepare_suspend);
+#endif
+
+#ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
+bool mmc_cd_is_pending_detect(struct mmc_host *host)
+{
+	struct mmc_gpio *ctx = host->slot.handler_priv;
+	if (!ctx)
+		return false;
+
+	return ctx->pending_detect;
+}
+EXPORT_SYMBOL(mmc_cd_is_pending_detect);
+#endif
 
 static irqreturn_t mmc_gpio_cd_irqt(int irq, void *dev_id)
 {
 	/* Schedule a card detection after a debounce timeout */
 	struct mmc_host *host = dev_id;
 	struct mmc_gpio *ctx = host->slot.handler_priv;
+#ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
+	unsigned long flags;
+#endif
 	int status;
 
 	/*
@@ -61,6 +93,28 @@ static irqreturn_t mmc_gpio_cd_irqt(int irq, void *dev_id)
 	status = mmc_gpio_get_status(host);
 	if (unlikely(status < 0))
 		goto out;
+
+#ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
+	if (ctx->suspended) {
+		/*
+		 * host->rescan_disable is normally set to 0 in mmc_resume_bus
+		 * but in case of a deferred resume we might get IRQ before
+		 * it is called.
+		 */
+		spin_lock_irqsave(&host->lock, flags);
+		host->rescan_disable = 0;
+		spin_unlock_irqrestore(&host->lock, flags);
+
+		/*
+		 * We've got IRQ just after resuming device but the status
+		 * did not change; card might have been swapped, force
+		 * redetection.
+		 */
+		if (status == ctx->status)
+			status = 2;
+	}
+	ctx->suspended = false;
+#endif
 
 	if (status ^ ctx->status) {
 		pr_info("%s: slot status change detected (%d -> %d), GPIO_ACTIVE_%s\n",
@@ -224,6 +278,11 @@ int mmc_gpio_request_cd(struct mmc_host *host, unsigned int gpio)
 
 	ctx->status = ret;
 
+#ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
+	ctx->pending_detect = false;
+	ctx->suspended = false;
+#endif
+
 	if (irq >= 0) {
 		ret = devm_request_threaded_irq(&host->class_dev, irq,
 			NULL, mmc_gpio_cd_irqt,
@@ -231,6 +290,10 @@ int mmc_gpio_request_cd(struct mmc_host *host, unsigned int gpio)
 			ctx->cd_label, host);
 		if (ret < 0)
 			irq = ret;
+#ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
+		else
+			irq_set_irq_wake(irq, 1);
+#endif
 	}
 
 	if (irq < 0)

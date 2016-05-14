@@ -271,12 +271,14 @@ Optional properties:
 					to the physical width in the framebuffer information.
 - qcom,mdss-pan-physical-height-dimension:	Specifies panel physical height in mm which corresponds
 					to the physical height in the framebuffer information.
+- qcom,mdss-dsi-panel-mode-gpio-state:	String that specifies the mode state for panel if it is defined
+					in dsi controller.
+					"high" = Set GPIO to HIGH
+					"low" = Set GPIO to LOW
 - qcom,mdss-dsi-mode-sel-gpio-state:	String that specifies the lcd mode for panel (DSC/non-DSC) if it is
 					defined in dsi controller.
 					"dual_mode" = Set GPIO to LOW
 					"dsc_mode" = Set GPIO to HIGH
-					"high" = Set GPIO to HIGH
-					"low" = Set GPIO to LOW
 - qcom,mdss-tear-check-disable:		Boolean to disable mdp tear check. Tear check is enabled by default to avoid
 					tearing. Other tear-check properties are ignored if this property is present.
 					The below tear check configuration properties can be individually tuned if
@@ -377,6 +379,8 @@ Optional properties:
 						go blank during transition.
 					"dynamic-switch-immediate"= Switch on next frame update. Panel will
 						not go blank for this transition.
+					"dynamic-resolution-switch-immediate"= Switch the panel resolution. Panel will
+						not go blank for this transition.
 - qcom,mdss-dsi-post-mode-switch-on-command:		Multiple dcs packets used for turning on DSI panel
 					after panel has switch modes.
 					Refer to "qcom,mdss-dsi-on-command" section for adding commands.
@@ -422,6 +426,20 @@ Optional properties:
 					instead of standard dcs type 0x0A.
 - qcom,dba-panel:			Indicates whether the current panel is used as a display bridge
 					to a non-DSI interface.
+
+- qcom,mdss-dsi-display-timings:	Parent node that lists the different resolutions that the panel supports.
+					Each child represents timings settings for a specific resolution.
+
+Additional properties added to the second level nodes that represent timings properties:
+- qcom,mdss-dsi-timing-default:		Property that specifies the current child as the default
+					timing configuration that will be used.
+- qcom,mdss-dsi-timing-switch-command:	List of commands that need to be sent
+					to panel when the resolution/timing switch happens dynamically.
+					Refer to "qcom,mdss-dsi-on-command" section for adding commands.
+- qcom,mdss-dsi-timing-switch-command-state:	String that specifies the ctrl state for sending resolution switch
+					commands.
+					"dsi_lp_mode" = DSI low power mode (default)
+					"dsi_hs_mode" = DSI high speed mode
 
 Note, if a given optional qcom,* binding is not present, then the driver will configure
 the default values specified.
@@ -519,6 +537,7 @@ Example:
 		qcom,5v-boost-gpio = <&pm8994_gpios 14 0>;
 		qcom,mdss-pan-physical-width-dimension = <60>;
 		qcom,mdss-pan-physical-height-dimension = <140>;
+		qcom,mdss-dsi-panel-mode-gpio-state = "low";
 		qcom,mdss-dsi-mode-sel-gpio-state = "dsc_mode";
 		qcom,mdss-tear-check-sync-cfg-height = <0xfff0>;
 		qcom,mdss-tear-check-sync-init-val = <1280>;

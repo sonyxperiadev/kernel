@@ -186,6 +186,8 @@
 #define QPNP_WLED_MIN_MSLEEP		20
 #define QPNP_WLED_SC_DLY_MS		20
 
+#define QPNP_WLED_CURR_SCALE_MAX	100
+
 /* output feedback mode */
 enum qpnp_wled_fdbk_op {
 	QPNP_WLED_FDBK_AUTO,
@@ -295,6 +297,9 @@ struct qpnp_wled {
 	bool disp_type_amoled;
 	bool en_ext_pfet_sc_pro;
 	bool prev_state;
+
+	bool calc_curr;
+	int curr_scale;
 };
 
 /* helper to read a pmic register */
@@ -370,6 +375,10 @@ static int qpnp_wled_set_level(struct qpnp_wled *wled, int level)
 {
 	int i, rc;
 	u8 reg;
+
+	if (wled->calc_curr &&
+		wled->curr_scale != QPNP_WLED_CURR_SCALE_MAX)
+		level = (level * wled->curr_scale) / QPNP_WLED_CURR_SCALE_MAX;
 
 	/* set brightness registers */
 	for (i = 0; i < wled->num_strings; i++) {
@@ -1204,7 +1213,13 @@ static int qpnp_wled_config(struct qpnp_wled *wled)
 		if (rc < 0)
 			return rc;
 		reg &= QPNP_WLED_FS_CURR_MASK;
-		temp = wled->fs_curr_ua / QPNP_WLED_FS_CURR_STEP_UA;
+		if (wled->calc_curr)
+			temp = (wled->fs_curr_ua +
+				(QPNP_WLED_FS_CURR_STEP_UA - 1)) /
+					QPNP_WLED_FS_CURR_STEP_UA;
+		else
+			temp = wled->fs_curr_ua /
+					QPNP_WLED_FS_CURR_STEP_UA;
 		reg |= temp;
 		rc = qpnp_wled_write_reg(wled, &reg,
 				QPNP_WLED_FS_CURR_REG(wled->sink_base,
@@ -1310,6 +1325,27 @@ static int qpnp_wled_config(struct qpnp_wled *wled)
 		}
 	}
 
+	return 0;
+}
+
+static int qpnp_wled_set_scale(struct qpnp_wled *wled)
+{
+	u8 reg = 0;
+	int rc, curr;
+
+	wled->curr_scale = QPNP_WLED_CURR_SCALE_MAX;
+	rc = qpnp_wled_read_reg(wled, &reg,
+			QPNP_WLED_FS_CURR_REG(wled->sink_base,
+				wled->strings[0]));
+	if (rc)
+		return rc;
+	reg &= ~QPNP_WLED_FS_CURR_MASK;
+	curr = (reg * QPNP_WLED_FS_CURR_STEP_UA);
+	if (curr > wled->fs_curr_ua)
+		wled->curr_scale = (wled->fs_curr_ua *
+			QPNP_WLED_CURR_SCALE_MAX) / curr;
+	pr_debug("%s: curr=%d fs_curr_ua=%d curr_scale=%d\n", __func__,
+				curr, wled->fs_curr_ua, wled->curr_scale);
 	return 0;
 }
 
@@ -1516,6 +1552,8 @@ static int qpnp_wled_parse_dt(struct qpnp_wled *wled)
 	if (!rc)
 		wled->cons_sync_write_delay_us = temp_val;
 
+	wled->calc_curr = of_property_read_bool(spmi->dev.of_node,
+			"somc,calc-curr");
 	wled->en_9b_dim_res = of_property_read_bool(spmi->dev.of_node,
 			"qcom,en-9b-dim-res");
 	wled->en_phase_stag = of_property_read_bool(spmi->dev.of_node,
@@ -1547,7 +1585,6 @@ static int qpnp_wled_parse_dt(struct qpnp_wled *wled)
 
 	wled->en_ext_pfet_sc_pro = of_property_read_bool(spmi->dev.of_node,
 					"qcom,en-ext-pfet-sc-pro");
-
 	return 0;
 }
 
@@ -1593,6 +1630,15 @@ static int qpnp_wled_probe(struct spmi_device *spmi)
 	if (rc) {
 		dev_err(&spmi->dev, "wled config failed\n");
 		return rc;
+	}
+
+	/* SoMC calc_curr */
+	if (wled->calc_curr) {
+		rc = qpnp_wled_set_scale(wled);
+		if (rc) {
+			dev_err(&spmi->dev, "wled config failed\n");
+			return rc;
+		}
 	}
 
 	mutex_init(&wled->lock);

@@ -1,6 +1,7 @@
 config ARM
 	bool
 	default y
+	select ARCH_USE_BUILTIN_BSWAP
 	select ARCH_BINFMT_ELF_RANDOMIZE_PIE
 	select ARCH_HAS_ATOMIC64_DEC_IF_POSITIVE
 	select ARCH_HAVE_CUSTOM_GPIO_H
@@ -21,6 +22,7 @@ config ARM
 	select GENERIC_STRNCPY_FROM_USER
 	select GENERIC_STRNLEN_USER
 	select HARDIRQS_SW_RESEND
+	select HAVE_ARCH_BITREVERSE if (CPU_32v7M || CPU_32v7) && !CPU_32v6
 	select HAVE_ARCH_JUMP_LABEL if !XIP_KERNEL
 	select HAVE_ARCH_KGDB
 	select HAVE_ARCH_SECCOMP_FILTER
@@ -156,12 +158,9 @@ config TRACE_IRQFLAGS_SUPPORT
 	bool
 	default y
 
-config RWSEM_GENERIC_SPINLOCK
-	bool
-	default y
-
 config RWSEM_XCHGADD_ALGORITHM
 	bool
+	default y
 
 config ARCH_HAS_ILOG2_U32
 	bool
