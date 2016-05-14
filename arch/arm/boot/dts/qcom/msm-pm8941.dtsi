@@ -59,6 +59,10 @@
 			qcom,pon-type = <0>;
 			qcom,pull-up = <1>;
 			linux,code = <116>;
+			qcom,support-reset = <1>;
+			qcom,s1-timer = <10256>;
+			qcom,s2-timer = <2000>;
+			qcom,s2-type = <1>;
 		};
 
 		qcom,pon_2 {
@@ -836,6 +840,10 @@
 			label = "internal_rsense";
 			reg = <0>;
 			qcom,decimation = <0>;
+			qcom,pre-div-channel-scaling = <1>;
+			qcom,calibration-type = "absolute";
+			qcom,scale-function = <0>;
+			qcom,hw-settle-time = <0>;
 			qcom,fast-avg-setup = <0>;
 		};
 	};
@@ -1358,7 +1366,7 @@
 		label = "kpdbl";
 	};
 
-	pwm@b100 {
+	pm8941_pwm_1: pwm@b100 {
 		compatible = "qcom,qpnp-pwm";
 		reg = <0xb100 0x100>,
 		      <0xb042 0x7e>;
@@ -1369,7 +1377,7 @@
 		#pwm-cells = <2>;
 	};
 
-	pwm@b200 {
+	pm8941_pwm_2: pwm@b200 {
 		compatible = "qcom,qpnp-pwm";
 		reg = <0xb200 0x100>,
 		      <0xb042 0x7e>;
@@ -1380,7 +1388,7 @@
 		#pwm-cells = <2>;
 	};
 
-	pwm@b300 {
+	pm8941_pwm_3: pwm@b300 {
 		compatible = "qcom,qpnp-pwm";
 		reg = <0xb300 0x100>,
 		      <0xb042 0x7e>;
@@ -1391,7 +1399,7 @@
 		#pwm-cells = <2>;
 	};
 
-	pwm@b400 {
+	pm8941_pwm_4: pwm@b400 {
 		compatible = "qcom,qpnp-pwm";
 		reg = <0xb400 0x100>,
 		      <0xb042 0x7e>;
@@ -1435,7 +1443,7 @@
 		#pwm-cells = <2>;
 	};
 
-	pwm@b800 {
+	pm8941_pwm_8: pwm@b800 {
 		compatible = "qcom,qpnp-pwm";
 		reg = <0xb800 0x100>,
 		      <0xb042 0x7e>;

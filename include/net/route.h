@@ -52,7 +52,6 @@ struct rtable {
 	__u8			rt_uses_gateway;
 
 	int			rt_iif;
-	uid_t			rt_uid;
 
 	/* Info on neighbour */
 	__be32			rt_gateway;

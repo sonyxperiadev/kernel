@@ -278,7 +278,7 @@ struct msm_mctl_post_proc_cmd {
 #define NUM_ACTUATOR_DIR 2
 #define MAX_ACTUATOR_SCENARIO 8
 #define MAX_ACTUATOR_REGION 5
-#define MAX_ACTUATOR_INIT_SET 12
+#define MAX_ACTUATOR_INIT_SET 2000
 #define MAX_ACTUATOR_TYPE_SIZE 32
 #define MAX_ACTUATOR_REG_TBL_SIZE 8
 
@@ -1704,6 +1704,7 @@ enum actuator_type {
 	ACTUATOR_PIEZO,
 	ACTUATOR_HVCM,
 	ACTUATOR_BIVCM,
+	ACTUATOR_VCM2,
 };
 
 enum msm_actuator_data_type {

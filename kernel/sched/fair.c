@@ -1995,6 +1995,8 @@ static int best_small_task_cpu(struct task_struct *p, int sync)
 	do {
 		rq = cpu_rq(i);
 
+		cpumask_clear_cpu(i, &search_cpu);
+
 		trace_sched_cpu_load(rq, idle_cpu(i),
 				     mostly_idle_cpu_sync(i,
 						  cpu_load_sync(i, sync), sync),
@@ -2011,8 +2013,6 @@ static int best_small_task_cpu(struct task_struct *p, int sync)
 				       &rq->freq_domain_cpumask);
 			continue;
 		}
-
-		cpumask_clear_cpu(i, &search_cpu);
 
 		if (sched_cpu_high_irqload(i))
 			continue;
@@ -2270,7 +2270,7 @@ static int select_best_cpu(struct task_struct *p, int target, int reason,
 		sync = 0;
 	}
 
-	if (small_task && !boost) {
+	if (small_task && !boost && !sync) {
 		best_cpu = best_small_task_cpu(p, sync);
 		prefer_idle = 0;	/* For sched_task_load tracepoint */
 		goto done;
@@ -2278,6 +2278,14 @@ static int select_best_cpu(struct task_struct *p, int target, int reason,
 
 	trq = task_rq(p);
 	cpumask_and(&search_cpus, tsk_cpus_allowed(p), cpu_online_mask);
+	if (sync) {
+		unsigned int cpuid = smp_processor_id();
+		if (cpumask_test_cpu(cpuid, &search_cpus)) {
+			best_cpu = cpuid;
+			goto done;
+		}
+	}
+
 	for_each_cpu(i, &search_cpus) {
 		struct rq *rq = cpu_rq(i);
 

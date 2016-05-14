@@ -51,6 +51,7 @@
 
 #define MAX_MSG_LEN 80
 #define SPS_IPC_LOGPAGES 10
+#define SPS_IPC_REG_DUMP_FACTOR 3
 
 /* Connection mapping control struct */
 struct sps_rm {
@@ -132,12 +133,15 @@ extern u8 print_limit_option;
 				ipc_log_string((dev)->ipc_log4, \
 					"%s: " msg, __func__, args); \
 			else \
-				pr_err("sps: no such IPC logging index!\n"); \
+				pr_debug("sps: no such IPC logging index!\n"); \
 		} \
 	} while (0)
 #define SPS_DUMP(msg, args...) do {					\
 		SPS_IPC(4, sps, msg, args); \
-		pr_info(msg, ##args);	\
+		if (sps) { \
+			if (sps->ipc_log4 == NULL) \
+				pr_info(msg, ##args);	\
+		} \
 	} while (0)
 #define SPS_DEBUGFS(msg, args...) do {					\
 		char buf[MAX_MSG_LEN];		\

@@ -224,7 +224,7 @@ svc_preempt:
 1:	bl	preempt_schedule_irq		@ irq en/disable is done inside
 	ldr	r0, [tsk, #TI_FLAGS]		@ get new tasks TI_FLAGS
 	tst	r0, #_TIF_NEED_RESCHED
-	moveq	pc, r8				@ go again
+	reteq	r8				@ go again
 	b	1b
 #endif
 
@@ -487,7 +487,8 @@ ENDPROC(__und_usr)
  */
 	.pushsection .fixup, "ax"
 	.align	2
-4:	mov	pc, r9
+4:	str     r4, [sp, #S_PC]			@ retry current instruction
+	ret	r9
 	.popsection
 	.pushsection __ex_table,"a"
 	.long	1b, 4b
@@ -549,7 +550,7 @@ call_fpe:
 #endif
 	tst	r0, #0x08000000			@ only CDP/CPRT/LDC/STC have bit 27
 	tstne	r0, #0x04000000			@ bit 26 set on both ARM and Thumb-2
-	moveq	pc, lr
+	reteq	lr
 	and	r8, r0, #0x00000f00		@ mask out CP number
  THUMB(	lsr	r8, r8, #8		)
 	mov	r7, #1
@@ -568,33 +569,33 @@ call_fpe:
  THUMB(	add	pc, r8			)
 	nop
 
-	movw_pc	lr				@ CP#0
+	ret.w	lr				@ CP#0
 	W(b)	do_fpe				@ CP#1 (FPE)
 	W(b)	do_fpe				@ CP#2 (FPE)
-	movw_pc	lr				@ CP#3
+	ret.w	lr				@ CP#3
 #ifdef CONFIG_CRUNCH
 	b	crunch_task_enable		@ CP#4 (MaverickCrunch)
 	b	crunch_task_enable		@ CP#5 (MaverickCrunch)
 	b	crunch_task_enable		@ CP#6 (MaverickCrunch)
 #else
-	movw_pc	lr				@ CP#4
-	movw_pc	lr				@ CP#5
-	movw_pc	lr				@ CP#6
+	ret.w	lr				@ CP#4
+	ret.w	lr				@ CP#5
+	ret.w	lr				@ CP#6
 #endif
-	movw_pc	lr				@ CP#7
-	movw_pc	lr				@ CP#8
-	movw_pc	lr				@ CP#9
+	ret.w	lr				@ CP#7
+	ret.w	lr				@ CP#8
+	ret.w	lr				@ CP#9
 #ifdef CONFIG_VFP
 	W(b)	do_vfp				@ CP#10 (VFP)
 	W(b)	do_vfp				@ CP#11 (VFP)
 #else
-	movw_pc	lr				@ CP#10 (VFP)
-	movw_pc	lr				@ CP#11 (VFP)
+	ret.w	lr				@ CP#10 (VFP)
+	ret.w	lr				@ CP#11 (VFP)
 #endif
-	movw_pc	lr				@ CP#12
-	movw_pc	lr				@ CP#13
-	movw_pc	lr				@ CP#14 (Debug)
-	movw_pc	lr				@ CP#15 (Control)
+	ret.w	lr				@ CP#12
+	ret.w	lr				@ CP#13
+	ret.w	lr				@ CP#14 (Debug)
+	ret.w	lr				@ CP#15 (Control)
 
 #ifdef NEED_CPU_ARCHITECTURE
 	.align	2
@@ -646,7 +647,7 @@ ENTRY(fp_enter)
 	.popsection
 
 ENTRY(no_fp)
-	mov	pc, lr
+	ret	lr
 ENDPROC(no_fp)
 
 __und_usr_fault_32:
@@ -742,7 +743,7 @@ ENDPROC(__switch_to)
 #ifdef CONFIG_ARM_THUMB
 	bx	\reg
 #else
-	mov	pc, \reg
+	ret	\reg
 #endif
 	.endm
 
@@ -925,7 +926,7 @@ kuser_cmpxchg64_fixup:
 #if __LINUX_ARM_ARCH__ < 6
 	bcc	kuser_cmpxchg32_fixup
 #endif
-	mov	pc, lr
+	ret	lr
 	.previous
 
 #else
@@ -993,7 +994,7 @@ kuser_cmpxchg32_fixup:
 	subs	r8, r4, r7
 	rsbcss	r8, r8, #(2b - 1b)
 	strcs	r7, [sp, #S_PC]
-	mov	pc, lr
+	ret	lr
 	.previous
 
 #else
@@ -1052,7 +1053,7 @@ __kuser_helper_end:
  * SP points to a minimal amount of processor-private memory, the address
  * of which is copied into r0 for the mode specific abort handler.
  */
-	.macro	vector_stub, name, mode, fixup, correction=0
+	.macro	vector_stub, name, mode, correction=0
 	.align	5
 
 vector_\name:
@@ -1081,18 +1082,6 @@ vector_\name:
 	and	lr, lr, #0x0f
  THUMB(	adr	r0, 1f			)
  THUMB(	ldr	lr, [r0, lr, lsl #2]	)
-	.if	\fixup
-#ifdef CONFIG_MSM_KRAIT_WFE_FIXUP
-	ldr	r0, .krait_fixup
-	ldr	r0, [r0]
-	cmp	r0, #0
-	beq	10f
-	mrc	p15, 7, r0, c15, c0, 5
-	orr	r0, r0, #0x10000
-	mcr	p15, 7, r0, c15, c0, 5
-10:	isb
-#endif
-	.endif
 	mov	r0, sp
  ARM(	ldr	lr, [pc, lr, lsl #2]	)
 	movs	pc, lr			@ branch to handler in SVC mode
@@ -1117,7 +1106,7 @@ vector_rst:
 /*
  * Interrupt dispatcher
  */
-	vector_stub	irq, IRQ_MODE, 1, 4
+	vector_stub	irq, IRQ_MODE, 4
 
 	.long	__irq_usr			@  0  (USR_26 / USR_32)
 	.long	__irq_invalid			@  1  (FIQ_26 / FIQ_32)
@@ -1140,7 +1129,7 @@ vector_rst:
  * Data abort dispatcher
  * Enter in ABT mode, spsr = USR CPSR, lr = USR PC
  */
-	vector_stub	dabt, ABT_MODE, 0, 8
+	vector_stub	dabt, ABT_MODE, 8
 
 	.long	__dabt_usr			@  0  (USR_26 / USR_32)
 	.long	__dabt_invalid			@  1  (FIQ_26 / FIQ_32)
@@ -1163,7 +1152,7 @@ vector_rst:
  * Prefetch abort dispatcher
  * Enter in ABT mode, spsr = USR CPSR, lr = USR PC
  */
-	vector_stub	pabt, ABT_MODE, 0, 4
+	vector_stub	pabt, ABT_MODE, 4
 
 	.long	__pabt_usr			@  0 (USR_26 / USR_32)
 	.long	__pabt_invalid			@  1 (FIQ_26 / FIQ_32)
@@ -1186,7 +1175,7 @@ vector_rst:
  * Undef instr entry dispatcher
  * Enter in UND mode, spsr = SVC/USR CPSR, lr = SVC/USR PC
  */
-	vector_stub	und, UND_MODE, 0
+	vector_stub	und, UND_MODE
 
 	.long	__und_usr			@  0 (USR_26 / USR_32)
 	.long	__und_invalid			@  1 (FIQ_26 / FIQ_32)
@@ -1229,9 +1218,6 @@ vector_addrexcptn:
  */
 vector_fiq:
 	subs	pc, lr, #4
-
-.krait_fixup:
-	.word	msm_krait_need_wfe_fixup
 
 	.globl	vector_fiq_offset
 	.equ	vector_fiq_offset, vector_fiq
