@@ -389,6 +389,11 @@ struct wl_pmk_list {
 	pmkid_t foo[MAXPMKID - 1];
 };
 
+#ifdef DHD_MAX_IFS
+#define WL_MAX_IFS DHD_MAX_IFS
+#else
+#define WL_MAX_IFS 16
+#endif
 
 #define ESCAN_BUF_SIZE (64 * 1024)
 
@@ -889,7 +894,6 @@ extern s32 wl_cfg80211_set_wps_p2p_ie(struct net_device *net, char *buf, int len
 	enum wl_management_type type);
 extern s32 wl_cfg80211_set_p2p_ps(struct net_device *net, char* buf, int len);
 extern struct bcm_cfg80211 *wl_get_cfg(struct net_device *ndev);
-
 
 /* btcoex functions */
 void* wl_cfg80211_btcoex_init(struct net_device *ndev);
