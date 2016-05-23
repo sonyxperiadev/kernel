@@ -19,9 +19,9 @@
 
 &soc {
 	/delete-node/ qcom,qseecom@6500000;
-	qcom,qseecom@e700000 {
+	qcom,qseecom@e900000 {
 		compatible = "qcom,qseecom";
-		reg = <0xe700000 0x1900000>;
+		reg = <0xe900000 0x1900000>;
 		reg-names = "secapp-region";
 		qcom,disk-encrypt-pipe-pair = <2>;
 		qcom,file-encrypt-pipe-pair = <0>;
@@ -285,5 +285,9 @@
 };
 
 &removed_regions {
-	reg = <0 0x06300000 0 0x9D00000>;
+	reg = <0 0x06A00000 0 0x9800000>;
+};
+
+&peripheral_mem {
+	reg = <0 0x0ca00000 0 0x3600000>;
 };

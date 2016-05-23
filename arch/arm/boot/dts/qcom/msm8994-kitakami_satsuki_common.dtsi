@@ -342,3 +342,7 @@
 &removed_regions {
 	reg = <0 0x06A00000 0 0x9800000>;
 };
+
+&peripheral_mem {
+	reg = <0 0x0ca00000 0 0x3600000>;
+};
