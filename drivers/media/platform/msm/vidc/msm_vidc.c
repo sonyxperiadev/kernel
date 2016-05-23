@@ -1001,7 +1001,7 @@ int msm_vidc_dqbuf(void *instance, struct v4l2_buffer *b)
 	if (rc)
 		return rc;
 
-	for (i = 0; i < b->length; i++) {
+	for (i = b->length - 1; i >= 0 ; i--) {
 		if (!inst->map_output_buffer)
 			continue;
 		if (EXTRADATA_IDX(b->length) &&
