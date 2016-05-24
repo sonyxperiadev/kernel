@@ -27,6 +27,7 @@
  *                               race when flurry of queued work comes in.
  *  2015-Mai-21  Humberto Borba  Added clock flow control for serial voting
  *                               (new PM runtime framework).
+ *  2016-Mai-24  Humberto Borba  Fix race condition for serial voting
  */
 
 #define pr_fmt(fmt)	"Bluetooth: %s: " fmt, __func__
@@ -76,7 +77,8 @@
 
 #define POLARITY_LOW 0
 #define POLARITY_HIGH 1
-
+#define HS_UART_ON 1
+#define HS_UART_OFF 0
 #define BT_PORT_ID	0
 
 /* enable/disable wake-on-bluetooth */
@@ -102,7 +104,6 @@ struct bluesleep_info {
 	struct uart_port *uport;
 	struct wake_lock wake_lock;
 	int irq_polarity;
-	int uart_port_is_open;
 	int has_ext_wake;
 };
 
@@ -211,15 +212,13 @@ static void hsuart_power(int on)
 		return;
 	if (on) {
 		// make sure port is active before enable it.
-		if(bsi->uport->state->port.count)
-		{
+		if (bsi->uport->state->port.count) {
 			msm_hs_request_clock_on(bsi->uport);
 			msm_hs_set_mctrl(bsi->uport, TIOCM_RTS);
 		}
 	} else {
 		msm_hs_set_mctrl(bsi->uport, 0);
 		msm_hs_request_clock_off(bsi->uport);
-		bsi->uart_port_is_open = 0;
 	}
 }
 
@@ -249,7 +248,7 @@ void bluesleep_sleep_wakeup(void)
 		clear_bit(BT_EXT_WAKE, &flags);
 		clear_bit(BT_ASLEEP, &flags);
 		/*Activating UART */
-		hsuart_power(1);
+		hsuart_power(HS_UART_ON);
 	}
 }
 
@@ -329,14 +328,13 @@ static void bluesleep_sleep_work(struct work_struct *work)
 				pr_info("going to sleep...\n");
 			set_bit(BT_ASLEEP, &flags);
 			/*Deactivating UART */
-			hsuart_power(0);
+			hsuart_power(HS_UART_OFF);
 			/* UART clk is not turned off immediately. Release
 			 * wakelock after 500 ms.
 			 */
 			wake_lock_timeout(&bsi->wake_lock, HZ / 2);
 		} else {
-
-		  mod_timer(&tx_timer, jiffies + (TX_TIMER_INTERVAL * HZ));
+			mod_timer(&tx_timer, jiffies + (TX_TIMER_INTERVAL * HZ));
 			return;
 		}
 	} else if (test_bit(BT_EXT_WAKE, &flags)
@@ -515,12 +513,8 @@ static int bluesleep_start(void)
 
 	mod_timer(&tx_timer, jiffies + (TX_TIMER_INTERVAL*HZ));
 
-	if (!bsi->uart_port_is_open) {
-		BT_INFO("UART port is open. Set initial clock vote ON!");
-		msm_hs_request_clock_on(bsi->uport);
-		BT_INFO("msm_hs_request_clock_on ... done");
-		bsi->uart_port_is_open = 1;
-	}
+	hsuart_power(HS_UART_ON);
+	BT_INFO("msm_hs_request_clock_on ... done");
 
 	/* assert BT_WAKE */
 	if (debug_mask & DEBUG_BTWAKE)
@@ -571,7 +565,7 @@ static void bluesleep_stop(void)
 	if (test_bit(BT_ASLEEP, &flags)) {
 		clear_bit(BT_ASLEEP, &flags);
 		spin_unlock_irqrestore(&rw_lock, irq_flags);
-		hsuart_power(1);
+		hsuart_power(HS_UART_ON);
 	} else {
 		spin_unlock_irqrestore(&rw_lock, irq_flags);
 	}
@@ -763,7 +757,6 @@ static int bluesleep_probe(struct platform_device *pdev)
 	}
 
 	bsi->irq_polarity = POLARITY_LOW;//low edge (falling edge)
-	bsi->uart_port_is_open = 0;
 	wake_lock_init(&bsi->wake_lock, WAKE_LOCK_SUSPEND, "bluesleep");
 	clear_bit(BT_SUSPEND, &flags);
 
@@ -1147,7 +1140,7 @@ static void __exit bluesleep_exit(void)
 		free_irq(bsi->host_wake_irq, NULL);
 		del_timer(&tx_timer);
 		if (test_bit(BT_ASLEEP, &flags))
-			hsuart_power(1);
+			hsuart_power(HS_UART_ON);
 	}
 
 #if !BT_BLUEDROID_SUPPORT
