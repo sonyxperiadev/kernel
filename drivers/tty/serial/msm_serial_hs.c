@@ -215,7 +215,7 @@ struct msm_hs_port {
 	struct clk *pclk;
 	struct msm_hs_tx tx;
 	struct msm_hs_rx rx;
-	atomic_t clk_count;
+	atomic_t resource_count;
 	struct msm_hs_wakeup wakeup;
 
 	struct dentry *loopback_dir;
@@ -354,7 +354,6 @@ static int msm_hs_clk_bus_vote(struct msm_hs_port *msm_uport)
 			__func__, rc);
 		goto core_unprepare;
 	}
-	atomic_inc(&msm_uport->clk_count);
 	MSM_HS_DBG("%s: Clock ON successful\n", __func__);
 	return rc;
 core_unprepare:
@@ -375,7 +374,6 @@ static void msm_hs_clk_bus_unvote(struct msm_hs_port *msm_uport)
 	if (msm_uport->pclk)
 		clk_disable_unprepare(msm_uport->pclk);
 	msm_hs_bus_voting(msm_uport, BUS_RESET);
-	atomic_dec(&msm_uport->clk_count);
 	MSM_HS_DBG("%s: Clock OFF successful\n", __func__);
 }
 
@@ -383,7 +381,7 @@ static void msm_hs_clk_bus_unvote(struct msm_hs_port *msm_uport)
 static void msm_hs_resource_unvote(struct msm_hs_port *msm_uport)
 {
 	struct uart_port *uport = &(msm_uport->uport);
-	int rc = atomic_read(&msm_uport->clk_count);
+	int rc = atomic_read(&msm_uport->resource_count);
 
 	MSM_HS_DBG("%s(): power usage count %d", __func__, rc);
 	if (rc <= 0) {
@@ -391,6 +389,7 @@ static void msm_hs_resource_unvote(struct msm_hs_port *msm_uport)
 		WARN_ON(1);
 		return;
 	}
+	atomic_dec(&msm_uport->resource_count);
 	pm_runtime_mark_last_busy(uport->dev);
 	pm_runtime_put_autosuspend(uport->dev);
 }
@@ -406,6 +405,7 @@ static void msm_hs_resource_vote(struct msm_hs_port *msm_uport)
 			__func__, uport->dev, ret);
 		msm_hs_pm_resume(uport->dev);
 	}
+	atomic_inc(&msm_uport->resource_count);
 }
 
 /* Check if the uport line number matches with user id stored in pdata.
@@ -594,8 +594,8 @@ static void dump_uart_hs_registers(struct msm_hs_port *msm_uport)
 	struct uart_port *uport = &(msm_uport->uport);
 
 	if (msm_uport->pm_state != MSM_HS_PM_ACTIVE) {
-		MSM_HS_INFO("%s:Failed clocks are off, clk_count %d",
-			__func__, atomic_read(&msm_uport->clk_count));
+		MSM_HS_INFO("%s:Failed clocks are off, resource_count %d",
+			__func__, atomic_read(&msm_uport->resource_count));
 		return;
 	}
 
@@ -3205,7 +3205,7 @@ static int msm_hs_pm_sys_suspend_noirq(struct device *dev)
 	 * If there is an active clk request or an impending userspace request
 	 * fail the suspend callback.
 	 */
-	clk_cnt = atomic_read(&msm_uport->clk_count);
+	clk_cnt = atomic_read(&msm_uport->resource_count);
 	client_count = atomic_read(&msm_uport->client_count);
 	if (msm_uport->pm_state == MSM_HS_PM_ACTIVE) {
 		MSM_HS_WARN("%s:Fail Suspend.clk_cnt:%d,clnt_count:%d\n",
@@ -3651,9 +3651,9 @@ static void msm_hs_shutdown(struct uart_port *uport)
 			 UART_XMIT_SIZE, DMA_TO_DEVICE);
 
 	msm_hs_resource_unvote(msm_uport);
-	rc = atomic_read(&msm_uport->clk_count);
+	rc = atomic_read(&msm_uport->resource_count);
 	if (rc) {
-		atomic_set(&msm_uport->clk_count, 1);
+		atomic_set(&msm_uport->resource_count, 1);
 		MSM_HS_WARN("%s(): removing extra vote\n", __func__);
 		msm_hs_resource_unvote(msm_uport);
 	}
