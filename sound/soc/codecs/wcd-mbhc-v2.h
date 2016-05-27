@@ -22,7 +22,11 @@
 #define WCD_MBHC_DEF_BUTTONS 8
 #define WCD_MBHC_KEYCODE_NUM 8
 #define WCD_MBHC_USLEEP_RANGE_MARGIN_US 100
+#ifndef CONFIG_MACH_SONY_SUZU
 #define WCD_MBHC_THR_HS_MICB_MV  2700
+#else
+#define WCD_MBHC_THR_HS_MICB_MV	 2450
+#endif
 /* z value defined in Ohms */
 #define WCD_MONO_HS_MIN_THR	2
 #define WCD_MBHC_STRINGIFY(s)  __stringify(s)
@@ -82,6 +86,9 @@ enum wcd_mbhc_plug_type {
 	MBHC_PLUG_TYPE_HIGH_HPH,
 	MBHC_PLUG_TYPE_GND_MIC_SWAP,
 	MBHC_PLUG_TYPE_ANC_HEADPHONE,
+#ifdef CONFIG_MACH_SONY_SUZU
+	MBHC_PLUG_TYPE_STEREO_MICROPHONE,
+#endif
 };
 
 enum pa_dac_ack_flags {
