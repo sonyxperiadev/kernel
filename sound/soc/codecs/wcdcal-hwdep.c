@@ -22,7 +22,11 @@
 #include "wcdcal-hwdep.h"
 
 const int cal_size_info[WCD9XXX_MAX_CAL] = {
+#ifdef CONFIG_MACH_SONY_SUZU
+	[WCD9XXX_ANC_CAL] = 36864,
+#else
 	[WCD9XXX_ANC_CAL] = 16384,
+#endif
 	[WCD9XXX_MBHC_CAL] = 4096,
 	[WCD9XXX_MAD_CAL] = 4096,
 	[WCD9XXX_VBAT_CAL] = 72,
