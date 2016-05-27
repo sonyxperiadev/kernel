@@ -2183,6 +2183,7 @@ static struct snd_soc_dai_link msm8974_common_dai_links[] = {
 		.ignore_pmdown_time = 1,
 		.be_id = MSM_FRONTEND_DAI_MULTIMEDIA3,
 	},
+#ifdef CONFIG_MACH_SONY_RHINE
 	{
 		.name = "MSM8974 ULL",
 		.stream_name = "MultiMedia3",
@@ -2198,6 +2199,7 @@ static struct snd_soc_dai_link msm8974_common_dai_links[] = {
 		.ignore_pmdown_time = 1,
 		.be_id = MSM_FRONTEND_DAI_MULTIMEDIA3,
 	},
+#endif
 	/* Hostless PCM purpose */
 	{
 		.name = "SLIMBUS_0 Hostless",

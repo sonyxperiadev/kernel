@@ -320,6 +320,13 @@
 		max-clk-turbo =   <320000000>;
 	};
 
+	qcom,msm-pcm-ultra-low-latency {
+		compatible = "qcom,msm-pcm-dsp";
+		qcom,msm-pcm-dsp-id = <2>;
+		qcom,msm-pcm-low-latency;
+		qcom,latency-level = "ultra";
+	};
+
 	sound {
 		qcom,audio-routing =
 			"RX_BIAS", "MCLK",
