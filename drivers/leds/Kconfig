@@ -544,6 +544,16 @@ config LEDS_AW2013
 	  This option enables support for the AW2013 RGB LED connected
 	  through I2C. Say Y to enable support for the AW2013 LED.
 
+config LEDS_AS3668
+	tristate "LED driver for AS3668"
+	depends on LEDS_CLASS
+	depends on I2C
+	help
+	  This option enables support for austriamicrosystems
+	  AS3668 led controller. It does not use LED framework
+	  but has its own sysfs API due to the special functionality
+	  it provides.
+
 comment "LED Triggers"
 source "drivers/leds/trigger/Kconfig"
 
