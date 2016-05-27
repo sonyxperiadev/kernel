@@ -1284,6 +1284,7 @@ static int smb1360_get_prop_batt_health(struct smb1360_chip *chip)
 	return ret.intval;
 }
 
+#ifdef CONFIG_MACH_SONY_TULIP
 static int smb1360_tulip_batt_capacity_extension(struct smb1360_chip *chip, int soc)
 {
 	int rc, report_soc;
@@ -1359,6 +1360,7 @@ static int smb1360_tulip_batt_capacity_extension(struct smb1360_chip *chip, int 
 	last_report_soc = chip->force_batt_full ? 100 : report_soc;
 	return last_report_soc;
 }
+#endif
 
 static int smb1360_get_prop_batt_capacity(struct smb1360_chip *chip)
 {
