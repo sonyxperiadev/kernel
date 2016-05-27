@@ -1,0 +1,41 @@
+/* arch/arm/boot/dts/qcom/msm8956-loire-suzu_generic.dtsi
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+/*
+ * Copyright (C) 2015 Sony Mobile Communications Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2, as
+ * published by the Free Software Foundation.
+ */
+
+&soc {
+	/*I2C : BLSP2 */
+	i2c@7af6000 {
+		nfc@28 {
+			compatible = "nxp,pn547";
+			reg = <0x28>;
+			interrupt-parent = <&msm_gpio>;
+			interrupts = <33 0x1>;
+			nxp,irq_gpio = <&msm_gpio 33 0x00>;
+			nxp,dwld_en = <&msm_gpio 16 0x00>;
+			nxp,ven = <&msm_gpio 34 0x01>;
+			qcom,clk-src = "BBCLK2";
+			qcom,clk-gpio = <&pm8950_gpios 5 0x00>;
+			clocks = <&clock_gcc clk_bb_clk2_pin>;
+			clock-names = "nfc_clk";
+			pinctrl-names = "pn547-active", "pn547-inactive";
+			pinctrl-0 = <&msm_gpio_33_def &msm_gpio_16_def>;
+			pinctrl-1 = <&msm_gpio_33_def &msm_gpio_16_def>;
+		};
+};
+
+};
