@@ -1428,7 +1428,9 @@ static struct clk_freq_tbl ftbl_sdcc2_4_apps_clk_src[] = {
 	F(    400000,             xo,   12,    1,     4),
 	F(  20000000,          gpll0,   10,    1,     4),
 	F(  25000000,          gpll0,   16,    1,     2),
+	F(  40000000,          gpll0,   10,    1,     2),
 	F(  50000000,          gpll0,   16,    0,     0),
+	F(  80000000,          gpll0,   10,    0,     0),
 	F( 100000000,          gpll0,    8,    0,     0),
 	F( 177777778,          gpll0,  4.5,    0,     0),
 	F( 200000000,          gpll0,    4,    0,     0),
@@ -1504,7 +1506,7 @@ static struct rcg_clk usb_fs_system_clk_src = {
 static struct clk_freq_tbl ftbl_usb_hs_system_clk_src[] = {
 	F(  57140000,          gpll0,   14,    0,     0),
 	F( 100000000,          gpll0,    8,    0,     0),
-	F( 133330000,          gpll0,    6,    0,     0),
+	F( 133333333,          gpll0,    6,    0,     0),
 	F( 177780000,          gpll0,  4.5,    0,     0),
 	F_END
 };
