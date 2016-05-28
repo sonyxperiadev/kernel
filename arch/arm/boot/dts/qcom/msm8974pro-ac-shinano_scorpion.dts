@@ -27,6 +27,7 @@
 / {
 	model = "SoMC Scorpion ROW";
 	compatible = "somc,scorpion-row", "qcom,msm8974";
-        qcom,msm-id = <210 8 0x10001>;
+        qcom,msm-id = <194 8 0x10001>,
+                      <210 8 0x10001>;
 };
 
