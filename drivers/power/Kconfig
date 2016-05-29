@@ -475,6 +475,15 @@ config QPNP_FG
 	  fuel gauge. The state of charge is reported through a BMS power
 	  supply property and also sends uevents when the capacity is updated.
 
+config QPNP_SMBCHARGER_ID_POLL
+	bool "Support ID polling function on QPNP SMB Charger driver"
+	depends on QPNP_SMBCHARGER
+	depends on QPNP_SMBCHARGER_EXTENSION
+	default n
+	help
+	  Say Y here to enable the ID polling function on the QPNP SMB Charger
+	  driver.
+
 config QPNP_SMBCHARGER_EXTENSION
 	tristate "QPNP SMB Charger driver: SoMC extensions"
 	depends on QPNP_SMBCHARGER
