@@ -170,6 +170,14 @@ config INPUT_QPNP_POWER_ON
 	  reporting the change in status of the KPDPWR_N line (connected to the
 	  power-key) as well as reset features.
 
+config PON_SOMC_ORG
+	bool "SoMC specific power on interface"
+	depends on INPUT_QPNP_POWER_ON
+	help
+	  This option enables SoMC specific power on interface.
+	  The implementation in this kernel is feature-reduced to support only
+	  the dvdd shutdown function.
+
 config INPUT_SPARCSPKR
 	tristate "SPARC Speaker support"
 	depends on PCI && SPARC64
