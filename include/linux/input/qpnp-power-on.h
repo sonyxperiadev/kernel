@@ -73,6 +73,12 @@ int qpnp_pon_wd_config(bool enable);
 int qpnp_pon_set_restart_reason(enum pon_restart_reason reason);
 bool qpnp_pon_check_hard_reset_stored(void);
 
+#ifdef CONFIG_PON_SOMC_ORG
+int qpnp_pon_dvdd_shutdown(void);
+#else
+static inline int qpnp_pon_dvdd_shutdown(void) { return -ENODEV; }
+#endif /* CONFIG_PON_SOMC_ORG */
+
 #else
 static int qpnp_pon_system_pwr_off(enum pon_power_off_type type)
 {
