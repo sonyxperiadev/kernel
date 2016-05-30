@@ -300,6 +300,12 @@
 	};
 };
 
+/{
+	yukon_tianchi_batterydata: qcom,battery-data {
+		#include "batterydata-yukon-tianchi.dtsi"
+	};
+};
+
 &pm8226_bms {
 	status = "ok";
 
@@ -309,12 +315,12 @@
 	qcom,low-soc-calculate-soc-threshold = <5>;
 	qcom,low-soc-calculate-soc-ms = <1000>;
 	qcom,calculate-soc-ms = <30000>;
-	qcom,batt-type = <3>;
-	qcom,use-external-rsense;
+  	qcom,use-ocv-thresholds;
 	qcom,ocv-voltage-high-threshold-uv = <3800000>;
 	qcom,ocv-voltage-low-threshold-uv = <3750000>;
 	qcom,clamp-soc-max-count = <2>;
 	qcom,chg-term-ua = <150000>;
+	qcom,battery-data = <&yukon_tianchi_batterydata>;
 
 	qcom,bms-bms@4000 {
 		status = "ok";

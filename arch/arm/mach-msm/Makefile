@@ -47,13 +47,13 @@ obj-$(CONFIG_ARCH_MSMVPIPA) += board-vpipa.o
 obj-$(CONFIG_MSM_PM) += ext-buck-control.o
 
 ifdef CONFIG_MACH_SONY_FLAMINGO
-	obj-$(CONFIG_MACH_SONY_FLAMINGO) += board-sony_yukon_flamingo-gpiomux.o bms-batterydata-flamingo.o
+	obj-$(CONFIG_MACH_SONY_FLAMINGO) += board-sony_yukon_flamingo-gpiomux.o
 else ifdef CONFIG_MACH_SONY_EAGLE
-        obj-$(CONFIG_MACH_SONY_EAGLE) += board-sony_yukon_eagle-gpiomux.o bms-batterydata-eagle.o
+        obj-$(CONFIG_MACH_SONY_EAGLE) += board-sony_yukon_eagle-gpiomux.o
 else ifdef CONFIG_MACH_SONY_TIANCHI
-	obj-$(CONFIG_MACH_SONY_TIANCHI) += board-sony_yukon_tianchi-gpiomux.o bms-batterydata-tianchi.o
+	obj-$(CONFIG_MACH_SONY_TIANCHI) += board-sony_yukon_tianchi-gpiomux.o
 else ifdef CONFIG_MACH_SONY_SEAGULL
-	obj-$(CONFIG_MACH_SONY_SEAGULL) += board-sony_yukon_seagull-gpiomux.o bms-batterydata-seagull.o
+	obj-$(CONFIG_MACH_SONY_SEAGULL) += board-sony_yukon_seagull-gpiomux.o
 else
 	obj-$(CONFIG_ARCH_MSM8226) += board-8226-gpiomux.o bms-batterydata-oem.o
 endif

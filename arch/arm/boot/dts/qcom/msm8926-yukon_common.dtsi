@@ -757,6 +757,13 @@
 	};
 };
 
+/{
+	yukon_batterydata: qcom,battery-data {
+		qcom,rpull-up-kohm = <100>;
+		qcom,vref-batt-therm = <1800000>;
+	};
+};
+
 &pm8226_bms {
 	status = "ok";
 	qcom,enable-fcc-learning;
@@ -764,8 +771,10 @@
 	qcom,min-fcc-ocv-pc = <30>;
 	qcom,min-fcc-learning-samples = <5>;
 	qcom,fcc-resolution = <10>;
-
+	qcom,batt-type = <0xFF>;
+	qcom,use-external-rsense;
 	qcom,clamp-soc-max-count = <0>;
+	qcom,battery-data = <&yukon_batterydata>;
 };
 
 &vph_pwr_vreg {
