@@ -25,6 +25,7 @@
 #include <linux/of_gpio.h>
 #include <linux/of_platform.h>
 #include <linux/gpio.h>
+#include <linux/regulator/consumer.h>
 #include <linux/regulator/qpnp-labibb-regulator.h>
 
 #include "../mdss_dsi.h"
@@ -102,6 +103,54 @@ static int somc_panel_vregs_init(struct mdss_dsi_ctrl_pdata *ctrl)
 								__func__);
 			return rc;
 		}
+	}
+
+	/**
+	 * LAB precharge time
+	 */
+	if (spec_pdata->fast_prechg_enb) {
+		rc = qpnp_lab_set_precharge(ctrl->lab,
+			spec_pdata->lab_fast_precharge_time,
+			spec_pdata->fast_prechg_enb);
+		if (rc)
+			pr_err("%s: Cannot configure lab precharge\n",
+				__func__);
+	}
+
+	/**
+	 * LAB soft start control
+	 */
+	if (spec_pdata->lab_soft_enb) {
+		rc = qpnp_lab_set_soft_start(ctrl->lab,
+			spec_pdata->lab_soft_start);
+		if (rc)
+			pr_err("%s: Cannot configure lab soft start\n",
+				__func__);
+	}
+	if (spec_pdata->ibb_soft_enb) {
+		rc = qpnp_ibb_set_soft_start(ctrl->ibb,
+			spec_pdata->ibb_soft_start);
+		if (rc)
+			pr_err("%s: Cannot configure ibb soft start\n",
+				__func__);
+	}
+
+	/**
+	 * LAB/IBB pull-down control
+	 */
+	if (spec_pdata->lab_pd_enb) {
+		rc = qpnp_lab_set_pull_down(ctrl->lab,
+			spec_pdata->lab_pd_full);
+		if (rc)
+			pr_err("%s: Cannot configure lab pull down\n",
+				__func__);
+	}
+	if (spec_pdata->ibb_pd_enb) {
+		rc = qpnp_ibb_set_pull_down(ctrl->ibb,
+			spec_pdata->ibb_pd_full);
+		if (rc)
+			pr_err("%s: Cannot configure ibb pull down\n",
+				__func__);
 	}
 
 	vregs_initialized = true;
@@ -193,6 +242,45 @@ int somc_panel_vregs_dt(struct device_node *np,
 		if (!rc)
 			spec_pdata->ibb_current_max = tmp;
 	}
+
+	spec_pdata->fast_prechg_enb = of_find_property(np,
+			"somc,qpnp-lab-max-precharge-enable", &tmp);
+	if (spec_pdata->fast_prechg_enb) {
+		rc = of_property_read_u32(np,
+			"somc,qpnp-lab-max-precharge-time", &tmp);
+		if (!rc)
+			spec_pdata->lab_fast_precharge_time = tmp;
+	}
+
+	spec_pdata->lab_soft_enb = of_find_property(np,
+			"somc,qpnp-lab-soft-start", &tmp);
+	if (spec_pdata->lab_soft_enb) {
+		rc = of_property_read_u32(np,
+			"somc,qpnp-lab-soft-start", &tmp);
+		if (!rc)
+			spec_pdata->lab_soft_start = tmp;
+	}
+
+	spec_pdata->ibb_soft_enb = of_find_property(np,
+			"somc,qpnp-ibb-discharge-resistor", &tmp);
+	if (spec_pdata->ibb_soft_enb) {
+		rc = of_property_read_u32(np,
+			"somc,qpnp-ibb-discharge-resistor", &tmp);
+		if (!rc)
+			spec_pdata->ibb_soft_start = tmp;
+	}
+
+	spec_pdata->lab_pd_enb = of_find_property(np,
+			"somc,qpnp-lab-full-pull-down", &tmp);
+	if (spec_pdata->lab_pd_enb)
+		spec_pdata->lab_pd_full = of_property_read_bool(np,
+			"somc,qpnp-lab-full-pull-down");
+
+	spec_pdata->ibb_pd_enb = of_find_property(np,
+			"somc,qpnp-ibb-full-pull-down", &tmp);
+	if (spec_pdata->ibb_pd_enb)
+		spec_pdata->ibb_pd_full = of_property_read_bool(np,
+			"somc,qpnp,ibb-full-pull-down");
 
 	ctrl_pdata->spec_pdata->vreg_init = somc_panel_vregs_init;
 	ctrl_pdata->spec_pdata->vreg_ctrl = somc_panel_vregs_ctrl;
