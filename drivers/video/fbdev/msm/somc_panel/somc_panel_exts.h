@@ -147,8 +147,19 @@ struct mdss_panel_specific_pdata {
 	u32 ibb_output_voltage;
 	u32 lab_current_max;
 	u32 ibb_current_max;
+	u32 lab_fast_precharge_time;
+	u32 lab_soft_start;
+	u32 ibb_soft_start;
+	bool lab_pd_full;
+	bool ibb_pd_full;
+
 	bool lab_current_max_enable;
 	bool ibb_current_max_enable;
+	bool fast_prechg_enb;
+	bool lab_soft_enb;
+	bool ibb_soft_enb;
+	bool lab_pd_enb;
+	bool ibb_pd_enb;
 	int (*vreg_init) (struct mdss_dsi_ctrl_pdata *ctrl);
 	int (*vreg_ctrl) (struct mdss_dsi_ctrl_pdata *ctrl, int enable);
 
