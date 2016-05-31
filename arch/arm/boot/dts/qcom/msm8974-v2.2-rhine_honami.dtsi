@@ -67,6 +67,12 @@
 	};
 };
 
+/{
+	rhine_honami_batterydata: qcom,battery-data {
+		#include "batterydata-rhine-honami.dtsi"
+	};
+};
+
 &pm8941_chg {
 	qcom,ibatmax-ma = <1500>;
 	qcom,ibatterm-ma = <150>;
@@ -79,6 +85,7 @@
 };
 
 &pm8941_bms {
+	qcom,battery-data = <&rhine_honami_batterydata>;
 	qcom,r-sense-uohm = <10005>;
 	qcom,fcc-resolution = <13>;
 	qcom,chg-term-ua = <150000>;
