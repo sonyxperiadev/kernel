@@ -357,8 +357,10 @@ int do_panel_detect(struct device_node **node,
 	rc = panel_detect_setup(node,
 			 ctrl_pdata->spec_pdata, pdev);
 	if (rc < 0)
-		return rc;
-	
+		pr_err("%s: WARNING: Panel detection LCD ID setup failed.\n",
+			__func__);
+
+
 	if (use_dric_only) {
 		pr_info("%s: Starting DriverIC-only " \
 			"Panel Detection...\n", __func__);
