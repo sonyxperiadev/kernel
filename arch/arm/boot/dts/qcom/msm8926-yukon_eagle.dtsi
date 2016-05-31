@@ -361,21 +361,17 @@
 };
 
 / {
-	mtp_batterydata: qcom,battery-data {
-		qcom,rpull-up-kohm = <100>;
-		qcom,vref-batt-therm = <1800000>;
-
-		#include "batterydata-palladium.dtsi"
-		#include "batterydata-mtp-3000mah.dtsi"
+	yukon_eagle_batterydata: qcom,battery-data {
+		#include "batterydata-yukon-eagle.dtsi"
 	};
 };
 
 &pm8226_bms {
-	qcom,battery-data = <&mtp_batterydata>;
+	qcom,battery-data = <&yukon_eagle_batterydata>;
 };
 
 &pm8226_chg {
-	qcom,battery-data = <&mtp_batterydata>;
+	qcom,battery-data = <&yukon_eagle_batterydata>;
 };
 
 &mdss_mdp {
