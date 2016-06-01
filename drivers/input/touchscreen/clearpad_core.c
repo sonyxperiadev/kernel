@@ -94,6 +94,10 @@
 #define SYNS(th, func, type, sym) \
 	SYNSET(th, SYN_F_PAGE_ADDR(th, SYNFUNC(func), SYNTYPE(type), \
 				   SYNOFF(th, func, type, sym)))
+/* only F12 can use SYNA (e.g. F12_2D_CTRL<regid>) */
+#define SYNA(th, func, type, regid) \
+	SYNSET(th, SYN_F_PAGE_ADDR(th, SYNFUNC(func), SYNTYPE(type), \
+		((th)->pdt[SYNFUNC(func)].offset[SYNTYPE(type)][regid])))
 
 #ifdef CONFIG_DEBUG_FS
 #define DEBUG_COMMAND(C0, C1) (((int)C0 << 8) + (int)C1)
@@ -126,6 +130,8 @@
 #define GLOVE_MODE_BIT_ENABLE				0x20
 #define GLOVE_MODE_BIT_DISABLE				0x00
 #define GLOVE_MODE_BIT_MASK				0x20
+#define GLOVE_MODE_FINGER_DET				0x01
+#define CLOSED_COVER_DET				0x02
 #define EW_DOUBLE_TAP_ENABLE				0x01
 #define EW_DOUBLE_TAP_DISABLE				0x00
 #define EW_RPT_GESTURE_ENABLE				0x02
@@ -223,6 +229,8 @@ enum clearpad_chip_e {
 	SYN_CHIP_3500	= 0x38,
 	SYN_CHIP_7300	= 0x37,
 	SYN_CHIP_7500	= 0x39,
+	SYN_CHIP_3330	= 0x3A,
+	SYN_CHIP_332U	= 0x40,
 };
 
 static const char * const clearpad_task_name[] = {
@@ -984,6 +992,18 @@ static int clearpad_set_glove_mode(struct clearpad_t *this,
 					GLOVE_MODE_BIT_ENABLE :
 					GLOVE_MODE_BIT_DISABLE,
 					GLOVE_MODE_BIT_MASK);
+
+		if (this->chip_id == SYN_CHIP_3330 ||
+		    this->chip_id == SYN_CHIP_332U) {
+			/* F12_2D_CTRL26: Feature Enable */
+			rc = clearpad_put_bit(SYNF(this, F12_2D, CTRL, 0x0C),
+					enable ?
+					GLOVE_MODE_FINGER_DET : 0,
+					GLOVE_MODE_FINGER_DET);
+			if (rc)
+				pr_err("%s: Cannot set glove mode finger det\n",
+					__func__);
+		}
 	} else if (clearpad_is_valid_function(this, SYN_F51_CUSTOM))
 		rc = clearpad_put(SYNF(this, F51_CUSTOM,
 					CTRL, 0x03),
@@ -1005,10 +1025,28 @@ static int clearpad_set_cover_status(struct clearpad_t *this)
 	int rc = 0;
 	u8 bufstr[3] = {0};
 
+	if (this->chip_id == SYN_CHIP_3330 ||
+	    this->chip_id == SYN_CHIP_332U) {
+		/* F12_2D_CTRL26: Feature Enable */
+		rc = clearpad_put_bit(SYNF(this, F12_2D, CTRL, 0x0C),
+				this->cover.status ?
+				CLOSED_COVER_DET : 0,
+				CLOSED_COVER_DET);
+		if (rc) {
+			pr_err("%s: Cannot set closed_cover_det\n", __func__);
+			goto exit;
+		}
+	}
+
 	rc = clearpad_set_glove_mode(this,
 			this->cover.status ? true : this->glove.enabled);
 	if (rc)
 		goto exit;
+
+	/* S3330/S332U won't need the glove as finger settings */
+	if (this->chip_id == SYN_CHIP_3330 ||
+	    this->chip_id == SYN_CHIP_332U)
+		goto update;
 
 	rc = clearpad_get_block(SYNF(this, F12_2D, CTRL, 0x09), bufstr, 3);
 	if (rc)
@@ -1025,11 +1063,12 @@ static int clearpad_set_cover_status(struct clearpad_t *this)
 	if (rc)
 		goto exit;
 
+
 	rc = clearpad_put(SYNF(this, F51_CUSTOM, CTRL, 0x00),
 			this->cover.status ? 0x03 : 0x00);
 	if (rc)
 		goto exit;
-
+update:
 	rc = clearpad_put_bit(SYNF(this, F54_ANALOG, COMMAND, 0x00),
 			ANALOG_COMMAND_FORCE_UPDATE,
 			ANALOG_COMMAND_FORCE_UPDATE);
@@ -1043,44 +1082,61 @@ exit:
 static int clearpad_set_cover_window(struct clearpad_t *this)
 {
 	int rc;
+	u8 block_buf[8];
 
-	rc = clearpad_put(SYNF(this, F51_CUSTOM,
-			CTRL, 0x03), this->cover.win_top);
-	if (rc)
-		goto exit;
-	rc = clearpad_put(SYNF(this, F51_CUSTOM,
-			CTRL, 0x04), this->cover.win_top >> 8);
-	if (rc)
-		goto exit;
-	rc = clearpad_put(SYNF(this, F51_CUSTOM,
-			CTRL, 0x07), this->cover.win_bottom);
-	if (rc)
-		goto exit;
-	rc = clearpad_put(SYNF(this, F51_CUSTOM,
-			CTRL, 0x08), this->cover.win_bottom >> 8);
-	if (rc)
-		goto exit;
-	rc = clearpad_put(SYNF(this, F51_CUSTOM,
-			CTRL, 0x05), this->cover.win_right);
-	if (rc)
-		goto exit;
-	rc = clearpad_put(SYNF(this, F51_CUSTOM,
-			CTRL, 0x06), this->cover.win_right >> 8);
-	if (rc)
-		goto exit;
-	rc = clearpad_put(SYNF(this, F51_CUSTOM,
-			CTRL, 0x01), this->cover.win_left);
-	if (rc)
-		goto exit;
-	rc = clearpad_put(SYNF(this, F51_CUSTOM,
-			CTRL, 0x02), this->cover.win_left >> 8);
-	if (rc)
-		goto exit;
+	if (this->chip_id == SYN_CHIP_3330 ||
+	    this->chip_id == SYN_CHIP_332U) {
+		/* Cover window size register F12_2D_CTRL25 */
+		if (!clearpad_is_valid_function(this, SYN_F12_2D)) {
+			pr_err("%s: F12_2D is required to set cover window",
+				__func__);
+			rc = -EPERM;
+			goto end;
+		}
+
+		block_buf[0] = this->cover.win_left;
+		block_buf[1] = this->cover.win_left >> 8;
+		block_buf[2] = this->cover.win_right;
+		block_buf[3] = this->cover.win_right >> 8;
+		block_buf[4] = this->cover.win_top;
+		block_buf[5] = this->cover.win_top >> 8;
+		block_buf[6] = this->cover.win_bottom;
+		block_buf[7] = this->cover.win_bottom >> 8;
+
+		/* F12_2D_CTRL25: Closed Xmin/Xmax/Ymin/Ymax */
+		rc = clearpad_put_block(SYNA(this, F12_2D, CTRL, 25),
+				block_buf, 8);
+		if (rc)
+			goto end;
+	} else {
+		/* Cover window size register F51_CUSTOM_CTRL05.01 */
+		if (!clearpad_is_valid_function(this, SYN_F51_CUSTOM)) {
+			pr_err("%s: F51 is required to set cover window",
+				__func__);
+			rc = -EPERM;
+			goto end;
+		}
+
+		block_buf[0] = this->cover.win_left;
+		block_buf[1] = this->cover.win_left >> 8;
+		block_buf[2] = this->cover.win_top;
+		block_buf[3] = this->cover.win_top >> 8;
+		block_buf[4] = this->cover.win_right;
+		block_buf[5] = this->cover.win_right >> 8;
+		block_buf[6] = this->cover.win_bottom;
+		block_buf[7] = this->cover.win_bottom >> 8;
+
+		/* F51_CUSTOM_CTRL05: Cover Left/Top/Right/Bottom */
+		rc = clearpad_put_block(SYNF(this, F51_CUSTOM, CTRL, 0x01),
+				block_buf, 8);
+		if (rc)
+			goto end;
+	}
 
 	rc = clearpad_set_cover_status(this);
-exit:
+end:
 	if (rc)
-		dev_err(&this->pdev->dev, "failed to set cover window");
+		pr_err("%s: failed to set cover window", __func__);
 	return rc;
 }
 
@@ -2072,6 +2128,12 @@ static int clearpad_vreg_suspend(struct clearpad_t *this, int enable)
 {
 	int rc = 0;
 
+	if (this->chip_id == SYN_CHIP_3330 ||
+	    this->chip_id == SYN_CHIP_332U) {
+		/* vreg_suspend not needed on S3330/S332U */
+		return 0;
+	}
+
 	if (IS_ERR(this->vreg_touch_vdd)) {
 		dev_err(&this->pdev->dev,
 				"%s: vreg_touch_vdd is not initialized\n",
@@ -2104,6 +2166,12 @@ static int clearpad_vreg_configure(struct clearpad_t *this, int enable)
 {
 	int rc = 0;
 	struct device *dev = this->pdev->dev.parent;
+
+	if (this->chip_id == SYN_CHIP_3330 ||
+	    this->chip_id == SYN_CHIP_332U) {
+		/* vreg_configure not needed on S3330/S332U */
+		return 0;
+	}
 
 	if (enable) {
 		this->vreg_touch_vdd = regulator_get(dev, CLEARPAD_VDD);
@@ -2400,8 +2468,38 @@ static int clearpad_set_normal_mode(struct clearpad_t *this)
 {
 	int rc = 0;
 	u8 irq, buf[4] = {0};
+	bool s33_series = (this->chip_id == SYN_CHIP_3330 ||
+			   this->chip_id == SYN_CHIP_332U);
 
 	dev_dbg(&this->pdev->dev, "%s\n", __func__);
+
+	if (!this->wakeup_gesture.enabled || s33_series) {
+		rc = clearpad_vreg_suspend(this, 0);
+		if (rc)
+			goto exit;
+		usleep_range(10000, 11000);
+		clearpad_set_irq(this, this->pdt[SYN_F01_RMI].irq_mask,
+								true);
+		rc = clearpad_get(SYNF(this, F01_RMI, DATA, 0x01), &irq);
+		if (rc) {
+			dev_err(&this->pdev->dev,
+				"failed to read interrupt status\n");
+			goto exit;
+		}
+		rc = clearpad_put_bit(SYNF(this, F01_RMI, CTRL, 0x00),
+			DEVICE_CONTROL_SLEEP_MODE_NORMAL_OPERATION,
+			DEVICE_CONTROL_SLEEP_MODE);
+		if (rc) {
+			dev_err(&this->pdev->dev,
+				"failed to exit sleep mode\n");
+			goto exit;
+		}
+		usleep_range(10000, 11000);
+
+		if (s33_series)
+			goto end;
+	}
+		
 
 	if (this->wakeup_gesture.enabled) {
 		if (!this->wakeup_gesture.lpm_disabled) {
@@ -2464,30 +2562,8 @@ static int clearpad_set_normal_mode(struct clearpad_t *this)
 				}
 			}
 		}
-	} else {
-		rc = clearpad_vreg_suspend(this, 0);
-		if (rc)
-			goto exit;
-		usleep_range(10000, 11000);
-		clearpad_set_irq(this, this->pdt[SYN_F01_RMI].irq_mask,
-								true);
-		rc = clearpad_get(SYNF(this, F01_RMI, DATA, 0x01), &irq);
-		if (rc) {
-			dev_err(&this->pdev->dev,
-				"failed to read interrupt status\n");
-			goto exit;
-		}
-		rc = clearpad_put_bit(SYNF(this, F01_RMI, CTRL, 0x00),
-			DEVICE_CONTROL_SLEEP_MODE_NORMAL_OPERATION,
-			DEVICE_CONTROL_SLEEP_MODE);
-		if (rc) {
-			dev_err(&this->pdev->dev,
-				"failed to exit sleep mode\n");
-			goto exit;
-		}
-		usleep_range(10000, 11000);
 	}
-
+end:
 	if (clearpad_is_valid_function(this, SYN_F51_CUSTOM)
 	    && this->cover.enabled)
 		rc = clearpad_set_cover_status(this);
