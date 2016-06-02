@@ -430,9 +430,7 @@
 	qcom,warm-bat-mv = <4000>;
 	qcom,vbatdet-delta-mv = <100>;
 	qcom,vbatdet-delta-soc = <1>;
-	qcom,ibatmax-cool-ma = <900>;
 	qcom,batt-hot-percentage = <25>;
-	qcom,btc-disabled = <1>;
 };
 
 &mdss_mdp {
