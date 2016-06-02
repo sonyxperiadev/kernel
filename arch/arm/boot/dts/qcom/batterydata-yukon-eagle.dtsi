@@ -18,6 +18,7 @@ qcom,eagle-batterydata {
 	qcom,default-rbatt-mohm = <139>;
 	qcom,rbatt-capacitive-mohm = <0>;
 	qcom,flat-ocv-threshold-uv = <3800000>;
+	qcom,batt-id-kohm = <1>;
 	qcom,battery-type = "Eagle_2330mah";
 
 	qcom,fcc-temp-lut {

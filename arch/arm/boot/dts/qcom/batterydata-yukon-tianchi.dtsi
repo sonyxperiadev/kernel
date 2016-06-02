@@ -16,6 +16,9 @@
 qcom,tianchi-batterydata {
 	qcom,fcc-mah = <3053>;
 	qcom,default-rbatt-mohm = <100>;
+	qcom,rbatt-capacitive-mohm = <0>;
+	qcom,flat-ocv-threshold-uv = <3800000>;
+	qcom,batt-id-kohm = <1>;
 	qcom,battery-type = "Tianchi_3053mah";
 
 	qcom,fcc-temp-lut {

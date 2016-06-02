@@ -16,6 +16,9 @@
 qcom,seagull-batterydata {
 	qcom,fcc-mah = <2500>;
 	qcom,default-rbatt-mohm = <240>;
+	qcom,rbatt-capacitive-mohm = <0>;
+	qcom,flat-ocv-threshold-uv = <3800000>;
+	qcom,batt-id-kohm = <1>;
 	qcom,battery-type = "Seagull_2500mah";
 
 	qcom,fcc-temp-lut {
