@@ -1198,6 +1198,11 @@
 	qcom,mdss-pref-prim-intf = "dsi";
 };
 
+&pmx_hdmi_cec {
+	qcom,pins = <&gp 0>;
+	status = "disabled";
+};
+
 &mdss_hdmi_tx {
 	pinctrl-names = "hdmi_hpd_active", "hdmi_ddc_active",
 				"hdmi_active", "hdmi_sleep";
@@ -3308,14 +3313,22 @@
 	/delete-property/ qcom,parallel-usb-min-current-ma;
 	/delete-property/ qcom,parallel-9v-usb-min-current-ma;
 	qcom,bmd-pin-src = "bpd_none";
-	qcom,chg-vadc = <&pmi8994_vadc>;
+	qcom,usb_dp-vadc = <&pmi8994_vadc>;
+	qcom,usb_dm-vadc = <&pmi8994_vadc>;
 	qcom,charge-unknown-battery;
-	qcom,dc-psy-type = "Wireless";
+	qcom,precharging-timeout-mins = <24>;
+	qcom,charging-timeout-mins = <768>;
 	somc,thermal-mitigation-usb-5v = <1500 1500 1500 1500 1500 1500 1500 1500 1200 900 700 500 300 300 0>;
 	somc,thermal-mitigation-usb-9v = <1800 1800 1800 1800 1800 1800 1400 1000 700 500 400 300 300 300 0>;
 	somc,thermal-mitigation-dc-5v = <1000 1000 1000 900 800 700 700 700 700 700 700 500 300 300 0>;
-	gpio_id_low = <&pmi8994_mpps 1 0>;
 	qcom,autoadjust-vfloat;
+	qcom,force-aicl-rerun;
+
+	id_poll_enable;
+	id_poll_up_interval = <2000>;
+	id_poll_up_period = <50000>;
+	id_poll_pd_gpio = <&pmi8994_mpps 1 0>;
+	id_poll_pd_invert = <0>;
 };
 
 &usb_ehci {
