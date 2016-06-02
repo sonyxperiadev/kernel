@@ -250,6 +250,7 @@
 
 &pm8226_chg {
 	qcom,tchg-mins = <240>;
+	qcom,thermal-mitigation = <1500 1250 1000 750 650 0>;
 	qcom,ibatmax-warm-ma = <400>;
 	qcom,warm-bat-decidegc = <450>;
 	qcom,warm-bat-mv = <3900>;
