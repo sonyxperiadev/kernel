@@ -88,22 +88,8 @@ static void mhl_unlock(struct wake_lock *lock)
 	}
 }
 
-/* It should be removed later */
-#ifdef MHL_PMIC_VMIN_SET
- #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
- extern int somc_chg_notify_mhl_state(int state);
- #else
- #define somc_chg_notify_mhl_state(x)
- #endif
-#endif
-
 static void mhl_pf_external_notify(int data)
 {
-	/* noitfy charger of mhl status */
-#ifdef MHL_PMIC_VMIN_SET
-	somc_chg_notify_mhl_state(data);
-#endif
-
 	notify_usb_online(usb_ctx, data);
 
 	/* notify HDMI Driver of change of HDMI Clock. */

@@ -482,6 +482,8 @@ static void chip_power_on(void)
 
 void mhl_device_release_resource(void)
 {
+	mhl_sii8620_clear_and_mask_interrupts(false);
+
 	mhl_unpowered_power_off();
 
 	mhl_discovery_timer_stop();
@@ -490,8 +492,6 @@ void mhl_device_release_resource(void)
 	mhl_platform_power_stop_charge();
 
 	deactivate_hpd();
-
-	mhl_sii8620_clear_and_mask_interrupts(false);
 
 	/* impedance 0 retry counter */
 	imp_zero_cnt = 0;
@@ -739,28 +739,6 @@ static int int_disc_isr(uint8_t int_disc_status)
 					 | BIT_CBUS_MSC_MR_WRITE_BURST
 					 | BIT_CBUS_MSC_MR_SET_INT
 					 | BIT_CBUS_MSC_MT_DONE_NACK);
-		} else if (0x00 == (disc_stat2 & 0x03)) {
-			pr_debug("%s: impedance count=%x\n",
-				__func__, imp_zero_cnt);
-
-#ifdef CONFIG_SUPPORT_CHG_TIMING
-			mhl_platform_power_stop_charge();
-#endif
-
-			/*
-			 * mhl_unpowered_power_off() is called to make
-			 * source_vbus_disable_changed flag false
-			 * (for retry of device discovery).
-			 */
-			mhl_unpowered_power_off();
-			msleep(50);
-			imp_zero_cnt++;
-			if(imp_zero_cnt > MAX_ZERO_IMP_DISC){
-				chip_power_off();
-			} else {
-				params_init_for_ready_to_mhl_connection();
-				return BIT_RGND_READY_INT;
-			}
 		} else {
 			pr_debug("%s: Cable impedance != 1k (Not MHL Device)\n",
 								__func__);
