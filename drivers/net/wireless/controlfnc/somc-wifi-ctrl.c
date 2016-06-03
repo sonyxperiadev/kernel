@@ -1,27 +1,20 @@
 /*
+ * Copyright (C) 2015 Sony Mobile Communications Inc.
  *
- * Copyright (C) 2013 Sony Mobile Communications AB.
- * Copyright (C) 2013 LGE, Inc
- *
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2, as
+ * published by the Free Software Foundation.
  */
 #include <linux/gpio.h>
-#include <linux/qpnp/pin.h>
-#include <linux/regulator/consumer.h>
 #include <linux/skbuff.h>
 #include <linux/wlan_plat.h>
 #include <linux/kernel.h>
 #include <linux/slab.h>
 #include <linux/delay.h>
 #include <linux/pinctrl/consumer.h>
+#ifdef CONFIG_BCMDHD_PCIE
 #include <linux/msm_pcie.h>
+#endif /* CONFIG_BCMDHD_PCIE */
 #include <linux/mmc/host.h>
 #include <linux/platform_device.h>
 #include <linux/of_gpio.h>
@@ -30,8 +23,53 @@
 #include "dhd_custom_memprealloc.h"
 
 #if defined(CONFIG_MACH_SONY_SHINANO)
+#include <linux/qpnp/pin.h>
+#include <linux/regulator/consumer.h>
 #include <../drivers/mmc/host/msm_sdcc.h>
+#endif
 
+static char *intf_macaddr = NULL;
+static struct mmc_host *wlan_mmc_host;
+
+struct bcmdhd_platform_data {
+	struct platform_device *pdev;
+	struct pinctrl *pinctrl;
+	struct pinctrl_state *gpio_state_active;
+	struct pinctrl_state *gpio_state_suspend;
+	unsigned int wlan_reg_on;
+#ifdef CONFIG_BCMDHD_PCIE
+	unsigned int pci_number;
+#endif /* CONFIG_BCMDHD_PCIE */
+};
+
+static struct bcmdhd_platform_data *bcmdhd_data;
+
+void somc_wifi_mmc_host_register(struct mmc_host *host)
+{
+        wlan_mmc_host = host;
+}
+
+#if !defined(CONFIG_MACH_SONY_SHINANO)
+int somc_wifi_set_power(int on)
+{
+	gpio_set_value(bcmdhd_data->wlan_reg_on, on);
+	return 0;
+}
+
+int somc_wifi_set_carddetect(int present)
+{
+#ifdef CONFIG_BCMDHD_PCIE
+	int ret = 0;
+	if (present)
+		ret = msm_pcie_enumerate(bcmdhd_data->pci_number);
+	return ret;
+#else
+	if (wlan_mmc_host)
+		mmc_detect_change(wlan_mmc_host, 0);
+	return 0;
+#endif /* CONFIG_BCMDHD_PCIE */
+}
+#else
 #define WIFI_POWER_PMIC_GPIO 18
 #define WIFI_IRQ_GPIO 67
 
@@ -67,30 +105,9 @@ static int somc_wifi_set_reset(int on)
 {
 	return 0;
 }
-#endif
-
-static char *intf_macaddr = NULL;
-static struct mmc_host *wlan_mmc_host;
-
-struct bcmdhd_platform_data {
-	struct platform_device *pdev;
-	struct pinctrl *pinctrl;
-	struct pinctrl_state *gpio_state_active;
-	struct pinctrl_state *gpio_state_suspend;
-	unsigned int wlan_reg_on;
-	unsigned int pci_number;
-};
-
-static struct bcmdhd_platform_data *bcmdhd_data;
-
-void somc_wifi_mmc_host_register(struct mmc_host *host)
-{
-        wlan_mmc_host = host;
-}
 
 int somc_wifi_set_power(int on)
 {
-#if defined(CONFIG_MACH_SONY_SHINANO)
 	int gpio = qpnp_pin_map("pm8941-gpio", WIFI_POWER_PMIC_GPIO);
 	int ret;
 
@@ -120,18 +137,12 @@ int somc_wifi_set_power(int on)
 	}
 
 	sdio_ctrl_power((struct mmc_host *)wifi_mmc_host, on);
-#else
-	gpio_set_value(bcmdhd_data->wlan_reg_on, on);
-#endif
 	return 0;
 
 }
 
-
 int somc_wifi_set_carddetect(int present)
 {
-#if defined(CONFIG_BCMDHD_SDIO)
-#if defined(CONFIG_MACH_SONY_SHINANO)
 	g_wifi_detect = present;
 
 	if (sdc_status_cb)
@@ -139,18 +150,8 @@ int somc_wifi_set_carddetect(int present)
 	else
 		printk(KERN_WARNING "%s: Nobody to notify\n", __func__);
 	return 0;
-#else
-	if (wlan_mmc_host)
-		mmc_detect_change(wlan_mmc_host, 0);
-	return 0;
-#endif
-#else
-	int ret = 0;
-	if (present)
-		ret = msm_pcie_enumerate(bcmdhd_data->pci_number);
-	return ret;
-#endif
 }
+#endif /* CONFIG_MACH_SONY_SHINANO */
 
 int somc_wifi_init(struct platform_device *pdev)
 {
@@ -217,6 +218,7 @@ int somc_wifi_init(struct platform_device *pdev)
 		goto err_gpio;
 	}
 
+#ifdef CONFIG_BCMDHD_PCIE
 	ret = of_property_read_u32(pdev->dev.of_node, "wlan-pci-number",
 		&bcmdhd_data->pci_number);
 	if (ret < 0) {
@@ -224,11 +226,14 @@ int somc_wifi_init(struct platform_device *pdev)
 			__func__, ret, bcmdhd_data->pci_number);
 		goto err_gpio_request;
 	}
+#endif /* CONFIG_BCMDHD_PCIE */
 
 	return 0;
 
+#ifdef CONFIG_BCMDHD_PCIE
 err_gpio_request:
 	gpio_free(bcmdhd_data->wlan_reg_on);
+#endif /* CONFIG_BCMDHD_PCIE */
 err_gpio:
 	ret_sus = pinctrl_select_state(bcmdhd_data->pinctrl,
 			bcmdhd_data->gpio_state_suspend);
@@ -428,7 +433,7 @@ struct wifi_platform_data somc_wifi_control = {
 	.set_power	= somc_wifi_set_power,
 #if defined(CONFIG_MACH_SONY_SHINANO)
 	.set_reset	= somc_wifi_set_reset,
-#endif
+#endif /* CONFIG_MACH_SONY_SHINANO */
 	.set_carddetect	= somc_wifi_set_carddetect,
 	.mem_prealloc	= dhd_wlan_mem_prealloc,
 	.get_mac_addr	= somc_wifi_get_mac_addr,
@@ -481,6 +486,6 @@ static int __init somc_wifi_init_on_boot(void)
 }
 
 device_initcall(somc_wifi_init_on_boot);
-#endif
+#endif /* CONFIG_MACH_SONY_SHINANO */
 
 MODULE_LICENSE("GPL v2");
