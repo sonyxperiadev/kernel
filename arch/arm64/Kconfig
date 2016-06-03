@@ -255,6 +255,24 @@ config ARCH_XGENE
 	help
 	  This enables support for AppliedMicro X-Gene SOC Family
 
+config ARCH_SONY_LOIRE
+    bool "Sony Mobile Loire platform"
+    depends on ARCH_MSM8916
+    help
+      Support for the SONY Mobile Loire platform
+      which is based on QCOM MSM8956 chipset.
+      If you enable this config,
+      please use SONY Mobile device tree.
+
+config MACH_SONY_SUZU
+    bool "Sony Mobile SUZU"
+    depends on ARCH_SONY_LOIRE
+    help
+      Support for the SONY Mobile Suzu device
+      which is based on SONY Loire platform.
+      If you enable this config,
+      please use SONY Mobile device tree.
+
 config ARCH_SONY_KANUTI
 	bool "Sony Mobile Kanuti platform"
 	depends on ARCH_MSM8916

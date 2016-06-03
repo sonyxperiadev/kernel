@@ -416,7 +416,9 @@
 			<0xff 321>, /* q6ss_irq_out(4) */
 			<0xff 322>, /* q6ss_irq_out(5) */
 			<0xff 323>, /* q6ss_irq_out(6) */
-			<0xff 325>; /* q6ss_wdog_exp_irq */
+			<0xff 325>, /* q6ss_wdog_exp_irq */
+			<0xff 327>, /* sdhc_3 */
+			<0xff 329>; /* sdhc_3 */
 
 		qcom,gpio-parent = <&msm_gpio>;
 		qcom,gpio-map = <3  100>,

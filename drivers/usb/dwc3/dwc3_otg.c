@@ -516,7 +516,7 @@ static void dwc3_ext_event_notify(struct usb_otg *otg)
 	if (ext_xceiv->ocp) {
 		dev_dbg(phy->dev, "XCVR: OCP set\n");
 		ext_xceiv->ocp = false;
-		set_bit(A_VBUS_DROP_DET, &dotg->inputs);
+		set_bit(A_VBUS_DROP_DET_DWC, &dotg->inputs);
 	}
 #endif
 
@@ -937,8 +937,8 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 			dotg->vbus_retry_count = 0;
 			work = 1;
 #ifdef CONFIG_SONY_USB_EXTENSIONS
-			clear_bit(A_VBUS_DROP_DET, &dotg->inputs);
-		} else if (test_bit(A_VBUS_DROP_DET, &dotg->inputs)) {
+			clear_bit(A_VBUS_DROP_DET_DWC, &dotg->inputs);
+		} else if (test_bit(A_VBUS_DROP_DET_DWC, &dotg->inputs)) {
 			dev_dbg(phy->dev, "vbus_drop_det\n");
 			/* staying on here until exit from A-Device */
 #endif
@@ -981,8 +981,8 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 			dotg->vbus_retry_count = 0;
 			work = 1;
 #ifdef CONFIG_SONY_USB_EXTENSIONS
-			clear_bit(A_VBUS_DROP_DET, &dotg->inputs);
-		} else if (test_bit(A_VBUS_DROP_DET, &dotg->inputs)) {
+			clear_bit(A_VBUS_DROP_DET_DWC, &dotg->inputs);
+		} else if (test_bit(A_VBUS_DROP_DET_DWC, &dotg->inputs)) {
 			dev_dbg(phy->dev, "vbus_drop_det\n");
 			dwc3_otg_start_host(&dotg->otg, 0);
 			phy->state = OTG_STATE_A_IDLE;

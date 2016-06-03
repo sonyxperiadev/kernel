@@ -634,5 +634,10 @@ config REGULATOR_CPR2_GFX
 	  graphics (GFX) rail. The GFX CPR2 controller monitors the graphics voltage
 	  requirements. This driver reads initial voltage values out of hardware
 	  fuses and CPR target quotient values out of device tree.
+
+config SOMC_LCD_OCP_ENABLED
+	bool "SoMC LCD OCP function"
+	help
+	  Select this to enable SoMC LCD Over current protection function.
 endif
 

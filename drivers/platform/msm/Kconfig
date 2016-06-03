@@ -305,4 +305,11 @@ config SEEMP_CORE
           This option enables Qualcomm Technologies, Inc. Snapdragron Smart Protection to
           detect anomalies in various activities. It records task activities in a log and
           rates the actions according to whether a typical user would use the tools.
+
+config PON_SOMC_ORG
+	bool "SoMC specific power on interface"
+	help
+	  This option enables SoMC specific power on interface.
+	  The implementation in this kernel is feature-reduced to support only
+	  the dvdd shutdown function.
 endmenu

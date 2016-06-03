@@ -68,7 +68,7 @@ struct dwc3_otg {
 	int			charger_retry_count;
 	int			vbus_retry_count;
 #ifdef CONFIG_SONY_USB_EXTENSIONS
- #define A_VBUS_DROP_DET 3
+ #define A_VBUS_DROP_DET_DWC 3
 	struct wake_lock	host_wakelock;
 	struct notifier_block	usbdev_nb;
 	int			device_count;

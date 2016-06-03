@@ -6795,11 +6795,13 @@ static int mem_cgroup_can_attach(struct cgroup *cgroup,
 	return ret;
 }
 
+/*
 static int mem_cgroup_allow_attach(struct cgroup *cgroup,
 				   struct cgroup_taskset *tset)
 {
 	return subsys_cgroup_allow_attach(cgroup, tset);
 }
+*/
 
 static void mem_cgroup_cancel_attach(struct cgroup *cgroup,
 				     struct cgroup_taskset *tset)

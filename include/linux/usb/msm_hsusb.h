@@ -171,6 +171,7 @@ enum usb_chg_type {
 	USB_ACA_DOCK_CHARGER,
 	USB_PROPRIETARY_CHARGER,
 	USB_FLOATED_CHARGER,
+	USB_RETRY_DET_CHARGER,
 };
 
 /**
@@ -288,6 +289,7 @@ enum usb_id_state {
  */
 struct msm_otg_platform_data {
 	int *phy_init_seq;
+	int *phy_init_seq_host;
 	int (*vbus_power)(bool on);
 	unsigned power_budget;
 	enum usb_mode_type mode;
@@ -324,6 +326,7 @@ struct msm_otg_platform_data {
 	bool enable_axi_prefetch;
 	struct clk *system_clk;
 	struct clk *pclk;
+	int usb_switch_sel_gpio; /* Loire Suzu */
 };
 
 /* phy related flags */
@@ -486,6 +489,7 @@ struct msm_otg {
 #define B_BUS_REQ	16
 #define MHL	        17
 #define B_FALSE_SDP	18
+#define A_VBUS_DROP_DET 31
 	unsigned long inputs;
 	struct work_struct sm_work;
 	bool sm_work_pending;
@@ -601,6 +605,11 @@ struct msm_otg {
 	char (buf[DEBUG_MAX_MSG])[DEBUG_MSG_LEN];   /* buffer */
 	u32 max_nominal_system_clk_rate;
 	unsigned int vbus_state;
+	int sub_type;
+	bool usbin_state;
+
+	u32 chg_det_cnt;
+	u32 chg_det_retrying;
 };
 
 struct ci13xxx_platform_data {

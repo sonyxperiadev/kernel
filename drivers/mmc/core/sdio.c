@@ -30,7 +30,7 @@
 #include "sdio_cis.h"
 
 // Sony Kitakami R2
-#if defined(CONFIG_MACH_SONY_SUZURAN) || defined(CONFIG_MACH_SONY_SUMIRE) || defined(CONFIG_MACH_SONY_SATSUKI)
+#if defined(CONFIG_MACH_SONY_SUZURAN) || defined(CONFIG_MACH_SONY_SUMIRE) || defined(CONFIG_MACH_SONY_SATSUKI) || defined(CONFIG_MACH_SONY_SUZU)
 #define SELECT_LOW_VOLTAGE
 #endif
 
