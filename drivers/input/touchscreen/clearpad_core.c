@@ -3555,7 +3555,7 @@ static int clearpad_command_open(struct clearpad_t *this,
 	} else {
 		this->flash.buffer_size = image_size;
 		dev_info(&this->pdev->dev,
-			"prepared buffer size=%u\n", this->flash.buffer_size);
+			"prepared buffer size=%zu\n", this->flash.buffer_size);
 	}
 	UNLOCK(this);
 	return rc;
@@ -3602,7 +3602,7 @@ static ssize_t clearpad_fwdata_write(struct file *file,
 				"config_size=%d\n",
 				this->flash.config_size);
 		dev_info(&this->pdev->dev,
-				"image_size=%d\n", image_size);
+				"image_size=%zu\n", image_size);
 		rc = clearpad_command_open(this, image_size);
 		if (rc) {
 			size = -EINVAL;
@@ -3621,7 +3621,7 @@ static ssize_t clearpad_fwdata_write(struct file *file,
 	memcpy(this->flash.image + this->flash.size, buf, size);
 	this->flash.size += size;
 	dev_info(&this->pdev->dev,
-		"got %d bytes, total %d bytes\n", size, this->flash.size);
+		"got %zu bytes, total %zu bytes\n", size, this->flash.size);
 	UNLOCK(this);
 exit:
 	return size;
@@ -4063,7 +4063,7 @@ static ssize_t clearpad_pca_store(struct device *dev,
 	if (size > SYN_PCA_ACCESS_MAX_WRITE_SIZE) {
 		rc = -EINVAL;
 		dev_err(&this->pdev->dev,
-		       "Input data size is large (size = %d)\n", size);
+		       "Input data size is large (size = %zu)\n", size);
 		goto err_unlock;
 	}
 
@@ -4091,8 +4091,8 @@ static ssize_t clearpad_pca_store(struct device *dev,
 	if (size % block_size) {
 		rc = -EINVAL;
 		dev_err(&this->pdev->dev,
-		       "Writed data size is not multiples of block_size" \
-			"(size = %d, block_size = %d)\n", size, block_size);
+		       "Written data size is not multiples of block_size" \
+			"(size = %zu, block_size = %d)\n", size, block_size);
 		goto err_unlock;
 	}
 
@@ -5319,7 +5319,7 @@ err_retrun:
 	return;
 }
 
-static ssize_t clearpad_debug_hwtest_open(struct inode *inode,
+static int clearpad_debug_hwtest_open(struct inode *inode,
 		struct file *file)
 {
 	file->private_data = inode->i_private;
@@ -5801,8 +5801,8 @@ static void clearpad_debug_init(struct clearpad_t *this)
 	dent = debugfs_create_dir("clearpad", 0);
 	if (!dent || IS_ERR(dent)) {
 		dev_err(&this->pdev->dev,
-			"%s: debugfs_create_dir error: dent=0x%x\n",
-			__func__, (unsigned)dent);
+			"%s: debugfs_create_dir error: dent=0x%lx\n",
+			__func__, PTR_ERR(dent));
 		goto exit;
 	}
 
@@ -5813,8 +5813,8 @@ static void clearpad_debug_init(struct clearpad_t *this)
 				&clearpad_debug_hwtest_fops);
 	if (!dent || IS_ERR(dent)) {
 		dev_err(&this->pdev->dev,
-			"%s: debugfs_create_file error: dent=0x%x\n",
-			__func__, (unsigned)dent);
+			"%s: debugfs_create_file error: dent=0x%lx\n",
+			__func__, PTR_ERR(dent));
 		goto error;
 	}
 
