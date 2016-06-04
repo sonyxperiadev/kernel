@@ -344,10 +344,6 @@ static int mdss_dsi_regulator_init(struct platform_device *pdev,
 		struct dsi_shared_data *sdata)
 {
 	int rc = 0, i = 0, j = 0;
-#if defined (CONFIG_REGULATOR_QPNP_LABIBB_SOMC) && \
-    defined (CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL)
-	struct mdss_dsi_ctrl_pdata *ctrl = NULL;
-#endif
 
 	if (!pdev || !sdata) {
 		pr_err("%s: invalid input\n", __func__);
