@@ -3323,7 +3323,6 @@ int msm_venc_set_csc(struct msm_vidc_inst *inst)
 int msm_venc_s_fmt(struct msm_vidc_inst *inst, struct v4l2_format *f)
 {
 	struct msm_vidc_format *fmt = NULL;
-	struct hal_frame_size frame_sz = {0};
 	int rc = 0;
 	int i;
 	struct hfi_device *hdev;
@@ -3364,7 +3363,6 @@ int msm_venc_s_fmt(struct msm_vidc_inst *inst, struct v4l2_format *f)
 			goto exit;
 		}
 	} else if (f->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
-		struct hal_uncompressed_format_select hal_fmt = {0};
 		struct hal_frame_size frame_sz;
 		struct hal_video_signal_info signal_info = {0};
 
