@@ -48,7 +48,7 @@
 	.ib = _ib,				\
 }
 
-static DEFINE_VDD_REGULATORS(vdd_mm, VDD_MM_NUM, 1, vdd_corner);
+static DEFINE_VDD_REGULATORS(vdd_mm, VDD_NUM_MM, 1, vdd_corner);
 static DEFINE_VDD_REGULATORS(vdd_mx, VDD_NUM, 1, vdd_corner);
 
 static struct msm_bus_vectors clk_debugfs_vectors[] = {
@@ -221,7 +221,7 @@ static const struct clk_div_table post_div_table_trion_even[] = {
 static struct clk_alpha_pll_postdiv cam_cc_pll0_out_even = {
 	.offset = 0x0,
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_TRION],
-	.post_div_shift = ALPHA_POST_DIV_EVEN_SHIFT,
+	.post_div_shift = 8,
 	.post_div_table = post_div_table_trion_even,
 	.num_post_div = ARRAY_SIZE(post_div_table_trion_even),
 	.width = 4,
@@ -230,7 +230,7 @@ static struct clk_alpha_pll_postdiv cam_cc_pll0_out_even = {
 		.parent_names = (const char *[]){ "cam_cc_pll0" },
 		.num_parents = 1,
 		.flags = CLK_SET_RATE_PARENT,
-		.ops = &clk_trion_pll_postdiv_ops,
+		.ops = &clk_alpha_pll_postdiv_trion_ops,
 	},
 };
 
@@ -242,7 +242,7 @@ static const struct clk_div_table post_div_table_trion_odd[] = {
 static struct clk_alpha_pll_postdiv cam_cc_pll0_out_odd = {
 	.offset = 0x0,
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_TRION],
-	.post_div_shift = ALPHA_POST_DIV_ODD_SHIFT,
+	.post_div_shift = 12,
 	.post_div_table = post_div_table_trion_odd,
 	.num_post_div = ARRAY_SIZE(post_div_table_trion_odd),
 	.width = 4,
@@ -251,7 +251,7 @@ static struct clk_alpha_pll_postdiv cam_cc_pll0_out_odd = {
 		.parent_names = (const char *[]){ "cam_cc_pll0" },
 		.num_parents = 1,
 		.flags = CLK_SET_RATE_PARENT,
-		.ops = &clk_trion_pll_postdiv_ops,
+		.ops = &clk_alpha_pll_postdiv_trion_ops,
 	},
 };
 
@@ -309,7 +309,7 @@ static struct clk_alpha_pll cam_cc_pll1 = {
 static struct clk_alpha_pll_postdiv cam_cc_pll1_out_even = {
 	.offset = 0x1000,
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_TRION],
-	.post_div_shift = ALPHA_POST_DIV_EVEN_SHIFT,
+	.post_div_shift = 8,
 	.post_div_table = post_div_table_trion_even,
 	.num_post_div = ARRAY_SIZE(post_div_table_trion_even),
 	.width = 4,
@@ -318,7 +318,7 @@ static struct clk_alpha_pll_postdiv cam_cc_pll1_out_even = {
 		.parent_names = (const char *[]){ "cam_cc_pll1" },
 		.num_parents = 1,
 		.flags = CLK_SET_RATE_PARENT,
-		.ops = &clk_trion_pll_postdiv_ops,
+		.ops = &clk_alpha_pll_postdiv_trion_ops,
 	},
 };
 
@@ -366,7 +366,7 @@ static const struct clk_div_table post_div_table_regera_main[] = {
 static struct clk_alpha_pll_postdiv cam_cc_pll2_out_main = {
 	.offset = 0x2000,
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_TRION],
-	.post_div_shift = ALPHA_POST_DIV_EVEN_SHIFT,
+	.post_div_shift = 8,
 	.post_div_table = post_div_table_regera_main,
 	.num_post_div = ARRAY_SIZE(post_div_table_regera_main),
 	.width = 2,
@@ -375,7 +375,7 @@ static struct clk_alpha_pll_postdiv cam_cc_pll2_out_main = {
 		.parent_names = (const char *[]){ "cam_cc_pll2" },
 		.num_parents = 1,
 		.flags = CLK_SET_RATE_PARENT,
-		.ops = &clk_trion_pll_postdiv_ops,
+		.ops = &clk_alpha_pll_postdiv_trion_ops,
 	},
 };
 
@@ -433,7 +433,7 @@ static struct clk_alpha_pll cam_cc_pll3 = {
 static struct clk_alpha_pll_postdiv cam_cc_pll3_out_even = {
 	.offset = 0x3000,
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_TRION],
-	.post_div_shift = ALPHA_POST_DIV_EVEN_SHIFT,
+	.post_div_shift = 8,
 	.post_div_table = post_div_table_trion_even,
 	.num_post_div = ARRAY_SIZE(post_div_table_trion_even),
 	.width = 4,
@@ -442,7 +442,7 @@ static struct clk_alpha_pll_postdiv cam_cc_pll3_out_even = {
 		.parent_names = (const char *[]){ "cam_cc_pll3" },
 		.num_parents = 1,
 		.flags = CLK_SET_RATE_PARENT,
-		.ops = &clk_trion_pll_postdiv_ops,
+		.ops = &clk_alpha_pll_postdiv_trion_ops,
 	},
 };
 
@@ -500,7 +500,7 @@ static struct clk_alpha_pll cam_cc_pll4 = {
 static struct clk_alpha_pll_postdiv cam_cc_pll4_out_even = {
 	.offset = 0x4000,
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_TRION],
-	.post_div_shift = ALPHA_POST_DIV_EVEN_SHIFT,
+	.post_div_shift = 8,
 	.post_div_table = post_div_table_trion_even,
 	.num_post_div = ARRAY_SIZE(post_div_table_trion_even),
 	.width = 4,
@@ -509,7 +509,7 @@ static struct clk_alpha_pll_postdiv cam_cc_pll4_out_even = {
 		.parent_names = (const char *[]){ "cam_cc_pll4" },
 		.num_parents = 1,
 		.flags = CLK_SET_RATE_PARENT,
-		.ops = &clk_trion_pll_postdiv_ops,
+		.ops = &clk_alpha_pll_postdiv_trion_ops,
 	},
 };
 
@@ -2531,11 +2531,11 @@ static int cam_cc_sm8150_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
-	clk_alpha_pll_trion_configure(&cam_cc_pll0, regmap, cam_cc_pll0.config);
-	clk_alpha_pll_trion_configure(&cam_cc_pll1, regmap, cam_cc_pll1.config);
-	clk_alpha_pll_regera_configure(&cam_cc_pll2, regmap, cam_cc_pll2.config);
-	clk_alpha_pll_trion_configure(&cam_cc_pll3, regmap, cam_cc_pll3.config);
-	clk_alpha_pll_trion_configure(&cam_cc_pll4, regmap, cam_cc_pll4.config);
+	clk_trion_pll_configure(&cam_cc_pll0, regmap, cam_cc_pll0.config);
+	clk_trion_pll_configure(&cam_cc_pll1, regmap, cam_cc_pll1.config);
+	clk_regera_pll_configure(&cam_cc_pll2, regmap, cam_cc_pll2.config);
+	clk_trion_pll_configure(&cam_cc_pll3, regmap, cam_cc_pll3.config);
+	clk_trion_pll_configure(&cam_cc_pll4, regmap, cam_cc_pll4.config);
 
 	ret = qcom_cc_really_probe(pdev, &cam_cc_sm8150_desc, regmap);
 	if (ret) {

@@ -48,7 +48,7 @@
 	.ib = _ib,				\
 }
 
-static DEFINE_VDD_REGULATORS(vdd_mm, VDD_MM_NUM, 1, vdd_corner);
+static DEFINE_VDD_REGULATORS(vdd_mm, VDD_NUM_MM, 1, vdd_corner);
 
 static struct msm_bus_vectors clk_debugfs_vectors[] = {
 	MSM_BUS_VECTOR(MSM_BUS_MASTER_AMPSS_M0,
@@ -1638,8 +1638,8 @@ static int disp_cc_sm8150_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
-	clk_alpha_pll_trion_configure(&disp_cc_pll0, regmap, disp_cc_pll0.config);
-	clk_alpha_pll_trion_configure(&disp_cc_pll1, regmap, disp_cc_pll1.config);
+	clk_trion_pll_configure(&disp_cc_pll0, regmap, disp_cc_pll0.config);
+	clk_trion_pll_configure(&disp_cc_pll1, regmap, disp_cc_pll1.config);
 
 	/* Enable clock gating for DSI and MDP clocks */
 	regmap_update_bits(regmap, DISP_CC_MISC_CMD, 0x10, 0x10);
