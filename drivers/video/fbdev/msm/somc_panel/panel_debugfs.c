@@ -520,6 +520,16 @@ static void crash_counter_reset(void)
 	bs_det.cnt_crash = 0;
 }
 
+static void mdss_dsi_panel_blackscreen_off(struct mdss_panel_data *pdata)
+{
+	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
+
+	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
+				panel_data);
+
+	pdata->resume_started = true;
+}
+
 static void mdss_dsi_panel_blackscreen_det(struct mdss_panel_data *pdata)
 {
 	bs_det.cnt_timeout++;
@@ -857,6 +867,7 @@ void mipi_dsi_panel_create_debugfs(struct msm_fb_data_type *mfd)
 	blackscreen_det_init();
 	first_frame_flushed_det_init();
 	pdata->crash_counter_reset = crash_counter_reset;
+	pdata->blackscreen_off = mdss_dsi_panel_blackscreen_off;
 	pdata->blackscreen_det = mdss_dsi_panel_blackscreen_det;
 	pdata->fff_time_update = mdss_dsi_panel_fff_time_update;
 	pdata->resume_started = false;
