@@ -8103,17 +8103,15 @@ static void clearpad_post_probe_work(struct work_struct *work)
 	get_monotonic_boottime(&ts);
 	HWLOGI(this, "start post probe @ %ld.%06ld\n", ts.tv_sec, ts.tv_nsec);
 
+//	if (unlikely(!first_blank_done))
+//		incell_force_sp_on();
+
 	rc = clearpad_ctrl_session_begin(this, session);
 	if (rc) {
 		HWLOGE(this, "failed to begin post probe session\n");
 		do_reschedule = true;
 		goto err_in_ctrl_session_begin;
 	}
-
-	if (unlikely(!first_blank_done))
-		incell_force_sp_on();
-
-	WARN_ON(!touchctrl_is_display_powered(this));
 
 	LOCK(&this->lock);
 	if (!this->dev_active) {
