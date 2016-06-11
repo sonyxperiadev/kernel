@@ -164,7 +164,7 @@
 			chip_id = <0x40>;
 			post_probe_start = <0>;
 			synaptics,firmware_name = "touch_module_id_0x%02x.img";
-			flash_on_post_probe = <1>;
+			flash_on_post_probe = <0>;
 			flip_config = <0>;
 			watchdog_enabled = <1>;
 			watchdog_delay_ms = <3000>;
@@ -202,6 +202,28 @@
 						type = <99>; /* END */
 					};
 				};
+			};
+			/* chip settings */
+			clearpad_default {
+				flash_default_timeout_ms = <20000>;
+				calibrate_on_fwflash = <0>;
+				calibration_supported = <0>;
+				hwreset_delay_for_powerup_ms = <220>;
+				interrupt_default_wait_ms = <1000>;
+			};
+			S3330 {
+				flash_default_timeout_ms = <20000>;
+				calibrate_on_fwflash = <0>;
+				calibration_supported = <0>;
+				hwreset_delay_for_powerup_ms = <220>;
+				interrupt_default_wait_ms = <1000>;
+			};
+			S332U {
+				flash_default_timeout_ms = <20000>;
+				calibrate_on_fwflash = <1>;
+				calibration_supported = <1>;
+				hwreset_delay_for_powerup_ms = <220>;
+				interrupt_default_wait_ms = <1000>;
 			};
 		};
 	};
