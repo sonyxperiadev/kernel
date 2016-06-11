@@ -21,6 +21,7 @@ obj-$(CONFIG_TOUCHSCREEN_BU21013)	+= bu21013_ts.o
 obj-$(CONFIG_TOUCHSCREEN_CHIPONE_ICN8318)	+= chipone_icn8318.o
 obj-$(CONFIG_TOUCHSCREEN_CLEARPAD_RMI_DEV)	+= clearpad_rmi_dev.o
 obj-$(CONFIG_TOUCHSCREEN_CLEARPAD)	+= clearpad_core.o
+obj-$(CONFIG_TOUCHSCREEN_INCELL_CLEARPAD)+= clearpad_incell_core.o
 obj-$(CONFIG_TOUCHSCREEN_CLEARPAD_I2C)	+= clearpad_i2c.o
 obj-$(CONFIG_TOUCHSCREEN_CY8CTMG110)	+= cy8ctmg110_ts.o
 obj-$(CONFIG_TOUCHSCREEN_CYTTSP_CORE)	+= cyttsp_core.o
