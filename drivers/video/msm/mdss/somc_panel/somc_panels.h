@@ -51,6 +51,8 @@
 #define QPNP_REGULATOR_VSP_V_5P4V	5400000
 #define QPNP_REGULATOR_VSN_V_M5P4V	5400000
 
+#define CHANGE_PAYLOAD(a, b) (spec_pdata->fps_cmds.cmds[a].payload[b])
+
 /* Data for internal use ONLY */
 struct fps_array {
 	u32 frame_nbr;
@@ -80,12 +82,31 @@ enum {
 	CLR_DATA_UV_PARAM_TYPE_RENE_SR
 };
 
+/* Common */
+int  somc_panel_vreg_name_to_config(
+		struct mdss_dsi_ctrl_pdata *ctrl_pdata,
+		struct dss_vreg *config, char *name);
+
+int  somc_panel_vreg_ctrl(
+		struct mdss_dsi_ctrl_pdata *ctrl_pdata,
+		char *vreg, bool enable);
+
+void somc_panel_chg_fps_cmds_send(struct mdss_dsi_ctrl_pdata *ctrl_pdata);
+
 /* Main */
+void somc_panel_down_period_quirk(
+			struct mdss_panel_specific_pdata *spec_pdata);
+
 void mdss_dsi_panel_cmds_send(struct mdss_dsi_ctrl_pdata *ctrl,
 			struct dsi_panel_cmds *pcmds);
 
 int  mdss_panel_parse_dt(struct device_node *np,
 			 struct mdss_dsi_ctrl_pdata *ctrl_pdata);
+
+int  mdss_dsi_request_gpios(struct mdss_dsi_ctrl_pdata *ctrl_pdata);
+
+int  mdss_dsi_property_read_u32_var(struct device_node *np,
+		char *name, u32 **out_data, int *num);
 
 /* Detection */
 int  do_panel_detect(struct device_node **node,
@@ -104,6 +125,29 @@ int somc_panel_vregs_dt(struct device_node *np,
 			struct mdss_dsi_ctrl_pdata *ctrl_pdata);
 #else
 #define somc_panel_vregs_dt(x, y) 0
+#endif
+
+#ifdef CONFIG_SOMC_PANEL_LEGACY
+/* Legacy */
+int legacy_panel_driver_init(struct mdss_dsi_ctrl_pdata *ctrl_pdata);
+#endif
+
+#ifdef CONFIG_SOMC_PANEL_INCELL
+/* Incell */
+int  incell_parse_dt(struct device_node *np,
+		struct mdss_dsi_ctrl_pdata *ctrl_pdata);
+
+int  incell_panel_driver_init(struct mdss_dsi_ctrl_pdata *ctrl_pdata);
+
+bool incell_panel_is_seq_for_ewu(void);
+int  incell_panel_request_gpios(struct mdss_dsi_ctrl_pdata *ctrl_pdata);
+void incell_panel_free_gpios(struct mdss_dsi_ctrl_pdata *ctrl_pdata);
+int  incell_dsi_panel_power_off_ex(struct mdss_panel_data *pdata);
+int  incell_dsi_panel_power_on_ex(struct mdss_panel_data *pdata);
+void incell_driver_post_power_on(struct mdss_panel_data *pdata);
+
+void incell_panel_fb_notifier_call_chain(
+		struct msm_fb_data_type *mfd, int blank, bool type);
 #endif
 
 #endif
