@@ -322,7 +322,7 @@ struct change_fps_rtn_pos {
 
 struct change_fps {
 	bool enable;
-	u32 disp_clk;
+	u64 disp_clk;
 	u32 dric_vbp;
 	u32 dric_vfp;
 	bool rtn_adj;
@@ -1027,6 +1027,7 @@ struct mdss_panel_data {
 
 	int (*intf_ready) (struct mdss_panel_data *pdata);
 	void (*crash_counter_reset) (void);
+	void (*blackscreen_off) (struct mdss_panel_data *pdata);
 	void (*blackscreen_det) (struct mdss_panel_data *pdata);
 	void (*fff_time_update) (struct mdss_panel_data *pdata);
 

@@ -376,6 +376,9 @@ struct msm_fb_data_type {
 	struct workqueue_struct *unblank_kworker;
 	struct work_struct unblank_work;
 	bool early_unblank_completed;
+ #ifdef CONFIG_SOMC_PANEL_INCELL
+	bool off_sts;
+ #endif
 #endif
 
 	/* Following is used for dynamic mode switch */

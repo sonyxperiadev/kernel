@@ -381,6 +381,10 @@ struct dsi_pinctrl_res {
 	struct pinctrl *pinctrl;
 	struct pinctrl_state *gpio_state_active;
 	struct pinctrl_state *gpio_state_suspend;
+#ifdef CONFIG_SOMC_PANEL_INCELL
+	struct pinctrl_state *touch_state_active;
+	struct pinctrl_state *touch_state_suspend;
+#endif
 };
 
 struct panel_horizontal_idle {
