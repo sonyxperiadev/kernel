@@ -2333,6 +2333,10 @@ static int clearpad_gpio_configure(struct clearpad_t *this, int enable)
 {
 	int rc = 0;
 
+#ifdef CONFIG_SOMC_PANEL_INCELL
+	return 0;
+#endif
+
 	if (enable) {
 		rc = gpio_request(this->pdata->irq_gpio, CLEARPAD_NAME);
 		if (rc) {
