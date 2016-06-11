@@ -29,6 +29,10 @@
 #define PCC_STS_UD	0x01	/* update request */
 #define DRIVER_IC_FIH	4
 
+/* Incell extensions */
+#define HYBRID_INCELL		((bool)true)
+#define FULL_INCELL		((bool)false)
+
 /* panel DriverIC type */
 enum {
 	PANEL_DRIVER_IC_R63311,
@@ -69,6 +73,18 @@ struct mdss_panel_power_seq {
 	int *rst_seq;
 	int seq_b_num;
 	int *rst_b_seq;
+#ifdef CONFIG_SOMC_PANEL_INCELL
+	int disp_vdd;
+	int disp_vddio;
+	int disp_vsp;
+	int disp_vsn;
+
+	int touch_avdd;
+	int touch_vddio;
+	int touch_reset;
+	int touch_reset_first;
+	int touch_intn;
+#endif
 };
 
 struct esd_reg_status_ctrl {
@@ -92,15 +108,25 @@ struct poll_ctrl {
 
 struct mdss_panel_specific_pdata {
 	int (*pcc_setup)(struct mdss_panel_data *pdata);
-	int (*panel_power_ctrl) (struct mdss_panel_data *pdata, int enable);
 	int (*disp_on) (struct mdss_panel_data *pdata);
 	int (*detect) (struct mdss_panel_data *pdata);
 	int (*update_panel) (struct mdss_panel_data *pdata);
 	int (*update_fps) (struct msm_fb_data_type *mfd);
 	int (*reset) (struct mdss_panel_data *pdata, int enable);
 
+	int (*panel_power_ctrl) (struct mdss_panel_data *pdata, int enable);
+	int (*panel_power_on)	(struct mdss_panel_data *pdata);
+	int (*panel_post_on)	(struct mdss_panel_data *pdata);
+	int (*panel_power_off)	(struct mdss_panel_data *pdata);
+	int (*dsi_panel_off_ex)	(struct mdss_panel_data *pdata);
+	int (*dsi_request_gpios)(struct mdss_dsi_ctrl_pdata *ctrl_pdata);
+	int (*parse_specific_dt)(struct device_node *np,
+				 struct mdss_dsi_ctrl_pdata *ctrl_pdata);
+
 	bool disp_on_in_boot;
+	bool disp_onoff_state;
 	bool detected;
+	bool gpios_requested;
 	int driver_ic;
 	int32_t lcd_id;
 	int32_t adc_uv;
@@ -117,6 +143,14 @@ struct mdss_panel_specific_pdata {
 	bool pwron_reset;
 	bool dsi_seq_hack;
 	bool postpwron_no_reset_quirk;
+
+#ifdef CONFIG_SOMC_PANEL_INCELL
+	int touch_reset_gpio;
+	int touch_vddio_gpio;
+	int touch_int_gpio;
+	bool panel_type;
+	struct mdss_panel_power_seq ewu_seq;
+#endif
 
 	struct dsi_panel_cmds cabc_early_on_cmds;
 	struct dsi_panel_cmds cabc_on_cmds;
@@ -139,6 +173,7 @@ struct mdss_panel_specific_pdata {
 
 	struct mdss_panel_power_seq on_seq;
 	struct mdss_panel_power_seq off_seq;
+	u32 current_period;
 	u32 down_period;
 	u32 new_vfp;
 
@@ -170,7 +205,6 @@ int mdss_dsi_panel_power_detect(struct platform_device *pdev, int enable);
 int mdss_dsi_panel_fps_data_update(struct msm_fb_data_type *mfd);
 int mdss_dsi_pinctrl_set_state(struct mdss_dsi_ctrl_pdata *ctrl_pdata,
 					bool active);
-int mdss_dsi_panel_disp_en(struct mdss_panel_data *pdata, int enable);
 
 static inline struct mdss_dsi_ctrl_pdata *mdss_dsi_get_master_ctrl(
 					struct mdss_panel_data *pdata)
