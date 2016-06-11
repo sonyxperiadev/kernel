@@ -2336,6 +2336,12 @@ static int mdss_mdp_cmd_panel_on(struct mdss_mdp_ctl *ctl,
 		if (ctl->panel_data->panel_info.disp_on_in_hs) {
 			disp_on_in_hs = true;
 		} else {
+#ifdef CONFIG_SOMC_PANEL_INCELL
+			rc = mdss_mdp_ctl_intf_event(ctl,
+					MDSS_EVENT_POST_PANEL_ON, NULL);
+			WARN(rc, "intf %d post panel on error (%d)\n",
+					ctl->intf_num, rc);
+#endif
 			rc = mdss_mdp_tearcheck_enable(ctl, true);
 			WARN(rc, "intf %d tearcheck enable error (%d)\n",
 					ctl->intf_num, rc);

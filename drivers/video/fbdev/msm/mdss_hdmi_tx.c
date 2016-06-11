@@ -824,7 +824,11 @@ static ssize_t hdmi_tx_sysfs_wta_hpd(struct device *dev,
 
 	mutex_lock(&hdmi_ctrl->tx_lock);
 
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 	rc = kstrtoint(buf, 10, &hpd);
+#else
+	rc = kstrtoint("0", 10, &hpd);
+#endif
 	if (rc) {
 		DEV_ERR("%s: kstrtoint failed. rc=%d\n", __func__, rc);
 		goto end;
