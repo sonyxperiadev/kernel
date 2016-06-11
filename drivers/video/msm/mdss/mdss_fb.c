@@ -119,6 +119,10 @@ static void mdss_fb_set_mdp_sync_pt_threshold(struct msm_fb_data_type *mfd,
 		int type);
 static void mdss_panelinfo_to_fb_var(struct mdss_panel_info *pinfo,
 					struct fb_var_screeninfo *var);
+#ifdef CONFIG_SOMC_PANEL_INCELL
+extern void incell_panel_fb_notifier_call_chain(
+		struct msm_fb_data_type *mfd, int blank, bool type);
+#endif
 
 static int lcd_backlight_registered;
 
@@ -267,6 +271,10 @@ static const struct input_device_id mdss_fb_input_ids[] = {
 };
 
 #ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+#ifdef CONFIG_SOMC_PANEL_INCELL
+extern void incell_driver_init(bool cont_splash_enabled);
+#endif
+
 static void mdss_background_unblank(struct work_struct *ws);
 
 static int pwr_pressed;
@@ -1210,6 +1218,10 @@ static int mdss_fb_probe(struct platform_device *pdev)
 		(mfd->panel_info->type == MIPI_CMD_PANEL))
 		mipi_dsi_panel_create_debugfs(mfd);
 
+#ifdef CONFIG_SOMC_PANEL_INCELL
+	incell_driver_init(mfd->panel_info->cont_splash_enabled);
+#endif
+
 	mfd->suspend_avoided = false;
 #endif
 
@@ -2007,9 +2019,19 @@ static int mdss_fb_blank_sub(int blank_mode, struct fb_info *info,
 	case FB_BLANK_HSYNC_SUSPEND:
 	case FB_BLANK_POWERDOWN:
 	default:
+#ifdef CONFIG_SOMC_PANEL_INCELL
+		incell_panel_fb_notifier_call_chain(mfd,
+					FB_BLANK_POWERDOWN, true);
+#endif
 		req_power_state = MDSS_PANEL_POWER_OFF;
 		pr_debug("blank powerdown called\n");
 		ret = mdss_fb_blank_blank(mfd, req_power_state);
+
+#ifdef CONFIG_SOMC_PANEL_INCELL
+		incell_panel_fb_notifier_call_chain(mfd,
+					FB_BLANK_POWERDOWN, false);
+#endif
+
 		break;
 	}
 
@@ -2029,12 +2051,20 @@ static void mdss_background_unblank(struct work_struct *ws)
 	mfd = container_of(ws, struct msm_fb_data_type, unblank_work);
 
 	pr_debug("unblank work running");
+#ifdef CONFIG_SOMC_PANEL_INCELL
+	incell_panel_fb_notifier_call_chain(mfd,
+				FB_BLANK_UNBLANK, true);
+#endif
 
 	ret = mdss_fb_blank_sub(FB_EARLY_UNBLANK, mfd->fbi,
 				mfd->op_enable);
 	if (ret)
 		pr_warn("can't turn on display!\n");
 	else {
+#ifdef CONFIG_SOMC_PANEL_INCELL
+		incell_panel_fb_notifier_call_chain(mfd,
+				FB_BLANK_POWERDOWN, false);
+#endif
 		mdss_fb_update_early_unblank_completed(mfd, true);
 		fb_set_suspend(mfd->fbi, FBINFO_STATE_RUNNING);
 	}
@@ -3009,6 +3039,15 @@ static void mdss_fb_power_setting_idle(struct msm_fb_data_type *mfd)
 static void __mdss_fb_copy_fence(struct msm_sync_pt_data *sync_pt_data,
 	struct sync_fence **fences, u32 *fence_cnt)
 {
+#ifdef CONFIG_SOMC_PANEL_INCELL
+	struct msm_fb_data_type *mfd;
+
+	mfd = container_of(sync_pt_data, struct msm_fb_data_type,
+				mdp_sync_pt_data);
+	if (mfd->off_sts)
+		return;
+#endif
+
 	pr_debug("%s: wait for fences\n", sync_pt_data->fence_name);
 
 	mutex_lock(&sync_pt_data->sync_mutex);
@@ -3177,6 +3216,13 @@ static int __mdss_fb_sync_buf_done_callback(struct notifier_block *p,
 	sync_pt_data = container_of(p, struct msm_sync_pt_data, notifier);
 	mfd = container_of(sync_pt_data, struct msm_fb_data_type,
 		mdp_sync_pt_data);
+
+#ifdef CONFIG_SOMC_PANEL_INCELL
+	if (mfd->off_sts) {
+		mdss_fb_signal_timeline(sync_pt_data);
+		return NOTIFY_OK;
+	}
+#endif
 
 	switch (event) {
 	case MDP_NOTIFY_FRAME_BEGIN:
@@ -3465,6 +3511,11 @@ static int __mdss_fb_perform_commit(struct msm_fb_data_type *mfd)
 	struct msm_fb_backup_type *fb_backup = &mfd->msm_fb_backup;
 	int ret = -ENOSYS;
 	u32 new_dsi_mode, dynamic_dsi_switch = 0;
+
+#ifdef CONFIG_SOMC_PANEL_INCELL
+	if (mfd->off_sts)
+		return 0;
+#endif
 
 	if (!sync_pt_data->async_wait_fences)
 		mdss_fb_wait_for_fence(sync_pt_data);
@@ -4298,6 +4349,11 @@ int mdss_fb_do_ioctl(struct fb_info *info, unsigned int cmd,
 	mfd = (struct msm_fb_data_type *)info->par;
 	if (!mfd)
 		return -EINVAL;
+
+#ifdef CONFIG_SOMC_PANEL_INCELL
+	if (mfd->off_sts)
+		return 0;
+#endif
 
 	if (mfd->shutdown_pending)
 		return -ESHUTDOWN;
