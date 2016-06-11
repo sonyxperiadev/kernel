@@ -134,6 +134,9 @@ void poll_worker_schedule(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 		return;
 	}
 
+	if (!polling)
+		return;
+
 	poll = &ctrl_pdata->spec_pdata->polling;
 	pinfo = &ctrl_pdata->panel_data.panel_info;
 
@@ -156,6 +159,9 @@ void poll_worker_cancel(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 		pr_err("%s: Invalid input data\n", __func__);
 		return;
 	}
+
+	if (!polling)
+		return;
 
 	poll = &ctrl_pdata->spec_pdata->polling;
 	pinfo = &ctrl_pdata->panel_data.panel_info;

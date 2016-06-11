@@ -13,3 +13,25 @@ config SOMC_PANEL_LABIBB
 	default y
 	---help---
 	LAB/IBB regulators handling for MSM8994 and later generation boards.
+
+choice
+	bool "SoMC Panel variant support"
+	default SOMC_PANEL_INCELL if (ARCH_SONY_LOIRE || ARCH_SONY_TONE)
+	default SOMC_PANEL_LEGACY if (ARCH_SONY_RHINE || ARCH_SONY_SHINANO || \
+				      ARCH_SONY_KITAKAMI || ARCH_SONY_KANUTI)
+
+config SOMC_PANEL_LEGACY
+	depends on FB_MSM_MDSS_SPECIFIC_PANEL
+	bool
+	prompt "SoMC Panel for Legacy"
+	---help---
+	Handles legacy panels (with or without LAB/IBB).
+
+config SOMC_PANEL_INCELL
+	depends on FB_MSM_MDSS_SPECIFIC_PANEL
+	bool
+	prompt "SoMC Panel for In-Cell"
+	---help---
+	Handles incell panels and touchscreens.
+	You probably want to also enable SOMC_PANEL_LABIBB.
+endchoice
