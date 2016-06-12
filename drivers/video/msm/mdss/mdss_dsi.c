@@ -1400,7 +1400,7 @@ int mdss_dsi_pinctrl_set_state(
 	struct mdss_panel_info *pinfo = NULL;
 	int rc = -EFAULT;
 
-#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+#ifdef CONFIG_SOMC_PANEL_LEGACY
 	if (ctrl_pdata->spec_pdata->disp_on_in_boot)
 		return 0;
 #endif
@@ -2326,12 +2326,12 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 	case MDSS_EVENT_PANEL_TIMING_SWITCH:
 		rc = mdss_dsi_panel_timing_switch(ctrl_pdata, arg);
 		break;
-#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+#ifdef CONFIG_SOMC_PANEL_LEGACY
 	case MDSS_EVENT_DISP_ON:
 		if (ctrl_pdata->spec_pdata->disp_on)
 			ctrl_pdata->spec_pdata->disp_on(pdata);
 		break;
-#endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
+#endif	/* CONFIG_SOMC_PANEL_LEGACY */
 	default:
 		pr_debug("%s: unhandled event=%d\n", __func__, event);
 		break;
@@ -3597,7 +3597,9 @@ int dsi_panel_device_register(struct platform_device *ctrl_pdev,
 
 	ctrl_pdata->panel_data.event_handler = mdss_dsi_event_handler;
 #ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+ #ifdef CONFIG_SOMC_PANEL_LEGACY
 	ctrl_pdata->panel_data.intf_ready = mdss_dsi_intf_ready;
+ #endif
 	ctrl_pdata->panel_data.detect = spec_pdata->detect;
 	ctrl_pdata->panel_data.update_panel = spec_pdata->update_panel;
 	ctrl_pdata->panel_data.panel_pdev = ctrl_pdev;
