@@ -314,6 +314,10 @@ static int mmc_read_ext_csd(struct mmc_card *card, u8 *ext_csd)
 	}
 
 	card->ext_csd.raw_strobe_support = ext_csd[EXT_CSD_STROBE_SUPPORT];
+#ifdef CONFIG_MACH_SONY_SUZU
+	/* Force no raw strobe support for Suzu */
+	card->ext_csd.raw_strobe_support = false;
+#endif
 	/*
 	 * The EXT_CSD format is meant to be forward compatible. As long
 	 * as CSD_STRUCTURE does not change, all values for EXT_CSD_REV
@@ -598,8 +602,12 @@ static int mmc_read_ext_csd(struct mmc_card *card, u8 *ext_csd)
 			card->ext_csd.data_tag_unit_size = 0;
 		}
 
+#ifdef CONFIG_MACH_SONY_SUZU
+		card->ext_csd.max_packed_writes = 8;
+#else
 		card->ext_csd.max_packed_writes =
 			ext_csd[EXT_CSD_MAX_PACKED_WRITES];
+#endif
 		card->ext_csd.max_packed_reads =
 			ext_csd[EXT_CSD_MAX_PACKED_READS];
 	} else {
@@ -630,6 +638,11 @@ static int mmc_read_ext_csd(struct mmc_card *card, u8 *ext_csd)
 		card->ext_csd.cmdq_support = 0;
 		card->ext_csd.cmdq_depth = 0;
 	}
+
+	/* eMMC v5 or later */
+	if (card->ext_csd.rev >= 7)
+		memcpy(card->ext_csd.fwrev, &ext_csd[EXT_CSD_FW_VERSION],
+		       MMC_FIRMWARE_LEN);
 
 out:
 	return err;
@@ -1742,6 +1755,9 @@ reinit:
 	/*
 	 * Enable power_off_notification byte in the ext_csd register
 	 */
+#ifdef CONFIG_MACH_SONY_SUZU
+	if (host->caps2 & MMC_CAP2_FULL_PWR_CYCLE)
+#endif
 	if (card->ext_csd.rev >= 6) {
 		err = mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
 				 EXT_CSD_POWER_OFF_NOTIFICATION,
@@ -1886,6 +1902,11 @@ reinit:
 		}
 	}
 
+	if (card->cid.manfid == CID_MANFID_HYNIX &&
+	    (card->ext_csd.fw_version == 0xA2 || card->ext_csd.fw_version == 0xA4)) {
+		card->host->caps2 &= ~MMC_CAP2_CMD_QUEUE;
+	}
+
 	if (card->ext_csd.cmdq_support && (card->host->caps2 &
 					   MMC_CAP2_CMD_QUEUE)) {
 		err = mmc_select_cmdq(card);
@@ -1898,6 +1919,7 @@ reinit:
 		}
 	}
 
+	memcpy(&host->cached_ios, &host->ios, sizeof(host->cached_ios));
 	return 0;
 
 free_card:
@@ -2022,6 +2044,40 @@ static void mmc_detect(struct mmc_host *host)
 	}
 }
 
+static int mmc_partial_init(struct mmc_host *host)
+{
+	int err = 0;
+	struct mmc_card *card = host->card;
+	u32 tuning_cmd;
+
+	pr_debug("%s: %s: bw: %d timing: %d clock: %d\n", mmc_hostname(host),
+		__func__,  host->cached_ios.bus_width,  host->cached_ios.timing,
+		host->cached_ios.clock);
+
+	mmc_set_bus_width(host, host->cached_ios.bus_width);
+	mmc_set_timing(host, host->cached_ios.timing);
+	mmc_set_clock(host, host->cached_ios.clock);
+
+	if (host->ops->execute_tuning && (mmc_card_hs200(card) ||
+					  mmc_card_hs400(card))) {
+		mmc_host_clk_hold(host);
+
+		if (mmc_card_hs200(card))
+			tuning_cmd = MMC_SEND_TUNING_BLOCK_HS200;
+		else if (mmc_card_hs400(card))
+			tuning_cmd = MMC_SEND_TUNING_BLOCK_HS400;
+
+		err = host->ops->execute_tuning(host,
+				tuning_cmd);
+
+		mmc_host_clk_release(host);
+	}
+	if (err)
+		pr_err("%s: tuning execution failed\n",
+			   mmc_hostname(host));
+	return err;
+}
+
 static int _mmc_suspend(struct mmc_host *host, bool is_suspend)
 {
 	int err = 0;
@@ -2040,7 +2096,7 @@ static int _mmc_suspend(struct mmc_host *host, bool is_suspend)
 	 */
 	mmc_disable_clk_scaling(host);
 
-	err = mmc_flush_cache(host->card);
+	err = mmc_cache_ctrl(host, 0);
 	if (err)
 		goto out;
 
@@ -2081,6 +2137,24 @@ static int mmc_resume(struct mmc_host *host)
 	BUG_ON(!host->card);
 
 	mmc_claim_host(host);
+
+	if (host->caps2 & MMC_CAP2_AWAKE_SUPP) {
+		err = mmc_card_awake(host);
+		if (err)
+			goto doinit;
+
+		err = mmc_partial_init(host);
+		if (err)
+			goto doinit;
+
+		err = mmc_cache_ctrl(host, 1);
+		if (err)
+			goto doinit;
+
+		goto skipinit;
+	}
+
+doinit:
 	retries = 3;
 	while (retries) {
 		err = mmc_init_card(host, host->ocr, host->card);
@@ -2097,6 +2171,7 @@ static int mmc_resume(struct mmc_host *host)
 		}
 		break;
 	}
+skipinit:
 	mmc_release_host(host);
 
 	/*

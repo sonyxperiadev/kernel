@@ -127,6 +127,9 @@ static int mmc_host_runtime_resume(struct device *dev)
 	}
 
 	if (host->card && !ret && mmc_card_cmdq(host->card)) {
+		mmc_host_clk_hold(host);
+		host->cmdq_ops->enable(host);
+		mmc_host_clk_release(host);
 		ret = mmc_cmdq_halt(host, false);
 		if (ret)
 			pr_err("%s: un-halt: failed: %d\n", __func__, ret);
@@ -193,6 +196,9 @@ static int mmc_host_suspend(struct device *dev)
 				mmc_release_host(host);
 				pr_err("%s: halt: failed: %d\n",
 						__func__, err);
+#ifdef CONFIG_MACH_SONY_SUZU
+				ret = err;
+#endif
 				goto out;
 			}
 		}
@@ -214,9 +220,11 @@ static int mmc_host_suspend(struct device *dev)
 	}
 out:
 	spin_lock_irqsave(&host->clk_lock, flags);
+#ifndef CONFIG_MACH_SONY_SUZU
 	if (ret)
 		host->dev_status = DEV_RESUMED;
 	else
+#endif
 		host->dev_status = DEV_SUSPENDED;
 	spin_unlock_irqrestore(&host->clk_lock, flags);
 	return ret;
@@ -236,6 +244,9 @@ static int mmc_host_resume(struct device *dev)
 			pr_err("%s: %s: failed: ret: %d\n", mmc_hostname(host),
 			       __func__, ret);
 		} else if (host->card && mmc_card_cmdq(host->card)) {
+			mmc_host_clk_hold(host);
+			host->cmdq_ops->enable(host);
+			mmc_host_clk_release(host);
 			ret = mmc_cmdq_halt(host, false);
 			if (ret)
 				pr_err("%s: un-halt: failed: %d\n",

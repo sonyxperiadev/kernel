@@ -290,6 +290,7 @@ struct sdhci_host {
 	struct mutex qos_lock;
 
 	struct sdhci_next next_data;
+	spinlock_t next_lock;			/* Mutex for next_data */
 	ktime_t data_start_time;
 	struct mutex ios_mutex;
 	enum sdhci_power_policy power_policy;

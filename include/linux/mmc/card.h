@@ -93,6 +93,8 @@ struct mmc_ext_csd {
 	unsigned int            data_tag_unit_size;     /* DATA TAG UNIT size */
 	unsigned int		boot_ro_lock;		/* ro lock support */
 	bool			boot_ro_lockable;
+#define MMC_FIRMWARE_LEN	8
+	u8			fwrev[MMC_FIRMWARE_LEN];/*FW version */
 	u8			raw_exception_status;	/* 54 */
 	u8			raw_partition_support;	/* 160 */
 	u8			raw_rpmb_size_mult;	/* 168 */
@@ -144,8 +146,13 @@ struct sd_switch_caps {
 #define HIGH_SPEED_MAX_DTR	50000000
 #define UHS_SDR104_MAX_DTR	208000000
 #define UHS_SDR50_MAX_DTR	100000000
+#ifndef CONFIG_MMC_DDR50_MAX_DTR_LMT
 #define UHS_DDR50_MAX_DTR	50000000
 #define UHS_SDR25_MAX_DTR	UHS_DDR50_MAX_DTR
+#else
+#define UHS_DDR50_MAX_DTR	40000000
+#define UHS_SDR25_MAX_DTR	50000000
+#endif
 #define UHS_SDR12_MAX_DTR	25000000
 	unsigned int		sd3_bus_mode;
 #define UHS_SDR12_BUS_SPEED	0
@@ -218,6 +225,7 @@ enum mmc_blk_status {
 	MMC_BLK_URGENT,
 	MMC_BLK_URGENT_DONE,
 	MMC_BLK_NO_REQ_TO_STOP,
+	MMC_BLK_RETRY_SINGLE,
 };
 
 enum mmc_packed_stop_reasons {
