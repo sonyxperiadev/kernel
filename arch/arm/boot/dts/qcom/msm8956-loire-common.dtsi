@@ -31,7 +31,7 @@
 			linux,reserve-contiguous-region;
 			linux,reserve-region;
 			linux,remove-completely;
-			reg = <0 0x57F00000 0 0x200000>;
+			reg = <0 0x57F00000 0 0x100000>;
 			label = "pstore_reserve_mem";
 		};
 
@@ -647,16 +647,16 @@
 		status = "ok";
 
 		android,ramoops-buffer-start = <0x57F00000>;
-		android,ramoops-buffer-size = <0x200000>;
-		android,ramoops-console-size = <0x100000>;
+		android,ramoops-buffer-size = <0x100000>;
+		android,ramoops-console-size = <0x60000>;
 		android,ramoops-record-size = <0x10000>;
 		android,ramoops-ftrace-size = <0x10000>;
-		android,ramoops-pmsg-size = <0x80000>;
+		android,ramoops-pmsg-size = <0x20000>;
 		android,ramoops-dump-oops = <0x1>;
 		linux,contiguous-region = <&pstore_reserve_mem>;
 		android,ramoops-hole {
 			compatible = "qcom,msm-contig-mem";
-			qcom,memblock-reserve = <0x57F00000 0x00200000>;
+			qcom,memblock-reserve = <0x57F00000 0x00100000>;
 		};
 	};
 
