@@ -937,7 +937,6 @@ void incell_power_on_ctrl(struct incell_ctrl *incell)
 	incell_intf_mode intf_mode = incell->intf_mode;
 	incell_worker_state worker_state = incell->worker_state;
 	bool incell_intf_operation = incell->incell_intf_operation;
-	static bool first_boot_done = false;
 
 	if (worker_state == INCELL_WORKER_ON) {
 		change_state = INCELL_STATE_P_ON;
@@ -968,8 +967,7 @@ void incell_power_on_ctrl(struct incell_ctrl *incell)
 				change_state = INCELL_STATE_SP_ON;
 				seq = POWER_ON_EXECUTE;
 			}
-		} else if (incell_state_is_power_on(state) &&
-			   likely(first_boot_done)) {
+		} else if (incell_state_is_power_on(state)) {
 			change_state = INCELL_STATE_S_ON;
 			seq = POWER_ON_EWU_SEQ;
 		} else {
@@ -977,9 +975,6 @@ void incell_power_on_ctrl(struct incell_ctrl *incell)
 			seq = POWER_ON_EXECUTE;
 		}
 	}
-
-	if (unlikely(!first_boot_done))
-		first_boot_done = true;
 
 	pr_debug("%s: incell change state seq:%d change_state:%d\n",
 				__func__, (int)seq, (int)change_state);
