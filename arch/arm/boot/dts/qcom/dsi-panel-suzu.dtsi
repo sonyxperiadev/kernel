@@ -747,10 +747,10 @@
 				0x00 0xE1 0x00 0x03 0x00 0x03 0x8000 0x8000 0x8000
 				0xFF 0x00 0x0E 0x38 0x0C 0x2F 0x8000 0x8000 0x8000>;
 		somc,mdss-dsi-use-picadj = <1>;
-		somc,mdss-dsi-picadj-sat = <1>;
+		somc,mdss-dsi-picadj-sat = <6675>;
 		somc,mdss-dsi-picadj-hue = <0>;
 		somc,mdss-dsi-picadj-val = <0>;
-		somc,mdss-dsi-picadj-cont = <0>;
+		somc,mdss-dsi-picadj-cont = <5>;
 
 	};
 
