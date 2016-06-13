@@ -687,6 +687,9 @@ static void mdss_dsi_panel_bl_ctrl(struct mdss_panel_data *pdata,
 	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
 
+	if (ctrl_pdata->spec_pdata->picadj_data.flags & MDP_PP_OPS_ENABLE)
+		mdss_dsi_panel_picadj_setup(pdata);
+
 	/*
 	 * Some backlight controllers specify a minimum duty cycle
 	 * for the backlight brightness. If the brightness is less
@@ -1344,9 +1347,6 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 		mdss_dsi_panel_pcc_setup(pdata);
 		spec_pdata->pcc_data.pcc_sts &= ~PCC_STS_UD;
 	}
-
-	if (spec_pdata->picadj_data.flags & MDP_PP_OPS_ENABLE)
-		mdss_dsi_panel_picadj_setup(pdata);
 
 	if (pdata->panel_info.dsi_master != pdata->panel_info.pdest)
 		goto end;
@@ -2010,7 +2010,89 @@ exit:
 	return 0;
 }
 
-static int mdss_dsi_panel_picadj_setup(struct mdss_panel_data *pdata)
+#define PA_V2_BASIC_FEAT_ENB (MDP_PP_PA_HUE_ENABLE | MDP_PP_PA_SAT_ENABLE | \
+			      MDP_PP_PA_VAL_ENABLE | MDP_PP_PA_CONT_ENABLE)
+#define PA_V2_BASIC_MASK_ENB (MDP_PP_PA_HUE_MASK | MDP_PP_PA_SAT_MASK | \
+			      MDP_PP_PA_VAL_MASK | MDP_PP_PA_CONT_MASK)
+
+static int somc_panel_pa_v2_setup(struct mdss_panel_data *pdata)
+{
+	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
+	struct mdp_pa_cfg *compat = NULL;
+	struct mdp_pa_v2_data *padata = NULL;
+	struct mdp_pa_v2_cfg_data picadj;
+	u32 copyback = 0;
+	int ret;
+
+	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
+				panel_data);
+
+	compat = &ctrl_pdata->spec_pdata->picadj_data;
+	if (!compat)
+		return -EINVAL;
+
+
+	memset(&picadj, 0, sizeof(struct mdp_pa_v2_cfg_data));
+
+	padata = kzalloc(sizeof(*padata), GFP_KERNEL);
+	if (padata == NULL) {
+		pr_err("%s: CRITICAL: Allocation failure. Bailing out.\n",
+			__func__);
+		return -ENOMEM;
+	}
+
+	padata->global_sat_adj = compat->sat_adj;
+	padata->global_hue_adj = compat->hue_adj;
+	padata->global_val_adj = compat->val_adj;
+	padata->global_cont_adj = compat->cont_adj;
+	padata->flags = MDP_PP_OPS_ENABLE;
+
+	/* Check if values are in permitted range, otherwise read defaults */
+	if ( ((padata->global_sat_adj  < 224|| padata->global_sat_adj  > 12000)
+					    && padata->global_sat_adj != 128)||
+	      (padata->global_hue_adj  < 0  || padata->global_hue_adj  > 1536) ||
+	     ((padata->global_val_adj  < 0  || padata->global_val_adj  > 383)
+					    && padata->global_val_adj  != 0) ||
+	     ((padata->global_cont_adj < 0  || padata->global_cont_adj > 383)
+					    && padata->global_cont_adj != 0) )
+	{
+		picadj.block = MDP_LOGICAL_BLOCK_DISP_0;
+		picadj.pa_v2_data.flags = MDP_PP_OPS_ENABLE | MDP_PP_OPS_READ |
+					  PA_V2_BASIC_FEAT_ENB |
+					  PA_V2_BASIC_MASK_ENB;
+
+		ret = mdss_mdp_pa_v2_config(&picadj, &copyback);
+		pr_err("%s: ERROR: Values not specified or invalid. \
+			Setting defaults.\n", __func__);
+		pr_err("%s (%d): defaults: sat=%d hue=%d val=%d cont=%d",
+			__func__, __LINE__,
+			picadj.pa_v2_data.global_sat_adj,
+			picadj.pa_v2_data.global_hue_adj,
+			picadj.pa_v2_data.global_val_adj,
+			picadj.pa_v2_data.global_cont_adj);
+
+		padata = &picadj.pa_v2_data;
+	}
+
+	picadj.block = MDP_LOGICAL_BLOCK_DISP_0;
+	padata->flags = MDP_PP_OPS_ENABLE | MDP_PP_OPS_WRITE |
+			PA_V2_BASIC_FEAT_ENB | PA_V2_BASIC_MASK_ENB;
+	picadj.pa_v2_data = *padata;
+
+	ret = mdss_mdp_pa_v2_config(&picadj, &copyback);
+	if (ret)
+		pr_err("%s: Cannot configure picadj: %d\n",
+			__func__, ret);
+
+	pr_info("%s (%d):sat=%d hue=%d val=%d cont=%d",
+		__func__, __LINE__, padata->global_sat_adj,
+		padata->global_hue_adj, padata->global_val_adj,
+		padata->global_cont_adj);
+
+	return ret;
+}
+
+static int somc_panel_pa_setup(struct mdss_panel_data *pdata)
 {
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
 	struct mdp_pa_cfg *padata = NULL;
@@ -2062,6 +2144,25 @@ static int mdss_dsi_panel_picadj_setup(struct mdss_panel_data *pdata)
 		padata->hue_adj, padata->val_adj, padata->cont_adj);
 
 	return 0;
+}
+
+static int mdss_dsi_panel_picadj_setup(struct mdss_panel_data *pdata)
+{
+	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
+
+	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
+				panel_data);
+
+	/*
+	 * Note: MDSS_DSI_HW_REV_101_1 is 8974Pro, which has MDP
+	 * revision 1.2.1 (102_1).
+	 * New picadj is required starting from MDP rev. 1.3.0 (103)
+	 * which has any DSI version >= 1.2.0 (102).
+	 */
+	if (ctrl_pdata->shared_data->hw_rev > MDSS_DSI_HW_REV_101_1)
+		return somc_panel_pa_v2_setup(pdata);
+	else
+		return somc_panel_pa_setup(pdata);
 }
 
 static void mdss_dsi_parse_trigger(struct device_node *np, char *trigger,
