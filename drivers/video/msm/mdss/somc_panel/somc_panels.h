@@ -134,16 +134,10 @@ int legacy_panel_driver_init(struct mdss_dsi_ctrl_pdata *ctrl_pdata);
 
 #ifdef CONFIG_SOMC_PANEL_INCELL
 /* Incell */
-int  incell_parse_dt(struct device_node *np,
-		struct mdss_dsi_ctrl_pdata *ctrl_pdata);
-
 int  incell_panel_driver_init(struct mdss_dsi_ctrl_pdata *ctrl_pdata);
 
 bool incell_panel_is_seq_for_ewu(void);
-int  incell_panel_request_gpios(struct mdss_dsi_ctrl_pdata *ctrl_pdata);
 void incell_panel_free_gpios(struct mdss_dsi_ctrl_pdata *ctrl_pdata);
-int  incell_dsi_panel_power_off_ex(struct mdss_panel_data *pdata);
-int  incell_dsi_panel_power_on_ex(struct mdss_panel_data *pdata);
 void incell_driver_post_power_on(struct mdss_panel_data *pdata);
 
 void incell_panel_fb_notifier_call_chain(

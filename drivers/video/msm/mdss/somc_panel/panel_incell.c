@@ -47,7 +47,7 @@ struct incell_ctrl incell_buf;
 
 static void incell_panel_power_worker_canceling(struct incell_ctrl *incell);
 
-int incell_parse_dt(struct device_node *np,
+static int incell_parse_dt(struct device_node *np,
 		struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 {
 	struct mdss_panel_specific_pdata *spec_pdata = NULL;
@@ -147,7 +147,7 @@ int incell_parse_dt(struct device_node *np,
 	return 0;
 }
 
-struct incell_ctrl *incell_get_info(void)
+static struct incell_ctrl *incell_get_info(void)
 {
 	return incell;
 }
@@ -286,7 +286,7 @@ int incell_get_power_status(incell_pw_status *power_status)
 	return INCELL_OK;
 }
 
-int incell_reset_touch(struct mdss_panel_data *pdata, int enable)
+static int incell_reset_touch(struct mdss_panel_data *pdata, int enable)
 {
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
 	struct mdss_panel_info *pinfo = NULL;
@@ -460,7 +460,7 @@ static void incell_power_off_ctrl(struct incell_ctrl *incell)
 	incell->change_state = change_state;
 }
 
-static void incell_state_s_off(incell_state *state)
+static inline void incell_state_s_off(incell_state *state)
 {
 	switch (*state) {
 	case INCELL_STATE_SLE100_P0:
@@ -493,7 +493,7 @@ static void incell_state_s_off(incell_state *state)
 	}
 }
 
-static void incell_state_p_off(incell_state *state)
+static inline void incell_state_p_off(incell_state *state)
 {
 	switch (*state) {
 	case INCELL_STATE_SLE000_P1:
@@ -526,7 +526,7 @@ static void incell_state_p_off(incell_state *state)
 	}
 }
 
-static void incell_state_sp_off(incell_state *state)
+static inline void incell_state_sp_off(incell_state *state)
 {
 	switch (*state) {
 	case INCELL_STATE_SLE000_P1:
@@ -583,7 +583,7 @@ void incell_state_change_off(struct incell_ctrl *incell)
 	pr_debug("%s: ---> status:%d\n", __func__, ((int)(*state)));
 }
 
-static void incell_state_s_on(incell_state *state)
+static inline void incell_state_s_on(incell_state *state)
 {
 	switch (*state) {
 	case INCELL_STATE_SLE000_P0:
@@ -616,7 +616,7 @@ static void incell_state_s_on(incell_state *state)
 	}
 }
 
-static void incell_state_p_on(incell_state *state)
+static inline void incell_state_p_on(incell_state *state)
 {
 	switch (*state) {
 	case INCELL_STATE_SLE000_P0:
@@ -649,7 +649,7 @@ static void incell_state_p_on(incell_state *state)
 	}
 }
 
-static void incell_state_sp_on(incell_state *state)
+static inline void incell_state_sp_on(incell_state *state)
 {
 	switch (*state) {
 	case INCELL_STATE_SLE000_P0:
@@ -745,7 +745,7 @@ static int incell_touch_pinctrl_set_state(
 	return rc;
 }
 
-int incell_dsi_panel_power_off_ex(struct mdss_panel_data *pdata)
+static int incell_dsi_panel_power_off_ex(struct mdss_panel_data *pdata)
 {
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
 	struct mdss_panel_specific_pdata *spec_pdata = NULL;
@@ -982,7 +982,7 @@ void incell_power_on_ctrl(struct incell_ctrl *incell)
 	incell->change_state = change_state;
 }
 
-int incell_dsi_panel_power_on_ex(struct mdss_panel_data *pdata)
+static int incell_dsi_panel_power_on_ex(struct mdss_panel_data *pdata)
 {
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
 	struct mdss_panel_specific_pdata *spec_pdata = NULL;
@@ -1761,7 +1761,7 @@ void incell_panel_fb_notifier_call_chain(
 	}
 }
 
-int incell_panel_request_gpios(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
+static int incell_panel_request_gpios(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 {
 	struct mdss_panel_specific_pdata *spec_pdata = NULL;
 	int rc = 0;
