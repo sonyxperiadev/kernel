@@ -158,8 +158,6 @@ struct mdss_panel_specific_pdata {
 	struct dsi_panel_cmds cabc_off_cmds;
 	struct dsi_panel_cmds cabc_late_off_cmds;
 	struct dsi_panel_cmds fps_cmds;
-	struct dsi_panel_cmds lock_cmds;
-	struct dsi_panel_cmds unlock_cmds;
 
 	struct dsi_panel_cmds einit_cmds;
 	struct dsi_panel_cmds init_cmds;
