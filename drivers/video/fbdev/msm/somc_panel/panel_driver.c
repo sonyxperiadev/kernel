@@ -3903,12 +3903,6 @@ int mdss_panel_parse_dt(struct device_node *np,
 		"qcom,mdss-dsi-off-command",
 		"qcom,mdss-dsi-off-command-state");
 
-	mdss_dsi_parse_dcs_cmds(np, &spec_pdata->lock_cmds,
-		"somc,mdss-dsi-lock-command", NULL);
-
-	mdss_dsi_parse_dcs_cmds(np, &spec_pdata->unlock_cmds,
-		"somc,mdss-dsi-unlock-command", NULL);
-
 	pinfo->mipi.force_clk_lane_hs = of_property_read_bool(np,
 		"qcom,mdss-dsi-force-clock-lane-hs");
 
