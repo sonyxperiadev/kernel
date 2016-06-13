@@ -133,18 +133,6 @@
 		somc,te-c-mode-45fps = <0x04 0xFF>;
 		somc,te-c-mode-pos = <3 1>;
 
-		somc,mdss-dsi-lock-command = [15 01 00 00 00 00 02 FF 10
-				15 01 00 00 00 00 02 FB 01
-				15 01 00 00 00 00 02 F0 55
-				15 01 00 00 00 00 02 F1 AA
-				15 01 00 00 01 00 02 F2 66];
-
-		somc,mdss-dsi-unlock-command = [15 01 00 00 00 00 02 FF 10
-				15 01 00 00 00 00 02 FB 01
-				15 01 00 00 00 00 02 F0 AA
-				15 01 00 00 00 00 02 F1 55
-				15 01 00 00 01 00 02 F2 99];
-
 		somc,mdss-dsi-pcc-enable;
 		somc,mdss-dsi-uv-command = [06 01 00 00 00 00 01 DA
 			06 01 00 00 00 00 01 DB];
@@ -489,18 +477,6 @@
 		somc,te-c-mode-60fps = <0x03 0x00>;
 		somc,te-c-mode-45fps = <0x04 0xFF>;
 		somc,te-c-mode-pos = <3 1>;
-
-		somc,mdss-dsi-lock-command = [15 01 00 00 00 00 02 FF 10
-				15 01 00 00 00 00 02 FB 01
-				15 01 00 00 00 00 02 F0 55
-				15 01 00 00 00 00 02 F1 AA
-				15 01 00 00 01 00 02 F2 66];
-
-		somc,mdss-dsi-unlock-command = [15 01 00 00 00 00 02 FF 10
-				15 01 00 00 00 00 02 FB 01
-				15 01 00 00 00 00 02 F0 AA
-				15 01 00 00 00 00 02 F1 55
-				15 01 00 00 01 00 02 F2 99];
 
 		somc,mdss-dsi-pcc-enable;
 		somc,mdss-dsi-uv-command = [06 01 00 00 00 00 01 DA
@@ -1559,18 +1535,6 @@
 		somc,te-c-mode-45fps = <0x04 0xFF>;
 		somc,te-c-mode-pos = <3 1>;
 
-		somc,mdss-dsi-lock-command = [15 01 00 00 00 00 02 FF 10
-				15 01 00 00 00 00 02 FB 01
-				15 01 00 00 00 00 02 F0 55
-				15 01 00 00 00 00 02 F1 AA
-				15 01 00 00 01 00 02 F2 66];
-
-		somc,mdss-dsi-unlock-command = [15 01 00 00 00 00 02 FF 10
-				15 01 00 00 00 00 02 FB 01
-				15 01 00 00 00 00 02 F0 AA
-				15 01 00 00 00 00 02 F1 55
-				15 01 00 00 01 00 02 F2 99];
-
 		somc,mdss-dsi-pcc-enable;
 		somc,mdss-dsi-uv-command = [06 01 00 00 00 00 01 DA
 			06 01 00 00 00 00 01 DB];
@@ -1916,18 +1880,6 @@
 		somc,te-c-mode-60fps = <0x03 0x00>;
 		somc,te-c-mode-45fps = <0x04 0xFF>;
 		somc,te-c-mode-pos = <3 1>;
-
-		somc,mdss-dsi-lock-command = [15 01 00 00 00 00 02 FF 10
-				15 01 00 00 00 00 02 FB 01
-				15 01 00 00 00 00 02 F0 55
-				15 01 00 00 00 00 02 F1 AA
-				15 01 00 00 01 00 02 F2 66];
-
-		somc,mdss-dsi-unlock-command = [15 01 00 00 00 00 02 FF 10
-				15 01 00 00 00 00 02 FB 01
-				15 01 00 00 00 00 02 F0 AA
-				15 01 00 00 00 00 02 F1 55
-				15 01 00 00 01 00 02 F2 99];
 
 		somc,mdss-dsi-pcc-enable;
 		somc,mdss-dsi-uv-command = [06 01 00 00 00 00 01 DA
