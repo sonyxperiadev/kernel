@@ -38,9 +38,7 @@
 #include <linux/mmc/mmc.h>
 #include <linux/mmc/sd.h>
 
-#ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
 #include <linux/mmc/slot-gpio.h>
-#endif
 
 #include "core.h"
 #include "bus.h"
