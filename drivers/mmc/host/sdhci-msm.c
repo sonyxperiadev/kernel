@@ -3845,11 +3845,14 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 				MMC_CAP2_DETECT_ON_ERR);
 	msm_host->mmc->caps2 |= MMC_CAP2_CACHE_CTRL;
 	msm_host->mmc->caps2 |= MMC_CAP2_STOP_REQUEST;
-	msm_host->mmc->caps2 |= MMC_CAP2_INIT_BKOPS;
 	msm_host->mmc->caps2 |= MMC_CAP2_ASYNC_SDIO_IRQ_4BIT_MODE;
 	msm_host->mmc->pm_caps |= MMC_PM_KEEP_POWER | MMC_PM_WAKE_SDIO_IRQ;
 	msm_host->mmc->caps2 |= MMC_CAP2_CORE_PM;
 	msm_host->mmc->caps2 |= MMC_CAP2_SANITIZE;
+
+#ifndef CONFIG_MACH_SONY_RHINE
+	msm_host->mmc->caps2 |= MMC_CAP2_INIT_BKOPS;
+#endif
 
 #ifdef CONFIG_MACH_SONY_SUZU
 	msm_host->mmc->caps2 |= MMC_CAP2_AWAKE_SUPP;
