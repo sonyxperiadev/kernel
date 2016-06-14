@@ -4436,6 +4436,11 @@ static int mdss_mdp_overlay_ioctl_handler(struct msm_fb_data_type *mfd,
 	int val, ret = -ENOSYS;
 	struct msmfb_metadata metadata;
 
+#ifdef CONFIG_SOMC_PANEL_INCELL
+	if (mfd->off_sts)
+		return 0;
+#endif /* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
+
 	switch (cmd) {
 	case MSMFB_MDP_PP:
 		ret = mdss_mdp_pp_ioctl(mfd, argp);

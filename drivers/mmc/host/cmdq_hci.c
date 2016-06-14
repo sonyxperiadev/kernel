@@ -373,9 +373,10 @@ static int cmdq_enable(struct mmc_host *mmc)
 
 	if (cq_host->ops->clear_set_dumpregs)
 		cq_host->ops->clear_set_dumpregs(mmc, 1);
-
+#ifndef CONFIG_MACH_SONY_SUZU
 	if (cq_host->ops->enhanced_strobe_mask)
 		cq_host->ops->enhanced_strobe_mask(mmc, true);
+#endif
 out:
 	return err;
 }
@@ -391,9 +392,10 @@ static void cmdq_disable(struct mmc_host *mmc, bool soft)
 	}
 
 	mmc_host_set_cq_disable(mmc);
+#ifndef CONFIG_MACH_SONY_SUZU
 	if (cq_host->ops->enhanced_strobe_mask)
 		cq_host->ops->enhanced_strobe_mask(mmc, false);
-
+#endif
 	cq_host->enabled = false;
 }
 
@@ -774,6 +776,12 @@ skip_cqterri:
 		 */
 		if (ret)
 			cmdq_disable(mmc, true);
+
+		/* Temporary fix to avoid Null Pointer access */
+		if (!mrq || !mrq->cmdq_req) {
+			pr_err("%s: mrq is not initialized\n", __func__);
+			goto out;
+		}
 
 		/*
 		 * CQE detected a reponse error from device

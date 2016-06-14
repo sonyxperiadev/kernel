@@ -22,6 +22,7 @@ struct mmc_gpio {
 	int cd_gpio;
 	char *ro_label;
 	bool status;
+	int uim2_gpio;
 #ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
 	bool pending_detect;
 	bool suspended;
@@ -29,7 +30,7 @@ struct mmc_gpio {
 	char cd_label[0]; /* Must be last entry */
 };
 
-static int mmc_gpio_get_status(struct mmc_host *host)
+int mmc_gpio_get_status(struct mmc_host *host)
 {
 	int ret = -ENOSYS;
 	struct mmc_gpio *ctx = host->slot.handler_priv;
@@ -153,6 +154,7 @@ static int mmc_gpio_alloc(struct mmc_host *host)
 			snprintf(ctx->ro_label, len, "%s ro", dev_name(host->parent));
 			ctx->cd_gpio = -EINVAL;
 			ctx->ro_gpio = -EINVAL;
+			ctx->uim2_gpio = -EINVAL;
 			host->slot.handler_priv = ctx;
 		}
 	}
@@ -351,3 +353,41 @@ void mmc_gpio_free_cd(struct mmc_host *host)
 	devm_gpio_free(&host->class_dev, gpio);
 }
 EXPORT_SYMBOL(mmc_gpio_free_cd);
+
+void mmc_gpio_init_uim2(struct mmc_host *host, unsigned int gpio)
+{
+	struct mmc_gpio *ctx;
+
+	ctx = host->slot.handler_priv;
+
+	ctx->uim2_gpio = gpio;
+
+	pr_debug("## %s: %s: gpio=%d\n", mmc_hostname(host), __func__, gpio);
+
+	mmc_gpio_set_uim2_en(host, 0);
+}
+EXPORT_SYMBOL(mmc_gpio_init_uim2);
+
+void mmc_gpio_set_uim2_en(struct mmc_host *host, int value)
+{
+	struct mmc_gpio *ctx = host->slot.handler_priv;
+
+	if (!ctx || !gpio_is_valid(ctx->uim2_gpio)) {
+		pr_debug("## %s: gpio_set failure: ctx=%p, uim2_gpio=%d\n",
+			mmc_hostname(host), ctx, ctx ? ctx->uim2_gpio : 0);
+		return;
+	}
+	gpio_set_value(ctx->uim2_gpio, value);
+	pr_debug("## %s: %s: gpio=%d value=%d\n", mmc_hostname(host), __func__,
+			ctx->uim2_gpio, value);
+}
+EXPORT_SYMBOL(mmc_gpio_set_uim2_en);
+
+void mmc_gpio_tray_close_set_uim2(struct mmc_host *host, int value)
+{
+	struct mmc_gpio *ctx = host->slot.handler_priv;
+
+	if (ctx && ctx->status)
+		mmc_gpio_set_uim2_en(host, value);
+}
+EXPORT_SYMBOL(mmc_gpio_tray_close_set_uim2);

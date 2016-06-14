@@ -1270,6 +1270,10 @@ static void mdss_dsi_reset_dual_display(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 }
 #endif
 
+#ifdef CONFIG_SOMC_PANEL_INCELL
+extern bool incell_dsi_execute_lp11_init(void);
+#endif
+
 int mdss_dsi_on(struct mdss_panel_data *pdata)
 {
 	int ret = 0;
@@ -1355,6 +1359,9 @@ int mdss_dsi_on(struct mdss_panel_data *pdata)
 	 * Issue hardware reset line after enabling the DSI clocks and data
 	 * data lanes for LP11 init
 	 */
+#ifdef CONFIG_SOMC_PANEL_INCELL
+	if (incell_dsi_execute_lp11_init())
+#endif
 	if (mipi->lp11_init) {
 #ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 		mdss_dsi_reset_dual_display(ctrl_pdata);
@@ -1393,7 +1400,7 @@ int mdss_dsi_pinctrl_set_state(
 	struct mdss_panel_info *pinfo = NULL;
 	int rc = -EFAULT;
 
-#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+#ifdef CONFIG_SOMC_PANEL_LEGACY
 	if (ctrl_pdata->spec_pdata->disp_on_in_boot)
 		return 0;
 #endif
@@ -1427,6 +1434,10 @@ int mdss_dsi_pinctrl_set_state(
 	return rc;
 }
 
+#ifdef CONFIG_SOMC_PANEL_INCELL
+extern int incell_pinctrl_init(struct mdss_dsi_ctrl_pdata *ctrl_pdata);
+#endif
+
 static int mdss_dsi_pinctrl_init(struct platform_device *pdev)
 {
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata;
@@ -1450,6 +1461,9 @@ static int mdss_dsi_pinctrl_init(struct platform_device *pdev)
 	if (IS_ERR_OR_NULL(ctrl_pdata->pin_res.gpio_state_suspend))
 		pr_warn("%s: can not get sleep pinstate\n", __func__);
 
+#ifdef CONFIG_SOMC_PANEL_INCELL
+	return incell_pinctrl_init(ctrl_pdata);
+#endif
 	return 0;
 }
 
@@ -2312,12 +2326,12 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 	case MDSS_EVENT_PANEL_TIMING_SWITCH:
 		rc = mdss_dsi_panel_timing_switch(ctrl_pdata, arg);
 		break;
-#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+#ifdef CONFIG_SOMC_PANEL_LEGACY
 	case MDSS_EVENT_DISP_ON:
 		if (ctrl_pdata->spec_pdata->disp_on)
 			ctrl_pdata->spec_pdata->disp_on(pdata);
 		break;
-#endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
+#endif	/* CONFIG_SOMC_PANEL_LEGACY */
 	default:
 		pr_debug("%s: unhandled event=%d\n", __func__, event);
 		break;
@@ -3467,6 +3481,32 @@ static int mdss_dsi_parse_gpio_params(struct platform_device *ctrl_pdev,
 	if (!gpio_is_valid(ctrl_pdata->spec_pdata->disp_dcdc_en_gpio))
 		pr_err("%s:%d, disp_dcdc_en gpio gpio not specified\n",
 						__func__, __LINE__);
+
+ #ifdef CONFIG_SOMC_PANEL_INCELL
+	ctrl_pdata->spec_pdata->touch_vddio_gpio = of_get_named_gpio(
+			ctrl_pdev->dev.of_node,
+			"qcom,platform-touch-vddio-gpio", 0);
+
+	if (!gpio_is_valid(ctrl_pdata->spec_pdata->touch_vddio_gpio))
+		pr_err("%s:%d, touch vddio gpio not specified\n",
+						__func__, __LINE__);
+
+	ctrl_pdata->spec_pdata->touch_reset_gpio = of_get_named_gpio(
+			ctrl_pdev->dev.of_node,
+			"qcom,platform-touch-reset-gpio", 0);
+
+	if (!gpio_is_valid(ctrl_pdata->spec_pdata->touch_reset_gpio))
+		pr_err("%s:%d, touch reset gpio not specified\n",
+						__func__, __LINE__);
+
+	ctrl_pdata->spec_pdata->touch_int_gpio = of_get_named_gpio(
+			ctrl_pdev->dev.of_node,
+			"qcom,platform-touch-int-gpio", 0);
+
+	if (!gpio_is_valid(ctrl_pdata->spec_pdata->touch_int_gpio))
+		pr_err("%s:%d, touch int gpio not specified\n",
+						__func__, __LINE__);
+ #endif /* CONFIG_SOMC_PANEL_INCELL */
 #endif
 
 	return 0;
@@ -3557,7 +3597,9 @@ int dsi_panel_device_register(struct platform_device *ctrl_pdev,
 
 	ctrl_pdata->panel_data.event_handler = mdss_dsi_event_handler;
 #ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+ #ifdef CONFIG_SOMC_PANEL_LEGACY
 	ctrl_pdata->panel_data.intf_ready = mdss_dsi_intf_ready;
+ #endif
 	ctrl_pdata->panel_data.detect = spec_pdata->detect;
 	ctrl_pdata->panel_data.update_panel = spec_pdata->update_panel;
 	ctrl_pdata->panel_data.panel_pdev = ctrl_pdev;

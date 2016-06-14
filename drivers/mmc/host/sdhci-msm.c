@@ -1655,6 +1655,12 @@ struct sdhci_msm_pltfm_data *sdhci_msm_populate_pdata(struct device *dev,
 	if (gpio_is_valid(pdata->status_gpio) & !(flags & OF_GPIO_ACTIVE_LOW))
 		pdata->caps2 |= MMC_CAP2_CD_ACTIVE_HIGH;
 
+	pdata->uim2_gpio = of_get_named_gpio(np, "uim2-gpios", 0);
+	if (!gpio_is_valid(pdata->uim2_gpio)) {
+		pr_err("## %s: gpio_is_valid(pdata->uim2_gpio)=%d: failure\n",
+			mmc_hostname(host->mmc), pdata->uim2_gpio);
+	}
+
 	of_property_read_u32(np, "qcom,bus-width", &bus_width);
 	if (bus_width == 8)
 		pdata->mmc_bus_width = MMC_CAP_8_BIT_DATA;
@@ -3465,6 +3471,10 @@ static void sdhci_set_default_hw_caps(struct sdhci_msm_host *msm_host,
 		msm_host->enhanced_strobe = true;
 	}
 
+#ifdef CONFIG_MACH_SONY_SUZU
+	msm_host->enhanced_strobe = false;
+#endif
+
 	/*
 	 * Mask 64-bit support for controller with 32-bit address bus so that
 	 * smaller descriptor size will be used and improve memory consumption.
@@ -3841,6 +3851,10 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 	msm_host->mmc->caps2 |= MMC_CAP2_CORE_PM;
 	msm_host->mmc->caps2 |= MMC_CAP2_SANITIZE;
 
+#ifdef CONFIG_MACH_SONY_SUZU
+	msm_host->mmc->caps2 |= MMC_CAP2_AWAKE_SUPP;
+#endif
+
 	if (msm_host->pdata->nonremovable)
 		msm_host->mmc->caps |= MMC_CAP_NONREMOVABLE;
 
@@ -3885,6 +3899,12 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 			goto vreg_deinit;
 		}
 	}
+
+	if (gpio_is_valid(msm_host->pdata->uim2_gpio))
+		mmc_gpio_init_uim2(msm_host->mmc, msm_host->pdata->uim2_gpio);
+	else
+		pr_debug("## %s: can't set uim2_gpio: %d\n", mmc_hostname(host->mmc),
+			msm_host->pdata->uim2_gpio);
 
 	if ((sdhci_readl(host, SDHCI_CAPABILITIES) & SDHCI_CAN_64BIT) &&
 		(dma_supported(mmc_dev(host->mmc), DMA_BIT_MASK(64)))) {

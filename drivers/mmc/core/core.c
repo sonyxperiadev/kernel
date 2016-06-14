@@ -38,9 +38,7 @@
 #include <linux/mmc/mmc.h>
 #include <linux/mmc/sd.h>
 
-#ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
 #include <linux/mmc/slot-gpio.h>
-#endif
 
 #include "core.h"
 #include "bus.h"
@@ -463,7 +461,8 @@ void mmc_start_delayed_bkops(struct mmc_card *card)
 		return;
 
 	if (card->bkops_info.sectors_changed <
-	    card->bkops_info.min_sectors_to_queue_delayed_work)
+	    card->bkops_info.min_sectors_to_queue_delayed_work &&
+	    !mmc_card_need_bkops(card))
 		return;
 
 	pr_debug("%s: %s: queueing delayed_bkops_work\n",
@@ -544,6 +543,8 @@ void mmc_start_bkops(struct mmc_card *card, bool from_exception)
 			       mmc_hostname(card->host), __func__, err);
 			goto out;
 		}
+
+		card->bkops_info.sectors_changed = 0;
 
 		if (!card->ext_csd.raw_bkops_status)
 			goto out;
@@ -1447,7 +1448,15 @@ int mmc_read_bkops_status(struct mmc_card *card)
 	}
 
 	mmc_claim_host(card->host);
-	err = mmc_send_ext_csd(card, ext_csd);
+	if (mmc_card_cmdq(card))
+		err = mmc_cmdq_halt_on_empty_queue(card->host);
+
+	if (!err) {
+		err = mmc_send_ext_csd(card, ext_csd);
+
+		if (mmc_card_cmdq(card))
+			mmc_cmdq_halt(card->host, false);
+	}
 	mmc_release_host(card->host);
 	if (err)
 		goto out;
@@ -2180,7 +2189,14 @@ int mmc_set_signal_voltage(struct mmc_host *host, int signal_voltage)
 
 	host->card_clock_off = false;
 	/* Wait for at least 1 ms according to spec */
-	mmc_delay(1);
+#ifndef CONFIG_MMC_SUPPORT_SVS_INTERVAL
+ 	mmc_delay(1);
+#else
+	if (host->caps & MMC_CAP_NONREMOVABLE)
+		mmc_delay(1);
+	else
+		mmc_delay(40);
+#endif
 
 	/*
 	 * Failure to switch is indicated by the card holding
@@ -2409,20 +2425,28 @@ int mmc_resume_bus(struct mmc_host *host)
 	printk("%s: Starting deferred resume\n", mmc_hostname(host));
 	spin_lock_irqsave(&host->lock, flags);
 	host->bus_resume_flags &= ~MMC_BUSRESUME_NEEDS_RESUME;
+	host->bus_resume_flags |= MMC_BUSRESUME_IS_RESUMING;
+
 	host->rescan_disable = 0;
 	spin_unlock_irqrestore(&host->lock, flags);
 
 	mmc_bus_get(host);
 	if (host->bus_ops && !host->bus_dead) {
 		mmc_power_up(host);
+		mmc_select_voltage(host, host->ocr);
 		BUG_ON(!host->bus_ops->resume);
 		host->bus_ops->resume(host);
 	}
 
+	spin_lock_irqsave(&host->lock, flags);
+	host->bus_resume_flags &= ~MMC_BUSRESUME_IS_RESUMING;
 #ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
 	wake_up(&host->defer_wq);
 #endif
+	spin_unlock_irqrestore(&host->lock, flags);
+
 	mmc_bus_put(host);
+	mmc_detect_change(host, 0);
 	printk("%s: Deferred resume completed\n", mmc_hostname(host));
 	return 0;
 }
@@ -3738,6 +3762,8 @@ static int mmc_rescan_try_freq(struct mmc_host *host, unsigned freq)
 		return 0;
 	if (!mmc_attach_sd(host))
 		return 0;
+	else
+		mmc_gpio_tray_close_set_uim2(host, 1);
 	if (!mmc_attach_mmc(host))
 		return 0;
 
@@ -3923,6 +3949,8 @@ void mmc_stop_host(struct mmc_host *host)
 
 	mmc_flush_scheduled_work();
 
+	mmc_gpio_set_uim2_en(host, 0);
+
 	/* clear pm flags now and let card drivers set them as needed */
 	host->pm_flags = 0;
 
@@ -4080,6 +4108,60 @@ int mmc_flush_cache(struct mmc_card *card)
 	return err;
 }
 EXPORT_SYMBOL(mmc_flush_cache);
+
+/*
+ * Turn the cache ON/OFF.
+ * Turning the cache OFF shall trigger flushing of the data
+ * to the non-volatile storage.
+ * This function should be called with host claimed
+ */
+int mmc_cache_ctrl(struct mmc_host *host, u8 enable)
+{
+	struct mmc_card *card = host->card;
+	unsigned int timeout;
+	int err = 0, rc;
+
+	BUG_ON(!card);
+	timeout = card->ext_csd.generic_cmd6_time;
+
+	if (!(host->caps2 & MMC_CAP2_CACHE_CTRL) ||
+			mmc_card_is_removable(host) ||
+			(card->quirks & MMC_QUIRK_CACHE_DISABLE))
+		return err;
+
+	if (card && mmc_card_mmc(card) &&
+			(card->ext_csd.cache_size > 0)) {
+		enable = !!enable;
+
+		if (card->ext_csd.cache_ctrl ^ enable) {
+			if (!enable)
+				timeout = MMC_FLUSH_REQ_TIMEOUT_MS;
+
+			err = mmc_switch_ignore_timeout(card,
+					EXT_CSD_CMD_SET_NORMAL,
+					EXT_CSD_CACHE_CTRL, enable, timeout);
+
+			if (err == -ETIMEDOUT && !enable) {
+				pr_err("%s:cache disable operation timeout\n",
+						mmc_hostname(card->host));
+				rc = mmc_interrupt_hpi(card);
+				if (rc)
+					pr_err("%s: mmc_interrupt_hpi() failed (%d)\n",
+							mmc_hostname(host), rc);
+			} else if (err) {
+				pr_err("%s: cache %s error %d\n",
+						mmc_hostname(card->host),
+						enable ? "on" : "off",
+						err);
+			} else {
+				card->ext_csd.cache_ctrl = enable;
+			}
+		}
+	}
+
+	return err;
+}
+EXPORT_SYMBOL(mmc_cache_ctrl);
 
 #ifdef CONFIG_PM
 
