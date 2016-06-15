@@ -64,6 +64,9 @@
 	somc,fastchg-cool-current-ma = <700>;
 	somc,thermal-engine-fastchg-current = <1850 1850 1850 1100 900 700 500 300 300 300 300 300 300 0 0>;
 	somc,thermal-mitigation-usb-9v = <1500 1400 1200 1000 1000 1000 1000 1000 1200 900 700 500 300 0 0>;
+	somc,thermal-mitigation-usb-8v = <1800 1800 1800 1500 1100 1100 1100 1100 1200 900 700 500 300 0 0>;
+	somc,thermal-mitigation-usb-7v = <2000 2000 2000 1500 1200 1200 1200 1200 1200 900 700 500 300 0 0>;
+	somc,thermal-mitigation-usb-6v = <2000 2000 2000 1500 1500 1500 1500 1500 1200 900 700 500 300 0 0>;
 	somc,thermal-mitigation-usb-5v = <1500 1500 1500 1500 1500 1500 1500 1500 1200 900 700 500 300 0 0>;
 	somc,limit-usb-5v-level = <8>;
 };
