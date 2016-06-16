@@ -35,6 +35,11 @@ enum {
 	MDSS_HDMI_PLL_8996_V2,
 	MDSS_HDMI_PLL_8996_V3,
 	MDSS_HDMI_PLL_8996_V3_1_8,
+	MDSS_DSI_PLL_HPM,
+	MDSS_DSI_PLL_20NM,
+	MDSS_EDP_PLL,
+	MDSS_HDMI_PLL,
+	MDSS_HDMI_PLL_20NM,
 	MDSS_UNKNOWN_PLL,
 };
 
@@ -44,6 +49,11 @@ enum {
 	MDSS_PLL_TARGET_8937,
 	MDSS_PLL_TARGET_8953,
 	MDSS_PLL_TARGET_8909,
+	MDSS_PLL_TARGET_8974,
+	MDSS_PLL_TARGET_8994,
+	MDSS_PLL_TARGET_8992,
+	MDSS_PLL_TARGET_8916,
+	MDSS_PLL_TARGET_8939,
 };
 
 #define DFPS_MAX_NUM_OF_FRAME_RATES 20
@@ -123,6 +133,12 @@ struct mdss_pll_resources {
 	 * status for them to turn on/off after set rate success.
 	 */
 	bool		pll_on;
+
+	/*
+	 * Certain plls' have to change the vco freq range to support
+	 * 90 phase difference between bit and byte clock frequency.
+	 */
+	bool		pll_en_90_phase;
 
 	/*
 	 * handoff_status is true of pll is already enabled by bootloader with
