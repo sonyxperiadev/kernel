@@ -247,6 +247,29 @@ static struct dsi_pll_vco_clk dsi_pll0_vco_clk = {
 	},
 };
 
+static struct dsi_pll_vco_clk dsi_vco_clk_8916 = {
+	.ref_clk_rate = 19200000,
+	.min_rate = 350000000,
+	.max_rate = 750000000,
+	.pll_en_seq_cnt = 9,
+	.pll_enable_seqs[0] = tsmc_dsi_pll_enable_seq_8916,
+	.pll_enable_seqs[1] = tsmc_dsi_pll_enable_seq_8916,
+	.pll_enable_seqs[2] = tsmc_dsi_pll_enable_seq_8916,
+	.pll_enable_seqs[3] = gf_1_dsi_pll_enable_seq_8916,
+	.pll_enable_seqs[4] = gf_1_dsi_pll_enable_seq_8916,
+	.pll_enable_seqs[5] = gf_1_dsi_pll_enable_seq_8916,
+	.pll_enable_seqs[6] = gf_2_dsi_pll_enable_seq_8916,
+	.pll_enable_seqs[7] = gf_2_dsi_pll_enable_seq_8916,
+	.pll_enable_seqs[8] = gf_2_dsi_pll_enable_seq_8916,
+	.lpfr_lut_size = 10,
+	.lpfr_lut = lpfr_lut_struct,
+	.c = {
+		.dbg_name = "dsi_vco_clk_8916",
+		.ops = &clk_ops_dsi_vco,
+		CLK_INIT(dsi_vco_clk_8916.c),
+	},
+};
+
 static struct div_clk dsi_pll0_analog_postdiv_clk = {
 	.data = {
 		.max_div = 255,
@@ -421,6 +444,88 @@ static struct div_clk dsi_pll1_byte_clk_src = {
 	},
 };
 
+
+/* MSM8916 MSM8936 MSM8939 */
+static struct div_clk analog_postdiv_clk_8916 = {
+	.data = {
+		.max_div = 255,
+		.min_div = 1,
+	},
+	.ops = &analog_postdiv_ops,
+	.c = {
+		.parent = &dsi_vco_clk_8916.c,
+		.dbg_name = "analog_postdiv_clk",
+		.ops = &analog_postdiv_clk_ops,
+		.flags = CLKFLAG_NO_RATE_CACHE,
+		CLK_INIT(analog_postdiv_clk_8916.c),
+	},
+};
+
+static struct div_clk indirect_path_div2_clk_8916 = {
+	.ops = &fixed_2div_ops,
+	.data = {
+		.div = 2,
+		.min_div = 2,
+		.max_div = 2,
+	},
+	.c = {
+		.parent = &analog_postdiv_clk_8916.c,
+		.dbg_name = "indirect_path_div2_clk",
+		.ops = &clk_ops_div,
+		.flags = CLKFLAG_NO_RATE_CACHE,
+		CLK_INIT(indirect_path_div2_clk_8916.c),
+	},
+};
+
+static struct div_clk pixel_clk_src = {
+	.data = {
+		.max_div = 255,
+		.min_div = 1,
+	},
+	.ops = &digital_postdiv_ops,
+	.c = {
+		.parent = &dsi_vco_clk_8916.c,
+		.dbg_name = "pixel_clk_src_8916",
+		.ops = &pixel_clk_src_ops,
+		.flags = CLKFLAG_NO_RATE_CACHE,
+		CLK_INIT(pixel_clk_src.c),
+	},
+};
+
+static struct mux_clk byte_mux_8916 = {
+	.num_parents = 2,
+	.parents = (struct clk_src[]){
+		{&dsi_vco_clk_8916.c, 0},
+		{&indirect_path_div2_clk_8916.c, 1},
+	},
+	.ops = &byte_mux_ops,
+	.c = {
+		.parent = &dsi_vco_clk_8916.c,
+		.dbg_name = "byte_mux_8916",
+		.ops = &byte_mux_clk_ops,
+		CLK_INIT(byte_mux_8916.c),
+	},
+};
+
+static struct div_clk byte_clk_src = {
+	.ops = &fixed_4div_ops,
+	.data = {
+		.min_div = 4,
+		.max_div = 4,
+	},
+	.c = {
+		.parent = &byte_mux_8916.c,
+		.dbg_name = "byte_clk_src_8916",
+		.ops = &byte_clk_src_ops,
+		CLK_INIT(byte_clk_src.c),
+	},
+};
+
+static struct clk_lookup mdss_dsi_pllcc_8916[] = {
+	CLK_LIST(pixel_clk_src),
+	CLK_LIST(byte_clk_src),
+};
+
 static struct clk_lookup dsi_pll0_cc[] = {
 	CLK_LIST(dsi_pll0_pixel_clk_src),
 	CLK_LIST(dsi_pll0_byte_clk_src),
@@ -496,23 +601,34 @@ int dsi_pll_clock_register_lpm(struct platform_device *pdev,
 		}
 	}
 
-	if ((pll_res->target_id == MDSS_PLL_TARGET_8952) ||
-		(pll_res->target_id == MDSS_PLL_TARGET_8937) ||
-		(pll_res->target_id == MDSS_PLL_TARGET_8909)) {
-		if (!pll_res->index)
+	switch (pll_res->target_id) {
+		case MDSS_PLL_TARGET_8952:
+		case MDSS_PLL_TARGET_8937:
+		case MDSS_PLL_TARGET_8909:
+			if (!pll_res->index)
+				rc = of_msm_clock_register(pdev->dev.of_node,
+					dsi_pll0_cc, ARRAY_SIZE(dsi_pll0_cc));
+			else
+				rc = of_msm_clock_register(pdev->dev.of_node,
+					dsi_pll1_cc, ARRAY_SIZE(dsi_pll1_cc));
+			if (rc) {
+				pr_err("Clock register failed. Deferring...\n");
+				rc = -EPROBE_DEFER;
+			}
+			break;
+		case MDSS_PLL_TARGET_8916:
+		case MDSS_PLL_TARGET_8939:
 			rc = of_msm_clock_register(pdev->dev.of_node,
-				dsi_pll0_cc, ARRAY_SIZE(dsi_pll0_cc));
-		else
-			rc = of_msm_clock_register(pdev->dev.of_node,
-				dsi_pll1_cc, ARRAY_SIZE(dsi_pll1_cc));
-		if (rc) {
-			pr_err("Clock register failed\n");
-			rc = -EPROBE_DEFER;
-		}
-	} else {
-		pr_err("Invalid target ID\n");
-		rc = -EINVAL;
-	}
+					mdss_dsi_pllcc_8916,
+					ARRAY_SIZE(mdss_dsi_pllcc_8916));
+			if (rc)
+				rc = -EPROBE_DEFER;
+			break;
+		default:
+			pr_err("Invalid target ID\n");
+			rc = -EINVAL;
+			break;
+	};
 
 	if (!rc)
 		pr_info("Registered DSI PLL:%d clocks successfully\n",
