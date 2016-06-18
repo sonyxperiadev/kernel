@@ -48,6 +48,11 @@
 #include <linux/file.h>
 #include <linux/kthread.h>
 #include <linux/dma-buf.h>
+#include <linux/msm_iommu_domains.h>
+
+#include <linux/qcom_iommu.h>
+#include <linux/msm_iommu_domains.h>
+
 #include "mdss_fb.h"
 #include "mdss_mdp_splash_logo.h"
 #include "mdss_mdp.h"

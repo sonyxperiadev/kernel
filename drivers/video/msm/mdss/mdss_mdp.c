@@ -43,6 +43,8 @@
 #include <linux/irqdomain.h>
 #include <linux/irq.h>
 
+#include <linux/qcom_iommu.h>
+#include <linux/msm_iommu_domains.h>
 #include <linux/msm-bus.h>
 #include <linux/msm-bus-board.h>
 #include <soc/qcom/scm.h>

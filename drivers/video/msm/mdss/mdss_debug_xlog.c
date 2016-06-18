@@ -667,6 +667,20 @@ void mdss_xlog_tout_handler_default(bool queue, const char *name, ...)
 	}
 }
 
+int mdss_xlog_tout_handler_iommu(struct iommu_domain *domain,
+	struct device *dev, unsigned long iova, int flags, void *token)
+{
+	if (!mdss_xlog_is_enabled(MDSS_XLOG_IOMMU))
+		return 0;
+
+	mdss_dump_reg_by_blk("mdp");
+	mdss_dump_reg_by_blk("vbif");
+	mdss_xlog_dump_all();
+	panic("mdp iommu");
+
+	return 0;
+}
+
 static int mdss_xlog_dump_open(struct inode *inode, struct file *file)
 {
 	/* non-seekable */

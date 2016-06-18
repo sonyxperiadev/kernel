@@ -23,6 +23,9 @@
 #include <linux/irqreturn.h>
 #include <linux/kref.h>
 
+#include <linux/file.h>
+#include <linux/dma-direction.h>
+
 #include "mdss.h"
 #include "mdss_mdp_hwio.h"
 #include "mdss_fb.h"
