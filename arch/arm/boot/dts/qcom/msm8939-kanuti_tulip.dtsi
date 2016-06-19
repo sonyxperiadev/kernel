@@ -472,6 +472,7 @@
 &mdss_dsi1 {
 	vddio-supply = <&pm8916_l16>;
 	qcom,platform-regulator-settings = [02 09 03 00 20 00 01];
+	status = "disabled";
 };
 
 &pm8916_mpps {
