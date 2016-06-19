@@ -502,8 +502,10 @@
 		clocks = <&clock_rpm clk_xo_wlan_clk>,
 			 <&clock_rpm clk_rf_clk2>,
 			 <&clock_debug clk_gcc_debug_mux>,
-			 <&clock_gcc clk_wcnss_m_clk>;
-		clock-names = "xo", "rf_clk", "measure", "wcnss_debug";
+			 <&clock_gcc clk_wcnss_m_clk>,
+			 <&clock_gcc clk_gcc_snoc_qosgen_clk>;
+		clock-names = "xo", "rf_clk", "measure", "wcnss_debug",
+				"snoc_qosgen";
 
 		qcom,has-autodetect-xo;
 		qcom,has-pronto-hw;
@@ -519,11 +521,31 @@
 		interrupt-names = "tsens-upper-lower";
 		qcom,sensors = <9>;
 		qcom,slope = <2911 2789 2906 2763 2922 2867 2833 2838 2840>;
-		qcom,sensor-id = <0 1 2 3 5 6 7 8 9>;
+	//	qcom,sensor-id = <0 1 2 3 5 6 7 8 9>;
 	};
 
 	qcom,sensor-information {
 		compatible = "qcom,sensor-information";
+
+		sensor_information0: qcom,sensor-information-0 {
+			qcom,sensor-type = "tsens";
+			qcom,sensor-name = "tsens_tz_sensor0";
+		};
+
+		sensor_information1: qcom,sensor-information-1 {
+			qcom,sensor-type =  "tsens";
+			qcom,sensor-name = "tsens_tz_sensor1";
+		};
+
+		sensor_information2: qcom,sensor-information-2 {
+			qcom,sensor-type =  "tsens";
+			qcom,sensor-name = "tsens_tz_sensor2";
+		};
+
+		sensor_information3: qcom,sensor-information-3 {
+			qcom,sensor-type =  "tsens";
+			qcom,sensor-name = "tsens_tz_sensor3";
+		};
 
 		sensor_information5: qcom,sensor-information-5 {
 			qcom,sensor-type = "tsens";
@@ -579,13 +601,6 @@
 		qcom,emergency-frequency-mitigate;
 	};
 
-	mitigation_profile4: qcom,limit_info-4 {
-		qcom,temperature-sensor = <&sensor_information9>;
-		qcom,boot-frequency-mitigate;
-		qcom,hotplug-mitigation-enable;
-		qcom,emergency-frequency-mitigate;
-	};
-
 	qcom,msm-thermal {
 		compatible = "qcom,msm-thermal";
 		qcom,sensor-id = <5>;
@@ -593,10 +608,12 @@
 		qcom,limit-temp = <60>;
 		qcom,temp-hysteresis = <10>;
 		qcom,freq-step = <2>;
-		qcom,freq-control-mask = <0xff>;
+		qcom,freq-control-list = <&CPU0 &CPU1 &CPU2 &CPU3
+					&CPU4 &CPU5 &CPU6 &CPU7>;
 		qcom,core-limit-temp = <80>;
 		qcom,core-temp-hysteresis = <10>;
-		qcom,core-control-mask = <0xfe>;
+		qcom,core-control-list = <&CPU0 &CPU1 &CPU2 &CPU3
+					&CPU4 &CPU5 &CPU6 &CPU7>;
 		qcom,hotplug-temp = <105>;
 		qcom,hotplug-temp-hysteresis = <15>;
 		qcom,cpu-sensors = "tsens_tz_sensor5", "tsens_tz_sensor6",
@@ -607,6 +624,7 @@
 		qcom,freq-mitigation-temp-hysteresis = <15>;
 		qcom,freq-mitigation-value = <400000>;
 		qcom,freq-mitigation-control-mask = <0x01>;
+		qcom,freq-mitigation-control-list = <&CPU0>;
 		qcom,therm-reset-temp = <115>;
 		qcom,online-hotplug-core;
 		qcom,synchronous-cluster-id = <0 1>;
@@ -639,7 +657,23 @@
 
 		qcom,client_1 {
 			compatible = "qcom,memshare-peripheral";
-			qcom,peripheral-size = <2097152>;
+			qcom,peripheral-size = <0x200000>;
+			qcom,client-id = <0>;
+			qcom,allocate-boot-time;
+			label = "modem";
+		};
+
+		qcom,client_2 {
+			compatible = "qcom,memshare-peripheral";
+			qcom,peripheral-size = <0x300000>;
+			qcom,client-id = <2>;
+			label = "modem";
+		};
+
+		qcom,client_3 {
+			compatible = "qcom,memshare-peripheral";
+			qcom,peripheral-size = <0>;
+			qcom,client-id = <1>;
 			label = "modem";
 		};
 	};
@@ -680,8 +714,11 @@
 		vdd_hf_pll-supply = <&pm8916_l7_ao>;
 		clocks = <&clock_rpm clk_xo_clk_src>,
                          <&clock_rpm clk_xo_a_clk_src>;
+		#address-cells = <1>;
+		#size-cells = <1>;
 		clock-names = "xo", "xo_a";
 		#clock-cells = <1>;
+		ranges;
 	};
 
 	clock_gcc_mdss: qcom,gcc-mdss@1a98300 {
@@ -825,8 +862,12 @@
 
 	usb_otg: usb@78d9000 {
 		compatible = "qcom,hsusb-otg";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
 
 		reg = <0x78d9000 0x400>;
+		reg-names = "core";
 		interrupts = <0 134 0>,<0 140 0>;
 		interrupt-names = "core_irq", "async_irq";
 
@@ -868,7 +909,9 @@
 		qcom,usbbam@78c4000 {
 			compatible = "qcom,usb-bam-msm";
 			reg = <0x78c4000 0x15000>;
+			reg-names = "hsusb";
 			interrupts = <0 135 0>;
+
 			qcom,bam-type = <1>;
 			qcom,usb-bam-num-pipes = <2>;
 			qcom,usb-bam-fifo-baseaddr = <0x08603800>;
