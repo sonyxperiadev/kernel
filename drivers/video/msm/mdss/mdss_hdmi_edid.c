@@ -1600,7 +1600,7 @@ static void hdmi_edid_add_sink_video_format(struct hdmi_edid_ctrl *edid_ctrl,
 #ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 		/* avoid multi registration */
 		for (i = 0; i < sink_data->num_of_elements; ++i) {
-			if (video_format == sink_data->disp_mode_list[i])
+			if (video_format == sink_data->disp_mode_list[i].video_format)
 				return;
 		}
 #endif
