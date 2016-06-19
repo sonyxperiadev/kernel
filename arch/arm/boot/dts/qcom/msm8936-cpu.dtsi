@@ -15,11 +15,29 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 
+		cpu-map {
+			cluster0 {
+				core0 {
+					cpu = <&CPU0>;
+				};
+				core1 {
+					cpu = <&CPU1>;
+				};
+				core2 {
+					cpu = <&CPU2>;
+				};
+				core3 {
+					cpu = <&CPU3>;
+				};
+			};
+		};
+
 		CPU0: cpu@0 {
 			device_type = "cpu";
 			compatible = "arm,cortex-a53";
 			reg = <0x0>;
 			enable-method = "qcom,arm-cortex-acc";
+			qcom,limits-info = <&mitigation_profile0>;
 			qcom,acc = <&acc0>;
 			next-level-cache = <&L2_1>;
 			qcom,sleep-status = <&cpu0_slp_sts>;
@@ -35,6 +53,7 @@
 			compatible = "arm,cortex-a53";
 			reg = <0x1>;
 			enable-method = "qcom,arm-cortex-acc";
+			qcom,limits-info = <&mitigation_profile1>;
 			qcom,acc = <&acc1>;
 			next-level-cache = <&L2_1>;
 			qcom,sleep-status = <&cpu1_slp_sts>;
@@ -45,6 +64,7 @@
 			compatible = "arm,cortex-a53";
 			reg = <0x2>;
 			enable-method = "qcom,arm-cortex-acc";
+			qcom,limits-info = <&mitigation_profile2>;
 			qcom,acc = <&acc2>;
 			next-level-cache = <&L2_1>;
 			qcom,sleep-status = <&cpu2_slp_sts>;
@@ -55,6 +75,7 @@
 			compatible = "arm,cortex-a53";
 			reg = <0x3>;
 			enable-method = "qcom,arm-cortex-acc";
+			qcom,limits-info = <&mitigation_profile3>;
 			qcom,acc = <&acc3>;
 			next-level-cache = <&L2_1>;
 			qcom,sleep-status = <&cpu3_slp_sts>;
