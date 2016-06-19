@@ -365,6 +365,10 @@ struct dsi_panel_timing {
 	struct dsi_panel_cmds on_cmds;
 	struct dsi_panel_cmds post_panel_on_cmds;
 	struct dsi_panel_cmds switch_cmds;
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	struct dsi_panel_cmds einit_cmds;
+	struct dsi_panel_cmds init_cmds;
+#endif
 };
 
 struct dsi_kickoff_action {
