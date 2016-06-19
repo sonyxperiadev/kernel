@@ -59,6 +59,7 @@
 		KGSL_CLK_RBBMTIMER */
 		qcom,clk-map = <0x000003DE>;
 
+
 		clocks = <&clock_gcc clk_gcc_oxili_gfx3d_clk>,
 		         <&clock_gcc clk_gcc_oxili_ahb_clk>,
 		         <&clock_gcc clk_gcc_oxili_gmem_clk>,
@@ -74,8 +75,24 @@
 		              "gtcu_iface_clk", "gtcu_clk", "gtbu_clk",
 		              "rbbmtimer_clk";
 
+/*
+		clocks = <&clock_gcc clk_gcc_oxili_gfx3d_clk>,
+		         <&clock_gcc clk_gcc_oxili_ahb_clk>,
+		         <&clock_gcc clk_gcc_oxili_gmem_clk>,
+		         <&clock_gcc clk_gcc_bimc_gfx_clk>,
+		         <&clock_gcc clk_gcc_bimc_gpu_clk>,
+			 <&clock_gcc clk_gcc_oxili_timer_clk>;
+
+		clock-names = "core_clk", "iface_clk", "mem_clk",
+		              "mem_iface_clk", "alt_mem_iface_clk",
+		              "rbbmtimer_clk";
+*/
 		/* Bus Scale Settings */
 		qcom,gpubw-dev = <&gpubw>;
+
+		qcom,bus-control;
+		qcom,bus-width = <16>;
+
 		qcom,msm-bus,name = "grp3d";
 		qcom,msm-bus,num-cases = <5>;
 		qcom,msm-bus,num-paths = <1>;
@@ -86,6 +103,7 @@
 		        <26 512 0 5984000>,
 		        <26 512 0 6368000>;
 
+		regulator-names = "vdd";
 		/* GDSC oxili regulators */
 		vdd-supply = <&gdsc_oxili_gx>;
 
@@ -143,5 +161,27 @@
 		};
 
 	};
-};
 
+	kgsl_msm_iommu: qcom,kgsl-iommu@1f00000 {
+		compatible = "qcom,kgsl-smmu-v2";
+		reg = <0x1f00000 0x10000>;
+		/*
+		* The gpu can only program a single context bank
+		* at this fixed offset.
+		*/
+		qcom,protect = <0x48000 0x1000>;
+		clocks = <&clock_gcc clk_gcc_smmu_cfg_clk>,
+			<&clock_gcc clk_gcc_gfx_tcu_clk>,
+			<&clock_gcc clk_gcc_gtcu_ahb_clk>,
+			<&clock_gcc clk_gcc_gfx_tbu_clk>;
+		clock-names = "iface_clk", "core_clk", "gtcu_iface_clk",
+				"gtbu_clk";
+/*		qcom,secure_align_mask = <0xfff>;
+		qcom,retention;
+*/
+		gfx3d_user: gfx3d_user {
+			compatible = "qcom,smmu-kgsl-cb";
+			qcom,gpu-offset = <0x48000>;
+		};
+	};
+};
