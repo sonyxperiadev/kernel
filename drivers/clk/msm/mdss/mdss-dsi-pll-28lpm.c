@@ -21,6 +21,10 @@
 #include <linux/clk/msm-clk-provider.h>
 #include <dt-bindings/clock/msm-clocks-8952.h>
 
+#ifdef CONFIG_MACH_SONY_TULIP
+#include <dt-bindings/clock/msm-clocks-8916.h>
+#endif
+
 #include "mdss-pll.h"
 #include "mdss-dsi-pll.h"
 
@@ -247,29 +251,6 @@ static struct dsi_pll_vco_clk dsi_pll0_vco_clk = {
 	},
 };
 
-static struct dsi_pll_vco_clk dsi_vco_clk_8916 = {
-	.ref_clk_rate = 19200000,
-	.min_rate = 350000000,
-	.max_rate = 750000000,
-	.pll_en_seq_cnt = 9,
-	.pll_enable_seqs[0] = tsmc_dsi_pll_enable_seq_8916,
-	.pll_enable_seqs[1] = tsmc_dsi_pll_enable_seq_8916,
-	.pll_enable_seqs[2] = tsmc_dsi_pll_enable_seq_8916,
-	.pll_enable_seqs[3] = gf_1_dsi_pll_enable_seq_8916,
-	.pll_enable_seqs[4] = gf_1_dsi_pll_enable_seq_8916,
-	.pll_enable_seqs[5] = gf_1_dsi_pll_enable_seq_8916,
-	.pll_enable_seqs[6] = gf_2_dsi_pll_enable_seq_8916,
-	.pll_enable_seqs[7] = gf_2_dsi_pll_enable_seq_8916,
-	.pll_enable_seqs[8] = gf_2_dsi_pll_enable_seq_8916,
-	.lpfr_lut_size = 10,
-	.lpfr_lut = lpfr_lut_struct,
-	.c = {
-		.dbg_name = "dsi_vco_clk_8916",
-		.ops = &clk_ops_dsi_vco,
-		CLK_INIT(dsi_vco_clk_8916.c),
-	},
-};
-
 static struct div_clk dsi_pll0_analog_postdiv_clk = {
 	.data = {
 		.max_div = 255,
@@ -446,6 +427,29 @@ static struct div_clk dsi_pll1_byte_clk_src = {
 
 
 /* MSM8916 MSM8936 MSM8939 */
+static struct dsi_pll_vco_clk dsi_vco_clk_8916 = {
+	.ref_clk_rate = 19200000,
+	.min_rate = 350000000,
+	.max_rate = 750000000,
+	.pll_en_seq_cnt = 9,
+	.pll_enable_seqs[0] = tsmc_dsi_pll_enable_seq_8916,
+	.pll_enable_seqs[1] = tsmc_dsi_pll_enable_seq_8916,
+	.pll_enable_seqs[2] = tsmc_dsi_pll_enable_seq_8916,
+	.pll_enable_seqs[3] = gf_1_dsi_pll_enable_seq_8916,
+	.pll_enable_seqs[4] = gf_1_dsi_pll_enable_seq_8916,
+	.pll_enable_seqs[5] = gf_1_dsi_pll_enable_seq_8916,
+	.pll_enable_seqs[6] = gf_2_dsi_pll_enable_seq_8916,
+	.pll_enable_seqs[7] = gf_2_dsi_pll_enable_seq_8916,
+	.pll_enable_seqs[8] = gf_2_dsi_pll_enable_seq_8916,
+	.lpfr_lut_size = 10,
+	.lpfr_lut = lpfr_lut_struct,
+	.c = {
+		.dbg_name = "dsi_vco_clk_8916",
+		.ops = &clk_ops_dsi_vco,
+		CLK_INIT(dsi_vco_clk_8916.c),
+	},
+};
+
 static struct div_clk analog_postdiv_clk_8916 = {
 	.data = {
 		.max_div = 255,
@@ -605,6 +609,7 @@ int dsi_pll_clock_register_lpm(struct platform_device *pdev,
 		case MDSS_PLL_TARGET_8952:
 		case MDSS_PLL_TARGET_8937:
 		case MDSS_PLL_TARGET_8909:
+			pr_info("MSM8952/8937/8909 detected!\n");
 			if (!pll_res->index)
 				rc = of_msm_clock_register(pdev->dev.of_node,
 					dsi_pll0_cc, ARRAY_SIZE(dsi_pll0_cc));
@@ -618,6 +623,14 @@ int dsi_pll_clock_register_lpm(struct platform_device *pdev,
 			break;
 		case MDSS_PLL_TARGET_8916:
 		case MDSS_PLL_TARGET_8939:
+			pr_info("MSM8916 or MSM8939 detected!\n");
+			byte_clk_src.priv = pll_res;
+			pixel_clk_src.priv = pll_res;
+			byte_mux_8916.priv = pll_res;
+			indirect_path_div2_clk_8916.priv = pll_res;
+			analog_postdiv_clk_8916.priv = pll_res;
+			dsi_vco_clk_8916.priv = pll_res;
+
 			rc = of_msm_clock_register(pdev->dev.of_node,
 					mdss_dsi_pllcc_8916,
 					ARRAY_SIZE(mdss_dsi_pllcc_8916));
