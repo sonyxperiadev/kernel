@@ -2056,6 +2056,9 @@ static int mdss_fb_blank_blank(struct msm_fb_data_type *mfd,
 {
 	int ret = 0;
 	int cur_power_state, current_bl;
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	struct mdss_panel_data *pdata;
+#endif
 
 	if (!mfd)
 		return -EINVAL;

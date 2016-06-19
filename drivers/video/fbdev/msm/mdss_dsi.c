@@ -2866,33 +2866,6 @@ static int mdss_dsi_set_override_cfg(char *override_cfg,
 	return 0;
 }
 
-static int mdss_dsi_set_override_cfg(char *override_cfg,
-		struct mdss_dsi_ctrl_pdata *ctrl_pdata, char *panel_cfg)
-{
-	struct mdss_panel_info *pinfo = &ctrl_pdata->panel_data.panel_info;
-	char *token = NULL;
-
-	pr_debug("%s: override config:%s\n", __func__, override_cfg);
-	while ((token = strsep(&override_cfg, ":"))) {
-		if (!strcmp(token, OVERRIDE_CFG)) {
-			continue;
-		} else if (!strcmp(token, SIM_HW_TE_PANEL)) {
-			pinfo->sim_panel_mode = SIM_HW_TE_MODE;
-		} else if (!strcmp(token, SIM_SW_TE_PANEL)) {
-			pinfo->sim_panel_mode = SIM_SW_TE_MODE;
-		} else if (!strcmp(token, SIM_PANEL)) {
-			pinfo->sim_panel_mode = SIM_MODE;
-		} else {
-			pr_err("%s: invalid override_cfg token: %s\n",
-					__func__, token);
-			return -EINVAL;
-		}
-	}
-	pr_debug("%s:sim_panel_mode:%d\n", __func__, pinfo->sim_panel_mode);
-
-	return 0;
-}
-
 static struct device_node *mdss_dsi_pref_prim_panel(
 		struct platform_device *pdev)
 {
