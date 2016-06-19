@@ -712,7 +712,7 @@ static bool	pinctrl_init( struct device *dev )
 	gpio_state_active	= pinctrl_lookup_state( ts_pinctrl, "pmx_ts_active" );
 
 	if(IS_ERR_OR_NULL( gpio_state_active)) {
-		printk( "&s: Can not get ts default pinstate\n",__func__ );
+		printk( "%s: Can not get ts default pinstate\n",__func__ );
 		return	false;
 	}
 
@@ -736,7 +736,7 @@ int cyttsp4_devtree_register_devices(struct device *adap_dev)
 		return 0;
 
 	if( !pinctrl_init( adap_dev ) )
-		printk( "&s: pinctrl_init() failed!!!\n",__func__ );
+		printk( "%s: pinctrl_init() failed!!!\n",__func__ );
 	else
 		printk( "%s: set Pin-Control done\n",__func__ );
 

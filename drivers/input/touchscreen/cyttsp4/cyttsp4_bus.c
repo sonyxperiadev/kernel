@@ -596,7 +596,7 @@ static int cyttsp4_pm_resume(struct device *dev)
 #ifdef CONFIG_PM_RUNTIME
 #define cyttsp4_pm_rt_suspend		pm_generic_runtime_suspend
 #define cyytsp4_pm_rt_resume		pm_generic_runtime_resume
-#define cyytsp4_pm_rt_idle		pm_generic_runtime_idle
+#define cyytsp4_pm_rt_idle		pm_runtime_idle
 #else /* !CONFIG_PM_RUNTIME */
 #define cyttsp4_pm_rt_suspend		NULL
 #define cyytsp4_pm_rt_resume		NULL
