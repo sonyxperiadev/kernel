@@ -310,14 +310,45 @@
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
 };
 
-&pmx_mdss {
-	qcom,num-grp-pins = <3>;
-	qcom,pins = <&gp 97>, <&gp 25>, <&gp 98>;
+
+&mdss_dsi_active {
+	mux {
+		pins = "gpio97", "gpio25", "gpio98";
+	};
+
+	config {
+		pins = "gpio97", "gpio25", "gpio98";
+	};
 };
 
-&pmx_mdss_te {
-	qcom,num-grp-pins = <1>;
-	qcom,pins = <&gp 24>;
+&mdss_dsi_suspend {
+	mux {
+		pins = "gpio97", "gpio25", "gpio98";
+	};
+
+	config {
+		pins = "gpio97", "gpio25", "gpio98";
+	};
+};
+
+&mdss_te_active {
+	mux {
+		pins = "gpio24";
+	};
+
+	config {
+		pins = "gpio24";
+	};
+};
+
+&mdss_te_suspend {
+	mux {
+		pins = "gpio24";
+	};
+
+	config {
+		pins = "gpio24";
+	};
 };
 
 &mdss_dsi0 {
@@ -354,6 +385,7 @@
 		qcom,src-sel = <4>;		/* DTEST1 */
 		qcom,vin-sel = <0>;		/* VPH_PWR */
 		qcom,master-en = <1>;		/* Enable MPP */
+		status = "ok";
 	};
 };
 
@@ -370,6 +402,7 @@
 		qcom,vin-sel = <2>; /* QPNP_PIN_VIN2 */
 		qcom,src-sel = <2>; /* QPNP_PIN_SEL_FUNC_1 */
 		qcom,master-en = <1>;
+		status = "ok";
 	};
 
 	gpio@c200 { /* GPIO 3 */
