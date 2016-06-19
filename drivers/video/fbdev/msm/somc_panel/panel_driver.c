@@ -41,6 +41,8 @@
 #define MIN_REFRESH_RATE	  48
 #define DEFAULT_MDP_TRANSFER_TIME 14000
 
+#define KERN318_FEATURESET
+
 struct device virtdev;
 
 DEFINE_LED_TRIGGER(bl_led_trigger);
@@ -85,6 +87,23 @@ void mdss_dsi_panel_pwm_cfg(struct mdss_dsi_ctrl_pdata *ctrl)
 				__func__, ctrl->pwm_lpg_chan);
 	}
 	ctrl->pwm_enabled = 0;
+}
+
+bool mdss_dsi_panel_pwm_enable(struct mdss_dsi_ctrl_pdata *ctrl)
+{
+	bool status = true;
+	if (!ctrl->pwm_enabled)
+		goto end;
+
+	if (pwm_enable(ctrl->pwm_bl)) {
+		pr_err("%s: pwm_enable() failed\n", __func__);
+		status = false;
+	}
+
+	ctrl->pwm_enabled = 1;
+
+end:
+	return status;
 }
 
 static void mdss_dsi_panel_bklt_pwm(struct mdss_dsi_ctrl_pdata *ctrl,
@@ -156,7 +175,7 @@ static struct dsi_cmd_desc dcs_read_cmd = {
 	dcs_cmd
 };
 
-u32 mdss_dsi_panel_cmd_read(struct mdss_dsi_ctrl_pdata *ctrl, char cmd0,
+int mdss_dsi_panel_cmd_read(struct mdss_dsi_ctrl_pdata *ctrl, char cmd0,
 						char cmd1, void (*fxn)(int),
 						char *rbuf, int len)
 {
@@ -2033,7 +2052,8 @@ static void get_uv_data(struct mdss_dsi_ctrl_pdata *ctrl_pdata,
 
 	mdss_dsi_cmd_mdp_busy(ctrl_pdata);
 	mdss_bus_bandwidth_ctrl(1);
-	mdss_dsi_clk_ctrl(ctrl_pdata, DSI_ALL_CLKS, 1);
+	mdss_dsi_clk_ctrl(ctrl_pdata, ctrl_pdata->dsi_clk_handle,
+				MDSS_DSI_ALL_CLKS, MDSS_DSI_CLK_ON);
 	for (i = 0; i < ctrl_pdata->spec_pdata->uv_read_cmds.cmd_cnt; i++) {
 		if (short_response)
 			mdss_dsi_cmds_rx(ctrl_pdata, cmds, 0, 0);
@@ -2043,7 +2063,8 @@ static void get_uv_data(struct mdss_dsi_ctrl_pdata *ctrl_pdata,
 		pos += len;
 		cmds++;
 	}
-	mdss_dsi_clk_ctrl(ctrl_pdata, DSI_ALL_CLKS, 0);
+	mdss_dsi_clk_ctrl(ctrl_pdata, ctrl_pdata->dsi_clk_handle,
+				MDSS_DSI_ALL_CLKS, MDSS_DSI_CLK_OFF);
 	mdss_bus_bandwidth_ctrl(0);
 	conv_uv_data(buf, param_type, u_data, v_data);
 }
@@ -2083,6 +2104,8 @@ static int mdss_dsi_panel_pcc_setup(struct mdss_panel_data *pdata)
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
 	struct mdss_pcc_data *pcc_data = NULL;
 	struct mdss_panel_info *pinfo = NULL;
+	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
+	struct msm_fb_data_type *mfd = mdata->ctl_off->mfd;
 	int ret;
 	u32 copyback;
 	struct mdp_pcc_cfg_data pcc_config;
@@ -2148,7 +2171,7 @@ static int mdss_dsi_panel_pcc_setup(struct mdss_panel_data *pdata)
 	if (pcc_data->color_tbl[pcc_data->tbl_idx].color_type != UNUSED) {
 		pcc_config.block = MDP_LOGICAL_BLOCK_DISP_0;
 		pcc_config.ops = MDP_PP_OPS_ENABLE | MDP_PP_OPS_WRITE;
-		ret = mdss_mdp_pcc_config(&pcc_config, &copyback);
+		ret = mdss_mdp_pcc_config(mfd, &pcc_config, &copyback);
 		if (ret != 0)
 			pr_err("%s: Failed setting PCC data\n", __func__);
 	}
@@ -2177,6 +2200,8 @@ static int mdss_dsi_panel_picadj_setup(struct mdss_panel_data *pdata)
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
 	struct mdp_pa_cfg *padata = NULL;
 	struct mdp_pa_cfg_data picadj;
+	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
+	struct msm_fb_data_type *mfd = mdata->ctl_off->mfd;
 	u32 copyback = 0;
 
 	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
@@ -2200,7 +2225,7 @@ static int mdss_dsi_panel_picadj_setup(struct mdss_panel_data *pdata)
 		picadj.block = MDP_LOGICAL_BLOCK_DISP_0;
 		picadj.pa_data.flags = MDP_PP_OPS_ENABLE | MDP_PP_OPS_READ;
 
-		mdss_mdp_pa_config(&picadj, &copyback);
+		mdss_mdp_pa_config(mfd, &picadj, &copyback);
 		pr_err("%s: ERROR: Values not specified or invalid. \
 			Setting defaults.\n", __func__);
 		pr_err("%s (%d): defaults: sat=%d hue=%d val=%d cont=%d",
@@ -2215,7 +2240,7 @@ static int mdss_dsi_panel_picadj_setup(struct mdss_panel_data *pdata)
 	padata->flags = MDP_PP_OPS_ENABLE | MDP_PP_OPS_WRITE;
 	picadj.pa_data = *padata;
 
-	mdss_mdp_pa_config(&picadj, &copyback);
+	mdss_mdp_pa_config(mfd, &picadj, &copyback);
 
 	pr_info("%s (%d):sat=%d hue=%d val=%d cont=%d",
 		__func__, __LINE__, padata->sat_adj,
@@ -2619,7 +2644,7 @@ void mdss_dsi_panel_dsc_pps_send(struct mdss_dsi_ctrl_pdata *ctrl,
 	pcmds.cmds = &cmd;
 	pcmds.link_state = DSI_LP_MODE;
 
-	mdss_dsi_panel_cmds_send(ctrl, &pcmds, CMD_REQ_COMMIT);
+	mdss_dsi_panel_cmds_send(ctrl, &pcmds);
 }
 
 static int mdss_dsi_parse_dsc_params(struct device_node *np,
@@ -4305,7 +4330,7 @@ static int mdss_dsi_panel_create_fs(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 		goto error;
 	}
 
-	rc = dev_set_drvdata(&virtdev, ctrl_pdata);
+	dev_set_drvdata(&virtdev, ctrl_pdata);
 
 	return 0;
 error:
@@ -4340,9 +4365,10 @@ static void mdss_dsi_set_prim_panel(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 	}
 }
 
+
 int mdss_dsi_panel_init(struct device_node *node,
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata,
-	bool cmd_cfg_cont_splash)
+	int ndx)
 {
 	int rc = 0;
 	struct device_node *dsi_ctrl_np = NULL;
