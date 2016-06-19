@@ -440,7 +440,16 @@ static const struct of_device_id mdss_pll_dt_match[] = {
 	{.compatible = "qcom,mdss_dsi_pll_8937"},
 	{.compatible = "qcom,mdss_dsi_pll_8909"},
 	{.compatible = "qcom,mdss_dsi_pll_8953"},
+	{.compatible = "qcom,mdss_dsi_pll_8974"},
 	{.compatible = "qcom,mdss_dsi_pll_8976"},
+	{.compatible = "qcom,mdss_dsi_pll_8994"},
+	{.compatible = "qcom,mdss_hdmi_pll_8994"},
+	{.compatible = "qcom,mdss_dsi_pll_8992"},
+	{.compatible = "qcom,mdss_hdmi_pll_8992"},
+	{.compatible = "qcom,mdss_dsi_pll_8916"},
+	{.compatible = "qcom,mdss_dsi_pll_8939"},
+	{.compatible = "qcom,mdss_edp_pll"},
+	{.compatible = "qcom,mdss_hdmi_pll"},
 	{}
 };
 
