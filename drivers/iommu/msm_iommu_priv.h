@@ -60,6 +60,7 @@ struct msm_iommu_pt {
  * attributes: Attributes associated with domains, like DYNAMIC attributes
  * base: If the domain is dynamic in nature, it must point to its base domain
  */
+#if defined(CONFIG_IOMMU_LPAE) || defined(CONFIG_IOMMU_AARCH64)
 struct msm_iommu_priv {
 	struct msm_iommu_pt pt;
 	struct list_head list_attached;
@@ -69,5 +70,16 @@ struct msm_iommu_priv {
 	u32 attributes;
 	struct iommu_domain *base;
 };
+#else
+struct msm_iommu_priv {
+	struct msm_iommu_pt pt;
+	struct list_head list_attached;
+	const char *client_name;
+	u64 procid;
+	u64 asid;
+	u64 attributes;
+	struct iommu_domain *base;
+};
+#endif
 
 #endif
