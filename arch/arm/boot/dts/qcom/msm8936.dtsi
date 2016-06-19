@@ -40,7 +40,7 @@
 		clock-frequency = <19200000>;
 	};
 
-	clock_cpu: qcom,cpu-clock-8936@b011050 {
+	clock_cpu: qcom,cpu-clock-8939@b011050 {
 		compatible = "qcom,cpu-clock-8936";
 		reg = <0xb011050 0x8>,
 			<0xb1d1050 0x8>,
@@ -48,6 +48,7 @@
 		reg-names = "apcs-c1-rcg-base",
 				"apcs-cci-rcg-base",
 				"efuse";
+		qcom,num-cluster;
 		vdd-c1-supply = <&apc_vreg_corner>;
 		vdd-cci-supply = <&apc_vreg_corner>;
 		clocks = <&clock_gcc clk_gpll0_ao>,
@@ -177,6 +178,8 @@
 	};
 
 	qcom,msm-thermal {
+		qcom,freq-control-list = <&CPU0 &CPU1 &CPU2 &CPU3>;
+		qcom,core-control-list = <&CPU1 &CPU2 &CPU3>;
 		qcom,synchronous-cluster-id = <0>;
 		qcom,synchronous-cluster-map = <0 4 &CPU0 &CPU1 &CPU2 &CPU3>;
 	};
@@ -239,3 +242,4 @@
 		qcom,coresight-jtagmm-cpu = <&CPU3>;
 	};
 };
+
