@@ -165,6 +165,8 @@
 #define clk_gcc_mdss_esc0_clk			0xaec5cb25
 #define clk_gcc_mdss_esc1_clk                   0xc8b33763
 #define clk_gcc_mdss_mdp_clk			0x22f3521f
+#define clk_gcc_mdss_mdp_vote_clk		0x588460a4
+#define clk_gcc_mdss_mdp_rotator_vote_clk	0x5b1f675e
 #define clk_gcc_mdss_pclk0_clk			0xcc5c5c77
 #define clk_gcc_mdss_pclk1_clk                  0x1de4a617
 #define clk_gcc_mdss_vsync_clk			0x32a09f1f
