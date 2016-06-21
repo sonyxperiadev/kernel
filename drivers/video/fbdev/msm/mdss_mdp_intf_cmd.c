@@ -3183,8 +3183,13 @@ static int mdss_mdp_cmd_kickoff(struct mdss_mdp_ctl *ctl, void *arg)
 #ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 	if (disp_on_in_hs) {
 		int rc;
+#ifdef CONFIG_SOMC_PANEL_INCELL
+		rc = mdss_mdp_ctl_intf_event(ctl, MDSS_EVENT_POST_PANEL_ON,
+			NULL, CTL_INTF_EVENT_FLAG_DEFAULT);
+#else
 		rc = mdss_mdp_ctl_intf_event(ctl, MDSS_EVENT_DISP_ON, NULL,
 			CTL_INTF_EVENT_FLAG_DEFAULT);
+#endif
 		WARN(rc, "intf %d disp on error (%d)\n", ctl->intf_num, rc);
 		disp_on_in_hs = false;
 
