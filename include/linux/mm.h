@@ -206,6 +206,11 @@ extern unsigned int kobjsize(const void *objp);
 #define VM_STACK_FLAGS	(VM_GROWSDOWN | VM_STACK_DEFAULT_FLAGS | VM_ACCOUNT)
 #endif
 
+#ifdef CONFIG_ARCH_MSM8953_SOC_SETTINGS
+#define MSM8953_TLMM_START_ADDR	0x01000000
+#define MSM8953_TLMM_END_ADDR	(0x01300000 - 1)
+#endif
+
 /*
  * Special vmas that are non-mergable, non-mlock()able.
  * Note: mm/huge_memory.c VM_NO_THP depends on this definition.
@@ -259,7 +264,7 @@ struct vm_fault {
 /*
  * These are the virtual MM functions - opening of an area, closing and
  * unmapping it (needed to keep files on disk up-to-date etc), pointer
- * to the functions called when a no-page or a wp-page exception occurs. 
+ * to the functions called when a no-page or a wp-page exception occurs.
  */
 struct vm_operations_struct {
 	void (*open)(struct vm_area_struct * area);
