@@ -16,6 +16,7 @@
 		#address-cells = <1>;
 		#size-cells = <1>;
 		reg = <0xb089000 0x1000>;
+		reg-names = "saw-base";
 		qcom,name = "cpu0";
 		qcom,cpu = <&CPU0>;
 		qcom,saw2-ver-reg = <0xfd0>;
@@ -36,7 +37,7 @@
 			qcom,sequence = [20 50 1b 10 80 30 90 5b 60 50 03 60
 				76 76 0b 50 1b 94 5B 80 10 26 30 50 0f];
 			qcom,spm_en;
-			qcom,slp_cmd_mode;
+			qcom,pc_mode;
 		};
 	};
 
@@ -45,6 +46,7 @@
 		#address-cells = <1>;
 		#size-cells = <1>;
 		reg = <0xb099000 0x1000>;
+		reg-names = "saw-base";
 		qcom,name = "cpu1";
 		qcom,cpu = <&CPU1>;
 		qcom,saw2-ver-reg = <0xfd0>;
@@ -65,7 +67,7 @@
 			qcom,sequence = [20 50 1b 10 80 30 90 5b 60 50 03 60
 				76 76 0b 50 1b 94 5B 80 10 26 30 50 0f];
 			qcom,spm_en;
-			qcom,slp_cmd_mode;
+			qcom,pc_mode;
 		};
 	};
 
@@ -74,6 +76,7 @@
 		#address-cells = <1>;
 		#size-cells = <1>;
 		reg = <0xb0a9000 0x1000>;
+		reg-names = "saw-base";
 		qcom,name = "cpu2";
 		qcom,cpu = <&CPU2>;
 		qcom,saw2-ver-reg = <0xfd0>;
@@ -94,7 +97,7 @@
 			qcom,sequence = [20 50 1b 10 80 30 90 5b 60 50 03 60
 				76 76 0b 50 1b 94 5B 80 10 26 30 50 0f];
 			qcom,spm_en;
-			qcom,slp_cmd_mode;
+			qcom,pc_mode;
 		};
 	};
 
@@ -103,6 +106,7 @@
 		#address-cells = <1>;
 		#size-cells = <1>;
 		reg = <0xb0b9000 0x1000>;
+		reg-names = "saw-base";
 		qcom,name = "cpu3";
 		qcom,cpu = <&CPU3>;
 		qcom,saw2-ver-reg = <0xfd0>;
@@ -123,7 +127,7 @@
 			qcom,sequence = [20 50 1b 10 80 30 90 5b 60 50 03 60
 				76 76 0b 50 1b 94 5B 80 10 26 30 50 0f];
 			qcom,spm_en;
-			qcom,slp_cmd_mode;
+			qcom,pc_mode;
 		};
 	};
 
@@ -132,6 +136,7 @@
 		#address-cells = <1>;
 		#size-cells = <1>;
 		reg = <0xb012000 0x1000>;
+		reg-names = "saw-base";
 		qcom,name = "system-l2";
 		qcom,saw2-ver-reg = <0xfd0>;
 		qcom,saw2-cfg = <0x1>;
@@ -141,7 +146,6 @@
 			qcom,label = "qcom,saw2-spm-cmd-ret";
 			qcom,sequence = [00 03 00 0f];
 			qcom,spm_en;
-			qcom,ret_mode;
 		};
 		qcom,mode1 {
 			qcom,label = "qcom,saw2-spm-cmd-gdhs";
@@ -155,7 +159,7 @@
 			qcom,sequence = [00 b0 7b 32 10 e0 d0 6b c0 50 42 b0 03
 				1f 1b b0 7b 4e 02 02 c0 d0 12 e0 6b 02 32 50 b0 0f];
 			qcom,spm_en;
-			qcom,slp_cmd_mode;
+			qcom,pc_mode;
 		};
 	};
 
@@ -164,6 +168,7 @@
 		#address-cells = <1>;
 		#size-cells = <1>;
 		reg = <0xb1d2000 0x1000>;
+		reg-names = "saw-base";
 		qcom,name = "system-cci";
 		qcom,saw2-ver-reg = <0xfd0>;
 		qcom,saw2-cfg = <0x14>;
@@ -172,17 +177,18 @@
 		qcom,saw2-pmic-data0 = <0x04030011>;
 		qcom,saw2-pmic-data1 = <0x00030010>;
 		qcom,supports-rpm-hs;
+		/*qcom,cpu-vctl-list = <&CPU0 &CPU1 &CPU2 &CPU3>;*/
 		qcom,mode0 {
 			qcom,label = "qcom,saw2-spm-cmd-ret";
 			qcom,sequence = [00 03 00 0f];
 			qcom,spm_en;
-			qcom,ret_mode;
 		};
 		qcom,mode1 {
 			qcom,label = "qcom,saw2-spm-cmd-pc";
 			qcom,sequence = [00 60 50 11 03 70 01 50
                                 02 62 72 0f];
 			qcom,spm_en;
+			qcom,pc_mode;
 			qcom,slp_cmd_mode;
 		};
 	};
@@ -281,6 +287,7 @@
 					qcom,time-overhead = <600>;
 					qcom,use-broadcast-timer;
 				};
+
 			};
 		};
 	};
@@ -414,18 +421,11 @@
 		clock-names =
 			"cpu0_clk", "cpu1_clk", "cpu2_clk",
 			"cpu3_clk", "l2_clk";
-		clocks = <&clock_cpu clk_a53ssmux_bc>,
-			 <&clock_cpu clk_a53ssmux_bc>,
-			 <&clock_cpu clk_a53ssmux_bc>,
-			 <&clock_cpu clk_a53ssmux_bc>,
-			 <&clock_cpu clk_a53ssmux_cci>;
-/*
 		clocks = <&clock_cpu clk_a53_bc_clk>,
 			 <&clock_cpu clk_a53_bc_clk>,
 			 <&clock_cpu clk_a53_bc_clk>,
 			 <&clock_cpu clk_a53_bc_clk>,
 			 <&clock_cpu clk_cci_clk>;
-*/
 	};
 
 	qcom,cpu-sleep-status{
