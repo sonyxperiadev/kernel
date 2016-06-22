@@ -41,6 +41,7 @@
 			qcom,acc = <&acc0>;
 			next-level-cache = <&L2_1>;
 			qcom,sleep-status = <&cpu0_slp_sts>;
+			qcom,spm-spc-as-pc;
 			L2_1: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-level = <2>;
