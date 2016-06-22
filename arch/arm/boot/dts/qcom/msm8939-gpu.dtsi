@@ -11,6 +11,10 @@
  */
 
 &soc {
+	msm_bus: qcom,kgsl-busmon {
+		label = "kgsl-busmon";
+		compatible = "qcom,kgsl-busmon";
+	};
 
 	/* To use BIMC based bus governor */
 	gpubw: qcom,gpubw {
@@ -51,7 +55,7 @@
 
 		qcom,initial-pwrlevel = <2>;
 
-		qcom,idle-timeout = <8>; //<HZ/12>
+		qcom,idle-timeout = <80>; //msecs
 		qcom,strtstp-sleepwake;
 
 		/* Clocks = KGSL_CLK_CORE | KGSL_CLK_IFACE | KGSL_CLK_MEM |
@@ -181,6 +185,7 @@
 */
 		gfx3d_user: gfx3d_user {
 			compatible = "qcom,smmu-kgsl-cb";
+			label = "gfx3d_user";
 			qcom,gpu-offset = <0x48000>;
 		};
 	};
