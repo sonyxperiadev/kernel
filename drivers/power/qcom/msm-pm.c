@@ -88,6 +88,8 @@ static long *msm_pc_debug_counters;
 static cpumask_t retention_cpus;
 static DEFINE_SPINLOCK(retention_lock);
 
+static bool msm_cpu_quirks_lpm = false;
+
 static bool msm_pm_is_L1_writeback(void)
 {
 	u32 cache_id = 0;
@@ -266,12 +268,16 @@ static bool __ref msm_pm_spm_power_collapse(
 	bool collapsed = 0;
 	int ret;
 	bool save_cpu_regs = (cpu_online(cpu) || from_idle);
+	int new_mode = mode;
 
 	if (MSM_PM_DEBUG_POWER_COLLAPSE & msm_pm_debug_mask)
 		pr_info("CPU%u: %s: notify_rpm %d\n",
 			cpu, __func__, (int) notify_rpm);
 
-	ret = msm_spm_set_low_power_mode(mode, notify_rpm);
+	if (msm_cpu_quirks_lpm)
+		new_mode = MSM_SPM_MODE_POWER_COLLAPSE;
+
+	ret = msm_spm_set_low_power_mode(new_mode, notify_rpm);
 	WARN_ON(ret);
 
 	entry = save_cpu_regs ?  cpu_resume : msm_secondary_startup;
@@ -544,6 +550,29 @@ snoc_cl_probe_done:
 	return rc;
 }
 
+/*
+ * Probe quirks for MSM CPU PM.
+ * Warning: This function assumes that the quirk properties are written
+ *          in the DT configuration for the first CPU and that the
+ *          first one is CPU0 (core0).
+ */
+static int msm_cpu_quirks_probe(void)
+{
+	struct device_node *cpu_node;
+
+	cpu_node = of_get_cpu_node(0, NULL);
+	if (!cpu_node) {
+		__WARN();
+		return -EINVAL;
+	}
+
+	/* SPM Standalone Power Collapse as Power Collapse quirk */
+	msm_cpu_quirks_lpm = of_property_read_bool(cpu_node,
+				"qcom,spm-spc-as-pc");
+
+	return 0;
+}
+
 static int msm_cpu_status_probe(struct platform_device *pdev)
 {
 	u32 cpu;
@@ -589,6 +618,10 @@ static int msm_cpu_status_probe(struct platform_device *pdev)
 			return rc;
 		}
 	}
+
+	rc = msm_cpu_quirks_probe();
+	if (rc)
+		pr_warn("%s: WARNING: quirks probing failed!\n", __func__);
 
 	return 0;
 };
