@@ -2021,6 +2021,8 @@ static int somc_panel_pa_v2_setup(struct mdss_panel_data *pdata)
 	struct mdp_pa_cfg *compat = NULL;
 	struct mdp_pa_v2_data *padata = NULL;
 	struct mdp_pa_v2_cfg_data picadj;
+	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
+	struct msm_fb_data_type *mfd = mdata->ctl_off->mfd;
 	u32 copyback = 0;
 	int ret;
 
@@ -2061,7 +2063,7 @@ static int somc_panel_pa_v2_setup(struct mdss_panel_data *pdata)
 					  PA_V2_BASIC_FEAT_ENB |
 					  PA_V2_BASIC_MASK_ENB;
 
-		ret = mdss_mdp_pa_v2_config(&picadj, &copyback);
+		ret = mdss_mdp_pa_v2_config(mfd, &picadj, &copyback);
 		pr_err("%s: ERROR: Values not specified or invalid. \
 			Setting defaults.\n", __func__);
 		pr_err("%s (%d): defaults: sat=%d hue=%d val=%d cont=%d",
@@ -2079,7 +2081,7 @@ static int somc_panel_pa_v2_setup(struct mdss_panel_data *pdata)
 			PA_V2_BASIC_FEAT_ENB | PA_V2_BASIC_MASK_ENB;
 	picadj.pa_v2_data = *padata;
 
-	ret = mdss_mdp_pa_v2_config(&picadj, &copyback);
+	ret = mdss_mdp_pa_v2_config(mfd, &picadj, &copyback);
 	if (ret)
 		pr_err("%s: Cannot configure picadj: %d\n",
 			__func__, ret);
