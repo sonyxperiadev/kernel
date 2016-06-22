@@ -654,8 +654,8 @@ static int clock_a53_probe(struct platform_device *pdev)
 			cpumask_set_cpu(cpu, &a53_lc_clk.cpumask);
 	}
 
-	a53_lc_clk.hw_low_power_ctrl = true;
-	a53_bc_clk.hw_low_power_ctrl = true;
+	a53_lc_clk.hw_low_power_ctrl = false;
+	a53_bc_clk.hw_low_power_ctrl = false;
 
 	register_pm_notifier(&clock_8936_pm_notifier);
 
