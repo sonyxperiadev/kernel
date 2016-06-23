@@ -199,7 +199,6 @@ dhd_dbg_ring_pull(dhd_pub_t *dhdp, int ring_id, void *data, uint32 buf_len)
 	if (ring->no_space) {
 		avail_len = avail_len - ring->rem_len + ring->wp;
 		ring->no_space = FALSE;
-		ring->wp_pad = 0;
 		ring->rem_len = 0;
 	}
 	while (avail_len > 0 && buf_len > 0) {
@@ -243,11 +242,10 @@ dhd_dbg_ring_push(dhd_pub_t *dhdp, int ring_id, dhd_dbg_ring_entry_t *hdr, void 
 		if (ring->rp <= ring->wp) {
 		 	if ((diff = (ring->ring_size - ring->wp)) <= w_len) {
 				ring->no_space = TRUE;
-				ring->wp_pad = ring->wp;
-				ring->rem_len = ring->ring_size - ring->wp_pad;
+				ring->rem_len = ring->ring_size - ring->wp;
 				/* 0 pad insufficient tail space */
 				memset(ring->ring_buf + ring->wp, 0,
-				       DBG_RING_ENTRY_SIZE);
+				       diff);
 				ring->wp = 0;
 				continue;
 			} else {

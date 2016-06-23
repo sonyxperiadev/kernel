@@ -10749,7 +10749,6 @@ int dhd_os_get_socram_dump(struct net_device *dev, char **buf, uint32 *size)
 			/* reset the storage of dump */
 			memset(dhdp->soc_ram, 0, dhdp->soc_ram_length);
 			*size = dhdp->soc_ram_length;
-			dhdp->soc_ram_length = 0;
 		} else {
 			ret = BCME_BUFTOOSHORT;
 			DHD_ERROR(("The length of the buffer is too short"

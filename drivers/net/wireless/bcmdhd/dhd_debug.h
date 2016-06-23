@@ -639,7 +639,6 @@ typedef struct dhd_dbg_ring {
 	void *	lock;		/* spin lock for ring access */
 	struct ring_statistics stat; /* statistics */
 	enum dbg_ring_state state;	/* ring state enum */
-	uint32  wp_pad; /* padding start position */
 	bool no_space; /* writer does not have enough space */
 	uint32 rem_len; /* number of bytes from wp_pad to end */
 	bool sched_pull; /* schedule reader immediately */
