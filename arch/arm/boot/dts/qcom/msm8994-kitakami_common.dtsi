@@ -3274,12 +3274,6 @@
 		qcom,hw-settle-time = <2>;
 		qcom,fast-avg-setup = <0>;
 	};
-	chan@73 { /* msm_therm */
-		qcom,scale-function = <13>;
-	};
-	chan@74 { /* emmc_therm */
-		qcom,scale-function = <13>;
-	};
 };
 
 &pm8994_adc_tm {
