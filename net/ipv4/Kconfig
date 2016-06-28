@@ -485,6 +485,7 @@ config TCP_CONG_WESTWOOD
 config TCP_CONG_HTCP
         tristate "H-TCP"
         default m
+        depends on (IPV6 || IPV6=n)
 	---help---
 	H-TCP is a send-side only modifications of the TCP Reno
 	protocol stack that optimizes the performance of TCP
