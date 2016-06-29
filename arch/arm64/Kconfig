@@ -319,6 +319,7 @@ config ARCH_MSM8937
 config ARCH_MSM8994
 	bool "Enable Support for Qualcomm Technologies Inc MSM8994"
 	depends on ARCH_MSM
+	select SCHED_IDLE_FORCEPOLL
 	help
 	  This enables support for the MSM8994 chipset. If you don't
 	  know what to do here, say N
