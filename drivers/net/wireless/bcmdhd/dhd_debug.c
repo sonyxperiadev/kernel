@@ -1344,7 +1344,8 @@ dhd_dbg_monitor_tx_status(dhd_pub_t *dhdp, void *pkt, uint32 pktid,
 	dhd_dbg_pkt_mon_state_t tx_status_state;
 	wifi_tx_packet_fate pkt_fate;
 	uint32 pkt_hash, temp_hash;
-	uint16 pkt_pos, status_pos, count;
+	uint16 pkt_pos, status_pos;
+	int16 count;
 	bool found = FALSE;
 
 	if (!dhdp || !dhdp->dbg) {
@@ -1378,11 +1379,11 @@ dhd_dbg_monitor_tx_status(dhd_pub_t *dhdp, void *pkt, uint32 pktid,
 				count++;
 			}
 
-			/* linear search (handles out-of-order completion) */
+			/* search until beginning (handles out-of-order completion) */
 			if (!found) {
-				count = 0;
-				tx_pkt = tx_report->tx_pkts;
-				while ((count < pkt_pos) && tx_pkt) {
+				count = status_pos - 1;
+				tx_pkt = (((dhd_dbg_tx_info_t *)tx_report->tx_pkts) + count);
+				while ((count >= 0) && tx_pkt) {
 					temp_hash = tx_pkt->info.pkt_hash;
 					if (temp_hash == pkt_hash) {
 						tx_pkt->fate = pkt_fate;
@@ -1390,14 +1391,16 @@ dhd_dbg_monitor_tx_status(dhd_pub_t *dhdp, void *pkt, uint32 pktid,
 						found = TRUE;
 						break;
 					}
-					tx_pkt++;
-					count++;
+					tx_pkt--;
+					count--;
 				}
 
-				/* still couldn't match tx_status */
-				DHD_ERROR(("%s(): couldn't match tx_status, pkt_pos=%u, "
-					"status_pos=%u, pkt_fate=%u\n", __FUNCTION__,
-					pkt_pos, status_pos, pkt_fate));
+				if (!found) {
+					/* still couldn't match tx_status */
+					DHD_ERROR(("%s(): couldn't match tx_status, pkt_pos=%u, "
+						"status_pos=%u, pkt_fate=%u\n", __FUNCTION__,
+						pkt_pos, status_pos, pkt_fate));
+				}
 			}
 		} else {
 			dhdp->dbg->pkt_mon.tx_status_state = PKT_MON_STOPPED;
