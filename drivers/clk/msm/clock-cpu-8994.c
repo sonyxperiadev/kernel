@@ -1430,7 +1430,7 @@ static void perform_v1_fixup(void)
 
 static long corner_to_voltage(unsigned long corner, struct device *dev)
 {
-	struct opp *oppl;
+	struct dev_pm_opp *oppl;
 	long uv;
 
 	rcu_read_lock();
@@ -1453,7 +1453,7 @@ static int add_opp(struct clk *c, struct device *cpudev, struct device *vregdev,
 	int level;
 	long ret, uv, corner;
 	bool use_voltages = false;
-	struct opp *oppl;
+	struct dev_pm_opp *oppl;
 
 	rcu_read_lock();
 	/* Check if the regulator driver has already populated OPP tables */
@@ -1520,7 +1520,7 @@ static int add_opp(struct clk *c, struct device *cpudev, struct device *vregdev,
 
 static void print_opp_table(int a53_cpu, int a57_cpu)
 {
-	struct opp *oppfmax, *oppfmin;
+	struct dev_pm_opp *oppfmax, *oppfmin;
 	unsigned long apc0_fmax = a53_clk.c.fmax[a53_clk.c.num_fmax - 1];
 	unsigned long apc1_fmax = a57_clk.c.fmax[a57_clk.c.num_fmax - 1];
 	unsigned long apc0_fmin = a53_clk.c.fmax[1];
