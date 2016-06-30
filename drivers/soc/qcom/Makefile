@@ -28,6 +28,7 @@ obj-$(CONFIG_MSM_BOOT_STATS) += boot_stats.o
 obj-$(CONFIG_MSM_BOOT_TIME_MARKER) += boot_marker.o
 obj-$(CONFIG_MSM_HYP_DEBUG) += hyp-debug.o
 obj-$(CONFIG_ARCH_MSM8996) += kryo-l2-accessors.o
+obj-$(CONFIG_ARCH_MSM_KRAIT) += krait-l2-accessors.o scm-krait.o
 obj-$(CONFIG_MSM_RPM_SMD) +=	rpm-smd.o
 obj-$(CONFIG_MSM_EVENT_TIMER) += event_timer.o
 ifdef CONFIG_DEBUG_FS
@@ -59,7 +60,10 @@ obj-$(CONFIG_MSM_RPM_RBCPR_STATS_V2_LOG) += rpm_rbcpr_stats_v2.o
 obj-$(CONFIG_MEM_SHARE_QMI_SERVICE)		+= memshare/
 obj-$(CONFIG_CP_ACCESS64) += cpaccess64.o
 obj-$(CONFIG_MSM_RPM_STATS_LOG) += rpm_stats.o rpm_master_stat.o rpm_rail_stats.o system_stats.o
-obj-$(CONFIG_HW_PERF_EVENTS) += perf_event_kryo.o perf_event_l2.o
+ifdef CONFIG_HW_PERF_EVENTS
+obj-$(CONFIG_ARCH_MSM_KRAIT) += perf_event_krait_l2.o perf_event_krait.o perf_event_l2.o
+obj-$(CONFIG_ARCH_MSM8996)   += perf_event_kryo.o perf_event_l2.o
+endif
 obj-$(CONFIG_MSM_RPM_LOG) += rpm_log.o
 obj-$(CONFIG_MSM_JTAG) += jtag-fuse.o jtag.o
 obj-$(CONFIG_MSM_JTAG_MM) +=  jtag-fuse.o jtag-mm.o

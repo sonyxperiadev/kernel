@@ -898,5 +898,14 @@ config REGULATOR_KRYO
 	  Say yes to support management of LDO and BHS modes for the clusters in the
 	  CPU subsystem.
 
+config REGULATOR_KRAIT
+	bool "Krait regulator driver"
+	depends on OF
+	help
+	 Certain MSMs have the Krait CPUs powered via a single supply
+	 line (LDO=>BHS=>LDO BYP) from the PMIC. This supply line is
+	 powered by multiple regulators running in ganged mode inside
+	 the PMIC.
+	 Enable this option to support such configurations.
 endif
 
