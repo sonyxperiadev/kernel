@@ -1453,7 +1453,11 @@ static int add_opp(struct clk *c, struct device *cpudev, struct device *vregdev,
 	int level;
 	long ret, uv, corner;
 	bool use_voltages = false;
+	bool first = true;
+	int *vdd_uv = c->vdd_class->vdd_uv;
+	struct regulator *reg = c->vdd_class->regulator[0];
 	struct dev_pm_opp *oppl;
+	int i = 1;
 
 	rcu_read_lock();
 	/* Check if the regulator driver has already populated OPP tables */
@@ -1463,18 +1467,26 @@ static int add_opp(struct clk *c, struct device *cpudev, struct device *vregdev,
 		use_voltages = true;
 
 	while (1) {
+
 		ret = clk_round_rate(c, rate + 1);
 		if (ret < 0) {
 			pr_warn("clock-cpu: round_rate failed at %lu\n", rate);
 			return ret;
 		}
 		rate = ret;
+	//	rate = c->fmax[i++];
 		level = find_vdd_level(c, rate);
 		if (level <= 0) {
+			pr_warn("clock-cpu: no corner for %lu.\n", rate);
+			return -EINVAL;
+		};
+
+		uv = regulator_list_corner_voltage(reg, vdd_uv[level]);
+		if (uv < 0) {
 			pr_warn("clock-cpu: no uv for %lu.\n", rate);
 			return -EINVAL;
 		}
-		uv = corner = c->vdd_class->vdd_uv[level];
+		corner = c->vdd_class->vdd_uv[level];
 		/*
 		 * If corner to voltage mapping is available, populate the OPP
 		 * table with the voltages rather than corners.
@@ -1511,8 +1523,12 @@ static int add_opp(struct clk *c, struct device *cpudev, struct device *vregdev,
 				return ret;
 			}
 		}
-		if (rate >= max_rate)
-			break;
+		if ((rate >= max_rate) || first) {
+			pr_info("clock-cpu-8994: set OPP pair (%lu Hz, %d uv) on %s\n",
+				rate, uv, dev_name(cpudev));
+			if (first) first = false;
+			else break;
+		}
 	}
 
 	return 0;
@@ -2120,6 +2136,8 @@ static int cpu_clock_8994_driver_probe(struct platform_device *pdev)
 
 	put_online_cpus();
 
+	populate_opp_table(pdev);
+
 	cpu_clock_8994_dev = pdev;
 	return 0;
 }
@@ -2139,15 +2157,6 @@ static struct platform_driver cpu_clock_8994_driver = {
 		.owner = THIS_MODULE,
 	},
 };
-
-/* CPU devices are not currently available in arch_initcall */
-static int __init cpu_clock_8994_init_opp(void)
-{
-	if (cpu_clock_8994_dev)
-		populate_opp_table(cpu_clock_8994_dev);
-	return 0;
-}
-module_init(cpu_clock_8994_init_opp);
 
 static int __init cpu_clock_8994_init(void)
 {
