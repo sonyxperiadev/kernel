@@ -52,7 +52,7 @@ static ssize_t write_pmsg(struct file *file, const char __user *buf,
 			vfree(buffer);
 			return -EFAULT;
 		}
-		psinfo->write_buf(PSTORE_TYPE_PMSG, 0, &id, 0, buffer, 0, c,
+		psinfo->write_buf(PSTORE_TYPE_PMSG, 0, &id, 0, buffer, c,
 				  psinfo);
 
 		i += c;
