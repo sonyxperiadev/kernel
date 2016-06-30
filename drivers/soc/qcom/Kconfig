@@ -379,6 +379,16 @@ config MSM_SCM_ERRATA
 
 	  If unsure, say N.
 
+config MSM_SMCMOD
+	tristate "Secure Monitor Call (SMC) Module"
+	default n
+	depends on (ION && ION_MSM && MSM_SCM)
+	help
+	  Enable support for smcmod driver. This driver provides a mechanism
+	  to execute the Secure Monitor Call (SMC) to switch from non-secure
+	  to secure execution in the msm8x26 and msm8x74 targets. This module
+	  utilizes Ion for buffer management.
+
 config MSM_PFE_WA
 	depends on HW_PERF_EVENTS
 	bool "Enable a H/W PFE WA"
