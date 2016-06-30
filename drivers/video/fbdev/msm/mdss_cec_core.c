@@ -668,7 +668,7 @@ static ssize_t cec_wta_msg(struct device *dev,
 #ifdef CONFIG_FB_MSM_MDSS_HDMI_PANEL
 	ret = hdmi_tx_is_HDMI_panel_power_on(dev);
 	if (ret <= 0) {
-		DEV_ERR("%s: HDMI clock is not enable\n", __func__);
+		dev_err(dev, "%s: HDMI clock is not enable\n", __func__);
 		return -EPERM;
 	}
 #endif
