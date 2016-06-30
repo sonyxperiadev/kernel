@@ -1266,70 +1266,6 @@ end:
 	return ret;
 }
 
-static ssize_t hdmi_tx_sysfs_rda_aksv(struct device *dev,
-	struct device_attribute *attr, char *buf)
-{
-	ssize_t ret;
-	struct hdmi_tx_ctrl *hdmi_ctrl =
-		hdmi_tx_get_drvdata_from_sysfs_dev(dev);
-
-	if (!hdmi_ctrl) {
-		DEV_ERR("%s: invalid input\n", __func__);
-		return -EINVAL;
-	}
-
-	if (hdcp_feature_on && hdmi_ctrl->present_hdcp) {
-		/* Aksv is notified by (MSB->LSB) order. */
-		ret = snprintf(buf, PAGE_SIZE, "%02X%02X%02X%02X%02X\n",
-			hdmi_ctrl->aksv[4], hdmi_ctrl->aksv[3],
-			hdmi_ctrl->aksv[2], hdmi_ctrl->aksv[1],
-			hdmi_ctrl->aksv[0]);
-		DEV_DBG("%s: '%02X%02X%02X%02X%02X'\n", __func__,
-			hdmi_ctrl->aksv[4], hdmi_ctrl->aksv[3],
-			hdmi_ctrl->aksv[2], hdmi_ctrl->aksv[1],
-			hdmi_ctrl->aksv[0]);
-	} else {
-		ret = snprintf(buf, PAGE_SIZE, "%02X%02X%02X%02X%02X\n",
-			0, 0, 0, 0, 0);
-		DEV_DBG("%s: '%02X%02X%02X%02X%02X'\n", __func__,
-			0, 0, 0, 0, 0);
-	}
-
-	return ret;
-} /* hdmi_tx_sysfs_rda_aksv */
-
-static ssize_t hdmi_tx_sysfs_rda_tmds(struct device *dev,
-	struct device_attribute *attr, char *buf)
-{
-	ssize_t ret;
-	struct hdmi_tx_ctrl *hdmi_ctrl =
-		hdmi_tx_get_drvdata_from_sysfs_dev(dev);
-
-	if (!hdmi_ctrl) {
-		DEV_ERR("%s: invalid input\n", __func__);
-		return -EINVAL;
-	}
-
-	if (hdcp_feature_on && hdmi_ctrl->present_hdcp) {
-		ret = snprintf(buf, PAGE_SIZE, "%s\n",
-			hdmi_ctrl->hdcp_status == HDCP_STATE_AUTHENTICATED
-			? "ON" : "OFF");
-		DEV_DBG("%s: '%s'\n", __func__,
-			hdmi_ctrl->hdcp_status == HDCP_STATE_AUTHENTICATED
-			? "ON" : "OFF");
-	} else {
-		if (hdmi_ctrl->hpd_state) {
-			ret = snprintf(buf, PAGE_SIZE, "%s\n", "ON");
-			DEV_DBG("%s: '%s'\n", __func__, "ON");
-		} else {
-			ret = snprintf(buf, PAGE_SIZE, "%s\n", "OFF");
-			DEV_DBG("%s: '%s'\n", __func__, "OFF");
-		}
-	}
-
-	return ret;
-} /* hdmi_tx_sysfs_rda_tmds */
-
 static ssize_t hdmi_tx_sysfs_rda_power_on(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
@@ -1365,8 +1301,6 @@ static DEVICE_ATTR(product_description, 0644,
 	hdmi_tx_sysfs_wta_product_description);
 static DEVICE_ATTR(avi_itc, 0200, NULL, hdmi_tx_sysfs_wta_avi_itc);
 static DEVICE_ATTR(avi_cn0_1, 0200, NULL, hdmi_tx_sysfs_wta_avi_cn_bits);
-static DEVICE_ATTR(aksv, 0444, hdmi_tx_sysfs_rda_aksv, NULL);
-static DEVICE_ATTR(tmds, 0444, hdmi_tx_sysfs_rda_tmds, NULL);
 static DEVICE_ATTR(hdmi_panel_power_on, 0444, hdmi_tx_sysfs_rda_power_on,
 	NULL);
 static DEVICE_ATTR(s3d_mode, 0644, hdmi_tx_sysfs_rda_s3d_mode,
@@ -1385,8 +1319,8 @@ static struct attribute *hdmi_tx_fs_attrs[] = {
 	&dev_attr_product_description.attr,
 	&dev_attr_avi_itc.attr,
 	&dev_attr_avi_cn0_1.attr,
-	&dev_attr_aksv.attr,
-	&dev_attr_tmds.attr,
+//	&dev_attr_aksv.attr,
+//	&dev_attr_tmds.attr,
 	&dev_attr_hdmi_panel_power_on.attr,
 	&dev_attr_s3d_mode.attr,
 	&dev_attr_5v.attr,
