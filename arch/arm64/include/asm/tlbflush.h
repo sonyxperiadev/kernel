@@ -78,65 +78,101 @@ static inline void flush_tlb_all(void)
 	isb();
 }
 
-static inline void flush_tlb_mm(struct mm_struct *mm)
+#ifdef CONFIG_ARCH_MSM8994
+static inline bool msm8994_needs_tlbi_wa(void)
 {
 #ifdef CONFIG_ARCH_MSM8994_V1_TLBI_WA
-	dsb(sy);
-	asm("tlbi	vmalle1is");
-	dsb(sy);
-	isb();
+	extern int msm8994_req_tlbi_wa;
+	return msm8994_req_tlbi_wa;
 #else
-	unsigned long asid = (unsigned long)ASID(mm) << 48;
-
-	dsb(ishst);
-	asm("tlbi	aside1is, %0" : : "r" (asid));
-	dsb(ish);
+	return false;
 #endif
+}
+#endif
+
+static inline void flush_tlb_mm(struct mm_struct *mm)
+{
+#ifdef CONFIG_ARCH_MSM8994
+	if (msm8994_needs_tlbi_wa()) {
+		dsb(ishst);
+		asm("tlbi	vmalle1is");
+		dsb(ish);
+		isb();
+	} else
+#endif
+	{
+		unsigned long asid = (unsigned long)ASID(mm) << 48;
+
+		dsb(ishst);
+		asm("tlbi	aside1is, %0" : : "r" (asid));
+		dsb(ish);
+	}
 }
 
 static inline void flush_tlb_page(struct vm_area_struct *vma,
 				  unsigned long uaddr)
 {
-#ifdef CONFIG_ARCH_MSM8994_V1_TLBI_WA
-	dsb(sy);
-	asm("tlbi	vmalle1is");
-	dsb(sy);
-	isb();
-#else
-	unsigned long addr = uaddr >> 12 |
-		((unsigned long)ASID(vma->vm_mm) << 48);
-
-	dsb(ishst);
-	asm("tlbi	vae1is, %0" : : "r" (addr));
-	dsb(ish);
+#ifdef CONFIG_ARCH_MSM8994
+	if (msm8994_needs_tlbi_wa()) {
+		dsb(ishst);
+		asm("tlbi	vmalle1is");
+		dsb(ish);
+		isb();
+	} else
 #endif
+	{
+		unsigned long addr = uaddr >> 12 |
+			((unsigned long)ASID(vma->vm_mm) << 48);
+
+		dsb(ishst);
+		asm("tlbi	vae1is, %0" : : "r" (addr));
+		dsb(ish);
+	}
 }
 
 static inline void __flush_tlb_range(struct vm_area_struct *vma,
 				     unsigned long start, unsigned long end)
 {
-	unsigned long asid = (unsigned long)ASID(vma->vm_mm) << 48;
-	unsigned long addr;
-	start = asid | (start >> 12);
-	end = asid | (end >> 12);
+#ifdef CONFIG_ARCH_MSM8994
+	if (msm8994_needs_tlbi_wa()) {
+		asm("tlbi	vmalle1is");
+		dsb(sy);
+		isb();
+	} else
+#endif
+	{
+		unsigned long asid = (unsigned long)ASID(vma->vm_mm) << 48;
+		unsigned long addr;
+		start = asid | (start >> 12);
+		end = asid | (end >> 12);
 
-	dsb(ishst);
-	for (addr = start; addr < end; addr += 1 << (PAGE_SHIFT - 12))
-		asm("tlbi vae1is, %0" : : "r"(addr));
-	dsb(ish);
+		dsb(ishst);
+		for (addr = start; addr < end; addr += 1 << (PAGE_SHIFT - 12))
+			asm("tlbi vae1is, %0" : : "r"(addr));
+		dsb(ish);
+	}
 }
 
 static inline void __flush_tlb_kernel_range(unsigned long start, unsigned long end)
 {
-	unsigned long addr;
-	start >>= 12;
-	end >>= 12;
+#ifdef CONFIG_ARCH_MSM8994
+	if (msm8994_needs_tlbi_wa()) {
+		asm("tlbi	vmalle1is");
+		dsb(sy);
+		isb();
+	} else
+#endif
+	{
+		unsigned long addr;
+		start >>= 12;
+		end >>= 12;
 
-	dsb(ishst);
-	for (addr = start; addr < end; addr += 1 << (PAGE_SHIFT - 12))
-		asm("tlbi vaae1is, %0" : : "r"(addr));
-	dsb(ish);
-	isb();
+		dsb(ishst);
+		for (addr = start; addr < end; addr += 1 << (PAGE_SHIFT - 12))
+			asm("tlbi vaae1is, %0" : : "r"(addr));
+		dsb(ish);
+		isb();
+	}
 }
 
 /*
