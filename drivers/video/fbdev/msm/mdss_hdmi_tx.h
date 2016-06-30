@@ -112,7 +112,7 @@ struct hdmi_tx_ctrl {
 	u32 s3d_mode;
 
 	u8 aksv[5];
-	enum hdmi_hdcp_state hdcp_status;
+	//enum hdmi_hdcp_state hdcp_status;
 
 	u8 timing_gen_on;
 	u8 mhl_hpd_on;
