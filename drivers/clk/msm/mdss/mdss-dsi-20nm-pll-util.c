@@ -505,7 +505,7 @@ static bool pll_20nm_is_pll_locked(struct mdss_pll_resources *dsi_pll_res)
 	bool pll_locked;
 
 	/* poll for PLL ready status */
-	if (readl_poll_timeout_noirq((dsi_pll_res->pll_base +
+	if (readl_poll_timeout_atomic((dsi_pll_res->pll_base +
 			MMSS_DSI_PHY_PLL_RESET_SM),
 			status,
 			((status & BIT(5)) > 0),
@@ -513,7 +513,7 @@ static bool pll_20nm_is_pll_locked(struct mdss_pll_resources *dsi_pll_res)
 			DSI_PLL_POLL_TIMEOUT_US)) {
 		pr_debug("DSI PLL status=%x failed to Lock\n", status);
 		pll_locked = false;
-	} else if (readl_poll_timeout_noirq((dsi_pll_res->pll_base +
+	} else if (readl_poll_timeout_atomic((dsi_pll_res->pll_base +
 				MMSS_DSI_PHY_PLL_RESET_SM),
 				status,
 				((status & BIT(6)) > 0),
