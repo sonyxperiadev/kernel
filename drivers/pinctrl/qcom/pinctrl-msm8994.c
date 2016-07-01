@@ -1076,6 +1076,9 @@ static const struct msm_pingroup msm8994_groups[] = {
 	SDC_PINGROUP(sdc2_clk, 0x2048, 14, 6),
 	SDC_PINGROUP(sdc2_cmd, 0x2048, 11, 3),
 	SDC_PINGROUP(sdc2_data, 0x2048, 9, 0),
+	SDC_PINGROUP(sdc3_clk, 0x204C, 14, 6),
+	SDC_PINGROUP(sdc3_cmd, 0x204C, 11, 3),
+	SDC_PINGROUP(sdc3_data, 0x204C, 9, 0),
 };
 
 static const struct msm_pinctrl_soc_data msm8994_pinctrl = {
