@@ -154,9 +154,11 @@ static void msm_ssusb_qmp_enable_autonomous(struct msm_ssphy_qmp *phy,
 		}
 
 		/* clamp phy level shifter to perform autonomous detection */
-		writel_relaxed(0x1, phy->vls_clamp_reg);
+		if (phy->vls_clamp_reg)
+			writel_relaxed(0x1, phy->vls_clamp_reg);
 	} else {
-		writel_relaxed(0x0, phy->vls_clamp_reg);
+		if (phy->vls_clamp_reg)
+			writel_relaxed(0x0, phy->vls_clamp_reg);
 		writeb_relaxed(0, phy->base + autonomous_mode_offset);
 		msm_ssusb_qmp_clr_lfps_rxterm_int(phy);
 	}
@@ -633,14 +635,14 @@ static int msm_ssphy_qmp_probe(struct platform_device *pdev)
 
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
 			"vls_clamp_reg");
-	if (!res) {
-		dev_err(dev, "failed getting vls_clamp_reg\n");
-		return -ENODEV;
-	}
+	if (res) {
 	phy->vls_clamp_reg = devm_ioremap_resource(dev, res);
-	if (IS_ERR(phy->vls_clamp_reg)) {
-		dev_err(dev, "couldn't find vls_clamp_reg address.\n");
-		return PTR_ERR(phy->vls_clamp_reg);
+		if (IS_ERR(phy->vls_clamp_reg)) {
+			dev_err(dev, "couldn't find vls_clamp_reg address.\n");
+			return PTR_ERR(phy->vls_clamp_reg);
+		}
+	} else {
+		dev_err(dev, "Failed getting vls_clamp_reg. Going on.\n");
 	}
 
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
