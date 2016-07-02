@@ -654,7 +654,7 @@ static __ref int mdss_mdp_splash_parse_dt(struct msm_fb_data_type *mfd)
 			goto error;
 		}
 
-		pnode = of_parse_phandle(child_node, "linux,contiguous-region",
+		pnode = of_parse_phandle(child_node, "memory-region",
 					0);
 		if (pnode != NULL) {
 			const u32 *addr;
