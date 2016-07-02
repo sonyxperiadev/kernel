@@ -295,6 +295,10 @@ void mdss_dsi_read_phy_revision(struct mdss_dsi_ctrl_pdata *ctrl)
 
 	reg_val = MIPI_INP(ctrl->phy_io.base);
 
+#ifdef CONFIG_ARCH_MSM8994
+	reg_val = DSI_PHY_REV_10;
+#endif
+
 	if (reg_val == DSI_PHY_REV_20)
 		ctrl->shared_data->phy_rev = DSI_PHY_REV_20;
 	else if (reg_val == DSI_PHY_REV_10)
