@@ -88,7 +88,7 @@ static int __init somc_pinctrl_drv_register(void)
 {
 	return platform_driver_register(&somc_pinctrl_drv);
 }
-postcore_initcall(somc_pinctrl_drv_register);
+arch_initcall(somc_pinctrl_drv_register);
 
 static void __exit somc_pinctrl_drv_unregister(void)
 {
