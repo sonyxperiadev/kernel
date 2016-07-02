@@ -3275,10 +3275,10 @@
 		qcom,fast-avg-setup = <0>;
 	};
 	chan@73 { /* msm_therm */
-		qcom,scale-function = <13>;
+		qcom,scale-function = <18>; /* 100K_PULLUP_DECI */
 	};
 	chan@74 { /* emmc_therm */
-		qcom,scale-function = <13>;
+		qcom,scale-function = <18>; /* 100K_PULLUP_DECI */
 	};
 };
 
