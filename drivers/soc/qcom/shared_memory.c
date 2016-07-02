@@ -57,7 +57,7 @@ static int msm_shared_heap_populate_base_and_size
 {
 	int ret = 0;
 	struct device_node *pnode;
-	pnode = of_parse_phandle(node, "linux,contiguous-region", 0);
+	pnode = of_parse_phandle(node, "memory-region", 0);
 	if (pnode != NULL) {
 		const u32 *addr;
 		u64 len;
