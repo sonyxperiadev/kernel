@@ -791,8 +791,8 @@ static void mdss_dsi_20nm_phy_regulator_enable(struct mdss_dsi_ctrl_pdata
 	phy_io_base = ctrl_pdata->phy_regulator_io.base;
 
 	if (pd->regulator_len != 7) {
-		pr_err("%s: wrong regulator settings\n", __func__);
-		return;
+		pr_err("%s: wrong regulator settings (len = %d) but going on\n", __func__, pd->regulator_len);
+	//	return;
 	}
 
 	if (pd->reg_ldo_mode) {
@@ -857,8 +857,8 @@ static void mdss_dsi_20nm_phy_config(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 	}
 
 	if (pd->lanecfg_len != 45) {
-		pr_err("%s: wrong lane cfg\n", __func__);
-		return;
+		pr_err("%s: wrong lane cfg but going on\n", __func__);
+		//return;
 	}
 
 	/* 4 lanes + clk lane configuration */
