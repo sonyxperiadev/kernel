@@ -297,19 +297,19 @@
 		qcom,decimation = <0>;
 		qcom,pre-div-channel-scaling = <0>;
 		qcom,calibration-type = "ratiometric";
-		qcom,scale-function = <15>;
+		qcom,scale-function = <18>; /* THERM_100K_PULLUP_DECI */
 		qcom,hw-settle-time = <2>;
 		qcom,fast-avg-setup = <0>;
 		qcom,vadc-thermal-node;
 	};
 
 	chan@78 { /* quiet_therm */
-		qcom,scale-function = <15>;
+		qcom,scale-function = <18>; /* THERM_100K_PULLUP_DECI */
 	};
 };
 
 &pm8994_adc_tm {
 	chan@78 { /* quiet_therm */
-		qcom,scale-function = <8>;
+		qcom,scale-function = <8>; /* SCALE_SMB_BATT_THERM */
 	};
 };
