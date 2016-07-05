@@ -291,6 +291,15 @@ config MACH_SONY_IVY
 	  If you enable this config,
 	  please use SONY Mobile device tree.
 
+config MACH_SONY_IVY_DSDS
+	bool "Sony Mobile Ivy Dsds"
+	depends on ARCH_SONY_KITAKAMI
+	help
+	  Support for the SONY Mobile Ivy Dsds device
+	  which is based on SONY Kitakami platform.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
 config MACH_SONY_KARIN
 	bool "Sony Mobile Karin"
 	depends on ARCH_SONY_KITAKAMI
@@ -309,6 +318,15 @@ config MACH_SONY_SUMIRE
       If you enable this config,
       please use SONY Mobile device tree.
 
+config MACH_SONY_SUMIRE_DSDS
+    bool "Sony Mobile Sumire Dsds"
+    depends on ARCH_SONY_KITAKAMI
+    help
+      Support for the SONY Mobile Sumire Dsds device
+      which is based on SONY Kitakami R2 platform.
+      If you enable this config,
+      please use SONY Mobile device tree.
+
 config MACH_SONY_SUZURAN
     bool "Sony Mobile Suzuran"
     depends on ARCH_SONY_KITAKAMI
@@ -323,6 +341,15 @@ config MACH_SONY_SATSUKI
     depends on ARCH_SONY_KITAKAMI
     help
       Support for the SONY Mobile Satsuki device
+      which is based on SONY Kitakami R2 platform.
+      If you enable this config,
+      please use SONY Mobile device tree.
+
+config MACH_SONY_SATSUKI_DSDS
+    bool "Sony Mobile Satsuki Dsds"
+    depends on ARCH_SONY_KITAKAMI
+    help
+      Support for the SONY Mobile Satsuki Dsds device
       which is based on SONY Kitakami R2 platform.
       If you enable this config,
       please use SONY Mobile device tree.

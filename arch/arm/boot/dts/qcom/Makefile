@@ -3,22 +3,22 @@ ifeq ($(CONFIG_OF),y)
 # MSM8994
 dtb-$(CONFIG_MACH_SONY_IVY)		+= msm8994-v2.0-kitakami_ivy_generic.dtb
 dtb-$(CONFIG_MACH_SONY_IVY)		+= msm8994-v2.1-kitakami_ivy_generic.dtb
-dtb-$(CONFIG_MACH_SONY_IVY)		+= msm8994-v2.0-kitakami_ivy_dsds.dtb
-dtb-$(CONFIG_MACH_SONY_IVY)		+= msm8994-v2.1-kitakami_ivy_dsds.dtb
+dtb-$(CONFIG_MACH_SONY_IVY_DSDS)	+= msm8994-v2.0-kitakami_ivy_dsds.dtb
+dtb-$(CONFIG_MACH_SONY_IVY_DSDS)	+= msm8994-v2.1-kitakami_ivy_dsds.dtb
 dtb-$(CONFIG_MACH_SONY_KARIN)		+= msm8994-v2.0-kitakami_karin_generic.dtb
 dtb-$(CONFIG_MACH_SONY_KARIN)		+= msm8994-v2.1-kitakami_karin_generic.dtb
 dtb-$(CONFIG_MACH_SONY_KARIN)		+= apq8094-v2.0-kitakami_karin_windy.dtb
 dtb-$(CONFIG_MACH_SONY_KARIN)		+= apq8094-v2.1-kitakami_karin_windy.dtb
 dtb-$(CONFIG_MACH_SONY_SUMIRE)		+= msm8994-v2.0-kitakami_sumire_generic.dtb
 dtb-$(CONFIG_MACH_SONY_SUMIRE)		+= msm8994-v2.1-kitakami_sumire_generic.dtb
-dtb-$(CONFIG_MACH_SONY_SUMIRE)		+= msm8994-v2.0-kitakami_sumire_dsds.dtb
-dtb-$(CONFIG_MACH_SONY_SUMIRE)		+= msm8994-v2.1-kitakami_sumire_dsds.dtb
+dtb-$(CONFIG_MACH_SONY_SUMIRE_DSDS)	+= msm8994-v2.0-kitakami_sumire_dsds.dtb
+dtb-$(CONFIG_MACH_SONY_SUMIRE_DSDS)	+= msm8994-v2.1-kitakami_sumire_dsds.dtb
 dtb-$(CONFIG_MACH_SONY_SUZURAN)		+= msm8994-v2.0-kitakami_suzuran_generic.dtb
 dtb-$(CONFIG_MACH_SONY_SUZURAN)		+= msm8994-v2.1-kitakami_suzuran_generic.dtb
 dtb-$(CONFIG_MACH_SONY_SATSUKI)		+= msm8994-v2.0-kitakami_satsuki_generic.dtb
 dtb-$(CONFIG_MACH_SONY_SATSUKI)		+= msm8994-v2.1-kitakami_satsuki_generic.dtb
-dtb-$(CONFIG_MACH_SONY_SATSUKI)		+= msm8994-v2.0-kitakami_satsuki_dsds.dtb
-dtb-$(CONFIG_MACH_SONY_SATSUKI)		+= msm8994-v2.1-kitakami_satsuki_dsds.dtb
+dtb-$(CONFIG_MACH_SONY_SATSUKI_DSDS)	+= msm8994-v2.0-kitakami_satsuki_dsds.dtb
+dtb-$(CONFIG_MACH_SONY_SATSUKI_DSDS)	+= msm8994-v2.1-kitakami_satsuki_dsds.dtb
 
 # MSM8939/MSM8916
 dtb-$(CONFIG_MACH_SONY_TULIP)		+= msm8939-kanuti_tulip.dtb
