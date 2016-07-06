@@ -1,4 +1,4 @@
-/* arch/arm/boot/dts/qcom/apq8074pro-ac-shinano_scorpion_windy.dts
+/* arch/arm/boot/dts/qcom/msm8974pro-ac-shinano_scorpion.dts
  *
  * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
  * Copyright (C) 2014 Sony Mobile Communications AB.
@@ -21,13 +21,12 @@
 #include "msm8974-mtp.dtsi"
 #include "msm8974pro-ac-shinano_common.dtsi"
 #include "msm8974pro-ac-shinano_scorpion_common.dtsi"
-#include "apq8074pro-ac-shinano_scorpion_windy.dtsi"
 #include "msm8974pro-ac-shinano_scorpion_camera.dtsi"
 #include "dsi-panel-scorpion.dtsi"
 
 / {
-	model = "SoMC Scorpion WINDY";
-	compatible = "somc,scorpion-windy", "qcom,apq8074";
-        qcom,msm-id = <194 9 0x10001>,
-                      <210 9 0x10001>;
+	model = "SoMC Scorpion ROW";
+	compatible = "somc,scorpion-row", "qcom,msm8974";
+        qcom,msm-id = <194 8 0x10001>;
 };
+

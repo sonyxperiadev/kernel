@@ -1,4 +1,4 @@
-/* arch/arm/boot/dts/qcom/msm8974pro-ac-shinano_leo.dts
+/* arch/arm/boot/dts/qcom/msm8974pro-ac-shinano_scorpion.dts
  *
  * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
  * Copyright (C) 2014 Sony Mobile Communications AB.
@@ -20,12 +20,13 @@
 #include "msm8974pro-ac-pm8941.dtsi"
 #include "msm8974-mtp.dtsi"
 #include "msm8974pro-ac-shinano_common.dtsi"
-#include "msm8974pro-ac-shinano_leo.dtsi"
-#include "msm8974pro-ac-shinano_leo_camera.dtsi"
-#include "dsi-panel-leo.dtsi"
+#include "msm8974pro-ac-shinano_scorpion_common.dtsi"
+#include "msm8974pro-ac-shinano_scorpion_camera.dtsi"
+#include "dsi-panel-scorpion.dtsi"
 
 / {
-	model = "SoMC Leo ROW";
-	compatible = "somc,leo-row", "qcom,msm8974";
-        qcom,msm-id = <194 8 0x10000>;
+	model = "SoMC Scorpion ROW";
+	compatible = "somc,scorpion-row", "qcom,msm8974";
+        qcom,msm-id = <210 8 0x10001>;
 };
+

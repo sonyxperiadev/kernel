@@ -27,12 +27,5 @@
 / {
 	model = "SoMC Aries ROW";
 	compatible = "somc,aries-row", "qcom,msm8974";
-        qcom,msm-id = <194 8 0x10000>,
-                      <209 8 0x10000>,
-                      <210 8 0x10000>,
-                      <212 8 0x10000>,
-                      <213 8 0x10000>,
-                      <215 8 0x10000>,
-                      <216 8 0x10000>,
-                      <218 8 0x10000>;
+        qcom,msm-id = <194 8 0x10000>;
 };
