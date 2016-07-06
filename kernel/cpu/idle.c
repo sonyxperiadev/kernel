@@ -11,6 +11,7 @@
 #include <asm/tlb.h>
 
 #include <trace/events/power.h>
+#include <asm/relaxed.h>
 
 int __read_mostly cpu_idle_force_poll;
 
@@ -66,9 +67,15 @@ static inline int cpu_idle_poll(void)
 	rcu_idle_enter();
 	trace_cpu_idle_rcuidle(0, smp_processor_id());
 	local_irq_enable();
-	while (!tif_need_resched() && (cpu_idle_force_poll ||
+
+	/*
+	 * The corresponding ldax call for cpu_read_relax is present in
+	 * test_ti_thread_flag_relaxed(), as tif_need_resched_relaxed()
+	 * ultimately invokes test_ti_thread_flag_relaxed().
+	 */
+	while (!tif_need_resched_relaxed() && (cpu_idle_force_poll ||
 		__get_cpu_var(idle_force_poll)))
-		cpu_relax();
+		cpu_read_relax();
 	trace_cpu_idle_rcuidle(PWR_EVENT_EXIT, smp_processor_id());
 	rcu_idle_exit();
 	return 1;
