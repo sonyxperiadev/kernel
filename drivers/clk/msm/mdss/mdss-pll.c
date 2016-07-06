@@ -340,6 +340,11 @@ static int mdss_pll_probe(struct platform_device *pdev)
 		goto gdsc_io_error;
 	}
 
+	pll_res->pll_en_90_phase = of_property_read_bool(pdev->dev.of_node,
+						"qcom,mdss-en-pll-90-phase");
+	if (pll_res->pll_en_90_phase)
+		pr_debug("%s: PLL configured to enable 90-Phase", __func__);
+
 	rc = mdss_pll_resource_init(pdev, pll_res);
 	if (rc) {
 		pr_err("Pll ndx=%d resource init failed rc=%d\n",
