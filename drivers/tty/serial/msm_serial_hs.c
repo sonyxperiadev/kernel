@@ -568,7 +568,7 @@ static void dump_uart_hs_registers(struct msm_hs_port *msm_uport)
 	struct uart_port *uport = &(msm_uport->uport);
 
 	if (msm_uport->pm_state != MSM_HS_PM_ACTIVE) {
-		MSM_HS_INFO("%s:Failed clocks are off, clk_count %d",
+		MSM_HS_DBG("%s:Failed clocks are off, clk_count %d",
 			__func__, atomic_read(&msm_uport->clk_count));
 		return;
 	}
@@ -1219,7 +1219,7 @@ unsigned int msm_hs_tx_empty(struct uart_port *uport)
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
 #ifdef CONFIG_BT_MSM_SLEEP
 	if (msm_uport->pm_state != MSM_HS_PM_ACTIVE) {
-		MSM_HS_WARN("%s(): Failed.Clocks are OFF\n", __func__);
+		MSM_HS_DBG("%s(): Failed.Clocks are OFF\n", __func__);
 		return -1;
 	}
 #endif
@@ -1324,7 +1324,7 @@ static void msm_hs_stop_rx_locked(struct uart_port *uport)
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
 
 	if (msm_uport->pm_state != MSM_HS_PM_ACTIVE)
-		MSM_HS_WARN("%s(): Clocks are off\n", __func__);
+		MSM_HS_DBG("%s(): Clocks are off\n", __func__);
 	else
 		msm_hs_disable_rx(uport);
 
@@ -1352,7 +1352,7 @@ void tx_timeout_handler(unsigned long arg)
 	int isr;
 
 	if (msm_uport->pm_state != MSM_HS_PM_ACTIVE) {
-		MSM_HS_WARN("%s(): clocks are off", __func__);
+		MSM_HS_DBG("%s(): clocks are off", __func__);
 		return;
 	}
 
@@ -1507,7 +1507,7 @@ static void msm_hs_start_rx_locked(struct uart_port *uport)
 	unsigned int data;
 
 	if (msm_uport->pm_state != MSM_HS_PM_ACTIVE) {
-		MSM_HS_WARN("%s(): Clocks are off\n", __func__);
+		MSM_HS_DBG("%s(): Clocks are off\n", __func__);
 		return;
 	}
 	if (rx->pending_flag) {
@@ -1984,7 +1984,7 @@ void msm_hs_set_mctrl_locked(struct uart_port *uport,
 
 	MSM_HS_DBG("%s()", __func__);
 	if (msm_uport->pm_state != MSM_HS_PM_ACTIVE) {
-		MSM_HS_WARN("%s(): Clocks are off\n", __func__);
+		MSM_HS_DBG("%s(): Clocks are off\n", __func__);
 		return;
 	}
 	/* RTS is active low */
@@ -2004,7 +2004,7 @@ void msm_hs_set_mctrl(struct uart_port *uport,
 
 #ifdef CONFIG_BT_MSM_SLEEP
 	if (msm_uport->pm_state != MSM_HS_PM_ACTIVE) {
-		MSM_HS_WARN("%s(): Failed.Clocks are OFF\n", __func__);
+		MSM_HS_DBG("%s(): Failed.Clocks are OFF\n", __func__);
 		return;
 	}
 #endif
@@ -2022,7 +2022,7 @@ static void msm_hs_enable_ms_locked(struct uart_port *uport)
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
 
 	if (msm_uport->pm_state != MSM_HS_PM_ACTIVE) {
-		MSM_HS_WARN("%s(): Clocks are off\n", __func__);
+		MSM_HS_DBG("%s(): Clocks are off\n", __func__);
 		return;
 	}
 
@@ -2290,7 +2290,7 @@ void msm_hs_request_clock_off(struct uart_port *uport)
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
 #ifdef CONFIG_BT_MSM_SLEEP
 	if (msm_uport->pm_state != MSM_HS_PM_ACTIVE) {
-		MSM_HS_WARN("%s(): Failed.Clocks are OFF\n", __func__);
+		MSM_HS_DBG("%s(): Failed.Clocks are OFF\n", __func__);
 		return;
 	}
 #endif
