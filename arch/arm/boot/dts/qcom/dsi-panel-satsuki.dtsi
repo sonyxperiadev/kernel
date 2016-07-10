@@ -144,6 +144,7 @@
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 
 		qcom,mdss-dsi-compression = "fbc";
+		qcom,mdss-dsi-fbc-enable;
 		qcom,mdss-dsi-fbc-ver2-mode;
 		qcom,mdss-dsi-fbc-bpp = <8>;
 		qcom,mdss-dsi-fbc-packing = <1>;
@@ -240,6 +241,7 @@
 		qcom,mdss-brightness-max-level = <4095>;
 
 		qcom,mdss-dsi-compression = "fbc";
+		qcom,mdss-dsi-fbc-enable;
 		qcom,mdss-dsi-fbc-ver2-mode;
 		qcom,mdss-dsi-fbc-bpp = <8>;
 		qcom,mdss-dsi-fbc-packing = <1>;
@@ -393,6 +395,7 @@
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 
 		qcom,mdss-dsi-compression = "fbc";
+		qcom,mdss-dsi-fbc-enable;
 		qcom,mdss-dsi-fbc-ver2-mode;
 		qcom,mdss-dsi-fbc-bpp = <8>;
 		qcom,mdss-dsi-fbc-packing = <1>;
@@ -489,6 +492,7 @@
 		qcom,mdss-brightness-max-level = <4095>;
 
 		qcom,mdss-dsi-compression = "fbc";
+		qcom,mdss-dsi-fbc-enable;
 		qcom,mdss-dsi-fbc-ver2-mode;
 		qcom,mdss-dsi-fbc-bpp = <8>;
 		qcom,mdss-dsi-fbc-packing = <1>;
@@ -1012,6 +1016,7 @@
 					"dsi_lp_mode";
 
 				qcom,mdss-dsi-compression = "fbc";
+				qcom,mdss-dsi-fbc-enable;
 				qcom,mdss-dsi-fbc-ver2-mode;
 				qcom,mdss-dsi-fbc-bpp = <8>;
 				qcom,mdss-dsi-fbc-packing = <1>;
@@ -1131,6 +1136,7 @@
 				qcom,mdss-dsi-t-clk-pre = <0x2B>;
 
 				qcom,mdss-dsi-compression = "fbc";
+				qcom,mdss-dsi-fbc-enable;
 				qcom,mdss-dsi-fbc-ver2-mode;
 				qcom,mdss-dsi-fbc-bpp = <8>;
 				qcom,mdss-dsi-fbc-packing = <1>;
@@ -1387,6 +1393,7 @@
 					"dsi_lp_mode";
 
 				qcom,mdss-dsi-compression = "fbc";
+				qcom,mdss-dsi-fbc-enable;
 				qcom,mdss-dsi-fbc-ver2-mode;
 				qcom,mdss-dsi-fbc-bpp = <8>;
 				qcom,mdss-dsi-fbc-packing = <1>;
@@ -1506,6 +1513,7 @@
 				qcom,mdss-dsi-t-clk-pre = <0x2B>;
 
 				qcom,mdss-dsi-compression = "fbc";
+				qcom,mdss-dsi-fbc-enable;
 				qcom,mdss-dsi-fbc-ver2-mode;
 				qcom,mdss-dsi-fbc-bpp = <8>;
 				qcom,mdss-dsi-fbc-packing = <1>;
@@ -1994,6 +2002,7 @@
 					"dsi_lp_mode";
 
 				qcom,mdss-dsi-compression = "fbc";
+				qcom,mdss-dsi-fbc-enable;
 				qcom,mdss-dsi-fbc-ver2-mode;
 				qcom,mdss-dsi-fbc-bpp = <8>;
 				qcom,mdss-dsi-fbc-packing = <1>;
@@ -2113,6 +2122,7 @@
 				qcom,mdss-dsi-t-clk-pre = <0x2B>;
 
 				qcom,mdss-dsi-compression = "fbc";
+				qcom,mdss-dsi-fbc-enable;
 				qcom,mdss-dsi-fbc-ver2-mode;
 				qcom,mdss-dsi-fbc-bpp = <8>;
 				qcom,mdss-dsi-fbc-packing = <1>;
@@ -2580,6 +2590,7 @@
 					"dsi_lp_mode";
 
 				qcom,mdss-dsi-compression = "fbc";
+				qcom,mdss-dsi-fbc-enable;
 				qcom,mdss-dsi-fbc-ver2-mode;
 				qcom,mdss-dsi-fbc-bpp = <8>;
 				qcom,mdss-dsi-fbc-packing = <1>;
@@ -2699,6 +2710,7 @@
 				qcom,mdss-dsi-t-clk-pre = <0x2B>;
 
 				qcom,mdss-dsi-compression = "fbc";
+				qcom,mdss-dsi-fbc-enable;
 				qcom,mdss-dsi-fbc-ver2-mode;
 				qcom,mdss-dsi-fbc-bpp = <8>;
 				qcom,mdss-dsi-fbc-packing = <1>;
@@ -3140,6 +3152,7 @@
 					"dsi_lp_mode";
 
 				qcom,mdss-dsi-compression = "fbc";
+				qcom,mdss-dsi-fbc-enable;
 				qcom,mdss-dsi-fbc-ver2-mode;
 				qcom,mdss-dsi-fbc-bpp = <8>;
 				qcom,mdss-dsi-fbc-packing = <1>;
@@ -3259,6 +3272,7 @@
 				qcom,mdss-dsi-t-clk-pre = <0x2B>;
 
 				qcom,mdss-dsi-compression = "fbc";
+				qcom,mdss-dsi-fbc-enable;
 				qcom,mdss-dsi-fbc-ver2-mode;
 				qcom,mdss-dsi-fbc-bpp = <8>;
 				qcom,mdss-dsi-fbc-packing = <1>;
@@ -3357,6 +3371,7 @@
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 
 		qcom,mdss-dsi-compression = "fbc";
+		qcom,mdss-dsi-fbc-enable;
 		qcom,mdss-dsi-fbc-ver2-mode;
 		qcom,mdss-dsi-fbc-bpp = <8>;
 		qcom,mdss-dsi-fbc-packing = <1>;
@@ -3458,6 +3473,7 @@
 		qcom,mdss-brightness-max-level = <4095>;
 
 		qcom,mdss-dsi-compression = "fbc";
+		qcom,mdss-dsi-fbc-enable;
 		qcom,mdss-dsi-fbc-ver2-mode;
 		qcom,mdss-dsi-fbc-bpp = <8>;
 		qcom,mdss-dsi-fbc-packing = <1>;
@@ -3563,6 +3579,7 @@
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 
 		qcom,mdss-dsi-compression = "fbc";
+		qcom,mdss-dsi-fbc-enable;
 		qcom,mdss-dsi-fbc-ver2-mode;
 		qcom,mdss-dsi-fbc-bpp = <8>;
 		qcom,mdss-dsi-fbc-packing = <1>;
@@ -3664,6 +3681,7 @@
 		qcom,mdss-brightness-max-level = <4095>;
 
 		qcom,mdss-dsi-compression = "fbc";
+		qcom,mdss-dsi-fbc-enable;
 		qcom,mdss-dsi-fbc-ver2-mode;
 		qcom,mdss-dsi-fbc-bpp = <8>;
 		qcom,mdss-dsi-fbc-packing = <1>;
