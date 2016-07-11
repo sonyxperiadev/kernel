@@ -21,6 +21,7 @@
 #include <linux/qpnp/clkdiv.h>
 #include <linux/regulator/consumer.h>
 #include <linux/io.h>
+#include <linux/switch.h>
 #include <soc/qcom/subsystem_notif.h>
 #include <sound/core.h>
 #include <sound/soc.h>
@@ -30,6 +31,8 @@
 #include <sound/q6afe-v2.h>
 #include <sound/q6core.h>
 #include <sound/pcm_params.h>
+#include <soc/qcom/liquid_dock.h>
+#include "device_event.h"
 #include "qdsp6v2/msm-pcm-routing-v2.h"
 #include "../codecs/wcd9xxx-common.h"
 #include "../codecs/wcd9320.h"
@@ -256,6 +259,7 @@ struct audio_plug_dev {
 	int plug_gpio;
 	int plug_irq;
 	int plug_det;
+	struct switch_dev audio_sdev;
 	struct snd_soc_dapm_context *dapm;
 	struct work_struct irq_work;
 };
@@ -524,7 +528,7 @@ static int msm8974_liquid_dock_notify_handler(struct notifier_block *this,
 {
 	int ret = 0;
 	/* plug in docking speaker+plug in device OR unplug one of them */
-	u32 dock_plug_irq_flags = IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING |
+	u32 plug_irq_flags = IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING |
 					IRQF_SHARED;
 	if (dock_event) {
 		ret = gpio_request(msm8974_liquid_dock_dev->plug_gpio,
@@ -543,7 +547,7 @@ static int msm8974_liquid_dock_notify_handler(struct notifier_block *this,
 
 		ret = request_irq(msm8974_liquid_dock_dev->plug_irq,
 				  msm8974_audio_plug_device_irq_handler,
-				  dock_plug_irq_flags,
+				  plug_irq_flags,
 				  "liquid_dock_plug_irq",
 				  msm8974_liquid_dock_dev);
 		if (ret < 0) {
@@ -585,7 +589,7 @@ static int msm8974_liquid_init_docking(struct snd_soc_dapm_context *dapm)
 	int plug_gpio = 0;
 
 	/* plug in docking speaker+plug in device OR unplug one of them */
-	u32 dock_plug_irq_flags = IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING;
+	u32 plug_irq_flags = IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING;
 
 	plug_gpio = of_get_named_gpio(spdev->dev.of_node,
 					   "qcom,dock-plug-det-irq", 0);
@@ -600,33 +604,35 @@ static int msm8974_liquid_init_docking(struct snd_soc_dapm_context *dapm)
 			return -ENOMEM;
 		}
 
-		msm8974__liquid_dock_dev->plug_gpio = plug_gpio;
+		msm8974_liquid_dock_dev->plug_gpio = plug_gpio;
 
-		ret = gpio_request(msm8974_liquid_dock_dev->dock_plug_gpio,
+		ret = gpio_request(msm8974_liquid_dock_dev->plug_gpio,
 					   "dock-plug-det-irq");
 		if (ret) {
-			pr_err("%s:failed request msm8974_liquid_dock_plug_gpio.\n",
+			pr_err("%s:failed request msm8974_liquid_plug_gpio.\n",
 				__func__);
 			return -EINVAL;
 		}
 
-		msm8974_liquid_dock_dev->dock_plug_det =
-			gpio_get_value(msm8974_liquid_dock_dev->dock_plug_gpio);
+		msm8974_liquid_dock_dev->plug_det =
+			gpio_get_value(msm8974_liquid_dock_dev->plug_gpio);
 
-		msm8974_liquid_dock_dev->dock_plug_irq =
-			gpio_to_irq(msm8974_liquid_dock_dev->dock_plug_gpio);
+		msm8974_liquid_dock_dev->plug_irq =
+			gpio_to_irq(msm8974_liquid_dock_dev->plug_gpio);
 
 		msm8974_liquid_dock_dev->dapm = dapm;
 
-		ret = request_irq(msm8974_liquid_dock_dev->dock_plug_irq,
-				  msm8974_liquid_docking_irq_handler,
-				  dock_plug_irq_flags,
+		ret = request_irq(msm8974_liquid_dock_dev->plug_irq,
+				  msm8974_audio_plug_device_irq_handler,
+				  plug_irq_flags,
 				  "liquid_dock_plug_irq",
 				  msm8974_liquid_dock_dev);
 
 		INIT_WORK(
 			&msm8974_liquid_dock_dev->irq_work,
 			msm8974_liquid_docking_irq_work);
+
+		register_liquid_dock_notify(&msm8974_liquid_docking_notifier);
 	}
 
 	return 0;
@@ -716,7 +722,7 @@ static int msm8974_liquid_ext_spk_power_amp_on(u32 spk)
 		    (msm8974_ext_spk_pamp & LO_4_SPK_AMP))
 			if (ext_spk_amp_gpio >= 0 &&
 			    msm8974_liquid_dock_dev &&
-			    msm8974_liquid_dock_dev->dock_plug_det == 0)
+			    msm8974_liquid_dock_dev->plug_det == 0)
 				msm8974_liquid_ext_spk_power_amp_enable(1);
 		rc = 0;
 	} else  {
@@ -788,7 +794,7 @@ static void msm8974_liquid_ext_spk_power_amp_off(u32 spk)
 		if (!msm8974_ext_spk_pamp) {
 			if (ext_spk_amp_gpio >= 0 &&
 				msm8974_liquid_dock_dev != NULL &&
-				msm8974_liquid_dock_dev->dock_plug_det == 0)
+				msm8974_liquid_dock_dev->plug_det == 0)
 				msm8974_liquid_ext_spk_power_amp_enable(0);
 		}
 
@@ -2316,6 +2322,8 @@ static int msm_snd_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
+	struct snd_soc_dai_link *dai_link = rtd->dai_link;
+
 	int ret = 0;
 	unsigned int rx_ch[SLIM_MAX_RX_PORTS], tx_ch[SLIM_MAX_TX_PORTS];
 	unsigned int rx_ch_cnt = 0, tx_ch_cnt = 0;
