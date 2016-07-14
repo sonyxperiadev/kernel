@@ -11629,6 +11629,13 @@ static int wl_construct_reginfo(struct bcm_cfg80211 *cfg, s32 bw_cap)
 	wl_reset_channel();
 
 	list = (wl_uint32_list_t *)(void *)pbuf;
+
+	if ((list) && (dtoh32(list->count) > htod32(WL_NUMCHANSPECS))) {
+		WL_ERR(("Invalid channel list : %d\n", dtoh32(list->count)));
+		kfree(pbuf);
+		return INVCHANSPEC;
+	}
+
 	band = array_size = 0;
 	for (i = 0; i < dtoh32(list->count); i++) {
 		index = 0;
