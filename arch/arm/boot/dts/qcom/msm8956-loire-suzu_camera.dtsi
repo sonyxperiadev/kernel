@@ -51,7 +51,7 @@
 		reg = <0x0>;
 		qcom,csiphy-sd-index = <0>;
 		qcom,csid-sd-index = <0>;
-		qcom,mount-angle = <90>;
+		qcom,mount-angle = <270>;
 		qcom,actuator-src = <&actuator0>;
 		qcom,led-flash-src = <&led_flash0>;
 		cam_vdig-supply = <&pm8950_l3>;
@@ -105,7 +105,7 @@
 		qcom,gpio-req-tbl-flags = <1 0 0>;
 		qcom,gpio-req-tbl-label = "CAMIF_MCLK2", "CAM_RESET1", "CAM_VIO";
 		qcom,sensor-position = <1>;
-		qcom,sensor-mode = <0>;
+		qcom,sensor-mode = <1>;
 		qcom,cci-master = <1>;
 		status = "ok";
 		clocks = <&clock_gcc clk_mclk2_clk_src>,
