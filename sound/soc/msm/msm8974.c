@@ -2949,6 +2949,7 @@ static struct snd_soc_dai_link msm8974_common_dai_links[] = {
 		.no_pcm = 1,
 		.be_id = MSM_BACKEND_DAI_SLIMBUS_5_TX,
 		.be_hw_params_fixup = msm_slim_5_tx_be_hw_params_fixup,
+		.ignore_suspend = 1,
 		.ops = &msm8974_be_ops,
 	},
 #ifdef CONFIG_MACH_SONY_SHINANO
