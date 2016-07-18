@@ -67,7 +67,7 @@ static void *adsp_state_notifier;
 
 static int msm8226_auxpcm_rate = 8000;
 static atomic_t auxpcm_rsc_ref;
-static const char *const auxpcm_rate_text[] = {"rate_8000", "rate_16000"};
+static const char *const auxpcm_rate_text[] = {"8000", "16000"};
 static const struct soc_enum msm8226_auxpcm_enum[] = {
 		SOC_ENUM_SINGLE_EXT(2, auxpcm_rate_text),
 };
