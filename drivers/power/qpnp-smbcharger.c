@@ -5889,12 +5889,6 @@ static int smbchg_battery_is_writeable(struct power_supply *psy,
 #endif
 		rc = 1;
 		break;
-	case POWER_SUPPLY_PROP_ALLOW_HVDCP3:
-		if (chip->allow_hvdcp3_detection != val->intval) {
-			chip->allow_hvdcp3_detection = !!val->intval;
-			power_supply_changed(&chip->batt_psy);
-		}
-		break;
 	default:
 		rc = 0;
 		break;
@@ -6071,9 +6065,6 @@ static int smbchg_dc_set_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
 		rc = vote(chip->dc_icl_votable, USER_ICL_VOTER, true,
 				val->intval / 1000);
-		break;
-	case POWER_SUPPLY_PROP_ALLOW_HVDCP3:
-		val->intval = chip->allow_hvdcp3_detection;
 		break;
 	default:
 		return -EINVAL;
