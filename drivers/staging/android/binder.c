@@ -1776,9 +1776,7 @@ static void binder_transaction(struct binder_proc *proc,
 	list_add_tail(&tcomplete->entry, &thread->todo);
 	if (target_wait) {
 		if (reply || !(t->flags & TF_ONE_WAY)) {
-			preempt_disable();
 			wake_up_interruptible_sync(target_wait);
-			preempt_enable_no_resched();
 		}
 		else {
 			wake_up_interruptible(target_wait);
