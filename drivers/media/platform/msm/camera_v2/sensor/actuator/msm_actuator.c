@@ -1374,29 +1374,6 @@ static int32_t msm_actuator_set_position(
 	int32_t rc = 0;
 	int32_t index;
 	uint16_t next_lens_position;
-
-	CDBG("%s Enter %d\n", __func__, __LINE__);
-	if (set_pos->number_of_steps <= 0 ||
-		set_pos->number_of_steps > MAX_NUMBER_OF_STEPS) {
-		pr_err("num_steps out of range = %d\n",
-			set_pos->number_of_steps);
-		return -EFAULT;
-	}
-	for (index = 0; index < set_pos->number_of_steps; index++) {
-		next_lens_position = set_pos->pos[index];
-		msm_actuator_vcm2_setdac(a_ctrl, next_lens_position);
-	}
-	CDBG("%s exit %d\n", __func__, __LINE__);
-	return rc;
-}
-
-static int32_t msm_actuator_vcm2_set_position(
-	struct msm_actuator_ctrl_t *a_ctrl,
-	struct msm_actuator_set_position_t *set_pos)
-{
-	int32_t rc = 0;
-	int32_t index;
-	uint16_t next_lens_position;
 	uint16_t delay;
 	uint32_t hw_params = 0;
 	struct msm_camera_i2c_reg_setting reg_setting;
@@ -1432,6 +1409,30 @@ static int32_t msm_actuator_vcm2_set_position(
 	CDBG("%s exit %d\n", __func__, __LINE__);
 	return rc;
 }
+
+static int32_t msm_actuator_vcm2_set_position(
+	struct msm_actuator_ctrl_t *a_ctrl,
+	struct msm_actuator_set_position_t *set_pos)
+{
+	int32_t rc = 0;
+	int32_t index;
+	uint16_t next_lens_position;
+
+	CDBG("%s Enter %d\n", __func__, __LINE__);
+	if (set_pos->number_of_steps <= 0 ||
+		set_pos->number_of_steps > MAX_NUMBER_OF_STEPS) {
+		pr_err("num_steps out of range = %d\n",
+			set_pos->number_of_steps);
+		return -EFAULT;
+	}
+	for (index = 0; index < set_pos->number_of_steps; index++) {
+		next_lens_position = set_pos->pos[index];
+		msm_actuator_vcm2_setdac(a_ctrl, next_lens_position);
+	}
+	CDBG("%s exit %d\n", __func__, __LINE__);
+	return rc;
+}
+
 
 static int32_t msm_actuator_bivcm_set_position(
 	struct msm_actuator_ctrl_t *a_ctrl,
