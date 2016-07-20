@@ -388,7 +388,6 @@ static int ipa_uc_panic_notifier(struct notifier_block *this,
 
 	ipa_ctx->uc_ctx.uc_sram_mmio->cmdOp =
 		IPA_CPU_2_HW_CMD_ERR_FATAL;
-	ipa_ctx->uc_ctx.pending_cmd = ipa_ctx->uc_ctx.uc_sram_mmio->cmdOp;
 	/* ensure write to shared memory is done before triggering uc */
 	wmb();
 	ipa_write_reg(ipa_ctx->mmio, IPA_IRQ_EE_UC_n_OFFS(0), 0x1);
@@ -727,7 +726,7 @@ int ipa_uc_reset_pipe(enum ipa_client_type ipa_client)
 	       IPA_CLIENT_IS_PROD(ipa_client) ? "CONS" : "PROD", ep_idx);
 
 	ret = ipa_uc_send_cmd(cmd.raw32b, IPA_CPU_2_HW_CMD_RESET_PIPE, 0,
-			      true, 10*HZ);
+			      false, 10*HZ);
 
 	return ret;
 }

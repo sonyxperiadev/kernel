@@ -1907,6 +1907,29 @@ reinit:
 		card->host->caps2 &= ~MMC_CAP2_CMD_QUEUE;
 	}
 
+	/*
+	 * Start auto bkops, if supported.
+	 *
+	 * Note: This leaves the possibility of having both manual and
+	 * auto bkops running in parallel. The runtime implementation
+	 * will allow this, but ignore bkops exceptions on the premises
+	 * that auto bkops will eventually kick in and the device will
+	 * handle bkops without START_BKOPS from the host.
+	 */
+	if (mmc_card_support_auto_bkops(card)) {
+		/*
+		 * Ignore the return value of setting auto bkops.
+		 * If it failed, will run in backward compatible mode.
+		 */
+		err = mmc_set_auto_bkops(card, true);
+		if (err)
+			pr_err("%s: %s: Failed to enable auto-bkops: err: %d\n",
+			       mmc_hostname(card->host), __func__, err);
+		else
+			printk_once("%s: %s: Enabled auto-bkops on device\n",
+				    mmc_hostname(card->host), __func__);
+	}
+
 	if (card->ext_csd.cmdq_support && (card->host->caps2 &
 					   MMC_CAP2_CMD_QUEUE)) {
 		err = mmc_select_cmdq(card);
@@ -2095,6 +2118,15 @@ static int _mmc_suspend(struct mmc_host *host, bool is_suspend)
 	 * as to avoid clock scaling decisions kicking in during this window.
 	 */
 	mmc_disable_clk_scaling(host);
+
+	if (mmc_card_doing_auto_bkops(host->card)) {
+		err = mmc_set_auto_bkops(host->card, false);
+		if (err) {
+			pr_err("%s: %s: failed to stop auto-bkops: %d\n",
+			       mmc_hostname(host), __func__, err);
+			goto out;
+		}
+	}
 
 	err = mmc_cache_ctrl(host, 0);
 	if (err)
