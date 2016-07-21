@@ -1,4 +1,4 @@
-/* Copyright (c) 2014 - 2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -136,17 +136,8 @@ static inline int get_pending_bufs_fw(struct msm_vidc_inst *inst)
 
 	if (inst->state >= MSM_VIDC_OPEN_DONE &&
 			inst->state < MSM_VIDC_STOP_DONE) {
-		struct buffer_info *temp = NULL;
-
 		fw_out_qsize = inst->count.ftb - inst->count.fbd;
-
-		list_for_each_entry(temp, &inst->registeredbufs.list, list) {
-			if (temp->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE &&
-					!temp->inactive &&
-					atomic_read(&temp->ref_count) == 2) {
-				buffers_in_driver++;
-			}
-		}
+		buffers_in_driver = inst->buffers_held_in_driver;
 	}
 
 	return fw_out_qsize + buffers_in_driver;
@@ -504,7 +495,7 @@ bool msm_dcvs_enc_check(struct msm_vidc_inst *inst)
 static int msm_dcvs_check_supported(struct msm_vidc_inst *inst)
 {
 	int rc = 0;
-	int dcvs_2k = 0, dcvs_4k = 0;
+	int dcvs_2k = -ENOTSUPP, dcvs_4k = 0;
 	int num_mbs_per_frame = 0;
 	int instance_count = 0;
 	struct msm_vidc_inst *temp = NULL;

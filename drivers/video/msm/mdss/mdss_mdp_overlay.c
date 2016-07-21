@@ -3286,6 +3286,7 @@ static int mdss_mdp_hw_cursor_pipe_update(struct msm_fb_data_type *mfd,
 	}
 
 	size = img->width * img->height * 4;
+
 #ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL /* REMOVEME???? */
 	if ((size != mfd->cursor_buf_size) ||
 			(cursor->set & FB_CUR_SETIMAGE) ||
@@ -3295,6 +3296,7 @@ static int mdss_mdp_hw_cursor_pipe_update(struct msm_fb_data_type *mfd,
 	if ((size != mfd->cursor_buf_size) ||
 			(cursor->set & FB_CUR_SETIMAGE)) {
 #endif /* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
+
 		pr_debug("allocating cursor mem size:%zd\n", size);
 
 		if (!ion_client) {
