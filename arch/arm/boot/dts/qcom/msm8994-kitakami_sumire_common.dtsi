@@ -248,17 +248,17 @@
 };
 
 &pmi8994_charger {
-	qcom,fastchg-current-ma = <1500>;
-	somc,fastchg-warm-current-ma = <700>;
-	somc,fastchg-cool-current-ma = <700>;
+	qcom,fastchg-current-ma = <1800>;
+/*	somc,fastchg-warm-current-ma = <700>;
+	somc,fastchg-cool-current-ma = <700>;	*/
 	qcom,iterm-ma = <150>;
 	qcom,precharging-timeout-mins = <24>;
 	qcom,charging-timeout-mins = <768>;
 	somc,step-charge-en = <1>;
 	somc,step-charge-threshold = <65>;
-	somc,step-charge-current-ma = <2100>;
-	somc,thermal-engine-fastchg-current = <2100 1950 1800 1100 900 700 500 400 300 300 300 300 300 0 0>;
-	somc,thermal-mitigation-usb-9v = <1500 1400 1300 1000 1000 1000 1000 1000 1200 900 700 500 300 0 0>;
+	somc,step-charge-current-ma = <1800>;
+	somc,thermal-engine-fastchg-current = <1800 1800 1800 1800 1800 1800 1500 1200 900 700 500 300 300 0 0>;
+	somc,thermal-mitigation-usb-9v = <1800 1800 1800 1800 1800 1800 1800 1500 1200 900 700 500 300 0 0>;
 	somc,thermal-mitigation-usb-5v = <1500 1500 1500 1500 1500 1500 1500 1500 1200 900 700 500 300 0 0>;
 	somc,limit-usb-5v-level = <8>;
 	somc,charge-full-design = <2987000>;
