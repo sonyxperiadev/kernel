@@ -93,7 +93,7 @@
 			"ispif_ahb_clk", "csi_clk", "csi_ahb_clk",
 			"csi_src_clk", "csi_rdi_clk",
 			 "csi_pix_clk", "csi_phy_clk";
-		qcom,clock-rates = <0 0 0 0 200000000 0 0 0>;
+		qcom,clock-rates = <0 0 200000000 0 0 0 0 0>;
 	};
 
 	qcom,csid@fda08400 {
@@ -117,7 +117,7 @@
 			"ispif_ahb_clk", "csi_clk", "csi_ahb_clk",
 			"csi_src_clk", "csi_rdi_clk",
 			 "csi_pix_clk", "csi_phy_clk";
-		qcom,clock-rates = <0 0 0 0 200000000 0 0 0>;
+		qcom,clock-rates = <0 0 200000000 0 0 0 0 0>;
 	};
 
 	qcom,csid@fda08800 {
@@ -141,7 +141,7 @@
 			"ispif_ahb_clk", "csi_clk", "csi_ahb_clk",
 			"csi_src_clk", "csi_rdi_clk",
 			 "csi_pix_clk", "csi_phy_clk";
-		qcom,clock-rates = <0 0 0 0 200000000 0 0 0>;
+		qcom,clock-rates = <0 0 200000000 0 0 0 0 0>;
 	};
 
 	qcom,csid@fda08C00 {
@@ -165,7 +165,7 @@
 			"ispif_ahb_clk", "csi_clk", "csi_ahb_clk",
 			"csi_src_clk", "csi_rdi_clk",
 			 "csi_pix_clk", "csi_phy_clk";
-		qcom,clock-rates = <0 0 0 0 200000000 0 0 0>;
+		qcom,clock-rates = <0 0 200000000 0 0 0 0 0>;
 	};
 
 	qcom,ispif@fda0A000 {
