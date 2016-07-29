@@ -1086,8 +1086,10 @@ remap_failed:
 	msm_cam_clk_enable(&cpp_dev->pdev->dev, cpp_clk_info,
 		cpp_dev->cpp_clk, cpp_dev->num_clk, 0);
 clk_failed:
-	regulator_disable(cpp_dev->fs_cpp);
-	regulator_put(cpp_dev->fs_cpp);
+	if (cpp_dev->fs_cpp != NULL) {
+		regulator_disable(cpp_dev->fs_cpp);
+		regulator_put(cpp_dev->fs_cpp);
+	}
 fs_failed:
 		if (cpp_dev->bus_master_flag)
 			msm_cpp_deinit_bandwidth_mgr(cpp_dev);
