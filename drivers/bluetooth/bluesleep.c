@@ -149,6 +149,8 @@ DECLARE_DELAYED_WORK(sleep_workqueue, bluesleep_sleep_work);
 #define PROC_BTWRITE	5
 #endif
 
+#define MSM_HSUART_BT	0
+
 #if BT_BLUEDROID_SUPPORT
 static bool has_lpm_enabled;
 #else
@@ -270,6 +272,9 @@ static int bluesleep_rfkill_set_power(void *data, bool blocked)
 
 	/* rfkill_ops callback. Turn transmitter on when blocked is false */
 	if (!blocked) {
+		/* Enable MSM serial clock for ttyHS(x) */
+		msm_hs_set_clock(MSM_HSUART_BT, 1);
+
 		if (regOnGpio) {
 			BT_DBG("Bluetooth device is already power on:%d\n",
 				regOnGpio);
@@ -284,6 +289,9 @@ static int bluesleep_rfkill_set_power(void *data, bool blocked)
 		gpio_set_value(bsi->bt_reg_on, 1);
 		gpio_set_value(bsi->ext_wake, 1);
 	} else {
+		/* Powering off: Disable serial clocks */
+		msm_hs_set_clock(MSM_HSUART_BT, 0);
+
 		if (!regOnGpio) {
 			BT_DBG("Bluetooth device is already power off:%d\n",
 				regOnGpio);
