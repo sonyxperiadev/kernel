@@ -253,3 +253,10 @@ config MSM_SEC_CCI_DEBUG
 	---help---
 	  Enables simulation of secure camera for Secure CCI Realy
 	  debugging.
+
+config SONY_CAM_V4L2
+        bool "SONY specific camera quirks"
+        depends on MSMB_CAMERA
+        default n
+        ---help---
+          SONY specific camera module quirks
