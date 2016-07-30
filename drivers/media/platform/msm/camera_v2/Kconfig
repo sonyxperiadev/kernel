@@ -275,3 +275,10 @@ config MSM_FD
 	 depends on MSMB_CAMERA
 	 ---help---
 	    Enables support for the MSM FD face detection engine.
+
+config SONY_CAM_V4L2
+        bool "SONY specific camera quirks"
+        depends on MSMB_CAMERA
+        default n
+        ---help---
+          SONY specific camera module quirks
