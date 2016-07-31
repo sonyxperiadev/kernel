@@ -105,6 +105,8 @@ static int mi2s_rx_bit_format = SNDRV_PCM_FORMAT_S16_LE;
 static int msm_proxy_rx_ch = 2;
 static void *adsp_state_notifier;
 
+static int msm_ear_enable_states;
+
 static int msm8952_enable_codec_mclk(struct snd_soc_codec *codec, int enable,
 					bool dapm);
 
@@ -293,6 +295,7 @@ struct msm8952_codec {
 struct msm8952_asoc_mach_data {
 	int ext_pa;
 	int us_euro_gpio;
+	int ear_en_gpio;
 	struct delayed_work hs_detect_dwork;
 	struct snd_soc_codec *codec;
 	struct msm8952_codec msm8952_codec_fn;
@@ -1080,6 +1083,73 @@ static int msm_proxy_rx_ch_put(struct snd_kcontrol *kcontrol,
 	return 1;
 }
 
+
+int is_ear_en_gpio_support(struct platform_device *pdev,
+			struct msm8952_asoc_mach_data *pdata)
+{
+	const char *ear_en_gpio = "qcom,ear-en-gpios";
+
+	pr_debug("%s:Enter\n", __func__);
+
+	pdata->ear_en_gpio = of_get_named_gpio(pdev->dev.of_node,
+				ear_en_gpio, 0);
+
+	if (pdata->ear_en_gpio < 0) {
+		dev_dbg(&pdev->dev,
+			"%s: missing %s in dt node\n", __func__, ear_en_gpio);
+	} else {
+		if (!gpio_is_valid(pdata->ear_en_gpio)) {
+			pr_err("%s: Invalid ear enable gpio: %d",
+				__func__, pdata->ear_en_gpio);
+			return -EINVAL;
+		}
+	}
+	return 0;
+}
+
+static int msm_ear_enable_get(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	ucontrol->value.integer.value[0] = msm_ear_enable_states;
+	pr_debug("%s: msm_ear_enable_states = %d\n", __func__,
+			msm_ear_enable_states);
+
+	return 0;
+}
+
+static int msm_ear_enable_put(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	int ret;
+	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_card *card = codec->card;
+	struct msm8952_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
+
+	pr_err("%s: ucontrol value = %ld\n", __func__,
+			ucontrol->value.integer.value[0]);
+
+	if (!gpio_is_valid(pdata->ear_en_gpio)) {
+		pr_err("%s: Invalid gpio: %d\n", __func__,
+			pdata->ear_en_gpio);
+		return 0;
+	}
+
+	msm_ear_enable_states = ucontrol->value.integer.value[0];
+
+	ret = gpio_request(pdata->ear_en_gpio, "ear_en_gpio");
+	if (ret) {
+		pr_err("%s: cannot requesting gpio %s\n",
+				__func__, "ear_en_gpio");
+		return ret;
+	}
+
+	gpio_set_value(pdata->ear_en_gpio, msm_ear_enable_states);
+
+	gpio_free(pdata->ear_en_gpio);
+
+	return 0;
+}
+
 static const char *const spk_function[] = {"Off", "On"};
 static const char *const slim0_rx_ch_text[] = {"One", "Two"};
 static const char *const slim0_tx_ch_text[] = {"One", "Two", "Three", "Four",
@@ -1099,6 +1169,7 @@ static char const *slim5_rx_bit_format_text[] = {"S16_LE", "S24_LE", "S24_3LE"};
 static const char *const proxy_rx_ch_text[] = {"One", "Two", "Three", "Four",
 	"Five", "Six", "Seven", "Eight"};
 static char const *slim6_rx_bit_format_text[] = {"S16_LE", "S24_LE", "S24_3LE"};
+static const char *const ear_enable_states_text[] = {"Disable", "Enable"};
 
 static const struct soc_enum msm_snd_enum[] = {
 	SOC_ENUM_SINGLE_EXT(2, spk_function),
@@ -1118,6 +1189,7 @@ static const struct soc_enum msm_snd_enum[] = {
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(slim6_rx_bit_format_text),
 				slim6_rx_bit_format_text),
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(slim6_rx_ch_text), slim6_rx_ch_text),
+	SOC_ENUM_SINGLE_EXT(2, ear_enable_states_text),
 };
 
 static const char *const btsco_rate_text[] = {"BTSCO_RATE_8KHZ",
@@ -1165,6 +1237,8 @@ static const struct snd_kcontrol_new msm_snd_controls[] = {
 		     msm_auxpcm_rate_get, msm_auxpcm_rate_put),
 	SOC_ENUM_EXT("PROXY_RX Channels", msm_snd_enum[9],
 			msm_proxy_rx_ch_get, msm_proxy_rx_ch_put),
+	SOC_ENUM_EXT("MSM_Ear_Enable_States", msm_snd_enum[10],
+			msm_ear_enable_get, msm_ear_enable_put),
 };
 
 int msm_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
@@ -2761,6 +2835,13 @@ static int msm8952_asoc_machine_probe(struct platform_device *pdev)
 	ret = is_us_eu_switch_gpio_support(pdev, pdata);
 	if (ret < 0) {
 		pr_err("%s: failed to is_us_eu_switch_gpio_support %d\n",
+				__func__, ret);
+		goto err;
+	}
+
+	ret = is_ear_en_gpio_support(pdev, pdata);
+	if (ret < 0) {
+		pr_debug("%s:  failed to is_ear_en_gpio_support %d\n",
 				__func__, ret);
 		goto err;
 	}
