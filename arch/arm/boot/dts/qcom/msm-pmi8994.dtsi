@@ -33,6 +33,11 @@
 			qcom,secondary-pon-reset;
 			qcom,s3-debounce = <32>;
 			qcom,s3-src = "kpdpwr-and-resin";
+			pon_perph_reg: qcom,pon_perph_reg {
+				regulator-name = "pon_spare_reg";
+				qcom,pon-spare-reg-addr = <0x8c>;
+				qcom,pon-spare-reg-bit = <1>;
+			};
 		};
 
 		pmi8994_gpios: gpios {
@@ -638,10 +643,10 @@
 				qcom,led-name = "led:flash_0";
 				qcom,default-led-trigger =
 						"flash0_trigger";
-				qcom,id = <0>;
-				qcom,duration = <1280>;
-				qcom,current = <625>;
 				qcom,max-current = <1000>;
+				qcom,duration = <1280>;
+				qcom,id = <0>;
+				qcom,current = <625>;
 			};
 
 			pmi8994_flash1: qcom,flash_1 {
@@ -649,10 +654,10 @@
 				qcom,led-name = "led:flash_1";
 				qcom,default-led-trigger =
 						"flash1_trigger";
-				qcom,id = <1>;
-				qcom,duration = <1280>;
-				qcom,current = <625>;
 				qcom,max-current = <1000>;
+				qcom,duration = <1280>;
+				qcom,id = <1>;
+				qcom,current = <625>;
 			};
 
 			pmi8994_torch0: qcom,torch_0 {
@@ -660,11 +665,17 @@
 				qcom,led-name = "led:torch_0";
 				qcom,default-led-trigger =
 						"torch0_trigger";
+				qcom,max-current = <200>;
 				qcom,id = <0>;
 				qcom,current = <120>;
-				qcom,max-current = <200>;
-				boost-supply = <&pmi8994_boostbypass>;
-				boost-voltage-max = <3600000>;
+				reg0 {
+					regulator-name =
+						"pmi8994_boostbypass";
+					max-voltage = <3600000>;
+				};
+				reg1 {
+					regulator-name = "pon_spare_reg";
+				};
 			};
 
 			pmi8994_torch1: qcom,torch_1 {
@@ -672,25 +683,18 @@
 				qcom,led-name = "led:torch_1";
 				qcom,default-led-trigger =
 						"torch1_trigger";
+				qcom,max-current = <200>;
 				qcom,id = <1>;
 				qcom,current = <120>;
-				qcom,max-current = <200>;
-				boost-supply = <&pmi8994_boostbypass>;
-				boost-voltage-max = <3600000>;
+				reg0 {
+					regulator-name =
+						"pmi8994_boostbypass";
+					max-voltage = <3600000>;
+				};
+				reg1 {
+					regulator-name = "pon_spare_reg";
+				};
 			};
-
-			pmi8994_switch: qcom,switch {
-                                label = "switch";
-                                qcom,led-name = "led:switch";
-                                qcom,default-led-trigger =
-                                                "switch_trigger";
-                                qcom,id = <2>;
-				qcom,current = <625>;
-				qcom,max-current = <1000>;
-				qcom,duration = <1280>;
-				boost-supply = <&pmi8994_boostbypass>;
-				boost-voltage-max = <3600000>;
-                        };
 		};
 	};
 };
