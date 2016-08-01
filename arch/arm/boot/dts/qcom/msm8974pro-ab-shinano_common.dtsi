@@ -178,6 +178,7 @@
 			mhl-switch-sel-1-gpio = <&msmgpio 10 0>;
 			mhl-switch-sel-2-gpio = <&msmgpio 11 0>;
 			mhl-fw-wake-gpio =  <&msmgpio 31 0>;
+			status = "disabled";
 		};
 		isa1200@48 {
 			status = "disabled";
