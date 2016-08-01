@@ -1131,13 +1131,36 @@
 
 &spmi_bus {
 	qcom,pm8941@0 {
-		vadc@3100 {
+		pm8941_vadc: vadc@3100 {
+			compatible = "qcom,qpnp-vadc";
+				reg = <0x3100 0x100>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+				interrupts = <0x0 0x31 0x0>;
+				interrupt-names = "eoc-int-en-set";
+				qcom,adc-bit-resolution = <15>;
+				qcom,adc-vdd-reference = <1800>;
+				qcom,vadc-poll-eoc;
+				qcom,pmic-revid = <&pm8941_revid>;
 			chan@b4 {
 				qcom,scale-function = <8>;
 			};
 		};
 
-		qcom,vadc@3400 {
+		pm8941_adc_tm: qcom,vadc@3400 {
+			compatible = "qcom,qpnp-adc-tm";
+			reg = <0x3400 0x100>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			interrupts =	<0x0 0x34 0x0>,
+					<0x0 0x34 0x3>,
+				     <0x0 0x34 0x4>;
+			interrupt-names =	"eoc-int-en-set",
+						"high-thr-en-set",
+						"low-thr-en-set";
+			qcom,adc-bit-resolution = <15>;
+			qcom,adc-vdd-reference = <1800>;
+			qcom,adc_tm-vadc = <&pm8941_vadc>;
 			chan@30 {
 				qcom,hw-settle-time = <15>;
 			};
@@ -1171,6 +1194,8 @@
 
 &usb3 {
        qcom,utmi-clk-rate = <24000000>;
+       qcom,usbin-vadc = <&pm8941_vadc>;
+       dwc_usb3-adc_tm = <&pm8941_adc_tm>;
 };
 
 &mdss_dsi0 {
