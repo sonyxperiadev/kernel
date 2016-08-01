@@ -1775,8 +1775,9 @@
 
 		clocks = <&clock_gcc clk_gcc_usb_hs_system_clk>,
 			 <&clock_gcc clk_gcc_usb_hs_ahb_clk>,
-			 <&clock_rpm clk_gcc_usb2b_phy_sleep_clk>;
-		clock-names = "core_clk", "iface_clk", "sleep_clk";
+			 <&clock_gcc clk_gcc_usb2b_phy_sleep_clk>,
+			 <&clock_rpm clk_cxo_ehci_host_clk>;
+		clock-names = "core_clk", "iface_clk", "sleep_clk", "xo";
 	};
 
 	gdsc_oxili_gx: qcom,gdsc@fd8c4024 {
