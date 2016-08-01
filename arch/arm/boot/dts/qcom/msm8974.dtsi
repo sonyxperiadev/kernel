@@ -1698,8 +1698,8 @@
 
 		clocks = <&clock_gcc clk_gcc_usb30_master_clk>,
 			 <&clock_gcc clk_gcc_sys_noc_usb3_axi_clk>,
-			 <&clock_gcc clk_usb30_mock_utmi_clk_src>,
 			 <&clock_gcc clk_gcc_usb30_mock_utmi_clk>,
+			 <&clock_gcc clk_usb30_mock_utmi_clk_src>,
 			 <&clock_gcc clk_gcc_usb30_sleep_clk>,
 			 <&clock_rpm clk_diff_clk>,
 			 <&clock_rpm clk_cxo_dwc3_clk>;
