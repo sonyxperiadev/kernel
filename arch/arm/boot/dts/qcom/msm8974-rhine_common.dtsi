@@ -165,7 +165,6 @@
 			smps3a-supply = <&pm8941_s3>;
 			vdda-supply = <&pm8941_l12>;
 			qcom,hdmi-tx-map = <&mdss_hdmi_tx>;
-			status = "disabled";
 		};
 
 		isa1200@48 {
