@@ -260,7 +260,7 @@
 			clock-names = "mhl_clk";
 			mhl_vcc-supply = <&pm8994_l25>;
 			qcom,hdmi-tx-map = <&mdss_hdmi_tx>;
-		status = "disable";
+		status = "disabled";
 		};
 
 		/delete-node/ silabs4705@11;
