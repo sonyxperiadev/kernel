@@ -192,6 +192,8 @@ static DEFINE_TIMER(tx_timer, bluesleep_tx_timer_expire, 0, 0);
 /** Lock for state transitions */
 static spinlock_t rw_lock;
 static struct rfkill *bt_rfkill;
+struct uart_port *rfkill_uport;
+static int rfkill_vote;
 
 #if !BT_BLUEDROID_SUPPORT
 /** Notifier block for HCI events */
@@ -271,8 +273,14 @@ static int bluesleep_rfkill_set_power(void *data, bool blocked)
 
 	/* rfkill_ops callback. Turn transmitter on when blocked is false */
 	if (!blocked) {
-		/* Enable MSM serial clock for ttyHS(x) */
-		msm_hs_set_clock(MSM_HSUART_BT, 1);
+		if (rfkill_uport) {
+			if (rfkill_uport->state->port.count && !rfkill_vote) {
+				/* Enable MSM serial clock for ttyHS(x) */
+				msm_hs_request_clock_on(rfkill_uport);
+				msm_hs_set_mctrl(rfkill_uport, TIOCM_RTS);
+				rfkill_vote = 1;
+			}
+		}
 
 		if (regOnGpio) {
 			BT_DBG("Bluetooth device is already power on:%d\n",
@@ -288,9 +296,6 @@ static int bluesleep_rfkill_set_power(void *data, bool blocked)
 		gpio_set_value(bsi->bt_reg_on, 1);
 		gpio_set_value(bsi->ext_wake, 1);
 	} else {
-		/* Powering off: Disable serial clocks */
-		msm_hs_set_clock(MSM_HSUART_BT, 0);
-
 		if (!regOnGpio) {
 			BT_DBG("Bluetooth device is already power off:%d\n",
 				regOnGpio);
@@ -299,6 +304,13 @@ static int bluesleep_rfkill_set_power(void *data, bool blocked)
 		gpio_set_value(bsi->bt_reg_on, 0);
 		if (bt_batfet)
 			regulator_disable(bt_batfet);
+
+		if (rfkill_vote) {
+			/* Powering off: Disable serial clocks */
+			msm_hs_set_mctrl(rfkill_uport, 0);
+			msm_hs_request_clock_off(rfkill_uport);
+			rfkill_vote = 0;
+		}
 	}
 	bt_enabled = !blocked;
 
@@ -791,6 +803,12 @@ static int bluesleep_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		dev_err(&pdev->dev, "bcm4339_bluetooth_probe rfkill_register fail\n");
 		goto  free_bt_ext_wake;
+	}
+
+	rfkill_uport = msm_hs_get_uart_port(MSM_HSUART_BT);
+	rfkill_vote = 0;
+	if (rfkill_uport == NULL) {
+		BT_INFO("couldn't find rfkill uart port for /dev/ttyHS0 \n");
 	}
 
 	return 0;
