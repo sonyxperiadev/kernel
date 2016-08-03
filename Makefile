@@ -689,7 +689,7 @@ endif
 ifeq ($(KBUILD_EXTMOD),)
 # Objects we will link into vmlinux / subdirs we need to visit
 core-y		:= init/ usr/ arch/$(SRCARCH)/
-drivers-y	:= drivers/ sound/
+drivers-y	:= drivers/ sound/ techpack/
 drivers-$(CONFIG_SAMPLES) += samples/
 drivers-$(CONFIG_NET) += net/
 drivers-y	+= virt/
@@ -1216,6 +1216,7 @@ ifeq ($(KBUILD_EXTMOD),)
 endif
 	$(Q)$(MAKE) $(hdr-inst)=$(hdr-prefix)include/uapi
 	$(Q)$(MAKE) $(hdr-inst)=$(hdr-prefix)arch/$(SRCARCH)/include/uapi
+	$(Q)$(MAKE) $(hdr-inst)=techpack
 
 # ---------------------------------------------------------------------------
 # Devicetree files
