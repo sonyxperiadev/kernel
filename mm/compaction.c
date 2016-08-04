@@ -1345,7 +1345,7 @@ static int __compact_finished(struct zone *zone, struct compact_control *cc,
 		 * other migratetype buddy lists.
 		 */
 		if (find_suitable_fallback(area, order, migratetype,
-						true, &can_steal) != -1)
+					   true, cc->order, &can_steal) != -1)
 			return COMPACT_PARTIAL;
 	}
 
