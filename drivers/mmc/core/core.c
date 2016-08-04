@@ -1519,6 +1519,9 @@ int mmc_read_bkops_status(struct mmc_card *card)
 	}
 
 	mmc_claim_host(card->host);
+#ifdef CONFIG_ARCH_MSM8974
+	err = mmc_send_ext_csd(card, ext_csd);
+#else
 	if (mmc_card_cmdq(card))
 		err = mmc_cmdq_halt_on_empty_queue(card->host);
 
@@ -1528,6 +1531,7 @@ int mmc_read_bkops_status(struct mmc_card *card)
 		if (mmc_card_cmdq(card))
 			mmc_cmdq_halt(card->host, false);
 	}
+#endif
 	mmc_release_host(card->host);
 	if (err)
 		goto out;
