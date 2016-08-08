@@ -554,7 +554,7 @@ config TOUCHSCREEN_CLEARPAD_I2C
 
 config TOUCHSCREEN_CLEARPAD_RMI_DEV
         tristate "Synaptics ClearPad RMI Dev"
-	depends on GPIO_SYSFS && TOUCHSCREEN_CLEARPAD && TOUCHSCREEN_CLEARPAD_I2C
+	depends on GPIO_SYSFS && (TOUCHSCREEN_CLEARPAD || TOUCHSCREEN_INCELL_CLEARPAD) && TOUCHSCREEN_CLEARPAD_I2C
 	default n
         help
           Say Y here to enable Synaptics ClearPad RMI dev.
