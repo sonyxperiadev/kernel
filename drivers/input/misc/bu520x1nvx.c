@@ -1,6 +1,6 @@
 /* drivers/input/misc/bu520x1nvx.c
  *
- * Copyright (C) 2013-2014 Sony Mobile Communications AB.
+ * Copyright (C) 2015 Sony Mobile Communications AB.
  *
  * Author: Takashi Shiina <takashi.shiina@sonymobile.com>
  *         Tadashi Kubo <tadashi.kubo@sonymobile.com>
@@ -39,7 +39,6 @@ struct bu520x1nvx_event_data {
 	const struct bu520x1nvx_gpio_event *event;
 	struct timer_list det_timer;
 	struct work_struct det_work;
-	unsigned int timer_debounce;
 	unsigned int irq;
 };
 
@@ -65,13 +64,17 @@ enum bu520x1nvx_switch_state {
 	SWITCH_ON,
 };
 
+static int bu520x1nvx_get_lid_state(const struct bu520x1nvx_gpio_event *event)
+{
+	return (gpio_get_value_cansleep(event->gpio)
+						  ^ event->active_low ?
+						  LID_CLOSE : LID_OPEN);
+}
+
 static void bu520x1nvx_report_input_event(struct input_dev *idev,
 				 const struct bu520x1nvx_gpio_event *event)
 {
-	int gpio_state = (gpio_get_value_cansleep(event->gpio)
-						  ^ event->active_low ?
-						  LID_CLOSE : LID_OPEN);
-
+	int gpio_state = bu520x1nvx_get_lid_state(event);
 	dev_dbg(&idev->dev, "%s: value(%d)\n", __func__, gpio_state);
 	input_report_switch(idev, SW_LID, gpio_state);
 	input_sync(idev);
@@ -142,6 +145,12 @@ static int bu520x1nvx_get_devtree(struct device *dev,
 
 		if (of_property_read_u32(pp, "debounce-interval", &reg) == 0)
 			events[i].debounce_interval = reg;
+		if (of_property_read_u32(pp, "open-debounce-interval",
+					 &reg) == 0)
+			events[i].open_debounce_interval = reg;
+		if (of_property_read_u32(pp, "close-debounce-interval",
+					 &reg) == 0)
+			events[i].close_debounce_interval = reg;
 		i++;
 	}
 	pdata->events = events;
@@ -163,9 +172,20 @@ static irqreturn_t bu520x1nvx_isr(int irq, void *data)
 						struct bu520x1nvx_drvdata,
 						data[!event->lid_pin]);
 
-	if (edata->timer_debounce)
+	unsigned int timer_debounce;
+
+	if (event->lid_pin) {
+		if (bu520x1nvx_get_lid_state(event) == LID_OPEN)
+			timer_debounce = event->open_debounce_interval;
+		else
+			timer_debounce = event->close_debounce_interval;
+	} else {
+		timer_debounce = event->debounce_interval;
+	}
+
+	if (timer_debounce)
 		mod_timer(&edata->det_timer,
-			jiffies + msecs_to_jiffies(edata->timer_debounce));
+			jiffies + msecs_to_jiffies(timer_debounce));
 	else
 		schedule_work(&edata->det_work);
 
@@ -310,8 +330,6 @@ static int bu520x1nvx_setup_event(struct platform_device *pdev,
 		goto fail;
 	}
 
-	edata->timer_debounce = event->debounce_interval;
-
 	irq = gpio_to_irq(event->gpio);
 	if (irq < 0) {
 		error = irq;
@@ -350,8 +368,7 @@ request_fail:
 static void bu520x1nvx_remove_event(struct bu520x1nvx_event_data *edata)
 {
 	free_irq(edata->irq, edata);
-	if (edata->timer_debounce)
-		del_timer_sync(&edata->det_timer);
+	del_timer_sync(&edata->det_timer);
 	cancel_work_sync(&edata->det_work);
 	if (gpio_is_valid(edata->event->gpio))
 		gpio_free(edata->event->gpio);
