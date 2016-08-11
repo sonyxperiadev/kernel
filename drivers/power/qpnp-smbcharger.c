@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2015 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014-2016 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -5126,22 +5126,17 @@ static void smbchg_handle_hvdcp3_disable(struct smbchg_chip *chip)
 	enum power_supply_type usb_supply_type;
 	char *usb_type_name = "NULL";
 
-	if (chip->allow_hvdcp3_detection)
-		return;
-
 	chip->pulse_cnt = 0;
 
 	if (is_hvdcp_present(chip)) {
 		smbchg_change_usb_supply_type(chip,
 			POWER_SUPPLY_TYPE_USB_HVDCP);
-	} else if (is_usb_present(chip)) {
+	} else {
 		read_usb_type(chip, &usb_type_name, &usb_supply_type);
 		smbchg_change_usb_supply_type(chip, usb_supply_type);
 		if (usb_supply_type == POWER_SUPPLY_TYPE_USB_DCP)
 			schedule_delayed_work(&chip->hvdcp_det_work,
 				msecs_to_jiffies(HVDCP_NOTIFY_MS));
-	} else {
-		smbchg_change_usb_supply_type(chip, POWER_SUPPLY_TYPE_UNKNOWN);
 	}
 }
 
@@ -5343,7 +5338,9 @@ out:
 		update_usb_status(chip, 0, 0);
 	}
 
-	smbchg_handle_hvdcp3_disable(chip);
+	/* This could be because allow_hvdcp3 set to false runtime */
+	if (is_usb_present(chip) && !chip->allow_hvdcp3_detection)
+		smbchg_handle_hvdcp3_disable(chip);
 
 	return rc;
 }
@@ -5547,7 +5544,10 @@ static int smbchg_unprepare_for_pulsing_lite(struct smbchg_chip *chip)
 		pr_smb(PR_MISC, "HVDCP removed\n");
 		update_usb_status(chip, 0, 0);
 	}
-	smbchg_handle_hvdcp3_disable(chip);
+
+	/* This could be because allow_hvdcp3 set to false runtime */
+	if (is_usb_present(chip) && !chip->allow_hvdcp3_detection)
+		smbchg_handle_hvdcp3_disable(chip);
 
 	return rc;
 }
@@ -5806,6 +5806,12 @@ static int smbchg_battery_set_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_RESTRICTED_CHARGING:
 		rc = smbchg_restricted_charging(chip, val->intval);
 		break;
+	case POWER_SUPPLY_PROP_ALLOW_HVDCP3:
+		if (chip->allow_hvdcp3_detection != val->intval) {
+			chip->allow_hvdcp3_detection = !!val->intval;
+			power_supply_changed(&chip->batt_psy);
+		}
+		break;
 #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
 	case POWER_SUPPLY_PROP_ENABLE_SHUTDOWN_AT_LOW_BATTERY:
 		chip->somc_params.low_batt.shutdown_enabled =
@@ -5992,6 +5998,9 @@ static int smbchg_battery_get_property(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_INPUT_CURRENT_NOW:
 		val->intval = smbchg_get_iusb(chip);
+		break;
+	case POWER_SUPPLY_PROP_ALLOW_HVDCP3:
+		val->intval = chip->allow_hvdcp3_detection;
 		break;
 #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
 	case POWER_SUPPLY_PROP_ENABLE_SHUTDOWN_AT_LOW_BATTERY:
@@ -8015,6 +8024,7 @@ static int smbchg_check_chg_version(struct smbchg_chip *chip)
 		pr_err("PMIC subtype %d not supported, WA flags not set\n",
 				pmic_rev_id->pmic_subtype);
 	}
+	chip->allow_hvdcp3_detection = true;
 
 	pr_smb(PR_STATUS, "pmic=%s, wa_flags=0x%x\n",
 			pmic_rev_id->pmic_name, chip->wa_flags);
@@ -8224,7 +8234,6 @@ static int smbchg_probe(struct spmi_device *spmi)
 		}
 	}
 	chip->psy_registered = true;
-	chip->allow_hvdcp3_detection = true;
 
 	if (chip->cfg_chg_led_support &&
 			chip->schg_version == QPNP_SCHG_LITE) {
