@@ -529,6 +529,7 @@ static struct clk_freq_tbl ftbl_camss_vfe_vfe0_1_clk[] = {
 	F_MM( 80000000,  gpll0, 7.5,   0,   0),
 	F_MM(100000000,  gpll0,   6,   0,   0),
 	F_MM(109090000,  gpll0, 5.5,   0,   0),
+	F_MM(133330000,  gpll0, 4.5,   0,   0),
 	F_MM(150000000,  gpll0,   4,   0,   0),
 	F_MM(200000000,  gpll0,   3,   0,   0),
 	F_MM(228570000, mmpll0, 3.5,   0,   0),
@@ -1477,7 +1478,7 @@ static struct branch_clk camss_jpeg_jpeg2_clk = {
 
 static struct branch_clk camss_jpeg_jpeg_ahb_clk = {
 	.cbcr_reg = CAMSS_JPEG_JPEG_AHB_CBCR,
-	.has_sibling = 1,
+	.has_sibling = 0,
 	.base = &virt_bases[MMSS_BASE],
 	.c = {
 		.dbg_name = "camss_jpeg_jpeg_ahb_clk",
@@ -1488,7 +1489,7 @@ static struct branch_clk camss_jpeg_jpeg_ahb_clk = {
 
 static struct branch_clk camss_jpeg_jpeg_axi_clk = {
 	.cbcr_reg = CAMSS_JPEG_JPEG_AXI_CBCR,
-	.has_sibling = 1,
+	.has_sibling = 0,
 	.base = &virt_bases[MMSS_BASE],
 	.c = {
 		.parent = &axi_clk_src.c,
@@ -1500,7 +1501,7 @@ static struct branch_clk camss_jpeg_jpeg_axi_clk = {
 
 static struct branch_clk camss_jpeg_jpeg_ocmemnoc_clk = {
 	.cbcr_reg = CAMSS_JPEG_JPEG_OCMEMNOC_CBCR,
-	.has_sibling = 1,
+	.has_sibling = 0,
 	.base = &virt_bases[MMSS_BASE],
 	.c = {
 		.parent = &ocmemnoc_clk_src.c,
@@ -1560,7 +1561,7 @@ static struct branch_clk camss_mclk3_clk = {
 
 static struct branch_clk camss_micro_ahb_clk = {
 	.cbcr_reg = CAMSS_MICRO_AHB_CBCR,
-	.has_sibling = 1,
+	.has_sibling = 0,
 	.bcr_reg = CAMSS_MICRO_BCR,
 	.base = &virt_bases[MMSS_BASE],
 	.c = {
@@ -1608,7 +1609,7 @@ static struct branch_clk camss_phy2_csi2phytimer_clk = {
 
 static struct branch_clk camss_top_ahb_clk = {
 	.cbcr_reg = CAMSS_TOP_AHB_CBCR,
-	.has_sibling = 1,
+	.has_sibling = 0,
 	.base = &virt_bases[MMSS_BASE],
 	.c = {
 		.dbg_name = "camss_top_ahb_clk",
@@ -1619,7 +1620,7 @@ static struct branch_clk camss_top_ahb_clk = {
 
 static struct branch_clk camss_vfe_cpp_ahb_clk = {
 	.cbcr_reg = CAMSS_VFE_CPP_AHB_CBCR,
-	.has_sibling = 1,
+	.has_sibling = 0,
 	.base = &virt_bases[MMSS_BASE],
 	.c = {
 		.dbg_name = "camss_vfe_cpp_ahb_clk",
@@ -1643,7 +1644,7 @@ static struct branch_clk camss_vfe_cpp_clk = {
 static struct branch_clk camss_vfe_vfe0_clk = {
 	.cbcr_reg = CAMSS_VFE_VFE0_CBCR,
 	.bcr_reg = CAMSS_VFE_BCR,
-	.has_sibling = 1,
+	.has_sibling = 0,
 	.base = &virt_bases[MMSS_BASE],
 	.c = {
 		.parent = &vfe0_clk_src.c,
@@ -1655,7 +1656,7 @@ static struct branch_clk camss_vfe_vfe0_clk = {
 
 static struct branch_clk camss_vfe_vfe1_clk = {
 	.cbcr_reg = CAMSS_VFE_VFE1_CBCR,
-	.has_sibling = 1,
+	.has_sibling = 0,
 	.base = &virt_bases[MMSS_BASE],
 	.c = {
 		.parent = &vfe1_clk_src.c,
@@ -1667,7 +1668,7 @@ static struct branch_clk camss_vfe_vfe1_clk = {
 
 static struct branch_clk camss_vfe_vfe_ahb_clk = {
 	.cbcr_reg = CAMSS_VFE_VFE_AHB_CBCR,
-	.has_sibling = 1,
+	.has_sibling = 0,
 	.base = &virt_bases[MMSS_BASE],
 	.c = {
 		.dbg_name = "camss_vfe_vfe_ahb_clk",
@@ -1678,7 +1679,7 @@ static struct branch_clk camss_vfe_vfe_ahb_clk = {
 
 static struct branch_clk camss_vfe_vfe_axi_clk = {
 	.cbcr_reg = CAMSS_VFE_VFE_AXI_CBCR,
-	.has_sibling = 1,
+	.has_sibling = 0,
 	.base = &virt_bases[MMSS_BASE],
 	.c = {
 		.parent = &axi_clk_src.c,
@@ -1690,7 +1691,7 @@ static struct branch_clk camss_vfe_vfe_axi_clk = {
 
 static struct branch_clk camss_vfe_vfe_ocmemnoc_clk = {
 	.cbcr_reg = CAMSS_VFE_VFE_OCMEMNOC_CBCR,
-	.has_sibling = 1,
+	.has_sibling = 0,
 	.base = &virt_bases[MMSS_BASE],
 	.c = {
 		.parent = &ocmemnoc_clk_src.c,
@@ -2566,27 +2567,27 @@ static struct clk_lookup msm_clocks_mmss_8974[] = {
 
 	/*VFE clocks*/
 	CLK_LOOKUP_OF("camss_top_ahb_clk", camss_top_ahb_clk,
-					"fda10000.qcom,vfe"),
-	CLK_LOOKUP_OF("vfe_clk_src", vfe0_clk_src,	 "fda10000.qcom,vfe"),
+					"fda10000.qcom,vfe40"),
+	CLK_LOOKUP_OF("vfe_clk_src", vfe0_clk_src,	 "fda10000.qcom,vfe40"),
 	CLK_LOOKUP_OF("camss_vfe_vfe_clk", camss_vfe_vfe0_clk,
-					"fda10000.qcom,vfe"),
+					"fda10000.qcom,vfe40"),
 	CLK_LOOKUP_OF("camss_csi_vfe_clk", camss_csi_vfe0_clk,
-					"fda10000.qcom,vfe"),
-	CLK_LOOKUP_OF("iface_clk", camss_vfe_vfe_ahb_clk, "fda10000.qcom,vfe"),
-	CLK_LOOKUP_OF("bus_clk", camss_vfe_vfe_axi_clk,	 "fda10000.qcom,vfe"),
+					"fda10000.qcom,vfe40"),
+	CLK_LOOKUP_OF("iface_clk", camss_vfe_vfe_ahb_clk, "fda10000.qcom,vfe40"),
+	CLK_LOOKUP_OF("bus_clk", camss_vfe_vfe_axi_clk,	 "fda10000.qcom,vfe40"),
 	CLK_LOOKUP_OF("alt_bus_clk", camss_vfe_vfe_ocmemnoc_clk,
-					"fda10000.qcom,vfe"),
+					"fda10000.qcom,vfe40"),
 	CLK_LOOKUP_OF("camss_top_ahb_clk", camss_top_ahb_clk,
-					"fda14000.qcom,vfe"),
-	CLK_LOOKUP_OF("vfe_clk_src", vfe1_clk_src,	 "fda14000.qcom,vfe"),
+					"fda14000.qcom,vfe40"),
+	CLK_LOOKUP_OF("vfe_clk_src", vfe1_clk_src,	 "fda14000.qcom,vfe40"),
 	CLK_LOOKUP_OF("camss_vfe_vfe_clk", camss_vfe_vfe1_clk,
-					"fda14000.qcom,vfe"),
+					"fda14000.qcom,vfe40"),
 	CLK_LOOKUP_OF("camss_csi_vfe_clk", camss_csi_vfe1_clk,
-					"fda14000.qcom,vfe"),
-	CLK_LOOKUP_OF("iface_clk", camss_vfe_vfe_ahb_clk, "fda14000.qcom,vfe"),
-	CLK_LOOKUP_OF("bus_clk", camss_vfe_vfe_axi_clk,	 "fda14000.qcom,vfe"),
+					"fda14000.qcom,vfe40"),
+	CLK_LOOKUP_OF("iface_clk", camss_vfe_vfe_ahb_clk, "fda14000.qcom,vfe40"),
+	CLK_LOOKUP_OF("bus_clk", camss_vfe_vfe_axi_clk,	 "fda14000.qcom,vfe40"),
 	CLK_LOOKUP_OF("alt_bus_clk", camss_vfe_vfe_ocmemnoc_clk,
-					"fda14000.qcom,vfe"),
+					"fda14000.qcom,vfe40"),
 	/*Jpeg Clocks*/
 	CLK_LOOKUP_OF("core_clk", camss_jpeg_jpeg0_clk, "fda1c000.qcom,jpeg"),
 	CLK_LOOKUP_OF("core_clk", camss_jpeg_jpeg1_clk, "fda20000.qcom,jpeg"),
