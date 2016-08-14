@@ -1477,7 +1477,7 @@ static struct branch_clk camss_jpeg_jpeg2_clk = {
 
 static struct branch_clk camss_jpeg_jpeg_ahb_clk = {
 	.cbcr_reg = CAMSS_JPEG_JPEG_AHB_CBCR,
-	.has_sibling = 1,
+	.has_sibling = 0,
 	.base = &virt_bases[MMSS_BASE],
 	.c = {
 		.dbg_name = "camss_jpeg_jpeg_ahb_clk",
@@ -1488,7 +1488,7 @@ static struct branch_clk camss_jpeg_jpeg_ahb_clk = {
 
 static struct branch_clk camss_jpeg_jpeg_axi_clk = {
 	.cbcr_reg = CAMSS_JPEG_JPEG_AXI_CBCR,
-	.has_sibling = 1,
+	.has_sibling = 0,
 	.base = &virt_bases[MMSS_BASE],
 	.c = {
 		.parent = &axi_clk_src.c,
@@ -1500,7 +1500,7 @@ static struct branch_clk camss_jpeg_jpeg_axi_clk = {
 
 static struct branch_clk camss_jpeg_jpeg_ocmemnoc_clk = {
 	.cbcr_reg = CAMSS_JPEG_JPEG_OCMEMNOC_CBCR,
-	.has_sibling = 1,
+	.has_sibling = 0,
 	.base = &virt_bases[MMSS_BASE],
 	.c = {
 		.parent = &ocmemnoc_clk_src.c,
@@ -1560,7 +1560,7 @@ static struct branch_clk camss_mclk3_clk = {
 
 static struct branch_clk camss_micro_ahb_clk = {
 	.cbcr_reg = CAMSS_MICRO_AHB_CBCR,
-	.has_sibling = 1,
+	.has_sibling = 0,
 	.bcr_reg = CAMSS_MICRO_BCR,
 	.base = &virt_bases[MMSS_BASE],
 	.c = {
@@ -1608,7 +1608,7 @@ static struct branch_clk camss_phy2_csi2phytimer_clk = {
 
 static struct branch_clk camss_top_ahb_clk = {
 	.cbcr_reg = CAMSS_TOP_AHB_CBCR,
-	.has_sibling = 1,
+	.has_sibling = 0,
 	.base = &virt_bases[MMSS_BASE],
 	.c = {
 		.dbg_name = "camss_top_ahb_clk",
@@ -1619,7 +1619,7 @@ static struct branch_clk camss_top_ahb_clk = {
 
 static struct branch_clk camss_vfe_cpp_ahb_clk = {
 	.cbcr_reg = CAMSS_VFE_CPP_AHB_CBCR,
-	.has_sibling = 1,
+	.has_sibling = 0,
 	.base = &virt_bases[MMSS_BASE],
 	.c = {
 		.dbg_name = "camss_vfe_cpp_ahb_clk",
@@ -1643,7 +1643,7 @@ static struct branch_clk camss_vfe_cpp_clk = {
 static struct branch_clk camss_vfe_vfe0_clk = {
 	.cbcr_reg = CAMSS_VFE_VFE0_CBCR,
 	.bcr_reg = CAMSS_VFE_BCR,
-	.has_sibling = 1,
+	.has_sibling = 0,
 	.base = &virt_bases[MMSS_BASE],
 	.c = {
 		.parent = &vfe0_clk_src.c,
@@ -1655,7 +1655,7 @@ static struct branch_clk camss_vfe_vfe0_clk = {
 
 static struct branch_clk camss_vfe_vfe1_clk = {
 	.cbcr_reg = CAMSS_VFE_VFE1_CBCR,
-	.has_sibling = 1,
+	.has_sibling = 0,
 	.base = &virt_bases[MMSS_BASE],
 	.c = {
 		.parent = &vfe1_clk_src.c,
@@ -1667,7 +1667,7 @@ static struct branch_clk camss_vfe_vfe1_clk = {
 
 static struct branch_clk camss_vfe_vfe_ahb_clk = {
 	.cbcr_reg = CAMSS_VFE_VFE_AHB_CBCR,
-	.has_sibling = 1,
+	.has_sibling = 0,
 	.base = &virt_bases[MMSS_BASE],
 	.c = {
 		.dbg_name = "camss_vfe_vfe_ahb_clk",
@@ -1678,7 +1678,7 @@ static struct branch_clk camss_vfe_vfe_ahb_clk = {
 
 static struct branch_clk camss_vfe_vfe_axi_clk = {
 	.cbcr_reg = CAMSS_VFE_VFE_AXI_CBCR,
-	.has_sibling = 1,
+	.has_sibling = 0,
 	.base = &virt_bases[MMSS_BASE],
 	.c = {
 		.parent = &axi_clk_src.c,
@@ -1690,7 +1690,7 @@ static struct branch_clk camss_vfe_vfe_axi_clk = {
 
 static struct branch_clk camss_vfe_vfe_ocmemnoc_clk = {
 	.cbcr_reg = CAMSS_VFE_VFE_OCMEMNOC_CBCR,
-	.has_sibling = 1,
+	.has_sibling = 0,
 	.base = &virt_bases[MMSS_BASE],
 	.c = {
 		.parent = &ocmemnoc_clk_src.c,
