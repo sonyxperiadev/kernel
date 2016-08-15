@@ -4,6 +4,7 @@
  *
  * Copyright (C) 2011 Google, Inc.
  * Copyright (c) 2011-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015 Sony Mobile Communications Inc
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -1372,13 +1373,13 @@ struct ion_handle *ion_import_dma_buf(struct ion_client *client, int fd)
 		mutex_unlock(&client->lock);
 		goto end;
 	}
-	mutex_unlock(&client->lock);
 
 	handle = ion_handle_create(client, buffer);
-	if (IS_ERR(handle))
+	if (IS_ERR(handle)) {
+		mutex_unlock(&client->lock);
 		goto end;
+	}
 
-	mutex_lock(&client->lock);
 	ret = ion_handle_add(client, handle);
 	mutex_unlock(&client->lock);
 	if (ret) {
