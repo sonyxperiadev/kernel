@@ -2426,7 +2426,7 @@
 		qcom,memory-reservation-size = <0x280000>; /* 2.5M EBI1 buffer */
 	};
 
-        qcom,qcedev@fd440000 {
+	qcom_cedev: qcom,qcedev@fd440000 {
 		compatible = "qcom,qcedev";
 		reg = <0xfd440000 0x20000>,
 		      <0xfd444000 0x1b000>;
@@ -2451,7 +2451,7 @@
 		qcom,ce-opp-freq = <100000000>;
 	};
 
-        qcom,qcrypto@fd440000 {
+	qcom_crypto: qcom,qcrypto@fd440000 {
 		compatible = "qcom,qcrypto";
 		reg = <0xfd440000 0x20000>,
 		      <0xfd444000 0x1b000>;
@@ -2481,7 +2481,7 @@
 		qcom,ce-opp-freq = <100000000>;
 	};
 
-	qcom,qcrypto1@fd440000 {
+	qcom_crypto1: qcom,qcrypto1@fd440000 {
 		compatible = "qcom,qcrypto";
 		reg = <0xfd440000 0x20000>,
 		      <0xfd444000 0x1b000>;
