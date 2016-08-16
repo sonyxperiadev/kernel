@@ -2487,6 +2487,14 @@
 		      <0xfd444000 0x1b000>;
 		reg-names = "crypto-base","crypto-bam-base";
 		interrupts = <0 236 0>;
+
+		clock-names = "core_clk", "iface_clk", "bus_clk",
+				"core_clk_src";
+		clocks = <&clock_gcc clk_gcc_ce2_clk>,
+			 <&clock_gcc clk_gcc_ce2_ahb_clk>,
+			 <&clock_gcc clk_gcc_ce2_axi_clk>,
+			 <&clock_gcc clk_ce2_clk_src>;
+
 		qcom,bam-pipe-pair = <0>;
 		qcom,ce-hw-instance = <1>;
 		qcom,ce-device = <1>;
