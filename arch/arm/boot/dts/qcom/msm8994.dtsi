@@ -2309,6 +2309,7 @@
 		reg = <0xfdc00000 0xff000>;
 		interrupts = <0 44 0>;
 		qcom,hfi = "venus";
+		qcom,firmware-name = "venus";
 		qcom,reg-presets = <0x800D8 0x707>,
 			<0xe0020 0x55555556>,
 			<0xe0024 0x55555556>,
