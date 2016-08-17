@@ -911,6 +911,8 @@ qcom,msm-audio-ion {
 Required properties:
 - compatible : "qcom,msm8226-audio-tapan"
 - qcom,model : The user-visible name of this sound card.
+- clock-names : clock name defined for external clock.
+- clocks : external clock defined for codec clock.
 - qcom,tapan-mclk-clk-freq : Tapan mclk Freq in Hz. currently only 9600000Hz
 				is supported.
 - qcom,prim-auxpcm-gpio-clk  : GPIO on which Primary AUXPCM clk signal is coming.
@@ -942,6 +944,9 @@ sound {
 	qcom,cdc-us-euro-gpios = <&msmgpio 69 0>;
 	qcom,cdc-lineout-spkr-gpios = <&pm8226_gpios 2 0>;
 	qcom,cdc-vdd-spkr-gpios = <&pm8226_gpios 3 0>;
+
+	clock-names = "osr_clk";
+	clocks = <&clock_gcc clk_div_clk1>;
 };
 
 * MSM8939 Slimbus ASoC Machine driver
