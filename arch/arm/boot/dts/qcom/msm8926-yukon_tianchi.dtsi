@@ -59,6 +59,10 @@
 			intf_name = "wled:backlight";
 			brightness = <255 0>;
 		};
+
+		clock-names = "iface_clk", "core_clk";
+		clocks = <&clock_gcc clk_gcc_blsp1_ahb_clk>,
+			 <&clock_gcc clk_gcc_blsp1_qup4_i2c_apps_clk>;
 	};
 
 	i2c@f9927000 { /* BLSP1 QUP5 */
@@ -189,7 +193,6 @@
         qcom,mdss_dsi_panel {
                 status = "ok";
         };
-
 };
 
 &sdhc_1 {

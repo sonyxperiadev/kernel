@@ -117,6 +117,18 @@
 			"csi1_src_clk", "csi1_clk",
 			"csi1_pix_clk", "csi1_rdi_clk",
 			"vfe_clk_src", "camss_vfe_vfe_clk", "camss_csi_vfe_clk";
+		clocks = <&clock_gcc clk_camss_ispif_ahb_clk>,
+			 <&clock_gcc clk_csi0_clk_src>,
+			 <&clock_gcc clk_camss_csi0_clk>,
+			 <&clock_gcc clk_camss_csi0pix_clk>,
+			 <&clock_gcc clk_camss_csi0rdi_clk>,
+			 <&clock_gcc clk_csi1_clk_src>,
+			 <&clock_gcc clk_camss_csi1_clk>,
+			 <&clock_gcc clk_camss_csi1pix_clk>,
+			 <&clock_gcc clk_camss_csi1rdi_clk>,
+			 <&clock_gcc clk_vfe0_clk_src>,
+			 <&clock_gcc clk_camss_vfe_vfe0_clk>,
+			 <&clock_gcc clk_camss_csi_vfe0_clk>;
 		qcom,clock-rates = <0
 			200000000 0 0 0
 			200000000 0 0 0
@@ -173,6 +185,12 @@
 		clock-names = "camss_top_ahb_clk" , "vfe_clk_src",
 			"camss_vfe_vfe_clk", "camss_csi_vfe_clk", "iface_clk",
 			"bus_clk";
+		clocks = <&clock_gcc clk_camss_top_ahb_clk>,
+			 <&clock_gcc clk_vfe0_clk_src>,
+			 <&clock_gcc clk_camss_vfe_vfe0_clk>,
+			 <&clock_gcc clk_camss_csi_vfe0_clk>,
+			 <&clock_gcc clk_camss_vfe_vfe_ahb_clk>,
+			 <&clock_gcc clk_camss_vfe_vfe_axi_clk>;
 		qcom,clock-rates = <0 266670000 0 0 0 0>;
 		ds-entries = <17>;
 		ds-regs = <0xBD8 0xBDC 0xBE0 0xBE4 0xBE8

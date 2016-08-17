@@ -58,8 +58,18 @@
 		};
 	};
 
+	i2c@f9926000 {
+		qcom,i2c-src-freq = <19200000>;
+		qcom,master-id = <86>;
+
+		clock-names = "iface_clk", "core_clk";
+		clocks = <&clock_gcc clk_gcc_blsp1_ahb_clk>,
+			 <&clock_gcc clk_gcc_blsp1_qup4_i2c_apps_clk>;
+	};
 
 	i2c@f9927000 { /* BLSP1 QUP5 */
+		qcom,master-id = <86>;
+
 		elan_ktf2k_ts@10{
 			compatible = "elan,ktf2k_ts";
 			reg = <0x10>;
@@ -133,10 +143,6 @@
 	};
 };
 
-&modem_mem {
-	reg = <0x08000000 0x7500000>;
-};
-
 &spmi_bus {
 	qcom,pm8226@0 {
 		qcom,leds@a100 {
@@ -175,15 +181,6 @@
 			/delete-property/ qcom,mode;
 		};
         };
-
-	i2c@f9926000 {
-		qcom,i2c-src-freq = <19200000>;
-		qcom,master-id = <86>;
-	};
-
-	i2c@f9927000 {
-		qcom,master-id = <86>;
-	};
 };
 
 &pm8226_gpios {

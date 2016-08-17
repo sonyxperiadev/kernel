@@ -3414,10 +3414,12 @@ static struct clk_lookup msm_clocks_8226[] = {
 	CLK_LOOKUP_OF("cam_clk", camss_mclk0_clk, "0.qcom,camera"),
 	CLK_LOOKUP_OF("cam_clk", camss_mclk0_clk, "1.qcom,camera"),
 
-#if !defined(CONFIG_MACH_SONY_YUKON) || defined(CONFIG_MACH_SONY_TIANCHI)
+#if !defined(CONFIG_MACH_SONY_EAGLE) && !defined(CONFIG_MACH_SONY_SEAGULL)
 	CLK_LOOKUP_OF("iface_clk", gcc_blsp1_ahb_clk, "f9926000.i2c"),
 	CLK_LOOKUP_OF("core_clk", gcc_blsp1_qup4_i2c_apps_clk, "f9926000.i2c"),
+#endif
 
+#if !defined(CONFIG_MACH_SONY_YUKON) || defined(CONFIG_MACH_SONY_TIANCHI)
 	CLK_LOOKUP_OF("cam_src_clk", mclk0_clk_src, "6d.qcom,camera"),
 	CLK_LOOKUP_OF("cam_clk", camss_mclk0_clk, "6d.qcom,camera"),
 	CLK_LOOKUP_OF("cam_src_clk", mclk0_clk_src, "6e.qcom,camera"),
@@ -3658,9 +3660,6 @@ static struct clk_lookup msm_clocks_8226[] = {
 #if defined(CONFIG_MACH_SONY_EAGLE)
 	CLK_LOOKUP_OF("core_clk", gcc_blsp1_qup3_i2c_apps_clk, ""),
 
-	CLK_LOOKUP_OF("iface_clk", gcc_blsp1_ahb_clk, "f9926000.i2c"),
-	CLK_LOOKUP_OF("core_clk", gcc_blsp1_qup4_i2c_apps_clk, "f9926000.i2c"),
-
 	CLK_LOOKUP_OF("iface_clk", gcc_blsp1_ahb_clk, "f9924000.i2c"),/* sensor */
 	CLK_LOOKUP_OF("core_clk", gcc_blsp1_qup2_i2c_apps_clk, "f9924000.i2c"),/* sensor */
 
@@ -3673,9 +3672,6 @@ static struct clk_lookup msm_clocks_8226[] = {
 	CLK_LOOKUP_OF("cam_src_clk", mclk0_clk_src, "a1.qcom,eeprom"), /* EEPROM*/
 	CLK_LOOKUP_OF("cam_clk", camss_mclk0_clk, "a1.qcom,eeprom"), /* EEPROM*/
 #elif defined(CONFIG_MACH_SONY_FLAMINGO)
-	CLK_LOOKUP_OF("iface_clk", gcc_blsp1_ahb_clk, "f9926000.i2c"),
-	CLK_LOOKUP_OF("core_clk", gcc_blsp1_qup4_i2c_apps_clk, "f9926000.i2c"),
-
 	CLK_LOOKUP_OF("cam_src_clk", mclk0_clk_src, "20.qcom,eeprom"),
 	CLK_LOOKUP_OF("cam_clk", camss_mclk0_clk, "20.qcom,eeprom"),
 
