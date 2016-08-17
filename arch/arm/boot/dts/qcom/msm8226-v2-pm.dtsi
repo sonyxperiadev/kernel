@@ -238,6 +238,7 @@
 		reg-names = "vmpm", "ipc";
 		interrupts = <0 171 1>;
 		clock-names = "xo";
+		clocks = <&clock_gcc clk_cxo_lpm_clk>;
 
 		qcom,ipc-bit-offset = <1>;
 

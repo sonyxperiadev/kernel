@@ -42,6 +42,9 @@
 			interrupt-parent = <&msmgpio>;
 			interrupts = <21 0>;
 			qcom,clk-gpio = <&pm8226_gpios 3 0>;
+
+			clock-names = "ref_clk";
+			clocks = <&clock_gcc clk_cxo_d1_pin>;
 		};
 
 		pn547@28 {

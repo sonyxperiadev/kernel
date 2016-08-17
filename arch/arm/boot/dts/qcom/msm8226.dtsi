@@ -180,6 +180,9 @@
 		interrupts = <0 44 0>;
 		venus-supply = <&gdsc_venus>;
 		clock-names = "core_clk", "iface_clk", "bus_clk";
+		clocks = <&clock_gcc clk_venus0_vcodec0_clk>,
+			 <&clock_gcc clk_venus0_ahb_clk>,
+			 <&clock_gcc clk_venus0_axi_clk>;
 		qcom,clock-configs = <0x3 0x0 0x0>;
 		qcom,sw-power-collapse;
 		qcom,load-freq-tbl = <352800 160000000 0xffffffff>,
@@ -266,6 +269,11 @@
 		compatible = "qcom,msm-lsuart-v14";
 		reg = <0xf991f000 0x1000>;
 		interrupts = <0 109 0>;
+
+		clock-names = "iface_clk", "core_clk";
+		clocks = <&clock_gcc clk_gcc_blsp1_ahb_clk>,
+			 <&clock_gcc clk_gcc_blsp1_uart3_apps_clk>;
+
 		status = "disabled";
 	};
 
@@ -312,6 +320,10 @@
 		reg = <0xf9984000 0x15000>,
 		      <0xf9999000 0xb000>;
 		interrupts = <0 94 0>;
+
+		clock-names = "dfab_clk", "dma_bam_pclk";
+		clocks = <&clock_gcc clk_pnoc_sps_clk>,
+			 <&clock_gcc clk_gcc_bam_dma_ahb_clk>;
 	};
 
 	qcom,usbbam@f9a44000 {
@@ -370,6 +382,12 @@
 				<87 512 0 0>,
 				<87 512 60000 960000>,
 				<87 512 6000  6000>;
+
+		clock-names = "xo", "iface_clk", "core_clk", "sleep_clk";
+		clocks = <&clock_gcc clk_cxo_otg_clk>,
+			 <&clock_gcc clk_gcc_usb_hs_ahb_clk>,
+			 <&clock_gcc clk_gcc_usb_hs_system_clk>,
+			 <&clock_gcc clk_gcc_usb2a_phy_sleep_clk>;
 	};
 
 	android_usb: android_usb@fe8050c8 {
@@ -504,6 +522,9 @@
 		qcom,prim-auxpcm-gpio-din  = <&msmgpio 65 0>;
 		qcom,prim-auxpcm-gpio-dout = <&msmgpio 66 0>;
 		qcom,prim-auxpcm-gpio-set = "prim-gpio-prim";
+
+		clock-names = "osr_clk";
+		clocks = <&clock_gcc clk_div_clk1>;
 	};
 
 	sound-9302 {
@@ -516,6 +537,9 @@
 		qcom,prim-auxpcm-gpio-dout = <&msmgpio 66 0>;
 		qcom,prim-auxpcm-gpio-set = "prim-gpio-prim";
 		qcom,tapan-codec-9302;
+
+		clock-names = "osr_clk";
+		clocks = <&clock_gcc clk_div_clk1>;
 	};
 
 	qcom,msm-pcm {
@@ -744,6 +768,12 @@
 		qcom,has-pronto-hw;
 		qcom,has-autodetect-xo;
 		qcom,wcnss-adc_tm = <&pm8226_adc_tm>;
+
+		clock-names = "xo", "rf_clk", "measure", "wcnss_debug";
+		clocks = <&clock_gcc  clk_cxo_wlan_clk>,
+			 <&clock_gcc  clk_cxo_a1>,
+			 <&clock_gcc  clk_measure_clk>,
+			 <&clock_gcc  clk_wcnss_m_clk>;
 	};
 
 	qcom,msm-ssc-sensors {
@@ -975,7 +1005,12 @@
 		interrupt-names = "qup_err_intr";
 		qcom,i2c-bus-freq = <400000>;
 		qcom,i2c-src-freq = <19200000>;
+
+		clock-names = "iface_clk", "core_clk";
+		clocks = <&clock_gcc clk_gcc_blsp1_ahb_clk>,
+			 <&clock_gcc clk_gcc_blsp1_qup3_i2c_apps_clk>;
 	};
+
 	i2c_0: i2c@f9926000 { /* BLSP-1 QUP-4 */
 		cell-index = <0>;
 		compatible = "qcom,i2c-qup";
@@ -1003,6 +1038,10 @@
 		qcom,i2c-src-freq = <19200000>;
 		qcom,sda-gpio = <&msmgpio 18 0>;
 		qcom,scl-gpio = <&msmgpio 19 0>;
+
+		clock-names = "iface_clk", "core_clk";
+		clocks = <&clock_gcc clk_gcc_blsp1_ahb_clk>,
+			 <&clock_gcc clk_gcc_blsp1_qup5_i2c_apps_clk>;
 	};
 
 	clock_gcc: qcom,gcc@fc400000 {
@@ -1025,6 +1064,8 @@
 		reg = <0xf9011050 0x8>;
 		reg-names = "rcg-base";
 		clock-names = "clk-4", "clk-5";
+		clocks = <&clock_gcc clk_gpll0_ao>,
+			 <&clock_gcc clk_a7sspll>;
 		qcom,speed0-bin-v0 =
 			<         0 0>,
 			< 384000000 1>,
@@ -1117,9 +1158,19 @@
 
 		vdd-supply = <&gdsc_venus>;
 		qcom,proxy-reg-names = "vdd";
-		clock-names = "core_clk", "iface_clk", "bus_clk", "mem_clk",
-				"scm_core_clk", "scm_iface_clk", "scm_bus_clk",
+		clock-names = "src_clk", "core_clk", "iface_clk",
+				"bus_clk", "mem_clk", "scm_core_clk",
+				"scm_iface_clk", "scm_bus_clk",
 				"scm_core_clk_src";
+		clocks = <&clock_gcc  clk_vcodec0_clk_src>,
+			 <&clock_gcc  clk_venus0_vcodec0_clk>,
+			 <&clock_gcc  clk_venus0_ahb_clk>,
+			 <&clock_gcc  clk_venus0_axi_clk>,
+			 <&clock_gcc  clk_venus0_ahb_clk>,
+			 <&clock_gcc  clk_gcc_ce1_clk>,
+			 <&clock_gcc  clk_gcc_ce1_ahb_clk>,
+			 <&clock_gcc  clk_gcc_ce1_axi_clk>,
+			 <&clock_gcc  clk_scm_ce1_clk_src>;
 		qcom,proxy-clock-names = "core_clk", "iface_clk", "bus_clk",
 					"mem_clk", "scm_core_clk",
 					"scm_iface_clk", "scm_bus_clk",
@@ -1148,7 +1199,12 @@
 		qcom,proxy-reg-names = "vdd_pronto_pll";
 		qcom,vdd_pronto_pll-uV-uA = <1800000 18000>;
 		clock-names = "xo", "scm_core_clk", "scm_iface_clk",
-					"scm_bus_clk", "scm_core_clk_src";
+				"scm_bus_clk", "scm_core_clk_src";
+		clocks = <&clock_gcc  clk_cxo_pil_pronto_clk>,
+			 <&clock_gcc  clk_gcc_ce1_clk>,
+			 <&clock_gcc  clk_gcc_ce1_ahb_clk>,
+			 <&clock_gcc  clk_gcc_ce1_axi_clk>,
+			 <&clock_gcc  clk_scm_ce1_clk_src>;
 		qcom,proxy-clock-names = "xo", "scm_core_clk", "scm_iface_clk",
 					"scm_bus_clk", "scm_core_clk_src";
 		qcom,scm_core_clk_src-freq = <50000000>;
@@ -1184,8 +1240,18 @@
 		qcom,proxy-reg-names = "vdd_cx";
 		qcom,vdd_cx-uV-uA = <7 100000>;
 
-		clock-names = "bus_clk", "xo", "scm_core_clk", "scm_iface_clk",
+		clock-names = "xo", "core_clk", "bus_clk", "iface_clk",
+				"reg_clk", "scm_core_clk", "scm_iface_clk",
 				"scm_bus_clk", "scm_core_clk_src";
+		clocks = <&clock_gcc  clk_cxo_pil_lpass_clk>,
+			 <&clock_gcc  clk_q6ss_xo_clk>,
+			 <&clock_gcc  clk_gcc_lpass_q6_axi_clk>,
+			 <&clock_gcc  clk_q6ss_ahb_lfabif_clk>,
+			 <&clock_gcc  clk_q6ss_ahbm_clk>,
+			 <&clock_gcc  clk_gcc_ce1_clk>,
+			 <&clock_gcc  clk_gcc_ce1_ahb_clk>,
+			 <&clock_gcc  clk_gcc_ce1_axi_clk>,
+			 <&clock_gcc  clk_scm_ce1_clk_src>;
 		qcom,active-clock-names = "bus_clk";
 		qcom,proxy-clock-names = "xo", "scm_core_clk", "scm_iface_clk",
 					"scm_bus_clk", "scm_core_clk_src";
@@ -1218,6 +1284,12 @@
 		      <0xfd485194 0x4>;
 		reg-names = "qdsp6_base", "halt_base", "rmb_base",
 			    "restart_reg", "cxrail_bhs_reg";
+
+		clock-names = "xo", "bus_clk", "iface_clk", "mem_clk";
+		clocks = <&clock_gcc  clk_cxo_pil_mss_clk>,
+			 <&clock_gcc  clk_gcc_mss_q6_bimc_axi_clk>,
+			 <&clock_gcc  clk_gcc_mss_cfg_ahb_clk>,
+			 <&clock_gcc  clk_gcc_boot_rom_ahb_clk>;
 
 		interrupts = <0 24 1>;
 		vdd_cx-supply = <&pm8226_s1_corner>;
@@ -1308,6 +1380,10 @@
 		qcom,bam-consumer-pipe-index = <12>;
 		qcom,bam-producer-pipe-index = <13>;
 		qcom,master-id = <86>;
+
+		clock-names = "iface_clk", "core_clk";
+		clocks = <&clock_gcc clk_gcc_blsp1_ahb_clk>,
+			 <&clock_gcc clk_gcc_blsp1_qup1_spi_apps_clk>;
 	};
 
 	qcom,bam_dmux@fc834000 {
@@ -1474,26 +1550,34 @@
 
 &gdsc_venus {
 	clock-names = "core_clk";
+	clocks = <&clock_gcc clk_venus0_vcodec0_clk>;
 	status = "ok";
 };
 
 &gdsc_mdss {
 	clock-names = "core_clk", "lut_clk";
+	clocks = <&clock_gcc clk_mdss_mdp_clk>,
+		 <&clock_gcc clk_mdss_mdp_lut_clk>;
 	status = "ok";
 };
 
 &gdsc_jpeg {
 	clock-names = "core_clk";
+	clocks = <&clock_gcc clk_camss_jpeg_jpeg0_clk>;
 	status = "ok";
 };
 
 &gdsc_vfe {
 	clock-names = "core_clk", "csi_clk", "cpp_clk";
+	clocks = <&clock_gcc clk_camss_vfe_vfe0_clk>,
+		 <&clock_gcc clk_camss_csi_vfe0_clk>,
+		 <&clock_gcc clk_camss_vfe_cpp_clk>;
 	status = "ok";
 };
 
 &gdsc_oxili_cx {
 	clock-names = "core_clk";
+	clocks = <&clock_gcc clk_oxili_gfx3d_clk>;
 	status = "ok";
 };
 
