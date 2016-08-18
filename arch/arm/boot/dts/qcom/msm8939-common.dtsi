@@ -1565,6 +1565,7 @@
 			<36000 133330000 0x01000414>; /* Legacy encoder VGA 30 fps   */
 
 		qcom,hfi = "venus";
+		qcom,firmware-name = "venus";
 		qcom,reg-presets = <0xE0020 0x0aaaaaaa>,
 			<0xE0024 0x0aaaaaaa>,
 			<0x80124 0x00000003>;
