@@ -64,8 +64,10 @@ int somc_panel_vreg_ctrl(
 	struct dss_vreg vreg_config;
 	struct mdss_panel_power_seq *pw_seq = NULL;
 	int valid = 0;
-	int wait = 0;
 	int ret = 0;
+#ifdef CONFIG_SOMC_PANEL_INCELL
+	int wait = 0;
+#endif
 
 	valid = somc_panel_vreg_name_to_config(
 			ctrl_pdata, &vreg_config, vreg);
