@@ -2337,10 +2337,10 @@
 			<&clock_mmss clk_venus0_ahb_clk>,
 			<&clock_mmss clk_venus0_axi_clk>,
 			<&clock_mmss clk_venus0_ocmemnoc_clk>,
-			<&clock_rpm clk_gcc_ce1_clk>,
-			<&clock_rpm clk_gcc_ce1_ahb_clk>,
-			<&clock_rpm clk_gcc_ce1_axi_clk>,
-			<&clock_rpm clk_ce1_clk_src>;
+			<&clock_gcc clk_gcc_ce1_clk>,
+			<&clock_gcc clk_gcc_ce1_ahb_clk>,
+			<&clock_gcc clk_gcc_ce1_axi_clk>,
+			<&clock_gcc clk_ce1_clk_src>;
 		clock-names = "core_clk", "iface_clk", "bus_clk", "mem_clk",
 				"scm_core_clk", "scm_iface_clk", "scm_bus_clk",
 				"scm_core_clk_src";
