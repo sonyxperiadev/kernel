@@ -111,8 +111,13 @@ struct inode *sdcardfs_iget(struct super_block *sb, struct inode *lower_inode, u
 		return ERR_PTR(err);
 	}
 	/* if found a cached inode, then just return it */
-	if (!(inode->i_state & I_NEW))
+	if (!(inode->i_state & I_NEW)) {
+		/* There can only be one alias, as we don't permit hard links
+		 * This ensures we do not keep stale dentries that would later
+		 * cause confusion. */
+		d_prune_aliases(inode);
 		return inode;
+	}
 
 	/* initialize new inode */
 	info = SDCARDFS_I(inode);
