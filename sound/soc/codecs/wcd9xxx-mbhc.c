@@ -2074,9 +2074,6 @@ wcd9xxx_codec_get_plug_type(struct wcd9xxx_mbhc *mbhc, bool highhph)
 	/* recalibrate DCE/STA GND voltages */
 	wcd9xxx_recalibrate(mbhc, &mbhc->mbhc_bias_regs, false);
 
-	/* recalibrate DCE/STA GND voltages */
-	wcd9xxx_recalibrate(mbhc, &mbhc->mbhc_bias_regs, false);
-
 	if (vddioon)
 		__wcd9xxx_switch_micbias(mbhc, 1, false, false);
 
