@@ -339,6 +339,12 @@
 			iommus = <&jpeg_iommu 2>;
 			label = "jpeg_dec";
 		};
+
+		msm_cam_smmu_cb8: msm_cam_smmu_cb8 {
+			compatible = "qcom,qsmmu-cam-cb";
+			iommus = <&jpeg_iommu 3>;
+			label = "jpeg_dma";
+		};
 	};
 
 	qcom,jpeg@fda1c000 {
