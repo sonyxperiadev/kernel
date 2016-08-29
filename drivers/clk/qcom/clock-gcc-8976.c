@@ -2761,6 +2761,7 @@ static struct branch_clk gcc_usb_fs_ic_clk = {
 
 static struct branch_clk gcc_usb_fs_system_clk = {
 	.cbcr_reg = USB_FS_SYSTEM_CBCR,
+	.bcr_reg  = USB_FS_BCR,
 	.has_sibling = 0,
 	.base = &virt_bases[GCC_BASE],
 	.c = {
