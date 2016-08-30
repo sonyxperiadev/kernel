@@ -119,7 +119,10 @@ static bool mhl_pf_is_switch_to_mhl(void)
  */
 static void mhl_pf_switch_to_mhl_or_usb(int sw)
 {
-	switch (sw) {
+	int mode = sw;
+
+#ifdef CONFIG_MHL_ENABLE_SIL6031_SWITCH
+	switch (mode) {
 	case STARK_USB:
 		pr_info("%s: Switching to USB\n", __func__);
 		break;
@@ -130,11 +133,16 @@ static void mhl_pf_switch_to_mhl_or_usb(int sw)
 		pr_err("%s: Invalid switch!!!\n", __func__);
 		break;
 	}
+#else
+	pr_err("%s: Switch requested, but disabled by kernel config.\n",
+		__func__);
+	mode = STARK_USB;
+#endif
 
 	/* switch gpio to MHL/USB from USB/MHL */
 	/* todo : must use dtsi for gpio */
-	gpio_set_value(switch_sel_1_gpio, sw);
-	gpio_set_value(switch_sel_2_gpio, sw);
+	gpio_set_value(switch_sel_1_gpio, mode);
+	gpio_set_value(switch_sel_2_gpio, mode);
 	pr_debug("%s: gpio(%d) : %d", __func__,
 			 switch_sel_1_gpio,
 			 gpio_get_value(switch_sel_1_gpio));
@@ -143,12 +151,12 @@ static void mhl_pf_switch_to_mhl_or_usb(int sw)
 			 gpio_get_value(switch_sel_2_gpio));
 
 	/* wakelock */
-	if (sw == STARK_USB)
+	if (mode == STARK_USB)
 		mhl_unlock(&mhl_wl);
-	else if (sw == STARK_MHL)
+	else if (mode == STARK_MHL)
 		mhl_lock(&mhl_wl);
 	else
-		pr_err("%s: wakelock : sw unknown",
+		pr_err("%s: wakelock : mode unknown",
 			__func__);
 
 	msleep(20);
