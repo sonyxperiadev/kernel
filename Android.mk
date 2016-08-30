@@ -136,7 +136,11 @@ define clean-module-folder
 endef
 
 ifeq ($(HOST_OS),darwin)
+ifeq (1,$(filter 1,$(shell echo "$$(( $(PLATFORM_SDK_VERSION) >= 24 ))" )))
+  MAKE_FLAGS += C_INCLUDE_PATH=$(ANDROID_BUILD_TOP)/external/elfutils/libelf/
+else
   MAKE_FLAGS += C_INCLUDE_PATH=$(ANDROID_BUILD_TOP)/external/elfutils/src/libelf/
+endif
 endif
 
 ifeq ($(TARGET_KERNEL_MODULES),)
