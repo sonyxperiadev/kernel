@@ -37,6 +37,14 @@ config MHL_BIST
 	  This will add a self test at driver/hw init time.
 	  If unsure, say N.
 
+config MHL_ENABLE_SIL6031_SWITCH
+	bool "MHL: Enable Sil6031 MHL/USB switch"
+	depends on MHL_SIMG_SONY
+	default n
+	help
+	  Enable this option to add functionality for the
+	  Sil6031 USB<->MHL switch.
+
 config SUPPORT_CHG_TIMING
 	bool "MHL: Support charge timing"
 	depends on MHL_SIMG_SONY
