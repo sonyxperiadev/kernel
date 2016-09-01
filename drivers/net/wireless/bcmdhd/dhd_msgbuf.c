@@ -368,7 +368,7 @@ typedef struct dhd_pktid_map {
 
 #define NATIVE_TO_PKTID_INIT(osh, items) dhd_pktid_map_init((osh), (items))
 #define NATIVE_TO_PKTID_FINI(map)        dhd_pktid_map_fini(map)
-#define NATIVE_TO_PKTID_CLEAR(map)        dhd_pktid_map_clear(map)
+#define NATIVE_TO_PKTID_CLEAR(osh, map)        dhd_pktid_map_clear((osh), (map))
 
 #define NATIVE_TO_PKTID_RSV(map, pkt)    dhd_pktid_map_reserve((map), (pkt))
 #define NATIVE_TO_PKTID_SAVE(map, pkt, nkey, pa, len, dma, buf_type) \
@@ -511,9 +511,8 @@ dhd_pktid_map_fini(dhd_pktid_map_handle_t *handle)
 }
 
 static void
-dhd_pktid_map_clear(dhd_pktid_map_handle_t *handle)
+dhd_pktid_map_clear(void * osh, dhd_pktid_map_handle_t *handle)
 {
-	void *osh;
 	int nkey;
 	dhd_pktid_map_t *map;
 	dhd_pktid_item_t *locker;
@@ -521,13 +520,12 @@ dhd_pktid_map_clear(dhd_pktid_map_handle_t *handle)
 
 	DHD_TRACE(("%s\n",__FUNCTION__));
 
-	if (handle == NULL)
+	if (!osh || !handle)
 		return;
 
 	map = (dhd_pktid_map_t *)handle;
 	flags  = DHD_PKTID_LOCK(map->pktid_lock);
 
-	osh = map->osh;
 	map->failures = 0;
 
 	nkey = 1; /* skip reserved KEY #0, and start from 1 */
@@ -602,9 +600,10 @@ dhd_pktid_map_reserve(dhd_pktid_map_handle_t *handle, void *pkt)
 	map->avail--;
 
 	locker = &map->lockers[nkey]; /* save packet metadata in locker */
-	locker->inuse = TRUE; /* reserve this locker */
 	locker->pkt = pkt;
 	locker->len = 0;
+	smp_wmb();
+	locker->inuse = TRUE; /* reserve this locker */
 	ASSERT(nkey != DHD_PKTID_INVALID);
 	return nkey; /* return locker's numbered key */
 }
@@ -3133,7 +3132,6 @@ dhd_prot_ring_detach(dhd_pub_t *dhd, msgbuf_ring_t * ring)
 {
 	dmaaddr_t phyaddr;
 	uint16 size;
-	dhd_prot_t *prot = dhd->prot;
 
 	BCM_REFERENCE(phyaddr);
 
@@ -3147,25 +3145,25 @@ dhd_prot_ring_detach(dhd_pub_t *dhd, msgbuf_ring_t * ring)
 	size = ring->ringmem->max_item * ring->ringmem->len_items;
 	/* Free up ring */
 	if (ring->ring_base.va) {
-		DMA_FREE_CONSISTENT(prot->osh, ring->ring_base.va, size, ring->ring_base.pa,
+		DMA_FREE_CONSISTENT(dhd->osh, ring->ring_base.va, size, ring->ring_base.pa,
 			ring->ring_base.dmah);
 		ring->ring_base.va = NULL;
 	}
 
 	/* Free up ring mem space */
 	if (ring->ringmem) {
-		MFREE(prot->osh, ring->ringmem, sizeof(ring_mem_t));
+		MFREE(dhd->osh, ring->ringmem, sizeof(ring_mem_t));
 		ring->ringmem = NULL;
 	}
 
 	/* Free up ring state info */
 	if (ring->ringstate) {
-		MFREE(prot->osh, ring->ringstate, sizeof(ring_state_t));
+		MFREE(dhd->osh, ring->ringstate, sizeof(ring_state_t));
 		ring->ringstate = NULL;
 	}
 
 	/* free up ring info */
-	MFREE(prot->osh, ring, sizeof(msgbuf_ring_t));
+	MFREE(dhd->osh, ring, sizeof(msgbuf_ring_t));
 }
 /* Assumes only one index is updated ata time */
 static void *BCMFASTPATH
@@ -3988,5 +3986,5 @@ dhd_prot_clear(dhd_pub_t *dhd)
 	 *  so when stopping bus, flowrings shall be deleted
 	 */
 	dhd_flow_rings_deinit(dhd);
-	NATIVE_TO_PKTID_CLEAR(prot->pktid_map_handle);
+	NATIVE_TO_PKTID_CLEAR(dhd->osh, prot->pktid_map_handle);
 }
