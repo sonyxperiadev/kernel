@@ -1929,7 +1929,6 @@ static int qseecom_load_app(struct qseecom_dev_handle *data, void __user *argp)
 #ifndef CONFIG_ARCH_MSM8974
 		entry->app_arch = load_img_req.app_arch;
 #endif
-		strlcpy(entry->app_name, load_img_req.img_name,
 
 		/*
 		* keymaster app may be first loaded as "keymaste" by qseecomd,
@@ -1962,7 +1961,6 @@ static int qseecom_load_app(struct qseecom_dev_handle *data, void __user *argp)
 #ifndef CONFIG_ARCH_MSM8974
 	data->client.app_arch = load_img_req.app_arch;
 #endif
-	strlcpy(data->client.app_name, load_img_req.img_name,
 
 	if (!strcmp(load_img_req.img_name, "keymaste"))
 		strlcpy(data->client.app_name, "keymaster", MAX_APP_NAME_SIZE);
