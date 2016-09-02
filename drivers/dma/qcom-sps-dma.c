@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -206,11 +206,8 @@ static struct dma_chan *qbam_dma_xlate(struct of_phandle_args *dma_spec,
 
 	/* allocate a channel */
 	qbam_chan = kzalloc(sizeof(*qbam_chan), GFP_KERNEL);
-	if (!qbam_chan) {
-		qbam_err(qbam_dev, "error kmalloc(size:%lu) faild\n",
-			 sizeof(*qbam_chan));
+	if (!qbam_chan)
 		return NULL;
-	}
 
 	/* allocate BAM resources for that channel */
 	qbam_chan->bam_pipe.handle = sps_alloc_endpoint();
@@ -245,7 +242,6 @@ static enum dma_status qbam_tx_status(struct dma_chan *chan,
 	struct qbam_channel *qbam_chan = DMA_TO_QBAM_CHAN(chan);
 	struct qbam_async_tx_descriptor	*qbam_desc = &qbam_chan->pending_desc;
 	enum dma_status ret;
-	struct scatterlist *sg;
 
 	mutex_lock(&qbam_chan->lock);
 
@@ -256,6 +252,7 @@ static enum dma_status qbam_tx_status(struct dma_chan *chan,
 
 	ret = dma_cookie_status(chan, cookie, state);
 	if (ret == DMA_IN_PROGRESS) {
+		struct scatterlist *sg;
 		int i;
 		u32 transfer_size = 0;
 
@@ -442,8 +439,8 @@ static int qbam_slave_cfg(struct qbam_channel *qbam_chan,
 						  GFP_KERNEL);
 	if (!pipe_cfg->desc.base) {
 		qbam_err(qbam_dev,
-			"error dma_alloc_coherent(desc-sz:%lu * n-descs:%d)\n",
-			sizeof(struct sps_iovec),
+			"error dma_alloc_coherent(desc-sz:%d * n-descs:%d)\n",
+			pipe_cfg->desc.size,
 			qbam_chan->bam_pipe.num_descriptors);
 		return -ENOMEM;
 	}
@@ -634,11 +631,9 @@ static int qbam_probe(struct platform_device *pdev)
 	struct device_node *of_node = pdev->dev.of_node;
 
 	qbam_dev = devm_kzalloc(&pdev->dev, sizeof(*qbam_dev), GFP_KERNEL);
-	if (!qbam_dev) {
-		qbam_err(qbam_dev, "error kmalloc(size:%lu) faild",
-			 sizeof(*qbam_dev));
+	if (!qbam_dev)
 		return -ENOMEM;
-	}
+
 	qbam_dev->dma_dev.dev = &pdev->dev;
 	platform_set_drvdata(pdev, qbam_dev);
 
