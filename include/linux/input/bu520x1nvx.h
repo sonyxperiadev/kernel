@@ -8,7 +8,7 @@
  * of the License, or (at your option) any later version.
  */
 /*
- * Copyright (C) 2014 Sony Mobile Communications Inc.
+ * Copyright (C) 2015 Sony Mobile Communications Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2, as
@@ -26,6 +26,8 @@ struct bu520x1nvx_gpio_event {
 	int active_low;
 	const char *desc;
 	int debounce_interval;
+	int open_debounce_interval;
+	int close_debounce_interval;
 	unsigned int irq;
 };
 
