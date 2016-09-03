@@ -6,7 +6,7 @@
 * suspend, resume, initialization routines etc.
 * AD7146 Controller Driver
 * Copyright 2013 Analog Devices Inc.
-* Copyright (C) 2013 Sony Mobile Communications Inc.
+* Copyright (C) 2014 Sony Mobile Communications Inc.
 * Licensed under the GPL version 2 or later.
 */
 
@@ -365,6 +365,7 @@ struct ad7146_product_stgx_data {
 	unsigned int stgx_offset_high_clamp;
 	unsigned int stgx_offset_low_clamp;
 	unsigned int stgx_hysterisis;
+	unsigned int stgx_high_th_offset;
 };
 
 static struct ad7146_product_stgx_data default_stgx_data = {
@@ -1069,7 +1070,7 @@ static ssize_t do_force_calibrate(struct device *dev,
 	struct ad7146_chip *ad7146 = dev_get_drvdata(dev);
 	int err;
 	unsigned short val;
-	unsigned short temp;
+	unsigned short temp, temp2;
 	int cnt;
 	struct ad7146_driver_data *sw = NULL;
 	unsigned short temp_th[PAD_NUM_MAX];
@@ -1090,6 +1091,17 @@ static ssize_t do_force_calibrate(struct device *dev,
 		!(ad7146->pad_enable_state & STG1_EN_FLG)) {
 		ad7146->fc_flag = DISABLE_AD7146;
 		ad7146->keep_detect_flag = DISABLE_AD7146;
+		dev_dbg(ad7146->dev,
+			"%s: clear fc_flag, keep_detect_flag\n", __func__);
+		mutex_lock(&ad7146->mutex);
+		temp = ad7146->product_data.stgx_data[STG_ZERO].stgx_offset_low;
+		temp2 = ad7146->product_data.stgx_data[STG_ONE].stgx_offset_low;
+		ad7146->write(ad7146->dev, STG0_OFFSET_LOW_REG, temp);
+		ad7146->write(ad7146->dev, STG1_OFFSET_LOW_REG, temp2);
+		mutex_unlock(&ad7146->mutex);
+		dev_dbg(ad7146->dev,
+			"%s:restore default low offset: PAD1:%04x, PAD2:%04x\n",
+			__func__, temp, temp2);
 		err = -EINVAL;
 		dev_err(ad7146->dev,
 			"%s: INVALID CMD", __func__);
@@ -1106,6 +1118,25 @@ static ssize_t do_force_calibrate(struct device *dev,
 			"%s:save threshold: PAD1:%04x, PAD2:%04x\n",
 			__func__, ad7146->sv_threshold[STG_ZERO],
 			ad7146->sv_threshold[STG_ONE]);
+		ad7146->sv_threshold[STG_ZERO] +=
+			ad7146->product_data.
+				stgx_data[STG_ZERO].stgx_high_th_offset;
+		ad7146->sv_threshold[STG_ONE] +=
+			ad7146->product_data.
+				stgx_data[STG_ONE].stgx_high_th_offset;
+		dev_dbg(ad7146->dev,
+			"%s:save threshold + scale: PAD1:%04x, PAD2:%04x\n",
+			__func__, ad7146->sv_threshold[STG_ZERO],
+			ad7146->sv_threshold[STG_ONE]);
+		temp = ad7146->product_data.
+			stgx_data[STG_ZERO].stgx_offset_high;
+		temp2 = ad7146->product_data.
+			stgx_data[STG_ONE].stgx_offset_high;
+		ad7146->write(ad7146->dev, STG0_OFFSET_LOW_REG, temp);
+		ad7146->write(ad7146->dev, STG1_OFFSET_LOW_REG, temp2);
+		dev_dbg(ad7146->dev,
+			"%s:change low offset: PAD1:%04x, PAD2:%04x\n",
+			__func__, temp, temp2);
 	}
 	ad7146->keep_detect_flag = DISABLE_AD7146;
 	for (cnt = 0; cnt < PAD_NUM_MAX; cnt++) {
@@ -1142,6 +1173,13 @@ static ssize_t do_force_calibrate(struct device *dev,
 			__func__,
 			temp_th[STG_ZERO], ad7146->sv_threshold[STG_ZERO],
 			temp_th[STG_ONE], ad7146->sv_threshold[STG_ONE]);
+		temp = ad7146->product_data.stgx_data[STG_ZERO].stgx_offset_low;
+		temp2 = ad7146->product_data.stgx_data[STG_ONE].stgx_offset_low;
+		ad7146->write(ad7146->dev, STG0_OFFSET_LOW_REG, temp);
+		ad7146->write(ad7146->dev, STG1_OFFSET_LOW_REG, temp2);
+		dev_dbg(ad7146->dev,
+			"%s:restore default low offset: PAD1:%04x, PAD2:%04x\n",
+			__func__, temp, temp2);
 	}
 	ad7146->read(ad7146->dev, STG_LOW_INT_STA_REG, &temp);
 	ad7146->read(ad7146->dev, STG_HIGH_INT_STA_REG, &temp);
@@ -1456,7 +1494,7 @@ static ssize_t store_pad_set(struct device *dev,
 {
 	struct ad7146_chip *ad7146 = dev_get_drvdata(dev);
 	int err, cnt;
-	unsigned short val, prev_mode;
+	unsigned short val, prev_mode, temp, temp2;
 	struct ad7146_driver_data *sw = NULL;
 
 	err = kstrtou16(buf, 0, &val);
@@ -1478,6 +1516,20 @@ static ssize_t store_pad_set(struct device *dev,
 			!(ad7146->pad_enable_state & STG1_EN_FLG)) {
 			ad7146->fc_flag = DISABLE_AD7146;
 			ad7146->keep_detect_flag = DISABLE_AD7146;
+			dev_dbg(ad7146->dev,
+				"%s: clear fc_flag, keep_detect_flag\n",
+				__func__);
+			mutex_lock(&ad7146->mutex);
+			temp = ad7146->product_data.
+				stgx_data[STG_ZERO].stgx_offset_low;
+			temp2 = ad7146->product_data.
+				stgx_data[STG_ONE].stgx_offset_low;
+			ad7146->write(ad7146->dev, STG0_OFFSET_LOW_REG, temp);
+			ad7146->write(ad7146->dev, STG1_OFFSET_LOW_REG, temp2);
+			mutex_unlock(&ad7146->mutex);
+			dev_dbg(ad7146->dev,
+				"%s:restore default low offset: PAD1:%04x, PAD2:%04x\n",
+				__func__, temp, temp2);
 		}
 		if (!ad7146->pad_enable_state) {
 			mutex_lock(&ad7146->mutex);
@@ -1686,7 +1738,7 @@ static void switch_set_work(struct work_struct *work)
 	int cnt, index, force_calib, tm_val;
 	unsigned short sw_data = STGX_ALL_OFF;
 	unsigned short prev_sw_data = ad7146->sw_updata;
-	unsigned short data;
+	unsigned short data, data2;
 	unsigned short pwr_data;
 	static unsigned short sv_data_point[PAD_NUM_MAX];
 	static unsigned short stg_data[PAD_NUM_MAX];
@@ -1696,6 +1748,11 @@ static void switch_set_work(struct work_struct *work)
 	static unsigned short switch_flag[PAD_NUM_MAX];
 
 	if (!ad7146->pad_enable_state)
+		return;
+
+	ad7146->read(ad7146->dev, shadow_reg[PWR_CONTROL].addr, &pwr_data);
+	if (ad7146->i2c_err_flag ||
+		(PWR_MODE_SHUTDOWN == (pwr_data & PWR_MODE_SHUTDOWN)))
 		return;
 
 	force_calib = DISABLE_AD7146;
@@ -1756,6 +1813,13 @@ static void switch_set_work(struct work_struct *work)
 			ad7146->sv_threshold[STG_ZERO],
 			stg_h_threshold[STG_ONE],
 			ad7146->sv_threshold[STG_ONE]);
+		data = ad7146->product_data.stgx_data[STG_ZERO].stgx_offset_low;
+		data2 = ad7146->product_data.stgx_data[STG_ONE].stgx_offset_low;
+		ad7146->write(ad7146->dev, STG0_OFFSET_LOW_REG, data);
+		ad7146->write(ad7146->dev, STG1_OFFSET_LOW_REG, data2);
+		dev_dbg(ad7146->dev,
+			"%s:restore default offset: PAD1:%04x, PAD2:%04x\n",
+			__func__, data, data2);
 	}
 
 	if (ad7146->fc_flag && !ad7146->keep_detect_flag) {
@@ -1884,18 +1948,13 @@ static irqreturn_t ad7146_isr(int irq, void *handle)
 {
 
 	struct ad7146_chip *ad7146 = handle;
-	int cnt, index, tm_val;
-	unsigned short pwr_data;
-	static unsigned short stg_data[PAD_NUM_MAX];
-	static unsigned short stg_h_threshold[PAD_NUM_MAX];
-	static unsigned short stg_l_threshold[PAD_NUM_MAX];
+	int cnt, tm_val;
 
 	if (!ad7146->pad_enable_state)
 		return IRQ_HANDLED;
 
 	cancel_delayed_work(&ad7146->work);
 
-	mutex_lock(&ad7146->mutex);
 	/* get int-status */
 	ad7146->read(ad7146->dev, STG_LOW_INT_STA_REG, &ad7146->low_status);
 	ad7146->read(ad7146->dev, STG_HIGH_INT_STA_REG, &ad7146->high_status);
@@ -1905,47 +1964,24 @@ static irqreturn_t ad7146_isr(int irq, void *handle)
 	tm_val = SWITCH_WORK_JITTER;
 	for (cnt = 0; cnt < PAD_NUM_MAX; cnt++) {
 		if (ad7146->pad_enable_state & AD7146_BIT_MASK(cnt)) {
-			/* get cdc value and threshold */
-			index = CDC_ZERO_VALUE;
-			ad7146->read(ad7146->dev, data_reg_addr[cnt][index],
-			&stg_data[cnt]);
-			index++;
-			ad7146->read(ad7146->dev, data_reg_addr[cnt][index],
-				&stg_h_threshold[cnt]);
-			index++;
-			ad7146->read(ad7146->dev, data_reg_addr[cnt][index],
-				&stg_l_threshold[cnt]);
-
-			/* check cdc : threshold */
-			if (stg_data[cnt] >= stg_h_threshold[cnt]) {
+			/* check status and set point */
+			if (ad7146->high_status & AD7146_BIT_MASK(cnt))
 				ad7146->save_data_point[cnt] = AD7146_HIGH;
-			} else if (stg_data[cnt] >= stg_l_threshold[cnt]) {
+			else
 				ad7146->save_data_point[cnt] = AD7146_CORRECT;
-			} else if (CDC_ZERO_VALUE == stg_data[cnt]) {
-				ad7146->save_data_point[cnt] = AD7146_CORRECT;
-			} else {
+			if (ad7146->low_status & AD7146_BIT_MASK(cnt)) {
 				ad7146->save_data_point[cnt] = AD7146_LOW;
 				tm_val = SWITCH_WORK_FORCE_CAL_JITTER;
 			}
-			dev_dbg(ad7146->dev,
-				"%s:SENSOR%d:DATA %04x, HIGH %04x, LOW %04x, POINT %u\n",
-				__func__, (cnt+1), stg_data[cnt],
-				stg_h_threshold[cnt], stg_l_threshold[cnt],
-				ad7146->save_data_point[cnt]);
 		} else {
 			ad7146->save_data_point[cnt] = AD7146_NOT_SET;
-			dev_dbg(ad7146->dev,
-				"%s:SENSOR%d:POINT %u\n", __func__, (cnt+1),
-				ad7146->save_data_point[cnt]);
 		}
+		dev_dbg(ad7146->dev, "%s:SENSOR%d:POINT %u\n",
+			__func__, (cnt+1), ad7146->save_data_point[cnt]);
 	}
-	mutex_unlock(&ad7146->mutex);
 
 	/* set scheduller */
-	ad7146->read(ad7146->dev, shadow_reg[PWR_CONTROL].addr, &pwr_data);
-	if (!ad7146->i2c_err_flag &&
-		((pwr_data & PWR_MODE_SHUTDOWN) != PWR_MODE_SHUTDOWN))
-		schedule_delayed_work(&ad7146->work, msecs_to_jiffies(tm_val));
+	schedule_delayed_work(&ad7146->work, msecs_to_jiffies(tm_val));
 	return IRQ_HANDLED;
 }
 
@@ -2022,6 +2058,7 @@ static int read_data_from_device_tree(struct ad7146_chip *ad7146)
 	const char * const prop_stagex_offset_l_clamp = "%s%d-offset_l_clamp";
 	const char * const prop_stagex_offset_h_clamp = "%s%d-offset_h_clamp";
 	const char * const prop_stagex_hysterisis = "%s%d-hysterisis";
+	const char * const prop_stagex_high_th_offset = "%s%d-high_th_offset";
 	const char * const prop_amb_comp_ctrlx = "pad,amb_comp_ctrl%d";
 	const char * const prop_mod_freq_ctrl = "pad,mod_freq_ctrl";
 	char temp_buf[TEMP_BUFER_MAX_LEN];
@@ -2102,11 +2139,11 @@ static int read_data_from_device_tree(struct ad7146_chip *ad7146)
 			dev_err(dev, err_format, temp_buf);
 			return rc;
 		}
-		/* Stagex OFFSET_HIGH_CLAMP Register value */
+		/* Stagex OFFSET_LOW_CLAMP Register value */
 		snprintf(temp_buf, TEMP_BUFER_MAX_LEN,
 			prop_stagex_offset_l_clamp, prop_stagex, cnt);
 		rc = of_property_read_u32(dev->of_node, temp_buf,
-			&pt->stgx_offset_high_clamp);
+			&pt->stgx_offset_low_clamp);
 		if (rc < 0) {
 			dev_err(dev, err_format, temp_buf);
 			return rc;
@@ -2115,7 +2152,7 @@ static int read_data_from_device_tree(struct ad7146_chip *ad7146)
 		snprintf(temp_buf, TEMP_BUFER_MAX_LEN,
 			prop_stagex_offset_h_clamp, prop_stagex, cnt);
 		rc = of_property_read_u32(dev->of_node, temp_buf,
-			&pt->stgx_offset_low_clamp);
+			&pt->stgx_offset_high_clamp);
 		if (rc < 0) {
 			dev_err(dev, err_format, temp_buf);
 			return rc;
@@ -2125,6 +2162,15 @@ static int read_data_from_device_tree(struct ad7146_chip *ad7146)
 			prop_stagex_hysterisis, prop_stagex, cnt);
 		rc = of_property_read_u32(dev->of_node, temp_buf,
 			&pt->stgx_hysterisis);
+		if (rc < 0) {
+			dev_err(dev, err_format, temp_buf);
+			return rc;
+		}
+		/* Stagex High Threshold Scale value */
+		snprintf(temp_buf, TEMP_BUFER_MAX_LEN,
+			prop_stagex_high_th_offset, prop_stagex, cnt);
+		rc = of_property_read_u32(dev->of_node, temp_buf,
+			&pt->stgx_high_th_offset);
 		if (rc < 0) {
 			dev_err(dev, err_format, temp_buf);
 			return rc;
@@ -2345,7 +2391,7 @@ static int ad7146_probe(struct i2c_client *client,
 		goto err_cap_reg;
 	}
 	error = request_threaded_irq(ad7146->irq, NULL, ad7146_isr,
-			IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
+			IRQF_TRIGGER_LOW | IRQF_ONESHOT,
 			dev_name(dev), ad7146);
 	if (error) {
 		dev_err(dev, "irq %d busy?\nDriver init Failed", ad7146->irq);
@@ -2408,7 +2454,7 @@ static void ad7146_shutdown(struct i2c_client *client)
 	struct ad7146_chip *ad7146 = i2c_get_clientdata(client);
 
 	free_irq(ad7146->irq, ad7146);
-	cancel_delayed_work(&ad7146->work);
+	cancel_delayed_work_sync(&ad7146->work);
 	cancel_work_sync(&ad7146->calib_work);
 	cancel_work_sync(&ad7146->resume_work);
 	cap_sensor_dev_unregister(&ad7146->cap_dev);
@@ -2429,14 +2475,14 @@ int ad7146_i2c_suspend(struct device *dev)
 	struct ad7146_chip *ad7146 = i2c_get_clientdata(to_i2c_client(dev));
 	unsigned short pwr_data;
 
+	disable_irq(ad7146->irq);
 	cancel_work_sync(&ad7146->resume_work);
+	cancel_delayed_work_sync(&ad7146->work);
 	if (ad7146->pad_enable_state) {
 		pwr_data = shadow_reg[PWR_CONTROL].data | PWR_MODE_SHUTDOWN;
 		ad7146->write(ad7146->dev,
 			shadow_reg[PWR_CONTROL].addr, pwr_data);
 	}
-	disable_irq(ad7146->irq);
-	cancel_delayed_work(&ad7146->work);
 	dev_dbg(ad7146->dev, "%s end: pad_enable_state = %x\n",
 		__func__, ad7146->pad_enable_state);
 	return 0;
