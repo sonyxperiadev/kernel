@@ -2246,7 +2246,7 @@ static void msm_otg_start_host(struct usb_otg *otg, int on)
 			writel_relaxed(val, USB_HS_APF_CTRL);
 		}
 #ifdef CONFIG_MACH_SONY_SUZU
-		ulpi_init (motg,USB_HOST);
+		ulpi_init(motg, USB_HOST);
 #endif
 		usb_add_hcd(hcd, hcd->irq, IRQF_SHARED);
 	} else {
@@ -4025,7 +4025,7 @@ static void msm_otg_sm_work(struct work_struct *w)
 			msm_hsusb_vbus_power(motg, 0);
 			otg->phy->state = OTG_STATE_A_WAIT_VFALL;
 			msm_otg_start_timer(motg, TA_WAIT_VFALL, A_WAIT_VFALL);
-#ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
+#if defined(CONFIG_QPNP_SMBCHARGER_EXTENSION) && !defined(CONFIG_MACH_SONY_SUZU)
 		} else if (test_bit(A_VBUS_DROP_DET, &motg->inputs)) {
 			pr_debug("vbus_drop_det\n");
 			msm_otg_dbg_log_event(&motg->phy, "A_VBUS_DROP_DET",
@@ -4139,6 +4139,18 @@ static void msm_otg_sm_work(struct work_struct *w)
 			if (!test_bit(ID_A, &motg->inputs))
 				msm_hsusb_vbus_power(motg, 0);
 			msm_otg_start_timer(motg, TA_WAIT_VFALL, A_WAIT_VFALL);
+#if defined(CONFIG_QPNP_SMBCHARGER_EXTENSION) && defined(CONFIG_MACH_SONY_SUZU)
+		} else if (test_bit(A_VBUS_DROP_DET, &motg->inputs)) {
+			pr_debug("vbus_drop_det\n");
+			msm_otg_dbg_log_event(&motg->phy, "A_VBUS_DROP_DET",
+					motg->inputs, otg->phy->state);
+			clear_bit(B_CONN, &motg->inputs);
+			clear_bit(A_BUS_REQ, &motg->inputs);
+			msm_otg_del_timer(motg);
+			otg->phy->state = OTG_STATE_A_IDLE;
+			msm_otg_start_host(otg, 0);
+			msm_hsusb_vbus_power(motg, 0);
+#endif
 		} else if (!test_bit(A_VBUS_VLD, &motg->inputs)) {
 			pr_debug("!a_vbus_vld\n");
 			msm_otg_dbg_log_event(&motg->phy, "!A_VBUS_VLD",
@@ -5250,6 +5262,9 @@ static int otg_power_set_property_usb(struct power_supply *psy,
 			if (motg->chg_type == USB_DCP_CHARGER)
 				motg->is_ext_chg_dcp = true;
 			motg->chg_state = USB_CHG_STATE_DETECTED;
+#if defined(CONFIG_QPNP_SMBCHARGER_EXTENSION) && defined(CONFIG_MACH_SONY_SUZU)
+			motg->chg_det_retrying = 0;
+#endif
 		}
 
 #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION

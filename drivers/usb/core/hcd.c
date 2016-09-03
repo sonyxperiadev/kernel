@@ -2681,7 +2681,7 @@ void usb_remove_hcd(struct usb_hcd *hcd)
 	hcd->driver->stop(hcd);
 	hcd->state = HC_STATE_HALT;
 
-#ifdef CONFIG_SONY_USB_EXTENSIONS
+#if defined(CONFIG_SONY_USB_EXTENSIONS) || defined(CONFIG_MACH_SONY_SUZU)
 	clear_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags);
 #endif
 
