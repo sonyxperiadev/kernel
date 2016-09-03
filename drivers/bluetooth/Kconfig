@@ -302,4 +302,6 @@ config BTFM_SLIM_WCN3990
 	  It is designed to adapt any future BT/FM device to implement a specific
 	  chip initialization process and control.
 
+source drivers/bluetooth/broadcom/Kconfig
+
 endmenu
