@@ -272,4 +272,6 @@ config MSM_BT_POWER
 	  Provides a parameter to switch on/off power from PMIC
 	  to Bluetooth device.
 
+source drivers/bluetooth/broadcom/Kconfig
+
 endmenu
