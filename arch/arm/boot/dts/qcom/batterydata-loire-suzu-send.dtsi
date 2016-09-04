@@ -18,6 +18,7 @@
  */
 
 qcom,loire-suzu-send {
+	qcom,max-voltage-uv = <4350000>;
 	qcom,batt-id-kohm = <330>;
 	qcom,battery-type = "1299-8167";
 	qcom,chg-rslow-comp-c1 = <2571531>;
