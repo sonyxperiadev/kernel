@@ -933,11 +933,6 @@ static void clearpad_debug_info(struct clearpad_t *this);
 #endif
 
 /*
- * Global variables
- */
-static bool first_blank_done = false;
-
-/*
  * Functions
  */
 
@@ -1333,8 +1328,7 @@ static int clearpad_ctrl_session_begin(struct clearpad_t *this,
 	LOCK(&this->lock);
 
 	/* keep touch power for this session */
-	rc = touchctrl_lock_power(this, session, true, false);
-	if (unlikely(!rc) && unlikely(first_blank_done)) {
+	if (!touchctrl_lock_power(this, session, true, false)) {
 		LOGE(this, "failed to lock power\n");
 		rc = -EAGAIN;
 		goto err_in_lock_power;
@@ -5903,9 +5897,6 @@ end:
 
 static void clearpad_fb_powerdown_handler(struct clearpad_t *this)
 {
-	if (unlikely(!first_blank_done))
-		first_blank_done = true;
-
 	LOCK(&this->lock);
 	if (this->wakeup_gesture.enabled)
 		clearpad_powerdown_core(this, "POWERDOWN");
@@ -7908,8 +7899,6 @@ static int clearpad_probe(struct platform_device *pdev)
 		}
 	}
 
-	this->post_probe.start = true;
-
 	spin_lock_init(&this->noise_det.slock);
 #ifdef CONFIG_TOUCHSCREEN_CLEARPAD_RMI_DEV
 	if (!cdata->rmi_dev) {
@@ -8103,9 +8092,6 @@ static void clearpad_post_probe_work(struct work_struct *work)
 	get_monotonic_boottime(&ts);
 	HWLOGI(this, "start post probe @ %ld.%06ld\n", ts.tv_sec, ts.tv_nsec);
 
-//	if (unlikely(!first_blank_done))
-//		incell_force_sp_on();
-
 	rc = clearpad_ctrl_session_begin(this, session);
 	if (rc) {
 		HWLOGE(this, "failed to begin post probe session\n");
@@ -8211,7 +8197,7 @@ static void clearpad_thread_resume_work(struct work_struct *work)
 	if (clearpad_handle_if_first_event(this) < 0)
 		LOGE(this, "failed to handle first event\n");
 
-		touchctrl_unlock_power(this, "fb_unblank");
+	touchctrl_unlock_power(this, "fb_unblank");
 
 	get_monotonic_boottime(&ts);
 	HWLOGI(this, "end thread_resume @ %ld.%06ld\n",

@@ -44,6 +44,7 @@
 
 struct incell_ctrl *incell = NULL;
 struct incell_ctrl incell_buf;
+static bool sp_panel_forced = false;
 
 static void incell_panel_power_worker_canceling(struct incell_ctrl *incell);
 
@@ -580,6 +581,7 @@ void incell_state_change_off(struct incell_ctrl *incell)
 		break;
 	}
 
+	sp_panel_forced = false;
 	pr_debug("%s: ---> status:%d\n", __func__, ((int)(*state)));
 }
 
@@ -1637,6 +1639,11 @@ int incell_power_lock_ctrl(incell_pw_lock lock,
 	incell->incell_intf_operation = INCELL_TOUCH_RUN;
 
 	pr_debug("%s: status:%d --->\n", __func__, ((int)(incell->state)));
+
+	if (incell->state == INCELL_STATE_SLE000_P0 && !sp_panel_forced) {
+		incell_force_sp_on();
+		sp_panel_forced = true;
+	}
 
 	if (lock == INCELL_DISPLAY_POWER_LOCK)
 		ret = incell_power_lock(&(incell->state));
