@@ -44,6 +44,8 @@
 
 struct incell_ctrl *incell = NULL;
 struct incell_ctrl incell_buf;
+static bool sp_panel_forced;
+static bool hybrid_incell;
 
 static void incell_panel_power_worker_canceling(struct incell_ctrl *incell);
 
@@ -139,10 +141,12 @@ static int incell_parse_dt(struct device_node *np,
 	panel_np = of_parse_phandle(np, "qcom,panel-supply-entries", 0);
 
 	panel_type_name = of_node_full_name(panel_np);
-	if (!strcmp(panel_type_name, NODE_OF_HYBRID))
-			spec_pdata->panel_type = HYBRID_INCELL;
+	if (!strcmp(panel_type_name, NODE_OF_HYBRID)) {
+		spec_pdata->panel_type = HYBRID_INCELL;
+		hybrid_incell = true;
+	}
 	if (!strcmp(panel_type_name, NODE_OF_FULL))
-			spec_pdata->panel_type = FULL_INCELL;
+		spec_pdata->panel_type = FULL_INCELL;
 
 	return 0;
 }
@@ -580,6 +584,7 @@ void incell_state_change_off(struct incell_ctrl *incell)
 		break;
 	}
 
+	sp_panel_forced = false;
 	pr_debug("%s: ---> status:%d\n", __func__, ((int)(*state)));
 }
 
@@ -1640,6 +1645,14 @@ int incell_power_lock_ctrl(incell_pw_lock lock,
 	incell->incell_intf_operation = INCELL_TOUCH_RUN;
 
 	pr_debug("%s: status:%d --->\n", __func__, ((int)(incell->state)));
+
+	if (hybrid_incell) {
+		if (incell->state == INCELL_STATE_SLE000_P0 &&
+				!sp_panel_forced) {
+			incell_force_sp_on();
+			sp_panel_forced = true;
+		}
+	}
 
 	if (lock == INCELL_DISPLAY_POWER_LOCK)
 		ret = incell_power_lock(&(incell->state));
