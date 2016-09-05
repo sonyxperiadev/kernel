@@ -1,7 +1,5 @@
 /* include/linux/clearpad.h
  *
- * Copyright (C) 2013 Sony Mobile Communications Inc.
- *
  * Author: Courtney Cavin <courtney.cavin@sonyericsson.com>
  *         Yusuke Yoshimura <Yusuke.Yoshimura@sonymobile.com>
  *
@@ -9,6 +7,13 @@
  * it under the terms of the GNU General Public License version 2, as
  * published by the Free Software Foundation; either version 2
  * of the License, or (at your option) any later version.
+ */
+/*
+ * Copyright (C) 2015 Sony Mobile Communications Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2, as
+ * published by the Free Software Foundation.
  */
 
 #ifndef __LINUX_CLEARPAD_H
@@ -22,7 +27,8 @@
 #define CLEARPADI2C_NAME "clearpad-i2c"
 #define CLEARPAD_RMI_DEV_NAME "clearpad-rmi-dev"
 
-#define SYN_PCA_BLOCK_SIZE	16
+#define SYN_PCA_BLOCK_SIZE		16
+#define SYN_PCA_BLOCK_NUMBER_MAX	31
 
 enum clearpad_funcarea_kind_e {
 	SYN_FUNCAREA_INSENSIBLE,
@@ -36,6 +42,18 @@ enum clearpad_flip_config_e {
 	SYN_FLIP_X,
 	SYN_FLIP_Y,
 	SYN_FLIP_XY,
+};
+
+enum clearpad_infomation_attribute_kind_e {
+	PCA_DATA			= 0x00,
+	PCA_IC				= 0x01,
+	PCA_CHIP			= 0x03,
+	PCA_MODULE			= 0x05,
+};
+
+enum clearpad_infomation_kind_e {
+	PCA_NO_USE			= 0x00,
+	PCA_FW_INFO			= 0x02,
 };
 
 struct clearpad_area_t {
