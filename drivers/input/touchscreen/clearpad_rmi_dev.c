@@ -1,5 +1,7 @@
 /*
  * Copyright (c) 2011 Synaptics Incorporated
+ * Copyright (C) 2012 Sony Ericsson Mobile Communications AB.
+ * Copyright (C) 2012-2013 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,13 +16,6 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
- */
-/*
- * Copyright (C) 2015 Sony Mobile Communications Inc.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2, as
- * published by the Free Software Foundation.
  */
 
 #include <linux/module.h>
