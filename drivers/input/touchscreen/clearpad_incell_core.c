@@ -44,6 +44,8 @@
 #include <asm/mach-types.h>
 #endif
 
+#define SYN_PCA_BLOCK_NUMBER_MAX	31
+
 #define SYN_CLEARPAD_VENDOR		0x1
 #define SYN_MAX_N_FINGERS		10
 #define SYN_DEVICE_STATUS		0x13
@@ -297,7 +299,7 @@ BIT_DEF(CALIBRATION_STATE_CALIBRATION_CRC,		0x02, 1);
 	HWLOG(this, format, ## __VA_ARGS__);	\
 })
 #define HWLOGD(this, format, ...) HWLOGx(LOGD, this, format, ## __VA_ARGS__)
-#define HWLOGI(this, format, ...) HWLOGx(LOGI, this, format, ## __VA_ARGS__)
+#define HWLOGI(this, format, ...) HWLOGx(LOGD, this, format, ## __VA_ARGS__)
 #define HWLOGE(this, format, ...) HWLOGx(LOGE, this, format, ## __VA_ARGS__)
 #define HWLOGW(this, format, ...) HWLOGx(LOGW, this, format, ## __VA_ARGS__)
 
@@ -347,6 +349,18 @@ BIT_DEF(CALIBRATION_STATE_CALIBRATION_CRC,		0x02, 1);
 /*
  * Types
  */
+
+enum clearpad_infomation_attribute_kind_e {
+	PCA_DATA			= 0x00,
+	PCA_IC				= 0x01,
+	PCA_CHIP			= 0x03,
+	PCA_MODULE			= 0x05,
+};
+
+enum clearpad_infomation_kind_e {
+	PCA_NO_USE			= 0x00,
+	PCA_FW_INFO			= 0x02,
+};
 
 enum clearpad_state_e {
 	SYN_STATE_INIT,
@@ -919,6 +933,11 @@ static void clearpad_debug_info(struct clearpad_t *this);
 #endif
 
 /*
+ * Global variables
+ */
+static bool first_blank_done = false;
+
+/*
  * Functions
  */
 
@@ -1312,8 +1331,10 @@ static int clearpad_ctrl_session_begin(struct clearpad_t *this,
 	touchctrl->session = session;
 
 	LOCK(&this->lock);
+
 	/* keep touch power for this session */
-	if (!touchctrl_lock_power(this, session, true, false)) {
+	rc = touchctrl_lock_power(this, session, true, false);
+	if (unlikely(!rc) && unlikely(first_blank_done)) {
 		LOGE(this, "failed to lock power\n");
 		rc = -EAGAIN;
 		goto err_in_lock_power;
@@ -5882,6 +5903,9 @@ end:
 
 static void clearpad_fb_powerdown_handler(struct clearpad_t *this)
 {
+	if (unlikely(!first_blank_done))
+		first_blank_done = true;
+
 	LOCK(&this->lock);
 	if (this->wakeup_gesture.enabled)
 		clearpad_powerdown_core(this, "POWERDOWN");
@@ -5922,6 +5946,7 @@ static void clearpad_fb_unblank_handler(struct clearpad_t *this)
 	       ts.tv_sec, ts.tv_nsec);
 
 	LOCK(&this->lock);
+
 	if (!this->post_probe.done) {
 		HWLOGI(this, "ignore UNBLANK event before post probe\n");
 		if (this->post_probe.start) {
@@ -7883,6 +7908,8 @@ static int clearpad_probe(struct platform_device *pdev)
 		}
 	}
 
+	this->post_probe.start = true;
+
 	spin_lock_init(&this->noise_det.slock);
 #ifdef CONFIG_TOUCHSCREEN_CLEARPAD_RMI_DEV
 	if (!cdata->rmi_dev) {
@@ -8002,7 +8029,7 @@ static int clearpad_probe(struct platform_device *pdev)
 		goto err_in_create_link;
 	}
 
-	if (this->post_probe.start) {
+	if (likely(this->post_probe.start)) {
 		HWLOGI(this, "schedule post probe\n");
 		schedule_delayed_work(&this->post_probe.work, 0);
 	} else {
@@ -8076,14 +8103,15 @@ static void clearpad_post_probe_work(struct work_struct *work)
 	get_monotonic_boottime(&ts);
 	HWLOGI(this, "start post probe @ %ld.%06ld\n", ts.tv_sec, ts.tv_nsec);
 
+//	if (unlikely(!first_blank_done))
+//		incell_force_sp_on();
+
 	rc = clearpad_ctrl_session_begin(this, session);
 	if (rc) {
 		HWLOGE(this, "failed to begin post probe session\n");
 		do_reschedule = true;
 		goto err_in_ctrl_session_begin;
 	}
-
-	WARN_ON(!touchctrl_is_display_powered(this));
 
 	LOCK(&this->lock);
 	if (!this->dev_active) {
