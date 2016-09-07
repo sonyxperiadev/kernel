@@ -158,9 +158,7 @@ struct msm_hsphy {
 	void __iomem		*tcsr;
 	void __iomem		*csr;
 	int			hsphy_init_seq;
-#ifdef CONFIG_ARCH_SONY_KITAKAMI
 	int			hsphy_init_seq_host;
-#endif
 	bool			set_pllbtune;
 	u32			core_ver;
 
