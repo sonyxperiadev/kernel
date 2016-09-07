@@ -3311,7 +3311,7 @@
 
 &pmi8994_charger {
 	/delete-property/ qcom,parallel-usb-min-current-ma;
-	/delete-property/ qcom,parallel-9v-usb-min-current-ma;
+	/delete-property/ qcom,parallel-usb-9v-min-current-ma;
 	qcom,bmd-pin-src = "bpd_none";
 	qcom,usb_dp-vadc = <&pmi8994_vadc>;
 	qcom,usb_dm-vadc = <&pmi8994_vadc>;
