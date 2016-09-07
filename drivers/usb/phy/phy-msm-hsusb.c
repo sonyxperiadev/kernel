@@ -30,6 +30,11 @@ static int override_phy_init;
 module_param(override_phy_init, int, S_IRUGO|S_IWUSR);
 MODULE_PARM_DESC(override_phy_init, "Override HSPHY Init Seq");
 
+#ifdef CONFIG_ARCH_SONY_KITAKAMI
+static int override_phy_init_host;
+module_param(override_phy_init_host, int, S_IRUGO|S_IWUSR);
+MODULE_PARM_DESC(override_phy_init_host, "Override HSPHY Init Seq");
+#endif
 
 #define PORT_OFFSET(i) ((i == 0) ? 0x0 : ((i == 1) ? 0x6c : 0x88))
 
@@ -129,12 +134,33 @@ MODULE_PARM_DESC(override_phy_init, "Override HSPHY Init Seq");
 #define USB_HSPHY_1P8_VOL_MAX			1800000 /* uV */
 #define USB_HSPHY_1P8_HPM_LOAD			19000	/* uA */
 
+#ifdef CONFIG_ARCH_SONY_KITAKAMI
+#define USB_PHY_TXFSLSTUNE0		0x03C00000	/* 22:25 */
+#define USB_PHY_TXRESTUNE0		0x00300000	/* 20:21 */
+#define USB_PHY_TXHSXVTUNE0		0x000C0000	/* 18:19 */
+#define USB_PHY_TXRISETUNE0		0x00030000	/* 16:17 */
+#define USB_PHY_TXPREEMPAMPTUNE0	0x0000C000	/* 14:15 */
+#define USB_PHY_TXPREEMPPULSETUNE0	0x00002000	/* 13:13 */
+#define USB_PHY_TXVREFTUNE0		0x00001E00	/*  9:12 */
+#define USB_PHY_SQRXTUNE0		0x000001C0	/*  6: 8 */
+#define USB_PHY_OTGTUNE0		0x00000038	/*  3: 5 */
+#define USB_PHY_COMPDISTUNE0		0x00000007	/*  0: 2 */
+
+#define msm_usb_read_phy_param(base, mask)\
+			msm_usb_read_reg_field((base),\
+						PARAMETER_OVERRIDE_X_REG(0), \
+						(mask))
+#endif
+
 struct msm_hsphy {
 	struct usb_phy		phy;
 	void __iomem		*base;
 	void __iomem		*tcsr;
 	void __iomem		*csr;
 	int			hsphy_init_seq;
+#ifdef CONFIG_ARCH_SONY_KITAKAMI
+	int			hsphy_init_seq_host;
+#endif
 	bool			set_pllbtune;
 	u32			core_ver;
 
@@ -259,6 +285,17 @@ put_vdda18_lpm:
 	return rc < 0 ? rc : 0;
 }
 
+static inline u32 msm_usb_read_reg_field(void *base,
+					  u32 offset,
+					  const u32 mask)
+{
+	u32 shift = find_first_bit((void *)&mask, 32);
+	u32 val = readl_relaxed(base + offset);
+	val &= mask;		/* clear other bits */
+	val >>= shift;
+	return val;
+}
+
 static void msm_usb_write_readback(void *base, u32 offset,
 					const u32 mask, u32 val)
 {
@@ -317,6 +354,43 @@ static int msm_hsphy_reset(struct usb_phy *uphy)
 	return 0;
 }
 
+#ifdef CONFIG_ARCH_SONY_KITAKAMI
+static int msm_hsphy_set_params(struct usb_phy *uphy)
+{
+	struct msm_hsphy *phy = container_of(uphy, struct msm_hsphy, phy);
+	bool host = uphy->flags & PHY_HOST_MODE;
+	int hsphy_init_seq;
+
+	/*
+	 * write HSPHY init value to QSCRATCH reg to set HSPHY parameters like
+	 * VBUS valid threshold, disconnect valid threshold, DC voltage level,
+	 * preempasis and rise/fall time.
+	 */
+	if (host) {
+		if (override_phy_init_host)
+			phy->hsphy_init_seq_host = override_phy_init_host;
+		hsphy_init_seq = phy->hsphy_init_seq_host;
+	} else {
+		if (override_phy_init)
+			phy->hsphy_init_seq = override_phy_init;
+		hsphy_init_seq = phy->hsphy_init_seq;
+	}
+
+	if (!hsphy_init_seq)
+		return 0;
+
+	dev_info(uphy->dev, "set phy param for %s value=0x%08x\n",
+						host ? "host" : "peripheral",
+						hsphy_init_seq & 0x03FFFFFF);
+	msm_usb_write_readback(phy->base,
+					PARAMETER_OVERRIDE_X_REG(0), 0x03FFFFFF,
+					hsphy_init_seq & 0x03FFFFFF);
+	//msm_hsphy_param_output(uphy);
+
+	return 0;
+}
+#endif
+
 static int msm_hsphy_init(struct usb_phy *uphy)
 {
 	struct msm_hsphy *phy = container_of(uphy, struct msm_hsphy, phy);
@@ -360,6 +434,7 @@ static int msm_hsphy_init(struct usb_phy *uphy)
 		writel_relaxed(val, phy->base + HS_PHY_CTRL_COMMON_REG);
 	}
 
+#ifndef CONFIG_ARCH_SONY_KITAKAMI
 	/*
 	 * write HSPHY init value to QSCRATCH reg to set HSPHY parameters like
 	 * VBUS valid threshold, disconnect valid threshold, DC voltage level,
@@ -371,7 +446,9 @@ static int msm_hsphy_init(struct usb_phy *uphy)
 		msm_usb_write_readback(phy->base,
 					PARAMETER_OVERRIDE_X_REG(0), 0x03FFFFFF,
 					phy->hsphy_init_seq & 0x03FFFFFF);
-
+#else
+	msm_hsphy_set_params(uphy);
+#endif
 	return 0;
 }
 
@@ -610,6 +687,7 @@ static int msm_hsphy_set_suspend(struct usb_phy *uphy, int suspend)
 							OTGDISABLE0, 0);
 			}
 		}
+#ifndef CONFIG_ARCH_SONY_KITAKAMI
 		/*
 		 * write HSPHY init value to QSCRATCH reg to set HSPHY
 		 * parameters like VBUS valid threshold, disconnect valid
@@ -622,6 +700,9 @@ static int msm_hsphy_set_suspend(struct usb_phy *uphy, int suspend)
 					PARAMETER_OVERRIDE_X_REG(0),
 					0x03FFFFFF,
 					phy->hsphy_init_seq & 0x03FFFFFF);
+#else
+		msm_hsphy_set_params(uphy);
+#endif
 	}
 
 	phy->suspended = !!suspend; /* double-NOT coerces to bool value */
@@ -848,6 +929,10 @@ static int msm_hsphy_probe(struct platform_device *pdev)
 	else if (!phy->hsphy_init_seq)
 		dev_warn(dev, "hsphy init seq cannot be 0. Using POR value\n");
 
+	if (of_property_read_u32(dev->of_node, "qcom,hsphy-init-host",
+					&phy->hsphy_init_seq_host))
+		dev_dbg(dev, "unable to read hsphy init seq for host\n");
+
 	if (of_property_read_u32(dev->of_node, "qcom,num-ports",
 					&phy->num_ports))
 		phy->num_ports = 1;
@@ -885,6 +970,9 @@ static int msm_hsphy_probe(struct platform_device *pdev)
 	phy->phy.reset			= msm_hsphy_reset;
 	/*FIXME: this conflicts with dwc3_otg */
 	/*phy->phy.type			= USB_PHY_TYPE_USB2; */
+#ifdef CONFIG_ARCH_SONY_KITAKAMI
+	phy->phy.set_params		= msm_hsphy_set_params;
+#endif
 
 	ret = usb_add_phy_dev(&phy->phy);
 	if (ret)
