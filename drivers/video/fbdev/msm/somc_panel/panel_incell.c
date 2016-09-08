@@ -1883,6 +1883,7 @@ int incell_panel_driver_init(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 
 	spec_pdata->panel_power_off = incell_dsi_panel_power_off_ex;
 	spec_pdata->panel_power_on = incell_dsi_panel_power_on_ex;
+	spec_pdata->panel_post_on = incell_driver_post_power_on;
 	spec_pdata->dsi_panel_off_ex = incell_dsi_panel_off_ex;
 	spec_pdata->dsi_request_gpios = incell_panel_request_gpios;
 	spec_pdata->parse_specific_dt = incell_parse_dt;
