@@ -207,8 +207,9 @@ void msm_isp_get_timestamp(struct msm_isp_timestamp *time_stamp,
 	struct vfe_device *vfe_dev)
 {
 	struct timespec ts;
-
-	do_gettimeofday(&(time_stamp->event_time));
+	ktime_get_ts(&ts);
+	time_stamp->event_time.tv_sec = ts.tv_sec;
+	time_stamp->event_time.tv_usec = ts.tv_nsec/1000;
 	if (vfe_dev->vt_enable) {
 		msm_isp_get_avtimer_ts(time_stamp);
 		time_stamp->buf_time.tv_sec    = time_stamp->vt_time.tv_sec;
