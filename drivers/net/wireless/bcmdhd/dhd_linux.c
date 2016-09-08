@@ -808,7 +808,6 @@ static inline void
 dhd_dev_priv_clear(struct net_device * dev)
 {
 	dhd_dev_priv_t * dev_priv;
-	ASSERT(dev != (struct net_device *)NULL);
 	dev_priv = DHD_DEV_PRIV(dev);
 	dev_priv->dhd = (dhd_info_t *)NULL;
 	dev_priv->ifp = (dhd_if_t *)NULL;
@@ -821,7 +820,6 @@ dhd_dev_priv_save(struct net_device * dev, dhd_info_t * dhd, dhd_if_t * ifp,
                   int ifidx)
 {
 	dhd_dev_priv_t * dev_priv;
-	ASSERT(dev != (struct net_device *)NULL);
 	dev_priv = DHD_DEV_PRIV(dev);
 	dev_priv->dhd = dhd;
 	dev_priv->ifp = ifp;
@@ -951,10 +949,8 @@ static void dhd_sta_pool_clear(dhd_pub_t *dhdp, int max_sta);
 /* Return interface pointer */
 static inline dhd_if_t *dhd_get_ifp(dhd_pub_t *dhdp, uint32 ifidx)
 {
-	ASSERT(ifidx < DHD_MAX_IFS);
-	if (ifidx >= DHD_MAX_IFS) {
+	if (ifidx >= DHD_MAX_IFS)
 		return NULL;
-	}
 	return dhdp->info->iflist[ifidx];
 }
 
@@ -964,9 +960,9 @@ dhd_sta_free(dhd_pub_t * dhdp, dhd_sta_t * sta)
 {
 	int prio;
 
-	ASSERT((sta != DHD_STA_NULL) && (sta->idx != ID16_INVALID));
+	DHD_WARN((sta != DHD_STA_NULL) && (sta->idx != ID16_INVALID), return;);
 
-	ASSERT((dhdp->staid_allocator != NULL) && (dhdp->sta_pool != NULL));
+	DHD_WARN((dhdp->staid_allocator != NULL) && (dhdp->sta_pool != NULL), return;);
 	id16_map_free(dhdp->staid_allocator, sta->idx);
 	for (prio = 0; prio < (int)NUMPRIO; prio++)
 		sta->flowid[prio] = FLOWID_INVALID;
@@ -985,7 +981,8 @@ dhd_sta_alloc(dhd_pub_t * dhdp)
 	dhd_sta_t * sta;
 	dhd_sta_pool_t * sta_pool;
 
-	ASSERT((dhdp->staid_allocator != NULL) && (dhdp->sta_pool != NULL));
+	if((dhdp->staid_allocator == NULL) || (dhdp->sta_pool == NULL))
+		return DHD_STA_NULL;
 
 	idx = id16_map_alloc(dhdp->staid_allocator);
 	if (idx == ID16_INVALID) {
@@ -996,8 +993,6 @@ dhd_sta_alloc(dhd_pub_t * dhdp)
 	sta_pool = (dhd_sta_pool_t *)(dhdp->sta_pool);
 	sta = &sta_pool[idx];
 
-	ASSERT((sta->idx == ID16_INVALID) &&
-	       (sta->ifp == DHD_IF_NULL) && (sta->ifidx == DHD_BAD_IF));
 	sta->idx = idx; /* implying allocated */
 
 	return sta;
@@ -1059,8 +1054,8 @@ dhd_sta_pool_init(dhd_pub_t *dhdp, int max_sta)
 	dhd_sta_pool_t * sta_pool;
 	void * staid_allocator;
 
-	ASSERT(dhdp != (dhd_pub_t *)NULL);
-	ASSERT((dhdp->staid_allocator == NULL) && (dhdp->sta_pool == NULL));
+	if((dhdp == NULL) || (dhdp->staid_allocator != NULL) || (dhdp->sta_pool != NULL))
+		return BCME_ERROR;
 
 	/* dhd_sta objects per radio are managed in a table. id#0 reserved. */
 	staid_allocator = id16_map_init(dhdp->osh, max_sta, 1);
@@ -1086,7 +1081,11 @@ dhd_sta_pool_init(dhd_pub_t *dhdp, int max_sta)
 	for (idx = max_sta; idx >= 1; idx--) { /* skip sta_pool[0] */
 		sta = &sta_pool[idx];
 		sta->idx = id16_map_alloc(staid_allocator);
-		ASSERT(sta->idx <= max_sta);
+		if(sta->idx > max_sta) {
+			DHD_ERROR(("%s: sta idx alloc failure\n", __FUNCTION__));
+			id16_map_fini(dhdp->osh, staid_allocator);
+			return BCME_ERROR;
+		}
 	}
 	/* Now place them into the pre-allocated free pool. */
 	for (idx = 1; idx <= max_sta; idx++) {
@@ -1109,8 +1108,8 @@ dhd_sta_pool_fini(dhd_pub_t *dhdp, int max_sta)
 		int idx;
 		int sta_pool_memsz = ((max_sta + 1) * sizeof(dhd_sta_t));
 		for (idx = 1; idx <= max_sta; idx++) {
-			ASSERT(sta_pool[idx].ifp == DHD_IF_NULL);
-			ASSERT(sta_pool[idx].idx == ID16_INVALID);
+			DHD_WARN(sta_pool[idx].ifp == DHD_IF_NULL, return;);
+			DHD_WARN(sta_pool[idx].idx == ID16_INVALID, return;);
 		}
 		MFREE(dhdp->osh, dhdp->sta_pool, sta_pool_memsz);
 		dhdp->sta_pool = NULL;
@@ -1160,7 +1159,7 @@ dhd_sta_pool_clear(dhd_pub_t *dhdp, int max_sta)
 	for (idx = max_sta; idx >= 1; idx--) { /* skip sta_pool[0] */
 		sta = &sta_pool[idx];
 		sta->idx = id16_map_alloc(staid_allocator);
-		ASSERT(sta->idx <= max_sta);
+		DHD_WARN(sta->idx <= max_sta, return;);
 	}
 	/* Now place them into the pre-allocated free pool. */
 	for (idx = 1; idx <= max_sta; idx++) {
@@ -1178,7 +1177,7 @@ dhd_find_sta(void *pub, int ifidx, void *ea)
 	dhd_if_t *ifp;
 	unsigned long flags;
 
-	ASSERT(ea != NULL);
+	DHD_WARN(ea != NULL, return DHD_STA_NULL;);
 	ifp = dhd_get_ifp((dhd_pub_t *)pub, ifidx);
 	if (ifp == NULL)
 		return DHD_STA_NULL;
@@ -1205,7 +1204,7 @@ dhd_add_sta(void *pub, int ifidx, void *ea)
 	dhd_if_t *ifp;
 	unsigned long flags;
 
-	ASSERT(ea != NULL);
+	DHD_WARN(ea != NULL, return DHD_STA_NULL;);
 	ifp = dhd_get_ifp((dhd_pub_t *)pub, ifidx);
 	if (ifp == NULL)
 		return DHD_STA_NULL;
@@ -1229,7 +1228,7 @@ dhd_add_sta(void *pub, int ifidx, void *ea)
 
 #if defined(BCM_GMAC3)
 	if (ifp->fwdh) {
-		ASSERT(ISALIGNED(ea, 2));
+		DHD_WARN(ISALIGNED(ea, 2), return DHD_STA_NULL;);
 		/* Add sta to WOFA forwarder. */
 		fwder_reassoc(ifp->fwdh, (uint16 *)ea, (wofa_t)sta);
 	}
@@ -1248,7 +1247,7 @@ dhd_del_sta(void *pub, int ifidx, void *ea)
 	dhd_if_t *ifp;
 	unsigned long flags;
 
-	ASSERT(ea != NULL);
+	DHD_WARN(ea != NULL, return;);
 	ifp = dhd_get_ifp((dhd_pub_t *)pub, ifidx);
 	if (ifp == NULL)
 		return;
@@ -1259,7 +1258,7 @@ dhd_del_sta(void *pub, int ifidx, void *ea)
 		if (!memcmp(sta->ea.octet, ea, ETHER_ADDR_LEN)) {
 #if defined(BCM_GMAC3)
 			if (ifp->fwdh) { /* Found a sta, remove from WOFA forwarder. */
-				ASSERT(ISALIGNED(ea, 2));
+				DHD_WARN(ISALIGNED(ea, 2), return;);
 				fwder_deassoc(ifp->fwdh, (uint16 *)ea, (wofa_t)sta);
 			}
 #endif /* BCM_GMAC3 */
@@ -1305,8 +1304,8 @@ int dhd_bssidx2idx(dhd_pub_t *dhdp, uint32 bssidx)
 	dhd_info_t *dhd = dhdp->info;
 	int i;
 
-	ASSERT(bssidx < DHD_MAX_IFS);
-	ASSERT(dhdp);
+	DHD_WARN(bssidx < DHD_MAX_IFS, return DHD_BAD_IF;);
+	DHD_WARN(dhdp, return DHD_BAD_IF;);
 
 	for (i = 0; i < DHD_MAX_IFS; i++) {
 		ifp = dhd->iflist[i];
@@ -1801,7 +1800,7 @@ dhd_net2idx(dhd_info_t *dhd, struct net_device *net)
 {
 	int i = 0;
 
-	ASSERT(dhd);
+	DHD_WARN(dhd, return DHD_BAD_IF;);
 	while (i < DHD_MAX_IFS) {
 		if (dhd->iflist[i] && dhd->iflist[i]->net && (dhd->iflist[i]->net == net))
 			return i;
@@ -1829,9 +1828,7 @@ dhd_ifname2idx(dhd_info_t *dhd, char *name)
 {
 	int i = DHD_MAX_IFS;
 
-	ASSERT(dhd);
-
-	if (name == NULL || *name == '\0')
+	if ((dhd == NULL) || (name == NULL) || (*name == '\0'))
 		return 0;
 
 	while (--i > 0)
@@ -1848,9 +1845,7 @@ dhd_ifidx2hostidx(dhd_info_t *dhd, int ifidx)
 {
 	int i = DHD_MAX_IFS;
 
-	ASSERT(dhd);
-
-	if (ifidx < 0 || ifidx >= DHD_MAX_IFS) {
+	if ((dhd == NULL) || (ifidx < 0) || (ifidx >= DHD_MAX_IFS)) {
 		DHD_TRACE(("%s: ifidx %d out of range\n", __FUNCTION__, ifidx));
 		return 0;	/* default - the primary interface */
 	}
@@ -1869,7 +1864,8 @@ dhd_ifname(dhd_pub_t *dhdp, int ifidx)
 {
 	dhd_info_t *dhd = (dhd_info_t *)dhdp->info;
 
-	ASSERT(dhd);
+	if(dhd == NULL)
+		return "<if_none>";
 
 	if (ifidx < 0 || ifidx >= DHD_MAX_IFS) {
 		DHD_ERROR(("%s: ifidx %d out of range\n", __FUNCTION__, ifidx));
@@ -1893,7 +1889,9 @@ dhd_bssidx2bssid(dhd_pub_t *dhdp, int idx)
 	int i;
 	dhd_info_t *dhd = (dhd_info_t *)dhdp;
 
-	ASSERT(dhd);
+	if(dhd == NULL)
+		return NULL;
+
 	for (i = 0; i < DHD_MAX_IFS; i++)
 	if (dhd->iflist[i] && dhd->iflist[i]->bssidx == idx)
 		return dhd->iflist[i]->mac_addr;
@@ -1918,28 +1916,28 @@ _dhd_set_multicast_list(dhd_info_t *dhd, int ifidx)
 	uint buflen;
 	int ret;
 
-			ASSERT(dhd && dhd->iflist[ifidx]);
-			dev = dhd->iflist[ifidx]->net;
-			if (!dev)
-				return;
+	if(dhd == NULL || dhd->iflist[ifidx] == NULL)
+		return;
+	dev = dhd->iflist[ifidx]->net;
+	if (!dev)
+		return;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27)
-			netif_addr_lock_bh(dev);
+	netif_addr_lock_bh(dev);
 #endif
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 35)
-			cnt = netdev_mc_count(dev);
+	cnt = netdev_mc_count(dev);
 #else
-			cnt = dev->mc_count;
+	cnt = dev->mc_count;
 #endif /* LINUX_VERSION_CODE */
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27)
-			netif_addr_unlock_bh(dev);
+	netif_addr_unlock_bh(dev);
 #endif
 
-			/* Determine initial value of allmulti flag */
+	/* Determine initial value of allmulti flag */
 	allmulti = (dev->flags & IFF_ALLMULTI) ? TRUE : FALSE;
 
 	/* Send down the multicast list first. */
-
 
 	buflen = sizeof("mcast_list") + sizeof(cnt) + (cnt * ETHER_ADDR_LEN);
 	if (!(bufp = buf = MALLOC(dhd->pub.osh, buflen))) {
@@ -2359,7 +2357,7 @@ int
 dhd_os_wlfc_block(dhd_pub_t *pub)
 {
 	dhd_info_t *di = (dhd_info_t *)(pub->info);
-	ASSERT(di != NULL);
+	DHD_WARN(di != NULL, return 0;);
 	spin_lock_bh(&di->wlfc_spinlock);
 	return 1;
 }
@@ -2369,7 +2367,7 @@ dhd_os_wlfc_unblock(dhd_pub_t *pub)
 {
 	dhd_info_t *di = (dhd_info_t *)(pub->info);
 
-	ASSERT(di != NULL);
+	DHD_WARN(di != NULL, return 0;);
 	spin_unlock_bh(&di->wlfc_spinlock);
 	return 1;
 }
@@ -2589,11 +2587,9 @@ dhd_start_xmit(struct sk_buff *skb, struct net_device *net)
 	ifp = DHD_DEV_IFP(net);
 	ifidx = DHD_DEV_IFIDX(net);
 
-	ASSERT(ifidx == dhd_net2idx(dhd, net));
-	ASSERT((ifp != NULL) && (ifp == dhd->iflist[ifidx]));
-
-	if (ifidx == DHD_BAD_IF) {
-		DHD_ERROR(("%s: bad ifidx %d\n", __FUNCTION__, ifidx));
+	if ((ifidx == DHD_BAD_IF) ||
+		(ifp == NULL) || (ifp != dhd->iflist[ifidx])) {
+		DHD_ERROR(("%s: bad ifidx %d or ifp NULL or bad %p\n", __FUNCTION__, ifidx,ifp));
 		netif_stop_queue(net);
 		DHD_PERIM_UNLOCK_TRY(DHD_FWDER_UNIT(dhd), TRUE);
 		DHD_OS_WAKE_UNLOCK(&dhd->pub);
@@ -2759,7 +2755,8 @@ dhd_txflowcontrol(dhd_pub_t *dhdp, int ifidx, bool state)
 
 	DHD_TRACE(("%s: Enter\n", __FUNCTION__));
 
-	ASSERT(dhd);
+	if(dhd == NULL)
+		return;
 
 	if (ifidx == ALL_INTERFACES) {
 		/* Flow control on all active interfaces */
@@ -2856,9 +2853,9 @@ dhd_rx_frame(dhd_pub_t *dhdp, int ifidx, void *pktbuf, int numpkt, uint8 chan,
 		PKTSETNEXT(dhdp->osh, pktbuf, NULL);
 
 		ifp = dhd->iflist[ifidx];
-		if (ifp == NULL) {
-			DHD_ERROR(("%s: ifp is NULL. drop packet\n",
-				__FUNCTION__));
+		if ((ifidx < 0) || (ifidx >= DHD_MAX_IFS) || (ifp == NULL)) {
+			DHD_ERROR(("%s: ifp is NULL or ifidx:%d wrong. drop packet\n",
+				__FUNCTION__, ifidx));
 			PKTCFREE(dhdp->osh, pktbuf, FALSE);
 			continue;
 		}
@@ -2932,7 +2929,6 @@ dhd_rx_frame(dhd_pub_t *dhdp, int ifidx, void *pktbuf, int numpkt, uint8 chan,
 		if (ifp == NULL)
 			ifp = dhd->iflist[0];
 
-		ASSERT(ifp);
 		skb->dev = ifp->net;
 
 #ifdef PCIE_FULL_DONGLE
@@ -3177,7 +3173,6 @@ dhd_rx_frame(dhd_pub_t *dhdp, int ifidx, void *pktbuf, int numpkt, uint8 chan,
 #endif
 		}
 
-		ASSERT(ifidx < DHD_MAX_IFS && dhd->iflist[ifidx]);
 		ifp = dhd->iflist[ifidx];
 
 		if (ifp->net)
@@ -3277,7 +3272,8 @@ dhd_get_stats(struct net_device *net)
 	}
 
 	ifp = dhd->iflist[ifidx];
-	ASSERT(dhd && ifp);
+	if((dhd == NULL) || (ifp == NULL))
+		return &net->stats;
 
 	if (dhd->pub.up) {
 		/* Use the protocol to get dongle stats */
@@ -4547,7 +4543,8 @@ dhd_allocate_if(dhd_pub_t *dhdpub, int ifidx, char *name,
 	dhd_info_t *dhdinfo = (dhd_info_t *)dhdpub->info;
 	dhd_if_t *ifp;
 
-	ASSERT(dhdinfo && (ifidx < DHD_MAX_IFS));
+	if((dhdinfo == NULL) || (ifidx >= DHD_MAX_IFS))
+		goto fail;
 	ifp = dhdinfo->iflist[ifidx];
 
 	if (ifp != NULL) {
@@ -5274,7 +5271,7 @@ dhd_bus_start(dhd_pub_t *dhdp)
 	dhd_info_t *dhd = (dhd_info_t*)dhdp->info;
 	unsigned long flags;
 
-	ASSERT(dhd);
+	DHD_BUG(!dhd);
 
 	DHD_TRACE(("Enter %s:\n", __FUNCTION__));
 
@@ -6460,9 +6457,15 @@ int dhd_change_mtu(dhd_pub_t *dhdp, int new_mtu, int ifidx)
 	struct dhd_info *dhd = dhdp->info;
 	struct net_device *dev = NULL;
 
-	ASSERT(dhd && dhd->iflist[ifidx]);
+	if (ifidx < 0 || ifidx >= DHD_MAX_IFS)
+		return BCME_BADARG;
+
+	if((dhd == NULL) || (dhd->iflist[ifidx] == NULL))
+		return BCME_BADARG;
+
 	dev = dhd->iflist[ifidx]->net;
-	ASSERT(dev);
+	if(dev == NULL)
+		return BCME_ERROR;
 
 	if (netif_running(dev)) {
 		DHD_ERROR(("%s: Must be down to change its MTU", dev->name));
@@ -6798,13 +6801,25 @@ dhd_register_if(dhd_pub_t *dhdp, int ifidx, bool need_rtnl_lock)
 
 	DHD_TRACE(("%s: ifidx %d\n", __FUNCTION__, ifidx));
 
-	ASSERT(dhd && dhd->iflist[ifidx]);
+	if (ifidx < 0 || ifidx >= DHD_MAX_IFS) {
+		err = BCME_BADARG;
+		goto fail;
+	}
+
+	if (!dhd || !dhd->iflist[ifidx]) {
+		err = BCME_ERROR;
+		goto fail;
+	}
+
 	ifp = dhd->iflist[ifidx];
 	net = ifp->net;
-	ASSERT(net && (ifp->idx == ifidx));
+
+	if (!net || ifp->idx != ifidx) {
+		err = BCME_ERROR;
+		goto fail;
+	}
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 31))
-	ASSERT(!net->open);
 	net->get_stats = dhd_get_stats;
 	net->do_ioctl = dhd_ioctl_entry;
 	net->hard_start_xmit = dhd_start_xmit;
@@ -6812,7 +6827,6 @@ dhd_register_if(dhd_pub_t *dhdp, int ifidx, bool need_rtnl_lock)
 	net->set_multicast_list = dhd_set_multicast_list;
 	net->open = net->stop = NULL;
 #else
-	ASSERT(!net->netdev_ops);
 	net->netdev_ops = &dhd_ops_virt;
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 31) */
 
@@ -7043,8 +7057,9 @@ void dhd_detach(dhd_pub_t *dhdp)
 
 		/*  delete primary interface 0 */
 		ifp = dhd->iflist[0];
-		ASSERT(ifp);
-		ASSERT(ifp->net);
+		if((ifp == NULL) || (ifp->net == NULL))
+			return;
+
 		if (ifp && ifp->net) {
 #ifdef WL_CFG80211
 			cfg = wl_get_cfg(ifp->net);
@@ -7666,7 +7681,8 @@ dhd_wl_host_event(dhd_info_t *dhd, int *ifidx, void *pktdata, size_t pktlen,
 	wl_event_msg_t *event, void **data)
 {
 	int bcmerror = 0;
-	ASSERT(dhd != NULL);
+	if(dhd == NULL)
+		return BCME_BADARG;
 
 #ifdef SHOW_LOGTRACE
 		bcmerror = wl_host_event(&dhd->pub, ifidx, pktdata, pktlen,
@@ -7679,14 +7695,14 @@ dhd_wl_host_event(dhd_info_t *dhd, int *ifidx, void *pktdata, size_t pktlen,
 	if (bcmerror != BCME_OK)
 		return (bcmerror);
 
+	if ((dhd->iflist[*ifidx] == NULL) || (dhd->iflist[*ifidx]->net == NULL))
+		return BCME_ERROR;
+
 #if defined(WL_WIRELESS_EXT)
 	if (event->bsscfgidx == 0) {
 		/*
 		 * Wireless ext is on primary interface only
 		 */
-
-		ASSERT(dhd->iflist[*ifidx] != NULL);
-		ASSERT(dhd->iflist[*ifidx]->net != NULL);
 
 		if (dhd->iflist[*ifidx]->net) {
 			wl_iw_event(dhd->iflist[*ifidx]->net, event, *data);
@@ -7695,8 +7711,6 @@ dhd_wl_host_event(dhd_info_t *dhd, int *ifidx, void *pktdata, size_t pktlen,
 #endif /* defined(WL_WIRELESS_EXT)  */
 
 #ifdef WL_CFG80211
-	ASSERT(dhd->iflist[*ifidx] != NULL);
-	ASSERT(dhd->iflist[*ifidx]->net != NULL);
 
 	if (dhd->iflist[*ifidx]->net)
 		wl_cfg80211_event(dhd->iflist[*ifidx]->net, event, *data);
@@ -7733,7 +7747,7 @@ dhd_sendup_log(dhd_pub_t *dhdp, void *data, int data_len)
 	dhd = dhdp->info;
 
 	if ((p = PKTGET(dhdp->osh, pktlen, FALSE))) {
-		ASSERT(ISALIGNED((uintptr)PKTDATA(dhdp->osh, p), sizeof(uint32)));
+		DHD_WARN(ISALIGNED((uintptr)PKTDATA(dhdp->osh, p), sizeof(uint32)), return;);
 
 		bcopy(&dhdp->mac, &eth.ether_dhost, ETHER_ADDR_LEN);
 		bcopy(&dhdp->mac, &eth.ether_shost, ETHER_ADDR_LEN);
@@ -7751,7 +7765,6 @@ dhd_sendup_log(dhd_pub_t *dhdp, void *data, int data_len)
 		if (ifp == NULL)
 			 ifp = dhd->iflist[0];
 
-		ASSERT(ifp);
 		skb->dev = ifp->net;
 		skb->protocol = eth_type_trans(skb, skb->dev);
 		skb->data = skb_data;
@@ -10655,7 +10668,8 @@ int dhd_get_ap_isolate(dhd_pub_t *dhdp, uint32 idx)
 	dhd_info_t *dhd = dhdp->info;
 	dhd_if_t *ifp;
 
-	ASSERT(idx < DHD_MAX_IFS);
+	if (idx < 0 || idx >= DHD_MAX_IFS)
+		return BCME_ERROR;
 
 	ifp = dhd->iflist[idx];
 
@@ -10668,7 +10682,8 @@ int dhd_set_ap_isolate(dhd_pub_t *dhdp, uint32 idx, int val)
 	dhd_info_t *dhd = dhdp->info;
 	dhd_if_t *ifp;
 
-	ASSERT(idx < DHD_MAX_IFS);
+	if (idx < 0 || idx >= DHD_MAX_IFS)
+		return BCME_ERROR;
 
 	ifp = dhd->iflist[idx];
 
@@ -10699,7 +10714,7 @@ dhd_mem_dump_to_file(void *handle, void *event_info, u8 event)
 	}
 
 	if (dhd->pub.memdump_enabled == DUMP_MEMFILE_BUGON) {
-		BUG_ON(1);
+		DHD_BUG(1);
 	}
 	MFREE(dhd->pub.osh, dump, sizeof(dhd_dump_t));
 }
@@ -10780,7 +10795,7 @@ dhd_wmf_t* dhd_wmf_conf(dhd_pub_t *dhdp, uint32 idx)
 	dhd_info_t *dhd = dhdp->info;
 	dhd_if_t *ifp;
 
-	ASSERT(idx < DHD_MAX_IFS);
+	DHD_WARN(idx < DHD_MAX_IFS, return NULL;);
 
 	ifp = dhd->iflist[idx];
 	return &ifp->wmf;

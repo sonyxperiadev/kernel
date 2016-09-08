@@ -73,7 +73,7 @@ struct bcmsdh_info
 extern int bcmsdh_detach(osl_t *osh, void *sdh);
 
 /* Query if SD device interrupts are enabled */
-extern bool bcmsdh_intr_query(void *sdh);
+extern int bcmsdh_intr_query(void *sdh);
 
 /* Enable/disable SD interrupt */
 extern int bcmsdh_intr_enable(void *sdh);
@@ -87,7 +87,7 @@ extern void bcmsdh_intr_forward(void *sdh, bool pass);
 
 #if defined(DHD_DEBUG)
 /* Query pending interrupt status from the host controller */
-extern bool bcmsdh_intr_pending(void *sdh);
+extern int bcmsdh_intr_pending(void *sdh);
 #endif
 
 #ifdef DHD_WAKE_STATUS

@@ -300,10 +300,6 @@ typedef struct bcm_iovar {
 
 extern const bcm_iovar_t *bcm_iovar_lookup(const bcm_iovar_t *table, const char *name);
 extern int bcm_iovar_lencheck(const bcm_iovar_t *table, void *arg, int len, bool set);
-#if defined(WLTINYDUMP) || defined(WLMSG_INFORM) || defined(WLMSG_ASSOC) || \
-	defined(WLMSG_PRPKT) || defined(WLMSG_WSEC)
-extern int bcm_format_ssid(char* buf, const uchar ssid[], uint ssid_len);
-#endif
 #endif	/* BCMDRIVER */
 
 /* Base type definitions */

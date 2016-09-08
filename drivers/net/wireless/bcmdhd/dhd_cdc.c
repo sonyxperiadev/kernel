@@ -279,8 +279,6 @@ dhd_prot_ioctl(dhd_pub_t *dhd, int ifidx, wl_ioctl_t * ioc, void * buf, int len)
 
 	DHD_TRACE(("%s: Enter\n", __FUNCTION__));
 
-	ASSERT(len <= WLC_IOCTL_MAXLEN);
-
 	if (len > WLC_IOCTL_MAXLEN)
 		goto done;
 

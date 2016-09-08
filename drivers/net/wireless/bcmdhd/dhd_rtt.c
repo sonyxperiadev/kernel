@@ -474,12 +474,14 @@ rate_rspec2rate(uint32 rspec)
 		uint mcs = (rspec & WL_RSPEC_VHT_MCS_MASK);
 		uint nss = (rspec & WL_RSPEC_VHT_NSS_MASK) >> WL_RSPEC_VHT_NSS_SHIFT;
 
-		ASSERT(mcs <= 9);
-		ASSERT(nss <= 8);
+		if (mcs > 9 || nss > 8)  {
+			DHD_ERROR(("%s(): Invalid mcs %d or nss %d\n",__FUNCTION__, mcs,nss));
+			return 0;
+		}
 
 		rate = rate_mcs2rate(mcs, nss, RSPEC_BW(rspec), RSPEC_ISSGI(rspec));
 	} else {
-		ASSERT(0);
+		DHD_WARN(0,);
 	}
 
 	return (rate == 0) ? -1 : rate;

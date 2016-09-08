@@ -242,7 +242,6 @@ dhd_deferred_schedule_work(void *workq, void *event_data, u8 event,
 
 	if (!deferred_wq) {
 		DHD_ERROR(("%s: work queue not initialized\n", __FUNCTION__));
-		ASSERT(0);
 		return DHD_WQ_STS_UNINITIALIZED;
 	}
 
@@ -257,15 +256,6 @@ dhd_deferred_schedule_work(void *workq, void *event_data, u8 event,
 			__FUNCTION__, priority));
 		return DHD_WQ_STS_UNKNOWN_PRIORITY;
 	}
-
-	/*
-	 * default element size is 1, which can be changed
-	 * using kfifo_esize(). Older kernel(FC11) doesn't support
-	 * changing element size. For compatibility changing
-	 * element size is not prefered
-	 */
-	ASSERT(kfifo_esize(deferred_wq->prio_fifo) == 1);
-	ASSERT(kfifo_esize(deferred_wq->work_fifo) == 1);
 
 	deferred_event.event = event;
 	deferred_event.event_data = event_data;
@@ -303,8 +293,8 @@ dhd_get_scheduled_work(struct dhd_deferred_wq *deferred_wq,
 	 * changing element size. For compatibility changing
 	 * element size is not prefered
 	 */
-	ASSERT(kfifo_esize(deferred_wq->prio_fifo) == 1);
-	ASSERT(kfifo_esize(deferred_wq->work_fifo) == 1);
+	DHD_WARN(kfifo_esize(deferred_wq->prio_fifo) == 1,);
+	DHD_WARN(kfifo_esize(deferred_wq->work_fifo) == 1,);
 
 	/* handle priority work */
 	if (DHD_FIFO_HAS_ENOUGH_DATA(deferred_wq->prio_fifo)) {
@@ -361,14 +351,14 @@ dhd_deferred_work_handler(struct work_struct *work)
 		if (work_event.event >= DHD_MAX_WQ_EVENTS) {
 			DHD_ERROR(("%s: unknown event\n", __FUNCTION__));
 			dhd_deferred_dump_work_event(&work_event);
-			ASSERT(work_event.event < DHD_MAX_WQ_EVENTS);
+			DHD_WARN(0,);
 			continue;
 		}
 
 		if (!work_event.event_data) {
 			DHD_ERROR(("%s: event data is null\n", __FUNCTION__));
 			dhd_deferred_dump_work_event(&work_event);
-			ASSERT(work_event.event_data != NULL);
+			DHD_WARN(0,);
 			continue;
 		}
 
@@ -379,7 +369,7 @@ dhd_deferred_work_handler(struct work_struct *work)
 			DHD_ERROR(("%s: event handler is null\n",
 				__FUNCTION__));
 			dhd_deferred_dump_work_event(&work_event);
-			ASSERT(work_event.event_handler != NULL);
+			DHD_WARN(0,);
 		}
 	} while (1);
 

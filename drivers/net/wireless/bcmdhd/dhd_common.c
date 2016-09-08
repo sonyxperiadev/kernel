@@ -707,8 +707,10 @@ dhd_doiovar(dhd_pub_t *dhd_pub, const bcm_iovar_t *vi, uint32 actionid, const ch
 		}
 
 		wmf = dhd_wmf_conf(dhd_pub, bssidx);
-		int_val = wmf->wmf_enable ? 1 :0;
-		bcopy(&int_val, arg, sizeof(int_val));
+		if (wmf) {
+			int_val = wmf->wmf_enable ? 1 :0;
+			bcopy(&int_val, arg, sizeof(int_val));
+		}
 		break;
 	}
 	case IOV_SVAL(IOV_WMF_BSS_ENAB): {
@@ -723,11 +725,13 @@ dhd_doiovar(dhd_pub_t *dhd_pub, const bcm_iovar_t *vi, uint32 actionid, const ch
 			break;
 		}
 
-		ASSERT(val);
+		DHD_WARN(val, bcmerror = BCME_BADARG; break;);
 		bcopy(val, &int_val, sizeof(uint32));
 		wmf = dhd_wmf_conf(dhd_pub, bssidx);
-		if (wmf->wmf_enable == int_val)
+
+		if (!wmf || wmf->wmf_enable == int_val)
 			break;
+
 		if (int_val) {
 			/* Enable WMF */
 			if (dhd_wmf_instance_add(dhd_pub, bssidx) != BCME_OK) {
@@ -845,12 +849,13 @@ dhd_doiovar(dhd_pub_t *dhd_pub, const bcm_iovar_t *vi, uint32 actionid, const ch
 		}
 
 		int_val = dhd_get_ap_isolate(dhd_pub, bssidx);
-		bcopy(&int_val, arg, sizeof(int_val));
+		if (int_val != BCME_ERROR)
+			bcopy(&int_val, arg, sizeof(int_val));
 		break;
 	}
 	case IOV_SVAL(IOV_AP_ISOLATE): {
 		uint32	bssidx;
-		char *val;
+		char *val = NULL;
 
 		if (dhd_iovar_parse_bssidx(dhd_pub, (char *)name, &bssidx, &val) != BCME_OK) {
 			DHD_ERROR(("%s: ap isolate: bad parameter\n", __FUNCTION__));
@@ -858,9 +863,10 @@ dhd_doiovar(dhd_pub_t *dhd_pub, const bcm_iovar_t *vi, uint32 actionid, const ch
 			break;
 		}
 
-		ASSERT(val);
-		bcopy(val, &int_val, sizeof(uint32));
-		dhd_set_ap_isolate(dhd_pub, bssidx, int_val);
+		if (val) {
+			bcopy(val, &int_val, sizeof(uint32));
+			dhd_set_ap_isolate(dhd_pub, bssidx, int_val);
+		}
 		break;
 	}
 
@@ -910,7 +916,7 @@ dhd_prec_enq(dhd_pub_t *dhdp, struct pktq *q, void *pkt, int prec)
 		eprec = prec;
 	else if (pktq_full(q)) {
 		p = pktq_peek_tail(q, &eprec);
-		ASSERT(p);
+		DHD_BUG(p);
 		if (eprec > prec || eprec < 0)
 			return FALSE;
 	}
@@ -918,13 +924,13 @@ dhd_prec_enq(dhd_pub_t *dhdp, struct pktq *q, void *pkt, int prec)
 	/* Evict if needed */
 	if (eprec >= 0) {
 		/* Detect queueing to unconfigured precedence */
-		ASSERT(!pktq_pempty(q, eprec));
+		DHD_WARN(!pktq_pempty(q, eprec), return FALSE;);
 		discard_oldest = AC_BITMAP_TST(dhdp->wme_dp, eprec);
 		if (eprec == prec && !discard_oldest)
 			return FALSE;		/* refuse newer (incoming) packet */
 		/* Evict packet according to discard policy */
 		p = discard_oldest ? pktq_pdeq(q, eprec) : pktq_pdeq_tail(q, eprec);
-		ASSERT(p);
+		DHD_WARN(p, return FALSE;);
 #ifdef DHDTCPACK_SUPPRESS
 		if (dhd_tcpack_check_xmit(dhdp, p) == BCME_ERROR) {
 			DHD_ERROR(("%s %d: tcpack_suppress ERROR!!! Stop using it\n",
@@ -937,7 +943,7 @@ dhd_prec_enq(dhd_pub_t *dhdp, struct pktq *q, void *pkt, int prec)
 
 	/* Enqueue */
 	p = pktq_penq(q, prec, pkt);
-	ASSERT(p);
+	DHD_BUG(!p);
 
 	return TRUE;
 }
@@ -955,8 +961,8 @@ dhd_prec_drop_pkts(dhd_pub_t *dhdp, struct pktq *pq, int prec, f_droppkt_t fn)
 	void *p, *prev = NULL, *next = NULL, *first = NULL, *last = NULL, *prev_first = NULL;
 	pkt_frag_t frag_info;
 
-	ASSERT(dhdp && pq);
-	ASSERT(prec >= 0 && prec < pq->num_prec);
+	DHD_BUG((dhdp == NULL) || (pq == NULL));
+	DHD_BUG((prec < 0) || (prec >= pq->num_prec));
 
 	q = &pq->q[prec];
 	p = q->head;
@@ -1040,14 +1046,14 @@ dhd_iovar_op(dhd_pub_t *dhd_pub, const char *name,
 
 	DHD_TRACE(("%s: Enter\n", __FUNCTION__));
 
-	ASSERT(name);
-	ASSERT(len >= 0);
+	DHD_WARN(name, return BCME_BADARG;);
+	DHD_WARN(len >= 0, return BCME_BADARG;);
 
 	/* Get MUST have return space */
-	ASSERT(set || (arg && len));
+	DHD_WARN(set || (arg && len), return BCME_BADARG;);
 
 	/* Set does NOT take qualifiers */
-	ASSERT(!set || (!params && !plen));
+	DHD_WARN(!set || (!params && !plen), return BCME_BADARG;);
 
 	if ((vi = bcm_iovar_lookup(dhd_iovars, name)) == NULL) {
 		bcmerror = BCME_UNSUPPORTED;
@@ -1703,7 +1709,9 @@ int wl_host_event(dhd_pub_t *dhd_pub, int *ifidx, void *pktdata, size_t pktlen,
 #ifdef PCIE_FULL_DONGLE
 		if (type != WLC_E_LINK) {
 			uint8 ifindex = (uint8)hostidx;
-			uint8 role = dhd_flow_rings_ifindex2role(dhd_pub, ifindex);
+			int role = dhd_flow_rings_ifindex2role(dhd_pub, ifindex);
+			if (role == BCME_ERROR)
+				return BCME_ERROR;
 			if (DHD_IF_ROLE_STA(role)) {
 				dhd_flow_rings_delete(dhd_pub, ifindex);
 			} else {

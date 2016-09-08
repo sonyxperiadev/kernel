@@ -172,5 +172,5 @@ extern int dhd_update_interface_link_status(dhd_pub_t *dhdp, uint8 ifindex,
 extern int dhd_flow_prio_map(dhd_pub_t *dhd, uint8 *map, bool set);
 extern int dhd_update_flow_prio_map(dhd_pub_t *dhdp, uint8 map);
 
-extern uint8 dhd_flow_rings_ifindex2role(dhd_pub_t *dhdp, uint8 ifindex);
+extern int dhd_flow_rings_ifindex2role(dhd_pub_t *dhdp, uint8 ifindex);
 #endif /* _dhd_flowrings_h_ */

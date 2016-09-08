@@ -247,7 +247,7 @@ dev_wlc_intvar_set(
 
 	val = htod32(val);
 	len = bcm_mkiovar(name, (char *)(&val), sizeof(val), buf, sizeof(buf));
-	ASSERT(len);
+	DHD_WARN(len, return BCME_ERROR;);
 
 	return (dev_wlc_ioctl(dev, WLC_SET_VAR, buf, len));
 }
@@ -264,7 +264,7 @@ dev_iw_iovar_setbuf(
 	int iolen;
 
 	iolen = bcm_mkiovar(iovar, param, paramlen, bufptr, buflen);
-	ASSERT(iolen);
+	DHD_WARN(iolen, return BCME_ERROR;);
 	BCM_REFERENCE(iolen);
 
 	return (dev_wlc_ioctl(dev, WLC_SET_VAR, bufptr, iolen));
@@ -282,7 +282,7 @@ dev_iw_iovar_getbuf(
 	int iolen;
 
 	iolen = bcm_mkiovar(iovar, param, paramlen, bufptr, buflen);
-	ASSERT(iolen);
+	DHD_WARN(iolen, return BCME_ERROR;);
 	BCM_REFERENCE(iolen);
 
 	return (dev_wlc_ioctl(dev, WLC_GET_VAR, bufptr, buflen));
@@ -304,7 +304,7 @@ dev_wlc_bufvar_set(
 		return -ENOMEM;
 
 	buflen = bcm_mkiovar(name, buf, len, ioctlbuf, MAX_WLIW_IOCTL_LEN);
-	ASSERT(buflen);
+	DHD_WARN(buflen, return BCME_ERROR;);
 	error = dev_wlc_ioctl(dev, WLC_SET_VAR, ioctlbuf, buflen);
 
 	kfree(ioctlbuf);
@@ -332,7 +332,7 @@ dev_wlc_bufvar_get(
 	if (!ioctlbuf)
 		return -ENOMEM;
 	len = bcm_mkiovar(name, NULL, 0, ioctlbuf, MAX_WLIW_IOCTL_LEN);
-	ASSERT(len);
+	DHD_WARN(len, return BCME_ERROR;);
 	BCM_REFERENCE(len);
 	error = dev_wlc_ioctl(dev, WLC_GET_VAR, (void *)ioctlbuf, MAX_WLIW_IOCTL_LEN);
 	if (!error)
@@ -363,7 +363,7 @@ dev_wlc_intvar_get(
 	uint data_null;
 
 	len = bcm_mkiovar(name, (char *)(&data_null), 0, (char *)(&var), sizeof(var.buf));
-	ASSERT(len);
+	DHD_WARN(len, return BCME_ERROR;);
 	error = dev_wlc_ioctl(dev, WLC_GET_VAR, (void *)&var, len);
 
 	*retval = dtoh32(var.val);
@@ -768,7 +768,7 @@ wl_iw_get_range(
 				nrate_list2copy = 3;
 		}
 		range->num_bitrates += 8;
-		ASSERT(range->num_bitrates < IW_MAX_BITRATES);
+		DHD_WARN(range->num_bitrates < IW_MAX_BITRATES, return BCME_ERROR;);
 		for (k = 0; i < range->num_bitrates; k++, i++) {
 			/* convert to bps */
 			range->bitrate[i] = (nrate_list[nrate_list2copy][k]) * 500000;
@@ -1077,12 +1077,12 @@ wl_iw_get_aplist(
 	list->buflen = dtoh32(list->buflen);
 	list->version = dtoh32(list->version);
 	list->count = dtoh32(list->count);
-	ASSERT(list->version == WL_BSS_INFO_VERSION);
+	DHD_WARN(list->version == WL_BSS_INFO_VERSION, kfree(list);return BCME_ERROR;);
 
 	for (i = 0, dwrq->length = 0; i < list->count && dwrq->length < IW_MAX_AP; i++) {
 		bi = bi ? (wl_bss_info_t *)((uintptr)bi + dtoh32(bi->length)) : list->bss_info;
-		ASSERT(((uintptr)bi + dtoh32(bi->length)) <= ((uintptr)list +
-			buflen));
+		DHD_WARN(((uintptr)bi + dtoh32(bi->length)) <= ((uintptr)list +
+			buflen), kfree(list);return BCME_ERROR;);
 
 		/* Infrastructure only */
 		if (!(dtoh16(bi->capability) & DOT11_CAP_ESS))
@@ -1146,13 +1146,13 @@ wl_iw_iscan_get_aplist(
 	/* Get scan results (too large to put on the stack) */
 	while (buf) {
 	    list = &((wl_iscan_results_t*)buf->iscan_buf)->results;
-	    ASSERT(list->version == WL_BSS_INFO_VERSION);
+		DHD_WARN(list->version == WL_BSS_INFO_VERSION, return BCME_ERROR;);
 
 	    bi = NULL;
 	for (i = 0, dwrq->length = 0; i < list->count && dwrq->length < IW_MAX_AP; i++) {
 		bi = bi ? (wl_bss_info_t *)((uintptr)bi + dtoh32(bi->length)) : list->bss_info;
-		ASSERT(((uintptr)bi + dtoh32(bi->length)) <= ((uintptr)list +
-			WLC_IW_ISCAN_MAXLEN));
+		DHD_WARN(((uintptr)bi + dtoh32(bi->length)) <= ((uintptr)list +
+			WLC_IW_ISCAN_MAXLEN), return BCME_ERROR;);
 
 		/* Infrastructure only */
 		if (!(dtoh16(bi->capability) & DOT11_CAP_ESS))
@@ -1424,12 +1424,8 @@ wl_iw_get_scan(
 	list->version = dtoh32(list->version);
 	list->count = dtoh32(list->count);
 
-	ASSERT(list->version == WL_BSS_INFO_VERSION);
-
 	for (i = 0; i < list->count && i < IW_MAX_AP; i++) {
 		bi = bi ? (wl_bss_info_t *)((uintptr)bi + dtoh32(bi->length)) : list->bss_info;
-		ASSERT(((uintptr)bi + dtoh32(bi->length)) <= ((uintptr)list +
-			buflen));
 
 		/* First entry must be the BSSID */
 		iwe.cmd = SIOCGIWAP;
@@ -1548,8 +1544,6 @@ wl_iw_iscan_get_scan(
 	    bi = NULL;
 	    for (ii = 0; ii < list->count && apcnt < IW_MAX_AP; apcnt++, ii++) {
 		bi = bi ? (wl_bss_info_t *)((uintptr)bi + dtoh32(bi->length)) : list->bss_info;
-		ASSERT(((uintptr)bi + dtoh32(bi->length)) <= ((uintptr)list +
-			WLC_IW_ISCAN_MAXLEN));
 
 		/* overflow check cover fields before wpa IEs */
 		if (event + ETHER_ADDR_LEN + bi->SSID_len + IW_EV_UINT_LEN + IW_EV_FREQ_LEN +
@@ -3490,7 +3484,7 @@ wl_iw_iscan(iscan_info_t *iscan, wlc_ssid_t *ssid, uint16 action)
 		return -ENOMEM;
 	}
 	memset(params, 0, params_size);
-	ASSERT(params_size < WLC_IOCTL_SMLEN);
+	DHD_WARN(params_size < WLC_IOCTL_SMLEN, kfree(params);return BCME_ERROR;);
 
 	err = wl_iw_iscan_prep(&params->params, ssid);
 

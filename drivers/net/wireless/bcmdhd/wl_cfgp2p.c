@@ -2385,13 +2385,11 @@ wl_cfgp2p_register_ndev(struct bcm_cfg80211 *cfg)
 	memcpy((void *)netdev_priv(net), &cfg, sizeof(struct bcm_cfg80211 *));
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 31))
-	ASSERT(!net->open);
 	net->do_ioctl = wl_cfgp2p_do_ioctl;
 	net->hard_start_xmit = wl_cfgp2p_start_xmit;
 	net->open = wl_cfgp2p_if_open;
 	net->stop = wl_cfgp2p_if_stop;
 #else
-	ASSERT(!net->netdev_ops);
 	net->netdev_ops = &wl_cfgp2p_if_ops;
 #endif
 

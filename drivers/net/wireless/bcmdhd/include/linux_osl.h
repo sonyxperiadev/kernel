@@ -920,7 +920,7 @@ struct chain_node {
 #define	PKTCFREE(osh, skb, send) \
 do { \
 	void *nskb; \
-	ASSERT((skb) != NULL); \
+	BUG_ON(!skb); \
 	FOREACH_CHAINED_PKT((skb), nskb) { \
 		PKTCLRCHAINED((osh), (skb)); \
 		PKTCCLRFLAGS((skb)); \

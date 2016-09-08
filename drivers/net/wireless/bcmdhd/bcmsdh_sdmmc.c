@@ -428,12 +428,12 @@ sdioh_iovar_op(sdioh_info_t *si, const char *name,
 	bool bool_val;
 	uint32 actionid;
 
-	ASSERT(name);
-	ASSERT(len >= 0);
+	DHD_WARN(name, return BCME_BADARG;);
+	DHD_WARN(len >= 0, return BCME_BADARG;);
 
 	/* Get must have return space; Set does not take qualifiers */
-	ASSERT(set || (arg && len));
-	ASSERT(!set || (!params && !plen));
+	DHD_WARN(set || (arg && len), return BCME_BADARG;);
+	DHD_WARN(!set || (!params && !plen), return BCME_BADARG;);
 
 	sd_trace(("%s: Enter (%s %s)\n", __FUNCTION__, (set ? "set" : "get"), name));
 
@@ -966,7 +966,7 @@ sdioh_request_packet_chain(sdioh_info_t *sd, uint fix_inc, uint write, uint func
 	struct mmc_host *host = sdio_func->card->host;
 
 	sd_trace(("%s: Enter\n", __FUNCTION__));
-	ASSERT(pkt);
+	DHD_WARN(pkt, return SDIOH_API_RC_FAIL;);
 	DHD_PM_RESUME_WAIT(sdioh_request_packet_wait);
 	DHD_PM_RESUME_RETURN_ERROR(SDIOH_API_RC_FAIL);
 
@@ -996,7 +996,7 @@ sdioh_request_packet_chain(sdioh_info_t *sd, uint fix_inc, uint write, uint func
 			int sg_data_size;
 			uint8 *pdata = (uint8*)PKTDATA(sd->osh, pnext);
 
-			ASSERT(pdata != NULL);
+			DHD_WARN(pdata != NULL, return SDIOH_API_RC_FAIL;);
 			pkt_len = PKTLEN(sd->osh, pnext);
 			sd_trace(("%s[%d] data=%p, len=%d\n", __FUNCTION__, write, pdata, pkt_len));
 			/* sg_count is unlikely larger than the array size, and this is
@@ -1077,7 +1077,7 @@ sdioh_buffer_tofrom_bus(sdioh_info_t *sd, uint fix_inc, uint write, uint func,
 	int err_ret = 0;
 
 	sd_trace(("%s: Enter\n", __FUNCTION__));
-	ASSERT(buf);
+	DHD_WARN(buf, return SDIOH_API_RC_FAIL;);
 
 	/* NOTE:
 	 * For all writes, each packet length is aligned to 32 (or 4)
@@ -1149,7 +1149,7 @@ sdioh_request_buffer(sdioh_info_t *sd, uint pio_dma, uint fix_inc, uint write, u
 		buf_len = PKTLEN(sd->osh, pkt);
 	}
 
-	ASSERT(buffer);
+	DHD_WARN(buffer, return SDIOH_API_RC_FAIL;);
 
 	/* buffer and length are aligned, use it directly so we can avoid memory copy */
 	if (((ulong)buffer & DMA_ALIGN_MASK) == 0 && (buf_len & DMA_ALIGN_MASK) == 0)
@@ -1254,13 +1254,13 @@ static void IRQHandler(struct sdio_func *func)
 
 	sd = sdio_get_drvdata(func);
 
-	ASSERT(sd != NULL);
+	DHD_BUG(!sd);
 	sdio_release_host(sd->func[0]);
 
 	if (sd->use_client_ints) {
 		sd->intrcount++;
-		ASSERT(sd->intr_handler);
-		ASSERT(sd->intr_handler_arg);
+		DHD_BUG(!sd->intr_handler);
+		DHD_BUG(!sd->intr_handler_arg);
 		(sd->intr_handler)(sd->intr_handler_arg);
 	} else {
 		sd_err(("bcmsdh_sdmmc: ***IRQHandler\n"));

@@ -82,7 +82,7 @@ pktpool_attach(osl_t *osh, uint32 total_pools)
 		return BCME_ERROR;
 	}
 
-	ASSERT(total_pools <= PKTPOOL_MAXIMUM_ID);
+	DHD_BUG(total_pools > PKTPOOL_MAXIMUM_ID);
 
 	/* Initialize registry: reserve slot#0 and tag others as free */
 	PKTPOOL_REGISTRY_RSV();		/* reserve slot#0 */
@@ -106,10 +106,10 @@ pktpool_dettach(osl_t *osh)
 	}
 
 	/* Ascertain that no pools are still registered */
-	ASSERT(PKTPOOL_REGISTRY_ISRSVD()); /* assert reserved slot */
+	DHD_BUG(!PKTPOOL_REGISTRY_ISRSVD()); /* assert reserved slot */
 
 	PKTPOOL_REGISTRY_FOREACH(poolid) {	/* ascertain all others are free */
-		ASSERT(PKTPOOL_REGISTRY_ISCLR(poolid));
+		DHD_WARN(PKTPOOL_REGISTRY_ISCLR(poolid), return BCME_ERROR;);
 	}
 
 	pktpools_max = 0U; /* restore boot state */
@@ -123,10 +123,9 @@ pktpool_register(pktpool_t * poolptr)
 	uint32 poolid;
 
 	if (pktpools_max == 0U) {
+		DHD_WARN(0,);
 		return PKTPOOL_INVALID_ID; /* registry has not yet been constructed */
 	}
-
-	ASSERT(pktpools_max != 0U);
 
 	/* find an empty slot in pktpools_registry */
 	PKTPOOL_REGISTRY_FOREACH(poolid) {
@@ -144,16 +143,16 @@ pktpool_deregister(pktpool_t * poolptr)
 {
 	uint32 poolid;
 
-	ASSERT(POOLPTR(poolptr) != POOLPTR(NULL));
+	DHD_BUG(POOLPTR(poolptr) == POOLPTR(NULL));
 
 	poolid = POOLID(poolptr);
-	ASSERT(poolid <= pktpools_max);
+	DHD_BUG(poolid > pktpools_max);
 
 	/* Asertain that a previously registered poolptr is being de-registered */
 	if (PKTPOOL_REGISTRY_CMP(poolid, POOLPTR(poolptr))) {
 		PKTPOOL_REGISTRY_CLR(poolid); /* mark as free */
 	} else {
-		ASSERT(0);
+		DHD_WARN(0,);
 		return BCME_ERROR; /* mismatch in registry */
 	}
 
@@ -184,9 +183,7 @@ pktpool_init(osl_t *osh, pktpool_t *pktp, int *pplen, int plen, bool istx, uint8
 	int pktplen;
 	uint8 pktp_id;
 
-	ASSERT(pktp != NULL);
-	ASSERT(osh != NULL);
-	ASSERT(pplen != NULL);
+	DHD_WARN(!pktp || !osh || !pplen, return BCME_BADARG;);
 
 	pktplen = *pplen;
 
@@ -253,8 +250,7 @@ pktpool_deinit(osl_t *osh, pktpool_t *pktp)
 {
 	uint16 freed = 0;
 
-	ASSERT(osh != NULL);
-	ASSERT(pktp != NULL);
+	DHD_WARN(osh && pktp, return BCME_BADARG;);
 
 #ifdef BCMDBG_POOL
 	{
@@ -276,11 +272,10 @@ pktpool_deinit(osl_t *osh, pktpool_t *pktp)
 		PKTFREE(osh, p, pktp->istx); /* free the packet */
 
 		freed++;
-		ASSERT(freed <= pktp->len);
 	}
 
 	pktp->avail -= freed;
-	ASSERT(pktp->avail == 0);
+	DHD_BUG(pktp->avail);
 
 	pktp->len -= freed;
 
@@ -290,7 +285,7 @@ pktpool_deinit(osl_t *osh, pktpool_t *pktp)
 	pktp->inited = FALSE;
 
 	/* Are there still pending pkts? */
-	ASSERT(pktp->len == 0);
+	DHD_BUG(pktp->len);
 
 	return 0;
 }
@@ -302,7 +297,7 @@ pktpool_fill(osl_t *osh, pktpool_t *pktp, bool minimal)
 	int err = 0;
 	int len, psize, maxlen;
 
-	ASSERT(pktp->plen != 0);
+	DHD_BUG(!pktp->plen);
 
 	maxlen = pktp->maxlen;
 	psize = minimal ? (maxlen >> 2) : maxlen;
@@ -333,7 +328,7 @@ pktpool_deq(pktpool_t *pktp)
 	if (pktp->avail == 0)
 		return NULL;
 
-	ASSERT(pktp->freelist != NULL);
+	DHD_WARN(pktp->freelist != NULL, return NULL;);
 
 	p = pktp->freelist;  /* dequeue packet from head of pktpool free list */
 	pktp->freelist = PKTFREELIST(p); /* free list points to next packet */
@@ -347,13 +342,13 @@ pktpool_deq(pktpool_t *pktp)
 static void
 pktpool_enq(pktpool_t *pktp, void *p)
 {
-	ASSERT(p != NULL);
+	DHD_BUG(!p);
 
 	PKTSETFREELIST(p, pktp->freelist); /* insert at head of pktpool free list */
 	pktp->freelist = p; /* free list points to newly inserted packet */
 
 	pktp->avail++;
-	ASSERT(pktp->avail <= pktp->len);
+	DHD_BUG(pktp->avail > pktp->len);
 }
 
 /* utility for registering host addr fill function called from pciedev */
@@ -362,9 +357,9 @@ int
 (pktpool_hostaddr_fill_register)(pktpool_t *pktp, pktpool_cb_extn_t cb, void *arg)
 {
 
-	ASSERT(cb != NULL);
+	DHD_WARN(cb != NULL, return BCME_BADARG;);
 
-	ASSERT(pktp->cbext.cb == NULL);
+	DHD_WARN(pktp->cbext.cb == NULL, return BCME_BADARG;);
 	pktp->cbext.cb = cb;
 	pktp->cbext.arg = arg;
 	return 0;
@@ -374,9 +369,9 @@ int
 pktpool_rxcplid_fill_register(pktpool_t *pktp, pktpool_cb_extn_t cb, void *arg)
 {
 
-	ASSERT(cb != NULL);
+	DHD_WARN(cb != NULL, return BCME_BADARG;);
 
-	ASSERT(pktp->rxcplidfn.cb == NULL);
+	DHD_WARN(pktp->rxcplidfn.cb == NULL, return BCME_BADARG;);
 	pktp->rxcplidfn.cb = cb;
 	pktp->rxcplidfn.arg = arg;
 	return 0;
@@ -386,8 +381,8 @@ pktpool_rxcplid_fill_register(pktpool_t *pktp, pktpool_cb_extn_t cb, void *arg)
 void
 pktpool_invoke_dmarxfill(pktpool_t *pktp)
 {
-	ASSERT(pktp->dmarxfill.cb);
-	ASSERT(pktp->dmarxfill.arg);
+	DHD_WARN(pktp->dmarxfill.cb, return;);
+	DHD_WARN(pktp->dmarxfill.arg, return;);
 
 	if (pktp->dmarxfill.cb)
 		pktp->dmarxfill.cb(pktp, pktp->dmarxfill.arg);
@@ -396,7 +391,7 @@ int
 pkpool_haddr_avail_register_cb(pktpool_t *pktp, pktpool_cb_t cb, void *arg)
 {
 
-	ASSERT(cb != NULL);
+	DHD_WARN(cb != NULL, return BCME_BADARG;);
 
 	pktp->dmarxfill.cb = cb;
 	pktp->dmarxfill.arg = arg;
@@ -409,13 +404,13 @@ pktpool_avail_register(pktpool_t *pktp, pktpool_cb_t cb, void *arg)
 {
 	int i;
 
-	ASSERT(cb != NULL);
+	DHD_WARN(cb != NULL, return BCME_BADARG;);
 
 	i = pktp->cbcnt;
 	if (i == PKTPOOL_CB_MAX)
 		return BCME_ERROR;
 
-	ASSERT(pktp->cbs[i].cb == NULL);
+	DHD_WARN(pktp->cbs[i].cb == NULL, return BCME_ERROR;);
 	pktp->cbs[i].cb = cb;
 	pktp->cbs[i].arg = arg;
 	pktp->cbcnt++;
@@ -428,13 +423,13 @@ pktpool_empty_register(pktpool_t *pktp, pktpool_cb_t cb, void *arg)
 {
 	int i;
 
-	ASSERT(cb != NULL);
+	DHD_WARN(cb != NULL, return BCME_BADARG;);
 
 	i = pktp->ecbcnt;
 	if (i == PKTPOOL_CB_MAX)
 		return BCME_ERROR;
 
-	ASSERT(pktp->ecbs[i].cb == NULL);
+	DHD_WARN(pktp->ecbs[i].cb == NULL, return BCME_ERROR;);
 	pktp->ecbs[i].cb = cb;
 	pktp->ecbs[i].arg = arg;
 	pktp->ecbcnt++;
@@ -449,7 +444,7 @@ pktpool_empty_notify(pktpool_t *pktp)
 
 	pktp->empty = TRUE;
 	for (i = 0; i < pktp->ecbcnt; i++) {
-		ASSERT(pktp->ecbs[i].cb != NULL);
+		DHD_WARN(pktp->ecbs[i].cb != NULL, return BCME_ERROR;);
 		pktp->ecbs[i].cb(pktp, pktp->ecbs[i].arg);
 	}
 	pktp->empty = FALSE;
@@ -463,13 +458,13 @@ pktpool_dbg_register(pktpool_t *pktp, pktpool_cb_t cb, void *arg)
 {
 	int i;
 
-	ASSERT(cb);
+	DHD_WARN(cb, return BCME_BADARG;);
 
 	i = pktp->dbg_cbcnt;
 	if (i == PKTPOOL_CB_MAX)
 		return BCME_ERROR;
 
-	ASSERT(pktp->dbg_cbs[i].cb == NULL);
+	DHD_WARN(pktp->dbg_cbs[i].cb == NULL, return BCME_BADARG;);
 	pktp->dbg_cbs[i].cb = cb;
 	pktp->dbg_cbs[i].arg = arg;
 	pktp->dbg_cbcnt++;
@@ -485,7 +480,7 @@ pktpool_dbg_notify(pktpool_t *pktp)
 	int i;
 
 	for (i = 0; i < pktp->dbg_cbcnt; i++) {
-		ASSERT(pktp->dbg_cbs[i].cb);
+		DHD_WARN(pktp->dbg_cbs[i].cb, return BCME_ERROR;);
 		pktp->dbg_cbs[i].cb(pktp, pktp->dbg_cbs[i].arg);
 	}
 
@@ -499,7 +494,7 @@ pktpool_dbg_dump(pktpool_t *pktp)
 
 	printf("pool len=%d maxlen=%d\n",  pktp->dbg_qlen, pktp->maxlen);
 	for (i = 0; i < pktp->dbg_qlen; i++) {
-		ASSERT(pktp->dbg_q[i].p);
+		DHD_WARN(pktp->dbg_q[i].p, return BCME_ERROR;);
 		printf("%d, p: 0x%x dur:%lu us state:%d\n", i,
 			pktp->dbg_q[i].p, pktp->dbg_q[i].dur/100, PKTPOOLSTATE(pktp->dbg_q[i].p));
 	}
@@ -515,7 +510,7 @@ pktpool_stats_dump(pktpool_t *pktp, pktpool_stats_t *stats)
 
 	bzero(stats, sizeof(pktpool_stats_t));
 	for (i = 0; i < pktp->dbg_qlen; i++) {
-		ASSERT(pktp->dbg_q[i].p != NULL);
+		DHD_WARN(pktp->dbg_q[i].p != NULL, return BCME_ERROR;);
 
 		state = PKTPOOLSTATE(pktp->dbg_q[i].p);
 		switch (state) {
@@ -550,7 +545,7 @@ pktpool_start_trigger(pktpool_t *pktp, void *p)
 	OSL_GETCYCLES(cycles);
 
 	for (i = 0; i < pktp->dbg_qlen; i++) {
-		ASSERT(pktp->dbg_q[i].p != NULL);
+		DHD_WARN(pktp->dbg_q[i].p != NULL, return BCME_ERROR;);
 
 		if (pktp->dbg_q[i].p == p) {
 			pktp->dbg_q[i].cycles = cycles;
@@ -573,7 +568,7 @@ pktpool_stop_trigger(pktpool_t *pktp, void *p)
 	OSL_GETCYCLES(cycles);
 
 	for (i = 0; i < pktp->dbg_qlen; i++) {
-		ASSERT(pktp->dbg_q[i].p != NULL);
+		DHD_WARN(pktp->dbg_q[i].p != NULL, return BCME_ERROR;);
 
 		if (pktp->dbg_q[i].p == p) {
 			if (pktp->dbg_q[i].cycles == 0)
@@ -597,7 +592,7 @@ pktpool_stop_trigger(pktpool_t *pktp, void *p)
 int
 pktpool_avail_notify_normal(osl_t *osh, pktpool_t *pktp)
 {
-	ASSERT(pktp);
+	DHD_WARN(pktp, return BCME_BADARG;);
 	pktp->availcb_excl = NULL;
 	return 0;
 }
@@ -607,8 +602,8 @@ pktpool_avail_notify_exclusive(osl_t *osh, pktpool_t *pktp, pktpool_cb_t cb)
 {
 	int i;
 
-	ASSERT(pktp);
-	ASSERT(pktp->availcb_excl == NULL);
+	DHD_WARN(pktp, return BCME_BADARG;);
+	DHD_WARN(pktp->availcb_excl == NULL, return BCME_BADARG;);
 	for (i = 0; i < pktp->cbcnt; i++) {
 		if (cb == pktp->cbs[i].cb) {
 			pktp->availcb_excl = &pktp->cbs[i];
@@ -628,7 +623,7 @@ pktpool_avail_notify(pktpool_t *pktp)
 	int i, k, idx;
 	int avail;
 
-	ASSERT(pktp);
+	DHD_WARN(pktp, return BCME_BADARG;);
 	if (pktp->availcb_excl != NULL) {
 		pktp->availcb_excl->cb(pktp, pktp->availcb_excl->arg);
 		return 0;
@@ -644,7 +639,7 @@ pktpool_avail_notify(pktpool_t *pktp)
 			else
 				idx = k--;
 
-			ASSERT(pktp->cbs[idx].cb != NULL);
+			DHD_WARN(pktp->cbs[idx].cb != NULL, return BCME_BADARG;);
 			pktp->cbs[idx].cb(pktp, pktp->cbs[idx].arg);
 		}
 	}
@@ -679,7 +674,7 @@ pktpool_get(pktpool_t *pktp)
 void
 pktpool_free(pktpool_t *pktp, void *p)
 {
-	ASSERT(p != NULL);
+	DHD_BUG(!p);
 #ifdef BCMDBG_POOL
 	/* pktpool_stop_trigger(pktp, p); */
 #endif
@@ -698,13 +693,13 @@ pktpool_free(pktpool_t *pktp, void *p)
 int
 pktpool_add(pktpool_t *pktp, void *p)
 {
-	ASSERT(p != NULL);
+	DHD_WARN(p != NULL, return BCME_BADARG;);
 
 	if (pktp->len == pktp->maxlen)
 		return BCME_RANGE;
 
 	/* pkts in pool have same length */
-	ASSERT(pktp->plen == PKTLEN(OSH_NULL, p));
+	DHD_WARN(pktp->plen == PKTLEN(OSH_NULL, p), return BCME_BADARG;);
 	PKTSETPOOL(OSH_NULL, p, TRUE, pktp);
 
 	pktp->len++;
@@ -738,14 +733,14 @@ BCMRAMFN(pktpool_setmaxlen)(pktpool_t *pktp, uint16 maxlen)
 void
 pktpool_emptycb_disable(pktpool_t *pktp, bool disable)
 {
-	ASSERT(pktp);
+	DHD_WARN(pktp, return;);
 
 	pktp->emptycb_disable = disable;
 }
 
-bool
+int
 pktpool_emptycb_disabled(pktpool_t *pktp)
 {
-	ASSERT(pktp);
+	DHD_WARN(pktp, return BCME_BADARG;);
 	return pktp->emptycb_disable;
 }
