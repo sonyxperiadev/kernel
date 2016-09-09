@@ -3077,7 +3077,11 @@ dhd_rx_frame(dhd_pub_t *dhdp, int ifidx, void *pktbuf, int numpkt, uint8 chan,
 			&data);
 
 			if (ret_event != BCME_OK) {
+#ifdef DHD_USE_STATIC_CTRLBUF
+				PKTFREE_STATIC(dhdp->osh, pktbuf, FALSE);
+#else
 				PKTFREE(dhdp->osh, pktbuf, FALSE);
+#endif
 				continue;
 			}
 
