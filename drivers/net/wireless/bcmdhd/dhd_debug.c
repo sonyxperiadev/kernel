@@ -1049,8 +1049,8 @@ __dhd_dbg_free_tx_pkts(dhd_pub_t *dhdp, dhd_dbg_tx_info_t *tx_pkts,
 
 	count = 0;
 	while ((count < pkt_count) && tx_pkts) {
-		PKTFREE(dhdp->osh, tx_pkts->info.pkt, TRUE);
-
+		if (tx_pkts->info.pkt)
+			PKTFREE(dhdp->osh, tx_pkts->info.pkt, TRUE);
 		tx_pkts++;
 		count++;
 	}
@@ -1066,8 +1066,8 @@ __dhd_dbg_free_rx_pkts(dhd_pub_t *dhdp, dhd_dbg_rx_info_t *rx_pkts,
 
 	count = 0;
 	while ((count < pkt_count) && rx_pkts) {
-		PKTFREE(dhdp->osh, rx_pkts->info.pkt, TRUE);
-
+		if (rx_pkts->info.pkt)
+			PKTFREE(dhdp->osh, rx_pkts->info.pkt, TRUE);
 		rx_pkts++;
 		count++;
 	}
