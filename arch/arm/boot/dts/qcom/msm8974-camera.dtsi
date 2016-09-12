@@ -374,23 +374,17 @@
 
 		msm_cam_smmu_cb4: msm_cam_smmu_cb4 {
 			compatible = "qcom,qsmmu-cam-cb";
-			iommus = <&fd_iommu 0>;
-			label = "camera_fd";
-		};
-
-		msm_cam_smmu_cb5: msm_cam_smmu_cb5 {
-			compatible = "qcom,qsmmu-cam-cb";
 			iommus = <&jpeg_iommu 0>;
 			label = "jpeg_enc0";
 		};
 
-		msm_cam_smmu_cb6: msm_cam_smmu_cb6 {
+		msm_cam_smmu_cb5: msm_cam_smmu_cb5 {
 			compatible = "qcom,qsmmu-cam-cb";
 			iommus = <&jpeg_iommu 1>;
 			label = "jpeg_enc1";
 		};
 
-		msm_cam_smmu_cb7: msm_cam_smmu_cb7 {
+		msm_cam_smmu_cb6: msm_cam_smmu_cb6 {
 			compatible = "qcom,qsmmu-cam-cb";
 			iommus = <&jpeg_iommu 2>;
 			label = "jpeg_dec";
