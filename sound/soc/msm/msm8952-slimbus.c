@@ -126,9 +126,15 @@ static struct wcd_mbhc_config wcd_mbhc_cfg = {
 	.key_code[6] = 0,
 	.key_code[7] = 0,
 	.linein_th = 5000,
+#ifdef CONFIG_MACH_SONY_SUZU
+	.moist_cfg = { V_45_MV, I_3P0_UA },
+	.anc_micbias = MIC_BIAS_3,
+	.enable_anc_mic_detect = true,
+#else
 	.mbhc_micbias = MIC_BIAS_2,
 	.anc_micbias = MIC_BIAS_2,
 	.enable_anc_mic_detect = false,
+#endif
 };
 
 static struct wcd9xxx_mbhc_config wcd9xxx_mbhc_cfg = {
@@ -167,7 +173,11 @@ static void *def_tasha_mbhc_cal(void)
 		return NULL;
 
 #define S(X, Y) ((WCD_MBHC_CAL_PLUG_TYPE_PTR(tasha_wcd_cal)->X) = (Y))
+#ifdef CONFIG_MACH_SONY_SUZU
+	S(v_hs_max, 1700);
+#else
 	S(v_hs_max, 1500);
+#endif
 #undef S
 #define S(X, Y) ((WCD_MBHC_CAL_BTN_DET_PTR(tasha_wcd_cal)->X) = (Y))
 	S(num_btn, WCD_MBHC_DEF_BUTTONS);
@@ -176,7 +186,16 @@ static void *def_tasha_mbhc_cal(void)
 	btn_cfg = WCD_MBHC_CAL_BTN_DET_PTR(tasha_wcd_cal);
 	btn_high = ((void *)&btn_cfg->_v_btn_low) +
 		(sizeof(btn_cfg->_v_btn_low[0]) * btn_cfg->num_btn);
-
+#ifdef CONFIG_MACH_SONY_SUZU
+	btn_high[0] = 75;
+	btn_high[1] = 137;
+	btn_high[2] = 237;
+	btn_high[3] = 500;
+	btn_high[4] = 500;
+	btn_high[5] = 500;
+	btn_high[6] = 500;
+	btn_high[7] = 500;
+#else
 	btn_high[0] = 75;
 	btn_high[1] = 150;
 	btn_high[2] = 237;
@@ -185,7 +204,7 @@ static void *def_tasha_mbhc_cal(void)
 	btn_high[5] = 450;
 	btn_high[6] = 450;
 	btn_high[7] = 450;
-
+#endif
 	return tasha_wcd_cal;
 }
 
@@ -1150,6 +1169,32 @@ static int msm_ear_enable_put(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+#ifdef CONFIG_MACH_SONY_SUZU
+static int msm8952_auxpcm_rate_get(struct snd_kcontrol *kcontrol,
+				struct snd_ctl_elem_value *ucontrol)
+{
+	ucontrol->value.integer.value[0] = msm8952_auxpcm_rate;
+	return 0;
+}
+
+static int msm8952_auxpcm_rate_put(struct snd_kcontrol *kcontrol,
+				struct snd_ctl_elem_value *ucontrol)
+{
+	switch (ucontrol->value.integer.value[0]) {
+	case 0:
+		msm8952_auxpcm_rate = SAMPLING_RATE_8KHZ;
+		break;
+	case 1:
+		msm8952_auxpcm_rate = SAMPLING_RATE_16KHZ;
+		break;
+	default:
+		msm8952_auxpcm_rate = SAMPLING_RATE_8KHZ;
+		break;
+	}
+	return 0;
+}
+#endif
+
 static const char *const spk_function[] = {"Off", "On"};
 static const char *const slim0_rx_ch_text[] = {"One", "Two"};
 static const char *const slim0_tx_ch_text[] = {"One", "Two", "Three", "Four",
@@ -1198,6 +1243,13 @@ static const struct soc_enum msm_btsco_enum[] = {
 	SOC_ENUM_SINGLE_EXT(2, btsco_rate_text),
 };
 
+#ifdef CONFIG_MACH_SONY_SUZU
+static const char *const auxpcm_rate_text[] = {"8000", "16000"};
+static const struct soc_enum msm8952_auxpcm_enum[] = {
+		SOC_ENUM_SINGLE_EXT(2, auxpcm_rate_text),
+};
+#endif
+
 static const struct snd_kcontrol_new msm_snd_controls[] = {
 	SOC_ENUM_EXT("Speaker Function", msm_snd_enum[0], msm8952_get_spk,
 			msm8952_set_spk),
@@ -1239,6 +1291,10 @@ static const struct snd_kcontrol_new msm_snd_controls[] = {
 			msm_proxy_rx_ch_get, msm_proxy_rx_ch_put),
 	SOC_ENUM_EXT("MSM_Ear_Enable_States", msm_snd_enum[10],
 			msm_ear_enable_get, msm_ear_enable_put),
+#ifdef CONFIG_MACH_SONY_SUZU
+	SOC_ENUM_EXT("AUX PCM SampleRate", msm8952_auxpcm_enum[0],
+			msm8952_auxpcm_rate_get, msm8952_auxpcm_rate_put),
+#endif
 };
 
 int msm_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
@@ -2223,6 +2279,29 @@ static const struct snd_soc_dapm_widget msm8952_tomtom_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("Digital Mic6", NULL),
 };
 
+#ifdef CONFIG_MACH_SONY_SUZU
+static const struct snd_soc_dapm_widget loire_msm8952_dapm_widgets[] = {
+
+	SND_SOC_DAPM_SUPPLY_S("MCLK", -1,  SND_SOC_NOPM, 0, 0,
+	msm8952_mclk_event, SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+
+	SND_SOC_DAPM_MIC("Handset Mic", NULL),
+	SND_SOC_DAPM_MIC("Headset Mic", NULL),
+	SND_SOC_DAPM_MIC("ANCRight Headset Mic", NULL),
+	SND_SOC_DAPM_MIC("ANCLeft Headset Mic", NULL),
+	SND_SOC_DAPM_MIC("AHC VSNS", NULL),
+	SND_SOC_DAPM_MIC("AHC ISNS", NULL),
+
+	SND_SOC_DAPM_MIC("Digital Mic0", NULL),
+	SND_SOC_DAPM_MIC("Digital Mic1", NULL),
+	SND_SOC_DAPM_MIC("Digital Mic2", NULL),
+	SND_SOC_DAPM_MIC("Digital Mic3", NULL),
+	SND_SOC_DAPM_MIC("Digital Mic4", NULL),
+	SND_SOC_DAPM_MIC("Digital Mic5", NULL),
+	SND_SOC_DAPM_MIC("Digital Mic6", NULL),
+};
+#endif
+
 static const struct snd_soc_dapm_widget msm8952_tasha_dapm_widgets[] = {
 
 	SND_SOC_DAPM_SUPPLY_S("MCLK", -1,  SND_SOC_NOPM, 0, 0,
@@ -2316,8 +2395,13 @@ int msm_audrx_init(struct snd_soc_pcm_runtime *rtd)
 	} else if (!strcmp(dev_name(codec_dai->dev), "tasha_codec")) {
 		pdata->msm8952_codec_fn.get_afe_config_fn =
 			tasha_get_afe_config;
+#ifdef CONFIG_MACH_SONY_SUZU
+		snd_soc_dapm_new_controls(dapm, loire_msm8952_dapm_widgets,
+				ARRAY_SIZE(loire_msm8952_dapm_widgets));
+#else
 		snd_soc_dapm_new_controls(dapm, msm8952_tasha_dapm_widgets,
 				ARRAY_SIZE(msm8952_tasha_dapm_widgets));
+#endif
 		snd_soc_dapm_add_routes(dapm, wcd9335_audio_paths,
 				ARRAY_SIZE(wcd9335_audio_paths));
 	}
