@@ -19,14 +19,13 @@
 
 #include "msm8974-v2.2.dtsi"
 #include "msm8974-mtp.dtsi"
+#include "msm8974-rhine_common.dtsi"
 #include "msm8974-rhine_honami_row.dtsi"
+#include "msm8974-rhine_honami_row_camera.dtsi"
+#include "dsi-panel-honami.dtsi"
 
 / {
 	model = "SoMC Honami ROW";
 	compatible = "somc,honami-row", "qcom,msm8974";
 	qcom,board-id = <8 0>;
-};
-
-&pm8941_chg {
-	qcom,bpd-detection = "bpd_thm";
 };

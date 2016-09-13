@@ -14,10 +14,6 @@
  * GNU General Public License for more details.
  */
 
-#include "dsi-panel-togari.dtsi"
-#include "msm8974-rhine_common.dtsi"
-#include "msm8974-camera-sensor-togari_row.dtsi"
-
 &soc {
 	/* BLSP2 */
 	i2c_2: i2c@f9924000 {

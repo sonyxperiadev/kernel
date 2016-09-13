@@ -341,6 +341,7 @@
 	qcom,vbatdet-delta-mv = <20>;
 	qcom,vbatdet-delta-soc = <1>;
 	qcom,tchg-mins = <512>;
+        qcom,bpd-detection = "bpd_thm";
 };
 
 &pm8941_bms {
