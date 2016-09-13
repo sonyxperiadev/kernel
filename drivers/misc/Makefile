@@ -70,3 +70,4 @@ obj-$(CONFIG_USB_EXT_TYPE_C_PERICOM)	+= type-c-pericom.o
 obj-$(CONFIG_USB_EXT_TYPE_C_TI)		+= type-c-ti.o
 obj-$(CONFIG_QPNP_MISC) 	+= qpnp-misc.o
 obj-$(CONFIG_LDO_VIBRATOR)	+= ldo_vibrator.o
+obj-$(CONFIG_SENSORS_TCS3490_KUGO) += tcs3490.o
