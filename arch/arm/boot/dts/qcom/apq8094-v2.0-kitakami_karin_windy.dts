@@ -23,7 +23,6 @@
 #include "apq8094-v2.0.dtsi"
 #include "msm8994-mtp.dtsi"
 #include "msm8994-kitakami_common.dtsi"
-#include "msm8994-kitakami_r1_common.dtsi"
 #include "msm8994-kitakami_karin_common.dtsi"
 #include "apq8094-kitakami_karin_windy.dtsi"
 #include "msm8994-kitakami_karin_camera.dtsi"
