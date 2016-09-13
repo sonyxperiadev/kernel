@@ -2,6 +2,7 @@ ifeq ($(CONFIG_OF),y)
 
 # MSM8956/MSM8976
 dtb-$(CONFIG_MACH_SONY_SUZU)		+= msm8956-v1.1-loire-suzu_generic.dtb
+dtb-$(CONFIG_MACH_SONY_KUGO)		+= msm8956-v1.1-loire-kugo_generic.dtb
 
 # MSM8994
 dtb-$(CONFIG_MACH_SONY_IVY)		+= msm8994-v2.0-kitakami_ivy_generic.dtb

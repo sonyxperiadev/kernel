@@ -144,6 +144,26 @@
 		pinctrl-1 = <&msm_gpio_19_def &msm_gpio_18_def>;
 	};
 
+        /*I2C : BLSP2 */
+        i2c@7af6000 {
+                nfc@28 {
+                        compatible = "nxp,pn547";
+                        reg = <0x28>;
+                        interrupt-parent = <&msm_gpio>;
+                        interrupts = <33 0x1>;
+                        nxp,irq_gpio = <&msm_gpio 33 0x00>;
+                        nxp,dwld_en = <&msm_gpio 16 0x00>;
+                        nxp,ven = <&msm_gpio 34 0x01>;
+                        qcom,clk-src = "BBCLK2";
+                        qcom,clk-gpio = <&pm8950_gpios 5 0x00>;
+                        clocks = <&clock_gcc clk_bb_clk2_pin>;
+                        clock-names = "nfc_clk";
+                        pinctrl-names = "pn547-active", "pn547-inactive";
+                        pinctrl-0 = <&msm_gpio_33_def &msm_gpio_16_def>;
+                        pinctrl-1 = <&msm_gpio_33_def &msm_gpio_16_def>;
+                };
+        };
+
 	/* SPI : BLSP3 */
 	/* Kernel default setting will be overridden by ADSP SW. */
 
@@ -2786,3 +2806,5 @@
 &qseecom_mem {
 	reg = <0x0 0x0 0x0 0x1400000>;
 };
+
+

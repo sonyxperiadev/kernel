@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 /*
- * Copyright (C) 2015 Sony Mobile Communications Inc.
+ * Copyright (C) 2016 Sony Mobile Communications Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2, as
@@ -22,12 +22,12 @@
 #include "msm8956-v1.1.dtsi"
 #include "msm8956-mtp.dtsi"
 #include "msm8956-loire-common.dtsi"
-#include "msm8956-loire-suzu-common.dtsi"
-#include "msm8956-loire-suzu_camera.dtsi"
-#include "dsi-panel-suzu.dtsi"
+#include "msm8956-loire-kugo-common.dtsi"
+#include "msm8956-loire-kugo_camera.dtsi"
+#include "dsi-panel-kugo.dtsi"
 
 / {
-	model = "SoMC Suzu-ROW";
-	compatible = "somc,suzu-row", "qcom,msm8956";
+	model = "SoMC Kugo-ROW";
+	compatible = "somc,kugo-row", "qcom,msm8956";
 	qcom,board-id= <8 0>;
 };
