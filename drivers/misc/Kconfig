@@ -598,6 +598,15 @@ config NFC_PN547_PMC8974_CLK_REQ
 	  Communication controller support.
 	  This option enables d1 clock for NFC.
 
+config SENSORS_TCS3490
+        tristate "AMS TCS3490 Sensor Driver"
+        depends on I2C
+        default n
+        help
+          If you say yes here you get support for the AMS tcs3490,
+          ALS and color light sensors.
+          This driver can also be build as module.
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"
