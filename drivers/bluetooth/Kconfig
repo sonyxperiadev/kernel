@@ -429,6 +429,14 @@ config BTFM_SLIM_WCN3990
 	  It is designed to adapt any future BT/FM device to implement a specific
 	  chip initialization process and control.
 
+config BT_BCM_COMBO
+	tristate "Broadcom BT/FM Combo chip driver"
+	help
+	  This enables the Broadcom BT/FM combo chip driver for
+	  certain BCM chips found primarily on various handheld
+	  devices.
+	  If unsure, say N.
+
 source drivers/bluetooth/broadcom/Kconfig
 
 endmenu
