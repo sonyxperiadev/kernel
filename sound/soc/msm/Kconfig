@@ -83,6 +83,12 @@ config AUDIO_OCMEM
 	 OCMEM gets exercised for low-power
 	 audio and voice use cases.
 
+config SND_SOMC_CUSTOM_STEREO
+	bool "Enable Sony Custom Stereo"
+	default n
+	help
+	 Enable Sony Custom Stereo.
+
 config DOLBY_DAP
 	bool "Enable Dolby DAP"
 	depends on SND_SOC_MSM_QDSP6V2_INTF

@@ -1,5 +1,5 @@
 /* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
- *
+ * Copyright (c) 2014 Sony Mobile Communications Inc.
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
  * only version 2 as published by the Free Software Foundation.
@@ -63,6 +63,11 @@ struct route_payload {
 	unsigned short num_copps;
 	unsigned int session_id;
 };
+
+#ifdef CONFIG_SND_SOMC_CUSTOM_STEREO
+int adm_matrix_mute(int port_id, int session_id, uint32_t ramp_duration,
+		uint32_t mute_flag_ch1, uint32_t mute_flag_ch2);
+#endif
 
 int srs_trumedia_open(int port_id, int copp_idx, __s32 srs_tech_id,
 		      void *srs_params);

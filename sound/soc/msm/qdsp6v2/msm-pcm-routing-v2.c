@@ -70,6 +70,16 @@ static int msm_route_ext_ec_ref = AFE_PORT_INVALID;
 static bool is_custom_stereo_on;
 static bool is_ds2_on;
 
+#ifdef CONFIG_SND_SOMC_CUSTOM_STEREO
+static int sony_custom_stereo_mode;
+
+static struct mute_params {
+	uint32_t duration;
+	uint32_t flag_ch1;
+	uint32_t flag_ch2;
+} mute = {0, 0, 0};
+#endif
+
 enum {
 	MADNONE,
 	MADAUDIO,
@@ -196,12 +206,17 @@ static void msm_pcm_routng_cfg_matrix_map_pp(struct route_payload payload,
 					     int path_type, int perf_mode)
 {
 	int itr = 0;
-	if ((path_type == ADM_PATH_PLAYBACK) &&
-	    (perf_mode == LEGACY_PCM_MODE) &&
-	    is_custom_stereo_on) {
-		for (itr = 0; itr < payload.num_copps; itr++) {
-			if ((payload.port_id[itr] == SLIMBUS_0_RX) ||
-			    (payload.port_id[itr] == RT_PROXY_PORT_001_RX)) {
+	if ((path_type != ADM_PATH_PLAYBACK) ||
+	    (perf_mode == ULTRA_LOW_LATENCY_PCM_MODE) ||
+	    !is_custom_stereo_on)
+		return;
+
+	for (itr = 0; itr < payload.num_copps; itr++) {
+		if ((payload.port_id[itr] == SLIMBUS_0_RX) ||
+		    (payload.port_id[itr] == RT_PROXY_PORT_001_RX)) {
+#ifdef CONFIG_SND_SOMC_CUSTOM_STEREO
+			if (sony_custom_stereo_mode == SONY_CUSTOM_STEREO_MIX)
+#endif
 				msm_qti_pp_send_stereo_to_custom_stereo_cmd(
 						payload.port_id[itr],
 						payload.copp_idx[itr],
@@ -210,7 +225,17 @@ static void msm_pcm_routng_cfg_matrix_map_pp(struct route_payload payload,
 						Q14_GAIN_ZERO_POINT_FIVE,
 						Q14_GAIN_ZERO_POINT_FIVE,
 						Q14_GAIN_ZERO_POINT_FIVE);
-			}
+#ifdef CONFIG_SND_SOMC_CUSTOM_STEREO
+			else
+				msm_qti_pp_send_stereo_to_custom_stereo_cmd(
+						payload.port_id[itr],
+						payload.copp_idx[itr],
+						payload.session_id,
+						0,
+						Q14_GAIN_UNITY,
+						Q14_GAIN_UNITY,
+						0);
+#endif
 		}
 	}
 }
@@ -4044,6 +4069,12 @@ static int msm_routing_put_stereo_to_custom_stereo_control(
 			session_id =
 				fe_dai_map[i][SESSION_TYPE_RX].strm_id;
 			if (is_custom_stereo_on) {
+#ifdef CONFIG_SND_SOMC_CUSTOM_STEREO
+				op_FL_ip_FL_weight = 0;
+				op_FL_ip_FR_weight = Q14_GAIN_UNITY;
+				op_FR_ip_FL_weight = Q14_GAIN_UNITY;
+				op_FR_ip_FR_weight = 0;
+#else
 				op_FL_ip_FL_weight =
 					Q14_GAIN_ZERO_POINT_FIVE;
 				op_FL_ip_FR_weight =
@@ -4052,6 +4083,7 @@ static int msm_routing_put_stereo_to_custom_stereo_control(
 					Q14_GAIN_ZERO_POINT_FIVE;
 				op_FR_ip_FR_weight =
 					Q14_GAIN_ZERO_POINT_FIVE;
+#endif
 			} else {
 				op_FL_ip_FL_weight = Q14_GAIN_UNITY;
 				op_FL_ip_FR_weight = 0;
@@ -4102,6 +4134,117 @@ static const struct snd_kcontrol_new stereo_to_custom_stereo_controls[] = {
 	1, 0, msm_routing_get_stereo_to_custom_stereo_control,
 	msm_routing_put_stereo_to_custom_stereo_control),
 };
+
+#ifdef CONFIG_SND_SOMC_CUSTOM_STEREO
+static int msm_routing_get_sony_stereo_to_custom_stereo_control(
+					struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_value *ucontrol)
+{
+	ucontrol->value.integer.value[0] = sony_custom_stereo_mode;
+	return 0;
+}
+
+static int msm_routing_put_sony_stereo_to_custom_stereo_control(
+					struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_value *ucontrol)
+{
+	int mode = 0, i = 0, rc = 0, idx = 0;
+	int be_index = 0, port_id, topo_id;
+	unsigned int session_id = 0;
+	uint16_t op_FL_ip_FL_weight;
+	uint16_t op_FL_ip_FR_weight;
+	uint16_t op_FR_ip_FL_weight;
+	uint16_t op_FR_ip_FR_weight;
+	mode = ucontrol->value.integer.value[0];
+	pr_debug("%s E mode %d\n", __func__, mode);
+
+	if (sony_custom_stereo_mode == mode) {
+		pr_err("%s: sony_custom_stereo_mode %d, mode %d\n",
+			__func__, sony_custom_stereo_mode, mode);
+		return 0;
+	}
+	sony_custom_stereo_mode = mode;
+	is_custom_stereo_on = (mode == SONY_CUSTOM_STEREO_NORMAL) ? false : true;
+	pr_debug("%s:sony_custom_stereo_mode %d\n", __func__, sony_custom_stereo_mode);
+	if (sony_custom_stereo_mode == SONY_CUSTOM_STEREO_MIX) {
+		op_FL_ip_FL_weight = Q14_GAIN_ZERO_POINT_FIVE;
+		op_FL_ip_FR_weight = Q14_GAIN_ZERO_POINT_FIVE;
+		op_FR_ip_FL_weight = Q14_GAIN_ZERO_POINT_FIVE;
+		op_FR_ip_FR_weight = Q14_GAIN_ZERO_POINT_FIVE;
+	} else if (sony_custom_stereo_mode == SONY_CUSTOM_STEREO_SWAP) {
+		op_FL_ip_FL_weight = 0;
+		op_FL_ip_FR_weight = Q14_GAIN_UNITY;
+		op_FR_ip_FL_weight = Q14_GAIN_UNITY;
+		op_FR_ip_FR_weight = 0;
+	} else {
+		op_FL_ip_FL_weight = Q14_GAIN_UNITY;
+		op_FL_ip_FR_weight = 0;
+		op_FR_ip_FL_weight = 0;
+		op_FR_ip_FR_weight = Q14_GAIN_UNITY;
+	}
+	for (be_index = 0; be_index < MSM_BACKEND_DAI_MAX; be_index++) {
+		port_id = msm_bedais[be_index].port_id;
+		if (!msm_bedais[be_index].active)
+			continue;
+		if ((port_id != SLIMBUS_0_RX) &&
+		     (port_id != RT_PROXY_PORT_001_RX))
+			continue;
+
+		for_each_set_bit(i, &msm_bedais[be_index].fe_sessions,
+				MSM_FRONTEND_DAI_MM_SIZE) {
+			if (fe_dai_map[i][SESSION_TYPE_RX].perf_mode ==
+			    ULTRA_LOW_LATENCY_PCM_MODE)
+				goto skip_send_custom_stereo;
+			session_id =
+				fe_dai_map[i][SESSION_TYPE_RX].strm_id;
+			for (idx = 0; idx < MAX_COPPS_PER_PORT; idx++) {
+				unsigned long copp =
+					session_copp_map[i]
+					[SESSION_TYPE_RX][be_index];
+				if (!test_bit(idx, &copp))
+					goto skip_send_custom_stereo;
+				topo_id = adm_get_topology_for_port_copp_idx(
+					msm_bedais[be_index].port_id, idx);
+				if (topo_id < 0)
+					pr_debug("%s:Err:custom stereo topo %d",
+						 __func__, topo_id);
+					pr_debug("idx %d\n", idx);
+				if (topo_id == DS2_ADM_COPP_TOPOLOGY_ID)
+					rc = msm_ds2_dap_set_custom_stereo_onoff
+						(msm_bedais[be_index].port_id,
+						idx, is_custom_stereo_on);
+				else if (topo_id == DOLBY_ADM_COPP_TOPOLOGY_ID)
+					rc = dolby_dap_set_custom_stereo_onoff(
+						msm_bedais[be_index].port_id,
+						idx, is_custom_stereo_on);
+				else
+				rc = msm_qti_pp_send_stereo_to_custom_stereo_cmd
+						(msm_bedais[be_index].port_id,
+						idx, session_id,
+						op_FL_ip_FL_weight,
+						op_FL_ip_FR_weight,
+						op_FR_ip_FL_weight,
+						op_FR_ip_FR_weight);
+				if (rc < 0)
+skip_send_custom_stereo:
+					pr_err("%s: err setting custom stereo\n",
+						__func__);
+			}
+
+		}
+	}
+	return 0;
+}
+static const char *const sony_custom_stereo_text[] = {"Off", "Mix", "Swap"};
+static const struct soc_enum sony_custom_stereo_channel_enum =
+	SOC_ENUM_SINGLE_EXT(3, sony_custom_stereo_text);
+static const struct snd_kcontrol_new sony_stereo_to_custom_stereo_controls[] = {
+	SOC_ENUM_EXT("Set Custom Stereo",
+	sony_custom_stereo_channel_enum,
+	msm_routing_get_sony_stereo_to_custom_stereo_control,
+	msm_routing_put_sony_stereo_to_custom_stereo_control),
+};
+#endif
 
 static int msm_routing_get_app_type_cfg_control(struct snd_kcontrol *kcontrol,
 					  struct snd_ctl_elem_value *ucontrol)
@@ -4224,6 +4367,78 @@ static struct snd_kcontrol_new msm_voc_session_controls[] = {
 			     0xFFFFFFFF, 0, 1, msm_voc_session_id_get,
 			     msm_voc_session_id_put),
 };
+
+#ifdef CONFIG_SND_SOMC_CUSTOM_STEREO
+static int msm_adm_mute_get(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_value *ucontrol)
+{
+	ucontrol->value.integer.value[0] = mute.duration;
+	ucontrol->value.integer.value[1] = mute.flag_ch1;
+	ucontrol->value.integer.value[2] = mute.flag_ch2;
+
+	pr_debug("%s: mute = {%d, %d, %d}\n", __func__,
+		mute.duration, mute.flag_ch1, mute.flag_ch2);
+
+	return 0;
+}
+
+static int msm_adm_mute_put(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_value *ucontrol)
+{
+	int ret = 0;
+	int be_index = 0;
+	int fedai_id = 0;
+	int port_id = 0;
+	int session_id = 0;
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	struct msm_pcm_routing_bdai_data *bedai;
+
+	mute.duration = (uint32_t)ucontrol->value.integer.value[0];
+	mute.flag_ch1 = (uint32_t)ucontrol->value.integer.value[1];
+	mute.flag_ch2 = (uint32_t)ucontrol->value.integer.value[2];
+
+	if ((mute.duration > 0xffff) ||
+		(mute.flag_ch1 > 1) || (mute.flag_ch2 > 1)) {
+		pr_err("%s Invalid arguments. mute={%x, %x, %x}",
+			__func__, mute.duration, mute.flag_ch1, mute.flag_ch2);
+		ret = -EINVAL;
+		goto done;
+	}
+
+	be_index = mc->reg;
+	bedai = &msm_bedais[be_index];
+	pr_debug("%s: be_index=%d, bedai->fe_sessions=%#x\n", __func__,
+		be_index, (int)bedai->fe_sessions);
+
+	for (fedai_id = 0; fedai_id < MSM_FRONTEND_DAI_MM_SIZE; fedai_id++) {
+		if (fe_dai_map[fedai_id][SESSION_TYPE_RX].strm_id !=
+			INVALID_SESSION) {
+			session_id = fe_dai_map[fedai_id][SESSION_TYPE_RX].strm_id;
+			port_id = msm_bedais[be_index].port_id;
+
+			pr_debug("%s: fedai_id=%d, strm_id=%d, port_id=%d, session_id=%d, mute={%d, %d, %d}\n",
+				__func__, fedai_id,
+				fe_dai_map[fedai_id][SESSION_TYPE_RX].strm_id,
+				port_id, session_id, mute.duration,
+				mute.flag_ch1, mute.flag_ch2);
+			adm_matrix_mute(port_id, session_id, mute.duration,
+				mute.flag_ch1, mute.flag_ch2);
+		} else {
+			; /* do nothing */
+		}
+	}
+
+done:
+	return ret;
+}
+
+static struct snd_kcontrol_new msm_adm_mute_controls[] = {
+	SOC_SINGLE_MULTI_EXT("Matrix Mute", SND_SOC_NOPM, 0,
+			     0xFFFFFFFF, 0, 3, msm_adm_mute_get,
+			     msm_adm_mute_put),
+};
+#endif
 
 static int msm_sound_focus_info(struct snd_kcontrol *kcontrol,
 				struct snd_ctl_elem_info *uinfo)
@@ -6610,6 +6825,11 @@ static int msm_routing_probe(struct snd_soc_platform *platform)
 				stereo_to_custom_stereo_controls,
 			ARRAY_SIZE(stereo_to_custom_stereo_controls));
 
+#ifdef CONFIG_SND_SOMC_CUSTOM_STEREO
+	snd_soc_add_platform_controls(platform,
+				sony_stereo_to_custom_stereo_controls,
+			ARRAY_SIZE(sony_stereo_to_custom_stereo_controls));
+#endif
 	msm_qti_pp_add_controls(platform);
 
 	msm_dts_srs_tm_add_controls(platform);
@@ -6624,6 +6844,10 @@ static int msm_routing_probe(struct snd_soc_platform *platform)
 				device_pp_params_mixer_controls,
 				ARRAY_SIZE(device_pp_params_mixer_controls));
 
+#ifdef CONFIG_SND_SOMC_CUSTOM_STEREO
+	snd_soc_add_platform_controls(platform, msm_adm_mute_controls,
+				      ARRAY_SIZE(msm_adm_mute_controls));
+#endif
 	msm_dts_eagle_add_controls(platform);
 
 	snd_soc_add_platform_controls(platform, msm_source_tracking_controls,

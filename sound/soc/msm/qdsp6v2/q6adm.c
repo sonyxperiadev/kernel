@@ -1,4 +1,5 @@
 /* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014 Sony Mobile Communications Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -2088,6 +2089,99 @@ static void send_adm_cal(int port_id, int copp_idx, int path, int perf_mode,
 			  app_type, acdb_id, sample_rate);
 	return;
 }
+
+#ifdef CONFIG_SND_SOMC_CUSTOM_STEREO
+int adm_matrix_mute(int port_id, int session_id, uint32_t ramp_duration,
+				uint32_t mute_flag_ch1, uint32_t mute_flag_ch2)
+{
+	struct adm_cmd_matrix_mute_v5	*apr = NULL;
+
+	int cmd_size = 0;
+	int ret = 0;
+	void *matrix_mute = NULL;
+	int port_idx, copp_idx = 0;
+
+	port_id = q6audio_convert_virtual_to_portid(port_id);
+	port_idx = adm_validate_and_get_port_index(port_id);
+	if (port_idx < 0) {
+		pr_err("%s: Invalid port_id 0x%x\n", __func__, port_id);
+		return -EINVAL;
+	}
+
+	if (this_adm.apr == NULL) {
+		this_adm.apr = apr_register("ADSP", "ADM", adm_callback,
+						0xFFFFFFFF, &this_adm);
+		if (this_adm.apr == NULL) {
+			pr_err("%s: Unable to register ADM\n", __func__);
+			ret = -ENODEV;
+			return ret;
+		}
+		rtac_set_adm_handle(this_adm.apr);
+	}
+
+	cmd_size = sizeof(struct adm_cmd_matrix_mute_v5);
+	matrix_mute = kzalloc(cmd_size, GFP_KERNEL);
+	if (matrix_mute == NULL) {
+		pr_err("%s: Mem alloc failed\n", __func__);
+		ret = -EINVAL;
+		return ret;
+	}
+	apr = (struct adm_cmd_matrix_mute_v5 *)matrix_mute;
+
+	pr_debug("%s: Port ID 0x%x, index %d\n", __func__, port_id, port_idx);
+
+	/* APR header field */
+	apr->hdr.hdr_field = APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD,
+				APR_HDR_LEN(APR_HDR_SIZE), APR_PKT_VER);
+	apr->hdr.pkt_size = cmd_size;
+	apr->hdr.src_svc = APR_SVC_ADM;
+	apr->hdr.src_domain = APR_DOMAIN_APPS;
+	apr->hdr.src_port = 0;
+	apr->hdr.dest_svc = APR_SVC_ADM;
+	apr->hdr.dest_domain = APR_DOMAIN_ADSP;
+	apr->hdr.dest_port = atomic_read(&this_adm.copp.id[port_idx][copp_idx]);
+	apr->hdr.token = port_idx << 16 | copp_idx;
+	apr->hdr.opcode = ADM_CMD_MATRIX_MUTE_V5;
+	/* APR message payload */
+	apr->matrix_id = ADM_MATRIX_ID_AUDIO_RX;
+	apr->session_id = session_id;
+	apr->copp_id = ADM_CMD_MATRIX_MUTE_COPP_ID_ALL_CONNECTED_COPPS;
+	apr->mute_flag_ch_1 = mute_flag_ch1;
+	apr->mute_flag_ch_2 = mute_flag_ch2;
+	apr->mute_flag_ch_3 = 0;
+	apr->mute_flag_ch_4 = 0;
+	apr->mute_flag_ch_5 = 0;
+	apr->mute_flag_ch_6 = 0;
+	apr->mute_flag_ch_7 = 0;
+	apr->mute_flag_ch_8 = 0;
+	apr->ramp_duration = ramp_duration;
+	apr->reserved_for_align = 0;
+
+	atomic_set(&this_adm.copp.stat[port_idx][copp_idx], 0);
+	ret = apr_send_pkt(this_adm.apr, (uint32_t *)matrix_mute);
+	if (ret < 0) {
+		pr_err("%s: Set params failed port = %#x\n",
+			__func__, port_id);
+		ret = -EINVAL;
+		goto adm_matrix_mute_return;
+	}
+	/* Wait for the callback */
+	ret = wait_event_timeout(this_adm.copp.wait[port_idx][copp_idx],
+		atomic_read(&this_adm.copp.stat[port_idx][copp_idx]),
+		msecs_to_jiffies(TIMEOUT_MS));
+	if (!ret) {
+		pr_err("%s: Set params timed out port = %#x\n",
+			 __func__, port_id);
+		ret = -EINVAL;
+		goto adm_matrix_mute_return;
+	}
+	ret = 0;
+
+adm_matrix_mute_return:
+	kfree(matrix_mute);
+	return ret;
+}
+#endif
 
 int adm_connect_afe_port(int mode, int session_id, int port_id)
 {
