@@ -18,8 +18,11 @@
  */
 
 &mdss_mdp {
+       somc,postpwron-no-reset-quirk;
 	dsi_auo_synaptics_cmd_5: somc,auo_synaptics_cmd_5_panel {
 		qcom,mdss-dsi-panel-name = "5";
+		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
+		qcom,mdss-dsi-panel-destination = "display_1";
 		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
 		qcom,mdss-dsi-panel-width = <720>;
 		qcom,mdss-dsi-panel-height = <1280>;
@@ -84,11 +87,11 @@
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
-		qcom,mdss-brightness-max-level = <4095>;
+		qcom,mdss-brightness-max-level = <255>;
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 
-		somc,qpnp-lab-limit-maximum-current = <200>;
-		somc,qpnp-ibb-limit-maximum-current = <800>;
+		qcom,qpnp-lab-limit-maximum-current = <200>;
+		qcom,qpnp-ibb-limit-maximum-current = <800>;
 		somc,qpnp-lab-max-precharge-time = <300>;
 		somc,qpnp-lab-soft-start = <800>;
 		somc,qpnp-lab-pull-down-enable;
@@ -96,6 +99,7 @@
 		somc,qpnp-ibb-pull-down-enable;
 		somc,qpnp-ibb-full-pull-down;
 
+		somc,lcd-id = <0>;
 		somc,lcd-id-adc = <801000 917000>;
 		somc,mdss-dsi-master;
 		somc,pw-on-rst-seq = <0 10>, <1 10>;
@@ -368,6 +372,8 @@
 
 	dsi_auo_synaptics_cmd_6: somc,auo_synaptics_cmd_6_panel {
 		qcom,mdss-dsi-panel-name = "6";
+		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
+		qcom,mdss-dsi-panel-destination = "display_1";
 		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
 		qcom,mdss-dsi-panel-width = <720>;
 		qcom,mdss-dsi-panel-height = <1280>;
@@ -431,11 +437,11 @@
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
-		qcom,mdss-brightness-max-level = <4095>;
+		qcom,mdss-brightness-max-level = <255>;
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 
-		somc,qpnp-lab-limit-maximum-current = <200>;
-		somc,qpnp-ibb-limit-maximum-current = <800>;
+		qcom,qpnp-lab-limit-maximum-current = <200>;
+		qcom,qpnp-ibb-limit-maximum-current = <800>;
 		somc,qpnp-lab-max-precharge-time = <300>;
 		somc,qpnp-lab-soft-start = <800>;
 		somc,qpnp-lab-pull-down-enable;
@@ -443,6 +449,7 @@
 		somc,qpnp-ibb-pull-down-enable;
 		somc,qpnp-ibb-full-pull-down;
 
+		somc,lcd-id = <0>;
 		somc,lcd-id-adc = <565000 653000>;
 		somc,mdss-dsi-master;
 		somc,pw-on-rst-seq = <0 10>, <1 10>;
@@ -715,6 +722,8 @@
 
 	dsi_jdi_synaptics_cmd_8: somc,jdi_synaptics_cmd_8_panel {
 		qcom,mdss-dsi-panel-name = "8";
+		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
+		qcom,mdss-dsi-panel-destination = "display_1";
 		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
 		qcom,mdss-dsi-panel-width = <720>;
 		qcom,mdss-dsi-panel-height = <1280>;
@@ -785,11 +794,11 @@
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
-		qcom,mdss-brightness-max-level = <4095>;
+		qcom,mdss-brightness-max-level = <255>;
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 
-		somc,qpnp-lab-limit-maximum-current = <200>;
-		somc,qpnp-ibb-limit-maximum-current = <800>;
+		qcom,qpnp-lab-limit-maximum-current = <200>;
+		qcom,qpnp-ibb-limit-maximum-current = <800>;
 		somc,qpnp-lab-max-precharge-time = <300>;
 		somc,qpnp-lab-soft-start = <800>;
 		somc,qpnp-lab-pull-down-enable;
@@ -797,6 +806,7 @@
 		somc,qpnp-ibb-pull-down-enable;
 		somc,qpnp-ibb-full-pull-down;
 
+		somc,lcd-id = <0>;
 		somc,lcd-id-adc = <215000 256000>;
 		somc,mdss-dsi-master;
 		somc,pw-on-rst-seq = <0 10>, <1 16>, <0 7>, <1 16>;
@@ -832,7 +842,7 @@
 		somc,driver-ic-vdisp = <1280>;
 		somc,driver-ic-vtouch = <6993970>;
 		somc,driver-ic-mclk = <61539>;
-		somc,change-fps-send-pos = <2 4>;
+		somc,change-fps-rtn-pos = <2 4>;
 		somc,change-fps-send-byte = <4>;
 		somc,change-fps-porch-mask-pos = <3>;
 		somc,change-fps-porch-mask = <0xF0>;
@@ -1074,6 +1084,8 @@
 
 	dsi_default_panel: somc,default_cmd_panel {
 		qcom,mdss-dsi-panel-name = "Default Panel";
+		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
+		qcom,mdss-dsi-panel-destination = "display_1";
 		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
 		qcom,mdss-dsi-panel-width = <720>;
 		qcom,mdss-dsi-panel-height = <1280>;
@@ -1144,11 +1156,11 @@
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
-		qcom,mdss-brightness-max-level = <4095>;
+		qcom,mdss-brightness-max-level = <255>;
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 
-		somc,qpnp-lab-limit-maximum-current = <200>;
-		somc,qpnp-ibb-limit-maximum-current = <800>;
+		qcom,qpnp-lab-limit-maximum-current = <200>;
+		qcom,qpnp-ibb-limit-maximum-current = <800>;
 		somc,qpnp-lab-max-precharge-time = <300>;
 		somc,qpnp-lab-soft-start = <800>;
 		somc,qpnp-lab-pull-down-enable;
@@ -1156,6 +1168,7 @@
 		somc,qpnp-ibb-pull-down-enable;
 		somc,qpnp-ibb-full-pull-down;
 
+		somc,lcd-id = <0>;
 		somc,lcd-id-adc = <0 0x7fffffff>;
 		somc,mdss-dsi-master;
 		somc,pw-on-rst-seq = <0 10>, <1 16>, <0 7>, <1 16>;
