@@ -275,17 +275,9 @@ void fmc_update_region_info(struct fmdrv_ops *fmdev,
 * FM common sub-module will schedule this tasklet whenever it receives
 * FM packet from ST driver.
 */
-#ifdef TASKLET_SUPPORT
-static void __recv_tasklet(unsigned long arg)
-{
-    struct fmdrv_ops *fmdev;
-    fmdev = (struct fmdrv_ops *)arg;
-#else
 static void fm_receive_data_ldisc(struct work_struct *w)
 {
     struct fmdrv_ops *fmdev = container_of(w, struct fmdrv_ops,rx_workqueue);
-#endif
-    //struct fmdrv_ops *fmdev;
     struct fm_event_msg_hdr *fm_evt_hdr;
     struct sk_buff *skb;
     unsigned long flags;
@@ -381,28 +373,16 @@ static void fm_receive_data_ldisc(struct work_struct *w)
             pr_err("Unhandled packet SKB(%p),purging", skb);
         }
         if (!skb_queue_empty(&fmdev->tx_q))
-#ifdef TASKLET_SUPPORT
-        tasklet_schedule(&fmdev->tx_task);
-#else
-        queue_work(fmdev->tx_wq,&fmdev->tx_workqueue);
-#endif
+		queue_work(fmdev->tx_wq,&fmdev->tx_workqueue);
     }
 }
 
 /*
 * FM send tasklet: is scheduled when
 * FM packet has to be sent to chip */
-#ifdef TASKLET_SUPPORT
-static void __send_tasklet(unsigned long arg)
-{
-    struct fmdrv_ops *fmdev;
-    fmdev = (struct fmdrv_ops *)arg;
-#else
 static void fm_send_data_ldisc(struct work_struct *w)
 {
     struct fmdrv_ops *fmdev =container_of(w, struct fmdrv_ops,tx_workqueue);
-#endif
-    //struct fmdrv_ops *fmdev;
     struct sk_buff *skb;
     int len;
 
@@ -483,11 +463,8 @@ static int __fm_send_cmd(struct fmdrv_ops *fmdev, unsigned char fmreg_index,
 //    print skb->cb to check pck_type and completion.
 
     skb_queue_tail(&fmdev->tx_q, skb);
-#ifdef TASKLET_SUPPORT
-     tasklet_schedule(&fmdev->tx_task);
-#else
-     queue_work(fmdev->tx_wq,&fmdev->tx_workqueue);
-#endif
+    queue_work(fmdev->tx_wq,&fmdev->tx_workqueue);
+
     return 0;
 }
 
@@ -525,11 +502,9 @@ static int __fm_send_vsc_hci_cmd(struct fmdrv_ops *fmdev,__u16 ocf_value,
     fm_cb(skb)->completion = wait_completion;
 
     skb_queue_tail(&fmdev->tx_q, skb);
-#ifdef TASKLET_SUPPORT
-    tasklet_schedule(&fmdev->tx_task);
-#else
+
     queue_work(fmdev->tx_wq,&fmdev->tx_workqueue);
-#endif
+
     return 0;
 }
 
@@ -1491,11 +1466,8 @@ static long fm_st_receive(void *arg, struct sk_buff *skb)
     memcpy(skb_push(skb, 1), &pkt_type, 1);
     skb_queue_tail(&fmdev->rx_q, skb);
 
-#ifdef TASKLET_SUPPORT
-    tasklet_schedule(&fmdev->rx_task);
-#else
     queue_work(fmdev->rx_wq,&fmdev->rx_workqueue);
-#endif
+
     return 0;
 }
 
@@ -1549,13 +1521,10 @@ int fmc_prepare(struct fmdrv_ops *fmdev)
     skb_queue_head_init(&fmdev->tx_q);
     /* Initialize RX Queue and RX tasklet */
     skb_queue_head_init(&fmdev->rx_q);
-#ifdef TASKLET_SUPPORT
-    tasklet_init(&fmdev->tx_task, __send_tasklet, (unsigned long)fmdev);
-    tasklet_init(&fmdev->rx_task, __recv_tasklet, (unsigned long)fmdev);
-#else
-INIT_WORK(&fmdev->tx_workqueue,fm_send_data_ldisc);
-INIT_WORK(&fmdev->rx_workqueue,fm_receive_data_ldisc);
-#endif
+
+    INIT_WORK(&fmdev->tx_workqueue,fm_send_data_ldisc);
+    INIT_WORK(&fmdev->rx_workqueue,fm_receive_data_ldisc);
+
     atomic_set(&fmdev->tx_cnt, 1);
     fmdev->response_completion = NULL;
 
@@ -1602,10 +1571,9 @@ int fmc_release(struct fmdrv_ops *fmdev)
         return 0;
     }
 
-#ifndef TASKLET_SUPPORT
     cancel_work_sync(&fmdev->tx_workqueue);
     cancel_work_sync(&fmdev->rx_workqueue);
-#endif
+
     ret = brcm_sh_ldisc_unregister(PROTO_SH_FM);
     if (ret < 0)
         V4L2_FM_DRV_ERR("(fmdrv): Failed to de-register FM from HCI LDisc - %d", ret);
@@ -1614,13 +1582,9 @@ int fmc_release(struct fmdrv_ops *fmdev)
 
     /* Sevice pending read */
     wake_up_interruptible(&fmdev->rx.rds.read_queue);
-#ifdef TASKLET_SUPPORT
-    tasklet_kill(&fmdev->tx_task);
-    tasklet_kill(&fmdev->rx_task);
-#else
+
     skb_queue_purge(&fmdev->tx_q);
     skb_queue_purge(&fmdev->rx_q);
-#endif
 
     fmdev->response_completion = NULL;
     fmdev->rx.curr_freq = 0;
@@ -1666,7 +1630,7 @@ static int __init fm_drv_init(void)
         kfree(fmdev);
         return ret;
     }
-#ifndef TASKLET_SUPPORT
+
     fmdev->tx_wq= create_workqueue("fm_drv_tx");
     if (!fmdev->tx_wq) {
         V4L2_FM_DRV_ERR("%s(): Unable to create workqueue fm_drv_tx\n", __func__);
@@ -1677,7 +1641,6 @@ static int __init fm_drv_init(void)
         V4L2_FM_DRV_ERR("%s(): Unable to create workqueue fm_drv_rx\n", __func__);
         return -ENOMEM;
     }
-#endif
 
     fmdev->curr_fmmode = FM_MODE_OFF;
     return 0;
@@ -1691,11 +1654,9 @@ static void __exit fm_drv_exit(void)
 
     fmdev = fm_v4l2_deinit_video_device();
     if (fmdev != NULL) {
-#ifndef TASKLET_SUPPORT
-    destroy_workqueue(fmdev->tx_wq);
-    destroy_workqueue(fmdev->rx_wq);
-#endif
-    kfree(fmdev);
+	destroy_workqueue(fmdev->tx_wq);
+	destroy_workqueue(fmdev->rx_wq);
+	kfree(fmdev);
     }
 }
 
