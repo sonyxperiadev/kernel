@@ -314,8 +314,8 @@ static int mmc_read_ext_csd(struct mmc_card *card, u8 *ext_csd)
 	}
 
 	card->ext_csd.raw_strobe_support = ext_csd[EXT_CSD_STROBE_SUPPORT];
-#ifdef CONFIG_MACH_SONY_SUZU
-	/* Force no raw strobe support for Suzu */
+#ifdef CONFIG_ARCH_SONY_LOIRE
+	/* Force no raw strobe support */
 	card->ext_csd.raw_strobe_support = false;
 #endif
 	/*
@@ -602,7 +602,7 @@ static int mmc_read_ext_csd(struct mmc_card *card, u8 *ext_csd)
 			card->ext_csd.data_tag_unit_size = 0;
 		}
 
-#ifdef CONFIG_MACH_SONY_SUZU
+#ifdef CONFIG_ARCH_SONY_LOIRE
 		card->ext_csd.max_packed_writes = 8;
 #else
 		card->ext_csd.max_packed_writes =
@@ -1755,7 +1755,7 @@ reinit:
 	/*
 	 * Enable power_off_notification byte in the ext_csd register
 	 */
-#ifdef CONFIG_MACH_SONY_SUZU
+#ifdef CONFIG_ARCH_SONY_LOIRE
 	if (host->caps2 & MMC_CAP2_FULL_PWR_CYCLE)
 #endif
 	if (card->ext_csd.rev >= 6) {

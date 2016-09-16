@@ -3471,7 +3471,7 @@ static void sdhci_set_default_hw_caps(struct sdhci_msm_host *msm_host,
 		msm_host->enhanced_strobe = true;
 	}
 
-#ifdef CONFIG_MACH_SONY_SUZU
+#ifdef CONFIG_ARCH_SONY_LOIRE
 	msm_host->enhanced_strobe = false;
 #endif
 
@@ -3856,7 +3856,7 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 	msm_host->mmc->caps2 |= MMC_CAP2_INIT_BKOPS;
 #endif
 
-#ifdef CONFIG_MACH_SONY_SUZU
+#ifdef CONFIG_ARCH_SONY_LOIRE
 	msm_host->mmc->caps2 |= MMC_CAP2_AWAKE_SUPP;
 #endif
 

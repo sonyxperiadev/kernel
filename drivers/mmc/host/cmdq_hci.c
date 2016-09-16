@@ -376,7 +376,7 @@ static int cmdq_enable(struct mmc_host *mmc)
 
 	if (cq_host->ops->clear_set_dumpregs)
 		cq_host->ops->clear_set_dumpregs(mmc, 1);
-#ifndef CONFIG_MACH_SONY_SUZU
+#ifndef CONFIG_ARCH_SONY_LOIRE
 	if (cq_host->ops->enhanced_strobe_mask)
 		cq_host->ops->enhanced_strobe_mask(mmc, true);
 #endif
@@ -395,7 +395,7 @@ static void cmdq_disable(struct mmc_host *mmc, bool soft)
 	}
 
 	mmc_host_set_cq_disable(mmc);
-#ifndef CONFIG_MACH_SONY_SUZU
+#ifndef CONFIG_ARCH_SONY_LOIRE
 	if (cq_host->ops->enhanced_strobe_mask)
 		cq_host->ops->enhanced_strobe_mask(mmc, false);
 #endif

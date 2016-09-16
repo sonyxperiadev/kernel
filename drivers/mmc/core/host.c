@@ -196,7 +196,7 @@ static int mmc_host_suspend(struct device *dev)
 				mmc_release_host(host);
 				pr_err("%s: halt: failed: %d\n",
 						__func__, err);
-#ifdef CONFIG_MACH_SONY_SUZU
+#ifdef CONFIG_ARCH_SONY_LOIRE
 				ret = err;
 #endif
 				goto out;
@@ -220,7 +220,7 @@ static int mmc_host_suspend(struct device *dev)
 	}
 out:
 	spin_lock_irqsave(&host->clk_lock, flags);
-#ifndef CONFIG_MACH_SONY_SUZU
+#ifndef CONFIG_ARCH_SONY_LOIRE
 	if (ret)
 		host->dev_status = DEV_RESUMED;
 	else
