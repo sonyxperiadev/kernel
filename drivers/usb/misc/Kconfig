@@ -292,3 +292,10 @@ config USB_QCOM_IPC_BRIDGE
 	  will be bridged in kernel space. This driver works as a transport
 	  layer for IPC router module that enables communication between
 	  APPS processor and MODEM processor.
+
+config USB_CC_FUSB301
+        bool "FUSB301 Configuration Channel Controller for USB Type-C"
+        depends on USB || I2C
+        default n
+        help
+          Enable this to support FUSB310 CC Controller for USB Type C.

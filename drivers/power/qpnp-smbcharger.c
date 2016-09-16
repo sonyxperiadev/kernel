@@ -121,6 +121,7 @@ struct smbchg_chip {
 	/* configuration parameters */
 	int				iterm_ma;
 	int				usb_max_current_ma;
+	int				typec_current_ma;
 	int				dc_max_current_ma;
 	int				dc_target_current_ma;
 	int				cfg_fastchg_current_ma;
@@ -202,6 +203,7 @@ struct smbchg_chip {
 	u32				wa_flags;
 	int				usb_icl_delta;
 	int				parallel_disable_vbat_uv;
+	bool				typec_dfp;
 
 	/* jeita and temperature */
 	bool				batt_hot;
@@ -244,6 +246,7 @@ struct smbchg_chip {
 	struct power_supply		batt_psy;
 	struct power_supply		dc_psy;
 	struct power_supply		*bms_psy;
+	struct power_supply		*typec_psy;
 	int				dc_psy_type;
 	const char			*bms_psy_name;
 	const char			*battery_psy_name;
@@ -320,11 +323,12 @@ enum print_reason {
 	PR_PM		= BIT(4),
 	PR_MISC		= BIT(5),
 	PR_WIPOWER	= BIT(6),
-	PR_SOMC		= BIT(7),
+	PR_TYPEC	= BIT(7),
+	PR_SOMC		= BIT(8),
 #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
-	PR_INFO		= BIT(8),
-	PR_THERM	= BIT(9),
-	PR_STEP_CHG	= BIT(10),
+	PR_INFO		= BIT(9),
+	PR_THERM	= BIT(10),
+	PR_STEP_CHG	= BIT(11),
 #endif
 };
 
@@ -1144,6 +1148,57 @@ static int get_prop_batt_health(struct smbchg_chip *chip)
 		return POWER_SUPPLY_HEALTH_COOL;
 	else
 		return POWER_SUPPLY_HEALTH_GOOD;
+}
+
+static void get_property_from_typec(struct smbchg_chip *chip,
+				enum power_supply_property property,
+				union power_supply_propval *prop)
+{
+	int rc;
+
+	rc = chip->typec_psy->get_property(chip->typec_psy, property, prop);
+	if (rc)
+		pr_smb(PR_TYPEC,
+			"typec psy doesn't support reading prop %d rc = %d\n",
+			property, rc);
+}
+
+static void update_typec_status(struct smbchg_chip *chip)
+{
+	union power_supply_propval type = {0, };
+	union power_supply_propval capability = {0, };
+	int rc;
+
+	get_property_from_typec(chip, POWER_SUPPLY_PROP_TYPE, &type);
+	if (type.intval != POWER_SUPPLY_TYPE_UNKNOWN) {
+		get_property_from_typec(chip,
+				POWER_SUPPLY_PROP_CURRENT_CAPABILITY,
+				&capability);
+
+		if (chip->typec_current_ma != 0 &&
+				chip->typec_current_ma <= capability.intval) {
+			/* Flow chart : C-9 */
+			pr_smb(PR_TYPEC,
+				"Type-C skip to set current max (current=%d req=%d)\n",
+				chip->typec_current_ma, capability.intval);
+			return;
+		}
+		chip->typec_current_ma = capability.intval;
+
+		if (!chip->skip_usb_notification) {
+			rc = chip->usb_psy->set_property(chip->usb_psy,
+				POWER_SUPPLY_PROP_INPUT_CURRENT_MAX,
+				&capability);
+			if (rc)
+				pr_err("typec failed to set current max rc=%d\n",
+					rc);
+			pr_smb(PR_TYPEC, "SMB Type-C mode = %d, current=%d\n",
+					type.intval, capability.intval);
+		}
+	} else {
+		pr_smb(PR_TYPEC,
+			"typec detection not completed continuing with USB update\n");
+	}
 }
 
 /*
@@ -4381,7 +4436,14 @@ static int smbchg_change_usb_supply_type(struct smbchg_chip *chip,
 	}
 #endif
 
-	if (type == POWER_SUPPLY_TYPE_USB)
+	/*
+	 * Type-C only supports STD(900), MEDIUM(1500) and HIGH(3000) current
+	 * modes, skip all BC 1.2 current if external typec is supported.
+	 * Note: for SDP supporting current based on USB notifications.
+	 */
+	if (chip->typec_psy && (type != POWER_SUPPLY_TYPE_USB))
+		current_limit_ma = chip->typec_current_ma;
+	else if (type == POWER_SUPPLY_TYPE_USB)
 		current_limit_ma = DEFAULT_SDP_MA;
 	else if (type == POWER_SUPPLY_TYPE_USB)
 		current_limit_ma = DEFAULT_SDP_MA;
@@ -4413,6 +4475,8 @@ static int smbchg_change_usb_supply_type(struct smbchg_chip *chip,
 	if (!chip->skip_usb_notification)
 		power_supply_set_supply_type(chip->usb_psy, type);
 #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
+	if (chip->typec_psy)
+		power_supply_set_supply_type(chip->typec_psy, type);
 	if (!chip->skip_usb_notification) {
 		union power_supply_propval val = {sub_type, };
 
@@ -4540,6 +4604,19 @@ static void smbchg_hvdcp_det_work(struct work_struct *work)
 		} else {
 			somc_chg_therm_set_hvdcp_en(chip);
 		}
+	} else if (chip->typec_psy) {
+		mutex_lock(&chip->usb_status_lock);
+		if (chip->usb_present) {
+			int current_limit_ma;
+
+			pr_smb(PR_TYPEC, "Update mA = %d\n", current_limit_ma);
+			rc = vote(chip->usb_icl_votable, PSY_ICL_VOTER, true,
+							current_limit_ma);
+			if (rc < 0)
+				pr_err("Couldn't vote for new USB ICL rc=%d\n",
+									rc);
+		}
+		mutex_unlock(&chip->usb_status_lock);
 #else
 		smbchg_change_usb_supply_type(chip,
 				POWER_SUPPLY_TYPE_USB_HVDCP);
@@ -4677,6 +4754,9 @@ static void handle_usb_removal(struct smbchg_chip *chip)
 		chip->usb_ov_det = false;
 	/* cancel/wait for hvdcp pending work if any */
 	cancel_delayed_work_sync(&chip->hvdcp_det_work);
+	/* Clear typec current status */
+	if (chip->typec_psy)
+		chip->typec_current_ma = 0;
 	smbchg_change_usb_supply_type(chip, POWER_SUPPLY_TYPE_UNKNOWN);
 	if (!chip->skip_usb_notification) {
 		pr_smb(PR_MISC, "setting usb psy present = %d\n",
@@ -4762,6 +4842,8 @@ static void handle_usb_insertion(struct smbchg_chip *chip)
 		"inserted type = %d (%s)", usb_supply_type, usb_type_name);
 
 	smbchg_aicl_deglitch_wa_check(chip);
+	if (chip->typec_psy)
+		update_typec_status(chip);
 	smbchg_change_usb_supply_type(chip, usb_supply_type);
 	if (!chip->skip_usb_notification) {
 		pr_smb(PR_MISC, "setting usb psy present = %d\n",
@@ -5671,6 +5753,71 @@ static int smbchg_dp_dm(struct smbchg_chip *chip, int val)
 	return rc;
 }
 
+static void update_typec_capability_status(struct smbchg_chip *chip,
+					const union power_supply_propval *val)
+{
+	int rc;
+
+	pr_smb(PR_TYPEC, "typec capability = %dma\n", val->intval);
+
+	if (!chip->skip_usb_notification) {
+		rc = chip->usb_psy->set_property(chip->usb_psy,
+				POWER_SUPPLY_PROP_INPUT_CURRENT_MAX, val);
+		if (rc)
+			pr_err("typec failed to set current max rc=%d\n", rc);
+	}
+
+	pr_debug("changing ICL from %dma to %dma\n", chip->typec_current_ma,
+			val->intval);
+
+#ifndef CONFIG_QPNP_SMBCHARGER_EXTENSION
+	chip->typec_current_ma = val->intval;
+	smbchg_change_usb_supply_type(chip, chip->usb_supply_type);
+#else
+	mutex_lock(&chip->usb_status_lock);
+	if (chip->typec_current_ma != 0 &&
+			chip->typec_current_ma <= val->intval) {
+		/* Flow chart : C-9 */
+		pr_smb(PR_TYPEC,
+			"Type-C skip to set current max (current=%d req=%d)\n",
+			chip->typec_current_ma, val->intval);
+		mutex_unlock(&chip->usb_status_lock);
+		return;
+	}
+	chip->typec_current_ma = val->intval;
+	if (chip->usb_present) {
+		int current_limit_ma;
+
+		pr_smb(PR_TYPEC, "Update mA = %d\n", current_limit_ma);
+		rc = vote(chip->usb_icl_votable, PSY_ICL_VOTER, true,
+							current_limit_ma);
+		if (rc < 0)
+			pr_err("Couldn't vote for new USB ICL rc=%d\n", rc);
+	}
+	mutex_unlock(&chip->usb_status_lock);
+#endif
+}
+
+static void update_typec_otg_status(struct smbchg_chip *chip, int mode,
+					bool force)
+{
+	pr_smb(PR_TYPEC, "typec mode = %d\n", mode);
+
+	if (mode == POWER_SUPPLY_TYPE_DFP) {
+		chip->typec_dfp = true;
+		power_supply_set_usb_otg(chip->usb_psy, chip->typec_dfp);
+		/* update FG */
+		set_property_on_fg(chip, POWER_SUPPLY_PROP_STATUS,
+				get_prop_batt_status(chip));
+	} else if (force || chip->typec_dfp) {
+		chip->typec_dfp = false;
+		power_supply_set_usb_otg(chip->usb_psy, chip->typec_dfp);
+		/* update FG */
+		set_property_on_fg(chip, POWER_SUPPLY_PROP_STATUS,
+				get_prop_batt_status(chip));
+	}
+}
+
 #define CHARGE_OUTPUT_VTG_RATIO		840
 static int smbchg_get_iusb(struct smbchg_chip *chip)
 {
@@ -5761,6 +5908,7 @@ static int smbchg_battery_set_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_BATTERY_CHARGING_ENABLED:
 		vote(chip->battchg_suspend_votable, BATTCHG_USER_EN_VOTER,
 				!val->intval, 0);
+		power_supply_changed(&chip->batt_psy);
 		break;
 	case POWER_SUPPLY_PROP_CHARGING_ENABLED:
 		rc = vote(chip->usb_suspend_votable, USER_EN_VOTER,
@@ -5811,6 +5959,14 @@ static int smbchg_battery_set_property(struct power_supply *psy,
 			chip->allow_hvdcp3_detection = !!val->intval;
 			power_supply_changed(&chip->batt_psy);
 		}
+		break;
+	case POWER_SUPPLY_PROP_CURRENT_CAPABILITY:
+		if (chip->typec_psy)
+			update_typec_capability_status(chip, val);
+		break;
+	case POWER_SUPPLY_PROP_TYPEC_MODE:
+		if (chip->typec_psy)
+			update_typec_otg_status(chip, val->intval, false);
 		break;
 #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
 	case POWER_SUPPLY_PROP_ENABLE_SHUTDOWN_AT_LOW_BATTERY:
@@ -6739,6 +6895,8 @@ static irqreturn_t usbid_change_handler(int irq, void *_chip)
 
 static int determine_initial_status(struct smbchg_chip *chip)
 {
+	union power_supply_propval type = {0, };
+
 	/*
 	 * It is okay to read the interrupt status here since
 	 * interrupts aren't requested. reading interrupt status
@@ -6753,7 +6911,12 @@ static int determine_initial_status(struct smbchg_chip *chip)
 	batt_cold_handler(0, chip);
 	chg_term_handler(0, chip);
 #ifndef CONFIG_QPNP_SMBCHARGER_EXTENSION
-	usbid_change_handler(0, chip);
+	if (chip->typec_psy) {
+		get_property_from_typec(chip, POWER_SUPPLY_PROP_TYPE, &type);
+		update_typec_otg_status(chip, type.intval, true);
+	} else {
+		usbid_change_handler(0, chip);
+	}
 	src_detect_handler(0, chip);
 #endif
 
@@ -6778,7 +6941,12 @@ static int determine_initial_status(struct smbchg_chip *chip)
 		handle_usb_removal(chip);
 	}
 #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
-	usbid_change_handler(0, chip);
+	if (chip->typec_psy) {
+		get_property_from_typec(chip, POWER_SUPPLY_PROP_TYPE, &type);
+		update_typec_otg_status(chip, type.intval, true);
+	} else {
+		usbid_change_handler(0, chip);
+	}
 #endif
 
 	return 0;
@@ -8036,13 +8204,51 @@ static int smbchg_probe(struct spmi_device *spmi)
 {
 	int rc;
 	struct smbchg_chip *chip;
-	struct power_supply *usb_psy;
+	struct power_supply *usb_psy, *typec_psy = NULL;
 	struct qpnp_vadc_chip *vadc_dev, *vchg_vadc_dev;
+	const char *typec_psy_name;
+#ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
+#define TYPEC_PROBE_RETRY_MAX	5
+	static int typec_retry_cnt;
+#endif
 
 	usb_psy = power_supply_get_by_name("usb");
 	if (!usb_psy) {
 		pr_smb(PR_STATUS, "USB supply not found, deferring probe\n");
 		return -EPROBE_DEFER;
+	}
+
+	if (of_property_read_bool(spmi->dev.of_node, "qcom,external-typec")) {
+		/* read the type power supply name */
+		rc = of_property_read_string(spmi->dev.of_node,
+				"qcom,typec-psy-name", &typec_psy_name);
+#ifndef CONFIG_QPNP_SMBCHARGER_EXTENSION
+		if (rc) {
+			pr_err("failed to get prop typec-psy-name rc=%d\n",
+				rc);
+			return rc;
+		}
+
+		typec_psy = power_supply_get_by_name(typec_psy_name);
+		if (!typec_psy) {
+			pr_smb(PR_STATUS,
+				"Type-C supply not found, deferring probe\n");
+			return -EPROBE_DEFER;
+		}
+#else
+		if (rc) {
+			pr_err("failed to get prop typec-psy-name rc=%d\n",
+				rc);
+		} else {
+			typec_psy = power_supply_get_by_name(typec_psy_name);
+			if (!typec_psy) {
+				dev_err(&spmi->dev,
+					"Type-C supply not found, deferring probe\n");
+				if (typec_retry_cnt++ < TYPEC_PROBE_RETRY_MAX)
+					return -EPROBE_DEFER;
+			}
+		}
+#endif
 	}
 
 	if (of_find_property(spmi->dev.of_node, "qcom,dcin-vadc", NULL)) {
@@ -8129,6 +8335,7 @@ static int smbchg_probe(struct spmi_device *spmi)
 	chip->spmi = spmi;
 	chip->dev = &spmi->dev;
 	chip->usb_psy = usb_psy;
+	chip->typec_psy = typec_psy;
 	chip->fake_battery_soc = -EINVAL;
 	chip->usb_online = -EINVAL;
 	dev_set_drvdata(&spmi->dev, chip);
