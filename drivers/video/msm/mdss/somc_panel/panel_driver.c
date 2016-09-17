@@ -329,15 +329,15 @@ static int mdss_dsi_panel_reset_seq(struct mdss_panel_data *pdata, int enable)
 		spec_pdata->gpios_requested = true;
 	}
 
-	pw_seq = (enable) ? &ctrl_pdata->spec_pdata->on_seq :
-				&ctrl_pdata->spec_pdata->off_seq;
-
 #ifdef CONFIG_SOMC_PANEL_INCELL
 	if (incell_panel_is_seq_for_ewu() && enable)
 		pw_seq = &ctrl_pdata->spec_pdata->ewu_seq ?
 				&ctrl_pdata->spec_pdata->ewu_seq :
 				&ctrl_pdata->spec_pdata->on_seq;
+	else
 #endif
+	pw_seq = (enable) ? &ctrl_pdata->spec_pdata->on_seq :
+				&ctrl_pdata->spec_pdata->off_seq;
 
 	if (pw_seq->rst_b_seq)
 		mdss_dsi_panel_set_gpio_seq(ctrl_pdata->rst_gpio,
