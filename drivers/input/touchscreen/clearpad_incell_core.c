@@ -8103,8 +8103,8 @@ static void clearpad_post_probe_work(struct work_struct *work)
 	get_monotonic_boottime(&ts);
 	HWLOGI(this, "start post probe @ %ld.%06ld\n", ts.tv_sec, ts.tv_nsec);
 
-//	if (unlikely(!first_blank_done))
-//		incell_force_sp_on();
+	if (unlikely(!first_blank_done))
+		incell_force_sp_on();
 
 	rc = clearpad_ctrl_session_begin(this, session);
 	if (rc) {
