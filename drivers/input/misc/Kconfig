@@ -853,4 +853,10 @@ config INPUT_STMVL53L0
 	 To compile this driver as a module, choose M here: the
 	 module will be called stmvl53l0.
 
+ config FPC1145_PLATFORM
+       tristate "Platform FPC1145 finger print driver"
+       default n
+       help
+         Select this module to enable FPC1145 tee finger print driver
+
 endif
