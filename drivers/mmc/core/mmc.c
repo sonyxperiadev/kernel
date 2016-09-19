@@ -1755,7 +1755,7 @@ reinit:
 	/*
 	 * Enable power_off_notification byte in the ext_csd register
 	 */
-#ifdef CONFIG_ARCH_SONY_LOIRE
+#if defined(CONFIG_ARCH_SONY_LOIRE) || defined(CONFIG_ARCH_SONY_KITAKAMI)
 	if (host->caps2 & MMC_CAP2_FULL_PWR_CYCLE)
 #endif
 	if (card->ext_csd.rev >= 6) {
