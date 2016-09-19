@@ -3856,7 +3856,7 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 	msm_host->mmc->caps2 |= MMC_CAP2_INIT_BKOPS;
 #endif
 
-#ifdef CONFIG_ARCH_SONY_LOIRE
+#if defined(CONFIG_ARCH_SONY_LOIRE) || defined(CONFIG_ARCH_SONY_KITAKAMI)
 	msm_host->mmc->caps2 |= MMC_CAP2_AWAKE_SUPP;
 #endif
 
