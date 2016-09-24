@@ -1363,15 +1363,23 @@ fb_mmap(struct file *file, struct vm_area_struct * vma)
 {
 	struct fb_info *info = file_fb_info(file);
 	struct fb_ops *fb;
+#ifdef CONFIG_MACH_SONY_RHINE
 	unsigned long off;
+#elif defined(CONFIG_MACH_SONY_SHINANO)
+	unsigned long mmio_pgoff;
+#endif
 	unsigned long start;
 	u32 len;
 
 	if (!info)
 		return -ENODEV;
+
+#ifdef CONFIG_MACH_SONY_RHINE
 	if (vma->vm_pgoff > (~0UL >> PAGE_SHIFT))
 		return -EINVAL;
 	off = vma->vm_pgoff << PAGE_SHIFT;
+#endif
+
 	fb = info->fbops;
 	if (!fb)
 		return -ENODEV;
@@ -1383,8 +1391,17 @@ fb_mmap(struct file *file, struct vm_area_struct * vma)
 		return res;
 	}
 
+#ifdef CONFIG_MACH_SONY_RHINE
 	/* frame buffer memory */
+#elif defined(CONFIG_MACH_SONY_SHINANO)
+	/*
+	 * Ugh. This can be either the frame buffer mapping, or
+	 * if pgoff points past it, the mmio mapping.
+	 */
+#endif
 	start = info->fix.smem_start;
+
+#ifdef CONFIG_MACH_SONY_RHINE
 	len = PAGE_ALIGN((start & ~PAGE_MASK) + info->fix.smem_len);
 	if (off >= len) {
 		/* memory mapped io */
@@ -1396,7 +1413,18 @@ fb_mmap(struct file *file, struct vm_area_struct * vma)
 		start = info->fix.mmio_start;
 		len = PAGE_ALIGN((start & ~PAGE_MASK) + info->fix.mmio_len);
 	}
+#elif defined(CONFIG_MACH_SONY_SHINANO)
+	len = info->fix.smem_len;
+	mmio_pgoff = PAGE_ALIGN((start & ~PAGE_MASK) + len) >> PAGE_SHIFT;
+	if (vma->vm_pgoff >= mmio_pgoff) {
+		vma->vm_pgoff -= mmio_pgoff;
+		start = info->fix.mmio_start;
+		len = info->fix.mmio_len;
+	}
+#endif
+
 	mutex_unlock(&info->mm_lock);
+#ifdef CONFIG_MACH_SONY_RHINE
 	start &= PAGE_MASK;
 	if ((vma->vm_end - vma->vm_start + off) > len)
 		return -EINVAL;
@@ -1404,12 +1432,20 @@ fb_mmap(struct file *file, struct vm_area_struct * vma)
 	vma->vm_pgoff = off >> PAGE_SHIFT;
 	/* This is an IO map - tell maydump to skip this VMA */
 	vma->vm_flags |= VM_IO | VM_RESERVED;
+#endif
+
 	vma->vm_page_prot = vm_get_page_prot(vma->vm_flags);
+#ifdef CONFIG_MACH_SONY_RHINE
 	fb_pgprotect(file, vma, off);
 	if (io_remap_pfn_range(vma, vma->vm_start, off >> PAGE_SHIFT,
-			     vma->vm_end - vma->vm_start, vma->vm_page_prot))
+				vma->vm_end - vma->vm_start, vma->vm_page_prot))
 		return -EAGAIN;
 	return 0;
+#elif defined(CONFIG_MACH_SONY_SHINANO)
+	fb_pgprotect(file, vma, start);
+
+	return vm_iomap_memory(vma, start, len);
+#endif
 }
 
 static int
