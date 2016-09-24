@@ -2339,11 +2339,11 @@ static int pp_dspp_setup(u32 disp_num, struct mdss_mdp_mixer *mixer)
 	}
 
 	if (flags & PP_FLAGS_DIRTY_DITHER) {
+		addr = base + MDSS_MDP_REG_DSPP_DITHER_DEPTH;
 		if (!pp_ops[DITHER].pp_set_config) {
 			pp_dither_config(addr, pp_sts,
 				&mdss_pp_res->dither_disp_cfg[disp_num]);
 		} else {
-			addr = base + MDSS_MDP_REG_DSPP_DITHER_DEPTH;
 			pp_ops[DITHER].pp_set_config(addr, pp_sts,
 			      &mdss_pp_res->dither_disp_cfg[disp_num], DSPP);
 		}
