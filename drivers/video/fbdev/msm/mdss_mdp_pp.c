@@ -2476,6 +2476,9 @@ static int pp_dspp_setup(u32 disp_num, struct mdss_mdp_mixer *mixer)
 	}
 
 	if (flags & PP_FLAGS_DIRTY_DITHER) {
+#if !defined(CONFIG_ARCH_MSM8996) && !defined(CONFIG_ARCH_MSM8998)
+		addr = base + MDSS_MDP_REG_DSPP_DITHER_DEPTH;
+#endif
 		if (!pp_ops[DITHER].pp_set_config && addr) {
 			pp_dither_config(addr, pp_sts,
 				&mdss_pp_res->dither_disp_cfg[disp_num]);
