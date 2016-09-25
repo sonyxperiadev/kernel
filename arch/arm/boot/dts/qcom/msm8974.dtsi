@@ -2502,10 +2502,10 @@
 		qcom,memory-reservation-size = <0x280000>; /* 2.5M EBI1 buffer */
 	};
 
-	qcom_cedev: qcom,qcedev@fd440000 {
+	qcom,qcedev@fd440000 {
 		compatible = "qcom,qcedev";
 		reg = <0xfd440000 0x20000>,
-		      <0xfd444000 0x1b000>;
+		      <0xfd444000 0x8000>;
 		reg-names = "crypto-base","crypto-bam-base";
 		interrupts = <0 236 0>;
 		clock-names = "core_clk", "iface_clk", "bus_clk",
@@ -2527,10 +2527,10 @@
 		qcom,ce-opp-freq = <100000000>;
 	};
 
-	qcom_crypto: qcom,qcrypto@fd440000 {
+	qcom,qcrypto@fd444000 {
 		compatible = "qcom,qcrypto";
 		reg = <0xfd440000 0x20000>,
-		      <0xfd444000 0x1b000>;
+		      <0xfd444000 0x8000>;
 		reg-names = "crypto-base","crypto-bam-base";
 		interrupts = <0 236 0>;
 
@@ -2546,36 +2546,6 @@
 		qcom,ce-device = <0>;
 		qcom,clk-mgmt-sus-res;
                 qcom,msm-bus,name = "qcrypto-noc";
-		qcom,msm-bus,num-cases = <2>;
-		qcom,msm-bus,num-paths = <1>;
-		qcom,use-sw-aes-cbc-ecb-ctr-algo;
-		qcom,use-sw-aes-xts-algo;
-		qcom,use-sw-ahash-algo;
-		qcom,msm-bus,vectors-KBps =
-				<56 512 0 0>,
-				<56 512 3936000 393600>;
-		qcom,ce-opp-freq = <100000000>;
-	};
-
-	qcom_crypto1: qcom,qcrypto1@fd440000 {
-		compatible = "qcom,qcrypto";
-		reg = <0xfd440000 0x20000>,
-		      <0xfd444000 0x1b000>;
-		reg-names = "crypto-base","crypto-bam-base";
-		interrupts = <0 236 0>;
-
-		clock-names = "core_clk", "iface_clk", "bus_clk",
-				"core_clk_src";
-		clocks = <&clock_gcc clk_gcc_ce2_clk>,
-			 <&clock_gcc clk_gcc_ce2_ahb_clk>,
-			 <&clock_gcc clk_gcc_ce2_axi_clk>,
-			 <&clock_gcc clk_ce2_clk_src>;
-
-		qcom,bam-pipe-pair = <0>;
-		qcom,ce-hw-instance = <1>;
-		qcom,ce-device = <1>;
-		qcom,clk-mgmt-sus-res;
-		qcom,msm-bus,name = "qcrypto-noc";
 		qcom,msm-bus,num-cases = <2>;
 		qcom,msm-bus,num-paths = <1>;
 		qcom,use-sw-aes-cbc-ecb-ctr-algo;
