@@ -1731,6 +1731,7 @@
 		qcom,boot-option = <0x1>;
 
 		qcom,ep-latency = <10>;
+		qcom,wr-halt-size = <0xa>;
 
 		linux,pci-domain = <2>;
 
