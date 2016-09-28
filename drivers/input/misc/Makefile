@@ -94,3 +94,4 @@ obj-$(CONFIG_SENSORS_MC3430)	+= mc3xxx.o
 obj-$(CONFIG_INPUT_KIONIX_ACCEL)	+= kionix_accel.o
 obj-$(CONFIG_FPC1145_TEE)		+= fpc1145_tee.o
 obj-$(CONFIG_SENSORS_ISL29044A)	+= isl29044a.o
+obj-$(CONFIG_FPC1145_PLATFORM) += fpc1145_platform.o

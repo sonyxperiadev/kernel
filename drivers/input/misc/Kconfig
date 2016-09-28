@@ -908,3 +908,9 @@ config SENSORS_ISL29044A
 
 endif
 
+
+config FPC1145_PLATFORM
+	tristate "Platform FPC1145 finger print driver"
+	default n
+	help
+	  Select this module to enable FPC1145 tee finger print driver
