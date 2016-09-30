@@ -1174,12 +1174,13 @@ end:
 	return ret;
 }
 
-void incell_driver_post_power_on(struct mdss_panel_data *pdata)
+int incell_driver_post_power_on(struct mdss_panel_data *pdata)
 {
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
 	struct mdss_panel_specific_pdata *spec_pdata = NULL;
 	struct incell_ctrl *incell = incell_get_info();
 	incell_state state;
+	int ret = 1;
 
 	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
@@ -1187,7 +1188,7 @@ void incell_driver_post_power_on(struct mdss_panel_data *pdata)
 	spec_pdata = ctrl_pdata->spec_pdata;
 	if (!spec_pdata) {
 		pr_err("%s: Invalid input data\n", __func__);
-		return;
+		return -EINVAL;
 	}
 
 	if (incell && spec_pdata->panel_type == HYBRID_INCELL) {
@@ -1204,6 +1205,8 @@ void incell_driver_post_power_on(struct mdss_panel_data *pdata)
 	somc_panel_chg_fps_cmds_send(ctrl_pdata);
 
 	spec_pdata->disp_onoff_state = true;
+
+	return ret;
 }
 
 void incell_force_sp_on(void)
