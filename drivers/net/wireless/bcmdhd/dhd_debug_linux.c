@@ -114,14 +114,16 @@ dbg_ring_poll_worker(struct work_struct *work)
 	flags = dhd_os_spin_lock(ring->lock);
 	dhd_dbg_get_ring_status(dhdp, ringid, &ring_status);
 
-	if (ring_status.written_bytes > ring_status.read_bytes)
-		buflen = ring_status.written_bytes - ring_status.read_bytes;
-	else if (ring_status.written_bytes < ring_status.read_bytes)
-		buflen = 0xFFFFFFFF + ring_status.written_bytes -
-			ring_status.read_bytes;
-	else {
+	if (ring->wp > ring->rp)
+		buflen = ring->wp - ring->rp;
+	else if (ring->wp < ring->rp)
+		buflen = ring->ring_size - ring->rp + ring->wp;
+	else
 		goto exit;
-	}
+
+	if (buflen > ring->ring_size)
+		goto exit;
+
 	buf = MALLOC(dhdp->osh, buflen);
 	if (!buf) {
 		DHD_ERROR(("%s failed to allocate read buf\n", __FUNCTION__));

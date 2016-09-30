@@ -147,75 +147,77 @@ typedef struct dhbdbg_pending_item {
 	dhd_dbg_ring_entry_t *ring_entry;
 } pending_item_t;
 
-/* get next entry; offset must point to valid entry */
-static u32
-next_entry(dhd_dbg_ring_t *ring, int32 offset)
+int
+dhd_dbg_ring_pull_single(dhd_pub_t *dhdp, int ring_id, void *data, uint32 buf_len,
+        bool strip_header)
 {
-	dhd_dbg_ring_entry_t *entry = (dhd_dbg_ring_entry_t *)(ring->ring_buf + offset);
+	dhd_dbg_ring_t *ring;
+	dhd_dbg_ring_entry_t *r_entry;
+	uint32 rlen;
+	char *buf;
 
-	/*
-	 * A length == 0 record is the end of buffer marker. Wrap around and
-	 * read the message at the start of the buffer as *this* one, and
-	 * return the one after that.
-	 */
-	if (!entry->len) {
-		entry = (dhd_dbg_ring_entry_t *)ring->ring_buf;
-		return ENTRY_LENGTH(entry);
+	if (!dhdp || !dhdp->dbg)
+		return 0;
+
+	ring = &dhdp->dbg->dbg_rings[ring_id];
+	if (ring->state != RING_ACTIVE)
+		return 0;
+
+	if (ring->rp == ring->wp)
+		return 0;
+
+	r_entry = (dhd_dbg_ring_entry_t *)((uint8 *)ring->ring_buf + ring->rp);
+	if (strip_header) {
+		rlen = r_entry->len;
+		buf = (char *)r_entry + DBG_RING_ENTRY_SIZE;
+	} else {
+		rlen = ENTRY_LENGTH(r_entry);
+		buf = (char *)r_entry;
 	}
-	return offset + ENTRY_LENGTH(entry);
-}
-
-/* get record by offset; idx must point to valid entry */
-static dhd_dbg_ring_entry_t *
-get_entry(dhd_dbg_ring_t *ring, int32 offset)
-{
-	dhd_dbg_ring_entry_t *entry = (dhd_dbg_ring_entry_t *)(ring->ring_buf + offset);
-
-	/*
-	 * A length == 0 record is the end of buffer marker. Wrap around and
-	 * read the message at the start of the buffer.
-	 */
-	if (!entry->len) {
-		return (dhd_dbg_ring_entry_t *)ring->ring_buf;
+	if (rlen > buf_len) {
+		DHD_ERROR(("%s: buf len %d is too small for entry len %d",
+			__FUNCTION__, buf_len, rlen));
+		return 0;
 	}
-	return entry;
+	memcpy(data, buf, rlen);
+	/* update ring context */
+	ring->rp += ENTRY_LENGTH(r_entry);
+	/* skip padding if there is one */
+	if (ring->tail_padded && ((ring->rp + ring->rem_len) >= ring->ring_size)) {
+		ring->rp = 0;
+		ring->tail_padded = FALSE;
+		ring->rem_len = 0;
+	}
+	ring->stat.read_bytes += ENTRY_LENGTH(r_entry);
+	DHD_RING(("%s read_bytes  %d\n", __FUNCTION__,
+		ring->stat.read_bytes));
+
+	return rlen;
 }
 
 int
 dhd_dbg_ring_pull(dhd_pub_t *dhdp, int ring_id, void *data, uint32 buf_len)
 {
-	int32 avail_len, r_len = 0;
+	int32 r_len, total_r_len = 0;
 	dhd_dbg_ring_t *ring;
-	dhd_dbg_ring_entry_t *hdr;
 
 	if (!dhdp || !dhdp->dbg)
-		return r_len;
+		return 0;
+
 	ring = &dhdp->dbg->dbg_rings[ring_id];
 	if (ring->state != RING_ACTIVE)
-		return r_len;
+		return 0;
 
-	/* get a fresh pending length */
-	avail_len = READ_AVAIL_SPACE(ring->wp, ring->rp, ring->ring_size);
-	if (ring->no_space) {
-		avail_len = avail_len - ring->rem_len + ring->wp;
-		ring->no_space = FALSE;
-		ring->rem_len = 0;
-	}
-	while (avail_len > 0 && buf_len > 0) {
-		hdr = get_entry(ring, ring->rp);
-		memcpy(data, hdr, ENTRY_LENGTH(hdr));
-		r_len += ENTRY_LENGTH(hdr);
-		/* update read pointer */
-		ring->rp = next_entry(ring, ring->rp);
-		data += ENTRY_LENGTH(hdr);
-		avail_len -= ENTRY_LENGTH(hdr);
-		buf_len -= ENTRY_LENGTH(hdr);
-		ring->stat.read_bytes += ENTRY_LENGTH(hdr);
-		DHD_RING(("%s read_bytes  %d\n", __FUNCTION__,
-			ring->stat.read_bytes));
+	while (buf_len > 0) {
+		r_len = dhd_dbg_ring_pull_single(dhdp, ring_id, data, buf_len, FALSE);
+		if (r_len == 0)
+			break;
+		data = (uint8 *)data + r_len;
+		buf_len -= r_len;
+		total_r_len += r_len;
 	}
 
-	return r_len;
+	return total_r_len;
 }
 
 int
@@ -223,9 +225,9 @@ dhd_dbg_ring_push(dhd_pub_t *dhdp, int ring_id, dhd_dbg_ring_entry_t *hdr, void 
 {
 	unsigned long flags;
 	uint32 pending_len;
-	int w_len, diff;
+	uint32 w_len;
 	dhd_dbg_ring_t *ring;
-	dhd_dbg_ring_entry_t *w_entry;
+	dhd_dbg_ring_entry_t *w_entry, *r_entry;
 	if (!dhdp || !dhdp->dbg)
 		return BCME_BADADDR;
 
@@ -237,27 +239,38 @@ dhd_dbg_ring_push(dhd_pub_t *dhdp, int ring_id, dhd_dbg_ring_entry_t *hdr, void 
 	flags = dhd_os_spin_lock(ring->lock);
 
 	w_len = ENTRY_LENGTH(hdr);
+
+	if (w_len > ring->ring_size)
+		return BCME_ERROR;
 	/* prep the space */
 	do {
-		if (ring->rp <= ring->wp) {
-		 	if ((diff = (ring->ring_size - ring->wp)) <= w_len) {
-				ring->no_space = TRUE;
-				ring->rem_len = ring->ring_size - ring->wp;
-				/* 0 pad insufficient tail space */
-				memset(ring->ring_buf + ring->wp, 0,
-				       diff);
-				ring->wp = 0;
-				continue;
-			} else {
-				break;
+		if ((ring->rp <= ring->wp) && ((ring->ring_size - ring->wp) <= w_len)) {
+			ring->tail_padded = TRUE;
+			ring->rem_len = ring->ring_size - ring->wp;
+			/* 0 pad insufficient tail space */
+			memset((uint8 *)ring->ring_buf + ring->wp, 0, ring->rem_len);
+			ring->wp = 0;
+			continue;
+		}
+		if ((ring->rp > ring->wp) && ((ring->rp - ring->wp) <= w_len)) {
+			/* Not enough space for new entry, free some up */
+			r_entry = (dhd_dbg_ring_entry_t *)((uint8 *)ring->ring_buf + ring->rp);
+			ring->rp += ENTRY_LENGTH(r_entry);
+			/* skip padding if there is one */
+			if (ring->tail_padded && (ring->rp + ring->rem_len >= ring->ring_size)) {
+				ring->rp = 0;
+				ring->tail_padded = FALSE;
+				ring->rem_len = 0;
 			}
+			ring->stat.read_bytes += ENTRY_LENGTH(r_entry);
+			DHD_RING(("%s read_bytes  %d\n", __FUNCTION__,
+				ring->stat.read_bytes));
+			continue;
 		}
-		if (ring->rp > ring->wp) {
-			break;
-		}
+		break;
 	} while (1);
 
-	w_entry = (dhd_dbg_ring_entry_t *)(ring->ring_buf + ring->wp);
+	w_entry = (dhd_dbg_ring_entry_t *)((uint8 *)ring->ring_buf + ring->wp);
 	/* header */
 	memcpy(w_entry, hdr, DBG_RING_ENTRY_SIZE);
 	w_entry->len = hdr->len;
@@ -275,8 +288,8 @@ dhd_dbg_ring_push(dhd_pub_t *dhdp, int ring_id, dhd_dbg_ring_entry_t *hdr, void 
 	pending_len = ring->stat.written_bytes - ring->stat.read_bytes;
 	if (ring->threshold > 0 &&
 		(pending_len >= ring->threshold) && ring->sched_pull) {
-		dhdp->dbg->pullreq(dhdp->dbg->private, ring->id);
-		ring->sched_pull = FALSE;
+			dhdp->dbg->pullreq(dhdp->dbg->private, ring->id);
+			ring->sched_pull = FALSE;
 	}
 	dhd_os_spin_unlock(ring->lock, flags);
 	return  BCME_OK;

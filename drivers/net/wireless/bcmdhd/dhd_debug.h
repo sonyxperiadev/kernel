@@ -639,7 +639,7 @@ typedef struct dhd_dbg_ring {
 	void *	lock;		/* spin lock for ring access */
 	struct ring_statistics stat; /* statistics */
 	enum dbg_ring_state state;	/* ring state enum */
-	bool no_space; /* writer does not have enough space */
+	bool tail_padded;		/* writer does not have enough space */
 	uint32 rem_len; /* number of bytes from wp_pad to end */
 	bool sched_pull; /* schedule reader immediately */
 
@@ -676,6 +676,8 @@ extern int dhd_dbg_get_ring_status(dhd_pub_t *dhdp, int ring_id,
 extern int dhd_dbg_ring_push(dhd_pub_t *dhdp, int ring_id, dhd_dbg_ring_entry_t *hdr, void *data);
 
 extern int dhd_dbg_ring_pull(dhd_pub_t *dhdp, int ring_id, void *data, uint32 buf_len);
+extern int dhd_dbg_ring_pull_single(dhd_pub_t *dhdp, int ring_id, void *data, uint32 buf_len,
+                bool strip_header);
 extern int dhd_dbg_find_ring_id(dhd_pub_t *dhdp, char *ring_name);
 extern void *dhd_dbg_get_priv(dhd_pub_t *dhdp);
 extern int dhd_dbg_send_urgent_evt(dhd_pub_t *dhdp, const void *data, const uint32 len);
