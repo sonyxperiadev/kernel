@@ -138,7 +138,7 @@ int  incell_panel_driver_init(struct mdss_dsi_ctrl_pdata *ctrl_pdata);
 
 bool incell_panel_is_seq_for_ewu(void);
 void incell_panel_free_gpios(struct mdss_dsi_ctrl_pdata *ctrl_pdata);
-void incell_driver_post_power_on(struct mdss_panel_data *pdata);
+int incell_driver_post_power_on(struct mdss_panel_data *pdata);
 
 void incell_panel_fb_notifier_call_chain(
 		struct msm_fb_data_type *mfd, int blank, bool type);
