@@ -43,7 +43,7 @@ config MSM_ADRENO_DEFAULT_GOVERNOR
 
 config MSM_ADRENO_USES_OLD_FIRMWARE
 	bool "Mantain compatibility with old Adreno firmwares"
-	default y
+	default n
 	---help---
 	  Select this if you need to use old Adreno firmwares
 	  not supporting CP_WAIT_FOR_ME and/or CP_COND_EXEC cmds.
