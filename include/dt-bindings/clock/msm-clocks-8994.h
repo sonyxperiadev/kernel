@@ -394,6 +394,8 @@
 #define clk_mdss_pclk0_clk 0x3487234a
 #define clk_mdss_pclk1_clk 0xd5804246
 #define clk_mdss_vsync_clk 0x42a022d3
+#define clk_mdss_mdp_vote_clk 0x588460a4
+#define clk_mdss_rotator_vote_clk 0x5b1f675e
 #define clk_mmss_misc_ahb_clk 0xea30b0e7
 #define clk_mmss_mmssnoc_axi_clk 0x63753a4b
 #define clk_mmss_s0_axi_clk 0xcbd7b001
