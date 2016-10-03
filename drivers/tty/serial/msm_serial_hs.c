@@ -31,10 +31,6 @@
  * of operation. See msm_serial_hs_platform_data.rx_wakeup_irq.
  */
 
-#if defined(CONFIG_MACH_SONY_SHINANO) || defined(CONFIG_ARCH_SONY_LOIRE)
-#define SONY_SHINANO_LOIRE
-#endif
-
 #include <linux/module.h>
 
 #include <linux/serial.h>
@@ -66,7 +62,7 @@
 #include <linux/ipc_logging.h>
 #include <asm/irq.h>
 #include <linux/kthread.h>
-#ifndef SONY_SHINANO_LOIRE
+#if defined(CONFIG_ARCH_SONY_KITAKAMI)
 #include <linux/delay.h>
 #endif
 
@@ -74,7 +70,10 @@
 #include <linux/platform_data/msm_serial_hs.h>
 #include <linux/msm-bus.h>
 
+#ifdef CONFIG_BT_MSM_SLEEP
 #include <linux/bcm43xx_bt_lpm.h>
+#endif
+
 #include "msm_serial_hs_hwreg.h"
 #define UART_SPS_CONS_PERIPHERAL 0
 #define UART_SPS_PROD_PERIPHERAL 1
@@ -214,7 +213,7 @@ struct msm_hs_wakeup {
 	unsigned char rx_to_inject;
 	bool enabled;
 	bool freed;
-#ifndef SONY_SHINANO_LOIRE
+#if defined(CONFIG_ARCH_SONY_KITAKAMI)
 	struct work_struct resume_work;
 #endif
 };
@@ -230,7 +229,9 @@ struct msm_hs_port {
 	struct msm_hs_wakeup wakeup;
 	struct wakeup_source ws;
 
+#ifdef CONFIG_BT_MSM_SLEEP
 	void (*exit_lpm_cb)(struct uart_port *);
+#endif
 
 	struct dentry *loopback_dir;
 	struct work_struct clock_off_w; /* work for actual clock off */
@@ -264,7 +265,7 @@ struct msm_hs_port {
 	atomic_t client_req_state;
 	void *ipc_msm_hs_log_ctxt;
 	int ipc_debug_mask;
-#ifndef SONY_SHINANO_LOIRE
+#if defined(CONFIG_ARCH_SONY_KITAKAMI)
 	atomic_t wakeup_irq_disabled;
 #endif
 };
@@ -1121,7 +1122,7 @@ static void msm_hs_set_termios(struct uart_port *uport,
 
 	MSM_HS_DBG("Entering %s\n", __func__);
 
-#ifdef CONFIG_BT_MSM_SLEEP
+#if defined(CONFIG_MACH_SONY_SHINANO)
 	/*
 	 * Clear the Rx Ready Ctl bit - This ensures that
 	 * flow control lines stop the other side from sending
@@ -1236,7 +1237,7 @@ static void msm_hs_set_termios(struct uart_port *uport,
 	 * UART Core would trigger RFR if it is not having any space with
 	 * RX FIFO.
 	 */
-#ifndef CONFIG_BT_MSM_SLEEP
+#if !defined(CONFIG_MACH_SONY_SHINANO)
 	/* Pulling RFR line high */
 	msm_hs_write(uport, UART_DM_CR, RFR_LOW);
 #endif
@@ -1264,7 +1265,7 @@ unsigned int msm_hs_tx_empty(struct uart_port *uport)
 	unsigned int data;
 	unsigned int ret = 0;
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
-#ifdef CONFIG_BT_MSM_SLEEP
+#if defined(CONFIG_MACH_SONY_SHINANO)
 	if (msm_uport->pm_state != MSM_HS_PM_ACTIVE) {
 		MSM_HS_WARN("%s(): Failed.Clocks are OFF\n", __func__);
 		return -1;
@@ -1848,8 +1849,10 @@ static void msm_hs_start_tx_locked(struct uart_port *uport)
 		return;
 	}
 
+#ifdef CONFIG_BT_MSM_SLEEP
 	if (msm_uport->exit_lpm_cb)
 		msm_uport->exit_lpm_cb(uport);
+#endif
 
 	if (!tx->dma_in_flight) {
 		tx->dma_in_flight = true;
@@ -2055,7 +2058,7 @@ void msm_hs_set_mctrl(struct uart_port *uport,
 	unsigned long flags;
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
 
-#ifdef CONFIG_BT_MSM_SLEEP
+#if defined(CONFIG_MACH_SONY_SHINANO)
 	if (msm_uport->pm_state != MSM_HS_PM_ACTIVE) {
 		MSM_HS_WARN("%s(): Failed.Clocks are OFF\n", __func__);
 		return;
@@ -2256,7 +2259,7 @@ void toggle_wakeup_interrupt(struct msm_hs_port *msm_uport)
 		spin_lock_irqsave(&uport->lock, flags);
 		msm_uport->wakeup.ignore = 1;
 		MSM_HS_DBG("%s(): Enable Wakeup IRQ", __func__);
-#ifndef SONY_SHINANO_LOIRE
+#if defined(CONFIG_ARCH_SONY_KITAKAMI)
 		atomic_set(&msm_uport->wakeup_irq_disabled, 0);
 #endif
 		enable_irq(msm_uport->wakeup.irq);
@@ -2264,9 +2267,7 @@ void toggle_wakeup_interrupt(struct msm_hs_port *msm_uport)
 		msm_uport->wakeup.enabled = true;
 		spin_unlock_irqrestore(&uport->lock, flags);
 	} else {
-#ifdef SONY_SHINANO_LOIRE
-		disable_irq_nosync(msm_uport->wakeup.irq);
-#else
+#if defined(CONFIG_ARCH_SONY_KITAKAMI)
 		spin_lock_irqsave(&uport->lock, flags);
 		if (!atomic_read(&msm_uport->wakeup_irq_disabled)) {
 			disable_irq_nosync(msm_uport->wakeup.irq);
@@ -2276,6 +2277,8 @@ void toggle_wakeup_interrupt(struct msm_hs_port *msm_uport)
 				__func__);
 		}
 		spin_unlock_irqrestore(&uport->lock, flags);
+#else
+		disable_irq_nosync(msm_uport->wakeup.irq);
 #endif
 		enable_irq(uport->irq);
 		spin_lock_irqsave(&uport->lock, flags);
@@ -2291,7 +2294,7 @@ void msm_hs_resource_off(struct msm_hs_port *msm_uport)
 	unsigned int data;
 
 	MSM_HS_DBG("%s(): begin", __func__);
-#ifndef CONFIG_BT_MSM_SLEEP
+#if !defined(CONFIG_MACH_SONY_SHINANO)
 	msm_hs_disable_flow_control(uport, false);
 #endif
 	if (msm_uport->rx.flush == FLUSH_NONE)
@@ -2308,7 +2311,7 @@ void msm_hs_resource_off(struct msm_hs_port *msm_uport)
 		msm_hs_write(uport, UART_DM_DMEN, data);
 		sps_tx_disconnect(msm_uport);
 	}
-#ifndef CONFIG_BT_MSM_SLEEP
+#if !defined(CONFIG_MACH_SONY_SHINANO) && !defined(CONFIG_ARCH_SONY_LOIRE)
 	if (!atomic_read(&msm_uport->client_req_state))
 		msm_hs_enable_flow_control(uport, false);
 #endif
@@ -2341,7 +2344,7 @@ void msm_hs_resource_on(struct msm_hs_port *msm_uport)
 void msm_hs_request_clock_off(struct uart_port *uport)
 {
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
-#ifdef CONFIG_BT_MSM_SLEEP
+#if defined(CONFIG_MACH_SONY_SHINANO)
 	if (msm_uport->pm_state != MSM_HS_PM_ACTIVE) {
 		MSM_HS_WARN("%s(): Failed.Clocks are OFF\n", __func__);
 		return;
@@ -2400,7 +2403,7 @@ void msm_hs_set_clock(int port_index, int on)
 }
 EXPORT_SYMBOL(msm_hs_set_clock);
 
-#ifdef SONY_SHINANO_LOIRE
+#if !defined(CONFIG_ARCH_SONY_KITAKAMI)
 static irqreturn_t msm_hs_wakeup_isr(int irq, void *dev)
 {
 	unsigned int wakeup = 0;
@@ -2441,9 +2444,9 @@ static irqreturn_t msm_hs_wakeup_isr(int irq, void *dev)
 		tty_flip_buffer_push(tty->port);
 	return IRQ_HANDLED;
 }
+#endif
 
-#else // Others platforms
-
+#if defined(CONFIG_ARCH_SONY_KITAKAMI)
 static irqreturn_t msm_hs_wakeup_isr(int irq, void *dev)
 {
 	unsigned long flags;
@@ -2510,7 +2513,7 @@ static void msm_hs_wakeup_resume_work(struct work_struct *work)
 		schedule_work(&msm_uport->wakeup.resume_work);
 	}
 }
-#endif // #ifdef SONY_SHINANO_LOIRE
+#endif // CONFIG_ARCH_SONY_KITAKAMI
 
 static const char *msm_hs_type(struct uart_port *port)
 {
@@ -2528,10 +2531,13 @@ static void msm_hs_unconfig_uart_gpios(struct uart_port *uport)
 					pdev->dev.platform_data;
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
 
+#if defined(CONFIG_ARCH_SONY_KITAKAMI)
 	if (!IS_ERR_OR_NULL(msm_uport->pinctrl)) {
 		pinctrl_select_state(msm_uport->pinctrl,
 				msm_uport->gpio_state_suspend);
-	} else if (pdata) {
+	} else
+#endif
+	if (pdata) {
 		if (gpio_is_valid(pdata->uart_tx_gpio))
 			gpio_free(pdata->uart_tx_gpio);
 		if (gpio_is_valid(pdata->uart_rx_gpio))
@@ -2696,10 +2702,10 @@ static int msm_hs_startup(struct uart_port *uport)
 	if (is_use_low_power_wakeup(msm_uport)) {
 		ret = request_threaded_irq(msm_uport->wakeup.irq, NULL,
 					msm_hs_wakeup_isr,
-#ifdef SONY_SHINANO_LOIRE
-					IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
-#else
+#if defined(CONFIG_ARCH_SONY_KITAKAMI)
 					IRQF_TRIGGER_HIGH | IRQF_ONESHOT,
+#else
+					IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
 #endif
 					"msm_hs_wakeup", msm_uport);
 		if (unlikely(ret)) {
@@ -2772,7 +2778,7 @@ static int msm_hs_startup(struct uart_port *uport)
 
 	/* Assume no flow control, unless termios sets it */
 	msm_uport->flow_control = false;
-#ifndef CONFIG_BT_MSM_SLEEP
+#if !defined(CONFIG_MACH_SONY_SHINANO)
 	msm_hs_disable_flow_control(uport, true);
 #endif
 
@@ -2818,7 +2824,7 @@ static int msm_hs_startup(struct uart_port *uport)
 	spin_lock_irqsave(&uport->lock, flags);
 	atomic_set(&msm_uport->ioctl_count, 0);
 	atomic_set(&msm_uport->client_req_state, 0);
-#ifndef SONY_SHINANO_LOIRE
+#if defined(CONFIG_ARCH_SONY_KITAKAMI)
 	atomic_set(&msm_uport->wakeup_irq_disabled, 0);
 #endif
 	msm_hs_start_rx_locked(uport);
@@ -3348,10 +3354,10 @@ static void  msm_serial_hs_rt_init(struct uart_port *uport)
 
 	MSM_HS_INFO("%s(): Enabling runtime pm", __func__);
 	pm_runtime_set_suspended(uport->dev);
-#ifdef SONY_SHINANO_LOIRE
-	pm_runtime_set_autosuspend_delay(uport->dev, 100);
-#else
+#if defined(CONFIG_ARCH_SONY_KITAKAMI)
 	pm_runtime_set_autosuspend_delay(uport->dev, 5000);
+#else
+	pm_runtime_set_autosuspend_delay(uport->dev, 100);
 #endif
 	pm_runtime_use_autosuspend(uport->dev);
 	mutex_lock(&msm_uport->mtx);
@@ -3518,7 +3524,7 @@ static int msm_hs_probe(struct platform_device *pdev)
 	msm_uport->wakeup.inject_rx = pdata->inject_rx_on_wakeup;
 	msm_uport->wakeup.rx_to_inject = pdata->rx_to_inject;
 	msm_uport->obs = pdata->obs;
-#ifndef SONY_SHINANO_LOIRE
+#if defined(CONFIG_ARCH_SONY_KITAKAMI)
 	INIT_WORK(&msm_uport->wakeup.resume_work, msm_hs_wakeup_resume_work);
 #endif
 
@@ -3528,6 +3534,7 @@ static int msm_hs_probe(struct platform_device *pdev)
 			pdata->bam_rx_ep_pipe_index;
 	msm_uport->wakeup.enabled = true;
 
+#ifdef CONFIG_BT_MSM_SLEEP
 	if (pdata == NULL) {
 		dev_warn(&pdev->dev, "msm_hs_probe() pdata is null\n");
 		msm_uport->exit_lpm_cb = NULL;
@@ -3535,6 +3542,7 @@ static int msm_hs_probe(struct platform_device *pdev)
 		dev_dbg(&pdev->dev, "msm_hs_probe() set exit_lpm_cb\n");
 		msm_uport->exit_lpm_cb = pdata->exit_lpm_cb;
 	}
+#endif
 
 	uport->iotype = UPIO_MEM;
 	uport->fifosize = 64;
@@ -3717,7 +3725,7 @@ static void msm_hs_shutdown(struct uart_port *uport)
 				__func__);
 	}
 
-#ifndef SONY_SHINANO_LOIRE
+#if defined(CONFIG_ARCH_SONY_KITAKAMI)
 	cancel_work_sync(&msm_uport->wakeup.resume_work);
 #endif
 	cancel_delayed_work_sync(&msm_uport->rx.flip_insert_work);
