@@ -1877,6 +1877,7 @@ static void get_uv_data(struct mdss_dsi_ctrl_pdata *ctrl_pdata,
 		int *u_data, int *v_data)
 {
 	struct dsi_cmd_desc *cmds = ctrl_pdata->spec_pdata->uv_read_cmds.cmds;
+	void *clk_handle;
 	int param_type = ctrl_pdata->spec_pdata->pcc_data.param_type;
 	char buf[MDSS_DSI_LEN];
 	char *pos = buf;
@@ -1888,7 +1889,13 @@ static void get_uv_data(struct mdss_dsi_ctrl_pdata *ctrl_pdata,
 
 	mdss_dsi_cmd_mdp_busy(ctrl_pdata);
 	mdss_bus_bandwidth_ctrl(1);
-	mdss_dsi_clk_ctrl(ctrl_pdata, ctrl_pdata->dsi_clk_handle,
+
+	if (ctrl_pdata->panel_data.panel_info.type == MIPI_CMD_PANEL)
+		clk_handle = ctrl_pdata->mdp_clk_handle;
+	else
+		clk_handle = ctrl_pdata->dsi_clk_handle;
+
+	mdss_dsi_clk_ctrl(ctrl_pdata, clk_handle,
 				MDSS_DSI_ALL_CLKS, MDSS_DSI_CLK_ON);
 	for (i = 0; i < ctrl_pdata->spec_pdata->uv_read_cmds.cmd_cnt; i++) {
 		if (short_response)
@@ -1899,7 +1906,7 @@ static void get_uv_data(struct mdss_dsi_ctrl_pdata *ctrl_pdata,
 		pos += len;
 		cmds++;
 	}
-	mdss_dsi_clk_ctrl(ctrl_pdata, ctrl_pdata->dsi_clk_handle,
+	mdss_dsi_clk_ctrl(ctrl_pdata, clk_handle,
 				MDSS_DSI_ALL_CLKS, MDSS_DSI_CLK_OFF);
 	mdss_bus_bandwidth_ctrl(0);
 	conv_uv_data(buf, param_type, u_data, v_data);
