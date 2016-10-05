@@ -345,28 +345,28 @@
 
 	qcom,sensor-information {
 		/* msm_therm */
-		qcom,sensor-information@17 {
+		qcom,sensor-information-17 {
 			qcom,scaling-factor = <10>;
 		};
 
 		/* emmc_therm */
-		qcom,sensor-information@18 {
+		qcom,sensor-information-18 {
 			qcom,scaling-factor = <10>;
 		};
 
 		/* quiet_therm */
-		qcom,sensor-information@21 {
+		qcom,sensor-information-21 {
 			qcom,alias-name = "bl_therm";
 		};
 
-		sensor_information100: qcom,sensor-information@100 {
+		sensor_information100: qcom,sensor-information-100 {
 			qcom,sensor-type = "adc";
 			qcom,sensor-name = "bms";
 			qcom,alias-name = "batt_therm";
 			qcom,scaling-factor = <1000>;
 		};
 
-		sensor_information101: qcom,sensor-information@101 {
+		sensor_information101: qcom,sensor-information-101 {
 			qcom,sensor-type = "adc";
 			qcom,sensor-name = "xo_therm";
 		};
