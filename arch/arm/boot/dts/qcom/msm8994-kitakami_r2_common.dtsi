@@ -96,7 +96,7 @@
 	};
 
 	qcom,sensor-information {
-		sensor_information102: qcom,sensor-information@102 {
+		sensor_information102: qcom,sensor-information-102 {
 			qcom,sensor-type = "adc";
 			qcom,sensor-name = "flash_therm";
 			qcom,scaling-factor = <10>;
