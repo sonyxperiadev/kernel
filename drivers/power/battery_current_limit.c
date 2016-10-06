@@ -217,11 +217,18 @@ static void bcl_handle_hotplug(struct work_struct *work)
 	trace_bcl_sw_mitigation_event("start hotplug mitigation");
 	mutex_lock(&bcl_hotplug_mutex);
 
+#ifdef CONFIG_MSM_BCL_SOMC_CTL
+	if ((bcl_soc_state == BCL_LOW_THRESHOLD
+		&& bcl_ibat_state == BCL_HIGH_THRESHOLD)
+		|| bcl_vph_state == BCL_LOW_THRESHOLD)
+		bcl_hotplug_request = bcl_soc_hotplug_mask;
+#else
 	if  (bcl_soc_state == BCL_LOW_THRESHOLD
 		|| bcl_vph_state == BCL_LOW_THRESHOLD)
 		bcl_hotplug_request = bcl_soc_hotplug_mask;
 	else if (bcl_ibat_state == BCL_HIGH_THRESHOLD)
 		bcl_hotplug_request = bcl_hotplug_mask;
+#endif /* CONFIG_MSM_BCL_SOMC_CTL */
 	else
 		bcl_hotplug_request = 0;
 
@@ -255,9 +262,15 @@ static void update_cpu_freq(void)
 	cpufreq_req.freq.max_freq = UINT_MAX;
 	cpufreq_req.freq.min_freq = CPUFREQ_MIN_NO_MITIGATION;
 
+#ifdef CONFIG_MSM_BCL_SOMC_CTL
+	if (bcl_vph_state == BCL_LOW_THRESHOLD
+		|| (bcl_ibat_state == BCL_HIGH_THRESHOLD
+		&& battery_soc_val <= soc_low_threshold)) {
+#else
 	if (bcl_vph_state == BCL_LOW_THRESHOLD
 		|| bcl_ibat_state == BCL_HIGH_THRESHOLD
 		|| battery_soc_val <= soc_low_threshold) {
+#endif /* CONFIG_MSM_BCL_SOMC_CTL */
 		cpufreq_req.freq.max_freq = (gbcl->bcl_monitor_type
 			== BCL_IBAT_MONITOR_TYPE) ? gbcl->btm_freq_max
 			: gbcl->bcl_p_freq_max;
