@@ -153,6 +153,29 @@ int somc_wifi_set_carddetect(int present)
 }
 #endif /* CONFIG_MACH_SONY_SHINANO */
 
+static ssize_t macaddr_show(struct device *dev, struct device_attribute *attr,
+				char *buf)
+{
+	return sprintf(buf, "%s", intf_macaddr);
+}
+
+static ssize_t macaddr_store(struct device *dev, struct device_attribute *attr,
+				const char *buf, size_t count)
+{
+	return snprintf(intf_macaddr, count, "%s\n", buf);
+}
+
+DEVICE_ATTR(macaddr, 0644, macaddr_show, macaddr_store);
+
+static struct attribute *wifi_attrs[] = {
+	&dev_attr_macaddr.attr,
+	NULL
+};
+
+static struct attribute_group wifi_attr_grp = {
+	.attrs = wifi_attrs,
+};
+
 int somc_wifi_init(struct platform_device *pdev)
 {
 	int ret, ret_sus, gpio;
@@ -228,6 +251,12 @@ int somc_wifi_init(struct platform_device *pdev)
 	}
 #endif /* CONFIG_BCMDHD_PCIE */
 
+	intf_macaddr = kzalloc(20*(sizeof(char)), GFP_KERNEL);
+	if (sysfs_create_group(&pdev->dev.kobj, &wifi_attr_grp) < 0) {
+		pr_err("%s: Unable to create sysfs\n", __func__);
+		kfree(intf_macaddr);
+	}
+
 	return 0;
 
 #ifdef CONFIG_BCMDHD_PCIE
@@ -266,7 +295,11 @@ void somc_wifi_deinit(struct platform_device *pdev)
 EXPORT_SYMBOL(somc_wifi_deinit);
 
 #define ETHER_ADDR_LEN    6
+#if defined(CONFIG_MACH_SONY_SHINANO)
 #define FILE_WIFI_MACADDR "/sys/devices/platform/bcmdhd_wlan/macaddr"
+#else
+#define FILE_WIFI_MACADDR "/sys/devices/soc.0/bcmdhd_wlan.90/macaddr"
+#endif /* CONFIG_MACH_SONY_SHINANO */
 
 static inline int xdigit (char c)
 {
@@ -415,20 +448,6 @@ random_mac:
 	return 0;
 }
 
-static ssize_t macaddr_show(struct device *dev, struct device_attribute *attr,
-				char *buf)
-{
-	return sprintf(buf, "%s", intf_macaddr);
-}
-
-static ssize_t macaddr_store(struct device *dev, struct device_attribute *attr,
-				const char *buf, size_t count)
-{
-	return snprintf(intf_macaddr, count, "%s\n", buf);
-}
-
-DEVICE_ATTR(macaddr, 0644, macaddr_show, macaddr_store);
-
 struct wifi_platform_data somc_wifi_control = {
 	.set_power	= somc_wifi_set_power,
 #if defined(CONFIG_MACH_SONY_SHINANO)
@@ -442,15 +461,6 @@ struct wifi_platform_data somc_wifi_control = {
 EXPORT_SYMBOL(somc_wifi_control);
 
 #if defined(CONFIG_MACH_SONY_SHINANO)
-static struct attribute *wifi_attrs[] = {
-	&dev_attr_macaddr.attr,
-	NULL
-};
-
-static struct attribute_group wifi_attr_grp = {
-	.attrs = wifi_attrs,
-};
-
 static struct resource somc_wifi_resources[] = {
 	[0] = {
 		.name	= "bcmdhd_wlan_irq",
