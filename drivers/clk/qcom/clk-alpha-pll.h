@@ -77,6 +77,7 @@ struct clk_alpha_pll_postdiv {
 extern const struct clk_ops clk_alpha_pll_ops;
 extern const struct clk_ops clk_alpha_pll_hwfsm_ops;
 extern const struct clk_ops clk_alpha_pll_postdiv_ops;
+extern const struct clk_ops clk_alpha_pll_slew_ops;
 extern const struct clk_ops clk_fabia_pll_ops;
 extern const struct clk_ops clk_fabia_fixed_pll_ops;
 extern const struct clk_ops clk_generic_pll_postdiv_ops;
