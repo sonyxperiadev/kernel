@@ -17,16 +17,12 @@
 
 /dts-v1/;
 
-/include/ "msm8974-v1.dtsi"
-/include/ "msm8974-mtp.dtsi"
+/include/ "msm8974-v1-mtp.dts"
 /include/ "msm8974-rhine_honami_row.dtsi"
 
 / {
 	model = "SoMC Honami ROW";
 	compatible = "somc,honami-row", "qcom,msm8974";
-	qcom,msm-id = <126 8 0>,
-		      <185 8 0>,
-		      <186 8 0>;
 };
 
 &soc {
@@ -39,8 +35,4 @@
 	i2c@f9928000 {
 		qcom,i2c-src-freq = <19200000>;
 	};
-};
-
-&pm8941_chg {
-	qcom,charging-disabled;
 };
