@@ -298,7 +298,11 @@ EXPORT_SYMBOL(somc_wifi_deinit);
 #if defined(CONFIG_MACH_SONY_SHINANO)
 #define FILE_WIFI_MACADDR "/sys/devices/platform/bcmdhd_wlan/macaddr"
 #else
+#if defined(CONFIG_MACH_SONY_KITAKAMI)
 #define FILE_WIFI_MACADDR "/sys/devices/soc.0/bcmdhd_wlan.90/macaddr"
+#else
+#define FILE_WIFI_MACADDR "/sys/devices/soc.0/bcmdhd_wlan.114/macaddr" /* LOIRE */
+#endif /* CONFIG_MACH_SONY_KITAKAMI */
 #endif /* CONFIG_MACH_SONY_SHINANO */
 
 static inline int xdigit (char c)
