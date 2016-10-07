@@ -254,7 +254,11 @@ static int a4xx_preemption_pre_ibsubmit(
 	unsigned int *cmds_orig = cmds;
 	int exec_ib = 0;
 
-	cmds += a4xx_preemption_token(adreno_dev, rb, cmds,
+	if (!context)
+		cmds += a4xx_preemption_token(adreno_dev, rb, cmds,
+				rb->preemption_desc.gpuaddr);
+	else
+		cmds += a4xx_preemption_token(adreno_dev, rb, cmds,
 				device->memstore.gpuaddr +
 				KGSL_MEMSTORE_OFFSET(context->id, preempted));
 
