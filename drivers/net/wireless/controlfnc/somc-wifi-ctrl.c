@@ -295,11 +295,6 @@ void somc_wifi_deinit(struct platform_device *pdev)
 EXPORT_SYMBOL(somc_wifi_deinit);
 
 #define ETHER_ADDR_LEN    6
-#if defined(CONFIG_MACH_SONY_SHINANO)
-#define FILE_WIFI_MACADDR "/sys/devices/platform/bcmdhd_wlan/macaddr"
-#else
-#define FILE_WIFI_MACADDR "/sys/devices/soc.0/bcmdhd_wlan.90/macaddr"
-#endif /* CONFIG_MACH_SONY_SHINANO */
 
 static inline int xdigit (char c)
 {
@@ -362,10 +357,6 @@ static int somc_wifi_get_mac_addr(unsigned char *buf)
 {
 	int ret = 0;
 
-	mm_segment_t oldfs;
-	struct kstat stat;
-	struct file* fp;
-	int readlen = 0;
 	char macasc[128] = {0,};
 	uint rand_mac;
 	static unsigned char mymac[ETHER_ADDR_LEN] = {0,};
@@ -376,29 +367,9 @@ static int somc_wifi_get_mac_addr(unsigned char *buf)
 
 	memset(buf, 0x00, ETHER_ADDR_LEN);
 
-	oldfs = get_fs();
-	set_fs(get_ds());
-
-	ret = vfs_stat(FILE_WIFI_MACADDR, &stat);
-	if (ret) {
-		set_fs(oldfs);
-		pr_err("%s: Failed to get information from file %s (%d)\n",
-				__FUNCTION__, FILE_WIFI_MACADDR, ret);
-		goto random_mac;
-	}
-	set_fs(oldfs);
-
-	fp = filp_open(FILE_WIFI_MACADDR, O_RDONLY, 0);
-	if (IS_ERR(fp)) {
-		pr_err("%s: Failed to read error %s\n",
-				__FUNCTION__, FILE_WIFI_MACADDR);
-		goto random_mac;
-	}
-
-	readlen = kernel_read(fp, fp->f_pos, macasc, 17); // 17 = 12 + 5
-	if (readlen > 0) {
+	if (intf_macaddr != NULL) {
 		unsigned char* macbin;
-		struct ether_addr* convmac = ether_aton( macasc );
+		struct ether_addr* convmac = ether_aton( intf_macaddr );
 
 		if (convmac == NULL) {
 			pr_err("%s: Invalid Mac Address Format %s\n",
@@ -416,7 +387,6 @@ static int somc_wifi_get_mac_addr(unsigned char *buf)
 		memcpy(buf, macbin, ETHER_ADDR_LEN);
 	}
 
-	filp_close(fp, NULL);
 	return ret;
 
 random_mac:
