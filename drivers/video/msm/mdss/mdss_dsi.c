@@ -126,7 +126,7 @@ static int mdss_dsi_labibb_vreg_init(struct platform_device *pdev)
 	return 0;
 }
 
-static int mdss_dsi_labibb_vreg_ctrl(struct mdss_dsi_ctrl_pdata *ctrl,
+int mdss_dsi_labibb_vreg_ctrl(struct mdss_dsi_ctrl_pdata *ctrl,
 							int enable)
 {
 	int rc;
