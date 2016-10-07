@@ -156,7 +156,7 @@
 	};
 
 	qcom,sensor-information {
-		sensor_information101: qcom,sensor-information@101 {
+		sensor_information101: qcom,sensor-information-101 {
 			qcom,sensor-name = "flash_therm";
 		};
 	};
