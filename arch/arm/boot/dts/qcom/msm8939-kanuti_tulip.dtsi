@@ -18,6 +18,7 @@
 
 &soc {
 	i2c@78b9000 { /* BLSP1 QUP5 */
+		qcom,clk-freq-out = <400000>;
 		tsc@24 {
 			compatible = "cy,cyttsp4_i2c_adapter";
 			reg = <0x24>;
@@ -201,6 +202,7 @@
 	};
 
 	i2c@78ba000 { /* BLSP1 QUP6 */
+		qcom,clk-freq-out = <400000>;
 		nfc@28 {
 			compatible = "nxp,pn547";
 			reg = <0x28>;
@@ -220,6 +222,7 @@
 	};
 
 	i2c@78b6000 { /* BLSP1 QUP2 */
+		qcom,clk-freq-out = <400000>;
 		lp5562@30 {
 			compatible = "ti,lp5562";
 			reg = <0x30>;
@@ -331,6 +334,10 @@
 			/* 0 | 0x100 */
 			cm36286,ps_conf3_val = <0x100>;
 		};
+	};
+
+	i2c@78b8000 { /* BLSP1 QUP4 */
+		qcom,clk-freq-out = <400000>;
 	};
 
 	gpio_keys {
