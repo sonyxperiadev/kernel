@@ -2337,8 +2337,8 @@ static int mdss_mdp_cmd_panel_on(struct mdss_mdp_ctl *ctl,
 			disp_on_in_hs = true;
 		} else {
 #ifdef CONFIG_SOMC_PANEL_INCELL
-			rc = mdss_mdp_ctl_intf_event(ctl,
-					MDSS_EVENT_POST_PANEL_ON, NULL);
+			rc = mdss_mdp_ctl_intf_event(ctl, MDSS_EVENT_POST_PANEL_ON,
+					NULL, CTL_INTF_EVENT_FLAG_DEFAULT);
 			WARN(rc, "intf %d post panel on error (%d)\n",
 					ctl->intf_num, rc);
 #endif
