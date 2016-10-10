@@ -27,6 +27,7 @@
 #include <linux/mm.h>
 #include <linux/module.h>
 #include <linux/mutex.h>
+#include <linux/spinlock.h>
 #include <linux/nsproxy.h>
 #include <linux/poll.h>
 #include <linux/debugfs.h>
@@ -315,6 +316,7 @@ enum binder_deferred_state {
 };
 
 struct binder_alloc {
+	struct mutex mutex;
 	struct vm_area_struct *vma;
 	struct mm_struct *vma_vm_mm;
 	void *buffer;
@@ -552,14 +554,16 @@ static void binder_insert_allocated_buffer(struct binder_proc *proc,
 static struct binder_buffer *binder_buffer_lookup(struct binder_proc *proc,
 						  uintptr_t user_ptr)
 {
-	struct rb_node *n = proc->alloc.allocated_buffers.rb_node;
+	struct rb_node *n;
 	struct binder_buffer *buffer;
 	struct binder_buffer *kern_ptr;
 
+	mutex_lock(&proc->alloc.mutex);
 	kern_ptr = (struct binder_buffer *)
 		(user_ptr - proc->alloc.user_buffer_offset -
 			offsetof(struct binder_buffer, data));
 
+	n = proc->alloc.allocated_buffers.rb_node;
 	while (n) {
 		buffer = rb_entry(n, struct binder_buffer, rb_node);
 		BUG_ON(buffer->free);
@@ -568,9 +572,12 @@ static struct binder_buffer *binder_buffer_lookup(struct binder_proc *proc,
 			n = n->rb_left;
 		else if (kern_ptr > buffer)
 			n = n->rb_right;
-		else
+		else {
+			mutex_unlock(&proc->alloc.mutex);
 			return buffer;
+		}
 	}
+	mutex_unlock(&proc->alloc.mutex);
 	return NULL;
 }
 
@@ -687,7 +694,7 @@ static struct binder_buffer *binder_alloc_buf(struct binder_proc *proc,
 					      size_t extra_buffers_size,
 					      int is_async)
 {
-	struct rb_node *n = proc->alloc.free_buffers.rb_node;
+	struct rb_node *n;
 	struct binder_buffer *buffer;
 	size_t buffer_size;
 	struct rb_node *best_fit = NULL;
@@ -695,10 +702,11 @@ static struct binder_buffer *binder_alloc_buf(struct binder_proc *proc,
 	void *end_page_addr;
 	size_t size, data_offsets_size;
 
+	mutex_lock(&proc->alloc.mutex);
 	if (proc->alloc.vma == NULL) {
 		pr_err("%d: binder_alloc_buf, no vma\n",
 		       proc->pid);
-		return NULL;
+		goto error_unlock;
 	}
 
 	data_offsets_size = ALIGN(data_size, sizeof(void *)) +
@@ -707,23 +715,26 @@ static struct binder_buffer *binder_alloc_buf(struct binder_proc *proc,
 	if (data_offsets_size < data_size || data_offsets_size < offsets_size) {
 		binder_user_error("%d: got transaction with invalid size %zd-%zd\n",
 				proc->pid, data_size, offsets_size);
-		return NULL;
+		goto error_unlock;
 	}
+
 	size = data_offsets_size + ALIGN(extra_buffers_size, sizeof(void *));
 	if (size < data_offsets_size || size < extra_buffers_size) {
 		binder_user_error("%d: got transaction with invalid extra_buffers_size %zd\n",
 				  proc->pid, extra_buffers_size);
-		return NULL;
+		goto error_unlock;
 	}
+
 	if (is_async &&
 	    proc->alloc.free_async_space <
 			size + sizeof(struct binder_buffer)) {
 		binder_debug(BINDER_DEBUG_BUFFER_ALLOC,
 			     "%d: binder_alloc_buf size %zd failed, no async space left\n",
 			      proc->pid, size);
-		return NULL;
+		goto error_unlock;
 	}
 
+	n = proc->alloc.free_buffers.rb_node;
 	while (n) {
 		buffer = rb_entry(n, struct binder_buffer, rb_node);
 		BUG_ON(!buffer->free);
@@ -742,7 +753,7 @@ static struct binder_buffer *binder_alloc_buf(struct binder_proc *proc,
 	if (best_fit == NULL) {
 		pr_err("%d: binder_alloc_buf size %zd failed, no address space\n",
 			proc->pid, size);
-		return NULL;
+		goto error_unlock;
 	}
 	if (n == NULL) {
 		buffer = rb_entry(best_fit, struct binder_buffer, rb_node);
@@ -766,8 +777,9 @@ static struct binder_buffer *binder_alloc_buf(struct binder_proc *proc,
 	if (end_page_addr > has_page_addr)
 		end_page_addr = has_page_addr;
 	if (binder_update_page_range(proc, 1,
-	    (void *)PAGE_ALIGN((uintptr_t)buffer->data), end_page_addr, NULL))
-		return NULL;
+	    (void *)PAGE_ALIGN((uintptr_t)buffer->data), end_page_addr, NULL)) {
+		goto error_unlock;
+	}
 
 	rb_erase(best_fit, &proc->alloc.free_buffers);
 	buffer->free = 0;
@@ -793,8 +805,13 @@ static struct binder_buffer *binder_alloc_buf(struct binder_proc *proc,
 			     "%d: binder_alloc_buf size %zd async free %zd\n",
 			      proc->pid, size, proc->alloc.free_async_space);
 	}
+	mutex_unlock(&proc->alloc.mutex);
 
 	return buffer;
+
+error_unlock:
+	mutex_unlock(&proc->alloc.mutex);
+	return NULL;
 }
 
 static void *buffer_start_page(struct binder_buffer *buffer)
@@ -857,6 +874,7 @@ static void binder_free_buf(struct binder_proc *proc,
 {
 	size_t size, buffer_size;
 
+	mutex_lock(&proc->alloc.mutex);
 	buffer_size = binder_buffer_size(proc, buffer);
 
 	size = ALIGN(buffer->data_size, sizeof(void *)) +
@@ -886,6 +904,7 @@ static void binder_free_buf(struct binder_proc *proc,
 		(void *)PAGE_ALIGN((uintptr_t)buffer->data),
 		(void *)(((uintptr_t)buffer->data + buffer_size) & PAGE_MASK),
 		NULL);
+
 	rb_erase(&buffer->rb_node, &proc->alloc.allocated_buffers);
 	buffer->free = 1;
 	if (!list_is_last(&buffer->entry, &proc->alloc.buffers)) {
@@ -908,6 +927,7 @@ static void binder_free_buf(struct binder_proc *proc,
 		}
 	}
 	binder_insert_free_buffer(proc, buffer);
+	mutex_unlock(&proc->alloc.mutex);
 }
 
 static struct binder_node *binder_get_node(struct binder_proc *proc,
@@ -2013,9 +2033,11 @@ static void binder_transaction(struct binder_proc *proc,
 
 	trace_binder_transaction(reply, t, target_node);
 
+	binder_unlock(__func__);
 	t->buffer = binder_alloc_buf(target_proc, tr->data_size,
 		tr->offsets_size, extra_buffers_size,
 		!reply && (t->flags & TF_ONE_WAY));
+	binder_lock(__func__);
 	if (t->buffer == NULL) {
 		return_error = BR_FAILED_REPLY;
 		goto err_binder_alloc_buf_failed;
@@ -2227,7 +2249,9 @@ err_copy_data_failed:
 	trace_binder_transaction_failed_buffer_release(t->buffer);
 	binder_transaction_buffer_release(target_proc, t->buffer, offp);
 	t->buffer->transaction = NULL;
+	binder_unlock(__func__);
 	binder_free_buf(target_proc, t->buffer);
+	binder_lock(__func__);
 err_binder_alloc_buf_failed:
 	kfree(tcomplete);
 	binder_stats_deleted(BINDER_STAT_TRANSACTION_COMPLETE);
@@ -2407,7 +2431,9 @@ static int binder_thread_write(struct binder_proc *proc,
 				return -EFAULT;
 			ptr += sizeof(binder_uintptr_t);
 
+			binder_unlock(__func__);
 			buffer = binder_buffer_lookup(proc, data_ptr);
+			binder_lock(__func__);
 			if (buffer == NULL) {
 				binder_user_error("%d:%d BC_FREE_BUFFER u%016llx no match\n",
 					proc->pid, thread->pid, (u64)data_ptr);
@@ -2437,7 +2463,9 @@ static int binder_thread_write(struct binder_proc *proc,
 			}
 			trace_binder_transaction_buffer_release(buffer);
 			binder_transaction_buffer_release(proc, buffer, NULL);
+			binder_unlock(__func__);
 			binder_free_buf(proc, buffer);
+			binder_lock(__func__);
 			break;
 		}
 
@@ -3484,6 +3512,7 @@ static int binder_open(struct inode *nodp, struct file *filp)
 	proc = kzalloc(sizeof(*proc), GFP_KERNEL);
 	if (proc == NULL)
 		return -ENOMEM;
+	mutex_init(&proc->alloc.mutex);
 	get_task_struct(current);
 	proc->tsk = current;
 	INIT_LIST_HEAD(&proc->todo);
@@ -3676,7 +3705,9 @@ static void binder_deferred_release(struct binder_proc *proc)
 			/*BUG();*/
 		}
 
+		binder_unlock(__func__);
 		binder_free_buf(proc, buffer);
+		binder_lock(__func__);
 		buffers++;
 	}
 
