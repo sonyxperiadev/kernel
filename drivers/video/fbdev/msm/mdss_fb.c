@@ -3471,13 +3471,16 @@ static int __mdss_fb_sync_buf_done_callback(struct notifier_block *p,
 		pr_debug("%s: frame flushed\n", sync_pt_data->fence_name);
 		sync_pt_data->flushed = true;
 #ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
-		pdata = dev_get_platdata(&mfd->pdev->dev);
-		if (!pdata) {
-			pr_err("no panel connected\n");
-			return -ENODEV;
+		if (mfd->panel.type == MIPI_VIDEO_PANEL ||
+		    mfd->panel.type == MIPI_CMD_PANEL) {
+			pdata = dev_get_platdata(&mfd->pdev->dev);
+			if (!pdata) {
+				pr_err("no panel connected\n");
+				return -ENODEV;
+			}
+			if (pdata->resume_started && pdata->fff_time_update)
+				pdata->fff_time_update(pdata);
 		}
-		if (pdata->resume_started && pdata->fff_time_update)
-			pdata->fff_time_update(pdata);
 #endif
 		break;
 	case MDP_NOTIFY_FRAME_TIMEOUT:
@@ -4057,6 +4060,9 @@ static int __mdss_fb_perform_commit(struct msm_fb_data_type *mfd)
 		else
 			pr_warn("no kickoff function setup for fb%d\n",
 				mfd->index);
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+		mdss_dsi_panel_fps_data_update(mfd);
+#endif
 		fb_backup->atomic_commit = false;
 	} else {
 		ret = mdss_fb_pan_display_sub(&fb_backup->disp_commit.var,
