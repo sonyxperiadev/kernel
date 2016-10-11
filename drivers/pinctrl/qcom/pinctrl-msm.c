@@ -67,6 +67,7 @@ struct msm_pinctrl {
 
 	DECLARE_BITMAP(dual_edge_irqs, MAX_NR_GPIO);
 	DECLARE_BITMAP(enabled_irqs, MAX_NR_GPIO);
+	DECLARE_BITMAP(disabled_pins, MAX_NR_GPIO);
 
 	const struct msm_pinctrl_soc_data *soc;
 	void __iomem *regs;
@@ -984,6 +985,8 @@ int msm_pinctrl_probe(struct platform_device *pdev,
 	struct resource *res;
 	int ret;
 	u32 tlmm_emmc_boot_select;
+	int disabled_pins_num;
+	const struct device_node *np = pdev->dev.of_node;
 
 	msm_pinctrl_data = pctrl = devm_kzalloc(&pdev->dev,
 				sizeof(*pctrl), GFP_KERNEL);
@@ -1022,6 +1025,24 @@ int msm_pinctrl_probe(struct platform_device *pdev,
 	if (!pctrl->pctrl) {
 		dev_err(&pdev->dev, "Couldn't register pinctrl driver\n");
 		return -ENODEV;
+	}
+
+	disabled_pins_num = of_property_count_u32_elems(np, "disabled-pins");
+	if (disabled_pins_num > 0) {
+		int i;
+		u32 pin;
+
+		for (i = 0; i < disabled_pins_num; i++) {
+			of_property_read_u32_index(np,
+					"disabled-pins", i, &pin);
+			if (pin < MAX_NR_GPIO) {
+				set_bit(pin, pctrl->disabled_pins);
+				dev_info(&pdev->dev, "pin %d disabled\n", pin);
+			} else {
+				dev_err(&pdev->dev, "pin %d out of range\n",
+						pin);
+			}
+		}
 	}
 
 	ret = msm_gpio_init(pctrl);
