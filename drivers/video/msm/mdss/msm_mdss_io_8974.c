@@ -1731,6 +1731,11 @@ static int mdss_dsi_ulps_config(struct mdss_dsi_ctrl_pdata *ctrl,
 	pinfo = &pdata->panel_info;
 	mipi = &pinfo->mipi;
 
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	if (!mdss_dsi_ulps_feature_enabled(pdata))
+		return 0;
+#endif
+
 	if (!mdss_dsi_is_ulps_req_valid(ctrl, enable)) {
 		pr_debug("%s: skiping ULPS config for ctrl%d, enable=%d\n",
 			__func__, ctrl->ndx, enable);
