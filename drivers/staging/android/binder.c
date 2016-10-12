@@ -290,8 +290,8 @@ struct binder_ref {
 	struct binder_proc *proc;
 	struct binder_node *node;
 	uint32_t desc;
-	int strong;
-	int weak;
+	atomic_t strong;
+	atomic_t weak;
 	struct binder_ref_death *death;
 };
 
@@ -606,7 +606,7 @@ static struct binder_ref *binder_get_ref(struct binder_proc *proc,
 			n = n->rb_left;
 		} else if (desc > ref->desc) {
 			n = n->rb_right;
-		} else if (need_strong_ref && !ref->strong) {
+		} else if (need_strong_ref && !atomic_read(&ref->strong)) {
 			binder_user_error("tried to use weak ref as strong ref\n");
 			return NULL;
 		} else {
@@ -643,6 +643,8 @@ static struct binder_ref *binder_get_ref_for_node(struct binder_proc *proc,
 	new_ref->debug_id = ++binder_last_id;
 	new_ref->proc = proc;
 	new_ref->node = node;
+	atomic_set(&new_ref->strong, 0);
+	atomic_set(&new_ref->weak, 0);
 	rb_link_node(&new_ref->rb_node_node, parent, p);
 	rb_insert_color(&new_ref->rb_node_node, &proc->refs_by_node);
 
@@ -692,7 +694,7 @@ static void binder_delete_ref(struct binder_ref *ref)
 
 	rb_erase(&ref->rb_node_desc, &ref->proc->refs_by_desc);
 	rb_erase(&ref->rb_node_node, &ref->proc->refs_by_node);
-	if (ref->strong)
+	if (atomic_read(&ref->strong))
 		binder_dec_node(ref->node, 1, 1);
 	hlist_del(&ref->node_entry);
 	binder_dec_node(ref->node, 0, 1);
@@ -711,54 +713,48 @@ static void binder_delete_ref(struct binder_ref *ref)
 static int binder_inc_ref(struct binder_ref *ref, int strong,
 			  struct list_head *target_list)
 {
-	int ret;
+	int ret = 0;
 
-	if (strong) {
-		if (ref->strong == 0) {
-			ret = binder_inc_node(ref->node, 1, 1, target_list);
-			if (ret)
-				return ret;
-		}
-		ref->strong++;
-	} else {
-		if (ref->weak == 0) {
-			ret = binder_inc_node(ref->node, 0, 1, target_list);
-			if (ret)
-				return ret;
-		}
-		ref->weak++;
+	if ((strong && atomic_inc_return(&ref->strong) == 1) ||
+	    (!strong && atomic_inc_return(&ref->weak) == 1)) {
+		ret = binder_inc_node(ref->node, strong, 1, target_list);
+		if (ret)
+			atomic_dec(strong ? &ref->strong : &ref->weak);
 	}
-	return 0;
-}
 
+	return ret;
+}
 
 static int binder_dec_ref(struct binder_ref *ref, int strong)
 {
 	if (strong) {
-		if (ref->strong == 0) {
+		int newval = atomic_dec_if_positive(&ref->strong);
+
+		if (newval < 0) {
 			binder_user_error("%d invalid dec strong, ref %d desc %d s %d w %d\n",
 					  ref->proc->pid, ref->debug_id,
-					  ref->desc, ref->strong, ref->weak);
+					  ref->desc, atomic_read(&ref->strong),
+					  atomic_read(&ref->weak));
 			return -EINVAL;
 		}
-		ref->strong--;
-		if (ref->strong == 0) {
-			int ret;
-
-			ret = binder_dec_node(ref->node, strong, 1);
+		if (newval == 0) {
+			int ret = binder_dec_node(ref->node, strong, 1);
 			if (ret)
 				return ret;
 		}
 	} else {
-		if (ref->weak == 0) {
+		int newval = atomic_dec_if_positive(&ref->weak);
+
+		if (newval < 0) {
 			binder_user_error("%d invalid dec weak, ref %d desc %d s %d w %d\n",
 					  ref->proc->pid, ref->debug_id,
-					  ref->desc, ref->strong, ref->weak);
+					  ref->desc, atomic_read(&ref->strong),
+					  atomic_read(&ref->weak));
 			return -EINVAL;
 		}
-		ref->weak--;
 	}
-	if (ref->strong == 0 && ref->weak == 0)
+
+	if (atomic_read(&ref->strong) == 0 && atomic_read(&ref->weak) == 0)
 		binder_delete_ref(ref);
 	return 0;
 }
@@ -1885,8 +1881,11 @@ static int binder_thread_write(struct binder_proc *proc,
 			}
 			binder_debug(BINDER_DEBUG_USER_REFS,
 				     "%d:%d %s ref %d desc %d s %d w %d for node %d\n",
-				     proc->pid, thread->pid, debug_string, ref->debug_id,
-				     ref->desc, ref->strong, ref->weak, ref->node->debug_id);
+				     proc->pid, thread->pid, debug_string,
+				     ref->debug_id, ref->desc,
+				     atomic_read(&ref->strong),
+				     atomic_read(&ref->weak),
+				     ref->node->debug_id);
 			break;
 		}
 		case BC_INCREFS_DONE:
@@ -2089,7 +2088,9 @@ static int binder_thread_write(struct binder_proc *proc,
 				     "BC_REQUEST_DEATH_NOTIFICATION" :
 				     "BC_CLEAR_DEATH_NOTIFICATION",
 				     (u64)cookie, ref->debug_id, ref->desc,
-				     ref->strong, ref->weak, ref->node->debug_id);
+				     atomic_read(&ref->strong),
+				     atomic_read(&ref->weak),
+				     ref->node->debug_id);
 
 			if (cmd == BC_REQUEST_DEATH_NOTIFICATION) {
 				if (ref->death) {
@@ -3351,7 +3352,8 @@ static void print_binder_ref(struct seq_file *m, struct binder_ref *ref)
 {
 	seq_printf(m, "  ref %d: desc %d %snode %d s %d w %d d %pK\n",
 		   ref->debug_id, ref->desc, ref->node->proc ? "" : "dead ",
-		   ref->node->debug_id, ref->strong, ref->weak, ref->death);
+		   ref->node->debug_id, atomic_read(&ref->strong),
+		   atomic_read(&ref->weak), ref->death);
 }
 
 static void print_binder_proc(struct seq_file *m,
@@ -3520,8 +3522,8 @@ static void print_binder_proc_stats(struct seq_file *m,
 		struct binder_ref *ref = rb_entry(n, struct binder_ref,
 						  rb_node_desc);
 		count++;
-		strong += ref->strong;
-		weak += ref->weak;
+		strong += atomic_read(&ref->strong);
+		weak += atomic_read(&ref->weak);
 	}
 	seq_printf(m, "  refs: %d s %d w %d\n", count, strong, weak);
 
