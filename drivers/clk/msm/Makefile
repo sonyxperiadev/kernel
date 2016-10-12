@@ -50,6 +50,9 @@ obj-$(CONFIG_ARCH_MSM8974)	+= clock-krait-8974.o
 obj-$(CONFIG_ARCH_MSM8916)	+= clock-rpm-8936.o
 obj-$(CONFIG_ARCH_MSM8916)	+= clock-gcc-8936.o
 
+# MSM8976
+obj-$(CONFIG_ARCH_MSM8976)	+= clock-gcc-8976.o
+
 # ACPU clock
 obj-$(CONFIG_ARCH_MDM9640)      += clock-a7.o
 obj-$(CONFIG_ARCH_MDMCALIFORNIUM)	+= clock-a7.o
@@ -62,6 +65,7 @@ obj-$(CONFIG_ARCH_MSM8916)	+= clock-gcc-8952.o
 obj-$(CONFIG_ARCH_MSM8916)	+= clock-gcc-8953.o
 obj-$(CONFIG_ARCH_MSM8916)	+= clock-rcgwr.o
 obj-$(CONFIG_ARCH_MSM8916)      += clock-cpu-8953.o
+obj-$(CONFIG_ARCH_MSM8916)	+= clock-cpu-8976.o
 
 # ACPU: Krait specific
 obj-$(CONFIG_ARCH_MSM_KRAIT)	+= clock-krait.o
