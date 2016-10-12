@@ -242,11 +242,6 @@ dtb-$(CONFIG_ARCH_MDM9607) += mdm9607-rumi.dtb \
 	mdm9607-rcm.dtb \
 	mdm9607-mtp-sdcard.dtb
 
-dtb-$(CONFIG_ARCH_MSM8916) += msm8952-qrd-skum.dtb \
-       msm8952-cdp.dtb \
-       msm8952-ext-codec-cdp.dtb \
-       msm8952-mtp.dtb
-
 dtb-$(CONFIG_ARCH_MSM8909) += msm8909-pm8916-mtp.dtb \
 	msm8909w-wtp.dtb \
 	apq8009w-wtp.dtb \
