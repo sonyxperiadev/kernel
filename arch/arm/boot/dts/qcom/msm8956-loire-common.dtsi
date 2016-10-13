@@ -21,24 +21,22 @@
 
 / {
 	reserved-memory {
-		debug_region: debug_region@0 {
+		debug_region: debug_region@57e00000 {
 			compatible = "removed-dma-pool", "qcom,debug_memory";
 			no-map;
 			reg = <0 0x57E00000 0 0x100000>;
 			label = "debug_mem";
 		};
 
-		pstore_reserve_mem: pstore_reserve_mem_region@0 {
+		pstore_reserve_mem: pstore_reserve_mem_region@57f00000 {
 			compatible = "removed-dma-pool";
 			no-map;
 			reg = <0 0x57F00000 0 0x100000>;
 		};
 
 		fb_mem: fb_region@0 {
-			compatible = "shared-dma-pool";
-			reusable;
-			size = <0 0x1000000>;
 			reg = <0 0 0 0x1000000>;
+			label = "fb_mem";
 		};
 
 		tz_app_mem: tz_app_mem@0 {
@@ -46,7 +44,6 @@
 			no-map;
 			reg = <0x0 0x8dd00000 0x0 0x1400000>;
 		};
-
 	};
 
 };
