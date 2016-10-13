@@ -13,7 +13,7 @@ obj-$(CONFIG_MSM_CLK_CONTROLLER_V2)	+= msm-clock-controller.o
 obj-$(CONFIG_COMMON_CLK_MSM)	+= clock-debug.o
 
 # MSM 8976
-obj-$(CONFIG_ARCH_MSM8976)	+= clock-gcc-8976.o
+obj-$(CONFIG_ARCH_MSM8916)	+= clock-gcc-8976.o
 obj-$(CONFIG_ARCH_MSM8916)	+= clock-cpu-8976.o
 
 # MSM 8996
