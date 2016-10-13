@@ -41,6 +41,9 @@
 #define L2_PWR_STATUS			0x18
 #define L2_CORE_CBCR			0x58
 
+#define L2_SPM_STS             0xc
+#define L2_VREG_CTL            0x1c
+
 /*
  * struct msm_l2ccc_of_info: represents of data for l2 cache clock controller.
  * @compat: compat string for l2 cache clock controller
@@ -306,6 +309,107 @@ static int power_on_l2_msm8937(struct device_node *l2ccc_node, u32 pon_mask,
 	return 0;
 }
 
+static int power_on_l2_msm8976(struct device_node *l2ccc_node, u32 pon_mask,
+				int cpu)
+{
+	u32 pon_status;
+	void __iomem *l2_base;
+	int ret = 0;
+	struct device_node *vctl_node;
+	uint32_t val;
+
+	vctl_node = of_parse_phandle(l2ccc_node, "qcom,vctl-node", 0);
+	if (!vctl_node)
+		return -ENODEV;
+
+	l2_base = of_iomap_by_name(l2ccc_node, "l2-base");
+	if (!l2_base)
+		return -ENOMEM;
+
+	/* Skip power-on sequence if l2 cache is already powered up */
+	pon_status = (__raw_readl(l2_base + L2_PWR_CTL) & pon_mask)
+				== pon_mask;
+	/* Check L2 SPM Status */
+	if (pon_status) {
+		ret = kick_l2spm(l2ccc_node, vctl_node);
+		iounmap(l2_base);
+		return ret;
+	}
+
+	/* Need to power on the rail */
+	ret = of_property_read_u32(l2ccc_node, "qcom,vctl-val", &val);
+	if (ret) {
+		iounmap(l2_base);
+		pr_err("Unable to read L2 voltage\n");
+		return -EFAULT;
+	}
+
+	ret = msm_spm_turn_on_cpu_rail(vctl_node, val, cpu, L2_VREG_CTL);
+	if (ret) {
+		iounmap(l2_base);
+		pr_err("Error turning on power rail.\n");
+		return -EFAULT;
+	}
+
+	/* Close Few of the head-switches for L2SCU logic */
+	writel_relaxed(0x10F700, l2_base + L2_PWR_CTL);
+	mb();
+	udelay(2);
+
+	/* Close Rest of the head-switches for L2SCU logic */
+	writel_relaxed(0x410F700, l2_base + L2_PWR_CTL);
+	mb();
+	udelay(2);
+
+	/* Assert PRESETDBG */
+	writel_relaxed(0x400000, l2_base + L2_PWR_CTL_OVERRIDE);
+	mb();
+	udelay(2);
+
+	/* De-assert L2/SCU memory Clamp */
+	writel_relaxed(0x4103700, l2_base + L2_PWR_CTL);
+	/* Assert L2 memory slp_nret_n */
+	writel_relaxed(0x4103703, l2_base + L2_PWR_CTL);
+	mb();
+	udelay(4);
+	/* Assert L2 memory slp_ret_n */
+	writel_relaxed(0x4101703, l2_base + L2_PWR_CTL);
+	mb();
+	udelay(4);
+	/* Assert L2 memory wl_en_clk */
+	writel_relaxed(0x4101783, l2_base + L2_PWR_CTL);
+	mb();
+	udelay(1);
+	/* De-assert L2 memory wl_en_clk */
+	writel_relaxed(0x4101703, l2_base + L2_PWR_CTL);
+	mb();
+	/* Enable clocks via SW_CLK_EN */
+	writel_relaxed(0x01, l2_base + L2_CORE_CBCR);
+
+	/* De-assert L2/SCU logic clamp */
+	writel_relaxed(0x4101603, l2_base + L2_PWR_CTL);
+	mb();
+	udelay(2);
+
+	/* De-assert PRESETDBG */
+	writel_relaxed(0x0, l2_base + L2_PWR_CTL_OVERRIDE);
+
+	/* De-assert L2/SCU Logic reset */
+	writel_relaxed(0x4100203, l2_base + L2_PWR_CTL);
+	mb();
+	udelay(54);
+
+	/* Turn on the PMIC_APC */
+	writel_relaxed(0x14100203, l2_base + L2_PWR_CTL);
+
+	/* Set H/W clock control for the cluster CBC block */
+	writel_relaxed(0x03, l2_base + L2_CORE_CBCR);
+	mb();
+	iounmap(l2_base);
+
+	return 0;
+}
+
 static const struct msm_l2ccc_of_info l2ccc_info[] = {
 	{
 		.compat = "qcom,8916-l2ccc",
@@ -320,6 +424,11 @@ static const struct msm_l2ccc_of_info l2ccc_info[] = {
 	{
 		.compat = "qcom,8937-l2ccc",
 		.l2_power_on = power_on_l2_msm8937,
+		.l2_power_on_mask = BIT(9) | BIT(28),
+	},
+	{
+		.compat = "qcom,8976-l2ccc",
+		.l2_power_on = power_on_l2_msm8976,
 		.l2_power_on_mask = BIT(9) | BIT(28),
 	},
 };
