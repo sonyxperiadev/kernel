@@ -1172,9 +1172,6 @@ static int mmc_select_hs400(struct mmc_card *card)
 	 * Before switching to dual data rate operation for HS400,
 	 * it is required to convert from HS200 mode to HS mode.
 	 */
-	mmc_set_timing(card->host, MMC_TIMING_MMC_HS);
-	mmc_set_bus_speed(card);
-
 	err = __mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
 			   EXT_CSD_HS_TIMING, EXT_CSD_TIMING_HS,
 			   card->ext_csd.generic_cmd6_time,
@@ -1184,6 +1181,9 @@ static int mmc_select_hs400(struct mmc_card *card)
 			mmc_hostname(host), err);
 		return err;
 	}
+
+	mmc_set_timing(card->host, MMC_TIMING_MMC_HS);
+	mmc_set_bus_speed(card);
 
 	val = EXT_CSD_DDR_BUS_WIDTH_8;
 	if (card->ext_csd.strobe_support) {
