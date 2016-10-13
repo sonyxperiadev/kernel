@@ -1225,6 +1225,9 @@
 		compatible = "qcom,hsusb-otg";
 		reg = <0x78db000 0x400>, <0x6c000 0x200>;
 		reg-names = "core", "phy_csr";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
 
 		interrupts = <0 134 0>, <0 140 0>;
 		interrupt-names = "core_irq", "async_irq";
@@ -1277,6 +1280,7 @@
 			compatible = "qcom,usb-bam-msm";
 			reg = <0x78c4000 0x17000>;
 			reg-names = "hsusb";
+			interrupt-parent = <&intc>;
 			interrupts = <0 135 0>;
 			interrupt-names = "hsusb";
 			qcom,usb-bam-num-pipes = <16>;
