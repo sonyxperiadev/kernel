@@ -58,64 +58,65 @@
 		#size-cells = <2>;
 
 		other_ext_mem: other_ext_region@0 {
-			linux,reserve-contiguous-region;
-			linux,reserve-region;
-			linux,remove-completely;
+			compatible = "removed-dma-pool";
+			no-map;
 			reg = <0x0 0x85e00000 0x0 0x0a00000>;
 			label = "other_ext_mem";
 		};
 
 		modem_mem: modem_region@0 {
-			linux,reserve-contiguous-region;
-			linux,reserve-region;
-			linux,remove-completely;
+			compatible = "removed-dma-pool";
+			no-map;
 			reg = <0x0 0x86c00000 0x0 0x05600000>;
 			label = "modem_mem";
 		};
 
 		reloc_mem: reloc_region@0 {
-			linux,reserve-contiguous-region;
-			linux,reserve-region;
-			linux,remove-completely;
+			compatible = "removed-dma-pool";
+			no-map;
 			reg = <0x0 0x8c200000 0x0 0x1700000>;
 			label = "reloc_mem";
 		};
 
 		venus_mem: venus_region@0 {
-			linux,reserve-contiguous-region;
-			linux,memory-limit = <0x90000000>;
-			reg = <0x0 0x0 0x0 0x0500000>;
-			label = "venus_mem";
+			compatible = "shared-dma-pool";
+			reusable;
+		//	linux,memory-limit = <0x90000000>;
+		//	reg = <0x0 0x0 0x0 0x0500000>;
+			alloc-ranges = <0x0 0x80000000 0x0 0x10000000>;
+			alignment = <0 0x400000>;
+			size = <0 0x0800000>;
 		};
 
 		secure_mem: secure_region@0 {
-			linux,reserve-contiguous-region;
-			reg = <0x0 0x0 0x0 0x7A00000>;
-			label = "secure_mem";
+			compatible = "shared-dma-pool";
+			reusable;
+			alignment = <0 0x400000>;
+			size = <0 0x7000000>;
 		};
 
 		qseecom_mem: qseecom_region@0 {
-			linux,reserve-contiguous-region;
-			reg = <0x0 0x0 0x0 0x1000000>;
-			label = "qseecom_mem";
+			compatible = "shared-dma-pool";
+			reusable;
+			alignment = <0 0x400000>;
+			size = <0 0x1000000>;
 		};
 
 		audio_mem: audio_region@0 {
-			linux,reserve-contiguous-region;
+			compatible = "shared-dma-pool";
+			reusable;
 			reg = <0x0 0x0 0x0 0x314000>;
 		};
 
 		cont_splash_mem: splash_region@83000000 {
-			linux,reserve-contiguous-region;
-			linux,reserve-region;
 			reg = <0x0 0x83000000 0x0 0x2800000>;
-			label = "cont_splash_mem";
 		};
 
 		adsp_mem: adsp_region@0 {
-			linux,reserve-contiguous-region;
-			reg = <0x0 0x0 0x0 0x400000>;
-			label = "adsp_mem";
+			compatible = "shared-dma-pool";
+			reusable;
+			alignment = <0 0x400000>;
+			size = <0 0x400000>;
 		};
 	};
 };
@@ -2003,7 +2004,7 @@
 		qcom,pas-id = <9>;
 		qcom,proxy-timeout-ms = <100>;
 		qcom,firmware-name = "venus";
-		linux,contiguous-region = <&venus_mem>;
+		memory-region = <&venus_mem>;
 	};
 
 	qcom,lpass@c200000 {
@@ -2042,7 +2043,7 @@
 		/* GPIO output to lpass */
 		qcom,gpio-force-stop = <&smp2pgpio_ssr_smp2p_2_out 0 0>;
 
-		linux,contiguous-region = <&reloc_mem>;
+		memory-region = <&reloc_mem>;
 	};
 
         spmi_bus: qcom,spmi@200f000 {
@@ -2127,7 +2128,7 @@
 
                 /* GPIO output to wcnss */
 		qcom,gpio-force-stop = <&smp2pgpio_ssr_smp2p_4_out 0 0>;
-		linux,contiguous-region = <&reloc_mem>;
+		memory-region = <&reloc_mem>;
 	};
 
 	dcc: dcc@b3000 {
@@ -2187,7 +2188,7 @@
 
 		/* GPIO output to mss */
 		qcom,gpio-force-stop = <&smp2pgpio_ssr_smp2p_1_out 0 0>;
-		linux,contiguous-region = <&modem_mem>;
+		memory-region = <&modem_mem>;
 	};
 
 	cpu-pmu {
@@ -2620,7 +2621,7 @@
 
 	qcom,adsprpc-mem {
 		compatible = "qcom,msm-adsprpc-mem-region";
-		linux,contiguous-region = <&adsp_mem>;
+		memory-region = <&adsp_mem>;
 	};
 
 	qcom,msm-adsp-loader {
