@@ -1,6 +1,6 @@
 /* Copyright (C) 2008 Google, Inc.
  * Copyright (C) 2008 HTC Corporation
- * Copyright (c) 2009-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2009-2013,2016 The Linux Foundation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -570,6 +570,8 @@ int audio_aio_release(struct inode *inode, struct file *file)
 	struct q6audio_aio *audio = file->private_data;
 	pr_debug("%s[%pK]\n", __func__, audio);
 	mutex_lock(&audio->lock);
+	mutex_lock(&audio->read_lock);
+	mutex_lock(&audio->write_lock);
 	audio->wflush = 1;
 	if (audio->wakelock_voted &&
 		(audio->audio_ws_mgr != NULL) &&
@@ -596,6 +598,8 @@ int audio_aio_release(struct inode *inode, struct file *file)
 	audio_aio_reset_event_queue(audio);
 	q6asm_audio_client_free(audio->ac);
 	mutex_unlock(&audio->lock);
+	mutex_unlock(&audio->write_lock);
+	mutex_unlock(&audio->read_lock);
 	mutex_destroy(&audio->lock);
 	mutex_destroy(&audio->read_lock);
 	mutex_destroy(&audio->write_lock);
@@ -1743,7 +1747,11 @@ static long audio_aio_ioctl(struct file *file, unsigned int cmd,
 				__func__);
 			rc = -EFAULT;
 		} else {
+			mutex_lock(&audio->read_lock);
+			mutex_lock(&audio->write_lock);
 			rc = audio_aio_ion_add(audio, &info);
+			mutex_unlock(&audio->write_lock);
+			mutex_unlock(&audio->read_lock);
 		}
 		mutex_unlock(&audio->lock);
 		break;
@@ -1758,7 +1766,11 @@ static long audio_aio_ioctl(struct file *file, unsigned int cmd,
 				__func__);
 			rc = -EFAULT;
 		} else {
+                        mutex_lock(&audio->read_lock);
+                        mutex_lock(&audio->write_lock);
 			rc = audio_aio_ion_remove(audio, &info);
+                        mutex_unlock(&audio->write_lock);
+                        mutex_unlock(&audio->read_lock);
 		}
 		mutex_unlock(&audio->lock);
 		break;
