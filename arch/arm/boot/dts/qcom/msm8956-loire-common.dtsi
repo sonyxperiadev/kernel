@@ -20,7 +20,7 @@
 #include "msm8956-loire_pinctrl.dtsi"
 
 / {
-	memory {
+	reserved-memory {
 		debug_region: debug_region@0 {
 			compatible = "removed-dma-pool", "qcom,debug_memory";
 			no-map;
