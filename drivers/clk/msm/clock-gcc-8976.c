@@ -3888,7 +3888,7 @@ static int of_get_fmax_vdd_class(struct platform_device *pdev, struct clk *c,
 static void print_opp_table(struct device *dev)
 {
 	struct clk *gpu_clk = &gfx3d_clk_src.c;
-	struct opp *opp;
+	struct dev_pm_opp *opp;
 	int i;
 
 	pr_debug("OPP table for GPU core clock:\n");
