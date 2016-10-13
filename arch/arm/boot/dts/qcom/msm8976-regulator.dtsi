@@ -77,7 +77,13 @@
 
 	/* VDD_MX supply */
 	rpm-regulator-smpa6 {
+		compatible = "qcom,rpm-smd-regulator-resource";
+		qcom,resource-name = "smpa";
+		qcom,resource-id = <6>;
+		qcom,regulator-type = <1>;
+		qcom,hpm-min-load = <100000>;
 		status = "okay";
+
 		/* TODO: check this node */
 		pm8950_s6_level: regulator-s6-level {
 			compatible = "qcom,rpm-smd-regulator";
@@ -132,8 +138,17 @@
 	};
 
 	rpm-regulator-ldoa1 {
+		compatible = "qcom,rpm-smd-regulator-resource";
+		qcom,resource-name = "ldoa";
+		qcom,resource-id = <1>;
+		qcom,regulator-type = <0>;
+		qcom,hpm-min-load = <10000>;
 		status = "okay";
+
 		pm8950_l1: regulator-l1 {
+			compatible = "qcom,rpm-smd-regulator";
+			regulator-name = "pm8950_l1";
+			qcom,set = <3>;
 			regulator-min-microvolt = <1200000>;
 			regulator-max-microvolt = <1200000>;
 			qcom,init-voltage = <1200000>;
