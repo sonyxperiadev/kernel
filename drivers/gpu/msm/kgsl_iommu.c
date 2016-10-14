@@ -2380,6 +2380,8 @@ static int _kgsl_iommu_probe(struct kgsl_device *device,
 			return ret;
 	}
 
+	pr_info("%s: kgsl IOMMU v%d probed!\n", __func__, iommu->version);
+
 	return 0;
 }
 
