@@ -54,7 +54,12 @@
 #define TSENS2_SN_STATUS_ADDR(n)	((n) + 0x1044)
 #define TSENS2_SN_STATUS_VALID		BIT(14)
 #define TSENS2_SN_STATUS_VALID_MASK	0x4000
+
+#ifdef CONFIG_ARCH_MSM8994
+#define TSENS2_TRDY_ADDR(n)		((n) + 0x84)
+#else
 #define TSENS2_TRDY_ADDR(n)		((n) + 0x1084)
+#endif
 
 #define TSENS3_TRDY_ADDR(n)            ((n) + 0x1084)
 
