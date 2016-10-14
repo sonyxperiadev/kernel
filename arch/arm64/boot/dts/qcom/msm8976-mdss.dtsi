@@ -96,7 +96,7 @@
 		clocks = <&clock_gcc clk_gcc_mdss_ahb_clk>,
 			 <&clock_gcc clk_gcc_mdss_axi_clk>,
 			 <&clock_gcc clk_mdp_clk_src>,
-			 <&clock_gcc clk_gcc_mdss_mdp_clk>,
+			 <&clock_gcc_mdss clk_gcc_mdss_mdp_vote_clk>,
 			 <&clock_gcc clk_gcc_mdss_vsync_clk>,
 			 <&clock_gcc clk_gcc_mdp_tbu_clk>,
 			 <&clock_gcc clk_gcc_mdp_rt_tbu_clk>;
@@ -204,7 +204,7 @@
 		      0x1a96b80 0x1a96b80 0x30
 		      0x193e000 0x193e000 0x30>;
 
-		clocks = <&clock_gcc clk_gcc_mdss_mdp_clk>,
+		clocks = <&clock_gcc_mdss clk_gcc_mdss_mdp_vote_clk>,
 			<&clock_gcc clk_gcc_mdss_ahb_clk>,
 			<&clock_gcc clk_gcc_mdss_axi_clk>,
 			<&clock_gcc_mdss clk_ext_byte0_clk_src>,
@@ -343,6 +343,28 @@
 		qcom,mdss_pan_res = <1280 720>;
 		qcom,mdss_pan_bpp = <24>;
 		qcom,mdss-fb-map = <&mdss_fb1>;
+	};
+
+	mdss_rotator: qcom,mdss_rotator {
+		compatible = "qcom,mdss_rotator";
+		qcom,mdss-wb-count = <1>;
+		qcom,mdss-has-downscale;
+		/* Bus Scale Settings */
+		qcom,msm-bus,name = "mdss_rotator";
+		qcom,msm-bus,num-cases = <3>;
+		qcom,msm-bus,num-paths = <1>;
+		qcom,msm-bus,vectors-KBps =
+			<22 512 0 0>,
+			<22 512 0 6400000>,
+			<22 512 0 6400000>;
+
+		rot-vdd-supply = <&gdsc_mdss>;
+		qcom,supply-names = "rot-vdd";
+
+		clocks = <&clock_gcc clk_gcc_mdss_ahb_clk>,
+			<&clock_gcc_mdss clk_gcc_mdss_mdp_rotator_vote_clk>;
+		clock-names = "iface_clk", "rot_core_clk";
+
 	};
 };
 
