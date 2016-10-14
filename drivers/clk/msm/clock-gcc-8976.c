@@ -2465,6 +2465,9 @@ static struct branch_clk gcc_mdss_mdp_clk = {
 	},
 };
 
+static DEFINE_CLK_VOTER(gcc_mdss_mdp_vote_clk, &gcc_mdss_mdp_clk.c, 0);
+static DEFINE_CLK_VOTER(gcc_mdss_mdp_rotator_vote_clk, &gcc_mdss_mdp_clk.c, 0);
+
 static struct branch_clk gcc_mdss_pclk0_clk = {
 	.cbcr_reg = MDSS_PCLK0_CBCR,
 	.has_sibling = 0,
@@ -3709,6 +3712,10 @@ static struct clk_lookup msm_clocks_gcc_mdss[] = {
 	CLK_LIST(gcc_mdss_pclk1_clk),
 	CLK_LIST(gcc_mdss_byte0_clk),
 	CLK_LIST(gcc_mdss_byte1_clk),
+
+	/* voters for new rotator implementation */
+	CLK_LIST(gcc_mdss_mdp_vote_clk),
+	CLK_LIST(gcc_mdss_mdp_rotator_vote_clk),
 };
 
 static int msm_gcc_mdss_probe(struct platform_device *pdev)
