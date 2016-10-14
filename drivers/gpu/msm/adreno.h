@@ -1386,8 +1386,26 @@ static inline int adreno_compare_prio_level(int p1, int p2)
 void adreno_readreg64(struct adreno_device *adreno_dev,
 		enum adreno_regs lo, enum adreno_regs hi, uint64_t *val);
 
-void adreno_writereg64(struct adreno_device *adreno_dev,
-		enum adreno_regs lo, enum adreno_regs hi, uint64_t val);
+/**
+ * adreno_writereg64() - Write a 64bit register by getting its offset from the
+ * offset array defined in gpudev node
+ * @adreno_dev:	Pointer to the the adreno device
+ * @lo:	lower 32bit register enum that is to be written
+ * @hi:	higher 32bit register enum that is to be written
+ * @val: 64 bit value to write
+ */
+static inline void adreno_writereg64(struct adreno_device *adreno_dev,
+                enum adreno_regs lo, enum adreno_regs hi, uint64_t val)
+{
+        struct adreno_gpudev *gpudev = ADRENO_GPU_DEVICE(adreno_dev);
+
+        if (adreno_checkreg_off(adreno_dev, lo))
+                kgsl_regwrite(KGSL_DEVICE(adreno_dev),
+                        gpudev->reg_offsets->offsets[lo], lower_32_bits(val));
+        if (adreno_checkreg_off(adreno_dev, hi))
+                kgsl_regwrite(KGSL_DEVICE(adreno_dev),
+                        gpudev->reg_offsets->offsets[hi], upper_32_bits(val));
+}
 
 unsigned int adreno_get_rptr(struct adreno_ringbuffer *rb);
 
