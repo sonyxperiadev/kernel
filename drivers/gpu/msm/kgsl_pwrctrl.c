@@ -1788,8 +1788,11 @@ int kgsl_pwrctrl_init(struct kgsl_device *device)
 			pwr->ocmem_pcl = msm_bus_scale_register_client
 					(ocmem_scale_table);
 
-		if (!pwr->ocmem_pcl)
-			return -EINVAL;
+		if (!pwr->ocmem_pcl) {
+			ocmem_bus_node = NULL;
+			pr_info("%s: Invalid ocmem bus client. Not fatal.\n",
+				__func__);
+		}
 	}
 
 	/* Bus width in bytes, set it to zero if not found */
