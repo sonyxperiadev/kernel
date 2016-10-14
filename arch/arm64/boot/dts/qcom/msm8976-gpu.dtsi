@@ -50,6 +50,7 @@
 		qcom,initial-pwrlevel = <5>;
 
 		qcom,idle-timeout = <80>; //msecs
+		qcom,deep-nap-timeout = <100>; //msecs
 		qcom,strtstp-sleepwake;
 
 		qcom,pm-qos-active-latency = <401>;
