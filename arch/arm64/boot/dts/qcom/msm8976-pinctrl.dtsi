@@ -16,6 +16,7 @@
 		compatible = "qcom,msm8976-pinctrl";
 		reg = <0x1000000 0x300000>;
 		interrupts = <0 208 0>;
+		status = "ok";
 		gpio-controller;
 		#gpio-cells = <2>;
 		interrupt-controller;
@@ -492,7 +493,6 @@
 				config {
 					drive-strength = <2>; /* 2 mA */
 					bias-pull-down; /* pull down */
-					input-debounce = <0>;
 				};
 			};
 
@@ -503,7 +503,6 @@
 				config {
 					drive-strength = <2>; /* 2 mA */
 					bias-pull-down; /* pull down */
-					input-debounce = <0>;
 				};
 			};
 		};
