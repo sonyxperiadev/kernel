@@ -186,6 +186,15 @@
 		gdsc-supply = <&gdsc_mdss>;
 		vdda-supply = <&pm8950_l1>;
 		vddio-supply = <&pm8950_l6>;
+
+		/* Bus Scale Settings */
+		qcom,msm-bus,name = "mdss_dsi";
+		qcom,msm-bus,num-cases = <2>;
+		qcom,msm-bus,num-paths = <1>;
+		qcom,msm-bus,vectors-KBps =
+			<22 512 0 0>,
+			<22 512 0 1000>;
+
 		ranges = <0x1a94000 0x1a94000 0x300
 		      0x1a94400 0x1a94400 0x280
 		      0x1a94b80 0x1a94b80 0x30
