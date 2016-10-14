@@ -2398,12 +2398,6 @@ static int _mmc_suspend(struct mmc_host *host, bool is_suspend)
 			goto out;
 	}
 
-	if (mmc_card_doing_auto_bkops(host->card)) {
-		err = mmc_set_auto_bkops(host->card, false);
-		if (err)
-			goto out;
-	}
-
 	err = mmc_cache_ctrl(host, 0);
 	if (err)
 		goto out;
@@ -2489,9 +2483,6 @@ static int mmc_partial_init(struct mmc_host *host)
 		    mmc_hostname(host), __func__, err);
 		goto out;
 	}
-
-	if (mmc_card_support_auto_bkops(host->card))
-		(void)mmc_set_auto_bkops(host->card, true);
 
 #if defined(CONFIG_ARCH_SONY_LOIRE) || defined(CONFIG_ARCH_SONY_TONE)
 	if (host->card->cmdq_init) {
