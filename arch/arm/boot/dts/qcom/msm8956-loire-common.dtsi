@@ -34,12 +34,12 @@
 			reg = <0 0x57F00000 0 0x100000>;
 		};
 
-		fb_mem: fb_region@0 {
+		fb_mem: fb_region {
 			reg = <0 0 0 0x1000000>;
 			label = "fb_mem";
 		};
 
-		tz_app_mem: tz_app_mem@0 {
+		tz_app_mem: tz_app_mem@8dd00000 {
 			compatible = "removed-dma-pool";
 			no-map;
 			reg = <0x0 0x8dd00000 0x0 0x1400000>;
