@@ -57,6 +57,7 @@
 	reserved-memory {
 		#address-cells = <2>;
 		#size-cells = <2>;
+		ranges;
 
 		other_ext_mem: other_ext_region@0 {
 			linux,reserve-contiguous-region;
