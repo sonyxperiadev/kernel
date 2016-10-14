@@ -5854,12 +5854,12 @@ static int get_device_tree_data(struct platform_device *pdev,
 		tmdev->tsens_type = TSENS_TYPE2;
 	else if (!strcmp(id->compatible, "qcom,msm8996-tsens"))
 		tmdev->tsens_type = TSENS_TYPE3;
-	else if (!strcmp(id->compatible, "qcom,msm8976-tsens") ||
-		 (!strcmp(id->compatible, "qcom,msm8953-tsens")) ||
+	else if (!strcmp(id->compatible, "qcom,msm8953-tsens") ||
 		(!strcmp(id->compatible, "qcom,msmcobalt-tsens"))) {
 		tmdev->tsens_type = TSENS_TYPE3;
 		tsens_poll_check = 0;
-	} else if (!strcmp(id->compatible, "qcom,msm8952-tsens") ||
+	} else if (!strcmp(id->compatible, "qcom,msm8976-tsens") ||
+			(!strcmp(id->compatible, "qcom,msm8952-tsens")) ||
 			(!strcmp(id->compatible, "qcom,msm8917-tsens")) ||
 			(!strcmp(id->compatible, "qcom,msm8937-tsens")))
 		tmdev->tsens_type = TSENS_TYPE4;
