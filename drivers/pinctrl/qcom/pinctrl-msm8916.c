@@ -344,7 +344,7 @@ static const unsigned int qdsd_data3_pins[] = { 133 };
 	{					        \
 		.name = #pg_name,			\
 		.pins = pg_name##_pins,			\
-		.npins = ARRAY_SIZE(pg_name##_pins),	\
+		.npins = (unsigned)ARRAY_SIZE(pg_name##_pins),	\
 		.ctl_reg = ctl,				\
 		.io_reg = 0,				\
 		.intr_cfg_reg = 0,			\
@@ -982,6 +982,7 @@ static const struct of_device_id msm8916_pinctrl_of_match[] = {
 static struct platform_driver msm8916_pinctrl_driver = {
 	.driver = {
 		.name = "msm8916-pinctrl",
+		.owner = THIS_MODULE,
 		.of_match_table = msm8916_pinctrl_of_match,
 	},
 	.probe = msm8916_pinctrl_probe,
