@@ -41,6 +41,8 @@
 #define MIN_REFRESH_RATE	  48
 #define DEFAULT_MDP_TRANSFER_TIME 14000
 
+#define VSYNC_DELAY msecs_to_jiffies(17)
+
 #define KERN318_FEATURESET
 
 struct device virtdev;
@@ -1393,6 +1395,12 @@ chg_fps:
 	somc_panel_chg_fps_cmds_send(ctrl_pdata);
 #endif
 
+	if (pinfo->compression_mode == COMPRESSION_DSC)
+		mdss_dsi_panel_dsc_pps_send(ctrl_pdata, pinfo);
+
+	if (ctrl_pdata->ds_registered && pinfo->is_pluggable)
+		mdss_dba_utils_video_on(pinfo->dba_data, pinfo);
+
 end:
 #ifdef CONFIG_MACH_SONY_YUKON
 	spec_pdata->disp_on(pdata);
@@ -1407,6 +1415,7 @@ static int mdss_dsi_post_panel_on(struct mdss_panel_data *pdata)
 	struct mdss_panel_specific_pdata *specific = NULL;
 	struct mdss_panel_info *pinfo;
 	struct dsi_panel_cmds *on_cmds;
+	u32 vsync_period = 0;
 	int rc = 0;
 
 	if (pdata == NULL) {
@@ -1432,7 +1441,7 @@ static int mdss_dsi_post_panel_on(struct mdss_panel_data *pdata)
 	pr_debug("%s: ctrl=%p cmd_cnt=%d\n", __func__, ctrl, on_cmds->cmd_cnt);
 
 	if (on_cmds->cmd_cnt) {
-		msleep(50);	/* wait for 3 vsync passed */
+		msleep(VSYNC_DELAY);	/* wait for 1 vsync passed */
 		mdss_dsi_panel_cmds_send(ctrl, on_cmds);
 	}
 
@@ -1441,6 +1450,13 @@ static int mdss_dsi_post_panel_on(struct mdss_panel_data *pdata)
 		rc = specific->panel_post_on(pdata);
 		if (rc)
 			return rc;
+	}
+
+	if (pinfo->is_dba_panel && pinfo->is_pluggable) {
+		/* ensure at least 1 frame transfers to down stream device */
+		vsync_period = (MSEC_PER_SEC / pinfo->mipi.frame_rate) + 1;
+		msleep(vsync_period);
+		mdss_dba_utils_hdcp_enable(pinfo->dba_data, true);
 	}
 
 end:
@@ -1531,6 +1547,11 @@ skip_off_cmds:
 #ifndef CONFIG_SOMC_PANEL_INCELL
 	mdss_dsi_panel_reset(pdata, 0);
 #endif
+
+	if (ctrl_pdata->ds_registered && pinfo->is_pluggable) {
+		mdss_dba_utils_video_off(pinfo->dba_data);
+		mdss_dba_utils_hdcp_enable(pinfo->dba_data, false);
+	}
 
 end:
 	pdata->resume_started = true;
@@ -2692,10 +2713,12 @@ static void mdss_panel_parse_te_params(struct device_node *np,
 	rc = of_property_read_u32(np, "qcom,mdss-tear-check-frame-rate", &tmp);
 	te->refx100 = (!rc ? tmp : 6000);
 	rc = of_property_read_u32(np, "qcom,mdss-tear-check-start-pos", &tmp);
-	te->start_pos = (!rc ? tmp : te->vsync_init_val);
+	//te->start_pos = (!rc ? tmp : te->vsync_init_val);
+	te->start_pos = (!rc ? tmp : timing->yres);
 	rc = of_property_read_u32
 		(np, "qcom,mdss-tear-check-rd-ptr-trigger-intr", &tmp);
-	te->rd_ptr_irq = (!rc ? tmp : te->vsync_init_val + 1);
+	//te->rd_ptr_irq = (!rc ? tmp : te->vsync_init_val + 1);
+	te->rd_ptr_irq = (!rc ? tmp : timing->yres + 1);
 }
 
 
@@ -3329,9 +3352,13 @@ int mdss_dsi_panel_timing_switch(struct mdss_dsi_ctrl_pdata *ctrl,
 	for (i = 0; i < ARRAY_SIZE(pt->phy_timing); i++)
 		pinfo->mipi.dsi_phy_db.timing[i] = pt->phy_timing[i];
 
+	for (i = 0; i < ARRAY_SIZE(pt->phy_timing_8996); i++)
+		pinfo->mipi.dsi_phy_db.timing_8996[i] = pt->phy_timing_8996[i];
+
 	ctrl->spec_pdata->einit_cmds = pt->einit_cmds;
 	ctrl->spec_pdata->init_cmds = pt->init_cmds;
 	ctrl->on_cmds = pt->on_cmds;
+	ctrl->post_panel_on_cmds = pt->post_panel_on_cmds;
 
 	ctrl->panel_data.current_timing = timing;
 	if (!timing->clk_rate)
@@ -3475,11 +3502,14 @@ static int  mdss_dsi_panel_config_res_properties(struct device_node *np,
 			"qcom,mdss-dsi-on-command",
 			"qcom,mdss-dsi-on-command-state");
 
+	mdss_dsi_parse_dcs_cmds(np, &pt->post_panel_on_cmds,
+		"qcom,mdss-dsi-post-panel-on-command", NULL);
+
 	mdss_dsi_parse_dcs_cmds(np, &pt->switch_cmds,
 			"qcom,mdss-dsi-timing-switch-command",
 			"qcom,mdss-dsi-timing-switch-command-state");
 
-#ifdef KERN318_FEATURESET
+#if 0 //def KERN318_FEATURESET
 	rc = mdss_dsi_parse_topology_config(np, pt, panel_data);
 	if (rc) {
 		pr_err("%s: parsing compression params failed. rc:%d\n",
@@ -3535,7 +3565,7 @@ static int mdss_panel_parse_display_timings(struct device_node *np,
 		goto exit;
 	}
 
-	modedb = kzalloc(num_timings * sizeof(*modedb), GFP_KERNEL);
+	modedb = kcalloc(num_timings, sizeof(*modedb), GFP_KERNEL);
 	if (!modedb) {
 		pr_err("unable to allocate modedb\n");
 		rc = -ENOMEM;
@@ -3633,11 +3663,6 @@ int mdss_panel_parse_dt(struct device_node *np,
 	} else {
 		pr_debug("%s: qcom,config-select is not present\n", __func__);
 	}
-
-	rc = mdss_panel_parse_display_timings(np,
-					&ctrl_pdata->panel_data);
-	if (rc)
-		return rc;
 
 	tmp = (int) of_property_read_bool(np, "somc,first-boot-aware");
 	if (tmp)
@@ -3823,6 +3848,11 @@ int mdss_panel_parse_dt(struct device_node *np,
 	pinfo->mipi.data_lane3 = of_property_read_bool(np,
 		"qcom,mdss-dsi-lane-3-state");
 
+	rc = mdss_panel_parse_display_timings(np,
+					&ctrl_pdata->panel_data);
+	if (rc)
+		return rc;
+
 	pinfo->mipi.rx_eot_ignore = of_property_read_bool(np,
 		"qcom,mdss-dsi-rx-eot-ignore");
 	pinfo->mipi.tx_eot_append = of_property_read_bool(np,
@@ -3866,6 +3896,7 @@ int mdss_panel_parse_dt(struct device_node *np,
 		pr_info("%s:%d, Unable to read SoMC Phy regulator \
 					settings", __func__, __LINE__);
 	} else {
+		pinfo->mipi.dsi_phy_db.regulator_len = len;
 		for (i = 0; i < len; i++)
 			pinfo->mipi.dsi_phy_db.regulator[i] = data[i];
 	}
@@ -3877,6 +3908,7 @@ int mdss_panel_parse_dt(struct device_node *np,
 			pinfo->mipi.dsi_phy_db.lanecfg[i] =
 					data[i];
 		}
+		pinfo->mipi.dsi_phy_db.lanecfg_len = len;
 	} else
 		pr_err("%s:%d, Unable to read Phy lane configure\n",
 			__func__, __LINE__);
@@ -4330,7 +4362,7 @@ int mdss_dsi_panel_init(struct device_node *node,
 		}
 	}
 
-	mdss_dsi_set_prim_panel(ctrl_pdata);
+	//mdss_dsi_set_prim_panel(ctrl_pdata);
 	pinfo->dynamic_switch_pending = false;
 	pinfo->is_lpm_mode = false;
 	pinfo->esd_rdy = false;
