@@ -58,21 +58,21 @@
 		#size-cells = <2>;
 		ranges;
 
-		other_ext_mem: other_ext_region {
+		other_ext_mem: other_ext_region@85e00000 {
 			compatible = "removed-dma-pool";
 			no-map;
 			reg = <0x0 0x85e00000 0x0 0x0a00000>;
 			label = "other_ext_mem";
 		};
 
-		modem_mem: modem_region {
+		modem_mem: modem_region@86c00000 {
 			compatible = "removed-dma-pool";
 			no-map;
 			reg = <0x0 0x86c00000 0x0 0x05600000>;
 			label = "modem_mem";
 		};
 
-		reloc_mem: reloc_region {
+		reloc_mem: reloc_region@8c200000 {
 			compatible = "removed-dma-pool";
 			no-map;
 			reg = <0x0 0x8c200000 0x0 0x1700000>;
