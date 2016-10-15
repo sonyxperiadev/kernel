@@ -190,6 +190,7 @@
 		};
 	};
 
+	/* ahb_base_offset: 0x40000 */
 	kgsl_msm_iommu: qcom,kgsl-iommu {
 		compatible = "qcom,kgsl-smmu-v2";
 		reg = <0x1f00000 0x10000>;
@@ -197,7 +198,9 @@
 		* The gpu can only program a single context bank
 		* at this fixed offset.
 		*/
-		qcom,protect = <0x48000 0x1000>;
+		qcom,protect = <0x40000 0x1000>;
+		//qcom,micro-mmu-control = <0x6000>;
+
 		clocks = <&clock_gcc clk_gcc_smmu_cfg_clk>,
 			<&clock_gcc_gfx clk_gcc_gfx_tcu_clk>,
 			<&clock_gcc_gfx clk_gcc_gtcu_ahb_clk>,
