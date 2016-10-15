@@ -199,10 +199,10 @@
 		*/
 		qcom,protect = <0x48000 0x1000>;
 		clocks = <&clock_gcc clk_gcc_smmu_cfg_clk>,
-			<&clock_gcc clk_gcc_gfx_tcu_clk>,
-			<&clock_gcc clk_gcc_gtcu_ahb_clk>,
-			<&clock_gcc clk_gcc_gfx_tbu_clk>;
-		clock-names = "iface_clk", "core_clk", "gtcu_iface_clk",
+			<&clock_gcc_gfx clk_gcc_gfx_tcu_clk>,
+			<&clock_gcc_gfx clk_gcc_gtcu_ahb_clk>,
+			<&clock_gcc_gfx clk_gcc_gfx_tbu_clk>;
+		clock-names = "scfg_clk", "gtcu_clk", "gtcu_iface_clk",
 				"gtbu_clk";
 		gfx3d_user: gfx3d_user {
 			compatible = "qcom,smmu-kgsl-cb";
