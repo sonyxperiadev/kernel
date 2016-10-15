@@ -55,6 +55,12 @@
 #define DEFAULT_BUS_DIV (100 / DEFAULT_BUS_P)
 
 /* Order deeply matters here because reasons. New entries go on the end */
+/* kholk: Not because reasons. Because they're SO lazy that they wanted to
+ *        set clocks through this array by hardcoding the array position
+ *        in the damn calls. It looks like the last clock to worry about
+ *        is rbbmtimer_clk, so after that one it should be safe to add
+ *        our clocks with our favourite order. Thanks for the explaination.
+ */
 static const char * const clocks[] = {
 	"src_clk",
 	"core_clk",
@@ -65,8 +71,9 @@ static const char * const clocks[] = {
 	"rbbmtimer_clk",
 	"gtcu_clk",
 	"gtbu_clk",
+	"gtbu1_clk",
 	"gtcu_iface_clk",
-	"alwayson_clk"
+	"alwayson_clk",
 };
 
 static unsigned int ib_votes[KGSL_MAX_BUSLEVELS];
