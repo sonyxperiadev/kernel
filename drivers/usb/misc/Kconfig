@@ -255,3 +255,10 @@ config USB_LINK_LAYER_TEST
 	  This driver is for generating specific traffic for Super Speed Link
 	  Layer Test Device. Say Y only when you want to conduct USB Super Speed
 	  Link Layer Test for host controllers.
+
+config USB_CC_FUSB301
+        bool "FUSB301 Configuration Channel Controller for USB Type-C"
+        depends on USB || I2C
+        default n
+        help
+          Enable this to support FUSB310 CC Controller for USB Type C.
