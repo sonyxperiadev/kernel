@@ -222,9 +222,10 @@
 			compatible = "qcom,smmu-kgsl-cb";
 			label = "gfx3d_secure";
 		};
-		gfx3d_priv: gfx3d_priv {
+/*		gfx3d_priv: gfx3d_priv {
 			compatible = "qcom,smmu-kgsl-cb";
 			label = "gfx3d_priv";
 		};
+*/
 	};
 };
