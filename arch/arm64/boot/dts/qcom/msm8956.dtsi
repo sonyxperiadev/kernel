@@ -67,7 +67,7 @@
 
 		modem_mem: modem_region@86c00000 {
 			compatible = "removed-dma-pool";
-			no-map;
+			no-map-fixup;
 			reg = <0x0 0x86c00000 0x0 0x05600000>;
 			label = "modem_mem";
 		};
@@ -82,18 +82,16 @@
 		venus_mem: venus_region {
 			compatible = "shared-dma-pool";
 			reusable;
-		//	linux,memory-limit = <0x90000000>;
-		//	reg = <0x0 0x0 0x0 0x0500000>;
 			alloc-ranges = <0x0 0x80000000 0x0 0x10000000>;
 			alignment = <0 0x400000>;
-			size = <0 0x0800000>;
+			size = <0 0x800000>;
 		};
 
 		secure_mem: secure_region {
 			compatible = "shared-dma-pool";
 			reusable;
 			alignment = <0 0x400000>;
-			size = <0 0x7000000>;
+			size = <0 0x7C00000>;
 		};
 
 		qseecom_mem: qseecom_region {
@@ -106,7 +104,9 @@
 		audio_mem: audio_region {
 			compatible = "shared-dma-pool";
 			reusable;
-			reg = <0x0 0x0 0x0 0x314000>;
+			//reg = <0x0 0x0 0x0 0x314000>;
+			alignment = <0 0x400000>;
+			size = <0 0x400000>;
 		};
 
 		cont_splash_mem: splash_region@83000000 {
@@ -116,7 +116,6 @@
 		adsp_mem: adsp_region {
 			compatible = "shared-dma-pool";
 			reusable;
-			alignment = <0 0x400000>;
 			size = <0 0x400000>;
 		};
 	};
