@@ -209,6 +209,8 @@ static int somc_panel_calc_gpio_sleep(
 		wait = pw_seq->touch_reset;
 	else if (gpio == spec_pdata->touch_int_gpio)
 		wait = pw_seq->touch_intn;
+	else if (gpio == spec_pdata->disp_vddio_gpio)
+		wait = pw_seq->disp_vddio;
 	else
 		wait = 0;
 
@@ -793,6 +795,9 @@ static int incell_dsi_panel_power_off_ex(struct mdss_panel_data *pdata)
 	somc_panel_set_gpio(ctrl_pdata,
 		(spec_pdata->touch_vddio_gpio), false, 1);
 
+	somc_panel_set_gpio(ctrl_pdata,
+		(spec_pdata->disp_vddio_gpio), false, 1);
+
 	ret += somc_panel_vreg_ctrl(ctrl_pdata, "vddio", false);
 	ret += somc_panel_vreg_ctrl(ctrl_pdata, "touch-avdd", false);
 	ret += somc_panel_vreg_ctrl(ctrl_pdata, "vdd", false);
@@ -1030,6 +1035,9 @@ static int incell_dsi_panel_power_on_ex(struct mdss_panel_data *pdata)
 	ret += somc_panel_vreg_ctrl(ctrl_pdata, "vdd", true);
 	ret += somc_panel_vreg_ctrl(ctrl_pdata, "touch-avdd", true);
 	ret += somc_panel_vreg_ctrl(ctrl_pdata, "vddio", true);
+
+	somc_panel_gpio_output(ctrl_pdata,
+		(spec_pdata->disp_vddio_gpio), true, 0);
 
 	somc_panel_gpio_output(ctrl_pdata,
 		(spec_pdata->touch_vddio_gpio), true, 0);
@@ -1776,6 +1784,16 @@ static int incell_panel_request_gpios(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 
 	spec_pdata = ctrl_pdata->spec_pdata;
 
+	if (gpio_is_valid(spec_pdata->disp_vddio_gpio)) {
+		rc = gpio_request(spec_pdata->disp_vddio_gpio,
+						"disp_vddio");
+		if (rc) {
+			pr_err("request disp vddio gpio failed, rc=%d\n",
+				       rc);
+			goto disp_vddio_gpio_err;
+		}
+	}
+
 	if (gpio_is_valid(spec_pdata->touch_vddio_gpio)) {
 		rc = gpio_request(spec_pdata->touch_vddio_gpio,
 						"touch_vddio");
@@ -1815,6 +1833,9 @@ touch_reset_gpio_err:
 	if (gpio_is_valid(spec_pdata->touch_vddio_gpio))
 		gpio_free(spec_pdata->touch_vddio_gpio);
 touch_vddio_gpio_err:
+	if (gpio_is_valid(spec_pdata->disp_vddio_gpio))
+		gpio_free(spec_pdata->disp_vddio_gpio);
+disp_vddio_gpio_err:
 	return rc;
 }
 
@@ -1837,6 +1858,9 @@ void incell_panel_free_gpios(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 
 	if (gpio_is_valid(spec_pdata->touch_vddio_gpio))
 		gpio_free(spec_pdata->touch_vddio_gpio);
+
+	if (gpio_is_valid(spec_pdata->disp_vddio_gpio))
+		gpio_free(spec_pdata->disp_vddio_gpio);
 }
 
 int incell_pinctrl_init(struct mdss_dsi_ctrl_pdata *ctrl_pdata)

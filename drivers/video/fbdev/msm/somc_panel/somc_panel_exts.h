@@ -145,6 +145,7 @@ struct mdss_panel_specific_pdata {
 	bool postpwron_no_reset_quirk;
 
 #ifdef CONFIG_SOMC_PANEL_INCELL
+	int disp_vddio_gpio;
 	int touch_reset_gpio;
 	int touch_vddio_gpio;
 	int touch_int_gpio;
