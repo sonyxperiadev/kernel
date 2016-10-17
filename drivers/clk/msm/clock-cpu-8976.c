@@ -950,6 +950,35 @@ static int cpu_parse_devicetree(struct platform_device *pdev)
 	return 0;
 }
 
+
+/**
+ * clock_panic_callback() - panic notification callback function.
+ *              This function is invoked when a kernel panic occurs.
+ * @nfb:        Notifier block pointer
+ * @event:      Value passed unmodified to notifier function
+ * @data:       Pointer passed unmodified to notifier function
+ *
+ * Return: NOTIFY_OK
+ */
+static int clock_panic_callback(struct notifier_block *nfb,
+					unsigned long event, void *data)
+{
+	unsigned long rate;
+
+	rate  = (a53_clk.c.count) ? a53_clk.c.rate : 0;
+	pr_err("%s frequency: %10lu Hz\n", a53_clk.c.dbg_name, rate);
+
+	rate  = (a72_clk.c.count) ? a72_clk.c.rate : 0;
+	pr_err("%s frequency: %10lu Hz\n", a72_clk.c.dbg_name, rate);
+
+	return NOTIFY_OK;
+}
+
+static struct notifier_block clock_panic_notifier = {
+	.notifier_call = clock_panic_callback,
+	.priority = 1,
+};
+
 #define GLB_DIAG	0x0b11101c
 
 static int clock_cpu_probe(struct platform_device *pdev)
@@ -1070,6 +1099,9 @@ static int clock_cpu_probe(struct platform_device *pdev)
 
 	a53_clk.hw_low_power_ctrl = true;
 	a72_clk.hw_low_power_ctrl = true;
+
+	atomic_notifier_chain_register(&panic_notifier_list,
+					&clock_panic_notifier);
 
 	return 0;
 }
