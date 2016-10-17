@@ -365,6 +365,17 @@
 			<&clock_gcc_mdss clk_gcc_mdss_mdp_rotator_vote_clk>;
 		clock-names = "iface_clk", "rot_core_clk";
 
+
+		qcom,mdss-rot-reg-bus {
+			/* Reg Bus Scale Settings */
+			qcom,msm-bus,name = "mdss_rot_reg";
+			qcom,msm-bus,num-cases = <2>;
+			qcom,msm-bus,num-paths = <1>;
+			qcom,msm-bus,active-only;
+			qcom,msm-bus,vectors-KBps =
+				<1 590 0 0>,
+				<1 590 0 76800>;
+		};
 	};
 };
 
