@@ -849,6 +849,11 @@ struct cpuidle_driver acpi_idle_driver = {
 	.owner =	THIS_MODULE,
 };
 
+int acpi_processor_using_idle_driver(void)
+{
+	return cpuidle_get_driver() == &acpi_idle_driver;
+}
+
 /**
  * acpi_processor_setup_cpuidle_cx - prepares and configures CPUIDLE
  * device i.e. per-cpu data
@@ -1013,7 +1018,7 @@ int acpi_processor_cst_has_changed(struct acpi_processor *pr)
 	 * to make the code that updates C-States be called once.
 	 */
 
-	if (pr->id == 0 && cpuidle_get_driver() == &acpi_idle_driver) {
+	if (pr->id == 0 && acpi_processor_using_idle_driver()) {
 
 		/* Protect against cpu-hotplug */
 		get_online_cpus();
