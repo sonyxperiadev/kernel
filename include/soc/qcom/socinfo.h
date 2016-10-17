@@ -80,6 +80,8 @@
 	of_flat_dt_is_compatible(of_get_flat_dt_root(), "qcom,fsm9010")
 #define early_machine_is_msm8976()	\
 	of_flat_dt_is_compatible(of_get_flat_dt_root(), "qcom,msm8976")
+#define early_machine_is_msm8956()	\
+	of_flat_dt_is_compatible(of_get_flat_dt_root(), "qcom,msm8956")
 #define early_machine_is_msmtellurium()	\
 	of_flat_dt_is_compatible(of_get_flat_dt_root(), "qcom,msmtellurium")
 #define early_machine_is_msm8996()	\
@@ -166,6 +168,7 @@
 #define early_machine_is_msmtellurium()	0
 #define early_machine_is_msm8996()	0
 #define early_machine_is_msm8976() 0
+#define early_machine_is_msm8956()	0
 #define early_machine_is_msm8929()	0
 #define early_machine_is_msmcobalt()	0
 #define early_machine_is_apqcobalt()	0
@@ -245,6 +248,7 @@ enum msm_cpu {
 	MSM_CPU_TELLURIUM,
 	MSM_CPU_8996,
 	MSM_CPU_8976,
+	MSM_CPU_8956,
 	MSM_CPU_8929,
 	MSM_CPU_COBALT,
 	MSM_CPU_HAMSTER,
