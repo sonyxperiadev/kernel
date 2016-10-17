@@ -4540,6 +4540,7 @@ static int venus_hfi_get_core_capabilities(void *dev)
 static int __initialize_packetization(struct venus_hfi_device *device)
 {
 	int rc = 0;
+	int major_version;
 	const char *hfi_version;
 
 	if (!device || !device->res) {
@@ -4548,6 +4549,16 @@ static int __initialize_packetization(struct venus_hfi_device *device)
 	}
 
 	hfi_version = device->res->hfi_version;
+
+	if (!hfi_version) {
+		rc = __read_register(device, VIDC_WRAPPER_HW_VERSION);
+		major_version = (rc &
+			VIDC_WRAPPER_HW_VERSION_MAJOR_VERSION_MASK) >>
+			VIDC_WRAPPER_HW_VERSION_MAJOR_VERSION_SHIFT;
+
+		if (major_version > 2)
+			hfi_version = "3xx";
+	};
 
 	if (!hfi_version) {
 		device->packetization_type = HFI_PACKETIZATION_LEGACY;
