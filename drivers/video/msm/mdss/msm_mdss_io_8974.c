@@ -1100,6 +1100,8 @@ static void mdss_dsi_phy_regulator_ctrl(struct mdss_dsi_ctrl_pdata *ctrl,
 {
 	struct mdss_dsi_ctrl_pdata *other_ctrl;
 	struct dsi_shared_data *sdata;
+	struct mdss_panel_data *pdata;
+	struct mdss_panel_info *pinfo;
 
 	if (!ctrl) {
 		pr_err("%s: Invalid input data\n", __func__);
@@ -1108,6 +1110,8 @@ static void mdss_dsi_phy_regulator_ctrl(struct mdss_dsi_ctrl_pdata *ctrl,
 
 	sdata = ctrl->shared_data;
 	other_ctrl = mdss_dsi_get_other_ctrl(ctrl);
+	pdata = &ctrl->panel_data;
+	pinfo = &pdata->panel_info;
 #ifdef CONFIG_ARCH_MSM8994
 	ctrl->shared_data->phy_rev = DSI_PHY_REV_10;
 #endif
@@ -1128,6 +1132,8 @@ static void mdss_dsi_phy_regulator_ctrl(struct mdss_dsi_ctrl_pdata *ctrl,
 			 * active.
 			 */
 			if (!mdss_dsi_is_hw_config_dual(sdata) ||
+				(mdss_dsi_is_ctrl_clk_master(ctrl) &&
+					pinfo->ulps_suspend_enabled) ||
 				(other_ctrl && (!other_ctrl->is_phyreg_enabled
 						|| other_ctrl->mmss_clamp)))
 				mdss_dsi_28nm_phy_regulator_enable(ctrl);
