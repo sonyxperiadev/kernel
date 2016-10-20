@@ -243,7 +243,7 @@ irqreturn_t msm_iommu_secure_fault_handler_v2(int irq, void *dev_id)
 	ctx_drvdata = dev_get_drvdata(&pdev->dev);
 	BUG_ON(!ctx_drvdata);
 
-	regs = kzalloc(sizeof(*regs), GFP_KERNEL);
+	regs = kzalloc(sizeof(*regs), GFP_ATOMIC);
 	if (!regs) {
 		pr_err("%s: Couldn't allocate memory\n", __func__);
 		goto lock_release;
