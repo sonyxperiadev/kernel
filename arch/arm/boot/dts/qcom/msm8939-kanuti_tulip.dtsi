@@ -10,6 +10,12 @@
  * GNU General Public License for more details.
  */
 
+/ {
+        aliases {
+                /delete-property/ spi0;
+        };
+};
+
 &soc {
 	i2c@78b9000 { /* BLSP1 QUP5 */
 		tsc@24 {
