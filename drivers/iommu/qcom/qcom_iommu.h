@@ -140,8 +140,6 @@ void __disable_clocks(struct msm_iommu_drvdata *drvdata);
  * @iommu_power_on:     Turn on power to unit
  * @iommu_power_off:    Turn off power to unit
  * @iommu_bus_vote:     Vote for bus bandwidth
- * @iommu_clk_on:       Turn on clks to unit
- * @iommu_clk_off:      Turn off clks to unit
  * @iommu_lock_initialize: Initialize the remote lock
  * @iommu_lock_acquire: Acquire any locks needed
  * @iommu_lock_release: Release locks needed
@@ -151,8 +149,6 @@ struct iommu_access_ops {
 	void (*iommu_power_off)(struct msm_iommu_drvdata *);
 	int (*iommu_bus_vote)(struct msm_iommu_drvdata *drvdata,
 			      unsigned int vote);
-	int (*iommu_clk_on)(struct msm_iommu_drvdata *);
-	void (*iommu_clk_off)(struct msm_iommu_drvdata *);
 	void * (*iommu_lock_initialize)(void);
 	void (*iommu_lock_acquire)(unsigned int need_extra_lock);
 	void (*iommu_lock_release)(unsigned int need_extra_lock);
