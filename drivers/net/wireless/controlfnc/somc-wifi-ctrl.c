@@ -152,6 +152,29 @@ int somc_wifi_set_carddetect(int present)
 #endif
 }
 
+static ssize_t macaddr_show(struct device *dev, struct device_attribute *attr,
+				char *buf)
+{
+	return sprintf(buf, "%s", intf_macaddr);
+}
+
+static ssize_t macaddr_store(struct device *dev, struct device_attribute *attr,
+				const char *buf, size_t count)
+{
+	return snprintf(intf_macaddr, count, "%s\n", buf);
+}
+
+DEVICE_ATTR(macaddr, 0644, macaddr_show, macaddr_store);
+
+static struct attribute *wifi_attrs[] = {
+	&dev_attr_macaddr.attr,
+	NULL
+};
+
+static struct attribute_group wifi_attr_grp = {
+	.attrs = wifi_attrs,
+};
+
 int somc_wifi_init(struct platform_device *pdev)
 {
 	int ret, ret_sus, gpio;
@@ -225,6 +248,12 @@ int somc_wifi_init(struct platform_device *pdev)
 		goto err_gpio_request;
 	}
 
+	intf_macaddr = kzalloc(20*(sizeof(char)), GFP_KERNEL);
+	if (sysfs_create_group(&pdev->dev.kobj, &wifi_attr_grp) < 0) {
+		pr_err("%s: Unable to create sysfs\n", __func__);
+		kfree(intf_macaddr);
+	}
+
 	return 0;
 
 err_gpio_request:
@@ -261,7 +290,6 @@ void somc_wifi_deinit(struct platform_device *pdev)
 EXPORT_SYMBOL(somc_wifi_deinit);
 
 #define ETHER_ADDR_LEN    6
-#define FILE_WIFI_MACADDR "/sys/devices/platform/bcmdhd_wlan/macaddr"
 
 static inline int xdigit (char c)
 {
@@ -324,10 +352,6 @@ static int somc_wifi_get_mac_addr(unsigned char *buf)
 {
 	int ret = 0;
 
-	mm_segment_t oldfs;
-	struct kstat stat;
-	struct file* fp;
-	int readlen = 0;
 	char macasc[128] = {0,};
 	uint rand_mac;
 	static unsigned char mymac[ETHER_ADDR_LEN] = {0,};
@@ -338,29 +362,9 @@ static int somc_wifi_get_mac_addr(unsigned char *buf)
 
 	memset(buf, 0x00, ETHER_ADDR_LEN);
 
-	oldfs = get_fs();
-	set_fs(get_ds());
-
-	ret = vfs_stat(FILE_WIFI_MACADDR, &stat);
-	if (ret) {
-		set_fs(oldfs);
-		pr_err("%s: Failed to get information from file %s (%d)\n",
-				__FUNCTION__, FILE_WIFI_MACADDR, ret);
-		goto random_mac;
-	}
-	set_fs(oldfs);
-
-	fp = filp_open(FILE_WIFI_MACADDR, O_RDONLY, 0);
-	if (IS_ERR(fp)) {
-		pr_err("%s: Failed to read error %s\n",
-				__FUNCTION__, FILE_WIFI_MACADDR);
-		goto random_mac;
-	}
-
-	readlen = kernel_read(fp, fp->f_pos, macasc, 17); // 17 = 12 + 5
-	if (readlen > 0) {
+	if (intf_macaddr != NULL) {
 		unsigned char* macbin;
-		struct ether_addr* convmac = ether_aton( macasc );
+		struct ether_addr* convmac = ether_aton( intf_macaddr );
 
 		if (convmac == NULL) {
 			pr_err("%s: Invalid Mac Address Format %s\n",
@@ -378,7 +382,6 @@ static int somc_wifi_get_mac_addr(unsigned char *buf)
 		memcpy(buf, macbin, ETHER_ADDR_LEN);
 	}
 
-	filp_close(fp, NULL);
 	return ret;
 
 random_mac:
@@ -410,20 +413,6 @@ random_mac:
 	return 0;
 }
 
-static ssize_t macaddr_show(struct device *dev, struct device_attribute *attr,
-				char *buf)
-{
-	return sprintf(buf, "%s", intf_macaddr);
-}
-
-static ssize_t macaddr_store(struct device *dev, struct device_attribute *attr,
-				const char *buf, size_t count)
-{
-	return snprintf(intf_macaddr, count, "%s\n", buf);
-}
-
-DEVICE_ATTR(macaddr, 0644, macaddr_show, macaddr_store);
-
 struct wifi_platform_data somc_wifi_control = {
 	.set_power	= somc_wifi_set_power,
 #if defined(CONFIG_MACH_SONY_SHINANO)
@@ -437,15 +426,6 @@ struct wifi_platform_data somc_wifi_control = {
 EXPORT_SYMBOL(somc_wifi_control);
 
 #if defined(CONFIG_MACH_SONY_SHINANO)
-static struct attribute *wifi_attrs[] = {
-	&dev_attr_macaddr.attr,
-	NULL
-};
-
-static struct attribute_group wifi_attr_grp = {
-	.attrs = wifi_attrs,
-};
-
 static struct resource somc_wifi_resources[] = {
 	[0] = {
 		.name	= "bcmdhd_wlan_irq",
