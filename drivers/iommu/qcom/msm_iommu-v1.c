@@ -119,8 +119,6 @@ struct iommu_access_ops iommu_access_ops_v1 = {
 	.iommu_power_on = __enable_regulators,
 	.iommu_power_off = __disable_regulators,
 	.iommu_bus_vote = apply_bus_vote,
-	.iommu_clk_on = __enable_clocks,
-	.iommu_clk_off = __disable_clocks,
 	.iommu_lock_acquire = _iommu_lock_acquire,
 	.iommu_lock_release = _iommu_lock_release,
 };
