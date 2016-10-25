@@ -517,11 +517,13 @@ static int pn547_probe(struct i2c_client *client,
 				devm_pinctrl_put(pinctrl);
 			return err;
 		}
-		if (!nfc_has_pinctrl) {
+
+// This function should be looked at
+/*		if (!nfc_has_pinctrl) {
 			err = board_nfc_parse_dt(&client->dev, platform_data);
 			if (err < 0)
 				return err;
-		}
+		}*/
 	} else {
 		platform_data = client->dev.platform_data;
 	}
@@ -531,11 +533,12 @@ static int pn547_probe(struct i2c_client *client,
 		return -ENODEV;
 	}
 
-	if (platform_data->dynamic_config) {
+// This function should be looked at
+/*	if (platform_data->dynamic_config) {
 		ret = board_nfc_hw_lag_check(client, platform_data);
 		if (ret < 0)
 			return ret;
-	}
+	}*/
 
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
 		pr_err("%s : need I2C_FUNC_I2C\n", __func__);
