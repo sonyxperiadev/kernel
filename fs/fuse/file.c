@@ -7,7 +7,6 @@
 */
 
 #include "fuse_i.h"
-#include "fuse_shortcircuit.h"
 
 #include <linux/pagemap.h>
 #include <linux/slab.h>
@@ -22,8 +21,7 @@
 static const struct file_operations fuse_direct_io_file_operations;
 
 static int fuse_send_open(struct fuse_conn *fc, u64 nodeid, struct file *file,
-			  int opcode, struct fuse_open_out *outargp,
-			  struct file **lower_file)
+			  int opcode, struct fuse_open_out *outargp)
 {
 	struct fuse_open_in inarg;
 	struct fuse_req *req;
@@ -47,10 +45,6 @@ static int fuse_send_open(struct fuse_conn *fc, u64 nodeid, struct file *file,
 	req->out.args[0].value = outargp;
 	fuse_request_send(fc, req);
 	err = req->out.h.error;
-
-	if (!err && req->private_lower_rw_file != NULL)
-		*lower_file =  req->private_lower_rw_file;
-
 	fuse_put_request(fc, req);
 
 	return err;
@@ -64,7 +58,6 @@ struct fuse_file *fuse_file_alloc(struct fuse_conn *fc)
 	if (unlikely(!ff))
 		return NULL;
 
-	ff->rw_lower_file = NULL;
 	ff->fc = fc;
 	ff->reserved_req = fuse_request_alloc(0);
 	if (unlikely(!ff->reserved_req)) {
@@ -172,8 +165,7 @@ int fuse_do_open(struct fuse_conn *fc, u64 nodeid, struct file *file,
 		struct fuse_open_out outarg;
 		int err;
 
-		err = fuse_send_open(fc, nodeid, file, opcode, &outarg,
-				     &(ff->rw_lower_file));
+		err = fuse_send_open(fc, nodeid, file, opcode, &outarg);
 		if (!err) {
 			ff->fh = outarg.fh;
 			ff->open_flags = outarg.open_flags;
@@ -295,8 +287,6 @@ void fuse_release_common(struct file *file, int opcode)
 	ff = file->private_data;
 	if (unlikely(!ff))
 		return;
-
-	fuse_shortcircuit_release(ff);
 
 	req = ff->reserved_req;
 	fuse_prepare_release(ff, file->f_flags, opcode);
@@ -983,10 +973,8 @@ out:
 
 static ssize_t fuse_file_read_iter(struct kiocb *iocb, struct iov_iter *to)
 {
-	ssize_t ret_val;
 	struct inode *inode = iocb->ki_filp->f_mapping->host;
 	struct fuse_conn *fc = get_fuse_conn(inode);
-	struct fuse_file *ff = iocb->ki_filp->private_data;
 
 	/*
 	 * In auto invalidate mode, always update attributes on read.
@@ -1001,12 +989,7 @@ static ssize_t fuse_file_read_iter(struct kiocb *iocb, struct iov_iter *to)
 			return err;
 	}
 
-	if (ff && ff->rw_lower_file)
-		ret_val = fuse_shortcircuit_read_iter(iocb, to);
-	else
-		ret_val = generic_file_read_iter(iocb, to);
-
-	return ret_val;
+	return generic_file_read_iter(iocb, to);
 }
 
 static void fuse_write_fill(struct fuse_req *req, struct fuse_file *ff,
@@ -1239,7 +1222,6 @@ static ssize_t fuse_file_write_iter(struct kiocb *iocb, struct iov_iter *from)
 {
 	struct file *file = iocb->ki_filp;
 	struct address_space *mapping = file->f_mapping;
-	struct fuse_file *ff = file->private_data;
 	size_t count = iov_iter_count(from);
 	ssize_t written = 0;
 	ssize_t written_buffered = 0;
@@ -1247,15 +1229,6 @@ static ssize_t fuse_file_write_iter(struct kiocb *iocb, struct iov_iter *from)
 	ssize_t err;
 	loff_t endbyte = 0;
 	loff_t pos = iocb->ki_pos;
-
-	if (ff && ff->rw_lower_file) {
-		/* Update size (EOF optimization) and mode (SUID clearing) */
-		err = fuse_update_attributes(mapping->host, NULL, file, NULL);
-		if (err)
-			return err;
-
-		return fuse_shortcircuit_write_iter(iocb, from);
-	}
 
 	if (get_fuse_conn(inode)->writeback_cache) {
 		/* Update size (EOF optimization) and mode (SUID clearing) */
