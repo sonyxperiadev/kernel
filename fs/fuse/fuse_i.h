@@ -160,7 +160,6 @@ struct fuse_file {
 
 	/* the read write file */
 	struct file *rw_lower_file;
-	bool shortcircuit_enabled;
 };
 
 /** One input argument of a request */
