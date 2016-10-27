@@ -1823,7 +1823,7 @@ int mdss_dsi_shadow_clk_init(struct platform_device *pdev,
 		goto error;
 	}
 
-	if (sdata->tbu_clk) {
+	if (ctrl->tbu_clk) {
 		rc = clk_prepare_enable(sdata->tbu_clk);
 		if (rc) {
 			pr_err("%s: failed to enable mdp tbu clk.rc=%d\n",
@@ -1836,7 +1836,7 @@ int mdss_dsi_shadow_clk_init(struct platform_device *pdev,
 		}
 	}
 
-	if (sdata->tbu_rt_clk) {
+	if (ctrl->tbu_rt_clk) {
 		rc = clk_prepare_enable(sdata->tbu_rt_clk);
 		if (rc) {
 			pr_err("%s: failed to enable mdp tbu rt clk.rc=%d\n",
