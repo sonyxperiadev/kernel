@@ -1490,11 +1490,6 @@ static void msm_vfe40_axi_cfg_wm_reg(
 	    vfe_dev->vfe_hw_version == VFE40_8939_VERSION) {
 		burst_len = VFE40_BURST_LEN_8916_VERSION;
 		wm_bit_shift = VFE40_WM_BIT_SHIFT;
-	} else if (vfe_dev->vfe_hw_version == VFE40_8974V1_VERSION ||
-			vfe_dev->vfe_hw_version == VFE40_8974V2_VERSION ||
-			vfe_dev->vfe_hw_version == VFE40_8974V3_VERSION) {
-		burst_len = VFE40_BURST_LEN;
-		wm_bit_shift = VFE40_WM_BIT_SHIFT;
 	} else if (vfe_dev->vfe_hw_version == VFE40_8952_VERSION) {
 		burst_len = VFE40_BURST_LEN_8952_VERSION;
 		wm_bit_shift = VFE40_WM_BIT_SHIFT;
@@ -1503,6 +1498,7 @@ static void msm_vfe40_axi_cfg_wm_reg(
 		wm_bit_shift = VFE40_WM_BIT_SHIFT_8976_VERSION;
 	} else {
 		burst_len = VFE40_BURST_LEN;
+		wm_bit_shift = VFE40_WM_BIT_SHIFT;
 	}
 
 	if (!stream_info->frame_based) {
