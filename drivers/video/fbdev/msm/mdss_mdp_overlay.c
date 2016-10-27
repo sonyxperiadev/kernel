@@ -3061,6 +3061,8 @@ static void mdss_mdp_overlay_pan_display(struct msm_fb_data_type *mfd)
 		goto pipe_release;
 	}
 
+	mdss_mdp_release_splash_pipe(mfd);
+
 	ret = mdss_mdp_overlay_start(mfd);
 	if (ret) {
 		pr_err("unable to start overlay %d (%d)\n", mfd->index, ret);
