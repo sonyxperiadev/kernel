@@ -1823,33 +1823,6 @@ int mdss_dsi_shadow_clk_init(struct platform_device *pdev,
 		goto error;
 	}
 
-	if (ctrl->tbu_clk) {
-		rc = clk_prepare_enable(sdata->tbu_clk);
-		if (rc) {
-			pr_err("%s: failed to enable mdp tbu clk.rc=%d\n",
-				__func__, rc);
-			clk_disable_unprepare(sdata->axi_clk);
-			clk_disable_unprepare(sdata->ahb_clk);
-			clk_disable_unprepare(sdata->mdp_core_clk);
-			clk_disable_unprepare(sdata->mmss_misc_ahb_clk);
-			goto error;
-		}
-	}
-
-	if (ctrl->tbu_rt_clk) {
-		rc = clk_prepare_enable(sdata->tbu_rt_clk);
-		if (rc) {
-			pr_err("%s: failed to enable mdp tbu rt clk.rc=%d\n",
-				__func__, rc);
-			clk_disable_unprepare(sdata->axi_clk);
-			clk_disable_unprepare(sdata->ahb_clk);
-			clk_disable_unprepare(sdata->mdp_core_clk);
-			clk_disable_unprepare(sdata->mmss_misc_ahb_clk);
-			clk_disable_unprepare(sdata->tbu_clk);
-			goto error;
-		}
-	}
-
 error:
 	if (rc)
 		mdss_dsi_shadow_clk_deinit(dev, ctrl);
