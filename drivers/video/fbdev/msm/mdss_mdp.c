@@ -4940,6 +4940,7 @@ static void apply_dynamic_ot_limit(u32 *ot_lim,
 		params->is_yuv, params->is_wfd, res, params->frame_rate);
 
 	switch (mdata->mdp_rev) {
+	case MDSS_MDP_HW_REV_111:
 	case MDSS_MDP_HW_REV_114:
 	case MDSS_MDP_HW_REV_115:
 	case MDSS_MDP_HW_REV_116:
