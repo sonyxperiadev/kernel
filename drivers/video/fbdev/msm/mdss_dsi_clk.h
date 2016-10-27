@@ -120,6 +120,8 @@ struct mdss_dsi_core_clk_info {
 	struct clk *ahb_clk;
 	struct clk *axi_clk;
 	struct clk *mmss_misc_ahb_clk;
+	struct clk *tbu_clk;
+	struct clk *tbu_rt_clk;
 };
 
 struct mdss_dsi_link_hs_clk_info {
