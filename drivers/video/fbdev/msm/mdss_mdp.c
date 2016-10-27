@@ -4613,6 +4613,7 @@ static void apply_dynamic_ot_limit(u32 *ot_lim,
 		params->is_yuv, params->is_wb, res, params->frame_rate);
 
 	switch (mdata->mdp_rev) {
+	case MDSS_MDP_HW_REV_111:
 	case MDSS_MDP_HW_REV_114:
 		/*
 		 * MDP rev is same for msm8937 and msm8940, but rotator OT
