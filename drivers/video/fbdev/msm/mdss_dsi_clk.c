@@ -165,6 +165,10 @@ static int dsi_core_clk_stop(struct dsi_core_clks *c_clks)
 	mngr = container_of(c_clks, struct mdss_dsi_clk_mngr, core_clks);
 
 	mdss_update_reg_bus_vote(mngr->reg_bus_clt, VOTE_INDEX_DISABLE);
+	if (c_clks->clks.tbu_clk)
+		clk_disable_unprepare(c_clks->clks.tbu_clk);
+	if (c_clks->clks.tbu_rt_clk)
+		clk_disable_unprepare(c_clks->clks.tbu_rt_clk);
 	if (c_clks->clks.mmss_misc_ahb_clk)
 		clk_disable_unprepare(c_clks->clks.mmss_misc_ahb_clk);
 	clk_disable_unprepare(c_clks->clks.axi_clk);

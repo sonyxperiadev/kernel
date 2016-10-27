@@ -3081,6 +3081,8 @@ static int mdss_dsi_ctrl_clock_init(struct platform_device *ctrl_pdev,
 	info.core_clks.axi_clk = ctrl_pdata->shared_data->axi_clk;
 	info.core_clks.mmss_misc_ahb_clk =
 		ctrl_pdata->shared_data->mmss_misc_ahb_clk;
+	info.core_clks.tbu_clk = ctrl_pdata->shared_data->tbu_clk;
+	info.core_clks.tbu_rt_clk = ctrl_pdata->shared_data->tbu_rt_clk;
 
 	info.link_clks.esc_clk = ctrl_pdata->esc_clk;
 	info.link_clks.byte_clk = ctrl_pdata->byte_clk;
