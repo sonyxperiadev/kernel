@@ -4524,6 +4524,7 @@ static void apply_dynamic_ot_limit(u32 *ot_lim,
 		read_vbif_ot = MDSS_VBIF_READ(mdata, MMSS_VBIF_OUT_RD_LIM_CONF0,
 					false);
 		rot_ot  = (read_vbif_ot == 0x10) ? 4 : 8;
+	case MDSS_MDP_HW_REV_111:
 	case MDSS_MDP_HW_REV_115:
 	case MDSS_MDP_HW_REV_116:
 		if ((res <= RES_1080p) && (params->frame_rate <= 30))
