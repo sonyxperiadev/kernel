@@ -15,7 +15,7 @@
 #include <linux/types.h>
 #include <soc/qcom/tracer_pkt.h>
 #define CREATE_TRACE_POINTS
-#include "tracer_pkt_private.h"
+#include <../drivers/soc/qcom/tracer_pkt_private.h>
 
 static unsigned qdss_tracing;
 module_param_named(qdss_tracing_enable, qdss_tracing,
