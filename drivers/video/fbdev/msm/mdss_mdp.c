@@ -2099,10 +2099,12 @@ static void mdss_mdp_hw_rev_caps_init(struct mdss_data_type *mdata)
 		break;
 	case MDSS_MDP_HW_REV_112:
 	case MDSS_MDP_HW_REV_111:
+		pr_info("mdss_mdp: Setting caps for HW_REV_111.\n");
 		mdata->max_target_zorder = 4; /* excluding base layer */
 		mdata->max_cursor_size = 64;
 		mdata->min_prefill_lines = 12;
 		set_bit(MDSS_QOS_OTLIM, mdata->mdss_qos_map);
+		mdss_set_quirk(mdata, MDSS_QUIRK_MIN_BUS_VOTE);
 		break;
 	case MDSS_MDP_HW_REV_114:
 		/* disable ECG for 28nm PHY platform */
