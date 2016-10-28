@@ -51,9 +51,6 @@ static HLIST_HEAD(binder_devices);
 static HLIST_HEAD(binder_procs);
 static DEFINE_MUTEX(binder_procs_lock);
 
-static HLIST_HEAD(binder_dead_nodes);
-static DEFINE_MUTEX(binder_dead_nodes_lock);
-
 static DEFINE_MUTEX(binder_context_mgr_node_lock);
 
 static struct dentry *binder_debugfs_dir_entry_root;
@@ -178,6 +175,7 @@ struct binder_stats {
 	atomic_t bc[_IOC_NR(BC_REPLY_SG) + 1];
 	atomic_t obj_created[BINDER_STAT_COUNT];
 	atomic_t obj_deleted[BINDER_STAT_COUNT];
+	atomic_t obj_zombie[BINDER_STAT_COUNT];
 };
 
 static struct binder_stats binder_stats;
@@ -190,6 +188,17 @@ static inline void binder_stats_deleted(enum binder_stat_types type)
 static inline void binder_stats_created(enum binder_stat_types type)
 {
 	atomic_inc(&binder_stats.obj_created[type]);
+}
+
+static inline void binder_stats_zombie(enum binder_stat_types type)
+{
+	atomic_inc(&binder_stats.obj_zombie[type]);
+}
+
+static inline void binder_stats_delete_zombie(enum binder_stat_types type)
+{
+	atomic_dec(&binder_stats.obj_zombie[type]);
+	binder_stats_deleted(type);
 }
 
 struct binder_transaction_log_entry {
@@ -281,6 +290,7 @@ struct binder_node {
 	unsigned has_async_transaction:1;
 	unsigned accept_fds:1;
 	unsigned min_priority:8;
+	bool is_zombie;
 	struct binder_worklist async_todo;
 };
 
@@ -311,6 +321,31 @@ enum binder_deferred_state {
 	BINDER_DEFERRED_PUT_FILES    = 0x01,
 	BINDER_DEFERRED_FLUSH        = 0x02,
 	BINDER_DEFERRED_RELEASE      = 0x04,
+	BINDER_ZOMBIE_CLEANUP        = 0x08,
+};
+
+struct binder_seq_head {
+	int active_count;
+	int max_active_count;
+	spinlock_t lock;
+	struct list_head active_threads;
+	u64 lowest_seq;
+};
+
+#define SEQ_BUCKETS 16
+struct binder_seq_head binder_active_threads[SEQ_BUCKETS];
+struct binder_seq_head zombie_procs;
+
+static inline int binder_seq_hash(struct binder_thread *thread)
+{
+	u64 tp = (u64)thread;
+
+	return ((tp>>8) ^ (tp>>12)) % SEQ_BUCKETS;
+}
+
+struct binder_seq_node {
+	struct list_head list_node;
+	atomic_t active_seq;
 };
 
 struct binder_proc {
@@ -320,6 +355,7 @@ struct binder_proc {
 	struct rb_root refs_by_desc;
 	struct rb_root refs_by_node;
 	int pid;
+	int active_thread_count;
 	struct task_struct *tsk;
 	struct files_struct *files;
 	struct hlist_node deferred_work_node;
@@ -336,6 +372,10 @@ struct binder_proc {
 	atomic_t ready_threads;
 	long default_priority;
 	struct dentry *debugfs_entry;
+	struct binder_seq_node zombie_proc;
+	bool is_zombie;
+	struct hlist_head zombie_nodes;
+	struct hlist_head zombie_threads;
 	struct binder_alloc alloc;
 	struct binder_context *context;
 };
@@ -351,7 +391,12 @@ enum {
 
 struct binder_thread {
 	struct binder_proc *proc;
-	struct rb_node rb_node;
+	union {
+		struct rb_node rb_node;
+		struct hlist_node zombie_thread;
+	};
+	struct binder_seq_node active_node;
+
 	int pid;
 	int looper;
 	struct binder_transaction *transaction_stack;
@@ -498,6 +543,10 @@ struct binder_transaction {
 
 static void
 binder_defer_work(struct binder_proc *proc, enum binder_deferred_state defer);
+static inline void binder_queue_for_zombie_cleanup(struct binder_proc *proc);
+
+static void binder_put_thread(struct binder_thread *thread);
+static struct binder_thread *binder_get_thread(struct binder_proc *proc);
 
 static int task_get_unused_fd_flags(struct binder_proc *proc, int flags)
 {
@@ -664,8 +713,7 @@ static int binder_inc_node(struct binder_node *node, int strong, int internal,
 	int ret = 0;
 	struct binder_proc *proc = node->proc;
 
-	if (proc)
-		binder_proc_lock(proc, __LINE__);
+	binder_proc_lock(proc, __LINE__);
 
 	if (strong) {
 		if (internal) {
@@ -706,19 +754,16 @@ static int binder_inc_node(struct binder_node *node, int strong, int internal,
 		}
 	}
 done:
-	if (proc)
-		binder_proc_unlock(proc, __LINE__);
+	binder_proc_unlock(proc, __LINE__);
 	return ret;
 }
 
 static int binder_dec_node(struct binder_node *node, int strong, int internal)
 {
-	bool free_node = false;
 	bool do_wakeup = false;
 	struct binder_proc *proc = node->proc;
 
-	if (proc)
-		binder_proc_lock(proc, __LINE__);
+	binder_proc_lock(proc, __LINE__);
 
 	if (strong) {
 		if (internal)
@@ -734,7 +779,7 @@ static int binder_dec_node(struct binder_node *node, int strong, int internal)
 			goto done;
 	}
 
-	if (proc && (node->has_strong_ref || node->has_weak_ref)) {
+	if (node->has_strong_ref || node->has_weak_ref) {
 		if (list_empty(&node->work.entry)) {
 			binder_enqueue_work(&node->work,
 					    &proc->todo, __LINE__);
@@ -745,31 +790,29 @@ static int binder_dec_node(struct binder_node *node, int strong, int internal)
 		if (hlist_empty(&node->refs) && !node->local_strong_refs &&
 		    !node->local_weak_refs) {
 			binder_dequeue_work(&node->work, __LINE__);
-			if (proc) {
+			if (!node->is_zombie) {
 				rb_erase(&node->rb_node, &proc->nodes);
 				binder_debug(BINDER_DEBUG_INTERNAL_REFS,
 					     "refless node %d deleted\n",
 					     node->debug_id);
+				INIT_HLIST_NODE(&node->dead_node);
+				node->is_zombie = true;
+				hlist_add_head(&node->dead_node,
+					       &proc->zombie_nodes);
+				binder_queue_for_zombie_cleanup(proc);
+				binder_stats_zombie(BINDER_STAT_NODE);
 			} else {
-				hlist_del(&node->dead_node);
 				binder_debug(BINDER_DEBUG_INTERNAL_REFS,
 					     "dead node %d deleted\n",
 					     node->debug_id);
 			}
-			free_node = true;
-			binder_stats_deleted(BINDER_STAT_NODE);
 		}
 	}
 done:
-	if (proc) {
-		BUG_ON(proc != node->proc);
-		binder_proc_unlock(proc, __LINE__);
-	}
+	binder_proc_unlock(proc, __LINE__);
 
 	if (do_wakeup)
 		wake_up_interruptible(&proc->wait);
-	if (free_node)
-		kfree(node);
 
 	return 0;
 }
@@ -859,6 +902,7 @@ static struct binder_ref *binder_get_ref_for_node(struct binder_proc *proc,
 		else {
 			binder_proc_unlock(proc, __LINE__);
 			kfree(new_ref);
+			binder_stats_deleted(BINDER_STAT_REF);
 			return ref;
 		}
 	}
@@ -891,18 +935,12 @@ static struct binder_ref *binder_get_ref_for_node(struct binder_proc *proc,
 	binder_proc_unlock(proc, __LINE__);
 
 	binder_proc_lock(node_proc, __LINE__);
-	if (node) {
-		hlist_add_head(&new_ref->node_entry, &node->refs);
+	hlist_add_head(&new_ref->node_entry, &node->refs);
 
-		binder_debug(BINDER_DEBUG_INTERNAL_REFS,
-			     "%d new ref %d desc %d for node %d\n",
-			      proc->pid, new_ref->debug_id, new_ref->desc,
-			      node->debug_id);
-	} else {
-		binder_debug(BINDER_DEBUG_INTERNAL_REFS,
-			     "%d new ref %d desc %d for dead node\n",
-			      proc->pid, new_ref->debug_id, new_ref->desc);
-	}
+	binder_debug(BINDER_DEBUG_INTERNAL_REFS,
+		     "%d new ref %d desc %d for %snode\n",
+		      proc->pid, new_ref->debug_id, new_ref->desc,
+		      node->is_zombie ? "zombie " : "");
 	binder_proc_unlock(node_proc, __LINE__);
 	return new_ref;
 }
@@ -935,15 +973,9 @@ static void binder_delete_ref(struct binder_ref *ref, bool force)
 	if (atomic_read(&ref->strong))
 		binder_dec_node(ref->node, 1, 1);
 
-	if (node_proc)
-		binder_proc_lock(node_proc, __LINE__);
-
+	binder_proc_lock(node_proc, __LINE__);
 	hlist_del(&ref->node_entry);
-
-	if (node_proc) {
-		BUG_ON(node_proc != ref->node->proc);
-		binder_proc_unlock(node_proc, __LINE__);
-	}
+	binder_proc_unlock(node_proc, __LINE__);
 
 	binder_dec_node(ref->node, 0, 1);
 	if (ref->death) {
@@ -1724,11 +1756,11 @@ static void binder_transaction(struct binder_proc *proc,
 			}
 		}
 		e->to_node = target_node->debug_id;
-		target_proc = target_node->proc;
-		if (target_proc == NULL) {
+		if (target_node->is_zombie) {
 			return_error = BR_DEAD_REPLY;
 			goto err_dead_binder;
 		}
+		target_proc = target_node->proc;
 		if (security_binder_transaction(proc->tsk, target_proc->tsk) < 0) {
 			return_error = BR_FAILED_REPLY;
 			goto err_invalid_target_handle;
@@ -2402,7 +2434,7 @@ static int binder_thread_write(struct binder_proc *proc,
 				INIT_LIST_HEAD(&death->work.entry);
 				death->cookie = cookie;
 				ref->death = death;
-				if (ref->node->proc == NULL) {
+				if (ref->node->is_zombie) {
 					ref->death->work.type = BINDER_WORK_DEAD_BINDER;
 					if (thread->looper &
 					    (BINDER_LOOPER_STATE_REGISTERED |
@@ -2544,10 +2576,11 @@ static inline int binder_has_thread_work(struct binder_thread *thread)
 }
 
 static int binder_thread_read(struct binder_proc *proc,
-			      struct binder_thread *thread,
+			      struct binder_thread **threadp,
 			      binder_uintptr_t binder_buffer, size_t size,
 			      binder_size_t *consumed, int non_block)
 {
+	struct binder_thread *thread = *threadp;
 	void __user *buffer = (void __user *)(uintptr_t)binder_buffer;
 	void __user *ptr = buffer + *consumed;
 	void __user *end = buffer + size;
@@ -2602,16 +2635,36 @@ retry:
 					   BINDER_LOOPER_STATE_ENTERED)));
 		binder_set_nice(proc->default_priority);
 		if (non_block) {
-			if (!binder_has_proc_work(proc, thread))
-				ret = -EAGAIN;
-		} else
+			if (!binder_has_proc_work(proc, thread)) {
+				binder_lock(__func__);
+				return -EAGAIN;
+			}
+		} else {
+			binder_put_thread(thread);
 			ret = wait_event_freezable_exclusive(proc->wait, binder_has_proc_work(proc, thread));
+			*threadp = thread = binder_get_thread(proc);
+			binder_lock(__func__);
+			if (!thread)
+				return -EINVAL;
+			if (ret)
+				return ret;
+		}
 	} else {
 		if (non_block) {
-			if (!binder_has_thread_work(thread))
-				ret = -EAGAIN;
-		} else
+			if (!binder_has_thread_work(thread)) {
+				binder_lock(__func__);
+				return -EAGAIN;
+			}
+		} else {
+			binder_put_thread(thread);
 			ret = wait_event_freezable(thread->wait, binder_has_thread_work(thread));
+			*threadp = thread = binder_get_thread(proc);
+			binder_lock(__func__);
+			if (!thread)
+				return -EINVAL;
+			if (ret)
+				return ret;
+		}
 	}
 
 	binder_lock(__func__);
@@ -2683,7 +2736,7 @@ retry:
 			int strong, weak;
 			struct binder_proc *proc = node->proc;
 
-			if (!proc)
+			if (node->is_zombie)
 				return -EINVAL;
 
 			binder_proc_lock(proc, __LINE__);
@@ -2735,7 +2788,7 @@ retry:
 					     (u64)node->ptr, (u64)node->cookie);
 			} else {
 				binder_dequeue_work(w, __LINE__);
-				if (!weak && !strong) {
+				if (!weak && !strong && !node->is_zombie) {
 					binder_debug(BINDER_DEBUG_INTERNAL_REFS,
 						     "%d:%d node %d u%016llx c%016llx deleted\n",
 						     proc->pid, thread->pid,
@@ -2743,9 +2796,13 @@ retry:
 						     (u64)node->ptr,
 						     (u64)node->cookie);
 					rb_erase(&node->rb_node, &proc->nodes);
+					INIT_HLIST_NODE(&node->dead_node);
+					node->is_zombie = true;
+					hlist_add_head(&node->dead_node,
+						       &proc->zombie_nodes);
+					binder_queue_for_zombie_cleanup(proc);
 					binder_proc_unlock(proc, __LINE__);
-					kfree(node);
-					binder_stats_deleted(BINDER_STAT_NODE);
+					binder_stats_zombie(BINDER_STAT_NODE);
 				} else {
 					binder_proc_unlock(proc, __LINE__);
 					binder_debug(BINDER_DEBUG_INTERNAL_REFS,
@@ -2961,6 +3018,64 @@ static void binder_release_work(struct binder_worklist *wlist)
 	spin_unlock(&wlist->lock);
 }
 
+static u64 binder_get_seq(struct binder_seq_head *tracker)
+{
+	u64 seq;
+	/*
+	 * No lock needed, worst case we return an overly conservative
+	 * value.
+	 */
+	seq = tracker->lowest_seq;
+	return seq;
+}
+
+atomic_t binder_seq_count;
+
+static inline u64 binder_get_next_seq(void)
+{
+	atomic_inc(&binder_seq_count);
+	return ((u64)atomic_read(&binder_seq_count));
+}
+
+static void binder_add_seq(struct binder_seq_node *node,
+			   struct binder_seq_head *tracker)
+{
+	u64 now = binder_get_next_seq();
+
+	atomic_set(&node->active_seq, now);
+
+	spin_lock(&tracker->lock);
+	list_add_tail(&node->list_node, &tracker->active_threads);
+	if (now < tracker->lowest_seq)
+			tracker->lowest_seq = now;
+
+	tracker->active_count++;
+	if (tracker->active_count > tracker->max_active_count)
+		tracker->max_active_count = tracker->active_count;
+	spin_unlock(&tracker->lock);
+}
+
+static void binder_del_seq(struct binder_seq_node *node,
+				 struct binder_seq_head *tracker)
+{
+	spin_lock(&tracker->lock);
+	/*
+	 * No need to track leftmost node, the queue tracks it already
+	 */
+	list_del_init(&node->list_node);
+
+	if (!list_empty(&tracker->active_threads)) {
+		struct binder_seq_node *tmp;
+
+		tmp = list_first_entry(&tracker->active_threads, typeof(*tmp),
+				       list_node);
+		tracker->lowest_seq = atomic_read(&tmp->active_seq);
+	} else {
+		tracker->lowest_seq = ~0ULL;
+	}
+	spin_unlock(&tracker->lock);
+}
+
 static struct binder_thread *binder_get_thread(struct binder_proc *proc)
 {
 	struct binder_thread *thread = NULL;
@@ -2996,6 +3111,7 @@ static struct binder_thread *binder_get_thread(struct binder_proc *proc)
 		new_thread->looper |= BINDER_LOOPER_STATE_NEED_RETURN;
 		new_thread->return_error = BR_OK;
 		new_thread->return_error2 = BR_OK;
+		INIT_LIST_HEAD(&new_thread->active_node.list_node);
 
 		binder_proc_lock(proc, __LINE__);
 		/*
@@ -3020,10 +3136,31 @@ static struct binder_thread *binder_get_thread(struct binder_proc *proc)
 		rb_link_node(&new_thread->rb_node, parent, p);
 		rb_insert_color(&new_thread->rb_node, &proc->threads);
 		thread = new_thread;
-
 		binder_proc_unlock(proc, __LINE__);
 	}
+	/*
+	 * Add to active threads
+	 */
+	binder_add_seq(&thread->active_node,
+		       &binder_active_threads[binder_seq_hash(thread)]);
+	proc->active_thread_count++;
 	return thread;
+}
+
+static inline void binder_queue_for_zombie_cleanup(struct binder_proc *proc)
+{
+	binder_del_seq(&proc->zombie_proc, &zombie_procs);
+	binder_add_seq(&proc->zombie_proc, &zombie_procs);
+}
+static inline void binder_dequeue_for_zombie_cleanup(struct binder_proc *proc)
+{
+	binder_del_seq(&proc->zombie_proc, &zombie_procs);
+}
+
+static void binder_put_thread(struct binder_thread *thread)
+{
+	binder_del_seq(&thread->active_node,
+		       &binder_active_threads[binder_seq_hash(thread)]);
 }
 
 static int binder_free_thread(struct binder_proc *proc,
@@ -3060,13 +3197,15 @@ static int binder_free_thread(struct binder_proc *proc,
 		} else
 			BUG();
 	}
+	INIT_HLIST_NODE(&thread->zombie_thread);
+	hlist_add_head(&thread->zombie_thread, &proc->zombie_threads);
+	binder_queue_for_zombie_cleanup(proc);
 	binder_proc_unlock(thread->proc, __LINE__);
 
 	if (send_reply)
 		binder_send_failed_reply(send_reply, BR_DEAD_REPLY);
 	binder_release_work(&thread->todo);
-	kfree(thread);
-	binder_stats_deleted(BINDER_STAT_THREAD);
+	binder_stats_zombie(BINDER_STAT_THREAD);
 	return active_transactions;
 }
 
@@ -3091,25 +3230,40 @@ static unsigned int binder_poll(struct file *filp,
 
 	if (wait_for_proc_work) {
 		if (binder_has_proc_work(proc, thread))
-			return POLLIN;
+			goto ret_pollin;
+		binder_put_thread(thread);
 		poll_wait(filp, &proc->wait, wait);
+		thread = binder_get_thread(proc);
+		if (!thread)
+			return -ENOENT;
 		if (binder_has_proc_work(proc, thread))
-			return POLLIN;
+			goto ret_pollin;
 	} else {
 		if (binder_has_thread_work(thread))
-			return POLLIN;
+			goto ret_pollin;
+		binder_put_thread(thread);
 		poll_wait(filp, &thread->wait, wait);
+		thread = binder_get_thread(proc);
+		if (!thread)
+			return -ENOENT;
 		if (binder_has_thread_work(thread))
-			return POLLIN;
+			goto ret_pollin;
 	}
+	binder_put_thread(thread);
 	return 0;
+
+ret_pollin:
+	binder_put_thread(thread);
+	return POLLIN;
+
 }
 
 static int binder_ioctl_write_read(struct file *filp,
 				unsigned int cmd, unsigned long arg,
-				struct binder_thread *thread)
+				struct binder_thread **threadp)
 {
 	int ret = 0;
+	int thread_pid = (*threadp)->pid;
 	struct binder_proc *proc = filp->private_data;
 	unsigned int size = _IOC_SIZE(cmd);
 	void __user *ubuf = (void __user *)arg;
@@ -3125,12 +3279,12 @@ static int binder_ioctl_write_read(struct file *filp,
 	}
 	binder_debug(BINDER_DEBUG_READ_WRITE,
 		     "%d:%d write %lld at %016llx, read %lld at %016llx\n",
-		     proc->pid, thread->pid,
+		     proc->pid, thread_pid,
 		     (u64)bwr.write_size, (u64)bwr.write_buffer,
 		     (u64)bwr.read_size, (u64)bwr.read_buffer);
 
 	if (bwr.write_size > 0) {
-		ret = binder_thread_write(proc, thread,
+		ret = binder_thread_write(proc, *threadp,
 					  bwr.write_buffer,
 					  bwr.write_size,
 					  &bwr.write_consumed);
@@ -3143,7 +3297,7 @@ static int binder_ioctl_write_read(struct file *filp,
 		}
 	}
 	if (bwr.read_size > 0) {
-		ret = binder_thread_read(proc, thread, bwr.read_buffer,
+		ret = binder_thread_read(proc, threadp, bwr.read_buffer,
 					 bwr.read_size,
 					 &bwr.read_consumed,
 					 filp->f_flags & O_NONBLOCK);
@@ -3158,7 +3312,7 @@ static int binder_ioctl_write_read(struct file *filp,
 	}
 	binder_debug(BINDER_DEBUG_READ_WRITE,
 		     "%d:%d wrote %lld of %lld, read return %lld of %lld\n",
-		     proc->pid, thread->pid,
+		     proc->pid, thread_pid,
 		     (u64)bwr.write_consumed, (u64)bwr.write_size,
 		     (u64)bwr.read_consumed, (u64)bwr.read_size);
 	if (copy_to_user(ubuf, &bwr, sizeof(bwr))) {
@@ -3215,6 +3369,28 @@ out:
 	return ret;
 }
 
+static inline u64 binder_get_thread_seq(void)
+{
+	u64 thread_seq = ~0ULL;
+	int i;
+
+	for (i = 0; i < SEQ_BUCKETS; i++) {
+		u64 ts = binder_get_seq(&binder_active_threads[i]);
+
+		thread_seq = min(ts, thread_seq);
+	}
+	return thread_seq;
+}
+
+static void zombie_cleanup_check(struct binder_proc *proc)
+{
+	u64 thread_seq = binder_get_thread_seq();
+	u64 zombie_seq = binder_get_seq(&zombie_procs);
+
+	if (thread_seq > zombie_seq)
+		binder_defer_work(proc, BINDER_ZOMBIE_CLEANUP);
+}
+
 static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	int ret;
@@ -3227,7 +3403,7 @@ static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	ret = wait_event_interruptible(binder_user_error_wait, binder_stop_on_user_error < 2);
 	if (ret)
-		goto err_unlocked;
+		goto err_wait_event;
 
 	binder_lock(__func__);
 	thread = binder_get_thread(proc);
@@ -3238,7 +3414,7 @@ static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	switch (cmd) {
 	case BINDER_WRITE_READ:
-		ret = binder_ioctl_write_read(filp, cmd, arg, thread);
+		ret = binder_ioctl_write_read(filp, cmd, arg, &thread);
 		if (ret)
 			goto err;
 		break;
@@ -3262,6 +3438,7 @@ static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		binder_debug(BINDER_DEBUG_THREADS, "%d:%d exit\n",
 			     proc->pid, thread->pid);
 		binder_free_thread(proc, thread);
+		binder_put_thread(thread);
 		thread = NULL;
 		break;
 	case BINDER_VERSION: {
@@ -3289,12 +3466,14 @@ err:
 		binder_proc_lock(thread->proc, __LINE__);
 		thread->looper &= ~BINDER_LOOPER_STATE_NEED_RETURN;
 		binder_proc_unlock(thread->proc, __LINE__);
+		zombie_cleanup_check(proc);
+		binder_put_thread(thread);
 	}
 	binder_unlock(__func__);
 	wait_event_interruptible(binder_user_error_wait, binder_stop_on_user_error < 2);
 	if (ret && ret != -ERESTARTSYS)
 		pr_info("%d:%d ioctl %x %lx returned %d\n", proc->pid, current->pid, cmd, arg, ret);
-err_unlocked:
+err_wait_event:
 	trace_binder_ioctl_done(ret);
 	return ret;
 }
@@ -3406,6 +3585,9 @@ static int binder_open(struct inode *nodp, struct file *filp)
 	atomic_set(&proc->max_threads, 0);
 	atomic_set(&proc->requested_threads, 0);
 	atomic_set(&proc->requested_threads_started, 0);
+	INIT_LIST_HEAD(&proc->zombie_proc.list_node);
+	INIT_HLIST_HEAD(&proc->zombie_nodes);
+	INIT_HLIST_HEAD(&proc->zombie_threads);
 	filp->private_data = proc;
 
 	mutex_unlock(&binder_procs_lock);
@@ -3522,21 +3704,19 @@ static int binder_node_release(struct binder_node *node, int refs)
 	binder_dequeue_work(&node->work, __LINE__);
 	binder_release_work(&node->async_todo);
 
+	INIT_HLIST_NODE(&node->dead_node);
+	node->is_zombie = true;
+	hlist_add_head(&node->dead_node, &proc->zombie_nodes);
+	binder_queue_for_zombie_cleanup(proc);
+	binder_stats_zombie(BINDER_STAT_NODE);
+
 	if (hlist_empty(&node->refs)) {
 		binder_proc_unlock(proc, __LINE__);
-		kfree(node);
-		binder_stats_deleted(BINDER_STAT_NODE);
-
 		return refs;
 	}
 
-	node->proc = NULL;
 	node->local_strong_refs = 0;
 	node->local_weak_refs = 0;
-
-	mutex_lock(&binder_dead_nodes_lock);
-	hlist_add_head(&node->dead_node, &binder_dead_nodes);
-	mutex_unlock(&binder_dead_nodes_lock);
 
 	binder_init_worklist(&tmplist);
 	hlist_for_each_entry(ref, &node->refs, node_entry) {
@@ -3583,8 +3763,11 @@ static void binder_deferred_release(struct binder_proc *proc)
 
 	BUG_ON(proc->files);
 
+	binder_queue_for_zombie_cleanup(proc);
+
 	mutex_lock(&binder_procs_lock);
-	hlist_del(&proc->proc_node);
+	hlist_del_init(&proc->proc_node);
+	proc->is_zombie = true;
 	mutex_unlock(&binder_procs_lock);
 
 	mutex_lock(&binder_context_mgr_node_lock);
@@ -3637,20 +3820,118 @@ static void binder_deferred_release(struct binder_proc *proc)
 
 	binder_release_work(&proc->todo);
 	binder_release_work(&proc->delivered_death);
-
-	binder_alloc_deferred_release(&proc->alloc);
-
-	binder_stats_deleted(BINDER_STAT_PROC);
-
-	put_task_struct(proc->tsk);
+	binder_stats_zombie(BINDER_STAT_PROC);
 
 	binder_debug(BINDER_DEBUG_OPEN_CLOSE,
 		     "%s: %d threads %d, nodes %d (ref %d), refs %d, active transactions %d\n",
 		     __func__, proc->pid, threads, nodes, incoming_refs,
 		     outgoing_refs, active_transactions);
-
-	kfree(proc);
 }
+
+static int cleared_nodes;
+static int cleared_threads;
+static int cleared_procs;
+
+static bool binder_proc_clear_zombies(struct binder_proc *proc)
+{
+	struct binder_node *node;
+	struct hlist_node *tmp;
+	struct binder_thread *thread;
+	struct hlist_head nodes_to_free;
+	struct hlist_head threads_to_free;
+	bool needs_requeue = false;
+
+	INIT_HLIST_HEAD(&nodes_to_free);
+	INIT_HLIST_HEAD(&threads_to_free);
+
+	binder_proc_lock(proc, __LINE__);
+	if (!list_empty(&proc->zombie_proc.list_node)) {
+		/* It has been re-queued with new zombie objects */
+		binder_proc_unlock(proc, __LINE__);
+		return 0;
+	}
+	hlist_for_each_entry_safe(node, tmp, &proc->zombie_nodes, dead_node)
+		if (hlist_empty(&node->refs)) {
+			hlist_del_init(&node->dead_node);
+			hlist_add_head(&node->dead_node, &nodes_to_free);
+		}
+	if (!hlist_empty(&proc->zombie_nodes))
+		needs_requeue = true;
+
+	hlist_for_each_entry_safe(thread, tmp, &proc->zombie_threads,
+				  zombie_thread) {
+		hlist_del_init(&thread->zombie_thread);
+		hlist_add_head(&thread->zombie_thread, &threads_to_free);
+	}
+
+	binder_proc_unlock(proc, __LINE__);
+
+	hlist_for_each_entry_safe(node, tmp, &nodes_to_free, dead_node) {
+		hlist_del_init(&node->dead_node);
+		binder_dequeue_work(&node->work, __LINE__);
+		BUG_ON(!list_empty(&node->work.entry));
+		binder_release_work(&node->async_todo);
+		BUG_ON(!binder_worklist_empty(&node->async_todo));
+		kfree(node);
+		binder_stats_delete_zombie(BINDER_STAT_NODE);
+		cleared_nodes++;
+	}
+	hlist_for_each_entry_safe(thread, tmp, &threads_to_free,
+				  zombie_thread) {
+		hlist_del_init(&thread->zombie_thread);
+		binder_release_work(&thread->todo);
+		BUG_ON(!binder_worklist_empty(&thread->todo));
+		kfree(thread);
+		binder_stats_delete_zombie(BINDER_STAT_THREAD);
+		cleared_threads++;
+	}
+	return proc->is_zombie && !needs_requeue;
+}
+
+static void binder_clear_zombies(void)
+{
+	struct binder_proc *proc;
+	u64 thread_seq = binder_get_thread_seq();
+	struct binder_seq_node *z;
+
+	spin_lock(&zombie_procs.lock);
+	if (list_empty(&zombie_procs.active_threads)) {
+		spin_unlock(&zombie_procs.lock);
+		return;
+	}
+
+	while ((z = list_first_entry_or_null(&zombie_procs.active_threads,
+					     typeof(*z), list_node)) != NULL) {
+		if (thread_seq < atomic_read(&z->active_seq))
+			break;
+		list_del_init(&z->list_node);
+
+		if (!list_empty(&zombie_procs.active_threads)) {
+			struct binder_seq_node *tmp;
+
+			tmp = list_first_entry(&zombie_procs.active_threads,
+					       typeof(*tmp), list_node);
+			zombie_procs.lowest_seq = atomic_read(&tmp->active_seq);
+		} else {
+			zombie_procs.lowest_seq = ~0ULL;
+		}
+
+		spin_unlock(&zombie_procs.lock);
+
+		proc = container_of(z, struct binder_proc, zombie_proc);
+		if (binder_proc_clear_zombies(proc)) {
+			binder_release_work(&proc->todo);
+			binder_alloc_deferred_release(&proc->alloc);
+			put_task_struct(proc->tsk);
+			kfree(proc);
+			cleared_procs++;
+			binder_stats_delete_zombie(BINDER_STAT_PROC);
+		}
+		spin_lock(&zombie_procs.lock);
+	}
+	spin_unlock(&zombie_procs.lock);
+}
+
 
 static void binder_deferred_func(struct work_struct *work)
 {
@@ -3686,10 +3967,14 @@ static void binder_deferred_func(struct work_struct *work)
 		if (defer & BINDER_DEFERRED_RELEASE)
 			binder_deferred_release(proc); /* frees proc */
 
+		if (defer & BINDER_ZOMBIE_CLEANUP)
+			binder_clear_zombies();
+
 		binder_unlock(__func__);
 		if (files)
 			put_files_struct(files);
 	} while (proc);
+
 }
 static DECLARE_WORK(binder_deferred_work, binder_deferred_func);
 
@@ -3814,10 +4099,7 @@ static void _print_binder_node(struct seq_file *m,
 	int count;
 	struct binder_proc *proc = node->proc;
 
-	if (proc)
-		BUG_ON(!spin_is_locked(&proc->proc_lock));
-	else
-		BUG_ON(!mutex_is_locked(&binder_dead_nodes_lock));
+	BUG_ON(!spin_is_locked(&proc->proc_lock));
 
 	count = 0;
 	hlist_for_each_entry(ref, &node->refs, node_entry)
@@ -3985,11 +4267,14 @@ static void print_binder_stats(struct seq_file *m, const char *prefix,
 	for (i = 0; i < ARRAY_SIZE(stats->obj_created); i++) {
 		int created = atomic_read(&stats->obj_created[i]);
 		int deleted = atomic_read(&stats->obj_deleted[i]);
+		int zombie = atomic_read(&stats->obj_zombie[i]);
 
-		if (created || deleted)
-			seq_printf(m, "%s%s: active %d total %d\n", prefix,
+		if (created || deleted || zombie)
+			seq_printf(m, "%s%s: active %d zombie %d total %d\n",
+				prefix,
 				binder_objstat_strings[i],
-				created - deleted,
+				created - deleted - zombie,
+				zombie,
 				created);
 	}
 }
@@ -3999,11 +4284,19 @@ static void print_binder_proc_stats(struct seq_file *m,
 {
 	struct binder_work *w;
 	struct rb_node *n;
+	struct binder_node *node;
+	struct binder_thread *thread;
 	int count, strong, weak;
+	int zombie_threads;
+	int zombie_nodes;
 
-	seq_printf(m, "proc %d\n", proc->pid);
+	seq_printf(m, "proc %d%s\n", proc->pid,
+			proc->is_zombie ? " (ZOMBIE)" : "");
 	seq_printf(m, "context %s\n", proc->context->name);
-	count = 0;
+	seq_printf(m, "  cleared: procs=%d nodes=%d threads=%d\n",
+			cleared_procs, cleared_nodes, cleared_threads);
+	zombie_threads = zombie_nodes = count = 0;
+
 	binder_proc_lock(proc, __LINE__);
 	for (n = rb_first(&proc->threads); n != NULL; n = rb_next(n))
 		count++;
@@ -4019,10 +4312,21 @@ static void print_binder_proc_stats(struct seq_file *m,
 			binder_alloc_get_free_async_space(&proc->alloc));
 	count = 0;
 	binder_proc_lock(proc, __LINE__);
-	for (n = rb_first(&proc->nodes); n != NULL; n = rb_next(n))
-		count++;
+	if (!proc->is_zombie)
+		for (n = rb_first(&proc->nodes); n != NULL; n = rb_next(n))
+			count++;
+	else {
+		hlist_for_each_entry(node, &proc->zombie_nodes, dead_node)
+			zombie_nodes++;
+		hlist_for_each_entry(thread, &proc->zombie_threads,
+				     zombie_thread)
+			zombie_threads++;
+	}
 	binder_proc_unlock(proc, __LINE__);
+	seq_printf(m, "  active threads: %d\n", proc->active_thread_count);
 	seq_printf(m, "  nodes: %d\n", count);
+	seq_printf(m, "  zombie nodes: %d\n", zombie_nodes);
+	seq_printf(m, "  zombie threads: %d\n", zombie_threads);
 	count = 0;
 	strong = 0;
 	weak = 0;
@@ -4056,20 +4360,12 @@ static void print_binder_proc_stats(struct seq_file *m,
 static int binder_state_show(struct seq_file *m, void *unused)
 {
 	struct binder_proc *proc;
-	struct binder_node *node;
 	int do_lock = !binder_debug_no_lock;
 
 	if (do_lock)
 		binder_lock(__func__);
 
 	seq_puts(m, "binder state:\n");
-
-	mutex_lock(&binder_dead_nodes_lock);
-	if (!hlist_empty(&binder_dead_nodes))
-		seq_puts(m, "dead nodes:\n");
-	hlist_for_each_entry(node, &binder_dead_nodes, dead_node)
-		_print_binder_node(m, node);
-	mutex_unlock(&binder_dead_nodes_lock);
 
 	mutex_lock(&binder_procs_lock);
 	hlist_for_each_entry(proc, &binder_procs, proc_node)
@@ -4085,6 +4381,8 @@ static int binder_stats_show(struct seq_file *m, void *unused)
 {
 	struct binder_proc *proc;
 	int do_lock = !binder_debug_no_lock;
+	int proc_count = 0;
+	int i, sum = 0, maxactive = 0;
 
 	if (do_lock)
 		binder_lock(__func__);
@@ -4094,11 +4392,28 @@ static int binder_stats_show(struct seq_file *m, void *unused)
 	print_binder_stats(m, "", &binder_stats);
 
 	mutex_lock(&binder_procs_lock);
-	hlist_for_each_entry(proc, &binder_procs, proc_node)
+	hlist_for_each_entry(proc, &binder_procs, proc_node) {
+		proc_count++;
 		print_binder_proc_stats(m, proc);
+	}
 	mutex_unlock(&binder_procs_lock);
 	if (do_lock)
 		binder_unlock(__func__);
+
+	for (i = 0; i < SEQ_BUCKETS; i++) {
+		sum += binder_active_threads[i].active_count;
+		maxactive = max(maxactive,
+				binder_active_threads[i].max_active_count);
+		seq_printf(m, "  activeThread[%d]: %d/%d\n", i,
+			binder_active_threads[i].active_count,
+			binder_active_threads[i].max_active_count);
+	}
+
+	seq_printf(m, "procs=%d active_threads=%d/%d zombie_procs=%d/%d\n",
+			proc_count,
+			sum, maxactive,
+			zombie_procs.active_count,
+			zombie_procs.max_active_count);
 	return 0;
 }
 
@@ -4213,11 +4528,12 @@ static int __init init_binder_device(const char *name)
 
 static int __init binder_init(void)
 {
-	int ret;
 	char *device_name, *device_names;
 	struct binder_device *device;
 	struct hlist_node *tmp;
-	int cpu;
+	int ret, cpu, i;
+
+	atomic_set(&binder_seq_count, 0);
 
 	for (cpu = 0; cpu < num_possible_cpus(); cpu++)
 		atomic_set(&per_cpu(proc_lock_held, cpu), 0);
@@ -4275,6 +4591,16 @@ static int __init binder_init(void)
 		if (ret)
 			goto err_init_binder_device_failed;
 	}
+
+	for (i = 0; i < SEQ_BUCKETS; i++) {
+		spin_lock_init(&binder_active_threads[i].lock);
+		INIT_LIST_HEAD(&binder_active_threads[i].active_threads);
+		binder_active_threads[i].lowest_seq = ~0ULL;
+	}
+
+	INIT_LIST_HEAD(&zombie_procs.active_threads);
+	spin_lock_init(&zombie_procs.lock);
+	zombie_procs.lowest_seq = ~0ULL;
 
 	return ret;
 
