@@ -1827,30 +1827,16 @@
 
 		clock-names = "core_clk", "core0_clk", "iface_clk", "bus_clk";
 		qcom,clock-configs = <0x1 0x0 0x0 0x0>;
+		qcom,allowed-clock-rates = <466000000 400000000 360000000
+					    228570000 133330000 100000000
+					    80000000 72727200>;
 		qcom,sw-power-collapse;
 		qcom,reset-clock-control;
 		qcom,regulator-scaling;
 		qcom,max-hw-load = <1011840>; /* 3840 x 2176 @ 30 fps + 3840 x 2176 @ 1 fps */
 		qcom,dcvs-min-load = <734400>; /* 1920 x 1088 @ 90fps */
 		qcom,dcvs-min-mbperframe = <32400>; /* 3840 x 2160 */
-
-		qcom,load-freq-tbl =
-			<979200 466000000 0x55555555>, /* TURBO, UHD30E   */
-			<979200 400000000 0xffffffff>, /* NOM+ , UHD30D   */
-			<734400 360000000 0xffffffff>, /* NOM  , 1080p90D */
-			<734400 400000000 0x55555555>, /* NOM+ , 1080p90E */
-			<489600 228570000 0xffffffff>, /* SVS  , 1080p60D */
-			<489600 466000000 0x55555555>, /* TURBO, 1080p60E */
-			<432000 228570000 0xffffffff>, /* SVS  , 720p120D */
-			<432000 400000000 0x55555555>, /* NOM+ , 720p120E */
-			<244800 133333333 0xffffffff>, /* SVS- , 1080p30D */
-			<244800 228570000 0x55555555>, /* SVS  , 1080p30E */
-			<216000 100000000 0xffffffff>, /* SVS- , 720p60D  */
-			<216000 228570000 0x55555555>, /* SVS  , 720p60E  */
-			<108000 80000000 0xffffffff>,  /* SVS--, 720p30D  */
-			<108000 100000000 0x55555555>, /* SVS- , 720p30E  */
-			<36000 72727200 0xffffffff>,   /* SVS--, 480p30D  */
-			<36000 80000000 0x55555555>;   /* SVS--, 480p30E  */
+		//qcom,max-hw-load = <979200>; /* TURBO, UHD30E */
 
 		qcom,qdss-presets =
 			<0x6025000 0x1000>,
@@ -1885,7 +1871,7 @@
 			<310667000 RPM_SMD_REGULATOR_LEVEL_NOM>,
 			<360000000 RPM_SMD_REGULATOR_LEVEL_NOM_PLUS>,
 			<400000000 RPM_SMD_REGULATOR_LEVEL_TURBO>;
-/*
+
 		qcom,clock-freq-tbl {
 			qcom,profile-dec {
 				qcom,codec-mask = <0xffffffff>;
@@ -1898,7 +1884,7 @@
 				qcom,low-power-mode-factor = <65536>;
 			};
 		};
-*/
+
 		qcom,vidc-iommu-domains {
 			qcom,domain-ns {
 				qcom,vidc-domain-phandle = <&venus_domain_ns>;
@@ -1921,7 +1907,7 @@
 				qcom,vidc-buffer-types = <0x480>;
 			};
 		};
-
+#if 0
 		qcom,msm-bus-clients {
 			qcom,msm-bus-client@0 {
 				qcom,msm-bus,name = "venc-ddr";
@@ -1988,6 +1974,24 @@
 				qcom,bus-configs = <0x00000000>;
 				qcom,bus-passive;
 			};
+		};
+#endif
+		venus_bus_ddr {
+			compatible = "qcom,msm-vidc,bus";
+			label = "venus-ddr";
+			qcom,bus-master = <MSM_BUS_MASTER_VIDEO_P0>;
+			qcom,bus-slave = <MSM_BUS_SLAVE_EBI_CH0>;
+			qcom,bus-governor = "msm-vidc-ddr";
+			qcom,bus-range-kbps = <1000 1205248>;
+		};
+
+		arm9_bus_ddr {
+			compatible = "qcom,msm-vidc,bus";
+			label = "venus-arm9-ddr";
+			qcom,bus-master = <MSM_BUS_MASTER_VIDEO_P0>;
+			qcom,bus-slave = <MSM_BUS_SLAVE_EBI_CH0>;
+			qcom,bus-governor = "performance";
+			qcom,bus-range-kbps = <1 1>;
 		};
 	};
 
