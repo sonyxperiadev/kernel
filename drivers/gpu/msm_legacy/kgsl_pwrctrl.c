@@ -1578,7 +1578,6 @@ static int _get_clocks(struct kgsl_device *device)
 				continue;
 
 			pwr->grp_clks[i] = devm_clk_get(dev, name);
-
 			if (IS_ERR(pwr->grp_clks[i])) {
 				int ret = PTR_ERR(pwr->grp_clks[i]);
 
@@ -1588,6 +1587,7 @@ static int _get_clocks(struct kgsl_device *device)
 				return ret;
 			}
 
+			pr_info("kgsl: Probed clock %d %s\n", i, name);
 			break;
 		}
 	}

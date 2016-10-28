@@ -1192,7 +1192,20 @@ static int _setup_user_context(struct kgsl_mmu *mmu)
 	 * 2) Program HUPCF to 1 (Process subsequent transactions
 	 *    independently of any outstanding fault)
 	 */
+#ifdef CONFIG_ARCH_MSM8976
+	/*
+	 * On MSM8994, MSM8974, MSM8976, do not halt IOMMU on
+	 * pagefault if FT pagefault policy is set accordingly
+	 */
+	if (!test_bit(KGSL_FT_PAGEFAULT_GPUHALT_ENABLE,
+			&adreno_dev->ft_pf_policy)) {
+		sctlr_val = KGSL_IOMMU_GET_CTX_REG(ctx, SCTLR);
 
+		sctlr_val |= (0x1 << KGSL_IOMMU_SCTLR_HUPCF_SHIFT);
+
+		KGSL_IOMMU_SET_CTL_REG(ctx, SCTLR, sctlr_val);
+	}
+#else
 	sctlr_val = KGSL_IOMMU_GET_CTX_REG(ctx, SCTLR);
 	if (test_bit(KGSL_FT_PAGEFAULT_GPUHALT_ENABLE,
 				&adreno_dev->ft_pf_policy)) {
@@ -1203,6 +1216,8 @@ static int _setup_user_context(struct kgsl_mmu *mmu)
 		sctlr_val |= (0x1 << KGSL_IOMMU_SCTLR_HUPCF_SHIFT);
 	}
 	KGSL_IOMMU_SET_CTX_REG(ctx, SCTLR, sctlr_val);
+#endif
+
 	kgsl_iommu_disable_clk(mmu);
 
 	return 0;
@@ -1585,7 +1600,12 @@ static int kgsl_iommu_set_pf_policy(struct kgsl_mmu *mmu,
 		kgsl_iommu_enable_clk(mmu);
 
 		sctlr_val = KGSL_IOMMU_GET_CTX_REG(ctx, SCTLR);
-
+#ifdef CONFIG_ARCH_MSM8976
+		if (test_bit(KGSL_FT_PAGEFAULT_GPUHALT_ENABLE, &pf_policy))
+			sctlr_val &= ~(0x1 << KGSL_IOMMU_SCTLR_HUPCF_SHIFT);
+		else
+			sctlr_val |= (0x1 << KGSL_IOMMU_SCTLR_HUPCF_SHIFT);
+#else
 		if (test_bit(KGSL_FT_PAGEFAULT_GPUHALT_ENABLE, &pf_policy)) {
 			sctlr_val |= (0x1 << KGSL_IOMMU_SCTLR_CFCFG_SHIFT);
 			sctlr_val &= ~(0x1 << KGSL_IOMMU_SCTLR_HUPCF_SHIFT);
@@ -1593,7 +1613,7 @@ static int kgsl_iommu_set_pf_policy(struct kgsl_mmu *mmu,
 			sctlr_val &= ~(0x1 << KGSL_IOMMU_SCTLR_CFCFG_SHIFT);
 			sctlr_val |= (0x1 << KGSL_IOMMU_SCTLR_HUPCF_SHIFT);
 		}
-
+#endif
 		KGSL_IOMMU_SET_CTX_REG(ctx, SCTLR, sctlr_val);
 
 		kgsl_iommu_disable_clk(mmu);
