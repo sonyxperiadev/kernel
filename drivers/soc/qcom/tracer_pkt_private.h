@@ -17,7 +17,7 @@
 #undef TRACE_INCLUDE_PATH
 #define TRACE_INCLUDE_PATH .
 #undef TRACE_INCLUDE_FILE
-#define TRACE_INCLUDE_FILE tracer_pkt_private
+#define TRACE_INCLUDE_FILE ../../drivers/soc/qcom/tracer_pkt_private
 
 #include <linux/tracepoint.h>
 
