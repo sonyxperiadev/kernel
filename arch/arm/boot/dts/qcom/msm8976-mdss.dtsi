@@ -90,7 +90,7 @@
 		qcom,mdss-has-10bit-pa;
 		qcom,mdss-needs-iommu-bw-vote;
 		qcom,mdss-has-panic-ctrl;
-		qcom,mdss-has-dst-split;
+		qcom,mdss-has-pingpong-split;
 		qcom,mdss-dsc-off = <0x00081000 0x00081400>;
 
 		clocks = <&clock_gcc clk_gcc_mdss_ahb_clk>,
