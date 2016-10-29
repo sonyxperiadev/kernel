@@ -2059,7 +2059,9 @@ static int pp_hist_setup(u32 *op, u32 block, struct mdss_mdp_mixer *mix,
 		goto error;
 	}
 
-	mutex_lock(&hist_info->hist_mutex);
+	if (!mutex_is_locked(&hist_info->hist_mutex))
+		mutex_lock(&hist_info->hist_mutex);
+
 	spin_lock_irqsave(&hist_info->hist_lock, flag);
 	/*
 	 * Set histogram interrupt if histogram collection is enabled. The
@@ -2211,8 +2213,7 @@ static int pp_dspp_setup(u32 disp_num, struct mdss_mdp_mixer *mixer)
 	mdata = ctl->mdata;
 	dspp_num = mixer->num;
 	/* no corresponding dspp */
-	if ((mixer->type != MDSS_MDP_MIXER_TYPE_INTF) ||
-		(dspp_num >= mdata->ndspp))
+	if (mixer->type != MDSS_MDP_MIXER_TYPE_INTF)
 		return -EINVAL;
 	base = mdss_mdp_get_dspp_addr_off(dspp_num);
 	if (IS_ERR(base))
@@ -2337,11 +2338,11 @@ static int pp_dspp_setup(u32 disp_num, struct mdss_mdp_mixer *mixer)
 	}
 
 	if (flags & PP_FLAGS_DIRTY_DITHER) {
+		addr = base + MDSS_MDP_REG_DSPP_DITHER_DEPTH;
 		if (!pp_ops[DITHER].pp_set_config) {
 			pp_dither_config(addr, pp_sts,
 				&mdss_pp_res->dither_disp_cfg[disp_num]);
 		} else {
-			addr = base + MDSS_MDP_REG_DSPP_DITHER_DEPTH;
 			pp_ops[DITHER].pp_set_config(addr, pp_sts,
 			      &mdss_pp_res->dither_disp_cfg[disp_num], DSPP);
 		}

@@ -17,6 +17,7 @@
 #include <linux/msm_ion.h>
 #include <linux/msm_mdp.h>
 #include <linux/mdss_io_util.h>
+#include <linux/msm_iommu_domains.h>
 
 #include "mdss.h"
 #include "mdss_mdp.h"
@@ -24,13 +25,6 @@
 
 #define MDSS_SMMU_COMPATIBLE "qcom,smmu"
 #define SMMU_CBN_FSYNR1		0x6c
-
-struct mdss_iommu_map_type {
-	char *client_name;
-	char *ctx_name;
-	unsigned long start;
-	unsigned long size;
-};
 
 struct mdss_smmu_domain {
 	char *ctx_name;

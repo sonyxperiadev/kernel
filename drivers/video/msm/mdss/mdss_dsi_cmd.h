@@ -95,7 +95,7 @@ struct dsi_cmd_desc {
 	char *payload;
 };
 
-#define CMD_REQ_MAX     4
+#define CMD_REQ_MAX     6
 #define CMD_REQ_RX      0x0001
 #define CMD_REQ_COMMIT  0x0002
 #define CMD_CLK_CTRL    0x0004

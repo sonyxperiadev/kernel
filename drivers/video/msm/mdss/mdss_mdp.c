@@ -43,6 +43,8 @@
 #include <linux/irqdomain.h>
 #include <linux/irq.h>
 
+#include <linux/qcom_iommu.h>
+#include <linux/msm_iommu_domains.h>
 #include <linux/msm-bus.h>
 #include <linux/msm-bus-board.h>
 #include <soc/qcom/scm.h>
@@ -1229,15 +1231,24 @@ static inline void __mdss_mdp_reg_access_clk_enable(
 	if (enable) {
 		mdss_update_reg_bus_vote(mdata->reg_bus_clt,
 				VOTE_INDEX_LOW);
+		if (mdss_has_quirk(mdata, MDSS_QUIRK_MIN_BUS_VOTE))
+				mdss_bus_scale_set_quota(MDSS_HW_RT,
+					SZ_1M, SZ_1M);
 		mdss_bus_rt_bw_vote(true);
 		mdss_mdp_clk_update(MDSS_CLK_AHB, 1);
 		mdss_mdp_clk_update(MDSS_CLK_AXI, 1);
+		mdss_mdp_clk_update(MDSS_CLK_MDP_TBU, 1);
+		mdss_mdp_clk_update(MDSS_CLK_MDP_TBU_RT, 1);
 		mdss_mdp_clk_update(MDSS_CLK_MDP_CORE, 1);
 	} else {
 		mdss_mdp_clk_update(MDSS_CLK_MDP_CORE, 0);
+		mdss_mdp_clk_update(MDSS_CLK_MDP_TBU_RT, 0);
+		mdss_mdp_clk_update(MDSS_CLK_MDP_TBU, 0);
 		mdss_mdp_clk_update(MDSS_CLK_AXI, 0);
 		mdss_mdp_clk_update(MDSS_CLK_AHB, 0);
 		mdss_bus_rt_bw_vote(false);
+		if (mdss_has_quirk(mdata, MDSS_QUIRK_MIN_BUS_VOTE))
+			mdss_bus_scale_set_quota(MDSS_HW_RT, 0, 0);
 		mdss_update_reg_bus_vote(mdata->reg_bus_clt,
 				VOTE_INDEX_DISABLE);
 	}
@@ -1316,8 +1327,11 @@ int mdss_iommu_ctrl(int enable)
 		 * delay iommu attach until continous splash screen has
 		 * finished handoff, as it may still be working with phys addr
 		 */
-		if (!mdata->iommu_attached && !mdata->handoff_pending) {
+		if (mdata->iommu_ref_cnt == 0) {
 			mdss_bus_rt_bw_vote(true);
+			if (mdss_has_quirk(mdata, MDSS_QUIRK_MIN_BUS_VOTE))
+				mdss_bus_scale_set_quota(MDSS_HW_RT,
+					 SZ_1M, SZ_1M);
 			rc = mdss_smmu_attach(mdata);
 		}
 		mdata->iommu_ref_cnt++;
@@ -1327,6 +1341,10 @@ int mdss_iommu_ctrl(int enable)
 			if (mdata->iommu_ref_cnt == 0) {
 				rc = mdss_smmu_detach(mdata);
 				mdss_bus_rt_bw_vote(false);
+				if (mdss_has_quirk(mdata,
+					MDSS_QUIRK_MIN_BUS_VOTE))
+					mdss_bus_scale_set_quota(MDSS_HW_RT,
+								0, 0);
 			}
 		} else {
 			pr_err("unbalanced iommu ref\n");
@@ -1522,6 +1540,8 @@ void mdss_mdp_clk_ctrl(int enable)
 		mdss_mdp_clk_update(MDSS_CLK_AXI, enable);
 		mdss_mdp_clk_update(MDSS_CLK_MDP_CORE, enable);
 		mdss_mdp_clk_update(MDSS_CLK_MDP_LUT, enable);
+		mdss_mdp_clk_update(MDSS_CLK_MDP_TBU, enable);
+		mdss_mdp_clk_update(MDSS_CLK_MDP_TBU_RT, enable);
 		if (mdata->vsync_ena)
 			mdss_mdp_clk_update(MDSS_CLK_MDP_VSYNC, enable);
 
@@ -1669,6 +1689,12 @@ static int mdss_mdp_irq_clk_setup(struct mdss_data_type *mdata)
 				      MDSS_CLK_MDP_CORE))
 		return -EINVAL;
 
+	/* tbu_clk is not present on all MDSS revisions */
+	mdss_mdp_irq_clk_register(mdata, "tbu_clk", MDSS_CLK_MDP_TBU);
+
+	/* tbu_rt_clk is not present on all MDSS revisions */
+	mdss_mdp_irq_clk_register(mdata, "tbu_rt_clk", MDSS_CLK_MDP_TBU_RT);
+
 	/* lut_clk is not present on all MDSS revisions */
 	mdss_mdp_irq_clk_register(mdata, "lut_clk", MDSS_CLK_MDP_LUT);
 
@@ -1815,10 +1841,13 @@ static void mdss_mdp_hw_rev_caps_init(struct mdss_data_type *mdata)
 		mdata->props = mdss_get_props();
 		break;
 	case MDSS_MDP_HW_REV_112:
+	case MDSS_MDP_HW_REV_111:
+		pr_info("mdss_mdp: Setting caps for HW_REV_111.\n");
 		mdata->max_target_zorder = 4; /* excluding base layer */
 		mdata->max_cursor_size = 64;
 		mdata->min_prefill_lines = 12;
 		set_bit(MDSS_QOS_OTLIM, mdata->mdss_qos_map);
+		mdss_set_quirk(mdata, MDSS_QUIRK_MIN_BUS_VOTE);
 		break;
 	case MDSS_MDP_HW_REV_114:
 		/* disable ECG for 28nm PHY platform */
@@ -4008,6 +4037,8 @@ static int mdss_mdp_parse_dt_misc(struct platform_device *pdev)
 		pr_debug("wfd mode: %s\n", wfd_data);
 		if (!strcmp(wfd_data, "intf")) {
 			mdata->wfd_mode = MDSS_MDP_WFD_INTERFACE;
+		} else if (!strcmp(wfd_data, "intf_no_dspp")) {
+			mdata->wfd_mode = MDSS_MDP_WFD_INTF_NO_DSPP;
 		} else if (!strcmp(wfd_data, "shared")) {
 			mdata->wfd_mode = MDSS_MDP_WFD_SHARED;
 		} else if (!strcmp(wfd_data, "dedicated")) {
@@ -4507,6 +4538,7 @@ static void apply_dynamic_ot_limit(u32 *ot_lim,
 		read_vbif_ot = MDSS_VBIF_READ(mdata, MMSS_VBIF_OUT_RD_LIM_CONF0,
 					false);
 		rot_ot  = (read_vbif_ot == 0x10) ? 4 : 8;
+	case MDSS_MDP_HW_REV_111:
 	case MDSS_MDP_HW_REV_115:
 	case MDSS_MDP_HW_REV_116:
 		if ((res <= RES_1080p) && (params->frame_rate <= 30))

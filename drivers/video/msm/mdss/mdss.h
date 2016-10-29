@@ -22,10 +22,8 @@
 #include <linux/irqreturn.h>
 #include <linux/irqdomain.h>
 #include <linux/mdss_io_util.h>
-
+#include <linux/msm_iommu_domains.h>
 #include <linux/msm-bus.h>
-#include <linux/file.h>
-#include <linux/dma-direction.h>
 
 #include "mdss_panel.h"
 
@@ -42,6 +40,8 @@ enum mdss_mdp_clk_type {
 	MDSS_CLK_MDP_CORE,
 	MDSS_CLK_MDP_LUT,
 	MDSS_CLK_MDP_VSYNC,
+	MDSS_CLK_MDP_TBU,
+	MDSS_CLK_MDP_TBU_RT,
 	MDSS_MAX_CLK
 };
 
@@ -59,6 +59,17 @@ enum mdss_bus_vote_type {
 	VOTE_INDEX_MID,
 	VOTE_INDEX_HIGH,
 	VOTE_INDEX_MAX,
+};
+
+struct mdss_iommu_map_type {
+	char *client_name;
+	char *ctx_name;
+	struct device *ctx;
+	struct msm_iova_partition partitions[1];
+	int npartitions;
+	int domain_idx;
+	unsigned long start;
+	unsigned long size;
 };
 
 struct mdss_hw_settings {
@@ -158,6 +169,7 @@ enum mdss_hw_quirk {
 	MDSS_QUIRK_DSC_RIGHT_ONLY_PU,
 	MDSS_QUIRK_DSC_2SLICE_PU_THRPUT,
 	MDSS_QUIRK_DMA_BI_DIR,
+	MDSS_QUIRK_MIN_BUS_VOTE,
 	MDSS_QUIRK_FMT_PACK_PATTERN,
 	MDSS_QUIRK_NEED_SECURE_MAP,
 	MDSS_QUIRK_SRC_SPLIT_ALWAYS,
@@ -196,6 +208,12 @@ enum mdss_mdp_pipe_type {
 	MDSS_MDP_PIPE_TYPE_DMA,
 	MDSS_MDP_PIPE_TYPE_CURSOR,
 	MDSS_MDP_PIPE_TYPE_MAX,
+};
+
+enum mdss_smmu_version {
+	MDSS_SMMU_V1,
+	MDSS_SMMU_V2,
+	MDSS_SMMU_ARM
 };
 
 struct reg_bus_client {
@@ -457,6 +475,7 @@ struct mdss_data_type {
 
 	struct ion_client *iclient;
 	int iommu_attached;
+	struct mdss_iommu_map_type *iommu_map;
 
 	struct debug_bus *dbg_bus;
 	u32 dbg_bus_size;

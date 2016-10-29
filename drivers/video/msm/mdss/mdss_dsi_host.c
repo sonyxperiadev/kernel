@@ -23,6 +23,8 @@
 
 #include <linux/msm-bus.h>
 
+#include <linux/msm_iommu_domains.h>
+
 #include "mdss.h"
 #include "mdss_dsi.h"
 #include "mdss_panel.h"
@@ -292,6 +294,10 @@ void mdss_dsi_read_phy_revision(struct mdss_dsi_ctrl_pdata *ctrl)
 		return;
 
 	reg_val = MIPI_INP(ctrl->phy_io.base);
+
+#ifdef CONFIG_ARCH_MSM8994
+	reg_val = DSI_PHY_REV_10;
+#endif
 
 	if (reg_val == DSI_PHY_REV_20)
 		ctrl->shared_data->phy_rev = DSI_PHY_REV_20;
@@ -2061,8 +2067,8 @@ static int mdss_dsi_cmd_dma_tx(struct mdss_dsi_ctrl_pdata *ctrl,
 		status = reg_val & DSI_INTR_CMD_DMA_DONE;
 		if (status) {
 			reg_val &= DSI_INTR_MASK_ALL;
-			/* clear CMD DMA isr only */
-			reg_val |= DSI_INTR_CMD_DMA_DONE;
+			/* clear CMD DMA and BTA_DONE isr only */
+			reg_val |= (DSI_INTR_CMD_DMA_DONE | DSI_INTR_BTA_DONE);
 			MIPI_OUTP(ctrl->ctrl_base + 0x0110, reg_val);
 			mdss_dsi_disable_irq_nosync(ctrl, DSI_CMD_TERM);
 			complete(&ctrl->dma_comp);
