@@ -509,6 +509,12 @@ struct mdp_pa_mem_col_cfg {
 	uint32_t hue_region;
 	uint32_t sat_region;
 	uint32_t val_region;
+
+	/* New Control Params in PA V1_7 */
+	uint32_t color_adjust_p2;
+	uint32_t blend_gain;
+	uint8_t sat_hold;
+	uint8_t val_hold;
 };
 
 #define MDP_SIX_ZONE_LUT_SIZE		384
