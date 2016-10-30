@@ -22,7 +22,7 @@
 #include "msm8974-rhine_common.dtsi"
 #include "msm8974-rhine_honami_row.dtsi"
 #include "msm8974-rhine_honami_row_camera.dtsi"
-#include "dsi-panel-honami.dtsi"
+#include "dsi-panel-somc-honami.dtsi"
 
 / {
 	model = "SoMC Honami ROW";
