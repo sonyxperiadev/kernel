@@ -23,7 +23,7 @@
 #include "msm8974pro-ab-shinano_castor_common.dtsi"
 #include "apq8074pro-ab-shinano_castor_windy.dtsi"
 #include "msm8974pro-ab-shinano_castor_camera.dtsi"
-#include "dsi-panel-castor.dtsi"
+#include "dsi-panel-somc-castor.dtsi"
 
 / {
 	model = "SoMC Castor WINDY";

@@ -22,7 +22,7 @@
 #include "msm8974pro-ac-shinano_common.dtsi"
 #include "msm8974pro-ac-shinano_leo.dtsi"
 #include "msm8974pro-ac-shinano_leo_camera.dtsi"
-#include "dsi-panel-leo.dtsi"
+#include "dsi-panel-somc-leo.dtsi"
 
 / {
 	model = "SoMC Leo ROW";
