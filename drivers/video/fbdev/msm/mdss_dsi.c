@@ -4073,6 +4073,7 @@ int mdss_dsi_panel_power_detect(struct platform_device *pdev, int enable)
 	return 0;
 }
 
+#ifdef CONFIG_SOMC_PANEL_LEGACY
 static int mdss_dsi_intf_ready(struct mdss_panel_data *pdata)
 {
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata;
@@ -4086,6 +4087,7 @@ static int mdss_dsi_intf_ready(struct mdss_panel_data *pdata)
 	ctrl_pdata->spec_pdata->disp_on(pdata);
 	return 0;
 }
+#endif  /* CONFIG_SOMC_PANEL_LEGACY */
 #endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 
 struct device dsi_dev;
