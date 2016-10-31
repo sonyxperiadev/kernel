@@ -218,7 +218,7 @@ static int somc_panel_calc_gpio_sleep(
 	return wait;
 }
 
-static void somc_panel_gpio_output(
+static void incell_panel_gpio_output(
 		struct mdss_dsi_ctrl_pdata *ctrl_pdata,
 		int gpio, bool enable, int value)
 {
@@ -233,7 +233,7 @@ static void somc_panel_gpio_output(
 		usleep_range(wait, wait + 100);
 }
 
-static void somc_panel_set_gpio(
+static void incell_panel_set_gpio(
 		struct mdss_dsi_ctrl_pdata *ctrl_pdata,
 		int gpio, bool enable, int value)
 {
@@ -324,10 +324,10 @@ static int incell_reset_touch(struct mdss_panel_data *pdata, int enable)
 			spec_pdata->gpios_requested = true;
 		}
 
-		somc_panel_gpio_output(ctrl_pdata,
+		incell_panel_gpio_output(ctrl_pdata,
 			(spec_pdata->touch_reset_gpio), true, 1);
 	} else {
-		somc_panel_set_gpio(ctrl_pdata,
+		incell_panel_set_gpio(ctrl_pdata,
 			(spec_pdata->touch_reset_gpio), false, 0);
 	}
 
@@ -792,10 +792,10 @@ static int incell_dsi_panel_power_off_ex(struct mdss_panel_data *pdata)
 
 	incell_touch_pinctrl_set_state(ctrl_pdata, false);
 
-	somc_panel_set_gpio(ctrl_pdata,
+	incell_panel_set_gpio(ctrl_pdata,
 		(spec_pdata->touch_vddio_gpio), false, 1);
 
-	somc_panel_set_gpio(ctrl_pdata,
+	incell_panel_set_gpio(ctrl_pdata,
 		(spec_pdata->disp_vddio_gpio), false, 1);
 
 	ret += somc_panel_vreg_ctrl(ctrl_pdata, "vddio", false);
@@ -1036,10 +1036,10 @@ static int incell_dsi_panel_power_on_ex(struct mdss_panel_data *pdata)
 	ret += somc_panel_vreg_ctrl(ctrl_pdata, "touch-avdd", true);
 	ret += somc_panel_vreg_ctrl(ctrl_pdata, "vddio", true);
 
-	somc_panel_gpio_output(ctrl_pdata,
+	incell_panel_gpio_output(ctrl_pdata,
 		(spec_pdata->disp_vddio_gpio), true, 0);
 
-	somc_panel_gpio_output(ctrl_pdata,
+	incell_panel_gpio_output(ctrl_pdata,
 		(spec_pdata->touch_vddio_gpio), true, 0);
 
 	incell_touch_pinctrl_set_state(ctrl_pdata, true);
