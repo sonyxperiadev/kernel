@@ -2517,6 +2517,7 @@ void mdss_dsi_panel_dsc_pps_send(struct mdss_dsi_ctrl_pdata *ctrl,
 	mdss_dsi_panel_cmds_send(ctrl, &pcmds);
 }
 
+#ifdef USE_TOPOLOGY_CONFIG_PARAMS
 static int mdss_dsi_parse_dsc_version(struct device_node *np,
 		struct mdss_panel_timing *timing)
 {
@@ -2778,7 +2779,8 @@ end:
 	of_node_put(cfg_np);
 	return rc;
 }
-#endif
+#endif  /* USE_TOPOLOGY_CONFIG_PARAMS */
+#endif  /* KERN318_FEATURESET */
 
 static void mdss_panel_parse_te_params(struct device_node *np,
 			struct mdss_panel_timing *timing)
@@ -3701,7 +3703,7 @@ static int  mdss_dsi_panel_config_res_properties(struct device_node *np,
 			"qcom,mdss-dsi-timing-switch-command",
 			"qcom,mdss-dsi-timing-switch-command-state");
 
-#if 0 //def KERN318_FEATURESET
+#ifdef USE_TOPOLOGY_CONFIG_PARAMS
 	rc = mdss_dsi_parse_topology_config(np, pt, panel_data, default_timing);
 	if (rc) {
 		pr_err("%s: parsing compression params failed. rc:%d\n",
@@ -4392,6 +4394,7 @@ error:
 	return rc;
 }
 
+#if 0
 static void mdss_dsi_set_prim_panel(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 {
 	struct mdss_dsi_ctrl_pdata *octrl = NULL;
@@ -4418,7 +4421,7 @@ static void mdss_dsi_set_prim_panel(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 		}
 	}
 }
-
+#endif
 
 int mdss_dsi_panel_init(struct device_node *node,
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata,
