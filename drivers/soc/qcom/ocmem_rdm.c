@@ -226,7 +226,7 @@ int ocmem_rdm_transfer(int id, struct ocmem_map_list *clist,
 
 	status = ocmem_read(dm_base + DM_GEN_STATUS);
 	pr_debug("Transfer status before %x\n", status);
-	INIT_COMPLETION(dm_transfer_event);
+	init_completion(&dm_transfer_event);
 	/* The DM and BR tables must be programmed before triggering the
 	 * Data Mover else the coherent transfer would be corrupted
 	 */
