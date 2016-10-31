@@ -156,7 +156,6 @@ int mdss_mdp_wfd_setup(struct mdss_mdp_wfd *wfd,
 	int ret = 0;
 	int mixer_type = MDSS_MDP_MIXER_TYPE_INTF;
 	u32 width, height, max_mixer_width;
-	u32 nmixer_without_dspp = ctl->mdata->nmixers_intf - ctl->mdata->ndspp;
 
 	if (!ctl)
 		return -EINVAL;
