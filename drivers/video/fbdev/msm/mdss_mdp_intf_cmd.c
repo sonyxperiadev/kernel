@@ -3210,9 +3210,6 @@ static int mdss_mdp_cmd_kickoff(struct mdss_mdp_ctl *ctl, void *arg)
 int mdss_mdp_cmd_restore(struct mdss_mdp_ctl *ctl, bool locked)
 {
 	struct mdss_mdp_cmd_ctx *ctx, *sctx = NULL;
-#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
-	int rc = 0;
-#endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 
 	if (!ctl)
 		return -EINVAL;
