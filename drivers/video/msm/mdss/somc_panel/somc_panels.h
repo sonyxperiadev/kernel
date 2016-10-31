@@ -83,6 +83,8 @@ enum {
 };
 
 /* Common */
+int  somc_panel_set_gpio(int gpio, int enable);
+
 int  somc_panel_vreg_name_to_config(
 		struct mdss_dsi_ctrl_pdata *ctrl_pdata,
 		struct dss_vreg *config, char *name);

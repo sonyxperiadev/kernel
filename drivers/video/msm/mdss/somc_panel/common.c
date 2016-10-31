@@ -37,6 +37,32 @@
 #include "../mdss_dsi.h"
 #include "somc_panels.h"
 
+/*
+ * somc_panel_set_gpio - GPIO setting helper
+ *
+ * Sets GPIOs to the desired values by also
+ * taking care about handling its direction.
+ *
+ * Note: This function assumes that GPIO is VALID!!!
+ */
+int somc_panel_set_gpio(int gpio, int enable)
+{
+	int rc = 0;
+
+	if (enable) {
+		rc = gpio_direction_output(gpio, 1);
+		if (rc) {
+			pr_debug("%s: Failed to set GPIO %d direction!!\n",
+				 __func__, gpio);
+			return rc;
+		}
+	} else {
+		gpio_set_value(gpio, 0);
+	}
+
+	return rc;
+}
+
 int somc_panel_vreg_name_to_config(
 		struct mdss_dsi_ctrl_pdata *ctrl_pdata,
 		struct dss_vreg *config, char *name)
