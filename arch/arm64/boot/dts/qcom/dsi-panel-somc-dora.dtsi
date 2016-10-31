@@ -24,7 +24,7 @@
 
 &mdss_mdp {
 	dsi_auo_synaptics_cmd_4: somc,auo_synaptics_cmd_4_panel {
-		qcom,mdss-dsi-panel-timings-8996 = [
+		qcom,mdss-dsi-panel-timings-phy-v2 = [
 				24 1f 08 09 05 03 04 a0
 				24 1f 08 09 05 03 04 a0
 				24 1f 08 09 05 03 04 a0
@@ -33,7 +33,7 @@
 	};
 
 	dsi_jdi_synaptics_cmd_6: somc,jdi_synaptics_cmd_6_panel {
-		qcom,mdss-dsi-panel-timings-8996 = [
+		qcom,mdss-dsi-panel-timings-phy-v2 = [
 				24 1f 08 09 05 03 04 a0
 				24 1f 08 09 05 03 04 a0
 				24 1f 08 09 05 03 04 a0
@@ -42,7 +42,7 @@
 	};
 
 	dsi_lgd_synaptics_cmd_8: somc,lgd_synaptics_cmd_8_panel {
-		qcom,mdss-dsi-panel-timings-8996 = [
+		qcom,mdss-dsi-panel-timings-phy-v2 = [
 				24 1f 08 09 05 03 04 a0
 				24 1f 08 09 05 03 04 a0
 				24 1f 08 09 05 03 04 a0
@@ -51,7 +51,7 @@
 	};
 
 	dsi_sharp_synaptics_cmd_3: somc,sharp_synaptics_cmd_3_panel {
-		qcom,mdss-dsi-panel-timings-8996 = [
+		qcom,mdss-dsi-panel-timings-phy-v2 = [
 				24 1f 08 09 05 03 04 a0
 				24 1f 08 09 05 03 04 a0
 				24 1f 08 09 05 03 04 a0
@@ -60,7 +60,7 @@
 	};
 
 	dsi_sharp_synaptics_cmd_9: somc,sharp_synaptics_cmd_9_panel {
-		qcom,mdss-dsi-panel-timings-8996 = [
+		qcom,mdss-dsi-panel-timings-phy-v2 = [
 				24 1f 08 09 05 03 04 a0
 				24 1f 08 09 05 03 04 a0
 				24 1f 08 09 05 03 04 a0
@@ -166,7 +166,7 @@
 		somc,lab-output-voltage = <5600000>;
 		somc,ibb-output-voltage = <5600000>;
 
-		qcom,mdss-dsi-panel-timings-8996 = [
+		qcom,mdss-dsi-panel-timings-phy-v2 = [
 				24 1f 08 09 05 03 04 a0
 				24 1f 08 09 05 03 04 a0
 				24 1f 08 09 05 03 04 a0
