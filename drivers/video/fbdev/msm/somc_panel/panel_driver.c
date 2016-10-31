@@ -35,6 +35,7 @@
 
 #include "../mdss_mdp.h"
 #include "../mdss_dsi.h"
+#include "../mdss_dba_utils.h"
 #include "somc_panels.h"
 
 #define DT_CMD_HDR 		  6
