@@ -158,7 +158,8 @@ static int mdss_dsi_panel_disp_en(struct mdss_panel_data *pdata, int enable)
 				usleep_range(pw_seq->disp_dcdc_en_pre * 1000,
 					pw_seq->disp_dcdc_en_pre * 1000 + 100);
 
-			gpio_set_value(spec_pdata->disp_dcdc_en_gpio, enable);
+			somc_panel_set_gpio(spec_pdata->disp_dcdc_en_gpio,
+					enable);
 
 			if (pw_seq->disp_dcdc_en_post)
 				usleep_range(pw_seq->disp_dcdc_en_post * 1000,
@@ -170,7 +171,7 @@ static int mdss_dsi_panel_disp_en(struct mdss_panel_data *pdata, int enable)
 		usleep_range(pw_seq->disp_en_pre * 1000,
 				pw_seq->disp_en_pre * 1000 + 100);
 	if (gpio_is_valid(ctrl_pdata->disp_en_gpio)) {
-		gpio_set_value(ctrl_pdata->disp_en_gpio, enable);
+		somc_panel_set_gpio(ctrl_pdata->disp_en_gpio, enable);
 	}
 
 	if (pw_seq->disp_en_post)
@@ -183,7 +184,8 @@ static int mdss_dsi_panel_disp_en(struct mdss_panel_data *pdata, int enable)
 				usleep_range(pw_seq->disp_dcdc_en_pre * 1000,
 					pw_seq->disp_dcdc_en_pre * 1000 + 100);
 
-			gpio_set_value(spec_pdata->disp_dcdc_en_gpio, enable);
+			somc_panel_set_gpio(spec_pdata->disp_dcdc_en_gpio,
+					enable);
 
 			if (pw_seq->disp_dcdc_en_post)
 				usleep_range(pw_seq->disp_dcdc_en_post * 1000,
@@ -324,8 +326,8 @@ static int legacy_panel_power_on_ex(struct mdss_panel_data *pdata)
 		gpio_is_valid(spec_pdata->vsp_gpio)) {
 		usleep_range(19000, 20000);
 
-		gpio_set_value(spec_pdata->vsn_gpio, 1);
-		gpio_set_value(spec_pdata->vsp_gpio, 1);
+		somc_panel_set_gpio(spec_pdata->vsn_gpio, 1);
+		somc_panel_set_gpio(spec_pdata->vsp_gpio, 1);
 	}
 
 	if (spec_pdata->pwron_reset) {
