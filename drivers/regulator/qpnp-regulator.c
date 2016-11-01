@@ -1589,6 +1589,8 @@ static struct regulator_ops qpnp_ln_ldo_ops = {
 	.get_voltage		= qpnp_regulator_common_get_voltage,
 	.list_voltage		= qpnp_regulator_common_list_voltage,
 	.enable_time		= qpnp_regulator_common_enable_time,
+	.register_ocp_notification
+		= qpnp_regulator_vs_register_ocp_notification,
 };
 
 static struct regulator_ops qpnp_vs_ops = {
