@@ -213,7 +213,9 @@ static struct wcd9xxx_mbhc_config mbhc_cfg = {
 	.do_recalibration = true,
 	.use_vddio_meas = true,
 	.enable_anc_mic_detect = false,
+#ifdef CONFIG_MACH_SONY_SHINANO
 	.hw_jack_type = SIX_POLE_JACK,
+#endif
 };
 
 struct msm_auxpcm_gpio {
