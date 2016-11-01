@@ -772,16 +772,6 @@ static const struct snd_soc_dapm_widget msm8974_dapm_widgets[] = {
 	SND_SOC_DAPM_SUPPLY("MCLK",  SND_SOC_NOPM, 0, 0,
 	msm8974_mclk_event, SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
 
-#ifdef CONFIG_MACH_SONY_RHINE
-	SND_SOC_DAPM_SPK("Lineout_1 amp", msm_ext_spkramp_event),
-	SND_SOC_DAPM_SPK("Lineout_3 amp", msm_ext_spkramp_event),
-
-	SND_SOC_DAPM_SPK("Lineout_2 amp", msm_ext_spkramp_event),
-	SND_SOC_DAPM_SPK("Lineout_4 amp", msm_ext_spkramp_event),
-	SND_SOC_DAPM_SPK("SPK_ultrasound amp",
-					 msm_ext_spkramp_ultrasound_event),
-#endif
-
 	SND_SOC_DAPM_SPK("Ext Spk Bottom Pos", msm_ext_spkramp_event),
 	SND_SOC_DAPM_SPK("Ext Spk Bottom Neg", msm_ext_spkramp_event),
 
