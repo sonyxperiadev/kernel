@@ -1064,6 +1064,20 @@ config REGULATOR_RPM_SMD
 	  be used on systems which contain an RPM which communicates with the
 	  application processor over SMD.
 
+config REGULATOR_QPNP_LABIBB_SOMC
+	depends on REGULATOR_QPNP_LABIBB
+	bool "QPNP LAB/IBB Regulator - SoMC enhancements"
+	help
+	  This activates SoMC specific enhancements to QTI QPNP LAB/IBB
+	  regulator driver.
+
+config SOMC_LCD_OCP_ENABLED
+	depends on REGULATOR_QPNP_LABIBB_SOMC
+	bool "QPNP LAB/IBB Regulator - SoMC LCD OverCurrent Protection"
+	help
+	  This activates SoMC specific LCD Over Current Protection (OCP)
+	  function in LAB/IBB driver.
+
 config REGULATOR_SPM
 	bool "SPM regulator driver"
 	depends on SPMI
