@@ -19,7 +19,7 @@
 #include "dsi-panel-somc-novatek-jdi-1080p-cmd.dtsi"
 #include "dsi-panel-somc-novatek-lgd-1080p-cmd-ID9.dtsi"
 #include "dsi-panel-somc-novatek-lgd-1080p-cmd-ID2.dtsi"
-#include "dsi-panel-somc-novatek-sharp-1080p-cmd-ID3.dtsi"
+#include "dsi-panel-somc-novatek-sharp-1080p-cmd.dtsi"
 #include "dsi-panel-somc-novatek-auo-1080p-cmd.dtsi"
 
 &mdss_mdp {
