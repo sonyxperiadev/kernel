@@ -539,8 +539,8 @@
 		qcom,panel-supply-entry@1 {
 			reg = <1>;
 			qcom,supply-name = "lab";
-			qcom,supply-min-voltage = <4600000>;
-			qcom,supply-max-voltage = <6000000>;
+			qcom,supply-min-voltage = <5500000>;
+			qcom,supply-max-voltage = <5700000>;
 			qcom,supply-enable-load = <100000>;
 			qcom,supply-disable-load = <100>;
 		};
@@ -548,8 +548,8 @@
 		qcom,panel-supply-entry@2 {
 			reg = <2>;
 			qcom,supply-name = "ibb";
-			qcom,supply-min-voltage = <4600000>;
-			qcom,supply-max-voltage = <6000000>;
+			qcom,supply-min-voltage = <5500000>;
+			qcom,supply-max-voltage = <5700000>;
 			qcom,supply-enable-load = <100000>;
 			qcom,supply-disable-load = <100>;
 		};
@@ -580,8 +580,8 @@
 		qcom,panel-supply-entry@1 {
 			reg = <1>;
 			qcom,supply-name = "lab";
-			qcom,supply-min-voltage = <4600000>;
-			qcom,supply-max-voltage = <6000000>;
+			qcom,supply-min-voltage = <5500000>;
+			qcom,supply-max-voltage = <5700000>;
 			qcom,supply-enable-load = <100000>;
 			qcom,supply-disable-load = <100>;
 		};
@@ -589,8 +589,8 @@
 		qcom,panel-supply-entry@2 {
 			reg = <2>;
 			qcom,supply-name = "ibb";
-			qcom,supply-min-voltage = <4600000>;
-			qcom,supply-max-voltage = <6000000>;
+			qcom,supply-min-voltage = <5500000>;
+			qcom,supply-max-voltage = <5700000>;
 			qcom,supply-enable-load = <100000>;
 			qcom,supply-disable-load = <100>;
 		};
@@ -3248,14 +3248,20 @@
 
 &labibb {
 	qcom,lab@de00 {
-		qcom,qpnp-lab-init-voltage = <6000000>;
-		qcom,qpnp-lab-init-lcd-voltage = <6000000>;
+		qcom,qpnp-lab-init-voltage = <5700000>;
+		qcom,qpnp-lab-init-lcd-voltage = <5700000>;
+		qcom,qpnp-lab-soft-start = <800>;
+		qcom,qpnp-lab-max-precharge-time = <300>;
+		qcom,qpnp-lab-pull-down-enable;
+		qcom,qpnp-lab-full-pull-down-enable;
 		interrupts = <0x3 0xde 0x0>;
 		interrupt-names = "lab_vreg_not_ok_interrupt";
 	};
 	qcom,ibb@dc00 {
-		qcom,qpnp-ibb-init-voltage = <6000000>;
-		qcom,qpnp-ibb-init-lcd-voltage = <6000000>;
+		qcom,qpnp-ibb-init-voltage = <5700000>;
+		qcom,qpnp-ibb-init-lcd-voltage = <5700000>;
+		qcom,qpnp-ibb-pull-down-enable;
+		qcom,qpnp-ibb-full-pull-down-enable;
 		interrupts = <0x3 0xdc 0x0>;
 		interrupt-names = "ibb_vreg_not_ok_interrupt";
 	};
