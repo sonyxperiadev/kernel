@@ -67,6 +67,7 @@ struct msm_pinctrl {
 
 	DECLARE_BITMAP(dual_edge_irqs, MAX_NR_GPIO);
 	DECLARE_BITMAP(enabled_irqs, MAX_NR_GPIO);
+	DECLARE_BITMAP(disabled_pins, MAX_NR_GPIO);
 
 	const struct msm_pinctrl_soc_data *soc;
 	void __iomem *regs;
@@ -984,6 +985,8 @@ int msm_pinctrl_probe(struct platform_device *pdev,
 	struct resource *res;
 	int ret;
 	u32 tlmm_emmc_boot_select;
+	int disabled_pins_num;
+	const struct device_node *np = pdev->dev.of_node;
 
 	msm_pinctrl_data = pctrl = devm_kzalloc(&pdev->dev,
 				sizeof(*pctrl), GFP_KERNEL);
@@ -1024,6 +1027,24 @@ int msm_pinctrl_probe(struct platform_device *pdev,
 		return -ENODEV;
 	}
 
+	disabled_pins_num = of_property_count_u32_elems(np, "disabled-pins");
+	if (disabled_pins_num > 0) {
+		int i;
+		u32 pin;
+
+		for (i = 0; i < disabled_pins_num; i++) {
+			of_property_read_u32_index(np,
+					"disabled-pins", i, &pin);
+			if (pin < MAX_NR_GPIO) {
+				set_bit(pin, pctrl->disabled_pins);
+				dev_info(&pdev->dev, "pin %d disabled\n", pin);
+			} else {
+				dev_err(&pdev->dev, "pin %d out of range\n",
+						pin);
+			}
+		}
+	}
+
 	ret = msm_gpio_init(pctrl);
 	if (ret) {
 		pinctrl_unregister(pctrl->pctrl);
@@ -1052,3 +1073,60 @@ int msm_pinctrl_remove(struct platform_device *pdev)
 	return 0;
 }
 EXPORT_SYMBOL(msm_pinctrl_remove);
+
+#ifdef CONFIG_USE_PINCTRL_IRQ
+#include "pinctrl-msm-tlmm.h"
+extern int msm_tlmm_of_gp_irq_init(struct device_node *controller,
+			    struct irq_chip *chip_extn);
+
+/**
+ * struct msm_irq_of_info: represents of init data for tlmm interrupt
+ * controllers
+ * @compat: compat string for tlmm interrup controller instance.
+ * @irq_init: irq chip initialization callback.
+ */
+struct msm_irq_of_info {
+	const char *compat;
+	int (*irq_init)(struct device_node *np, struct irq_chip *ic);
+};
+
+struct irq_chip mpm_tlmm_irq_extn = {
+	.irq_eoi	= NULL,
+	.irq_mask	= NULL,
+	.irq_unmask	= NULL,
+	.irq_retrigger	= NULL,
+	.irq_set_type	= NULL,
+	.irq_set_wake	= NULL,
+	.irq_disable	= NULL,
+};
+
+struct msm_irq_of_info msm_tlmm_irq[] = {
+#ifdef CONFIG_PINCTRL_MSM_TLMM
+	{
+		.compat = "qcom,msm-tlmm-gp",
+		.irq_init = msm_tlmm_of_gp_irq_init,
+	},
+#endif
+};
+
+int __init msm_tlmm_of_irq_init(struct device_node *controller,
+						struct device_node *parent)
+{
+	int rc, i;
+	const char *compat;
+
+	rc = of_property_read_string(controller, "compatible", &compat);
+	if (rc)
+		return rc;
+
+	for (i = 0; i < ARRAY_SIZE(msm_tlmm_irq); i++) {
+		struct msm_irq_of_info *tlmm_info = &msm_tlmm_irq[i];
+
+		if (!of_compat_cmp(tlmm_info->compat, compat, strlen(compat)))
+				return tlmm_info->irq_init(controller,
+							&mpm_tlmm_irq_extn);
+
+	}
+	return -EIO;
+}
+#endif

@@ -286,4 +286,29 @@ config ARCH_MSM8909
 	select ARCH_WANT_KMAP_ATOMIC_FLUSH
 
 endmenu
+
+config  ARCH_MSM_KRAIT
+	bool
+	select ARM_L1_CACHE_SHIFT_6
+	select DEVFREQ_GOV_MSM_BW_HWMON
+	select DEVFREQ_GOV_MSM_CACHE_HWMON
+
+config  MSM_CORTEX_A53
+	bool
+
+config  MSM_SMP
+	select HAVE_SMP
+	bool
+
+config  ARCH_MSM_KRAITMP
+	select ARCH_MSM_KRAIT
+	select MSM_SMP
+	select HAVE_ARCH_HAS_CURRENT_TIMER
+	select MSM_JTAG if CORESIGHT_ETM
+	bool
+
+config  ARCH_MSM_CORTEXMP
+	select MSM_SMP
+	bool
+
 endif

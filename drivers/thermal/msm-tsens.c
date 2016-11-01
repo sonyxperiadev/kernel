@@ -182,6 +182,8 @@
 #define TSENS_REDUN_REGION4_EEPROM(n)		((n) + 0x440)
 #define TSENS_REDUN_REGION5_EEPROM(n)		((n) + 0x444)
 
+#define TSENS_CALIB_BIT_SIZE		3
+
 /* TSENS calibration Mask data */
 #define TSENS_BASE1_MASK		0xff
 #define TSENS0_POINT1_MASK		0x3f00
@@ -756,6 +758,7 @@ enum tsens_calib_fuse_map_type {
 	TSENS_CALIB_FUSE_MAP_MDM9607,
 	TSENS_CALIB_FUSE_MAP_MSM8937,
 	TSENS_CALIB_FUSE_MAP_MSM8917,
+	TSENS_CALIB_FUSE_MAP_GENERIC_A,
 	TSENS_CALIB_FUSE_MAP_NUM,
 };
 
@@ -823,6 +826,14 @@ struct tsens_sensor_dbg_info {
 	int				adccode[10];
 };
 
+struct mask_info {
+	uint32_t			id;
+	uint32_t			addr_offset;
+	uint32_t			mask;
+	uint32_t			mask_shift;
+	uint32_t			mask_bits;
+};
+
 struct tsens_mtc_sysfs {
 	uint32_t zone_log;
 	int zone_mtc;
@@ -851,6 +862,16 @@ struct tsens_tm_device {
 	struct resource			*res_calib_mem;
 	uint32_t			calib_mode;
 	uint32_t			tsens_type;
+	uint32_t			tsens_no_of_base;
+	uint32_t			tsens_base_bit_size;
+	struct mask_info		*tsens_base_mask;
+	uint32_t			tsens_calib_mask_info;
+	struct mask_info		*tsens_calib_mask;
+	uint32_t			tsens_sensor_bit_size;
+	uint32_t			tsens_sensor_point1_masks;
+	uint32_t			tsens_sensor_point2_masks;
+	struct mask_info		*tsens_point1_mask;
+	struct mask_info		*tsens_point2_mask;
 	bool				tsens_valid_status_check;
 	struct tsens_dbg_counter	tsens_thread_iq_dbg;
 	struct tsens_sensor_dbg_info	sensor_dbg_info[16];
@@ -924,6 +945,9 @@ static struct of_device_id tsens_match[] = {
 	},
 	{	.compatible = "qcom,msm8953-tsens",
 		.data = (void *)TSENS_CALIB_FUSE_MAP_NONE,
+	},
+	{	.compatible = "qcom,msm8976-tsens",
+		.data = (void *)TSENS_CALIB_FUSE_MAP_GENERIC_A,
 	},
 	{	.compatible = "qcom,msm8937-tsens",
 		.data = (void *)TSENS_CALIB_FUSE_MAP_MSM8937,
@@ -5412,6 +5436,121 @@ static int tsens_calib_mdm9640_sensors(struct tsens_tm_device *tmdev)
 
 	return 0;
 }
+
+static void tsens_calculate_data(uint32_t *data, uint32_t count,
+			uint32_t no_of_bits, struct mask_info *mask,
+			struct tsens_tm_device *tmdev)
+{
+	uint32_t id = 0, i = 0, temp = 0;
+	for (i = 0; i < count; i++) {
+		id = mask[i].id;
+		temp = readl_relaxed(tmdev->tsens_calib_addr +
+						mask[i].addr_offset);
+		data[id] = (temp & mask[i].mask) >> mask[i].mask_shift;
+		if (mask[i].mask_bits != no_of_bits) {
+			temp = readl_relaxed(tmdev->tsens_calib_addr +
+						mask[i + 1].addr_offset);
+			data[id] |= (((temp & mask[i + 1].mask) >>
+						mask[i + 1].mask_shift)
+						<< mask[i].mask_bits);
+			i = i + 1;
+		}
+	}
+}
+
+static int tsens_generic_dt_calib_type_a(struct tsens_tm_device *tmdev)
+{
+	int i = 0, tsens_calibration_mode = 0;
+	uint32_t tsens_num_sensor = tmdev->tsens_num_sensor;
+	uint32_t calib_tsens_point1_data[tsens_num_sensor];
+	uint32_t calib_tsens_point2_data[tsens_num_sensor];
+	uint32_t tsens_base_data[2] = {0, 0};
+	struct mask_info *tsens_calib_mask = tmdev->tsens_calib_mask;
+	struct mask_info *tsens_base_mask = tmdev->tsens_base_mask;
+	uint32_t tsens_sensor_point1_masks = tmdev->tsens_sensor_point1_masks;
+	uint32_t tsens_sensor_point2_masks = tmdev->tsens_sensor_point2_masks;
+	uint32_t tsens_bit_size = tmdev->tsens_sensor_bit_size;
+	uint32_t no_of_base = tmdev->tsens_no_of_base;
+	uint32_t base_bit_size = tmdev->tsens_base_bit_size;
+	struct mask_info *tsens_point1_mask = tmdev->tsens_point1_mask;
+	struct mask_info *tsens_point2_mask = tmdev->tsens_point2_mask;
+
+	for (i = 0; i < tsens_num_sensor; i++) {
+		calib_tsens_point1_data[i] = 0;
+		calib_tsens_point2_data[i] = 0;
+	}
+
+	if (!tmdev->calibration_less_mode)
+		tsens_calculate_data(&tsens_calibration_mode,
+				tmdev->tsens_calib_mask_info,
+				TSENS_CALIB_BIT_SIZE, tsens_calib_mask,
+				tmdev);
+
+	tsens_calculate_data(tsens_base_data, no_of_base, base_bit_size,
+						tsens_base_mask, tmdev);
+	if ((tsens_calibration_mode == TSENS_TWO_POINT_CALIB) ||
+		(tsens_calibration_mode == TSENS_ONE_POINT_CALIB_OPTION_2))
+		tsens_calculate_data(calib_tsens_point1_data,
+				tsens_sensor_point1_masks, tsens_bit_size,
+				tsens_point1_mask, tmdev);
+
+	if (tsens_calibration_mode == TSENS_TWO_POINT_CALIB)
+		tsens_calculate_data(calib_tsens_point2_data,
+				tsens_sensor_point2_masks, tsens_bit_size,
+				tsens_point2_mask, tmdev);
+
+	if (tsens_calibration_mode == 0) {
+		pr_debug("TSENS is calibrationless mode\n");
+		for (i = 0; i < tsens_num_sensor; i++) {
+			calib_tsens_point2_data[i] = 780;
+			calib_tsens_point1_data[i] = 500;
+		}
+	}
+
+	if ((tsens_calibration_mode == TSENS_ONE_POINT_CALIB_OPTION_2) ||
+			(tsens_calibration_mode == TSENS_TWO_POINT_CALIB)) {
+		for (i = 0; i < tsens_num_sensor; i++)
+			calib_tsens_point1_data[i] = ((tsens_base_data[0]
+						+ calib_tsens_point1_data[i])
+						<< (10 - base_bit_size));
+	}
+
+	if (tsens_calibration_mode == TSENS_TWO_POINT_CALIB) {
+		pr_debug("two point calibration calculation\n");
+		for (i = 0; i < tsens_num_sensor; i++)
+			calib_tsens_point2_data[i] = ((tsens_base_data[1]
+						+ calib_tsens_point2_data[i])
+						<< (10 - base_bit_size));
+	}
+
+	for (i = 0; i < tmdev->tsens_num_sensor; i++) {
+		int32_t num = 0, den = 0;
+		tmdev->sensor[i].calib_data_point2 = calib_tsens_point2_data[i];
+		tmdev->sensor[i].calib_data_point1 = calib_tsens_point1_data[i];
+		pr_debug("sensor:%d - calib_data_point1:0x%x, calib_data_point2:0x%x\n",
+				i, tmdev->sensor[i].calib_data_point1,
+				tmdev->sensor[i].calib_data_point2);
+		if (tsens_calibration_mode == TSENS_TWO_POINT_CALIB) {
+			/*
+			 * slope (m) = adc_code2 - adc_code1 (y2 - y1)
+			 * temp_120_degc - temp_30_degc (x2 - x1)
+			 */
+			num = tmdev->sensor[i].calib_data_point2 -
+				tmdev->sensor[i].calib_data_point1;
+			num *= tmdev->tsens_factor;
+			den = TSENS_CAL_DEGC_POINT2 - TSENS_CAL_DEGC_POINT1;
+			tmdev->sensor[i].slope_mul_tsens_factor = num/den;
+		}
+		tmdev->sensor[i].offset = (tmdev->sensor[i].calib_data_point1 *
+				tmdev->tsens_factor) - (TSENS_CAL_DEGC_POINT1 *
+				tmdev->sensor[i].slope_mul_tsens_factor);
+		pr_debug("offset:%d and slope:%d\n", tmdev->sensor[i].offset,
+				tmdev->sensor[i].slope_mul_tsens_factor);
+		tmdev->prev_reading_avail = false;
+	}
+	return 0;
+}
+
 static int tsens_calib_sensors(struct tsens_tm_device *tmdev)
 {
 	int rc = 0;
@@ -5451,6 +5590,8 @@ static int tsens_calib_sensors(struct tsens_tm_device *tmdev)
 		rc = tsens_calib_msm8937_msm8917_sensors(tmdev);
 	else if (tmdev->calib_mode == TSENS_CALIB_FUSE_MAP_MSM8917)
 		rc = tsens_calib_msm8937_msm8917_sensors(tmdev);
+	else if (tmdev->calib_mode == TSENS_CALIB_FUSE_MAP_GENERIC_A)
+		rc = tsens_generic_dt_calib_type_a(tmdev);
 	else if (tmdev->calib_mode == TSENS_CALIB_FUSE_MAP_NONE) {
 		pr_debug("Fuse map info not required\n");
 		rc = 0;
@@ -5462,6 +5603,137 @@ static int tsens_calib_sensors(struct tsens_tm_device *tmdev)
 	return rc;
 }
 
+int get_calibration_data(struct platform_device *pdev,
+			 struct tsens_tm_device *tmdev)
+{
+	struct device_node *of_node = pdev->dev.of_node;
+	u32 rc = 0;
+	u32 tsens_base_info[2] = {0 , 0};
+	u32 base_bit_size = 0, no_of_base = 0;
+	u32 tsens_sensor_point1_masks = 0, tsens_sensor_point2_masks = 0;
+	u32 tsens_sensor_bit_size = 0, tsens_calib_mask_info = 1;
+	struct mask_info *tsens_base_mask, *tsens_calib_mask;
+
+	rc = of_property_read_u32_array(of_node, "qcom,tsens_base_info",
+				tsens_base_info,
+				sizeof(tsens_base_info)/sizeof(u32));
+	if (rc) {
+		dev_err(&pdev->dev, "missing tsens_base_info");
+		return rc;
+	}
+
+	no_of_base = tsens_base_info[0];
+	base_bit_size = tsens_base_info[1];
+
+	tsens_base_mask = devm_kzalloc(&pdev->dev, no_of_base *
+				sizeof(struct mask_info), GFP_KERNEL);
+	if (!tsens_base_mask) {
+		dev_err(&pdev->dev, "can not allocate base_mask");
+		return -ENOMEM;
+	}
+
+	rc = of_property_read_u32_array(of_node, "qcom,tsens_base_mask",
+				(u32 *) tsens_base_mask, no_of_base *
+				sizeof(struct mask_info)/sizeof(u32));
+	if (rc) {
+		dev_err(&pdev->dev, "missing tsens_base_mask");
+		return rc;
+	}
+
+	rc = of_property_read_u32(of_node, "qcom,tsens_calib_mask_info",
+						&tsens_calib_mask_info);
+	if (rc) {
+		dev_info(&pdev->dev, "tsens_calib_mask_info not set");
+		tsens_calib_mask_info = 1;
+	}
+
+	tsens_calib_mask = devm_kzalloc(&pdev->dev, tsens_calib_mask_info
+				* sizeof(struct mask_info), GFP_KERNEL);
+	if (!tsens_calib_mask) {
+		dev_err(&pdev->dev, "can not allocate tsens_calib_mask");
+		return -ENOMEM;
+	}
+
+	rc = of_property_read_u32_array(of_node, "qcom,tsens_calib_mask",
+			(u32 *) tsens_calib_mask, tsens_calib_mask_info *
+			sizeof(struct mask_info)/sizeof(u32));
+	if (rc) {
+		dev_err(&pdev->dev, "missing tsens_calib_mask");
+		return rc;
+	}
+
+	rc = of_property_read_u32(of_node,
+				"qcom,tsens_sensor_point_bit_size",
+				&tsens_sensor_bit_size);
+	if (rc) {
+		dev_err(&pdev->dev, "missing tsens_sensor_point_bit_size");
+		return rc;
+	}
+
+	rc = of_property_read_u32(of_node,
+				"qcom,tsens_sensor_point1_total_masks",
+				&tsens_sensor_point1_masks);
+	if (rc) {
+		dev_err(&pdev->dev, "missing tsens_sensor_point1_total_masks");
+		return rc;
+	}
+
+	tmdev->tsens_point1_mask = devm_kzalloc(&pdev->dev,
+				tsens_sensor_point1_masks *
+				sizeof(struct mask_info), GFP_KERNEL);
+	if (!tmdev->tsens_point1_mask) {
+		dev_err(&pdev->dev, "can not allocate tsens_point1_mask");
+		return -ENOMEM;
+	}
+
+	rc = of_property_read_u32_array(of_node,
+				"qcom,tsens_sensor_point1",
+				(u32 *) tmdev->tsens_point1_mask,
+				tsens_sensor_point1_masks *
+				sizeof(struct mask_info) / sizeof(u32));
+	if (rc) {
+		dev_err(&pdev->dev, "missing tsens_sensor_point1");
+		return rc;
+	}
+
+	rc = of_property_read_u32(of_node,
+				"qcom,tsens_sensor_point2_total_masks",
+				&tsens_sensor_point2_masks);
+	if (rc) {
+		dev_err(&pdev->dev, "missing tsens_sensor_point2_total_masks");
+		return rc;
+	}
+
+	tmdev->tsens_point2_mask = devm_kzalloc(&pdev->dev,
+				tsens_sensor_point2_masks *
+				sizeof(struct mask_info), GFP_KERNEL);
+	if (!tmdev->tsens_point2_mask) {
+		dev_err(&pdev->dev, "can not allocate tsens_point2_mask");
+		return -ENOMEM;
+	}
+
+	rc = of_property_read_u32_array(of_node,
+				"qcom,tsens_sensor_point2",
+				(u32 *) tmdev->tsens_point2_mask,
+				tsens_sensor_point2_masks *
+				sizeof(struct mask_info) / sizeof(u32));
+	if (rc) {
+		dev_err(&pdev->dev, "missing tsens_sensor_point2");
+		return rc;
+	}
+
+	tmdev->tsens_no_of_base = no_of_base;
+	tmdev->tsens_base_bit_size = base_bit_size;
+	tmdev->tsens_base_mask = tsens_base_mask;
+	tmdev->tsens_calib_mask_info = tsens_calib_mask_info;
+	tmdev->tsens_calib_mask = tsens_calib_mask;
+	tmdev->tsens_sensor_bit_size = tsens_sensor_bit_size;
+	tmdev->tsens_sensor_point1_masks = tsens_sensor_point1_masks;
+	tmdev->tsens_sensor_point2_masks = tsens_sensor_point2_masks;
+
+	return rc;
+}
+
 static int get_device_tree_data(struct platform_device *pdev,
 				struct tsens_tm_device *tmdev)
 {
@@ -5469,7 +5741,7 @@ static int get_device_tree_data(struct platform_device *pdev,
 	struct resource *res_mem = NULL;
 	u32 *tsens_slope_data, *sensor_id, *client_id;
 	u32 *temp1_calib_offset_factor, *temp2_calib_offset_factor;
-	u32 rc = 0, i, tsens_num_sensors = 0;
+	u32 rc = 0, i = 0, tsens_num_sensors = 0;
 	const struct of_device_id *id;
 
 	rc = of_property_read_u32(of_node,
@@ -5516,6 +5788,25 @@ static int get_device_tree_data(struct platform_device *pdev,
 	tmdev->tsens_local_init = of_property_read_bool(of_node,
 				"qcom,tsens-local-init");
 	tmdev->calib_mode = (u32)(uintptr_t) id->data;
+
+	if (tmdev->calib_mode == TSENS_CALIB_FUSE_MAP_GENERIC_A) {
+		rc = get_calibration_data(pdev, tmdev);
+		if (rc) {
+			dev_err(&pdev->dev, "get_calibration_data failed");
+			return rc;
+		}
+	} else {
+		tmdev->tsens_no_of_base = 0;
+		tmdev->tsens_base_bit_size = 0;
+		tmdev->tsens_base_mask = NULL;
+		tmdev->tsens_calib_mask = NULL;
+		tmdev->tsens_point1_mask = NULL;
+		tmdev->tsens_point2_mask = NULL;
+		tmdev->tsens_calib_mask_info = 1;
+		tmdev->tsens_sensor_bit_size = 0;
+		tmdev->tsens_sensor_point1_masks = 0;
+		tmdev->tsens_sensor_point2_masks = 0;
+	}
 
 	sensor_id = devm_kzalloc(&pdev->dev,
 		tsens_num_sensors * sizeof(u32), GFP_KERNEL);
@@ -5567,7 +5858,8 @@ static int get_device_tree_data(struct platform_device *pdev,
 		(!strcmp(id->compatible, "qcom,msmcobalt-tsens"))) {
 		tmdev->tsens_type = TSENS_TYPE3;
 		tsens_poll_check = 0;
-	} else if (!strcmp(id->compatible, "qcom,msm8952-tsens") ||
+	} else if (!strcmp(id->compatible, "qcom,msm8976-tsens") ||
+			(!strcmp(id->compatible, "qcom,msm8952-tsens")) ||
 			(!strcmp(id->compatible, "qcom,msm8917-tsens")) ||
 			(!strcmp(id->compatible, "qcom,msm8937-tsens")))
 		tmdev->tsens_type = TSENS_TYPE4;
@@ -5583,6 +5875,7 @@ static int get_device_tree_data(struct platform_device *pdev,
 		(!strcmp(id->compatible, "qcom,msm8996-tsens")) ||
 		(!strcmp(id->compatible, "qcom,msm8952-tsens")) ||
 		(!strcmp(id->compatible, "qcom,msm8937-tsens")) ||
+		(!strcmp(id->compatible, "qcom,msm8976-tsens")) ||
 		(!strcmp(id->compatible, "qcom,msm8953-tsens")) ||
 		(!strcmp(id->compatible, "qcom,msmcobalt-tsens")) ||
 		(!strcmp(id->compatible, "qcom,mdm9640v2-tsens")))

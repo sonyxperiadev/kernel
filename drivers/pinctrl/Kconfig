@@ -124,6 +124,12 @@ config PINCTRL_SINGLE
 	help
 	  This selects the device tree based generic pinctrl driver.
 
+config PINCTRL_SOMC
+	bool "SoMC pinctrl driver"
+	default n
+	help
+	  Select this to enable SoMC pinctrl driver.
+
 config PINCTRL_SIRF
 	bool "CSR SiRFprimaII/SiRFmarco pin controller driver"
 	depends on ARCH_SIRF

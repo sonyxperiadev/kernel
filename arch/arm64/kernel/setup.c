@@ -666,3 +666,32 @@ void arch_setup_pdev_archdata(struct platform_device *pdev)
 	pdev->archdata.dma_mask = DMA_BIT_MASK(32);
 	pdev->dev.dma_mask = &pdev->archdata.dma_mask;
 }
+
+#ifdef CONFIG_ARCH_MSM8994
+#include <linux/of_address.h>
+/* Used for 8994 Only */
+int msm8994_req_tlbi_wa = 1;
+#define SOC_MAJOR_REV(val) (((val) & 0xF00) >> 8)
+
+static int __init msm8994_check_tlbi_workaround(void)
+{
+	void __iomem *addr;
+	int major_rev;
+	struct device_node *dn;
+
+	dn = of_find_compatible_node(NULL, NULL, "qcom,cpuss-8994");
+	if (dn) {
+		addr = of_iomap(dn, 0);
+		if (!addr)
+			return -ENOMEM;
+		major_rev  = SOC_MAJOR_REV((__raw_readl(addr)));
+		msm8994_req_tlbi_wa = (major_rev >= 2) ? 0 : 1;
+	} else {
+		/* If the node does not exist disable the workaround */
+		msm8994_req_tlbi_wa = 0;
+	}
+
+	return 0;
+}
+arch_initcall_sync(msm8994_check_tlbi_workaround);
+#endif
