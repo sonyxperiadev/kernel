@@ -1,4 +1,4 @@
-/* arch/arm/boot/dts/qcom/msm8996-tone-dora-generic.dtsi
+/* arch/arm/boot/dts/qcom/msm8996-tone-dora_generic.dtsi
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -24,6 +24,15 @@
 		pinctrl-3 = <&msm_gpio_49 &msm_gpio_73 &msm_gpio_74
 				&msm_gpio_77>;
 	};
+
+	/* I2C : BLSP12 */
+	i2c@75ba000 {
+		synaptics_clearpad@2c {
+			synaptics,irq_gpio_noise_det = <&tlmm 126 0x00>;
+			noise_det_retrytime_ms = <200>;
+		};
+	};
+};
 
 /{
 	tone_dora_batterydata: qcom,battery-data {
