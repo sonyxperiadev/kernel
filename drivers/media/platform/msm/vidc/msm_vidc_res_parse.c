@@ -155,10 +155,20 @@ static inline void msm_vidc_free_clock_table(
 	res->clock_set.count = 0;
 }
 
+static inline void msm_vidc_free_clock_voltage_table(
+			struct msm_vidc_platform_resources *res)
+{
+	res->cv_info.cv_table = NULL;
+	res->cv_info.count = 0;
+	res->cv_info_vp9d.cv_table = NULL;
+	res->cv_info_vp9d.count = 0;
+}
+
 void msm_vidc_free_platform_resources(
 			struct msm_vidc_platform_resources *res)
 {
 	msm_vidc_free_clock_table(res);
+	msm_vidc_free_clock_voltage_table(res);
 	msm_vidc_free_regulator_table(res);
 	msm_vidc_free_freq_table(res);
 	msm_vidc_free_platform_version_table(res);
@@ -955,6 +965,127 @@ err_load_clk_table_fail:
 	return rc;
 }
 
+static int msm_vidc_load_clock_voltage_table(
+		struct msm_vidc_platform_resources *res)
+{
+	int rc = 0, i = 0, num_elements = 0;
+	struct platform_device *pdev = res->pdev;
+	struct clock_voltage_info *cv_info = &res->cv_info;
+	struct clock_voltage_info *cv_info_vp9d = &res->cv_info_vp9d;
+	int *cv_table = NULL;
+	bool reset_clock_control = false;
+	bool regulator_scaling = false;
+
+	reset_clock_control = of_property_read_bool(pdev->dev.of_node,
+			"qcom,reset-clock-control");
+	if (reset_clock_control)
+		msm_vidc_reset_clock_control = 1;
+
+	regulator_scaling = of_property_read_bool(pdev->dev.of_node,
+			"qcom,regulator-scaling");
+	if (regulator_scaling)
+		msm_vidc_regulator_scaling = 1;
+
+
+	num_elements = get_u32_array_num_elements(pdev->dev.of_node,
+			"qcom,clock-voltage-tbl");
+	if (num_elements <= 0) {
+		dprintk(VIDC_WARN,
+			"No clocks and voltage elements found, numelements %d\n",
+			num_elements);
+		cv_info->count = 0;
+		rc = 0;
+		goto err_load_clk_vltg_table_fail;
+	}
+	cv_info->count =  num_elements /
+			(sizeof(*cv_info->cv_table) / sizeof(u32));
+
+	cv_table = devm_kzalloc(&pdev->dev,
+			num_elements * sizeof(u32), GFP_KERNEL);
+	if (!cv_table) {
+		dprintk(VIDC_ERR, "No memory to read clock voltage tables\n");
+		rc = -ENOMEM;
+		goto err_load_clk_vltg_table_fail;
+	}
+
+	rc = of_property_read_u32_array(pdev->dev.of_node,
+				"qcom,clock-voltage-tbl", cv_table,
+				num_elements);
+	if (rc) {
+		dprintk(VIDC_ERR, "Failed to read clock properties: %d\n", rc);
+		goto err_load_clk_vltg_table_fail;
+	}
+	cv_info->cv_table = (struct clock_voltage_table *)cv_table;
+
+	dprintk(VIDC_DBG, "%s: clock voltage table size %d\n",
+		__func__, cv_info->count);
+	for (i = 0; i < cv_info->count; i++) {
+		dprintk(VIDC_DBG,
+			"clock freq: %d, voltage index: %d\n",
+			cv_info->cv_table[i].clock_freq,
+			cv_info->cv_table[i].voltage_idx);
+	}
+
+	/* load vp9 decoder specific clock voltage table */
+	num_elements = get_u32_array_num_elements(pdev->dev.of_node,
+			"qcom,vp9d-clock-voltage-tbl");
+	if (num_elements <= 0) {
+		dprintk(VIDC_DBG,
+			"No vp9 clocks and voltage elements found, num elements %d\n",
+			num_elements);
+		cv_info_vp9d->count = 0;
+		rc = 0;
+		goto err_load_clk_vltg_table_fail;
+	}
+	cv_info_vp9d->count =  num_elements /
+			(sizeof(*cv_info_vp9d->cv_table) / sizeof(u32));
+
+	cv_table = devm_kzalloc(&pdev->dev,
+			num_elements * sizeof(u32), GFP_KERNEL);
+	if (!cv_table) {
+		dprintk(VIDC_ERR,
+			"No memory to read vp9 clock voltage tables\n");
+		rc = -ENOMEM;
+		goto err_load_clk_vltg_table_fail;
+	}
+
+	rc = of_property_read_u32_array(pdev->dev.of_node,
+				"qcom,vp9d-clock-voltage-tbl", cv_table,
+				num_elements);
+	if (rc) {
+		dprintk(VIDC_ERR,
+			"Failed to read vp9 clock properties: %d\n",
+			rc);
+		goto err_load_clk_vltg_table_fail;
+	}
+	cv_info_vp9d->cv_table = (struct clock_voltage_table *)cv_table;
+
+	/*
+	 * enable regulator scaling if vp9 decoder clock vs voltage
+	 * table is available and hw fuse version = 1 which supports
+	 * vp9 decoder in video hardware.
+	 */
+	if (cv_info_vp9d->count && vidc_driver->platform_version == 1)
+		msm_vidc_regulator_scaling = 1;
+
+	dprintk(VIDC_DBG, "%s: vp9d clock voltage table size %d\n",
+		__func__, cv_info_vp9d->count);
+	for (i = 0; i < cv_info_vp9d->count; i++) {
+		dprintk(VIDC_DBG,
+			"vp9d clock freq: %d, voltage index: %d\n",
+			cv_info_vp9d->cv_table[i].clock_freq,
+			cv_info_vp9d->cv_table[i].voltage_idx);
+	}
+
+	dprintk(VIDC_DBG, "video reset clock control enabled = %s\n",
+			msm_vidc_reset_clock_control ? "yes" : "no");
+	dprintk(VIDC_DBG, "regulator scaling enabled = %s\n",
+			msm_vidc_regulator_scaling ? "yes" : "no");
+
+err_load_clk_vltg_table_fail:
+	return rc;
+}
+
 int read_platform_resources_from_dt(
 		struct msm_vidc_platform_resources *res)
 {
@@ -1055,6 +1186,13 @@ int read_platform_resources_from_dt(
 		goto err_load_clock_table;
 	}
 
+	rc = msm_vidc_load_clock_voltage_table(res);
+	if (rc) {
+		dprintk(VIDC_ERR,
+			"Failed to load clock voltage table: %d\n", rc);
+		goto err_load_clock_voltage_table;
+	}
+
 	rc = msm_vidc_load_cycles_per_mb_table(res);
 	if (rc) {
 		dprintk(VIDC_ERR,
@@ -1122,6 +1260,8 @@ err_load_max_hw_load:
 err_load_allowed_clocks_table:
 	msm_vidc_free_cycles_per_mb_table(res);
 err_load_cycles_per_mb_table:
+	msm_vidc_free_clock_voltage_table(res);
+err_load_clock_voltage_table:
 	msm_vidc_free_clock_table(res);
 err_load_clock_table:
 	msm_vidc_free_regulator_table(res);
