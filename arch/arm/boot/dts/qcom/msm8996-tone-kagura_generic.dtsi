@@ -1,4 +1,5 @@
-/* Copyright (c) 2015, The Linux Foundation. All rights reserved.
+/* arch/arm/boot/dts/qcom/msm8996-tone-kagura-generic.dtsi
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
  * only version 2 as published by the Free Software Foundation.
@@ -23,24 +24,10 @@
 		pinctrl-1 = <&msm_gpio_25 &msm_gpio_47 &msm_gpio_48
 			&msm_gpio_59 &msm_gpio_60 &msm_gpio_61 &msm_gpio_78
 			&msm_gpio_104 &msm_gpio_127 &msm_gpio_131>;
-	};
-
-	/* I2C : BLSP12 */
-	i2c@75ba000 {
-		synaptics_clearpad@2c {
-			/* Stamina Mode */
-			stamina_mode_supported = <0x80000003>;
-
-			/* F01_RMI_CTRL05: Doze Holdoff */
-			doze_default_time = <50>;
-			doze_glove_mode_time = <50>;
-			doze_cover_mode_time = <50>;
-
-			/* chip settings */
-			S332U {
-				calibrate_on_fwflash = <0>;
-			};
-		};
+		/* If variant specific default setting is needed,
+		   fill pinctrl-2 value in <variant>.dtsi */
+		pinctrl-2 = <&msm_gpio_49 &msm_gpio_73 &msm_gpio_74
+				&msm_gpio_77>;
 	};
 };
 
@@ -312,3 +299,4 @@
 	id_polling_keep_not_dischg;
 	no_device_det_enable;
 };
+

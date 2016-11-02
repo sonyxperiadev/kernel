@@ -1,4 +1,5 @@
-/* Copyright (c) 2015, The Linux Foundation. All rights reserved.
+/* arch/arm/boot/dts/qcom/msm8996-tone-dora-generic.dtsi
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
  * only version 2 as published by the Free Software Foundation.
@@ -17,15 +18,11 @@
  */
 
 &soc {
-	/* I2C : BLSP12 */
-	i2c@75ba000 {
-		synaptics_clearpad@2c {
-			wakeup_gesture_use_workaround_for_felica = <1>;
-			/* chip settings */
-			S332U {
-				calibrate_on_fwflash = <0>;
-			};
-		};
+	somc_pinctrl: somc_pinctrl {
+		/* If variant specific default setting is needed,
+		   fill pinctrl-3 value in <variant>.dtsi */
+		pinctrl-3 = <&msm_gpio_49 &msm_gpio_73 &msm_gpio_74
+				&msm_gpio_77>;
 	};
 };
 
@@ -49,7 +46,7 @@
 	qcom,float-voltage-comp = <0x05>;
 	somc,fastchg-warm-current-ma = <800>;
 	somc,fastchg-cool-current-ma = <800>;
-	somc,thermal-engine-fastchg-current = <2700 2100 1800 1400 1000 700 500 300 300 300 300 300 300 0 0>;
+	somc,thermal-engine-fastchg-current = <1800 1800 1800 1400 1000 700 500 300 300 300 300 300 300 0 0>;
 	somc,thermal-mitigation-usb-9v = <1700 1700 1400 1000 1000 1000 1000 1000 1200 900 700 500 300 0 0>;
 	somc,thermal-mitigation-usb-5v = <1500 1500 1500 1500 1500 1500 1500 1500 1200 900 700 500 300 0 0>;
 	somc,limit-usb-5v-level = <8>;
@@ -91,4 +88,18 @@
 			qcom,ilim-ma = <660>;
 		};
 	};
+};
+
+/* I2C : BLSP11 */
+&i2c_11 {
+	status = "disabled";
+};
+
+/* Regulator config */
+&pm8994_l11 {
+	status = "disabled";
+};
+
+&pm8994_l14 {
+	status = "disabled";
 };
