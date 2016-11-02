@@ -728,6 +728,9 @@ static struct clk_freq_tbl ftbl_cpp_clk_src[] = {
 	F_MM( 100000000, mmsscc_gpll0_div,    3,    0,     0),
 	F_MM( 200000000,     mmsscc_gpll0,    3,    0,     0),
 	F_MM( 320000000,  mmpll0_out_main,  2.5,    0,     0),
+#if defined(CONFIG_SONY_CAM_V4L2)
+	F_MM( 384000000, mmpll4_out_main, 2.5, 0, 0),
+#endif
 	F_MM( 480000000,  mmpll4_out_main,    2,    0,     0),
 	F_MM( 640000000,  mmpll4_out_main,  1.5,    0,     0),
 	F_END
