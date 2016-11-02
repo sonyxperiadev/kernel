@@ -2567,7 +2567,6 @@ static int venus_hfi_core_trigger_ssr(void *device,
 	struct hfi_cmd_sys_test_ssr_packet pkt;
 	int rc = 0;
 	struct venus_hfi_device *dev;
-	struct clock_voltage_info *cv_info = NULL;
 
 	if (!device) {
 		dprintk(VIDC_ERR, "invalid device\n");
