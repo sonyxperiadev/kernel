@@ -2562,7 +2562,7 @@ static int gsi_alloc_ap_channel(unsigned int chan_hdl)
 	return GSI_STATUS_SUCCESS;
 }
 
-static void __gsi_write_channel_scratch(unsigned long chan_hdl,
+static inline void __gsi_write_channel_scratch(unsigned long chan_hdl,
 		union __packed gsi_channel_scratch val)
 {
 	gsi_writel(val.data.word1, gsi_ctx->base +

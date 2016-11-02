@@ -7,6 +7,11 @@ config PINCTRL_MSM
 	select GENERIC_PINCONF
 	select GPIOLIB_IRQCHIP
 
+config PINCTRL_SOMC
+	bool "SoMC pinctrl driver"
+	help
+	  Select this to enable SoMC pinctrl driver.
+
 config PINCTRL_APQ8064
 	tristate "Qualcomm APQ8064 pin controller driver"
 	depends on GPIOLIB && OF
