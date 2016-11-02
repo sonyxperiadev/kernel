@@ -279,7 +279,7 @@
 			watchdog_delay_ms = <3000>;
 			charger_supported = <0>;
 			pen_supported = <0>;
-			glove_supported = <1>;
+			glove_supported = <0>;
 			cover_supported = <1>;
 			touch_pressure_enabled = <1>;
 			touch_size_enabled = <0>;
@@ -287,8 +287,8 @@
 			preset_x_max = <1079>;
 			preset_y_max = <1919>;
 			preset_n_fingers = <10>;
-			wakeup_gesture_supported = <1>;
-			wakeup_gesture_lpm_disabled = <1>;
+			wakeup_gesture_supported = <0>;
+			wakeup_gesture_lpm_disabled = <0>;
 			wakeup_gesture_timeout = <0>;
 			wakeup_gesture {
 				double_tap {
@@ -329,8 +329,8 @@
 			};
 			S332U {
 				flash_default_timeout_ms = <20000>;
-				calibrate_on_fwflash = <1>;
-				calibration_supported = <1>;
+				calibrate_on_fwflash = <0>;
+				calibration_supported = <0>;
 				hwreset_delay_for_powerup_ms = <220>;
 				interrupt_default_wait_ms = <1000>;
 			};
@@ -400,9 +400,6 @@
 	};
 
 	sound-9335 {
-		/delete-property/ qcom,hdmi-audio-rx;
-		/delete-property/ asoc-codec;
-		/delete-property/ asoc-codec-names;
 		/delete-property/ qcom,hph-en1-gpio;
 		/delete-property/ qcom,hph-en0-gpio;
 		/delete-property/ qcom,us-euro-gpios;
@@ -692,23 +689,6 @@
                         qcom,vph-low-threshold-uv = <3200000>;
 		};
 	};
-};
-
-&mdss_hdmi_tx {
-	pinctrl-names = "";
-	/delete-property/ pinctrl-names;
-	/delete-property/ pinctrl-0;
-	/delete-property/ pinctrl-1;
-	/delete-property/ pinctrl-2;
-	/delete-property/ pinctrl-3;
-	/delete-property/ pinctrl-4;
-};
-
-&dai_mi2s {
-	pinctrl-names = "";
-	/delete-property/ pinctrl-names;
-	/delete-property/ pinctrl-0;
-	/delete-property/ pinctrl-1;
 };
 
 /{
@@ -1232,11 +1212,6 @@
 	regulator-max-microvolt = <1800000>;
 	qcom,init-voltage = <1800000>;
 	status = "okay";
-};
-
-&pm8994_l18_pin_ctrl {
-	regulator-min-microvolt = <1800000>;
-	qcom,init-voltage = <1800000>;
 };
 
 /* pm8994_l19 */
@@ -2075,7 +2050,7 @@
 		};
 	};
 
-	/* GPIO_49 : FELICA_FLD_MON */
+	/* GPIO_49 : NC */
 	msm_gpio_49: msm_gpio_49 {
 		mux {
 			pins = "gpio49";
@@ -2085,7 +2060,8 @@
 		config {
 			pins = "gpio49";
 			drive-strength = <2>;
-			bias-pull-up;
+			/delete-property/ bias-pull-up;
+			bias-pull-down;
 		};
 	};
 
@@ -2336,7 +2312,7 @@
 	/* GPIO_72 : SLIMBUS_DATA1 */
 	/* Follow QTI */
 
-	/* GPIO_73 : DTV_RST_N */
+	/* GPIO_73 : NC */
 	msm_gpio_73: msm_gpio_73 {
 		mux {
 			pins = "gpio73";
@@ -2351,7 +2327,7 @@
 		};
 	};
 
-	/* GPIO_74 : DTV_LDO_EN */
+	/* GPIO_74 : NC */
 	msm_gpio_74: msm_gpio_74 {
 		mux {
 			pins = "gpio74";
@@ -2394,7 +2370,7 @@
 		};
 	};
 
-	/* GPIO_77 : DTV_INT */
+	/* GPIO_77 : NC */
 	msm_gpio_77: msm_gpio_77 {
 		mux {
 			pins = "gpio77";
@@ -3127,27 +3103,6 @@
 	};
 };
 
-&pcie0_clkreq_sleep {
-	config {
-		/delete-property/ bias-disable;
-		bias-pull-up;
-	};
-};
-
-&pcie0_wake_sleep {
-	config {
-		/delete-property/ bias-disable;
-		bias-pull-up;
-	};
-};
-
-&cdc_reset_active {
-	config {
-		/delete-property/ bias-pull-down;
-		bias-disable;
-	};
-};
-
 /* I2C : BLSP7 */
 &i2c_7 {
 	/delete-node/ silabs4705@11;
@@ -3378,63 +3333,3 @@
 	};
 };
 
-&tlmm {
-	/* GPIO_49 : NC */
-	msm_gpio_49: msm_gpio_49 {
-		mux {
-			pins = "gpio49";
-			function = "gpio";
-		};
-
-		config {
-			pins = "gpio49";
-			drive-strength = <2>;
-			/delete-property/ bias-pull-up;
-			bias-pull-down;
-		};
-	};
-
-	/* GPIO_73 : NC */
-	msm_gpio_73: msm_gpio_73 {
-		mux {
-			pins = "gpio73";
-			function = "gpio";
-		};
-
-		config {
-			pins = "gpio73";
-			drive-strength = <2>;
-			bias-disable;
-			output-low;
-		};
-	};
-
-	/* GPIO_74 : NC */
-	msm_gpio_74: msm_gpio_74 {
-		mux {
-			pins = "gpio74";
-			function = "gpio";
-		};
-
-		config {
-			pins = "gpio74";
-			drive-strength = <2>;
-			bias-disable;
-			output-low;
-		};
-	};
-
-	/* GPIO_77 : NC */
-	msm_gpio_77: msm_gpio_77 {
-		mux {
-			pins = "gpio77";
-			function = "gpio";
-		};
-
-		config {
-			pins = "gpio77";
-			drive-strength = <2>;
-			bias-pull-down;
-		};
-	};
-};
