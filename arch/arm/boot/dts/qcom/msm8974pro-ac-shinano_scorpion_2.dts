@@ -22,7 +22,7 @@
 #include "msm8974pro-ac-shinano_common.dtsi"
 #include "msm8974pro-ac-shinano_scorpion_common.dtsi"
 #include "msm8974pro-ac-shinano_scorpion_camera.dtsi"
-#include "dsi-panel-scorpion.dtsi"
+#include "dsi-panel-somc-scorpion.dtsi"
 
 / {
 	model = "SoMC Scorpion ROW";

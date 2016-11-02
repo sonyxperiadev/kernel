@@ -22,7 +22,7 @@
 #include "msm8974pro-ab-shinano_common.dtsi"
 #include "msm8974pro-ab-shinano_sirius.dtsi"
 #include "msm8974pro-ab-shinano_sirius_camera.dtsi"
-#include "dsi-panel-sirius.dtsi"
+#include "dsi-panel-somc-sirius.dtsi"
 
 / {
 	model = "SoMC Sirius ROW";

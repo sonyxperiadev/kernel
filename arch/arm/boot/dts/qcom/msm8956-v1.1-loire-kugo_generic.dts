@@ -24,7 +24,7 @@
 #include "msm8956-loire-common.dtsi"
 #include "msm8956-loire-kugo-common.dtsi"
 #include "msm8956-loire-kugo_camera.dtsi"
-#include "dsi-panel-kugo.dtsi"
+#include "dsi-panel-somc-kugo.dtsi"
 
 / {
 	model = "SoMC Kugo-ROW";

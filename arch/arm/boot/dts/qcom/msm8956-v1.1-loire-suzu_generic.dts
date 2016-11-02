@@ -24,7 +24,7 @@
 #include "msm8956-loire-common.dtsi"
 #include "msm8956-loire-suzu-common.dtsi"
 #include "msm8956-loire-suzu_camera.dtsi"
-#include "dsi-panel-suzu.dtsi"
+#include "dsi-panel-somc-suzu.dtsi"
 
 / {
 	model = "SoMC Suzu-ROW";

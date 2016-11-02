@@ -26,7 +26,7 @@
 #include "msm8994-kitakami_karin_common.dtsi"
 #include "apq8094-kitakami_karin_windy.dtsi"
 #include "msm8994-kitakami_karin_camera.dtsi"
-#include "dsi-panel-karin.dtsi"
+#include "dsi-panel-somc-karin.dtsi"
 
 / {
 	model = "SoMC Karin-WINDY";

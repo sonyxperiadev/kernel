@@ -278,7 +278,7 @@
 		qcom,mba-load-to-phys;
 	};
 
-	rhine_panel_power_supply: dsi_panel_pwr_supply {
+	somc_panel_power_supply: dsi_panel_pwr_supply {
 		#address-cells = <1>;
 		#size-cells = <0>;
 
