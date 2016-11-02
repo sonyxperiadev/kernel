@@ -103,7 +103,6 @@ static void __unload_fw(struct venus_hfi_device *device);
 static int __tzbsp_set_video_state(enum tzbsp_video_state state);
 
 static void venus_hfi_clock_adjust(struct venus_hfi_device *device);
-static int venus_hfi_reduce_clocks(struct venus_hfi_device *device);
 
 
 /**
@@ -3606,6 +3605,8 @@ static int __set_clock_rate(struct venus_hfi_device *hfidev,
 			break;
 		}
 	}
+
+	return rc;
 }
 
 #define HFI_CTRL_STATUS_CLK_DOWN        0x200
@@ -4933,7 +4934,7 @@ static struct venus_hfi_device *__add_device(u32 device_id,
 
 	mutex_init(&hdevice->lock);
 	
-mutex_init(&hdevice->clock_lock);
+	mutex_init(&hdevice->clock_lock);
 	INIT_LIST_HEAD(&hdevice->list);
 	INIT_LIST_HEAD(&hdevice->sess_head);
 	list_add_tail(&hdevice->list, &hal_ctxt.dev_head);
