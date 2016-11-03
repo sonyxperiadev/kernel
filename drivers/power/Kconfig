@@ -1,3 +1,12 @@
+config QNS_SYSTEM
+	bool "Qnovo QNS wrapper implementation"
+	default n
+	help
+	  Say Y here to enable support for QNS system.
+	  QNS is a battery charging controller and it necessary to access a
+	  kernel driver for a battery charging.
+	  This adds sysfs interface which enables QNS daemon to access it.
+
 source "drivers/power/avs/Kconfig"
 source "drivers/power/reset/Kconfig"
 source "drivers/power/supply/Kconfig"
