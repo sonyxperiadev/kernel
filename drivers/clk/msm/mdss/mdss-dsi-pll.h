@@ -111,6 +111,7 @@ enum handoff pll_20nm_vco_handoff(struct clk *c);
 int pll_20nm_vco_prepare(struct clk *c);
 void pll_20nm_vco_unprepare(struct clk *c);
 int pll_20nm_vco_enable_seq(struct mdss_pll_resources *dsi_pll_res);
+void pll_20nm_config_powerdown(void __iomem *pll_base);
 
 int set_bypass_lp_div_mux_sel(struct mux_clk *clk, int sel);
 int set_shadow_bypass_lp_div_mux_sel(struct mux_clk *clk, int sel);
