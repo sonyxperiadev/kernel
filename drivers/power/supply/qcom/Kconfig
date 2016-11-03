@@ -9,6 +9,12 @@ config QPNP_FG
 	  fuel gauge. The state of charge is reported through a BMS power
 	  supply property and also sends uevents when the capacity is updated.
 
+config QPNP_FG_EXTENSION
+	tristate "Fuel gauge driver extension"
+	depends on QPNP_FG
+	help
+	  Say Y here to enable SoMC extensional fuel gauge functions.
+
 config QPNP_FG_GEN3
 	tristate "QPNP GEN3 fuel gauge driver"
 	depends on MFD_SPMI_PMIC
@@ -105,6 +111,12 @@ config QPNP_SMBCHARGER
 	  supports USB detection and battery charging up to 3A.
 	  The driver also offers relevant information to userspace via the
 	  power supply framework.
+
+config QPNP_SMBCHARGER_EXTENSION
+	tristate "Charger driver extension"
+	depends on QPNP_SMBCHARGER
+	help
+	  Say Y here to enable SoMC extensional SMB charger functions.
 
 config QPNP_QNOVO
 	bool "QPNP QNOVO driver"
