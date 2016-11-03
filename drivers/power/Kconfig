@@ -526,6 +526,15 @@ config QPNP_FG
 	  fuel gauge. The state of charge is reported through a BMS power
 	  supply property and also sends uevents when the capacity is updated.
 
+config QNS_SYSTEM
+	bool "Qnovo QNS wrapper implementation"
+	default n
+	help
+	  Say Y here to enable support for QNS system.
+	  QNS is a battery charging controller and it necessary to access a
+	  kernel driver for a battery charging.
+	  This adds sysfs interface which enables QNS daemon to access it.
+
 config BATTERY_BCL
 	tristate "Battery Current Limit driver"
 	depends on THERMAL_MONITOR
