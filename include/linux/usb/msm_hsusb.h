@@ -651,7 +651,7 @@ static inline bool msm_usb_bam_enable(enum usb_ctrl ctrl, bool bam_enable)
 {
 	return true;
 }
-int msm_do_bam_disable_enable(enum usb_ctrl ctrl) { return true; }
+static inline int msm_do_bam_disable_enable(enum usb_ctrl ctrl) { return true;}
 #endif
 #ifdef CONFIG_USB_CI13XXX_MSM
 void msm_hw_bam_disable(bool bam_disable);
