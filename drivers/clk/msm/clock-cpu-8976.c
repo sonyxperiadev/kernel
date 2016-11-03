@@ -54,7 +54,7 @@ enum {
 };
 
 static void __iomem *virt_bases[N_BASES];
-struct platform_device *cpu_clock_dev;
+struct platform_device *cpu_clock_dev_8976;
 
 static DEFINE_VDD_REGS_INIT(vdd_cpu_a72, 1);
 static DEFINE_VDD_REGS_INIT(vdd_cpu_a53, 1);
