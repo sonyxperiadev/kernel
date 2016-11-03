@@ -22,7 +22,11 @@
 #include <linux/clk/msm-clk.h>
 #include <linux/clk/msm-clock-generic.h>
 
+#ifdef CONFIG_ARCH_MSM8974
 #include <dt-bindings/clock/msm-clocks-8974.h>
+#else
+#include <dt-bindings/clock/msm-clocks-8976.h>
+#endif
 
 #include "mdss-pll.h"
 #include "mdss-edp-pll.h"
