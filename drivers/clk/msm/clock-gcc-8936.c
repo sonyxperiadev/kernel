@@ -21,6 +21,7 @@
 #include <linux/platform_device.h>
 #include <linux/module.h>
 #include <linux/of.h>
+#include <linux/of_platform.h>
 #include <soc/qcom/clock-local2.h>
 #include <soc/qcom/clock-pll.h>
 #include <soc/qcom/clock-voter.h>
@@ -267,9 +268,12 @@ static void __iomem *virt_dbgbase;
 #define OXILI_GFX3D_CBCR				0x59020
 #define OXILI_GMEM_CBCR					0x59024
 #define OXILI_AHB_CBCR					0x59028
+#define OXILI_TIMER_CBCR				0x59040
 #define CAMSS_TOP_AHB_CMD_RCGR				0x5A000
 #define BIMC_GFX_CBCR					0x31024
 #define BIMC_GPU_CBCR					0x31040
+#define GCC_SPARE3_REG					0x7E004
+#define SNOC_QOSGEN					0x2601C
 
 #define APCS_CCI_PLL_MODE				0x00000
 #define APCS_CCI_PLL_L_VAL				0x00004
@@ -294,6 +298,10 @@ static void __iomem *virt_dbgbase;
 #define APCS_C1_PLL_USER_CTL				0x00010
 #define APCS_C1_PLL_CONFIG_CTL				0x00014
 #define APCS_C1_PLL_STATUS				0x0001C
+
+#define CLKFLAG_WAKEUP_CYCLES				0x0
+#define CLKFLAG_SLEEP_CYCLES				0x0
+
 
 /* Mux source select values */
 #define gcc_xo_source_val		0
@@ -370,10 +378,21 @@ static void __iomem *virt_dbgbase;
 	},					\
 	.num_fmax = VDD_DIG_NUM
 
+#define VDD_DIG_FMAX_MAP4(l1, f1, l2, f2, l3, f3, l4, f4) \
+	.vdd_class = &vdd_dig, \
+	.fmax = (unsigned long[VDD_DIG_NUM]) {	\
+		[VDD_DIG_##l1] = (f1),		\
+		[VDD_DIG_##l2] = (f2),		\
+		[VDD_DIG_##l3] = (f3),		\
+		[VDD_DIG_##l4] = (f4),          \
+	},					\
+	.num_fmax = VDD_DIG_NUM
+
 enum vdd_dig_levels {
 	VDD_DIG_NONE,
 	VDD_DIG_LOW,
 	VDD_DIG_NOMINAL,
+	VDD_DIG_NOMINAL_PLUS,
 	VDD_DIG_HIGH,
 	VDD_DIG_NUM
 };
@@ -382,6 +401,7 @@ static int vdd_corner[] = {
 	RPM_REGULATOR_CORNER_NONE,		/* VDD_DIG_NONE */
 	RPM_REGULATOR_CORNER_SVS_SOC,		/* VDD_DIG_LOW */
 	RPM_REGULATOR_CORNER_NORMAL,		/* VDD_DIG_NOMINAL */
+	RPM_REGULATOR_CORNER_TURBO,		/* VDD_DIG_NOMINAL_PLUS */
 	RPM_REGULATOR_CORNER_SUPER_TURBO,	/* VDD_DIG_HIGH */
 };
 
@@ -449,6 +469,10 @@ static struct pll_clk a53ss_cci_pll = {
 		.main_output_mask = BIT(0),
 	},
 	.base = &virt_bases[APCS_CCI_PLL_BASE],
+	.spm_ctrl = {
+		.offset = 0x40,
+		.event_bit = 0x0,
+	},
 	.c = {
 		.parent = &xo_a_clk.c,
 		.dbg_name = "a53ss_cci_pll",
@@ -466,6 +490,7 @@ static struct pll_clk a53ss_cci_pll = {
 static struct pll_freq_tbl apcs_c0_pll_freq[] = {
 	F_APCS_PLL( 998400000,  52, 0x0, 0x1, 0x0, 0x0, 0x0),
 	F_APCS_PLL(1113600000,  58, 0x0, 0x1, 0x0, 0x0, 0x0),
+	F_APCS_PLL(1209600000,  63, 0x0, 0x1, 0x0, 0x0, 0x0),
 };
 
 static struct pll_clk a53ss_c0_pll = {
@@ -484,6 +509,10 @@ static struct pll_clk a53ss_c0_pll = {
 		.main_output_mask = BIT(0),
 	},
 	.base = &virt_bases[APCS_C0_PLL_BASE],
+	.spm_ctrl = {
+		.offset = 0x50,
+		.event_bit = 0x4,
+	},
 	.c = {
 		.parent = &xo_a_clk.c,
 		.dbg_name = "a53ss_c0_pll",
@@ -509,10 +538,13 @@ static struct pll_freq_tbl apcs_c1_pll_freq[] = {
 	F_APCS_PLL( 998400000, 52, 0x0, 0x1, 0x0, 0x0, 0x0),
 	F_APCS_PLL(1036800000, 54, 0x0, 0x1, 0x0, 0x0, 0x0),
 	F_APCS_PLL(1113600000, 58, 0x0, 0x1, 0x0, 0x0, 0x0),
+	F_APCS_PLL(1209600000, 63, 0x0, 0x1, 0x0, 0x0, 0x0),
 	F_APCS_PLL(1190400000, 62, 0x0, 0x1, 0x0, 0x0, 0x0),
 	F_APCS_PLL(1267200000, 66, 0x0, 0x1, 0x0, 0x0, 0x0),
 	F_APCS_PLL(1344000000, 70, 0x0, 0x1, 0x0, 0x0, 0x0),
+	F_APCS_PLL(1363200000, 71, 0x0, 0x1, 0x0, 0x0, 0x0),
 	F_APCS_PLL(1420800000, 74, 0x0, 0x1, 0x0, 0x0, 0x0),
+	F_APCS_PLL(1459200000, 76, 0x0, 0x1, 0x0, 0x0, 0x0),
 	F_APCS_PLL(1497600000, 78, 0x0, 0x1, 0x0, 0x0, 0x0),
 	F_APCS_PLL(1536000000, 80, 0x0, 0x1, 0x0, 0x0, 0x0),
 	F_APCS_PLL(1574400000, 82, 0x0, 0x1, 0x0, 0x0, 0x0),
@@ -539,6 +571,10 @@ static struct pll_clk a53ss_c1_pll = {
 		.main_output_mask = BIT(0),
 	},
 	.base = &virt_bases[APCS_C1_PLL_BASE],
+	.spm_ctrl = {
+		.offset = 0x50,
+		.event_bit = 0x4,
+	},
 	.c = {
 		.parent = &xo_a_clk.c,
 		.dbg_name = "a53ss_c1_pll",
@@ -797,8 +833,8 @@ static struct rcg_clk vfe0_clk_src = {
 	.c = {
 		.dbg_name = "vfe0_clk_src",
 		.ops = &clk_ops_rcg,
-		VDD_DIG_FMAX_MAP3(LOW, 160000000, NOMINAL, 320000000, HIGH,
-			600000000),
+		VDD_DIG_FMAX_MAP4(LOW, 200000000, NOMINAL, 400000000,
+			NOMINAL_PLUS, 480000000, HIGH, 600000000),
 		CLK_INIT(vfe0_clk_src.c),
 	},
 };
@@ -812,9 +848,10 @@ static struct clk_freq_tbl ftbl_gcc_oxili_gfx3d_clk[] = {
 	F( 200000000,      gpll0_out_main,   4,	  0,	0),
 	F( 220000000,      gpll3_out_main,   5,	  0,	0),
 	F( 266670000,      gpll0_out_main,   3,	  0,	0),
-	F( 310000000,	gpll2_gfx3d,	3,	  0,	0),
+	F( 310000000,      gpll2_gfx3d,      3,	  0,	0),
 	F( 400000000,      gpll0_out_main,   2,	  0,	0),
-	F( 550000000,      gpll3_out_main,   2,    0,    0),
+	F( 465000000,      gpll2_gfx3d,      2,    0,   0),
+	F( 550000000,      gpll3_out_main,   2,    0,   0),
 	F_END
 };
 
@@ -827,8 +864,8 @@ static struct rcg_clk gfx3d_clk_src = {
 	.c = {
 		.dbg_name = "gfx3d_clk_src",
 		.ops = &clk_ops_rcg,
-		VDD_DIG_FMAX_MAP3(LOW, 220000000, NOMINAL, 400000000, HIGH,
-			550000000),
+		VDD_DIG_FMAX_MAP4(LOW, 220000000, NOMINAL, 400000000,
+			NOMINAL_PLUS, 465000000, HIGH, 550000000),
 		CLK_INIT(gfx3d_clk_src.c),
 	},
 };
@@ -1314,7 +1351,7 @@ static struct rcg_clk byte0_clk_src = {
 	.c = {
 		.dbg_name = "byte0_clk_src",
 		.ops = &clk_ops_byte,
-		VDD_DIG_FMAX_MAP2(LOW, 112500000, NOMINAL, 187500000),
+		VDD_DIG_FMAX_MAP2(LOW, 112000000, NOMINAL, 188000000),
 		CLK_INIT(byte0_clk_src.c),
 	},
 };
@@ -1333,7 +1370,7 @@ static struct rcg_clk byte1_clk_src = {
 	.c = {
 		.dbg_name = "byte1_clk_src",
 		.ops = &clk_ops_byte,
-		VDD_DIG_FMAX_MAP2(LOW, 112500000, NOMINAL, 187500000),
+		VDD_DIG_FMAX_MAP2(LOW, 112000000, NOMINAL, 188000000),
 		CLK_INIT(byte1_clk_src.c),
 	},
 };
@@ -1416,7 +1453,7 @@ static struct rcg_clk pclk0_clk_src = {
 	.c = {
 		.dbg_name = "pclk0_clk_src",
 		.ops = &clk_ops_pixel,
-		VDD_DIG_FMAX_MAP2(LOW, 150000000, NOMINAL, 250000000),
+		VDD_DIG_FMAX_MAP2(LOW, 149000000, NOMINAL, 250000000),
 		CLK_INIT(pclk0_clk_src.c),
 	},
 };
@@ -1435,7 +1472,7 @@ static struct rcg_clk pclk1_clk_src = {
 	.c = {
 		.dbg_name = "pclk1_clk_src",
 		.ops = &clk_ops_pixel,
-		VDD_DIG_FMAX_MAP2(LOW, 150000000, NOMINAL, 250000000),
+		VDD_DIG_FMAX_MAP2(LOW, 149000000, NOMINAL, 250000000),
 		CLK_INIT(pclk1_clk_src.c),
 	},
 };
@@ -1519,8 +1556,9 @@ static struct rcg_clk sdcc2_apps_clk_src = {
 };
 
 static struct clk_freq_tbl ftbl_gcc_usb_hs_system_clk[] = {
-	F(  57140000,      gpll0_out_main,  14,    0,    0),
+	F(  57140000,      gpll0_out_main,  14,   0,    0),
 	F(  80000000,	   gpll0_out_main,  10,	  0,	0),
+	F( 100000000,	   gpll0_out_main,   8,	  0,	0),
 	F_END
 };
 
@@ -1533,7 +1571,7 @@ static struct rcg_clk usb_hs_system_clk_src = {
 	.c = {
 		.dbg_name = "usb_hs_system_clk_src",
 		.ops = &clk_ops_rcg,
-		VDD_DIG_FMAX_MAP2(LOW, 57140000, NOMINAL, 80000000),
+		VDD_DIG_FMAX_MAP2(LOW, 57140000, NOMINAL, 100000000),
 		CLK_INIT(usb_hs_system_clk_src.c),
 	},
 };
@@ -2448,6 +2486,9 @@ static struct branch_clk gcc_mdss_mdp_clk = {
 	},
 };
 
+static DEFINE_CLK_VOTER(gcc_mdss_mdp_vote_clk, &gcc_mdss_mdp_clk.c, 0);
+static DEFINE_CLK_VOTER(gcc_mdss_mdp_rotator_vote_clk, &gcc_mdss_mdp_clk.c, 0);
+
 static struct branch_clk gcc_mdss_pclk0_clk = {
 	.cbcr_reg = MDSS_PCLK0_CBCR,
 	.has_sibling = 0,
@@ -2526,6 +2567,18 @@ static struct branch_clk gcc_oxili_gfx3d_clk = {
 		.parent = &gfx3d_clk_src.c,
 		.ops = &clk_ops_branch,
 		CLK_INIT(gcc_oxili_gfx3d_clk.c),
+	},
+};
+
+static struct branch_clk gcc_oxili_timer_clk = {
+	.cbcr_reg = OXILI_TIMER_CBCR,
+	.has_sibling = 0,
+	.base = &virt_bases[GCC_BASE],
+	.c = {
+		.dbg_name = "gcc_oxili_timer_clk",
+		.parent = &gcc_xo.c,
+		.ops = &clk_ops_branch,
+		CLK_INIT(gcc_oxili_timer_clk.c),
 	},
 };
 
@@ -2924,6 +2977,18 @@ static struct pll_config_regs gpll4_regs = {
 	.base = &virt_bases[GCC_BASE],
 };
 
+static struct gate_clk gcc_snoc_qosgen_clk = {
+	.en_mask = BIT(0),
+	.en_reg = SNOC_QOSGEN,
+	.base = &virt_bases[GCC_BASE],
+	.c = {
+		.dbg_name = "gcc_snoc_qosgen_clk",
+		.ops = &clk_ops_gate,
+		.flags = CLKFLAG_SKIP_HANDOFF,
+		CLK_INIT(gcc_snoc_qosgen_clk.c),
+	},
+};
+
 static struct mux_clk gcc_debug_mux;
 static struct clk_ops clk_ops_debug_mux;
 
@@ -3049,6 +3114,7 @@ static struct mux_clk gcc_debug_mux = {
 		{&gcc_crypto_clk.c,			0x0138},
 		{&gcc_crypto_axi_clk.c,			0x0139},
 		{&gcc_crypto_ahb_clk.c,			0x013a},
+		{&gcc_oxili_timer_clk.c,		0x01e9},
 		{&gcc_oxili_gfx3d_clk.c,		0x01ea},
 		{&gcc_oxili_ahb_clk.c,			0x01eb},
 		{&gcc_oxili_gmem_clk.c,			0x01f0},
@@ -3234,6 +3300,7 @@ static struct clk_lookup msm_clocks_lookup[] = {
 	CLK_LIST(gcc_mss_cfg_ahb_clk),
 	CLK_LIST(gcc_mss_q6_bimc_axi_clk),
 	CLK_LIST(gcc_oxili_ahb_clk),
+	CLK_LIST(gcc_oxili_timer_clk),
 	CLK_LIST(gcc_oxili_gfx3d_clk),
 	CLK_LIST(gcc_pdm2_clk),
 	CLK_LIST(gcc_pdm_ahb_clk),
@@ -3261,6 +3328,9 @@ static struct clk_lookup msm_clocks_lookup[] = {
 	CLK_LIST(gcc_crypto_ahb_clk),
 	CLK_LIST(gcc_crypto_axi_clk),
 	CLK_LIST(crypto_clk_src),
+
+	/* QoS Reference clock */
+	CLK_LIST(gcc_snoc_qosgen_clk),
 };
 
 /* Please note that the order of reg-names is important */
@@ -3383,6 +3453,10 @@ static int msm_gcc_probe(struct platform_device *pdev)
 	clk_set_rate(&apss_ahb_clk_src.c, 19200000);
 	clk_prepare_enable(&apss_ahb_clk_src.c);
 
+	ret = of_platform_populate(pdev->dev.of_node, NULL, NULL, &pdev->dev);
+	if (ret)
+		return ret;
+
 	dev_info(&pdev->dev, "Registered GCC clocks\n");
 
 	return 0;
@@ -3402,9 +3476,78 @@ static struct platform_driver msm_clock_gcc_driver = {
 	},
 };
 
+static int msm_gcc_spm_probe(struct platform_device *pdev)
+{
+	struct resource *res = NULL;
+
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "spm_c0_base");
+	if (!res) {
+		dev_err(&pdev->dev, "SPM register base not defined for c0\n");
+		return -ENOMEM;
+	}
+
+	a53ss_c0_pll.spm_ctrl.spm_base = devm_ioremap(&pdev->dev, res->start,
+						resource_size(res));
+	if (!a53ss_c0_pll.spm_ctrl.spm_base) {
+		dev_err(&pdev->dev, "Failed to ioremap c0 spm registers\n");
+		return -ENOMEM;
+	}
+
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "spm_c1_base");
+	if (!res) {
+		dev_err(&pdev->dev, "SPM register base not defined for c1\n");
+		return -ENOMEM;
+	}
+
+	a53ss_c1_pll.spm_ctrl.spm_base = devm_ioremap(&pdev->dev, res->start,
+						resource_size(res));
+	if (!a53ss_c1_pll.spm_ctrl.spm_base) {
+		dev_err(&pdev->dev, "Failed to ioremap c1 spm registers\n");
+		return -ENOMEM;
+	}
+
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
+						"spm_cci_base");
+	if (!res) {
+		dev_err(&pdev->dev, "SPM register base not defined for cci\n");
+		return -ENOMEM;
+	}
+
+	a53ss_cci_pll.spm_ctrl.spm_base = devm_ioremap(&pdev->dev, res->start,
+						resource_size(res));
+	if (!a53ss_cci_pll.spm_ctrl.spm_base) {
+		dev_err(&pdev->dev, "Failed to ioremap cci spm registers\n");
+		return -ENOMEM;
+	}
+
+	dev_info(&pdev->dev, "Registered GCC SPM clocks\n");
+
+	return 0;
+}
+
+static struct of_device_id msm_clock_spm_match_table[] = {
+	{ .compatible = "qcom,gcc-spm-8936" },
+	{}
+};
+
+static struct platform_driver msm_clock_spm_driver = {
+	.probe = msm_gcc_spm_probe,
+	.driver = {
+		.name = "qcom,gcc-spm-8936",
+		.of_match_table = msm_clock_spm_match_table,
+		.owner = THIS_MODULE,
+	},
+};
+
 static int __init msm_gcc_init(void)
 {
-	return platform_driver_register(&msm_clock_gcc_driver);
+	int ret;
+
+	ret = platform_driver_register(&msm_clock_gcc_driver);
+	if (!ret)
+		ret = platform_driver_register(&msm_clock_spm_driver);
+
+	return ret;
 }
 arch_initcall(msm_gcc_init);
 
@@ -3482,6 +3625,10 @@ static struct clk_lookup msm_clocks_gcc_mdss[] = {
 	CLK_LIST(gcc_mdss_pclk1_clk),
 	CLK_LIST(gcc_mdss_byte0_clk),
 	CLK_LIST(gcc_mdss_byte1_clk),
+
+	/* voters for new rotator implementation */
+	CLK_LIST(gcc_mdss_mdp_vote_clk),
+	CLK_LIST(gcc_mdss_mdp_rotator_vote_clk),
 };
 
 static int msm_gcc_mdss_probe(struct platform_device *pdev)
