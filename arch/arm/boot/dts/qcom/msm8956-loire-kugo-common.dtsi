@@ -191,83 +191,138 @@
 	status = "okay";
 };
 
-&tlmm_pinmux {
+&msm_gpio {
 	/* GPIO_12: TOF_INT */
-	msm_gpio_12 {
-		qcom,pin-func = <0>;
-		msm_gpio_12_act: active {
-			drive-strength = <2>;
-			bias-pull-up;
+	msm_gpio_12_def: msm_gpio_12def {
+		mux {
+			pins = "gpio12";
+			function = "gpio";
 		};
-		msm_gpio_12_sus: suspend {
-			drive-strength = <2>;
-			bias-pull-down;
-			input-enable;
-		};
-		msm_gpio_12_def: default {
+		config {
+			pins = "gpio12";
 			drive-strength = <2>;
 			/delete-property/ bias-disable;
 			/delete-property/ output-low;
 			bias-pull-down;
 			input-enable;
+		};
+	};
+
+	msm_gpio_12_sus: msm_gpio_12sus {
+		mux {
+			pins = "gpio12";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio12";
+			drive-strength = <2>;
+			bias-pull-down;
+			input-enable;
+		};
+	};
+
+	msm_gpio_12_act: msm_gpio_12act {
+		mux {
+			pins = "gpio12";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio12";
+			drive-strength = <2>;
+			bias-pull-up;
 		};
 	};
 
 	/* GPIO_13: RGBC_IR_INT */
-	msm_gpio_13 {
-		qcom,pin-func = <0>;
-		msm_gpio_13_act: active {
-			drive-strength = <2>;
-			bias-pull-up;
+	msm_gpio_13_def: msm_gpio_13def {
+		mux {
+			pins = "gpio13";
+			function = "blsp_spi4";
 		};
-		msm_gpio_13_sus: suspend {
-			drive-strength = <2>;
-			bias-pull-down;
-			input-enable;
-		};
-		msm_gpio_13_def: default {
+		config {
+			pins = "gpio13";
 			drive-strength = <2>;
 			/delete-property/ bias-disable;
 			/delete-property/ output-low;
 			bias-pull-down;
 			input-enable;
+		};
+	};
+
+	msm_gpio_13_sus: msm_gpio_13sus {
+		mux {
+			pins = "gpio13";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio13";
+			drive-strength = <2>;
+			bias-pull-down;
+			input-enable;
+		};
+	};
+
+	msm_gpio_13_act: msm_gpio_13act {
+		mux {
+			pins = "gpio13";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio13";
+			drive-strength = <2>;
+			bias-pull-up;
 		};
 	};
 
 	/* GPIO_18: RGBC-IR & ToF I2C SDA */
-	msm_gpio_18 {
-		qcom,pin-func = <3>;
-		msm_gpio_18_act: active {
-			drive-strength = <2>;
-			bias-disable;
+	msm_gpio_18_def: msm_gpio_18def {
+		mux {
+			pins = "gpio18";
+			function = "blsp_i2c5";
 		};
-		msm_gpio_18_sus: suspend {
-			drive-strength = <2>;
-			bias-pull-down;
-			input-enable;
-		};
-		msm_gpio_18_def: default {
+		config {
+			pins = "gpio18";
 			drive-strength = <2>;
 			/delete-property/ bias-disable;
 			/delete-property/ output-low;
 			bias-pull-down;
 			input-enable;
+		};
+	};
+
+	msm_gpio_18_sus: msm_gpio_18sus {
+		mux {
+			pins = "gpio18";
+			function = "blsp_i2c5";
+		};
+		config {
+			pins = "gpio18";
+			drive-strength = <2>;
+			bias-pull-down;
+			input-enable;
+		};
+	};
+
+	msm_gpio_18_act: msm_gpio_18act {
+		mux {
+			pins = "gpio18";
+			function = "blsp_i2c5";
+		};
+		config {
+			pins = "gpio18";
+			drive-strength = <2>;
+			bias-disable;
 		};
 	};
 
 	/* GPIO_19: RGBC-IR & ToF I2C SCL */
-	msm_gpio_19 {
-		qcom,pin-func = <3>;
-		msm_gpio_19_act: active {
-			drive-strength = <2>;
-			bias-disable;
+	msm_gpio_19_def: msm_gpio_19def {
+		mux {
+			pins = "gpio19";
+			function = "blsp_i2c5";
 		};
-		msm_gpio_19_sus: suspend {
-			drive-strength = <2>;
-			bias-pull-down;
-			input-enable;
-		};
-		msm_gpio_19_def: default {
+		config {
+			pins = "gpio19";
 			drive-strength = <2>;
 			/delete-property/ bias-disable;
 			/delete-property/ output-low;
@@ -276,68 +331,63 @@
 		};
 	};
 
-	/* GPIO_27: BT_DEV_WAKE */
-	msm_gpio_27 {
-		qcom,pins = <&gp 27>;
-		qcom,num-grp-pins = <1>;
-		label = "msm_gpio_27";
-		qcom,pin-func = <0>;
-		msm_gpio_27_def: default {
-			drive-strength = <2>;
-			bias-disable;
-			output-low;
+	msm_gpio_19_sus: msm_gpio_19sus {
+		mux {
+			pins = "gpio19";
+			function = "blsp_i2c5";
 		};
-	};
-
-	/* GPIO_36: BT_REG_ON */
-	msm_gpio_36 {
-		qcom,pins = <&gp 36>;
-		qcom,num-grp-pins = <1>;
-		label = "msm_gpio_36";
-		qcom,pin-func = <0>;
-		msm_gpio_36_def: default {
+		config {
+			pins = "gpio19";
 			drive-strength = <2>;
-			bias-disable;
-			output-low;
-		};
-	};
-
-	/* GPIO_107: USB_CABLE_DET_N */
-	msm_gpio_107 {
-		qcom,pin-func = <0>;
-		msm_gpio_107_def: default {
-			drive-strength = <2>;
-			bias-pull-up;
+			bias-pull-down;
 			input-enable;
 		};
 	};
 
-	/* GPIO_116: USB_CABLE_SENSE_EN */
-	msm_gpio_116 {
-		qcom,pin-func = <0>;
-		msm_gpio_116_def: default {
+	msm_gpio_19_act: msm_gpio_19act {
+		mux {
+			pins = "gpio19";
+			function = "blsp_i2c5";
+		};
+		config {
+			pins = "gpio19";
 			drive-strength = <2>;
 			bias-disable;
-			output-low;
 		};
 	};
+};
 
-	/* GPIO_131: USB_CC_INT */
-	msm_gpio_131 {
-		qcom,pin-func = <0>;
-		msm_gpio_131_def: default {
-			drive-strength = <2>;
-			/delete-property/ bias-disable;
-			/delete-property/ output-low;
-			bias-pull-up;
-			input-enable;
-		};
+/* GPIO_27: BT_DEV_WAKE */
+&msm_gpio_27_def {
+	mux {
+		function = "gpio";
 	};
+};
 
-	pmx_sdc2_data {
-		sdc2_data_on: data_on {
-			drive-strength = <8>;
-		};
+/* GPIO_36: BT_REG_ON */
+&msm_gpio_36_def {
+	mux {
+		function = "gpio";
+	};
+};
+
+/* GPIO_107: USB_CABLE_DET_N */
+
+/* GPIO_116: USB_CABLE_SENSE_EN */
+
+/* GPIO_131: USB_CC_INT */
+&msm_gpio_131_def {
+	config {
+		/delete-property/ bias-disable;
+		/delete-property/ output-low;
+		bias-pull-up;
+		input-enable;
+	};
+};
+
+&sdc2_data_on {
+	config {
+		drive-strength = <8>;
 	};
 };
 
