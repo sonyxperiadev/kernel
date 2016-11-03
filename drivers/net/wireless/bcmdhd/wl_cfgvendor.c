@@ -691,14 +691,22 @@ static int wl_cfgvendor_hotlist_cfg(struct wiphy *wiphy,
 	struct bcm_cfg80211 *cfg = wiphy_priv(wiphy);
 	gscan_hotlist_scan_params_t *hotlist_params;
 	int tmp, tmp1, tmp2, type, j = 0, dummy;
-	const struct nlattr *outer, *inner, *iter;
-	bool flush = FALSE;
+	const struct nlattr *outer, *inner = NULL, *iter;
+	uint8 flush = 0;
 	struct bssid_t *pbssid;
 
-	hotlist_params = (gscan_hotlist_scan_params_t *)kzalloc(len, GFP_KERNEL);
+	if (len < sizeof(*hotlist_params) || len >= WLC_IOCTL_MAXLEN) {
+		WL_ERR(("buffer length :%d wrong - bail out.\n", len));
+		return -EINVAL;
+	}
+
+	hotlist_params = kzalloc(sizeof(*hotlist_params)
+		+ (sizeof(struct bssid_t) * (PFN_SWC_MAX_NUM_APS - 1)),
+		GFP_KERNEL);
+
 	if (!hotlist_params) {
 		WL_ERR(("Cannot Malloc mem to parse config commands size - %d bytes \n", len));
-		return -1;
+		return -ENOMEM;
 	}
 
 	hotlist_params->lost_ap_window = GSCAN_LOST_AP_WINDOW_DEFAULT;
@@ -706,37 +714,78 @@ static int wl_cfgvendor_hotlist_cfg(struct wiphy *wiphy,
 	nla_for_each_attr(iter, data, len, tmp2) {
 		type = nla_type(iter);
 		switch (type) {
-			case GSCAN_ATTRIBUTE_HOTLIST_BSSIDS:
-				pbssid = hotlist_params->bssid;
-				nla_for_each_nested(outer, iter, tmp) {
-					nla_for_each_nested(inner, outer, tmp1) {
-						type = nla_type(inner);
+		case GSCAN_ATTRIBUTE_HOTLIST_BSSIDS:
+			pbssid = hotlist_params->bssid;
+			nla_for_each_nested(outer, iter, tmp) {
+				nla_for_each_nested(inner, outer, tmp1) {
+					type = nla_type(inner);
 
-						switch (type) {
-							case GSCAN_ATTRIBUTE_BSSID:
-								memcpy(&(pbssid[j].macaddr),
-								  nla_data(inner), ETHER_ADDR_LEN);
-								break;
-							case GSCAN_ATTRIBUTE_RSSI_LOW:
-								pbssid[j].rssi_reporting_threshold =
-								         (int8) nla_get_u8(inner);
-								break;
-							case GSCAN_ATTRIBUTE_RSSI_HIGH:
-								dummy = (int8) nla_get_u8(inner);
-								break;
+					switch (type) {
+					case GSCAN_ATTRIBUTE_BSSID:
+						if (nla_len(inner) != sizeof(pbssid[j].macaddr)) {
+							WL_DBG(("type:%d length:%d not matching.\n",
+								type, nla_len(inner)));
+							err = -EINVAL;
+							goto exit;
 						}
+						memcpy(
+							&pbssid[j].macaddr,
+							nla_data(inner),
+							sizeof(pbssid[j].macaddr));
+						break;
+					case GSCAN_ATTRIBUTE_RSSI_LOW:
+						if (nla_len(inner) != sizeof(uint8)) {
+							WL_DBG(("type:%d length:%d not matching.\n",
+								type, nla_len(inner)));
+							err = -EINVAL;
+							goto exit;
+						}
+						pbssid[j].rssi_reporting_threshold =
+								(int8)nla_get_u8(inner);
+						break;
+					case GSCAN_ATTRIBUTE_RSSI_HIGH:
+						if (nla_len(inner) != sizeof(uint8)) {
+							WL_DBG(("type:%d length:%d not matching.\n",
+								type, nla_len(inner)));
+							err = -EINVAL;
+							goto exit;
+						}
+						dummy = (int8)nla_get_u8(inner);
+						break;
 					}
-					j++;
+				}
+				if (++j > PFN_SWC_MAX_NUM_APS) {
+					WL_DBG(("nbssid:%d exeed limit.\n",
+						hotlist_params->nbssid));
+					err = -EINVAL;
+					goto exit;
 				}
 				hotlist_params->nbssid = j;
-				break;
-			case GSCAN_ATTRIBUTE_HOTLIST_FLUSH:
-				flush = (bool) nla_get_u8(iter);
-				break;
-			case GSCAN_ATTRIBUTE_LOST_AP_SAMPLE_SIZE:
-				hotlist_params->lost_ap_window = nla_get_u32(iter);
-				break;
 			}
+			break;
+		case GSCAN_ATTRIBUTE_HOTLIST_FLUSH:
+			if (nla_len(iter) != sizeof(uint8)) {
+				WL_DBG(("type:%d length:%d not matching.\n",
+					type, nla_len(inner)));
+				err = -EINVAL;
+				goto exit;
+			}
+			flush = nla_get_u8(iter);
+			break;
+		case GSCAN_ATTRIBUTE_LOST_AP_SAMPLE_SIZE:
+			if (nla_len(iter) != sizeof(uint32)) {
+				WL_DBG(("type:%d length:%d not matching.\n",
+					type, nla_len(inner)));
+				err = -EINVAL;
+				goto exit;
+			}
+			hotlist_params->lost_ap_window = (uint16)nla_get_u32(iter);
+			break;
+		default:
+			WL_DBG(("Unknown type %d\n", type));
+			err = -EINVAL;
+			goto exit;
+		}
 
 	}
 
