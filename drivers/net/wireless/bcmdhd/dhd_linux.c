@@ -9097,13 +9097,24 @@ __dhd_apf_add_filter(struct net_device *ndev, uint32 filter_id,
 	}
 
 	cmd_len = sizeof(cmd);
+
+	/* Check if the program_len is more than the expected len
+	 * and if program is initialized to NULL return here.
+	 */
+	if ((program_len > WL_APF_PROGRAM_MAX_SIZE) ||
+	    (program == NULL)) {
+		DHD_ERROR(("%s Invalid program_len: %d, program: %pK\n",
+			__func__, program_len, program));
+		return -EINVAL;
+	}
 	buf_len = cmd_len + WL_PKT_FILTER_FIXED_LEN +
 		WL_APF_PROGRAM_FIXED_LEN + program_len;
 
 	kflags = in_atomic() ? GFP_ATOMIC : GFP_KERNEL;
 	buf = kzalloc(buf_len, kflags);
 	if (unlikely(!buf)) {
-		DHD_ERROR(("%s: MALLOC failure, %d bytes\n", __FUNCTION__, buf_len));
+		DHD_ERROR(("%s: MALLOC failure, %d bytes\n", __func__,
+			buf_len));
 		return -ENOMEM;
 	}
 

@@ -2722,12 +2722,33 @@ wl_cfgvendor_apf_set_filter(struct wiphy *wiphy,
 	int ret, tmp, type;
 	gfp_t kflags;
 
-	/* assumption: length attribute must come first */
+	if (len <= 0) {
+		WL_ERR((" Invalid len : %d\n", len));
+		ret = -EINVAL;
+		goto exit;
+	}
 	nla_for_each_attr(iter, data, len, tmp) {
 		type = nla_type(iter);
 		switch (type) {
 			case APF_ATTRIBUTE_PROGRAM_LEN:
-				program_len = nla_get_u32(iter);
+				/* check if the iter is valid and program
+				 * length is not already initialized.
+				 */
+				if (nla_len(iter) == sizeof(uint32) &&
+				   !program_len) {
+					program_len = nla_get_u32(iter);
+				} else {
+					ret = -EINVAL;
+					goto exit;
+				}
+
+				if (program_len >
+					WL_APF_PROGRAM_MAX_SIZE) {
+					WL_ERR(("program len is more "));
+					WL_ERR(("than expected len\n"));
+					ret = -EINVAL;
+					goto exit;
+				}
 				if (unlikely(!program_len)) {
 					WL_ERR(("zero program length\n"));
 					ret = -EINVAL;
@@ -2740,6 +2761,12 @@ wl_cfgvendor_apf_set_filter(struct wiphy *wiphy,
 					ret = -EINVAL;
 					goto exit;
 				}
+				if (nla_len(iter) != program_len) {
+					WL_ERR(("program_len is not same\n"));
+					ret = -EINVAL;
+					goto exit;
+				}
+
 				kflags = in_atomic() ? GFP_ATOMIC : GFP_KERNEL;
 				program = kzalloc(program_len, kflags);
 				if (unlikely(!program)) {

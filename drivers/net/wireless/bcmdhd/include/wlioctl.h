@@ -3291,6 +3291,8 @@ typedef struct wl_tcp_keep_set {
 			OFFSETOF(wl_pkt_filter_pattern_listel_t, mask_and_data)
 
 #define WL_APF_INTERNAL_VERSION 1
+/* This will be MAX allowable APF program size */
+#define WL_APF_PROGRAM_MAX_SIZE (2 * 1024)
 #define WL_APF_PROGRAM_FIXED_LEN OFFSETOF(wl_apf_program_t, instrs)
 #define WL_APF_PROGRAM_LEN(apf_program) \
 	(apf_program->instr_len * sizeof(apf_program->instrs[0]))
