@@ -1279,6 +1279,34 @@ static int msm_camera_pinctrl_init(struct msm_camera_power_ctrl_t *ctrl)
 	return 0;
 }
 
+static int manage_custom_vreg(struct device *dev, const char* vreg_name, bool enb)
+{
+	struct regulator *this_vreg = NULL;
+	int rc = 0;
+
+	pr_debug("Manage custom vreg. enb=%d\n", enb);
+
+	this_vreg = regulator_get(dev, vreg_name);
+
+	if (!this_vreg) {
+		pr_err("%s: FATAL: Cannot get regulator.\n", __func__);
+		return -ENODEV;
+	}
+
+	if (enb) {
+		rc = regulator_enable(this_vreg);
+		if (rc)
+			pr_err("%s: Failed to enable regulator.\n",
+				__func__);
+	} else {
+		regulator_disable(this_vreg);
+	}
+
+	regulator_put(this_vreg);
+
+	return rc;
+}
+
 int msm_camera_power_up(struct msm_camera_power_ctrl_t *ctrl,
 	enum msm_camera_device_type_t device_type,
 	struct msm_camera_i2c_client *sensor_i2c_client)
@@ -1405,6 +1433,8 @@ int msm_camera_power_up(struct msm_camera_power_ctrl_t *ctrl,
 				(power_setting->delay * 1000) + 1000);
 		}
 	}
+	if (of_machine_is_compatible("somc,kugo-row"))
+		manage_custom_vreg(ctrl->dev, "camera_rgbcir_vreg", true);
 
 	if (device_type == MSM_CAMERA_PLATFORM_DEVICE) {
 		rc = sensor_i2c_client->i2c_func_tbl->i2c_util(
@@ -1471,6 +1501,8 @@ power_up_failed:
 				(power_setting->delay * 1000) + 1000);
 		}
 	}
+	if (of_machine_is_compatible("somc,kugo-row"))
+		manage_custom_vreg(ctrl->dev, "camera_rgbcir_vreg", false);
 	if (ctrl->cam_pinctrl_status) {
 		ret = pinctrl_select_state(ctrl->pinctrl_info.pinctrl,
 				ctrl->pinctrl_info.gpio_state_suspend);
@@ -1527,7 +1559,8 @@ int msm_camera_power_down(struct msm_camera_power_ctrl_t *ctrl,
 	if (of_machine_is_compatible("somc,eagle") ||
 			of_machine_is_compatible("somc,eagle_dsds"))
 		gpio_set_value_cansleep(69, 0);
-
+	if (of_machine_is_compatible("somc,kugo-row"))
+		manage_custom_vreg(ctrl->dev, "camera_rgbcir_vreg", false);
 	for (index = 0; index < ctrl->power_down_setting_size; index++) {
 		CDBG("%s index %d\n", __func__, index);
 		pd = &ctrl->power_down_setting[index];
