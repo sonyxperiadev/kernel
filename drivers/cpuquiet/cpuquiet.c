@@ -313,7 +313,7 @@ static void cpuquiet_unregister_devices(void)
 	mutex_unlock(&cpuquiet_lock);
 }
 
-static int cpuquiet_probe(struct platform_device *pdev)
+static int __init cpuquiet_probe(struct platform_device *pdev)
 {
 	int err;
 
