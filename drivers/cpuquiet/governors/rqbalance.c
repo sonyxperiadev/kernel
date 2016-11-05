@@ -36,6 +36,7 @@
 #include <linux/jiffies.h>
 #include <linux/cpu.h>
 #include <linux/sched.h>
+#include <linux/slab.h>
 
 #include "../cpuquiet.h"
 
@@ -617,7 +618,7 @@ static int balanced_cpufreq_transition(struct notifier_block *nb,
 		if (num_online_cluster_cpus(CLUSTER_BIG) > 0)
 			n = 1;
 
-	if (state == CPUFREQ_POSTCHANGE || state == CPUFREQ_RESUMECHANGE) {
+	if (state == CPUFREQ_POSTCHANGE) {
 		cpu_freq = freqs->new;
 
 		switch (rqbalance_state) {
@@ -804,7 +805,7 @@ static void rqbalance_kickstart(void)
 	/*FIXME: Kick start the state machine by faking a freq notification*/
 	initial_freq.new = cpufreq_get(0);
 	if (initial_freq.new != 0)
-		balanced_cpufreq_transition(NULL, CPUFREQ_RESUMECHANGE,
+		balanced_cpufreq_transition(NULL, CPUFREQ_POSTCHANGE,
 						&initial_freq);
 }
 
