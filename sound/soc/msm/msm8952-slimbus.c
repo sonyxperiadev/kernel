@@ -1122,7 +1122,7 @@ static int msm_ear_enable_put(struct snd_kcontrol *kcontrol,
 {
 	int ret;
 	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
-	struct snd_soc_card *card = codec->card;
+	struct snd_soc_card *card = codec->component.card;
 	struct msm8952_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
 
 	pr_err("%s: ucontrol value = %ld\n", __func__,
@@ -2426,7 +2426,7 @@ int msm_audrx_init(struct snd_soc_pcm_runtime *rtd)
 	if (!strcmp(dev_name(codec_dai->dev), "tomtom_codec")) {
 
 		wcd9xxx_mbhc_cfg.gpio_level_insert = of_property_read_bool(
-						codec->card->dev->of_node,
+						codec->component.card->dev->of_node,
 						"qcom,headset-jack-type-NC");
 		/* start mbhc */
 		wcd9xxx_mbhc_cfg.calibration = def_codec_mbhc_cal();
