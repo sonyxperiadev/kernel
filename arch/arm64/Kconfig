@@ -904,8 +904,6 @@ config ARM64_LSE_ATOMICS
 	  not support these instructions and requires the kernel to be
 	  built with binutils >= 2.25.
 
-source "drivers/cpuquiet/Kconfig"
-
 endmenu
 
 config ARM64_UAO
