@@ -913,6 +913,11 @@ int sr_pll_clk_enable(struct clk *c)
 		/* PLL initilazation is similar to HF PLL */
 		__hf_pll_init(c);
 
+	/* Remove SPM HW event */
+	spm_event(pll->spm_ctrl.spm_base, pll->spm_ctrl.offset,
+				pll->spm_ctrl.event_bit, false);
+
+
 	mode = readl_relaxed(PLL_MODE_REG(pll));
 	/* De-assert active-low PLL reset. */
 	mode |= PLL_RESET_N;
