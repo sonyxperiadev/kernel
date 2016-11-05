@@ -906,6 +906,8 @@ int sr_pll_clk_enable(struct clk *c)
 	unsigned long flags;
 	struct pll_clk *pll = to_pll_clk(c);
 	u32 lockmask = pll->masks.lock_mask ?: PLL_LOCKED_BIT;
+	u32 status_reg, user_reg, l_reg, m_reg, n_reg, config_reg;
+	u64 time;
 
 	spin_lock_irqsave(&pll_reg_lock, flags);
 
@@ -920,24 +922,14 @@ int sr_pll_clk_enable(struct clk *c)
 
 	mode = readl_relaxed(PLL_MODE_REG(pll));
 	/* De-assert active-low PLL reset. */
-	mode |= PLL_RESET_N;
+	mode |= PLL_RESET_N | PLL_BYPASSNL;
 	writel_relaxed(mode, PLL_MODE_REG(pll));
 
-	/*
-	 * H/W requires a 5us delay between disabling the bypass and
-	 * de-asserting the reset. Delay 10us just to be safe.
-	 */
+	/* A 100us delay required before locking the PLL */
 	mb();
-	udelay(10);
+	udelay(100);
 
-	/* Disable PLL bypass mode. */
-	mode |= PLL_BYPASSNL;
-	writel_relaxed(mode, PLL_MODE_REG(pll));
-
-	/* A 60us delay required before locking the PLL */
-	mb();
-	udelay(60);
-
+	time = sched_clock();
 	/* Wait for the PLL to lock */
 	for (count = ENABLE_WAIT_MAX_LOOPS; count > 0; count--) {
 		if (readl_relaxed(PLL_STATUS_REG(pll)) & lockmask)
@@ -945,8 +937,33 @@ int sr_pll_clk_enable(struct clk *c)
 		udelay(1);
 	}
 
-	if (!(readl_relaxed(PLL_STATUS_REG(pll)) & lockmask))
+	time = sched_clock() - time;
+
+	if (!(readl_relaxed(PLL_STATUS_REG(pll)) & lockmask)) {
+		pr_err("PLL lock bit detection total wait time: %lld ns", time);
+		mode = readl_relaxed(PLL_MODE_REG(pll));
+		status_reg = readl_relaxed(PLL_STATUS_REG(pll));
+		user_reg = readl_relaxed(PLL_CONFIG_REG(pll));
+		config_reg = readl_relaxed(PLL_CFG_CTL_REG(pll));
+		l_reg = readl_relaxed(PLL_L_REG(pll));
+		m_reg = readl_relaxed(PLL_M_REG(pll));
+		n_reg = readl_relaxed(PLL_N_REG(pll));
+
+		pr_err("PLL %s didn't lock after enabling for L value 0x%x!\n",
+				c->dbg_name, l_reg);
+		pr_err("mode register is 0x%x\n", mode);
+		pr_err("status register is 0x%x\n", status_reg);
+		pr_err("user control register is 0x%x\n", user_reg);
+		pr_err("config control register is 0x%x\n", config_reg);
+		pr_err("L value register is 0x%x\n", l_reg);
+		pr_err("M value register is 0x%x\n", m_reg);
+		pr_err("N value control register is 0x%x\n", n_reg);
+		if (pll->spm_ctrl.spm_base)
+			pr_err("L2 spm_force_event_en 0x%x\n",
+			readl_relaxed(pll->spm_ctrl.spm_base +
+						SPM_FORCE_EVENT));
 		panic("PLL %s didn't lock after enabling it!\n", c->dbg_name);
+	}
 
 	/* Enable PLL output. */
 	mode |= PLL_OUTCTRL;
