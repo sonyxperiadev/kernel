@@ -66,5 +66,16 @@ config CPU_QUIET_DEFAULT_GOV_RQBALANCE
 	 Use the CPUQuiet governor 'rqbalance' as default.
 endchoice
 
+config CPU_QUIET_MSM
+	bool "MSM CPUquiet Driver"
+	depends on HOTPLUG_CPU && ARCH_MSM
+	default n
+	help
+	 This is the CPUquiet driver for MSM SoCs. It supports
+	 automatic hotplugging of CPU cores using the CPUquiet
+	 governor.
+
+	 If unsure, say N.
 endif
+
 endmenu
