@@ -86,25 +86,20 @@
 		qcom,mdss-dsi-panel-timings = [E6 38 26 00 68 6E 2A 3C 2C 03 04 00];
 		qcom,mdss-dsi-t-clk-post = <0x1B>;
 		qcom,mdss-dsi-t-clk-pre = <0x2B>;
-		qcom,panel-supply-entries = <&dsi_panel_pwr_supply_hybrid_incell>;
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
 		qcom,mdss-brightness-max-level = <255>;
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 
-		qcom,qpnp-lab-limit-maximum-current = <200>;
-		qcom,qpnp-ibb-limit-maximum-current = <800>;
 		somc,qpnp-lab-max-precharge-time = <300>;
 		somc,qpnp-lab-soft-start = <800>;
 		somc,qpnp-lab-pull-down-enable;
 		somc,qpnp-lab-full-pull-down;
 		somc,qpnp-ibb-pull-down-enable;
 		somc,qpnp-ibb-full-pull-down;
-
 		somc,lcd-id = <0>;
 		somc,lcd-id-adc = <353000 653000>;
-		somc,mdss-dsi-master;
 		somc,pw-on-rst-seq = <0 10>, <1 16>, <0 7>, <1 16>;
 		somc,pw-off-rst-b-seq = <0 11>;
 		somc,pw-wait-after-on-vdd = <0>;
@@ -125,14 +120,9 @@
 		somc,pw-wait-after-off-touch-reset = <5>;
 		somc,pw-wait-after-off-touch-int-n = <0>;
 		somc,pw-down-period = <100>;
-		somc,lab-output-voltage = <5600000>;
-		somc,ibb-output-voltage = <5600000>;
-
 		somc,ewu-wait-after-touch-reset = <40>;
-
 		somc,mdss-dsi-disp-on-in-hs = <0>;
 		somc,mdss-dsi-wait-time-before-post-on-cmd = <0>;
-
 		somc,change-fps-enable;
 		somc,change-fps-command =
 				[29 01 00 00 00 00 02 B0 04
@@ -146,7 +136,6 @@
 		somc,change-fps-send-byte = <4>;
 		somc,change-fps-porch-mask-pos = <3>;
 		somc,change-fps-porch-mask = <0xF0>;
-
 		somc,mdss-dsi-pcc-enable;
 		somc,mdss-dsi-u-rev = <0 8>;
 		somc,mdss-dsi-v-rev = <0 8>;
