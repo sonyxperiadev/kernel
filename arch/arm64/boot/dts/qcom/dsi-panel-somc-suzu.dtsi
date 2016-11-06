@@ -24,6 +24,50 @@
 #include "dsi-panel-somc-synaptics-sharp-1080p-cmd-ID9.dtsi"
 
 &mdss_mdp {
+	dsi_auo_synaptics_cmd_4: somc,auo_synaptics_cmd_4_panel {
+		qcom,panel-supply-entries = <&dsi_panel_pwr_supply_full_incell>;
+		qcom,qpnp-lab-limit-maximum-current = <200>;
+		qcom,qpnp-ibb-limit-maximum-current = <800>;
+		somc,lab-output-voltage = <5600000>;
+		somc,ibb-output-voltage = <5600000>;
+	};
+
+	dsi_jdi_synaptics_cmd_6: somc,jdi_synaptics_cmd_6_panel{
+		qcom,panel-supply-entries = <&dsi_panel_pwr_supply_hybrid_incell>;
+		qcom,qpnp-lab-limit-maximum-current = <200>;
+		qcom,qpnp-ibb-limit-maximum-current = <800>;
+		somc,lab-output-voltage = <5600000>;
+		somc,ibb-output-voltage = <5600000>;
+		somc,mdss-dsi-master;
+	};
+
+	dsi_lgd_synaptics_cmd_8: somc,lgd_synaptics_cmd_8_panel {
+		qcom,panel-supply-entries = <&dsi_panel_pwr_supply_full_incell>;
+		qcom,qpnp-lab-limit-maximum-current = <200>;
+		qcom,qpnp-ibb-limit-maximum-current = <800>;
+		somc,lab-output-voltage = <5500000>;
+		somc,ibb-output-voltage = <5500000>;
+		somc,mdss-dsi-master;
+	};
+
+	dsi_sharp_synaptics_cmd_3: somc,sharp_synaptics_cmd_3_panel {
+		qcom,panel-supply-entries = <&dsi_panel_pwr_supply_full_incell>;
+		qcom,qpnp-lab-limit-maximum-current = <200>;
+		qcom,qpnp-ibb-limit-maximum-current = <800>;
+		somc,lab-output-voltage = <5600000>;
+		somc,ibb-output-voltage = <5600000>;
+		somc,mdss-dsi-master;
+	};
+
+	dsi_sharp_synaptics_cmd_9: somc,sharp_synaptics_cmd_9_panel {
+		qcom,panel-supply-entries = <&dsi_panel_pwr_supply_full_incell>;
+		qcom,qpnp-lab-limit-maximum-current = <200>;
+		qcom,qpnp-ibb-limit-maximum-current = <800>;
+		somc,lab-output-voltage = <5600000>;
+		somc,ibb-output-voltage = <5600000>;
+		somc,mdss-dsi-master;
+	};
+
 	dsi_default_panel: somc,default_cmd_panel {
 		qcom,mdss-dsi-panel-name = "Default Panel";
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
