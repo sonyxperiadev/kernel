@@ -21,6 +21,36 @@
 #include "dsi-panel-somc-synaptics-jdi-720p-cmd.dtsi"
 
 &mdss_mdp {
+	dsi_auo_synaptics_cmd_5: somc,auo_synaptics_cmd_5_panel {
+		qcom,panel-supply-entries = <&dsi_panel_pwr_supply_full_incell>;
+		qcom,qpnp-lab-limit-maximum-current = <200>;
+		qcom,qpnp-ibb-limit-maximum-current = <800>;
+		somc,lab-output-voltage = <5600000>;
+		somc,ibb-output-voltage = <5600000>;
+		somc,qpnp-lab-max-precharge-time = <300>;
+		somc,qpnp-lab-soft-start = <800>;
+		somc,qpnp-lab-pull-down-enable;
+		somc,qpnp-lab-full-pull-down;
+		somc,qpnp-ibb-pull-down-enable;
+		somc,qpnp-ibb-full-pull-down;
+		somc,mdss-dsi-master;
+	};
+
+	dsi_jdi_synaptics_cmd_8: somc,jdi_synaptics_cmd_8_panel {
+		qcom,panel-supply-entries = <&dsi_panel_pwr_supply_hybrid_incell>;
+		qcom,qpnp-lab-limit-maximum-current = <200>;
+		qcom,qpnp-ibb-limit-maximum-current = <800>;
+		somc,lab-output-voltage = <5600000>;
+		somc,ibb-output-voltage = <5600000>;
+		somc,qpnp-lab-max-precharge-time = <300>;
+		somc,qpnp-lab-soft-start = <800>;
+		somc,qpnp-lab-pull-down-enable;
+		somc,qpnp-lab-full-pull-down;
+		somc,qpnp-ibb-pull-down-enable;
+		somc,qpnp-ibb-full-pull-down;
+		somc,mdss-dsi-master;
+	};
+
 	dsi_default_panel: somc,default_cmd_panel {
 		qcom,mdss-dsi-panel-name = "Default Panel";
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
