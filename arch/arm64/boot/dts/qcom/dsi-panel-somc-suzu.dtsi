@@ -20,7 +20,8 @@
 #include "dsi-panel-somc-synaptics-auo-1080p-cmd.dtsi"
 #include "dsi-panel-somc-synaptics-jdi-1080p-cmd.dtsi"
 #include "dsi-panel-somc-synaptics-lgd-1080p-cmd.dtsi"
-#include "dsi-panel-somc-synaptics-sharp-1080p-cmd.dtsi"
+#include "dsi-panel-somc-synaptics-sharp-1080p-cmd-ID3.dtsi"
+#include "dsi-panel-somc-synaptics-sharp-1080p-cmd-ID9.dtsi"
 
 &mdss_mdp {
 	dsi_default_panel: somc,default_cmd_panel {
