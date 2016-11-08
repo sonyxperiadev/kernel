@@ -22,6 +22,12 @@
 
 &mdss_mdp {
 	dsi_jdi_synaptics_cmd_6: somc,jdi_synaptics_cmd_6_panel {
+		qcom,panel-supply-entries = <&dsi_panel_pwr_supply_hybrid_incell>;
+		qcom,qpnp-lab-limit-maximum-current = <200>;
+		qcom,qpnp-ibb-limit-maximum-current = <800>;
+		somc,lab-output-voltage = <5600000>;
+		somc,ibb-output-voltage = <5600000>;
+		somc,mdss-dsi-master;
 		qcom,mdss-dsi-panel-timings-phy-v2 = [
 				24 1f 08 09 05 03 04 a0
 				24 1f 08 09 05 03 04 a0
@@ -31,6 +37,12 @@
 	};
 
 	dsi_sharp_synaptics_cmd_9: somc,sharp_synaptics_cmd_9_panel {
+		qcom,panel-supply-entries = <&dsi_panel_pwr_supply_full_incell>;
+		qcom,qpnp-lab-limit-maximum-current = <200>;
+		qcom,qpnp-ibb-limit-maximum-current = <800>;
+		somc,lab-output-voltage = <5600000>;
+		somc,ibb-output-voltage = <5600000>;
+		somc,mdss-dsi-master;
 		qcom,mdss-dsi-panel-timings-phy-v2 = [
 				24 1f 08 09 05 03 04 a0
 				24 1f 08 09 05 03 04 a0
