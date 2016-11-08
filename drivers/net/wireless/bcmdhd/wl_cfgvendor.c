@@ -510,23 +510,113 @@ static int wl_cfgvendor_enable_full_scan_result(struct wiphy *wiphy,
 	return err;
 }
 
-static int wl_cfgvendor_set_scan_cfg(struct wiphy *wiphy,
-	struct wireless_dev *wdev, const void  *data, int len)
+static int
+wl_cfgvendor_set_scan_cfg_bucket(const struct nlattr *prev,
+				 gscan_scan_params_t *scan_param, int num)
+{
+	struct dhd_pno_gscan_channel_bucket  *ch_bucket;
+	int k = 0;
+	int type, err = 0, rem;
+	const struct nlattr *cur, *next;
+
+	nla_for_each_nested(cur, prev, rem) {
+		type = nla_type(cur);
+		ch_bucket = scan_param->channel_bucket;
+		switch (type) {
+		case GSCAN_ATTRIBUTE_BUCKET_ID:
+			break;
+		case GSCAN_ATTRIBUTE_BUCKET_PERIOD:
+			if (nla_len(cur) != sizeof(uint32)) {
+				err = -EINVAL;
+				goto exit;
+			}
+
+			ch_bucket[num].bucket_freq_multiple =
+				nla_get_u32(cur) / MSEC_PER_SEC;
+			break;
+		case GSCAN_ATTRIBUTE_BUCKET_NUM_CHANNELS:
+			if (nla_len(cur) != sizeof(uint32)) {
+				err = -EINVAL;
+				goto exit;
+			}
+			ch_bucket[num].num_channels = nla_get_u32(cur);
+			if (ch_bucket[num].num_channels >
+				GSCAN_MAX_CHANNELS_IN_BUCKET) {
+				WL_ERR(("channel range:%d,bucket:%d\n",
+					ch_bucket[num].num_channels,
+					num));
+				err = -EINVAL;
+				goto exit;
+			}
+			break;
+		case GSCAN_ATTRIBUTE_BUCKET_CHANNELS:
+			nla_for_each_nested(next, cur, rem) {
+				if (k >= GSCAN_MAX_CHANNELS_IN_BUCKET)
+					break;
+				if (nla_len(next) != sizeof(uint32)) {
+					err = -EINVAL;
+					goto exit;
+				}
+				ch_bucket[num].chan_list[k] = nla_get_u32(next);
+				k++;
+			}
+			break;
+		case GSCAN_ATTRIBUTE_BUCKETS_BAND:
+			if (nla_len(cur) != sizeof(uint32)) {
+				err = -EINVAL;
+				goto exit;
+			}
+			ch_bucket[num].band = (uint16)nla_get_u32(cur);
+			break;
+		case GSCAN_ATTRIBUTE_REPORT_EVENTS:
+			if (nla_len(cur) != sizeof(uint32)) {
+				err = -EINVAL;
+				goto exit;
+			}
+			ch_bucket[num].report_flag = (uint8)nla_get_u32(cur);
+			break;
+		case GSCAN_ATTRIBUTE_BUCKET_STEP_COUNT:
+			if (nla_len(cur) != sizeof(uint32)) {
+				err = -EINVAL;
+				goto exit;
+			}
+			ch_bucket[num].repeat = (uint16)nla_get_u32(cur);
+			break;
+		case GSCAN_ATTRIBUTE_BUCKET_MAX_PERIOD:
+			if (nla_len(cur) != sizeof(uint32)) {
+				err = -EINVAL;
+				goto exit;
+			}
+			ch_bucket[num].bucket_max_multiple =
+				nla_get_u32(cur) / MSEC_PER_SEC;
+			break;
+		default:
+			WL_ERR(("unknown attr type:%d\n", type));
+			err = -EINVAL;
+			goto exit;
+		}
+	}
+
+exit:
+	return err;
+}
+
+static int
+wl_cfgvendor_set_scan_cfg(struct wiphy *wiphy, struct wireless_dev *wdev,
+			  const void  *data, int len)
 {
 	int err = 0;
 	struct bcm_cfg80211 *cfg = wiphy_priv(wiphy);
 	gscan_scan_params_t *scan_param;
 	int j = 0;
-	int type, tmp, tmp1, tmp2, k = 0;
-	const struct nlattr *iter, *iter1, *iter2;
-	struct dhd_pno_gscan_channel_bucket  *ch_bucket;
+	int type, tmp;
+	const struct nlattr *iter;
 
 	scan_param = kzalloc(sizeof(gscan_scan_params_t), GFP_KERNEL);
 	if (!scan_param) {
 		WL_ERR(("Could not set GSCAN scan cfg, mem alloc failure\n"));
 		err = -EINVAL;
 		return err;
-
 	}
 
 	scan_param->scan_fr = PNO_SCAN_MIN_FW_SEC;
@@ -537,77 +627,61 @@ static int wl_cfgvendor_set_scan_cfg(struct wiphy *wiphy,
 			break;
 
 		switch (type) {
-			case GSCAN_ATTRIBUTE_BASE_PERIOD:
-				scan_param->scan_fr = nla_get_u32(iter)/1000;
-				break;
-			case GSCAN_ATTRIBUTE_NUM_BUCKETS:
-				scan_param->nchannel_buckets = nla_get_u32(iter);
-				break;
-			case GSCAN_ATTRIBUTE_CH_BUCKET_1:
-			case GSCAN_ATTRIBUTE_CH_BUCKET_2:
-			case GSCAN_ATTRIBUTE_CH_BUCKET_3:
-			case GSCAN_ATTRIBUTE_CH_BUCKET_4:
-			case GSCAN_ATTRIBUTE_CH_BUCKET_5:
-			case GSCAN_ATTRIBUTE_CH_BUCKET_6:
-			case GSCAN_ATTRIBUTE_CH_BUCKET_7:
-				nla_for_each_nested(iter1, iter, tmp1) {
-					type = nla_type(iter1);
-					ch_bucket =
-					scan_param->channel_bucket;
+		case GSCAN_ATTRIBUTE_BASE_PERIOD:
+			if (nla_len(iter) != sizeof(uint32)) {
+				err = -EINVAL;
+				goto exit;
+			}
+			scan_param->scan_fr = nla_get_u32(iter) / MSEC_PER_SEC;
+			break;
+		case GSCAN_ATTRIBUTE_NUM_BUCKETS:
+			if (nla_len(iter) != sizeof(uint32)) {
+				err = -EINVAL;
+				goto exit;
+			}
+			scan_param->nchannel_buckets = nla_get_u32(iter);
+			if (scan_param->nchannel_buckets >=
+			    GSCAN_MAX_CH_BUCKETS) {
+				WL_ERR(("ncha_buck out of range %d\n",
+					scan_param->nchannel_buckets));
+				err = -EINVAL;
+				goto exit;
+			}
+			break;
+		case GSCAN_ATTRIBUTE_CH_BUCKET_1:
+		case GSCAN_ATTRIBUTE_CH_BUCKET_2:
+		case GSCAN_ATTRIBUTE_CH_BUCKET_3:
+		case GSCAN_ATTRIBUTE_CH_BUCKET_4:
+		case GSCAN_ATTRIBUTE_CH_BUCKET_5:
+		case GSCAN_ATTRIBUTE_CH_BUCKET_6:
+		case GSCAN_ATTRIBUTE_CH_BUCKET_7:
+			err = wl_cfgvendor_set_scan_cfg_bucket(iter,
+							       scan_param, j);
+			if (err < 0) {
+				WL_ERR(("set_scan_cfg_buck error:%d\n", err));
+				goto exit;
+			}
 
-					switch (type) {
-						case GSCAN_ATTRIBUTE_BUCKET_ID:
-						break;
-						case GSCAN_ATTRIBUTE_BUCKET_PERIOD:
-							ch_bucket[j].bucket_freq_multiple =
-							    nla_get_u32(iter1)/1000;
-							break;
-						case GSCAN_ATTRIBUTE_BUCKET_NUM_CHANNELS:
-							ch_bucket[j].num_channels =
-							     nla_get_u32(iter1);
-							break;
-						case GSCAN_ATTRIBUTE_BUCKET_CHANNELS:
-							nla_for_each_nested(iter2, iter1, tmp2) {
-								if (k >= GSCAN_MAX_CHANNELS_IN_BUCKET)
-									break;
-								ch_bucket[j].chan_list[k] =
-								     nla_get_u32(iter2);
-								k++;
-							}
-							k = 0;
-							break;
-						case GSCAN_ATTRIBUTE_BUCKETS_BAND:
-							ch_bucket[j].band = (uint16)
-							     nla_get_u32(iter1);
-							break;
-						case GSCAN_ATTRIBUTE_REPORT_EVENTS:
-							ch_bucket[j].report_flag = (uint8)
-							     nla_get_u32(iter1);
-							break;
-						case GSCAN_ATTRIBUTE_BUCKET_STEP_COUNT:
-							ch_bucket[j].repeat = (uint16)
-							     nla_get_u32(iter1);
-							break;
-						case GSCAN_ATTRIBUTE_BUCKET_MAX_PERIOD:
-							ch_bucket[j].bucket_max_multiple =
-							     nla_get_u32(iter1)/1000;
-							break;
-					}
-				}
-				j++;
-				break;
+			j++;
+			break;
+		default:
+			WL_ERR(("Unknown attr type %d\n", type));
+			err = -EINVAL;
+			goto exit;
 		}
 	}
 
-	if (dhd_dev_pno_set_cfg_gscan(bcmcfg_to_prmry_ndev(cfg),
-	     DHD_PNO_SCAN_CFG_ID, scan_param, FALSE) < 0) {
-		WL_ERR(("Could not set GSCAN scan cfg\n"));
+	err = dhd_dev_pno_set_cfg_gscan(bcmcfg_to_prmry_ndev(cfg),
+					DHD_PNO_SCAN_CFG_ID, scan_param, FALSE);
+
+	if (err < 0) {
+		WL_ERR(("Could not set GSCAN scan cfg error %d\n", err));
 		err = -EINVAL;
 	}
 
+exit:
 	kfree(scan_param);
 	return err;
-
 }
 
 static int wl_cfgvendor_hotlist_cfg(struct wiphy *wiphy,
