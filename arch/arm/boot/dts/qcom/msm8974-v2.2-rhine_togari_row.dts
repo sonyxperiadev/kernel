@@ -22,7 +22,7 @@
 #include "msm8974-rhine_common.dtsi"
 #include "msm8974-rhine_togari_row.dtsi"
 #include "msm8974-rhine_togari_row_camera.dtsi"
-#include "dsi-panel-somc-togari.dtsi"
+#include "dsi-panel-togari.dtsi"
 
 / {
 	model = "SoMC Togari ROW";
