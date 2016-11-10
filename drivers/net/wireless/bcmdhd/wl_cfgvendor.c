@@ -939,10 +939,13 @@ exit:
 	return err;
 }
 
+#ifdef DHD_ANQPO_SUPPORT
 static int wl_cfgvendor_gscan_anqpo_config(struct wiphy *wiphy,
 	struct wireless_dev *wdev, const void  *data, int len)
 {
-	int err = BCME_ERROR, rem, type, hs_list_size = 0, malloc_size, i = 0, j, k, num_oi, oi_len;
+	int err = BCME_ERROR, rem, type, malloc_size, i = 0;
+	uint32 hs_list_size = 0;
+	int j, k, num_oi, oi_len;
 	wifi_passpoint_network *hs_list = NULL, *src_hs;
 	wl_anqpo_pfn_hs_list_t *anqpo_hs_list;
 	wl_anqpo_pfn_hs_t *dst_hs;
@@ -953,52 +956,100 @@ static int wl_cfgvendor_gscan_anqpo_config(struct wiphy *wiphy,
 	char *rcid;
 
 	nla_for_each_attr(iter, data, len, rem) {
-		type = nla_type(iter);
-		switch (type) {
-			case GSCAN_ATTRIBUTE_ANQPO_HS_LIST:
-				if (hs_list_size > 0) {
-					hs_list = kmalloc(hs_list_size*sizeof(wifi_passpoint_network), GFP_KERNEL);
-					if (hs_list == NULL) {
-						WL_ERR(("failed to allocate hs_list\n"));
-						return -ENOMEM;
-					}
-				}
-				nla_for_each_nested(outer, iter, tmp) {
-					nla_for_each_nested(inner, outer, tmp1) {
-						type = nla_type(inner);
-
-						switch (type) {
-							case GSCAN_ATTRIBUTE_ANQPO_HS_NETWORK_ID:
-								hs_list[i].id = nla_get_u32(inner);
-								WL_ERR(("%s: net id: %d\n", __func__, hs_list[i].id));
-								break;
-							case GSCAN_ATTRIBUTE_ANQPO_HS_NAI_REALM:
-								memcpy(hs_list[i].realm,
-								  nla_data(inner), 256);
-								WL_ERR(("%s: realm: %s\n", __func__, hs_list[i].realm));
-								break;
-							case GSCAN_ATTRIBUTE_ANQPO_HS_ROAM_CONSORTIUM_ID:
-								memcpy(hs_list[i].roamingConsortiumIds,
-								  nla_data(inner), 128);
-								break;
-							case GSCAN_ATTRIBUTE_ANQPO_HS_PLMN:
-								memcpy(hs_list[i].plmn,
-								  nla_data(inner), 3);
-								WL_ERR(("%s: plmn: %c %c %c\n", __func__, hs_list[i].plmn[0], hs_list[i].plmn[1], hs_list[i].plmn[2]));
-								break;
-						}
-					}
-					i++;
-				}
-				break;
-			case GSCAN_ATTRIBUTE_ANQPO_HS_LIST_SIZE:
-				hs_list_size = nla_get_u32(iter);
-				WL_ERR(("%s: ANQPO: %d\n", __func__, hs_list_size));
-				break;
-			default:
-				WL_ERR(("Unknown type: %d\n", type));
-				return err;
+	type = nla_type(iter);
+	switch (type) {
+	case GSCAN_ATTRIBUTE_ANQPO_HS_LIST:
+		if (hs_list) {
+			err = -EINVAL;
+			goto exit;
 		}
+		if (hs_list_size > GSCAN_ANQPO_MAX_HS_LIST_SIZE) {
+			err = -EINVAL;
+			goto exit;
+		}
+		if (hs_list_size > 0) {
+			hs_list = kzalloc(hs_list_size *
+				sizeof(wifi_passpoint_network), GFP_KERNEL);
+			if (!hs_list) {
+				WL_ERR(("failed to allocate hs_list\n"));
+				return -ENOMEM;
+			}
+		}
+		nla_for_each_nested(outer, iter, tmp) {
+			if (i == hs_list_size)
+				break;
+			nla_for_each_nested(inner, outer, tmp1) {
+			type = nla_type(inner);
+
+			switch (type) {
+			case GSCAN_ATTRIBUTE_ANQPO_HS_NETWORK_ID:
+				if (nla_len(inner) != sizeof(hs_list[i].id)) {
+					err = -EINVAL;
+					goto exit;
+				}
+				hs_list[i].id = nla_get_u32(inner);
+				WL_DBG(("%s: net id: %d\n",
+					__func__, hs_list[i].id));
+				break;
+			case GSCAN_ATTRIBUTE_ANQPO_HS_NAI_REALM:
+				if (nla_len(inner) !=
+					sizeof(hs_list[i].realm)) {
+					err = -EINVAL;
+					goto exit;
+				}
+				memcpy(hs_list[i].realm, nla_data(inner),
+				       sizeof(hs_list[i].realm));
+				WL_DBG(("%s: realm: %s\n",
+					__func__, hs_list[i].realm));
+				break;
+			case GSCAN_ATTRIBUTE_ANQPO_HS_ROAM_CONSORTIUM_ID:
+				if (nla_len(inner) != sizeof(hs_list[i].
+					roamingConsortiumIds)) {
+					err = -EINVAL;
+					goto exit;
+				}
+				memcpy(hs_list[i].roamingConsortiumIds,
+				       nla_data(inner),
+				       sizeof(hs_list[i].roamingConsortiumIds));
+				break;
+			case GSCAN_ATTRIBUTE_ANQPO_HS_PLMN:
+				if (nla_len(inner) != sizeof(hs_list[i].plmn)) {
+					err = -EINVAL;
+					goto exit;
+				}
+				memcpy(hs_list[i].plmn,
+				       nla_data(inner),
+				       sizeof(hs_list[i].plmn));
+				WL_DBG(("%s: plmn: %c %c %c\n",
+					__func__, hs_list[i].plmn[0],
+					hs_list[i].plmn[1],
+					hs_list[i].plmn[2]));
+				break;
+			}
+			}
+			i++;
+		}
+		break;
+	case GSCAN_ATTRIBUTE_ANQPO_HS_LIST_SIZE:
+		if (nla_len(iter) != sizeof(hs_list_size)) {
+			err = -EINVAL;
+			goto exit;
+		}
+		hs_list_size = nla_get_u32(iter);
+		if ((hs_list_size == 0) ||
+		    (hs_list_size > GSCAN_ANQPO_MAX_HS_LIST_SIZE)) {
+			WL_ERR(("%s: ANQPO: %d\n", __func__, hs_list_size));
+			err = -EINVAL;
+			goto exit;
+		}
+		WL_DBG(("%s: ANQPO: %d\n", __func__, hs_list_size));
+		break;
+	default:
+		WL_ERR(("Unknown type: %d\n", type));
+		err = -EINVAL;
+		goto exit;
+	}
+
 	}
 
 	malloc_size = OFFSETOF(wl_anqpo_pfn_hs_list_t, hs) +
@@ -1046,7 +1097,7 @@ exit:
 	kfree(hs_list);
 	return err;
 }
-
+#endif /* DHD_ANQPO_SUPPORT */
 static int wl_cfgvendor_set_batch_scan_cfg(struct wiphy *wiphy,
 	struct wireless_dev *wdev, const void  *data, int len)
 {
@@ -3065,6 +3116,7 @@ static const struct wiphy_vendor_command wl_vendor_cmds [] = {
 		.flags = WIPHY_VENDOR_CMD_NEED_WDEV | WIPHY_VENDOR_CMD_NEED_NETDEV,
 		.doit = wl_cfgvendor_set_bssid_blacklist
 	},
+#ifdef DHD_ANQPO_SUPPORT
 	{
 		{
 			.vendor_id = OUI_GOOGLE,
@@ -3073,6 +3125,7 @@ static const struct wiphy_vendor_command wl_vendor_cmds [] = {
 		.flags = WIPHY_VENDOR_CMD_NEED_WDEV | WIPHY_VENDOR_CMD_NEED_NETDEV,
 		.doit = wl_cfgvendor_gscan_anqpo_config
 	},
+#endif /* DHD_ANQPO_SUPPORT */
 #endif /* GSCAN_SUPPORT */
 	{
 		{
@@ -3233,7 +3286,9 @@ static const struct  nl80211_vendor_cmd_info wl_vendor_events [] = {
 		{ OUI_GOOGLE, GOOGLE_SCAN_EPNO_EVENT },
 		{ OUI_GOOGLE, GOOGLE_DEBUG_RING_EVENT },
 		{ OUI_GOOGLE, GOOGLE_FW_DUMP_EVENT },
+#ifdef DHD_ANQPO_SUPPORT
 		{ OUI_GOOGLE, GOOGLE_PNO_HOTSPOT_FOUND_EVENT },
+#endif /* DHD_ANQPO_SUPPORT */
 		{ OUI_GOOGLE, GOOGLE_RSSI_MONITOR_EVENT },
 		{ OUI_GOOGLE, GOOGLE_MKEEP_ALIVE_EVENT }
 };

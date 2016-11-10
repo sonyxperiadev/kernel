@@ -98,8 +98,9 @@
 
 #define CHANNEL_BUCKET_EMPTY_INDEX                      0xFFFF
 #define GSCAN_RETRY_THRESHOLD              3
-#define MAX_EPNO_SSID_NUM                   64
-
+#define MAX_EPNO_SSID_NUM                  64
+#define GSCAN_ANQPO_MAX_HS_LIST_SIZE	   16
+#define ANQPO_MAX_HS_NAI_REALM_SIZE	   256
 #endif /* GSCAN_SUPPORT */
 
 enum scan_status {
@@ -351,10 +352,10 @@ typedef struct gscan_results_cache {
 } gscan_results_cache_t;
 
 typedef struct {
-    int  id;                            /* identifier of this network block, report this in event */
-    char realm[256];                    /* null terminated UTF8 encoded realm, 0 if unspecified */
-    int64_t roamingConsortiumIds[16];   /* roaming consortium ids to match, 0s if unspecified */
-    uint8 plmn[3];                      /* mcc/mnc combination as per rules, 0s if unspecified */
+	int  id;
+	char realm[ANQPO_MAX_HS_NAI_REALM_SIZE];
+	int64_t roamingConsortiumIds[ANQPO_MAX_PFN_HS];
+	uint8 plmn[ANQPO_MCC_LENGTH];
 } wifi_passpoint_network;
 
 typedef struct dhd_pno_gscan_capabilities {
@@ -517,8 +518,10 @@ extern void dhd_dev_gscan_hotlist_cache_cleanup(struct net_device *dev, hotlist_
 extern int dhd_dev_wait_batch_results_complete(struct net_device *dev);
 extern void * dhd_dev_process_epno_result(struct net_device *dev,
                         const void  *data, uint32 event, int *send_evt_bytes);
+#ifdef DHD_ANQPO_SUPPORT
 extern void * dhd_dev_process_anqpo_result(struct net_device *dev,
 	const void  *data, uint32 event, int *send_evt_bytes);
+#endif /* DHD_ANQPO_SUPPORT */
 extern int dhd_dev_set_epno(struct net_device *dev);
 extern int dhd_dev_flush_fw_epno(struct net_device *dev);
 #endif /* GSCAN_SUPPORT */
@@ -567,7 +570,9 @@ extern void dhd_gscan_hotlist_cache_cleanup(dhd_pub_t *dhd, hotlist_type_t type)
 extern int dhd_wait_batch_results_complete(dhd_pub_t *dhd);
 extern void * dhd_pno_process_epno_result(dhd_pub_t *dhd, const void *data,
 	uint32 event, int *size);
+#ifdef DHD_ANQPO_SUPPORT
 extern void * dhd_pno_process_anqpo_result(dhd_pub_t *dhd, const void *data, uint32 event, int *size);
+#endif /* DHD_ANQPO_SUPPORT */
 extern void dhd_pno_translate_epno_fw_flags(uint32 *flags);
 extern int dhd_pno_set_epno(dhd_pub_t *dhd);
 extern int dhd_pno_flush_fw_epno(dhd_pub_t *dhd);

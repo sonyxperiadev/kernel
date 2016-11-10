@@ -3798,6 +3798,7 @@ dhd_pno_process_epno_result(dhd_pub_t *dhd, const void *data, uint32 event, int 
 	return results;
 }
 
+#ifdef DHD_ANQPO_SUPPORT
 void *
 dhd_pno_process_anqpo_result(dhd_pub_t *dhd, const void *data, uint32 event, int *size)
 {
@@ -3849,7 +3850,7 @@ dhd_pno_process_anqpo_result(dhd_pub_t *dhd, const void *data, uint32 event, int
 
 	return result;
 }
-
+#endif /* DHD_ANQPO_SUPPORT */
 
 void *dhd_handle_hotlist_scan_evt(dhd_pub_t *dhd, const void *event_data, int *send_evt_bytes,
       hotlist_type_t type)
