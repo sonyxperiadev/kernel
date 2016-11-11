@@ -16,7 +16,7 @@
 	dsi_default_gpio_0: somc,default_panel_0 {
 		qcom,mdss-dsi-panel-name = "default vid 0";
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
-		qcom,panel-supply-entries = <&somc_panel_power_supply>;
+		qcom,panel-supply-entries = <&shinano_panel_power_supply>;
 		qcom,mdss-dsi-panel-type = "dsi_video_mode";
 		qcom,mdss-dsi-panel-destination = "display_1";
 		qcom,mdss-dsi-panel-framerate = <60>;
@@ -333,7 +333,7 @@
 	dsi_default_gpio_1: somc,default_panel_1 {
 		qcom,mdss-dsi-panel-name = "default vid 1";
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
-		qcom,panel-supply-entries = <&somc_panel_power_supply>;
+		qcom,panel-supply-entries = <&shinano_panel_power_supply>;
 		qcom,mdss-dsi-panel-type = "dsi_video_mode";
 		qcom,mdss-dsi-panel-destination = "display_1";
 		qcom,mdss-dsi-panel-framerate = <60>;
