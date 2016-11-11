@@ -21,7 +21,6 @@
 	dsi_dual_0_sharp_novatek_4k2k_cut2_cmd_ID3: somc,dual_0_sharp_novatek_4k2k_cut2_cmd_panel_ID3 {
 		qcom,mdss-dsi-panel-name = "3";
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
-		qcom,panel-supply-entries = <&kitakami_panel_power_supply>;
 		qcom,mdss-dsi-panel-destination = "display_1";
 		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
 		qcom,mdss-dsi-bpp = <24>;
@@ -56,8 +55,6 @@
 		qcom,mdss-dsi-lane-2-state;
 		qcom,mdss-dsi-lane-3-state;
 		qcom,mdss-dsi-tx-eot-append;
-		qcom,qpnp-lab-limit-maximum-current = <400>;
-		qcom,qpnp-ibb-limit-maximum-current = <900>;
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
@@ -66,7 +63,6 @@
 
 		somc,mdss-dsi-disp-on-in-hs = <0>;
 		somc,mdss-dsi-wait-time-before-on-cmd = <0>;
-		somc,platform-regulator-settings = [03 03 03 00 20 00 01];
 		somc,mdss-dsi-lane-config = [02 00 EF 00 20 00 00 01 FF
 				02 00 EF 00 40 00 00 01 FF
 				02 00 EF 40 20 00 00 01 FF
@@ -79,8 +75,6 @@
 		somc,disp-en-off-post = <5>;
 		somc,pw-off-rst-b-seq = <0 5>;
 		somc,pw-down-period = <100>;
-		somc,lab-output-voltage = <5800000>;
-		somc,ibb-output-voltage = <5600000>;
 		somc,lcd-id = <1>;
 		somc,lcd-id-adc = <1236000 1395000>;
 		somc,dsi-index = <0>;
@@ -510,7 +504,6 @@
 	dsi_dual_1_sharp_novatek_4k2k_cut2_cmd_ID3: somc,dual_1_sharp_novatek_4k2k_cut2_cmd_panel_ID3 {
 		qcom,mdss-dsi-panel-name = "3";
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi1>;
-		qcom,panel-supply-entries = <&kitakami_panel_power_supply>;
 		qcom,mdss-dsi-panel-destination = "display_2";
 		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
 		qcom,mdss-dsi-bpp = <24>;
@@ -542,25 +535,19 @@
 		qcom,mdss-dsi-lane-2-state;
 		qcom,mdss-dsi-lane-3-state;
 		qcom,mdss-dsi-tx-eot-append;
-		qcom,qpnp-lab-limit-maximum-current = <400>;
-		qcom,qpnp-ibb-limit-maximum-current = <900>;
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
 		qcom,mdss-brightness-max-level = <4095>;
 
-		somc,platform-regulator-settings = [03 03 03 00 20 00 01];
 		somc,mdss-dsi-lane-config = [02 00 EF 00 20 00 00 01 FF
 				02 00 EF 00 40 00 00 01 FF
 				02 00 EF 40 20 00 00 01 FF
 				02 00 EF 40 00 00 00 01 FF
 				00 00 45 80 00 00 00 01 97];
-		somc,lab-output-voltage = <5800000>;
-		somc,ibb-output-voltage = <5600000>;
 		somc,lcd-id = <1>;
 		somc,lcd-id-adc = <1236000 1395000>;
 		somc,dsi-index = <1>;
-		somc,mdss-dsi-slave;
 
 		qcom,dynamic-mode-switch-enabled;
 		qcom,dynamic-mode-switch-type = "dynamic-resolution-switch-immediate";

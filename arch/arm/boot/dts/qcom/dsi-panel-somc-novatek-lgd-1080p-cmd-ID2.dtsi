@@ -21,7 +21,6 @@
 	dsi_novatek_lgd_1080_cmd_ID2: somc,novatek_lgd_1080p_cmd_ID2_panel {
 		qcom,mdss-dsi-panel-name = "2";
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
-		qcom,panel-supply-entries = <&kitakami_panel_power_supply>;
 		qcom,mdss-dsi-panel-destination = "display_1";
 		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
 		qcom,mdss-dsi-panel-width = <1080>;
@@ -92,12 +91,9 @@
 		qcom,mdss-dsi-bl-max-level = <4095>;
 		qcom,mdss-brightness-max-level = <255>;
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
-		qcom,qpnp-lab-limit-maximum-current = <200>;
-		qcom,qpnp-ibb-limit-maximum-current = <800>;
 
 		somc,mdss-dsi-disp-on-in-hs = <0>;
 		somc,mdss-dsi-wait-time-before-on-cmd = <0>;
-		somc,platform-regulator-settings = [03 03 03 00 20 00 01];
 		somc,mdss-dsi-lane-config = [02 00 EF 00 20 00 00 01 FF
 				02 00 EF 00 40 00 00 01 FF
 				02 00 EF 40 20 00 00 01 FF
@@ -108,11 +104,8 @@
 		somc,disp-en-off-post = <10>;
 		somc,pw-off-rst-seq = <0 1>;
 		somc,pw-down-period = <100>;
-		somc,lab-output-voltage = <5700000>;
-		somc,ibb-output-voltage = <5700000>;
 		somc,lcd-id = <1>;
 		somc,lcd-id-adc = <1420000 1594000>;
-		somc,mdss-dsi-master;
 
 		somc,change-fps-enable;
 		somc,change-fps-command = [15 01 00 00 00 00 02 FF 24

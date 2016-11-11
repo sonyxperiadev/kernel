@@ -21,7 +21,6 @@
 	dsi_novatek_lgd_720_cmd: somc,novatek_lgd_720p_cmd_panel {
 		qcom,mdss-dsi-panel-name = "8";
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
-		qcom,panel-supply-entries = <&kitakami_panel_power_supply>;
 		qcom,mdss-dsi-panel-destination = "display_1";
 		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
 		qcom,mdss-dsi-panel-width = <720>;
@@ -97,12 +96,9 @@
 		qcom,mdss-dsi-bl-max-level = <4095>;
 		qcom,mdss-brightness-max-level = <255>;
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
-		qcom,qpnp-lab-limit-maximum-current = <200>;
-		qcom,qpnp-ibb-limit-maximum-current = <800>;
 
 		somc,mdss-dsi-disp-on-in-hs = <1>;
 		somc,mdss-dsi-wait-time-before-on-cmd = <0>;
-		somc,platform-regulator-settings = [03 03 03 00 20 00 01];
 		somc,mdss-dsi-lane-config = [02 00 EF 00 20 00 00 01 FF
 				02 00 EF 00 40 00 00 01 FF
 				02 00 EF 40 20 00 00 01 FF
@@ -113,11 +109,8 @@
 		somc,disp-en-off-post = <10>;
 		somc,pw-off-rst-seq = <0 1>;
 		somc,pw-down-period = <200>;
-		somc,lab-output-voltage = <5800000>;
-		somc,ibb-output-voltage = <5800000>;
 		somc,lcd-id = <1>;
 		somc,lcd-id-adc = <215000 256000>;
-		somc,mdss-dsi-master;
 
 		somc,change-fps-enable;
 		somc,change-fps-suspend-resume-mode;
