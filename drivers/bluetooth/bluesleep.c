@@ -104,6 +104,7 @@ struct bluesleep_info {
 	struct uart_port *uport;
 	struct wake_lock wake_lock;
 	int irq_polarity;
+	int uart_port_is_open;
 	int has_ext_wake;
 };
 
@@ -118,6 +119,7 @@ static struct bt_pinctrl_data *pinctrl_data;
 
 static struct regulator *bt_batfet;
 static bool bt_enabled;
+static bool rfkill_uport_clk_on;
 
 /* work function */
 static void bluesleep_sleep_work(struct work_struct *work);
@@ -149,8 +151,6 @@ DECLARE_DELAYED_WORK(sleep_workqueue, bluesleep_sleep_work);
 #define PROC_LPM	4
 #define PROC_BTWRITE	5
 #endif
-
-#define MSM_HSUART_BT	0
 
 #if BT_BLUEDROID_SUPPORT
 static bool has_lpm_enabled;
@@ -208,18 +208,13 @@ struct proc_dir_entry *bluetooth_dir, *sleep_dir;
 
 static void hsuart_power(int on)
 {
+	int ret = 0;
+
 	if (test_bit(BT_SUSPEND, &flags))
 		return;
-	if (on) {
-		// make sure port is active before enable it.
-		if (bsi->uport->state->port.count) {
-			msm_hs_request_clock_on(bsi->uport);
-			msm_hs_set_mctrl(bsi->uport, TIOCM_RTS);
-		}
-	} else {
-		msm_hs_set_mctrl(bsi->uport, 0);
-		msm_hs_request_clock_off(bsi->uport);
-	}
+	ret = msm_hs_set_clock(bsi->uport, on);
+	if (ret && !on)
+		bsi->uart_port_is_open = 0;
 }
 
 /**
@@ -272,8 +267,11 @@ static int bluesleep_rfkill_set_power(void *data, bool blocked)
 	/* rfkill_ops callback. Turn transmitter on when blocked is false */
 	if (!blocked) {
 		/* Enable MSM serial clock for ttyHS(x) */
-		msm_hs_set_clock(MSM_HSUART_BT, 1);
-
+		if (!rfkill_uport_clk_on) {
+			bsi->uport = msm_hs_get_uart_port(BT_PORT_ID);
+			msm_hs_request_clock_on(bsi->uport);
+			rfkill_uport_clk_on = true;
+		}
 		if (regOnGpio) {
 			BT_DBG("Bluetooth device is already power on:%d\n",
 				regOnGpio);
@@ -288,9 +286,6 @@ static int bluesleep_rfkill_set_power(void *data, bool blocked)
 		gpio_set_value(bsi->bt_reg_on, 1);
 		gpio_set_value(bsi->ext_wake, 1);
 	} else {
-		/* Powering off: Disable serial clocks */
-		msm_hs_set_clock(MSM_HSUART_BT, 0);
-
 		if (!regOnGpio) {
 			BT_DBG("Bluetooth device is already power off:%d\n",
 				regOnGpio);
@@ -513,8 +508,10 @@ static int bluesleep_start(void)
 
 	mod_timer(&tx_timer, jiffies + (TX_TIMER_INTERVAL*HZ));
 
-	hsuart_power(HS_UART_ON);
-	BT_INFO("msm_hs_request_clock_on ... done");
+	if (!bsi->uart_port_is_open) {
+		msm_hs_request_clock_on(bsi->uport);
+		bsi->uart_port_is_open = 1;
+	}
 
 	/* assert BT_WAKE */
 	if (debug_mask & DEBUG_BTWAKE)
@@ -757,6 +754,7 @@ static int bluesleep_probe(struct platform_device *pdev)
 	}
 
 	bsi->irq_polarity = POLARITY_LOW;//low edge (falling edge)
+	bsi->uart_port_is_open = 0;
 	wake_lock_init(&bsi->wake_lock, WAKE_LOCK_SUSPEND, "bluesleep");
 	clear_bit(BT_SUSPEND, &flags);
 
@@ -836,8 +834,7 @@ static int bluesleep_resume(struct platform_device *pdev)
 			(gpio_get_value(bsi->host_wake) == bsi->irq_polarity)) {
 			if (debug_mask & DEBUG_SUSPEND)
 				pr_info("bluesleep resume from BT event...\n");
-			msm_hs_request_clock_on(bsi->uport);
-			msm_hs_set_mctrl(bsi->uport, TIOCM_RTS);
+			hsuart_power(HS_UART_ON);
 		}
 		clear_bit(BT_SUSPEND, &flags);
 	}
