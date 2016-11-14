@@ -120,12 +120,12 @@ static int msm_iommu_dump_fault_regs(int smmu_id, int cb_num,
 {
 	int ret;
 
-	__dma_flush_range(regs, regs + 1);
+	__dma_flush_area(regs, sizeof(*regs));
 
 	ret = qcom_scm_iommu_dump_fault_regs(smmu_id, cb_num,
 					     virt_to_phys(regs), sizeof(*regs));
 
-	__dma_flush_range(regs, regs + 1);
+	__dma_flush_area(regs, sizeof(*regs));
 
 	return ret;
 }
@@ -375,7 +375,7 @@ static int msm_iommu_sec_ptbl_map(struct msm_iommu_drvdata *iommu_drvdata,
 	/*
 	 * Ensure that the buffer is in RAM by the time it gets to TZ
 	 */
-	__dma_flush_range(flush_va, flush_va_end);
+	__dma_flush_area(flush_va, sizeof(phys_addr_t));
 
 	ret = msm_iommu_sec_map2(&map);
 	if (ret)
@@ -476,7 +476,7 @@ static int msm_iommu_sec_ptbl_map_range(struct msm_iommu_drvdata *iommu_drvdata,
 	 */
 	flush_va_end = (void *) (((unsigned long) flush_va) +
 			(map.plist.list_size * sizeof(*pa_list)));
-	__dma_flush_range(flush_va, flush_va_end);
+	__dma_flush_area(flush_va, (map.plist.list_size * sizeof(*pa_list)));
 
 	ret = msm_iommu_sec_map2(&map);
 	kfree(pa_list);

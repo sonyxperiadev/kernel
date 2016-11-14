@@ -87,10 +87,10 @@ static int msm_iommu_tex_class[4];
 #define PRRR_NOS(prrr, n) ((prrr) & (1 << ((n) + 24)) ? 1 : 0)
 #define PRRR_MT(prrr, n)  ((((prrr) & (3 << ((n) * 2))) >> ((n) * 2)))
 
-static inline void clean_pte(u32 *start, u32 *end, int redirect)
+static inline void clean_pte(u32 *start, size_t size, int redirect)
 {
 	if (!redirect)
-		__dma_flush_range(start, end);
+		__dma_flush_area(start, size);
 }
 
 int msm_iommu_pagetable_alloc(struct msm_iommu_pt *pt)
@@ -108,7 +108,7 @@ int msm_iommu_pagetable_alloc(struct msm_iommu_pt *pt)
 
 	memset(pt->fl_table, 0, SZ_16K);
 	memset(pt->fl_table_shadow, 0, SZ_16K);
-	clean_pte(pt->fl_table, pt->fl_table + NUM_FL_PTE, pt->redirect);
+	clean_pte(pt->fl_table, NUM_FL_PTE * sizeof(u64), pt->redirect);
 
 	return 0;
 }
@@ -213,13 +213,13 @@ static u32 *make_second_level(struct msm_iommu_pt *pt, u32 *fl_pte,
 		goto fail;
 	}
 	memset(sl, 0, SZ_4K);
-	clean_pte(sl, sl + NUM_SL_PTE + GUARD_PTE, pt->redirect);
+	clean_pte(sl, (NUM_SL_PTE + GUARD_PTE) * sizeof(u32), pt->redirect);
 
 	*fl_pte = ((((int)__pa(sl)) & FL_BASE_MASK) | \
 			FL_TYPE_TABLE);
 	*fl_pte_shadow = *fl_pte & ~0x1FF;
 
-	clean_pte(fl_pte, fl_pte + 1, pt->redirect);
+	clean_pte(fl_pte, sizeof(u32), pt->redirect);
 fail:
 	return sl;
 }
@@ -402,14 +402,14 @@ int msm_iommu_pagetable_map_range(struct msm_iommu_pt *pt, unsigned int va,
 				ret = fl_16m(fl_pte, pa, pgprot16m);
 				if (ret)
 					goto fail;
-				clean_pte(fl_pte, fl_pte + 16, pt->redirect);
+				clean_pte(fl_pte, 16 * sizeof(u32), pt->redirect);
 				fl_pte += 16;
 				fl_pte_shadow += 16;
 			} else if (chunk_size == SZ_1M) {
 				ret = fl_1m(fl_pte, pa, pgprot1m);
 				if (ret)
 					goto fail;
-				clean_pte(fl_pte, fl_pte + 1, pt->redirect);
+				clean_pte(fl_pte, sizeof(u32), pt->redirect);
 				fl_pte++;
 				fl_pte_shadow++;
 			}
@@ -484,7 +484,7 @@ int msm_iommu_pagetable_map_range(struct msm_iommu_pt *pt, unsigned int va,
 			}
 		}
 
-		clean_pte(sl_table + sl_start, sl_table + sl_offset,
+		clean_pte(sl_table + sl_start, (sl_offset - sl_start) * sizeof(u32),
 				pt->redirect);
 		fl_pte++;
 		fl_pte_shadow++;
@@ -528,7 +528,7 @@ void msm_iommu_pagetable_unmap_range(struct msm_iommu_pt *pt, unsigned int va,
 			n_entries = sl_end - sl_start;
 
 			memset(sl_table + sl_start, 0, n_entries * 4);
-			clean_pte(sl_table + sl_start, sl_table + sl_end,
+			clean_pte(sl_table + sl_start, (sl_end - sl_start) * sizeof(u32),
 					pt->redirect);
 
 			offset += n_entries * SZ_4K;
@@ -542,7 +542,7 @@ void msm_iommu_pagetable_unmap_range(struct msm_iommu_pt *pt, unsigned int va,
 
 			if (!used) {
 				*fl_pte = 0;
-				clean_pte(fl_pte, fl_pte + 1, pt->redirect);
+				clean_pte(fl_pte, sizeof(u32), pt->redirect);
 			}
 
 			sl_start = 0;
@@ -550,7 +550,7 @@ void msm_iommu_pagetable_unmap_range(struct msm_iommu_pt *pt, unsigned int va,
 			*fl_pte = 0;
 			*fl_pte_shadow = 0;
 
-			clean_pte(fl_pte, fl_pte + 1, pt->redirect);
+			clean_pte(fl_pte, sizeof(u32), pt->redirect);
 			va += SZ_1M;
 			offset += SZ_1M;
 			sl_start = 0;
