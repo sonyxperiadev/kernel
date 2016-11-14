@@ -1058,7 +1058,12 @@ static void binder_pop_transaction(struct binder_thread *target_thread,
 	if (target_thread) {
 		binder_proc_lock(target_thread->proc, __LINE__);
 		BUG_ON(target_thread->transaction_stack != t);
-		BUG_ON(target_thread->transaction_stack->from != target_thread);
+		/*
+		 * It is possible that the target_thread has died so
+		 * transaction_stack->from could already be NULL
+		 */
+		BUG_ON(target_thread->transaction_stack->from != NULL &&
+		       target_thread->transaction_stack->from != target_thread);
 		target_thread->transaction_stack =
 			target_thread->transaction_stack->from_parent;
 		t->from = NULL;
