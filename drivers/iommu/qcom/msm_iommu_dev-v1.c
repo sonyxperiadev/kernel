@@ -461,6 +461,12 @@ static int msm_iommu_probe(struct platform_device *pdev)
 		return ret;
 	}
 
+	ret = __enable_clocks(drvdata);
+	if (ret) {
+		dev_err(dev, "Failed to enable clocks\n");
+		return ret;
+	}
+
 	return msm_iommu_init(&pdev->dev);
 }
 
@@ -473,6 +479,7 @@ static int msm_iommu_remove(struct platform_device *pdev)
 
 	drv = platform_get_drvdata(pdev);
 	if (drv) {
+		__disable_clocks(drv);
 		__put_bus_vote_client(drv);
 		msm_iommu_remove_drv(drv);
 		platform_set_drvdata(pdev, NULL);
