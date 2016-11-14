@@ -132,6 +132,9 @@ struct msm_iommu_drvdata {
 	struct list_head masters;
 };
 
+int __enable_clocks(struct msm_iommu_drvdata *drvdata);
+void __disable_clocks(struct msm_iommu_drvdata *drvdata);
+
 /**
  * struct iommu_access_ops - Callbacks for accessing IOMMU
  * @iommu_power_on:     Turn on power to unit
