@@ -21,7 +21,6 @@
 	dsi_renesas_jdi_1080_vid: somc,renesas_jdi_1080p_panel {
 		qcom,mdss-dsi-panel-name = "jdi renesas 1080p video";
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
-		qcom,panel-supply-entries = <&shinano_panel_power_supply>;
 		qcom,mdss-dsi-panel-destination = "display_1";
 		qcom,mdss-dsi-panel-type = "dsi_video_mode";
 		qcom,mdss-dsi-panel-width = <1080>;
@@ -181,12 +180,6 @@
 			0x17 0x00 0x32 0x3B 0x0A 0x13 0x7080 0x8000 0x7900
 			0x18 0x00 0x28 0x31 0x00 0x09 0x7A00 0x8000 0x7580
 			0x19 0x00 0x32 0x3B 0x00 0x09 0x6F00 0x8000 0x7200>;
-
-		qcom,mdss-dsi-pan-enable-dynamic-fps;
-		qcom,mdss-dsi-pan-fps-update = "dfps_suspend_resume_mode";
-		qcom,cont-splash-enabled;
-
-		somc,driver-ic = <0>;
 		somc,mdss-phy-size-mm = <64 114>;
 	};
 };

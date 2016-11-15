@@ -21,6 +21,24 @@
 #include "dsi-panel-somc-novatek-sharp-720p-vid.dtsi"
 
 &mdss_mdp {
+	dsi_novatek_jdi_720_vid: somc,novatek_jdi_720p_video_panel {
+		qcom,panel-supply-entries = <&shinano_panel_power_supply>;
+		qcom,mdss-dsi-pan-enable-dynamic-fps;
+		qcom,mdss-dsi-pan-fps-update = "dfps_suspend_resume_mode";
+		qcom,cont-splash-enabled;
+		somc,driver-ic = <1>;
+		somc,touch-reset-gpio = <&msmgpio 85 0>;
+	};
+
+	dsi_novatek_sharp_720_vid: somc,novatek_sharp_720p_video_panel {
+		qcom,panel-supply-entries = <&shinano_panel_power_supply>;
+		qcom,mdss-dsi-pan-enable-dynamic-fps;
+		qcom,mdss-dsi-pan-fps-update = "dfps_suspend_resume_mode";
+		qcom,cont-splash-enabled;
+		somc,driver-ic = <1>;
+		somc,touch-reset-gpio = <&msmgpio 85 0>;
+	};
+
 	dsi_default_gpio_0: somc,default_panel_0 {
 		qcom,mdss-dsi-panel-name = "default";
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
@@ -111,7 +129,6 @@
 		qcom,mdss-dsi-pan-enable-dynamic-fps;
 		qcom,mdss-dsi-pan-fps-update = "dfps_suspend_resume_mode";
 		qcom,cont-splash-enabled;
-
 		somc,driver-ic = <0>;
 		somc,touch-reset-gpio = <&msmgpio 85 0>;
 		somc,mdss-phy-size-mm = <56 100>;
@@ -206,7 +223,6 @@
 		qcom,mdss-dsi-pan-enable-dynamic-fps;
 		qcom,mdss-dsi-pan-fps-update = "dfps_suspend_resume_mode";
 		qcom,cont-splash-enabled;
-
 		somc,driver-ic = <1>;
 		somc,touch-reset-gpio = <&msmgpio 85 0>;
 		somc,mdss-phy-size-mm = <56 100>;

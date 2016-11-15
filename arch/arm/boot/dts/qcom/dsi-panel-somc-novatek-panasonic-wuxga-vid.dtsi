@@ -21,7 +21,6 @@
 	dsi_novatek_panasonic_wuxga_vid: somc,novatek_panasonic_wuxga_panel {
 		qcom,mdss-dsi-panel-name = "panasonic novatek wuxga video";
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
-		qcom,panel-supply-entries = <&shinano_panel_power_supply>;
 		qcom,mdss-dsi-panel-destination = "display_1";
 		qcom,mdss-dsi-panel-type = "dsi_video_mode";
 		qcom,mdss-dsi-panel-width = <1920>;
@@ -64,12 +63,7 @@
 		qcom,mdss-dsi-bl-max-level = <255>;
 		qcom,mdss-brightness-max-level = <255>;
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
-		qcom,mdss-dsi-pan-enable-dynamic-fps;
-		qcom,mdss-dsi-pan-fps-update = "dfps_suspend_resume_mode";
-		qcom,cont-splash-enabled;
 
-		somc,driver-ic = <3>;
-		somc,mdss-phy-size-mm = <217 135>;
 		somc,mdss-dsi-lane-config = [00 c2 ef 00 00 00 00 01 ff
 			00 c2 ef 00 00 00 00 01 ff
 			00 c2 ef 00 00 00 00 01 ff
@@ -85,5 +79,6 @@
 		somc,mdss-dsi-pcc-table-size = <1>;
 		somc,mdss-dsi-pcc-table = <
 			0x00 0x01 0x1C 0x1F 0x1C 0x1F 0x8000 0x8000 0x7D80>;
+		somc,mdss-phy-size-mm = <217 135>;
 	};
 };

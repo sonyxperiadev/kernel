@@ -26,6 +26,54 @@
 
 &mdss_mdp {
 	qcom,mdss-ib-factor = <19 10>;
+	dsi_novatek_auo_1080_vid: somc,novatek_auo_1080p_panel {
+		qcom,panel-supply-entries = <&shinano_panel_power_supply>;
+		qcom,mdss-dsi-pan-enable-dynamic-fps;
+		qcom,mdss-dsi-pan-fps-update = "dfps_suspend_resume_mode";
+		qcom,cont-splash-enabled;
+		somc,driver-ic = <1>;
+	};
+
+	dsi_novatek_jdi_1080_vid: somc,novatek_jdi_1080p_panel {
+		qcom,panel-supply-entries = <&shinano_panel_power_supply>;
+		qcom,mdss-dsi-pan-enable-dynamic-fps;
+		qcom,mdss-dsi-pan-fps-update = "dfps_suspend_resume_mode";
+		qcom,cont-splash-enabled;
+		somc,driver-ic = <1>;
+	};
+
+	dsi_novatek_sharp_1080_vid: somc,novatek_sharp_1080p_panel {
+		qcom,panel-supply-entries = <&shinano_panel_power_supply>;
+		qcom,mdss-dsi-pan-enable-dynamic-fps;
+		qcom,mdss-dsi-pan-fps-update = "dfps_suspend_resume_mode";
+		qcom,cont-splash-enabled;
+		somc,driver-ic = <1>;
+	};
+
+	dsi_renesas_auo_1080_vid: somc,renesas_auo_1080p_panel {
+		qcom,panel-supply-entries = <&shinano_panel_power_supply>;
+		qcom,mdss-dsi-pan-enable-dynamic-fps;
+		qcom,mdss-dsi-pan-fps-update = "dfps_suspend_resume_mode";
+		qcom,cont-splash-enabled;
+		somc,driver-ic = <0>;
+	};
+
+	dsi_renesas_jdi_1080_vid: somc,renesas_jdi_1080p_panel {
+		qcom,panel-supply-entries = <&shinano_panel_power_supply>;
+		qcom,mdss-dsi-pan-enable-dynamic-fps;
+		qcom,mdss-dsi-pan-fps-update = "dfps_suspend_resume_mode";
+		qcom,cont-splash-enabled;
+		somc,driver-ic = <0>;
+	};
+
+	dsi_renesas_sharp_1080_vid: somc,renesas_sharp_1080p_panel {
+		qcom,panel-supply-entries = <&shinano_panel_power_supply>;
+		qcom,mdss-dsi-pan-enable-dynamic-fps;
+		qcom,mdss-dsi-pan-fps-update = "dfps_suspend_resume_mode";
+		qcom,cont-splash-enabled;
+		somc,driver-ic = <0>;
+	};
+
 	dsi_default_gpio_0: somc,default_panel_0 {
 		qcom,mdss-dsi-panel-name = "default";
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
@@ -112,7 +160,6 @@
 		qcom,mdss-dsi-pan-enable-dynamic-fps;
 		qcom,mdss-dsi-pan-fps-update = "dfps_suspend_resume_mode";
 		qcom,cont-splash-enabled;
-
 		somc,driver-ic = <0>;
 		somc,mdss-phy-size-mm = <64 114>;
 	};
@@ -202,7 +249,6 @@
 		qcom,mdss-dsi-pan-enable-dynamic-fps;
 		qcom,mdss-dsi-pan-fps-update = "dfps_suspend_resume_mode";
 		qcom,cont-splash-enabled;
-
 		somc,driver-ic = <0>;
 		somc,mdss-phy-size-mm = <64 114>;
 	};

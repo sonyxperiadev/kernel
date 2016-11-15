@@ -21,7 +21,6 @@
 	dsi_novatek_jdi_1080_vid: somc,novatek_jdi_1080p_panel {
 		qcom,mdss-dsi-panel-name = "jdi novatek 1080p video";
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
-		qcom,panel-supply-entries = <&shinano_panel_power_supply>;
 		qcom,mdss-dsi-panel-destination = "display_1";
 		qcom,mdss-dsi-panel-type = "dsi_video_mode";
 		qcom,mdss-dsi-panel-width = <1080>;
@@ -570,12 +569,6 @@
 		somc,mdss-dsi-picadj-hue = <0>;
 		somc,mdss-dsi-picadj-val = <1>;
 		somc,mdss-dsi-picadj-cont = <1>;
-
-		qcom,mdss-dsi-pan-enable-dynamic-fps;
-		qcom,mdss-dsi-pan-fps-update = "dfps_suspend_resume_mode";
-		qcom,cont-splash-enabled;
-
-		somc,driver-ic = <1>;
 		somc,mdss-phy-size-mm = <64 114>;
 	};
 };

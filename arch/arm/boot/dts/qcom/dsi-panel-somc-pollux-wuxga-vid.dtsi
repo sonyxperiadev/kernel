@@ -21,7 +21,6 @@
 	dsi_pollux_wuxga_vid: somc,pollux_wuxga_panel {
 		qcom,mdss-dsi-panel-name = "pollux-vsb panasonic wuxga video";
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
-		qcom,panel-supply-entries = <&shinano_panel_power_supply>;
 		qcom,mdss-dsi-panel-destination = "display_1";
 		qcom,mdss-dsi-panel-type = "dsi_video_mode";
 		qcom,mdss-dsi-panel-width = <1920>;
@@ -62,12 +61,7 @@
 		qcom,mdss-dsi-bl-max-level = <255>;
 		qcom,mdss-brightness-max-level = <255>;
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
-		qcom,mdss-dsi-pan-enable-dynamic-fps;
-		qcom,mdss-dsi-pan-fps-update = "dfps_suspend_resume_mode";
-		qcom,cont-splash-enabled;
 
-		somc,driver-ic = <3>;
-		somc,mdss-phy-size-mm = <217 135>;
 		somc,mdss-dsi-lane-config = [00 c2 ef 00 00 00 00 01 75
 			00 c2 ef 00 00 00 00 01 75
 			00 c2 ef 00 00 00 00 01 75
@@ -78,5 +72,6 @@
 		somc,disp-en-on-post = <251>;
 		somc,disp-en-off-pre = <86>;
 		somc,pw-down-period = <500>;
+		somc,mdss-phy-size-mm = <217 135>;
 	};
 };

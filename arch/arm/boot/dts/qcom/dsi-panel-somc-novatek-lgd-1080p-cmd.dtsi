@@ -22,7 +22,6 @@
 		qcom,mdss-dsi-panel-name = "lgd novatek 1080p cmd";
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
 		qcom,mdss-dsi-panel-destination = "display_1";
-		qcom,panel-supply-entries = <&shinano_panel_power_supply>;
 		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
 		qcom,mdss-dsi-panel-width = <1080>;
 		qcom,mdss-dsi-panel-height = <1920>;
@@ -361,15 +360,6 @@
 			0x00 0xDF 0x04 0x07 0x00 0x03 0x8000 0x8000 0x8000
 			0x00 0xE0 0x00 0x03 0x00 0x03 0x8000 0x8000 0x8000
 			0xFF 0x00 0x00 0x3B 0x00 0x3B 0x8000 0x8000 0x8000>;
-
-		qcom,mdss-dsi-pan-enable-dynamic-fps;
-		qcom,mdss-dsi-pan-fps-update = "dfps_suspend_resume_mode";
-		qcom,cont-splash-enabled;
-
-		somc,driver-ic = <0>;
-		somc,dric-gpio = <&msmgpio 26 0>;
-		somc,touch-reset-gpio = <&msmgpio 85 0>;
-		somc,mul-channel-scaling = <3>;
 		somc,mdss-phy-size-mm = <64 114>;
 	};
 };
