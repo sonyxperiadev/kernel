@@ -120,6 +120,10 @@ static struct bt_pinctrl_data *pinctrl_data;
 static struct regulator *bt_batfet;
 static bool bt_enabled;
 
+#if defined(CONFIG_ARCH_SONY_LOIRE)
+static int rfkill_uport_clk_on = 0;
+#endif
+
 /* work function */
 static void bluesleep_sleep_work(struct work_struct *work);
 
@@ -236,9 +240,6 @@ static int bluesleep_rfkill_set_power(void *data, bool blocked)
 
 	/* rfkill_ops callback. Turn transmitter on when blocked is false */
 	if (!blocked) {
-		/* Enable MSM serial clock for ttyHS(x) */
-		msm_hs_set_clock(MSM_HSUART_BT, 1);
-
 		if (regOnGpio) {
 			BT_DBG("Bluetooth device is already power on:%d\n",
 				regOnGpio);
@@ -250,17 +251,30 @@ static int bluesleep_rfkill_set_power(void *data, bool blocked)
 				pr_warn("%s: Can't enable regulator!\n",
 								__func__);
 		}
+#if defined(CONFIG_ARCH_SONY_LOIRE)
+		/* Enable MSM serial clock for ttyHS(x) */
+		if (rfkill_uport_clk_on == 0) {
+			bsi->uport = msm_hs_get_uart_port(BT_PORT_ID);
+			msm_hs_request_clock_on(bsi->uport);
+			rfkill_uport_clk_on = 1;
+		}
+#endif
 		gpio_set_value(bsi->bt_reg_on, 1);
 		gpio_set_value(bsi->ext_wake, 1);
 	} else {
-		/* Powering off: Disable serial clocks */
-		msm_hs_set_clock(MSM_HSUART_BT, 0);
-
 		if (!regOnGpio) {
 			BT_DBG("Bluetooth device is already power off:%d\n",
 				regOnGpio);
 			return 0;
 		}
+#if defined(CONFIG_ARCH_SONY_LOIRE)
+		/* Powering off: Disable serial clocks */
+		if (rfkill_uport_clk_on) {
+			bsi->uport = msm_hs_get_uart_port(BT_PORT_ID);
+			msm_hs_request_clock_off(bsi->uport);
+			rfkill_uport_clk_on = -1;
+		}
+#endif
 		gpio_set_value(bsi->bt_reg_on, 0);
 		if (bt_batfet)
 			regulator_disable(bt_batfet);
