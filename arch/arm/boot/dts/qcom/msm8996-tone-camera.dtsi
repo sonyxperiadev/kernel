@@ -19,15 +19,24 @@
 
 &soc {
 	led_flash0: qcom,camera-flash {
-		cell-index = <0>;
-        compatible = "qcom,camera-flash";
-        qcom,flash-source = <&pmi8994_flash0 &pmi8994_flash1>;
-        qcom,torch-source = <&pmi8994_torch0 &pmi8994_torch1>;
-        qcom,switch-source = <&pmi8994_switch>;
+	cell-index = <0>;
+	compatible = "qcom,camera-flash";
+	qcom,flash-source = <&pmi8994_flash0 &pmi8994_flash1>;
+	qcom,torch-source = <&pmi8994_torch0 &pmi8994_torch1>;
+	qcom,switch-source = <&pmi8994_switch>;
 	};
 };
 
 &cci {
+	/delete-node/ qcom,actuator@0;
+	/delete-node/ qcom,actuator@1;
+	/delete-node/ qcom,ois@0;
+	/delete-node/ qcom,eeprom@0;
+	/delete-node/ qcom,eeprom@1;
+	/delete-node/ qcom,camera@0;
+	/delete-node/ qcom,camera@1;
+	/delete-node/ qcom,camera@2;
+
 	actuator0: qcom,actuator@0 {
 		cell-index = <0>;
 		reg = <0x0>;
@@ -52,7 +61,7 @@
 	qcom,camera@0 {
 		cell-index = <0>;
 		compatible = "qcom,camera";
-		reg = <0x20>;
+		reg = <0x0>;
 		status = "ok";
 		qcom,csiphy-sd-index = <0>;
 		qcom,csid-sd-index = <0>;
@@ -88,7 +97,7 @@
 	qcom,camera@1 {
 		cell-index = <1>;
 		compatible = "qcom,camera";
-		reg = <0x34>;
+		reg = <0x1>;
 		status = "ok";
 		qcom,csiphy-sd-index = <2>;
 		qcom,csid-sd-index = <2>;
