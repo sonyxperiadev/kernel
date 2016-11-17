@@ -37,20 +37,7 @@
 	};
 };
 
-&cci {
-	/delete-node/ qcom,actuator@0;
-	/delete-node/ qcom,actuator@1;
-	/delete-node/ qcom,ois@0;
-	/delete-node/ qcom,eeprom@0;
-	/delete-node/ qcom,eeprom@1;
-	/delete-node/ qcom,camera@0;
-	/delete-node/ qcom,camera@1;
-	/delete-node/ qcom,camera@2;
-};
-
 &soc {
-	/delete-node/ qcom,camera-flash;
-
 	pinctrl@01010000 {
 		disabled-pins = <0 1 2 3>;
 	};
