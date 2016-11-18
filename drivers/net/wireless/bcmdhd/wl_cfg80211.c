@@ -335,12 +335,17 @@ static s32 wl_cfg80211_resume(struct wiphy *wiphy);
 	2, 0))
 static s32 wl_cfg80211_mgmt_tx_cancel_wait(struct wiphy *wiphy,
 	bcm_struct_cfgdev *cfgdev, u64 cookie);
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 18, 0))
+static s32 wl_cfg80211_del_station(
+	struct wiphy *wiphy, struct net_device *ndev,
+	struct station_del_parameters *params);
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 16, 0))
 static s32 wl_cfg80211_del_station(struct wiphy *wiphy,
-	struct net_device *ndev,
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 16, 0))
-	const
+	struct net_device *ndev, const u8 *mac_addr);
+#else
+static s32 wl_cfg80211_del_station(struct wiphy *wiphy,
+	struct net_device *ndev, u8 *mac_addr);
 #endif
-	u8 *mac_addr);
 static s32 wl_cfg80211_change_station(struct wiphy *wiphy,
 	struct net_device *dev,
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 16, 0))
@@ -4789,7 +4794,11 @@ get_station_err:
 			/* Disconnect due to zero BSSID or error to get RSSI */
 			WL_ERR(("force cfg80211_disconnected: %d\n", err));
 			wl_clr_drv_status(cfg, CONNECTED, dev);
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 18, 0))
+			cfg80211_disconnected(dev, 0, NULL, 0, false, GFP_KERNEL);
+#else
 			cfg80211_disconnected(dev, 0, NULL, 0, GFP_KERNEL);
+#endif
 			wl_link_down(cfg);
 		}
 	}
@@ -6831,14 +6840,22 @@ static s32 wl_cfg80211_hostapd_sec(
 
 #if defined(WL_SUPPORT_BACKPORTED_KPATCHES) || (LINUX_VERSION_CODE >= KERNEL_VERSION(3, \
 	2, 0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 18, 0))
 static s32
-wl_cfg80211_del_station(
-	struct wiphy *wiphy,
+wl_cfg80211_del_station(struct wiphy *wiphy,
 	struct net_device *ndev,
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 16, 0))
-	const
-#endif
+	struct station_del_parameters *params)
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 16, 0))
+static s32
+wl_cfg80211_del_station(struct wiphy *wiphy,
+	struct net_device *ndev,
+	const u8 *mac_addr)
+#else
+static s32
+wl_cfg80211_del_station(struct wiphy *wiphy,
+	struct net_device *ndev,
 	u8 *mac_addr)
+#endif
 {
 	struct net_device *dev;
 	struct bcm_cfg80211 *cfg = wiphy_priv(wiphy);
@@ -6849,6 +6866,10 @@ wl_cfg80211_del_station(
 		sizeof(struct ether_addr) + sizeof(uint)] = {0};
 	struct maclist *assoc_maclist = (struct maclist *)mac_buf;
 	int num_associated = 0;
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 18, 0))
+	const u8 *mac_addr = params->mac;
+#endif
 
 	WL_DBG(("Entry\n"));
 	if (mac_addr == NULL) {
@@ -8548,7 +8569,11 @@ wl_notify_connect_status(struct bcm_cfg80211 *cfg, bcm_struct_cfgdev *cfgdev,
 						WL_ERR(("WLC_DISASSOC error %d\n", err));
 						err = 0;
 					}
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 18, 0))
+					cfg80211_disconnected(ndev, reason, NULL, 0, false, GFP_KERNEL);
+#else
 					cfg80211_disconnected(ndev, reason, NULL, 0, GFP_KERNEL);
+#endif
 					wl_link_down(cfg);
 					wl_init_prof(cfg, ndev);
 				} else {
@@ -9127,7 +9152,11 @@ wl_notify_pfn_status(struct bcm_cfg80211 *cfg, bcm_struct_cfgdev *cfgdev,
 #ifndef WL_SCHED_SCAN
 	mutex_lock(&cfg->usr_sync);
 	/* TODO: Use cfg80211_sched_scan_results(wiphy); */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 18, 0))
+	cfg80211_disconnected(ndev, 0, NULL, 0, false, GFP_KERNEL);
+#else
 	cfg80211_disconnected(ndev, 0, NULL, 0, GFP_KERNEL);
+#endif
 	mutex_unlock(&cfg->usr_sync);
 #else
 	/* If cfg80211 scheduled scan is supported, report the pno results via sched
@@ -11737,7 +11766,11 @@ int wl_cfg80211_hang(struct net_device *dev, u16 reason)
 
 	WL_ERR(("In : chip crash eventing\n"));
 	wl_add_remove_pm_enable_work(cfg, FALSE, WL_HANDLER_DEL);
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 18, 0))
+	cfg80211_disconnected(dev, reason, NULL, 0, false, GFP_KERNEL);
+#else
 	cfg80211_disconnected(dev, reason, NULL, 0, GFP_KERNEL);
+#endif
 	if (cfg != NULL) {
 		wl_link_down(cfg);
 	}

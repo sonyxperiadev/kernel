@@ -840,7 +840,9 @@ int
 dhdpcie_enable_device(dhd_bus_t *bus)
 {
 	int ret = BCME_ERROR;
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 0, 0))
 	dhdpcie_info_t *pch;
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3, 0, 0) */
 
 	DHD_TRACE(("%s Enter:\n", __FUNCTION__));
 
@@ -850,28 +852,33 @@ dhdpcie_enable_device(dhd_bus_t *bus)
 	if(bus->dev == NULL)
 		return BCME_ERROR;
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 0, 0))
 	pch = pci_get_drvdata(bus->dev);
 	if(pch == NULL)
 		return BCME_ERROR;
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 0, 0))
-	if (pci_load_saved_state(bus->dev, pch->default_state))
-		pci_disable_device(bus->dev);
-	else {
-#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3, 0, 0) */
-		pci_restore_state(bus->dev);
-		ret = pci_enable_device(bus->dev);
-		if(!ret)
-			pci_set_master(bus->dev);
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 0, 0))
-	}
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0))
+	/* Updated with pci_load_and_free_saved_state to compatible
+	 * with kernel 3.14 or higher
+	 */
+	pci_load_and_free_saved_state(bus->dev, &pch->default_state);
+	pch->default_state = pci_store_saved_state(bus->dev);
+#else
+	pci_load_saved_state(bus->dev, pch->default_state);
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0) */
+	pci_restore_state(bus->dev);
 #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3, 0, 0) */
 
-	if(ret)
+	ret = pci_enable_device(bus->dev);
+	if (ret) {
 		pci_disable_device(bus->dev);
+	} else {
+		pci_set_master(bus->dev);
+	}
 
 	return ret;
 }
+
 int
 dhdpcie_alloc_resource(dhd_bus_t *bus)
 {
