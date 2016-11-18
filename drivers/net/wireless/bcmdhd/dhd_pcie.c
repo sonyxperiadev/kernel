@@ -4038,6 +4038,9 @@ dhdpcie_chipmatch(uint16 vendor, uint16 device)
 		(device == BCM4359_D11AC5G_ID) || (device == BCM4359_CHIP_ID))
 		return 0;
 
+	if ((device == BCM43596_D11AC_ID) || (device == BCM43596_D11AC2G_ID) ||
+		(device == BCM43596_D11AC5G_ID))
+		return 0;
 
 	DHD_ERROR(("%s: Unsupported vendor %x device %x\n", __FUNCTION__, vendor, device));
 	return (-ENODEV);

@@ -193,6 +193,9 @@
 #define BCM4359_D11AC_ID	0x43d6		/* 4359 802.11ac dualband device */
 #define BCM4359_D11AC2G_ID	0x43d7		/* 4359 802.11ac 2.4G device */
 #define BCM4359_D11AC5G_ID	0x43d8		/* 4359 802.11ac 5G device */
+#define BCM43596_D11AC_ID	0x4415		/* 43596 802.11ac dualband device */
+#define BCM43596_D11AC2G_ID	0x4416		/* 43596 802.11ac 2.4G device */
+#define BCM43596_D11AC5G_ID	0x4417		/* 43596 802.11ac 5G device */
 
 /* PCI Subsystem ID */
 #define BCM943228HMB_SSID_VEN1	0x0607
