@@ -22,12 +22,6 @@
 #include <linux/fs.h>
 #include "dhd_custom_memprealloc.h"
 
-#if defined(CONFIG_MACH_SONY_SHINANO)
-#include <linux/qpnp/pin.h>
-#include <linux/regulator/consumer.h>
-#include <../drivers/mmc/host/msm_sdcc.h>
-#endif
-
 static char *intf_macaddr = NULL;
 static struct mmc_host *wlan_mmc_host;
 
@@ -49,7 +43,6 @@ void somc_wifi_mmc_host_register(struct mmc_host *host)
         wlan_mmc_host = host;
 }
 
-#if !defined(CONFIG_MACH_SONY_SHINANO)
 int somc_wifi_set_power(int on)
 {
 	gpio_set_value(bcmdhd_data->wlan_reg_on, on);
@@ -69,89 +62,6 @@ int somc_wifi_set_carddetect(int present)
 	return 0;
 #endif /* CONFIG_BCMDHD_PCIE */
 }
-#else
-#define WIFI_POWER_PMIC_GPIO 18
-#define WIFI_IRQ_GPIO 67
-
-static unsigned int g_wifi_detect;
-static void *sdc_dev;
-void (*sdc_status_cb)(int card_present, void *dev);
-static void *wifi_mmc_host;
-static struct regulator *wifi_batfet;
-static int batfet_ena;
-extern void sdio_ctrl_power(struct mmc_host *card, bool onoff);
-
-int wcf_status_register(void (*cb)(int card_present, void *dev), void *dev)
-{
-	pr_info("%s\n", __func__);
-
-	if (sdc_status_cb)
-		return -EINVAL;
-
-	sdc_status_cb = cb;
-	sdc_dev = dev;
-	wifi_mmc_host = ((struct msmsdcc_host *)dev)->mmc;
-
-	return 0;
-}
-
-unsigned int wcf_status(struct device *dev)
-{
-	pr_info("%s: wifi_detect = %d\n", __func__, g_wifi_detect);
-	return g_wifi_detect;
-}
-
-static int somc_wifi_set_reset(int on)
-{
-	return 0;
-}
-
-int somc_wifi_set_power(int on)
-{
-	int gpio = qpnp_pin_map("pm8941-gpio", WIFI_POWER_PMIC_GPIO);
-	int ret;
-
-	if (!wifi_batfet) {
-		wifi_batfet = regulator_get(NULL, "batfet");
-		if (IS_ERR_OR_NULL(wifi_batfet)) {
-			printk(KERN_ERR "unable to get batfet reg. rc=%d\n",
-				PTR_RET(wifi_batfet));
-			wifi_batfet = NULL;
-		}
-	}
-	if (on) {
-		if (!batfet_ena && wifi_batfet) {
-			ret = regulator_enable(wifi_batfet);
-			if (ret != 0)
-				pr_warn("%s: Can't enable batfet regulator!\n",
-								__func__);
-			batfet_ena = 1;
-		}
-	}
-	gpio_set_value(gpio, on);
-	if (!on) {
-		if (batfet_ena && wifi_batfet) {
-			regulator_disable(wifi_batfet);
-			batfet_ena = 0;
-		}
-	}
-
-	sdio_ctrl_power((struct mmc_host *)wifi_mmc_host, on);
-	return 0;
-
-}
-
-int somc_wifi_set_carddetect(int present)
-{
-	g_wifi_detect = present;
-
-	if (sdc_status_cb)
-		sdc_status_cb(present, sdc_dev);
-	else
-		printk(KERN_WARNING "%s: Nobody to notify\n", __func__);
-	return 0;
-}
-#endif /* CONFIG_MACH_SONY_SHINANO */
 
 static ssize_t macaddr_show(struct device *dev, struct device_attribute *attr,
 				char *buf)
@@ -420,52 +330,11 @@ random_mac:
 
 struct wifi_platform_data somc_wifi_control = {
 	.set_power	= somc_wifi_set_power,
-#if defined(CONFIG_MACH_SONY_SHINANO)
-	.set_reset	= somc_wifi_set_reset,
-#endif /* CONFIG_MACH_SONY_SHINANO */
 	.set_carddetect	= somc_wifi_set_carddetect,
 	.mem_prealloc	= dhd_wlan_mem_prealloc,
 	.get_mac_addr	= somc_wifi_get_mac_addr,
 };
 
 EXPORT_SYMBOL(somc_wifi_control);
-
-#if defined(CONFIG_MACH_SONY_SHINANO)
-static struct resource somc_wifi_resources[] = {
-	[0] = {
-		.name	= "bcmdhd_wlan_irq",
-		.start	= 0,
-		.end	= 0,
-		.flags	= IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHLEVEL |
-			  IORESOURCE_IRQ_SHAREABLE,
-	},
-};
-
-static struct platform_device somc_wifi = {
-	.name		= "bcmdhd_wlan",
-	.id		= -1,
-	.num_resources	= ARRAY_SIZE(somc_wifi_resources),
-	.resource	= somc_wifi_resources,
-	.dev		= {
-		.platform_data = &somc_wifi_control,
-	},
-};
-
-static int __init somc_wifi_init_on_boot(void)
-{
-	somc_wifi.resource->start = gpio_to_irq(WIFI_IRQ_GPIO);
-	somc_wifi.resource->end = gpio_to_irq(WIFI_IRQ_GPIO);
-	platform_device_register(&somc_wifi);
-
-	intf_macaddr = kzalloc(20*(sizeof(char)), GFP_KERNEL);
-	if (sysfs_create_group(&somc_wifi.dev.kobj, &wifi_attr_grp) < 0) {
-		pr_err("%s: Unable to create sysfs\n", __func__);
-		kfree(intf_macaddr);
-	}
-	return 0;
-}
-
-device_initcall(somc_wifi_init_on_boot);
-#endif /* CONFIG_MACH_SONY_SHINANO */
 
 MODULE_LICENSE("GPL v2");
