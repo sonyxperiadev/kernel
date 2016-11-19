@@ -1265,12 +1265,6 @@ unsigned int msm_hs_tx_empty(struct uart_port *uport)
 	unsigned int data;
 	unsigned int ret = 0;
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
-#if defined(CONFIG_MACH_SONY_SHINANO)
-	if (msm_uport->pm_state != MSM_HS_PM_ACTIVE) {
-		MSM_HS_WARN("%s(): Failed.Clocks are OFF\n", __func__);
-		return -1;
-	}
-#endif
 	msm_hs_resource_vote(msm_uport);
 	data = msm_hs_read(uport, UART_DM_SR);
 	msm_hs_resource_unvote(msm_uport);
@@ -2058,12 +2052,6 @@ void msm_hs_set_mctrl(struct uart_port *uport,
 	unsigned long flags;
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
 
-#if defined(CONFIG_MACH_SONY_SHINANO)
-	if (msm_uport->pm_state != MSM_HS_PM_ACTIVE) {
-		MSM_HS_WARN("%s(): Failed.Clocks are OFF\n", __func__);
-		return;
-	}
-#endif
 	msm_hs_resource_vote(msm_uport);
 	spin_lock_irqsave(&uport->lock, flags);
 	msm_hs_set_mctrl_locked(uport, mctrl);
@@ -2344,12 +2332,6 @@ void msm_hs_resource_on(struct msm_hs_port *msm_uport)
 void msm_hs_request_clock_off(struct uart_port *uport)
 {
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
-#if defined(CONFIG_MACH_SONY_SHINANO)
-	if (msm_uport->pm_state != MSM_HS_PM_ACTIVE) {
-		MSM_HS_WARN("%s(): Failed.Clocks are OFF\n", __func__);
-		return;
-	}
-#endif
 	/* Set the flag to disable flow control and wakeup irq */
 	if (msm_uport->obs)
 		atomic_set(&msm_uport->client_req_state, 1);
