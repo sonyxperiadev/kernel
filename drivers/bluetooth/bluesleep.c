@@ -739,13 +739,6 @@ static int bluesleep_suspend(struct platform_device *pdev, pm_message_t state)
 	return 0;
 }
 
-/* for msm_serial_hs */
-void bcm_bt_lpm_exit_lpm_locked(struct uart_port *uport)
-{
-	bsi->uport = uport;
-}
-EXPORT_SYMBOL(bcm_bt_lpm_exit_lpm_locked);
-
 static struct of_device_id bluesleep_match_table[] = {
 	{ .compatible = "qcom,bluesleep" },
 	{}
