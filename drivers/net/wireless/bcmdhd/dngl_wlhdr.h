@@ -1,7 +1,7 @@
 /*
  * Dongle WL Header definitions
  *
- * Copyright (C) 1999-2014, Broadcom Corporation
+ * Copyright (C) 1999-2016, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -21,7 +21,10 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dngl_wlhdr.h 464743 2014-03-25 21:04:32Z $
+ *
+ * <<Broadcom-WL-IPTag/Open:>>
+ *
+ * $Id: dngl_wlhdr.h 514727 2014-11-12 03:02:48Z $
  */
 
 #ifndef _dngl_wlhdr_h_

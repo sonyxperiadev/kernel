@@ -1,7 +1,7 @@
 /*
  * SROM format definition.
  *
- * Copyright (C) 1999-2014, Broadcom Corporation
+ * Copyright (C) 1999-2016, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -21,18 +21,27 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: bcmsrom_fmt.h 473704 2014-04-29 15:49:57Z $
+ *
+ * <<Broadcom-WL-IPTag/Open:>>
+ *
+ * $Id: bcmsrom_fmt.h 553280 2015-04-29 07:55:29Z $
  */
 
 #ifndef	_bcmsrom_fmt_h_
 #define	_bcmsrom_fmt_h_
 
-#define SROM_MAXREV		11	/* max revisiton supported by driver */
+#define SROM_MAXREV		13	/* max revision supported by driver */
 
 /* Maximum srom: 12 Kilobits == 1536 bytes */
+
 #define	SROM_MAX		1536
-#define SROM_MAXW		384
-#define VARS_MAX		4096
+#define SROM_MAXW		594
+
+#ifdef LARGE_NVRAM_MAXSZ
+#define VARS_MAX                LARGE_NVRAM_MAXSZ
+#else
+#define VARS_MAX                4096
+#endif /* LARGE_NVRAM_MAXSZ */
 
 /* PCI fields */
 #define PCI_F0DEVID		48
@@ -375,6 +384,8 @@
 
 #define SROM9_PO_MCS32		202
 #define SROM9_PO_LOFDM40DUP	203
+#define SROM9_EU_EDCRSTH	204
+#define SROM10_EU_EDCRSTH	204
 #define SROM8_RXGAINERR_2G	205
 #define SROM8_RXGAINERR_5GL	206
 #define SROM8_RXGAINERR_5GM	207
@@ -382,6 +393,7 @@
 #define SROM8_RXGAINERR_5GU	209
 #define SROM8_SUBBAND_PPR	210
 #define SROM8_PCIEINGRESS_WAR	211
+#define SROM8_EU_EDCRSTH	212
 #define SROM9_SAR		212
 
 #define SROM8_NOISELVL_2G	213
@@ -465,7 +477,7 @@
 #define SROM11_TSSIFLOOR_5GH 		98
 #define SROM11_TSSIFLOOR_5GU 		99
 
-/* Masks and offsets for Terrmal parameters */
+/* Masks and offsets for Thermal parameters */
 #define SROM11_TEMPS_PERIOD_MASK	0xf0
 #define SROM11_TEMPS_PERIOD_SHIFT	4
 #define SROM11_TEMPS_HYSTERESIS_MASK	0x0f
@@ -616,11 +628,331 @@
 #define SROM11_RXGAINERR_5GH		230
 #define SROM11_RXGAINERR_5GU		231
 
+#define SROM11_EU_EDCRSTH	        232
+#define SROM12_EU_EDCRSTH	        232
+
 #define SROM11_SIGN 			64
 #define SROM11_CRCREV 			233
 
-#define	SROM11_WORDS			234
+#define	SROM11_WORDS				234
 #define	SROM11_SIGNATURE		0x0634
+
+
+/* SROM REV 12 */
+#define SROM12_SIGN                     64
+#define SROM12_WORDS			512
+#define SROM12_SIGNATURE		0x8888
+#define SROM12_CRCREV			511
+
+#define SROM12_BFL6				486
+#define SROM12_BFL7				487
+
+#define SROM12_MCSBW205GX1PO		234
+#define SROM12_MCSBW205GX1PO_1		235
+#define SROM12_MCSBW405GX1PO		236
+#define SROM12_MCSBW405GX1PO_1		237
+#define SROM12_MCSBW805GX1PO		238
+#define SROM12_MCSBW805GX1PO_1		239
+#define SROM12_MCSLR5GX1PO			240
+#define SROM12_SB40AND80LR5GX1PO		241
+#define SROM12_SB20IN80AND160LR5GX1PO	242
+#define SROM12_SB20IN80AND160HR5GX1PO	243
+#define SROM12_SB40AND80HR5GX1PO		244
+
+#define SROM12_MCSBW205GX2PO		245
+#define SROM12_MCSBW205GX2PO_1		246
+#define SROM12_MCSBW405GX2PO		247
+#define SROM12_MCSBW405GX2PO_1		248
+#define SROM12_MCSBW805GX2PO		249
+#define SROM12_MCSBW805GX2PO_1		250
+#define SROM12_MCSLR5GX2PO			251
+#define SROM12_SB40AND80LR5GX2PO	252
+#define SROM12_SB20IN80AND160LR5GX2PO	253
+#define SROM12_SB20IN80AND160HR5GX2PO	254
+#define SROM12_SB40AND80HR5GX2PO		255
+
+/* MISC */
+#define	SROM12_RXGAINS10			483
+#define	SROM12_RXGAINS11			484
+#define	SROM12_RXGAINS12			485
+
+/* Per-path fields and offset */
+#define	MAX_PATH_SROM_12			3
+#define SROM12_PATH0				256
+#define SROM12_PATH1				328
+#define SROM12_PATH2				400
+
+#define	SROM12_5GB42G_MAXP				0
+#define SROM12_2GB0_PA					1
+#define SROM12_2GB0_PA_W0				1
+#define SROM12_2GB0_PA_W1				2
+#define SROM12_2GB0_PA_W2				3
+#define SROM12_2GB0_PA_W3				4
+
+#define	SROM12_RXGAINS					5
+#define	SROM12_5GB1B0_MAXP				6
+#define	SROM12_5GB3B2_MAXP				7
+
+#define SROM12_5GB0_PA					8
+#define SROM12_5GB0_PA_W0				8
+#define SROM12_5GB0_PA_W1				9
+#define SROM12_5GB0_PA_W2				10
+#define SROM12_5GB0_PA_W3				11
+
+#define SROM12_5GB1_PA					12
+#define SROM12_5GB1_PA_W0				12
+#define SROM12_5GB1_PA_W1				13
+#define SROM12_5GB1_PA_W2				14
+#define SROM12_5GB1_PA_W3				15
+
+#define SROM12_5GB2_PA					16
+#define SROM12_5GB2_PA_W0				16
+#define SROM12_5GB2_PA_W1				17
+#define SROM12_5GB2_PA_W2				18
+#define SROM12_5GB2_PA_W3				19
+
+#define SROM12_5GB3_PA					20
+#define SROM12_5GB3_PA_W0				20
+#define SROM12_5GB3_PA_W1				21
+#define SROM12_5GB3_PA_W2				22
+#define SROM12_5GB3_PA_W3				23
+
+#define SROM12_5GB4_PA					24
+#define SROM12_5GB4_PA_W0				24
+#define SROM12_5GB4_PA_W1				25
+#define SROM12_5GB4_PA_W2				26
+#define SROM12_5GB4_PA_W3				27
+
+#define SROM12_2G40B0_PA				28
+#define SROM12_2G40B0_PA_W0				28
+#define SROM12_2G40B0_PA_W1				29
+#define SROM12_2G40B0_PA_W2				30
+#define SROM12_2G40B0_PA_W3				31
+
+#define SROM12_5G40B0_PA				32
+#define SROM12_5G40B0_PA_W0				32
+#define SROM12_5G40B0_PA_W1				33
+#define SROM12_5G40B0_PA_W2				34
+#define SROM12_5G40B0_PA_W3				35
+
+#define SROM12_5G40B1_PA				36
+#define SROM12_5G40B1_PA_W0				36
+#define SROM12_5G40B1_PA_W1				37
+#define SROM12_5G40B1_PA_W2				38
+#define SROM12_5G40B1_PA_W3				39
+
+#define SROM12_5G40B2_PA				40
+#define SROM12_5G40B2_PA_W0				40
+#define SROM12_5G40B2_PA_W1				41
+#define SROM12_5G40B2_PA_W2				42
+#define SROM12_5G40B2_PA_W3				43
+
+#define SROM12_5G40B3_PA				44
+#define SROM12_5G40B3_PA_W0				44
+#define SROM12_5G40B3_PA_W1				45
+#define SROM12_5G40B3_PA_W2				46
+#define SROM12_5G40B3_PA_W3				47
+
+#define SROM12_5G40B4_PA				48
+#define SROM12_5G40B4_PA_W0				48
+#define SROM12_5G40B4_PA_W1				49
+#define SROM12_5G40B4_PA_W2				50
+#define SROM12_5G40B4_PA_W3				51
+
+#define SROM12_5G80B0_PA				52
+#define SROM12_5G80B0_PA_W0				52
+#define SROM12_5G80B0_PA_W1				53
+#define SROM12_5G80B0_PA_W2				54
+#define SROM12_5G80B0_PA_W3				55
+
+#define SROM12_5G80B1_PA				56
+#define SROM12_5G80B1_PA_W0				56
+#define SROM12_5G80B1_PA_W1				57
+#define SROM12_5G80B1_PA_W2				58
+#define SROM12_5G80B1_PA_W3				59
+
+#define SROM12_5G80B2_PA				60
+#define SROM12_5G80B2_PA_W0				60
+#define SROM12_5G80B2_PA_W1				61
+#define SROM12_5G80B2_PA_W2				62
+#define SROM12_5G80B2_PA_W3				63
+
+#define SROM12_5G80B3_PA				64
+#define SROM12_5G80B3_PA_W0				64
+#define SROM12_5G80B3_PA_W1				65
+#define SROM12_5G80B3_PA_W2				66
+#define SROM12_5G80B3_PA_W3				67
+
+#define SROM12_5G80B4_PA				68
+#define SROM12_5G80B4_PA_W0				68
+#define SROM12_5G80B4_PA_W1				69
+#define SROM12_5G80B4_PA_W2				70
+#define SROM12_5G80B4_PA_W3				71
+
+/* PD offset */
+#define SROM12_PDOFF_2G_CCK				472
+
+#define SROM12_PDOFF_20in40M_5G_B0		473
+#define SROM12_PDOFF_20in40M_5G_B1		474
+#define SROM12_PDOFF_20in40M_5G_B2		475
+#define SROM12_PDOFF_20in40M_5G_B3		476
+#define SROM12_PDOFF_20in40M_5G_B4		477
+
+#define SROM12_PDOFF_40in80M_5G_B0		478
+#define SROM12_PDOFF_40in80M_5G_B1		479
+#define SROM12_PDOFF_40in80M_5G_B2		480
+#define SROM12_PDOFF_40in80M_5G_B3		481
+#define SROM12_PDOFF_40in80M_5G_B4		482
+
+#define SROM12_PDOFF_20in80M_5G_B0		488
+#define SROM12_PDOFF_20in80M_5G_B1		489
+#define SROM12_PDOFF_20in80M_5G_B2		490
+#define SROM12_PDOFF_20in80M_5G_B3		491
+#define SROM12_PDOFF_20in80M_5G_B4		492
+
+#define SROM13_PDOFFSET20IN40M5GCORE3           98
+#define SROM13_PDOFFSET20IN40M5GCORE3_1         99
+#define SROM13_PDOFFSET20IN80M5GCORE3           510
+#define SROM13_PDOFFSET20IN80M5GCORE3_1         511
+#define SROM13_PDOFFSET40IN80M5GCORE3           105
+#define SROM13_PDOFFSET40IN80M5GCORE3_1         106
+
+#define SROM13_PDOFFSET20IN40M2G                94
+#define SROM13_PDOFFSET20IN40M2GCORE3           95
+
+#define SROM12_GPDN_L				91  /* GPIO pull down bits [15:0]  */
+#define SROM12_GPDN_H				233 /* GPIO pull down bits [31:16] */
+
+#define SROM13_SIGN                     64
+#define SROM13_WORDS                    590
+#define SROM13_SIGNATURE                0x4d55
+#define SROM13_CRCREV                   589
+
+
+/* Per-path fields and offset */
+#define MAX_PATH_SROM_13                        4
+#define SROM13_PATH0                            256
+#define SROM13_PATH1                            328
+#define SROM13_PATH2                            400
+#define SROM13_PATH3                            512
+#define SROM13_RXGAINS                         5
+
+#define SROM13_XTALFREQ                 90
+
+#define SROM13_PDOFFSET20IN40M2G        94
+#define SROM13_PDOFFSET20IN40M2GCORE3   95
+#define SROM13_SB20IN40HRLRPOX          96
+
+#define SROM13_RXGAINS1CORE3            97
+
+#define SROM13_PDOFFSET20IN40M5GCORE3   98
+#define SROM13_PDOFFSET20IN40M5GCORE3_1 99
+
+#define SROM13_ANTGAIN_BANDBGA          100
+
+#define SROM13_RXGAINS2CORE0            101
+#define SROM13_RXGAINS2CORE1            102
+#define SROM13_RXGAINS2CORE2            103
+#define SROM13_RXGAINS2CORE3            104
+
+#define SROM13_PDOFFSET40IN80M5GCORE3   105
+#define SROM13_PDOFFSET40IN80M5GCORE3_1 106
+
+/* power per rate */
+#define SROM13_MCS1024QAM2GPO           108
+#define SROM13_MCS1024QAM5GLPO          109
+#define SROM13_MCS1024QAM5GLPO_1        110
+#define SROM13_MCS1024QAM5GMPO          111
+#define SROM13_MCS1024QAM5GMPO_1        112
+#define SROM13_MCS1024QAM5GHPO          113
+#define SROM13_MCS1024QAM5GHPO_1        114
+#define SROM13_MCS1024QAM5GX1PO         115
+#define SROM13_MCS1024QAM5GX1PO_1       116
+#define SROM13_MCS1024QAM5GX2PO         117
+#define SROM13_MCS1024QAM5GX2PO_1       118
+
+#define SROM13_MCSBW1605GLPO            119
+#define SROM13_MCSBW1605GLPO_1          120
+#define SROM13_MCSBW1605GMPO            121
+#define SROM13_MCSBW1605GMPO_1          122
+#define SROM13_MCSBW1605GHPO            123
+#define SROM13_MCSBW1605GHPO_1          124
+
+#define SROM13_MCSBW1605GX1PO           125
+#define SROM13_MCSBW1605GX1PO_1         126
+#define SROM13_MCSBW1605GX2PO           127
+#define SROM13_MCSBW1605GX2PO_1         128
+
+#define SROM13_ULBPPROFFS5GB0		129
+#define SROM13_ULBPPROFFS5GB1           130
+#define SROM13_ULBPPROFFS5GB2           131
+#define SROM13_ULBPPROFFS5GB3           132
+#define SROM13_ULBPPROFFS5GB4           133
+#define SROM13_ULBPPROFFS2G		134
+
+#define SROM13_MCS8POEXP                135
+#define SROM13_MCS8POEXP_1              136
+#define SROM13_MCS9POEXP                137
+#define SROM13_MCS9POEXP_1              138
+#define SROM13_MCS10POEXP               139
+#define SROM13_MCS10POEXP_1             140
+#define SROM13_MCS11POEXP               141
+#define SROM13_MCS11POEXP_1             142
+#define SROM13_ULBPDOFFS5GB0A0		143
+#define SROM13_ULBPDOFFS5GB0A1          144
+#define SROM13_ULBPDOFFS5GB0A2          145
+#define SROM13_ULBPDOFFS5GB0A3          146
+#define SROM13_ULBPDOFFS5GB1A0          147
+#define SROM13_ULBPDOFFS5GB1A1          148
+#define SROM13_ULBPDOFFS5GB1A2          149
+#define SROM13_ULBPDOFFS5GB1A3          150
+#define SROM13_ULBPDOFFS5GB2A0          151
+#define SROM13_ULBPDOFFS5GB2A1          152
+#define SROM13_ULBPDOFFS5GB2A2          153
+#define SROM13_ULBPDOFFS5GB2A3          154
+#define SROM13_ULBPDOFFS5GB3A0          155
+#define SROM13_ULBPDOFFS5GB3A1          156
+#define SROM13_ULBPDOFFS5GB3A2          157
+#define SROM13_ULBPDOFFS5GB3A3          158
+#define SROM13_ULBPDOFFS5GB4A0          159
+#define SROM13_ULBPDOFFS5GB4A1          160
+#define SROM13_ULBPDOFFS5GB4A2          161
+#define SROM13_ULBPDOFFS5GB4A3          162
+#define SROM13_ULBPDOFFS2GA0		163
+#define SROM13_ULBPDOFFS2GA1		164
+#define SROM13_ULBPDOFFS2GA2		165
+#define SROM13_ULBPDOFFS2GA3		166
+
+#define SROM13_RPCAL5GB4                199
+
+#define SROM13_EU_EDCRSTH               232
+
+#define SROM13_SWCTRLMAP4_CFG			493
+#define SROM13_SWCTRLMAP4_TX2G_FEM3TO0		494
+#define SROM13_SWCTRLMAP4_RX2G_FEM3TO0		495
+#define SROM13_SWCTRLMAP4_RXBYP2G_FEM3TO0	496
+#define SROM13_SWCTRLMAP4_MISC2G_FEM3TO0	497
+#define SROM13_SWCTRLMAP4_TX5G_FEM3TO0		498
+#define SROM13_SWCTRLMAP4_RX5G_FEM3TO0		499
+#define SROM13_SWCTRLMAP4_RXBYP5G_FEM3TO0	500
+#define SROM13_SWCTRLMAP4_MISC5G_FEM3TO0	501
+#define SROM13_SWCTRLMAP4_TX2G_FEM7TO4		502
+#define SROM13_SWCTRLMAP4_RX2G_FEM7TO4		503
+#define SROM13_SWCTRLMAP4_RXBYP2G_FEM7TO4	504
+#define SROM13_SWCTRLMAP4_MISC2G_FEM7TO4	505
+#define SROM13_SWCTRLMAP4_TX5G_FEM7TO4		506
+#define SROM13_SWCTRLMAP4_RX5G_FEM7TO4		507
+#define SROM13_SWCTRLMAP4_RXBYP5G_FEM7TO4	508
+#define SROM13_SWCTRLMAP4_MISC5G_FEM7TO4	509
+
+#define SROM13_PDOFFSET20IN80M5GCORE3   510
+#define SROM13_PDOFFSET20IN80M5GCORE3_1 511
+
+#define SROM13_NOISELVLCORE3            584
+#define SROM13_NOISELVLCORE3_1          585
+#define SROM13_RXGAINERRCORE3           586
+#define SROM13_RXGAINERRCORE3_1         587
+
 
 typedef struct {
 	uint8 tssipos;		/* TSSI positive slope, 1: positive, 0: negative */

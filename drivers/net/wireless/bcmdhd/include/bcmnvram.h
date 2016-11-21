@@ -1,7 +1,7 @@
 /*
  * NVRAM variable manipulation
  *
- * Copyright (C) 1999-2014, Broadcom Corporation
+ * Copyright (C) 1999-2016, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -21,7 +21,10 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: bcmnvram.h 428512 2013-10-09 02:12:11Z $
+ *
+ * <<Broadcom-WL-IPTag/Open:>>
+ *
+ * $Id: bcmnvram.h 514727 2014-11-12 03:02:48Z $
  */
 
 #ifndef _bcmnvram_h_
@@ -96,6 +99,15 @@ extern void nvram_exit(void *sih);
 extern char * nvram_get(const char *name);
 
 /*
+ * Get the value of an NVRAM variable. The pointer returned may be
+ * invalid after a set.
+ * @param	name	name of variable to get
+ * @param	bit	bit value to get
+ * @return	value of variable or NULL if undefined
+ */
+extern char * nvram_get_bitflag(const char *name, const int bit);
+
+/*
  * Read the reset GPIO value from the nvram and set the GPIO
  * as input
  */
@@ -128,6 +140,21 @@ nvram_match(const char *name, const char *match)
 }
 
 /*
+ * Match an NVRAM variable.
+ * @param	name	name of variable to match
+ * @param	bit	bit value to get
+ * @param	match	value to compare against value of variable
+ * @return	TRUE if variable is defined and its value is string equal
+ *		to match or FALSE otherwise
+ */
+static INLINE int
+nvram_match_bitflag(const char *name, const int bit, const char *match)
+{
+	const char *value = nvram_get_bitflag(name, bit);
+	return (value && !strcmp(value, match));
+}
+
+/*
  * Inversely match an NVRAM variable.
  * @param	name	name of variable to match
  * @param	match	value to compare against value of variable
@@ -152,6 +179,17 @@ nvram_invmatch(const char *name, const char *invmatch)
  */
 extern int nvram_set(const char *name, const char *value);
 
+/*
+ * Set the value of an NVRAM variable. The name and value strings are
+ * copied into private storage. Pointers to previously set values
+ * may become invalid. The new value may be immediately
+ * retrieved but will not be permanently stored until a commit.
+ * @param	name	name of variable to set
+ * @param	bit	bit value to set
+ * @param	value	value of variable
+ * @return	0 on success and errno on failure
+ */
+extern int nvram_set_bitflag(const char *name, const int bit, const int value);
 /*
  * Unset an NVRAM variable. Pointers to previously set values
  * remain valid until a set.

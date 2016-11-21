@@ -35,7 +35,7 @@
  *              and instrumentation on top of the heap, without modifying the heap
  *              allocation implementation.
  *
- * Copyright (C) 1999-2014, Broadcom Corporation
+ * Copyright (C) 1999-2016, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -55,7 +55,10 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: bcm_mpool_pub.h 407097 2013-06-11 18:43:16Z $
+ *
+ * <<Broadcom-WL-IPTag/Open:>>
+ *
+ * $Id: bcm_mpool_pub.h 514727 2014-11-12 03:02:48Z $
  */
 
 #ifndef _BCM_MPOOL_PUB_H

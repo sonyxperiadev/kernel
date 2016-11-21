@@ -1,7 +1,7 @@
 /*
  * BCM43XX PCIE core hardware definitions.
  *
- * Copyright (C) 1999-2014, Broadcom Corporation
+ * Copyright (C) 1999-2016, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -21,7 +21,10 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: pcie_core.h 468449 2014-04-07 21:50:10Z $
+ *
+ * <<Broadcom-WL-IPTag/Open:>>
+ *
+ * $Id: pcie_core.h 514727 2014-11-12 03:02:48Z $
  */
 #ifndef	_PCIE_CORE_H
 #define	_PCIE_CORE_H
@@ -142,7 +145,9 @@ typedef struct sbpcieregs {
 			uint32	ltr_state;	/* 0x1A0 */
 			uint32	pwr_int_status;	/* 0x1A4 */
 			uint32	pwr_int_mask;	/* 0x1A8 */
-			uint32  PAD[21]; 	/* 0x1AC - 0x200 */
+			uint32  PAD[13]; 	/* 0x1AC - 0x1DF */
+			uint32  clk_ctl_st;	/* 0x1E0 */
+			uint32  PAD[7]; 	/* 0x1E4 - 0x1FF */
 			pcie_devdmaregs_t  h2d0_dmaregs; /* 0x200 - 0x23c */
 			pcie_devdmaregs_t  d2h0_dmaregs; /* 0x240 - 0x27c */
 			pcie_devdmaregs_t  h2d1_dmaregs; /* 0x280 - 0x2bc */
@@ -165,6 +170,8 @@ typedef struct sbpcieregs {
 #define PCIE_DLYPERST	0x100	/* Delay PeRst to CoE Core */
 #define PCIE_DISSPROMLD	0x200	/* DisableSpromLoadOnPerst */
 #define PCIE_WakeModeL2	0x1000	/* Wake on L2 */
+#define PCIE_PipeIddqDisable0	0x8000	/* Disable assertion of pcie_pipe_iddq during L1.2 and L2 */
+#define PCIE_PipeIddqDisable1	0x10000	/* Disable assertion of pcie_pipe_iddq during L2 */
 
 #define	PCIE_CFGADDR	0x120	/* offsetof(configaddr) */
 #define	PCIE_CFGDATA	0x124	/* offsetof(configdata) */
@@ -215,9 +222,9 @@ typedef struct sbpcieregs {
 
 #define PCIE_MB_D2H_MB_MASK		\
 	(PCIE_MB_TOPCIE_D2H0_DB0 | PCIE_MB_TOPCIE_D2H0_DB1 |	\
-	PCIE_MB_TOPCIE_D2H1_DB1  | PCIE_MB_TOPCIE_D2H1_DB1 |	\
-	PCIE_MB_TOPCIE_D2H2_DB1  | PCIE_MB_TOPCIE_D2H2_DB1 |	\
-	PCIE_MB_TOPCIE_D2H3_DB1  | PCIE_MB_TOPCIE_D2H3_DB1)
+	PCIE_MB_TOPCIE_D2H1_DB0  | PCIE_MB_TOPCIE_D2H1_DB1 |	\
+	PCIE_MB_TOPCIE_D2H2_DB0  | PCIE_MB_TOPCIE_D2H2_DB1 |	\
+	PCIE_MB_TOPCIE_D2H3_DB0  | PCIE_MB_TOPCIE_D2H3_DB1)
 
 /* SB to PCIE translation masks */
 #define SBTOPCIE0_MASK	0xfc000000
@@ -328,6 +335,12 @@ typedef struct sbpcieregs {
 #define PCIE_TLP_TGTDEBUG2		0x078 /* Target Debug Reg2 */
 #define PCIE_TLP_TGTDEBUG3		0x07C /* Target Debug Reg3 */
 #define PCIE_TLP_TGTDEBUG4		0x080 /* Target Debug Reg4 */
+
+/* PCIE2 MDIO register offsets */
+#define PCIE2_MDIO_CONTROL    0x128
+#define PCIE2_MDIO_WR_DATA    0x12C
+#define PCIE2_MDIO_RD_DATA    0x130
+
 
 /* MDIO control */
 #define MDIOCTL_DIVISOR_MASK		0x7f	/* clock to be used on MDIO */
@@ -552,6 +565,8 @@ typedef struct sbpcieregs {
 #define I_F0_B1         (0x1 << 9) /* Mail box interrupt Function 0 interrupt, bit 1 */
 
 #define PCIECFGREG_DEVCONTROL	0xB4
+#define PCIECFGREG_DEVCONTROL_MRRS_SHFT	12
+#define PCIECFGREG_DEVCONTROL_MRRS_MASK	(0x7 << PCIECFGREG_DEVCONTROL_MRRS_SHFT)
 
 /* SROM hardware region */
 #define SROM_OFFSET_BAR1_CTRL  52
@@ -615,11 +630,11 @@ typedef struct sbpcieregs {
 #define PCIEGEN2_IOC_L2_L3_LINK_SHIFT		15
 
 #define PCIEGEN2_IOC_D0_STATE_MASK		(1 << PCIEGEN2_IOC_D0_STATE_SHIFT)
-#define PCIEGEN2_IOC_D1_STATE_MASK		(1 << PCIEGEN2_IOC_D1_STATE_SHIF)
-#define PCIEGEN2_IOC_D2_STATE_MASK		(1 << PCIEGEN2_IOC_D2_STATE_SHIF)
-#define PCIEGEN2_IOC_D3_STATE_MASK		(1 << PCIEGEN2_IOC_D3_STATE_SHIF)
-#define PCIEGEN2_IOC_L0_LINK_MASK		(1 << PCIEGEN2_IOC_L0_LINK_SHIF)
-#define PCIEGEN2_IOC_L1_LINK_MASK		(1 << PCIEGEN2_IOC_L1_LINK_SHIF)
+#define PCIEGEN2_IOC_D1_STATE_MASK		(1 << PCIEGEN2_IOC_D1_STATE_SHIFT)
+#define PCIEGEN2_IOC_D2_STATE_MASK		(1 << PCIEGEN2_IOC_D2_STATE_SHIFT)
+#define PCIEGEN2_IOC_D3_STATE_MASK		(1 << PCIEGEN2_IOC_D3_STATE_SHIFT)
+#define PCIEGEN2_IOC_L0_LINK_MASK		(1 << PCIEGEN2_IOC_L0_LINK_SHIFT)
+#define PCIEGEN2_IOC_L1_LINK_MASK		(1 << PCIEGEN2_IOC_L1_LINK_SHIFT)
 #define PCIEGEN2_IOC_L1L2_LINK_MASK		(1 << PCIEGEN2_IOC_L1L2_LINK_SHIFT)
 #define PCIEGEN2_IOC_L2_L3_LINK_MASK		(1 << PCIEGEN2_IOC_L2_L3_LINK_SHIFT)
 
@@ -631,6 +646,7 @@ typedef struct sbpcieregs {
 
 #ifdef BCMDRIVER
 void pcie_watchdog_reset(osl_t *osh, si_t *sih, sbpcieregs_t *sbpcieregs);
+void pcie_serdes_iddqdisable(osl_t *osh, si_t *sih, sbpcieregs_t *sbpcieregs);
 #endif /* BCMDRIVER */
 
 #endif	/* _PCIE_CORE_H */

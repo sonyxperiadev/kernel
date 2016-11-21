@@ -1,17 +1,14 @@
 /*
- *Trace log blocks sent over HBUS
- * Broadcom 802.11abg Networking Device Driver
+ * Trace log blocks sent over HBUS
  *
- * Definitions subject to change without notice.
- *
- * Copyright (C) 1999-2014, Broadcom Corporation
- *
+ * Copyright (C) 1999-2016, Broadcom Corporation
+ * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
  * following added to such license:
- *
+ * 
  *      As a special exception, the copyright holders of this software give you
  * permission to link this software with independent modules, and to copy and
  * distribute the resulting executable under terms of your choice, provided that
@@ -19,14 +16,19 @@
  * the license of that module.  An independent module is a module which is not
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
- *
+ * 
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: event_log.h 241182 2011-02-17 21:50:03Z$
+ * $Id$
  */
 
+/**
+ * @file
+ * @brief
+ * Define the trace event ID and tag ID
+ */
 
 #ifndef	_WL_DIAG_H
 #define	_WL_DIAG_H
@@ -41,15 +43,10 @@
 					/* bit[11:8] major ver */
 					/* bit[7:4] minor ver */
 					/* bit[3:0] micro ver */
-#define ETHER_ADDR_PACK_LOW(addr)  (((addr)->octet[3])<<24 | ((addr)->octet[2])<<16 | \
-	((addr)->octet[1])<<8 | ((addr)->octet[0]))
-#define ETHER_ADDR_PACK_HI(addr)   (((addr)->octet[5])<<8 | ((addr)->octet[4]))
-
-#define SSID_PACK(addr)   (((uint8)(addr)[0])<<24 | ((uint8)(addr)[1])<<16 | \
-	((uint8)(addr)[2])<<8 | ((uint8)(addr)[3]))
 
 /* event ID for trace purpose only, to avoid the conflict with future new
-* WLC_E_ , starting from 0x8000 */
+* WLC_E_ , starting from 0x8000
+*/
 #define TRACE_FW_AUTH_STARTED			0x8000
 #define TRACE_FW_ASSOC_STARTED			0x8001
 #define TRACE_FW_RE_ASSOC_STARTED		0x8002
@@ -66,6 +63,14 @@
 #define TRACE_BT_COEX_BT_HID_START		0x800d
 #define TRACE_BT_COEX_BT_HID_STOP		0x800e
 #define TRACE_ROAM_AUTH_STARTED			0x800f
+
+/* Event ID for NAN, start from 0x9000 */
+#define TRACE_NAN_CLUSTER_STARTED               0x9000
+#define TRACE_NAN_CLUSTER_JOINED                0x9001
+#define TRACE_NAN_CLUSTER_MERGED                0x9002
+#define TRACE_NAN_ROLE_CHANGED                  0x9003
+#define TRACE_NAN_SCAN_COMPLETE                 0x9004
+#define TRACE_NAN_STATUS_CHNG                   0x9005
 
 /* Parameters of wifi logger events are TLVs */
 /* Event parameters tags are defined as: */
@@ -90,8 +95,6 @@
 						   /* as parameter */
 #define TRACE_TAG_RATE_MBPS			15 /* take a wifi rate in 0.5 mbps */
 
-/* for each event id with logging data, define its logging data structure */
-
 typedef union {
 	struct {
 		uint16 event:	16;
@@ -100,40 +103,4 @@ typedef union {
 	uint32 t;
 } wl_event_log_id_t;
 
-typedef union {
-	struct {
-		uint16 status:	16;
-		uint16 paraset:	16;
-	};
-	uint32 t;
-} wl_event_log_blk_ack_t;
-
-typedef union {
-	struct {
-		uint8	mode:	8;
-		uint8	count:	8;
-		uint16    ch:	16;
-	};
-	uint32 t;
-} wl_event_log_csa_t;
-
-typedef union {
-	struct {
-		uint8  status:		1;
-		uint8  eapol_idx:	2;
-		uint32 notused:		13;
-		uint16  rate0:		16;
-	};
-	uint32 t;
-} wl_event_log_eapol_tx_t;
-
-#ifdef EVENT_LOG_COMPILE
-#define WL_EVENT_LOG(tag, event, ...) \
-	do {					\
-		wl_event_log_id_t entry = {{event, DIAG_VERSION}}; \
-		EVENT_LOG(tag, "WL event", entry.t , ## __VA_ARGS__); \
-	} while (0)
-#else
-#define WL_EVENT_LOG(tag, event, ...)
-#endif    /* EVENT_LOG_COMPILE */
 #endif	/* _WL_DIAG_H */

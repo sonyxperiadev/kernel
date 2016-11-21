@@ -1,14 +1,14 @@
 /*
- *  DHD debugability Linux os layer
+ * DHD debugability Linux os layer
  *
- * Copyright (C) 1999-2014, Broadcom Corporation
- *
+ * Copyright (C) 1999-2016, Broadcom Corporation
+ * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
  * following added to such license:
- *
+ * 
  *      As a special exception, the copyright holders of this software give you
  * permission to link this software with independent modules, and to copy and
  * distribute the resulting executable under terms of your choice, provided that
@@ -16,12 +16,12 @@
  * the license of that module.  An independent module is a module which is not
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
- *
+ * 
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_debug_linux.c 545157 2015-03-30 23:47:38Z $
+ * $Id: dhd_debug_linux.c 554441 2015-05-05 18:45:58Z $
  */
 
 #include <typedefs.h>
@@ -176,7 +176,7 @@ dhd_os_start_logging(dhd_pub_t *dhdp, char *ring_name, int log_level,
 	if (!VALID_RING(ring_id))
 		return BCME_UNSUPPORTED;
 
-	DHD_RING(("%s , log_level : %d, time_intval : %d, threshod %d Bytes\n",
+	DHD_DBGIF(("%s , log_level : %d, time_intval : %d, threshod %d Bytes\n",
 		__FUNCTION__, log_level, time_intval, threshold));
 
 	/* change the configuration */
@@ -223,7 +223,7 @@ dhd_os_reset_logging(dhd_pub_t *dhdp)
 
 	/* Stop all rings */
 	for (ring_id = DEBUG_RING_ID_INVALID + 1; ring_id < DEBUG_RING_ID_MAX; ring_id++) {
-		DHD_RING(("%s: Stop ring buffer %d\n", __FUNCTION__, ring_id));
+		DHD_DBGIF(("%s: Stop ring buffer %d\n", __FUNCTION__, ring_id));
 
 		ring_info = &os_priv[ring_id];
 		/* cancel any pending work */
@@ -254,7 +254,8 @@ dhd_os_suppress_logging(dhd_pub_t *dhdp, bool suppress)
 	if (!os_priv)
 		return BCME_ERROR;
 
-	max_log_level = MAX(os_priv[FW_VERBOSE_RING_ID].log_level, os_priv[FW_EVENT_RING_ID].log_level);
+	max_log_level = MAX(os_priv[FW_VERBOSE_RING_ID].log_level,
+		os_priv[FW_EVENT_RING_ID].log_level);
 	if (max_log_level == SUPPRESS_LOG_LEVEL) {
 		/* suppress the logging in FW not to wake up host while device in suspend mode */
 		ret = dhd_iovar(dhdp, 0, "logtrace", (char *)&enable, sizeof(enable), 1);
@@ -305,11 +306,13 @@ dhd_os_push_push_ring_data(dhd_pub_t *dhdp, int ring_id, void *data, int32 data_
 
 	if (!VALID_RING(ring_id))
 		return BCME_UNSUPPORTED;
-	os_priv = dhd_dbg_get_priv(dhdp);
 
-	if (os_priv) {
-		ring_info = &os_priv[ring_id];
-	}
+	os_priv = dhd_dbg_get_priv(dhdp);
+	if (!os_priv)
+		return BCME_UNSUPPORTED;
+
+	ring_info = &os_priv[ring_id];
+
 	memset(&msg_hdr, 0, sizeof(dhd_dbg_ring_entry_t));
 
 	if (ring_id == DHD_EVENT_RING_ID) {
@@ -334,6 +337,7 @@ dhd_os_push_push_ring_data(dhd_pub_t *dhdp, int ring_id, void *data, int32 data_
 		DHD_ERROR(("%s : failed to push data into the ring (%d) with ret(%d)\n",
 			__FUNCTION__, ring_id, ret));
 	}
+
 	return ret;
 }
 
@@ -341,7 +345,6 @@ int
 dhd_os_dbg_get_feature(dhd_pub_t *dhdp, int32 *features)
 {
 	int ret = BCME_OK;
-	/* XXX : we need to find a way to get the features for dbg */
 	*features = 0;
 	*features |= DBG_MEMORY_DUMP_SUPPORTED;
 	if (FW_SUPPORTED(dhdp, logtrace)) {

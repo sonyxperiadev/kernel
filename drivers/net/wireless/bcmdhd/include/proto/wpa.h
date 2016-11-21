@@ -1,7 +1,7 @@
 /*
  * Fundamental types and constants relating to WPA
  *
- * Copyright (C) 1999-2014, Broadcom Corporation
+ * Copyright (C) 1999-2016, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -21,7 +21,10 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: wpa.h 450928 2014-01-23 14:13:38Z $
+ *
+ * <<Broadcom-WL-IPTag/Open:>>
+ *
+ * $Id: wpa.h 518342 2014-12-01 23:21:41Z $
  */
 
 #ifndef _proto_wpa_h_
@@ -68,6 +71,8 @@ typedef BWL_PRE_PACKED_STRUCT struct
 #define WPA_IE_OUITYPE_LEN	4
 #define WPA_IE_FIXED_LEN	8
 #define WPA_IE_TAG_FIXED_LEN	6
+
+#define BIP_OUI_TYPE WPA2_OUI "\x06"
 
 typedef BWL_PRE_PACKED_STRUCT struct {
 	uint8 tag;	/* TAG */
@@ -119,7 +124,22 @@ typedef BWL_PRE_PACKED_STRUCT struct
 #define WPA_CIPHER_WEP_104	5	/* WEP (104-bit) */
 #define WPA_CIPHER_BIP		6	/* WEP (104-bit) */
 #define WPA_CIPHER_TPK		7	/* Group addressed traffic not allowed */
+#ifdef BCMCCX
+#define WPA_CIPHER_CKIP		8	/* KP with no MIC */
+#define WPA_CIPHER_CKIP_MMH	9	/* KP with MIC ("CKIP/MMH", "CKIP+CMIC") */
+#define WPA_CIPHER_WEP_MMH	10	/* MIC with no KP ("WEP/MMH", "CMIC") */
 
+#define IS_CCX_CIPHER(cipher)	((cipher) == WPA_CIPHER_CKIP || \
+				 (cipher) == WPA_CIPHER_CKIP_MMH || \
+				 (cipher) == WPA_CIPHER_WEP_MMH)
+#endif
+
+#ifdef BCMWAPI_WAI
+#define WAPI_CIPHER_NONE	WPA_CIPHER_NONE
+#define WAPI_CIPHER_SMS4	11
+
+#define WAPI_CSE_WPI_SMS4	1
+#endif /* BCMWAPI_WAI */
 
 #define IS_WPA_CIPHER(cipher)	((cipher) == WPA_CIPHER_NONE || \
 				 (cipher) == WPA_CIPHER_WEP_40 || \
@@ -129,6 +149,17 @@ typedef BWL_PRE_PACKED_STRUCT struct
 				 (cipher) == WPA_CIPHER_AES_CCM || \
 				 (cipher) == WPA_CIPHER_TPK)
 
+#ifdef BCMWAPI_WAI
+#define IS_WAPI_CIPHER(cipher)	((cipher) == WAPI_CIPHER_NONE || \
+				 (cipher) == WAPI_CSE_WPI_SMS4)
+
+/* convert WAPI_CSE_WPI_XXX to WAPI_CIPHER_XXX */
+#define WAPI_CSE_WPI_2_CIPHER(cse) ((cse) == WAPI_CSE_WPI_SMS4 ? \
+				WAPI_CIPHER_SMS4 : WAPI_CIPHER_NONE)
+
+#define WAPI_CIPHER_2_CSE_WPI(cipher) ((cipher) == WAPI_CIPHER_SMS4 ? \
+				WAPI_CSE_WPI_SMS4 : WAPI_CIPHER_NONE)
+#endif /* BCMWAPI_WAI */
 
 /* WPA TKIP countermeasures parameters */
 #define WPA_TKIP_CM_DETECT	60	/* multiple MIC failure window (seconds) */
@@ -170,6 +201,19 @@ typedef BWL_PRE_PACKED_STRUCT struct
 
 #define WPA2_PMKID_COUNT_LEN	2
 
+#ifdef BCMWAPI_WAI
+#define WAPI_CAP_PREAUTH		RSN_CAP_PREAUTH
+
+/* Other WAI definition */
+#define WAPI_WAI_REQUEST		0x00F1
+#define WAPI_UNICAST_REKEY		0x00F2
+#define WAPI_STA_AGING			0x00F3
+#define WAPI_MUTIL_REKEY		0x00F4
+#define WAPI_STA_STATS			0x00F5
+
+#define WAPI_USK_REKEY_COUNT		0x4000000 /* 0xA00000 */
+#define WAPI_MSK_REKEY_COUNT		0x4000000 /* 0xA00000 */
+#endif /* BCMWAPI_WAI */
 
 /* This marks the end of a packed structure section. */
 #include <packed_section_end.h>

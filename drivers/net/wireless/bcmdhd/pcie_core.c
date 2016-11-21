@@ -3,7 +3,7 @@
  * Contains PCIe related functions that are shared between different driver models (e.g. firmware
  * builds, DHD builds, BMAC builds), in order to avoid code duplication.
  *
- * Copyright (C) 1999-2014, Broadcom Corporation
+ * Copyright (C) 1999-2016, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -22,6 +22,9 @@
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
+ *
+ *
+ * <<Broadcom-WL-IPTag/Open:>>
  *
  * $Id: pcie_core.c 444841 2013-12-21 04:32:29Z $
  */
@@ -54,7 +57,13 @@ void pcie_watchdog_reset(osl_t *osh, si_t *sih, sbpcieregs_t *sbpcieregs)
 		PCIECFGREG_LINK_STATUS_CTRL2, PCIECFGREG_RBAR_CTRL,
 		PCIECFGREG_PML1_SUB_CTRL1, PCIECFGREG_REG_BAR2_CONFIG,
 		PCIECFGREG_REG_BAR3_CONFIG};
+	sbpcieregs_t *pcie = NULL;
 	uint32 origidx = si_coreidx(sih);
+
+	/* Switch to PCIE2 core */
+	pcie = (sbpcieregs_t *)si_setcore(sih, PCIE2_CORE_ID, 0);
+	BCM_REFERENCE(pcie);
+	ASSERT(pcie != NULL);
 
 	/* Disable/restore ASPM Control to protect the watchdog reset */
 	W_REG(osh, &sbpcieregs->configaddr, PCIECFGREG_LINK_STATUS_CTRL);
@@ -62,22 +71,45 @@ void pcie_watchdog_reset(osl_t *osh, si_t *sih, sbpcieregs_t *sbpcieregs)
 	val = lsc & (~PCIE_ASPM_ENAB);
 	W_REG(osh, &sbpcieregs->configdata, val);
 
-	si_setcore(sih, PCIE2_CORE_ID, 0);
 	si_corereg(sih, SI_CC_IDX, OFFSETOF(chipcregs_t, watchdog), ~0, 4);
 	OSL_DELAY(100000);
 
 	W_REG(osh, &sbpcieregs->configaddr, PCIECFGREG_LINK_STATUS_CTRL);
 	W_REG(osh, &sbpcieregs->configdata, lsc);
 
-	/* Write configuration registers back to the shadow registers
-	 * cause shadow registers are cleared out after watchdog reset.
-	 */
-	for (i = 0; i < ARRAYSIZE(cfg_offset); i++) {
-		W_REG(osh, &sbpcieregs->configaddr, cfg_offset[i]);
-		val = R_REG(osh, &sbpcieregs->configdata);
-		W_REG(osh, &sbpcieregs->configdata, val);
+	if (sih->buscorerev <= 13) {
+		/* Write configuration registers back to the shadow registers
+		 * cause shadow registers are cleared out after watchdog reset.
+		 */
+		for (i = 0; i < ARRAYSIZE(cfg_offset); i++) {
+			W_REG(osh, &sbpcieregs->configaddr, cfg_offset[i]);
+			val = R_REG(osh, &sbpcieregs->configdata);
+			W_REG(osh, &sbpcieregs->configdata, val);
+		}
 	}
 	si_setcoreidx(sih, origidx);
 }
 
+
+/* CRWLPCIEGEN2-117 pcie_pipe_Iddq should be controlled
+ * by the L12 state from MAC to save power by putting the
+ * SerDes analog in IDDQ mode
+ */
+void  pcie_serdes_iddqdisable(osl_t *osh, si_t *sih, sbpcieregs_t *sbpcieregs)
+{
+	sbpcieregs_t *pcie = NULL;
+	uint crwlpciegen2_117_disable = 0;
+	uint32 origidx = si_coreidx(sih);
+
+	crwlpciegen2_117_disable = PCIE_PipeIddqDisable0 | PCIE_PipeIddqDisable1;
+	/* Switch to PCIE2 core */
+	pcie = (sbpcieregs_t *)si_setcore(sih, PCIE2_CORE_ID, 0);
+	BCM_REFERENCE(pcie);
+	ASSERT(pcie != NULL);
+
+	OR_REG(osh, &sbpcieregs->control,
+		crwlpciegen2_117_disable);
+
+	si_setcoreidx(sih, origidx);
+}
 #endif /* BCMDRIVER */

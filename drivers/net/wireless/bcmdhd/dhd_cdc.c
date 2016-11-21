@@ -1,14 +1,14 @@
 /*
  * DHD Protocol Module for CDC and BDC.
  *
- * Copyright (C) 1999-2014, Broadcom Corporation
- *
+ * Copyright (C) 1999-2016, Broadcom Corporation
+ * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
  * following added to such license:
- *
+ * 
  *      As a special exception, the copyright holders of this software give you
  * permission to link this software with independent modules, and to copy and
  * distribute the resulting executable under terms of your choice, provided that
@@ -16,12 +16,15 @@
  * the license of that module.  An independent module is a module which is not
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
- *
+ * 
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_cdc.c 472193 2014-04-23 06:27:38Z $
+ *
+ * <<Broadcom-WL-IPTag/Open:>>
+ *
+ * $Id: dhd_cdc.c 581085 2015-08-21 09:04:22Z $
  *
  * BDC is like CDC, except it includes a header for data packets to convey
  * packet priority over the bus, and flags (e.g. to indicate checksum status
@@ -46,6 +49,10 @@
 #include <wlfc_proto.h>
 #include <dhd_wlfc.h>
 #endif
+
+#ifdef DHD_ULP
+#include <dhd_ulp.h>
+#endif /* DHD_ULP */
 
 
 #define RETRIES 2		/* # of retries to retrieve matching ioctl response */
@@ -101,6 +108,9 @@ dhdcdc_cmplt(dhd_pub_t *dhd, uint32 id, uint32 len)
 
 	DHD_TRACE(("%s: Enter\n", __FUNCTION__));
 
+#if defined(CUSTOMER_HW5)
+	DHD_OS_WAKE_LOCK(dhd);
+#endif 
 
 	do {
 		ret = dhd_bus_rxctl(dhd->bus, (uchar*)&prot->msg, cdc_len);
@@ -108,6 +118,9 @@ dhdcdc_cmplt(dhd_pub_t *dhd, uint32 id, uint32 len)
 			break;
 	} while (CDC_IOC_ID(ltoh32(prot->msg.flags)) != id);
 
+#if defined(CUSTOMER_HW5)
+	DHD_OS_WAKE_UNLOCK(dhd);
+#endif 
 
 	return ret;
 }
@@ -234,6 +247,14 @@ dhdcdc_set_ioctl(dhd_pub_t *dhd, int ifidx, uint cmd, void *buf, uint len, uint8
 	if (buf)
 		memcpy(prot->buf, buf, len);
 
+#ifdef DHD_ULP
+	if (buf && (!strncmp(buf, "wowl_force", sizeof("wowl_force")) ||
+			!strncmp(buf, "ulp", sizeof("ulp")))) {
+		/* force all the writes after this point to NOT to use cached sbwad value */
+		dhd_ulp_disable_cached_sbwad(dhd);
+	}
+#endif /* DHD_ULP */
+
 	if ((ret = dhdcdc_msg(dhd)) < 0) {
 		DHD_ERROR(("%s: dhdcdc_msg failed w/status %d\n", __FUNCTION__, ret));
 		goto done;
@@ -251,6 +272,12 @@ dhdcdc_set_ioctl(dhd_pub_t *dhd, int ifidx, uint cmd, void *buf, uint len, uint8
 		ret = -EINVAL;
 		goto done;
 	}
+
+#ifdef DHD_ULP
+	/* For ulp prototyping temporary */
+	if ((ret = dhd_ulp_check_ulp_request(dhd, buf)) < 0)
+		goto done;
+#endif /* DHD_ULP */
 
 	/* Check the ERROR flag */
 	if (flags & CDCF_IOC_ERROR)
@@ -340,6 +367,10 @@ dhd_prot_iovar_op(dhd_pub_t *dhdp, const char *name,
 void
 dhd_prot_dump(dhd_pub_t *dhdp, struct bcmstrbuf *strbuf)
 {
+	if (!dhdp || !dhdp->prot) {
+		return;
+	}
+
 	bcm_bprintf(strbuf, "Protocol CDC: reqid %d\n", dhdp->prot->reqid);
 #ifdef PROP_TXSTATUS
 	dhd_wlfc_dump(dhdp, strbuf);
@@ -421,11 +452,7 @@ dhd_prot_hdrpull(dhd_pub_t *dhd, int *ifidx, void *pktbuf, uchar *reorder_buf_in
 		goto exit;
 	}
 
-	if ((*ifidx = BDC_GET_IF_IDX(h)) >= DHD_MAX_IFS) {
-		DHD_ERROR(("%s: rx data ifnum out of range (%d)\n",
-		           __FUNCTION__, *ifidx));
-		return BCME_ERROR;
-	}
+	*ifidx = BDC_GET_IF_IDX(h);
 
 	if (((h->flags & BDC_FLAG_VER_MASK) >> BDC_FLAG_VER_SHIFT) != BDC_PROTO_VER) {
 		DHD_ERROR(("%s: non-BDC packet received, flags = 0x%x\n",
@@ -487,9 +514,6 @@ dhd_prot_attach(dhd_pub_t *dhd)
 	dhd->hdrlen += BDC_HEADER_LEN;
 #endif
 	dhd->maxctl = WLC_IOCTL_MAXLEN + sizeof(cdc_ioctl_t) + ROUND_UP_MARGIN;
-	/* set  the memdump capability */
-	dhd->memdump_enabled = DUMP_MEMONLY;
-
 	return 0;
 
 fail:
@@ -554,7 +578,7 @@ done:
 
 int dhd_prot_init(dhd_pub_t *dhd)
 {
-	return TRUE;
+	return BCME_OK;
 }
 
 void

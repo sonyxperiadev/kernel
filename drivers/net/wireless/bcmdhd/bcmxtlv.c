@@ -1,35 +1,51 @@
 /*
  * Driver O/S-independent utility routines
  *
- * $Copyright Broadcom Corporation$
- * $Id: bcmxtlv.c 458062 2014-02-25 19:34:27Z nehru $
+ * Copyright (C) 1999-2016, Broadcom Corporation
+ * 
+ *      Unless you and Broadcom execute a separate written software license
+ * agreement governing use of this software, this software is licensed to you
+ * under the terms of the GNU General Public License version 2 (the "GPL"),
+ * available at http://www.broadcom.com/licenses/GPLv2.php, with the
+ * following added to such license:
+ * 
+ *      As a special exception, the copyright holders of this software give you
+ * permission to link this software with independent modules, and to copy and
+ * distribute the resulting executable under terms of your choice, provided that
+ * you also meet, for each linked independent module, the terms and conditions of
+ * the license of that module.  An independent module is a module which is not
+ * derived from this software.  The special exception does not apply to any
+ * modifications of the software.
+ * 
+ *      Notwithstanding the above, under no circumstances may you combine this
+ * software in any way with any other Broadcom software provided under a license
+ * other than the GPL, without Broadcom's express prior written consent.
+ *
+ *
+ * <<Broadcom-WL-IPTag/Open:>>
+ *
+ * $Id: bcmxtlv.c 527361 2015-01-17 01:48:34Z $
  */
 
-#ifndef __FreeBSD__
 #include <bcm_cfg.h>
-#endif
 
 #include <typedefs.h>
 #include <bcmdefs.h>
 
-#if defined(__FreeBSD__) || defined(__NetBSD__)
-#include <machine/stdarg.h>
-#else
 #include <stdarg.h>
-#endif /* __FreeBSD__ */
 
 #ifdef BCMDRIVER
-	#include <osl.h>
+#include <osl.h>
 #else /* !BCMDRIVER */
 	#include <stdlib.h> /* AS!!! */
-	#include <stdio.h>
-	#include <string.h>
+#include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 #ifndef ASSERT
-	#define ASSERT(exp)
+#define ASSERT(exp)
 #endif
-inline void* MALLOCZ(void *o, size_t s) { BCM_REFERENCE(o); return calloc(1, s); }
-inline void MFREE(void *o, void *p, size_t s) { BCM_REFERENCE(o); BCM_REFERENCE(s); free(p); }
+INLINE void* MALLOCZ(void *o, size_t s) { BCM_REFERENCE(o); return calloc(1, s); }
+INLINE void MFREE(void *o, void *p, size_t s) { BCM_REFERENCE(o); BCM_REFERENCE(s); free(p); }
 #endif /* !BCMDRIVER */
 
 #include <bcmendian.h>
@@ -45,11 +61,6 @@ bcm_xtlv_t *
 bcm_next_xtlv(bcm_xtlv_t *elt, int *buflen, bcm_xtlv_opts_t opts)
 {
 	int sz;
-#ifdef BCMDBG
-	/* validate current elt */
-	if (!bcm_valid_xtlv(elt, *buflen, opts))
-		return NULL;
-#endif
 	/* advance to next elt */
 	sz = BCM_XTLV_SIZE(elt, opts);
 	elt = (bcm_xtlv_t*)((uint8 *)elt + sz);
@@ -79,7 +90,7 @@ uint16
 bcm_xtlv_buf_len(bcm_xtlvbuf_t *tbuf)
 {
 	if (tbuf == NULL) return 0;
-	return (tbuf->buf - tbuf->head);
+	return (uint16)(tbuf->buf - tbuf->head);
 }
 uint16
 bcm_xtlv_buf_rlen(bcm_xtlvbuf_t *tbuf)
@@ -240,7 +251,7 @@ bcm_pack_xtlv_entry(uint8 **tlv_buf, uint16 *buflen, uint16 type, uint16 len, vo
 	/* advance callers pointer to tlv buff */
 	*tlv_buf += size;
 	/* decrement the len */
-	*buflen -= size;
+	*buflen -= (uint16)size;
 	return BCME_OK;
 }
 
@@ -254,7 +265,7 @@ bcm_unpack_xtlv_buf(void *ctx, uint8 *tlv_buf, uint16 buflen, bcm_xtlv_opts_t op
 {
 	uint16 len;
 	uint16 type;
-	int res = 0;
+	int res = BCME_OK;
 	int size;
 	bcm_xtlv_t *ptlv;
 	int sbuflen = buflen;
@@ -321,8 +332,9 @@ bcm_pack_xtlv_buf(void *ctx, void *tlv_buf, uint16 buflen, bcm_xtlv_opts_t opts,
 		res = BCME_BUFTOOSHORT;
 
 done:
-	if (outlen)
-		*outlen = buf - startp;
+	if (outlen) {
+		*outlen = (int)(buf - startp);
+	}
 	return res;
 }
 
@@ -333,11 +345,11 @@ int
 bcm_pack_xtlv_buf_from_mem(void **tlv_buf, uint16 *buflen, xtlv_desc_t *items,
 	bcm_xtlv_opts_t opts)
 {
-	int res = 0;
+	int res = BCME_OK;
 	uint8 *ptlv = (uint8 *)*tlv_buf;
 
 	while (items->type != 0) {
-		if ((items->len > 0) &&	(res = bcm_pack_xtlv_entry(&ptlv,
+		if ((res = bcm_pack_xtlv_entry(&ptlv,
 			buflen, items->type,
 			items->len, items->ptr, opts) != BCME_OK)) {
 			break;
@@ -370,24 +382,66 @@ bcm_unpack_xtlv_buf_to_mem(void *tlv_buf, int *buflen, xtlv_desc_t *items, bcm_x
 		uint16 len = ltoh16(elt->len);
 
 		while (dst_desc->type != 0) {
-			if (ltoh16(elt->id) != dst_desc->type) {
-				dst_desc++;
-				continue;
+			if (ltoh16(elt->id) == dst_desc->type) {
+				if (len != dst_desc->len) {
+					res = BCME_BADLEN;
+				} else {
+					memcpy(dst_desc->ptr, elt->data, len);
+				}
+				break;
 			}
-			if (len != dst_desc->len)
-				res = BCME_BADLEN;
-			else
-				memcpy(dst_desc->ptr, elt->data, len);
-			break;
+			dst_desc++;
 		}
-		if (dst_desc->type == 0)
-			res = BCME_NOTFOUND;
 	}
 
-	if (*buflen != 0 && res == BCME_OK)
-		res = BCME_BUFTOOSHORT;
+	if (res == BCME_OK && *buflen != 0)
+		res =  BCME_BUFTOOSHORT;
 
 	return res;
+}
+
+/*
+ * return data pointer of a given ID from xtlv buffer.
+ * If the specified xTLV ID is found, on return *data_len_out will contain
+ * the the data length of the xTLV ID.
+ */
+void *
+bcm_get_data_from_xtlv_buf(uint8 *tlv_buf, uint16 buflen, uint16 id,
+	uint16 *datalen_out, bcm_xtlv_opts_t opts)
+{
+	void *retptr = NULL;
+	uint16 type, len;
+	int size;
+	bcm_xtlv_t *ptlv;
+	int sbuflen = buflen;
+
+	while (sbuflen >= (int)BCM_XTLV_HDR_SIZE) {
+		ptlv = (bcm_xtlv_t *)tlv_buf;
+
+		/* tlv header is always packed in LE order */
+		type = ltoh16(ptlv->id);
+		len = ltoh16(ptlv->len);
+		size = bcm_xtlv_size_for_data(len, opts);
+
+		sbuflen -= size;
+		/* check for possible buffer overrun */
+		if (sbuflen < 0) {
+			printf("%s %d: Invalid sbuflen %d\n",
+				__FUNCTION__, __LINE__, sbuflen);
+			break;
+		}
+
+		if (id == type) {
+			retptr = ptlv->data;
+			if (datalen_out) {
+				*datalen_out = len;
+			}
+			break;
+		}
+		tlv_buf += size;
+	}
+
+	return retptr;
 }
 
 int bcm_xtlv_size(const bcm_xtlv_t *elt, bcm_xtlv_opts_t opts)

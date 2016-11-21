@@ -207,44 +207,9 @@ int wifi_platform_bus_enumerate(wifi_adapter_info_t *adapter, bool device_presen
 	DHD_ERROR(("%s device present %d\n", __FUNCTION__, device_present));
 	if (plat_data->set_carddetect) {
 		err = plat_data->set_carddetect(device_present);
-	} else {
-#if defined(CONFIG_ARCH_MSM) && defined(BCMPCIE)
-		extern int msm_pcie_enumerate(u32 rc_idx);
-		msm_pcie_enumerate(1);
-#endif
 	}
 	return err;
 
-}
-
-int wifi_platform_get_wake_irq(wifi_adapter_info_t *adapter)
-{
-	struct wifi_platform_data *plat_data;
-
-	if (!adapter || !adapter->wifi_plat_data)
-		return -1;
-	plat_data = adapter->wifi_plat_data;
-#ifdef CONFIG_DHD_WAKE_STATUS
-	if (plat_data->get_wake_irq)
-		return plat_data->get_wake_irq();
-#endif
-	return -1;
-}
-
-bool wifi_process_partial_resume(wifi_adapter_info_t *adapter, int action)
-{
-#ifdef CONFIG_PARTIALRESUME
-	struct wifi_platform_data *plat_data;
-
-	if (!adapter || !adapter->wifi_plat_data)
-		return false;
-	plat_data = adapter->wifi_plat_data;
-	if (plat_data->partial_resume)
-		return plat_data->partial_resume(action);
-	return false;
-#else
-	return false;
-#endif
 }
 
 int wifi_platform_get_mac_addr(wifi_adapter_info_t *adapter, unsigned char *buf)

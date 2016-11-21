@@ -2,7 +2,7 @@
  * Minimal debug/trace/assert driver definitions for
  * Broadcom 802.11 Networking Adapter.
  *
- * Copyright (C) 1999-2014, Broadcom Corporation
+ * Copyright (C) 1999-2016, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -22,7 +22,10 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: wl_dbg.h 472390 2014-04-23 23:32:01Z $
+ *
+ * <<Broadcom-WL-IPTag/Open:>>
+ *
+ * $Id: wl_dbg.h 519338 2014-12-05 21:23:30Z $
  */
 
 
@@ -104,12 +107,12 @@ extern uint32 wl_msg_level2;
 #define WL_MCNX(args)
 #define WL_PROT(args)
 #define WL_PSTA(args)
+#define WL_WFDS(m, b, n)
 #define WL_TRF_MGMT(args)
 #define WL_L2FILTER(args)
 #define WL_MQ(args)
 #define WL_TXBF(args)
 #define WL_P2PO(args)
-#define WL_NET_DETECT(args)
 #define WL_ROAM(args)
 #define WL_WNM(args)
 
@@ -132,7 +135,8 @@ extern uint32 wl_msg_level2;
 #define WL_WSEC(args)
 #define WL_WSEC_DUMP(args)
 #define WL_PCIE(args)
-#define WL_CHANLOG(w, s, i, j)
+#define WL_TSLOG(w, s, i, j)
+#define WL_FBT(args)
 
 #define WL_ERROR_ON()		(wl_msg_level & WL_ERROR_VAL)
 #define WL_TRACE_ON()		0
@@ -171,8 +175,7 @@ extern uint32 wl_msg_level2;
 #define WL_L2FILTER_ON()	0
 #define WL_TXBF_ON()		0
 #define WL_P2PO_ON()		0
-#define WL_CHANLOG_ON()		0
-#define WL_NET_DETECT_ON()	0
+#define WL_TSLOG_ON()		0
 #define WL_WNM_ON()		0
 #define WL_PCIE_ON()		0
 
@@ -199,6 +202,8 @@ extern uint32 wl_msg_level2;
 #endif
 #define WL_PCIE(args)		do {if (wl_msg_level2 & WL_PCIE_VAL) WL_PRINT(args);} while (0)
 #define WL_PCIE_ON()		(wl_msg_level2 & WL_PCIE_VAL)
+#define WL_PFN(args)      do {if (wl_msg_level & WL_PFN_VAL) WL_PRINT(args);} while (0)
+#define WL_PFN_ON()		(wl_msg_level & WL_PFN_VAL)
 #endif 
 
 extern uint32 wl_msg_level;

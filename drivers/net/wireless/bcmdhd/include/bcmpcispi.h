@@ -1,7 +1,7 @@
 /*
  * Broadcom PCI-SPI Host Controller Register Definitions
  *
- * Copyright (C) 1999-2014, Broadcom Corporation
+ * Copyright (C) 1999-2016, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -21,7 +21,10 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: bcmpcispi.h 241182 2011-02-17 21:50:03Z $
+ *
+ * <<Broadcom-WL-IPTag/Open:>>
+ *
+ * $Id: bcmpcispi.h 514727 2014-11-12 03:02:48Z $
  */
 #ifndef	_BCM_PCI_SPI_H
 #define	_BCM_PCI_SPI_H

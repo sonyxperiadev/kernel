@@ -2,7 +2,7 @@
  *  BCMSDH interface glue
  *  implement bcmsdh API for SDIOH driver
  *
- * Copyright (C) 1999-2014, Broadcom Corporation
+ * Copyright (C) 1999-2016, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -22,7 +22,10 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: bcmsdh.c 450676 2014-01-22 22:45:13Z $
+ *
+ * <<Broadcom-WL-IPTag/Open:>>
+ *
+ * $Id: bcmsdh.c 572557 2015-07-20 07:12:29Z $
  */
 
 /**
@@ -85,6 +88,8 @@ bcmsdh_attach(osl_t *osh, void *sdioh, ulong *regsva)
 	bcmsdh->osh = osh;
 	bcmsdh->init_success = TRUE;
 	*regsva = SI_ENUM_BASE;
+
+	bcmsdh_force_sbwad_calc(bcmsdh, FALSE);
 
 	/* Report the BAR, to fix if needed */
 	bcmsdh->sbwad = SI_ENUM_BASE;
@@ -396,7 +401,7 @@ bcmsdh_reg_read(void *sdh, uint32 addr, uint size)
 
 	ASSERT(bcmsdh->init_success);
 
-	if (bcmsdhsdio_set_sbaddr_window(bcmsdh, addr, FALSE))
+	if (bcmsdhsdio_set_sbaddr_window(bcmsdh, addr, bcmsdh->force_sbwad_calc))
 		return 0xFFFFFFFF;
 
 	addr &= SBSDIO_SB_OFT_ADDR_MASK;
@@ -445,7 +450,7 @@ bcmsdh_reg_write(void *sdh, uint32 addr, uint size, uint32 data)
 
 	ASSERT(bcmsdh->init_success);
 
-	if ((err = bcmsdhsdio_set_sbaddr_window(bcmsdh, addr, FALSE)))
+	if ((err = bcmsdhsdio_set_sbaddr_window(bcmsdh, addr, bcmsdh->force_sbwad_calc)))
 		return err;
 
 	addr &= SBSDIO_SB_OFT_ADDR_MASK;
@@ -646,6 +651,19 @@ bcmsdh_cur_sbwad(void *sdh)
 		bcmsdh = l_bcmsdh;
 
 	return (bcmsdh->sbwad);
+}
+
+/* example usage: if force is TRUE, forces the bcmsdhsdio_set_sbaddr_window to
+ * calculate sbwad always instead of caching.
+ */
+void
+bcmsdh_force_sbwad_calc(void *sdh, bool force)
+{
+	bcmsdh_info_t *bcmsdh = (bcmsdh_info_t *)sdh;
+
+	if (!bcmsdh)
+		bcmsdh = l_bcmsdh;
+	bcmsdh->force_sbwad_calc = force;
 }
 
 void

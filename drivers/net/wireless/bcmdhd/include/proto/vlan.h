@@ -1,7 +1,7 @@
 /*
  * 802.1Q VLAN protocol definitions
  *
- * Copyright (C) 1999-2014, Broadcom Corporation
+ * Copyright (C) 1999-2016, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -21,7 +21,10 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: vlan.h 382883 2013-02-04 23:26:09Z $
+ *
+ * <<Broadcom-WL-IPTag/Open:>>
+ *
+ * $Id: vlan.h 518342 2014-12-01 23:21:41Z $
  */
 
 #ifndef _vlan_h_

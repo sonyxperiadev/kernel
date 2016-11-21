@@ -1,7 +1,7 @@
 /*
  * Linux cfg80211 driver - Dongle Host Driver (DHD) related
  *
- * Copyright (C) 1999-2014, Broadcom Corporation
+ * Copyright (C) 1999-2016, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -21,7 +21,10 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: wl_cfg_btcoex.c 467328 2014-04-03 01:23:40Z $
+ *
+ * <<Broadcom-WL-IPTag/Open:>>
+ *
+ * $Id: wl_cfg_btcoex.c 637937 2016-05-16 08:35:04Z $
  */
 
 #include <net/rtnetlink.h>
@@ -100,11 +103,7 @@ dev_wlc_intvar_get_reg(struct net_device *dev, char *name,
 static int
 dev_wlc_bufvar_set(struct net_device *dev, char *name, char *buf, int len)
 {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 31)
-	char ioctlbuf_local[1024];
-#else
-	static char ioctlbuf_local[1024];
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 31) */
+	char ioctlbuf_local[WLC_IOCTL_SMLEN];
 
 	bcm_mkiovar(name, buf, len, ioctlbuf_local, sizeof(ioctlbuf_local));
 

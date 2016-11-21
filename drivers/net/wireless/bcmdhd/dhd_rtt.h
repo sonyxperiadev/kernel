@@ -1,13 +1,14 @@
 /*
- * Header file of Broadcom Dongle Host Driver (DHD)
- * Copyright (C) 1999-2014, Broadcom Corporation
+ * Broadcom Dongle Host Driver (DHD), RTT
  *
+ * Copyright (C) 1999-2016, Broadcom Corporation
+ * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
  * following added to such license:
- *
+ * 
  *      As a special exception, the copyright holders of this software give you
  * permission to link this software with independent modules, and to copy and
  * distribute the resulting executable under terms of your choice, provided that
@@ -15,23 +16,23 @@
  * the license of that module.  An independent module is a module which is not
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
- *
+ * 
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_rtt.h 423669 2014-07-01 13:01:56Z $
+ * $Id: dhd_rtt.h 578013 2015-08-10 05:56:41Z $
  */
 #ifndef __DHD_RTT_H__
 #define __DHD_RTT_H__
 
 #include "dngl_stats.h"
 
-#define RTT_MAX_TARGET_CNT 50
-#define RTT_MAX_FRAME_CNT 25
-#define RTT_MAX_RETRY_CNT 10
-#define DEFAULT_FTM_CNT 6
-#define DEFAULT_RETRY_CNT 6
+#define RTT_MAX_TARGET_CNT	50
+#define RTT_MAX_FRAME_CNT	25
+#define RTT_MAX_RETRY_CNT	10
+#define DEFAULT_FTM_CNT		6
+#define DEFAULT_RETRY_CNT	6
 #define TARGET_INFO_SIZE(count) (sizeof(rtt_target_info_t) * count)
 
 #define TARGET_TYPE(target) (target->type)
@@ -60,11 +61,13 @@ enum rtt_role {
 	RTT_INITIATOR = 0,
 	RTT_TARGET = 1
 };
+
 enum rtt_status {
 	RTT_STOPPED = 0,
 	RTT_STARTED = 1,
 	RTT_ENABLED = 2
 };
+
 typedef int64_t wifi_timestamp; /* In microseconds (us) */
 typedef int64_t wifi_timespan;
 typedef int32 wifi_rssi;
@@ -85,19 +88,19 @@ typedef enum {
 } rtt_peer_type_t;
 
 typedef enum rtt_reason {
-    RTT_REASON_SUCCESS,
-    RTT_REASON_FAILURE,
-    RTT_REASON_FAIL_NO_RSP,
-    RTT_REASON_FAIL_INVALID_TS, /* Invalid timestamp */
-    RTT_REASON_FAIL_PROTOCOL, /* 11mc protocol failed */
-    RTT_REASON_FAIL_REJECTED,
-    RTT_REASON_FAIL_NOT_SCHEDULED_YET,
-    RTT_REASON_FAIL_SCHEDULE, /* schedule failed */
-    RTT_REASON_FAIL_TM_TIMEOUT,
-    RTT_REASON_FAIL_AP_ON_DIFF_CHANNEL,
-    RTT_REASON_FAIL_NO_CAPABILITY,
-    RTT_REASON_FAIL_BUSY_TRY_LATER,
-    RTT_REASON_ABORTED
+	RTT_REASON_SUCCESS,
+	RTT_REASON_FAILURE,
+	RTT_REASON_FAIL_NO_RSP,
+	RTT_REASON_FAIL_INVALID_TS, /* Invalid timestamp */
+	RTT_REASON_FAIL_PROTOCOL, /* 11mc protocol failed */
+	RTT_REASON_FAIL_REJECTED,
+	RTT_REASON_FAIL_NOT_SCHEDULED_YET,
+	RTT_REASON_FAIL_SCHEDULE, /* schedule failed */
+	RTT_REASON_FAIL_TM_TIMEOUT,
+	RTT_REASON_FAIL_AP_ON_DIFF_CHANNEL,
+	RTT_REASON_FAIL_NO_CAPABILITY,
+	RTT_REASON_FAIL_BUSY_TRY_LATER,
+	RTT_REASON_ABORTED
 } rtt_reason_t;
 
 enum {
@@ -119,7 +122,6 @@ enum {
 	RTT_PREAMBLE_VHT = BIT(2)
 };
 
-
 enum {
 	RTT_BW_5 = BIT(0),
 	RTT_BW_10 = BIT(1),
@@ -128,6 +130,7 @@ enum {
 	RTT_BW_80 = BIT(4),
 	RTT_BW_160 = BIT(5)
 };
+
 #define FTM_MAX_NUM_BURST_EXP	14
 #define HAS_11MC_CAP(cap) (cap & RTT_CAP_FTM_WAY)
 #define HAS_ONEWAY_CAP(cap) (cap & RTT_CAP_ONE_WAY)
@@ -141,7 +144,7 @@ typedef struct wifi_channel_info {
 } wifi_channel_info_t;
 
 typedef struct wifi_rate {
-	uint32 preamble :3; /* 0: OFDM, 1: CCK, 2 : HT, 3: VHT, 4..7 reserved */
+	uint32 preamble		:3; /* 0: OFDM, 1: CCK, 2 : HT, 3: VHT, 4..7 reserved */
 	uint32 nss		:2; /* 1 : 1x1, 2: 2x2, 3: 3x3, 4: 4x4 */
 	uint32 bw		:3; /* 0: 20Mhz, 1: 40Mhz, 2: 80Mhz, 3: 160Mhz */
 	/* OFDM/CCK rate code would be as per IEEE std in the unit of 0.5 mb
@@ -187,7 +190,7 @@ typedef struct rtt_target_info {
 	* initiator will request that the responder send
 	* in a single frame
 	*/
-    uint32 num_frames_per_burst;
+	uint32 num_frames_per_burst;
 	/* num of frames in each RTT burst
 	 * for single side, measurement result num = frame number
 	 * for 2 side RTT, measurement result num  = frame number - 1
@@ -211,7 +214,6 @@ typedef struct rtt_target_info {
 	uint8  preamble; /* 1 - Legacy, 2 - HT, 4 - VHT */
 	uint8  bw;  /* 5, 10, 20, 40, 80, 160 */
 } rtt_target_info_t;
-
 
 typedef struct rtt_report {
 	struct ether_addr addr;
@@ -247,6 +249,7 @@ typedef struct rtt_report {
 	bcm_tlv_t *LCI; /* LCI Report */
 	bcm_tlv_t *LCR; /* Location Civic Report */
 } rtt_report_t;
+
 #define RTT_REPORT_SIZE (sizeof(rtt_report_t))
 
 /* rtt_results_header to maintain rtt result list per mac address */
@@ -281,6 +284,8 @@ typedef struct rtt_config_params {
 } rtt_config_params_t;
 
 typedef void (*dhd_rtt_compl_noti_fn)(void *ctx, void *rtt_data);
+
+#ifdef RTT_SUPPORT
 /* Linux wrapper to call common dhd_rtt_set_cfg */
 int
 dhd_dev_rtt_set_cfg(struct net_device *dev, void *buf);
@@ -329,4 +334,5 @@ dhd_rtt_init(dhd_pub_t *dhd);
 
 int
 dhd_rtt_deinit(dhd_pub_t *dhd);
+#endif /* RTT_SUPPORT */
 #endif /* __DHD_RTT_H__ */

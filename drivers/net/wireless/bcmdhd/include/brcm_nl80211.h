@@ -1,7 +1,7 @@
 /*
- * Definitions for nl80211 testmode access to host driver
+ * Definitions for nl80211 vendor command/event access to host driver
  *
- * Copyright (C) 1999-2014, Broadcom Corporation
+ * Copyright (C) 1999-2016, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -21,16 +21,28 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: brcm_nl80211.h 438755 2013-11-22 23:20:40Z $
+ *
+ * <<Broadcom-WL-IPTag/Open:>>
+ *
+ * $Id: brcm_nl80211.h 556083 2015-05-12 14:03:00Z $
  *
  */
 
 #ifndef _brcm_nl80211_h_
 #define _brcm_nl80211_h_
 
+#define OUI_BRCM  0x001018
+
+enum wl_vendor_subcmd {
+	BRCM_VENDOR_SCMD_UNSPEC,
+	BRCM_VENDOR_SCMD_PRIV_STR,
+	BRCM_VENDOR_SCMD_BCM_STR
+};
+
+
 struct bcm_nlmsg_hdr {
 	uint cmd;	/* common ioctl definition */
-	uint len;	/* attached buffer length */
+	int len;	/* expected return buffer length */
 	uint offset;	/* user buffer offset */
 	uint set;	/* get or set request optional */
 	uint magic;	/* magic number for verification */
