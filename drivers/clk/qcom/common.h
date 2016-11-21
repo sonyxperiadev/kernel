@@ -62,6 +62,8 @@ struct qcom_cc_dfs_desc {
 
 extern const struct freq_tbl *qcom_find_freq(const struct freq_tbl *f,
 					     unsigned long rate);
+extern const struct freq_tbl *qcom_find_freq_floor(const struct freq_tbl *f,
+						   unsigned long rate);
 extern int qcom_find_src_index(struct clk_hw *hw, const struct parent_map *map,
 			       u8 src);
 
