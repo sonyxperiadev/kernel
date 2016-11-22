@@ -126,7 +126,7 @@ static struct wcd_mbhc_config wcd_mbhc_cfg = {
 	.key_code[6] = 0,
 	.key_code[7] = 0,
 	.linein_th = 5000,
-#ifdef CONFIG_MACH_SONY_SUZU
+#ifdef CONFIG_ARCH_SONY_LOIRE
 	.moist_cfg = { V_45_MV, I_3P0_UA },
 	.anc_micbias = MIC_BIAS_3,
 	.enable_anc_mic_detect = true,
@@ -173,7 +173,7 @@ static void *def_tasha_mbhc_cal(void)
 		return NULL;
 
 #define S(X, Y) ((WCD_MBHC_CAL_PLUG_TYPE_PTR(tasha_wcd_cal)->X) = (Y))
-#ifdef CONFIG_MACH_SONY_SUZU
+#ifdef CONFIG_ARCH_SONY_LOIRE
 	S(v_hs_max, 1700);
 #else
 	S(v_hs_max, 1500);
@@ -186,7 +186,7 @@ static void *def_tasha_mbhc_cal(void)
 	btn_cfg = WCD_MBHC_CAL_BTN_DET_PTR(tasha_wcd_cal);
 	btn_high = ((void *)&btn_cfg->_v_btn_low) +
 		(sizeof(btn_cfg->_v_btn_low[0]) * btn_cfg->num_btn);
-#ifdef CONFIG_MACH_SONY_SUZU
+#ifdef CONFIG_ARCH_SONY_LOIRE
 	btn_high[0] = 75;
 	btn_high[1] = 137;
 	btn_high[2] = 237;
@@ -1169,7 +1169,7 @@ static int msm_ear_enable_put(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-#ifdef CONFIG_MACH_SONY_SUZU
+#ifdef CONFIG_ARCH_SONY_LOIRE
 static int msm8952_auxpcm_rate_get(struct snd_kcontrol *kcontrol,
 				struct snd_ctl_elem_value *ucontrol)
 {
@@ -1243,7 +1243,7 @@ static const struct soc_enum msm_btsco_enum[] = {
 	SOC_ENUM_SINGLE_EXT(2, btsco_rate_text),
 };
 
-#ifdef CONFIG_MACH_SONY_SUZU
+#ifdef CONFIG_ARCH_SONY_LOIRE
 static const char *const auxpcm_rate_text[] = {"8000", "16000"};
 static const struct soc_enum msm8952_auxpcm_enum[] = {
 		SOC_ENUM_SINGLE_EXT(2, auxpcm_rate_text),
@@ -1291,7 +1291,7 @@ static const struct snd_kcontrol_new msm_snd_controls[] = {
 			msm_proxy_rx_ch_get, msm_proxy_rx_ch_put),
 	SOC_ENUM_EXT("MSM_Ear_Enable_States", msm_snd_enum[10],
 			msm_ear_enable_get, msm_ear_enable_put),
-#ifdef CONFIG_MACH_SONY_SUZU
+#ifdef CONFIG_ARCH_SONY_LOIRE
 	SOC_ENUM_EXT("AUX PCM SampleRate", msm8952_auxpcm_enum[0],
 			msm8952_auxpcm_rate_get, msm8952_auxpcm_rate_put),
 #endif
@@ -2279,7 +2279,7 @@ static const struct snd_soc_dapm_widget msm8952_tomtom_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("Digital Mic6", NULL),
 };
 
-#ifdef CONFIG_MACH_SONY_SUZU
+#ifdef CONFIG_ARCH_SONY_LOIRE
 static const struct snd_soc_dapm_widget loire_msm8952_dapm_widgets[] = {
 
 	SND_SOC_DAPM_SUPPLY_S("MCLK", -1,  SND_SOC_NOPM, 0, 0,
@@ -2395,7 +2395,7 @@ int msm_audrx_init(struct snd_soc_pcm_runtime *rtd)
 	} else if (!strcmp(dev_name(codec_dai->dev), "tasha_codec")) {
 		pdata->msm8952_codec_fn.get_afe_config_fn =
 			tasha_get_afe_config;
-#ifdef CONFIG_MACH_SONY_SUZU
+#ifdef CONFIG_ARCH_SONY_LOIRE
 		snd_soc_dapm_new_controls(dapm, loire_msm8952_dapm_widgets,
 				ARRAY_SIZE(loire_msm8952_dapm_widgets));
 #else
