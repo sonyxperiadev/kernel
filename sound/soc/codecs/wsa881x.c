@@ -991,7 +991,7 @@ static void wsa881x_init(struct snd_soc_codec *codec)
 			    0x03, 0x00);
 	if (snd_soc_read(codec, WSA881X_OTP_REG_0))
 		snd_soc_update_bits(codec, WSA881X_BOOST_PRESET_OUT1,
-#ifndef CONFIG_MACH_SONY_SUZU
+#ifndef CONFIG_ARCH_SONY_LOIRE
 				    0xF0, 0x70);
 #else
 				    0xF0, 0x30);
