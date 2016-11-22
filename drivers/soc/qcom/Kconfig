@@ -782,6 +782,11 @@ config MSM_SUSPEND_STATS_FIRST_BUCKET
 endif # MSM_IDLE_STATS
 endif # MSM_PM
 
+config QCOM_UART_SETUP
+	bool "Setup UART console at boot"
+	help
+	  This is a driver to setup UART console at boot.
+
 source "drivers/soc/qcom/memshare/Kconfig"
 source "drivers/soc/qcom/hab/Kconfig"
 
