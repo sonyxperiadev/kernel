@@ -28,7 +28,8 @@ dtb-$(CONFIG_MACH_SONY_SATSUKI_DSDS)	+= msm8994-v2.1-kitakami_satsuki_dsds.dtb
 dtb-$(CONFIG_MACH_SONY_TULIP)		+= msm8939-kanuti_tulip.dtb
 
 # MSM8974
-dtb-$(CONFIG_MACH_SONY_SIRIUS)		+= msm8974pro-ab-shinano_sirius.dtb
+dtb-$(CONFIG_MACH_SONY_SIRIUS)		+= msm8974pro-ab-shinano_sirius_1.dtb
+dtb-$(CONFIG_MACH_SONY_SIRIUS)		+= msm8974pro-ab-shinano_sirius_2.dtb
 dtb-$(CONFIG_MACH_SONY_CASTOR)		+= msm8974pro-ab-shinano_castor_1.dtb
 dtb-$(CONFIG_MACH_SONY_CASTOR)		+= msm8974pro-ab-shinano_castor_2.dtb
 dtb-$(CONFIG_MACH_SONY_CASTOR)	 	+= apq8074pro-ab-shinano_castor_windy_1.dtb

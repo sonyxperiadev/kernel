@@ -28,7 +28,7 @@
 #include "msm8994-kitakami_satsuki_common.dtsi"
 #include "msm8994-kitakami_satsuki_dsds.dtsi"
 #include "msm8994-kitakami_satsuki_camera.dtsi"
-#include "dsi-panel-satsuki.dtsi"
+#include "dsi-panel-somc-satsuki.dtsi"
 
 / {
 	model = "SoMC Satsuki-DSDS";

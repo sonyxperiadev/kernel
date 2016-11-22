@@ -1,0 +1,279 @@
+/* Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+/*
+ * Copyright (C) 2015 Sony Mobile Communications Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2, as
+ * published by the Free Software Foundation.
+ */
+#include "dsi-panel-somc-novatek-auo-1080p-cmd.dtsi"
+#include "dsi-panel-somc-novatek-jdi-1080p-cmd.dtsi"
+#include "dsi-panel-somc-novatek-lgd-1080p-cmd-ID9.dtsi"
+#include "dsi-panel-somc-novatek-lgd-1080p-cmd-ID2.dtsi"
+#include "dsi-panel-somc-novatek-sharp-1080p-cmd.dtsi"
+
+&mdss_mdp {
+	somc,dric-gpio = <&msm_gpio 56 0>;
+	somc,mul-channel-scaling = <3>;
+	somc,postpwron-no-reset-quirk;
+
+	dsi_novatek_auo_1080_cmd: somc,novatek_auo_1080p_cmd_panel {
+		qcom,panel-supply-entries = <&kitakami_panel_power_supply>;
+		somc,platform-regulator-settings = [03 03 03 00 20 00 01];
+		qcom,qpnp-lab-limit-maximum-current = <200>;
+		qcom,qpnp-ibb-limit-maximum-current = <800>;
+		somc,lab-output-voltage = <5400000>;
+		somc,ibb-output-voltage = <5400000>;
+		somc,mdss-dsi-master;
+	};
+
+	dsi_novatek_jdi_1080_cmd: somc,novatek_jdi_1080p_cmd_panel {
+		qcom,panel-supply-entries = <&kitakami_panel_power_supply>;
+		somc,platform-regulator-settings = [03 03 03 00 20 00 01];
+		qcom,qpnp-lab-limit-maximum-current = <200>;
+		qcom,qpnp-ibb-limit-maximum-current = <800>;
+		somc,lab-output-voltage = <5400000>;
+		somc,ibb-output-voltage = <5400000>;
+		somc,mdss-dsi-master;
+		qcom,mdss-dsi-on-command = [05 01 00 00 00 00 01 29
+			05 01 00 00 0A 00 01 11];
+	};
+
+	dsi_novatek_lgd_1080_cmd_ID2: somc,novatek_lgd_1080p_cmd_ID2_panel {
+		qcom,panel-supply-entries = <&kitakami_panel_power_supply>;
+		somc,platform-regulator-settings = [03 03 03 00 20 00 01];
+		qcom,qpnp-lab-limit-maximum-current = <200>;
+		qcom,qpnp-ibb-limit-maximum-current = <800>;
+		somc,lab-output-voltage = <5700000>;
+		somc,ibb-output-voltage = <5700000>;
+		somc,mdss-dsi-master;
+	};
+
+	dsi_novatek_lgd_1080_cmd_ID9: somc,novatek_lgd_1080p_cmd_ID9_panel {
+		qcom,panel-supply-entries = <&kitakami_panel_power_supply>;
+		somc,platform-regulator-settings = [03 03 03 00 20 00 01];
+		qcom,qpnp-lab-limit-maximum-current = <200>;
+		qcom,qpnp-ibb-limit-maximum-current = <800>;
+		somc,lab-output-voltage = <5700000>;
+		somc,ibb-output-voltage = <5700000>;
+		somc,mdss-dsi-master;
+	};
+
+	dsi_novatek_sharp_1080_cmd_ID3: somc,novatek_sharp_1080p_cmd_ID3_panel {
+		qcom,panel-supply-entries = <&kitakami_panel_power_supply>;
+		somc,platform-regulator-settings = [03 03 03 00 20 00 01];
+		qcom,qpnp-lab-limit-maximum-current = <200>;
+		qcom,qpnp-ibb-limit-maximum-current = <800>;
+		somc,lab-output-voltage = <5600000>;
+		somc,ibb-output-voltage = <5600000>;
+		somc,mdss-dsi-master;
+	};
+
+	dsi_default_gpio_0: somc,default_cmd_panel_0 {
+		qcom,mdss-dsi-panel-name = "default";
+		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
+		qcom,panel-supply-entries = <&kitakami_panel_power_supply>;
+		qcom,mdss-dsi-panel-destination = "display_1";
+		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
+		qcom,mdss-dsi-panel-width = <1080>;
+		qcom,mdss-dsi-panel-height = <1920>;
+		qcom,mdss-dsi-bpp = <24>;
+		qcom,mdss-dsi-h-back-porch = <8>;
+		qcom,mdss-dsi-h-pulse-width = <8>;
+		qcom,mdss-dsi-h-front-porch = <56>;
+		qcom,mdss-dsi-v-back-porch = <8>;
+		qcom,mdss-dsi-v-pulse-width = <2>;
+		qcom,mdss-dsi-v-front-porch = <233>;
+		qcom,mdss-pan-physical-width-dimension = <64>;
+		qcom,mdss-pan-physical-height-dimension = <114>;
+		qcom,mdss-dsi-panel-framerate = <60>;
+		qcom,mdss-dsi-virtual-channel-id = <0>;
+		qcom,mdss-dsi-stream = <0>;
+		qcom,mdss-dsi-h-sync-skew = <0>;
+		qcom,mdss-dsi-h-left-border = <0>;
+		qcom,mdss-dsi-h-right-border = <0>;
+		qcom,mdss-dsi-v-top-border = <0>;
+		qcom,mdss-dsi-v-bottom-border = <0>;
+		qcom,mdss-dsi-underflow-color = <0x0>;
+		qcom,mdss-dsi-border-color = <0>;
+		qcom,mdss-dsi-h-sync-pulse = <1>;
+		qcom,mdss-dsi-traffic-mode = "non_burst_sync_event";
+		qcom,mdss-dsi-bllp-eof-power-mode;
+		qcom,mdss-dsi-bllp-power-mode;
+		qcom,mdss-dsi-dma-trigger = "trigger_sw";
+		qcom,mdss-dsi-mdp-trigger = "none";
+		somc,mdss-dsi-init-command = [15 01 00 00 00 00 02 FF E0
+				15 01 00 00 00 00 02 FB 01
+				15 01 00 00 00 00 02 B5 86
+				15 01 00 00 00 00 02 B6 77
+				15 01 00 00 00 00 02 B8 AD
+				15 01 00 00 00 00 02 FF 20
+				15 01 00 00 00 00 02 FB 01
+				15 01 00 00 00 00 02 2D 14
+				15 01 00 00 00 00 02 FF 24
+				15 01 00 00 00 00 02 FB 01
+				15 01 00 00 00 00 02 C6 00
+				15 01 00 00 00 00 02 92 8B
+				15 01 00 00 00 00 02 C5 32
+				15 01 00 00 00 00 02 FF 10
+				15 01 00 00 00 00 02 35 00
+				39 01 00 00 00 00 03 44 03 00
+				39 01 00 00 00 00 04 3B 03 30 06
+				15 01 00 00 01 00 02 BB 10
+				05 01 00 00 1E 00 01 11];
+		qcom,mdss-dsi-on-command = [05 01 00 00 28 00 01 29];
+		qcom,mdss-dsi-off-command = [05 01 00 00 00 00 01 28
+				05 01 00 00 64 00 01 10];
+		qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
+		qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
+		qcom,mdss-dsi-te-pin-select = <1>;
+		qcom,mdss-dsi-wr-mem-start = <0x2c>;
+		qcom,mdss-dsi-wr-mem-continue = <0x3c>;
+		qcom,mdss-dsi-te-dcs-command = <1>;
+		qcom,mdss-dsi-te-check-enable;
+		qcom,mdss-dsi-te-using-te-pin;
+		qcom,mdss-dsi-lane-0-state;
+		qcom,mdss-dsi-lane-1-state;
+		qcom,mdss-dsi-lane-2-state;
+		qcom,mdss-dsi-lane-3-state;
+		qcom,mdss-dsi-panel-timings = [E6 38 26 00 68 66 32 3C 2C 03 04 00];
+		qcom,mdss-dsi-t-clk-post = <0x21>;
+		qcom,mdss-dsi-t-clk-pre = <0x2B>;
+		qcom,mdss-dsi-tx-eot-append;
+		qcom,mdss-dsi-lp11-init;
+		qcom,mdss-dsi-bl-min-level = <1>;
+		qcom,mdss-dsi-bl-max-level = <4095>;
+		qcom,mdss-brightness-max-level = <255>;
+		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
+		qcom,qpnp-lab-limit-maximum-current = <200>;
+		qcom,qpnp-ibb-limit-maximum-current = <800>;
+
+		somc,mdss-dsi-disp-on-in-hs = <0>;
+		somc,mdss-dsi-wait-time-before-on-cmd = <0>;
+		somc,platform-regulator-settings = [03 03 03 00 20 00 01];
+		somc,mdss-dsi-lane-config = [02 00 EF 00 20 00 00 01 FF
+				02 00 EF 00 40 00 00 01 FF
+				02 00 EF 40 20 00 00 01 FF
+				02 00 EF 40 00 00 00 01 FF
+				00 00 45 80 00 00 00 01 97];
+		somc,disp-en-on-pre = <1>;
+		somc,pw-on-rst-seq = <0 20>, <1 10>;
+		somc,disp-en-off-post = <70>;
+		somc,pw-off-rst-seq = <0 0>;
+		somc,pw-down-period = <100>;
+		somc,lab-output-voltage = <5400000>;
+		somc,ibb-output-voltage = <5400000>;
+		somc,lcd-id = <0>;
+		somc,lcd-id-adc = <0 0x7fffffff>;
+		somc,mdss-dsi-master;
+	};
+
+	dsi_default_gpio_1: somc,default_cmd_panel_1 {
+		qcom,mdss-dsi-panel-name = "default";
+		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
+		qcom,panel-supply-entries = <&kitakami_panel_power_supply>;
+		qcom,mdss-dsi-panel-destination = "display_1";
+		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
+		qcom,mdss-dsi-panel-width = <1080>;
+		qcom,mdss-dsi-panel-height = <1920>;
+		qcom,mdss-dsi-bpp = <24>;
+		qcom,mdss-dsi-h-back-porch = <8>;
+		qcom,mdss-dsi-h-pulse-width = <8>;
+		qcom,mdss-dsi-h-front-porch = <56>;
+		qcom,mdss-dsi-v-back-porch = <8>;
+		qcom,mdss-dsi-v-pulse-width = <2>;
+		qcom,mdss-dsi-v-front-porch = <233>;
+		qcom,mdss-pan-physical-width-dimension = <64>;
+		qcom,mdss-pan-physical-height-dimension = <114>;
+		qcom,mdss-dsi-panel-framerate = <60>;
+		qcom,mdss-dsi-virtual-channel-id = <0>;
+		qcom,mdss-dsi-stream = <0>;
+		qcom,mdss-dsi-h-sync-skew = <0>;
+		qcom,mdss-dsi-h-left-border = <0>;
+		qcom,mdss-dsi-h-right-border = <0>;
+		qcom,mdss-dsi-v-top-border = <0>;
+		qcom,mdss-dsi-v-bottom-border = <0>;
+		qcom,mdss-dsi-underflow-color = <0x0>;
+		qcom,mdss-dsi-border-color = <0>;
+		qcom,mdss-dsi-h-sync-pulse = <1>;
+		qcom,mdss-dsi-traffic-mode = "non_burst_sync_event";
+		qcom,mdss-dsi-bllp-eof-power-mode;
+		qcom,mdss-dsi-bllp-power-mode;
+		qcom,mdss-dsi-dma-trigger = "trigger_sw";
+		qcom,mdss-dsi-mdp-trigger = "none";
+		somc,mdss-dsi-init-command = [15 01 00 00 00 00 02 FF E0
+				15 01 00 00 00 00 02 FB 01
+				15 01 00 00 00 00 02 B5 86
+				15 01 00 00 00 00 02 B6 77
+				15 01 00 00 00 00 02 B8 AD
+				15 01 00 00 00 00 02 FF 20
+				15 01 00 00 00 00 02 FB 01
+				15 01 00 00 00 00 02 2D 14
+				15 01 00 00 00 00 02 FF 24
+				15 01 00 00 00 00 02 FB 01
+				15 01 00 00 00 00 02 C6 00
+				15 01 00 00 00 00 02 92 8B
+				15 01 00 00 00 00 02 C5 32
+				15 01 00 00 00 00 02 FF 10
+				15 01 00 00 00 00 02 35 00
+				39 01 00 00 00 00 03 44 03 00
+				39 01 00 00 00 00 04 3B 03 30 06
+				15 01 00 00 01 00 02 BB 10
+				05 01 00 00 1E 00 01 11];
+		qcom,mdss-dsi-on-command = [05 01 00 00 28 00 01 29];
+		qcom,mdss-dsi-off-command = [05 01 00 00 00 00 01 28
+				05 01 00 00 64 00 01 10];
+		qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
+		qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
+		qcom,mdss-dsi-te-pin-select = <1>;
+		qcom,mdss-dsi-wr-mem-start = <0x2c>;
+		qcom,mdss-dsi-wr-mem-continue = <0x3c>;
+		qcom,mdss-dsi-te-dcs-command = <1>;
+		qcom,mdss-dsi-te-check-enable;
+		qcom,mdss-dsi-te-using-te-pin;
+		qcom,mdss-dsi-lane-0-state;
+		qcom,mdss-dsi-lane-1-state;
+		qcom,mdss-dsi-lane-2-state;
+		qcom,mdss-dsi-lane-3-state;
+		qcom,mdss-dsi-panel-timings = [E6 38 26 00 68 66 32 3C 2C 03 04 00];
+		qcom,mdss-dsi-t-clk-post = <0x21>;
+		qcom,mdss-dsi-t-clk-pre = <0x2B>;
+		qcom,mdss-dsi-tx-eot-append;
+		qcom,mdss-dsi-lp11-init;
+		qcom,mdss-dsi-bl-min-level = <1>;
+		qcom,mdss-dsi-bl-max-level = <4095>;
+		qcom,mdss-brightness-max-level = <255>;
+		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
+		qcom,qpnp-lab-limit-maximum-current = <200>;
+		qcom,qpnp-ibb-limit-maximum-current = <800>;
+
+		somc,mdss-dsi-disp-on-in-hs = <0>;
+		somc,mdss-dsi-wait-time-before-on-cmd = <0>;
+		somc,platform-regulator-settings = [03 03 03 00 20 00 01];
+		somc,mdss-dsi-lane-config = [02 00 EF 00 20 00 00 01 FF
+				02 00 EF 00 40 00 00 01 FF
+				02 00 EF 40 20 00 00 01 FF
+				02 00 EF 40 00 00 00 01 FF
+				00 00 45 80 00 00 00 01 97];
+		somc,disp-en-on-pre = <1>;
+		somc,pw-on-rst-seq = <0 20>, <1 10>;
+		somc,disp-en-off-post = <70>;
+		somc,pw-off-rst-seq = <0 0>;
+		somc,pw-down-period = <100>;
+		somc,lab-output-voltage = <5400000>;
+		somc,ibb-output-voltage = <5400000>;
+		somc,lcd-id = <1>;
+		somc,lcd-id-adc = <0 0x7fffffff>;
+		somc,mdss-dsi-master;
+	};
+};

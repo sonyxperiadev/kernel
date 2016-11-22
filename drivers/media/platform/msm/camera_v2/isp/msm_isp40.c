@@ -1498,6 +1498,7 @@ static void msm_vfe40_axi_cfg_wm_reg(
 		wm_bit_shift = VFE40_WM_BIT_SHIFT_8976_VERSION;
 	} else {
 		burst_len = VFE40_BURST_LEN;
+		wm_bit_shift = VFE40_WM_BIT_SHIFT;
 	}
 
 	if (!stream_info->frame_based) {

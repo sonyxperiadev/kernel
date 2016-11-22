@@ -1775,6 +1775,7 @@ static void dwc3_chg_detect_work(struct work_struct *w)
 			chg_to_string(mdwc->charger.chg_type));
 		mdwc->charger.notify_detection_complete(mdwc->otg_xceiv->otg,
 								&mdwc->charger);
+								return;
 	default:
 		pm_runtime_put_sync(mdwc->dev);
 		return;

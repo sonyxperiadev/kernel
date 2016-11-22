@@ -1,0 +1,251 @@
+/* Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+/*
+ * Copyright (C) 2015 Sony Mobile Communications Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2, as
+ * published by the Free Software Foundation.
+ */
+
+#include "dsi-panel-somc-novatek-auo-1080p-video.dtsi"
+#include "dsi-panel-somc-novatek-jdi-1080p-video.dtsi"
+#include "dsi-panel-somc-novatek-lgd-1080p-cmd.dtsi"
+#include "dsi-panel-somc-novatek-sharp-1080p-vid.dtsi"
+#include "dsi-panel-somc-novatek-sharp-1080p-video.dtsi"
+
+&mdss_mdp {
+	qcom,mdss-ib-factor = <19 10>;
+	dsi_novatek_auo_1080_vid: somc,novatek_auo_1080p_video_panel {
+		qcom,panel-supply-entries = <&shinano_panel_power_supply>;
+		qcom,mdss-dsi-pan-enable-dynamic-fps;
+		qcom,mdss-dsi-pan-fps-update = "dfps_suspend_resume_mode";
+		qcom,cont-splash-enabled;
+		somc,driver-ic = <0>;
+		somc,touch-reset-gpio = <&msmgpio 85 0>;
+	};
+
+	dsi_novatek_jdi_1080_video: somc,novatek_jdi_1080p_vid_panel {
+		qcom,panel-supply-entries = <&shinano_panel_power_supply>;
+		qcom,mdss-dsi-pan-enable-dynamic-fps;
+		qcom,mdss-dsi-pan-fps-update = "dfps_suspend_resume_mode";
+		qcom,cont-splash-enabled;
+		somc,driver-ic = <0>;
+		somc,touch-reset-gpio = <&msmgpio 85 0>;
+	};
+
+	dsi_novatek_lgd_1080_cmd: somc,novatek_lgd_1080p_cmd_panel {
+		qcom,panel-supply-entries = <&shinano_panel_power_supply>;
+		qcom,mdss-dsi-pan-enable-dynamic-fps;
+		qcom,mdss-dsi-pan-fps-update = "dfps_suspend_resume_mode";
+		qcom,cont-splash-enabled;
+		somc,driver-ic = <0>;
+		somc,dric-gpio = <&msmgpio 26 0>;
+		somc,touch-reset-gpio = <&msmgpio 85 0>;
+		somc,mul-channel-scaling = <3>;
+	};
+
+	dsi_novatek_sharp_1080_vid: somc,novatek_sharp_1080p_video_panel {
+		qcom,panel-supply-entries = <&shinano_panel_power_supply>;
+		qcom,mdss-dsi-pan-enable-dynamic-fps;
+		qcom,mdss-dsi-pan-fps-update = "dfps_suspend_resume_mode";
+		qcom,cont-splash-enabled;
+		somc,driver-ic = <0>;
+		somc,touch-reset-gpio = <&msmgpio 85 0>;
+	};
+
+	dsi_novatek_sharp_1080_video: somc,novatek_sharp_1080p_vid_panel {
+		qcom,panel-supply-entries = <&shinano_panel_power_supply>;
+		qcom,mdss-dsi-pan-enable-dynamic-fps;
+		qcom,mdss-dsi-pan-fps-update = "dfps_suspend_resume_mode";
+		qcom,cont-splash-enabled;
+		somc,driver-ic = <0>;
+		somc,touch-reset-gpio = <&msmgpio 85 0>;
+	};
+
+	dsi_default_gpio_0: somc,default_panel_0 {
+		qcom,mdss-dsi-panel-name = "default video 0";
+		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
+		qcom,panel-supply-entries = <&shinano_panel_power_supply>;
+		qcom,mdss-dsi-panel-destination = "display_1";
+		qcom,mdss-dsi-panel-type = "dsi_video_mode";
+		qcom,mdss-dsi-panel-width = <1080>;
+		qcom,mdss-dsi-panel-height = <1920>;
+		qcom,mdss-dsi-bpp = <24>;
+		qcom,mdss-dsi-h-back-porch = <20>;
+		qcom,mdss-dsi-h-pulse-width = <60>;
+		qcom,mdss-dsi-h-front-porch = <136>;
+		qcom,mdss-dsi-v-back-porch = <3>;
+		qcom,mdss-dsi-v-pulse-width = <2>;
+		qcom,mdss-dsi-v-front-porch = <4>;
+		qcom,mdss-pan-physical-width-dimension = <64>;
+		qcom,mdss-pan-physical-height-dimension = <114>;
+		qcom,mdss-dsi-panel-framerate = <60>;
+		qcom,mdss-dsi-virtual-channel-id = <0>;
+		qcom,mdss-dsi-stream = <0>;
+		qcom,mdss-dsi-h-sync-skew = <0>;
+		qcom,mdss-dsi-h-left-border = <0>;
+		qcom,mdss-dsi-h-right-border = <0>;
+		qcom,mdss-dsi-v-top-border = <0>;
+		qcom,mdss-dsi-v-bottom-border = <0>;
+		qcom,mdss-dsi-underflow-color = <0x0>;
+		qcom,mdss-dsi-border-color = <0>;
+		qcom,mdss-dsi-h-sync-pulse = <1>;
+		qcom,mdss-dsi-traffic-mode = "non_burst_sync_event";
+		qcom,mdss-dsi-bllp-eof-power-mode;
+		qcom,mdss-dsi-bllp-power-mode;
+		qcom,mdss-dsi-dma-trigger = "trigger_sw";
+		qcom,mdss-dsi-mdp-trigger = "none";
+		somc,mdss-dsi-init-command = [15 01 00 00 00 00 02 BB 03
+				39 01 00 00 00 00 06 3B 03 05 04 50 88
+				15 01 00 00 00 00 02 FF 24
+				15 01 00 00 00 00 02 FB 01
+				15 01 00 00 00 00 02 C4 9A
+				15 01 00 00 00 00 02 FF 10];
+		qcom,mdss-dsi-on-command = [05 01 00 00 96 00 01 11
+				05 01 00 00 28 00 01 29];
+		qcom,mdss-dsi-post-panel-on-command = [
+				39 01 00 00 00 00 01 29];
+		qcom,mdss-dsi-off-command = [15 01 00 00 00 00 02 FF 10
+				05 01 00 00 14 00 01 28
+				05 01 00 00 50 00 01 10];
+		qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
+		qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
+
+		qcom,mdss-dsi-lane-0-state;
+		qcom,mdss-dsi-lane-1-state;
+		qcom,mdss-dsi-lane-2-state;
+		qcom,mdss-dsi-lane-3-state;
+		qcom,mdss-dsi-panel-timings = [E6 38 26 00 68 6E 2A 3C 2C 03 04 00];
+		qcom,mdss-dsi-t-clk-post = <0x02>;
+		qcom,mdss-dsi-t-clk-pre = <0x2B>;
+		qcom,mdss-dsi-lp11-init;
+		qcom,mdss-dsi-bl-min-level = <1>;
+		qcom,mdss-dsi-bl-max-level = <255>;
+		qcom,mdss-brightness-max-level = <255>;
+		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
+		qcom,mdss-dsi-tx-eot-append;
+
+		somc,mul-channel-scaling = <3>;
+		somc,dric-gpio = <&msmgpio 26 0>;
+		somc,mdss-dsi-disp-on-in-hs = <1>;
+		somc,mdss-dsi-wait-time-before-on-cmd = <150>;
+		somc,mdss-dsi-lane-config = [00 c2 ef 00 00 00 00 01 ff
+				00 c2 ef 00 00 00 00 01 ff
+				00 c2 ef 00 00 00 00 01 ff
+				00 c2 ef 00 00 00 00 01 ff
+				00 02 45 00 00 00 00 01 97];
+		somc,disp-en-on-pre = <200>;
+		somc,disp-en-on-post = <10>;
+		somc,pw-on-rst-seq = <1 1>, <0 1>, <1 20>;
+		somc,disp-en-off-post = <200>;
+		somc,pw-off-rst-seq = <0 5>;
+		somc,pw-down-period = <100>;
+		somc,lcd-id = <0>;
+		somc,lcd-id-adc = <0 0x7fffffff>;
+
+		qcom,mdss-dsi-pan-enable-dynamic-fps;
+		qcom,mdss-dsi-pan-fps-update = "dfps_suspend_resume_mode";
+		qcom,cont-splash-enabled;
+		somc,driver-ic = <0>;
+		somc,touch-reset-gpio = <&msmgpio 85 0>;
+		somc,mdss-phy-size-mm = <64 114>;
+	};
+
+	dsi_default_gpio_1: somc,default_panel_1 {
+		qcom,mdss-dsi-panel-name = "default video 1";
+		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
+		qcom,panel-supply-entries = <&shinano_panel_power_supply>;
+		qcom,mdss-dsi-panel-destination = "display_1";
+		qcom,mdss-dsi-panel-type = "dsi_video_mode";
+		qcom,mdss-dsi-panel-width = <1080>;
+		qcom,mdss-dsi-panel-height = <1920>;
+		qcom,mdss-dsi-bpp = <24>;
+		qcom,mdss-dsi-h-back-porch = <20>;
+		qcom,mdss-dsi-h-pulse-width = <60>;
+		qcom,mdss-dsi-h-front-porch = <136>;
+		qcom,mdss-dsi-v-back-porch = <3>;
+		qcom,mdss-dsi-v-pulse-width = <2>;
+		qcom,mdss-dsi-v-front-porch = <4>;
+		qcom,mdss-pan-physical-width-dimension = <64>;
+		qcom,mdss-pan-physical-height-dimension = <114>;
+		qcom,mdss-dsi-panel-framerate = <60>;
+		qcom,mdss-dsi-virtual-channel-id = <0>;
+		qcom,mdss-dsi-stream = <0>;
+		qcom,mdss-dsi-h-sync-skew = <0>;
+		qcom,mdss-dsi-h-left-border = <0>;
+		qcom,mdss-dsi-h-right-border = <0>;
+		qcom,mdss-dsi-v-top-border = <0>;
+		qcom,mdss-dsi-v-bottom-border = <0>;
+		qcom,mdss-dsi-underflow-color = <0x0>;
+		qcom,mdss-dsi-border-color = <0>;
+		qcom,mdss-dsi-h-sync-pulse = <1>;
+		qcom,mdss-dsi-traffic-mode = "non_burst_sync_event";
+		qcom,mdss-dsi-bllp-eof-power-mode;
+		qcom,mdss-dsi-bllp-power-mode;
+		qcom,mdss-dsi-dma-trigger = "trigger_sw";
+		qcom,mdss-dsi-mdp-trigger = "none";
+		somc,mdss-dsi-init-command = [15 01 00 00 00 00 02 BB 03
+				39 01 00 00 00 00 06 3B 03 05 04 50 88
+				15 01 00 00 00 00 02 FF 24
+				15 01 00 00 00 00 02 FB 01
+				15 01 00 00 00 00 02 C4 9A
+				15 01 00 00 00 00 02 FF 10];
+		qcom,mdss-dsi-on-command = [05 01 00 00 96 00 01 11
+				05 01 00 00 28 00 01 29];
+		qcom,mdss-dsi-post-panel-on-command = [
+				39 01 00 00 00 00 01 29];
+		qcom,mdss-dsi-off-command = [15 01 00 00 00 00 02 FF 10
+				05 01 00 00 14 00 01 28
+				05 01 00 00 50 00 01 10];
+		qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
+		qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
+		qcom,mdss-dsi-lane-0-state;
+		qcom,mdss-dsi-lane-1-state;
+		qcom,mdss-dsi-lane-2-state;
+		qcom,mdss-dsi-lane-3-state;
+		qcom,mdss-dsi-panel-timings = [E6 38 26 00 68 6E 2A 3C 2C 03 04 00];
+		qcom,mdss-dsi-t-clk-post = <0x02>;
+		qcom,mdss-dsi-t-clk-pre = <0x2B>;
+		qcom,mdss-dsi-lp11-init;
+		qcom,mdss-dsi-bl-min-level = <1>;
+		qcom,mdss-dsi-bl-max-level = <255>;
+		qcom,mdss-brightness-max-level = <255>;
+		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
+		qcom,mdss-dsi-tx-eot-append;
+
+		somc,mul-channel-scaling = <3>;
+		somc,dric-gpio = <&msmgpio 26 0>;
+		somc,mdss-dsi-disp-on-in-hs = <1>;
+		somc,mdss-dsi-wait-time-before-on-cmd = <150>;
+		somc,mdss-dsi-lane-config = [00 c2 ef 00 00 00 00 01 ff
+				00 c2 ef 00 00 00 00 01 ff
+				00 c2 ef 00 00 00 00 01 ff
+				00 c2 ef 00 00 00 00 01 ff
+				00 02 45 00 00 00 00 01 97];
+		somc,disp-en-on-pre = <200>;
+		somc,disp-en-on-post = <10>;
+		somc,pw-on-rst-seq = <1 1>, <0 1>, <1 20>;
+		somc,disp-en-off-post = <200>;
+		somc,pw-off-rst-seq = <0 5>;
+		somc,pw-down-period = <100>;
+		somc,lcd-id = <1>;
+		somc,lcd-id-adc = <0 0x7fffffff>;
+
+		qcom,mdss-dsi-pan-enable-dynamic-fps;
+		qcom,mdss-dsi-pan-fps-update = "dfps_suspend_resume_mode";
+		qcom,cont-splash-enabled;
+		somc,driver-ic = <0>;
+		somc,touch-reset-gpio = <&msmgpio 85 0>;
+		somc,mdss-phy-size-mm = <64 114>;
+	};
+};

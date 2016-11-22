@@ -28,7 +28,7 @@
 #include "msm8994-kitakami_suzuran_common.dtsi"
 #include "msm8994-kitakami_suzuran_generic.dtsi"
 #include "msm8994-kitakami_suzuran_camera.dtsi"
-#include "dsi-panel-suzuran.dtsi"
+#include "dsi-panel-somc-suzuran.dtsi"
 
 / {
 	model = "SoMC Suzuran-ROW";

@@ -22,7 +22,7 @@
 #include "msm8974pro-ac-shinano_common.dtsi"
 #include "msm8974pro-ac-shinano_aries.dtsi"
 #include "msm8974pro-ac-shinano_aries_camera.dtsi"
-#include "dsi-panel-aries.dtsi"
+#include "dsi-panel-somc-aries.dtsi"
 
 / {
 	model = "SoMC Aries ROW";

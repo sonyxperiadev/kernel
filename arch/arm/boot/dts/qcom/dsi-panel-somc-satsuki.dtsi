@@ -1,0 +1,560 @@
+/* Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+/*
+ * Copyright (C) 2015 Sony Mobile Communications Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2, as
+ * published by the Free Software Foundation.
+ */
+
+#include "dsi-panel-somc-novatek-auo-4k2k-cmd-ID6.dtsi"
+#include "dsi-panel-somc-novatek-auo-4k2k-cmd-ID9.dtsi"
+#include "dsi-panel-somc-novatek-jdi-4k2k-cmd-ID4.dtsi"
+#include "dsi-panel-somc-novatek-jdi-4k2k-cmd-ID5.dtsi"
+#include "dsi-panel-somc-novatek-sharp-4k2k-cmd-ID3.dtsi"
+#include "dsi-panel-somc-novatek-sharp-4k2k-cmd-ID8.dtsi"
+
+&mdss_mdp {
+	somc,dric-gpio = <&msm_gpio 56 0>;
+	somc,mul-channel-scaling = <3>;
+	somc,postpwron-no-reset-quirk;
+	dsi_dual_0_auo_novatek_4k2k_cut1_cmd: somc,dual_0_auo_novatek_4k2k_cut1_cmd_panel {
+		qcom,panel-supply-entries = <&kitakami_panel_power_supply>;
+		somc,platform-regulator-settings = [03 03 03 00 20 00 01];
+		qcom,qpnp-lab-limit-maximum-current = <400>;
+		qcom,qpnp-ibb-limit-maximum-current = <900>;
+		somc,lab-output-voltage = <5600000>;
+		somc,ibb-output-voltage = <5600000>;
+	};
+
+	dsi_dual_1_auo_novatek_4k2k_cut1_cmd: somc,dual_1_auo_novatek_4k2k_cut1_cmd_panel {
+		qcom,panel-supply-entries = <&kitakami_panel_power_supply>;
+		somc,platform-regulator-settings = [03 03 03 00 20 00 01];
+		qcom,qpnp-lab-limit-maximum-current = <400>;
+		qcom,qpnp-ibb-limit-maximum-current = <900>;
+		somc,lab-output-voltage = <5600000>;
+		somc,ibb-output-voltage = <5600000>;
+		somc,mdss-dsi-slave;
+	};
+
+	dsi_dual_0_auo_novatek_4k2k_cut2_cmd: somc,dual_0_auo_novatek_4k2k_cut2_cmd_panel {
+		qcom,panel-supply-entries = <&kitakami_panel_power_supply>;
+		somc,platform-regulator-settings = [03 03 03 00 20 00 01];
+		qcom,qpnp-lab-limit-maximum-current = <400>;
+		qcom,qpnp-ibb-limit-maximum-current = <900>;
+		somc,lab-output-voltage = <5600000>;
+		somc,ibb-output-voltage = <5600000>;
+	};
+
+	dsi_dual_1_auo_novatek_4k2k_cut2_cmd: somc,dual_1_auo_novatek_4k2k_cut2_cmd_panel {
+		qcom,panel-supply-entries = <&kitakami_panel_power_supply>;
+		somc,platform-regulator-settings = [03 03 03 00 20 00 01];
+		qcom,qpnp-lab-limit-maximum-current = <400>;
+		qcom,qpnp-ibb-limit-maximum-current = <900>;
+		somc,lab-output-voltage = <5600000>;
+		somc,ibb-output-voltage = <5600000>;
+		somc,mdss-dsi-slave;
+	};
+
+	dsi_dual_0_jdi_novatek_4k2k_cut1_cmd: somc,dual_0_jdi_novatek_4k2k_cut1_cmd_panel {
+		qcom,panel-supply-entries = <&kitakami_panel_power_supply>;
+		somc,platform-regulator-settings = [03 03 03 00 20 00 01];
+		qcom,qpnp-lab-limit-maximum-current = <400>;
+		qcom,qpnp-ibb-limit-maximum-current = <900>;
+		somc,lab-output-voltage = <5800000>;
+		somc,ibb-output-voltage = <5800000>;
+	};
+
+	dsi_dual_1_jdi_novatek_4k2k_cut1_cmd: somc,dual_1_jdi_novatek_4k2k_cut1_cmd_panel {
+		qcom,panel-supply-entries = <&kitakami_panel_power_supply>;
+		somc,platform-regulator-settings = [03 03 03 00 20 00 01];
+		qcom,qpnp-lab-limit-maximum-current = <400>;
+		qcom,qpnp-ibb-limit-maximum-current = <900>;
+		somc,lab-output-voltage = <5800000>;
+		somc,ibb-output-voltage = <5800000>;
+		somc,mdss-dsi-slave;
+	};
+
+	dsi_dual_0_jdi_novatek_4k2k_cut2_cmd: somc,dual_0_jdi_novatek_4k2k_cut2_cmd_panel {
+		qcom,panel-supply-entries = <&kitakami_panel_power_supply>;
+		somc,platform-regulator-settings = [03 03 03 00 20 00 01];
+		qcom,qpnp-lab-limit-maximum-current = <400>;
+		qcom,qpnp-ibb-limit-maximum-current = <900>;
+		somc,lab-output-voltage = <5800000>;
+		somc,ibb-output-voltage = <5800000>;
+	};
+
+	dsi_dual_1_jdi_novatek_4k2k_cut2_cmd: somc,dual_1_jdi_novatek_4k2k_cut2_cmd_panel {
+		qcom,panel-supply-entries = <&kitakami_panel_power_supply>;
+		somc,platform-regulator-settings = [03 03 03 00 20 00 01];
+		qcom,qpnp-lab-limit-maximum-current = <400>;
+		qcom,qpnp-ibb-limit-maximum-current = <900>;
+		somc,lab-output-voltage = <5800000>;
+		somc,ibb-output-voltage = <5800000>;
+		somc,mdss-dsi-slave;
+	};
+
+	dsi_dual_0_sharp_novatek_4k2k_cut1_cmd: somc,dual_0_sharp_novatek_4k2k_cut1_cmd_panel {
+		qcom,panel-supply-entries = <&kitakami_panel_power_supply>;
+		somc,platform-regulator-settings = [03 03 03 00 20 00 01];
+		qcom,qpnp-lab-limit-maximum-current = <400>;
+		qcom,qpnp-ibb-limit-maximum-current = <900>;
+		somc,lab-output-voltage = <5800000>;
+		somc,ibb-output-voltage = <5600000>;
+	};
+
+	dsi_dual_1_sharp_novatek_4k2k_cut1_cmd: somc,dual_1_sharp_novatek_4k2k_cut1_cmd_panel {
+		qcom,panel-supply-entries = <&kitakami_panel_power_supply>;
+		somc,platform-regulator-settings = [03 03 03 00 20 00 01];
+		qcom,qpnp-lab-limit-maximum-current = <400>;
+		qcom,qpnp-ibb-limit-maximum-current = <900>;
+		somc,lab-output-voltage = <5800000>;
+		somc,ibb-output-voltage = <5600000>;
+		somc,mdss-dsi-slave;
+	};
+
+	dsi_dual_0_sharp_novatek_4k2k_cut2_cmd_ID3: somc,dual_0_sharp_novatek_4k2k_cut2_cmd_panel_ID3 {
+		qcom,panel-supply-entries = <&kitakami_panel_power_supply>;
+		somc,platform-regulator-settings = [03 03 03 00 20 00 01];
+		qcom,qpnp-lab-limit-maximum-current = <400>;
+		qcom,qpnp-ibb-limit-maximum-current = <900>;
+		somc,lab-output-voltage = <5800000>;
+		somc,ibb-output-voltage = <5600000>;
+	};
+
+	dsi_dual_1_sharp_novatek_4k2k_cut2_cmd_ID3: somc,dual_1_sharp_novatek_4k2k_cut2_cmd_panel_ID3 {
+		qcom,panel-supply-entries = <&kitakami_panel_power_supply>;
+		somc,platform-regulator-settings = [03 03 03 00 20 00 01];
+		qcom,qpnp-lab-limit-maximum-current = <400>;
+		qcom,qpnp-ibb-limit-maximum-current = <900>;
+		somc,lab-output-voltage = <5800000>;
+		somc,ibb-output-voltage = <5600000>;
+		somc,mdss-dsi-slave;
+	};
+
+	dsi_dual_0_default_gpio_0: somc,dual_0_default_panel_0 {
+		qcom,mdss-dsi-panel-name = "default";
+		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
+		qcom,panel-supply-entries = <&kitakami_panel_power_supply>;
+		qcom,mdss-dsi-panel-destination = "display_1";
+		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
+		qcom,mdss-dsi-panel-width = <1080>;
+		qcom,mdss-dsi-panel-height = <3840>;
+		qcom,mdss-dsi-bpp = <24>;
+		qcom,mdss-dsi-h-back-porch = <8>;
+		qcom,mdss-dsi-h-pulse-width = <8>;
+		qcom,mdss-dsi-h-front-porch = <172>;
+		qcom,mdss-dsi-v-back-porch = <8>;
+		qcom,mdss-dsi-v-pulse-width = <8>;
+		qcom,mdss-dsi-v-front-porch = <691>;
+		qcom,mdss-pan-physical-width-dimension = <68>;
+		qcom,mdss-pan-physical-height-dimension = <121>;
+		qcom,mdss-dsi-panel-framerate = <60>;
+		qcom,mdss-dsi-virtual-channel-id = <0>;
+		qcom,mdss-dsi-stream = <0>;
+		qcom,mdss-dsi-h-sync-skew = <0>;
+		qcom,mdss-dsi-h-left-border = <0>;
+		qcom,mdss-dsi-h-right-border = <0>;
+		qcom,mdss-dsi-v-top-border = <0>;
+		qcom,mdss-dsi-v-bottom-border = <0>;
+		qcom,mdss-dsi-underflow-color = <0x0>;
+		qcom,mdss-dsi-border-color = <0>;
+		qcom,mdss-dsi-h-sync-pulse = <1>;
+		qcom,mdss-dsi-traffic-mode = "non_burst_sync_event";
+		qcom,mdss-dsi-bllp-eof-power-mode;
+		qcom,mdss-dsi-bllp-power-mode;
+		qcom,mdss-dsi-dma-trigger = "trigger_sw";
+		qcom,mdss-dsi-mdp-trigger = "none";
+		somc,mdss-dsi-init-command = [15 01 00 00 00 00 02 90 02
+				39 01 00 00 00 00 06 F0 55 AA 52 08 07
+				15 01 00 00 00 00 02 EF 01
+				39 01 00 00 00 00 06 F0 55 AA 52 08 00
+				15 01 00 00 00 00 02 B4 01
+				39 01 00 00 00 00 05 FF AA 55 A5 80
+				15 01 00 00 00 00 02 6F 18
+				15 01 00 00 00 00 02 F7 06
+				15 01 00 00 00 00 02 35 00
+				39 01 00 00 00 00 03 44 00 00
+				05 01 00 00 96 00 01 11];
+		qcom,mdss-dsi-on-command = [05 01 00 00 00 00 01 29];
+		qcom,mdss-dsi-off-command = [05 01 00 00 0A 00 01 28
+				05 01 00 00 96 00 01 10];
+		qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
+		qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
+		qcom,mdss-dsi-te-pin-select = <1>;
+		qcom,mdss-dsi-wr-mem-start = <0x2c>;
+		qcom,mdss-dsi-wr-mem-continue = <0x3c>;
+		qcom,mdss-dsi-te-dcs-command = <1>;
+		qcom,mdss-dsi-te-check-enable;
+		qcom,mdss-dsi-te-using-te-pin;
+		qcom,mdss-dsi-lane-0-state;
+		qcom,mdss-dsi-lane-1-state;
+		qcom,mdss-dsi-lane-2-state;
+		qcom,mdss-dsi-lane-3-state;
+		qcom,mdss-dsi-panel-timings = [E6 38 26 00 68 66 32 3C 2C 03 04 00 ];
+		qcom,mdss-dsi-t-clk-post = <0x02>;
+		qcom,mdss-dsi-t-clk-pre = <0x2B>;
+		qcom,mdss-dsi-tx-eot-append;
+		qcom,qpnp-lab-limit-maximum-current = <400>;
+		qcom,qpnp-ibb-limit-maximum-current = <900>;
+		qcom,mdss-dsi-lp11-init;
+		qcom,mdss-dsi-bl-min-level = <1>;
+		qcom,mdss-dsi-bl-max-level = <4095>;
+		qcom,mdss-brightness-max-level = <4095>;
+		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
+
+		qcom,mdss-dsi-compression = "fbc";
+		qcom,mdss-dsi-fbc-enable;
+		qcom,mdss-dsi-fbc-ver2-mode;
+		qcom,mdss-dsi-fbc-bpp = <8>;
+		qcom,mdss-dsi-fbc-packing = <1>;
+		qcom,mdss-dsi-fbc-2d-pred-mode;
+		qcom,mdss-dsi-fbc-slice-height = <4>;
+		qcom,mdss-dsi-fbc-quant-error;
+		qcom,mdss-dsi-fbc-bias = <2>;
+		qcom,mdss-dsi-fbc-vlc-mode;
+		qcom,mdss-dsi-fbc-bflc-mode;
+		qcom,mdss-dsi-fbc-lossy-mode-idx = <3>;
+		qcom,mdss-dsi-fbc-pat-mode;
+		qcom,mdss-dsi-fbc-budget-ctrl = <5>;
+		qcom,mdss-dsi-fbc-block-budget = <59>;
+		qcom,mdss-dsi-fbc-h-line-budget = <675>;
+		qcom,mdss-dsi-fbc-lossless-threshold = <0x200>;
+		qcom,mdss-dsi-fbc-lossy-threshold = <192>;
+		qcom,mdss-dsi-fbc-rgb-threshold = <4>;
+		qcom,mdss-dsi-fbc-max-pred-err = <3>;
+
+		somc,mdss-dsi-disp-on-in-hs = <0>;
+		somc,mdss-dsi-wait-time-before-on-cmd = <0>;
+		somc,platform-regulator-settings = [03 03 03 00 20 00 01];
+		somc,mdss-dsi-lane-config = [02 00 EF 00 20 00 00 01 FF
+				02 00 EF 00 40 00 00 01 FF
+				02 00 EF 40 20 00 00 01 FF
+				02 00 EF 40 00 00 00 01 FF
+				00 00 45 80 00 00 00 01 97];
+		somc,disp-dcdc-en-on-pre = <10>;
+		somc,disp-en-on-pre = <10>;
+		somc,pw-on-rst-seq = <0 10>, <1 10>, <0 15>, <1 20>;
+		somc,disp-dcdc-en-off-post = <5>;
+		somc,disp-en-off-post = <5>;
+		somc,pw-off-rst-b-seq = <0 5>;
+		somc,pw-down-period = <100>;
+		somc,lab-output-voltage = <5800000>;
+		somc,ibb-output-voltage = <5600000>;
+		somc,lcd-id = <0>;
+		somc,lcd-id-adc = <0 0x7fffffff>;
+		somc,dsi-index = <0>;
+
+		somc,poll-enable;
+		somc,poll-intervals = <10000>;
+		somc,poll-esd-reg-adress = <0x0A>;
+		somc,poll-esd-reg-val = <0x9C>;
+	};
+
+	dsi_dual_1_default_gpio_0: somc,dual_1_default_panel_0 {
+		qcom,mdss-dsi-panel-name = "default";
+		qcom,mdss-dsi-panel-controller = <&mdss_dsi1>;
+		qcom,panel-supply-entries = <&kitakami_panel_power_supply>;
+		qcom,mdss-dsi-panel-destination = "display_2";
+		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
+		qcom,mdss-dsi-panel-width = <1080>;
+		qcom,mdss-dsi-panel-height = <3840>;
+		qcom,mdss-dsi-bpp = <24>;
+		qcom,mdss-dsi-h-back-porch = <8>;
+		qcom,mdss-dsi-h-pulse-width = <8>;
+		qcom,mdss-dsi-h-front-porch = <172>;
+		qcom,mdss-dsi-v-back-porch = <8>;
+		qcom,mdss-dsi-v-pulse-width = <8>;
+		qcom,mdss-dsi-v-front-porch = <691>;
+		qcom,mdss-pan-physical-width-dimension = <68>;
+		qcom,mdss-pan-physical-height-dimension = <121>;
+		qcom,mdss-dsi-panel-framerate = <60>;
+		qcom,mdss-dsi-virtual-channel-id = <0>;
+		qcom,mdss-dsi-stream = <0>;
+		qcom,mdss-dsi-h-sync-skew = <0>;
+		qcom,mdss-dsi-h-left-border = <0>;
+		qcom,mdss-dsi-h-right-border = <0>;
+		qcom,mdss-dsi-v-top-border = <0>;
+		qcom,mdss-dsi-v-bottom-border = <0>;
+		qcom,mdss-dsi-underflow-color = <0x0>;
+		qcom,mdss-dsi-border-color = <0>;
+		qcom,mdss-dsi-h-sync-pulse = <1>;
+		qcom,mdss-dsi-traffic-mode = "non_burst_sync_event";
+		qcom,mdss-dsi-bllp-eof-power-mode;
+		qcom,mdss-dsi-bllp-power-mode;
+		qcom,mdss-dsi-dma-trigger = "trigger_sw";
+		qcom,mdss-dsi-mdp-trigger = "none";
+		qcom,mdss-dsi-te-pin-select = <1>;
+		qcom,mdss-dsi-wr-mem-start = <0x2c>;
+		qcom,mdss-dsi-wr-mem-continue = <0x3c>;
+		qcom,mdss-dsi-te-dcs-command = <1>;
+		qcom,mdss-dsi-te-check-enable;
+		qcom,mdss-dsi-te-using-te-pin;
+		qcom,mdss-dsi-lane-0-state;
+		qcom,mdss-dsi-lane-1-state;
+		qcom,mdss-dsi-lane-2-state;
+		qcom,mdss-dsi-lane-3-state;
+		qcom,mdss-dsi-panel-timings = [E6 38 26 00 68 66 32 3C 2C 03 04 00 ];
+		qcom,mdss-dsi-t-clk-post = <0x02>;
+		qcom,mdss-dsi-t-clk-pre = <0x2B>;
+		qcom,mdss-dsi-tx-eot-append;
+		qcom,qpnp-lab-limit-maximum-current = <400>;
+		qcom,qpnp-ibb-limit-maximum-current = <900>;
+		qcom,mdss-dsi-lp11-init;
+		qcom,mdss-dsi-bl-min-level = <1>;
+		qcom,mdss-dsi-bl-max-level = <4095>;
+		qcom,mdss-brightness-max-level = <4095>;
+
+		qcom,mdss-dsi-compression = "fbc";
+		qcom,mdss-dsi-fbc-enable;
+		qcom,mdss-dsi-fbc-ver2-mode;
+		qcom,mdss-dsi-fbc-bpp = <8>;
+		qcom,mdss-dsi-fbc-packing = <1>;
+		qcom,mdss-dsi-fbc-2d-pred-mode;
+		qcom,mdss-dsi-fbc-slice-height = <4>;
+		qcom,mdss-dsi-fbc-quant-error;
+		qcom,mdss-dsi-fbc-bias = <2>;
+		qcom,mdss-dsi-fbc-vlc-mode;
+		qcom,mdss-dsi-fbc-bflc-mode;
+		qcom,mdss-dsi-fbc-lossy-mode-idx = <3>;
+		qcom,mdss-dsi-fbc-pat-mode;
+		qcom,mdss-dsi-fbc-budget-ctrl = <5>;
+		qcom,mdss-dsi-fbc-block-budget = <59>;
+		qcom,mdss-dsi-fbc-h-line-budget = <675>;
+		qcom,mdss-dsi-fbc-lossless-threshold = <0x200>;
+		qcom,mdss-dsi-fbc-lossy-threshold = <192>;
+		qcom,mdss-dsi-fbc-rgb-threshold = <4>;
+		qcom,mdss-dsi-fbc-max-pred-err = <3>;
+
+		somc,platform-regulator-settings = [03 03 03 00 20 00 01];
+		somc,mdss-dsi-lane-config = [02 00 EF 00 20 00 00 01 FF
+				02 00 EF 00 40 00 00 01 FF
+				02 00 EF 40 20 00 00 01 FF
+				02 00 EF 40 00 00 00 01 FF
+				00 00 45 80 00 00 00 01 97];
+		somc,lab-output-voltage = <5800000>;
+		somc,ibb-output-voltage = <5600000>;
+		somc,lcd-id = <0>;
+		somc,lcd-id-adc = <0 0x7fffffff>;
+		somc,dsi-index = <1>;
+		somc,mdss-dsi-slave;
+	};
+
+	dsi_dual_0_default_gpio_1: somc,dual_0_default_panel_1 {
+		qcom,mdss-dsi-panel-name = "default";
+		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
+		qcom,panel-supply-entries = <&kitakami_panel_power_supply>;
+		qcom,mdss-dsi-panel-destination = "display_1";
+		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
+		qcom,mdss-dsi-panel-width = <1080>;
+		qcom,mdss-dsi-panel-height = <3840>;
+		qcom,mdss-dsi-bpp = <24>;
+		qcom,mdss-dsi-h-back-porch = <8>;
+		qcom,mdss-dsi-h-pulse-width = <8>;
+		qcom,mdss-dsi-h-front-porch = <172>;
+		qcom,mdss-dsi-v-back-porch = <8>;
+		qcom,mdss-dsi-v-pulse-width = <8>;
+		qcom,mdss-dsi-v-front-porch = <691>;
+		qcom,mdss-pan-physical-width-dimension = <68>;
+		qcom,mdss-pan-physical-height-dimension = <121>;
+		qcom,mdss-dsi-panel-framerate = <60>;
+		qcom,mdss-dsi-virtual-channel-id = <0>;
+		qcom,mdss-dsi-stream = <0>;
+		qcom,mdss-dsi-h-sync-skew = <0>;
+		qcom,mdss-dsi-h-left-border = <0>;
+		qcom,mdss-dsi-h-right-border = <0>;
+		qcom,mdss-dsi-v-top-border = <0>;
+		qcom,mdss-dsi-v-bottom-border = <0>;
+		qcom,mdss-dsi-underflow-color = <0x0>;
+		qcom,mdss-dsi-border-color = <0>;
+		qcom,mdss-dsi-h-sync-pulse = <1>;
+		qcom,mdss-dsi-traffic-mode = "non_burst_sync_event";
+		qcom,mdss-dsi-bllp-eof-power-mode;
+		qcom,mdss-dsi-bllp-power-mode;
+		qcom,mdss-dsi-dma-trigger = "trigger_sw";
+		qcom,mdss-dsi-mdp-trigger = "none";
+		somc,mdss-dsi-init-command = [15 01 00 00 00 00 02 90 02
+				39 01 00 00 00 00 06 F0 55 AA 52 08 07
+				15 01 00 00 00 00 02 EF 01
+				39 01 00 00 00 00 06 F0 55 AA 52 08 00
+				15 01 00 00 00 00 02 B4 01
+				39 01 00 00 00 00 05 FF AA 55 A5 80
+				15 01 00 00 00 00 02 6F 18
+				15 01 00 00 00 00 02 F7 06
+				15 01 00 00 00 00 02 35 00
+				39 01 00 00 00 00 03 44 00 00
+				05 01 00 00 96 00 01 11];
+		qcom,mdss-dsi-on-command = [05 01 00 00 00 00 01 29];
+		qcom,mdss-dsi-off-command = [05 01 00 00 0A 00 01 28
+				05 01 00 00 96 00 01 10];
+		qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
+		qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
+		qcom,mdss-dsi-te-pin-select = <1>;
+		qcom,mdss-dsi-wr-mem-start = <0x2c>;
+		qcom,mdss-dsi-wr-mem-continue = <0x3c>;
+		qcom,mdss-dsi-te-dcs-command = <1>;
+		qcom,mdss-dsi-te-check-enable;
+		qcom,mdss-dsi-te-using-te-pin;
+		qcom,mdss-dsi-lane-0-state;
+		qcom,mdss-dsi-lane-1-state;
+		qcom,mdss-dsi-lane-2-state;
+		qcom,mdss-dsi-lane-3-state;
+		qcom,mdss-dsi-panel-timings = [E6 38 26 00 68 66 32 3C 2C 03 04 00 ];
+		qcom,mdss-dsi-t-clk-post = <0x02>;
+		qcom,mdss-dsi-t-clk-pre = <0x2B>;
+		qcom,mdss-dsi-tx-eot-append;
+		qcom,qpnp-lab-limit-maximum-current = <400>;
+		qcom,qpnp-ibb-limit-maximum-current = <900>;
+		qcom,mdss-dsi-lp11-init;
+		qcom,mdss-dsi-bl-min-level = <1>;
+		qcom,mdss-dsi-bl-max-level = <4095>;
+		qcom,mdss-brightness-max-level = <4095>;
+		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
+
+		qcom,mdss-dsi-compression = "fbc";
+		qcom,mdss-dsi-fbc-enable;
+		qcom,mdss-dsi-fbc-ver2-mode;
+		qcom,mdss-dsi-fbc-bpp = <8>;
+		qcom,mdss-dsi-fbc-packing = <1>;
+		qcom,mdss-dsi-fbc-2d-pred-mode;
+		qcom,mdss-dsi-fbc-slice-height = <4>;
+		qcom,mdss-dsi-fbc-quant-error;
+		qcom,mdss-dsi-fbc-bias = <2>;
+		qcom,mdss-dsi-fbc-vlc-mode;
+		qcom,mdss-dsi-fbc-bflc-mode;
+		qcom,mdss-dsi-fbc-lossy-mode-idx = <3>;
+		qcom,mdss-dsi-fbc-pat-mode;
+		qcom,mdss-dsi-fbc-budget-ctrl = <5>;
+		qcom,mdss-dsi-fbc-block-budget = <59>;
+		qcom,mdss-dsi-fbc-h-line-budget = <675>;
+		qcom,mdss-dsi-fbc-lossless-threshold = <0x200>;
+		qcom,mdss-dsi-fbc-lossy-threshold = <192>;
+		qcom,mdss-dsi-fbc-rgb-threshold = <4>;
+		qcom,mdss-dsi-fbc-max-pred-err = <3>;
+
+		somc,mdss-dsi-disp-on-in-hs = <0>;
+		somc,mdss-dsi-wait-time-before-on-cmd = <0>;
+		somc,platform-regulator-settings = [03 03 03 00 20 00 01];
+		somc,mdss-dsi-lane-config = [02 00 EF 00 20 00 00 01 FF
+				02 00 EF 00 40 00 00 01 FF
+				02 00 EF 40 20 00 00 01 FF
+				02 00 EF 40 00 00 00 01 FF
+				00 00 45 80 00 00 00 01 97];
+		somc,disp-dcdc-en-on-pre = <10>;
+		somc,disp-en-on-pre = <10>;
+		somc,pw-on-rst-seq = <0 10>, <1 10>, <0 15>, <1 20>;
+		somc,disp-dcdc-en-off-post = <5>;
+		somc,disp-en-off-post = <5>;
+		somc,pw-off-rst-b-seq = <0 5>;
+		somc,pw-down-period = <100>;
+		somc,lab-output-voltage = <5800000>;
+		somc,ibb-output-voltage = <5600000>;
+		somc,lcd-id = <1>;
+		somc,lcd-id-adc = <0 0x7fffffff>;
+		somc,dsi-index = <0>;
+
+		somc,poll-enable;
+		somc,poll-intervals = <10000>;
+		somc,poll-esd-reg-adress = <0x0A>;
+		somc,poll-esd-reg-val = <0x9C>;
+	};
+
+	dsi_dual_1_default_gpio_1: somc,dual_1_default_panel_1 {
+		qcom,mdss-dsi-panel-name = "default";
+		qcom,mdss-dsi-panel-controller = <&mdss_dsi1>;
+		qcom,panel-supply-entries = <&kitakami_panel_power_supply>;
+		qcom,mdss-dsi-panel-destination = "display_2";
+		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
+		qcom,mdss-dsi-panel-width = <1080>;
+		qcom,mdss-dsi-panel-height = <3840>;
+		qcom,mdss-dsi-bpp = <24>;
+		qcom,mdss-dsi-h-back-porch = <8>;
+		qcom,mdss-dsi-h-pulse-width = <8>;
+		qcom,mdss-dsi-h-front-porch = <172>;
+		qcom,mdss-dsi-v-back-porch = <8>;
+		qcom,mdss-dsi-v-pulse-width = <8>;
+		qcom,mdss-dsi-v-front-porch = <691>;
+		qcom,mdss-pan-physical-width-dimension = <68>;
+		qcom,mdss-pan-physical-height-dimension = <121>;
+		qcom,mdss-dsi-panel-framerate = <60>;
+		qcom,mdss-dsi-virtual-channel-id = <0>;
+		qcom,mdss-dsi-stream = <0>;
+		qcom,mdss-dsi-h-sync-skew = <0>;
+		qcom,mdss-dsi-h-left-border = <0>;
+		qcom,mdss-dsi-h-right-border = <0>;
+		qcom,mdss-dsi-v-top-border = <0>;
+		qcom,mdss-dsi-v-bottom-border = <0>;
+		qcom,mdss-dsi-underflow-color = <0x0>;
+		qcom,mdss-dsi-border-color = <0>;
+		qcom,mdss-dsi-h-sync-pulse = <1>;
+		qcom,mdss-dsi-traffic-mode = "non_burst_sync_event";
+		qcom,mdss-dsi-bllp-eof-power-mode;
+		qcom,mdss-dsi-bllp-power-mode;
+		qcom,mdss-dsi-dma-trigger = "trigger_sw";
+		qcom,mdss-dsi-mdp-trigger = "none";
+		qcom,mdss-dsi-te-pin-select = <1>;
+		qcom,mdss-dsi-wr-mem-start = <0x2c>;
+		qcom,mdss-dsi-wr-mem-continue = <0x3c>;
+		qcom,mdss-dsi-te-dcs-command = <1>;
+		qcom,mdss-dsi-te-check-enable;
+		qcom,mdss-dsi-te-using-te-pin;
+		qcom,mdss-dsi-lane-0-state;
+		qcom,mdss-dsi-lane-1-state;
+		qcom,mdss-dsi-lane-2-state;
+		qcom,mdss-dsi-lane-3-state;
+		qcom,mdss-dsi-panel-timings = [E6 38 26 00 68 66 32 3C 2C 03 04 00 ];
+		qcom,mdss-dsi-t-clk-post = <0x02>;
+		qcom,mdss-dsi-t-clk-pre = <0x2B>;
+		qcom,mdss-dsi-tx-eot-append;
+		qcom,qpnp-lab-limit-maximum-current = <400>;
+		qcom,qpnp-ibb-limit-maximum-current = <900>;
+		qcom,mdss-dsi-lp11-init;
+		qcom,mdss-dsi-bl-min-level = <1>;
+		qcom,mdss-dsi-bl-max-level = <4095>;
+		qcom,mdss-brightness-max-level = <4095>;
+
+		qcom,mdss-dsi-compression = "fbc";
+		qcom,mdss-dsi-fbc-enable;
+		qcom,mdss-dsi-fbc-ver2-mode;
+		qcom,mdss-dsi-fbc-bpp = <8>;
+		qcom,mdss-dsi-fbc-packing = <1>;
+		qcom,mdss-dsi-fbc-2d-pred-mode;
+		qcom,mdss-dsi-fbc-slice-height = <4>;
+		qcom,mdss-dsi-fbc-quant-error;
+		qcom,mdss-dsi-fbc-bias = <2>;
+		qcom,mdss-dsi-fbc-vlc-mode;
+		qcom,mdss-dsi-fbc-bflc-mode;
+		qcom,mdss-dsi-fbc-lossy-mode-idx = <3>;
+		qcom,mdss-dsi-fbc-pat-mode;
+		qcom,mdss-dsi-fbc-budget-ctrl = <5>;
+		qcom,mdss-dsi-fbc-block-budget = <59>;
+		qcom,mdss-dsi-fbc-h-line-budget = <675>;
+		qcom,mdss-dsi-fbc-lossless-threshold = <0x200>;
+		qcom,mdss-dsi-fbc-lossy-threshold = <192>;
+		qcom,mdss-dsi-fbc-rgb-threshold = <4>;
+		qcom,mdss-dsi-fbc-max-pred-err = <3>;
+
+		somc,platform-regulator-settings = [03 03 03 00 20 00 01];
+		somc,mdss-dsi-lane-config = [02 00 EF 00 20 00 00 01 FF
+				02 00 EF 00 40 00 00 01 FF
+				02 00 EF 40 20 00 00 01 FF
+				02 00 EF 40 00 00 00 01 FF
+				00 00 45 80 00 00 00 01 97];
+		somc,lab-output-voltage = <5800000>;
+		somc,ibb-output-voltage = <5600000>;
+		somc,lcd-id = <1>;
+		somc,lcd-id-adc = <0 0x7fffffff>;
+		somc,dsi-index = <1>;
+		somc,mdss-dsi-slave;
+	};
+};
