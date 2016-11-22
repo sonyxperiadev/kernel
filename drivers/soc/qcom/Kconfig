@@ -947,4 +947,9 @@ config MSM_CACHE_M4M_ERP64_PANIC_ON_UE
          Say 'Y' here to cause kernel panic when uncorrectable cache/M4M errors
          are detected.
 
+config QCOM_UART_SETUP
+	bool "Setup UART console at boot"
+	help
+	  This is a driver to setup UART console at boot.
+
 source "drivers/soc/qcom/memshare/Kconfig"
