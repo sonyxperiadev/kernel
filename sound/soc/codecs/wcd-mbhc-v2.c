@@ -553,7 +553,7 @@ static void wcd_mbhc_hs_elec_irq(struct wcd_mbhc *mbhc, int irq_type,
 static void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 				enum snd_jack_types jack_type)
 {
-#ifdef CONFIG_ARCH_SONY_LOIRE
+#if defined(CONFIG_ARCH_SONY_LOIRE) || defined (CONFIG_ARCH_SONY_TONE)
 	bool skip_report = false;
 #endif
 
@@ -676,7 +676,7 @@ static void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 			mbhc->jiffies_atreport = jiffies;
 		} else if (jack_type == SND_JACK_LINEOUT) {
 			mbhc->current_plug = MBHC_PLUG_TYPE_HIGH_HPH;
-#ifdef CONFIG_ARCH_SONY_LOIRE
+#if defined(CONFIG_ARCH_SONY_LOIRE) || defined (CONFIG_ARCH_SONY_TONE)
 			skip_report = true;
 #endif
 		} else if (jack_type == SND_JACK_ANC_HEADPHONE)
@@ -687,7 +687,7 @@ static void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 			(mbhc->mbhc_cfg->linein_th != 0)) {
 				mbhc->mbhc_cb->compute_impedance(mbhc,
 						&mbhc->zl, &mbhc->zr);
-#ifdef CONFIG_ARCH_SONY_LOIRE
+#if defined(CONFIG_ARCH_SONY_LOIRE) || defined (CONFIG_ARCH_SONY_TONE)
 			if (mbhc->zl > mbhc->mbhc_cfg->linein_th &&
 			    jack_type == SND_JACK_ANC_HEADPHONE) {
 				jack_type = SND_JACK_STEREO_MICROPHONE;
@@ -726,7 +726,7 @@ static void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 
 		pr_debug("%s: Reporting insertion %d(%x)\n", __func__,
 			 jack_type, mbhc->hph_status);
-#ifdef CONFIG_ARCH_SONY_LOIRE
+#if defined(CONFIG_ARCH_SONY_LOIRE) || defined (CONFIG_ARCH_SONY_TONE)
 		if (!skip_report)
 #endif
 		wcd_mbhc_jack_report(mbhc, &mbhc->headset_jack,
@@ -1048,7 +1048,7 @@ static void wcd_mbhc_update_fsm_source(struct wcd_mbhc *mbhc,
 		break;
 	case MBHC_PLUG_TYPE_HEADSET:
 	case MBHC_PLUG_TYPE_ANC_HEADPHONE:
-#ifdef CONFIG_ARCH_SONY_LOIRE
+#if defined(CONFIG_ARCH_SONY_LOIRE) || defined (CONFIG_ARCH_SONY_TONE)
 	case MBHC_PLUG_TYPE_STEREO_MICROPHONE:
 #endif
 		if (!mbhc->is_hs_recording && !micbias2)
@@ -1371,7 +1371,7 @@ correct_plug_type:
 				 * and if there is not button press without
 				 * release
 				 */
-#ifdef CONFIG_ARCH_SONY_LOIRE
+#if defined(CONFIG_ARCH_SONY_LOIRE) || defined (CONFIG_ARCH_SONY_TONE)
 				if (mbhc->current_plug !=
 				    MBHC_PLUG_TYPE_STEREO_MICROPHONE)
 #endif
@@ -1402,11 +1402,11 @@ correct_plug_type:
 	 * detect_plug-type or in above while loop, no need to report again
 	 */
 	if (!wrk_complete && ((plug_type == MBHC_PLUG_TYPE_HEADSET) ||
-#ifndef CONFIG_ARCH_SONY_LOIRE
-	    (plug_type == MBHC_PLUG_TYPE_ANC_HEADPHONE))) {
-#else
+#if defined(CONFIG_ARCH_SONY_LOIRE) || defined (CONFIG_ARCH_SONY_TONE)
 	    (plug_type == MBHC_PLUG_TYPE_ANC_HEADPHONE) ||
 	    (plug_type == MBHC_PLUG_TYPE_STEREO_MICROPHONE))) {
+#else
+	    (plug_type == MBHC_PLUG_TYPE_ANC_HEADPHONE))) {
 #endif
 		pr_debug("%s: plug_type:0x%x already reported\n",
 			 __func__, mbhc->current_plug);
@@ -1625,7 +1625,7 @@ static void wcd_mbhc_swch_irq_handler(struct wcd_mbhc *mbhc)
 						 0);
 			WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_ELECT_SCHMT_ISRC, 0);
 			wcd_mbhc_report_plug(mbhc, 0, SND_JACK_ANC_HEADPHONE);
-#ifdef CONFIG_ARCH_SONY_LOIRE
+#if defined(CONFIG_ARCH_SONY_LOIRE) || defined (CONFIG_ARCH_SONY_TONE)
 		} else if (mbhc->current_plug ==
 			   MBHC_PLUG_TYPE_STEREO_MICROPHONE) {
 			mbhc->mbhc_cb->irq_control(codec,
