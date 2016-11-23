@@ -1678,6 +1678,9 @@ static void dwc3_chg_detect_work(struct work_struct *w)
 	bool is_dcd = false, tmout, vout;
 	static bool dcd;
 	unsigned long delay;
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+	int chg_type;
+#endif
 
 	dev_dbg(mdwc->dev, "chg detection work, state=%d\n", mdwc->chg_state);
 	switch (mdwc->chg_state) {
@@ -1693,9 +1696,6 @@ static void dwc3_chg_detect_work(struct work_struct *w)
 		is_dcd = dwc3_chg_check_dcd(mdwc);
 		tmout = ++mdwc->dcd_retries == DWC3_CHG_DCD_MAX_RETRIES;
 		if (is_dcd || tmout) {
-#ifdef CONFIG_SONY_USB_EXTENSIONS
-			int chg_type;
-#endif
 			if (is_dcd)
 				dcd = true;
 			else
@@ -1753,8 +1753,29 @@ static void dwc3_chg_detect_work(struct work_struct *w)
 		vout = dwc3_chg_det_check_output(mdwc);
 		if (vout)
 			mdwc->charger.chg_type = DWC3_DCP_CHARGER;
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+		// workaround for msm8974 -> ac charger source
+		chg_type = get_prop_proprietary_charger(mdwc);
+		if (vout && IS_ERR_VALUE(chg_type)) {
+			// msm8974 -> vout is a case while on ac charger
+			mdwc->charger.chg_type = DWC3_PROPRIETARY_CHARGER;
+		}
+#endif
 		else
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+		{
+			// workaround for msm8974 -> usb source as a default
+			if (IS_ERR_VALUE(chg_type)) {
+				mdwc->charger.chg_type = DWC3_SDP_CHARGER;
+			}
+			else
+			{
+#endif
 			mdwc->charger.chg_type = DWC3_CDP_CHARGER;
+#ifdef CONFIG_SONY_USB_EXTENSIONS
+			}
+		}	//end workaround for msm8974
+#endif
 		mdwc->chg_state = USB_CHG_STATE_SECONDARY_DONE;
 		/* fall through */
 	case USB_CHG_STATE_SECONDARY_DONE:
