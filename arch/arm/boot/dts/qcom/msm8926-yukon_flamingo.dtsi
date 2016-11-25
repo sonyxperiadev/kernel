@@ -250,26 +250,15 @@
 
 &pm8226_chg {
 	qcom,tchg-mins = <240>;
-	qcom,usb-tchg-mins = <480>;
-	qcom,ac-tchg-mins = <240>;
+	qcom,thermal-mitigation = <1500 1250 1000 750 650 0>;
 	qcom,ibatmax-warm-ma = <400>;
 	qcom,warm-bat-decidegc = <450>;
 	qcom,warm-bat-mv = <3900>;
 	qcom,cool-bat-decidegc = <150>;
 	qcom,cool-bat-mv = <4200>;
 	qcom,ibatmax-cool-ma = <1500>;
-	qcom,btc-disabled;
-	qcom,hot-bat-decidegc = <550>;
-	qcom,cold-bat-decidegc = <50>;
-	qcom,charging-timer-enable;
 	qcom,vbatweak-mv = <3400>;
-	qcom,call-bat-mv = <3900>;
-	qcom,resume-soc = <0>;
 	qcom,vbatdet-delta-mv = <50>;
-	qcom,first-maintain-mins = <3600>;
-	qcom,second-maintain-mins = <12000>;
-	qcom,first-maintain-mv = <4150>;
-	qcom,second-maintain-mv = <4100>;
 };
 
 &pm8226_bms {

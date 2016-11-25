@@ -72,7 +72,7 @@ qcom,flamingo-batterydata {
 	};
 
 	qcom,rbatt-sf-lut {
-		qcom,lut-col-legend = <(-20) 0 25 40 60 70>;
+		qcom,lut-col-legend = <(-20) 0 25 40 60>;
 		qcom,lut-row-legend = <100 95 90 85 80>,
 				<75 70 65 60 55>,
 				<50 45 40 35 30>,

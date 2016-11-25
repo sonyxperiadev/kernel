@@ -372,6 +372,7 @@
 
 &pm8226_chg {
 	qcom,battery-data = <&yukon_eagle_batterydata>;
+	qcom,thermal-mitigation = <1500 1500 1100 900 700 500 300 200 100 0>;
 };
 
 &mdss_mdp {
