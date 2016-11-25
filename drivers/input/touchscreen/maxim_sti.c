@@ -3085,4 +3085,3 @@ MODULE_AUTHOR("Maxim Integrated Products, Inc.");
 MODULE_DESCRIPTION("Maxim SmartTouch Imager Touchscreen Driver");
 MODULE_LICENSE("GPL v2");
 MODULE_VERSION(__stringify(DRIVER_VERSION));
-

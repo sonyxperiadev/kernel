@@ -11,7 +11,9 @@
 
 #include <linux/cpu.h>
 #include <linux/cpufreq.h>
+#include <linux/err.h>
 #include <linux/module.h>
+#include <linux/of.h>
 #include <linux/slab.h>
 #include <linux/sort.h>
 #include <linux/err.h>
@@ -584,7 +586,7 @@ static void cpufreq_allstats_create(unsigned int cpu,
 static int cpufreq_stat_notifier_policy(struct notifier_block *nb,
 		unsigned long val, void *data)
 {
-	int ret, count = 0, i;
+	int ret = 0, count = 0, i;
 	struct cpufreq_policy *policy = data;
 	struct cpufreq_frequency_table *table;
 	unsigned int cpu_num, cpu = policy->cpu;
@@ -608,11 +610,10 @@ static int cpufreq_stat_notifier_policy(struct notifier_block *nb,
 
 	if (!per_cpu(all_cpufreq_stats, cpu))
 		cpufreq_allstats_create(cpu, table, count);
+	
+	if (!per_cpu(cpufreq_power_stats, cpu))
+		cpufreq_powerstats_create(cpu, table, count);
 
-	for_each_possible_cpu(cpu_num) {
-		if (!per_cpu(cpufreq_power_stats, cpu_num))
-			cpufreq_powerstats_create(cpu_num, table, count);
-	}
 
 	if (val == CPUFREQ_CREATE_POLICY)
 		ret = __cpufreq_stats_create_table(policy, table, count);
