@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -71,6 +71,12 @@ int32_t msm_camera_cci_i2c_read_seq(struct msm_camera_i2c_client *client,
 		|| num_byte == 0)
 		return rc;
 
+	if (num_byte > I2C_REG_DATA_MAX) {
+		pr_err("%s: Error num_byte:0x%x exceeds 8K max supported:0x%x\n",
+			__func__, num_byte, I2C_REG_DATA_MAX);
+		return rc;
+	}
+
 	buf = kzalloc(num_byte, GFP_KERNEL);
 	if (!buf) {
 		pr_err("%s:%d no memory\n", __func__, __LINE__);
@@ -136,7 +142,7 @@ int32_t msm_camera_cci_i2c_write_seq(struct msm_camera_i2c_client *client,
 	uint32_t addr, uint8_t *data, uint32_t num_byte)
 {
 	int32_t rc = -EFAULT;
-	uint8_t i = 0;
+	uint32_t i = 0;
 	struct msm_camera_cci_ctrl cci_ctrl;
 	struct msm_camera_i2c_reg_array *reg_conf_tbl = NULL;
 
@@ -360,6 +366,12 @@ int32_t msm_camera_cci_i2c_write_seq_table(
 	reg_setting = write_setting->reg_setting;
 	client_addr_type = client->addr_type;
 	client->addr_type = write_setting->addr_type;
+
+	if (reg_setting->reg_data_size > I2C_SEQ_REG_DATA_MAX) {
+		pr_err("%s: number of bytes %u exceeding the max supported %d\n",
+		__func__, reg_setting->reg_data_size, I2C_SEQ_REG_DATA_MAX);
+		return rc;
+	}
 
 	for (i = 0; i < write_setting->size; i++) {
 		rc = msm_camera_cci_i2c_write_seq(client, reg_setting->reg_addr,
