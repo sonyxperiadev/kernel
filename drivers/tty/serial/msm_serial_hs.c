@@ -70,10 +70,6 @@
 #include <linux/platform_data/msm_serial_hs.h>
 #include <linux/msm-bus.h>
 
-#ifdef CONFIG_BT_MSM_SLEEP
-#include <linux/bcm43xx_bt_lpm.h>
-#endif
-
 #include "msm_serial_hs_hwreg.h"
 #define UART_SPS_CONS_PERIPHERAL 0
 #define UART_SPS_PROD_PERIPHERAL 1
@@ -228,10 +224,6 @@ struct msm_hs_port {
 	atomic_t clk_count;
 	struct msm_hs_wakeup wakeup;
 	struct wakeup_source ws;
-
-#ifdef CONFIG_BT_MSM_SLEEP
-	void (*exit_lpm_cb)(struct uart_port *);
-#endif
 
 	struct dentry *loopback_dir;
 	struct work_struct clock_off_w; /* work for actual clock off */
@@ -1265,12 +1257,6 @@ unsigned int msm_hs_tx_empty(struct uart_port *uport)
 	unsigned int data;
 	unsigned int ret = 0;
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
-#if defined(CONFIG_MACH_SONY_SHINANO)
-	if (msm_uport->pm_state != MSM_HS_PM_ACTIVE) {
-		MSM_HS_WARN("%s(): Failed.Clocks are OFF\n", __func__);
-		return -1;
-	}
-#endif
 	msm_hs_resource_vote(msm_uport);
 	data = msm_hs_read(uport, UART_DM_SR);
 	msm_hs_resource_unvote(msm_uport);
@@ -1849,11 +1835,6 @@ static void msm_hs_start_tx_locked(struct uart_port *uport)
 		return;
 	}
 
-#ifdef CONFIG_BT_MSM_SLEEP
-	if (msm_uport->exit_lpm_cb)
-		msm_uport->exit_lpm_cb(uport);
-#endif
-
 	if (!tx->dma_in_flight) {
 		tx->dma_in_flight = true;
 		queue_kthread_work(&msm_uport->tx.kworker,
@@ -2058,12 +2039,6 @@ void msm_hs_set_mctrl(struct uart_port *uport,
 	unsigned long flags;
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
 
-#if defined(CONFIG_MACH_SONY_SHINANO)
-	if (msm_uport->pm_state != MSM_HS_PM_ACTIVE) {
-		MSM_HS_WARN("%s(): Failed.Clocks are OFF\n", __func__);
-		return;
-	}
-#endif
 	msm_hs_resource_vote(msm_uport);
 	spin_lock_irqsave(&uport->lock, flags);
 	msm_hs_set_mctrl_locked(uport, mctrl);
@@ -2344,12 +2319,6 @@ void msm_hs_resource_on(struct msm_hs_port *msm_uport)
 void msm_hs_request_clock_off(struct uart_port *uport)
 {
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
-#if defined(CONFIG_MACH_SONY_SHINANO)
-	if (msm_uport->pm_state != MSM_HS_PM_ACTIVE) {
-		MSM_HS_WARN("%s(): Failed.Clocks are OFF\n", __func__);
-		return;
-	}
-#endif
 	/* Set the flag to disable flow control and wakeup irq */
 	if (msm_uport->obs)
 		atomic_set(&msm_uport->client_req_state, 1);
@@ -2993,10 +2962,6 @@ struct msm_serial_hs_platform_data
 		return ERR_PTR(-EINVAL);
 	}
 
-#ifdef CONFIG_BT_MSM_SLEEP
-	pdata->exit_lpm_cb = bcm_bt_lpm_exit_lpm_locked;
-#endif
-
 	pr_debug("tx_ep_pipe_index:%d rx_ep_pipe_index:%d\n"
 		"tx_gpio:%d rx_gpio:%d rfr_gpio:%d cts_gpio:%d",
 		pdata->bam_tx_ep_pipe_index, pdata->bam_rx_ep_pipe_index,
@@ -3533,16 +3498,6 @@ static int msm_hs_probe(struct platform_device *pdev)
 	msm_uport->bam_rx_ep_pipe_index =
 			pdata->bam_rx_ep_pipe_index;
 	msm_uport->wakeup.enabled = true;
-
-#ifdef CONFIG_BT_MSM_SLEEP
-	if (pdata == NULL) {
-		dev_warn(&pdev->dev, "msm_hs_probe() pdata is null\n");
-		msm_uport->exit_lpm_cb = NULL;
-	} else {
-		dev_dbg(&pdev->dev, "msm_hs_probe() set exit_lpm_cb\n");
-		msm_uport->exit_lpm_cb = pdata->exit_lpm_cb;
-	}
-#endif
 
 	uport->iotype = UPIO_MEM;
 	uport->fifosize = 64;
