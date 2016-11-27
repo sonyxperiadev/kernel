@@ -2582,6 +2582,10 @@
 		compatible = "qcom,msm-pcm-hostless";
 	};
 
+	bcmbt_ldisc {
+		compatible = "bcmbt_ldisc";
+	};
+
 	dai_pri_auxpcm: qcom,msm-pri-auxpcm {
 		compatible = "qcom,msm-auxpcm-dev";
 		qcom,msm-cpudai-auxpcm-mode = <0>, <0>;
