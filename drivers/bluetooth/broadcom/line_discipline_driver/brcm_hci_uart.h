@@ -41,7 +41,7 @@
 *****************************************************************************/
 
 #ifndef N_BRCM_HCI
-#define N_BRCM_HCI      26
+#define N_BRCM_HCI      25
 #endif
 
 /* Ioctls */
