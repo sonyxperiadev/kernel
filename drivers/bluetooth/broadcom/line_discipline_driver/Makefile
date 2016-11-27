@@ -7,4 +7,4 @@ KBUILD_CFLAGS += -w
 EXTRA_CFLAGS := -I$(PWD)/../include/
 
 ccflags-y += -w -DVERSION="\"1.2\""
-#ccflags-y += -DLPM_BLUESLEEP
+ccflags-$(CONFIG_BT_MSM_SLEEP) += -DLPM_BLUESLEEP
