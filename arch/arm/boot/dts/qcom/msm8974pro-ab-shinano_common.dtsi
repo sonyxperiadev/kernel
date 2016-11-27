@@ -70,16 +70,16 @@
 		status = "ok";
 	};
 
+	bcmbt_ldisc {
+		compatible = "bcmbt_ldisc";
+	};
+
 	bluetooth_bcm: bcm4339 {
 		compatible = "bcm,bcm4339";
 		gpios = <&pm8941_gpios 16 0>, /* BT_REG_ON */
 			<&msmgpio 95 0>, /* BT_HOST_WAKE */
 			<&msmgpio 96 0>; /* BT_DEV_WAKE */
 	};
-	
-	bcmbt_ldisc {
-		compatible = "bcmbt_ldisc";
-        };
 
 	bluesleep {
 		compatible = "qcom,bluesleep";
