@@ -442,6 +442,10 @@
 		/delete-property/ qcom,android-usb-uicc-nluns;
 	};
 
+        bcmbt_ldisc {
+		compatible = "bcmbt_ldisc";
+        };
+
 	sim_detect {
 		compatible = "sim-detect";
 		interrupt-parent = <&msm_gpio>;
