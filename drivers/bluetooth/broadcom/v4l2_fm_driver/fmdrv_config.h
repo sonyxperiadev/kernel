@@ -45,7 +45,9 @@
 #define DEF_V4L2_FM_AUDIO_MODE FM_AUTO_MODE
 
 /* Set default Audio path */
-#ifndef DEF_V4L2_FM_AUDIO_PATH
+#if defined(CONFIG_MACH_SONY_SHINANO)
+#define DEF_V4L2_FM_AUDIO_PATH FM_AUDIO_I2S
+#else
 #define DEF_V4L2_FM_AUDIO_PATH FM_AUDIO_DAC
 #endif
 
