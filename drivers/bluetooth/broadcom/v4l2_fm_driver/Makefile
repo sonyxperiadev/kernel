@@ -7,4 +7,3 @@ KBUILD_CFLAGS += -w
 EXTRA_CFLAGS := -I$(PWD)/../include/
 
 ccflags-y += -w -DVERSION="\"1.2\""
-ccflags-y += -DDEF_V4L2_FM_AUDIO_PATH=FM_AUDIO_I2S
