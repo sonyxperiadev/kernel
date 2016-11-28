@@ -105,11 +105,10 @@
 
 	bcm43xx {
 		compatible = "bcm,bcm43xx";
-		bcm,reg-on-gpio = <&msm_gpio 91 0x00>, /* BT_REG_ON */
-			<&msm_gpio 110 0x00>; /* BT_DEV_WAKE */
+		bcm,reg-on-gpio = <&msm_gpio 91 0x00>; /* BT_REG_ON */
 		pinctrl-names = "default", "sleep";
-		pinctrl-0 = <&msm_gpio_91_act &msm_gpio_110_act>;
-		pinctrl-1 = <&msm_gpio_91_sus &msm_gpio_110_sus>;
+		pinctrl-0 = <&msm_gpio_91_act>;
+		pinctrl-1 = <&msm_gpio_91_sus>;
 	};
 
 	bluesleep {
@@ -120,8 +119,8 @@
 		interrupts = <111 0>;
 		interrupt-names = "host_wake";
 		pinctrl-names = "default", "sleep";
-		pinctrl-0 = <&msm_gpio_91_act &msm_gpio_110_act &msm_gpio_111_act>;
-		pinctrl-1 = <&msm_gpio_91_sus &msm_gpio_110_sus &msm_gpio_111_sus>;
+		pinctrl-0 = <&msm_gpio_110_act &msm_gpio_111_act>;
+		pinctrl-1 = <&msm_gpio_110_sus &msm_gpio_111_sus>;
 	};
 
 	/* I2C : BLSP2 */
