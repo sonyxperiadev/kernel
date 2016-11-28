@@ -105,7 +105,7 @@
 
 	bcm43xx {
 		compatible = "bcm,bcm43xx";
-		gpios = <&msm_gpio 91 0x00>, /* BT_REG_ON */
+		bcm,reg-on-gpio = <&msm_gpio 91 0x00>, /* BT_REG_ON */
 			<&msm_gpio 110 0x00>; /* BT_DEV_WAKE */
 		pinctrl-names = "default", "sleep";
 		pinctrl-0 = <&msm_gpio_91_act &msm_gpio_110_act>;
@@ -116,7 +116,6 @@
 		compatible = "qcom,bluesleep";
 		bt_ext_wake = <&msm_gpio 110 0>;
 		bt_host_wake = <&msm_gpio 111 0>;
-		bt_reg_on = <&msm_gpio 91 0>;
 		interrupt-parent = <&msm_gpio>;
 		interrupts = <111 0>;
 		interrupt-names = "host_wake";

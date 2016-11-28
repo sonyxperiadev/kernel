@@ -45,7 +45,6 @@
 #include <linux/workqueue.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/platform_device.h>
-#include <linux/rfkill.h>
 
 #include <linux/atomic.h>
 #include <linux/irq.h>
@@ -58,7 +57,6 @@
 #include <linux/of_gpio.h>
 #include <linux/serial_core.h>
 #include <linux/platform_data/msm_serial_hs.h>
-#include <linux/regulator/consumer.h>
 
 #include <net/bluetooth/bluetooth.h>
 #include <net/bluetooth/hci_core.h> /* event notifications */
@@ -95,7 +93,10 @@ static int debug_mask = DEBUG_USER_STATE;
 module_param_named(debug_mask, debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP);
 
 struct bluesleep_info {
-	unsigned bt_reg_on;
+	struct pinctrl *pinctrl;
+	struct pinctrl_state *gpio_state_active;
+	struct pinctrl_state *gpio_state_suspend;
+	bool has_pinctl;
 	unsigned host_wake;
 	unsigned ext_wake;
 	unsigned host_wake_irq;
@@ -105,18 +106,6 @@ struct bluesleep_info {
 	int has_ext_wake;
 	atomic_t wakeup_irq_disabled;
 };
-
-struct bt_pinctrl_data {
-	struct pinctrl *pinctrl;
-	struct pinctrl_state *gpio_state_active;
-	struct pinctrl_state *gpio_state_suspend;
-	bool has_pinctl;
-};
-
-static struct bt_pinctrl_data *pinctrl_data;
-
-static struct regulator *bt_batfet;
-static bool bt_enabled;
 
 /* work function */
 static void bluesleep_sleep_work(struct work_struct *work);
@@ -146,10 +135,6 @@ DECLARE_DELAYED_WORK(sleep_workqueue, bluesleep_sleep_work);
 #define PROC_ASLEEP	3
 #define PROC_LPM	4
 #define PROC_BTWRITE	5
-
-#define MSM_HSUART_BT	0
-
-static bool has_lpm_enabled;
 
 static struct platform_device *bluesleep_uart_dev;
 static struct bluesleep_info *bsi;
@@ -181,7 +166,6 @@ static DEFINE_TIMER(tx_timer, bluesleep_tx_timer_expire, 0, 0);
 
 /** Lock for state transitions */
 static spinlock_t rw_lock;
-static struct rfkill *bt_rfkill;
 
 struct proc_dir_entry *bluetooth_dir, *sleep_dir;
 
@@ -208,18 +192,10 @@ static void enable_wakeup_irq(int enable)
 	disabled = atomic_read(&bsi->wakeup_irq_disabled);
 
 	if (enable && disabled == 1) {
-#if defined(CONFIG_LINE_DISCIPLINE_DRIVER)
 		enable_irq_wake(bsi->host_wake_irq);
-#else
-		enable_irq(bsi->host_wake_irq);
-#endif
 		atomic_dec(&bsi->wakeup_irq_disabled);
 	} else if (!enable && !disabled) {
-#if defined(CONFIG_LINE_DISCIPLINE_DRIVER)
 		disable_irq_wake(bsi->host_wake_irq);
-#else
-		disable_irq(bsi->host_wake_irq);
-#endif
 		atomic_inc(&bsi->wakeup_irq_disabled);
 	}
 }
@@ -233,62 +209,6 @@ int bluesleep_can_sleep(void)
 	return ((gpio_get_value(bsi->host_wake) != bsi->irq_polarity) &&
 		(test_bit(BT_EXT_WAKE, &flags)) && (bsi->uport != NULL));
 }
-
-static int bluesleep_rfkill_set_power(void *data, bool blocked)
-{
-	int regOnGpio;
-	int ret;
-
-	BT_DBG("Bluetooth device set power\n");
-
-	regOnGpio = gpio_get_value(bsi->bt_reg_on);
-	if (!bt_batfet) {
-		bt_batfet = regulator_get(NULL, "batfet");
-		if (IS_ERR_OR_NULL(bt_batfet)) {
-			pr_debug("unable to get batfet reg. rc=%d\n",
-				PTR_RET(bt_batfet));
-			bt_batfet = NULL;
-		}
-	}
-	/* rfkill_ops callback. Turn transmitter on when blocked is false */
-	if (!blocked) {
-		/* Enable MSM serial clock for ttyHS(x) */
-		msm_hs_set_clock(MSM_HSUART_BT, 1);
-
-		if (regOnGpio) {
-			BT_DBG("Bluetooth device is already power on:%d\n",
-				regOnGpio);
-			return 0;
-		}
-		if (bt_batfet) {
-			ret = regulator_enable(bt_batfet);
-			if (ret != 0)
-				pr_warn("%s: Can't enable regulator!\n",
-								__func__);
-		}
-		gpio_set_value(bsi->bt_reg_on, 1);
-		gpio_set_value(bsi->ext_wake, 1);
-	} else {
-		/* Powering off: Disable serial clocks */
-		msm_hs_set_clock(MSM_HSUART_BT, 0);
-
-		if (!regOnGpio) {
-			BT_DBG("Bluetooth device is already power off:%d\n",
-				regOnGpio);
-			return 0;
-		}
-		gpio_set_value(bsi->bt_reg_on, 0);
-		if (bt_batfet)
-			regulator_disable(bt_batfet);
-	}
-	bt_enabled = !blocked;
-
-	return 0;
-}
-
-static const struct rfkill_ops bluesleep_rfkill_ops = {
-	.set_block = bluesleep_rfkill_set_power,
-};
 
 /**
  * @brief@  main sleep work handling function which update the flags
@@ -319,7 +239,7 @@ static void bluesleep_sleep_work(struct work_struct *work)
 			pr_err("This should never happen.\n");
 			return;
 		}
-	} else if (test_bit(BT_ASLEEP, &flags)) {
+	} else if (test_bit(BT_ASLEEP, &flags) && (bsi->uport != NULL)) {
 		/* Can not sleep but UART has already sleep */
 		if (debug_mask & DEBUG_SUSPEND)
 			pr_err("waking up...\n");
@@ -484,12 +404,6 @@ int bluesleep_start(void)
 {
 	unsigned long irq_flags;
 
-#if defined(CONFIG_LINE_DISCIPLINE_DRIVER)
-	if (!has_lpm_enabled) {
-		has_lpm_enabled  = true;
-		bsi->uport = msm_hs_get_uart_port(BT_PORT_ID);
-	}
-#endif
 	spin_lock_irqsave(&rw_lock, irq_flags);
 
 	if (test_bit(BT_PROTO, &flags)) {
@@ -563,10 +477,6 @@ void bluesleep_stop(void)
 
 	enable_wakeup_irq(0);
 	wake_lock_timeout(&bsi->wake_lock, HZ / 2);
-#if defined(CONFIG_LINE_DISCIPLINE_DRIVER)
-	has_lpm_enabled = false;
-	bsi->uport = NULL;
-#endif
 }
 EXPORT_SYMBOL(bluesleep_stop);
 
@@ -596,17 +506,40 @@ static int bluesleep_populate_dt_pinfo(struct platform_device *pdev)
 	if (bsi->has_ext_wake)
 		bsi->ext_wake = tmp;
 
-	tmp = of_get_named_gpio(np, "bt_reg_on", 0);
-	if (tmp < 0) {
-		BT_ERR("couldn't find bt_reg_on gpio");
-		return -ENODEV;
-	}
-	bsi->bt_reg_on = tmp;
-
-	BT_INFO("bt_host_wake %d, bt_ext_wake %d, bt_reg_on %d",
+	BT_INFO("bt_host_wake %d, bt_ext_wake %d",
 			bsi->host_wake,
-			bsi->ext_wake,
-			bsi->bt_reg_on);
+			bsi->ext_wake);
+
+	bsi->pinctrl = devm_pinctrl_get(&pdev->dev);
+	if (IS_ERR(bsi->pinctrl)) {
+		pr_err("pinctrl not defined\n");
+	} else {
+		bsi->has_pinctl = true;
+	}
+
+	if (bsi->has_pinctl) {
+		bsi->gpio_state_active =
+			pinctrl_lookup_state(bsi->pinctrl, PINCTRL_STATE_DEFAULT);
+		if (IS_ERR_OR_NULL(bsi->gpio_state_active)) {
+			pr_err("pinctrl lookup failed for default\n");
+			return PTR_ERR(bsi->gpio_state_active);
+		}
+
+		bsi->gpio_state_suspend =
+			pinctrl_lookup_state(bsi->pinctrl, PINCTRL_STATE_SLEEP);
+		if (IS_ERR_OR_NULL(bsi->gpio_state_suspend)) {
+			pr_err("pinctrl lookup failed for sleep\n");
+			return PTR_ERR(bsi->gpio_state_suspend);
+		}
+
+		tmp = pinctrl_select_state(bsi->pinctrl, bsi->gpio_state_active);
+		if (tmp) {
+			pr_err("failed to select active state\n");
+			pinctrl_select_state(bsi->pinctrl, bsi->gpio_state_suspend);
+			return tmp;
+		}
+	}
+
 	return 0;
 }
 
@@ -635,60 +568,7 @@ static int bluesleep_populate_pinfo(struct platform_device *pdev)
 
 static int bluesleep_probe(struct platform_device *pdev)
 {
-	int ret, rc;
-
-	struct pinctrl *pinctrl;
-	struct pinctrl_state *lookup_state;
-
-	pinctrl_data = kzalloc(sizeof(*pinctrl_data), GFP_KERNEL);
-	if (!pinctrl_data) {
-		dev_err(&pdev->dev, "%s(): no memory\n", __func__);
-		ret = -ENOMEM;
-		return ret;
-	}
-
-	pinctrl_data->has_pinctl = false;
-
-	pinctrl = devm_pinctrl_get(&pdev->dev);
-	if (IS_ERR(pinctrl)) {
-		dev_err(&pdev->dev, "%s: pinctrl not defined\n",
-			__func__);
-		ret = PTR_ERR(pinctrl);
-	} else {
-		pinctrl_data->has_pinctl = true;
-	}
-
-	if (pinctrl_data->has_pinctl) {
-
-		pr_info("bluesleep in pinctl mode\n");
-		pinctrl_data->pinctrl = pinctrl;
-
-		lookup_state = pinctrl_lookup_state(pinctrl, PINCTRL_STATE_DEFAULT);
-		if (IS_ERR_OR_NULL(lookup_state)) {
-			dev_err(&pdev->dev, "%s(): pinctrl lookup failed for default\n",
-			__func__);
-			ret = PTR_ERR(lookup_state);
-			return ret;
-		}
-		pinctrl_data->gpio_state_active = lookup_state;
-
-		lookup_state = pinctrl_lookup_state(pinctrl, PINCTRL_STATE_SLEEP);
-		if (IS_ERR_OR_NULL(lookup_state)) {
-			dev_err(&pdev->dev, "%s(): pinctrl lookup failed for sleep\n",
-			__func__);
-			ret = PTR_ERR(lookup_state);
-			return ret;
-		}
-		pinctrl_data->gpio_state_suspend = lookup_state;
-
-		ret = pinctrl_select_state(pinctrl_data->pinctrl,
-			pinctrl_data->gpio_state_active);
-		if (ret) {
-			dev_err(&pdev->dev, "%s(): Failed to select active state\n",
-				__func__);
-			return ret;
-		}
-	}
+	int ret;
 
 	bsi = kzalloc(sizeof(struct bluesleep_info), GFP_KERNEL);
 	if (!bsi)
@@ -754,27 +634,9 @@ static int bluesleep_probe(struct platform_device *pdev)
 		goto free_bt_ext_wake;
 	}
 
-	bt_rfkill = rfkill_alloc("bluesleep Bluetooth", &pdev->dev,
-				RFKILL_TYPE_BLUETOOTH, &bluesleep_rfkill_ops,
-				NULL);
+	bsi->uport = msm_hs_get_uart_port(BT_PORT_ID);
 
-	if (unlikely(!bt_rfkill)) {
-		ret = -ENOMEM;
-		dev_err(&pdev->dev, "bcm4339_bluetooth_probe rfkill_alloc fail\n");
-		goto  free_bt_ext_wake;
-	}
-
-	rfkill_set_states(bt_rfkill, true, false);
-	rc = rfkill_register(bt_rfkill);
-
-	if (unlikely(rc)) {
-		rfkill_destroy(bt_rfkill);
-		ret = -ENOMEM;
-		dev_err(&pdev->dev, "bcm4339_bluetooth_probe rfkill_register fail\n");
-		goto  free_bt_ext_wake;
-	}
-
-	enable_wakeup_irq(0);
+	atomic_set(&bsi->wakeup_irq_disabled, 1);
 	return 0;
 
 free_bt_ext_wake:
@@ -788,21 +650,13 @@ free_bsi:
 
 static int bluesleep_remove(struct platform_device *pdev)
 {
-
-	int ret;
-	
 	enable_wakeup_irq(0);
 	free_irq(bsi->host_wake_irq, NULL);
 	gpio_free(bsi->host_wake);
 	gpio_free(bsi->ext_wake);
-	if (pinctrl_data->has_pinctl){
-		ret = pinctrl_select_state(pinctrl_data->pinctrl,
-					pinctrl_data->gpio_state_suspend);
-		if (ret) {
-			dev_warn(&pdev->dev, "%s(): Failed to select suspend state",
-				__func__);
-		}
-	}
+	if (bsi->has_pinctl)
+		pinctrl_select_state(bsi->pinctrl, bsi->gpio_state_suspend);
+
 	wake_lock_destroy(&bsi->wake_lock);
 	kfree(bsi);
 	return 0;
@@ -814,7 +668,7 @@ static int bluesleep_resume(struct platform_device *pdev)
 	if (test_bit(BT_SUSPEND, &flags)) {
 		if (debug_mask & DEBUG_SUSPEND)
 			pr_info("bluesleep resuming...\n");
-		if ((bsi->uport != NULL) &&
+		if (atomic_read(&open_count) == 0 &&
 			(gpio_get_value(bsi->host_wake) == bsi->irq_polarity)) {
 			if (debug_mask & DEBUG_SUSPEND)
 				pr_info("bluesleep resume from BT event...\n");
@@ -855,8 +709,8 @@ static int bluesleep_proc_show(struct seq_file *m, void *v)
 {
 	switch ((long)m->private) {
 	case PROC_LPM:
-		seq_printf(m, "lpm: %u\n",
-				test_bit(has_lpm_enabled, &flags) ? 1 : 0);
+		seq_printf(m, "lpm: %d\n",
+				atomic_read(&open_count) == 0 ? 1 : 0);
 		break;
 	case PROC_BTWRITE:
 		seq_printf(m, "btwrite: %u\n",
@@ -887,16 +741,9 @@ static ssize_t bluesleep_proc_write(struct file *file, const char *buf,
 		if (lbuf[0] == '0') {
 			/* HCI_DEV_UNREG */
 			bluesleep_stop();
-			has_lpm_enabled = false;
-			bsi->uport = NULL;
 		} else {
 			/* HCI_DEV_REG */
-			if (!has_lpm_enabled) {
-				has_lpm_enabled = true;
-				bsi->uport = msm_hs_get_uart_port(BT_PORT_ID);
-				/* if bluetooth started, start bluesleep*/
-				bluesleep_start();
-			}
+			bluesleep_start();
 		}
 		break;
 	case PROC_BTWRITE:
@@ -955,8 +802,6 @@ static int __init bluesleep_init(void)
 		pr_err("bsi is NULL.");
 		return 0;
 	}
-
-	bt_enabled = false;
 
 	bluetooth_dir = proc_mkdir("bluetooth", NULL);
 	if (bluetooth_dir == NULL) {
