@@ -76,8 +76,7 @@
 
 	bcm43xx {
 		compatible = "bcm,bcm43xx";
-		bcm,reg-on-gpio = <&pm8941_gpios 16 0>, /* BT_REG_ON */
-			<&msmgpio 96 0>; /* BT_DEV_WAKE */
+		bcm,reg-on-gpio = <&pm8941_gpios 16 0>; /* BT_REG_ON */
 	};
 
 	bluesleep {
