@@ -3633,6 +3633,12 @@ static int __wlan_hdd_cfg80211_extscan_set_significant_change(struct wiphy *wiph
     }
     pReqMsg->numAp = nla_get_u32(
             tb[QCA_WLAN_VENDOR_ATTR_EXTSCAN_SIGNIFICANT_CHANGE_PARAMS_NUM_AP]);
+    if (pReqMsg->numAp > WLAN_EXTSCAN_MAX_SIGNIFICANT_CHANGE_APS) {
+        hdd_err("Number of AP %u exceeds max %u",
+                pReqMsg->numAp,
+                WLAN_EXTSCAN_MAX_SIGNIFICANT_CHANGE_APS);
+        goto fail;
+    }
     hddLog(VOS_TRACE_LEVEL_INFO, FL("Number of AP (%d)"), pReqMsg->numAp);
 
     pReqMsg->sessionId = pAdapter->sessionId;
@@ -3640,6 +3646,12 @@ static int __wlan_hdd_cfg80211_extscan_set_significant_change(struct wiphy *wiph
 
     nla_for_each_nested(apTh,
                 tb[QCA_WLAN_VENDOR_ATTR_EXTSCAN_AP_THRESHOLD_PARAM], rem) {
+
+        if (i == pReqMsg->numAp) {
+            hdd_warn("Ignoring excess AP");
+            break;
+        }
+
         if(nla_parse(tb2,
                 QCA_WLAN_VENDOR_ATTR_EXTSCAN_SUBCMD_CONFIG_PARAM_MAX,
                 nla_data(apTh), nla_len(apTh),
@@ -3686,6 +3698,11 @@ static int __wlan_hdd_cfg80211_extscan_set_significant_change(struct wiphy *wiph
         hddLog(VOS_TRACE_LEVEL_INFO,
                            FL("Channel (%u)"), pReqMsg->ap[i].channel);
         i++;
+    }
+    if (i < pReqMsg->numAp) {
+        hdd_warn("Number of AP %u less than expected %u",
+                 i, pReqMsg->numAp);
+        pReqMsg->numAp = i;
     }
 
     status = sme_SetSignificantChange(pHddCtx->hHal, pReqMsg);
