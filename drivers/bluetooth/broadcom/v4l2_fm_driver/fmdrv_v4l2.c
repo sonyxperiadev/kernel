@@ -565,6 +565,13 @@ static struct attribute_group v4l2_fm_attr_grp = {
     .attrs = v4l2_fm_attrs,
 };
 
+static int notify_topology(struct video_device *radio_dev)
+{
+    static const char *env[] = { "ACTION=change", NULL };
+
+    return kobject_uevent_env(&radio_dev->dev.kobj, KOBJ_CHANGE, env);
+}
+
 /* Handle open request for "/dev/radioX" device.
  * Start with FM RX mode as default.
  */
@@ -632,6 +639,9 @@ static int fm_v4l2_fops_open(struct file *file)
         V4L2_FM_DRV_ERR("failed to create sysfs entries");
         return ret;
     }
+
+    /* Notify new sysfs entries */
+    notify_topology(fmdev->radio_dev);
 
     /* Set Audio path */
     V4L2_FM_DRV_DBG(V4L2_DBG_OPEN,"(fmdrv): FM Set Audio path option : %d", DEF_V4L2_FM_AUDIO_PATH);
