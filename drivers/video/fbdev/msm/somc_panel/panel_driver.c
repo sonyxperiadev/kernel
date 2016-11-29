@@ -303,6 +303,12 @@ static void mdss_dsi_panel_set_gpio_seq(
 {
 	int i, rc;
 
+	if (unlikely(seq == NULL)) {
+		pr_err("%s: WARNING: Reset sequence is NULL! Bailing out.\n",
+			__func__);
+		return;
+	}
+
 	rc = gpio_direction_output(gpio, seq[0]);
 	if (rc) {
 		pr_err("%s: FATAL: Cannot set direction for reset GPIO %d\n",
@@ -432,9 +438,22 @@ static int mdss_dsi_panel_reset_seq(struct mdss_panel_data *pdata, int enable)
 			gpio_set_value(spec_pdata->disp_p5, 0);
 			usleep_range(10000, 10000);
 		}
-	} else
+	} else {
+		if (unlikely(pw_seq->rst_seq == NULL)) {
+			pr_err("FATAL: power%s reset sequence is NULL!!\n",
+				enable ? "on" : "off");
+			return 0;
+		}
+
+		if (unlikely(pw_seq->seq_num < 0 || pw_seq->seq_num > 20)) {
+			pr_err("FATAL: Invalid number of entries for "\
+				"power%s sequence!!\n", enable ? "on" : "off");
+			return 0;
+		};
+
 		mdss_dsi_panel_set_gpio_seq(ctrl_pdata->rst_gpio,
 			pw_seq->seq_num, pw_seq->rst_seq);
+	}
 
 	return 0;
 }
