@@ -1034,20 +1034,24 @@ int brcm_hci_uart_tx_wakeup(struct hci_uart *hu)
     struct tty_struct *tty = hu->tty;
     struct sk_buff *skb;
     unsigned long lock_flags;
+    bool wakeup = true;
     if (test_and_set_bit(HCI_UART_SENDING, &hu->tx_state))
     {
         set_bit(HCI_UART_TX_WAKEUP, &hu->tx_state);
         return 0;
     }
 
-    BT_LDISC_DBG(V4L2_DBG_TX, "hci_uart_tx_wakeup");
-    brcm_btsleep_wake(sleep);
-
     do{
         clear_bit(HCI_UART_TX_WAKEUP, &hu->tx_state);
 
         while ((skb = brcm_hci_uart_dequeue(hu))) {
             int len;
+            if (wakeup) {
+                BT_LDISC_DBG(V4L2_DBG_TX, "hci_uart_tx_wakeup");
+                brcm_btsleep_wake(sleep);
+                wakeup = false;
+            }
+
             spin_lock_irqsave(&hu->lock, lock_flags);
 
             len = tty->ops->write(tty, skb->data, skb->len);
