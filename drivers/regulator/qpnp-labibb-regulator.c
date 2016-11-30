@@ -1231,15 +1231,13 @@ static int qpnp_lab_dt_init(struct qpnp_labibb *labibb,
 		return -EINVAL;
 	}
 
-#ifdef CONFIG_SOMC_LCD_OCP_ENABLED
 	if (of_property_read_bool(of_node,
-		"qcom,qpnp-lab-limit-max-current-enable"))
-		val |= LAB_CURRENT_LIMIT_OVERRIDE;
-#else
-	if (of_property_read_bool(of_node,
-		"qcom,qpnp-lab-limit-max-current-enable"))
+		"qcom,qpnp-lab-limit-max-current-enable")) {
 		val |= LAB_CURRENT_LIMIT_EN;
+#ifdef CONFIG_SOMC_LCD_OCP_ENABLED
+		val |= LAB_CURRENT_LIMIT_OVERRIDE;
 #endif /* SOMC_LCD_OCP_ENABLED */
+	}
 
 	rc = qpnp_labibb_write(labibb, labibb->lab_base +
 				REG_LAB_CURRENT_LIMIT, &val, 1);
@@ -3213,14 +3211,14 @@ static int qpnp_ibb_regulator_disable(struct regulator_dev *rdev)
 	int rc;
 	struct qpnp_labibb *labibb  = rdev_get_drvdata(rdev);
 
+#ifdef CONFIG_SOMC_LCD_OCP_ENABLED
+		qpnp_ibb_interrupt_disable_ctl(labibb);
+#endif /* SOMC_LCD_OCP_ENABLED */
+
 	if (labibb->ibb_vreg.vreg_enabled && !labibb->swire_control) {
 
 		if (labibb->mode != QPNP_LABIBB_STANDALONE_MODE)
 			return qpnp_labibb_regulator_disable(labibb);
-
-#ifdef CONFIG_SOMC_LCD_OCP_ENABLED
-		qpnp_ibb_interrupt_disable_ctl(labibb);
-#endif /* SOMC_LCD_OCP_ENABLED */
 
 		rc = qpnp_ibb_set_mode(labibb, IBB_SW_CONTROL_DIS);
 		if (rc) {
@@ -3731,23 +3729,6 @@ static int qpnp_labibb_regulator_probe(struct spmi_device *spmi)
 		return rc;
 	}
 
-	labibb->ttw_en = of_property_read_bool(labibb->dev->of_node,
-				"qcom,labibb-touch-to-wake-en");
-	if (labibb->ttw_en && labibb->mode != QPNP_LABIBB_LCD_MODE) {
-		pr_err("Invalid mode for TTW\n");
-		return -EINVAL;
-	}
-
-	labibb->ttw_force_lab_on = of_property_read_bool(
-		labibb->dev->of_node, "qcom,labibb-ttw-force-lab-on");
-
-	labibb->swire_control = of_property_read_bool(labibb->dev->of_node,
-							"qpnp,swire-control");
-	if (labibb->swire_control && labibb->mode != QPNP_LABIBB_AMOLED_MODE) {
-		pr_err("Invalid mode for SWIRE control\n");
-		return -EINVAL;
-	}
-
 #ifdef CONFIG_SOMC_LCD_OCP_ENABLED
 	/* initialize labibb_vreg_status_ctrl */
 	labibb_vreg_check.labibb = labibb;
@@ -3772,6 +3753,23 @@ static int qpnp_labibb_regulator_probe(struct spmi_device *spmi)
 	INIT_DELAYED_WORK(&labibb_vreg_check.vreg_check_work,
 				vreg_check_worker);
 #endif /* CONFIG_SOMC_LCD_OCP_ENABLED */
+
+	labibb->ttw_en = of_property_read_bool(labibb->dev->of_node,
+				"qcom,labibb-touch-to-wake-en");
+	if (labibb->ttw_en && labibb->mode != QPNP_LABIBB_LCD_MODE) {
+		pr_err("Invalid mode for TTW\n");
+		return -EINVAL;
+	}
+
+	labibb->ttw_force_lab_on = of_property_read_bool(
+		labibb->dev->of_node, "qcom,labibb-ttw-force-lab-on");
+
+	labibb->swire_control = of_property_read_bool(labibb->dev->of_node,
+							"qpnp,swire-control");
+	if (labibb->swire_control && labibb->mode != QPNP_LABIBB_AMOLED_MODE) {
+		pr_err("Invalid mode for SWIRE control\n");
+		return -EINVAL;
+	}
 
 	spmi_for_each_container_dev(spmi_resource, spmi) {
 		if (!spmi_resource) {
