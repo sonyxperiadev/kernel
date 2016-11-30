@@ -192,6 +192,11 @@ static ssize_t queue_write_same_max_show(struct request_queue *q, char *page)
 		(unsigned long long)q->limits.max_write_same_sectors << 9);
 }
 
+static ssize_t queue_write_zeroes_max_show(struct request_queue *q, char *page)
+{
+	return sprintf(page, "%llu\n",
+		(unsigned long long)q->limits.max_write_zeroes_sectors << 9);
+}
 
 static ssize_t
 queue_max_sectors_store(struct request_queue *q, const char *page, size_t count)
@@ -479,6 +484,11 @@ static struct queue_sysfs_entry queue_write_same_max_entry = {
 	.show = queue_write_same_max_show,
 };
 
+static struct queue_sysfs_entry queue_write_zeroes_max_entry = {
+	.attr = {.name = "write_zeroes_max_bytes", .mode = S_IRUGO },
+	.show = queue_write_zeroes_max_show,
+};
+
 static struct queue_sysfs_entry queue_nonrot_entry = {
 	.attr = {.name = "rotational", .mode = S_IRUGO | S_IWUSR },
 	.show = queue_show_nonrot,
@@ -545,6 +555,7 @@ static struct attribute *default_attrs[] = {
 	&queue_discard_max_hw_entry.attr,
 	&queue_discard_zeroes_data_entry.attr,
 	&queue_write_same_max_entry.attr,
+	&queue_write_zeroes_max_entry.attr,
 	&queue_nonrot_entry.attr,
 	&queue_nomerges_entry.attr,
 	&queue_rq_affinity_entry.attr,

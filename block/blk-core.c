@@ -1937,6 +1937,10 @@ generic_make_request_checks(struct bio *bio)
 		if (!bdev_write_same(bio->bi_bdev))
 			goto not_supported;
 		break;
+	case REQ_OP_WRITE_ZEROES:
+		if (!bdev_write_zeroes_sectors(bio->bi_bdev))
+			goto not_supported;
+		break;
 	default:
 		break;
 	}
@@ -2741,9 +2745,9 @@ void blk_finish_request(struct request *req, int error)
 
 	blk_account_io_done(req);
 
-	if (req->end_io)
+	if (req->end_io) {
 		req->end_io(req, error);
-	else {
+	} else {
 		if (blk_bidi_rq(req))
 			__blk_put_request(req->next_rq->q, req->next_rq);
 
