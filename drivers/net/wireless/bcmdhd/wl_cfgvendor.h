@@ -200,6 +200,7 @@ enum gscan_attributes {
     GSCAN_ATTRIBUTE_RSSI_HIGH,
     GSCAN_ATTRIBUTE_HOSTLIST_BSSID_ELEM,
     GSCAN_ATTRIBUTE_HOTLIST_FLUSH,
+    GSCAN_ATTRIBUTE_HOTLIST_BSSID_COUNT,
 
     /* remaining reserved for additional attributes */
     GSCAN_ATTRIBUTE_RSSI_SAMPLE_SIZE = 60,
