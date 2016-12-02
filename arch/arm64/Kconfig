@@ -276,6 +276,7 @@ config ARCH_MSM
 config ARCH_MSM8916
 	bool "Enable Support for Qualcomm MSM8916"
 	depends on ARCH_MSM
+	select RCU_BOOST if DEBUG_KMEMLEAK
 	help
 	  This enables support for the MSM8916 chipset. If you don't
 	  know what to do here, say N
@@ -347,6 +348,33 @@ config MSM8994_V1_PMUIRQ_WA
 	  This workaround is required for MSM8994 V1 revision where the
 	  percpu PMU interrupt is incorrectly connected to the corresponding
 	  CPUs in the other cluster.
+
+config ARCH_SONY_LOIRE
+    bool "Sony Mobile Loire platform"
+    depends on ARCH_MSM8916
+    help
+      Support for the SONY Mobile Loire platform
+      which is based on QCOM MSM8956 chipset.
+      If you enable this config,
+      please use SONY Mobile device tree.
+
+config MACH_SONY_SUZU
+    bool "Sony Mobile SUZU"
+    depends on ARCH_SONY_LOIRE
+    help
+      Support for the SONY Mobile Suzu device
+      which is based on SONY Loire platform.
+      If you enable this config,
+      please use SONY Mobile device tree.
+
+config MACH_SONY_KUGO
+    bool "Sony Mobile KUGO"
+    depends on ARCH_SONY_LOIRE
+    help
+      Support for the SONY Mobile Kugo device
+      which is based on SONY Loire platform.
+      If you enable this config,
+      please use SONY Mobile device tree.
 
 config ARCH_SONY_TONE
     bool "Sony Mobile Tone platform"
