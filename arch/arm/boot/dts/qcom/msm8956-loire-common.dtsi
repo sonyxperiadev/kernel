@@ -182,7 +182,7 @@
 			interrupts = <65 0x2>;
 			synaptics,irq_gpio = <&msm_gpio 65 0x00>;
 			chip_id = <0x40>;
-			post_probe_start = <0>;
+			post_probe_start = <1>;
 			synaptics,firmware_name = "touch_module_id_0x%02x.img";
 			flash_on_post_probe = <0>;
 			flip_config = <0>;
