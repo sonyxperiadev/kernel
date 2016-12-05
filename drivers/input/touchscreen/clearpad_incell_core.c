@@ -44,8 +44,6 @@
 #include <asm/mach-types.h>
 #endif
 
-#define SYN_PCA_BLOCK_NUMBER_MAX	31
-
 #define SYN_CLEARPAD_VENDOR		0x1
 #define SYN_MAX_N_FINGERS		10
 #define SYN_DEVICE_STATUS		0x13
@@ -349,18 +347,6 @@ BIT_DEF(CALIBRATION_STATE_CALIBRATION_CRC,		0x02, 1);
 /*
  * Types
  */
-
-enum clearpad_infomation_attribute_kind_e {
-	PCA_DATA			= 0x00,
-	PCA_IC				= 0x01,
-	PCA_CHIP			= 0x03,
-	PCA_MODULE			= 0x05,
-};
-
-enum clearpad_infomation_kind_e {
-	PCA_NO_USE			= 0x00,
-	PCA_FW_INFO			= 0x02,
-};
 
 enum clearpad_state_e {
 	SYN_STATE_INIT,
@@ -7513,6 +7499,7 @@ end:
 	return rc;
 }
 
+/* need LOCK(&this->lock) */
 static int clearpad_read_pca_block(struct clearpad_t *this,
 				  u16 block_num, u8 *data)
 {
@@ -7584,6 +7571,7 @@ end:
 	return rc;
 }
 
+/* need LOCK(&this->lock) */
 static int clearpad_write_pca_block(struct clearpad_t *this,
 				  u16 block_num, u8 *data)
 {
@@ -7714,10 +7702,9 @@ static int clearpad_write_pca_block(struct clearpad_t *this,
 	UNLOCK(&this->lock);
 	rc = clearpad_wait_for_interrupt(this, &this->interrupt.for_F34,
 						this->interrupt.wait_ms);
-	if (rc) {
+	if (rc)
 		HWLOGE(this, "wait for interrupt status failed %d\n", rc);
-		LOCK(&this->lock);
-	}
+	LOCK(&this->lock);
 
 err_exit_bl:
 	/* exit bootloader mode */
@@ -7757,8 +7744,10 @@ static long clearpad_debug_pca_ioctl(struct file *file,
 
 	switch (cmd) {
 	case SYN_PCA_IOCTL_GET:
+		LOCK(&this->lock);
 		rc = clearpad_read_pca_block(this, pca_info.block_pos,
 					     pca_info.data);
+		UNLOCK(&this->lock);
 		if (rc)
 			break;
 
@@ -7769,8 +7758,10 @@ static long clearpad_debug_pca_ioctl(struct file *file,
 		}
 		break;
 	case SYN_PCA_IOCTL_SET:
+		LOCK(&this->lock);
 		rc = clearpad_write_pca_block(this, pca_info.block_pos,
 					 pca_info.data);
+		UNLOCK(&this->lock);
 		break;
 	default:
 		rc = -EINVAL;
@@ -7908,8 +7899,6 @@ static int clearpad_probe(struct platform_device *pdev)
 		}
 	}
 
-	this->post_probe.start = true;
-
 	spin_lock_init(&this->noise_det.slock);
 #ifdef CONFIG_TOUCHSCREEN_CLEARPAD_RMI_DEV
 	if (!cdata->rmi_dev) {
@@ -8029,7 +8018,7 @@ static int clearpad_probe(struct platform_device *pdev)
 		goto err_in_create_link;
 	}
 
-	if (likely(this->post_probe.start)) {
+	if (this->post_probe.start) {
 		HWLOGI(this, "schedule post probe\n");
 		schedule_delayed_work(&this->post_probe.work, 0);
 	} else {
@@ -8211,7 +8200,7 @@ static void clearpad_thread_resume_work(struct work_struct *work)
 	if (clearpad_handle_if_first_event(this) < 0)
 		LOGE(this, "failed to handle first event\n");
 
-		touchctrl_unlock_power(this, "fb_unblank");
+	touchctrl_unlock_power(this, "fb_unblank");
 
 	get_monotonic_boottime(&ts);
 	HWLOGI(this, "end thread_resume @ %ld.%06ld\n",
