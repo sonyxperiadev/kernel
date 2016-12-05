@@ -105,19 +105,17 @@
 		compatible = "qcom,bluesleep";
 		bt_host_wake = <&tlmm 82 0x00>; /* BT_HOST_WAKE */
 		bt_ext_wake = <&tlmm 81 0x00>; /* BT_DEV_WAKE */
-		bt_reg_on = <&tlmm 83 0x00>; /* BT_REG_ON */
 		interrupt-parent = <&tlmm>;
 		interrupts = <82 0>;
 		interrupt-names = "host_wake";
 		pinctrl-names = "default", "sleep";
-		pinctrl-0 = <&msm_gpio_83 &msm_gpio_82_active &msm_gpio_81>;
-		pinctrl-1 = <&msm_gpio_83 &msm_gpio_82_suspend &msm_gpio_81>;
+		pinctrl-0 = <&msm_gpio_82_active &msm_gpio_81>;
+		pinctrl-1 = <&msm_gpio_82_suspend &msm_gpio_81>;
 	};
 
 	bcm43xx {
 		compatible = "bcm,bcm43xx";
-		gpios = <&tlmm 83 0x00>, /* BT_REG_ON */
-			<&tlmm 81 0x00>; /* BT_DEV_WAKE */
+		bcm,reg-on-gpio = <&tlmm 83 0x00>; /* BT_REG_ON */
 		pinctrl-names = "default", "sleep";
 		pinctrl-0 = <&msm_gpio_83 &msm_gpio_81>;
 		pinctrl-1 = <&msm_gpio_83 &msm_gpio_81>;
