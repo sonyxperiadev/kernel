@@ -2353,7 +2353,6 @@ void msm_hs_set_clock(int port_index, int on)
 {
 	struct uart_port *uport = msm_hs_get_uart_port(port_index);
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
-	int rc = atomic_read(&msm_uport->clk_count);
 
 	// Check if there is a registered wakeup source
 	if (!msm_uport->ws.name) {
@@ -2368,10 +2367,8 @@ void msm_hs_set_clock(int port_index, int on)
 		msm_hs_request_clock_on(uport);
 		msm_hs_set_mctrl(uport, TIOCM_RTS);
 	} else {
-		if (rc > 0) {
-			msm_hs_set_mctrl(uport, 0);
-			msm_hs_request_clock_off(uport);
-		}
+		msm_hs_set_mctrl(uport, 0);
+		msm_hs_request_clock_off(uport);
 	}
 }
 EXPORT_SYMBOL(msm_hs_set_clock);
