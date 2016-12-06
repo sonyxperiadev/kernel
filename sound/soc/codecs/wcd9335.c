@@ -1540,6 +1540,7 @@ static void tasha_mbhc_hph_l_pull_up_control(struct snd_soc_codec *codec,
 			    0xC0, 0x40);
 }
 
+#ifndef CONFIG_ARCH_SONY_LOIRE
 static int tasha_enable_ext_mb_source(struct wcd_mbhc *mbhc,
 		bool turn_on)
 {
@@ -1589,6 +1590,7 @@ static int tasha_enable_ext_mb_source(struct wcd_mbhc *mbhc,
 
 	return ret;
 }
+#endif
 
 static int tasha_micbias_control(struct snd_soc_codec *codec,
 				 int micb_num,
@@ -7853,9 +7855,6 @@ static int tasha_amic_pwr_lvl_get(struct snd_kcontrol *kcontrol,
 {
 	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	u16 amic_reg;
-#ifdef CONFIG_ARCH_SONY_LOIRE
-	struct tasha_priv *tasha = snd_soc_codec_get_drvdata(codec);
-#endif
 
 	if (!strcmp(kcontrol->id.name, "AMIC_1_2 PWR MODE"))
 		amic_reg = WCD9335_ANA_AMIC1;
@@ -13586,6 +13585,7 @@ err:
 	return ret;
 }
 
+#ifndef CONFIG_ARCH_SONY_LOIRE
 static struct regulator *tasha_codec_find_ondemand_regulator(
 		struct snd_soc_codec *codec, const char *name)
 {
@@ -13605,6 +13605,7 @@ static struct regulator *tasha_codec_find_ondemand_regulator(
 		name);
 	return NULL;
 }
+#endif
 
 static int tasha_codec_probe(struct snd_soc_codec *codec)
 {
