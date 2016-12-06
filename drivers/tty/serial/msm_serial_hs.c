@@ -31,10 +31,6 @@
  * of operation. See msm_serial_hs_platform_data.rx_wakeup_irq.
  */
 
-#if defined(CONFIG_MACH_SONY_SHINANO) || defined(CONFIG_ARCH_SONY_LOIRE)
-#define SONY_SHINANO_LOIRE
-#endif
-
 #include <linux/module.h>
 
 #include <linux/serial.h>
@@ -66,7 +62,7 @@
 #include <linux/ipc_logging.h>
 #include <asm/irq.h>
 #include <linux/kthread.h>
-#ifndef SONY_SHINANO_LOIRE
+#ifndef CONFIG_ARCH_MSM8974
 #include <linux/delay.h>
 #endif
 
@@ -213,7 +209,7 @@ struct msm_hs_wakeup {
 	unsigned char rx_to_inject;
 	bool enabled;
 	bool freed;
-#ifndef SONY_SHINANO_LOIRE
+#ifndef CONFIG_ARCH_MSM8974
 	struct work_struct resume_work;
 #endif
 };
@@ -261,7 +257,7 @@ struct msm_hs_port {
 	atomic_t client_req_state;
 	void *ipc_msm_hs_log_ctxt;
 	int ipc_debug_mask;
-#ifndef SONY_SHINANO_LOIRE
+#ifndef CONFIG_ARCH_MSM8974
 	atomic_t wakeup_irq_disabled;
 #endif
 };
@@ -2238,7 +2234,7 @@ void toggle_wakeup_interrupt(struct msm_hs_port *msm_uport)
 		spin_lock_irqsave(&uport->lock, flags);
 		msm_uport->wakeup.ignore = 1;
 		MSM_HS_DBG("%s(): Enable Wakeup IRQ", __func__);
-#ifndef SONY_SHINANO_LOIRE
+#ifndef CONFIG_ARCH_MSM8974
 		atomic_set(&msm_uport->wakeup_irq_disabled, 0);
 #endif
 		enable_irq(msm_uport->wakeup.irq);
@@ -2246,7 +2242,7 @@ void toggle_wakeup_interrupt(struct msm_hs_port *msm_uport)
 		msm_uport->wakeup.enabled = true;
 		spin_unlock_irqrestore(&uport->lock, flags);
 	} else {
-#ifdef SONY_SHINANO_LOIRE
+#ifdef CONFIG_ARCH_MSM8974
 		disable_irq_nosync(msm_uport->wakeup.irq);
 #else
 		spin_lock_irqsave(&uport->lock, flags);
@@ -2366,7 +2362,7 @@ void msm_hs_set_clock(int port_index, int on)
 }
 EXPORT_SYMBOL(msm_hs_set_clock);
 
-#ifdef SONY_SHINANO_LOIRE
+#ifdef CONFIG_ARCH_MSM8974
 static irqreturn_t msm_hs_wakeup_isr(int irq, void *dev)
 {
 	unsigned int wakeup = 0;
@@ -2476,7 +2472,7 @@ static void msm_hs_wakeup_resume_work(struct work_struct *work)
 		schedule_work(&msm_uport->wakeup.resume_work);
 	}
 }
-#endif // #ifdef SONY_SHINANO_LOIRE
+#endif // #ifdef CONFIG_ARCH_MSM8974
 
 static const char *msm_hs_type(struct uart_port *port)
 {
@@ -2662,7 +2658,7 @@ static int msm_hs_startup(struct uart_port *uport)
 	if (is_use_low_power_wakeup(msm_uport)) {
 		ret = request_threaded_irq(msm_uport->wakeup.irq, NULL,
 					msm_hs_wakeup_isr,
-#ifdef SONY_SHINANO_LOIRE
+#ifdef CONFIG_ARCH_MSM8974
 					IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
 #else
 					IRQF_TRIGGER_HIGH | IRQF_ONESHOT,
@@ -2784,7 +2780,7 @@ static int msm_hs_startup(struct uart_port *uport)
 	spin_lock_irqsave(&uport->lock, flags);
 	atomic_set(&msm_uport->ioctl_count, 0);
 	atomic_set(&msm_uport->client_req_state, 0);
-#ifndef SONY_SHINANO_LOIRE
+#ifndef CONFIG_ARCH_MSM8974
 	atomic_set(&msm_uport->wakeup_irq_disabled, 0);
 #endif
 	msm_hs_start_rx_locked(uport);
@@ -3310,7 +3306,7 @@ static void  msm_serial_hs_rt_init(struct uart_port *uport)
 
 	MSM_HS_INFO("%s(): Enabling runtime pm", __func__);
 	pm_runtime_set_suspended(uport->dev);
-#ifdef SONY_SHINANO_LOIRE
+#ifdef CONFIG_ARCH_MSM8974
 	pm_runtime_set_autosuspend_delay(uport->dev, 100);
 #else
 	pm_runtime_set_autosuspend_delay(uport->dev, 5000);
@@ -3480,7 +3476,7 @@ static int msm_hs_probe(struct platform_device *pdev)
 	msm_uport->wakeup.inject_rx = pdata->inject_rx_on_wakeup;
 	msm_uport->wakeup.rx_to_inject = pdata->rx_to_inject;
 	msm_uport->obs = pdata->obs;
-#ifndef SONY_SHINANO_LOIRE
+#ifndef CONFIG_ARCH_MSM8974
 	INIT_WORK(&msm_uport->wakeup.resume_work, msm_hs_wakeup_resume_work);
 #endif
 
@@ -3671,7 +3667,7 @@ static void msm_hs_shutdown(struct uart_port *uport)
 				__func__);
 	}
 
-#ifndef SONY_SHINANO_LOIRE
+#ifndef CONFIG_ARCH_MSM8974
 	cancel_work_sync(&msm_uport->wakeup.resume_work);
 #endif
 	cancel_delayed_work_sync(&msm_uport->rx.flip_insert_work);
