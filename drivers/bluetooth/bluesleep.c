@@ -175,14 +175,20 @@ struct proc_dir_entry *bluetooth_dir, *sleep_dir;
 
 static void hsuart_power(int on)
 {
+	int ret = 0;
+
 	if (test_bit(BT_SUSPEND, &flags))
 		return;
 	if (on) {
-		msm_hs_request_clock_on(bsi->uport);
+		ret = msm_hs_request_clock_on(bsi->uport);
+		if (unlikely(ret))
+			pr_err("Turning UART clock on failed (%d)\n", ret);
 		msm_hs_set_mctrl(bsi->uport, TIOCM_RTS);
 	} else {
 		msm_hs_set_mctrl(bsi->uport, 0);
-		msm_hs_request_clock_off(bsi->uport);
+		ret = msm_hs_request_clock_off(bsi->uport);
+		if (unlikely(ret))
+			pr_err("Turning UART clock off failed (%d)\n", ret);
 	}
 }
 
@@ -665,6 +671,8 @@ static int bluesleep_remove(struct platform_device *pdev)
 
 static int bluesleep_resume(struct platform_device *pdev)
 {
+	int ret = 0;
+
 	if (test_bit(BT_SUSPEND, &flags)) {
 		if (debug_mask & DEBUG_SUSPEND)
 			pr_info("bluesleep resuming...\n");
@@ -672,7 +680,10 @@ static int bluesleep_resume(struct platform_device *pdev)
 			(gpio_get_value(bsi->host_wake) == bsi->irq_polarity)) {
 			if (debug_mask & DEBUG_SUSPEND)
 				pr_info("bluesleep resume from BT event...\n");
-			msm_hs_request_clock_on(bsi->uport);
+			ret = msm_hs_request_clock_on(bsi->uport);
+			if (unlikely(ret))
+				pr_err("Turning UART clock on failed (%d)\n",
+						ret);
 			msm_hs_set_mctrl(bsi->uport, TIOCM_RTS);
 		}
 		clear_bit(BT_SUSPEND, &flags);
