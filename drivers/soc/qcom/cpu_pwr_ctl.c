@@ -58,7 +58,7 @@ struct msm_l2ccc_of_info {
 static int kick_l2spm(struct device_node *l2ccc_node,
 				struct device_node *vctl_node)
 {
-	struct resource res, acinactm_res;
+	struct resource res;
 	int val;
 	int timeout = 10, ret = 0;
 	void __iomem *l2spm_base = of_iomap(vctl_node, 0);
