@@ -310,6 +310,8 @@ struct binder_ref {
 	uint32_t desc;
 	atomic_t strong;
 	atomic_t weak;
+	bool is_zombie;
+	struct hlist_node zombie_ref;
 	struct binder_ref_death *death;
 };
 
@@ -371,6 +373,7 @@ struct binder_proc {
 	struct binder_seq_node zombie_proc;
 	bool is_zombie;
 	struct hlist_head zombie_nodes;
+	struct hlist_head zombie_refs;
 	struct hlist_head zombie_threads;
 	struct binder_alloc alloc;
 	struct binder_context *context;
@@ -949,8 +952,9 @@ static void binder_delete_ref(struct binder_ref *ref, bool force)
 		      ref->node->debug_id);
 
 	binder_proc_lock(ref->proc, __LINE__);
-	if (!force && ((atomic_read(&ref->strong) != 0) ||
-				(atomic_read(&ref->weak) != 0))) {
+	if (ref->is_zombie ||
+	    (!force && ((atomic_read(&ref->strong) != 0) ||
+				(atomic_read(&ref->weak) != 0)))) {
 		/*
 		 * This is not a forced deletion (eg not
 		 * a release) and there is still a reference.
@@ -962,6 +966,7 @@ static void binder_delete_ref(struct binder_ref *ref, bool force)
 
 	rb_erase(&ref->rb_node_desc, &ref->proc->refs_by_desc);
 	rb_erase(&ref->rb_node_node, &ref->proc->refs_by_node);
+	ref->is_zombie = true;
 	binder_proc_unlock(ref->proc, __LINE__);
 
 	if (atomic_read(&ref->strong))
@@ -969,20 +974,26 @@ static void binder_delete_ref(struct binder_ref *ref, bool force)
 
 	binder_proc_lock(node_proc, __LINE__);
 	hlist_del(&ref->node_entry);
+	if (ref->node->is_zombie)
+		binder_queue_for_zombie_cleanup(node_proc);
 	binder_proc_unlock(node_proc, __LINE__);
 
 	binder_dec_node(ref->node, 0, 1);
+
+	binder_proc_lock(ref->proc, __LINE__);
 	if (ref->death) {
 		binder_debug(BINDER_DEBUG_DEAD_BINDER,
 			     "%d delete ref %d desc %d has death notification\n",
 			      ref->proc->pid, ref->debug_id, ref->desc);
-
-		binder_dequeue_work(&ref->death->work, __LINE__);
-		kfree(ref->death);
-		binder_stats_deleted(BINDER_STAT_DEATH);
+		if (ref->death->work.wlist)
+			binder_dequeue_work(&ref->death->work, __LINE__);
+		binder_stats_zombie(BINDER_STAT_DEATH);
 	}
-	kfree(ref);
-	binder_stats_deleted(BINDER_STAT_REF);
+	INIT_HLIST_NODE(&ref->zombie_ref);
+	hlist_add_head(&ref->zombie_ref, &ref->proc->zombie_refs);
+	binder_queue_for_zombie_cleanup(ref->proc);
+	binder_proc_unlock(ref->proc, __LINE__);
+	binder_stats_zombie(BINDER_STAT_REF);
 }
 
 static int binder_inc_ref(struct binder_ref *ref, int strong,
@@ -2150,7 +2161,7 @@ static int binder_thread_write(struct binder_proc *proc,
 			    (cmd == BC_INCREFS || cmd == BC_ACQUIRE)) {
 				ref = binder_get_ref_for_node(proc,
 							      ctx_mgr_node);
-				if (ref->desc != target) {
+				if (ref && ref->desc != target) {
 					binder_user_error("%d:%d tried to acquire reference to desc 0, got %d instead\n",
 						proc->pid, thread->pid,
 						ref->desc);
@@ -3606,6 +3617,7 @@ static int binder_open(struct inode *nodp, struct file *filp)
 	atomic_set(&proc->requested_threads, 0);
 	atomic_set(&proc->requested_threads_started, 0);
 	INIT_LIST_HEAD(&proc->zombie_proc.list_node);
+	INIT_HLIST_HEAD(&proc->zombie_refs);
 	INIT_HLIST_HEAD(&proc->zombie_nodes);
 	INIT_HLIST_HEAD(&proc->zombie_threads);
 	filp->private_data = proc;
@@ -3857,12 +3869,14 @@ static bool binder_proc_clear_zombies(struct binder_proc *proc)
 	struct binder_node *node;
 	struct hlist_node *tmp;
 	struct binder_thread *thread;
+	struct binder_ref *ref;
 	struct hlist_head nodes_to_free;
 	struct hlist_head threads_to_free;
+	struct hlist_head refs_to_free;
 	bool needs_requeue = false;
-
 	INIT_HLIST_HEAD(&nodes_to_free);
 	INIT_HLIST_HEAD(&threads_to_free);
+	INIT_HLIST_HEAD(&refs_to_free);
 
 	binder_proc_lock(proc, __LINE__);
 	if (!list_empty(&proc->zombie_proc.list_node)) {
@@ -3870,6 +3884,11 @@ static bool binder_proc_clear_zombies(struct binder_proc *proc)
 		binder_proc_unlock(proc, __LINE__);
 		return 0;
 	}
+	hlist_for_each_entry_safe(ref, tmp, &proc->zombie_refs, zombie_ref) {
+		hlist_del_init(&ref->zombie_ref);
+		hlist_add_head(&ref->zombie_ref, &refs_to_free);
+	}
+
 	hlist_for_each_entry_safe(node, tmp, &proc->zombie_nodes, dead_node)
 		if (hlist_empty(&node->refs)) {
 			hlist_del_init(&node->dead_node);
@@ -3907,6 +3926,17 @@ static bool binder_proc_clear_zombies(struct binder_proc *proc)
 		binder_stats_delete_zombie(BINDER_STAT_THREAD);
 		cleared_threads++;
 	}
+	hlist_for_each_entry_safe(ref, tmp, &refs_to_free, zombie_ref) {
+		hlist_del_init(&ref->zombie_ref);
+		if (ref->death) {
+			binder_dequeue_work(&ref->death->work, __LINE__);
+			kfree(ref->death);
+			binder_stats_delete_zombie(BINDER_STAT_DEATH);
+		}
+		kfree(ref);
+		binder_stats_delete_zombie(BINDER_STAT_REF);
+	}
+
 	return proc->is_zombie && !needs_requeue;
 }
 
@@ -4309,16 +4339,18 @@ static void print_binder_proc_stats(struct seq_file *m,
 	struct rb_node *n;
 	struct binder_node *node;
 	struct binder_thread *thread;
+	struct binder_ref *ref;
 	int count, strong, weak;
 	int zombie_threads;
 	int zombie_nodes;
+	int zombie_refs;
 
 	seq_printf(m, "proc %d%s\n", proc->pid,
 			proc->is_zombie ? " (ZOMBIE)" : "");
 	seq_printf(m, "context %s\n", proc->context->name);
 	seq_printf(m, "  cleared: procs=%d nodes=%d threads=%d\n",
 			cleared_procs, cleared_nodes, cleared_threads);
-	zombie_threads = zombie_nodes = count = 0;
+	zombie_threads = zombie_nodes = zombie_refs = count = 0;
 
 	binder_proc_lock(proc, __LINE__);
 	for (n = rb_first(&proc->threads); n != NULL; n = rb_next(n))
@@ -4344,12 +4376,15 @@ static void print_binder_proc_stats(struct seq_file *m,
 		hlist_for_each_entry(thread, &proc->zombie_threads,
 				     zombie_thread)
 			zombie_threads++;
+		hlist_for_each_entry(ref, &proc->zombie_refs, zombie_ref)
+			zombie_refs++;
 	}
 	binder_proc_unlock(proc, __LINE__);
 	seq_printf(m, "  active threads: %d\n", proc->active_thread_count);
 	seq_printf(m, "  nodes: %d\n", count);
 	seq_printf(m, "  zombie nodes: %d\n", zombie_nodes);
 	seq_printf(m, "  zombie threads: %d\n", zombie_threads);
+	seq_printf(m, "  zombie refs: %d\n", zombie_refs);
 	count = 0;
 	strong = 0;
 	weak = 0;
