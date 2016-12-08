@@ -570,6 +570,16 @@ void arch_setup_pdev_archdata(struct platform_device *pdev)
 int msm8994_req_tlbi_wa = 1;
 #define SOC_MAJOR_REV(val) (((val) & 0xF00) >> 8)
 
+#if defined(CONFIG_ARCH_SONY_KITAKAMI) || defined(CONFIG_ARCH_SONY_LOIRE)
+static struct platform_device bcm_ldisc_device = {
+	.name = "bcm_ldisc",
+	.id = -1,
+	.dev = {
+
+	},
+};
+#endif
+
 static int __init msm8994_check_tlbi_workaround(void)
 {
 	void __iomem *addr;
@@ -587,6 +597,9 @@ static int __init msm8994_check_tlbi_workaround(void)
 		msm8994_req_tlbi_wa = 0;
 	}
 
+#if defined(CONFIG_ARCH_SONY_KITAKAMI) || defined(CONFIG_ARCH_SONY_LOIRE)
+	platform_device_register(&bcm_ldisc_device);
+#endif
 	return 0;
 }
 arch_initcall_sync(msm8994_check_tlbi_workaround);

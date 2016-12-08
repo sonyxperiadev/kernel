@@ -115,6 +115,16 @@ static void __init msm8974_map_io(void)
 	msm_map_8974_io();
 }
 
+#if defined(CONFIG_MACH_SONY_SHINANO)
+static struct platform_device bcm_ldisc_device = {
+	.name = "bcm_ldisc",
+	.id = -1,
+	.dev = {
+
+	},
+};
+#endif
+
 void __init msm8974_init(void)
 {
 	struct of_dev_auxdata *adata = msm8974_auxdata_lookup;
@@ -135,6 +145,9 @@ void __init msm8974_init(void)
 	msm_8974_init_gpiomux();
 	regulator_has_full_constraints();
 	msm8974_add_drivers();
+#if defined(CONFIG_MACH_SONY_SHINANO)
+	platform_device_register(&bcm_ldisc_device);
+#endif
 }
 
 static const char *msm8974_dt_match[] __initconst = {
