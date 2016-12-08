@@ -2389,23 +2389,6 @@ exit_request_clock_on:
 }
 EXPORT_SYMBOL(msm_hs_request_clock_on);
 
-void msm_hs_set_clock(int port_index, int on)
-{
-	struct uart_port *uport = msm_hs_get_uart_port(port_index);
-
-	pr_debug("%s /dev/ttyHS%d clock: %s\n", __func__,
-		port_index, on ? "ON" : "OFF");
-
-	if (on) {
-		msm_hs_request_clock_on(uport);
-		msm_hs_set_mctrl(uport, TIOCM_RTS);
-	} else {
-		msm_hs_set_mctrl(uport, 0);
-		msm_hs_request_clock_off(uport);
-	}
-}
-EXPORT_SYMBOL(msm_hs_set_clock);
-
 static irqreturn_t msm_hs_wakeup_isr(int irq, void *dev)
 {
 	unsigned int wakeup = 0;
