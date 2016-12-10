@@ -255,7 +255,7 @@ static void bluesleep_sleep_work(struct work_struct *work)
 			pr_err("This should never happen.\n");
 			return;
 		}
-	} else if (test_bit(BT_ASLEEP, &flags)) {
+	} else if (test_bit(BT_ASLEEP, &flags) && (bsi->uport != NULL)) {
 		/* Can not sleep but UART has already sleep */
 		if (debug_mask & DEBUG_SUSPEND)
 			pr_err("waking up...\n");
