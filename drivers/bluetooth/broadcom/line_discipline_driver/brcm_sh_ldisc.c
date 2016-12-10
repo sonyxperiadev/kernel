@@ -704,32 +704,32 @@ static ssize_t store_snoop_enable(struct device *dev,
 
 /* structures specific for sysfs entries */
 static struct kobj_attribute ldisc_bdaddr =
-__ATTR(bdaddr, 0666, NULL,(void *)store_bdaddr);
+__ATTR(bdaddr, S_IRUGO | S_IWUSR | S_IWGRP, NULL,(void *)store_bdaddr);
 
 /* structures specific for sysfs entries */
 static struct kobj_attribute ldisc_install =
-__ATTR(install, 0666, (void *)show_install, (void *)store_install);
+__ATTR(install, S_IRUGO | S_IWUSR | S_IWGRP, (void *)show_install, (void *)store_install);
 
 /* structures specific for sysfs entries */
 static struct kobj_attribute ldisc_vendor_params =
-__ATTR(vendor_params, 0666, (void *)show_vendor_params, (void *)store_vendor_params);
+__ATTR(vendor_params, S_IRUGO | S_IWUSR | S_IWGRP, (void *)show_vendor_params, (void *)store_vendor_params);
 
 /* structures specific for sysfs entries */
 static struct kobj_attribute ldisc_bt_err =
-__ATTR(bt_err, 0666, (void *)show_bt_err, (void *)store_bt_err);
+__ATTR(bt_err, S_IRUGO | S_IWUSR | S_IWGRP, (void *)show_bt_err, (void *)store_bt_err);
 
 /* structures specific for sysfs entries */
 static struct kobj_attribute ldisc_fm_err =
-__ATTR(fm_err, 0666, (void *)show_fm_err, (void *)store_fm_err);
+__ATTR(fm_err, S_IRUGO | S_IWUSR | S_IWGRP, (void *)show_fm_err, (void *)store_fm_err);
 
 /* structures specific for sysfs entries */
 static struct kobj_attribute ldisc_fw_patchfile =
-__ATTR(fw_patchfile, 0666, NULL, (void *)store_fw_patchfile);
+__ATTR(fw_patchfile, S_IRUGO | S_IWUSR | S_IWGRP, NULL, (void *)store_fw_patchfile);
 
 #if V4L2_SNOOP_ENABLE
 /* structures specific for sysfs entries */
 static struct kobj_attribute ldisc_snoop_enable =
-__ATTR(snoop_enable, 0666, (void *)show_snoop_enable, (void *)store_snoop_enable);
+__ATTR(snoop_enable, S_IRUGO | S_IWUSR | S_IWGRP, (void *)show_snoop_enable, (void *)store_snoop_enable);
 #endif
 
 static struct attribute *uim_attrs[] = {
@@ -1692,7 +1692,7 @@ long brcm_sh_ldisc_stop(struct hci_uart *hu)
 {
     long err = 0;
 
-    INIT_COMPLETION(hu->ldisc_installed);
+    reinit_completion(hu->ldisc_installed);
 
     brcm_btsleep_stop(sleep);
     hu->ldisc_install = V4L2_STATUS_OFF;
@@ -1729,7 +1729,7 @@ long brcm_sh_ldisc_start(struct hci_uart *hu)
 
     do {
         brcm_btsleep_start(sleep);
-        INIT_COMPLETION(hu->ldisc_installed);
+        reinit_completion(hu->ldisc_installed);
         /* send notification to UIM */
         hu->ldisc_install = V4L2_STATUS_ON;
         BT_LDISC_DBG(V4L2_DBG_INIT, "ldisc_install = %c",\
@@ -1742,7 +1742,7 @@ long brcm_sh_ldisc_start(struct hci_uart *hu)
                 msecs_to_jiffies(LDISC_TIME));
         if (!err) { /* timeout */
             pr_err("line disc installation timed out ");
-            INIT_COMPLETION(hu->tty_close_complete);
+            reinit_completion(hu->tty_close_complete);
             err = brcm_sh_ldisc_stop(hu);
             cl_err = wait_for_completion_timeout(&hu->tty_close_complete,
                     msecs_to_jiffies(TTY_CLOSE_TIME));
@@ -1757,7 +1757,7 @@ long brcm_sh_ldisc_start(struct hci_uart *hu)
             err = download_patchram(hu);
             if (err != 0) {
                 pr_err("patchram download failed");
-                INIT_COMPLETION(hu->tty_close_complete);
+                reinit_completion(hu->tty_close_complete);
                 brcm_sh_ldisc_stop(hu);
                 cl_err = wait_for_completion_timeout(&hu->tty_close_complete,
                         msecs_to_jiffies(TTY_CLOSE_TIME));

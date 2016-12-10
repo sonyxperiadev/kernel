@@ -515,40 +515,40 @@ static ssize_t store_fmrx_channel_space(struct device *dev,
 
 /* To start FM RX complete scan*/
 static struct kobj_attribute v4l2_fmrx_comp_scan =
-__ATTR(fmrx_comp_scan, 0666, (void *)show_fmrx_comp_scan,
+__ATTR(fmrx_comp_scan, S_IRUGO | S_IWUSR | S_IWGRP, (void *)show_fmrx_comp_scan,
         (void *)store_fmrx_comp_scan);
 
 /* To Set De-Emphasis filter mode */
 static struct kobj_attribute v4l2_fmrx_deemph_mode =
-__ATTR(fmrx_deemph_mode, 0666, (void *)show_fmrx_deemphasis,
+__ATTR(fmrx_deemph_mode, S_IRUGO | S_IWUSR | S_IWGRP, (void *)show_fmrx_deemphasis,
         (void *)store_fmrx_deemphasis);
 
 /* To Enable/Disable FM RX RDS AF feature */
 static struct kobj_attribute v4l2_fmrx_rds_af =
-__ATTR(fmrx_rds_af, 0666, (void *)show_fmrx_af, (void *)store_fmrx_af);
+__ATTR(fmrx_rds_af, S_IRUGO | S_IWUSR | S_IWGRP, (void *)show_fmrx_af, (void *)store_fmrx_af);
 
 /* To switch between Japan/US bands */
 static struct kobj_attribute v4l2_fmrx_band =
-__ATTR(fmrx_band, 0666, (void *)show_fmrx_band, (void *)store_fmrx_band);
+__ATTR(fmrx_band, S_IRUGO | S_IWUSR | S_IWGRP, (void *)show_fmrx_band, (void *)store_fmrx_band);
 
 /* To set the desired FM reception RSSI level */
 static struct kobj_attribute v4l2_fmrx_rssi_lvl =
-__ATTR(fmrx_rssi_lvl, 0666, (void *) show_fmrx_rssi_lvl,
+__ATTR(fmrx_rssi_lvl, S_IRUGO | S_IWUSR | S_IWGRP, (void *) show_fmrx_rssi_lvl,
         (void *)store_fmrx_rssi_lvl);
 
 /* To set the desired FM reception SNR level */
 static struct kobj_attribute v4l2_fmrx_snr_lvl =
-__ATTR(fmrx_snr_lvl, 0666, (void *) show_fmrx_snr_lvl,
+__ATTR(fmrx_snr_lvl, S_IRUGO | S_IWUSR | S_IWGRP, (void *) show_fmrx_snr_lvl,
         (void *)store_fmrx_snr_lvl);
 
 /* To set the desired channel spacing */
 static struct kobj_attribute v4l2_fmrx_channel_space =
-__ATTR(fmrx_chl_lvl, 0666, (void *) show_fmrx_channel_space,
+__ATTR(fmrx_chl_lvl, S_IRUGO | S_IWUSR | S_IWGRP, (void *) show_fmrx_channel_space,
         (void *)store_fmrx_channel_space);
 
 /* To switch between PCM / I2S pins*/
 static struct kobj_attribute v4l2_fmrx_fm_audio_pins =
-__ATTR(fmrx_fm_audio_pins, 0666, (void *)show_fmrx_fm_audio_pins, (void *)store_fmrx_fm_audio_pins);
+__ATTR(fmrx_fm_audio_pins, S_IRUGO | S_IWUSR | S_IWGRP, (void *)show_fmrx_fm_audio_pins, (void *)store_fmrx_fm_audio_pins);
 
 static struct attribute *v4l2_fm_attrs[] = {
     &v4l2_fmrx_comp_scan.attr,
