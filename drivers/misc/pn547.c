@@ -44,7 +44,7 @@
 #include <mach/msm_xo.h>
 #include <linux/workqueue.h>
 #endif
-#ifdef CONFIG_NFC_PN547_PMC8974_CLK_REQ
+#ifdef CONFIG_NFC_PN547_PMC_CLK_REQ
 #include <linux/clk.h>
 #endif
 
@@ -75,7 +75,7 @@ struct pn547_dev {
 	atomic_t read_flag;
 	bool cancel_read;
 	struct wake_lock nfc_wake_lock;
-#ifdef CONFIG_NFC_PN547_PMC8974_CLK_REQ
+#ifdef CONFIG_NFC_PN547_PMC_CLK_REQ
 	struct clk *nfc_clk;
 #endif
 #ifdef CONFIG_NFC_PN547_CLOCK_REQUEST
@@ -581,7 +581,7 @@ static int pn547_probe(struct i2c_client *client,
 	}
 	pn547_dev->clock_state = false;
 #endif
-#ifdef CONFIG_NFC_PN547_PMC8974_CLK_REQ
+#ifdef CONFIG_NFC_PN547_PMC_CLK_REQ
 	pn547_dev->nfc_clk = clk_get(&client->dev, "nfc_clk");
 	if (IS_ERR(pn547_dev->nfc_clk)) {
 		ret = PTR_ERR(pn547_dev->nfc_clk);
@@ -732,7 +732,7 @@ static int pn547_remove(struct i2c_client *client)
 	int ret = 0;
 
 	pn547_dev = i2c_get_clientdata(client);
-#ifdef CONFIG_NFC_PN547_PMC8974_CLK_REQ
+#ifdef CONFIG_NFC_PN547_PMC_CLK_REQ
 	if (pn547_dev->nfc_clk)
 		clk_unprepare(pn547_dev->nfc_clk);
 #endif
