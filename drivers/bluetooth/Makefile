@@ -39,6 +39,6 @@ hci_uart-$(CONFIG_BT_HCIUART_3WIRE)	+= hci_h5.o
 hci_uart-$(CONFIG_BT_HCIUART_IBS)	+= hci_ibs.o
 hci_uart-objs				:= $(hci_uart-y)
 
-obj-$(CONFIG_ARCH_SONY_KITAKAMI) += broadcom/
+obj-$(CONFIG_BT_BCM_COMBO)		+= broadcom/
 
 ccflags-y += -D__CHECK_ENDIAN__
