@@ -152,7 +152,7 @@ struct hci_uart {
     unsigned char    protos_registered;
     spinlock_t lock;
 
-    struct completion cmd_rcvd, *ldisc_installed, ldisc_patchram_complete,
+    struct completion cmd_rcvd, ldisc_installed, ldisc_patchram_complete,
                 uim_baudrate_set_complete;
     char resp_buffer[30];
     struct platform_device *brcm_pdev;
@@ -170,7 +170,7 @@ struct hci_uart {
     spinlock_t hcisnoop_lock;
     spinlock_t hcisnoop_write_lock;
 #endif
-    struct completion *tty_close_complete;
+    struct completion tty_close_complete;
 };
 
 typedef struct {
