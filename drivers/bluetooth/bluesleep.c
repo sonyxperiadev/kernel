@@ -136,8 +136,6 @@ DECLARE_DELAYED_WORK(sleep_workqueue, bluesleep_sleep_work);
 #define PROC_LPM	4
 #define PROC_BTWRITE	5
 
-static bool has_lpm_enabled;
-
 static struct platform_device *bluesleep_uart_dev;
 static struct bluesleep_info *bsi;
 
@@ -420,12 +418,6 @@ int bluesleep_start(void)
 {
 	unsigned long irq_flags;
 
-#if defined(CONFIG_LINE_DISCIPLINE_DRIVER)
-	if (!has_lpm_enabled) {
-		has_lpm_enabled  = true;
-		bsi->uport = msm_hs_get_uart_port(BT_PORT_ID);
-	}
-#endif
 	spin_lock_irqsave(&rw_lock, irq_flags);
 
 	if (test_bit(BT_PROTO, &flags)) {
@@ -499,10 +491,6 @@ void bluesleep_stop(void)
 
 	enable_wakeup_irq(0);
 	wake_lock_timeout(&bsi->wake_lock, HZ / 2);
-#if defined(CONFIG_LINE_DISCIPLINE_DRIVER)
-	has_lpm_enabled = false;
-	bsi->uport = NULL;
-#endif
 }
 EXPORT_SYMBOL(bluesleep_stop);
 
@@ -660,7 +648,9 @@ static int bluesleep_probe(struct platform_device *pdev)
 		goto free_bt_ext_wake;
 	}
 
-	enable_wakeup_irq(0);
+	bsi->uport = msm_hs_get_uart_port(BT_PORT_ID);
+
+	atomic_set(&bsi->wakeup_irq_disabled, 1);
 	return 0;
 
 free_bt_ext_wake:
@@ -694,7 +684,7 @@ static int bluesleep_resume(struct platform_device *pdev)
 	if (test_bit(BT_SUSPEND, &flags)) {
 		if (debug_mask & DEBUG_SUSPEND)
 			pr_info("bluesleep resuming...\n");
-		if ((bsi->uport != NULL) &&
+		if (atomic_read(&open_count) == 0 &&
 			(gpio_get_value(bsi->host_wake) == bsi->irq_polarity)) {
 			if (debug_mask & DEBUG_SUSPEND)
 				pr_info("bluesleep resume from BT event...\n");
@@ -738,8 +728,8 @@ static int bluesleep_proc_show(struct seq_file *m, void *v)
 {
 	switch ((long)m->private) {
 	case PROC_LPM:
-		seq_printf(m, "lpm: %u\n",
-				test_bit(has_lpm_enabled, &flags) ? 1 : 0);
+		seq_printf(m, "lpm: %d\n",
+				atomic_read(&open_count) == 0 ? 1 : 0);
 		break;
 	case PROC_BTWRITE:
 		seq_printf(m, "btwrite: %u\n",
@@ -770,16 +760,9 @@ static ssize_t bluesleep_proc_write(struct file *file, const char *buf,
 		if (lbuf[0] == '0') {
 			/* HCI_DEV_UNREG */
 			bluesleep_stop();
-			has_lpm_enabled = false;
-			bsi->uport = NULL;
 		} else {
 			/* HCI_DEV_REG */
-			if (!has_lpm_enabled) {
-				has_lpm_enabled = true;
-				bsi->uport = msm_hs_get_uart_port(BT_PORT_ID);
-				/* if bluetooth started, start bluesleep*/
-				bluesleep_start();
-			}
+			bluesleep_start();
 		}
 		break;
 	case PROC_BTWRITE:
