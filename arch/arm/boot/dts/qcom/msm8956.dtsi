@@ -2323,7 +2323,7 @@
 		qcom,wsa-max-devs = <2>;
 		qcom,wsa-devs = <&wsa881x_211>, <&wsa881x_212>,
 				<&wsa881x_213>, <&wsa881x_214>;
-		qcom,aux-codec-prefix = "SpkrLeft", "SpkrRight",
+		qcom,wsa-aux-dev-prefix = "SpkrLeft", "SpkrRight",
 					"SpkrLeft", "SpkrRight";
 	};
 
