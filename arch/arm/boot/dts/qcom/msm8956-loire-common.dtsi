@@ -476,7 +476,7 @@
 
 		tasha_codec {
 			swr_master {
-				wsa881x@20170212 {
+				wsa881x_212: wsa881x@20170212 {
 					qcom,spkr-sd-n-gpio = <&msm_gpio 101 0>;
 				};
 			};
