@@ -964,4 +964,14 @@ config SENSORS_MC3430
 	 Say Y here if you want to enable the MC3430 acceleration sensor
 	 driver.
 
+config SENSORS_MMC3416X
+	tristate "MMC3416xPJ 3-axis magnetic sensor driver"
+	depends on I2C
+	help
+	  Say Y here if you want to enable the MMC3416xPJ magnetic sensor
+	  driver.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called mmc3416x.
+
 endif
