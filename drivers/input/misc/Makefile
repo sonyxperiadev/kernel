@@ -101,4 +101,5 @@ obj-$(CONFIG_SENSORS_ISL29044A)	+= isl29044a.o
 obj-$(CONFIG_SENSORS_LIS3DH)		+= lis3dh_acc.o
 obj-$(CONFIG_SENSORS_MC3430)	+= mc3xxx.o
 obj-$(CONFIG_SENSORS_MMC3416X)		+= mmc3416x.o
+obj-$(CONFIG_SENSORS_MPU6050)		+= mpu6050.o
 
