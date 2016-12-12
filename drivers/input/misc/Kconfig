@@ -957,4 +957,11 @@ config SENSORS_LIS3DH
 	  To compile this driver as a module, choose M here: the
 	  module will be called lis3dh_acc.
 
+config SENSORS_MC3430
+	tristate "MC3430 acceleration sensor support"
+	depends on I2C
+	help
+	 Say Y here if you want to enable the MC3430 acceleration sensor
+	 driver.
+
 endif
