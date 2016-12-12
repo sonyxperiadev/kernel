@@ -947,4 +947,14 @@ config SENSORS_ISL29044A
 	help
 	 This option enables support for the INTERSIL ISL29044A P/L sensor.
 
+config SENSORS_LIS3DH
+	tristate "ST LIS3DH 3-axis digital acceleromater"
+	depends on I2C
+	help
+	  Say Y here if you want to support STMicroelectronics LIS3DH
+	  accelerometer connected via an I2C bus.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called lis3dh_acc.
+
 endif
