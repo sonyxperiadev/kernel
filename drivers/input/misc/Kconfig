@@ -867,4 +867,25 @@ config INPUT_STMVL53L0
        help
          Select this module to enable FPC1145 tee finger print driver
 
+config SENSORS_AKM09911
+	tristate "AKM09911 3-axis electronic compass sensor driver"
+	depends on I2C
+	help
+	  Say Y here if you want to enable the akm09911 ecompass sensor
+	  driver.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called akm09911.
+
+config SENSORS_AKM8963
+	tristate "AKM8963 3-axis electronic compass sensor driver"
+	depends on I2C
+	default n
+	help
+	  Say Y here if you want to enable the akm8963 ecompass sensor
+	  driver.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called akm8963.
+
 endif
