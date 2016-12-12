@@ -90,6 +90,8 @@ struct input_absinfo {
  * (depending on which element was used to perform lookup).
  */
 struct input_keymap_entry {
+#define SYN_TIME_SEC		4
+#define SYN_TIME_NSEC		5
 #define INPUT_KEYMAP_BY_INDEX	(1 << 0)
 	__u8  flags;
 	__u8  len;
