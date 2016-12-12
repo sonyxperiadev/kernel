@@ -941,4 +941,10 @@ config SENSORS_CAPELLA_CM36283
 	  To compile this driver as a module, choose M here: the
 	  module will be called CM36283.
 
+config SENSORS_ISL29044A
+	tristate "INTERSIL P/L sensor"
+	depends on I2C
+	help
+	 This option enables support for the INTERSIL ISL29044A P/L sensor.
+
 endif
