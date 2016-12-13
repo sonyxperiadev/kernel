@@ -4441,6 +4441,7 @@ static int smbchg_change_usb_supply_type(struct smbchg_chip *chip,
 	 * modes, skip all BC 1.2 current if external typec is supported.
 	 * Note: for SDP supporting current based on USB notifications.
 	 */
+#ifndef CONFIG_QPNP_SMBCHARGER_EXTENSION
 	if (chip->typec_psy && (type != POWER_SUPPLY_TYPE_USB))
 		current_limit_ma = chip->typec_current_ma;
 	else if (type == POWER_SUPPLY_TYPE_USB)
@@ -4460,6 +4461,9 @@ static int smbchg_change_usb_supply_type(struct smbchg_chip *chip,
 #endif
 	else
 		current_limit_ma = smbchg_default_dcp_icl_ma;
+#else
+	current_limit_ma = somc_chg_get_current_ma(chip, type);
+#endif
 
 	vote(chip->usb_icl_votable, PSY_ICL_VOTER, true, 0);
 
@@ -4609,6 +4613,8 @@ static void smbchg_hvdcp_det_work(struct work_struct *work)
 		if (chip->usb_present) {
 			int current_limit_ma;
 
+			current_limit_ma = somc_chg_get_current_ma(chip,
+							chip->usb_supply_type);
 			pr_smb(PR_TYPEC, "Update mA = %d\n", current_limit_ma);
 			rc = vote(chip->usb_icl_votable, PSY_ICL_VOTER, true,
 							current_limit_ma);
@@ -5788,6 +5794,8 @@ static void update_typec_capability_status(struct smbchg_chip *chip,
 	if (chip->usb_present) {
 		int current_limit_ma;
 
+		current_limit_ma = somc_chg_get_current_ma(chip,
+							chip->usb_supply_type);
 		pr_smb(PR_TYPEC, "Update mA = %d\n", current_limit_ma);
 		rc = vote(chip->usb_icl_votable, PSY_ICL_VOTER, true,
 							current_limit_ma);

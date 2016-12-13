@@ -17,6 +17,8 @@
 #ifndef __QPNP_SMBCHARGER_EXTENSION
 #define __QPNP_SMBCHARGER_EXTENSION
 
+static int somc_chg_get_current_ma(struct smbchg_chip *chip,
+						enum power_supply_type type);
 static int somc_chg_get_prop_batt_charge_full(struct smbchg_chip *chip);
 static int somc_chg_get_prop_batt_charge_full_design(struct smbchg_chip *chip);
 static int somc_chg_get_prop_batt_cycle_count(struct smbchg_chip *chip);

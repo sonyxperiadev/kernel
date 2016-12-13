@@ -101,6 +101,42 @@ static void batt_log_work(struct work_struct *work)
 		    msecs_to_jiffies(params->batt_log.output_period * 1000));
 }
 
+static int somc_chg_get_current_ma(struct smbchg_chip *chip,
+						enum power_supply_type type)
+{
+	int current_limit_ma = 0;
+
+	if (type == POWER_SUPPLY_TYPE_USB)
+		current_limit_ma = DEFAULT_SDP_MA;
+	else if (type == POWER_SUPPLY_TYPE_USB)
+		/* Flow chart: C-1 SDP */
+		current_limit_ma = DEFAULT_SDP_MA;
+	else if (type == POWER_SUPPLY_TYPE_USB_CDP)
+		/* Flow chart: C-1 CDP */
+		current_limit_ma = DEFAULT_CDP_MA;
+	else if (type == POWER_SUPPLY_TYPE_USB_HVDCP)
+		/* Flow chart: C-5 */
+		current_limit_ma = smbchg_default_hvdcp_icl_ma;
+	else if (type == POWER_SUPPLY_TYPE_USB_HVDCP_3)
+		if (chip->typec_current_ma > CURRENT_1500_MA)
+			/* Flow chart: C-7 */
+			current_limit_ma = chip->typec_current_ma;
+		else if (!chip->typec_current_ma)
+			/* Flow chart: C-8 */
+			current_limit_ma = smbchg_default_hvdcp_icl_ma;
+		else
+			/* Flow chart: C-6 */
+			current_limit_ma = CURRENT_1500_MA;
+	else
+		/* Unknown, and DCP before detection of HVDCP */
+		current_limit_ma = smbchg_default_dcp_icl_ma;
+
+	pr_smb(PR_MISC, "type=%d, cur=%dma\n", type,
+					current_limit_ma);
+
+	return current_limit_ma;
+}
+
 static int somc_chg_apsd_wait_rerun(struct smbchg_chip *chip)
 {
 	struct chg_somc_params *params = &chip->somc_params;
