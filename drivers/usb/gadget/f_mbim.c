@@ -1805,7 +1805,7 @@ mbim_write(struct file *fp, const char __user *buf, size_t count, loff_t *pos)
 	pr_debug("Enter(%zu)\n", count);
 
 	if (!dev || !req || !req->buf) {
-		pr_err("%s: dev %p req %p req->buf %p\n",
+		pr_err("%s: dev %pK req %pK req->buf %pK\n",
 			__func__, dev, req, req ? req->buf : req);
 		return -ENODEV;
 	}
@@ -1827,7 +1827,7 @@ mbim_write(struct file *fp, const char __user *buf, size_t count, loff_t *pos)
 	}
 
 	if (dev->not_port.notify_state != MBIM_NOTIFY_RESPONSE_AVAILABLE) {
-		pr_err("dev:%p state=%d error\n", dev,
+		pr_err("dev:%pK state=%d error\n", dev,
 			dev->not_port.notify_state);
 		mbim_unlock(&dev->write_excl);
 		return -EINVAL;
