@@ -33,6 +33,7 @@
 #include <linux/timer.h>
 #include <linux/version.h>
 #include <linux/videodev2.h>
+#include <media/v4l2-device.h>
 
 /*******************************************************************************
 **  Constants & Macros
@@ -213,6 +214,7 @@ struct fm_device_info {
 /* FM driver operation structure */
 struct fmdrv_ops {
     struct video_device *radio_dev;   /* V4L2 video device pointer */
+    struct v4l2_device v4l2_dev;      /* V4L2 top level struct */
     spinlock_t resp_skb_lock;         /* To protect access to received SKB */
     spinlock_t rds_cbuff_lock;        /* To protect access to RDS Circular buffer */
 
