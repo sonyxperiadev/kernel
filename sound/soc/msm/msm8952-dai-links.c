@@ -24,6 +24,7 @@
 enum TASHA_LITE_DEVICE {
 	MSM8952_TASHA_LITE = 0,
 	MSM8953_TASHA_LITE,
+	MSM8976_TASHA_LITE,
 	NUM_OF_TASHA_LITE_DEVICE,
 };
 
@@ -315,6 +316,7 @@ static struct snd_soc_dai_link msm8952_tasha_be_dai[] = {
 		.ops = &msm8952_slimbus_be_ops,
 		.ignore_suspend = 1,
 	},
+#ifndef CONFIG_ARCH_SONY_LOIRE
 	{
 		.name = LPASS_BE_SLIMBUS_6_RX,
 		.stream_name = "Slimbus6 Playback",
@@ -331,6 +333,7 @@ static struct snd_soc_dai_link msm8952_tasha_be_dai[] = {
 		.ignore_pmdown_time = 1,
 		.ignore_suspend = 1,
 	},
+#endif
 };
 
 static struct snd_soc_dai_link msm8952_tomtom_fe_dai[] = {
@@ -1573,7 +1576,8 @@ struct snd_soc_card *populate_snd_card_dailinks(struct device *dev)
 	enum codec_variant codec_ver = 0;
 	const char *tasha_lite[NUM_OF_TASHA_LITE_DEVICE] = {
 		"msm8952-tashalite-snd-card",
-		"msm8953-tashalite-snd-card"
+		"msm8953-tashalite-snd-card",
+		"msm8976-tashalite-snd-card"
 	};
 
 	card->dev = dev;
@@ -1607,6 +1611,8 @@ struct snd_soc_card *populate_snd_card_dailinks(struct device *dev)
 				card->name = tasha_lite[MSM8952_TASHA_LITE];
 			else if (!strcmp(card->name, "msm8953-tasha-snd-card"))
 				card->name = tasha_lite[MSM8953_TASHA_LITE];
+			else if (!strcmp(card->name, "msm8976-tasha-snd-card"))
+				card->name = tasha_lite[MSM8976_TASHA_LITE];
 		}
 
 		len1 = ARRAY_SIZE(msm8952_common_fe_dai);
