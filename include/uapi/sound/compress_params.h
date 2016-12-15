@@ -65,6 +65,11 @@
 /* Bit-0 - 0 : Disable Timestamp mode */
 #define COMPRESSED_TIMESTAMP_FLAG 0x0001
 
+/* Timestamp flsg */
+/* Bit-0 - 1 : Enable Timestamp mode */
+/* Bit-0 - 0 : Disable Timestamp mode */
+#define COMPRESSED_TIMESTAMP_FLAG 0x0001
+
 /* Codecs are listed linearly to allow for extensibility */
 #define SND_AUDIOCODEC_PCM                   ((__u32) 0x00000001)
 #define SND_AUDIOCODEC_MP3                   ((__u32) 0x00000002)
@@ -419,7 +424,8 @@ struct snd_codec {
 	__u32 align;
 	union snd_codec_options options;
 	__u32 compr_passthr;
-	__u32 reserved[2];
+	__u32 flags;
+	__u32 reserved[1];
 } __attribute__((packed, aligned(4)));
 
 #define SND_CODEC_COMPRESS_PASSTHROUGH
