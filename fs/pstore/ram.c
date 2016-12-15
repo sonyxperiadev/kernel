@@ -19,6 +19,11 @@
  * 02110-1301 USA
  *
  */
+/*
+ * NOTE: This file has been modified by Sony Mobile Communications Inc.
+ * Modifications are Copyright (c) 2015 Sony Mobile Communications Inc,
+ * and licensed under the license of the file.
+ */
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
@@ -34,6 +39,8 @@
 #include <linux/slab.h>
 #include <linux/compiler.h>
 #include <linux/pstore_ram.h>
+#include <linux/of.h>
+#include <linux/of_address.h>
 
 #define RAMOOPS_KERNMSG_HDR "===="
 #define MIN_MEM_SIZE 4096UL
@@ -43,7 +50,11 @@ module_param(record_size, ulong, 0400);
 MODULE_PARM_DESC(record_size,
 		"size of each dump done on oops/panic");
 
+#ifdef CONFIG_LOG_BUF_SHIFT
+static ulong ramoops_console_size = (1 << CONFIG_LOG_BUF_SHIFT);
+#else
 static ulong ramoops_console_size = MIN_MEM_SIZE;
+#endif
 module_param_named(console_size, ramoops_console_size, ulong, 0400);
 MODULE_PARM_DESC(console_size, "size of kernel console log");
 
@@ -457,6 +468,45 @@ static int ramoops_probe(struct platform_device *pdev)
 	if (cxt->max_dump_cnt)
 		goto fail_out;
 
+	if (!pdata && dev->of_node) {
+		struct device_node *pnode;
+		pdata = kzalloc(sizeof(*pdata), GFP_KERNEL);
+		if (!pdata) {
+			pr_err("could not allocate pdata\n");
+			err = -ENOMEM;
+			goto fail_out;
+		}
+
+		pnode = of_parse_phandle(dev->of_node, "memory-region", 0);
+		if (pnode != NULL) {
+			const u32 *addr;
+			u64 size;
+			addr = of_get_address(pnode, 0, &size, NULL);
+			if (!addr) {
+				of_node_put(pnode);
+				kfree(pdata);
+				goto fail_out;
+			}
+
+			pdata->mem_address = of_read_number(addr,
+							of_n_addr_cells(pnode));
+			pdata->mem_size = size;
+			of_node_put(pnode);
+		} else {
+			pr_err("%s: unable to parse phandle\n", __func__);
+			kfree(pdata);
+			goto fail_out;
+		}
+
+		pdata->record_size = record_size;
+		pdata->console_size = ramoops_console_size;
+		pdata->ftrace_size = ramoops_ftrace_size;
+		pdata->pmsg_size = ramoops_pmsg_size;
+		pdata->dump_oops = dump_oops;
+		pdata->ecc_info.ecc_size = ramoops_ecc == 1 ? 16 : ramoops_ecc;
+		dev->platform_data = &pdata;
+	}
+
 	if (!pdata->mem_size || (!pdata->record_size && !pdata->console_size &&
 			!pdata->ftrace_size && !pdata->pmsg_size)) {
 		pr_err("The memory size and the record/console size must be "
@@ -581,12 +631,18 @@ static int __exit ramoops_remove(struct platform_device *pdev)
 	return -EBUSY;
 }
 
+static struct of_device_id ramoops_match_table[] = {
+	{.compatible = "pstore-ramoops"},
+	{},
+};
+
 static struct platform_driver ramoops_driver = {
 	.probe		= ramoops_probe,
 	.remove		= __exit_p(ramoops_remove),
 	.driver		= {
 		.name	= "ramoops",
 		.owner	= THIS_MODULE,
+		.of_match_table = ramoops_match_table
 	},
 };
 
@@ -635,8 +691,10 @@ postcore_initcall(ramoops_init);
 static void __exit ramoops_exit(void)
 {
 	platform_driver_unregister(&ramoops_driver);
-	platform_device_unregister(dummy);
-	kfree(dummy_data);
+	if (dummy) {
+		platform_device_unregister(dummy);
+		kfree(dummy_data);
+	}
 }
 module_exit(ramoops_exit);
 
