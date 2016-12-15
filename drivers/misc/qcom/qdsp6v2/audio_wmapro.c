@@ -2,7 +2,7 @@
  *
  * Copyright (C) 2008 Google, Inc.
  * Copyright (C) 2008 HTC Corporation
- * Copyright (c) 2009-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2009-2016, The Linux Foundation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -18,11 +18,10 @@
 #include <linux/types.h>
 #include <linux/msm_audio_wmapro.h>
 #include <linux/compat.h>
-#include <linux/wakelock.h>
 #include "audio_utils_aio.h"
 
-struct miscdevice audio_wmapro_misc;
-struct ws_mgr     audio_wmapro_ws_mgr;
+static struct miscdevice audio_wmapro_misc;
+static struct ws_mgr audio_wmapro_ws_mgr;
 
 #ifdef CONFIG_DEBUG_FS
 static const struct file_operations audio_wmapro_debug_fops = {
@@ -174,7 +173,7 @@ static long audio_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		break;
 	}
 	default: {
-		pr_debug("%s[%p]: Calling utils ioctl\n", __func__, audio);
+		pr_debug("%s[%pK]: Calling utils ioctl\n", __func__, audio);
 		rc = audio->codec_ioctl(file, cmd, arg);
 		if (rc)
 			pr_err("Failed in utils_ioctl: %d\n", rc);
@@ -217,6 +216,8 @@ static long audio_compat_ioctl(struct file *file, unsigned int cmd,
 	case AUDIO_GET_WMAPRO_CONFIG_32: {
 		struct msm_audio_wmapro_config *wmapro_config;
 		struct msm_audio_wmapro_config32 wmapro_config_32;
+
+		memset(&wmapro_config_32, 0, sizeof(wmapro_config_32));
 
 		wmapro_config =
 			(struct msm_audio_wmapro_config *)audio->codec_cfg;
@@ -282,7 +283,7 @@ static long audio_compat_ioctl(struct file *file, unsigned int cmd,
 		break;
 	}
 	default: {
-		pr_debug("%s[%p]: Calling utils ioctl\n", __func__, audio);
+		pr_debug("%s[%pK]: Calling utils ioctl\n", __func__, audio);
 		rc = audio->codec_compat_ioctl(file, cmd, arg);
 		if (rc)
 			pr_err("Failed in utils_ioctl: %d\n", rc);
@@ -398,7 +399,7 @@ static const struct file_operations audio_wmapro_fops = {
 	.compat_ioctl = audio_compat_ioctl
 };
 
-struct miscdevice audio_wmapro_misc = {
+static struct miscdevice audio_wmapro_misc = {
 	.minor = MISC_DYNAMIC_MINOR,
 	.name = "msm_wmapro",
 	.fops = &audio_wmapro_fops,

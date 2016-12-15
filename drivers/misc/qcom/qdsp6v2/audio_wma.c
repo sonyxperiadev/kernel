@@ -18,11 +18,10 @@
 #include <linux/types.h>
 #include <linux/msm_audio_wma.h>
 #include <linux/compat.h>
-#include <linux/wakelock.h>
 #include "audio_utils_aio.h"
 
-struct miscdevice audio_wma_misc;
-struct ws_mgr audio_wma_ws_mgr;
+static struct miscdevice audio_wma_misc;
+static struct ws_mgr audio_wma_ws_mgr;
 
 #ifdef CONFIG_DEBUG_FS
 static const struct file_operations audio_wma_debug_fops = {
@@ -41,7 +40,7 @@ static long audio_ioctl_shared(struct file *file, unsigned int cmd,
 	case AUDIO_START: {
 		struct asm_wma_cfg wma_cfg;
 		struct msm_audio_wma_config_v2 *wma_config;
-		pr_debug("%s[%p]: AUDIO_START session_id[%d]\n", __func__,
+		pr_debug("%s[%pK]: AUDIO_START session_id[%d]\n", __func__,
 						audio, audio->ac->session);
 		if (audio->feedback == NON_TUNNEL_MODE) {
 			/* Configure PCM output block */
@@ -123,7 +122,7 @@ static long audio_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		break;
 	}
 	default: {
-		pr_debug("%s[%p]: Calling utils ioctl\n", __func__, audio);
+		pr_debug("%s[%pK]: Calling utils ioctl\n", __func__, audio);
 		rc = audio->codec_ioctl(file, cmd, arg);
 		if (rc)
 			pr_err("Failed in utils_ioctl: %d\n", rc);
@@ -210,7 +209,7 @@ static long audio_compat_ioctl(struct file *file, unsigned int cmd,
 		break;
 	}
 	default: {
-		pr_debug("%s[%p]: Calling utils ioctl\n", __func__, audio);
+		pr_debug("%s[%pK]: Calling utils ioctl\n", __func__, audio);
 		rc = audio->codec_compat_ioctl(file, cmd, arg);
 		if (rc)
 			pr_err("Failed in utils_ioctl: %d\n", rc);
@@ -325,7 +324,7 @@ static const struct file_operations audio_wma_fops = {
 	.compat_ioctl = audio_compat_ioctl
 };
 
-struct miscdevice audio_wma_misc = {
+static struct miscdevice audio_wma_misc = {
 	.minor = MISC_DYNAMIC_MINOR,
 	.name = "msm_wma",
 	.fops = &audio_wma_fops,

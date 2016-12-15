@@ -1,4 +1,4 @@
-/* Copyright (c) 2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2016, The Linux Foundation. All rights reserved.
 *
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License version 2 and
@@ -15,6 +15,9 @@
 #include <linux/msm_audio_alac.h>
 #include <linux/compat.h>
 #include "audio_utils_aio.h"
+
+static struct miscdevice audio_alac_misc;
+static struct ws_mgr audio_alac_ws_mgr;
 
 #ifdef CONFIG_DEBUG_FS
 static const struct file_operations audio_alac_debug_fops = {
@@ -55,7 +58,7 @@ static long audio_ioctl_shared(struct file *file, unsigned int cmd,
 					__func__, audio->pcm_cfg.channel_count);
 		}
 
-		pr_debug("%s[%p]: AUDIO_START session_id[%d]\n", __func__,
+		pr_debug("%s[%pK]: AUDIO_START session_id[%d]\n", __func__,
 						audio, audio->ac->session);
 		if (audio->feedback == NON_TUNNEL_MODE) {
 			/* Configure PCM output block */
@@ -199,6 +202,8 @@ static long audio_compat_ioctl(struct file *file, unsigned int cmd,
 		struct msm_audio_alac_config *alac_config;
 		struct msm_audio_alac_config_32 alac_config_32;
 
+		memset(&alac_config_32, 0, sizeof(alac_config_32));
+
 		alac_config = (struct msm_audio_alac_config *)audio->codec_cfg;
 		alac_config_32.frameLength = alac_config->frameLength;
 		alac_config_32.compatVersion =
@@ -287,6 +292,9 @@ static int audio_open(struct inode *inode, struct file *file)
 	}
 
 	audio->pcm_cfg.buffer_size = PCM_BUFSZ_MIN;
+	audio->miscdevice = &audio_alac_misc;
+	audio->wakelock_voted = false;
+	audio->audio_ws_mgr = &audio_alac_ws_mgr;
 
 	audio->ac = q6asm_audio_client_alloc((app_cb) q6_audio_cb,
 					     (void *)audio);
@@ -415,7 +423,7 @@ static const struct file_operations audio_alac_fops = {
 	.compat_ioctl = audio_compat_ioctl
 };
 
-struct miscdevice audio_alac_misc = {
+static struct miscdevice audio_alac_misc = {
 	.minor = MISC_DYNAMIC_MINOR,
 	.name = "msm_alac",
 	.fops = &audio_alac_fops,
@@ -423,7 +431,14 @@ struct miscdevice audio_alac_misc = {
 
 static int __init audio_alac_init(void)
 {
-	return misc_register(&audio_alac_misc);
+	int ret = misc_register(&audio_alac_misc);
+
+	if (ret == 0)
+		device_init_wakeup(audio_alac_misc.this_device, true);
+	audio_alac_ws_mgr.ref_cnt = 0;
+	mutex_init(&audio_alac_ws_mgr.ws_lock);
+
+	return ret;
 }
 
 device_initcall(audio_alac_init);
