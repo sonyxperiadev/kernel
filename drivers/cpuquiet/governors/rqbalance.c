@@ -36,6 +36,7 @@
 #include <linux/jiffies.h>
 #include <linux/cpu.h>
 #include <linux/sched.h>
+#include <linux/slab.h>
 
 #include "../cpuquiet.h"
 
