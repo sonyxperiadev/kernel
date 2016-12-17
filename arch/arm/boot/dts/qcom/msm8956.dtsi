@@ -2214,6 +2214,7 @@
 		/* GPIO output to mss */
 		qcom,gpio-force-stop = <&smp2pgpio_ssr_smp2p_1_out 0 0>;
 		memory-region = <&modem_mem>;
+		qcom,mem-protect-id = <0xF>;
 	};
 
 	cpu-pmu {
