@@ -1011,11 +1011,13 @@ static int adreno_init(struct kgsl_device *device)
 	adreno_ft_regs_num = (ARRAY_SIZE(adreno_ft_regs_default) +
 				   gpudev->ft_perf_counters_count*2);
 
-	adreno_ft_regs = kzalloc(adreno_ft_regs_num, GFP_KERNEL);
+	adreno_ft_regs = kzalloc(adreno_ft_regs_num * sizeof(unsigned int),
+						GFP_KERNEL);
 	if (!adreno_ft_regs)
 		return -ENOMEM;
 
-	adreno_ft_regs_val = kzalloc(adreno_ft_regs_num, GFP_KERNEL);
+	adreno_ft_regs_val = kzalloc(adreno_ft_regs_num * sizeof(unsigned int),
+						GFP_KERNEL);
 	if (!adreno_ft_regs_val)
 		return -ENOMEM;
 
@@ -1100,6 +1102,7 @@ static int _adreno_start(struct adreno_device *adreno_dev)
 	struct kgsl_device *device = &adreno_dev->dev;
 	struct adreno_gpudev *gpudev = ADRENO_GPU_DEVICE(adreno_dev);
 	int status = -EINVAL;
+	unsigned int state = device->state;
 	unsigned int regulator_left_on = 0;
 	unsigned int pmqos_wakeup_vote = device->pwrctrl.pm_qos_wakeup_latency;
 	unsigned int pmqos_active_vote = device->pwrctrl.pm_qos_active_latency;
@@ -1211,7 +1214,8 @@ error_mmu_off:
 	kgsl_mmu_stop(&device->mmu);
 
 error_pwr_off:
-	kgsl_pwrctrl_change_state(device, KGSL_STATE_INIT);
+	/* set the state back to original state */
+	kgsl_pwrctrl_change_state(device, state);
 
 	if (pmqos_active_vote != pmqos_wakeup_vote)
 		pm_qos_update_request(&device->pwrctrl.pm_qos_req_dma,
