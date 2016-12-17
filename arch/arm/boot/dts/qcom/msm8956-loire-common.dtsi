@@ -929,7 +929,7 @@
 
 &pm8950_vadc {
 	chan@13 { /* case_therm */
-		qcom,scale-function = <15>; /* 100K_PULLUP_DECI */
+		qcom,scale-function = <17>; /* 100K_PULLUP_DECI */
 	};
 };
 
@@ -940,7 +940,7 @@
 		qcom,decimation = <0>;
 		qcom,pre-div-channel-scaling = <0>;
 		qcom,calibration-type = "ratiometric";
-		qcom,scale-function = <15>; /* 100K_PULLUP_DECI */
+		qcom,scale-function = <17>; /* 100K_PULLUP_DECI */
 		qcom,hw-settle-time = <2>;
 		qcom,fast-avg-setup = <0>;
 		qcom,vadc-thermal-node;
