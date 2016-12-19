@@ -66,7 +66,11 @@ obj-$(CONFIG_STM_LIS3DH)		+= lis3dh_acc.o
 obj-$(CONFIG_BMP18X)			+= bmp18x-core.o
 obj-$(CONFIG_BMP18X_I2C)		+= bmp18x-i2c.o
 obj-$(CONFIG_SENSORS_MMA8X5X)	  	+= mma8x5x.o
-obj-$(CONFIG_SENSORS_STK3X1X)		+= stk3x1x.o
+ifeq ($(CONFIG_MACH_SONY_EAGLE),y)
+obj-$(CONFIG_SENSORS_STK3X1X)»              += stk3x1x-eagle.o
+else
+obj-$(CONFIG_SENSORS_STK3X1X)           += stk3x1x.o
+endif
 obj-$(CONFIG_SENSORS_CAPELLA_CM36283)	+= cm36283.o
 obj-$(CONFIG_SENSORS_MMC3416XPJ_MAG)	+= mmc3416x.o mecs.o
 obj-$(CONFIG_INPUT_KIONIX_ACCEL)	+= kionix_accel.o
