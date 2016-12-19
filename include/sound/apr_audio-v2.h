@@ -1,4 +1,5 @@
 /* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+*  Copyright (c) 2014 Sony Mobile Communications Inc.
 *
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License version 2 and
@@ -617,6 +618,9 @@ struct adm_session_copp_gain_v5 {
 
 /*  Payload of the #ADM_CMD_MATRIX_MUTE_V5 command*/
 struct adm_cmd_matrix_mute_v5 {
+#ifdef CONFIG_SND_SOMC_CUSTOM_STEREO
+	struct apr_hdr	hdr;
+#endif
 	u32                  matrix_id;
 /* Specifies whether the matrix ID is Audio Rx (0) or Audio Tx (1).
  * Use the ADM_MATRIX_ID_AUDIO_RX or  ADM_MATRIX_ID_AUDIOX

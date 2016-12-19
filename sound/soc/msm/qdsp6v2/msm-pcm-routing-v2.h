@@ -1,4 +1,5 @@
 /* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014 Sony Mobile Communications Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -177,6 +178,15 @@ enum msm_pcm_routing_event {
 	MSM_PCM_RT_EVT_DEVSWITCH,
 	MSM_PCM_RT_EVT_MAX,
 };
+
+#ifdef CONFIG_SND_SOMC_CUSTOM_STEREO
+enum {
+	SONY_CUSTOM_STEREO_NORMAL = 0,
+	SONY_CUSTOM_STEREO_MIX,
+	SONY_CUSTOM_STEREO_SWAP,
+	SONY_CUSTOM_STEREO_MAX,
+};
+#endif
 
 #define INVALID_SESSION -1
 #define SESSION_TYPE_RX 0
