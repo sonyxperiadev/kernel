@@ -916,6 +916,7 @@
 		interrupts = <0 123 0>, <0 138 0>;
 		interrupt-names = "hc_irq", "pwr_irq";
 
+		qcom,large-address-bus;
 		qcom,bus-width = <8>;
 
 		qcom,devfreq,freq-table = <20000000 200000000>;
@@ -965,6 +966,7 @@
 		interrupts = <0 125 0>, <0 221 0>;
 		interrupt-names = "hc_irq", "pwr_irq";
 
+		qcom,large-address-bus;
 		qcom,bus-width = <4>;
 
 		qcom,devfreq,freq-table = <20000000 200000000>;
