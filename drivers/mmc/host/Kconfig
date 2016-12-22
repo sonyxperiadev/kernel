@@ -423,6 +423,14 @@ config MMC_SDHCI_MSM_ICE
 	  Select this if you have ICE supported for SDHCI on QTI chipset.
 	  If unsure, say N.
 
+config MMC_ENABLE_CLK_SCALE
+	bool "Clock Scaling of SDHCI support"
+	depends on MMC_SDHCI_MSM
+	default n
+	help
+	  This selects support for the SD/MMC Host Controller on
+	  Clock Scaling.
+
 config MMC_MSM
 	tristate "Qualcomm SDCC Controller Support"
 	depends on MMC && (ARCH_MSM7X00A || ARCH_MSM7X30 || ARCH_QSD8X50)
