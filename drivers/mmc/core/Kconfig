@@ -37,3 +37,15 @@ config MMC_CLKGATE
 	  support handling this in order for it to be of any use.
 
 	  If unsure, say N.
+
+config MMC_DDR50_MAX_DTR_LMT
+	bool "DDR50 DTR limit"
+	default n
+	help
+	  If you say Y here, DTR of DDR50 is limited.
+
+config MMC_SUPPORT_SVS_INTERVAL
+	bool "Support Signal Voltage Switch interval"
+	help
+	  If you say Y here, the signal voltage switch interval
+	  is supported for to relieve Team's SD card.
