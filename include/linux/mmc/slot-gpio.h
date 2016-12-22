@@ -35,4 +35,8 @@ int mmc_gpiod_request_ro(struct mmc_host *host, const char *con_id,
 void mmc_gpiod_free_cd(struct mmc_host *host);
 void mmc_gpiod_request_cd_irq(struct mmc_host *host);
 
+#ifdef CONFIG_MMC_SD_DEFERRED_RESUME
+void mmc_cd_prepare_suspend(struct mmc_host *host, bool pending_detect);
+bool mmc_cd_is_pending_detect(struct mmc_host *host);
+#endif
 #endif
