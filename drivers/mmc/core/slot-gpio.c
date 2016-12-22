@@ -31,6 +31,10 @@ struct mmc_gpio {
 	char cd_label[0];
 	bool status;
 	int uim2_gpio;
+#ifdef CONFIG_MMC_SD_DEFERRED_RESUME
+	bool pending_detect;
+	bool suspended;
+#endif
 };
 
 int mmc_gpio_get_status(struct mmc_host *host)
@@ -47,12 +51,40 @@ out:
 	return ret;
 }
 
+#ifdef CONFIG_MMC_SD_DEFERRED_RESUME
+void mmc_cd_prepare_suspend(struct mmc_host *host, bool pending_detect)
+{
+	struct mmc_gpio *ctx = host->slot.handler_priv;
+
+	if (!ctx)
+		return;
+
+	ctx->suspended = true;
+	ctx->pending_detect = pending_detect;
+}
+EXPORT_SYMBOL(mmc_cd_prepare_suspend);
+
+bool mmc_cd_is_pending_detect(struct mmc_host *host)
+{
+	struct mmc_gpio *ctx = host->slot.handler_priv;
+
+	if (!ctx)
+		return false;
+
+	return ctx->pending_detect;
+}
+EXPORT_SYMBOL(mmc_cd_is_pending_detect);
+#endif
+
 static irqreturn_t mmc_gpio_cd_irqt(int irq, void *dev_id)
 {
 	/* Schedule a card detection after a debounce timeout */
 	struct mmc_host *host = dev_id;
 	struct mmc_gpio *ctx = host->slot.handler_priv;
 	int status;
+#ifdef CONFIG_MMC_SD_DEFERRED_RESUME
+	unsigned long flags;
+#endif
 
 	if (!host->ops)
 		goto out;
@@ -72,6 +104,20 @@ static irqreturn_t mmc_gpio_cd_irqt(int irq, void *dev_id)
 		ctx->status = status;
 
 		host->trigger_card_event = true;
+#ifdef CONFIG_MMC_SD_DEFERRED_RESUME
+		if (ctx->suspended) {
+			/*
+			 * host->rescan_disable is normally set to 0 in
+			 * PM_POST_RESTORE of mmc_pm_notify but in case
+			 * of a deferred resume we might get IRQ before
+			 * it is called.
+			 */
+			spin_lock_irqsave(&host->lock, flags);
+			host->rescan_disable = 0;
+			spin_unlock_irqrestore(&host->lock, flags);
+		}
+		ctx->suspended = false;
+#endif
 		/* Schedule a card detection after a debounce timeout */
 		mmc_detect_change(host, msecs_to_jiffies(200));
 	}
@@ -246,7 +292,10 @@ int mmc_gpio_request_cd(struct mmc_host *host, unsigned int gpio,
 
 	ctx->override_cd_active_level = true;
 	ctx->cd_gpio = gpio_to_desc(gpio);
-
+#ifdef CONFIG_MMC_SD_DEFERRED_RESUME
+	ctx->pending_detect = false;
+	ctx->suspended = false;
+#endif
 	return 0;
 }
 EXPORT_SYMBOL(mmc_gpio_request_cd);
