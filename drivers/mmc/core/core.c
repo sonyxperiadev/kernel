@@ -4395,6 +4395,9 @@ int mmc_pm_notify(struct notifier_block *notify_block,
 		notify_block, struct mmc_host, pm_notify);
 	unsigned long flags;
 	int err = 0;
+#ifdef CONFIG_MMC_SD_DEFERRED_RESUME
+	bool pending_detect = false;
+#endif
 
 	switch (mode) {
 	case PM_HIBERNATION_PREPARE:
@@ -4403,7 +4406,15 @@ int mmc_pm_notify(struct notifier_block *notify_block,
 		spin_lock_irqsave(&host->lock, flags);
 		host->rescan_disable = 1;
 		spin_unlock_irqrestore(&host->lock, flags);
+#ifdef CONFIG_MMC_SD_DEFERRED_RESUME
+		if (cancel_delayed_work_sync(&host->detect)) {
+			pending_detect = true;
+		}
+
+		mmc_cd_prepare_suspend(host, pending_detect);
+#else
 		cancel_delayed_work_sync(&host->detect);
+#endif
 
 		if (!host->bus_ops)
 			break;
@@ -4434,6 +4445,10 @@ int mmc_pm_notify(struct notifier_block *notify_block,
 			break;
 		}
 		spin_unlock_irqrestore(&host->lock, flags);
+#ifdef CONFIG_MMC_SD_DEFERRED_RESUME
+		if (!mmc_cd_is_pending_detect(host))
+			break; /* IRQ should be triggered if CD changed */
+#endif
 		_mmc_detect_change(host, 0, false);
 
 	}
