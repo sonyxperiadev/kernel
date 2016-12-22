@@ -617,6 +617,8 @@ struct sdhci_host {
 
 	enum sdhci_power_policy power_policy;
 
+	spinlock_t next_lock;	/* Mutex for next_data */
+
 	bool is_crypto_en;
 	bool crypto_reset_reqd;
 	bool sdio_irq_async_status;

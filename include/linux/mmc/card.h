@@ -1,6 +1,8 @@
 /*
  *  linux/include/linux/mmc/card.h
  *
+ * Copyright (c) 2014 Sony Mobile Communications Inc.
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
@@ -167,8 +169,13 @@ struct sd_switch_caps {
 #define HIGH_SPEED_MAX_DTR	50000000
 #define UHS_SDR104_MAX_DTR	208000000
 #define UHS_SDR50_MAX_DTR	100000000
+#ifndef CONFIG_MMC_DDR50_MAX_DTR_LMT
 #define UHS_DDR50_MAX_DTR	50000000
 #define UHS_SDR25_MAX_DTR	UHS_DDR50_MAX_DTR
+#else
+#define UHS_DDR50_MAX_DTR	40000000
+#define UHS_SDR25_MAX_DTR	50000000
+#endif
 #define UHS_SDR12_MAX_DTR	25000000
 	unsigned int		sd3_bus_mode;
 #define UHS_SDR12_BUS_SPEED	0
@@ -238,6 +245,7 @@ enum mmc_blk_status {
 	MMC_BLK_ECC_ERR,
 	MMC_BLK_NOMEDIUM,
 	MMC_BLK_NEW_REQUEST,
+	MMC_BLK_RETRY_SINGLE,
 };
 
 enum mmc_packed_stop_reasons {
