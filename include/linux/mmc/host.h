@@ -1,6 +1,8 @@
 /*
  *  linux/include/linux/mmc/host.h
  *
+ * Copyright (c) 2015 Sony Mobile Communications Inc
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
@@ -26,7 +28,10 @@
 #include <linux/mmc/pm.h>
 #include <linux/mmc/ring_buffer.h>
 
+/* Default idle timeout for MMC devices: 3 seconds. */
 #define MMC_AUTOSUSPEND_DELAY_MS	3000
+/* Default idle timeout for SD cards: 5 minutes. */
+#define MMC_SDCARD_AUTOSUSPEND_DELAY_MS 30000
 
 struct mmc_ios {
 	unsigned int	clock;			/* clock rate */
@@ -710,6 +715,8 @@ int mmc_power_restore_host(struct mmc_host *host);
 void mmc_detect_change(struct mmc_host *, unsigned long delay);
 void mmc_request_done(struct mmc_host *, struct mmc_request *);
 void mmc_command_done(struct mmc_host *host, struct mmc_request *mrq);
+
+int mmc_cache_ctrl(struct mmc_host *, u8);
 
 static inline void mmc_signal_sdio_irq(struct mmc_host *host)
 {
