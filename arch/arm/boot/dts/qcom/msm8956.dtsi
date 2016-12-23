@@ -919,9 +919,6 @@
 		qcom,bus-width = <8>;
 
 		qcom,devfreq,freq-table = <20000000 200000000>;
-		qcom,cpu-dma-latency-us = <60 340 900>;
-		qcom,cpu-affinity = "affine_cores";
-		qcom,cpu-affinity-mask = <0x0f>;
 
 		qcom,msm-bus,name = "sdhc1";
 		qcom,msm-bus,num-cases = <9>;
@@ -950,6 +947,13 @@
 		qcom,ice-clk-rates = <200000000 100000000>;
 		qcom,scaling-lower-bus-speed-mode = "DDR52";
 
+		qcom,pm-qos-cpu-groups = <0x03 0x0c>;
+		qcom,pm-qos-cmdq-latency-us = <70 70>, <70 70>;
+		qcom,pm-qos-legacy-latency-us = <70 70>, <70 70>;
+		qcom,pm-qos-irq-type = "affine_cores";
+		qcom,pm-qos-irq-cpu = <0>;
+		qcom,pm-qos-irq-latency = <70 70>;
+
 		status = "disabled";
 	};
 
@@ -964,7 +968,6 @@
 		qcom,bus-width = <4>;
 
 		qcom,devfreq,freq-table = <20000000 200000000>;
-		qcom,cpu-dma-latency-us = <701>;
 
 		qcom,msm-bus,name = "sdhc2";
 		qcom,msm-bus,num-cases = <8>;
@@ -985,6 +988,12 @@
 		clock-names = "iface_clk", "core_clk";
 
 		qcom,clk-rates = <400000 25000000 50000000 100000000 200000000>;
+
+		qcom,pm-qos-cpu-groups = <0x03 0x0c>;
+		qcom,pm-qos-legacy-latency-us = <70 70>, <70 70>;
+		qcom,pm-qos-irq-type = "affine_cores";
+		qcom,pm-qos-irq-cpu = <0>;
+		qcom,pm-qos-irq-latency = <70 70>;
 
 		status = "disabled";
 	};
@@ -1007,9 +1016,6 @@
 								200000000>;
 
 		qcom,devfreq,freq-table = <20000000 200000000>;
-		qcom,cpu-dma-latency-us = <60>;
-		qcom,cpu-affinity = "affine_cores";
-		qcom,cpu-affinity-mask = <0x0f>;
 
 		clock-names = "iface_clk", "core_clk";
 		clocks = <&clock_gcc clk_gcc_sdcc3_ahb_clk>,
@@ -1043,6 +1049,14 @@
 
 		qcom,bus-speed-mode = "SDR12", "SDR25", "SDR50", "DDR50",
 						"SDR104";
+
+		qcom,pm-qos-cpu-groups = <0x03 0x0c>;
+		qcom,pm-qos-cmdq-latency-us = <70 70>, <70 70>;
+		qcom,pm-qos-legacy-latency-us = <70 70>, <70 70>;
+		qcom,pm-qos-irq-type = "affine_cores";
+		qcom,pm-qos-irq-cpu = <0>;
+		qcom,pm-qos-irq-latency = <70 70>;
+
 		status = "disabled";
 	};
 
