@@ -45,10 +45,10 @@
 #define DEF_V4L2_FM_AUDIO_MODE FM_AUTO_MODE
 
 /* Set default Audio path */
-#ifndef DEF_V4L2_FM_AUDIO_PATH
-#define DEF_V4L2_FM_AUDIO_PATH FM_AUDIO_I2S
-#else
+#if defined (CONFIG_MACH_SONY_CASTOR) || defined (CONFIG_MACH_SONY_SIRIUS)
 #define DEF_V4L2_FM_AUDIO_PATH FM_AUDIO_DAC
+#else
+#define DEF_V4L2_FM_AUDIO_PATH FM_AUDIO_I2S
 #endif
 
 /*Make this TRUE if FM I2S audio to be routed over */
