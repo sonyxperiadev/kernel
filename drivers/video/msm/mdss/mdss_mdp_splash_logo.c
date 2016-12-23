@@ -38,7 +38,8 @@
       defined(CONFIG_MACH_SONY_TULIP) || \
       defined(CONFIG_MACH_SONY_AMAMI) || \
       defined(CONFIG_MACH_SONY_ARIES) || \
-      defined(CONFIG_MACH_SONY_SUZURAN)
+      defined(CONFIG_MACH_SONY_SUZURAN) || \
+      defined(CONFIG_MACH_SONY_KUGO)
 #include "splash_320.h"
 #else
 // All 1080p devices and beyond
