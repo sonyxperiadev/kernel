@@ -287,18 +287,14 @@
 	};
 
 	qcom,cam_smmu {
+		status = "ok";
 		compatible = "qcom,msm-cam-smmu";
 		msm_cam_smmu_cb1: msm_cam_smmu_cb1 {
 			compatible = "qcom,qsmmu-cam-cb";
 			iommus = <&apps_iommu 0x400>,
 						<&apps_iommu 0x3400>;
 			label = "vfe";
-		};
-
-		msm_cam_smmu_cb2: msm_cam_smmu_cb2 {
-			compatible = "qcom,qsmmu-cam-cb";
-			label = "vfe_secure";
-			qcom,secure-context;
+			qcom,scratch-buf-support;
 		};
 
 		msm_cam_smmu_cb3: msm_cam_smmu_cb3 {
