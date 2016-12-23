@@ -24,6 +24,7 @@
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/of_device.h>
+#include <linux/of_iommu.h>
 
 #include "msm_iommu_hw-v1.h"
 #include "qcom_iommu.h"
@@ -672,7 +673,7 @@ static struct platform_driver msm_iommu_ctx_driver = {
 	.remove = msm_iommu_ctx_remove,
 };
 
-static int __init msm_iommu_driver_init(void)
+static int __init msm_iommu_driver_init(struct device_node *np)
 {
 	int ret;
 
@@ -691,13 +692,13 @@ static int __init msm_iommu_driver_init(void)
 
 	return 0;
 }
+IOMMU_OF_DECLARE(msm_mmuv1, "qcom,msm-mmu-500", msm_iommu_driver_init);
 
 static void __exit msm_iommu_driver_exit(void)
 {
 	platform_driver_unregister(&msm_iommu_ctx_driver);
 	platform_driver_unregister(&msm_iommu_driver);
 }
-subsys_initcall(msm_iommu_driver_init);
 module_exit(msm_iommu_driver_exit);
 
 MODULE_LICENSE("GPL v2");
