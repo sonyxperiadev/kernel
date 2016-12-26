@@ -595,6 +595,7 @@ config SWP_EMULATE
 
 config HZ
 	int
+	default 300 if ARCH_MSM8916 || ARCH_MSM8994
 	default 100
 
 config ARCH_HAS_HOLES_MEMORYMODEL
