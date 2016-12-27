@@ -49,3 +49,10 @@ config MMC_SUPPORT_SVS_INTERVAL
 	help
 	  If you say Y here, the signal voltage switch interval
 	  is supported for to relieve Team's SD card.
+
+config MMC_SOMC_LOW_VOLTAGE
+	bool "Select low voltage if mmc host has the capability"
+	default n
+	help
+	  Select low voltage 1.8v if mmc host has the capability
+	  and other voltages are not available.
