@@ -201,7 +201,7 @@ static int brcm_bt_drv_open(struct inode *inode, struct file *filp)
         BT_DRV_ERR("failed to get ST write func pointer");
 
         /* Undo registration with ST */
-        err = brcm_sh_ldisc_unregister(PROTO_SH_BT);
+        err = brcm_sh_ldisc_unregister(PROTO_SH_BT, err != -EBUSY);
         if (err < 0)
             BT_DRV_ERR("st_unregister failed %d", err);
 
@@ -267,7 +267,7 @@ static int brcm_bt_drv_close(struct inode *i, struct file *f)
 
     /* Unregister from ST layer */
     if (test_and_clear_bit(BT_ST_REGISTERED, &bt_dev_p->flags)) {
-        err = brcm_sh_ldisc_unregister(PROTO_SH_BT);
+        err = brcm_sh_ldisc_unregister(PROTO_SH_BT, 1);
         if (err != 0) {
             BT_DRV_ERR("%s st_unregister failed %d", __func__, err);
             err = -EBUSY;
