@@ -141,7 +141,7 @@ static struct platform_device *bluesleep_uart_dev;
 static struct bluesleep_info *bsi;
 
 /* module usage */
-static atomic_t open_count = ATOMIC_INIT(1);
+static atomic_t open_count = ATOMIC_INIT(0);
 
 /*
  * Global variables
@@ -188,10 +188,16 @@ static void hsuart_power(int on)
 	} else if (!on && atomic_read(&uart_is_on) == 1) {
 		msm_hs_set_mctrl(bsi->uport, 0);
 		ret = msm_hs_request_clock_off(bsi->uport);
-		if (unlikely(ret))
+		if (unlikely(ret)) {
+			if(ret == -EPERM) {
+				// Decrease the uart clk indicator in the error case: clock was turned
+				// off already.
+				atomic_set(&uart_is_on, 0);
+			}
 			pr_err("Turning UART clock off failed (%d)\n", ret);
-		else
-			atomic_dec(&uart_is_on);
+		} else {
+			atomic_set(&uart_is_on, 0);
+		}
 	} else {
 		pr_err("Inconsistent UART clock request state.\n");
 	}
@@ -312,8 +318,7 @@ void bluesleep_outgoing_data(void)
 	spin_lock_irqsave(&rw_lock, irq_flags);
 
 #if defined(CONFIG_LINE_DISCIPLINE_DRIVER)
-	if (!test_bit(BT_TXDATA, &flags))
-		mod_timer(&tx_timer, jiffies + (TX_TIMER_INTERVAL * HZ));
+	mod_timer(&tx_timer, jiffies + (TX_TIMER_INTERVAL * HZ));
 	set_bit(BT_TXDATA, &flags);
 #endif
 
@@ -430,30 +435,17 @@ int bluesleep_start(bool is_clock_enabled)
 {
 	unsigned long irq_flags;
 
+	if (atomic_read(&open_count) != 0) {
+		return -EBUSY;
+	}
+	atomic_inc(&open_count);
+
 	spin_lock_irqsave(&rw_lock, irq_flags);
 
 	if (test_bit(BT_PROTO, &flags)) {
 		spin_unlock_irqrestore(&rw_lock, irq_flags);
 		return 0;
 	}
-
-	spin_unlock_irqrestore(&rw_lock, irq_flags);
-
-	// For ldisc-controlled BT, the clock is enabled by upper layers, so
-	// make bluesleep aware of this state.
-	if(is_clock_enabled) {
-		atomic_set(&uart_is_on, 1);
-		clear_bit(BT_ASLEEP, &flags);
-	} else {
-		set_bit(BT_ASLEEP, &flags);
-	}
-
-	if (!atomic_dec_and_test(&open_count)) {
-		atomic_inc(&open_count);
-		return -EBUSY;
-	}
-
-	spin_lock_irqsave(&rw_lock, irq_flags);
 
 	/* assert BT_WAKE */
 	if (debug_mask & DEBUG_BTWAKE)
@@ -465,6 +457,15 @@ int bluesleep_start(bool is_clock_enabled)
 #if defined(CONFIG_LINE_DISCIPLINE_DRIVER)
 	clear_bit(BT_TXDATA, &flags);
 #endif
+
+	// For ldisc-controlled BT, the clock is enabled by upper layers, so
+	// make bluesleep aware of this state.
+	clear_bit(BT_ASLEEP, &flags);
+	if(is_clock_enabled) {
+		atomic_set(&uart_is_on, 1);
+	} else {
+		hsuart_power(HS_UART_ON);
+	}
 
 	spin_unlock_irqrestore(&rw_lock, irq_flags);
 
@@ -499,8 +500,6 @@ void bluesleep_stop(void)
 
 #if defined(CONFIG_LINE_DISCIPLINE_DRIVER)
 	del_timer(&tx_timer);
-
-	atomic_set(&uart_is_on, 0);
 #endif
 
 	if (!test_bit(BT_ASLEEP, &flags)) {
@@ -511,7 +510,11 @@ void bluesleep_stop(void)
 		spin_unlock_irqrestore(&rw_lock, irq_flags);
 	}
 
-	atomic_inc(&open_count);
+#if defined(CONFIG_LINE_DISCIPLINE_DRIVER)
+	atomic_set(&uart_is_on, 0);
+#endif
+
+	atomic_dec(&open_count);
 
 	enable_wakeup_irq(0);
 	wake_lock_timeout(&bsi->wake_lock, HZ / 2);
@@ -706,7 +709,7 @@ static int bluesleep_resume(struct platform_device *pdev)
 	if (test_bit(BT_SUSPEND, &flags)) {
 		if (debug_mask & DEBUG_SUSPEND)
 			pr_info("bluesleep resuming...\n");
-		if (atomic_read(&open_count) == 0 &&
+		if (atomic_read(&open_count) == 1 &&
 			(gpio_get_value(bsi->host_wake) == bsi->irq_polarity)) {
 			if (debug_mask & DEBUG_SUSPEND)
 				pr_info("bluesleep resume from BT event...\n");
