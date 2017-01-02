@@ -214,7 +214,7 @@ long brcm_sh_ldisc_write(struct sk_buff *);
 /* ask for reference from KIM */
 void hu_ref(struct hci_uart **, int);
 long brcm_sh_ldisc_start(struct hci_uart *hu);
-long brcm_sh_ldisc_stop(struct hci_uart *hu);
+long brcm_sh_ldisc_stop(struct hci_uart *hu, bool btsleep_open);
 
 #ifdef CONFIG_BT_HCIUART_H4
 int h4_init(void);
