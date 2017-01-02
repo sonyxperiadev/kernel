@@ -438,20 +438,6 @@ static inline unsigned long cpufreq_scale(unsigned long old, u_int div,
  *                          CPUFREQ GOVERNORS                        *
  *********************************************************************/
 
-/* Govinfo Notifiers */
-#define CPUFREQ_LOAD_CHANGE		(0)
-
-/*
- * Governor specific info that can be passed to modules that subscribe
- * to CPUFREQ_GOVINFO_NOTIFIER
- */
-struct cpufreq_govinfo {
-	unsigned int cpu;
-	unsigned int load;
-	unsigned int sampling_rate_us;
-};
-extern struct atomic_notifier_head cpufreq_govinfo_notifier_list;
-
 /*
  * If (cpufreq_driver->target) exists, the ->governor decides what frequency
  * within the limits is used. If (cpufreq_driver->setpolicy> exists, these
