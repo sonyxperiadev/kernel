@@ -54,8 +54,10 @@ static const char * const pctl_names[] = {
 	"fpc1145_reset_reset",
 	"fpc1145_reset_active",
 	"fpc1145_irq_active",
+#ifdef CONFIG_ARCH_SONY_LOIRE
 	"fpc1145_ldo_enable",
 	"fpc1145_ldo_disable",
+#endif
 };
 
 struct vreg_config {
@@ -66,7 +68,13 @@ struct vreg_config {
 };
 
 static const struct vreg_config const vreg_conf[] = {
+#ifdef CONFIG_ARCH_SONY_LOIRE
 	{ "vcc_spi", 1800000UL, 1800000UL, 10, },
+#else
+	{ "vdd_ana", 1800000UL, 1800000UL, 6000, },
+	{ "vcc_spi", 1800000UL, 1800000UL, 10, },
+	{ "vdd_io", 1800000UL, 1800000UL, 6000, },
+#endif
 };
 
 struct fpc1145_data {
@@ -77,7 +85,9 @@ struct fpc1145_data {
 
 	int irq_gpio;
 	int rst_gpio;
+#ifdef CONFIG_ARCH_SONY_LOIRE
 	int ldo_gpio;
+#endif
 	struct mutex lock;
 	bool prepared;
 };
@@ -276,7 +286,17 @@ static int device_prepare(struct fpc1145_data *fpc1145, bool enable)
 		if (rc)
 			goto exit;
 
+#ifdef CONFIG_ARCH_SONY_LOIRE
 		(void)select_pin_ctl(fpc1145, "fpc1145_ldo_enable");
+#else
+		rc = vreg_setup(fpc1145, "vdd_io", true);
+		if (rc)
+			goto exit_1;
+
+		rc = vreg_setup(fpc1145, "vdd_ana", true);
+		if (rc)
+			goto exit_2;
+#endif
 
 		usleep_range(PWR_ON_STEP_SLEEP,
 				PWR_ON_STEP_SLEEP + PWR_ON_STEP_RANGE2);
@@ -292,7 +312,14 @@ static int device_prepare(struct fpc1145_data *fpc1145, bool enable)
 		usleep_range(PWR_ON_STEP_SLEEP,
 				PWR_ON_STEP_SLEEP + PWR_ON_STEP_RANGE2);
 
+#ifdef CONFIG_ARCH_SONY_LOIRE
 		(void)select_pin_ctl(fpc1145, "fpc1145_ldo_disable");
+#else
+		(void)vreg_setup(fpc1145, "vdd_ana", false);
+exit_2:
+		(void)vreg_setup(fpc1145, "vdd_io", false);
+exit_1:
+#endif
 		(void)vreg_setup(fpc1145, "vcc_spi", false);
 exit:
 		fpc1145->prepared = false;
@@ -440,10 +467,12 @@ static int fpc1145_probe(struct platform_device *pdev)
 			&fpc1145->rst_gpio);
 	if (rc)
 		goto exit;
+#ifdef CONFIG_ARCH_SONY_LOIRE
 	rc = fpc1145_request_named_gpio(fpc1145, "fpc,gpio_ldo",
 			&fpc1145->ldo_gpio);
 	if (rc)
 		goto exit;
+#endif
 
 	fpc1145->fingerprint_pinctrl = devm_pinctrl_get(dev);
 	if (IS_ERR(fpc1145->fingerprint_pinctrl)) {
@@ -519,7 +548,14 @@ static int fpc1145_remove(struct platform_device *pdev)
 	sysfs_remove_link(&pdev->dev.parent->kobj, FPC_SYMLINK);
 	sysfs_remove_group(&pdev->dev.kobj, &attribute_group);
 	mutex_destroy(&fpc1145->lock);
+#ifdef CONFIG_ARCH_SONY_LOIRE
 	(void)vreg_setup(fpc1145, "vcc_spi", false);
+#else
+	(void)vreg_setup(fpc1145, "vdd_io", false);
+	(void)vreg_setup(fpc1145, "vcc_spi", false);
+	(void)vreg_setup(fpc1145, "vdd_ana", false);
+#endif
+
 	dev_info(&pdev->dev, "%s\n", __func__);
 	return 0;
 }
