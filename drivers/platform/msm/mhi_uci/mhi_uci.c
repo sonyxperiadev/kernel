@@ -1306,9 +1306,10 @@ static int mhi_uci_create_device(struct uci_client *uci_client)
 		 uci_client->out_attr.mhi_handle->bus,
 		 uci_client->out_attr.mhi_handle->slot,
 		 uci_client->out_attr.chan_id);
+#ifdef CONFIG_IPC_LOGGING
 	uci_client->uci_ipc_log = ipc_log_context_create(MHI_UCI_IPC_LOG_PAGES,
 							 node_name, 0);
-
+#endif
 	return 0;
 }
 
@@ -1446,6 +1447,7 @@ static struct platform_driver mhi_uci_driver = {
 
 static int mhi_uci_init(void)
 {
+#ifdef CONFIG_IPC_LOGGING
 	mhi_uci_drv_ctxt.mhi_uci_ipc_log =
 		ipc_log_context_create(MHI_UCI_IPC_LOG_PAGES,
 				       "mhi-uci",
@@ -1455,7 +1457,7 @@ static int mhi_uci_init(void)
 			UCI_DBG_WARNING,
 			"Failed to create IPC logging context");
 	}
-
+#endif
 	mhi_uci_drv_ctxt.mhi_uci_class =
 		class_create(THIS_MODULE, DEVICE_NAME);
 

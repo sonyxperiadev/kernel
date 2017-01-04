@@ -3520,6 +3520,7 @@ static int msm_hs_probe(struct platform_device *pdev)
 	memset(name, 0, sizeof(name));
 	scnprintf(name, sizeof(name), "%s%s", dev_name(msm_uport->uport.dev),
 									"_state");
+#ifdef CONFIG_IPC_LOGGING
 	msm_uport->ipc_msm_hs_log_ctxt =
 			ipc_log_context_create(IPC_MSM_HS_LOG_STATE_PAGES,
 								name, 0);
@@ -3533,7 +3534,7 @@ static int msm_hs_probe(struct platform_device *pdev)
 		if (unlikely(ret))
 			MSM_HS_WARN("%s: Failed to create dev. attr", __func__);
 	}
-
+#endif
 	uport->irq = core_irqres;
 	msm_uport->bam_irq = bam_irqres;
 	pdata->wakeup_irq = wakeup_irqres;

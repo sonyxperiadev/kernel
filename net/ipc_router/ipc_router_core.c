@@ -3961,6 +3961,8 @@ static void *ipc_router_create_log_ctx(char *name)
 				GFP_KERNEL);
 	if (!sub_log_ctx)
 		return NULL;
+
+#ifdef CONFIG_IPC_LOGGING
 	sub_log_ctx->log_ctx = ipc_log_context_create(
 				IPC_RTR_INFO_PAGES, name, 0);
 	if (!sub_log_ctx->log_ctx) {
@@ -3969,6 +3971,10 @@ static void *ipc_router_create_log_ctx(char *name)
 		kfree(sub_log_ctx);
 		return NULL;
 	}
+#else
+		return NULL;
+#endif
+
 	strlcpy(sub_log_ctx->log_ctx_name, name,
 			LOG_CTX_NAME_LEN);
 	INIT_LIST_HEAD(&sub_log_ctx->list);

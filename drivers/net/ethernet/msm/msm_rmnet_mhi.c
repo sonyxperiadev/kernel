@@ -1329,9 +1329,11 @@ static int rmnet_mhi_probe(struct platform_device *pdev)
 		 client_handle->bus,
 		 client_handle->slot,
 		 rmnet_mhi_ptr->dev_id);
+#ifdef CONFIG_IPC_LOGGING
 	rmnet_mhi_ptr->rmnet_ipc_log =
 		ipc_log_context_create(RMNET_IPC_LOG_PAGES,
 				       node_name, 0);
+#endif
 	rmnet_mhi_ptr->debug.rmnet_msg_lvl = MSG_CRITICAL;
 
 #ifdef CONFIG_MSM_MHI_DEBUG

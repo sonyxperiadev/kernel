@@ -1790,11 +1790,13 @@ static int mhi_init(struct mhi_dev *mhi)
 	if (!mhi->mmio_backup)
 		return -ENOMEM;
 
+#ifdef CONFIG_IPC_LOGGING
 	mhi_ipc_log = ipc_log_context_create(MHI_IPC_LOG_PAGES, "mhi", 0);
 	if (mhi_ipc_log == NULL) {
 		dev_err(&pdev->dev,
 				"Failed to create IPC logging context\n");
 	}
+#endif
 
 	return 0;
 }
