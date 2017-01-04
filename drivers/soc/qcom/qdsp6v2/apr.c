@@ -926,10 +926,12 @@ static int __init apr_init(void)
 		return -ENOMEM;
 	atomic_notifier_chain_register(&panic_notifier_list, &panic_nb);
 
+#ifdef CONFIG_IPC_LOGGING
 	apr_pkt_ctx = ipc_log_context_create(APR_PKT_IPC_LOG_PAGE_CNT,
 						"apr", 0);
 	if (!apr_pkt_ctx)
 		pr_err("%s: Unable to create ipc log context\n", __func__);
+#endif
 
 	return 0;
 }
