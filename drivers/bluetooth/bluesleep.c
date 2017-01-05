@@ -446,7 +446,7 @@ int bluesleep_start(bool is_clock_enabled)
 		spin_unlock_irqrestore(&rw_lock, irq_flags);
 		return 0;
 	}
-
+  
 	/* assert BT_WAKE */
 	if (debug_mask & DEBUG_BTWAKE)
 		pr_err("BT WAKE: set to wake\n");
@@ -500,6 +500,8 @@ void bluesleep_stop(void)
 
 #if defined(CONFIG_LINE_DISCIPLINE_DRIVER)
 	del_timer(&tx_timer);
+
+	atomic_set(&uart_is_on, 0);
 #endif
 
 	if (!test_bit(BT_ASLEEP, &flags)) {
