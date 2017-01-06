@@ -1929,6 +1929,15 @@ void *def_taiko_mbhc_cal(void)
 	btn_high = wcd9xxx_mbhc_cal_btn_det_mp(btn_cfg,
 					       MBHC_BTN_DET_V_BTN_HIGH);
 	btn_low[0] = -30;
+#ifdef CONFIG_MACH_SONY_RHINE
+	btn_high[0] = 887;
+	btn_low[1] = 888;
+	btn_high[1] = 1009;
+	btn_low[2] = 1010;
+	btn_high[2] = 1189;
+	btn_low[3] = 1190;
+	btn_high[3] = 1411;
+#else
 	btn_high[0] = 50;
 	btn_low[1] = 51;
 	btn_high[1] = 336;
@@ -1936,6 +1945,7 @@ void *def_taiko_mbhc_cal(void)
 	btn_high[2] = 680;
 	btn_low[3] = 681;
 	btn_high[3] = 1207;
+#endif
 	n_ready = wcd9xxx_mbhc_cal_btn_det_mp(btn_cfg, MBHC_BTN_DET_N_READY);
 	n_ready[0] = 80;
 	n_ready[1] = 68;
