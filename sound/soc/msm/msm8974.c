@@ -202,7 +202,7 @@ static struct wcd9xxx_mbhc_config mbhc_cfg = {
 	.micbias_enable_flags = 1 << MBHC_MICBIAS_ENABLE_THRESHOLD_HEADSET,
 	.insert_detect = true,
 	.swap_gnd_mic = NULL,
-#ifdef CONFIG_MACH_SONY_SHINANO
+#if defined (CONFIG_MACH_SONY_SHINANO) || defined (CONFIG_MACH_SONY_RHINE)
 	.cs_enable_flags = 0,
 #else
 	.cs_enable_flags = (1 << MBHC_CS_ENABLE_POLLING |
