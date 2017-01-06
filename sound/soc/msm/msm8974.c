@@ -1904,8 +1904,13 @@ void *def_taiko_mbhc_cal(void)
 	S(t_ins_retry, 200);
 #undef S
 #define S(X, Y) ((WCD9XXX_MBHC_CAL_PLUG_TYPE_PTR(taiko_cal)->X) = (Y))
+#ifdef CONFIG_MACH_SONY_RHINE
+	S(v_no_mic, 900);
+	S(v_hs_max, 2600);
+#else
 	S(v_no_mic, 50);
 	S(v_hs_max, 2550);
+#endif
 #undef S
 #define S(X, Y) ((WCD9XXX_MBHC_CAL_BTN_DET_PTR(taiko_cal)->X) = (Y))
 	S(c[0], 62);
