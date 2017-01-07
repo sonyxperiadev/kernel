@@ -25,7 +25,7 @@ static void net_secret_init(void)
 
 	for (i = NET_SECRET_SIZE; i > 0;) {
 		do {
-			get_random_bytes(&tmp, sizeof(tmp));
+			prandom_bytes(&tmp, sizeof(tmp));
 		} while (!tmp);
 		cmpxchg(&net_secret[--i], 0, tmp);
 	}

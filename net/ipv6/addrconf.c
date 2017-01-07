@@ -1935,7 +1935,7 @@ static int ipv6_inherit_eui64(u8 *eui, struct inet6_dev *idev)
 static void __ipv6_regen_rndid(struct inet6_dev *idev)
 {
 regen:
-	get_random_bytes(idev->rndid, sizeof(idev->rndid));
+	prandom_bytes(idev->rndid, sizeof(idev->rndid));
 	idev->rndid[0] &= ~0x02;
 
 	/*
