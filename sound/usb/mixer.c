@@ -994,9 +994,9 @@ static int get_min_max_with_quirks(struct usb_mixer_elem_info *cval,
 	 * while ALSA TLV contains in 1/100 dB unit
 	 */
 	cval->dBmin =
-		(convert_signed_value(cval, cval->min) * 100) / (cval->res);
+		(convert_signed_value(cval, cval->min) * 100) / 256;
 	cval->dBmax =
-		(convert_signed_value(cval, cval->max) * 100) / (cval->res);
+		(convert_signed_value(cval, cval->max) * 100) / 256;
 	if (cval->dBmin > cval->dBmax) {
 		/* something is wrong; assume it's either from/to 0dB */
 		if (cval->dBmin < 0)
