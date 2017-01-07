@@ -4482,7 +4482,7 @@ static void cfq_registered_queue(struct request_queue *q)
 static ssize_t
 cfq_var_show(unsigned int var, char *page)
 {
-	return sprintf(page, "%d\n", var);
+	return sprintf(page, "%u\n", var);
 }
 
 static ssize_t
