@@ -1,3 +1,8 @@
+#ifdef CONFIG_MSMB_CAMERA_LEGACY
+
+#include <uapi/media/msmb_isp_legacy.h>
+
+#else /* CONFIG_MSMB_CAMERA_NEWGEN */
 #ifndef __UAPI_MSMB_ISP__
 #define __UAPI_MSMB_ISP__
 
@@ -986,3 +991,4 @@ enum msm_isp_ioctl_cmd_code {
 	_IOWR('V', MSM_ISP_MAP_BUF_START_MULTI_PASS_FE, \
 		struct msm_vfe_fetch_eng_multi_pass_start)
 #endif /* __MSMB_ISP__ */
+#endif /* MSMB_CAMERA_NEWGEN */
