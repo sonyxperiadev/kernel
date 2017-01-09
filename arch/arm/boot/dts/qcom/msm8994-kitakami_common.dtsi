@@ -219,12 +219,12 @@
 					};
 					event_01 {
 						type = <1>; /* KEY */
-						code = <116>; /* KEY_POWER */
+						code = <143>; /* WAKEUP */
 						down = <1>;
 					};
 					event_02 {
 						type = <1>; /* KEY */
-						code = <116>; /* KEY_POWER */
+						code = <143>; /* WAKEUP */
 						down = <0>;
 					};
 					event_03 {
