@@ -171,6 +171,13 @@ static u32 vendor_oui = CONFIG_DHD_SET_RANDOM_MAC_VAL;
 
 #include <wl_android.h>
 
+#include <dhd_somc_custom.h>
+
+#ifdef SOMC_MIMO
+#define SOMC_TXPWR_5G 0x20
+#define SOMC_TXPWR_OVERRIDE 0x80
+#endif
+
 /* Maximum STA per radio */
 #define DHD_MAX_STA     32
 
@@ -525,6 +532,12 @@ module_param(disable_proptx, int, 0644);
 /* load firmware and/or nvram values from the filesystem */
 module_param_string(firmware_path, firmware_path, MOD_PARAM_PATHLEN, 0660);
 module_param_string(nvram_path, nvram_path, MOD_PARAM_PATHLEN, 0660);
+
+/* Disable VHT(11ac) mode */
+#if !defined(DISABLE_11AC)
+int somc_disable_vht = 0;
+module_param(somc_disable_vht, int, 0660);
+#endif /* ! DISABLE_11AC */
 
 /* Watchdog interval */
 
@@ -3939,6 +3952,35 @@ int dhd_ioctl_process(dhd_pub_t *pub, int ifidx, dhd_ioctl_t *ioc, void *data_bu
 #endif
 		goto done;
 	}
+
+#ifdef SOMC_MIMO
+	if (*((char *)data_buf + 12) & SOMC_TXPWR_5G &&
+		*((char *)data_buf + 9) != WLC_TXPWR_MAX &&
+		*((char *)data_buf + 10) != WLC_TXPWR_MAX) {
+			*((char *)data_buf + 12) |= SOMC_TXPWR_OVERRIDE;
+	}
+#endif
+
+	if (ioc->cmd == WLC_SET_VAR && data_buf != NULL &&
+	    strncmp("qtxpower", data_buf, 8) == 0) {
+		if (somc_update_qtxpower((char *)data_buf + 9, *((char *)data_buf + 12), 0) != 0) {
+			DHD_ERROR(("qtxpower on chain0 failed\n"));
+			bcmerror = BCME_ERROR;
+			goto done;
+		}
+#ifdef SOMC_MIMO
+		if (somc_update_qtxpower((char *)data_buf + 10, *((char *)data_buf + 12), 1) != 0) {
+			DHD_ERROR(("qtxpower on chain1 failed\n"));
+			bcmerror = BCME_ERROR;
+			goto done;
+		}
+#else
+		/* initialize chain1 value just in case since it's not needed for SISO */
+		*((char *)data_buf + 10) = 0;
+#endif
+	}
+
+
 	bcmerror = dhd_wl_ioctl(pub, ifidx, (wl_ioctl_t *)ioc, data_buf, buflen);
 
 done:
@@ -5570,6 +5612,8 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 	uint32 nmode = 0;
 #endif /* DISABLE_11N */
 
+	uint32 vhtmode = 0;
+
 #ifdef USE_WL_TXBF
 	uint32 txbf = 1;
 #endif /* USE_WL_TXBF */
@@ -5768,6 +5812,18 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 			DHD_ERROR(("%s: country code setting failed\n", __FUNCTION__));
 	}
 
+#if !defined(DISABLE_11AC)
+	if (somc_disable_vht)
+	{
+#endif /* ! DISABLE_11AC */
+	bcm_mkiovar("vhtmode", (char *)&vhtmode, 4, iovbuf, sizeof(iovbuf));
+	if ((ret = dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0)) < 0)
+		DHD_ERROR(("%s wl vhtmode 0 failed %d\n", __FUNCTION__, ret));
+	else
+		DHD_ERROR(("%s VHT(11ac) mode is disabled\n", __FUNCTION__));
+#if !defined(DISABLE_11AC)
+	}
+#endif /* ! DISABLE_11AC */
 
 	/* Set Listen Interval */
 	bcm_mkiovar("assoc_listen", (char *)&listen_interval, 4, iovbuf, sizeof(iovbuf));

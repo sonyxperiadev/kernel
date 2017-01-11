@@ -57,6 +57,8 @@
 #endif /* DHDTCPACK_SUPPRESS */
 #include <proto/bcmevent.h>
 
+#include <dhd_somc_custom.h>
+
 #ifdef BCMEMBEDIMAGE
 #include BCMEMBEDIMAGE
 #endif /* BCMEMBEDIMAGE */
@@ -936,6 +938,11 @@ dhdpcie_download_nvram(struct dhd_bus *bus)
 	if (len > 0 && len < MAX_NVRAMBUF_SIZE) {
 		bufp = (char *)memblock;
 		bufp[len] = 0;
+
+		if (somc_txpower_calibrate(memblock, len) != BCME_OK) {
+			DHD_ERROR(("%s: error calibrating tx power\n", __FUNCTION__));
+			goto err;
+		}
 
 		if (nvram_file_exists)
 			len = process_nvram_vars(bufp, len);
