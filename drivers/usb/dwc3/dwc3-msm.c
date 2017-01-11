@@ -2811,9 +2811,6 @@ static void dwc3_msm_external_power_changed(struct power_supply *psy)
 		dwc3_start_chg_det(&mdwc->charger, false);
 		mdwc->ext_vbus_psy->get_property(mdwc->ext_vbus_psy,
 					POWER_SUPPLY_PROP_CURRENT_MAX, &ret);
-#ifndef CONFIG_SONY_USB_EXTENSIONS
-		power_supply_set_current_limit(&mdwc->usb_psy, ret.intval);
-#endif
 	}
 
 #ifdef CONFIG_SONY_USB_EXTENSIONS
