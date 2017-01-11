@@ -1,0 +1,185 @@
+/* Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+*
+* This program is free software; you can redistribute it and/or modify
+* it under the terms of the GNU General Public License version 2 and
+* only version 2 as published by the Free Software Foundation.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+*/
+
+#ifndef __MSM_CLOCKS_8226_H
+#define __MSM_CLOCKS_8226_H
+
+#define clk_measure_clk 0x2ede82c7
+#define clk_apc0_m_clk 0xf771869f
+#define clk_apc1_m_clk 0xaeff2054
+#define clk_apc2_m_clk 0x909d619f
+#define clk_apc3_m_clk 0xa6c0668a
+#define clk_l2_m_clk 0x90c000c6
+#define clk_wcnss_m_clk 0x3ca8444a
+#define clk_cxo_lpm_clk 0xdcef3633
+#define clk_cxo_pil_lpass_clk 0x5ef1f85c
+#define clk_q6ss_xo_clk 0x503ac4a2
+#define clk_gcc_lpass_q6_axi_clk 0x71c0620b
+#define clk_q6ss_ahb_lfabif_clk 0x2cb1ad50
+#define clk_q6ss_ahbm_clk 0x73cd6898
+#define clk_cxo_pil_mss_clk 0xbc6bfa33
+#define clk_gcc_mss_q6_bimc_axi_clk 0xe68cc2e5
+#define clk_gcc_mss_cfg_ahb_clk 0xca6a2f13
+#define clk_gcc_boot_rom_ahb_clk 0xfb4b2fab
+#define clk_cxo_d1_pin 0xe5814e14
+#define clk_cxo_d1 0x760c6a12
+#define clk_cxo_pil_pronto_clk 0x1bd2ce83
+#define clk_vcodec0_clk_src 0x32253709
+#define clk_venus0_vcodec0_clk 0xd1200033
+#define clk_venus0_ahb_clk 0x31f39d9f
+#define clk_venus0_axi_clk 0x87fc9000
+#define clk_xo_a_clk 0x4c2ee2a8
+#define clk_gpll0_ao 0x3ff44098
+#define clk_a7sspll 0x0af752ac
+#define clk_kpss_ahb_clk_src 0x089581c4
+#define clk_cxo_wlan_clk 0x1ee2e7c4
+#define clk_cxo_a1 0x77b5603d
+#define clk_cnoc_msmbus_clk 0xbc12f5aa
+#define clk_cnoc_msmbus_a_clk 0x3fd69f26
+#define clk_snoc_msmbus_clk 0x20a77976
+#define clk_snoc_msmbus_a_clk 0xdc503474
+#define clk_pnoc_msmbus_clk 0x4b8907ec
+#define clk_pnoc_msmbus_a_clk 0xee3084e4
+#define clk_bimc_msmbus_clk 0xcdee1c3f
+#define clk_bimc_msmbus_a_clk 0x4f0acd95
+#define clk_bimc_acpu_a_clk 0xb11bda25
+#define clk_ocmemgx_msmbus_clk 0xf2af8777
+#define clk_ocmemgx_msmbus_a_clk 0xfc73a647
+#define clk_mmss_s0_axi_clk 0x3ac69dcc
+#define clk_qdss_clk 0xaff53364
+#define clk_qdss_a_clk 0x53254c5a
+#define clk_mmss_misc_ahb_clk 0x9ee498ac
+#define clk_cxo_otg_clk 0xa161eae7
+#define clk_gcc_usb_hs_ahb_clk 0x0518c801
+#define clk_gcc_usb_hs_system_clk 0x60d4f36e
+#define clk_gcc_usb2a_phy_sleep_clk 0x7d2b2e77
+#define clk_pnoc_sps_clk 0xfb67c2b7
+#define clk_gcc_bam_dma_ahb_clk 0x8a795433
+#define clk_gcc_blsp1_ahb_clk 0x15c94c04
+#define clk_gcc_blsp1_qup5_i2c_apps_clk 0x35856a33
+#define clk_gcc_blsp1_qup3_i2c_apps_clk 0x81520542
+#define clk_gcc_blsp1_uart3_apps_clk 0x606fe320
+#define clk_gcc_blsp1_uart2_apps_clk 0x649762bd
+#define clk_gcc_blsp1_qup1_spi_apps_clk 0x364082be
+#define clk_gcc_ce1_clk 0x2c4cb1bb
+#define clk_gcc_ce1_ahb_clk 0x3e17a4d7
+#define clk_gcc_ce1_axi_clk 0x2f34ce08
+#define clk_qseecom_ce1_clk_src 0x23940c04
+#define clk_gud_ce1_clk_src 0x8a7cf37e
+#define clk_scm_ce1_clk_src 0x46637f99
+#define clk_ce1_clk_src 0x88468e8d
+#define clk_gcc_sdcc1_ahb_clk 0xf4c198ad
+#define clk_gcc_sdcc1_apps_clk 0xa4854c2b
+#define clk_gcc_sdcc2_ahb_clk 0x40eec15d
+#define clk_gcc_sdcc2_apps_clk 0xcbe87b4d
+#define clk_gcc_sdcc3_ahb_clk 0xd4558985
+#define clk_gcc_sdcc3_apps_clk 0xf70cf467
+#define clk_pnoc_clk 0x51f84c83
+#define clk_pnoc_a_clk 0xbecee18f
+#define clk_snoc_clk 0xd79f56c8
+#define clk_snoc_a_clk 0x86c76502
+#define clk_cnoc_clk 0xe12cfb45
+#define clk_cnoc_a_clk 0xc654c733
+#define clk_mmssnoc_ahb_clk 0xd8358f6c
+#define clk_mmssnoc_ahb_a_clk 0x6351fc54
+#define clk_bimc_clk 0x0fb4aea3
+#define clk_bimc_a_clk 0x0dca025b
+#define clk_axi_clk_src 0x9d8b2a94
+#define clk_gpll0 0x8d19e248
+#define clk_gpll1 0xeaa523af
+#define clk_mmpll0_pll 0x11e15f7d
+#define clk_mmpll1_pll 0xbb4fb657
+#define clk_gcc_blsp1_qup1_i2c_apps_clk 0xcf0b1509
+#define clk_gcc_blsp1_qup2_i2c_apps_clk 0x21c87002
+#define clk_gcc_blsp1_qup2_spi_apps_clk 0xd43f832a
+#define clk_gcc_blsp1_qup3_spi_apps_clk 0xdee08ddd
+#define clk_gcc_blsp1_qup4_i2c_apps_clk 0x8f68e01e
+#define clk_gcc_blsp1_qup4_spi_apps_clk 0x60905c72
+#define clk_gcc_blsp1_qup5_spi_apps_clk 0xcb9f8322
+#define clk_gcc_blsp1_qup6_i2c_apps_clk 0xa4cc2a2b
+#define clk_gcc_blsp1_qup6_spi_apps_clk 0xf25b73d5
+#define clk_gcc_blsp1_uart1_apps_clk 0x614eca63
+#define clk_gcc_blsp1_uart4_apps_clk 0x1cb912e8
+#define clk_gcc_blsp1_uart5_apps_clk 0xa0777aa3
+#define clk_gcc_blsp1_uart6_apps_clk 0x498b8077
+#define clk_gcc_pdm2_clk 0xf75cc103
+#define clk_gcc_pdm_ahb_clk 0x55830f95
+#define clk_gcc_prng_ahb_clk 0x99ce358f
+#define clk_gcc_gp1_clk 0x690d1a7f
+#define clk_gcc_gp2_clk 0xebabf071
+#define clk_gcc_gp3_clk 0x1ac94e00
+#define clk_gcc_usb_hsic_ahb_clk 0x8942def5
+#define clk_gcc_usb_hsic_clk 0xba129a12
+#define clk_gcc_usb_hsic_io_cal_clk 0xa0e2aae6
+#define clk_gcc_usb_hsic_system_clk 0x4af97421
+#define clk_div_clk2 0xe22ef530
+#define clk_mdss_byte0_clk 0x2efcb6e0
+#define clk_mdss_esc0_clk 0x8cf75fc0
+#define clk_mdss_pclk0_clk 0xf704aabf
+#define clk_mdss_ahb_clk 0x0680301b
+#define clk_mdss_axi_clk 0x6dfdb770
+#define clk_mdss_mdp_clk 0x073895bd
+#define clk_mdss_mdp_lut_clk 0xb0fc391b
+#define clk_mdp_clk_src 0xbd9fd9a4
+#define clk_mdss_vsync_clk 0xc1ad53a7
+#define clk_camss_jpeg_jpeg0_clk 0x50d0b890
+#define clk_camss_vfe_vfe0_clk 0x0c936bec
+#define clk_camss_csi_vfe0_clk 0x1ae3b23a
+#define clk_camss_vfe_cpp_clk 0xe516fc95
+#define clk_oxili_gfx3d_clk 0xddadcb72
+#define clk_mclk0_clk_src 0xc91d97ac
+#define clk_mclk1_clk_src 0x3d998ca9
+#define clk_camss_mclk0_clk 0x3688abaf
+#define clk_camss_mclk1_clk 0x83c90e26
+#define clk_camss_top_ahb_clk 0xd6767074
+#define clk_camss_cci_cci_ahb_clk 0x6b55585e
+#define clk_cci_clk_src 0xb28a3c73
+#define clk_camss_cci_cci_clk 0x595629a1
+#define clk_camss_ispif_ahb_clk 0xdbc4d3e5
+#define clk_csi0phytimer_clk_src 0xc22d442f
+#define clk_camss_phy0_csi0phytimer_clk 0x831673c3
+#define clk_csi1phytimer_clk_src 0xbee61a21
+#define clk_camss_phy1_csi1phytimer_clk 0xfd17827a
+#define clk_camss_csi0_ahb_clk 0xc2f3b179
+#define clk_csi0_clk_src 0x550c1d42
+#define clk_camss_csi0phy_clk 0xa25a278d
+#define clk_camss_csi0_clk 0x075e31cf
+#define clk_camss_csi0pix_clk 0x904601cc
+#define clk_camss_csi0rdi_clk 0x4225cbb7
+#define clk_camss_csi1_ahb_clk 0x96f1d838
+#define clk_csi1_clk_src 0x6f1271bb
+#define clk_camss_csi1phy_clk 0x83fbb1c9
+#define clk_camss_csi1_clk 0xfcf14a45
+#define clk_camss_csi1pix_clk 0x87c738f0
+#define clk_camss_csi1rdi_clk 0x85e65c86
+#define clk_vfe0_clk_src 0x13fc340b
+#define clk_camss_vfe_vfe_ahb_clk 0xfadd3c47
+#define clk_camss_vfe_vfe_axi_clk 0x7a4d338f
+#define clk_camss_jpeg_jpeg_ahb_clk 0x111844ac
+#define clk_camss_jpeg_jpeg_axi_clk 0x13db32df
+#define clk_camss_micro_ahb_clk 0xf056f6d0
+#define clk_camss_vfe_cpp_ahb_clk 0xa6ba0be9
+#define clk_oxilicx_ahb_clk 0xdb01f919
+#define clk_oxilicx_axi_clk 0x19e333d1
+#define clk_ocmemgx_core_clk 0x5ab79f43
+#define clk_camss_gp0_clk 0x2c39059d
+#define clk_camss_gp1_clk 0x073f0496
+#define clk_mmss_mmssnoc_axi_clk 0xcc6cb72f
+#define clk_div_clk1 0xaf1d8eb8
+#define clk_dsi_vco_clk_8226 0xe289ed8e
+#define clk_analog_postdiv_clk_8226 0xfb6fc909
+#define clk_indirect_path_div2_clk_8226 0x04da77be
+#define clk_pixel_clk_src_8226 0x78beed47
+#define clk_byte_mux_8226 0x777ab409
+#define clk_byte_clk_src_8226 0x477834fe
+
+#endif

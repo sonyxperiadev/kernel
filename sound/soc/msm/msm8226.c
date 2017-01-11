@@ -148,6 +148,7 @@ enum {
 	SLIM_4_TX_1 = 150, /* In-call musid delivery TX */
 };
 
+static struct platform_device *spdev;
 static int msm8226_ext_spk_pamp;
 static int msm_slim_0_rx_ch = 1;
 static int msm_slim_0_tx_ch = 1;
@@ -1081,7 +1082,7 @@ static int msm_audrx_init(struct snd_soc_pcm_runtime *rtd)
 
 	snd_soc_dapm_sync(dapm);
 
-	codec_clk = clk_get(cpu_dai->dev, "osr_clk");
+	codec_clk = clk_get(&spdev->dev, "osr_clk");
 	if (codec_clk < 0)
 		pr_err("%s() Failed to get clock for %s\n",
 			   __func__, dev_name(cpu_dai->dev));
@@ -2455,6 +2456,8 @@ static int msm8226_asoc_machine_probe(struct platform_device *pdev)
 			dev_dbg(&pdev->dev, "Unknown value, hence setting to default");
 		}
 	}
+
+	spdev = pdev;
 
 	ret = snd_soc_register_card(card);
 	if (ret) {
