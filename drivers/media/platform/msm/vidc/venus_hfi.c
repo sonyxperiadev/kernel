@@ -4692,11 +4692,21 @@ static int __load_fw(struct venus_hfi_device *device)
 		goto fail_init_res;
 	}
 
-	rc = __initialize_packetization(device);
-	if (rc) {
-		dprintk(VIDC_ERR, "Failed to initialize packetization\n");
-		goto fail_init_pkt;
+	/* kholk: Legacy SoCs cannot initialize packetization
+	 *        in firmware load path because old bootloader
+	 */
+	if (!of_machine_is_compatible("qcom,msm8956") &&
+	    !of_machine_is_compatible("qcom,msm8976") &&
+	    !of_machine_is_compatible("qcom,msm8974") &&
+	    !of_machine_is_compatible("qcom,msm8994") &&
+	    !of_machine_is_compatible("qcom,msm8226")) {
+		rc = __initialize_packetization(device);
+		if (rc) {
+			dprintk(VIDC_ERR, "Failed to initialize packetization\n");
+			goto fail_init_pkt;
+		}
 	}
+
 	trace_msm_v4l2_vidc_fw_load_start("msm_v4l2_vidc venus_fw load start");
 
 	rc = __venus_power_on(device);
