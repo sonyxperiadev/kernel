@@ -46,7 +46,7 @@
 		qcom,cam-vreg-name = "cam_vaf";
 		qcom,cam-vreg-min-voltage = <2700000>;
 		qcom,cam-vreg-max-voltage = <2700000>;
-		qcom,cam-vreg-op-mode = <150000>;
+		qcom,cam-vreg-op-mode = <300000>;
 		qcom,clock-rates = <19200000 0>;
 	};
 
