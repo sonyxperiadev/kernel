@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2015. The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -8498,3 +8498,66 @@ eHalStatus limTxBdComplete(tpAniSirGlobal pMac, void *pData)
             pTxBdStatus->txBdToken, pTxBdStatus->txCompleteStatus);
     return eHAL_STATUS_SUCCESS;
 }
+
+/**
+ * lim_is_robust_mgmt_action_frame() - Check if action catagory is
+ * robust action frame
+ * @action_catagory: Action frame catagory.
+ *
+ * This function is used to check if given action catagory is robust
+ * action frame.
+ *
+ * Return: bool
+ */
+bool lim_is_robust_mgmt_action_frame(uint8 action_catagory)
+{
+   switch (action_catagory) {
+       /*
+        * NOTE: This function doesn't take care of the DMG
+        * (Directional Multi-Gigatbit) BSS case as 8011ad
+        * support is not yet added. In future, if the support
+        * is required then this function need few more arguments
+        * and little change in logic.
+        */
+       case SIR_MAC_ACTION_SPECTRUM_MGMT:
+       case SIR_MAC_ACTION_QOS_MGMT:
+       case SIR_MAC_ACTION_DLP:
+       case SIR_MAC_ACTION_BLKACK:
+       case SIR_MAC_ACTION_RRM:
+       case SIR_MAC_ACTION_FAST_BSS_TRNST:
+       case SIR_MAC_ACTION_SA_QUERY:
+       case SIR_MAC_ACTION_PROT_DUAL_PUB:
+       case SIR_MAC_ACTION_WNM:
+       case SIR_MAC_ACITON_MESH:
+       case SIR_MAC_ACTION_MHF:
+       case SIR_MAC_ACTION_FST:
+            return true;
+       default:
+            VOS_TRACE (VOS_MODULE_ID_PE, VOS_TRACE_LEVEL_INFO,
+                   FL("non-PMF action category[%d] "),
+                   action_catagory);
+            break;
+   }
+   return false;
+}
+
+/**
+ * lim_compute_ext_cap_ie_length - compute the length of ext cap ie
+ * based on the bits set
+ * @ext_cap: extended IEs structure
+ *
+ * Return: length of the ext cap ie, 0 means should not present
+ */
+tANI_U8 lim_compute_ext_cap_ie_length (tDot11fIEExtCap *ext_cap) {
+    tANI_U8 i = DOT11F_IE_EXTCAP_MAX_LEN;
+
+    while (i) {
+        if (ext_cap->bytes[i-1]) {
+            break;
+        }
+        i --;
+    }
+
+    return i;
+}
+

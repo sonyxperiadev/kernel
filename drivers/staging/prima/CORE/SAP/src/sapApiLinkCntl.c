@@ -99,9 +99,6 @@
 /*----------------------------------------------------------------------------
  * Externalized Function Definitions
  * -------------------------------------------------------------------------*/
-#ifdef FEATURE_WLAN_CH_AVOID
-   extern safeChannelType safeChannels[];
-#endif /* FEATURE_WLAN_CH_AVOID */
 
 /*----------------------------------------------------------------------------
  * Function Declarations and Documentation
@@ -164,19 +161,6 @@ void sapSetOperatingChannel(ptSapContext psapContext, v_U8_t operChannel)
                    BAND(2.4GHz) as 2.4 channels are available in all the
                    countries*/
                    psapContext->channel = SAP_DEFAULT_CHANNEL;
-
-#ifdef FEATURE_WLAN_CH_AVOID
-                for( i = 0; i < NUM_20MHZ_RF_CHANNELS; i++ )
-                {
-                    if((NV_CHANNEL_ENABLE ==
-                        vos_nv_getChannelEnabledState(safeChannels[i].channelNumber))
-                            && (VOS_TRUE == safeChannels[i].isSafe))
-                    {
-                        psapContext->channel = safeChannels[i].channelNumber;
-                        break;
-                    }
-                }
-#endif
             }
         }
         else
@@ -1269,15 +1253,6 @@ WLANSAP_RoamCallback
                         FL("CSR roamStatus = %s (%d)"),
                         "eCSR_ROAM_WPS_PBC_PROBE_REQ_IND", roamStatus);
             break;        
-
-        case eCSR_ROAM_INDICATE_MGMT_FRAME:
-            VOS_TRACE( VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_INFO_HIGH,
-                        FL("CSR roamStatus = %s (%d)"),
-                        "eCSR_ROAM_INDICATE_MGMT_FRAME", roamStatus);
-            sapSignalHDDevent(sapContext, pCsrRoamInfo, 
-                              eSAP_INDICATE_MGMT_FRAME, 
-                              (v_PVOID_t) eSAP_STATUS_SUCCESS);
-            break;
         case eCSR_ROAM_REMAIN_CHAN_READY:
             VOS_TRACE( VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_INFO_HIGH,
                         FL("CSR roamStatus = %s (%d)"),
@@ -1414,6 +1389,7 @@ WLANSAP_RoamCallback
 #endif
             break;
 
+        case eCSR_ROAM_RESULT_DEAUTH_IND:
         case eCSR_ROAM_RESULT_DISASSOC_IND:
             VOS_TRACE( VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_INFO_HIGH,
                           FL("CSR roamResult = %s (%d)"),
@@ -1423,23 +1399,6 @@ WLANSAP_RoamCallback
             sapRemoveHT40IntolerantSta(sapContext, pCsrRoamInfo);
 #endif
             /* Fill in the event structure */
-            vosStatus = sapSignalHDDevent( sapContext, pCsrRoamInfo, eSAP_STA_DISASSOC_EVENT, (v_PVOID_t)eSAP_STATUS_SUCCESS);
-            if(!VOS_IS_STATUS_SUCCESS(vosStatus))
-            {
-                halStatus = eHAL_STATUS_FAILURE;
-            }
-            break;
-
-        case eCSR_ROAM_RESULT_DEAUTH_IND:
-            VOS_TRACE( VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_INFO_HIGH,
-                          FL("CSR roamResult = %s (%d)"),
-                             "eCSR_ROAM_RESULT_DEAUTH_IND",
-                              roamResult);
-#ifdef WLAN_FEATURE_AP_HT40_24G
-            sapRemoveHT40IntolerantSta(sapContext, pCsrRoamInfo);
-#endif
-            /* Fill in the event structure */
-            //TODO: we will use the same event inorder to inform HDD to disassociate the station
             vosStatus = sapSignalHDDevent( sapContext, pCsrRoamInfo, eSAP_STA_DISASSOC_EVENT, (v_PVOID_t)eSAP_STATUS_SUCCESS);
             if(!VOS_IS_STATUS_SUCCESS(vosStatus))
             {

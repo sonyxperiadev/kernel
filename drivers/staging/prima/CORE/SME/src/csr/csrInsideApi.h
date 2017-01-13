@@ -47,8 +47,11 @@
 #define CSR_ACTIVE_MAX_CHANNEL_TIME    40
 #define CSR_ACTIVE_MIN_CHANNEL_TIME    20
 
-#define CSR_ACTIVE_MAX_CHANNEL_TIME_BTC    120
-#define CSR_ACTIVE_MIN_CHANNEL_TIME_BTC    60
+#define CSR_ACTIVE_MAX_CHANNEL_TIME_ESCO_BTC    120
+#define CSR_ACTIVE_MIN_CHANNEL_TIME_ESCO_BTC    60
+
+#define CSR_ACTIVE_MIN_CHANNEL_TIME_SCO_BTC    20
+#define CSR_ACTIVE_MAX_CHANNEL_TIME_SCO_BTC    40
 
 #ifdef WLAN_AP_STA_CONCURRENCY
 #define CSR_PASSIVE_MAX_CHANNEL_TIME_CONC   110
@@ -67,8 +70,9 @@
 
 #define CSR_MAX_2_4_GHZ_SUPPORTED_CHANNELS 14
 
-#define CSR_MAX_BSS_SUPPORT            250
+#define CSR_MAX_BSS_SUPPORT            512
 #define SYSTEM_TIME_MSEC_TO_USEC      1000
+#define SYSTEM_TIME_SEC_TO_MSEC       1000
 
 //This number minus 1 means the number of times a channel is scanned before a BSS is remvoed from
 //cache scan result
@@ -84,7 +88,6 @@
 #define CSR_MIC_ERROR_TIMEOUT  (60 * PAL_TIMER_TO_SEC_UNIT)     //60 seconds
 #define CSR_TKIP_COUNTER_MEASURE_TIMEOUT  (60 * PAL_TIMER_TO_SEC_UNIT)     //60 seconds
 #define CSR_SCAN_RESULT_AGING_INTERVAL    (5 * PAL_TIMER_TO_SEC_UNIT)     //5 seconds
-#define CSR_SCAN_RESULT_CFG_AGING_INTERVAL    (PAL_TIMER_TO_SEC_UNIT)     // 1  second
 //the following defines are NOT used by palTimer
 #define CSR_SCAN_AGING_TIME_NOT_CONNECT_NO_PS 50     //50 seconds
 #define CSR_SCAN_AGING_TIME_NOT_CONNECT_W_PS 300     //300 seconds
@@ -109,6 +112,44 @@
 #ifdef FEATURE_WLAN_BTAMP_UT_RF
 #define CSR_JOIN_MAX_RETRY_COUNT             10
 #define CSR_JOIN_RETRY_TIMEOUT_PERIOD        ( 1 *  PAL_TIMER_TO_SEC_UNIT )  // 1 second
+#endif
+
+#ifdef WLAN_FEATURE_ROAM_SCAN_OFFLOAD
+#define ROAMING_RSSI_WEIGHT 50
+#define MIN_RSSI (-100)
+#define MAX_RSSI 0
+#define ROAM_AP_COUNT_WEIGHT 50
+#define ROAM_MAX_COUNT 30
+#define ROAM_MIN_COUNT 0
+#define ROAM_MAX_WEIGHT 100
+
+#define RSSI_WEIGHTAGE 25
+#define HT_CAPABILITY_WEIGHTAGE 10
+#define VHT_CAP_WEIGHTAGE 6
+#define BEAMFORMING_CAP_WEIGHTAGE 2
+#define CHAN_WIDTH_WEIGHTAGE 10
+#define CHAN_BAND_WEIGHTAGE 5
+#define WMM_WEIGHTAGE 2
+#define CCA_WEIGHTAGE 10
+#define OTHER_AP_WEIGHT 30
+
+#define MAX_AP_LOAD 255
+#define PENALTY_TIMEOUT (30 * 60 * 1000)
+#define PENALTY_REMAINING_SCORE (7)
+#define PENALTY_TOTAL_SCORE (10)
+#define PER_EXCELENT_RSSI -40
+#define PER_GOOD_RSSI -55
+#define PER_POOR_RSSI -65
+#define PER_BAD_RSSI  -80
+#define PER_ROAM_EXCELLENT_RSSI_WEIGHT 100
+#define PER_ROAM_GOOD_RSSI_WEIGHT 80
+#define PER_ROAM_BAD_RSSI_WEIGHT 60
+#define PER_ROAM_MAX_WEIGHT 100
+#define PER_ROAM_80MHZ 100
+#define PER_ROAM_40MHZ 70
+#define PER_ROAM_20MHZ 30
+#define PER_ROAM_PENALTY (3/10)
+#define PER_ROAM_MAX_BSS_SCORE 10000
 #endif
 
 typedef enum 
@@ -169,7 +210,9 @@ typedef struct tagCsrScanResult
     eCsrEncryptionType ucEncryptionType; //Preferred Encryption type that matched with profile.
     eCsrEncryptionType mcEncryptionType; 
     eCsrAuthType authType; //Preferred auth type that matched with the profile.
-
+#ifdef WLAN_FEATURE_ROAM_SCAN_OFFLOAD
+    int congestionScore;
+#endif
     tCsrScanResultInfo Result;
 }tCsrScanResult;
 
@@ -255,8 +298,6 @@ eHalStatus csrScanForSSID(tpAniSirGlobal pMac, tANI_U32 sessionId, tCsrRoamProfi
 eHalStatus csrScanForCapabilityChange(tpAniSirGlobal pMac, tSirSmeApNewCaps *pNewCaps);
 eHalStatus csrScanStartGetResultTimer(tpAniSirGlobal pMac);
 eHalStatus csrScanStopGetResultTimer(tpAniSirGlobal pMac);
-eHalStatus csrScanStartResultCfgAgingTimer(tpAniSirGlobal pMac);
-eHalStatus csrScanStopResultCfgAgingTimer(tpAniSirGlobal pMac);
 eHalStatus csrScanBGScanEnable(tpAniSirGlobal pMac);
 eHalStatus csrScanStartIdleScanTimer(tpAniSirGlobal pMac, tANI_U32 interval);
 eHalStatus csrScanStopIdleScanTimer(tpAniSirGlobal pMac);
@@ -422,7 +463,8 @@ eHalStatus csrRoamCloseSession( tpAniSirGlobal pMac, tANI_U32 sessionId,
                                 tANI_BOOLEAN fSync, tANI_U8 bPurgeList,
                                 csrRoamSessionCloseCallback callback,
                                 void *pContext );
-void csrPurgeSmeCmdList(tpAniSirGlobal pMac, tANI_U32 sessionId);
+void csrPurgeSmeCmdList(tpAniSirGlobal pMac, tANI_U32 sessionId,
+                        bool flush_all);
 void csrCleanupSession(tpAniSirGlobal pMac, tANI_U32 sessionId);
 eHalStatus csrRoamGetSessionIdFromBSSID( tpAniSirGlobal pMac, tCsrBssid *bssid, tANI_U32 *pSessionId );
 eCsrCfgDot11Mode csrFindBestPhyMode( tpAniSirGlobal pMac, tANI_U32 phyMode );

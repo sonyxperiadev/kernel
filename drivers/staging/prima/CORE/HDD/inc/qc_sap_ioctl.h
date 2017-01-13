@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013, 2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -142,7 +142,7 @@ typedef struct
 #define QCSAP_IOCTL_COMMIT            (SIOCIWFIRSTPRIV+2)
 
 #define QCSAP_IOCTL_GET_STAWPAIE      (SIOCIWFIRSTPRIV+4)
-#define QCSAP_IOCTL_SETWPAIE          (SIOCIWFIRSTPRIV+5)
+
 #define QCSAP_IOCTL_STOPBSS           (SIOCIWFIRSTPRIV+6)
 #define QCSAP_IOCTL_VERSION           (SIOCIWFIRSTPRIV+7)
 #define QCSAP_IOCTL_GET_WPS_PBC_PROBE_REQ_IES       (SIOCIWFIRSTPRIV+8)

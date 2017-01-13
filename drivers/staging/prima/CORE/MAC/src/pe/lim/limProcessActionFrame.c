@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2015 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -2247,15 +2247,26 @@ limProcessActionFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,tpPESession ps
     tpSirMacActionFrameHdr pActionHdr = (tpSirMacActionFrameHdr) pBody;
 #ifdef WLAN_FEATURE_11W
     tpSirMacMgmtHdr pHdr = WDA_GET_RX_MAC_HEADER(pRxPacketInfo);
+
+    if (lim_is_robust_mgmt_action_frame(pActionHdr->category) &&
+        limDropUnprotectedActionFrame(pMac, psessionEntry, pHdr,
+                                      pActionHdr->category)) {
+        limLog(pMac, LOGE,
+               FL("Don't send unprotect action frame to upper layer categ %d "),
+               pActionHdr->category);
+        return;
+    }
 #endif
 
     switch (pActionHdr->category)
     {
+
+        /*
+         * WARNING: If you add Action frame category case here, set the
+         * corresponding bit to 1 in sme_set_allowed_action_frames() for
+         * the FW to hand over that frame to host without dropping itself
+         */
         case SIR_MAC_ACTION_QOS_MGMT:
-#ifdef WLAN_FEATURE_11W
-            if (limDropUnprotectedActionFrame(pMac, psessionEntry, pHdr, pActionHdr->category))
-                break;
-#endif
             if ( (psessionEntry->limQosEnabled) ||
                   (pActionHdr->actionID == SIR_MAC_QOS_MAP_CONFIGURE) )
             {
@@ -2286,10 +2297,6 @@ limProcessActionFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,tpPESession ps
            break;
 
         case SIR_MAC_ACTION_SPECTRUM_MGMT:
-#ifdef WLAN_FEATURE_11W
-            if (limDropUnprotectedActionFrame(pMac, psessionEntry, pHdr, pActionHdr->category))
-                break;
-#endif
             switch (pActionHdr->actionID)
             {
 #ifdef ANI_SUPPORT_11H
@@ -2357,10 +2364,6 @@ limProcessActionFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,tpPESession ps
 
         case SIR_MAC_ACTION_BLKACK:
             // Determine the "type" of BA Action Frame
-#ifdef WLAN_FEATURE_11W
-            if (limDropUnprotectedActionFrame(pMac, psessionEntry, pHdr, pActionHdr->category))
-                break;
-#endif
             switch(pActionHdr->actionID)
             {
               case SIR_MAC_BLKACK_ADD_REQ:
@@ -2394,10 +2397,6 @@ limProcessActionFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,tpPESession ps
 
     case SIR_MAC_ACTION_WNM:
     {
-#ifdef WLAN_FEATURE_11W
-        if (limDropUnprotectedActionFrame(pMac, psessionEntry, pHdr, pActionHdr->category))
-            break;
-#endif
         PELOGE(limLog(pMac, LOG1, FL("WNM Action category %d action %d."),
                                 pActionHdr->category, pActionHdr->actionID);)
         switch (pActionHdr->actionID)
@@ -2422,10 +2421,6 @@ limProcessActionFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,tpPESession ps
     }
 #if defined WLAN_FEATURE_VOWIFI
     case SIR_MAC_ACTION_RRM:
-#ifdef WLAN_FEATURE_11W
-        if (limDropUnprotectedActionFrame(pMac, psessionEntry, pHdr, pActionHdr->category))
-            break;
-#endif
         if( pMac->rrm.rrmPEContext.rrmEnable )
         {
             switch(pActionHdr->actionID) {
@@ -2551,8 +2546,6 @@ limProcessActionFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo,tpPESession ps
     case SIR_MAC_ACTION_SA_QUERY:
     {
         PELOGE(limLog(pMac, LOG1, FL("SA Query Action category %d action %d."), pActionHdr->category, pActionHdr->actionID);)
-        if (limDropUnprotectedActionFrame(pMac, psessionEntry, pHdr, pActionHdr->category))
-            break;
         switch (pActionHdr->actionID)
         {
             case  SIR_MAC_SA_QUERY_REQ:

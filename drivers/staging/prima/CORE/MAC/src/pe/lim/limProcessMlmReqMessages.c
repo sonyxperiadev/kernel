@@ -1090,6 +1090,27 @@ void limSendHalEndScanReq(tpAniSirGlobal pMac, tANI_U8 channelNum, tLimLimHalSca
     return;
 }
 
+
+void limSendTLPauseInd(tpAniSirGlobal pMac, uint16_t staId)
+{
+    tSirMsgQ            msg;
+    tSirRetStatus       rc = eSIR_SUCCESS;
+
+    msg.type = WDA_PAUSE_TL_IND;
+    msg.bodyval = staId;
+
+    MTRACE(macTraceMsgTx(pMac, NO_SESSION, msg.type));
+
+    rc = wdaPostCtrlMsg(pMac, &msg);
+    if (rc == eSIR_SUCCESS) {
+            return;
+    }
+
+    limLog(pMac, LOGW, FL("wdaPostCtrlMsg failed, error code %d"), rc);
+
+    return;
+}
+
 /**
  * limSendHalFinishScanReq()
  *

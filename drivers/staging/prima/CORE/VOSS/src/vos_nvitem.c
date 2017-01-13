@@ -123,6 +123,59 @@ typedef struct
 // loaded on driver initialization if available
 
 #ifdef CONFIG_ENABLE_LINUX_REG
+static struct
+chan_to_ht_40_index_map chan_to_ht_40_index[NUM_20MHZ_RF_CHANNELS] =
+{
+  /* ht_40_minus_index, ht_40_plus_index */
+  {INVALID_RF_CHANNEL, RF_CHAN_BOND_3},    //RF_CHAN_1,
+  {INVALID_RF_CHANNEL, RF_CHAN_BOND_4},    //RF_CHAN_2,
+  {INVALID_RF_CHANNEL, RF_CHAN_BOND_5},    //RF_CHAN_3,
+  {INVALID_RF_CHANNEL, RF_CHAN_BOND_6},    //RF_CHAN_4,
+  {RF_CHAN_BOND_3, RF_CHAN_BOND_7},        //RF_CHAN_5,
+  {RF_CHAN_BOND_4, RF_CHAN_BOND_8},        //RF_CHAN_6,
+  {RF_CHAN_BOND_5, RF_CHAN_BOND_9},        //RF_CHAN_7,
+  {RF_CHAN_BOND_6, RF_CHAN_BOND_10},       //RF_CHAN_8,
+  {RF_CHAN_BOND_7, RF_CHAN_BOND_11},       //RF_CHAN_9,
+  {RF_CHAN_BOND_8, INVALID_RF_CHANNEL},    //RF_CHAN_10,
+  {RF_CHAN_BOND_9, INVALID_RF_CHANNEL},    //RF_CHAN_11,
+  {RF_CHAN_BOND_10, INVALID_RF_CHANNEL},   //RF_CHAN_12,
+  {RF_CHAN_BOND_11, INVALID_RF_CHANNEL},   //RF_CHAN_13,
+  {INVALID_RF_CHANNEL, INVALID_RF_CHANNEL},//RF_CHAN_14,
+  {INVALID_RF_CHANNEL, RF_CHAN_BOND_242},  //RF_CHAN_240,
+  {RF_CHAN_BOND_242, RF_CHAN_BOND_246},    //RF_CHAN_244,
+  {RF_CHAN_BOND_246, RF_CHAN_BOND_250},    //RF_CHAN_248,
+  {RF_CHAN_BOND_250, INVALID_RF_CHANNEL},  //RF_CHAN_252,
+  {INVALID_RF_CHANNEL, RF_CHAN_BOND_210},  //RF_CHAN_208,
+  {RF_CHAN_BOND_210, RF_CHAN_BOND_214},    //RF_CHAN_212,
+  {RF_CHAN_BOND_214, INVALID_RF_CHANNEL},  //RF_CHAN_216,
+  {INVALID_RF_CHANNEL, RF_CHAN_BOND_38},   //RF_CHAN_36,
+  {RF_CHAN_BOND_38, RF_CHAN_BOND_42},      //RF_CHAN_40,
+  {RF_CHAN_BOND_42, RF_CHAN_BOND_46},      //RF_CHAN_44,
+  {RF_CHAN_BOND_46, RF_CHAN_BOND_50},      //RF_CHAN_48,
+  {RF_CHAN_BOND_50, RF_CHAN_BOND_54},      //RF_CHAN_52,
+  {RF_CHAN_BOND_54, RF_CHAN_BOND_58},      //RF_CHAN_56,
+  {RF_CHAN_BOND_58, RF_CHAN_BOND_62},      //RF_CHAN_60,
+  {RF_CHAN_BOND_62, INVALID_RF_CHANNEL},   //RF_CHAN_64,
+  {INVALID_RF_CHANNEL, RF_CHAN_BOND_102},  //RF_CHAN_100,
+  {RF_CHAN_BOND_102, RF_CHAN_BOND_106},    //RF_CHAN_104,
+  {RF_CHAN_BOND_106, RF_CHAN_BOND_110},    //RF_CHAN_108,
+  {RF_CHAN_BOND_110, RF_CHAN_BOND_114},    //RF_CHAN_112,
+  {RF_CHAN_BOND_114, RF_CHAN_BOND_118},    //RF_CHAN_116,
+  {RF_CHAN_BOND_118, RF_CHAN_BOND_122},    //RF_CHAN_120,
+  {RF_CHAN_BOND_122, RF_CHAN_BOND_126},    //RF_CHAN_124,
+  {RF_CHAN_BOND_126, RF_CHAN_BOND_130},    //RF_CHAN_128,
+  {RF_CHAN_BOND_130, RF_CHAN_BOND_134},    //RF_CHAN_132,
+  {RF_CHAN_BOND_134, RF_CHAN_BOND_138},    //RF_CHAN_136,
+  {RF_CHAN_BOND_138, RF_CHAN_BOND_142},    //RF_CHAN_140,
+#ifdef FEATURE_WLAN_CH144
+  {RF_CHAN_BOND_142, INVALID_RF_CHANNEL},  //RF_CHAN_144,
+#endif /* FEATURE_WLAN_CH144 */
+  {INVALID_RF_CHANNEL, RF_CHAN_BOND_151},  //RF_CHAN_149,
+  {RF_CHAN_BOND_151, RF_CHAN_BOND_155},    //RF_CHAN_153,
+  {RF_CHAN_BOND_155, RF_CHAN_BOND_159},    //RF_CHAN_157,
+  {RF_CHAN_BOND_159, RF_CHAN_BOND_163},    //RF_CHAN_161,
+  {RF_CHAN_BOND_163, INVALID_RF_CHANNEL},  //RF_CHAN_165,
+};
 
 static CountryInfoTable_t countryInfoTable =
 {
@@ -3256,81 +3309,19 @@ v_BOOL_t vos_is_channel_valid_for_vht80(v_U32_t chan)
 
 #ifdef CONFIG_ENABLE_LINUX_REG
 
-static int bw20_ch_index_to_bw40_plus_minus_ch_index(int k,
+static inline int bw20_ch_index_to_bw40_plus_minus_ch_index(int k,
                                     eChannnelBondingTypes cbflag )
 {
-   int m = INVALID_RF_CHANNEL;
-   if (k >= RF_CHAN_1 && k <= RF_CHAN_14)
-   {
-      if(RF_CHAN_BOND_HT40_PLUS == cbflag)
-         m = k - RF_CHAN_1 + RF_CHAN_BOND_3 ;
-      else
-         m = k - RF_CHAN_1 + RF_CHAN_BOND_3 - HT_40MINUS_INDEX ;
+   if (k >= NUM_20MHZ_RF_CHANNELS) {
+     VOS_TRACE(VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_ERROR,
+           "%s invlaid channel index %d",__func__, k);
+     return INVALID_RF_CHANNEL;
+   }
 
-      if (m > RF_CHAN_BOND_11)
-         m = INVALID_RF_CHANNEL;
-      if (m < RF_CHAN_BOND_3)
-         m = INVALID_RF_CHANNEL;
-   }
-   else if (k >= RF_CHAN_240 && k <= RF_CHAN_216)
-   {
-      if(RF_CHAN_BOND_HT40_PLUS == cbflag)
-         m = k - RF_CHAN_240 + RF_CHAN_BOND_242 ;
-      else
-         m = k - RF_CHAN_240 + RF_CHAN_BOND_242 - HT_40MINUS_INDEX;
-
-      if (m > RF_CHAN_BOND_214)
-         m = INVALID_RF_CHANNEL;
-      if (m < RF_CHAN_BOND_242)
-         m = INVALID_RF_CHANNEL;
-   }
-   else if (k >= RF_CHAN_36 && k <= RF_CHAN_64)
-   {
-      if(RF_CHAN_BOND_HT40_PLUS == cbflag)
-         m = k - RF_CHAN_36 + RF_CHAN_BOND_38;
-      else
-         m = k - RF_CHAN_36 + RF_CHAN_BOND_38 - HT_40MINUS_INDEX;
-
-      if (m > RF_CHAN_BOND_62)
-         m = INVALID_RF_CHANNEL;
-      if (m < RF_CHAN_BOND_38)
-         m = INVALID_RF_CHANNEL;
-   }
-#ifdef FEATURE_WLAN_CH144
-   else if (k >= RF_CHAN_100 && k <= RF_CHAN_144)
-#else
-   else if (k >= RF_CHAN_100 && k <= RF_CHAN_140)
-#endif /* FEATURE_WLAN_CH144 */
-   {
-      if(RF_CHAN_BOND_HT40_PLUS == cbflag)
-         m = k - RF_CHAN_100 + RF_CHAN_BOND_102;
-      else
-         m = k - RF_CHAN_100 + RF_CHAN_BOND_102 -  HT_40MINUS_INDEX;
-#ifdef FEATURE_WLAN_CH144
-      if (m > RF_CHAN_BOND_142)
-         m = INVALID_RF_CHANNEL;
-      if (m < RF_CHAN_BOND_102)
-         m = INVALID_RF_CHANNEL;
-#else
-      if (m > RF_CHAN_BOND_138)
-         m = INVALID_RF_CHANNEL;
-      if (m < RF_CHAN_BOND_102)
-         m = INVALID_RF_CHANNEL;
-#endif /* FEATURE_WLAN_CH144 */
-   }
-   else if (k >= RF_CHAN_149 && k <= RF_CHAN_165)
-   {
-      if(RF_CHAN_BOND_HT40_PLUS == cbflag)
-         m = k - RF_CHAN_149 + RF_CHAN_BOND_151;
-      else
-         m = k - RF_CHAN_149 + RF_CHAN_BOND_151 - HT_40MINUS_INDEX;
-
-      if (m > RF_CHAN_BOND_163)
-         m = INVALID_RF_CHANNEL;
-      if (m < RF_CHAN_BOND_151)
-         m = INVALID_RF_CHANNEL;
-   }
-   return m;
+   if (RF_CHAN_BOND_HT40_PLUS == cbflag)
+     return chan_to_ht_40_index[k].ht_40_plus_index;
+   else
+     return chan_to_ht_40_index[k].ht_40_minus_index;
 }
 /**------------------------------------------------------------------------
   \brief vos_nv_setRegDomain -
@@ -4110,20 +4101,17 @@ int __wlan_hdd_linux_reg_notifier(struct wiphy *wiphy,
 
         cur_reg_domain = temp_reg_domain;
 
-        if(!vos_is_load_unload_in_progress( VOS_MODULE_ID_VOSS, NULL)) {
-            /* now pass the new country information to sme */
-            if (request->alpha2[0] == '0' && request->alpha2[1] == '0')
-            {
-               sme_GenericChangeCountryCode(pHddCtx->hHal, country_code,
-                                           REGDOMAIN_COUNT);
-            }
-            else
-            {
-               sme_GenericChangeCountryCode(pHddCtx->hHal, country_code,
-                                        temp_reg_domain);
-            }
+        /* now pass the new country information to sme */
+        if (request->alpha2[0] == '0' && request->alpha2[1] == '0')
+        {
+           sme_GenericChangeCountryCode(pHddCtx->hHal, country_code,
+                                       REGDOMAIN_COUNT);
         }
-
+        else
+        {
+           sme_GenericChangeCountryCode(pHddCtx->hHal, country_code,
+                                    temp_reg_domain);
+        }
     }
 
     /* Mark channels 36-48 as passive for US CC */

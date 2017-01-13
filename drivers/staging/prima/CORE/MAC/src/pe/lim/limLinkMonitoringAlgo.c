@@ -300,6 +300,17 @@ limTriggerSTAdeletion(tpAniSirGlobal pMac, tpDphHashNode pStaDs, tpPESession pse
         PELOGW(limLog(pMac, LOGW, FL("Skip STA deletion (invalid STA)"));)
         return;
     }
+
+    if (pStaDs->sta_deletion_in_progress) {
+         /* Already in the process of deleting context for the peer */
+        limLog(pMac, LOG1,
+            FL("Deletion is in progress (%d) for peer:%p in mlmState %d"),
+            pStaDs->sta_deletion_in_progress, pStaDs->staAddr,
+            pStaDs->mlmStaContext.mlmState);
+         return;
+     }
+     pStaDs->sta_deletion_in_progress = true;
+
     /**
      * MAC based Authentication was used. Trigger
      * Deauthentication frame to peer since it will

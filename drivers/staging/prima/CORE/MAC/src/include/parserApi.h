@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2014 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2014, 2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -106,8 +106,10 @@ typedef struct sSirProbeRespBeacon
 #ifdef WLAN_FEATURE_VOWIFI_11R
     tANI_U8                   mdie[SIR_MDIE_SIZE];
 #endif
+#if defined(FEATURE_WLAN_ESE) || defined(WLAN_FEATURE_ROAM_SCAN_OFFLOAD)
 #ifdef FEATURE_WLAN_ESE
     tDot11fIEESETxmitPower    eseTxPwr;
+#endif
     tDot11fIEQBSSLoad         QBSSLoad;
 #endif
     tANI_U8                   ssidPresent;
@@ -297,6 +299,79 @@ typedef struct sSirEseBcnReportMandatoryIe
     tANI_U8               rrmPresent;
 } tSirEseBcnReportMandatoryIe, *tpSirEseBcnReportMandatoryIe;
 #endif /* FEATURE_WLAN_ESE_UPLOAD */
+
+struct s_ext_cap {
+    uint8_t bssCoexistMgmtSupport: 1;
+    uint8_t        reserved1: 1;
+    uint8_t    extChanSwitch: 1;
+    uint8_t        reserved2: 1;
+    uint8_t          psmpCap: 1;
+    uint8_t        reserved3: 1;
+    uint8_t         spsmpCap: 1;
+    uint8_t            event: 1;
+    uint8_t      diagnostics: 1;
+    uint8_t multiDiagnostics: 1;
+    uint8_t      locTracking: 1;
+    uint8_t              FMS: 1;
+    uint8_t  proxyARPService: 1;
+    uint8_t coLocIntfReporting: 1;
+    uint8_t         civicLoc: 1;
+    uint8_t    geospatialLoc: 1;
+    uint8_t              TFS: 1;
+    uint8_t     wnmSleepMode: 1;
+    uint8_t     timBroadcast: 1;
+    uint8_t    bssTransition: 1;
+    uint8_t    qosTrafficCap: 1;
+    uint8_t         acStaCnt: 1;
+    uint8_t       multiBSSID: 1;
+    uint8_t       timingMeas: 1;
+    uint8_t        chanUsage: 1;
+    uint8_t         ssidList: 1;
+    uint8_t              DMS: 1;
+    uint8_t     UTCTSFOffset: 1;
+    uint8_t TDLSPeerUAPSDBufferSTA: 1;
+    uint8_t  TDLSPeerPSMSupp: 1;
+    uint8_t TDLSChannelSwitching: 1;
+    uint8_t interworkingService: 1;
+    uint8_t           qosMap: 1;
+    uint8_t              EBR: 1;
+    uint8_t    sspnInterface: 1;
+    uint8_t        reserved4: 1;
+    uint8_t         msgCFCap: 1;
+    uint8_t      TDLSSupport: 1;
+    uint8_t   TDLSProhibited: 1;
+    uint8_t TDLSChanSwitProhibited: 1;
+    uint8_t rejectUnadmittedTraffic: 1;
+    uint8_t serviceIntervalGranularity: 3;
+    uint8_t    identifierLoc: 1;
+    uint8_t uapsdCoexistence: 1;
+    uint8_t  wnmNotification: 1;
+    uint8_t     QABcapbility: 1;
+    uint8_t         UTF8SSID: 1;
+    uint8_t     QMFActivated: 1;
+    uint8_t      QMFreconAct: 1;
+    uint8_t RobustAVStreaming: 1;
+    uint8_t      AdvancedGCR: 1;
+    uint8_t          MeshGCR: 1;
+    uint8_t              SCS: 1;
+    uint8_t      QLoadReport: 1;
+    uint8_t    AlternateEDCA: 1;
+    uint8_t    UnprotTXOPneg: 1;
+    uint8_t      ProtTXOPneg: 1;
+    uint8_t        reserved6: 1;
+    uint8_t  ProtQLoadReport: 1;
+    uint8_t      TDLSWiderBW: 1;
+    uint8_t operModeNotification: 1;
+    uint8_t maxNumOfMSDU_bit1: 1;
+    uint8_t maxNumOfMSDU_bit2: 1;
+    uint8_t      ChanSchMgmt: 1;
+    uint8_t GeoDBInbandEnSignal: 1;
+    uint8_t    NwChanControl: 1;
+    uint8_t    WhiteSpaceMap: 1;
+    uint8_t   ChanAvailQuery: 1;
+    uint8_t   fineTimingMeas: 1;
+    uint8_t        reserved7: 1;
+};
 
 tANI_U8
 sirIsPropCapabilityEnabled(struct sAniSirGlobal *pMac, tANI_U32 bitnum);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2015 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -558,4 +558,7 @@ extern tANI_U32 limGetMaxRateFlags(tpDphHashNode pStaDs,
 void limDecrementPendingMgmtCount (tpAniSirGlobal pMac);
 
 eHalStatus limTxBdComplete(tpAniSirGlobal pMac, void *pData);
+bool lim_is_robust_mgmt_action_frame(uint8 action_catagory);
+tANI_U8 lim_compute_ext_cap_ie_length (tDot11fIEExtCap *ext_cap);
+
 #endif /* __LIM_UTILS_H */

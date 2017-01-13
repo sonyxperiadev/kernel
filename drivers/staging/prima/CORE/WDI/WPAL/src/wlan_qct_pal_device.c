@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2015 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -823,3 +823,28 @@ wpt_status wpalNotifySmsm
    return eWLAN_PAL_STATUS_SUCCESS;
 }
 
+/* Get Interrupt Status */
+int wpal_get_int_state
+(
+   wpt_uint32    intType
+)
+{
+   int ret;
+   ret = 0;
+
+   switch (intType)
+   {
+   case DXE_INTERRUPT_RX_READY:
+      if (gpEnv->rx_isr_enabled == 1)
+          ret = 1;
+      break;
+   case DXE_INTERRUPT_TX_COMPLE:
+      if (gpEnv->tx_isr_enabled == 1)
+          ret = 1;
+      break;
+   default:
+      break;
+   }
+
+   return ret;
+}

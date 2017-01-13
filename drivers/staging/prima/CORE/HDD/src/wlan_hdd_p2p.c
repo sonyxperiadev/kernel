@@ -75,7 +75,7 @@ tANI_U8* hdd_getActionString( tANI_U16 MsgType )
        CASE_RETURN_STRING(SIR_MAC_ACTION_UNPROT_WNM);
        CASE_RETURN_STRING(SIR_MAC_ACTION_TDLS);
        CASE_RETURN_STRING(SIR_MAC_ACITON_MESH);
-       CASE_RETURN_STRING(SIR_MAC_ACTION_MULTIHOP);
+       CASE_RETURN_STRING(SIR_MAC_ACTION_MHF);
        CASE_RETURN_STRING(SIR_MAC_SELF_PROTECTED);
        CASE_RETURN_STRING(SIR_MAC_ACTION_WME);
        CASE_RETURN_STRING(SIR_MAC_ACTION_VHT);
@@ -354,8 +354,8 @@ VOS_STATUS wlan_hdd_cancel_existing_remain_on_channel(hdd_adapter_t *pAdapter)
             }
             else
                 pRemainChanCtx->hdd_remain_on_chan_cancel_in_progress = TRUE;
-            mutex_unlock(&pHddCtx->roc_lock);
             INIT_COMPLETION(pAdapter->cancel_rem_on_chan_var);
+            mutex_unlock(&pHddCtx->roc_lock);
 
             /* Issue abort remain on chan request to sme.
              * The remain on channel callback will make sure the remain_on_chan
@@ -382,14 +382,14 @@ VOS_STATUS wlan_hdd_cancel_existing_remain_on_channel(hdd_adapter_t *pAdapter)
             status = wait_for_completion_interruptible_timeout(
                                     &pAdapter->cancel_rem_on_chan_var,
                                     msecs_to_jiffies(WAIT_CANCEL_REM_CHAN));
+            hdd_allow_suspend(WIFI_POWER_EVENT_WAKELOCK_ROC);
             if (0 >= status)
             {
-                hddLog( LOGE,
-                       "%s: timeout waiting for cancel remain on channel"
-                         " ready indication %d",
-                          __func__, status);
+                hddLog(LOGE,
+                       FL("Timeout waiting for cancel remain on channel ready indication %d"),
+                       status);
+                return VOS_STATUS_E_FAILURE;
             }
-            hdd_allow_suspend(WIFI_POWER_EVENT_WAKELOCK_ROC);
          }
          else
          {
@@ -477,8 +477,8 @@ void wlan_hdd_remain_on_chan_timeout(void *data)
     }
 
     pRemainChanCtx->hdd_remain_on_chan_cancel_in_progress = TRUE;
-    mutex_unlock(&pHddCtx->roc_lock);
     INIT_COMPLETION(pAdapter->cancel_rem_on_chan_var);
+    mutex_unlock(&pHddCtx->roc_lock);
     hddLog( LOG1,"%s: Cancel Remain on Channel on timeout", __func__);
     if ( ( WLAN_HDD_INFRA_STATION == pAdapter->device_mode ) ||
           ( WLAN_HDD_P2P_CLIENT == pAdapter->device_mode ) ||
@@ -1041,8 +1041,8 @@ int __wlan_hdd_cfg80211_cancel_remain_on_channel( struct wiphy *wiphy,
         else
             pRemainChanCtx->hdd_remain_on_chan_cancel_in_progress = TRUE;
     }
-    mutex_unlock(&pHddCtx->roc_lock);
     INIT_COMPLETION(pAdapter->cancel_rem_on_chan_var);
+    mutex_unlock(&pHddCtx->roc_lock);
     /* Issue abort remain on chan request to sme.
      * The remain on channel callback will make sure the remain_on_chan
      * expired event is sent.
@@ -2252,12 +2252,12 @@ void hdd_sendMgmtFrameOverMonitorIface( hdd_adapter_t *pMonAdapter,
      return ;
 }
 
-void hdd_indicateMgmtFrame( hdd_adapter_t *pAdapter,
+void __hdd_indicate_mgmt_frame(hdd_adapter_t *pAdapter,
                             tANI_U32 nFrameLength,
                             tANI_U8* pbFrames,
                             tANI_U8 frameType,
                             tANI_U32 rxChan,
-                            tANI_S8 rxRssi )
+                            tANI_S8 rxRssi)
 {
     tANI_U16 freq;
     tANI_U16 extend_time;

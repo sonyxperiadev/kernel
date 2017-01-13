@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2015 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -514,7 +514,7 @@ static eHalStatus hdd_IndicateScanResult(hdd_scan_info_t *scanInfo, tCsrScanResu
    event.cmd = IWEVCUSTOM;
    p = custom;
    p += scnprintf(p, MAX_CUSTOM_LEN, " Age: %lu",
-                 vos_timer_get_system_ticks() - descriptor->nReceivedTime);
+                 vos_timer_get_system_time() - descriptor->nReceivedTime);
    event.u.data.length = p - custom;
    current_event = iwe_stream_add_point (scanInfo->info,current_event, end,
                                          &event, custom);
@@ -825,7 +825,24 @@ int __iw_set_scan(struct net_device *dev, struct iw_request_info *info,
        scanRequest.uIEFieldLen = pHddCtx->scan_info.scanAddIE.length;
        scanRequest.pIEField = pHddCtx->scan_info.scanAddIE.addIEdata;
    }
+   if (pHddCtx->spoofMacAddr.isEnabled &&
+       pHddCtx->cfg_ini->enableMacSpoofing == 1)
+   {
+        hddLog(LOG1, FL("MAC Spoofing enabled for current scan"));
+        /*
+         * Updating SelfSta Mac Addr in TL which will be used to get
+         * staidx to fill TxBds for probe request during current scan
+         */
+        status = WLANTL_updateSpoofMacAddr(pHddCtx->pvosContext,
+             &pHddCtx->spoofMacAddr.randomMacAddr,
+             &pAdapter->macAddressCurrent);
 
+        if (status != eHAL_STATUS_SUCCESS)
+        {
+           hddLog(LOGE, FL("Failed to update MAC Spoof Addr in TL"));
+           goto error;
+        }
+   }
    status = sme_ScanRequest( (WLAN_HDD_GET_CTX(pAdapter))->hHal, pAdapter->sessionId,&scanRequest, &scanId, &hdd_ScanRequestCallback, dev ); 
    if (!HAL_STATUS_SUCCESS(status))
    {

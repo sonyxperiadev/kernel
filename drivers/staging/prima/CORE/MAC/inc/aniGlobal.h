@@ -1067,6 +1067,14 @@ typedef struct sAniSirGlobal
     tANI_BOOLEAN miracastVendorConfig;
     v_BOOL_t fActiveScanOnDFSChannels;
     tAuthAckStatus  authAckStatus;
+    sir_mgmt_frame_ind_callback mgmt_frame_ind_cb;
+#ifdef WLAN_FEATURE_ROAM_SCAN_OFFLOAD
+    v_U8_t PERroamCandidatesCnt;
+    tSirCandidateChanInfo candidateChannelInfo[SIR_PER_ROAM_MAX_CANDIDATE_CNT];
+    tSirRoamAPInfo previousRoamApInfo[SIR_PER_ROAM_MAX_CANDIDATE_CNT];
+    v_U32_t PERroamTimeout;
+    v_U32_t currentBssScore;
+#endif
 } tAniSirGlobal;
 
 #ifdef FEATURE_WLAN_TDLS

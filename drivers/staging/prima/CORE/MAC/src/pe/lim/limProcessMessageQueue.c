@@ -80,7 +80,7 @@
 #include "vos_memory.h"
 
 /* This value corresponds to 500 ms */
-#define MAX_PROBEREQ_TIME 5000
+#define MAX_PROBEREQ_TIME 50
 
 #ifdef WLAN_FEATURE_EXTSCAN
 #define  SIZE_OF_FIXED_PARAM 12
@@ -739,9 +739,58 @@ limHandle80211Frames(tpAniSirGlobal pMac, tpSirMsgQ limMsg, tANI_U8 *pDeferMsg)
                     ((pHdr->seqControl.seqNumHi << 4) | (pHdr->seqControl.seqNumLo)));
         }
 #ifdef WLAN_FEATURE_ROAM_SCAN_OFFLOAD
-    if ( WDA_GET_ROAMCANDIDATEIND(pRxPacketInfo))
+    if (WDA_GET_ROAMCANDIDATEIND(pRxPacketInfo))
     {
-        limLog( pMac, LOG2, FL("Notify SME with candidate ind"));
+        limLog( pMac, LOGW, FL("Notify SME with candidate ind"));
+
+        if (WDA_IF_PER_ROAMCANDIDATEIND(pRxPacketInfo) &&
+            IS_FEATURE_SUPPORTED_BY_FW(PER_BASED_ROAMING) &&
+            pMac->roam.configParam.isPERRoamEnabled)
+        {
+            tSirPerRoamScanResult *candidateChanInfo =
+                (tSirPerRoamScanResult *)WDA_GET_RX_MPDU_DATA(pRxPacketInfo);
+            int chanInfoLen = WDA_GET_RX_PAYLOAD_LEN(pRxPacketInfo)
+                                      - sizeof(tANI_U32);
+
+            /* Translate network buffer into system buffer */
+            vos_buff_to_hl_buff((v_U8_t *)candidateChanInfo,
+                          WDA_GET_RX_PAYLOAD_LEN(pRxPacketInfo));
+
+            /* Max candidates allowed */
+            if (candidateChanInfo->candidateCount >
+                SIR_PER_ROAM_MAX_CANDIDATE_CNT)
+            {
+                limLog(pMac, LOGE,
+                       FL("Got maximum candidates as %d, setting count as %d"),
+                       candidateChanInfo->candidateCount,
+                       SIR_PER_ROAM_MAX_CANDIDATE_CNT);
+                candidateChanInfo->candidateCount =
+                        SIR_PER_ROAM_MAX_CANDIDATE_CNT;
+            }
+
+            vos_mem_set(&pMac->candidateChannelInfo,
+                        sizeof(tSirCandidateChanInfo) *
+                        SIR_PER_ROAM_MAX_CANDIDATE_CNT, 0);
+
+            vos_mem_copy(&pMac->candidateChannelInfo,
+                         candidateChanInfo->channelInfo,
+                         (sizeof(tSirCandidateChanInfo) *
+                         SIR_PER_ROAM_MAX_CANDIDATE_CNT) < chanInfoLen ?
+                         (sizeof(tSirCandidateChanInfo) *
+                         SIR_PER_ROAM_MAX_CANDIDATE_CNT):
+                         chanInfoLen);
+
+            limLog(pMac, LOG1,
+                   FL("PER based Roam candidates %d"),
+                   candidateChanInfo->candidateCount);
+
+            pMac->PERroamCandidatesCnt = candidateChanInfo->candidateCount;
+        } else
+        {
+            /* Normal RSSI based roaming */
+            pMac->PERroamCandidatesCnt = 0;
+        }
+
         //send a session 0 for now - TBD
         limSendSmeCandidateFoundInd(pMac, 0);
         goto end;
@@ -1565,6 +1614,7 @@ limProcessMessages(tpAniSirGlobal pMac, tpSirMsgQ  limMsg)
         case eWNI_SME_GET_TSM_STATS_REQ:
 #endif /* FEATURE_WLAN_ESE && FEATURE_WLAN_ESE_UPLOAD */
         case eWNI_SME_MAC_SPOOF_ADDR_IND:
+        case eWNI_SME_REGISTER_MGMT_FRAME_CB:
             // These messages are from HDD
             limProcessNormalHddMsg(pMac, limMsg, false);   //no need to response to hdd
             break;
@@ -2094,8 +2144,11 @@ limProcessMessages(tpAniSirGlobal pMac, tpSirMsgQ  limMsg)
         {
 #ifdef WLAN_ACTIVEMODE_OFFLOAD_FEATURE
             tpPESession     psessionEntry;
-            tANI_U8 sessionId = (tANI_U8)limMsg->bodyval ;
-            psessionEntry = &pMac->lim.gpSession[sessionId];
+            tANI_U8 sessionId;
+            tSirSetActiveModeSetBncFilterReq *bcnFilterReq =
+                (tSirSetActiveModeSetBncFilterReq *)limMsg->bodyptr;
+            psessionEntry = peFindSessionByBssid(pMac, bcnFilterReq->bssid,
+                                                 &sessionId);
             if(psessionEntry != NULL && IS_ACTIVEMODE_OFFLOAD_FEATURE_ENABLE)
             {
                // sending beacon filtering information down to HAL
@@ -2151,17 +2204,22 @@ limProcessMessages(tpAniSirGlobal pMac, tpSirMsgQ  limMsg)
     case eWNI_SME_HT40_STOP_OBSS_SCAN_IND:
         {
            tpPESession     psessionEntry = NULL;
-           tANI_U8 sessionId = (tANI_U8)limMsg->bodyval ;
+           tANI_U8 sessionId;
+           tSirSmeHT40OBSSStopScanInd *ht40StopScanInd =
+               (tSirSmeHT40OBSSStopScanInd *)limMsg->bodyptr;
 
-           psessionEntry = &pMac->lim.gpSession[sessionId];
+           psessionEntry = peFindSessionByBssid(pMac,
+                   ht40StopScanInd->bssid, &sessionId);;
            /* Sending LIM STOP OBSS SCAN Indication
                      Stop command support is only for debugging purpose */
-           if ( IS_HT40_OBSS_SCAN_FEATURE_ENABLE )
+           if (psessionEntry && IS_HT40_OBSS_SCAN_FEATURE_ENABLE)
               limSendHT40OBSSStopScanInd(pMac, psessionEntry);
            else
               VOS_TRACE(VOS_MODULE_ID_PE,VOS_TRACE_LEVEL_ERROR,
                    "OBSS Scan Stop not started ");
         }
+        vos_mem_free(limMsg->bodyptr);
+        limMsg->bodyptr = NULL;
         break;
 #ifdef WLAN_FEATURE_AP_HT40_24G
     case eWNI_SME_SET_HT_2040_MODE:

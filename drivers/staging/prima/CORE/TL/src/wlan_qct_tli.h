@@ -699,6 +699,9 @@ typedef struct
   /* BD Rate for transmitting ARP packets */
   v_U8_t arpRate;
   v_BOOL_t arpOnWQ5;
+
+  /* Disassoc in progress */
+  v_BOOL_t disassoc_progress;
 }WLANTL_STAClientType;
 
 /*---------------------------------------------------------------------------
@@ -782,6 +785,37 @@ typedef struct
    v_PVOID_t                            macCtxt;
    vos_lock_t                           hosLock;
 } WLANTL_HO_SUPPORT_TYPE;
+
+#ifdef WLAN_FEATURE_ROAM_SCAN_OFFLOAD
+#define ROAM_MAX_INDEX_NUM              50
+#define ROAM_PER_INDEX_TIME             500 /* (msec) */
+#define MIN_PKTS_TO_START_MONTIOR       10
+
+typedef struct
+{
+  v_U64_t lowRateRxPacketsRcvd;
+  v_U64_t totalPktRcvd;
+  v_U64_t time;
+}WLANTL_RoamTrafficStatsType;
+
+typedef struct {
+   v_U8_t running;
+   v_U8_t staId;
+   v_S7_t index;
+   v_U8_t intialPktToStart;
+   v_U8_t minPercentage;
+   v_U16_t minRate;
+   v_U16_t maxRate;
+   v_U32_t minPktRequired;
+   v_U64_t totalPkt;
+   v_U64_t timeToWait;
+   v_U64_t lowRatePkt;
+   v_U64_t lastTriggerTime;
+   WLANTL_RoamTrafficStatsType rxRoamStats[ROAM_MAX_INDEX_NUM];
+   void (*triggerRoamScanfn) (void *, v_U8_t);
+   void *hHal;
+}WLANTL_RoamMonitorType;
+#endif
 
 /*---------------------------------------------------------------------------
   TL control block type
@@ -896,8 +930,12 @@ typedef struct
   v_BOOL_t   isTxTranmitMsgPending;
   WLANTL_MonRxCBType           pfnMonRx;
   v_BOOL_t              isConversionReq;
+#ifdef WLAN_FEATURE_ROAM_SCAN_OFFLOAD
+  WLANTL_RoamMonitorType gDsRxRoamStats;
+#endif
 
 }WLANTL_CbType;
+
 
 /*==========================================================================
 

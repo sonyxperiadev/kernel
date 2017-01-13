@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013, 2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -451,7 +451,8 @@ typedef struct
         wpt_uint32 reorderSlotIdx:6;
         
 #ifdef WCN_PRONTO
-        wpt_uint32 reserved7: 2;
+        wpt_uint32 reserved7: 1;
+        wpt_uint32 perRoamCndInd:1;
         wpt_uint32 outOfOrderForward: 1;
         wpt_uint32 reorderEnable: 1;
 #else
@@ -463,7 +464,8 @@ typedef struct
 #ifdef WCN_PRONTO
         wpt_uint32 reorderEnable: 1;
         wpt_uint32 outOfOrderForward: 1;
-        wpt_uint32 reserved7: 2;
+        wpt_uint32 perRoamCndInd:1;
+        wpt_uint32 reserved7: 1;
 #else
         wpt_uint32 reserved7:4;
 #endif //WCN_PRONTO

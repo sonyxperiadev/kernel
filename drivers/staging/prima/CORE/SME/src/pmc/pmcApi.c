@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2015 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -205,6 +205,7 @@ eHalStatus pmcStart (tHalHandle hHal)
     pMac->pmc.wowlExitSrc = eWOWL_EXIT_USER;
     pMac->pmc.bmpsRequestedByHdd = FALSE;
     pMac->pmc.remainInPowerActiveTillDHCP = FALSE;
+    pMac->pmc.full_power_till_set_key = false;
     pMac->pmc.remainInPowerActiveThreshold = 0;
 
     /* WLAN Switch initial states. */
@@ -3088,7 +3089,8 @@ eHalStatus pmcSetPreferredNetworkList
     pCommand->command = eSmeCommandPnoReq;
     pCommand->sessionId = (tANI_U8)sessionId;
 
-    if (!HAL_STATUS_SUCCESS(csrQueueSmeCommand(pMac, pCommand, TRUE)))
+    if (!HAL_STATUS_SUCCESS(csrQueueSmeCommand(pMac, pCommand,
+                                               !pRequestBuf->enable)))
     {
         VOS_TRACE(VOS_MODULE_ID_SME, VOS_TRACE_LEVEL_ERROR,
                   FL("failed to post eSmeCommandPnoReq command"));

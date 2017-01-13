@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2015 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -717,8 +717,11 @@ typedef struct
 typedef struct
 {
    u64                             *rxIntDisableReturn;
+   u64                             *rxIntDisableFrame;
    wpt_uint8                       rxIntChanlSrc;
    wpt_uint8                       txCmpIntChanlSrc;
+   wpt_uint8                       dxe_prev_ps;
+   wpt_uint8                       rx_imps_set_fp;
 } WLANDXE_EnvInformation;
 /*==========================================================================
   @  Function Name 

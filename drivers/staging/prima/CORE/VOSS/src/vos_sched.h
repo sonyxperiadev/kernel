@@ -77,21 +77,22 @@
 #include <vos_timer.h>
 
 
-#define TX_POST_EVENT_MASK               0x001
-#define TX_SUSPEND_EVENT_MASK            0x002
-#define MC_POST_EVENT_MASK               0x001
-#define MC_SUSPEND_EVENT_MASK            0x002
-#define RX_POST_EVENT_MASK               0x001
-#define RX_SUSPEND_EVENT_MASK            0x002
-#define TX_SHUTDOWN_EVENT_MASK           0x010
-#define MC_SHUTDOWN_EVENT_MASK           0x010
-#define RX_SHUTDOWN_EVENT_MASK           0x010
-#define WD_POST_EVENT_MASK               0x001
-#define WD_SHUTDOWN_EVENT_MASK           0x002
-#define WD_CHIP_RESET_EVENT_MASK         0x004
-#define WD_WLAN_SHUTDOWN_EVENT_MASK      0x008
-#define WD_WLAN_REINIT_EVENT_MASK        0x010
-#define WD_WLAN_DETECT_THREAD_STUCK_MASK 0x020
+#define TX_POST_EVENT               0x000
+#define TX_SUSPEND_EVENT            0x001
+#define MC_POST_EVENT               0x000
+#define MC_SUSPEND_EVENT            0x001
+#define RX_POST_EVENT               0x000
+#define RX_SUSPEND_EVENT            0x001
+#define TX_SHUTDOWN_EVENT           0x002
+#define MC_SHUTDOWN_EVENT           0x002
+#define RX_SHUTDOWN_EVENT           0x002
+
+#define WD_POST_EVENT               0x000
+#define WD_SHUTDOWN_EVENT           0x001
+#define WD_CHIP_RESET_EVENT         0x002
+#define WD_WLAN_SHUTDOWN_EVENT      0x003
+#define WD_WLAN_REINIT_EVENT        0x004
+#define WD_WLAN_DETECT_THREAD_STUCK 0x005
 
 
  

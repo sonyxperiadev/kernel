@@ -216,60 +216,6 @@ eHalStatus sme_remainOnChnRsp( tpAniSirGlobal pMac, tANI_U8 *pMsg)
     return status;
 }
 
-
-/*------------------------------------------------------------------
- *
- * Handle the Mgmt frm ind from LIM and forward to HDD.
- *
- *------------------------------------------------------------------*/
-
-eHalStatus sme_mgmtFrmInd( tHalHandle hHal, tpSirSmeMgmtFrameInd pSmeMgmtFrm)
-{
-    tpAniSirGlobal pMac = PMAC_STRUCT( hHal );
-    eHalStatus  status = eHAL_STATUS_SUCCESS;
-    tCsrRoamInfo pRoamInfo = {0};
-#ifndef WLAN_FEATURE_P2P_INTERNAL
-    tANI_U32 SessionId = pSmeMgmtFrm->sessionId;
-#endif
-
-#ifdef WLAN_FEATURE_P2P_INTERNAL
-    tANI_U8 i;
-
-    //For now, only action frames are needed.
-    if(SIR_MAC_MGMT_ACTION == pSmeMgmtFrm->frameType)
-    {
-       pRoamInfo.nFrameLength = pSmeMgmtFrm->mesgLen - sizeof(tSirSmeMgmtFrameInd);
-       pRoamInfo.pbFrames = pSmeMgmtFrm->frameBuf;
-       pRoamInfo.frameType = pSmeMgmtFrm->frameType;
-       pRoamInfo.rxChan   = pSmeMgmtFrm->rxChan;
-       pRoamInfo.rxRssi   = pSmeMgmtFrm->rxRssi;
-
-       //Somehow we don't get the right sessionId.
-       for(i = 0; i < CSR_ROAM_SESSION_MAX; i++)
-       {
-          if( CSR_IS_SESSION_VALID( pMac, i ) )
-          {
-              status = eHAL_STATUS_SUCCESS;
-              /* forward the mgmt frame to all active sessions*/
-              csrRoamCallCallback(pMac, i, &pRoamInfo, 0, eCSR_ROAM_INDICATE_MGMT_FRAME, 0);
-          }
-       }
-    }
-#else
-    pRoamInfo.nFrameLength = pSmeMgmtFrm->mesgLen - sizeof(tSirSmeMgmtFrameInd);
-    pRoamInfo.pbFrames = pSmeMgmtFrm->frameBuf;
-    pRoamInfo.frameType = pSmeMgmtFrm->frameType;
-    pRoamInfo.rxChan   = pSmeMgmtFrm->rxChan;
-    pRoamInfo.rxRssi   = pSmeMgmtFrm->rxRssi;
-
-    /* forward the mgmt frame to HDD */
-    csrRoamCallCallback(pMac, SessionId, &pRoamInfo, 0, eCSR_ROAM_INDICATE_MGMT_FRAME, 0);
-#endif
-
-    return status;
-}
-
-
 /*------------------------------------------------------------------
  *
  * Handle the remain on channel ready indication from PE

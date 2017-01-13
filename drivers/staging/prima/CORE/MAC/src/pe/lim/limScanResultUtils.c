@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2014 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2014, 2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -187,7 +187,32 @@ limCollectBssDescription(tpAniSirGlobal pMac,
     pBssDescr->beaconInterval = pBPR->beaconInterval;
     pBssDescr->capabilityInfo = limGetU16((tANI_U8 *) &pBPR->capabilityInfo);
 
-     if(!pBssDescr->beaconInterval )
+    pBssDescr->HTCapsPresent = 0;
+    pBssDescr->chanWidth = eHT_CHANNEL_WIDTH_20MHZ;
+    pBssDescr->wmeInfoPresent = 0;
+    pBssDescr->vhtCapsPresent = 0;
+    pBssDescr->beacomformingCapable = 0;
+    /* HT capability */
+    if (pBPR->HTCaps.present) {
+        pBssDescr->HTCapsPresent = 1;
+        if (pBPR->HTCaps.supportedChannelWidthSet)
+            pBssDescr->chanWidth = eHT_CHANNEL_WIDTH_40MHZ;
+    }
+    if (pBPR->wmeEdcaPresent)
+        pBssDescr->wmeInfoPresent = 1;
+
+#ifdef WLAN_FEATURE_11AC
+    /* VHT Parameters */
+    if (pBPR->VHTCaps.present) {
+        pBssDescr->vhtCapsPresent = 1;
+        if (pBPR->VHTCaps.muBeamformerCap)
+            pBssDescr->beacomformingCapable = 1;
+    }
+    if (pBPR->VHTOperation.present)
+        if (pBPR->VHTOperation.chanWidth == 1)
+            pBssDescr->chanWidth = eHT_CHANNEL_WIDTH_80MHZ;
+#endif
+    if(!pBssDescr->beaconInterval )
     {
 			        limLog(pMac, LOGW,
             FL("Beacon Interval is ZERO, making it to default 100 "
@@ -243,7 +268,7 @@ limCollectBssDescription(tpAniSirGlobal pMac,
     //SINR no longer reported by HW
     pBssDescr->sinr = 0;
 
-    pBssDescr->nReceivedTime = (tANI_TIMESTAMP)palGetTickCount(pMac->hHdd);
+    pBssDescr->nReceivedTime = vos_timer_get_system_time();
 
 #if defined WLAN_FEATURE_VOWIFI
     if( fScanning )
@@ -270,13 +295,14 @@ limCollectBssDescription(tpAniSirGlobal pMac,
     }
 #endif
 
-#ifdef FEATURE_WLAN_ESE
+#if defined(FEATURE_WLAN_ESE) || defined(WLAN_FEATURE_ROAM_SCAN_OFFLOAD)
     pBssDescr->QBSSLoad_present = FALSE;
     pBssDescr->QBSSLoad_avail = 0; 
     if( pBPR->QBSSLoad.present) 
     {
         pBssDescr->QBSSLoad_present = TRUE;
         pBssDescr->QBSSLoad_avail = pBPR->QBSSLoad.avail;
+        pBssDescr->QBSS_ChanLoad = pBPR->QBSSLoad.chautil;
     }
 #endif
     // Copy IE fields

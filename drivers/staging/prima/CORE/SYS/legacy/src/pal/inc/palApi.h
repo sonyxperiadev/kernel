@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2013, 2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -451,7 +451,7 @@ extern void palGetUnicastStats(tHddHandle hHdd, tANI_U32 *tx, tANI_U32 *rx);
 
     \return tick count.
 ----------------------------------------------------------------------------------*/
-tANI_U32 palGetTickCount(tHddHandle hHdd);
+tANI_TIMESTAMP palGetTickCount(tHddHandle hHdd);
 
 /** ---------------------------------------------------------------------------
 
