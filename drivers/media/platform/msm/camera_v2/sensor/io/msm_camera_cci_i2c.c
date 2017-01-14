@@ -430,6 +430,7 @@ static int32_t msm_camera_cci_i2c_compare(struct msm_camera_i2c_client *client,
 	int32_t rc;
 	uint16_t reg_data = 0;
 	int data_len = 0;
+
 	switch (data_type) {
 	case MSM_CAMERA_I2C_BYTE_DATA:
 	case MSM_CAMERA_I2C_WORD_DATA:
@@ -527,6 +528,7 @@ static int32_t msm_camera_cci_i2c_set_write_mask_data(
 {
 	int32_t rc;
 	uint16_t reg_data;
+
 	CDBG("%s\n", __func__);
 	if (mask == -1)
 		return 0;
@@ -556,8 +558,10 @@ int32_t msm_camera_cci_i2c_write_conf_tbl(
 {
 	int i;
 	int32_t rc = -EFAULT;
+
 	for (i = 0; i < size; i++) {
 		enum msm_camera_i2c_data_type dt;
+
 		if (reg_conf_tbl->cmd_type == MSM_CAMERA_I2C_CMD_POLL) {
 			rc = msm_camera_cci_i2c_poll(client,
 				reg_conf_tbl->reg_addr,
