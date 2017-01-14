@@ -19,7 +19,11 @@ obj-$(CONFIG_LKDTM)		+= lkdtm.o
 obj-$(CONFIG_TIFM_CORE)       	+= tifm_core.o
 obj-$(CONFIG_TIFM_7XX1)       	+= tifm_7xx1.o
 obj-$(CONFIG_PHANTOM)		+= phantom.o
+ifdef CONFIG_ARCH_SONY_KITAKAMI
+obj-$(CONFIG_NFC_PN547)		+= pn547-pinctrl.o
+else
 obj-$(CONFIG_NFC_PN547)		+= pn547.o
+endif
 obj-$(CONFIG_NFC_PN544)		+= pn544.o
 obj-$(CONFIG_SENSORS_BH1780)	+= bh1780gli.o
 obj-$(CONFIG_SENSORS_BH1770)	+= bh1770glc.o
