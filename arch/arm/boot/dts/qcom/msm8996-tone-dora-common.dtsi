@@ -1,0 +1,123 @@
+/* arch/arm/boot/dts/qcom/msm8996-tone-dora-common.dtsi
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+/*
+ * Copyright (C) 2015 Sony Mobile Communications Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2, as
+ * published by the Free Software Foundation.
+ */
+
+&soc {
+	/* I2C : BLSP12 */
+	i2c@75ba000 {
+		synaptics_clearpad@2c {
+			wakeup_gesture_use_workaround_for_felica = <1>;
+			/* chip settings */
+			S332U {
+				calibrate_on_fwflash = <0>;
+			};
+		};
+	};
+};
+
+/{
+	tone_dora_batterydata: qcom,battery-data {
+		#include "batterydata-tone-dora-send.dtsi"
+	};
+};
+
+&pmi8994_fg {
+	qcom,battery-data = <&tone_dora_batterydata>;
+	qcom,fg-iterm-ma = <150>;
+	qcom,fg-chg-iterm-ma = <150>;
+	qcom,cold-hot-jeita-hysteresis = <20 20>;
+	somc,cool-warm-jeita-hysteresis = <20 20>;
+};
+
+&pmi8994_charger {
+	qcom,fastchg-current-ma = <1800>;
+	somc,usb-9v-current-max = <1700>;
+	qcom,float-voltage-comp = <0x05>;
+	somc,fastchg-warm-current-ma = <800>;
+	somc,fastchg-cool-current-ma = <800>;
+	somc,thermal-engine-fastchg-current = <1800 1800 1800 1400 1000 700 500 300 300 300 300 300 300 0 0>;
+	somc,thermal-mitigation-usb-5v = <1500 1500 1500 1500 1500 1500 1500 1500 1200 900 700 500 300 0 0>;
+	somc,thermal-mitigation-usb-6v = <2300 2300 2300 2300 1500 1500 1500 1500 1200 900 700 500 300 0 0>;
+	somc,thermal-mitigation-usb-7v = <2000 2000 2000 2000 1200 1200 1200 1200 1200 900 700 500 300 0 0>;
+	somc,thermal-mitigation-usb-8v = <1800 1800 1800 1800 1100 1100 1100 1100 1200 900 700 500 300 0 0>;
+	somc,thermal-mitigation-usb-9v = <1600 1600 1600 1600 1000 1000 1000 1000 1200 900 700 500 300 0 0>;
+	somc,limit-usb-5v-level = <8>;
+};
+
+&spmi_bus {
+	qcom,pmi8994@3 {
+		qcom,leds@d000 {
+			status = "okay";
+			qcom,rgb_sync = <1>;
+
+			qcom,rgb_0 {
+				somc,pwm-channel = <2>;
+				linux,name = "led:rgb_red";
+				linux,default-trigger = "none";
+				somc,color_variation_max_num = <1>;
+				somc,max_current = <0 320 320>;
+			};
+			qcom,rgb_1 {
+				somc,pwm-channel = <1>;
+				linux,name = "led:rgb_green";
+				linux,default-trigger = "none";
+				somc,color_variation_max_num = <1>;
+				somc,max_current = <0 511 511>;
+			};
+			qcom,rgb_2 {
+				somc,pwm-channel = <0>;
+				linux,name = "led:rgb_blue";
+				linux,default-trigger = "none";
+				somc,color_variation_max_num = <1>;
+				somc,max_current = <0 511 224>;
+			};
+		};
+		qcom,leds@d800 {
+			qcom,fs-curr-ua = <20000>;
+			qcom,led-strings-list = [00 01 02];
+			somc,init-br-ua = <10000>;
+			somc-s1,br-power-save-ua = <800>;
+			qcom,ilim-ma = <660>;
+		};
+	};
+};
+
+&usb3 {
+	id_polling_use;
+	id_polling_up_interval = <2000>;
+	id_polling_up_period = <500>;
+	id_polling_pd_gpio = <&tlmm 24 0>;
+	id_lv_vadc_channel = <0x39>;
+	qcom,usb_id_lv-vadc = <&pm8994_vadc>;
+	qcom,usbin-vadc = <&pmi8994_vadc>;
+	usb_switch_sel = <&pmi8994_gpios 9 0>;
+	usb_id_discharge = <&pmi8994_mpps 1 0>;
+};
+
+&pm8994_vadc {
+	chan@39 {
+		label = "usb_id_lv";
+		reg = <0x39>;
+		qcom,decimation = <0>;
+		qcom,pre-div-channel-scaling = <0>;
+		qcom,calibration-type = "absolute";
+		qcom,scale-function = <0>;
+		qcom,hw-settle-time = <5>;
+		qcom,fast-avg-setup = <0>;
+	};
+};
