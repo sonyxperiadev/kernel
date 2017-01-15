@@ -225,7 +225,7 @@ static int mdss_mdp_cmd_tearcheck_cfg(struct mdss_mdp_mixer *mixer,
 		 pinfo->lcdc.v_front_porch +
 		 pinfo->lcdc.v_pulse_width;
 
-	height = (pinfo->yres + vporch) * 2;
+	height = (pinfo->yres + vporch);
 
 	pr_debug("%s: yres=%d vclks=%x height=%d init=%d rd=%d start=%d\n",
 		__func__, pinfo->yres, vclks_line, te->sync_cfg_height,
