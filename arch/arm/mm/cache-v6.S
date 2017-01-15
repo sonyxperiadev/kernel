@@ -51,7 +51,7 @@ ENTRY(v6_flush_icache_all)
 #else
 	mcr	p15, 0, r0, c7, c5, 0		@ invalidate I-cache
 #endif
-	mov	pc, lr
+	ret	lr
 ENDPROC(v6_flush_icache_all)
 
 /*
@@ -73,7 +73,7 @@ ENTRY(v6_flush_kern_cache_all)
 #else
 	mcr	p15, 0, r0, c7, c15, 0		@ Cache clean+invalidate
 #endif
-	mov	pc, lr
+	ret	lr
 
 /*
  *	v6_flush_cache_all()
@@ -98,7 +98,7 @@ ENTRY(v6_flush_user_cache_all)
  *	- we have a VIPT cache.
  */
 ENTRY(v6_flush_user_cache_range)
-	mov	pc, lr
+	ret	lr
 
 /*
  *	v6_coherent_kern_range(start,end)
@@ -150,7 +150,7 @@ ENTRY(v6_coherent_user_range)
 #else
 	mcr	p15, 0, r0, c7, c5, 6		@ invalidate BTB
 #endif
-	mov	pc, lr
+	ret	lr
 
 /*
  * Fault handling for the cache operation above. If the virtual address in r0
@@ -158,7 +158,7 @@ ENTRY(v6_coherent_user_range)
  */
 9001:
 	mov	r0, #-EFAULT
-	mov	pc, lr
+	ret	lr
  UNWIND(.fnend		)
 ENDPROC(v6_coherent_user_range)
 ENDPROC(v6_coherent_kern_range)
@@ -188,7 +188,7 @@ ENTRY(v6_flush_kern_dcache_area)
 	mov	r0, #0
 	mcr	p15, 0, r0, c7, c10, 4
 #endif
-	mov	pc, lr
+	ret	lr
 
 
 /*
@@ -239,7 +239,7 @@ v6_dma_inv_range:
 	blo	1b
 	mov	r0, #0
 	mcr	p15, 0, r0, c7, c10, 4		@ drain write buffer
-	mov	pc, lr
+	ret	lr
 
 /*
  *	v6_dma_clean_range(start,end)
@@ -262,7 +262,7 @@ v6_dma_clean_range:
 	blo	1b
 	mov	r0, #0
 	mcr	p15, 0, r0, c7, c10, 4		@ drain write buffer
-	mov	pc, lr
+	ret	lr
 
 /*
  *	v6_dma_flush_range(start,end)
@@ -295,7 +295,7 @@ ENTRY(v6_dma_flush_range)
 	blo	1b
 	mov	r0, #0
 	mcr	p15, 0, r0, c7, c10, 4		@ drain write buffer
-	mov	pc, lr
+	ret	lr
 
 #ifdef CONFIG_CACHE_FLUSH_RANGE_LIMIT
 v6_dma_flush_dcache_all:
@@ -306,7 +306,7 @@ v6_dma_flush_dcache_all:
 	mcr	p15, 0, r0, c7, c15, 0		@ Cache clean+invalidate
 #endif
 	mcr	p15, 0, r0, c7, c10, 4		@ drain write buffer
-	mov	pc, lr
+	ret	lr
 #endif
 
 /*
@@ -340,7 +340,7 @@ ENTRY(v6_dma_unmap_area)
 	teq	r2, #DMA_TO_DEVICE
 	bne	v6_dma_inv_range
 #endif
-	mov	pc, lr
+	ret	lr
 ENDPROC(v6_dma_unmap_area)
 
 	.globl	v6_flush_kern_cache_louis

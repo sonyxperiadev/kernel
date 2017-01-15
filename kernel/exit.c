@@ -70,10 +70,12 @@ static void __unhash_process(struct task_struct *p, bool group_dead)
 		detach_pid(p, PIDTYPE_SID);
 
 		list_del_rcu(&p->tasks);
+		delete_from_adj_tree(p);
 		list_del_init(&p->sibling);
 		__this_cpu_dec(process_counts);
 	}
 	list_del_rcu(&p->thread_group);
+	list_del_rcu(&p->thread_node);
 }
 
 /*
@@ -520,8 +522,7 @@ static struct task_struct *find_new_reaper(struct task_struct *father)
 	struct pid_namespace *pid_ns = task_active_pid_ns(father);
 	struct task_struct *thread;
 
-	thread = father;
-	while_each_thread(father, thread) {
+	for_each_thread(father, thread) {
 		if (thread->flags & PF_EXITING)
 			continue;
 		if (unlikely(pid_ns->child_reaper == father))
@@ -556,11 +557,10 @@ static struct task_struct *find_new_reaper(struct task_struct *father)
 				break;
 			if (!reaper->signal->is_child_subreaper)
 				continue;
-			thread = reaper;
-			do {
+			for_each_thread(reaper, thread) {
 				if (!(thread->flags & PF_EXITING))
-					return reaper;
-			} while_each_thread(reaper, thread);
+					return thread;
+			}
 		}
 	}
 
