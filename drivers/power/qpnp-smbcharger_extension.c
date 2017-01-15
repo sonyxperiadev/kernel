@@ -517,7 +517,7 @@ static bool somc_chg_is_charger_type_same(const char *type)
 		rc = chg_params->usb_psy->get_property(chg_params->usb_psy,
 			POWER_SUPPLY_PROP_CHARGER_TYPE, &prop);
 		if (rc < 0)
-			pr_err("Couldn't read charger type: %d\n", rc);
+			pr_debug("Couldn't read charger type: %d\n", rc);
 		else if (strcmp(prop.strval, type) == 0)
 			ret = true;
 	}
@@ -1933,7 +1933,7 @@ int somc_chg_register(struct device *dev, struct chg_somc_params *params)
 
 	params->ext_vbus_psy = power_supply_get_by_name("ext-vbus");
 	if (!params->ext_vbus_psy)
-		pr_err("ext-vbus supply not found\n");
+		pr_debug("ext-vbus supply not found\n");
 
 	usb_id->gpio_id_low = of_get_named_gpio(dev->of_node,
 							"gpio_id_low", 0);
@@ -2486,7 +2486,7 @@ int somc_chg_shutdown_lowbatt(struct power_supply *bms_psy)
 
 	if (!chg_params || !chg_params->dev || !chg_params->usb_psy ||
 			!chg_params->ext_vbus_psy) {
-		pr_err("chg_params is not initialized\n");
+		pr_debug("chg_params is not initialized\n");
 		return -EINVAL;
 	}
 
