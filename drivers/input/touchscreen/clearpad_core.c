@@ -3370,8 +3370,6 @@ static int clearpad_process_irq(struct clearpad_t *this)
 		goto unlock;
 	}
 
-	rc = 0;
-
 	dev_info(&this->pdev->dev, "no work, interrupt=[0x%02x]\n", interrupt);
 unlock:
 	if (rc) {
@@ -3397,17 +3395,20 @@ static irqreturn_t clearpad_threaded_handler(int irq, void *dev_id)
 	do {
 		(void)clearpad_process_irq(this);
 
-		spin_lock_irqsave(&this->slock, flags);
 		if (likely(!this->irq_pending)) {
+			spin_lock_irqsave(&this->slock, flags);
 			this->dev_busy = false;
 			spin_unlock_irqrestore(&this->slock, flags);
 			break;
 		}
+
+		spin_lock_irqsave(&this->slock, flags);
 		this->irq_pending = false;
-		dev_info(&this->pdev->dev, "Touch irq pending\n");
 		spin_unlock_irqrestore(&this->slock, flags);
 
+		dev_info(&this->pdev->dev, "Touch irq pending\n");
 	} while (true);
+
 	return IRQ_HANDLED;
 }
 
@@ -3418,16 +3419,19 @@ static irqreturn_t clearpad_hard_handler(int irq, void *dev_id)
 	unsigned long flags;
 	irqreturn_t ret;
 
-	spin_lock_irqsave(&this->slock, flags);
 	if (unlikely(this->dev_busy)) {
+		spin_lock_irqsave(&this->slock, flags);
 		this->irq_pending = true;
+		spin_unlock_irqrestore(&this->slock, flags);
 		dev_info(&this->pdev->dev, "Touch irq busy\n");
 		ret = IRQ_HANDLED;
 	} else {
+		spin_lock_irqsave(&this->slock, flags);
 		this->dev_busy = true;
+		spin_unlock_irqrestore(&this->slock, flags);
 		ret = IRQ_WAKE_THREAD;
 	}
-	spin_unlock_irqrestore(&this->slock, flags);
+
 	return ret;
 }
 
@@ -4168,7 +4172,13 @@ static ssize_t clearpad_screen_status_store(struct device *dev,
 
 	LOCK(this);
 
-	sscanf(buf, "%d", &this->screen_status);
+	if (sscanf(buf, "%d", &this->screen_status) != 1) {
+		dev_err(&this->pdev->dev, "%s: %s sscanf failed ",
+						__func__, attr->attr.name);
+		UNLOCK(this);
+		return -EINVAL;
+	}
+
 	dev_dbg(&this->pdev->dev, "%s: screen_status = %d\n", __func__,
 				this->screen_status);
 
@@ -4650,12 +4660,12 @@ static int clearpad_pm_suspend(struct device *dev)
 	unsigned long flags;
 	int rc = 0;
 
-	spin_lock_irqsave(&this->slock, flags);
 	if (unlikely(this->dev_busy)) {
 		dev_info(dev, "Busy to suspend\n");
-		spin_unlock_irqrestore(&this->slock, flags);
 		return -EBUSY;
 	}
+
+	spin_lock_irqsave(&this->slock, flags);
 	this->dev_busy = true;
 	spin_unlock_irqrestore(&this->slock, flags);
 
@@ -4701,7 +4711,7 @@ static int clearpad_pm_resume(struct device *dev)
 #endif
 	(void)(rc ? rc : clearpad_resume(&this->pdev->dev));
 
-	return 0;
+	return rc;
 }
 
 static int clearpad_pm_suspend_noirq(struct device *dev)
