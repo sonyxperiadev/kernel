@@ -146,33 +146,8 @@
 			<&clock_gcc clk_gcc_blsp1_qup3_i2c_apps_clk>;
 		pinctrl-names = "i2c_active", "i2c_sleep";
 		pinctrl-0 = <&msm_gpio_47 &msm_gpio_48>;
-		pinctrl-1 = <&msm_gpio_47_suspend &msm_gpio_48_suspend>;
-		status = "okay";
-		tcs3490@72 {
-			compatible = "ams,tcs3490";
-			reg = <0x72>;
-			interrupt-parent = <&tlmm>;
-			interrupts = <86 0x0>;
-			rgbcir_vdd-supply = <&pm8994_lvs1>;
-			ams,rgbcir-supply_name = "rgbcir_vdd";
-			pinctrl-names = "rgbcir_irq_active", "rgbcir_irq_suspend";
-			pinctrl-0 = <&msm_gpio_86>;
-			pinctrl-1 = <&msm_gpio_86_suspend>;
-		};
-		tof_sensor@52 {
-			compatible = "tof_sensor";
-			reg = <0x52>;
-			interrupt-parent = <&tlmm>;
-			interrupts = <85 0x0>;
-			tof_avdd-supply = <&pm8994_lvs1>;
-			tof-supply_name = "tof_avdd";
-			pinctrl-names = "tof_irq_active", "tof_irq_suspend";
-			pinctrl-0 = <&msm_gpio_85>;
-			pinctrl-1 = <&msm_gpio_85_suspend>;
-			sony,tof-sensor-name = "VL53L0";
-			sony,tof-need-cam-on = <1>;
-			sony,tof-sensor-facing = <0>;
-		};
+		pinctrl-1 = <&msm_gpio_47 &msm_gpio_48>;
+		status = "disabled";
 	};
 
 	/* I2C : BLSP7 */
@@ -357,14 +332,14 @@
 				&msm_gpio_30 &msm_gpio_31 &msm_gpio_32 &msm_gpio_33
 				&msm_gpio_34 &msm_gpio_38 &msm_gpio_39 &msm_gpio_40
 				&msm_gpio_41 &msm_gpio_42 &msm_gpio_43 &msm_gpio_44_suspend
-				&msm_gpio_45 &msm_gpio_46 &msm_gpio_47_suspend &msm_gpio_48_suspend
+				&msm_gpio_45 &msm_gpio_46 &msm_gpio_47 &msm_gpio_48
 				&msm_gpio_49 &msm_gpio_50 &msm_gpio_51 &msm_gpio_52
 				&msm_gpio_55 &msm_gpio_56 &msm_gpio_57 &msm_gpio_58
 				&msm_gpio_59 &msm_gpio_60 &msm_gpio_61 &msm_gpio_62
 				&msm_gpio_63 &msm_gpio_69 &msm_gpio_73 &msm_gpio_74
 				&msm_gpio_75 &msm_gpio_76 &msm_gpio_77 &msm_gpio_78
 				&msm_gpio_79 &msm_gpio_81 &msm_gpio_82_suspend &msm_gpio_83
-				&msm_gpio_84 &msm_gpio_85_suspend &msm_gpio_86_suspend &msm_gpio_87
+				&msm_gpio_84 &msm_gpio_85 &msm_gpio_86 &msm_gpio_87
 				&msm_gpio_88 &msm_gpio_89 &msm_gpio_90 &msm_gpio_91
 				&msm_gpio_92 &msm_gpio_93 &msm_gpio_94 &msm_gpio_95
 				&msm_gpio_96 &msm_gpio_108 &msm_gpio_112 &msm_gpio_116
@@ -387,10 +362,10 @@
 	};
 
 	sound-9335 {
+		qcom,msm-mbhc-hphl-swh = <1>;
 		/delete-property/ qcom,hph-en1-gpio;
 		/delete-property/ qcom,hph-en0-gpio;
 		/delete-property/ qcom,us-euro-gpios;
-		qcom,msm-mbhc-hphl-swh = <1>;
 		qcom,ear-en-gpios = <&pm8994_gpios 13 0>;
 		qcom,audio-routing =
 			"AIF4 VI", "MCLK",
@@ -687,51 +662,6 @@
                         qcom,vph-low-threshold-uv = <3200000>;
 		};
 	};
-};
-
-/{
-	tone_batterydata: qcom,battery-data {
-		qcom,batt-id-range-pct = <17>;
-		/delete-node/ qcom,itech-3000mah;
-	};
-};
-
-&pmi8994_fg {
-	qcom,battery-data = <&tone_batterydata>;
-	qcom,hot-bat-decidegc = <550>;
-	qcom,warm-bat-decidegc = <450>;
-	qcom,cool-bat-decidegc = <100>;
-	qcom,cold-bat-decidegc = <50>;
-	qcom,cl-max-increment-deciperc = <0>;
-	qcom,cl-max-decrement-deciperc = <20>;
-	qcom,cl-max-start-capacity = <40>;
-	qcom,hold-soc-while-full;
-	qcom,thermal-coefficients = [EC 85 75 4A FC 35];
-	qcom,vbat-estimate-diff-mv = <200>;
-	qcom,cl-vbat-est-thr-uv = <300000>;
-	qcom,fg-cc-cv-threshold-mv = <4340>;
-	/delete-property/ qcom,capacity-learning-feedback;
-	somc,vfloat-arrangement;
-	somc,vfloat-arrangement-threshold = <90>;
-	somc,soc-magnification = <106>;
-	somc,resume-soc-raw-full-normal = <0xF3>;
-	somc,resume-soc-raw-full-aging = <0xE3>;
-	somc,resume-soc-raw-not-full-normal = <0xFD>;
-	somc,resume-soc-raw-not-full-aging = <0xEF>;
-};
-
-&pmi8994_charger {
-	/delete-property/ qcom,parallel-usb-min-current-ma;
-	/delete-property/ qcom,parallel-usb-9v-min-current-ma;
-	/delete-property/ qcom,charging-disabled;
-	qcom,charge-unknown-battery;
-	qcom,usb_dp-vadc = <&pmi8994_vadc>;
-	qcom,usb_dm-vadc = <&pmi8994_vadc>;
-	qcom,usbin-vadc = <&pmi8994_vadc>;
-	qcom,float-voltage-mv = <4350>;
-	qcom,precharging-timeout-mins = <24>;
-	qcom,charging-timeout-mins = <768>;
-	qcom,bmd-pin-src = "bpd_none";
 };
 
 &pm8994_gpios {
@@ -1052,7 +982,7 @@
 	/* MPP_1: USB_ID_DISCHG */
 	mpp@a000 {
 		qcom,mode = <0>;		/* DIN */
-		qcom,vin-sel = <2>;		/* VDD_MSM_IO(1.8V) */
+		qcom,vin-sel = <0>;		/* VPH */
 		qcom,master-en = <1>;		/* Enable */
 		status = "okay";
 	};
@@ -1073,6 +1003,48 @@
 		qcom,master-en = <0>;		/* Disable */
 		status = "okay";
 	};
+};
+
+/{
+	tone_batterydata: qcom,battery-data {
+		qcom,batt-id-range-pct = <17>;
+		/delete-node/ qcom,itech-3000mah;
+	};
+};
+
+&pmi8994_fg {
+	qcom,battery-data = <&tone_batterydata>;
+	qcom,hot-bat-decidegc = <550>;
+	qcom,warm-bat-decidegc = <450>;
+	qcom,cool-bat-decidegc = <100>;
+	qcom,cold-bat-decidegc = <50>;
+	qcom,cl-max-increment-deciperc = <0>;
+	qcom,cl-max-decrement-deciperc = <20>;
+	qcom,cl-max-start-capacity = <40>;
+	qcom,hold-soc-while-full;
+	qcom,thermal-coefficients = [EC 85 75 4A FC 35];
+	qcom,vbat-estimate-diff-mv = <200>;
+	qcom,cl-vbat-est-thr-uv = <300000>;
+	qcom,fg-cc-cv-threshold-mv = <4290>;
+	/delete-property/ qcom,capacity-learning-feedback;
+	somc,resume-soc-raw-full-normal = <0xF3>;
+	somc,resume-soc-raw-full-aging = <0xE3>;
+	somc,resume-soc-raw-not-full-normal = <0xFD>;
+	somc,resume-soc-raw-not-full-aging = <0xEF>;
+};
+
+&pmi8994_charger {
+	/delete-property/ qcom,parallel-usb-min-current-ma;
+	/delete-property/ qcom,parallel-usb-9v-min-current-ma;
+	/delete-property/ qcom,charging-disabled;
+	qcom,charge-unknown-battery;
+	qcom,usb_dp-vadc = <&pmi8994_vadc>;
+	qcom,usb_dm-vadc = <&pmi8994_vadc>;
+	qcom,float-voltage-mv = <4300>;
+	qcom,usbin-vadc = <&pmi8994_vadc>;
+	qcom,precharging-timeout-mins = <24>;
+	qcom,charging-timeout-mins = <768>;
+	qcom,bmd-pin-src = "bpd_none";
 };
 
 /* Regulator config */
@@ -2000,61 +1972,37 @@
 		};
 	};
 
-	/* GPIO_47 : RGBC-IR & ToF I2C SDA */
+	/* GPIO_47 : NC */
 	msm_gpio_47: msm_gpio_47 {
 		mux {
 			pins = "gpio47";
-			function = "blsp_i2c3";
+			function = "gpio";
 		};
 
 		config {
 			pins = "gpio47";
 			drive-strength = <2>;
 			bias-disable;
-		};
-	};
-	msm_gpio_47_suspend: msm_gpio_47_suspend {
-		mux {
-			pins = "gpio47";
-			function = "blsp_i2c3";
-		};
-
-		config {
-			pins = "gpio47";
-			drive-strength = <2>;
-			bias-pull-down;
-			input-enable;
+			output-low;
 		};
 	};
 
-	/* GPIO_48 : RGBC-IR & ToF I2C SCL*/
+	/* GPIO_48 : NC */
 	msm_gpio_48: msm_gpio_48 {
 		mux {
 			pins = "gpio48";
-			function = "blsp_i2c3";
+			function = "gpio";
 		};
 
 		config {
 			pins = "gpio48";
 			drive-strength = <2>;
 			bias-disable;
-		};
-	};
-	msm_gpio_48_suspend: msm_gpio_48_suspend {
-		mux {
-			pins = "gpio48";
-			function = "blsp_i2c3";
-		};
-
-		config {
-			pins = "gpio48";
-			drive-strength = <2>;
-			bias-pull-down;
-			input-enable;
+			output-low;
 		};
 	};
 
-	/* GPIO_49 : NC */
+	/* GPIO_49 : FELICA_FLD_MON */
 	msm_gpio_49: msm_gpio_49 {
 		mux {
 			pins = "gpio49";
@@ -2064,8 +2012,7 @@
 		config {
 			pins = "gpio49";
 			drive-strength = <2>;
-			/delete-property/ bias-pull-up;
-			bias-pull-down;
+			bias-pull-up;
 		};
 	};
 
@@ -2316,7 +2263,7 @@
 	/* GPIO_72 : SLIMBUS_DATA1 */
 	/* Follow QTI */
 
-	/* GPIO_73 : NC */
+	/* GPIO_73 : DTV_RST_N */
 	msm_gpio_73: msm_gpio_73 {
 		mux {
 			pins = "gpio73";
@@ -2331,7 +2278,7 @@
 		};
 	};
 
-	/* GPIO_74 : NC */
+	/* GPIO_74 : DTV_LDO_EN */
 	msm_gpio_74: msm_gpio_74 {
 		mux {
 			pins = "gpio74";
@@ -2374,7 +2321,7 @@
 		};
 	};
 
-	/* GPIO_77 : NC */
+	/* GPIO_77 : DTV_INT */
 	msm_gpio_77: msm_gpio_77 {
 		mux {
 			pins = "gpio77";
@@ -2490,7 +2437,7 @@
 		};
 	};
 
-	/* GPIO_85 : TOF_INT */
+	/* GPIO_85 : NC */
 	msm_gpio_85: msm_gpio_85 {
 		mux {
 			pins = "gpio85";
@@ -2500,24 +2447,12 @@
 		config {
 			pins = "gpio85";
 			drive-strength = <2>;
-			bias-pull-up;
-		};
-	};
-	msm_gpio_85_suspend: msm_gpio_85_suspend {
-		mux {
-			pins = "gpio85";
-			function = "gpio";
-		};
-
-		config {
-			pins = "gpio85";
-			drive-strength = <2>;
-			bias-pull-down;
-			input-enable;
+			bias-disable;
+			output-low;
 		};
 	};
 
-	/* GPIO_86 : RGBC_IR_INT */
+	/* GPIO_86 : NC */
 	msm_gpio_86: msm_gpio_86 {
 		mux {
 			pins = "gpio86";
@@ -2527,20 +2462,8 @@
 		config {
 			pins = "gpio86";
 			drive-strength = <2>;
-			bias-pull-up;
-		};
-	};
-	msm_gpio_86_suspend: msm_gpio_86_suspend {
-		mux {
-			pins = "gpio86";
-			function = "gpio";
-		};
-
-		config {
-			pins = "gpio86";
-			drive-strength = <2>;
-			bias-pull-down;
-			input-enable;
+			bias-disable;
+			output-low;
 		};
 	};
 
@@ -3107,6 +3030,42 @@
 	};
 };
 
+&cam_sensor_mclk0_suspend {
+	config {
+		/delete-property/ bias-pull-down;
+		bias-disable;
+		output-low;
+	};
+};
+
+&cam_sensor_mclk2_suspend {
+	config {
+		/delete-property/ bias-pull-down;
+		bias-disable;
+		output-low;
+	};
+};
+
+&cci0_suspend {
+	mux {
+		function = "gpio";
+	};
+	config {
+		bias-pull-down;
+		input-enable;
+	};
+};
+
+&cci1_suspend {
+	mux {
+		function = "gpio";
+	};
+	config {
+		bias-pull-down;
+		input-enable;
+	};
+};
+
 /* I2C : BLSP7 */
 &i2c_7 {
 	/delete-node/ silabs4705@11;
@@ -3260,14 +3219,6 @@
 };
 
 &usb3 {
-	id_polling_use;
-	id_polling_up_interval = <2000>;
-	id_polling_up_period = <500>;
-	id_polling_pd_gpio = <&tlmm 24 0>;
-	qcom,usb_id_lv-vadc = <&pm8994_vadc>;
-	qcom,usbin-vadc = <&pmi8994_vadc>;
-	usb_switch_sel = <&pmi8994_gpios 9 0>;
-	usb_id_discharge = <&pmi8994_mpps 1 0>;
 	dwc3@6a00000 {
 		maximum-speed = "high-speed";
 	};
@@ -3293,56 +3244,8 @@
 	chan@74 { /* emmc_therm */
 		qcom,scale-function = <17>;
 	};
-
-	chan@79 {
-		label = "usb_id_lv";
-		reg = <0x79>;
-		qcom,decimation = <0>;
-		qcom,pre-div-channel-scaling = <0>;
-		qcom,calibration-type = "absolute";
-		qcom,scale-function = <0>;
-		qcom,hw-settle-time = <5>;
-		qcom,fast-avg-setup = <0>;
-	};
 };
 
 &pcie0 {
 	qcom,clk-power-manage-en;
 };
-
-&cam_sensor_mclk0_suspend {
-	config {
-		/delete-property/ bias-pull-down;
-		bias-disable;
-		output-low;
-	};
-};
-
-&cam_sensor_mclk2_suspend {
-	config {
-		/delete-property/ bias-pull-down;
-		bias-disable;
-		output-low;
-	};
-};
-
-&cci0_suspend {
-	mux {
-		function = "gpio";
-	};
-	config {
-		bias-pull-down;
-		input-enable;
-	};
-};
-
-&cci1_suspend {
-	mux {
-		function = "gpio";
-	};
-	config {
-		bias-pull-down;
-		input-enable;
-	};
-};
-
