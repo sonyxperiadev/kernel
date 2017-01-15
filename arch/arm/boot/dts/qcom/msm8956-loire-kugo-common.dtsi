@@ -276,7 +276,7 @@
 	msm_gpio_18_def: msm_gpio_18def {
 		mux {
 			pins = "gpio18";
-			function = "blsp_i2c5";
+			function = "blsp_i2c8";
 		};
 		config {
 			pins = "gpio18";
@@ -291,7 +291,7 @@
 	msm_gpio_18_sus: msm_gpio_18sus {
 		mux {
 			pins = "gpio18";
-			function = "blsp_i2c5";
+			function = "blsp_i2c8";
 		};
 		config {
 			pins = "gpio18";
@@ -304,7 +304,7 @@
 	msm_gpio_18_act: msm_gpio_18act {
 		mux {
 			pins = "gpio18";
-			function = "blsp_i2c5";
+			function = "blsp_i2c8";
 		};
 		config {
 			pins = "gpio18";
@@ -317,7 +317,7 @@
 	msm_gpio_19_def: msm_gpio_19def {
 		mux {
 			pins = "gpio19";
-			function = "blsp_i2c5";
+			function = "blsp_i2c8";
 		};
 		config {
 			pins = "gpio19";
@@ -332,7 +332,7 @@
 	msm_gpio_19_sus: msm_gpio_19sus {
 		mux {
 			pins = "gpio19";
-			function = "blsp_i2c5";
+			function = "blsp_i2c8";
 		};
 		config {
 			pins = "gpio19";
@@ -345,7 +345,7 @@
 	msm_gpio_19_act: msm_gpio_19act {
 		mux {
 			pins = "gpio19";
-			function = "blsp_i2c5";
+			function = "blsp_i2c8";
 		};
 		config {
 			pins = "gpio19";
