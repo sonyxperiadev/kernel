@@ -21,6 +21,7 @@
 #include <linux/qpnp/clkdiv.h>
 #include <linux/regulator/consumer.h>
 #include <linux/io.h>
+#include <linux/switch.h>
 #include <soc/qcom/subsystem_notif.h>
 #include <sound/core.h>
 #include <sound/soc.h>
@@ -30,6 +31,8 @@
 #include <sound/q6afe-v2.h>
 #include <sound/q6core.h>
 #include <sound/pcm_params.h>
+#include <soc/qcom/liquid_dock.h>
+#include "device_event.h"
 #include "qdsp6v2/msm-pcm-routing-v2.h"
 #include "../codecs/wcd9xxx-common.h"
 #include "../codecs/wcd9320.h"
@@ -252,15 +255,23 @@ static char *msm_sec_auxpcm_gpio_name[][2] = {
 	{"SEC_AUXPCM_DOUT",      "qcom,sec-auxpcm-gpio-dout"},
 };
 
-struct msm8974_liquid_dock_dev {
-	int dock_plug_gpio;
-	int dock_plug_irq;
-	int dock_plug_det;
+struct audio_plug_dev {
+	int plug_gpio;
+	int plug_irq;
+	int plug_det;
+	struct switch_dev audio_sdev;
 	struct snd_soc_dapm_context *dapm;
 	struct work_struct irq_work;
 };
 
-static struct msm8974_liquid_dock_dev *msm8974_liquid_dock_dev;
+static struct audio_plug_dev *msm8974_liquid_dock_dev;
+
+/* Rear panel audio jack which connected to LO1&2 */
+static struct audio_plug_dev *apq8074_db_ext_bp_out_dev;
+/* Front panel audio jack which connected to LO3&4 */
+static struct audio_plug_dev *apq8074_db_ext_fp_in_dev;
+/* Front panel audio jack which connected to Line in (ADC6) */
+static struct audio_plug_dev *apq8074_db_ext_fp_out_dev;
 
 /* Shared channel numbers for Slimbus ports that connect APQ to MDM. */
 enum {
@@ -281,11 +292,13 @@ static int msm8974_spk_control = 1;
 static int msm8974_ext_spk_pamp;
 static int msm_slim_0_rx_ch = 1;
 static int msm_slim_0_tx_ch = 1;
+static int msm_vi_feed_tx_ch = 2;
 
 static int msm_btsco_rate = BTSCO_RATE_8KHZ;
 static int msm_btsco_ch = 1;
 static int msm_hdmi_rx_ch = 2;
 static int slim0_rx_sample_rate = SAMPLING_RATE_48KHZ;
+static int slim0_tx_sample_rate = SAMPLING_RATE_48KHZ;
 static int msm_proxy_rx_ch = 2;
 static int hdmi_rx_sample_rate = SAMPLING_RATE_48KHZ;
 
@@ -386,61 +399,202 @@ static void msm8974_liquid_ext_spk_power_amp_enable(u32 on)
 			on ? "Enable" : "Disable");
 }
 
-static void msm8974_liquid_docking_irq_work(struct work_struct *work)
+static irqreturn_t msm8974_audio_plug_device_irq_handler(int irq, void *dev)
 {
-	struct msm8974_liquid_dock_dev *dock_dev =
-		container_of(work,
-					 struct msm8974_liquid_dock_dev,
-					 irq_work);
-
-	struct snd_soc_dapm_context *dapm = dock_dev->dapm;
-
-
-	mutex_lock(&dapm->codec->mutex);
-	dock_dev->dock_plug_det =
-		gpio_get_value(dock_dev->dock_plug_gpio);
-
-
-	if (0 == dock_dev->dock_plug_det) {
-		if ((msm8974_ext_spk_pamp & LO_1_SPK_AMP) &&
-			(msm8974_ext_spk_pamp & LO_3_SPK_AMP) &&
-			(msm8974_ext_spk_pamp & LO_2_SPK_AMP) &&
-			(msm8974_ext_spk_pamp & LO_4_SPK_AMP))
-			msm8974_liquid_ext_spk_power_amp_enable(1);
-	} else {
-		if ((msm8974_ext_spk_pamp & LO_1_SPK_AMP) &&
-			(msm8974_ext_spk_pamp & LO_3_SPK_AMP) &&
-			(msm8974_ext_spk_pamp & LO_2_SPK_AMP) &&
-			(msm8974_ext_spk_pamp & LO_4_SPK_AMP))
-			msm8974_liquid_ext_spk_power_amp_enable(0);
-	}
-
-	mutex_unlock(&dapm->codec->mutex);
-
-}
-
-static irqreturn_t msm8974_liquid_docking_irq_handler(int irq, void *dev)
-{
-	struct msm8974_liquid_dock_dev *dock_dev = dev;
+	struct audio_plug_dev *dock_dev = dev;
 
 	/* switch speakers should not run in interrupt context */
 	schedule_work(&dock_dev->irq_work);
-
 	return IRQ_HANDLED;
 }
+
+static int msm8974_audio_plug_device_init
+				(struct audio_plug_dev *audio_plug_dev,
+				 int plug_gpio,
+				 char *node_name,
+				 char *switch_dev_name,
+				 void (*irq_work)(struct work_struct *work))
+{
+	int ret = 0;
+
+	/* awaike by plug in device OR unplug one of them */
+	u32 plug_irq_flags = IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING;
+
+	audio_plug_dev =
+		kzalloc(sizeof(*audio_plug_dev), GFP_KERNEL);
+	if (!audio_plug_dev) {
+		pr_err("audio_plug_device alloc fail. dev_name= %s\n",
+					node_name);
+		ret = -ENOMEM;
+		goto exit;
+	}
+
+	audio_plug_dev->plug_gpio = plug_gpio;
+
+	ret = gpio_request(audio_plug_dev->plug_gpio,
+					   node_name);
+	if (ret) {
+		pr_err("%s:failed request audio_plug_device device_name = %s err= 0x%x\n",
+			__func__, node_name, ret);
+		ret = -EINVAL;
+		goto release_audio_plug_device;
+	}
+
+	ret = gpio_direction_input(audio_plug_dev->plug_gpio);
+
+	audio_plug_dev->plug_det =
+			gpio_get_value(audio_plug_dev->plug_gpio);
+	audio_plug_dev->plug_irq =
+		gpio_to_irq(audio_plug_dev->plug_gpio);
+
+	ret = request_irq(audio_plug_dev->plug_irq,
+				msm8974_audio_plug_device_irq_handler,
+				plug_irq_flags,
+				node_name,
+				audio_plug_dev);
+	if (ret < 0) {
+		pr_err("%s: Request Irq Failed err = %d\n",
+				__func__, ret);
+		goto fail_gpio;
+	}
+
+	audio_plug_dev->audio_sdev.name = switch_dev_name;
+	if (switch_dev_register(
+		&audio_plug_dev->audio_sdev) < 0) {
+		pr_err("%s: audio plug device register in switch diretory failed\n",
+		__func__);
+		goto fail_switch_dev;
+	}
+
+	switch_set_state(&audio_plug_dev->audio_sdev,
+					!(audio_plug_dev->plug_det));
+
+	/*notify to audio deamon*/
+	sysfs_notify(&audio_plug_dev->audio_sdev.dev->kobj,
+				NULL, "state");
+
+	INIT_WORK(&audio_plug_dev->irq_work,
+			irq_work);
+
+	return 0;
+
+fail_switch_dev:
+	free_irq(audio_plug_dev->plug_irq,
+				audio_plug_dev);
+fail_gpio:
+	gpio_free(audio_plug_dev->plug_gpio);
+release_audio_plug_device:
+	kfree(audio_plug_dev);
+exit:
+	audio_plug_dev = NULL;
+	return ret;
+
+}
+
+static void msm8974_audio_plug_device_remove
+				(struct audio_plug_dev *audio_plug_dev)
+{
+	if (audio_plug_dev != NULL) {
+		switch_dev_unregister(&audio_plug_dev->audio_sdev);
+
+		if (audio_plug_dev->plug_irq)
+			free_irq(audio_plug_dev->plug_irq,
+				 audio_plug_dev);
+
+		if (audio_plug_dev->plug_gpio)
+			gpio_free(audio_plug_dev->plug_gpio);
+
+		kfree(audio_plug_dev);
+		audio_plug_dev = NULL;
+	}
+}
+
+static void msm8974_liquid_docking_irq_work(struct work_struct *work)
+{
+	struct audio_plug_dev *dock_dev =
+		container_of(work, struct audio_plug_dev, irq_work);
+
+	dock_dev->plug_det =
+		gpio_get_value(dock_dev->plug_gpio);
+
+	switch_set_state(&dock_dev->audio_sdev, dock_dev->plug_det);
+	/*notify to audio deamon*/
+	sysfs_notify(&dock_dev->audio_sdev.dev->kobj, NULL, "state");
+}
+
+static int msm8974_liquid_dock_notify_handler(struct notifier_block *this,
+					unsigned long dock_event,
+					void *unused)
+{
+	int ret = 0;
+	/* plug in docking speaker+plug in device OR unplug one of them */
+	u32 plug_irq_flags = IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING |
+					IRQF_SHARED;
+	if (dock_event) {
+		ret = gpio_request(msm8974_liquid_dock_dev->plug_gpio,
+					   "dock-plug-det-irq");
+		if (ret) {
+			pr_err("%s:failed request msm8974_liquid_plug_gpio err = %d\n",
+				__func__, ret);
+			ret = -EINVAL;
+			goto fail_dock_gpio;
+		}
+
+		msm8974_liquid_dock_dev->plug_det =
+			gpio_get_value(msm8974_liquid_dock_dev->plug_gpio);
+		msm8974_liquid_dock_dev->plug_irq =
+			gpio_to_irq(msm8974_liquid_dock_dev->plug_gpio);
+
+		ret = request_irq(msm8974_liquid_dock_dev->plug_irq,
+				  msm8974_audio_plug_device_irq_handler,
+				  plug_irq_flags,
+				  "liquid_dock_plug_irq",
+				  msm8974_liquid_dock_dev);
+		if (ret < 0) {
+			pr_err("%s: Request Irq Failed err = %d\n",
+				__func__, ret);
+			goto fail_gpio_irq;
+		}
+
+		switch_set_state(&msm8974_liquid_dock_dev->audio_sdev,
+				msm8974_liquid_dock_dev->plug_det);
+		/*notify to audio deamon*/
+		sysfs_notify(&msm8974_liquid_dock_dev->audio_sdev.dev->kobj,
+				NULL, "state");
+	} else {
+		if (msm8974_liquid_dock_dev->plug_irq)
+			free_irq(msm8974_liquid_dock_dev->plug_irq,
+				 msm8974_liquid_dock_dev);
+
+		if (msm8974_liquid_dock_dev->plug_gpio)
+			gpio_free(msm8974_liquid_dock_dev->plug_gpio);
+	}
+	return NOTIFY_OK;
+
+fail_gpio_irq:
+	gpio_free(msm8974_liquid_dock_dev->plug_gpio);
+
+fail_dock_gpio:
+	return NOTIFY_DONE;
+}
+
+
+static struct notifier_block msm8974_liquid_docking_notifier = {
+	.notifier_call  = msm8974_liquid_dock_notify_handler,
+};
 
 static int msm8974_liquid_init_docking(struct snd_soc_dapm_context *dapm)
 {
 	int ret = 0;
-	int dock_plug_gpio = 0;
+	int plug_gpio = 0;
 
 	/* plug in docking speaker+plug in device OR unplug one of them */
-	u32 dock_plug_irq_flags = IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING;
+	u32 plug_irq_flags = IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING;
 
-	dock_plug_gpio = of_get_named_gpio(spdev->dev.of_node,
+	plug_gpio = of_get_named_gpio(spdev->dev.of_node,
 					   "qcom,dock-plug-det-irq", 0);
 
-	if (dock_plug_gpio >= 0) {
+	if (plug_gpio >= 0) {
 
 		msm8974_liquid_dock_dev =
 		 kzalloc(sizeof(*msm8974_liquid_dock_dev), GFP_KERNEL);
@@ -450,36 +604,107 @@ static int msm8974_liquid_init_docking(struct snd_soc_dapm_context *dapm)
 			return -ENOMEM;
 		}
 
-		msm8974_liquid_dock_dev->dock_plug_gpio = dock_plug_gpio;
+		msm8974_liquid_dock_dev->plug_gpio = plug_gpio;
 
-		ret = gpio_request(msm8974_liquid_dock_dev->dock_plug_gpio,
+		ret = gpio_request(msm8974_liquid_dock_dev->plug_gpio,
 					   "dock-plug-det-irq");
 		if (ret) {
-			pr_err("%s:failed request msm8974_liquid_dock_plug_gpio.\n",
+			pr_err("%s:failed request msm8974_liquid_plug_gpio.\n",
 				__func__);
 			return -EINVAL;
 		}
 
-		msm8974_liquid_dock_dev->dock_plug_det =
-			gpio_get_value(msm8974_liquid_dock_dev->dock_plug_gpio);
+		msm8974_liquid_dock_dev->plug_det =
+			gpio_get_value(msm8974_liquid_dock_dev->plug_gpio);
 
-		msm8974_liquid_dock_dev->dock_plug_irq =
-			gpio_to_irq(msm8974_liquid_dock_dev->dock_plug_gpio);
+		msm8974_liquid_dock_dev->plug_irq =
+			gpio_to_irq(msm8974_liquid_dock_dev->plug_gpio);
 
 		msm8974_liquid_dock_dev->dapm = dapm;
 
-		ret = request_irq(msm8974_liquid_dock_dev->dock_plug_irq,
-				  msm8974_liquid_docking_irq_handler,
-				  dock_plug_irq_flags,
+		ret = request_irq(msm8974_liquid_dock_dev->plug_irq,
+				  msm8974_audio_plug_device_irq_handler,
+				  plug_irq_flags,
 				  "liquid_dock_plug_irq",
 				  msm8974_liquid_dock_dev);
 
 		INIT_WORK(
 			&msm8974_liquid_dock_dev->irq_work,
 			msm8974_liquid_docking_irq_work);
+
+		register_liquid_dock_notify(&msm8974_liquid_docking_notifier);
 	}
 
 	return 0;
+}
+
+static void apq8074_db_device_irq_work(struct work_struct *work)
+{
+	struct audio_plug_dev *plug_dev =
+		container_of(work, struct audio_plug_dev, irq_work);
+
+	plug_dev->plug_det =
+		gpio_get_value(plug_dev->plug_gpio);
+
+	switch_set_state(&plug_dev->audio_sdev, !(plug_dev->plug_det));
+
+	/*notify to audio deamon*/
+	sysfs_notify(&plug_dev->audio_sdev.dev->kobj, NULL, "state");
+}
+
+static int apq8074_db_device_init(void)
+{
+	int ret = 0;
+	int plug_gpio = 0;
+
+
+	plug_gpio = of_get_named_gpio(spdev->dev.of_node,
+					   "qcom,ext-spk-rear-panel-irq", 0);
+	if (plug_gpio >= 0) {
+		ret = msm8974_audio_plug_device_init(apq8074_db_ext_bp_out_dev,
+						plug_gpio,
+						"qcom,ext-spk-rear-panel-irq",
+						QC_AUDIO_EXTERNAL_SPK_2_EVENT,
+						&apq8074_db_device_irq_work);
+		if (ret != 0) {
+			pr_err("%s: external audio device init failed = %s\n",
+				__func__,
+				apq8074_db_ext_bp_out_dev->audio_sdev.name);
+			return ret;
+		}
+	}
+
+	plug_gpio = of_get_named_gpio(spdev->dev.of_node,
+					   "qcom,ext-spk-front-panel-irq", 0);
+	if (plug_gpio >= 0) {
+		ret = msm8974_audio_plug_device_init(apq8074_db_ext_fp_out_dev,
+						plug_gpio,
+						"qcom,ext-spk-front-panel-irq",
+						QC_AUDIO_EXTERNAL_SPK_1_EVENT,
+						&apq8074_db_device_irq_work);
+		if (ret != 0) {
+			pr_err("%s: external audio device init failed = %s\n",
+				__func__,
+				apq8074_db_ext_fp_out_dev->audio_sdev.name);
+			return ret;
+		}
+	}
+
+	plug_gpio = of_get_named_gpio(spdev->dev.of_node,
+					   "qcom,ext-mic-front-panel-irq", 0);
+	if (plug_gpio >= 0) {
+		ret = msm8974_audio_plug_device_init(apq8074_db_ext_fp_in_dev,
+						plug_gpio,
+						"qcom,ext-mic-front-panel-irq",
+						QC_AUDIO_EXTERNAL_MIC_EVENT,
+						&apq8074_db_device_irq_work);
+		if (ret != 0)
+			pr_err("%s: external audio device init failed = %s\n",
+				__func__,
+				apq8074_db_ext_fp_in_dev->audio_sdev.name);
+	}
+
+	return ret;
 }
 
 static int msm8974_liquid_ext_spk_power_amp_on(u32 spk)
@@ -497,7 +722,7 @@ static int msm8974_liquid_ext_spk_power_amp_on(u32 spk)
 		    (msm8974_ext_spk_pamp & LO_4_SPK_AMP))
 			if (ext_spk_amp_gpio >= 0 &&
 			    msm8974_liquid_dock_dev &&
-			    msm8974_liquid_dock_dev->dock_plug_det == 0)
+			    msm8974_liquid_dock_dev->plug_det == 0)
 				msm8974_liquid_ext_spk_power_amp_enable(1);
 		rc = 0;
 	} else  {
@@ -569,7 +794,7 @@ static void msm8974_liquid_ext_spk_power_amp_off(u32 spk)
 		if (!msm8974_ext_spk_pamp) {
 			if (ext_spk_amp_gpio >= 0 &&
 				msm8974_liquid_dock_dev != NULL &&
-				msm8974_liquid_dock_dev->dock_plug_det == 0)
+				msm8974_liquid_dock_dev->plug_det == 0)
 				msm8974_liquid_ext_spk_power_amp_enable(0);
 		}
 
@@ -843,6 +1068,7 @@ static const struct snd_soc_dapm_widget msm8974_dapm_widgets[] = {
 
 static const char *const spk_function[] = {"Off", "On"};
 static const char *const slim0_rx_ch_text[] = {"One", "Two"};
+static const char *const vi_feed_ch_text[] = {"One", "Two"};
 static const char *const slim0_tx_ch_text[] = {"One", "Two", "Three", "Four",
 						"Five", "Six", "Seven",
 						"Eight"};
@@ -969,6 +1195,105 @@ static int msm_slim_0_rx_ch_put(struct snd_kcontrol *kcontrol,
 	return 1;
 }
 
+static int slim0_tx_sample_rate_get(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	int sample_rate_val = 0;
+
+	switch (slim0_tx_sample_rate) {
+	case SAMPLING_RATE_192KHZ:
+		sample_rate_val = 2;
+		break;
+	case SAMPLING_RATE_96KHZ:
+		sample_rate_val = 1;
+		break;
+	case SAMPLING_RATE_48KHZ:
+	default:
+		sample_rate_val = 0;
+		break;
+	}
+
+	ucontrol->value.integer.value[0] = sample_rate_val;
+	pr_debug("%s: slim0_tx_sample_rate = %d\n", __func__,
+				slim0_tx_sample_rate);
+
+	return 0;
+}
+
+static int slim0_tx_sample_rate_put(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	int rc = 0;
+
+	pr_debug("%s: ucontrol value = %ld\n", __func__,
+			ucontrol->value.integer.value[0]);
+
+	switch (ucontrol->value.integer.value[0]) {
+	case 2:
+		slim0_tx_sample_rate = SAMPLING_RATE_192KHZ;
+		break;
+	case 1:
+		slim0_tx_sample_rate = SAMPLING_RATE_96KHZ;
+		break;
+	case 0:
+		slim0_tx_sample_rate = SAMPLING_RATE_48KHZ;
+		break;
+	default:
+		rc = -EINVAL;
+		pr_err("%s: invalid sample rate being passed\n", __func__);
+		break;
+	}
+
+	pr_debug("%s: slim0_tx_sample_rate = %d\n", __func__,
+			slim0_tx_sample_rate);
+
+	return rc;
+}
+
+static int slim0_tx_bit_format_get(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+
+	switch (slim0_tx_bit_format) {
+	case SNDRV_PCM_FORMAT_S24_LE:
+		ucontrol->value.integer.value[0] = 1;
+		break;
+
+	case SNDRV_PCM_FORMAT_S16_LE:
+	default:
+		ucontrol->value.integer.value[0] = 0;
+		break;
+	}
+
+	pr_debug("%s: slim0_tx_bit_format = %d, ucontrol value = %ld\n",
+			 __func__, slim0_tx_bit_format,
+			ucontrol->value.integer.value[0]);
+
+	return 0;
+}
+
+static int slim0_tx_bit_format_put(struct snd_kcontrol *kcontrol,
+				   struct snd_ctl_elem_value *ucontrol)
+{
+	int rc = 0;
+
+	switch (ucontrol->value.integer.value[0]) {
+	case 1:
+		slim0_tx_bit_format = SNDRV_PCM_FORMAT_S24_LE;
+		break;
+	case 0:
+		slim0_tx_bit_format = SNDRV_PCM_FORMAT_S16_LE;
+		break;
+	default:
+		pr_err("%s: invalid value %ld\n", __func__,
+		       ucontrol->value.integer.value[0]);
+		rc = -EINVAL;
+		break;
+	}
+
+	return rc;
+}
+
 static int msm_slim_0_tx_ch_get(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
@@ -984,6 +1309,25 @@ static int msm_slim_0_tx_ch_put(struct snd_kcontrol *kcontrol,
 	msm_slim_0_tx_ch = ucontrol->value.integer.value[0] + 1;
 
 	pr_debug("%s: msm_slim_0_tx_ch = %d\n", __func__, msm_slim_0_tx_ch);
+	return 1;
+}
+
+static int msm_vi_feed_tx_ch_get(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	ucontrol->value.integer.value[0] = (msm_vi_feed_tx_ch/2 - 1);
+	pr_debug("%s: msm_vi_feed_tx_ch = %ld\n", __func__,
+		 ucontrol->value.integer.value[0]);
+	return 0;
+}
+
+static int msm_vi_feed_tx_ch_put(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	msm_vi_feed_tx_ch =
+		roundup_pow_of_two(ucontrol->value.integer.value[0] + 2);
+
+	pr_debug("%s: msm_vi_feed_tx_ch = %d\n", __func__, msm_vi_feed_tx_ch);
 	return 1;
 }
 
@@ -1538,7 +1882,7 @@ static int msm_slim_0_tx_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 	pr_debug("%s()\n", __func__);
 	param_set_mask(params, SNDRV_PCM_HW_PARAM_FORMAT,
 				   slim0_tx_bit_format);
-	rate->min = rate->max = 48000;
+	rate->min = rate->max = slim0_tx_sample_rate;
 	channels->min = channels->max = msm_slim_0_tx_ch;
 
 	return 0;
@@ -1553,10 +1897,10 @@ static int msm_slim_4_tx_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 	struct snd_interval *channels = hw_param_interval(params,
 			SNDRV_PCM_HW_PARAM_CHANNELS);
 
-	pr_debug("%s()\n", __func__);
 	rate->min = rate->max = 48000;
-	channels->min = channels->max = 2;
-
+	
+	channels->min = channels->max = msm_vi_feed_tx_ch;
+	pr_debug("%s: %d\n", __func__, msm_vi_feed_tx_ch);
 	return 0;
 }
 
@@ -1634,6 +1978,7 @@ static const struct soc_enum msm_snd_enum[] = {
 	SOC_ENUM_SINGLE_EXT(3, slim0_rx_sample_rate_text),
 	SOC_ENUM_SINGLE_EXT(8, proxy_rx_ch_text),
 	SOC_ENUM_SINGLE_EXT(3, hdmi_rx_sample_rate_text),
+	SOC_ENUM_SINGLE_EXT(2, vi_feed_ch_text),
 };
 
 static const struct snd_kcontrol_new msm_snd_controls[] = {
@@ -1643,6 +1988,8 @@ static const struct snd_kcontrol_new msm_snd_controls[] = {
 			msm_slim_0_rx_ch_get, msm_slim_0_rx_ch_put),
 	SOC_ENUM_EXT("SLIM_0_TX Channels", msm_snd_enum[2],
 			msm_slim_0_tx_ch_get, msm_slim_0_tx_ch_put),
+	SOC_ENUM_EXT("VI_FEED_TX Channels", msm_snd_enum[8],
+			msm_vi_feed_tx_ch_get, msm_vi_feed_tx_ch_put),
 	SOC_ENUM_EXT("AUX PCM SampleRate", msm8974_auxpcm_enum[0],
 			msm8974_auxpcm_rate_get, msm8974_auxpcm_rate_put),
 	SOC_ENUM_EXT("HDMI_RX Channels", msm_snd_enum[3],
@@ -1659,6 +2006,10 @@ static const struct snd_kcontrol_new msm_snd_controls[] = {
 		     msm_btsco_rate_get, msm_btsco_rate_put),
 	SOC_ENUM_EXT("HDMI_RX SampleRate", msm_snd_enum[7],
 			hdmi_rx_sample_rate_get, hdmi_rx_sample_rate_put),
+	SOC_ENUM_EXT("SLIM_0_TX Format", msm_snd_enum[4],
+			slim0_tx_bit_format_get, slim0_tx_bit_format_put),
+	SOC_ENUM_EXT("SLIM_0_TX SampleRate", msm_snd_enum[5],
+			slim0_tx_sample_rate_get, slim0_tx_sample_rate_put),
 };
 
 static bool msm8974_swap_gnd_mic(struct snd_soc_codec *codec)
@@ -1971,6 +2322,8 @@ static int msm_snd_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
+	struct snd_soc_dai_link *dai_link = rtd->dai_link;
+
 	int ret = 0;
 	unsigned int rx_ch[SLIM_MAX_RX_PORTS], tx_ch[SLIM_MAX_TX_PORTS];
 	unsigned int rx_ch_cnt = 0, tx_ch_cnt = 0;
@@ -2008,11 +2361,14 @@ static int msm_snd_hw_params(struct snd_pcm_substream *substream,
 		/* For tabla_tx2 case */
 		else if (codec_dai->id == 3)
 			user_set_tx_ch = params_channels(params);
+		else if (dai_link->be_id == MSM_BACKEND_DAI_SLIMBUS_4_TX)
+			user_set_tx_ch = msm_vi_feed_tx_ch;
 		else
 			user_set_tx_ch = tx_ch_cnt;
 
-		pr_debug("%s: msm_slim_0_tx_ch(%d)user_set_tx_ch(%d)tx_ch_cnt(%d)\n",
-			 __func__, msm_slim_0_tx_ch, user_set_tx_ch, tx_ch_cnt);
+		pr_debug("%s: msm_slim_0_tx_ch(%d) user_set_tx_ch(%d) tx_ch_cnt(%d) be_id %d\n",
+			__func__, msm_slim_0_tx_ch, user_set_tx_ch,
+			tx_ch_cnt, dai_link->be_id);
 
 		ret = snd_soc_dai_set_channel_map(cpu_dai,
 						  user_set_tx_ch, tx_ch, 0 , 0);
@@ -3361,6 +3717,12 @@ static int msm8974_asoc_machine_probe(struct platform_device *pdev)
 		ret = -EINVAL;
 		goto err2;
 	}
+	ret = apq8074_db_device_init();
+	if (ret) {
+		pr_err("%s: DB8094 init ext devices stat IRQ failed (%d)\n",
+				__func__, ret);
+		goto err1;
+	}
 	return 0;
 
 err2:
@@ -3405,18 +3767,11 @@ static int msm8974_asoc_machine_remove(struct platform_device *pdev)
 	if (gpio_is_valid(ext_spk_amp_gpio))
 		gpio_free(ext_spk_amp_gpio);
 
-	if (msm8974_liquid_dock_dev != NULL) {
-		if (msm8974_liquid_dock_dev->dock_plug_gpio)
-			gpio_free(msm8974_liquid_dock_dev->dock_plug_gpio);
+	msm8974_audio_plug_device_remove(msm8974_liquid_dock_dev);
 
-		if (msm8974_liquid_dock_dev->dock_plug_irq)
-			free_irq(msm8974_liquid_dock_dev->dock_plug_irq,
-				 msm8974_liquid_dock_dev);
-
-		kfree(msm8974_liquid_dock_dev);
-		msm8974_liquid_dock_dev = NULL;
-	}
-
+	msm8974_audio_plug_device_remove(apq8074_db_ext_bp_out_dev);
+	msm8974_audio_plug_device_remove(apq8074_db_ext_fp_in_dev);
+	msm8974_audio_plug_device_remove(apq8074_db_ext_fp_out_dev);
 	iounmap(pdata->pri_auxpcm_ctrl->mux);
 	iounmap(pdata->sec_auxpcm_ctrl->mux);
 	snd_soc_unregister_card(card);
