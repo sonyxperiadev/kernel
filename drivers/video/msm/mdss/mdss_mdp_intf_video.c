@@ -46,8 +46,10 @@ struct intf_timing_params {
 	u32 v_front_porch;
 	u32 hsync_pulse_width;
 	u32 vsync_pulse_width;
+#ifndef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 	u32 h_polarity;
 	u32 v_polarity;
+#endif
 
 	u32 border_clr;
 	u32 underflow_clr;
@@ -288,8 +290,18 @@ static int mdss_mdp_video_timegen_setup(struct mdss_mdp_ctl *ctl,
 	display_hctl = (hsync_end_x << 16) | hsync_start_x;
 
 	den_polarity = 0;
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	if (MDSS_INTF_HDMI == ctx->intf_type) {
+		hsync_polarity = p->yres >= 720 ? 0 : 1;
+		vsync_polarity = p->yres >= 720 ? 0 : 1;
+	} else {
+		hsync_polarity = 0;
+		vsync_polarity = 0;
+	}
+#else
 	hsync_polarity = p->h_polarity;
 	vsync_polarity = p->v_polarity;
+#endif
 	polarity_ctl = (den_polarity << 2)   | /*  DEN Polarity  */
 		       (vsync_polarity << 1) | /* VSYNC Polarity */
 		       (hsync_polarity << 0);  /* HSYNC Polarity */
@@ -1264,8 +1276,10 @@ static int mdss_mdp_video_ctx_setup(struct mdss_mdp_ctl *ctl,
 	itp.v_front_porch = pinfo->lcdc.v_front_porch;
 	itp.hsync_pulse_width = pinfo->lcdc.h_pulse_width;
 	itp.vsync_pulse_width = pinfo->lcdc.v_pulse_width;
+#ifndef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 	itp.h_polarity = pinfo->lcdc.h_polarity;
 	itp.v_polarity = pinfo->lcdc.v_polarity;
+#endif
 
 	if (!ctl->panel_data->panel_info.cont_splash_enabled) {
 		if (mdss_mdp_video_timegen_setup(ctl, &itp, ctx)) {
