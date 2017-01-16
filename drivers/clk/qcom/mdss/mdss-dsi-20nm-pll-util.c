@@ -908,6 +908,7 @@ enum handoff pll_20nm_vco_handoff(struct clk *c)
 		ret = HANDOFF_ENABLED_CLK;
 		dsi_pll_res->vco_locking_rate = c->rate;
 		dsi_pll_res->is_init_locked = true;
+		pll_20nm_vco_set_rate(vco, c->rate);
 		pll_20nm_cache_trim_codes(dsi_pll_res);
 		pr_debug("handoff vco_locking_rate=0x%llu\n",
 			dsi_pll_res->vco_locking_rate);
@@ -962,6 +963,8 @@ void pll_20nm_vco_unprepare(struct clk *c)
 
 static void pll_20nm_config_resetsm(void __iomem *pll_base)
 {
+	MDSS_PLL_REG_W(pll_base, MMSS_DSI_PHY_PLL_KVCO_CODE, 0x00);
+	MDSS_PLL_REG_W(pll_base, MMSS_DSI_PHY_PLL_PLL_VCO_TUNE, 0x00);
 	MDSS_PLL_REG_W(pll_base, MMSS_DSI_PHY_PLL_RESETSM_CNTRL, 0x24);
 	MDSS_PLL_REG_W(pll_base, MMSS_DSI_PHY_PLL_RESETSM_CNTRL2, 0x07);
 }
