@@ -938,7 +938,7 @@ static int mdss_iommu_tlb_timeout_notify(struct notifier_block *self,
 	switch (action) {
 	case TLB_SYNC_TIMEOUT:
 		pr_err("cb for TLB SYNC timeout. Dumping XLOG's\n");
-		MDSS_XLOG_TOUT_HANDLER("vbif", "mdp");
+		MDSS_XLOG_TOUT_HANDLER_FATAL_DUMP("vbif", "mdp", "mdp_dbg_bus");
 		break;
 	}
 
@@ -1184,6 +1184,8 @@ static void mdss_mdp_hw_rev_caps_init(struct mdss_data_type *mdata)
 {
 	/* prevent disable of prefill calculations */
 	mdata->min_prefill_lines = 0xffff;
+
+	mdss_mdp_hw_rev_debug_caps_init(mdata);
 
 	switch (mdata->mdp_rev) {
 	case MDSS_MDP_HW_REV_105:
@@ -3154,7 +3156,7 @@ int mdss_mdp_wait_for_xin_halt(u32 xin_id, bool is_vbif_nrt)
 	if (rc == -ETIMEDOUT) {
 		pr_err("VBIF client %d not halting. TIMEDOUT.\n",
 			xin_id);
-		MDSS_XLOG_TOUT_HANDLER("mdp", "vbif", "panic");
+		MDSS_XLOG_TOUT_HANDLER("mdp", "vbif", "mdp_dbg_bus", "panic");
 	} else {
 		pr_debug("VBIF client %d is halted\n", xin_id);
 	}
