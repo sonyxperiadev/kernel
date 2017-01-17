@@ -2959,6 +2959,7 @@ static struct snd_soc_dai_link msm8974_common_dai_links[] = {
 		.be_id = MSM_BACKEND_DAI_QUATERNARY_MI2S_RX,
 		.be_hw_params_fixup = msm_be_hw_params_fixup,
 		.ops = &msm8974_mi2s_be_ops,
+		.ignore_suspend = 1,
 	},
 	/* MI2S Capture BACK END DAI Link */
 	{
@@ -2972,6 +2973,7 @@ static struct snd_soc_dai_link msm8974_common_dai_links[] = {
 		.be_id = MSM_BACKEND_DAI_QUATERNARY_MI2S_TX,
 		.be_hw_params_fixup = msm_be_hw_params_fixup,
 		.ops = &msm8974_mi2s_be_ops,
+		.ignore_suspend = 1,
 	},
 #endif
 	/* Incall Music BACK END DAI Link */
