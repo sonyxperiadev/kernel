@@ -43,8 +43,18 @@ struct clk_alpha_pll {
 	struct pll_config *config;
 	bool inited;
 
+	u32 *soft_vote;
+	u32 soft_vote_mask;
+/* Soft voting values */
+#define PLL_SOFT_VOTE_PRIMARY	BIT(0)
+#define PLL_SOFT_VOTE_CPU	BIT(1)
+#define PLL_SOFT_VOTE_AUX	BIT(2)
+
 	const struct pll_vco *vco_table;
 	size_t num_vco;
+
+/* associated with soft_vote for multiple PLL software instances */
+#define SUPPORTS_FSM_VOTE	BIT(3)
 
 	struct clk_regmap clkr;
 	u32 config_ctl_val;
