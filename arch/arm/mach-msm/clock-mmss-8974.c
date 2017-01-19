@@ -601,6 +601,7 @@ static struct rcg_clk mdp_clk_src = {
 
 static struct clk_freq_tbl ftbl_camss_cci_cci_clk[] = {
 	F_MM(19200000,    cxo,   1,   0,   0),
+	F_MM(37500000,  gpll0,  16,   0,   0),
 	F_END
 };
 
