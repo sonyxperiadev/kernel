@@ -297,7 +297,7 @@ int mdss_mdp_video_addr_setup(struct mdss_data_type *mdata,
 
 	for (i = 0; i < count; i++) {
 		head[i].base = mdata->mdss_io.base + offsets[i];
-		pr_debug("adding Video Intf #%d offset=0x%x virt=%p\n", i,
+		pr_debug("adding Video Intf #%d offset=0x%x virt=%pK\n", i,
 				offsets[i], head[i].base);
 		head[i].ref_cnt = 0;
 		head[i].intf_num = i + MDSS_MDP_INTF0;
@@ -310,7 +310,7 @@ int mdss_mdp_video_addr_setup(struct mdss_data_type *mdata,
 	return 0;
 }
 
-static void mdss_mdp_video_intf_recovery(void *data, int event)
+static int mdss_mdp_video_intf_recovery(void *data, int event)
 {
 	struct mdss_mdp_video_ctx *ctx;
 	struct mdss_mdp_ctl *ctl = data;
@@ -322,7 +322,7 @@ static void mdss_mdp_video_intf_recovery(void *data, int event)
 
 	if (!data) {
 		pr_err("%s: invalid ctl\n", __func__);
-		return;
+		return -EINVAL;
 	}
 
 	/*
@@ -333,7 +333,7 @@ static void mdss_mdp_video_intf_recovery(void *data, int event)
 	if (event != MDP_INTF_DSI_VIDEO_FIFO_OVERFLOW) {
 		pr_warn("%s: unsupported recovery event:%d\n",
 					__func__, event);
-		return;
+		return -EPERM;
 	}
 
 	ctx = ctl->intf_ctx[MASTER_CTX];
@@ -348,7 +348,7 @@ static void mdss_mdp_video_intf_recovery(void *data, int event)
 	clk_rate = DIV_ROUND_UP_ULL(clk_rate, 1000); /* in kHz */
 	if (!clk_rate) {
 		pr_err("Unable to get proper clk_rate\n");
-		return;
+		return -EINVAL;
 	}
 	/*
 	 * calculate clk_period as pico second to maintain good
@@ -358,7 +358,7 @@ static void mdss_mdp_video_intf_recovery(void *data, int event)
 	clk_period = DIV_ROUND_UP_ULL(1000000000, clk_rate);
 	if (!clk_period) {
 		pr_err("Unable to calculate clock period\n");
-		return;
+		return -EINVAL;
 	}
 	min_ln_cnt = pinfo->lcdc.v_back_porch + pinfo->lcdc.v_pulse_width;
 	active_lns_cnt = pinfo->yres;
@@ -384,7 +384,7 @@ static void mdss_mdp_video_intf_recovery(void *data, int event)
 				!ctx->timegen_en) {
 			pr_warn("Target is in suspend or shutdown pending\n");
 			mutex_unlock(&ctl->offlock);
-			return;
+			return -EPERM;
 		}
 
 		line_cnt = mdss_mdp_video_line_count(ctl);
@@ -394,7 +394,7 @@ static void mdss_mdp_video_intf_recovery(void *data, int event)
 			pr_debug("%s, Needed lines left line_cnt=%d\n",
 						__func__, line_cnt);
 			mutex_unlock(&ctl->offlock);
-			return;
+			return 0;
 		} else {
 			pr_warn("line count is less. line_cnt = %d\n",
 								line_cnt);
@@ -880,7 +880,7 @@ static int mdss_mdp_video_intfs_stop(struct mdss_mdp_ctl *ctl,
 		pr_err("Intf %d not in use\n", (inum + MDSS_MDP_INTF0));
 		return -ENODEV;
 	}
-	pr_debug("stop ctl=%d video Intf #%d base=%p", ctl->num, ctx->intf_num,
+	pr_debug("stop ctl=%d video Intf #%d base=%pK", ctl->num, ctx->intf_num,
 			ctx->base);
 
 	ret = mdss_mdp_video_ctx_stop(ctl, pinfo, ctx);
@@ -898,7 +898,7 @@ static int mdss_mdp_video_intfs_stop(struct mdss_mdp_ctl *ctl,
 			pr_err("Intf %d not in use\n", (inum + MDSS_MDP_INTF0));
 			return -ENODEV;
 		}
-		pr_debug("stop ctl=%d video Intf #%d base=%p", ctl->num,
+		pr_debug("stop ctl=%d video Intf #%d base=%pK", ctl->num,
 				sctx->intf_num, sctx->base);
 
 		ret = mdss_mdp_video_ctx_stop(ctl, pinfo, sctx);
@@ -1938,7 +1938,7 @@ static int mdss_mdp_video_intfs_setup(struct mdss_mdp_ctl *ctl,
 					(inum + MDSS_MDP_INTF0));
 			return -EBUSY;
 		}
-		pr_debug("video Intf #%d base=%p", ctx->intf_num, ctx->base);
+		pr_debug("video Intf #%d base=%pK", ctx->intf_num, ctx->base);
 		ctx->ref_cnt++;
 	} else {
 		pr_err("Invalid intf number: %d\n", (inum + MDSS_MDP_INTF0));
@@ -1971,7 +1971,7 @@ static int mdss_mdp_video_intfs_setup(struct mdss_mdp_ctl *ctl,
 					(inum + MDSS_MDP_INTF0));
 			return -EBUSY;
 		}
-		pr_debug("video Intf #%d base=%p", ctx->intf_num, ctx->base);
+		pr_debug("video Intf #%d base=%pK", ctx->intf_num, ctx->base);
 		ctx->ref_cnt++;
 
 		ctl->intf_ctx[SLAVE_CTX] = ctx;

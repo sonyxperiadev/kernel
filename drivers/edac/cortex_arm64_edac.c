@@ -26,6 +26,8 @@
 #include <linux/percpu.h>
 #include <linux/msm_rtb.h>
 
+#include <soc/qcom/cti-pmu-irq.h>
+
 #include <asm/cputype.h>
 #include <asm/esr.h>
 
@@ -697,6 +699,10 @@ static void arm64_sbe_handler(struct perf_event *event,
 	struct erp_local_data errdata;
 	int cpu = raw_smp_processor_id();
 
+#ifdef CONFIG_MACH_MSM8994
+	msm_cti_pmu_irq_ack(cpu);
+#endif
+
 	errdata.drv = event->overflow_handler_context;
 	errdata.err = SBE;
 	edac_printk(KERN_CRIT, EDAC_CPU, "ARM64 CPU ERP: Single-bit error interrupt received on CPU %d!\n",
@@ -941,6 +947,9 @@ static int arm64_cpu_erp_probe(struct platform_device *pdev)
 
 	drv->nb_pm.notifier_call = arm64_pmu_cpu_pm_notify;
 	cpu_pm_register_notifier(&(drv->nb_pm));
+#ifdef CONFIG_MACH_MSM8994
+	schedule_on_each_cpu(msm_enable_cti_pmu_workaround);
+#endif
 	drv->nb_panic.notifier_call = arm64_erp_panic_notify;
 	atomic_notifier_chain_register(&panic_notifier_list,
 				       &drv->nb_panic);

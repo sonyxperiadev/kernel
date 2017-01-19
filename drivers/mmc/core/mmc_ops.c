@@ -2,6 +2,7 @@
  *  linux/drivers/mmc/core/mmc_ops.h
  *
  *  Copyright 2006-2007 Pierre Ossman
+ *  Copyright (c) 2015 Sony Mobile Communications Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -55,6 +56,33 @@ static inline int __mmc_send_status(struct mmc_card *card, u32 *status,
 int mmc_send_status(struct mmc_card *card, u32 *status)
 {
 	return __mmc_send_status(card, status, false);
+}
+
+static int mmc_switch_status_error(struct mmc_host *host, u32 status)
+{
+	if (mmc_host_is_spi(host)) {
+		if (status & R1_SPI_ILLEGAL_COMMAND)
+			return -EBADMSG;
+	} else {
+		if (status & 0xFDFFA000)
+			pr_warn("%s: unexpected status %#x after switch\n",
+				mmc_hostname(host), status);
+		if (status & R1_SWITCH_ERROR)
+			return -EBADMSG;
+	}
+	return 0;
+}
+
+int mmc_switch_status(struct mmc_card *card, bool ignore_crc)
+{
+	u32 status;
+	int err;
+
+	err = __mmc_send_status(card, &status, ignore_crc);
+	if (err)
+		return err;
+
+	return mmc_switch_status_error(card->host, status);
 }
 
 static int _mmc_select_card(struct mmc_host *host, struct mmc_card *card)
@@ -564,18 +592,9 @@ int __mmc_switch(struct mmc_card *card, u8 set, u8 index, u8 value,
 		}
 	} while (R1_CURRENT_STATE(status) == R1_STATE_PRG);
 
-	if (mmc_host_is_spi(host)) {
-		if (status & R1_SPI_ILLEGAL_COMMAND)
-			return -EBADMSG;
-	} else {
-		if (status & 0xFDFFA000)
-			pr_warn("%s: unexpected status %#x after switch\n",
-				mmc_hostname(host), status);
-		if (status & R1_SWITCH_ERROR)
-			return -EBADMSG;
-	}
+	err = mmc_switch_status_error(host, status);
 
-	return 0;
+	return err;
 }
 EXPORT_SYMBOL_GPL(__mmc_switch);
 
@@ -586,6 +605,14 @@ int mmc_switch(struct mmc_card *card, u8 set, u8 index, u8 value,
 				false);
 }
 EXPORT_SYMBOL_GPL(mmc_switch);
+
+int mmc_switch_ignore_timeout(struct mmc_card *card, u8 set, u8 index, u8 value,
+		unsigned int timeout_ms)
+{
+	return __mmc_switch(card, set, index, value, timeout_ms, true, true,
+				true);
+}
+EXPORT_SYMBOL(mmc_switch_ignore_timeout);
 
 static int
 mmc_send_bus_test(struct mmc_card *card, struct mmc_host *host, u8 opcode,

@@ -624,14 +624,14 @@ config SND_SOC_WCD9306
         tristate
 
 config SND_SOC_WCD9320
-        tristate
+        tristate "WCD9320 CODEC"
 
 config SND_SOC_WCD9330
-        tristate
+        tristate "WCD9330 CODEC"
 	depends on WCD9330_CODEC
 
 config SND_SOC_WCD9335
-        tristate
+        tristate "WCD9335 CODEC"
 
 config SND_SOC_WSA881X_SENSORS
 	tristate

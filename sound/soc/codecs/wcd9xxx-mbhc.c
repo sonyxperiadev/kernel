@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -146,6 +146,9 @@
  * is larger than 5K ohm
  */
 #define WCD9XXX_LINEIN_THRESHOLD 5000000
+
+#define WCD9XXX_COMP_VTH_OFFSET  3
+#define WCD9XXX_PLUG_TYPE_OFFSET 2
 
 static int impedance_detect_en;
 module_param(impedance_detect_en, int,
@@ -852,6 +855,14 @@ static void wcd9xxx_insert_detect_setup(struct wcd9xxx_mbhc *mbhc, bool ins)
 	if (mbhc->mbhc_cfg->gpio_level_insert)
 		snd_soc_write(mbhc->codec, WCD9XXX_A_MBHC_INSERT_DETECT,
 			      (0x68 | (ins ? (1 << 1) : 0)));
+	else if (mbhc->mbhc_cfg->insert_detect_comp_vth ||
+			mbhc->mbhc_cfg->insert_detect_plug_type)
+		snd_soc_write(mbhc->codec, WCD9XXX_A_MBHC_INSERT_DETECT,
+				(mbhc->mbhc_cfg->insert_detect_comp_vth
+					<< WCD9XXX_COMP_VTH_OFFSET
+				| mbhc->mbhc_cfg->insert_detect_plug_type
+					<< WCD9XXX_PLUG_TYPE_OFFSET
+				| (ins ? (1 << 1) : 0)));
 	else
 		snd_soc_write(mbhc->codec, WCD9XXX_A_MBHC_INSERT_DETECT,
 			      (0x6C | (ins ? (1 << 1) : 0)));
@@ -4689,7 +4700,7 @@ int wcd9xxx_mbhc_start(struct wcd9xxx_mbhc *mbhc,
 			schedule_delayed_work(&mbhc->mbhc_firmware_dwork,
 					     usecs_to_jiffies(FW_READ_TIMEOUT));
 		else
-			pr_debug("%s: Skipping to read mbhc fw, 0x%p %p\n",
+			pr_debug("%s: Skipping to read mbhc fw, 0x%pK %pK\n",
 				 __func__, mbhc->mbhc_fw, mbhc->mbhc_cal);
 	}
 
@@ -5087,7 +5098,7 @@ static int wcd9xxx_remeasure_z_values(struct wcd9xxx_mbhc *mbhc,
 	right = !!(r);
 
 	dev_dbg(codec->dev, "%s: Remeasuring impedance values\n", __func__);
-	dev_dbg(codec->dev, "%s: l: %p, r: %p, left=%d, right=%d\n", __func__,
+	dev_dbg(codec->dev, "%s: l: %pK, r: %pK, left=%d, right=%d\n", __func__,
 		 l, r, left, right);
 
 	/* Remeasure V2 values */

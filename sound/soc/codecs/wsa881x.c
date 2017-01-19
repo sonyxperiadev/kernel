@@ -905,7 +905,7 @@ int wsa881x_set_channel_map(struct snd_soc_codec *codec, u8 *port, u8 num_port,
 	if (!port || !ch_mask || !ch_rate ||
 		(num_port > WSA881X_MAX_SWR_PORTS)) {
 		dev_err(codec->dev,
-			"%s: Invalid port=%p, ch_mask=%p, ch_rate=%p\n",
+			"%s: Invalid port=%pK, ch_mask=%pK, ch_rate=%pK\n",
 			__func__, port, ch_mask, ch_rate);
 		return -EINVAL;
 	}
@@ -949,7 +949,11 @@ static void wsa881x_init(struct snd_soc_codec *codec)
 				    0x03, 0x00);
 		if (snd_soc_read(codec, WSA881X_OTP_REG_0))
 			snd_soc_update_bits(codec, WSA881X_BOOST_PRESET_OUT1,
+#if defined(CONFIG_ARCH_SONY_LOIRE) || defined(CONFIG_ARCH_SONY_TONE)
+					    0xF0, 0x30);
+#else
 					    0xF0, 0x70);
+#endif
 		snd_soc_update_bits(codec, WSA881X_BOOST_PRESET_OUT2,
 				    0xF0, 0x30);
 		snd_soc_update_bits(codec, WSA881X_SPKR_DRV_EN, 0x08, 0x08);
@@ -975,7 +979,11 @@ static void wsa881x_init(struct snd_soc_codec *codec)
 		snd_soc_update_bits(codec, WSA881X_SPKR_PA_INT, 0x0F, 0x0E);
 		snd_soc_update_bits(codec, WSA881X_BOOST_PS_CTL, 0x80, 0x00);
 		snd_soc_update_bits(codec, WSA881X_BOOST_PRESET_OUT1,
+#if defined(CONFIG_ARCH_SONY_LOIRE) || defined(CONFIG_ARCH_SONY_TONE)
+				    0xF0, 0x30);
+#else
 				    0xF0, 0xB0);
+#endif
 		snd_soc_update_bits(codec, WSA881X_BOOST_PRESET_OUT2,
 				    0xF0, 0x30);
 		snd_soc_update_bits(codec, WSA881X_SPKR_DRV_EN, 0x0F, 0x0C);

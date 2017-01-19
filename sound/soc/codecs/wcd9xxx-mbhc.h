@@ -121,6 +121,18 @@ enum hw_jack_type {
 	SIX_POLE_JACK,
 };
 
+enum wcd9xxx_insert_detect_plug_type {
+	DETECT_NC_PLUG_TYPE = 0,
+	DETECT_NO_PLUG_TYPE,
+};
+
+enum wcd9xxx_insert_detect_comp_vth_type {
+	MBHC_COMP_OFF = 0,
+	MBHC_COMP_V_0P9_VDD,
+	MBHC_COMP_V_0P875_VDD,
+	MBHC_COMP_V_0P925_VDD,
+};
+
 enum wcd9xx_mbhc_micbias_enable_bits {
 	MBHC_MICBIAS_ENABLE_THRESHOLD_HEADSET,
 	MBHC_MICBIAS_ENABLE_REGULAR_HEADSET,
@@ -275,6 +287,8 @@ struct wcd9xxx_mbhc_config {
 	bool use_vddio_meas;
 	bool enable_anc_mic_detect;
 	enum hw_jack_type hw_jack_type;
+	enum wcd9xxx_insert_detect_plug_type insert_detect_plug_type;
+	enum wcd9xxx_insert_detect_comp_vth_type insert_detect_comp_vth;
 	int key_code[8];
 };
 

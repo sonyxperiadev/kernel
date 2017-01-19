@@ -67,6 +67,8 @@ IRQCHIP_DECLARE(wcd9xxx_irq, "qcom,wcd9xxx-irq", wcd9xxx_irq_of_init);
 IRQCHIP_DECLARE(8917_pinctrl, "qcom,msm8917-pinctrl", pinctrl_irq_dummy);
 IRQCHIP_DECLARE(8952_pinctrl, "qcom,msm8952-pinctrl", pinctrl_irq_dummy);
 IRQCHIP_DECLARE(8937_pinctrl, "qcom,msm8937-pinctrl", pinctrl_irq_dummy);
+IRQCHIP_DECLARE(8916_pinctrl, "qcom,msm8916-pinctrl", pinctrl_irq_dummy);
+IRQCHIP_DECLARE(8976_pinctrl, "qcom,msm8976-pinctrl", pinctrl_irq_dummy);
 IRQCHIP_DECLARE(8953_pinctrl, "qcom,msm8953-pinctrl",
 						pinctrl_irq_dummy);
 IRQCHIP_DECLARE(8909_pinctrl, "qcom,msm8909-pinctrl", pinctrl_irq_dummy);

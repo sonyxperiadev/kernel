@@ -120,22 +120,20 @@
 		compatible = "qcom,bluesleep";
 		bt_host_wake = <&msm_gpio 17 0x00>; /* BT_HOST_WAKE */
 		bt_ext_wake = <&msm_gpio 18 0x00>; /* BT_DEV_WAKE */
-		bt_reg_on = <&msm_gpio 19 0x00>; /* BT_REG_ON */
 		interrupt-parent = <&msm_gpio>;
 		interrupts = <17 0>;
 		interrupt-names = "host_wake";
 		pinctrl-names = "default", "sleep";
-		pinctrl-0 = <&msm_gpio_19_def &msm_gpio_17_act &msm_gpio_18_def>;
-		pinctrl-1 = <&msm_gpio_19_def &msm_gpio_17_sus &msm_gpio_18_def>;
+		pinctrl-0 = <&msm_gpio_17_act &msm_gpio_18_def>;
+		pinctrl-1 = <&msm_gpio_17_sus &msm_gpio_18_def>;
 	};
 
 	bcm43xx {
 		compatible = "bcm,bcm43xx";
-		gpios = <&msm_gpio 19 0x00>, /* BT_REG_ON */
-			<&msm_gpio 18 0x00>; /* BT_DEV_WAKE */
+		bcm,reg-on-gpio = <&msm_gpio 19 0x00>; /* BT_REG_ON */
 		pinctrl-names = "default", "sleep";
-		pinctrl-0 = <&msm_gpio_19_def &msm_gpio_18_def>;
-		pinctrl-1 = <&msm_gpio_19_def &msm_gpio_18_def>;
+		pinctrl-0 = <&msm_gpio_19_def>;
+		pinctrl-1 = <&msm_gpio_19_def>;
 	};
 
         /*I2C : BLSP2 */
@@ -206,12 +204,12 @@
 					};
 					event_01 {
 						type = <1>; /* KEY */
-						code = <531>; /* TOUCHPAD_ON */
+						code = <143>; /* WAKEUP */
 						down = <1>;
 					};
 					event_02 {
 						type = <1>; /* KEY */
-						code = <531>; /* TOUCHPAD_ON */
+						code = <143>; /* WAKEUP */
 						down = <0>;
 					};
 					event_03 {
@@ -478,7 +476,7 @@
 
 		tasha_codec {
 			swr_master {
-				wsa881x@20170212 {
+				wsa881x_212: wsa881x@20170212 {
 					qcom,spkr-sd-n-gpio = <&msm_gpio 101 0>;
 				};
 			};
@@ -931,7 +929,7 @@
 
 &pm8950_vadc {
 	chan@13 { /* case_therm */
-		qcom,scale-function = <15>; /* 100K_PULLUP_DECI */
+		qcom,scale-function = <17>; /* 100K_PULLUP_DECI */
 	};
 };
 
@@ -942,7 +940,7 @@
 		qcom,decimation = <0>;
 		qcom,pre-div-channel-scaling = <0>;
 		qcom,calibration-type = "ratiometric";
-		qcom,scale-function = <15>; /* 100K_PULLUP_DECI */
+		qcom,scale-function = <17>; /* 100K_PULLUP_DECI */
 		qcom,hw-settle-time = <2>;
 		qcom,fast-avg-setup = <0>;
 		qcom,vadc-thermal-node;

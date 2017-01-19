@@ -948,11 +948,11 @@
 
 	msm_gpio_69_output_high: msm_gpio_69_outputhigh {
 		mux {
-			pins = "gpio69_output";
+			pins = "gpio69";
 			function = "gpio";
 		};
 		config {
-			pins = "gpio69_output";
+			pins = "gpio69";
 			drive-strength = <2>;
 			bias-disable;
 			output-high;
@@ -1558,6 +1558,19 @@
 	};
 
 	/delete-node/ pri-tlmm-lines;
+
+	wsa_spkr_sd: spkr_lines {
+		mux {
+			pins = "gpio132", "gpio101";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio132";
+			drive-strength = <2>;
+			output-high;
+			bias-pull-down;
+		};
+	};
 
 	wsa_spkr_sd_act: spkr_lines_on {
 		mux {

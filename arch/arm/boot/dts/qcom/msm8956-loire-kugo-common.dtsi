@@ -137,22 +137,20 @@
 		compatible = "qcom,bluesleep";
 		bt_host_wake = <&msm_gpio 17 0x00>; /* BT_HOST_WAKE */
 		bt_ext_wake = <&msm_gpio 27 0x00>; /* BT_DEV_WAKE */
-		bt_reg_on = <&msm_gpio 36 0x00>; /* BT_REG_ON */
 		interrupt-parent = <&msm_gpio>;
 		interrupts = <17 0>;
 		interrupt-names = "host_wake";
 		pinctrl-names = "default", "sleep";
-		pinctrl-0 = <&msm_gpio_36_def &msm_gpio_17_act &msm_gpio_27_def>;
-		pinctrl-1 = <&msm_gpio_36_def &msm_gpio_17_sus &msm_gpio_27_def>;
+		pinctrl-0 = <&msm_gpio_17_act &msm_gpio_27_def>;
+		pinctrl-1 = <&msm_gpio_17_sus &msm_gpio_27_def>;
 	};
 
 	bcm43xx {
 		compatible = "bcm,bcm43xx";
-		gpios = <&msm_gpio 36 0x00>, /* BT_REG_ON */
-			<&msm_gpio 27 0x00>; /* BT_DEV_WAKE */
+		bcm,reg-on-gpio = <&msm_gpio 36 0x00>; /* BT_REG_ON */
 		pinctrl-names = "default", "sleep";
-		pinctrl-0 = <&msm_gpio_36_def &msm_gpio_27_def>;
-		pinctrl-1 = <&msm_gpio_36_def &msm_gpio_27_def>;
+		pinctrl-0 = <&msm_gpio_36_def>;
+		pinctrl-1 = <&msm_gpio_36_def>;
 	};
 
 	qcom,sensor-information {
@@ -278,7 +276,7 @@
 	msm_gpio_18_def: msm_gpio_18def {
 		mux {
 			pins = "gpio18";
-			function = "blsp_i2c5";
+			function = "blsp_i2c8";
 		};
 		config {
 			pins = "gpio18";
@@ -293,7 +291,7 @@
 	msm_gpio_18_sus: msm_gpio_18sus {
 		mux {
 			pins = "gpio18";
-			function = "blsp_i2c5";
+			function = "blsp_i2c8";
 		};
 		config {
 			pins = "gpio18";
@@ -306,7 +304,7 @@
 	msm_gpio_18_act: msm_gpio_18act {
 		mux {
 			pins = "gpio18";
-			function = "blsp_i2c5";
+			function = "blsp_i2c8";
 		};
 		config {
 			pins = "gpio18";
@@ -319,7 +317,7 @@
 	msm_gpio_19_def: msm_gpio_19def {
 		mux {
 			pins = "gpio19";
-			function = "blsp_i2c5";
+			function = "blsp_i2c8";
 		};
 		config {
 			pins = "gpio19";
@@ -334,7 +332,7 @@
 	msm_gpio_19_sus: msm_gpio_19sus {
 		mux {
 			pins = "gpio19";
-			function = "blsp_i2c5";
+			function = "blsp_i2c8";
 		};
 		config {
 			pins = "gpio19";
@@ -347,7 +345,7 @@
 	msm_gpio_19_act: msm_gpio_19act {
 		mux {
 			pins = "gpio19";
-			function = "blsp_i2c5";
+			function = "blsp_i2c8";
 		};
 		config {
 			pins = "gpio19";

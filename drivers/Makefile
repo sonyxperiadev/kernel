@@ -171,5 +171,7 @@ obj-$(CONFIG_BIF)		+= bif/
 
 obj-$(CONFIG_SENSORS_SSC)	+= sensors/
 
+obj-$(CONFIG_CPU_QUIET)		+= cpuquiet/
+
 # <t-base drivers
 obj-$(CONFIG_MOBICORE_DRIVER)	+= gud/

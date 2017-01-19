@@ -304,6 +304,16 @@ config APDS9802ALS
 	  This driver can also be built as a module.  If so, the module
 	  will be called apds9802als.
 
+config APDS9930
+	tristate "Avago APDS9930 combined als and proximity sensors"
+	depends on I2C
+	help
+	  Say Y here if you want to build a driver for Avago APDS9930
+	  combined ambient light and proximity sensor chip.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called apds9950. If unsure, say N here.
+
 config ISL29003
 	tristate "Intersil ISL29003 ambient light sensor"
 	depends on I2C && SYSFS
@@ -599,7 +609,7 @@ config NFC_PN547
 	  It is used by many services. NFC is fully controlled using I2C
 	  to communicate the AP chip.
 
-config NFC_PN547_PMC8974_CLK_REQ
+config NFC_PN547_PMC_CLK_REQ
 	bool "NXP PN547 NFC Controller Driver"
 	depends on I2C
 	default n

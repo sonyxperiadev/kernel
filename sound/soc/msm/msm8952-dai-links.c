@@ -24,6 +24,7 @@
 enum TASHA_LITE_DEVICE {
 	MSM8952_TASHA_LITE = 0,
 	MSM8953_TASHA_LITE,
+	MSM8976_TASHA_LITE,
 	NUM_OF_TASHA_LITE_DEVICE,
 };
 
@@ -45,6 +46,11 @@ static struct snd_soc_ops msm8952_quin_mi2s_be_ops = {
 static struct snd_soc_ops msm_pri_auxpcm_be_ops = {
 	.startup = msm_prim_auxpcm_startup,
 	.shutdown = msm_prim_auxpcm_shutdown,
+};
+
+static struct snd_soc_ops msm_sec_auxpcm_be_ops = {
+	.startup = msm_sec_auxpcm_startup,
+	.shutdown = msm_sec_auxpcm_shutdown,
 };
 
 static struct snd_soc_ops msm8952_slimbus_be_ops = {
@@ -116,6 +122,22 @@ static struct snd_soc_dai_link msm8952_tasha_fe_dai[] = {
 		.codec_dai_name = "tasha_mad1",
 		.codec_name = "tasha_codec",
 		.ops = &msm8952_cpe_ops,
+	},
+	/* FM Capture */
+	{
+		.name = "QUIN_MI2S Hostless",
+		.stream_name = "QUIN_MI2S Hostless",
+		.cpu_dai_name = "QUIN_MI2S_TX_HOSTLESS",
+		.platform_name = "msm-pcm-hostless",
+		.dynamic = 1,
+		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+			SND_SOC_DPCM_TRIGGER_POST},
+		.no_host_mode = SND_SOC_DAI_LINK_NO_HOST,
+		.ignore_suspend = 1,
+		/* this dai link has playback support */
+		.ignore_pmdown_time = 1,
+		.codec_dai_name = "snd-soc-dummy-dai",
+		.codec_name = "snd-soc-dummy",
 	},
 	/* slimbus rx 6 hostless */
 	{
@@ -294,6 +316,7 @@ static struct snd_soc_dai_link msm8952_tasha_be_dai[] = {
 		.ops = &msm8952_slimbus_be_ops,
 		.ignore_suspend = 1,
 	},
+#ifndef CONFIG_ARCH_SONY_LOIRE
 	{
 		.name = LPASS_BE_SLIMBUS_6_RX,
 		.stream_name = "Slimbus6 Playback",
@@ -310,6 +333,7 @@ static struct snd_soc_dai_link msm8952_tasha_be_dai[] = {
 		.ignore_pmdown_time = 1,
 		.ignore_suspend = 1,
 	},
+#endif
 };
 
 static struct snd_soc_dai_link msm8952_tomtom_fe_dai[] = {
@@ -1124,6 +1148,35 @@ static struct snd_soc_dai_link msm8952_common_be_dai[] = {
 		.ops = &msm_pri_auxpcm_be_ops,
 		.ignore_suspend = 1,
 	},
+	/* Secondary AUX PCM Backend DAI Links */
+	{
+		.name = LPASS_BE_SEC_AUXPCM_RX,
+		.stream_name = "Sec AUX PCM Playback",
+		.cpu_dai_name = "msm-dai-q6-auxpcm.2",
+		.platform_name = "msm-pcm-routing",
+		.codec_name = "msm-stub-codec.1",
+		.codec_dai_name = "msm-stub-rx",
+		.no_pcm = 1,
+		.be_id = MSM_BACKEND_DAI_SEC_AUXPCM_RX,
+		.be_hw_params_fixup = msm_auxpcm_be_params_fixup,
+		.ops = &msm_sec_auxpcm_be_ops,
+		.ignore_pmdown_time = 1,
+		.ignore_suspend = 1,
+		/* this dainlink has playback support */
+	},
+	{
+		.name = LPASS_BE_SEC_AUXPCM_TX,
+		.stream_name = "Sec AUX PCM Capture",
+		.cpu_dai_name = "msm-dai-q6-auxpcm.2",
+		.platform_name = "msm-pcm-routing",
+		.codec_name = "msm-stub-codec.1",
+		.codec_dai_name = "msm-stub-tx",
+		.no_pcm = 1,
+		.be_id = MSM_BACKEND_DAI_SEC_AUXPCM_TX,
+		.be_hw_params_fixup = msm_auxpcm_be_params_fixup,
+		.ops = &msm_sec_auxpcm_be_ops,
+		.ignore_suspend = 1,
+	},
 	{
 		.name = LPASS_BE_QUAT_MI2S_TX,
 		.stream_name = "Quaternary MI2S Capture",
@@ -1523,7 +1576,8 @@ struct snd_soc_card *populate_snd_card_dailinks(struct device *dev)
 	enum codec_variant codec_ver = 0;
 	const char *tasha_lite[NUM_OF_TASHA_LITE_DEVICE] = {
 		"msm8952-tashalite-snd-card",
-		"msm8953-tashalite-snd-card"
+		"msm8953-tashalite-snd-card",
+		"msm8976-tashalite-snd-card"
 	};
 
 	card->dev = dev;
@@ -1557,6 +1611,8 @@ struct snd_soc_card *populate_snd_card_dailinks(struct device *dev)
 				card->name = tasha_lite[MSM8952_TASHA_LITE];
 			else if (!strcmp(card->name, "msm8953-tasha-snd-card"))
 				card->name = tasha_lite[MSM8953_TASHA_LITE];
+			else if (!strcmp(card->name, "msm8976-tasha-snd-card"))
+				card->name = tasha_lite[MSM8976_TASHA_LITE];
 		}
 
 		len1 = ARRAY_SIZE(msm8952_common_fe_dai);
