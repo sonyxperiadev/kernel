@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -110,7 +110,11 @@ static void venus_hfi_clock_adjust(struct venus_hfi_device *device);
  */
 static inline void __strict_check(struct venus_hfi_device *device)
 {
-	WARN_ON(!mutex_is_locked(&device->lock));
+	if (!mutex_is_locked(&device->lock)) {
+		dprintk(VIDC_WARN,
+			"device->lock mutex is not locked\n");
+		WARN_ON(VIDC_DBG_WARN_ENABLE);
+	}
 }
 
 static inline void __set_state(struct venus_hfi_device *device,
@@ -272,7 +276,7 @@ static int __acquire_regulator(struct regulator_info *rinfo)
 	if (!regulator_is_enabled(rinfo->regulator)) {
 		dprintk(VIDC_WARN, "Regulator is not enabled %s\n",
 			rinfo->name);
-		WARN_ON(1);
+		WARN_ON(VIDC_DBG_WARN_ENABLE);
 	}
 
 	return rc;
@@ -622,7 +626,7 @@ static void __write_register(struct venus_hfi_device *device,
 	if (!device->power_enabled) {
 		dprintk(VIDC_WARN,
 			"HFI Write register failed : Power is OFF\n");
-		WARN_ON(1);
+		WARN_ON(VIDC_DBG_WARN_ENABLE);
 		return;
 	}
 
@@ -648,7 +652,7 @@ static int __read_register(struct venus_hfi_device *device, u32 reg)
 	if (!device->power_enabled) {
 		dprintk(VIDC_WARN,
 			"HFI Read register failed : Power is OFF\n");
-		WARN_ON(1);
+		WARN_ON(VIDC_DBG_WARN_ENABLE);
 		return -EINVAL;
 	}
 
@@ -1351,7 +1355,7 @@ static int __halt_axi(struct venus_hfi_device *device)
 	if (!device->power_enabled) {
 		dprintk(VIDC_WARN,
 			"Clocks are OFF, skipping AXI HALT\n");
-		WARN_ON(1);
+		WARN_ON(VIDC_DBG_WARN_ENABLE);
 		return -EINVAL;
 	}
 
@@ -3804,7 +3808,11 @@ static int __response_handler(struct venus_hfi_device *device)
 		if (session_id) {
 			struct hal_session *session = NULL;
 
-			WARN_ON(upper_32_bits((uintptr_t)*session_id) != 0);
+			if (upper_32_bits((uintptr_t)*session_id) != 0) {
+				dprintk(VIDC_WARN,
+					"Upper 32 bits of session_id != 0\n");
+				WARN_ON(VIDC_DBG_WARN_ENABLE);
+			}
 			session = __get_session(device,
 					(u32)(uintptr_t)*session_id);
 			if (!session) {
@@ -4366,7 +4374,7 @@ static int __disable_regulator(struct regulator_info *rinfo)
 disable_regulator_failed:
 
 	/* Bring attention to this issue */
-	WARN_ON(1);
+	WARN_ON(VIDC_DBG_WARN_ENABLE);
 	return rc;
 }
 
