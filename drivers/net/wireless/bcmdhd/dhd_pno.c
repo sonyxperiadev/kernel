@@ -3622,7 +3622,17 @@ void * dhd_handle_swc_evt(dhd_pub_t *dhd, const void *event_data, int *send_evt_
 	}
 
 	change_array = &params->change_array[params->results_rxed_so_far];
-	memcpy(change_array, results->list, sizeof(wl_pfn_significant_net_t) * results->pkt_count);
+	if ((params->results_rxed_so_far + results->pkt_count) >
+		results->total_count) {
+		DHD_ERROR(("Error: Invalid data reset the counters!!\n"));
+		*send_evt_bytes = 0;
+		kfree(params->change_array);
+		params->change_array = NULL;
+		return ptr;
+	}
+
+	memcpy(change_array, results->list,
+		sizeof(wl_pfn_significant_net_t) * results->pkt_count);
 	params->results_rxed_so_far += results->pkt_count;
 
 	if (params->results_rxed_so_far == results->total_count) {
