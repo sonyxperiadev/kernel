@@ -827,6 +827,7 @@ void limProcessSwitchChannelRsp(tpAniSirGlobal pMac,  void * );
 void limSendHalInitScanReq( tpAniSirGlobal, tLimLimHalScanState, tSirLinkTrafficCheck);
 void limSendHalStartScanReq( tpAniSirGlobal, tANI_U8, tLimLimHalScanState);
 void limSendHalEndScanReq( tpAniSirGlobal, tANI_U8, tLimLimHalScanState);
+void limSendTLPauseInd(tpAniSirGlobal pMac, uint16_t staId);
 void limSendHalFinishScanReq( tpAniSirGlobal, tLimLimHalScanState);
 
 void limContinuePostChannelScan(tpAniSirGlobal pMac);

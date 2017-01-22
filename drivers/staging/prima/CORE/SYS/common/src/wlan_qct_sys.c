@@ -778,6 +778,7 @@ void wlan_sys_probe(void)
 
     vosMessage.reserved = FTM_SYS_MSG_COOKIE;
     vosMessage.type     = SYS_MSG_ID_MC_THR_PROBE;
+    vosMessage.callback = NULL;
     vosMessage.bodyptr  = NULL;
 
     vos_mq_post_message(VOS_MQ_ID_SYS, &vosMessage);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2015 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -1379,6 +1379,10 @@ eHalStatus csrNeighborRoamPrepareScanProfileFilter(tpAniSirGlobal pMac, tCsrScan
        pScanFilter->ChannelInfo.numOfChannels = 0;
        pScanFilter->ChannelInfo.ChannelList = NULL;
     }
+#ifdef WLAN_FEATURE_ROAM_SCAN_OFFLOAD
+    if (pMac->PERroamCandidatesCnt)
+       pScanFilter->isPERRoamScan = true;
+#endif
 #ifdef WLAN_FEATURE_VOWIFI_11R
     if (pNeighborRoamInfo->is11rAssoc)
     {
@@ -3080,7 +3084,7 @@ void csrForcedInitialRoamTo5GHTimerCallback(void *context)
         return;
     }
 
-    pNeighborRoamInfo->scanRequestTimeStamp = (tANI_TIMESTAMP)palGetTickCount(pMac->hHdd);
+    pNeighborRoamInfo->scanRequestTimeStamp = vos_timer_get_system_time();
     /*
      * We are about to start a fresh scan cycle for all valid channles for 5Ghz
      * purge non-P2P results from the past for 5Ghz band
@@ -3452,7 +3456,8 @@ void csrNeighborRoamRRMNeighborReportResult(void *context, VOS_STATUS vosStatus)
                 }
 
                 /* We are gonna scan now. Remember the time stamp to filter out results only after this timestamp */
-                pNeighborRoamInfo->scanRequestTimeStamp = (tANI_TIMESTAMP)palGetTickCount(pMac->hHdd);
+                pNeighborRoamInfo->scanRequestTimeStamp =
+                                              vos_timer_get_system_time();
                 
                 /* Now ready for neighbor scan based on the channel list created */
                 /* Start Neighbor scan timer now. Multiplication by PAL_TIMER_TO_MS_UNIT is to convert ms to us which is 
@@ -3854,7 +3859,8 @@ VOS_STATUS csrNeighborRoamTransitToCFGChanScan(tpAniSirGlobal pMac)
                 pNeighborRoamInfo->lookupDOWNRssi,
                 pNeighborRoamInfo->cfgParams.neighborReassocThreshold*(-1));
 
-            pNeighborRoamInfo->scanRequestTimeStamp = (tANI_TIMESTAMP)palGetTickCount(pMac->hHdd);
+            pNeighborRoamInfo->scanRequestTimeStamp =
+                                          vos_timer_get_system_time();
 
             vos_timer_stop(&pNeighborRoamInfo->neighborScanTimer);
 
@@ -4039,7 +4045,7 @@ VOS_STATUS csrNeighborRoamTransitToCFGChanScan(tpAniSirGlobal pMac)
     }
 
     /* We are gonna scan now. Remember the time stamp to filter out results only after this timestamp */
-    pNeighborRoamInfo->scanRequestTimeStamp = (tANI_TIMESTAMP)palGetTickCount(pMac->hHdd);
+    pNeighborRoamInfo->scanRequestTimeStamp = vos_timer_get_system_time();
     
     vos_timer_stop(&pNeighborRoamInfo->neighborScanTimer);
     /* Start Neighbor scan timer now. Multiplication by PAL_TIMER_TO_MS_UNIT is to convert ms to us which is 
@@ -4904,7 +4910,7 @@ eHalStatus csrNeighborRoamInit(tpAniSirGlobal pMac)
     }
 #endif
     /* Initialize this with the current tick count */
-    pNeighborRoamInfo->scanRequestTimeStamp = (tANI_TIMESTAMP)palGetTickCount(pMac->hHdd);
+    pNeighborRoamInfo->scanRequestTimeStamp = vos_timer_get_system_time();
 
     CSR_NEIGHBOR_ROAM_STATE_TRANSITION(eCSR_NEIGHBOR_ROAM_STATE_INIT)
     pNeighborRoamInfo->roamChannelInfo.IAPPNeighborListReceived = eANI_BOOLEAN_FALSE;

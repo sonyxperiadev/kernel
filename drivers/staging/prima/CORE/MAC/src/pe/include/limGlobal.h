@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2015 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -282,8 +282,8 @@ typedef struct sLimMlmScanReq
     tSirScanType       scanType;
     tANI_U32           minChannelTime;
     tANI_U32           maxChannelTime;
-    tANI_U32           minChannelTimeBtc;
-    tANI_U32           maxChannelTimeBtc;
+    tANI_U32           min_chntime_btc_esco;
+    tANI_U32           max_chntime_btc_esco;
     tSirBackgroundScanMode  backgroundScanMode;
     tANI_U32 dot11mode;
     /* Number of SSIDs to scan(send Probe request) */

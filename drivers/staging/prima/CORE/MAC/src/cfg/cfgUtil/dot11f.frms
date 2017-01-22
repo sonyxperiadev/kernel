@@ -2673,63 +2673,7 @@ IE WiderBWChanSwitchAnn (EID_WIDER_BW_CHANNEL_SWITCH_ANN)
 
 IE ExtCap (EID_EXT_CAP)
 {
-    {
-        bssCoexistMgmtSupport:          1;
-        reserved1:                      1;
-        extChanSwitch:                  1;
-        reserved2:                      1;
-        psmpCap:                        1;
-        reserved3:                      1;
-        spsmpCap:                       1;
-        event:                          1;
-        diagnostics:                    1;
-        multiDiagnostics:               1;
-        locTracking:                    1;
-        FMS:                            1;
-        proxyARPService:                1;
-        coLocIntfReporting:             1;
-        civicLoc:                       1;
-        geospatialLoc:                  1;
-        TFS:                            1;
-        wnmSleepMode:                   1;
-        timBroadcast:                   1;
-        bssTransition:                  1;
-        qosTrafficCap:                  1;
-        acStaCnt:                       1;
-        multiBSSID:                     1;
-        timingMeas:                     1;
-        chanUsage:                      1;
-        ssidList:                       1;
-        DMS:                            1;
-        UTCTSFOffset:                   1;
-        TDLSPeerUAPSDBufferSTA:         1;
-        TDLSPeerPSMSupp:                1;
-        TDLSChannelSwitching:           1;
-        interworkingService:            1;
-    }
-    {
-        qosMap:                         1;
-        EBR:                            1;
-        sspnInterface:                  1;
-        reserved4:                      1;
-        msgCFCap:                       1;
-        TDLSSupport:                    1;
-        TDLSProhibited:                 1;
-        TDLSChanSwitProhibited:         1;
-        rejectUnadmittedTraffic:        1;
-        serviceIntervalGranularity:     3;
-        identifierLoc:                  1;
-        uapsdCoexistence:               1;
-        wnmNotification:                1;
-        reserved5:                      1;
-    }
-    {
-        UTF8SSID:                       1;
-        reserved6:                      12;
-        TDLSWiderBW:                    1;
-        operModeNotification:           1;
-        reserved7:                      1;
-    }
+   bytes[1..9];
 }
 
 IE HTCaps (EID_HT_CAPABILITIES)

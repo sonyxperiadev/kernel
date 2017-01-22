@@ -1987,7 +1987,7 @@ VOS_STATUS vos_mq_post_message( VOS_MQ_ID msgQueueId, vos_msg_t *pMsg )
 
   vos_mq_put(pTargetMq, pMsgWrapper);
 
-  set_bit(MC_POST_EVENT_MASK, &gpVosContext->vosSched.mcEventFlag);
+  set_bit(MC_POST_EVENT, &gpVosContext->vosSched.mcEventFlag);
   wake_up_interruptible(&gpVosContext->vosSched.mcWaitQueue);
 
   return VOS_STATUS_SUCCESS;
@@ -2123,7 +2123,7 @@ VOS_STATUS vos_mq_post_message_high_pri(VOS_MQ_ID msgQueueId, vos_msg_t *pMsg)
 
   vos_mq_put_front(pTargetMq, pMsgWrapper);
 
-  set_bit(MC_POST_EVENT_MASK, &gpVosContext->vosSched.mcEventFlag);
+  set_bit(MC_POST_EVENT, &gpVosContext->vosSched.mcEventFlag);
   wake_up_interruptible(&gpVosContext->vosSched.mcWaitQueue);
 
   return VOS_STATUS_SUCCESS;
@@ -2242,7 +2242,7 @@ VOS_STATUS vos_tx_mq_serialize( VOS_MQ_ID msgQueueId, vos_msg_t *pMsg )
 
   vos_mq_put(pTargetMq, pMsgWrapper);
 
-  set_bit(TX_POST_EVENT_MASK, &gpVosContext->vosSched.txEventFlag);
+  set_bit(TX_POST_EVENT, &gpVosContext->vosSched.txEventFlag);
   wake_up_interruptible(&gpVosContext->vosSched.txWaitQueue);
 
   return VOS_STATUS_SUCCESS;
@@ -2357,7 +2357,7 @@ VOS_STATUS vos_rx_mq_serialize( VOS_MQ_ID msgQueueId, vos_msg_t *pMsg )
 
   vos_mq_put(pTargetMq, pMsgWrapper);
 
-  set_bit(RX_POST_EVENT_MASK, &gpVosContext->vosSched.rxEventFlag);
+  set_bit(RX_POST_EVENT, &gpVosContext->vosSched.rxEventFlag);
   wake_up_interruptible(&gpVosContext->vosSched.rxWaitQueue);
 
   return VOS_STATUS_SUCCESS;
@@ -3038,6 +3038,61 @@ v_BOOL_t vos_isUnloadInProgress(void)
     }
 
     return (WLAN_HDD_UNLOAD_IN_PROGRESS == pHddCtx->isLoadUnloadInProgress);
+}
+
+/**
+ *vos_get_rx_wow_dump()
+ *
+ * Return true/flase to dump RX packet
+ *
+ */
+bool vos_get_rx_wow_dump(void)
+{
+    hdd_context_t *pHddCtx = NULL;
+    v_CONTEXT_t pVosContext = vos_get_global_context(VOS_MODULE_ID_SYS, NULL);
+
+    if(!pVosContext)
+    {
+       hddLog(VOS_TRACE_LEVEL_FATAL,"%s: Global VOS context is Null", __func__);
+       return FALSE;
+    }
+
+    pHddCtx = (hdd_context_t *)vos_get_context(VOS_MODULE_ID_HDD, pVosContext );
+    if(!pHddCtx) {
+       VOS_TRACE(VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_FATAL,
+                "%s: HDD context is Null", __func__);
+       return FALSE;
+    }
+
+    return pHddCtx->rx_wow_dump;
+}
+
+/**
+ *vos_set_rx_wow_dump() - Set RX wow pkt dump
+ *@value: Value of RX wow pkt dump
+ *
+ * Return none.
+ *
+ */
+void vos_set_rx_wow_dump(bool value)
+{
+    hdd_context_t *pHddCtx = NULL;
+    v_CONTEXT_t pVosContext = vos_get_global_context(VOS_MODULE_ID_SYS, NULL);
+
+    if(!pVosContext)
+    {
+       hddLog(VOS_TRACE_LEVEL_FATAL,"%s: Global VOS context is Null", __func__);
+       return;
+    }
+
+    pHddCtx = (hdd_context_t *)vos_get_context(VOS_MODULE_ID_HDD, pVosContext );
+    if(!pHddCtx) {
+       VOS_TRACE(VOS_MODULE_ID_VOSS, VOS_TRACE_LEVEL_FATAL,
+                "%s: HDD context is Null", __func__);
+       return;
+    }
+
+    pHddCtx->rx_wow_dump = value;
 }
 
 /**

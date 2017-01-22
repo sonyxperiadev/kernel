@@ -172,8 +172,12 @@ int nl_srv_ucast(struct sk_buff *skb, int dst_pid, int flag)
    NETLINK_CB(skb).portid = 0; //sender's pid
 #endif
    NETLINK_CB(skb).dst_group = 0; //not multicast
-
-   err = netlink_unicast(nl_srv_sock, skb, dst_pid, flag);
+   if (nl_srv_sock != NULL) {
+      err = netlink_unicast(nl_srv_sock, skb,
+                            dst_pid, flag);
+   }
+   else
+      dev_kfree_skb(skb);
 
    if (err < 0)
       VOS_TRACE( VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_WARN,
@@ -200,8 +204,13 @@ int nl_srv_bcast(struct sk_buff *skb)
    NETLINK_CB(skb).portid = 0; //sender's pid
 #endif
    NETLINK_CB(skb).dst_group = WLAN_NLINK_MCAST_GRP_ID; //destination group
+   if (nl_srv_sock != NULL){
+      err = netlink_broadcast(nl_srv_sock, skb, 0,
+                              WLAN_NLINK_MCAST_GRP_ID, flags);
+   }
+   else
+      dev_kfree_skb(skb);
 
-   err = netlink_broadcast(nl_srv_sock, skb, 0, WLAN_NLINK_MCAST_GRP_ID, flags);
 
    if (err < 0)
    {

@@ -690,13 +690,13 @@ limCleanupRxPath(tpAniSirGlobal pMac, tpDphHashNode pStaDs,tpPESession psessionE
              * There is no context at Polaris to delete.
              * Release our assigned AID back to the free pool
              */
-            if ((psessionEntry->limSystemRole == eLIM_AP_ROLE) || 
+            if ((psessionEntry->limSystemRole == eLIM_AP_ROLE) ||
                 (psessionEntry->limSystemRole == eLIM_BT_AMP_AP_ROLE))
-            {    
+            {
+                limDelSta(pMac, pStaDs, false, psessionEntry);
                 limReleasePeerIdx(pMac, pStaDs->assocId, psessionEntry);
             }
             limDeleteDphHashEntry(pMac, pStaDs->staAddr, pStaDs->assocId,psessionEntry);
-
             return retCode;
         }
     }
@@ -819,7 +819,6 @@ limSendDelStaCnf(tpAniSirGlobal pMac, tSirMacAddr staDsAddr,
         }
 
         psessionEntry->limAID = 0;
-
 
     }
 

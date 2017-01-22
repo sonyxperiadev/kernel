@@ -276,6 +276,41 @@ static VOS_STATUS hdd_softap_flush_tx_queues( hdd_adapter_t *pAdapter )
    return status;
 }
 
+/**
+ * hdd_softap_get_connected_sta() -  provide number of connected STA
+ * @pHostapdAdapter: pAdapter for SAP
+ *
+ * This function is invoked for SAP mode to get connected STA.
+ *
+ * Return:  Total number of connected STA to SAP.
+ */
+v_U8_t hdd_softap_get_connected_sta(hdd_adapter_t *pHostapdAdapter)
+{
+    v_U8_t i, sta_ct = 0;
+    v_CONTEXT_t pVosContext = NULL;
+    ptSapContext pSapCtx = NULL;
+
+    pVosContext = (WLAN_HDD_GET_CTX(pHostapdAdapter))->pvosContext;
+    pSapCtx = VOS_GET_SAP_CB(pVosContext);
+    if (pSapCtx == NULL) {
+        VOS_TRACE(VOS_MODULE_ID_SAP, VOS_TRACE_LEVEL_INFO,
+                 FL("psapCtx is NULL"));
+        goto error;
+    }
+
+    spin_lock_bh(&pSapCtx->staInfo_lock);
+    // get stations associated with SAP
+    for (i = 0; i < WLAN_MAX_STA_COUNT; i++) {
+        if (pSapCtx->aStaInfo[i].isUsed &&
+                  (!vos_is_macaddr_broadcast(&pSapCtx->aStaInfo[i].macAddrSTA)))
+               sta_ct++;
+    }
+    spin_unlock_bh( &pSapCtx->staInfo_lock );
+
+error:
+    return sta_ct;
+}
+
 /**============================================================================
   @brief hdd_softap_hard_start_xmit() - Function registered with the Linux OS for 
   transmitting packets. There are 2 versions of this function. One that uses

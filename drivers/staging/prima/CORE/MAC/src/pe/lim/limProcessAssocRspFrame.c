@@ -469,9 +469,12 @@ limProcessAssocRspFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tANI_U8 sub
     }
     if(pAssocRsp->ExtCap.present)
     {
-        limLog(pMac, LOGE, FL("Filling tdls prohibited in session entry"));
+        struct s_ext_cap *p_ext_cap = (struct s_ext_cap *)
+                                    pAssocRsp->ExtCap.bytes;
+        limLog(pMac, LOG1,
+            FL("Filling tdls prohibited in session entry"));
         psessionEntry->tdlsChanSwitProhibited =
-                       pAssocRsp->ExtCap.TDLSChanSwitProhibited ;
+                       p_ext_cap->TDLSChanSwitProhibited;
     }
     if(!pAssocRsp->suppRatesPresent)
     {

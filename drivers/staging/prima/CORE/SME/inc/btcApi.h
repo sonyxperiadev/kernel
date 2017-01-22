@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013, 2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -366,7 +366,10 @@ typedef struct sSmeBtcInfo
    v_BOOL_t      fA2DPTrafStop;/*flag to check A2DP_STOP event has come before MODE_CHANGED*/
    v_U16_t       btcScoHandles[BT_MAX_SCO_SUPPORT];  /* Handles for SCO, if any*/
    v_BOOL_t      fA2DPUp;        /*remember whether A2DP is in session*/
-   v_BOOL_t      btcScanCompromise;
+   /* Scan compromise due to eSCO */
+   bool          btc_scan_compromise_esco;
+   /* Scan compromise due to SCO */
+   bool          btc_scan_compromise_sco;
    v_U8_t        btcBssfordisableaggr[VOS_MAC_ADDRESS_LEN];
    vos_timer_t   enableUapsdTimer;
 } tSmeBtcInfo, *tpSmeBtcInfo;

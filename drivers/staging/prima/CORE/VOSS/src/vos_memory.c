@@ -420,6 +420,20 @@ v_VOID_t vos_mem_set( v_VOID_t *ptr, v_SIZE_t numBytes, v_BYTE_t value )
    memset(ptr, value, numBytes);
 }
 
+void vos_buff_to_hl_buff (tANI_U8 *buffer, int size)
+{
+    int *val, i;
+    if (size % 4 != 0)
+        VOS_TRACE(VOS_MODULE_ID_PE,VOS_TRACE_LEVEL_ERROR,
+                  "%s: size should be multiple of 4, size %d",
+                  __func__, size);
+
+    val = (int *)buffer;
+
+    for (i=0; i<(size/4); i++)
+        *(val+i) = vos_htonl ((unsigned long)(*(val+i)));
+}
+
 v_VOID_t vos_mem_zero( v_VOID_t *ptr, v_SIZE_t numBytes )
 {
    if (0 == numBytes)

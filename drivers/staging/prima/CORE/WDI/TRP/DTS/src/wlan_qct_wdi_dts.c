@@ -78,6 +78,9 @@ typedef struct
 #define WDTS_MAX_PAGE_SIZE 4096
 #define WDTS_MAX_RXDB_DATA_SIZE 128
 
+#define MAC_ADDR_ARRAY(a) (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5]
+#define MAC_ADDRESS_STR "%02x:%02x:%02x:%02x:%02x:%02x"
+
 struct WDTS_RxPktInfo
 {
     uint8 rx_bd[WDTS_MAX_RXDB_DATA_SIZE];
@@ -584,6 +587,84 @@ WDTS_StoreMetaInfo(wpt_packet *pFrame, wpt_uint8 *pBDHeader)
     return;
 }
 
+/**
+ *WDTS_RxPacketDump - Dump Rx packet details
+ *@pFrame: pointer to first Rx buffer received
+ *@pRxMetadata: pointer to RX packet Meta Info
+ *
+ *DTS utility to dump RX packet details.
+ *
+ *Return: None.
+ */
+static void WDTS_RxPacketDump(vos_pkt_t *pFrame,
+                              WDI_DS_RxMetaInfoType *pRxMetadata)
+{
+    tpSirMacMgmtHdr pHdr;
+    struct sk_buff *skb = NULL;
+    uint8_t proto_type;
+    uint8_t flag = 0x0F;
+    wpt_status status;
+
+    if (NULL == pRxMetadata) {
+        VOS_TRACE(VOS_MODULE_ID_WDI, VOS_TRACE_LEVEL_ERROR,
+                  "%s: RX Meta data info is NULL", __func__);
+        return;
+    }
+
+    pHdr = (tpSirMacMgmtHdr)pRxMetadata->mpduHeaderPtr;
+
+    /* RX packet type*/
+    if (pRxMetadata->bcast)
+         VOS_TRACE(VOS_MODULE_ID_WDI, VOS_TRACE_LEVEL_ERROR,
+                   "%s RX Data frame is BC", __func__);
+    else if (pHdr->da[0] & 0x01)
+         VOS_TRACE(VOS_MODULE_ID_WDI, VOS_TRACE_LEVEL_ERROR,
+                   "%s RX Data frame is MC", __func__);
+    else
+         VOS_TRACE(VOS_MODULE_ID_WDI, VOS_TRACE_LEVEL_ERROR,
+                   "%s RX Data frame is UC", __func__);
+
+    /* 802.11 packet type, subtype */
+    if (WDI_MAC_MGMT_FRAME == pRxMetadata->type) {
+       VOS_TRACE(VOS_MODULE_ID_WDI, VOS_TRACE_LEVEL_ERROR,
+                 "%s: Management subtype:%d SA:"MAC_ADDRESS_STR" DA:"
+                 MAC_ADDRESS_STR, __func__, pRxMetadata->subtype,
+                 MAC_ADDR_ARRAY(pHdr->sa), MAC_ADDR_ARRAY(pHdr->da));
+    } else if (WDI_MAC_CTRL_FRAME == pRxMetadata->type) {
+        VOS_TRACE(VOS_MODULE_ID_WDI, VOS_TRACE_LEVEL_ERROR,
+                  "%s: Control subtype:%d SA:"MAC_ADDRESS_STR" DA:"
+                  MAC_ADDRESS_STR, __func__, pRxMetadata->subtype,
+                  MAC_ADDR_ARRAY(pHdr->sa), MAC_ADDR_ARRAY(pHdr->da));
+    } else if (WDI_MAC_DATA_FRAME == pRxMetadata->type) {
+        VOS_TRACE(VOS_MODULE_ID_WDI, VOS_TRACE_LEVEL_ERROR,
+                  "%s: Data subtype:%d SA:"MAC_ADDRESS_STR" DA:"
+                  MAC_ADDRESS_STR, __func__, pRxMetadata->subtype,
+                  MAC_ADDR_ARRAY(pHdr->sa), MAC_ADDR_ARRAY(pHdr->da));
+
+        status = vos_pkt_get_os_packet(pFrame, (v_VOID_t **)&skb, 0);
+        if (eWLAN_PAL_STATUS_SUCCESS != status) {
+            VOS_TRACE(VOS_MODULE_ID_WDI, VOS_TRACE_LEVEL_ERROR,
+                      "%s: Failure extracting skb from vos pkt", __func__);
+            return;
+        }
+
+        proto_type = vos_pkt_get_proto_type(skb, flag);
+        if (VOS_PKT_PROTO_TYPE_EAPOL & proto_type)
+           VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
+                     "%s: RX frame is EAPOL", __func__);
+        else if (VOS_PKT_PROTO_TYPE_DHCP & proto_type)
+           VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
+                     "%s: RX frame is DHCP", __func__);
+        else if (VOS_PKT_PROTO_TYPE_ARP & proto_type)
+           VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
+                     "%s: RX frame is ARP", __func__);
+
+    } else
+        VOS_TRACE(VOS_MODULE_ID_WDI, VOS_TRACE_LEVEL_ERROR,
+                  "%s: Unknown frame SA:"MAC_ADDRESS_STR,
+                   __func__, MAC_ADDR_ARRAY(pHdr->sa));
+}
+
 /* DTS Rx packet function. 
  * This function should be invoked by the transport device to indicate 
  * reception of a frame.
@@ -798,6 +879,7 @@ wpt_status WDTS_RxPacket (void *pContext, wpt_packet *pFrame, WDTS_ChannelType c
 #ifdef WLAN_FEATURE_ROAM_SCAN_OFFLOAD
       pRxMetadata->offloadScanLearn = WDI_RX_BD_GET_OFFLOADSCANLEARN(pBDHeader);
       pRxMetadata->roamCandidateInd = WDI_RX_BD_GET_ROAMCANDIDATEIND(pBDHeader);
+      pRxMetadata->perRoamCndInd = WDI_RX_BD_GET_PER_ROAMCANDIDATEIND(pBDHeader);
 #endif
 #ifdef WLAN_FEATURE_EXTSCAN
       pRxMetadata->extscanBuffer = WDI_RX_BD_GET_EXTSCANFULLSCANRESIND(pBDHeader);
@@ -870,24 +952,31 @@ wpt_status WDTS_RxPacket (void *pContext, wpt_packet *pFrame, WDTS_ChannelType c
       {
           vos_record_roam_event(e_DXE_RX_PKT_TIME, (void *)pFrame, pRxMetadata->type);
       }
-      // Invoke Rx complete callback
-      pClientData->receiveFrameCB(pClientData->pCallbackContext, pFrame);  
+
+      /* Dump first Rx packet after host wakeup */
+      if (vos_get_rx_wow_dump()) {
+          WDTS_RxPacketDump((vos_pkt_t*)pFrame, pRxMetadata);
+          vos_set_rx_wow_dump(false);
+      }
+
+      /* Invoke Rx complete callback */
+      pClientData->receiveFrameCB(pClientData->pCallbackContext, pFrame);
   }
   else
   {
       wpalPacketSetRxLength(pFrame, usMPDULen+ucMPDUHOffset);
       wpalPacketRawTrimHead(pFrame, ucMPDUHOffset);
 
-      //flow control related
+      /* flow control related */
       pRxMetadata->fc = isFcBd;
       pRxMetadata->mclkRxTimestamp = WDI_RX_BD_GET_TIMESTAMP(pBDHeader);
       pRxMetadata->fcStaTxDisabledBitmap = WDI_RX_FC_BD_GET_STA_TX_DISABLED_BITMAP(pBDHeader);
       pRxMetadata->fcSTAValidMask = WDI_RX_FC_BD_GET_STA_VALID_MASK(pBDHeader);
-      // Invoke Rx complete callback
+      /* Invoke Rx complete callback */
       pClientData->receiveFrameCB(pClientData->pCallbackContext, pFrame);  
   }
 
-  //Log the RX Stats
+  /* Log the RX Stats */
   if(gDsTrafficStats.running && pRxMetadata->staId < HAL_NUM_STA)
   {
      if(pRxMetadata->rateIndex < WDTS_MAX_RATE_NUM)

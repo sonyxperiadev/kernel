@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013, 2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -148,5 +148,7 @@ void __printf(3,4) vos_snprintf(char *strBuffer, unsigned  int size,
 #endif
 
 #define VOS_RETURN_ADDRESS  __builtin_return_address(0)
+
+#define VOS_SMP_MB smp_mb()
 
 #endif

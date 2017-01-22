@@ -3289,4 +3289,27 @@ WLANTL_FatalError
  v_VOID_t
 );
 
+#ifdef WLAN_FEATURE_ROAM_SCAN_OFFLOAD
+void WLANTL_StartRxRateMonitor(v_PVOID_t pvosGCtx, wpt_uint8 staId,
+                  wpt_uint16 minRate,
+                  wpt_uint16 maxRate, wpt_uint8 minPercentage,
+                  wpt_uint16 minPktRequired, void *hHal,
+                  wpt_uint64 timeToWait,
+                  void (*triggerRoamScanfn) (void *, wpt_uint8));
+
+void WLANTL_StopRxRateMonitor(v_PVOID_t pvosGCtx);
+#endif
+
+/*
+ * WLANTL_ResetRxSSN - reset last rx ssn
+ * @pvosGCtx: global vos context
+ * @ucSTAId: station id
+ *
+ * This function resets the last ssn of all tids of the station
+ * for whom BA reorder session exists.
+ *
+ * Return: none
+ */
+void WLANTL_ResetRxSSN(v_PVOID_t pvosGCtx, uint8_t ucSTAId);
+
 #endif /* #ifndef WLAN_QCT_WLANTL_H */

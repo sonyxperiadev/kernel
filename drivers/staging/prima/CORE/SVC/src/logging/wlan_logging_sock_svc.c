@@ -56,10 +56,10 @@
 #define INVALID_PID -1
 
 #define MAX_LOGMSG_LENGTH 4096
-#define LOGGER_MGMT_DATA_PKT_POST_MASK   0x001
-#define HOST_LOG_POST_MASK   0x002
-#define LOGGER_FW_LOG_PKT_POST_MASK   0x003
-#define LOGGER_FATAL_EVENT_POST_MASK  0x004
+#define LOGGER_MGMT_DATA_PKT_POST        0x001
+#define HOST_LOG_POST                    0x002
+#define LOGGER_FW_LOG_PKT_POST           0x003
+#define LOGGER_FATAL_EVENT_POST          0x004
 
 #define LOGGER_MAX_DATA_MGMT_PKT_Q_LEN   (8)
 #define LOGGER_MAX_FW_LOG_PKT_Q_LEN   (16)
@@ -330,7 +330,6 @@ static int wlan_queue_logmsg_for_app(void)
 	return ret;
 }
 
-
 int wlan_log_to_user(VOS_TRACE_LEVEL log_level, char *to_be_sent, int length)
 {
 	/* Add the current time stamp */
@@ -422,7 +421,7 @@ int wlan_log_to_user(VOS_TRACE_LEVEL log_level, char *to_be_sent, int length)
                  * thread
                  */
 
-			set_bit(HOST_LOG_POST_MASK, &gwlan_logging.event_flag);
+			set_bit(HOST_LOG_POST, &gwlan_logging.event_flag);
 			wake_up_interruptible(&gwlan_logging.wait_queue);
 	}
 
@@ -733,13 +732,13 @@ static int wlan_logging_thread(void *Arg)
 	while (!gwlan_logging.exit) {
 		ret_wait_status = wait_event_interruptible(
 		  gwlan_logging.wait_queue,
-		  (test_bit(HOST_LOG_POST_MASK, &gwlan_logging.event_flag) ||
+		  (test_bit(HOST_LOG_POST, &gwlan_logging.event_flag) ||
 		   gwlan_logging.exit ||
-		   test_bit(LOGGER_MGMT_DATA_PKT_POST_MASK,
+		   test_bit(LOGGER_MGMT_DATA_PKT_POST,
 						&gwlan_logging.event_flag) ||
-		   test_bit(LOGGER_FW_LOG_PKT_POST_MASK,
+		   test_bit(LOGGER_FW_LOG_PKT_POST,
 						&gwlan_logging.event_flag) ||
-		   test_bit(LOGGER_FATAL_EVENT_POST_MASK,
+		   test_bit(LOGGER_FATAL_EVENT_POST,
 						&gwlan_logging.event_flag)));
 
 		if (ret_wait_status == -ERESTARTSYS) {
@@ -751,7 +750,7 @@ static int wlan_logging_thread(void *Arg)
 		    break;
 		}
 
-		if (test_and_clear_bit(HOST_LOG_POST_MASK,
+		if (test_and_clear_bit(HOST_LOG_POST,
 			&gwlan_logging.event_flag)) {
 			ret = send_filled_buffers_to_user();
 			if (-ENOMEM == ret) {
@@ -759,17 +758,17 @@ static int wlan_logging_thread(void *Arg)
 			}
 		}
 
-		if (test_and_clear_bit(LOGGER_FW_LOG_PKT_POST_MASK,
+		if (test_and_clear_bit(LOGGER_FW_LOG_PKT_POST,
 			&gwlan_logging.event_flag)) {
 			send_fw_log_pkt_to_user();
 		}
 
-		if (test_and_clear_bit(LOGGER_MGMT_DATA_PKT_POST_MASK,
+		if (test_and_clear_bit(LOGGER_MGMT_DATA_PKT_POST,
 			&gwlan_logging.event_flag)) {
 			send_data_mgmt_log_pkt_to_user();
 		}
 
-		if (test_and_clear_bit(LOGGER_FATAL_EVENT_POST_MASK,
+		if (test_and_clear_bit(LOGGER_FATAL_EVENT_POST,
 			&gwlan_logging.event_flag)) {
 			if (gwlan_logging.log_complete.is_flush_complete == true) {
 				gwlan_logging.log_complete.is_flush_complete = false;
@@ -777,9 +776,9 @@ static int wlan_logging_thread(void *Arg)
 			}
 			else {
 				gwlan_logging.log_complete.is_flush_complete = true;
-				set_bit(HOST_LOG_POST_MASK,&gwlan_logging.event_flag);
-				set_bit(LOGGER_FW_LOG_PKT_POST_MASK,&gwlan_logging.event_flag);
-				set_bit(LOGGER_FATAL_EVENT_POST_MASK,&gwlan_logging.event_flag);
+				set_bit(HOST_LOG_POST, &gwlan_logging.event_flag);
+				set_bit(LOGGER_FW_LOG_PKT_POST,&gwlan_logging.event_flag);
+				set_bit(LOGGER_FATAL_EVENT_POST, &gwlan_logging.event_flag);
 				wake_up_interruptible(&gwlan_logging.wait_queue);
 			}
 		}
@@ -826,7 +825,7 @@ static int wlan_logging_proc_sock_rx_msg(struct sk_buff *skb)
 			wlan_queue_logmsg_for_app();
 		}
 		spin_unlock_bh(&gwlan_logging.spin_lock);
-		set_bit(HOST_LOG_POST_MASK, &gwlan_logging.event_flag);
+		set_bit(HOST_LOG_POST, &gwlan_logging.event_flag);
 		wake_up_interruptible(&gwlan_logging.wait_queue);
 	} else {
 		/* This is to set the default levels (WLAN logging
@@ -940,10 +939,10 @@ int wlan_logging_sock_activate_svc(int log_fe_to_console, int num_buf)
 
 	init_waitqueue_head(&gwlan_logging.wait_queue);
 	gwlan_logging.exit = false;
-	clear_bit(HOST_LOG_POST_MASK, &gwlan_logging.event_flag);
-	clear_bit(LOGGER_MGMT_DATA_PKT_POST_MASK, &gwlan_logging.event_flag);
-	clear_bit(LOGGER_FW_LOG_PKT_POST_MASK, &gwlan_logging.event_flag);
-	clear_bit(LOGGER_FATAL_EVENT_POST_MASK, &gwlan_logging.event_flag);
+	clear_bit(HOST_LOG_POST, &gwlan_logging.event_flag);
+	clear_bit(LOGGER_MGMT_DATA_PKT_POST, &gwlan_logging.event_flag);
+	clear_bit(LOGGER_FW_LOG_PKT_POST, &gwlan_logging.event_flag);
+	clear_bit(LOGGER_FATAL_EVENT_POST, &gwlan_logging.event_flag);
 	init_completion(&gwlan_logging.shutdown_comp);
 	gwlan_logging.thread = kthread_create(wlan_logging_thread, NULL,
 					"wlan_logging_thread");
@@ -1101,7 +1100,7 @@ int wlan_queue_data_mgmt_pkt_for_app(vos_pkt_t *pPacket)
 
 	spin_unlock_irqrestore(&gwlan_logging.data_mgmt_pkt_lock, flags);
 
-	set_bit(LOGGER_MGMT_DATA_PKT_POST_MASK, &gwlan_logging.event_flag);
+	set_bit(LOGGER_MGMT_DATA_PKT_POST, &gwlan_logging.event_flag);
 	wake_up_interruptible(&gwlan_logging.wait_queue);
 
 	return VOS_STATUS_SUCCESS;
@@ -1166,7 +1165,7 @@ int wlan_queue_fw_log_pkt_for_app(vos_pkt_t *pPacket)
 
 	spin_unlock_irqrestore(&gwlan_logging.fw_log_pkt_lock, flags);
 
-	set_bit(LOGGER_FW_LOG_PKT_POST_MASK, &gwlan_logging.event_flag);
+	set_bit(LOGGER_FW_LOG_PKT_POST, &gwlan_logging.event_flag);
 	wake_up_interruptible(&gwlan_logging.wait_queue);
 
 	return VOS_STATUS_SUCCESS;
@@ -1214,7 +1213,7 @@ void wlan_process_done_indication(uint8 type, uint32 reason_code)
     if ((type == WLAN_QXDM_LOGGING) && (wlan_is_log_report_in_progress() == TRUE))
     {
         pr_info("%s: Setting LOGGER_FATAL_EVENT\n", __func__);
-        set_bit(LOGGER_FATAL_EVENT_POST_MASK, &gwlan_logging.event_flag);
+        set_bit(LOGGER_FATAL_EVENT_POST, &gwlan_logging.event_flag);
         wake_up_interruptible(&gwlan_logging.wait_queue);
     }
 }

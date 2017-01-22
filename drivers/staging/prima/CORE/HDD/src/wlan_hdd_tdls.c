@@ -814,6 +814,7 @@ void wlan_hdd_tdls_btCoex_cb(void *data, int indType)
     u16 connectedTdlsPeers;
     tdlsCtx_t *pHddTdlsCtx;
     hddTdlsPeer_t *currPeer;
+    tANI_U16 numCurrTdlsPeers = 0;
 
     ENTER();
     if ((NULL == data) || (indType < 0))
@@ -907,6 +908,9 @@ void wlan_hdd_tdls_btCoex_cb(void *data, int indType)
                }
             }
         }
+        /* stop TCP delack timer if BtCoex is enable  */
+        set_bit(WLAN_BTCOEX_MODE, &pHddCtx->mode);
+        hdd_manage_delack_timer(pHddCtx);
    }
    /* BtCoex notification type enabled, Enable TDLS */
    else if (indType == SIR_COEX_IND_TYPE_TDLS_ENABLE)
@@ -923,7 +927,15 @@ void wlan_hdd_tdls_btCoex_cb(void *data, int indType)
             pHddCtx->is_tdls_btc_enabled = TRUE;
             wlan_hdd_tdls_set_mode(pHddCtx, pHddCtx->tdls_mode_last, FALSE);
         }
-   }
+
+        clear_bit(WLAN_BTCOEX_MODE, &pHddCtx->mode);
+        numCurrTdlsPeers = wlan_hdd_tdlsConnectedPeers(pAdapter);
+        if(numCurrTdlsPeers == 0) {
+             /* start delack timer if BtCoex is disable and tdls is not present */
+             hdd_manage_delack_timer(pHddCtx);
+        }
+  }
+
    EXIT();
    return;
 }

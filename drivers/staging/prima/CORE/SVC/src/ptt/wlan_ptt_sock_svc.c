@@ -320,4 +320,12 @@ int ptt_sock_activate_svc(void *pAdapter)
 #endif /* WLAN_KD_READY_NOTIFIER */
    return 0;
 }
+
+int ptt_sock_deactivate_svc(hdd_context_t *pHddCtx)
+{
+   nl_srv_unregister(ANI_NL_MSG_PUMAC, ptt_sock_rx_nlink_msg);
+   nl_srv_unregister(ANI_NL_MSG_PTT, ptt_sock_rx_nlink_msg);
+   return 0;
+}
+
 #endif //PTT_SOCK_SVC_ENABLE

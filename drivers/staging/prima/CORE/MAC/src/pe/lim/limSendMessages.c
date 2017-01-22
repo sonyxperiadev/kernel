@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2015 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -798,7 +798,9 @@ tSirRetStatus limSendBeaconFilterInfo(tpAniSirGlobal pMac,tpPESession psessionEn
     tANI_U8            *ptr;
     tANI_U32           i;
     tANI_U32           msgSize;
+    tANI_BOOLEAN       ignore_secchannel_bcn_filter = false;
     tpBeaconFilterIe   pIe;
+    tpDphHashNode      pStaDs;
 
     if( psessionEntry == NULL )
     {
@@ -844,10 +846,36 @@ tSirRetStatus limSendBeaconFilterInfo(tpAniSirGlobal pMac,tpPESession psessionEn
     //Fill the BSSIDX
     pBeaconFilterMsg->bssIdx = psessionEntry->bssIdx;
 
+    pStaDs = dphGetHashEntry(pMac, DPH_STA_HASH_INDEX_PEER,
+                            &psessionEntry->dph.dphHashTable);
+    if((psessionEntry->currentOperChannel <= RF_CHAN_14) &&
+       ((psessionEntry->htSupportedChannelWidthSet ==
+                                eHT_CHANNEL_WIDTH_20MHZ) ||
+        (pStaDs != NULL && (pStaDs->htSupportedChannelWidthSet ==
+                                eHT_CHANNEL_WIDTH_20MHZ))))
+    {
+        ignore_secchannel_bcn_filter = true;
+    }
+
     //Fill message with info contained in the beaconFilterTable
     ptr = (tANI_U8 *)pBeaconFilterMsg + sizeof(tBeaconFilterMsg);
     for(i=0; i < (pBeaconFilterMsg->ieNum); i++)
     {
+        /*
+        *Interoperability workaround:  TP-LINK TL-WDR6300
+        *The value of Secondary Channel Offset in HT Operation element
+        *of beacon frame switching between 1 and 0, which causes dut(sta)
+        *to wake up frequently.
+        */
+        if((ignore_secchannel_bcn_filter == true) &&
+           (beaconFilterTable[i].elementId == SIR_MAC_HT_INFO_EID) &&
+           (beaconFilterTable[i].byte.offset == 1) &&
+           (beaconFilterTable[i].byte.bitMask == HT_BYTE1_FILTER_MASK))
+        {
+            limLog( pMac, LOGW,
+                FL("Skip Secondary Channel bcn filter when channel is 20Mhz"));
+            continue;
+        }
         pIe = (tpBeaconFilterIe) ptr;
         pIe->elementId = beaconFilterTable[i].elementId;
         pIe->checkIePresence = beaconFilterTable[i].checkIePresence;

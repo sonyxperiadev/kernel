@@ -334,6 +334,178 @@ typedef struct
     } \
   } while (0);
 
+
+/* Following is the copy of g11bRateInfo to understand rate index at TL */
+#define WLANTL_MAX_RATE_NUM               137
+typedef struct
+{
+   uint32 phyRate;   //unit in Mega bits per sec X 10
+   uint32 tputRate;  //unit in Mega bits per sec X 10
+   uint32 tputBpms;  //unit in Bytes per msec = (tputRateX1024x1024)/(8x10X1000) ~= (tputRate*13)
+   uint32 tputBpus;  //unit in Bytes per usec: round off to integral value
+}WLANTL_RateInfo;
+
+WLANTL_RateInfo gTLRateInfo[WLANTL_MAX_RATE_NUM]  = {
+    //11b rates
+    {  10,  9,  117, 0}, //index 0
+    {  20,  17, 221, 0}, //index 1
+    {  55,  41, 533, 0}, //index 2
+    { 110,  68, 884, 0}, //index 3
+
+    //11b short preamble
+    {  10,  10,  130, 0}, //index 4
+    {  20,  18,  234, 0}, //index 5
+    {  55,  44,  572, 0}, //index 6
+    { 110,  77, 1001, 0}, //index 7
+
+    //11ag
+    {  60,  50,  650, 1}, //index 8
+    {  90,  70,  910, 1}, //index 9
+    { 120, 100, 1300, 1}, //index 10
+    { 180, 150, 1950, 2}, //index 11
+    { 240, 190, 2470, 2}, //index 12
+    { 360, 280, 3640, 4}, //index 13
+    { 480, 350, 4550, 5}, //index 14
+    { 540, 380, 4940, 6}, //index 15
+
+    //11n SIMO
+    {  65,  54,  702, 1}, //index 16
+    { 130, 108, 1404, 1}, //index 17
+    { 195, 161, 2093, 2}, //index 18
+    { 260, 217, 2821, 3}, //index 19
+    { 390, 326, 4238, 4}, //index 20
+    { 520, 435, 5655, 6}, //index 21
+    { 585, 492, 6396, 6}, //index 22
+    { 650, 548, 7124, 7}, //index 23
+
+    //11n SIMO SGI
+    {  72,  59,  767, 1}, //index 24
+    { 144, 118, 1534, 2}, //index 25
+    { 217, 180, 2340, 2}, //index 26
+    { 289, 243, 3159, 3}, //index 27
+    { 434, 363, 4719, 5}, //index 28
+    { 578, 486, 6318, 6}, //index 29
+    { 650, 548, 7124, 7}, //index 30
+    { 722, 606, 7878, 8}, //index 31
+
+    //11n GF SIMO
+    {  65,  54,  702, 1}, //index 32
+    { 130, 108, 1404, 1}, //index 33
+    { 195, 161, 2093, 2}, //index 34
+    { 260, 217, 2821, 3}, //index 35
+    { 390, 326, 4238, 4}, //index 36
+    { 520, 435, 5655, 6}, //index 37
+    { 585, 492, 6396, 6}, //index 38
+    { 650, 548, 7124, 7}, //index 39
+
+    //11n SIMO CB MCS 0 - 7
+    { 135,   110,  1430,  1}, //index 40
+    { 270,   223,  2899,  3}, //index 41
+    { 405,   337,  4381,  4}, //index 42
+    { 540,   454,  5902,  6}, //index 43
+    { 810,   679,  8827,  9}, //index 44
+    { 1080,  909, 11817, 12}, //index 45
+    { 1215, 1022, 13286, 13}, //index 46
+    { 1350, 1137, 14781, 15}, //index 47
+
+    //11n SIMO CB SGI MCS 0 - 7
+    { 150,   121,  1573,  2}, //index 48
+    { 300,   249,  3237,  3}, //index 49
+    { 450,   378,  4914,  5}, //index 50
+    { 600,   503,  6539,  7}, //index 51
+    { 900,   758,  9854,  10}, //index 52
+    { 1200, 1010, 13130, 13}, //index 53
+    { 1350, 1137, 14781, 15}, //index 54
+    { 1500, 1262, 16406, 16}, //index 55
+
+    //11n SIMO GF CB MCS 0 - 7
+    { 135,   110,   1430,  1}, //index 56
+    { 270,   223,   2899,  3}, //index 57
+    { 405,   337,   4381,  4}, //index 58
+    { 540,   454,   5902,  6}, //index 59
+    { 810,   679,   8827,  9}, //index 60
+    { 1080,  909,  11817, 12}, //index 61
+    { 1215, 1022,  13286, 13}, //index 62
+    { 1350, 1137,  14781, 15}, //index 63
+
+    //11AC
+    { 1350,  675,  8775,  9}, //reserved 64
+    { 1350,  675,  8775,  9}, //reserved 65
+    {   65,   45,   585,  1}, //index 66
+    {  130,   91,  1183,  1}, //index 67
+    {  195,  136,  1768,  2}, //index 68
+    {  260,  182,  2366,  2}, //index 69
+    {  390,  273,  3549,  4}, //index 70
+    {  520,  364,  4732,  5}, //index 71
+    {  585,  409,  5317,  5}, //index 72
+    {  650,  455,  5915,  6}, //index 73
+    {  780,  546,  7098,  7}, //index 74
+    { 1350,  675,  8775,  9}, //reserved 75
+    { 1350,  675,  8775,  9}, //reserved 76
+    { 1350,  675,  8775,  9}, //reserved 77
+    { 1350,  675,  8775,  9}, //index 78
+    { 1350,  675,  8775,  9}, //index 79
+    { 1350,  675,  8775,  9}, //index 80
+    { 1350,  675,  8775,  9}, //index 81
+    { 1350,  675,  8775,  9}, //index 82
+    { 1350,  675,  8775,  9}, //index 83
+    {  655,  458,  5954,  6}, //index 84
+    {  722,  505,  6565,  7}, //index 85
+    {  866,  606,  7878,  8}, //index 86
+    { 1350,  675,  8775,  9}, //reserved 87
+    { 1350,  675,  8775,  9}, //reserved 88
+    { 1350,  675,  8775,  9}, //reserved 89
+    {  135,   94,  1222,  1}, //index 90
+    {  270,  189,  2457,  2}, //index 91
+    {  405,  283,  3679,  4}, //index 92
+    {  540,  378,  4914,  5}, //index 93
+    {  810,  567,  7371,  7}, //index 94
+    { 1080,  756,  9828, 10}, //index 95
+    { 1215,  850, 11050, 11}, //index 96
+    { 1350,  675,  8775,  9}, //index 97
+    { 1350,  675,  8775,  9}, //index 98
+    { 1620,  810, 10530, 11}, //index 99
+    { 1800,  900, 11700, 12}, //index 100
+    { 1350,  675,  8775,  9}, //reserved 101
+    { 1350,  675,  8775,  9}, //index 102
+    { 1350,  675,  8775,  9}, //index 103
+    { 1350,  675,  8775,  9}, //index 104
+    { 1350,  675,  8775,  9}, //index 105
+    { 1350,  675,  8775,  9}, //index 106
+    { 1200,  840, 10920, 11}, //index 107
+    { 1350,  675,  8775,  9}, //index 108
+    { 1500,  750,  9750, 10}, //index 109
+    { 1350,  675,  8775,  9}, //index 110
+    { 1800,  900, 11700, 12}, //index 111
+    { 2000, 1000, 13000, 13}, //index 112
+    { 1350,  675,  8775,  9}, //index 113
+    {  292,  204,  2652,  3}, //index 114
+    {  585,  409,  5317,  5}, //index 115
+    {  877,  613,  7969,  8}, //index 116
+    { 1170,  819, 10647, 11}, //index 117
+    { 1755,  877, 11401, 11}, //index 118
+    { 2340, 1170, 15210, 15}, //index 119
+    { 2632, 1316, 17108, 17}, //index 120
+    { 2925, 1462, 19006, 19}, //index 121
+    { 1350,  675,  8775,  9}, //index 122
+    { 3510, 1755, 22815, 23}, //index 123
+    { 3900, 1950, 25350, 25}, //index 124
+    { 1350,  675,  8775,  9}, //reserved 125
+    { 1350,  675,  8775,  9}, //index 126
+    { 1350,  675,  8775,  9}, //index 127
+    { 1350,  675,  8775,  9}, //index 128
+    { 1350,  675,  8775,  9}, //index 129
+    { 1350,  675,  8775,  9}, //index 130
+    { 1350,  675,  8775,  9}, //index 131
+    { 2925, 1462, 19006, 19}, //index 132
+    { 3250, 1625, 21125, 21}, //index 133
+    { 1350,  675,  8775,  9}, //index 134
+    { 3900, 1950, 25350, 25}, //index 135
+    { 4333, 2166, 28158, 28}  //index 136
+ };
+
+
+
 /*----------------------------------------------------------------------------
  * Static Variable Definitions
  * -------------------------------------------------------------------------*/
@@ -1239,6 +1411,7 @@ WLANTL_RegisterSTAClient
   pClientSTA->tlPri    = WLANTL_STA_PRI_NORMAL;
   pClientSTA->wSTADesc.ucSTAId  = pwSTADescType->ucSTAId;
   pClientSTA->ptkInstalled = 0;
+  pClientSTA->disassoc_progress = VOS_FALSE;
 
   pMac = vos_get_context(VOS_MODULE_ID_PE, pvosGCtx);
   if ( NULL != pMac )
@@ -4725,7 +4898,8 @@ WLANTL_GetFrames
            for ( i = 0; i < WLAN_MAX_STA_COUNT; i++)
            {
               if (NULL != pTLCb->atlSTAClients[i] && (pTLCb->atlSTAClients[i]->ucExists) &&
-                  (pTLCb->atlSTAClients[i]->ucPktPending))
+                  (pTLCb->atlSTAClients[i]->ucPktPending) &&
+                  (pTLCb->atlSTAClients[i]->disassoc_progress == VOS_FALSE))
               {
                   /* There is station to be Served */
                   break;
@@ -6012,15 +6186,24 @@ WLANTL_RxFrames
         }
       }/*if bcast*/
 
-      if ((WLANTL_STA_ID_INVALID(ucSTAId)) || (WLANTL_TID_INVALID(ucTid)))
+      if (WLANTL_STA_ID_INVALID(ucSTAId))
       {
         TLLOGW(VOS_TRACE( VOS_MODULE_ID_TL, VOS_TRACE_LEVEL_WARN,
-                   "WLAN TL:STAId %d, Tid %d. Invalid STA ID/TID- dropping pkt",
-                   ucSTAId, ucTid));
+                   "WLAN TL:STAId %d. Invalid STA ID dropping pkt",
+                   ucSTAId));
         /* Drop packet */
         vos_pkt_return_packet(vosTempBuff);
         vosTempBuff = vosDataBuff;
         continue;
+      }
+
+      if (WLANTL_TID_INVALID( ucTid)) {
+         /* There is a possibility AP uses wrong TID. In that case to avoid
+            dropping EAPOL packet in the driver use TID to zero.*/
+         VOS_TRACE( VOS_MODULE_ID_TL, VOS_TRACE_LEVEL_INFO,
+             "WLAN TL:Invalid Tid: %d Frame type: %d", ucTid, ucFrmType);
+         WDA_GET_RX_TID( pvBDHeader ) = 0;
+         ucTid = 0;
       }
 
 #ifdef WLAN_FEATURE_LINK_LAYER_STATS
@@ -8622,6 +8805,235 @@ WLANTL_FwdPktToHDD
    return VOS_STATUS_SUCCESS;
 }
 
+#ifdef WLAN_FEATURE_ROAM_SCAN_OFFLOAD
+void WLANTL_StopRxRateMonitor(v_PVOID_t pvosGCtx)
+{
+   WLANTL_CbType *pTLCb = VOS_GET_TL_CB(pvosGCtx);
+   if (!pTLCb)
+     return;
+   pTLCb->gDsRxRoamStats.running = eWLAN_PAL_FALSE;
+}
+
+void WLANTL_StartRxRateMonitor(v_PVOID_t pvosGCtx, v_U8_t staId,
+                  v_U16_t minRate,
+                  v_U16_t maxRate, v_U8_t minPercentage,
+                  v_U16_t minPktRequired, void *hHal,
+                  v_U64_t timeToWait,
+                  void (*triggerRoamScanfn) (void *, v_U8_t))
+{
+
+   WLANTL_CbType *pTLCb = VOS_GET_TL_CB(pvosGCtx);
+   if (!pTLCb)
+     return;
+
+   pTLCb->gDsRxRoamStats.running = eWLAN_PAL_TRUE;
+   pTLCb->gDsRxRoamStats.index = 0;
+   pTLCb->gDsRxRoamStats.lastTriggerTime = jiffies_to_msecs(jiffies);
+   pTLCb->gDsRxRoamStats.maxRate = maxRate;
+   pTLCb->gDsRxRoamStats.minRate = minRate;
+   pTLCb->gDsRxRoamStats.staId = staId;
+   pTLCb->gDsRxRoamStats.minPercentage = minPercentage;
+   pTLCb->gDsRxRoamStats.timeToWait = timeToWait * 1000;
+   pTLCb->gDsRxRoamStats.intialPktToStart = 0;
+   pTLCb->gDsRxRoamStats.minPktRequired = minPktRequired;
+   pTLCb->gDsRxRoamStats.triggerRoamScanfn = triggerRoamScanfn;
+   pTLCb->gDsRxRoamStats.hHal = hHal;
+   vos_mem_zero(pTLCb->gDsRxRoamStats.rxRoamStats, ROAM_MAX_INDEX_NUM *
+                                sizeof(WLANTL_RoamTrafficStatsType));
+   VOS_TRACE(VOS_MODULE_ID_WDI, VOS_TRACE_LEVEL_DEBUG,
+       "staId=%d, minRate=%d maxRate=%d minPercentage=%d minPktRequired=%d",
+       staId, minRate, maxRate, minPercentage, minPktRequired);
+}
+
+void static WLANTL_ClearAllRoamStats(WLANTL_CbType *pTLCb)
+{
+   pTLCb->gDsRxRoamStats.index = 0;
+   pTLCb->gDsRxRoamStats.totalPkt = 0;
+   pTLCb->gDsRxRoamStats.lowRatePkt = 0;
+   pTLCb->gDsRxRoamStats.intialPktToStart = 0;
+   vos_mem_zero(pTLCb->gDsRxRoamStats.rxRoamStats, ROAM_MAX_INDEX_NUM *
+                                sizeof(WLANTL_RoamTrafficStatsType));
+}
+
+/*
+ * WLANTL_ClearRoamStatsTillIndex : This API will clear older data
+ * at the indexes.
+ *
+ * Since its a circular buffer we don't know if we are filling
+ * data first time or some older data was already present at
+ * the index. In that case we should clear the older data from
+ * current index to new index and subtract this data from
+ * global count as well before filling new one.
+ */
+static inline void WLANTL_ClearRoamStatsTillIndex(WLANTL_CbType *pTLCb,
+                                           v_U8_t newIndex)
+{
+   while (pTLCb->gDsRxRoamStats.index < newIndex)
+   {
+     pTLCb->gDsRxRoamStats.index++;
+     pTLCb->gDsRxRoamStats.totalPkt -=
+         pTLCb->gDsRxRoamStats.
+             rxRoamStats[pTLCb->gDsRxRoamStats.index].totalPktRcvd;
+     pTLCb->gDsRxRoamStats.lowRatePkt -=
+         pTLCb->gDsRxRoamStats.
+             rxRoamStats[pTLCb->gDsRxRoamStats.index].lowRateRxPacketsRcvd;
+     pTLCb->gDsRxRoamStats.
+         rxRoamStats[pTLCb->gDsRxRoamStats.index].totalPktRcvd = 0;
+     pTLCb->gDsRxRoamStats.
+         rxRoamStats[pTLCb->gDsRxRoamStats.index].lowRateRxPacketsRcvd = 0;
+   }
+}
+
+
+static void WLANTL_ClearOldPERStats(WLANTL_CbType *pTLCb, v_U8_t incrementCnt)
+{
+   v_U8_t newIndex;
+
+   newIndex = (pTLCb->gDsRxRoamStats.index + incrementCnt) %
+                                             ROAM_MAX_INDEX_NUM;
+
+   /* We have crossed the max limit of buffer, clear the stats
+    * till ROAM_MAX_INDEX_NUM and set index as 0 */
+   if ((pTLCb->gDsRxRoamStats.index + incrementCnt) >=
+                                             ROAM_MAX_INDEX_NUM)
+   {
+       WLANTL_ClearRoamStatsTillIndex(pTLCb, ROAM_MAX_INDEX_NUM - 1);
+       pTLCb->gDsRxRoamStats.index = -1;
+   }
+   /* Clear the stats from current index till new index */
+   WLANTL_ClearRoamStatsTillIndex(pTLCb, newIndex);
+}
+
+/*
+ * This API implements a circular buffer to store rate stats for a station to
+ * trigger PER based roam scan.
+ * API will start monitoring only if DUT gets continues packets which are below
+ * configured rate. In the upper rates, this should have minimal effect on data
+ * throughput.
+ *
+ * This API will store stats in a circular buffer of size ROAM_MAX_INDEX_NUM
+ * where each index will have time duration of ROAM_PER_INDEX_TIME.
+ * Using a buffer instead of counter will help to maintain stats of time
+ * duration ROAM_PER_INDEX_TIME * ROAM_MAX_INDEX_NUM. Whenever host gets a new
+ * packet, it will remove last ROAM_PER_INDEX_TIME duration of packets from
+ * global entry and index entry and fill new data.
+ *
+ * Global stats of data also be maintained so that host need not to parse whole
+ * buffer while checking the trigger condition
+ * Each of the index will be having the packets stats at duration of
+ * ROAM_PER_INDEX_TIME from the first packet which arrived in that.
+ * Global index will be used to calculate new index position to fill once host
+ * gets a packet.
+ */
+static void WLANTL_updatePERStats(WLANTL_CbType *pTLCb,
+                                  v_U8_t rateIndex)
+{
+   v_U8_t incrementCnt;
+   v_U64_t currentTime, timeDifference;
+
+   /*
+    * Host will start monitoring Rx rates only if it gets
+    * MIN_PKTS_TO_START_MONTIOR number of pkts continuously below min rate
+    * This will make sure we never do this much processing in high
+    * rates/throughput cases
+    */
+
+   if(pTLCb->gDsRxRoamStats.intialPktToStart < MIN_PKTS_TO_START_MONTIOR)
+   {
+       if (gTLRateInfo[rateIndex].phyRate < pTLCb->gDsRxRoamStats.minRate)
+          pTLCb->gDsRxRoamStats.intialPktToStart++;
+       else
+          pTLCb->gDsRxRoamStats.intialPktToStart = 0;
+       return;
+   }
+
+   currentTime = jiffies_to_msecs(jiffies);
+   /*
+    * scan was triggered in last timeToWait time duration
+    * Wait for timeToWait before monitoring again.
+    */
+   if((currentTime - pTLCb->gDsRxRoamStats.lastTriggerTime) <
+       pTLCb->gDsRxRoamStats.timeToWait)
+       return;
+
+   /* paket above max rate, clear current stats and montior again */
+   if (gTLRateInfo[rateIndex].phyRate >=
+           pTLCb->gDsRxRoamStats.maxRate)
+   {
+       WLANTL_ClearAllRoamStats(pTLCb);
+       /* Stop any PER based scan if going on */
+       pTLCb->gDsRxRoamStats.
+                  triggerRoamScanfn(pTLCb->gDsRxRoamStats.hHal, 0);
+       return;
+   }
+
+   timeDifference = currentTime -
+       pTLCb->gDsRxRoamStats.rxRoamStats[pTLCb->gDsRxRoamStats.index].time;
+
+   if (timeDifference)
+       incrementCnt = do_div(timeDifference, ROAM_PER_INDEX_TIME);
+
+   /* More that ROAM_PER_INDEX_TIME has esclapsed,
+    * fill data at new index */
+   if (incrementCnt)
+   {
+       if (incrementCnt > ROAM_MAX_INDEX_NUM)
+       {
+           /*
+            * Clear all stats, these are older than
+            * ROAM_MAX_INDEX_NUM * ROAM_PER_INDEX_TIME (Max buffer time)
+            */
+           WLANTL_ClearAllRoamStats(pTLCb);
+           pTLCb->gDsRxRoamStats.index = 0;
+       }
+       else
+           WLANTL_ClearOldPERStats(pTLCb, incrementCnt);
+
+       pTLCb->gDsRxRoamStats.rxRoamStats
+                    [pTLCb->gDsRxRoamStats.index].time = currentTime;
+   }
+
+   /* If pkt rate below minRate, increment low pkts counts */
+   if (gTLRateInfo[rateIndex].phyRate <
+           pTLCb->gDsRxRoamStats.minRate)
+   {
+       pTLCb->gDsRxRoamStats.
+           rxRoamStats[pTLCb->gDsRxRoamStats.index].
+               lowRateRxPacketsRcvd++;
+       pTLCb->gDsRxRoamStats.lowRatePkt++;
+   }
+   /* Increment total pkts counts */
+   pTLCb->gDsRxRoamStats.
+           rxRoamStats[pTLCb->gDsRxRoamStats.index].totalPktRcvd++;
+   pTLCb->gDsRxRoamStats.totalPkt++;
+
+   /* Check if we have reached threshold value to trigger a roam scan */
+   if ((pTLCb->gDsRxRoamStats.totalPkt != 0) &&
+       (pTLCb->gDsRxRoamStats.totalPkt >
+                pTLCb->gDsRxRoamStats.minPktRequired)&&
+       ((pTLCb->gDsRxRoamStats.lowRatePkt * 100) >
+                (pTLCb->gDsRxRoamStats.totalPkt *
+       pTLCb->gDsRxRoamStats.minPercentage)))
+   {
+       /* callback handler to trigger a roam scan */
+       if (pTLCb->gDsRxRoamStats.triggerRoamScanfn)
+           pTLCb->gDsRxRoamStats.
+                   triggerRoamScanfn(pTLCb->gDsRxRoamStats.hHal, 1);
+
+       VOS_TRACE(VOS_MODULE_ID_TL, VOS_TRACE_LEVEL_DEBUG,
+           "PER Roam: triggerring roam scan totalPkt =%lu lowRatePkt %lu minPktRequired %u minPercentage %d",
+           (long unsigned int) pTLCb->gDsRxRoamStats.totalPkt,
+           (long unsigned int) pTLCb->gDsRxRoamStats.lowRatePkt,
+           (unsigned int) pTLCb->gDsRxRoamStats.minPktRequired,
+           pTLCb->gDsRxRoamStats.minPercentage);
+
+       WLANTL_ClearAllRoamStats(pTLCb);
+       /*  save current time as last trigger time */
+       pTLCb->gDsRxRoamStats.lastTriggerTime = currentTime;
+   }
+}
+#endif
+
 /*==========================================================================
   FUNCTION    WLANTL_STARxAuth
 
@@ -8668,6 +9080,10 @@ WLANTL_STARxAuth
    v_U8_t                   ucMPDUHLen;
    v_U16_t                  usActualHLen = 0;   
    v_U8_t                   ucTid;
+#ifdef WLAN_FEATURE_ROAM_SCAN_OFFLOAD
+   v_U8_t                   rxRate;
+   v_U8_t                   type;
+#endif
 #ifdef FEATURE_WLAN_WAPI
    v_U16_t                  usEtherType = 0;
    tSirMacMgmtHdr           *hdr;
@@ -8726,6 +9142,10 @@ WLANTL_STARxAuth
   usMPDULen     = (v_U16_t)WDA_GET_RX_MPDU_LEN(aucBDHeader);
   ucMPDUHLen    = (v_U8_t)WDA_GET_RX_MPDU_HEADER_LEN(aucBDHeader);
   ucTid         = (v_U8_t)WDA_GET_RX_TID(aucBDHeader);
+#ifdef WLAN_FEATURE_ROAM_SCAN_OFFLOAD
+  rxRate        = (v_U8_t)WDA_GET_RX_MAC_RATE_IDX(aucBDHeader);
+  type          = (v_U8_t)WDA_GET_RX_TYPE(aucBDHeader);
+#endif
 
   /* Fix for a hardware bug. 
    * H/W does not update the tid field in BD header for BAR frames.
@@ -8843,6 +9263,14 @@ WLANTL_STARxAuth
     return VOS_STATUS_E_FAILURE;
   }
 
+#ifdef WLAN_FEATURE_ROAM_SCAN_OFFLOAD
+  if (pTLCb->gDsRxRoamStats.running &&
+     (ucSTAId == pTLCb->gDsRxRoamStats.staId) &&
+     (rxRate < WLANTL_MAX_RATE_NUM) && (type == SIR_MAC_DATA_FRAME))
+  {
+      WLANTL_updatePERStats(pTLCb, rxRate);
+  }
+#endif
   /*------------------------------------------------------------------------
     Check if AMSDU and send for processing if so
    ------------------------------------------------------------------------*/
@@ -11025,7 +11453,8 @@ WLAN_TLAPGetNextTxIds
           continue;
         }
 
-        if (WLANTL_STA_AUTHENTICATED != pTLCb->atlSTAClients[ucNextSTA]->tlState)
+        if ((WLANTL_STA_AUTHENTICATED != pTLCb->atlSTAClients[ucNextSTA]->tlState)
+           || (pTLCb->atlSTAClients[ucNextSTA]->disassoc_progress == VOS_TRUE ))
         {
           TLLOG2(VOS_TRACE( VOS_MODULE_ID_TL, VOS_TRACE_LEVEL_INFO_HIGH,
                  "%s Sta %d not in auth state so skipping it.",
@@ -11693,7 +12122,7 @@ WLANTL_CleanSTA
   ptlSTAClient->wSTADesc.ucSwFrameTXXlation = 0;
   ptlSTAClient->wSTADesc.ucSwFrameRXXlation = 0;
   ptlSTAClient->wSTADesc.ucProtectedFrame = 0;
-
+  ptlSTAClient->disassoc_progress = VOS_FALSE;
   /*-------------------------------------------------------------------------
     AMSDU information for the STA
    -------------------------------------------------------------------------*/
@@ -13277,3 +13706,44 @@ WLANTL_GetSTALinkCapacity
 
     return VOS_STATUS_SUCCESS;
 }/* WLANTL_GetSTALinkCapacity */
+
+/*
+ * WLANTL_ResetRxSSN - reset last rx ssn
+ * @pvosGCtx: global vos context
+ * @ucSTAId: station id
+ *
+ * This function resets the last ssn of all tids of the station
+ * for whom BA reorder session exists.
+ *
+ * Return: none
+ */
+void WLANTL_ResetRxSSN(v_PVOID_t pvosGCtx, uint8_t ucSTAId)
+{
+   WLANTL_CbType*  pTLCb = NULL;
+   WLANTL_STAClientType* pClientSTA = NULL;
+   uint8_t i;
+
+  if (WLANTL_STA_ID_INVALID(ucSTAId)) {
+    TLLOGE(VOS_TRACE( VOS_MODULE_ID_TL, VOS_TRACE_LEVEL_ERROR,
+             "WLAN TL:Invalid station id requested WLANTL_ResetRxSSN"));
+    return;
+  }
+
+  pTLCb = VOS_GET_TL_CB(pvosGCtx);
+  if (NULL == pTLCb) {
+    TLLOGE(VOS_TRACE( VOS_MODULE_ID_TL, VOS_TRACE_LEVEL_ERROR,
+         "WLAN TL:Invalid TL pointer from pvosGCtx WLANTL_ResetRxSSN"));
+    return;
+  }
+
+  pClientSTA = pTLCb->atlSTAClients[ucSTAId];
+
+  for (i = 0; i < WLAN_MAX_TID ; i++) {
+     if (0 == pClientSTA->atlBAReorderInfo[i].ucExists) {
+        continue;
+     }
+     TLLOG1(VOS_TRACE(VOS_MODULE_ID_TL, VOS_TRACE_LEVEL_INFO,
+           "WLAN TL: Last RxSSN reset to zero for tid %d", i));
+     pClientSTA->atlBAReorderInfo[i].LastSN = 0;
+  }
+}

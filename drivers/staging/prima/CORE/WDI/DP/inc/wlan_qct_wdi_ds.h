@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013, 2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -168,6 +168,7 @@ typedef struct
 #ifdef WLAN_FEATURE_ROAM_SCAN_OFFLOAD
    wpt_uint32 offloadScanLearn;
    wpt_uint32 roamCandidateInd;
+   wpt_uint32 perRoamCndInd;
 #endif
 #ifdef WLAN_FEATURE_EXTSCAN
    wpt_uint32 extscanBuffer;

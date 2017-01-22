@@ -5156,8 +5156,13 @@ static int __wlan_hdd_cfg80211_firmware_roaming(struct wiphy *wiphy,
 
     //Update roaming
     status = sme_ConfigFwrRoaming((tHalHandle)(pHddCtx->hHal), isFwrRoamEnabled);
+    if (!HAL_STATUS_SUCCESS(status)) {
+        hddLog(LOGE,
+           FL("sme_ConfigFwrRoaming failed (err=%d)"), status);
+        return -EINVAL;
+    }
     EXIT();
-    return status;
+    return 0;
 }
 
 static int wlan_hdd_cfg80211_firmware_roaming(struct wiphy *wiphy,
@@ -5897,16 +5902,15 @@ void wlan_hdd_cfg80211_update_reg_info(struct wiphy *wiphy)
        }
     }
 }
-
 /* This function registers for all frame which supplicant is interested in */
 void wlan_hdd_cfg80211_register_frames(hdd_adapter_t* pAdapter)
 {
     tHalHandle hHal = WLAN_HDD_GET_HAL_CTX(pAdapter);
     /* Register for all P2P action, public action etc frames */
     v_U16_t type = (SIR_MAC_MGMT_FRAME << 2) | ( SIR_MAC_MGMT_ACTION << 4);
-
     ENTER();
-
+    /* Register frame indication call back */
+    sme_register_mgmt_frame_ind_callback(hHal, hdd_indicate_mgmt_frame);
    /* Right now we are registering these frame when driver is getting
       initialized. Once we will move to 2.6.37 kernel, in which we have
       frame register ops, we will move this code as a part of that */
@@ -9856,7 +9860,13 @@ wlan_hdd_cfg80211_inform_bss_frame( hdd_adapter_t *pAdapter,
     qie_age->oui_2      = QCOM_OUI2;
     qie_age->oui_3      = QCOM_OUI3;
     qie_age->type       = QCOM_VENDOR_IE_AGE_TYPE;
-    qie_age->age        = vos_timer_get_system_ticks() - bss_desc->nReceivedTime;
+    /* Lowi expects the timestamp of bss in units of 1/10 ms. In driver all
+     * bss related timestamp is in units of ms. Due to this when scan results
+     * are sent to lowi the scan age is high.To address this, send age in units
+     * of 1/10 ms.
+     */
+    qie_age->age        = (vos_timer_get_system_time() -
+                                   bss_desc->nReceivedTime)/10;
 #endif
 
     memcpy(mgmt->u.probe_resp.variable, ie, ie_length);
@@ -11809,13 +11819,14 @@ int wlan_hdd_cfg80211_set_ie( hdd_adapter_t *pAdapter,
                 pWextState->roamProfile.nRSNReqIELength = eLen + 2; //ie_len;
                 break;
 
-                /* Appending Extended Capabilities with Interworking bit set
-                 * in Assoc Req.
+                /* Appending extended capabilities with Interworking or
+                 * bsstransition bit set in Assoc Req.
                  *
                  * In assoc req this EXT Cap will only be taken into account if
-                 * interworkingService bit is set to 1. Currently
-                 * driver is only interested in interworkingService capability
-                 * from supplicant. If in future any other EXT Cap info is
+                 * interworkingService or bsstransition bit is set to 1.
+                 * Driver is only interested in interworkingService and
+                 * bsstransition capability from supplicant.
+                 * If in future any other EXT Cap info is
                  * required from supplicat, it needs to be handled while
                  * sending Assoc Req in LIM.
                  */
@@ -12077,47 +12088,73 @@ int wlan_hdd_cfg80211_set_privacy( hdd_adapter_t *pAdapter,
 static int wlan_hdd_try_disconnect( hdd_adapter_t *pAdapter )
 {
     long ret = 0;
+    int status, result = 0;
     hdd_station_ctx_t *pHddStaCtx;
     eMib_dot11DesiredBssType connectedBssType;
+    hdd_context_t *pHddCtx = WLAN_HDD_GET_CTX(pAdapter);
 
+    ret = wlan_hdd_validate_context(pHddCtx);
+    if (0 != ret)
+    {
+        return ret;
+    }
     pHddStaCtx = WLAN_HDD_GET_STATION_CTX_PTR(pAdapter);
 
     hdd_connGetConnectedBssType(pHddStaCtx,&connectedBssType );
 
     if((eMib_dot11DesiredBssType_independent == connectedBssType) ||
       (eConnectionState_Associated == pHddStaCtx->conn_info.connState) ||
+      (eConnectionState_Connecting == pHddStaCtx->conn_info.connState) ||
       (eConnectionState_IbssConnected == pHddStaCtx->conn_info.connState))
     {
+        spin_lock_bh(&pAdapter->lock_for_active_session);
+        if (eConnectionState_Associated ==  pHddStaCtx->conn_info.connState)
+        {
+            wlan_hdd_decr_active_session(pHddCtx, pAdapter->device_mode);
+        }
+        spin_unlock_bh(&pAdapter->lock_for_active_session);
+        hdd_connSetConnectionState(pHddStaCtx,
+                     eConnectionState_Disconnecting);
         /* Issue disconnect to CSR */
         INIT_COMPLETION(pAdapter->disconnect_comp_var);
-        if( eHAL_STATUS_SUCCESS ==
-              sme_RoamDisconnect( WLAN_HDD_GET_HAL_CTX(pAdapter),
+        status = sme_RoamDisconnect(WLAN_HDD_GET_HAL_CTX(pAdapter),
                         pAdapter->sessionId,
-                        eCSR_DISCONNECT_REASON_UNSPECIFIED ) )
-        {
-            ret = wait_for_completion_interruptible_timeout(
+                        eCSR_DISCONNECT_REASON_UNSPECIFIED);
+        if(eHAL_STATUS_CMD_NOT_QUEUED == status) {
+            hddLog(LOG1,
+             FL("Already disconnected or connect was in sme/roam pending list and removed by disconnect"));
+        } else if ( 0 != status ) {
+            hddLog(LOGE,
+               FL("csrRoamDisconnect failure, returned %d"),
+               (int)status );
+            result = -EINVAL;
+            goto disconnected;
+        }
+        ret = wait_for_completion_timeout(
                          &pAdapter->disconnect_comp_var,
                          msecs_to_jiffies(WLAN_WAIT_TIME_DISCONNECT));
-            if (0 >=  ret)
-            {
-                hddLog(LOGE, FL("Failed to receive disconnect event"));
-                return -EALREADY;
-            }
+        if (!ret && ( eHAL_STATUS_CMD_NOT_QUEUED != status)) {
+            hddLog(LOGE,
+              "%s: Failed to disconnect, timed out", __func__);
+            result = -ETIMEDOUT;
         }
     }
     else if(eConnectionState_Disconnecting == pHddStaCtx->conn_info.connState)
     {
-        ret = wait_for_completion_interruptible_timeout(
+        ret = wait_for_completion_timeout(
                      &pAdapter->disconnect_comp_var,
                      msecs_to_jiffies(WLAN_WAIT_TIME_DISCONNECT));
-        if (0 >= ret)
+        if (!ret)
         {
             hddLog(LOGE, FL("Failed to receive disconnect event"));
-            return -EALREADY;
+            result = -ETIMEDOUT;
         }
     }
-
-    return 0;
+disconnected:
+    hddLog(LOG1,
+          FL("Set HDD connState to eConnectionState_NotConnected"));
+    pHddStaCtx->conn_info.connState = eConnectionState_NotConnected;
+    return result;
 }
 
 /*
@@ -12158,10 +12195,6 @@ static int __wlan_hdd_cfg80211_connect( struct wiphy *wiphy,
         return status;
     }
 
-    if (vos_max_concurrent_connections_reached()) {
-        hddLog(VOS_TRACE_LEVEL_INFO, FL("Reached max concurrent connections"));
-        return -ECONNREFUSED;
-    }
 
 #ifdef WLAN_BTAMP_FEATURE
     //Infra connect not supported when AMP traffic is on.
@@ -12189,6 +12222,11 @@ static int __wlan_hdd_cfg80211_connect( struct wiphy *wiphy,
                 " connection"));
         return -EALREADY;
     }
+    /* Check for max concurrent connections after doing disconnect if any*/
+    if (vos_max_concurrent_connections_reached()) {
+        hddLog(VOS_TRACE_LEVEL_INFO, FL("Reached max concurrent connections"));
+        return -ECONNREFUSED;
+    }
 
     /*initialise security parameters*/
     status = wlan_hdd_cfg80211_set_privacy(pAdapter, req);
@@ -12199,6 +12237,21 @@ static int __wlan_hdd_cfg80211_connect( struct wiphy *wiphy,
                 __func__);
         return status;
     }
+
+    if (pHddCtx->spoofMacAddr.isEnabled)
+    {
+        hddLog(VOS_TRACE_LEVEL_INFO,
+                        "%s: MAC Spoofing enabled ", __func__);
+        /* Updating SelfSta Mac Addr in TL which will be used to get staidx
+         * to fill TxBds for probe request during SSID scan which may happen
+         * as part of connect command
+         */
+        status = WLANTL_updateSpoofMacAddr(pHddCtx->pvosContext,
+            &pHddCtx->spoofMacAddr.randomMacAddr, &pAdapter->macAddressCurrent);
+        if (status != VOS_STATUS_SUCCESS)
+            return -ECONNREFUSED;
+    }
+
     if ( req->channel )
     {
         status = wlan_hdd_cfg80211_connect_start(pAdapter, req->ssid,
@@ -12302,40 +12355,42 @@ int wlan_hdd_disconnect( hdd_adapter_t *pAdapter, u16 reason )
     /*issue disconnect*/
     status = sme_RoamDisconnect( WLAN_HDD_GET_HAL_CTX(pAdapter),
                                  pAdapter->sessionId, reason);
-     if(eHAL_STATUS_CMD_NOT_QUEUED == status)
-     {
-        hddLog(VOS_TRACE_LEVEL_INFO,
-             FL("status = %d, already disconnected"),
-                     (int)status );
-
+    if(eHAL_STATUS_CMD_NOT_QUEUED == status)
+    {
+        hddLog(LOG1,
+            FL("Already disconnected or connect was in sme/roam pending list and removed by disconnect"));
     }
     else if ( 0 != status )
     {
-        hddLog(VOS_TRACE_LEVEL_ERROR,
-               "%s csrRoamDisconnect failure, returned %d",
-               __func__, (int)status );
+        hddLog(LOGE,
+               FL("csrRoamDisconnect failure, returned %d"),
+               (int)status);
         result = -EINVAL;
         goto disconnected;
     }
-    ret = wait_for_completion_interruptible_timeout(
+    ret = wait_for_completion_timeout(
                 &pAdapter->disconnect_comp_var,
                 msecs_to_jiffies(WLAN_WAIT_TIME_DISCONNECT));
-    if (!ret && ( eHAL_STATUS_CMD_NOT_QUEUED != status ))
+    if (!ret && (eHAL_STATUS_CMD_NOT_QUEUED != status))
     {
-        hddLog(VOS_TRACE_LEVEL_ERROR,
+        hddLog(LOGE,
               "%s: Failed to disconnect, timed out", __func__);
+        VOS_BUG(0);
         result = -ETIMEDOUT;
     }
-    else if (ret == -ERESTARTSYS)
-    {
-        hddLog(VOS_TRACE_LEVEL_ERROR,
-               "%s: Failed to disconnect, wait interrupted", __func__);
-        result = -ERESTARTSYS;
-    }
 disconnected:
-    VOS_TRACE( VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
+     hddLog(LOG1,
               FL("Set HDD connState to eConnectionState_NotConnected"));
     pHddStaCtx->conn_info.connState = eConnectionState_NotConnected;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
+    /* Sending disconnect event to userspace for kernel version < 3.11
+     * is handled by __cfg80211_disconnect call to __cfg80211_disconnected
+     */
+    hddLog(LOG1, FL("Send disconnected event to userspace"));
+
+    wlan_hdd_cfg80211_indicate_disconnect(pAdapter->dev, true,
+                                          WLAN_REASON_UNSPECIFIED);
+#endif
 
     EXIT();
     return result;
@@ -14755,6 +14810,11 @@ static int __wlan_hdd_cfg80211_sched_scan_stop(struct wiphy *wiphy,
     MTRACE(vos_trace(VOS_MODULE_ID_HDD,
                      TRACE_CODE_HDD_CFG80211_SCHED_SCAN_STOP,
                      pAdapter->sessionId, pAdapter->device_mode));
+
+    INIT_COMPLETION(pAdapter->pno_comp_var);
+    pnoRequest.statusCallback = hdd_cfg80211_sched_scan_start_status_cb;
+    pnoRequest.callbackContext = pAdapter;
+    pAdapter->pno_req_status = 0;
     status = sme_SetPreferredNetworkList(hHal, &pnoRequest,
                                 pAdapter->sessionId,
                                 NULL, pAdapter);
@@ -14765,7 +14825,22 @@ static int __wlan_hdd_cfg80211_sched_scan_stop(struct wiphy *wiphy,
         ret = -EINVAL;
         goto error;
     }
-    pHddCtx->isPnoEnable = FALSE;
+    ret = wait_for_completion_timeout(
+                 &pAdapter->pno_comp_var,
+                  msecs_to_jiffies(WLAN_WAIT_TIME_PNO));
+    if (0 >= ret)
+    {
+        // Did not receive the response for PNO disable in time.
+        // Assuming the PNO disable was success.
+        // Returning error from here, because we timeout, results
+        // in side effect of Wifi (Wifi Setting) not to work.
+        VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+                  FL("Timed out waiting for PNO to be disabled"));
+        ret = 0;
+    }
+
+    ret = pAdapter->pno_req_status;
+    pHddCtx->isPnoEnable = (ret == 0) ? FALSE : TRUE;
 
 error:
     VOS_TRACE( VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
@@ -15652,6 +15727,9 @@ static int __wlan_hdd_cfg80211_tdls_oper(struct wiphy *wiphy, struct net_device 
                         }
                     }
                 }
+                /* stop TCP delack timer if TDLS is enable  */
+                set_bit(WLAN_TDLS_MODE, &pHddCtx->mode);
+                hdd_manage_delack_timer(pHddCtx);
             }
             break;
         case NL80211_TDLS_DISABLE_LINK:
@@ -15792,6 +15870,11 @@ static int __wlan_hdd_cfg80211_tdls_oper(struct wiphy *wiphy, struct net_device 
                     mutex_unlock(&pHddCtx->tdls_lock);
                     VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
                               "%s: TDLS Peer Station doesn't exist.", __func__);
+                }
+                if (numCurrTdlsPeers == 0) {
+                   /* start TCP delack timer if TDLS is disable  */
+                    clear_bit(WLAN_TDLS_MODE, &pHddCtx->mode);
+                    hdd_manage_delack_timer(pHddCtx);
                 }
             }
             break;

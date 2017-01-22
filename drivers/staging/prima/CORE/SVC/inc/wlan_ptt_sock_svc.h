@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2015 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -89,6 +89,7 @@
  * Payload     : LEN_PAYLOAD bytes
 */
 int ptt_sock_activate_svc(void *pAdapter);
+int ptt_sock_deactivate_svc(hdd_context_t *pHddCtx);
 int ptt_sock_send_msg_to_app(tAniHdr *wmsg, int radio, int src_mod, int pid, int flag);
 
 /*

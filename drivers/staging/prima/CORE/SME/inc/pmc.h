@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013, 2016 The Linux Foundation. All rights reserved.
  *
  * Previously licensed under the ISC license by Qualcomm Atheros, Inc.
  *
@@ -146,6 +146,8 @@ typedef struct sPmcInfo
     tANI_BOOLEAN bmpsRequestQueued; /*If a enter BMPS request is queued*/
     tANI_BOOLEAN smpsEnabled;  /* TRUE if SMPS is enabled */
     tANI_BOOLEAN remainInPowerActiveTillDHCP;  /* Remain in Power active till DHCP completes */
+    /* Remain in Power active till set key is done */
+    bool full_power_till_set_key;
     tANI_U32 remainInPowerActiveThreshold;  /*Remain in Power active till DHCP threshold*/
     tANI_U32 impsPeriod;  /* amount of time to remain in IMPS */
     void (*impsCallbackRoutine) (void *callbackContext, eHalStatus status);  /* routine to call when IMPS period

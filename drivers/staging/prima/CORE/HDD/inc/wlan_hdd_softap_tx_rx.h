@@ -64,6 +64,17 @@
   -------------------------------------------------------------------------*/ 
 
 /**============================================================================
+  @brief hdd_softap_get_connected_sta() - Function to get numbeer of connected
+  stations with softap
+
+  @param pHostapdAdapter      : [in]  pointer to  saftap adapter
+
+  @return         :  Number of connected peer with softap
+  ===========================================================================*/
+
+v_U8_t hdd_softap_get_connected_sta(hdd_adapter_t *pHostapdAdapter);
+
+/**============================================================================
   @brief hdd_softap_hard_start_xmit() - Function registered with the Linux OS for 
   transmitting packets
 
