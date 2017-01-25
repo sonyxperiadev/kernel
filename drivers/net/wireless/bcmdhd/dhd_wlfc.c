@@ -2458,7 +2458,7 @@ static void
 _dhd_wlfc_reorderinfo_indicate(uint8 *val, uint8 len, uchar *info_buf, uint *info_len)
 {
 	if (info_len) {
-		if (info_buf) {
+		if (info_buf && (len <= WLHOST_REORDERDATA_TOTLEN)) {
 			bcopy(val, info_buf, len);
 			*info_len = len;
 		}
