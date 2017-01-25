@@ -204,21 +204,11 @@ int ext4_inherit_context(struct inode *parent, struct inode *child)
 		return -ENOKEY;
 
 	ctx.format = EXT4_ENCRYPTION_CONTEXT_FORMAT_V1;
-	if (DUMMY_ENCRYPTION_ENABLED(EXT4_SB(parent->i_sb))) {
-		ctx.contents_encryption_mode = EXT4_ENCRYPTION_MODE_AES_256_XTS;
-		ctx.filenames_encryption_mode =
-			EXT4_ENCRYPTION_MODE_AES_256_CTS;
-		ctx.flags = 0;
-		memset(ctx.master_key_descriptor, 0x42,
-		       EXT4_KEY_DESCRIPTOR_SIZE);
-		res = 0;
-	} else {
-		ctx.contents_encryption_mode = ci->ci_data_mode;
-		ctx.filenames_encryption_mode = ci->ci_filename_mode;
-		ctx.flags = ci->ci_flags;
-		memcpy(ctx.master_key_descriptor, ci->ci_master_key,
-		       EXT4_KEY_DESCRIPTOR_SIZE);
-	}
+	ctx.contents_encryption_mode = ci->ci_data_mode;
+	ctx.filenames_encryption_mode = ci->ci_filename_mode;
+	ctx.flags = ci->ci_flags;
+	memcpy(ctx.master_key_descriptor, ci->ci_master_key,
+	       EXT4_KEY_DESCRIPTOR_SIZE);
 	get_random_bytes(ctx.nonce, EXT4_KEY_DERIVATION_NONCE_SIZE);
 	res = ext4_xattr_set(child, EXT4_XATTR_INDEX_ENCRYPTION,
 			     EXT4_XATTR_NAME_ENCRYPTION_CONTEXT, &ctx,
