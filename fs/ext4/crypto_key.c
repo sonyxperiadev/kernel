@@ -8,6 +8,7 @@
  * Written by Michael Halcrow, Ildar Muslukhov, and Uday Savagaonkar, 2015.
  */
 
+#include <crypto/algapi.h>
 #include <keys/encrypted-type.h>
 #include <keys/user-type.h>
 #include <linux/random.h>
@@ -84,16 +85,78 @@ out:
 	return res;
 }
 
+/*
+ * Since we don't do key derivation for ICE-encrypted files, typically there
+ * will be many such files that use the same raw key.  To save memory and reduce
+ * the number of copies we make of the raw key, these files can share their
+ * ext4_crypt_info structures.  Implement this using a simple hash table, keyed
+ * by master key descriptor; but all other parts of the ext4_crypt_info,
+ * including the key itself, must also match to actually share an entry.
+ */
+static DEFINE_HASHTABLE(ext4_crypt_infos, 6); /* 6 bits = 64 buckets */
+static DEFINE_SPINLOCK(ext4_crypt_infos_lock);
+
 void ext4_free_crypt_info(struct ext4_crypt_info *ci)
 {
 	if (!ci)
 		return;
 
+	if (atomic_read(&ci->ci_dedup_refcnt) != 0) {
+		/* dropping reference to deduplicated key */
+		if (!atomic_dec_and_lock(&ci->ci_dedup_refcnt,
+					 &ext4_crypt_infos_lock))
+			return;
+		hash_del(&ci->ci_dedup_node);
+		spin_unlock(&ext4_crypt_infos_lock);
+	}
 	if (ci->ci_keyring_key)
 		key_put(ci->ci_keyring_key);
 	crypto_free_ablkcipher(ci->ci_ctfm);
 	memset(ci, 0, sizeof(*ci));
 	kmem_cache_free(ext4_crypt_info_cachep, ci);
+}
+
+
+static struct ext4_crypt_info *ext4_dedup_crypt_info(struct ext4_crypt_info *ci)
+{
+	unsigned long hash_key;
+	struct ext4_crypt_info *existing;
+
+	BUILD_BUG_ON(sizeof(hash_key) > sizeof(ci->ci_master_key));
+	memcpy(&hash_key, ci->ci_master_key, sizeof(hash_key));
+
+	spin_lock(&ext4_crypt_infos_lock);
+
+	hash_for_each_possible(ext4_crypt_infos, existing, ci_dedup_node,
+			       hash_key) {
+		if (existing->ci_data_mode != ci->ci_data_mode)
+			continue;
+		if (existing->ci_filename_mode != ci->ci_filename_mode)
+			continue;
+		if (existing->ci_flags != ci->ci_flags)
+			continue;
+		if (existing->ci_ctfm != ci->ci_ctfm)
+			continue;
+		if (existing->ci_keyring_key != ci->ci_keyring_key)
+			continue;
+		if (crypto_memneq(existing->ci_master_key, ci->ci_master_key,
+				  sizeof(ci->ci_master_key)))
+			continue;
+		if (crypto_memneq(existing->ci_raw_key, ci->ci_raw_key,
+				  sizeof(ci->ci_raw_key)))
+			continue;
+		/* using existing copy of key */
+		atomic_inc(&existing->ci_dedup_refcnt);
+		spin_unlock(&ext4_crypt_infos_lock);
+		ext4_free_crypt_info(ci);
+		return existing;
+	}
+
+	/* inserting new key */
+	atomic_set(&ci->ci_dedup_refcnt, 1);
+	hash_add(ext4_crypt_infos, &ci->ci_dedup_node, hash_key);
+	spin_unlock(&ext4_crypt_infos_lock);
+	return ci;
 }
 
 void ext4_free_encryption_info(struct inode *inode,
@@ -176,6 +239,7 @@ retry:
 	crypt_info->ci_keyring_key = NULL;
 	memcpy(crypt_info->ci_master_key, ctx.master_key_descriptor,
 	       sizeof(crypt_info->ci_master_key));
+	atomic_set(&crypt_info->ci_dedup_refcnt, 0);
 	if (S_ISDIR(inode->i_mode) || S_ISLNK(inode->i_mode))
 		for_fname = 1;
 	else if (!S_ISREG(inode->i_mode))
@@ -250,6 +314,7 @@ retry:
 	} else if (ext4_is_ice_enabled()) {
 		memcpy(crypt_info->ci_raw_key, master_key->raw,
 		       EXT4_MAX_KEY_SIZE);
+		crypt_info = ext4_dedup_crypt_info(crypt_info);
 		res = 0;
 	} else {
 		pr_warn("%s: ICE support not available\n", __func__);
