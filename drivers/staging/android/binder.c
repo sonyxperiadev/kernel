@@ -42,6 +42,18 @@
 #include "binder_alloc.h"
 #include "binder_trace.h"
 
+/*
+ * Some apps are not ready for full fine-grained locks and
+ * rely on the timing of the global lock implementation.
+ * To work around this, we can turn on a per-proc mutex
+ * that serializes the threads of a given proc.
+ *
+ * This could be modified to be a per-proc setting via
+ * ioctl so apps that are FGL-safe can turn off this
+ * serialization.
+ */
+#define BINDER_PROC_THREAD_SERIALIZATION
+
 static HLIST_HEAD(binder_deferred_list);
 static DEFINE_MUTEX(binder_deferred_lock);
 
@@ -347,6 +359,9 @@ struct binder_seq_node {
 };
 
 struct binder_proc {
+#ifdef BINDER_PROC_THREAD_SERIALIZATION
+	struct mutex mutex;
+#endif
 	struct hlist_node proc_node;
 	struct rb_root threads;
 	struct rb_root nodes;
@@ -407,6 +422,21 @@ struct binder_thread {
 	wait_queue_head_t wait;
 	struct binder_stats stats;
 };
+
+#ifdef BINDER_PROC_THREAD_SERIALIZATION
+static inline void binder_serialize_threads(struct binder_proc *proc)
+{
+	mutex_lock(&proc->mutex);
+}
+
+static inline void binder_unserialize_threads(struct binder_proc *proc)
+{
+	mutex_unlock(&proc->mutex);
+}
+#else
+static inline void binder_serialize_threads(struct binder_proc *proc) {}
+static inline void binder_unserialize_threads(struct binder_proc *proc) {}
+#endif
 
 static void binder_init_worklist(struct binder_worklist *wlist)
 {
@@ -2634,6 +2664,8 @@ retry:
 	if (wait_for_proc_work)
 		atomic_inc(&proc->ready_threads);
 
+	binder_unserialize_threads(proc);
+
 	trace_binder_wait_for_work(wait_for_proc_work,
 				   !!thread->transaction_stack,
 				   !binder_worklist_empty(&thread->todo));
@@ -2677,6 +2709,8 @@ retry:
 
 	if (ret)
 		return ret;
+
+	binder_serialize_threads(proc);
 
 	while (1) {
 		uint32_t cmd;
@@ -3449,6 +3483,7 @@ static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	if (ret)
 		goto err_wait_event;
 
+	binder_serialize_threads(proc);
 	thread = binder_get_thread(proc);
 	if (thread == NULL) {
 		ret = -ENOMEM;
@@ -3512,6 +3547,7 @@ err:
 		zombie_cleanup_check(proc);
 		binder_put_thread(thread);
 	}
+	binder_unserialize_threads(proc);
 	wait_event_interruptible(binder_user_error_wait, binder_stop_on_user_error < 2);
 	if (ret && ret != -ERESTARTSYS)
 		pr_info("%d:%d ioctl %x %lx returned %d\n", proc->pid, current->pid, cmd, arg, ret);
@@ -3610,6 +3646,9 @@ static int binder_open(struct inode *nodp, struct file *filp)
 	get_task_struct(current);
 	proc->tsk = current;
 	binder_init_worklist(&proc->todo);
+#ifdef BINDER_PROC_THREAD_SERIALIZATION
+	mutex_init(&proc->mutex);
+#endif
 	init_waitqueue_head(&proc->wait);
 	proc->default_priority = task_nice(current);
 	binder_dev = container_of(filp->private_data, struct binder_device,
@@ -4017,6 +4056,9 @@ static void binder_deferred_func(struct work_struct *work)
 		}
 		mutex_unlock(&binder_deferred_lock);
 
+		if (proc)
+			binder_serialize_threads(proc);
+
 		files = NULL;
 		if (defer & BINDER_DEFERRED_PUT_FILES) {
 			files = proc->files;
@@ -4029,6 +4071,9 @@ static void binder_deferred_func(struct work_struct *work)
 
 		if (defer & BINDER_DEFERRED_RELEASE)
 			binder_deferred_release(proc); /* frees proc */
+
+		if (proc)
+			binder_unserialize_threads(proc);
 
 		if (defer & BINDER_ZOMBIE_CLEANUP)
 			binder_clear_zombies();
