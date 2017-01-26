@@ -1417,8 +1417,10 @@ static int binder_translate_binder(struct flat_binder_object *fp,
 		if (!node)
 			return -ENOMEM;
 
+		binder_proc_lock(node->proc, __LINE__);
 		node->min_priority = fp->flags & FLAT_BINDER_FLAG_PRIORITY_MASK;
 		node->accept_fds = !!(fp->flags & FLAT_BINDER_FLAG_ACCEPTS_FDS);
+		binder_proc_unlock(node->proc, __LINE__);
 	}
 	if (fp->cookie != node->cookie) {
 		binder_user_error("%d:%d sending u%016llx node %d, cookie mismatch %016llx != %016llx\n",
@@ -2234,11 +2236,13 @@ static int binder_thread_write(struct binder_proc *proc,
 					(u64)cookie, (u64)node->cookie);
 				break;
 			}
+			binder_proc_lock(node->proc, __LINE__);
 			if (cmd == BC_ACQUIRE_DONE) {
 				if (node->pending_strong_ref == 0) {
 					binder_user_error("%d:%d BC_ACQUIRE_DONE node %d has no pending acquire request\n",
 						proc->pid, thread->pid,
 						node->debug_id);
+					binder_proc_unlock(node->proc, __LINE__);
 					break;
 				}
 				node->pending_strong_ref = 0;
@@ -2247,10 +2251,12 @@ static int binder_thread_write(struct binder_proc *proc,
 					binder_user_error("%d:%d BC_INCREFS_DONE node %d has no pending increfs request\n",
 						proc->pid, thread->pid,
 						node->debug_id);
+					binder_proc_unlock(node->proc, __LINE__);
 					break;
 				}
 				node->pending_weak_ref = 0;
 			}
+			binder_proc_unlock(node->proc, __LINE__);
 			binder_dec_node(node, cmd == BC_ACQUIRE_DONE, 0);
 			binder_debug(BINDER_DEBUG_USER_REFS,
 				     "%d:%d %s node %d ls %d lw %d\n",
@@ -2305,7 +2311,7 @@ static int binder_thread_write(struct binder_proc *proc,
 				 * Change to BUG_ON once fixed. Until then
 				 * this is benign.
 				 */
-				WARN_ON(!buf_node->has_async_transaction);
+				BUG_ON(!buf_node->has_async_transaction);
 				if (binder_worklist_empty(
 							&buf_node->async_todo))
 					buf_node->has_async_transaction = 0;
