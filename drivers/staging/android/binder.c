@@ -3159,6 +3159,7 @@ static struct binder_thread *binder_get_thread(struct binder_proc *proc)
 		 * Since we gave up the proc lock, we need
 		 * to recalc the insertion point in the rb tree.
 		 */
+		p = &proc->threads.rb_node;
 		while (*p) {
 			parent = *p;
 			thread = rb_entry(parent,
