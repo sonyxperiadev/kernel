@@ -2678,30 +2678,28 @@ retry:
 		binder_set_nice(proc->default_priority);
 		if (non_block) {
 			if (!binder_has_proc_work(proc, thread))
-				return -EAGAIN;
+				ret = -EAGAIN;
 		} else {
 			binder_put_thread(thread);
 			ret = wait_event_freezable_exclusive(proc->wait, binder_has_proc_work(proc, thread));
 			*threadp = thread = binder_get_thread(proc);
 			if (!thread)
-				return -EINVAL;
-			if (ret)
-				return ret;
+				ret = -EINVAL;
 		}
 	} else {
 		if (non_block) {
 			if (!binder_has_thread_work(thread))
-				return -EAGAIN;
+				ret = -EAGAIN;
 		} else {
 			binder_put_thread(thread);
 			ret = wait_event_freezable(thread->wait, binder_has_thread_work(thread));
 			*threadp = thread = binder_get_thread(proc);
 			if (!thread)
-				return -EINVAL;
-			if (ret)
-				return ret;
+				ret = -EINVAL;
 		}
 	}
+
+	binder_serialize_threads(proc);
 
 	if (wait_for_proc_work)
 		atomic_dec(&proc->ready_threads);
@@ -2709,8 +2707,6 @@ retry:
 
 	if (ret)
 		return ret;
-
-	binder_serialize_threads(proc);
 
 	while (1) {
 		uint32_t cmd;
