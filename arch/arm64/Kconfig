@@ -751,6 +751,12 @@ config ARCH_NR_GPIO
 
 	  If unsure, leave the default value.
 
+config QCOM_TLB_EL2_HANDLER
+	bool "Raise TLB conflict exception to EL2"
+	help
+	  This option enables TLB conflict to be handled
+	  by EL2
+
 # Common NUMA Features
 config NUMA
 	bool "Numa Memory Allocation and Scheduler Support"

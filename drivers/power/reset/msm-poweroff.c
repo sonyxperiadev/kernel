@@ -799,3 +799,17 @@ static int __init msm_restart_init(void)
 	return platform_driver_register(&msm_restart_driver);
 }
 pure_initcall(msm_restart_init);
+
+#if 0
+static int __init write_restart_codedead(void)
+{
+	void __iomem *base;
+	base = ioremap_nocache(0x146bf65c, SZ_4);
+
+	__raw_writel(0xC0DEDEAD, base);
+	mb();
+
+	return 0;
+}
+early_initcall(write_restart_codedead);
+#endif
