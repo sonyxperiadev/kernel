@@ -24,7 +24,7 @@
 	};
 
 	reserved-memory {
-		pstore_reserve_mem: pstore_reserve_mem_region@ffc00000 {
+		ramoops {
 			compatible = "removed-dma-pool", "ramoops";
 			no-map;
 			reg = <0 0xffc00000 0 0x00100000>;

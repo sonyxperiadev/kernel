@@ -469,6 +469,17 @@ no_context:
 	return 0;
 }
 
+#ifdef CONFIG_QCOM_TLB_EL2_HANDLER
+/*
+ * TLB conflict is already handled in EL2. This routine should return zero
+ * so that, do_mem_abort would not crash kernel thinking TLB conflict not
+ * handled.
+*/
+static int do_tlb_conf_fault(unsigned long addr,
+				unsigned int esr,
+				struct pt_regs *regs)
+{ return 0; }
+#else
 static int do_tlb_conf_fault(unsigned long addr,
 				unsigned int esr,
 				struct pt_regs *regs)
@@ -485,7 +496,7 @@ static int do_tlb_conf_fault(unsigned long addr,
 
 	return 0;
 }
-
+#endif
 /*
  * First Level Translation Fault Handler
  *
@@ -578,7 +589,11 @@ static const struct fault_info fault_info[] = {
 	{ do_bad,		SIGBUS,  0,		"unknown 45"			},
 	{ do_bad,		SIGBUS,  0,		"unknown 46"			},
 	{ do_bad,		SIGBUS,  0,		"unknown 47"			},
+#ifdef CONFIG_QCOM_TLB_EL2_HANDLER
 	{ do_tlb_conf_fault,	SIGBUS,  0,		"TLB conflict abort"		},
+#else
+	{ do_bad,		SIGBUS,  0,		"TLB conflict abort"		},
+#endif
 	{ do_bad,		SIGBUS,  0,		"unknown 49"			},
 	{ do_bad,		SIGBUS,  0,		"unknown 50"			},
 	{ do_bad,		SIGBUS,  0,		"unknown 51"			},
