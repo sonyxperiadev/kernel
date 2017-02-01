@@ -343,7 +343,7 @@ static inline int binder_seq_hash(struct binder_thread *thread)
 
 struct binder_seq_node {
 	struct list_head list_node;
-	atomic_t active_seq;
+	u64 active_seq;
 };
 
 struct binder_proc {
@@ -364,9 +364,9 @@ struct binder_proc {
 	wait_queue_head_t wait;
 	struct binder_stats stats;
 	struct binder_worklist delivered_death;
-	atomic_t max_threads;
-	atomic_t requested_threads;
-	atomic_t requested_threads_started;
+	int max_threads;
+	int requested_threads;
+	int requested_threads_started;
 	atomic_t ready_threads;
 	long default_priority;
 	struct dentry *debugfs_entry;
@@ -441,48 +441,46 @@ static inline bool binder_worklist_empty(struct binder_worklist *wlist)
 	return ret;
 }
 
-static DEFINE_PER_CPU(atomic_t, proc_lock_held);
+static DEFINE_PER_CPU(int, proc_lock_held);
 
 static void
 binder_proc_lock(struct binder_proc *proc, int line)
 {
 	int cpu;
-	atomic_t *held;
+	int held;
 
 	binder_debug(BINDER_DEBUG_SPINLOCKS,
 		     "%s: line=%d\n", __func__, line);
 	spin_lock(&proc->proc_lock);
 	cpu = smp_processor_id();
-	held = &per_cpu(proc_lock_held, cpu);
+	held = per_cpu(proc_lock_held, cpu);
 	/*
 	 * Acquisition of the proc lock must never be
 	 * nested with other proc locks.
 	 */
-	if (atomic_read(held)) {
+	if (held) {
 		pr_err("binder: nested proc lock @ %d, orig %d\n",
-				line, atomic_read(held));
+		       line, held);
 		BUG();
 	}
 
-	atomic_set(held, line);
+	per_cpu(proc_lock_held, cpu) = line;
 }
 
 static void
 binder_proc_unlock(struct binder_proc *proc, int line)
 {
-	atomic_t *held;
 	int acq_line;
+	int cpu = smp_processor_id();
 
-	held = &per_cpu(proc_lock_held, smp_processor_id());
-	acq_line = atomic_read(held);
+	acq_line = per_cpu(proc_lock_held, cpu);
 	binder_debug(BINDER_DEBUG_SPINLOCKS,
 		     "%s: line=%d acq=%d\n", __func__, line, acq_line);
 	if (!acq_line) {
-		pr_err("binder: bad proc unlock @ %d, orig %d\n",
-				line, atomic_read(held));
+		pr_err("binder: bad proc unlock @ %d\n", line);
 		BUG();
 	}
-	atomic_set(held, 0);
+	per_cpu(proc_lock_held, cpu) = 0;
 	spin_unlock(&proc->proc_lock);
 }
 
@@ -2361,19 +2359,21 @@ static int binder_thread_write(struct binder_proc *proc,
 			binder_debug(BINDER_DEBUG_THREADS,
 				     "%d:%d BC_REGISTER_LOOPER\n",
 				     proc->pid, thread->pid);
+			binder_proc_lock(proc, __LINE__);
 			if (thread->looper & BINDER_LOOPER_STATE_ENTERED) {
 				thread->looper |= BINDER_LOOPER_STATE_INVALID;
 				binder_user_error("%d:%d ERROR: BC_REGISTER_LOOPER called after BC_ENTER_LOOPER\n",
 					proc->pid, thread->pid);
-			} else if (atomic_read(&proc->requested_threads) == 0) {
+			} else if (proc->requested_threads == 0) {
 				thread->looper |= BINDER_LOOPER_STATE_INVALID;
 				binder_user_error("%d:%d ERROR: BC_REGISTER_LOOPER called without request\n",
 					proc->pid, thread->pid);
 			} else {
-				atomic_dec(&proc->requested_threads);
-				atomic_inc(&proc->requested_threads_started);
+				proc->requested_threads--;
+				proc->requested_threads_started++;
 			}
 			thread->looper |= BINDER_LOOPER_STATE_REGISTERED;
+			binder_proc_unlock(proc, __LINE__);
 			break;
 		case BC_ENTER_LOOPER:
 			binder_debug(BINDER_DEBUG_THREADS,
@@ -2968,15 +2968,14 @@ retry:
 done:
 	*consumed = ptr - buffer;
 	binder_proc_lock(thread->proc, __LINE__);
-	if (atomic_read(&proc->requested_threads) +
+	if (proc->requested_threads +
 			atomic_read(&proc->ready_threads) == 0 &&
-	atomic_read(&proc->requested_threads_started) <
-		    atomic_read(&proc->max_threads) &&
+			proc->requested_threads_started < proc->max_threads &&
 			(thread->looper & (BINDER_LOOPER_STATE_REGISTERED |
 					   BINDER_LOOPER_STATE_ENTERED))
 		    /* the user-space code fails to */
 		    /* spawn a new thread if we leave this out */) {
-		atomic_inc(&proc->requested_threads);
+		proc->requested_threads++;
 		binder_proc_unlock(thread->proc, __LINE__);
 
 		binder_debug(BINDER_DEBUG_THREADS,
@@ -3076,21 +3075,17 @@ atomic_t binder_seq_count;
 
 static inline u64 binder_get_next_seq(void)
 {
-	atomic_inc(&binder_seq_count);
-	return ((u64)atomic_read(&binder_seq_count));
+	return atomic_inc_return(&binder_seq_count);
 }
 
 static void binder_add_seq(struct binder_seq_node *node,
 			   struct binder_seq_head *tracker)
 {
-	u64 now = binder_get_next_seq();
-
-	atomic_set(&node->active_seq, now);
-
 	spin_lock(&tracker->lock);
+	node->active_seq = binder_get_next_seq();
 	list_add_tail(&node->list_node, &tracker->active_threads);
-	if (now < tracker->lowest_seq)
-			tracker->lowest_seq = now;
+	if (node->active_seq < tracker->lowest_seq)
+		tracker->lowest_seq = node->active_seq;
 
 	tracker->active_count++;
 	if (tracker->active_count > tracker->max_active_count)
@@ -3112,7 +3107,7 @@ static void binder_del_seq(struct binder_seq_node *node,
 
 		tmp = list_first_entry(&tracker->active_threads, typeof(*tmp),
 				       list_node);
-		tracker->lowest_seq = atomic_read(&tmp->active_seq);
+		tracker->lowest_seq = tmp->active_seq;
 	} else {
 		tracker->lowest_seq = ~0ULL;
 	}
@@ -3461,11 +3456,13 @@ static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		int max_threads;
 
 		if (copy_from_user(&max_threads, ubuf,
-				   sizeof(proc->max_threads))) {
+				   sizeof(max_threads))) {
 			ret = -EINVAL;
 			goto err;
 		}
-		atomic_set(&proc->max_threads, max_threads);
+		binder_proc_lock(proc, __LINE__);
+		proc->max_threads = max_threads;
+		binder_proc_unlock(proc, __LINE__);
 		break;
 	}
 	case BINDER_SET_CONTEXT_MGR:
@@ -3620,9 +3617,9 @@ static int binder_open(struct inode *nodp, struct file *filp)
 	spin_lock_init(&proc->proc_lock);
 	binder_init_worklist(&proc->delivered_death);
 	atomic_set(&proc->ready_threads, 0);
-	atomic_set(&proc->max_threads, 0);
-	atomic_set(&proc->requested_threads, 0);
-	atomic_set(&proc->requested_threads_started, 0);
+	proc->max_threads = 0;
+	proc->requested_threads = 0;
+	proc->requested_threads_started = 0;
 	INIT_LIST_HEAD(&proc->zombie_proc.list_node);
 	INIT_HLIST_HEAD(&proc->zombie_refs);
 	INIT_HLIST_HEAD(&proc->zombie_nodes);
@@ -3961,7 +3958,7 @@ static void binder_clear_zombies(void)
 
 	while ((z = list_first_entry_or_null(&zombie_procs.active_threads,
 					     typeof(*z), list_node)) != NULL) {
-		if (thread_seq < atomic_read(&z->active_seq))
+		if (thread_seq < z->active_seq)
 			break;
 		list_del_init(&z->list_node);
 
@@ -3970,7 +3967,7 @@ static void binder_clear_zombies(void)
 
 			tmp = list_first_entry(&zombie_procs.active_threads,
 					       typeof(*tmp), list_node);
-			zombie_procs.lowest_seq = atomic_read(&tmp->active_seq);
+			zombie_procs.lowest_seq = tmp->active_seq;
 		} else {
 			zombie_procs.lowest_seq = ~0ULL;
 		}
@@ -4367,9 +4364,9 @@ static void print_binder_proc_stats(struct seq_file *m,
 	seq_printf(m, "  requested threads: %d+%d/%d\n"
 			"  ready threads %d\n"
 			"  free async space %zd\n",
-			atomic_read(&proc->requested_threads),
-			atomic_read(&proc->requested_threads_started),
-			atomic_read(&proc->max_threads),
+			proc->requested_threads,
+			proc->requested_threads_started,
+			proc->max_threads,
 			atomic_read(&proc->ready_threads),
 			binder_alloc_get_free_async_space(&proc->alloc));
 	count = 0;
@@ -4576,7 +4573,7 @@ static int __init binder_init(void)
 	atomic_set(&binder_seq_count, 0);
 
 	for (cpu = 0; cpu < num_possible_cpus(); cpu++)
-		atomic_set(&per_cpu(proc_lock_held, cpu), 0);
+		per_cpu(proc_lock_held, cpu) = 0;
 
 	binder_deferred_workqueue = create_singlethread_workqueue("binder");
 	if (!binder_deferred_workqueue)
