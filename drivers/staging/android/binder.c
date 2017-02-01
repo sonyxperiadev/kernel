@@ -2577,14 +2577,14 @@ static inline int binder_has_proc_work(struct binder_proc *proc,
 				struct binder_thread *thread)
 {
 	return !binder_worklist_empty(&proc->todo) ||
-		thread->looper_need_return;
+		READ_ONCE(thread->looper_need_return);
 }
 
 static inline int binder_has_thread_work(struct binder_thread *thread)
 {
 	return !binder_worklist_empty(&thread->todo) ||
 		thread->return_error != BR_OK ||
-		thread->looper_need_return;
+		READ_ONCE(thread->looper_need_return);
 }
 
 static int binder_thread_read(struct binder_proc *proc,
@@ -2706,7 +2706,7 @@ retry:
 				binder_proc_unlock(thread->proc, __LINE__);
 				/* no data added */
 				if (ptr - buffer == 4 &&
-				    !thread->looper_need_return)
+				    !READ_ONCE(thread->looper_need_return))
 					goto retry;
 				break;
 			}
@@ -3146,7 +3146,7 @@ static struct binder_thread *binder_get_thread(struct binder_proc *proc)
 		new_thread->pid = current->pid;
 		init_waitqueue_head(&new_thread->wait);
 		binder_init_worklist(&new_thread->todo);
-		new_thread->looper_need_return = true;
+		WRITE_ONCE(new_thread->looper_need_return, true);
 		new_thread->return_error = BR_OK;
 		new_thread->return_error2 = BR_OK;
 		INIT_LIST_HEAD(&new_thread->active_node.list_node);
@@ -3500,7 +3500,7 @@ static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 err:
 	if (thread) {
 		binder_proc_lock(thread->proc, __LINE__);
-		thread->looper_need_return = false;
+		WRITE_ONCE(thread->looper_need_return, false);
 		binder_proc_unlock(thread->proc, __LINE__);
 		zombie_cleanup_check(proc);
 		binder_put_thread(thread);
@@ -3689,7 +3689,7 @@ static void binder_deferred_flush(struct binder_proc *proc)
 			struct binder_thread *thread;
 
 			thread = rb_entry(n, struct binder_thread, rb_node);
-			thread->looper_need_return = true;
+			WRITE_ONCE(thread->looper_need_return, true);
 			if (thread->looper & BINDER_LOOPER_STATE_WAITING) {
 				if (i < count)
 					waits[i] = &thread->wait;
@@ -4121,7 +4121,7 @@ static void _print_binder_thread(struct seq_file *m,
 
 	seq_printf(m, "  thread %d: l %02x need_return %d\n",
 			thread->pid, thread->looper,
-			thread->looper_need_return);
+			READ_ONCE(thread->looper_need_return));
 	header_pos = m->count;
 	t = thread->transaction_stack;
 	while (t) {

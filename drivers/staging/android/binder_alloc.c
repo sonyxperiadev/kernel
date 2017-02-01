@@ -511,7 +511,8 @@ int binder_alloc_mmap_handler(struct binder_alloc *alloc,
 		goto err_get_vm_area_failed;
 	}
 	alloc->buffer = area->addr;
-	alloc->user_buffer_offset = vma->vm_start - (uintptr_t)alloc->buffer;
+	WRITE_ONCE(alloc->user_buffer_offset,
+			vma->vm_start - (uintptr_t)alloc->buffer);
 	mutex_unlock(&alloc->mutex);
 
 #ifdef CONFIG_CPU_CACHE_VIPT

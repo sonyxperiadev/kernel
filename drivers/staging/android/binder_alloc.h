@@ -92,7 +92,12 @@ binder_alloc_get_free_async_space(struct binder_alloc *alloc)
 static inline ptrdiff_t
 binder_alloc_get_user_buffer_offset(struct binder_alloc *alloc)
 {
-	return alloc->user_buffer_offset;
+	/*
+	 * user_buffer_offset is constant if vma is set and
+	 * undefined if vma is not set
+	 */
+	BUG_ON(!alloc->vma);
+	return READ_ONCE(alloc->user_buffer_offset);
 }
 
 #endif /* _LINUX_BINDER_ALLOC_H */
