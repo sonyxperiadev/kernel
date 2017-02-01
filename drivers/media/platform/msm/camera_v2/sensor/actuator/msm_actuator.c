@@ -2250,9 +2250,11 @@ static int32_t msm_actuator_platform_probe(struct platform_device *pdev)
 		rc = msm_camera_pinctrl_init(
 			&(msm_actuator_t->pinctrl_info), &(pdev->dev));
 		if (rc < 0) {
-			pr_err("ERR:%s: Error in reading actuator pinctrl\n",
+			pr_err("%s: Error in reading actuator pinctrl. \
+				Not fatal, going on.\n",
 				__func__);
 			msm_actuator_t->cam_pinctrl_status = 0;
+			rc = 0;
 		}
 	}
 
