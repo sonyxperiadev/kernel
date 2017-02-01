@@ -13132,6 +13132,10 @@ wl_cfg80211_add_iw_ie(struct bcm_cfg80211 *cfg, struct net_device *ndev, s32 bss
 	if (ie_id != DOT11_MNG_INTERWORKING_ID)
 		return BCME_UNSUPPORTED;
 
+	if (data_len > IW_IES_MAX_BUF_LEN) {
+		WL_ERR(("wrong data_len:%d\n", data_len));
+		return BCME_BADARG;
+	}
 	/* Validate the pktflag parameter */
 	if ((pktflag & ~(VNDR_IE_BEACON_FLAG | VNDR_IE_PRBRSP_FLAG |
 	            VNDR_IE_ASSOCRSP_FLAG | VNDR_IE_AUTHRSP_FLAG |
