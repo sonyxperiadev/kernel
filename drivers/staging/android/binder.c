@@ -954,9 +954,10 @@ static void binder_delete_ref(struct binder_ref *ref, bool force)
 	    (!force && ((atomic_read(&ref->strong) != 0) ||
 				(atomic_read(&ref->weak) != 0)))) {
 		/*
-		 * This is not a forced deletion (eg not
-		 * a release) and there is still a reference.
-		 * Don't delete the ref.
+		 * Multiple threads could observe the ref counts
+		 * going to 0. The first one to get the lock will
+		 * make it a zombie. Subsequent callers bail out
+		 * here.
 		 */
 		binder_proc_unlock(ref->proc, __LINE__);
 		return;
@@ -999,11 +1000,14 @@ static int binder_inc_ref(struct binder_ref *ref, int strong,
 {
 	int ret = 0;
 
+	/* atomic_inc_return does not require explicit barrier */
 	if ((strong && atomic_inc_return(&ref->strong) == 1) ||
 	    (!strong && atomic_inc_return(&ref->weak) == 1)) {
 		ret = binder_inc_node(ref->node, strong, 1, target_list);
-		if (ret)
+		if (ret) {
 			atomic_dec(strong ? &ref->strong : &ref->weak);
+			smp_mb__after_atomic();
+		}
 	}
 
 	return ret;
@@ -1012,6 +1016,7 @@ static int binder_inc_ref(struct binder_ref *ref, int strong,
 static int binder_dec_ref(struct binder_ref *ref, int strong)
 {
 	if (strong) {
+		/* atomic_dec_if_positive does not require explicit barrier */
 		int newval = atomic_dec_if_positive(&ref->strong);
 
 		if (newval < 0) {
@@ -1039,6 +1044,11 @@ static int binder_dec_ref(struct binder_ref *ref, int strong)
 	}
 
 	if (atomic_read(&ref->strong) == 0 && atomic_read(&ref->weak) == 0)
+		/* it is possible that multiple threads could observe the
+		 * strong/weak references going to 0 at the same time.
+		 * This case is handled when the proc lock is acquired
+		 * in binder_delete_ref()
+		 */
 		binder_delete_ref(ref, false);
 	return 0;
 }
