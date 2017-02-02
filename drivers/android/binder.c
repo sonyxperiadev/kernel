@@ -530,6 +530,9 @@ struct binder_transaction {
 	unsigned int	flags;
 	long	priority;
 	long	saved_priority;
+	int	sched_policy;
+	int	saved_sched_policy;
+	int	rt_priority;
 	kuid_t	sender_euid;
 };
 
@@ -605,6 +608,63 @@ static void binder_set_nice(long nice)
 	if (min_nice <= MAX_NICE)
 		return;
 	binder_user_error("%d RLIMIT_NICE not set\n", current->pid);
+}
+
+static inline int is_rt_policy(int sched_policy)
+{
+	return (sched_policy == SCHED_FIFO || sched_policy == SCHED_RR);
+}
+
+static void binder_set_priority(
+	struct binder_transaction *t, struct binder_node *target_node)
+{
+	bool oneway = !!(t->flags & TF_ONE_WAY);
+
+	t->saved_sched_policy = current->policy;
+	t->saved_priority = task_nice(current);
+
+	if (is_rt_policy(t->sched_policy) && !is_rt_policy(current->policy)) {
+		/* Transaction was initiated with a real-time policy,
+		 * but we are not; temporarily upgrade this thread to RT.
+		 */
+		struct sched_param params = {t->rt_priority};
+
+		sched_setscheduler_nocheck(current,
+					   t->sched_policy |
+					   SCHED_RESET_ON_FORK,
+					   &params);
+	} else if (!is_rt_policy(current->policy)) {
+		/* Neither policy is real-time, fall back to setting nice. */
+		if (t->priority < target_node->min_priority && !oneway)
+			binder_set_nice(t->priority);
+		else if (!oneway ||
+			 t->saved_priority > target_node->min_priority)
+			binder_set_nice(target_node->min_priority);
+	} else {
+		/* Cases where we do nothing:
+		 * 1. Both source and target threads have a real-time policy
+		 * 2. Source does not have a real-time policy, but the target
+		 * does.
+		 */
+	}
+}
+
+static void binder_restore_priority(struct binder_transaction *t)
+{
+	struct sched_param params = {0};
+
+	if (current->policy != t->saved_sched_policy) {
+		/* Binder only transitions from a non-RT to a RT
+		 * policy; therefore, the restore should always
+		 * be a non-RT policy, and params.priority is not
+		 * relevant.
+		 */
+		sched_setscheduler_nocheck(current,
+					   t->saved_sched_policy,
+					   &params);
+	}
+	if (!is_rt_policy(t->saved_sched_policy))
+		binder_set_nice(t->saved_priority);
 }
 
 static struct binder_node *binder_get_node(struct binder_proc *proc,
@@ -1788,7 +1848,7 @@ static void binder_transaction(struct binder_proc *proc,
 		}
 		thread->transaction_stack = in_reply_to->to_parent;
 		binder_proc_unlock(thread->proc, __LINE__);
-		binder_set_nice(in_reply_to->saved_priority);
+		binder_restore_priority(in_reply_to);
 		target_thread = in_reply_to->from;
 		if (target_thread == NULL) {
 			return_error = BR_DEAD_REPLY;
@@ -1916,7 +1976,9 @@ static void binder_transaction(struct binder_proc *proc,
 	t->to_thread = target_thread;
 	t->code = tr->code;
 	t->flags = tr->flags;
+	t->sched_policy = current->policy;
 	t->priority = task_nice(current);
+	t->rt_priority = current->rt_priority;
 
 	trace_binder_transaction(reply, t, target_node);
 
@@ -2982,13 +3044,7 @@ retry:
 
 			tr.target.ptr = target_node->ptr;
 			tr.cookie =  target_node->cookie;
-			t->saved_priority = task_nice(current);
-			if (t->priority < target_node->min_priority &&
-			    !(t->flags & TF_ONE_WAY))
-				binder_set_nice(t->priority);
-			else if (!(t->flags & TF_ONE_WAY) ||
-				 t->saved_priority > target_node->min_priority)
-				binder_set_nice(target_node->min_priority);
+			binder_set_priority(t, target_node);
 			cmd = BR_TRANSACTION;
 		} else {
 			tr.target.ptr = 0;
