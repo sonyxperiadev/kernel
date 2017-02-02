@@ -458,16 +458,17 @@ int bluesleep_start(bool is_clock_enabled)
 	clear_bit(BT_TXDATA, &flags);
 #endif
 
+	clear_bit(BT_ASLEEP, &flags);
+
+	spin_unlock_irqrestore(&rw_lock, irq_flags);
+
 	// For ldisc-controlled BT, the clock is enabled by upper layers, so
 	// make bluesleep aware of this state.
-	clear_bit(BT_ASLEEP, &flags);
 	if(is_clock_enabled) {
 		atomic_set(&uart_is_on, 1);
 	} else {
 		hsuart_power(HS_UART_ON);
 	}
-
-	spin_unlock_irqrestore(&rw_lock, irq_flags);
 
 	enable_wakeup_irq(1);
 	set_bit(BT_PROTO, &flags);
