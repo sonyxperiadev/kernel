@@ -327,7 +327,7 @@
 		compatible = "qcom,jpeg";
 		reg = <0x1b1c000 0x400>,
 			<0x1b60000 0xc30>;
-		reg-names = "jpeg";
+		reg-names = "jpeg_hw", "jpeg_vbif";
 		interrupts = <0 59 0>;
 		interrupt-names = "jpeg";
 		vdd-supply = <&gdsc_jpeg>;
