@@ -16,6 +16,14 @@
 		compatible = "qcom,msm-cam";
 		reg = <0x1b00000 0x10000>;
 		reg-names = "msm-cam";
+		status = "ok";
+		/*
+		 * Note: It may also be comfortable to use 400000000
+		 *       as TURBO frequency (still gpll0).
+		 *       Would it be a waste of battery power?
+		 */
+		bus-vectors = "suspend", "svs", "nominal", "turbo";
+		qcom,bus-votes = <0 160000000 320000000 320000000>;
 	};
 
 	qcom,csiphy@1b0ac00 {
