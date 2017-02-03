@@ -331,6 +331,7 @@
 		interrupts = <0 59 0>;
 		interrupt-names = "jpeg";
 		vdd-supply = <&gdsc_jpeg>;
+		qcom,vdd-names = "vdd";
 		clock-names =  "core_clk", "iface_clk", "bus_clk0",
 			"camss_top_ahb_clk", "camss_ahb_clk";
 		clocks = <&clock_gcc clk_gcc_camss_jpeg0_clk>,
