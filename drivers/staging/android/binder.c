@@ -2316,11 +2316,7 @@ static int binder_thread_write(struct binder_proc *proc,
 
 				buf_node = buffer->target_node;
 				binder_proc_lock(buf_node->proc, __LINE__);
-				/*
-				 * Change to BUG_ON once fixed. Until then
-				 * this is benign.
-				 */
-				WARN_ON(!buf_node->has_async_transaction);
+				BUG_ON(!buf_node->has_async_transaction);
 				if (binder_worklist_empty(
 							&buf_node->async_todo))
 					buf_node->has_async_transaction = 0;
