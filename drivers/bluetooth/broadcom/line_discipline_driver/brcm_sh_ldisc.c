@@ -187,6 +187,16 @@ static struct nlmsghdr *nlh;
 static struct sk_buff *hcisnoop_skb_out;
 #endif
 
+/* HIC commands emitted by libbt which shall be ignored. */
+#define IGNORE_CMD_SIZE 14
+static const short IGNORE_CMDS[IGNORE_CMD_SIZE] =
+                                      {0x0c03, 0xfc45, 0xfc18, 0x0c14, 0xfc2e,
+                                       0xfc01, 0xfc27, 0xfc1c, 0xfc1e, 0xfc6d,
+                                       0xfc7e, 0xfc4e, 0x0c33, 0xfc4c};
+#define READ_CMD_DATA_LEN 33
+#define MAX_HCI_EVENT_LEN 37 // (+ 4 bytes header)
+
+static bool hci_filter_enabled = false;
 
 /*******************************************************************************
 **  Function forward-declarations and Function callback declarations
@@ -198,10 +208,6 @@ static struct hci_uart_proto *hup[HCI_UART_MAX_PROTO];
 
 static struct platform_device *brcm_plt_devices[MAX_BRCM_DEVICES];
 
-
-/*******************************************************************************
-**  Function forward-declarations and Function callback declarations
-*******************************************************************************/
 /**
   * internal functions to read chip name and
  * download patchram file
@@ -1179,6 +1185,11 @@ long brcm_sh_ldisc_register(struct sh_proto_s *new_proto)
         return -EPROTONOSUPPORT;
     }
 
+    if(new_proto->type == PROTO_SH_BT) {
+    	pr_err("enabling HCI Filter\n");
+    	hci_filter_enabled = true;
+    }
+
     /* check if protocol already registered */
     if (hu->list[new_proto->type] != NULL)
     {
@@ -1784,6 +1795,90 @@ long brcm_sh_ldisc_start(struct hci_uart *hu)
 
 /*******************************************************************************
 **
+** Function - equals_hci_ev()
+**
+** Description - Checks if the received packet equals the given HCI command.
+**
+** Returns - true if the packet is the HCI cmd; false otherwise
+**
+*******************************************************************************/
+static bool pkt_equals_hci_ev(struct sk_buff *skb, uint16_t hci_event)
+{
+    unsigned char first_byte = (unsigned char)((hci_event >> 8) & 0xFF);
+    unsigned char second_byte = (unsigned char)(hci_event & 0xFF);
+
+    if(skb->len > 2 && (skb->data)[1] == second_byte && (skb->data)[2] == first_byte) {
+        return true;
+    }
+
+    return false;
+}
+
+
+/*******************************************************************************
+**
+** Function - ignore_hci_cmd()
+**
+** Description - Checks if the received packet is a HCI command that shall be
+**               ignored based on the IGNORE_CMDS array. Commands that shall be
+**               ignored are resets and configuration commands emmitted by libbt.
+**
+** Returns - true if the packet is HCI cmd to ignore; false otherwise
+**
+*******************************************************************************/
+static bool ignore_hci_cmd(struct sk_buff *skb)
+{
+    if(skb->len < 3 || (skb->len > 0 && (skb->data)[0] != 0x01)) {
+        return false;
+    }
+
+    static bool reset_received, is_bt_init, is_bt_init_end;
+    int cmd_cnt = 0;
+    unsigned char first_byte, second_byte;
+
+    for( ; cmd_cnt < IGNORE_CMD_SIZE; cmd_cnt++) {
+        if(pkt_equals_hci_ev(skb, IGNORE_CMDS[cmd_cnt])) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/*******************************************************************************
+**
+** Function - hci_cfg_sequence_end()
+**
+** Description - Checks if the received packet is a HCI command that is the final
+**               command emmitted by libbt to configure the BT/FM chip. Internally,
+**               the HCI commands belonging to the config end sequence modify the
+**               state such that "true" is only returned for the matching
+**               sequence.
+**
+** Returns - true if the packet is HCI cmd of the configuration end sequence.
+**
+*******************************************************************************/
+static bool hci_cfg_sequence_end(struct sk_buff *skb) {
+    static u8 end_cmd_cnt = 0;
+
+    if(end_cmd_cnt == 0 && pkt_equals_hci_ev(skb, 0xfc01)) {
+        end_cmd_cnt++;
+        return false;
+    } else if (end_cmd_cnt == 1 && pkt_equals_hci_ev(skb, 0x0c03)) {
+        end_cmd_cnt++;
+        return false;
+    }  else if (end_cmd_cnt == 2 && pkt_equals_hci_ev(skb, 0x0c33)) {
+        end_cmd_cnt++;
+        return true;
+    }
+
+    end_cmd_cnt = 0;
+    return false;
+}
+
+
+/*******************************************************************************
+**
 ** Function - brcm_sh_ldisc_write()
 **
 ** Description - Function to write to the shared line discipline driver
@@ -1798,7 +1893,9 @@ long brcm_sh_ldisc_write(struct sk_buff *skb)
     enum proto_type protoid = PROTO_SH_MAX;
     long len;
     struct brcm_struct *brcm;
-    char ptr[6];
+    char ptr[MAX_HCI_EVENT_LEN + 2] = {0};
+    int hci_response_data_len = 4;
+    int hci_response_len = hci_response_data_len + 2; // (+ add. header bytes)
 
     struct hci_uart *hu;
     hu_ref(&hu,0);
@@ -1846,28 +1943,41 @@ long brcm_sh_ldisc_write(struct sk_buff *skb)
 
     len = skb->len;
 
-    if ((hu->is_registered[PROTO_SH_ANT] || hu->is_registered[PROTO_SH_FM])
-            && (skb->data)[1] == 0x03 && (skb->data)[2] == 0x0c)
+    /* HCI reset commands & those used during libbt init will be answered
+     * by fake responses (not needed), such that no response timeouts occur. */
+    if ((hci_filter_enabled && ignore_hci_cmd(skb)))
     {
         if (likely(hu->list[PROTO_SH_BT]->recv != NULL))
         {
+            if(hci_cfg_sequence_end(skb)) {
+                BT_LDISC_DBG(V4L2_DBG_INIT, "BT_CFG_END detected\n");
+                hci_filter_enabled = false;
+            }
+            /* Adjust length of hci fake response events for packets
+             * that would send back parameters. */
+            if(pkt_equals_hci_ev(skb, 0x0c14)) {
+                hci_response_data_len += READ_CMD_DATA_LEN;
+                hci_response_len += READ_CMD_DATA_LEN;
+            }
+
             brcm->rx_skb = alloc_skb(HCI_MAX_FRAME_SIZE, GFP_ATOMIC);
-            if(brcm->rx_skb)
-                skb_reserve(brcm->rx_skb,8);
+            if(brcm->rx_skb) {
+                skb_reserve(brcm->rx_skb, hci_response_len + 2);
+            }
 
             brcm->rx_skb->dev = (void *) hu->hdev;
             sh_ldisc_cb(brcm->rx_skb)->pkt_type = HCI_EVENT_PKT;
 
+            // Build the response: event header + command
             ptr[0] = 0x0e;
-            ptr[1] = 0x04;
+            ptr[1] = hci_response_data_len;
             ptr[2] = 0x01;
-            ptr[3] = 0x03;
-            ptr[4] = 0x0c;
-            ptr[5] = 0x00;
+            ptr[3] = (skb->data)[1];
+            ptr[4] = (skb->data)[2];
 
-            memcpy(skb_put(brcm->rx_skb, 6), ptr, 6);
+            memcpy(skb_put(brcm->rx_skb, hci_response_len), ptr, hci_response_len);
 
-            brcm_hci_process_frametype(HCI_EVENT_PKT,hu,brcm->rx_skb, 6);
+            brcm_hci_process_frametype(HCI_EVENT_PKT,hu,brcm->rx_skb, hci_response_len);
             brcm_hci_uart_route_frame(PROTO_SH_BT, hu, brcm->rx_skb);
         }
     }
