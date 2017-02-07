@@ -1459,7 +1459,7 @@ static void msm_hs_submit_tx_locked(struct uart_port *uport)
 	ret = sps_transfer_one(sps_pipe_handle, src_addr, tx_count,
 				msm_uport, flags);
 
-#ifdef CONFIG_BT_MSM_SLEEP
+#if defined(CONFIG_BT_MSM_SLEEP) && !defined(CONFIG_LINE_DISCIPLINE_DRIVER)
 	/* Notify the bluesleep driver of outgoing data, if available. */
 	bluesleep_outgoing_data();
 #endif
@@ -2742,8 +2742,10 @@ static int msm_hs_startup(struct uart_port *uport)
 
 
 	spin_lock_irqsave(&uport->lock, flags);
+#ifndef CONFIG_LINE_DISCIPLINE_DRIVER
 	atomic_set(&msm_uport->client_count, 0);
 	atomic_set(&msm_uport->client_req_state, 0);
+#endif
 	LOG_USR_MSG(msm_uport->ipc_msm_hs_pwr_ctxt,
 			"%s(): Client_Count 0\n", __func__);
 	msm_hs_start_rx_locked(uport);
