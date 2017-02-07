@@ -87,6 +87,8 @@ BINDER_DEBUG_ENTRY(proc);
 
 #define BINDER_SMALL_BUF_SIZE (PAGE_SIZE * 64)
 
+#define BINDER_PROC_UNLOCKED                0xDEAD10CC
+
 enum {
 	BINDER_DEBUG_USER_ERROR             = 1U << 0,
 	BINDER_DEBUG_FAILED_TRANSACTION     = 1U << 1,
@@ -360,6 +362,7 @@ struct binder_proc {
 	struct hlist_node deferred_work_node;
 	int deferred_work;
 	spinlock_t proc_lock;
+	int proc_lock_last_cpu;
 	spinlock_t todo_lock;
 	struct binder_worklist todo;
 	wait_queue_head_t wait;
@@ -459,13 +462,14 @@ binder_proc_lock(struct binder_proc *proc, int line)
 	 * Acquisition of the proc lock must never be
 	 * nested with other proc locks.
 	 */
-	if (held) {
-		pr_err("binder: nested proc lock @ %d, orig %d\n",
+	if (held != BINDER_PROC_UNLOCKED) {
+		pr_err("binder: nested proc lock @ %d, orig %x\n",
 		       line, held);
 		BUG();
 	}
 
 	per_cpu(proc_lock_held, cpu) = line;
+	proc->proc_lock_last_cpu = cpu;
 }
 
 static void
@@ -477,11 +481,26 @@ binder_proc_unlock(struct binder_proc *proc, int line)
 	acq_line = per_cpu(proc_lock_held, cpu);
 	binder_debug(BINDER_DEBUG_SPINLOCKS,
 		     "%s: line=%d acq=%d\n", __func__, line, acq_line);
-	if (!acq_line) {
-		pr_err("binder: bad proc unlock @ %d\n", line);
+
+	if (!spin_is_locked(&proc->proc_lock)) {
+		pr_err("binder: unlock @ %d called without locking first (last lock_held: 0x%x, last_cpu: %d)\n",
+		       line, acq_line, proc->proc_lock_last_cpu);
 		BUG();
 	}
-	per_cpu(proc_lock_held, cpu) = 0;
+
+	if (proc->proc_lock_last_cpu != cpu) {
+		pr_err("binder: proc last_lock_cpu (%d) != this cpu (%d). @ %d (lock_held: %x)\n",
+		       proc->proc_lock_last_cpu, cpu, line, acq_line);
+		BUG();
+	}
+
+	if (acq_line < 1 || acq_line > 10000) {
+		pr_err("binder: bad proc unlock @ %d (lock_held: 0x%x, last_cpu: %d)\n",
+		       line, acq_line, proc->proc_lock_last_cpu);
+		BUG();
+	}
+
+	per_cpu(proc_lock_held, cpu) = BINDER_PROC_UNLOCKED;
 	spin_unlock(&proc->proc_lock);
 }
 
@@ -3622,6 +3641,7 @@ static int binder_open(struct inode *nodp, struct file *filp)
 	hlist_add_head(&proc->proc_node, &binder_procs);
 	proc->pid = current->group_leader->pid;
 	spin_lock_init(&proc->proc_lock);
+	proc->proc_lock_last_cpu = -1;
 	binder_init_worklist(&proc->delivered_death);
 	atomic_set(&proc->ready_threads, 0);
 	proc->max_threads = 0;
@@ -4588,7 +4608,7 @@ static int __init binder_init(void)
 	atomic_set(&binder_seq_count, 0);
 
 	for (cpu = 0; cpu < num_possible_cpus(); cpu++)
-		per_cpu(proc_lock_held, cpu) = 0;
+		per_cpu(proc_lock_held, cpu) = BINDER_PROC_UNLOCKED;
 
 	binder_deferred_workqueue = create_singlethread_workqueue("binder");
 	if (!binder_deferred_workqueue)
