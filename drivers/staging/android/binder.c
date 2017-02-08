@@ -3881,7 +3881,9 @@ static void binder_deferred_release(struct binder_proc *proc)
 
 	BUG_ON(proc->files);
 
+	binder_proc_lock(proc, __LINE__);
 	binder_queue_for_zombie_cleanup(proc);
+	binder_proc_unlock(proc, __LINE__);
 
 	mutex_lock(&binder_procs_lock);
 	hlist_del_init(&proc->proc_node);
