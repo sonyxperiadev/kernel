@@ -3163,6 +3163,14 @@ static void binder_add_seq(struct binder_seq_node *node,
 			   struct binder_seq_head *tracker)
 {
 	spin_lock(&tracker->lock);
+	/*
+	 * Was the node previously added?
+	 * - binder_get_thread/put_thread should never be nested
+	 * - binder_queue_for_zombie_cleanup should first delete and then
+	 * enqueue, so this shouldn't happen.
+	 */
+	BUG_ON(!list_empty(&node->list_node));
+
 	node->active_seq = binder_get_next_seq();
 	list_add_tail(&node->list_node, &tracker->active_threads);
 	if (node->active_seq < READ_ONCE(tracker->lowest_seq))
