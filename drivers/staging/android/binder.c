@@ -3148,7 +3148,7 @@ static u64 binder_get_seq(struct binder_seq_head *tracker)
 	 * No lock needed, worst case we return an overly conservative
 	 * value.
 	 */
-	seq = tracker->lowest_seq;
+	seq = READ_ONCE(tracker->lowest_seq);
 	return seq;
 }
 
@@ -3165,8 +3165,8 @@ static void binder_add_seq(struct binder_seq_node *node,
 	spin_lock(&tracker->lock);
 	node->active_seq = binder_get_next_seq();
 	list_add_tail(&node->list_node, &tracker->active_threads);
-	if (node->active_seq < tracker->lowest_seq)
-		tracker->lowest_seq = node->active_seq;
+	if (node->active_seq < READ_ONCE(tracker->lowest_seq))
+		WRITE_ONCE(tracker->lowest_seq, node->active_seq);
 
 	tracker->active_count++;
 	if (tracker->active_count > tracker->max_active_count)
@@ -3188,9 +3188,9 @@ static void binder_del_seq(struct binder_seq_node *node,
 
 		tmp = list_first_entry(&tracker->active_threads, typeof(*tmp),
 				       list_node);
-		tracker->lowest_seq = tmp->active_seq;
+		WRITE_ONCE(tracker->lowest_seq, tmp->active_seq);
 	} else {
-		tracker->lowest_seq = ~0ULL;
+		WRITE_ONCE(tracker->lowest_seq, ~0ULL);
 	}
 	spin_unlock(&tracker->lock);
 }
@@ -4057,9 +4057,9 @@ static void binder_clear_zombies(void)
 
 			tmp = list_first_entry(&zombie_procs.active_threads,
 					       typeof(*tmp), list_node);
-			zombie_procs.lowest_seq = tmp->active_seq;
+			WRITE_ONCE(zombie_procs.lowest_seq, tmp->active_seq);
 		} else {
-			zombie_procs.lowest_seq = ~0ULL;
+			WRITE_ONCE(zombie_procs.lowest_seq, ~0ULL);
 		}
 
 		spin_unlock(&zombie_procs.lock);
@@ -4722,12 +4722,12 @@ static int __init binder_init(void)
 	for (i = 0; i < SEQ_BUCKETS; i++) {
 		spin_lock_init(&binder_active_threads[i].lock);
 		INIT_LIST_HEAD(&binder_active_threads[i].active_threads);
-		binder_active_threads[i].lowest_seq = ~0ULL;
+		WRITE_ONCE(binder_active_threads[i].lowest_seq, ~0ULL);
 	}
 
 	INIT_LIST_HEAD(&zombie_procs.active_threads);
 	spin_lock_init(&zombie_procs.lock);
-	zombie_procs.lowest_seq = ~0ULL;
+	WRITE_ONCE(zombie_procs.lowest_seq, ~0ULL);
 
 	return ret;
 
