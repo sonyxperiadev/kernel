@@ -468,13 +468,12 @@
 	};
 
 	slim_msm: slim@c140000 {
-		qcom,cdc-micbias1-mv = <1800>;
-		qcom,cdc-micbias2-mv = <2450>;
-		qcom,cdc-micbias3-mv = <2450>;
-		qcom,cdc-micbias4-mv = <1800>;
-		qcom,cdc-dmic-sample-rate = <2400000>;
-
 		tasha_codec {
+			qcom,cdc-micbias1-mv = <1800>;
+			qcom,cdc-micbias2-mv = <2450>;
+			qcom,cdc-micbias3-mv = <2450>;
+			qcom,cdc-micbias4-mv = <1800>;
+			qcom,cdc-dmic-sample-rate = <2400000>;
 			swr_master {
 				wsa881x_212: wsa881x@20170212 {
 					qcom,spkr-sd-n-gpio = <&msm_gpio 101 0>;
