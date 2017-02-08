@@ -480,11 +480,6 @@
 			qcom,cdc-micbias3-mv = <2450>;
 			qcom,cdc-micbias4-mv = <1800>;
 			qcom,cdc-dmic-sample-rate = <2400000>;
-			swr_master {
-				wsa881x@20170212 {
-					qcom,spkr-sd-n-gpio = <&msm_gpio 101 0>;
-				};
-			};
 		};
 	};
 
@@ -2804,4 +2799,13 @@
 	reg = <0x0 0x0 0x0 0x1400000>;
 };
 
+&slim_msm {
+	tasha_codec {
+		swr_master {
+			wsa881x@20170212 {
+				qcom,spkr-sd-n-gpio = <&msm_gpio 101 0>;
+			};
+		};
+	};
+};
 
