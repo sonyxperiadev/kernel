@@ -36,7 +36,7 @@
 		reg = <0x0>;
 		qcom,csiphy-sd-index = <0>;
 		qcom,csid-sd-index = <0>;
-		qcom,mount-angle = <180>;
+		qcom,mount-angle = <0>;
 		qcom,actuator-src = <&actuator0>;
 		cam_vdig-supply = <&pm8941_l3>;
 		cam_vana-supply = <&pm8941_l17>;
