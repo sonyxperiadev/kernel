@@ -29,7 +29,6 @@
 #include <linux/bitops.h>
 #include <linux/qpnp/qpnp-adc.h>
 #include <linux/completion.h>
-#include <linux/pm_wakeup.h>
 
 #ifdef CONFIG_MACH_SONY_TULIP
 #include <soc/qcom/smem.h>
@@ -377,22 +376,6 @@ struct smb1360_otg_regulator {
 	struct regulator_dev	*rdev;
 };
 
-enum wakeup_src {
-	WAKEUP_SRC_FG_ACCESS = 0,
-	WAKEUP_SRC_JEITA_SOFT,
-	WAKEUP_SRC_PARALLEL,
-	WAKEUP_SRC_MIN_SOC,
-	WAKEUP_SRC_EMPTY_SOC,
-	WAKEUP_SRC_MAX,
-};
-#define WAKEUP_SRC_MASK (~(~0 << WAKEUP_SRC_MAX))
-
-struct smb1360_wakeup_source {
-	struct wakeup_source source;
-	unsigned long enabled_bitmap;
-	spinlock_t ws_lock;
-};
-
 struct smb1360_chip {
 	struct i2c_client		*client;
 	struct device			*dev;
@@ -405,9 +388,6 @@ struct smb1360_chip {
 	unsigned short			fg_i2c_addr;
 	bool				pulsed_irq;
 	struct completion		fg_mem_access_granted;
-
-	/* wakeup source */
-	struct smb1360_wakeup_source	smb1360_ws;
 
 	/* configuration data - charger */
 	int				fake_battery_soc;
@@ -544,44 +524,6 @@ static int input_current_limit[] = {
 static int fastchg_current[] = {
 	450, 600, 750, 900, 1050, 1200, 1350, 1500,
 };
-
-static void smb1360_stay_awake(struct smb1360_wakeup_source *source,
-	enum wakeup_src wk_src)
-{
-	unsigned long flags;
-
-	spin_lock_irqsave(&source->ws_lock, flags);
-
-	if (!__test_and_set_bit(wk_src, &source->enabled_bitmap)) {
-		__pm_stay_awake(&source->source);
-		pr_debug("enabled source %s, wakeup_src %d\n",
-			source->source.name, wk_src);
-	}
-	spin_unlock_irqrestore(&source->ws_lock, flags);
-}
-
-static void smb1360_relax(struct smb1360_wakeup_source *source,
-	enum wakeup_src wk_src)
-{
-	unsigned long flags;
-
-	spin_lock_irqsave(&source->ws_lock, flags);
-	if (__test_and_clear_bit(wk_src, &source->enabled_bitmap) &&
-		!(source->enabled_bitmap & WAKEUP_SRC_MASK)) {
-		__pm_relax(&source->source);
-		pr_debug("disabled source %s\n", source->source.name);
-	}
-	spin_unlock_irqrestore(&source->ws_lock, flags);
-
-	pr_debug("relax source %s, wakeup_src %d\n",
-		source->source.name, wk_src);
-}
-
-static void smb1360_wakeup_src_init(struct smb1360_chip *chip)
-{
-	spin_lock_init(&chip->smb1360_ws.ws_lock);
-	wakeup_source_init(&chip->smb1360_ws.source, "smb1360");
-}
 
 static int is_between(int value, int left, int right)
 {
@@ -901,7 +843,7 @@ static int smb1360_enable_fg_access(struct smb1360_chip *chip)
 	 * check if the access was granted before
 	 */
 	mutex_lock(&chip->fg_access_request_lock);
-	smb1360_stay_awake(&chip->smb1360_ws, WAKEUP_SRC_FG_ACCESS);
+	pm_stay_awake(chip->dev);
 	rc = smb1360_read(chip, IRQ_I_REG, &reg);
 	if (rc) {
 		pr_err("Couldn't read IRQ_I_REG, rc=%d\n", rc);
@@ -942,7 +884,7 @@ static int smb1360_enable_fg_access(struct smb1360_chip *chip)
 	}
 
 bail_i2c:
-	smb1360_relax(&chip->smb1360_ws, WAKEUP_SRC_FG_ACCESS);
+	pm_relax(chip->dev);
 	mutex_unlock(&chip->fg_access_request_lock);
 	return rc;
 }
@@ -1782,7 +1724,7 @@ static void smb1360_parallel_work(struct work_struct *work)
 	}
 
 exit_work:
-	smb1360_relax(&chip->smb1360_ws, WAKEUP_SRC_PARALLEL);
+	pm_relax(chip->dev);
 }
 
 static int smb1360_set_appropriate_usb_current(struct smb1360_chip *chip)
@@ -2281,7 +2223,7 @@ static void smb1360_jeita_work_fn(struct work_struct *work)
 		!!chip->soft_hot_rt_stat, chip->soft_jeita_supported,
 		chip->soft_cold_thresh, chip->soft_hot_thresh);
 end:
-	smb1360_relax(&chip->smb1360_ws, WAKEUP_SRC_JEITA_SOFT);
+	pm_relax(chip->dev);
 }
 
 static int hot_soft_handler(struct smb1360_chip *chip, u8 rt_stat)
@@ -2295,8 +2237,7 @@ static int hot_soft_handler(struct smb1360_chip *chip, u8 rt_stat)
 		cancel_delayed_work_sync(&chip->jeita_work);
 		schedule_delayed_work(&chip->jeita_work,
 					msecs_to_jiffies(JEITA_WORK_MS));
-		smb1360_stay_awake(&chip->smb1360_ws,
-			WAKEUP_SRC_JEITA_SOFT);
+		pm_stay_awake(chip->dev);
 	}
 
 	if (chip->parallel_charging) {
@@ -2319,8 +2260,7 @@ static int cold_soft_handler(struct smb1360_chip *chip, u8 rt_stat)
 		cancel_delayed_work_sync(&chip->jeita_work);
 		schedule_delayed_work(&chip->jeita_work,
 					msecs_to_jiffies(JEITA_WORK_MS));
-		smb1360_stay_awake(&chip->smb1360_ws,
-			WAKEUP_SRC_JEITA_SOFT);
+		pm_stay_awake(chip->dev);
 	}
 
 	if (chip->parallel_charging) {
@@ -2476,7 +2416,7 @@ static int aicl_done_handler(struct smb1360_chip *chip, u8 rt_stat)
 
 	if (chip->parallel_charging && aicl_done) {
 		cancel_work_sync(&chip->parallel_work);
-		smb1360_stay_awake(&chip->smb1360_ws, WAKEUP_SRC_PARALLEL);
+		pm_stay_awake(chip->dev);
 		schedule_work(&chip->parallel_work);
 	}
 
@@ -2508,10 +2448,7 @@ static int min_soc_handler(struct smb1360_chip *chip, u8 rt_stat)
 	pr_debug("SOC dropped below min SOC, rt_stat = 0x%02x\n", rt_stat);
 
 	if (chip->awake_min_soc)
-		rt_stat ? smb1360_stay_awake(&chip->smb1360_ws,
-				WAKEUP_SRC_MIN_SOC) :
-			smb1360_relax(&chip->smb1360_ws,
-				WAKEUP_SRC_MIN_SOC);
+		rt_stat ? pm_stay_awake(chip->dev) : pm_relax(chip->dev);
 
 	return 0;
 }
@@ -2523,14 +2460,12 @@ static int empty_soc_handler(struct smb1360_chip *chip, u8 rt_stat)
 	if (!chip->empty_soc_disabled) {
 		if (rt_stat) {
 			chip->empty_soc = true;
-			smb1360_stay_awake(&chip->smb1360_ws,
-				WAKEUP_SRC_EMPTY_SOC);
+			pm_stay_awake(chip->dev);
 			pr_warn_ratelimited("SOC is 0\n");
 		} else {
 			chip->empty_soc = false;
 #ifndef CONFIG_MACH_SONY_TULIP
-			smb1360_relax(&chip->smb1360_ws,
-				WAKEUP_SRC_EMPTY_SOC);
+			pm_relax(chip->dev);
 #endif
 		}
 	}
@@ -5277,7 +5212,6 @@ static int smb1360_probe(struct i2c_client *client,
 	INIT_DELAYED_WORK(&chip->delayed_init_work,
 			smb1360_delayed_init_work_fn);
 	init_completion(&chip->fg_mem_access_granted);
-	smb1360_wakeup_src_init(chip);
 
 	/* probe the device to check if its actually connected */
 	rc = smb1360_read(chip, CFG_BATT_CHG_REG, &reg);
