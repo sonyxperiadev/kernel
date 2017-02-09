@@ -2843,10 +2843,12 @@ static struct irq_handler_info handlers[] = {
 			{
 				.name		= "safety_timeout",
 			},
+#ifndef CONFIG_MACH_SONY_TULIP
 			{
 				.name		= "aicl_done",
 				.smb_irq	= aicl_done_handler,
 			},
+#endif
 			{
 				.name		= "battery_ov",
 			},
@@ -5141,7 +5143,7 @@ brain_work(struct work_struct *work)
 	int fast_chg = smb1360_get_prop_fast_chg_current(chip);
 	int input_type = smb1360_get_prop_input_type(chip);
 	int input_current = smb1360_get_prop_input_current(chip);
-	int en = smb1360_get_prop_charging_status(chip);
+	int en = !chip->charging_disabled_status;
 
 	smb1360_get_prop_usb_present(chip);
 	if (brain_ms)
