@@ -3495,7 +3495,8 @@ static int binder_ioctl_set_ctx_mgr(struct file *filp)
 	temp = binder_new_node(proc, 0, 0);
 	if (temp == NULL) {
 		context->binder_context_mgr_uid = INVALID_UID;
-		return -ENOMEM;
+		ret = -ENOMEM;
+		goto out;
 	}
 	temp->local_weak_refs++;
 	temp->local_strong_refs++;
