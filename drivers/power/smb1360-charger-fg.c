@@ -1223,22 +1223,6 @@ static int smb1360_get_prop_batt_status(struct smb1360_chip *chip)
 		return POWER_SUPPLY_STATUS_CHARGING;
 }
 
-#ifdef CONFIG_MACH_SONY_TULIP
-static int smb1360_get_prop_charging_status(struct smb1360_chip *chip)
-{
-	int rc;
-	u8 reg = 0;
-
-	rc = smb1360_read(chip, STATUS_3_REG, &reg);
-	if (rc) {
-		pr_err("Couldn't read STATUS_3_REG rc=%d\n", rc);
-		return 0;
-	}
-
-	return (reg & CHG_EN_BIT) ? 1 : 0;
-}
-#endif
-
 static int smb1360_get_prop_charge_type(struct smb1360_chip *chip)
 {
 	int rc;
@@ -2097,15 +2081,9 @@ static int smb1360_battery_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_STATUS:
 		val->intval = smb1360_get_prop_batt_status(chip);
 		break;
-#ifndef CONFIG_MACH_SONY_TULIP
 	case POWER_SUPPLY_PROP_CHARGING_ENABLED:
 		val->intval = !chip->charging_disabled_status;
 		break;
-#else
-	case POWER_SUPPLY_PROP_CHARGING_ENABLED:
-		val->intval = smb1360_get_prop_charging_status(chip);
-		break;
-#endif
 	case POWER_SUPPLY_PROP_CHARGE_TYPE:
 		val->intval = smb1360_get_prop_charge_type(chip);
 		break;
@@ -2867,9 +2845,7 @@ static struct irq_handler_info handlers[] = {
 			},
 			{
 				.name		= "aicl_done",
-#ifndef CONFIG_MACH_SONY_TULIP
 				.smb_irq	= aicl_done_handler,
-#endif
 			},
 			{
 				.name		= "battery_ov",
