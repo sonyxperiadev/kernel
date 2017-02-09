@@ -949,10 +949,9 @@ static struct binder_ref *binder_get_ref_for_node(struct binder_proc *proc,
 
 	/* Need to allocate a new ref */
 	new_ref = kzalloc(sizeof(*ref), GFP_KERNEL);
-	if (new_ref == NULL) {
-		binder_proc_unlock(proc, __LINE__);
+	if (new_ref == NULL)
 		return NULL;
-	}
+
 	binder_stats_created(BINDER_STAT_REF);
 	new_ref->debug_id = ++binder_last_id;
 	new_ref->proc = proc;
