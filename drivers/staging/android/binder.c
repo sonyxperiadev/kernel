@@ -750,7 +750,7 @@ static struct binder_node *binder_new_node(struct binder_proc *proc,
 		else {
 			binder_proc_unlock(proc, __LINE__);
 			kfree(temp_node);
-			return NULL;
+			return node;
 		}
 	}
 
