@@ -3881,13 +3881,20 @@ static int binder_node_release(struct binder_node *node, int refs)
 
 	while (!list_empty(&tmplist.list)) {
 		struct binder_ref_death *death;
+		wait_queue_head_t *wait;
 
 		w = list_first_entry(&tmplist.list, struct binder_work, entry);
 		death = container_of(w, struct binder_ref_death, work);
 		binder_dequeue_work(w, __LINE__);
+		/*
+		 * It's not safe to touch death after
+		 * enqueuing since it may be processed
+		 * remotely and kfree'd
+		 */
+		wait = &death->wait_proc->wait;
 		binder_enqueue_work(w, &death->wait_proc->todo,
 				    __LINE__);
-		wake_up_interruptible(&death->wait_proc->wait);
+		wake_up_interruptible(wait);
 	}
 	binder_debug(BINDER_DEBUG_DEAD_BINDER,
 		     "node %d now dead, refs %d, death %d\n",
