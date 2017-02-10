@@ -1284,6 +1284,8 @@
 			interrupt-parent = <&intc>;
 			interrupts = <0 135 0>;
 			interrupt-names = "hsusb";
+
+			qcom,bam-type = <1>;
 			qcom,usb-bam-num-pipes = <16>;
 			qcom,usb-bam-fifo-baseaddr = <0x08606000>;
 			qcom,ignore-core-reset-ack;
@@ -1294,7 +1296,6 @@
 			qcom,pipe0 {
 				label = "hsusb-ipa-out-0";
 				qcom,usb-bam-mem-type = <2>;
-				qcom,bam-type = <1>;
 				qcom,dir = <0>;
 				qcom,pipe-num = <0>;
 				qcom,peer-bam = <2>;
@@ -1308,7 +1309,6 @@
 			qcom,pipe1 {
 				label = "hsusb-ipa-in-0";
 				qcom,usb-bam-mem-type = <2>;
-				qcom,bam-type = <1>;
 				qcom,dir = <1>;
 				qcom,pipe-num = <0>;
 				qcom,peer-bam = <2>;
@@ -1322,7 +1322,6 @@
 			qcom,pipe2 {
 				label = "hsusb-qdss-in-0";
 				qcom,usb-bam-mem-type = <3>;
-				qcom,bam-type = <1>;
 				qcom,dir = <1>;
 				qcom,pipe-num = <0>;
 				qcom,peer-bam = <1>;
@@ -1341,7 +1340,6 @@
 			qcom,pipe3 {
 				label = "hsusb-dpl-ipa-in-1";
 				qcom,usb-bam-mem-type = <2>;
-				qcom,bam-type = <1>;
 				qcom,dir = <1>;
 				qcom,pipe-num = <1>;
 				qcom,peer-bam = <2>;
