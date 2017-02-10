@@ -342,16 +342,24 @@
 
 		pmx_sdc3_clk {
 			sdc3_clk_on: sdc3_clk_on {
+				mux {
+					pins = "gpio44";
+					function = "sdc3";
+				};
 				config {
-					pins = "sdc3_clk";
-					drive-strength = <16>; /* 16 MA */
+					pins = "gpio44";
 					bias-disable; /* NO pull */
+					drive-strength = <16>; /* 16 MA */
 				};
 			};
 
 			sdc3_clk_off: sdc3_clk_off {
+				mux {
+					pins = "gpio44";
+					function = "sdc3";
+				};
 				config {
-					pins = "sdc3_clk";
+					pins = "gpio44";
 					bias-disable; /* NO pull */
 					drive-strength = <2>; /* 2 MA */
 				};
@@ -360,16 +368,24 @@
 
 		pmx_sdc3_cmd {
 			sdc3_cmd_on: sdc3_cmd_on {
+				mux {
+					pins = "gpio43";
+					function = "sdc3";
+				};
 				config {
-					pins = "sdc3_cmd";
+					pins = "gpio43";
 					bias-pull-up; /* pull up */
 					drive-strength = <10>; /* 10 MA */
 				};
 			};
 
 			sdc3_cmd_off: sdc3_cmd_off {
+				mux {
+					pins = "gpio43";
+					function = "sdc3";
+				};
 				config {
-					pins = "sdc3_cmd";
+					pins = "gpio43";
 					bias-pull-up; /* pull up */
 					drive-strength = <2>; /* 2 MA */
 				};
@@ -378,86 +394,33 @@
 
 		pmx_sdc3_data {
 			sdc3_dat_on: sdc3_data_on {
+				mux {
+					pins = "gpio39", "gpio40",
+						"gpio41", "gpio42";
+					function = "sdc3";
+				};
 				config {
-					pins = "sdc3_data";
+					pins = "gpio39", "gpio40",
+						"gpio41", "gpio42";
 					bias-pull-up; /* pull up */
 					drive-strength = <10>; /* 10 MA */
 				};
 			};
 
 			sdc3_dat_off: sdc3_data_off {
+				mux {
+					pins = "gpio39", "gpio40",
+						"gpio41", "gpio42";
+					function = "sdc3";
+				};
 				config {
-					pins = "sdc3_data";
+					pins = "gpio39", "gpio40",
+						"gpio41", "gpio42";
 					bias-pull-up; /* pull up */
 					drive-strength = <2>; /* 2 MA */
 				};
 			};
 		};
-/************************************************************************
-		// TODO: CHECK ME!!!!
-		pmx_sdc3_clk {
-			qcom,pins = <&gp 44>;
-			qcom,num-grp-pins = <1>;
-			qcom,pin-func = <2>;
-			label = "sdc3_clk";
-			sdc3_clk_on: clk_on {
-				bias-disable;
-				drive-strength = <16>;
-			};
-			sdc3_clk_off: clk_off {
-				bias-disable;
-				drive-strength = <2>;
-			};
-		};
-
-		pmx_sdc3_cmd {
-			qcom,pins = <&gp 43>;
-			qcom,num-grp-pins = <1>;
-			qcom,pin-func = <2>;
-			label = "sdc3_cmd";
-			sdc3_cmd_on: cmd_on {
-				bias-pull-up;
-				drive-strength = <10>;
-			};
-			sdc3_cmd_off: cmd_off {
-				bias-pull-up;
-				drive-strength = <2>;
-			};
-		};
-
-		pmx_sdc3_dat {
-			qcom,pins = <&gp 39>, <&gp 40>, <&gp 41>, <&gp 42>;
-			qcom,num-grp-pins = <4>;
-			qcom,pin-func = <2>;
-			label = "sdc3_dat";
-			sdc3_dat_on: dat_on {
-				bias-pull-up;
-				drive-strength = <10>;
-			};
-			sdc3_dat_off: dat_off {
-				bias-pull-up;
-				drive-strength = <2>;
-			};
-		};
-
-		sdc3_wlan_gpio {
-			qcom,pins = <&gp 34>;
-			qcom,num-grp-pins = <1>;
-			qcom,pin-func = <0>;
-			label = "wlan_en_gpio";
-			sdc3_wlan_gpio_active: sdc3_wlan_gpio_active {
-				output-high;
-				drive-strength = <8>;
-				bias-pull-up;
-			};
-			sdc3_wlan_gpio_sleep: sdc3_wlan_gpio_sleep {
-				output-low;
-				drive-strength = <2>;
-				bias-disable;
-			};
-
-		};
-***********************************************************************/
 
 		pmx_mdss: pmx_mdss {
 			mdss_dsi_active: mdss_dsi_active {
