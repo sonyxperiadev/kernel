@@ -244,17 +244,14 @@ static const struct pinctrl_pin_desc msm8976_pins[] = {
 	PINCTRL_PIN(149, "SDC2_CLK"),
 	PINCTRL_PIN(150, "SDC2_CMD"),
 	PINCTRL_PIN(151, "SDC2_DATA"),
-	PINCTRL_PIN(152, "SDC3_CLK"),
-	PINCTRL_PIN(153, "SDC3_CMD"),
-	PINCTRL_PIN(154, "SDC3_DATA"),
-	PINCTRL_PIN(155, "QDSD_CLK"),
-	PINCTRL_PIN(156, "QDSD_CMD"),
-	PINCTRL_PIN(157, "QDSD_DATA0"),
-	PINCTRL_PIN(158, "QDSD_DATA1"),
-	PINCTRL_PIN(159, "QDSD_DATA2"),
-	PINCTRL_PIN(160, "QDSD_DATA3"),
-	PINCTRL_PIN(161, "QDSD_DATA4"),
-	PINCTRL_PIN(162, "QDSD_DATA5"),
+	PINCTRL_PIN(152, "QDSD_CLK"),
+	PINCTRL_PIN(153, "QDSD_CMD"),
+	PINCTRL_PIN(154, "QDSD_DATA0"),
+	PINCTRL_PIN(155, "QDSD_DATA1"),
+	PINCTRL_PIN(156, "QDSD_DATA2"),
+	PINCTRL_PIN(157, "QDSD_DATA3"),
+	PINCTRL_PIN(158, "QDSD_DATA4"),
+	PINCTRL_PIN(159, "QDSD_DATA5"),
 
 };
 
@@ -413,17 +410,14 @@ static const unsigned int sdc1_rclk_pins[] = { 148 };
 static const unsigned int sdc2_clk_pins[] = { 149 };
 static const unsigned int sdc2_cmd_pins[] = { 150 };
 static const unsigned int sdc2_data_pins[] = { 151 };
-static const unsigned int sdc3_clk_pins[] = { 152 };
-static const unsigned int sdc3_cmd_pins[] = { 153 };
-static const unsigned int sdc3_data_pins[] = { 154 };
-static const unsigned int qdsd_clk_pins[] = { 155 };
-static const unsigned int qdsd_cmd_pins[] = { 156 };
-static const unsigned int qdsd_data0_pins[] = { 157 };
-static const unsigned int qdsd_data1_pins[] = { 158 };
-static const unsigned int qdsd_data2_pins[] = { 159 };
-static const unsigned int qdsd_data3_pins[] = { 160 };
-static const unsigned int qdsd_data4_pins[] = { 161 };
-static const unsigned int qdsd_data5_pins[] = { 162 };
+static const unsigned int qdsd_clk_pins[] = { 152 };
+static const unsigned int qdsd_cmd_pins[] = { 153 };
+static const unsigned int qdsd_data0_pins[] = { 154 };
+static const unsigned int qdsd_data1_pins[] = { 155 };
+static const unsigned int qdsd_data2_pins[] = { 156 };
+static const unsigned int qdsd_data3_pins[] = { 157 };
+static const unsigned int qdsd_data4_pins[] = { 158 };
+static const unsigned int qdsd_data5_pins[] = { 159 };
 
 enum msm8976_functions {
 	msm_mux_gpio,
@@ -566,6 +560,7 @@ enum msm8976_functions {
 	msm_mux_wcss_bt,
 	msm_mux_atest_char2,
 	msm_mux_ebi_ch0,
+	msm_mux_sdc3,
 	msm_mux_wcss_wlan2,
 	msm_mux_wcss_wlan1,
 	msm_mux_wcss_wlan0,
@@ -1077,6 +1072,10 @@ static const char * const atest_char2_groups[] = {
 static const char * const ebi_ch0_groups[] = {
 	"gpio75",
 };
+static const char * const sdc3_groups[] = {
+	"gpio39", "gpio40", "gpio41",
+	"gpio42", "gpio43", "gpio44",
+};
 static const char * const wcss_wlan2_groups[] = {
 	"gpio40",
 };
@@ -1405,6 +1404,7 @@ static const struct msm_function msm8976_functions[] = {
 	FUNCTION(wcss_bt),
 	FUNCTION(atest_char2),
 	FUNCTION(ebi_ch0),
+	FUNCTION(sdc3),
 	FUNCTION(wcss_wlan2),
 	FUNCTION(wcss_wlan1),
 	FUNCTION(wcss_wlan0),
@@ -1539,16 +1539,18 @@ static const struct msm_pingroup msm8976_groups[] = {
 		 NA, NA, qdss_tracedata_b),
 	PINGROUP(37, NA, NA, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
 	PINGROUP(38, cci_async, NA, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
-	PINGROUP(39, NA, NA, NA, qdss_tracedata_a, NA, dac_calib5, NA, NA, NA),
-	PINGROUP(40, wcss_wlan2, NA, qdss_tracedata_a, NA, dac_calib6, NA, NA, NA, NA),
+	PINGROUP(39, NA, NA, NA, qdss_tracedata_a, NA, dac_calib5, NA,
+		 sdc3, NA),
+	PINGROUP(40, wcss_wlan2, NA, qdss_tracedata_a, NA, dac_calib6, NA, NA,
+		 sdc3, NA),
 	PINGROUP(41, wcss_wlan1, cci_timer4, blsp3_spi, gcc_gp1_clk_b, qdss_tracedata_a,
-		 NA, qdss_cti_trig_out_a0, NA, dac_calib7),
+		 NA, qdss_cti_trig_out_a0, sdc3, dac_calib7),
 	PINGROUP(42, wcss_wlan0, gcc_gp1_clk_a, qdss_tracedata_a, NA,
-		 dac_calib8, NA, NA, NA, NA),
+		 dac_calib8, NA, NA, sdc3, NA),
 	PINGROUP(43, wcss_wlan, gcc_gp2_clk_a, qdss_tracedata_a, NA,
-		 dac_calib9, NA, NA, NA, NA),
+		 dac_calib9, NA, NA, sdc3, NA),
 	PINGROUP(44, wcss_wlan, gcc_gp3_clk_a, qdss_tracedata_a, NA,
-		 dac_calib10, NA, NA, NA, NA),
+		 dac_calib10, NA, NA, sdc3, NA),
 	PINGROUP(45, NA, qdss_tracedata_a, NA, dac_calib11, NA, NA, NA, NA, NA),
 	PINGROUP(46, qdss_tracedata_a, NA, dac_calib12, NA, NA, NA, NA, NA, NA),
 	PINGROUP(47, blsp6_spi, qdss_tracedata_a, NA, dac_calib13, NA, NA, NA,
@@ -1673,9 +1675,6 @@ static const struct msm_pingroup msm8976_groups[] = {
 	SDC_QDSD_PINGROUP(sdc2_clk, 0x109000, 14, 6),
 	SDC_QDSD_PINGROUP(sdc2_cmd, 0x109000, 11, 3),
 	SDC_QDSD_PINGROUP(sdc2_data, 0x109000, 9, 0),
-	SDC_QDSD_PINGROUP(sdc3_clk, 0x108000, 14, 6),
-	SDC_QDSD_PINGROUP(sdc3_cmd, 0x108000, 11, 3),
-	SDC_QDSD_PINGROUP(sdc3_data, 0x108000, 9, 0),
 	SDC_QDSD_PINGROUP(qdsd_clk, 0x19c000, 3, 0),
 	SDC_QDSD_PINGROUP(qdsd_cmd, 0x19c000, 8, 5),
 	SDC_QDSD_PINGROUP(qdsd_data0, 0x19c000, 13, 10),
