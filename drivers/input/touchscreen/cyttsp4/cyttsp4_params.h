@@ -24,7 +24,11 @@ static const uint8_t cyttsp4_param_regs[] = {
 	0x70, 0x04,  /* CONFIG_DATA_SIZE */
 	0x70, 0x04,  /* CONFIG_DATA_MAX_SIZE */
 	0x40, 0x00, 0x00, 0x00,  /* SDK_CTRL_CFG_SIZE */
+#ifdef CONFIG_MACH_SONY_TULIP
+	0x02, 0x40,  /* CONFIG_VER */
+#else
 	0x01, 0x40,  /* CONFIG_VER */
+#endif
 	0x01,  /* PANEL_ID_CONFIG */
 	0x00,  /* PIP_REPORTING_DISABLE */
 	0xF6, 0x18,  /* X_LEN_PHY */
@@ -519,7 +523,11 @@ static const uint8_t cyttsp4_param_regs[] = {
 	0x00, 0x00,  /* GLOVE_MULTI_TOUCH_DEBOUNCE */
 	0x14, 0x00,  /* GLOVE_Z_SCALING */
 	0x00, 0x00,  /* GLOVE_Z8_FILTER_SCALE */
+#ifdef CONFIG_MACH_SONY_TULIP
+	0x32, 0x00,  /* GLOVE_GRIP_FILTER_SCALE */
+#else
 	0xFF, 0xFF,  /* GLOVE_GRIP_FILTER_SCALE */
+#endif
 	0x14, 0x00,  /* GLOVE_BL_THRSH_MUT */
 	0x12, 0x00,  /* GLOVE_BL_THRSH_SELF */
 	0x28, 0x00,  /* GLOVE_MAX_FAT_FINGER_SIZE */
@@ -552,7 +560,11 @@ static const uint8_t cyttsp4_param_regs[] = {
 	0x32, 0x00,  /* WF_RAW_CALC_THOLD */
 	0x32, 0x00,  /* WF_DIFF_CALC_THOLD */
 	0x00, 0x00,  /* Reserved1134 */
+#ifdef CONFIG_MACH_SONY_TULIP
+	0x82, 0x09,  /* CONFIG_CRC */
+#else
 	0x5C, 0x4C,  /* CONFIG_CRC */
+#endif
 };
 
 /* Touchscreen Parameters Field Sizes (Writable: 0:Readonly; 1:Writable) */
