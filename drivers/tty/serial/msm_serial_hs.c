@@ -1443,11 +1443,6 @@ static void msm_hs_submit_tx_locked(struct uart_port *uport)
 	mod_timer(&tx->tx_timeout_timer,
 		jiffies + msecs_to_jiffies(MSEC_PER_SEC));
 
-	/* Notify the bluesleep driver of outgoing data, if available. */
-#ifdef CONFIG_BT_MSM_SLEEP
-	bluesleep_outgoing_data();
-#endif
-
 	MSM_HS_DBG("%s:Enqueue Tx Cmd, ret %d\n", __func__, ret);
 }
 
