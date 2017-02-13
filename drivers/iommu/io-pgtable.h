@@ -97,6 +97,7 @@ struct io_pgtable_cfg {
 	#define IO_PGTABLE_QUIRK_QCOM_USE_UPSTREAM_HINT	BIT(4)
 	#define IO_PGTABLE_QUIRK_PAGE_TABLE_COHERENT BIT(5)
 	#define IO_PGTABLE_QUIRK_QSMMUV500_NON_SHAREABLE BIT(6)
+	#define IO_PGTABLE_QUIRK_ARM_TTBR1 BIT(7)	/* Allocate TTBR1 PT */
 	unsigned long			quirks;
 	unsigned long			pgsize_bitmap;
 	unsigned int			ias;
