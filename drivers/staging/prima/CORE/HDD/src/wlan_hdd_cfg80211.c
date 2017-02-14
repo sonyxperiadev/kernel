@@ -8764,6 +8764,15 @@ static int __wlan_hdd_change_station(struct wiphy *wiphy,
                 }
                 StaParams.supported_channels_len = j;
             }
+            if (params->supported_oper_classes_len >
+                SIR_MAC_MAX_SUPP_OPER_CLASSES) {
+                VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_INFO,
+                          "received oper classes:%d, resetting it to max supported %d",
+                          params->supported_oper_classes_len,
+                          SIR_MAC_MAX_SUPP_OPER_CLASSES);
+                params->supported_oper_classes_len =
+                    SIR_MAC_MAX_SUPP_OPER_CLASSES;
+            }
             vos_mem_copy(StaParams.supported_oper_classes,
                          params->supported_oper_classes,
                          params->supported_oper_classes_len);
