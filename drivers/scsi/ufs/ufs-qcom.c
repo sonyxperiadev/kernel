@@ -2135,6 +2135,8 @@ static int ufs_qcom_init(struct ufs_hba *hba)
 		dev_err(dev, "%s: ufs_qcom_ice_get_dev failed %d\n",
 			__func__, err);
 		goto out_host_free;
+	} else {
+		hba->host->inlinecrypt_support = 1;
 	}
 
 	host->generic_phy = devm_phy_get(dev, "ufsphy");

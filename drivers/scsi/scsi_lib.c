@@ -2126,6 +2126,9 @@ static void __scsi_init_queue(struct Scsi_Host *shost, struct request_queue *q)
 	if (!shost->use_clustering)
 		q->limits.cluster = 0;
 
+	if (shost->inlinecrypt_support)
+		queue_flag_set_unlocked(QUEUE_FLAG_INLINECRYPT, q);
+
 	/*
 	 * set a reasonable default alignment on word boundaries: the
 	 * host and device may alter it using
