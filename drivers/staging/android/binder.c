@@ -448,46 +448,19 @@ static inline bool binder_worklist_empty(struct binder_worklist *wlist)
 	return ret;
 }
 
-static DEFINE_PER_CPU(int, proc_lock_held);
-
 static void
 binder_proc_lock(struct binder_proc *proc, int line)
 {
-	int cpu;
-	int held;
-
 	binder_debug(BINDER_DEBUG_SPINLOCKS,
 		     "%s: line=%d\n", __func__, line);
 	spin_lock(&proc->proc_lock);
-	cpu = smp_processor_id();
-	held = per_cpu(proc_lock_held, cpu);
-	/*
-	 * Acquisition of the proc lock must never be
-	 * nested with other proc locks.
-	 */
-	if (held) {
-		pr_err("binder: nested proc lock @ %d, orig %d\n",
-		       line, held);
-		BUG();
-	}
-
-	per_cpu(proc_lock_held, cpu) = line;
 }
 
 static void
 binder_proc_unlock(struct binder_proc *proc, int line)
 {
-	int acq_line;
-	int cpu = smp_processor_id();
-
-	acq_line = per_cpu(proc_lock_held, cpu);
 	binder_debug(BINDER_DEBUG_SPINLOCKS,
-		     "%s: line=%d acq=%d\n", __func__, line, acq_line);
-	if (!acq_line) {
-		pr_err("binder: bad proc unlock @ %d\n", line);
-		BUG();
-	}
-	per_cpu(proc_lock_held, cpu) = 0;
+		     "%s: line=%d\n", __func__, line);
 	spin_unlock(&proc->proc_lock);
 }
 
@@ -4712,12 +4685,9 @@ static int __init binder_init(void)
 	char *device_name, *device_names;
 	struct binder_device *device;
 	struct hlist_node *tmp;
-	int ret, cpu, i;
+	int ret, i;
 
 	atomic_set(&binder_seq_count, 0);
-
-	for (cpu = 0; cpu < num_possible_cpus(); cpu++)
-		per_cpu(proc_lock_held, cpu) = 0;
 
 	binder_deferred_workqueue = create_singlethread_workqueue("binder");
 	if (!binder_deferred_workqueue)
