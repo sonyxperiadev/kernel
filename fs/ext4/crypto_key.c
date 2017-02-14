@@ -397,13 +397,14 @@ retry:
 	if (for_fname ||
 	    (crypt_info->ci_data_mode != EXT4_ENCRYPTION_MODE_PRIVATE)) {
 		res = ext4_derive_key(&ctx, master_key->raw, crypt_info->ci_raw_key);
-	} else if (ext4_is_ice_enabled()) {
+	} else if (ext4_is_ice_capable(inode->i_sb)) {
 		memcpy(crypt_info->ci_raw_key, master_key->raw,
 		       EXT4_MAX_KEY_SIZE);
 		crypt_info = ext4_dedup_crypt_info(crypt_info);
 		res = 0;
 	} else {
-		pr_warn("%s: ICE support not available\n", __func__);
+		ext4_warning(inode->i_sb,
+			     "ICE support not available on this device\n");
 		res = -EINVAL;
 	}
 

@@ -62,18 +62,13 @@ static void completion_pages(struct work_struct *work)
 
 	bio_for_each_segment_all(bv, bio, i) {
 		struct page *page = bv->bv_page;
+		int ret = ext4_decrypt(page);
 
-		if (ext4_is_ice_enabled()) {
+		if (ret) {
+			WARN_ON_ONCE(1);
+			SetPageError(page);
+		} else
 			SetPageUptodate(page);
-		} else {
-			int ret = ext4_decrypt(page);
-
-			if (ret) {
-				WARN_ON_ONCE(1);
-				SetPageError(page);
-			} else
-				SetPageUptodate(page);
-		}
 		unlock_page(page);
 	}
 	ext4_release_crypto_ctx(ctx);
@@ -284,7 +279,8 @@ int ext4_mpage_readpages(struct address_space *mapping,
 			struct ext4_crypto_ctx *ctx = NULL;
 
 			if (ext4_encrypted_inode(inode) &&
-			    S_ISREG(inode->i_mode)) {
+			    S_ISREG(inode->i_mode) &&
+			    !ext4_using_hardware_encryption(inode)) {
 				ctx = ext4_get_crypto_ctx(inode, GFP_NOFS);
 				if (IS_ERR(ctx))
 					goto set_error_page;

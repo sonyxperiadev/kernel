@@ -25,9 +25,9 @@ static inline int ext4_should_be_processed_by_ice(const struct inode *inode)
 	return ext4_using_hardware_encryption((struct inode *)inode);
 }
 
-static inline int ext4_is_ice_enabled(void)
+static inline int ext4_is_ice_capable(const struct super_block *sb)
 {
-	return 1;
+	return blk_queue_inlinecrypt(bdev_get_queue(sb->s_bdev));
 }
 
 int ext4_is_aes_xts_cipher(const struct inode *inode);
@@ -55,7 +55,7 @@ static inline int ext4_should_be_processed_by_ice(const struct inode *inode)
 {
 	return 0;
 }
-static inline int ext4_is_ice_enabled(void)
+static inline int ext4_is_ice_capable(const struct super_block *sb)
 {
 	return 0;
 }
