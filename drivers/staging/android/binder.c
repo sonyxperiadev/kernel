@@ -544,19 +544,18 @@ binder_dequeue_work(struct binder_work *work, int line)
 {
 	struct binder_worklist *wlist = work->wlist;
 
-	if (!wlist) {
-		/* already dequeued. This can happen
-		 * if the associated node is being
-		 * released
-		 */
-		/* Add barrier to ensure list delete happened */
-		smp_mb();
-		return;
+	while (wlist) {
+		spin_lock(&wlist->lock);
+		if (wlist == work->wlist) {
+			_binder_dequeue_work(work, line);
+			spin_unlock(&wlist->lock);
+			return;
+		}
+		spin_unlock(&wlist->lock);
+		wlist = work->wlist;
 	}
-	spin_lock(&wlist->lock);
-	_binder_dequeue_work(work, line);
-	spin_unlock(&wlist->lock);
-
+	/* Add barrier to ensure list delete is visible */
+	smp_mb();
 }
 
 struct binder_transaction {
