@@ -408,6 +408,7 @@ struct binder_thread {
 	int pid;
 	int looper;              /* only modified by this thread */
 	bool looper_need_return; /* can be written by other thread */
+	bool waiting_for_proc_work; /* can be read by other thread */
 	struct binder_transaction *transaction_stack;
 	struct binder_worklist todo;
 	uint32_t return_error; /* Write failed, return error code in read buf */
@@ -1152,6 +1153,10 @@ static void binder_send_failed_reply(struct binder_transaction *t,
 				binder_pop_transaction(target_thread, t);
 				target_thread->return_error = error_code;
 				wake_up_interruptible(&target_thread->wait);
+				if (READ_ONCE(
+					target_thread->waiting_for_proc_work))
+					wake_up_interruptible_all(
+						&target_thread->proc->wait);
 			} else {
 				pr_err("reply failed, target thread, %d:%d, has error code %d already\n",
 					target_thread->proc->pid,
@@ -2148,6 +2153,15 @@ static void binder_transaction(struct binder_proc *proc,
 	binder_enqueue_work(tcomplete, &thread->todo, __LINE__);
 
 	if (target_wait) {
+		/*
+		 * Handle rare case where thread work has been added but
+		 * the thread is waiting on the proc workqueue. Make sure
+		 * it wakes up.
+		 */
+		if (unlikely(target_thread &&
+			     READ_ONCE(target_thread->waiting_for_proc_work)))
+			wake_up_interruptible_all(&target_proc->wait);
+
 		if (reply || !(t->flags & TF_ONE_WAY))
 			wake_up_interruptible_sync(target_wait);
 		else
@@ -2660,18 +2674,18 @@ static void binder_stat_br(struct binder_proc *proc,
 	}
 }
 
-static inline int binder_has_proc_work(struct binder_proc *proc,
-				struct binder_thread *thread)
-{
-	return !binder_worklist_empty(&proc->todo) ||
-		READ_ONCE(thread->looper_need_return);
-}
-
 static inline int binder_has_thread_work(struct binder_thread *thread)
 {
 	return !binder_worklist_empty(&thread->todo) ||
 		thread->return_error != BR_OK ||
 		READ_ONCE(thread->looper_need_return);
+}
+
+static inline int binder_has_proc_work(struct binder_proc *proc,
+				struct binder_thread *thread)
+{
+	return !binder_worklist_empty(&proc->todo) ||
+		binder_has_thread_work(thread);
 }
 
 static int binder_thread_read(struct binder_proc *proc,
@@ -2720,6 +2734,14 @@ retry:
 
 	if (wait_for_proc_work)
 		atomic_inc(&proc->ready_threads);
+	else if (!binder_worklist_empty(&proc->todo) &&
+			atomic_read(&proc->ready_threads)) {
+		/*
+		 * Need to kick the proc wait queue in case
+		 * it was just unfrozen and has work to do
+		 */
+		wake_up_interruptible(&proc->wait);
+	}
 
 	binder_unlock(__func__);
 
@@ -2739,11 +2761,15 @@ retry:
 				ret = -EAGAIN;
 			}
 		} else {
+			WRITE_ONCE(thread->waiting_for_proc_work, true);
 			binder_put_thread(thread);
 			ret = wait_event_freezable_exclusive(proc->wait, binder_has_proc_work(proc, thread));
 			*threadp = thread = binder_get_thread(proc);
 			binder_lock(__func__);
-			if (!thread)
+			if (thread)
+				WRITE_ONCE(thread->waiting_for_proc_work,
+					   false);
+			else
 				ret = -EINVAL;
 		}
 	} else {
