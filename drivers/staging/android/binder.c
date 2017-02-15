@@ -2800,10 +2800,11 @@ retry:
 
 	if (wait_for_proc_work)
 		atomic_dec(&proc->ready_threads);
-	thread->looper &= ~BINDER_LOOPER_STATE_WAITING;
 
 	if (ret)
 		return ret;
+
+	thread->looper &= ~BINDER_LOOPER_STATE_WAITING;
 
 	while (1) {
 		uint32_t cmd;
