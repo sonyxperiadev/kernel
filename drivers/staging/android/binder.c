@@ -1415,7 +1415,7 @@ static void binder_transaction_buffer_release(struct binder_proc *proc,
 			fp = to_flat_binder_object(hdr);
 			node = binder_get_node(proc, fp->binder);
 			if (node == NULL) {
-				pr_err("transaction release %d bad node %016llx\n",
+				pr_err("transaction release %d bad node %016llx, target died\n",
 				       debug_id, (u64)fp->binder);
 				break;
 			}
@@ -1434,7 +1434,7 @@ static void binder_transaction_buffer_release(struct binder_proc *proc,
 			ref = binder_get_ref(proc, fp->handle,
 					     hdr->type == BINDER_TYPE_HANDLE);
 			if (ref == NULL) {
-				pr_err("transaction release %d bad handle %d\n",
+				pr_err("transaction release %d bad handle %d, target died\n",
 				 debug_id, fp->handle);
 				break;
 			}
@@ -1856,6 +1856,10 @@ static void binder_transaction(struct binder_proc *proc,
 		}
 		binder_proc_unlock(target_thread->proc, __LINE__);
 		target_proc = target_thread->proc;
+		if (target_proc->tsk->flags & PF_EXITING) {
+			return_error = BR_DEAD_REPLY;
+			goto err_dead_binder;
+		}
 	} else {
 		if (tr->target.handle) {
 			struct binder_ref *ref;
@@ -1876,11 +1880,12 @@ static void binder_transaction(struct binder_proc *proc,
 			}
 		}
 		e->to_node = target_node->debug_id;
-		if (target_node->is_zombie) {
+		target_proc = target_node->proc;
+		if (target_node->is_zombie ||
+				(target_proc->tsk->flags & PF_EXITING)) {
 			return_error = BR_DEAD_REPLY;
 			goto err_dead_binder;
 		}
-		target_proc = target_node->proc;
 		if (security_binder_transaction(proc->tsk, target_proc->tsk) < 0) {
 			return_error = BR_FAILED_REPLY;
 			goto err_invalid_target_handle;
@@ -3172,7 +3177,7 @@ static void binder_release_work(struct binder_worklist *wlist)
 			binder_stats_deleted(BINDER_STAT_DEATH);
 		} break;
 		case BINDER_WORK_NODE:
-			pr_info("unfinished BINDER_WORK_NODE\n");
+			pr_info("unfinished BINDER_WORK_NODE, proc has died\n");
 			break;
 		default:
 			pr_err("unexpected work type, %d, not freed\n",
