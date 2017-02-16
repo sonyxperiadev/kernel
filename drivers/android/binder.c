@@ -627,6 +627,7 @@ static struct binder_node *binder_get_node(struct binder_proc *proc,
 		else if (ptr > node->ptr)
 			n = n->rb_right;
 		else {
+			node->local_strong_refs++;
 			binder_proc_unlock(proc, __LINE__);
 			return node;
 		}
@@ -634,6 +635,20 @@ static struct binder_node *binder_get_node(struct binder_proc *proc,
 	binder_proc_unlock(proc, __LINE__);
 
 	return NULL;
+}
+
+static void _binder_make_node_zombie(struct binder_node *node)
+{
+	struct binder_proc *proc = node->proc;
+
+	BUG_ON(node->is_zombie);
+	BUG_ON(!spin_is_locked(&proc->proc_lock));
+	rb_erase(&node->rb_node, &proc->nodes);
+	INIT_HLIST_NODE(&node->dead_node);
+	node->is_zombie = true;
+	hlist_add_head(&node->dead_node, &proc->zombie_nodes);
+	binder_queue_for_zombie_cleanup(proc);
+	binder_stats_zombie(BINDER_STAT_NODE);
 }
 
 static struct binder_node *binder_new_node(struct binder_proc *proc,
@@ -656,6 +671,7 @@ static struct binder_node *binder_new_node(struct binder_proc *proc,
 		else if (ptr > node->ptr)
 			p = &(*p)->rb_right;
 		else {
+			node->local_strong_refs++;
 			binder_proc_unlock(proc, __LINE__);
 			kfree(temp_node);
 			return node;
@@ -685,6 +701,7 @@ static struct binder_node *binder_new_node(struct binder_proc *proc,
 
 	rb_link_node(&node->rb_node, parent, p);
 	rb_insert_color(&node->rb_node, &proc->nodes);
+	node->local_strong_refs++;
 	binder_proc_unlock(proc, __LINE__);
 
 	return node;
@@ -774,16 +791,10 @@ static int binder_dec_node(struct binder_node *node, int strong, int internal)
 		    !node->local_weak_refs) {
 			binder_dequeue_work(&node->work, __LINE__);
 			if (!node->is_zombie) {
-				rb_erase(&node->rb_node, &proc->nodes);
+				_binder_make_node_zombie(node);
 				binder_debug(BINDER_DEBUG_INTERNAL_REFS,
 					     "refless node %d deleted\n",
 					     node->debug_id);
-				INIT_HLIST_NODE(&node->dead_node);
-				node->is_zombie = true;
-				hlist_add_head(&node->dead_node,
-					       &proc->zombie_nodes);
-				binder_queue_for_zombie_cleanup(proc);
-				binder_stats_zombie(BINDER_STAT_NODE);
 			} else {
 				binder_debug(BINDER_DEBUG_INTERNAL_REFS,
 					     "dead node %d deleted\n",
@@ -800,6 +811,10 @@ done:
 	return 0;
 }
 
+static inline void binder_put_node(struct binder_node *node)
+{
+	binder_dec_node(node, 1, 0);
+}
 
 static struct binder_ref *binder_get_ref(struct binder_proc *proc,
 					 u32 desc, bool need_strong_ref)
@@ -1310,6 +1325,7 @@ static void binder_transaction_buffer_release(struct binder_proc *proc,
 				     node->debug_id, (u64)node->ptr);
 			binder_dec_node(node, hdr->type == BINDER_TYPE_BINDER,
 					0);
+			binder_put_node(node);
 		} break;
 		case BINDER_TYPE_HANDLE:
 		case BINDER_TYPE_WEAK_HANDLE: {
@@ -1419,14 +1435,19 @@ static int binder_translate_binder(struct flat_binder_object *fp,
 				  proc->pid, thread->pid, (u64)fp->binder,
 				  node->debug_id, (u64)fp->cookie,
 				  (u64)node->cookie);
+		binder_put_node(node);
 		return -EINVAL;
 	}
-	if (security_binder_transfer_binder(proc->tsk, target_proc->tsk))
+	if (security_binder_transfer_binder(proc->tsk, target_proc->tsk)) {
+		binder_put_node(node);
 		return -EPERM;
+	}
 
 	ref = binder_get_ref_for_node(target_proc, node);
-	if (!ref)
+	if (!ref) {
+		binder_put_node(node);
 		return -EINVAL;
+	}
 
 	if (fp->hdr.type == BINDER_TYPE_BINDER)
 		fp->hdr.type = BINDER_TYPE_HANDLE;
@@ -1442,7 +1463,7 @@ static int binder_translate_binder(struct flat_binder_object *fp,
 		     "        node %d u%016llx -> ref %d desc %d\n",
 		     node->debug_id, (u64)node->ptr,
 		     ref->debug_id, ref->desc);
-
+	binder_put_node(node);
 	return 0;
 }
 
@@ -2228,6 +2249,7 @@ static int binder_thread_write(struct binder_proc *proc,
 					"BC_INCREFS_DONE" : "BC_ACQUIRE_DONE",
 					(u64)node_ptr, node->debug_id,
 					(u64)cookie, (u64)node->cookie);
+				binder_put_node(node);
 				break;
 			}
 			binder_proc_lock(node->proc, __LINE__);
@@ -2237,6 +2259,7 @@ static int binder_thread_write(struct binder_proc *proc,
 						proc->pid, thread->pid,
 						node->debug_id);
 					binder_proc_unlock(node->proc, __LINE__);
+					binder_put_node(node);
 					break;
 				}
 				node->pending_strong_ref = 0;
@@ -2246,6 +2269,7 @@ static int binder_thread_write(struct binder_proc *proc,
 						proc->pid, thread->pid,
 						node->debug_id);
 					binder_proc_unlock(node->proc, __LINE__);
+					binder_put_node(node);
 					break;
 				}
 				node->pending_weak_ref = 0;
@@ -2257,6 +2281,7 @@ static int binder_thread_write(struct binder_proc *proc,
 				     proc->pid, thread->pid,
 				     cmd == BC_INCREFS_DONE ? "BC_INCREFS_DONE" : "BC_ACQUIRE_DONE",
 				     node->debug_id, node->local_strong_refs, node->local_weak_refs);
+			binder_put_node(node);
 			break;
 		}
 		case BC_ATTEMPT_ACQUIRE:
@@ -2795,14 +2820,8 @@ retry:
 						     node->debug_id,
 						     (u64)node->ptr,
 						     (u64)node->cookie);
-					rb_erase(&node->rb_node, &proc->nodes);
-					INIT_HLIST_NODE(&node->dead_node);
-					node->is_zombie = true;
-					hlist_add_head(&node->dead_node,
-						       &proc->zombie_nodes);
-					binder_queue_for_zombie_cleanup(proc);
+					_binder_make_node_zombie(node);
 					binder_proc_unlock(proc, __LINE__);
-					binder_stats_zombie(BINDER_STAT_NODE);
 				} else {
 					binder_proc_unlock(proc, __LINE__);
 					binder_debug(BINDER_DEBUG_INTERNAL_REFS,
@@ -3381,6 +3400,7 @@ static int binder_ioctl_set_ctx_mgr(struct file *filp)
 	temp->has_strong_ref = 1;
 	temp->has_weak_ref = 1;
 	context->binder_context_mgr_node = temp;
+	binder_put_node(temp);
 out:
 	mutex_unlock(&binder_context_mgr_node_lock);
 	return ret;
@@ -3722,11 +3742,7 @@ static int binder_node_release(struct binder_node *node, int refs)
 	binder_dequeue_work(&node->work, __LINE__);
 	binder_release_work(&node->async_todo);
 
-	INIT_HLIST_NODE(&node->dead_node);
-	node->is_zombie = true;
-	hlist_add_head(&node->dead_node, &proc->zombie_nodes);
-	binder_queue_for_zombie_cleanup(proc);
-	binder_stats_zombie(BINDER_STAT_NODE);
+	_binder_make_node_zombie(node);
 
 	if (hlist_empty(&node->refs)) {
 		binder_proc_unlock(proc, __LINE__);
@@ -3827,7 +3843,6 @@ static void binder_deferred_release(struct binder_proc *proc)
 
 		node = rb_entry(n, struct binder_node, rb_node);
 		nodes++;
-		rb_erase(&node->rb_node, &proc->nodes);
 		binder_proc_unlock(proc, __LINE__);
 		incoming_refs = binder_node_release(node, incoming_refs);
 		binder_proc_lock(proc, __LINE__);
