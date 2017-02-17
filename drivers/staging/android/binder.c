@@ -739,9 +739,9 @@ static struct binder_node *binder_new_node(struct binder_proc *proc,
 		else if (ptr > node->ptr)
 			p = &(*p)->rb_right;
 		else {
+			node->local_strong_refs++;
 			binder_proc_unlock(proc, __LINE__);
 			kfree(temp_node);
-			node->local_strong_refs++;
 			return node;
 		}
 	}
