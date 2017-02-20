@@ -685,6 +685,10 @@
 	};
 };
 
+&sdhc_2 {
+	cd-gpios = <&msm_gpio 38 0>;
+};
+
 &sdc2_cd_off {
 	bias-pull-up;
 };
