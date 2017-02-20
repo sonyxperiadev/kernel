@@ -30,6 +30,13 @@
 		qcom,qpnp-ibb-limit-maximum-current = <800>;
 		somc,lab-output-voltage = <5600000>;
 		somc,ibb-output-voltage = <5600000>;
+		somc,qpnp-lab-max-precharge-time = <300>;
+		somc,qpnp-lab-soft-start = <800>;
+		somc,qpnp-lab-pull-down-enable;
+		somc,qpnp-lab-full-pull-down;
+		somc,qpnp-ibb-pull-down-enable;
+		somc,qpnp-ibb-full-pull-down;
+		somc,mdss-dsi-master;
 	};
 
 	dsi_jdi_synaptics_cmd_6: somc,jdi_synaptics_cmd_6_panel{
@@ -38,6 +45,12 @@
 		qcom,qpnp-ibb-limit-maximum-current = <800>;
 		somc,lab-output-voltage = <5600000>;
 		somc,ibb-output-voltage = <5600000>;
+		somc,qpnp-lab-max-precharge-time = <300>;
+		somc,qpnp-lab-soft-start = <800>;
+		somc,qpnp-lab-pull-down-enable;
+		somc,qpnp-lab-full-pull-down;
+		somc,qpnp-ibb-pull-down-enable;
+		somc,qpnp-ibb-full-pull-down;
 		somc,mdss-dsi-master;
 	};
 
@@ -47,6 +60,12 @@
 		qcom,qpnp-ibb-limit-maximum-current = <800>;
 		somc,lab-output-voltage = <5500000>;
 		somc,ibb-output-voltage = <5500000>;
+		somc,qpnp-lab-max-precharge-time = <300>;
+		somc,qpnp-lab-soft-start = <800>;
+		somc,qpnp-lab-pull-down-enable;
+		somc,qpnp-lab-full-pull-down;
+		somc,qpnp-ibb-pull-down-enable;
+		somc,qpnp-ibb-full-pull-down;
 		somc,mdss-dsi-master;
 	};
 
@@ -56,6 +75,12 @@
 		qcom,qpnp-ibb-limit-maximum-current = <800>;
 		somc,lab-output-voltage = <5600000>;
 		somc,ibb-output-voltage = <5600000>;
+		somc,qpnp-lab-max-precharge-time = <300>;
+		somc,qpnp-lab-soft-start = <800>;
+		somc,qpnp-lab-pull-down-enable;
+		somc,qpnp-lab-full-pull-down;
+		somc,qpnp-ibb-pull-down-enable;
+		somc,qpnp-ibb-full-pull-down;
 		somc,mdss-dsi-master;
 	};
 
@@ -65,6 +90,12 @@
 		qcom,qpnp-ibb-limit-maximum-current = <800>;
 		somc,lab-output-voltage = <5600000>;
 		somc,ibb-output-voltage = <5600000>;
+		somc,qpnp-lab-max-precharge-time = <300>;
+		somc,qpnp-lab-soft-start = <800>;
+		somc,qpnp-lab-pull-down-enable;
+		somc,qpnp-lab-full-pull-down;
+		somc,qpnp-ibb-pull-down-enable;
+		somc,qpnp-ibb-full-pull-down;
 		somc,mdss-dsi-master;
 	};
 
