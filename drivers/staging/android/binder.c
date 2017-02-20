@@ -622,7 +622,8 @@ static void binder_set_priority(
 	t->saved_sched_policy = current->policy;
 	t->saved_priority = task_nice(current);
 
-	if (is_rt_policy(t->sched_policy) && !is_rt_policy(current->policy)) {
+	if (!oneway && is_rt_policy(t->sched_policy) &&
+	    !is_rt_policy(current->policy)) {
 		/* Transaction was initiated with a real-time policy,
 		 * but we are not; temporarily upgrade this thread to RT.
 		 */
