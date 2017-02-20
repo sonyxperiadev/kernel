@@ -40,6 +40,31 @@
 				24 1f 08 09 05 03 04 a0
 				24 1f 08 09 05 03 04 a0
 				24 1b 08 09 05 03 04 a0];
+		qcom,mdss-pan-physical-width-dimension = <64>;
+		qcom,mdss-pan-physical-height-dimension = <114>;
+		qcom,mdss-dsi-on-command = [
+				29 01 00 00 00 00 02 B0 00
+				29 01 00 00 00 00 02 D6 01
+				29 01 00 00 00 00 03 C4 70 22
+				29 01 00 00 00 00 15 C6 53 2E 2E 05 45 00 00 00 00 00 00 42 0F 00 00 00 00 04 10 06
+				29 01 00 00 00 00 0E EC 64 DC EC 3B 52 00 0B 0B 13 15 68 0B B5
+				29 01 00 00 00 00 02 B0 03
+				39 01 00 00 00 00 02 35 00
+				39 01 00 00 00 00 02 36 00
+				39 01 00 00 00 00 02 3A 77
+				39 01 00 00 00 00 05 2A 00 00 04 37
+				39 01 00 00 00 00 05 2B 00 00 07 7F
+				39 01 00 00 00 00 03 44 00 00
+				39 01 00 00 78 00 01 11];
+		qcom,mdss-dsi-off-command = [
+				39 01 00 00 14 00 01 28
+				29 01 00 00 00 00 02 B0 00
+				29 01 00 00 00 00 02 D6 01
+				29 01 00 00 00 00 0E EC 64 DC EC 3B 52 00 0B 0B 13 15 68 0B 95
+				29 01 00 00 00 00 02 B0 03
+				39 01 00 00 50 00 01 10];
+		somc,pw-wait-after-on-touch-reset-first = <90>;
+		somc,pw-wait-after-on-touch-int-n = <10>;
 	};
 
 	dsi_sharp_synaptics_cmd_9: somc,sharp_synaptics_cmd_9_panel {
@@ -55,12 +80,21 @@
 		somc,qpnp-ibb-pull-down-enable;
 		somc,qpnp-ibb-full-pull-down;
 		somc,mdss-dsi-master;
+		qcom,mdss-pan-physical-width-dimension = <64>;
+		qcom,mdss-pan-physical-height-dimension = <114>;
 		qcom,mdss-dsi-panel-timings-phy-v2 = [
 				24 1f 08 09 05 03 04 a0
 				24 1f 08 09 05 03 04 a0
 				24 1f 08 09 05 03 04 a0
 				24 1f 08 09 05 03 04 a0
 				24 1b 08 09 05 03 04 a0];
+		qcom,mdss-dsi-on-command = [
+				39 01 00 00 00 00 02 35 00
+				05 01 00 00 00 00 01 29];
+		qcom,mdss-dsi-post-panel-on-command = [
+				05 01 00 00 78 00 01 11];
+		somc,pw-wait-after-on-touch-int-n = <10>;
+		somc,pw-wait-after-off-touch-reset = <6>;
 	};
 
 	dsi_default_panel: somc,default_cmd_panel {
@@ -185,6 +219,5 @@
 
 		somc,mdss-dsi-disp-on-in-hs = <0>;
 		somc,mdss-dsi-wait-time-before-post-on-cmd = <0>;
-
 	};
 };
