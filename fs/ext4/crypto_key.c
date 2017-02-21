@@ -194,8 +194,6 @@ void ext4_free_crypt_info(struct ext4_crypt_info *ci)
 		hash_del(&ci->ci_dedup_node);
 		spin_unlock(&ext4_crypt_infos_lock);
 	}
-	if (ci->ci_keyring_key)
-		key_put(ci->ci_keyring_key);
 	crypto_free_ablkcipher(ci->ci_ctfm);
 	memset(ci, 0, sizeof(*ci));
 	kmem_cache_free(ext4_crypt_info_cachep, ci);
@@ -220,8 +218,6 @@ static struct ext4_crypt_info *ext4_dedup_crypt_info(struct ext4_crypt_info *ci)
 		if (existing->ci_flags != ci->ci_flags)
 			continue;
 		if (existing->ci_ctfm != ci->ci_ctfm)
-			continue;
-		if (existing->ci_keyring_key != ci->ci_keyring_key)
 			continue;
 		if (crypto_memneq(existing->ci_master_key, ci->ci_master_key,
 				  sizeof(ci->ci_master_key)))
@@ -260,7 +256,7 @@ void ext4_free_encryption_info(struct inode *inode,
 	ext4_free_crypt_info(ci);
 }
 
-int _ext4_get_encryption_info(struct inode *inode)
+int ext4_get_encryption_info(struct inode *inode)
 {
 	struct ext4_inode_info *ei = EXT4_I(inode);
 	struct ext4_crypt_info *crypt_info;
@@ -277,19 +273,12 @@ int _ext4_get_encryption_info(struct inode *inode)
 	int mode;
 	int res;
 
+	if (ei->i_crypt_info)
+		return 0;
+
 	res = ext4_init_crypto();
 	if (res)
 		return res;
-
-retry:
-	crypt_info = ACCESS_ONCE(ei->i_crypt_info);
-	if (crypt_info) {
-		if (!crypt_info->ci_keyring_key ||
-		    key_validate(crypt_info->ci_keyring_key) == 0)
-			return 0;
-		ext4_free_encryption_info(inode, crypt_info);
-		goto retry;
-	}
 
 	res = ext4_xattr_get(inode, EXT4_XATTR_INDEX_ENCRYPTION,
 				 EXT4_XATTR_NAME_ENCRYPTION_CONTEXT,
@@ -318,7 +307,6 @@ retry:
 	crypt_info->ci_data_mode = ctx.contents_encryption_mode;
 	crypt_info->ci_filename_mode = ctx.filenames_encryption_mode;
 	crypt_info->ci_ctfm = NULL;
-	crypt_info->ci_keyring_key = NULL;
 	memcpy(crypt_info->ci_master_key, ctx.master_key_descriptor,
 	       sizeof(crypt_info->ci_master_key));
 	atomic_set(&crypt_info->ci_dedup_refcnt, 0);
@@ -361,7 +349,6 @@ retry:
 		keyring_key = NULL;
 		goto out;
 	}
-	crypt_info->ci_keyring_key = keyring_key;
 	if (keyring_key->type != &key_type_logon) {
 		printk_once(KERN_WARNING
 			    "ext4: key type must be logon\n");
@@ -429,17 +416,12 @@ retry:
 		memzero_explicit(crypt_info->ci_raw_key,
 			sizeof(crypt_info->ci_raw_key));
 	}
-	if (cmpxchg(&ei->i_crypt_info, NULL, crypt_info) != NULL) {
-		ext4_free_crypt_info(crypt_info);
-		goto retry;
-	}
-	return 0;
-
+	if (cmpxchg(&ei->i_crypt_info, NULL, crypt_info) == NULL)
+		crypt_info = NULL;
 out:
 	if (res == -ENOKEY)
 		res = 0;
-	memzero_explicit(crypt_info->ci_raw_key,
-		sizeof(crypt_info->ci_raw_key));
+	key_put(keyring_key);
 	ext4_free_crypt_info(crypt_info);
 	return res;
 }
