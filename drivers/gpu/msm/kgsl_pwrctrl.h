@@ -14,6 +14,7 @@
 #define __KGSL_PWRCTRL_H
 
 #include <linux/pm_qos.h>
+#include <soc/qcom/cx_ipeak.h>
 
 /*****************************************************************************
  * power flags
@@ -172,6 +173,8 @@ struct kgsl_regulator {
  * isense_clk_indx - index of isense clock, 0 if no isense
  * isense_clk_on_level - isense clock rate is XO rate below this level.
  * tzone_name - pointer to thermal zone name of GPU temperature sensor
+ * gpu_cx_ipeak - pointer to cx ipeak client used by GPU
+ * gpu_cx_ipeak_clk - GPU threshold frequency to call cx ipeak driver API
  */
 
 struct kgsl_pwrctrl {
@@ -230,6 +233,8 @@ struct kgsl_pwrctrl {
 	unsigned int gpu_bimc_int_clk_freq;
 	bool gpu_bimc_interface_enabled;
 	const char *tzone_name;
+	struct cx_ipeak_client *gpu_cx_ipeak;
+	unsigned int gpu_cx_ipeak_clk;
 };
 
 int kgsl_pwrctrl_init(struct kgsl_device *device);
