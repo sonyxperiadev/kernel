@@ -2339,6 +2339,45 @@ static ssize_t as3668_audio_brightness_store(struct device *dev,
 	return strnlen(buf, PAGE_SIZE);
 }
 
+static ssize_t as3668_blink_store(struct device *dev,
+		struct device_attribute *attr,
+		const char *buf, size_t size)
+{
+	struct as3668_led *led = ldev_to_led(dev_get_drvdata(dev));
+	struct as3668_data *data = dev_get_drvdata(dev->parent);
+	int enable, ret = 0;
+
+	ret = sscanf(buf, "%d", &enable);
+
+	if (enable > 0) {
+		led->mode = MODE_BLINK_PATTERN;
+		led->pattern_brightness = (led->pled->max_current_uA / 100);
+	}
+	else {
+		led->mode = MODE_OFF;
+		led->pattern_brightness = 0;
+	}
+
+	AS3668_LOCK();
+	as3668_switch_led(data, led, led->mode);
+	AS3668_MODIFY_REG(AS3668_REG_Start_Ctrl, 0x06, 0x06);
+	AS3668_UNLOCK();
+	return strnlen(buf, PAGE_SIZE);
+}
+
+static ssize_t as3668_blink_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct as3668_led *led = ldev_to_led(dev_get_drvdata(dev));
+	int blinking = 1;
+
+	if (led->mode == MODE_OFF)
+		blinking = 0;
+
+	snprintf(buf, PAGE_SIZE, "%d\n", blinking);
+	return strnlen(buf, PAGE_SIZE);
+}
+
 static struct device_attribute as3668_attributes[] = {
 	AS3668_ATTR(debug),
 	AS3668_ATTR(pattern_pwm_dim_speed_down_ms),
@@ -2395,6 +2434,7 @@ static struct device_attribute as3668_led_attributes[] = {
 #endif /* CONFIG_LEDS_AS3668_EXTENSION */
 	AS3668_ATTR(audio_enable),
 	AS3668_ATTR(audio_brightness),
+	AS3668_ATTR(blink),
 	__ATTR_NULL
 };
 
@@ -2456,8 +2496,8 @@ static int as3668_configure(struct i2c_client *client,
 		led->ldev.brightness_set = as3668_set_led_brightness;
 		led->ldev.blink_brightness = LED_HALF;
 		led->ldev.blink_set = as3668_set_led_blink;
-		led->ldev.blink_delay_on = 0;
-		led->ldev.blink_delay_off = 0;
+		led->ldev.blink_delay_on = 300;
+		led->ldev.blink_delay_off = 300;
 		led->pwm_brightness = LED_OFF;
 		INIT_WORK(&led->brightness_work, as3668_set_brightness_work);
 		INIT_WORK(&led->blink_work, as3668_set_blink_work);
