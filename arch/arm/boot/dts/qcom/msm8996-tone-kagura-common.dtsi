@@ -384,6 +384,7 @@
 					19 511 511
 					20 511 511
 					21 511 511>;
+				qcom,use-blink;
 			};
 			qcom,rgb_1 {
 				somc,pwm-channel = <1>;
@@ -395,6 +396,7 @@
 					19 511 511
 					20 511 511
 					21 511 511>;
+				qcom,use-blink;
 			};
 			qcom,rgb_2 {
 				somc,pwm-channel = <0>;
@@ -406,6 +408,7 @@
 					19 511 511
 					20 511 511
 					21 511 511>;
+				qcom,use-blink;
 			};
 		};
 		qcom,leds@d800 {
