@@ -71,6 +71,7 @@
 				linux,default-trigger = "none";
 				somc,color_variation_max_num = <1>;
 				somc,max_current = <0 320 320>;
+				qcom,use-blink;
 			};
 			qcom,rgb_1 {
 				somc,pwm-channel = <1>;
@@ -78,6 +79,7 @@
 				linux,default-trigger = "none";
 				somc,color_variation_max_num = <1>;
 				somc,max_current = <0 511 511>;
+				qcom,use-blink;
 			};
 			qcom,rgb_2 {
 				somc,pwm-channel = <0>;
@@ -85,6 +87,7 @@
 				linux,default-trigger = "none";
 				somc,color_variation_max_num = <1>;
 				somc,max_current = <0 511 224>;
+				qcom,use-blink;
 			};
 		};
 		qcom,leds@d800 {
