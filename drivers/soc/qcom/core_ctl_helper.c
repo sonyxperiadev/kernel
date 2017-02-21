@@ -60,3 +60,9 @@ int __ref core_ctl_online_core(unsigned int cpu)
 	return cpu_up(cpu);
 }
 EXPORT_SYMBOL(core_ctl_online_core);
+
+int __ref core_ctl_offline_core(unsigned int cpu)
+{
+	return cpu_down(cpu);
+}
+EXPORT_SYMBOL(core_ctl_offline_core);
