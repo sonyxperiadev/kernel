@@ -605,14 +605,14 @@
 			qcom,alias-name = "bl_therm";
 		};
 
-		sensor_information100: qcom,sensor-information@100 {
+		sensor_information100: qcom,sensor-information-100 {
 			qcom,sensor-type = "adc";
 			qcom,sensor-name = "bms";
 			qcom,alias-name = "batt_therm";
 			qcom,scaling-factor = <1000>;
 		};
 
-		sensor_information101: qcom,sensor-information@101 {
+		sensor_information101: qcom,sensor-information-101 {
 			qcom,sensor-type = "adc";
 			qcom,sensor-name = "flash_therm";
 			qcom,scaling-factor = <10>;
