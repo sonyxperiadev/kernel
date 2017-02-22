@@ -3097,17 +3097,17 @@ static void binder_release_work(struct binder_worklist *wlist)
 	struct binder_work *w;
 
 	spin_lock(&wlist->lock);
-	if (wlist->freeze) {
-		/* Very rare race. We can't release work now
-		 * since the list is in use by a worker thread.
-		 * This can be safely done when the zombie object
-		 * is being reaped.
-		 */
-		spin_unlock(&wlist->lock);
-		return;
-	}
-
 	while (!list_empty(&wlist->list)) {
+
+		if (wlist->freeze) {
+			/* Very rare race. We can't release work now
+			 * since the list is in use by a worker thread.
+			 * This can be safely done when the zombie object
+			 * is being reaped.
+			 */
+			spin_unlock(&wlist->lock);
+			return;
+		}
 		w = list_first_entry(&wlist->list, struct binder_work, entry);
 		_binder_dequeue_work(w, __LINE__);
 
