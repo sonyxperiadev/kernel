@@ -707,19 +707,6 @@ static void _binder_make_node_zombie(struct binder_node *node)
 	binder_stats_zombie(BINDER_STAT_NODE);
 }
 
-static void binder_put_node(struct binder_node *node)
-{
-	bool strong;
-	struct binder_proc *proc = node->proc;
-
-	binder_proc_lock(proc, __LINE__);
-	strong = --node->local_strong_refs || node->internal_strong_refs;
-	if (!strong && hlist_empty(&node->refs) && !node->is_zombie)
-		_binder_make_node_zombie(node);
-	BUG_ON(node->local_strong_refs < 0);
-	binder_proc_unlock(proc, __LINE__);
-}
-
 static struct binder_node *binder_new_node(struct binder_proc *proc,
 					   binder_uintptr_t ptr,
 					   binder_uintptr_t cookie)
@@ -885,6 +872,11 @@ done:
 		wake_up_interruptible(&proc->wait);
 
 	return 0;
+}
+
+static inline void binder_put_node(struct binder_node *node)
+{
+	binder_dec_node(node, 1, 0, __LINE__);
 }
 
 static struct binder_ref *binder_get_ref(struct binder_proc *proc,
