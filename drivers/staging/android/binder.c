@@ -1029,8 +1029,6 @@ static void binder_delete_ref(struct binder_ref *ref, bool force, int line)
 		return;
 	}
 
-	rb_erase(&ref->rb_node_desc, &ref->proc->refs_by_desc);
-	rb_erase(&ref->rb_node_node, &ref->proc->refs_by_node);
 	ref->is_zombie = true;
 	binder_proc_unlock(ref->proc, __LINE__);
 
@@ -1046,6 +1044,8 @@ static void binder_delete_ref(struct binder_ref *ref, bool force, int line)
 	binder_dec_node(ref->node, 0, 1, line);
 
 	binder_proc_lock(ref->proc, __LINE__);
+	rb_erase(&ref->rb_node_desc, &ref->proc->refs_by_desc);
+	rb_erase(&ref->rb_node_node, &ref->proc->refs_by_node);
 	if (ref->death) {
 		binder_debug(BINDER_DEBUG_DEAD_BINDER,
 			     "%d delete ref %d desc %d has death notification\n",
@@ -4012,7 +4012,7 @@ static bool binder_proc_clear_zombies(struct binder_proc *proc)
 
 	binder_proc_lock(proc, __LINE__);
 	if (!list_empty(&proc->zombie_proc.list_node)) {
-		/* It has been re-queued with new zombie objects */
+		/* The proc has been re-queued with new zombie objects */
 		binder_proc_unlock(proc, __LINE__);
 		return 0;
 	}
@@ -4020,13 +4020,15 @@ static bool binder_proc_clear_zombies(struct binder_proc *proc)
 		hlist_del_init(&ref->zombie_ref);
 		hlist_add_head(&ref->zombie_ref, &refs_to_free);
 	}
+	if (!RB_EMPTY_ROOT(&proc->refs_by_desc))
+		needs_requeue = true;
 
 	hlist_for_each_entry_safe(node, tmp, &proc->zombie_nodes, dead_node)
 		if (hlist_empty(&node->refs)) {
 			hlist_del_init(&node->dead_node);
 			hlist_add_head(&node->dead_node, &nodes_to_free);
 		}
-	if (!hlist_empty(&proc->zombie_nodes))
+	if (!hlist_empty(&proc->zombie_nodes) || !RB_EMPTY_ROOT(&proc->nodes))
 		needs_requeue = true;
 
 	hlist_for_each_entry_safe(thread, tmp, &proc->zombie_threads,
@@ -4034,6 +4036,8 @@ static bool binder_proc_clear_zombies(struct binder_proc *proc)
 		hlist_del_init(&thread->zombie_thread);
 		hlist_add_head(&thread->zombie_thread, &threads_to_free);
 	}
+	if (!RB_EMPTY_ROOT(&proc->threads))
+		needs_requeue = true;
 
 	files = proc->zombie_files;
 	proc->zombie_files = NULL;
@@ -4117,6 +4121,7 @@ static void binder_clear_zombies(void)
 		proc = container_of(z, struct binder_proc, zombie_proc);
 		if (binder_proc_clear_zombies(proc)) {
 			BUG_ON(proc->todo.freeze);
+			BUG_ON(!list_empty(&proc->zombie_proc.list_node));
 			binder_release_work(&proc->todo);
 			binder_alloc_deferred_release(&proc->alloc);
 			put_task_struct(proc->tsk);
