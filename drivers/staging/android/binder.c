@@ -1833,10 +1833,6 @@ static void binder_transaction(struct binder_proc *proc,
 		}
 		binder_proc_unlock(target_thread->proc, __LINE__);
 		target_proc = target_thread->proc;
-		if (target_proc->tsk->flags & PF_EXITING) {
-			return_error = BR_DEAD_REPLY;
-			goto err_dead_binder;
-		}
 	} else {
 		if (tr->target.handle) {
 			struct binder_ref *ref;
@@ -1858,8 +1854,7 @@ static void binder_transaction(struct binder_proc *proc,
 		}
 		e->to_node = target_node->debug_id;
 		target_proc = target_node->proc;
-		if (target_node->is_zombie ||
-				(target_proc->tsk->flags & PF_EXITING)) {
+		if (target_node->is_zombie) {
 			return_error = BR_DEAD_REPLY;
 			goto err_dead_binder;
 		}
@@ -1956,7 +1951,8 @@ static void binder_transaction(struct binder_proc *proc,
 		tr->offsets_size, extra_buffers_size,
 		!reply && (t->flags & TF_ONE_WAY));
 	if (t->buffer == NULL) {
-		return_error = BR_FAILED_REPLY;
+		return_error = !(target_proc->tsk->flags & PF_EXITING) ?
+					BR_FAILED_REPLY : BR_DEAD_REPLY;
 		goto err_binder_alloc_buf_failed;
 	}
 	t->buffer->allow_user_free = 0;
