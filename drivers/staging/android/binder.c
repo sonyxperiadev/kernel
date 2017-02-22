@@ -412,6 +412,7 @@ struct binder_thread {
 		/* buffer. Used when sending a reply to a dead process that */
 		/* we are also waiting on */
 	wait_queue_head_t wait;
+	bool is_zombie;
 	struct binder_stats stats;
 };
 
@@ -3319,6 +3320,16 @@ static int binder_free_thread(struct binder_proc *proc,
 	int active_transactions = 0;
 
 	binder_proc_lock(thread->proc, __LINE__);
+	if (thread->is_zombie) {
+		/*
+		 * Can be called twice: by binder_deferred_release
+		 * and binder_ioctl(BINDER_THREAD_EXIT). Only process
+		 * it the first time.
+		 */
+		binder_proc_unlock(thread->proc, __LINE__);
+		return 0;
+	}
+	thread->is_zombie = true;
 	rb_erase(&thread->rb_node, &proc->threads);
 	t = thread->transaction_stack;
 	if (t && t->to_thread == thread)
@@ -3345,6 +3356,7 @@ static int binder_free_thread(struct binder_proc *proc,
 		} else
 			BUG();
 	}
+	binder_release_work(&thread->todo);
 	INIT_HLIST_NODE(&thread->zombie_thread);
 	hlist_add_head(&thread->zombie_thread, &proc->zombie_threads);
 	binder_queue_for_zombie_cleanup(proc);
@@ -3352,7 +3364,6 @@ static int binder_free_thread(struct binder_proc *proc,
 
 	if (send_reply)
 		binder_send_failed_reply(send_reply, BR_DEAD_REPLY);
-	binder_release_work(&thread->todo);
 	binder_stats_zombie(BINDER_STAT_THREAD);
 	return active_transactions;
 }
