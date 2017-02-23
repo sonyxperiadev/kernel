@@ -2735,7 +2735,19 @@
 };
 
 &spmi_bus {
+	qcom,pm8004@4 {
+		qcom,leds@a100 {
+			status = "disabled";
+		};
+		qcom,leds@a300 {
+			status = "disabled";
+		};
+	};
+
 	qcom,pm8950@0 {
+		qcom,leds@a300 {
+			status = "disabled";
+		};
 		qcom,power-on@800 {
 			qcom,s3-debounce = <16>;
 			qcom,s3-src = "resin";
@@ -2746,6 +2758,9 @@
 	};
 
 	qcom,pmi8950@2 {
+		qcom,leds@a100 {
+			status = "disabled";
+		};
 		qcom,power-on@800 {
 			qcom,s3-debounce = <128>;
 			qcom,s3-src = "kpdpwr-and-resin";
@@ -2808,4 +2823,3 @@
 		};
 	};
 };
-
