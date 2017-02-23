@@ -662,7 +662,7 @@ void binder_alloc_vma_close(struct binder_alloc *alloc)
 
 void binder_alloc_init(struct binder_alloc *alloc)
 {
-	alloc->tsk = current;
+	alloc->tsk = current->group_leader;
 	alloc->pid = current->group_leader->pid;
 	mutex_init(&alloc->mutex);
 }
