@@ -36,7 +36,7 @@
 #elif defined(CONFIG_MACH_SONY_SEAGULL) || \
       defined(CONFIG_MACH_SONY_TIANCHI) || \
       defined(CONFIG_MACH_SONY_TULIP) || \
-      defined(CONFIG_MACH_SONY_AMAMI) || \
+      defined(CONFIG_MACH_SONY_AMAMI_ROW) || \
       defined(CONFIG_MACH_SONY_ARIES) || \
       defined(CONFIG_MACH_SONY_SUZURAN) || \
       defined(CONFIG_MACH_SONY_KUGO)
