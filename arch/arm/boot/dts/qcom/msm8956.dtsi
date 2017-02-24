@@ -1342,7 +1342,6 @@
 			qcom,disable-clk-gating;
 			qcom,usb-bam-max-mbps-highspeed = <400>;
 			qcom,enable-hsusb-bam-on-boot;
-			qcom,reset-bam-on-disconnect;
 
 			qcom,pipe0 {
 				label = "hsusb-ipa-out-0";
