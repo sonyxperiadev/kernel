@@ -120,6 +120,7 @@ int rmnet_config_notify_cb(struct notifier_block *nb,
 				  unsigned long event, void *data);
 int rmnet_create_vnd(int id);
 int rmnet_create_vnd_prefix(int id, const char *name);
+int rmnet_create_vnd_name(int id, const char *name);
 int rmnet_free_vnd(int id);
 
 #endif /* _RMNET_DATA_CONFIG_H_ */

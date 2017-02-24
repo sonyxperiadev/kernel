@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -556,7 +556,7 @@ int rmnet_vnd_init(void)
  *      - RMNET_CONFIG_UNKNOWN_ERROR if register_netdevice() fails
  */
 int rmnet_vnd_create_dev(int id, struct net_device **new_device,
-			 const char *prefix)
+			 const char *prefix, int use_name)
 {
 	struct net_device *dev;
 	char dev_prefix[IFNAMSIZ];
@@ -572,12 +572,15 @@ int rmnet_vnd_create_dev(int id, struct net_device **new_device,
 		return RMNET_CONFIG_DEVICE_IN_USE;
 	}
 
-	if (!prefix)
+	if (!prefix && !use_name)
 		p = scnprintf(dev_prefix, IFNAMSIZ, "%s%%d",
 			  RMNET_DATA_DEV_NAME_STR);
+	else if (prefix && use_name)
+		p = scnprintf(dev_prefix, IFNAMSIZ, "%s", prefix);
+	else if (prefix && !use_name)
+		p = scnprintf(dev_prefix, IFNAMSIZ, "%s%%d", prefix);
 	else
-		p = scnprintf(dev_prefix, IFNAMSIZ, "%s%%d",
-			  prefix);
+		return RMNET_CONFIG_BAD_ARGUMENTS;
 	if (p >= (IFNAMSIZ-1)) {
 		LOGE("Specified prefix longer than IFNAMSIZ");
 		return RMNET_CONFIG_BAD_ARGUMENTS;
