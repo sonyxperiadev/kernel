@@ -78,7 +78,6 @@ snd-soc-msm8x16-wcd-objs += wcd9xxx-common.o wcd9xxx-resmgr.o wcd9xxx-mbhc.o
 snd-soc-msm8x16-wcd-objs += wcd9306.o wcd9306-tables.o
 snd-soc-msm8x16-wcd-objs += wcd9330.o wcd9330-tables.o wcdcal-hwdep.o
 snd-soc-msm8x16-wcd-objs += wcd9335.o wcd9xxx-common-v2.o wcd9xxx-resmgr-v2.o
-snd-soc-msm8x16-wcd-objs += wcd_cpe_services.o wcd_cpe_core.o
 audio-ext-clock-objs := audio-ext-clk.o
 snd-soc-wcd-cpe-objs := wcd_cpe_services.o wcd_cpe_core.o
 snd-soc-msm8909-wcd-objs := msm8x16-wcd.o msm8x16-wcd-tables.o
