@@ -4695,7 +4695,8 @@ static int __load_fw(struct venus_hfi_device *device)
 	/* kholk: Legacy SoCs cannot initialize packetization
 	 *        in firmware load path because old bootloader
 	 */
-	if (!of_machine_is_compatible("qcom,msm8956") &&
+	if (!of_machine_is_compatible("qcom,msm8939") &&
+	    !of_machine_is_compatible("qcom,msm8956") &&
 	    !of_machine_is_compatible("qcom,msm8976") &&
 	    !of_machine_is_compatible("qcom,msm8974") &&
 	    !of_machine_is_compatible("qcom,msm8994") &&
