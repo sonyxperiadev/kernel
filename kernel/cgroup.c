@@ -2135,8 +2135,8 @@ int subsys_cgroup_allow_attach(struct cgroup *cgrp, struct cgroup_taskset *tset)
 	cgroup_taskset_for_each(task, cgrp, tset) {
 		tcred = __task_cred(task);
 
-		if (current != task && cred->euid != tcred->uid &&
-		    cred->euid != tcred->suid)
+		if (current != task && !uid_eq(cred->euid, tcred->uid) &&
+		    !uid_eq(cred->euid, tcred->suid))
 			return -EACCES;
 	}
 
