@@ -39,7 +39,8 @@
 #define AS3668_VMON_MIN_VOLTAGE 3000 /* mA */
 #define AS3668_VMON_VOLTAGE_STEP 150 /* mA */
 
-#define AS3668_NUM_LEDS 4
+#define AS3668_NUM_LEDS 3
+#define AS3668_CURRENT_MAX_PATTERN 4
 
 /* AS3668 registers */
 #define AS3668_REG_ChipID1	0x3E
@@ -85,6 +86,8 @@
 
 #define AS3668_LOCK()   mutex_lock(&(data)->update_lock)
 #define AS3668_UNLOCK() mutex_unlock(&(data)->update_lock)
+
+static int rgb_current_index;
 
 enum {
 	MODE_OFF = 0,
@@ -807,6 +810,7 @@ static ssize_t as3668_pattern_run_store(struct device *dev,
 	struct as3668_led *led;
 	int i;
 	int pattern_run;
+	u8 mode_mask = 0, mode_ctrl = 0;
 
 	i = sscanf(buf, "%d", &pattern_run);
 	if ((i != 1) || (pattern_run > 1) || (pattern_run < 0)) {
@@ -837,19 +841,21 @@ static ssize_t as3668_pattern_run_store(struct device *dev,
 		data->pattern_running = 1;
 		for (i = 0; i < data->num_leds; i++) {
 			led = &data->leds[i];
+			mode_mask |= (0x03 << led->mode_shift);
 			if (led->pattern_brightness) {
 				AS3668_MODIFY_REG(AS3668_REG_Frame_Mask,
 					0x03 << led->pattern_frame_mask_shift,
 					led->pattern_frame_mask << led->pattern_frame_mask_shift);
-				as3668_switch_led(data, led, MODE_BLINK_PATTERN);
+				mode_ctrl |= (MODE_BLINK_PATTERN << led->mode_shift);
 			} else {
 				AS3668_MODIFY_REG(AS3668_REG_Frame_Mask,
 					0x03 << led->pattern_frame_mask_shift,
 					0 << led->pattern_frame_mask_shift);
-				as3668_switch_led(data, led, MODE_OFF);
+				mode_ctrl |= (MODE_OFF << led->mode_shift);
 			}
 			AS3668_WRITE_REG(led->reg, led->pattern_brightness);
 		}
+		AS3668_MODIFY_REG(AS3668_REG_CurrX_Ctrl, mode_mask, mode_ctrl);
 		AS3668_MODIFY_REG(AS3668_REG_Start_Ctrl, 0x06,
 			((data->pattern_fade_out << 2) | (pattern_run << 1)));
 		AS3668_UNLOCK();
@@ -2312,11 +2318,12 @@ static int as3668_parse_dt(struct device *dev,
 		struct as3668_platform_data *pdata)
 {
 	struct device_node *node, *temp = NULL;
-	int rc = 0, num_leds = 0, parsed_leds = 0;
+	int rc = 0, num_leds = 0, parsed_leds = 0, i, current_index;
 	struct as3668_platform_led *pled;
 	struct as3668_led *led;
 	const char *led_label;
-	u32 tmp_data;
+	u32 *rgb_current;
+	u32 tmp_data, color_variation_max_num;
 
 	node = dev->of_node;
 	while ((temp = of_get_next_child(node, temp)))
@@ -2391,6 +2398,17 @@ static int as3668_parse_dt(struct device *dev,
 		data->pattern_fade_out = tmp_data;
 	}
 
+	rc = of_property_read_u32(dev->of_node,
+			"somc,color_variation_max_num", &tmp_data);
+	if (rc < 0) {
+		dev_err(dev, "Unable to read pattern_fade_out\n");
+		color_variation_max_num = AS3668_CURRENT_MAX_PATTERN;
+	} else {
+		color_variation_max_num = tmp_data;
+	}
+	dev_info(dev, "color_variation_max_num[%d] rgb_current_index[%d]\n",
+		color_variation_max_num, rgb_current_index);
+
 	rc = of_property_read_u32(node,
 			"somc,pattern_start_source", &tmp_data);
 	if (rc < 0) {
@@ -2408,6 +2426,28 @@ static int as3668_parse_dt(struct device *dev,
 		pdata->pwm_source = tmp_data;
 	}
 
+	rgb_current = devm_kzalloc(dev,
+		sizeof(u32) * color_variation_max_num * (AS3668_NUM_LEDS * 2 + 1), GFP_KERNEL);
+	if (!rgb_current) {
+		dev_err(dev, "Failed to alloc rgb_current\n");
+		led->max_mix_brightness = AS3668_MAX_OUTPUT_CURRENT / 100;
+		led->max_single_brightness = AS3668_MAX_OUTPUT_CURRENT / 100;
+	} else {
+		rc = of_property_read_u32_array(node, "somc,max_current_uA",
+				rgb_current, color_variation_max_num * (AS3668_NUM_LEDS * 2 + 1));
+		if (rc < 0) {
+			dev_err(dev, "Unable to read max_mix_current_uA\n");
+			for (i = 0; i < color_variation_max_num * (AS3668_NUM_LEDS * 2 + 1); i++) {
+				current_index = i % (AS3668_NUM_LEDS * 2 + 1);
+				if (!current_index)
+					rgb_current[i] =
+						i / (AS3668_NUM_LEDS * 2 + 1);
+				else
+					rgb_current[i] = AS3668_MAX_OUTPUT_CURRENT;
+			}
+		}
+	}
+
 	for_each_child_of_node(node, temp) {
 		pled = &pdata->leds[parsed_leds];
 		led = &data->leds[parsed_leds];
@@ -2423,32 +2463,31 @@ static int as3668_parse_dt(struct device *dev,
 				dev_err(dev, "Unable to read linux,name\n");
 				goto exit;
 			}
-			rc = of_property_read_u32(temp,
-				"somc,max_mix_current_uA", &tmp_data);
-			if (rc < 0) {
-				dev_err(dev,
-					"Unable to read max_mix_current_uA %d\n",
-					tmp_data);
-				led->max_mix_brightness =
-					AS3668_MAX_OUTPUT_CURRENT / 100;
+			current_index = (color_variation_max_num - 1) * (AS3668_NUM_LEDS * 2 + 1);
+			if (rgb_current_index < rgb_current[0]
+				|| rgb_current_index > rgb_current[current_index]) {
+				current_index = (color_variation_max_num - 1) * (AS3668_NUM_LEDS * 2 + 1) + 1;
+				led->max_single_brightness = rgb_current[current_index + parsed_leds * 2] / 100;
+				led->max_mix_brightness = rgb_current[current_index + parsed_leds * 2 + 1] / 100;
 			} else {
-				led->max_mix_brightness = tmp_data / 100;
+				for (i = 0; i < color_variation_max_num; i++) {
+					current_index = i * (AS3668_NUM_LEDS * 2 + 1);
+					if (rgb_current_index == rgb_current[current_index]) {
+						break;
+					}
+				}
+				led->max_single_brightness = rgb_current[current_index + 1 + parsed_leds * 2] / 100;
+				led->max_mix_brightness = rgb_current[current_index + 1 + parsed_leds * 2 + 1] / 100;
 			}
-			rc = of_property_read_u32(temp,
-				"somc,max_single_current_uA", &tmp_data);
-			if (rc < 0) {
-				dev_err(dev,
-					"Unable to read max_single_current_uA %d\n",
-					tmp_data);
-				led->max_single_brightness =
-					AS3668_MAX_OUTPUT_CURRENT / 100;
-			} else {
-				led->max_single_brightness = tmp_data / 100;
-			}
+
 			if (led->max_single_brightness > led->max_mix_brightness)
 				pled->max_current_uA = led->max_single_brightness * 100;
 			else
 				pled->max_current_uA = led->max_mix_brightness * 100;
+			dev_info(dev, "%s max_single_brightness[%d] max_mix_brightness[%d]\n",
+				(parsed_leds < 1 ? "blue" : (parsed_leds < 2 ? "red" : "green")),
+				led->max_single_brightness, led->max_mix_brightness);
+
 			rc = of_property_read_u32(temp,
 				"somc,pattern_frame_mask", &tmp_data);
 			if (rc < 0) {
