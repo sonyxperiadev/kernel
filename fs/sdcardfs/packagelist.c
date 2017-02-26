@@ -99,7 +99,7 @@ int check_caller_access_to_name(struct inode *parent_node, const char* name) {
 
 	/* Root always has access; access for any other UIDs should always
 	 * be controlled through packages.list. */
-	if (current_fsuid() == 0) {
+	if (from_kuid(&init_user_ns, current_fsuid()) == 0) {
 		return 1;
 	}
 
