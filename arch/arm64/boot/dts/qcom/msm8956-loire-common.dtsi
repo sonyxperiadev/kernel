@@ -283,7 +283,7 @@
 			somc,pattern_fade_out = <0>;
 			somc,rgb_blue {
 				label = "rgb";
-				linux,name = "as3668:blue";
+				linux,name = "led:rgb_blue";
 				somc,max_single_current_uA = <12000>;
 				somc,max_mix_current_uA = <5000>;
 				somc,pattern_frame_mask = <0>;
@@ -292,7 +292,7 @@
 			};
 			somc,rgb_red {
 				label = "rgb";
-				linux,name = "as3668:red";
+				linux,name = "led:rgb_red";
 				somc,max_single_current_uA = <4000>;
 				somc,max_mix_current_uA = <4000>;
 				somc,pattern_frame_mask = <0>;
@@ -301,7 +301,7 @@
 			};
 			somc,rgb_green {
 				label = "rgb";
-				linux,name = "as3668:green";
+				linux,name = "led:rgb_green";
 				somc,max_single_current_uA = <8000>;
 				somc,max_mix_current_uA = <8000>;
 				somc,pattern_frame_mask = <0>;
