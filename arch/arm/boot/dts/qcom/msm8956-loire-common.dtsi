@@ -2762,6 +2762,14 @@
 			qcom,s3-src = "kpdpwr-and-resin";
 		};
 	};
+
+	qcom,pmi8950@3 {
+		qcom,leds@d300 {
+			/delete-node/ qcom,flash_1;
+			/delete-node/ qcom,torch_1;
+		};
+	};
+
 };
 
 &sdhc_2 {
