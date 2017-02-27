@@ -366,7 +366,7 @@ static bool pft_is_current_process_registered(void)
 {
 	int is_registered = false;
 	int i;
-	u32 uid = current_uid();
+	u32 uid = __kuid_val(current_uid());
 
 	mutex_lock(&pft_dev->lock);
 	for (i = 0; i < pft_dev->uid_count; i++) {
@@ -914,7 +914,7 @@ int pft_inode_post_create(struct inode *dir, struct dentry *dentry,
 	case PFT_STATE_KEY_LOADED:
 		/* Check whether the new file should be encrypted */
 		if (pft_is_current_process_registered()) {
-			u32 key_index = pft_get_app_key_index(current_uid());
+			u32 key_index = pft_get_app_key_index(__kuid_val(current_uid()));
 			ret = pft_tag_file(dentry, key_index);
 			if (ret == 0)
 				pr_debug("key loaded, pid [%u] uid [%d] is creating file %s\n",
@@ -1497,7 +1497,7 @@ static int pft_set_inplace_file(struct pft_command *command, int size)
 	pft_sync_file(filp);
 
 	rc = pft_tag_file(pft_dev->inplace_file->f_dentry,
-			  pft_get_app_key_index(current_uid()));
+			  pft_get_app_key_index(__kuid_val(current_uid())));
 
 	if (!rc) {
 		pr_debug("tagged file %s to be encrypted.\n",
