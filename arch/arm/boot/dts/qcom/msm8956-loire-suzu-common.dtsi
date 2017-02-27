@@ -38,21 +38,7 @@
 	/* I2C : BLSP6 */
 	i2c@7af6000 { /* BLSP2 QUP1 */
 		as3668@42 {
-			somc,rgb_blue {
-				linux,name = "led:rgb_blue";
-				somc,max_single_current_uA = <12000>;
-				somc,max_mix_current_uA = <4000>;
-			};
-			somc,rgb_red {
-				linux,name = "led:rgb_red";
-				somc,max_single_current_uA = <5000>;
-				somc,max_mix_current_uA = <5000>;
-			};
-			somc,rgb_green {
-				linux,name = "led:rgb_green";
-				somc,max_single_current_uA = <8000>;
-				somc,max_mix_current_uA = <8000>;
-			};
+			somc,max_current_uA = <0 12000 4000 5000 5000 8000 8000>;
 		};
 	};
 };

@@ -115,21 +115,7 @@
 			fusb301,use-try-snk-emulation;
 		};
 		as3668@42 {
-                        somc,rgb_blue {
-                                linux,name = "led:rgb_blue";
-                                somc,max_single_current_uA = <12000>;
-                                somc,max_mix_current_uA = <4500>;
-                        };
-                        somc,rgb_red {
-                                linux,name = "led:rgb_red";
-                                somc,max_single_current_uA = <2700>;
-                                somc,max_mix_current_uA = <900>;
-                        };
-                        somc,rgb_green {
-                                linux,name = "led:rgb_green";
-                                somc,max_single_current_uA = <2000>;
-                                somc,max_mix_current_uA = <2000>;
-                        };
+			somc,max_current_uA = <0 12000 4500 2700 900 2000 2000>;
 		};
 	};
 
