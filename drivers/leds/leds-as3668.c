@@ -2352,15 +2352,17 @@ static ssize_t as3668_blink_store(struct device *dev,
 	if (enable > 0) {
 		led->mode = MODE_BLINK_PATTERN;
 		led->pattern_brightness = (led->pled->max_current_uA / 100);
-	}
-	else {
+		led->ldev.brightness = LED_FULL;
+	} else {
 		led->mode = MODE_OFF;
 		led->pattern_brightness = 0;
+		led->ldev.brightness = LED_OFF;
 	}
 
 	AS3668_LOCK();
 	as3668_switch_led(data, led, led->mode);
 	AS3668_MODIFY_REG(AS3668_REG_Start_Ctrl, 0x06, 0x06);
+	AS3668_WRITE_REG(led->reg, led->ldev.brightness);
 	AS3668_UNLOCK();
 	return strnlen(buf, PAGE_SIZE);
 }
