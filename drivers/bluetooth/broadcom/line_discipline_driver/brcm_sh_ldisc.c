@@ -1212,7 +1212,7 @@ long brcm_sh_ldisc_register(struct sh_proto_s *new_proto)
                 (test_bit(LDISC_REG_PENDING, &hu->sh_ldisc_state))) {
                 pr_err(" ldisc registration failed ");
             }
-            return err == -EBUSY ? err : -EINVAL;
+            return -EINVAL;
         }
 
         BT_LDISC_DBG(V4L2_DBG_OPEN, "clearing flag LDISC_REG_IN_PROGRESS");
@@ -1270,7 +1270,7 @@ EXPORT_SYMBOL(brcm_sh_ldisc_register);
 ** Returns - 0 if success; errno otherwise
 **
 *******************************************************************************/
-long brcm_sh_ldisc_unregister(enum proto_type type, bool btsleep_open)
+long brcm_sh_ldisc_unregister(enum proto_type type)
 {
     long err = 0;
     unsigned long flags;
@@ -1318,7 +1318,7 @@ long brcm_sh_ldisc_unregister(enum proto_type type, bool btsleep_open)
         }
 
         /* all chnl_ids now unregistered */
-        brcm_sh_ldisc_stop(hu, btsleep_open);
+        brcm_sh_ldisc_stop(hu);
     }
 
     return err;
@@ -1688,14 +1688,13 @@ error_state:
 /**
  * brcm_sh_ldisc_stop - called  on the last un-registration */
 
-long brcm_sh_ldisc_stop(struct hci_uart *hu, bool btsleep_open)
+long brcm_sh_ldisc_stop(struct hci_uart *hu)
 {
     long err = 0;
 
     INIT_COMPLETION(hu->ldisc_installed);
 
-    if(btsleep_open)
-        brcm_btsleep_stop(sleep);
+    brcm_btsleep_stop(sleep);
     hu->ldisc_install = V4L2_STATUS_OFF;
 
     /* send uninstall notification to UIM */
@@ -1729,9 +1728,7 @@ long brcm_sh_ldisc_start(struct hci_uart *hu)
     BT_LDISC_DBG(V4L2_DBG_INIT, " %p",tty);
 
     do {
-        if(brcm_btsleep_start(sleep) == -EBUSY)
-            return -EBUSY;
-
+        brcm_btsleep_start(sleep);
         INIT_COMPLETION(hu->ldisc_installed);
         /* send notification to UIM */
         hu->ldisc_install = V4L2_STATUS_ON;
@@ -1746,7 +1743,7 @@ long brcm_sh_ldisc_start(struct hci_uart *hu)
         if (!err) { /* timeout */
             pr_err("line disc installation timed out ");
             INIT_COMPLETION(hu->tty_close_complete);
-            err = brcm_sh_ldisc_stop(hu, 1);
+            err = brcm_sh_ldisc_stop(hu);
             cl_err = wait_for_completion_timeout(&hu->tty_close_complete,
                     msecs_to_jiffies(TTY_CLOSE_TIME));
             if (!cl_err) { /* timeout */
@@ -1761,7 +1758,7 @@ long brcm_sh_ldisc_start(struct hci_uart *hu)
             if (err != 0) {
                 pr_err("patchram download failed");
                 INIT_COMPLETION(hu->tty_close_complete);
-                brcm_sh_ldisc_stop(hu, 1);
+                brcm_sh_ldisc_stop(hu);
                 cl_err = wait_for_completion_timeout(&hu->tty_close_complete,
                         msecs_to_jiffies(TTY_CLOSE_TIME));
                 if (!cl_err) { /* timeout */

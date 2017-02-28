@@ -67,7 +67,7 @@ enum sleep_type {
 
 
 void brcm_btsleep_wake( enum sleep_type type);
-int brcm_btsleep_start(enum sleep_type type);
+void brcm_btsleep_start(enum sleep_type type);
 void brcm_btsleep_stop(enum sleep_type type);
 
 
@@ -117,6 +117,6 @@ struct sh_proto_s {
 *******************************************************************************/
 
 extern long brcm_sh_ldisc_register(struct sh_proto_s *);
-extern long brcm_sh_ldisc_unregister(enum proto_type, bool btsleep_open);
+extern long brcm_sh_ldisc_unregister(enum proto_type);
 
 #endif /* LDISC_H */

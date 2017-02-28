@@ -47,13 +47,12 @@ void brcm_btsleep_wake( enum sleep_type type)
 /**
  * Starts the Sleep-Mode Protocol on the Host.
 **/
-int brcm_btsleep_start(enum sleep_type type)
+void brcm_btsleep_start(enum sleep_type type)
 {
 #ifdef LPM_BLUESLEEP
     if(type == SLEEP_BLUESLEEP)
-        return bluesleep_start(0);
+        bluesleep_start(0);
 #endif
-    return 0;
 }
 /**
  * Stops the Sleep-Mode Protocol on the Host.
