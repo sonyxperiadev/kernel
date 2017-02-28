@@ -29,7 +29,9 @@
 #include "../include/brcm_ldisc_sh.h"
 
 #ifdef LPM_BLUESLEEP
-#include <net/bluetooth/bluesleep.h>
+    extern void bluesleep_outgoing_data(void);
+    extern int bluesleep_start(void);
+    extern void bluesleep_stop(void);
 #endif
 
 /**
@@ -51,7 +53,7 @@ void brcm_btsleep_start(enum sleep_type type)
 {
 #ifdef LPM_BLUESLEEP
     if(type == SLEEP_BLUESLEEP)
-        bluesleep_start(0);
+        bluesleep_start();
 #endif
 }
 /**
