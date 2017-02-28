@@ -64,7 +64,7 @@ static int bcm43xx_bt_rfkill_set_power(void *data, bool blocked)
 		}
 		gpio_set_value(bcm43xx_my_data->reg_on_gpio, 1);
 
-#if defined(CONFIG_BT_MSM_SLEEP) && !defined(CONFIG_LINE_DISCIPLINE_DRIVER)
+#ifdef CONFIG_BT_MSM_SLEEP
 		bluesleep_start(1);
 #endif
 	} else {
@@ -75,7 +75,7 @@ static int bcm43xx_bt_rfkill_set_power(void *data, bool blocked)
 		}
 		gpio_set_value(bcm43xx_my_data->reg_on_gpio, 0);
 
-#if defined(CONFIG_BT_MSM_SLEEP) && !defined(CONFIG_LINE_DISCIPLINE_DRIVER)
+#ifdef CONFIG_BT_MSM_SLEEP
 		bluesleep_stop();
 #endif
 	}
