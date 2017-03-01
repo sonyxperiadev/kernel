@@ -1770,6 +1770,7 @@ static void binder_transaction(struct binder_proc *proc,
 	struct binder_buffer_object *last_fixup_obj = NULL;
 	binder_size_t last_fixup_min_off = 0;
 	struct binder_context *context = proc->context;
+	bool oneway;
 
 	e = binder_transaction_log_add(&binder_transaction_log);
 	e->call_type = reply ? 2 : !!(tr->flags & TF_ONE_WAY);
@@ -2122,6 +2123,7 @@ static void binder_transaction(struct binder_proc *proc,
 	t->work.type = BINDER_WORK_TRANSACTION;
 	tcomplete->type = BINDER_WORK_TRANSACTION_COMPLETE;
 	binder_enqueue_work(tcomplete, &thread->todo, __LINE__);
+	oneway = !!(t->flags & TF_ONE_WAY);
 
 	if (reply) {
 		BUG_ON(t->buffer->async_transaction != 0);
@@ -2164,7 +2166,7 @@ static void binder_transaction(struct binder_proc *proc,
 			     READ_ONCE(target_thread->waiting_for_proc_work)))
 			wake_up_interruptible_all(&target_proc->wait);
 
-		if (reply || !(t->flags & TF_ONE_WAY))
+		if (reply || !oneway)
 			wake_up_interruptible_sync(target_wait);
 		else
 			wake_up_interruptible(target_wait);
