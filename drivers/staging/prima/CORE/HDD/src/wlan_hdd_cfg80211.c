@@ -572,7 +572,7 @@ extern struct net_device_ops net_ops_struct;
 static eHalStatus wlan_hdd_is_pno_allowed(hdd_adapter_t *pAdapter);
 #endif
 
-#ifdef WLAN_NL80211_TESTMODE
+#ifdef CONFIG_NL80211_TESTMODE
 enum wlan_hdd_tm_attr
 {
     WLAN_HDD_TM_ATTR_INVALID = 0,
@@ -597,7 +597,7 @@ static const struct nla_policy wlan_hdd_tm_policy[WLAN_HDD_TM_ATTR_MAX + 1] =
     [WLAN_HDD_TM_ATTR_DATA]       = { .type = NLA_BINARY,
                                     .len = WLAN_HDD_TM_DATA_MAX_LEN },
 };
-#endif /* WLAN_NL80211_TESTMODE */
+#endif /* CONFIG_NL80211_TESTMODE */
 
 #ifdef FEATURE_WLAN_CH_AVOID
 /*
@@ -16275,7 +16275,7 @@ static int wlan_hdd_cfg80211_set_mac_acl(struct wiphy *wiphy,
     return ret;
 }
 
-#ifdef WLAN_NL80211_TESTMODE
+#ifdef CONFIG_NL80211_TESTMODE
 #ifdef FEATURE_WLAN_LPHB
 void wlan_hdd_cfg80211_lphb_ind_handler
 (
@@ -16770,7 +16770,7 @@ static struct cfg80211_ops wlan_hdd_cfg80211_ops =
      .resume = wlan_hdd_cfg80211_resume_wlan,
      .suspend = wlan_hdd_cfg80211_suspend_wlan,
      .set_mac_acl = wlan_hdd_cfg80211_set_mac_acl,
-#ifdef WLAN_NL80211_TESTMODE
+#ifdef CONFIG_NL80211_TESTMODE
      .testmode_cmd = wlan_hdd_cfg80211_testmode,
 #endif
      .dump_survey = wlan_hdd_cfg80211_dump_survey,
