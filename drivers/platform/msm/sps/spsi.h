@@ -235,27 +235,13 @@ extern u8 print_limit_option;
 		}	\
 	} while (0)
 #else
-#define SPS_DUMP(msg, args...) do {			\
-				pr_info(msg, ##args);	\
-	} while (0)
-#define SPS_ERR(dev, msg, args...) do {			\
-				pr_err(msg, ##args);	\
-	} while (0)
-#define SPS_INFO(dev, msg, args...) do {		\
-				pr_info(msg, ##args);	\
-	} while (0)
-#define SPS_DBG(dev, msg, args...) do {			\
-				pr_info(msg, ##args);	\
-	} while (0)
-#define SPS_DBG1(dev, msg, args...) do {		\
-				pr_info(msg, ##args);	\
-	} while (0)
-#define SPS_DBG2(dev, msg, args...) do {		\
-				pr_info(msg, ##args);	\
-	} while (0)
-#define SPS_DBG3(dev, msg, args...) do {		\
-			pr_debug(msg, ##args);		\
-	} while (0)
+#define	SPS_DBG3(x...)		pr_debug(x)
+#define	SPS_DBG2(x...)		pr_debug(x)
+#define	SPS_DBG1(x...)		pr_debug(x)
+#define	SPS_DBG(x...)		pr_debug(x)
+#define	SPS_INFO(x...)		pr_info(x)
+#define	SPS_ERR(x...)		pr_err(x)
+#define	SPS_DUMP(x...)		pr_info(x)
 #endif
 
 /* End point parameters */
