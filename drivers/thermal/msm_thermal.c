@@ -48,6 +48,7 @@
 #include <linux/suspend.h>
 #include <soc/qcom/msm-core.h>
 #include <linux/cpumask.h>
+#include <linux/uaccess.h>
 
 #define CREATE_TRACE_POINTS
 #define TRACE_MSM_THERMAL
