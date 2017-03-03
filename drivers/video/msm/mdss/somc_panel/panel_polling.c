@@ -34,6 +34,34 @@ struct poll_ctrl *polling;
 static struct dsi_ctrl_hdr poll_reg_dchdr = {
 	DTYPE_DCS_READ, 1, 0, 1, 5, 1};
 
+
+u32 panel_cmd_read(struct mdss_dsi_ctrl_pdata *ctrl,
+                struct dsi_cmd_desc *cmds, void (*fxn)(int),
+                char *rbuf, int len)
+{
+        struct dcs_cmd_req cmdreq;
+        struct mdss_panel_info *pinfo;
+
+        pinfo = &(ctrl->panel_data.panel_info);
+
+        memset(&cmdreq, 0, sizeof(cmdreq));
+        cmdreq.cmds = cmds;
+        cmdreq.cmds_cnt = 1;
+        cmdreq.flags = CMD_REQ_RX | CMD_REQ_COMMIT;
+        cmdreq.rlen = len;
+        cmdreq.rbuf = rbuf;
+        cmdreq.cb = fxn; /* call back */
+
+        mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_ON);
+        mdss_dsi_cmdlist_put(ctrl, &cmdreq);
+        mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF);
+        /*
+         * blocked here, until call back called
+         */
+
+        return 0;
+}
+
 /*
  * send_panel_on_seq() - Sends on sequence.
  */

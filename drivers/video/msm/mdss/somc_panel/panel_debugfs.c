@@ -209,33 +209,6 @@ exit:
 	return ret;
 }
 
-u32 panel_cmd_read(struct mdss_dsi_ctrl_pdata *ctrl,
-		struct dsi_cmd_desc *cmds, void (*fxn)(int),
-		char *rbuf, int len)
-{
-	struct dcs_cmd_req cmdreq;
-	struct mdss_panel_info *pinfo;
-
-	pinfo = &(ctrl->panel_data.panel_info);
-
-	memset(&cmdreq, 0, sizeof(cmdreq));
-	cmdreq.cmds = cmds;
-	cmdreq.cmds_cnt = 1;
-	cmdreq.flags = CMD_REQ_RX | CMD_REQ_COMMIT;
-	cmdreq.rlen = len;
-	cmdreq.rbuf = rbuf;
-	cmdreq.cb = fxn; /* call back */
-
-	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_ON);
-	mdss_dsi_cmdlist_put(ctrl, &cmdreq);
-	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF);
-	/*
-	 * blocked here, until call back called
-	 */
-
-	return 0;
-}
-
 static void panel_cmds_send(struct mdss_dsi_ctrl_pdata *ctrl,
 			struct dsi_cmd_desc *cmds, int cmd_cnt,
 			int link_state)
