@@ -2455,6 +2455,7 @@ static int qpnp_flash_led_probe(struct spmi_device *spmi)
 
 	led->num_leds = i;
 
+#ifdef CONFIG_DEBUG_FS
 	root = debugfs_create_dir("flashLED", NULL);
 	if (IS_ERR_OR_NULL(root)) {
 		pr_err("Error creating top level directory err%ld",
@@ -2485,7 +2486,7 @@ static int qpnp_flash_led_probe(struct spmi_device *spmi)
 		pr_err("error creating 'strobe' entry\n");
 		goto error_led_register;
 	}
-
+#endif
 	dev_set_drvdata(&spmi->dev, led);
 
 	return 0;
@@ -2498,7 +2499,9 @@ error_led_register:
 		j = ARRAY_SIZE(qpnp_flash_led_attrs) - 1;
 		led_classdev_unregister(&led->flash_node[i].cdev);
 	}
+#ifdef CONFIG_DEBUG_FS
 	debugfs_remove_recursive(root);
+#endif
 	mutex_destroy(&led->flash_led_lock);
 	destroy_workqueue(led->ordered_workq);
 
@@ -2523,7 +2526,9 @@ static int qpnp_flash_led_remove(struct spmi_device *spmi)
 						&qpnp_flash_led_attrs[j].attr);
 		led_classdev_unregister(&led->flash_node[i].cdev);
 	}
+#ifdef CONFIG_DEBUG_FS
 	debugfs_remove_recursive(led->dbgfs_root);
+#endif
 	mutex_destroy(&led->flash_led_lock);
 	destroy_workqueue(led->ordered_workq);
 
