@@ -3153,7 +3153,9 @@ static void clearpad_watchdog_work(struct work_struct *work)
 	LOG_STAT(this, "%s (icount=%u)\n",
 	     healthy ? "healthy" : "NEED HW RESET", this->interrupt.count);
 	if (!healthy) {
+#ifdef CONFIG_DEBUG_FS
 		clearpad_debug_info(this);
+#endif
 		clearpad_reset(this, SYN_HWRESET, "Watchdog");
 		UNLOCK(&this->lock);
 		rc = clearpad_wait_for_interrupt(this,
@@ -7499,6 +7501,107 @@ end:
 	return rc;
 }
 
+static long clearpad_debug_pca_ioctl(struct file *file,
+					unsigned int cmd, unsigned long arg)
+{
+	struct clearpad_t *this = (struct clearpad_t *)file->private_data;
+	struct clearpad_hwtest_t *hwt = &this->hwtest;
+	const char *session = "debug ioctl";
+	struct clearpad_ioctl_pca_info pca_info;
+	int rc;
+
+	LOCK(&hwt->lock);
+	rc = clearpad_ctrl_session_begin(this, session);
+	if (rc)
+		goto err_in_ctrl_begin;
+
+	LOGI(this, "ioctl: %x\n", cmd);
+	if (copy_from_user(&pca_info, (void *) arg,
+			sizeof(struct clearpad_ioctl_pca_info))) {
+		rc = -EFAULT;
+		HWLOGE(this, "copy_from_user error\n");
+		goto err_in_copy_from_user;
+	}
+
+	switch (cmd) {
+	case SYN_PCA_IOCTL_GET:
+		LOCK(&this->lock);
+		rc = clearpad_read_pca_block(this, pca_info.block_pos,
+					     pca_info.data);
+		UNLOCK(&this->lock);
+		if (rc)
+			break;
+
+		if (copy_to_user((void *) arg, &pca_info,
+				sizeof(struct clearpad_ioctl_pca_info))) {
+			rc = -EFAULT;
+			HWLOGE(this, "copy_to_user error\n");
+		}
+		break;
+	case SYN_PCA_IOCTL_SET:
+		LOCK(&this->lock);
+		rc = clearpad_write_pca_block(this, pca_info.block_pos,
+					 pca_info.data);
+		UNLOCK(&this->lock);
+		break;
+	default:
+		rc = -EINVAL;
+		HWLOGE(this, "cmd %d error\n", cmd);
+		break;
+	}
+
+err_in_copy_from_user:
+	if (rc)
+		LOGE(this, "failed to access to touch device\n");
+
+	clearpad_ctrl_session_end(this, session);
+err_in_ctrl_begin:
+	UNLOCK(&hwt->lock);
+	return rc;
+}
+
+static const struct file_operations clearpad_debug_hwtest_fops = {
+	.owner = THIS_MODULE,
+	.open = clearpad_debug_hwtest_open,
+	.write = clearpad_debug_hwtest_write,
+	.read = clearpad_debug_hwtest_read,
+	.unlocked_ioctl = clearpad_debug_pca_ioctl,
+};
+
+static int clearpad_debug_init(struct clearpad_t *this)
+{
+	struct dentry *dent = NULL;
+	int rc = 0;
+
+	mutex_init(&this->hwtest.lock.lock);
+	dent = debugfs_create_dir("clearpad", 0);
+	if (!dent || IS_ERR(dent)) {
+		HWLOGE(this, "debugfs_create_dir error: dent=0x%p\n", dent);
+		rc = -ENODEV;
+		goto end;
+	}
+
+	this->debugfs = dent;
+
+	dent = debugfs_create_file("hwtest", 0600, this->debugfs,
+				(void *)this,
+				&clearpad_debug_hwtest_fops);
+	if (!dent || IS_ERR(dent)) {
+		HWLOGE(this, "debugfs_create_file error: dent=0x%p\n", dent);
+		rc = -ENODEV;
+		goto error;
+	}
+
+	goto end;
+
+error:
+	debugfs_remove_recursive(this->debugfs);
+	this->debugfs = NULL;
+end:
+	return rc;
+}
+#endif /* CONFIG_DEBUG_FS */
+
 /* need LOCK(&this->lock) */
 static int clearpad_read_pca_block(struct clearpad_t *this,
 				  u16 block_num, u8 *data)
@@ -7720,106 +7823,6 @@ end:
 	return rc;
 }
 
-static long clearpad_debug_pca_ioctl(struct file *file,
-					unsigned int cmd, unsigned long arg)
-{
-	struct clearpad_t *this = (struct clearpad_t *)file->private_data;
-	struct clearpad_hwtest_t *hwt = &this->hwtest;
-	const char *session = "debug ioctl";
-	struct clearpad_ioctl_pca_info pca_info;
-	int rc;
-
-	LOCK(&hwt->lock);
-	rc = clearpad_ctrl_session_begin(this, session);
-	if (rc)
-		goto err_in_ctrl_begin;
-
-	LOGI(this, "ioctl: %x\n", cmd);
-	if (copy_from_user(&pca_info, (void *) arg,
-			sizeof(struct clearpad_ioctl_pca_info))) {
-		rc = -EFAULT;
-		HWLOGE(this, "copy_from_user error\n");
-		goto err_in_copy_from_user;
-	}
-
-	switch (cmd) {
-	case SYN_PCA_IOCTL_GET:
-		LOCK(&this->lock);
-		rc = clearpad_read_pca_block(this, pca_info.block_pos,
-					     pca_info.data);
-		UNLOCK(&this->lock);
-		if (rc)
-			break;
-
-		if (copy_to_user((void *) arg, &pca_info,
-				sizeof(struct clearpad_ioctl_pca_info))) {
-			rc = -EFAULT;
-			HWLOGE(this, "copy_to_user error\n");
-		}
-		break;
-	case SYN_PCA_IOCTL_SET:
-		LOCK(&this->lock);
-		rc = clearpad_write_pca_block(this, pca_info.block_pos,
-					 pca_info.data);
-		UNLOCK(&this->lock);
-		break;
-	default:
-		rc = -EINVAL;
-		HWLOGE(this, "cmd %d error\n", cmd);
-		break;
-	}
-
-err_in_copy_from_user:
-	if (rc)
-		LOGE(this, "failed to access to touch device\n");
-
-	clearpad_ctrl_session_end(this, session);
-err_in_ctrl_begin:
-	UNLOCK(&hwt->lock);
-	return rc;
-}
-
-static const struct file_operations clearpad_debug_hwtest_fops = {
-	.owner = THIS_MODULE,
-	.open = clearpad_debug_hwtest_open,
-	.write = clearpad_debug_hwtest_write,
-	.read = clearpad_debug_hwtest_read,
-	.unlocked_ioctl = clearpad_debug_pca_ioctl,
-};
-
-static int clearpad_debug_init(struct clearpad_t *this)
-{
-	struct dentry *dent = NULL;
-	int rc = 0;
-
-	mutex_init(&this->hwtest.lock.lock);
-	dent = debugfs_create_dir("clearpad", 0);
-	if (!dent || IS_ERR(dent)) {
-		HWLOGE(this, "debugfs_create_dir error: dent=0x%p\n", dent);
-		rc = -ENODEV;
-		goto end;
-	}
-
-	this->debugfs = dent;
-
-	dent = debugfs_create_file("hwtest", 0600, this->debugfs,
-				(void *)this,
-				&clearpad_debug_hwtest_fops);
-	if (!dent || IS_ERR(dent)) {
-		HWLOGE(this, "debugfs_create_file error: dent=0x%p\n", dent);
-		rc = -ENODEV;
-		goto error;
-	}
-
-	goto end;
-
-error:
-	debugfs_remove_recursive(this->debugfs);
-	this->debugfs = NULL;
-end:
-	return rc;
-}
-#endif /* CONFIG_DEBUG_FS */
 
 static int clearpad_probe(struct platform_device *pdev)
 {
@@ -7842,10 +7845,11 @@ static int clearpad_probe(struct platform_device *pdev)
 	}
 	/* Start logging for probe (no lock until end of probe) */
 	get_monotonic_boottime(&ts);
+#ifdef CONFIG_DEBUG_FS
 	this->hwtest.log_size =
 		scnprintf(this->hwtest.log_buf, sizeof(this->hwtest.log_buf),
 			  "start probe @ %ld.%06ld\n", ts.tv_sec, ts.tv_nsec);
-
+#endif
 	this->state = SYN_STATE_INIT;
 	mutex_init(&this->lock.lock);
 	spin_lock_init(&this->slock);
