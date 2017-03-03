@@ -3429,6 +3429,7 @@ static int msm_hs_probe(struct platform_device *pdev)
 	memset(name, 0, sizeof(name));
 	scnprintf(name, sizeof(name), "%s%s", dev_name(msm_uport->uport.dev),
 									"_state");
+#ifdef CONFIG_IPC_LOGGING
 	msm_uport->ipc_msm_hs_log_ctxt =
 			ipc_log_context_create(IPC_MSM_HS_LOG_STATE_PAGES,
 								name, 0);
@@ -3437,11 +3438,11 @@ static int msm_hs_probe(struct platform_device *pdev)
 								__func__);
 	} else {
 		msm_uport->ipc_debug_mask = INFO_LEV;
-		ret = sysfs_create_file(&pdev->dev.kobj,
-				&dev_attr_debug_mask.attr);
-		if (unlikely(ret))
-			MSM_HS_WARN("%s: Failed to create dev. attr", __func__);
 	}
+#endif
+	ret = sysfs_create_file(&pdev->dev.kobj, &dev_attr_debug_mask.attr);
+	if (unlikely(ret))
+		MSM_HS_WARN("%s: Failed to create dev. attr", __func__);
 
 	uport->irq = core_irqres;
 	msm_uport->bam_irq = bam_irqres;
@@ -3519,30 +3520,33 @@ static int msm_hs_probe(struct platform_device *pdev)
 	memset(name, 0, sizeof(name));
 	scnprintf(name, sizeof(name), "%s%s", dev_name(msm_uport->uport.dev),
 									"_tx");
+#ifdef CONFIG_IPC_LOGGING
 	msm_uport->tx.ipc_tx_ctxt =
 		ipc_log_context_create(IPC_MSM_HS_LOG_DATA_PAGES, name, 0);
 	if (!msm_uport->tx.ipc_tx_ctxt)
 		dev_err(&pdev->dev, "%s: error creating tx logging context",
 								__func__);
-
+#endif
 	memset(name, 0, sizeof(name));
 	scnprintf(name, sizeof(name), "%s%s", dev_name(msm_uport->uport.dev),
 									"_rx");
 	msm_uport->rx.ipc_rx_ctxt = ipc_log_context_create(
 					IPC_MSM_HS_LOG_DATA_PAGES, name, 0);
+#ifdef CONFIG_IPC_LOGGING
 	if (!msm_uport->rx.ipc_rx_ctxt)
 		dev_err(&pdev->dev, "%s: error creating rx logging context",
 								__func__);
-
+#endif
 	memset(name, 0, sizeof(name));
 	scnprintf(name, sizeof(name), "%s%s", dev_name(msm_uport->uport.dev),
 									"_pwr");
+#ifdef CONFIG_IPC_LOGGING
 	msm_uport->ipc_msm_hs_pwr_ctxt = ipc_log_context_create(
 					IPC_MSM_HS_LOG_USER_PAGES, name, 0);
 	if (!msm_uport->ipc_msm_hs_pwr_ctxt)
 		dev_err(&pdev->dev, "%s: error creating usr logging context",
 								__func__);
-
+#endif
 	uport->irq = core_irqres;
 	msm_uport->bam_irq = bam_irqres;
 

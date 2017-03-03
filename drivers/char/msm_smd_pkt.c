@@ -1592,9 +1592,10 @@ static int __init smd_pkt_init(void)
 	INIT_DELAYED_WORK(&smdpkt_probe_work, smdpkt_probe_worker);
 	schedule_delayed_work(&smdpkt_probe_work,
 				msecs_to_jiffies(SMD_PKT_PROBE_WAIT_TIMEOUT));
-
+#ifdef CONFIG_IPC_LOGGING
 	smd_pkt_ilctxt = ipc_log_context_create(SMD_PKT_IPC_LOG_PAGE_CNT,
 						"smd_pkt", 0);
+#endif
 	return 0;
 }
 

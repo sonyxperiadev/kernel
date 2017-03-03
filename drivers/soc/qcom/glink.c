@@ -4751,9 +4751,11 @@ EXPORT_SYMBOL(glink_get_log_ctx);
 
 static int glink_init(void)
 {
+#ifdef CONFIG_IPC_LOGGING
 	log_ctx = ipc_log_context_create(NUM_LOG_PAGES, "glink", 0);
 	if (!log_ctx)
 		GLINK_ERR("%s: unable to create log context\n", __func__);
+#endif
 	glink_debugfs_init();
 
 	return 0;

@@ -1038,9 +1038,10 @@ static int __init rmnet_mhi_init(void)
 	int i;
 	enum MHI_STATUS res = MHI_STATUS_SUCCESS;
 	struct rmnet_mhi_private *rmnet_mhi_ptr = 0;
+#ifdef CONFIG_IPC_LOGGING
 	rmnet_ipc_log = ipc_log_context_create(RMNET_IPC_LOG_PAGES,
 						"mhi_rmnet", 0);
-
+#endif
 	for (i = 0; i < MHI_RMNET_DEVICE_COUNT; i++) {
 		rmnet_mhi_ptr = &rmnet_mhi_ctxt_list[i];
 
