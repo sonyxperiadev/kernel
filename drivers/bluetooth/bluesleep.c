@@ -710,13 +710,14 @@ static int bluesleep_resume(struct platform_device *pdev)
 	if (test_bit(BT_SUSPEND, &flags)) {
 		if (debug_mask & DEBUG_SUSPEND)
 			pr_info("bluesleep resuming...\n");
+		clear_bit(BT_SUSPEND, &flags);
+
 		if (atomic_read(&open_count) == 1 &&
 			(gpio_get_value(bsi->host_wake) == bsi->irq_polarity)) {
 			if (debug_mask & DEBUG_SUSPEND)
 				pr_info("bluesleep resume from BT event...\n");
 			hsuart_power(HS_UART_ON);
 		}
-		clear_bit(BT_SUSPEND, &flags);
 	}
 	return 0;
 }
