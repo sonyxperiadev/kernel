@@ -331,8 +331,8 @@
 		qcom,clock-rates = <80000000 0 19200000 0 0 0>,
 						<80000000 0 37500000 0 0 0>;
 		pinctrl-names = "cci_default", "cci_suspend";
-		pinctrl-0 = <&cci0_default>;
-		pinctrl-1 = <&cci0_sleep>;
+		pinctrl-0 = <&cci0_active &cci1_active>;
+		pinctrl-1 = <&cci0_suspend &cci1_suspend>;
 		gpios = <&msm_gpio 29 0>,
 			<&msm_gpio 30 0>;
 		qcom,gpio-tbl-num = <0 1>;
