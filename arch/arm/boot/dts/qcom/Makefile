@@ -155,6 +155,7 @@ dtb-$(CONFIG_ARCH_MDM9640) += mdm9640-sim.dtb \
 	mdm9640-v2-pmk8001-mtp.dtb \
 
 # MSM8939/MSM8936
+dtb-$(CONFIG_MACH_SONY_TULIP)		+= msm8936-kanuti_tulip.dtb
 dtb-$(CONFIG_MACH_SONY_TULIP)		+= msm8939-kanuti_tulip.dtb
 
 dtb-$(CONFIG_ARCH_MDMCALIFORNIUM) += mdmcalifornium-sim.dtb \
