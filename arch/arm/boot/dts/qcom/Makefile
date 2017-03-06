@@ -23,6 +23,7 @@ dtb-$(CONFIG_MACH_SONY_SUZU)            += msm8956-v1.1-loire-suzu_generic.dtb
 dtb-$(CONFIG_MACH_SONY_KUGO)            += msm8956-v1.1-loire-kugo_generic.dtb
 
 # MSM8939/MSM8936
+dtb-$(CONFIG_MACH_SONY_TULIP)		+= msm8936-kanuti_tulip.dtb
 dtb-$(CONFIG_MACH_SONY_TULIP)		+= msm8939-kanuti_tulip.dtb
 
 ifneq ($(CONFIG_ARCH_SONY_TONE),y)
