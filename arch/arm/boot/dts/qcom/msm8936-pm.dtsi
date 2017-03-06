@@ -10,6 +10,8 @@
  * GNU General Public License for more details.
  */
 
+#include <dt-bindings/msm/pm.h>
+
 &soc {
 	qcom,spm@b089000 {
 		compatible = "qcom,spm-v2";
@@ -222,6 +224,9 @@
 				qcom,energy-overhead = <575000>;
 				qcom,time-overhead = <700>;
 				qcom,min-child-idx = <1>;
+				qcom,reset-level =
+					<LPM_RESET_LVL_GDHS>;
+
 			};
 
 			qcom,pm-cluster-level@2{
@@ -234,6 +239,8 @@
 				qcom,energy-overhead = <1080000>;
 				qcom,time-overhead = <1500>;
 				qcom,min-child-idx = <2>;
+				qcom,reset-level =
+					<LPM_RESET_LVL_RET>;
 			};
 
 			qcom,pm-cluster-level@3{
@@ -247,6 +254,8 @@
 				qcom,time-overhead = <3200>;
 				qcom,min-child-idx = <2>;
 				qcom,notify-rpm;
+				qcom,reset-level =
+					<LPM_RESET_LVL_PC>;
 			};
 
 			qcom,pm-cpu {
@@ -270,6 +279,8 @@
 					qcom,energy-overhead = <458673>;
 					qcom,time-overhead = <550>;
 					qcom,use-broadcast-timer;
+					qcom,reset-level =
+						<LPM_RESET_LVL_PC>;
 				};
 
 				qcom,pm-cpu-level@2 {
@@ -280,6 +291,8 @@
 					qcom,energy-overhead = <497400>;
 					qcom,time-overhead = <600>;
 					qcom,use-broadcast-timer;
+					qcom,reset-level =
+						<LPM_RESET_LVL_PC>;
 				};
 			};
 		};
