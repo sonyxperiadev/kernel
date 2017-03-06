@@ -484,7 +484,6 @@
 				config {
 					drive-strength = <2>; /* 2 mA */
 					bias-pull-down; /* pull down */
-					input-debounce = <0>;
 				};
 			};
 
@@ -496,7 +495,6 @@
 				config {
 					drive-strength = <2>; /* 2 mA */
 					bias-pull-down; /* pull down */
-					input-debounce = <0>;
 				};
 			};
 		};
