@@ -21,6 +21,13 @@
 		compatible = "qcom,devbw";
 		governor = "bw_hwmon";
 		qcom,src-dst-ports = <26 512>;
+
+		/*
+		 * active-only flag is used while registering the bus
+		 * governor.It helps release the bus vote when the CPU
+		 * subsystem is inactiv3
+		 */
+		qcom,active-only;
 		qcom,bw-tbl =
 			< 146 >,	/* 9.6 MHz */
 			< 1977 >,	/* 129.6 MHz */
@@ -56,6 +63,12 @@
 		qcom,initial-pwrlevel = <2>;
 
 		qcom,idle-timeout = <80>; //msecs
+
+		/*
+		 * Timeout to enter deeper power saving state
+		 * from NAP.
+		 */
+		qcom,deep-nap-timeout = <20>; //msecs
 		qcom,strtstp-sleepwake;
 
 		/* Clocks = KGSL_CLK_CORE | KGSL_CLK_IFACE | KGSL_CLK_MEM |
@@ -163,7 +176,8 @@
 				qcom,bus-freq = <0>;
 			};
 		};
-
+		qcom,ocmem-bus-client {
+		};
 	};
 
 	kgsl_msm_iommu: qcom,kgsl-iommu@1f00000 {
