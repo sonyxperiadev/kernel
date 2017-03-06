@@ -926,6 +926,7 @@
 			reg = <0x78c4000 0x15000>;
 			reg-names = "hsusb";
 			interrupts = <0 135 0>;
+			interrupt-names = "hsusb";
 
 			qcom,bam-type = <1>;
 			qcom,usb-bam-num-pipes = <2>;
