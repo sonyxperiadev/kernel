@@ -4926,18 +4926,16 @@ static int smb1360_probe(struct i2c_client *client,
 		return -ENOMEM;
 	}
 
-	/* probe the device to check if its actually connected */
-	rc = smb1360_read(chip, CFG_BATT_CHG_REG, &reg);
-	if (rc) {
-		pr_err("Failed to detect SMB1360, device may be absent\n");
-		return -ENODEV;
-	}
+
+
+
 
 	chip->resume_completed = true;
 	chip->client = client;
 	chip->dev = &client->dev;
 	chip->usb_psy = usb_psy;
 	chip->fake_battery_soc = -EINVAL;
+
 	mutex_init(&chip->read_write_lock);
 	mutex_init(&chip->parallel_chg_lock);
 	mutex_init(&chip->otp_gain_lock);
@@ -4950,6 +4948,15 @@ static int smb1360_probe(struct i2c_client *client,
 			smb1360_delayed_init_work_fn);
 	init_completion(&chip->fg_mem_access_granted);
 	smb1360_wakeup_src_init(chip);
+
+	/* probe the device to check if its actually connected */
+	rc = smb1360_read(chip, CFG_BATT_CHG_REG, &reg);
+	if (rc) {
+		pr_err("Failed to detect SMB1360, device may be absent\n");
+		mutex_destroy(&chip->read_write_lock);
+		return -ENODEV;
+		goto destroy_mutex;
+	}
 
 	rc = read_revision(chip, &chip->revision);
 	if (rc)
