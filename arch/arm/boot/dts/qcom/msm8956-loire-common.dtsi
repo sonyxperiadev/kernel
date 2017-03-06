@@ -765,6 +765,11 @@
 		reg = <0x4a3000 0x1000>;
 		clock-frequency = <32768>;
 	};
+
+	/delete-node/ qcom,iris-fm;
+	/delete-node/ qcom,pronto@a21b000;
+	/delete-node/ qcom,wcnss-wlan@0a000000;
+
 };
 
 &pm8950_gpios {
