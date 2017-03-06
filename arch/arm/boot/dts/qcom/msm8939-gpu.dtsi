@@ -176,8 +176,6 @@
 				qcom,bus-freq = <0>;
 			};
 		};
-		qcom,ocmem-bus-client {
-		};
 	};
 
 	kgsl_msm_iommu: qcom,kgsl-iommu@1f00000 {
@@ -192,7 +190,7 @@
 			<&clock_gcc clk_gcc_gfx_tcu_clk>,
 			<&clock_gcc clk_gcc_gtcu_ahb_clk>,
 			<&clock_gcc clk_gcc_gfx_tbu_clk>;
-		clock-names = "iface_clk", "core_clk", "gtcu_iface_clk",
+		clock-names = "scfg_clk", "gtcu_clk", "gtcu_iface_clk",
 				"gtbu_clk";
 /*		qcom,secure_align_mask = <0xfff>;
 		qcom,retention;
