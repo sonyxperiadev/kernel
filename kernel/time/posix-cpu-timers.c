@@ -1253,7 +1253,8 @@ void set_process_cpu_timer(struct task_struct *tsk, unsigned int clock_idx,
 	unsigned long long now = 0;
 
 	WARN_ON_ONCE(clock_idx == CPUCLOCK_SCHED);
-	cpu_timer_sample_group(clock_idx, tsk, &now);
+	if (cpu_timer_sample_group(clock_idx, tsk, &now))
+		return;
 
 	if (oldval) {
 		/*
