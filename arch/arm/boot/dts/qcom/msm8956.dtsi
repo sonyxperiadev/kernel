@@ -2323,20 +2323,13 @@
 		#clock-cells = <1>;
 	};
 
-	pcm0: qcom,msm-pcm {
-		compatible = "qcom,msm-pcm-dsp";
-		qcom,msm-pcm-dsp-id = <0>;
-	};
-
 	routing: qcom,msm-pcm-routing {
 		compatible = "qcom,msm-pcm-routing";
 	};
 
-	pcm2: qcom,msm-ultra-low-latency {
+	pcm0: qcom,msm-pcm {
 		compatible = "qcom,msm-pcm-dsp";
-		qcom,msm-pcm-dsp-id = <2>;
-		qcom,msm-pcm-low-latency;
-		qcom,latency-level = "ultra";
+		qcom,msm-pcm-dsp-id = <0>;
 	};
 
 	pcm1: qcom,msm-pcm-low-latency {
@@ -2582,10 +2575,6 @@
 		compatible = "qcom,msm-pcm-hostless";
 	};
 
-	bcmbt_ldisc {
-		compatible = "bcmbt_ldisc";
-	};
-
 	dai_pri_auxpcm: qcom,msm-pri-auxpcm {
 		compatible = "qcom,msm-auxpcm-dev";
 		qcom,msm-cpudai-auxpcm-mode = <0>, <0>;
@@ -2597,6 +2586,10 @@
 		qcom,msm-cpudai-auxpcm-data = <0>, <0>;
 		qcom,msm-cpudai-auxpcm-pcm-clk-rate = <2048000>, <2048000>;
 		qcom,msm-auxpcm-interface = "primary";
+	};
+
+	bcmbt_ldisc {
+		compatible = "bcmbt_ldisc";
 	};
 
 	dai_sec_auxpcm: qcom,msm-sec-auxpcm {
