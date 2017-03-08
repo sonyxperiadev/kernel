@@ -1130,7 +1130,7 @@ static void extract_buf(struct entropy_store *r, __u8 *out)
 	 * brute-forcing the feedback as hard as brute-forcing the
 	 * hash.
 	 */
-	__mix_pool_bytes(r, hash.w, sizeof(hash.w), extract);
+	__mix_pool_bytes(r, hash.w, sizeof(hash.w));
 	spin_unlock_irqrestore(&r->lock, flags);
 
 	memzero_explicit(workspace, sizeof(workspace));
@@ -1858,8 +1858,8 @@ void add_hwgenerator_randomness(const char *buffer, size_t count,
 	 * or when the calling thread is about to terminate.
 	 */
 	wait_event_interruptible(random_write_wait, kthread_should_stop() ||
-			ENTROPY_BITS(poolp) <= random_write_wakeup_thresh);
-	mix_pool_bytes(poolp, buffer, count, NULL);
+			ENTROPY_BITS(poolp) <= random_write_wakeup_bits);
+	mix_pool_bytes(poolp, buffer, count);
 	credit_entropy_bits(poolp, entropy);
 }
 EXPORT_SYMBOL_GPL(add_hwgenerator_randomness);
