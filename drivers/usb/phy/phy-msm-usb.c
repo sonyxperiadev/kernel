@@ -3468,6 +3468,9 @@ static void msm_otg_init_sm(struct msm_otg *motg)
 	}
 	motg->id_state = (test_bit(ID, &motg->inputs)) ? USB_ID_FLOAT :
 							USB_ID_GROUND;
+#ifdef CONFIG_MACH_SONY_SUZU
+	msm_otg_select_usb_switch(motg);
+#endif
 }
 
 static void msm_otg_wait_for_ext_chg_done(struct msm_otg *motg)
@@ -4842,6 +4845,9 @@ static ssize_t msm_otg_mode_write(struct file *file, const char __user *ubuf,
 
 	motg->id_state = (test_bit(ID, &motg->inputs)) ? USB_ID_FLOAT :
 							USB_ID_GROUND;
+#ifdef CONFIG_MACH_SONY_SUZU
+	msm_otg_select_usb_switch(motg);
+#endif
 	pm_runtime_resume(phy->dev);
 	queue_work(motg->otg_wq, &motg->sm_work);
 out:
@@ -5163,6 +5169,9 @@ static int otg_power_set_property_usb(struct power_supply *psy,
 	switch (psp) {
 	case POWER_SUPPLY_PROP_USB_OTG:
 		motg->id_state = val->intval ? USB_ID_GROUND : USB_ID_FLOAT;
+#ifdef CONFIG_MACH_SONY_SUZU
+		msm_otg_select_usb_switch(motg);
+#endif
 		queue_delayed_work(motg->otg_wq, &motg->id_status_work, 0);
 		break;
 	/* PMIC notification for DP DM state */
@@ -6378,6 +6387,9 @@ static int msm_otg_probe(struct platform_device *pdev)
 	mb();
 
 	motg->id_state = USB_ID_FLOAT;
+#ifdef CONFIG_MACH_SONY_SUZU
+	msm_otg_select_usb_switch(motg);
+#endif
 	ret = msm_otg_mhl_register_callback(motg, msm_otg_mhl_notify_online);
 	if (ret)
 		dev_dbg(&pdev->dev, "MHL can not be supported\n");
