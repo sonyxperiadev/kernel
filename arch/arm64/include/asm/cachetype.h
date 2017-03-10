@@ -28,8 +28,6 @@
 #define CTR_CACHE_MINLINE_MASK	\
 	((0xf << CTR_DMINLINE_SHIFT) | (0xf << CTR_IMINLINE_SHIFT))
 
-#define ICACHE_POLICY_RESERVED	0
-#define ICACHE_POLICY_AIVIVT	1
 #define ICACHE_POLICY_VIPT	2
 #define ICACHE_POLICY_PIPT	3
 
@@ -40,7 +38,6 @@
 #define CTR_L1IP(ctr)	(((ctr) >> CTR_L1IP_SHIFT) & CTR_L1IP_MASK)
 
 #define ICACHEF_ALIASING	0
-#define ICACHEF_AIVIVT		1
 
 extern unsigned long __icache_flags;
 
@@ -75,11 +72,6 @@ extern unsigned long __icache_flags;
 static inline int icache_is_aliasing(void)
 {
 	return test_bit(ICACHEF_ALIASING, &__icache_flags);
-}
-
-static inline int icache_is_aivivt(void)
-{
-	return test_bit(ICACHEF_AIVIVT, &__icache_flags);
 }
 
 static inline u32 cache_type_cwg(void)
