@@ -960,6 +960,32 @@ static struct binder_ref *binder_get_ref_for_node(struct binder_proc *proc,
 	 */
 	atomic_set(&new_ref->weak, 1);
 
+	/*
+	 * Attach the new ref to the node before
+	 * making it visible for lookups (needed
+	 * to insure a weak ref on the node)
+	 */
+	binder_proc_lock(node_proc, __LINE__);
+	if (node->is_zombie) {
+		/*
+		 * Do not allow new refs to zombie nodes
+		 */
+		binder_proc_unlock(node_proc, __LINE__);
+		binder_debug(BINDER_DEBUG_INTERNAL_REFS,
+		     "%d attempt to take new ref %d desc %d on zombie node\n",
+		      proc->pid, new_ref->debug_id, new_ref->desc);
+		kfree(new_ref);
+		binder_stats_deleted(BINDER_STAT_REF);
+		return NULL;
+	}
+	INIT_HLIST_NODE(&new_ref->node_entry);
+	hlist_add_head(&new_ref->node_entry, &node->refs);
+
+	binder_debug(BINDER_DEBUG_INTERNAL_REFS,
+		     "%d new ref %d desc %d for node\n",
+		      proc->pid, new_ref->debug_id, new_ref->desc);
+	binder_proc_unlock(node_proc, __LINE__);
+
 	binder_proc_lock(proc, __LINE__);
 	/*
 	 * Since we dropped the proc lock, we need to
@@ -975,8 +1001,18 @@ static struct binder_ref *binder_get_ref_for_node(struct binder_proc *proc,
 		else if (node > ref->node)
 			p = &(*p)->rb_right;
 		else {
-			atomic_inc(&ref->weak);
+			/*
+			 * ref already created by another thread
+			 * disconnect and free the new ref
+			 */
+			if (!ref->is_zombie)
+				atomic_inc(&ref->weak);
+			else
+				ref = NULL;
 			binder_proc_unlock(proc, __LINE__);
+			binder_proc_lock(node_proc, __LINE__);
+			hlist_del(&new_ref->node_entry);
+			binder_proc_unlock(node_proc, __LINE__);
 			kfree(new_ref);
 			binder_stats_deleted(BINDER_STAT_REF);
 			return ref;
@@ -1007,17 +1043,7 @@ static struct binder_ref *binder_get_ref_for_node(struct binder_proc *proc,
 	}
 	rb_link_node(&new_ref->rb_node_desc, parent, p);
 	rb_insert_color(&new_ref->rb_node_desc, &proc->refs_by_desc);
-	INIT_HLIST_NODE(&new_ref->node_entry);
 	binder_proc_unlock(proc, __LINE__);
-
-	binder_proc_lock(node_proc, __LINE__);
-	hlist_add_head(&new_ref->node_entry, &node->refs);
-
-	binder_debug(BINDER_DEBUG_INTERNAL_REFS,
-		     "%d new ref %d desc %d for %snode\n",
-		      proc->pid, new_ref->debug_id, new_ref->desc,
-		      node->is_zombie ? "zombie " : "");
-	binder_proc_unlock(node_proc, __LINE__);
 	smp_mb();
 	/*
 	 * complete the implicit weak inc_ref by incrementing
@@ -1051,20 +1077,6 @@ static void binder_delete_ref(struct binder_ref *ref, bool force)
 	}
 
 	ref->is_zombie = true;
-	binder_proc_unlock(ref->proc, __LINE__);
-
-	if (atomic_read(&ref->strong))
-		binder_dec_node(ref->node, 1, 1);
-
-	binder_proc_lock(node_proc, __LINE__);
-	hlist_del(&ref->node_entry);
-	if (ref->node->is_zombie)
-		binder_queue_for_zombie_cleanup(node_proc);
-	binder_proc_unlock(node_proc, __LINE__);
-
-	binder_dec_node(ref->node, 0, 1);
-
-	binder_proc_lock(ref->proc, __LINE__);
 	rb_erase(&ref->rb_node_desc, &ref->proc->refs_by_desc);
 	rb_erase(&ref->rb_node_node, &ref->proc->refs_by_node);
 	if (ref->death) {
@@ -1079,6 +1091,17 @@ static void binder_delete_ref(struct binder_ref *ref, bool force)
 	hlist_add_head(&ref->zombie_ref, &ref->proc->zombie_refs);
 	binder_queue_for_zombie_cleanup(ref->proc);
 	binder_proc_unlock(ref->proc, __LINE__);
+
+	binder_proc_lock(node_proc, __LINE__);
+	if (ref->node->is_zombie)
+		binder_queue_for_zombie_cleanup(node_proc);
+	hlist_del(&ref->node_entry);
+	binder_proc_unlock(node_proc, __LINE__);
+
+	if (atomic_read(&ref->strong))
+		binder_dec_node(ref->node, 1, 1);
+	binder_dec_node(ref->node, 0, 1);
+
 	binder_stats_zombie(BINDER_STAT_REF);
 }
 
