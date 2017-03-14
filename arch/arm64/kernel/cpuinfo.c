@@ -70,6 +70,7 @@ static const char *const hwcap_str[] = {
 	"cpuid",
 	"asimdrdm",
 	"jscvt",
+	"fcma",
 	NULL
 };
 
