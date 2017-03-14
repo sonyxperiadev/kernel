@@ -3251,11 +3251,11 @@ static u64 binder_get_seq(struct binder_seq_head *tracker)
 	return seq;
 }
 
-atomic_t binder_seq_count;
+atomic64_t binder_seq_count;
 
 static inline u64 binder_get_next_seq(void)
 {
-	return atomic_inc_return(&binder_seq_count);
+	return atomic64_inc_return(&binder_seq_count);
 }
 
 static void binder_add_seq(struct binder_seq_node *node,
