@@ -200,10 +200,11 @@ s32 ffsMountVol(struct super_block *sb)
 			break;
 
 	if (i < 53) {
-		if (GET16(p_pbr->bpb+11)) /* num_fat_sectors */
-			ret = fat16_mount(sb, p_pbr);
-		else
-			ret = fat32_mount(sb, p_pbr);
+		printk("[EXFAT] driver only supports exFAT formatted drives\n");
+
+		brelse(tmp_bh);
+		bdev_close(sb);
+		return FFS_FORMATERR;
 	} else {
 		ret = exfat_mount(sb, p_pbr);
 	}
