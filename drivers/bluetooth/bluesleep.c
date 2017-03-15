@@ -209,10 +209,10 @@ static void enable_wakeup_irq(int enable)
 	disabled = atomic_read(&bsi->wakeup_irq_disabled);
 
 	if (enable && disabled == 1) {
-		enable_irq_wake(bsi->host_wake_irq);
+		enable_irq(bsi->host_wake_irq);
 		atomic_dec(&bsi->wakeup_irq_disabled);
 	} else if (!enable && !disabled) {
-		disable_irq_wake(bsi->host_wake_irq);
+		disable_irq(bsi->host_wake_irq);
 		atomic_inc(&bsi->wakeup_irq_disabled);
 	}
 }
