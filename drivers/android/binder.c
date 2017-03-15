@@ -4163,7 +4163,6 @@ static bool binder_proc_clear_zombies(struct binder_proc *proc)
 static void binder_clear_zombies(void)
 {
 	struct binder_proc *proc;
-	u64 thread_seq = binder_get_thread_seq();
 	struct binder_seq_node *z;
 
 	spin_lock(&zombie_procs.lock);
@@ -4174,7 +4173,7 @@ static void binder_clear_zombies(void)
 
 	while ((z = list_first_entry_or_null(&zombie_procs.active_threads,
 					     typeof(*z), list_node)) != NULL) {
-		if (thread_seq < z->active_seq)
+		if (binder_get_thread_seq() < z->active_seq)
 			break;
 		list_del_init(&z->list_node);
 
