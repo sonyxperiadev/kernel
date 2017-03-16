@@ -2567,6 +2567,7 @@ static int binder_thread_write(struct binder_proc *proc,
 			binder_uintptr_t cookie;
 			struct binder_ref *ref;
 			struct binder_ref_death *death;
+			bool do_wakeup = false;
 
 			if (get_user(target, (uint32_t __user *)ptr))
 				return -EFAULT;
@@ -2615,8 +2616,10 @@ static int binder_thread_write(struct binder_proc *proc,
 				binder_stats_created(BINDER_STAT_DEATH);
 				INIT_LIST_HEAD(&death->work.entry);
 				death->cookie = cookie;
+				binder_proc_lock(proc, __LINE__);
 				ref->death = death;
-				if (ref->node->is_zombie) {
+				if (ref->node->is_zombie &&
+				    list_empty(&ref->death->work.entry)) {
 					ref->death->work.type = BINDER_WORK_DEAD_BINDER;
 					if (thread->looper &
 					    (BINDER_LOOPER_STATE_REGISTERED |
@@ -2630,10 +2633,10 @@ static int binder_thread_write(struct binder_proc *proc,
 							&ref->death->work,
 							&proc->todo,
 							__LINE__);
-						wake_up_interruptible(
-								&proc->wait);
+						do_wakeup = true;
 					}
 				}
+				binder_proc_unlock(proc, __LINE__);
 			} else {
 				if (ref->death == NULL) {
 					binder_user_error("%d:%d BC_CLEAR_DEATH_NOTIFICATION death notification not active\n",
@@ -2650,6 +2653,7 @@ static int binder_thread_write(struct binder_proc *proc,
 					binder_put_ref(ref);
 					break;
 				}
+				binder_proc_lock(proc, __LINE__);
 				ref->death = NULL;
 				if (list_empty(&death->work.entry)) {
 					death->work.type = BINDER_WORK_CLEAR_DEATH_NOTIFICATION;
@@ -2665,20 +2669,23 @@ static int binder_thread_write(struct binder_proc *proc,
 								&death->work,
 								&proc->todo,
 								__LINE__);
-						wake_up_interruptible(
-								&proc->wait);
+						do_wakeup = true;
 					}
 				} else {
 					BUG_ON(death->work.type != BINDER_WORK_DEAD_BINDER);
 					death->work.type = BINDER_WORK_DEAD_BINDER_AND_CLEAR;
 				}
+				binder_proc_unlock(proc, __LINE__);
 			}
+			if (do_wakeup)
+				wake_up_interruptible(&proc->wait);
 			binder_put_ref(ref);
 		} break;
 		case BC_DEAD_BINDER_DONE: {
 			struct binder_work *w;
 			binder_uintptr_t cookie;
 			struct binder_ref_death *death = NULL;
+			bool do_wakeup = false;
 
 			if (get_user(cookie, (binder_uintptr_t __user *)ptr))
 				return -EFAULT;
@@ -2707,6 +2714,7 @@ static int binder_thread_write(struct binder_proc *proc,
 					proc->pid, thread->pid, (u64)cookie);
 				break;
 			}
+			binder_proc_lock(proc, __LINE__);
 			binder_dequeue_work(&death->work, __LINE__);
 			if (death->work.type == BINDER_WORK_DEAD_BINDER_AND_CLEAR) {
 				death->work.type = BINDER_WORK_CLEAR_DEATH_NOTIFICATION;
@@ -2720,9 +2728,12 @@ static int binder_thread_write(struct binder_proc *proc,
 					binder_enqueue_work(&death->work,
 							    &proc->todo,
 							    __LINE__);
-					wake_up_interruptible(&proc->wait);
+					do_wakeup = true;
 				}
 			}
+			binder_proc_unlock(proc, __LINE__);
+			if (do_wakeup)
+				wake_up_interruptible(&proc->wait);
 		} break;
 
 		default:
@@ -3040,14 +3051,17 @@ retry:
 				      "BR_CLEAR_DEATH_NOTIFICATION_DONE",
 				      (u64)death->cookie);
 
+			binder_proc_lock(proc, __LINE__);
 			if (w->type == BINDER_WORK_CLEAR_DEATH_NOTIFICATION) {
 				binder_dequeue_work(w, __LINE__);
+				binder_proc_unlock(proc, __LINE__);
 				kfree(death);
 				binder_stats_deleted(BINDER_STAT_DEATH);
 			} else {
 				binder_dequeue_work(w, __LINE__);
 				binder_enqueue_work(w, &proc->delivered_death,
 						    __LINE__);
+				binder_proc_unlock(proc, __LINE__);
 
 			}
 			binder_unfreeze_worklist(wlist);
@@ -3976,6 +3990,7 @@ static int binder_node_release(struct binder_node *node, int refs)
 
 		w = list_first_entry(&tmplist.list, struct binder_work, entry);
 		death = container_of(w, struct binder_ref_death, work);
+		binder_proc_lock(proc, __LINE__);
 		binder_dequeue_work(w, __LINE__);
 		/*
 		 * It's not safe to touch death after
@@ -3985,6 +4000,7 @@ static int binder_node_release(struct binder_node *node, int refs)
 		wait = &death->wait_proc->wait;
 		binder_enqueue_work(w, &death->wait_proc->todo,
 				    __LINE__);
+		binder_proc_unlock(proc, __LINE__);
 		wake_up_interruptible(wait);
 	}
 	binder_debug(BINDER_DEBUG_DEAD_BINDER,
