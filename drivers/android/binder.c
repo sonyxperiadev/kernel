@@ -3717,8 +3717,8 @@ err:
 		binder_proc_lock(thread->proc, __LINE__);
 		WRITE_ONCE(thread->looper_need_return, false);
 		binder_proc_unlock(thread->proc, __LINE__);
-		zombie_cleanup_check(proc);
 		binder_put_thread(thread);
+		zombie_cleanup_check(proc);
 	}
 	wait_event_interruptible(binder_user_error_wait, binder_stop_on_user_error < 2);
 	if (ret && ret != -ERESTARTSYS)
@@ -4247,6 +4247,7 @@ static void binder_deferred_func(struct work_struct *work)
 				proc->zombie_files = proc->files;
 				proc->files = NULL;
 				binder_queue_for_zombie_cleanup(proc);
+				defer |= BINDER_ZOMBIE_CLEANUP;
 			}
 			binder_proc_unlock(proc, __LINE__);
 		}
