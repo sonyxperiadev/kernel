@@ -2938,10 +2938,12 @@ retry:
 		} break;
 		case BINDER_WORK_NODE: {
 			struct binder_node *node = container_of(w, struct binder_node, work);
-			uint32_t cmd = BR_NOOP;
-			const char *cmd_name;
+			uint32_t cmd[2];
+			const char *cmd_name[2];
+			int cmd_count = 0;
 			int strong, weak;
 			struct binder_proc *proc = node->proc;
+			int i;
 
 			binder_proc_lock(proc, __LINE__);
 			strong = node->internal_strong_refs ||
@@ -2950,74 +2952,72 @@ retry:
 					node->local_weak_refs || strong;
 
 			if (weak && !node->has_weak_ref) {
-				cmd = BR_INCREFS;
-				cmd_name = "BR_INCREFS";
+				cmd[cmd_count] = BR_INCREFS;
+				cmd_name[cmd_count++] = "BR_INCREFS";
 				node->has_weak_ref = 1;
 				node->pending_weak_ref = 1;
 				node->local_weak_refs++;
-			} else if (strong && !node->has_strong_ref) {
-				cmd = BR_ACQUIRE;
-				cmd_name = "BR_ACQUIRE";
+			}
+			if (strong && !node->has_strong_ref) {
+				cmd[cmd_count] = BR_ACQUIRE;
+				cmd_name[cmd_count++] = "BR_ACQUIRE";
 				node->has_strong_ref = 1;
 				node->pending_strong_ref = 1;
 				node->local_strong_refs++;
-			} else if (!strong && node->has_strong_ref) {
-				cmd = BR_RELEASE;
-				cmd_name = "BR_RELEASE";
+			}
+			if (!strong && node->has_strong_ref) {
+				cmd[cmd_count] = BR_RELEASE;
+				cmd_name[cmd_count++] = "BR_RELEASE";
 				node->has_strong_ref = 0;
-			} else if (!weak && node->has_weak_ref) {
-				cmd = BR_DECREFS;
-				cmd_name = "BR_DECREFS";
+			}
+			if (!weak && node->has_weak_ref) {
+				cmd[cmd_count] = BR_DECREFS;
+				cmd_name[cmd_count++] = "BR_DECREFS";
 				node->has_weak_ref = 0;
 			}
-			if (cmd != BR_NOOP) {
-				binder_proc_unlock(proc, __LINE__);
-				if (put_user(cmd, (uint32_t __user *)ptr)) {
-					binder_unfreeze_worklist(wlist);
+			BUG_ON(cmd_count > 2);
+
+			if (!weak && !strong && !node->is_zombie) {
+				binder_debug(BINDER_DEBUG_INTERNAL_REFS,
+					     "%d:%d node %d u%016llx c%016llx deleted\n",
+					     proc->pid, thread->pid,
+					     node->debug_id,
+					     (u64)node->ptr,
+					     (u64)node->cookie);
+				_binder_make_node_zombie(node);
+			} else {
+				binder_debug(BINDER_DEBUG_INTERNAL_REFS,
+					     "%d:%d node %d u%016llx c%016llx state unchanged\n",
+					     proc->pid, thread->pid,
+					     node->debug_id,
+					     (u64)node->ptr,
+					     (u64)node->cookie);
+			}
+			binder_dequeue_work(w, __LINE__);
+			binder_unfreeze_worklist(wlist);
+			binder_proc_unlock(proc, __LINE__);
+
+			for (i = 0; i < cmd_count; i++) {
+				if (put_user(cmd[i], (uint32_t __user *)ptr))
 					return -EFAULT;
-				}
 				ptr += sizeof(uint32_t);
+
 				if (put_user(node->ptr,
-					     (binder_uintptr_t __user *)ptr)) {
-					binder_unfreeze_worklist(wlist);
+					     (binder_uintptr_t __user *)ptr))
 					return -EFAULT;
-				}
-				ptr += sizeof(binder_uintptr_t);
-				if (put_user(node->cookie,
-					     (binder_uintptr_t __user *)ptr)) {
-					binder_unfreeze_worklist(wlist);
-					return -EFAULT;
-				}
 				ptr += sizeof(binder_uintptr_t);
 
-				binder_stat_br(proc, thread, cmd);
+				if (put_user(node->cookie,
+					     (binder_uintptr_t __user *)ptr))
+					return -EFAULT;
+				ptr += sizeof(binder_uintptr_t);
+
+				binder_stat_br(proc, thread, cmd[i]);
 				binder_debug(BINDER_DEBUG_USER_REFS,
 					     "%d:%d %s %d u%016llx c%016llx\n",
-					     proc->pid, thread->pid, cmd_name,
-					     node->debug_id,
+					     proc->pid, thread->pid,
+					     cmd_name[i], node->debug_id,
 					     (u64)node->ptr, (u64)node->cookie);
-				binder_unfreeze_worklist(wlist);
-			} else {
-				binder_dequeue_work(w, __LINE__);
-				if (!weak && !strong && !node->is_zombie) {
-					binder_debug(BINDER_DEBUG_INTERNAL_REFS,
-						     "%d:%d node %d u%016llx c%016llx deleted\n",
-						     proc->pid, thread->pid,
-						     node->debug_id,
-						     (u64)node->ptr,
-						     (u64)node->cookie);
-					_binder_make_node_zombie(node);
-					binder_proc_unlock(proc, __LINE__);
-				} else {
-					binder_proc_unlock(proc, __LINE__);
-					binder_debug(BINDER_DEBUG_INTERNAL_REFS,
-						     "%d:%d node %d u%016llx c%016llx state unchanged\n",
-						     proc->pid, thread->pid,
-						     node->debug_id,
-						     (u64)node->ptr,
-						     (u64)node->cookie);
-				}
-				binder_unfreeze_worklist(wlist);
 			}
 		} break;
 		case BINDER_WORK_DEAD_BINDER:
