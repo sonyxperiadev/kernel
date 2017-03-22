@@ -473,9 +473,9 @@ binder_enqueue_work(struct binder_work *work,
 	binder_debug(BINDER_DEBUG_TODO_LISTS,
 		     "%s: line=%d last_line=%d\n", __func__,
 		     line, work->last_line);
+	spin_lock(&target_wlist->lock);
 	BUG_ON(work->wlist != NULL);
 	BUG_ON(target_wlist == NULL);
-	spin_lock(&target_wlist->lock);
 	work->wlist = target_wlist;
 	list_add_tail(&work->entry, &target_wlist->list);
 	work->last_line = line;
