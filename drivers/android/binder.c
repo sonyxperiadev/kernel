@@ -684,7 +684,7 @@ static struct binder_node *binder_get_node(struct binder_proc *proc,
 		else if (ptr > node->ptr)
 			n = n->rb_right;
 		else {
-			node->local_strong_refs++;
+			node->local_weak_refs++;
 			binder_proc_unlock(proc, __LINE__);
 			return node;
 		}
@@ -728,7 +728,7 @@ static struct binder_node *binder_new_node(struct binder_proc *proc,
 		else if (ptr > node->ptr)
 			p = &(*p)->rb_right;
 		else {
-			node->local_strong_refs++;
+			node->local_weak_refs++;
 			binder_proc_unlock(proc, __LINE__);
 			kfree(temp_node);
 			return node;
@@ -758,7 +758,7 @@ static struct binder_node *binder_new_node(struct binder_proc *proc,
 
 	rb_link_node(&node->rb_node, parent, p);
 	rb_insert_color(&node->rb_node, &proc->nodes);
-	node->local_strong_refs++;
+	node->local_weak_refs++;
 	binder_proc_unlock(proc, __LINE__);
 
 	return node;
@@ -870,7 +870,7 @@ done:
 
 static inline void binder_put_node(struct binder_node *node)
 {
-	binder_dec_node(node, 1, 0);
+	binder_dec_node(node, 0, 0);
 }
 
 static struct binder_ref *binder_get_ref(struct binder_proc *proc,
