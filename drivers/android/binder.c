@@ -244,6 +244,7 @@ struct binder_context {
 	struct binder_node *binder_context_mgr_node;
 	kuid_t binder_context_mgr_uid;
 	const char *name;
+	bool inherit_fifo_prio;
 };
 
 struct binder_device {
@@ -622,11 +623,12 @@ static void binder_set_priority(
 	struct binder_transaction *t, struct binder_node *target_node)
 {
 	bool oneway = !!(t->flags & TF_ONE_WAY);
+	bool inherit_fifo = target_node->proc->context->inherit_fifo_prio;
 
 	t->saved_sched_policy = current->policy;
 	t->saved_priority = task_nice(current);
 
-	if (!oneway && is_rt_policy(t->sched_policy) &&
+	if (!oneway && inherit_fifo && is_rt_policy(t->sched_policy) &&
 	    !is_rt_policy(current->policy)) {
 		/* Transaction was initiated with a real-time policy,
 		 * but we are not; temporarily upgrade this thread to RT.
@@ -3617,6 +3619,34 @@ out:
 	return ret;
 }
 
+static int binder_ioctl_set_inherit_fifo_prio(struct file *filp)
+{
+	int ret = 0;
+	struct binder_proc *proc = filp->private_data;
+	struct binder_context *context = proc->context;
+
+	kuid_t curr_euid = current_euid();
+	mutex_lock(&binder_context_mgr_node_lock);
+
+	if (uid_valid(context->binder_context_mgr_uid)) {
+		if (!uid_eq(context->binder_context_mgr_uid, curr_euid)) {
+			pr_err("BINDER_SET_INHERIT_FIFO_PRIO bad uid %d != %d\n",
+			       from_kuid(&init_user_ns, curr_euid),
+			       from_kuid(&init_user_ns,
+					 context->binder_context_mgr_uid));
+			ret = -EPERM;
+			goto out;
+		}
+	}
+
+	context->inherit_fifo_prio = true;
+
+ out:
+	mutex_unlock(&binder_context_mgr_node_lock);
+	return ret;
+}
+
+
 static int binder_ioctl_set_ctx_mgr(struct file *filp)
 {
 	int ret = 0;
@@ -3730,6 +3760,12 @@ static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		if (ret)
 			goto err;
 		break;
+	case BINDER_SET_INHERIT_FIFO_PRIO:
+		ret = binder_ioctl_set_inherit_fifo_prio(filp);
+		if (ret)
+			goto err;
+		break;
+
 	case BINDER_THREAD_EXIT:
 		binder_debug(BINDER_DEBUG_THREADS, "%d:%d exit\n",
 			     proc->pid, thread->pid);
@@ -4627,6 +4663,7 @@ static void print_binder_proc_stats(struct seq_file *m,
 	seq_printf(m, "proc %d%s\n", proc->pid,
 			proc->is_zombie ? " (ZOMBIE)" : "");
 	seq_printf(m, "context %s\n", proc->context->name);
+	seq_printf(m, "context FIFO: %d\n", proc->context->inherit_fifo_prio);
 	seq_printf(m, "  cleared: procs=%d nodes=%d threads=%d\n",
 			cleared_procs, cleared_nodes, cleared_threads);
 	zombie_threads = zombie_nodes = zombie_refs = count = 0;

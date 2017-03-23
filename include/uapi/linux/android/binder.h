@@ -193,6 +193,7 @@ struct binder_version {
 #define BINDER_SET_CONTEXT_MGR		_IOW('b', 7, __s32)
 #define BINDER_THREAD_EXIT		_IOW('b', 8, __s32)
 #define BINDER_VERSION			_IOWR('b', 9, struct binder_version)
+#define BINDER_SET_INHERIT_FIFO_PRIO	_IO('b', 10)
 
 /*
  * NOTE: Two special error codes you should check for when calling
