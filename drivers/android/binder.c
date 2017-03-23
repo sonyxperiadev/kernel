@@ -971,13 +971,13 @@ static struct binder_ref *binder_get_ref_for_node(struct binder_proc *proc,
 	 * to insure a weak ref on the node)
 	 */
 	binder_proc_lock(node_proc, __LINE__);
-	if (node->is_zombie) {
+	if (node->is_zombie && hlist_empty(&node->refs)) {
 		/*
-		 * Do not allow new refs to zombie nodes
+		 * Do not allow new refs to unreferenced zombie nodes
 		 */
 		binder_proc_unlock(node_proc, __LINE__);
 		binder_debug(BINDER_DEBUG_INTERNAL_REFS,
-		     "%d attempt to take new ref %d desc %d on zombie node\n",
+		     "%d attempt to take new ref %d desc %d on unreferenced zombie node\n",
 		      proc->pid, new_ref->debug_id, new_ref->desc);
 		kfree(new_ref);
 		binder_stats_deleted(BINDER_STAT_REF);
