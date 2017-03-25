@@ -311,14 +311,14 @@ static int msm_hs_ioctl(struct uart_port *uport, unsigned int cmd,
 	switch (cmd) {
 	case MSM_ENABLE_UART_CLOCK: {
 		ret = msm_hs_request_clock_on(&msm_uport->uport);
-#ifdef CONFIG_BT_MSM_SLEEP
+#if defined(CONFIG_LINE_DISCIPLINE_DRIVER)
 		bluesleep_outgoing_data();
 #endif
 		break;
 	}
 	case MSM_DISABLE_UART_CLOCK: {
 		ret = msm_hs_request_clock_off(&msm_uport->uport);
-#ifdef CONFIG_BT_MSM_SLEEP
+#if defined(CONFIG_LINE_DISCIPLINE_DRIVER)
 		bluesleep_tx_allow_sleep();
 #endif
 		break;
@@ -1441,11 +1441,6 @@ static void msm_hs_submit_tx_locked(struct uart_port *uport)
 	/* Set 1 second timeout */
 	mod_timer(&tx->tx_timeout_timer,
 		jiffies + msecs_to_jiffies(MSEC_PER_SEC));
-
-	/* Notify the bluesleep driver of outgoing data, if available. */
-#if defined(CONFIG_BT_MSM_SLEEP) && !defined(CONFIG_LINE_DISCIPLINE_DRIVER)
-	bluesleep_outgoing_data();
-#endif
 
 	MSM_HS_DBG("%s:Enqueue Tx Cmd, ret %d\n", __func__, ret);
 }
