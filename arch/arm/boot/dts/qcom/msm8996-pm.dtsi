@@ -9,6 +9,11 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
+/*
+ * NOTE: This file has been modified by Sony Mobile Communications Inc.
+ * Modifications are Copyright (c) 2016 Sony Mobile Communications Inc,
+ * and licensed under the license of the file.
+ */
 
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/msm/pm.h>
@@ -327,9 +332,11 @@
 			<0xff 115>, /* mdss_irq */
 			<0xff 126>, /* bam_irq[0] */
 			<0xff 127>, /* blsp1_qup_irq(0) */
+			<0xff 129>, /* hwirq */
 			<0xff 132>, /* blsp1_qup_irq(5) */
 			<0xff 133>, /* blsp2_qup_irq(0) */
 			<0xff 134>, /* blsp2_qup_irq(1) */
+			<0xff 137>, /* hwirq */
 			<0xff 138>, /* blsp2_qup_irq(5) */
 			<0xff 140>, /* blsp1_uart_irq(1) */
 			<0xff 146>, /* blsp2_uart_irq(1) */
@@ -521,7 +528,8 @@
 			<66  131>,
 			<67  132>, /* PCIe1 */
 			<68  133>,
-			<69  145>;
+			<69  145>,
+			<70  85>; /* hwirq */
 	};
 
 	rpm_msg_ram: memory@0x200000 {
