@@ -27,6 +27,9 @@
 #include <linux/platform_device.h>
 #include <linux/rfkill.h>
 #include <linux/slab.h>
+#ifdef CONFIG_BT_MSM_SLEEP
+#include <net/bluetooth/bluesleep.h>
+#endif
 
 #define D_BCM_BLUETOOTH_CONFIG_MATCH_TABLE   "bcm,bcm43xx"
 
@@ -61,6 +64,9 @@ static int bcm43xx_bt_rfkill_set_power(void *data, bool blocked)
 		}
 		gpio_set_value(bcm43xx_my_data->reg_on_gpio, 1);
 
+#if defined(CONFIG_BT_MSM_SLEEP) && !defined(CONFIG_LINE_DISCIPLINE_DRIVER)
+		bluesleep_start(1);
+#endif
 	} else {
 		if (!regOnGpio) {
 			pr_debug("Bluetooth device is already power off:%d\n",
@@ -69,6 +75,9 @@ static int bcm43xx_bt_rfkill_set_power(void *data, bool blocked)
 		}
 		gpio_set_value(bcm43xx_my_data->reg_on_gpio, 0);
 
+#if defined(CONFIG_BT_MSM_SLEEP) && !defined(CONFIG_LINE_DISCIPLINE_DRIVER)
+		bluesleep_stop();
+#endif
 	}
 	bt_enabled = !blocked;
 
