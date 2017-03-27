@@ -137,19 +137,11 @@ DECLARE_DELAYED_WORK(sleep_workqueue, bluesleep_sleep_work);
 #define PROC_LPM	4
 #define PROC_BTWRITE	5
 
-#if !defined(CONFIG_LINE_DISCIPLINE_DRIVER)
-static bool has_lpm_enabled;
-#endif
-
 static struct platform_device *bluesleep_uart_dev;
 static struct bluesleep_info *bsi;
 
 /* module usage */
-#if defined(CONFIG_LINE_DISCIPLINE_DRIVER)
 static atomic_t open_count = ATOMIC_INIT(0);
-#else
-static atomic_t open_count = ATOMIC_INIT(1);
-#endif
 
 /*
  * Global variables
@@ -435,12 +427,10 @@ int bluesleep_start(bool is_clock_enabled)
 {
 	unsigned long irq_flags;
 
-#if defined(CONFIG_LINE_DISCIPLINE_DRIVER)
 	if (atomic_read(&open_count) != 0) {
 		return -EBUSY;
 	}
 	atomic_inc(&open_count);
-#endif
 
 	spin_lock_irqsave(&rw_lock, irq_flags);
 
@@ -448,17 +438,6 @@ int bluesleep_start(bool is_clock_enabled)
 		spin_unlock_irqrestore(&rw_lock, irq_flags);
 		return 0;
 	}
-
-#if !defined(CONFIG_LINE_DISCIPLINE_DRIVER)
-	spin_unlock_irqrestore(&rw_lock, irq_flags);
-
-	if (!atomic_dec_and_test(&open_count)) {
-		atomic_inc(&open_count);
-		return -EBUSY;
-	}
-
-	spin_lock_irqsave(&rw_lock, irq_flags);
-#endif
 
 	/* assert BT_WAKE */
 	if (debug_mask & DEBUG_BTWAKE)
@@ -469,14 +448,12 @@ int bluesleep_start(bool is_clock_enabled)
 
 #if defined(CONFIG_LINE_DISCIPLINE_DRIVER)
 	clear_bit(BT_TXDATA, &flags);
-	clear_bit(BT_ASLEEP, &flags);
-#else
-	set_bit(BT_ASLEEP, &flags);
 #endif
+
+	clear_bit(BT_ASLEEP, &flags);
 
 	spin_unlock_irqrestore(&rw_lock, irq_flags);
 
-#if defined(CONFIG_LINE_DISCIPLINE_DRIVER)
 	// For ldisc-controlled BT, the clock is enabled by upper layers, so
 	// make bluesleep aware of this state.
 	if(is_clock_enabled) {
@@ -484,7 +461,6 @@ int bluesleep_start(bool is_clock_enabled)
 	} else {
 		hsuart_power(HS_UART_ON);
 	}
-#endif
 
 	enable_wakeup_irq(1);
 	set_bit(BT_PROTO, &flags);
@@ -529,10 +505,9 @@ void bluesleep_stop(void)
 
 #if defined(CONFIG_LINE_DISCIPLINE_DRIVER)
 	atomic_set(&uart_is_on, 0);
-	atomic_dec(&open_count);
-#else
-	atomic_inc(&open_count);
 #endif
+
+	atomic_dec(&open_count);
 
 	enable_wakeup_irq(0);
 	wake_lock_timeout(&bsi->wake_lock, HZ / 2);
@@ -693,12 +668,9 @@ static int bluesleep_probe(struct platform_device *pdev)
 		goto free_bt_ext_wake;
 	}
 
-#if defined(CONFIG_LINE_DISCIPLINE_DRIVER)
 	bsi->uport = msm_hs_get_uart_port(BT_PORT_ID);
+
 	atomic_set(&bsi->wakeup_irq_disabled, 1);
-#else
-	enable_wakeup_irq(0);
-#endif
 	return 0;
 
 free_bt_ext_wake:
@@ -771,13 +743,8 @@ static int bluesleep_proc_show(struct seq_file *m, void *v)
 {
 	switch ((long)m->private) {
 	case PROC_LPM:
-#if defined(CONFIG_LINE_DISCIPLINE_DRIVER)
 		seq_printf(m, "lpm: %d\n",
 				atomic_read(&open_count) == 0 ? 1 : 0);
-#else
-		seq_printf(m, "lpm: %u\n",
-				test_bit(has_lpm_enabled, &flags) ? 1 : 0);
-#endif
 		break;
 	case PROC_BTWRITE:
 		seq_printf(m, "btwrite: %u\n",
@@ -808,20 +775,9 @@ static ssize_t bluesleep_proc_write(struct file *file, const char *buf,
 		if (lbuf[0] == '0') {
 			/* HCI_DEV_UNREG */
 			bluesleep_stop();
-			has_lpm_enabled = false;
-			bsi->uport = NULL;
 		} else {
 			/* HCI_DEV_REG */
-#if defined(CONFIG_LINE_DISCIPLINE_DRIVER)
 			bluesleep_start(0);
-#else
-			if (!has_lpm_enabled) {
-				has_lpm_enabled = true;
-				bsi->uport = msm_hs_get_uart_port(BT_PORT_ID);
-				/* if bluetooth started, start bluesleep*/
-				bluesleep_start(0);
-			}
-#endif
 		}
 		break;
 	case PROC_BTWRITE:
