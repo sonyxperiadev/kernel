@@ -102,10 +102,10 @@
 		qcom,clock-rates = <24000000 0>;
 	};
 
-	qcom,camera@1 {
-		cell-index = <1>;
+	qcom,camera@2 {
+		cell-index = <2>;
 		compatible = "qcom,camera";
-		reg = <0x1>;
+		reg = <0x2>;
 		qcom,csiphy-sd-index = <2>;
 		qcom,csid-sd-index = <2>;
 		qcom,mount-angle = <0>;
@@ -128,7 +128,7 @@
 		qcom,gpio-req-tbl-flags = <1 0>;
 		qcom,gpio-req-tbl-label = "CAMIF_MCLK2", "CAM_RESET1";
 		qcom,sensor-position = <1>;
-		qcom,sensor-mode = <1>;
+		qcom,sensor-mode = <0>;
 		qcom,cci-master = <1>;
 		status = "ok";
 		clocks = <&clock_mmss clk_mclk2_clk_src>,
