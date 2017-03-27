@@ -132,12 +132,15 @@ static int lmk_vmpressure_notifier(struct notifier_block *nb,
 	int other_free, other_file;
 	unsigned long pressure = action;
 	int array_size = ARRAY_SIZE(lowmem_adj);
+	struct sysinfo swapspace;
 
 	if (!enable_adaptive_lmk)
 		return 0;
 
 	if (pressure >= 95) {
-		other_file = global_page_state(NR_FILE_PAGES) -
+		si_swapinfo(&swapspace);
+		other_file = swapspace.freeswap +
+			global_page_state(NR_FILE_PAGES) -
 			global_page_state(NR_SHMEM) -
 			total_swapcache_pages();
 		other_free = global_page_state(NR_FREE_PAGES);
@@ -150,7 +153,9 @@ static int lmk_vmpressure_notifier(struct notifier_block *nb,
 		if (lowmem_minfree_size < array_size)
 			array_size = lowmem_minfree_size;
 
-		other_file = global_page_state(NR_FILE_PAGES) -
+		si_swapinfo(&swapspace);
+		other_file = swapspace.freeswap +
+			global_page_state(NR_FILE_PAGES) -
 			global_page_state(NR_SHMEM) -
 			total_swapcache_pages();
 
@@ -383,6 +388,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	int other_free;
 	int other_file;
 	unsigned long nr_to_scan = sc->nr_to_scan;
+	struct sysinfo swapspace;
 
 	rcu_read_lock();
 	tsk = current->group_leader;
@@ -399,10 +405,12 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	}
 
 	other_free = global_page_state(NR_FREE_PAGES);
+	si_swapinfo(&swapspace);
 
 	if (global_page_state(NR_SHMEM) + total_swapcache_pages() <
-		global_page_state(NR_FILE_PAGES))
-		other_file = global_page_state(NR_FILE_PAGES) -
+		global_page_state(NR_FILE_PAGES) + swapspace.freeswap)
+		other_file = swapspace.freeswap +
+			     global_page_state(NR_FILE_PAGES) -
 						global_page_state(NR_SHMEM) -
 						total_swapcache_pages();
 	else
