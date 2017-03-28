@@ -64,7 +64,7 @@ ifeq ($(CONFIG_COMPAT_VDSO), y)
   # CONFIG_CROSS_COMPILE_ARM32, set CROSS_COMPILE_ARM32 to an appropriate value
   # when invoking make and fix CONFIG_CROSS_COMPILE_ARM32.
   ifeq ($(CROSS_COMPILE_ARM32),)
-    $(warning CROSS_COMPILE_ARM32 not defined or empty, the compat vDSO will not be built)
+    $(error CROSS_COMPILE_ARM32 not defined or empty, the compat vDSO will not be built)
   else ifeq ($(cc-name),clang)
     export CLANG_TRIPLE_ARM32 ?= $(CROSS_COMPILE_ARM32)
     export CLANG_TARGET_ARM32 := --target=$(notdir $(CLANG_TRIPLE_ARM32:%-=%))
