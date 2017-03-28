@@ -2496,11 +2496,14 @@ static int msm_cpp_copy_from_ioctl_ptr(void *dst_ptr,
 #endif
 
 
-static int msm_cpp_validate_input(unsigned int cmd, void *arg,
+static int msm_cpp_validate_ioctl_input(unsigned int cmd, void *arg,
 	struct msm_camera_v4l2_ioctl_t **ioctl_ptr)
 {
 	switch (cmd) {
 	case MSM_SD_SHUTDOWN:
+	case MSM_SD_NOTIFY_FREEZE:
+	case VIDIOC_MSM_CPP_IOMMU_ATTACH:
+	case VIDIOC_MSM_CPP_IOMMU_DETACH:
 		break;
 	default:
 		if (ioctl_ptr == NULL) {
@@ -2509,8 +2512,9 @@ static int msm_cpp_validate_input(unsigned int cmd, void *arg,
 		}
 
 		*ioctl_ptr = arg;
-		if ((*ioctl_ptr == NULL) ||
-			(*ioctl_ptr)->ioctl_ptr == NULL) {
+		if (((*ioctl_ptr) == NULL) ||
+			((*ioctl_ptr)->ioctl_ptr == NULL) ||
+			((*ioctl_ptr)->len == 0)) {
 			pr_err("Error invalid ioctl argument cmd %u\n", cmd);
 			return -EINVAL;
 		}
@@ -2546,6 +2550,13 @@ long msm_cpp_subdev_ioctl(struct v4l2_subdev *sd,
 		pr_err("sd %pK\n", sd);
 		return -EINVAL;
 	}
+
+	rc = msm_cpp_validate_ioctl_input(cmd, arg, &ioctl_ptr);
+	if (rc != 0) {
+		pr_err("input validation failed\n");
+		return rc;
+	}
+
 	cpp_dev = v4l2_get_subdevdata(sd);
 	if (cpp_dev == NULL) {
 		pr_err("cpp_dev is null\n");
@@ -2554,11 +2565,6 @@ long msm_cpp_subdev_ioctl(struct v4l2_subdev *sd,
 	if (_IOC_DIR(cmd) == _IOC_NONE) {
 		pr_err("Invalid ioctl/subdev cmd %u", cmd);
 		return -EINVAL;
-	}
-	rc = msm_cpp_validate_input(cmd, arg, &ioctl_ptr);
-	if (rc != 0) {
-		pr_err("input validation failed\n");
-		return rc;
 	}
 	mutex_lock(&cpp_dev->mutex);
 	CPP_DBG("E cmd: 0x%x\n", cmd);
@@ -3034,8 +3040,9 @@ STREAM_BUFF_END:
 			}
 			cpp_dev->iommu_state = CPP_IOMMU_STATE_DETACHED;
 		} else {
-			pr_err("%s:%d IOMMMU attach triggered in invalid state\n",
+			pr_err("%s:%d IOMMMU detach triggered in invalid state\n",
 				__func__, __LINE__);
+			rc = -EINVAL;
 		}
 		break;
 	}
@@ -3639,9 +3646,9 @@ static long msm_cpp_subdev_fops_compat_ioctl(struct file *file,
 		cmd = MSM_SD_SHUTDOWN;
 		break;
 	default:
-		pr_err_ratelimited("%s: unsupported compat type :%x LOAD %lu\n",
-				__func__, cmd, VIDIOC_MSM_CPP_LOAD_FIRMWARE);
-		break;
+		pr_err_ratelimited("%s: unsupported compat type :%d\n",
+				__func__, cmd);
+		return -EINVAL;
 	}
 
 	switch (cmd) {
@@ -3669,7 +3676,7 @@ static long msm_cpp_subdev_fops_compat_ioctl(struct file *file,
 	default:
 		pr_err_ratelimited("%s: unsupported compat type :%d\n",
 				__func__, cmd);
-		break;
+		return -EINVAL;
 	}
 
 	up32_ioctl.id = kp_ioctl.id;
