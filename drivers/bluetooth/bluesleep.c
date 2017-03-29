@@ -668,9 +668,13 @@ static int bluesleep_probe(struct platform_device *pdev)
 		goto free_bt_ext_wake;
 	}
 
+#if defined(CONFIG_LINE_DISCIPLINE_DRIVER)
 	bsi->uport = msm_hs_get_uart_port(BT_PORT_ID);
-
 	atomic_set(&bsi->wakeup_irq_disabled, 1);
+#else
+	enable_wakeup_irq(0);
+#endif
+
 	return 0;
 
 free_bt_ext_wake:
