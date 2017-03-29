@@ -209,18 +209,10 @@ static void enable_wakeup_irq(int enable)
 	disabled = atomic_read(&bsi->wakeup_irq_disabled);
 
 	if (enable && disabled == 1) {
-#if defined(CONFIG_LINE_DISCIPLINE_DRIVER)
-		enable_irq_wake(bsi->host_wake_irq);
-#else
 		enable_irq(bsi->host_wake_irq);
-#endif
 		atomic_dec(&bsi->wakeup_irq_disabled);
 	} else if (!enable && !disabled) {
-#if defined(CONFIG_LINE_DISCIPLINE_DRIVER)
-		disable_irq_wake(bsi->host_wake_irq);
-#else
 		disable_irq(bsi->host_wake_irq);
-#endif
 		atomic_inc(&bsi->wakeup_irq_disabled);
 	}
 }
@@ -676,9 +668,13 @@ static int bluesleep_probe(struct platform_device *pdev)
 		goto free_bt_ext_wake;
 	}
 
+#if defined(CONFIG_LINE_DISCIPLINE_DRIVER)
 	bsi->uport = msm_hs_get_uart_port(BT_PORT_ID);
-
 	atomic_set(&bsi->wakeup_irq_disabled, 1);
+#else
+	enable_wakeup_irq(0);
+#endif
+
 	return 0;
 
 free_bt_ext_wake:

@@ -102,10 +102,10 @@
 		qcom,clock-rates = <24000000 0>;
 	};
 
-	qcom,camera@1 {
-		cell-index = <1>;
+	qcom,camera@2 {
+		cell-index = <2>;
 		compatible = "qcom,camera";
-		reg = <0x1>;
+		reg = <0x2>;
 		qcom,csiphy-sd-index = <2>;
 		qcom,csid-sd-index = <2>;
 		qcom,mount-angle = <0>;
