@@ -631,7 +631,19 @@ static void binder_wakeup_poll_threads(struct binder_proc *proc, bool sync)
 	}
 }
 
-static void binder_wakeup_thread(struct binder_proc *proc, bool sync)
+/**
+ * binder_select_thread() - selects a thread for doing proc work.
+ * @proc:	process to select a thread from
+ *
+ * Note that calling this function moves the thread off the waiting_threads
+ * list, so it can only be woken up by the caller of this function, or a
+ * signal. Therefore, callers *should* always wake up the thread this function
+ * returns.
+ *
+ * Return:	If there's a thread currently waiting for process work,
+ *		returns that thread. Otherwise returns NULL.
+ */
+static struct binder_thread *binder_select_thread(struct binder_proc *proc)
 {
 	struct binder_thread *thread;
 
@@ -640,8 +652,19 @@ static void binder_wakeup_thread(struct binder_proc *proc, bool sync)
 					  struct binder_thread,
 					  waiting_thread_node);
 
-	if (thread) {
+	if (thread)
 		list_del_init(&thread->waiting_thread_node);
+
+	return thread;
+}
+
+static void binder_wakeup_thread(struct binder_proc *proc, bool sync)
+{
+	struct binder_thread *thread;
+
+	BUG_ON(!spin_is_locked(&proc->proc_lock));
+	thread = binder_select_thread(proc);
+	if (thread) {
 		if (sync)
 			wake_up_interruptible_sync(&thread->wait);
 		else
@@ -1919,7 +1942,6 @@ static void binder_transaction(struct binder_proc *proc,
 	binder_size_t last_fixup_min_off = 0;
 	struct binder_context *context = proc->context;
 	bool oneway;
-	bool wakeup_for_proc_work = false;
 
 	e = binder_transaction_log_add(&binder_transaction_log);
 	e->call_type = reply ? 2 : !!(tr->flags & TF_ONE_WAY);
@@ -2042,7 +2064,6 @@ static void binder_transaction(struct binder_proc *proc,
 	} else {
 		target_list = &target_proc->todo;
 		target_wait = NULL;
-		wakeup_for_proc_work = true;
 	}
 	e->to_proc = target_proc->pid;
 
@@ -2320,14 +2341,30 @@ static void binder_transaction(struct binder_proc *proc,
 		binder_enqueue_work(&t->work, target_list, __LINE__);
 		binder_proc_unlock(target_thread->proc, __LINE__);
 		binder_free_transaction(in_reply_to);
+		wake_up_interruptible_sync(target_wait);
 	} else if (!(t->flags & TF_ONE_WAY)) {
 		BUG_ON(t->buffer->async_transaction != 0);
 		binder_proc_lock(thread->proc, __LINE__);
 		t->need_reply = 1;
 		t->from_parent = thread->transaction_stack;
 		thread->transaction_stack = t;
-		binder_enqueue_work(&t->work, target_list, __LINE__);
 		binder_proc_unlock(thread->proc, __LINE__);
+		binder_proc_lock(target_proc, __LINE__);
+		if (!target_thread) {
+			/* See if we can find a thread to take this */
+			target_thread = binder_select_thread(target_proc);
+			if (target_thread) {
+				target_wait = &target_thread->wait;
+				target_list = &target_thread->todo;
+			}
+		}
+		binder_enqueue_work(&t->work, target_list, __LINE__);
+		if (target_wait)
+			wake_up_interruptible_sync(target_wait);
+		else
+			binder_wakeup_poll_threads(target_proc,
+						   true /* sync */);
+		binder_proc_unlock(target_proc, __LINE__);
 	} else {
 		BUG_ON(target_node == NULL);
 		BUG_ON(t->buffer->async_transaction != 1);
@@ -2335,10 +2372,10 @@ static void binder_transaction(struct binder_proc *proc,
 		binder_proc_lock(target_node->proc, __LINE__);
 		if (target_node->has_async_transaction) {
 			target_list = &target_node->async_todo;
-			target_wait = NULL;
-			wakeup_for_proc_work = false;
-		} else
+		} else {
 			target_node->has_async_transaction = 1;
+			binder_wakeup_thread(target_proc, false /*sync */);
+		}
 		/*
 		 * Test/set of has_async_transaction
 		 * must be atomic with enqueue on
@@ -2346,14 +2383,6 @@ static void binder_transaction(struct binder_proc *proc,
 		 */
 		binder_enqueue_work(&t->work, target_list, __LINE__);
 		binder_proc_unlock(target_node->proc, __LINE__);
-	}
-
-	if (target_wait) {
-		wake_up_interruptible_sync(target_wait);
-	} else if (wakeup_for_proc_work) {
-		binder_proc_lock(target_proc, __LINE__);
-		binder_wakeup_thread(target_proc, !oneway /*sync */);
-		binder_proc_unlock(target_proc, __LINE__);
 	}
 	return;
 
