@@ -340,7 +340,7 @@ static s32 wl_cfg80211_del_station(struct wiphy *wiphy,
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 16, 0))
 	const
 #endif
-	u8 *mac_addr);
+	struct station_del_parameters *params);
 static s32 wl_cfg80211_change_station(struct wiphy *wiphy,
 	struct net_device *dev,
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 16, 0))
@@ -6838,7 +6838,7 @@ wl_cfg80211_del_station(
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 16, 0))
 	const
 #endif
-	u8 *mac_addr)
+	struct station_del_parameters *params)
 {
 	struct net_device *dev;
 	struct bcm_cfg80211 *cfg = wiphy_priv(wiphy);
@@ -6849,6 +6849,7 @@ wl_cfg80211_del_station(
 		sizeof(struct ether_addr) + sizeof(uint)] = {0};
 	struct maclist *assoc_maclist = (struct maclist *)mac_buf;
 	int num_associated = 0;
+	const u8 *mac_addr = params->mac;
 
 	WL_DBG(("Entry\n"));
 	if (mac_addr == NULL) {
