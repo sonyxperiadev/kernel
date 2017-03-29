@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -319,23 +319,23 @@ static int enable_ldo_mode(struct msm_gfx_ldo *ldo_vreg)
 
 	/* Move BHS under SW control */
 	ctl |= BHS_UNDER_SW_CTL;
-	writel_relaxed(ctl, ldo_vreg + PWRSWITCH_CTRL_REG);
+	writel_relaxed(ctl, ldo_vreg->ldo_base + PWRSWITCH_CTRL_REG);
 
 	/* Set LDO under gdsc control */
 	ctl &= ~LDO_UNDER_SW_CTRL_BIT;
-	writel_relaxed(ctl, ldo_vreg + PWRSWITCH_CTRL_REG);
+	writel_relaxed(ctl, ldo_vreg->ldo_base + PWRSWITCH_CTRL_REG);
 
 	/* enable hw_pre-on to gdsc */
 	ctl |= LDO_PREON_SW_OVR_BIT;
-	writel_relaxed(ctl, ldo_vreg + PWRSWITCH_CTRL_REG);
+	writel_relaxed(ctl, ldo_vreg->ldo_base + PWRSWITCH_CTRL_REG);
 
 	/* remove LDO bypass */
 	ctl &= ~LDO_BYPASS_BIT;
-	writel_relaxed(ctl, ldo_vreg + PWRSWITCH_CTRL_REG);
+	writel_relaxed(ctl, ldo_vreg->ldo_base + PWRSWITCH_CTRL_REG);
 
 	/* set power-source as LDO */
 	ctl |= PWR_SRC_SEL_BIT;
-	writel_relaxed(ctl, ldo_vreg + PWRSWITCH_CTRL_REG);
+	writel_relaxed(ctl, ldo_vreg->ldo_base + PWRSWITCH_CTRL_REG);
 
 	/* clear fake-sw ack to gdsc */
 	ctl &= ~ACK_SW_OVR_BIT;
@@ -343,7 +343,7 @@ static int enable_ldo_mode(struct msm_gfx_ldo *ldo_vreg)
 
 	/* put CPR in bypass mode */
 	ctl |= CPR_BYPASS_IN_LDO_MODE_BIT;
-	writel_relaxed(ctl, ldo_vreg + PWRSWITCH_CTRL_REG);
+	writel_relaxed(ctl, ldo_vreg->ldo_base + PWRSWITCH_CTRL_REG);
 
 	/* complete all writes */
 	mb();
@@ -535,7 +535,7 @@ static int switch_mode_to_ldo(struct msm_gfx_ldo *ldo_vreg, int new_corner)
 
 	/* remove LDO bypass */
 	ctl &= ~LDO_BYPASS_BIT;
-	writel_relaxed(ctl, ldo_vreg + PWRSWITCH_CTRL_REG);
+	writel_relaxed(ctl, ldo_vreg->ldo_base + PWRSWITCH_CTRL_REG);
 
 	/* expose LDO to gdsc */
 	ctl &= ~ACK_SW_OVR_BIT;
@@ -755,6 +755,9 @@ static int msm_gfx_ldo_adjust_init_voltage(struct msm_gfx_ldo *ldo_vreg)
 
 	volt_adjust = devm_kcalloc(ldo_vreg->dev, size, sizeof(*volt_adjust),
 								GFP_KERNEL);
+	if (!volt_adjust)
+		return -ENOMEM;
+
 	rc = of_property_read_u32_array(of_node, prop_name, volt_adjust, size);
 	if (rc) {
 		pr_err("failed to read %s property rc=%d\n", prop_name, rc);

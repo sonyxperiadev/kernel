@@ -242,6 +242,7 @@ enum hal_property {
 	HAL_PARAM_VENC_VIDEO_SIGNAL_INFO,
 	HAL_PARAM_VENC_SESSION_QP_RANGE_PACKED,
 	HAL_PARAM_VENC_H264_TRANSFORM_8x8,
+	HAL_PARAM_VENC_IFRAMESIZE_TYPE,
 };
 
 enum hal_domain {
@@ -1002,6 +1003,13 @@ struct hal_video_signal_info {
 	bool full_range;
 };
 
+enum hal_iframesize_type {
+	HAL_IFRAMESIZE_TYPE_DEFAULT,
+	HAL_IFRAMESIZE_TYPE_MEDIUM,
+	HAL_IFRAMESIZE_TYPE_HUGE,
+	HAL_IFRAMESIZE_TYPE_UNLIMITED,
+};
+
 enum vidc_resource_id {
 	VIDC_RESOURCE_NONE,
 	VIDC_RESOURCE_OCMEM,
@@ -1357,6 +1365,7 @@ struct msm_vidc_cb_event {
 	ion_phys_addr_t packet_buffer;
 	ion_phys_addr_t extra_data_buffer;
 	u32 pic_struct;
+	u32 colour_space;
 };
 
 struct msm_vidc_cb_data_done {

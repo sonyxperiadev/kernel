@@ -379,6 +379,9 @@ long kgsl_ioctl_gpuobj_set_info(struct kgsl_device_private *dev_priv,
 
 void kgsl_mem_entry_destroy(struct kref *kref);
 
+void kgsl_get_egl_counts(struct kgsl_mem_entry *entry,
+			int *egl_surface_count, int *egl_image_count);
+
 struct kgsl_mem_entry * __must_check
 kgsl_sharedmem_find(struct kgsl_process_private *private, uint64_t gpuaddr);
 
@@ -542,4 +545,19 @@ static inline void __user *to_user_ptr(uint64_t address)
 	return (void __user *)(uintptr_t)address;
 }
 
+static inline void kgsl_gpu_sysfs_add_link(struct kobject *dst,
+			struct kobject *src, const char *src_name,
+			const char *dst_name)
+{
+	struct kernfs_node *old;
+
+	if (dst == NULL || src == NULL)
+		return;
+
+	old = sysfs_get_dirent(src->sd, src_name);
+	if (IS_ERR_OR_NULL(old))
+		return;
+
+	kernfs_create_link(dst->sd, dst_name, old);
+}
 #endif /* __KGSL_H */
