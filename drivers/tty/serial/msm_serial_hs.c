@@ -2739,7 +2739,7 @@ static int msm_hs_startup(struct uart_port *uport)
 
 
 	spin_lock_irqsave(&uport->lock, flags);
-#ifndef CONFIG_LINE_DISCIPLINE_DRIVER
+#ifdef CONFIG_BT_MSM_SLEEP
 	atomic_set(&msm_uport->client_count, 0);
 	atomic_set(&msm_uport->client_req_state, 0);
 #endif
