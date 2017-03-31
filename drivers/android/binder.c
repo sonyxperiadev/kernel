@@ -1178,20 +1178,23 @@ static inline void binder_put_ref(struct binder_ref *ref)
 static void binder_pop_transaction(struct binder_thread *target_thread,
 				   struct binder_transaction *t)
 {
-	if (target_thread) {
-		binder_proc_lock(target_thread->proc, __LINE__);
-		BUG_ON(target_thread->transaction_stack != t);
-		/*
-		 * It is possible that the target_thread has died so
-		 * transaction_stack->from could already be NULL
-		 */
-		BUG_ON(target_thread->transaction_stack->from != NULL &&
-		       target_thread->transaction_stack->from != target_thread);
-		target_thread->transaction_stack =
-			target_thread->transaction_stack->from_parent;
-		t->from = NULL;
-		binder_proc_unlock(target_thread->proc, __LINE__);
-	}
+	BUG_ON(!target_thread);
+	BUG_ON(!spin_is_locked(&target_thread->proc->proc_lock));
+
+	BUG_ON(target_thread->transaction_stack != t);
+	/*
+	 * It is possible that the target_thread has died so
+	 * transaction_stack->from could already be NULL
+	 */
+	BUG_ON(target_thread->transaction_stack->from &&
+	       target_thread->transaction_stack->from != target_thread);
+	target_thread->transaction_stack =
+		target_thread->transaction_stack->from_parent;
+	t->from = NULL;
+}
+
+static void binder_free_transaction(struct binder_transaction *t)
+{
 	t->need_reply = 0;
 	if (t->buffer)
 		t->buffer->transaction = NULL;
@@ -1209,6 +1212,7 @@ static void binder_send_failed_reply(struct binder_transaction *t,
 	while (1) {
 		target_thread = t->from;
 		if (target_thread) {
+			binder_proc_lock(target_thread->proc, __LINE__);
 			if (target_thread->return_error != BR_OK &&
 			   target_thread->return_error2 == BR_OK) {
 				target_thread->return_error2 =
@@ -1224,12 +1228,17 @@ static void binder_send_failed_reply(struct binder_transaction *t,
 
 				binder_pop_transaction(target_thread, t);
 				target_thread->return_error = error_code;
+				binder_proc_unlock(target_thread->proc,
+						   __LINE__);
 				wake_up_interruptible(&target_thread->wait);
 				if (READ_ONCE(
 					target_thread->waiting_for_proc_work))
 					wake_up_interruptible_all(
 						&target_thread->proc->wait);
+				binder_free_transaction(t);
 			} else {
+				binder_proc_unlock(target_thread->proc,
+						   __LINE__);
 				pr_err("reply failed, target thread, %d:%d, has error code %d already\n",
 					target_thread->proc->pid,
 					target_thread->pid,
@@ -1243,7 +1252,7 @@ static void binder_send_failed_reply(struct binder_transaction *t,
 			     "send failed reply for transaction %d, target dead\n",
 			     t->debug_id);
 
-		binder_pop_transaction(target_thread, t);
+		binder_free_transaction(t);
 		if (next == NULL) {
 			binder_debug(BINDER_DEBUG_DEAD_BINDER,
 				     "reply failed, no target thread at root\n");
@@ -2239,8 +2248,11 @@ static void binder_transaction(struct binder_proc *proc,
 
 	if (reply) {
 		BUG_ON(t->buffer->async_transaction != 0);
+		binder_proc_lock(target_thread->proc, __LINE__);
 		binder_pop_transaction(target_thread, in_reply_to);
 		binder_enqueue_work(&t->work, target_list, __LINE__);
+		binder_proc_unlock(target_thread->proc, __LINE__);
+		binder_free_transaction(in_reply_to);
 	} else if (!(t->flags & TF_ONE_WAY)) {
 		BUG_ON(t->buffer->async_transaction != 0);
 		binder_proc_lock(thread->proc, __LINE__);
@@ -2325,12 +2337,16 @@ err_no_context_mgr_node:
 		*fe = *e;
 	}
 
+	binder_proc_lock(thread->proc, __LINE__);
 	BUG_ON(thread->return_error != BR_OK);
 	if (in_reply_to) {
 		thread->return_error = BR_TRANSACTION_COMPLETE;
+		binder_proc_unlock(thread->proc, __LINE__);
 		binder_send_failed_reply(in_reply_to, return_error);
-	} else
+	} else {
 		thread->return_error = return_error;
+		binder_proc_unlock(thread->proc, __LINE__);
+	}
 }
 
 static int binder_thread_write(struct binder_proc *proc,
@@ -2652,10 +2668,15 @@ static int binder_thread_write(struct binder_proc *proc,
 				}
 				death = kzalloc(sizeof(*death), GFP_KERNEL);
 				if (death == NULL) {
+					binder_proc_lock(thread->proc,
+							 __LINE__);
+					WARN_ON(thread->return_error != BR_OK);
 					thread->return_error = BR_ERROR;
 					binder_debug(BINDER_DEBUG_FAILED_TRANSACTION,
 						     "%d:%d BC_REQUEST_DEATH_NOTIFICATION failed\n",
 						     proc->pid, thread->pid);
+					binder_proc_unlock(thread->proc,
+							   __LINE__);
 					binder_put_ref(ref);
 					break;
 				}
@@ -2829,6 +2850,7 @@ static int binder_thread_read(struct binder_proc *proc,
 	struct binder_worklist *wlist = NULL;
 	int ret = 0;
 	int wait_for_proc_work;
+	uint32_t return_error;
 
 	if (*consumed == 0) {
 		if (put_user(BR_NOOP, (uint32_t __user *)ptr))
@@ -2837,21 +2859,36 @@ static int binder_thread_read(struct binder_proc *proc,
 	}
 
 retry:
-	if (thread->return_error != BR_OK && ptr < end) {
-		if (thread->return_error2 != BR_OK) {
-			if (put_user(thread->return_error2, (uint32_t __user *)ptr))
+	binder_proc_lock(proc, __LINE__);
+	return_error = thread->return_error;
+	if (return_error != BR_OK && ptr < end) {
+		uint32_t return_error2 = thread->return_error2;
+
+		if (return_error2 != BR_OK) {
+			/* Clear return_error2, we always have space */
+			thread->return_error2 = BR_OK;
+			if (ptr + sizeof(uint32_t) < end) {
+				/* have space for return_error as well */
+				thread->return_error = BR_OK;
+			}
+		} else {
+			/* No return_error2, always space for return_error */
+			thread->return_error = BR_OK;
+		}
+		binder_proc_unlock(proc, __LINE__);
+		if (return_error2 != BR_OK) {
+			if (put_user(return_error2, (uint32_t __user *)ptr))
 				return -EFAULT;
 			ptr += sizeof(uint32_t);
-			binder_stat_br(proc, thread, thread->return_error2);
+			binder_stat_br(proc, thread, return_error2);
 			if (ptr == end)
 				goto done;
-			thread->return_error2 = BR_OK;
 		}
-		if (put_user(thread->return_error, (uint32_t __user *)ptr))
+
+		if (put_user(return_error, (uint32_t __user *)ptr))
 			return -EFAULT;
 		ptr += sizeof(uint32_t);
-		binder_stat_br(proc, thread, thread->return_error);
-		thread->return_error = BR_OK;
+		binder_stat_br(proc, thread, return_error);
 		goto done;
 	}
 
@@ -2860,6 +2897,7 @@ retry:
 		(thread->looper &
 			(BINDER_LOOPER_STATE_REGISTERED |
 			 BINDER_LOOPER_STATE_ENTERED));
+	binder_proc_unlock(proc, __LINE__);
 
 	if (wait_for_proc_work)
 		atomic_inc(&proc->ready_threads);
@@ -3192,9 +3230,7 @@ retry:
 			thread->transaction_stack = t;
 			binder_proc_unlock(thread->proc, __LINE__);
 		} else {
-			t->buffer->transaction = NULL;
-			kfree(t);
-			binder_stats_deleted(BINDER_STAT_TRANSACTION);
+			binder_free_transaction(t);
 		}
 		break;
 	}
