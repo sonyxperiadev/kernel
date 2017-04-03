@@ -1983,6 +1983,10 @@ static int mdss_dsi_panel_pcc_setup(struct mdss_panel_data *pdata)
 	int ret;
 	u32 copyback;
 	struct mdp_pcc_cfg_data pcc_config;
+	struct mdp_pcc_data_v1_7 pcc_payload;
+	struct mdp_pp_feature_version pcc_version = {
+		.pp_feature = PCC,
+	};
 
 	if (pdata == NULL) {
 		pr_err("%s: Invalid input data\n", __func__);
@@ -2016,8 +2020,6 @@ static int mdss_dsi_panel_pcc_setup(struct mdss_panel_data *pdata)
 								 __func__);
 	}
 
-	memset(&pcc_config, 0, sizeof(struct mdp_pcc_cfg_data));
-
 	pinfo = &ctrl_pdata->panel_data.panel_info;
 	if (pinfo->rev_u[1] != 0) {
 		if (pinfo->rev_u[0] == 0)
@@ -2036,6 +2038,7 @@ static int mdss_dsi_panel_pcc_setup(struct mdss_panel_data *pdata)
 			pcc_data->v_data = pcc_data->v_data - pinfo->rev_v[1];
 	}
 
+	memset(&pcc_config, 0, sizeof(struct mdp_pcc_cfg_data));
 	ret = find_color_area(&pcc_config, pcc_data);
 	if (ret) {
 		pr_err("%s: Can't find color area!!!!\n", __func__);
@@ -2043,8 +2046,21 @@ static int mdss_dsi_panel_pcc_setup(struct mdss_panel_data *pdata)
 	}
 
 	if (pcc_data->color_tbl[pcc_data->tbl_idx].color_type != UNUSED) {
+		ret = mdss_mdp_pp_get_version(&pcc_version);
+		if (ret) {
+			pr_err("%s: FAIL: Cannot get PP version.\n", __func__);
+			goto exit;
+		}
+		memset(&pcc_payload, 0, sizeof(struct mdp_pcc_data_v1_7));
+		pcc_config.cfg_payload = &pcc_payload;
+		pcc_config.version = pcc_version.version_info;
 		pcc_config.block = MDP_LOGICAL_BLOCK_DISP_0;
 		pcc_config.ops = MDP_PP_OPS_ENABLE | MDP_PP_OPS_WRITE;
+
+		pcc_payload.r.r = pcc_config.r.r;
+		pcc_payload.g.g = pcc_config.g.g;
+		pcc_payload.b.b = pcc_config.b.b;
+
 		ret = mdss_mdp_pcc_config(mfd, &pcc_config, &copyback);
 		if (ret != 0)
 			pr_err("%s: Failed setting PCC data\n", __func__);
@@ -4603,6 +4619,7 @@ int mdss_dsi_panel_init(struct device_node *node,
 	spec_pdata->reset = mdss_dsi_panel_reset_seq;
 	spec_pdata->disp_on = mdss_dsi_panel_disp_on;
 	spec_pdata->update_fps = mdss_dsi_panel_fps_data_update;
+	spec_pdata->unblank = mdss_dsi_panel_unblank;
 
 	ctrl_pdata->on = mdss_dsi_panel_on;
 	ctrl_pdata->post_panel_on = mdss_dsi_post_panel_on;
