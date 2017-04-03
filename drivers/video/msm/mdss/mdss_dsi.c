@@ -1615,6 +1615,13 @@ static int mdss_dsi_unblank(struct mdss_panel_data *pdata)
 	}
 
 	ctrl_pdata->ctrl_state |= CTRL_STATE_PANEL_INIT;
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	ret = ctrl_pdata->spec_pdata->unblank(ctrl_pdata);
+	if (ret){
+		pr_err("%s: Unblank specific commands failed.\n", __func__);
+		goto error;
+	}
+#endif
 
 error:
 	mdss_dsi_clk_ctrl(ctrl_pdata, ctrl_pdata->dsi_clk_handle,
