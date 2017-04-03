@@ -1346,6 +1346,16 @@ error:
 	return -ENODEV;
 }
 
+static int mdss_dsi_panel_unblank(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
+{
+	if (ctrl_pdata->spec_pdata->pcc_data.pcc_sts & PCC_STS_UD) {
+		ctrl_pdata->spec_pdata->pcc_setup(&ctrl_pdata->panel_data);
+		ctrl_pdata->spec_pdata->pcc_data.pcc_sts &= ~PCC_STS_UD;
+	}
+
+	return 0;
+}
+
 static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 {
 	struct mipi_panel_info *mipi;
@@ -1376,11 +1386,11 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 
 	lcm_first_boot = 0;
 
-	if (spec_pdata->pcc_data.pcc_sts & PCC_STS_UD) {
+/*	if (spec_pdata->pcc_data.pcc_sts & PCC_STS_UD) {
 		mdss_dsi_panel_pcc_setup(pdata);
 		spec_pdata->pcc_data.pcc_sts &= ~PCC_STS_UD;
 	}
-
+*/
 	if (pdata->panel_info.dsi_master != pdata->panel_info.pdest)
 		goto end;
 

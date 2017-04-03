@@ -113,6 +113,7 @@ struct mdss_panel_specific_pdata {
 	int (*update_panel) (struct mdss_panel_data *pdata);
 	int (*update_fps) (struct msm_fb_data_type *mfd);
 	int (*reset) (struct mdss_panel_data *pdata, int enable);
+	int (*unblank) (struct mdss_dsi_ctrl_pdata *ctrl_pdata);
 
 	int (*panel_power_ctrl) (struct mdss_panel_data *pdata, int enable);
 	int (*panel_power_on)	(struct mdss_panel_data *pdata);
