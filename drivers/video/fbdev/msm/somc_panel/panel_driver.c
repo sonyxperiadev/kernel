@@ -2092,7 +2092,7 @@ static int mdss_dsi_panel_pcc_setup(struct mdss_panel_data *pdata)
 		pcc_data->color_tbl[pcc_data->tbl_idx].b_data);
 
 exit:
-	return 0;
+	return ret;
 }
 
 #define PA_V2_BASIC_FEAT_ENB (MDP_PP_PA_HUE_ENABLE | MDP_PP_PA_SAT_ENABLE | \
