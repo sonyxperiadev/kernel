@@ -764,6 +764,12 @@ static inline bool is_dev_zone(const struct zone *zone)
 
 extern struct mutex zonelists_mutex;
 void build_all_zonelists(pg_data_t *pgdat, struct zone *zone);
+#ifdef CONFIG_ANDROID_LOW_MEMORY_KILLER_CONSIDER_SWAP
+void _wake_all_kswapds(unsigned int order,
+			     struct zonelist *zonelist,
+			     enum zone_type high_zoneidx,
+			     struct zone *preferred_zone);
+#endif
 void wakeup_kswapd(struct zone *zone, int order, enum zone_type classzone_idx);
 bool zone_watermark_ok(struct zone *z, unsigned int order,
 		unsigned long mark, int classzone_idx, int alloc_flags);
