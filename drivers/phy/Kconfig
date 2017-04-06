@@ -446,6 +446,14 @@ config PHY_STIH41X_USB
 	  Enable this to support the USB transceiver that is part of
 	  STMicroelectronics STiH41x SoC series.
 
+config PHY_QCOM_QMP
+	tristate "Qualcomm QMP PHY Driver"
+	depends on OF && COMMON_CLK && (ARCH_QCOM || COMPILE_TEST)
+	select GENERIC_PHY
+	help
+	  Enable this to support the QMP PHY transceiver that is used
+	  with controllers such as PCIe, UFS, and USB on Qualcomm chips.
+
 config PHY_QCOM_UFS
 	tristate "Qualcomm UFS PHY driver"
 	depends on OF && ARCH_QCOM
