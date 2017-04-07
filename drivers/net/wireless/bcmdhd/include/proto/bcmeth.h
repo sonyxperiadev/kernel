@@ -93,6 +93,7 @@
 #define BCMILCP_BCM_SUBTYPE_DNGLEVENT		5
 #define BCMILCP_BCM_SUBTYPEHDR_MINLENGTH	8
 #define BCMILCP_BCM_SUBTYPEHDR_VERSION		0
+#define BCMILCP_BCM_SUBTYPE_EVENT_DATA_PAD	2
 
 /* These fields are stored in network order */
 typedef BWL_PRE_PACKED_STRUCT struct bcmeth_hdr
