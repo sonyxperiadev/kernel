@@ -533,6 +533,16 @@ config CMA_AREAS
 
 	  If unsure, leave the default value "7".
 
+config SWAP_CONSIDER_CMA_FREE
+	bool "swap consider cma free size"
+	depends on CMA
+	help
+	  When swap is enable, CMA page is also swapped out.
+	  But CMA page is not used for movable pages.
+	  So in some cases many CMA page remains free.
+	  This help to avoid this situation
+	  by introducing a threshold allowing CMA page reclaim.
+
 config MEM_SOFT_DIRTY
 	bool "Track memory changes"
 	depends on CHECKPOINT_RESTORE && HAVE_ARCH_SOFT_DIRTY && PROC_FS
