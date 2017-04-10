@@ -403,6 +403,15 @@ config MACH_SONY_KAGURA
       If you enable this config,
       please use SONY Mobile device tree.
 
+config MACH_SONY_KEYAKI
+    bool "Sony Mobile Keyaki"
+    depends on ARCH_SONY_TONE
+    help
+      Support for the SONY Mobile Keyaki device
+      which is based on SONY Tone platform.
+      If you enable this config,
+      please use SONY Mobile device tree.
+
 endmenu
 
 menu "Bus support"
