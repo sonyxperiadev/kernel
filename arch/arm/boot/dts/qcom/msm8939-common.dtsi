@@ -94,6 +94,14 @@
 			reg = <0x0 0x83000000 0x0 0x2000000>;
 			label = "cont_splash_mem";
 		};
+
+		pstore_reserve_mem: pstore_reserve_mem_region@0 {
+			linux,reserve-contiguous-region;
+			linux,reserve-region;
+			linux,remove-completely;
+			reg = <0 0xA0000000 0 0x100000>;
+			label = "pstore_reserve_mem";
+		};
 	};
 
 	soc: soc { };
@@ -1200,6 +1208,24 @@
 		boot_stats@6b0 {
 			compatible = "qcom,msm-imem-boot_stats";
 			reg = <0x6b0 32>;
+		};
+	};
+
+	ramoops {
+		compatible = "ramoops";
+		status = "ok";
+
+		android,ramoops-buffer-start = <0xA0000000>;
+		android,ramoops-buffer-size = <0x100000>;
+		android,ramoops-console-size = <0x60000>;
+		android,ramoops-record-size = <0x10000>;
+		android,ramoops-ftrace-size = <0x10000>;
+		android,ramoops-pmsg-size = <0x20000>;
+		android,ramoops-dump-oops = <0x1>;
+		linux,contiguous-region = <&pstore_reserve_mem>;
+		android,ramoops-hole {
+			compatible = "qcom,msm-contig-mem";
+			qcom,memblock-reserve = <0xA0000000 0x00100000>;
 		};
 	};
 
