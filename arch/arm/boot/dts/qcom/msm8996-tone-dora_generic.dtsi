@@ -1,4 +1,4 @@
-/* arch/arm/boot/dts/qcom/msm8996-tone-dora-generic.dtsi
+/* arch/arm/boot/dts/qcom/msm8996-tone-dora_generic.dtsi
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -18,88 +18,4 @@
  */
 
 &soc {
-	somc_pinctrl: somc_pinctrl {
-		/* If variant specific default setting is needed,
-		   fill pinctrl-3 value in <variant>.dtsi */
-		pinctrl-3 = <&msm_gpio_49 &msm_gpio_73 &msm_gpio_74
-				&msm_gpio_77>;
-	};
-};
-
-/{
-	tone_dora_batterydata: qcom,battery-data {
-		#include "batterydata-tone-dora-send.dtsi"
-	};
-};
-
-&pmi8994_fg {
-	qcom,battery-data = <&tone_dora_batterydata>;
-	qcom,fg-iterm-ma = <150>;
-	qcom,fg-chg-iterm-ma = <150>;
-	qcom,cold-hot-jeita-hysteresis = <20 20>;
-	somc,cool-warm-jeita-hysteresis = <20 20>;
-};
-
-&pmi8994_charger {
-	qcom,fastchg-current-ma = <1800>;
-	somc,usb-9v-current-max = <1700>;
-	qcom,float-voltage-comp = <0x05>;
-	somc,fastchg-warm-current-ma = <800>;
-	somc,fastchg-cool-current-ma = <800>;
-	somc,thermal-engine-fastchg-current = <1800 1800 1800 1400 1000 700 500 300 300 300 300 300 300 0 0>;
-	somc,thermal-mitigation-usb-9v = <1700 1700 1400 1000 1000 1000 1000 1000 1200 900 700 500 300 0 0>;
-	somc,thermal-mitigation-usb-5v = <1500 1500 1500 1500 1500 1500 1500 1500 1200 900 700 500 300 0 0>;
-	somc,limit-usb-5v-level = <8>;
-};
-
-&spmi_bus {
-	qcom,pmi8994@3 {
-		qcom,leds@d000 {
-			status = "okay";
-			qcom,rgb_sync = <1>;
-
-			qcom,rgb_0 {
-				somc,pwm-channel = <2>;
-				linux,name = "led:rgb_red";
-				linux,default-trigger = "none";
-				somc,color_variation_max_num = <1>;
-				somc,max_current = <0 320 320>;
-			};
-			qcom,rgb_1 {
-				somc,pwm-channel = <1>;
-				linux,name = "led:rgb_green";
-				linux,default-trigger = "none";
-				somc,color_variation_max_num = <1>;
-				somc,max_current = <0 511 511>;
-			};
-			qcom,rgb_2 {
-				somc,pwm-channel = <0>;
-				linux,name = "led:rgb_blue";
-				linux,default-trigger = "none";
-				somc,color_variation_max_num = <1>;
-				somc,max_current = <0 511 224>;
-			};
-		};
-		qcom,leds@d800 {
-			qcom,fs-curr-ua = <20000>;
-			qcom,led-strings-list = [00 01 02];
-			somc,init-br-ua = <10000>;
-			somc-s1,br-power-save-ua = <800>;
-			qcom,ilim-ma = <660>;
-		};
-	};
-};
-
-/* I2C : BLSP11 */
-&i2c_11 {
-	status = "disabled";
-};
-
-/* Regulator config */
-&pm8994_l11 {
-	status = "disabled";
-};
-
-&pm8994_l14 {
-	status = "disabled";
 };
