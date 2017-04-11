@@ -419,6 +419,7 @@ struct binder_thread {
 	wait_queue_head_t wait;
 	bool is_zombie;
 	struct binder_stats stats;
+	struct task_struct *task;
 };
 
 static void binder_init_worklist(struct binder_worklist *wlist)
@@ -519,6 +520,12 @@ binder_dequeue_work(struct binder_work *work, int line)
 	smp_mb();
 }
 
+struct binder_priority {
+	int sched_policy;
+	long nice;       /* valid when sched_policy = SCHED_NORMAL */
+	int rt_priority; /* valid when sched_policy = SCHED_RR or SCHED_FIFO */
+};
+
 struct binder_transaction {
 	int debug_id;
 	struct binder_work work;
@@ -533,11 +540,9 @@ struct binder_transaction {
 	struct binder_buffer *buffer;
 	unsigned int	code;
 	unsigned int	flags;
-	long	priority;
-	long	saved_priority;
-	int	sched_policy;
-	int	saved_sched_policy;
-	int	rt_priority;
+	struct binder_priority priority;
+	struct binder_priority saved_priority;
+	bool    set_priority_called;
 	kuid_t	sender_euid;
 };
 
@@ -688,22 +693,22 @@ static void binder_wakeup_thread(struct binder_proc *proc, bool sync)
 	binder_wakeup_poll_threads(proc, sync);
 }
 
-static void binder_set_nice(long nice)
+static void binder_set_nice(struct task_struct *task, long nice)
 {
 	long min_nice;
 
-	if (can_nice(current, nice)) {
-		set_user_nice(current, nice);
+	if (can_nice(task, nice)) {
+		set_user_nice(task, nice);
 		return;
 	}
-	min_nice = rlimit_to_nice(current->signal->rlim[RLIMIT_NICE].rlim_cur);
+	min_nice = rlimit_to_nice(task->signal->rlim[RLIMIT_NICE].rlim_cur);
 	binder_debug(BINDER_DEBUG_PRIORITY_CAP,
 		     "%d: nice value %ld not allowed use %ld instead\n",
-		      current->pid, nice, min_nice);
-	set_user_nice(current, min_nice);
+		      task->pid, nice, min_nice);
+	set_user_nice(task, min_nice);
 	if (min_nice <= MAX_NICE)
 		return;
-	binder_user_error("%d RLIMIT_NICE not set\n", current->pid);
+	binder_user_error("%d RLIMIT_NICE not set\n", task->pid);
 }
 
 static inline int is_rt_policy(int sched_policy)
@@ -712,32 +717,35 @@ static inline int is_rt_policy(int sched_policy)
 }
 
 static void binder_set_priority(
+	struct task_struct *task,
 	struct binder_transaction *t, struct binder_node *target_node)
 {
 	bool oneway = !!(t->flags & TF_ONE_WAY);
 	bool inherit_fifo = target_node->proc->context->inherit_fifo_prio;
 
-	t->saved_sched_policy = current->policy;
-	t->saved_priority = task_nice(current);
+	t->saved_priority.sched_policy = task->policy;
+	t->saved_priority.nice = task_nice(task);
+	t->set_priority_called = true;
 
-	if (!oneway && inherit_fifo && is_rt_policy(t->sched_policy) &&
-	    !is_rt_policy(current->policy)) {
+	if (!oneway && inherit_fifo &&
+	    is_rt_policy(t->priority.sched_policy) &&
+	    !is_rt_policy(task->policy)) {
 		/* Transaction was initiated with a real-time policy,
 		 * but we are not; temporarily upgrade this thread to RT.
 		 */
-		struct sched_param params = {t->rt_priority};
+		struct sched_param params = {t->priority.rt_priority};
 
-		sched_setscheduler_nocheck(current,
-					   t->sched_policy |
+		sched_setscheduler_nocheck(task,
+					   t->priority.sched_policy |
 					   SCHED_RESET_ON_FORK,
 					   &params);
-	} else if (!is_rt_policy(current->policy)) {
+	} else if (!is_rt_policy(task->policy)) {
 		/* Neither policy is real-time, fall back to setting nice. */
-		if (t->priority < target_node->min_priority && !oneway)
-			binder_set_nice(t->priority);
+		if (t->priority.nice < target_node->min_priority && !oneway)
+			binder_set_nice(task, t->priority.nice);
 		else if (!oneway ||
-			 t->saved_priority > target_node->min_priority)
-			binder_set_nice(target_node->min_priority);
+			 t->saved_priority.nice > target_node->min_priority)
+			binder_set_nice(task, target_node->min_priority);
 	} else {
 		/* Cases where we do nothing:
 		 * 1. Both source and target threads have a real-time policy
@@ -747,22 +755,23 @@ static void binder_set_priority(
 	}
 }
 
-static void binder_restore_priority(struct binder_transaction *t)
+static void binder_restore_priority(
+		const struct binder_priority *saved_priority)
 {
 	struct sched_param params = {0};
 
-	if (current->policy != t->saved_sched_policy) {
+	if (current->policy != saved_priority->sched_policy) {
 		/* Binder only transitions from a non-RT to a RT
 		 * policy; therefore, the restore should always
 		 * be a non-RT policy, and params.priority is not
 		 * relevant.
 		 */
 		sched_setscheduler_nocheck(current,
-					   t->saved_sched_policy,
+					   saved_priority->sched_policy,
 					   &params);
 	}
-	if (!is_rt_policy(t->saved_sched_policy))
-		binder_set_nice(t->saved_priority);
+	if (!is_rt_policy(saved_priority->sched_policy))
+		binder_set_nice(current, saved_priority->nice);
 }
 
 static struct binder_node *binder_get_node(struct binder_proc *proc,
@@ -1942,6 +1951,7 @@ static void binder_transaction(struct binder_proc *proc,
 	binder_size_t last_fixup_min_off = 0;
 	struct binder_context *context = proc->context;
 	bool oneway;
+	struct binder_priority saved_priority;
 
 	e = binder_transaction_log_add(&binder_transaction_log);
 	e->call_type = reply ? 2 : !!(tr->flags & TF_ONE_WAY);
@@ -1978,7 +1988,7 @@ static void binder_transaction(struct binder_proc *proc,
 		}
 		thread->transaction_stack = in_reply_to->to_parent;
 		binder_proc_unlock(thread->proc, __LINE__);
-		binder_restore_priority(in_reply_to);
+		saved_priority = in_reply_to->saved_priority;
 		target_thread = in_reply_to->from;
 		if (target_thread == NULL) {
 			return_error = BR_DEAD_REPLY;
@@ -2115,9 +2125,9 @@ static void binder_transaction(struct binder_proc *proc,
 	t->to_thread = target_thread;
 	t->code = tr->code;
 	t->flags = tr->flags;
-	t->sched_policy = current->policy;
-	t->priority = task_nice(current);
-	t->rt_priority = current->rt_priority;
+	t->priority.sched_policy = current->policy;
+	t->priority.nice = task_nice(current);
+	t->priority.rt_priority = current->rt_priority;
 
 	trace_binder_transaction(reply, t, target_node);
 
@@ -2342,6 +2352,7 @@ static void binder_transaction(struct binder_proc *proc,
 		binder_proc_unlock(target_thread->proc, __LINE__);
 		binder_free_transaction(in_reply_to);
 		wake_up_interruptible_sync(target_wait);
+		binder_restore_priority(&saved_priority);
 	} else if (!(t->flags & TF_ONE_WAY)) {
 		BUG_ON(t->buffer->async_transaction != 0);
 		binder_proc_lock(thread->proc, __LINE__);
@@ -2356,6 +2367,8 @@ static void binder_transaction(struct binder_proc *proc,
 			if (target_thread) {
 				target_wait = &target_thread->wait;
 				target_list = &target_thread->todo;
+				binder_set_priority(target_thread->task, t,
+						    target_node);
 			}
 		}
 		binder_enqueue_work(&t->work, target_list, __LINE__);
@@ -2431,6 +2444,7 @@ err_no_context_mgr_node:
 	if (in_reply_to) {
 		thread->return_error = BR_TRANSACTION_COMPLETE;
 		binder_proc_unlock(thread->proc, __LINE__);
+		binder_restore_priority(&saved_priority);
 		binder_send_failed_reply(in_reply_to, return_error);
 	} else {
 		thread->return_error = return_error;
@@ -3014,7 +3028,7 @@ retry:
 	if (wait_for_proc_work) {
 		BUG_ON(!(thread->looper & (BINDER_LOOPER_STATE_REGISTERED |
 					   BINDER_LOOPER_STATE_ENTERED)));
-		binder_set_nice(proc->default_priority);
+		binder_set_nice(current, proc->default_priority);
 	}
 
 	if (non_block) {
@@ -3245,7 +3259,12 @@ retry:
 
 			tr.target.ptr = target_node->ptr;
 			tr.cookie =  target_node->cookie;
-			binder_set_priority(t, target_node);
+			/* Don't need a lock to check set_priority_called, since
+			 * the lock was held when pulling t of the workqueue,
+			 * and it hasn't changed since then
+			 */
+			if (!t->set_priority_called)
+				binder_set_priority(current, t, target_node);
 			cmd = BR_TRANSACTION;
 		} else {
 			tr.target.ptr = 0;
@@ -3513,6 +3532,8 @@ static struct binder_thread *binder_get_thread(struct binder_proc *proc)
 		new_thread->return_error2 = BR_OK;
 		INIT_LIST_HEAD(&new_thread->active_node.list_node);
 		INIT_LIST_HEAD(&new_thread->waiting_thread_node);
+		get_task_struct(current);
+		new_thread->task = current;
 
 		binder_proc_lock(proc, __LINE__);
 		/*
@@ -4342,6 +4363,7 @@ static bool binder_proc_clear_zombies(struct binder_proc *proc)
 		BUG_ON(thread->todo.freeze);
 		binder_release_work(&thread->todo);
 		BUG_ON(!binder_worklist_empty(&thread->todo));
+		put_task_struct(thread->task);
 		kfree(thread);
 		binder_stats_delete_zombie(BINDER_STAT_THREAD);
 		cleared_threads++;
@@ -4472,7 +4494,7 @@ static void _print_binder_transaction(struct seq_file *m,
 		   t->from ? t->from->pid : 0,
 		   t->to_proc ? t->to_proc->pid : 0,
 		   t->to_thread ? t->to_thread->pid : 0,
-		   t->code, t->flags, t->priority, t->need_reply);
+		   t->code, t->flags, t->priority.nice, t->need_reply);
 	if (t->buffer == NULL) {
 		seq_puts(m, " buffer free\n");
 		return;
