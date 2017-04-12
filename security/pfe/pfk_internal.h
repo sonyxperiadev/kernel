@@ -29,6 +29,4 @@ int pfk_key_size_to_key_type(size_t key_size,
 bool pfe_is_inode_filesystem_type(const struct inode *inode,
 	const char *fs_type);
 
-char *inode_to_filename(const struct inode *inode);
-
 #endif /* _PFK_INTERNAL_H_ */

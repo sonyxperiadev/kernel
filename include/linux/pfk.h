@@ -17,6 +17,19 @@
 
 struct ice_crypto_setting;
 
+/*
+ * Default key for inline encryption.
+ *
+ * For now only AES-256-XTS is supported, so this is a fixed length.  But if
+ * ever needed, this should be made variable-length with a 'mode' and 'size'.
+ * (Remember to update pfk_allow_merge_bio() when doing so!)
+ */
+#define BLK_ENCRYPTION_KEY_SIZE_AES_256_XTS 64
+
+struct blk_encryption_key {
+	u8 raw[BLK_ENCRYPTION_KEY_SIZE_AES_256_XTS];
+};
+
 #ifdef CONFIG_PFK
 
 int pfk_load_key_start(const struct bio *bio,
