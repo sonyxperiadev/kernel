@@ -183,7 +183,7 @@ void migrate_irqs(void)
 		raw_spin_unlock(&desc->lock);
 
 		if (affinity_broken && printk_ratelimit())
-			pr_warning("IRQ%u no longer affine to CPU%u\n", i,
+			pr_debug("IRQ%u no longer affine to CPU%u\n", i,
 				smp_processor_id());
 	}
 
