@@ -4480,30 +4480,46 @@ binder_defer_work(struct binder_proc *proc, enum binder_deferred_state defer)
 }
 
 static void _print_binder_transaction(struct seq_file *m,
+				      struct binder_proc *proc,
 				      const char *prefix,
 				      struct binder_transaction *t)
 {
+	struct binder_thread *from = t->from;
+	struct binder_thread *to_thread = t->to_thread;
+	struct binder_proc *to_proc = t->to_proc;
+	struct binder_buffer *buffer = t->buffer;
+
 	seq_printf(m,
 		   "%s %d: %p from %d:%d to %d:%d code %x flags %x pri %ld r%d",
 		   prefix, t->debug_id, t,
-		   t->from ? t->from->proc->pid : 0,
-		   t->from ? t->from->pid : 0,
-		   t->to_proc ? t->to_proc->pid : 0,
-		   t->to_thread ? t->to_thread->pid : 0,
+		   from ? from->proc->pid : 0,
+		   from ? from->pid : 0,
+		   to_proc ? to_proc->pid : 0,
+		   to_thread ? to_thread->pid : 0,
 		   t->code, t->flags, t->priority.nice, t->need_reply);
-	if (t->buffer == NULL) {
+
+	if (proc != t->to_proc) {
+		/*
+		 * Can only safely deref buffer if we are holding the
+		 * correct proc lock for this node
+		 */
+		seq_puts(m, "\n");
+		return;
+	}
+	if (buffer == NULL) {
 		seq_puts(m, " buffer free\n");
 		return;
 	}
-	if (t->buffer->target_node)
-		seq_printf(m, " node %d",
-			   t->buffer->target_node->debug_id);
-	seq_printf(m, " size %zd:%zd data %p\n",
-		   t->buffer->data_size, t->buffer->offsets_size,
-		   t->buffer->data);
+	if (buffer->target_node)
+		seq_printf(m, " node %d", buffer->target_node->debug_id);
+	seq_printf(m, " size %zd:%zd data %pK\n",
+		   buffer->data_size, buffer->offsets_size,
+		   buffer->data);
 }
 
-static void _print_binder_work(struct seq_file *m, const char *prefix,
+static void _print_binder_work(struct seq_file *m,
+			       struct binder_proc *proc,
+			       const char *prefix,
 			       const char *transaction_prefix,
 			       struct binder_work *w)
 {
@@ -4515,7 +4531,7 @@ static void _print_binder_work(struct seq_file *m, const char *prefix,
 	switch (w->type) {
 	case BINDER_WORK_TRANSACTION:
 		t = container_of(w, struct binder_transaction, work);
-		_print_binder_transaction(m, transaction_prefix, t);
+		_print_binder_transaction(m, proc, transaction_prefix, t);
 		break;
 	case BINDER_WORK_RETURN_ERROR: {
 		struct binder_error *e = container_of(
@@ -4566,22 +4582,23 @@ static void _print_binder_thread(struct seq_file *m,
 	t = thread->transaction_stack;
 	while (t) {
 		if (t->from == thread) {
-			_print_binder_transaction(m,
+			_print_binder_transaction(m, thread->proc,
 					"    outgoing transaction", t);
 			t = t->from_parent;
 		} else if (t->to_thread == thread) {
-			_print_binder_transaction(m,
+			_print_binder_transaction(m, thread->proc,
 					"    incoming transaction", t);
 			t = t->to_parent;
 		} else {
-			_print_binder_transaction(m,
+			_print_binder_transaction(m, thread->proc,
 					"    bad transaction", t);
 			t = NULL;
 		}
 	}
 	spin_lock(&thread->todo.lock);
 	list_for_each_entry(w, &thread->todo.list, entry) {
-		_print_binder_work(m, "    ", "    pending transaction", w);
+		_print_binder_work(m, thread->proc, "    ",
+				   "    pending transaction", w);
 	}
 	spin_unlock(&thread->todo.lock);
 	if (!print_always && m->count == header_pos)
@@ -4615,7 +4632,7 @@ static void _print_binder_node(struct seq_file *m,
 	seq_puts(m, "\n");
 	spin_lock(&node->async_todo.lock);
 	list_for_each_entry(w, &node->async_todo.list, entry)
-		_print_binder_work(m, "    ",
+		_print_binder_work(m, node->proc, "    ",
 				   "    pending async transaction", w);
 	spin_unlock(&node->async_todo.lock);
 }
@@ -4664,7 +4681,7 @@ static void print_binder_proc(struct seq_file *m,
 	binder_alloc_print_allocated(m, &proc->alloc);
 	spin_lock(&proc->todo.lock);
 	list_for_each_entry(w, &proc->todo.list, entry)
-		_print_binder_work(m, "  ", "  pending transaction", w);
+		_print_binder_work(m, proc, "  ", "  pending transaction", w);
 	spin_unlock(&proc->todo.lock);
 	spin_lock(&proc->delivered_death.lock);
 	list_for_each_entry(w, &proc->delivered_death.list, entry) {
