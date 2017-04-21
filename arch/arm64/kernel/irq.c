@@ -27,6 +27,7 @@
 #include <linux/init.h>
 #include <linux/irqchip.h>
 #include <linux/seq_file.h>
+#include <linux/ratelimit.h>
 
 unsigned long irq_err_count;
 
