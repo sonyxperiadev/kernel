@@ -36,11 +36,11 @@ static bool migrate_one_irq(struct irq_desc *desc)
 
 	c = irq_data_get_irq_chip(d);
 	if (!c->irq_set_affinity) {
-		pr_warn_ratelimited("IRQ%u: unable to set affinity\n", d->irq);
+		pr_devel_ratelimited("IRQ%u: unable to set affinity\n", d->irq);
 	} else {
 		int r = irq_do_set_affinity(d, affinity, false);
 		if (r)
-			pr_warn_ratelimited("IRQ%u: set affinity failed(%d).\n",
+			pr_devel_ratelimited("IRQ%u: set affinity failed(%d).\n",
 					    d->irq, r);
 	}
 
@@ -74,7 +74,7 @@ void irq_migrate_all_off_this_cpu(void)
 		raw_spin_unlock(&desc->lock);
 
 		if (affinity_broken)
-			pr_warn_ratelimited("IRQ%u no longer affine to CPU%u\n",
+			pr_devel_ratelimited("IRQ%u no longer affine to CPU%u\n",
 					    irq, smp_processor_id());
 	}
 
