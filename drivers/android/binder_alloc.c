@@ -113,8 +113,8 @@ static void binder_insert_allocated_buffer(struct binder_alloc *alloc,
 	rb_insert_color(&new_buffer->rb_node, &alloc->allocated_buffers);
 }
 
-struct binder_buffer *binder_alloc_buffer_lookup(struct binder_alloc *alloc,
-						 uintptr_t user_ptr)
+struct binder_buffer *binder_alloc_prepare_to_free(struct binder_alloc *alloc,
+						   uintptr_t user_ptr)
 {
 	struct rb_node *n;
 	struct binder_buffer *buffer;
@@ -134,6 +134,17 @@ struct binder_buffer *binder_alloc_buffer_lookup(struct binder_alloc *alloc,
 		else if (kern_ptr > buffer)
 			n = n->rb_right;
 		else {
+			/*
+			 * Guard against user threads attempting to
+			 * free the buffer twice
+			 */
+			if (!buffer->free_in_progress) {
+				buffer->free_in_progress = 1;
+			} else {
+				pr_err("%d:%d FREE_BUFFER u%016llx user freed buffer twice\n",
+				       alloc->pid, current->pid, (u64)user_ptr);
+				buffer = NULL;
+			}
 			mutex_unlock(&alloc->mutex);
 			return buffer;
 		}
@@ -375,6 +386,7 @@ struct binder_buffer *binder_alloc_new_buf(struct binder_alloc *alloc,
 
 	rb_erase(best_fit, &alloc->free_buffers);
 	buffer->free = 0;
+	buffer->free_in_progress = 0;
 	binder_insert_allocated_buffer(alloc, buffer);
 	if (buffer_size != size) {
 		struct binder_buffer *new_buffer = (void *)buffer->data + size;
