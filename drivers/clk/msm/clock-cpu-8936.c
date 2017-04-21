@@ -286,8 +286,8 @@ static int of_get_fmax_vdd_class(struct platform_device *pdev, struct clk *c,
 static void get_speed_bin(struct platform_device *pdev, int *bin)
 {
 	struct resource *res;
-	void __iomem *base, *base1, *base2;
-	u32 pte_efuse, pte_efuse1, pte_efuse2;
+	void __iomem *base;
+	u32 pte_efuse;
 
 	*bin = 0;
 
@@ -310,7 +310,6 @@ static void get_speed_bin(struct platform_device *pdev, int *bin)
 
 	*bin = (pte_efuse >> 2) & 0x7;
 
-out:
 	dev_info(&pdev->dev, "Speed bin: %d PVS Version: 0\n", *bin);
 }
 
@@ -582,7 +581,7 @@ static struct notifier_block clock_8936_pm_notifier = {
 
 static int clock_a53_probe(struct platform_device *pdev)
 {
-	int speed_bin, rc, cpu, mux_id, rate;
+	int speed_bin, rc, cpu, mux_id;
 	char prop_name[] = "qcom,speedX-bin-vX-XXX";
 	int mux_num;
 
