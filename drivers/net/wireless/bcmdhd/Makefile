@@ -121,6 +121,7 @@ DRIVER_TYPE ?= y
 #########################
 
 ifneq ($(filter y, $(CONFIG_BCM4339) $(CONFIG_BCM4354) $(CONFIG_BCM4356) $(CONFIG_BCM4358)),)
+  DHDCFLAGS += -DSOMC_MIMO -DCUSTOMER_HW5
   DHDCFLAGS += -DUSE_WL_TXBF
   DHDCFLAGS += -DUSE_WL_FRAMEBURST
   DHDCFLAGS += -DCUSTOM_DPC_CPUCORE=0
@@ -212,6 +213,8 @@ DHDOFILES := dhd_pno.o dhd_common.o dhd_ip.o dhd_custom_gpio.o \
 ifneq ($(CONFIG_DHD_OF_SUPPORT),)
   DHDOFILES += dhd_custom_platdev.o
 endif
+
+DHDOFILES += dhd_somc_custom.o
 
 ifneq ($(CONFIG_BCMDHD_SDIO),)
   DHDOFILES += bcmsdh.o bcmsdh_linux.o bcmsdh_sdmmc.o bcmsdh_sdmmc_linux.o
