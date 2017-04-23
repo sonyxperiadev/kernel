@@ -4138,8 +4138,8 @@ int mdss_panel_parse_dt(struct device_node *np,
 	data = of_get_property(np,
 		"somc,platform-regulator-settings", &len);
 	if (!data || len != 7) {
-		pr_info("%s:%d, Unable to read SoMC Phy regulator \
-					settings", __func__, __LINE__);
+		pr_info("%s:%d, Unable to read SoMC Phy regulator "
+					"settings", __func__, __LINE__);
 	} else {
 		pinfo->mipi.dsi_phy_db.regulator_len = len;
 		for (i = 0; i < len; i++)
