@@ -1589,7 +1589,7 @@ config AIO
 
 config AIO_SSD_ONLY
 	bool "Tune AIO performance for SSDs" if EXPERT
-	default n
+	default y
 	depends on AIO
 	help
 	  Solid state storage have no head to move and no location
