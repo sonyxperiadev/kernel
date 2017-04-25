@@ -626,6 +626,9 @@ static int mmc_decode_ext_csd(struct mmc_card *card, u8 *ext_csd)
 		}
 
 #if defined(CONFIG_ARCH_SONY_LOIRE) || defined(CONFIG_ARCH_SONY_TONE)
+		if (card->cid.manfid == CID_MANFID_HYNIX)
+			card->ext_csd.generic_cmd6_time = 100;
+
 		card->ext_csd.max_packed_writes = 8;
 #else
 		card->ext_csd.max_packed_writes =
