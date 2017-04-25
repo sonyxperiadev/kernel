@@ -204,11 +204,11 @@ static void __cpuinit cpuquiet_work_func(struct work_struct *work)
 
 	cpumask_andnot(&online, &online, &cpu_online);
 	for_each_cpu(cpu, &online)
-		cpu_up(cpu);
+		device_online(get_cpu_device(cpu));
 
 	cpumask_and(&offline, &offline, &cpu_online);
 	for_each_cpu(cpu, &offline)
-		cpu_down(cpu);
+		device_offline(get_cpu_device(cpu));
 
 	wake_up_interruptible(&wait_cpu);
 }
