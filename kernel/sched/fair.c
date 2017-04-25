@@ -2376,7 +2376,7 @@ unsigned int __read_mostly sysctl_sched_big_waker_task_load_pct = 25;
  * task. This eliminates the LPM exit latency associated with the idle
  * CPUs in the waker cluster.
  */
-unsigned int __read_mostly sysctl_sched_prefer_sync_wakee_to_waker;
+unsigned int __read_mostly sysctl_sched_prefer_sync_wakee_to_waker = 1;
 
 /*
  * CPUs with load greater than the sched_spill_load_threshold are not
@@ -3257,11 +3257,10 @@ bias_to_prev_cpu(struct cpu_select_env *env, struct cluster_cpu_stats *stats)
 }
 
 static inline bool
-wake_to_waker_cluster(struct cpu_select_env *env)
+wake_to_waker_cluster(struct cpu_select_env *env, int this_cpu)
 {
 	return !env->need_idle && !env->reason && env->sync &&
-	       task_load(current) > sched_big_waker_task_load &&
-	       task_load(env->p) < sched_small_wakee_task_load;
+	       task_will_fit(env->p, this_cpu);
 }
 
 static inline int
@@ -3315,7 +3314,7 @@ static int select_best_cpu(struct task_struct *p, int target, int reason,
 			env.rtg = grp;
 	} else {
 		cluster = cpu_rq(cpu)->cluster;
-		if (wake_to_waker_cluster(&env)) {
+		if (wake_to_waker_cluster(&env, cpu)) {
 			if (sysctl_sched_prefer_sync_wakee_to_waker &&
 				cpu_rq(cpu)->nr_running == 1 &&
 				cpumask_test_cpu(cpu, tsk_cpus_allowed(p)) &&
