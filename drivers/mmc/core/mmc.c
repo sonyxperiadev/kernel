@@ -657,6 +657,9 @@ static int mmc_read_ext_csd(struct mmc_card *card, u8 *ext_csd)
 		}
 
 #if defined(CONFIG_ARCH_SONY_LOIRE) || defined(CONFIG_ARCH_SONY_TONE)
+		if (card->cid.manfid == CID_MANFID_HYNIX)
+			card->ext_csd.generic_cmd6_time = 100;
+
 		card->ext_csd.max_packed_writes = 8;
 #else
 		card->ext_csd.max_packed_writes =
@@ -1888,7 +1891,9 @@ reinit:
 	/*
 	 * Enable power_off_notification byte in the ext_csd register
 	 */
-#if defined(CONFIG_ARCH_SONY_LOIRE)
+#if defined(CONFIG_ARCH_SONY_LOIRE) || \
+    defined(CONFIG_ARCH_SONY_KITAKAMI) || \
+    defined(CONFIG_ARCH_SONY_TONE)
 	if (host->caps2 & MMC_CAP2_FULL_PWR_CYCLE)
 #endif
 	if (card->ext_csd.rev >= 6) {
