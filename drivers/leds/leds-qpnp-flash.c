@@ -2079,7 +2079,7 @@ static int qpnp_flash_led_init_settings(struct qpnp_flash_led *led)
 	if (!led->battery_psy) {
 		dev_err(&led->spmi_dev->dev,
 			"Failed to get battery power supply\n");
-		return -EINVAL;
+		return -EPROBE_DEFER;
 	}
 
 	return 0;
