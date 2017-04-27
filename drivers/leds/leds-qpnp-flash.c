@@ -2079,7 +2079,7 @@ static int qpnp_flash_led_init_settings(struct qpnp_flash_led *led)
 	if (!led->battery_psy) {
 		dev_err(&led->spmi_dev->dev,
 			"Failed to get battery power supply\n");
-		return -EINVAL;
+		return -EPROBE_DEFER;
 	}
 
 	return 0;
@@ -2483,6 +2483,8 @@ static int qpnp_flash_led_probe(struct spmi_device *spmi)
 	rc = qpnp_flash_led_init_settings(led);
 	if (rc) {
 		dev_err(&spmi->dev, "Failed to initialize flash LED\n");
+		if (rc == -EPROBE_DEFER)
+			dev_err(&spmi->dev, "Deferring probe.\n");
 		return rc;
 	}
 
@@ -2628,6 +2630,8 @@ static int qpnp_flash_led_probe(struct spmi_device *spmi)
 	}
 
 	dev_set_drvdata(&spmi->dev, led);
+
+        dev_err(&spmi->dev, "Flash LED initialized.\n");
 
 	return 0;
 
