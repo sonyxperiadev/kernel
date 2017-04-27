@@ -2483,6 +2483,8 @@ static int qpnp_flash_led_probe(struct spmi_device *spmi)
 	rc = qpnp_flash_led_init_settings(led);
 	if (rc) {
 		dev_err(&spmi->dev, "Failed to initialize flash LED\n");
+		if (rc == -EPROBE_DEFER)
+			dev_err(&spmi->dev, "Deferring probe.\n");
 		return rc;
 	}
 
@@ -2628,6 +2630,8 @@ static int qpnp_flash_led_probe(struct spmi_device *spmi)
 	}
 
 	dev_set_drvdata(&spmi->dev, led);
+
+        dev_err(&spmi->dev, "Flash LED initialized.\n");
 
 	return 0;
 
