@@ -287,11 +287,11 @@ bool workingset_refault(void *shadow)
 	refault_distance = (refault - eviction) & EVICTION_MASK;
 
 	inc_node_state(pgdat, WORKINGSET_REFAULT);
-	mem_cgroup_inc_stat(memcg, MEMCG_WORKINGSET_REFAULT);
+	mem_cgroup_inc_stat(memcg, WORKINGSET_REFAULT);
 
 	if (refault_distance <= active_file) {
 		inc_node_state(pgdat, WORKINGSET_ACTIVATE);
-		mem_cgroup_inc_stat(memcg, MEMCG_WORKINGSET_ACTIVATE);
+		mem_cgroup_inc_stat(memcg, WORKINGSET_ACTIVATE);
 		rcu_read_unlock();
 		return true;
 	}
@@ -435,8 +435,7 @@ static enum lru_status shadow_lru_isolate(struct list_head *item,
 	}
 	BUG_ON(workingset_node_shadows(node));
 	inc_node_state(page_pgdat(virt_to_page(node)), WORKINGSET_NODERECLAIM);
-	mem_cgroup_inc_page_stat(virt_to_page(node),
-				 MEMCG_WORKINGSET_NODERECLAIM);
+	mem_cgroup_inc_page_stat(virt_to_page(node), WORKINGSET_NODERECLAIM);
 	if (!__radix_tree_delete_node(&mapping->page_tree, node))
 		BUG();
 
