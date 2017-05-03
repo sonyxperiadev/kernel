@@ -666,12 +666,30 @@ static struct binder_thread *binder_select_thread(struct binder_proc *proc)
 	return thread;
 }
 
-static void binder_wakeup_thread(struct binder_proc *proc, bool sync)
+/**
+ * binder_wakeup_thread() - wakes up a thread for doing proc work.
+ * @proc:	process to wake up a thread in
+ * @thread:	specific thread to wake-up (may be NULL)
+ * @sync:	whether to do a synchronous wake-up
+ *
+ * This function wakes up a thread in the @proc process.
+ * The caller may provide a specific thread to wake-up in
+ * the @thread parameter. If @thread is NULL, this function
+ * will wake up threads that have called poll().
+ *
+ * Note that for this function to work as expected, callers
+ * should first call binder_select_thread() to find a thread
+ * to handle the work (if they don't have a thread already),
+ * and pass the result into the @thread parameter.
+ *
+ * The caller must hold the proc lock when calling this function.
+ */
+static void binder_wakeup_thread(struct binder_proc *proc,
+				 struct binder_thread *thread,
+				 bool sync)
 {
-	struct binder_thread *thread;
-
 	BUG_ON(!spin_is_locked(&proc->proc_lock));
-	thread = binder_select_thread(proc);
+
 	if (thread) {
 		if (sync)
 			wake_up_interruptible_sync(&thread->wait);
@@ -694,6 +712,13 @@ static void binder_wakeup_thread(struct binder_proc *proc, bool sync)
 	 *    work currently.
 	 */
 	binder_wakeup_poll_threads(proc, sync);
+}
+
+static void binder_wakeup_proc(struct binder_proc *proc)
+{
+	struct binder_thread *thread = binder_select_thread(proc);
+
+	binder_wakeup_thread(proc, thread, false /* sync */);
 }
 
 static bool is_rt_policy(int policy) {
@@ -1008,7 +1033,7 @@ static int binder_dec_node(struct binder_node *node, int strong, int internal)
 	}
 done:
 	if (do_wakeup)
-		binder_wakeup_thread(proc, false);
+		binder_wakeup_proc(proc);
 
 	binder_proc_unlock(proc, __LINE__);
 
@@ -1963,6 +1988,52 @@ static int binder_fixup_parent(struct binder_transaction *t,
 
 	return 0;
 }
+/**
+ * binder_proc_transaction() - sends a transaction to a process and wakes it up
+ * @t:		transaction to send
+ * @proc:	process to send the transaction to
+ * @thread:	thread in @proc to send the transaction to (may be NULL)
+ *
+ * This function queues a transaction to the specified process. In order
+ * to do proper priority inheritance, it will try to find a thread in the
+ * target process to handle the transaction, raise its priority, and
+ * then wake that thread up.
+ *
+ * If the @thread parameter is not NULL, the transaction is always queued
+ * to the waitlist of that specific thread.
+ *
+ * The caller must hold the proc lock when calling this function.
+ *
+ */
+static void binder_proc_transaction(struct binder_transaction *t,
+				    struct binder_proc *proc,
+				    struct binder_thread *thread)
+{
+	struct binder_worklist *target_list = NULL;
+	wait_queue_head_t *target_wait = NULL;
+	bool oneway = !!(t->flags & TF_ONE_WAY);
+
+	if (!thread) {
+		/*
+		 * See if we can find a thread to take this, so we can
+		 * do priority inheritance.
+		 */
+		thread = binder_select_thread(proc);
+	}
+
+	if (thread) {
+		target_list = &thread->todo;
+		target_wait = &thread->wait;
+		binder_transaction_priority(thread->task, t,
+					    t->buffer->target_node);
+	} else {
+		target_list = &proc->todo;
+	}
+
+	binder_enqueue_work(&t->work, target_list, __LINE__);
+
+	binder_wakeup_thread(proc, thread, !oneway /* sync */);
+}
 
 static void binder_transaction(struct binder_proc *proc,
 			       struct binder_thread *thread,
@@ -1979,8 +2050,6 @@ static void binder_transaction(struct binder_proc *proc,
 	struct binder_thread *target_thread = NULL;
 	struct binder_node *target_node = NULL;
 	struct binder_ref *target_ref = NULL;
-	struct binder_worklist *target_list;
-	wait_queue_head_t *target_wait;
 	struct binder_transaction *in_reply_to = NULL;
 	struct binder_transaction_log_entry *e;
 	uint32_t return_error = 0;
@@ -2108,11 +2177,6 @@ static void binder_transaction(struct binder_proc *proc,
 	}
 	if (target_thread) {
 		e->to_thread = target_thread->pid;
-		target_list = &target_thread->todo;
-		target_wait = &target_thread->wait;
-	} else {
-		target_list = &target_proc->todo;
-		target_wait = NULL;
 	}
 	e->to_proc = target_proc->pid;
 
@@ -2381,7 +2445,6 @@ static void binder_transaction(struct binder_proc *proc,
 		}
 	}
 
-	BUG_ON(!target_list);
 	t->work.type = BINDER_WORK_TRANSACTION;
 	tcomplete->type = BINDER_WORK_TRANSACTION_COMPLETE;
 	binder_enqueue_work(tcomplete, &thread->todo, __LINE__);
@@ -2391,10 +2454,10 @@ static void binder_transaction(struct binder_proc *proc,
 		BUG_ON(t->buffer->async_transaction != 0);
 		binder_proc_lock(target_thread->proc, __LINE__);
 		binder_pop_transaction(target_thread, in_reply_to);
-		binder_enqueue_work(&t->work, target_list, __LINE__);
+		binder_enqueue_work(&t->work, &target_thread->todo, __LINE__);
 		binder_proc_unlock(target_thread->proc, __LINE__);
 		binder_free_transaction(in_reply_to);
-		wake_up_interruptible_sync(target_wait);
+		wake_up_interruptible_sync(&target_thread->wait);
 		binder_set_priority(current, saved_priority);
 	} else if (!(t->flags & TF_ONE_WAY)) {
 		BUG_ON(t->buffer->async_transaction != 0);
@@ -2404,41 +2467,25 @@ static void binder_transaction(struct binder_proc *proc,
 		thread->transaction_stack = t;
 		binder_proc_unlock(thread->proc, __LINE__);
 		binder_proc_lock(target_proc, __LINE__);
-		if (!target_thread) {
-			/* See if we can find a thread to take this */
-			target_thread = binder_select_thread(target_proc);
-			if (target_thread) {
-				target_wait = &target_thread->wait;
-				target_list = &target_thread->todo;
-				binder_transaction_priority(
-						target_thread->task, t,
-						target_node);
-			}
-		}
-		binder_enqueue_work(&t->work, target_list, __LINE__);
-		if (target_wait)
-			wake_up_interruptible_sync(target_wait);
-		else
-			binder_wakeup_poll_threads(target_proc,
-						   true /* sync */);
+		binder_proc_transaction(t, target_proc, target_thread);
 		binder_proc_unlock(target_proc, __LINE__);
 	} else {
 		BUG_ON(target_node == NULL);
 		BUG_ON(t->buffer->async_transaction != 1);
 
 		binder_proc_lock(target_node->proc, __LINE__);
-		if (target_node->has_async_transaction) {
-			target_list = &target_node->async_todo;
-		} else {
-			target_node->has_async_transaction = 1;
-			binder_wakeup_thread(target_proc, false /*sync */);
-		}
 		/*
 		 * Test/set of has_async_transaction
 		 * must be atomic with enqueue on
 		 * async_todo
 		 */
-		binder_enqueue_work(&t->work, target_list, __LINE__);
+		if (target_node->has_async_transaction) {
+			binder_enqueue_work(&t->work, &target_node->async_todo,
+					    __LINE__);
+		} else {
+			target_node->has_async_transaction = 1;
+			binder_proc_transaction(t, target_proc, NULL);
+		}
 		binder_proc_unlock(target_node->proc, __LINE__);
 	}
 	return;
@@ -2853,8 +2900,7 @@ static int binder_thread_write(struct binder_proc *proc,
 							&ref->death->work,
 							&proc->todo,
 							__LINE__);
-						binder_wakeup_thread(proc,
-								     false);
+						binder_wakeup_proc(proc);
 					}
 				}
 				binder_proc_unlock(proc, __LINE__);
@@ -2890,8 +2936,7 @@ static int binder_thread_write(struct binder_proc *proc,
 								&death->work,
 								&proc->todo,
 								__LINE__);
-						binder_wakeup_thread(proc,
-								     false);
+						binder_wakeup_proc(proc);
 					}
 				} else {
 					BUG_ON(death->work.type != BINDER_WORK_DEAD_BINDER);
@@ -2947,7 +2992,7 @@ static int binder_thread_write(struct binder_proc *proc,
 					binder_enqueue_work(&death->work,
 							    &proc->todo,
 							    __LINE__);
-					binder_wakeup_thread(proc, false);
+					binder_wakeup_proc(proc);
 				}
 			}
 			binder_proc_unlock(proc, __LINE__);
@@ -3767,7 +3812,7 @@ static int binder_ioctl_write_read(struct file *filp,
 		trace_binder_read_done(ret);
 		if (!binder_worklist_empty(&proc->todo)) {
 			binder_proc_lock(proc, __LINE__);
-			binder_wakeup_thread(proc, false);
+			binder_wakeup_proc(proc);
 			binder_proc_unlock(proc, __LINE__);
 		}
 		if (ret < 0) {
@@ -4256,7 +4301,7 @@ static int binder_node_release(struct binder_node *node, int refs)
 				    __LINE__);
 		binder_proc_unlock(proc, __LINE__);
 		binder_proc_lock(wait_proc, __LINE__);
-		binder_wakeup_thread(wait_proc, false);
+		binder_wakeup_proc(wait_proc);
 		binder_proc_unlock(wait_proc, __LINE__);
 	}
 	binder_debug(BINDER_DEBUG_DEAD_BINDER,
