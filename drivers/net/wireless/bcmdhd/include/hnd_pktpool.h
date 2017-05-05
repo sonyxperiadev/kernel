@@ -148,7 +148,7 @@ extern int pktpool_empty_register(pktpool_t *pktp, pktpool_cb_t cb, void *arg);
 extern int pktpool_setmaxlen(pktpool_t *pktp, uint16 maxlen);
 extern int pktpool_setmaxlen_strict(osl_t *osh, pktpool_t *pktp, uint16 maxlen);
 extern void pktpool_emptycb_disable(pktpool_t *pktp, bool disable);
-extern bool pktpool_emptycb_disabled(pktpool_t *pktp);
+extern int pktpool_emptycb_disabled(pktpool_t *pktp);
 extern int pktpool_hostaddr_fill_register(pktpool_t *pktp, pktpool_cb_extn_t cb, void *arg1);
 extern int pktpool_rxcplid_fill_register(pktpool_t *pktp, pktpool_cb_extn_t cb, void *arg);
 extern void pktpool_invoke_dmarxfill(pktpool_t *pktp);

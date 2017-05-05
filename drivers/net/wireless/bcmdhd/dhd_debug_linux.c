@@ -54,11 +54,17 @@ typedef struct dhd_dbg_os_ring_info {
 } linux_dbgring_info_t;
 
 struct log_level_table dhd_event_map[] = {
-	{1, WIFI_EVENT_DRIVER_EAPOL_FRAME_TRANSMIT_REQUESTED, "DRIVER EAPOL TX REQ"},
-	{1, WIFI_EVENT_DRIVER_EAPOL_FRAME_RECEIVED, "DRIVER EAPOL RX"},
-	{2, WIFI_EVENT_DRIVER_SCAN_REQUESTED, "SCAN_REQUESTED"},
-	{2, WIFI_EVENT_DRIVER_SCAN_COMPLETE, "SCAN COMPELETE"},
-	{3, WIFI_EVENT_DRIVER_SCAN_RESULT_FOUND, "SCAN RESULT FOUND"}
+	{1, WIFI_EVENT_DRIVER_EAPOL_FRAME_TRANSMIT_REQUESTED, 0, "DRIVER EAPOL TX REQ"},
+	{1, WIFI_EVENT_DRIVER_EAPOL_FRAME_RECEIVED, 0, "DRIVER EAPOL RX"},
+	{2, WIFI_EVENT_DRIVER_SCAN_REQUESTED, 0, "SCAN_REQUESTED"},
+	{2, WIFI_EVENT_DRIVER_SCAN_COMPLETE, 0, "SCAN COMPELETE"},
+	{3, WIFI_EVENT_DRIVER_SCAN_RESULT_FOUND, 0, "SCAN RESULT FOUND"},
+	{2, WIFI_EVENT_DRIVER_PNO_ADD, 0, "PNO ADD"},
+	{2, WIFI_EVENT_DRIVER_PNO_REMOVE, 0, "PNO REMOVE"},
+	{2, WIFI_EVENT_DRIVER_PNO_NETWORK_FOUND, 0, "PNO NETWORK FOUND"},
+	{2, WIFI_EVENT_DRIVER_PNO_SCAN_REQUESTED, 0, "PNO SCAN_REQUESTED"},
+	{1, WIFI_EVENT_DRIVER_PNO_SCAN_RESULT_FOUND, 0, "PNO SCAN RESULT FOUND"},
+	{1, WIFI_EVENT_DRIVER_PNO_SCAN_COMPLETE, 0, "PNO SCAN COMPELETE"},
 };
 
 static void
@@ -92,6 +98,8 @@ static void
 dbg_ring_poll_worker(struct work_struct *work)
 {
 	struct delayed_work *d_work = to_delayed_work(work);
+	bool sched = TRUE;
+	dhd_dbg_ring_t *ring;
 	linux_dbgring_info_t *ring_info =
 		container_of(d_work, linux_dbgring_info_t, work);
 	dhd_pub_t *dhdp = ring_info->dhdp;
@@ -100,21 +108,33 @@ dbg_ring_poll_worker(struct work_struct *work)
 	void *buf;
 	dhd_dbg_ring_entry_t *hdr;
 	uint32 buflen, rlen;
+	unsigned long flags;
 
+	ring = &dhdp->dbg->dbg_rings[ringid];
+	flags = dhd_os_spin_lock(ring->lock);
 	dhd_dbg_get_ring_status(dhdp, ringid, &ring_status);
-	if (ring_status.written_bytes > ring_status.read_bytes)
-		buflen = ring_status.written_bytes - ring_status.read_bytes;
-	else if (ring_status.written_bytes < ring_status.read_bytes)
-		buflen = 0xFFFFFFFF + ring_status.written_bytes -
-			ring_status.read_bytes;
+
+	if (ring->wp > ring->rp)
+		buflen = ring->wp - ring->rp;
+	else if (ring->wp < ring->rp)
+		buflen = ring->ring_size - ring->rp + ring->wp;
 	else
 		goto exit;
+
+	if (buflen > ring->ring_size)
+		goto exit;
+
 	buf = MALLOC(dhdp->osh, buflen);
 	if (!buf) {
 		DHD_ERROR(("%s failed to allocate read buf\n", __FUNCTION__));
-		return;
+		sched = FALSE;
+		goto exit;
 	}
 	rlen = dhd_dbg_ring_pull(dhdp, ringid, buf, buflen);
+	if (!ring->sched_pull) {
+		ring->sched_pull = TRUE;
+	}
+
 	hdr = (dhd_dbg_ring_entry_t *)buf;
 	while (rlen > 0) {
 		ring_status.read_bytes += ENTRY_LENGTH(hdr);
@@ -127,19 +147,14 @@ dbg_ring_poll_worker(struct work_struct *work)
 	}
 	MFREE(dhdp->osh, buf, buflen);
 
-	if (!ring_info->interval)
-		return;
-	dhd_dbg_get_ring_status(dhdp, ring_info->ring_id, &ring_status);
-
 exit:
-	if (ring_info->interval) {
+	if (sched) {
 		/* retrigger the work at same interval */
-		if (ring_status.written_bytes == ring_status.read_bytes)
+		if ((ring_status.written_bytes == ring_status.read_bytes) && (ring_info->interval)) {
 			schedule_delayed_work(d_work, ring_info->interval);
-		else
-			schedule_delayed_work(d_work, 0);
+		}
 	}
-
+	dhd_os_spin_unlock(ring->lock, flags);
 	return;
 }
 
@@ -204,9 +219,9 @@ dhd_os_start_logging(dhd_pub_t *dhdp, char *ring_name, int log_level,
 		cancel_delayed_work_sync(&ring_info->work);
 	} else {
 		ring_info->interval = msecs_to_jiffies(time_intval * MSEC_PER_SEC);
+		cancel_delayed_work_sync(&ring_info->work);
 		schedule_delayed_work(&ring_info->work, ring_info->interval);
 	}
-
 	return ret;
 }
 
@@ -300,16 +315,18 @@ dhd_os_push_push_ring_data(dhd_pub_t *dhdp, int ring_id, void *data, int32 data_
 {
 	int ret = BCME_OK, i;
 	dhd_dbg_ring_entry_t msg_hdr;
-	log_conn_event_t event_data;
+	log_conn_event_t *event_data = (log_conn_event_t *)data;
 	linux_dbgring_info_t *os_priv, *ring_info = NULL;
 
 	if (!VALID_RING(ring_id))
 		return BCME_UNSUPPORTED;
-	os_priv = dhd_dbg_get_priv(dhdp);
 
-	if (os_priv) {
-		ring_info = &os_priv[ring_id];
-	}
+	os_priv = dhd_dbg_get_priv(dhdp);
+	if (!os_priv)
+		return BCME_UNSUPPORTED;
+
+	ring_info = &os_priv[ring_id];
+
 	memset(&msg_hdr, 0, sizeof(dhd_dbg_ring_entry_t));
 
 	if (ring_id == DHD_EVENT_RING_ID) {
@@ -319,23 +336,82 @@ dhd_os_push_push_ring_data(dhd_pub_t *dhdp, int ring_id, void *data, int32 data_
 		msg_hdr.timestamp = local_clock();
 		/* convert to ms */
 		do_div(msg_hdr.timestamp, 1000000);
-		msg_hdr.len = sizeof(event_data);
-		event_data.event = *((uint16 *)(data));
+		msg_hdr.len = data_len;
 		/* filter the event for higher log level with current log level */
 		for (i = 0; i < ARRAYSIZE(dhd_event_map); i++) {
-			if ((dhd_event_map[i].tag == event_data.event) &&
+			if ((dhd_event_map[i].tag == event_data->event) &&
 				dhd_event_map[i].log_level > ring_info->log_level) {
 				return ret;
 			}
 		}
 	}
-	ret = dhd_dbg_ring_push(dhdp, ring_id, &msg_hdr, &event_data);
+	ret = dhd_dbg_ring_push(dhdp, ring_id, &msg_hdr, event_data);
 	if (ret) {
 		DHD_ERROR(("%s : failed to push data into the ring (%d) with ret(%d)\n",
 			__FUNCTION__, ring_id, ret));
 	}
 	return ret;
 }
+
+#ifdef DBG_PKT_MON
+int
+dhd_os_dbg_attach_pkt_monitor(dhd_pub_t *dhdp)
+{
+	return dhd_dbg_attach_pkt_monitor(dhdp, dhd_os_dbg_monitor_tx_pkts,
+		dhd_os_dbg_monitor_tx_status, dhd_os_dbg_monitor_rx_pkts);
+}
+
+int
+dhd_os_dbg_start_pkt_monitor(dhd_pub_t *dhdp)
+{
+	return dhd_dbg_start_pkt_monitor(dhdp);
+}
+
+int
+dhd_os_dbg_monitor_tx_pkts(dhd_pub_t *dhdp, void *pkt, uint32 pktid)
+{
+	return dhd_dbg_monitor_tx_pkts(dhdp, pkt, pktid);
+}
+
+int
+dhd_os_dbg_monitor_tx_status(dhd_pub_t *dhdp, void *pkt, uint32 pktid,
+	uint16 status)
+{
+	return dhd_dbg_monitor_tx_status(dhdp, pkt, pktid, status);
+}
+
+int
+dhd_os_dbg_monitor_rx_pkts(dhd_pub_t *dhdp, void *pkt)
+{
+	return dhd_dbg_monitor_rx_pkts(dhdp, pkt);
+}
+
+int
+dhd_os_dbg_stop_pkt_monitor(dhd_pub_t *dhdp)
+{
+	return dhd_dbg_stop_pkt_monitor(dhdp);
+}
+
+int
+dhd_os_dbg_monitor_get_tx_pkts(dhd_pub_t *dhdp, void __user *user_buf,
+	uint16 req_count, uint16 *resp_count)
+{
+	return dhd_dbg_monitor_get_tx_pkts(dhdp, user_buf, req_count, resp_count);
+}
+
+int
+dhd_os_dbg_monitor_get_rx_pkts(dhd_pub_t *dhdp, void __user *user_buf,
+	uint16 req_count, uint16 *resp_count)
+{
+	return dhd_dbg_monitor_get_rx_pkts(dhdp, user_buf, req_count, resp_count);
+}
+
+int
+dhd_os_dbg_detach_pkt_monitor(dhd_pub_t *dhdp)
+{
+	return dhd_dbg_detach_pkt_monitor(dhdp);
+}
+#endif /* DBG_PKT_MON */
 
 int
 dhd_os_dbg_get_feature(dhd_pub_t *dhdp, int32 *features)
@@ -351,6 +427,11 @@ dhd_os_dbg_get_feature(dhd_pub_t *dhdp, int32 *features)
 	if (FW_SUPPORTED(dhdp, hchk)) {
 		*features |= DBG_HEALTH_CHECK_SUPPORTED;
 	}
+#ifdef DBG_PKT_MON
+	if (FW_SUPPORTED(dhdp, d11status)) {
+		*features |= DBG_PACKET_FATE_SUPPORTED;
+	}
+#endif /* DBG_PKT_MON */
 	return ret;
 }
 
@@ -360,8 +441,8 @@ dhd_os_dbg_pullreq(void *os_priv, int ring_id)
 	linux_dbgring_info_t *ring_info;
 
 	ring_info = &((linux_dbgring_info_t *)os_priv)[ring_id];
-	if (ring_info->interval != 0)
-		schedule_delayed_work(&ring_info->work, 0);
+	cancel_delayed_work(&ring_info->work);
+	schedule_delayed_work(&ring_info->work, 0);
 }
 
 int

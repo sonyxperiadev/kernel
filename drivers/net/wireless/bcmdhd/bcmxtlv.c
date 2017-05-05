@@ -187,7 +187,7 @@ bcm_unpack_xtlv_entry(uint8 **tlv_buf, uint16 xpct_type, uint16 xpct_len, void *
 	uint16 len;
 	uint16 type;
 
-	ASSERT(ptlv);
+	DHD_WARN(ptlv, return BCME_BADARG;);
 	/* tlv headr is always packed in LE order */
 	len = ltoh16(ptlv->len);
 	type = ltoh16(ptlv->id);
@@ -220,8 +220,8 @@ bcm_pack_xtlv_entry(uint8 **tlv_buf, uint16 *buflen, uint16 type, uint16 len, vo
 	bcm_xtlv_t *ptlv = (bcm_xtlv_t *)*tlv_buf;
 	int size;
 
-	ASSERT(ptlv);
-	ASSERT(src);
+	DHD_WARN(ptlv, return BCME_BADARG;);
+	DHD_WARN(src, return BCME_BADARG;);
 
 	size = bcm_xtlv_size_for_data(len, opts);
 
@@ -259,8 +259,8 @@ bcm_unpack_xtlv_buf(void *ctx, uint8 *tlv_buf, uint16 buflen, bcm_xtlv_opts_t op
 	bcm_xtlv_t *ptlv;
 	int sbuflen = buflen;
 
-	ASSERT(!buflen || tlv_buf);
-	ASSERT(!buflen || cbfn);
+	DHD_WARN(!buflen || tlv_buf, return BCME_BADARG;);
+	DHD_WARN(!buflen || cbfn, return BCME_BADARG;);
 
 	while (sbuflen >= (int)BCM_XTLV_HDR_SIZE) {
 		ptlv = (bcm_xtlv_t *)tlv_buf;
@@ -297,7 +297,7 @@ bcm_pack_xtlv_buf(void *ctx, void *tlv_buf, uint16 buflen, bcm_xtlv_opts_t opts,
 	bool more;
 	int size;
 
-	ASSERT(get_next && pack_next);
+	DHD_WARN(get_next && pack_next, return BCME_BADARG;);
 
 	buf = (uint8 *)tlv_buf;
 	startp = buf;

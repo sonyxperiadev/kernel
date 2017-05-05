@@ -155,7 +155,7 @@ ai_scan(si_t *sih, void *regs, uint devid)
 	case PCMCIA_BUS:
 	default:
 		SI_ERROR(("Don't know how to do AXI enumertion on bus %d\n", sih->bustype));
-		ASSERT(0);
+		DHD_BUG(1);
 		return;
 	}
 	eromlim = eromptr + (ER_REMAPCONTROL / sizeof(uint32));
@@ -365,7 +365,7 @@ ai_setcoreidx(si_t *sih, uint coreidx)
 	 * If the user has provided an interrupt mask enabled function,
 	 * then assert interrupts are disabled before switching the core.
 	 */
-	ASSERT((sii->intrsenabled_fn == NULL) || !(*(sii)->intrsenabled_fn)((sii)->intr_arg));
+	DHD_BUG(!(sii->intrsenabled_fn == NULL) && (*(sii)->intrsenabled_fn)((sii)->intr_arg));
 
 	switch (BUSTYPE(sih->bustype)) {
 	case SI_BUS:
@@ -373,12 +373,12 @@ ai_setcoreidx(si_t *sih, uint coreidx)
 		if (!cores_info->regs[coreidx]) {
 			cores_info->regs[coreidx] = REG_MAP(addr,
 				AI_SETCOREIDX_MAPSIZE(cores_info->coreid[coreidx]));
-			ASSERT(GOODREGS(cores_info->regs[coreidx]));
+			DHD_BUG(!GOODREGS(cores_info->regs[coreidx]));
 		}
 		sii->curmap = regs = cores_info->regs[coreidx];
 		if (!cores_info->wrappers[coreidx] && (wrap != 0)) {
 			cores_info->wrappers[coreidx] = REG_MAP(wrap, SI_CORE_SIZE);
-			ASSERT(GOODREGS(cores_info->wrappers[coreidx]));
+			DHD_BUG(!GOODREGS(cores_info->wrappers[coreidx]));
 		}
 		sii->curwrap = cores_info->wrappers[coreidx];
 		break;
@@ -404,7 +404,7 @@ ai_setcoreidx(si_t *sih, uint coreidx)
 
 	case PCMCIA_BUS:
 	default:
-		ASSERT(0);
+		DHD_BUG(1);
 		regs = NULL;
 		break;
 	}
@@ -557,6 +557,8 @@ ai_flag(si_t *sih)
 	si_info_t *sii = SI_INFO(sih);
 	aidmp_t *ai;
 
+	DHD_BUG(!GOODREGS(sii->curwrap));
+
 	if (BCM47162_DMP()) {
 		SI_ERROR(("%s: Attempting to read MIPS DMP registers on 47162a0", __FUNCTION__));
 		return sii->curidx;
@@ -580,7 +582,6 @@ ai_flag(si_t *sih)
 #endif /* REROUTE_OOBINT */
 
 	ai = sii->curwrap;
-	ASSERT(ai != NULL);
 
 	return (R_REG(sii->osh, &ai->oobselouta30) & 0x1f);
 }
@@ -694,9 +695,9 @@ ai_corereg(si_t *sih, uint coreidx, uint regoff, uint mask, uint val)
 	si_cores_info_t *cores_info = (si_cores_info_t *)sii->cores_info;
 
 
-	ASSERT(GOODIDX(coreidx));
-	ASSERT(regoff < SI_CORE_SIZE);
-	ASSERT((val & ~mask) == 0);
+	DHD_BUG(!GOODIDX(coreidx));
+	DHD_BUG(regoff >= SI_CORE_SIZE);
+	DHD_BUG((val & ~mask));
 
 	if (coreidx >= SI_MAXCORES)
 		return 0;
@@ -708,7 +709,7 @@ ai_corereg(si_t *sih, uint coreidx, uint regoff, uint mask, uint val)
 		if (!cores_info->regs[coreidx]) {
 			cores_info->regs[coreidx] = REG_MAP(cores_info->coresba[coreidx],
 			                            SI_CORE_SIZE);
-			ASSERT(GOODREGS(cores_info->regs[coreidx]));
+			DHD_BUG(!GOODREGS(cores_info->regs[coreidx]));
 		}
 		r = (uint32 *)((uchar *)cores_info->regs[coreidx] + regoff);
 	} else if (BUSTYPE(sih->bustype) == PCI_BUS) {
@@ -744,7 +745,7 @@ ai_corereg(si_t *sih, uint coreidx, uint regoff, uint mask, uint val)
 		/* switch core */
 		r = (uint32*) ((uchar*) ai_setcoreidx(&sii->pub, coreidx) + regoff);
 	}
-	ASSERT(r != NULL);
+	DHD_BUG(!r);
 
 	/* mask and set */
 	if (mask || val) {
@@ -783,9 +784,8 @@ ai_corereg_addr(si_t *sih, uint coreidx, uint regoff)
 	si_info_t *sii = SI_INFO(sih);
 	si_cores_info_t *cores_info = (si_cores_info_t *)sii->cores_info;
 
-
-	ASSERT(GOODIDX(coreidx));
-	ASSERT(regoff < SI_CORE_SIZE);
+	DHD_BUG(!GOODIDX(coreidx));
+	DHD_BUG(regoff >= SI_CORE_SIZE);
 
 	if (coreidx >= SI_MAXCORES)
 		return 0;
@@ -797,7 +797,7 @@ ai_corereg_addr(si_t *sih, uint coreidx, uint regoff)
 		if (!cores_info->regs[coreidx]) {
 			cores_info->regs[coreidx] = REG_MAP(cores_info->coresba[coreidx],
 			                            SI_CORE_SIZE);
-			ASSERT(GOODREGS(cores_info->regs[coreidx]));
+			DHD_BUG(!GOODREGS(cores_info->regs[coreidx]));
 		}
 		r = (uint32 *)((uchar *)cores_info->regs[coreidx] + regoff);
 	} else if (BUSTYPE(sih->bustype) == PCI_BUS) {
@@ -839,7 +839,7 @@ ai_core_disable(si_t *sih, uint32 bits)
 	aidmp_t *ai;
 
 
-	ASSERT(GOODREGS(sii->curwrap));
+	DHD_BUG(!GOODREGS(sii->curwrap));
 	ai = sii->curwrap;
 
 	/* if core is already in reset, just return */
@@ -882,7 +882,7 @@ ai_core_reset(si_t *sih, uint32 bits, uint32 resetbits)
 	volatile uint32 dummy;
 	uint loop_counter = 10;
 
-	ASSERT(GOODREGS(sii->curwrap));
+	DHD_BUG(!GOODREGS(sii->curwrap));
 	ai = sii->curwrap;
 
 	/* ensure there are no pending backplane operations */
@@ -952,10 +952,10 @@ ai_core_cflags_wo(si_t *sih, uint32 mask, uint32 val)
 		return;
 	}
 
-	ASSERT(GOODREGS(sii->curwrap));
+	DHD_BUG(!GOODREGS(sii->curwrap));
 	ai = sii->curwrap;
 
-	ASSERT((val & ~mask) == 0);
+	DHD_BUG(val & ~mask);
 
 	if (mask || val) {
 		w = ((R_REG(sii->osh, &ai->ioctrl) & ~mask) | val);
@@ -991,10 +991,10 @@ ai_core_cflags(si_t *sih, uint32 mask, uint32 val)
 			__FUNCTION__));
 		return 0;
 	}
-	ASSERT(GOODREGS(sii->curwrap));
+	DHD_BUG(!GOODREGS(sii->curwrap));
 	ai = sii->curwrap;
 
-	ASSERT((val & ~mask) == 0);
+	DHD_BUG(val & ~mask);
 
 	if (mask || val) {
 		w = ((R_REG(sii->osh, &ai->ioctrl) & ~mask) | val);
@@ -1032,11 +1032,11 @@ ai_core_sflags(si_t *sih, uint32 mask, uint32 val)
 		return 0;
 	}
 
-	ASSERT(GOODREGS(sii->curwrap));
+	DHD_BUG(!GOODREGS(sii->curwrap));
 	ai = sii->curwrap;
 
-	ASSERT((val & ~mask) == 0);
-	ASSERT((mask & ~SISF_CORE_BITS) == 0);
+	DHD_BUG(val & ~mask);
+	DHD_BUG(mask & ~SISF_CORE_BITS);
 
 	if (mask || val) {
 		w = ((R_REG(sii->osh, &ai->iostatus) & ~mask) | val);

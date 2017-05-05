@@ -74,7 +74,7 @@ dhd_flow_queue_overflow(flow_queue_t *queue, void *pkt)
 void /* Initialize a flow ring's queue */
 dhd_flow_queue_init(dhd_pub_t *dhdp, flow_queue_t *queue, int max)
 {
-	ASSERT((queue != NULL) && (max > 0));
+	DHD_BUG((queue == NULL) || (max <= 0));
 
 	dll_init(&queue->list);
 	queue->head = queue->tail = NULL;
@@ -87,8 +87,8 @@ dhd_flow_queue_init(dhd_pub_t *dhdp, flow_queue_t *queue, int max)
 void /* Register an enqueue overflow callback handler */
 dhd_flow_queue_register(flow_queue_t *queue, flow_queue_cb_t cb)
 {
-	ASSERT(queue != NULL);
-	queue->cb = cb;
+	if(queue)
+		queue->cb = cb;
 }
 
 
@@ -97,7 +97,8 @@ dhd_flow_queue_enqueue(dhd_pub_t *dhdp, flow_queue_t *queue, void *pkt)
 {
 	int ret = BCME_OK;
 
-	ASSERT(queue != NULL);
+	if(queue == NULL)
+		return BCME_BADARG;
 
 	if (queue->len >= queue->max) {
 		queue->failures++;
@@ -124,14 +125,15 @@ done:
 void * BCMFASTPATH /* Dequeue a packet from a flow ring's queue, from head */
 dhd_flow_queue_dequeue(dhd_pub_t *dhdp, flow_queue_t *queue)
 {
-	void * pkt;
+	void * pkt = NULL;
 
-	ASSERT(queue != NULL);
+	if(queue == NULL)
+		goto done;
 
 	pkt = queue->head; /* from head */
 
 	if (pkt == NULL) {
-		ASSERT((queue->len == 0) && (queue->tail == NULL));
+		DHD_WARN((queue->len == 0) && (queue->tail == NULL),);
 		goto done;
 	}
 
@@ -282,7 +284,7 @@ void dhd_flow_rings_deinit(dhd_pub_t *dhdp)
 
 	if (dhdp->flow_ring_table != NULL) {
 
-		ASSERT(dhdp->num_flow_rings > 0);
+		DHD_WARN(dhdp->num_flow_rings > 0, return;);
 
 		DHD_FLOWID_LOCK(dhdp->flowid_lock, flags);
 		flow_ring_table = (flow_ring_table_t *)dhdp->flow_ring_table;
@@ -292,7 +294,7 @@ void dhd_flow_rings_deinit(dhd_pub_t *dhdp)
 			if (flow_ring_table[idx].active) {
 				dhd_bus_clean_flow_ring(dhdp->bus, &flow_ring_table[idx]);
 			}
-			ASSERT(flow_queue_empty(&flow_ring_table[idx].queue));
+			DHD_WARN(flow_queue_empty(&flow_ring_table[idx].queue), return;);
 
 			/* Deinit flow ring queue locks before destroying flow ring table */
 			dhd_os_spin_lock_deinit(dhdp->osh, flow_ring_table[idx].lock);
@@ -326,11 +328,11 @@ void dhd_flow_rings_deinit(dhd_pub_t *dhdp)
 	dhd_os_spin_lock_deinit(dhdp->osh, lock);
 }
 
-uint8
+int
 dhd_flow_rings_ifindex2role(dhd_pub_t *dhdp, uint8 ifindex)
 {
 	if_flow_lkup_t *if_flow_lkup = (if_flow_lkup_t *)dhdp->if_flow_lkup;
-	ASSERT(if_flow_lkup);
+	DHD_WARN(if_flow_lkup, return BCME_ERROR;);
 	return if_flow_lkup[ifindex].role;
 }
 
@@ -428,7 +430,8 @@ dhd_flowid_alloc(dhd_pub_t *dhdp, uint8 ifindex, uint8 prio, char *sa, char *da)
 	memcpy(fl_hash_node->flow_info.da, da, sizeof(fl_hash_node->flow_info.da));
 
 	DHD_FLOWID_LOCK(dhdp->flowid_lock, flags);
-	ASSERT(dhdp->flowid_allocator != NULL);
+	if(dhdp->flowid_allocator == NULL)
+		return FLOWID_INVALID;
 	flowid = id16_map_alloc(dhdp->flowid_allocator);
 	DHD_FLOWID_UNLOCK(dhdp->flowid_lock, flags);
 
@@ -492,44 +495,43 @@ dhd_flowid_lookup(dhd_pub_t *dhdp, uint8 ifindex,
 	flow_ring_node_t *flow_ring_node;
 	flow_ring_table_t *flow_ring_table;
 	unsigned long flags;
+	if_flow_lkup_t *if_flow_lkup;
 
 	DHD_INFO(("%s\n", __FUNCTION__));
+	*flowid = FLOWID_INVALID;
 
-	if (!dhdp->flow_ring_table)
+	if (!dhdp->flow_ring_table) {
 		return BCME_ERROR;
-
+	}
 	flow_ring_table = (flow_ring_table_t *)dhdp->flow_ring_table;
 
 	id = dhd_flowid_find(dhdp, ifindex, prio, sa, da);
 
-	if (id == FLOWID_INVALID) {
-
-		if_flow_lkup_t *if_flow_lkup;
-		if_flow_lkup = (if_flow_lkup_t *)dhdp->if_flow_lkup;
-
-		if (!if_flow_lkup[ifindex].status)
-			return BCME_ERROR;
-
-		id = dhd_flowid_alloc(dhdp, ifindex, prio, sa, da);
-		if (id == FLOWID_INVALID) {
-			DHD_ERROR(("%s: alloc flowid ifindex %u status %u\n",
-			           __FUNCTION__, ifindex, if_flow_lkup[ifindex].status));
-			return BCME_ERROR;
-		}
-
-		/* register this flowid in dhd_pub */
-		dhd_add_flowid(dhdp, ifindex, prio, da, id);
-	}
-
-	ASSERT(id < dhdp->num_flow_rings);
-
-	flow_ring_node = (flow_ring_node_t *) &flow_ring_table[id];
-	DHD_FLOWRING_LOCK(flow_ring_node->lock, flags);
-	if (flow_ring_node->active) {
-		DHD_FLOWRING_UNLOCK(flow_ring_node->lock, flags);
+	if (id != FLOWID_INVALID) {
 		*flowid = id;
 		return BCME_OK;
 	}
+
+	/* if flowID not found, allocate new one */
+	if_flow_lkup = (if_flow_lkup_t *)dhdp->if_flow_lkup;
+
+	if (!if_flow_lkup[ifindex].status) {
+		return BCME_ERROR;
+	}
+
+	id = dhd_flowid_alloc(dhdp, ifindex, prio, sa, da);
+	if (id == FLOWID_INVALID) {
+		DHD_ERROR(("%s: alloc flowid ifindex %u status %u\n",
+		           __FUNCTION__, ifindex, if_flow_lkup[ifindex].status));
+		return BCME_ERROR;
+	}
+
+	/* register this flowid in dhd_pub */
+	dhd_add_flowid(dhdp, ifindex, prio, da, id);
+
+	flow_ring_node = (flow_ring_node_t *) &flow_ring_table[id];
+
+	DHD_FLOWRING_LOCK(flow_ring_node->lock, flags);
 
 	/* Init Flow info */
 	memcpy(flow_ring_node->flow_info.sa, sa, sizeof(flow_ring_node->flow_info.sa));
@@ -565,10 +567,8 @@ dhd_flowid_update(dhd_pub_t *dhdp, uint8 ifindex, uint8 prio, void *pktbuf)
 	if (dhd_bus_is_txmode_push(dhdp->bus))
 		return BCME_OK;
 
-	ASSERT(ifindex < DHD_MAX_IFS);
-	if (ifindex >= DHD_MAX_IFS) {
+	if (ifindex >= DHD_MAX_IFS)
 		return BCME_BADARG;
-	}
 
 	if (!dhdp->flowid_allocator) {
 		DHD_ERROR(("%s: Flow ring not intited yet  \n", __FUNCTION__));
@@ -651,7 +651,6 @@ dhd_flow_rings_delete(dhd_pub_t *dhdp, uint8 ifindex)
 
 	DHD_INFO(("%s: ifindex %u\n", __FUNCTION__, ifindex));
 
-	ASSERT(ifindex < DHD_MAX_IFS);
 	if (ifindex >= DHD_MAX_IFS)
 		return;
 
@@ -680,7 +679,6 @@ dhd_flow_rings_delete_for_peer(dhd_pub_t *dhdp, uint8 ifindex, char *addr)
 
 	DHD_ERROR(("%s: ifindex %u\n", __FUNCTION__, ifindex));
 
-	ASSERT(ifindex < DHD_MAX_IFS);
 	if (ifindex >= DHD_MAX_IFS)
 		return;
 
@@ -709,7 +707,6 @@ dhd_update_interface_flow_info(dhd_pub_t *dhdp, uint8 ifindex,
 	if_flow_lkup_t *if_flow_lkup;
 	unsigned long flags;
 
-	ASSERT(ifindex < DHD_MAX_IFS);
 	if (ifindex >= DHD_MAX_IFS)
 		return;
 
@@ -748,7 +745,6 @@ dhd_update_interface_link_status(dhd_pub_t *dhdp, uint8 ifindex, uint8 status)
 	if_flow_lkup_t *if_flow_lkup;
 	unsigned long flags;
 
-	ASSERT(ifindex < DHD_MAX_IFS);
 	if (ifindex >= DHD_MAX_IFS)
 		return BCME_BADARG;
 

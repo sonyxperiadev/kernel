@@ -31,6 +31,7 @@
 
 #include <wldev_common.h>
 #include <bcmutils.h>
+#include <wl_cfg80211.h>
 
 #define htod32(i) (i)
 #define htod16(i) (i)
@@ -342,6 +343,9 @@ int wldev_set_country(
 	wl_country_t cspec = {{0}, 0, {0}};
 	scb_val_t scbval;
 	char smbuf[WLC_IOCTL_SMLEN];
+	struct wireless_dev *wdev = ndev_to_wdev(dev);
+	struct wiphy *wiphy = wdev->wiphy;
+	struct bcm_cfg80211 *cfg = wiphy_priv(wiphy);
 
 	if (!country_code)
 		return error;
@@ -356,7 +360,7 @@ int wldev_set_country(
 	if ((error < 0) || dhd_force_country_change(dev) ||
 	    (strncmp(country_code, cspec.country_abbrev, WLC_CNTRY_BUF_SZ) != 0)) {
 
-		if (user_enforced) {
+		if ((user_enforced) && (wl_get_drv_status(cfg, CONNECTED, dev))) {
 			bzero(&scbval, sizeof(scb_val_t));
 			error = wldev_ioctl(dev, WLC_DISASSOC, &scbval, sizeof(scb_val_t), true);
 			if (error < 0) {

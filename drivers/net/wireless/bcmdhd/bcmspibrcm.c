@@ -346,12 +346,12 @@ sdioh_iovar_op(sdioh_info_t *si, const char *name,
 	sdioh_regs_t *regs;
 */
 
-	ASSERT(name);
-	ASSERT(len >= 0);
+	DHD_WARN(name, return BCME_BADARG;);
+	DHD_WARN(len >= 0, return BCME_BADARG;);
 
 	/* Get must have return space; Set does not take qualifiers */
-	ASSERT(set || (arg && len));
-	ASSERT(!set || (!params && !plen));
+	DHD_WARN(set || (arg && len), return BCME_BADARG;);
+	DHD_WARN(!set || (!params && !plen), return BCME_BADARG;);
 
 	sd_trace(("%s: Enter (%s %s)\n", __FUNCTION__, (set ? "set" : "get"), name));
 
@@ -710,9 +710,9 @@ sdioh_request_buffer(sdioh_info_t *sd, uint pio_dma, uint fix_inc, uint rw, uint
 
 	spi_lock(sd);
 
-	ASSERT(reg_width == 4);
-	ASSERT(buflen_u < (1 << 30));
-	ASSERT(sd->client_block_size[func]);
+	DHD_BUG(reg_width != 4);
+	DHD_BUG(buflen_u >= (1 << 30));
+	DHD_BUG(!sd->client_block_size[func]);
 
 	sd_data(("%s: %c len %d r_cnt %d t_cnt %d, pkt @0x%p\n",
 	         __FUNCTION__, rw == SDIOH_READ ? 'R' : 'W',
@@ -762,7 +762,7 @@ bcmspi_card_byterewrite(sdioh_info_t *sd, int func, uint32 regaddr, uint8 byte)
 	/* Set up and issue the SPI command.  MSByte goes out on bus first.  Increase datalen
 	 * according to the wordlen mode(16/32bit) the device is in.
 	 */
-	ASSERT(sd->wordlen == 4 || sd->wordlen == 2);
+	DHD_BUG((sd->wordlen != 4) && (sd->wordlen != 2));
 	datalen = ROUNDUP(datalen, sd->wordlen);
 
 	/* Start by copying command in the spi-outbuffer */
@@ -848,7 +848,7 @@ bcmspi_resync_f1(sdioh_info_t *sd)
 	/* Set up and issue the SPI command.  MSByte goes out on bus first.  Increase datalen
 	 * according to the wordlen mode(16/32bit) the device is in.
 	 */
-	ASSERT(sd->wordlen == 4 || sd->wordlen == 2);
+	DHD_BUG((sd->wordlen != 4) && (sd->wordlen != 2));
 	datalen = ROUNDUP(datalen, sd->wordlen);
 
 	/* Start by copying command in the spi-outbuffer */
@@ -1009,15 +1009,15 @@ get_client_blocksize(sdioh_info_t *sd)
 
 	sd->client_block_size[1] = (regdata[0] & F1_MAX_PKT_SIZE) >> 2;
 	sd_trace(("Func1 blocksize = %d\n", sd->client_block_size[1]));
-	ASSERT(sd->client_block_size[1] == BLOCK_SIZE_F1);
+	DHD_BUG(sd->client_block_size[1] != BLOCK_SIZE_F1);
 
 	sd->client_block_size[2] = ((regdata[0] >> 16) & F2_MAX_PKT_SIZE) >> 2;
 	sd_trace(("Func2 blocksize = %d\n", sd->client_block_size[2]));
-	ASSERT(sd->client_block_size[2] == BLOCK_SIZE_F2);
+	DHD_BUG(sd->client_block_size[2] != BLOCK_SIZE_F2);
 
 	sd->client_block_size[3] = (regdata[1] & F3_MAX_PKT_SIZE) >> 2;
 	sd_trace(("Func3 blocksize = %d\n", sd->client_block_size[3]));
-	ASSERT(sd->client_block_size[3] == BLOCK_SIZE_F3);
+	DHD_BUG(sd->client_block_size[3] != BLOCK_SIZE_F3);
 
 	return 0;
 }
@@ -1382,7 +1382,7 @@ bcmspi_card_regread(sdioh_info_t *sd, int func, uint32 regaddr, int regsize, uin
 	int status;
 	uint32 cmd_arg, dstatus;
 
-	ASSERT(regsize);
+	DHD_WARN(regsize, return BCME_BADARG;);
 
 	if (func == 2)
 		sd_trace(("Reg access on F2 will generate error indication in dstatus bits.\n"));
@@ -1415,7 +1415,7 @@ bcmspi_card_regread_fixedaddr(sdioh_info_t *sd, int func, uint32 regaddr, int re
 	uint32 cmd_arg;
 	uint32 dstatus;
 
-	ASSERT(regsize);
+	DHD_WARN(regsize, return BCME_BADARG;);
 
 	if (func == 2)
 		sd_trace(("Reg access on F2 will generate error indication in dstatus bits.\n"));
@@ -1447,7 +1447,7 @@ bcmspi_card_regwrite(sdioh_info_t *sd, int func, uint32 regaddr, int regsize, ui
 	int status;
 	uint32 cmd_arg, dstatus;
 
-	ASSERT(regsize);
+	DHD_WARN(regsize, return BCME_BADARG;);
 
 	cmd_arg = 0;
 
@@ -1605,7 +1605,7 @@ bcmspi_cmd_issue(sdioh_info_t *sd, bool use_dma, uint32 cmd_arg,
 					resp_delay = sd->resp_delay_all ? F2_RESPONSE_DELAY : 0;
 				break;
 			default:
-				ASSERT(0);
+				DHD_BUG(1);
 				break;
 		}
 		/* Program response delay */
@@ -1688,8 +1688,8 @@ bcmspi_card_buf(sdioh_info_t *sd, int rw, int func, bool fifo,
 
 	cmd_arg = 0;
 
-	ASSERT(nbytes);
-	ASSERT(nbytes <= sd->client_block_size[func]);
+	DHD_WARN(nbytes, return BCME_BADARG;);
+	DHD_WARN(nbytes <= sd->client_block_size[func], return BCME_BADARG;);
 
 	if (write) sd->t_cnt++; else sd->r_cnt++;
 
@@ -1766,8 +1766,8 @@ bcmspi_card_buf(sdioh_info_t *sd, int rw, int func, bool fifo,
 
 	/* gSPI expects that hw-header-len is equal to spi-command-len */
 	if ((func == 2) && (rw == SDIOH_WRITE) && (sd->dwordmode == FALSE)) {
-		ASSERT((uint16)sd->data_xfer_count == (uint16)(*data & 0xffff));
-		ASSERT((uint16)sd->data_xfer_count == (uint16)(~((*data & 0xffff0000) >> 16)));
+		DHD_WARN((uint16)sd->data_xfer_count == (uint16)(*data & 0xffff), return BCME_ERROR;);
+		DHD_WARN((uint16)sd->data_xfer_count == (uint16)(~((*data & 0xffff0000) >> 16)), return BCME_ERROR;);
 	}
 
 	if ((nbytes > 2000) && !write) {

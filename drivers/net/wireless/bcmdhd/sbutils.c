@@ -154,7 +154,7 @@ sb_intflag(si_t *sih)
 	INTR_OFF(sii, intr_val);
 	origidx = si_coreidx(sih);
 	corereg = si_setcore(sih, CC_CORE_ID, 0);
-	ASSERT(corereg != NULL);
+	DHD_WARN(corereg != NULL, return 0;);
 	sb = REGS2SB(corereg);
 	intflag = R_SBREG(sii, &sb->sbflagst);
 	sb_setcoreidx(sih, origidx);
@@ -287,7 +287,7 @@ sb_core_cflags_wo(si_t *sih, uint32 mask, uint32 val)
 	sii = SI_INFO(sih);
 	sb = REGS2SB(sii->curmap);
 
-	ASSERT((val & ~mask) == 0);
+	DHD_WARN((val & ~mask) == 0, return;);
 
 	/* mask and set */
 	w = (R_SBREG(sii, &sb->sbtmstatelow) & ~(mask << SBTML_SICF_SHIFT)) |
@@ -306,7 +306,7 @@ sb_core_cflags(si_t *sih, uint32 mask, uint32 val)
 	sii = SI_INFO(sih);
 	sb = REGS2SB(sii->curmap);
 
-	ASSERT((val & ~mask) == 0);
+	DHD_WARN((val & ~mask) == 0, return 0;);
 
 	/* mask and set */
 	if (mask || val) {
@@ -332,8 +332,8 @@ sb_core_sflags(si_t *sih, uint32 mask, uint32 val)
 	sii = SI_INFO(sih);
 	sb = REGS2SB(sii->curmap);
 
-	ASSERT((val & ~mask) == 0);
-	ASSERT((mask & ~SISF_CORE_BITS) == 0);
+	DHD_WARN((val & ~mask) == 0, return 0;);
+	DHD_WARN((mask & ~SISF_CORE_BITS) == 0, return 0;);
 
 	/* mask and set */
 	if (mask || val) {
@@ -380,9 +380,9 @@ sb_corereg(si_t *sih, uint coreidx, uint regoff, uint mask, uint val)
 	si_info_t *sii = SI_INFO(sih);
 	si_cores_info_t *cores_info = (si_cores_info_t *)sii->cores_info;
 
-	ASSERT(GOODIDX(coreidx));
-	ASSERT(regoff < SI_CORE_SIZE);
-	ASSERT((val & ~mask) == 0);
+	DHD_WARN(GOODIDX(coreidx), return 0;);
+	DHD_WARN(regoff < SI_CORE_SIZE, return 0;);
+	DHD_WARN((val & ~mask) == 0, return 0;);
 
 	if (coreidx >= SI_MAXCORES)
 		return 0;
@@ -394,7 +394,7 @@ sb_corereg(si_t *sih, uint coreidx, uint regoff, uint mask, uint val)
 		if (!cores_info->regs[coreidx]) {
 			cores_info->regs[coreidx] = REG_MAP(cores_info->coresba[coreidx],
 			                            SI_CORE_SIZE);
-			ASSERT(GOODREGS(cores_info->regs[coreidx]));
+			DHD_WARN(GOODREGS(cores_info->regs[coreidx]), return 0;);
 		}
 		r = (uint32 *)((uchar *)cores_info->regs[coreidx] + regoff);
 	} else if (BUSTYPE(sii->pub.bustype) == PCI_BUS) {
@@ -430,7 +430,7 @@ sb_corereg(si_t *sih, uint coreidx, uint regoff, uint mask, uint val)
 		/* switch core */
 		r = (uint32*) ((uchar*)sb_setcoreidx(&sii->pub, coreidx) + regoff);
 	}
-	ASSERT(r != NULL);
+	DHD_BUG(r == NULL);
 
 	/* mask and set */
 	if (mask || val) {
@@ -483,8 +483,8 @@ sb_corereg_addr(si_t *sih, uint coreidx, uint regoff)
 	si_info_t *sii = SI_INFO(sih);
 	si_cores_info_t *cores_info = (si_cores_info_t *)sii->cores_info;
 
-	ASSERT(GOODIDX(coreidx));
-	ASSERT(regoff < SI_CORE_SIZE);
+	DHD_WARN(GOODIDX(coreidx), return 0;);
+	DHD_WARN(regoff < SI_CORE_SIZE, return 0;);
 
 	if (coreidx >= SI_MAXCORES)
 		return 0;
@@ -496,7 +496,7 @@ sb_corereg_addr(si_t *sih, uint coreidx, uint regoff)
 		if (!cores_info->regs[coreidx]) {
 			cores_info->regs[coreidx] = REG_MAP(cores_info->coresba[coreidx],
 			                            SI_CORE_SIZE);
-			ASSERT(GOODREGS(cores_info->regs[coreidx]));
+			DHD_WARN(GOODREGS(cores_info->regs[coreidx]), return 0;);
 		}
 		r = (uint32 *)((uchar *)cores_info->regs[coreidx] + regoff);
 	} else if (BUSTYPE(sii->pub.bustype) == PCI_BUS) {
@@ -577,7 +577,7 @@ _sb_scan(si_info_t *sii, uint32 sba, void *regs, uint bus, uint32 sbba, uint num
 
 			/* determine numcores - this is the total # cores in the chip */
 			if (((ccrev == 4) || (ccrev >= 6))) {
-				ASSERT(cc);
+				DHD_WARN(cc, return 0;);
 				numcores = (R_REG(sii->osh, &cc->chipid) & CID_CC_MASK) >>
 				        CID_CC_SHIFT;
 			} else {
@@ -593,8 +593,9 @@ _sb_scan(si_info_t *sii, uint32 sba, void *regs, uint bus, uint32 sbba, uint num
 				else {
 					SI_ERROR(("sb_chip2numcores: unsupported chip 0x%x\n",
 					          chip));
-					ASSERT(0);
+
 					numcores = 1;
+					DHD_WARN(0,return 0;);
 				}
 			}
 			SI_VMSG(("_sb_scan: there are %u cores in the chip %s\n", numcores,
@@ -666,7 +667,7 @@ sb_setcoreidx(si_t *sih, uint coreidx)
 	 * If the user has provided an interrupt mask enabled function,
 	 * then assert interrupts are disabled before switching the core.
 	 */
-	ASSERT((sii->intrsenabled_fn == NULL) || !(*(sii)->intrsenabled_fn)((sii)->intr_arg));
+	DHD_WARN((sii->intrsenabled_fn == NULL) || !(*(sii)->intrsenabled_fn)((sii)->intr_arg), return NULL;);
 
 	sii->curmap = _sb_setcoreidx(sii, coreidx);
 	sii->curidx = coreidx;
@@ -689,7 +690,7 @@ _sb_setcoreidx(si_info_t *sii, uint coreidx)
 		/* map new one */
 		if (!cores_info->regs[coreidx]) {
 			cores_info->regs[coreidx] = REG_MAP(sbaddr, SI_CORE_SIZE);
-			ASSERT(GOODREGS(cores_info->regs[coreidx]));
+			DHD_WARN(GOODREGS(cores_info->regs[coreidx]), regs = NULL; break;);
 		}
 		regs = cores_info->regs[coreidx];
 		break;
@@ -716,7 +717,7 @@ _sb_setcoreidx(si_info_t *sii, uint coreidx)
 		/* map new one */
 		if (!cores_info->regs[coreidx]) {
 			cores_info->regs[coreidx] = (void *)(uintptr)sbaddr;
-			ASSERT(GOODREGS(cores_info->regs[coreidx]));
+			DHD_WARN(GOODREGS(cores_info->regs[coreidx]), regs = NULL; break;);
 		}
 		regs = cores_info->regs[coreidx];
 		break;
@@ -724,7 +725,7 @@ _sb_setcoreidx(si_info_t *sii, uint coreidx)
 
 
 	default:
-		ASSERT(0);
+		DHD_WARN(0,);
 		regs = NULL;
 		break;
 	}
@@ -813,20 +814,20 @@ sb_commit(si_t *sih)
 	uint intr_val = 0;
 
 	origidx = sii->curidx;
-	ASSERT(GOODIDX(origidx));
+	DHD_WARN(GOODIDX(origidx), return;);
 
 	INTR_OFF(sii, intr_val);
 
 	/* switch over to chipcommon core if there is one, else use pci */
 	if (sii->pub.ccrev != NOREV) {
 		chipcregs_t *ccregs = (chipcregs_t *)si_setcore(sih, CC_CORE_ID, 0);
-		ASSERT(ccregs != NULL);
+		DHD_WARN(ccregs != NULL, return;);
 
 		/* do the buffer registers update */
 		W_REG(sii->osh, &ccregs->broadcastaddress, SB_COMMIT);
 		W_REG(sii->osh, &ccregs->broadcastdata, 0x0);
 	} else
-		ASSERT(0);
+		DHD_WARN(0,);
 
 	/* restore core index */
 	sb_setcoreidx(sih, origidx);
@@ -842,7 +843,7 @@ sb_core_disable(si_t *sih, uint32 bits)
 
 	sii = SI_INFO(sih);
 
-	ASSERT(GOODREGS(sii->curmap));
+	DHD_WARN(GOODREGS(sii->curmap), return;);
 	sb = REGS2SB(sii->curmap);
 
 	/* if core is already in reset, just return */
@@ -901,7 +902,7 @@ sb_core_reset(si_t *sih, uint32 bits, uint32 resetbits)
 	volatile uint32 dummy;
 
 	sii = SI_INFO(sih);
-	ASSERT(GOODREGS(sii->curmap));
+	DHD_WARN(GOODREGS(sii->curmap), return;);
 	sb = REGS2SB(sii->curmap);
 
 	/*
@@ -999,7 +1000,7 @@ sb_set_initiator_to(si_t *sih, uint32 to, uint idx)
 			idx = si_findcoreidx(sih, MIPS33_CORE_ID, 0);
 			break;
 		default:
-			ASSERT(0);
+			DHD_BUG(1);
 		}
 		if (idx == BADIDX)
 			return ret;
@@ -1027,17 +1028,17 @@ sb_base(uint32 admatch)
 	uint type;
 
 	type = admatch & SBAM_TYPE_MASK;
-	ASSERT(type < 3);
+	DHD_BUG(type >= 3);
 
 	base = 0;
 
 	if (type == 0) {
 		base = admatch & SBAM_BASE0_MASK;
 	} else if (type == 1) {
-		ASSERT(!(admatch & SBAM_ADNEG));	/* neg not supported */
+		DHD_WARN(!(admatch & SBAM_ADNEG),);	/* neg not supported */
 		base = admatch & SBAM_BASE1_MASK;
 	} else if (type == 2) {
-		ASSERT(!(admatch & SBAM_ADNEG));	/* neg not supported */
+		DHD_WARN(!(admatch & SBAM_ADNEG),);	/* neg not supported */
 		base = admatch & SBAM_BASE2_MASK;
 	}
 
@@ -1051,17 +1052,17 @@ sb_size(uint32 admatch)
 	uint type;
 
 	type = admatch & SBAM_TYPE_MASK;
-	ASSERT(type < 3);
+	DHD_BUG(type >= 3);
 
 	size = 0;
 
 	if (type == 0) {
 		size = 1 << (((admatch & SBAM_ADINT0_MASK) >> SBAM_ADINT0_SHIFT) + 1);
 	} else if (type == 1) {
-		ASSERT(!(admatch & SBAM_ADNEG));	/* neg not supported */
+		DHD_WARN(!(admatch & SBAM_ADNEG),);	/* neg not supported */
 		size = 1 << (((admatch & SBAM_ADINT1_MASK) >> SBAM_ADINT1_SHIFT) + 1);
 	} else if (type == 2) {
-		ASSERT(!(admatch & SBAM_ADNEG));	/* neg not supported */
+		DHD_WARN(!(admatch & SBAM_ADNEG),);	/* neg not supported */
 		size = 1 << (((admatch & SBAM_ADINT2_MASK) >> SBAM_ADINT2_SHIFT) + 1);
 	}
 

@@ -474,12 +474,14 @@ rate_rspec2rate(uint32 rspec)
 		uint mcs = (rspec & WL_RSPEC_VHT_MCS_MASK);
 		uint nss = (rspec & WL_RSPEC_VHT_NSS_MASK) >> WL_RSPEC_VHT_NSS_SHIFT;
 
-		ASSERT(mcs <= 9);
-		ASSERT(nss <= 8);
+		if (mcs > 9 || nss > 8)  {
+			DHD_ERROR(("%s(): Invalid mcs %d or nss %d\n",__FUNCTION__, mcs,nss));
+			return 0;
+		}
 
 		rate = rate_mcs2rate(mcs, nss, RSPEC_BW(rspec), RSPEC_ISSGI(rspec));
 	} else {
-		ASSERT(0);
+		DHD_WARN(0,);
 	}
 
 	return (rate == 0) ? -1 : rate;
@@ -1361,7 +1363,7 @@ dhd_rtt_start(dhd_pub_t *dhd)
 	/* burst-duration */
 	if (rtt_target->burst_duration) {
 		ftm_params[ftm_param_cnt].data_intvl.intvl =
-			htol32(rtt_target->burst_period); /* ms */
+			htol32(rtt_target->burst_duration); /* ms */
 		ftm_params[ftm_param_cnt].data_intvl.tmu = WL_PROXD_TMU_MILLI_SEC;
 		ftm_params[ftm_param_cnt++].tlvid = WL_PROXD_TLV_ID_BURST_DURATION;
 		DHD_RTT((">\t burst duration : %d ms\n",
@@ -1414,6 +1416,8 @@ dhd_rtt_start(dhd_pub_t *dhd)
 		}
 
 	}
+	/* use random mac address */
+	dhd_set_rand_mac_oui(dhd);
 	dhd_rtt_ftm_config(dhd, FTM_DEFAULT_SESSION, FTM_CONFIG_CAT_GENERAL,
 		ftm_params, ftm_param_cnt);
 
@@ -1584,7 +1588,7 @@ dhd_rtt_convert_results_to_host(rtt_report_t *rtt_report, uint8 *p_data, uint16 
 	rtt_report->status = ftm_get_statusmap_info(proxd_status,
 			&ftm_status_map_info[0], ARRAYSIZE(ftm_status_map_info));
 	/* rssi (0.5db) */
-	rtt_report->rssi = ABS(ltoh16_ua(&p_data_info->avg_rtt.rssi)) * 2;
+	rtt_report->rssi = ABS((int16) ltoh16_ua(&p_data_info->avg_rtt.rssi)) * 2;
 	/* rx rate */
 	ratespec = ltoh32_ua(&p_data_info->avg_rtt.ratespec);
 	rtt_report->rx_rate = dhd_rtt_convert_rate_to_host(ratespec);
@@ -1597,14 +1601,14 @@ dhd_rtt_convert_results_to_host(rtt_report_t *rtt_report, uint8 *p_data, uint16 
 	/* rtt_sd */
 	rtt.tmu = ltoh16_ua(&p_data_info->avg_rtt.rtt.tmu);
 	rtt.intvl = ltoh32_ua(&p_data_info->avg_rtt.rtt.intvl);
-	rtt_report->rtt = FTM_INTVL2NSEC(&rtt) * 10; /* nano -> 0.1 nano */
+	rtt_report->rtt = FTM_INTVL2NSEC(&rtt) * 1000; /* nano -> pico seconds */
 	rtt_report->rtt_sd = ltoh16_ua(&p_data_info->sd_rtt); /* nano -> 0.1 nano */
 	DHD_RTT(("rtt_report->rtt : %llu\n", rtt_report->rtt));
 	DHD_RTT(("rtt_report->rssi : %d (0.5db)\n", rtt_report->rssi));
 
 	/* average distance */
 	if (avg_dist != FTM_INVALID) {
-		rtt_report->distance = (avg_dist >> 8) * 100; /* meter -> cm */
+		rtt_report->distance = (avg_dist >> 8) * 1000; /* meter -> mm */
 		rtt_report->distance += (avg_dist & 0xff) * 100 / 256;
 	} else {
 		rtt_report->distance = FTM_INVALID;
@@ -1915,34 +1919,28 @@ dhd_rtt_capability(dhd_pub_t *dhd, rtt_capabilities_t *capa)
 {
 	rtt_status_info_t *rtt_status;
 	int err = BCME_OK;
+
 	NULL_CHECK(dhd, "dhd is NULL", err);
 	rtt_status = GET_RTTSTATE(dhd);
 	NULL_CHECK(rtt_status, "rtt_status is NULL", err);
 	NULL_CHECK(capa, "capa is NULL", err);
 	bzero(capa, sizeof(rtt_capabilities_t));
-	switch (rtt_status->rtt_capa.proto) {
-	case RTT_CAP_ONE_WAY:
-		capa->rtt_one_sided_supported = 1;
-		break;
-	case RTT_CAP_FTM_WAY:
-		capa->rtt_ftm_supported = 1;
-		break;
-	}
 
-	switch (rtt_status->rtt_capa.feature) {
-	case RTT_FEATURE_LCI:
+	/* set rtt capabilities */
+	if (rtt_status->rtt_capa.proto & RTT_CAP_ONE_WAY)
+		capa->rtt_one_sided_supported = 1;
+	if (rtt_status->rtt_capa.proto & RTT_CAP_FTM_WAY)
+		capa->rtt_ftm_supported = 1;
+
+	if (rtt_status->rtt_capa.feature & RTT_FEATURE_LCI)
 		capa->lci_support = 1;
-		break;
-	case RTT_FEATURE_LCR:
+	if (rtt_status->rtt_capa.feature & RTT_FEATURE_LCR)
 		capa->lcr_support = 1;
-		break;
-	case RTT_FEATURE_PREAMBLE:
+	if (rtt_status->rtt_capa.feature & RTT_FEATURE_PREAMBLE)
 		capa->preamble_support = 1;
-		break;
-	case RTT_FEATURE_BW:
+	if (rtt_status->rtt_capa.feature & RTT_FEATURE_BW)
 		capa->bw_support = 1;
-		break;
-	}
+
 	/* bit mask */
 	capa->preamble_support = rtt_status->rtt_capa.preamble;
 	capa->bw_support = rtt_status->rtt_capa.bw;
@@ -1989,6 +1987,8 @@ dhd_rtt_init(dhd_pub_t *dhd)
 		rtt_status->rtt_capa.proto |= RTT_CAP_FTM_WAY;
 
 		/* indicate to set tx rate */
+		rtt_status->rtt_capa.feature |= RTT_FEATURE_LCI;
+		rtt_status->rtt_capa.feature |= RTT_FEATURE_LCR;
 		rtt_status->rtt_capa.feature |= RTT_FEATURE_PREAMBLE;
 		rtt_status->rtt_capa.preamble |= RTT_PREAMBLE_VHT;
 		rtt_status->rtt_capa.preamble |= RTT_PREAMBLE_HT;

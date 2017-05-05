@@ -53,6 +53,7 @@ void wl_android_post_init(void);
 int wl_android_wifi_on(struct net_device *dev);
 int wl_android_wifi_off(struct net_device *dev, bool on_failure);
 int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd);
+int wl_handle_private_cmd(struct net_device *net, char *command, u32 cmd_len);
 
 
 /* hostap mac mode */

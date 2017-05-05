@@ -625,7 +625,7 @@ wf_chspec_malformed(chanspec_t chanspec)
 			return TRUE;
 	}
 	else if (chspec_bw == WL_CHANSPEC_BW_160) {
-		ASSERT(CHSPEC_CTL_SB(chanspec) <= WL_CHANSPEC_CTL_SB_UUU);
+		DHD_WARN(CHSPEC_CTL_SB(chanspec) <= WL_CHANSPEC_CTL_SB_UUU,);
 	}
 	return FALSE;
 }
@@ -735,8 +735,6 @@ wf_chspec_ctlchan(chanspec_t chspec)
 	uint bw_mhz;
 	uint sb;
 
-	ASSERT(!wf_chspec_malformed(chspec));
-
 	/* Is there a sideband ? */
 	if (CHSPEC_IS20(chspec)) {
 		return CHSPEC_CHANNEL(chspec);
@@ -756,6 +754,8 @@ wf_chspec_ctlchan(chanspec_t chspec)
 		}
 		else {
 			bw_mhz = bw_chspec_to_mhz(chspec);
+			if (!bw_mhz)
+				return 0;
 			center_chan = CHSPEC_CHANNEL(chspec) >> WL_CHANSPEC_CHAN_SHIFT;
 		}
 
@@ -778,8 +778,6 @@ wf_chspec_ctlchspec(chanspec_t chspec)
 {
 	chanspec_t ctl_chspec = chspec;
 	uint8 ctl_chan;
-
-	ASSERT(!wf_chspec_malformed(chspec));
 
 	/* Is there a sideband ? */
 	if (!CHSPEC_IS20(chspec)) {
@@ -852,8 +850,6 @@ extern chanspec_t wf_chspec_primary40_chspec(chanspec_t chspec)
 	chanspec_t chspec40 = chspec;
 	uint center_chan;
 	uint sb;
-
-	ASSERT(!wf_chspec_malformed(chspec));
 
 	/* if the chanspec is > 80MHz, use the helper routine to find the primary 80 MHz channel */
 	if (CHSPEC_IS8080(chspec) || CHSPEC_IS160(chspec)) {
@@ -1178,7 +1174,6 @@ wf_chspec_primary80_chspec(chanspec_t chspec)
 	uint center_chan;
 	uint sb;
 
-	ASSERT(!wf_chspec_malformed(chspec));
 	if (CHSPEC_IS80(chspec)) {
 		chspec80 = chspec;
 	}

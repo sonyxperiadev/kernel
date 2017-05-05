@@ -56,7 +56,8 @@ pkt_frag_t pkt_frag_info(osl_t *osh, void *p)
 	int ipl;			/* IP frame length */
 	uint16 iph_frag;
 
-	ASSERT(osh && p);
+	if((osh == NULL) || (p == NULL))
+		return DHD_PKT_FRAG_NONE;
 
 	frame = PKTDATA(osh, p);
 	length = PKTLEN(osh, p);
@@ -227,7 +228,7 @@ _tdata_psh_info_pool_enq(tcpack_sup_module_t *tcpack_sup_mod,
 		return;
 	}
 
-	ASSERT(tdata_psh_info->next == NULL);
+	DHD_WARN(tdata_psh_info->next == NULL, return;);
 	tdata_psh_info->next = tcpack_sup_mod->tdata_psh_info_free;
 	tcpack_sup_mod->tdata_psh_info_free = tdata_psh_info;
 #ifdef DHDTCPACK_SUP_DBG
@@ -271,8 +272,8 @@ static int _tdata_psh_info_pool_init(dhd_pub_t *dhdp,
 	if (tcpack_sup_mod == NULL)
 		return BCME_ERROR;
 
-	ASSERT(tcpack_sup_mod->tdata_psh_info_pool == NULL);
-	ASSERT(tcpack_sup_mod->tdata_psh_info_free == NULL);
+	DHD_WARN(tcpack_sup_mod->tdata_psh_info_pool == NULL, return BCME_ERROR;);
+	DHD_WARN(tcpack_sup_mod->tdata_psh_info_free == NULL, return BCME_ERROR;);
 
 	tdata_psh_info_pool =
 		MALLOC(dhdp->osh, sizeof(tdata_psh_info_t) * TCPDATA_PSH_INFO_MAXNUM);
@@ -288,7 +289,7 @@ static int _tdata_psh_info_pool_init(dhd_pub_t *dhdp,
 	for (i = 0; i < TCPDATA_PSH_INFO_MAXNUM; i++)
 		_tdata_psh_info_pool_enq(tcpack_sup_mod, &tdata_psh_info_pool[i]);
 
-	ASSERT(tcpack_sup_mod->tdata_psh_info_free != NULL);
+	DHD_WARN(tcpack_sup_mod->tdata_psh_info_free != NULL, return BCME_ERROR;);
 	tcpack_sup_mod->tdata_psh_info_pool = tdata_psh_info_pool;
 
 	return BCME_OK;
@@ -330,7 +331,9 @@ static void _tdata_psh_info_pool_deinit(dhd_pub_t *dhdp,
 		tdata_psh_info->next = NULL;
 		i++;
 	}
-	ASSERT(i == TCPDATA_PSH_INFO_MAXNUM);
+
+	DHD_BUG(i != TCPDATA_PSH_INFO_MAXNUM);
+
 	MFREE(dhdp->osh, tcpack_sup_mod->tdata_psh_info_pool,
 		sizeof(tdata_psh_info_t) * TCPDATA_PSH_INFO_MAXNUM);
 	tcpack_sup_mod->tdata_psh_info_pool = NULL;
@@ -378,7 +381,7 @@ int dhd_tcpack_suppress_set(dhd_pub_t *dhdp, uint8 mode)
 	dhdp->tcpack_sup_mode = mode;
 
 	if (mode == TCPACK_SUP_OFF) {
-		ASSERT(dhdp->tcpack_sup_module != NULL);
+		DHD_WARN(dhdp->tcpack_sup_module != NULL,);
 		MFREE(dhdp->osh, dhdp->tcpack_sup_module, sizeof(tcpack_sup_module_t));
 		dhdp->tcpack_sup_module = NULL;
 		goto exit;
@@ -468,8 +471,6 @@ inline int dhd_tcpack_check_xmit(dhd_pub_t *dhdp, void *pkt)
 	}
 	tbl_cnt = tcpack_sup_mod->tcpack_info_cnt;
 	tcpack_info_tbl = tcpack_sup_mod->tcpack_info_tbl;
-
-	ASSERT(tbl_cnt <= TCPACK_INFO_MAXNUM);
 
 	for (i = 0; i < tbl_cnt; i++) {
 		if (tcpack_info_tbl[i].pkt_in_q == pkt) {
@@ -620,7 +621,7 @@ dhd_tcpack_suppress(dhd_pub_t *dhdp, void *pkt)
 	new_ip_hdr = new_ether_hdr + ETHER_HDR_LEN;
 	cur_framelen -= ETHER_HDR_LEN;
 
-	ASSERT(cur_framelen >= IPV4_MIN_HEADER_LEN);
+	DHD_WARN(cur_framelen >= IPV4_MIN_HEADER_LEN, goto exit;);
 
 	new_ip_hdr_len = IPV4_HLEN(new_ip_hdr);
 	if (IP_VER(new_ip_hdr) != IP_VER_4 || IPV4_PROT(new_ip_hdr) != IP_PROT_TCP) {
@@ -632,7 +633,7 @@ dhd_tcpack_suppress(dhd_pub_t *dhdp, void *pkt)
 	new_tcp_hdr = new_ip_hdr + new_ip_hdr_len;
 	cur_framelen -= new_ip_hdr_len;
 
-	ASSERT(cur_framelen >= TCP_MIN_HEADER_LEN);
+	DHD_WARN(cur_framelen >= TCP_MIN_HEADER_LEN, goto exit;);
 
 	DHD_TRACE(("%s %d: TCP pkt!\n", __FUNCTION__, __LINE__));
 
@@ -652,7 +653,7 @@ dhd_tcpack_suppress(dhd_pub_t *dhdp, void *pkt)
 		goto exit;
 	}
 
-	ASSERT(new_ip_total_len == new_ip_hdr_len + new_tcp_hdr_len);
+	DHD_WARN(new_ip_total_len == new_ip_hdr_len + new_tcp_hdr_len, goto exit;);
 
 	new_tcp_ack_num = ntoh32_ua(&new_tcp_hdr[TCP_ACK_NUM_OFFSET]);
 
@@ -733,7 +734,6 @@ dhd_tcpack_suppress(dhd_pub_t *dhdp, void *pkt)
 			/* New packet has higher TCP ACK number, so it replaces the old packet */
 			if (new_ip_hdr_len == old_ip_hdr_len &&
 				new_tcp_hdr_len == old_tcp_hdr_len) {
-				ASSERT(memcmp(new_ether_hdr, old_ether_hdr, ETHER_HDR_LEN) == 0);
 				bcopy(new_ip_hdr, old_ip_hdr, new_ip_total_len);
 				PKTFREE(dhdp->osh, pkt, FALSE);
 				DHD_TRACE(("%s %d: TCP ACK replace %u -> %u\n",
@@ -782,7 +782,7 @@ dhd_tcpack_suppress(dhd_pub_t *dhdp, void *pkt)
 		tack_tbl.cnt[1]++;
 #endif /* DEBUG_COUNTER && DHDTCPACK_SUP_DBG */
 	} else {
-		ASSERT(i == tcpack_sup_mod->tcpack_info_cnt);
+		DHD_WARN(i == tcpack_sup_mod->tcpack_info_cnt,);
 		DHD_TRACE(("%s %d: No empty tcp ack info tbl\n",
 			__FUNCTION__, __LINE__));
 	}
@@ -836,7 +836,7 @@ dhd_tcpdata_info_get(dhd_pub_t *dhdp, void *pkt)
 	ip_hdr = ether_hdr + ETHER_HDR_LEN;
 	cur_framelen -= ETHER_HDR_LEN;
 
-	ASSERT(cur_framelen >= IPV4_MIN_HEADER_LEN);
+	DHD_WARN(cur_framelen >= IPV4_MIN_HEADER_LEN, goto exit;);
 
 	ip_hdr_len = IPV4_HLEN(ip_hdr);
 	if (IP_VER(ip_hdr) != IP_VER_4 || IPV4_PROT(ip_hdr) != IP_PROT_TCP) {
@@ -848,7 +848,7 @@ dhd_tcpdata_info_get(dhd_pub_t *dhdp, void *pkt)
 	tcp_hdr = ip_hdr + ip_hdr_len;
 	cur_framelen -= ip_hdr_len;
 
-	ASSERT(cur_framelen >= TCP_MIN_HEADER_LEN);
+	DHD_WARN(cur_framelen >= TCP_MIN_HEADER_LEN, goto exit;);
 
 	DHD_TRACE(("%s %d: TCP pkt!\n", __FUNCTION__, __LINE__));
 
@@ -861,7 +861,7 @@ dhd_tcpdata_info_get(dhd_pub_t *dhdp, void *pkt)
 		goto exit;
 	}
 
-	ASSERT(ip_total_len > ip_hdr_len + tcp_hdr_len);
+	DHD_WARN(ip_total_len > ip_hdr_len + tcp_hdr_len, goto exit;);
 
 	if ((tcp_hdr[TCP_FLAGS_OFFSET] & TCP_FLAG_PSH) == 0) {
 		DHD_TRACE(("%s %d: Not interested TCP DATA packet\n", __FUNCTION__, __LINE__));
@@ -925,12 +925,12 @@ dhd_tcpdata_info_get(dhd_pub_t *dhdp, void *pkt)
 				__FUNCTION__, __LINE__, tcpack_sup_mod->psh_info_enq_num));
 #endif /* DHDTCPACK_SUP_DBG */
 			tcpack_sup_mod->tcpdata_info_cnt--;
-			ASSERT(tcpack_sup_mod->tcpdata_info_cnt >= 0);
+			DHD_WARN(tcpack_sup_mod->tcpdata_info_cnt >= 0, goto exit;);
 
 			last_tdata_info =
 				&tcpack_sup_mod->tcpdata_info_tbl[tcpack_sup_mod->tcpdata_info_cnt];
 			if (i < tcpack_sup_mod->tcpdata_info_cnt) {
-				ASSERT(last_tdata_info != tdata_info_tmp);
+				DHD_WARN(last_tdata_info != tdata_info_tmp,);
 				bcopy(last_tdata_info, tdata_info_tmp, sizeof(tcpdata_info_t));
 			}
 			bzero(last_tdata_info, sizeof(tcpdata_info_t));
@@ -946,7 +946,7 @@ dhd_tcpdata_info_get(dhd_pub_t *dhdp, void *pkt)
 	end_tcp_seq_num = tcp_seq_num + tcp_data_len;
 
 	if (tcpdata_info == NULL) {
-		ASSERT(i == tcpack_sup_mod->tcpdata_info_cnt);
+		DHD_WARN(i == tcpack_sup_mod->tcpdata_info_cnt, goto exit;);
 		if (i >= TCPDATA_INFO_MAXNUM) {
 			DHD_TRACE(("%s %d: tcp_data_info_tbl FULL! %d %d"
 				" IP addr "IPV4_ADDR_STR" "IPV4_ADDR_STR" TCP port %d %d\n",
@@ -980,7 +980,7 @@ dhd_tcpdata_info_get(dhd_pub_t *dhdp, void *pkt)
 		tcpack_sup_mod->tcpdata_info_cnt++;
 	}
 
-	ASSERT(tcpdata_info != NULL);
+	DHD_WARN(tcpdata_info != NULL,ret = BCME_ERROR;dhd_os_tcpackunlock(dhdp);goto exit;);
 
 	tdata_psh_info = _tdata_psh_info_pool_deq(tcpack_sup_mod);
 #ifdef DHDTCPACK_SUP_DBG
@@ -1003,12 +1003,12 @@ dhd_tcpdata_info_get(dhd_pub_t *dhdp, void *pkt)
 	DHD_TRACE(("%s %d: TCP PSH DATA recvd! end seq %u\n",
 		__FUNCTION__, __LINE__, tdata_psh_info->end_seq));
 
-	ASSERT(tdata_psh_info->next == NULL);
+	DHD_WARN(tdata_psh_info->next == NULL,ret = BCME_ERROR;dhd_os_tcpackunlock(dhdp);goto exit;);
 
 	if (tcpdata_info->tdata_psh_info_head == NULL)
 		tcpdata_info->tdata_psh_info_head = tdata_psh_info;
 	else {
-		ASSERT(tcpdata_info->tdata_psh_info_tail);
+		DHD_WARN(tcpdata_info->tdata_psh_info_tail, ret = BCME_ERROR;dhd_os_tcpackunlock(dhdp);goto exit;);
 		tcpdata_info->tdata_psh_info_tail->next = tdata_psh_info;
 	}
 	tcpdata_info->tdata_psh_info_tail = tdata_psh_info;

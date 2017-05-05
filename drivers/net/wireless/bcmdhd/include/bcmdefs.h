@@ -246,9 +246,11 @@ typedef struct {
 # undef BCMASSERT_LOG
 #endif
 
-#if defined(BCMASSERT_LOG)
-#define BCMASSERT_SUPPORT
-#endif 
+#define DHD_WARN(expr, func) \
+do { if(!(expr)) { \
+	WARN_ON(!(expr)); \
+	func} } while (0)
+#define DHD_BUG(expr) BUG_ON(expr); \
 
 /* Macros for doing definition and get/set of bitfields
  * Usage example, e.g. a three-bit field (bits 4-6):

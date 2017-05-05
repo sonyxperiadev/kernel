@@ -50,6 +50,8 @@
 #include <linux/fs.h>
 
 
+#define DHD_DT_COMPAT_ENTRY	"android,bcmdhd_wlan"
+
 #define BCM_DBG pr_debug
 
 static int gpio_wl_reg_on = -1;
@@ -298,13 +300,13 @@ err_skb_alloc:
 
 int dhd_wifi_init_gpio(void)
 {
-	int wl_reg_on,wl_host_wake;
-	char *wlan_node = "android,bcmdhd_wlan";
+	int wl_reg_on;
+	int wl_host_wake;
 	struct device_node *np;
 
-	np = of_find_compatible_node(NULL, NULL, wlan_node);
+	np = of_find_compatible_node(NULL, NULL, DHD_DT_COMPAT_ENTRY);
 	if (!np) {
-		WARN(1, "failed to get device node of BRCM WLAN\n");
+		pr_warn("%s: BRCM WLAN mode not found\n", __func__);
 		return -ENODEV;
 	}
 
@@ -379,7 +381,151 @@ struct cntry_locales_custom {
 	int  custom_locale_rev;
 };
 
-static struct cntry_locales_custom brcm_wlan_translate_custom_table[] = {
+struct country_tables {
+	struct cntry_locales_custom *sta_dfs_table;
+	size_t sta_dfs_size;
+	struct cntry_locales_custom *sta_nodfs_table;
+	size_t sta_nodfs_size;
+	struct cntry_locales_custom *ap_table;
+	size_t ap_size;
+};
+
+static struct cntry_locales_custom bcm4354_sdio_translate_sta_dfs_table[] = {
+/* Table should be filled out based on custom platform regulatory requirement */
+	{"",   "XZ", 11},  /* Universal if Country code is unknown or empty */
+	{"US", "US", 0},
+	{"AE", "AE", 1},
+	{"AR", "AR", 21},
+	{"AT", "AT", 4},
+	{"AU", "AU", 6},
+	{"BE", "BE", 4},
+	{"BG", "BG", 4},
+	{"BN", "BN", 4},
+	{"BR", "BR", 4},
+	{"CA", "US", 0},   /* Previously was CA/31 */
+	{"CH", "CH", 4},
+	{"CY", "CY", 4},
+	{"CZ", "CZ", 4},
+	{"DE", "DE", 7},
+	{"DK", "DK", 4},
+	{"EE", "EE", 4},
+	{"ES", "ES", 4},
+	{"FI", "FI", 4},
+	{"FR", "FR", 5},
+	{"GB", "GB", 6},
+	{"GR", "GR", 4},
+	{"HK", "HK", 2},
+	{"HR", "HR", 4},
+	{"HU", "HU", 4},
+	{"IE", "IE", 5},
+	{"IN", "IN", 3},
+	{"IS", "IS", 4},
+	{"IT", "IT", 4},
+	{"ID", "ID", 13},
+	{"JP", "JP", 58},
+	{"KR", "KR", 57},
+	{"KW", "KW", 5},
+	{"LI", "LI", 4},
+	{"LT", "LT", 4},
+	{"LU", "LU", 3},
+	{"LV", "LV", 4},
+	{"MA", "MA", 2},
+	{"MT", "MT", 4},
+	{"MX", "MX", 20},
+	{"MY", "MY", 3},
+	{"NL", "NL", 4},
+	{"NO", "NO", 4},
+	{"NZ", "NZ", 4},
+	{"PL", "PL", 4},
+	{"PT", "PT", 4},
+	{"PY", "PY", 2},
+	{"QA", "QA", 0},
+	{"RO", "RO", 4},
+	{"RU", "RU", 13},
+	{"SA", "SA", 26},
+	{"SE", "SE", 4},
+	{"SG", "SG", 4},
+	{"SI", "SI", 4},
+	{"SK", "SK", 4},
+	{"TH", "TH", 5},
+	{"TR", "TR", 7},
+	{"TW", "TW", 1},
+	{"VN", "VN", 4},
+	{"IR", "XZ", 11},
+	{"SD", "XZ", 11},
+	{"SY", "XZ", 11},
+	{"GL", "XZ", 11},
+	{"PS", "XZ", 11},
+	{"TL", "XZ", 11},
+	{"MH", "XZ", 11},
+};
+
+static struct cntry_locales_custom bcm4354_sdio_translate_sta_nodfs_table[] = {
+	{"",   "XZ", 40},  /* Universal if Country code is unknown or empty */
+	{"US", "US", 172},
+	{"AM", "E0", 26},
+	{"AU", "AU", 37},
+	{"BG", "E0", 26},
+	{"BR", "BR", 18},
+	{"CA", "US", 172},
+	{"CH", "E0", 26},
+	{"CY", "E0", 26},
+	{"CZ", "E0", 26},
+	{"DE", "E0", 26},
+	{"DK", "E0", 26},
+	{"DZ", "E0", 26},
+	{"EE", "E0", 26},
+	{"ES", "E0", 26},
+	{"EU", "E0", 26},
+	{"FI", "E0", 26},
+	{"FR", "E0", 26},
+	{"GB", "E0", 26},
+	{"GR", "E0", 26},
+	{"HK", "SG", 17},
+	{"HR", "E0", 26},
+	{"HU", "E0", 26},
+	{"ID", "ID", 1},
+	{"IE", "E0", 26},
+	{"IL", "E0", 26},
+	{"IN", "IN", 27},
+	{"IQ", "E0", 26},
+	{"IS", "E0", 26},
+	{"IT", "E0", 26},
+	{"JP", "JP", 83},
+	{"KR", "KR", 79},
+	{"KW", "E0", 26},
+	{"KZ", "E0", 26},
+	{"LI", "E0", 26},
+	{"LT", "E0", 26},
+	{"LU", "E0", 26},
+	{"LV", "LV", 4},
+	{"LY", "E0", 26},
+	{"MA", "E0", 26},
+	{"MT", "E0", 26},
+	{"MY", "MY", 15},
+	{"MX", "US", 172},
+	{"NL", "E0", 26},
+	{"NO", "E0", 26},
+	{"OM", "E0", 26},
+	{"PL", "E0", 26},
+	{"PT", "E0", 26},
+	{"QA", "QA", 0},
+	{"RO", "E0", 26},
+	{"RS", "E0", 26},
+	{"SA", "SA", 26},
+	{"SE", "E0", 26},
+	{"SG", "SG", 17},
+	{"SI", "E0", 26},
+	{"SK", "E0", 26},
+	{"SZ", "E0", 26},
+	{"TH", "TH", 9},
+	{"TN", "E0", 26},
+	{"TR", "E0", 26},
+	{"TW", "TW", 60},
+	{"ZA", "E0", 26},
+};
+
+static struct cntry_locales_custom bcm4356_pcie_translate_sta_dfs_table[] = {
 	/* Table should be filled out based on custom platform regulatory requirement */
 	{"",   "XT", 49},  /* Universal if Country code is unknown or empty */
 	{"US", "US", 176},
@@ -393,6 +539,7 @@ static struct cntry_locales_custom brcm_wlan_translate_custom_table[] = {
 	{"BR", "BR", 4},
 	{"CA", "US", 176},   /* Previousely was CA/31 */
 	{"CH", "CH", 4},
+	{"CN", "CN", 24},
 	{"CY", "CY", 4},
 	{"CZ", "CZ", 4},
 	{"DE", "DE", 7},
@@ -440,7 +587,7 @@ static struct cntry_locales_custom brcm_wlan_translate_custom_table[] = {
 	{"VN", "VN", 4},
 };
 
-struct cntry_locales_custom brcm_wlan_translate_nodfs_table[] = {
+static struct cntry_locales_custom bcm4356_pcie_translate_sta_nodfs_table[] = {
 	{"",   "XT", 50},  /* Universal if Country code is unknown or empty */
 	{"US", "US", 177},
 	{"AU", "AU", 41},
@@ -491,6 +638,153 @@ struct cntry_locales_custom brcm_wlan_translate_nodfs_table[] = {
 	{"TW", "TW", 60},
 };
 
+static struct cntry_locales_custom bcm4356_pcie_translate_ap_table[] = {
+	{"JP", "JP", 991},
+};
+
+static struct cntry_locales_custom bcm4358_pcie_translate_sta_dfs_table[] = {
+	/* Table should be filled out based on custom platform regulatory requirement */
+	{"",   "XT", 994},  /* Universal if Country code is unknown or empty */
+	{"US", "US", 975},
+	{"AE", "AE", 1},
+	{"AR", "AR", 21},
+	{"AT", "AT", 4},
+	{"AU", "AU", 989},
+	{"BE", "BE", 4},
+	{"BG", "BG", 4},
+	{"BN", "BN", 4},
+	{"BR", "BR", 4},
+	{"CA", "US", 975},
+	{"CH", "E0", 961},
+	{"CN", "CN", 24},
+	{"CO", "CO", 17},
+	{"CY", "E0", 961},
+	{"CZ", "E0", 961},
+	{"DE", "E0", 961},
+	{"DK", "E0", 961},
+	{"EE", "E0", 961},
+	{"ES", "E0", 961},
+	{"EU", "E0", 961},
+	{"FI", "E0", 961},
+	{"FR", "E0", 961},
+	{"GB", "E0", 961},
+	{"GR", "E0", 961},
+	{"HK", "HK", 2},
+	{"HR", "E0", 961},
+	{"HU", "E0", 961},
+	{"ID", "ID", 5},
+	{"IE", "E0", 961},
+	{"IN", "IN", 998},
+	{"IS", "E0", 961},
+	{"IT", "E0", 961},
+	{"ID", "ID", 5},
+	{"JP", "JP", 989},
+	{"KR", "KR", 984},
+	{"KW", "KW", 5},
+	{"LI", "E0", 961},
+	{"LT", "E0", 961},
+	{"LU", "E0", 961},
+	{"LV", "LV", 4},
+	{"MA", "MA", 2},
+	{"MT", "E0", 961},
+	{"MX", "US", 975},
+	{"MY", "MY", 19},
+	{"NL", "E0", 961},
+	{"NO", "E0", 961},
+	{"NZ", "NZ", 4},
+	{"PL", "E0", 961},
+	{"PR", "PR", 20},
+	{"PT", "E0", 961},
+	{"PY", "PY", 2},
+	{"RO", "E0", 961},
+	{"RU", "RU", 62},
+	{"SA", "SA", 5},
+	{"SE", "E0", 961},
+	{"SG", "SG", 996},
+	{"SI", "E0", 961},
+	{"SK", "E0", 961},
+	{"SZ", "E0", 961},
+	{"TH", "TH", 5},
+	{"TR", "TR", 7},
+	{"TW", "TW", 992},
+	{"VN", "VN", 4},
+	{"ZA", "ZA", 6},
+};
+
+static struct cntry_locales_custom bcm4358_pcie_translate_sta_nodfs_table[] = {
+	{"",   "XT", 995},  /* Universal if Country code is unknown or empty */
+	{"US", "US", 976},
+	{"AT", "AT", 16},
+	{"AU", "AU", 988},
+	{"BE", "BE", 15},
+	{"BR", "BR", 18},
+	{"CA", "CA", 78},
+	{"CH", "E0", 960},
+	{"CO", "CO", 40},
+	{"CY", "E0", 960},
+	{"CZ", "E0", 960},
+	{"DE", "E0", 960},
+	{"DK", "E0", 960},
+	{"EE", "E0", 960},
+	{"ES", "E0", 960},
+	{"EU", "E0", 960},
+	{"FI", "E0", 960},
+	{"FR", "E0", 960},
+	{"GB", "E0", 960},
+	{"GR", "E0", 960},
+	{"HK", "HK", 7},
+	{"HR", "E0", 960},
+	{"HU", "E0", 960},
+	{"ID", "ID", 28},
+	{"IE", "E0", 960},
+	{"IN", "IN", 997},
+	{"IS", "E0", 960},
+	{"IT", "E0", 960},
+	{"JP", "JP", 987},
+	{"KR", "KR", 983},
+	{"KW", "KW", 6},
+	{"LI", "E0", 960},
+	{"LT", "E0", 960},
+	{"LU", "E0", 960},
+	{"LV", "LV", 4},
+	{"MA", "MA", 2},
+	{"MT", "E0", 960},
+	{"MY", "MY", 20},
+	{"MX", "US", 976},
+	{"NL", "E0", 960},
+	{"NO", "E0", 960},
+	{"NZ", "NZ", 10},
+	{"PL", "E0", 960},
+	{"PR", "PR", 39},
+	{"PT", "E0", 960},
+	{"RO", "E0", 960},
+	{"RU", "RU", 63},
+	{"SA", "SA", 27},
+	{"SE", "E0", 960},
+	{"SG", "SG", 995},
+	{"SI", "E0", 960},
+	{"SK", "E0", 960},
+	{"SZ", "E0", 960},
+	{"TH", "TH", 9},
+	{"TR", "TR", 16},
+	{"TW", "TW", 991},
+	{"ZA", "ZA", 15},
+};
+
+static struct cntry_locales_custom bcm4358_pcie_translate_ap_table[] = {
+	{"", "XT", 993},
+	{"JP", "JP", 988},
+};
+
+static struct country_tables dhd_country_tables = {
+	.sta_dfs_table = bcm4358_pcie_translate_sta_dfs_table,
+	.sta_dfs_size = ARRAY_SIZE(bcm4358_pcie_translate_sta_dfs_table),
+	.sta_nodfs_table = bcm4358_pcie_translate_sta_nodfs_table,
+	.sta_nodfs_size = ARRAY_SIZE(bcm4358_pcie_translate_sta_nodfs_table),
+	.ap_table = bcm4358_pcie_translate_ap_table,
+	.ap_size = ARRAY_SIZE(bcm4358_pcie_translate_ap_table),
+};
+
 static void *dhd_wlan_get_country_code(char *ccode, u32 flags)
 {
 	struct cntry_locales_custom *locales;
@@ -500,18 +794,68 @@ static void *dhd_wlan_get_country_code(char *ccode, u32 flags)
 	if (!ccode)
 		return NULL;
 
+	if (flags & WLAN_PLAT_AP_FLAG) {
+		locales = dhd_country_tables.ap_table;
+		size = dhd_country_tables.ap_size;
+		for (i = 0; i < size; i++)
+			if (strcmp(ccode, locales[i].iso_abbrev) == 0)
+				return &locales[i];
+	}
+
 	if (flags & WLAN_PLAT_NODFS_FLAG) {
-		locales = brcm_wlan_translate_nodfs_table;
-		size = ARRAY_SIZE(brcm_wlan_translate_nodfs_table);
+		locales = dhd_country_tables.sta_nodfs_table;
+		size = dhd_country_tables.sta_nodfs_size;
 	} else {
-		locales = brcm_wlan_translate_custom_table;
-		size = ARRAY_SIZE(brcm_wlan_translate_custom_table);
+		locales = dhd_country_tables.sta_dfs_table;
+		size = dhd_country_tables.sta_dfs_size;
 	}
 
 	for (i = 0; i < size; i++)
 		if (strcmp(ccode, locales[i].iso_abbrev) == 0)
 			return &locales[i];
 	return &locales[0];
+}
+
+static int dhd_wifi_init_country(void)
+{
+	struct device_node *np;
+	const char *chip_name;
+
+	np = of_find_compatible_node(NULL, NULL, DHD_DT_COMPAT_ENTRY);
+	if (!np) {
+		pr_warn("%s: BRCM WLAN node not found\n", __func__);
+		return -ENODEV;
+	}
+	if (of_property_read_string(np, "wl_chip", &chip_name)) {
+		pr_warn("%s: BRCM WLAN chip name not found\n", __func__);
+		return -ENODEV;
+	}
+	if (strcmp(chip_name, "bcm4354_sdio") == 0) {
+		dhd_country_tables.sta_dfs_table =
+			bcm4354_sdio_translate_sta_dfs_table;
+		dhd_country_tables.sta_dfs_size =
+			ARRAY_SIZE(bcm4354_sdio_translate_sta_dfs_table);
+		dhd_country_tables.sta_nodfs_table =
+			bcm4354_sdio_translate_sta_nodfs_table;
+		dhd_country_tables.sta_nodfs_size =
+			ARRAY_SIZE(bcm4354_sdio_translate_sta_nodfs_table);
+		dhd_country_tables.ap_table = NULL;
+		dhd_country_tables.ap_size = 0;
+	} else if (strcmp(chip_name, "bcm4356_pcie") == 0) {
+		dhd_country_tables.sta_dfs_table =
+			bcm4356_pcie_translate_sta_dfs_table;
+		dhd_country_tables.sta_dfs_size =
+			ARRAY_SIZE(bcm4356_pcie_translate_sta_dfs_table);
+		dhd_country_tables.sta_nodfs_table =
+			bcm4356_pcie_translate_sta_nodfs_table;
+		dhd_country_tables.sta_nodfs_size =
+			ARRAY_SIZE(bcm4356_pcie_translate_sta_nodfs_table);
+		dhd_country_tables.ap_table =
+			bcm4356_pcie_translate_ap_table;
+		dhd_country_tables.ap_size =
+			ARRAY_SIZE(bcm4356_pcie_translate_ap_table);
+	}
+	return 0;
 }
 
 static unsigned char brcm_mac_addr[IFHWADDRLEN] = { 0, 0x90, 0x4c, 0, 0, 0 };
@@ -614,6 +958,7 @@ int __init dhd_wlan_init(void)
 	ret = dhd_init_wlan_mem();
 #endif
 
+	dhd_wifi_init_country();
 	ret = dhd_wifi_init_gpio();
 	dhd_wlan_resources[0].start = dhd_wlan_resources[0].end =
 		brcm_wake_irq;

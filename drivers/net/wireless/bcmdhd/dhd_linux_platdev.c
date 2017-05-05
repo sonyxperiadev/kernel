@@ -67,7 +67,7 @@ struct wifi_platform_data dhd_wlan_control = {0};
 
 static int dhd_wifi_platform_load(void);
 
-extern void* wl_cfg80211_get_dhdp(void);
+extern void *wl_cfg80211_get_dhdp(struct net_device *dev);
 
 #ifdef ENABLE_4335BT_WAR
 extern int bcm_bt_lock(int cookie);
@@ -272,8 +272,8 @@ static int wifi_plat_dev_drv_probe(struct platform_device *pdev)
 	/* Android style wifi platform data device ("bcmdhd_wlan" or "bcm4329_wlan")
 	 * is kept for backward compatibility and supports only 1 adapter
 	 */
-	ASSERT(dhd_wifi_platdata != NULL);
-	ASSERT(dhd_wifi_platdata->num_adapters == 1);
+	DHD_WARN(dhd_wifi_platdata != NULL, return -ENODEV;);
+	DHD_WARN(dhd_wifi_platdata->num_adapters == 1, return -ENODEV;);
 	adapter = &dhd_wifi_platdata->adapters[0];
 #if !defined(CONFIG_MACH_SONY_SHINANO) && defined(CONFIG_WIFI_CONTROL_FUNC)
 	adapter->wifi_plat_data = (void *)&somc_wifi_control;
@@ -318,8 +318,8 @@ static int wifi_plat_dev_drv_remove(struct platform_device *pdev)
 	/* Android style wifi platform data device ("bcmdhd_wlan" or "bcm4329_wlan")
 	 * is kept for backward compatibility and supports only 1 adapter
 	 */
-	ASSERT(dhd_wifi_platdata != NULL);
-	ASSERT(dhd_wifi_platdata->num_adapters == 1);
+	DHD_WARN(dhd_wifi_platdata != NULL, return -ENODEV;);
+	DHD_WARN(dhd_wifi_platdata->num_adapters == 1, return -ENODEV;);
 	adapter = &dhd_wifi_platdata->adapters[0];
 	if (is_power_on) {
 #ifdef BCMPCIE
@@ -519,7 +519,7 @@ static int bcmdhd_wifi_plat_dev_drv_remove(struct platform_device *pdev)
 {
 	int i;
 	wifi_adapter_info_t *adapter;
-	ASSERT(dhd_wifi_platdata != NULL);
+	DHD_WARN(dhd_wifi_platdata != NULL, return -ENODEV;);
 
 	/* power down all adapters */
 	for (i = 0; i < dhd_wifi_platdata->num_adapters; i++) {
