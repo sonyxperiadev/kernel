@@ -8179,6 +8179,7 @@ static s32 wl_inform_single_bss(struct bcm_cfg80211 *cfg, struct wl_bss_info *bi
 	cfg80211_put_bss(cbss);
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 9, 0) */
 
+#ifdef WL_SCHED_SCAN
 	if (DBG_RING_ACTIVE(dhdp, DHD_EVENT_RING_ID) &&
 		(cfg->sched_scan_req && !cfg->scan_request)) {
 		alloc_len = sizeof(log_conn_event_t) + (3 * sizeof(tlv_log)) +
@@ -8220,6 +8221,7 @@ static s32 wl_inform_single_bss(struct bcm_cfg80211 *cfg, struct wl_bss_info *bi
 			event_data, payload_len);
 		MFREE(dhdp->osh, event_data, alloc_len);
 	}
+#endif /* WL_SCHED_SCAN */
 
 out_err:
 	kfree(notif_bss_info);
@@ -10216,7 +10218,9 @@ static s32 wl_notify_escan_complete(struct bcm_cfg80211 *cfg,
 	s32 err = BCME_OK;
 	unsigned long flags;
 	struct net_device *dev;
+#ifdef WL_SCHED_SCAN
 	dhd_pub_t *dhdp = (dhd_pub_t *)(cfg->pub);
+#endif /* WL_SCHED_SCAN */
 
 	WL_DBG(("Enter \n"));
 
