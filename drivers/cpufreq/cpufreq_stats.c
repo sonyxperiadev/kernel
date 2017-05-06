@@ -440,7 +440,6 @@ static void cpufreq_powerstats_create(unsigned int cpu,
 	unsigned int alloc_size, i = 0, j = 0, ret = 0;
 	struct cpufreq_power_stats *powerstats;
 	struct device_node *cpu_node;
-	char device_path[16];
 
 	powerstats = kzalloc(sizeof(struct cpufreq_power_stats),
 			GFP_KERNEL);
@@ -468,8 +467,7 @@ static void cpufreq_powerstats_create(unsigned int cpu,
 	}
 	powerstats->state_num = j;
 
-	snprintf(device_path, sizeof(device_path), "/cpus/cpu@%d", cpu);
-	cpu_node = of_find_node_by_path(device_path);
+	cpu_node = of_get_cpu_node(cpu, NULL);
 	if (cpu_node) {
 		ret = of_property_read_u32_array(cpu_node, "current",
 				powerstats->curr, count);
@@ -628,7 +626,7 @@ static void cpufreq_stats_create_table(unsigned int cpu)
 {
 	struct cpufreq_policy *policy;
 	struct cpufreq_frequency_table *table;
-	int i, count = 0;
+	int i, cpu_num, count = 0;
 	/*
 	 * "likely(!policy)" because normally cpufreq_stats will be registered
 	 * before cpufreq driver
@@ -642,16 +640,17 @@ static void cpufreq_stats_create_table(unsigned int cpu)
 		for (i = 0; table[i].frequency != CPUFREQ_TABLE_END; i++) {
 			unsigned int freq = table[i].frequency;
 
-			if (freq == CPUFREQ_ENTRY_INVALID)
-				continue;
-			count++;
+			if (freq != CPUFREQ_ENTRY_INVALID)
+				count++;
 		}
 
 		if (!per_cpu(all_cpufreq_stats, cpu))
 			cpufreq_allstats_create(cpu, table, count);
 
-		if (!per_cpu(cpufreq_power_stats, cpu))
-			cpufreq_powerstats_create(cpu, table, count);
+		for_each_possible_cpu(cpu_num) {
+			if (!per_cpu(cpufreq_power_stats, cpu))
+				cpufreq_powerstats_create(cpu, table, count);
+		}
 
 		__cpufreq_stats_create_table(policy, table, count);
 	}
