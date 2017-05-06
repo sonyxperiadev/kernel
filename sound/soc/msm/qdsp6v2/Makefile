@@ -18,3 +18,4 @@ obj-y += audio_calibration.o audio_cal_utils.o q6adm.o q6afe.o q6asm.o \
 	q6audio-v2.o q6voice.o q6core.o rtac.o q6lsm.o audio_slimslave.o
 ocmem-audio-objs += audio_ocmem.o
 obj-$(CONFIG_AUDIO_OCMEM) += ocmem-audio.o
+ccflags-y := -Os
