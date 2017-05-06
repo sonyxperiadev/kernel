@@ -3634,7 +3634,7 @@ static int __wlan_hdd_cfg80211_extscan_set_significant_change(struct wiphy *wiph
     pReqMsg->numAp = nla_get_u32(
             tb[QCA_WLAN_VENDOR_ATTR_EXTSCAN_SIGNIFICANT_CHANGE_PARAMS_NUM_AP]);
     if (pReqMsg->numAp > WLAN_EXTSCAN_MAX_SIGNIFICANT_CHANGE_APS) {
-        hdd_err("Number of AP %u exceeds max %u",
+        hddLog(VOS_TRACE_LEVEL_ERROR, FL("Number of AP %u exceeds max %u"),
                 pReqMsg->numAp,
                 WLAN_EXTSCAN_MAX_SIGNIFICANT_CHANGE_APS);
         goto fail;
@@ -3648,7 +3648,7 @@ static int __wlan_hdd_cfg80211_extscan_set_significant_change(struct wiphy *wiph
                 tb[QCA_WLAN_VENDOR_ATTR_EXTSCAN_AP_THRESHOLD_PARAM], rem) {
 
         if (i == pReqMsg->numAp) {
-            hdd_warn("Ignoring excess AP");
+            hddLog(VOS_TRACE_LEVEL_WARN, FL("Ignoring excess AP"));
             break;
         }
 
@@ -3700,8 +3700,8 @@ static int __wlan_hdd_cfg80211_extscan_set_significant_change(struct wiphy *wiph
         i++;
     }
     if (i < pReqMsg->numAp) {
-        hdd_warn("Number of AP %u less than expected %u",
-                 i, pReqMsg->numAp);
+        hddLog(VOS_TRACE_LEVEL_WARN, FL("Number of AP %u less than expected %u"),
+        	 i, pReqMsg->numAp);
         pReqMsg->numAp = i;
     }
 
