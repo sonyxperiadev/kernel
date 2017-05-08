@@ -301,6 +301,7 @@ struct binder_node {
 	unsigned has_async_transaction:1;
 	unsigned accept_fds:1;
 	unsigned min_priority:8;
+	unsigned sched_policy:2;
 	bool is_zombie;
 	struct binder_worklist async_todo;
 };
@@ -798,8 +799,10 @@ static void binder_transaction_priority(struct task_struct *task,
 	if (!binder_supported_policy(desired_prio.sched_policy))
 		return;
 
-	if (target_node->min_priority < t->priority.prio) {
-		desired_prio.sched_policy = SCHED_NORMAL;
+	if (target_node->min_priority < t->priority.prio ||
+	    (target_node->min_priority == t->priority.prio &&
+	     target_node->sched_policy == SCHED_FIFO)) {
+		desired_prio.sched_policy = target_node->sched_policy;
 		desired_prio.prio = target_node->min_priority;
 	}
 
@@ -1686,13 +1689,17 @@ static int binder_translate_binder(struct flat_binder_object *fp,
 
 	node = binder_get_node(proc, fp->binder);
 	if (!node) {
+		s8 priority = fp->flags & FLAT_BINDER_FLAG_PRIORITY_MASK;
+		int sched_policy =
+			(fp->flags & FLAT_BINDER_FLAG_SCHED_POLICY_MASK) >>
+			FLAT_BINDER_FLAG_SCHED_POLICY_SHIFT;
 		node = binder_new_node(proc, fp->binder, fp->cookie);
 		if (!node)
 			return -ENOMEM;
 
 		binder_proc_lock(node->proc, __LINE__);
-		node->min_priority = NICE_TO_PRIO(
-				fp->flags & FLAT_BINDER_FLAG_PRIORITY_MASK);
+		node->sched_policy = sched_policy;
+		node->min_priority = to_kernel_prio(sched_policy, priority);
 		node->accept_fds = !!(fp->flags & FLAT_BINDER_FLAG_ACCEPTS_FDS);
 		binder_proc_unlock(node->proc, __LINE__);
 	}
@@ -4668,9 +4675,10 @@ static void _print_binder_node(struct seq_file *m,
 	hlist_for_each_entry(ref, &node->refs, node_entry)
 		count++;
 
-	seq_printf(m, "  node %d: u%016llx c%016llx pri %d hs %d hw %d ls %d lw %d is %d iw %d",
+	seq_printf(m, "  node %d: u%016llx c%016llx pri %d:%d hs %d hw %d ls %d lw %d is %d iw %d",
 		   node->debug_id, (u64)node->ptr, (u64)node->cookie,
-		   node->min_priority, node->has_strong_ref, node->has_weak_ref,
+		   node->sched_policy, node->min_priority,
+		   node->has_strong_ref, node->has_weak_ref,
 		   node->local_strong_refs, node->local_weak_refs,
 		   node->internal_strong_refs, count);
 	if (count) {
