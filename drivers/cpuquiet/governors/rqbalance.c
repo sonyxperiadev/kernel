@@ -239,6 +239,25 @@ static inline int get_offline_core(int cluster)
 	return 0;
 }
 
+static inline int get_online_core(int cluster)
+{
+	int i;
+
+	for_each_possible_cpu(i) {
+		/* We don't wanna check cpu0 since this API return cpu
+		that will be fired */
+		if (!i)
+			continue;
+		if (topology_physical_package_id(i) != cluster)
+			continue;
+
+		if (cpu_online(i))
+			return i;
+	};
+
+	return 0;
+}
+
 /*
  * There are two ladders here for hysteresis. We do not want to offline
  * and online a CPU repeatedly. Thus, the down thresholds are *lower*
@@ -508,8 +527,11 @@ static void hotplug_hmp_final_decision(unsigned int cpu, bool up)
 		    big_cores_on == 0) {
 			cpuquiet_wake_cpu(
 				get_offline_core(CLUSTER_BIG), false);
-			cpuquiet_quiesce_cpu(
-				get_offline_core(CLUSTER_LITTLE), false);
+			while (little_cores_on > 2) {
+				cpuquiet_quiesce_cpu(
+					get_online_core(CLUSTER_LITTLE), false);
+				little_cores_on--;
+			}
 			return;
 		};
 		cpuquiet_wake_cpu(cpu, false);
