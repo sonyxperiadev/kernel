@@ -18,6 +18,27 @@
  */
 
 &soc {
+
+	bluesleep {
+		compatible = "qcom,bluesleep";
+		bt_host_wake = <&msm_gpio 17 0x00>; /* BT_HOST_WAKE */
+		bt_ext_wake = <&msm_gpio 18 0x00>; /* BT_DEV_WAKE */
+		interrupt-parent = <&msm_gpio>;
+		interrupts = <17 0>;
+		interrupt-names = "host_wake";
+		pinctrl-names = "default", "sleep";
+		pinctrl-0 = <&msm_gpio_17_act &msm_gpio_18_def>;
+		pinctrl-1 = <&msm_gpio_17_sus &msm_gpio_18_def>;
+	};
+
+	bcm43xx {
+		compatible = "bcm,bcm43xx";
+		bcm,reg-on-gpio = <&msm_gpio 19 0x00>; /* BT_REG_ON */
+		pinctrl-names = "default", "sleep";
+		pinctrl-0 = <&msm_gpio_19_def>;
+		pinctrl-1 = <&msm_gpio_19_def>;
+	};
+
 	usb_otg: usb@78db000 {
 		qcom,hsusb-otg-phy-init-seq =
 			<0x74 0x80 0x6f 0x81 0x3f 0x82 0x33 0x83 0xffffffff>;

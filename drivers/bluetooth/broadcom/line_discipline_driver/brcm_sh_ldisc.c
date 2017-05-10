@@ -2469,7 +2469,6 @@ static int bcmbt_ldisc_probe(struct platform_device *pdev)
     struct hci_uart *hu;
     printk("%s\n",  __func__);
     BT_LDISC_DBG(V4L2_DBG_INIT, "%s", __func__);
-    mutex_init(&cmd_credit);
 
     if ((pdev->id != -1) && (pdev->id < MAX_BRCM_DEVICES)) {
         /* multiple devices could exist */
@@ -2516,15 +2515,6 @@ static int bcmbt_ldisc_remove(struct platform_device *pdev)
 {
     struct hci_uart* hu;
     BT_LDISC_DBG(V4L2_DBG_INIT, "bcmbt_ldisc_remove() unloading ");
-    mutex_destroy(&cmd_credit);
-#if V4L2_SNOOP_ENABLE
-    if(ldisc_snoop_enable_param)
-    {
-        /* stop hci snoop to hcidump */
-        if(nl_sk_hcisnoop)
-            netlink_kernel_release(nl_sk_hcisnoop);
-    }
-#endif
     hu = dev_get_drvdata(&pdev->dev);
     sysfs_remove_group(&pdev->dev.kobj, &uim_attr_grp);
     brcm_hci_uart_exit(hu);
@@ -2532,11 +2522,6 @@ static int bcmbt_ldisc_remove(struct platform_device *pdev)
     hu  = NULL;
     return 0;
 }
-
-static const struct of_device_id bcmbt_ldisc_dt_ids[] = {
-    { .compatible = "bcmbt_ldisc"},
-    {}
-};
 
 /* Sys_fs entry bcm_ldisc. The Line discipline driver sets this to 1 when bluedroid performs open on BT
   * protocol driver or application performs open on FM v4l2 driver */
@@ -2548,11 +2533,33 @@ static struct platform_driver bcmbt_ldisc_platform_driver = {
     .driver = {
            .name = "bcm_ldisc",
            .owner = THIS_MODULE,
-           .of_match_table = bcmbt_ldisc_dt_ids,
            },
 };
 
-module_platform_driver(bcmbt_ldisc_platform_driver);
+static int __init bcmbt_ldisc_init(void)
+{
+    platform_driver_register(&bcmbt_ldisc_platform_driver);
+    mutex_init(&cmd_credit);
+    return 0;
+}
+
+static void __exit bcmbt_ldisc_exit(void)
+{
+    platform_driver_unregister(&bcmbt_ldisc_platform_driver);
+    mutex_destroy(&cmd_credit);
+
+#if V4L2_SNOOP_ENABLE
+    if(ldisc_snoop_enable_param)
+    {
+        /* stop hci snoop to hcidump */
+        if(nl_sk_hcisnoop)
+            netlink_kernel_release(nl_sk_hcisnoop);
+    }
+#endif
+}
+
+module_init(bcmbt_ldisc_init);
+module_exit(bcmbt_ldisc_exit);
 
 
 /*****************************************************************************

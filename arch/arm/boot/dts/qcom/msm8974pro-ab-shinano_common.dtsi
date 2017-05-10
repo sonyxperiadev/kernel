@@ -70,10 +70,6 @@
 		status = "ok";
 	};
 
-	bcmbt_ldisc {
-		compatible = "bcmbt_ldisc";
-	};
-
 	bcm43xx {
 		compatible = "bcm,bcm43xx";
 		bcm,reg-on-gpio = <&pm8941_gpios 16 0>; /* BT_REG_ON */
