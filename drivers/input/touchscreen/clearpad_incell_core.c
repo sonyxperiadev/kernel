@@ -44,6 +44,8 @@
 #include <asm/mach-types.h>
 #endif
 
+#define SYN_PCA_BLOCK_NUMBER_MAX	31
+
 #define SYN_CLEARPAD_VENDOR		0x1
 #define SYN_MAX_N_FINGERS		10
 #define SYN_DEVICE_STATUS		0x13
@@ -347,6 +349,18 @@ BIT_DEF(CALIBRATION_STATE_CALIBRATION_CRC,		0x02, 1);
 /*
  * Types
  */
+
+enum clearpad_infomation_attribute_kind_e {
+	PCA_DATA			= 0x00,
+	PCA_IC				= 0x01,
+	PCA_CHIP			= 0x03,
+	PCA_MODULE			= 0x05,
+};
+
+enum clearpad_infomation_kind_e {
+	PCA_NO_USE			= 0x00,
+	PCA_FW_INFO			= 0x02,
+};
 
 enum clearpad_state_e {
 	SYN_STATE_INIT,
@@ -7903,6 +7917,8 @@ static int clearpad_probe(struct platform_device *pdev)
 		}
 	}
 
+	this->post_probe.start = true;
+
 	spin_lock_init(&this->noise_det.slock);
 #ifdef CONFIG_TOUCHSCREEN_CLEARPAD_RMI_DEV
 	if (!cdata->rmi_dev) {
@@ -8022,7 +8038,7 @@ static int clearpad_probe(struct platform_device *pdev)
 		goto err_in_create_link;
 	}
 
-	if (this->post_probe.start) {
+	if (likely(this->post_probe.start)) {
 		HWLOGI(this, "schedule post probe\n");
 		schedule_delayed_work(&this->post_probe.work, 0);
 	} else {
