@@ -1999,7 +1999,8 @@ long brcm_sh_ldisc_write(struct sk_buff *skb)
                 brcm_hci_write(hu, skb->data, skb->len);
 #endif
             brcm_hci_uart_tx_wakeup(hu);
-            if (!wait_for_completion_timeout(&hu->cmd_rcvd, msecs_to_jiffies(5000))) {
+            if (!wait_for_completion_timeout(&hu->cmd_rcvd,
+                    msecs_to_jiffies(CMD_WR_TIME))) {
                 pr_err(" waiting for command response - timed out");
                 return 0;
             }
