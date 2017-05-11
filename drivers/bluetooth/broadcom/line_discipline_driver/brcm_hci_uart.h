@@ -75,7 +75,7 @@
  */
 #define LDISC_TIME             1500
 #define CMD_RESP_TIME          800
-#define CMD_WR_TIME            5000
+#define CMD_WR_TIME            1000
 #define POR_RETRY_COUNT        5
 
 
