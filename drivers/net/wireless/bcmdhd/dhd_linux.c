@@ -6713,7 +6713,7 @@ dhd_inet6_work_handler(void *dhd_info, void *event_data, u8 event)
 			}
 #else /* !NDO_CONFIG_SUPPORT */
 			DHD_TRACE(("%s: Disable NDO\n ", __FUNCTION__));
-			ret = dhd_ndo_enable(pub, FALSE);
+			ret = dhd_ndo_enable(dhdp, FALSE);
 			if (ret < 0) {
 				DHD_ERROR(("%s: disabling NDO Failed %d\n", __FUNCTION__, ret));
 				goto done;
