@@ -777,6 +777,8 @@ config ARCH_NR_GPIO
 
 source kernel/Kconfig.preempt
 
+source kernel/Kconfig.hz
+
 config HZ
 	int
 	default 100
