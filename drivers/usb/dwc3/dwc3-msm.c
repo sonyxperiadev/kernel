@@ -2500,10 +2500,13 @@ static int dwc3_msm_remove_pulldown(struct dwc3_msm *mdwc, bool rm_pulldown)
 	return 0;
 
 disable_vdda33:
-	ret = regulator_disable(mdwc->vdda33);
-	if (ret)
-		dev_err(mdwc->dev, "Unable to disable vdda33:%d\n", ret);
-
+	// try to disable only if the regulator is enabled
+	// this helps avoid unbalanced disables
+	if (regulator_is_enabled(mdwc->vdda33)) {
+		ret = regulator_disable(mdwc->vdda33);
+		if (ret)
+			dev_err(mdwc->dev, "Unable to disable vdda33:%d\n", ret);
+	}
 unset_vdd33:
 	ret = regulator_set_voltage(mdwc->vdda33, 0, DWC3_3P3_VOL_MAX);
 	if (ret)
@@ -2516,10 +2519,11 @@ put_vdda33_lpm:
 		dev_err(mdwc->dev, "Unable to set (0) HPM of vdda33\n");
 
 disable_vdda18:
-	ret = regulator_disable(mdwc->vdda18);
-	if (ret)
-		dev_err(mdwc->dev, "Unable to disable vdda18:%d\n", ret);
-
+	if (regulator_is_enabled(mdwc->vdda18)) {
+		ret = regulator_disable(mdwc->vdda18);
+		if (ret)
+			dev_err(mdwc->dev, "Unable to disable vdda18:%d\n", ret);
+	}
 unset_vdda18:
 	ret = regulator_set_voltage(mdwc->vdda18, 0, DWC3_1P8_VOL_MAX);
 	if (ret)
