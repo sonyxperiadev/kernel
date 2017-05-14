@@ -117,8 +117,17 @@
 
 	/* I2C : BLSP6 */
 	i2c@f9928000 {
+		cell-index = <6>;
+		compatible = "qcom,i2c-qup";
+		reg = <0xf9928000 0x1000>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg-names = "qup_phys_addr";
+		interrupts = <0 100 0>;
+		interrupt-names = "qup_err_intr";
 		qcom,i2c-bus-freq = <355000>;
 		qcom,i2c-src-freq = <50000000>;
+		qcom,master-id = <86>;
 		status = "ok";
 
 		nfc@28 {
