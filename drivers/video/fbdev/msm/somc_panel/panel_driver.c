@@ -1841,7 +1841,10 @@ static int mdss_dsi_panel_power_ctrl_ex(struct mdss_panel_data *pdata, int enabl
 
 	switch (enable) {
 	case MDSS_PANEL_POWER_OFF:
-		ret = mdss_dsi_panel_power_off_ex(pdata);
+                /* if LCD has not been disabled, then disable it now */
+                if ((pinfo->panel_power_state != MDSS_PANEL_POWER_LCD_DISABLED)
+                     && (pinfo->panel_power_state != MDSS_PANEL_POWER_OFF))
+			ret = mdss_dsi_panel_power_off_ex(pdata);
 		break;
 	case MDSS_PANEL_POWER_ON:
 		if (mdss_dsi_is_panel_on_lp(pdata))
