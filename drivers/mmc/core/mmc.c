@@ -679,7 +679,7 @@ static int mmc_decode_ext_csd(struct mmc_card *card, u8 *ext_csd)
 			 EXT_CSD_WR_REL_PARAM_EN_RPMB_REL_WR);
 
 		/* Report firmware version for eMMC 5.0 devices */
-		memcpy(card->ext_csd.fwrev, &ext_csd[EXT_CSD_FW_VERSION],
+		memcpy(card->ext_csd.fwrev, &ext_csd[EXT_CSD_FIRMWARE_VERSION],
 		       MMC_FIRMWARE_LEN);
 	} else {
 		card->ext_csd.cmdq_support = 0;
