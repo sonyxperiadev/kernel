@@ -4617,7 +4617,7 @@ static int smbchg_change_usb_supply_type(struct smbchg_chip *chip,
 		union power_supply_propval val = {
 				chip->somc_params.chg_det.sub_type, };
 
-		chip->usb_psy->set_property(chip->usb_psy,
+		power_supply_set_property(chip->usb_psy,
 				POWER_SUPPLY_PROP_SUB_TYPE, &val);
 	}
 #endif
@@ -7004,7 +7004,7 @@ static irqreturn_t src_detect_handler(int irq, void *_chip)
 	if (!src_detect) {
 		union power_supply_propval prop = {0, };
 
-		chip->usb_psy->set_property(chip->usb_psy,
+		power_supply_set_property(chip->usb_psy,
 					POWER_SUPPLY_PROP_USBIN_DET, &prop);
 	}
 #endif
@@ -7191,7 +7191,7 @@ static int determine_initial_status(struct smbchg_chip *chip)
 		int rc = 0;
 #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
 		union power_supply_propval prop = {chip->usb_present, };
-		chip->usb_psy->set_property(chip->usb_psy,
+		power_supply_set_property(chip->usb_psy,
 					POWER_SUPPLY_PROP_USBIN_DET, &prop);
 #endif
 		pr_smb(PR_MISC, "setting usb dp=f dm=f\n");
