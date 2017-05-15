@@ -214,7 +214,7 @@ int pil_assign_mem_to_linux(struct pil_desc *desc, phys_addr_t addr,
 	if (ret)
 		panic("%s: failed for %pa address of size %zx - subsys VMid %d rc:%d\n",
 				__func__, &addr, size, desc->subsys_vmid, ret);
-
+#endif
 	return ret;
 }
 EXPORT_SYMBOL(pil_assign_mem_to_linux);
