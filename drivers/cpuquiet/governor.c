@@ -40,7 +40,7 @@ struct cpuquiet_governor *cpuquiet_find_governor(const char *str)
 	struct cpuquiet_governor *gov;
 
 	list_for_each_entry(gov, &cpuquiet_governors, governor_list)
-		if (!strnicmp(str, gov->name, CPUQUIET_NAME_LEN))
+		if (!strncasecmp(str, gov->name, CPUQUIET_NAME_LEN))
 			return gov;
 
 	return NULL;
