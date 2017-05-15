@@ -481,18 +481,6 @@
 		};
 	};
 
-	mdss_dsi: qcom,mdss_dsi@0 {
-		mdss_dsi0: qcom,mdss_dsi_ctrl0@994000 {
-			vddio-supply = <&pm8994_s4>;
-			touch-avdd-supply = <&pm8994_l22>;
-		};
-
-		mdss_dsi1: qcom,mdss_dsi_ctrl1@996000 {
-			vddio-supply = <&pm8994_s4>;
-			touch-avdd-supply = <&pm8994_l22>;
-		};
-	};
-
 	dsi_panel_pwr_supply_hybrid_incell: dsi_panel_pwr_supply_hybrid_incell {
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -3116,6 +3104,8 @@
 };
 
 &mdss_dsi0 {
+	vddio-supply = <&pm8994_s4>;
+	touch-avdd-supply = <&pm8994_l22>;
 	qcom,display-id = "primary";
 	qcom,dsi-pref-prim-pan = <&dsi_default_panel>;
 	pinctrl-names = "mdss_default", "mdss_sleep", "mdss_touch_active", "mdss_touch_suspend";
@@ -3133,6 +3123,8 @@
 };
 
 &mdss_dsi1 {
+	vddio-supply = <&pm8994_s4>;
+	touch-avdd-supply = <&pm8994_l22>;
 	status = "disabled";
 };
 
