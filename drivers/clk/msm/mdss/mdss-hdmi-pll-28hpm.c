@@ -88,11 +88,6 @@
 #define HDMI_PLL_POLL_MAX_READS			10
 #define HDMI_PLL_POLL_TIMEOUT_US		50
 
-static inline struct hdmi_pll_vco_clk *to_hdmi_vco_clk(struct clk *clk)
-{
-	return container_of(clk, struct hdmi_pll_vco_clk, c);
-}
-
 static void hdmi_vco_disable(struct clk *c)
 {
 	struct hdmi_pll_vco_clk *vco = to_hdmi_vco_clk(c);
