@@ -353,6 +353,8 @@ static int is_floated_charger(struct smbchg_chip *chip)
 	int dp = 0;
 	int dm = 0;
 	int ret;
+	union power_supply_propval dpdm_3v3 = {
+		POWER_SUPPLY_DP_DM_DP3P3_DM3P3, };
 
 	ret = power_supply_get_property(chip->usb_psy,
 					POWER_SUPPLY_PROP_DP_DM, &dp_dm);
@@ -361,8 +363,8 @@ static int is_floated_charger(struct smbchg_chip *chip)
 		return ret;
 	}
 
-	ret = power_supply_set_dp_dm(chip->usb_psy,
-					POWER_SUPPLY_DP_DM_DP3P3_DM3P3);
+	ret = power_supply_set_property(chip->usb_psy,
+			POWER_SUPPLY_PROP_DP_DM, &dpdm_3v3);
 	if (IS_ERR_VALUE(ret)) {
 		dev_err(chip->dev, "%s: set D+/D- 3.3V fail\n", __func__);
 		return ret;
@@ -386,7 +388,8 @@ static int is_floated_charger(struct smbchg_chip *chip)
 	ret = (dp > THR_DP_DM_FLOAT_UV || dm > THR_DP_DM_FLOAT_UV ||
 							dp < THR_DP_GND_UV);
 out:
-	power_supply_set_dp_dm(chip->usb_psy, dp_dm.intval);
+	power_supply_set_property(chip->usb_psy,
+		POWER_SUPPLY_PROP_DP_DM, &dp_dm);
 	pr_smb(PR_MISC, "%s: is_float=%d, D+=%dV, D-=%dV\n", __func__, ret,
 									dp, dm);
 	return ret;
