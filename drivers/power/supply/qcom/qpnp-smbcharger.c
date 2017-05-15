@@ -936,7 +936,6 @@ static int get_prop_batt_status(struct smbchg_chip *chip)
 	u8 reg = 0, chg_type;
 	bool charger_present, chg_inhibit;
 #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
-	int i = 0;
 	int smart_votabled, other_votabled = 0;
 	bool smart_charging_faked = false;
 #endif
