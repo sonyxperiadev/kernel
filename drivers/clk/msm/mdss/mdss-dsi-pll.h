@@ -65,6 +65,7 @@ int dsi_pll_clock_register_8998(struct platform_device *pdev,
 
 int set_byte_mux_sel(struct mux_clk *clk, int sel);
 int get_byte_mux_sel(struct mux_clk *clk);
+int dsi_pll_div_prepare(struct clk *c);
 int dsi_pll_mux_prepare(struct clk *c);
 int fixed_4div_set_div(struct div_clk *clk, int div);
 int fixed_4div_get_div(struct div_clk *clk);
