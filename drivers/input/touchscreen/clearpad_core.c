@@ -2143,9 +2143,9 @@ static int clearpad_vreg_suspend(struct clearpad_t *this, int enable)
 	}
 
 	if (enable)
-		rc = regulator_set_optimum_mode(this->vreg_touch_vdd, 1000);
+		rc = regulator_set_load(this->vreg_touch_vdd, 1000);
 	else
-		rc = regulator_set_optimum_mode(this->vreg_touch_vdd, 15000);
+		rc = regulator_set_load(this->vreg_touch_vdd, 15000);
 
 	if (rc < 0) {
 		dev_err(&this->pdev->dev,
