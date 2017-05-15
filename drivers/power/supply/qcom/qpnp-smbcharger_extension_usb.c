@@ -134,7 +134,7 @@ static void somc_chg_usbid_start_polling_delay_work(struct work_struct *work)
 		union power_supply_propval val = {0, };
 
 		val.intval = POWER_SUPPLY_TYPE_TYPEC;
-		chip->typec_psy->set_property(chip->typec_psy,
+		power_supply_set_property(chip->typec_psy,
 				POWER_SUPPLY_PROP_TYPEC_MODE, &val);
 	}
 }
@@ -177,7 +177,7 @@ static void somc_chg_usbid_stop_polling_delay_work(struct work_struct *work)
 		union power_supply_propval val = {0, };
 
 		val.intval = POWER_SUPPLY_TYPE_UFP;
-		chip->typec_psy->set_property(chip->typec_psy,
+		power_supply_set_property(chip->typec_psy,
 				POWER_SUPPLY_PROP_TYPEC_MODE, &val);
 	}
 	start_id_polling = false;
@@ -354,7 +354,7 @@ static int is_floated_charger(struct smbchg_chip *chip)
 	int dm = 0;
 	int ret;
 
-	ret = chip->usb_psy->get_property(chip->usb_psy,
+	ret = power_supply_get_property(chip->usb_psy,
 					POWER_SUPPLY_PROP_DP_DM, &dp_dm);
 	if (IS_ERR_VALUE(ret)) {
 		dev_err(chip->dev, "%s: read D+/D- state fail\n", __func__);
