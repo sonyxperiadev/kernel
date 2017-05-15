@@ -148,7 +148,7 @@ int cpuquiet_wake_quiesce_cpu(unsigned int cpunumber, bool sync, bool up)
  * @cr_online_requests: specifies which CPUs to be brought online
  * @cr_offline_requests: specifies which CPUs to be taken offline
  */
-static void __cpuinit cpuquiet_work_func(struct work_struct *work)
+static void cpuquiet_work_func(struct work_struct *work)
 {
 	int count = -1;
 	unsigned int cpu;
