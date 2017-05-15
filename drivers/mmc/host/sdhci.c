@@ -585,7 +585,7 @@ static int sdhci_pre_dma_transfer(struct sdhci_host *host,
 	 * dma_map_sg() result.
 	 */
 	if (data->host_cookie == COOKIE_PRE_MAPPED) {
-		spin_lock_irqrestore(&host->next_lock, flags);
+		spin_unlock_irqrestore(&host->next_lock, flags);
 		return data->sg_count;
 	}
 
@@ -594,7 +594,7 @@ static int sdhci_pre_dma_transfer(struct sdhci_host *host,
 				DMA_TO_DEVICE : DMA_FROM_DEVICE);
 
 	if (sg_count == 0) {
-		spin_lock_irqrestore(&host->next_lock, flags);
+		spin_unlock_irqrestore(&host->next_lock, flags);
 		return -ENOSPC;
 	}
 
