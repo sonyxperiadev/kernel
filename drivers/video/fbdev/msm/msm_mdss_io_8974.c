@@ -2086,6 +2086,9 @@ static int mdss_dsi_ulps_config(struct mdss_dsi_ctrl_pdata *ctrl,
 	int enable)
 {
 	int ret = 0;
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	struct mdss_panel_data *pdata = &ctrl->panel_data;
+#endif
 
 	if (!ctrl) {
 		pr_err("%s: invalid input\n", __func__);
