@@ -937,7 +937,7 @@ static int get_prop_batt_status(struct smbchg_chip *chip)
 	bool charger_present, chg_inhibit;
 #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
 	int i = 0;
-	int votabled, smart_votabled, other_votabled = 0;
+	int smart_votabled, other_votabled = 0;
 	bool smart_charging_faked = false;
 #endif
 
@@ -985,15 +985,33 @@ static int get_prop_batt_status(struct smbchg_chip *chip)
 	chg_type = (reg & CHG_TYPE_MASK) >> CHG_TYPE_SHIFT;
 
 #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
-	for (i = 0; i < NUM_BATTCHG_EN_VOTERS; i++) {
-		votabled = get_client_vote(chip->battchg_suspend_votable, i);
-		pr_smb(PR_MISC, "battchg suspend voter[%d] = %d\n",
-							i, votabled);
-		if (i == BATTCHG_SMART_EN_VOTER)
-			smart_votabled = votabled;
-		else if (!other_votabled)
-			other_votabled = votabled;
+	other_votabled = get_client_vote(chip->battchg_suspend_votable,
+					BATTCHG_USER_EN_VOTER);
+	pr_smb(PR_MISC, "battchg suspend voter[%s] = %d\n",
+				BATTCHG_USER_EN_VOTER, other_votabled);
+
+	if (!other_votabled) {
+		other_votabled = get_client_vote(chip->battchg_suspend_votable,
+					BATTCHG_UNKNOWN_BATTERY_EN_VOTER);
+		pr_smb(PR_MISC, "battchg suspend voter[%s] = %d\n",
+				BATTCHG_UNKNOWN_BATTERY_EN_VOTER,
+				other_votabled);
 	}
+
+	if (!other_votabled) {
+		other_votabled = get_client_vote(chip->battchg_suspend_votable,
+					BATTCHG_LRC_EN_VOTER);
+		pr_smb(PR_MISC, "battchg suspend voter[%s] = %d\n",
+				BATTCHG_LRC_EN_VOTER,
+				other_votabled);
+	}
+
+	smart_votabled = get_client_vote(chip->battchg_suspend_votable,
+					BATTCHG_SMART_EN_VOTER);
+
+	pr_smb(PR_MISC, "battchg suspend voter[%s] = %d\n",
+				BATTCHG_SMART_EN_VOTER, other_votabled);
+
 	if (smart_votabled && !other_votabled) {
 		smart_charging_faked = true;
 		pr_smb(PR_MISC, "Fake charging due to smart charge\n");
