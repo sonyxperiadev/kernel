@@ -882,7 +882,7 @@ int qpnp_pon_dvdd_shutdown(void)
 					QPNP_PON_DVDD_SHUTDOWN_MASK,
 					QPNP_PON_DVDD_SHUTDOWN_SET);
 	if (rc)
-		dev_err(&pon->spmi->dev,
+		dev_err(&pon->pdev->dev,
 			"Unable to write to addr=%x, rc(%d)\n",
 			QPNP_PON_SW_RESET_S2_CTL(pon->base), rc);
 
@@ -890,7 +890,7 @@ int qpnp_pon_dvdd_shutdown(void)
 					QPNP_PON_SW_RESET_EN_MASK,
 					QPNP_PON_SW_RESET_EN_SET);
 	if (rc)
-		dev_err(&pon->spmi->dev,
+		dev_err(&pon->pdev->dev,
 			"Unable to write to addr=%x, rc(%d)\n",
 			QPNP_PON_SW_RESET_S2_CTL2(pon->base), rc);
 
@@ -898,7 +898,7 @@ int qpnp_pon_dvdd_shutdown(void)
 					QPNP_PON_SW_RESET_GO_MASK,
 					QPNP_PON_SW_RESET_GO_SET);
 	if (rc)
-		dev_err(&pon->spmi->dev,
+		dev_err(&pon->pdev->dev,
 			"Unable to write to addr=%x, rc(%d)\n",
 			QPNP_PON_SW_RESET_GO(pon->base), rc);
 
