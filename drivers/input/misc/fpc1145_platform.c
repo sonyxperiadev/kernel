@@ -126,7 +126,7 @@ found:
 					"Unable to set voltage on %s, %d\n",
 					name, rc);
 		}
-		rc = regulator_set_optimum_mode(vreg, vreg_conf[i].ua_load);
+		rc = regulator_set_load(vreg, vreg_conf[i].ua_load);
 		if (rc < 0)
 			dev_err(dev, "Unable to set current on %s, %d\n",
 					name, rc);
