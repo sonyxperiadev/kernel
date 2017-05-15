@@ -393,11 +393,23 @@ static int mdss_dsi_panel_reset_seq(struct mdss_panel_data *pdata, int enable)
 		usleep_range(pw_seq->disp_en_post * 1000,
 				pw_seq->disp_en_post * 1000 + 100);
 
-	if (gpio_is_valid(ctrl_pdata->mode_gpio) && enable) {
-		if (pinfo->mode_gpio_state == MODE_GPIO_HIGH)
-			gpio_direction_output(ctrl_pdata->mode_gpio, 1);
-		else if (pinfo->mode_gpio_state == MODE_GPIO_LOW)
-			gpio_direction_output(ctrl_pdata->mode_gpio, 0);
+	if (gpio_is_valid(ctrl_pdata->lcd_mode_sel_gpio) && enable) {
+		switch (pinfo->mode_sel_state) {
+			case MODE_GPIO_HIGH:
+			case MODE_SEL_SINGLE_PORT:
+				gpio_direction_output(
+					ctrl_pdata->lcd_mode_sel_gpio, 1);
+				break;
+			case MODE_GPIO_LOW:
+			case MODE_SEL_DUAL_PORT:
+				gpio_direction_output(
+					ctrl_pdata->lcd_mode_sel_gpio, 0);
+				break;
+			default:
+				pr_err("%s: Mode selection UNDEFINED. FIXME!!",
+					__func__);
+				break;
+		}
 	}
 
 	if (alt_panelid_cmd)
@@ -4104,14 +4116,18 @@ int mdss_panel_parse_dt(struct device_node *np,
 	pinfo->mipi.stream = !rc ? tmp : 0;
 
 	data = of_get_property(np,
-		"qcom,mdss-dsi-panel-mode-gpio-state", NULL);
+		"qcom,mdss-dsi-panel-mode-sel-gpio-state", NULL);
 	if (data) {
 		if (!strcmp(data, "high"))
-			pinfo->mode_gpio_state = MODE_GPIO_HIGH;
+			pinfo->mode_sel_state = MODE_GPIO_HIGH;
 		else if (!strcmp(data, "low"))
-			pinfo->mode_gpio_state = MODE_GPIO_LOW;
+			pinfo->mode_sel_state = MODE_GPIO_LOW;
+		else if (!strcmp(data, "single_port"))
+			pinfo->mode_sel_state = MODE_SEL_SINGLE_PORT;
+		else if (!strcmp(data, "dual_port"))
+			pinfo->mode_sel_state = MODE_SEL_DUAL_PORT;
 	} else {
-		pinfo->mode_gpio_state = MODE_GPIO_NOT_VALID;
+		pinfo->mode_sel_state = MODE_SEL_DUAL_PORT;
 	}
 
 	rc = of_property_read_u32(np, "qcom,mdss-mdp-transfer-time-us", &tmp);
