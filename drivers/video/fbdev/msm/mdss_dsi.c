@@ -4092,7 +4092,7 @@ int mdss_dsi_panel_power_detect(struct platform_device *pdev, int enable)
 	}
 
 	if (enable) {
-		ret = regulator_set_optimum_mode(vdd_vreg, 100000);
+		ret = regulator_set_load(vdd_vreg, 100000);
 		if (ret < 0) {
 			pr_err("%s: vdd_vreg set regulator mode failed.\n",
 						       __func__);
@@ -4114,7 +4114,7 @@ int mdss_dsi_panel_power_detect(struct platform_device *pdev, int enable)
 			return ret;
 		}
 
-		ret = regulator_set_optimum_mode(vdd_vreg, 100);
+		ret = regulator_set_load(vdd_vreg, 100);
 		if (ret < 0) {
 			pr_err("%s: vdd_vreg set regulator mode failed.\n",
 						       __func__);
@@ -4140,7 +4140,7 @@ int mdss_dsi_panel_power_detect(struct platform_device *pdev, int enable)
 	}
 
 	if (enable) {
-		ret = regulator_set_optimum_mode(vddio_vreg, 100000);
+		ret = regulator_set_load(vddio_vreg, 100000);
 		if (ret < 0) {
 			pr_err("%s: vdd_vreg set regulator mode failed.\n",
 						       __func__);
@@ -4162,7 +4162,7 @@ int mdss_dsi_panel_power_detect(struct platform_device *pdev, int enable)
 			return ret;
 		}
 
-		ret = regulator_set_optimum_mode(vddio_vreg, 100);
+		ret = regulator_set_load(vddio_vreg, 100);
 		if (ret < 0) {
 			pr_err("%s: vdd_vreg set regulator mode failed.\n",
 						       __func__);
