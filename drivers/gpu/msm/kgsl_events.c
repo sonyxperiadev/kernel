@@ -15,7 +15,7 @@
 #include <linux/list.h>
 #include <linux/workqueue.h>
 #include <linux/debugfs.h>
-#include <kgsl_device.h>
+#include <../drivers/gpu/msm/kgsl_device.h>
 
 #include "kgsl_debugfs.h"
 #include "kgsl_trace.h"
