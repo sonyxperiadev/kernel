@@ -147,8 +147,12 @@ struct msm_ext_disp_init_data {
  * @pdev: platform device pointer
  * @codec_ops: audio codec operations
  */
+#ifdef CONFIG_MSM_EXT_DISPLAY
 int msm_ext_disp_register_audio_codec(struct platform_device *pdev,
 		struct msm_ext_disp_audio_codec_ops *ops);
+#else
+#define msm_ext_disp_register_audio_codec(...) -EINVAL
+#endif
 
 /*
  * msm_hdmi_register_audio_codec() - wrapper for hdmi audio codec registration
