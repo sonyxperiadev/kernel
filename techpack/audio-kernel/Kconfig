@@ -102,6 +102,8 @@ config SND_SOC_SDM670
 	tristate "SND_SOC_SDM670"
 config SND_SOC_SDM660
 	tristate "SND_SOC_SDM660"
+config SND_SOC_MSM8X16
+	tristate "SoC Machine driver for MSM8916"
 config SND_SOC_MSM8956
 	tristate "SND_SOC_MSM8956"
 config SND_SOC_MSM8996
