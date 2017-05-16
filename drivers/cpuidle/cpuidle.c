@@ -4,6 +4,7 @@
  * (C) 2006-2007 Venkatesh Pallipadi <venkatesh.pallipadi@intel.com>
  *               Shaohua Li <shaohua.li@intel.com>
  *               Adam Belay <abelay@novell.com>
+ * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This code is licenced under the GPL.
  */
@@ -19,6 +20,7 @@
 #include <linux/ktime.h>
 #include <linux/hrtimer.h>
 #include <linux/module.h>
+#include <asm/relaxed.h>
 
 #include "cpuidle.h"
 
@@ -222,8 +224,14 @@ static int poll_idle(struct cpuidle_device *dev,
 
 	t1 = ktime_get();
 	local_irq_enable();
-	while (!need_resched())
-		cpu_relax();
+
+	/*
+	 * The corresponding ldax call for cpu_read_relax() is
+	 * present in test_ti_thread_flag_relaxed(), as need_resched_relaxed()
+	 * ultimately invokes test_ti_thread_flag_relaxed().
+	 */
+	while (!need_resched_relaxed())
+		cpu_read_relax();
 
 	t2 = ktime_get();
 	diff = ktime_to_us(ktime_sub(t2, t1));
