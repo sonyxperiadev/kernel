@@ -121,13 +121,13 @@ static int somc_fg_aging_setting(struct fg_chip *chip, bool mode)
 		chip->batt_psy = power_supply_get_by_name("battery");
 
 	if (chip->batt_psy) {
-		rc = chip->batt_psy->set_property(chip->batt_psy,
+		rc = power_supply_set_property(chip->batt_psy,
 				POWER_SUPPLY_PROP_FV_CFG, &prop);
 		if (rc) {
 			pr_err("couldn't set_property FV_CFG rc=%d\n", rc);
 			return rc;
 		}
-		rc = chip->batt_psy->set_property(chip->batt_psy,
+		rc = power_supply_set_property(chip->batt_psy,
 				POWER_SUPPLY_PROP_FV_CMP_CFG, &val);
 		if (rc) {
 			pr_err("couldn't write FV_CMP_CFG rc=%d\n", rc);
@@ -445,9 +445,9 @@ static ssize_t somc_fg_param_show(struct device *dev,
 			union power_supply_propval prop_type = {0,};
 			union power_supply_propval prop_res = {0,};
 
-			chip->bms_psy.get_property(&chip->bms_psy,
+			power_supply_get_property(chip->bms_psy,
 				POWER_SUPPLY_PROP_BATTERY_TYPE, &prop_type);
-			chip->bms_psy.get_property(&chip->bms_psy,
+			power_supply_get_property(chip->bms_psy,
 				POWER_SUPPLY_PROP_RESISTANCE_ID, &prop_res);
 			size = scnprintf(buf, PAGE_SIZE, "%s/%d/%d/0x%02X\n",
 					prop_type.strval,
