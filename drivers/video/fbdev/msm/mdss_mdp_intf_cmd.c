@@ -283,10 +283,13 @@ static int mdss_mdp_cmd_tearcheck_cfg(struct mdss_mdp_mixer *mixer,
 	struct mdss_mdp_pp_tear_check *te = NULL;
 	struct mdss_panel_info *pinfo;
 	u32 vsync_clk_speed_hz, total_lines, vclks_line, cfg = 0;
-	u32 vporch, height = 0;
+	u32 height = 0;
 	char __iomem *pingpong_base;
 	struct mdss_mdp_ctl *ctl = ctx->ctl;
 	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	u32 vporch;
+#endif
 
 	if (IS_ERR_OR_NULL(ctl->panel_data)) {
 		pr_err("no panel data\n");
@@ -3177,8 +3180,10 @@ static int mdss_mdp_cmd_kickoff(struct mdss_mdp_ctl *ctl, void *arg)
 				return -ENODEV;
 			}
 
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 			if (pdata->intf_ready)
 				pdata->intf_ready(pdata);
+#endif
 		}
 		ctx->panel_power_state = MDSS_PANEL_POWER_ON;
 		if (sctx)
