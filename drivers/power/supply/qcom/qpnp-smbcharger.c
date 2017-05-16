@@ -1207,7 +1207,6 @@ static int get_prop_batt_voltage_max_design(struct smbchg_chip *chip)
 	}
 	return uv;
 }
-#endif
 
 static int get_prop_batt_health(struct smbchg_chip *chip)
 {
@@ -3027,7 +3026,7 @@ static int smbchg_system_temp_level_set(struct smbchg_chip *chip,
 out:
 	mutex_unlock(&chip->therm_lvl_lock);
 #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
-	power_supply_changed(&chip->batt_psy);
+	power_supply_changed(chip->batt_psy);
 #endif
 	return rc;
 }
@@ -3863,7 +3862,7 @@ static void smbchg_external_power_changed(struct power_supply *psy)
 
 	read_usb_type(chip, &usb_type_name, &usb_supply_type);
 #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
-	rc = chip->usb_psy->get_property(chip->usb_psy,
+	rc = power_supply_get_property(chip->usb_psy,
 				POWER_SUPPLY_PROP_TYPE, &prop);
 	if (rc == 0)
 		type = prop.intval;
@@ -4581,6 +4580,9 @@ static int smbchg_change_usb_supply_type(struct smbchg_chip *chip,
 						enum power_supply_type type)
 {
 	int rc, current_limit_ma;
+#ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
+	const union power_supply_propval pval = {type, };
+#endif
 
 	/*
 	 * if the type is not unknown, set the type before changing ICL vote
@@ -4628,14 +4630,20 @@ static int smbchg_change_usb_supply_type(struct smbchg_chip *chip,
 		power_supply_changed(chip->usb_psy);
 
 #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
+/*	if (chip->typec_psy)
+		power_supply_set_supply_type(chip->typec_psy, type);*/
 	if (chip->typec_psy)
-		power_supply_set_supply_type(chip->typec_psy, type);
+		power_supply_set_property(chip->typec_psy,
+			POWER_SUPPLY_PROP_TYPE, &pval);		
 	if (!chip->skip_usb_notification) {
 		union power_supply_propval val = {
 				chip->somc_params.chg_det.sub_type, };
 
 		power_supply_set_property(chip->usb_psy,
 				POWER_SUPPLY_PROP_SUB_TYPE, &val);
+
+		/* kholk 16/05/2017: TODO: Should we notify usb or typec psy?*/
+		power_supply_changed(chip->typec_psy);
 	}
 #endif
 
@@ -4712,8 +4720,8 @@ static void smbchg_hvdcp_det_work(struct work_struct *work)
 		if (!somc_chg_therm_is_hvdcp_limit(chip)) {
 			smbchg_change_usb_supply_type(chip,
 					POWER_SUPPLY_TYPE_USB_HVDCP);
-			if (chip->psy_registered)
-				power_supply_changed(&chip->batt_psy);
+			if (chip->batt_psy)
+				power_supply_changed(chip->batt_psy);
 			smbchg_aicl_deglitch_wa_check(chip);
 		} else {
 			somc_chg_therm_set_hvdcp_en(chip);
@@ -5970,7 +5978,7 @@ static void update_typec_capability_status(struct smbchg_chip *chip,
 	}
 	chip->typec_current_ma = val->intval;
 	if (chip->usb_present) {
-		int current_limit_ma;
+		int current_limit_ma, rc;
 
 		current_limit_ma = somc_chg_get_current_ma(chip,
 							chip->usb_supply_type);
@@ -6293,7 +6301,7 @@ static int smbchg_battery_set_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_INT_CLD:
 		chip->somc_params.daemon.int_cld = (int)val->intval;
 		if (chip->somc_params.daemon.int_cld)
-			power_supply_changed(&chip->batt_psy);
+			power_supply_changed(chip->batt_psy);
 		break;
 	case POWER_SUPPLY_PROP_SMART_CHARGING_ACTIVATION:
 		if (val->intval) {
@@ -6305,7 +6313,7 @@ static int smbchg_battery_set_property(struct power_supply *psy,
 		if (chip->somc_params.smart.enabled) {
 			chip->somc_params.smart.suspended = (bool)val->intval;
 			rc = somc_chg_smart_set_suspend(chip);
-			power_supply_changed(&chip->batt_psy);
+			power_supply_changed(chip->batt_psy);
 		}
 		break;
 	case POWER_SUPPLY_PROP_USB_OTG:
@@ -8690,7 +8698,7 @@ static int smbchg_probe(struct platform_device *pdev)
 		} else {
 			typec_psy = power_supply_get_by_name(typec_psy_name);
 			if (!typec_psy) {
-				dev_err(&spmi->dev,
+				dev_err(&pdev->dev,
 					"Type-C supply not found, deferring probe\n");
 				if (typec_retry_cnt++ < TYPEC_PROBE_RETRY_MAX)
 					return -EPROBE_DEFER;
@@ -8918,13 +8926,13 @@ static int smbchg_probe(struct platform_device *pdev)
 #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
 	rc = somc_chg_register(chip);
 	if (rc < 0) {
-		dev_err(&spmi->dev, "somc chg register failed rc = %d\n", rc);
+		dev_err(&pdev->dev, "somc chg register failed rc = %d\n", rc);
 		goto out;
 	}
 
 	rc =  somc_usb_register(chip);
 	if (rc < 0) {
-		dev_err(&spmi->dev, "somc usb register failed rc = %d\n", rc);
+		dev_err(&pdev->dev, "somc usb register failed rc = %d\n", rc);
 		goto out;
 	}
 #endif
