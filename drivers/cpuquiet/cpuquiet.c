@@ -1,7 +1,7 @@
 /*
  * drivers/cpuquiet/cpuquiet.c - Core cpuquiet functionality
  *
- * Copyright (c) 2012-2013 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2016 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -178,6 +178,7 @@ static void __cpuinit cpuquiet_work_func(struct work_struct *work)
 	/* always keep CPU0 online */
 	cpumask_set_cpu(0, &online);
 	cpu_online = *cpu_online_mask;
+	cpumask_clear_cpu(0, &offline);
 
 	if (max_cpus < min_cpus)
 		max_cpus = min_cpus;

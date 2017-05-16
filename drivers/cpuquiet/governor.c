@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2014 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -49,6 +49,10 @@ struct cpuquiet_governor *cpuquiet_find_governor(const char *str)
 int cpuquiet_switch_governor(struct cpuquiet_governor *gov)
 {
 	int err = 0;
+
+	/* Governor is already set, bail early */
+	if (cpuquiet_curr_governor == gov)
+		return err;
 
 	if (cpuquiet_curr_governor) {
 		if (cpuquiet_curr_governor->stop)
