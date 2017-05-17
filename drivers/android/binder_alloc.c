@@ -29,6 +29,8 @@
 #include "binder_alloc.h"
 #include "binder_trace.h"
 
+static DEFINE_MUTEX(binder_alloc_mmap_lock);
+
 enum {
 	BINDER_DEBUG_OPEN_CLOSE             = 1U << 1,
 	BINDER_DEBUG_BUFFER_ALLOC           = 1U << 2,
@@ -546,7 +548,7 @@ int binder_alloc_mmap_handler(struct binder_alloc *alloc,
 	const char *failure_string;
 	struct binder_buffer *buffer;
 
-	mutex_lock(&alloc->mutex);
+	mutex_lock(&binder_alloc_mmap_lock);
 	if (alloc->buffer) {
 		ret = -EBUSY;
 		failure_string = "already mapped";
@@ -562,6 +564,7 @@ int binder_alloc_mmap_handler(struct binder_alloc *alloc,
 	alloc->buffer = area->addr;
 	WRITE_ONCE(alloc->user_buffer_offset,
 			vma->vm_start - (uintptr_t)alloc->buffer);
+	mutex_unlock(&binder_alloc_mmap_lock);
 
 #ifdef CONFIG_CPU_CACHE_VIPT
 	if (cache_is_vipt_aliasing()) {
@@ -600,7 +603,6 @@ int binder_alloc_mmap_handler(struct binder_alloc *alloc,
 	barrier();
 	alloc->vma = vma;
 	alloc->vma_vm_mm = vma->vm_mm;
-	mutex_unlock(&alloc->mutex);
 
 	return 0;
 
@@ -608,11 +610,12 @@ err_alloc_small_buf_failed:
 	kfree(alloc->pages);
 	alloc->pages = NULL;
 err_alloc_pages_failed:
+	mutex_lock(&binder_alloc_mmap_lock);
 	vfree(alloc->buffer);
 	alloc->buffer = NULL;
 err_get_vm_area_failed:
 err_already_mapped:
-	mutex_unlock(&alloc->mutex);
+	mutex_unlock(&binder_alloc_mmap_lock);
 	pr_err("%s: %d %lx-%lx %s failed %d\n", __func__,
 	       alloc->pid, vma->vm_start, vma->vm_end, failure_string, ret);
 	return ret;
