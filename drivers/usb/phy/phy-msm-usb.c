@@ -5163,6 +5163,9 @@ static int otg_power_set_property_usb(struct power_supply *psy,
 	switch (psp) {
 	case POWER_SUPPLY_PROP_USB_OTG:
 		motg->id_state = val->intval ? USB_ID_GROUND : USB_ID_FLOAT;
+#ifdef CONFIG_MACH_SONY_SUZU
+		msm_otg_select_usb_switch(motg);
+#endif
 		queue_delayed_work(motg->otg_wq, &motg->id_status_work, 0);
 		break;
 	/* PMIC notification for DP DM state */
