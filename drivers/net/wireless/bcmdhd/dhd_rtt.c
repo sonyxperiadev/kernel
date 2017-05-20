@@ -451,7 +451,7 @@ rate_mcs2rate(uint mcs, uint nss, uint bw, int sgi)
 int
 rate_rspec2rate(uint32 rspec)
 {
-	int rate = -1;
+	int rate = 0;
 
 	if (RSPEC_ISLEGACY(rspec)) {
 		rate = 500 * (rspec & WL_RSPEC_RATE_MASK);
@@ -477,7 +477,7 @@ rate_rspec2rate(uint32 rspec)
 		ASSERT(0);
 	}
 
-	return (rate == 0) ? -1 : rate;
+	return rate;
 }
 
 char resp_buf[WLC_IOCTL_SMLEN];
@@ -1484,18 +1484,38 @@ static wifi_rate_t
 dhd_rtt_convert_rate_to_host(uint32 rspec)
 {
 	wifi_rate_t host_rate;
+	uint32 bandwidth;
 	memset(&host_rate, 0, sizeof(wifi_rate_t));
-	if ((rspec & WL_RSPEC_ENCODING_MASK) == WL_RSPEC_ENCODE_RATE) {
+	if (RSPEC_ISLEGACY(rspec)) {
 		host_rate.preamble = 0;
-	} else if ((rspec & WL_RSPEC_ENCODING_MASK) == WL_RSPEC_ENCODE_HT) {
+	} else if (RSPEC_ISHT(rspec)) {
 		host_rate.preamble = 2;
 		host_rate.rateMcsIdx = rspec & WL_RSPEC_RATE_MASK;
-	} else if ((rspec & WL_RSPEC_ENCODING_MASK) == WL_RSPEC_ENCODE_VHT) {
+	} else if (RSPEC_ISVHT(rspec)) {
 		host_rate.preamble = 3;
 		host_rate.rateMcsIdx = rspec & WL_RSPEC_VHT_MCS_MASK;
 		host_rate.nss = (rspec & WL_RSPEC_VHT_NSS_MASK) >> WL_RSPEC_VHT_NSS_SHIFT;
 	}
-	host_rate.bw = (rspec & WL_RSPEC_BW_MASK) - 1;
+
+	bandwidth = RSPEC_BW(rspec);
+	switch (bandwidth) {
+	case WL_RSPEC_BW_20MHZ:
+		host_rate.bw = RTT_RATE_20M;
+		break;
+	case WL_RSPEC_BW_40MHZ:
+		host_rate.bw = RTT_RATE_40M;
+		break;
+	case WL_RSPEC_BW_80MHZ:
+		host_rate.bw = RTT_RATE_80M;
+		break;
+	case WL_RSPEC_BW_160MHZ:
+		host_rate.bw = RTT_RATE_160M;
+		break;
+	default:
+		host_rate.bw = RTT_RATE_20M;
+		break;
+	}
+
 	host_rate.bitrate = rate_rspec2rate(rspec) / 100; /* 100kbps */
 	DHD_RTT(("bit rate : %d\n", host_rate.bitrate));
 	return host_rate;
