@@ -21,7 +21,7 @@ qcom,honami-batterydata {
 	qcom,rbatt-capacitive-mohm = <0>;
 	qcom,flat-ocv-threshold-uv = <3800000>;
 	qcom,max-voltage-uv = <4350000>;
-	qcom,v-cutoff-uv = <3400000>;
+	qcom,v-cutoff-uv = <3200000>;
 	qcom,chg-term-ua = <100000>;
 	qcom,batt-id-kohm = <1>;
 	qcom,battery-type = "1274-xxxx SALOMON";
