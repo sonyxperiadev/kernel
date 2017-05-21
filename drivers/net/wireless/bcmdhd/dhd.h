@@ -4,7 +4,7 @@
  * Provides type definitions and function prototypes used to link the
  * DHD OS, bus, and protocol modules.
  *
- * Copyright (C) 1999-2016, Broadcom Corporation
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * Copyright (C) 2013 Sony Mobile Communications Inc.
  * 
  *      Unless you and Broadcom execute a separate written software license

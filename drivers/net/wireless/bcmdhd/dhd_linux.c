@@ -2,7 +2,7 @@
  * Broadcom Dongle Host Driver (DHD), Linux-specific network interface
  * Basically selected code segments from usb-cdc.c and usb-rndis.c
  *
- * Copyright (C) 1999-2016, Broadcom Corporation
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * Copyright (C) 2014 Sony Mobile Communications Inc.
  * 
  *      Unless you and Broadcom execute a separate written software license
@@ -26,7 +26,7 @@
  *
  * <<Broadcom-WL-IPTag/Open:>>
  *
- * $Id: dhd_linux.c 644723 2016-06-21 12:05:02Z $
+ * $Id: dhd_linux.c 675364 2016-12-15 11:06:58Z $
  */
 
 #include <typedefs.h>
@@ -197,10 +197,23 @@ static u32 vendor_oui = CONFIG_DHD_SET_RANDOM_MAC_VAL;
 
 #include <wl_android.h>
 
+#ifdef SOMC_CUSTOM
+#include <dhd_somc_custom.h>
+#endif
+
 /* Maximum STA per radio */
 #define DHD_MAX_STA     32
 
 
+#ifdef SOMC_BMIC
+#ifndef ENABLE_ADAPTIVE_SCHED
+#include <linux/cpufreq.h>
+#endif
+#include <linux/msm-bus.h>
+dhd_bw_info_t g_bw_info;
+void dhd_request_bus_bandwidth(int level);
+static void dhd_update_bw_cpufreq(void);
+#endif
 
 const uint8 wme_fifo2ac[] = { 0, 1, 2, 3, 1, 1 };
 const uint8 prio2fifo[8] = { 1, 0, 0, 1, 2, 2, 3, 3 };
@@ -4668,6 +4681,9 @@ dhd_rpm_state_thread(void *data)
 				DHD_TIMER(("%s:\n", __FUNCTION__));
 				if (dhd->pub.up) {
 					dhd_runtimepm_state(&dhd->pub);
+#ifdef SOMC_BMIC
+					dhd_update_bw_cpufreq();
+#endif
 				}
 
 				DHD_GENERAL_LOCK(&dhd->pub, flags);
@@ -5407,6 +5423,33 @@ int dhd_ioctl_process(dhd_pub_t *pub, int ifidx, dhd_ioctl_t *ioc, void *data_bu
 		bcmerror = BCME_UNSUPPORTED;
 		goto done;
 	}
+
+#ifdef SOMC_CUSTOM
+	if (ioc->cmd == WLC_SET_VAR && data_buf != NULL &&
+	    strncmp("qtxpower", data_buf, 8) == 0) {
+		if (somc_update_qtxpower((char *)data_buf + 9, *((char *)data_buf + 12), 0) != 0) {
+			DHD_ERROR(("qtxpower on chain0 failed\n"));
+			bcmerror = BCME_ERROR;
+			goto done;
+		}
+#ifdef SOMC_MIMO
+		if (somc_update_qtxpower((char *)data_buf + 10, *((char *)data_buf + 12), 1) != 0) {
+			DHD_ERROR(("qtxpower on chain1 failed\n"));
+			bcmerror = BCME_ERROR;
+			goto done;
+		}
+#else
+		/* initialize chain1 value just in case since it's not needed for SISO */
+		*((char *)data_buf + 10) = 0;
+#endif
+	}
+
+	if (ioc->cmd == WLC_SET_VAR && data_buf != NULL &&
+		strncmp("bus:disconnect", data_buf, 14) == 0 && *((char *)(data_buf + 15)) == 99) {
+		DHD_ERROR(("%s: DHD force crash by wl command of bus:disconnect 99\n",
+			__FUNCTION__));
+	}
+#endif
 
 	bcmerror = dhd_wl_ioctl(pub, ifidx, (wl_ioctl_t *)ioc, data_buf, buflen);
 
@@ -6692,6 +6735,155 @@ static int dhd_clear_evt_trace_log(dhd_pub_t *dhdp)
 
 #endif /* SHOW_LOGTRACE */
 
+#ifdef SOMC_BMIC
+void dhd_update_cpufreq(int type, int cur_level, int level)
+{
+	int online_cpu;
+	int ret = -1;
+	int is_update = false;
+
+	switch (type) {
+		case TYPE_FREQ_WIFI_OFF:
+		case TYPE_FREQ_WIFI_ON:
+			is_update = true;
+			break;
+		case TYPE_FREQ_SUS_RES:
+			if ((BW_HIGH == cur_level) && (BW_NONE == level))
+				is_update = true;
+			break;
+		case TYPE_FREQ_UPDATE_BW:
+			if (((BW_LOW == cur_level) && (BW_HIGH == level)) ||
+				((BW_HIGH == cur_level) && (BW_LOW == level))) {
+				is_update = true;
+			}
+			break;
+		default:
+			break;
+	}
+
+	if (!is_update) {
+		return;
+	}
+
+	for_each_online_cpu(online_cpu) {
+		if (online_cpu == TARGET_CPU_ID) {
+			ret = cpufreq_update_policy(online_cpu);
+			if (ret) {
+				DHD_ERROR(("Unable to update policy for cpu:%d. err:%d\n",
+					online_cpu, ret));
+			} else {
+				DHD_ERROR(("Update policy for CPU%d done\n", online_cpu));
+			}
+		}
+	}
+}
+
+static int dhd_bmic_cpufreq_callback(struct notifier_block *nfb,
+		unsigned long event, void *data)
+{
+	struct cpufreq_policy *policy = data;
+	uint32_t max_freq_req, min_freq_req;
+	int online_cpu;
+	int cur_level = g_bw_info.level;
+
+	DHD_INFO(("event: %lu, cpu: %d, max: %d, min: %d, cur level: %d\n",
+		event, policy->cpu, policy->max, policy->min, cur_level));
+
+	switch (event) {
+		case CPUFREQ_NOTIFY:
+			for_each_online_cpu(online_cpu) {
+				if ((policy->cpu == online_cpu) &&
+					(policy->cpu == TARGET_CPU_ID)) {
+					max_freq_req = MAX_FREQ_HIGH;
+					if ((cur_level == BW_NONE) || (cur_level == BW_LOW)) {
+						min_freq_req = MIN_FREQ_LOW;
+					} else if (cur_level == BW_HIGH) {
+						min_freq_req = MIN_FREQ_HIGH;
+					} else {
+						return NOTIFY_OK;
+					}
+
+					if (min_freq_req > max_freq_req) {
+						min_freq_req = max_freq_req;
+					}
+
+					DHD_INFO(("mitigating CPU%d Gold min_freq to %u\n",
+						policy->cpu, min_freq_req));
+
+					cpufreq_verify_within_limits(policy, min_freq_req,
+						max_freq_req);
+				}
+			}
+			break;
+	}
+	return NOTIFY_OK;
+}
+
+static struct notifier_block dhd_bmic_cpufreq_notifier = {
+	.notifier_call = dhd_bmic_cpufreq_callback,
+};
+
+void
+dhd_request_bus_bandwidth(int level)
+{
+	int ret = 0;
+
+	if (!g_bw_info.bus_client) {
+		DHD_ERROR(("%s, no bus client\n", __FUNCTION__));
+		return;
+	}
+
+	switch (level) {
+		case BW_NONE:
+		case BW_LOW:
+		case BW_HIGH:
+			ret = msm_bus_scale_client_update_request(g_bw_info.bus_client, level);
+			if (ret) {
+				DHD_ERROR(("%s, update bw failed, level: %d\n", __FUNCTION__,
+					level));
+			} else {
+				DHD_ERROR(("%s, update bw ok, level: %d\n", __FUNCTION__,
+					level));
+				g_bw_info.level = level;
+			}
+			break;
+
+		default:
+			DHD_ERROR(("%s, invalid level value:%d\n", __FUNCTION__, level));
+	}
+}
+
+static void
+dhd_update_bw_cpufreq(void)
+{
+	ulong txp, total;
+	int level;
+	int cur_level = g_bw_info.level;
+
+	if (!g_bw_info.bus_client) {
+		return;
+	}
+
+	txp = g_bw_info.dhd->pub.tx_packets;
+	total = (txp - g_bw_info.prev_tx_packets);
+
+	if (total >= BW_HIGH_THRESHOLD) {
+		level = BW_HIGH;
+	} else {
+		level = BW_LOW;
+	}
+
+	DHD_INFO(("%s:txp=%lu\n", __FUNCTION__, txp));
+
+	if (level != cur_level) {
+		DHD_ERROR(("%s: total:%lu, current level:%d, next level:%d\n",
+			__FUNCTION__, total, cur_level, level));
+		dhd_request_bus_bandwidth(level);
+		dhd_update_cpufreq(TYPE_FREQ_UPDATE_BW, cur_level, level);
+	}
+	g_bw_info.prev_tx_packets = txp;
+}
+#endif
 
 dhd_pub_t *
 dhd_attach(osl_t *osh, struct dhd_bus *bus, uint bus_hdrlen)
@@ -6703,6 +6895,13 @@ dhd_attach(osl_t *osh, struct dhd_bus *bus, uint bus_hdrlen)
 	uint32 bus_num = -1;
 	uint32 slot_num = -1;
 	wifi_adapter_info_t *adapter = NULL;
+
+#ifdef SOMC_BMIC
+	int cpufreq_ret = 0;
+	struct platform_device *plat_dev = NULL;
+	struct device *bcm_dev = NULL;
+	int ret = 0;
+#endif
 
 	dhd_attach_states_t dhd_state = DHD_ATTACH_STATE_INIT;
 	DHD_TRACE(("%s: Enter\n", __FUNCTION__));
@@ -7084,6 +7283,44 @@ dhd_attach(osl_t *osh, struct dhd_bus *bus, uint bus_hdrlen)
 #endif /* DHD_LB_RXP */
 
 #endif /* DHD_LB */
+
+#ifdef SOMC_BMIC
+	cpufreq_ret = cpufreq_register_notifier(&dhd_bmic_cpufreq_notifier,
+		CPUFREQ_POLICY_NOTIFIER);
+
+	if (cpufreq_ret)
+		DHD_ERROR(("cannot register cpufreq notifier. err:%d\n", ret));
+
+	// Init dhd_bw_info_t
+	g_bw_info.bus_client = 0;
+	g_bw_info.bus_scale_table = NULL;
+	g_bw_info.prev_tx_packets = 0;
+	g_bw_info.level = 0;
+	g_bw_info.dhd = dhd;
+
+	// Register and set bandwith none after module init
+	bcm_dev = bus_find_device_by_name(&platform_bus_type, NULL, "soc:bcmdhd_wlan");
+	if (bcm_dev) {
+		DHD_ERROR(("get platform device success!\n"));
+		plat_dev = container_of(bcm_dev, struct platform_device, dev);
+		if (plat_dev)
+			g_bw_info.bus_scale_table = msm_bus_cl_get_pdata(plat_dev);
+	} else {
+		DHD_ERROR(("get platform device failed!\n"));
+	}
+
+	if (g_bw_info.bus_scale_table) {
+		g_bw_info.bus_client = msm_bus_scale_register_client(g_bw_info.bus_scale_table);
+		if (!g_bw_info.bus_client) {
+			DHD_ERROR(("failed to register with bus scale client\n"));
+			msm_bus_cl_clear_pdata(g_bw_info.bus_scale_table);
+		} else {
+			dhd_request_bus_bandwidth(BW_NONE);
+		}
+	} else {
+		DHD_ERROR(("Get table failed"));
+	}
+#endif
 
 	(void)dhd_sysfs_init(dhd);
 
@@ -7737,6 +7974,10 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 #endif
 #if defined(PROP_TXSTATUS)
 #endif /* PROP_TXSTATUS */
+#if defined(DISABLE_PARALLEL_SCAN)
+	uint32 scan_parallel = 0;
+#endif /* defined(DISABLE_PARALLEL_SCAN) */
+
 #ifdef DHD_SET_FW_HIGHSPEED
 	uint32 ack_ratio = 250;
 	uint32 ack_ratio_depth = 64;
@@ -7805,6 +8046,12 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 #ifdef GET_CUSTOM_MAC_ENABLE
 	}
 #endif /* GET_CUSTOM_MAC_ENABLE */
+
+#if defined(DISABLE_PARALLEL_SCAN)
+	bcm_mkiovar("scan_parallel", (char *)&scan_parallel, 4, iovbuf, sizeof(iovbuf));
+	if ((ret = dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0)) < 0)
+		DHD_ERROR(("%s disabling parallel scan failed ret = %d\n", __FUNCTION__, ret));
+#endif /* defined(DISABLE_PARALLEL_SCAN) */
 
 	/* get a capabilities from firmware */
 	{
@@ -9346,12 +9593,18 @@ void dhd_detach(dhd_pub_t *dhdp)
 		dhd->new_freq = NULL;
 		cpufreq_unregister_notifier(&dhd->freq_trans, CPUFREQ_TRANSITION_NOTIFIER);
 #endif
-	if (dhd->dhd_state & DHD_ATTACH_STATE_WAKELOCKS_INIT) {
-		DHD_TRACE(("wd wakelock count:%d\n", dhd->wakelock_wd_counter));
-		dhd->wakelock_wd_counter = 0;
+
+#ifdef SOMC_BMIC
+	cpufreq_unregister_notifier(&dhd_bmic_cpufreq_notifier, CPUFREQ_POLICY_NOTIFIER);
+#endif
+
+	DHD_TRACE(("wd wakelock count:%d\n", dhd->wakelock_wd_counter));
+	dhd->wakelock_wd_counter = 0;
 #ifdef CONFIG_HAS_WAKELOCK
-		wake_lock_destroy(&dhd->wl_wdwake);
+	wake_lock_destroy(&dhd->wl_wdwake);
 #endif /* CONFIG_HAS_WAKELOCK */
+
+	if (dhd->dhd_state & DHD_ATTACH_STATE_WAKELOCKS_INIT) {
 		DHD_OS_WAKE_LOCK_DESTROY(dhd);
 	}
 
@@ -10823,7 +11076,7 @@ dhd_dev_set_whitelist_ssid(struct net_device *dev, wl_ssid_whitelist_t *ssid_whi
 	return err;
 }
 
-#if defined(ANQPO_SUPPORT)
+#ifdef ANQPO_SUPPORT
 void * dhd_dev_process_anqpo_result(struct net_device *dev,
 	const void  *data, uint32 event, int *send_evt_bytes)
 {
@@ -13629,3 +13882,15 @@ static void dhd_sysfs_exit(dhd_info_t *dhd)
 }
 
 /* ---------------------------- End of sysfs implementation ------------------------------------- */
+
+#ifdef CUSTOMER_HW5
+bool dhd_is_p2p_connection(struct net_device *ndev)
+{
+	dhd_info_t *dhd = DHD_DEV_INFO(ndev);
+
+	if (dhd->pub.op_mode & (DHD_FLAG_P2P_GC_MODE | DHD_FLAG_P2P_GO_MODE)) {
+		return TRUE;
+	}
+	return FALSE;
+}
+#endif	/* CUSTOMER_HW5 */

@@ -2,7 +2,7 @@
  * OS Abstraction Layer Extension - the APIs defined by the "extension" API
  * are only supported by a subset of all operating systems.
  *
- * Copyright (C) 1999-2016, Broadcom Corporation
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you

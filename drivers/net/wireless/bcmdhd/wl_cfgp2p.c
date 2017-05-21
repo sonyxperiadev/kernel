@@ -1,7 +1,7 @@
 /*
  * Linux cfgp2p driver
  *
- * Copyright (C) 1999-2016, Broadcom Corporation
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -24,7 +24,7 @@
  *
  * <<Broadcom-WL-IPTag/Open:>>
  *
- * $Id: wl_cfgp2p.c 598851 2015-11-11 06:48:53Z $
+ * $Id: wl_cfgp2p.c 663917 2016-10-07 10:42:53Z $
  *
  */
 #include <typedefs.h>
@@ -1776,13 +1776,13 @@ wl_cfgp2p_down(struct bcm_cfg80211 *cfg)
 
 	wl_cfgp2p_cancel_listen(cfg, ndev, wdev, TRUE);
 	wl_cfgp2p_disable_discovery(cfg);
-#if defined(WL_CFG80211_P2P_DEV_IF)
+#if defined(WL_CFG80211_P2P_DEV_IF) && !defined(CUSTOMER_HW5)
 	if (cfg->p2p_wdev) {
 		/* If p2p wdev is left out, clean it up */
 		WL_ERR(("Clean up the p2p discovery IF\n"));
 		wl_cfgp2p_del_p2p_disc_if(cfg->p2p_wdev, cfg);
 	}
-#endif /* WL_CFG80211_P2P_DEV_IF */
+#endif /* WL_CFG80211_P2P_DEV_IF && !CUSTOMER_HW5 */
 	for (i = 0; i < P2PAPI_BSSCFG_MAX; i++) {
 			index = wl_to_p2p_bss_bssidx(cfg, i);
 			if (index != WL_INVALID)

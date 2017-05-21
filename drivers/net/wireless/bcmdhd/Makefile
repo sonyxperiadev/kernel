@@ -35,6 +35,13 @@ DHDCFLAGS += -Wall -Wno-date-time -Wstrict-prototypes -Dlinux -DLINUX -DBCMDRIVE
         -DCONFIG_DTS -DCUSTOM_COUNTRY_CODE
 
 #####################
+# Sony Custom
+#####################
+ifeq ($(CONFIG_BCMDHD_SOMC_CUSTOM),y)
+	DHDCFLAGS += -DSOMC_CUSTOM
+endif
+
+#####################
 # Bus Interface Type
 #####################
 ifneq ($(CONFIG_BCMDHD_PCIE),)
@@ -259,6 +266,7 @@ DRIVER_TYPE ?= y
 ifneq ($(CONFIG_BCM4359),)
   DHDCFLAGS += -DBCM4359_CHIP -DSUPPORT_MULTIPLE_REVISION
   DHDCFLAGS += -DMIMO_ANT_SETTING
+  DHDCFLAGS += -DDISABLE_PARALLEL_SCAN
 
   DHDCFLAGS += -DENABLE_BCN_LI_BCN_WAKEUP
   DHDCFLAGS += -DDHD_DONOT_FORWARD_BCMEVENT_AS_NETWORK_PKT
@@ -537,6 +545,9 @@ ifeq ($(BUS_IFACE_PCIE),y)
 DHDOFILES += dhd_pcie.o dhd_pcie_linux.o pcie_core.o dhd_flowring.o dhd_msgbuf.o
 endif
 
+ifeq ($(CONFIG_BCMDHD_SOMC_CUSTOM),y)
+DHDOFILES += dhd_somc_custom.o
+endif
 
 DHDOFILES += $(ANDROID_OFILES)
 

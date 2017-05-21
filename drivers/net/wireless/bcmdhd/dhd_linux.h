@@ -1,7 +1,8 @@
 /*
  * DHD Linux header file (dhd_linux exports for cfg80211 and other components)
  *
- * Copyright (C) 1999-2016, Broadcom Corporation
+ * Copyright (C) 1999-2017, Broadcom Corporation
+ * Copyright (C) 2016 Sony Mobile Communications Inc.
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -80,6 +81,33 @@ typedef struct wifi_adapter_info {
 	uint		bus_num;
 	uint		slot_num;
 } wifi_adapter_info_t;
+
+#ifdef SOMC_BMIC
+#define TARGET_CPU_ID 2
+#define MIN_FREQ_LOW 307200
+#define MIN_FREQ_HIGH 652800
+#define MAX_FREQ_HIGH 2150400
+#define BW_HIGH_THRESHOLD 800
+#define TYPE_FREQ_WIFI_OFF  0
+#define TYPE_FREQ_WIFI_ON   1
+#define TYPE_FREQ_SUS_RES   2
+#define TYPE_FREQ_UPDATE_BW 3
+#define BW_HIGH 2
+#define BW_LOW  1
+#define BW_NONE 0
+
+typedef struct dhd_bw_info {
+	struct msm_bus_scale_pdata *bus_scale_table;
+	uint32 bus_client;
+	ulong prev_tx_packets;
+	int level;
+	struct dhd_info *dhd;
+} dhd_bw_info_t;
+
+extern dhd_bw_info_t g_bw_info;
+extern void dhd_request_bus_bandwidth(int level);
+extern void dhd_update_cpufreq(int type, int cur_level, int level);
+#endif
 
 typedef struct bcmdhd_wifi_platdata {
 	uint				num_adapters;
