@@ -2,7 +2,7 @@
  * Header file of Broadcom Dongle Host Driver (DHD)
  * Prefered Network Offload code and Wi-Fi Location Service(WLS) code.
  *
- * Copyright (C) 1999-2016, Broadcom Corporation
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -99,6 +99,8 @@
 #define CHANNEL_BUCKET_EMPTY_INDEX                      0xFF
 #define GSCAN_RETRY_THRESHOLD              3
 #define MAX_EPNO_SSID_NUM                   32
+#define GSCAN_ANQPO_MAX_HS_LIST_SIZE        16
+#define ANQPO_MAX_HS_NAI_REALM_SIZE         256
 #endif /* GSCAN_SUPPORT */
 
 enum scan_status {
@@ -349,12 +351,12 @@ typedef struct gscan_results_cache {
 	wifi_gscan_result_t results[1];
 } gscan_results_cache_t;
 
-#if defined(ANQPO_SUPPORT)
+#ifdef ANQPO_SUPPORT
 typedef struct {
-    int  id;                            /* identifier of this network block, report this in event */
-    char realm[256];                    /* null terminated UTF8 encoded realm, 0 if unspecified */
-    int64_t roamingConsortiumIds[16];   /* roaming consortium ids to match, 0s if unspecified */
-    uint8 plmn[3];                      /* mcc/mnc combination as per rules, 0s if unspecified */
+	int  id;
+	char realm[ANQPO_MAX_HS_NAI_REALM_SIZE];
+	int64_t roamingConsortiumIds[ANQPO_MAX_PFN_HS];
+	uint8 plmn[ANQPO_MCC_LENGTH];
 } wifi_passpoint_network;
 #endif /* ANQPO_SUPPORT */
 
@@ -519,7 +521,7 @@ extern void dhd_dev_gscan_hotlist_cache_cleanup(struct net_device *dev, hotlist_
 extern int dhd_dev_wait_batch_results_complete(struct net_device *dev);
 extern void * dhd_dev_process_epno_result(struct net_device *dev,
                         const void  *data, uint32 event, int *send_evt_bytes);
-#if defined(ANQPO_SUPPORT)
+#ifdef ANQPO_SUPPORT
 extern void * dhd_dev_process_anqpo_result(struct net_device *dev,
 	const void  *data, uint32 event, int *send_evt_bytes);
 #endif /* ANQPO_SUPPORT */
@@ -569,7 +571,7 @@ extern void dhd_gscan_hotlist_cache_cleanup(dhd_pub_t *dhd, hotlist_type_t type)
 extern int dhd_wait_batch_results_complete(dhd_pub_t *dhd);
 extern void * dhd_pno_process_epno_result(dhd_pub_t *dhd, const void *data,
 	uint32 event, int *size);
-#if defined(ANQPO_SUPPORT)
+#ifdef ANQPO_SUPPORT
 extern void * dhd_pno_process_anqpo_result(dhd_pub_t *dhd,
 	const void *data, uint32 event, int *size);
 #endif /* ANQPO_SUPPORT */

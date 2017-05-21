@@ -1,7 +1,7 @@
 /*
  * Linux DHD Bus Module for PCIE
  *
- * Copyright (C) 1999-2016, Broadcom Corporation
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * Copyright (C) 2016 Sony Mobile Communications Inc.
  * 
  *      Unless you and Broadcom execute a separate written software license
@@ -63,6 +63,10 @@
 #define PCI_CFG_RETRY 		10
 #define OS_HANDLE_MAGIC		0x1234abcd	/* Magic # to recognize osh */
 #define BCM_MEM_FILENAME_LEN 	24		/* Mem. filename length */
+
+#ifdef SOMC_BMIC
+#include <linux/msm-bus.h>
+#endif
 
 #define OSL_PKTTAG_CLEAR(p) \
 do { \
@@ -247,7 +251,11 @@ static int dhdpcie_pci_resume(struct pci_dev *pdev)
 
 #endif /* DHD_PCIE_RUNTIMEPM */
 
+#ifdef SOMC_BMIC
+static int _dhdpcie_set_suspend_resume(struct pci_dev *pdev, bool state)
+#else
 static int dhdpcie_set_suspend_resume(struct pci_dev *pdev, bool state)
+#endif
 {
 	int ret = 0;
 	dhdpcie_info_t *pch = pci_get_drvdata(pdev);
@@ -292,6 +300,36 @@ static int dhdpcie_set_suspend_resume(struct pci_dev *pdev, bool state)
 #endif /* DHD_PCIE_RUNTIMEPM */
 	return ret;
 }
+
+#ifdef SOMC_BMIC
+static int dhdpcie_set_suspend_resume(struct pci_dev *pdev, bool state)
+{
+	int ret = 0;
+	dhdpcie_info_t *pch = pci_get_drvdata(pdev);
+	dhd_bus_t *bus = NULL;
+	int cur_level = g_bw_info.level;
+
+	ret = _dhdpcie_set_suspend_resume(pdev, state);
+
+	if (pch) {
+		bus = pch->bus;
+	}
+
+	if (bus && (bus->dhd->busstate == DHD_BUS_DOWN) &&
+		bus->dhd->dongle_reset) {
+		DHD_ERROR(("%s: Dongle isn't up!\n", __FUNCTION__));
+		return ret;
+	}
+
+	if (bus && !ret) {
+		dhd_request_bus_bandwidth((state ? BW_NONE : BW_LOW));
+		dhd_update_cpufreq(TYPE_FREQ_SUS_RES, cur_level, (state ? BW_NONE : BW_LOW));
+	} else {
+		DHD_ERROR(("%s: suspend/resume state: %d\n", __FUNCTION__, state));
+	}
+	return ret;
+}
+#endif
 
 extern void dhd_dpc_tasklet_kill(dhd_pub_t *dhdp);
 
