@@ -304,7 +304,6 @@ struct binder_node {
 struct binder_ref_death {
 	struct binder_work work;
 	binder_uintptr_t cookie;
-	struct binder_proc *wait_proc;
 };
 
 struct binder_ref {
@@ -322,6 +321,7 @@ struct binder_ref {
 	atomic_t strong;
 	atomic_t weak;
 	bool is_zombie;
+	bool node_is_zombie;
 	struct hlist_node zombie_ref;
 	struct binder_ref_death *death;
 };
@@ -2855,12 +2855,6 @@ static int binder_thread_write(struct binder_proc *proc,
 				     ref->node->debug_id);
 
 			if (cmd == BC_REQUEST_DEATH_NOTIFICATION) {
-				if (ref->death) {
-					binder_user_error("%d:%d BC_REQUEST_DEATH_NOTIFICATION death notification already set\n",
-						proc->pid, thread->pid);
-					binder_put_ref(ref);
-					break;
-				}
 				death = kzalloc(sizeof(*death), GFP_KERNEL);
 				if (death == NULL) {
 					binder_proc_lock(thread->proc,
@@ -2882,9 +2876,16 @@ static int binder_thread_write(struct binder_proc *proc,
 				INIT_LIST_HEAD(&death->work.entry);
 				death->cookie = cookie;
 				binder_proc_lock(proc, __LINE__);
+				if (ref->death) {
+					binder_user_error("%d:%d BC_REQUEST_DEATH_NOTIFICATION death notification already set\n",
+						proc->pid, thread->pid);
+					binder_proc_unlock(proc, __LINE__);
+					kfree(death);
+					binder_put_ref(ref);
+					break;
+				}
 				ref->death = death;
-				if (ref->node->is_zombie &&
-				    list_empty(&ref->death->work.entry)) {
+				if (ref->node_is_zombie) {
 					ref->death->work.type = BINDER_WORK_DEAD_BINDER;
 					if (thread->looper &
 					    (BINDER_LOOPER_STATE_REGISTERED |
@@ -2903,9 +2904,11 @@ static int binder_thread_write(struct binder_proc *proc,
 				}
 				binder_proc_unlock(proc, __LINE__);
 			} else {
+				binder_proc_lock(proc, __LINE__);
 				if (ref->death == NULL) {
 					binder_user_error("%d:%d BC_CLEAR_DEATH_NOTIFICATION death notification not active\n",
 						proc->pid, thread->pid);
+					binder_proc_unlock(proc, __LINE__);
 					binder_put_ref(ref);
 					break;
 				}
@@ -2915,10 +2918,10 @@ static int binder_thread_write(struct binder_proc *proc,
 						proc->pid, thread->pid,
 						(u64)death->cookie,
 						(u64)cookie);
+					binder_proc_unlock(proc, __LINE__);
 					binder_put_ref(ref);
 					break;
 				}
-				binder_proc_lock(proc, __LINE__);
 				ref->death = NULL;
 				if (list_empty(&death->work.entry)) {
 					death->work.type = BINDER_WORK_CLEAR_DEATH_NOTIFICATION;
@@ -3277,24 +3280,15 @@ retry:
 		case BINDER_WORK_CLEAR_DEATH_NOTIFICATION: {
 			struct binder_ref_death *death;
 			uint32_t cmd;
+			binder_uintptr_t cookie;
 
+			binder_proc_lock(proc, __LINE__);
 			death = container_of(w, struct binder_ref_death, work);
 			if (w->type == BINDER_WORK_CLEAR_DEATH_NOTIFICATION)
 				cmd = BR_CLEAR_DEATH_NOTIFICATION_DONE;
 			else
 				cmd = BR_DEAD_BINDER;
-			if (put_user(cmd, (uint32_t __user *)ptr)) {
-				binder_unfreeze_worklist(wlist);
-				return -EFAULT;
-			}
-			ptr += sizeof(uint32_t);
-			if (put_user(death->cookie,
-				     (binder_uintptr_t __user *)ptr)) {
-				binder_unfreeze_worklist(wlist);
-				return -EFAULT;
-			}
-			ptr += sizeof(binder_uintptr_t);
-			binder_stat_br(proc, thread, cmd);
+			cookie = death->cookie;
 			binder_debug(BINDER_DEBUG_DEATH_NOTIFICATION,
 				     "%d:%d %s %016llx\n",
 				      proc->pid, thread->pid,
@@ -3303,7 +3297,6 @@ retry:
 				      "BR_CLEAR_DEATH_NOTIFICATION_DONE",
 				      (u64)death->cookie);
 
-			binder_proc_lock(proc, __LINE__);
 			if (w->type == BINDER_WORK_CLEAR_DEATH_NOTIFICATION) {
 				binder_dequeue_work(w, __LINE__);
 				binder_proc_unlock(proc, __LINE__);
@@ -3317,6 +3310,15 @@ retry:
 
 			}
 			binder_unfreeze_worklist(wlist);
+			if (put_user(cmd, (uint32_t __user *)ptr)) {
+				return -EFAULT;
+			}
+			ptr += sizeof(uint32_t);
+			if (put_user(cookie, (binder_uintptr_t __user *)ptr)) {
+				return -EFAULT;
+			}
+			ptr += sizeof(binder_uintptr_t);
+			binder_stat_br(proc, thread, cmd);
 			if (cmd == BR_DEAD_BINDER)
 				goto done; /* DEAD_BINDER notifications can cause transactions */
 		} break;
@@ -4243,10 +4245,17 @@ static int binder_node_release(struct binder_node *node, int refs)
 	struct binder_ref *ref;
 	int death = 0;
 	struct binder_proc *proc = node->proc;
-	struct binder_worklist tmplist;
-	struct binder_work *w;
+	struct binder_ref dummy_ref;
+	struct hlist_head unvisited_refs;
 
 	BUG_ON(!proc);
+
+	INIT_HLIST_HEAD(&unvisited_refs);
+
+	/* node->refs entries can have their proc->pid printed */
+	dummy_ref.proc = proc;
+	INIT_HLIST_NODE(&dummy_ref.node_entry);
+
 	binder_proc_lock(proc, __LINE__);
 
 	binder_dequeue_work(&node->work, __LINE__);
@@ -4262,47 +4271,58 @@ static int binder_node_release(struct binder_node *node, int refs)
 	node->local_strong_refs = 0;
 	node->local_weak_refs = 0;
 
-	binder_init_worklist(&tmplist);
-	hlist_for_each_entry(ref, &node->refs, node_entry) {
+	/*
+	 * We move all the references to an 'unvisited' list, to avoid
+	 * iterating node->refs without the lock held.
+	 */
+	hlist_move_list(&node->refs, &unvisited_refs);
+
+	/*
+	 * Add a dummy reference to prevent the node from getting freed,
+	 * which can happen if a ref goes away while we don't hold the
+	 * proc lock for the node below.
+	 */
+	hlist_add_head(&dummy_ref.node_entry, &node->refs);
+
+	while (!hlist_empty(&unvisited_refs)) {
+		ref = hlist_entry(unvisited_refs.first, struct binder_ref,
+				  node_entry);
+
+		/* First, move it back */
+		hlist_del_init(&ref->node_entry);
+		hlist_add_head(&ref->node_entry, &node->refs);
+
+		/* Then, see if we need to do any work on it */
+		binder_proc_unlock(proc, __LINE__);
+
 		refs++;
 
-		if (!ref->death)
+		binder_proc_lock(ref->proc, __LINE__);
+
+		ref->node_is_zombie = true;
+
+		if (!ref->death || ref->is_zombie) {
+			binder_proc_unlock(ref->proc, __LINE__);
+			binder_proc_lock(proc, __LINE__);
 			continue;
+		}
 
 		death++;
 
-		if (list_empty(&ref->death->work.entry)) {
-			ref->death->work.type = BINDER_WORK_DEAD_BINDER;
-			ref->death->wait_proc = ref->proc;
-			binder_enqueue_work(&ref->death->work,
-					    &tmplist,
-					    __LINE__);
-		} else
-			BUG();
+		BUG_ON(!list_empty(&ref->death->work.entry));
+		ref->death->work.type = BINDER_WORK_DEAD_BINDER;
+		binder_enqueue_work(&ref->death->work, &ref->proc->todo,
+				    __LINE__);
+		binder_wakeup_proc(ref->proc);
+
+		binder_proc_unlock(ref->proc, __LINE__);
+		binder_proc_lock(proc, __LINE__);
 	}
+
+	hlist_del(&dummy_ref.node_entry);
+
 	binder_proc_unlock(proc, __LINE__);
 
-	while (!list_empty(&tmplist.list)) {
-		struct binder_ref_death *death;
-		struct binder_proc *wait_proc;
-
-		w = list_first_entry(&tmplist.list, struct binder_work, entry);
-		death = container_of(w, struct binder_ref_death, work);
-		binder_proc_lock(proc, __LINE__);
-		binder_dequeue_work(w, __LINE__);
-		/*
-		 * It's not safe to touch death after
-		 * enqueuing since it may be processed
-		 * remotely and kfree'd
-		 */
-		wait_proc = death->wait_proc;
-		binder_enqueue_work(w, &death->wait_proc->todo,
-				    __LINE__);
-		binder_proc_unlock(proc, __LINE__);
-		binder_proc_lock(wait_proc, __LINE__);
-		binder_wakeup_proc(wait_proc);
-		binder_proc_unlock(wait_proc, __LINE__);
-	}
 	binder_debug(BINDER_DEBUG_DEAD_BINDER,
 		     "node %d now dead, refs %d, death %d\n",
 		     node->debug_id, refs, death);
