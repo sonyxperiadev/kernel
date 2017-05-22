@@ -193,7 +193,7 @@
 		peripheral_mem: peripheral_region@8ea00000 {
 			compatible = "removed-dma-pool";
 			no-map;
-			reg = <0 0x8ea00000 0 0x2b00000>;
+			reg = <0 0x8ea00000 0 0x2d00000>;
 		};
 
 		adsp_mem: adsp_region {
@@ -254,7 +254,9 @@
 };
 
 #include "msm8996-ion.dtsi"
+#include "msm8996-mdss.dtsi"
 #include "msm8996-sde.dtsi"
+//#include "msm8996-mdss.dtsi"
 #include "msm8996-mdss-pll.dtsi"
 #include "msm8996-smp2p.dtsi"
 #include "msm8996-ipcrouter.dtsi"
