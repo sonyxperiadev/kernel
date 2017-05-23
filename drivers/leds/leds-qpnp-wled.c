@@ -1579,7 +1579,8 @@ static irqreturn_t qpnp_wled_sc_irq_handler(int irq, void *_wled)
 	pr_err("WLED short circuit detected %d times fault_status=%x\n",
 		++wled->sc_cnt, val);
 
-	mutex_lock(&wled->lock);
+	if (!mutex_is_locked(&wled->lock))
+		mutex_lock(&wled->lock);
 	qpnp_wled_module_en(wled, wled->ctrl_base, false);
 	msleep(QPNP_WLED_SC_DLY_MS);
 	qpnp_wled_module_en(wled, wled->ctrl_base, true);
