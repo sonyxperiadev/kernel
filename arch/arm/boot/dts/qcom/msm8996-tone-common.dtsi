@@ -556,8 +556,17 @@
 		/delete-node/ qcom,panel-supply-entry@3;
 	};
 
-	ramoops {
-		compatible = "pstore-ramoops";
+	ramoops@a7f00000 {
+		compatible = "ramoops";
+		reg = <0xa7f00000 0x100000>;
+		status = "ok";
+
+		record-size = <0x4000>;
+		console-size = <0x4000>;
+		ftrace-size = <0x2000>;
+		pmsg-size = <0x4000>;
+		ecc-size = <16>;
+
 		memory-region = <&pstore_reserve_mem>;
 	};
 
