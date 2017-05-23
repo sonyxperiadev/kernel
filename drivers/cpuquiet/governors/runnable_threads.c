@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2014 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,7 +38,7 @@ static unsigned int sample_rate = 200;	  /* msec */
 #define NR_FSHIFT      (1 << NR_FSHIFT_EXP)
 /* avg run threads * 8 (e.g., 11 = 1.375 threads) */
 static unsigned int default_thresholds[] = {
-	10, 18, 20, UINT_MAX
+	10, 14, 20, UINT_MAX
 };
 
 static unsigned int nr_run_last;
@@ -227,34 +227,11 @@ static void runnables_stop(void)
 
 static int runnables_start(void)
 {
-	int i, err, arch_specific_sample_rate;
+	int err;
 
 	err = runnables_sysfs_init();
 	if (err)
 		return err;
-
-	INIT_WORK(&runnables_work, runnables_work_func);
-
-	init_timer(&runnables_timer);
-	runnables_timer.function = runnables_avg_sampler;
-
-	arch_specific_sample_rate = cpuquiet_get_avg_hotplug_latency();
-	if (arch_specific_sample_rate)
-		/*
-		 * Sample at least 10 times as slowly as overhead for one
-		 * hotplug event.
-		 */
-		sample_rate = arch_specific_sample_rate * 10;
-
-	for (i = 0; i < ARRAY_SIZE(nr_run_thresholds); ++i) {
-		if (i < ARRAY_SIZE(default_thresholds))
-			nr_run_thresholds[i] = default_thresholds[i];
-		else if (i == (ARRAY_SIZE(nr_run_thresholds) - 1))
-			nr_run_thresholds[i] = UINT_MAX;
-		else
-			nr_run_thresholds[i] = i + 1 +
-				NR_FSHIFT / default_threshold_level;
-	}
 
 	runnables_enabled = true;
 
@@ -272,6 +249,31 @@ static struct cpuquiet_governor runnables_governor = {
 
 static int __init init_runnables(void)
 {
+	int i, arch_specific_sample_rate;
+
+	INIT_WORK(&runnables_work, runnables_work_func);
+
+	init_timer(&runnables_timer);
+	runnables_timer.function = runnables_avg_sampler;
+
+	arch_specific_sample_rate = cpuquiet_get_avg_hotplug_latency();
+	if (arch_specific_sample_rate)
+		/*
+		 * Sample at least 10 times as slowly as overhead for one
+		 * hotplug event.
+		 */
+		sample_rate = arch_specific_sample_rate * 10;
+
+	for (i = 0; i < ARRAY_SIZE(nr_run_thresholds); ++i) {
+		if (i == (ARRAY_SIZE(nr_run_thresholds) - 1))
+			nr_run_thresholds[i] = UINT_MAX;
+		else if (i < ARRAY_SIZE(default_thresholds))
+			nr_run_thresholds[i] = default_thresholds[i];
+		else
+			nr_run_thresholds[i] = i + 1 +
+				NR_FSHIFT / default_threshold_level;
+	}
+
 	return cpuquiet_register_governor(&runnables_governor);
 }
 
