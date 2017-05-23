@@ -27,6 +27,14 @@
 #include <linux/leds-qpnp-wled.h>
 #include <linux/qpnp/qpnp-revid.h>
 
+#ifdef CONFIG_ARCH_MSM8996
+#define QPNP_IRQ_FLAGS	(IRQF_TRIGGER_RISING | \
+			IRQF_TRIGGER_FALLING | \
+			IRQF_ONESHOT)
+#else
+#define QPNP_IRQ_FLAGS	IRQF_ONESHOT
+#endif
+
 /* base addresses */
 #define QPNP_WLED_CTRL_BASE		"qpnp-wled-ctrl-base"
 #define QPNP_WLED_SINK_BASE		"qpnp-wled-sink-base"
@@ -1570,6 +1578,7 @@ static irqreturn_t qpnp_wled_sc_irq_handler(int irq, void *_wled)
 
 	pr_err("WLED short circuit detected %d times fault_status=%x\n",
 		++wled->sc_cnt, val);
+
 	mutex_lock(&wled->lock);
 	qpnp_wled_module_en(wled, wled->ctrl_base, false);
 	msleep(QPNP_WLED_SC_DLY_MS);
@@ -2183,7 +2192,8 @@ static int qpnp_wled_config(struct qpnp_wled *wled)
 	if (wled->sc_irq >= 0) {
 		wled->sc_cnt = 0;
 		rc = devm_request_threaded_irq(&wled->pdev->dev, wled->sc_irq,
-				NULL, qpnp_wled_sc_irq_handler, IRQF_ONESHOT,
+				NULL, qpnp_wled_sc_irq_handler, 
+				QPNP_IRQ_FLAGS,
 				"qpnp_wled_sc_irq", wled);
 		if (rc < 0) {
 			dev_err(&wled->pdev->dev,
