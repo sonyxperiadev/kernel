@@ -218,8 +218,7 @@ struct binder_transaction_log_entry {
 	const char *context_name;
 };
 struct binder_transaction_log {
-	int next;
-	int full;
+	atomic64_t cur;
 	struct binder_transaction_log_entry entry[32];
 };
 static struct binder_transaction_log binder_transaction_log;
@@ -229,14 +228,10 @@ static struct binder_transaction_log_entry *binder_transaction_log_add(
 	struct binder_transaction_log *log)
 {
 	struct binder_transaction_log_entry *e;
+	uint64_t cur = atomic64_inc_return(&log->cur);
 
-	e = &log->entry[log->next];
+	e = &log->entry[cur % ARRAY_SIZE(log->entry)];
 	memset(e, 0, sizeof(*e));
-	log->next++;
-	if (log->next == ARRAY_SIZE(log->entry)) {
-		log->next = 0;
-		log->full = 1;
-	}
 	return e;
 }
 
@@ -5071,14 +5066,14 @@ static void print_binder_transaction_log_entry(struct seq_file *m,
 static int binder_transaction_log_show(struct seq_file *m, void *unused)
 {
 	struct binder_transaction_log *log = m->private;
+	uint64_t count = atomic64_read(&log->cur);
+	uint64_t cur = count % ARRAY_SIZE(log->entry);
 	int i;
 
-	if (log->full) {
-		for (i = log->next; i < ARRAY_SIZE(log->entry); i++)
-			print_binder_transaction_log_entry(m, &log->entry[i]);
+	for (i = 0; i < ARRAY_SIZE(log->entry) && i < count; i++) {
+		uint64_t index = cur++ % ARRAY_SIZE(log->entry);
+		print_binder_transaction_log_entry(m, &log->entry[index]);
 	}
-	for (i = 0; i < log->next; i++)
-		print_binder_transaction_log_entry(m, &log->entry[i]);
 	return 0;
 }
 
@@ -5133,6 +5128,8 @@ static int __init binder_init(void)
 	int ret, i;
 
 	atomic_set(&binder_seq_count, 0);
+	atomic64_set(&binder_transaction_log.cur, ~0ULL);
+	atomic64_set(&binder_transaction_log_failed.cur, ~0ULL);
 
 	binder_deferred_workqueue = create_singlethread_workqueue("binder");
 	if (!binder_deferred_workqueue)
