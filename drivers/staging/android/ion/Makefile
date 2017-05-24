@@ -11,3 +11,7 @@ obj-$(CONFIG_ION_DUMMY) += ion_dummy_driver.o
 obj-$(CONFIG_ION_TEGRA) += tegra/
 obj-$(CONFIG_ION_MSM) += msm/
 obj-$(CONFIG_ION_MSM) += ion_system_secure_heap.o
+
+# TODO: remove me b/62057517
+subdir-ccflags-y += \
+	-Wno-constant-logical-operand

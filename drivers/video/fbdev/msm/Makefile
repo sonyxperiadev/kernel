@@ -71,3 +71,7 @@ obj-$(CONFIG_FB_MSM_MDSS) += mdss_fb.o mdss_util.o
 ifeq ($(CONFIG_FB_MSM_MDSS),y)
     obj-$(CONFIG_COMPAT) += mdss_compat_utils.o
 endif
+
+# TODO: remove me b/62057517
+subdir-ccflags-y += \
+	-Wno-header-guard
