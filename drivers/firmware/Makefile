@@ -24,3 +24,7 @@ obj-$(CONFIG_GOOGLE_FIRMWARE)	+= google/
 obj-$(CONFIG_EFI)		+= efi/
 obj-$(CONFIG_UEFI_CPER)		+= efi/
 obj-$(CONFIG_MSM_TZ_LOG)        += qcom/
+
+# TODO: remove me b/62057517
+subdir-ccflags-y += \
+	-Wno-ignored-attributes
