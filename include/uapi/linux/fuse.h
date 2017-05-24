@@ -250,7 +250,6 @@ struct fuse_file_lock {
 #define FUSE_ASYNC_DIO		(1 << 15)
 #define FUSE_WRITEBACK_CACHE	(1 << 16)
 #define FUSE_NO_OPEN_SUPPORT	(1 << 17)
-#define FUSE_PASSTHROUGH	(1 << 18)
 
 /**
  * CUSE INIT request/reply flags
@@ -482,7 +481,7 @@ struct fuse_create_in {
 struct fuse_open_out {
 	uint64_t	fh;
 	uint32_t	open_flags;
-	int32_t         passthrough_fd;
+	uint32_t	padding;
 };
 
 struct fuse_release_in {
