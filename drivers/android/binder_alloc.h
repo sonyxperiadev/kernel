@@ -100,9 +100,12 @@ binder_alloc_get_user_buffer_offset(struct binder_alloc *alloc)
 {
 	/*
 	 * user_buffer_offset is constant if vma is set and
-	 * undefined if vma is not set
+	 * undefined if vma is not set. It is possible to
+	 * get here with !alloc->vma if the target process
+	 * is dying while a transaction is being initiated.
+	 * Returning the old value is ok in this case and
+	 * the transaction will fail.
 	 */
-	BUG_ON(!alloc->vma);
 	return READ_ONCE(alloc->user_buffer_offset);
 }
 
