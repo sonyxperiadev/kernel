@@ -4570,6 +4570,12 @@ int mdss_panel_parse_dt(struct device_node *np,
 	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->post_panel_on_cmds,
 		"qcom,mdss-dsi-post-panel-on-command", NULL);
 
+	rc = of_property_read_u32(np,
+		"qcom,mdss-dsi-host-esc-clk-freq-hz",
+		&pinfo->esc_clk_rate_hz);
+	if (rc)
+		pinfo->esc_clk_rate_hz = MDSS_DSI_MAX_ESC_CLK_RATE_HZ;
+
 
 	return spec_pdata->parse_specific_dt(np, ctrl_pdata);
 
