@@ -723,6 +723,16 @@ end:
 	return 0;
 }
 
+static int mdss_dsi_panel_apply_display_setting(struct mdss_panel_data
+					*pdata __attribute__((unused)),
+					u32 mode __attribute__((unused)))
+{
+	pr_err("somc_panel: Tried to set LP commands, but "
+		"persistence mode is NOT IMPLEMENTED.\n");
+	pr_err("somc_panel: Returning 0 to avoid kernel crash!!!\n");
+	return 0;
+}
+
 static void mdss_dsi_panel_switch_mode(struct mdss_panel_data *pdata,
 							int mode)
 {
@@ -4810,6 +4820,7 @@ int mdss_dsi_panel_init(struct device_node *node,
 	pinfo->dynamic_switch_pending = false;
 	pinfo->is_lpm_mode = false;
 	pinfo->esd_rdy = false;
+	pinfo->persist_mode = false;
 
 	spec_pdata->pcc_setup = mdss_dsi_panel_pcc_setup;
 	spec_pdata->panel_power_ctrl = mdss_dsi_panel_power_ctrl_ex;
@@ -4823,7 +4834,10 @@ int mdss_dsi_panel_init(struct device_node *node,
 	ctrl_pdata->off = mdss_dsi_panel_off;
 	ctrl_pdata->low_power_config = mdss_dsi_panel_low_power_config;
 	ctrl_pdata->panel_data.set_backlight = mdss_dsi_panel_bl_ctrl;
+	ctrl_pdata->panel_data.apply_display_setting =
+				mdss_dsi_panel_apply_display_setting;
 	ctrl_pdata->switch_mode = mdss_dsi_panel_switch_mode;
+
 
 	mdss_dsi_panel_fps_data_init(&fpsd);
 	mdss_dsi_panel_fps_data_init(&vpsd);
