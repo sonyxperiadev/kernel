@@ -13,5 +13,5 @@ obj-$(CONFIG_CRYPTO_DEV_QCOM_ICE) += ice.o
 
 # TODO: remove me b/62057517
 subdir-ccflags-y += \
-	-Wno-frame-larger-than= \
+	$(call cc-option,-Wno-frame-larger-than=) \
 	-Wno-ignored-attributes
