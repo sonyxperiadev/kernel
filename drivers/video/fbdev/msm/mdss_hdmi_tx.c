@@ -119,7 +119,6 @@ static int hdmi_tx_get_audio_edid_blk(struct platform_device *pdev,
 	struct msm_ext_disp_audio_edid_blk *blk);
 static int hdmi_tx_get_cable_status(struct platform_device *pdev, u32 vote);
 static int hdmi_tx_update_ppm(struct hdmi_tx_ctrl *hdmi_ctrl, s32 ppm);
-static void hdmi_tx_set_avi_infoframe(struct hdmi_tx_ctrl *hdmi_ctrl);
 
 static struct mdss_hw hdmi_tx_hw = {
 	.hw_ndx = MDSS_HW_HDMI,
@@ -1093,7 +1092,6 @@ static ssize_t hdmi_tx_sysfs_wta_avi_itc(struct device *dev,
 
 	ret = strnlen(buf, PAGE_SIZE);
 
-	hdmi_tx_set_avi_infoframe(hdmi_ctrl);
 end:
 	mutex_unlock(&hdmi_ctrl->tx_lock);
 	return ret;
@@ -1963,10 +1961,6 @@ static int hdmi_tx_init_hdcp(struct hdmi_tx_ctrl *hdmi_ctrl)
 
 	if (hdmi_ctrl->hdcp14_present) {
 		hdcp_data = hdcp_1x_init(&hdcp_init_data);
-
-		/* TODO: CHECKME!!! */
-		hdmi_hdcp_aksv(&hdmi_ctrl->aksv[0],
-			hdmi_ctrl->feature_data[HDMI_TX_FEAT_HDCP]);
 
 		if (IS_ERR_OR_NULL(hdcp_data)) {
 			DEV_ERR("%s: hdcp 1.4 init failed\n", __func__);
