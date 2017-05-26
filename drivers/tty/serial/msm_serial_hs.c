@@ -2218,13 +2218,16 @@ struct uart_port *msm_hs_get_uart_port(int port_index)
 {
 	struct uart_state *state = msm_hs_driver.state + port_index;
 
+	if (!state || !state->uart_port)
+		goto err;
+
 	/* The uart_driver structure stores the states in an array.
 	 * Thus the corresponding offset from the drv->state returns
 	 * the state for the uart_port that is requested
 	 */
 	if (port_index == state->uart_port->line)
 		return state->uart_port;
-
+err:
 	return NULL;
 }
 EXPORT_SYMBOL(msm_hs_get_uart_port);
