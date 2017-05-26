@@ -51,6 +51,12 @@
 #define KGSL_L2PC_CPU_TIMEOUT	(80 * 1000)
 
 /* Order deeply matters here because reasons. New entries go on the end */
+/* kholk: Not because reasons. This is because they wanted to
+ *        set clocks through this array by hardcoding the array position
+ *        in the damn calls. It looks like the last clock to worry about
+ *        is rbbmtimer_clk, so after that one it should be safe to add
+ *        our clocks in our favourite order.
+ */
 static const char * const clocks[] = {
 	"src_clk",
 	"core_clk",
@@ -65,7 +71,8 @@ static const char * const clocks[] = {
 	"alwayson_clk",
 	"isense_clk",
 	"rbcpr_clk",
-	"iref_clk"
+	"iref_clk",
+	"gtbu1_clk"
 };
 
 static unsigned int ib_votes[KGSL_MAX_BUSLEVELS];

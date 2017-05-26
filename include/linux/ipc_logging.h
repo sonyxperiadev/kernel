@@ -225,6 +225,7 @@ int add_deserialization_func(void *ctxt, int type,
 int ipc_log_context_destroy(void *ctxt);
 
 #else
+#include <linux/errno.h>
 
 static inline void *ipc_log_context_create(int max_num_pages,
 	const char *modname, uint16_t user_version)

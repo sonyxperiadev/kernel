@@ -633,6 +633,21 @@ config LEDS_VERSATILE
 	  This option enabled support for the LEDs on the ARM Versatile
 	  and RealView boards. Say Y to enabled these.
 
+config LEDS_AS3668
+	tristate "LED driver for AS3668"
+	depends on LEDS_CLASS
+	depends on I2C
+	help
+	  This option enables support for austriamicrosystems
+	  AS3668 led controller. It does not use LED framework
+	  but has its own sysfs API due to the special functionality
+	  it provides.
+
+config LEDS_AS3668_EXTENSION
+	tristate "AS3668 LED driver extension"
+	help
+	  This option enables extensional RGB LED function.
+
 comment "LED Triggers"
 source "drivers/leds/trigger/Kconfig"
 

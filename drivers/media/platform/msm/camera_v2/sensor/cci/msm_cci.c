@@ -447,6 +447,7 @@ static int32_t msm_cci_wait_report_cmd(struct cci_device *cci_dev,
 	return msm_cci_wait(cci_dev, master, queue);
 }
 
+#if !defined(CONFIG_SONY_CAM_V4L2)
 static void msm_cci_process_half_q(struct cci_device *cci_dev,
 	enum cci_i2c_master_t master,
 	enum cci_i2c_queue_t queue)
@@ -459,6 +460,7 @@ static void msm_cci_process_half_q(struct cci_device *cci_dev,
 			CCI_QUEUE_START_ADDR);
 	}
 }
+#endif
 
 static int32_t msm_cci_process_full_q(struct cci_device *cci_dev,
 	enum cci_i2c_master_t master,
@@ -659,7 +661,9 @@ static int32_t msm_cci_data_queue(struct cci_device *cci_dev,
 				}
 				continue;
 			}
+#if !defined(CONFIG_SONY_CAM_V4L2)
 			msm_cci_process_half_q(cci_dev,	master, queue);
+#endif
 		}
 
 		CDBG("%s cmd_size %d addr 0x%x data 0x%x\n", __func__,

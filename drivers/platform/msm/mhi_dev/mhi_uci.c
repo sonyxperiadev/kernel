@@ -737,12 +737,14 @@ int mhi_uci_init(void)
 	struct uci_client *mhi_client = NULL;
 	s32 r = 0;
 
+#ifdef CONFIG_IPC_LOGGING
 	mhi_uci_ipc_log = ipc_log_context_create(MHI_UCI_IPC_LOG_PAGES,
 						"mhi-uci", 0);
 	if (mhi_uci_ipc_log == NULL) {
 		uci_log(UCI_DBG_WARNING,
 				"Failed to create IPC logging context\n");
 	}
+#endif
 	uci_ctxt.event_notifier = uci_event_notifier;
 
 	uci_log(UCI_DBG_DBG, "Setting up channel attributes.\n");

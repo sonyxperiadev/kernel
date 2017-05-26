@@ -29,7 +29,7 @@
 #include <linux/workqueue.h>
 
 #define CREATE_TRACE_POINTS
-#include "rndis_ipa_trace.h"
+#include <../drivers/net/ethernet/msm/rndis_ipa_trace.h>
 
 #define DRV_NAME "RNDIS_IPA"
 #define DEBUGFS_DIR_NAME "rndis_ipa"

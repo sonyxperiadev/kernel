@@ -11,7 +11,7 @@
  */
 
 &soc {
-	mdss_mdp: qcom,mdss_mdp@900000 {
+	sde_kms: qcom,sde_kms@900000 {
 		compatible = "qcom,sde-kms";
 		reg = <0x00900000 0x90000>,
 		      <0x009b0000 0x1040>,
@@ -178,22 +178,22 @@
 			};
 		};
 
-		smmu_mdp_unsec: qcom,smmu_mdp_unsec_cb {
+		smmu_kms_unsec: qcom,smmu_mdp_unsec_cb {
 			compatible = "qcom,smmu_mdp_unsec";
 			iommus = <&mdp_smmu 0>;
 		};
 
-		smmu_rot_unsec: qcom,smmu_rot_unsec_cb {
+		smmu_kmsrot_unsec: qcom,smmu_rot_unsec_cb {
 			compatible = "qcom,smmu_rot_unsec";
 			iommus = <&rot_smmu 0>;
 		};
 
-		smmu_mdp_sec: qcom,smmu_mdp_sec_cb {
+		smmu_kms_sec: qcom,smmu_mdp_sec_cb {
 			compatible = "qcom,smmu_mdp_sec";
 			iommus = <&mdp_smmu 1>;
 		};
 
-		smmu_rot_sec: qcom,smmu_rot_sec_cb {
+		smmu_kmsrot_sec: qcom,smmu_rot_sec_cb {
 			compatible = "qcom,smmu_rot_sec";
 			iommus = <&rot_smmu 1>;
 		};
@@ -224,6 +224,7 @@
 		};
 	};
 
+#if 0
 	mdss_dsi0: qcom,mdss_dsi_ctrl0@994000 {
 		compatible = "qcom,dsi-ctrl-hw-v1.4";
 		label = "dsi-ctrl-0";
@@ -544,3 +545,8 @@
 		/* dummy node for backward compatibility */
 	};
 };
+#else
+
+};
+
+#endif

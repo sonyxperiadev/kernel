@@ -229,13 +229,14 @@ struct venus_hfi_device {
 	struct list_head sess_head;
 	u32 intr_status;
 	u32 device_id;
-	u32 clk_freq;
+	unsigned long clk_freq;
 	u32 last_packet_type;
 	unsigned long clk_bitrate;
 	unsigned long scaled_rate;
 	struct msm_vidc_gov_data bus_vote;
 	bool power_enabled;
 	struct mutex lock;
+	struct mutex clock_lock;
 	msm_vidc_callback callback;
 	struct vidc_mem_addr iface_q_table;
 	struct vidc_mem_addr qdss;

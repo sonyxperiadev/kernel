@@ -522,6 +522,15 @@ config REGULATOR_PWM
 	  This driver supports PWM controlled voltage regulators. PWM
 	  duty cycle can increase or decrease the voltage.
 
+config REGULATOR_ONSEMI_NCP6335D
+	tristate "OnSemi NCP6335D regulator support"
+	depends on I2C
+	help
+	 This driver supports the OnSemi NCP6335D switching voltage regulator
+	 (buck convertor). The regulator is controlled using an I2C interface
+	 and supports a programmable voltage range from 0.6V to 1.4V in steps
+	 of 6.25mV.
+
 config REGULATOR_QCOM_RPM
 	tristate "Qualcomm RPM regulator driver"
 	depends on MFD_QCOM_RPM
@@ -844,6 +853,20 @@ config REGULATOR_QPNP_OLEDB
 	  Qualcomm Technologies, Inc. QPNP PMICs. It exposes the OLED voltage
 	  configuration via the regulator framework. The configurable range of
 	  this bias is 5 V to 8.1 V.
+
+config REGULATOR_QPNP_LABIBB_SOMC
+	depends on REGULATOR_QPNP_LABIBB
+	bool "QPNP LAB/IBB Regulator - SoMC enhancements"
+	help
+	  This activates SoMC specific enhancements to QTI QPNP LAB/IBB
+	  regulator driver.
+
+config SOMC_LCD_OCP_ENABLED
+	depends on REGULATOR_QPNP_LABIBB_SOMC
+	bool "QPNP LAB/IBB Regulator - SoMC LCD OverCurrent Protection"
+	help
+	  This activates SoMC specific LCD Over Current Protection (OCP)
+	  function in LAB/IBB driver.
 
 config REGULATOR_SPM
 	bool "SPM regulator driver"
