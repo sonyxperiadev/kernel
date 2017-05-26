@@ -334,5 +334,6 @@ source "drivers/net/wireless/rsi/Kconfig"
 source "drivers/net/wireless/cnss/Kconfig"
 
 source "drivers/net/wireless/controlfnc/Kconfig"
+source "drivers/net/wireless/bcmdhd/Kconfig"
 
 endif # WLAN
