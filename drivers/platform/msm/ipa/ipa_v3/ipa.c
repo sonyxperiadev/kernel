@@ -4731,7 +4731,9 @@ fail_mem_ctrl:
 	kfree(ipa3_ctx->ipa_tz_unlock_reg);
 fail_tz_unlock_reg:
 	ipc_log_context_destroy(ipa3_ctx->logbuf);
+#ifdef CONFIG_IPC_LOGGING
 fail_logbuf:
+#endif
 	kfree(ipa3_ctx);
 	ipa3_ctx = NULL;
 fail_mem_ctx:
