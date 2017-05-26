@@ -647,6 +647,11 @@ static int bluesleep_probe(struct platform_device *pdev)
 	}
 
 	bsi->uport = msm_hs_get_uart_port(BT_PORT_ID);
+	if (IS_ERR_OR_NULL(bsi->uport)) {
+		ret = -EPROBE_DEFER;
+		goto free_bt_ext_wake;
+	}
+
 	atomic_set(&bsi->wakeup_irq_disabled, 1);
 
 	return 0;
