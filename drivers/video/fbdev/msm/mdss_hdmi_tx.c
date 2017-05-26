@@ -1108,7 +1108,6 @@ static ssize_t hdmi_tx_sysfs_wta_avi_itc(struct device *dev,
 
 	ret = strnlen(buf, PAGE_SIZE);
 
-	hdmi_tx_set_avi_infoframe(hdmi_ctrl);
 end:
 	mutex_unlock(&hdmi_ctrl->tx_lock);
 	return ret;
@@ -1817,10 +1816,6 @@ static int hdmi_tx_init_hdcp(struct hdmi_tx_ctrl *hdmi_ctrl)
 
 	if (hdmi_ctrl->hdcp14_present) {
 		hdcp_data = hdmi_hdcp_init(&hdcp_init_data);
-
-		/* TODO: CHECKME!!! */
-		hdmi_hdcp_aksv(&hdmi_ctrl->aksv[0],
-			hdmi_ctrl->feature_data[HDMI_TX_FEAT_HDCP]);
 
 		if (IS_ERR_OR_NULL(hdcp_data)) {
 			DEV_ERR("%s: hdcp 1.4 init failed\n", __func__);
