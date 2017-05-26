@@ -743,7 +743,8 @@ static int to_kernel_prio(int policy, int user_priority) {
 }
 
 static void binder_set_priority(struct task_struct *task,
-				struct binder_priority desired)
+				struct binder_priority desired,
+				bool restore)
 {
 	int priority; /* user-space prio value */
 	bool has_cap_nice;
@@ -756,7 +757,7 @@ static void binder_set_priority(struct task_struct *task,
 
 	priority = to_userspace_prio(policy, desired.prio);
 
-	if (is_rt_policy(policy) && !has_cap_nice) {
+	if (!restore && is_rt_policy(policy) && !has_cap_nice) {
 		long max_rtprio = task_rlimit(task, RLIMIT_RTPRIO);
 		if (max_rtprio == 0) {
 			policy = SCHED_NORMAL;
@@ -766,7 +767,7 @@ static void binder_set_priority(struct task_struct *task,
 		}
 	}
 
-	if (is_fair_policy(policy) && !has_cap_nice) {
+	if (!restore && is_fair_policy(policy) && !has_cap_nice) {
 		long min_nice = rlimit_to_nice(task_rlimit(task, RLIMIT_NICE));
 		if (min_nice > MAX_NICE) {
 			binder_user_error("%d RLIMIT_NICE not set\n",
@@ -832,7 +833,7 @@ static void binder_transaction_priority(struct task_struct *task,
 		desired_prio.prio = NICE_TO_PRIO(MIN_NICE);
 	}
 
-	binder_set_priority(task, desired_prio);
+	binder_set_priority(task, desired_prio, false /* restore */);
 }
 
 static struct binder_node *binder_get_node(struct binder_proc *proc,
@@ -2456,7 +2457,7 @@ static void binder_transaction(struct binder_proc *proc,
 		binder_proc_unlock(target_thread->proc, __LINE__);
 		binder_free_transaction(in_reply_to);
 		wake_up_interruptible_sync(&target_thread->wait);
-		binder_set_priority(current, saved_priority);
+		binder_set_priority(current, saved_priority, true /*restore*/);
 	} else if (!(t->flags & TF_ONE_WAY)) {
 		BUG_ON(t->buffer->async_transaction != 0);
 		binder_proc_lock(thread->proc, __LINE__);
@@ -2535,7 +2536,7 @@ err_no_context_mgr_node:
 		binder_enqueue_work(&thread->return_error.work,
 				    &thread->todo, __LINE__);
 		binder_proc_unlock(thread->proc, __LINE__);
-		binder_set_priority(current, saved_priority);
+		binder_set_priority(current, saved_priority, true /*restore*/);
 		binder_send_failed_reply(in_reply_to, return_error);
 	} else {
 		thread->return_error.cmd = return_error;
@@ -3092,7 +3093,8 @@ retry:
 	if (wait_for_proc_work) {
 		BUG_ON(!(thread->looper & (BINDER_LOOPER_STATE_REGISTERED |
 					   BINDER_LOOPER_STATE_ENTERED)));
-		binder_set_priority(current, proc->default_priority);
+		binder_set_priority(current, proc->default_priority,
+				    true /* restore */);
 	}
 
 	if (non_block) {
