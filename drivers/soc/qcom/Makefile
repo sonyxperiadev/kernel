@@ -72,6 +72,7 @@ obj-$(CONFIG_QCOM_COMMON_LOG) += common_log.o
 obj-$(CONFIG_QCOM_IRQ_HELPER) += irq-helper.o
 obj-$(CONFIG_TRACER_PKT)	+=	tracer_pkt.o
 obj-$(CONFIG_ICNSS) += icnss.o wlan_firmware_service_v01.o icnss_utils.o
+obj-$(CONFIG_MSM_CACHE_M4M_ERP64) += cache_m4m_erp64.o
 obj-$(CONFIG_SOC_BUS)  +=      socinfo.o
 obj-$(CONFIG_QCOM_BUS_SCALING) += msm_bus/
 obj-$(CONFIG_MSM_SERVICE_NOTIFIER) += service-notifier.o
