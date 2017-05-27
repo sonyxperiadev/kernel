@@ -70,7 +70,7 @@ extern struct wifi_platform_data dhd_wlan_control;
 static bool dts_enabled = FALSE;
 struct resource dhd_wlan_resources = {0};
 struct wifi_platform_data dhd_wlan_control = {0};
-#endif /* CONFIG_OF && !defined(CONFIG_ARCH_MSM) */
+#endif /* CONFIG_OF && !defined(CONFIG_ARCH_QCOM) */
 #endif /* !defind(CONFIG_DTS) */
 
 static int dhd_wifi_platform_load(void);

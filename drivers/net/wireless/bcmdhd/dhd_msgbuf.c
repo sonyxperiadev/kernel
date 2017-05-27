@@ -615,10 +615,10 @@ dhd_prot_d2h_sync_livelock(dhd_pub_t *dhd, msgbuf_ring_t *ring, uint32 tries,
 		ring->dma_buf.va, msg, ring->curr_rd));
 	prhex("D2H MsgBuf Failure", (uchar *)msg, msglen);
 
-#if defined(SUPPORT_LINKDOWN_RECOVERY) && defined(CONFIG_ARCH_MSM)
+#if defined(SUPPORT_LINKDOWN_RECOVERY) && defined(CONFIG_ARCH_QCOM)
 	dhd->bus->no_cfg_restore = 1;
 	dhd_os_check_hang(dhd, 0, -ETIMEDOUT);
-#endif /* SUPPORT_LINKDOWN_RECOVERY && CONFIG_ARCH_MSM */
+#endif /* SUPPORT_LINKDOWN_RECOVERY && CONFIG_ARCH_QCOM */
 }
 
 /**
@@ -4712,9 +4712,9 @@ dhd_msgbuf_wait_ioctl_cmplt(dhd_pub_t *dhd, uint32 len, void *buf)
 #endif /* DHD_FW_COREDUMP && OEM_ANDROID */
 		if (dhd->rxcnt_timeout >= MAX_CNTL_RX_TIMEOUT) {
 #ifdef SUPPORT_LINKDOWN_RECOVERY
-#ifdef CONFIG_ARCH_MSM
+#ifdef CONFIG_ARCH_QCOM
 			dhd->bus->no_cfg_restore = 1;
-#endif /* CONFIG_ARCH_MSM */
+#endif /* CONFIG_ARCH_QCOM */
 #endif /* SUPPORT_LINKDOWN_RECOVERY */
 			DHD_ERROR(("%s: timeout > MAX_CNTL_TX_TIMEOUT\n", __FUNCTION__));
 		}
@@ -4729,9 +4729,9 @@ dhd_msgbuf_wait_ioctl_cmplt(dhd_pub_t *dhd, uint32 len, void *buf)
 
 	if (dhd->dongle_trap_occured) {
 #ifdef SUPPORT_LINKDOWN_RECOVERY
-#ifdef CONFIG_ARCH_MSM
+#ifdef CONFIG_ARCH_QCOM
 		dhd->bus->no_cfg_restore = 1;
-#endif /* CONFIG_ARCH_MSM */
+#endif /* CONFIG_ARCH_QCOM */
 #endif /* SUPPORT_LINKDOWN_RECOVERY */
 		DHD_ERROR(("%s: TRAP occurred!!\n", __FUNCTION__));
 		ret = -EREMOTEIO;
