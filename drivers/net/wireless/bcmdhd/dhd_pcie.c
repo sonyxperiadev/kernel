@@ -3082,9 +3082,9 @@ dhd_bus_devreset(dhd_pub_t *dhdp, uint8 flag)
 	dhd_bus_t *bus = dhdp->bus;
 	int bcmerror = 0;
 	unsigned long flags;
-#ifdef CONFIG_ARCH_MSM
+#ifdef CONFIG_ARCH_QCOM
 	int retry = POWERUP_MAX_RETRY;
-#endif /* CONFIG_ARCH_MSM */
+#endif /* CONFIG_ARCH_QCOM */
 
 	if (dhd_download_fw_on_driverload) {
 		bcmerror = dhd_bus_start(dhdp);
@@ -3118,14 +3118,14 @@ dhd_bus_devreset(dhd_pub_t *dhdp, uint8 flag)
 						__FUNCTION__, bcmerror));
 					goto done;
 				}
-#ifdef CONFIG_ARCH_MSM
+#ifdef CONFIG_ARCH_QCOM
 				bcmerror = dhdpcie_bus_clock_stop(bus);
 				if (bcmerror) {
 					DHD_ERROR(("%s: host clock stop failed: %d\n",
 						__FUNCTION__, bcmerror));
 					goto done;
 				}
-#endif /* CONFIG_ARCH_MSM */
+#endif /* CONFIG_ARCH_QCOM */
 				DHD_GENERAL_LOCK(bus->dhd, flags);
 				bus->dhd->busstate = DHD_BUS_DOWN;
 				DHD_GENERAL_UNLOCK(bus->dhd, flags);
@@ -3149,14 +3149,14 @@ dhd_bus_devreset(dhd_pub_t *dhdp, uint8 flag)
 					goto done;
 				}
 
-#ifdef CONFIG_ARCH_MSM
+#ifdef CONFIG_ARCH_QCOM
 				bcmerror = dhdpcie_bus_clock_stop(bus);
 				if (bcmerror) {
 					DHD_ERROR(("%s: host clock stop failed: %d\n",
 						__FUNCTION__, bcmerror));
 					goto done;
 				}
-#endif  /* CONFIG_ARCH_MSM */
+#endif  /* CONFIG_ARCH_QCOM */
 			}
 
 			bus->dhd->dongle_reset = TRUE;
@@ -3166,7 +3166,7 @@ dhd_bus_devreset(dhd_pub_t *dhdp, uint8 flag)
 			if (bus->dhd->busstate == DHD_BUS_DOWN) {
 				/* Powering On */
 				DHD_ERROR(("%s: == Power ON ==\n", __FUNCTION__));
-#ifdef CONFIG_ARCH_MSM
+#ifdef CONFIG_ARCH_QCOM
 				while (--retry) {
 					bcmerror = dhdpcie_bus_clock_start(bus);
 					if (!bcmerror) {
@@ -3183,7 +3183,7 @@ dhd_bus_devreset(dhd_pub_t *dhdp, uint8 flag)
 						__FUNCTION__, bcmerror));
 					goto done;
 				}
-#endif /* CONFIG_ARCH_MSM */
+#endif /* CONFIG_ARCH_QCOM */
 				bus->is_linkdown = 0;
 				bus->pci_d3hot_done = 0;
 
@@ -3981,9 +3981,9 @@ dhdpcie_bus_suspend(struct dhd_bus *bus, bool state)
 				DHD_ERROR(("%s: Event HANG send up "
 					"due to PCIe linkdown\n", __FUNCTION__));
 #ifdef SUPPORT_LINKDOWN_RECOVERY
-#ifdef CONFIG_ARCH_MSM
+#ifdef CONFIG_ARCH_QCOM
 				bus->no_cfg_restore = 1;
-#endif /* CONFIG_ARCH_MSM */
+#endif /* CONFIG_ARCH_QCOM */
 #endif /* SUPPORT_LINKDOWN_RECOVERY */
 				dhd_os_check_hang(bus->dhd, 0, -ETIMEDOUT);
 			}

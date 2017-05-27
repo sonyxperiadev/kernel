@@ -472,7 +472,7 @@ static void wl_cfg80211_cancel_scan(struct bcm_cfg80211 *cfg);
 static s32 wl_notify_escan_complete(struct bcm_cfg80211 *cfg,
 	struct net_device *ndev, bool aborted, bool fw_abort);
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(3, 2, 0)) || defined(WL_COMPAT_WIRELESS)
-#if (defined(CONFIG_ARCH_MSM) && defined(TDLS_MGMT_VERSION2)) || (LINUX_VERSION_CODE < \
+#if (defined(CONFIG_ARCH_QCOM) && defined(TDLS_MGMT_VERSION2)) || (LINUX_VERSION_CODE < \
 	KERNEL_VERSION(3, 16, 0) && LINUX_VERSION_CODE >= KERNEL_VERSION(3, 15, 0))
 static s32 wl_cfg80211_tdls_mgmt(struct wiphy *wiphy, struct net_device *dev,
 	u8 *peer, u8 action_code, u8 dialog_token, u16 status_code,
@@ -490,7 +490,7 @@ static s32 wl_cfg80211_tdls_mgmt(struct wiphy *wiphy, struct net_device *dev,
 static s32 wl_cfg80211_tdls_mgmt(struct wiphy *wiphy, struct net_device *dev,
 	u8 *peer, u8 action_code, u8 dialog_token, u16 status_code, const u8 *data,
 	size_t len);
-#endif /* CONFIG_ARCH_MSM && TDLS_MGMT_VERSION2 */
+#endif /* CONFIG_ARCH_QCOM && TDLS_MGMT_VERSION2 */
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 16, 0))
 static s32 wl_cfg80211_tdls_oper(struct wiphy *wiphy, struct net_device *dev,
 	const u8 *peer, enum nl80211_tdls_operation oper);
@@ -14382,7 +14382,7 @@ wl_tdls_event_handler(struct bcm_cfg80211 *cfg, bcm_struct_cfgdev *cfgdev,
 
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(3, 2, 0)) || defined(WL_COMPAT_WIRELESS)
 static s32
-#if (defined(CONFIG_ARCH_MSM) && defined(TDLS_MGMT_VERSION2)) || (LINUX_VERSION_CODE < \
+#if (defined(CONFIG_ARCH_QCOM) && defined(TDLS_MGMT_VERSION2)) || (LINUX_VERSION_CODE < \
 	KERNEL_VERSION(3, 16, 0) && LINUX_VERSION_CODE >= KERNEL_VERSION(3, 15, 0))
 wl_cfg80211_tdls_mgmt(struct wiphy *wiphy, struct net_device *dev,
         u8 *peer, u8 action_code, u8 dialog_token, u16 status_code,
@@ -14400,7 +14400,7 @@ wl_cfg80211_tdls_mgmt(struct wiphy *wiphy, struct net_device *dev,
 wl_cfg80211_tdls_mgmt(struct wiphy *wiphy, struct net_device *dev,
 	u8 *peer, u8 action_code, u8 dialog_token, u16 status_code, const u8 *data,
 	size_t len)
-#endif  /* CONFIG_ARCH_MSM && TDLS_MGMT_VERSION2 */
+#endif  /* CONFIG_ARCH_QCOM && TDLS_MGMT_VERSION2 */
 {
 	s32 ret = 0;
 #ifdef WLTDLS
@@ -14409,12 +14409,12 @@ wl_cfg80211_tdls_mgmt(struct wiphy *wiphy, struct net_device *dev,
 	memset(&info, 0, sizeof(tdls_wfd_ie_iovar_t));
 	cfg = g_bcm_cfg;
 
-#if defined(CONFIG_ARCH_MSM) && defined(TDLS_MGMT_VERSION2)
+#if defined(CONFIG_ARCH_QCOM) && defined(TDLS_MGMT_VERSION2)
 	/* Some customer platform back ported this feature from kernel 3.15 to kernel 3.10
 	* and that cuases build error
 	*/
 	BCM_REFERENCE(peer_capability);
-#endif  /* CONFIG_ARCH_MSM && TDLS_MGMT_VERSION2 */
+#endif  /* CONFIG_ARCH_QCOM && TDLS_MGMT_VERSION2 */
 
 	switch (action_code) {
 	/* We need to set TDLS Wifi Display IE to firmware
