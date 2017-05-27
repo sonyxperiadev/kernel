@@ -317,13 +317,23 @@
 
 	intc: interrupt-controller@09bc0000 {
 		compatible = "arm,gic-v3";
+		reg = <0x9bc0000 0x10000>,       /* GICD */
+		      <0x9c00000 0x100000>;      /* GICR * 4 */
 		#interrupt-cells = <3>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
 		interrupt-controller;
 		#redistributor-regions = <1>;
 		redistributor-stride = <0x0 0x40000>;
-		reg = <0x09bc0000 0x10000>,       /* GICD */
-		      <0x09c00000 0x100000>;      /* GICR * 4 */
+
 		interrupts = <1 9 4>;
+
+		msic: gic-its@09BE0000 {
+			compatible = "arm,gic-v3-its";
+			msi-controller;
+			reg = <0x9be0000 0x20000>;
+		};
 	};
 
 	timer {
@@ -671,12 +681,9 @@
 
 	msm_cpufreq: qcom,msm-cpufreq {
 		compatible = "qcom,msm-cpufreq";
-		clock-names = "l2_clk", "cpu0_clk", "cpu1_clk", "cpu2_clk",
-				"cpu3_clk";
+		clock-names = "l2_clk", "cpu0_clk", "cpu2_clk";
 		clocks = <&clock_cpu clk_cbf_clk>,
 			 <&clock_cpu clk_pwrcl_clk>,
-			 <&clock_cpu clk_pwrcl_clk>,
-			 <&clock_cpu clk_perfcl_clk>,
 			 <&clock_cpu clk_perfcl_clk>;
 
 		qcom,governor-per-policy;
