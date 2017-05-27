@@ -684,12 +684,9 @@
 
 	msm_cpufreq: qcom,msm-cpufreq {
 		compatible = "qcom,msm-cpufreq";
-		clock-names = "l2_clk", "cpu0_clk", "cpu1_clk", "cpu2_clk",
-				"cpu3_clk";
+		clock-names = "l2_clk", "cpu0_clk", "cpu2_clk";
 		clocks = <&clock_cpu clk_cbf_clk>,
 			 <&clock_cpu clk_pwrcl_clk>,
-			 <&clock_cpu clk_pwrcl_clk>,
-			 <&clock_cpu clk_perfcl_clk>,
 			 <&clock_cpu clk_perfcl_clk>;
 
 		qcom,governor-per-policy;
