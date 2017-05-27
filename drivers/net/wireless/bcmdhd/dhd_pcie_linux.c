@@ -52,13 +52,13 @@
 #include <pcicfg.h>
 #include <dhd_pcie.h>
 #include <dhd_linux.h>
-#ifdef CONFIG_ARCH_MSM
+#ifdef CONFIG_ARCH_QCOM
 #if defined(CONFIG_ARCH_MSM8994) || defined(CONFIG_ARCH_MSM8996)
 #include <linux/msm_pcie.h>
 #else
 #include <mach/msm_pcie.h>
 #endif /* CONFIG_ARCH_MSM8994 */
-#endif /* CONFIG_ARCH_MSM */
+#endif /* CONFIG_ARCH_QCOM */
 
 #define PCI_CFG_RETRY 		10
 #define OS_HANDLE_MAGIC		0x1234abcd	/* Magic # to recognize osh */
@@ -364,16 +364,16 @@ out:
 static int dhdpcie_resume_host_dev(dhd_bus_t *bus)
 {
 	int bcmerror = 0;
-#ifdef CONFIG_ARCH_MSM
+#ifdef CONFIG_ARCH_QCOM
 	bcmerror = dhdpcie_start_host_pcieclock(bus);
-#endif /* CONFIG_ARCH_MSM */
+#endif /* CONFIG_ARCH_QCOM */
 	if (bcmerror < 0) {
 		DHD_ERROR(("%s: PCIe RC resume failed!!! (%d)\n",
 			__FUNCTION__, bcmerror));
 		bus->is_linkdown = 1;
-#ifdef CONFIG_ARCH_MSM
+#ifdef CONFIG_ARCH_QCOM
 		bus->no_cfg_restore = 1;
-#endif /* CONFIG_ARCH_MSM */
+#endif /* CONFIG_ARCH_QCOM */
 	}
 
 	return bcmerror;
@@ -382,9 +382,9 @@ static int dhdpcie_resume_host_dev(dhd_bus_t *bus)
 static int dhdpcie_suspend_host_dev(dhd_bus_t *bus)
 {
 	int bcmerror = 0;
-#ifdef CONFIG_ARCH_MSM
+#ifdef CONFIG_ARCH_QCOM
 	bcmerror = dhdpcie_stop_host_pcieclock(bus);
-#endif	/* CONFIG_ARCH_MSM */
+#endif	/* CONFIG_ARCH_QCOM */
 	return bcmerror;
 }
 
@@ -485,7 +485,7 @@ dhdpcie_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 		"(good PCI location)\n", pdev->bus->number,
 		PCI_SLOT(pdev->devfn), pdev->vendor, pdev->device);
 
-#if defined(CUSTOMER_HW5) && defined(CONFIG_ARCH_MSM)
+#if defined(CUSTOMER_HW5) && defined(CONFIG_ARCH_QCOM)
 	if (msm_pcie_pm_control(MSM_PCIE_RESUME, pdev->bus->number, pdev, NULL, 0)) {
 		DHD_ERROR(("%s Failed to resume PCIE link\n", __FUNCTION__));
 		return -ENODEV;
@@ -495,7 +495,7 @@ dhdpcie_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 		DHD_ERROR(("%s Failed to recover PCIE config\n", __FUNCTION__));
 		return -ENODEV;
 	}
-#endif	/* CUSTOMER_HW5 && CONFIG_ARCH_MSM */
+#endif	/* CUSTOMER_HW5 && CONFIG_ARCH_QCOM */
 
 	if (dhdpcie_init (pdev)) {
 		DHD_ERROR(("%s: PCIe Enumeration failed\n", __FUNCTION__));
@@ -539,11 +539,11 @@ dhdpcie_pci_remove(struct pci_dev *pdev)
 	osh = pch->osh;
 
 #ifdef SUPPORT_LINKDOWN_RECOVERY
-#ifdef CONFIG_ARCH_MSM
+#ifdef CONFIG_ARCH_QCOM
 	if (bus) {
 		msm_pcie_deregister_event(&bus->pcie_event);
 	}
-#endif /* CONFIG_ARCH_MSM */
+#endif /* CONFIG_ARCH_QCOM */
 #endif /* SUPPORT_LINKDOWN_RECOVERY */
 	dhdpcie_bus_release(bus);
 	if (pci_is_enabled(pdev))
@@ -705,7 +705,7 @@ int dhdpcie_scan_resource(dhdpcie_info_t *dhdpcie_info)
 }
 
 #ifdef SUPPORT_LINKDOWN_RECOVERY
-#ifdef CONFIG_ARCH_MSM
+#ifdef CONFIG_ARCH_QCOM
 void dhdpcie_linkdown_cb(struct msm_pcie_notify *noti)
 {
 	struct pci_dev *pdev = (struct pci_dev *)noti->user;
@@ -721,9 +721,9 @@ void dhdpcie_linkdown_cb(struct msm_pcie_notify *noti)
 					DHD_ERROR(("%s: Event HANG send up "
 						"due to PCIe linkdown\n",
 						__FUNCTION__));
-#ifdef CONFIG_ARCH_MSM
+#ifdef CONFIG_ARCH_QCOM
 					bus->no_cfg_restore = 1;
-#endif /* CONFIG_ARCH_MSM */
+#endif /* CONFIG_ARCH_QCOM */
 					bus->is_linkdown = 1;
 					DHD_OS_WAKE_LOCK(dhd);
 					dhd_os_check_hang(dhd, 0, -ETIMEDOUT);
@@ -733,7 +733,7 @@ void dhdpcie_linkdown_cb(struct msm_pcie_notify *noti)
 	}
 
 }
-#endif /* CONFIG_ARCH_MSM */
+#endif /* CONFIG_ARCH_QCOM */
 #endif /* SUPPORT_LINKDOWN_RECOVERY */
 
 int dhdpcie_init(struct pci_dev *pdev)
@@ -820,7 +820,7 @@ int dhdpcie_init(struct pci_dev *pdev)
 #endif /* DONGLE_ENABLE_ISOLATION */
 
 #ifdef SUPPORT_LINKDOWN_RECOVERY
-#ifdef CONFIG_ARCH_MSM
+#ifdef CONFIG_ARCH_QCOM
 		bus->pcie_event.events = MSM_PCIE_EVENT_LINKDOWN;
 		bus->pcie_event.user = pdev;
 		bus->pcie_event.mode = MSM_PCIE_TRIGGER_CALLBACK;
@@ -828,7 +828,7 @@ int dhdpcie_init(struct pci_dev *pdev)
 		bus->pcie_event.options = MSM_PCIE_CONFIG_NO_RECOVERY;
 		msm_pcie_register_event(&bus->pcie_event);
 		bus->no_cfg_restore = 0;
-#endif /* CONFIG_ARCH_MSM */
+#endif /* CONFIG_ARCH_QCOM */
 #endif /* SUPPORT_LINKDOWN_RECOVERY */
 
 		if (bus->intr) {
@@ -964,11 +964,11 @@ int
 dhdpcie_start_host_pcieclock(dhd_bus_t *bus)
 {
 	int ret = 0;
-#ifdef CONFIG_ARCH_MSM
+#ifdef CONFIG_ARCH_QCOM
 #ifdef SUPPORT_LINKDOWN_RECOVERY
 	int options = 0;
 #endif /* SUPPORT_LINKDOWN_RECOVERY */
-#endif /* CONFIG_ARCH_MSM */
+#endif /* CONFIG_ARCH_QCOM */
 	DHD_TRACE(("%s Enter:\n", __FUNCTION__));
 
 	if (bus == NULL) {
@@ -979,7 +979,7 @@ dhdpcie_start_host_pcieclock(dhd_bus_t *bus)
 		return BCME_ERROR;
 	}
 
-#ifdef CONFIG_ARCH_MSM
+#ifdef CONFIG_ARCH_QCOM
 #ifdef SUPPORT_LINKDOWN_RECOVERY
 	if (bus->no_cfg_restore) {
 		options = MSM_PCIE_CONFIG_NO_CFG_RESTORE;
@@ -1000,7 +1000,7 @@ dhdpcie_start_host_pcieclock(dhd_bus_t *bus)
 	}
 
 done:
-#endif /* CONFIG_ARCH_MSM */
+#endif /* CONFIG_ARCH_QCOM */
 	DHD_TRACE(("%s Exit:\n", __FUNCTION__));
 	return ret;
 }
@@ -1009,11 +1009,11 @@ int
 dhdpcie_stop_host_pcieclock(dhd_bus_t *bus)
 {
 	int ret = 0;
-#ifdef CONFIG_ARCH_MSM
+#ifdef CONFIG_ARCH_QCOM
 #ifdef SUPPORT_LINKDOWN_RECOVERY
 	int options = 0;
 #endif /* SUPPORT_LINKDOWN_RECOVERY */
-#endif /* CONFIG_ARCH_MSM */
+#endif /* CONFIG_ARCH_QCOM */
 
 	DHD_TRACE(("%s Enter:\n", __FUNCTION__));
 
@@ -1025,7 +1025,7 @@ dhdpcie_stop_host_pcieclock(dhd_bus_t *bus)
 		return BCME_ERROR;
 	}
 
-#ifdef CONFIG_ARCH_MSM
+#ifdef CONFIG_ARCH_QCOM
 #ifdef SUPPORT_LINKDOWN_RECOVERY
 	if (bus->no_cfg_restore) {
 		options = MSM_PCIE_CONFIG_NO_CFG_RESTORE | MSM_PCIE_CONFIG_LINKDOWN;
@@ -1042,7 +1042,7 @@ dhdpcie_stop_host_pcieclock(dhd_bus_t *bus)
 		goto done;
 	}
 done:
-#endif /* CONFIG_ARCH_MSM */
+#endif /* CONFIG_ARCH_QCOM */
 	DHD_TRACE(("%s Exit:\n", __FUNCTION__));
 	return ret;
 }

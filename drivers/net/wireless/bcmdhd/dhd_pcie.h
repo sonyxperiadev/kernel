@@ -34,13 +34,13 @@
 #include <bcmpcie.h>
 #include <hnd_cons.h>
 #ifdef SUPPORT_LINKDOWN_RECOVERY
-#ifdef CONFIG_ARCH_MSM
+#ifdef CONFIG_ARCH_QCOM
 #if defined(CONFIG_ARCH_MSM8994) || defined(CONFIG_ARCH_MSM8996)
 #include <linux/msm_pcie.h>
 #else
 #include <mach/msm_pcie.h>
 #endif /* CONFIG_ARCH_MSM8994 */
-#endif /* CONFIG_ARCH_MSM */
+#endif /* CONFIG_ARCH_QCOM */
 #endif /* SUPPORT_LINKDOWN_RECOVERY */
 
 #ifdef DHD_PCIE_RUNTIMEPM
@@ -206,10 +206,10 @@ typedef struct dhd_bus {
 	bool	oob_enabled;
 #endif /* PCIE_OOB */
 #ifdef SUPPORT_LINKDOWN_RECOVERY
-#ifdef CONFIG_ARCH_MSM
+#ifdef CONFIG_ARCH_QCOM
 	struct msm_pcie_register_event pcie_event;
 	uint8 no_cfg_restore;
-#endif /* CONFIG_ARCH_MSM */
+#endif /* CONFIG_ARCH_QCOM */
 #endif /* SUPPORT_LINKDOWN_RECOVERY */
 #ifdef DHD_PCIE_RUNTIMEPM
 	int32 idlecount;                /* Activity timeout counter */
