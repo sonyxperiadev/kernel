@@ -1921,13 +1921,7 @@ reinit:
 		 * Ignore the return value of setting auto bkops.
 		 * If it failed, will run in backward compatible mode.
 		 */
-		err = mmc_set_auto_bkops(card, true);
-		if (err)
-			pr_err("%s: %s: Failed to enable auto-bkops: err: %d\n",
-			       mmc_hostname(card->host), __func__, err);
-		else
-			printk_once("%s: %s: Enabled auto-bkops on device\n",
-				    mmc_hostname(card->host), __func__);
+		(void)mmc_set_auto_bkops(card, true);
 	}
 
 	if (card->ext_csd.cmdq_support && (card->host->caps2 &
