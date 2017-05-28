@@ -32,6 +32,7 @@ struct spmii_boardinfo {
 static DEFINE_MUTEX(board_lock);
 static LIST_HEAD(board_list);
 static DEFINE_IDR(ctrl_idr);
+static DEFINE_IDA(spmi_devid_ida);
 static struct device_type spmi_dev_type;
 static struct device_type spmi_ctrl_type;
 
@@ -229,25 +230,32 @@ int spmi_add_device(struct spmi_device *spmidev)
 {
 	int rc;
 	struct device *dev = get_valid_device(spmidev);
+	int id;
 
 	if (!dev) {
 		pr_err("invalid SPMI device\n");
 		return -EINVAL;
 	}
 
+	id = ida_simple_get(&spmi_devid_ida, 0, 0, GFP_KERNEL);
+	if (id < 0) {
+		pr_err("No id available status = %d\n", id);
+		return id;
+	}
+
 	/* Set the device name */
-	if (spmidev->res.resource)
-		dev_set_name(dev, "%02x-%s-%04x", spmidev->sid, spmidev->dev.of_node->name, spmidev->res.resource[0].start);
-	else
-		dev_set_name(dev, "%02x-%s", spmidev->sid, spmidev->dev.of_node->name);
+	spmidev->id = id;
+	dev_set_name(dev, "%s-%d", spmidev->name, spmidev->id);
 
 	/* Device may be bound to an active driver when this returns */
 	rc = device_add(dev);
 
-	if (rc < 0)
+	if (rc < 0) {
+		ida_simple_remove(&spmi_devid_ida, spmidev->id);
 		dev_err(dev, "Can't add %s, status %d\n", dev_name(dev), rc);
-	else
+	} else {
 		dev_dbg(dev, "device %s registered\n", dev_name(dev));
+	}
 
 	return rc;
 }
@@ -295,6 +303,7 @@ EXPORT_SYMBOL_GPL(spmi_new_device);
 void spmi_remove_device(struct spmi_device *spmi_dev)
 {
 	device_unregister(&spmi_dev->dev);
+	ida_simple_remove(&spmi_devid_ida, spmi_dev->id);
 }
 EXPORT_SYMBOL_GPL(spmi_remove_device);
 
