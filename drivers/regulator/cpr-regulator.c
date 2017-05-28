@@ -5182,7 +5182,7 @@ static int cpr_check_tsens(struct cpr_regulator *cpr_vreg)
 {
 	int rc = 0;
 	struct tsens_device tsens_dev;
-	unsigned long temp = 0;
+	int temp = 0;
 	bool disable;
 
 	if (tsens_is_ready() > 0) {
