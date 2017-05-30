@@ -67,7 +67,7 @@
 
 		modem_mem: modem_region@86c00000 {
 			compatible = "removed-dma-pool";
-			no-map-fixup;
+			no-map;
 			reg = <0x0 0x86c00000 0x0 0x05600000>;
 			label = "modem_mem";
 		};
@@ -117,6 +117,13 @@
 			compatible = "shared-dma-pool";
 			reusable;
 			size = <0 0x400000>;
+		};
+
+		mba_mem: modem_region@d5300000 {
+			compatible = "removed-dma-pool";
+			no-map;
+			reg = <0x0 0xd5300000 0x0 0x00200000>;
+			label = "mba_mem";
 		};
 	};
 };
@@ -2271,6 +2278,13 @@
 		qcom,gpio-force-stop = <&smp2pgpio_ssr_smp2p_1_out 0 0>;
 		memory-region = <&modem_mem>;
 		qcom,mem-protect-id = <0xF>;
+
+		qcom,pil-mba-mem@d5300000 {
+			compatible = "qcom,pil-mba-mem";
+			reg = <0xd5300000 0x200000>;
+			memory-region = <&mba_mem>;
+			status = "okay";
+		};
 	};
 
 	cpu-pmu {
