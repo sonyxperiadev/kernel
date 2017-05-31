@@ -156,6 +156,26 @@
 		qcom,mdss-prefill-pingpong-buffer-pixels = <5120>;
 		qcom,mdss-prefill-fbc-lines = <0>;
 
+		smmu_mdp_unsec: qcom,smmu_mdp_unsec_cb {
+			compatible = "qcom,smmu_mdp_unsec";
+			iommus = <&apps_smmu 0xc00>,
+				<&apps_smmu 0x2400>;
+			clocks = <&clock_gcc clk_gcc_smmu_cfg_clk>,
+				 <&clock_gcc clk_gcc_apss_tcu_clk>;
+			clock-names = "gcc_smmu_cfg_clk",
+				      "gcc_apss_tcu_clk";
+		};
+
+		smmu_mdp_sec: qcom,smmu_mdp_sec_cb {
+			compatible = "qcom,smmu_mdp_sec";
+			iommus = <&apps_smmu 0xc01>,
+				<&apps_smmu 0x2401>;
+			clocks = <&clock_gcc clk_gcc_smmu_cfg_clk>,
+				 <&clock_gcc clk_gcc_apss_tcu_clk>;
+			clock-names = "gcc_smmu_cfg_clk",
+				      "gcc_apss_tcu_clk";
+		};
+
 		mdss_fb0: qcom,mdss_fb_primary {
 			cell-index = <0>;
 			compatible = "qcom,mdss-fb";
