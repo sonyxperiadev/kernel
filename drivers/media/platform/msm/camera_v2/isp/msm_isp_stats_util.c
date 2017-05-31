@@ -551,10 +551,10 @@ int msm_isp_release_stats_stream(struct vfe_device *vfe_dev, void *arg)
 		stream_info->buffer_offset[i] = stream_info->buffer_offset[k];
 	}
 
+	stream_info->num_isp--;
 	stream_info->vfe_dev[stream_info->num_isp] = 0;
 	stream_info->stream_handle[stream_info->num_isp] = 0;
 	stream_info->buffer_offset[stream_info->num_isp] = 0;
-	stream_info->num_isp--;
 	stream_info->vfe_mask &= ~(1 << vfe_dev->pdev->id);
 	if (stream_info->num_isp == 0)
 		stream_info->state = STATS_AVAILABLE;
