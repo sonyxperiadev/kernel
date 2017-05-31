@@ -924,7 +924,6 @@ static struct binder_node *binder_new_node(struct binder_proc *proc,
 		     proc->pid, current->pid, node->debug_id,
 		     (u64)node->ptr, (u64)node->cookie);
 
-	RB_CLEAR_NODE(&node->rb_node);
 	rb_link_node(&node->rb_node, parent, p);
 	rb_insert_color(&node->rb_node, &proc->nodes);
 	node->local_weak_refs++;
@@ -1187,7 +1186,6 @@ static struct binder_ref *binder_get_ref_for_node(struct binder_proc *proc,
 			return ref;
 		}
 	}
-	RB_CLEAR_NODE(&new_ref->rb_node_node);
 	rb_link_node(&new_ref->rb_node_node, parent, p);
 	rb_insert_color(&new_ref->rb_node_node, &proc->refs_by_node);
 
@@ -1211,7 +1209,6 @@ static struct binder_ref *binder_get_ref_for_node(struct binder_proc *proc,
 		else
 			BUG();
 	}
-	RB_CLEAR_NODE(&new_ref->rb_node_desc);
 	rb_link_node(&new_ref->rb_node_desc, parent, p);
 	rb_insert_color(&new_ref->rb_node_desc, &proc->refs_by_desc);
 	binder_proc_unlock(proc, __LINE__);
@@ -3648,7 +3645,6 @@ static struct binder_thread *binder_get_thread(struct binder_proc *proc)
 		/* This thread can't have been added */
 		BUG_ON(*p != NULL);
 
-		RB_CLEAR_NODE(&new_thread->rb_node);
 		rb_link_node(&new_thread->rb_node, parent, p);
 		rb_insert_color(&new_thread->rb_node, &proc->threads);
 		thread = new_thread;
