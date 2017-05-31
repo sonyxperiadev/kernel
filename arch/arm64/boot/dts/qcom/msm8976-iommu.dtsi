@@ -11,6 +11,8 @@
  * GNU General Public License for more details.
  */
 
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+
 &soc {
 	/*
 	 * kgsl_smmu range: 0x1f00000 - 0x1f10000
