@@ -145,7 +145,7 @@
 		qcom,register-save;
 		qcom,skip-init;
 
-		qcom,enable-smmu-halt;
+		//qcom,enable-smmu-halt;
 		qcom,enable-static-cb;
 		qcom,no-smr-check;
 
