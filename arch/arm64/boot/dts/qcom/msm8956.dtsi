@@ -14,6 +14,7 @@
 #include "skeleton64.dtsi"
 #include <dt-bindings/clock/msm-clocks-8976.h>
 #include <dt-bindings/regulator/qcom,rpm-smd-regulator.h>
+#include <dt-bindings/interrupt-controller/arm-gic.h>
 
 / {
 	model = "Qualcomm Technologies, Inc. MSM 8956";
@@ -129,6 +130,28 @@
 			linux,cma-default;
 		};
 	};
+
+       clocks {
+               xo_board {
+                       compatible = "fixed-clock";
+                       #clock-cells = <0>;
+                       clock-frequency = <19200000>;
+                       clock-output-names = "xo_board";
+		};
+               sleep_clk {
+                       compatible = "fixed-clock";
+                       #clock-cells = <0>;
+                       clock-frequency = <32764>;
+                       clock-output-names = "sleep_clk";
+		};
+	};
+
+	vendor: vendor {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges = <0 0 0 0xffffffff>;
+		compatible = "simple-bus";
+	};
 };
 
 #include "msm8976-pinctrl.dtsi"
@@ -150,6 +173,30 @@
 	#size-cells = <1>;
 	ranges = <0 0 0 0xffffffff>;
 	compatible = "simple-bus";
+
+	/* SPMI Arbitrator HAS to be node #1!!! */
+        spmi_bus: qcom,spmi@200f000 {
+                compatible = "qcom,spmi-pmic-arb";
+                reg = <0x200f000 0x1000>,
+                        <0x2400000 0x800000>,
+                        <0x2c00000 0x800000>,
+                        <0x3800000 0x200000>,
+                        <0x200a000 0x2100>;
+                reg-names = "core", "chnls", "obsrvr", "intr", "cnfg";
+                interrupts = <GIC_SPI 190 IRQ_TYPE_NONE>;
+		interrupt-names = "periph_irq";
+                qcom,channel = <0>;
+                qcom,ee = <0>;
+
+                #address-cells = <1>;
+                #size-cells = <0>;
+                interrupt-controller;
+		#interrupt-cells = <4>;
+                cell-index = <0>;
+	};
+};
+
+&soc {
 
 	arm64-cpu-erp {
 		compatible = "arm,arm64-cpu-erp";
@@ -1441,28 +1488,6 @@
                 <90 512 100000 800000>,    /* SVS  - (ab=100Mbps, ib=800Mbps ~V 50MHz BIMC freq) */
                 <90 512 100000 1200000>;   /* PERF - (ab=100Mbps, ib=1200Mbps ~V 75MHz BIMC freq) */
                 qcom,bus-vector-names = "MIN", "SVS", "PERF";
-
-		qcom,arm-smmu;
-		qcom,smmu-disable-htw;
-		qcom,smmu-s1-bypass;
-
-		/* TODO: Do we need to specify IOVA mappings for AP and uC? */
-		ipa_smmu_ap: ipa_smmu_ap {
-			compatible = "qcom,ipa-smmu-ap-cb";
-			iommus = <&apps_smmu 0x2800>;
-		};
-
-		/* IPA WLAN should be PRONTO related */
-		ipa_smmu_wlan: ipa_smmu_wlan {
-			compatible = "qcom,ipa-smmu-wlan-cb";
-			status = "disabled";
-			iommus = <&apps_smmu 0x2802>;
-		};
-
-		ipa_smmu_uc: ipa_smmu_uc {
-			compatible = "qcom,ipa-smmu-uc-cb";
-			iommus = <&apps_smmu 0x2804>;
-		};
         };
 
         qcom,rmnet-ipa {
@@ -2235,26 +2260,6 @@
 		qcom,gpio-force-stop = <&smp2pgpio_ssr_smp2p_2_out 0 0>;
 
 		memory-region = <&reloc_mem>;
-	};
-
-        spmi_bus: qcom,spmi@200f000 {
-                compatible = "qcom,spmi-pmic-arb";
-                reg = <0x200f000 0x1000>,
-                        <0x2400000 0x800000>,
-                        <0x2c00000 0x800000>,
-                        <0x3800000 0x200000>,
-                        <0x200a000 0x2100>;
-                reg-names = "core", "chnls", "obsrvr", "intr", "cnfg";
-                interrupts = <0 190 0>;
-                qcom,pmic-arb-channel = <0>;
-                qcom,pmic-arb-max-peripherals = <256>;
-                qcom,pmic-arb-max-periph-interrupts = <224>;
-                qcom,pmic-arb-ee = <0>;
-                #interrupt-cells = <3>;
-                interrupt-controller;
-                #address-cells = <1>;
-                #size-cells = <0>;
-                cell-index = <0>;
 	};
 
 	spi_0: spi@0x78B5000 { /* BLSP1 QUP0 */
