@@ -247,7 +247,7 @@
 
 	/* UART: BLSP6 */
 	serial@7af0000 { /* BLSP2 UART2 */
-		compatible = "qcom,msm-lsuart-v14";
+		compatible = "qcom,msm-uartdm-v1.4", "qcom,msm-uartdm";
 		reg = <0x7af0000 0x200>;
 		interrupts = <0 307 0>;
 		clock-names = "core_clk", "iface_clk";
