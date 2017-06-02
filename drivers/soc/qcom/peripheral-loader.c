@@ -241,7 +241,7 @@ EXPORT_SYMBOL(pil_assign_mem_to_subsys_and_linux);
 int pil_reclaim_mem(struct pil_desc *desc, phys_addr_t addr, size_t size,
 						int VMid)
 {
-	int ret;
+	int ret = 0;
 #ifndef CONFIG_MSM_PIL_LEGACY
 	int srcVM[2] = {VMID_HLOS, desc->subsys_vmid};
 	int destVM[1] = {VMid};

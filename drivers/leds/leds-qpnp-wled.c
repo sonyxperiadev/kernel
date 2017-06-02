@@ -27,7 +27,7 @@
 #include <linux/leds-qpnp-wled.h>
 #include <linux/qpnp/qpnp-revid.h>
 
-#ifdef CONFIG_ARCH_MSM8996
+#if defined(CONFIG_ARCH_MSM8996) || defined(CONFIG_ARCH_MSM8916)
 #define QPNP_IRQ_FLAGS	(IRQF_TRIGGER_RISING | \
 			IRQF_TRIGGER_FALLING | \
 			IRQF_ONESHOT)

@@ -12,6 +12,7 @@
  */
 
 &rpm_bus {
+	status="okay";
 	rpm-regulator-smpa1 {
 		status = "okay";
 		pm8950_s1: regulator-s1 {
@@ -363,6 +364,12 @@
 	};
 
 	qcom,pm8004@5 {
+		/* Note: declaration nodes are probably not required */
+		compatible = "qcom,spmi-pmic";
+		reg = <0x5 SPMI_USID>;
+		#address-cells = <2>;
+		#size-cells = <0>;
+
 		/* PM8004 S2-S4 VDD_APC1 supply */
 		pm8004_s2: spm-regulator@1700 {
 			compatible = "qcom,spm-regulator";

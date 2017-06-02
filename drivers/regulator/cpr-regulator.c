@@ -5182,7 +5182,7 @@ static int cpr_check_tsens(struct cpr_regulator *cpr_vreg)
 {
 	int rc = 0;
 	struct tsens_device tsens_dev;
-	unsigned long temp = 0;
+	int temp = 0;
 	bool disable;
 
 	if (tsens_is_ready() > 0) {
@@ -6036,7 +6036,8 @@ static int cpr_regulator_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
-	init_data = of_get_regulator_init_data(&pdev->dev, pdev->dev.of_node);
+	init_data = of_get_regulator_init_data(&pdev->dev,
+			pdev->dev.of_node, NULL);
 	if (!init_data) {
 		dev_err(dev, "regulator init data is missing\n");
 		return -EINVAL;
