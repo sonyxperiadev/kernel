@@ -356,6 +356,7 @@ struct arm_smmu_device {
 #define ARM_SMMU_OPT_DYNAMIC		(1 << 10)
 #define ARM_SMMU_OPT_HALT		(1 << 11)
 #define ARM_SMMU_OPT_STATIC_CB		(1 << 12)
+#define ARM_SMMU_OPT_ENFORCE_NO_HALT	(1 << 13)
 	u32				options;
 	enum arm_smmu_arch_version	version;
 
@@ -485,6 +486,7 @@ static struct arm_smmu_option_prop arm_smmu_options[] = {
 	{ ARM_SMMU_OPT_DYNAMIC, "qcom,dynamic" },
 	{ ARM_SMMU_OPT_HALT, "qcom,enable-smmu-halt"},
 	{ ARM_SMMU_OPT_STATIC_CB, "qcom,enable-static-cb"},
+	{ ARM_SMMU_OPT_ENFORCE_NO_HALT, "qcom,enforce-no-halt"},
 	{ 0, NULL},
 };
 
@@ -2766,6 +2768,9 @@ static int arm_smmu_wait_for_halt(struct arm_smmu_device *smmu)
 	void __iomem *impl_def1_base = ARM_SMMU_IMPL_DEF1(smmu);
 	u32 tmp;
 
+	if (smmu->options & ARM_SMMU_OPT_ENFORCE_NO_HALT)
+		return 0;
+
 	if (readl_poll_timeout_atomic(impl_def1_base + IMPL_DEF1_MICRO_MMU_CTRL,
 				      tmp, (tmp & MICRO_MMU_CTRL_IDLE),
 				      0, 30000)) {
@@ -2803,11 +2808,17 @@ static int __arm_smmu_halt(struct arm_smmu_device *smmu, bool wait)
 
 static int arm_smmu_halt(struct arm_smmu_device *smmu)
 {
+	if (smmu->options & ARM_SMMU_OPT_ENFORCE_NO_HALT)
+		return 0;
+
 	return __arm_smmu_halt(smmu, true);
 }
 
 static int arm_smmu_halt_nowait(struct arm_smmu_device *smmu)
 {
+	if (smmu->options & ARM_SMMU_OPT_ENFORCE_NO_HALT)
+		return 0;
+
 	return __arm_smmu_halt(smmu, false);
 }
 
@@ -2817,6 +2828,10 @@ static void arm_smmu_resume(struct arm_smmu_device *smmu)
 	u32 reg;
 
 	if (arm_smmu_restore_sec_cfg(smmu))
+		return;
+
+	/* If SMMU doesn't support HALT, there's no point in resuming it */
+	if (smmu->options & ARM_SMMU_OPT_ENFORCE_NO_HALT)
 		return;
 
 	reg = readl_relaxed(impl_def1_base + IMPL_DEF1_MICRO_MMU_CTRL);
@@ -3970,7 +3985,7 @@ static int arm_smmu_add_static_cbndx(struct arm_smmu_device *smmu, int sid,
 		entry->cbndx = (s2cr_reg >> S2CR_CBNDX_SHIFT) &
 					S2CR_CBNDX_MASK;
 		__arm_smmu_set_bitmap(smmu->context_map, entry->cbndx);
-		pr_debug("Static context bank: smr:%d, sid:%d, cbndx:%d\n",
+		pr_err("Static context bank: smr:%d, sid:%d, cbndx:%d\n",
 			smr_idx, sid, entry->cbndx);
 	}
 	__arm_smmu_set_bitmap(smmu->smr_map, smr_idx);
