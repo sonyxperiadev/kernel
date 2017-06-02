@@ -2508,7 +2508,7 @@
 	};
 
 	wcd_rst_gpio: wcd_gpio_ctrl {
-		compatible = "qcom,wcd-gpio-ctrl";
+		compatible = "qcom,msm-cdc-pinctrl";
 		qcom,cdc-rst-n-gpio = <&msm_gpio 133 0>;
 		pinctrl-names = "aud_active", "aud_sleep";
 		pinctrl-0 = <&cdc_reset_line_act>;
