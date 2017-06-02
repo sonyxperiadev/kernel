@@ -44,12 +44,11 @@
 		#clock-cells = <1>;
 		#global-interrupts = <1>;
 
-		qcom,dynamic;
+		//qcom,dynamic;
 		qcom,register-save;
 		qcom,skip-init;
 
-		qcom,enable-smmu-halt;
-		qcom,enable-static-cb;
+		qcom,enforce-no-halt;
 		qcom,no-smr-check;
 
 		vdd-supply = <&gdsc_oxili_cx>;
@@ -57,8 +56,14 @@
 		interrupts = <GIC_SPI 240 IRQ_TYPE_LEVEL_HIGH>,
 			     <GIC_SPI 241 IRQ_TYPE_LEVEL_HIGH>,
 			     <GIC_SPI 242 IRQ_TYPE_LEVEL_HIGH>;
+
+		/*
+		 * Clocks TODO: Do we really need the gpu_ahb_clock
+		 * declared in the KGSL SMMU node's clocks, or can
+		 * we let the KGSL driver to manage it independently?
+		 */
 		clocks = <&clock_gcc clk_gcc_smmu_cfg_clk>,
-			 <&clock_gcc_gfx clk_gcc_oxili_ahb_clk>, /* is this needed? */
+			 <&clock_gcc_gfx clk_gcc_oxili_ahb_clk>,
 			 <&clock_gcc_gfx clk_gcc_gfx_tcu_clk>;
 		clock-names = "gcc_smmu_cfg_clk",
 			      "gcc_gpu_ahb_clk",
@@ -141,15 +146,12 @@
 		#clock-cells = <1>;
 		#global-interrupts = <1>;
 
-		qcom,dynamic;
+		//qcom,dynamic;
 		qcom,register-save;
 		qcom,skip-init;
 
-		//qcom,enable-smmu-halt;
-		qcom,enable-static-cb;
+		qcom,enforce-no-halt;
 		qcom,no-smr-check;
-
-		//vdd-supply = <&gdsc_oxili_cx>;
 
 		interrupts = <GIC_SPI 254 IRQ_TYPE_LEVEL_HIGH>, /* SEC ctxs */
 			     <GIC_SPI 255 IRQ_TYPE_LEVEL_HIGH>,
@@ -179,10 +181,6 @@
 			     <GIC_SPI 119 IRQ_TYPE_LEVEL_HIGH>,
 			     <GIC_SPI 120 IRQ_TYPE_LEVEL_HIGH>;
 
-		/* Clocks. Do we manage clocks here or in specific device nodes?
-		 * Have we got any common IOMMU clock for the apps iommu?
-		 * And then, which GDSC should we manage for this IOMMU?
-		 */
 		clocks = <&clock_gcc clk_gcc_smmu_cfg_clk>,
 			 <&clock_gcc clk_gcc_apss_tcu_clk>;
 		clock-names = "gcc_smmu_cfg_clk",
