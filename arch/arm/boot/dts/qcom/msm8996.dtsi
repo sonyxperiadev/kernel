@@ -3573,6 +3573,7 @@
 
 	qcom,msm-ssc-sensors {
 		compatible = "qcom,msm-ssc-sensors";
+		qcom,firmware-name = "slpi";
 		status = "ok";
 	};
 
