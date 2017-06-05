@@ -12047,6 +12047,13 @@ static s32 wl_escan_handler(struct bcm_cfg80211 *cfg, bcm_struct_cfgdev *cfgdev,
 			WL_ERR(("Invalid escan result (NULL pointer)\n"));
 			goto exit;
 		}
+		if ((dtoh32(escan_result->buflen) > ESCAN_BUF_SIZE) ||
+		    (dtoh32(escan_result->buflen) <
+			sizeof(wl_escan_result_t))) {
+			WL_ERR(("Invalid escan buffer len:%d\n",
+				dtoh32(escan_result->buflen)));
+			goto exit;
+		}
 		if (dtoh16(escan_result->bss_count) != 1) {
 			WL_ERR(("Invalid bss_count %d: ignoring\n", escan_result->bss_count));
 			goto exit;
