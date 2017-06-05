@@ -99,6 +99,12 @@
 
 #define ENTRY_OVERHEAD strlen("bssid=\nssid=\nfreq=\nlevel=\nage=\ndist=\ndistSd=\n====")
 #define TIME_MIN_DIFF 5
+
+#define EVENT_DATABUF_MAXLEN	(512 - sizeof(bcm_event_t))
+#define EVENT_MAX_NETCNT \
+	((EVENT_DATABUF_MAXLEN - sizeof(wl_pfn_scanresults_t)) \
+	/ sizeof(wl_pfn_net_info_t) + 1)
+
 static wlc_ssid_ext_t * dhd_pno_get_legacy_pno_ssid(dhd_pub_t *dhd,
         dhd_pno_status_info_t *pno_state);
 #ifdef GSCAN_SUPPORT
@@ -3627,7 +3633,12 @@ dhd_pno_process_epno_result(dhd_pub_t *dhd, const void *data, uint32 event, int 
 	} else if (event == WLC_E_PFN_NET_FOUND || event == WLC_E_PFN_NET_LOST) {
 		wl_pfn_scanresults_t *pfn_result = (wl_pfn_scanresults_t *)data;
 		wl_pfn_net_info_t *net;
-
+		if ((pfn_result->count == 0) ||
+		    (pfn_result->count > EVENT_MAX_NETCNT)) {
+			DHD_ERROR(("%s event %d: incorrect results count:%d\n",
+				__FUNCTION__, event, pfn_result->count));
+			return NULL;
+		}
 		if (pfn_result->version != PFN_SCANRESULT_VERSION) {
 			DHD_ERROR(("%s event %d: Incorrect version %d %d\n", __FUNCTION__, event,
 			          pfn_result->version, PFN_SCANRESULT_VERSION));
@@ -3683,7 +3694,9 @@ dhd_handle_hotlist_scan_evt(dhd_pub_t *dhd, const void *event_data,
 
 	gscan_params = &(_pno_state->pno_params_arr[INDEX_OF_GSCAN_PARAMS].params_gscan);
 
-	if (!results->count) {
+	if ((results->count == 0) || (results->count > EVENT_MAX_NETCNT)) {
+		DHD_ERROR(("%s: wrong count:%d\n", __FUNCTION__,
+				results->count));
 		*send_evt_bytes = 0;
 		return ptr;
 	}
