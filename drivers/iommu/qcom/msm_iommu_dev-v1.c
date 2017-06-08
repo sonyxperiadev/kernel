@@ -527,6 +527,8 @@ static int msm_iommu_probe(struct platform_device *pdev)
 
 	INIT_LIST_HEAD(&drvdata->masters);
 
+	idr_init(&drvdata->asid_idr);
+
 	ret = of_platform_populate(np, msm_iommu_ctx_match_table, NULL, dev);
 	if (ret) {
 		dev_err(dev, "Failed to create iommu context device\n");
@@ -551,6 +553,7 @@ static int msm_iommu_remove(struct platform_device *pdev)
 
 	drv = platform_get_drvdata(pdev);
 	if (drv) {
+		idr_destroy(&drv->asid_idr);
 		__disable_clocks(drv);
 		__put_bus_vote_client(drv);
 		msm_iommu_remove_drv(drv);
