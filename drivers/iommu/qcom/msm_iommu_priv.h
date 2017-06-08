@@ -61,6 +61,10 @@ struct msm_iommu_priv {
 	struct list_head list_attached;
 	struct iommu_domain domain;
 	const char *client_name;
+	u32 procid;
+	u32 asid;
+	u32 attributes;
+	struct iommu_domain *base;
 };
 
 static inline struct msm_iommu_priv *to_msm_priv(struct iommu_domain *dom)
