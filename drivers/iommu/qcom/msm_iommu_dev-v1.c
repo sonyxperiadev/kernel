@@ -28,7 +28,7 @@
 
 #include "msm_iommu_hw-v1.h"
 #include "qcom_iommu.h"
-#include <linux/qcom_scm.h>
+#include <soc/qcom/scm.h>
 #include "msm_iommu_perfmon.h"
 #include "msm_iommu_priv.h"
 
@@ -245,14 +245,93 @@ static int msm_iommu_pmon_parse_dt(struct platform_device *pdev,
 	return 0;
 }
 
-#define SCM_SVC_MP		0xc
+//#define SCM_SVC_MP		0xc
+#define IOMMU_SECURE_PTBL_SIZE  3
+#define IOMMU_SECURE_PTBL_INIT  4
+#define IOMMU_SEC_SET_CP_POOLSZ 5
 #define MAXIMUM_VIRT_SIZE	(300 * SZ_1M)
 #define MAKE_VERSION(major, minor, patch) \
 	(((major & 0x3FF) << 22) | ((minor & 0x3FF) << 12) | (patch & 0xFFF))
 
+static int iommu_scm_set_pool_size(void)
+{
+	struct scm_desc desc = {0};
+	int ret;
+
+	desc.args[0] = MAXIMUM_VIRT_SIZE;
+	desc.args[1] = 0;
+	desc.arginfo = SCM_ARGS(2);
+
+	ret = scm_call2(SCM_SIP_FNID(SCM_SVC_MP, IOMMU_SEC_SET_CP_POOLSZ),
+			 &desc);
+	if (ret)
+		pr_err("%s: Failed to set CP pool size in secure env\n",
+			__func__);
+
+	return ret;
+}
+
+static int iommu_scm_secure_ptbl_init(u64 addr, u32 sz, u32 spare)
+{
+	struct scm_desc desc = {0};
+	int ret;
+
+	desc.args[0] = addr;
+	desc.args[1] = sz;
+	desc.args[2] = spare;
+	desc.arginfo = SCM_ARGS(3, SCM_RW, SCM_VAL, SCM_VAL);
+
+	ret = scm_call2(SCM_SIP_FNID(SCM_SVC_MP, IOMMU_SECURE_PTBL_INIT),
+			&desc);
+	if (ret == -EPERM)
+		return 0;
+
+	if (ret) {
+		pr_err("%s: Failed to initialize secure partition table\n",
+			__func__);
+		return ret;
+	}
+
+	if (desc.ret[0]) {
+		pr_err("%s: TZ Error while initializing secure"
+			" partition table", __func__);
+		ret = desc.ret[0];
+	}
+
+	return ret;
+}
+
+static int iommu_scm_get_secure_ptbl_size(u32 spare, size_t *size)
+{
+	struct scm_desc desc = {0};
+	int ret;
+
+	desc.args[0] = spare;
+	desc.arginfo = SCM_ARGS(1);
+
+	ret = scm_call2(SCM_SIP_FNID(SCM_SVC_MP, IOMMU_SECURE_PTBL_SIZE),
+			&desc);
+	if (ret) {
+		pr_err("%s: Failed to get secure partition table size\n",
+			__func__);
+		return ret;
+	}
+
+	if (desc.ret[1]) {
+		pr_err("%s: TZ Error while getting secure partition table\n",
+			__func__);
+		return -EINVAL;
+	}
+
+	if (size)
+		*size = desc.ret[0];
+
+	return desc.ret[1];
+}
+
 static int msm_iommu_sec_ptbl_init(struct device *dev)
 {
-	int psize[2] = {0, 0};
+	size_t psize;
 	unsigned int spare = 0;
 	int ret;
 	int version;
@@ -264,10 +343,10 @@ static int msm_iommu_sec_ptbl_init(struct device *dev)
 	if (allocated)
 		return 0;
 
-	version = qcom_scm_get_feat_version(SCM_SVC_MP);
+	version = scm_get_feat_version(SCM_SVC_MP);
 
 	if (version >= MAKE_VERSION(1, 1, 1)) {
-		ret = qcom_scm_iommu_set_cp_pool_size(MAXIMUM_VIRT_SIZE, 0);
+		ret = iommu_scm_set_pool_size();
 		if (ret) {
 			dev_err(dev, "failed setting max virtual size (%d)\n",
 				ret);
@@ -275,31 +354,31 @@ static int msm_iommu_sec_ptbl_init(struct device *dev)
 		}
 	}
 
-	ret = qcom_scm_iommu_secure_ptbl_size(spare, psize);
+	ret = iommu_scm_get_secure_ptbl_size(spare, &psize);
 	if (ret) {
 		dev_err(dev, "failed to get iommu secure pgtable size (%d)\n",
 			ret);
 		return ret;
 	}
-
+/*
 	if (psize[1]) {
 		dev_err(dev, "failed to get iommu secure pgtable size (%d)\n",
 			ret);
 		return psize[1];
 	}
-
-	dev_info(dev, "iommu sec: pgtable size: %d\n", psize[0]);
+*/
+	dev_info(dev, "iommu sec: pgtable size: %zu\n", psize);
 
 	dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, &attrs);
 
-	cpu_addr = dma_alloc_attrs(dev, psize[0], &paddr, GFP_KERNEL, &attrs);
+	cpu_addr = dma_alloc_attrs(dev, psize, &paddr, GFP_KERNEL, &attrs);
 	if (!cpu_addr) {
-		dev_err(dev, "failed to allocate %d bytes for pgtable\n",
-			psize[0]);
+		dev_err(dev, "failed to allocate %zu bytes for pgtable\n",
+			psize);
 		return -ENOMEM;
 	}
 
-	ret = qcom_scm_iommu_secure_ptbl_init(paddr, psize[0], spare);
+	ret = iommu_scm_secure_ptbl_init(paddr, psize, spare);
 	if (ret) {
 		dev_err(dev, "failed to init iommu pgtable (%d)\n", ret);
 		goto free_mem;
@@ -310,7 +389,7 @@ static int msm_iommu_sec_ptbl_init(struct device *dev)
 	return 0;
 
 free_mem:
-	dma_free_attrs(dev, psize[0], cpu_addr, paddr, &attrs);
+	dma_free_attrs(dev, psize, cpu_addr, paddr, &attrs);
 	return ret;
 }
 
@@ -326,13 +405,6 @@ static int msm_iommu_probe(struct platform_device *pdev)
 	int global_cfg_irq, global_client_irq;
 	u32 temp;
 	unsigned long rate;
-
-	if (!qcom_scm_is_available())
-		return -EPROBE_DEFER;
-
-	msm_iommu_check_scm_call_avail();
-	msm_set_iommu_access_ops(&iommu_access_ops_v1);
-	msm_iommu_sec_set_access_ops(&iommu_access_ops_v1);
 
 	drvdata = devm_kzalloc(dev, sizeof(*drvdata), GFP_KERNEL);
 	if (!drvdata)
@@ -609,9 +681,6 @@ static int msm_iommu_ctx_probe(struct platform_device *pdev)
 	struct msm_iommu_ctx_drvdata *ctx_drvdata;
 	int ret;
 
-	if (!qcom_scm_is_available())
-		return -EPROBE_DEFER;
-
 	if (!pdev->dev.parent)
 		return -EINVAL;
 
@@ -672,9 +741,14 @@ static struct platform_driver msm_iommu_ctx_driver = {
 	.remove = msm_iommu_ctx_remove,
 };
 
-static int __init msm_iommu_driver_init(struct device_node *np)
+static int __init msm_iommu_driver_init(void)//struct device_node *np)
 {
 	int ret;
+
+	msm_iommu_check_scm_call_avail();
+
+	msm_set_iommu_access_ops(&iommu_access_ops_v1);
+	msm_iommu_sec_set_access_ops(&iommu_access_ops_v1);
 
 	ret = platform_driver_register(&msm_iommu_driver);
 	if (ret) {
@@ -691,7 +765,8 @@ static int __init msm_iommu_driver_init(struct device_node *np)
 
 	return 0;
 }
-IOMMU_OF_DECLARE(msm_mmuv1, "qcom,msm-mmu-500", msm_iommu_driver_init);
+//IOMMU_OF_DECLARE(msm_mmuv1, "qcom,msm-mmu-500", msm_iommu_driver_init);
+subsys_initcall(msm_iommu_driver_init);
 
 static void __exit msm_iommu_driver_exit(void)
 {

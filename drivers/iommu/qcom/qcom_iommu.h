@@ -19,6 +19,9 @@
 #include <linux/regulator/consumer.h>
 
 /* Private pgprot flag */
+#ifdef IOMMU_PRIV
+#undef IOMMU_PRIV
+#endif
 #define IOMMU_PRIV	16
 
 extern pgprot_t     pgprot_kernel;
