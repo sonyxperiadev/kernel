@@ -430,6 +430,8 @@ config MTK_IOMMU_V1
 
 	  if unsure, say N here.
 
+source drivers/iommu/qcom/Kconfig
+
 menuconfig IOMMU_DEBUG
 	bool "IOMMU Profiling and Debugging"
 	help
