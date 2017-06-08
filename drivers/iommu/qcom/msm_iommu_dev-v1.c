@@ -244,7 +244,7 @@ static int msm_iommu_pmon_parse_dt(struct platform_device *pdev,
 
 	return 0;
 }
-#if 0
+
 #define SCM_SVC_MP		0xc
 #define MAXIMUM_VIRT_SIZE	(300 * SZ_1M)
 #define MAKE_VERSION(major, minor, patch) \
@@ -313,7 +313,7 @@ free_mem:
 	dma_free_attrs(dev, psize[0], cpu_addr, paddr, &attrs);
 	return ret;
 }
-#endif
+
 
 static int msm_iommu_probe(struct platform_device *pdev)
 {
@@ -387,13 +387,12 @@ static int msm_iommu_probe(struct platform_device *pdev)
 	dev_info(dev, "device %s (model: %d) mapped at %p, with %d ctx banks\n",
 		 drvdata->name, drvdata->model, drvdata->base, drvdata->ncb);
 
-#if 0
 	if (drvdata->sec_id != -1) {
 		ret = msm_iommu_sec_ptbl_init(dev);
 		if (ret)
 			return ret;
 	}
-#endif
+
 	platform_set_drvdata(pdev, drvdata);
 
 	pmon_info = msm_iommu_pm_alloc(dev);
