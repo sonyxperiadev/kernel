@@ -1005,6 +1005,7 @@ fail:
 	return len;
 }
 
+/*
 static size_t msm_iommu_map_sg(struct iommu_domain *domain, unsigned long iova,
 			       struct scatterlist *sg, unsigned int nents,
 			       int prot)
@@ -1057,7 +1058,7 @@ static int msm_iommu_unmap_range(struct iommu_domain *domain, unsigned int va,
 
 	return 0;
 }
-
+*/
 #ifdef CONFIG_IOMMU_LPAE
 static phys_addr_t msm_iommu_get_phy_from_PAR(unsigned long va, u64 par)
 {
@@ -1448,14 +1449,14 @@ fail:
 
 	return ret;
 }
-
+#if 0
 static phys_addr_t msm_iommu_get_pt_base_addr(struct iommu_domain *domain)
 {
 	struct msm_iommu_priv *priv = to_msm_priv(domain);
 
 	return __pa(priv->pt.fl_table);
 }
-
+#endif
 #define DUMP_REG_INIT(dump_reg, cb_reg, mbp, drt)		\
 	do {							\
 		dump_regs_tbl[dump_reg].reg_offset = cb_reg;	\
