@@ -33,6 +33,8 @@
 #include <asm/sizes.h>
 #include <linux/dma-iommu.h>
 
+#include <soc/qcom/secure_buffer.h>
+
 #include "qcom_iommu.h"
 #include "msm_iommu_hw-v1.h"
 #include "msm_iommu_priv.h"
@@ -1660,6 +1662,30 @@ static int msm_iommu_domain_set_attr(struct iommu_domain *domain,
 	case DOMAIN_ATTR_QCOM_COHERENT_HTW_DISABLE:
 		__do_set_redirect(domain, data);
 		break;
+	case DOMAIN_ATTR_SECURE_VMID:
+		/*
+		 * Not supported on MMU-500 driver as we are on preconfigured
+		 * secure context banks where the secure VMID is already set
+		 * from bootloader MMU initialization.
+		 * Also, the TZ in MSM SoC using this driver will not accept
+		 * hypervisor SCM calls which would be needed to change the
+		 * secure VMID mapping in the IOMMU!
+		 *
+		 * Note: This is valid for both secure and non-secure IOMMU.
+		 */
+		break;
+	case DOMAIN_ATTR_CONTEXT_BANK:
+		/*
+		 * We don't need to do anything here because CB allocation
+		 * is not dynamic in this driver.
+		 */
+		break;
+	case DOMAIN_ATTR_ATOMIC:
+		/*
+		 * Map / unmap in legacy driver are by default atomic. So
+		 * we don't need to do anything here.
+		 */
+		break;
 	case DOMAIN_ATTR_PROCID:
 		priv->procid = *((u32 *)data);
 		break;
@@ -1673,18 +1699,6 @@ static int msm_iommu_domain_set_attr(struct iommu_domain *domain,
 			priv->attributes |= 1 << DOMAIN_ATTR_DYNAMIC;
 		else
 			priv->attributes &= ~(1 << DOMAIN_ATTR_DYNAMIC);
-		break;
-	case DOMAIN_ATTR_CONTEXT_BANK:
-		/*
-		 * We don't need to do anything here because CB allocation
-		 * is not dynamic in this driver.
-		 */
-		break;
-	case DOMAIN_ATTR_ATOMIC:
-		/*
-		 * Map / unmap in legacy driver are by default atomic. So
-		 * we don't need to do anything here.
-		 */
 		break;
 	default:
 		return -EINVAL;
@@ -1700,9 +1714,20 @@ static int msm_iommu_domain_get_attr(struct iommu_domain *domain,
 	u64 ttbr0;
 	u32 ctxidr;
 
+	if (!list_empty(&priv->list_attached))
+		ctx_drvdata = list_first_entry(&priv->list_attached,
+			struct msm_iommu_ctx_drvdata, attached_elm);
+
 	switch (attr) {
 	case DOMAIN_ATTR_QCOM_COHERENT_HTW_DISABLE:
 		__do_get_redirect(domain, data);
+		break;
+	/* kholk TODO: PT_BASE_ADDR scheduled for removal */
+	case DOMAIN_ATTR_PT_BASE_ADDR:
+		*((phys_addr_t *)data) = virt_to_phys(priv->pt.fl_table);
+		break;
+	case DOMAIN_ATTR_SECURE_VMID:
+		*((int *) data) = -VMID_INVAL;
 		break;
 	case DOMAIN_ATTR_CONTEXT_BANK:
 		if (!ctx_drvdata)
