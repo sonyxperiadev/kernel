@@ -1318,6 +1318,8 @@ static struct iommu_group *msm_iommu_device_group(struct device *dev)
 		return ERR_CAST(master);
 	}
 
+	iommu_group_set_iommudata(group, &master->ctx_drvdata, NULL);
+
 	return group;
 }
 
