@@ -110,9 +110,6 @@
 		vddcx-supply = <&gdsc_oxili_cx>;
 		vdd-supply = <&gdsc_oxili_gx>;
 
-		/* IOMMU Data */
-                iommu = <&kgsl_smmu>;
-
 		/* Trace bus */
 		coresight-id = <67>;
 		coresight-name = "coresight-gfx";
@@ -215,14 +212,12 @@
 		gfx3d_user: gfx3d_user {
 			compatible = "qcom,smmu-kgsl-cb";
 			label = "gfx3d_user";
-			qcom,gpu-offset = <0x48000>;
-			/* Context SID 0 */
 			iommus = <&kgsl_smmu 0>;
+			qcom,gpu-offset = <0x48000>;
 		};
 		gfx3d_secure: gfx3d_secure {
 			compatible = "qcom,smmu-kgsl-cb";
 			label = "gfx3d_secure";
-			/* Context SID 2 */
 			iommus = <&kgsl_smmu 2>;
 			memory-region = <&secure_mem>;
 		};
