@@ -863,6 +863,7 @@ static int msm_iommu_attach_dev(struct iommu_domain *domain, struct device *dev)
 	struct msm_iommu_master *master;
 	int ret = 0;
 	int is_secure;
+	bool secure_ctx;
 	bool set_m2v = false;
 
 	mutex_lock(&msm_iommu_lock);
@@ -941,6 +942,12 @@ static int msm_iommu_attach_dev(struct iommu_domain *domain, struct device *dev)
 		set_m2v = true;
 	}
 
+	secure_ctx = !!(ctx_drvdata->secure_context > 0);
+	if (secure_ctx) {
+		dev_dbg(dev, "Detected secure context.\n");
+		goto add_domain;
+	}
+
 	iommu_halt(iommu_drvdata);
 
 	__program_context(iommu_drvdata, ctx_drvdata, priv, is_secure, set_m2v);
@@ -954,6 +961,7 @@ static int msm_iommu_attach_dev(struct iommu_domain *domain, struct device *dev)
 		__sync_tlb(iommu_drvdata, ctx_drvdata->num, priv);
 	}
 
+add_domain:
 	list_add(&(ctx_drvdata->attached_elm), &priv->list_attached);
 	ctx_drvdata->attached_domain = domain;
 	++iommu_drvdata->ctx_attach_count;
