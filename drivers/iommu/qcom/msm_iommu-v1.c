@@ -777,15 +777,14 @@ static struct msm_iommu_master *msm_iommu_find_master(struct device *dev)
 static struct iommu_domain *msm_iommu_domain_alloc(unsigned type)
 {
 	struct msm_iommu_priv *priv;
-	struct iommu_domain *domain;
 	int ret;
 
 	if (type != IOMMU_DOMAIN_UNMANAGED && type != IOMMU_DOMAIN_DMA)
-		return ERR_PTR(-EINVAL);
+		return NULL;
 
 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
 	if (!priv)
-		return ERR_PTR(-ENOMEM);
+		return NULL;
 
 	priv->pt.redirect = INITIAL_REDIRECT_VAL;
 
@@ -794,23 +793,21 @@ static struct iommu_domain *msm_iommu_domain_alloc(unsigned type)
 	ret = msm_iommu_pagetable_alloc(&priv->pt);
 	if (ret) {
 		kfree(priv);
-		return ERR_PTR(ret);
+		return NULL;
 	}
 
-	domain = &priv->domain;
-
 	if (type == IOMMU_DOMAIN_DMA) {
-		ret = iommu_get_dma_cookie(domain);
+		ret = iommu_get_dma_cookie(&priv->domain);
 		if (ret)
 			goto err;
 	}
 
-	return domain;
+	return &priv->domain;
 
 err:
 	msm_iommu_pagetable_free(&priv->pt);
 	kfree(priv);
-	return ERR_PTR(ret);
+	return NULL;
 }
 
 static void msm_iommu_domain_free(struct iommu_domain *domain)
