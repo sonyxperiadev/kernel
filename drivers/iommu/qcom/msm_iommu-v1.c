@@ -1813,7 +1813,7 @@ static int msm_iommu_of_xlate(struct device *dev, struct of_phandle_args *args)
 	dev_dbg(dev, "found ctx data for %s (num:%d)\n",
 		ctx_drvdata->name, ctx_drvdata->num);
 
-	master = kzalloc(sizeof(*master), GFP_KERNEL);
+	master = devm_kzalloc(iommu_drvdata->dev, sizeof(*master), GFP_KERNEL);
 	if (!master)
 		return -ENOMEM;
 
