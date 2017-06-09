@@ -33,6 +33,7 @@
 #include <asm/sizes.h>
 #include <linux/dma-iommu.h>
 
+#include <linux/amba/bus.h>
 #include <soc/qcom/secure_buffer.h>
 
 #include "qcom_iommu.h"
@@ -1874,6 +1875,16 @@ int msm_iommu_init(struct device *dev)
 	ret = bus_set_iommu(&platform_bus_type, &msm_iommu_ops);
 	if (ret)
 		return ret;
+
+#ifdef CONFIG_ARM_AMBA
+	if (!iommu_present(&amba_bustype))
+		bus_set_iommu(&amba_bustype, &msm_iommu_ops);
+#endif
+
+#ifdef CONFIG_PCI
+	if (!iommu_present(&pci_bus_type))
+		bus_set_iommu(&pci_bus_type, &msm_iommu_ops);
+#endif
 
 	msm_iommu_build_dump_regs_table();
 
