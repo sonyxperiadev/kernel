@@ -1,0 +1,63 @@
+/*
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+/*
+ * Copyright (C) 2016 Sony Mobile Communications Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2, as
+ * published by the Free Software Foundation.
+ */
+
+synaptics_clearpad@2c {
+	S3500 {
+	/* Write area------------------------------------------ */
+
+		EXTRA_0x03 {
+			somc,clearpad-f01-rmi-cmd00		= <0x00>;
+			somc,clearpad-f01-rmi-ctrl00		= <0x00>;
+			somc,clearpad-f01-rmi-ctrl01		= <0x01>;
+			somc,clearpad-f01-rmi-ctrl05		= <0x04>;
+			somc,clearpad-f01-rmi-data00		= <0x00>;
+			somc,clearpad-f01-rmi-data01		= <0x01>;
+			somc,clearpad-f01-rmi-query11		= <0x0B>;
+
+			somc,clearpad-f12-2d-ctrl08		= <0x00>;
+
+			somc,clearpad-f34-flash-ctrl00		= <0x00>;
+			somc,clearpad-f34-flash-data00		= <0x00>;
+			somc,clearpad-f34-flash-data01		= <0x01>;
+			somc,clearpad-f34-flash-data02		= <0x02>;
+			somc,clearpad-f34-flash-data03		= <0x03>;
+			somc,clearpad-f34-flash-query00		= <0x00>;
+			somc,clearpad-f34-flash-query01		= <0x01>;
+			somc,clearpad-f34-flash-query03		= <0x03>;
+
+			somc,clearpad-f51-custom-ctrl05		= <0x00>;
+			somc,clearpad-f51-custom-ctrl30		= <0x86>;
+
+			somc,clearpad-f54-analog-cmd00		= <0x00>;
+			somc,clearpad-f54-analog-ctrl113	= <0x25>;
+			somc,clearpad-f54-analog-ctrl147	= <0x2F>;
+			somc,clearpad-f54-analog-ctrl149	= <0x30>;
+			somc,clearpad-f54-analog-ctrl41		= <0x14>;
+			somc,clearpad-f54-analog-ctrl57		= <0x17>;
+			somc,clearpad-f54-analog-ctrl88		= <0x19>;
+			somc,clearpad-f54-analog-data00		= <0x00>;
+			somc,clearpad-f54-analog-data01		= <0x01>;
+			somc,clearpad-f54-analog-data02		= <0x02>;
+			somc,clearpad-f54-analog-data03		= <0x03>;
+			somc,clearpad-f54-analog-query38	= <0x1E>;
+		};
+
+	/* Write area------------------------------------------ */
+	};
+};
+

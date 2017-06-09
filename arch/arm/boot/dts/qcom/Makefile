@@ -1,3 +1,9 @@
+# MSM8998
+dtb-$(CONFIG_MACH_SONY_MAPLE) += msm8998-v2-yoshino-maple_generic.dtb
+dtb-$(CONFIG_MACH_SONY_MAPLE) += msm8998-v2.1-yoshino-maple_generic.dtb
+dtb-$(CONFIG_MACH_SONY_MAPLE_DSDS) += msm8998-v2-yoshino-maple_dsds.dtb
+dtb-$(CONFIG_MACH_SONY_MAPLE_DSDS) += msm8998-v2.1-yoshino-maple_dsds.dtb
+
 # MSM8996
 dtb-$(CONFIG_MACH_SONY_DORA)            += msm8996-v3.0-pmi8996-tone-dora_generic.dtb
 dtb-$(CONFIG_MACH_SONY_DORA)            += msm8996-v3-pmi8996-tone-dora_generic.dtb
@@ -116,6 +122,7 @@ dtb-$(CONFIG_ARCH_MSM8996) += msm8996-v2-pmi8994-cdp.dtb \
 	apq8096-v3-pmi8996-dragonboard.dtb
 endif
 
+ifneq ($(CONFIG_ARCH_SONY_YOSHINO),y)
 dtb-$(CONFIG_ARCH_MSM8998) += msm8998-sim.dtb \
 	msm8998-rumi.dtb \
 	msm8998-cdp.dtb \
@@ -148,6 +155,7 @@ dtb-$(CONFIG_ARCH_MSM8998) += msm8998-sim.dtb \
 	msm8998-v2.1-interposer-sdm660-cdp.dtb \
 	msm8998-v2.1-interposer-sdm660-mtp.dtb \
 	msm8998-v2.1-interposer-sdm660-qrd.dtb
+endif
 
 dtb-$(CONFIG_ARCH_MSMHAMSTER) += msmhamster-rumi.dtb
 

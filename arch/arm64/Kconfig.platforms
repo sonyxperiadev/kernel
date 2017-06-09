@@ -193,4 +193,31 @@ config ARCH_ZYNQMP
 	help
 	  This enables support for Xilinx ZynqMP Family
 
+config ARCH_SONY_YOSHINO
+        bool "Sony Mobile Yoshino platform"
+        depends on ARCH_MSM8998
+        help
+        Support for the SONY Mobile Yoshino platform
+        which is based on QCOM MSM8998 chipset.
+        If you enable this config,
+        please use SONY Mobile device tree.
+
+config MACH_SONY_MAPLE
+        bool "Sony Mobile Maple"
+        depends on ARCH_SONY_YOSHINO
+        help
+        Support for the SONY Mobile Maple device
+        which is based on SONY Yoshino platform.
+        If you enable this config,
+        please use SONY Mobile device tree.
+
+config MACH_SONY_MAPLE_DSDS
+        bool "Sony Mobile Maple Dsds"
+        depends on ARCH_SONY_YOSHINO
+        help
+        Support for the SONY Mobile Maple Dsds device
+        which is based on SONY Yoshino platform.
+        If you enable this config,
+        please use SONY Mobile device tree.
+
 endmenu
