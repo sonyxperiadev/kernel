@@ -987,6 +987,7 @@
 	};
 
 	sdcc1_ice: sdcc1ice@7803000 {
+		status = "disabled";
 		compatible = "qcom,ice";
 		reg = <0x7803000 0x8000>;
 		interrupt-names = "sdcc_ice_nonsec_level_irq", "sdcc_ice_sec_level_irq";
@@ -1014,7 +1015,7 @@
 		reg = <0x7824900 0x500>, <0x7824000 0x800>, <0x7824e00 0x200>;
 		reg-names = "hc_mem", "core_mem", "cmdq_mem";
 
-		sdhc-msm-crypto = <&sdcc1_ice>;
+		//sdhc-msm-crypto = <&sdcc1_ice>;
 		interrupts = <0 123 0>, <0 138 0>;
 		interrupt-names = "hc_irq", "pwr_irq";
 
@@ -2090,26 +2091,26 @@
 		non_secure_cb {
 			compatible = "qcom,msm-vidc,context-bank";
 			label = "venus_ns";
-			iommus = <&apps_iommu 0x800>,
-				<&apps_iommu 0x807>,
-				<&apps_iommu 0x808>,
-				<&apps_iommu 0x80C>,
-				<&apps_iommu 0x810>,
-				<&apps_iommu 0x821>,
-				<&apps_iommu 0x828>,
-				<&apps_iommu 0x82B>,
-				<&apps_iommu 0x82C>,
-				<&apps_iommu 0x831>,
-				<&apps_iommu 0x3000>,
-				<&apps_iommu 0x3007>,
-				<&apps_iommu 0x3008>,
-				<&apps_iommu 0x300C>,
-				<&apps_iommu 0x3010>,
-				<&apps_iommu 0x3021>,
-				<&apps_iommu 0x3028>,
-				<&apps_iommu 0x302B>,
-				<&apps_iommu 0x302C>,
-				<&apps_iommu 0x3031>;
+			iommus = <&apps_smmu 0x800>,
+				<&apps_smmu 0x807>,
+				<&apps_smmu 0x808>,
+				<&apps_smmu 0x80C>,
+				<&apps_smmu 0x810>,
+				<&apps_smmu 0x821>,
+				<&apps_smmu 0x828>,
+				<&apps_smmu 0x82B>,
+				<&apps_smmu 0x82C>,
+				<&apps_smmu 0x831>,
+				<&apps_smmu 0x3000>,
+				<&apps_smmu 0x3007>,
+				<&apps_smmu 0x3008>,
+				<&apps_smmu 0x300C>,
+				<&apps_smmu 0x3010>,
+				<&apps_smmu 0x3021>,
+				<&apps_smmu 0x3028>,
+				<&apps_smmu 0x302B>,
+				<&apps_smmu 0x302C>,
+				<&apps_smmu 0x3031>;
 
 			/* Buffer types relative to the two address pools */
 			buffer-types = <0x7ff>, <0x800>;
@@ -2123,24 +2124,24 @@
 			/* Firmware context bank is unlabeled in 4.4 */
 			/* note: old-style label is "venus_fw" */
 			qcom,fw-context-bank;
-			iommus = <&apps_iommu 0x980>,
-				<&apps_iommu 0x986>,
-				<&apps_iommu 0x903>,
-				<&apps_iommu 0x3180>,
-				<&apps_iommu 0x3186>,
-				<&apps_iommu 0x3103>;
+			iommus = <&apps_smmu 0x980>,
+				<&apps_smmu 0x986>,
+				<&apps_smmu 0x903>,
+				<&apps_smmu 0x3180>,
+				<&apps_smmu 0x3186>,
+				<&apps_smmu 0x3103>;
 		};
 
 		/* Address pool from 1200MB to 1500MB */
 		secure_bitstream_cb {
 			compatible = "qcom,msm-vidc,context-bank";
 			label = "venus_sec_bitstream";
-			iommus = <&apps_iommu 0x902>,
-				<&apps_iommu 0x90e>,
-				<&apps_iommu 0x909>,
-				<&apps_iommu 0x3102>,
-				<&apps_iommu 0x310e>,
-				<&apps_iommu 0x3109>;
+			iommus = <&apps_smmu 0x902>,
+				<&apps_smmu 0x90e>,
+				<&apps_smmu 0x909>,
+				<&apps_smmu 0x3102>,
+				<&apps_smmu 0x310e>,
+				<&apps_smmu 0x3109>;
 			buffer-types = <0x241>;
 			virtual-addr-pool = <0x4b000000 0x12c00000>;
 			qcom,secure-context-bank;
@@ -2150,12 +2151,12 @@
 		venus_secure_pixel_cb: secure_pixel_cb {
 			compatible = "qcom,msm-vidc,context-bank";
 			label = "venus_sec_pixel";
-			iommus = <&apps_iommu 0x904>,
-				<&apps_iommu 0x90c>,
-				<&apps_iommu 0x910>,
-				<&apps_iommu 0x3104>,
-				<&apps_iommu 0x310c>,
-				<&apps_iommu 0x3110>;
+			iommus = <&apps_smmu 0x904>,
+				<&apps_smmu 0x90c>,
+				<&apps_smmu 0x910>,
+				<&apps_smmu 0x3104>,
+				<&apps_smmu 0x310c>,
+				<&apps_smmu 0x3110>;
 			buffer-types = <0x106>;
 			virtual-addr-pool = <0x25800000 0x25800000>;
 			qcom,secure-context-bank;
@@ -2165,20 +2166,20 @@
 		venus_secure_non_pixel_cb: secure_non_pixel_cb {
 			compatible = "qcom,msm-vidc,context-bank";
 			label = "venus_sec_non_pixel";
-			iommus = <&apps_iommu 0x940>,
-				<&apps_iommu 0x905>,
-				<&apps_iommu 0x907>,
-				<&apps_iommu 0x908>,
-				<&apps_iommu 0x90d>,
-				<&apps_iommu 0x925>,
-				<&apps_iommu 0x92d>,
-				<&apps_iommu 0x3140>,
-				<&apps_iommu 0x3105>,
-				<&apps_iommu 0x3107>,
-				<&apps_iommu 0x3108>,
-				<&apps_iommu 0x310d>,
-				<&apps_iommu 0x3125>,
-				<&apps_iommu 0x312d>;
+			iommus = <&apps_smmu 0x940>,
+				<&apps_smmu 0x905>,
+				<&apps_smmu 0x907>,
+				<&apps_smmu 0x908>,
+				<&apps_smmu 0x90d>,
+				<&apps_smmu 0x925>,
+				<&apps_smmu 0x92d>,
+				<&apps_smmu 0x3140>,
+				<&apps_smmu 0x3105>,
+				<&apps_smmu 0x3107>,
+				<&apps_smmu 0x3108>,
+				<&apps_smmu 0x310d>,
+				<&apps_smmu 0x3125>,
+				<&apps_smmu 0x312d>;
 			buffer-types = <0x380>;
 			virtual-addr-pool = <0x1000000 0x24800000>;
 			qcom,secure-context-bank;
@@ -2814,10 +2815,9 @@
 
 	qcom,msm-audio-ion {
 		compatible = "qcom,msm-audio-ion";
-		qcom,smmu-version = <1>;
+		qcom,smmu-version = <2>;
 		qcom,smmu-enabled;
-		qcom,smmu-sid = <0x1>;
-		iommus = <&lpass_audio_iommu 1>;
+		iommus = <&apps_smmu 0x2c01>;
 	};
 
 	qcom,adsprpc-mem {
