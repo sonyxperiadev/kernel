@@ -806,6 +806,13 @@ config MSM_AVTIMER
 		This driver gets the Q6 out of power collapsed state and
 		exposes ioctl control to read avtimer tick.
 
+config MSM_PACMAN
+	tristate "Enable the Peripheral Access Control Manager (PACMan)"
+	help
+	  Add support for the Peripheral Access Control Manager (PACMan). This
+	  driver allows reconfiguration of the Bus Access Manager Low Speed
+	  peripheral (BLSP) ownership.
+
 config MSM_KERNEL_PROTECT
 	bool "Protect kernel text by removing write permissions in stage-2"
         depends on !FUNCTION_TRACER
