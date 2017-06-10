@@ -139,6 +139,7 @@
         /*I2C : BLSP2 */
         i2c@7af6000 {
                 nfc@28 {
+			status = "disabled";
                         compatible = "nxp,pn547";
                         reg = <0x28>;
                         interrupt-parent = <&msm_gpio>;
@@ -271,7 +272,7 @@
 			compatible = "as3668";
 			reg = <0x42>;
 			label = "rgb";
-			status = "okay";
+			status = "disable";
 			somc,led_num = <3>;
 			somc,pattern_start_source = <0>;
 			somc,pwm_source = <0>;
