@@ -20,6 +20,7 @@ obj-$(CONFIG_MSM_SMP2P_TEST)	+=	smp2p_loopback.o smp2p_test.o smp2p_spinlock_tes
 obj-$(CONFIG_MSM_QMI_INTERFACE)	+=	qmi_interface.o
 obj-$(CONFIG_MSM_RPM_SMD)	+=	rpm-smd.o
 obj-$(CONFIG_MSM_HVC) += hvc.o
+obj-$(CONFIG_MSM_CPU_PWR_CTL)	+=	cpu_pwr_ctl.o
 ifdef CONFIG_DEBUG_FS
 obj-$(CONFIG_MSM_RPM_SMD)	+=	rpm-smd-debug.o
 endif
