@@ -647,6 +647,14 @@ config MSM_PERFORMANCE
 	  online at any given point in time. This module can also restrict
 	  max freq or min freq of cpu cluster
 
+config MSM_CPU_PWR_CTL
+	bool "CPU subsystem power control"
+	depends on SMP && (ARM || ARM64)
+	default y
+	help
+	Provides routines to power on cpu rails and l2 cache
+	controller during coldboot.
+
 config MSM_CDSP_LOADER
 	tristate "CDSP loader support"
 	depends on MSM_GLINK
