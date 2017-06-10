@@ -310,20 +310,20 @@
 		status = "ok";
 		compatible = "qcom,msm-cam-smmu";
 		msm_cam_smmu_cb1: msm_cam_smmu_cb1 {
-			compatible = "qcom,qsmmu-cam-cb";
+			compatible = "qcom,msm-cam-smmu-cb";
 			iommus = <&apps_smmu 20>;
 			label = "vfe";
 			qcom,scratch-buf-support;
 		};
 
 		msm_cam_smmu_cb3: msm_cam_smmu_cb3 {
-			compatible = "qcom,qsmmu-cam-cb";
+			compatible = "qcom,msm-cam-smmu-cb";
 			iommus = <&apps_smmu 18>;
 			label = "cpp";
 		};
 
 		msm_cam_smmu_cb4: msm_cam_smmu_cb4 {
-			compatible = "qcom,qsmmu-cam-cb";
+			compatible = "qcom,msm-cam-smmu-cb";
 			iommus = <&apps_smmu 19>;
 			label = "jpeg_enc0";
 		};
