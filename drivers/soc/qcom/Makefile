@@ -77,6 +77,7 @@ obj-$(CONFIG_MSM_BGCOM) += bgcom_spi.o
 
 obj-$(CONFIG_MSM_PERFORMANCE) += msm_performance.o
 obj-$(CONFIG_MSM_CPU_PWR_CTL)	+=	cpu_pwr_ctl.o
+obj-$(CONFIG_MSM_PACMAN) += msm_pacman.o
 
 ifdef CONFIG_MSM_SUBSYSTEM_RESTART
        obj-y += subsystem_notif.o
