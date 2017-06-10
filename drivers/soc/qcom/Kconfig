@@ -189,6 +189,14 @@ config MSM_QMI_INTERFACE
 	  to perform QMI message marshaling and transport them over IPC
 	  Router.
 
+config MSM_CPU_PWR_CTL
+	bool "Cpu subsystem power control"
+	depends on SMP && (ARM || ARM64)
+	default y
+	help
+	Provides routines to power on cpu rails and l2 cache
+	controller during coldboot.
+
 config MSM_CACHE_M4M_ERP64
        bool "Cache and M4M error report"
        depends on ARCH_MSM8996
