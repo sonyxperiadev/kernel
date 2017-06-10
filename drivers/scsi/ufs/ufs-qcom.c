@@ -160,11 +160,12 @@ static int ufs_qcom_enable_lane_clks(struct ufs_qcom_host *host)
 			host->rx_l1_sync_clk);
 		if (err)
 			goto disable_tx_l0;
-
+#ifndef CONFIG_SCSI_UFS_RESTRICT_TX_LANES
 		/* The tx lane1 clk could be muxed, hence keep this optional */
 		if (host->tx_l1_sync_clk)
 			ufs_qcom_host_clk_enable(dev, "tx_lane1_sync_clk",
 						 host->tx_l1_sync_clk);
+#endif
 	}
 	host->is_lane_clks_enabled = true;
 	goto out;
@@ -207,10 +208,11 @@ static int ufs_qcom_init_lane_clks(struct ufs_qcom_host *host)
 					__func__, err);
 			goto out;
 		}
-
+#ifndef CONFIG_SCSI_UFS_RESTRICT_TX_LANES
 		/* The tx lane1 clk could be muxed, hence keep this optional */
 		ufs_qcom_host_clk_get(dev, "tx_lane1_sync_clk",
 					&host->tx_l1_sync_clk);
+#endif
 	}
 out:
 	return err;
@@ -1507,7 +1509,9 @@ static void ufs_qcom_advertise_quirks(struct ufs_hba *hba)
 				| UFSHCD_QUIRK_BROKEN_PA_RXHSUNTERMCAP);
 	}
 
+#ifndef CONFIG_ARCH_SONY_YOSHINO
 	if (host->disable_lpm)
+#endif
 		hba->quirks |= UFSHCD_QUIRK_BROKEN_AUTO_HIBERN8;
 }
 
