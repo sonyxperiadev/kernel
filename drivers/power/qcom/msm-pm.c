@@ -291,7 +291,7 @@ static bool __ref msm_pm_spm_power_collapse(
 	msm_jtag_save_state();
 
 	collapsed = save_cpu_regs ?
-		!__cpu_suspend(0, msm_pm_collapse) : msm_pm_pc_hotplug();
+		!cpu_suspend(0, msm_pm_collapse) : msm_pm_pc_hotplug();
 
 	msm_jtag_restore_state();
 
