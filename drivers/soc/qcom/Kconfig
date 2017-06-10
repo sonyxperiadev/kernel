@@ -678,6 +678,14 @@ config QTI_RPM_STATS_LOG
 	  the low power modes that RPM enters. The drivers outputs the message
 	  via a debugfs node.
 
+config MSM_CPU_PWR_CTL
+	bool "CPU subsystem power control"
+	depends on SMP && (ARM || ARM64)
+	default y
+	help
+	Provides routines to power on cpu rails and l2 cache
+	controller during coldboot.
+
 config MSM_CDSP_LOADER
 	tristate "CDSP loader support"
 	help
