@@ -364,13 +364,9 @@
 	};
 
 	mdss_rotator: qcom,mdss_rotator {
-		compatible = "qcom,sde_rotator";
-		//qcom,mdss-wb-count = <1>;
+		compatible = "qcom,mdss_rotator";
+		qcom,mdss-wb-count = <1>;
 		qcom,mdss-has-downscale;
-
-		qcom,mdss-rot-mode = <1>;
-		qcom,mdss-highest-bank-bit = <0x1>;
-
 		/* Bus Scale Settings */
 		qcom,msm-bus,name = "mdss_rotator";
 		qcom,msm-bus,num-cases = <3>;
@@ -384,15 +380,9 @@
 		qcom,supply-names = "rot-vdd";
 
 		clocks = <&clock_gcc clk_gcc_mdss_ahb_clk>,
-			 <&clock_gcc clk_gcc_mdss_axi_clk>,
 			<&clock_gcc_mdss clk_gcc_mdss_mdp_rotator_vote_clk>;
-		clock-names = "iface_clk", "axi_clk", "rot_core_clk";
+		clock-names = "iface_clk", "rot_core_clk";
 
-		/* VBIF QoS remapper settings*/
-		qcom,mdss-rot-vbif-qos-setting = <1 1 1 1>;
-
-		qcom,mdss-default-ot-wr-limit = <16>;
-		qcom,mdss-default-ot-rd-limit = <16>;
 
 		qcom,mdss-rot-reg-bus {
 			/* Reg Bus Scale Settings */
