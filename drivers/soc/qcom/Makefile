@@ -76,6 +76,7 @@ obj-$(CONFIG_MSM_PIL_MSS_QDSP6V5) += pil-q6v5.o pil-msa.o pil-q6v5-mss.o
 obj-$(CONFIG_MSM_BGCOM) += bgcom_spi.o
 
 obj-$(CONFIG_MSM_PERFORMANCE) += msm_performance.o
+obj-$(CONFIG_MSM_CPU_ACC_CONTROLLER) += idle-v8.o cpu_ops.o
 obj-$(CONFIG_MSM_CPU_PWR_CTL)	+=	cpu_pwr_ctl.o
 obj-$(CONFIG_MSM_PACMAN) += msm_pacman.o
 

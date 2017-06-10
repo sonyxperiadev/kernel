@@ -647,6 +647,13 @@ config MSM_PERFORMANCE
 	  online at any given point in time. This module can also restrict
 	  max freq or min freq of cpu cluster
 
+config MSM_CPU_ACC_CONTROLLER
+	bool "CPU Operations and ACC Clock Controller"
+	help
+	  This driver enables the kernel to manage the L2 Cache
+	  Clock Controller and program the SCM to bring up/down
+	  the CPUs in the SoC.
+
 config MSM_CPU_PWR_CTL
 	bool "CPU subsystem power control"
 	depends on SMP && (ARM || ARM64)
