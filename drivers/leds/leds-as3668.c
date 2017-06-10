@@ -398,20 +398,6 @@ static s32 as3668_modify_reg(struct as3668_data *data, u8 addr, u8 mask, u8 val)
 }
 
 #ifdef CONFIG_PM
-static int as3668_suspend(struct i2c_client *client, pm_message_t msg)
-{
-	dev_info(&client->dev, "Suspending AS3668\n");
-
-	return 0;
-}
-
-static int as3668_resume(struct i2c_client *client)
-{
-	dev_info(&client->dev, "Resuming AS3668\n");
-
-	return 0;
-}
-
 static void as3668_shutdown(struct i2c_client *client)
 {
 	struct as3668_data *data = i2c_get_clientdata(client);
@@ -2837,8 +2823,6 @@ static struct i2c_driver as3668_driver = {
 	.remove = as3668_remove,
 #ifdef CONFIG_PM
 	.shutdown = as3668_shutdown,
-	.suspend  = as3668_suspend,
-	.resume   = as3668_resume,
 #endif
 	.id_table = as3668_id,
 };
