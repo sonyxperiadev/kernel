@@ -3041,6 +3041,10 @@ static int mdss_mdp_cmd_kickoff(struct mdss_mdp_ctl *ctl, void *arg)
 	struct mdss_mdp_ctl *sctl = NULL, *mctl = ctl;
 	struct mdss_mdp_cmd_ctx *ctx, *sctx = NULL;
 	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	struct mdss_panel_data *pdata = NULL;
+	struct mipi_panel_info *mipi = NULL;
+#endif /* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 
 	ctx = (struct mdss_mdp_cmd_ctx *) ctl->intf_ctx[MASTER_CTX];
 	if (!ctx) {
@@ -3113,6 +3117,31 @@ static int mdss_mdp_cmd_kickoff(struct mdss_mdp_ctl *ctl, void *arg)
 	/*
 	 * tx dcs command if had any
 	 */
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	if (IS_ERR_OR_NULL(ctl->panel_data)) {
+		pr_warn("%s: no panel data\n", __func__);
+	} else {
+		pdata = ctl->panel_data;
+		mipi  = &pdata->panel_info.mipi;
+	}
+
+	if (ctl->panel_data && mipi &&
+		mipi->dms_mode == DYNAMIC_MODE_RESOLUTION_SWITCH_IMMEDIATE &&
+		mipi->switch_mode_pending == true) {
+		/* enable clks and rd_ptr interrupt */
+		mdss_mdp_setup_vsync(ctx, true);
+
+		atomic_inc(&ctx->rdptr_cnt);
+		MDSS_XLOG(atomic_read(&ctx->rdptr_cnt));
+		mdss_mdp_cmd_wait4readptr(ctx);
+		MDSS_XLOG(atomic_read(&ctx->rdptr_cnt));
+
+		/* disable clks and rd_ptr interrupt */
+		mdss_mdp_setup_vsync(ctx, false);
+
+		mipi->switch_mode_pending = false;
+	}
+#endif /* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 	mdss_mdp_ctl_intf_event(ctl, MDSS_EVENT_DSI_CMDLIST_KOFF, NULL,
 		CTL_INTF_EVENT_FLAG_DEFAULT);
 
