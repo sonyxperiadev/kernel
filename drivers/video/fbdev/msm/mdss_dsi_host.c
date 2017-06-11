@@ -1230,12 +1230,22 @@ int mdss_dsi_reg_status_check(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 {
 	int ret = 0;
 	struct mdss_dsi_ctrl_pdata *sctrl_pdata = NULL;
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	struct mipi_panel_info *mipi = NULL;
+#endif /* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 
 	if (ctrl_pdata == NULL) {
 		pr_err("%s: Invalid input data\n", __func__);
 		return 0;
 	}
 
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	mipi = &ctrl_pdata->panel_data.panel_info.mipi;
+	if (mipi->switch_mode_pending == true) {
+		pr_err("%s: Skip status check, Pending switch mode\n", __func__);
+		return 0;
+	}
+#endif /* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 	pr_debug("%s: Checking Register status\n", __func__);
 
 	mdss_dsi_clk_ctrl(ctrl_pdata, ctrl_pdata->dsi_clk_handle,

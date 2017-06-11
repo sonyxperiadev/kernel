@@ -470,6 +470,7 @@ struct mipi_panel_info {
 	u8 default_lanes;
 #ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 	int input_fpks;
+	bool switch_mode_pending;
 #endif
 };
 
