@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014-2015, 2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -729,9 +729,11 @@
 		qcom,master-offset = <4096>;
 	};
 
+/*
 	qcom,rpm-rbcpr-stats@0x29daa0  {
 		compatible = "qcom,rpmrbcpr-stats";
 		reg = <0x29daa0 0x1a0000>;
 		qcom,start-offset = <0x190010>;
 	};
+*/
 };
