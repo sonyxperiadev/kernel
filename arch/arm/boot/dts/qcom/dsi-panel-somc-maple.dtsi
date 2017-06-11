@@ -87,9 +87,9 @@
 		qcom,mdss-dsi-panel-blackness-level = <4646>;
 
 		somc,dsi-index = <0>;
+		somc,lcd-id = <0>;
 		somc,lcd-id-adc = <0 0x7fffffff>;
 
-		somc,mdss-dsi-master;
 		somc,pw-on-rst-seq = <0 15>, <1 10>, <0 15>, <1 20>;
 		somc,pw-off-rst-b-seq = <0 11>;
 		somc,pw-wait-after-on-vdd = <0>;
@@ -303,6 +303,7 @@
 		qcom,mdss-dsi-panel-blackness-level = <4646>;
 
 		somc,dsi-index = <1>;
+		somc,lcd-id = <0>;
 		somc,lcd-id-adc = <0 0x7fffffff>;
 
 		somc,lab-output-voltage = <5800000>;
@@ -317,6 +318,7 @@
 		somc,qpnp-ibb-pull-down-enable;
 		somc,qpnp-ibb-full-pull-down;
 
+		somc,mdss-dsi-slave;
 		somc,lk-on-skip;
 
 		qcom,dynamic-mode-switch-enabled;
