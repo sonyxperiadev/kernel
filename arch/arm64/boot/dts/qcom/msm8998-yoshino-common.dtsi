@@ -123,8 +123,6 @@
 
 		/delete-node/ synaptics@20;
 
-#include "clearpad-ic-default-regoffset.dtsi"
-
 		synaptics_clearpad@2c {
 			compatible = "synaptics,clearpad";
 			reg = <0x2c>;
