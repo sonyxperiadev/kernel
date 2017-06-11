@@ -70,6 +70,7 @@
 		qcom,mdss-dsi-panel-blackness-level = <4646>;
 
 		somc,dsi-index = <0>;
+		somc,lcd-id = <0>;
 		somc,lcd-id-adc = <565000 653000>;
 
 		somc,mdss-dsi-master;
@@ -1223,6 +1224,7 @@
 		qcom,mdss-dsi-panel-blackness-level = <4646>;
 
 		somc,dsi-index = <1>;
+		somc,lcd-id = <0>;
 		somc,lcd-id-adc = <565000 653000>;
 
 		somc,lab-output-voltage = <5800000>;
