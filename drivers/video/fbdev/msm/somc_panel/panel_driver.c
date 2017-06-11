@@ -772,13 +772,17 @@ static void mdss_dsi_panel_switch_mode(struct mdss_panel_data *pdata,
 		pr_debug("%s: sending switch commands\n", __func__);
 		pcmds = &pt->switch_cmds;
 		flags |= CMD_REQ_DMA_TPG;
+		mipi->switch_mode_pending = true;
 	} else {
 		pr_warn("%s: Invalid mode switch attempted\n", __func__);
 		return;
 	}
 
-	if (pdata->panel_info.dsi_master == pdata->panel_info.pdest)
-		__mdss_dsi_panel_cmds_send(ctrl_pdata, pcmds, flags);
+	if ((pdata->panel_info.compression_mode == COMPRESSION_DSC) &&
+			(mipi->switch_mode_pending == true))
+		mdss_dsi_panel_dsc_pps_send(ctrl_pdata, &pdata->panel_info);
+
+	mdss_dsi_panel_cmds_send(ctrl_pdata, pcmds, flags);
 
 	return;
 }
