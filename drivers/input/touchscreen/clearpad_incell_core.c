@@ -86,6 +86,11 @@
 #define SYN_WAKEUP_GESTURE			"wakeup_gesture"
 #define WAKE_LOCK_ID				"touchctrl"
 #define INDENT					"        "
+#define FLASH_DATA_CONFIGURATION_AREA_SELECT_PERM	1
+#define FLASH_DATA_CONFIGURATION_AREA_SELECT_SHIFT	13
+#define FLASH_READ_CONFIGURATION_SIZE			21
+#define FLASH_READ_FIRMWARE_INFO_SIZE_BL6X		4
+#define FLASH_READ_FIRMWARE_INFO_SIZE_BL7X		5
 
 #define SYN_PAGE_ADDR(page, addr) ((page) << 8 | (addr))
 #define SYN_F_ADDR(th, func, type, reg) ((th)->pdt[func].base[type] + (reg))
@@ -226,6 +231,17 @@ BIT_DEF(STATUS_FLASH_STATUS,					0x1F, 0,
 	STATUS_FLASH_STATUS_FLASH_HARDWARE_FAILURE		= 0x1F);
 BIT_DEF(STATUS_DEVICE_CONFIG_STATUS,			0x60, 5);
 BIT_DEF(STATUS_BL_MODE,					0x80, 7);
+
+/* F34_FLASH_DATA02: Flash Control */
+BIT_DEF(FLASH_CONTROL,					0x3F, 0,
+	FLASH_CONTROL_WRITE_FIRMWARE_BLOCK		= 0x02,
+	FLASH_CONTROL_ERASE_ALL				= 0x03,
+	FLASH_CONTROL_READ_CONFIGURATION_BLOCK		= 0x05,
+	FLASH_CONTROL_WRITE_CONFIGURATION_BLOCK		= 0x06,
+	FLASH_CONTROL_ERASE_CONFIGURATION		= 0x07,
+	FLASH_CONTROL_ENABLE_FLASH_PROGRAMMING		= 0x0F);
+/* F34_FLASH_DATA03: Flash Status */
+BIT_DEF(FLASH_STATUS_PROGRAM_ENABLED,			0x80, 7);
 
 /* F51_CUSTOM_CTRL05.00: Cover */
 BIT_DEF(COVER_ENABLE,					0x01, 0);
@@ -390,7 +406,7 @@ static const char * const clearpad_chip_name[] = {
 	[SYN_CHIP_3000]	= "S3000",
 	[SYN_CHIP_3200]	= "S3200",
 	[SYN_CHIP_3400]	= "S3400",
-	[SYN_CHIP_3500]	= "S3500",
+	[SYN_CHIP_3500]	= "S3500", /* Hybrid incell (Yoshino) */
 	[SYN_CHIP_7300]	= "S7300",
 	[SYN_CHIP_7500]	= "S7500",
 	[SYN_CHIP_3330]	= "S3330", /* Hybrid incell */
@@ -788,6 +804,10 @@ struct descriptor_t {
 	u32 content_len;
 };
 
+struct clearpad_charger_only_t {
+	unsigned long delay_ms;
+};
+
 enum clearpad_hwtest_data_type_e {
 	HWTEST_NULL,
 	HWTEST_U8,
@@ -862,6 +882,7 @@ struct clearpad_t {
 	struct clearpad_reset_t reset;
 	struct clearpad_noise_detect_t noise_det;
 	struct clearpad_interrupt_t interrupt;
+	struct clearpad_charger_only_t charger_only;
 	int irq;
 	bool irq_enabled;
 	enum clearpad_force_sleep_e force_sleep;
@@ -889,6 +910,7 @@ struct clearpad_t {
 	bool early_suspend; /* suspend mode has been set from early suspend */
 	bool irq_pending;
 	bool last_irq;
+	bool is_sol;
 };
 
 /*
@@ -2229,7 +2251,7 @@ static int clearpad_initialize(struct clearpad_t *this)
 {
 	int rc;
 	u8 fw_info[SYN_DEVICE_INFO_SIZE], bl_ver[SYN_DEVICE_BL_INFO_SIZE];
-	u8 device_status, fw_status;
+	u8 device_status, fw_status, bl_cmd;
 	struct clearpad_device_info_t *info = &this->device_info;
 	u8 product_id[HEADER_PRODUCT_ID_SIZE];
 
@@ -2242,6 +2264,15 @@ static int clearpad_initialize(struct clearpad_t *this)
 		goto end;
 	memcpy(info->product_id, product_id, HEADER_PRODUCT_ID_SIZE);
 
+	clearpad_update_chip_id(this);
+
+	this->is_sol = false;
+	bl_cmd = 0x01;
+	if (this->chip_id == SYN_CHIP_3500) {
+		this->is_sol = true;
+		bl_cmd = 0x00;
+	}
+
 	/* read device status */
 	/* F01_RMI_DATA00: Device Status */
 	rc = clearpad_get(SYNF(this, F01_RMI, DATA, 0x00), &device_status);
@@ -2250,11 +2281,19 @@ static int clearpad_initialize(struct clearpad_t *this)
 
 	LOGI(this, "device status 0x%02x\n", device_status);
 
+
 	/* F34_FLASH_QUERY01: Bootloader Revision */
-	rc = clearpad_get_block(SYNF(this, F34_FLASH, QUERY, 0x01),
+	rc = clearpad_get_block(SYNF(this, F34_FLASH, QUERY, bl_cmd),
 				bl_ver, SYN_DEVICE_BL_INFO_SIZE);
 	if (rc)
 		goto end;
+
+	if (this->is_sol && (bl_ver[1] >= 0x30 && bl_ver[1] <= 0x39)) {
+		/* S3500: Flash memory management V1 */
+		/* change character to decimal */
+		bl_ver[1] -= 0x30;
+		bl_ver[0] = 0x00;
+	}
 
 	LOGI(this, "bootloader revision %d.%03d\n", bl_ver[1], bl_ver[0]);
 
@@ -2315,8 +2354,6 @@ static int clearpad_initialize(struct clearpad_t *this)
 		     + info->serial_number[1],
 		     clearpad_s(info->product_id, HEADER_PRODUCT_ID_SIZE));
 	}
-
-	clearpad_update_chip_id(this);
 
 	if (clearpad_is_valid_function(this, SYN_F12_2D)) {
 		rc = clearpad_prepare_f12_2d(this);
@@ -3011,13 +3048,272 @@ end:
 	return rc;
 }
 
-/* need LOCK(&this->lock) */
-static int clearpad_flash(struct clearpad_t *this)
+/* for Bootloader v6.0 */
+static int clearpad_flash_enable_bl_v6(struct clearpad_t *this)
+{
+	int rc;
+	u8 buf[SYN_DEVICE_BL_INFO_SIZE];
+
+	/* read bootloader id */
+	rc = clearpad_get_block(SYNF(this, F34_FLASH, QUERY, 0x00),
+				buf, sizeof(buf));
+	LOG_CHECK(this, "rc=%d\n", rc);
+	if (rc)
+		goto end;
+
+	/* write bootloader id to block data */
+	rc = clearpad_put_block(SYNF(this, F34_FLASH, DATA, 0x01),
+				buf, sizeof(buf));
+	LOG_CHECK(this, "rc=%d\n", rc);
+	if (rc)
+		goto end;
+
+	clearpad_set_delay(10);
+
+	/* issue a flash program enable */
+	this->flash.enter_bootloader_mode = true;
+	rc = clearpad_put(SYNF(this, F34_FLASH, DATA, 0x02),
+			  FLASH_CONTROL_ENABLE_FLASH_PROGRAMMING);
+	LOG_CHECK(this, "rc=%d\n", rc);
+	if (rc)
+		goto end;
+
+	this->state = SYN_STATE_FLASH_ENABLE;
+	clearpad_set_delay(100);
+
+	clearpad_set_irq(this, true);
+
+end:
+	return rc;
+}
+
+static int clearpad_flash_program_bl_v6(struct clearpad_t *this)
+{
+	struct clearpad_flash_t *flash = &this->flash;
+	int rc;
+	u8 buf[SYN_DEVICE_BL_INFO_SIZE];
+
+	/* make sure that we are in programming mode and there are no issues */
+	rc = clearpad_get(SYNF(this, F34_FLASH, DATA, 0x03), buf);
+	if (rc) {
+		HWLOGE(this, "failed to get flash programming status\n");
+		goto end;
+	}
+	if (!(BIT_GET(buf[0], STATUS_BL_MODE))) {
+		HWLOGE(this, "failed enabling flash (%s)\n",
+			      NAME_OF(clearpad_flash_status_name,
+				      BIT_GET(buf[0], STATUS_FLASH_STATUS)));
+		rc = -EIO;
+		goto end;
+	}
+
+	HWLOGI(this, "flashing enabled\n");
+
+	if (this->state == SYN_STATE_FLASH_ENABLE) {
+		/* PDT may have changed, re-read */
+		rc = clearpad_read_pdt(this);
+		if (rc) {
+			HWLOGE(this, "failed to read pdt\n");
+			goto end;
+		}
+	}
+
+	/* read bootloader id */
+	rc = clearpad_get_block(SYNF(this, F34_FLASH, QUERY, 0x00),
+				buf, sizeof(buf));
+	if (rc)
+		goto end;
+
+	/* write bootloader id to block data */
+	rc = clearpad_put_block(SYNF(this, F34_FLASH, DATA, 0x01),
+				buf, sizeof(buf));
+	if (rc)
+		goto end;
+
+	if (this->state == SYN_STATE_FLASH_ENABLE &&
+	    (flash->command == SYN_FORCE_FLASH ||
+	     flash->command == SYN_DEFAULT_FLASH)) {
+		rc = clearpad_put(SYNF(this, F34_FLASH, DATA, 0x02),
+				FLASH_CONTROL_ERASE_ALL);
+		if (rc)
+			goto end;
+		this->state = SYN_STATE_FLASH_PROGRAM;
+	} else if ((this->state == SYN_STATE_FLASH_PROGRAM &&
+		    (flash->command == SYN_FORCE_FLASH ||
+		     flash->command == SYN_DEFAULT_FLASH))) {
+		rc = clearpad_put(SYNF(this, F34_FLASH, DATA, 0x02),
+				FLASH_CONTROL_ERASE_CONFIGURATION);
+		if (rc)
+			goto end;
+		this->state = SYN_STATE_FLASH_ERASE;
+	} else {
+		HWLOGE(this, "invalid state(%s) for command(%s)\n",
+			NAME_OF(clearpad_state_name, this->state),
+			NAME_OF(clearpad_flash_command_name, flash->command));
+		rc = -EINVAL;
+		goto end;
+	}
+
+	HWLOGI(this, "firmware erasing\n");
+end:
+	return rc;
+}
+
+static int clearpad_flash_update_bl_v6(struct clearpad_t *this)
+{
+	struct clearpad_flash_t *flash = &this->flash;
+	int rc, len;
+	const u8 *data;
+	u8 buf, pid;
+	struct clearpad_flash_block_t *object;
+	enum clearpad_state_e finish_state;
+	u8 pos[2];
+
+	if (this->state == SYN_STATE_FLASH_ERASE &&
+	    (flash->command == SYN_FORCE_FLASH ||
+	     flash->command == SYN_DEFAULT_FLASH)) {
+		object = &(&this->flash)->data;
+		pid = PID_CORE_CODE;
+		finish_state = SYN_STATE_FLASH_DATA;
+	} else if ((this->state == SYN_STATE_FLASH_DATA &&
+		    (flash->command == SYN_FORCE_FLASH ||
+		     flash->command == SYN_DEFAULT_FLASH))) {
+		object = &(&this->flash)->config;
+		pid = PID_CORE_CONFIGURATION;
+		finish_state = SYN_STATE_FLASH_CONFIG;
+	} else {
+		HWLOGE(this, "invalid state(%s) for command(%s)\n",
+			NAME_OF(clearpad_state_name, this->state),
+			NAME_OF(clearpad_flash_command_name, flash->command));
+		rc = -EINVAL;
+		goto end;
+	}
+
+	if (object->pos > 0)
+		goto write_block_data;
+
+	/* make sure that we are in programming mode and there are no issues */
+	rc = clearpad_get(SYNF(this, F34_FLASH, DATA, 0x03), &buf);
+	if (rc) {
+		HWLOGE(this, "failed to get flash programming status\n");
+		goto end;
+	}
+
+	if (!(BIT_GET(buf, STATUS_BL_MODE))) {
+		HWLOGE(this, "failed flashing in %s (%s)\n",
+		     NAME_OF(clearpad_state_name, this->state),
+		     NAME_OF(clearpad_flash_status_name,
+			     BIT_GET(buf, STATUS_FLASH_STATUS)));
+		rc = -EIO;
+		goto end;
+	}
+
+	object->payload_length = SYN_PAYLOAD_LENGTH;
+
+	/* block # low and high byte */
+	pos[0] = object->pos & 0xff;
+	pos[1] = (object->pos >> 8) & 0xff;
+	rc = clearpad_put_block(SYNF(this, F34_FLASH, DATA, 0x00), pos, 2);
+	if (rc)
+		goto end;
+
+write_block_data:
+	data = object->data + object->pos * 16;
+	len = object->length - object->pos * 16;
+	if (len > 16)
+		len = 16;
+
+	/* write block data */
+	rc = clearpad_put_block(SYNF(this, F34_FLASH, DATA, 0x01), data, len);
+	if (rc)
+		goto end;
+	/* issue a write data block command */
+	if (pid == PID_CORE_CODE)
+		rc = clearpad_put(SYNF(this, F34_FLASH, DATA, 0x02),
+				  FLASH_CONTROL_WRITE_FIRMWARE_BLOCK);
+	else
+		rc = clearpad_put(SYNF(this, F34_FLASH, DATA, 0x02),
+				  FLASH_CONTROL_WRITE_CONFIGURATION_BLOCK);
+	if (rc)
+		goto end;
+
+	if (object->pos % 100 == 0)
+		LOGI(this, "wrote %d blocks\n", object->pos);
+
+	/* if we've reached the end of the data/configuration flashing */
+	if (++object->pos == object->blocks) {
+		HWLOGI(this, "flash finished on %s\n",
+			      NAME_OF(clearpad_state_name, this->state));
+		this->state = finish_state;
+	}
+end:
+	return rc;
+}
+
+static int clearpad_flash_disable_bl_v6(struct clearpad_t *this)
+{
+	int rc;
+	u8 buf;
+
+	/* make sure that we are in programming mode and there are no issues */
+	rc = clearpad_get(SYNF(this, F34_FLASH, DATA, 0x03), &buf);
+	if (rc)
+		goto end;
+
+	if (!(BIT_GET(buf, STATUS_BL_MODE))) {
+		HWLOGE(this, "failed flashing config (%s)\n",
+			      NAME_OF(clearpad_flash_status_name,
+				      BIT_GET(buf, STATUS_FLASH_STATUS)));
+		rc = -EIO;
+		goto end;
+	}
+
+	clearpad_set_delay(SYN_WAIT_TIME_AFTER_REGISTER_ACCESS);
+
+	/* send a reset to the device to complete the flash procedure */
+	clearpad_reset(this, SYN_SWRESET, __func__);
+
+	HWLOGI(this, "flashing finished, resetting\n");
+	this->state = SYN_STATE_FLASH_DISABLE;
+end:
+	return rc;
+}
+
+static int clearpad_flash_bl_v6(struct clearpad_t *this)
 {
 	int rc = 0;
 
-	LOGD(this, "flash state=%s\n",
-	     NAME_OF(clearpad_state_name, this->state));
+	switch (this->state) {
+	case SYN_STATE_FLASH_IMAGE_SET:
+		rc = clearpad_flash_enable_bl_v6(this);
+	break;
+	case SYN_STATE_FLASH_ENABLE:
+	case SYN_STATE_FLASH_PROGRAM:
+		rc = clearpad_flash_program_bl_v6(this);
+		break;
+	case SYN_STATE_FLASH_ERASE:
+	case SYN_STATE_FLASH_DATA:
+		rc = clearpad_flash_update_bl_v6(this);
+		break;
+	case SYN_STATE_FLASH_CONFIG:
+		rc = clearpad_flash_disable_bl_v6(this);
+		clearpad_firmware_reset(this);
+		break;
+	case SYN_STATE_FLASH_DISABLE:
+		HWLOGE(this, "should be handled by clearpad_initialize\n");
+		break;
+	default:
+		HWLOGE(this, "invalid state(%s)",
+			      NAME_OF(clearpad_state_name, this->state));
+		rc = -EINVAL;
+		break;
+	}
+	return rc;
+}
+
+static int clearpad_flash_bl_v7(struct clearpad_t *this)
+{
+	int rc = 0;
 
 	switch (this->state) {
 	case SYN_STATE_FLASH_IMAGE_SET:
@@ -3043,6 +3339,23 @@ static int clearpad_flash(struct clearpad_t *this)
 			      NAME_OF(clearpad_state_name, this->state));
 		rc = -EINVAL;
 		break;
+	}
+
+	return rc;
+}
+
+/* need LOCK(&this->lock) */
+static int clearpad_flash(struct clearpad_t *this)
+{
+	int rc = 0;
+
+	LOGD(this, "flash state=%s\n",
+	     NAME_OF(clearpad_state_name, this->state));
+
+	if (this->is_sol) {
+		rc = clearpad_flash_bl_v6(this);
+	} else {
+		rc = clearpad_flash_bl_v7(this);
 	}
 
 	if (rc) {
@@ -3219,7 +3532,7 @@ static int clearpad_set_resume_mode(struct clearpad_t *this)
 			LOGE(this, "failed to exit sleep mode\n");
 			goto end;
 		}
-		clearpad_set_delay(200);
+		clearpad_set_delay(this->charger_only.delay_ms);
 	}
 
 	this->early_suspend = false;
@@ -3286,7 +3599,7 @@ static int clearpad_set_early_suspend_mode(struct clearpad_t *this)
 			LOGE(this, "failed to exit normal mode\n");
 			goto end;
 		}
-		clearpad_set_delay(200);
+		clearpad_set_delay(this->charger_only.delay_ms);
 	}
 	clearpad_set_irq(this, false);
 	this->early_suspend = true;
@@ -3352,7 +3665,7 @@ static int clearpad_set_suspend_mode(struct clearpad_t *this)
 						   "mode\n");
 					goto end;
 				}
-				clearpad_set_delay(200);
+				clearpad_set_delay(this->charger_only.delay_ms);
 			}
 			clearpad_set_irq(this, false);
 			HWLOGI(this, "enter sleep mode\n");
@@ -5557,6 +5870,11 @@ static void clearpad_touch_config_dt_for_chip_id(struct clearpad_t *this,
 	if (of_property_read_u32(chip_node, "interrupt_default_wait_ms",
 				 &this->interrupt.wait_ms))
 		LOGW(this, "no interrupt_default_wait_ms config\n");
+
+	if (of_property_read_u32(chip_node, "charger_only_delay_ms", &value))
+		LOGW(this, "no charger_only_delay_ms config\n");
+	else
+		this->charger_only.delay_ms = (unsigned long)value;
 }
 
 static int clearpad_touch_config_dt(struct clearpad_t *this)
@@ -7499,8 +7817,46 @@ end:
 	return rc;
 }
 
+/* for Bootloader v6.0 */
 /* need LOCK(&this->lock) */
-static int clearpad_read_pca_block(struct clearpad_t *this,
+static int clearpad_read_pca_block_v6(struct clearpad_t *this,
+				  u16 block_num, u8 *data)
+{
+	int rc;
+	u16 block;
+
+	block = block_num |
+		(FLASH_DATA_CONFIGURATION_AREA_SELECT_PERM <<
+		 FLASH_DATA_CONFIGURATION_AREA_SELECT_SHIFT);
+	rc = clearpad_put_block(SYNF(this, F34_FLASH, DATA, 0x00),
+				(u8 *)&block, 2);
+	if (rc) {
+		HWLOGE(this, "set block number error\n");
+		goto end;
+	}
+
+	/* issue read configuration block command */
+	rc = clearpad_put(SYNF(this, F34_FLASH, DATA, 0x02),
+			  FLASH_CONTROL_READ_CONFIGURATION_BLOCK);
+	if (rc) {
+		HWLOGE(this, "issue config error\n");
+		goto end;
+	}
+
+	/* read data block */
+	rc = clearpad_get_block(SYNF(this, F34_FLASH, DATA, 0x01),
+				data, SYN_PCA_BLOCK_SIZE);
+	if (rc) {
+		HWLOGE(this, "read data error\n");
+		goto end;
+	}
+
+end:
+	return rc;
+}
+
+/* need LOCK(&this->lock) */
+static int clearpad_read_pca_block_v7(struct clearpad_t *this,
 				  u16 block_num, u8 *data)
 {
 	int rc;
@@ -7572,7 +7928,151 @@ end:
 }
 
 /* need LOCK(&this->lock) */
-static int clearpad_write_pca_block(struct clearpad_t *this,
+static inline int clearpad_read_pca_block(struct clearpad_t *this,
+				  u16 block_num, u8 *data)
+{
+	int rc;
+
+	if (this->is_sol)
+		rc = clearpad_read_pca_block_v6(this, block_num, data);
+	else
+		rc = clearpad_read_pca_block_v7(this, block_num, data);
+	if (rc)
+		HWLOGE(this, "failed pca read rc = %d\n", rc);
+	return rc;
+}
+
+/* for Bootloader v6.0 */
+/* need LOCK(&this->lock) */
+static int clearpad_write_pca_block_v6(struct clearpad_t *this,
+				  u16 block_num, u8 *data)
+{
+	int rc;
+	u16 block;
+	u8 buf[2];
+
+	/* change to bootloader mode start */
+	this->flash.enter_bootloader_mode = true;
+
+	/* change to bootloader mode start */
+	/* read bootloader id */
+	rc = clearpad_get_block(SYNF(this, F34_FLASH, QUERY, 0x00),
+			buf, sizeof(buf));
+	if (rc) {
+		HWLOGE(this, "get id error\n");
+		goto end;
+	}
+
+	/* write bootloader id to block data */
+	rc = clearpad_put_block(SYNF(this, F34_FLASH, DATA, 0x01),
+			buf, sizeof(buf));
+	if (rc) {
+		HWLOGE(this, "write id error\n");
+		goto end;
+	}
+
+	clearpad_prepare_for_interrupt(this, &this->interrupt.for_F34,
+				       "F34_FLASH_DATA02 for write pca");
+
+	/* issue a flash program enable */
+	rc = clearpad_put(SYNF(this, F34_FLASH, DATA, 0x02),
+			FLASH_CONTROL_ENABLE_FLASH_PROGRAMMING);
+	if (rc) {
+		HWLOGE(this, "issue config error\n");
+		clearpad_undo_prepared_interrupt(this,
+			&this->interrupt.for_F34,
+			"F34_FLASH_DATA02 for write pca");
+		goto end;
+	}
+
+	UNLOCK(&this->lock);
+	rc = clearpad_wait_for_interrupt(this, &this->interrupt.for_F34,
+						this->interrupt.wait_ms);
+	if (rc) {
+		HWLOGE(this, "wait for interrupt status failed %d\n", rc);
+		LOCK(&this->lock);
+		goto err_exit_bl;
+	}
+	LOCK(&this->lock);
+
+	/* reread PDT if it was changed. On success, driver can reset */
+	rc = clearpad_read_pdt(this);
+	if (rc) {
+		HWLOGE(this, "set pdt error\n");
+		goto err_exit_bl;
+	}
+
+	/* make sure that we are in programming mode and there are no issues */
+	rc = clearpad_get(SYNF(this, F34_FLASH, DATA, 0x03), buf);
+	if (rc) {
+		HWLOGE(this, "get mode error\n");
+		goto end;
+	}
+
+	if (!(BIT_GET(buf[0], FLASH_STATUS_PROGRAM_ENABLED))) {
+		HWLOGE(this, "failed enabling flash\n");
+		rc = -EIO;
+		goto end;
+	}
+	/* changing finished */
+
+	block = block_num |
+		(FLASH_DATA_CONFIGURATION_AREA_SELECT_PERM <<
+		 FLASH_DATA_CONFIGURATION_AREA_SELECT_SHIFT);
+	rc = clearpad_put_block(SYNF(this, F34_FLASH, DATA, 0x00),
+			(u8 *)&block, 2);
+	if (rc) {
+		HWLOGE(this, "set block offset error\n");
+		goto err_exit_bl;
+	}
+
+	/* write block data */
+	rc = clearpad_put_block(SYNF(this, F34_FLASH, DATA, 0x01),
+				data, SYN_PCA_BLOCK_SIZE);
+	if (rc) {
+		dev_err(&this->pdev->dev,
+			"%s: set data error\n", __func__);
+		goto end;
+	}
+
+	clearpad_prepare_for_interrupt(this, &this->interrupt.for_F34,
+				       "F34_FLASH_DATA02 for write pca");
+
+	/* issue a write configuration block command */
+	rc = clearpad_put(SYNF(this, F34_FLASH, DATA, 0x02),
+			FLASH_CONTROL_WRITE_CONFIGURATION_BLOCK);
+	if (rc) {
+		dev_err(&this->pdev->dev,
+			"%s: flash error\n", __func__);
+		clearpad_undo_prepared_interrupt(this,
+			&this->interrupt.for_F34,
+			"F34_FLASH_DATA02 for write pca");
+		goto end;
+	}
+
+	UNLOCK(&this->lock);
+	rc = clearpad_wait_for_interrupt(this, &this->interrupt.for_F34,
+						this->interrupt.wait_ms);
+	if (rc)
+		HWLOGE(this, "wait for interrupt status failed %d\n", rc);
+	LOCK(&this->lock);
+
+err_exit_bl:
+	/* exit bootloader mode */
+	clearpad_reset(this, SYN_SWRESET, __func__);
+
+	UNLOCK(&this->lock);
+	rc = clearpad_wait_for_interrupt(this, &this->interrupt.for_reset,
+						this->interrupt.wait_ms);
+	if (rc)
+		HWLOGE(this, "wait for interrupt status failed %d\n", rc);
+	LOCK(&this->lock);
+end:
+	return rc;
+}
+
+/* need LOCK(&this->lock) */
+static int clearpad_write_pca_block_v7(struct clearpad_t *this,
 				  u16 block_num, u8 *data)
 {
 	int rc;
@@ -7719,6 +8219,22 @@ err_exit_bl:
 end:
 	return rc;
 }
+
+/* need LOCK(&this->lock) */
+static int clearpad_write_pca_block(struct clearpad_t *this,
+				  u16 block_num, u8 *data)
+{
+	int rc;
+
+	if (this->is_sol)
+		rc = clearpad_write_pca_block_v6(this, block_num, data);
+	else
+		rc = clearpad_write_pca_block_v7(this, block_num, data);
+	if (rc)
+		HWLOGE(this, "failed pca write rc = %d\n", rc);
+	return rc;
+}
+
 
 static long clearpad_debug_pca_ioctl(struct file *file,
 					unsigned int cmd, unsigned long arg)
