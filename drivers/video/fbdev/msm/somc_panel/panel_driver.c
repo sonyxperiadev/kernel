@@ -45,6 +45,7 @@
 #define VSYNC_DELAY msecs_to_jiffies(17)
 
 #define KERN318_FEATURESET
+#define USE_TOPOLOGY_CONFIG_PARAMS
 
 struct device virtdev;
 
