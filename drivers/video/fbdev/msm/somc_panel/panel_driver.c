@@ -1574,6 +1574,20 @@ static int mdss_dsi_post_panel_on(struct mdss_panel_data *pdata)
 			return rc;
 	}
 
+	if (pdata->panel_info.pdest == DISPLAY_1) {
+		if (spec_pdata->chg_fps.enable) {
+			if (spec_pdata->chg_fps.mode == FPS_MODE_SUSRES)
+				mdss_dsi_panel_chg_fps_calc(ctrl_pdata,
+							specific->input_fpks);
+	
+			mdss_dsi_panel_driver_chg_fps_cmds_send(ctrl_pdata);
+		} else {
+			pr_notice("%s: change fps is not supported.\n",
+							__func__);
+		}
+	}
+
+dba_utils:
 	if (pinfo->is_dba_panel && pinfo->is_pluggable) {
 		/* ensure at least 1 frame transfers to down stream device */
 		vsync_period = (MSEC_PER_SEC / pinfo->mipi.frame_rate) + 1;
