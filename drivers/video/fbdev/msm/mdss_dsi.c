@@ -4447,7 +4447,7 @@ static int mdss_dsi_parse_gpio_params(struct platform_device *ctrl_pdev,
 #ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 	ctrl_pdata->spec_pdata->disp_dcdc_en_gpio
 		= of_get_named_gpio(ctrl_pdev->dev.of_node,
-			"somc,platform-disp-dcdc-en-gpio", 0);
+			"somc,disp-dcdc-en-gpio", 0);
 
 	if (!gpio_is_valid(ctrl_pdata->spec_pdata->disp_dcdc_en_gpio))
 		pr_err("%s:%d, disp_dcdc_en gpio gpio not specified\n",
