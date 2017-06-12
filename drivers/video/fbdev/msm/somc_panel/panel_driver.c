@@ -782,7 +782,7 @@ static void mdss_dsi_panel_switch_mode(struct mdss_panel_data *pdata,
 			(mipi->switch_mode_pending == true))
 		mdss_dsi_panel_dsc_pps_send(ctrl_pdata, &pdata->panel_info);
 
-	mdss_dsi_panel_cmds_send(ctrl_pdata, pcmds, flags);
+	__mdss_dsi_panel_cmds_send(ctrl_pdata, pcmds, flags);
 
 	return;
 }
@@ -1575,12 +1575,13 @@ static int mdss_dsi_post_panel_on(struct mdss_panel_data *pdata)
 	}
 
 	if (pdata->panel_info.pdest == DISPLAY_1) {
-		if (spec_pdata->chg_fps.enable) {
-			if (spec_pdata->chg_fps.mode == FPS_MODE_SUSRES)
-				mdss_dsi_panel_chg_fps_calc(ctrl_pdata,
-							specific->input_fpks);
+		int ifpks = ctrl->panel_data.panel_info.mipi.input_fpks;
+
+		if (pinfo->lcdc.chg_fps.enable) {
+			if (pinfo->lcdc.chg_fps.susres_mode)
+				mdss_dsi_panel_chg_fps_calc(ctrl, ifpks);
 	
-			mdss_dsi_panel_driver_chg_fps_cmds_send(ctrl_pdata);
+			somc_panel_chg_fps_cmds_send(ctrl);
 		} else {
 			pr_notice("%s: change fps is not supported.\n",
 							__func__);
