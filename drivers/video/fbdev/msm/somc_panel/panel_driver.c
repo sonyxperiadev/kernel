@@ -282,6 +282,9 @@ int mdss_dsi_request_gpios(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 {
 	int rc = 0;
 
+	if (likely(ctrl_pdata->spec_pdata->gpios_requested))
+		return 0;
+
 	if (gpio_is_valid(ctrl_pdata->rst_gpio)) {
 		rc = gpio_request(ctrl_pdata->rst_gpio, "disp_rst_n");
 		if (rc) {
@@ -292,6 +295,9 @@ int mdss_dsi_request_gpios(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 	}
 
 	rc = ctrl_pdata->spec_pdata->dsi_request_gpios(ctrl_pdata);
+
+	if (rc == 0)
+		ctrl_pdata->spec_pdata->gpios_requested = true;
 
 	return rc;
 
@@ -356,13 +362,10 @@ static int mdss_dsi_panel_reset_seq(struct mdss_panel_data *pdata, int enable)
 	pr_debug("%s: enable=%d\n", __func__, enable);
 	pinfo = &ctrl_pdata->panel_data.panel_info;
 
-	if (!spec_pdata->gpios_requested) {
-		rc = mdss_dsi_request_gpios(ctrl_pdata);
-		if (rc) {
-			pr_err("gpio request failed\n");
-			return rc;
-		}
-		spec_pdata->gpios_requested = true;
+	rc = mdss_dsi_request_gpios(ctrl_pdata);
+	if (rc) {
+		pr_err("gpio request failed\n");
+		return rc;
 	}
 
 	pw_seq = (enable) ? &ctrl_pdata->spec_pdata->on_seq :
