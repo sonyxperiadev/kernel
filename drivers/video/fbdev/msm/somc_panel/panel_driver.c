@@ -4596,6 +4596,8 @@ int mdss_panel_parse_dt(struct device_node *np,
 	if (rc)
 		pinfo->esc_clk_rate_hz = MDSS_DSI_MAX_ESC_CLK_RATE_HZ;
 
+	spec_pdata->gpios_requested = of_property_read_bool(np,
+			"somc,reset-gpio-bad-design-quirk");
 
 	return spec_pdata->parse_specific_dt(np, ctrl_pdata);
 
