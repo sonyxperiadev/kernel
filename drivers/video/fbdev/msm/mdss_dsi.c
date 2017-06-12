@@ -1386,27 +1386,31 @@ static int mdss_dsi_update_panel_config(struct mdss_dsi_ctrl_pdata *ctrl_pdata,
 }
 
 #ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
-static void mdss_dsi_reset_dual_display(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
+int mdss_dsi_reset_dual_display(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 {
 	struct mdss_dsi_ctrl_pdata *mctrl_pdata = NULL;
+	int ret = 0;
 
 	if (mdss_dsi_res->shared_data->hw_config != SPLIT_DSI) {
 		if (mdss_dsi_pinctrl_set_state(ctrl_pdata, true))
 			pr_debug("reset enable: pinctrl not enabled\n");
-		mdss_dsi_panel_reset(&(ctrl_pdata->panel_data), 1);
+		ret = mdss_dsi_panel_reset(&(ctrl_pdata->panel_data), 1);
 	} else if (ctrl_pdata->ndx == DSI_CTRL_1) {
 		mctrl_pdata = mdss_dsi_get_other_ctrl(ctrl_pdata);
 		if (!mctrl_pdata) {
 			pr_warn("%s: Unable to get other control\n",
 				__func__);
+			ret = -EINVAL;
 		} else {
 			if (mdss_dsi_pinctrl_set_state(mctrl_pdata, true))
 				pr_debug("other reset pinctrl not enabled\n");
-			mdss_dsi_panel_reset(&(mctrl_pdata->panel_data), 1);
+			ret = mdss_dsi_panel_reset(&(mctrl_pdata->panel_data), 1);
 		}
 	} else {
 		pr_debug("%s: reset pinctrl not yet\n", __func__);
 	}
+
+	return ret;
 }
 #endif
 
@@ -3195,7 +3199,8 @@ static int mdss_dsi_cont_splash_config(struct mdss_panel_info *pinfo,
 			MDSS_PANEL_POWER_ON);
 		if (rc) {
 			pr_err("%s: Panel power on failed\n", __func__);
-			return rc;
+			rc = 0;
+			//return rc;
 		}
 		if (ctrl_pdata->bklt_ctrl == BL_PWM)
 			mdss_dsi_panel_pwm_enable(ctrl_pdata);
@@ -4442,7 +4447,7 @@ static int mdss_dsi_parse_gpio_params(struct platform_device *ctrl_pdev,
 #ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 	ctrl_pdata->spec_pdata->disp_dcdc_en_gpio
 		= of_get_named_gpio(ctrl_pdev->dev.of_node,
-			"somc,platform-disp-dcdc-en-gpio", 0);
+			"somc,disp-dcdc-en-gpio", 0);
 
 	if (!gpio_is_valid(ctrl_pdata->spec_pdata->disp_dcdc_en_gpio))
 		pr_err("%s:%d, disp_dcdc_en gpio gpio not specified\n",

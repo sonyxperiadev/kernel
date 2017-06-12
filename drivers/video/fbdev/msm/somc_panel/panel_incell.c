@@ -992,6 +992,8 @@ void incell_power_on_ctrl(struct incell_ctrl *incell)
 	incell->change_state = change_state;
 }
 
+int mdss_dsi_reset_dual_display(struct mdss_dsi_ctrl_pdata *ctrl_pdata);
+
 static int incell_dsi_panel_power_on_ex(struct mdss_panel_data *pdata)
 {
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
@@ -1006,6 +1008,8 @@ static int incell_dsi_panel_power_on_ex(struct mdss_panel_data *pdata)
 		pr_err("%s: Invalid input data\n", __func__);
 		return -EINVAL;
 	}
+	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
+				panel_data);
 
 	if (incell) {
 		incell_power_on_ctrl(incell);
@@ -1013,15 +1017,14 @@ static int incell_dsi_panel_power_on_ex(struct mdss_panel_data *pdata)
 			if (incell->seq == POWER_ON_EWU_SEQ) {
 				ret = 0;
 				ret += incell_reset_touch(pdata, 0);
-				ret += mdss_dsi_panel_reset(pdata, 1);
+				ret += mdss_dsi_reset_dual_display(ctrl_pdata);
 			}
 			return ret;
 		}
 		state = incell->state;
 	}
 
-	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
-				panel_data);
+
 
 	spec_pdata = ctrl_pdata->spec_pdata;
 	pw_seq = &spec_pdata->on_seq;

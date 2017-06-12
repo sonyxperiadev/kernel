@@ -45,6 +45,7 @@
 #define VSYNC_DELAY msecs_to_jiffies(17)
 
 #define KERN318_FEATURESET
+#define USE_TOPOLOGY_CONFIG_PARAMS
 
 struct device virtdev;
 
@@ -281,6 +282,9 @@ int mdss_dsi_request_gpios(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 {
 	int rc = 0;
 
+	if (likely(ctrl_pdata->spec_pdata->gpios_requested))
+		return 0;
+
 	if (gpio_is_valid(ctrl_pdata->rst_gpio)) {
 		rc = gpio_request(ctrl_pdata->rst_gpio, "disp_rst_n");
 		if (rc) {
@@ -291,6 +295,9 @@ int mdss_dsi_request_gpios(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 	}
 
 	rc = ctrl_pdata->spec_pdata->dsi_request_gpios(ctrl_pdata);
+
+	if (rc == 0)
+		ctrl_pdata->spec_pdata->gpios_requested = true;
 
 	return rc;
 
@@ -355,13 +362,10 @@ static int mdss_dsi_panel_reset_seq(struct mdss_panel_data *pdata, int enable)
 	pr_debug("%s: enable=%d\n", __func__, enable);
 	pinfo = &ctrl_pdata->panel_data.panel_info;
 
-	if (!spec_pdata->gpios_requested) {
-		rc = mdss_dsi_request_gpios(ctrl_pdata);
-		if (rc) {
-			pr_err("gpio request failed\n");
-			return rc;
-		}
-		spec_pdata->gpios_requested = true;
+	rc = mdss_dsi_request_gpios(ctrl_pdata);
+	if (rc) {
+		pr_err("gpio request failed\n");
+		return rc;
 	}
 
 	pw_seq = (enable) ? &ctrl_pdata->spec_pdata->on_seq :
@@ -771,13 +775,17 @@ static void mdss_dsi_panel_switch_mode(struct mdss_panel_data *pdata,
 		pr_debug("%s: sending switch commands\n", __func__);
 		pcmds = &pt->switch_cmds;
 		flags |= CMD_REQ_DMA_TPG;
+		mipi->switch_mode_pending = true;
 	} else {
 		pr_warn("%s: Invalid mode switch attempted\n", __func__);
 		return;
 	}
 
-	if (pdata->panel_info.dsi_master == pdata->panel_info.pdest)
-		__mdss_dsi_panel_cmds_send(ctrl_pdata, pcmds, flags);
+	if ((pdata->panel_info.compression_mode == COMPRESSION_DSC) &&
+			(mipi->switch_mode_pending == true))
+		mdss_dsi_panel_dsc_pps_send(ctrl_pdata, &pdata->panel_info);
+
+	__mdss_dsi_panel_cmds_send(ctrl_pdata, pcmds, flags);
 
 	return;
 }
@@ -1562,6 +1570,13 @@ static int mdss_dsi_post_panel_on(struct mdss_panel_data *pdata)
 		mdss_dsi_panel_cmds_send(ctrl, on_cmds);
 	}
 
+	if (pinfo->is_dba_panel && pinfo->is_pluggable) {
+		/* ensure at least 1 frame transfers to down stream device */
+		vsync_period = (MSEC_PER_SEC / pinfo->mipi.frame_rate) + 1;
+		msleep(vsync_period);
+		mdss_dba_utils_hdcp_enable(pinfo->dba_data, true);
+	}
+
 	/* NOTE: Any debugging message must be shown from specific function. */
 	if (specific->panel_post_on) {
 		rc = specific->panel_post_on(pdata);
@@ -1569,11 +1584,18 @@ static int mdss_dsi_post_panel_on(struct mdss_panel_data *pdata)
 			return rc;
 	}
 
-	if (pinfo->is_dba_panel && pinfo->is_pluggable) {
-		/* ensure at least 1 frame transfers to down stream device */
-		vsync_period = (MSEC_PER_SEC / pinfo->mipi.frame_rate) + 1;
-		msleep(vsync_period);
-		mdss_dba_utils_hdcp_enable(pinfo->dba_data, true);
+	if (pdata->panel_info.pdest == DISPLAY_1) {
+		int ifpks = ctrl->panel_data.panel_info.mipi.input_fpks;
+
+		if (pinfo->lcdc.chg_fps.enable) {
+			if (pinfo->lcdc.chg_fps.susres_mode)
+				mdss_dsi_panel_chg_fps_calc(ctrl, ifpks);
+	
+			somc_panel_chg_fps_cmds_send(ctrl);
+		} else {
+			pr_notice("%s: change fps is not supported.\n",
+							__func__);
+		}
 	}
 
 end:
@@ -1629,7 +1651,6 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 		mdss_dsi_panel_wait_change(ctrl_pdata, false);
 		mdss_dsi_panel_cmds_send(ctrl_pdata,
 					&ctrl_pdata->off_cmds);
-		spec_pdata->disp_onoff_state = false;
 	}
 
 	if (spec_pdata->cabc_active && (spec_pdata->cabc_enabled == 0)) {
@@ -1643,7 +1664,7 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 		spec_pdata->cabc_active = 0;
 	}
 
-skip_off_cmds:
+
 	if ((spec_pdata->new_vfp) &&
 		(ctrl_pdata->panel_data.panel_info.lcdc.v_front_porch !=
 			spec_pdata->new_vfp))
@@ -1665,12 +1686,14 @@ skip_off_cmds:
 	mdss_dsi_panel_reset(pdata, 0);
 #endif
 
+skip_off_cmds:
 	if (ctrl_pdata->ds_registered && pinfo->is_pluggable) {
 		mdss_dba_utils_video_off(pinfo->dba_data);
 		mdss_dba_utils_hdcp_enable(pinfo->dba_data, false);
 	}
 
 end:
+	spec_pdata->disp_onoff_state = false;
 	pdata->resume_started = true;
 	pr_debug("%s: Done\n", __func__);
 
@@ -4576,6 +4599,8 @@ int mdss_panel_parse_dt(struct device_node *np,
 	if (rc)
 		pinfo->esc_clk_rate_hz = MDSS_DSI_MAX_ESC_CLK_RATE_HZ;
 
+	spec_pdata->gpios_requested = of_property_read_bool(np,
+			"somc,reset-gpio-bad-design-quirk");
 
 	return spec_pdata->parse_specific_dt(np, ctrl_pdata);
 

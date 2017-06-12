@@ -572,6 +572,7 @@ struct mipi_panel_info {
 
 #ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 	int input_fpks;
+	bool switch_mode_pending;
 #endif
 };
 

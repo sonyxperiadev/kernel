@@ -224,6 +224,7 @@
 				calibration_supported = <0>;
 				hwreset_delay_for_powerup_ms = <220>;
 				interrupt_default_wait_ms = <1000>;
+				charger_only_delay_ms = <200>;
 			};
 			S3330 {
 				flash_default_timeout_ms = <20000>;
@@ -231,6 +232,7 @@
 				calibration_supported = <0>;
 				hwreset_delay_for_powerup_ms = <220>;
 				interrupt_default_wait_ms = <1000>;
+				charger_only_delay_ms = <200>;
 			};
 			S332U {
 				flash_default_timeout_ms = <20000>;
@@ -238,6 +240,7 @@
 				calibration_supported = <1>;
 				hwreset_delay_for_powerup_ms = <220>;
 				interrupt_default_wait_ms = <1000>;
+				charger_only_delay_ms = <200>;
 			};
 		};
 	};

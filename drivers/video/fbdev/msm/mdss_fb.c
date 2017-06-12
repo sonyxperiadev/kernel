@@ -2375,8 +2375,8 @@ static void mdss_background_unblank(struct work_struct *ws)
 
 	pr_debug("unblank work running");
 #ifdef CONFIG_SOMC_PANEL_INCELL
-	incell_panel_fb_notifier_call_chain(mfd,
-				FB_BLANK_UNBLANK, true);
+//	incell_panel_fb_notifier_call_chain(mfd,
+//				FB_BLANK_UNBLANK, true);
 #endif
 
 	ret = mdss_fb_blank_sub(FB_EARLY_UNBLANK, mfd->fbi,
@@ -2385,8 +2385,8 @@ static void mdss_background_unblank(struct work_struct *ws)
 		pr_warn("can't turn on display!\n");
 	else {
 #ifdef CONFIG_SOMC_PANEL_INCELL
-		incell_panel_fb_notifier_call_chain(mfd,
-				FB_BLANK_POWERDOWN, false);
+//		incell_panel_fb_notifier_call_chain(mfd,
+//				FB_BLANK_POWERDOWN, false);
 #endif
 		mdss_fb_update_early_unblank_completed(mfd, true);
 		fb_set_suspend(mfd->fbi, FBINFO_STATE_RUNNING);
@@ -3199,6 +3199,10 @@ static int mdss_fb_release_all(struct fb_info *info, bool release_all)
 				pr_err("PP release failed ret %d\n", ret);
 		}
 
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+		mdss_ensure_kworker_done(mfd->unblank_kworker);
+		mdss_fb_update_early_unblank_completed(mfd, false);
+#else
 		/* reset backlight before blank to prevent backlight from
 		 * enabling ahead of unblank. for some special cases like
 		 * adb shell stop/start.
@@ -3206,12 +3210,7 @@ static int mdss_fb_release_all(struct fb_info *info, bool release_all)
 		mutex_lock(&mfd->bl_lock);
 		mdss_fb_set_backlight(mfd, 0);
 		mutex_unlock(&mfd->bl_lock);
-
-#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
-		mdss_ensure_kworker_done(mfd->unblank_kworker);
-		mdss_fb_update_early_unblank_completed(mfd, false);
 #endif
-
 		ret = mdss_fb_blank_sub(FB_BLANK_POWERDOWN, info,
 			mfd->op_enable);
 		if (ret) {
