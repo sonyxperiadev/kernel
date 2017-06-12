@@ -1570,6 +1570,13 @@ static int mdss_dsi_post_panel_on(struct mdss_panel_data *pdata)
 		mdss_dsi_panel_cmds_send(ctrl, on_cmds);
 	}
 
+	if (pinfo->is_dba_panel && pinfo->is_pluggable) {
+		/* ensure at least 1 frame transfers to down stream device */
+		vsync_period = (MSEC_PER_SEC / pinfo->mipi.frame_rate) + 1;
+		msleep(vsync_period);
+		mdss_dba_utils_hdcp_enable(pinfo->dba_data, true);
+	}
+
 	/* NOTE: Any debugging message must be shown from specific function. */
 	if (specific->panel_post_on) {
 		rc = specific->panel_post_on(pdata);
@@ -1589,14 +1596,6 @@ static int mdss_dsi_post_panel_on(struct mdss_panel_data *pdata)
 			pr_notice("%s: change fps is not supported.\n",
 							__func__);
 		}
-	}
-
-dba_utils:
-	if (pinfo->is_dba_panel && pinfo->is_pluggable) {
-		/* ensure at least 1 frame transfers to down stream device */
-		vsync_period = (MSEC_PER_SEC / pinfo->mipi.frame_rate) + 1;
-		msleep(vsync_period);
-		mdss_dba_utils_hdcp_enable(pinfo->dba_data, true);
 	}
 
 end:
