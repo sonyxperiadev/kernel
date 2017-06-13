@@ -4609,6 +4609,10 @@ int dsi_panel_device_register(struct platform_device *ctrl_pdev,
 	ctrl_pdata->panel_data.detect = spec_pdata->detect;
 	ctrl_pdata->panel_data.update_panel = spec_pdata->update_panel;
 	ctrl_pdata->panel_data.panel_pdev = ctrl_pdev;
+
+ #ifdef CONFIG_SOMC_PANEL_LABIBB
+	ctrl_pdata->spec_pdata->regulator_mgr->vreg_init(ctrl_pdata);
+ #endif
 #endif
 
 	if (ctrl_pdata->status_mode == ESD_REG ||
