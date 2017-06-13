@@ -453,6 +453,9 @@ static int somc_panel_pa_v2_setup(struct mdss_panel_data *pdata)
 	struct mdp_pa_v2_cfg_data picadj;
 	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
 	struct msm_fb_data_type *mfd = mdata->ctl_off->mfd;
+	struct mdp_pp_feature_version pa_version = {
+		.pp_feature = PA,
+	};
 	u32 copyback = 0;
 	int ret;
 
@@ -477,6 +480,14 @@ static int somc_panel_pa_v2_setup(struct mdss_panel_data *pdata)
 			__func__);
 		return -ENOMEM;
 	}
+
+	ret = mdss_mdp_pa_get_version(&pa_version);
+	if (ret) {
+		pr_err("%s: Cannot get PA HW version. Bailing out.\n",
+			__func__);
+		return -EINVAL;
+	};
+	picadj.version = pa_version.version_info;
 
 	padata->global_sat_adj = compat->sat_adj;
 	padata->global_hue_adj = compat->hue_adj;
