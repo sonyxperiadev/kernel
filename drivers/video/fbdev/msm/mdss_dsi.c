@@ -3479,10 +3479,12 @@ static int mdss_dsi_ctrl_probe(struct platform_device *pdev)
 
 #ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 	if (ctrl_pdata->panel_data.panel_info.cont_splash_enabled &&
-		ctrl_pdata->spec_pdata->pcc_data.pcc_sts & PCC_STS_UD) {
-		rc = ctrl_pdata->spec_pdata->pcc_setup(&ctrl_pdata->panel_data);
+	    ctrl_pdata->spec_pdata->color_mgr->pcc_data.pcc_sts & PCC_STS_UD) {
+		rc = ctrl_pdata->spec_pdata->color_mgr->pcc_setup(
+			&ctrl_pdata->panel_data);
 		if (rc == 0)
-			ctrl_pdata->spec_pdata->pcc_data.pcc_sts &= ~PCC_STS_UD;
+			ctrl_pdata->spec_pdata->color_mgr->pcc_data.pcc_sts &=
+								 ~PCC_STS_UD;
 	}
 #endif /* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 
