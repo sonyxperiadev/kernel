@@ -850,66 +850,6 @@ static void mdss_dsi_panel_bl_ctrl(struct mdss_panel_data *pdata,
 	}
 }
 
-static int mdss_dsi_panel_read_cabc(struct device *dev)
-{
-	struct platform_device *pdev = NULL;
-	struct mdss_dsi_ctrl_pdata *ctrl_pdata;
-
-	pdev = container_of(dev, struct platform_device, dev);
-
-	ctrl_pdata = platform_get_drvdata(pdev);
-	if (!ctrl_pdata) {
-		dev_err(dev, "%s(%d): no panel connected\n",
-							__func__, __LINE__);
-		goto exit;
-	}
-
-	return ctrl_pdata->spec_pdata->cabc_enabled;
-exit:
-	return -EINVAL;
-}
-
-static void mdss_dsi_panel_write_cabc(struct device *dev, int enable)
-{
-	struct mdss_dsi_ctrl_pdata *ctrl_pdata;
-
-	ctrl_pdata = dev_get_drvdata(dev);
-	if (!ctrl_pdata) {
-		dev_err(dev, "%s(%d): no panel connected\n",
-							__func__, __LINE__);
-		goto exit;
-	}
-
-	ctrl_pdata->spec_pdata->cabc_enabled = enable;
-
-exit:
-	return;
-}
-
-static ssize_t mdss_dsi_panel_cabc_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{
-	int tmp;
-	tmp = mdss_dsi_panel_read_cabc(dev);
-	return scnprintf(buf, PAGE_SIZE, "%i\n", tmp);
-}
-
-static ssize_t mdss_dsi_panel_cabc_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t count)
-{
-	int ret = count;
-	long tmp;
-
-	if (kstrtol(buf, 10, &tmp)) {
-		dev_err(dev, "%s: Error, buf = %s\n", __func__, buf);
-		ret = -EINVAL;
-		goto exit;
-	}
-	mdss_dsi_panel_write_cabc(dev, tmp);
-exit:
-	return ret;
-}
-
 static ssize_t mdss_dsi_panel_id_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -944,8 +884,6 @@ exit:
 }
 
 static struct device_attribute panel_attributes[] = {
-	__ATTR(cabc, S_IRUGO|S_IWUSR|S_IWGRP, mdss_dsi_panel_cabc_show,
-						mdss_dsi_panel_cabc_store),
 	__ATTR(panel_id, S_IRUSR, mdss_dsi_panel_id_show, NULL),
 	__ATTR(cc, S_IRUGO, mdss_dsi_panel_pcc_show, NULL),
 };
@@ -1026,14 +964,6 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 		pr_debug("%s: early init sequence\n", __func__);
 		mdss_dsi_panel_cmds_send(ctrl_pdata, &spec_pdata->einit_cmds);
 		//mdss_dsi_panel_reset(pdata, 1);
-	}
-
-	if (spec_pdata->cabc_early_on_cmds.cmd_cnt &&
-					(spec_pdata->cabc_enabled == 1)) {
-		pr_debug("%s: early CABC-on sequence\n", __func__);
-		mdss_dsi_panel_cmds_send(ctrl_pdata,
-			&spec_pdata->cabc_early_on_cmds);
-		spec_pdata->cabc_active = 1;
 	}
 
 	if (spec_pdata->init_cmds.cmd_cnt) {
@@ -1175,18 +1105,6 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 					&ctrl_pdata->off_cmds);
 	}
 
-	if (spec_pdata->cabc_active && (spec_pdata->cabc_enabled == 0)) {
-		pr_debug("%s: sending display off\n", __func__);
-		if (spec_pdata->cabc_off_cmds.cmd_cnt)
-			mdss_dsi_panel_cmds_send(ctrl_pdata,
-				&spec_pdata->cabc_off_cmds);
-		if (spec_pdata->cabc_late_off_cmds.cmd_cnt)
-			mdss_dsi_panel_cmds_send(ctrl_pdata,
-				&spec_pdata->cabc_late_off_cmds);
-		spec_pdata->cabc_active = 0;
-	}
-
-
 	if ((spec_pdata->new_vfp) &&
 		(ctrl_pdata->panel_data.panel_info.lcdc.v_front_porch !=
 			spec_pdata->new_vfp))
@@ -1265,19 +1183,6 @@ static int mdss_dsi_panel_disp_on(struct mdss_panel_data *pdata)
 	if (pinfo->dcs_cmd_by_left &&
 	    (ctrl_pdata->ndx != DSI_CTRL_LEFT))
 		return 0;
-
-	if ((spec_pdata->cabc_on_cmds.cmd_cnt && spec_pdata->cabc_enabled) ||
-		(ctrl_pdata->on_cmds.cmd_cnt && pinfo->disp_on_in_hs)) {
-		pr_debug("%s: delay after entering video mode\n", __func__);
-		if (pinfo->wait_time_before_on_cmd)
-			msleep(pinfo->wait_time_before_on_cmd);
-	}
-
-	if (spec_pdata->cabc_on_cmds.cmd_cnt && spec_pdata->cabc_enabled) {
-		pr_debug("%s: CABC on sequence\n", __func__);
-		mdss_dsi_panel_cmds_send(ctrl_pdata, &spec_pdata->cabc_on_cmds);
-		spec_pdata->cabc_active = 1;
-	}
 
 	if (ctrl_pdata->on_cmds.cmd_cnt && pinfo->disp_on_in_hs) {
 		pr_debug("%s: panel on sequence (in high speed)\n", __func__);
@@ -3838,26 +3743,6 @@ int mdss_panel_parse_dt(struct device_node *np,
 
 	rc = of_property_read_u32(np, "somc,mdss-dsi-picadj-cont", &tmp);
 	spec_pdata->picadj_data.cont_adj = !rc ? tmp : -1;
-
-	mdss_dsi_parse_dcs_cmds(np,
-		&spec_pdata->cabc_early_on_cmds,
-		"somc,mdss-dsi-cabc-early-on-command", NULL);
-
-	mdss_dsi_parse_dcs_cmds(np,
-		&spec_pdata->cabc_on_cmds,
-		"somc,mdss-dsi-cabc-on-command", NULL);
-
-	mdss_dsi_parse_dcs_cmds(np,
-		&spec_pdata->cabc_off_cmds,
-		"somc,mdss-dsi-cabc-off-command", NULL);
-
-	mdss_dsi_parse_dcs_cmds(np,
-		&spec_pdata->cabc_late_off_cmds,
-		"somc,mdss-dsi-cabc-late-off-command", NULL);
-
-	rc = of_property_read_u32(np,
-		"somc,mdss-dsi-cabc-enabled", &tmp);
-	spec_pdata->cabc_enabled = !rc ? tmp : 0;
 
 	rc = of_property_read_u32(np, "somc,disp-en-on-pre", &tmp);
 	spec_pdata->on_seq.disp_en_pre = !rc ? tmp : 0;
