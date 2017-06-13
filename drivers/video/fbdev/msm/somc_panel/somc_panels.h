@@ -135,6 +135,8 @@ int  somc_panel_fps_register_attr(struct device *dev);
 int  somc_panel_fps_manager_init(void);
 
 /* Color Manager */
+int somc_panel_parse_dt_colormgr_config(struct device_node *np,
+			struct mdss_dsi_ctrl_pdata *ctrl);
 int  somc_panel_color_manager_init(struct mdss_dsi_ctrl_pdata *ctrl);
 int  somc_panel_colormgr_register_attr(struct device *dev);
 
