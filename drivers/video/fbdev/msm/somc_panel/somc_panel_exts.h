@@ -155,8 +155,21 @@ struct change_fps {
 	u32 dric_tp;
 };
 
-struct mdss_panel_specific_pdata {
+struct somc_panel_color_mgr {
 	int (*pcc_setup)(struct mdss_panel_data *pdata);
+	int (*picadj_setup)(struct mdss_panel_data *pdata);
+	int (*unblank_hndl)(struct mdss_dsi_ctrl_pdata *ctrl);
+
+	bool mdss_force_pcc;
+
+	struct dsi_panel_cmds pre_uv_read_cmds;
+	struct dsi_panel_cmds uv_read_cmds;
+
+	struct mdss_pcc_data pcc_data;
+	struct mdp_pa_cfg picadj_data;
+};
+
+struct mdss_panel_specific_pdata {
 	int (*disp_on) (struct mdss_panel_data *pdata);
 	int (*detect) (struct mdss_panel_data *pdata);
 	int (*update_panel) (struct mdss_panel_data *pdata);
@@ -172,6 +185,8 @@ struct mdss_panel_specific_pdata {
 	int (*dsi_request_gpios)(struct mdss_dsi_ctrl_pdata *ctrl_pdata);
 	int (*parse_specific_dt)(struct device_node *np,
 				 struct mdss_dsi_ctrl_pdata *ctrl_pdata);
+
+	struct somc_panel_color_mgr *color_mgr;
 
 	bool disp_on_in_boot;
 	bool disp_onoff_state;
@@ -206,12 +221,6 @@ struct mdss_panel_specific_pdata {
 	struct dsi_panel_cmds einit_cmds;
 	struct dsi_panel_cmds init_cmds;
 	struct dsi_panel_cmds id_read_cmds;
-
-	bool pcc_enable;
-	struct dsi_panel_cmds pre_uv_read_cmds;
-	struct dsi_panel_cmds uv_read_cmds;
-	struct mdss_pcc_data pcc_data;
-	struct mdp_pa_cfg picadj_data;
 
 	struct mdss_panel_power_seq on_seq;
 	struct mdss_panel_power_seq off_seq;

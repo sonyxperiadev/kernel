@@ -55,10 +55,6 @@ static bool display_on_in_boot;
 static int lcm_first_boot = 0;
 bool alt_panelid_cmd;
 static bool mdss_panel_flip_ud = false;
-static bool mdss_force_pcc = false;
-
-static int mdss_dsi_panel_pcc_setup(struct mdss_panel_data *pdata);
-static int mdss_dsi_panel_picadj_setup(struct mdss_panel_data *pdata);
 
 static int __init continous_splash_setup(char *str)
 {
@@ -790,6 +786,7 @@ static void mdss_dsi_panel_bl_ctrl(struct mdss_panel_data *pdata,
 							u32 bl_level)
 {
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
+	struct somc_panel_color_mgr *color_mgr = NULL;
 	struct mdss_dsi_ctrl_pdata *sctrl = NULL;
 
 	if (pdata == NULL) {
@@ -799,9 +796,10 @@ static void mdss_dsi_panel_bl_ctrl(struct mdss_panel_data *pdata,
 
 	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
+	color_mgr = ctrl_pdata->spec_pdata->color_mgr;
 
-	if (ctrl_pdata->spec_pdata->picadj_data.flags & MDP_PP_OPS_ENABLE)
-		mdss_dsi_panel_picadj_setup(pdata);
+	if (color_mgr->picadj_data.flags & MDP_PP_OPS_ENABLE)
+		color_mgr->picadj_setup(pdata);
 
 	/*
 	 * Some backlight controllers specify a minimum duty cycle
@@ -860,32 +858,8 @@ static ssize_t mdss_dsi_panel_id_show(struct device *dev,
 	return scnprintf(buf, PAGE_SIZE, "%s\n", id);
 }
 
-static ssize_t mdss_dsi_panel_pcc_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{
-	struct mdss_dsi_ctrl_pdata *ctrl_pdata = dev_get_drvdata(dev);
-	struct mdss_pcc_data *pcc_data = &ctrl_pdata->spec_pdata->pcc_data;
-	u32 r, g, b;
-
-	r = g = b = 0;
-	if (!pcc_data->color_tbl)
-		goto exit;
-	if (pcc_data->u_data == 0 && pcc_data->v_data == 0)
-		goto exit;
-	if (pcc_data->tbl_idx >= pcc_data->tbl_size)
-		goto exit;
-	if (pcc_data->color_tbl[pcc_data->tbl_idx].color_type == UNUSED)
-		goto exit;
-	r = pcc_data->color_tbl[pcc_data->tbl_idx].r_data;
-	g = pcc_data->color_tbl[pcc_data->tbl_idx].g_data;
-	b = pcc_data->color_tbl[pcc_data->tbl_idx].b_data;
-exit:
-	return scnprintf(buf, PAGE_SIZE, "0x%x 0x%x 0x%x ", r, g, b);
-}
-
 static struct device_attribute panel_attributes[] = {
 	__ATTR(panel_id, S_IRUSR, mdss_dsi_panel_id_show, NULL),
-	__ATTR(cc, S_IRUGO, mdss_dsi_panel_pcc_show, NULL),
 };
 
 static int register_attributes(struct device *dev)
@@ -896,7 +870,13 @@ static int register_attributes(struct device *dev)
 			goto error;
 
 	rc = somc_panel_fps_register_attr(dev);
+	if (unlikely(rc != 0))
+		goto end;
 
+	rc = somc_panel_colormgr_register_attr(dev);
+	if (unlikely(rc != 0))
+		goto end;
+end:
 	return rc;
 error:
 	dev_err(dev, "%s: Unable to create interface\n", __func__);
@@ -907,12 +887,15 @@ error:
 
 static int mdss_dsi_panel_unblank(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 {
-	if (ctrl_pdata->spec_pdata->pcc_data.pcc_sts & PCC_STS_UD) {
-		ctrl_pdata->spec_pdata->pcc_setup(&ctrl_pdata->panel_data);
-		ctrl_pdata->spec_pdata->pcc_data.pcc_sts &= ~PCC_STS_UD;
-	}
+	struct somc_panel_color_mgr *color_mgr =
+			ctrl_pdata->spec_pdata->color_mgr;
+	int rc;
 
-	return 0;
+	rc = color_mgr->unblank_hndl(ctrl_pdata);
+	if (unlikely(rc != 0))
+		pr_err("%s: Color Manager unblanker failed!!\n", __func__);
+
+	return rc;
 }
 
 static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
@@ -945,11 +928,6 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 
 	lcm_first_boot = 0;
 
-/*	if (spec_pdata->pcc_data.pcc_sts & PCC_STS_UD) {
-		mdss_dsi_panel_pcc_setup(pdata);
-		spec_pdata->pcc_data.pcc_sts &= ~PCC_STS_UD;
-	}
-*/
 	if (pdata->panel_info.dsi_master != pdata->panel_info.pdest)
 		goto end;
 
@@ -1285,401 +1263,6 @@ static int mdss_dsi_panel_power_ctrl_ex(struct mdss_panel_data *pdata, int enabl
 		pinfo->panel_power_state = enable;
 
 	return ret;
-}
-
-static void conv_uv_data(char *data, int param_type, int *u_data, int *v_data)
-{
-	switch (param_type) {
-	case CLR_DATA_UV_PARAM_TYPE_RENE_DEFAULT:
-		*u_data = ((data[0] & 0x0F) << 2) |
-			/* 4bit of data[0] higher data. */
-			((data[1] >> 6) & 0x03);
-			/* 2bit of data[1] lower data. */
-		*v_data = (data[1] & 0x3F);
-			/* Remainder 6bit of data[1] is effective as v_data. */
-		break;
-	case CLR_DATA_UV_PARAM_TYPE_NOVA_DEFAULT:
-	case CLR_DATA_UV_PARAM_TYPE_RENE_SR:
-		/* 6bit is effective as u_data */
-		*u_data = data[0] & 0x3F;
-		/* 6bit is effective as v_data */
-		*v_data = data[1] & 0x3F;
-		break;
-	case CLR_DATA_UV_PARAM_TYPE_NOVA_AUO:
-		/* 6bit is effective as u_data */
-		*u_data = data[0] & 0x3F;
-		/* 6bit is effective as v_data */
-		*v_data = data[2] & 0x3F;
-		break;
-	default:
-		pr_err("%s: Failed to conv type:%d\n", __func__, param_type);
-		break;
-	}
-}
-
-static int get_uv_param_len(int param_type, bool *short_response)
-{
-	int ret = 0;
-
-	*short_response = false;
-	switch (param_type) {
-	case CLR_DATA_UV_PARAM_TYPE_RENE_DEFAULT:
-		ret = CLR_DATA_REG_LEN_RENE_DEFAULT;
-		break;
-	case CLR_DATA_UV_PARAM_TYPE_NOVA_DEFAULT:
-		ret = CLR_DATA_REG_LEN_NOVA_DEFAULT;
-		break;
-	case CLR_DATA_UV_PARAM_TYPE_NOVA_AUO:
-		ret = CLR_DATA_REG_LEN_NOVA_AUO;
-		break;
-	case CLR_DATA_UV_PARAM_TYPE_RENE_SR:
-		ret = CLR_DATA_REG_LEN_RENE_SR;
-		*short_response = true;
-		break;
-	default:
-		pr_err("%s: Failed to get param len\n", __func__);
-		break;
-	}
-
-	return ret;
-}
-
-static void get_uv_data(struct mdss_dsi_ctrl_pdata *ctrl_pdata,
-		int *u_data, int *v_data)
-{
-	struct dsi_cmd_desc *cmds = ctrl_pdata->spec_pdata->uv_read_cmds.cmds;
-	void *clk_handle;
-	int param_type = ctrl_pdata->spec_pdata->pcc_data.param_type;
-	char buf[MDSS_DSI_LEN];
-	char *pos = buf;
-	int len;
-	int i;
-	bool short_response;
-
-	len = get_uv_param_len(param_type, &short_response);
-
-	mdss_dsi_cmd_mdp_busy(ctrl_pdata);
-	mdss_bus_bandwidth_ctrl(1);
-
-	if (ctrl_pdata->panel_data.panel_info.type == MIPI_CMD_PANEL)
-		clk_handle = ctrl_pdata->mdp_clk_handle;
-	else
-		clk_handle = ctrl_pdata->dsi_clk_handle;
-
-	mdss_dsi_clk_ctrl(ctrl_pdata, clk_handle,
-				MDSS_DSI_ALL_CLKS, MDSS_DSI_CLK_ON);
-	for (i = 0; i < ctrl_pdata->spec_pdata->uv_read_cmds.cmd_cnt; i++) {
-		if (short_response)
-			mdss_dsi_cmds_rx(ctrl_pdata, cmds, 0, 0);
-		else
-			mdss_dsi_cmds_rx(ctrl_pdata, cmds, len, 0);
-		memcpy(pos, ctrl_pdata->rx_buf.data, len);
-		pos += len;
-		cmds++;
-	}
-	mdss_dsi_clk_ctrl(ctrl_pdata, clk_handle,
-				MDSS_DSI_ALL_CLKS, MDSS_DSI_CLK_OFF);
-	mdss_bus_bandwidth_ctrl(0);
-	conv_uv_data(buf, param_type, u_data, v_data);
-}
-
-static int find_color_area(struct mdp_pcc_cfg_data *pcc_config,
-	struct mdss_pcc_data *pcc_data)
-{
-	int i;
-	int ret = 0;
-
-	for (i = 0; i < pcc_data->tbl_size; i++) {
-		if (pcc_data->u_data < pcc_data->color_tbl[i].u_min)
-			continue;
-		if (pcc_data->u_data > pcc_data->color_tbl[i].u_max)
-			continue;
-		if (pcc_data->v_data < pcc_data->color_tbl[i].v_min)
-			continue;
-		if (pcc_data->v_data > pcc_data->color_tbl[i].v_max)
-			continue;
-		break;
-	}
-	pcc_data->tbl_idx = i;
-	if (i >= pcc_data->tbl_size) {
-		ret = -EINVAL;
-		goto exit;
-	}
-
-	pcc_config->r.r = pcc_data->color_tbl[i].r_data;
-	pcc_config->g.g = pcc_data->color_tbl[i].g_data;
-	pcc_config->b.b = pcc_data->color_tbl[i].b_data;
-exit:
-	return ret;
-}
-
-static int mdss_dsi_panel_pcc_setup(struct mdss_panel_data *pdata)
-{
-	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
-	struct mdss_pcc_data *pcc_data = NULL;
-	struct mdss_panel_info *pinfo = NULL;
-	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
-	struct msm_fb_data_type *mfd = mdata->ctl_off->mfd;
-	int ret;
-	u32 copyback;
-	struct mdp_pcc_cfg_data pcc_config;
-	struct mdp_pcc_data_v1_7 pcc_payload;
-	struct mdp_pp_feature_version pcc_version = {
-		.pp_feature = PCC,
-	};
-
-	if (pdata == NULL) {
-		pr_err("%s: Invalid input data\n", __func__);
-		return -EINVAL;
-	}
-
-	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
-				panel_data);
-
-	pcc_data = &ctrl_pdata->spec_pdata->pcc_data;
-	if (!pcc_data->color_tbl) {
-		pr_err("%s: color_tbl not available: no pcc.\n", __func__);
-		goto exit;
-	}
-
-	mdss_dsi_op_mode_config(DSI_CMD_MODE, pdata);
-	if (ctrl_pdata->spec_pdata->pre_uv_read_cmds.cmds)
-		mdss_dsi_panel_cmds_send(
-			ctrl_pdata, &ctrl_pdata->spec_pdata->pre_uv_read_cmds);
-	if (ctrl_pdata->spec_pdata->uv_read_cmds.cmds) {
-		get_uv_data(ctrl_pdata, &pcc_data->u_data, &pcc_data->v_data);
-		pcc_data->u_data = CENTER_U_DATA;
-		pcc_data->v_data = CENTER_V_DATA;
-	}
-	if (pcc_data->u_data == 0 && pcc_data->v_data == 0) {
-		pr_err("%s: U/V Data is invalid.\n", __func__);
-		if (!mdss_force_pcc)
-			goto exit;
-
-		pr_info("%s: PCC force flag found. Forcing calibration.\n",
-								 __func__);
-	}
-
-	pinfo = &ctrl_pdata->panel_data.panel_info;
-	if (pinfo->rev_u[1] != 0) {
-		if (pinfo->rev_u[0] == 0)
-			pcc_data->u_data = pcc_data->u_data + pinfo->rev_u[1];
-		else if (pcc_data->u_data < pinfo->rev_u[1])
-			pcc_data->u_data = 0;
-		else
-			pcc_data->u_data = pcc_data->u_data - pinfo->rev_u[1];
-	}
-	if (pinfo->rev_v[1] != 0) {
-		if (pinfo->rev_v[0] == 0)
-			pcc_data->v_data = pcc_data->v_data + pinfo->rev_v[1];
-		else if (pcc_data->v_data < pinfo->rev_v[1])
-			pcc_data->v_data = 0;
-		else
-			pcc_data->v_data = pcc_data->v_data - pinfo->rev_v[1];
-	}
-
-	memset(&pcc_config, 0, sizeof(struct mdp_pcc_cfg_data));
-	ret = find_color_area(&pcc_config, pcc_data);
-	if (ret) {
-		pr_err("%s: Can't find color area!!!!\n", __func__);
-		goto exit;
-	}
-
-	if (pcc_data->color_tbl[pcc_data->tbl_idx].color_type != UNUSED) {
-		ret = mdss_mdp_pp_get_version(&pcc_version);
-		if (ret) {
-			pr_err("%s: FAIL: Cannot get PP version.\n", __func__);
-			goto exit;
-		}
-		memset(&pcc_payload, 0, sizeof(struct mdp_pcc_data_v1_7));
-		pcc_config.cfg_payload = &pcc_payload;
-		pcc_config.version = pcc_version.version_info;
-		pcc_config.block = MDP_LOGICAL_BLOCK_DISP_0;
-		pcc_config.ops = MDP_PP_OPS_ENABLE | MDP_PP_OPS_WRITE;
-
-		pcc_payload.r.r = pcc_config.r.r;
-		pcc_payload.g.g = pcc_config.g.g;
-		pcc_payload.b.b = pcc_config.b.b;
-
-		ret = mdss_mdp_pcc_config(mfd, &pcc_config, &copyback);
-		if (ret != 0)
-			pr_err("%s: Failed setting PCC data\n", __func__);
-	}
-
-	if (pinfo->rev_u[1] != 0 && pinfo->rev_v[1] != 0)
-		pr_info("%s: (%d):(ru[0], ru[1])=(%d, %d), (rv[0], rv[1])=(%d, %d)",
-			__func__, __LINE__,
-			pinfo->rev_u[0], pinfo->rev_u[1],
-			pinfo->rev_v[0], pinfo->rev_v[1]);
-
-	pr_info("%s: (%d):ct=%d area=%d ud=%d vd=%d r=0x%08X g=0x%08X b=0x%08X",
-		__func__, __LINE__,
-		pcc_data->color_tbl[pcc_data->tbl_idx].color_type,
-		pcc_data->color_tbl[pcc_data->tbl_idx].area_num,
-		pcc_data->u_data, pcc_data->v_data,
-		pcc_data->color_tbl[pcc_data->tbl_idx].r_data,
-		pcc_data->color_tbl[pcc_data->tbl_idx].g_data,
-		pcc_data->color_tbl[pcc_data->tbl_idx].b_data);
-
-exit:
-	return ret;
-}
-
-#define PA_V2_BASIC_FEAT_ENB (MDP_PP_PA_HUE_ENABLE | MDP_PP_PA_SAT_ENABLE | \
-			      MDP_PP_PA_VAL_ENABLE | MDP_PP_PA_CONT_ENABLE)
-#define PA_V2_BASIC_MASK_ENB (MDP_PP_PA_HUE_MASK | MDP_PP_PA_SAT_MASK | \
-			      MDP_PP_PA_VAL_MASK | MDP_PP_PA_CONT_MASK)
-
-static int somc_panel_pa_v2_setup(struct mdss_panel_data *pdata)
-{
-	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
-	struct mdp_pa_cfg *compat = NULL;
-	struct mdp_pa_v2_data *padata = NULL;
-	struct mdp_pa_v2_cfg_data picadj;
-	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
-	struct msm_fb_data_type *mfd = mdata->ctl_off->mfd;
-	u32 copyback = 0;
-	int ret;
-
-	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
-				panel_data);
-
-	compat = &ctrl_pdata->spec_pdata->picadj_data;
-	if (!compat)
-		return -EINVAL;
-
-
-	memset(&picadj, 0, sizeof(struct mdp_pa_v2_cfg_data));
-
-	padata = kzalloc(sizeof(*padata), GFP_KERNEL);
-	if (padata == NULL) {
-		pr_err("%s: CRITICAL: Allocation failure. Bailing out.\n",
-			__func__);
-		return -ENOMEM;
-	}
-
-	padata->global_sat_adj = compat->sat_adj;
-	padata->global_hue_adj = compat->hue_adj;
-	padata->global_val_adj = compat->val_adj;
-	padata->global_cont_adj = compat->cont_adj;
-	padata->flags = MDP_PP_OPS_ENABLE;
-
-	/* Check if values are in permitted range, otherwise read defaults */
-	if ( ((padata->global_sat_adj  < 224|| padata->global_sat_adj  > 12000)
-					    && padata->global_sat_adj != 128)||
-	      (padata->global_hue_adj  < 0  || padata->global_hue_adj  > 1536) ||
-	     ((padata->global_val_adj  < 0  || padata->global_val_adj  > 383)
-					    && padata->global_val_adj  != 0) ||
-	     ((padata->global_cont_adj < 0  || padata->global_cont_adj > 383)
-					    && padata->global_cont_adj != 0) )
-	{
-		picadj.block = MDP_LOGICAL_BLOCK_DISP_0;
-		picadj.pa_v2_data.flags = MDP_PP_OPS_ENABLE | MDP_PP_OPS_READ |
-					  PA_V2_BASIC_FEAT_ENB |
-					  PA_V2_BASIC_MASK_ENB;
-
-		ret = mdss_mdp_pa_v2_config(mfd, &picadj, &copyback);
-		pr_err("%s: ERROR: Values not specified or invalid. \
-			Setting defaults.\n", __func__);
-		pr_err("%s (%d): defaults: sat=%d hue=%d val=%d cont=%d",
-			__func__, __LINE__,
-			picadj.pa_v2_data.global_sat_adj,
-			picadj.pa_v2_data.global_hue_adj,
-			picadj.pa_v2_data.global_val_adj,
-			picadj.pa_v2_data.global_cont_adj);
-
-		padata = &picadj.pa_v2_data;
-	}
-
-	picadj.block = MDP_LOGICAL_BLOCK_DISP_0;
-	padata->flags = MDP_PP_OPS_ENABLE | MDP_PP_OPS_WRITE |
-			PA_V2_BASIC_FEAT_ENB | PA_V2_BASIC_MASK_ENB;
-	picadj.pa_v2_data = *padata;
-
-	ret = mdss_mdp_pa_v2_config(mfd, &picadj, &copyback);
-	if (ret)
-		pr_err("%s: Cannot configure picadj: %d\n",
-			__func__, ret);
-
-	pr_info("%s (%d):sat=%d hue=%d val=%d cont=%d",
-		__func__, __LINE__, padata->global_sat_adj,
-		padata->global_hue_adj, padata->global_val_adj,
-		padata->global_cont_adj);
-
-	return ret;
-}
-
-static int somc_panel_pa_setup(struct mdss_panel_data *pdata)
-{
-	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
-	struct mdp_pa_cfg *padata = NULL;
-	struct mdp_pa_cfg_data picadj;
-	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
-	struct msm_fb_data_type *mfd = mdata->ctl_off->mfd;
-	u32 copyback = 0;
-
-	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
-				panel_data);
-
-	padata = &ctrl_pdata->spec_pdata->picadj_data;
-	if (!padata)
-		return -EINVAL;
-
-	memset(&picadj, 0, sizeof(struct mdp_pa_cfg_data));
-
-	/* Check if values are in permitted range, otherwise read defaults */
-	if ( ((padata->sat_adj  < 224 || padata->sat_adj  > 12000)
-						&& padata->sat_adj != 128)||
-	      (padata->hue_adj  < 0   || padata->hue_adj  > 1536) ||
-	     ((padata->val_adj  < 0   || padata->val_adj  > 383)
-						&& padata->val_adj  != 0) ||
-	     ((padata->cont_adj < 0   || padata->cont_adj > 383)
-						&& padata->cont_adj != 0) )
-	{
-		picadj.block = MDP_LOGICAL_BLOCK_DISP_0;
-		picadj.pa_data.flags = MDP_PP_OPS_ENABLE | MDP_PP_OPS_READ;
-
-		mdss_mdp_pa_config(mfd, &picadj, &copyback);
-		pr_err("%s: ERROR: Values not specified or invalid. \
-			Setting defaults.\n", __func__);
-		pr_err("%s (%d): defaults: sat=%d hue=%d val=%d cont=%d",
-			__func__, __LINE__,
-			picadj.pa_data.sat_adj, picadj.pa_data.hue_adj,
-			picadj.pa_data.val_adj, picadj.pa_data.cont_adj);
-
-		padata = &picadj.pa_data;
-	}
-
-	picadj.block = MDP_LOGICAL_BLOCK_DISP_0;
-	padata->flags = MDP_PP_OPS_ENABLE | MDP_PP_OPS_WRITE;
-	picadj.pa_data = *padata;
-
-	mdss_mdp_pa_config(mfd, &picadj, &copyback);
-
-	pr_info("%s (%d):sat=%d hue=%d val=%d cont=%d",
-		__func__, __LINE__, padata->sat_adj,
-		padata->hue_adj, padata->val_adj, padata->cont_adj);
-
-	return 0;
-}
-
-static int mdss_dsi_panel_picadj_setup(struct mdss_panel_data *pdata)
-{
-	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
-
-	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
-				panel_data);
-
-	/*
-	 * Note: MDSS_DSI_HW_REV_101_1 is 8974Pro, which has MDP
-	 * revision 1.2.1 (102_1).
-	 * New picadj is required starting from MDP rev. 1.3.0 (103)
-	 * which has any DSI version >= 1.2.0 (102).
-	 */
-	if (ctrl_pdata->shared_data->hw_rev > MDSS_DSI_HW_REV_101_1)
-		return somc_panel_pa_v2_setup(pdata);
-	else
-		return somc_panel_pa_setup(pdata);
 }
 
 static void mdss_dsi_parse_mdp_kickoff_threshold(struct device_node *np,
@@ -3684,66 +3267,6 @@ int mdss_panel_parse_dt(struct device_node *np,
 		"somc,mdss-dsi-init-from-begin", &tmp);
 	spec_pdata->init_from_begin = !rc ? tmp : 0;
 
-	mdss_dsi_parse_dcs_cmds(np, &spec_pdata->pre_uv_read_cmds,
-		"somc,mdss-dsi-pre-uv-command", NULL);
-
-	mdss_dsi_parse_dcs_cmds(np, &spec_pdata->uv_read_cmds,
-		"somc,mdss-dsi-uv-command", NULL);
-
-	rc = of_property_read_u32(np,
-		"somc,mdss-dsi-uv-param-type", &tmp);
-	spec_pdata->pcc_data.param_type =
-		(!rc ? tmp : CLR_DATA_UV_PARAM_TYPE_NONE);
-
-	rc = of_property_read_u32(np,
-		"somc,mdss-dsi-pcc-table-size", &tmp);
-	spec_pdata->pcc_data.tbl_size =
-		(!rc ? tmp : 0);
-
-	if (of_find_property(np, "somc,mdss-dsi-pcc-table", NULL)) {
-		spec_pdata->pcc_data.color_tbl =
-			kzalloc(spec_pdata->pcc_data.tbl_size *
-				sizeof(struct mdss_pcc_color_tbl),
-				GFP_KERNEL);
-		if (!spec_pdata->pcc_data.color_tbl) {
-			pr_err("no mem assigned: kzalloc fail\n");
-			return -ENOMEM;
-		}
-		rc = of_property_read_u32_array(np,
-			"somc,mdss-dsi-pcc-table",
-			(u32 *)spec_pdata->pcc_data.color_tbl,
-			spec_pdata->pcc_data.tbl_size *
-			sizeof(struct mdss_pcc_color_tbl) /
-			sizeof(u32));
-		if (rc) {
-			spec_pdata->pcc_data.tbl_size = 0;
-			kzfree(spec_pdata->pcc_data.color_tbl);
-			spec_pdata->pcc_data.color_tbl = NULL;
-			pr_err("%s:%d, Unable to read pcc table",
-				__func__, __LINE__);
-			goto error;
-		}
-		spec_pdata->pcc_data.pcc_sts |= PCC_STS_UD;
-	}
-
-	mdss_force_pcc = of_property_read_bool(np,
-					"somc,mdss-dsi-pcc-force-cal");
-
-	rc = of_property_read_u32(np, "somc,mdss-dsi-use-picadj", &tmp);
-	spec_pdata->picadj_data.flags = !rc ? MDP_PP_OPS_ENABLE : 0;
-
-	rc = of_property_read_u32(np, "somc,mdss-dsi-picadj-sat", &tmp);
-	spec_pdata->picadj_data.sat_adj = !rc ? tmp : -1;
-
-	rc = of_property_read_u32(np, "somc,mdss-dsi-picadj-hue", &tmp);
-	spec_pdata->picadj_data.hue_adj = !rc ? tmp : -1;
-
-	rc = of_property_read_u32(np, "somc,mdss-dsi-picadj-val", &tmp);
-	spec_pdata->picadj_data.val_adj = !rc ? tmp : -1;
-
-	rc = of_property_read_u32(np, "somc,mdss-dsi-picadj-cont", &tmp);
-	spec_pdata->picadj_data.cont_adj = !rc ? tmp : -1;
-
 	rc = of_property_read_u32(np, "somc,disp-en-on-pre", &tmp);
 	spec_pdata->on_seq.disp_en_pre = !rc ? tmp : 0;
 	rc = of_property_read_u32(np, "somc,disp-en-on-post", &tmp);
@@ -4091,7 +3614,6 @@ int mdss_dsi_panel_init(struct device_node *node,
 	pinfo->esd_rdy = false;
 	pinfo->persist_mode = false;
 
-	spec_pdata->pcc_setup = mdss_dsi_panel_pcc_setup;
 	spec_pdata->panel_power_ctrl = mdss_dsi_panel_power_ctrl_ex;
 	spec_pdata->reset = mdss_dsi_panel_reset_seq;
 	spec_pdata->disp_on = mdss_dsi_panel_disp_on;
@@ -4106,7 +3628,7 @@ int mdss_dsi_panel_init(struct device_node *node,
 				mdss_dsi_panel_apply_display_setting;
 	ctrl_pdata->switch_mode = mdss_dsi_panel_switch_mode;
 
-
+	somc_panel_color_manager_init(ctrl_pdata);
 	somc_panel_fps_manager_init();
 
 	return 0;

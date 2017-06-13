@@ -134,6 +134,10 @@ void somc_panel_fpsman_panel_off(void);
 int  somc_panel_fps_register_attr(struct device *dev);
 int  somc_panel_fps_manager_init(void);
 
+/* Color Manager */
+int  somc_panel_color_manager_init(struct mdss_dsi_ctrl_pdata *ctrl);
+int  somc_panel_colormgr_register_attr(struct device *dev);
+
 /* Regulators */
 #ifdef CONFIG_SOMC_PANEL_LABIBB
 int somc_panel_vregs_dt(struct device_node *np,
