@@ -286,36 +286,6 @@ enum mdss_intf_events {
 	MDSS_EVENT_MAX,
 };
 
-#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
-struct change_fps_rtn_pos {
-	int num;
-	int *pos;
-};
-
-struct change_fps {
-	bool enable;
-	u64 disp_clk;
-	u32 dric_vbp;
-	u32 dric_vfp;
-	bool rtn_adj;
-	struct change_fps_rtn_pos rtn_pos;
-	bool te_c_update;
-	u32 threshold;
-	u32 te_c_60fps[2];
-	u32 te_c_45fps[2];
-	u32 te_c_pos[2];
-
-	u32 wait_on_60fps;
-	u32 wait_on_45fps;
-	u32 wait_off_60fps;
-	u32 wait_off_45fps;
-	u32 wait_on_cmds_num;
-	u32 wait_off_cmds_num;
-
-	bool susres_mode;
-};
-#endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
-
 struct lcd_panel_info {
 	u32 h_back_porch;
 	u32 h_front_porch;
@@ -335,9 +305,6 @@ struct lcd_panel_info {
 	/* Pad height */
 	u32 yres_pad;
 	u32 frame_rate;
-#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
-	struct change_fps chg_fps;
-#endif
 };
 
 

@@ -106,6 +106,55 @@ struct poll_ctrl {
 	void (*cancel_work) (struct mdss_dsi_ctrl_pdata *ctrl_pdata);
 };
 
+typedef enum FPS_TYPE {
+	FPSD,
+	VPSD
+} fps_type;
+
+typedef enum FPS_PANEL_TYPE {
+	FPS_TYPE_UHD_4K,
+	FPS_TYPE_HYBRID_INCELL,
+	FPS_TYPE_FULL_INCELL,
+} fps_panel_type;
+
+typedef enum FPS_PANEL_MODE {
+	FPS_MODE_SUSRES,
+	FPS_MODE_DYNAMIC,
+} fps_panel_mode;
+
+struct change_fps_send_pos {
+	int num;
+	int *pos;
+};
+
+struct change_fps {
+	/* common */
+	bool enable;
+	fps_panel_type type;
+	fps_panel_mode mode;
+	u32 dric_vdisp;
+	struct change_fps_send_pos send_pos;
+	u32 dric_rclk;
+	u32 dric_total_porch;
+	u8 chg_fps_type;
+	u8 chg_fps_mode;
+	int input_fpks;
+
+	/* uhd_4k */
+	bool rtn_adj;
+
+	/* hybrid */
+	u32 dric_mclk;
+	u32 dric_vtouch;
+	u16 dric_rtn;
+	u16 send_byte;
+	u16 mask_pos;
+	char mask;
+
+	/* full */
+	u32 dric_tp;
+};
+
 struct mdss_panel_specific_pdata {
 	int (*pcc_setup)(struct mdss_panel_data *pdata);
 	int (*disp_on) (struct mdss_panel_data *pdata);
@@ -198,11 +247,12 @@ struct mdss_panel_specific_pdata {
 	int (*vreg_init) (struct mdss_dsi_ctrl_pdata *ctrl);
 	int (*vreg_ctrl) (struct mdss_dsi_ctrl_pdata *ctrl, int enable);
 
+	struct change_fps chg_fps;
 	struct poll_ctrl polling;
 };
 
+void somc_panel_fpsd_data_update(struct msm_fb_data_type *mfd);
 int mdss_dsi_panel_power_detect(struct platform_device *pdev, int enable);
-int mdss_dsi_panel_fps_data_update(struct msm_fb_data_type *mfd);
 int mdss_dsi_pinctrl_set_state(struct mdss_dsi_ctrl_pdata *ctrl_pdata,
 					bool active);
 
