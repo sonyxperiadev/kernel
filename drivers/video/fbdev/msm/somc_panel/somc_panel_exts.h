@@ -182,8 +182,6 @@ struct mdss_panel_specific_pdata {
 	int32_t adc_uv;
 	int panel_detect;
 	int init_from_begin;
-	int cabc_enabled;
-	int cabc_active;
 	int lcm_bl_gpio;
 	int disp_dcdc_en_gpio;
 	int disp_p5;
@@ -203,11 +201,6 @@ struct mdss_panel_specific_pdata {
 	struct mdss_panel_power_seq ewu_seq;
 #endif
 
-	struct dsi_panel_cmds cabc_early_on_cmds;
-	struct dsi_panel_cmds cabc_on_cmds;
-
-	struct dsi_panel_cmds cabc_off_cmds;
-	struct dsi_panel_cmds cabc_late_off_cmds;
 	struct dsi_panel_cmds fps_cmds;
 
 	struct dsi_panel_cmds einit_cmds;
