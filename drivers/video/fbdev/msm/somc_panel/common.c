@@ -131,4 +131,40 @@ int somc_panel_vreg_ctrl(
 }
 
 
+int somc_panel_allocate(struct platform_device *pdev,
+		struct mdss_dsi_ctrl_pdata *ctrl)
+{
+	ctrl->spec_pdata = devm_kzalloc(&pdev->dev,
+		sizeof(struct mdss_panel_specific_pdata),
+		GFP_KERNEL);
+	if (!ctrl->spec_pdata) {
+		pr_err("%s: FAILED: cannot allocate spec_pdata\n", __func__);
+		goto fail_specific;
+	};
 
+	ctrl->spec_pdata->color_mgr = devm_kzalloc(&pdev->dev,
+		sizeof(struct somc_panel_color_mgr), GFP_KERNEL);
+	if (!ctrl->spec_pdata->color_mgr) {
+		pr_err("%s: FAILED: Cannot allocate color_mgr\n", __func__);
+		goto fail_color_mgr;
+	};
+
+	ctrl->spec_pdata->regulator_mgr = devm_kzalloc(&pdev->dev,
+		sizeof (struct somc_panel_regulator_mgr), GFP_KERNEL);
+	if (!ctrl->spec_pdata->regulator_mgr) {
+		pr_err("%s: FAILED: Cannot allocate regulator_mgr\n",
+			__func__);
+		goto fail_regulator_mgr;
+	};
+
+	return 0;
+
+fail_regulator_mgr:
+	devm_kfree(&pdev->dev, ctrl->spec_pdata->regulator_mgr);
+fail_color_mgr:
+	devm_kfree(&pdev->dev, ctrl->spec_pdata->color_mgr);
+fail_specific:
+	devm_kfree(&pdev->dev, ctrl->spec_pdata);
+
+	return -ENOMEM;
+}
