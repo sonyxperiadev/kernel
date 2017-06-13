@@ -3325,6 +3325,7 @@ int mdss_panel_parse_dt(struct device_node *np,
 			MSM_DBA_CHIP_NAME_MAX_LEN);
 	}
 
+	if (pinfo->pdest == pinfo->dsi_master)
 	somc_panel_parse_dt_colormgr_config(np, ctrl_pdata);
 	if (rc)
 		pr_err("%s: Failed to parse Color Manager configuration\n",
