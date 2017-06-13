@@ -481,9 +481,9 @@ static int somc_panel_pa_v2_setup(struct mdss_panel_data *pdata)
 		return -ENOMEM;
 	}
 
-	ret = mdss_mdp_pa_get_version(&pa_version);
+	ret = mdss_mdp_pp_get_version(&pa_version);
 	if (ret) {
-		pr_err("%s: Cannot get PA HW version. Bailing out.\n",
+		pr_err("%s: Cannot get PP HW version. Bailing out.\n",
 			__func__);
 		return -EINVAL;
 	};
@@ -523,9 +523,10 @@ static int somc_panel_pa_v2_setup(struct mdss_panel_data *pdata)
 	}
 
 	picadj.block = MDP_LOGICAL_BLOCK_DISP_0;
-	padata->flags = MDP_PP_OPS_ENABLE | MDP_PP_OPS_WRITE |
+	picadj.flags = MDP_PP_OPS_ENABLE | MDP_PP_OPS_WRITE |
 			PA_V2_BASIC_FEAT_ENB | PA_V2_BASIC_MASK_ENB;
-	picadj.pa_v2_data = *padata;
+	padata->flags = picadj.flags;
+	picadj.cfg_payload = padata;
 
 	ret = mdss_mdp_pa_v2_config(mfd, &picadj, &copyback);
 	if (ret)
