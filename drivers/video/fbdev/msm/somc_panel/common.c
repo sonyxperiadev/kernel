@@ -130,25 +130,5 @@ int somc_panel_vreg_ctrl(
 	return ret;
 }
 
-void somc_panel_chg_fps_cmds_send(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
-{
-	struct mdss_panel_specific_pdata *spec_pdata = NULL;
-	struct mdss_panel_info *pinfo = NULL;
-	u32 fps_cmds, fps_payload;
-	char rtn;
 
-	pinfo = &ctrl_pdata->panel_data.panel_info;
-	spec_pdata = ctrl_pdata->spec_pdata;
 
-	if (ctrl_pdata->panel_data.panel_info.mipi.mode == DSI_CMD_MODE) {
-		if (spec_pdata->fps_cmds.cmd_cnt) {
-			fps_cmds = pinfo->lcdc.chg_fps.rtn_pos.pos[0];
-			fps_payload = pinfo->lcdc.chg_fps.rtn_pos.pos[1];
-			rtn = CHANGE_PAYLOAD(fps_cmds, fps_payload);
-			pr_debug("%s: change fps sequence --- rtn = 0x%x\n",
-				__func__, rtn);
-			mdss_dsi_panel_cmds_send(ctrl_pdata,
-						&spec_pdata->fps_cmds);
-		}
-	}
-}

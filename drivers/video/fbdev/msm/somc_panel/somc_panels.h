@@ -25,8 +25,11 @@
 #define ADC_RNG_MAX			1
 #define ADC_PNUM			2
 
-#define CHANGE_FPS_MIN 			36
-#define CHANGE_FPS_MAX 			63
+#define CHANGE_FPS_MIN 			22
+#define CHANGE_FPS_MAX 			60
+
+#define CHANGE_FPS_PORCH		2
+#define CHANGE_FPS_SEND			10
 
 #define DEF_FPS_LOG_INTERVAL		100
 #define DEF_FPS_ARRAY_SIZE		120
@@ -93,8 +96,6 @@ int  somc_panel_vreg_ctrl(
 		struct mdss_dsi_ctrl_pdata *ctrl_pdata,
 		char *vreg, bool enable);
 
-void somc_panel_chg_fps_cmds_send(struct mdss_dsi_ctrl_pdata *ctrl_pdata);
-
 /* Main */
 void somc_panel_down_period_quirk(
 			struct mdss_panel_specific_pdata *spec_pdata);
@@ -110,6 +111,9 @@ int  mdss_dsi_request_gpios(struct mdss_dsi_ctrl_pdata *ctrl_pdata);
 int  mdss_dsi_property_read_u32_var(struct device_node *np,
 		char *name, u32 **out_data, int *num);
 
+int  somc_panel_parse_dcs_cmds(struct device_node *np,
+		struct dsi_panel_cmds *pcmds, char *cmd_key, char *link_key);
+
 /* Detection */
 int  do_panel_detect(struct device_node **node,
 		struct platform_device *pdev,
@@ -120,6 +124,15 @@ int  do_panel_detect(struct device_node **node,
 void poll_worker_schedule(struct mdss_dsi_ctrl_pdata *ctrl_pdata);
 void poll_worker_cancel(struct mdss_dsi_ctrl_pdata *ctrl_pdata);
 int  panel_polling_init(struct mdss_dsi_ctrl_pdata *ctrl_pdata);
+
+/* FPS Manager */
+int  somc_panel_parse_dt_chgfps_config(struct device_node *pan_node,
+			struct mdss_dsi_ctrl_pdata *ctrl_pdata);
+void somc_panel_chg_fps_cmds_send(struct mdss_dsi_ctrl_pdata *ctrl_pdata);
+void somc_panel_fpsman_panel_post_on(struct mdss_dsi_ctrl_pdata *ctrl);
+void somc_panel_fpsman_panel_off(void);
+int  somc_panel_fps_register_attr(struct device *dev);
+int  somc_panel_fps_manager_init(void);
 
 /* Regulators */
 #ifdef CONFIG_SOMC_PANEL_LABIBB

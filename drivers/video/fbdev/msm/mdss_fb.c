@@ -4058,7 +4058,7 @@ static int __mdss_fb_perform_commit(struct msm_fb_data_type *mfd)
 			pr_warn("no kickoff function setup for fb%d\n",
 					mfd->index);
 #ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
-		mdss_dsi_panel_fps_data_update(mfd);
+		somc_panel_fpsd_data_update(mfd);
 #endif
 	} else if (fb_backup->atomic_commit) {
 		if (mfd->mdp.kickoff_fnc)
@@ -4068,7 +4068,7 @@ static int __mdss_fb_perform_commit(struct msm_fb_data_type *mfd)
 			pr_warn("no kickoff function setup for fb%d\n",
 				mfd->index);
 #ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
-		mdss_dsi_panel_fps_data_update(mfd);
+		somc_panel_fpsd_data_update(mfd);
 #endif
 		fb_backup->atomic_commit = false;
 	} else {
