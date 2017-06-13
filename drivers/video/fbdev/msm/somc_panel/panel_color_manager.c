@@ -485,7 +485,7 @@ static int somc_panel_pa_v2_setup(struct mdss_panel_data *pdata)
 	padata->flags = MDP_PP_OPS_ENABLE;
 
 	/* Check if values are in permitted range, otherwise read defaults */
-	if ( ((padata->global_sat_adj  < 224|| padata->global_sat_adj  > 12000)
+	if ( ((padata->global_sat_adj  < 0  || padata->global_sat_adj  > 12000)
 					    && padata->global_sat_adj != 128)||
 	      (padata->global_hue_adj  < 0  || padata->global_hue_adj  > 1536) ||
 	     ((padata->global_val_adj  < 0  || padata->global_val_adj  > 383)
