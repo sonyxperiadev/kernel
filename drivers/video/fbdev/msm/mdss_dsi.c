@@ -3355,15 +3355,12 @@ static int mdss_dsi_ctrl_probe(struct platform_device *pdev)
 	atomic_set(&ctrl_pdata->te_irq_ready, 0);
 
 #ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
-	ctrl_pdata->spec_pdata = devm_kzalloc(&pdev->dev,
-		sizeof(struct mdss_panel_specific_pdata),
-		GFP_KERNEL);
-	if (!ctrl_pdata->spec_pdata) {
-		pr_err("%s: FAILED: cannot allocate spec_pdata\n",
+	rc = somc_panel_allocate(pdev, ctrl_pdata);
+	if (unlikely(rc != 0)) {
+		pr_err("%s: FAILED: cannot allocate somc_panel structures\n",
 			__func__);
-		devm_kfree(&pdev->dev, ctrl_pdata->spec_pdata);
-		return -ENOMEM;
-	};
+		return rc;
+	}
 #endif
 
 	ctrl_name = of_get_property(pdev->dev.of_node, "label", NULL);
