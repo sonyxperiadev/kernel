@@ -939,8 +939,6 @@ struct mdss_panel_info {
 	int disp_on_in_hs;
 	int wait_time_before_on_cmd;
 
-	u32 rev_u[2], rev_v[2]; /* ROI */
-
 	/* physical size in mm */
 	__u32 width;
 	__u32 height;

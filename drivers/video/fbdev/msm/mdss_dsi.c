@@ -3474,17 +3474,6 @@ static int mdss_dsi_ctrl_probe(struct platform_device *pdev)
 		goto error_shadow_clk_deinit;
 	}
 
-#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
-	if (ctrl_pdata->panel_data.panel_info.cont_splash_enabled &&
-	    ctrl_pdata->spec_pdata->color_mgr->pcc_data.pcc_sts & PCC_STS_UD) {
-		rc = ctrl_pdata->spec_pdata->color_mgr->pcc_setup(
-			&ctrl_pdata->panel_data);
-		if (rc == 0)
-			ctrl_pdata->spec_pdata->color_mgr->pcc_data.pcc_sts &=
-								 ~PCC_STS_UD;
-	}
-#endif /* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
-
 	pr_info("%s: Dsi Ctrl->%d initialized, DSI rev:0x%x, PHY rev:0x%x\n",
 		__func__, index, ctrl_pdata->shared_data->hw_rev,
 		ctrl_pdata->shared_data->phy_rev);
