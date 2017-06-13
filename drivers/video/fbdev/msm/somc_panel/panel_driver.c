@@ -3294,25 +3294,6 @@ int mdss_panel_parse_dt(struct device_node *np,
 	if (rc)
 		pr_err("%s: Failed to parse lab/ibb vregs DT!!\n", __func__);
 
-	rc = of_property_read_u32_array(np,
-		"somc,mdss-dsi-u-rev", res, 2);
-	if (rc) {
-		pinfo->rev_u[0] = 0;
-		pinfo->rev_u[1] = 0;
-	} else {
-		pinfo->rev_u[0] = res[0];
-		pinfo->rev_u[1] = res[1];
-	}
-	rc = of_property_read_u32_array(np,
-		"somc,mdss-dsi-v-rev", res, 2);
-	if (rc) {
-		pinfo->rev_v[0] = 0;
-		pinfo->rev_v[1] = 0;
-	} else {
-		pinfo->rev_v[0] = res[0];
-		pinfo->rev_v[1] = res[1];
-	}
-
 	spec_pdata->pwron_reset = of_property_read_bool(np,
 					"somc,panel-pwron-reset");
 

@@ -61,6 +61,7 @@ struct mdss_pcc_data {
 	u8 pcc_sts;
 	u32 u_data;
 	u32 v_data;
+	u32 rev_u[2], rev_v[2]; /* ROI */
 	int param_type;
 };
 

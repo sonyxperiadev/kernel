@@ -37,10 +37,18 @@ int somc_panel_parse_dt_colormgr_config(struct device_node *np,
 			struct mdss_dsi_ctrl_pdata *ctrl)
 {
 	struct somc_panel_color_mgr *color_mgr = ctrl->spec_pdata->color_mgr;
-	u32 tmp;
+	u32 tmp, res[2];
 	int rc;
 
 	if (!of_find_property(np, "somc,mdss-dsi-pcc-table", NULL))
+		goto picadj_params;
+
+	rc = of_property_read_u32(np,
+		"somc,mdss-dsi-pcc-table-size", &tmp);
+	color_mgr->pcc_data.tbl_size =
+		(!rc ? tmp : 0);
+
+	if (unlikely(color_mgr->pcc_data.tbl_size <= 0))
 		goto picadj_params;
 
 	/* PCC Parameters */
@@ -79,13 +87,27 @@ int somc_panel_parse_dt_colormgr_config(struct device_node *np,
 	color_mgr->pcc_data.param_type =
 		(!rc ? tmp : CLR_DATA_UV_PARAM_TYPE_NONE);
 
-	rc = of_property_read_u32(np,
-		"somc,mdss-dsi-pcc-table-size", &tmp);
-	color_mgr->pcc_data.tbl_size =
-		(!rc ? tmp : 0);
-
 	color_mgr->mdss_force_pcc = of_property_read_bool(np,
 					"somc,mdss-dsi-pcc-force-cal");
+
+	rc = of_property_read_u32_array(np,
+		"somc,mdss-dsi-u-rev", res, 2);
+	if (rc) {
+		color_mgr->pcc_data.rev_u[0] = 0;
+		color_mgr->pcc_data.rev_u[1] = 0;
+	} else {
+		color_mgr->pcc_data.rev_u[0] = res[0];
+		color_mgr->pcc_data.rev_u[1] = res[1];
+	}
+	rc = of_property_read_u32_array(np,
+		"somc,mdss-dsi-v-rev", res, 2);
+	if (rc) {
+		color_mgr->pcc_data.rev_v[0] = 0;
+		color_mgr->pcc_data.rev_v[1] = 0;
+	} else {
+		color_mgr->pcc_data.rev_v[0] = res[0];
+		color_mgr->pcc_data.rev_v[1] = res[1];
+	}
 
 picadj_params:
 	/* Picture Adjustment (PicAdj) Parameters */
@@ -243,7 +265,6 @@ static int somc_panel_pcc_setup(struct mdss_panel_data *pdata)
 {
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
 	struct mdss_pcc_data *pcc_data = NULL;
-	struct mdss_panel_info *pinfo = NULL;
 	struct somc_panel_color_mgr *color_mgr = NULL;
 	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
 	struct msm_fb_data_type *mfd = mdata->ctl_off->mfd;
@@ -293,22 +314,21 @@ static int somc_panel_pcc_setup(struct mdss_panel_data *pdata)
 								 __func__);
 	}
 
-	pinfo = &ctrl_pdata->panel_data.panel_info;
-	if (pinfo->rev_u[1] != 0) {
-		if (pinfo->rev_u[0] == 0)
-			pcc_data->u_data = pcc_data->u_data + pinfo->rev_u[1];
-		else if (pcc_data->u_data < pinfo->rev_u[1])
+	if (pcc_data->rev_u[1] != 0) {
+		if (pcc_data->rev_u[0] == 0)
+			pcc_data->u_data = pcc_data->u_data + pcc_data->rev_u[1];
+		else if (pcc_data->u_data < pcc_data->rev_u[1])
 			pcc_data->u_data = 0;
 		else
-			pcc_data->u_data = pcc_data->u_data - pinfo->rev_u[1];
+			pcc_data->u_data = pcc_data->u_data - pcc_data->rev_u[1];
 	}
-	if (pinfo->rev_v[1] != 0) {
-		if (pinfo->rev_v[0] == 0)
-			pcc_data->v_data = pcc_data->v_data + pinfo->rev_v[1];
-		else if (pcc_data->v_data < pinfo->rev_v[1])
+	if (pcc_data->rev_v[1] != 0) {
+		if (pcc_data->rev_v[0] == 0)
+			pcc_data->v_data = pcc_data->v_data + pcc_data->rev_v[1];
+		else if (pcc_data->v_data < pcc_data->rev_v[1])
 			pcc_data->v_data = 0;
 		else
-			pcc_data->v_data = pcc_data->v_data - pinfo->rev_v[1];
+			pcc_data->v_data = pcc_data->v_data - pcc_data->rev_v[1];
 	}
 
 	memset(&pcc_config, 0, sizeof(struct mdp_pcc_cfg_data));
@@ -339,11 +359,11 @@ static int somc_panel_pcc_setup(struct mdss_panel_data *pdata)
 			pr_err("%s: Failed setting PCC data\n", __func__);
 	}
 
-	if (pinfo->rev_u[1] != 0 && pinfo->rev_v[1] != 0)
+	if (pcc_data->rev_u[1] != 0 && pcc_data->rev_v[1] != 0)
 		pr_info("%s: (%d):(ru[0], ru[1])=(%d, %d), (rv[0], rv[1])=(%d, %d)",
 			__func__, __LINE__,
-			pinfo->rev_u[0], pinfo->rev_u[1],
-			pinfo->rev_v[0], pinfo->rev_v[1]);
+			pcc_data->rev_u[0], pcc_data->rev_u[1],
+			pcc_data->rev_v[0], pcc_data->rev_v[1]);
 
 	pr_info("%s: (%d):ct=%d area=%d ud=%d vd=%d r=0x%08X g=0x%08X b=0x%08X",
 		__func__, __LINE__,
@@ -355,7 +375,7 @@ static int somc_panel_pcc_setup(struct mdss_panel_data *pdata)
 		pcc_data->color_tbl[pcc_data->tbl_idx].b_data);
 
 exit:
-	return ret;
+	return 0;
 }
 
 static int somc_panel_pa_setup(struct mdss_panel_data *pdata)
