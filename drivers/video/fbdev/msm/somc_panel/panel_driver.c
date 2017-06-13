@@ -3344,6 +3344,10 @@ int mdss_panel_parse_dt(struct device_node *np,
 			MSM_DBA_CHIP_NAME_MAX_LEN);
 	}
 
+	somc_panel_parse_dt_colormgr_config(np, ctrl_pdata);
+	if (rc)
+		pr_err("%s: Failed to parse Color Manager configuration\n",
+			__func__);
 	somc_panel_parse_dt_chgfps_config(np, ctrl_pdata);
 
 	rc = mdss_dsi_parse_polling_config(np, ctrl_pdata);
