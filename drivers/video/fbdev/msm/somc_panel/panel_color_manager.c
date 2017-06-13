@@ -37,8 +37,14 @@ int somc_panel_parse_dt_colormgr_config(struct device_node *np,
 			struct mdss_dsi_ctrl_pdata *ctrl)
 {
 	struct somc_panel_color_mgr *color_mgr = ctrl->spec_pdata->color_mgr;
+	struct mdss_panel_info *pinfo;
 	u32 tmp, res[2];
-	int rc;
+	int rc = 0;
+
+	pinfo = &ctrl->panel_data.panel_info;
+
+	if (pinfo->dsi_master != pinfo->pdest)
+		goto end;
 
 	if (!of_find_property(np, "somc,mdss-dsi-pcc-table", NULL))
 		goto picadj_params;
@@ -114,9 +120,6 @@ picadj_params:
 	if (!of_find_property(np, "somc,mdss-dsi-use-picadj", NULL))
 		goto end;
 
-	rc = of_property_read_u32(np, "somc,mdss-dsi-use-picadj", &tmp);
-	color_mgr->picadj_data.flags = !rc ? MDP_PP_OPS_ENABLE : 0;
-
 	rc = of_property_read_u32(np, "somc,mdss-dsi-picadj-sat", &tmp);
 	color_mgr->picadj_data.sat_adj = !rc ? tmp : -1;
 
@@ -128,6 +131,8 @@ picadj_params:
 
 	rc = of_property_read_u32(np, "somc,mdss-dsi-picadj-cont", &tmp);
 	color_mgr->picadj_data.cont_adj = !rc ? tmp : -1;
+
+	color_mgr->picadj_data.flags |= MDP_PP_OPS_ENABLE;
 
 end:
 	return rc;
@@ -593,6 +598,10 @@ static int somc_panel_colormgr_unblank_handler(struct mdss_dsi_ctrl_pdata *ctrl)
 		color_mgr->pcc_setup(&ctrl->panel_data);
 		color_mgr->pcc_data.pcc_sts &= ~PCC_STS_UD;
 	}
+
+	if (color_mgr->picadj_data.flags & MDP_PP_OPS_ENABLE)
+		color_mgr->picadj_setup(&ctrl->panel_data);
+
 
 	return 0;
 }
