@@ -169,6 +169,29 @@ struct somc_panel_color_mgr {
 	struct mdp_pa_cfg picadj_data;
 };
 
+struct somc_panel_regulator_mgr {
+	int (*vreg_init) (struct mdss_dsi_ctrl_pdata *ctrl);
+	int (*vreg_ctrl) (struct mdss_dsi_ctrl_pdata *ctrl, int enable);
+
+	u32 lab_output_voltage;
+	u32 ibb_output_voltage;
+	u32 lab_current_max;
+	u32 ibb_current_max;
+	u32 lab_fast_precharge_time;
+	u32 lab_soft_start;
+	u32 ibb_soft_start;
+	bool lab_pd_full;
+	bool ibb_pd_full;
+
+	bool lab_current_max_enable;
+	bool ibb_current_max_enable;
+	bool fast_prechg_enb;
+	bool lab_soft_enb;
+	bool ibb_soft_enb;
+	bool lab_pd_enb;
+	bool ibb_pd_enb;
+};
+
 struct mdss_panel_specific_pdata {
 	int (*disp_on) (struct mdss_panel_data *pdata);
 	int (*detect) (struct mdss_panel_data *pdata);
@@ -187,6 +210,7 @@ struct mdss_panel_specific_pdata {
 				 struct mdss_dsi_ctrl_pdata *ctrl_pdata);
 
 	struct somc_panel_color_mgr *color_mgr;
+	struct somc_panel_regulator_mgr *regulator_mgr;
 
 	bool disp_on_in_boot;
 	bool disp_onoff_state;
@@ -227,27 +251,6 @@ struct mdss_panel_specific_pdata {
 	u32 current_period;
 	u32 down_period;
 	u32 new_vfp;
-
-	/* LAB/IBB SoMC regulator params */
-	u32 lab_output_voltage;
-	u32 ibb_output_voltage;
-	u32 lab_current_max;
-	u32 ibb_current_max;
-	u32 lab_fast_precharge_time;
-	u32 lab_soft_start;
-	u32 ibb_soft_start;
-	bool lab_pd_full;
-	bool ibb_pd_full;
-
-	bool lab_current_max_enable;
-	bool ibb_current_max_enable;
-	bool fast_prechg_enb;
-	bool lab_soft_enb;
-	bool ibb_soft_enb;
-	bool lab_pd_enb;
-	bool ibb_pd_enb;
-	int (*vreg_init) (struct mdss_dsi_ctrl_pdata *ctrl);
-	int (*vreg_ctrl) (struct mdss_dsi_ctrl_pdata *ctrl, int enable);
 
 	struct change_fps chg_fps;
 	struct poll_ctrl polling;

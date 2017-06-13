@@ -36,6 +36,7 @@ static bool vregs_initialized = 0;
 static int somc_panel_vregs_init(struct mdss_dsi_ctrl_pdata *ctrl)
 {
 	struct mdss_panel_specific_pdata *spec_pdata = NULL;
+	struct somc_panel_regulator_mgr *regulator_mgr = NULL;
 	struct dss_vreg *this_vreg = NULL;
 	int rc, min_uV, max_uV = 0;
 
@@ -47,6 +48,8 @@ static int somc_panel_vregs_init(struct mdss_dsi_ctrl_pdata *ctrl)
 		pr_err("%s: FATAL: NULL SoMC panel data!!\n", __func__);
 		return -EINVAL;
 	}
+
+	regulator_mgr = spec_pdata->regulator_mgr;
 
 	for (rc = 0; rc < ctrl->panel_power_data.num_vreg; rc++) {
 		if ((ctrl->lab != NULL) && (ctrl->ibb != NULL))
@@ -68,14 +71,14 @@ static int somc_panel_vregs_init(struct mdss_dsi_ctrl_pdata *ctrl)
 	/*
 	 * Set lab/ibb voltage.
 	 */
-	min_uV = spec_pdata->lab_output_voltage;
+	min_uV = regulator_mgr->lab_output_voltage;
 	max_uV = min_uV;
 	rc = regulator_set_voltage(ctrl->lab, min_uV, max_uV);
 	if (rc) {
 		pr_err("%s: Unable to configure of lab voltage.\n", __func__);
 		return rc;
 	}
-	min_uV = spec_pdata->ibb_output_voltage;
+	min_uV = regulator_mgr->ibb_output_voltage;
 	max_uV = min_uV;
 	rc = regulator_set_voltage(ctrl->ibb, min_uV, max_uV);
 	if (rc) {
@@ -86,18 +89,18 @@ static int somc_panel_vregs_init(struct mdss_dsi_ctrl_pdata *ctrl)
 	/**
 	 * Set lab/ibb current max
 	 */
-	if (spec_pdata->lab_current_max_enable) {
+	if (regulator_mgr->lab_current_max_enable) {
 		rc = qpnp_lab_set_current_max(ctrl->lab,
-				spec_pdata->lab_current_max);
+				regulator_mgr->lab_current_max);
 		if (rc) {
 			pr_err("%s: Unable to configure of lab current_max.\n",
 								__func__);
 			return rc;
 		}
 	}
-	if (spec_pdata->ibb_current_max_enable) {
+	if (regulator_mgr->ibb_current_max_enable) {
 		rc = qpnp_ibb_set_current_max(ctrl->ibb,
-				spec_pdata->ibb_current_max);
+				regulator_mgr->ibb_current_max);
 		if (rc) {
 			pr_err("%s: Unable to configure of ibb current_max.\n",
 								__func__);
@@ -108,10 +111,10 @@ static int somc_panel_vregs_init(struct mdss_dsi_ctrl_pdata *ctrl)
 	/**
 	 * LAB precharge time
 	 */
-	if (spec_pdata->fast_prechg_enb) {
+	if (regulator_mgr->fast_prechg_enb) {
 		rc = qpnp_lab_set_precharge(ctrl->lab,
-			spec_pdata->lab_fast_precharge_time,
-			spec_pdata->fast_prechg_enb);
+			regulator_mgr->lab_fast_precharge_time,
+			regulator_mgr->fast_prechg_enb);
 		if (rc)
 			pr_err("%s: Cannot configure lab precharge\n",
 				__func__);
@@ -120,16 +123,16 @@ static int somc_panel_vregs_init(struct mdss_dsi_ctrl_pdata *ctrl)
 	/**
 	 * LAB soft start control
 	 */
-	if (spec_pdata->lab_soft_enb) {
+	if (regulator_mgr->lab_soft_enb) {
 		rc = qpnp_lab_set_soft_start(ctrl->lab,
-			spec_pdata->lab_soft_start);
+			regulator_mgr->lab_soft_start);
 		if (rc)
 			pr_err("%s: Cannot configure lab soft start\n",
 				__func__);
 	}
-	if (spec_pdata->ibb_soft_enb) {
+	if (regulator_mgr->ibb_soft_enb) {
 		rc = qpnp_ibb_set_soft_start(ctrl->ibb,
-			spec_pdata->ibb_soft_start);
+			regulator_mgr->ibb_soft_start);
 		if (rc)
 			pr_err("%s: Cannot configure ibb soft start\n",
 				__func__);
@@ -138,16 +141,16 @@ static int somc_panel_vregs_init(struct mdss_dsi_ctrl_pdata *ctrl)
 	/**
 	 * LAB/IBB pull-down control
 	 */
-	if (spec_pdata->lab_pd_enb) {
+	if (regulator_mgr->lab_pd_enb) {
 		rc = qpnp_lab_set_pull_down(ctrl->lab,
-			spec_pdata->lab_pd_full);
+			regulator_mgr->lab_pd_full);
 		if (rc)
 			pr_err("%s: Cannot configure lab pull down\n",
 				__func__);
 	}
-	if (spec_pdata->ibb_pd_enb) {
+	if (regulator_mgr->ibb_pd_enb) {
 		rc = qpnp_ibb_set_pull_down(ctrl->ibb,
-			spec_pdata->ibb_pd_full);
+			regulator_mgr->ibb_pd_full);
 		if (rc)
 			pr_err("%s: Cannot configure ibb pull down\n",
 				__func__);
@@ -205,6 +208,7 @@ int somc_panel_vregs_dt(struct device_node *np,
 			struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 {
 	struct mdss_panel_specific_pdata *spec_pdata = NULL;
+	struct somc_panel_regulator_mgr *regulator_mgr = NULL;
 	int rc = 0;
 	u32 tmp;
 
@@ -214,76 +218,78 @@ int somc_panel_vregs_dt(struct device_node *np,
 		return -EINVAL;
 	}
 
-	spec_pdata->lab_output_voltage = QPNP_REGULATOR_VSP_V_5P4V;
+	regulator_mgr = spec_pdata->regulator_mgr;
+
+	regulator_mgr->lab_output_voltage = QPNP_REGULATOR_VSP_V_5P4V;
 	rc = of_property_read_u32(np, "somc,lab-output-voltage", &tmp);
 	if (!rc)
-		spec_pdata->lab_output_voltage = tmp;
+		regulator_mgr->lab_output_voltage = tmp;
 
-	spec_pdata->ibb_output_voltage = QPNP_REGULATOR_VSN_V_M5P4V;
+	regulator_mgr->ibb_output_voltage = QPNP_REGULATOR_VSN_V_M5P4V;
 	rc = of_property_read_u32(np, "somc,ibb-output-voltage", &tmp);
 	if (!rc)
-		spec_pdata->ibb_output_voltage = tmp;
+		regulator_mgr->ibb_output_voltage = tmp;
 
-	spec_pdata->lab_current_max_enable = of_find_property(np,
+	regulator_mgr->lab_current_max_enable = of_find_property(np,
 			"qcom,qpnp-lab-limit-maximum-current", &tmp);
 
-	if (spec_pdata->lab_current_max_enable) {
+	if (regulator_mgr->lab_current_max_enable) {
 		rc = of_property_read_u32(np,
 			"qcom,qpnp-lab-limit-maximum-current", &tmp);
 		if (!rc)
-			spec_pdata->lab_current_max = tmp;
+			regulator_mgr->lab_current_max = tmp;
 	}
 
-	spec_pdata->ibb_current_max_enable = of_find_property(np,
+	regulator_mgr->ibb_current_max_enable = of_find_property(np,
 			"qcom,qpnp-ibb-limit-maximum-current", &tmp);
-	if (spec_pdata->ibb_current_max_enable) {
+	if (regulator_mgr->ibb_current_max_enable) {
 		rc = of_property_read_u32(np,
 			"qcom,qpnp-ibb-limit-maximum-current", &tmp);
 		if (!rc)
-			spec_pdata->ibb_current_max = tmp;
+			regulator_mgr->ibb_current_max = tmp;
 	}
 
-	spec_pdata->fast_prechg_enb = of_find_property(np,
+	regulator_mgr->fast_prechg_enb = of_find_property(np,
 			"somc,qpnp-lab-max-precharge-enable", &tmp);
-	if (spec_pdata->fast_prechg_enb) {
+	if (regulator_mgr->fast_prechg_enb) {
 		rc = of_property_read_u32(np,
 			"somc,qpnp-lab-max-precharge-time", &tmp);
 		if (!rc)
-			spec_pdata->lab_fast_precharge_time = tmp;
+			regulator_mgr->lab_fast_precharge_time = tmp;
 	}
 
-	spec_pdata->lab_soft_enb = of_find_property(np,
+	regulator_mgr->lab_soft_enb = of_find_property(np,
 			"somc,qpnp-lab-soft-start", &tmp);
-	if (spec_pdata->lab_soft_enb) {
+	if (regulator_mgr->lab_soft_enb) {
 		rc = of_property_read_u32(np,
 			"somc,qpnp-lab-soft-start", &tmp);
 		if (!rc)
-			spec_pdata->lab_soft_start = tmp;
+			regulator_mgr->lab_soft_start = tmp;
 	}
 
-	spec_pdata->ibb_soft_enb = of_find_property(np,
+	regulator_mgr->ibb_soft_enb = of_find_property(np,
 			"somc,qpnp-ibb-discharge-resistor", &tmp);
-	if (spec_pdata->ibb_soft_enb) {
+	if (regulator_mgr->ibb_soft_enb) {
 		rc = of_property_read_u32(np,
 			"somc,qpnp-ibb-discharge-resistor", &tmp);
 		if (!rc)
-			spec_pdata->ibb_soft_start = tmp;
+			regulator_mgr->ibb_soft_start = tmp;
 	}
 
-	spec_pdata->lab_pd_enb = of_find_property(np,
+	regulator_mgr->lab_pd_enb = of_find_property(np,
 			"somc,qpnp-lab-full-pull-down", &tmp);
-	if (spec_pdata->lab_pd_enb)
-		spec_pdata->lab_pd_full = of_property_read_bool(np,
+	if (regulator_mgr->lab_pd_enb)
+		regulator_mgr->lab_pd_full = of_property_read_bool(np,
 			"somc,qpnp-lab-full-pull-down");
 
-	spec_pdata->ibb_pd_enb = of_find_property(np,
+	regulator_mgr->ibb_pd_enb = of_find_property(np,
 			"somc,qpnp-ibb-full-pull-down", &tmp);
-	if (spec_pdata->ibb_pd_enb)
-		spec_pdata->ibb_pd_full = of_property_read_bool(np,
+	if (regulator_mgr->ibb_pd_enb)
+		regulator_mgr->ibb_pd_full = of_property_read_bool(np,
 			"somc,qpnp,ibb-full-pull-down");
 
-	ctrl_pdata->spec_pdata->vreg_init = somc_panel_vregs_init;
-	ctrl_pdata->spec_pdata->vreg_ctrl = somc_panel_vregs_ctrl;
+	regulator_mgr->vreg_init = somc_panel_vregs_init;
+	regulator_mgr->vreg_ctrl = somc_panel_vregs_ctrl;
 
 	return 0;
 }

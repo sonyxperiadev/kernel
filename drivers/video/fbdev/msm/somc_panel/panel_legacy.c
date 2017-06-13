@@ -283,6 +283,7 @@ static int legacy_panel_power_on_ex(struct mdss_panel_data *pdata)
 {
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
 	struct mdss_panel_specific_pdata *spec_pdata = NULL;
+	struct somc_panel_regulator_mgr *regulator_mgr = NULL;
 	int ret;
 
 	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
@@ -305,8 +306,10 @@ static int legacy_panel_power_on_ex(struct mdss_panel_data *pdata)
 	if (pdata->panel_info.pdest != DISPLAY_1)
 		return 0;
 
-	if (spec_pdata->vreg_init)
-		spec_pdata->vreg_init(ctrl_pdata);
+	regulator_mgr = spec_pdata->regulator_mgr;
+
+	if (regulator_mgr->vreg_init)
+		regulator_mgr->vreg_init(ctrl_pdata);
 
 	somc_panel_down_period_quirk(spec_pdata);
 
