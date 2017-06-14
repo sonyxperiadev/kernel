@@ -612,6 +612,14 @@ config QCOM_SPMI_ADC5
 	  To compile this driver as a module, choose M here: the module will
 	  be called qcom-spmi-adc5.
 
+config SOMC_RRADC_EXTENSION
+	bool "SoMC Extension for QC PMIC Round Robin ADC"
+	depends on QCOM_RRADC
+	default y if ARCH_SONY_YOSHINO
+	help
+	  This is additional code from SoMC for RRADC. Adds a DT
+	  property for custom RRADC registers configuration.
+
 config QCOM_TADC
 	tristate "Qualcomm Technologies, Inc. TADC driver"
 	depends on MFD_I2C_PMIC
