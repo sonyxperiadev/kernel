@@ -130,25 +130,41 @@ int somc_panel_vreg_ctrl(
 	return ret;
 }
 
-void somc_panel_chg_fps_cmds_send(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
+
+int somc_panel_allocate(struct platform_device *pdev,
+		struct mdss_dsi_ctrl_pdata *ctrl)
 {
-	struct mdss_panel_specific_pdata *spec_pdata = NULL;
-	struct mdss_panel_info *pinfo = NULL;
-	u32 fps_cmds, fps_payload;
-	char rtn;
+	ctrl->spec_pdata = devm_kzalloc(&pdev->dev,
+		sizeof(struct mdss_panel_specific_pdata),
+		GFP_KERNEL);
+	if (!ctrl->spec_pdata) {
+		pr_err("%s: FAILED: cannot allocate spec_pdata\n", __func__);
+		goto fail_specific;
+	};
 
-	pinfo = &ctrl_pdata->panel_data.panel_info;
-	spec_pdata = ctrl_pdata->spec_pdata;
+	ctrl->spec_pdata->color_mgr = devm_kzalloc(&pdev->dev,
+		sizeof(struct somc_panel_color_mgr), GFP_KERNEL);
+	if (!ctrl->spec_pdata->color_mgr) {
+		pr_err("%s: FAILED: Cannot allocate color_mgr\n", __func__);
+		goto fail_color_mgr;
+	};
 
-	if (ctrl_pdata->panel_data.panel_info.mipi.mode == DSI_CMD_MODE) {
-		if (spec_pdata->fps_cmds.cmd_cnt) {
-			fps_cmds = pinfo->lcdc.chg_fps.rtn_pos.pos[0];
-			fps_payload = pinfo->lcdc.chg_fps.rtn_pos.pos[1];
-			rtn = CHANGE_PAYLOAD(fps_cmds, fps_payload);
-			pr_debug("%s: change fps sequence --- rtn = 0x%x\n",
-				__func__, rtn);
-			mdss_dsi_panel_cmds_send(ctrl_pdata,
-						&spec_pdata->fps_cmds);
-		}
-	}
+	ctrl->spec_pdata->regulator_mgr = devm_kzalloc(&pdev->dev,
+		sizeof (struct somc_panel_regulator_mgr), GFP_KERNEL);
+	if (!ctrl->spec_pdata->regulator_mgr) {
+		pr_err("%s: FAILED: Cannot allocate regulator_mgr\n",
+			__func__);
+		goto fail_regulator_mgr;
+	};
+
+	return 0;
+
+fail_regulator_mgr:
+	devm_kfree(&pdev->dev, ctrl->spec_pdata->regulator_mgr);
+fail_color_mgr:
+	devm_kfree(&pdev->dev, ctrl->spec_pdata->color_mgr);
+fail_specific:
+	devm_kfree(&pdev->dev, ctrl->spec_pdata);
+
+	return -ENOMEM;
 }

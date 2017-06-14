@@ -61,6 +61,7 @@ struct mdss_pcc_data {
 	u8 pcc_sts;
 	u32 u_data;
 	u32 v_data;
+	u32 rev_u[2], rev_v[2]; /* ROI */
 	int param_type;
 };
 
@@ -106,8 +107,93 @@ struct poll_ctrl {
 	void (*cancel_work) (struct mdss_dsi_ctrl_pdata *ctrl_pdata);
 };
 
-struct mdss_panel_specific_pdata {
+typedef enum FPS_TYPE {
+	FPSD,
+	VPSD
+} fps_type;
+
+typedef enum FPS_PANEL_TYPE {
+	FPS_TYPE_UHD_4K,
+	FPS_TYPE_HYBRID_INCELL,
+	FPS_TYPE_FULL_INCELL,
+} fps_panel_type;
+
+typedef enum FPS_PANEL_MODE {
+	FPS_MODE_SUSRES,
+	FPS_MODE_DYNAMIC,
+} fps_panel_mode;
+
+struct change_fps_send_pos {
+	int num;
+	int *pos;
+};
+
+struct change_fps {
+	/* common */
+	bool enable;
+	fps_panel_type type;
+	fps_panel_mode mode;
+	u32 dric_vdisp;
+	struct change_fps_send_pos send_pos;
+	u32 dric_rclk;
+	u32 dric_total_porch;
+	u8 chg_fps_type;
+	u8 chg_fps_mode;
+	int input_fpks;
+
+	/* uhd_4k */
+	bool rtn_adj;
+
+	/* hybrid */
+	u32 dric_mclk;
+	u32 dric_vtouch;
+	u16 dric_rtn;
+	u16 send_byte;
+	u16 mask_pos;
+	char mask;
+
+	/* full */
+	u32 dric_tp;
+};
+
+struct somc_panel_color_mgr {
 	int (*pcc_setup)(struct mdss_panel_data *pdata);
+	int (*picadj_setup)(struct mdss_panel_data *pdata);
+	int (*unblank_hndl)(struct mdss_dsi_ctrl_pdata *ctrl);
+
+	bool mdss_force_pcc;
+
+	struct dsi_panel_cmds pre_uv_read_cmds;
+	struct dsi_panel_cmds uv_read_cmds;
+
+	struct mdss_pcc_data pcc_data;
+	struct mdp_pa_cfg picadj_data;
+};
+
+struct somc_panel_regulator_mgr {
+	int (*vreg_init) (struct mdss_dsi_ctrl_pdata *ctrl);
+	int (*vreg_ctrl) (struct mdss_dsi_ctrl_pdata *ctrl, int enable);
+
+	u32 lab_output_voltage;
+	u32 ibb_output_voltage;
+	u32 lab_current_max;
+	u32 ibb_current_max;
+	u32 lab_fast_precharge_time;
+	u32 lab_soft_start;
+	u32 ibb_soft_start;
+	bool lab_pd_full;
+	bool ibb_pd_full;
+
+	bool lab_current_max_enable;
+	bool ibb_current_max_enable;
+	bool fast_prechg_enb;
+	bool lab_soft_enb;
+	bool ibb_soft_enb;
+	bool lab_pd_enb;
+	bool ibb_pd_enb;
+};
+
+struct mdss_panel_specific_pdata {
 	int (*disp_on) (struct mdss_panel_data *pdata);
 	int (*detect) (struct mdss_panel_data *pdata);
 	int (*update_panel) (struct mdss_panel_data *pdata);
@@ -124,6 +210,9 @@ struct mdss_panel_specific_pdata {
 	int (*parse_specific_dt)(struct device_node *np,
 				 struct mdss_dsi_ctrl_pdata *ctrl_pdata);
 
+	struct somc_panel_color_mgr *color_mgr;
+	struct somc_panel_regulator_mgr *regulator_mgr;
+
 	bool disp_on_in_boot;
 	bool disp_onoff_state;
 	bool detected;
@@ -133,8 +222,6 @@ struct mdss_panel_specific_pdata {
 	int32_t adc_uv;
 	int panel_detect;
 	int init_from_begin;
-	int cabc_enabled;
-	int cabc_active;
 	int lcm_bl_gpio;
 	int disp_dcdc_en_gpio;
 	int disp_p5;
@@ -154,22 +241,11 @@ struct mdss_panel_specific_pdata {
 	struct mdss_panel_power_seq ewu_seq;
 #endif
 
-	struct dsi_panel_cmds cabc_early_on_cmds;
-	struct dsi_panel_cmds cabc_on_cmds;
-
-	struct dsi_panel_cmds cabc_off_cmds;
-	struct dsi_panel_cmds cabc_late_off_cmds;
 	struct dsi_panel_cmds fps_cmds;
 
 	struct dsi_panel_cmds einit_cmds;
 	struct dsi_panel_cmds init_cmds;
 	struct dsi_panel_cmds id_read_cmds;
-
-	bool pcc_enable;
-	struct dsi_panel_cmds pre_uv_read_cmds;
-	struct dsi_panel_cmds uv_read_cmds;
-	struct mdss_pcc_data pcc_data;
-	struct mdp_pa_cfg picadj_data;
 
 	struct mdss_panel_power_seq on_seq;
 	struct mdss_panel_power_seq off_seq;
@@ -177,34 +253,16 @@ struct mdss_panel_specific_pdata {
 	u32 down_period;
 	u32 new_vfp;
 
-	/* LAB/IBB SoMC regulator params */
-	u32 lab_output_voltage;
-	u32 ibb_output_voltage;
-	u32 lab_current_max;
-	u32 ibb_current_max;
-	u32 lab_fast_precharge_time;
-	u32 lab_soft_start;
-	u32 ibb_soft_start;
-	bool lab_pd_full;
-	bool ibb_pd_full;
-
-	bool lab_current_max_enable;
-	bool ibb_current_max_enable;
-	bool fast_prechg_enb;
-	bool lab_soft_enb;
-	bool ibb_soft_enb;
-	bool lab_pd_enb;
-	bool ibb_pd_enb;
-	int (*vreg_init) (struct mdss_dsi_ctrl_pdata *ctrl);
-	int (*vreg_ctrl) (struct mdss_dsi_ctrl_pdata *ctrl, int enable);
-
+	struct change_fps chg_fps;
 	struct poll_ctrl polling;
 };
 
+void somc_panel_fpsd_data_update(struct msm_fb_data_type *mfd);
 int mdss_dsi_panel_power_detect(struct platform_device *pdev, int enable);
-int mdss_dsi_panel_fps_data_update(struct msm_fb_data_type *mfd);
 int mdss_dsi_pinctrl_set_state(struct mdss_dsi_ctrl_pdata *ctrl_pdata,
 					bool active);
+int somc_panel_allocate(struct platform_device *pdev,
+		struct mdss_dsi_ctrl_pdata *ctrl);
 
 static inline struct mdss_dsi_ctrl_pdata *mdss_dsi_get_master_ctrl(
 					struct mdss_panel_data *pdata)
@@ -218,5 +276,4 @@ static inline struct mdss_dsi_ctrl_pdata *mdss_dsi_get_master_ctrl(
 
 	return mdss_dsi_get_ctrl_by_index(dsi_master);
 }
-
 #endif

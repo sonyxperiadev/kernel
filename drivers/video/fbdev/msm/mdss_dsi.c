@@ -3355,15 +3355,12 @@ static int mdss_dsi_ctrl_probe(struct platform_device *pdev)
 	atomic_set(&ctrl_pdata->te_irq_ready, 0);
 
 #ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
-	ctrl_pdata->spec_pdata = devm_kzalloc(&pdev->dev,
-		sizeof(struct mdss_panel_specific_pdata),
-		GFP_KERNEL);
-	if (!ctrl_pdata->spec_pdata) {
-		pr_err("%s: FAILED: cannot allocate spec_pdata\n",
+	rc = somc_panel_allocate(pdev, ctrl_pdata);
+	if (unlikely(rc != 0)) {
+		pr_err("%s: FAILED: cannot allocate somc_panel structures\n",
 			__func__);
-		devm_kfree(&pdev->dev, ctrl_pdata->spec_pdata);
-		return -ENOMEM;
-	};
+		return rc;
+	}
 #endif
 
 	ctrl_name = of_get_property(pdev->dev.of_node, "label", NULL);
@@ -3476,15 +3473,6 @@ static int mdss_dsi_ctrl_probe(struct platform_device *pdev)
 		pr_err("%s: invalid controller configuration\n", __func__);
 		goto error_shadow_clk_deinit;
 	}
-
-#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
-	if (ctrl_pdata->panel_data.panel_info.cont_splash_enabled &&
-		ctrl_pdata->spec_pdata->pcc_data.pcc_sts & PCC_STS_UD) {
-		rc = ctrl_pdata->spec_pdata->pcc_setup(&ctrl_pdata->panel_data);
-		if (rc == 0)
-			ctrl_pdata->spec_pdata->pcc_data.pcc_sts &= ~PCC_STS_UD;
-	}
-#endif /* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 
 	pr_info("%s: Dsi Ctrl->%d initialized, DSI rev:0x%x, PHY rev:0x%x\n",
 		__func__, index, ctrl_pdata->shared_data->hw_rev,
@@ -4607,6 +4595,10 @@ int dsi_panel_device_register(struct platform_device *ctrl_pdev,
 	ctrl_pdata->panel_data.detect = spec_pdata->detect;
 	ctrl_pdata->panel_data.update_panel = spec_pdata->update_panel;
 	ctrl_pdata->panel_data.panel_pdev = ctrl_pdev;
+
+ #ifdef CONFIG_SOMC_PANEL_LABIBB
+	ctrl_pdata->spec_pdata->regulator_mgr->vreg_init(ctrl_pdata);
+ #endif
 #endif
 
 	if (ctrl_pdata->status_mode == ESD_REG ||

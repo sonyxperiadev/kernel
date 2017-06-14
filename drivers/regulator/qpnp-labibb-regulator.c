@@ -393,23 +393,6 @@
 
 
 #ifdef CONFIG_SOMC_LCD_OCP_ENABLED
-/* request_irq */
-#define REQUEST_IRQ(chip, devnode, irq_num, irq_name, irq_handler, flags, rc)\
-do {									\
-	irq_num = of_irq_get_byname(devnode, irq_name);			\
-	if (irq_num < 0) {						\
-		dev_err(chip->dev, "Unable to get " irq_name " irq\n");	\
-		return -ENXIO;						\
-	}								\
-	rc = devm_request_irq(&chip->pdev->dev, irq_num, irq_handler,	\
-		flags, irq_name, chip);					\
-	if (rc < 0) {							\
-		dev_err(chip->dev, "Unable to request " irq_name " irq: %d\n",\
-				rc);					\
-		return -ENXIO;						\
-	}								\
-} while (0)								\
-
 /* enable_irq */
 #define ENABLE_IRQ(irq_num)						\
 do {									\
@@ -725,10 +708,6 @@ struct ibb_regulator {
 struct qpnp_labibb {
 	struct device			*dev;
 	struct platform_device		*pdev;
-#ifdef CONFIG_SOMC_LCD_OCP_ENABLED
-	struct device_node		*node_lab;
-	struct device_node		*node_ibb;
-#endif
 	struct regmap			*regmap;
 	struct pmic_revid_data		*pmic_rev_id;
 	u16				lab_base;
@@ -1714,11 +1693,6 @@ static int qpnp_lab_request_interrupt(struct qpnp_labibb *labibb)
 {
 	int rc = 0;
 
-	if (!labibb->node_lab) {
-		pr_err("%s: lab spmi_resource is NULL\n", __func__);
-		goto exit;
-	}
-
 	/* lab int set type */
 	rc = qpnp_labibb_masked_write(labibb, labibb->lab_base +
 		REG_LAB_INT_SET_TYPE,
@@ -1774,14 +1748,6 @@ static int qpnp_lab_request_interrupt(struct qpnp_labibb *labibb)
 		goto exit;
 	}
 
-	/* request irq */
-	REQUEST_IRQ(labibb, labibb->node_lab,
-		labibb->lab_vreg_irq, "lab_vreg_not_ok_interrupt",
-		lab_vreg_handler, IRQF_LAB_FLAGS, rc);
-	if (rc) {
-		pr_err("lab request irq failed rc=%d\n", rc);
-		goto exit;
-	}
 exit:
 	return rc;
 }
@@ -1789,11 +1755,6 @@ exit:
 static int qpnp_ibb_request_interrupt(struct qpnp_labibb *labibb)
 {
 	int rc = 0;
-
-	if (!labibb->node_ibb) {
-		pr_err("%s: ibb spmi_resource is NULL\n", __func__);
-		goto exit;
-	}
 
 	/* ibb int set type */
 	rc = qpnp_labibb_masked_write(labibb, labibb->ibb_base +
@@ -1850,14 +1811,6 @@ static int qpnp_ibb_request_interrupt(struct qpnp_labibb *labibb)
 		goto exit;
 	}
 
-	/* request irq */
-	REQUEST_IRQ(labibb, labibb->node_ibb,
-		labibb->ibb_vreg_irq, "ibb_vreg_not_ok_interrupt",
-		ibb_vreg_handler, IRQF_IBB_FLAGS, rc);
-	if (rc) {
-		pr_err("ibb request irq failed rc=%d\n", rc);
-		goto exit;
-	}
 exit:
 	return rc;
 }
@@ -3268,6 +3221,17 @@ static int register_qpnp_lab_regulator(struct qpnp_labibb *labibb,
 								rc);
 			return rc;
 		}
+
+		rc = devm_request_threaded_irq(labibb->dev,
+				labibb->lab_vreg_irq, NULL,
+				lab_vreg_handler,
+				IRQF_LAB_FLAGS,
+				"lab_vreg_not_ok_interrupt", labibb);
+		if (rc) {
+			pr_err("Failed to register 'lab_vreg_not_ok_interrupt' irq rc=%d\n",
+						rc);
+			return rc;
+		}
 #endif /* CONFIG_SOMC_LCD_OCP_ENABLED */
 	}
 
@@ -4364,6 +4328,16 @@ static int register_qpnp_ibb_regulator(struct qpnp_labibb *labibb,
 								rc);
 			return rc;
 		}
+		rc = devm_request_threaded_irq(labibb->dev,
+				labibb->ibb_vreg_irq, NULL,
+				ibb_vreg_handler,
+				IRQF_IBB_FLAGS,
+				"ibb_vreg_not_ok_interrupt", labibb);
+		if (rc) {
+			pr_err("Failed to register 'ibb_vreg_not_ok_interrupt' irq rc=%d\n",
+						rc);
+			return rc;
+		}
 #endif /* CONFIG_SOMC_LCD_OCP_ENABLED */
 	} else {
 		/* SWIRE_RDY and IBB_MODULE_EN not enabled */
@@ -4811,9 +4785,6 @@ static int qpnp_labibb_regulator_probe(struct platform_device *pdev)
 
 		switch (type) {
 		case QPNP_LAB_TYPE:
-#ifdef CONFIG_SOMC_LCD_OCP_ENABLED
-			labibb->node_lab = child;
-#endif
 			labibb->lab_base = base;
 			labibb->lab_dig_major = revision;
 			rc = qpnp_lab_register_irq(child, labibb);
@@ -4828,9 +4799,6 @@ static int qpnp_labibb_regulator_probe(struct platform_device *pdev)
 		break;
 
 		case QPNP_IBB_TYPE:
-#ifdef CONFIG_SOMC_LCD_OCP_ENABLED
-			labibb->node_ibb = child;
-#endif
 			labibb->ibb_base = base;
 			labibb->ibb_dig_major = revision;
 			rc = register_qpnp_ibb_regulator(labibb, child);
