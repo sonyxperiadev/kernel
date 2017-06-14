@@ -39,6 +39,11 @@
 	};
 };
 
+&cont_splash_mem {
+	reg = <0x0 0x9d400000 0x0 0x02400000>;
+};
+
+
 &soc {
 	pinctrl@03400000 {
 		disabled-pins = <0 1 2 3 81 82 83 84>;
@@ -2945,6 +2950,7 @@
 };
 
 &sdhc_2 {
+	qcom,sdr104-wa;
 	cd-gpios = <&tlmm 95 0x0>;
 };
 
