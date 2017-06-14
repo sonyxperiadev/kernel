@@ -10806,10 +10806,13 @@ wl_notify_gscan_event(struct bcm_cfg80211 *cfg, bcm_struct_cfgdev *cfgdev,
 			}
 			break;
 		case WLC_E_PFN_GSCAN_FULL_RESULT:
-			ptr = dhd_dev_process_full_gscan_result(ndev, data, &send_evt_bytes);
+			ptr =
+			dhd_dev_process_full_gscan_result(ndev, data, len,
+							  &send_evt_bytes);
 			if (ptr) {
 				wl_cfgvendor_send_async_event(wiphy, ndev,
-				    GOOGLE_SCAN_FULL_RESULTS_EVENT, ptr, send_evt_bytes);
+				    GOOGLE_SCAN_FULL_RESULTS_EVENT, ptr,
+				    send_evt_bytes);
 				kfree(ptr);
 			} else {
 				err = -ENOMEM;
