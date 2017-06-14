@@ -347,9 +347,13 @@ static int msm_pcm_playback_prepare(struct snd_pcm_substream *substream)
 			return -ENOMEM;
 		}
 	} else {
+#ifdef CONFIG_ARCH_MSM8998
 		ret = q6asm_open_write_v4(prtd->audio_client,
 			fmt_type, bits_per_sample);
-
+#else
+		ret = q6asm_open_write_v3(prtd->audio_client,
+			fmt_type, bits_per_sample);
+#endif
 		if (ret < 0) {
 			pr_err("%s: q6asm_open_write_v4 failed (%d)\n",
 			__func__, ret);
