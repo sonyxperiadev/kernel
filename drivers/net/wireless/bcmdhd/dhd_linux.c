@@ -10652,11 +10652,12 @@ dhd_dev_hotlist_scan_event(struct net_device *dev,
 /* Linux wrapper to call common dhd_process_full_gscan_result */
 void *
 dhd_dev_process_full_gscan_result(struct net_device *dev,
-const void  *data, int *send_evt_bytes)
+const void  *data, uint32 len, int *send_evt_bytes)
 {
 	dhd_info_t *dhd = *(dhd_info_t **)netdev_priv(dev);
 
-	return (dhd_process_full_gscan_result(&dhd->pub, data, send_evt_bytes));
+	return dhd_process_full_gscan_result(&dhd->pub, data, len,
+			send_evt_bytes);
 }
 
 void
