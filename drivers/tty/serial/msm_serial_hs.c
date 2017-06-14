@@ -2304,6 +2304,10 @@ void msm_hs_resource_off(struct msm_hs_port *msm_uport)
 		msm_hs_write(uport, UART_DM_DMEN, data);
 		sps_tx_disconnect(msm_uport);
 	}
+#ifndef CONFIG_BT_MSM_SLEEP
+	if (!atomic_read(&msm_uport->client_req_state))
+		msm_hs_enable_flow_control(uport, false);
+#endif
 }
 
 void msm_hs_resource_on(struct msm_hs_port *msm_uport)
@@ -2742,10 +2746,8 @@ static int msm_hs_startup(struct uart_port *uport)
 
 
 	spin_lock_irqsave(&uport->lock, flags);
-#ifdef CONFIG_BT_MSM_SLEEP
 	atomic_set(&msm_uport->client_count, 0);
 	atomic_set(&msm_uport->client_req_state, 0);
-#endif
 	LOG_USR_MSG(msm_uport->ipc_msm_hs_pwr_ctxt,
 			"%s: Client_Count 0\n", __func__);
 	msm_hs_start_rx_locked(uport);
