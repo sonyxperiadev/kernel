@@ -39,6 +39,11 @@
 	};
 };
 
+&cont_splash_mem {
+	reg = <0x0 0x9d400000 0x0 0x02400000>;
+};
+
+
 &soc {
 	pinctrl@03400000 {
 		disabled-pins = <0 1 2 3 81 82 83 84>;
@@ -462,11 +467,11 @@
 	ramoops {
 		compatible = "ramoops";
 		memory-region = <&pstore_reserve_mem>;
-		record-size = <0x0 0x1000>;
-		console-size = <0x0 0x40000>;
-		ftrace-size = <0x0 0x0>;
-		pmsg-size = <0x0 0x0>;
-		ecc-size = <0x0 0x0>;
+		record-size = <0x0 0x10000>;
+		console-size = <0x0 0x60000>;
+		ftrace-size = <0x0 0x10000>;
+		pmsg-size = <0x0 0x20000>;
+		ecc-size = <16>;
 	};
 
 	gpio_keys {
@@ -2866,6 +2871,15 @@
 	};
 };
 
+&mdss_hdmi_tx {
+	/delete-property/ pinctrl-names;
+	/delete-property/ pinctrl-0;
+	/delete-property/ pinctrl-1;
+	/delete-property/ pinctrl-2;
+	/delete-property/ pinctrl-3;
+	/delete-property/ pinctrl-4;
+};
+
 &pmx_mdss {
 	mdss_dsi_active: mdss_dsi_active {
 		mux {
@@ -2936,6 +2950,7 @@
 };
 
 &sdhc_2 {
+	qcom,sdr104-wa;
 	cd-gpios = <&tlmm 95 0x0>;
 };
 

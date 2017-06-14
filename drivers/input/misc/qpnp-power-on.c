@@ -2357,6 +2357,20 @@ static int qpnp_pon_probe(struct platform_device *pdev)
 					"qcom,store-hard-reset-reason");
 
 	qpnp_pon_debugfs_init(pdev);
+
+#ifdef CONFIG_ARCH_SONY_YOSHINO
+	if (pon == sys_reset_dev) {
+		rc = qpnp_pon_reset_config(pon, PON_POWER_OFF_WARM_RESET);
+		if (rc) {
+			dev_err(&pon->pdev->dev,
+				"Error configuring primary PON rc: %d\n", rc);
+			return rc;
+		}
+
+		dev_info(&pon->pdev->dev, "Configured primary PON for warm reset\n");
+	}
+#endif
+
 	return 0;
 }
 
