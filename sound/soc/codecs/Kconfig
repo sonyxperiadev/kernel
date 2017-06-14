@@ -763,6 +763,10 @@ config SND_SOC_WCD_CPE
 	tristate
 	default y if SND_SOC_WCD9330=y || SND_SOC_WCD9335=y
 
+config SND_SOC_WCD_CPE_SOMC_EXT
+	bool "WCD CPE SoMC Extensions"
+	depends on SND_SOC_WCD_CPE
+
 config AUDIO_EXT_CLK
 	tristate
 	default y if SND_SOC_WCD9335=y || SND_SOC_WCD9330=y || SND_SOC_SDM660_CDC=y
