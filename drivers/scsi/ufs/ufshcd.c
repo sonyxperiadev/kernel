@@ -7491,7 +7491,7 @@ static int ufshcd_query_ioctl(struct ufs_hba *hba, u8 lun, void __user *buffer)
 		case QUERY_ATTR_IDN_CORR_PRG_BLK_NUM:
 			index = lun;
 			break;
-#ifndef CONFIG_ARCH_SONY_YOSHINO
+#ifdef CONFIG_ARCH_SONY_YOSHINO
 		case QUERY_ATTR_IDN_PURGE_STATUS:
 			index = 0;
 			if (hba->dev_quirks & UFS_DEVICE_QUIRK_NO_PURGE) {
