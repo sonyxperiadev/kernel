@@ -1,0 +1,89 @@
+config BCMDHD
+	tristate "Broadcom wireless cards support"
+	depends on MMC || PCI
+	---help---
+	  This module adds support for wireless adapters based on
+	  Broadcom chipset.
+
+config BCMDHD_SDIO
+	bool "SDIO bus interface support"
+	depends on BCMDHD && MMC && !BCMDHD_PCIE
+
+config BCMDHD_PCIE
+	bool "PCIe bus interface support"
+	depends on BCMDHD && PCI
+
+config BCM4339
+	bool "Broadcom 4339 wireless cards support"
+	depends on BCMDHD && BCMDHD_SDIO
+	---help---
+	  This module adds support for wireless adapters based on
+	  Broadcom 4339 chipset.
+
+config BCM4354
+	bool "Broadcom 4354 wireless cards support"
+	depends on BCMDHD && (BCMDHD_SDIO || BCMDHD_PCIE)
+	---help---
+	  This module adds support for wireless adapters based on
+	  Broadcom 4354 chipset.
+
+config BCM4356
+	bool "Broadcom 4356 wireless cards support"
+	depends on BCMDHD && (BCMDHD_SDIO || BCMDHD_PCIE)
+	---help---
+	  This module adds support for wireless adapters based on
+	  Broadcom 4356 chipset.
+
+config BCM4359
+	bool "Broadcom 4359 wireless cards support"
+	depends on BCMDHD && BCMDHD_PCIE
+	---help---
+	  This module adds support for wireless adapters based on
+	  Broadcom 4359 chipset.
+
+config BCMDHD_FW_PATH
+	depends on BCMDHD
+	string "Firmware path"
+	default "/system/vendor/firmware/fw_bcmdhd.bin"
+	---help---
+	  Path to the firmware file.
+
+config BCMDHD_NVRAM_PATH
+	depends on BCMDHD
+	string "NVRAM path"
+	default "/system/etc/wifi/bcmdhd.cal"
+	---help---
+	  Path to the calibration file.
+
+config DHD_USE_STATIC_BUF
+	bool "Enable memory preallocation"
+	depends on BCMDHD
+	default n
+	---help---
+	  Use memory preallocated in platform
+
+config DHD_USE_SCHED_SCAN
+	bool "Use CFG80211 sched scan"
+	depends on BCMDHD && CFG80211
+	default n
+	---help---
+	  Use CFG80211 sched scan
+
+config BROADCOM_WIFI_RESERVED_MEM
+	bool "BROADCOM Reserved memory for wifi device"
+	depends on BCMDHD
+	---help---
+	  This is a configuration for broadcom WLAN driver.
+
+config BCMDHD_DEBUG_PAGEALLOC
+	bool "Enable Memory Pagealloc Debugging Support"
+	depends on (BCM4354 || BCM4356 || BCM4359)
+	---help---
+	  Enable Memory Pagealloc Debugging
+
+config DHD_SET_RANDOM_MAC_VAL
+	hex "Vendor OUI"
+	depends on BCMDHD
+	default 0x001A11
+	---help---
+	  Set vendor OUI for SoftAP
