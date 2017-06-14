@@ -2866,6 +2866,15 @@
 	};
 };
 
+&mdss_hdmi_tx {
+	/delete-property/ pinctrl-names;
+	/delete-property/ pinctrl-0;
+	/delete-property/ pinctrl-1;
+	/delete-property/ pinctrl-2;
+	/delete-property/ pinctrl-3;
+	/delete-property/ pinctrl-4;
+};
+
 &pmx_mdss {
 	mdss_dsi_active: mdss_dsi_active {
 		mux {
