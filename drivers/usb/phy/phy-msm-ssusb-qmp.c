@@ -91,6 +91,26 @@ enum core_ldo_levels {
 #define USB3_UNI_PCS_EQ_CONFIG5		0x09EC
 #define RXEQ_RETRAIN_MODE_SEL		BIT(6)
 
+#ifdef CONFIG_MSM_USB_PHY_SOMC_EXT
+#define SSUSB3PHY_TXA_DRV_LVL		0x21c
+#define SSUSB3PHY_TXB_DRV_LVL		0x61c
+#define SSUSB3PHY_TXA_EMP_POST1_LVL	0x20c
+#define SSUSB3PHY_TXB_EMP_POST1_LVL	0x60c
+
+unsigned int ssphy_txa_drv_lvl;
+unsigned int ssphy_txb_drv_lvl;
+unsigned int ssphy_txa_emp_post1_lvl;
+unsigned int ssphy_txb_emp_post1_lvl;
+module_param(ssphy_txa_drv_lvl, uint, S_IRUGO | S_IWUSR);
+module_param(ssphy_txb_drv_lvl, uint, S_IRUGO | S_IWUSR);
+module_param(ssphy_txa_emp_post1_lvl, uint, S_IRUGO | S_IWUSR);
+module_param(ssphy_txb_emp_post1_lvl, uint, S_IRUGO | S_IWUSR);
+MODULE_PARM_DESC(ssphy_txa_drv_lvl, "SSUSB3PHY QSERDES TXA DRV LVL");
+MODULE_PARM_DESC(ssphy_txb_drv_lvl, "SSUSB3PHY QSERDES TXB DRV LVL");
+MODULE_PARM_DESC(ssphy_txa_emp_post1_lvl, "SSUSB3PHY QSERDES TXA EMP POST1 LVL");
+MODULE_PARM_DESC(ssphy_txb_emp_post1_lvl, "SSUSB3PHY QSERDES TXB EMP POST1 LVL");
+#endif /* CONFIG_MSM_USB_PHY_SOMC_EXT */
+
 enum qmp_phy_rev_reg {
 	USB3_PHY_PCS_STATUS,
 	USB3_PHY_AUTONOMOUS_MODE_CTRL,
@@ -368,6 +388,23 @@ static int configure_phy_regs(struct usb_phy *uphy,
 			usleep_range(reg->delay, reg->delay + 10);
 		reg++;
 	}
+
+#ifdef CONFIG_MSM_USB_PHY_SOMC_EXT
+	/* ssusb phy dynamic set */
+	if (ssphy_txa_drv_lvl)
+		writel_relaxed(ssphy_txa_drv_lvl,
+				phy->base + SSUSB3PHY_TXA_DRV_LVL);
+	if (ssphy_txb_drv_lvl)
+		writel_relaxed(ssphy_txb_drv_lvl,
+				phy->base + SSUSB3PHY_TXB_DRV_LVL);
+	if (ssphy_txa_emp_post1_lvl)
+		writel_relaxed(ssphy_txa_emp_post1_lvl,
+				phy->base + SSUSB3PHY_TXA_EMP_POST1_LVL);
+	if (ssphy_txb_emp_post1_lvl)
+		writel_relaxed(ssphy_txb_emp_post1_lvl,
+				phy->base + SSUSB3PHY_TXB_EMP_POST1_LVL);
+
+#endif
 	return 0;
 }
 
