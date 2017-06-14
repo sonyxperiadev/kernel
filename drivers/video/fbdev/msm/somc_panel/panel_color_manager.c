@@ -611,9 +611,10 @@ static int somc_panel_colormgr_unblank_handler(struct mdss_dsi_ctrl_pdata *ctrl)
 		color_mgr->pcc_data.pcc_sts &= ~PCC_STS_UD;
 	}
 
-	if (color_mgr->picadj_data.flags & MDP_PP_OPS_ENABLE)
+	if (color_mgr->picadj_data.flags & MDP_PP_OPS_ENABLE) {
 		color_mgr->picadj_setup(&ctrl->panel_data);
-
+		color_mgr->picadj_data.flags &= ~MDP_PP_OPS_ENABLE;
+	}
 
 	return 0;
 }
