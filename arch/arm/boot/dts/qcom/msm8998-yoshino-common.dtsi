@@ -462,11 +462,11 @@
 	ramoops {
 		compatible = "ramoops";
 		memory-region = <&pstore_reserve_mem>;
-		record-size = <0x0 0x1000>;
-		console-size = <0x0 0x40000>;
-		ftrace-size = <0x0 0x0>;
-		pmsg-size = <0x0 0x0>;
-		ecc-size = <0x0 0x0>;
+		record-size = <0x0 0x10000>;
+		console-size = <0x0 0x60000>;
+		ftrace-size = <0x0 0x10000>;
+		pmsg-size = <0x0 0x20000>;
+		ecc-size = <16>;
 	};
 
 	gpio_keys {
