@@ -18,6 +18,7 @@
  */
 
 #include "msm8998-yoshino-common.dtsi"
+#include "msm8998-yoshino-maple-camera.dtsi"
 #include "dsi-panel-somc-maple.dtsi"
 
 &soc {
