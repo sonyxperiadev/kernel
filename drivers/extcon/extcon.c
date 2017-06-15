@@ -190,6 +190,14 @@ struct __extcon_info {
 		.name = "MECHANICAL",
 	},
 
+#ifdef CONFIG_EXTCON_SOMC_EXTENSION
+	[EXTCON_VBUS_DROP] = {
+		.type = EXTCON_TYPE_MISC,
+		.id = EXTCON_VBUS_DROP,
+		.name = "VBUS-DROP",
+	},
+#endif
+
 	{ /* sentinel */ }
 };
 
