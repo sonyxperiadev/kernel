@@ -3113,6 +3113,8 @@
 };
 
 &pmi8998_charger {
+	clock-names = "xo";
+	clocks = <&clock_gcc clk_cxo_clk_src>;
 	usb_switch_sel = <&pmi8998_gpios 8 0>;
 	qcom,usb-icl-ua = <1500000>;
 	io-channels = <&pmi8998_rradc 2>,
