@@ -867,9 +867,9 @@ static int pl_init(void)
 		goto release_wakeup_source;
 	}
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
-	chip->fv_votable = create_votable("FV", VOTE_MAX,
-#else
 	chip->fv_votable = create_votable("FV", VOTE_MIN,
+#else
+	chip->fv_votable = create_votable("FV", VOTE_MAX,
 #endif
 					pl_fv_vote_callback,
 					chip);
