@@ -104,4 +104,15 @@ config USB_DWC3_QCOM
 	  Recent Qualcomm SoCs ship with one DesignWare Core USB3 IP inside,
 	  say 'Y' or 'M' if you have one such device.
 
+config USB_DWC3_MSM_ID_POLL
+	bool "Support ID polling function on DesignWare USB Controller for MSM"
+	depends on USB_DWC3_DUAL_ROLE
+	depends on USB_DWC3_QCOM
+	depends on USB_DWC3
+	default n
+	help
+	  Say Y here to enable the ID polling function on the DesignWare USB3.0
+	  (DRD) Controller for MSM driver.
+
+
 endif
