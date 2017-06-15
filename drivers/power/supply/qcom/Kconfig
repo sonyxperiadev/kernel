@@ -92,6 +92,13 @@ config QPNP_SMB2
 	help
 	  Enables support for the SMB2 charging peripheral
 
+config QPNP_SMBFG_NEWGEN_EXTENSION
+	bool "SoMC Charger Extension for new-gen QC SMB2 and FG3"
+	depends on QPNP_SMB2 && QPNP_FG_GEN3
+	help
+	  Say Y here to enable extensional code from SoMC for the
+	  new generation Qualcomm SMBCharger2 and Fuel Gauge Gen3
+
 config SMB138X_CHARGER
 	tristate "SMB138X Battery Charger"
 	depends on MFD_I2C_PMIC

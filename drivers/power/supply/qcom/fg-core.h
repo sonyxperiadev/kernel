@@ -86,6 +86,9 @@ enum fg_debug_flag {
 	FG_BUS_READ		= BIT(6), /* Show REGMAP reads */
 	FG_CAP_LEARN		= BIT(7), /* Show capacity learning */
 	FG_TTF			= BIT(8), /* Show time to full */
+#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+	FG_SOMC			= BIT(15), /* SoMC Extension messages */
+#endif
 };
 
 /* SRAM access */
@@ -171,6 +174,12 @@ enum fg_sram_param_id {
 	FG_SRAM_ESR_TIGHT_FILTER,
 	FG_SRAM_ESR_BROAD_FILTER,
 	FG_SRAM_SLOPE_LIMIT,
+#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+	FG_SRAM_SOC_SYSTEM,
+	FG_SRAM_SOC_MONOTONIC,
+	FG_SRAM_SOC_CUTOFF,
+	FG_SRAM_SOC_FULL,
+#endif
 	FG_SRAM_MAX,
 };
 
@@ -258,6 +267,11 @@ struct fg_dt_props {
 	int	ki_coeff_hi_dischg[KI_COEFF_SOC_LEVELS];
 	int	slope_limit_coeffs[SLOPE_LIMIT_NUM_COEFFS];
 	u8	batt_therm_coeffs[BATT_THERM_NUM_COEFFS];
+#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+	int	therm_coeff_c1;
+	int	therm_coeff_c2;
+	int	therm_coeff_c3;
+#endif
 };
 
 /* parameters from battery profile */
@@ -318,6 +332,13 @@ static const struct fg_pt fg_ln_table[] = {
 	{ 128000,	4852 },
 };
 
+#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+#define ORG_BATT_TYPE_SIZE	9
+#define BATT_TYPE_SIZE		(ORG_BATT_TYPE_SIZE + 2)
+#define BATT_TYPE_FIRST_HYPHEN	4
+#define BATT_TYPE_SECOND_HYPHEN	9
+#define BATT_TYPE_AGING_LEVEL	10
+#endif
 struct fg_chip {
 	struct device		*dev;
 	struct pmic_revid_data	*pmic_rev_id;
@@ -383,6 +404,22 @@ struct fg_chip {
 	struct delayed_work	sram_dump_work;
 	struct fg_circ_buf	ibatt_circ_buf;
 	struct fg_circ_buf	vbatt_circ_buf;
+#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+	/* Learning */
+	int64_t			charge_full_raw;
+	ktime_t			learning_timestamp;
+	int			rated_capacity;
+	int			initial_capacity;
+
+	/* Soft Charge */
+	int			batt_aging_level;
+	int			saved_batt_aging_level;
+	char			org_batt_type_str[ORG_BATT_TYPE_SIZE + 1];
+
+	/* Recharge */
+	bool			recharge_starting;
+	int			recharge_voltage_mv;
+#endif
 };
 
 /* Debugfs data structures are below */
