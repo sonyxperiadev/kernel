@@ -80,6 +80,10 @@ static const char *extcon_name[] =  {
 	[EXTCON_JIG]			= "JIG",
 	[EXTCON_MECHANICAL]		= "MECHANICAL",
 
+#ifdef CONFIG_EXTCON_SOMC_EXTENSION
+	[EXTCON_VBUS_DROP]		= "VBUS-DROP",
+#endif
+
 	NULL,
 };
 
