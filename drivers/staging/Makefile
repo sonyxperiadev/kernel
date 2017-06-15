@@ -52,3 +52,4 @@ obj-$(CONFIG_ISDN_CAPI)		+= isdn/
 obj-$(CONFIG_UWB)		+= uwb/
 obj-$(CONFIG_USB_WUSB)		+= wusbcore/
 obj-$(CONFIG_QLGE)		+= qlge/
+obj-y				+= wlan-qc/
