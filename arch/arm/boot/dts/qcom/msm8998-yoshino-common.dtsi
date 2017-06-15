@@ -741,6 +741,11 @@
 
 	/* GPIO_9: FLASH_THERM */
 	gpio@c800 {
+		/delete-property/ qcom,mode;
+		/delete-property/ qcom,pull;
+		/delete-property/ qcom,vin-sel;
+		/delete-property/ qcom,src-sel;
+		/delete-property/ qcom,invert;
 		status = "ok";
 		qcom,master-en = <0>;           /* Disable */
 	};
@@ -783,6 +788,11 @@
 
 	/* GPIO_20: NC */
 	gpio@d300 {
+		/delete-property/ qcom,mode;
+		/delete-property/ qcom,pull;
+		/delete-property/ qcom,vin-sel;
+		/delete-property/ qcom,src-sel;
+		/delete-property/ qcom,invert;
 		qcom,master-en = <0>;           /* Disable */
 		status = "okay";
 	};
