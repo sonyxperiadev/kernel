@@ -20,12 +20,20 @@
 #include <linux/extcon.h>
 #include "storm-watch.h"
 
+#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+#include <linux/regulator/machine.h>
+#include <linux/wakelock.h>
+#endif /* CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION */
+
 enum print_reason {
 	PR_INTERRUPT	= BIT(0),
 	PR_REGISTER	= BIT(1),
 	PR_MISC		= BIT(2),
 	PR_PARALLEL	= BIT(3),
 	PR_OTG		= BIT(4),
+#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+	PR_SOMC		= BIT(15),
+#endif /* CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION */
 };
 
 #define DEFAULT_VOTER			"DEFAULT_VOTER"
@@ -58,6 +66,20 @@ enum print_reason {
 #define CTM_VOTER			"CTM_VOTER"
 #define SW_QC3_VOTER			"SW_QC3_VOTER"
 #define AICL_RERUN_VOTER		"AICL_RERUN_VOTER"
+
+#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+#define SOMC_APSD_VOTER			"SOMC_APSD_VOTER"
+#define BATTCHG_SMART_EN_VOTER		"BATTCHG_SMART_EN_VOTER"
+#define BATTCHG_LRC_EN_VOTER		"BATTCHG_LRC_EN_VOTER"
+#define LRC_OVER_SOC_EN_VOTER		"LRC_OVER_SOC_EN_VOTER"
+#define PRODUCT_VOTER			"PRODUCT_VOTER"
+#define TYPEC_VOTER			"TYPEC_VOTER"
+#define HIGH_VOLTAGE_VOTER		"HIGH_VOLTAGE_VOTER"
+
+#define JEITA_VOTER			"JEITA_VOTER"
+#define LOW_BATT_EN_VOTER		"LOW_BATT_EN_VOTER"
+#define QNS_VOTER			"QNS_VOTER"
+#endif /* CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION */
 
 #define VCONN_MAX_ATTEMPTS	3
 #define OTG_MAX_ATTEMPTS	3
@@ -174,6 +196,29 @@ struct smb_chg_freq {
 	unsigned int		freq_above_otg_threshold;
 };
 
+#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+enum somc_lrc_status {
+	LRC_DISABLE,
+	LRC_CHG_OFF,
+	LRC_CHG_ON,
+};
+
+struct somc_usb_ocp {
+	struct regulator_ocp_notification notification;
+	spinlock_t		lock;
+};
+
+struct usb_somc_params {
+	struct somc_usb_ocp		ocp;
+	u8				apsd_result_bit;
+};
+
+struct somc_wake_lock {
+	struct wake_lock	lock;
+	bool			enabled;
+};
+#endif /* CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION */
+
 struct smb_params {
 	struct smb_chg_param	fcc;
 	struct smb_chg_param	fv;
@@ -208,6 +253,9 @@ struct smb_iio {
 	struct iio_channel	*connector_temp_thr1_chan;
 	struct iio_channel	*connector_temp_thr2_chan;
 	struct iio_channel	*connector_temp_thr3_chan;
+#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+	struct iio_channel	*skin_temp_chan;
+#endif /* CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION */
 };
 
 struct reg_info {
@@ -235,6 +283,10 @@ struct smb_charger {
 	struct mutex		write_lock;
 	struct mutex		ps_change_lock;
 	struct mutex		otg_oc_lock;
+#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+	struct mutex		thermal_lock;
+	struct mutex		xo_lock;
+#endif /* CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION */
 
 	/* power supplies */
 	struct power_supply		*batt_psy;
@@ -291,8 +343,10 @@ struct smb_charger {
 	bool			system_suspend_supported;
 	int			boost_threshold_ua;
 	int			system_temp_level;
+#ifndef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
 	int			thermal_levels;
 	int			*thermal_mitigation;
+#endif /* CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION */
 	int			dcp_icl_ua;
 	int			fake_capacity;
 	bool			step_chg_enabled;
@@ -323,6 +377,61 @@ struct smb_charger {
 	int			qnovo_fv_uv;
 	int			usb_icl_delta_ua;
 	int			pulse_cnt;
+
+#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+	/* clocks */
+	struct clk		*xo_clk;
+	bool			xo_holded;
+
+	int			*thermal_fcc_ua;
+	int			*thermal_lo_volt_icl_ua;
+	int			*thermal_hi_volt_icl_ua;
+	int			thermal_fcc_levels;
+	int			thermal_lo_volt_icl_levels;
+	int			thermal_hi_volt_icl_levels;
+	int			product_icl_ua;
+	int			high_voltage_icl_ua;
+	int			input_limited_fcc_ua; /* extension?? */
+	struct usb_somc_params	usb_params;
+	int			usb_switch_sel_gpio;
+
+	/* jeita */
+	struct delayed_work	jeita_work;
+	bool			jeita_sw_ctl_en;
+	bool			jeita_use_aux;
+	int			jeita_skin_temp_condition;
+	int			jeita_batt_temp_condition;
+	int			jeita_synth_temp_condition;
+	int			jeita_aux_thresh_hot;
+	int			jeita_aux_thresh_warm;
+	int			jeita_warm_fcc_ua;
+	int			jeita_cool_fcc_ua;
+
+	/* low batt shutdown */
+	int			low_batt_shutdown_enabled;
+
+	/* smart charge */
+	bool			smart_charge_enabled;
+	bool			smart_charge_suspended;
+	struct delayed_work	smart_charge_wdog_work;
+	struct mutex		smart_charge_lock;
+
+	/* limited range charge */
+	bool			lrc_enabled;
+	int			lrc_socmax;
+	int			lrc_socmin;
+	int			lrc_status;
+	bool			lrc_fake_capacity;
+	int			lrc_hysterisis;
+
+	/* usb remove */
+	struct delayed_work	usb_removal_work;
+	struct input_dev	*usb_removal_input;
+	struct somc_wake_lock	usb_removal_wakelock;
+
+	/* misc */
+	bool			int_cld;
+#endif /* CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION */
 };
 
 int smblib_read(struct smb_charger *chg, u16 addr, u8 *val);
@@ -485,4 +594,32 @@ int smblib_rerun_aicl(struct smb_charger *chg);
 
 int smblib_init(struct smb_charger *chg);
 int smblib_deinit(struct smb_charger *chg);
+
+#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+const char *smblib_somc_get_charger_type(struct smb_charger *chg);
+int somc_usb_register(struct smb_charger *chg);
+void somc_usb_unregister(struct smb_charger *chg);
+int somc_usb_otg_regulator_register_ocp_notification(
+			struct regulator_dev *rdev,
+			struct regulator_ocp_notification *notification);
+int smblib_get_prop_charging_enabled(struct smb_charger *chg,
+				union power_supply_propval *val);
+int smblib_get_prop_charge_full_design(struct smb_charger *chg,
+				union power_supply_propval *val);
+int smblib_get_prop_charge_full(struct smb_charger *chg,
+				union power_supply_propval *val);
+int smblib_set_prop_charging_enabled(struct smb_charger *chg,
+				const union power_supply_propval *val);
+int smblib_get_prop_skin_temp(struct smb_charger *chg,
+				union power_supply_propval *val);
+void smblib_somc_thermal_fcc_change(struct smb_charger *chg);
+void smblib_somc_thermal_icl_change(struct smb_charger *chg);
+void smblib_somc_set_low_batt_suspend_en(struct smb_charger *chg);
+int smblib_somc_smart_set_suspend(struct smb_charger *chg);
+int smblib_somc_lrc_get_capacity(struct smb_charger *chg,
+			int capacity);
+void smblib_somc_lrc_check(struct smb_charger *chg);
+int smblib_get_usb_max_current_limited(struct smb_charger *chg);
+#endif /* CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION */
+
 #endif /* __SMB2_CHARGER_H */

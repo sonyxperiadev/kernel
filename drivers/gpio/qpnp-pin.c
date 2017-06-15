@@ -753,6 +753,119 @@ int qpnp_pin_config(int gpio, struct qpnp_pin_cfg *param)
 }
 EXPORT_SYMBOL(qpnp_pin_config);
 
+#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+static int _qpnp_get_pin_config(struct qpnp_pin_chip *q_chip,
+		struct qpnp_pin_spec *q_spec, struct qpnp_pin_cfg *param)
+{
+	u8 shift, mask, *reg;
+
+	if (is_gpio_lv_mv(q_spec)) {
+		shift = Q_REG_LV_MV_MODE_SEL_SHIFT;
+		mask = Q_REG_LV_MV_MODE_SEL_MASK;
+	} else {
+		shift = Q_REG_MODE_SEL_SHIFT;
+		mask = Q_REG_MODE_SEL_MASK;
+	}
+	param->mode	   = q_reg_get(&q_spec->regs[Q_REG_I_MODE_CTL],
+							shift, mask);
+
+	param->output_type  = q_reg_get(&q_spec->regs[Q_REG_I_DIG_OUT_CTL],
+				       Q_REG_OUT_TYPE_SHIFT,
+				       Q_REG_OUT_TYPE_MASK);
+
+	if (is_gpio_lv_mv(q_spec)) {
+		shift = Q_REG_DIG_OUT_SRC_INVERT_SHIFT;
+		mask = Q_REG_DIG_OUT_SRC_INVERT_MASK;
+		reg = &q_spec->regs[Q_REG_I_DIG_OUT_SRC_CTL];
+	} else {
+		shift = Q_REG_OUT_INVERT_SHIFT;
+		mask = Q_REG_OUT_INVERT_MASK;
+		reg = &q_spec->regs[Q_REG_I_MODE_CTL];
+	}
+	param->invert	   = q_reg_get(reg, shift, mask);
+
+	param->pull	   = q_reg_get(&q_spec->regs[Q_REG_I_DIG_PULL_CTL],
+				       Q_REG_PULL_SHIFT, Q_REG_PULL_MASK);
+	param->vin_sel	   = q_reg_get(&q_spec->regs[Q_REG_I_DIG_VIN_CTL],
+				       Q_REG_VIN_SHIFT, Q_REG_VIN_MASK);
+	param->out_strength = q_reg_get(&q_spec->regs[Q_REG_I_DIG_OUT_CTL],
+				       Q_REG_OUT_STRENGTH_SHIFT,
+				       Q_REG_OUT_STRENGTH_MASK);
+
+	if (is_gpio_lv_mv(q_spec)) {
+		shift = Q_REG_DIG_OUT_SRC_SRC_SEL_SHIFT;
+		mask = Q_REG_DIG_OUT_SRC_SRC_SEL_MASK;
+		reg = &q_spec->regs[Q_REG_I_DIG_OUT_SRC_CTL];
+	} else {
+		shift = Q_REG_SRC_SEL_SHIFT;
+		mask = Q_REG_SRC_SEL_MASK;
+		reg = &q_spec->regs[Q_REG_I_MODE_CTL];
+	}
+	param->src_sel   = q_reg_get(reg, shift, mask);
+
+	param->master_en    = q_reg_get(&q_spec->regs[Q_REG_I_EN_CTL],
+				       Q_REG_MASTER_EN_SHIFT,
+				       Q_REG_MASTER_EN_MASK);
+	param->aout_ref    = q_reg_get(&q_spec->regs[Q_REG_I_AOUT_CTL],
+				       Q_REG_AOUT_REF_SHIFT,
+				       Q_REG_AOUT_REF_MASK);
+	param->ain_route    = q_reg_get(&q_spec->regs[Q_REG_I_AIN_CTL],
+				       Q_REG_AIN_ROUTE_SHIFT,
+				       Q_REG_AIN_ROUTE_MASK);
+	param->cs_out    = q_reg_get(&q_spec->regs[Q_REG_I_SINK_CTL],
+				       Q_REG_CS_OUT_SHIFT,
+				       Q_REG_CS_OUT_MASK);
+	param->apass_sel    = q_reg_get(&q_spec->regs[Q_REG_I_APASS_SEL_CTL],
+				       Q_REG_APASS_SEL_SHIFT,
+				       Q_REG_APASS_SEL_MASK);
+	if (is_gpio_lv_mv(q_spec)) {
+		param->dtest_sel = q_reg_get(&q_spec->regs[Q_REG_I_DIG_IN_CTL],
+				Q_REG_LV_MV_DTEST_SEL_CFG_SHIFT,
+				Q_REG_LV_MV_DTEST_SEL_CFG_MASK);
+	} else {
+		param->dtest_sel = q_reg_get(&q_spec->regs[Q_REG_I_DIG_IN_CTL],
+				Q_REG_DTEST_SEL_SHIFT,
+				Q_REG_DTEST_SEL_MASK);
+	}
+	return 0;
+}
+
+int qpnp_get_pin_config(int gpio, struct qpnp_pin_cfg *param)
+{
+	int rc, chip_offset;
+	struct qpnp_pin_chip *q_chip;
+	struct qpnp_pin_spec *q_spec = NULL;
+	struct gpio_chip *gpio_chip;
+
+	if (param == NULL)
+		return -EINVAL;
+
+	mutex_lock(&qpnp_pin_chips_lock);
+	list_for_each_entry(q_chip, &qpnp_pin_chips, chip_list) {
+		gpio_chip = &q_chip->gpio_chip;
+		if (gpio >= gpio_chip->base
+				&& gpio < gpio_chip->base + gpio_chip->ngpio) {
+			chip_offset = gpio - gpio_chip->base;
+			q_spec = qpnp_chip_gpio_get_spec(q_chip, chip_offset);
+			if (WARN_ON(!q_spec)) {
+				mutex_unlock(&qpnp_pin_chips_lock);
+				return -ENODEV;
+			}
+			break;
+		}
+	}
+	mutex_unlock(&qpnp_pin_chips_lock);
+
+	if (!q_spec)
+		return -ENODEV;
+
+	rc = _qpnp_get_pin_config(q_chip, q_spec, param);
+
+	return rc;
+}
+EXPORT_SYMBOL(qpnp_get_pin_config);
+#endif /* CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION */
+
 int qpnp_pin_map(const char *name, uint32_t pmic_pin)
 {
 	struct qpnp_pin_chip *q_chip;

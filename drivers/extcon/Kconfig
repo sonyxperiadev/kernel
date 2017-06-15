@@ -117,4 +117,10 @@ config EXTCON_USB_GPIO
 	  Say Y here to enable GPIO based USB cable detection extcon support.
 	  Used typically if GPIO is used for USB ID pin detection.
 
+config EXTCON_SOMC_EXTENSION
+	bool "SoMC Extensions for EXTCON"
+	depends on QPNP_SMBFG_NEWGEN_EXTENSION
+	help
+	  Say Y here to enable SoMC extensions for EXTCON API
+
 endif
