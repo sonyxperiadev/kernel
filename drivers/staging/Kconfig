@@ -123,4 +123,6 @@ source "drivers/staging/uwb/Kconfig"
 
 source "drivers/staging/qlge/Kconfig"
 
+source "drivers/staging/wlan-qc/Kconfig"
+
 endif # STAGING
