@@ -47,6 +47,12 @@
 #include <linux/extcon.h>
 #include <linux/reset.h>
 
+#ifdef CONFIG_USB_DWC3_MSM_ID_POLL
+#include <linux/qpnp/qpnp-adc.h>
+#include <linux/fb.h>
+#include <linux/wakelock.h>
+#endif /* CONFIG_USB_DWC3_MSM_ID_POLL */
+
 #include "power.h"
 #include "core.h"
 #include "gadget.h"
@@ -242,6 +248,27 @@ struct dwc3_msm {
 	bool			send_vbus_drop_ue;
 	bool			otg_present;
 #endif
+
+#ifdef CONFIG_USB_DWC3_MSM_ID_POLL
+	/* id polling */
+	bool			id_polling_use;
+	bool			id_polling_start;
+	struct delayed_work	id_polling_work;
+	struct workqueue_struct *id_polling_q;
+	unsigned int		id_polling_up_interval;
+	unsigned int		id_polling_up_period;
+	int			id_polling_pd_gpio;
+	struct qpnp_vadc_chip	*usb_detect_adc;
+	spinlock_t		id_polling_lock;
+	unsigned int		lcd_blanked;
+	struct wakeup_source	id_polling_wu;
+	struct delayed_work	setsink_work;
+	struct wake_lock	setsink_lock;
+	int			setsink_cnt;
+#ifdef CONFIG_FB
+	struct notifier_block	fb_notif;
+#endif /* CONFIG_FB */
+#endif /* CONFIG_USB_DWC3_MSM_ID_POLL */
 };
 
 #define USB_HSPHY_3P3_VOL_MIN		3050000 /* uV */
@@ -258,6 +285,17 @@ struct dwc3_msm {
 
 #define DSTS_CONNECTSPD_SS		0x4
 
+#ifdef CONFIG_USB_DWC3_MSM_ID_POLL
+#define USB_ID_POLLING_UP_INTERVAL	1000	/* s  */
+#define USB_ID_POLLING_UP_PERIOD	100	/* us */
+#define USB_ID_POLLING_WAKE_TIMEOUT	2000
+
+#define SETSINK_RETRY_INTERVAL	2000
+#define WAKELOCK_RETRY_INTERVAL	2500
+
+/* Max of retry to set SINK */
+#define SETSINK_RETRY_MAX	3
+#endif /* CONFIG_USB_DWC3_MSM_ID_POLL */
 
 static void dwc3_pwr_event_handler(struct dwc3_msm *mdwc);
 static int dwc3_msm_gadget_vbus_draw(struct dwc3_msm *mdwc, unsigned mA);
@@ -2470,6 +2508,284 @@ static irqreturn_t msm_dwc3_pwr_irq(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
+#ifdef CONFIG_USB_DWC3_MSM_ID_POLL
+static void dwc3_setsink_work(struct work_struct *w)
+{
+	struct dwc3_msm *mdwc = container_of(w, struct dwc3_msm,
+							setsink_work.work);
+	union power_supply_propval val = {0};
+	int ret;
+
+	if (!mdwc->otg_present && mdwc->setsink_cnt < SETSINK_RETRY_MAX) {
+		wake_lock_timeout(&mdwc->setsink_lock,
+				msecs_to_jiffies(WAKELOCK_RETRY_INTERVAL));
+		mdwc->setsink_cnt++;
+		power_supply_get_property(mdwc->usb_psy,
+				POWER_SUPPLY_PROP_TYPEC_POWER_ROLE, &val);
+		if (val.intval == POWER_SUPPLY_TYPEC_PR_SINK) {
+			pr_info("%s(): power role was changed to sink\n",
+					__func__);
+			return;
+		}
+
+		val.intval = POWER_SUPPLY_TYPEC_PR_SINK;
+		ret = power_supply_set_property(mdwc->usb_psy,
+				POWER_SUPPLY_PROP_TYPEC_POWER_ROLE, &val);
+		if (ret) {
+			dev_err(mdwc->dev, "set power supply fail\n");
+			return;
+		}
+		pr_info("%s(): rerun set to sink\n", __func__);
+		schedule_delayed_work(&mdwc->setsink_work,
+				msecs_to_jiffies(SETSINK_RETRY_INTERVAL));
+	} else {
+		if (mdwc->otg_present)
+			pr_info("%s(): cable is connected, so power role does not change\n",
+					__func__);
+		else
+			dev_err(mdwc->dev,
+				"retry count is over, power role has not changed.\n");
+	}
+}
+
+static void dwc3_id_pullup(struct dwc3_msm *mdwc, int pullup)
+{
+	if (pullup) {
+		dev_dbg(mdwc->dev, "%s: pull up ID pin\n", __func__);
+		if (mdwc->id_polling_pd_gpio)
+			gpio_set_value(mdwc->id_polling_pd_gpio, 1);
+	} else {
+		if (mdwc->id_polling_pd_gpio)
+			gpio_set_value(mdwc->id_polling_pd_gpio, 0);
+		dev_dbg(mdwc->dev, "%s: pull down ID pin\n", __func__);
+	}
+}
+
+static ssize_t id_polling_up_interval_show(struct device *dev,
+			       struct device_attribute *attr, char *buf)
+{
+	struct dwc3_msm *mdwc = dev_get_drvdata(dev);
+
+	if (!mdwc)
+		return -EINVAL;
+
+	return snprintf(buf, PAGE_SIZE, "%u\n", mdwc->id_polling_up_interval);
+}
+
+static ssize_t id_polling_up_interval_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t size)
+{
+	struct dwc3_msm *mdwc = dev_get_drvdata(dev);
+
+	if (!mdwc)
+		return -EINVAL;
+
+	if (kstrtou32(buf, 0, &mdwc->id_polling_up_interval) < 0) {
+		pr_err("id_polling_up_interval cannot read value\n");
+		return -EINVAL;
+	}
+
+	if (mdwc->id_polling_start) {
+		/* restart id polling with new interval value. */
+		cancel_delayed_work_sync(&mdwc->id_polling_work);
+		queue_delayed_work(mdwc->id_polling_q, &mdwc->id_polling_work,
+				msecs_to_jiffies(mdwc->id_polling_up_interval));
+	}
+
+	return size;
+}
+
+static DEVICE_ATTR(id_polling_up_interval, S_IRUGO | S_IWUSR,
+						id_polling_up_interval_show,
+						id_polling_up_interval_store);
+
+static ssize_t id_polling_up_period_show(struct device *dev,
+			       struct device_attribute *attr, char *buf)
+{
+	struct dwc3_msm *mdwc = dev_get_drvdata(dev);
+
+	if (!mdwc)
+		return -EINVAL;
+
+	return snprintf(buf, PAGE_SIZE, "%u\n", mdwc->id_polling_up_period);
+}
+
+static ssize_t id_polling_up_period_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t size)
+{
+	struct dwc3_msm *mdwc = dev_get_drvdata(dev);
+
+	if (!mdwc)
+		return -EINVAL;
+
+	if (kstrtou32(buf, 0, &mdwc->id_polling_up_period) < 0) {
+		pr_err("id_polling_up_period cannot read value\n");
+		return -EINVAL;
+	}
+
+	return size;
+}
+
+static DEVICE_ATTR(id_polling_up_period, S_IRUGO | S_IWUSR,
+						id_polling_up_period_show,
+						id_polling_up_period_store);
+
+static void dwc3_id_poll_update(struct dwc3_msm *mdwc)
+{
+	if (!mdwc->otg_present && mdwc->lcd_blanked) {
+		mdwc->id_polling_start = false;
+		cancel_delayed_work(&mdwc->id_polling_work);
+	} else if (!mdwc->id_polling_start) {
+		mdwc->id_polling_start = true;
+		queue_delayed_work(mdwc->id_polling_q, &mdwc->id_polling_work,
+									0);
+	}
+}
+
+#ifdef CONFIG_FB
+static int fb_notifier_callback(struct notifier_block *self,
+					 unsigned long event, void *data)
+{
+	struct dwc3_msm *mdwc = container_of(self, struct dwc3_msm, fb_notif);
+	struct fb_event *evdata = data;
+	unsigned int blanked;
+	unsigned long flags;
+
+	if (!mdwc->id_polling_use || !evdata || !evdata->data ||
+							event != FB_EVENT_BLANK)
+		return 0;
+
+	blanked = !(*(unsigned int *)(evdata->data) == FB_BLANK_UNBLANK);
+
+	dev_info(mdwc->dev, "receive fb event blank=%u->%u, otg_present=%d\n",
+			mdwc->lcd_blanked, blanked, mdwc->otg_present);
+
+	if (blanked == mdwc->lcd_blanked)
+		return 0;
+
+	spin_lock_irqsave(&mdwc->id_polling_lock, flags);
+	mdwc->lcd_blanked = blanked;
+	dwc3_id_poll_update(mdwc);
+	spin_unlock_irqrestore(&mdwc->id_polling_lock, flags);
+
+	return 0;
+}
+#endif /* CONFIG_FB */
+
+static int dwc3_msm_set_type_power_role(struct dwc3_msm *mdwc,
+		int typec_power_role)
+{
+	union power_supply_propval pval = {0};
+	int ret;
+
+	if (!mdwc->usb_psy) {
+		mdwc->usb_psy = power_supply_get_by_name("usb");
+		if (!mdwc->usb_psy) {
+			dev_warn(mdwc->dev, "Could not get usb power_supply\n");
+			return -ENODEV;
+		}
+	}
+	pr_info("%s(): typec power role=%d\n", __func__, typec_power_role);
+	pval.intval = typec_power_role;
+	ret = power_supply_set_property(mdwc->usb_psy,
+			POWER_SUPPLY_PROP_TYPEC_POWER_ROLE, &pval);
+	if (ret) {
+		dev_err(mdwc->dev,
+			"power supply error when setting property\n");
+		return ret;
+	}
+
+	if (typec_power_role == POWER_SUPPLY_TYPEC_PR_SINK) {
+		mdwc->setsink_cnt = 0;
+		wake_lock_timeout(&mdwc->setsink_lock,
+				msecs_to_jiffies(WAKELOCK_RETRY_INTERVAL));
+		schedule_delayed_work(&mdwc->setsink_work,
+				msecs_to_jiffies(SETSINK_RETRY_INTERVAL));
+	}
+	return 0;
+}
+
+static int dwc3_get_usb_detect_adc(struct dwc3_msm *mdwc)
+{
+	int rc = 0;
+	struct qpnp_vadc_result results;
+
+	if (IS_ERR_OR_NULL(mdwc->usb_detect_adc)) {
+		mdwc->usb_detect_adc = qpnp_get_vadc(mdwc->dev, "usb_detect");
+		if (IS_ERR(mdwc->usb_detect_adc))
+			return PTR_ERR(mdwc->usb_detect_adc);
+	}
+
+	rc = qpnp_vadc_read(mdwc->usb_detect_adc, 0x14, &results);
+	if (rc)
+		return 1;
+	else
+		return (800000 < results.physical);
+}
+
+static void dwc3_id_polling_work(struct work_struct *w)
+{
+	struct dwc3_msm *mdwc = container_of(w, struct dwc3_msm,
+							id_polling_work.work);
+	enum dwc3_id_state id;
+	unsigned int delta;
+	unsigned long flags;
+	bool otg_present;
+
+	if (!mdwc->id_polling_use)
+		return;
+
+	spin_lock_irqsave(&mdwc->id_polling_lock, flags);
+	if (!mdwc->id_polling_start) {
+		spin_unlock_irqrestore(&mdwc->id_polling_lock, flags);
+		return;
+	}
+	queue_delayed_work(mdwc->id_polling_q, to_delayed_work(w),
+				msecs_to_jiffies(mdwc->id_polling_up_interval));
+	spin_unlock_irqrestore(&mdwc->id_polling_lock, flags);
+
+	pr_debug("id polling, interval=%u ms, period=%u us\n",
+						mdwc->id_polling_up_interval,
+						mdwc->id_polling_up_period);
+
+	__pm_stay_awake(&mdwc->id_polling_wu);
+	dwc3_id_pullup(mdwc, 1);
+
+	if (mdwc->id_polling_up_period) {
+		if (mdwc->id_polling_up_period < 10) {
+			udelay(mdwc->id_polling_up_period);
+		} else if (mdwc->id_polling_up_period < 20000) {
+			delta = mdwc->id_polling_up_period / 10;
+			usleep_range(mdwc->id_polling_up_period - delta,
+					mdwc->id_polling_up_period + delta);
+		} else if (mdwc->id_polling_up_period / 1000 <
+				mdwc->id_polling_up_interval) {
+			msleep(mdwc->id_polling_up_period / 1000);
+		} else {
+			pr_warn("pull up period is too long because it is longer than interval.\n");
+		}
+	}
+
+	id = dwc3_get_usb_detect_adc(mdwc) ? DWC3_ID_FLOAT : DWC3_ID_GROUND;
+	dwc3_id_pullup(mdwc, 0);
+
+	spin_lock_irqsave(&mdwc->id_polling_lock, flags);
+	otg_present = mdwc->otg_present;
+	mdwc->otg_present = id == DWC3_ID_GROUND;
+	dwc3_id_poll_update(mdwc);
+	spin_unlock_irqrestore(&mdwc->id_polling_lock, flags);
+
+	if (mdwc->otg_present != otg_present) {
+		dwc3_msm_set_type_power_role(mdwc, mdwc->otg_present ?
+			POWER_SUPPLY_TYPEC_PR_DUAL :
+			POWER_SUPPLY_TYPEC_PR_SINK);
+		__pm_wakeup_event(&mdwc->id_polling_wu,
+				USB_ID_POLLING_WAKE_TIMEOUT);
+	}
+	__pm_relax(&mdwc->id_polling_wu);
+}
+#endif /* CONFIG_USB_DWC3_MSM_ID_POLL */
+
 static int dwc3_cpu_notifier_cb(struct notifier_block *nfb,
 		unsigned long action, void *hcpu)
 {
@@ -2965,6 +3281,16 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 		}
 	}
 
+#ifdef CONFIG_USB_DWC3_MSM_ID_POLL
+	mdwc->id_polling_use = of_property_read_bool(node, "id_polling_use");
+	if (mdwc->id_polling_use) {
+		dev_info(&pdev->dev, "id polling is enabled\n");
+		mdwc->id_state = DWC3_ID_FLOAT;
+	}
+
+	wake_lock_init(&mdwc->setsink_lock, WAKE_LOCK_SUSPEND, "typecsink_lock");
+#endif /* CONFIG_USB_DWC3_MSM_ID_POLL */
+
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "tcsr_base");
 	if (!res) {
 		dev_dbg(&pdev->dev, "missing TCSR memory resource\n");
@@ -3198,6 +3524,47 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 		dwc3_ext_event_notify(mdwc);
 	}
 
+#ifdef CONFIG_USB_DWC3_MSM_ID_POLL
+	if (mdwc->id_polling_use) {
+		INIT_DELAYED_WORK(&mdwc->setsink_work, dwc3_setsink_work);
+		INIT_DELAYED_WORK(&mdwc->id_polling_work, dwc3_id_polling_work);
+		mdwc->id_polling_q =
+				create_singlethread_workqueue("id_polling_q");
+
+		mdwc->id_polling_up_interval = USB_ID_POLLING_UP_INTERVAL;
+		of_property_read_u32(node, "id_polling_up_interval",
+						&mdwc->id_polling_up_interval);
+		dev_dbg(&pdev->dev, "id_polling_up_interval=%dms\n",
+						mdwc->id_polling_up_interval);
+		device_create_file(&pdev->dev,
+					&dev_attr_id_polling_up_interval);
+
+		mdwc->id_polling_up_period = USB_ID_POLLING_UP_PERIOD;
+		of_property_read_u32(node, "id_polling_up_period",
+						&mdwc->id_polling_up_period);
+		dev_dbg(&pdev->dev, "id_polling_up_period=%dus\n",
+						mdwc->id_polling_up_period);
+		device_create_file(&pdev->dev, &dev_attr_id_polling_up_period);
+
+		mdwc->id_polling_pd_gpio = of_get_named_gpio(node,
+						"id_polling_pd_gpio", 0);
+		if (!gpio_is_valid(mdwc->id_polling_pd_gpio))
+			dev_info(&pdev->dev, "id_polling_pd is missing\n");
+
+		wakeup_source_init(&mdwc->id_polling_wu, "id_polling");
+		spin_lock_init(&mdwc->id_polling_lock);
+
+#ifdef CONFIG_FB
+		mdwc->fb_notif.notifier_call = fb_notifier_callback;
+		if (fb_register_client(&mdwc->fb_notif))
+			dev_err(mdwc->dev, "failed to register fb_notifier\n");
+#endif /* CONFIG_FB */
+		mdwc->id_polling_start = true;
+		queue_delayed_work(mdwc->id_polling_q, &mdwc->id_polling_work,
+				msecs_to_jiffies(mdwc->id_polling_up_interval));
+	}
+#endif /* CONFIG_USB_DWC3_MSM_ID_POLL */
+
 	return 0;
 
 put_dwc3:
@@ -3205,6 +3572,9 @@ put_dwc3:
 	if (mdwc->bus_perf_client)
 		msm_bus_scale_unregister_client(mdwc->bus_perf_client);
 err:
+#ifdef CONFIG_USB_DWC3_MSM_ID_POLL
+	wake_lock_destroy(&mdwc->setsink_lock);
+#endif
 	return ret;
 }
 
@@ -3245,6 +3615,22 @@ static int dwc3_msm_remove(struct platform_device *pdev)
 	}
 
 	cancel_delayed_work_sync(&mdwc->perf_vote_work);
+#ifdef CONFIG_USB_DWC3_MSM_ID_POLL
+	cancel_delayed_work_sync(&mdwc->setsink_work);
+	wake_lock_destroy(&mdwc->setsink_lock);
+	if (mdwc->id_polling_use) {
+#ifdef CONFIG_FB
+		fb_unregister_client(&mdwc->fb_notif);
+#endif /* CONFIG_FB */
+		wakeup_source_trash(&mdwc->id_polling_wu);
+		device_remove_file(&pdev->dev,
+					&dev_attr_id_polling_up_interval);
+		device_remove_file(&pdev->dev, &dev_attr_id_polling_up_period);
+		cancel_delayed_work_sync(&mdwc->id_polling_work);
+		destroy_workqueue(mdwc->id_polling_q);
+	}
+#endif /* CONFIG_USB_DWC3_MSM_ID_POLL */
+
 	cancel_delayed_work_sync(&mdwc->sm_work);
 
 	if (mdwc->hs_phy)
