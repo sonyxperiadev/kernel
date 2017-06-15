@@ -324,6 +324,10 @@ struct dwc3_msm {
 	int pm_qos_latency;
 #ifdef CONFIG_EXTCON_SOMC_EXTENSION
 	bool			send_vbus_drop_ue;
+#endif
+
+#if defined(CONFIG_EXTCON_SOMC_EXTENSION) || \
+    defined(CONFIG_USB_DWC3_MSM_ID_POLL)
 	bool			otg_present;
 #endif
 	struct pm_qos_request pm_qos_req_dma;
