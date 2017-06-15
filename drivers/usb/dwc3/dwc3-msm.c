@@ -142,6 +142,9 @@ enum plug_orientation {
 #define ID			0
 #define B_SESS_VLD		1
 #define B_SUSPEND		2
+#ifdef CONFIG_EXTCON_SOMC_EXTENSION
+#define A_VBUS_DROP_DET		3
+#endif
 
 #define PM_QOS_SAMPLE_SEC	2
 #define PM_QOS_THRESHOLD	400
@@ -214,8 +217,15 @@ struct dwc3_msm {
 
 	struct extcon_dev	*extcon_vbus;
 	struct extcon_dev	*extcon_id;
+#ifdef CONFIG_EXTCON_SOMC_EXTENSION
+	struct extcon_dev	*extcon_vbus_drop;
+#endif
+
 	struct notifier_block	vbus_nb;
 	struct notifier_block	id_nb;
+#ifdef CONFIG_EXTCON_SOMC_EXTENSION
+	struct notifier_block	vbus_drop_nb;
+#endif
 
 	struct notifier_block	host_nb;
 
@@ -227,6 +237,11 @@ struct dwc3_msm {
 	int pm_qos_latency;
 	struct pm_qos_request pm_qos_req_dma;
 	struct delayed_work perf_vote_work;
+
+#ifdef CONFIG_EXTCON_SOMC_EXTENSION
+	bool			send_vbus_drop_ue;
+	bool			otg_present;
+#endif
 };
 
 #define USB_HSPHY_3P3_VOL_MIN		3050000 /* uV */
@@ -2621,6 +2636,26 @@ done:
 	return NOTIFY_DONE;
 }
 
+#ifdef CONFIG_EXTCON_SOMC_EXTENSION
+static int dwc3_msm_vbus_drop_notifier(struct notifier_block *nb,
+	unsigned long event, void *ptr)
+{
+	struct dwc3_msm *mdwc = container_of(nb, struct dwc3_msm, vbus_drop_nb);
+	struct extcon_dev *edev = ptr;
+
+	if (!edev) {
+		dev_err(mdwc->dev, "%s: edev null\n", __func__);
+		goto done;
+	}
+
+	set_bit(A_VBUS_DROP_DET, &mdwc->inputs);
+	pr_info("%s: receive ocp notification\n", __func__);
+	schedule_delayed_work(&mdwc->sm_work, 0);
+done:
+	return NOTIFY_DONE;
+}
+#endif
+
 static int dwc3_msm_vbus_notifier(struct notifier_block *nb,
 	unsigned long event, void *ptr)
 {
@@ -2709,10 +2744,25 @@ static int dwc3_msm_extcon_register(struct dwc3_msm *mdwc)
 			dev_err(mdwc->dev, "failed to register notifier for USB-HOST\n");
 			goto err;
 		}
+#ifdef CONFIG_EXTCON_SOMC_EXTENSION
+		mdwc->extcon_vbus_drop = edev;
+		mdwc->vbus_drop_nb.notifier_call = dwc3_msm_vbus_drop_notifier;
+		ret = extcon_register_notifier(edev, EXTCON_VBUS_DROP,
+				&mdwc->vbus_drop_nb);
+		if (ret < 0) {
+			dev_err(mdwc->dev, "failed to register notifier for USB-DropT\n");
+			goto err;
+		}
+#endif /* CONFIG_EXTCON_SOMC_EXTENSION */
 	}
 
 	return 0;
 err:
+#ifdef CONFIG_EXTCON_SOMC_EXTENSION
+	if (mdwc->extcon_id)
+		extcon_unregister_notifier(mdwc->extcon_id, EXTCON_USB_HOST,
+				&mdwc->id_nb);
+#endif
 	if (mdwc->extcon_vbus)
 		extcon_unregister_notifier(mdwc->extcon_vbus, EXTCON_USB,
 				&mdwc->vbus_nb);
@@ -2840,6 +2890,9 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 	}
 
 	mdwc->id_state = DWC3_ID_FLOAT;
+#ifdef CONFIG_EXTCON_SOMC_EXTENSION
+	mdwc->otg_present = true;
+#endif
 	set_bit(ID, &mdwc->inputs);
 
 	mdwc->charging_disabled = of_property_read_bool(node,
@@ -3121,6 +3174,12 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 	else if (mdwc->extcon_id && extcon_get_cable_state_(mdwc->extcon_id,
 							EXTCON_USB_HOST))
 		dwc3_msm_id_notifier(&mdwc->id_nb, true, mdwc->extcon_id);
+#ifdef CONFIG_EXTCON_SOMC_EXTENSION
+	else if (mdwc->extcon_vbus_drop && extcon_get_cable_state_(
+				mdwc->extcon_vbus_drop, EXTCON_VBUS_DROP))
+		dwc3_msm_vbus_drop_notifier(&mdwc->vbus_drop_nb, true,
+				mdwc->extcon_vbus_drop);
+#endif
 	else if (!pval.intval) {
 		/* USB cable is not connected */
 		schedule_delayed_work(&mdwc->sm_work, 0);
@@ -3685,6 +3744,9 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 			break;
 		} else {
 			dwc3_msm_gadget_vbus_draw(mdwc, 0);
+#ifdef CONFIG_EXTCON_SOMC_EXTENSION
+			mdwc->send_vbus_drop_ue = false;
+#endif
 			dev_dbg(mdwc->dev, "Cable disconnected\n");
 		}
 		break;
@@ -3746,9 +3808,17 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 		/* Switch to A-Device*/
 		if (test_bit(ID, &mdwc->inputs)) {
 			dev_dbg(mdwc->dev, "id\n");
+#ifdef CONFIG_EXTCON_SOMC_EXTENSION
+			clear_bit(A_VBUS_DROP_DET, &mdwc->inputs);
+#endif
 			mdwc->otg_state = OTG_STATE_B_IDLE;
 			mdwc->vbus_retry_count = 0;
 			work = 1;
+#ifdef CONFIG_EXTCON_SOMC_EXTENSION
+		} else if (test_bit(A_VBUS_DROP_DET, &mdwc->inputs)) {
+			dev_dbg(mdwc->dev, "vbus_drop_det\n");
+			/* staying on here until exit from A-Device */
+#endif
 		} else {
 			mdwc->otg_state = OTG_STATE_A_HOST;
 			ret = dwc3_otg_start_host(mdwc, 1);
@@ -3779,6 +3849,13 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 			mdwc->vbus_retry_count = 0;
 			mdwc->hc_died = false;
 			work = 1;
+#ifdef CONFIG_EXTCON_SOMC_EXTENSION
+		} else if (test_bit(A_VBUS_DROP_DET, &mdwc->inputs)) {
+			dev_dbg(mdwc->dev, "vbus_drop_det\n");
+			dwc3_otg_start_host(mdwc, 0);
+			mdwc->otg_state = OTG_STATE_A_IDLE;
+			mdwc->vbus_retry_count = 0;
+#endif
 		} else {
 			dev_dbg(mdwc->dev, "still in a_host state. Resuming root hub.\n");
 			dbg_event(0xFF, "XHCIResume", 0);
