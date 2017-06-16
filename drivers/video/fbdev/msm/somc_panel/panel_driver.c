@@ -44,9 +44,6 @@
 
 #define VSYNC_DELAY msecs_to_jiffies(17)
 
-#define KERN318_FEATURESET
-#define USE_TOPOLOGY_CONFIG_PARAMS
-
 struct device virtdev;
 
 DEFINE_LED_TRIGGER(bl_led_trigger);
@@ -1592,7 +1589,6 @@ static int mdss_dsi_parse_fbc_params(struct device_node *np,
 	return 0;
 }
 
-#ifdef KERN318_FEATURESET
 void mdss_dsi_panel_dsc_pps_send(struct mdss_dsi_ctrl_pdata *ctrl,
 				struct mdss_panel_info *pinfo)
 {
@@ -1673,7 +1669,6 @@ static int mdss_dsi_parse_hdr_settings(struct device_node *np,
 	return 0;
 }
 
-#ifdef USE_TOPOLOGY_CONFIG_PARAMS
 static int mdss_dsi_parse_dsc_version(struct device_node *np,
 		struct mdss_panel_timing *timing)
 {
@@ -1935,8 +1930,6 @@ end:
 	of_node_put(cfg_np);
 	return rc;
 }
-#endif  /* USE_TOPOLOGY_CONFIG_PARAMS */
-#endif  /* KERN318_FEATURESET */
 
 static void mdss_panel_parse_te_params(struct device_node *np,
 			struct mdss_panel_timing *timing)
@@ -2505,9 +2498,7 @@ static void mdss_dsi_parse_dfps_config(struct device_node *pan_node,
 		pr_debug("dfps update mode not configured: disable\n");
 	}
 	pinfo->new_fps = pinfo->mipi.frame_rate;
-#ifdef KERN318_FEATURESET
 	pinfo->current_fps = pinfo->mipi.frame_rate;
-#endif
 
 	return;
 }
@@ -2654,11 +2645,7 @@ int mdss_dsi_panel_timing_switch(struct mdss_dsi_ctrl_pdata *ctrl,
 	if (!timing->clk_rate)
 		ctrl->refresh_clk_rate = true;
 
-#ifdef KERN318_FEATURESET
 	mdss_dsi_clk_refresh(&ctrl->panel_data, ctrl->update_phy_timing);
-#else
-	mdss_dsi_clk_refresh(&ctrl->panel_data);
-#endif
 
 	return 0;
 }
@@ -2732,10 +2719,12 @@ static int mdss_dsi_panel_timing_from_dt(struct device_node *np,
 	pt->timing.frame_rate = !rc ? tmp : DEFAULT_FRAME_RATE;
 	rc = of_property_read_u64(np, "qcom,mdss-dsi-panel-clockrate", &tmp64);
 	if (rc == -EOVERFLOW) {
+		tmp64 = 0;
 		rc = of_property_read_u32(np,
 			"qcom,mdss-dsi-panel-clockrate", (u32 *)&tmp64);
 	}
 	pt->timing.clk_rate = !rc ? tmp64 : 0;
+
 
 	data = of_get_property(np, "qcom,mdss-dsi-panel-timings", &len);
 	if ((!data) || (len != 12)) {
@@ -2748,7 +2737,6 @@ static int mdss_dsi_panel_timing_from_dt(struct device_node *np,
 		phy_timings_present = true;
 	}
 
-#ifdef KERN318_FEATURESET
 	data = of_get_property(np, "qcom,mdss-dsi-panel-timings-phy-v2", &len);
 	if ((!data) || (len != 40)) {
 		pr_debug("%s:%d, Unable to read 8996 Phy lane timing settings",
@@ -2758,7 +2746,6 @@ static int mdss_dsi_panel_timing_from_dt(struct device_node *np,
 			pt->phy_timing_8996[i] = data[i];
 		phy_timings_present = true;
 	}
-#endif
 	if (!phy_timings_present)
 		pr_err("%s: phy timing settings not present\n", __func__);
 
@@ -2802,16 +2789,12 @@ static int  mdss_dsi_panel_config_res_properties(struct device_node *np,
 			"qcom,mdss-dsi-timing-switch-command",
 			"qcom,mdss-dsi-timing-switch-command-state");
 
-#ifdef USE_TOPOLOGY_CONFIG_PARAMS
 	rc = mdss_dsi_parse_topology_config(np, pt, panel_data, default_timing);
 	if (rc) {
 		pr_err("%s: parsing compression params failed. rc:%d\n",
 			__func__, rc);
 		return rc;
 	}
-#else
-	rc = mdss_dsi_parse_fbc_params(np, &pt->timing);
-#endif
 
 	mdss_panel_parse_te_params(np, &pt->timing);
 
@@ -3190,14 +3173,6 @@ int mdss_panel_parse_dt(struct device_node *np,
 	rc = of_property_read_u32(np, "qcom,mdss-dsi-post-init-delay", &tmp);
 	pinfo->mipi.post_init_delay = (!rc ? tmp : 0);
 
-	rc = of_property_read_u32(np,
-		"qcom,mdss-dsi-panel-framerate", &tmp);
-	pinfo->mipi.frame_rate = !rc ? tmp : 60;
-	pinfo->mipi.input_fpks = pinfo->mipi.frame_rate * 1000;
-
-	rc = of_property_read_u32(np,
-		"qcom,mdss-dsi-panel-clockrate", &tmp);
-	pinfo->clk_rate = !rc ? tmp : 0;
 
 	data = of_get_property(np,
 		"somc,platform-regulator-settings", &len);
@@ -3227,13 +3202,6 @@ int mdss_panel_parse_dt(struct device_node *np,
 
 	mdss_dsi_parse_trigger(np, &(pinfo->mipi.dma_trigger),
 		"qcom,mdss-dsi-dma-trigger");
-
-	rc = of_property_read_u32(np,
-		"qcom,mdss-dsi-t-clk-pre", &tmp);
-	pinfo->mipi.t_clk_pre = !rc ? tmp : 0x24;
-	rc = of_property_read_u32(np,
-		"qcom,mdss-dsi-t-clk-post", &tmp);
-	pinfo->mipi.t_clk_post = !rc ? tmp : 0x03;
 
 	mdss_dsi_parse_reset_seq(np, pinfo->rst_seq,
 		&(pinfo->rst_seq_len),
