@@ -111,7 +111,8 @@ struct mdss_mdp_cmd_ctx {
 
 struct mdss_mdp_cmd_ctx mdss_mdp_cmd_ctx_list[MAX_SESSIONS];
 
-#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+#if defined(CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL) && \
+    !defined(CONFIG_SOMC_PANEL_INCELL)
 static bool disp_on_in_hs;
 #endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 
@@ -283,13 +284,9 @@ static int mdss_mdp_cmd_tearcheck_cfg(struct mdss_mdp_mixer *mixer,
 	struct mdss_mdp_pp_tear_check *te = NULL;
 	struct mdss_panel_info *pinfo;
 	u32 vsync_clk_speed_hz, total_lines, vclks_line, cfg = 0;
-	u32 height = 0;
 	char __iomem *pingpong_base;
 	struct mdss_mdp_ctl *ctl = ctx->ctl;
 	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
-#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
-	u32 vporch;
-#endif
 
 	if (IS_ERR_OR_NULL(ctl->panel_data)) {
 		pr_err("no panel data\n");
@@ -325,14 +322,6 @@ static int mdss_mdp_cmd_tearcheck_cfg(struct mdss_mdp_mixer *mixer,
 
 	cfg |= vclks_line;
 
-#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
-		vporch = pinfo->lcdc.v_back_porch +
-			 pinfo->lcdc.v_front_porch +
-			 pinfo->lcdc.v_pulse_width;
-
-		height = (pinfo->yres + vporch) * 2;
-#endif
-
 	pr_debug("%s: yres=%d vclks=%x height=%d init=%d rd=%d start=%d wr=%d\n",
 		__func__, pinfo->yres, vclks_line, te->sync_cfg_height,
 		te->vsync_init_val, te->rd_ptr_irq, te->start_pos,
@@ -349,7 +338,8 @@ static int mdss_mdp_cmd_tearcheck_cfg(struct mdss_mdp_mixer *mixer,
 	mdss_mdp_pingpong_write(pingpong_base,
 		MDSS_MDP_REG_PP_SYNC_CONFIG_VSYNC, cfg);
 	mdss_mdp_pingpong_write(pingpong_base,
-		MDSS_MDP_REG_PP_SYNC_CONFIG_HEIGHT, height);
+		MDSS_MDP_REG_PP_SYNC_CONFIG_HEIGHT,
+		te ? te->sync_cfg_height : 0);
 	mdss_mdp_pingpong_write(pingpong_base,
 		MDSS_MDP_REG_PP_VSYNC_INIT_VAL,
 		te ? te->vsync_init_val : 0);
@@ -2340,21 +2330,23 @@ static int mdss_mdp_cmd_panel_on(struct mdss_mdp_ctl *ctl,
 
 		}
 
-#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+#if defined(CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL) && \
+    !defined(CONFIG_SOMC_PANEL_INCELL)
 		if (ctl->panel_data->panel_info.disp_on_in_hs) {
 			disp_on_in_hs = true;
 		} else {
-#ifdef CONFIG_SOMC_PANEL_INCELL
-			rc = mdss_mdp_ctl_intf_event(ctl, MDSS_EVENT_POST_PANEL_ON,
-					NULL, CTL_INTF_EVENT_FLAG_DEFAULT);
-			WARN(rc, "intf %d post panel on error (%d)\n",
-					ctl->intf_num, rc);
-#endif
 			rc = mdss_mdp_tearcheck_enable(ctl, true);
 			WARN(rc, "intf %d tearcheck enable error (%d)\n",
 					ctl->intf_num, rc);
 		}
 #else
+
+#ifdef CONFIG_SOMC_PANEL_INCELL
+		rc = mdss_mdp_ctl_intf_event(ctl, MDSS_EVENT_POST_PANEL_ON,
+				NULL, CTL_INTF_EVENT_FLAG_DEFAULT);
+		WARN(rc, "intf %d post panel on error (%d)\n",
+				ctl->intf_num, rc);
+#endif
 		rc = mdss_mdp_tearcheck_enable(ctl, true);
 		WARN(rc, "intf %d tearcheck enable error (%d)\n",
 				ctl->intf_num, rc);
@@ -3199,7 +3191,8 @@ static int mdss_mdp_cmd_kickoff(struct mdss_mdp_ctl *ctl, void *arg)
 	MDSS_XLOG(ctl->num, ctx->current_pp_num,
 		sctx ? sctx->current_pp_num : -1, atomic_read(&ctx->koff_cnt));
 
-        /* kholk TODO: This should be Sony specific. Check and ifdef!! */
+#if defined(CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL) && \
+    !defined(CONFIG_SOMC_PANEL_INCELL)
 	if (!__mdss_mdp_cmd_is_panel_power_on_interactive(ctx)) {
 		if (ctl->mfd) {
 			struct mdss_panel_data *pdata;
@@ -3209,17 +3202,15 @@ static int mdss_mdp_cmd_kickoff(struct mdss_mdp_ctl *ctl, void *arg)
 				return -ENODEV;
 			}
 
-#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+
 			if (pdata->intf_ready)
 				pdata->intf_ready(pdata);
-#endif
 		}
 		ctx->panel_power_state = MDSS_PANEL_POWER_ON;
 		if (sctx)
 			sctx->panel_power_state = MDSS_PANEL_POWER_ON;
 	}
 
-#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 	if (disp_on_in_hs) {
 		int rc;
 #ifdef CONFIG_SOMC_PANEL_INCELL
