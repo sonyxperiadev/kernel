@@ -120,14 +120,16 @@
 		somc,mdss-dsi-wait-time-before-post-on-cmd = <0>;
 
 		somc,change-fps-enable;
+		somc,change-fps-panel-type = "full_incell_type";
+		somc,change-fps-panel-mode = "dynamic_mode";
 		somc,change-fps-command =
 				[29 01 00 00 00 00 02 B0 04
 				 29 01 00 00 00 00 02 D6 01
 				 29 01 00 00 00 00 02 C6 59];
-		somc,driver-ic-vbp = <11>;
+		somc,driver-ic-total-porch = <11>;
 		somc,driver-ic-vdisp = <1920>;
-		somc,display-clock = /bits/ 64 <14000000000>;
-		somc,driver-ic-vfp = <682>;
+		somc,driver-ic-rclk = <14000000>;
+		somc,driver-ic-vtp = <682>;
 		somc,change-fps-rtn-pos = <2 1>;
 
 		somc,mdss-dsi-pcc-enable;
