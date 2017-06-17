@@ -110,15 +110,21 @@
 		somc,ewu-wait-after-touch-reset = <0>;
 		somc,mdss-dsi-disp-on-in-hs = <0>;
 		somc,mdss-dsi-wait-time-before-post-on-cmd = <0>;
+
+		/* (vback porch + vfront porch + vpulse width + yres) * 2 */
+		qcom,mdss-tear-check-sync-cfg-height = <4326>;
+
 		somc,change-fps-enable;
+		somc,change-fps-panel-type = "full_incell_type";
+		somc,change-fps-panel-mode = "dynamic_mode";
 		somc,change-fps-command =
 				[29 01 00 00 00 00 02 B0 04
 				 29 01 00 00 00 00 02 D6 01
 				 29 01 00 00 00 00 02 C6 51];
-		somc,driver-ic-vbp = <31>;
+		somc,driver-ic-total-porch = <31>;
 		somc,driver-ic-vdisp = <1920>;
-		somc,display-clock = /bits/ 64 <14000000000>;
-		somc,driver-ic-vfp = <936>;
+		somc,driver-ic-rclk = <14000000>;
+		somc,driver-ic-vtp = <936>;
 		somc,change-fps-rtn-pos = <2 1>;
 		somc,mdss-dsi-pcc-enable;
 		somc,mdss-dsi-uv-command = [06 01 00 00 00 00 01 DA

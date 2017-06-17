@@ -109,7 +109,13 @@
 		somc,pw-down-period = <100>;
 		somc,ewu-rst-seq = <0 2>, <1 5>;
 		somc,ewu-wait-after-touch-reset = <0>;
+
+		/* (vback porch + vfront porch + vpulse width + yres) * 2 */
+		qcom,mdss-tear-check-sync-cfg-height = <6592>;
+
 		somc,change-fps-enable;
+		somc,change-fps-panel-type = "full_incell_type";
+		somc,change-fps-panel-mode = "dynamic_mode";
 		somc,change-fps-command =
 				[29 01 00 00 00 00 02 B0 04
 				 29 01 00 00 00 00 02 D6 01
