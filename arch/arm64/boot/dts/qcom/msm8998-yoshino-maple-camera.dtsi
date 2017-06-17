@@ -25,8 +25,8 @@
 	led_flash0: qcom,camera-flash@0 {
 		cell-index = <0>;
 		compatible = "qcom,camera-flash";
-		qcom,flash-source = <&pmi8998_flash0>;
-		qcom,torch-source = <&pmi8998_torch0>;
+		qcom,flash-source = <&pmi8998_flash0 &pmi8998_flash1>;
+		qcom,torch-source = <&pmi8998_torch0 &pmi8998_torch1>;
 		qcom,switch-source = <&pmi8998_switch0>;
 		status = "ok";
 	};
