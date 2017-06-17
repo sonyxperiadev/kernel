@@ -445,7 +445,7 @@ static u32 qusb_phy_get_tune1_param(struct qusb_phy *qphy)
 	return reg;
 }
 #else
-static void usb_phy_get_tune1_param(struct qusb_phy *qphy)
+static void qusb_phy_get_tune1_param(struct qusb_phy *qphy)
 {
 	u8 reg;
 	u32 bit_mask = 1;
