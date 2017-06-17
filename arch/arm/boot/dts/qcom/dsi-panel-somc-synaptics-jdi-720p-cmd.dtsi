@@ -116,6 +116,10 @@
 		somc,pw-wait-after-off-touch-int-n = <0>;
 		somc,pw-down-period = <100>;
 		somc,ewu-wait-after-touch-reset = <40>;
+
+		/* (vback porch + vfront porch + vpulse width + yres) * 2 */
+		qcom,mdss-tear-check-sync-cfg-height = <6592>;
+
 		somc,change-fps-enable;
 		somc,change-fps-panel-type = "hybrid_incell_type";
 		somc,change-fps-panel-mode = "dynamic_mode";

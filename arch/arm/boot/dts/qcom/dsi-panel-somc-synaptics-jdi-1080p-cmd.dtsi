@@ -123,6 +123,10 @@
 		somc,ewu-wait-after-touch-reset = <40>;
 		somc,mdss-dsi-disp-on-in-hs = <0>;
 		somc,mdss-dsi-wait-time-before-post-on-cmd = <0>;
+
+		/* (vback porch + vfront porch + vpulse width + yres) * 2 */
+		qcom,mdss-tear-check-sync-cfg-height = <4326>;
+
 		somc,change-fps-enable;
 		somc,change-fps-panel-type = "hybrid_incell_type";
 		somc,change-fps-panel-mode = "dynamic_mode";
