@@ -1981,6 +1981,7 @@ unlock_and_return:
 	return retflag;
 }
 
+#if defined(CONFIG_MSM_PM) && defined(CONFIG_ARCH_MSM8916)
 /**
  * lpm_cpu_hotplug_enter(): Called by dying CPU to terminate in low power mode
  *
@@ -2036,5 +2037,5 @@ void lpm_cpu_hotplug_enter(unsigned int cpu)
 
 	msm_cpu_pm_enter_sleep(mode, false);
 }
-
+#endif
 
