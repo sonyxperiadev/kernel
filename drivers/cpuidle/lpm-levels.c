@@ -1294,6 +1294,7 @@ unlock_and_return:
 	return state_id;
 }
 
+#if defined(CONFIG_MSM_PM) && defined(CONFIG_ARCH_MSM8916)
 /**
  * lpm_cpu_hotplug_enter(): Called by dying CPU to terminate in low power mode
  *
@@ -1349,6 +1350,7 @@ void lpm_cpu_hotplug_enter(unsigned int cpu)
 
 	msm_cpu_pm_enter_sleep(mode, false);
 }
+#endif
 
 static bool psci_enter_sleep(struct lpm_cpu *cpu, int idx, bool from_idle)
 {
