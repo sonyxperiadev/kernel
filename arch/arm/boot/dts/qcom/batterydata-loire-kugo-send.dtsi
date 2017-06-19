@@ -24,6 +24,7 @@ qcom,loire-kugo-send {
 	qcom,chg-rslow-comp-c2 = <3081929>;
 	qcom,chg-rs-to-rslow = <1333501>;
 	qcom,chg-rslow-comp-thr = <0x99>;
+	qcom,max-voltage-uv = <4350000>;
 	qcom,fg-profile-data = [
 		 DD 83 71 7C
 		 83 80 26 76
