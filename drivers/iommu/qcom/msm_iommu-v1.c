@@ -344,12 +344,17 @@ static int __flush_iotlb_va(struct iommu_domain *domain, unsigned int va)
 		iommu_drvdata = dev_get_drvdata(ctx_drvdata->pdev->dev.parent);
 		BUG_ON(!iommu_drvdata);
 
+		ret = __enable_clocks(iommu_drvdata);
+		if (ret)
+			goto fail;
+
 		SET_TLBIVA(iommu_drvdata->cb_base, ctx_drvdata->num,
 			   priv->asid | (va & CB_TLBIVA_VA));
 		mb();
 		__sync_tlb(iommu_drvdata, ctx_drvdata->num, priv);
+		__disable_clocks(iommu_drvdata);
 	}
-
+fail:
 	return ret;
 }
 #endif
@@ -382,11 +387,16 @@ static int __flush_iotlb(struct iommu_domain *domain)
 		iommu_drvdata = dev_get_drvdata(ctx_drvdata->pdev->dev.parent);
 		BUG_ON(!iommu_drvdata);
 
+		ret = __enable_clocks(iommu_drvdata);
+		if (ret)
+			goto fail;
+
 		SET_TLBIASID(iommu_drvdata->cb_base, ctx_drvdata->num,
 			     priv->asid);
 		__sync_tlb(iommu_drvdata, ctx_drvdata->num, priv);
+		__disable_clocks(iommu_drvdata);
 	}
-
+fail:
 	return ret;
 }
 
@@ -923,6 +933,12 @@ static int msm_iommu_attach_dev(struct iommu_domain *domain, struct device *dev)
 	if (ret)
 		goto unlock;
 
+	ret = __enable_clocks(iommu_drvdata);
+	if (ret) {
+		__disable_regulators(iommu_drvdata);
+		goto unlock;
+	}
+
 	/* We can only do this once */
 	if (!iommu_drvdata->ctx_attach_count) {
 		if (!is_secure) {
@@ -960,6 +976,8 @@ static int msm_iommu_attach_dev(struct iommu_domain *domain, struct device *dev)
 			     ctx_drvdata->asid);
 		__sync_tlb(iommu_drvdata, ctx_drvdata->num, priv);
 	}
+
+	__disable_clocks(iommu_drvdata);
 
 add_domain:
 	list_add(&(ctx_drvdata->attached_elm), &priv->list_attached);
@@ -1048,6 +1066,10 @@ static void msm_iommu_detach_dev(struct iommu_domain *domain,
 	if (ctx_drvdata->attach_count > 0)
 		goto unlock;
 
+	ret = __enable_clocks(iommu_drvdata);
+	if (ret)
+		goto unlock;
+
 	is_secure = iommu_drvdata->sec_id != -1;
 
 	if (iommu_drvdata->model == MMU_500) {
@@ -1067,6 +1089,8 @@ static void msm_iommu_detach_dev(struct iommu_domain *domain,
 		__release_smg(iommu_drvdata->base);
 		iommu_resume(iommu_drvdata);
 	}
+
+	__disable_clocks(iommu_drvdata);
 
 	apply_bus_vote(iommu_drvdata, 0);
 
@@ -1485,6 +1509,12 @@ irqreturn_t msm_iommu_global_fault_handler(int irq, void *dev_id)
 		goto fail;
 	}
 
+	ret = __enable_clocks(drvdata);
+	if (ret) {
+		ret = IRQ_NONE;
+		goto fail;
+	}
+
 	gfsr = GET_GFSR(drvdata->base);
 	if (gfsr) {
 		pr_err("Unexpected %s global fault !!\n", drvdata->name);
@@ -1494,6 +1524,7 @@ irqreturn_t msm_iommu_global_fault_handler(int irq, void *dev_id)
 	} else
 		ret = IRQ_NONE;
 
+	__disable_clocks(drvdata);
 fail:
 	mutex_unlock(&msm_iommu_lock);
 
