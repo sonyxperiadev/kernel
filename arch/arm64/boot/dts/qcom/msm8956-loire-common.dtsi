@@ -254,7 +254,7 @@
 		compatible = "qcom,msm-uartdm-v1.4", "qcom,msm-uartdm";
 		reg = <0x7af0000 0x200>;
 		interrupts = <0 307 0>;
-		clock-names = "core_clk", "iface_clk";
+		clock-names = "core", "iface";
 		clocks = <&clock_gcc clk_gcc_blsp2_uart2_apps_clk>,
 				<&clock_gcc clk_gcc_blsp2_ahb_clk>;
 		pinctrl-names = "default";
