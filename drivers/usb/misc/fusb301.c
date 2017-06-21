@@ -1295,7 +1295,6 @@ static void fusb301_src_detected(struct fusb301_chip *chip)
 	chip->typec_state = POWER_SUPPLY_TYPE_UFP;
 	chip->type_c_psy_d.type = POWER_SUPPLY_TYPE_UFP;
 	set_property_on_battery(chip, POWER_SUPPLY_PROP_TYPEC_MODE);
-	power_supply_changed(chip->type_c_psy);
 }
 
 static void fusb301_snk_detected(struct fusb301_chip *chip)
@@ -1351,7 +1350,6 @@ static void fusb301_snk_detected(struct fusb301_chip *chip)
 		chip->typec_state = POWER_SUPPLY_TYPE_DFP;
 		chip->type_c_psy_d.type = POWER_SUPPLY_TYPE_DFP;
 		set_property_on_battery(chip, POWER_SUPPLY_PROP_TYPEC_MODE);
-		power_supply_changed(chip->type_c_psy);
 	}
 }
 
@@ -1477,8 +1475,6 @@ static void fusb301_detach(struct fusb301_chip *chip)
 	chip->typec_state = POWER_SUPPLY_TYPE_UNKNOWN;
 	chip->type_c_psy_d.type = POWER_SUPPLY_TYPE_UNKNOWN;
 	set_property_on_battery(chip, POWER_SUPPLY_PROP_TYPEC_MODE);
-
-	power_supply_changed(chip->type_c_psy);
 
 	if (chip->pdata->cbl_det_enabled && !chip->cbl_det) {
 		dev_dbg(cdev, "%s: !cbl_det, set SNK.\n", __func__);
