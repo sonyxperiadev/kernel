@@ -1053,7 +1053,6 @@ config SERIAL_MSM_CONSOLE
 	depends on SERIAL_MSM=y
 	select SERIAL_CORE_CONSOLE
 	select SERIAL_EARLYCON
-	select QCOM_UART_SETUP
 
 config SERIAL_MSM_HS
 	tristate "MSM UART High Speed: Serial Driver"
