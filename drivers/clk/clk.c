@@ -1751,6 +1751,15 @@ static int clk_change_rate(struct clk_core *core)
 	else if (core->parent)
 		best_parent_rate = core->parent->rate;
 
+	trace_clk_set_rate(core, core->new_rate);
+
+	/* Enforce vdd requirements for new frequency. */
+	if (core->prepare_count) {
+		rc = clk_vote_rate_vdd(core, core->new_rate);
+		if (rc)
+			goto out;
+	}
+
 	if (core->new_parent && core->new_parent != core->parent) {
 		old_parent = __clk_set_parent_before(core, core->new_parent);
 		trace_clk_set_parent(core, core->new_parent);
@@ -1766,15 +1775,6 @@ static int clk_change_rate(struct clk_core *core)
 
 		trace_clk_set_parent_complete(core, core->new_parent);
 		__clk_set_parent_after(core, core->new_parent, old_parent);
-	}
-
-	trace_clk_set_rate(core, core->new_rate);
-
-	/* Enforce vdd requirements for new frequency. */
-	if (core->prepare_count) {
-		rc = clk_vote_rate_vdd(core, core->new_rate);
-		if (rc)
-			goto out;
 	}
 
 	if (!skip_set_rate && core->ops->set_rate) {
@@ -2874,8 +2874,6 @@ static int clk_debug_create_one(struct clk_core *core, struct dentry *pdentry)
 			goto err_out;
 	}
 
-	clk_debug_measure_add(core->hw, core->dentry);
-
 	ret = 0;
 	goto out;
 
@@ -3005,10 +3003,8 @@ static int __init clk_debug_init(void)
 		return -ENOMEM;
 
 	mutex_lock(&clk_debug_lock);
-	hlist_for_each_entry(core, &clk_debug_list, debug_node) {
-		clk_register_debug(core->hw, core->dentry);
+	hlist_for_each_entry(core, &clk_debug_list, debug_node)
 		clk_debug_create_one(core, rootdir);
-	}
 
 	inited = 1;
 	mutex_unlock(&clk_debug_lock);

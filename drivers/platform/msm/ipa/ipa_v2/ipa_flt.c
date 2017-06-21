@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -653,6 +653,7 @@ int __ipa_commit_flt_v1_1(enum ipa_ip_type ip)
 	struct ipa_ip_v6_filter_init *v6;
 	u16 avail;
 	u16 size;
+	gfp_t flag = GFP_KERNEL | (ipa_ctx->use_dma_zone ? GFP_DMA : 0);
 
 	mem = kmalloc(sizeof(struct ipa_mem_buffer), GFP_KERNEL);
 	if (!mem) {
@@ -669,7 +670,7 @@ int __ipa_commit_flt_v1_1(enum ipa_ip_type ip)
 			IPA_MEM_PART(v6_flt_size_ddr);
 		size = sizeof(struct ipa_ip_v6_filter_init);
 	}
-	cmd = kmalloc(size, GFP_KERNEL);
+	cmd = kmalloc(size, flag);
 	if (!cmd) {
 		IPAERR("failed to alloc immediate command object\n");
 		goto fail_alloc_cmd;
@@ -842,6 +843,7 @@ int __ipa_commit_flt_v2(enum ipa_ip_type ip)
 	int num_desc = 0;
 	int i;
 	u16 avail;
+	gfp_t flag = GFP_ATOMIC | (ipa_ctx->use_dma_zone ? GFP_DMA : 0);
 
 	desc = kzalloc(16 * sizeof(*desc), GFP_ATOMIC);
 	if (desc == NULL) {
@@ -850,7 +852,7 @@ int __ipa_commit_flt_v2(enum ipa_ip_type ip)
 		goto fail_desc;
 	}
 
-	cmd = kzalloc(16 * sizeof(*cmd), GFP_ATOMIC);
+	cmd = kzalloc(16 * sizeof(*cmd), flag);
 	if (cmd == NULL) {
 		IPAERR("fail to alloc cmd blob ip %d\n", ip);
 		rc = -ENOMEM;
@@ -1482,17 +1484,24 @@ void ipa_install_dflt_flt_rules(u32 ipa_ep_idx)
 
 void ipa_delete_dflt_flt_rules(u32 ipa_ep_idx)
 {
+	struct ipa_flt_tbl *tbl;
 	struct ipa_ep_context *ep = &ipa_ctx->ep[ipa_ep_idx];
 
 	mutex_lock(&ipa_ctx->lock);
 	if (ep->dflt_flt4_rule_hdl) {
+		tbl = &ipa_ctx->flt_tbl[ipa_ep_idx][IPA_IP_v4];
 		__ipa_del_flt_rule(ep->dflt_flt4_rule_hdl);
 		ipa_ctx->ctrl->ipa_commit_flt(IPA_IP_v4);
+		/* Reset the sticky flag. */
+		tbl->sticky_rear = false;
 		ep->dflt_flt4_rule_hdl = 0;
 	}
 	if (ep->dflt_flt6_rule_hdl) {
+		tbl = &ipa_ctx->flt_tbl[ipa_ep_idx][IPA_IP_v6];
 		__ipa_del_flt_rule(ep->dflt_flt6_rule_hdl);
 		ipa_ctx->ctrl->ipa_commit_flt(IPA_IP_v6);
+		/* Reset the sticky flag. */
+		tbl->sticky_rear = false;
 		ep->dflt_flt6_rule_hdl = 0;
 	}
 	mutex_unlock(&ipa_ctx->lock);

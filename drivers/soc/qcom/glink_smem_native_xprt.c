@@ -677,7 +677,8 @@ static void process_rx_data(struct edge_info *einfo, uint16_t cmd_id,
 		err = true;
 	} else if (intent->data == NULL) {
 		if (einfo->intentless) {
-			intent->data = kmalloc(cmd.frag_size, GFP_ATOMIC);
+			intent->data = kmalloc(cmd.frag_size,
+						__GFP_ATOMIC | __GFP_HIGH);
 			if (!intent->data) {
 				err = true;
 				GLINK_ERR(
@@ -796,6 +797,12 @@ static bool get_rx_fifo(struct edge_info *einfo)
 							&einfo->rx_fifo_size,
 							einfo->remote_proc_id,
 							SMEM_ITEM_CACHED_FLAG);
+		if (!einfo->rx_fifo)
+			einfo->rx_fifo = smem_get_entry(
+						SMEM_GLINK_NATIVE_XPRT_FIFO_1,
+							&einfo->rx_fifo_size,
+							einfo->remote_proc_id,
+							0);
 		if (!einfo->rx_fifo)
 			return false;
 	}

@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2016, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -78,7 +78,17 @@ struct diagfwd_info {
 	void *ctxt;
 	struct diagfwd_buf_t *buf_1;
 	struct diagfwd_buf_t *buf_2;
+	struct diagfwd_buf_t *buf_upd_1_a;
+	struct diagfwd_buf_t *buf_upd_1_b;
+	struct diagfwd_buf_t *buf_upd_2_a;
+	struct diagfwd_buf_t *buf_upd_2_b;
 	struct diagfwd_buf_t *buf_ptr[NUM_WRITE_BUFFERS];
+	int cpd_len_1;
+	int cpd_len_2;
+	int upd_len_1_a;
+	int upd_len_1_b;
+	int upd_len_2_a;
+	int upd_len_2_b;
 	struct diag_peripheral_ops *p_ops;
 	struct diag_channel_ops *c_ops;
 };

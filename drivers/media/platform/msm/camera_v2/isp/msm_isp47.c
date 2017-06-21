@@ -1401,7 +1401,7 @@ void msm_vfe47_cfg_camif(struct vfe_device *vfe_dev,
 	if (subsample_period && subsample_pattern) {
 		val = msm_camera_io_r(vfe_dev->vfe_base + 0x494);
 		val &= 0xFFFFE0FF;
-		val = (subsample_period - 1) << 8;
+		val |= (subsample_period - 1) << 8;
 		msm_camera_io_w(val, vfe_dev->vfe_base + 0x494);
 		ISP_DBG("%s:camif PERIOD %x PATTERN %x\n",
 			__func__,  subsample_period, subsample_pattern);
@@ -1857,10 +1857,10 @@ void msm_vfe47_cfg_axi_ub_equal_default(
 					axi_data->free_wm[i])
 					break;
 
-			rdi_ub_offset = ((SRC_TO_INTF(
+			rdi_ub_offset = (SRC_TO_INTF(
 					HANDLE_TO_IDX(axi_data->free_wm[i])) -
-					VFE_RAW_0 * 2) + plane) *
-					axi_data->hw_info->min_wm_ub;
+					VFE_RAW_0 ) *
+					axi_data->hw_info->min_wm_ub * 2;
 			wm_ub_size = axi_data->hw_info->min_wm_ub * 2;
 			msm_camera_io_w(rdi_ub_offset << 16 | (wm_ub_size - 1),
 				vfe_dev->vfe_base +

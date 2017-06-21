@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -27,7 +27,7 @@
 #include "diag_mux.h"
 #include "diag_usb.h"
 #include "diag_memorydevice.h"
-
+#include "diag_ipc_logging.h"
 
 struct diag_mux_state_t *diag_mux;
 static struct diag_logger_t usb_logger;
@@ -133,21 +133,56 @@ int diag_mux_queue_read(int proc)
 int diag_mux_write(int proc, unsigned char *buf, int len, int ctx)
 {
 	struct diag_logger_t *logger = NULL;
-	int peripheral;
+	int peripheral, upd;
 
 	if (proc < 0 || proc >= NUM_MUX_PROC)
 		return -EINVAL;
 	if (!diag_mux)
 		return -EIO;
 
-	peripheral = GET_BUF_PERIPHERAL(ctx);
-	if (peripheral > NUM_PERIPHERALS)
-		return -EINVAL;
+	upd = GET_PD_CTXT(ctx);
+	if (upd) {
+		switch (upd) {
+		case DIAG_ID_MPSS:
+			upd = PERIPHERAL_MODEM;
+			break;
+		case DIAG_ID_LPASS:
+			upd = PERIPHERAL_LPASS;
+			break;
+		case DIAG_ID_CDSP:
+			upd = PERIPHERAL_CDSP;
+			break;
+		case UPD_WLAN:
+			if (!driver->num_pd_session)
+				upd = PERIPHERAL_MODEM;
+			break;
+		case UPD_AUDIO:
+		case UPD_SENSORS:
+			if (!driver->num_pd_session)
+				upd = PERIPHERAL_LPASS;
+			break;
+		default:
+			pr_err("diag: invalid pd ctxt= %d\n", upd);
+			return -EINVAL;
+		}
+		if (((MD_PERIPHERAL_MASK(upd)) &
+			(diag_mux->mux_mask)) &&
+			driver->md_session_map[upd])
+			logger = diag_mux->md_ptr;
+		else
+			logger = diag_mux->usb_ptr;
+	} else {
 
-	if (MD_PERIPHERAL_MASK(peripheral) & diag_mux->mux_mask)
-		logger = diag_mux->md_ptr;
-	else
-		logger = diag_mux->usb_ptr;
+		peripheral = GET_BUF_PERIPHERAL(ctx);
+		if (peripheral > NUM_PERIPHERALS)
+			return -EINVAL;
+
+		if (MD_PERIPHERAL_MASK(peripheral) &
+			diag_mux->mux_mask)
+			logger = diag_mux->md_ptr;
+		else
+			logger = diag_mux->usb_ptr;
+	}
 
 	if (logger && logger->log_ops && logger->log_ops->write)
 		return logger->log_ops->write(proc, buf, len, ctx);
@@ -159,9 +194,17 @@ int diag_mux_close_peripheral(int proc, uint8_t peripheral)
 	struct diag_logger_t *logger = NULL;
 	if (proc < 0 || proc >= NUM_MUX_PROC)
 		return -EINVAL;
+
 	/* Peripheral should account for Apps data as well */
-	if (peripheral > NUM_PERIPHERALS)
-		return -EINVAL;
+	if (peripheral > NUM_PERIPHERALS) {
+		if (driver->num_pd_session) {
+			if (peripheral > NUM_MD_SESSIONS)
+				return -EINVAL;
+		} else {
+			return -EINVAL;
+		}
+	}
+
 	if (!diag_mux)
 		return -EIO;
 
@@ -182,7 +225,8 @@ int diag_mux_switch_logging(int *req_mode, int *peripheral_mask)
 	if (!req_mode)
 		return -EINVAL;
 
-	if (*peripheral_mask <= 0 || *peripheral_mask > DIAG_CON_ALL) {
+	if (*peripheral_mask <= 0 ||
+		(*peripheral_mask > (DIAG_CON_ALL | DIAG_CON_UPD_ALL))) {
 		pr_err("diag: mask %d in %s\n", *peripheral_mask, __func__);
 		return -EINVAL;
 	}
