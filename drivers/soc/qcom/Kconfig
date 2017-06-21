@@ -1,6 +1,13 @@
 #
 # QCOM Soc drivers
 #
+config MSM_CPU_ACC_CONTROLLER
+	bool "CPU Operations and ACC Clock Controller"
+	help
+	  This driver enables the kernel to manage the L2 Cache
+	  Clock Controller and program the SCM to bring up/down
+	  the CPUs in the SoC.
+
 config MSM_INRUSH_CURRENT_MITIGATION
 	bool "Inrush-current mitigation Driver"
 	help
@@ -188,6 +195,14 @@ config MSM_QMI_INTERFACE
 	  This library provides interface functions to the kernel drivers
 	  to perform QMI message marshaling and transport them over IPC
 	  Router.
+
+config MSM_CPU_PWR_CTL
+	bool "Cpu subsystem power control"
+	depends on SMP && (ARM || ARM64)
+	default y
+	help
+	Provides routines to power on cpu rails and l2 cache
+	controller during coldboot.
 
 config MSM_CACHE_M4M_ERP64
        bool "Cache and M4M error report"
@@ -797,6 +812,13 @@ config MSM_AVTIMER
 	help
 		This driver gets the Q6 out of power collapsed state and
 		exposes ioctl control to read avtimer tick.
+
+config MSM_PACMAN
+	tristate "Enable the Peripheral Access Control Manager (PACMan)"
+	help
+	  Add support for the Peripheral Access Control Manager (PACMan). This
+	  driver allows reconfiguration of the Bus Access Manager Low Speed
+	  peripheral (BLSP) ownership.
 
 config MSM_KERNEL_PROTECT
 	bool "Protect kernel text by removing write permissions in stage-2"

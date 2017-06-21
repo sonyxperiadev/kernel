@@ -64,6 +64,7 @@
  * where to place its SVC stack
  */
 struct secondary_data secondary_data;
+volatile unsigned long secondary_holding_pen_release = INVALID_HWID;
 
 enum ipi_msg_type {
 	IPI_RESCHEDULE,
@@ -713,6 +714,11 @@ void arch_send_call_function_single_ipi(int cpu)
 void arch_send_wakeup_ipi_mask(const struct cpumask *mask)
 {
 	smp_cross_call(mask, IPI_WAKEUP);
+}
+#else
+void arch_send_wakeup_ipi_mask(const struct cpumask *mask)
+{
+        smp_cross_call_common(mask, IPI_WAKEUP);
 }
 #endif
 

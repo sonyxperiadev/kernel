@@ -36,6 +36,7 @@
 #include <dt-bindings/clock/msm-clocks-8976.h>
 #include <dt-bindings/clock/msm-clocks-hwio-8976.h>
 
+#include "reset.h"
 #include "clock.h"
 
 enum {
@@ -94,6 +95,13 @@ static DEFINE_CLK_BRANCH_VOTER(xo_wlan_clk, &xo_clk_src.c);
 
 DEFINE_CLK_DUMMY(wcnss_m_clk, 0);
 DEFINE_EXT_CLK(debug_cpu_clk, NULL);
+
+static const struct msm_reset_map gcc_msm8976_resets[] = {
+	[RST_CAMSS_MICRO_BCR]	= { 0x56008 },
+	[RST_USB_HS_BCR]	= { 0x41000 },
+	[RST_QUSB2_PHY_BCR]	= { 0x4103C },
+	[RST_USB2_HS_PHY_ONLY_BCR] = { 0x41034 },
+};
 
 static unsigned int soft_vote_gpll0;
 
@@ -3622,6 +3630,10 @@ static int msm_gcc_probe(struct platform_device *pdev)
 	regval = readl_relaxed(GCC_REG_BASE(APSS_MISC));
 	regval |= BIT(2);
 	writel_relaxed(regval, GCC_REG_BASE(APSS_MISC));
+
+	/* Register block resets */
+	msm_reset_controller_register(pdev, gcc_msm8976_resets,
+			ARRAY_SIZE(gcc_msm8976_resets), virt_bases[GCC_BASE]);
 
 	dev_info(&pdev->dev, "Registered GCC clocks\n");
 

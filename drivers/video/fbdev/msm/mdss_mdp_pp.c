@@ -7719,6 +7719,7 @@ static int pp_get_driver_ops(struct mdp_pp_driver_ops *ops)
 	case MDSS_MDP_HW_REV_109:
 	case MDSS_MDP_HW_REV_110:
 	case MDSS_MDP_HW_REV_200:
+	case MDSS_MDP_HW_REV_111:
 	case MDSS_MDP_HW_REV_112:
 		memset(ops, 0, sizeof(struct mdp_pp_driver_ops));
 		break;
