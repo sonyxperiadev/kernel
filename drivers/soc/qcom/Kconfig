@@ -940,9 +940,4 @@ config QCOM_CX_IPEAK
 	  clients are going to cross their thresholds then Cx ipeak hw module will raise
 	  an interrupt to cDSP block to throttle cDSP fmax.
 
-config QCOM_UART_SETUP
-	bool "Setup UART console at boot"
-	help
-	  This is a driver to setup UART console at boot.
-
 source "drivers/soc/qcom/memshare/Kconfig"
