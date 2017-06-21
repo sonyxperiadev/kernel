@@ -16,7 +16,7 @@
  */
 
 #ifdef CONFIG_ARCH_MSM8916
-#include <linux/usb/msm_hsusb_legacy.h
+#include <linux/usb/msm_hsusb_legacy.h>
 #else
 
 #ifndef __ASM_ARCH_MSM_HSUSB_H
