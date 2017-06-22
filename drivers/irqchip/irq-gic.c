@@ -89,6 +89,10 @@ struct gic_chip_data {
 
 static DEFINE_RAW_SPINLOCK(irq_controller_lock);
 
+#ifdef CONFIG_MSM_LEGACY_QGIC
+static DEFINE_RAW_SPINLOCK(gic_sgi_lock);
+#endif
+
 /*
  * The GIC mapping of CPU interfaces does not necessarily match
  * the logical CPU numbering.  Let's use a mapping as returned
@@ -741,6 +745,16 @@ static void gic_cpu_restore(unsigned int gic_nr)
 	if (!dist_base || !cpu_base)
 		return;
 
+#ifdef CONFIG_MSM_LEGACY_QGIC
+	ptr = raw_cpu_ptr(gic_data[gic_nr].saved_ppi_conf);
+	for (i = 0; i < DIV_ROUND_UP(32, 16); i++)
+		writel_relaxed(ptr[i], dist_base + GIC_DIST_CONFIG + i * 4);
+
+	for (i = 0; i < DIV_ROUND_UP(32, 4); i++)
+		writel_relaxed(GICD_INT_DEF_PRI_X4,
+					dist_base + GIC_DIST_PRI + i * 4);
+#endif /* CONFIG_MSM_LEGACY_QGIC */
+
 	ptr = raw_cpu_ptr(gic_data[gic_nr].saved_ppi_enable);
 	for (i = 0; i < DIV_ROUND_UP(32, 32); i++) {
 		writel_relaxed(GICD_INT_EN_CLR_X32,
@@ -755,6 +769,7 @@ static void gic_cpu_restore(unsigned int gic_nr)
 		writel_relaxed(ptr[i], dist_base + GIC_DIST_ACTIVE_SET + i * 4);
 	}
 
+#ifndef CONFIG_MSM_LEGACY_QGIC
 	ptr = raw_cpu_ptr(gic_data[gic_nr].saved_ppi_conf);
 	for (i = 0; i < DIV_ROUND_UP(32, 16); i++)
 		writel_relaxed(ptr[i], dist_base + GIC_DIST_CONFIG + i * 4);
@@ -762,6 +777,7 @@ static void gic_cpu_restore(unsigned int gic_nr)
 	for (i = 0; i < DIV_ROUND_UP(32, 4); i++)
 		writel_relaxed(GICD_INT_DEF_PRI_X4,
 					dist_base + GIC_DIST_PRI + i * 4);
+#endif /* CONFIG_MSM_LEGACY_QGIC */
 
 	writel_relaxed(GICC_INT_PRI_THRESHOLD, cpu_base + GIC_CPU_PRIMASK);
 	gic_cpu_if_up(&gic_data[gic_nr]);
@@ -841,7 +857,11 @@ static void gic_raise_softirq(const struct cpumask *mask, unsigned int irq)
 	int cpu;
 	unsigned long flags, map = 0;
 
+#ifdef CONFIG_MSM_LEGACY_QGIC
+	raw_spin_lock_irqsave(&gic_sgi_lock, flags);
+#else
 	raw_spin_lock_irqsave(&irq_controller_lock, flags);
+#endif /* CONFIG_MSM_LEGACY_QGIC */
 
 	/* Convert our logical CPU mask into a physical one. */
 	for_each_cpu(cpu, mask)
@@ -856,7 +876,11 @@ static void gic_raise_softirq(const struct cpumask *mask, unsigned int irq)
 	/* this always happens on GIC0 */
 	writel_relaxed(map << 16 | irq, gic_data_dist_base(&gic_data[0]) + GIC_DIST_SOFTINT);
 
+#ifdef CONFIG_MSM_LEGACY_QGIC
+	raw_spin_unlock_irqrestore(&gic_sgi_lock, flags);
+#else
 	raw_spin_unlock_irqrestore(&irq_controller_lock, flags);
+#endif /* CONFIG_MSM_LEGACY_QGIC */
 }
 #endif
 
@@ -926,6 +950,9 @@ void gic_migrate_target(unsigned int new_cpu_id)
 	ror_val = (cur_cpu_id - new_cpu_id) & 31;
 
 	raw_spin_lock(&irq_controller_lock);
+#ifdef CONFIG_MSM_LEGACY_QGIC
+	raw_spin_lock(&gic_sgi_lock);
+#endif /* CONFIG_MSM_LEGACY_QGIC */
 
 	/* Update the target interface for this logical CPU */
 	gic_cpu_map[cpu] = 1 << new_cpu_id;
@@ -945,6 +972,9 @@ void gic_migrate_target(unsigned int new_cpu_id)
 		}
 	}
 
+#ifdef CONFIG_MSM_LEGACY_QGIC
+	raw_spin_unlock(&gic_sgi_lock);
+#endif /* CONFIG_MSM_LEGACY_QGIC */
 	raw_spin_unlock(&irq_controller_lock);
 
 	/*
