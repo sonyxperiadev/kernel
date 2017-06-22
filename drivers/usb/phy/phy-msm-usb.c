@@ -3521,6 +3521,7 @@ static struct platform_device *msm_otg_add_pdev(
 		goto error;
 	}
 
+	arch_setup_dma_ops(&pdev->dev, 0, 0, NULL, 0);
 	pdev->dev.coherent_dma_mask = DMA_BIT_MASK(32);
 	pdev->dev.dma_mask = &msm_otg_dma_mask;
 	pdev->dev.parent = &ofdev->dev;
