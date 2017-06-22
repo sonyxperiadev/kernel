@@ -248,7 +248,7 @@ typedef union bcm_event_msg_u {
 #define WLC_E_FBT_AUTH_REQ_IND		132	/* FBT Authentication Request Indication */
 #define WLC_E_RSSI_LQM			133	/* Enhancement addition for WLC_E_RSSI */
 #define WLC_E_PFN_GSCAN_FULL_RESULT		134 /* Full probe/beacon (IEs etc) results */
-#define WLC_E_PFN_SWC		135 /* Significant change in rssi of bssids being tracked */
+/* 135 was legacy entry for WLC_E_PFN_SWC can be reused */
 #define WLC_E_AUTHORIZED	136	/* a STA been authroized for traffic */
 #define WLC_E_PROBREQ_MSG_RX	137 /* probe req with wl_event_rx_frame_data_t header */
 #define WLC_E_PFN_SCAN_COMPLETE	138	/* PFN completed scan of network list */
