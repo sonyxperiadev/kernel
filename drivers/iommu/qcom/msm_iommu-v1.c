@@ -1739,6 +1739,13 @@ static int msm_iommu_domain_set_attr(struct iommu_domain *domain,
 		else
 			priv->attributes &= ~(1 << DOMAIN_ATTR_DYNAMIC);
 		break;
+	case DOMAIN_ATTR_FAST:
+		/*
+		 * We cannot support DOMAIN_ATTR_FAST. This is an optimization
+		 * that is specific to arm_smmu implementations and MMU-500
+		 * does not support this mere trick.
+		 */
+		break;
 	default:
 		return -EINVAL;
 	}
@@ -1794,6 +1801,14 @@ static int msm_iommu_domain_get_attr(struct iommu_domain *domain,
 	case DOMAIN_ATTR_DYNAMIC:
 		*((int *)data) = !!(priv->attributes
 					& (1 << DOMAIN_ATTR_DYNAMIC));
+		break;
+	case DOMAIN_ATTR_FAST:
+		/*
+		 * We cannot support DOMAIN_ATTR_FAST. This is an optimization
+		 * that is specific to arm_smmu implementations and MMU-500
+		 * does not support this mere trick.
+		 */
+		*((int *)data) = 0;
 		break;
 	default:
 		return -EINVAL;
