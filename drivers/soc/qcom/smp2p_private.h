@@ -17,6 +17,7 @@
 #include <linux/types.h>
 #include <linux/spinlock.h>
 #include <linux/ipc_logging.h>
+#include <asm/io.h>
 #include "smp2p_private_api.h"
 
 #define SMP2P_MAX_ENTRY 16
@@ -50,49 +51,63 @@
 		| (((new_value) << (bit)) & (mask)); \
 	}
 
-#define SMP2P_GET_LOCAL_PID(hdr) \
-	SMP2P_GET_BITS(hdr, SMP2P_LOCAL_PID_MASK, SMP2P_LOCAL_PID_BIT)
-#define SMP2P_SET_LOCAL_PID(hdr, pid) \
-	SMP2P_SET_BITS(hdr, SMP2P_LOCAL_PID_MASK, SMP2P_LOCAL_PID_BIT, pid)
+#define SMP2P_IOMEM_GET_BITS(hdr, val, mask, bit) \
+	({\
+		const volatile void __iomem *__p = (hdr); \
+		__p += offsetof(typeof(*(hdr)), val); \
+		(readl(__p) & (mask)) >> (bit); \
+	})
+#define SMP2P_IOMEM_SET_BITS(hdr, val, mask, bit, new_value) \
+	({\
+		volatile void __iomem *__p = (hdr); \
+		__p += offsetof(typeof(*(hdr)), val); \
+		writel((readl(__p) & ~(mask)) \
+		| (((new_value) << (bit)) & (mask)), __p); \
+	})
 
-#define SMP2P_GET_REMOTE_PID(hdr) \
-	SMP2P_GET_BITS(hdr, SMP2P_REMOTE_PID_MASK, SMP2P_REMOTE_PID_BIT)
-#define SMP2P_SET_REMOTE_PID(hdr, pid) \
-	SMP2P_SET_BITS(hdr, SMP2P_REMOTE_PID_MASK, SMP2P_REMOTE_PID_BIT, pid)
+#define SMP2P_GET_LOCAL_PID(hdr, val) \
+	SMP2P_IOMEM_GET_BITS(hdr, val, SMP2P_LOCAL_PID_MASK, SMP2P_LOCAL_PID_BIT)
+#define SMP2P_SET_LOCAL_PID(hdr, val, pid) \
+	SMP2P_IOMEM_SET_BITS(hdr, val, SMP2P_LOCAL_PID_MASK, SMP2P_LOCAL_PID_BIT, pid)
 
-#define SMP2P_GET_VERSION(hdr) \
-	SMP2P_GET_BITS(hdr, SMP2P_VERSION_MASK, SMP2P_VERSION_BIT)
-#define SMP2P_SET_VERSION(hdr, version) \
-	SMP2P_SET_BITS(hdr, SMP2P_VERSION_MASK, SMP2P_VERSION_BIT, version)
+#define SMP2P_GET_REMOTE_PID(hdr, val) \
+	SMP2P_IOMEM_GET_BITS(hdr, val, SMP2P_REMOTE_PID_MASK, SMP2P_REMOTE_PID_BIT)
+#define SMP2P_SET_REMOTE_PID(hdr, val, pid) \
+	SMP2P_IOMEM_SET_BITS(hdr, val, SMP2P_REMOTE_PID_MASK, SMP2P_REMOTE_PID_BIT, pid)
 
-#define SMP2P_GET_FEATURES(hdr) \
-	SMP2P_GET_BITS(hdr, SMP2P_FEATURE_MASK, SMP2P_FEATURE_BIT)
-#define SMP2P_SET_FEATURES(hdr, features) \
-	SMP2P_SET_BITS(hdr, SMP2P_FEATURE_MASK, SMP2P_FEATURE_BIT, features)
+#define SMP2P_GET_VERSION(hdr, val) \
+	SMP2P_IOMEM_GET_BITS(hdr, val, SMP2P_VERSION_MASK, SMP2P_VERSION_BIT)
+#define SMP2P_SET_VERSION(hdr, val, version) \
+	SMP2P_IOMEM_SET_BITS(hdr, val, SMP2P_VERSION_MASK, SMP2P_VERSION_BIT, version)
 
-#define SMP2P_GET_ENT_TOTAL(hdr) \
-	SMP2P_GET_BITS(hdr, SMP2P_ENT_TOTAL_MASK, SMP2P_ENT_TOTAL_BIT)
-#define SMP2P_SET_ENT_TOTAL(hdr, entries) \
-	SMP2P_SET_BITS(hdr, SMP2P_ENT_TOTAL_MASK, SMP2P_ENT_TOTAL_BIT, entries)
+#define SMP2P_GET_FEATURES(hdr, val) \
+	SMP2P_IOMEM_GET_BITS(hdr, val, SMP2P_FEATURE_MASK, SMP2P_FEATURE_BIT)
+#define SMP2P_SET_FEATURES(hdr, val, features) \
+	SMP2P_IOMEM_SET_BITS(hdr, val, SMP2P_FEATURE_MASK, SMP2P_FEATURE_BIT, features)
 
-#define SMP2P_GET_ENT_VALID(hdr) \
-	SMP2P_GET_BITS(hdr, SMP2P_ENT_VALID_MASK, SMP2P_ENT_VALID_BIT)
-#define SMP2P_SET_ENT_VALID(hdr, entries) \
-	SMP2P_SET_BITS(hdr,  SMP2P_ENT_VALID_MASK, SMP2P_ENT_VALID_BIT,\
+#define SMP2P_GET_ENT_TOTAL(hdr, val) \
+	SMP2P_IOMEM_GET_BITS(hdr, val, SMP2P_ENT_TOTAL_MASK, SMP2P_ENT_TOTAL_BIT)
+#define SMP2P_SET_ENT_TOTAL(hdr, val, entries) \
+	SMP2P_IOMEM_SET_BITS(hdr, val, SMP2P_ENT_TOTAL_MASK, SMP2P_ENT_TOTAL_BIT, entries)
+
+#define SMP2P_GET_ENT_VALID(hdr, val) \
+	SMP2P_IOMEM_GET_BITS(hdr, val, SMP2P_ENT_VALID_MASK, SMP2P_ENT_VALID_BIT)
+#define SMP2P_SET_ENT_VALID(hdr, val, entries) \
+	SMP2P_IOMEM_SET_BITS(hdr, val, SMP2P_ENT_VALID_MASK, SMP2P_ENT_VALID_BIT,\
 		entries)
 
-#define SMP2P_GET_RESTART_DONE(hdr) \
-	SMP2P_GET_BITS(hdr, SMP2P_FLAGS_RESTART_DONE_MASK, \
+#define SMP2P_GET_RESTART_DONE(hdr, val) \
+	SMP2P_IOMEM_GET_BITS(hdr, val, SMP2P_FLAGS_RESTART_DONE_MASK, \
 			SMP2P_FLAGS_RESTART_DONE_BIT)
-#define SMP2P_SET_RESTART_DONE(hdr, value) \
-	SMP2P_SET_BITS(hdr, SMP2P_FLAGS_RESTART_DONE_MASK, \
+#define SMP2P_SET_RESTART_DONE(hdr, val, value) \
+	SMP2P_IOMEM_SET_BITS(hdr, val, SMP2P_FLAGS_RESTART_DONE_MASK, \
 			SMP2P_FLAGS_RESTART_DONE_BIT, value)
 
-#define SMP2P_GET_RESTART_ACK(hdr) \
-	SMP2P_GET_BITS(hdr, SMP2P_FLAGS_RESTART_ACK_MASK, \
+#define SMP2P_GET_RESTART_ACK(hdr, val) \
+	SMP2P_IOMEM_GET_BITS(hdr, val, SMP2P_FLAGS_RESTART_ACK_MASK, \
 			SMP2P_FLAGS_RESTART_ACK_BIT)
-#define SMP2P_SET_RESTART_ACK(hdr, value) \
-	SMP2P_SET_BITS(hdr, SMP2P_FLAGS_RESTART_ACK_MASK, \
+#define SMP2P_SET_RESTART_ACK(hdr, val, value) \
+	SMP2P_IOMEM_SET_BITS(hdr, val, SMP2P_FLAGS_RESTART_ACK_MASK, \
 			SMP2P_FLAGS_RESTART_ACK_BIT, value)
 
 /* Loopback Command Macros */
