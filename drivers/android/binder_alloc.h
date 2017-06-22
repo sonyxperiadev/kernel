@@ -27,6 +27,8 @@
 #include <linux/vmalloc.h>
 #include <linux/slab.h>
 
+#define BINDER_MIN_ALLOC (1 * PAGE_SIZE)
+
 struct binder_transaction;
 
 struct binder_buffer {
@@ -65,6 +67,11 @@ struct binder_alloc {
 	int pid;
 };
 
+#ifdef CONFIG_ANDROID_BINDER_IPC_SELFTEST
+void binder_selftest_alloc(struct binder_alloc *alloc);
+#else
+static inline void binder_selftest_alloc(struct binder_alloc *alloc) {}
+#endif
 extern struct binder_buffer *binder_alloc_new_buf(struct binder_alloc *alloc,
 						  size_t data_size,
 						  size_t offsets_size,

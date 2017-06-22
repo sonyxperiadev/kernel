@@ -29,8 +29,6 @@
 #include "binder_alloc.h"
 #include "binder_trace.h"
 
-#define BINDER_MIN_ALLOC (1 * PAGE_SIZE)
-
 static DEFINE_MUTEX(binder_alloc_mmap_lock);
 
 enum {
