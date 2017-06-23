@@ -1857,7 +1857,7 @@ static int fusb301_parse_dt(struct fusb301_chip *chip)
 
 	data->cbl_sns_gpio = of_get_named_gpio(dev_node,
 						"fusb301,cbl_sns-gpio", 0);
-	if (data->cbl_sns_gpio < 0) {
+	if (data->cbl_sns_enabled && data->cbl_sns_gpio < 0) {
 		dev_err(cdev, "cbl_sns_gpio is not available\n");
 		rc = data->cbl_sns_gpio;
 		goto out;
