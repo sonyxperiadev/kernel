@@ -64,6 +64,7 @@
 			reg = <0x0 0x0>;
 			qcom,limits-info = <&mitigation_profile0>;
 			enable-method = "psci";
+			efficiency = <1024>;
 			qcom,ea = <&ea0>;
 			next-level-cache = <&L2_0>;
 			L2_0: l2-cache {
@@ -86,6 +87,7 @@
 			reg = <0x0 0x1>;
 			qcom,limits-info = <&mitigation_profile1>;
 			enable-method = "psci";
+			efficiency = <1024>;
 			qcom,ea = <&ea1>;
 			next-level-cache = <&L2_0>;
 			L1_D_1: l1-dcache {
@@ -103,6 +105,7 @@
 			reg = <0x0 0x100>;
 			qcom,limits-info = <&mitigation_profile2>;
 			enable-method = "psci";
+			efficiency = <1536>;
 			qcom,ea = <&ea2>;
 			next-level-cache = <&L2_1>;
 			L2_1: l2-cache {
@@ -125,6 +128,7 @@
 			reg = <0x0 0x101>;
 			enable-method = "psci";
 			qcom,limits-info = <&mitigation_profile3>;
+			efficiency = <1536>;
 			qcom,ea = <&ea3>;
 			next-level-cache = <&L2_1>;
 			L1_D_101: l1-dcache {
