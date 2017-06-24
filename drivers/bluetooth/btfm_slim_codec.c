@@ -24,7 +24,7 @@
 #include <sound/soc.h>
 #include <sound/soc-dapm.h>
 #include <sound/tlv.h>
-#include <btfm_slim.h>
+#include "btfm_slim.h"
 
 static int btfm_slim_codec_write(struct snd_soc_codec *codec, unsigned int reg,
 	unsigned int value)

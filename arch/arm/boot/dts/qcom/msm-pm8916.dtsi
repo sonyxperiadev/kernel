@@ -11,6 +11,7 @@
  */
 
 &spmi_bus {
+	#address-cells = <1>;
 
 	qcom,pm8916@0 {
 		spmi-slave-container;
@@ -63,21 +64,25 @@
 			mpp@a000 {
 				reg = <0xa000 0x100>;
 				qcom,pin-num = <1>;
+				status = "disabled";
 			};
 
 			mpp@a100 {
 				reg = <0xa100 0x100>;
 				qcom,pin-num = <2>;
+				status = "disabled";
 			};
 
 			mpp@a200 {
 				reg = <0xa200 0x100>;
 				qcom,pin-num = <3>;
+				status = "disabled";
 			};
 
 			mpp@a300 {
 				reg = <0xa300 0x100>;
 				qcom,pin-num = <4>;
+				status = "disabled";
 			};
 		};
 
@@ -93,21 +98,25 @@
 			gpio@c000 {
 				reg = <0xc000 0x100>;
 				qcom,pin-num = <1>;
+				status = "disabled";
 			};
 
 			gpio@c100 {
 				reg = <0xc100 0x100>;
 				qcom,pin-num = <2>;
+				status = "disabled";
 			};
 
 			gpio@c200 {
 				reg = <0xc200 0x100>;
 				qcom,pin-num = <3>;
+				status = "disabled";
 			};
 
 			gpio@c300 {
 				reg = <0xc300 0x100>;
 				qcom,pin-num = <4>;
+				status = "disabled";
 			};
 		};
 
