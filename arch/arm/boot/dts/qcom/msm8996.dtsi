@@ -331,7 +331,6 @@
 
 		msic: gic-its@09BE0000 {
 			compatible = "arm,gic-v3-its";
-			msi-controller;
 			reg = <0x9be0000 0x20000>;
 		};
 	};
