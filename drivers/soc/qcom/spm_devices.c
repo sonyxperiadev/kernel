@@ -545,7 +545,7 @@ EXPORT_SYMBOL(msm_spm_set_low_power_mode);
 
 void msm_spm_set_rpm_hs(bool allow_rpm_hs)
 {
-	struct msm_spm_device *dev = &__get_cpu_var(msm_cpu_spm_device);
+	struct msm_spm_device *dev = this_cpu_ptr(&msm_cpu_spm_device);
 
 	dev->allow_rpm_hs = allow_rpm_hs;
 }
