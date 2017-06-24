@@ -44,8 +44,34 @@ config MSMB_CAMERA_DEBUG
 	---help---
 	  Enable printk() debug for msm camera 2.0
 
+choice
+	prompt "Choose a MSM camera implementation"
+	depends on MSMB_CAMERA
+
+	config MSMB_CAMERA_NEWGEN
+		bool "New implementation for ARM-SMMU (MSM8996 and later)"
+		default y
+		---help---
+		  This is the new camera implementation, found in official
+		  CAF kernel 3.18 releases. It supports new SoCs using the
+		  ARM SMMU. Not suitable for old SoCs using QC IOMMU v1 and v2.
+
+	config MSMB_CAMERA_LEGACY
+		bool "Old implementation for QC IOMMU (Legacy SoCs)"
+		---help---
+		  This is the old camera implementation, found in branch
+		  3.18 LAW.BR.xxx. This implementation matches the CAF
+		  kernel 3.10 LA.BR.1.3.x.xxx and supports only SoC with
+		  QC IOMMU v1 and v2.
+endchoice
+
 if MSMB_CAMERA
-source "drivers/media/platform/msm/camera_v2/Kconfig"
+ if MSMB_CAMERA_NEWGEN
+ source "drivers/media/platform/msm/camera_v2/Kconfig"
+ endif # MSMB_CAMERA_NEWGEN
+ if MSMB_CAMERA_LEGACY
+ source "drivers/media/platform/msm/camera_v2_legacy/Kconfig"
+ endif # MSMB_CAMERA_LEGACY
 endif # MSMB_CAMERA
 source "drivers/media/platform/msm/dvb/Kconfig"
 source "drivers/media/platform/msm/broadcast/Kconfig"
