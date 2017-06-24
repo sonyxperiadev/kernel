@@ -60,6 +60,7 @@
 			reg = <0x0 0x0>;
 			qcom,limits-info = <&mitigation_profile0>;
 			enable-method = "psci";
+			efficiency = <1024>;
 			qcom,ea = <&ea0>;
 			next-level-cache = <&L2_0>;
 			L2_0: l2-cache {
@@ -82,6 +83,7 @@
 			reg = <0x0 0x1>;
 			qcom,limits-info = <&mitigation_profile1>;
 			enable-method = "psci";
+			efficiency = <1024>;
 			qcom,ea = <&ea1>;
 			next-level-cache = <&L2_0>;
 			L1_D_1: l1-dcache {
@@ -99,6 +101,7 @@
 			reg = <0x0 0x100>;
 			qcom,limits-info = <&mitigation_profile2>;
 			enable-method = "psci";
+			efficiency = <1536>;
 			qcom,ea = <&ea2>;
 			next-level-cache = <&L2_1>;
 			L2_1: l2-cache {
@@ -121,6 +124,7 @@
 			reg = <0x0 0x101>;
 			enable-method = "psci";
 			qcom,limits-info = <&mitigation_profile3>;
+			efficiency = <1536>;
 			qcom,ea = <&ea3>;
 			next-level-cache = <&L2_1>;
 			L1_D_101: l1-dcache {
@@ -283,6 +287,7 @@
                 interrupts = <GIC_SPI 326 IRQ_TYPE_NONE>;
                 qcom,ee = <0>;
                 qcom,channel = <0>;
+		qcom,reserved-chan = <511>;
                 #address-cells = <2>;
                 #size-cells = <0>;
                 interrupt-controller;
@@ -331,14 +336,13 @@
 
 		msic: gic-its@09BE0000 {
 			compatible = "arm,gic-v3-its";
-			msi-controller;
 			reg = <0x9be0000 0x20000>;
 		};
 	};
 
 	timer {
 		compatible = "arm,armv8-timer";
-	        interrupts = <GIC_PPI 13 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>,
+		interrupts = <GIC_PPI 13 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>,
 				<GIC_PPI 14 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>,
 				<GIC_PPI 11 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>,
 				<GIC_PPI 10 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>;
@@ -591,6 +595,7 @@
 		governor = "powersave";
 		qcom,src-dst-ports = <1 512>;
 		qcom,active-only;
+		status = "ok";
 		qcom,bw-tbl =
 			<  1525 /* 200 MHz */ >,
 			<  2288 /* 300 MHz */ >,
@@ -609,6 +614,7 @@
 		governor = "powersave";
 		qcom,src-dst-ports = <1 512>;
 		qcom,active-only;
+		status = "ok";
 		qcom,bw-tbl =
 			<  1525 /* 200 MHz */ >,
 			<  2288 /* 300 MHz */ >,
@@ -626,14 +632,24 @@
 		compatible = "qcom,arm-memlat-mon";
 		qcom,cpulist =	<&CPU0 &CPU1>;
 		qcom,target-dev = <&memlat_cpu0>;
-		status = "disabled";
+		qcom,core-dev-table =
+			<  307200 1525 >,
+			<  480000 3509 >,
+			< 1113600 5928 >,
+			< 1593600 7904 >;
 	};
 
 	qcom,arm-memlat-mon-2 {
 		compatible = "qcom,arm-memlat-mon";
 		qcom,cpulist =	<&CPU2 &CPU3>;
 		qcom,target-dev = <&memlat_cpu2>;
-		status = "disabled";
+		qcom,core-dev-table =
+			<  300000  1525 >,
+			<  480000  3509 >,
+			< 1036800  4066 >,
+			< 1296000  9887 >,
+			< 1555000 11863 >,
+			< 1824000 13763 >;
 	};
 
 	devfreq_cpufreq: devfreq-cpufreq {
@@ -681,9 +697,12 @@
 
 	msm_cpufreq: qcom,msm-cpufreq {
 		compatible = "qcom,msm-cpufreq";
-		clock-names = "l2_clk", "cpu0_clk", "cpu2_clk";
+		clock-names = "l2_clk", "cpu0_clk", "cpu1_clk", "cpu2_clk",
+				"cpu3_clk";
 		clocks = <&clock_cpu clk_cbf_clk>,
 			 <&clock_cpu clk_pwrcl_clk>,
+			 <&clock_cpu clk_pwrcl_clk>,
+			 <&clock_cpu clk_perfcl_clk>,
 			 <&clock_cpu clk_perfcl_clk>;
 
 		qcom,governor-per-policy;

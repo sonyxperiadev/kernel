@@ -467,7 +467,12 @@ int set_l2_mode(struct low_power_ops *ops, int mode, bool notify_rpm)
 		lpm = MSM_SPM_MODE_DISABLED;
 		break;
 	}
-	rc = msm_spm_config_low_power_mode(ops->spm, lpm, notify_rpm);
+
+	if (lpm_wa_get_skip_l2_spm())
+		rc = msm_spm_config_low_power_mode_addr(ops->spm, lpm,
+							notify_rpm);
+	else
+		rc = msm_spm_config_low_power_mode(ops->spm, lpm, notify_rpm);
 
 	if (rc)
 		pr_err("%s: Failed to set L2 low power mode %d, ERR %d",
@@ -1139,6 +1144,9 @@ static int cluster_configure(struct lpm_cluster *cluster, int idx,
 
 		do_div(us, NSEC_PER_SEC/SCLK_HZ);
 		msm_mpm_enter_sleep(us, from_idle, cpumask);
+
+		if (cluster->no_saw_devices && !use_psci)
+			msm_spm_set_rpm_hs(true);
 	}
 
 	/* Notify cluster enter event after successfully config completion */
@@ -1293,6 +1301,9 @@ static void cluster_unprepare(struct lpm_cluster *cluster,
 
 		lpm_wa_cx_unvote_send();
 		msm_mpm_exit_sleep(from_idle);
+
+		if (cluster->no_saw_devices && !use_psci)
+			msm_spm_set_rpm_hs(false);
 	}
 
 	update_debug_pc_event(CLUSTER_EXIT, cluster->last_level,
