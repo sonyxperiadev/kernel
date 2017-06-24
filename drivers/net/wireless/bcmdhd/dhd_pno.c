@@ -2,7 +2,7 @@
  * Broadcom Dongle Host Driver (DHD)
  * Prefered Network Offload and Wi-Fi Location Service(WLS) code.
  *
- * Copyright (C) 1999-2016, Broadcom Corporation
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -3093,9 +3093,10 @@ _dhd_pno_get_for_batch(dhd_pub_t *dhd, char *buf, int bufsize, int reason)
 		list_del(&pscan_results->list);
 		MFREE(dhd->osh, pscan_results, SCAN_RESULTS_SIZE);
 		_params->params_batch.get_batch.top_node_cnt--;
+	} else {
+		/* increase total scan count using current scan count */
+		_params->params_batch.get_batch.tot_scan_cnt += pscan_results->cnt_header;
 	}
-	/* increase total scan count using current scan count */
-	_params->params_batch.get_batch.tot_scan_cnt += pscan_results->cnt_header;
 
 	if (buf && bufsize) {
 		/* This is a first try to get batching results */
@@ -3644,8 +3645,14 @@ dhd_handle_swc_evt(dhd_pub_t *dhd, const void *event_data, int *send_evt_bytes)
 	}
 
 	change_array = &params->change_array[params->results_rxed_so_far];
-	memcpy(change_array, results->list, sizeof(wl_pfn_significant_net_t) * results->pkt_count);
-	params->results_rxed_so_far += results->pkt_count;
+	if ((params->results_rxed_so_far + results->pkt_count) <= results->total_count) {
+		memcpy(change_array, results->list,
+		sizeof(wl_pfn_significant_net_t) * results->pkt_count);
+		params->results_rxed_so_far += results->pkt_count;
+	} else {
+		/* In case of spurious event or invalid data send hang event */
+		dhd_os_send_hang_message(dhd);
+	}
 
 	if (params->results_rxed_so_far == results->total_count) {
 		params->results_rxed_so_far = 0;
@@ -3941,20 +3948,36 @@ dhd_handle_hotlist_scan_evt(dhd_pub_t *dhd, const void *event_data,
 		*send_evt_bytes =  total * sizeof(wifi_gscan_result_t);
 	}
 
-    return ptr;
+	return ptr;
 }
 
-#if defined(ANQPO_SUPPORT)
+#ifdef ANQPO_SUPPORT
 void *
 dhd_pno_process_anqpo_result(dhd_pub_t *dhd, const void *data, uint32 event, int *size)
 {
 	wl_bss_info_t *bi = (wl_bss_info_t *)data;
 	wifi_gscan_result_t *result = NULL;
-	wl_event_gas_t *gas_data = (wl_event_gas_t *)((uint8 *)data +
-		OFFSETOF(wifi_gscan_result_t, ie_data) + bi->ie_length);
+	wl_event_gas_t *gas_data;
 	uint8 channel;
 	uint32 mem_needed;
 	struct timespec ts;
+
+	if ((bi->SSID_len > DOT11_MAX_SSID_LEN) ||
+	    (bi->ie_length > (*size - sizeof(wl_bss_info_t))) ||
+	    (bi->ie_offset < sizeof(wl_bss_info_t)) ||
+	    (bi->ie_offset > (sizeof(wl_bss_info_t) + bi->ie_length))) {
+		DHD_ERROR(("%s: tot:%d,SSID:%d,ie_len:%d,ie_off:%d\n",
+			__FUNCTION__, *size, bi->SSID_len,
+			bi->ie_length, bi->ie_offset));
+		return NULL;
+	}
+
+	gas_data = (wl_event_gas_t *)((uint8 *)data + bi->ie_offset + bi->ie_length);
+	if (gas_data->data_len > (*size - (bi->ie_offset + bi->ie_length))) {
+		DHD_ERROR(("%s: wrong gas_data_len:%d\n",
+			__FUNCTION__, gas_data->data_len));
+		return NULL;
+	}
 
 	if (event == WLC_E_PFN_NET_FOUND) {
 		mem_needed = OFFSETOF(wifi_gscan_result_t, ie_data) + bi->ie_length +

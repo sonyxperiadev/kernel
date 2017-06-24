@@ -1,7 +1,7 @@
 /*
  * Linux cfg80211 driver
  *
- * Copyright (C) 1999-2016, Broadcom Corporation
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * Copyright (C) 2015 Sony Mobile Communications Inc.
  * 
  *      Unless you and Broadcom execute a separate written software license
@@ -25,7 +25,7 @@
  *
  * <<Broadcom-WL-IPTag/Open:>>
  *
- * $Id: wl_cfg80211.c 641057 2016-06-01 02:27:54Z $
+ * $Id: wl_cfg80211.c 689723 2017-03-13 08:42:31Z $
  */
 /* */
 #include <typedefs.h>
@@ -2590,6 +2590,13 @@ wl_run_escan(struct bcm_cfg80211 *cfg, struct net_device *ndev,
 			if (!wl_get_valid_channels(ndev, chan_buf, sizeof(chan_buf))) {
 				list = (wl_uint32_list_t *) chan_buf;
 				n_valid_chan = dtoh32(list->count);
+				if (n_valid_chan > WL_NUMCHANNELS) {
+					WL_ERR(("Invaild n_valid_chan value: %d\n", n_valid_chan));
+					kfree(default_chan_list);
+					err = -EINVAL;
+					goto exit;
+				}
+
 				for (i = 0; i < num_chans; i++)
 				{
 #ifdef WL_HOST_BAND_MGMT
@@ -2621,9 +2628,13 @@ wl_run_escan(struct bcm_cfg80211 *cfg, struct net_device *ndev,
 						/* allows only supported channel on
 						*  current reguatory
 						*/
-						if (channel == (dtoh32(list->element[j])))
+						if (n_nodfs >= num_chans) {
+							break;
+						}
+						if (channel == (dtoh32(list->element[j]))) {
 							default_chan_list[n_nodfs++] =
 								channel;
+						}
 					}
 
 				}
@@ -2782,7 +2793,11 @@ __wl_cfg80211_scan(struct wiphy *wiphy, struct net_device *ndev,
 	 */
 	if (request && (scan_req_iftype(request) == NL80211_IFTYPE_AP)) {
 		WL_INFORM(("Scan Command on SoftAP Interface. Ignoring...\n"));
+#ifdef CUSTOMER_HW5
+		return -EINVAL;
+#else
 		return 0;
+#endif /* CUSTOMER_HW5 */
 	}
 
 	ndev = ndev_to_wlc_ndev(ndev, cfg);
@@ -4465,6 +4480,9 @@ wl_cfg80211_connect(struct wiphy *wiphy, struct net_device *dev,
 	s32 bssidx = -1;
 	int ret;
 	int wait_cnt;
+#ifdef MFP
+	u8* group_mgmt_cs;
+#endif /* MFP */
 
 	WL_DBG(("In\n"));
 
@@ -4593,6 +4611,18 @@ wl_cfg80211_connect(struct wiphy *wiphy, struct net_device *dev,
 			wpaie = (wpa_ie != NULL) ? (u8 *)wpa_ie : (u8 *)wpa2_ie;
 			wpaie_len = (wpa_ie != NULL) ? wpa_ie->length : wpa2_ie->len;
 			wpaie_len += WPA_RSN_IE_TAG_FIXED_LEN;
+#ifdef MFP
+			group_mgmt_cs = (u8*)&wpaie[wpaie_len-WPA_SUITE_LEN];
+			if (bcmp((const uint8 *)BIP_OUI_TYPE, group_mgmt_cs, WPA_SUITE_LEN) == 0) {
+				WL_DBG(("BIP is found\n"));
+				err = wldev_iovar_setbuf(dev, "bip",
+					group_mgmt_cs, WPA_SUITE_LEN, cfg->ioctl_buf,
+					WLC_IOCTL_SMLEN, &cfg->ioctl_buf_sync);
+				if (err < 0) {
+					WL_ERR(("bip set error %d\n", err));
+				}
+			}
+#endif /* MFP */
 			err = wldev_iovar_setbuf(dev, "wpaie", wpaie, wpaie_len,
 				cfg->ioctl_buf, WLC_IOCTL_MAXLEN, &cfg->ioctl_buf_sync);
 			if (unlikely(err)) {
@@ -8631,9 +8661,9 @@ fail:
 #endif /* LINUX_VERSION < VERSION(3,4,0) || WL_COMPAT_WIRELESS */
 
 #ifdef WL_SCHED_SCAN
-#define PNO_TIME		30
-#define PNO_REPEAT		4
-#define PNO_FREQ_EXPO_MAX	2
+#define PNO_TIME		120
+#define PNO_REPEAT		2
+#define PNO_FREQ_EXPO_MAX	1
 static bool
 is_ssid_in_list(struct cfg80211_ssid *ssid, struct cfg80211_ssid *ssid_list, int count)
 {
@@ -9802,7 +9832,10 @@ wl_notify_connect_status(struct bcm_cfg80211 *cfg, bcm_struct_cfgdev *cfgdev,
 	struct cfg80211_bss *bss = NULL;
 	struct wlc_ssid *ssid = NULL;
 	u8 *bssid = 0;
-
+#ifdef DHD_ENABLE_DISC_TIME_LOG
+	struct timeval tv_now;
+	do_gettimeofday(&tv_now);
+#endif /* DHD_ENABLE_DISC_TIME_LOG */
 	ndev = cfgdev_to_wlc_ndev(cfgdev, cfg);
 
 	if (wl_get_mode_by_netdev(cfg, ndev) == WL_MODE_AP) {
@@ -9879,7 +9912,10 @@ wl_notify_connect_status(struct bcm_cfg80211 *cfg, bcm_struct_cfgdev *cfgdev,
 					reason = ntoh32(e->reason);
 				/* WLAN_REASON_UNSPECIFIED is used for hang up event in Android */
 				reason = (reason == WLAN_REASON_UNSPECIFIED)? 0 : reason;
-
+#ifdef DHD_ENABLE_DISC_TIME_LOG
+				printk("KERN_ERR [Log]%s: current time=%lu\n", __FUNCTION__,
+				       (unsigned long int) tv_now.tv_sec*1000000+tv_now.tv_usec);
+#endif /* DHD_ENABLE_DISC_TIME_LOG */
 				printk("link down if %s may call cfg80211_disconnected. "
 					"event : %d, reason=%d from " MACDBG "\n",
 					ndev->name, event, ntoh32(e->reason),
@@ -10805,7 +10841,7 @@ wl_notify_gscan_event(struct bcm_cfg80211 *cfg, bcm_struct_cfgdev *cfgdev,
 				err = -ENOMEM;
 			}
 			break;
-#if defined(ANQPO_SUPPORT)
+#ifdef ANQPO_SUPPORT
 		case WLC_E_PFN_NET_FOUND:
 			ptr = dhd_dev_process_anqpo_result(ndev, data, event, &len);
 			if (ptr) {
@@ -11418,7 +11454,7 @@ static void wl_init_event_handler(struct bcm_cfg80211 *cfg)
 	cfg->evt_handler[WLC_E_PFN_SSID_EXT] = wl_notify_gscan_event;
 	cfg->evt_handler[WLC_E_GAS_FRAGMENT_RX] = wl_notify_gscan_event;
 	cfg->evt_handler[WLC_E_ROAM_EXP_EVENT] = wl_handle_roam_exp_event;
-#if defined(ANQPO_SUPPORT)
+#ifdef ANQPO_SUPPORT
 	cfg->evt_handler[WLC_E_GAS_FRAGMENT_RX] = wl_notify_gscan_event;
 #endif /* ANQPO_SUPPORT */
 #endif /* GSCAN_SUPPORT */
@@ -15182,6 +15218,12 @@ wl_cfg80211_add_iw_ie(struct bcm_cfg80211 *cfg, struct net_device *ndev, s32 bss
 	if (ie_id != DOT11_MNG_INTERWORKING_ID)
 		return BCME_UNSUPPORTED;
 
+	/* access network options (1 octet)  is the mandatory field */
+	if (!data || data_len == 0 || data_len > IW_IES_MAX_BUF_LEN) {
+		WL_ERR(("wrong interworking IE (len=%d)\n", data_len));
+		return BCME_BADARG;
+	}
+
 	/* Validate the pktflag parameter */
 	if ((pktflag & ~(VNDR_IE_BEACON_FLAG | VNDR_IE_PRBRSP_FLAG |
 	            VNDR_IE_ASSOCRSP_FLAG | VNDR_IE_AUTHRSP_FLAG |
@@ -16304,12 +16346,11 @@ wl_cfg80211_set_mac_acl(struct wiphy *wiphy, struct net_device *cfgdev,
 int wl_chspec_chandef(chanspec_t chanspec,
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0))
 	struct cfg80211_chan_def *chandef,
-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION (3, 5, 0) && (LINUX_VERSION_CODE <= (3, 7, \
-	\
-	0)))
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION (3, 5, 0) && \
+	(LINUX_VERSION_CODE <= (3, 7, 0)))
 	struct chan_info *chaninfo,
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 5, 0)) */
-struct wiphy *wiphy)
+	struct wiphy *wiphy)
 
 {
 	uint16 freq = 0;
@@ -16373,9 +16414,8 @@ struct wiphy *wiphy)
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION (3, 8, 0))
 	cfg80211_chandef_create(chandef, ieee80211_get_channel(wiphy, freq), chan_type);
-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION (3, 5, 0) && (LINUX_VERSION_CODE <= (3, 7, \
-	\
-	0)))
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION (3, 5, 0) && \
+	(LINUX_VERSION_CODE <= (3, 7, 0)))
 	chaninfo->freq = freq;
 	chaninfo->chan_type = chan_type;
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION (3, 8, 0)) */
@@ -16388,9 +16428,8 @@ wl_cfg80211_ch_switch_notify(struct net_device *dev, uint16 chanspec, struct wip
 	u32 freq;
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION (3, 8, 0))
 	struct cfg80211_chan_def chandef;
-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION (3, 5, 0) && (LINUX_VERSION_CODE <= (3, 7, \
-	\
-	0)))
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION (3, 5, 0) && \
+	(LINUX_VERSION_CODE <= (3, 7, 0)))
 	struct chan_info chaninfo;
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION (3, 8, 0)) */
 
@@ -16406,9 +16445,8 @@ wl_cfg80211_ch_switch_notify(struct net_device *dev, uint16 chanspec, struct wip
 	}
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION (3, 8, 0))
 	if (wl_chspec_chandef(chanspec, &chandef, wiphy)) {
-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION (3, 5, 0) && (LINUX_VERSION_CODE <= (3, 7, \
-	\
-	0)))
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION (3, 5, 0) && \
+	(LINUX_VERSION_CODE <= (3, 7, 0)))
 	if (wl_chspec_chandef(chanspec, &chaninfo, wiphy)) {
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION (3, 8, 0)) */
 
@@ -16418,9 +16456,8 @@ wl_cfg80211_ch_switch_notify(struct net_device *dev, uint16 chanspec, struct wip
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION (3, 8, 0))
 	freq = chandef.chan ? chandef.chan->center_freq : chandef.center_freq1;
 	cfg80211_ch_switch_notify(dev, &chandef);
-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION (3, 5, 0) && (LINUX_VERSION_CODE <= (3, 7, \
-	\
-	0)))
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION (3, 5, 0) && \
+	(LINUX_VERSION_CODE <= (3, 7, 0)))
 	freq = chan_info.freq;
 	cfg80211_ch_switch_notify(dev, freq, chan_info.chan_type);
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION (3, 8, 0)) */

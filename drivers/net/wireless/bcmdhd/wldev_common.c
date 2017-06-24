@@ -1,7 +1,7 @@
 /*
  * Common function shared by Linux WEXT, cfg80211 and p2p drivers
  *
- * Copyright (C) 1999-2016, Broadcom Corporation
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -24,7 +24,7 @@
  *
  * <<Broadcom-WL-IPTag/Open:>>
  *
- * $Id: wldev_common.c 596015 2015-10-29 10:23:51Z $
+ * $Id: wldev_common.c 674911 2016-12-13 07:54:14Z $
  */
 
 #include <osl.h>
@@ -437,6 +437,15 @@ int wldev_set_country(
 				return error;
 			}
 		}
+#ifdef CUSTOMER_HW5
+		else {
+			if (dhd_is_p2p_connection(dev)) {
+				WLDEV_ERROR(("Skip to set country code for preventing "
+					"p2p disconnection\n"));
+				return -1;
+			}
+		}
+#endif	/* CUSTOMER_HW5 */
 
 		cspec.rev = revinfo;
 		memcpy(cspec.country_abbrev, country_code, WLC_CNTRY_BUF_SZ);
