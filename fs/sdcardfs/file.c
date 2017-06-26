@@ -17,11 +17,69 @@
  * under the terms of the Apache 2.0 License OR version 2 of the GNU
  * General Public License.
  */
+/*
+ * NOTE: This file has been modified by Sony Mobile Communications Inc.
+ * Modifications are Copyright (c) 2017 Sony Mobile Communications Inc,
+ * and licensed under the license of the file.
+ */
 
 #include "sdcardfs.h"
 #ifdef CONFIG_SDCARD_FS_FADV_NOACTIVE
 #include <linux/backing-dev.h>
 #endif
+
+static ssize_t sdcardfs_read_iter(struct kiocb *iocb, struct iov_iter *iter)
+{
+	int err;
+	struct file *lower_file;
+	struct file *file = iocb->ki_filp;
+	struct dentry *dentry = file->f_path.dentry;
+
+	lower_file = sdcardfs_lower_file(file);
+	if (!lower_file->f_op->read_iter)
+		return -EIO;
+
+	get_file(lower_file);
+	iocb->ki_filp = lower_file;
+	err = lower_file->f_op->read_iter(iocb, iter);
+	/* update our inode atime upon a successful lower read */
+	if (err >= 0 || err == -EIOCBQUEUED)
+		fsstack_copy_attr_atime(d_inode(dentry),
+					file_inode(lower_file));
+
+	iocb->ki_filp = file;
+	fput(lower_file);
+
+	return err;
+}
+
+static ssize_t sdcardfs_write_iter(struct kiocb *iocb, struct iov_iter *iter)
+{
+	int err;
+	struct file *lower_file;
+	struct file *file = iocb->ki_filp;
+	struct dentry *dentry = file->f_path.dentry;
+
+	lower_file = sdcardfs_lower_file(file);
+	if (!lower_file->f_op->write_iter)
+		return -EIO;
+
+	get_file(lower_file);
+	iocb->ki_filp = lower_file;
+	err = lower_file->f_op->write_iter(iocb, iter);
+	/* update our inode times+sizes upon a successful lower write */
+	if (err >= 0 || err == -EIOCBQUEUED) {
+		fsstack_copy_inode_size(d_inode(dentry),
+					file_inode(lower_file));
+		fsstack_copy_attr_times(d_inode(dentry),
+					file_inode(lower_file));
+	}
+
+	iocb->ki_filp = file;
+	fput(lower_file);
+
+	return err;
+}
 
 static ssize_t sdcardfs_read(struct file *file, char __user *buf,
 			   size_t count, loff_t *ppos)
@@ -227,6 +285,7 @@ static int sdcardfs_open(struct inode *inode, struct file *file)
 	/* save current_cred and override it */
 	OVERRIDE_CRED(sbi, saved_cred);
 
+	file->f_mode |= FMODE_NONMAPPABLE;
 	file->private_data =
 		kzalloc(sizeof(struct sdcardfs_file_info), GFP_KERNEL);
 	if (!SDCARDFS_F(file)) {
@@ -323,6 +382,11 @@ static int sdcardfs_fasync(int fd, struct file *file, int flag)
 	return err;
 }
 
+static struct file *sdcardfs_get_lower_file(struct file *f)
+{
+	return sdcardfs_lower_file(f);
+}
+
 const struct file_operations sdcardfs_main_fops = {
 	.llseek		= generic_file_llseek,
 	.read		= sdcardfs_read,
@@ -337,6 +401,9 @@ const struct file_operations sdcardfs_main_fops = {
 	.release	= sdcardfs_file_release,
 	.fsync		= sdcardfs_fsync,
 	.fasync		= sdcardfs_fasync,
+	.get_lower_file = sdcardfs_get_lower_file,
+	.read_iter	= sdcardfs_read_iter,
+	.write_iter	= sdcardfs_write_iter,
 };
 
 /* trimmed directory options */
@@ -353,4 +420,5 @@ const struct file_operations sdcardfs_dir_fops = {
 	.flush		= sdcardfs_flush,
 	.fsync		= sdcardfs_fsync,
 	.fasync		= sdcardfs_fasync,
+	.get_lower_file = sdcardfs_get_lower_file,
 };

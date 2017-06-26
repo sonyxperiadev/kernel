@@ -22,6 +22,11 @@
  * under the terms of the Apache 2.0 License OR version 2 of the GNU
  * General Public License.
  */
+/*
+ * NOTE: This file has been modified by Sony Mobile Communications Inc.
+ * Modifications are Copyright (c) 2016 Sony Mobile Communications Inc,
+ * and licensed under the license of the file.
+ */
 
 #ifndef _SDCARDFS_H_
 #define _SDCARDFS_H_
@@ -188,6 +193,7 @@ struct sdcardfs_mount_options {
 	gid_t gid;
 	mode_t mask;
 	bool multiuser;
+	bool allow_utime_grp;
 	unsigned int reserved_mb;
 };
 
