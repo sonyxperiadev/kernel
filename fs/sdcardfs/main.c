@@ -17,6 +17,11 @@
  * under the terms of the Apache 2.0 License OR version 2 of the GNU
  * General Public License.
  */
+/*
+ * NOTE: This file has been modified by Sony Mobile Communications Inc.
+ * Modifications are Copyright (c) 2016 Sony Mobile Communications Inc,
+ * and licensed under the license of the file.
+ */
 
 #include "sdcardfs.h"
 #include <linux/module.h>
@@ -31,6 +36,7 @@ enum {
 	Opt_lower_fs,
 	Opt_mask,
 	Opt_multiuser, // May need?
+	Opt_allow_utime_grp,
 	Opt_userid,
 	Opt_reserved_mb,
 	Opt_err,
@@ -44,6 +50,7 @@ static const match_table_t sdcardfs_tokens = {
 	{Opt_mask, "mask=%u"},
 	{Opt_userid, "userid=%d"},
 	{Opt_multiuser, "multiuser"},
+	{Opt_allow_utime_grp, "allow_utime_grp=%d"},
 	{Opt_reserved_mb, "reserved_mb=%u"},
 	{Opt_err, NULL}
 };
@@ -60,6 +67,7 @@ static int parse_options(struct super_block *sb, char *options, int silent,
 	opts->fs_low_gid = AID_MEDIA_RW;
 	opts->mask = 0;
 	opts->multiuser = false;
+	opts->allow_utime_grp = true;
 	opts->fs_user_id = 0;
 	opts->gid = 0;
 	/* by default, 0MB is reserved */
@@ -108,6 +116,11 @@ static int parse_options(struct super_block *sb, char *options, int silent,
 			break;
 		case Opt_multiuser:
 			opts->multiuser = true;
+			break;
+		case Opt_allow_utime_grp:
+			if (match_int(&args[0], &option))
+				return 0;
+			opts->allow_utime_grp = !!option;
 			break;
 		case Opt_reserved_mb:
 			if (match_int(&args[0], &option))
@@ -274,7 +287,7 @@ static int sdcardfs_read_super(struct super_block *sb, const char *dev_name,
 					sb_info->options.fs_low_uid,
 					sb_info->options.fs_low_gid, 00755);*/
 	} else {
-		setup_derived_state(sb->s_root->d_inode, PERM_ROOT, sb_info->options.fs_low_uid, AID_ROOT, false);
+		setup_derived_state(sb->s_root->d_inode, PERM_ROOT, sb_info->options.fs_user_id, AID_ROOT, false);
 		snprintf(sb_info->obbpath_s, PATH_MAX, "%s/Android/obb", dev_name);
 	}
 	fix_derived_permission(sb->s_root->d_inode);

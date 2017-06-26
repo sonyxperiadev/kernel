@@ -17,6 +17,11 @@
  * under the terms of the Apache 2.0 License OR version 2 of the GNU
  * General Public License.
  */
+/*
+ * NOTE: This file has been modified by Sony Mobile Communications Inc.
+ * Modifications are Copyright (c) 2016 Sony Mobile Communications Inc,
+ * and licensed under the license of the file.
+ */
 
 #include "sdcardfs.h"
 
@@ -111,15 +116,15 @@ void get_derived_permission(struct dentry *parent, struct dentry *dentry)
 
 void get_derive_permissions_recursive(struct dentry *parent) {
 	struct dentry *dentry;
+	spin_lock(&parent->d_lock);
 	list_for_each_entry(dentry, &parent->d_subdirs, d_child) {
 		if (dentry->d_inode) {
-			mutex_lock(&dentry->d_inode->i_mutex);
 			get_derived_permission(parent, dentry);
 			fix_derived_permission(dentry->d_inode);
 			get_derive_permissions_recursive(dentry);
-			mutex_unlock(&dentry->d_inode->i_mutex);
 		}
 	}
+	spin_unlock(&parent->d_lock);
 }
 
 /* main function for updating derived permission */
@@ -135,7 +140,6 @@ inline void update_derived_permission_lock(struct dentry *dentry)
 	 * 1. need to check whether the dentry is updated or not
 	 * 2. remove the root dentry update
 	 */
-	mutex_lock(&dentry->d_inode->i_mutex);
 	if(IS_ROOT(dentry)) {
 		//setup_default_pre_root_state(dentry->d_inode);
 	} else {
@@ -146,7 +150,6 @@ inline void update_derived_permission_lock(struct dentry *dentry)
 		}
 	}
 	fix_derived_permission(dentry->d_inode);
-	mutex_unlock(&dentry->d_inode->i_mutex);
 }
 
 int need_graft_path(struct dentry *dentry)

@@ -17,9 +17,15 @@
  * under the terms of the Apache 2.0 License OR version 2 of the GNU
  * General Public License.
  */
+/*
+ * NOTE: This file has been modified by Sony Mobile Communications Inc.
+ * Modifications are Copyright (c) 2017 Sony Mobile Communications Inc,
+ * and licensed under the license of the file.
+ */
 
 #include "sdcardfs.h"
 #include "linux/delay.h"
+#include <linux/limits.h>
 
 /* The dentry cache is just so we have properly sized dentries */
 static struct kmem_cache *sdcardfs_dentry_cachep;
@@ -111,8 +117,13 @@ struct inode *sdcardfs_iget(struct super_block *sb, struct inode *lower_inode, u
 		return ERR_PTR(err);
 	}
 	/* if found a cached inode, then just return it */
-	if (!(inode->i_state & I_NEW))
+	if (!(inode->i_state & I_NEW)) {
+		/* There can only be one alias, as we don't permit hard links
+		 * This ensures we do not keep stale dentries that would later
+		 * cause confusion. */
+		d_prune_aliases(inode);
 		return inode;
+	}
 
 	/* initialize new inode */
 	info = SDCARDFS_I(inode);
@@ -206,6 +217,89 @@ out:
 	return err;
 }
 
+/* The dir context used by  sdcardfs_lower_filldir() */
+struct sdcardfs_lower_getent_cb {
+	struct dir_context ctx;
+	loff_t pos;
+	const char *target; /* search target */
+	int target_len;
+	char alias[NAME_MAX+1]; /* alias name found in lower dir */
+	int alias_len;
+	int result; /* 0: found, -ENOENT: not found. */
+};
+
+/* The filldir used by case insensitive search in sdcardfs_ci_path_lookup() */
+static int
+sdcardfs_lower_filldir(struct dir_context *ctx, const char *name, int namelen,
+	loff_t offset, u64 ino, unsigned int d_type)
+{
+	struct sdcardfs_lower_getent_cb *buf;
+
+	buf = container_of(ctx, struct sdcardfs_lower_getent_cb, ctx);
+
+	if (!buf->result)  /* entry already found, skip search */
+		return 0;
+
+	buf->pos = buf->ctx.pos;
+	if (!strncasecmp(name, buf->target, namelen) &&
+			namelen == buf->target_len) {
+		strlcpy(buf->alias, name, namelen + 1);
+		buf->alias_len = namelen;
+		buf->result = 0; /* 0: found matching entry */
+	}
+	return 0;
+}
+
+/*
+ * Case insentively lookup lower directory.
+ *
+ * @folder: path to the lower folder.
+ * @name: lookup name.
+ * @entry: path to the found entry.
+ *
+ * Returns: 0 (ok), -ENOENT (entry not found)
+ */
+static int sdcardfs_ci_path_lookup(struct path *folder, const char *name,
+		struct path *entry)
+{
+	int ret = 0;
+	struct file *filp;
+	loff_t last_pos;
+	struct sdcardfs_lower_getent_cb buf = {
+			.ctx.actor = sdcardfs_lower_filldir,
+			.ctx.pos = 0,
+			.pos = 0,
+			.target = name,
+			.alias_len = 0,
+			.result = -ENOENT
+		};
+
+
+	buf.target_len = strlen(name);
+
+	filp = dentry_open(folder, O_RDONLY | O_DIRECTORY, current_cred());
+
+	if (IS_ERR_OR_NULL(filp))
+		return -ENOENT;
+
+	while (ret >= 0) {
+		last_pos = filp->f_pos;
+		ret = iterate_dir(filp, &buf.ctx);
+		/* reaches end or found matching entry */
+		if (last_pos == filp->f_pos || !buf.result)
+			break;
+	}
+
+	filp_close(filp, NULL);
+
+	if (!buf.result)
+		return vfs_path_lookup(folder->dentry, folder->mnt, buf.alias,
+				0, entry);
+	else
+		return buf.result;
+
+}
+
 /*
  * Main driver function for sdcardfs's lookup.
  *
@@ -240,6 +334,36 @@ static struct dentry *__sdcardfs_lookup(struct dentry *dentry,
 	/* Use vfs_path_lookup to check if the dentry exists or not */
 	err = vfs_path_lookup(lower_dir_dentry, lower_dir_mnt, name, 0,
 				&lower_path);
+
+	/* If the dentry was not found, and the intent is not rename file,
+	 * try case insensitive search in lower parent directory.
+	 */
+	if ((err == -ENOENT) && !(flags & LOOKUP_RENAME_TARGET))
+		err = sdcardfs_ci_path_lookup(lower_parent_path, name, &lower_path);
+#if 0
+	/* check for other cases */
+	if (err == -ENOENT) {
+		struct dentry *child;
+		struct dentry *match = NULL;
+		spin_lock(&lower_dir_dentry->d_lock);
+		list_for_each_entry(child, &lower_dir_dentry->d_subdirs, d_child) {
+			if (child && child->d_inode) {
+				if (strcasecmp(child->d_name.name, name)==0) {
+					match = dget(child);
+					break;
+				}
+			}
+		}
+		spin_unlock(&lower_dir_dentry->d_lock);
+		if (match) {
+			err = vfs_path_lookup(lower_dir_dentry,
+						lower_dir_mnt,
+						match->d_name.name, 0,
+						&lower_path);
+			dput(match);
+		}
+	}
+#endif
 
 	/* no error: handle positive dentries */
 	if (!err) {
@@ -365,11 +489,9 @@ struct dentry *sdcardfs_lookup(struct inode *dir, struct dentry *dentry,
 	if (dentry->d_inode) {
 		fsstack_copy_attr_times(dentry->d_inode,
 					sdcardfs_lower_inode(dentry->d_inode));
-		/* get drived permission */
-		mutex_lock(&dentry->d_inode->i_mutex);
+		/* get derived permission */
 		get_derived_permission(parent, dentry);
 		fix_derived_permission(dentry->d_inode);
-		mutex_unlock(&dentry->d_inode->i_mutex);
 	}
 	/* update parent directory's atime */
 	fsstack_copy_attr_atime(parent->d_inode,
