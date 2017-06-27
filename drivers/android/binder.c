@@ -2511,10 +2511,10 @@ err_no_context_mgr_node:
 		binder_put_ref(target_ref);
 
 	binder_debug(BINDER_DEBUG_FAILED_TRANSACTION,
-		     "%d:%d transaction failed %d/%d, size %lld-%lld line %d\n",
-		     proc->pid, thread->pid, return_error, return_error_param,
-		     (u64)tr->data_size, (u64)tr->offsets_size,
-		     return_error_line);
+		     "%d:%d --> %d:%d transaction failed %d/%d, size %lld-%lld line %d\n",
+		     proc->pid, thread->pid, e->to_proc, e->to_thread,
+		     return_error, return_error_param, (u64)tr->data_size,
+		     (u64)tr->offsets_size, return_error_line);
 
 	{
 		struct binder_transaction_log_entry *fe;
