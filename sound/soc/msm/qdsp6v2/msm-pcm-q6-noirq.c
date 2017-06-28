@@ -310,7 +310,7 @@ static int msm_pcm_hw_params(struct snd_pcm_substream *substream,
 	if (prtd->enabled)
 		return 0;
 
-	switch (runtime->format) {
+	switch (params_format(params)) {
 	case SNDRV_PCM_FORMAT_S24_LE:
 		bits_per_sample = 24;
 		sample_word_size = 32;
