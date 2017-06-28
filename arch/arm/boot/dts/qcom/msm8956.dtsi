@@ -496,7 +496,7 @@
 			<  7104 /*  465.6 MHz */ >;	/* STURBO */
 	};
 
-	memlat_cpu2: qcom,memlat-cpu2 {
+	memlat_cpu4: qcom,memlat-cpu4 {
 		compatible = "qcom,devbw";
 		governor = "powersave";
 		qcom,src-dst-ports = <1 512>;
@@ -519,10 +519,10 @@
 		qcom,target-dev = <&memlat_cpu0>;
 	};
 
-	qcom,arm-memlat-mon-2 {
+	qcom,arm-memlat-mon-4 {
 		compatible = "qcom,arm-memlat-mon";
-		qcom,cpulist =	<&CPU4 &CPU5 &CPU6 &CPU7>;
-		qcom,target-dev = <&memlat_cpu2>;
+		qcom,cpulist =	<&CPU4 &CPU5>;
+		qcom,target-dev = <&memlat_cpu4>;
 	};
 
 	devfreq-cpufreq {
@@ -888,7 +888,7 @@
 		qcom,online-hotplug-core;
 		qcom,synchronous-cluster-id = <0 1>;
 		qcom,synchronous-cluster-map = <0 4 &CPU0 &CPU1 &CPU2 &CPU3>,
-						<1 4 &CPU4 &CPU5 &CPU6 &CPU7>;
+						<1 2 &CPU4 &CPU5>;
 		qcom,disable-cx-phase-ctrl;
 		qcom,disable-gfx-phase-ctrl;
 		qcom,disable-psm;
@@ -927,9 +927,9 @@
 		compatible = "qcom,bcl";
 		qcom,bcl-enable;
 		qcom,bcl-framework-interface;
-		qcom,bcl-freq-control-list = <&CPU4 &CPU5 &CPU6 &CPU7>;
-		qcom,bcl-hotplug-list = <&CPU4 &CPU5 &CPU6 &CPU7>;
-		qcom,bcl-soc-hotplug-list = <&CPU4 &CPU5 &CPU6 &CPU7>;
+		qcom,bcl-freq-control-list = <&CPU4 &CPU5>;
+		qcom,bcl-hotplug-list = <&CPU4 &CPU5>;
+		qcom,bcl-soc-hotplug-list = <&CPU4 &CPU5>;
 		qcom,ibat-monitor {
 			qcom,high-threshold-uamp = <4200000>;
 			qcom,low-threshold-uamp = <3400000>;
