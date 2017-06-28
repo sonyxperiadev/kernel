@@ -2408,6 +2408,8 @@ __acquires(udc->lock)
 	if (retval)
 		goto done;
 
+	usb_gadget_set_state(&udc->gadget, USB_STATE_DEFAULT);
+
 	spin_lock(udc->lock);
 
  done:
@@ -2805,6 +2807,7 @@ __acquires(udc->lock)
 			if (err)
 				break;
 			err = isr_setup_status_phase(udc);
+			usb_gadget_set_state(&udc->gadget, USB_STATE_ADDRESS);
 			break;
 		case USB_REQ_SET_CONFIGURATION:
 			if (type == (USB_DIR_OUT|USB_TYPE_STANDARD))
@@ -3440,12 +3443,14 @@ static int ci13xxx_vbus_session(struct usb_gadget *_gadget, int is_active)
 			msm_usb_bam_enable(CI_CTRL, false);
 			hw_device_state(udc->ep0out.qh.dma);
 		}
+		usb_gadget_set_state(_gadget, USB_STATE_POWERED);
 	} else {
 		hw_device_state(0);
 		_gadget_stop_activity(&udc->gadget);
 		if (udc->udc_driver->notify_event)
 			udc->udc_driver->notify_event(udc,
 				CI13XXX_CONTROLLER_DISCONNECT_EVENT);
+		usb_gadget_set_state(_gadget, USB_STATE_NOTATTACHED);
 	}
 
 	return 0;
@@ -3727,6 +3732,9 @@ static irqreturn_t udc_irq(void)
 		if (USBi_SLI & intr) {
 			isr_suspend_handler(udc);
 			isr_statistics.sli++;
+			if (udc->suspended)
+				usb_gadget_set_state(&udc->gadget,
+						USB_STATE_SUSPENDED);
 		}
 		retval = IRQ_HANDLED;
 	} else {
