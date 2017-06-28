@@ -28,6 +28,8 @@
 #include <linux/hrtimer.h>
 #include <linux/power_supply.h>
 #include <linux/cdev.h>
+#include <linux/extcon.h>
+
 /*
  * The following are bit fields describing the usb_request.udc_priv word.
  * These bit fields are set by function drivers that wish to queue
@@ -447,7 +449,7 @@ struct msm_otg {
 	int phy_number;
 	struct workqueue_struct *otg_wq;
 	struct delayed_work chg_work;
-	struct delayed_work id_status_work;
+	struct work_struct id_status_work;
 	enum usb_chg_state chg_state;
 	enum usb_chg_type chg_type;
 	u8 dcd_retries;
@@ -552,6 +554,12 @@ struct msm_otg {
 	int pm_qos_latency;
 	struct pm_qos_request pm_qos_req_dma;
 	struct delayed_work perf_vote_work;
+
+	/* EXTCON */
+	struct extcon_dev *ec_vbus;
+	struct extcon_dev *ec_usbid;
+	struct notifier_block vbus_notifier;
+	struct notifier_block usbid_notifier;
 };
 
 struct ci13xxx_platform_data {
