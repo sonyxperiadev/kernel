@@ -47,6 +47,8 @@
 #include <linux/regulator/consumer.h>
 #include <linux/qpnp/qpnp-adc.h>
 
+#include <linux/extcon.h>
+
 #include <linux/msm-bus.h>
 
 #define MSM_USB_BASE	(motg->regs)
@@ -1141,7 +1143,7 @@ static irqreturn_t msm_otg_phy_irq_handler(int irq, void *data)
 		msm_otg_kick_sm_work(motg);
 	} else {
 		pr_debug("PHY ID IRQ outside LPM\n");
-		msm_id_status_w(&motg->id_status_work.work);
+		msm_id_status_w(&motg->id_status_work);
 	}
 
 	return IRQ_HANDLED;
@@ -1493,7 +1495,7 @@ phcd_retry:
 		if (motg->vbus_state != test_bit(B_SESS_VLD, &motg->inputs))
 			msm_otg_set_vbus_state(motg->vbus_state);
 		if (motg->id_state != test_bit(ID, &motg->inputs))
-			msm_id_status_w(&motg->id_status_work.work);
+			msm_id_status_w(&motg->id_status_work);
 	}
 
 	return 0;
@@ -1654,7 +1656,7 @@ skip_phy_resume:
 
 	if (motg->phy_irq_pending) {
 		motg->phy_irq_pending = false;
-		msm_id_status_w(&motg->id_status_work.work);
+		msm_id_status_w(&motg->id_status_work);
 	}
 
 	if (motg->host_bus_suspend) {
@@ -3061,7 +3063,7 @@ out:
 static void msm_id_status_w(struct work_struct *w)
 {
 	struct msm_otg *motg = container_of(w, struct msm_otg,
-						id_status_work.work);
+						id_status_work);
 	int work = 0;
 
 	dev_dbg(motg->phy.dev, "ID status_w\n");
@@ -3099,14 +3101,14 @@ static void msm_id_status_w(struct work_struct *w)
 	}
 }
 
-#define MSM_ID_STATUS_DELAY	5 /* 5msec */
 static irqreturn_t msm_id_irq(int irq, void *data)
 {
 	struct msm_otg *motg = data;
 
-	/*schedule delayed work for 5msec for ID line state to settle*/
-	queue_delayed_work(motg->otg_wq, &motg->id_status_work,
-			msecs_to_jiffies(MSM_ID_STATUS_DELAY));
+	/* Delay work of 5ms for ID line state to settle */
+	usleep_range(5000, 5000);
+
+	queue_work(motg->otg_wq, &motg->id_status_work);
 
 	return IRQ_HANDLED;
 }
@@ -3951,6 +3953,97 @@ struct msm_otg_platform_data *msm_otg_dt_to_pdata(struct platform_device *pdev)
 	return pdata;
 }
 
+/*
+ * kholk 28/06/2017:
+ * On kernel 4.4 we cannot use old blasphemic hacks anymore luckily,
+ * hence we need to do things finally properly and use EXTCON.
+ * ***************************
+ * EXTCON implementation START
+ * ***************************
+ */
+
+static int msm_otg_usbid_notifier(struct notifier_block *nb,
+		unsigned long event, void *ptr)
+{
+	struct msm_otg *motg = container_of(nb,
+			struct msm_otg, usbid_notifier);
+
+	motg->id_state = event ? USB_ID_GROUND : USB_ID_FLOAT;
+	queue_work(motg->otg_wq, &motg->id_status_work);
+
+	return NOTIFY_DONE;
+}
+
+static int msm_otg_vbus_notifier(struct notifier_block *nb,
+		unsigned long event, void *ptr)
+{
+	msm_otg_set_vbus_state(event);
+
+	return NOTIFY_DONE;
+}
+
+static int msm_otg_extcon_probe(struct platform_device *pdev,
+			struct msm_otg *msm_otg)
+{
+	struct device_node *node = pdev->dev.of_node;
+	struct extcon_dev *edev;
+	int rc;
+
+	if (!of_property_read_bool(node, "extcon"))
+		return 0;
+
+	edev = extcon_get_edev_by_phandle(&pdev->dev, 0);
+	if (IS_ERR(edev)) {
+		if (PTR_ERR(edev) != -ENODEV)
+			return PTR_ERR(edev);
+		goto try_second_edev;
+	}
+
+	msm_otg->ec_vbus = edev;
+	msm_otg->vbus_notifier.notifier_call = msm_otg_vbus_notifier;
+	rc = extcon_register_notifier(edev,
+		EXTCON_USB, &msm_otg->vbus_notifier);
+	if (rc < 0) {
+		dev_err(&pdev->dev, "Cannot register extcon vbus notifier\n");
+		return rc;
+	}
+
+try_second_edev:
+	/* If a second phandle for USBID wasn't provided, just go out. */
+	if (!(of_count_phandle_with_args(node, "extcon", NULL) > 1))
+		return 0;
+
+	edev = extcon_get_edev_by_phandle(&pdev->dev, 1);
+	if (IS_ERR(edev)) {
+		if (PTR_ERR(edev) != -ENODEV) {
+			rc = PTR_ERR(edev);
+			goto err;
+		}
+		return 0;
+	}
+
+	msm_otg->ec_usbid = edev;
+	msm_otg->usbid_notifier.notifier_call = msm_otg_usbid_notifier;
+	rc = extcon_register_notifier(edev,
+		EXTCON_USB_HOST, &msm_otg->usbid_notifier);
+	if (rc < 0) {
+		dev_err(&pdev->dev, "Cannot register extcon vbus notifier\n");
+		goto err;
+	}
+
+	return 0;
+err:
+	if (msm_otg->ec_vbus)
+		extcon_unregister_notifier(msm_otg->ec_vbus,
+			EXTCON_USB, &msm_otg->vbus_notifier);
+	return rc;
+}
+
+/* *************************
+ * EXTCON implementation END
+ * *************************
+ */
+
 static int msm_otg_probe(struct platform_device *pdev)
 {
 	int ret = 0;
@@ -4380,7 +4473,7 @@ static int msm_otg_probe(struct platform_device *pdev)
 	wake_lock_init(&motg->wlock, WAKE_LOCK_SUSPEND, "msm_otg");
 	INIT_WORK(&motg->sm_work, msm_otg_sm_work);
 	INIT_DELAYED_WORK(&motg->chg_work, msm_chg_detect_work);
-	INIT_DELAYED_WORK(&motg->id_status_work, msm_id_status_w);
+	INIT_WORK(&motg->id_status_work, msm_id_status_w);
 	INIT_DELAYED_WORK(&motg->perf_vote_work, msm_otg_perf_vote_work);
 	setup_timer(&motg->chg_check_timer, msm_otg_chg_check_timer_func,
 				(unsigned long) motg);
@@ -4593,6 +4686,22 @@ static int msm_otg_probe(struct platform_device *pdev)
 		}
 	}
 
+	ret = msm_otg_extcon_probe(pdev, motg);
+	if (ret) {
+		dev_err(&pdev->dev, "Cannot register extcon\n");
+	} else {
+		/* Extcon is present! Set the initial status. */
+		if (motg->ec_vbus && extcon_get_cable_state_(motg->ec_vbus,
+							EXTCON_USB))
+			msm_otg_vbus_notifier(&motg->vbus_notifier,
+						true, NULL);
+
+		if (motg->ec_usbid && extcon_get_cable_state_(motg->ec_usbid,
+							EXTCON_USB_HOST))
+			msm_otg_usbid_notifier(&motg->usbid_notifier,
+						true, NULL);
+	}
+
 	motg->pm_notify.notifier_call = msm_otg_pm_notify;
 	register_pm_notifier(&motg->pm_notify);
 	msm_otg_dbg_log_event(phy, "OTG PROBE", motg->caps, motg->lpm_flags);
@@ -4694,7 +4803,7 @@ static int msm_otg_remove(struct platform_device *pdev)
 		power_supply_unregister(psy);
 	msm_otg_debugfs_cleanup();
 	cancel_delayed_work_sync(&motg->chg_work);
-	cancel_delayed_work_sync(&motg->id_status_work);
+	cancel_work_sync(&motg->id_status_work);
 	cancel_delayed_work_sync(&motg->perf_vote_work);
 	msm_otg_perf_vote_update(motg, false);
 	cancel_work_sync(&motg->sm_work);
