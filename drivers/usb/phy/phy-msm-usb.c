@@ -3968,6 +3968,7 @@ static int msm_otg_usbid_notifier(struct notifier_block *nb,
 	struct msm_otg *motg = container_of(nb,
 			struct msm_otg, usbid_notifier);
 
+	pr_debug("%s: Setting vbus state: %lu\n", __func__, event);
 	motg->id_state = event ? USB_ID_GROUND : USB_ID_FLOAT;
 	queue_work(motg->otg_wq, &motg->id_status_work);
 
@@ -3977,6 +3978,7 @@ static int msm_otg_usbid_notifier(struct notifier_block *nb,
 static int msm_otg_vbus_notifier(struct notifier_block *nb,
 		unsigned long event, void *ptr)
 {
+	pr_debug("%s: Setting vbus state: %lu\n", __func__, event);
 	msm_otg_set_vbus_state(event);
 
 	return NOTIFY_DONE;
@@ -4007,6 +4009,7 @@ static int msm_otg_extcon_probe(struct platform_device *pdev,
 		dev_err(&pdev->dev, "Cannot register extcon vbus notifier\n");
 		return rc;
 	}
+	pr_debug("%s: Extcon VBUS notifier registered.\n", __func__);
 
 try_second_edev:
 	/* If a second phandle for USBID wasn't provided, just go out. */
@@ -4030,6 +4033,7 @@ try_second_edev:
 		dev_err(&pdev->dev, "Cannot register extcon vbus notifier\n");
 		goto err;
 	}
+	pr_debug("%s: Extcon USB ID notifier registered.\n", __func__);
 
 	return 0;
 err:
