@@ -559,18 +559,17 @@
 		/delete-node/ qcom,panel-supply-entry@3;
 	};
 
-	ramoops@a7f00000 {
+
+
+	ramoops {
 		compatible = "ramoops";
-		reg = <0xa7f00000 0x100000>;
 		status = "ok";
-
-		record-size = <0x4000>;
-		console-size = <0x4000>;
-		ftrace-size = <0x2000>;
-		pmsg-size = <0x4000>;
-		ecc-size = <16>;
-
 		memory-region = <&pstore_reserve_mem>;
+		record-size = <0x0 0x20000>;
+		console-size = <0x0 0x40000>;
+		ftrace-size = <0x0 0x20000>;
+		pmsg-size = <0x0 0x20000>;
+		ecc-size = <16>;
 	};
 
 	qusb_phy0: qusb@7411000 {
