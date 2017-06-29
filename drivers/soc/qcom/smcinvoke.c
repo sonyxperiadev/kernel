@@ -19,6 +19,7 @@
 #include <linux/slab.h>
 #include <linux/file.h>
 #include <linux/fs.h>
+#include <linux/of.h>
 #include <linux/anon_inodes.h>
 #include <linux/hashtable.h>
 #include <linux/smcinvoke.h>

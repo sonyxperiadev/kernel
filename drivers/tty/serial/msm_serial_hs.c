@@ -2747,8 +2747,10 @@ static int msm_hs_startup(struct uart_port *uport)
 
 
 	spin_lock_irqsave(&uport->lock, flags);
+#ifndef CONFIG_LINE_DISCIPLINE_DRIVER
 	atomic_set(&msm_uport->client_count, 0);
 	atomic_set(&msm_uport->client_req_state, 0);
+#endif
 	LOG_USR_MSG(msm_uport->ipc_msm_hs_pwr_ctxt,
 			"%s(): Client_Count 0\n", __func__);
 	msm_hs_start_rx_locked(uport);
