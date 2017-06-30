@@ -439,11 +439,12 @@ int bluesleep_start(bool is_clock_enabled)
 
 	// For ldisc-controlled BT, the clock is enabled by upper layers, so
 	// make bluesleep aware of this state.
-	if(is_clock_enabled) {
+	if (is_clock_enabled)
 		atomic_set(&uart_is_on, 1);
-	} else {
+#ifdef CONFIG_LINE_DISCIPLINE_DRIVER
+	else
 		hsuart_power(HS_UART_ON);
-	}
+#endif
 
 	enable_wakeup_irq(1);
 	set_bit(BT_PROTO, &flags);
@@ -652,7 +653,7 @@ static int bluesleep_probe(struct platform_device *pdev)
 		goto free_bt_ext_wake;
 	}
 
-	atomic_set(&bsi->wakeup_irq_disabled, 1);
+	enable_wakeup_irq(0);
 
 	return 0;
 
