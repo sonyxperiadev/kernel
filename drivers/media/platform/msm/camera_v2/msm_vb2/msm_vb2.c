@@ -310,7 +310,8 @@ static int msm_vb2_put_buf(struct vb2_v4l2_buffer *vb, int session_id,
 
 static int msm_vb2_buf_done(struct vb2_v4l2_buffer *vb, int session_id,
 				unsigned int stream_id, uint32_t sequence,
-				struct timeval *ts, uint32_t reserved)
+				struct timeval *ts, uint32_t reserved,
+				enum vb2_buffer_state state)
 {
 	unsigned long flags;
 	struct msm_vb2_buffer *msm_vb2;
@@ -341,7 +342,7 @@ static int msm_vb2_buf_done(struct vb2_v4l2_buffer *vb, int session_id,
 			vb2_v4l2_buf->sequence = sequence;
 			vb2_v4l2_buf->timestamp = *ts;
 			vb2_buffer_done(&vb2_v4l2_buf->vb2_buf,
-				VB2_BUF_STATE_DONE);
+				state);
 			msm_vb2->in_freeq = 0;
 			rc = 0;
 		} else
