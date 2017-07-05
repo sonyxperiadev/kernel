@@ -3630,6 +3630,7 @@ static struct binder_thread *binder_get_thread(struct binder_proc *proc)
 		 * to recalc the insertion point in the rb tree.
 		 */
 		p = &proc->threads.rb_node;
+		parent = NULL;
 		while (*p) {
 			parent = *p;
 			thread = rb_entry(parent,
