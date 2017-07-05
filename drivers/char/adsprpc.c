@@ -240,7 +240,7 @@ struct fastrpc_apps {
 	spinlock_t hlock;
 	struct ion_client *client;
 	struct device *dev;
-	bool glink;
+	bool smd;
 };
 
 struct fastrpc_mmap {
@@ -1404,7 +1404,7 @@ static int fastrpc_invoke_send(struct smq_invoke_ctx *ctx,
 	msg->invoke.page.addr = ctx->buf ? ctx->buf->phys : 0;
 	msg->invoke.page.size = buf_page_size(ctx->used);
 
-	if (fl->apps->glink) {
+	if (!fl->apps->smd) {
 		if (fl->ssrcount != channel_ctx->ssrcount) {
 			err = -ECONNRESET;
 			goto bail;
@@ -2039,7 +2039,7 @@ static void fastrpc_channel_close(struct kref *kref)
 
 	ctx = container_of(kref, struct fastrpc_channel_ctx, kref);
 	cid = ctx - &gcinfo[0];
-	if (!me->glink) {
+	if (me->smd) {
 		smd_close(ctx->chan);
 	} else {
 		fastrpc_glink_close(ctx->chan, cid);
@@ -2461,7 +2461,7 @@ static int fastrpc_channel_open(struct fastrpc_file *fl)
 	fl->ssrcount = me->channel[cid].ssrcount;
 	if ((kref_get_unless_zero(&me->channel[cid].kref) == 0) ||
 	    (me->channel[cid].chan == 0)) {
-		if (me->glink) {
+		if (!me->smd) {
 			fastrpc_glink_register(cid, me);
 			VERIFY(err, 0 == fastrpc_glink_open(cid));
 		} else {
@@ -2699,7 +2699,7 @@ static int fastrpc_restart_notifier_cb(struct notifier_block *nb,
 		ctx->ssrcount++;
 		ctx->issubsystemup = 0;
 		if (ctx->chan) {
-			if (me->glink) {
+			if (!me->smd) {
 				fastrpc_glink_close(ctx->chan, cid);
 			} else {
 				smd_close(ctx->chan);
@@ -2928,7 +2928,7 @@ static int fastrpc_probe(struct platform_device *pdev)
 		return 0;
 	}
 
-	me->glink = of_property_read_bool(dev->of_node, "qcom,fastrpc-glink");
+	me->smd = of_property_read_bool(dev->of_node, "qcom,fastrpc-smd");
 
 	VERIFY(err, !of_platform_populate(pdev->dev.of_node,
 					  fastrpc_match_table,
