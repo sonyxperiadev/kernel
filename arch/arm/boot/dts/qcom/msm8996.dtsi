@@ -3607,6 +3607,7 @@
 
 	qcom,msm_fastrpc {
 		compatible = "qcom,msm-fastrpc-adsp";
+		qcom,fastrpc-smd;
 
 		qcom,msm_fastrpc_compute_cb1 {
 			compatible = "qcom,msm-fastrpc-compute-cb";
