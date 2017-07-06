@@ -1240,6 +1240,9 @@ static void update_typec_status(struct smbchg_chip *chip)
 {
 	union power_supply_propval type = {0, };
 	union power_supply_propval capability = {0, };
+#ifdef CONFIG_USB_MSM_OTG
+	int rc;
+#endif
 
 	get_property_from_typec(chip, POWER_SUPPLY_PROP_TYPE, &type);
 	if (type.intval != POWER_SUPPLY_TYPE_UNKNOWN) {
@@ -1249,6 +1252,18 @@ static void update_typec_status(struct smbchg_chip *chip)
 		chip->typec_current_ma = capability.intval;
 		pr_smb(PR_TYPEC, "SMB Type-C mode = %d, current=%d\n",
 				type.intval, capability.intval);
+#ifdef CONFIG_USB_MSM_OTG
+		if (!chip->skip_usb_notification) {
+			rc = power_supply_set_property(chip->usb_psy,
+				POWER_SUPPLY_PROP_INPUT_CURRENT_MAX,
+				&capability);
+			if (rc)
+				pr_err("typec failed to set current max rc=%d\n",
+					rc);
+			pr_smb(PR_TYPEC, "SMB Type-C mode = %d, current=%d\n",
+					type.intval, capability.intval);
+		}
+#endif
 	} else {
 		pr_smb(PR_TYPEC,
 			"typec detection not completed continuing with USB update\n");
@@ -1618,6 +1633,9 @@ static void smbchg_usb_update_online_work(struct work_struct *work)
 	bool user_enabled = !get_client_vote(chip->usb_suspend_votable,
 						USER_EN_VOTER);
 	int online;
+#ifdef CONFIG_USB_MSM_OTG
+	union power_supply_propval ret;
+#endif
 
 #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
 	bool low_batt_enabled = !get_client_vote(chip->usb_suspend_votable,
@@ -1630,11 +1648,21 @@ static void smbchg_usb_update_online_work(struct work_struct *work)
 #endif
 
 	mutex_lock(&chip->usb_set_online_lock);
+#ifdef CONFIG_USB_MSM_OTG
+	if (chip->usb_online != online) {
+		pr_smb(PR_MISC, "setting usb psy online = %d\n", online);
+		ret.intval = online;
+		power_supply_set_property(chip->usb_psy,
+				POWER_SUPPLY_PROP_ONLINE, &ret);
+		chip->usb_online = online;
+	}
+#else
 	if (chip->usb_online != online) {
 		pr_smb(PR_MISC, "setting usb psy online = %d\n", online);
 		chip->usb_online = online;
 		power_supply_changed(chip->usb_psy);
 	}
+#endif /* CONFIG_USB_MSM_OTG */
 	mutex_unlock(&chip->usb_set_online_lock);
 }
 
@@ -3860,6 +3888,13 @@ static void smbchg_external_power_changed(struct power_supply *psy)
 			current_limit < chip->typec_current_ma)
 		current_limit = chip->typec_current_ma;
 
+#ifdef CONFIG_USB_MSM_OTG
+	rc = power_supply_get_property(chip->usb_psy,
+				POWER_SUPPLY_PROP_CURRENT_MAX, &prop);
+	if (rc == 0)
+		current_limit = prop.intval / 1000;
+#endif
+
 	read_usb_type(chip, &usb_type_name, &usb_supply_type);
 #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
 	rc = power_supply_get_property(chip->usb_psy,
@@ -4583,6 +4618,9 @@ static int smbchg_change_usb_supply_type(struct smbchg_chip *chip,
 #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
 	const union power_supply_propval pval = {type, };
 #endif
+#ifdef CONFIG_USB_MSM_OTG
+	union power_supply_propval tpval = {0, };
+#endif
 
 	/*
 	 * if the type is not unknown, set the type before changing ICL vote
@@ -4622,12 +4660,22 @@ static int smbchg_change_usb_supply_type(struct smbchg_chip *chip,
 		goto out;
 	}
 
+#ifdef CONFIG_USB_MSM_OTG
+	if (!chip->skip_usb_notification) {
+		tpval.intval = type;
+		power_supply_set_property(chip->usb_psy,
+				POWER_SUPPLY_PROP_TYPE, &tpval);
+	}
+#endif
+
 	/* otherwise if it is unknown, set type after the vote */
 	if (type == POWER_SUPPLY_TYPE_UNKNOWN)
 		chip->usb_supply_type = type;
 
+#ifndef CONFIG_USB_MSM_OTG
 	if (!chip->skip_usb_notification)
 		power_supply_changed(chip->usb_psy);
+#endif
 
 #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
 /*	if (chip->typec_psy)
@@ -4879,14 +4927,36 @@ static void handle_usb_removal(struct smbchg_chip *chip)
 	cancel_delayed_work_sync(&chip->hvdcp_det_work); // CHECKME
 #endif
 	smbchg_change_usb_supply_type(chip, POWER_SUPPLY_TYPE_UNKNOWN);
+
+#ifdef CONFIG_USB_MSM_OTG
+	if (!chip->skip_usb_notification) {
+		pr_smb(PR_MISC, "setting usb psy present = %d\n",
+				chip->usb_present);
+		pval.intval = chip->usb_present;
+		power_supply_set_property(chip->usb_psy,
+				POWER_SUPPLY_PROP_PRESENT, &pval);
+		set_usb_psy_dp_dm(chip, POWER_SUPPLY_DP_DM_DPR_DMR);
+	}
+#endif /* CONFIG_USB_MSM_OTG */
+
 	extcon_set_cable_state_(chip->extcon, EXTCON_USB, chip->usb_present);
 	if (chip->dpdm_reg)
 		regulator_disable(chip->dpdm_reg);
 	schedule_work(&chip->usb_set_online_work);
 
 	pr_smb(PR_MISC, "setting usb psy health UNKNOWN\n");
+#ifdef CONFIG_USB_MSM_OTG
+	pval.intval = POWER_SUPPLY_HEALTH_UNKNOWN;
+	rc = power_supply_set_property(chip->usb_psy, POWER_SUPPLY_PROP_HEALTH,
+			&pval);
+	if (rc < 0)
+		pr_smb(PR_STATUS,
+			"usb psy does not allow updating prop %d rc = %d\n",
+			POWER_SUPPLY_HEALTH_UNKNOWN, rc);
+#else
 	chip->usb_health = POWER_SUPPLY_HEALTH_UNKNOWN;
 	power_supply_changed(chip->usb_psy);
+#endif /* CONFIG_USB_MSM_OTG */
 
 	if (parallel_psy && chip->parallel_charger_detected) {
 		pval.intval = false;
@@ -4991,6 +5061,16 @@ static void handle_usb_insertion(struct smbchg_chip *chip)
 		update_typec_status(chip);
 	smbchg_change_usb_supply_type(chip, usb_supply_type);
 
+#ifdef CONFIG_USB_MSM_OTG
+	if (!chip->skip_usb_notification) {
+		pr_smb(PR_MISC, "setting usb psy present = %d\n",
+				chip->usb_present);
+		pval.intval = chip->usb_present;
+		power_supply_set_property(chip->usb_psy,
+				POWER_SUPPLY_PROP_PRESENT, &pval);
+	}
+#endif /* CONFIG_USB_MSM_OTG */
+
 	/* Only notify USB if it's not a charger */
 	if (usb_supply_type == POWER_SUPPLY_TYPE_USB ||
 			usb_supply_type == POWER_SUPPLY_TYPE_USB_CDP)
@@ -5007,10 +5087,23 @@ static void handle_usb_insertion(struct smbchg_chip *chip)
 		pr_smb(PR_MISC, "setting usb psy health %s\n",
 				chip->very_weak_charger
 				? "UNSPEC_FAILURE" : "GOOD");
+#ifdef CONFIG_USB_MSM_OTG
+		pval.intval = chip->very_weak_charger
+				? POWER_SUPPLY_HEALTH_UNSPEC_FAILURE
+				: POWER_SUPPLY_HEALTH_GOOD;
+		rc = power_supply_set_property(chip->usb_psy,
+				POWER_SUPPLY_PROP_HEALTH,
+				&pval);
+		if (rc < 0)
+			pr_smb(PR_STATUS,
+				"usb psy does not allow updating prop %d rc = %d\n",
+				POWER_SUPPLY_HEALTH_GOOD, rc);
+#else
 		chip->usb_health = chip->very_weak_charger
 				? POWER_SUPPLY_HEALTH_UNSPEC_FAILURE
 				: POWER_SUPPLY_HEALTH_GOOD;
 		power_supply_changed(chip->usb_psy);
+#endif
 	}
 	schedule_work(&chip->usb_set_online_work);
 
@@ -5135,6 +5228,9 @@ static void increment_aicl_count(struct smbchg_chip *chip)
 	u8 reg;
 	long elapsed_seconds;
 	unsigned long now_seconds;
+#ifdef CONFIG_USB_MSM_OTG
+	union power_supply_propval pval = {0, };
+#endif
 
 	pr_smb(PR_INTERRUPT, "aicl count c:%d dgltch:%d first:%ld\n",
 			chip->aicl_irq_count, chip->aicl_deglitch_short,
@@ -5216,8 +5312,18 @@ static void increment_aicl_count(struct smbchg_chip *chip)
 		if (bad_charger) {
 			pr_smb(PR_MISC,
 				"setting usb psy health UNSPEC_FAILURE\n");
+#ifdef CONFIG_USB_MSM_OTG
+			pval.intval = POWER_SUPPLY_HEALTH_UNSPEC_FAILURE;
+			rc = power_supply_set_property(chip->usb_psy,
+					POWER_SUPPLY_PROP_HEALTH,
+					&pval);
+			if (rc)
+				pr_err("Couldn't set health on usb psy rc:%d\n",
+					rc);
+#else
 			chip->usb_health = POWER_SUPPLY_HEALTH_UNSPEC_FAILURE;
 			power_supply_changed(chip->usb_psy);
+#endif /* CONFIG_USB_MSM_OTG */
 			schedule_work(&chip->usb_set_online_work);
 		}
 	}
@@ -5955,7 +6061,20 @@ static int smbchg_dp_dm(struct smbchg_chip *chip, int val)
 static void update_typec_capability_status(struct smbchg_chip *chip,
 					const union power_supply_propval *val)
 {
+#ifdef CONFIG_USB_MSM_OTG
+	int rc;
+#endif
+
 	pr_smb(PR_TYPEC, "typec capability = %dma\n", val->intval);
+
+#ifdef CONFIG_USB_MSM_OTG
+	if (!chip->skip_usb_notification) {
+		rc = power_supply_set_property(chip->usb_psy,
+			POWER_SUPPLY_PROP_INPUT_CURRENT_MAX, val);
+		if (rc)
+			pr_err("typec failed to set current max rc=%d\n", rc);
+	}
+#endif
 
 	pr_debug("changing ICL from %dma to %dma\n", chip->typec_current_ma,
 			val->intval);
@@ -5998,6 +6117,10 @@ static void update_typec_otg_status(struct smbchg_chip *chip, int mode,
 	if (mode == POWER_SUPPLY_TYPE_DFP) {
 		chip->typec_dfp = true;
 		pval.intval = 1;
+#ifdef CONFIG_USB_MSM_OTG
+		power_supply_set_property(chip->usb_psy,
+				POWER_SUPPLY_PROP_USB_OTG, &pval);
+#endif
 		extcon_set_cable_state_(chip->extcon, EXTCON_USB_HOST,
 				chip->typec_dfp);
 		/* update FG */
@@ -6006,6 +6129,10 @@ static void update_typec_otg_status(struct smbchg_chip *chip, int mode,
 	} else if (force || chip->typec_dfp) {
 		chip->typec_dfp = false;
 		pval.intval = 0;
+#ifdef CONFIG_USB_MSM_OTG
+		power_supply_set_property(chip->usb_psy,
+				POWER_SUPPLY_PROP_USB_OTG, &pval);
+#endif
 		extcon_set_cable_state_(chip->extcon, EXTCON_USB_HOST,
 				chip->typec_dfp);
 		/* update FG */
@@ -6877,6 +7004,9 @@ static irqreturn_t usbin_ov_handler(int irq, void *_chip)
 	int rc;
 	u8 reg;
 	bool usb_present;
+#ifdef CONFIG_USB_MSM_OTG
+	union power_supply_propval pval = {0, };
+#endif
 
 	rc = smbchg_read(chip, &reg, chip->usb_chgpth_base + RT_STS, 1);
 	if (rc < 0) {
@@ -6887,9 +7017,23 @@ static irqreturn_t usbin_ov_handler(int irq, void *_chip)
 	/* OV condition is detected. Notify it to USB psy */
 	if (reg & USBIN_OV_BIT) {
 		chip->usb_ov_det = true;
+#ifdef CONFIG_USB_MSM_OTG
+		if (chip->usb_psy) {
+			pr_smb(PR_MISC, "setting usb psy health OV\n");
+			pval.intval = POWER_SUPPLY_HEALTH_OVERVOLTAGE;
+			rc = power_supply_set_property(chip->usb_psy,
+					POWER_SUPPLY_PROP_HEALTH,
+					&pval);
+			if (rc)
+				pr_smb(PR_STATUS,
+					"usb psy does not allow updating prop %d rc = %d\n",
+					POWER_SUPPLY_HEALTH_OVERVOLTAGE, rc);
+		}
+#else
 		pr_smb(PR_MISC, "setting usb psy health OV\n");
 		chip->usb_health = POWER_SUPPLY_HEALTH_OVERVOLTAGE;
 		power_supply_changed(chip->usb_psy);
+#endif /* CONFIG_USB_MSM_OTG */
 	} else {
 		chip->usb_ov_det = false;
 		/* If USB is present, then handle the USB insertion */
@@ -6914,6 +7058,9 @@ static irqreturn_t usbin_uv_handler(int irq, void *_chip)
 	int aicl_level = smbchg_get_aicl_level_ma(chip);
 	int rc;
 	u8 reg;
+#ifdef CONFIG_USB_MSM_OTG
+	union power_supply_propval pval = {0, };
+#endif
 
 	rc = smbchg_read(chip, &reg, chip->usb_chgpth_base + RT_STS, 1);
 	if (rc) {
@@ -6939,6 +7086,11 @@ static irqreturn_t usbin_uv_handler(int irq, void *_chip)
 			pr_err("Couldn't enable DP/DM for pulsing rc=%d\n", rc);
 			return rc;
 		}
+#ifdef CONFIG_USB_MSM_OTG
+		pval.intval = POWER_SUPPLY_DP_DM_DPF_DMF;
+		power_supply_set_property(chip->usb_psy,
+				POWER_SUPPLY_PROP_DP_DM, &pval);
+#endif
 	}
 
 	if (reg & USBIN_UV_BIT)
@@ -6985,8 +7137,16 @@ static irqreturn_t usbin_uv_handler(int irq, void *_chip)
 						rc);
 		}
 		pr_smb(PR_MISC, "setting usb psy health UNSPEC_FAILURE\n");
+#ifdef CONFIG_USB_MSM_OTG
+		pval.intval = POWER_SUPPLY_HEALTH_UNSPEC_FAILURE;
+		rc = power_supply_set_property(chip->usb_psy,
+				POWER_SUPPLY_PROP_HEALTH, &pval);
+		if (rc)
+			pr_err("Couldn't set health on usb psy rc:%d\n", rc);
+#else
 		chip->usb_health = POWER_SUPPLY_HEALTH_UNSPEC_FAILURE;
 		power_supply_changed(chip->usb_psy);
+#endif /* CONFIG_USB_MSM_OTG */
 		schedule_work(&chip->usb_set_online_work);
 	}
 
@@ -7163,12 +7323,25 @@ static irqreturn_t usbid_change_handler(int irq, void *_chip)
 {
 	struct smbchg_chip *chip = _chip;
 	bool otg_present;
+#ifdef CONFIG_USB_MSM_OTG
+	union power_supply_propval pval = {0, };
+#endif
 
 	pr_smb(PR_INTERRUPT, "triggered\n");
 
 	otg_present = is_otg_present(chip);
+#ifdef CONFIG_USB_MSM_OTG
+	if (chip->usb_psy) {
+		pr_smb(PR_MISC, "setting usb psy OTG = %d\n",
+				otg_present ? 1 : 0);
+		pval.intval = otg_present ? 1 : 0;
+		power_supply_set_property(chip->usb_psy,
+				POWER_SUPPLY_PROP_USB_OTG, &pval);
+	}
+#else
 	pr_smb(PR_MISC, "setting usb psy OTG = %d\n",
 			otg_present ? 1 : 0);
+#endif
 
 	extcon_set_cable_state_(chip->extcon, EXTCON_USB_HOST, otg_present);
 
@@ -7185,6 +7358,9 @@ static irqreturn_t usbid_change_handler(int irq, void *_chip)
 static int determine_initial_status(struct smbchg_chip *chip)
 {
 	union power_supply_propval type = {0, };
+#ifdef CONFIG_USB_MSM_OTG
+	union power_supply_propval pval = {0, };
+#endif
 
 	/*
 	 * It is okay to read the interrupt status here since
@@ -7224,6 +7400,11 @@ static int determine_initial_status(struct smbchg_chip *chip)
 		if (rc < 0) {
 			pr_err("Couldn't enable DP/DM for pulsing rc=%d\n", rc);
 			return rc;
+#ifdef CONFIG_USB_MSM_OTG
+		pval.intval = POWER_SUPPLY_DP_DM_DPF_DMF;
+		power_supply_set_property(chip->usb_psy,
+				POWER_SUPPLY_PROP_DP_DM, &pval);
+#endif
 		}
 #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
 		msleep(WAIT_TO_READ_DPDM_AT_PROBE_MS);
@@ -8667,6 +8848,7 @@ static int smbchg_probe(struct platform_device *pdev)
 	const char *typec_psy_name;
 #ifdef CONFIG_USB_MSM_OTG
 	struct power_supply *usb_psy = NULL;
+	union power_supply_propval pval = {0, };
 #else
 	struct power_supply_config usb_psy_cfg = {};
 #endif
@@ -8842,6 +9024,10 @@ static int smbchg_probe(struct platform_device *pdev)
 	chip->pdev = pdev;
 	chip->dev = &pdev->dev;
 
+#ifdef CONFIG_USB_MSM_OTG
+	chip->usb_psy = usb_psy;
+#endif
+
 	chip->typec_psy = typec_psy;
 	chip->fake_battery_soc = -EINVAL;
 	chip->usb_online = -EINVAL;
@@ -8918,8 +9104,6 @@ static int smbchg_probe(struct platform_device *pdev)
 		rc = PTR_ERR(chip->usb_psy);
 		goto votables_cleanup;
 	}
-#else
-	chip->usb_psy = usb_psy;
 #endif
 	if (of_find_property(chip->dev->of_node, "dpdm-supply", NULL)) {
 		chip->dpdm_reg = devm_regulator_get(chip->dev, "dpdm");
@@ -9029,6 +9213,16 @@ static int smbchg_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Unable to request irqs rc = %d\n", rc);
 		goto unregister_led_class;
 	}
+
+#ifdef CONFIG_USB_MSM_OTG
+	if (!chip->skip_usb_notification) {
+		pr_smb(PR_MISC, "setting usb psy present = %d\n",
+			chip->usb_present);
+		pval.intval = chip->usb_present;
+		power_supply_set_property(chip->usb_psy,
+				POWER_SUPPLY_PROP_PRESENT, &pval);
+	}
+#endif
 
 	rerun_hvdcp_det_if_necessary(chip);
 
