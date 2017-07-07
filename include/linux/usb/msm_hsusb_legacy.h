@@ -293,9 +293,9 @@ struct msm_otg_platform_data {
 	int phy_init_sz;
 	int (*vbus_power)(bool on);
 	unsigned power_budget;
-	enum usb_mode_type mode;
+	enum usb_dr_mode mode;
 	enum otg_control_type otg_control;
-	enum usb_mode_type default_mode;
+	enum usb_dr_mode default_mode;
 	enum msm_usb_phy_type phy_type;
 	void (*setup_gpio)(enum usb_otg_state state);
 	int (*link_clk_reset)(struct clk *link_clk, bool assert);
