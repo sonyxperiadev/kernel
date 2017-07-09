@@ -223,25 +223,25 @@
 	qcom,cam_smmu {
 		compatible = "qcom,msm-cam-smmu";
 		msm_cam_smmu_cb1: msm_cam_smmu_cb1 {
-			compatible = "qcom,qsmmu-cam-cb";
+			compatible = "qcom,msm-cam-smmu-cb";
 			iommus = <&apps_smmu 2>;
 			label = "vfe";
 		};
 
 		msm_cam_smmu_cb2: msm_cam_smmu_cb2 {
-			compatible = "qcom,qsmmu-cam-cb";
+			compatible = "qcom,msm-cam-smmu-cb";
 			label = "vfe_secure";
 			qcom,secure-context;
 		};
 
 		msm_cam_smmu_cb3: msm_cam_smmu_cb3 {
-			compatible = "qcom,qsmmu-cam-cb";
+			compatible = "qcom,msm-cam-smmu-cb";
 			iommus = <&apps_smmu 5>;
 			label = "cpp";
 		};
 
 		msm_cam_smmu_cb4: msm_cam_smmu_cb4 {
-			compatible = "qcom,qsmmu-cam-cb";
+			compatible = "qcom,msm-cam-smmu-cb";
 			iommus = <&apps_smmu 1>;
 			label = "jpeg_enc0";
 		};
