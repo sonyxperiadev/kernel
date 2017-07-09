@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2014, 2016 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2014, 2016-2017 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -10,14 +10,15 @@
  * GNU General Public License for more details.
  */
 
-&spmi_bus {
-	#address-cells = <1>;
+#include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/spmi/spmi.h>
 
+&spmi_bus {
 	qcom,pm8916@0 {
-		spmi-slave-container;
-		reg = <0x0>;
-		#address-cells = <1>;
-		#size-cells = <1>;
+		compatible = "qcom,spmi-pmic";
+		reg = <0x0 SPMI_USID>;
+		#address-cells = <2>;
+		#size-cells = <0>;
 
 		pm8916_revid: qcom,revid@100 {
 			compatible = "qcom,qpnp-revid";
@@ -27,8 +28,8 @@
 		pm8916_pon: qcom,power-on@800 {
 			compatible = "qcom,qpnp-power-on";
 			reg = <0x800 0x100>;
-			interrupts = <0x0 0x8 0x0>,
-				     <0x0 0x8 0x1>;
+			interrupts = <0x0 0x8 0x0 IRQ_TYPE_NONE>,
+				     <0x0 0x8 0x1 IRQ_TYPE_NONE>;
 			interrupt-names = "kpdpwr", "resin";
 			qcom,pon-dbc-delay = <15625>;
 			qcom,system-reset;
@@ -54,7 +55,6 @@
 
 		pm8916_mpps: mpps {
 			compatible = "qcom,qpnp-pin";
-			spmi-dev-container;
 			gpio-controller;
 			#gpio-cells = <2>;
 			#address-cells = <1>;
@@ -88,7 +88,6 @@
 
 		pm8916_gpios: gpios {
 			compatible = "qcom,qpnp-pin";
-			spmi-dev-container;
 			gpio-controller;
 			#gpio-cells = <2>;
 			#address-cells = <1>;
@@ -121,7 +120,6 @@
 		};
 
 		pm8916_rtc: qcom,pm8916_rtc {
-                        spmi-dev-container;
                         compatible = "qcom,qpnp-rtc";
                         #address-cells = <1>;
                         #size-cells = <1>;
@@ -133,7 +131,7 @@
                         };
                         qcom,pm8916_rtc_alarm@6100 {
                                 reg = <0x6100 0x100>;
-                                interrupts = <0x0 0x61 0x1>;
+                                interrupts = <0x0 0x61 0x1 IRQ_TYPE_NONE>;
                         };
                 };
 
@@ -142,7 +140,7 @@
 			reg = <0x3100 0x100>;
 			#address-cells = <1>;
 			#size-cells = <0>;
-			interrupts = <0x0 0x31 0x0>;
+			interrupts = <0x0 0x31 0x0 IRQ_TYPE_NONE>;
 			interrupt-names = "eoc-int-en-set";
 			qcom,adc-bit-resolution = <15>;
 			qcom,adc-vdd-reference = <1800>;
@@ -186,7 +184,7 @@
 		pm8916_tz: qcom,temp-alarm@2400 {
 			compatible = "qcom,qpnp-temp-alarm";
 			reg = <0x2400 0x100>;
-			interrupts = <0x0 0x24 0x0>;
+			interrupts = <0x0 0x24 0x0 IRQ_TYPE_NONE>;
 			label = "pm8916_tz";
 			qcom,channel-num = <8>;
 			qcom,threshold-set = <0>;
@@ -198,9 +196,9 @@
 			reg = <0x3400 0x100>;
 			#address-cells = <1>;
 			#size-cells = <0>;
-			interrupts =	<0x0 0x34 0x0>,
-					<0x0 0x34 0x3>,
-					<0x0 0x34 0x4>;
+			interrupts =	<0x0 0x34 0x0 IRQ_TYPE_NONE>,
+					<0x0 0x34 0x3 IRQ_TYPE_NONE>,
+					<0x0 0x34 0x4 IRQ_TYPE_NONE>;
 			interrupt-names =	"eoc-int-en-set",
 						"high-thr-en-set",
 						"low-thr-en-set";
@@ -211,7 +209,6 @@
 		};
 
 		pm8916_chg: qcom,charger {
-			spmi-dev-container;
 			compatible = "qcom,qpnp-linear-charger";
 			#address-cells = <1>;
 			#size-cells = <1>;
@@ -238,10 +235,10 @@
 
 			qcom,chgr@1000 {
 				reg = <0x1000 0x100>;
-				interrupts =	<0x0 0x10 0x7>,
-						<0x0 0x10 0x6>,
-						<0x0 0x10 0x5>,
-						<0x0 0x10 0x0>;
+				interrupts =	<0x0 0x10 0x7 IRQ_TYPE_NONE>,
+						<0x0 0x10 0x6 IRQ_TYPE_NONE>,
+						<0x0 0x10 0x5 IRQ_TYPE_NONE>,
+						<0x0 0x10 0x0 IRQ_TYPE_NONE>;
 				interrupt-names =	"chg-done",
 							"chg-failed",
 							"fast-chg-on",
@@ -250,17 +247,17 @@
 
 			qcom,bat-if@1200 {
 				reg = <0x1200 0x100>;
-				interrupts =	<0x0 0x12 0x1>,
-						<0x0 0x12 0x0>;
+				interrupts =	<0x0 0x12 0x1 IRQ_TYPE_NONE>,
+						<0x0 0x12 0x0 IRQ_TYPE_NONE>;
 				interrupt-names =	"bat-temp-ok",
 							"batt-pres";
 			};
 
 			qcom,usb-chgpth@1300 {
 				reg = <0x1300 0x100>;
-				interrupts =	<0 0x13 0x4>,
-						<0 0x13 0x2>,
-						<0 0x13 0x1>;
+				interrupts =	<0 0x13 0x4 IRQ_TYPE_NONE>,
+						<0 0x13 0x2 IRQ_TYPE_NONE>,
+						<0 0x13 0x1 IRQ_TYPE_NONE>;
 				interrupt-names =	"usb-over-temp",
 							"chg-gone",
 							"usbin-valid";
@@ -272,7 +269,6 @@
 		};
 
 		pm8916_bms: qcom,vmbms {
-			spmi-dev-container;
 			compatible = "qcom,qpnp-vm-bms";
 			#address-cells = <1>;
 			#size-cells = <1>;
@@ -309,12 +305,12 @@
 
 			qcom,vm-bms@4000 {
 				reg = <0x4000 0x100>;
-				interrupts =	<0x0 0x40 0x0>,
-						<0x0 0x40 0x1>,
-						<0x0 0x40 0x2>,
-						<0x0 0x40 0x3>,
-						<0x0 0x40 0x4>,
-						<0x0 0x40 0x5>;
+				interrupts =	<0x0 0x40 0x0 IRQ_TYPE_NONE>,
+						<0x0 0x40 0x1 IRQ_TYPE_NONE>,
+						<0x0 0x40 0x2 IRQ_TYPE_NONE>,
+						<0x0 0x40 0x3 IRQ_TYPE_NONE>,
+						<0x0 0x40 0x4 IRQ_TYPE_NONE>,
+						<0x0 0x40 0x5 IRQ_TYPE_NONE>;
 
 				interrupt-names = "leave_cv",
 						  "enter_cv",
@@ -333,15 +329,14 @@
 	};
 
 	qcom,pm8916@1 {
-		spmi-slave-container;
-		reg = <0x1>;
-		#address-cells = <1>;
-		#size-cells = <1>;
+		compatible = "qcom,spmi-pmic";
+		reg = <0x1 SPMI_USID>;
+		#address-cells = <2>;
+		#size-cells = <0>;
 
 		regulator@1400 {
 			compatible = "qcom,qpnp-regulator";
 			regulator-name = "8916_s1";
-			spmi-dev-container;
 			#address-cells = <1>;
 			#size-cells = <1>;
 			reg = <0x1400 0x300>;
@@ -361,7 +356,6 @@
 		regulator@1700 {
 			compatible = "qcom,qpnp-regulator";
 			regulator-name = "8916_s2";
-			spmi-dev-container;
 			#address-cells = <1>;
 			#size-cells = <1>;
 			reg = <0x1700 0x300>;
@@ -381,7 +375,6 @@
 		regulator@1a00 {
 			compatible = "qcom,qpnp-regulator";
 			regulator-name = "8916_s3";
-			spmi-dev-container;
 			#address-cells = <1>;
 			#size-cells = <1>;
 			reg = <0x1a00 0x300>;
@@ -401,7 +394,6 @@
 		regulator@1d00 {
 			compatible = "qcom,qpnp-regulator";
 			regulator-name = "8916_s4";
-			spmi-dev-container;
 			#address-cells = <1>;
 			#size-cells = <1>;
 			reg = <0x1d00 0x300>;
@@ -564,14 +556,14 @@
 			compatible = "qcom,msm8x16_wcd_codec";
 			reg = <0xf000 0x100>;
 			interrupt-parent = <&spmi_bus>;
-			interrupts = <0x1 0xf0 0x0>,
-				     <0x1 0xf0 0x1>,
-				     <0x1 0xf0 0x2>,
-				     <0x1 0xf0 0x3>,
-				     <0x1 0xf0 0x4>,
-				     <0x1 0xf0 0x5>,
-				     <0x1 0xf0 0x6>,
-				     <0x1 0xf0 0x7>;
+			interrupts = <0x1 0xf0 0x0 IRQ_TYPE_NONE>,
+				     <0x1 0xf0 0x1 IRQ_TYPE_NONE>,
+				     <0x1 0xf0 0x2 IRQ_TYPE_NONE>,
+				     <0x1 0xf0 0x3 IRQ_TYPE_NONE>,
+				     <0x1 0xf0 0x4 IRQ_TYPE_NONE>,
+				     <0x1 0xf0 0x5 IRQ_TYPE_NONE>,
+				     <0x1 0xf0 0x6 IRQ_TYPE_NONE>,
+				     <0x1 0xf0 0x7 IRQ_TYPE_NONE>;
 			interrupt-names = "spk_cnp_int",
 					  "spk_clip_int",
 					  "spk_ocp_int",
@@ -615,12 +607,12 @@
 			compatible = "qcom,msm8x16_wcd_codec";
 			reg = <0xf100 0x100>;
 			interrupt-parent = <&spmi_bus>;
-			interrupts = <0x1 0xf1 0x0>,
-				     <0x1 0xf1 0x1>,
-				     <0x1 0xf1 0x2>,
-				     <0x1 0xf1 0x3>,
-				     <0x1 0xf1 0x4>,
-				     <0x1 0xf1 0x5>;
+			interrupts = <0x1 0xf1 0x0 IRQ_TYPE_NONE>,
+				     <0x1 0xf1 0x1 IRQ_TYPE_NONE>,
+				     <0x1 0xf1 0x2 IRQ_TYPE_NONE>,
+				     <0x1 0xf1 0x3 IRQ_TYPE_NONE>,
+				     <0x1 0xf1 0x4 IRQ_TYPE_NONE>,
+				     <0x1 0xf1 0x5 IRQ_TYPE_NONE>;
 			interrupt-names = "ear_ocp_int",
 					  "hphr_ocp_int",
 					  "hphl_ocp_det",
@@ -632,7 +624,8 @@
 		pm8916_bcm: qpnp-buck-current-monitor@1800 {
 			compatible = "qcom,qpnp-buck-current-monitor";
 			reg = <0x1800 0x100>;
-			interrupts = <1 0x18 0>, <1 0x18 1>;
+			interrupts = <1 0x18 0 IRQ_TYPE_NONE>,
+				     <1 0x18 1 IRQ_TYPE_NONE>;
 			interrupt-names = "iwarning", "icritical";
 			qcom,enable-current-monitor;
 			qcom,icrit-init-threshold-pc = <90>;
