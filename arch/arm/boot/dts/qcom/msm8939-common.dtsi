@@ -87,6 +87,12 @@
 			size = <0 0x400000>;
 		};
 
+		pstore_reserve_mem: pstore_reserve_mem_region@a0000000 {
+			compatible = "removed-dma-pool";
+			no-map;
+			reg = <0 0xA0000000 0 0x100000>;
+		};
+
 		cont_splash_mem: splash_region@83000000 {
 			reg = <0x0 0x83000000 0x0 0x2000000>;
 		};
@@ -1305,6 +1311,17 @@
 			compatible = "qcom,msm-imem-boot_stats";
 			reg = <0x6b0 32>;
 		};
+	};
+
+	ramoops {
+		compatible = "ramoops";
+		status = "ok";
+		memory-region = <&pstore_reserve_mem>;
+		record-size = <0x0 0x20000>;
+		console-size = <0x0 0x40000>;
+		ftrace-size = <0x0 0x20000>;
+		pmsg-size = <0x0 0x20000>;
+		ecc-size = <16>;
 	};
 
 	qcom,mpm2-sleep-counter@4a3000 {
