@@ -520,7 +520,7 @@ static struct ncp6335d_platform_data *
 	int rc;
 
 	init_data = of_get_regulator_init_data(&client->dev,
-				client->dev.of_node);
+				client->dev.of_node, &rdesc);
 	if (!init_data) {
 		dev_err(&client->dev, "regulator init data is missing\n");
 		return pdata;
