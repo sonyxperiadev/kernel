@@ -8,7 +8,7 @@
  * published by the Free Software Foundation.
  */
 /*
- * Copyright (C) 2015 Sony Mobile Communications Inc.
+ * Copyright (C) 2016 Sony Mobile Communications Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2, as
@@ -58,7 +58,7 @@
 #define SYN_STRING_LENGTH		128
 #define SYN_RETRY_NUM_OF_INITIAL_CHECK	2
 #define SYN_RETRY_NUM_OF_PROBE		3
-#define SYN_RETRY_NUM_OF_POST_PROBE	3
+#define SYN_RETRY_NUM_OF_POST_PROBE	6
 #define SYN_RETRY_NUM_OF_RECOVERY	3
 #define SYN_RETRY_NUM_OF_RESET		5
 #define SYN_RETRY_NUM			3
@@ -75,6 +75,10 @@
 #define SYN_PAYLOAD_LENGTH		1
 #define SYN_DEVICE_INFO_SIZE		5
 #define SYN_DEVICE_BL_INFO_SIZE		2
+#define SYN_STAMINA_MODE_SUPPORTED_MASK		0x80000000
+#define SYN_STAMINA_REPROTRATE_SUPPORTED_MASK	0x00000001
+#define SYN_STAMINA_DOZE_HOLDOFF_SUPPORTED_MASK	0x00000002
+#define SYN_WAIT_TIME_AFTER_CHANGE_REPORTRATE	34
 #define HWTEST_SIZE_OF_COMMAND_PREFIX		2
 #define HWTEST_SIZE_OF_ONE_DIMENSION		1
 #define HWTEST_SIZE_OF_ONE_HIGH_RX		3
@@ -89,8 +93,16 @@
 #define FLASH_DATA_CONFIGURATION_AREA_SELECT_PERM	1
 #define FLASH_DATA_CONFIGURATION_AREA_SELECT_SHIFT	13
 #define FLASH_READ_CONFIGURATION_SIZE			21
-#define FLASH_READ_FIRMWARE_INFO_SIZE_BL6X		4
-#define FLASH_READ_FIRMWARE_INFO_SIZE_BL7X		5
+#define FLASH_READ_FIRMWARE_INFO_SIZE_BL6X			4
+#define FLASH_READ_FIRMWARE_INFO_SIZE_BL7X			5
+
+/*
+ * Register Offset
+ */
+
+/* F01_RMI_CTRL05: Doze Holdoff */
+#define SYN_COVER_RECTANGLE_OFFSET	0x01
+#define SYN_EXTERNAL_REPORT_RATE_OFFSET	0x06
 
 #define SYN_PAGE_ADDR(page, addr) ((page) << 8 | (addr))
 #define SYN_F_ADDR(th, func, type, reg) ((th)->pdt[func].base[type] + (reg))
@@ -231,7 +243,6 @@ BIT_DEF(STATUS_FLASH_STATUS,					0x1F, 0,
 	STATUS_FLASH_STATUS_FLASH_HARDWARE_FAILURE		= 0x1F);
 BIT_DEF(STATUS_DEVICE_CONFIG_STATUS,			0x60, 5);
 BIT_DEF(STATUS_BL_MODE,					0x80, 7);
-
 /* F34_FLASH_DATA02: Flash Control */
 BIT_DEF(FLASH_CONTROL,					0x3F, 0,
 	FLASH_CONTROL_WRITE_FIRMWARE_BLOCK		= 0x02,
@@ -364,6 +375,17 @@ BIT_DEF(CALIBRATION_STATE_CALIBRATION_CRC,		0x02, 1);
  * Types
  */
 
+static const char * const clearpad_flash_status[] = {
+	[0] = "Success",
+	[1] = "(Reserved)",
+	[2] = "Flash Programming Not Enabled/Bad Command",
+	[3] = "Invalid Block Number",
+	[4] = "Block Not Erased",
+	[5] = "Erase Key Incorrect",
+	[6] = "Unknown Erase/Program Failure",
+	[7] = "Device has been reset",
+};
+
 enum clearpad_state_e {
 	SYN_STATE_INIT,
 	SYN_STATE_RUNNING,
@@ -391,26 +413,14 @@ static const char * const clearpad_state_name[] = {
 };
 
 enum clearpad_chip_e {
-	SYN_CHIP_3000	= 0x33,
-	SYN_CHIP_3200	= 0x35,
-	SYN_CHIP_3400	= 0x36,
 	SYN_CHIP_3500	= 0x38,
-	SYN_CHIP_7300	= 0x37,
-	SYN_CHIP_7500	= 0x39,
 	SYN_CHIP_3330	= 0x3A, /* Hybrid incell */
-	SYN_CHIP_3700	= 0x3B, /* Sydney */
 	SYN_CHIP_332U	= 0x40, /* Full incell */
 };
 
 static const char * const clearpad_chip_name[] = {
-	[SYN_CHIP_3000]	= "S3000",
-	[SYN_CHIP_3200]	= "S3200",
-	[SYN_CHIP_3400]	= "S3400",
-	[SYN_CHIP_3500]	= "S3500", /* Hybrid incell (Yoshino) */
-	[SYN_CHIP_7300]	= "S7300",
-	[SYN_CHIP_7500]	= "S7500",
+	[SYN_CHIP_3500]	= "S3500",
 	[SYN_CHIP_3330]	= "S3330", /* Hybrid incell */
-	[SYN_CHIP_3700]	= "S3700", /* Sydney */
 	[SYN_CHIP_332U]	= "S332U", /* Full incell */
 };
 
@@ -477,6 +487,7 @@ static const char * const clearpad_flash_reason_name[] = {
 };
 
 enum clearpad_firmware_e {
+	HEADER_SIZE			= 0x100,
 	HEADER_VERSION_OFFSET		= 0x07,
 	HEADER_PRODUCT_ID_SIZE		= 10,
 };
@@ -526,28 +537,22 @@ enum firmware_container_id_const_e {
 };
 
 enum firmware_bootloader_version_const_e {
+	BV6	= 0x06,
 	BV7	= 0x10,
 };
 
 static const int clearpad_bootloader_version_dec[] = {
+	[BV6]	= 6,
 	[BV7]	= 7,
-};
-
-enum clearpad_device_serialization_queries_e {
-	SIZE_OF_DATE_CODE	= 3,
-	SIZE_OF_TESTER_ID	= 2,
-	SIZE_OF_SERIAL_NUMBER	= 2,
 };
 
 enum clearpad_flash_command_e {
 	SYN_FORCE_FLASH,
-	SYN_CONFIG_FLASH,
 	SYN_DEFAULT_FLASH,
 };
 
 static const char * const clearpad_flash_command_name[] = {
 	[SYN_FORCE_FLASH]	= "force",
-	[SYN_CONFIG_FLASH]	= "config",
 	[SYN_DEFAULT_FLASH]	= "default",
 };
 
@@ -610,11 +615,15 @@ struct clearpad_interrupt_t {
 enum clearpad_reset_e {
 	SYN_HWRESET,
 	SYN_SWRESET,
+	SYN_FORCE_HWRESET,
+	SYN_FORCE_SWRESET,
 };
 
 static const char * const clearpad_reset_name[] = {
 	[SYN_HWRESET]	= "HW reset",
 	[SYN_SWRESET]	= "SW reset",
+	[SYN_FORCE_HWRESET]	= "Force HW reset",
+	[SYN_FORCE_SWRESET]	= "Force SW reset",
 };
 
 struct clearpad_reset_t {
@@ -632,9 +641,6 @@ struct clearpad_device_info_t {
 	u8 firmware_revision_minor;
 	u8 firmware_revision_extra;
 	u8 analog_id;
-	u8 date[SIZE_OF_DATE_CODE];
-	u8 tester_id[SIZE_OF_TESTER_ID];
-	u8 serial_number[SIZE_OF_SERIAL_NUMBER];
 	u8 product_id[HEADER_PRODUCT_ID_SIZE];
 	u8 boot_loader_version_major;
 	u8 boot_loader_version_minor;
@@ -752,6 +758,7 @@ struct clearpad_cover_t {
 	bool supported;
 	bool status;
 	bool enabled;
+	bool set_disp_size_to_win;
 	int win_top;
 	int win_bottom;
 	int win_right;
@@ -802,6 +809,76 @@ struct descriptor_t {
 	u8 minor_version;
 	u32 content_start_addr;
 	u32 content_len;
+};
+
+struct clearpad_change_reportrate_t {
+	bool supported;
+	u8 mode;
+};
+
+struct clearpad_doze_holdoff_t {
+	bool supported;
+	u8 default_time;
+	u8 glove_mode_time;
+	u8 cover_mode_time;
+};
+
+struct clearpad_stamina_mode_t {
+	bool supported;
+	bool enabled;
+	struct clearpad_change_reportrate_t change_reportrate;
+	struct clearpad_doze_holdoff_t doze_holdoff;
+};
+
+struct fb_t {
+	bool unblank_done;
+	bool unblank_early_done;
+};
+
+struct clearpad_reg_offset_t {
+	bool updated;
+
+	u8 f01_cmd00;
+	u8 f01_ctrl00;
+	u8 f01_ctrl01;
+	u8 f01_ctrl05;
+	u8 f01_ctrl18;
+	u8 f01_data00;
+	u8 f01_data01;
+	u8 f01_query11;
+
+	u8 f12_ctrl08;
+
+	u8 f34_ctrl00;
+	u8 f34_data00;
+	u8 f34_data01;
+	u8 f34_data02;
+	u8 f34_data03;
+	u8 f34_data04;
+	u8 f34_data05;
+	u8 f34_query00;
+	u8 f34_query01;
+	u8 f34_query03;
+
+	u8 f51_ctrl05;
+	u8 f51_ctrl30;
+
+	u8 f54_cmd00;
+	u8 f54_ctrl41;
+	u8 f54_ctrl57;
+	u8 f54_ctrl88;
+	u8 f54_ctrl109;
+	u8 f54_ctrl113;
+	u8 f54_ctrl147;
+	u8 f54_ctrl149;
+	u8 f54_ctrl188;
+	u8 f54_ctrl214;
+	u8 f54_data00;
+	u8 f54_data01;
+	u8 f54_data02;
+	u8 f54_data03;
+	u8 f54_data31;
+	u8 f54_query38;
 };
 
 struct clearpad_charger_only_t {
@@ -882,6 +959,8 @@ struct clearpad_t {
 	struct clearpad_reset_t reset;
 	struct clearpad_noise_detect_t noise_det;
 	struct clearpad_interrupt_t interrupt;
+	struct clearpad_stamina_mode_t stamina;
+	struct clearpad_reg_offset_t reg_offset;
 	struct clearpad_charger_only_t charger_only;
 	int irq;
 	bool irq_enabled;
@@ -910,7 +989,10 @@ struct clearpad_t {
 	bool early_suspend; /* suspend mode has been set from early suspend */
 	bool irq_pending;
 	bool last_irq;
+
 	bool is_sol;
+
+	struct fb_t wakeup;
 };
 
 /*
@@ -918,6 +1000,7 @@ struct clearpad_t {
  */
 
 static void clearpad_update_chip_id(struct clearpad_t *this);
+static void clearpad_set_is_sol(struct clearpad_t *this);
 static void clearpad_post_probe_work(struct work_struct *work);
 static void clearpad_thread_resume_work(struct work_struct *work);
 static void clearpad_funcarea_initialize(struct clearpad_t *this);
@@ -934,16 +1017,13 @@ static int clearpad_write_pca_block(struct clearpad_t *this,
 static int clearpad_process_irq(struct clearpad_t *this);
 static int clearpad_flash(struct clearpad_t *this);
 static bool clearpad_process_noise_det_irq(struct clearpad_t *this);
+static void clearpad_touch_config_dt_for_chip_id(struct clearpad_t *this,
+						int chip_id);
 #ifdef CONFIG_DEBUG_FS
 static int clearpad_debug_hwtest_log(struct clearpad_t *this,
 				     const char *format, ...);
 static void clearpad_debug_info(struct clearpad_t *this);
 #endif
-
-/*
- * Global variables
- */
-static bool first_blank_done = false;
 
 /*
  * Functions
@@ -1110,8 +1190,11 @@ static int touchctrl_hwreset(struct clearpad_t *this, int mode)
 	int retry;
 
 	LOGI(this, "execute '%s'\n", NAME_OF(clearpad_reset_name, mode));
+	this->wakeup.unblank_done = false;
+	this->wakeup.unblank_early_done = false;
 	switch (mode) {
 	case SYN_HWRESET:
+	case SYN_FORCE_HWRESET:
 		raw_mode = INCELL_DISPLAY_HW_RESET;
 		break;
 	default:
@@ -1134,7 +1217,8 @@ static int touchctrl_display_off(struct clearpad_t *this)
 	int retry;
 
 	LOGI(this, "turn display off\n");
-
+	this->wakeup.unblank_done = false;
+	this->wakeup.unblank_early_done = false;
 	for (retry = 0; retry < SYN_RETRY_NUM; retry++) {
 		rc = incell_control_mode(INCELL_DISPLAY_OFF, INCELL_FORCE);
 		if (rc != INCELL_EBUSY)
@@ -1339,10 +1423,8 @@ static int clearpad_ctrl_session_begin(struct clearpad_t *this,
 	touchctrl->session = session;
 
 	LOCK(&this->lock);
-
 	/* keep touch power for this session */
-	rc = touchctrl_lock_power(this, session, true, false);
-	if (unlikely(!rc) && unlikely(first_blank_done)) {
+	if (!touchctrl_lock_power(this, session, true, false)) {
 		LOGE(this, "failed to lock power\n");
 		rc = -EAGAIN;
 		goto err_in_lock_power;
@@ -1476,6 +1558,93 @@ static int clearpad_put_block(struct clearpad_t *this, u16 addr,
 	return  rc == len ? 0 : (rc < 0 ? rc : -EIO);
 }
 
+static int clearpad_set_doze_holdoff_time(struct clearpad_t *this,
+					  u8 holdoff_time)
+{
+	int rc = 0;
+	u8 current_time = 0x00;
+
+	if (!this->stamina.supported) {
+		LOGI(this, "stamina mode is not supported\n");
+		goto end;
+	}
+	if (!this->stamina.doze_holdoff.supported) {
+		LOGI(this, "doze holdoff is not supported\n");
+		goto end;
+	}
+
+	if (clearpad_get(
+		SYNF(this, F01_RMI, CTRL, this->reg_offset.f01_ctrl05),
+			&current_time)) {
+		LOGE(this, "failed to get current Doze Holdoff\n");
+		rc = -EINVAL;
+		goto end;
+	}
+	if (current_time == holdoff_time) {
+		LOGI(this, "new Doze Holdoff is same as current=0x%02x\n",
+			current_time);
+		goto end;
+	}
+
+	/* F01_RMI_CTRL05: Doze Holdoff */
+	rc = clearpad_put(
+			SYNF(this, F01_RMI, CTRL,
+			     this->reg_offset.f01_ctrl05),
+			holdoff_time);
+	if (rc) {
+		LOGE(this, "failed to set new Doze Holdoff=0x%02x\n",
+			holdoff_time);
+		goto end;
+	}
+	/* F54_ANALOG_CMD00: Analog Command */
+	rc = clearpad_put(
+			SYNF(this, F54_ANALOG, COMMAND,
+				this->reg_offset.f54_cmd00),
+			ANALOG_COMMAND_FORCE_UPDATE_MASK);
+	if (rc) {
+		LOGE(this, "failed to set force update\n");
+		goto end;
+	}
+	LOGI(this, "changed Doze Holdoff=0x%02x\n", holdoff_time);
+
+end:
+	return rc;
+}
+
+/* need LOCK(&this->lock) */
+static int clearpad_set_doze_holdoff(struct clearpad_t *this)
+{
+	int rc = 0;
+	u8 holdoff_time = 0x00;
+
+	if (!this->stamina.supported) {
+		LOGI(this, "stamina mode is not supported\n");
+		goto end;
+	}
+	if (!this->stamina.doze_holdoff.supported) {
+		LOGI(this, "doze holdoff is not supported\n");
+		goto end;
+	}
+
+	LOGI(this, "glove mode: %s, cover mode/status: %s/%s\n",
+		this->glove.enabled ? "enable" : "disable",
+		this->cover.enabled ? "enable" : "disable",
+		this->cover.status ? "CLOSE" : "OPEN");
+
+	holdoff_time = this->stamina.doze_holdoff.default_time;
+	if (this->glove.enabled)
+		holdoff_time = this->stamina.doze_holdoff.glove_mode_time;
+	if (this->cover.enabled && this->cover.status)
+		holdoff_time = this->stamina.doze_holdoff.cover_mode_time;
+
+	rc = clearpad_set_doze_holdoff_time(this, holdoff_time);
+	if (rc)
+		goto end;
+
+end:
+	return rc;
+}
+
 static struct clearpad_funcarea_t clearpad_default_funcarea_array[] = {
 	{
 		{ 0, 0, 0, 0}, { 0, 0, 0, 0},
@@ -1594,13 +1763,15 @@ static int clearpad_set_charger(struct clearpad_t *this)
 		goto end;
 
 	if (this->charger.status)
-		/* F01_RMI_CMD00: Device Command */
-		rc = clearpad_put_bit(SYNF(this, F01_RMI, CTRL, 0x00),
+		/* F01_RMI_CTRL00: Device Command */
+		rc = clearpad_put_bit(
+			SYNF(this, F01_RMI, CTRL, this->reg_offset.f01_ctrl00),
 			DEVICE_CONTROL_CHARGER_CONNECTED_MASK,
 			DEVICE_CONTROL_CHARGER_CONNECTED_MASK);
 	else
-		/* F01_RMI_CMD00: Device Command */
-		rc = clearpad_put_bit(SYNF(this, F01_RMI, CTRL, 0x00),
+		/* F01_RMI_CTRL00: Device Command */
+		rc = clearpad_put_bit(
+			SYNF(this, F01_RMI, CTRL, this->reg_offset.f01_ctrl00),
 			0, DEVICE_CONTROL_CHARGER_CONNECTED_MASK);
 	if (rc)
 		LOGE(this, "failed to set charger status");
@@ -1637,6 +1808,41 @@ end:
 }
 
 /*
+ * Glove finger register in touch ic
+ */
+
+static int clearpad_set_glove_finger_reg(struct clearpad_t *this, bool enable)
+{
+	int rc = 0;
+
+	/* F12_2D_CTRL23_00: Object Report Enable */
+	rc = clearpad_put_bit(SYNA(this, F12_2D, CTRL, 23),
+			      enable ?
+			      OBJECT_REPORT_ENABLE_GLOVED_FINGER_MASK : 0,
+			      OBJECT_REPORT_ENABLE_GLOVED_FINGER_MASK);
+	if (rc) {
+		LOGE(this, "error in setting for object report enable\n");
+		goto end;
+	}
+	if (this->chip_id == SYN_CHIP_3330 ||
+	    this->chip_id == SYN_CHIP_332U) {
+		/* F12_2D_CTRL26: Feature Enable */
+		rc = clearpad_put_bit(SYNA(this, F12_2D, CTRL, 26),
+		      enable ?
+		      FEATURE_ENABLE_ENABLE_GLOVED_FINGER_DETECTION_MASK : 0,
+		      FEATURE_ENABLE_ENABLE_GLOVED_FINGER_DETECTION_MASK);
+		if (rc) {
+			LOGE(this, "error in setting for feature enable\n");
+			goto end;
+		}
+	}
+end:
+	if (rc)
+		LOGE(this, "failed to set glove finger register in touch ic \n");
+	return rc;
+}
+
+/*
  * Glove
  */
 
@@ -1665,28 +1871,15 @@ static int clearpad_set_glove_mode(struct clearpad_t *this, bool enable)
 		goto end;
 	}
 
-	/* F12_2D_CTRL23_00: Object Report Enable */
-	rc = clearpad_put_bit(SYNA(this, F12_2D, CTRL, 23),
-			      enable ?
-			      OBJECT_REPORT_ENABLE_GLOVED_FINGER_MASK : 0,
-			      OBJECT_REPORT_ENABLE_GLOVED_FINGER_MASK);
-	if (rc) {
-		LOGE(this, "error in setting for object report enable\n");
-		goto end;
-	}
-	if (this->chip_id == SYN_CHIP_3330 ||
-	    this->chip_id == SYN_CHIP_332U) {
-		/* F12_2D_CTRL26: Feature Enable */
-		rc = clearpad_put_bit(SYNA(this, F12_2D, CTRL, 26),
-		      enable ?
-		      FEATURE_ENABLE_ENABLE_GLOVED_FINGER_DETECTION_MASK : 0,
-		      FEATURE_ENABLE_ENABLE_GLOVED_FINGER_DETECTION_MASK);
-		if (rc) {
-			LOGE(this, "error in setting for feature enable\n");
+	/* Set glove finger register in touch ic */
+	if (!this->cover.status) {
+		rc = clearpad_set_glove_finger_reg(this, enable);
+		if (rc)
 			goto end;
-		}
+		rc = clearpad_set_doze_holdoff(this);
+		if (rc)
+			LOGE(this, "failed to set Doze Holdoff\n");
 	}
-
 end:
 	if (rc)
 		LOGE(this, "failed to set glove mode");
@@ -1721,11 +1914,12 @@ static int clearpad_set_cover_status(struct clearpad_t *this)
 		      FEATURE_ENABLE_ENABLE_CLOSED_COVER_DETECTION_MASK);
 		break;
 	case SYN_CHIP_3500:
-	case SYN_CHIP_7500:
 		/* F51_CUSTOM_CTRL05.00: Cover */
-		rc = clearpad_put(SYNF(this, F51_CUSTOM, CTRL, 0x00),
-			 this->cover.status ?
-			 COVER_ENABLE_MASK | COVER_REPORT_FINGER_MASK : 0x00);
+		rc = clearpad_put(
+			SYNF(this, F51_CUSTOM, CTRL,
+				this->reg_offset.f51_ctrl05),
+			this->cover.status ?
+			COVER_ENABLE_MASK | COVER_REPORT_FINGER_MASK : 0x00);
 		break;
 	default:
 		LOGE(this, "not supported chip id (0x%02x)\n", this->chip_id);
@@ -1735,8 +1929,12 @@ static int clearpad_set_cover_status(struct clearpad_t *this)
 	if (rc)
 		goto end;
 
-	rc = clearpad_set_glove_mode(this,
-			this->cover.status ? true : this->glove.enabled);
+	/* Set glove finger register in touch ic */
+	if (this->cover.status) {
+		rc = clearpad_set_glove_finger_reg(this, true);
+	} else {
+		rc = clearpad_set_glove_finger_reg(this, this->glove.enabled);
+	}
 	if (rc)
 		goto end;
 
@@ -1746,7 +1944,6 @@ static int clearpad_set_cover_status(struct clearpad_t *this)
 		/* Report Glove As Finger setting is not needed */
 		break;
 	case SYN_CHIP_3500:
-	case SYN_CHIP_7500:
 		/* F12_2D_CTRL23_02: Report As Finger */
 		rc = clearpad_get_block(SYNA(this, F12_2D, CTRL, 23), buf,
 					buf_size);
@@ -1767,9 +1964,16 @@ static int clearpad_set_cover_status(struct clearpad_t *this)
 	}
 
 	/* F54_ANALOG_CMD00: Analog Command */
-	rc = clearpad_put_bit(SYNF(this, F54_ANALOG, COMMAND, 0x00),
-			ANALOG_COMMAND_FORCE_UPDATE_MASK,
+	rc = clearpad_put(
+			SYNF(this, F54_ANALOG, COMMAND,
+				this->reg_offset.f54_cmd00),
 			ANALOG_COMMAND_FORCE_UPDATE_MASK);
+	if (rc)
+		goto end;
+
+	rc = clearpad_set_doze_holdoff(this);
+	if (rc)
+		LOGE(this, "failed to set Doze Holdoff\n");
 end:
 	if (rc)
 		LOGE(this, "failed to set cover status");
@@ -1806,7 +2010,7 @@ static int clearpad_set_cover_window(struct clearpad_t *this)
 		if (rc)
 			goto end;
 	} else {
-		/* Cover window size register F51_CUSTOM_CTRL05.01 */
+		/* Cover window size register F51_CUSTOM_CTRL05 */
 		if (!clearpad_is_valid_function(this, SYN_F51_CUSTOM)) {
 			LOGE(this, "F51 is required to set cover window");
 			rc = -EPERM;
@@ -1822,8 +2026,11 @@ static int clearpad_set_cover_window(struct clearpad_t *this)
 		block_buf[6] = this->cover.win_bottom;
 		block_buf[7] = this->cover.win_bottom >> 8;
 
-		/* F51_CUSTOM_CTRL05: Cover Left/Top/Right/Bottom */
-		rc = clearpad_put_block(SYNF(this, F51_CUSTOM, CTRL, 0x01),
+		/* F51_CUSTOM_CTRL05.01: Cover Left/Top/Right/Bottom */
+		rc = clearpad_put_block(
+				SYNF(this, F51_CUSTOM, CTRL,
+					this->reg_offset.f51_ctrl05 +
+					SYN_COVER_RECTANGLE_OFFSET),
 				block_buf, 8);
 		if (rc)
 			goto end;
@@ -1836,6 +2043,126 @@ end:
 	return rc;
 }
 
+/* need LOCK(&this->lock) */
+static void clearpad_set_cover_size(struct clearpad_cover_t *cover,
+		int width, int height)
+{
+	cover->win_left = 0;
+	cover->win_right = width;
+	cover->win_top = 0;
+	cover->win_bottom = height;
+}
+
+/*
+ * Stamina (Report rate)
+ */
+
+/* need LOCK(&this->lock) */
+static int clearpad_change_report_rate(struct clearpad_t *this)
+{
+	int rc = 0;
+	bool enable = false, report_status = false;
+	u8 buf;
+
+	if (!this) {
+		LOGE(this, "failed get this data\n");
+		rc = -EINVAL;
+		goto exit;
+	}
+
+	if (!this->stamina.change_reportrate.supported)
+		goto exit;
+
+	if (this->stamina.change_reportrate.mode > 0)
+		enable = true;
+	else
+		enable = false;
+
+	switch (this->chip_id) {
+	case SYN_CHIP_3330:
+	case SYN_CHIP_332U:
+		rc = clearpad_get(SYNF(this, F01_RMI, CTRL,
+			this->reg_offset.f01_ctrl00), &buf);
+		if (rc) {
+			LOGE(this, "failed to get status\n");
+			rc = -EINVAL;
+			goto exit;
+		}
+		if (BIT_GET(buf, DEVICE_CONTROL_REPORT_RATE))
+			report_status = true;
+
+		if (enable == report_status) {
+			LOGI(this, "report rate is already %s\n",
+			this->stamina.enabled ? "enabled" : "disabled");
+			goto exit;
+		}
+
+		rc = clearpad_put_bit(
+				SYNF(this, F01_RMI, CTRL,
+					this->reg_offset.f01_ctrl00),
+				enable ? DEVICE_CONTROL_REPORT_RATE_MASK : 0,
+				DEVICE_CONTROL_REPORT_RATE_MASK);
+		if (rc) {
+			LOGE(this, "failed to set report rate\n");
+			goto exit;
+		}
+		LOGI(this, "report rate %s\n",
+			enable ? "enable" : "disable");
+
+		clearpad_set_delay(SYN_WAIT_TIME_AFTER_CHANGE_REPORTRATE);
+
+		/* F54_ANALOG_CMD00: Analog Command */
+		rc = clearpad_put(SYNF(this, F54_ANALOG, COMMAND,
+					  this->reg_offset.f54_cmd00),
+					  ANALOG_COMMAND_FORCE_UPDATE_MASK);
+		if (rc) {
+			LOGE(this, "failed to set force update\n");
+			goto exit;
+		}
+
+		break;
+	case SYN_CHIP_3500:
+		/* F51_CUSTOM_CTRL30.06[1:0]: External Report Rate Selection */
+		rc = clearpad_put(
+				SYNF(this, F51_CUSTOM, CTRL,
+				this->reg_offset.f51_ctrl30
+				+ SYN_EXTERNAL_REPORT_RATE_OFFSET),
+				this->stamina.change_reportrate.mode);
+		if (rc) {
+			LOGE(this, "failed to set change report rate\n");
+			goto exit;
+		}
+
+		break;
+	default:
+		LOGE(this, "not supported on chip id 0x0%2x\n", this->chip_id);
+		goto exit;
+	}
+
+exit:
+	return rc;
+}
+
+/*
+ * Stamina
+ */
+
+/* need LOCK(&this->lock) */
+static int clearpad_set_stamina_mode(struct clearpad_t *this)
+{
+	int rc = 0;
+
+	if (!this->stamina.supported)
+		goto end;
+
+	rc = clearpad_change_report_rate(this);
+	if (rc)
+		LOGE(this, "failed to change report rate\n");
+
+end:
+	return rc;
+}
+
 /*
  * Wakeup gesture (EW)
  */
@@ -1844,7 +2171,6 @@ end:
 static int clearpad_enable_wakeup_gesture(struct clearpad_t *this)
 {
 	u8 buf[F12_2D_CTRL_RPT_REG_MAX];
-	u8 offset_CTRL109, offset_CTRL113, offset_CTRL147, offset_CTRL214;
 	int rc = 0;
 
 	if (!clearpad_is_valid_function(this, SYN_F12_2D)) {
@@ -1861,9 +2187,10 @@ static int clearpad_enable_wakeup_gesture(struct clearpad_t *this)
 	}
 
 	/* F01_RMI_CTRL00: Device Control */
-	rc = clearpad_put_bit(SYNF(this, F01_RMI, CTRL, 0x00),
-			      DEVICE_CONTROL_CONFIGURED_MASK,
-			      DEVICE_CONTROL_CONFIGURED_MASK);
+	rc = clearpad_put_bit(
+		SYNF(this, F01_RMI, CTRL, this->reg_offset.f01_ctrl00),
+		DEVICE_CONTROL_CONFIGURED_MASK,
+		DEVICE_CONTROL_CONFIGURED_MASK);
 	if (rc) {
 		LOGE(this, "failed to set device configured bit\n");
 		goto end;
@@ -1889,31 +2216,9 @@ static int clearpad_enable_wakeup_gesture(struct clearpad_t *this)
 			goto end;
 		}
 
-		switch (this->device_info.firmware_revision_extra) {
-		case 0x05:
-			offset_CTRL109 = 0x3A;
-			offset_CTRL113 = 0x3B;
-			offset_CTRL147 = 0x42;
-			offset_CTRL214 = 0x55;
-			break;
-		case 0x06:
-			offset_CTRL109 = 0x38;
-			offset_CTRL113 = 0x39;
-			offset_CTRL147 = 0x40;
-			offset_CTRL214 = 0x53;
-			break;
-		default:
-			HWLOGE(this, "Invalid fw extra=0x%02x: family 0x%02x, rev 0x%02x.%02x\n",
-					this->device_info.firmware_revision_extra,
-					this->device_info.customer_family,
-					this->device_info.firmware_revision_major,
-					this->device_info.firmware_revision_minor);
-			WARN_ON(1); /* instead of HWRESET */
-			goto end;
-		}
-
 		/* F54_ANALOG_CTRL113_00: General Control */
-		rc = clearpad_put_bit(SYNF(this, F54_ANALOG, CTRL, offset_CTRL113),
+		rc = clearpad_put_bit(SYNF(this, F54_ANALOG, CTRL,
+				this->reg_offset.f54_ctrl113),
 				      DISABLE_HYBRID_BASELINE_MASK,
 				      DISABLE_HYBRID_BASELINE_MASK);
 		if (rc) {
@@ -1921,14 +2226,16 @@ static int clearpad_enable_wakeup_gesture(struct clearpad_t *this)
 			goto end;
 		}
 		/* F54_ANALOG_CTRL109_00: General Control */
-		rc = clearpad_put(SYNF(this, F54_ANALOG, CTRL, offset_CTRL109),
+		rc = clearpad_put(SYNF(this, F54_ANALOG, CTRL,
+				this->reg_offset.f54_ctrl109),
 				       BASELINE_CORRECTION_MODE_MASK);
 		if (rc) {
 			LOGE(this, "failed to set baseline correction mode\n");
 			goto end;
 		}
 		/* F54_ANALOG_CTRL147_00: Disable Hybrid CBC Auto Correction */
-		rc = clearpad_put_bit(SYNF(this, F54_ANALOG, CTRL, offset_CTRL147),
+		rc = clearpad_put_bit(SYNF(this, F54_ANALOG, CTRL,
+			this->reg_offset.f54_ctrl147),
 				DISABLE_HYBRID_CBC_AUTO_CORRECTION_MASK,
 				DISABLE_HYBRID_CBC_AUTO_CORRECTION_MASK);
 		if (rc) {
@@ -1937,7 +2244,8 @@ static int clearpad_enable_wakeup_gesture(struct clearpad_t *this)
 			goto end;
 		}
 		/* F54_ANALOG_CTRL214_00: General Control */
-		rc = clearpad_put_bit(SYNF(this, F54_ANALOG, CTRL, offset_CTRL214), 0,
+		rc = clearpad_put_bit(SYNF(this, F54_ANALOG, CTRL,
+			this->reg_offset.f54_ctrl214), 0,
 				ENABLE_HYBRID_CHARGER_NOISE_MITIGATION_MASK);
 		if (rc) {
 			LOGE(this, "failed to set enable hybrid charger noise "
@@ -1945,9 +2253,10 @@ static int clearpad_enable_wakeup_gesture(struct clearpad_t *this)
 			goto end;
 		}
 		/* F54_ANALOG_CMD00: Analog Command */
-		rc = clearpad_put_bit(SYNF(this, F54_ANALOG, COMMAND, 0x00),
-				      ANALOG_COMMAND_FORCE_UPDATE_MASK,
-				      ANALOG_COMMAND_FORCE_UPDATE_MASK);
+		rc = clearpad_put(
+			SYNF(this, F54_ANALOG, COMMAND,
+				this->reg_offset.f54_cmd00),
+			ANALOG_COMMAND_FORCE_UPDATE_MASK);
 		if (rc) {
 			LOGE(this, "failed to set force update\n");
 			goto end;
@@ -2023,8 +2332,9 @@ static int clearpad_disable_wakeup_gesture(struct clearpad_t *this)
 		}
 
 		/* F54_ANALOG_CMD00: Analog Command */
-		rc = clearpad_put_bit(SYNF(this, F54_ANALOG, COMMAND, 0x00),
-			ANALOG_COMMAND_FORCE_CALIBRATION_MASK,
+		rc = clearpad_put(
+			SYNF(this, F54_ANALOG, COMMAND,
+				this->reg_offset.f54_cmd00),
 			ANALOG_COMMAND_FORCE_CALIBRATION_MASK);
 		if (rc)
 			LOGE(this, "failed to force calibrate\n");
@@ -2052,6 +2362,13 @@ static int clearpad_set_feature_settings(struct clearpad_t *this)
 		goto end;
 	if (this->cover.enabled)
 		rc = clearpad_set_cover_window(this);
+	if (rc)
+		goto end;
+	if (this->stamina.enabled)
+		rc = clearpad_set_stamina_mode(this);
+	if (rc)
+		goto end;
+	rc = clearpad_set_doze_holdoff(this);
 end:
 	return rc;
 }
@@ -2251,51 +2568,65 @@ static int clearpad_initialize(struct clearpad_t *this)
 {
 	int rc;
 	u8 fw_info[SYN_DEVICE_INFO_SIZE], bl_ver[SYN_DEVICE_BL_INFO_SIZE];
-	u8 device_status, fw_status, bl_cmd;
+	u8 device_status, fw_status;
 	struct clearpad_device_info_t *info = &this->device_info;
 	u8 product_id[HEADER_PRODUCT_ID_SIZE];
 
 	LOGI(this, "initialize device\n");
 
 	/* read device product id */
-	rc = clearpad_get_block(SYNF(this, F01_RMI, QUERY, 0x0B),
-				product_id, HEADER_PRODUCT_ID_SIZE);
+	/* F01_RMI_QUERY11: Product ID Query */
+	rc = clearpad_get_block(SYNF(this, F01_RMI, QUERY,
+		this->reg_offset.f01_query11),
+		product_id, HEADER_PRODUCT_ID_SIZE);
 	if (rc)
 		goto end;
 	memcpy(info->product_id, product_id, HEADER_PRODUCT_ID_SIZE);
 
 	clearpad_update_chip_id(this);
 
-	this->is_sol = false;
-	bl_cmd = 0x01;
-	if (this->chip_id == SYN_CHIP_3500) {
-		this->is_sol = true;
-		bl_cmd = 0x00;
-	}
+	clearpad_set_is_sol(this);
 
 	/* read device status */
 	/* F01_RMI_DATA00: Device Status */
-	rc = clearpad_get(SYNF(this, F01_RMI, DATA, 0x00), &device_status);
+	rc = clearpad_get(SYNF(this, F01_RMI, DATA,
+		this->reg_offset.f01_data00),
+		&device_status);
 	if (rc)
 		goto end;
 
 	LOGI(this, "device status 0x%02x\n", device_status);
 
-
-	/* F34_FLASH_QUERY01: Bootloader Revision */
-	rc = clearpad_get_block(SYNF(this, F34_FLASH, QUERY, bl_cmd),
+	if (this->is_sol) {
+		/* F34_FLASH_QUERY00: Bootloader Revision */
+		rc = clearpad_get_block(SYNF(this, F34_FLASH, QUERY,
+				this->reg_offset.f34_query00),
 				bl_ver, SYN_DEVICE_BL_INFO_SIZE);
-	if (rc)
-		goto end;
+		if (rc)
+			goto end;
 
-	if (this->is_sol && (bl_ver[1] >= 0x30 && bl_ver[1] <= 0x39)) {
-		/* S3500: Flash memory management V1 */
-		/* change character to decimal */
-		bl_ver[1] -= 0x30;
-		bl_ver[0] = 0x00;
+		/* Flash memory management, Version 1         */
+		/* Bootloader Revision is stored as character */
+		LOGI(this, "bl[0]:%c\n", bl_ver[0]);
+		LOGI(this, "bl[1]:%c\n", bl_ver[1]);
+		if (bl_ver[1] >= 0x30 && bl_ver[1] <= 0x39) {
+			/* change character to decimal */
+			bl_ver[1] -= 0x30;
+			bl_ver[0] = 0x00;	/* minor value is 0 */
+		}
+		LOGI(this, "bootloader revision %d.%03d\n", bl_ver[1], bl_ver[0]);
+	} else {
+		/* F34_FLASH_QUERY01: Bootloader Revision */
+		rc = clearpad_get_block(SYNF(this, F34_FLASH, QUERY,
+					this->reg_offset.f34_query01),
+					bl_ver, SYN_DEVICE_BL_INFO_SIZE);
+		if (rc)
+			goto end;
+
+		/* Flash memory management, Version 2       */
+		/* Bootloader Revision is stored as decimal */
+		LOGI(this, "bootloader revision %d.%03d\n", bl_ver[1], bl_ver[0]);
 	}
-
-	LOGI(this, "bootloader revision %d.%03d\n", bl_ver[1], bl_ver[0]);
 
 	switch (BIT_GET(device_status, DEVICE_STATUS_CODE)) {
 	case DEVICE_STATUS_CODE_CONFIGURATION_CRC_FAILURE:
@@ -2305,15 +2636,11 @@ static int clearpad_initialize(struct clearpad_t *this)
 		memset(fw_info, 0, sizeof(fw_info));
 		break;
 	default:
-		rc = clearpad_get_block(
-			SYNF(this, F34_FLASH, CTRL, 0x00), fw_info, 5);
-		if (rc)
-			goto end;
-
 		if (bl_ver[1] >= clearpad_bootloader_version_dec[BV7]) {
 			/* F34_FLASH_DATA00: Status */
-			rc = clearpad_get(SYNF(this, F34_FLASH, DATA, 0x00),
-					  &fw_status);
+			rc = clearpad_get(SYNF(this, F34_FLASH, DATA,
+					this->reg_offset.f34_data00),
+				&fw_status);
 			if (rc)
 				goto end;
 
@@ -2328,16 +2655,39 @@ static int clearpad_initialize(struct clearpad_t *this)
 			default:
 				break;
 			}
+			rc = clearpad_get_block(
+				SYNF(this, F34_FLASH, CTRL,
+				this->reg_offset.f34_ctrl00), fw_info,
+				FLASH_READ_FIRMWARE_INFO_SIZE_BL7X);
+			if (rc)
+				goto end;
+
+			info->customer_family = fw_info[0];
+			info->firmware_revision_major = fw_info[1];
+			info->firmware_revision_minor = fw_info[2];
+			info->firmware_revision_extra = fw_info[3];
+			info->analog_id = fw_info[4];
+			info->boot_loader_version_minor = bl_ver[0];
+			info->boot_loader_version_major = bl_ver[1];
+		} else if (bl_ver[1] >= clearpad_bootloader_version_dec[BV6]) {
+			rc = clearpad_get_block(SYNF(this, F34_FLASH, CTRL,
+				this->reg_offset.f34_ctrl00),
+				fw_info, FLASH_READ_FIRMWARE_INFO_SIZE_BL6X);
+			if (rc)
+				goto end;
+
+			info->customer_family = fw_info[0];
+			info->firmware_revision_major = fw_info[1];
+			info->firmware_revision_minor = fw_info[2];
+			info->firmware_revision_extra = fw_info[3];
+			info->boot_loader_version_minor = bl_ver[0];
+			info->boot_loader_version_major = bl_ver[1];
 		}
 		break;
 	}
-	info->customer_family = fw_info[0];
-	info->firmware_revision_major = fw_info[1];
-	info->firmware_revision_minor = fw_info[2];
-	info->firmware_revision_extra = fw_info[3];
-	info->analog_id = fw_info[4];
-	info->boot_loader_version_minor = bl_ver[0];
-	info->boot_loader_version_major = bl_ver[1];
+
+	/* overwrite default settings with actual chip settings */
+	clearpad_touch_config_dt_for_chip_id(this, this->chip_id);
 
 	if (this->state != SYN_STATE_RUNNING) {
 		LOGI(this, "device mid %d, prop %d, family 0x%02x, "
@@ -2347,11 +2697,7 @@ static int clearpad_initialize(struct clearpad_t *this)
 		     info->firmware_revision_minor,
 		     info->firmware_revision_extra,
 		     info->analog_id);
-		LOGI(this, "bl %04d-%02d-%02d, tester %d, s/n %d, id '%s'\n",
-		     2000 + info->date[0], info->date[1], info->date[2],
-		     ((int)info->tester_id[0] << 8) + info->tester_id[1],
-		     ((int)info->serial_number[0] << 8)
-		     + info->serial_number[1],
+		LOGI(this, "product id '%s'\n",
 		     clearpad_s(info->product_id, HEADER_PRODUCT_ID_SIZE));
 	}
 
@@ -2363,7 +2709,8 @@ static int clearpad_initialize(struct clearpad_t *this)
 
 	/* set device configured bit */
 	/* F01_RMI_CTRL00: Device Control */
-	rc = clearpad_put_bit(SYNF(this, F01_RMI, CTRL, 0x00),
+	rc = clearpad_put_bit(SYNF(this, F01_RMI, CTRL,
+		this->reg_offset.f01_ctrl00),
 			      DEVICE_CONTROL_CONFIGURED_MASK,
 			      DEVICE_CONTROL_CONFIGURED_MASK);
 	if (rc)
@@ -2431,13 +2778,15 @@ read_pdt:
 
 read_interrupt:
 	/* F01_RMI_DATA01: Interrupt Status */
-	rc = clearpad_get(SYNF(this, F01_RMI, DATA, 0x01), interrupt_status);
+	rc = clearpad_get(SYNF(this, F01_RMI, DATA,
+		this->reg_offset.f01_data01), interrupt_status);
 	if (rc) {
 		HWLOGE(this, "failed to read interrupt status\n");
 		goto end;
 	}
 	/* F01_RMI_DATA00: Device Status */
-	rc = clearpad_get(SYNF(this, F01_RMI, DATA, 0x00), device_status);
+	rc = clearpad_get(SYNF(this, F01_RMI, DATA,
+		this->reg_offset.f01_data00), device_status);
 	if (rc) {
 		HWLOGE(this, "failed to read device status\n");
 		goto end;
@@ -2459,7 +2808,8 @@ err_in_read_pdt:
 	/* this workaround will be replaced by HW reset */
 	HWLOGE(this, "retry reading interrupt status as workaround\n");
 	/* F01_RMI_DATA01: Interrupt Status */
-	rc = clearpad_get(SYNF(this, F01_RMI, DATA, 0x01), interrupt_status);
+	rc = clearpad_get(SYNF(this, F01_RMI, DATA,
+		this->reg_offset.f01_data01), interrupt_status);
 	if (rc)
 		HWLOGE(this, "failed to read interrupt status\n");
 	return -EIO;
@@ -2592,6 +2942,46 @@ void clearpad_parse_container(struct clearpad_t *this)
 	}
 }
 
+static void clearpad_parse_firmware(struct clearpad_t *this)
+{
+	const u8 *data;
+	struct clearpad_flash_t *f = &this->flash;
+
+	data = this->flash.fw->data;
+	LOGI(this, "data:%p\n", data);
+
+	/* Set up data block info */
+	f->data.length = le32_to_cpu(*(u32 *)(data + 8));
+	f->data.blocks = (f->data.length / 16) + !!(f->data.length % 16);
+	f->data.data = data + HEADER_SIZE;
+	f->data.pos = 0;
+	LOGI(this, "DATA: length=%x blocks=%x data=%p\n",
+		 f->data.length, f->data.blocks, f->data.data);
+
+	/* Set up configuration block info */
+	f->config.length = le32_to_cpu(*(u32 *)(data + 12));
+	f->config.blocks = (f->config.length / 16) + !!(f->config.length % 16);
+	f->config.data = data + HEADER_SIZE + f->data.length;
+	f->config.pos = 0;
+	LOGI(this, "CONFIG: length=%x blocks=%x data=%p\n",
+		 f->config.length, f->config.blocks, f->config.data);
+
+	/* family Rev major minor extra info */
+	f->customer_family =
+		*(data + f->data.length + HEADER_SIZE + CONFIG_CUSTOMER_FAMILY_OFFSET);
+	f->firmware_revision_major =
+		*(data + f->data.length + HEADER_SIZE + CONFIG_FIRMWARE_REVISION_MAJOR_OFFSET);
+	f->firmware_revision_minor =
+		*(data + f->data.length + HEADER_SIZE + CONFIG_FIRMWARE_REVISION_MINOR_OFFSET);
+	f->firmware_revision_extra =
+		*(data + f->data.length + HEADER_SIZE + CONFIG_FIRMWARE_REVISION_EXTRA_OFFSET);
+	LOGI(this,
+		"core config: family 0x%02x, rev 0x%02x.%02x.0x%02x\n",
+		f->customer_family, f->firmware_revision_major,
+		f->firmware_revision_minor, f->firmware_revision_extra);
+
+}
+
 static ssize_t clearpad_get_firmware(struct clearpad_t *this, char *filename)
 {
 	int rc;
@@ -2608,6 +2998,8 @@ static ssize_t clearpad_get_firmware(struct clearpad_t *this, char *filename)
 	f->format_version = f->fw->data[HEADER_VERSION_OFFSET];
 	if (f->format_version >= BV7) {
 		clearpad_parse_container(this);
+	} else if (f->format_version >= BV6) {
+		clearpad_parse_firmware(this);
 	} else {
 		HWLOGE(this, "bootloader version not supported\n");
 		rc = -ENODEV;
@@ -2643,7 +3035,9 @@ static int clearpad_get_pca_module_id(struct clearpad_t *this)
 			goto end;
 		}
 	}
-	HWLOGI(this, "no module id in pca\n");
+	HWLOGI(this, "no module id in pca data:%x ic:%x chip:%x module:%x\n",
+		pca_block_data[PCA_DATA], pca_block_data[PCA_IC],
+		pca_block_data[PCA_CHIP], pca_block_data[PCA_MODULE]);
 	rc = -EINVAL;
 end:
 	return rc;
@@ -2682,14 +3076,6 @@ static int clearpad_judge_firmware_flash(struct clearpad_t *this,
 	int blank_block;
 	char filename[SYN_STRING_LENGTH] = "";
 	u8 fw_info[SYN_PCA_BLOCK_SIZE] = {PCA_FW_INFO, SYN_CLEARPAD_VENDOR};
-
-	if (this->device_info.boot_loader_version_major <
-			clearpad_bootloader_version_dec[BV7]) {
-		rc = -ENODEV;
-		HWLOGE(this, "illegal boot loader revision %x\n",
-		     this->device_info.boot_loader_version_major);
-		goto end;
-	}
 
 	if (!this->device_info.customer_family)
 		HWLOGI(this, "device is broken\n");
@@ -2769,300 +3155,23 @@ end:
 	return rc;
 }
 
-static int clearpad_flash_enable(struct clearpad_t *this)
-{
-	int rc;
-	u8 buf[SYN_SINGLE_TRANSACTION_SIZE] = {
-		PID_BOOTLOADER, 0x00, 0x00, 0x00, 0x00,
-		FLASH_CMD_ENTER_BOOTLOADER};
-
-	/* set device configured bit */
-	/* F01_RMI_CTRL00: Device Control */
-	rc = clearpad_put_bit(SYNF(this, F01_RMI, CTRL, 0x00),
-			      DEVICE_CONTROL_CONFIGURED_MASK,
-			      DEVICE_CONTROL_CONFIGURED_MASK);
-	if (rc) {
-		HWLOGE(this, "failed to set device configured bit\n");
-		goto end;
-	}
-	clearpad_set_delay(SYN_WAIT_TIME_AFTER_REGISTER_ACCESS);
-
-	/* read flash program key */
-	rc = clearpad_get_block(SYNF(this, F34_FLASH, QUERY, 0x01),
-			buf + SYN_FP_KEY_OFFSET, 2);
-	if (rc) {
-		HWLOGE(this, "failed to read flash program key\n");
-		goto end;
-	}
-
-	/* issue command to enter bootloader mode with key*/
-	this->flash.enter_bootloader_mode = true;
-	rc = clearpad_put_block(SYNF(this, F34_FLASH, DATA, 0x01),
-			buf, sizeof(buf));
-	if (rc) {
-		HWLOGE(this, "failed to enter bootloader mode\n");
-		goto end;
-	}
-
-	this->state = SYN_STATE_FLASH_ENABLE;
-
-end:
-	return rc;
-}
-
-static int clearpad_flash_program(struct clearpad_t *this)
-{
-	struct clearpad_flash_t *flash = &this->flash;
-	int rc;
-	u8 buf[SYN_SINGLE_TRANSACTION_SIZE] = {
-		0x00, 0x00, 0x00, 0x00, 0x00, FLASH_CMD_ERASE};
-
-	/* make sure that we are in programming mode and there are no issues */
-	rc = clearpad_get(SYNF(this, F34_FLASH, DATA, 0x00), buf);
-	if (rc) {
-		HWLOGE(this, "failed to get flash programming status\n");
-		goto end;
-	}
-
-	if (!(BIT_GET(buf[0], STATUS_BL_MODE))) {
-		HWLOGE(this, "failed enabling flash (%s)\n",
-			      NAME_OF(clearpad_flash_status_name,
-				      BIT_GET(buf[0], STATUS_FLASH_STATUS)));
-		rc = -EIO;
-		goto end;
-	}
-
-	HWLOGI(this, "flashing enabled\n");
-
-	if (this->state == SYN_STATE_FLASH_ENABLE) {
-		/* PDT may have changed, re-read */
-		rc = clearpad_read_pdt(this);
-		if (rc) {
-			HWLOGE(this, "failed to read pdt\n");
-			goto end;
-		}
-	}
-
-	/* read flash program key */
-	rc = clearpad_get_block(SYNF(this, F34_FLASH, QUERY, 0x01),
-				buf + SYN_FP_KEY_OFFSET, 2);
-	if (rc) {
-		HWLOGE(this, "failed to flash program key\n");
-		goto end;
-	}
-
-	if (this->state == SYN_STATE_FLASH_ENABLE &&
-	    (flash->command == SYN_FORCE_FLASH ||
-	     flash->command == SYN_DEFAULT_FLASH)) {
-		buf[0] = PID_CORE_CODE;
-		this->state = SYN_STATE_FLASH_PROGRAM;
-	} else if ((this->state == SYN_STATE_FLASH_ENABLE &&
-		    flash->command == SYN_CONFIG_FLASH) ||
-		   (this->state == SYN_STATE_FLASH_PROGRAM &&
-		    (flash->command == SYN_FORCE_FLASH ||
-		     flash->command == SYN_DEFAULT_FLASH))) {
-		buf[0] = PID_CORE_CONFIGURATION;
-		this->state = SYN_STATE_FLASH_ERASE;
-	} else {
-		HWLOGE(this, "invalid state(%s) for command(%s)\n",
-			NAME_OF(clearpad_state_name, this->state),
-			NAME_OF(clearpad_flash_command_name, flash->command));
-		rc = -EINVAL;
-		goto end;
-	}
-
-	/* issue command to erase partition with key*/
-	rc = clearpad_put_block(SYNF(this, F34_FLASH, DATA, 0x01),
-				buf, sizeof(buf));
-	if (rc) {
-		HWLOGE(this, "failed to erase partition with key\n");
-		goto end;
-	}
-
-	HWLOGI(this, "firmware erasing\n");
-end:
-	return rc;
-}
-
-static int clearpad_flash_update(struct clearpad_t *this)
-{
-	struct clearpad_flash_t *flash = &this->flash;
-	int rc, len;
-	u8 buf, block_buf[3], pid;
-	const u8 *data;
-	u16 block_num = 0;
-	struct clearpad_flash_block_t *object;
-	enum clearpad_state_e finish_state;
-
-	if (this->state == SYN_STATE_FLASH_ERASE &&
-	    (flash->command == SYN_FORCE_FLASH ||
-	     flash->command == SYN_DEFAULT_FLASH)) {
-		object = &(&this->flash)->data;
-		pid = PID_CORE_CODE;
-		finish_state = SYN_STATE_FLASH_DATA;
-	} else if ((this->state == SYN_STATE_FLASH_ERASE &&
-		    flash->command == SYN_CONFIG_FLASH) ||
-		   (this->state == SYN_STATE_FLASH_DATA &&
-		    (flash->command == SYN_FORCE_FLASH ||
-		     flash->command == SYN_DEFAULT_FLASH))) {
-		object = &(&this->flash)->config;
-		pid = PID_CORE_CONFIGURATION;
-		finish_state = SYN_STATE_FLASH_CONFIG;
-	} else {
-		HWLOGE(this, "invalid state(%s) for command(%s)\n",
-			NAME_OF(clearpad_state_name, this->state),
-			NAME_OF(clearpad_flash_command_name, flash->command));
-		rc = -EINVAL;
-		goto end;
-	}
-
-	if (object->pos > 0)
-		goto write_block_data;
-
-	/* make sure that we are in programming mode and there are no issues */
-	rc = clearpad_get(SYNF(this, F34_FLASH, DATA, 0x00), &buf);
-	if (rc) {
-		HWLOGE(this, "failed to get flash programming status\n");
-		goto end;
-	}
-
-	if (!(BIT_GET(buf, STATUS_BL_MODE))) {
-		HWLOGE(this, "failed flashing in %s (%s)\n",
-		     NAME_OF(clearpad_state_name, this->state),
-		     NAME_OF(clearpad_flash_status_name,
-			     BIT_GET(buf, STATUS_FLASH_STATUS)));
-		rc = -EIO;
-		goto end;
-	}
-
-	object->payload_length = SYN_PAYLOAD_LENGTH;
-
-	/* read block size */
-	rc = clearpad_get_block(SYNF(this, F34_FLASH, QUERY, 0x03),
-				    block_buf, 3);
-	if (rc) {
-		HWLOGE(this, "unable to read block size of fw\n");
-		goto end;
-	}
-
-	object->block_size = ((block_buf[2] << 8) | block_buf[1]);
-
-	object->remain_block = (object->length / object->block_size)
-		% object->payload_length;
-	object->transation_count = (object->length / object->block_size)
-		/ object->payload_length;
-	object->blocks = (object->length / object->block_size)
-		+ !!(object->length % object->block_size);
-
-	if (object->remain_block > 0)
-		object->transation_count++;
-
-	/* write partition id */
-	rc = clearpad_put(SYNF(this, F34_FLASH, DATA, 0x01), pid);
-	if (rc) {
-		HWLOGE(this, "unable to write partition id\n");
-		goto end;
-	}
-
-	/* write block num */
-	rc = clearpad_put_block(SYNF(this, F34_FLASH, DATA, 0x02),
-					(u8 *)&block_num, 2);
-	if (rc) {
-		HWLOGE(this, "unable to write block number\n");
-		goto end;
-	}
-
-write_block_data:
-	if ((object->pos == (object->transation_count - 1))
-			&& (object->remain_block > 0))
-		object->payload_length = object->remain_block;
-
-	data = object->data + object->pos * object->block_size;
-	len = object->length - object->pos * object->block_size;
-
-	if (len > object->block_size)
-		len = object->block_size;
-
-	/* write payload length */
-	rc = clearpad_put_block(SYNF(this, F34_FLASH, DATA, 0x03),
-					(u8 *)&(object->payload_length), 2);
-	if (rc) {
-		HWLOGE(this, "unable to write payload length\n");
-		goto end;
-	}
-
-	/* write command */
-	rc = clearpad_put(SYNF(this, F34_FLASH, DATA, 0x04), FLASH_CMD_WRITE);
-	if (rc) {
-		HWLOGE(this, "unable to write flash cmd\n");
-		goto end;
-	}
-
-	/* issue a write data/configuration block command with data */
-	rc = clearpad_put_block(SYNF(this, F34_FLASH, DATA, 0x05), data, len);
-	if (rc) {
-		HWLOGE(this, "unable to write data/configuration block cmd\n");
-		goto end;
-	}
-
-	if (object->pos % 100 == 0)
-		LOGI(this, "wrote %d blocks\n", object->pos);
-
-	/* if we've reached the end of the data/configuration flashing */
-	if (++object->pos == object->blocks) {
-		HWLOGI(this, "flash finished on %s\n",
-			      NAME_OF(clearpad_state_name, this->state));
-		this->state = finish_state;
-	}
-end:
-	return rc;
-}
-
-static int clearpad_flash_disable(struct clearpad_t *this)
-{
-	int rc;
-	u8 buf;
-
-	/* make sure that we are in programming mode and there are no issues */
-	rc = clearpad_get(SYNF(this, F34_FLASH, DATA, 0x00), &buf);
-	if (rc) {
-		HWLOGE(this, "failed to get flash programming status\n");
-		goto end;
-	}
-	if (!(BIT_GET(buf, STATUS_BL_MODE))) {
-		HWLOGE(this, "failed flashing config (%s)\n",
-			      NAME_OF(clearpad_flash_status_name,
-				      BIT_GET(buf, STATUS_FLASH_STATUS)));
-		rc = -EIO;
-		goto end;
-	}
-
-	clearpad_set_delay(SYN_WAIT_TIME_AFTER_REGISTER_ACCESS);
-
-	/* send a reset to the device to complete the flash procedure */
-	clearpad_reset(this, SYN_SWRESET, __func__);
-
-	HWLOGI(this, "flashing finished, resetting\n");
-	this->state = SYN_STATE_FLASH_DISABLE;
-end:
-	return rc;
-}
-
 /* for Bootloader v6.0 */
-static int clearpad_flash_enable_bl_v6(struct clearpad_t *this)
+static int clearpad_flash_enable_bl_v6_0(struct clearpad_t *this)
 {
 	int rc;
 	u8 buf[SYN_DEVICE_BL_INFO_SIZE];
 
 	/* read bootloader id */
-	rc = clearpad_get_block(SYNF(this, F34_FLASH, QUERY, 0x00),
-				buf, sizeof(buf));
+	rc = clearpad_get_block(SYNF(this, F34_FLASH, QUERY,
+			this->reg_offset.f34_query00),
+			buf, sizeof(buf));
 	LOG_CHECK(this, "rc=%d\n", rc);
 	if (rc)
 		goto end;
 
 	/* write bootloader id to block data */
-	rc = clearpad_put_block(SYNF(this, F34_FLASH, DATA, 0x01),
+	rc = clearpad_put_block(SYNF(this, F34_FLASH, DATA,
+				this->reg_offset.f34_data01),
 				buf, sizeof(buf));
 	LOG_CHECK(this, "rc=%d\n", rc);
 	if (rc)
@@ -3072,8 +3181,9 @@ static int clearpad_flash_enable_bl_v6(struct clearpad_t *this)
 
 	/* issue a flash program enable */
 	this->flash.enter_bootloader_mode = true;
-	rc = clearpad_put(SYNF(this, F34_FLASH, DATA, 0x02),
-			  FLASH_CONTROL_ENABLE_FLASH_PROGRAMMING);
+	rc = clearpad_put(SYNF(this, F34_FLASH, DATA,
+			this->reg_offset.f34_data02),
+			FLASH_CONTROL_ENABLE_FLASH_PROGRAMMING);
 	LOG_CHECK(this, "rc=%d\n", rc);
 	if (rc)
 		goto end;
@@ -3087,14 +3197,15 @@ end:
 	return rc;
 }
 
-static int clearpad_flash_program_bl_v6(struct clearpad_t *this)
+static int clearpad_flash_program_bl_v6_0(struct clearpad_t *this)
 {
 	struct clearpad_flash_t *flash = &this->flash;
 	int rc;
 	u8 buf[SYN_DEVICE_BL_INFO_SIZE];
 
 	/* make sure that we are in programming mode and there are no issues */
-	rc = clearpad_get(SYNF(this, F34_FLASH, DATA, 0x03), buf);
+	rc = clearpad_get(SYNF(this, F34_FLASH, DATA,
+		this->reg_offset.f34_data03), buf);
 	if (rc) {
 		HWLOGE(this, "failed to get flash programming status\n");
 		goto end;
@@ -3119,21 +3230,22 @@ static int clearpad_flash_program_bl_v6(struct clearpad_t *this)
 	}
 
 	/* read bootloader id */
-	rc = clearpad_get_block(SYNF(this, F34_FLASH, QUERY, 0x00),
-				buf, sizeof(buf));
+	rc = clearpad_get_block(SYNF(this, F34_FLASH, QUERY,
+			this->reg_offset.f34_query00), buf, sizeof(buf));
 	if (rc)
 		goto end;
 
 	/* write bootloader id to block data */
-	rc = clearpad_put_block(SYNF(this, F34_FLASH, DATA, 0x01),
-				buf, sizeof(buf));
+	rc = clearpad_put_block(SYNF(this, F34_FLASH, DATA,
+		this->reg_offset.f34_data01), buf, sizeof(buf));
 	if (rc)
 		goto end;
 
 	if (this->state == SYN_STATE_FLASH_ENABLE &&
 	    (flash->command == SYN_FORCE_FLASH ||
 	     flash->command == SYN_DEFAULT_FLASH)) {
-		rc = clearpad_put(SYNF(this, F34_FLASH, DATA, 0x02),
+		rc = clearpad_put(SYNF(this, F34_FLASH, DATA,
+				this->reg_offset.f34_data02),
 				FLASH_CONTROL_ERASE_ALL);
 		if (rc)
 			goto end;
@@ -3141,7 +3253,8 @@ static int clearpad_flash_program_bl_v6(struct clearpad_t *this)
 	} else if ((this->state == SYN_STATE_FLASH_PROGRAM &&
 		    (flash->command == SYN_FORCE_FLASH ||
 		     flash->command == SYN_DEFAULT_FLASH))) {
-		rc = clearpad_put(SYNF(this, F34_FLASH, DATA, 0x02),
+		rc = clearpad_put(SYNF(this, F34_FLASH, DATA,
+				this->reg_offset.f34_data02),
 				FLASH_CONTROL_ERASE_CONFIGURATION);
 		if (rc)
 			goto end;
@@ -3159,7 +3272,7 @@ end:
 	return rc;
 }
 
-static int clearpad_flash_update_bl_v6(struct clearpad_t *this)
+static int clearpad_flash_update_bl_v6_0(struct clearpad_t *this)
 {
 	struct clearpad_flash_t *flash = &this->flash;
 	int rc, len;
@@ -3193,7 +3306,8 @@ static int clearpad_flash_update_bl_v6(struct clearpad_t *this)
 		goto write_block_data;
 
 	/* make sure that we are in programming mode and there are no issues */
-	rc = clearpad_get(SYNF(this, F34_FLASH, DATA, 0x03), &buf);
+	rc = clearpad_get(SYNF(this, F34_FLASH, DATA,
+		this->reg_offset.f34_data03), &buf);
 	if (rc) {
 		HWLOGE(this, "failed to get flash programming status\n");
 		goto end;
@@ -3213,7 +3327,8 @@ static int clearpad_flash_update_bl_v6(struct clearpad_t *this)
 	/* block # low and high byte */
 	pos[0] = object->pos & 0xff;
 	pos[1] = (object->pos >> 8) & 0xff;
-	rc = clearpad_put_block(SYNF(this, F34_FLASH, DATA, 0x00), pos, 2);
+	rc = clearpad_put_block(SYNF(this, F34_FLASH, DATA,
+			this->reg_offset.f34_data00), pos, 2);
 	if (rc)
 		goto end;
 
@@ -3224,16 +3339,19 @@ write_block_data:
 		len = 16;
 
 	/* write block data */
-	rc = clearpad_put_block(SYNF(this, F34_FLASH, DATA, 0x01), data, len);
+	rc = clearpad_put_block(SYNF(this, F34_FLASH, DATA,
+		this->reg_offset.f34_data01), data, len);
 	if (rc)
 		goto end;
 	/* issue a write data block command */
 	if (pid == PID_CORE_CODE)
-		rc = clearpad_put(SYNF(this, F34_FLASH, DATA, 0x02),
-				  FLASH_CONTROL_WRITE_FIRMWARE_BLOCK);
+		rc = clearpad_put(SYNF(this, F34_FLASH, DATA,
+				this->reg_offset.f34_data02),
+				FLASH_CONTROL_WRITE_FIRMWARE_BLOCK);
 	else
-		rc = clearpad_put(SYNF(this, F34_FLASH, DATA, 0x02),
-				  FLASH_CONTROL_WRITE_CONFIGURATION_BLOCK);
+		rc = clearpad_put(SYNF(this, F34_FLASH, DATA,
+				this->reg_offset.f34_data02),
+				FLASH_CONTROL_WRITE_CONFIGURATION_BLOCK);
 	if (rc)
 		goto end;
 
@@ -3250,13 +3368,14 @@ end:
 	return rc;
 }
 
-static int clearpad_flash_disable_bl_v6(struct clearpad_t *this)
+static int clearpad_flash_disable_bl_v6_0(struct clearpad_t *this)
 {
 	int rc;
 	u8 buf;
 
 	/* make sure that we are in programming mode and there are no issues */
-	rc = clearpad_get(SYNF(this, F34_FLASH, DATA, 0x03), &buf);
+	rc = clearpad_get(SYNF(this, F34_FLASH, DATA,
+		this->reg_offset.f34_data03), &buf);
 	if (rc)
 		goto end;
 
@@ -3279,24 +3398,25 @@ end:
 	return rc;
 }
 
-static int clearpad_flash_bl_v6(struct clearpad_t *this)
+/* need LOCK(&this->lock) */
+static int clearpad_flash_bl_v6_0(struct clearpad_t *this)
 {
 	int rc = 0;
 
 	switch (this->state) {
 	case SYN_STATE_FLASH_IMAGE_SET:
-		rc = clearpad_flash_enable_bl_v6(this);
-	break;
+		rc = clearpad_flash_enable_bl_v6_0(this);
+		break;
 	case SYN_STATE_FLASH_ENABLE:
 	case SYN_STATE_FLASH_PROGRAM:
-		rc = clearpad_flash_program_bl_v6(this);
+		rc = clearpad_flash_program_bl_v6_0(this);
 		break;
 	case SYN_STATE_FLASH_ERASE:
 	case SYN_STATE_FLASH_DATA:
-		rc = clearpad_flash_update_bl_v6(this);
+		rc = clearpad_flash_update_bl_v6_0(this);
 		break;
 	case SYN_STATE_FLASH_CONFIG:
-		rc = clearpad_flash_disable_bl_v6(this);
+		rc = clearpad_flash_disable_bl_v6_0(this);
 		clearpad_firmware_reset(this);
 		break;
 	case SYN_STATE_FLASH_DISABLE:
@@ -3311,24 +3431,316 @@ static int clearpad_flash_bl_v6(struct clearpad_t *this)
 	return rc;
 }
 
-static int clearpad_flash_bl_v7(struct clearpad_t *this)
+/* for Bootloader v7.x */
+static int clearpad_flash_enable_bl_v7_x(struct clearpad_t *this)
+{
+	int rc;
+	u8 buf[SYN_SINGLE_TRANSACTION_SIZE] = {
+		PID_BOOTLOADER, 0x00, 0x00, 0x00, 0x00,
+		FLASH_CMD_ENTER_BOOTLOADER};
+
+	/* set device configured bit */
+	/* F01_RMI_CTRL00: Device Control */
+	rc = clearpad_put_bit(SYNF(this, F01_RMI, CTRL,
+				  this->reg_offset.f01_ctrl00),
+			      DEVICE_CONTROL_CONFIGURED_MASK,
+			      DEVICE_CONTROL_CONFIGURED_MASK);
+	if (rc) {
+		HWLOGE(this, "failed to set device configured bit\n");
+		goto end;
+	}
+	clearpad_set_delay(SYN_WAIT_TIME_AFTER_REGISTER_ACCESS);
+
+	/* read flash program key */
+	rc = clearpad_get_block(SYNF(this, F34_FLASH, QUERY,
+			this->reg_offset.f34_query01),
+			buf + SYN_FP_KEY_OFFSET, 2);
+	if (rc) {
+		HWLOGE(this, "failed to read flash program key\n");
+		goto end;
+	}
+
+	/* issue command to enter bootloader mode with key*/
+	this->flash.enter_bootloader_mode = true;
+	rc = clearpad_put_block(SYNF(this, F34_FLASH, DATA,
+			this->reg_offset.f34_data01),
+			buf, sizeof(buf));
+
+	if (rc) {
+		HWLOGE(this, "failed to enter bootloader mode\n");
+		goto end;
+	}
+
+	this->state = SYN_STATE_FLASH_ENABLE;
+
+end:
+	return rc;
+}
+
+static int clearpad_flash_program_bl_v7_x(struct clearpad_t *this)
+{
+	struct clearpad_flash_t *flash = &this->flash;
+	int rc;
+	u8 buf[SYN_SINGLE_TRANSACTION_SIZE] = {
+		0x00, 0x00, 0x00, 0x00, 0x00, FLASH_CMD_ERASE};
+
+	/* make sure that we are in programming mode and there are no issues */
+	rc = clearpad_get(SYNF(this, F34_FLASH, DATA,
+		this->reg_offset.f34_data00), buf);
+	if (rc) {
+		HWLOGE(this, "failed to get flash programming status\n");
+		goto end;
+	}
+
+	if (!(BIT_GET(buf[0], STATUS_BL_MODE))) {
+		HWLOGE(this, "failed enabling flash (%s)\n",
+			      NAME_OF(clearpad_flash_status_name,
+				      BIT_GET(buf[0], STATUS_FLASH_STATUS)));
+		rc = -EIO;
+		goto end;
+	}
+
+	HWLOGI(this, "flashing enabled\n");
+
+	if (this->state == SYN_STATE_FLASH_ENABLE) {
+		/* PDT may have changed, re-read */
+		rc = clearpad_read_pdt(this);
+		if (rc) {
+			HWLOGE(this, "failed to read pdt\n");
+			goto end;
+		}
+	}
+
+	/* read flash program key */
+	rc = clearpad_get_block(SYNF(this, F34_FLASH, QUERY,
+				this->reg_offset.f34_query01),
+				buf + SYN_FP_KEY_OFFSET, 2);
+	if (rc) {
+		HWLOGE(this, "failed to flash program key\n");
+		goto end;
+	}
+
+	if (this->state == SYN_STATE_FLASH_ENABLE &&
+	    (flash->command == SYN_FORCE_FLASH ||
+	     flash->command == SYN_DEFAULT_FLASH)) {
+		buf[0] = PID_CORE_CODE;
+		this->state = SYN_STATE_FLASH_PROGRAM;
+	} else if ((this->state == SYN_STATE_FLASH_PROGRAM &&
+		    (flash->command == SYN_FORCE_FLASH ||
+		     flash->command == SYN_DEFAULT_FLASH))) {
+		buf[0] = PID_CORE_CONFIGURATION;
+		this->state = SYN_STATE_FLASH_ERASE;
+	} else {
+		HWLOGE(this, "invalid state(%s) for command(%s)\n",
+			NAME_OF(clearpad_state_name, this->state),
+			NAME_OF(clearpad_flash_command_name, flash->command));
+		rc = -EINVAL;
+		goto end;
+	}
+
+	/* issue command to erase partition with key*/
+	rc = clearpad_put_block(SYNF(this, F34_FLASH, DATA,
+				this->reg_offset.f34_data01), buf, sizeof(buf));
+	if (rc) {
+		HWLOGE(this, "failed to erase partition with key\n");
+		goto end;
+	}
+
+	HWLOGI(this, "firmware erasing\n");
+end:
+	return rc;
+}
+
+static int clearpad_flash_update_bl_v7_x(struct clearpad_t *this)
+{
+	struct clearpad_flash_t *flash = &this->flash;
+	int rc, len;
+	const u8 *data;
+	u8 buf, pid;
+	u8 block_buf[3];
+	u16 block_num = 0;
+	struct clearpad_flash_block_t *object;
+	enum clearpad_state_e finish_state;
+
+	if (this->state == SYN_STATE_FLASH_ERASE &&
+	    (flash->command == SYN_FORCE_FLASH ||
+	     flash->command == SYN_DEFAULT_FLASH)) {
+		object = &(&this->flash)->data;
+		pid = PID_CORE_CODE;
+		finish_state = SYN_STATE_FLASH_DATA;
+	} else if ((this->state == SYN_STATE_FLASH_DATA &&
+		    (flash->command == SYN_FORCE_FLASH ||
+		     flash->command == SYN_DEFAULT_FLASH))) {
+		object = &(&this->flash)->config;
+		pid = PID_CORE_CONFIGURATION;
+		finish_state = SYN_STATE_FLASH_CONFIG;
+	} else {
+		HWLOGE(this, "invalid state(%s) for command(%s)\n",
+			NAME_OF(clearpad_state_name, this->state),
+			NAME_OF(clearpad_flash_command_name, flash->command));
+		rc = -EINVAL;
+		goto end;
+	}
+
+	if (object->pos > 0)
+		goto write_block_data;
+
+	/* make sure that we are in programming mode and there are no issues */
+	rc = clearpad_get(SYNF(this, F34_FLASH, DATA,
+		this->reg_offset.f34_data00), &buf);
+	if (rc) {
+		HWLOGE(this, "failed to get flash programming status\n");
+		goto end;
+	}
+
+	if (!(BIT_GET(buf, STATUS_BL_MODE))) {
+		HWLOGE(this, "failed flashing in %s (%s)\n",
+		     NAME_OF(clearpad_state_name, this->state),
+		     NAME_OF(clearpad_flash_status_name,
+			     BIT_GET(buf, STATUS_FLASH_STATUS)));
+		rc = -EIO;
+		goto end;
+	}
+
+	object->payload_length = SYN_PAYLOAD_LENGTH;
+
+	/* read block size */
+	rc = clearpad_get_block(SYNF(this, F34_FLASH, QUERY,
+				this->reg_offset.f34_query03),
+				block_buf, 3);
+	if (rc) {
+		HWLOGE(this, "unable to read block size of fw\n");
+		goto end;
+	}
+
+	object->block_size = ((block_buf[2] << 8) | block_buf[1]);
+
+	object->remain_block = (object->length / object->block_size)
+		% object->payload_length;
+	object->transation_count = (object->length / object->block_size)
+		/ object->payload_length;
+	object->blocks = (object->length / object->block_size)
+		+ !!(object->length % object->block_size);
+
+	if (object->remain_block > 0)
+		object->transation_count++;
+
+	/* write partition id */
+	rc = clearpad_put(SYNF(this, F34_FLASH, DATA,
+		this->reg_offset.f34_data01), pid);
+	if (rc) {
+		HWLOGE(this, "unable to write partition id\n");
+		goto end;
+	}
+
+	/* write block num */
+	rc = clearpad_put_block(SYNF(this, F34_FLASH, DATA,
+					this->reg_offset.f34_data02),
+					(u8 *)&block_num, 2);
+	if (rc) {
+		HWLOGE(this, "unable to write block number\n");
+		goto end;
+	}
+
+write_block_data:
+	if ((object->pos == (object->transation_count - 1))
+			&& (object->remain_block > 0))
+		object->payload_length = object->remain_block;
+
+	data = object->data + object->pos * object->block_size;
+	len = object->length - object->pos * object->block_size;
+
+	if (len > object->block_size)
+		len = object->block_size;
+
+	/* write payload length */
+	rc = clearpad_put_block(SYNF(
+		this, F34_FLASH, DATA, this->reg_offset.f34_data03),
+		(u8 *)&(object->payload_length), 2);
+	if (rc) {
+		HWLOGE(this, "unable to write payload length\n");
+		goto end;
+	}
+
+	/* write command */
+	rc = clearpad_put(
+		SYNF(this, F34_FLASH, DATA, this->reg_offset.f34_data04),
+		FLASH_CMD_WRITE);
+	if (rc) {
+		HWLOGE(this, "unable to write flash cmd\n");
+		goto end;
+	}
+
+	/* issue a write data/configuration block command with data */
+	rc = clearpad_put_block(SYNF(this, F34_FLASH, DATA,
+		this->reg_offset.f34_data05), data, len);
+	if (rc) {
+		HWLOGE(this, "unable to write data/configuration block cmd\n");
+		goto end;
+	}
+
+	if (object->pos % 100 == 0)
+		LOGI(this, "wrote %d blocks\n", object->pos);
+
+	/* if we've reached the end of the data/configuration flashing */
+	if (++object->pos == object->blocks) {
+		HWLOGI(this, "flash finished on %s\n",
+			      NAME_OF(clearpad_state_name, this->state));
+		this->state = finish_state;
+	}
+end:
+	return rc;
+}
+
+static int clearpad_flash_disable_bl_v7_x(struct clearpad_t *this)
+{
+	int rc;
+	u8 buf;
+
+	/* make sure that we are in programming mode and there are no issues */
+	rc = clearpad_get(SYNF(this, F34_FLASH, DATA,
+			this->reg_offset.f34_data00), &buf);
+	if (rc)
+		goto end;
+
+	if (!(BIT_GET(buf, STATUS_BL_MODE))) {
+		HWLOGE(this, "failed flashing config (%s)\n",
+			      NAME_OF(clearpad_flash_status_name,
+				      BIT_GET(buf, STATUS_FLASH_STATUS)));
+		rc = -EIO;
+		goto end;
+	}
+
+	clearpad_set_delay(SYN_WAIT_TIME_AFTER_REGISTER_ACCESS);
+
+	/* send a reset to the device to complete the flash procedure */
+	clearpad_reset(this, SYN_SWRESET, __func__);
+
+	HWLOGI(this, "flashing finished, resetting\n");
+	this->state = SYN_STATE_FLASH_DISABLE;
+end:
+	return rc;
+}
+
+/* need LOCK(&this->lock) */
+static int clearpad_flash_bl_v7_x(struct clearpad_t *this)
 {
 	int rc = 0;
 
 	switch (this->state) {
 	case SYN_STATE_FLASH_IMAGE_SET:
-		rc = clearpad_flash_enable(this);
+		rc = clearpad_flash_enable_bl_v7_x(this);
 		break;
 	case SYN_STATE_FLASH_ENABLE:
 	case SYN_STATE_FLASH_PROGRAM:
-		rc = clearpad_flash_program(this);
+		rc = clearpad_flash_program_bl_v7_x(this);
 		break;
 	case SYN_STATE_FLASH_ERASE:
 	case SYN_STATE_FLASH_DATA:
-		rc = clearpad_flash_update(this);
+		rc = clearpad_flash_update_bl_v7_x(this);
 		break;
 	case SYN_STATE_FLASH_CONFIG:
-		rc = clearpad_flash_disable(this);
+		rc = clearpad_flash_disable_bl_v7_x(this);
 		clearpad_firmware_reset(this);
 		break;
 	case SYN_STATE_FLASH_DISABLE:
@@ -3340,7 +3752,6 @@ static int clearpad_flash_bl_v7(struct clearpad_t *this)
 		rc = -EINVAL;
 		break;
 	}
-
 	return rc;
 }
 
@@ -3352,12 +3763,10 @@ static int clearpad_flash(struct clearpad_t *this)
 	LOGD(this, "flash state=%s\n",
 	     NAME_OF(clearpad_state_name, this->state));
 
-	if (this->is_sol) {
-		rc = clearpad_flash_bl_v6(this);
-	} else {
-		rc = clearpad_flash_bl_v7(this);
-	}
-
+	if (this->is_sol)
+		rc = clearpad_flash_bl_v6_0(this);
+	else
+		rc = clearpad_flash_bl_v7_x(this);
 	if (rc) {
 		HWLOGE(this, "failed during flash (%s), rc = %d\n",
 		     NAME_OF(clearpad_state_name, this->state), rc);
@@ -3391,7 +3800,8 @@ bool clearpad_is_healthy(struct clearpad_t *this)
 	switch (this->chip_id) {
 	case SYN_CHIP_332U:
 		/* F01_RMI_CTRL00: Device Control */
-		rc = clearpad_get(SYNF(this, F01_RMI, CTRL, 0x00), &status);
+		rc = clearpad_get(SYNF(this, F01_RMI, CTRL,
+			this->reg_offset.f01_ctrl00), &status);
 		if (rc) {
 			LOGE(this, "rc=%d\n", rc);
 			return false;
@@ -3403,9 +3813,9 @@ bool clearpad_is_healthy(struct clearpad_t *this)
 		/* fall-through */
 	case SYN_CHIP_3330:
 	case SYN_CHIP_3500:
-	case SYN_CHIP_7500:
 		/* F01_RMI_DATA00: Device Status */
-		rc = clearpad_get(SYNF(this, F01_RMI, DATA, 0x00), &status);
+		rc = clearpad_get(SYNF(this, F01_RMI, DATA,
+			this->reg_offset.f01_data00), &status);
 		if (rc) {
 			LOGE(this, "rc=%d\n", rc);
 			return false;
@@ -3511,23 +3921,26 @@ static int clearpad_set_resume_mode(struct clearpad_t *this)
 		clearpad_funcarea_invalidate_all(this);
 
 	/* F01_RMI_CTRL01.00: Interrupt Enable 0 */
-	rc = clearpad_put(SYNF(this, F01_RMI, CTRL, 0x01),
-			  INTERRUPT_ENABLE_0_ENABLE_ALL);
+	rc = clearpad_put(SYNF(this, F01_RMI, CTRL,
+		this->reg_offset.f01_ctrl01),
+		INTERRUPT_ENABLE_0_ENABLE_ALL);
 	if (rc) {
 		LOGE(this, "failed to set interrupt enable\n");
 		goto end;
 	}
 
 	/* F01_RMI_CTRL00: Device Control */
-	rc = clearpad_get(SYNF(this, F01_RMI, CTRL, 0x00), &value);
+	rc = clearpad_get(SYNF(this, F01_RMI, CTRL,
+		this->reg_offset.f01_ctrl00), &value);
 	if (rc) {
 		LOGE(this, "failed to get sleep status\n");
 		goto end;
 	}
 	if (BIT_GET(value, DEVICE_CONTROL_SLEEP_MODE)) {
-		rc = clearpad_put_bit(SYNF(this, F01_RMI, CTRL, 0x00),
-			      DEVICE_CONTROL_SLEEP_MODE_NORMAL_OPERATION,
-			      DEVICE_CONTROL_SLEEP_MODE_MASK);
+		rc = clearpad_put_bit(SYNF(this, F01_RMI, CTRL,
+			this->reg_offset.f01_ctrl00),
+			DEVICE_CONTROL_SLEEP_MODE_NORMAL_OPERATION,
+			DEVICE_CONTROL_SLEEP_MODE_MASK);
 		if (rc) {
 			LOGE(this, "failed to exit sleep mode\n");
 			goto end;
@@ -3557,7 +3970,8 @@ static int clearpad_set_resume_mode(struct clearpad_t *this)
 
 	if (!this->irq_enabled) {
 		/* F01_RMI_DATA01: Interrupt Status */
-		rc = clearpad_get(SYNF(this, F01_RMI, DATA, 0x01), &interrupt);
+		rc = clearpad_get(SYNF(this, F01_RMI, DATA,
+			this->reg_offset.f01_data01), &interrupt);
 		if (rc) {
 			LOGE(this, "failed to read interrupt status\n");
 			goto end;
@@ -3584,7 +3998,8 @@ static int clearpad_set_early_suspend_mode(struct clearpad_t *this)
 
 	if (this->force_sleep != FSMODE_KEEP) {
 		/* F01_RMI_CTRL01.00: Interrupt Enable 0 */
-		rc = clearpad_put(SYNF(this, F01_RMI, CTRL, 0x01),
+		rc = clearpad_put(SYNF(this, F01_RMI, CTRL,
+			this->reg_offset.f01_ctrl01),
 				  INTERRUPT_ENABLE_0_DISABLE_ALL);
 		if (rc) {
 			LOGE(this, "failed to disable interrupt mode\n");
@@ -3592,7 +4007,8 @@ static int clearpad_set_early_suspend_mode(struct clearpad_t *this)
 		}
 	} else {
 		/* F01_RMI_CTRL00: Device Control */
-		rc = clearpad_put_bit(SYNF(this, F01_RMI, CTRL, 0x00),
+		rc = clearpad_put_bit(SYNF(this, F01_RMI, CTRL,
+			this->reg_offset.f01_ctrl00),
 			DEVICE_CONTROL_SLEEP_MODE_SENSOR_SLEEP,
 			DEVICE_CONTROL_SLEEP_MODE_MASK);
 		if (rc) {
@@ -3624,8 +4040,9 @@ static int clearpad_set_suspend_mode(struct clearpad_t *this)
 		HWLOGI(this, "prepare for wakeup gesture mode");
 		if (this->early_suspend) {
 			/* F01_RMI_CTRL01.00: Interrupt Enable 0 */
-			rc = clearpad_put(SYNF(this, F01_RMI, CTRL, 0x01),
-					  INTERRUPT_ENABLE_0_ENABLE_ALL);
+			rc = clearpad_put(SYNF(this, F01_RMI, CTRL,
+				this->reg_offset.f01_ctrl01),
+				INTERRUPT_ENABLE_0_ENABLE_ALL);
 			if (rc) {
 				LOGE(this, "failed to exit sleep mode\n");
 				goto end;
@@ -3647,8 +4064,8 @@ static int clearpad_set_suspend_mode(struct clearpad_t *this)
 			if (this->force_sleep != FSMODE_KEEP) {
 				/* F01_RMI_CTRL01.00: Interrupt Enable 0 */
 				rc = clearpad_put(SYNF(this, F01_RMI, CTRL,
-						0x01),
-						INTERRUPT_ENABLE_0_DISABLE_ALL);
+					this->reg_offset.f01_ctrl01),
+					INTERRUPT_ENABLE_0_DISABLE_ALL);
 				if (rc) {
 					LOGE(this, "failed to set interrupt"
 						   "disable\n");
@@ -3657,7 +4074,8 @@ static int clearpad_set_suspend_mode(struct clearpad_t *this)
 			} else {
 				/* F01_RMI_CTRL00: Device Control */
 				rc = clearpad_put_bit(
-					SYNF(this, F01_RMI, CTRL, 0x00),
+					SYNF(this, F01_RMI, CTRL,
+					this->reg_offset.f01_ctrl00),
 					DEVICE_CONTROL_SLEEP_MODE_SENSOR_SLEEP,
 					DEVICE_CONTROL_SLEEP_MODE_MASK);
 				if (rc) {
@@ -3723,15 +4141,18 @@ retry_reset:
 	spin_unlock_irqrestore(&this->slock, flags);
 	switch (reset->mode) {
 	case SYN_HWRESET:
+	case SYN_FORCE_HWRESET:
 		rc = touchctrl_hwreset(this, reset->mode);
 		if (rc && retry++ < SYN_RETRY_NUM_OF_RESET)
 			goto retry_reset;
 		break;
 	case SYN_SWRESET:
+	case SYN_FORCE_SWRESET:
 		/* F01_RMI_CMD00: Device Command */
-		rc = clearpad_put_bit(SYNF(this, F01_RMI, COMMAND, 0x00),
-				      DEVICE_COMMAND_RESET_MASK,
-				      DEVICE_COMMAND_RESET_MASK);
+		rc = clearpad_put(
+				SYNF(this, F01_RMI, COMMAND,
+					this->reg_offset.f01_cmd00),
+				DEVICE_COMMAND_RESET_MASK);
 		if (rc && retry++ < SYN_RETRY_NUM_OF_RESET)
 			goto retry_reset;
 		break;
@@ -3777,9 +4198,10 @@ static void clearpad_reset(struct clearpad_t *this,
 {
 	struct clearpad_reset_t *reset = &this->reset;
 
-	if (!this->dev_active) {
+	if (!this->dev_active
+	    && mode != SYN_FORCE_HWRESET && mode != SYN_FORCE_SWRESET) {
 		HWLOGW(this, "could not execute %s because "
-			"device is suspended\n",
+			"device is suspended and not force reset\n",
 			NAME_OF(clearpad_reset_name, mode));
 		goto err_in_device_mode;
 	}
@@ -4226,14 +4648,18 @@ static void clearpad_report_finger_n(struct clearpad_t *this,
 			    new_point.tool);
 
 		if (!pointer->down) {
-			/* first touch event */
-			pointer->down = true;
-			pointer->cur = new_point;
-			pointer->funcarea
-				= clearpad_funcarea_search(this, pointer);
-			LOG_VERBOSE(this, "validate pointer %d [func %d]\n",
-				    new_point.id, pointer->funcarea
-				    ? pointer->funcarea->func : -1);
+			if (clearpad_funcarea_test(&this->funcarea->original, &new_point)) {
+				/* first touch event */
+				pointer->down = true;
+				pointer->cur = new_point;
+				pointer->funcarea
+					= clearpad_funcarea_search(this, pointer);
+				LOG_VERBOSE(this, "validate pointer %d [func %d]\n",
+					    new_point.id, pointer->funcarea
+					    ? pointer->funcarea->func : -1);
+			} else {
+				LOGW(this, "invalidate pointer %d\n", new_point.id);
+			}
 		}
 		if (pointer->funcarea) {
 			extension = &pointer->funcarea->extension;
@@ -4242,7 +4668,9 @@ static void clearpad_report_finger_n(struct clearpad_t *this,
 				pointer->cur = new_point;
 				clearpad_funcarea_down(this, pointer);
 			} else {
+				pointer->down = false;
 				clearpad_funcarea_out(this, pointer);
+				LOGW(this, "invalidate pointer %d\n", new_point.id);
 			}
 		}
 	} else {
@@ -4396,7 +4824,8 @@ static int clearpad_process_F12_2D(struct clearpad_t *this, bool *waked)
 	}
 
 	/* F01_RMI_DATA00: Device Status */
-	rc = clearpad_get(SYNF(this, F01_RMI, DATA, 0x00), &status);
+	rc = clearpad_get(SYNF(this, F01_RMI, DATA,
+		this->reg_offset.f01_data00), &status);
 	LOG_CHECK(this, "rc=%d F01_RMI_DATA00=0x%x\n", rc, status);
 	if (rc)
 		goto end;
@@ -4514,7 +4943,8 @@ static bool clearpad_process_noise_det_irq(struct clearpad_t *this)
 	}
 
 	/* F01_RMI_CTRL18: Device Control 1 */
-	rc = clearpad_put_bit(SYNF(this, F01_RMI, CTRL, 0x04),
+	rc = clearpad_put_bit(
+		SYNF(this, F01_RMI, CTRL, this->reg_offset.f01_ctrl18),
 		DEVICE_CONTROL_1_GSM_ENABLE_MASK,
 		DEVICE_CONTROL_1_GSM_ENABLE_MASK);
 	if (rc) {
@@ -4715,6 +5145,7 @@ static int clearpad_command_fwflash(struct clearpad_t *this)
 
 	memset(this->result_info, 0, SYN_STRING_LENGTH);
 	this->flash_requested = true;
+	this->reg_offset.updated = false;
 
 	/* prepare to waiting for end of flash */
 	clearpad_prepare_for_interrupt(this, &this->interrupt.for_reset,
@@ -4779,6 +5210,13 @@ static ssize_t clearpad_state_show(struct device *dev,
 {
 	struct clearpad_t *this = dev_get_drvdata(dev);
 	struct clearpad_touchctrl_t *touchctrl = &this->touchctrl;
+
+	if (!strncmp(attr->attr.name, __stringify(post_probe_start),
+								PAGE_SIZE)) {
+		snprintf(buf, PAGE_SIZE,
+			"%d", this->post_probe.start);
+		goto end;
+	}
 
 	if (!this->post_probe.done) {
 		LOGW(this, "post_probe hasn't finished, please retry later\n");
@@ -4867,6 +5305,14 @@ static ssize_t clearpad_state_show(struct device *dev,
 								PAGE_SIZE))
 		snprintf(buf, PAGE_SIZE,
 			"%d", this->cover.win_left);
+	else if (!strncmp(attr->attr.name, __stringify(disp_size_to_cover_win),
+								PAGE_SIZE))
+		snprintf(buf, PAGE_SIZE,
+			"%d", this->cover.set_disp_size_to_win);
+	else if (!strncmp(attr->attr.name, __stringify(stamina_mode),
+								PAGE_SIZE))
+		snprintf(buf, PAGE_SIZE,
+			"%d", this->stamina.enabled);
 	else
 		snprintf(buf, PAGE_SIZE, "illegal sysfs file");
 end:
@@ -4885,7 +5331,7 @@ static int clearpad_do_calibration(struct clearpad_t *this, int mode,
 	int rc = 0;
 	int reset_rc = 0;
 	bool calibrate;
-	u8 status, bit, need_bit, offset;
+	u8 status, bit, need_bit;
 
 	switch (mode) {
 	case SYN_CALIBRATION_NORMAL:
@@ -4929,19 +5375,9 @@ static int clearpad_do_calibration(struct clearpad_t *this, int mode,
 
 	clearpad_set_delay(SYN_CALIBRATION_SETUP_TIME);
 	/* start calibration */
-	switch (this->device_info.firmware_revision_extra) {
-	case 0x05:
-		offset = 0x1D;
-		break;
-	case 0x06:
-		offset = 0x1F;
-		break;
-	default:
-		HWLOGE(this, "firmware is not supported\n");
-		goto end;
-	}
 	/* F54_ANALOG_CTRL188: Start Calibration or Production Test */
-	rc = clearpad_put_bit(SYNF(this, F54_ANALOG, CTRL, offset), bit, bit);
+	rc = clearpad_put_bit(SYNF(this, F54_ANALOG, CTRL,
+		this->reg_offset.f54_ctrl188), bit, bit);
 	if (rc) {
 		HWLOGE(this, "failed to start %s\n",
 			      NAME_OF(clearpad_calibration_name, mode));
@@ -4952,8 +5388,9 @@ static int clearpad_do_calibration(struct clearpad_t *this, int mode,
 	do {
 		clearpad_set_delay(SYN_CALIBRATION_WAIT);
 		/* F54_ANALOG_CTRL188: Start Calibration or Production Test */
-		rc = clearpad_get(SYNF(this, F54_ANALOG, CTRL, offset),
-								&status);
+		rc = clearpad_get(SYNF(this, F54_ANALOG, CTRL,
+			this->reg_offset.f54_ctrl188),
+			&status);
 		if (rc)
 			HWLOGE(this, "failed to read status\n");
 		if (!(status & bit))
@@ -4964,7 +5401,8 @@ static int clearpad_do_calibration(struct clearpad_t *this, int mode,
 	goto end;
 
 succeeded:
-	rc = clearpad_get(SYNF(this, F54_ANALOG, DATA, 0x0E), &status);
+	rc = clearpad_get(SYNF(this, F54_ANALOG, DATA,
+		this->reg_offset.f54_data31), &status);
 	if (rc) {
 		HWLOGE(this, "failed to get calibration status\n");
 		goto end;
@@ -4977,6 +5415,9 @@ succeeded:
 	}
 	HWLOGI(this, "%s : %s\n", NAME_OF(clearpad_calibration_name, mode),
 		     status & need_bit ? "Failed" : "Succeed");
+
+	clearpad_set_delay(20);
+
 end:
 	switch (mode) {
 	case SYN_CALIBRATION_EW:
@@ -5023,8 +5464,9 @@ static int clearpad_calibrate_on_fwflash(struct clearpad_t *this,
 		BIT_SET(calibration_crc,
 			CALIBRATION_STATE_IS_CALIBRATION_CRC, 1);
 	} else {
-		rc = clearpad_get(SYNF(this, F54_ANALOG, DATA, 0x0E),
-				  &calibration_crc);
+		rc = clearpad_get(SYNF(this, F54_ANALOG, DATA,
+			this->reg_offset.f54_data31),
+			&calibration_crc);
 		if (rc) {
 			HWLOGE(this, "failed to get calibration status\n");
 			goto end;
@@ -5147,9 +5589,6 @@ static ssize_t clearpad_fwflash_store(struct device *dev,
 	if (!strncmp(request, command[SYN_FORCE_FLASH], PAGE_SIZE)) {
 		HWLOGI(this, "start force firmware flash, id=%x\n", id);
 		rc = clearpad_fwflash_core(this, SYN_FORCE_FLASH, id);
-	} else if (!strncmp(request, command[SYN_CONFIG_FLASH], PAGE_SIZE)) {
-		HWLOGI(this, "start firmware config\n");
-		rc = clearpad_fwflash_core(this, SYN_CONFIG_FLASH, 0);
 	} else if (!strncmp(request, command[SYN_DEFAULT_FLASH], PAGE_SIZE)) {
 		HWLOGI(this, "start firmware config & data\n");
 		rc = clearpad_fwflash_core(this, SYN_DEFAULT_FLASH, 0);
@@ -5273,7 +5712,7 @@ not_ready_to_access_i2c:
 err_in_check_post_probe:
 	LOCK(&this->lock);
 	this->glove.enabled = sysfs_streq(buf, "0") ? false : true;
-	if (!lazy_update && !this->cover.status) {
+	if (!lazy_update) {
 		rc = clearpad_set_glove_mode(this, this->glove.enabled);
 		if (rc)
 			LOGE(this, "failed to set glove for device\n");
@@ -5450,6 +5889,8 @@ err_in_session_begin:
 not_ready_to_access_i2c:
 err_in_check_post_probe:
 	LOCK(&this->lock);
+	this->wakeup.unblank_done = false;
+	this->wakeup.unblank_early_done = false;
 	old = this->force_sleep;
 
 	rc = kstrtoint(buf, 0, &value);
@@ -5666,6 +6107,67 @@ err_in_check_support:
 	return size;
 }
 
+static ssize_t clearpad_set_disp_size_to_cover_win_store(struct device *dev,
+		struct device_attribute *attr,
+		const char *buf, size_t size)
+{
+	int rc = 0;
+	bool is_disp_size_to_cover_win = !sysfs_streq(buf, "0");
+	struct clearpad_t *this = dev_get_drvdata(dev);
+	const char *session = "set_disp_size_to_cover_win";
+
+	if (!this->cover.supported) {
+		LOGI(this, "cover mode is not supported");
+		return size;
+	}
+
+	if (is_disp_size_to_cover_win) {
+		int width = this->extents.preset_x_max + 1;
+		int height = this->extents.preset_y_max + 1;
+
+		LOGI(this,
+			"set display resolution (%d, %d) to cover window size.",
+			width, height);
+
+		LOCK(&this->lock);
+		clearpad_set_cover_size(&this->cover, width, height);
+		this->cover.set_disp_size_to_win = true;
+	} else {
+		LOCK(&this->lock);
+		this->cover.set_disp_size_to_win = false;
+	}
+	UNLOCK(&this->lock);
+
+	if (!this->post_probe.done) {
+		LOGI(this, "post_probe hasn't finished, will apply later\n");
+		return size;
+	}
+
+	if (!this->dev_active || this->interrupt.count == 0) {
+		LOGI(this, "avoid to access I2C before waiting %d ms delay\n",
+			this->reset.delay_for_powerup_ms);
+		return size;
+	}
+
+	rc = clearpad_ctrl_session_begin(this, session);
+	if (rc) {
+		LOGI(this, "not powered, will be applied later\n");
+		return size;
+	}
+
+	LOCK(&this->lock);
+	if (this->cover.enabled)
+		rc = clearpad_set_cover_window(this);
+	UNLOCK(&this->lock);
+
+	if (rc)
+		LOGE(this, "failed to set cover window for device\n");
+
+	clearpad_ctrl_session_end(this, session);
+
+	return size;
+}
+
 static ssize_t clearpad_cover_win_store(struct device *dev,
 		struct device_attribute *attr,
 		const char *buf, size_t size)
@@ -5751,6 +6253,127 @@ err_in_check_support:
 	return size;
 }
 
+static ssize_t clearpad_stamina_mode_enabled_store(struct device *dev,
+		struct device_attribute *attr,
+		const char *buf, size_t size)
+{
+	int rc = 0;
+	int value = 0;
+	const char *session = "stamina mode enabled store";
+	struct clearpad_t *this = dev_get_drvdata(dev);
+	bool lazy_update = false;
+
+	LOGD(this, "start\n");
+
+	if (!this->stamina.supported) {
+		LOGI(this, "stamina mode is not supported\n");
+		goto err_in_check_support;
+	}
+
+	if (!this->post_probe.done) {
+		LOGI(this, "post_probe hasn't finished, will apply later\n");
+		lazy_update = true;
+		goto err_in_check_post_probe;
+	}
+
+	if (!this->dev_active || this->interrupt.count == 0) {
+		LOGI(this, "avoid to access I2C before waiting %d ms delay\n",
+				this->reset.delay_for_powerup_ms);
+		lazy_update = true;
+		goto not_ready_to_access_i2c;
+	}
+
+	rc = clearpad_ctrl_session_begin(this, session);
+	if (rc) {
+		LOGI(this, "not powered, will be applied later\n");
+		lazy_update = true;
+		goto err_in_session_begin;
+	}
+
+err_in_session_begin:
+err_in_check_post_probe:
+not_ready_to_access_i2c:
+	LOCK(&this->lock);
+	if (kstrtoint(buf, 0, &value)) {
+		LOGE(this, "failed to read %s", attr->attr.name);
+		rc = -EINVAL;
+		goto err_in_read_size;
+	}
+	switch (this->chip_id) {
+	case SYN_CHIP_3330:
+	case SYN_CHIP_332U:
+		if (value < 0 || 1 < value) {
+			LOGE(this, "invalid stamina report rate mode %d\n",
+					value);
+			goto err_in_read_size;
+		}
+		if (value) {
+			this->stamina.enabled = true;
+			this->stamina.change_reportrate.mode = 1;
+		} else {
+			this->stamina.enabled = false;
+			this->stamina.change_reportrate.mode = 0;
+		}
+		break;
+	case SYN_CHIP_3500:
+		if (value < 0 || 3 < value) {
+			LOGE(this, "invalid stamina report rate mode %d\n",
+					value);
+			goto err_in_read_size;
+		}
+		if (value)
+			this->stamina.enabled = true;
+		else
+			this->stamina.enabled = false;
+		this->stamina.change_reportrate.mode = value;
+		break;
+	default:
+		LOGE(this, "not supported on chip id 0x0%2x\n", this->chip_id);
+		goto err_in_read_size;
+	}
+	if (!lazy_update) {
+		rc = clearpad_set_stamina_mode(this);
+		if (rc)
+			LOGE(this, "failed to set stamina for device\n");
+	}
+err_in_read_size:
+	LOGI(this, "stamina mode %s\n",
+		this->stamina.enabled ? "enable" : "disable");
+	LOGI(this, "change report rate mode %d\n",
+		this->stamina.change_reportrate.mode);
+	UNLOCK(&this->lock);
+
+	if (!lazy_update)
+		clearpad_ctrl_session_end(this, session);
+
+err_in_check_support:
+	return size;
+}
+
+static ssize_t clearpad_post_probe_start_store(struct device *dev,
+		struct device_attribute *attr,
+		const char *buf, size_t size)
+{
+	struct clearpad_t *this = dev_get_drvdata(dev);
+
+	LOGD(this, "start\n");
+
+	LOCK(&this->lock);
+	this->post_probe.start = sysfs_streq(buf, "0") ? false : true;
+	if (this->post_probe.done) {
+		HWLOGI(this, "already post probed, need reboot\n");
+	} else {
+		if (this->post_probe.start) {
+			HWLOGI(this, "start post probe"
+			       "with post_probe_start sysfs\n");
+			schedule_delayed_work(&this->post_probe.work, 0);
+		}
+	}
+	UNLOCK(&this->lock);
+
+	return size;
+}
+
 static struct device_attribute clearpad_sysfs_attrs[] = {
 	__ATTR(fwinfo, S_IRUGO, clearpad_state_show, 0),
 	__ATTR(fwchip_id, S_IRUGO, clearpad_state_show, 0),
@@ -5776,6 +6399,9 @@ static struct device_attribute clearpad_sysfs_attrs[] = {
 	__ATTR(cover_mode_enabled, S_IRUGO | S_IWUSR,
 				clearpad_state_show,
 				clearpad_cover_mode_enabled_store),
+	__ATTR(cover_win_set_disp_size, S_IRUGO | S_IWUSR,
+				clearpad_state_show,
+				clearpad_set_disp_size_to_cover_win_store),
 	__ATTR(cover_win_top, S_IRUGO | S_IWUSR,
 				clearpad_state_show,
 				clearpad_cover_win_store),
@@ -5788,6 +6414,12 @@ static struct device_attribute clearpad_sysfs_attrs[] = {
 	__ATTR(cover_win_left, S_IRUGO | S_IWUSR,
 				clearpad_state_show,
 				clearpad_cover_win_store),
+	__ATTR(stamina_mode, S_IRUGO | S_IWUSR,
+				clearpad_state_show,
+				clearpad_stamina_mode_enabled_store),
+	__ATTR(post_probe_start, S_IRUGO | S_IWUSR,
+				clearpad_state_show,
+				clearpad_post_probe_start_store),
 	__ATTR_NULL
 };
 
@@ -5822,6 +6454,226 @@ static void clearpad_remove_sysfs_entries(struct clearpad_t *this,
 
 	for (i = 0; attrs[i].attr.name; i++)
 		device_remove_file(&this->input->dev, &attrs[i]);
+}
+
+static int clearpad_read_config_u8(struct device_node *devnode,
+	char *conf_name, u8 *container)
+{
+	int rc = 0;
+	u32 value;
+
+	if (!of_property_read_u32(devnode, conf_name, &value))
+		*container = (u8)value;
+	else
+		rc = -EINVAL;
+
+	return rc;
+}
+
+static void clearpad_reg_offset_print(struct clearpad_t *this)
+{
+	/* F01_RMI */
+	LOGD(this, "f01-cmd00:0x%02X\n", this->reg_offset.f01_cmd00);
+	LOGD(this, "f01-ctrl00:0x%02X\n", this->reg_offset.f01_ctrl00);
+	LOGD(this, "f01-ctrl01:0x%02X\n", this->reg_offset.f01_ctrl01);
+	LOGD(this, "f01-ctrl05:0x%02X\n", this->reg_offset.f01_ctrl05);
+	LOGD(this, "f01-ctrl18:0x%02X\n", this->reg_offset.f01_ctrl18);
+	LOGD(this, "f01-data00:0x%02X\n", this->reg_offset.f01_data00);
+	LOGD(this, "f01-data01:0x%02X\n", this->reg_offset.f01_data01);
+	LOGD(this, "f01-query11:0x%02X\n", this->reg_offset.f01_query11);
+
+	/* F02_2D */
+	LOGD(this, "f12-ctrl08:0x%02X\n", this->reg_offset.f12_ctrl08);
+
+	/* F34_FLASH */
+	LOGD(this, "f34-ctrl00:0x%02X\n", this->reg_offset.f34_ctrl00);
+	LOGD(this, "f34-data00:0x%02X\n", this->reg_offset.f34_data00);
+	LOGD(this, "f34-data01:0x%02X\n", this->reg_offset.f34_data01);
+	LOGD(this, "f34-data02:0x%02X\n", this->reg_offset.f34_data02);
+	LOGD(this, "f34-data03:0x%02X\n", this->reg_offset.f34_data03);
+	LOGD(this, "f34-data04:0x%02X\n", this->reg_offset.f34_data04);
+	LOGD(this, "f34-data05:0x%02X\n", this->reg_offset.f34_data05);
+	LOGD(this, "f34-query00:0x%02X\n", this->reg_offset.f34_query00);
+	LOGD(this, "f34-query01:0x%02X\n", this->reg_offset.f34_query01);
+	LOGD(this, "f34-query03:0x%02X\n", this->reg_offset.f34_query03);
+
+	/* F51_CUSTOM */
+	LOGD(this, "f51-ctrl05:0x%02X\n", this->reg_offset.f51_ctrl05);
+	LOGD(this, "f51-ctrl30:0x%02X\n", this->reg_offset.f51_ctrl30);
+
+	/* F54_ANALOG */
+	LOGD(this, "f54-cmd00:0x%02X\n", this->reg_offset.f54_cmd00);
+	LOGD(this, "f54-ctrl41:0x%02X\n", this->reg_offset.f54_ctrl41);
+	LOGD(this, "f54-ctrl57:0x%02X\n", this->reg_offset.f54_ctrl57);
+	LOGD(this, "f54-ctrl88:0x%02X\n", this->reg_offset.f54_ctrl88);
+	LOGD(this, "f54-ctrl109:0x%02X\n", this->reg_offset.f54_ctrl109);
+	LOGD(this, "f54-ctrl113:0x%02X\n", this->reg_offset.f54_ctrl113);
+	LOGD(this, "f54-ctrl147:0x%02X\n", this->reg_offset.f54_ctrl147);
+	LOGD(this, "f54-ctrl149:0x%02X\n", this->reg_offset.f54_ctrl149);
+	LOGD(this, "f54-ctrl188:0x%02X\n", this->reg_offset.f54_ctrl188);
+	LOGD(this, "f54-ctrl214:0x%02X\n", this->reg_offset.f54_ctrl214);
+	LOGD(this, "f54-data00:0x%02X\n", this->reg_offset.f54_data00);
+	LOGD(this, "f54-data01:0x%02X\n", this->reg_offset.f54_data01);
+	LOGD(this, "f54-data02:0x%02X\n", this->reg_offset.f54_data02);
+	LOGD(this, "f54-data03:0x%02X\n", this->reg_offset.f54_data03);
+	LOGD(this, "f54-data31:0x%02X\n", this->reg_offset.f54_data31);
+	LOGD(this, "f54-query38:0x%02X\n", this->reg_offset.f54_query38);
+}
+
+static void clearpad_reg_offset_dt(struct clearpad_t *this,
+	 struct device_node *devnode)
+{
+	if (!devnode) {
+		LOGW(this, "device node is invalid\n");
+		return;
+	}
+
+	/* F01_RMI */
+	clearpad_read_config_u8(devnode,
+		"somc,clearpad-f01-rmi-cmd00", &this->reg_offset.f01_cmd00);
+
+	clearpad_read_config_u8(devnode,
+		"somc,clearpad-f01-rmi-ctrl00", &this->reg_offset.f01_ctrl00);
+
+	clearpad_read_config_u8(devnode,
+		"somc,clearpad-f01-rmi-ctrl01", &this->reg_offset.f01_ctrl01);
+
+	clearpad_read_config_u8(devnode,
+		"somc,clearpad-f01-rmi-ctrl05", &this->reg_offset.f01_ctrl05);
+
+	clearpad_read_config_u8(devnode,
+		"somc,clearpad-f01-rmi-ctrl18", &this->reg_offset.f01_ctrl18);
+
+	clearpad_read_config_u8(devnode,
+		"somc,clearpad-f01-rmi-data00", &this->reg_offset.f01_data00);
+
+	clearpad_read_config_u8(devnode,
+		"somc,clearpad-f01-rmi-data01", &this->reg_offset.f01_data01);
+
+	clearpad_read_config_u8(devnode,
+		"somc,clearpad-f01-rmi-query11", &this->reg_offset.f01_query11);
+
+	/* F02_2D */
+	clearpad_read_config_u8(devnode,
+		"somc,clearpad-f12-2d-ctrl08", &this->reg_offset.f12_ctrl08);
+
+	/* F34_FLASH */
+	clearpad_read_config_u8(devnode,
+		"somc,clearpad-f34-flash-ctrl00", &this->reg_offset.f34_ctrl00);
+
+	clearpad_read_config_u8(devnode,
+		"somc,clearpad-f34-flash-data00", &this->reg_offset.f34_data00);
+
+	clearpad_read_config_u8(devnode,
+		"somc,clearpad-f34-flash-data01", &this->reg_offset.f34_data01);
+
+	clearpad_read_config_u8(devnode,
+		"somc,clearpad-f34-flash-data02", &this->reg_offset.f34_data02);
+
+	clearpad_read_config_u8(devnode,
+		"somc,clearpad-f34-flash-data03", &this->reg_offset.f34_data03);
+
+	clearpad_read_config_u8(devnode,
+		"somc,clearpad-f34-flash-data04", &this->reg_offset.f34_data04);
+
+	clearpad_read_config_u8(devnode,
+		"somc,clearpad-f34-flash-data05", &this->reg_offset.f34_data05);
+
+	clearpad_read_config_u8(devnode,
+		"somc,clearpad-f34-flash-query00", &this->reg_offset.f34_query00);
+
+	clearpad_read_config_u8(devnode,
+		"somc,clearpad-f34-flash-query01", &this->reg_offset.f34_query01);
+
+	clearpad_read_config_u8(devnode,
+		"somc,clearpad-f34-flash-query03", &this->reg_offset.f34_query03);
+
+	/* F51_CUSTOM */
+	clearpad_read_config_u8(devnode,
+		"somc,clearpad-f51-custom-ctrl05", &this->reg_offset.f51_ctrl05);
+
+	clearpad_read_config_u8(devnode,
+		"somc,clearpad-f51-custom-ctrl30", &this->reg_offset.f51_ctrl30);
+
+	/* F54_ANALOG */
+	clearpad_read_config_u8(devnode,
+		"somc,clearpad-f54-analog-cmd00", &this->reg_offset.f54_cmd00);
+
+	clearpad_read_config_u8(devnode,
+		"somc,clearpad-f54-analog-ctrl41", &this->reg_offset.f54_ctrl41);
+
+	clearpad_read_config_u8(devnode,
+		"somc,clearpad-f54-analog-ctrl57", &this->reg_offset.f54_ctrl57);
+
+	clearpad_read_config_u8(devnode,
+		"somc,clearpad-f54-analog-ctrl88", &this->reg_offset.f54_ctrl88);
+
+	clearpad_read_config_u8(devnode,
+		"somc,clearpad-f54-analog-ctrl109", &this->reg_offset.f54_ctrl109);
+
+	clearpad_read_config_u8(devnode,
+		"somc,clearpad-f54-analog-ctrl113", &this->reg_offset.f54_ctrl113);
+
+	clearpad_read_config_u8(devnode,
+		"somc,clearpad-f54-analog-ctrl147", &this->reg_offset.f54_ctrl147);
+
+	clearpad_read_config_u8(devnode,
+		"somc,clearpad-f54-analog-ctrl149", &this->reg_offset.f54_ctrl149);
+
+	clearpad_read_config_u8(devnode,
+		"somc,clearpad-f54-analog-ctrl188", &this->reg_offset.f54_ctrl188);
+
+	clearpad_read_config_u8(devnode,
+		"somc,clearpad-f54-analog-ctrl214", &this->reg_offset.f54_ctrl214);
+
+	clearpad_read_config_u8(devnode,
+		"somc,clearpad-f54-analog-data00", &this->reg_offset.f54_data00);
+
+	clearpad_read_config_u8(devnode,
+		"somc,clearpad-f54-analog-data01", &this->reg_offset.f54_data01);
+
+	clearpad_read_config_u8(devnode,
+		"somc,clearpad-f54-analog-data02", &this->reg_offset.f54_data02);
+
+	clearpad_read_config_u8(devnode,
+		"somc,clearpad-f54-analog-data03", &this->reg_offset.f54_data03);
+
+	clearpad_read_config_u8(devnode,
+		"somc,clearpad-f54-analog-data31", &this->reg_offset.f54_data31);
+
+	clearpad_read_config_u8(devnode,
+		"somc,clearpad-f54-analog-query38", &this->reg_offset.f54_query38);
+}
+
+static void clearpad_reg_offset_config_dt(struct clearpad_t *this)
+{
+	struct device_node *devnode = this->bdata->of_node;
+
+	clearpad_reg_offset_dt(this, devnode);
+}
+
+static void clearpad_reg_offset_config_dt_for_extra_id(
+		struct clearpad_t *this,
+		struct device_node *chip_node)
+{
+	struct device_node *extra_node = NULL;
+	char extra_name[SYN_STRING_LENGTH];
+
+	snprintf(extra_name, SYN_STRING_LENGTH,
+		"EXTRA_0x%02X", this->device_info.firmware_revision_extra);
+
+	extra_node = of_find_node_by_name(chip_node, extra_name);
+	if (extra_node == NULL) {
+		LOGE(this, "no settings for %s\n", extra_name);
+		return;
+	}
+
+	LOGI(this, "read settings for %s\n", extra_name);
+
+	clearpad_reg_offset_dt(this, extra_node);
+	clearpad_reg_offset_print(this);
+
+	this->reg_offset.updated = true;
 }
 
 static void clearpad_touch_config_dt_for_chip_id(struct clearpad_t *this,
@@ -5875,6 +6727,9 @@ static void clearpad_touch_config_dt_for_chip_id(struct clearpad_t *this,
 		LOGW(this, "no charger_only_delay_ms config\n");
 	else
 		this->charger_only.delay_ms = (unsigned long)value;
+
+	if (!this->reg_offset.updated)
+		clearpad_reg_offset_config_dt_for_extra_id(this, chip_node);
 }
 
 static int clearpad_touch_config_dt(struct clearpad_t *this)
@@ -6005,6 +6860,38 @@ static int clearpad_touch_config_dt(struct clearpad_t *this)
 		this->noise_det.retry_time_ms = value;
 	}
 
+	if (of_property_read_u32(devnode, "stamina_mode_supported", &value)) {
+		LOGW(this, "no stamina_mode_supported config\n");
+	} else {
+		this->stamina.supported =
+		(value & SYN_STAMINA_MODE_SUPPORTED_MASK) ? true : false;
+
+		this->stamina.change_reportrate.supported =
+		(value & SYN_STAMINA_REPROTRATE_SUPPORTED_MASK) ? true : false;
+
+		this->stamina.doze_holdoff.supported =
+		(value & SYN_STAMINA_DOZE_HOLDOFF_SUPPORTED_MASK)
+			? true : false;
+	}
+
+	if (of_property_read_u32(devnode, "doze_default_time", &value))
+		LOGW(this, "no doze_default_time config\n");
+	else
+		this->stamina.doze_holdoff.default_time = (u8)value;
+
+	if (of_property_read_u32(devnode, "doze_glove_mode_time", &value))
+		LOGW(this, "no doze_glove_mode_time config\n");
+	else
+		this->stamina.doze_holdoff.glove_mode_time = (u8)value;
+
+	if (of_property_read_u32(devnode, "doze_cover_mode_time", &value))
+		LOGW(this, "no doze_cover_mode_time config\n");
+	else
+		this->stamina.doze_holdoff.cover_mode_time = (u8)value;
+
+	/* read default register offset params */
+	clearpad_reg_offset_config_dt(this);
+
 	/* set default chip id settings */
 	clearpad_touch_config_dt_for_chip_id(this, 0);
 
@@ -6027,9 +6914,14 @@ static void clearpad_update_chip_id(struct clearpad_t *this)
 	}
 update:
 	LOGI(this, "chip_id=0x%x\n", this->chip_id);
+}
 
-	/* overwrite default settings with actual chip settings */
-	clearpad_touch_config_dt_for_chip_id(this, this->chip_id);
+static void clearpad_set_is_sol(struct clearpad_t *this)
+{
+	this->is_sol = false;
+	if (this->chip_id == SYN_CHIP_3500)
+		this->is_sol = true;
+	LOGI(this, "is_sol=%s\n", this->is_sol ? "ture" : "false");
 }
 
 static int clearpad_input_init(struct clearpad_t *this)
@@ -6201,18 +7093,17 @@ static void clearpad_fb_early_powerdown_handler(struct clearpad_t *this)
 
 	clearpad_powerdown_core(this, "EARLY POWERDOWN");
 end:
+	this->wakeup.unblank_early_done = false;
 	UNLOCK(&this->lock);
 	return;
 }
 
 static void clearpad_fb_powerdown_handler(struct clearpad_t *this)
 {
-	if (unlikely(!first_blank_done))
-		first_blank_done = true;
-
 	LOCK(&this->lock);
 	if (this->wakeup_gesture.enabled)
 		clearpad_powerdown_core(this, "POWERDOWN");
+	this->wakeup.unblank_done = false;
 	UNLOCK(&this->lock);
 	return;
 }
@@ -6222,8 +7113,12 @@ static void clearpad_fb_early_unblank_handler(struct clearpad_t *this)
 	struct timespec ts;
 	unsigned long flags;
 
+	if (this->wakeup.unblank_early_done)
+		return;
+
 	get_monotonic_boottime(&ts);
 	LOCK(&this->lock);
+	this->wakeup.unblank_early_done = true;
 
 	if (this->touchctrl.will_powerdown && this->touchctrl.power_user == 0) {
 		this->interrupt.count = 0;
@@ -6241,16 +7136,25 @@ static void clearpad_fb_early_unblank_handler(struct clearpad_t *this)
 static void clearpad_fb_unblank_handler(struct clearpad_t *this)
 {
 	struct timespec ts;
+	bool power = touchctrl_is_touch_powered(this);
 
 	get_monotonic_boottime(&ts);
 	HWLOGI(this, "UNBLANK (power=%s icount=%u active=%s) @ %ld.%06ld\n",
-	       touchctrl_is_touch_powered(this) ? "OK" : "NG",
+	       power ? "OK" : "NG",
 	       this->interrupt.count,
 	       this->dev_active ? "true" : "false",
 	       ts.tv_sec, ts.tv_nsec);
 
-	LOCK(&this->lock);
+	if (!power) {
+		HWLOGI(this, "ignore UNBLANK event before power on\n");
+		return;
+	}
 
+	if (this->wakeup.unblank_done)
+		return;
+
+	LOCK(&this->lock);
+	this->wakeup.unblank_done = true;
 	if (!this->post_probe.done) {
 		HWLOGI(this, "ignore UNBLANK event before post probe\n");
 		if (this->post_probe.start) {
@@ -6420,13 +7324,12 @@ static void clearpad_analog_test(struct clearpad_t *this,
 {
 	int rc, i, j, k, len, num_tx = 0, num_rx = 0;
 	int loop_count_i, loop_count_j, data_type, data_size;
-	u8 buf[14], *data, *line, *pl, fw_rev_extra, offset;
+	u8 buf[14], *data, *line, *pl, fw_rev_extra;
 	const char delimeter[] = " | ";
 
 	/* Handle unsupported test report */
 	switch (this->chip_id) {
 	case SYN_CHIP_3500:
-	case SYN_CHIP_7500:
 		switch (mode) {
 		case F54_16_IMAGE_REPORT:
 		case F54_AUTOSCAN_REPORT:
@@ -6479,7 +7382,8 @@ static void clearpad_analog_test(struct clearpad_t *this,
 	LOCK(&this->lock);
 
 	/* F01_RMI_CTRL00: Device Control */
-	rc = clearpad_put_bit(SYNF(this, F01_RMI, CTRL, 0x00),
+	rc = clearpad_put_bit(SYNF(this, F01_RMI, CTRL,
+		this->reg_offset.f01_ctrl00),
 			      DEVICE_CONTROL_NO_SLEEP_MASK,
 			      DEVICE_CONTROL_NO_SLEEP_MASK);
 	if (rc)
@@ -6489,12 +7393,14 @@ static void clearpad_analog_test(struct clearpad_t *this,
 	clearpad_set_delay(100);
 
 	/* F01_RMI_CTRL01: Interrupt Enable */
-	rc = clearpad_put(SYNF(this, F01_RMI, CTRL, 0x01),
+	rc = clearpad_put(SYNF(this, F01_RMI, CTRL,
+		this->reg_offset.f01_ctrl01),
 			this->pdt[f_analog].irq_mask);
 	if (rc)
 		goto unset_no_sleep_mode;
 
-	rc = clearpad_get_block(SYNF(this, F12_2D, CTRL, 0x00),
+	rc = clearpad_get_block(SYNF(this, F12_2D, CTRL,
+		this->reg_offset.f12_ctrl08),
 				buf, 14);
 	if (rc)
 		goto err_set_irq_xy;
@@ -6505,117 +7411,54 @@ static void clearpad_analog_test(struct clearpad_t *this,
 
 	if (this->chip_id == SYN_CHIP_332U) {
 		if (mode == F54_FULLINCELL_RAW_CAP_REPORT) {
-			switch (fw_rev_extra) {
-			case 0x05:
-				offset = 0x1D;
-				break;
-			case 0x06:
-				offset = 0x1F;
-				break;
-			default:
-				HWLOGE(this, "firmware is not supported\n");
-				goto err_set_irq_xy;
-			}
 			/* F54_ANALOG_CTRL188: Start Calibration or Prod Test */
 			rc = clearpad_put_bit(
-				SYNF(this, F54_ANALOG, CTRL, offset),
+				SYNF(this, F54_ANALOG, CTRL,
+				this->reg_offset.f54_ctrl188),
 				0, START_CAL_PROD_TEST_SET_FREQUENCY_MASK);
 			if (rc)
 				goto err_set_irq_xy;
 			/* F54_ANALOG_CTRL188: Start Calibration or Prod Test */
 			rc = clearpad_put_bit(
-				SYNF(this, F54_ANALOG, CTRL, offset),
+				SYNF(this, F54_ANALOG, CTRL,
+				this->reg_offset.f54_ctrl188),
 				START_CAL_PROD_TEST_START_PROD_TEST_MASK,
 				START_CAL_PROD_TEST_START_PROD_TEST_MASK);
 			if (rc)
 				goto err_set_irq_xy;
 		}
-	} else if (this->chip_id != SYN_CHIP_3330) {
+	} else if (this->chip_id == SYN_CHIP_3500) {
 		if (mode == F54_RAW_CAP_RX_COUPLING_REPORT ||
 			mode == F54_HIGH_RESISTANCE_REPORT ||
 			mode == F54_TRX_TO_TRX_SHORT_2_REPORT) {
 			switch (fw_rev_extra) {
-			case 0x00:
-				rc = clearpad_get(
-				SYNF(this, F54_ANALOG, QUERY, 0x1E), buf);
-				if (rc)
-					goto err_set_irq_xy;
-				if (buf[0] != 0) {
-					/* F54_ANALOG_CTRL149: Trans CBC 2 */
-					rc = clearpad_put_bit(
-					SYNF(this, F54_ANALOG, CTRL, 0x38), 0,
-					TRANS_CBC_2_TRANS_CBC_GLOBAL_CAP_MASK);
-					if (rc)
-						goto err_set_irq_xy;
-				}
-				/* F54_ANALOG_CTRL88: Analog Control 1 */
-				rc = clearpad_put_bit(
-				SYNF(this, F54_ANALOG, CTRL, 0x19), 0,
-				ANALOG_CONTROL_1_CBC_XMTR_CARRIER_SELECT_MASK);
-				if (rc)
-					goto err_set_irq_xy;
-				/* F54_ANALOG_CTRL57: 0D CBC Settings */
-				rc = clearpad_put_bit(
-				SYNF(this, F54_ANALOG, CTRL, 0x17), 0,
-				CBC_SETTINGS_XMTR_CARRIER_SELECT_MASK);
-				if (rc)
-					goto err_set_irq_xy;
-				/* F54_ANALOG_CTRL41:
-				   Multimetric Noise Control*/
-				rc = clearpad_put_bit(
-				SYNF(this, F54_ANALOG, CTRL, 0x14),
-				MULTIMETRIC_NOISE_CTRL_NO_SIGNAL_CLARITY_MASK,
-				MULTIMETRIC_NOISE_CTRL_NO_SIGNAL_CLARITY_MASK);
-				if (rc)
-					goto err_set_irq_xy;
-				break;
-			case 0x01:
-			case 0x02:
-				/* F54_ANALOG_CTRL149: Trans CBC 2 */
-				rc = clearpad_put_bit(
-				SYNF(this, F54_ANALOG, CTRL,
-				fw_rev_extra == 0x01 ? 0x33 : 0x32), 0,
-				TRANS_CBC_2_TRANS_CBC_GLOBAL_CAP_MASK);
-				if (rc)
-					goto err_set_irq_xy;
-				/* F54_ANALOG_CTRL88: Analog Control 1 */
-				rc = clearpad_put_bit(
-				SYNF(this, F54_ANALOG, CTRL, 0x15), 0,
-				ANALOG_CONTROL_1_CBC_XMTR_CARRIER_SELECT_MASK);
-				if (rc)
-					goto err_set_irq_xy;
-				/* F54_ANALOG_CTRL41:
-				   Multimetric Noise Control*/
-				rc = clearpad_put_bit(
-				SYNF(this, F54_ANALOG, CTRL, 0x14),
-				MULTIMETRIC_NOISE_CTRL_NO_SIGNAL_CLARITY_MASK,
-				MULTIMETRIC_NOISE_CTRL_NO_SIGNAL_CLARITY_MASK);
-				if (rc)
-					goto err_set_irq_xy;
-				break;
 			case 0x03:
 				/* F54_ANALOG_CTRL149: Trans CBC 2 */
 				rc = clearpad_put_bit(
-				SYNF(this, F54_ANALOG, CTRL, 0x30), 0,
+				SYNF(this, F54_ANALOG, CTRL,
+				this->reg_offset.f54_ctrl149), 0,
 				TRANS_CBC_2_TRANS_CBC_GLOBAL_CAP_MASK);
 				if (rc)
 					goto err_set_irq_xy;
 				/* F54_ANALOG_CTRL88: Analog Control 1 */
 				rc = clearpad_put_bit(
-				SYNF(this, F54_ANALOG, CTRL, 0x19), 0,
+				SYNF(this, F54_ANALOG, CTRL,
+				this->reg_offset.f54_ctrl88), 0,
 				ANALOG_CONTROL_1_CBC_XMTR_CARRIER_SELECT_MASK);
 				if (rc)
 					goto err_set_irq_xy;
 				/* F54_ANALOG_CTRL57: 0D CBC Settings */
 				rc = clearpad_put_bit(
-				SYNF(this, F54_ANALOG, CTRL, 0x17), 0,
+				SYNF(this, F54_ANALOG, CTRL,
+				this->reg_offset.f54_ctrl57), 0,
 				CBC_SETTINGS_XMTR_CARRIER_SELECT_MASK);
 				if (rc)
 					goto err_set_irq_xy;
 				/* F54_ANALOG_CTRL41:
 				   Multimetric Noise Control*/
 				rc = clearpad_put_bit(
-				SYNF(this, F54_ANALOG, CTRL, 0x14),
+				SYNF(this, F54_ANALOG, CTRL,
+				this->reg_offset.f54_ctrl41),
 				MULTIMETRIC_NOISE_CTRL_NO_SIGNAL_CLARITY_MASK,
 				MULTIMETRIC_NOISE_CTRL_NO_SIGNAL_CLARITY_MASK);
 				if (rc)
@@ -6623,17 +7466,19 @@ static void clearpad_analog_test(struct clearpad_t *this,
 
 				break;
 			default:
+				HWLOGE(this, "firmware is not supported\n");
 				break;
 			}
 			/* F54_ANALOG_CMD00: Analog Command */
-			rc = clearpad_put_bit(SYNF(this, F54_ANALOG, COMMAND,
-									0x00),
-				ANALOG_COMMAND_FORCE_UPDATE_MASK,
-				ANALOG_COMMAND_FORCE_UPDATE_MASK);
+			rc = clearpad_put(
+					SYNF(this, F54_ANALOG, COMMAND,
+						this->reg_offset.f54_cmd00),
+					ANALOG_COMMAND_FORCE_UPDATE_MASK);
 			if (rc)
 				goto err_set_irq_xy;
-			rc = clearpad_get(SYNF(this, F54_ANALOG, COMMAND, 0x00),
-									buf);
+			rc = clearpad_get(SYNF(this, F54_ANALOG, COMMAND,
+					this->reg_offset.f54_cmd00),
+				buf);
 			if (rc)
 				goto err_set_irq_xy;
 			for (i = 0;
@@ -6642,8 +7487,8 @@ static void clearpad_analog_test(struct clearpad_t *this,
 				clearpad_set_delay(
 					SYN_WAIT_TIME_AFTER_REGISTER_ACCESS);
 				rc = clearpad_get(
-					SYNF(this, F54_ANALOG, COMMAND, 0x00),
-									buf);
+					SYNF(this, F54_ANALOG, COMMAND,
+					this->reg_offset.f54_cmd00), buf);
 				if (rc || i > 100)
 					goto err_set_irq_xy;
 				HWLOGI(this,
@@ -6651,14 +7496,15 @@ static void clearpad_analog_test(struct clearpad_t *this,
 					buf[0], i);
 			}
 			/* F54_ANALOG_CMD00: Analog Command */
-			rc = clearpad_put_bit(SYNF(this, F54_ANALOG, COMMAND,
-									0x00),
-				ANALOG_COMMAND_FORCE_CALIBRATION_MASK,
-				ANALOG_COMMAND_FORCE_CALIBRATION_MASK);
+			rc = clearpad_put(
+					SYNF(this, F54_ANALOG, COMMAND,
+						this->reg_offset.f54_cmd00),
+					ANALOG_COMMAND_FORCE_CALIBRATION_MASK);
 			if (rc)
 				goto err_set_irq_xy;
-			rc = clearpad_get(SYNF(this, F54_ANALOG, COMMAND, 0x00),
-									buf);
+			rc = clearpad_get(SYNF(this, F54_ANALOG, COMMAND,
+				this->reg_offset.f54_cmd00),
+				buf);
 			if (rc || BIT_GET(buf[0], ANALOG_COMMAND_GET_REPORT))
 				goto err_set_irq_xy;
 			for (i = 0;
@@ -6667,7 +7513,8 @@ static void clearpad_analog_test(struct clearpad_t *this,
 				clearpad_set_delay(
 					SYN_WAIT_TIME_AFTER_REGISTER_ACCESS);
 				rc = clearpad_get(
-				SYNF(this, F54_ANALOG, COMMAND, 0x00), buf);
+					SYNF(this, F54_ANALOG, COMMAND,
+					this->reg_offset.f54_cmd00), buf);
 				if (rc || i > 100)
 					goto err_set_irq_xy;
 				HWLOGI(this, "force cal flag = %x, loop = %d\n",
@@ -6694,7 +7541,7 @@ static void clearpad_analog_test(struct clearpad_t *this,
 		goto err_set_irq_xy;
 	}
 
-	data = devm_kzalloc(&this->pdev->dev, loop_count_j * data_size,
+	data = devm_kzalloc(&this->pdev->dev, loop_count_i * loop_count_j * data_size,
 							   GFP_KERNEL);
 	if (!data)
 		goto err_set_irq_xy;
@@ -6711,7 +7558,8 @@ static void clearpad_analog_test(struct clearpad_t *this,
 		HWLOGI(this, "ANALOG: mode[%d], num[%d], rx[%d], tx[%d]",
 		       mode, k, num_rx, num_tx);
 
-		rc = clearpad_put(SYNF(this, F54_ANALOG, DATA, 0x00), mode);
+		rc = clearpad_put(SYNF(this, F54_ANALOG, DATA,
+			this->reg_offset.f54_data00), mode);
 		if (rc)
 			goto err_reset;
 
@@ -6720,7 +7568,8 @@ static void clearpad_analog_test(struct clearpad_t *this,
 
 		/* F54_ANALOG_CMD00: Analog Command */
 		rc = clearpad_put(
-				SYNF(this, F54_ANALOG, COMMAND, 0x00),
+				SYNF(this, F54_ANALOG, COMMAND,
+					this->reg_offset.f54_cmd00),
 				ANALOG_COMMAND_GET_REPORT_MASK);
 		if (rc) {
 			clearpad_undo_prepared_interrupt(this,
@@ -6739,38 +7588,39 @@ static void clearpad_analog_test(struct clearpad_t *this,
 			goto err_reset;
 		}
 
-		rc = clearpad_put(SYNF(this, F54_ANALOG, DATA, 0x01), 0x00);
+		rc = clearpad_put(SYNF(this, F54_ANALOG, DATA,
+			this->reg_offset.f54_data01), 0x00);
 		if (rc)
 			goto err_reset;
-		rc = clearpad_put(SYNF(this, F54_ANALOG, DATA, 0x02), 0x00);
+		rc = clearpad_put(SYNF(this, F54_ANALOG, DATA,
+			this->reg_offset.f54_data02), 0x00);
+		if (rc)
+			goto err_reset;
+		clearpad_set_delay(20);
+		rc = clearpad_get_block(
+			SYNF(this, F54_ANALOG, DATA, this->reg_offset.f54_data03),
+				data, loop_count_i * loop_count_j * data_size);
 		if (rc)
 			goto err_reset;
 		for (i = 0; i < loop_count_i; i++) {
-			for (j = 0; j < loop_count_j * data_size; j++) {
-				rc = clearpad_get(
-					SYNF(this, F54_ANALOG, DATA, 0x03),
-								data + j);
-				if (rc)
-					goto err_reset;
-			}
 			pl = line;
 			for (j = 0; j < loop_count_j; j++) {
 				s64 val = 0;
 
 				switch (data_type) {
 				case HWTEST_U8:
-					val = (u8)(*(data + j));
+					val = (u8)(*(data + (i * loop_count_j) + j));
 					break;
 				case HWTEST_S8:
-					val = (s8)(*(data + j));
+					val = (s8)(*(data + (i * loop_count_j) + j));
 					break;
 				case HWTEST_S16:
 					val = (s16)le16_to_cpup(
-					(const u16 *)(data + j * data_size));
+					(const u16 *)(data + ((i * loop_count_j) + j) * data_size));
 					break;
 				case HWTEST_U32:
 					val = (u32)le32_to_cpup(
-					(const u32 *)(data + j * data_size));
+					(const u32 *)(data + ((i * loop_count_j) + j) * data_size));
 					break;
 				default:
 					break;
@@ -6793,7 +7643,7 @@ static void clearpad_analog_test(struct clearpad_t *this,
 err_reset:
 	devm_kfree(&this->pdev->dev, line);
 	devm_kfree(&this->pdev->dev, data);
-	clearpad_reset(this, SYN_SWRESET, __func__);
+	clearpad_reset(this, SYN_FORCE_SWRESET, __func__);
 	UNLOCK(&this->lock);
 	rc = clearpad_wait_for_interrupt(this,
 					 &this->interrupt.for_reset,
@@ -6807,12 +7657,14 @@ err_kfree_data:
 	devm_kfree(&this->pdev->dev, data);
 err_set_irq_xy:
 	if (clearpad_is_valid_function(this, SYN_F12_2D))
-		clearpad_put(SYNF(this, F01_RMI, CTRL, 0x01),
-				this->pdt[SYN_F12_2D].irq_mask);
+		clearpad_put(SYNF(this, F01_RMI, CTRL,
+			this->reg_offset.f01_ctrl01),
+			this->pdt[SYN_F12_2D].irq_mask);
 unset_no_sleep_mode:
 	/* F01_RMI_CTRL00: Device Control */
-	clearpad_put_bit(SYNF(this, F01_RMI, CTRL, 0x00),
-			 0, DEVICE_CONTROL_NO_SLEEP_MASK);
+	clearpad_put_bit(SYNF(this, F01_RMI, CTRL,
+		this->reg_offset.f01_ctrl00),
+		0, DEVICE_CONTROL_NO_SLEEP_MASK);
 update_mode:
 	UNLOCK(&this->lock);
 end:
@@ -6983,7 +7835,8 @@ static int clearpad_debug_get_calibration_result(struct clearpad_t *this,
 		goto end;
 	}
 	LOCK(&this->lock);
-	rc = clearpad_get(SYNF(this, F54_ANALOG, DATA, 0x0E), &buf);
+	rc = clearpad_get(SYNF(this, F54_ANALOG, DATA,
+		this->reg_offset.f54_data31), &buf);
 	UNLOCK(&this->lock);
 	if (rc) {
 		HWLOGE(this, "failed to get CRC\n");
@@ -7044,7 +7897,6 @@ static int clearpad_debug_print_reg(const char *desc, struct clearpad_t *this,
 static void clearpad_debug_registers(struct clearpad_t *this)
 {
 	u8 buf[80];
-	u8 offset_CTRL109, offset_CTRL113, offset_CTRL147, offset_CTRL214;
 
 	LOCK(&this->lock);
 	if (!touchctrl_lock_power(this, __func__, true, false)) {
@@ -7059,7 +7911,8 @@ static void clearpad_debug_registers(struct clearpad_t *this)
 
 	/* F34_FLASH_DATA00: Status */
 	if (clearpad_debug_print_reg("F34_FLASH_DATA00: Status",
-		     SYNF(this, F34_FLASH, DATA, 0x00), buf, 1) == 0) {
+		     SYNF(this, F34_FLASH, DATA,
+		     this->reg_offset.f34_data00), buf, 1) == 0) {
 		HWLOGI(this, INDENT "Status = %d\n",
 		       BIT_GET(buf[0], STATUS_FLASH_STATUS));
 		HWLOGI(this, INDENT "Device Cfg Status = %d\n",
@@ -7070,11 +7923,13 @@ static void clearpad_debug_registers(struct clearpad_t *this)
 
 	/* F34_FLASH_QUERY01: Bootloader Revision */
 	clearpad_debug_print_reg("F34_FLASH_QUERY01: Bootloader Revision",
-		 SYNF(this, F34_FLASH, QUERY, 0x01), buf, 2);
+		 SYNF(this, F34_FLASH, QUERY,
+		 this->reg_offset.f34_query01), buf, 2);
 
 	/* F34_FLASH_CTRL00: Customer Configuration ID */
 	if (clearpad_debug_print_reg("F34_FLASH_CTRL00: Customer Config ID",
-		     SYNF(this, F34_FLASH, CTRL, 0x00), buf, 5) == 0)
+		     SYNF(this, F34_FLASH, CTRL,
+		     this->reg_offset.f34_ctrl00), buf, 5) == 0)
 		HWLOGI(this, INDENT "family=0x%02x rev=0x%02x.%02x "
 		       "extra=0x%02x aid=0x%02x\n",
 		       buf[0], buf[1], buf[2], buf[3], buf[4]);
@@ -7087,7 +7942,8 @@ reg_F01_RMI:
 
 	/* F01_RMI_CTRL00: Device Control */
 	if (clearpad_debug_print_reg("F01_RMI_CTRL00: Device Control",
-		     SYNF(this, F01_RMI, CTRL, 0x00), buf, 1) == 0) {
+		     SYNF(this, F01_RMI, CTRL,
+		     this->reg_offset.f01_ctrl00), buf, 1) == 0) {
 		HWLOGI(this, INDENT "Sleep Mode = %d\n",
 		       BIT_GET(buf[0], DEVICE_CONTROL_SLEEP_MODE));
 		HWLOGI(this, INDENT "No Sleep = %d\n",
@@ -7102,15 +7958,23 @@ reg_F01_RMI:
 
 	/* F01_RMI_CTRL01: Interrupt Enable 0 */
 	clearpad_debug_print_reg("F01_RMI_CTRL01: Interrupt Enable 0",
-		 SYNF(this, F01_RMI, CTRL, 0x01), buf, 1);
+		 SYNF(this, F01_RMI, CTRL,
+		 this->reg_offset.f01_ctrl01), buf, 1);
 
 	/* F01_RMI_CTRL18: Device Control 1 */
 	clearpad_debug_print_reg("F01_RMI_CTRL18: Device Control 1",
-		 SYNF(this, F01_RMI, CTRL, 0x04), buf, 1);
+		 SYNF(this, F01_RMI, CTRL,
+		 this->reg_offset.f01_ctrl18), buf, 1);
+
+	/* F01_RMI_CTRL05: Doze Holdoff */
+	clearpad_debug_print_reg("F01_RMI_CTRL05: Doze Holdoff",
+		 SYNF(this, F01_RMI, CTRL,
+		 this->reg_offset.f01_ctrl05), buf, 1);
 
 	/* F01_RMI_DATA00: Device Status */
 	if (clearpad_debug_print_reg("F01_RMI_DATA00: Device Status",
-		     SYNF(this, F01_RMI, DATA, 0x00), buf, 1) == 0) {
+		     SYNF(this, F01_RMI, DATA,
+		     this->reg_offset.f01_data00), buf, 1) == 0) {
 		HWLOGI(this, INDENT "Status Code = %d\n",
 		       BIT_GET(buf[0], DEVICE_STATUS_CODE));
 		HWLOGI(this, INDENT "Flash Prog = %d\n",
@@ -7121,7 +7985,8 @@ reg_F01_RMI:
 
 	/* F01_RMI_DATA01.00: Interrupt Status */
 	clearpad_debug_print_reg("F01_RMI_DATA01.00: Interrupt Status",
-		 SYNF(this, F01_RMI, DATA, 0x01), buf, 1);
+		 SYNF(this, F01_RMI, DATA,
+		 this->reg_offset.f01_data01), buf, 1);
 
 reg_F12_2D:
 	if (!clearpad_is_valid_function(this, SYN_F12_2D))
@@ -7153,7 +8018,7 @@ reg_F12_2D:
 		 SYNA(this, F12_2D, QUERY, 0), buf, 1);
 
 	/* F12_2D_QUERY10: Supported Object Types */
-	if (this->chip_id == SYN_CHIP_3330 || this->chip_id == SYN_CHIP_7500) {
+	if (this->chip_id == SYN_CHIP_3330) {
 		if (clearpad_debug_print_reg(
 			"F12_2D_QUERY10: Supported Object Types",
 			SYNA(this, F12_2D, QUERY, 10), buf, 1) == 0) {
@@ -7302,13 +8167,29 @@ reg_F12_2D:
 	if (!clearpad_is_valid_function(this, SYN_F54_ANALOG))
 		goto reg_end;
 
+	HWLOGI(this, "=== F51_CUSTOM ===\n");
+
+	if (this->chip_id == SYN_CHIP_3500) {
+		/* F51_CUSTOM_CTRL30_06: Custom Report Rate */
+		if (clearpad_debug_print_reg(
+			"F51_CUSTOM_CTRL30_06: Custom Report Rate State",
+			SYNF(this, F51_CUSTOM, CTRL,
+			this->reg_offset.f51_ctrl30
+			+ SYN_EXTERNAL_REPORT_RATE_OFFSET), buf, 1) == 0) {
+			HWLOGI(this,
+				INDENT "Custom Report Rate Mode = %d\n",
+				*buf);
+		}
+	}
+
 	HWLOGI(this, "=== F54_ANALOG ===\n");
 
 	if (this->calibration_supported) {
 		/* F54_ANALOG_DATA31: Calibration State */
 		if (clearpad_debug_print_reg("F54_ANALOG_DATA31: Calibration "
 					     "State",
-			SYNF(this, F54_ANALOG, DATA, 0x0E), buf, 1) == 0) {
+			SYNF(this, F54_ANALOG, DATA,
+			this->reg_offset.f54_data31), buf, 1) == 0) {
 			HWLOGI(this, INDENT "Normal Calibration CRC = %d\n",
 				BIT_GET(buf[0],
 					CALIBRATION_STATE_CALIBRATION_CRC));
@@ -7321,7 +8202,8 @@ reg_F12_2D:
 
 	/* F54_ANALOG_CMD00: Analog Command 0 */
 	if (clearpad_debug_print_reg("F54_ANALOG_CMD00: Analog Command 0",
-		     SYNF(this, F54_ANALOG, COMMAND, 0x00), buf, 1) == 0) {
+		     SYNF(this, F54_ANALOG, COMMAND,
+		     this->reg_offset.f54_cmd00), buf, 1) == 0) {
 		HWLOGI(this, INDENT "Force Cal = %d\n",
 		       BIT_GET(buf[0], ANALOG_COMMAND_FORCE_CALIBRATION));
 		HWLOGI(this, INDENT "Force Update = %d\n",
@@ -7329,59 +8211,46 @@ reg_F12_2D:
 	}
 
 	if (this->chip_id == SYN_CHIP_3330) {
-		switch (this->device_info.firmware_revision_extra) {
-		case 0x05:
-			offset_CTRL109 = 0x3A;
-			offset_CTRL113 = 0x3B;
-			offset_CTRL147 = 0x42;
-			offset_CTRL214 = 0x55;
-			break;
-		case 0x06:
-			offset_CTRL109 = 0x38;
-			offset_CTRL113 = 0x39;
-			offset_CTRL147 = 0x40;
-			offset_CTRL214 = 0x53;
-			break;
-		default:
-			HWLOGE(this, "Invalid fw extra=0x%02x: family 0x%02x, rev 0x%02x.%02x\n",
-					this->device_info.firmware_revision_extra,
-					this->device_info.customer_family,
-					this->device_info.firmware_revision_major,
-					this->device_info.firmware_revision_minor);
-			WARN_ON(1); /* instead of HWRESET */
-			goto reg_end;
-		}
-
 
 		/* F54_ANALOG_CTRL109_00: General Control */
 		if (clearpad_debug_print_reg("F54_ANALOG_CTRL109_00: General Control",
-				 SYNF(this, F54_ANALOG, CTRL, offset_CTRL109), buf, 1) == 0) {
+				SYNF(this, F54_ANALOG, CTRL,
+				this->reg_offset.f54_ctrl109),
+				buf, 1) == 0) {
 			HWLOGI(this, INDENT "Baseline Correction Mode = %d\n",
 				   BIT_GET(buf[0], BASELINE_CORRECTION_MODE));
 		}
 
 		/* F54_ANALOG_CTRL113_00: General Control */
 		if (clearpad_debug_print_reg("F54_ANALOG_CTRL113_00: General Control",
-				 SYNF(this, F54_ANALOG, CTRL, offset_CTRL113), buf, 1) == 0) {
+				SYNF(this, F54_ANALOG, CTRL,
+				this->reg_offset.f54_ctrl113),
+				buf, 1) == 0) {
 			HWLOGI(this, INDENT "Disable Hybrid Baseline = %d\n",
 				   BIT_GET(buf[0], DISABLE_HYBRID_BASELINE));
 		}
 
 		/* F54_ANALOG_CTRL147_00: Disable Hybrid CBC Auto Correction */
 		if (clearpad_debug_print_reg("F54_ANALOG_CTRL147_00: General Control",
-				 SYNF(this, F54_ANALOG, CTRL, offset_CTRL147), buf, 1) == 0) {
+				SYNF(this, F54_ANALOG, CTRL,
+				this->reg_offset.f54_ctrl147),
+				buf, 1) == 0) {
 			HWLOGI(this, INDENT "Disable Hybrid CBC Auto Correction = %d\n",
 				   BIT_GET(buf[0], DISABLE_HYBRID_CBC_AUTO_CORRECTION));
 		}
 
 		/* F54_ANALOG_CTRL214_00: General Control */
 		if (clearpad_debug_print_reg("F54_ANALOG_CTRL214_00: General Control",
-				 SYNF(this, F54_ANALOG, CTRL, offset_CTRL214), buf, 1) == 0) {
+				SYNF(this, F54_ANALOG, CTRL,
+				this->reg_offset.f54_ctrl214),
+				buf, 1) == 0) {
 			HWLOGI(this, INDENT "Enable Hybrid Charger noise "
 						"Mitigation = %d\n",
 				   BIT_GET(buf[0], ENABLE_HYBRID_CHARGER_NOISE_MITIGATION));
 		}
 	}
+
+	clearpad_reg_offset_print(this);
 
 reg_end:
 	touchctrl_unlock_power(this, __func__);
@@ -7482,16 +8351,20 @@ static void clearpad_debug_info(struct clearpad_t *this)
 	HWLOGI(this, "[charger] supported=%s status=%s\n",
 	       this->charger.supported ? "true" : "false",
 	       this->charger.status ? "true" : "false");
+	HWLOGI(this, "[charger only] delay_ms=%lu\n",
+	       this->charger_only.delay_ms);
 	HWLOGI(this, "[stylus] supported=%s enabled=%s\n",
 	       this->pen.supported ? "true" : "false",
 	       this->pen.enabled ? "true" : "false");
 	HWLOGI(this, "[glove] supported=%s enabled=%s\n",
 	       this->glove.supported ? "true" : "false",
 	       this->glove.enabled ? "true" : "false");
-	HWLOGI(this, "[cover] supported=%s status=%s enabled=%s\n",
+	HWLOGI(this, "[cover] supported=%s status=%s enabled=%s "
+		"set_disp_size_to_win=%s\n",
 	       this->cover.supported ? "true" : "false",
 	       this->cover.status ? "true" : "false",
-	       this->cover.enabled ? "true" : "false");
+	       this->cover.enabled ? "true" : "false",
+	       this->cover.set_disp_size_to_win ? "true" : "false");
 	HWLOGI(this, INDENT "win top=%d bottom=%d right=%d left=%d\n",
 	       this->cover.win_top, this->cover.win_bottom,
 	       this->cover.win_right, this->cover.win_left);
@@ -7503,6 +8376,21 @@ static void clearpad_debug_info(struct clearpad_t *this)
 	       this->wakeup_gesture.enabled ? "true" : "false");
 	HWLOGI(this, "[watchdog] enabled=%s delay=%d\n",
 	       this->watchdog.enabled ? "true" : "false", this->watchdog.delay);
+	HWLOGI(this, "[stamina_mode] supported=%s enabled=%s\n",
+	       this->stamina.supported ? "true" : "false",
+	       this->stamina.enabled ? "true" : "false");
+	HWLOGI(this, INDENT "[change_reportrate] supported=%s mode=%d\n",
+	       this->stamina.change_reportrate.supported ? "true" : "false",
+	       this->stamina.change_reportrate.mode);
+	HWLOGI(this, INDENT "[doze holdoff] supported=%s default_time=%u "
+		"glove_mode_time=%u cover_mode_time=%u\n",
+	       this->stamina.doze_holdoff.supported ? "true" : "false",
+	       this->stamina.doze_holdoff.default_time,
+	       this->stamina.doze_holdoff.glove_mode_time,
+	       this->stamina.doze_holdoff.cover_mode_time);
+	HWLOGI(this, "[early unblank] done=%s early_done=%s\n",
+	       this->wakeup.unblank_done ? "true" : "false",
+	       this->wakeup.unblank_early_done ? "true" : "false");
 }
 
 static ssize_t clearpad_debug_hwtest_write(struct file *file,
@@ -7605,11 +8493,26 @@ static ssize_t clearpad_debug_hwtest_write(struct file *file,
 		}
 		break;
 	case DEBUG_COMMAND('R', 'H'):
-	case DEBUG_COMMAND('P', '0'):
 		/* RH/PO - HW reset */
 		if (clearpad_ctrl_session_begin(this, session) == 0) {
 			LOCK(&this->lock);
 			clearpad_reset(this, SYN_HWRESET, "HW reset cmd");
+			UNLOCK(&this->lock);
+			rc = clearpad_wait_for_interrupt(this,
+						&this->interrupt.for_reset,
+						this->interrupt.wait_ms);
+			if (rc)
+				LOGE(this, "failed to get interrupt (rc=%d)\n",
+									rc);
+			clearpad_ctrl_session_end(this, session);
+		}
+		break;
+	case DEBUG_COMMAND('P', '0'):
+	case DEBUG_COMMAND('R', 'F'):
+		/* RH/PO - HW reset */
+		if (clearpad_ctrl_session_begin(this, session) == 0) {
+			LOCK(&this->lock);
+			clearpad_reset(this, SYN_FORCE_HWRESET, "Force HW reset cmd");
 			UNLOCK(&this->lock);
 			rc = clearpad_wait_for_interrupt(this,
 						&this->interrupt.for_reset,
@@ -7658,16 +8561,6 @@ static ssize_t clearpad_debug_hwtest_write(struct file *file,
 		if (clearpad_ctrl_session_begin(this, session) == 0) {
 			LOCK(&this->lock);
 			rc = clearpad_fwflash_core(this, SYN_FORCE_FLASH, id);
-			UNLOCK(&this->lock);
-			clearpad_ctrl_session_end(this, session);
-		}
-		break;
-	case DEBUG_COMMAND('F', 'C'):
-		/* FC - FW config update */
-		HWLOGI(this, "start config flash\n");
-		if (clearpad_ctrl_session_begin(this, session) == 0) {
-			LOCK(&this->lock);
-			rc = clearpad_fwflash_core(this, SYN_CONFIG_FLASH, 0);
 			UNLOCK(&this->lock);
 			clearpad_ctrl_session_end(this, session);
 		}
@@ -7731,23 +8624,6 @@ static ssize_t clearpad_debug_hwtest_write(struct file *file,
 			touchctrl_unlock_power(this, __func__);
 			UNLOCK(&this->lock);
 		}
-		break;
-	case DEBUG_COMMAND('X', 'P'):
-		/* XP - start post probe */
-		b += HWTEST_SIZE_OF_COMMAND_PREFIX;
-		b = skip_spaces(b);
-		if (is_equal_cstring(b, "flash_on_post_probe=1"))
-			this->flash.on_post_probe = true;
-		else if (is_equal_cstring(b, "flash_on_post_probe=0"))
-			this->flash.on_post_probe = false;
-		LOCK(&this->lock);
-		if (this->post_probe.done) {
-			HWLOGI(this, "already post probed, need reboot\n");
-		} else {
-			this->post_probe.start = true;
-			schedule_delayed_work(&this->post_probe.work, 0);
-		}
-		UNLOCK(&this->lock);
 		break;
 	case DEBUG_COMMAND('X', 'W'):
 		/* XW[number:interval(ms)] - watchdog (0:stop, else:start) */
@@ -7819,7 +8695,7 @@ end:
 
 /* for Bootloader v6.0 */
 /* need LOCK(&this->lock) */
-static int clearpad_read_pca_block_v6(struct clearpad_t *this,
+static int clearpad_read_pca_block_bl_v6_0(struct clearpad_t *this,
 				  u16 block_num, u8 *data)
 {
 	int rc;
@@ -7828,24 +8704,27 @@ static int clearpad_read_pca_block_v6(struct clearpad_t *this,
 	block = block_num |
 		(FLASH_DATA_CONFIGURATION_AREA_SELECT_PERM <<
 		 FLASH_DATA_CONFIGURATION_AREA_SELECT_SHIFT);
-	rc = clearpad_put_block(SYNF(this, F34_FLASH, DATA, 0x00),
-				(u8 *)&block, 2);
+	rc = clearpad_put_block(SYNF(this, F34_FLASH, DATA,
+			this->reg_offset.f34_data00),
+			(u8 *)&block, 2);
 	if (rc) {
 		HWLOGE(this, "set block number error\n");
 		goto end;
 	}
 
 	/* issue read configuration block command */
-	rc = clearpad_put(SYNF(this, F34_FLASH, DATA, 0x02),
-			  FLASH_CONTROL_READ_CONFIGURATION_BLOCK);
+	rc = clearpad_put(SYNF(this, F34_FLASH, DATA,
+			this->reg_offset.f34_data02),
+			FLASH_CONTROL_READ_CONFIGURATION_BLOCK);
 	if (rc) {
 		HWLOGE(this, "issue config error\n");
 		goto end;
 	}
 
 	/* read data block */
-	rc = clearpad_get_block(SYNF(this, F34_FLASH, DATA, 0x01),
-				data, SYN_PCA_BLOCK_SIZE);
+	rc = clearpad_get_block(SYNF(this, F34_FLASH, DATA,
+			this->reg_offset.f34_data01),
+			data, SYN_PCA_BLOCK_SIZE);
 	if (rc) {
 		HWLOGE(this, "read data error\n");
 		goto end;
@@ -7855,40 +8734,36 @@ end:
 	return rc;
 }
 
+/* for Bootloader v7.x */
 /* need LOCK(&this->lock) */
-static int clearpad_read_pca_block_v7(struct clearpad_t *this,
+static int clearpad_read_pca_block_bl_v7_x(struct clearpad_t *this,
 				  u16 block_num, u8 *data)
 {
 	int rc;
 	u16 payload_len = SYN_PAYLOAD_LENGTH;
 
-	if (this->device_info.boot_loader_version_major <
-	    clearpad_bootloader_version_dec[BV7]) {
-		rc = -ENODEV;
-		HWLOGE(this, "illegal boot loader revision %x\n",
-			    this->device_info.boot_loader_version_major);
-		goto end;
-	}
-
 	/* write partition id */
-	rc = clearpad_put(SYNF(this, F34_FLASH, DATA, 0x01),
-			  PID_GUEST_SERIALIZATION);
+	rc = clearpad_put(
+		SYNF(this, F34_FLASH, DATA, this->reg_offset.f34_data01),
+		PID_GUEST_SERIALIZATION);
 	if (rc) {
 		HWLOGE(this, "set partition id error\n");
 		goto end;
 	}
 
 	/* set block number */
-	rc = clearpad_put_block(SYNF(this, F34_FLASH, DATA, 0x02),
-				(u8 *)&block_num, 2);
+	rc = clearpad_put_block(
+		SYNF(this, F34_FLASH, DATA, this->reg_offset.f34_data02),
+		(u8 *)&block_num, 2);
 	if (rc) {
 		HWLOGE(this, "set block offset error\n");
 		goto end;
 	}
 
 	/* set payload length */
-	rc = clearpad_put_block(SYNF(this, F34_FLASH, DATA, 0x03),
-				(u8 *)&payload_len, 2);
+	rc = clearpad_put_block(
+		SYNF(this, F34_FLASH, DATA, this->reg_offset.f34_data03),
+		(u8 *)&payload_len, 2);
 	if (rc) {
 		HWLOGE(this, "set payload length error\n");
 		goto end;
@@ -7898,7 +8773,9 @@ static int clearpad_read_pca_block_v7(struct clearpad_t *this,
 				       "F34_FLASH_DATA04 for read pca");
 	/* issue read command */
 	/* F34_FLASH_DATA04: Programming Command */
-	rc = clearpad_put(SYNF(this, F34_FLASH, DATA, 0x04), FLASH_CMD_READ);
+	rc = clearpad_put(
+		SYNF(this, F34_FLASH, DATA, this->reg_offset.f34_data04),
+		FLASH_CMD_READ);
 	if (rc) {
 		HWLOGE(this, "set flash read command error\n");
 		clearpad_undo_prepared_interrupt(this,
@@ -7917,26 +8794,28 @@ static int clearpad_read_pca_block_v7(struct clearpad_t *this,
 	LOCK(&this->lock);
 
 	/* read pca block */
-	rc = clearpad_get_block(SYNF(this, F34_FLASH, DATA, 0x05),
-				data, SYN_PCA_BLOCK_SIZE);
+	rc = clearpad_get_block(
+		SYNF(this, F34_FLASH, DATA, this->reg_offset.f34_data05),
+		data, SYN_PCA_BLOCK_SIZE);
 	if (rc) {
 		HWLOGE(this, "read pca block error\n");
 		goto end;
 	}
+
 end:
 	return rc;
 }
 
 /* need LOCK(&this->lock) */
-static inline int clearpad_read_pca_block(struct clearpad_t *this,
+static int clearpad_read_pca_block(struct clearpad_t *this,
 				  u16 block_num, u8 *data)
 {
 	int rc;
 
 	if (this->is_sol)
-		rc = clearpad_read_pca_block_v6(this, block_num, data);
+		rc = clearpad_read_pca_block_bl_v6_0(this, block_num, data);
 	else
-		rc = clearpad_read_pca_block_v7(this, block_num, data);
+		rc = clearpad_read_pca_block_bl_v7_x(this, block_num, data);
 	if (rc)
 		HWLOGE(this, "failed pca read rc = %d\n", rc);
 	return rc;
@@ -7944,7 +8823,7 @@ static inline int clearpad_read_pca_block(struct clearpad_t *this,
 
 /* for Bootloader v6.0 */
 /* need LOCK(&this->lock) */
-static int clearpad_write_pca_block_v6(struct clearpad_t *this,
+static int clearpad_write_pca_block_bl_v6_0(struct clearpad_t *this,
 				  u16 block_num, u8 *data)
 {
 	int rc;
@@ -7956,7 +8835,8 @@ static int clearpad_write_pca_block_v6(struct clearpad_t *this,
 
 	/* change to bootloader mode start */
 	/* read bootloader id */
-	rc = clearpad_get_block(SYNF(this, F34_FLASH, QUERY, 0x00),
+	rc = clearpad_get_block(SYNF(this, F34_FLASH, QUERY,
+			this->reg_offset.f34_query00),
 			buf, sizeof(buf));
 	if (rc) {
 		HWLOGE(this, "get id error\n");
@@ -7964,7 +8844,8 @@ static int clearpad_write_pca_block_v6(struct clearpad_t *this,
 	}
 
 	/* write bootloader id to block data */
-	rc = clearpad_put_block(SYNF(this, F34_FLASH, DATA, 0x01),
+	rc = clearpad_put_block(SYNF(this, F34_FLASH, DATA,
+			this->reg_offset.f34_data01),
 			buf, sizeof(buf));
 	if (rc) {
 		HWLOGE(this, "write id error\n");
@@ -7975,7 +8856,8 @@ static int clearpad_write_pca_block_v6(struct clearpad_t *this,
 				       "F34_FLASH_DATA02 for write pca");
 
 	/* issue a flash program enable */
-	rc = clearpad_put(SYNF(this, F34_FLASH, DATA, 0x02),
+	rc = clearpad_put(SYNF(this, F34_FLASH, DATA,
+			this->reg_offset.f34_data02),
 			FLASH_CONTROL_ENABLE_FLASH_PROGRAMMING);
 	if (rc) {
 		HWLOGE(this, "issue config error\n");
@@ -8003,14 +8885,17 @@ static int clearpad_write_pca_block_v6(struct clearpad_t *this,
 	}
 
 	/* make sure that we are in programming mode and there are no issues */
-	rc = clearpad_get(SYNF(this, F34_FLASH, DATA, 0x03), buf);
+	rc = clearpad_get(SYNF(this, F34_FLASH, DATA,
+		this->reg_offset.f34_data03),
+		buf);
 	if (rc) {
 		HWLOGE(this, "get mode error\n");
 		goto end;
 	}
 
 	if (!(BIT_GET(buf[0], FLASH_STATUS_PROGRAM_ENABLED))) {
-		HWLOGE(this, "failed enabling flash\n");
+		HWLOGE(this, "failed enabling flash (%s)\n",
+			clearpad_flash_status[buf[0] & 7]);
 		rc = -EIO;
 		goto end;
 	}
@@ -8019,7 +8904,8 @@ static int clearpad_write_pca_block_v6(struct clearpad_t *this,
 	block = block_num |
 		(FLASH_DATA_CONFIGURATION_AREA_SELECT_PERM <<
 		 FLASH_DATA_CONFIGURATION_AREA_SELECT_SHIFT);
-	rc = clearpad_put_block(SYNF(this, F34_FLASH, DATA, 0x00),
+	rc = clearpad_put_block(SYNF(this, F34_FLASH, DATA,
+			this->reg_offset.f34_data00),
 			(u8 *)&block, 2);
 	if (rc) {
 		HWLOGE(this, "set block offset error\n");
@@ -8027,7 +8913,8 @@ static int clearpad_write_pca_block_v6(struct clearpad_t *this,
 	}
 
 	/* write block data */
-	rc = clearpad_put_block(SYNF(this, F34_FLASH, DATA, 0x01),
+	rc = clearpad_put_block(SYNF(this, F34_FLASH, DATA,
+				this->reg_offset.f34_data01),
 				data, SYN_PCA_BLOCK_SIZE);
 	if (rc) {
 		dev_err(&this->pdev->dev,
@@ -8039,7 +8926,8 @@ static int clearpad_write_pca_block_v6(struct clearpad_t *this,
 				       "F34_FLASH_DATA02 for write pca");
 
 	/* issue a write configuration block command */
-	rc = clearpad_put(SYNF(this, F34_FLASH, DATA, 0x02),
+	rc = clearpad_put(SYNF(this, F34_FLASH, DATA,
+			this->reg_offset.f34_data02),
 			FLASH_CONTROL_WRITE_CONFIGURATION_BLOCK);
 	if (rc) {
 		dev_err(&this->pdev->dev,
@@ -8071,8 +8959,9 @@ end:
 	return rc;
 }
 
+/* for Bootloader v7.x */
 /* need LOCK(&this->lock) */
-static int clearpad_write_pca_block_v7(struct clearpad_t *this,
+static int clearpad_write_pca_block_bl_v7_x(struct clearpad_t *this,
 				  u16 block_num, u8 *data)
 {
 	int rc;
@@ -8081,26 +8970,20 @@ static int clearpad_write_pca_block_v7(struct clearpad_t *this,
 		FLASH_CMD_ENTER_BOOTLOADER};
 	u16 payload_len = SYN_PAYLOAD_LENGTH;
 
-	if (this->device_info.boot_loader_version_major <
-	    clearpad_bootloader_version_dec[BV7]) {
-		rc = -ENODEV;
-		HWLOGE(this, "illegal boot loader revision %x\n",
-			    this->device_info.boot_loader_version_major);
-		goto end;
-	}
-
 	/* change to bootloader mode start */
 	this->flash.enter_bootloader_mode = true;
+
 	/* read flash program key */
-	rc = clearpad_get_block(SYNF(this, F34_FLASH, QUERY, 0x01),
-				bl_buf + SYN_FP_KEY_OFFSET, 2);
+	rc = clearpad_get_block(
+		SYNF(this, F34_FLASH, QUERY, this->reg_offset.f34_query01),
+		bl_buf + SYN_FP_KEY_OFFSET, 2);
 	if (rc) {
 		HWLOGE(this, "get boot loader revision error\n");
 		goto end;
 	}
 
 	clearpad_prepare_for_interrupt(this, &this->interrupt.for_F34,
-				       "F34_FLASH_DATA04 for write pca");
+				       "F34_FLASH_DATA01 for write pca");
 
 	/* issue command to enter bootloader mode with key*/
 	/* F34_FLASH_DATA01: Partition ID
@@ -8110,13 +8993,14 @@ static int clearpad_write_pca_block_v7(struct clearpad_t *this,
 	 * F34_FLASH_DATA03_01: Data Transfer Settings
 	 * F34_FLASH_DATA04: Programming Command
 	 */
-	rc = clearpad_put_block(SYNF(this, F34_FLASH, DATA, 0x01),
-			bl_buf, sizeof(bl_buf));
+	rc = clearpad_put_block(
+		SYNF(this, F34_FLASH, DATA, this->reg_offset.f34_data01),
+		bl_buf, sizeof(bl_buf));
 	if (rc) {
 		HWLOGE(this, "set bl mode error\n");
 		clearpad_undo_prepared_interrupt(this,
 			&this->interrupt.for_F34,
-			"F34_FLASH_DATA04 for write pca");
+			"F34_FLASH_DATA01 for write pca");
 		goto end;
 	}
 
@@ -8138,7 +9022,9 @@ static int clearpad_write_pca_block_v7(struct clearpad_t *this,
 	}
 
 	/* make sure that we are in programming mode and there are no issues */
-	rc = clearpad_get(SYNF(this, F34_FLASH, DATA, 0x00), &buf);
+	rc = clearpad_get(
+		SYNF(this, F34_FLASH, DATA, this->reg_offset.f34_data00),
+		&buf);
 	if (rc) {
 		HWLOGE(this, "failed to get flash programming status\n");
 		goto err_exit_bl;
@@ -8154,31 +9040,36 @@ static int clearpad_write_pca_block_v7(struct clearpad_t *this,
 	/* changing finished */
 
 	/* write partition id */
-	rc = clearpad_put(SYNF(this, F34_FLASH, DATA, 0x01),
-			  PID_GUEST_SERIALIZATION);
+	rc = clearpad_put(
+		SYNF(this, F34_FLASH, DATA, this->reg_offset.f34_data01),
+		PID_GUEST_SERIALIZATION);
 	if (rc) {
 		HWLOGE(this, "set partition id error\n");
 		goto err_exit_bl;
 	}
 
 	/* set block number */
-	rc = clearpad_put_block(SYNF(this, F34_FLASH, DATA, 0x02),
-				(u8 *)&block_num, 2);
+	rc = clearpad_put_block(
+		SYNF(this, F34_FLASH, DATA, this->reg_offset.f34_data02),
+		(u8 *)&block_num, 2);
 	if (rc) {
 		HWLOGE(this, "set block offset error\n");
 		goto err_exit_bl;
 	}
 
 	/* set payload length */
-	rc = clearpad_put_block(SYNF(this, F34_FLASH, DATA, 0x03),
-				(u8 *)&payload_len, 2);
+	rc = clearpad_put_block(
+		SYNF(this, F34_FLASH, DATA, this->reg_offset.f34_data03),
+		(u8 *)&payload_len, 2);
 	if (rc) {
 		HWLOGE(this, "set length error\n");
 		goto err_exit_bl;
 	}
 
 	/* write command */
-	rc = clearpad_put(SYNF(this, F34_FLASH, DATA, 0x04), FLASH_CMD_WRITE);
+	rc = clearpad_put(
+		SYNF(this, F34_FLASH, DATA, this->reg_offset.f34_data04),
+		FLASH_CMD_WRITE);
 	if (rc) {
 		HWLOGE(this, "set write command error\n");
 		goto err_exit_bl;
@@ -8189,8 +9080,9 @@ static int clearpad_write_pca_block_v7(struct clearpad_t *this,
 
 	/* write pca block */
 	/* F34_FLASH_DATA05: Payload */
-	rc = clearpad_put_block(SYNF(this, F34_FLASH, DATA, 0x05),
-				data, SYN_PCA_BLOCK_SIZE);
+	rc = clearpad_put_block(
+		SYNF(this, F34_FLASH, DATA, this->reg_offset.f34_data05),
+		data, SYN_PCA_BLOCK_SIZE);
 	if (rc) {
 		HWLOGE(this, "write error\n");
 		clearpad_undo_prepared_interrupt(this,
@@ -8227,14 +9119,13 @@ static int clearpad_write_pca_block(struct clearpad_t *this,
 	int rc;
 
 	if (this->is_sol)
-		rc = clearpad_write_pca_block_v6(this, block_num, data);
+		rc = clearpad_write_pca_block_bl_v6_0(this, block_num, data);
 	else
-		rc = clearpad_write_pca_block_v7(this, block_num, data);
+		rc = clearpad_write_pca_block_bl_v7_x(this, block_num, data);
 	if (rc)
 		HWLOGE(this, "failed pca write rc = %d\n", rc);
 	return rc;
 }
-
 
 static long clearpad_debug_pca_ioctl(struct file *file,
 					unsigned int cmd, unsigned long arg)
@@ -8363,6 +9254,8 @@ static int clearpad_probe(struct platform_device *pdev)
 			  "start probe @ %ld.%06ld\n", ts.tv_sec, ts.tv_nsec);
 
 	this->state = SYN_STATE_INIT;
+	this->wakeup.unblank_done = false;
+	this->wakeup.unblank_early_done = false;
 	mutex_init(&this->lock.lock);
 	spin_lock_init(&this->slock);
 
@@ -8538,7 +9431,8 @@ static int clearpad_probe(struct platform_device *pdev)
 		HWLOGI(this, "schedule post probe\n");
 		schedule_delayed_work(&this->post_probe.work, 0);
 	} else {
-		HWLOGI(this, "'XP' command is required to start post probe\n");
+		HWLOGI(this, "post_probe_start sysfs is required"
+		       "to start post probe\n");
 	}
 	UNLOCK(&touchctrl->session_lock);
 	goto end_log;
@@ -8608,15 +9502,14 @@ static void clearpad_post_probe_work(struct work_struct *work)
 	get_monotonic_boottime(&ts);
 	HWLOGI(this, "start post probe @ %ld.%06ld\n", ts.tv_sec, ts.tv_nsec);
 
-//	if (unlikely(!first_blank_done))
-//		incell_force_sp_on();
-
 	rc = clearpad_ctrl_session_begin(this, session);
 	if (rc) {
 		HWLOGE(this, "failed to begin post probe session\n");
 		do_reschedule = true;
 		goto err_in_ctrl_session_begin;
 	}
+
+	WARN_ON(!touchctrl_is_display_powered(this));
 
 	LOCK(&this->lock);
 	if (!this->dev_active) {
@@ -8640,9 +9533,25 @@ static void clearpad_post_probe_work(struct work_struct *work)
 		}
 	}
 
-	this->state = SYN_STATE_RUNNING;
+	if (this->chip_id == SYN_CHIP_3500) {
+		/* Remove this part after firmware flash sequence released */
+		/* @ Yoshino1.0 */
+		HWLOGW(this, "WA for Yoshino BU\n");
+		clearpad_reset(this, SYN_SWRESET, __func__);
 
-	UNLOCK(&this->lock);
+		this->state = SYN_STATE_RUNNING;
+
+		UNLOCK(&this->lock);
+
+		rc = clearpad_wait_for_interrupt(this,
+			&this->interrupt.for_reset, this->interrupt.wait_ms);
+		if (rc)
+			LOGE(this, "failed to get interrupt (rc=%d)\n", rc);
+	} else {
+		this->state = SYN_STATE_RUNNING;
+
+		UNLOCK(&this->lock);
+	}
 
 	clearpad_ctrl_session_end(this, session);
 
@@ -8687,6 +9596,7 @@ static void clearpad_thread_resume_work(struct work_struct *work)
 				struct clearpad_t, thread_resume);
 	struct timespec ts;
 	bool locked = false;
+	int rc;
 
 	get_monotonic_boottime(&ts);
 	LOCK(&this->lock);
@@ -8715,6 +9625,30 @@ static void clearpad_thread_resume_work(struct work_struct *work)
 	this->interrupt.count = 0;
 	if (clearpad_handle_if_first_event(this) < 0)
 		LOGE(this, "failed to handle first event\n");
+
+	/* Workaround for Kagura sharp panel id 9 */
+	if (this->chip_id == SYN_CHIP_332U) {
+		switch (this->device_info.customer_family) {
+		case 0xb1:
+		case 0xb2:
+			HWLOGW(this, "Trigger SW reset; "
+			       "workaround for Kagura sharp panel id 9\n");
+
+			clearpad_reset(this, SYN_SWRESET, __func__);
+
+			UNLOCK(&this->lock);
+
+			rc = clearpad_wait_for_interrupt(this,
+				&this->interrupt.for_reset, this->interrupt.wait_ms);
+
+			LOCK(&this->lock);
+			if (rc)
+				LOGE(this, "failed to get interrupt (rc=%d)\n", rc);
+			break;
+		default:
+			break;
+		}
+	}
 
 	touchctrl_unlock_power(this, "fb_unblank");
 

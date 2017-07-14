@@ -258,7 +258,7 @@ static int clearpad_i2c_probe(struct i2c_client *client,
 	if (rc)
 		goto err_device_put;
 
-	dev_info(&client->dev, "%s: sucess\n", __func__);
+	dev_info(&client->dev, "%s: success\n", __func__);
 	goto exit;
 
 err_device_put:
