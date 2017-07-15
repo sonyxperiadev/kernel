@@ -6456,20 +6456,6 @@ static void clearpad_remove_sysfs_entries(struct clearpad_t *this,
 		device_remove_file(&this->input->dev, &attrs[i]);
 }
 
-static int clearpad_read_config_u8(struct device_node *devnode,
-	char *conf_name, u8 *container)
-{
-	int rc = 0;
-	u32 value;
-
-	if (!of_property_read_u32(devnode, conf_name, &value))
-		*container = (u8)value;
-	else
-		rc = -EINVAL;
-
-	return rc;
-}
-
 static void clearpad_reg_offset_print(struct clearpad_t *this)
 {
 	/* F01_RMI */
@@ -6520,157 +6506,113 @@ static void clearpad_reg_offset_print(struct clearpad_t *this)
 	LOGD(this, "f54-query38:0x%02X\n", this->reg_offset.f54_query38);
 }
 
-static void clearpad_reg_offset_dt(struct clearpad_t *this,
-	 struct device_node *devnode)
+static void clearpad_reg_offset(struct clearpad_t *this)
 {
-	if (!devnode) {
-		LOGW(this, "device node is invalid\n");
-		return;
+	u8 firmware_revision_extra = this->device_info.firmware_revision_extra;
+
+	this->reg_offset.f01_cmd00 = 0x00;
+	this->reg_offset.f01_ctrl00 = 0x00;
+	this->reg_offset.f01_ctrl01 = 0x01;
+	this->reg_offset.f01_data00 = 0x00;
+	this->reg_offset.f01_data01 = 0x01;
+	this->reg_offset.f01_query11 = 0x0B;
+
+	this->reg_offset.f34_ctrl00 = 0x00;
+	this->reg_offset.f34_data00 = 0x00;
+	this->reg_offset.f34_data01 = 0x01;
+	this->reg_offset.f34_data02 = 0x02;
+	this->reg_offset.f34_data03 = 0x03;
+	this->reg_offset.f34_data04 = 0x04;
+	this->reg_offset.f34_data05 = 0x05;
+	this->reg_offset.f34_query01 = 0x01;
+	this->reg_offset.f34_query03 = 0x03;
+
+	if (this->chip_id == SYN_CHIP_332U || this->chip_id == SYN_CHIP_3330 || this->chip_id == SYN_CHIP_3500) {
+		this->reg_offset.f01_ctrl18 = 0x04;
+
+		this->reg_offset.f12_ctrl08 = 0x00;
+
+		this->reg_offset.f54_cmd00 = 0x00;
+		this->reg_offset.f54_data00 = 0x00;
+		this->reg_offset.f54_data01 = 0x01;
+		this->reg_offset.f54_data02 = 0x02;
+		this->reg_offset.f54_data03 = 0x03;
+		this->reg_offset.f54_data31 = 0x0E;
 	}
 
-	/* F01_RMI */
-	clearpad_read_config_u8(devnode,
-		"somc,clearpad-f01-rmi-cmd00", &this->reg_offset.f01_cmd00);
+	if (this->chip_id == SYN_CHIP_332U) {
+		this->reg_offset.f01_ctrl05 = 0x02;
+	}
 
-	clearpad_read_config_u8(devnode,
-		"somc,clearpad-f01-rmi-ctrl00", &this->reg_offset.f01_ctrl00);
+	if (this->chip_id == SYN_CHIP_3330) {
+		this->reg_offset.f54_ctrl214 = 0x53;
+	}
 
-	clearpad_read_config_u8(devnode,
-		"somc,clearpad-f01-rmi-ctrl01", &this->reg_offset.f01_ctrl01);
+	if (!firmware_revision_extra || (firmware_revision_extra == 3 && this->chip_id == SYN_CHIP_3500)) {
+		this->reg_offset.f34_query00 = 0x00;
+	}
 
-	clearpad_read_config_u8(devnode,
-		"somc,clearpad-f01-rmi-ctrl05", &this->reg_offset.f01_ctrl05);
+	if (firmware_revision_extra == 5 && this->chip_id == SYN_CHIP_332U) {
+		this->reg_offset.f54_ctrl188 = 0x1D;
+	}
 
-	clearpad_read_config_u8(devnode,
-		"somc,clearpad-f01-rmi-ctrl18", &this->reg_offset.f01_ctrl18);
+	if (firmware_revision_extra == 6 && this->chip_id == SYN_CHIP_332U) {
+		this->reg_offset.f54_ctrl188 = 0x1F;
+	}
 
-	clearpad_read_config_u8(devnode,
-		"somc,clearpad-f01-rmi-data00", &this->reg_offset.f01_data00);
+	if (this->chip_id == SYN_CHIP_3330 || this->chip_id == SYN_CHIP_3500) {
+		this->reg_offset.f01_ctrl05 = 0x04;
 
-	clearpad_read_config_u8(devnode,
-		"somc,clearpad-f01-rmi-data01", &this->reg_offset.f01_data01);
+		this->reg_offset.f54_query38 = 0x1E;
+	}
 
-	clearpad_read_config_u8(devnode,
-		"somc,clearpad-f01-rmi-query11", &this->reg_offset.f01_query11);
+	if (firmware_revision_extra == 5 && this->chip_id == SYN_CHIP_3330) {
+		this->reg_offset.f54_ctrl109 = 0x3a;
+		this->reg_offset.f54_ctrl113 = 0x3b;
+		this->reg_offset.f54_ctrl147 = 0x42;
+	}
 
-	/* F02_2D */
-	clearpad_read_config_u8(devnode,
-		"somc,clearpad-f12-2d-ctrl08", &this->reg_offset.f12_ctrl08);
+	if (firmware_revision_extra == 6 && this->chip_id == SYN_CHIP_3330) {
+		this->reg_offset.f54_ctrl88 = 0x26;
+		this->reg_offset.f54_ctrl109 = 0x38;
+		this->reg_offset.f54_ctrl113 = 0x39;
+		this->reg_offset.f54_ctrl147 = 0x40;
+	}
 
-	/* F34_FLASH */
-	clearpad_read_config_u8(devnode,
-		"somc,clearpad-f34-flash-ctrl00", &this->reg_offset.f34_ctrl00);
+	if (firmware_revision_extra == 3 && this->chip_id == SYN_CHIP_3500) {
+		this->reg_offset.f51_ctrl05 = 0x00;
+		this->reg_offset.f51_ctrl30 = 0x86;
 
-	clearpad_read_config_u8(devnode,
-		"somc,clearpad-f34-flash-data00", &this->reg_offset.f34_data00);
-
-	clearpad_read_config_u8(devnode,
-		"somc,clearpad-f34-flash-data01", &this->reg_offset.f34_data01);
-
-	clearpad_read_config_u8(devnode,
-		"somc,clearpad-f34-flash-data02", &this->reg_offset.f34_data02);
-
-	clearpad_read_config_u8(devnode,
-		"somc,clearpad-f34-flash-data03", &this->reg_offset.f34_data03);
-
-	clearpad_read_config_u8(devnode,
-		"somc,clearpad-f34-flash-data04", &this->reg_offset.f34_data04);
-
-	clearpad_read_config_u8(devnode,
-		"somc,clearpad-f34-flash-data05", &this->reg_offset.f34_data05);
-
-	clearpad_read_config_u8(devnode,
-		"somc,clearpad-f34-flash-query00", &this->reg_offset.f34_query00);
-
-	clearpad_read_config_u8(devnode,
-		"somc,clearpad-f34-flash-query01", &this->reg_offset.f34_query01);
-
-	clearpad_read_config_u8(devnode,
-		"somc,clearpad-f34-flash-query03", &this->reg_offset.f34_query03);
-
-	/* F51_CUSTOM */
-	clearpad_read_config_u8(devnode,
-		"somc,clearpad-f51-custom-ctrl05", &this->reg_offset.f51_ctrl05);
-
-	clearpad_read_config_u8(devnode,
-		"somc,clearpad-f51-custom-ctrl30", &this->reg_offset.f51_ctrl30);
-
-	/* F54_ANALOG */
-	clearpad_read_config_u8(devnode,
-		"somc,clearpad-f54-analog-cmd00", &this->reg_offset.f54_cmd00);
-
-	clearpad_read_config_u8(devnode,
-		"somc,clearpad-f54-analog-ctrl41", &this->reg_offset.f54_ctrl41);
-
-	clearpad_read_config_u8(devnode,
-		"somc,clearpad-f54-analog-ctrl57", &this->reg_offset.f54_ctrl57);
-
-	clearpad_read_config_u8(devnode,
-		"somc,clearpad-f54-analog-ctrl88", &this->reg_offset.f54_ctrl88);
-
-	clearpad_read_config_u8(devnode,
-		"somc,clearpad-f54-analog-ctrl109", &this->reg_offset.f54_ctrl109);
-
-	clearpad_read_config_u8(devnode,
-		"somc,clearpad-f54-analog-ctrl113", &this->reg_offset.f54_ctrl113);
-
-	clearpad_read_config_u8(devnode,
-		"somc,clearpad-f54-analog-ctrl147", &this->reg_offset.f54_ctrl147);
-
-	clearpad_read_config_u8(devnode,
-		"somc,clearpad-f54-analog-ctrl149", &this->reg_offset.f54_ctrl149);
-
-	clearpad_read_config_u8(devnode,
-		"somc,clearpad-f54-analog-ctrl188", &this->reg_offset.f54_ctrl188);
-
-	clearpad_read_config_u8(devnode,
-		"somc,clearpad-f54-analog-ctrl214", &this->reg_offset.f54_ctrl214);
-
-	clearpad_read_config_u8(devnode,
-		"somc,clearpad-f54-analog-data00", &this->reg_offset.f54_data00);
-
-	clearpad_read_config_u8(devnode,
-		"somc,clearpad-f54-analog-data01", &this->reg_offset.f54_data01);
-
-	clearpad_read_config_u8(devnode,
-		"somc,clearpad-f54-analog-data02", &this->reg_offset.f54_data02);
-
-	clearpad_read_config_u8(devnode,
-		"somc,clearpad-f54-analog-data03", &this->reg_offset.f54_data03);
-
-	clearpad_read_config_u8(devnode,
-		"somc,clearpad-f54-analog-data31", &this->reg_offset.f54_data31);
-
-	clearpad_read_config_u8(devnode,
-		"somc,clearpad-f54-analog-query38", &this->reg_offset.f54_query38);
+		this->reg_offset.f54_ctrl113 = 0x25;
+		this->reg_offset.f54_ctrl147 = 0x2F;
+		this->reg_offset.f54_ctrl149 = 0x30;
+		this->reg_offset.f54_ctrl41 = 0x14;
+		this->reg_offset.f54_ctrl57 = 0x17;
+		this->reg_offset.f54_ctrl88 = 0x19;
+	}
 }
 
-static void clearpad_reg_offset_config_dt(struct clearpad_t *this)
+static void clearpad_reg_offset_config(struct clearpad_t *this)
 {
-	struct device_node *devnode = this->bdata->of_node;
-
-	clearpad_reg_offset_dt(this, devnode);
+	clearpad_reg_offset(this);
 }
 
-static void clearpad_reg_offset_config_dt_for_extra_id(
-		struct clearpad_t *this,
-		struct device_node *chip_node)
+static void clearpad_reg_offset_config_for_extra_id(
+		struct clearpad_t *this)
 {
-	struct device_node *extra_node = NULL;
 	char extra_name[SYN_STRING_LENGTH];
 
 	snprintf(extra_name, SYN_STRING_LENGTH,
 		"EXTRA_0x%02X", this->device_info.firmware_revision_extra);
 
-	extra_node = of_find_node_by_name(chip_node, extra_name);
-	if (extra_node == NULL) {
+	if(!this->chip_id && !this->device_info.firmware_revision_extra) {
 		LOGE(this, "no settings for %s\n", extra_name);
 		return;
 	}
 
 	LOGI(this, "read settings for %s\n", extra_name);
 
-	clearpad_reg_offset_dt(this, extra_node);
+	clearpad_reg_offset(this);
 	clearpad_reg_offset_print(this);
 
 	this->reg_offset.updated = true;
@@ -6729,7 +6671,7 @@ static void clearpad_touch_config_dt_for_chip_id(struct clearpad_t *this,
 		this->charger_only.delay_ms = (unsigned long)value;
 
 	if (!this->reg_offset.updated)
-		clearpad_reg_offset_config_dt_for_extra_id(this, chip_node);
+		clearpad_reg_offset_config_for_extra_id(this);
 }
 
 static int clearpad_touch_config_dt(struct clearpad_t *this)
@@ -6890,7 +6832,7 @@ static int clearpad_touch_config_dt(struct clearpad_t *this)
 		this->stamina.doze_holdoff.cover_mode_time = (u8)value;
 
 	/* read default register offset params */
-	clearpad_reg_offset_config_dt(this);
+	clearpad_reg_offset_config(this);
 
 	/* set default chip id settings */
 	clearpad_touch_config_dt_for_chip_id(this, 0);
