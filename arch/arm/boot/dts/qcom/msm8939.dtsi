@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014-2015, 2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -43,13 +43,13 @@
 
 	clock_cpu: qcom,cpu-clock-8939@b111050 {
 		compatible = "qcom,cpu-clock-8939";
-		reg = <0x0b111050 0x8>,
-			<0xb011050 0x8>,
+		reg =   <0xb011050 0x8>,
+			<0xb111050 0x8>,
 			<0xb1d1050 0x8>,
 			<0x5800c 0x8>,
 			<0x58000 0x8>,
 			<0x58004 0x8>;
-		reg-names = "apcs-c0-rcg-base", "apcs-c1-rcg-base",
+		reg-names = "apcs-c1-rcg-base", "apcs-c0-rcg-base",
 				"apcs-cci-rcg-base", "efuse", "efuse1",
 				"efuse2";
 		vdd-c0-supply = <&apc_vreg_corner>;
