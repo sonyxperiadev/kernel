@@ -10,6 +10,8 @@
  * GNU General Public License for more details.
  */
 
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+
 / {
 	interrupt-parent = <&intc>;
 	aliases {
@@ -107,6 +109,28 @@
 		};
 	};
 
+	clocks {
+               xo_board {
+                       compatible = "fixed-clock";
+                       #clock-cells = <0>;
+                       clock-frequency = <19200000>;
+                       clock-output-names = "xo_board";
+		};
+               sleep_clk {
+                       compatible = "fixed-clock";
+                       #clock-cells = <0>;
+                       clock-frequency = <32764>;
+                       clock-output-names = "sleep_clk";
+		};
+	};
+
+	vendor: vendor {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges = <0 0 0 0xffffffff>;
+		compatible = "simple-bus";
+	};
+
 	soc: soc { };
 };
 
@@ -125,6 +149,27 @@
 	#size-cells = <1>;
 	ranges = <0 0 0 0xffffffff>;
 	compatible = "simple-bus";
+
+	/* SPMI Arbitrator HAS to be node #1 */
+	spmi_bus: qcom,spmi@200f000 {
+		compatible = "qcom,spmi-pmic-arb";
+		reg = <0x200f000 0x1000>,
+			<0x2400000 0x400000>,
+			<0x2c00000 0x400000>,
+			<0x3800000 0x200000>,
+			<0x200a000 0x2100>;
+		reg-names = "core", "chnls", "obsrvr", "intr", "cnfg";
+                interrupts = <GIC_SPI 190 IRQ_TYPE_NONE>;
+		interrupt-names = "periph_irq";
+                qcom,channel = <0>;
+                qcom,ee = <0>;
+
+                #address-cells = <2>;
+                #size-cells = <0>;
+                interrupt-controller;
+		#interrupt-cells = <4>;
+                cell-index = <0>;
+	};
 
 	intc: interrupt-controller@b000000 {
 		compatible = "qcom,msm-qgic2";
@@ -1175,26 +1220,6 @@
 		qcom,master-id = <86>;
 		qcom,rt-priority;
 		status = "disabled";
-	};
-
-	spmi_bus: qcom,spmi@200f000 {
-		compatible = "qcom,spmi-pmic-arb";
-		reg = <0x200f000 0x1000>,
-			<0x2400000 0x400000>,
-			<0x2c00000 0x400000>,
-			<0x3800000 0x200000>,
-			<0x200a000 0x2100>;
-		reg-names = "core", "chnls", "obsrvr", "intr", "cnfg";
-		interrupts = <0 190 0>;
-		qcom,pmic-arb-channel = <0>;
-		qcom,pmic-arb-max-peripherals = <256>;
-		qcom,pmic-arb-max-periph-interrupts = <256>;
-		qcom,pmic-arb-ee = <0>;
-		#interrupt-cells = <3>;
-		interrupt-controller;
-		#address-cells = <1>;
-		#size-cells = <0>;
-		cell-index = <0>;
 	};
 
 	qcom,rmtfs_sharedmem@8e580000 {
