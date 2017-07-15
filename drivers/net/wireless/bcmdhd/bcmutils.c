@@ -24,7 +24,7 @@
  *
  * <<Broadcom-WL-IPTag/Open:>>
  *
- * $Id: bcmutils.c 585315 2015-09-10 06:02:11Z $
+ * $Id: bcmutils.c 701290 2017-05-24 10:46:57Z $
  */
 
 #include <bcm_cfg.h>
@@ -2235,8 +2235,10 @@ bcm_mkiovar(const char *name, char *data, uint datalen, char *buf, uint buflen)
 	strncpy(buf, name, buflen);
 
 	/* append data onto the end of the name string */
-	memcpy(&buf[len], data, datalen);
-	len += datalen;
+	if (data && datalen != 0) {
+		memcpy(&buf[len], data, datalen);
+		len += datalen;
+	}
 
 	return len;
 }
