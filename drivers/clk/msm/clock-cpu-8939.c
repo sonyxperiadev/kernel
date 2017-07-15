@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -598,7 +598,7 @@ static void populate_opp_table(struct platform_device *pdev,
 		apc0_dev = of_find_device_by_node(apc0_node);
 
 	apc1_dev = of_find_device_by_node(apc1_node);
-	if (!apc1_dev && !single_cluster) {
+	if (!apc0_dev && !single_cluster) {
 		pr_err("can't find the apc0 device node.\n");
 		return;
 	}
@@ -799,10 +799,22 @@ static int clock_a53_probe(struct platform_device *pdev)
 		clk_set_rate(&cci_clk.c, rate);
 	}
 
-	for (mux_id = 0; mux_id < mux_num; mux_id++) {
-		/* Force a PLL reconfiguration */
-		config_pll(mux_id);
-	}
+	/*
+	 * The PLL reconfiguration is different for the single cluster SoC
+	 * We have already successfully reconfigured MUX_CCI above so we
+	 * don't need to do this again on the non single cluster SoC
+	 */
+	 if (single_cluster) {
+	 	 for (mux_id = 0; mux_id < mux_num; mux_id++) {
+	 	 /* Force a PLL reconfiguration */
+	 	 	 config_pll(mux_id);
+	 	 }
+	 } else {
+	 	 for (mux_id = 0; mux_id < A53SS_MUX_CCI; mux_id++) {
+	 	 	 /* Force a PLL reconfiguration */
+	 	 	 config_pll(mux_id);
+	 	 }
+	 }
 
 	/*
 	 * We don't want the CPU clocks to be turned off at late init
