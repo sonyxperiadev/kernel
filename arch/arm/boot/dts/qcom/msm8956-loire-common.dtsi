@@ -31,7 +31,7 @@
 		pstore_reserve_mem: pstore_reserve_mem_region@57f00000 {
 			compatible = "removed-dma-pool";
 			no-map;
-			reg = <0 0x57F00000 0 0x100000>;
+			reg = <0 0x57f00000 0 0x00100000>;
 		};
 
 		fb_mem: fb_region {
@@ -619,19 +619,12 @@
 	ramoops {
 		compatible = "ramoops";
 		status = "ok";
-
-		android,ramoops-buffer-start = <0x57F00000>;
-		android,ramoops-buffer-size = <0x100000>;
-		android,ramoops-console-size = <0x40000>;
-		android,ramoops-record-size = <0x20000>;
-		android,ramoops-ftrace-size = <0x20000>;
-		android,ramoops-pmsg-size = <0x20000>;
-		android,ramoops-dump-oops = <0x1>;
 		memory-region = <&pstore_reserve_mem>;
-		android,ramoops-hole {
-			compatible = "qcom,msm-contig-mem";
-			qcom,memblock-reserve = <0x57F00000 0x00100000>;
-		};
+		record-size = <0x0 0x20000>;
+		console-size = <0x0 0x40000>;
+		ftrace-size = <0x0 0x20000>;
+		pmsg-size = <0x0 0x20000>;
+		ecc-size = <16>;
 	};
 
 	pcm3: qcom,msm-pcm-bit {
