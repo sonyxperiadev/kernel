@@ -1071,6 +1071,13 @@ static int mdss_mdp_video_stop(struct mdss_mdp_ctl *ctl, int panel_power_state)
 {
 	int intfs_num, ret = 0;
 
+	if (ctl->cdm) {
+		if (!mdss_mdp_cdm_destroy(ctl->cdm))
+			mdss_mdp_ctl_write(ctl,
+				MDSS_MDP_REG_CTL_FLUSH, BIT(26));
+		ctl->cdm = NULL;
+	}
+
 	intfs_num = ctl->intf_num - MDSS_MDP_INTF0;
 	ret = mdss_mdp_video_intfs_stop(ctl, ctl->panel_data, intfs_num);
 	if (IS_ERR_VALUE(ret)) {
@@ -1083,10 +1090,6 @@ static int mdss_mdp_video_stop(struct mdss_mdp_ctl *ctl, int panel_power_state)
 	mdss_mdp_ctl_reset(ctl, false);
 	ctl->intf_ctx[MASTER_CTX] = NULL;
 
-	if (ctl->cdm) {
-		mdss_mdp_cdm_destroy(ctl->cdm);
-		ctl->cdm = NULL;
-	}
 	return 0;
 }
 
@@ -1811,7 +1814,9 @@ int mdss_mdp_video_reconfigure_splash_done(struct mdss_mdp_ctl *ctl,
 		mdss_mdp_video_timegen_flush(ctl, sctx);
 
 		/* wait for 1 VSYNC for the pipe to be unstaged */
-		msleep(20);
+		mdss_mdp_video_wait4comp(ctl, NULL);
+		if (sctl)
+			mdss_mdp_video_wait4comp(sctl, NULL);
 
 		ret = mdss_mdp_ctl_intf_event(ctl,
 			MDSS_EVENT_CONT_SPLASH_FINISH, NULL,

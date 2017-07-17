@@ -1072,9 +1072,6 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 
 	pr_info("%s: ctrl=%p ndx=%d\n", __func__, ctrl_pdata, ctrl_pdata->ndx);
 
-	if (pdata->panel_info.dsi_master != pdata->panel_info.pdest)
-		goto skip_off_cmds;
-
 	if (ctrl_pdata->off_cmds.cmd_cnt) {
 		mdss_dsi_panel_cmds_send(ctrl_pdata,
 					&ctrl_pdata->off_cmds);
@@ -1086,21 +1083,25 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 		ctrl_pdata->panel_data.panel_info.lcdc.v_front_porch =
 			spec_pdata->new_vfp;
 
+	if (ctrl_pdata->ds_registered && pinfo->is_pluggable) {
+		mdss_dba_utils_video_off(pinfo->dba_data);
+		mdss_dba_utils_hdcp_enable(pinfo->dba_data, false);
+	}
+
+	if (pdata->panel_info.dsi_master != pdata->panel_info.pdest)
+		goto skip_offsequence;
+
 	somc_panel_fpsman_panel_off();
 
 #ifndef CONFIG_SOMC_PANEL_INCELL
 	mdss_dsi_panel_reset(pdata, 0);
 #endif
 
-skip_off_cmds:
-	if (ctrl_pdata->ds_registered && pinfo->is_pluggable) {
-		mdss_dba_utils_video_off(pinfo->dba_data);
-		mdss_dba_utils_hdcp_enable(pinfo->dba_data, false);
-	}
-
 end:
 	spec_pdata->disp_onoff_state = false;
 	pdata->resume_started = true;
+
+skip_offsequence:
 	pr_debug("%s: Done\n", __func__);
 
 	return 0;
@@ -2644,6 +2645,9 @@ int mdss_dsi_panel_timing_switch(struct mdss_dsi_ctrl_pdata *ctrl,
 	ctrl->panel_data.current_timing = timing;
 	if (!timing->clk_rate)
 		ctrl->refresh_clk_rate = true;
+
+	/* Set color correction parameters again for the new mode */
+	somc_panel_colormgr_reset(ctrl);
 
 	mdss_dsi_clk_refresh(&ctrl->panel_data, ctrl->update_phy_timing);
 

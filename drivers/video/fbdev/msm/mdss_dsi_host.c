@@ -602,7 +602,7 @@ error:
 	return rc;
 }
 
-static void mdss_dsi_cfg_lane_ctrl(struct mdss_dsi_ctrl_pdata *ctrl,
+void mdss_dsi_cfg_lane_ctrl(struct mdss_dsi_ctrl_pdata *ctrl,
 						u32 bits, int set)
 {
 	u32 data;
@@ -613,6 +613,7 @@ static void mdss_dsi_cfg_lane_ctrl(struct mdss_dsi_ctrl_pdata *ctrl,
 	else
 		data &= ~bits;
 	MIPI_OUTP(ctrl->ctrl_base + 0x0ac, data);
+	wmb(); /* make sure write happens */
 }
 
 
@@ -777,6 +778,12 @@ static void mdss_dsi_ctl_phy_reset(struct mdss_dsi_ctrl_pdata *ctrl, u32 event)
 	u32 loop = 10, u_dly = 200;
 	pr_debug("%s: MDSS DSI CTRL and PHY reset. ctrl-num = %d\n",
 					__func__, ctrl->ndx);
+
+	if (ctrl->panel_mode == DSI_CMD_MODE) {
+		pr_warn("ctl_phy_reset not applicable for cmd mode\n");
+		return;
+	}
+
 	if (event == DSI_EV_DLNx_FIFO_OVERFLOW) {
 		mask = BIT(20); /* clock lane only for overflow recovery */
 	} else if (event == DSI_EV_LP_RX_TIMEOUT) {
@@ -791,15 +798,6 @@ static void mdss_dsi_ctl_phy_reset(struct mdss_dsi_ctrl_pdata *ctrl, u32 event)
 		ctrl0 = mdss_dsi_get_ctrl_by_index(DSI_CTRL_0);
 		ctrl1 = mdss_dsi_get_ctrl_by_index(DSI_CTRL_1);
 
-		if (ctrl0->recovery) {
-			rc = ctrl0->recovery->fxn(ctrl0->recovery->data,
-					MDP_INTF_DSI_VIDEO_FIFO_OVERFLOW);
-			if (rc < 0) {
-				pr_debug("%s: Target is in suspend/shutdown\n",
-					__func__);
-				return;
-			}
-		}
 		/*
 		 * Disable PHY contention detection and receive.
 		 * Configure the strength ctrl 1 register.
@@ -873,6 +871,15 @@ static void mdss_dsi_ctl_phy_reset(struct mdss_dsi_ctrl_pdata *ctrl, u32 event)
 		MIPI_OUTP(ctrl0->ctrl_base + 0x0ac, ln_ctrl0 & ~mask);
 		MIPI_OUTP(ctrl1->ctrl_base + 0x0ac, ln_ctrl1 & ~mask);
 
+		if (ctrl0->recovery) {
+			rc = ctrl0->recovery->fxn(ctrl0->recovery->data,
+					MDP_INTF_DSI_VIDEO_FIFO_OVERFLOW);
+			if (rc < 0) {
+				pr_debug("%s: Target is in suspend/shutdown\n",
+					__func__);
+				return;
+			}
+		}
 		/* Enable Video mode for DSI controller */
 		MIPI_OUTP(ctrl0->ctrl_base + 0x004, data0);
 		MIPI_OUTP(ctrl1->ctrl_base + 0x004, data1);
@@ -889,15 +896,6 @@ static void mdss_dsi_ctl_phy_reset(struct mdss_dsi_ctrl_pdata *ctrl, u32 event)
 		 */
 		udelay(200);
 	} else {
-		if (ctrl->recovery) {
-			rc = ctrl->recovery->fxn(ctrl->recovery->data,
-					MDP_INTF_DSI_VIDEO_FIFO_OVERFLOW);
-			if (rc < 0) {
-				pr_debug("%s: Target is in suspend/shutdown\n",
-					__func__);
-				return;
-			}
-		}
 		/* Disable PHY contention detection and receive */
 		MIPI_OUTP((ctrl->phy_io.base) + 0x0188, 0);
 
@@ -950,6 +948,15 @@ static void mdss_dsi_ctl_phy_reset(struct mdss_dsi_ctrl_pdata *ctrl, u32 event)
 			 __func__, ln0);
 		MIPI_OUTP(ctrl->ctrl_base + 0x0ac, ln_ctrl0 & ~mask);
 
+		if (ctrl->recovery) {
+			rc = ctrl->recovery->fxn(ctrl->recovery->data,
+					MDP_INTF_DSI_VIDEO_FIFO_OVERFLOW);
+			if (rc < 0) {
+				pr_debug("%s: Target is in suspend/shutdown\n",
+					__func__);
+				return;
+			}
+		}
 		/* Enable Video mode for DSI controller */
 		MIPI_OUTP(ctrl->ctrl_base + 0x004, data0);
 		/* Enable PHY contention detection and receiver */
@@ -3011,7 +3018,10 @@ bool mdss_dsi_ack_err_status(struct mdss_dsi_ctrl_pdata *ctrl)
 		 * warning message is ignored.
 		 */
 		if (ctrl->panel_data.panel_info.esd_check_enabled &&
-			(ctrl->status_mode == ESD_BTA) && (status & 0x1008000))
+			((ctrl->status_mode == ESD_BTA) ||
+			 (ctrl->status_mode == ESD_REG) ||
+			 (ctrl->status_mode == ESD_REG_NT35596)) &&
+			 (status & 0x1008000))
 			return false;
 
 		pr_err("%s: status=%x\n", __func__, status);
@@ -3242,8 +3252,10 @@ irqreturn_t mdss_dsi_isr(int irq, void *ptr)
 		 * cleared.
 		 */
 		if (ctrl->panel_data.panel_info.esd_check_enabled &&
-			(ctrl->status_mode == ESD_BTA) &&
-			(ctrl->panel_mode == DSI_VIDEO_MODE)) {
+			((ctrl->status_mode == ESD_BTA) ||
+			 (ctrl->status_mode == ESD_REG) ||
+			 (ctrl->status_mode == ESD_REG_NT35596)) &&
+			 (ctrl->panel_mode == DSI_VIDEO_MODE)) {
 			isr &= ~DSI_INTR_ERROR;
 			/* clear only overflow */
 			mdss_dsi_set_reg(ctrl, 0x0c, 0x44440000, 0x44440000);

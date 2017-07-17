@@ -1230,6 +1230,7 @@
 		qcom,mdss-dsi-panel-peak-brightness = <7000000>;
 		qcom,mdss-dsi-panel-blackness-level = <4646>;
 
+		somc,mdss-dsi-slave;
 		somc,dsi-index = <1>;
 		somc,lcd-id = <0>;
 		somc,lcd-id-adc = <565000 653000>;
