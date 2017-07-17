@@ -1701,25 +1701,9 @@
 			<&clock_gcc clk_gcc_venus0_axi_clk>;
 		clock-names = "core_clk", "core0_clk", "core1_clk", "iface_clk", "bus_clk";
 		qcom,clock-configs = <0x1 0x0 0x0 0x0 0x0>;
+		qcom,allowed-clock-rates = <266670000 200000000 133330000>;
 		qcom,sw-power-collapse;
-		qcom,load-freq-tbl =
-			<489600 266670000 0x0c000000>, /* HEVC  decoder 1080p 60fps  */
-			<489600 266670000 0x030fcfff>, /* Legacy decoder 1080p 60fps  */
-			<489600 266670000 0x01000414>, /* Encoder turbo (wfd) */
-			<244800 133330000 0x0c000000>, /* HEVC decoder 1080p 30fps   */
-			<244800 133330000 0x030ccfff>, /* Legacy decoder 1080p 30fps   */
-			<244800 200000000 0x00030000>, /* VC1 decoder 1080p 30fps  */
-			<244800 200000000 0x01000414>, /* Legacy encoder 1080p 30fps   */
-			<220800 133330000 0x0c000000>, /* HEVC  decoder 720p 60fps  */
-			<220800 133330000 0x030fcfff>, /* Legacy decoder 720p 60fps  */
-			<108000 133330000 0x0c000000>, /* HEVC decoder 720p 30fps   */
-			<108000 133330000 0x030fcfff>, /* Legacy decoder 720p 30fps   */
-			<108000 200000000 0x01000414>, /* Legacy encoder 720p 30fps   */
-			<72000 133330000 0x0c000000>, /* HEVC decoder VGA 60fps   */
-			<72000 133330000 0x030fcfff>, /* Legacy decoder VGA 60fps   */
-			<36000 133330000 0x0c000000>, /* HEVC VGA 30 fps  */
-			<36000 133330000 0x030fcfff>, /* Legacy decoder VGA 30 fps  */
-			<36000 133330000 0x01000414>; /* Legacy encoder VGA 30 fps   */
+		//qcom,max-hw-load = <489600>; /* Encoder turbo (wfd) */
 
 		qcom,hfi = "venus";
 		qcom,reg-presets = <0xE0020 0x0aaaaaaa>,
@@ -1733,77 +1717,148 @@
 			<0x9181000 0x1000>;
 		qcom,max-hw-load = <489600>; /* 1080p @ 30 + 1080p @ 30 */
 		qcom,enable-idle-indicator;
-		qcom,vidc-iommu-domains {
-			qcom,domain-ns {
-				qcom,vidc-domain-phandle = <&venus_domain_ns>;
-				qcom,vidc-partition-buffer-types = <0x7ff>,
-					<0x800>;
+
+		/* VIDC buses */
+		venus_bus_ddr {
+			compatible = "qcom,msm-vidc,bus";
+			label = "venus-ddr";
+			qcom,bus-master = <MSM_BUS_MASTER_VIDEO_P0>;
+			qcom,bus-slave = <MSM_BUS_SLAVE_EBI_CH0>;
+			qcom,bus-governor = "msm-vidc-ddr";
+			qcom,bus-range-kbps = <1000 1205248>;
+		};
+
+		arm9_bus_ddr {
+			compatible = "qcom,msm-vidc,bus";
+			label = "venus-arm9-ddr";
+			qcom,bus-master = <MSM_BUS_MASTER_VIDEO_P0>;
+			qcom,bus-slave = <MSM_BUS_SLAVE_EBI_CH0>;
+			qcom,bus-governor = "performance";
+			qcom,bus-range-kbps = <1 1>;
+		};
+
+		qcom,clock-freq-tbl {
+			qcom,profile-dec {
+				qcom,codec-mask = <0x030fcfff>; // TODO: CHECKME! (0x0c000000)
+				qcom,cycles-per-mb = <392>;
+				qcom,low-power-mode-factor = <65536>;
 			};
-			qcom,domain-sec-bs {
-				qcom,vidc-domain-phandle = <&venus_domain_sec_bitstream>;
-				qcom,vidc-partition-buffer-types = <0x241>;
-			};
-			qcom,domain-sec-px {
-				qcom,vidc-domain-phandle = <&venus_domain_sec_pixel>;
-				qcom,vidc-partition-buffer-types = <0x106>;
-			};
-			qcom,domain-sec-np {
-				qcom,vidc-domain-phandle = <&venus_domain_sec_non_pixel>;
-				qcom,vidc-partition-buffer-types = <0x480>;
+			qcom,profile-enc {
+				qcom,codec-mask = <0x01000414>; // TODO: CHECKME!
+				qcom,cycles-per-mb = <656>;
+				qcom,low-power-mode-factor = <65536>;
 			};
 		};
-		qcom,msm-bus-clients {
-			qcom,msm-bus-client@0 {
-				qcom,msm-bus,name = "venc-ddr";
-				qcom,msm-bus,num-cases = <6>;
-				qcom,msm-bus,num-paths = <1>;
-				qcom,msm-bus,vectors-KBps =
-					<63 512 0 0>,
-					<63 512 136806 1236684>, /* VGA 30 fps */
-					<63 512 410521 1859686>, /* VGA 60 fps */
-					<63 512 410521 1859686>, /* 720p 30 fps */
-					<63 512 930406 1859686>, /* 720p 60 fps */
-					<63 512 930406 1859686>; /* 1080p 30 fps */
-				qcom,bus-configs = <0x01000414>;
+
+		/* Bus governor tables */
+		venus-ddr-gov {
+			compatible = "qcom,msm-vidc,governor,table";
+
+			name = "venus-ddr-gov";
+			status = "ok";
+			qcom,bus-freq-table {
+				qcom,profile-enc {
+					qcom,codec-mask = <0x01000414>;
+					qcom,load-busfreq-tbl =
+						<979200 1044000>,  /* UHD30E     */
+						<864000 887000>,   /* 720p240LPE */
+						<489600 666000>,   /* 1080p60E   */
+						<432000 578000>,   /* 720p120E   */
+						<244800 346000>,   /* 1080p30E   */
+						<216000 293000>,   /* 720p60E    */
+						<108000 151000>,   /* 720p30E    */
+						<0 0>;
+				};
+				qcom,profile-dec {
+					qcom,codec-mask = <0x030fcfff>;
+					qcom,load-busfreq-tbl =
+						<979200 2365000>,  /* UHD30D     */
+						<864000 1978000>,  /* 720p240D   */
+						<489600 1133000>,  /* 1080p60D   */
+						<432000 994000>,   /* 720p120D   */
+						<244800 580000>,   /* 1080p30D   */
+						<216000 501000>,   /* 720p60E    */
+						<108000 255000>,   /* 720p30D    */
+						<0 0>;
+				};
+				qcom,profile-dec-ubwc {
+					qcom,codec-mask = <0x030fcfff>;
+					qcom,ubwc-mode;
+					qcom,load-busfreq-tbl =
+						<979200 1892000>,  /* UHD30D     */
+						<864000 1554000>,  /* 720p240D   */
+						<489600 895000>,   /* 1080p60D   */
+						<432000 781000>,   /* 720p120D   */
+						<244800 460000>,   /* 1080p30D   */
+						<216000 301000>,   /* 720p60E    */
+						<108000 202000>,   /* 720p30D    */
+						<0 0>;
+				};
+				qcom,profile-dec-ubwc-10bit {
+					qcom,codec-mask = <0x030fcfff>;
+					qcom,ubwc-10bit;
+					qcom,load-busfreq-tbl =
+						<979200 2446336>,  /* UHD30D     */
+						<864000 2108416>,  /* 720p240D   */
+						<489600 1207296>,  /* 1080p60D   */
+						<432000 1058816>,  /* 720p120D   */
+						<244800 616448>,   /* 1080p30D   */
+						<216000 534528>,   /* 720p60D    */
+						<108000 271360>,   /* 720p30D    */
+						<0 0>;
+				};
 			};
-			qcom,msm-bus-client@1 {
-				qcom,msm-bus,name = "vdec-core0-ddr";
-				qcom,msm-bus,num-cases = <7>;
-				qcom,msm-bus,num-paths = <1>;
-				qcom,msm-bus,vectors-KBps =
-					<63 512 0 0>,
-					<63 512 101991 644403>,
-					<63 512 204083 1288704>,
-					<63 512 306074 644403>,
-					<63 512 612250 1288704>,
-					<63 512 693863 644403>,
-					<63 512 1387725 2577408>;
-				qcom,bus-configs = <0x030fcfff>;
-			};
-			qcom,msm-bus-client@2 {
-				qcom,msm-bus,name = "vdec-core1-ddr";
-				qcom,msm-bus,num-cases = <7>;
-				qcom,msm-bus,num-paths = <1>;
-				qcom,msm-bus,vectors-KBps =
-					<63 512 0 0>,
-					<63 512 96051 572826>,
-					<63 512 192103 1145754>,
-					<63 512 288256 572826>,
-					<63 512 576410 1145754>,
-					<63 512 653312 572826>,
-					<63 512 1306624 2291405>;
-				qcom,bus-configs = <0x0c000000>;
-			};
-			qcom,msm-bus-client@3 {
-				qcom,msm-bus,name = "venus-arm9-ddr";
-				qcom,msm-bus,num-cases = <2>;
-				qcom,msm-bus,num-paths = <1>;
-				qcom,msm-bus,vectors-KBps =
-					<63 512 0 0>,
-					<63 512 1000 1000>;
-				qcom,bus-configs = <0x00000000>;
-				qcom,bus-passive;
-			};
+		};
+					
+		/* IOMMU Contexts: Non Secure */
+		/* Address pool from 1500MB to 3532MB && 3532MB to 3548MB */
+		non_secure_cb {
+			compatible = "qcom,msm-vidc,context-bank";
+			label = "venus_ns";
+			iommus = <&apps_smmu 4>;
+			/* Buffer types relative to the two address pools */
+			buffer-types = <0x7ff>, <0x800>;
+			virtual-addr-pool = <0x5dc00000 0x7f000000
+					     0xdcc00000 0x1000000>;
+		};
+
+		/* IOMMU Contexts: Secure */
+		firmware_cb {
+			compatible = "qcom,msm-vidc,context-bank";
+			/* Firmware context bank is unlabeled in 4.4 */
+			/* note: old-style label is "venus_fw" */
+			qcom,fw-context-bank;
+			iommus = <&apps_smmu 13>;
+		};
+
+		/* Address pool from 1200MB to 1500MB */
+		secure_bitstream_cb {
+			compatible = "qcom,msm-vidc,context-bank";
+			label = "venus_sec_bitstream";
+			iommus = <&apps_smmu 11>;
+			buffer-types = <0x241>;
+			virtual-addr-pool = <0x4b000000 0x12c00000>;
+			qcom,secure-context-bank;
+		};
+
+		/* Address pool from 616MB to 1200MB */
+		venus_secure_pixel_cb: secure_pixel_cb {
+			compatible = "qcom,msm-vidc,context-bank";
+			label = "venus_sec_pixel";
+			iommus = <&apps_smmu 10>;
+			buffer-types = <0x106>;
+			virtual-addr-pool = <0x25800000 0x25800000>;
+			qcom,secure-context-bank;
+		};
+
+		/* Address pool from 16MB to 616MB */
+		venus_secure_non_pixel_cb: secure_non_pixel_cb {
+			compatible = "qcom,msm-vidc,context-bank";
+			label = "venus_sec_non_pixel";
+			iommus = <&apps_smmu 12>;
+			buffer-types = <0x380>;
+			virtual-addr-pool = <0x1000000 0x24800000>;
+			qcom,secure-context-bank;
 		};
 	};
 
