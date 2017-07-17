@@ -2921,6 +2921,7 @@
 
 &mdss_mdp {
 	qcom,mdss-pref-prim-intf = "dsi";
+	qcom,max-clk-rate = <550000000>;
 };
 
 &mdss_dsi0 {
