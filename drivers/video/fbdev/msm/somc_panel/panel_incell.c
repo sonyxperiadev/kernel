@@ -1218,8 +1218,6 @@ int incell_driver_post_power_on(struct mdss_panel_data *pdata)
 	if (incell)
 		incell_state_change_on(incell);
 
-	somc_panel_chg_fps_cmds_send(ctrl_pdata);
-
 	spec_pdata->disp_onoff_state = true;
 
 	return ret;
