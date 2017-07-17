@@ -124,9 +124,6 @@
 		/* GDSC oxili regulators */
 		vdd-supply = <&gdsc_oxili_gx>;
 
-		/* IOMMU Data */
-		iommu = <&gfx_iommu>;
-
 		/* Trace bus */
 		coresight-id = <67>;
 		coresight-name = "coresight-gfx";
@@ -198,6 +195,7 @@
 		gfx3d_user: gfx3d_user {
 			compatible = "qcom,smmu-kgsl-cb";
 			label = "gfx3d_user";
+			iommus = <&kgsl_smmu 0>;
 			qcom,gpu-offset = <0x48000>;
 		};
 	};
