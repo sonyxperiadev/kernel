@@ -2646,6 +2646,9 @@ int mdss_dsi_panel_timing_switch(struct mdss_dsi_ctrl_pdata *ctrl,
 	if (!timing->clk_rate)
 		ctrl->refresh_clk_rate = true;
 
+	/* Set color correction parameters again for the new mode */
+	somc_panel_colormgr_reset(ctrl);
+
 	mdss_dsi_clk_refresh(&ctrl->panel_data, ctrl->update_phy_timing);
 
 	return 0;
