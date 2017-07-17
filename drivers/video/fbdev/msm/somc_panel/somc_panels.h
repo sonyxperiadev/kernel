@@ -139,6 +139,7 @@ int somc_panel_parse_dt_colormgr_config(struct device_node *np,
 			struct mdss_dsi_ctrl_pdata *ctrl);
 int  somc_panel_color_manager_init(struct mdss_dsi_ctrl_pdata *ctrl);
 int  somc_panel_colormgr_register_attr(struct device *dev);
+void somc_panel_colormgr_reset(struct mdss_dsi_ctrl_pdata *ctrl);
 
 /* Regulators */
 #ifdef CONFIG_SOMC_PANEL_LABIBB

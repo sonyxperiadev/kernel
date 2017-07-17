@@ -619,6 +619,14 @@ static int somc_panel_colormgr_unblank_handler(struct mdss_dsi_ctrl_pdata *ctrl)
 	return 0;
 }
 
+void somc_panel_colormgr_reset(struct mdss_dsi_ctrl_pdata *ctrl)
+{
+	struct somc_panel_color_mgr *color_mgr = ctrl->spec_pdata->color_mgr;
+
+	color_mgr->pcc_data.pcc_sts = PCC_STS_UD;
+	color_mgr->picadj_data.flags = MDP_PP_OPS_ENABLE;
+}
+
 int somc_panel_color_manager_init(struct mdss_dsi_ctrl_pdata *ctrl)
 {
 	struct somc_panel_color_mgr *color_mgr = NULL;
