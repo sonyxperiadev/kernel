@@ -109,7 +109,7 @@ static irqreturn_t pn547_dev_irq_handler(int irq, void *dev_id)
 #if NFC_DEBUG
 	pr_info("pn547 : call\n");
 #endif
-	wake_lock_timeout(&pn547_dev->nfc_wake_lock, 2*HZ);
+	wake_lock_timeout(&pn547_dev->nfc_wake_lock, msecs_to_jiffies(2000));
 	return IRQ_HANDLED;
 }
 
