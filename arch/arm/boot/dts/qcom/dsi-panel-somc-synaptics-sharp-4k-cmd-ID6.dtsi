@@ -1067,7 +1067,7 @@
 		qcom,dynamic-mode-switch-type = "dynamic-resolution-switch-immediate";
 		qcom,dcs-cmd-by-left;
 		qcom,mdss-dsi-display-timings {
-			1080p {
+			1080p60 {
 				qcom,mdss-dsi-timing-default;
 				qcom,mdss-dsi-panel-width = <540>;
 				qcom,mdss-dsi-panel-height = <1920>;
@@ -1078,6 +1078,64 @@
 				qcom,mdss-dsi-v-pulse-width = <2>;
 				qcom,mdss-dsi-v-front-porch = <12>;
 				qcom,mdss-dsi-panel-framerate = <60>;
+				qcom,mdss-dsi-panel-timings = [00 1B 06 06 0B 11 05 07 05 03 04 00];
+				qcom,mdss-dsi-t-clk-post = <0x07>;
+				qcom,mdss-dsi-t-clk-pre = <0x29>;
+				qcom,mdss-dsi-on-command = [
+							39 01 00 00 00 00 06 F0 55 AA 52 08 00
+							15 01 00 00 00 00 02 C9 01
+							15 01 00 00 00 00 02 90 00
+							15 01 00 00 00 00 02 58 01
+							39 01 00 00 00 00 06 F0 55 AA 52 08 07
+							15 01 00 00 00 00 02 EF 01
+							39 01 00 00 00 00 06 F0 55 AA 52 08 00
+							15 01 00 00 00 00 02 B4 01
+							39 01 00 00 00 00 10 BD 00 AC 0C 0C 00 01 56 09 09 01 01 0C 0C 00 D9
+							15 01 00 00 00 00 02 35 00
+							39 01 00 00 00 00 03 44 00 00
+							39 01 00 00 00 00 06 F0 55 AA 52 08 01
+							39 01 00 00 00 00 03 D4 88 88
+							39 01 00 00 00 00 05 FF AA 55 A5 80
+							15 01 00 00 00 00 02 6F 01
+							15 01 00 00 00 00 02 F3 10
+							39 01 00 00 00 00 05 FF AA 55 A5 00];
+				qcom,mdss-dsi-post-panel-on-command  = [
+							05 01 00 00 00 00 01 29
+							05 01 00 00 43 00 01 11];
+
+				qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
+
+				qcom,mdss-dsi-timing-switch-command = [
+							39 00 00 00 00 00 06 F0 55 AA 52 08 00
+							15 00 00 00 00 00 02 C9 01
+							15 00 00 00 00 00 02 90 00
+							15 00 00 00 00 00 02 58 01
+							15 00 00 00 00 00 02 03 00
+							39 00 00 00 00 00 06 F0 55 AA 52 08 04
+							15 01 00 00 00 00 02 C0 03
+							];
+				qcom,mdss-dsi-timing-switch-command-state =
+					"dsi_lp_mode";
+
+				qcom,mdss-tear-check-sync-init-val = <3840>;
+				qcom,mdss-tear-check-start-pos = <3840>;
+				qcom,mdss-tear-check-rd-ptr-trigger-intr = <3841>;
+
+				qcom,config-select = <&dsi_dual_default_cmd_config0>;
+
+				qcom,mdss-dsi-panel-clockrate = <899000000>;
+			};
+
+			1080p120 {
+				qcom,mdss-dsi-panel-width = <540>;
+				qcom,mdss-dsi-panel-height = <1920>;
+				qcom,mdss-dsi-h-back-porch = <300>;
+				qcom,mdss-dsi-h-pulse-width = <40>;
+				qcom,mdss-dsi-h-front-porch = <400>;
+				qcom,mdss-dsi-v-back-porch = <10>;
+				qcom,mdss-dsi-v-pulse-width = <2>;
+				qcom,mdss-dsi-v-front-porch = <12>;
+				qcom,mdss-dsi-panel-framerate = <120>;
 				qcom,mdss-dsi-panel-timings = [00 1B 06 06 0B 11 05 07 05 03 04 00];
 				qcom,mdss-dsi-t-clk-post = <0x07>;
 				qcom,mdss-dsi-t-clk-pre = <0x29>;
@@ -1254,7 +1312,7 @@
 		qcom,dynamic-mode-switch-type = "dynamic-resolution-switch-immediate";
 		qcom,dcs-cmd-by-left;
 		qcom,mdss-dsi-display-timings {
-			1080p {
+			1080p60 {
 				qcom,mdss-dsi-timing-default;
 				qcom,mdss-dsi-panel-width = <540>;
 				qcom,mdss-dsi-panel-height = <1920>;
@@ -1265,6 +1323,29 @@
 				qcom,mdss-dsi-v-pulse-width = <2>;
 				qcom,mdss-dsi-v-front-porch = <12>;
 				qcom,mdss-dsi-panel-framerate = <60>;
+				qcom,mdss-dsi-panel-timings = [00 1B 06 06 0B 11 05 07 05 03 04 00];
+				qcom,mdss-dsi-t-clk-post = <0x07>;
+				qcom,mdss-dsi-t-clk-pre = <0x29>;
+
+				qcom,mdss-tear-check-sync-init-val = <3840>;
+				qcom,mdss-tear-check-start-pos = <3840>;
+				qcom,mdss-tear-check-rd-ptr-trigger-intr = <3841>;
+
+				qcom,config-select = <&dsi_dual_default_cmd_config0>;
+
+				qcom,mdss-dsi-panel-clockrate = <899000000>;
+			};
+
+			1080p120 {
+				qcom,mdss-dsi-panel-width = <540>;
+				qcom,mdss-dsi-panel-height = <1920>;
+				qcom,mdss-dsi-h-back-porch = <300>;
+				qcom,mdss-dsi-h-pulse-width = <40>;
+				qcom,mdss-dsi-h-front-porch = <400>;
+				qcom,mdss-dsi-v-back-porch = <10>;
+				qcom,mdss-dsi-v-pulse-width = <2>;
+				qcom,mdss-dsi-v-front-porch = <12>;
+				qcom,mdss-dsi-panel-framerate = <120>;
 				qcom,mdss-dsi-panel-timings = [00 1B 06 06 0B 11 05 07 05 03 04 00];
 				qcom,mdss-dsi-t-clk-post = <0x07>;
 				qcom,mdss-dsi-t-clk-pre = <0x29>;
