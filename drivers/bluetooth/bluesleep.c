@@ -249,7 +249,7 @@ static void bluesleep_sleep_work(struct work_struct *work)
 			/* UART clk is not turned off immediately. Release
 			 * wakelock after 500 ms.
 			 */
-			wake_lock_timeout(&bsi->wake_lock, HZ / 2);
+			wake_lock_timeout(&bsi->wake_lock, msecs_to_jiffies(500));
 		} else {
 			pr_err("This should never happen.\n");
 			return;
@@ -307,7 +307,8 @@ void bluesleep_outgoing_data(void)
 
 	spin_lock_irqsave(&rw_lock, irq_flags);
 
-	mod_timer(&tx_timer, jiffies + (TX_TIMER_INTERVAL * HZ));
+	mod_timer(&tx_timer, jiffies +
+			msecs_to_jiffies(TX_TIMER_INTERVAL * 1000));
 	set_bit(BT_TXDATA, &flags);
 
 	/* if the tx side is sleeping... */
@@ -351,7 +352,8 @@ void bluesleep_tx_allow_sleep(void)
 
 	spin_lock_irqsave(&rw_lock, irq_flags);
 
-	mod_timer(&tx_timer, jiffies + (TX_TIMER_INTERVAL*HZ));
+	mod_timer(&tx_timer, jiffies +
+			msecs_to_jiffies(TX_TIMER_INTERVAL * 1000));
 	clear_bit(BT_TXDATA, &flags);
 
 	spin_unlock_irqrestore(&rw_lock, irq_flags);
@@ -383,7 +385,8 @@ static void bluesleep_tx_timer_expire(unsigned long data)
 	} else {
 		if (debug_mask & DEBUG_SUSPEND)
 			pr_info("Tx data during last period\n");
-		mod_timer(&tx_timer, jiffies + (TX_TIMER_INTERVAL*HZ));
+		mod_timer(&tx_timer, jiffies +
+				msecs_to_jiffies(TX_TIMER_INTERVAL * 1000));
 	}
 	/* clear the incoming data flag */
 	clear_bit(BT_TXDATA, &flags);
@@ -489,7 +492,7 @@ void bluesleep_stop(void)
 	atomic_dec(&open_count);
 
 	enable_wakeup_irq(0);
-	wake_lock_timeout(&bsi->wake_lock, HZ / 2);
+	wake_lock_timeout(&bsi->wake_lock, msecs_to_jiffies(500));
 }
 EXPORT_SYMBOL(bluesleep_stop);
 
