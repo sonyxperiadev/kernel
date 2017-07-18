@@ -106,7 +106,7 @@ int ipa3_disable_data_path(u32 clnt_hdl)
 		if (ipa3_ctx->apply_rg10_wa && ipa3_uc_state_check()) {
 			IPADBG("uC is not loaded yet, waiting...\n");
 			res = wait_for_completion_timeout(
-				&ipa3_ctx->uc_loaded_completion_obj, 60 * HZ);
+				&ipa3_ctx->uc_loaded_completion_obj, IPA_TIMEOUT(60));
 			if (res == 0)
 				IPADBG("timeout waiting for uC to load\n");
 		}
