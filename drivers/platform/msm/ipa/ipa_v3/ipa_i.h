@@ -74,6 +74,8 @@
 
 #define IPA_MAX_NUM_REQ_CACHE 10
 
+#define IPA_TIMEOUT(value) (msecs_to_jiffies(value * 1000))
+
 #define IPADBG(fmt, args...) \
 	do { \
 		pr_debug(DRV_NAME " %s:%d " fmt, __func__, __LINE__, ## args);\
