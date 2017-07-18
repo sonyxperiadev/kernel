@@ -30,7 +30,7 @@
 
 #define USB_THRESHOLD 512
 #define USB_BAM_MAX_STR_LEN 50
-#define USB_BAM_TIMEOUT (10*HZ)
+#define USB_BAM_TIMEOUT 10000
 #define DBG_MAX_MSG   512UL
 #define DBG_MSG_LEN   160UL
 #define TIME_BUF_LEN  17
@@ -1664,7 +1664,7 @@ static void wait_for_prod_granted(enum usb_ctrl cur_bam)
 	} else if (ret == -EINPROGRESS) {
 		log_event_dbg("%s: Waiting for PROD_GRANTED\n", __func__);
 		if (!wait_for_completion_timeout(&info[cur_bam].prod_avail,
-			USB_BAM_TIMEOUT))
+			msecs_to_jiffies(USB_BAM_TIMEOUT)))
 			log_event_err("%s: Timeout wainting for PROD_GRANTED\n",
 				__func__);
 	} else
@@ -1709,7 +1709,7 @@ static void wait_for_prod_release(enum usb_ctrl cur_bam)
 	} else if (ret == -EINPROGRESS) {
 		log_event_dbg("%s: Waiting for PROD_RELEASED\n", __func__);
 		if (!wait_for_completion_timeout(&info[cur_bam].prod_released,
-						USB_BAM_TIMEOUT))
+						msecs_to_jiffies(USB_BAM_TIMEOUT)))
 			log_event_err("%s: Timeout waiting for PROD_RELEASED\n",
 			__func__);
 	} else {
