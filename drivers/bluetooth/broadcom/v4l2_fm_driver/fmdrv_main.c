@@ -539,7 +539,8 @@ int fmc_send_cmd(struct fmdrv_ops *fmdev, unsigned char fmreg_index,
            return ret;
     }
 
-    timeleft = wait_for_completion_timeout(wait_completion, FM_DRV_TX_TIMEOUT);
+    timeleft = wait_for_completion_timeout(wait_completion,
+            msecs_to_jiffies(FM_DRV_TX_TIMEOUT));
     if (!timeleft)
     {
         pr_err("(fmdrv): Timeout(%d sec),didn't get reg"

@@ -453,7 +453,7 @@ int fm_rx_set_frequency(struct fmdrv_ops *fmdev, unsigned int freq_to_set)
     /* Wait for tune ended interrupt */
     init_completion(&fmdev->maintask_completion);
     timeleft = wait_for_completion_timeout(&fmdev->maintask_completion,
-                           FM_DRV_TX_TIMEOUT);
+                           msecs_to_jiffies(FM_DRV_TX_TIMEOUT));
     if (!timeleft)
     {
         V4L2_FM_DRV_ERR("(fmdrv) Timeout(%d sec),didn't get tune ended interrupt",\
@@ -578,7 +578,7 @@ int fm_rx_seek_station(struct fmdrv_ops *fmdev, unsigned char direction_upward,
     /* Wait for tune ended interrupt */
     init_completion(&fmdev->seektask_completion);
     timeleft = wait_for_completion_timeout(&fmdev->seektask_completion,
-                           FM_DRV_RX_SEEK_TIMEOUT);
+                           msecs_to_jiffies(FM_DRV_RX_SEEK_TIMEOUT));
     if (!timeleft)
     {
         V4L2_FM_DRV_ERR("(fmdrv) Timeout(%d sec),didn't get seek ended interrupt",\
@@ -612,7 +612,7 @@ int fm_rx_seek_station(struct fmdrv_ops *fmdev, unsigned char direction_upward,
         /* Wait for tune ended interrupt */
         init_completion(&fmdev->seektask_completion);
         timeleft = wait_for_completion_timeout(&fmdev->seektask_completion,
-                               FM_DRV_RX_SEEK_TIMEOUT);
+                               msecs_to_jiffies(FM_DRV_RX_SEEK_TIMEOUT));
 
         fmdev->rx.fm_rds_flag &= ~FM_RDS_FLAG_SCH_FRZ_BIT;
         if (!timeleft)
