@@ -909,6 +909,23 @@ void somc_panel_fpsman_panel_off(void)
 	}
 }
 
+void somc_panel_fpsman_refresh(struct mdss_dsi_ctrl_pdata *ctrl,
+		bool immediate_refresh)
+{
+	struct change_fps *chg_fps = &ctrl->spec_pdata->chg_fps;
+	struct mdss_panel_info *pinfo = &ctrl->panel_data.panel_info;
+
+	if (!chg_fps->enable) {
+		pr_debug("%s: change fps not supported\n", __func__);
+		return;
+	}
+
+	chg_fps->input_fpks = pinfo->mipi.frame_rate * 1000;
+
+	if (immediate_refresh)
+		somc_panel_chg_fps_calc(ctrl, chg_fps->input_fpks);
+}
+
 void somc_panel_fpsman_panel_post_on(struct mdss_dsi_ctrl_pdata *ctrl)
 {
 	struct change_fps *chg_fps = &ctrl->spec_pdata->chg_fps;
