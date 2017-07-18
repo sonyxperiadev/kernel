@@ -53,6 +53,8 @@
 		somc,pw-wait-after-on-touch-reset-first = <90>;
 		somc,pw-wait-after-on-touch-int-n = <10>;
 
+		qcom,dynamic-mode-switch-enabled;
+		qcom,dynamic-mode-switch-type = "dynamic-resolution-switch-susres";
 		qcom,mdss-dsi-display-timings {
 			1080p60 {
 				qcom,mdss-dsi-panel-timings-phy-v2 = [
@@ -121,6 +123,8 @@
 		somc,pw-wait-after-on-touch-int-n = <10>;
 		somc,pw-wait-after-off-touch-reset = <6>;
 
+		qcom,dynamic-mode-switch-enabled;
+		qcom,dynamic-mode-switch-type = "dynamic-resolution-switch-susres";
 		qcom,mdss-dsi-display-timings {
 			1080p60 {
 				qcom,mdss-dsi-panel-timings-phy-v2 = [
