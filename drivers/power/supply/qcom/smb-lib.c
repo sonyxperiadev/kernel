@@ -3704,7 +3704,7 @@ irqreturn_t smblib_handle_usbin_uv(int irq, void *data)
 
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
 #define REMOVAL_DELAY_MS			2000
-#define REMOVAL_WAKE_PERIOD		(3 * HZ)
+#define REMOVAL_WAKE_PERIOD		(3000)
 #endif /* CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION */
 
 irqreturn_t smblib_handle_usb_plugin(int irq, void *data)
@@ -3777,7 +3777,8 @@ irqreturn_t smblib_handle_usb_plugin(int irq, void *data)
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
 		smblib_somc_lrc_check(chg);
 		wake_lock_timeout(
-			&chg->usb_removal_wakelock.lock, REMOVAL_WAKE_PERIOD);
+			&chg->usb_removal_wakelock.lock,
+					msecs_to_jiffies(REMOVAL_WAKE_PERIOD));
 		schedule_delayed_work(&chg->usb_removal_work,
 					msecs_to_jiffies(REMOVAL_DELAY_MS));
 

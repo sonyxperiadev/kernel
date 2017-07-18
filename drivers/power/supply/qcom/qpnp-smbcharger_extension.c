@@ -383,10 +383,11 @@ exit:
 	return;
 }
 
-#define UNPLUG_WAKE_PERIOD		(3 * HZ)
+#define UNPLUG_WAKE_PERIOD		(3000)
 void somc_unplug_wakelock(struct chg_somc_params *params)
 {
-	wake_lock_timeout(&params->unplug_wakelock, UNPLUG_WAKE_PERIOD);
+	wake_lock_timeout(&params->unplug_wakelock,
+			msecs_to_jiffies(UNPLUG_WAKE_PERIOD));
 }
 
 static void somc_chg_set_low_batt_suspend_en(struct smbchg_chip *chip)
