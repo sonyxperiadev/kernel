@@ -1171,7 +1171,7 @@ long brcm_sh_ldisc_register(struct sh_proto_s *new_proto)
         {
             jiffi2 = jiffies;
             diff = (long)jiffi2 - (long)jiffi1;
-            if ( ((diff *1000)/HZ) >= 1000)
+            if ( ((diff * HZ * 10) / HZ) >= 1000)
                 is_print_reg_error = 1;
         }
         return -1;

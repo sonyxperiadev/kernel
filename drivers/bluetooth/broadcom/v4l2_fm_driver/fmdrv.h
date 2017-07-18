@@ -50,8 +50,8 @@
 /* Flag info */
 #define FM_CORE_READY                 3
 
-#define FM_DRV_TX_TIMEOUT       (1*HZ)  /* 1 sec */
-#define FM_DRV_RX_SEEK_TIMEOUT       (20*HZ)  /* 20 sec */
+#define FM_DRV_TX_TIMEOUT       (1000)  /* 1 sec */
+#define FM_DRV_RX_SEEK_TIMEOUT       (20000)  /* 20 sec */
 
 #define NO_OF_ENTRIES_IN_ARRAY(array) (sizeof(array) / sizeof(array[0]))
 
