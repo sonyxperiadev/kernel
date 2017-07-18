@@ -2648,6 +2648,9 @@ int mdss_dsi_panel_timing_switch(struct mdss_dsi_ctrl_pdata *ctrl,
 
 	/* Set color correction parameters again for the new mode */
 	somc_panel_colormgr_reset(ctrl);
+	
+	/* Refresh FPS immediately in case of refresh rate change */
+	somc_panel_fpsman_refresh(ctrl, true);
 
 	mdss_dsi_clk_refresh(&ctrl->panel_data, ctrl->update_phy_timing);
 
