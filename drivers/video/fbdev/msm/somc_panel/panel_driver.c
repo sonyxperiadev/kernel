@@ -2077,21 +2077,25 @@ static void mdss_dsi_parse_dms_config(struct device_node *np,
 	/* default mode is suspend_resume */
 	pinfo->mipi.dms_mode = DYNAMIC_MODE_SWITCH_SUSPEND_RESUME;
 	data = of_get_property(np, "qcom,dynamic-mode-switch-type", NULL);
-	if (data && !strcmp(data, "dynamic-resolution-switch-immediate")) {
-		if (!list_empty(&ctrl->panel_data.timings_list))
-			pinfo->mipi.dms_mode =
-				DYNAMIC_MODE_RESOLUTION_SWITCH_IMMEDIATE;
-		else
-			pinfo->mipi.dms_mode =
-				DYNAMIC_MODE_SWITCH_DISABLED;
+	if (data) {
+		if (!strcmp(data, "dynamic-resolution-switch-immediate")) {
+			if (!list_empty(&ctrl->panel_data.timings_list))
+				pinfo->mipi.dms_mode =
+				    DYNAMIC_MODE_RESOLUTION_SWITCH_IMMEDIATE;
+			else
+				pinfo->mipi.dms_mode =
+				    DYNAMIC_MODE_SWITCH_DISABLED;
 
-		goto exit;
+			goto exit;
+		} else if (!strcmp(data, "dynamic-resolution-switch-susres")) {
+			pinfo->mipi.dms_mode =
+				DYNAMIC_MODE_SWITCH_SUSPEND_RESUME;
+			goto exit;
+		} else if (!strcmp(data, "dynamic-switch-immediate")) {
+			/* Video<=>CMD dynamic mode switch */
+			pinfo->mipi.dms_mode = DYNAMIC_MODE_SWITCH_IMMEDIATE;
+		}
 	}
-
-	if (data && !strcmp(data, "dynamic-switch-immediate"))
-		pinfo->mipi.dms_mode = DYNAMIC_MODE_SWITCH_IMMEDIATE;
-	else
-		pr_debug("%s: default dms suspend/resume\n", __func__);
 
 	mdss_dsi_parse_dcs_cmds(np, &ctrl->video2cmd,
 		"qcom,video-to-cmd-mode-switch-commands", NULL);
