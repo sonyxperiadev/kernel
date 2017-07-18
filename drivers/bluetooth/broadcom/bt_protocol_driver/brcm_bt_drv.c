@@ -184,7 +184,7 @@ static int brcm_bt_drv_open(struct inode *inode, struct file *filp)
         else {
             jiffi2 = jiffies;
             diff = (long)jiffi2 - (long)jiffi1;
-            if ( ((diff *1000)/HZ) >= 1000)
+            if ( ((diff * HZ * 10) / HZ) >= 1000)
                 is_print_reg_error = 1;
         }
         err = -EAGAIN;
