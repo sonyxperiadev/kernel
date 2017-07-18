@@ -23,7 +23,7 @@
 #define DMA_HISTO_RESET_TIMEOUT_MS 40
 #define DMA_LUT_CONFIG_MASK 0xfffffbe8
 #define DMA_CCS_CONFIG_MASK 0xfffffc17
-#define HIST_WAIT_TIMEOUT(frame) ((75 * HZ * (frame)) / 1000)
+#define HIST_WAIT_TIMEOUT(frame) ((75 * msecs_to_jiffies(1000) * (frame)) / 1000)
 
 #define VSYNC_SELECT 0x024
 #define VSYNC_TOTAL_LINES_SHIFT 21

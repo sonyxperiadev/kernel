@@ -2721,7 +2721,7 @@ static int mhl_tx_discover_mhl_device(void *mhl_ctx, int id,
 	init_completion(&dev_context->sem_mhl_discovery_complete);
 
 	remaining_time = wait_for_completion_interruptible_timeout(
-		&dev_context->sem_mhl_discovery_complete, 2 * HZ);
+		&dev_context->sem_mhl_discovery_complete, msecs_to_jiffies(2000));
 	dev_context->mhl_discovery_in_progress = false;
 	if (dev_context->mhl_detected) {
 		pr_debug("mhl driver detected mhl connection\n");

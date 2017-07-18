@@ -843,7 +843,7 @@ static int hdcp_1x_verify_r0(struct hdcp_1x *hdcp)
 		if (!hdcp->sink_r0_ready) {
 			reinit_completion(&hdcp->sink_r0_available);
 			timeout_count = wait_for_completion_timeout(
-				&hdcp->sink_r0_available, HZ / 2);
+				&hdcp->sink_r0_available, msecs_to_jiffies(500));
 
 			if (hdcp->reauth) {
 				pr_err("sink R0 not ready\n");
@@ -1389,7 +1389,7 @@ int hdcp_1x_authenticate(void *input)
 	if (!hdcp_1x_load_keys(input)) {
 
 		queue_delayed_work(hdcp->workq,
-			&hdcp->hdcp_auth_work, HZ/2);
+			&hdcp->hdcp_auth_work, msecs_to_jiffies(500));
 	} else {
 		hdcp->hdcp_state = HDCP_STATE_AUTH_FAIL;
 		hdcp_1x_update_auth_status(hdcp);
