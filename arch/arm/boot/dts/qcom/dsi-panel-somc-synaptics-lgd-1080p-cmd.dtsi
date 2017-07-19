@@ -86,9 +86,6 @@
 		somc,mdss-dsi-disp-on-in-hs = <0>;
 		somc,mdss-dsi-wait-time-before-post-on-cmd = <0>;
 
-		/* (vback porch + vfront porch + vpulse width + yres) * 2 */
-		qcom,mdss-tear-check-sync-cfg-height = <4326>;
-
 		somc,change-fps-enable;
 		somc,change-fps-panel-type = "full_incell_type";
 		somc,change-fps-panel-mode = "dynamic_mode";
@@ -359,7 +356,9 @@
 						05 01 00 00 00 00 01 29];
 				qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
 
-				qcom,mdss-tear-check-sync-cfg-height = <4326>;
+				qcom,mdss-tear-check-sync-init-val = <1920>;
+				qcom,mdss-tear-check-start-pos = <1920>;
+				qcom,mdss-tear-check-rd-ptr-trigger-intr = <1921>;
 			};
 
 			1080p120 {
@@ -385,7 +384,9 @@
 						05 01 00 00 00 00 01 29];
 				qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
 
-				qcom,mdss-tear-check-sync-cfg-height = <4326>;
+				qcom,mdss-tear-check-sync-init-val = <1920>;
+				qcom,mdss-tear-check-start-pos = <1920>;
+				qcom,mdss-tear-check-rd-ptr-trigger-intr = <1921>;
 			};
 		};
 	};
