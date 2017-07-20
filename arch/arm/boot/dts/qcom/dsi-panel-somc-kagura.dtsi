@@ -40,22 +40,6 @@
 				24 1f 08 09 05 03 04 a0
 				24 1f 08 09 05 03 04 a0
 				24 1b 08 09 05 03 04 a0];
-		qcom,mdss-pan-physical-width-dimension = <64>;
-		qcom,mdss-pan-physical-height-dimension = <114>;
-		qcom,mdss-dsi-on-command = [
-				29 01 00 00 00 00 02 B0 00
-				29 01 00 00 00 00 02 D6 01
-				29 01 00 00 00 00 03 C4 70 22
-				29 01 00 00 00 00 15 C6 53 2E 2E 05 45 00 00 00 00 00 00 42 0F 00 00 00 00 04 10 06
-				29 01 00 00 00 00 0E EC 64 DC EC 3B 52 00 0B 0B 13 15 68 0B B5
-				29 01 00 00 00 00 02 B0 03
-				39 01 00 00 00 00 02 35 00
-				39 01 00 00 00 00 02 36 00
-				39 01 00 00 00 00 02 3A 77
-				39 01 00 00 00 00 05 2A 00 00 04 37
-				39 01 00 00 00 00 05 2B 00 00 07 7F
-				39 01 00 00 00 00 03 44 00 00
-				39 01 00 00 78 00 01 11];
 		qcom,mdss-dsi-off-command = [
 				39 01 00 00 14 00 01 28
 				29 01 00 00 00 00 02 B0 00
@@ -63,8 +47,61 @@
 				29 01 00 00 00 00 0E EC 64 DC EC 3B 52 00 0B 0B 13 15 68 0B 95
 				29 01 00 00 00 00 02 B0 03
 				39 01 00 00 50 00 01 10];
+		qcom,mdss-pan-physical-width-dimension = <64>;
+		qcom,mdss-pan-physical-height-dimension = <114>;
+
 		somc,pw-wait-after-on-touch-reset-first = <90>;
 		somc,pw-wait-after-on-touch-int-n = <10>;
+
+		qcom,dynamic-mode-switch-enabled;
+		qcom,dynamic-mode-switch-type = "dynamic-resolution-switch-susres";
+		qcom,mdss-dsi-display-timings {
+			1080p60 {
+				qcom,mdss-dsi-panel-timings-phy-v2 = [
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1b 08 09 05 03 04 a0];
+				qcom,mdss-dsi-on-command = [
+						29 01 00 00 00 00 02 B0 00
+						29 01 00 00 00 00 02 D6 01
+						29 01 00 00 00 00 03 C4 70 22
+						29 01 00 00 00 00 15 C6 53 2E 2E 05 45 00 00 00 00 00 00 42 0F 00 00 00 00 04 10 06
+						29 01 00 00 00 00 0E EC 64 DC EC 3B 52 00 0B 0B 13 15 68 0B B5
+						29 01 00 00 00 00 02 B0 03
+						39 01 00 00 00 00 02 35 00
+						39 01 00 00 00 00 02 36 00
+						39 01 00 00 00 00 02 3A 77
+						39 01 00 00 00 00 05 2A 00 00 04 37
+						39 01 00 00 00 00 05 2B 00 00 07 7F
+						39 01 00 00 00 00 03 44 00 00
+						39 01 00 00 78 00 01 11];
+			};
+
+			1080p120 {
+				qcom,mdss-dsi-panel-timings-phy-v2 = [
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1b 08 09 05 03 04 a0];
+				qcom,mdss-dsi-on-command = [
+						29 01 00 00 00 00 02 B0 00
+						29 01 00 00 00 00 02 D6 01
+						29 01 00 00 00 00 03 C4 70 22
+						29 01 00 00 00 00 15 C6 53 2E 2E 05 45 00 00 00 00 00 00 42 0F 00 00 00 00 04 10 06
+						29 01 00 00 00 00 0E EC 64 DC EC 3B 52 00 0B 0B 13 15 68 0B B5
+						29 01 00 00 00 00 02 B0 03
+						39 01 00 00 00 00 02 35 00
+						39 01 00 00 00 00 02 36 00
+						39 01 00 00 00 00 02 3A 77
+						39 01 00 00 00 00 05 2A 00 00 04 37
+						39 01 00 00 00 00 05 2B 00 00 07 7F
+						39 01 00 00 00 00 03 44 00 00
+						39 01 00 00 78 00 01 11];
+			};
+		};
 	};
 
 	dsi_sharp_synaptics_cmd_9: somc,sharp_synaptics_cmd_9_panel {
@@ -82,19 +119,40 @@
 		somc,mdss-dsi-master;
 		qcom,mdss-pan-physical-width-dimension = <64>;
 		qcom,mdss-pan-physical-height-dimension = <114>;
-		qcom,mdss-dsi-panel-timings-phy-v2 = [
-				24 1f 08 09 05 03 04 a0
-				24 1f 08 09 05 03 04 a0
-				24 1f 08 09 05 03 04 a0
-				24 1f 08 09 05 03 04 a0
-				24 1b 08 09 05 03 04 a0];
-		qcom,mdss-dsi-on-command = [
-				39 01 00 00 00 00 02 35 00
-				05 01 00 00 00 00 01 29];
-		qcom,mdss-dsi-post-panel-on-command = [
-				05 01 00 00 78 00 01 11];
+
 		somc,pw-wait-after-on-touch-int-n = <10>;
 		somc,pw-wait-after-off-touch-reset = <6>;
+
+		qcom,dynamic-mode-switch-enabled;
+		qcom,dynamic-mode-switch-type = "dynamic-resolution-switch-susres";
+		qcom,mdss-dsi-display-timings {
+			1080p60 {
+				qcom,mdss-dsi-panel-timings-phy-v2 = [
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1b 08 09 05 03 04 a0];
+				qcom,mdss-dsi-on-command = [
+						39 01 00 00 00 00 02 35 00
+						05 01 00 00 00 00 01 29];
+				qcom,mdss-dsi-post-panel-on-command = [
+						05 01 00 00 78 00 01 11];
+			};
+			1080p120 {
+				qcom,mdss-dsi-panel-timings-phy-v2 = [
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1b 08 09 05 03 04 a0];
+				qcom,mdss-dsi-on-command = [
+						39 01 00 00 00 00 02 35 00
+						05 01 00 00 00 00 01 29];
+				qcom,mdss-dsi-post-panel-on-command = [
+						05 01 00 00 78 00 01 11];
+			};
+		};
 	};
 
 	dsi_default_panel: somc,default_cmd_panel {
@@ -102,18 +160,9 @@
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
 		qcom,mdss-dsi-panel-destination = "display_1";
 		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
-		qcom,mdss-dsi-panel-width = <1080>;
-		qcom,mdss-dsi-panel-height = <1920>;
 		qcom,mdss-dsi-bpp = <24>;
-		qcom,mdss-dsi-h-back-porch = <8>;
-		qcom,mdss-dsi-h-pulse-width = <8>;
-		qcom,mdss-dsi-h-front-porch = <56>;
-		qcom,mdss-dsi-v-back-porch = <8>;
-		qcom,mdss-dsi-v-pulse-width = <8>;
-		qcom,mdss-dsi-v-front-porch = <227>;
 		qcom,mdss-pan-physical-width-dimension = <64>;
 		qcom,mdss-pan-physical-height-dimension = <114>;
-		qcom,mdss-dsi-panel-framerate = <60>;
 		qcom,mdss-dsi-virtual-channel-id = <0>;
 		qcom,mdss-dsi-stream = <0>;
 		qcom,mdss-dsi-h-sync-skew = <0>;
@@ -130,22 +179,6 @@
 		qcom,mdss-dsi-dma-trigger = "trigger_sw";
 		qcom,mdss-dsi-mdp-trigger = "none";
 		qcom,mdss-dsi-tx-eot-append;
-		qcom,mdss-dsi-on-command = [
-				29 01 00 00 00 00 02 B0 00
-				29 01 00 00 00 00 02 D6 01
-				29 01 00 00 00 00 03 C4 70 22
-				29 01 00 00 00 00 15 C6 53 2E 2E 05 45 00 00 00 00 00 00 42 0F 00 00 00 00 04 10 06
-				29 01 00 00 00 00 0E EC 64 DC EC 3B 52 00 0B 0B 13 15 68 0B B5
-				29 01 00 00 00 00 02 B0 03
-				39 01 00 00 00 00 02 35 00
-				39 01 00 00 00 00 02 36 00
-				39 01 00 00 00 00 02 3A 77
-				39 01 00 00 00 00 05 2A 00 00 04 37
-				39 01 00 00 00 00 05 2B 00 00 07 7F
-				39 01 00 00 00 00 03 44 00 00
-				39 01 00 00 78 00 01 11];
-		qcom,mdss-dsi-post-panel-on-command = [
-				39 01 00 00 00 00 01 29];
 		qcom,mdss-dsi-off-command = [
 				39 01 00 00 14 00 01 28
 				29 01 00 00 00 00 02 B0 00
@@ -153,7 +186,6 @@
 				29 01 00 00 00 00 0E EC 64 DC EC 3B 52 00 0B 0B 13 15 68 0B 95
 				29 01 00 00 00 00 02 B0 03
 				39 01 00 00 50 00 01 10];
-		qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
 		qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
 		qcom,mdss-dsi-te-pin-select = <1>;
 		qcom,mdss-dsi-wr-mem-start = <0x2c>;
@@ -165,9 +197,6 @@
 		qcom,mdss-dsi-lane-1-state;
 		qcom,mdss-dsi-lane-2-state;
 		qcom,mdss-dsi-lane-3-state;
-		qcom,mdss-dsi-panel-timings = [E6 38 26 00 68 6E 2A 3C 2C 03 04 00];
-		qcom,mdss-dsi-t-clk-post = <0x1B>;
-		qcom,mdss-dsi-t-clk-pre = <0x2B>;
 		qcom,panel-supply-entries = <&dsi_panel_pwr_supply_hybrid_incell>;
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-bl-min-level = <1>;
@@ -219,5 +248,84 @@
 
 		somc,mdss-dsi-disp-on-in-hs = <0>;
 		somc,mdss-dsi-wait-time-before-post-on-cmd = <0>;
+
+		qcom,mdss-dsi-display-timings {
+			1080p60 {
+				qcom,mdss-dsi-timing-default;
+				qcom,mdss-dsi-panel-width = <1080>;
+				qcom,mdss-dsi-panel-height = <1920>;
+				qcom,mdss-dsi-h-back-porch = <8>;
+				qcom,mdss-dsi-h-pulse-width = <8>;
+				qcom,mdss-dsi-h-front-porch = <56>;
+				qcom,mdss-dsi-v-back-porch = <8>;
+				qcom,mdss-dsi-v-pulse-width = <8>;
+				qcom,mdss-dsi-v-front-porch = <227>;
+				qcom,mdss-dsi-panel-framerate = <60>;
+				qcom,mdss-dsi-panel-timings = [E6 38 26 00 68 6E 2A 3C 2C 03 04 00];
+				qcom,mdss-dsi-t-clk-post = <0x1B>;
+				qcom,mdss-dsi-t-clk-pre = <0x2B>;
+				qcom,mdss-dsi-panel-timings-phy-v2 = [
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1b 08 09 05 03 04 a0];
+				qcom,mdss-dsi-on-command = [
+						29 01 00 00 00 00 02 B0 00
+						29 01 00 00 00 00 02 D6 01
+						29 01 00 00 00 00 03 C4 70 22
+						29 01 00 00 00 00 15 C6 53 2E 2E 05 45 00 00 00 00 00 00 42 0F 00 00 00 00 04 10 06
+						29 01 00 00 00 00 0E EC 64 DC EC 3B 52 00 0B 0B 13 15 68 0B B5
+						29 01 00 00 00 00 02 B0 03
+						39 01 00 00 00 00 02 35 00
+						39 01 00 00 00 00 02 36 00
+						39 01 00 00 00 00 02 3A 77
+						39 01 00 00 00 00 05 2A 00 00 04 37
+						39 01 00 00 00 00 05 2B 00 00 07 7F
+						39 01 00 00 00 00 03 44 00 00
+						39 01 00 00 78 00 01 11];
+				qcom,mdss-dsi-post-panel-on-command = [
+						39 01 00 00 00 00 01 29];
+				qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
+			};
+
+			1080p120 {
+				qcom,mdss-dsi-panel-width = <1080>;
+				qcom,mdss-dsi-panel-height = <1920>;
+				qcom,mdss-dsi-h-back-porch = <8>;
+				qcom,mdss-dsi-h-pulse-width = <8>;
+				qcom,mdss-dsi-h-front-porch = <56>;
+				qcom,mdss-dsi-v-back-porch = <8>;
+				qcom,mdss-dsi-v-pulse-width = <8>;
+				qcom,mdss-dsi-v-front-porch = <227>;
+				qcom,mdss-dsi-panel-framerate = <60>;
+				qcom,mdss-dsi-panel-timings = [E6 38 26 00 68 6E 2A 3C 2C 03 04 00];
+				qcom,mdss-dsi-t-clk-post = <0x1B>;
+				qcom,mdss-dsi-t-clk-pre = <0x2B>;
+				qcom,mdss-dsi-panel-timings-phy-v2 = [
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1b 08 09 05 03 04 a0];
+				qcom,mdss-dsi-on-command = [
+						29 01 00 00 00 00 02 B0 00
+						29 01 00 00 00 00 02 D6 01
+						29 01 00 00 00 00 03 C4 70 22
+						29 01 00 00 00 00 15 C6 53 2E 2E 05 45 00 00 00 00 00 00 42 0F 00 00 00 00 04 10 06
+						29 01 00 00 00 00 0E EC 64 DC EC 3B 52 00 0B 0B 13 15 68 0B B5
+						29 01 00 00 00 00 02 B0 03
+						39 01 00 00 00 00 02 35 00
+						39 01 00 00 00 00 02 36 00
+						39 01 00 00 00 00 02 3A 77
+						39 01 00 00 00 00 05 2A 00 00 04 37
+						39 01 00 00 00 00 05 2B 00 00 07 7F
+						39 01 00 00 00 00 03 44 00 00
+						39 01 00 00 78 00 01 11];
+				qcom,mdss-dsi-post-panel-on-command = [
+						39 01 00 00 00 00 01 29];
+				qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
+			};
+		};
 	};
 };

@@ -26,7 +26,7 @@
 #define ADC_PNUM			2
 
 #define CHANGE_FPS_MIN 			22
-#define CHANGE_FPS_MAX 			60
+#define CHANGE_FPS_MAX 			120
 
 #define CHANGE_FPS_PORCH		2
 #define CHANGE_FPS_SEND			10
@@ -131,6 +131,8 @@ int  somc_panel_parse_dt_chgfps_config(struct device_node *pan_node,
 void somc_panel_chg_fps_cmds_send(struct mdss_dsi_ctrl_pdata *ctrl_pdata);
 void somc_panel_fpsman_panel_post_on(struct mdss_dsi_ctrl_pdata *ctrl);
 void somc_panel_fpsman_panel_off(void);
+void somc_panel_fpsman_refresh(struct mdss_dsi_ctrl_pdata *ctrl,
+		bool immediate_refresh);
 int  somc_panel_fps_register_attr(struct device *dev);
 int  somc_panel_fps_manager_init(void);
 
