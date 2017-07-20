@@ -3438,7 +3438,7 @@ retry_reset:
 	if ((rc == -EAGAIN || rc == -EBUSY) &&
 	    reset->retry++ < SYN_RETRY_NUM_OF_RESET) {
 		LOGI(this, "schedule reset for retry (rc=%d)\n", rc);
-		schedule_delayed_work(&reset->work, 1 * HZ);
+		schedule_delayed_work(&reset->work, msecs_to_jiffies(1000));
 	} else if (rc) {
 		LOGE(this, "failed to execute %s '%s'\n",
 		     NAME_OF(clearpad_reset_name, reset->mode),
@@ -8140,7 +8140,8 @@ err_in_ctrl_session_begin:
 		if (this->post_probe.retry <= SYN_RETRY_NUM_OF_POST_PROBE) {
 			HWLOGI(this, "reschedule post probe (%d)\n",
 			       this->post_probe.retry);
-			schedule_delayed_work(&this->post_probe.work, 3 * HZ);
+			schedule_delayed_work(&this->post_probe.work,
+					msecs_to_jiffies(3000));
 		} else {
 			this->post_probe.retry = 0;
 			HWLOGE(this, "stop post probe\n");
