@@ -39,7 +39,7 @@
 static int cmdq_halt_poll(struct mmc_host *mmc, bool halt);
 static int cmdq_halt(struct mmc_host *mmc, bool halt);
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 static int cmdq_runtime_pm_get(struct cmdq_host *host)
 {
 	return pm_runtime_get_sync(host->mmc->parent);
