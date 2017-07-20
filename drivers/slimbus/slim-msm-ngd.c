@@ -1948,7 +1948,7 @@ static int ngd_slim_runtime_idle(struct device *device)
 /*
  * If PM_RUNTIME is not defined, these 2 functions become helper
  * functions to be called from system suspend/resume. So they are not
- * inside ifdef CONFIG_PM_RUNTIME
+ * inside ifdef CONFIG_PM
  */
 static int ngd_slim_runtime_resume(struct device *device)
 {

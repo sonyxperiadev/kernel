@@ -674,13 +674,13 @@ static inline void msm_usb_irq_disable(bool disable)
 }
 #endif
 
-/* CONFIG_PM_RUNTIME */
-#ifdef CONFIG_PM_RUNTIME
+/* CONFIG_PM */
+#ifdef CONFIG_PM
 static inline int get_pm_runtime_counter(struct device *dev)
 {
 	return atomic_read(&dev->power.usage_count);
 }
-#else /* !CONFIG_PM_RUNTIME */
+#else /* !CONFIG_PM */
 static inline int get_pm_runtime_counter(struct device *dev) { return -ENOSYS; }
 #endif
 
