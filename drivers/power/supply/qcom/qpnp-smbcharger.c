@@ -4641,9 +4641,6 @@ static int smbchg_change_usb_supply_type(struct smbchg_chip *chip,
 
 		power_supply_set_property(chip->usb_psy,
 				POWER_SUPPLY_PROP_SUB_TYPE, &val);
-
-		/* kholk 16/05/2017: TODO: Should we notify usb or typec psy?*/
-		power_supply_changed(chip->typec_psy);
 	}
 #endif
 
