@@ -145,6 +145,8 @@ DHDCFLAGS += -DWL_SUPPORT_AUTO_CHANNEL -DSUPPORT_HIDDEN_AP
 DHDCFLAGS += -DDISABLE_11H_SOFTAP
 DHDCFLAGS += -DSUPPORT_HOSTAPD_BGN_MODE
 DHDCFLAGS += -DDISABLE_WL_FRAMEBURST_SOFTAP
+# For setting custom short & long retry limit
+DHDCFLAGS += -DSET_RETRY_LIMIT -DCUSTOM_SRL_SETTING=13 -DCUSTOM_LRL_SETTING=13
 
 # HW5 specific features
 DHDCFLAGS += -DSUPPORT_PM2_ONLY
@@ -213,6 +215,9 @@ DHDCFLAGS += -DCONFIG_HAS_WAKELOCK
 
 # Used short dwell time during initial scan
 DHDCFLAGS += -DUSE_INITIAL_SHORT_DWELL_TIME
+
+# Disable to delay link down event
+DHDCFLAGS += -DDISABLE_BCNLOSS_ROAM
 
 ##############################
 # Android Platform Definition
@@ -292,7 +297,7 @@ endif
 # For Runtime PM feature
 ifeq ($(BUS_IFACE_PCIE),y)
   DHDCFLAGS += -DBCMPCIE_OOB_HOST_WAKE
-  DHDCFLAGS += -DDHD_PCIE_RUNTIMEPM -DMAX_IDLE_COUNT=11 -DCUSTOM_DHD_RUNTIME_MS=100
+  DHDCFLAGS += -DDHD_PCIE_RUNTIMEPM -DMAX_IDLE_COUNT=11 -DCUSTOM_DHD_RUNTIME_MS=200
 endif
 
 ifeq ($(CONFIG_ARCH_QCOM),y)
@@ -314,7 +319,7 @@ endif
   DHDCFLAGS += -DSUPPORT_WL_TXPOWER
   DHDCFLAGS += -DWL11ULB
   DHDCFLAGS += -DDISABLE_TXBFR
-# DHDCFLAGS += -DWL_ABORT_SCAN
+  DHDCFLAGS += -DWL_ABORT_SCAN
 
  # Support CUSTOM_EVENT_PM_WAKE
   DHDCFLAGS += -DCUSTOM_EVENT_PM_WAKE=30
@@ -324,7 +329,7 @@ endif
   DHDCFLAGS :=$(filter-out -DDISABLE_11H_SOFTAP,$(DHDCFLAGS))
 ifeq ($(CONFIG_BCM4359),y)
   DHDCFLAGS += -DENABLE_INSMOD_NO_FW_LOAD
-  DHDCFLAGS += -DUSE_LATE_INITCALL_SYNC
+#  DHDCFLAGS += -DUSE_LATE_INITCALL_SYNC
 endif
 ifeq ($(CONFIG_ARCH_MSM8996),y)
  # Enable Dongle Isolation
@@ -516,10 +521,16 @@ endif
 #############################
 # Platform dependent feature
 #############################
+# Default Beacon timeout
+DHDCFLAGS += -DCUSTOM_BCN_TIMEOUT=3
+
+
 #########
 # Others
 #########
 
+# Read custom mac address function
+DHDCFLAGS += -DGET_CUSTOM_MAC_ENABLE
 
 EXTRA_LDFLAGS += --strip-debug
 EXTRA_CFLAGS += $(DHDCFLAGS) -DDHD_DEBUG
