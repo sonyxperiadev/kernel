@@ -127,7 +127,6 @@ static struct wcd_mbhc_config wcd_mbhc_cfg = {
 	.key_code[7] = 0,
 	.linein_th = 5000,
 #ifdef CONFIG_ARCH_SONY_LOIRE
-	.moist_cfg = { V_45_MV, I_3P0_UA },
 	.anc_micbias = MIC_BIAS_3,
 	.enable_anc_mic_detect = true,
 #else
@@ -351,7 +350,7 @@ int msm895x_wsa881x_init(struct snd_soc_component *component)
 	unsigned int ch_mask[WSA881X_MAX_SWR_PORTS] = {0x1, 0xF, 0x3, 0x3};
 	struct snd_soc_codec *codec = snd_soc_component_to_codec(component);
 	struct msm8952_asoc_mach_data *pdata;
-	struct snd_soc_dapm_context *dapm = &codec->dapm;
+	struct snd_soc_dapm_context *dapm = snd_soc_codec_get_dapm(codec);
 
 	if (!codec) {
 		pr_err("%s codec is NULL\n", __func__);
@@ -407,9 +406,8 @@ static void param_set_mask(struct snd_pcm_hw_params *p, int n, unsigned bit)
 
 static void msm8952_ext_control(struct snd_soc_codec *codec)
 {
-	struct snd_soc_dapm_context *dapm = &codec->dapm;
+	struct snd_soc_dapm_context *dapm = snd_soc_codec_get_dapm(codec);
 
-	mutex_lock(&codec->mutex);
 	pr_debug("%s: msm8952_spk_control = %d", __func__, msm8952_spk_control);
 	if (msm8952_spk_control == MSM8952_SPK_ON) {
 		snd_soc_dapm_enable_pin(dapm, "Lineout_1 amp");
@@ -418,7 +416,6 @@ static void msm8952_ext_control(struct snd_soc_codec *codec)
 		snd_soc_dapm_disable_pin(dapm, "Lineout_1 amp");
 		snd_soc_dapm_disable_pin(dapm, "Lineout_3 amp");
 	}
-	mutex_unlock(&codec->mutex);
 	snd_soc_dapm_sync(dapm);
 }
 
@@ -2367,7 +2364,7 @@ int msm_audrx_init(struct snd_soc_pcm_runtime *rtd)
 {
 	int err;
 	struct snd_soc_codec *codec = rtd->codec;
-	struct snd_soc_dapm_context *dapm = &codec->dapm;
+	struct snd_soc_dapm_context *dapm = snd_soc_codec_get_dapm(codec);
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
 	struct snd_card *card;
