@@ -1146,6 +1146,9 @@ static struct binder_ref *binder_get_ref_for_node(struct binder_proc *proc,
 		binder_stats_deleted(BINDER_STAT_REF);
 		return NULL;
 	}
+
+	new_ref->node_is_zombie = node->is_zombie;
+
 	INIT_HLIST_NODE(&new_ref->node_entry);
 	hlist_add_head(&new_ref->node_entry, &node->refs);
 
