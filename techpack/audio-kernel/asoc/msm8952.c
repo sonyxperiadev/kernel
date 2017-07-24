@@ -28,8 +28,7 @@
 #include <soc/qcom/socinfo.h>
 #include "qdsp6v2/msm-pcm-routing-v2.h"
 #include "msm-audio-pinctrl.h"
-#include "../codecs/msm8x16-wcd.h"
-#include "../codecs/wsa881x-analog.h"
+#include "../codecs/wcd-mbhc-v2.h"
 #include <linux/regulator/consumer.h>
 #define DRV_NAME "msm8952-asoc-wcd"
 
@@ -51,6 +50,9 @@
 #define WCD_MBHC_DEF_RLOADS 5
 #define MAX_WSA_CODEC_NAME_LENGTH 80
 #define MSM_DT_MAX_PROP_SIZE 80
+
+#define MICBIAS_EXT_BYP_CAP 0x00
+#define MICBIAS_NO_EXT_BYP_CAP 0x01
 
 enum btsco_rates {
 	RATE_8KHZ_ID,
@@ -79,6 +81,36 @@ static int msm8952_mclk_event(struct snd_soc_dapm_widget *w,
 			      struct snd_kcontrol *kcontrol, int event);
 static int msm8952_wsa_switch_event(struct snd_soc_dapm_widget *w,
 			      struct snd_kcontrol *kcontrol, int event);
+
+struct on_demand_supply {
+        struct regulator *supply;
+        atomic_t ref;
+};
+
+struct msm8916_asoc_mach_data {
+        int codec_type;
+        int ext_pa;
+        int us_euro_gpio;
+        int spk_ext_pa_gpio;
+        int mclk_freq;
+        int lb_mode;
+        int afe_clk_ver;
+        u8 micbias1_cap_mode;
+        u8 micbias2_cap_mode;
+        atomic_t mclk_rsc_ref;
+        atomic_t mclk_enabled;
+        atomic_t wsa_mclk_rsc_ref;
+        struct mutex cdc_mclk_mutex;
+        struct mutex wsa_mclk_mutex;
+        struct delayed_work disable_mclk_work;
+        struct afe_digital_clk_cfg digital_cdc_clk;
+        struct afe_clk_set digital_cdc_core_clk;
+        void __iomem *vaddr_gpio_mux_spkr_ctl;
+        void __iomem *vaddr_gpio_mux_mic_ctl;
+        void __iomem *vaddr_gpio_mux_quin_ctl;
+        void __iomem *vaddr_gpio_mux_pcm_ctl;
+        struct on_demand_supply wsa_switch_supply;
+};
 
 /*
  * Android L spec
