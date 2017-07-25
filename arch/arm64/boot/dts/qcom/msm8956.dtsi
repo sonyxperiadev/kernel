@@ -154,18 +154,18 @@
 	};
 };
 
-#include "msm8976-pinctrl.dtsi"
-#include "msm8976-ion.dtsi"
-#include "msm8976-iommu.dtsi"
-#include "msm8976-smp2p.dtsi"
-#include "msm8976-bus.dtsi"
-#include "msm8976-jtag.dtsi"
-#include "msm8976-coresight.dtsi"
-#include "msm8976-pm.dtsi"
-#include "msm8976-gpu.dtsi"
-#include "msm8976-cpu.dtsi"
-#include "msm8976-mdss.dtsi"
-#include "msm8976-mdss-pll.dtsi"
+#include "msm8956-pinctrl.dtsi"
+#include "msm8956-ion.dtsi"
+#include "msm8956-iommu.dtsi"
+#include "msm8956-smp2p.dtsi"
+#include "msm8956-bus.dtsi"
+#include "msm8956-jtag.dtsi"
+#include "msm8956-coresight.dtsi"
+#include "msm8956-pm.dtsi"
+#include "msm8956-gpu.dtsi"
+#include "msm8956-cpu.dtsi"
+#include "msm8956-mdss.dtsi"
+#include "msm8956-mdss-pll.dtsi"
 #include "msm-rdbg.dtsi"
 
 &soc {
@@ -2817,9 +2817,9 @@
 #include "msm-pm8950.dtsi"
 #include "msm-pmi8950.dtsi"
 #include "msm-pm8004.dtsi"
-#include "msm8976-regulator.dtsi"
+#include "msm8956-regulator.dtsi"
 #include "msm-gdsc-8916.dtsi"
-#include "msm8976-camera.dtsi"
+#include "msm8956-camera.dtsi"
 
 &gdsc_venus {
 	clock-names = "bus_clk", "core_clk";
