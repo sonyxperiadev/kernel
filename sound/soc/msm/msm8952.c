@@ -86,7 +86,7 @@ struct on_demand_supply {
         atomic_t ref;
 };
 
-struct msm8916_asoc_mach_data {
+struct msm_asoc_mach_data {
         int codec_type;
         int ext_pa;
         int us_euro_gpio;
@@ -237,7 +237,7 @@ static const struct snd_soc_dapm_widget msm8952_dapm_widgets[] = {
 };
 
 int is_ext_spk_gpio_support(struct platform_device *pdev,
-			struct msm8916_asoc_mach_data *pdata)
+			struct msm_asoc_mach_data *pdata)
 {
 	const char *spk_ext_pa = "qcom,msm-spk-ext-pa";
 
@@ -261,7 +261,7 @@ int is_ext_spk_gpio_support(struct platform_device *pdev,
 
 /* Validate whether US EU switch is present or not */
 int is_us_eu_switch_gpio_support(struct platform_device *pdev,
-		struct msm8916_asoc_mach_data *pdata)
+		struct msm_asoc_mach_data *pdata)
 {
 	int ret;
 
@@ -516,7 +516,7 @@ static int msm_mi2s_sclk_ctl(struct snd_pcm_substream *substream, bool enable)
 	int ret = 0;
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_card *card = rtd->card;
-	struct msm8916_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
+	struct msm_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
 	int port_id = 0;
 
 	port_id = msm8952_get_port_id(rtd->dai_link->be_id);
@@ -602,7 +602,7 @@ static int msm8952_enable_dig_cdc_clk(struct snd_soc_codec *codec,
 					int enable, bool dapm)
 {
 	int ret = 0;
-	struct msm8916_asoc_mach_data *pdata = NULL;
+	struct msm_asoc_mach_data *pdata = NULL;
 
 	pdata = snd_soc_card_get_drvdata(codec->component.card);
 	pr_debug("%s: enable %d mclk ref counter %d\n",
@@ -748,7 +748,7 @@ static int loopback_mclk_put(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
 	int ret = -EINVAL;
-	struct msm8916_asoc_mach_data *pdata = NULL;
+	struct msm_asoc_mach_data *pdata = NULL;
 	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 
 	pdata = snd_soc_card_get_drvdata(codec->component.card);
@@ -971,7 +971,7 @@ static const struct snd_kcontrol_new msm_snd_controls[] = {
 static int msm8952_mclk_event(struct snd_soc_dapm_widget *w,
 			      struct snd_kcontrol *kcontrol, int event)
 {
-	struct msm8916_asoc_mach_data *pdata = NULL;
+	struct msm_asoc_mach_data *pdata = NULL;
 	int ret = 0;
 
 	pdata = snd_soc_card_get_drvdata(w->codec->component.card);
@@ -1002,7 +1002,7 @@ static int msm8952_mclk_event(struct snd_soc_dapm_widget *w,
 static int msm8952_enable_wsa_mclk(struct snd_soc_card *card, bool enable)
 {
 	int ret = 0;
-	struct msm8916_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
+	struct msm_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
 
 	mutex_lock(&pdata->wsa_mclk_mutex);
 	if (enable) {
@@ -1061,7 +1061,7 @@ static int msm_mi2s_snd_startup(struct snd_pcm_substream *substream)
 	struct snd_soc_card *card = rtd->card;
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
 	struct snd_soc_codec *codec = rtd->codec;
-	struct msm8916_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
+	struct msm_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
 	int ret = 0, val = 0;
 
 	pr_debug("%s(): substream = %s  stream = %d\n", __func__,
@@ -1121,7 +1121,7 @@ static void msm_mi2s_snd_shutdown(struct snd_pcm_substream *substream)
 	int ret;
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_card *card = rtd->card;
-	struct msm8916_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
+	struct msm_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
 
 	pr_debug("%s(): substream = %s  stream = %d\n", __func__,
 			substream->name, substream->stream);
@@ -1150,7 +1150,7 @@ static int msm_prim_auxpcm_startup(struct snd_pcm_substream *substream)
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_codec *codec = rtd->codec;
 	struct snd_soc_card *card = rtd->card;
-	struct msm8916_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
+	struct msm_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
 	int ret = 0, val = 0;
 
 	pr_debug("%s(): substream = %s\n",
@@ -1184,7 +1184,7 @@ static void msm_prim_auxpcm_shutdown(struct snd_pcm_substream *substream)
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_card *card = rtd->card;
 	struct snd_soc_codec *codec = rtd->codec;
-	struct msm8916_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
+	struct msm_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
 
 	pr_debug("%s(): substream = %s\n",
 			__func__, substream->name);
@@ -1210,7 +1210,7 @@ static int msm_sec_mi2s_snd_startup(struct snd_pcm_substream *substream)
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_card *card = rtd->card;
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
-	struct msm8916_asoc_mach_data *pdata =
+	struct msm_asoc_mach_data *pdata =
 			snd_soc_card_get_drvdata(card);
 	int ret = 0, val = 0;
 
@@ -1267,7 +1267,7 @@ static void msm_sec_mi2s_snd_shutdown(struct snd_pcm_substream *substream)
 	int ret;
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_card *card = rtd->card;
-	struct msm8916_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
+	struct msm_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
 
 	pr_debug("%s(): substream = %s  stream = %d\n", __func__,
 				substream->name, substream->stream);
@@ -1289,7 +1289,7 @@ static int msm_quat_mi2s_snd_startup(struct snd_pcm_substream *substream)
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_card *card = rtd->card;
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
-	struct msm8916_asoc_mach_data *pdata =
+	struct msm_asoc_mach_data *pdata =
 			snd_soc_card_get_drvdata(card);
 	int ret = 0, val = 0;
 
@@ -1347,7 +1347,7 @@ static int msm_quin_mi2s_snd_startup(struct snd_pcm_substream *substream)
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_card *card = rtd->card;
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
-	struct msm8916_asoc_mach_data *pdata =
+	struct msm_asoc_mach_data *pdata =
 			snd_soc_card_get_drvdata(card);
 	int ret = 0, val = 0;
 
@@ -1732,7 +1732,7 @@ static struct snd_soc_dai_link msm8952_dai[] = {
 		.codec_name = "snd-soc-dummy",
 	},
 	{/* hw:x,18 */
-		.name = "MSM8916 HFP",
+		.name = "msm HFP",
 		.stream_name = "MultiMedia6",
 		.cpu_dai_name = "MultiMedia6",
 		.platform_name  = "msm-pcm-loopback",
@@ -2024,7 +2024,7 @@ static struct snd_soc_dai_link msm8952_dai[] = {
 		.be_id = MSM_FRONTEND_DAI_VOICEMMODE2,
 	},
 	{/* hw:x,36 */
-		.name = "MSM8916 HFP Loopback2",
+		.name = "msm HFP Loopback2",
 		.stream_name = "MultiMedia8",
 		.cpu_dai_name = "MultiMedia8",
 		.platform_name  = "msm-pcm-loopback",
@@ -2384,12 +2384,12 @@ static struct snd_soc_card bear_card = {
 
 void msm8952_disable_mclk(struct work_struct *work)
 {
-	struct msm8916_asoc_mach_data *pdata = NULL;
+	struct msm_asoc_mach_data *pdata = NULL;
 	struct delayed_work *dwork;
 	int ret = 0;
 
 	dwork = to_delayed_work(work);
-	pdata = container_of(dwork, struct msm8916_asoc_mach_data,
+	pdata = container_of(dwork, struct msm_asoc_mach_data,
 			disable_mclk_work);
 	mutex_lock(&pdata->cdc_mclk_mutex);
 	pr_debug("%s: mclk_enabled %d mclk_rsc_ref %d\n", __func__,
@@ -2421,7 +2421,7 @@ void msm8952_disable_mclk(struct work_struct *work)
 static bool msm8952_swap_gnd_mic(struct snd_soc_codec *codec)
 {
 	struct snd_soc_card *card = codec->component.card;
-	struct msm8916_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
+	struct msm_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
 	int value, ret;
 
 	pr_debug("%s: configure gpios for US_EU\n", __func__);
@@ -2451,7 +2451,7 @@ static bool msm8952_swap_gnd_mic(struct snd_soc_codec *codec)
 }
 
 static void msm8952_dt_parse_cap_info(struct platform_device *pdev,
-		struct msm8916_asoc_mach_data *pdata)
+		struct msm_asoc_mach_data *pdata)
 {
 	const char *ext1_cap = "qcom,msm-micbias1-ext-cap";
 	const char *ext2_cap = "qcom,msm-micbias2-ext-cap";
@@ -2592,7 +2592,7 @@ static struct snd_soc_card *msm8952_populate_sndcard_dailinks(
 static int msm8952_asoc_machine_probe(struct platform_device *pdev)
 {
 	struct snd_soc_card *card;
-	struct msm8916_asoc_mach_data *pdata = NULL;
+	struct msm_asoc_mach_data *pdata = NULL;
 	const char *hs_micbias_type = "qcom,msm-hs-micbias-type";
 	const char *ext_pa = "qcom,msm-ext-pa";
 	const char *mclk = "qcom,msm-mclk-freq";
@@ -2608,7 +2608,7 @@ static int msm8952_asoc_machine_probe(struct platform_device *pdev)
 	char *temp_str = NULL;
 
 	pdata = devm_kzalloc(&pdev->dev,
-			sizeof(struct msm8916_asoc_mach_data), GFP_KERNEL);
+			sizeof(struct msm_asoc_mach_data), GFP_KERNEL);
 	if (!pdata)
 		return -ENOMEM;
 
@@ -2893,7 +2893,7 @@ err1:
 static int msm8952_asoc_machine_remove(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
-	struct msm8916_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
+	struct msm_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
 	int i;
 
 	if (pdata->vaddr_gpio_mux_spkr_ctl)
