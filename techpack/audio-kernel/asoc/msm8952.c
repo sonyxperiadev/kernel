@@ -972,9 +972,10 @@ static int msm8952_mclk_event(struct snd_soc_dapm_widget *w,
 			      struct snd_kcontrol *kcontrol, int event)
 {
 	struct msm_asoc_mach_data *pdata = NULL;
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
 	int ret = 0;
 
-	pdata = snd_soc_card_get_drvdata(w->codec->component.card);
+	pdata = snd_soc_card_get_drvdata(codec->component.card);
 	pr_debug("%s: event = %d\n", __func__, event);
 	switch (event) {
 	case SND_SOC_DAPM_POST_PMD:
@@ -989,7 +990,7 @@ static int msm8952_mclk_event(struct snd_soc_dapm_widget *w,
 		if (atomic_read(&pdata->mclk_rsc_ref) == 0) {
 			pr_debug("%s: disabling MCLK\n", __func__);
 			/* disable the codec mclk config*/
-			msm8952_enable_dig_cdc_clk(w->codec, 0, true);
+			msm8952_enable_dig_cdc_clk(codec, 0, true);
 		}
 		break;
 	default:

@@ -2244,13 +2244,15 @@ static int msm8952_wcd93xx_codec_up(struct snd_soc_codec *codec)
 static int msm8952_mclk_event(struct snd_soc_dapm_widget *w,
 		struct snd_kcontrol *kcontrol, int event)
 {
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
+
 	pr_debug("%s: event = %d\n", __func__, event);
 
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
-		return msm8952_enable_codec_mclk(w->codec, 1, true);
+		return msm8952_enable_codec_mclk(codec, 1, true);
 	case SND_SOC_DAPM_POST_PMD:
-		return msm8952_enable_codec_mclk(w->codec, 0, true);
+		return msm8952_enable_codec_mclk(codec, 0, true);
 	}
 	return 0;
 }
