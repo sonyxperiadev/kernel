@@ -589,6 +589,9 @@ static void f_midi_in_trigger(struct snd_rawmidi_substream *substream, int up)
 {
 	struct f_midi *midi = substream->rmidi->private_data;
 
+	if (!midi)
+		return;
+
 	if (!midi->in_port[substream->number])
 		return;
 
@@ -621,6 +624,9 @@ static int f_midi_out_close(struct snd_rawmidi_substream *substream)
 static void f_midi_out_trigger(struct snd_rawmidi_substream *substream, int up)
 {
 	struct f_midi *midi = substream->rmidi->private_data;
+
+	if (!midi)
+		return;
 
 	VDBG(midi, "%s()\n", __func__);
 
