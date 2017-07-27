@@ -1068,7 +1068,7 @@ config SERIAL_MSM_HS
 
 config SERIAL_MSM_HSL
 	tristate "MSM UART High Speed : Legacy mode Serial Driver"
-	depends on (ARM || ARM64) && ARCH_MSM
+	depends on (ARM || ARM64) && ARCH_QCOM
 	select SERIAL_CORE
 	default n
 	help
