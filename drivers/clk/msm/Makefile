@@ -30,6 +30,6 @@ endif
 obj-$(CONFIG_COMMON_CLK_MSM)	+= gdsc.o
 obj-$(CONFIG_COMMON_CLK_MSM)	+= mdss/
 
-# TODO: remove me b/62057517
+# TODO: remove me b/62058353
 subdir-ccflags-y += \
 	-Wno-literal-conversion
