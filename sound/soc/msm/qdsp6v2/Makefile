@@ -20,6 +20,7 @@ obj-y += audio_calibration.o audio_cal_utils.o q6adm.o q6afe.o q6asm.o \
 ocmem-audio-objs += audio_ocmem.o
 obj-$(CONFIG_AUDIO_OCMEM) += ocmem-audio.o
 
-#TODO: remove me b/62057517
+#TODO: remove me b/62058353
 subdir-ccflags-y += \
-	-Wno-non-literal-null-conversion
+	-Wno-non-literal-null-conversion \
+	-Wno-duplicate-decl-specifier

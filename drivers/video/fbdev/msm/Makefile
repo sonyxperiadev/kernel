@@ -72,6 +72,9 @@ ifeq ($(CONFIG_FB_MSM_MDSS),y)
     obj-$(CONFIG_COMPAT) += mdss_compat_utils.o
 endif
 
-# TODO: remove me b/62057517
+# TODO: remove me b/62058353
 subdir-ccflags-y += \
-	-Wno-header-guard
+	-Wno-header-guard \
+	-Wno-parentheses-equality \
+	-Wno-duplicate-decl-specifier
+
