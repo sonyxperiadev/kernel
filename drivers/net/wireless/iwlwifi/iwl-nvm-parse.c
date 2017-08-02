@@ -312,7 +312,7 @@ static int iwl_init_channel_map(struct device *dev, const struct iwl_cfg *cfg,
 
 		channel->hw_value = nvm_chan[ch_idx];
 		channel->band = is_5ghz ?
-				IEEE80211_BAND_5GHZ : IEEE80211_BAND_2GHZ;
+				NL80211_BAND_5GHZ : NL80211_BAND_2GHZ;
 		channel->center_freq =
 			ieee80211_channel_to_frequency(
 				channel->hw_value, channel->band);
@@ -431,22 +431,22 @@ static void iwl_init_sbands(struct device *dev, const struct iwl_cfg *cfg,
 				lar_supported,
 				no_wide_in_5ghz);
 
-	sband = &data->bands[IEEE80211_BAND_2GHZ];
-	sband->band = IEEE80211_BAND_2GHZ;
+	sband = &data->bands[NL80211_BAND_2GHZ];
+	sband->band = NL80211_BAND_2GHZ;
 	sband->bitrates = &iwl_cfg80211_rates[RATES_24_OFFS];
 	sband->n_bitrates = N_RATES_24;
 	n_used += iwl_init_sband_channels(data, sband, n_channels,
-					  IEEE80211_BAND_2GHZ);
-	iwl_init_ht_hw_capab(cfg, data, &sband->ht_cap, IEEE80211_BAND_2GHZ,
+					  NL80211_BAND_2GHZ);
+	iwl_init_ht_hw_capab(cfg, data, &sband->ht_cap, NL80211_BAND_2GHZ,
 			     tx_chains, rx_chains);
 
-	sband = &data->bands[IEEE80211_BAND_5GHZ];
-	sband->band = IEEE80211_BAND_5GHZ;
+	sband = &data->bands[NL80211_BAND_5GHZ];
+	sband->band = NL80211_BAND_5GHZ;
 	sband->bitrates = &iwl_cfg80211_rates[RATES_52_OFFS];
 	sband->n_bitrates = N_RATES_52;
 	n_used += iwl_init_sband_channels(data, sband, n_channels,
-					  IEEE80211_BAND_5GHZ);
-	iwl_init_ht_hw_capab(cfg, data, &sband->ht_cap, IEEE80211_BAND_5GHZ,
+					  NL80211_BAND_5GHZ);
+	iwl_init_ht_hw_capab(cfg, data, &sband->ht_cap, NL80211_BAND_5GHZ,
 			     tx_chains, rx_chains);
 	if (data->sku_cap_11ac_enable)
 		iwl_init_vht_hw_capab(cfg, data, &sband->vht_cap,
@@ -787,7 +787,7 @@ iwl_parse_nvm_mcc_info(struct device *dev, const struct iwl_cfg *cfg,
 	struct ieee80211_regdomain *regd;
 	int size_of_regd;
 	struct ieee80211_reg_rule *rule;
-	enum ieee80211_band band;
+	enum nl80211_band band;
 	int center_freq, prev_center_freq = 0;
 	int valid_rules = 0;
 	bool new_rule;
@@ -815,7 +815,7 @@ iwl_parse_nvm_mcc_info(struct device *dev, const struct iwl_cfg *cfg,
 	for (ch_idx = 0; ch_idx < num_of_ch; ch_idx++) {
 		ch_flags = (u16)__le32_to_cpup(channels + ch_idx);
 		band = (ch_idx < NUM_2GHZ_CHANNELS) ?
-		       IEEE80211_BAND_2GHZ : IEEE80211_BAND_5GHZ;
+		       NL80211_BAND_2GHZ : NL80211_BAND_5GHZ;
 		center_freq = ieee80211_channel_to_frequency(nvm_chan[ch_idx],
 							     band);
 		new_rule = false;
@@ -863,7 +863,7 @@ iwl_parse_nvm_mcc_info(struct device *dev, const struct iwl_cfg *cfg,
 		IWL_DEBUG_DEV(dev, IWL_DL_LAR,
 			      "Ch. %d [%sGHz] %s%s%s%s%s%s%s%s%s(0x%02x): Ad-Hoc %ssupported\n",
 			      center_freq,
-			      band == IEEE80211_BAND_5GHZ ? "5.2" : "2.4",
+			      band == NL80211_BAND_5GHZ ? "5.2" : "2.4",
 			      CHECK_AND_PRINT_I(VALID),
 			      CHECK_AND_PRINT_I(ACTIVE),
 			      CHECK_AND_PRINT_I(RADAR),
