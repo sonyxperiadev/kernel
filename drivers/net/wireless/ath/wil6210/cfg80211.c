@@ -32,7 +32,7 @@ module_param(ignore_reg_hints, bool, 0444);
 MODULE_PARM_DESC(ignore_reg_hints, " Ignore OTA regulatory hints (Default: true)");
 
 #define CHAN60G(_channel, _flags) {				\
-	.band			= IEEE80211_BAND_60GHZ,		\
+	.band			= NL80211_BAND_60GHZ,		\
 	.center_freq		= 56160 + (2160 * (_channel)),	\
 	.hw_value		= (_channel),			\
 	.flags			= (_flags),			\
@@ -1876,7 +1876,7 @@ static void wil_wiphy_init(struct wiphy *wiphy)
 		NL80211_PROBE_RESP_OFFLOAD_SUPPORT_WPS2 |
 		NL80211_PROBE_RESP_OFFLOAD_SUPPORT_P2P;
 
-	wiphy->bands[IEEE80211_BAND_60GHZ] = &wil_band_60ghz;
+	wiphy->bands[NL80211_BAND_60GHZ] = &wil_band_60ghz;
 
 	/* may change after reading FW capabilities */
 	wiphy->signal_type = CFG80211_SIGNAL_TYPE_UNSPEC;

@@ -834,7 +834,7 @@ static s8 wl_dbg_estr[][WL_DBG_ESTR_MAX] = {
 #endif				/* WL_DBG_LEVEL */
 
 #define CHAN2G(_channel, _freq, _flags) {			\
-	.band			= IEEE80211_BAND_2GHZ,		\
+	.band			= NL80211_BAND_2GHZ,		\
 	.center_freq		= (_freq),			\
 	.hw_value		= (_channel),			\
 	.flags			= (_flags),			\
@@ -843,7 +843,7 @@ static s8 wl_dbg_estr[][WL_DBG_ESTR_MAX] = {
 }
 
 #define CHAN5G(_channel, _flags) {				\
-	.band			= IEEE80211_BAND_5GHZ,		\
+	.band			= NL80211_BAND_5GHZ,		\
 	.center_freq		= 5000 + (5 * (_channel)),	\
 	.hw_value		= (_channel),			\
 	.flags			= (_flags),			\
@@ -915,7 +915,7 @@ static struct ieee80211_channel __wl_5ghz_a_channels[] = {
 };
 
 static struct ieee80211_supported_band __wl_band_2ghz = {
-	.band = IEEE80211_BAND_2GHZ,
+	.band = NL80211_BAND_2GHZ,
 	.channels = __wl_2ghz_channels,
 	.n_channels = ARRAY_SIZE(__wl_2ghz_channels),
 	.bitrates = wl_g_rates,
@@ -923,7 +923,7 @@ static struct ieee80211_supported_band __wl_band_2ghz = {
 };
 
 static struct ieee80211_supported_band __wl_band_5ghz_a = {
-	.band = IEEE80211_BAND_5GHZ,
+	.band = NL80211_BAND_5GHZ,
 	.channels = __wl_5ghz_a_channels,
 	.n_channels = ARRAY_SIZE(__wl_5ghz_a_channels),
 	.bitrates = wl_a_rates,
@@ -2346,7 +2346,7 @@ static void wl_scan_prep(struct wl_scan_params *params, struct cfg80211_scan_req
 				continue;
 			}
 
-			if (request->channels[i]->band == IEEE80211_BAND_2GHZ) {
+			if (request->channels[i]->band == NL80211_BAND_2GHZ) {
 #ifdef WL_HOST_BAND_MGMT
 				if (cfg->curr_band == WLC_BAND_5G) {
 					WL_DBG(("In 5G only mode, omit 2G channel:%d\n", channel));
@@ -3775,9 +3775,9 @@ wl_cfg80211_join_ibss(struct wiphy *wiphy, struct net_device *dev,
 		cfg->ibss_starter = true;
 	}
 	if (chan) {
-		if (chan->band == IEEE80211_BAND_5GHZ)
+		if (chan->band == NL80211_BAND_5GHZ)
 			param[0] = WLC_BAND_5G;
-		else if (chan->band == IEEE80211_BAND_2GHZ)
+		else if (chan->band == NL80211_BAND_2GHZ)
 			param[0] = WLC_BAND_2G;
 		err = wldev_iovar_getint(dev, "bw_cap", param);
 		if (unlikely(err)) {
@@ -7076,7 +7076,7 @@ wl_cfg80211_set_channel(struct wiphy *wiphy, struct net_device *dev,
 		goto set_channel;
 	}
 #endif /* WL11ULB */
-	if (chan->band == IEEE80211_BAND_5GHZ) {
+	if (chan->band == NL80211_BAND_5GHZ) {
 		param.band = WLC_BAND_5G;
 		err = wldev_iovar_getbuf(dev, "bw_cap", &param, sizeof(param),
 			cfg->ioctl_buf, WLC_IOCTL_SMLEN, &cfg->ioctl_buf_sync);
@@ -7102,7 +7102,7 @@ wl_cfg80211_set_channel(struct wiphy *wiphy, struct net_device *dev,
 
 		}
 
-	} else if (chan->band == IEEE80211_BAND_2GHZ)
+	} else if (chan->band == NL80211_BAND_2GHZ)
 		bw = WL_CHANSPEC_BW_20;
 set_channel:
 	chspec = wf_channel2chspec(_chan, bw);
@@ -8922,7 +8922,7 @@ static int wl_cfg80211_dump_survey(struct wiphy *wiphy, struct net_device *ndev,
 	if (!(dhd->op_mode & DHD_FLAG_HOSTAP_MODE)) {
 		return -ENOENT;
 	}
-	band = wiphy->bands[IEEE80211_BAND_2GHZ];
+	band = wiphy->bands[NL80211_BAND_2GHZ];
 	if (band && idx >= band->n_channels) {
 		idx -= band->n_channels;
 		band = NULL;
@@ -8930,7 +8930,7 @@ static int wl_cfg80211_dump_survey(struct wiphy *wiphy, struct net_device *ndev,
 
 	if (!band || idx >= band->n_channels) {
 		/* Move to 5G band */
-		band = wiphy->bands[IEEE80211_BAND_5GHZ];
+		band = wiphy->bands[NL80211_BAND_5GHZ];
 		if (idx >= band->n_channels) {
 			return -ENOENT;
 		}
@@ -9189,7 +9189,7 @@ static s32 wl_setup_wiphy(struct wireless_dev *wdev, struct device *sdiofunc_dev
 		ARRAY_SIZE(common_iface_combinations);
 #endif /* LINUX_VER >= 3.0 && (WL_IFACE_COMB_NUM_CHANNELS || WL_CFG80211_P2P_DEV_IF) */
 
-	wdev->wiphy->bands[IEEE80211_BAND_2GHZ] = &__wl_band_2ghz;
+	wdev->wiphy->bands[NL80211_BAND_2GHZ] = &__wl_band_2ghz;
 
 	wdev->wiphy->signal_type = CFG80211_SIGNAL_TYPE_MBM;
 	wdev->wiphy->cipher_suites = __wl_cipher_suites;
@@ -9409,9 +9409,9 @@ static s32 wl_inform_single_bss(struct bcm_cfg80211 *cfg, struct wl_bss_info *bi
 		wf_chspec_ctlchan(wl_chspec_driver_to_host(bi->chanspec));
 
 	if (notif_bss_info->channel <= CH_MAX_2G_CHANNEL)
-		band = wiphy->bands[IEEE80211_BAND_2GHZ];
+		band = wiphy->bands[NL80211_BAND_2GHZ];
 	else
-		band = wiphy->bands[IEEE80211_BAND_5GHZ];
+		band = wiphy->bands[NL80211_BAND_5GHZ];
 	if (!band) {
 		WL_ERR(("No valid band"));
 		kfree(notif_bss_info);
@@ -9656,9 +9656,9 @@ wl_notify_connect_status_ap(struct bcm_cfg80211 *cfg, struct net_device *ndev,
 
 	channel = dtoh32(ci.hw_channel);
 	if (channel <= CH_MAX_2G_CHANNEL)
-		band = wiphy->bands[IEEE80211_BAND_2GHZ];
+		band = wiphy->bands[NL80211_BAND_2GHZ];
 	else
-		band = wiphy->bands[IEEE80211_BAND_5GHZ];
+		band = wiphy->bands[NL80211_BAND_5GHZ];
 	if (!band) {
 		WL_ERR(("No valid band"));
 		if (body)
@@ -9785,7 +9785,7 @@ wl_notify_connect_status_ibss(struct bcm_cfg80211 *cfg, struct net_device *ndev,
 			return err;
 		}
 		chan = wf_chspec_ctlchan(wl_chspec_driver_to_host(chanspec));
-		band = (chan <= CH_MAX_2G_CHANNEL) ? IEEE80211_BAND_2GHZ : IEEE80211_BAND_5GHZ;
+		band = (chan <= CH_MAX_2G_CHANNEL) ? NL80211_BAND_2GHZ : NL80211_BAND_5GHZ;
 		freq = ieee80211_channel_to_frequency(chan, band);
 		channel = ieee80211_get_channel(wiphy, freq);
 #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3, 15, 0) */
@@ -10576,9 +10576,9 @@ wl_bss_roaming_done(struct bcm_cfg80211 *cfg, struct net_device *ndev,
 	/* channel info for cfg80211_roamed introduced in 2.6.39-rc1 */
 	channel = (u32 *)wl_read_prof(cfg, ndev, WL_PROF_CHAN);
 	if (*channel <= CH_MAX_2G_CHANNEL)
-		band = wiphy->bands[IEEE80211_BAND_2GHZ];
+		band = wiphy->bands[NL80211_BAND_2GHZ];
 	else
-		band = wiphy->bands[IEEE80211_BAND_5GHZ];
+		band = wiphy->bands[NL80211_BAND_5GHZ];
 	freq = ieee80211_channel_to_frequency(*channel, band->band);
 	notify_channel = ieee80211_get_channel(wiphy, freq);
 #endif /* LINUX_VERSION > 2.6.39  || WL_COMPAT_WIRELESS */
@@ -11071,9 +11071,9 @@ wl_notify_rx_mgmt_frame(struct bcm_cfg80211 *cfg, bcm_struct_cfgdev *cfgdev,
 	ndev = cfgdev_to_wlc_ndev(cfgdev, cfg);
 
 	if (channel <= CH_MAX_2G_CHANNEL)
-		band = wiphy->bands[IEEE80211_BAND_2GHZ];
+		band = wiphy->bands[NL80211_BAND_2GHZ];
 	else
-		band = wiphy->bands[IEEE80211_BAND_5GHZ];
+		band = wiphy->bands[NL80211_BAND_5GHZ];
 	if (!band) {
 		WL_ERR(("No valid band"));
 		return -EINVAL;
@@ -13309,13 +13309,13 @@ static int wl_construct_reginfo(struct bcm_cfg80211 *cfg, s32 bw_cap)
 			band_chan_arr = __wl_2ghz_channels;
 			array_size = ARRAYSIZE(__wl_2ghz_channels);
 			n_cnt = &n_2g;
-			band = IEEE80211_BAND_2GHZ;
+			band = NL80211_BAND_2GHZ;
 			ht40_allowed = (bw_cap  == WLC_N_BW_40ALL)? true : false;
 		} else if (CHSPEC_IS5G(c) && channel >= CH_MIN_5G_CHANNEL) {
 			band_chan_arr = __wl_5ghz_a_channels;
 			array_size = ARRAYSIZE(__wl_5ghz_a_channels);
 			n_cnt = &n_5g;
-			band = IEEE80211_BAND_5GHZ;
+			band = NL80211_BAND_5GHZ;
 			ht40_allowed = (bw_cap  == WLC_N_BW_20ALL)? false : true;
 		} else {
 			WL_ERR(("Invalid channel Sepc. 0x%x.\n", c));
@@ -13366,7 +13366,7 @@ static int wl_construct_reginfo(struct bcm_cfg80211 *cfg, s32 bw_cap)
 			} else {
 				band_chan_arr[index].flags = IEEE80211_CHAN_NO_HT40;
 				if (!dfs_radar_disabled) {
-					if (band == IEEE80211_BAND_2GHZ)
+					if (band == NL80211_BAND_2GHZ)
 						channel |= WL_CHANSPEC_BAND_2G;
 					else
 						channel |= WL_CHANSPEC_BAND_5G;
@@ -13434,7 +13434,7 @@ s32 wl_update_wiphybands(struct bcm_cfg80211 *cfg, bool notify)
 	bool rollback_lock = false;
 	s32 bw_cap = 0;
 	s32 cur_band = -1;
-	struct ieee80211_supported_band *bands[IEEE80211_NUM_BANDS] = {NULL, };
+	struct ieee80211_supported_band *bands[NUM_NL80211_BANDS] = {NULL, };
 
 	if (cfg == NULL) {
 		cfg = g_bcm_cfg;
@@ -13531,9 +13531,9 @@ s32 wl_update_wiphybands(struct bcm_cfg80211 *cfg, bool notify)
 	for (i = 1; i <= nband && i < ARRAYSIZE(bandlist); i++) {
 		index = -1;
 		if (bandlist[i] == WLC_BAND_5G && __wl_band_5ghz_a.n_channels > 0) {
-			bands[IEEE80211_BAND_5GHZ] =
+			bands[NL80211_BAND_5GHZ] =
 				&__wl_band_5ghz_a;
-			index = IEEE80211_BAND_5GHZ;
+			index = NL80211_BAND_5GHZ;
 			if (nmode && (bw_cap == WLC_N_BW_40ALL || bw_cap == WLC_N_BW_20IN2G_40IN5G))
 				bands[index]->ht_cap.cap |= IEEE80211_HT_CAP_SGI_40;
 
@@ -13624,9 +13624,9 @@ s32 wl_update_wiphybands(struct bcm_cfg80211 *cfg, bool notify)
 #endif /* KERNEL >= 3.6 || CUSTOMER_HW5 */
 		}
 		else if (bandlist[i] == WLC_BAND_2G && __wl_band_2ghz.n_channels > 0) {
-			bands[IEEE80211_BAND_2GHZ] =
+			bands[NL80211_BAND_2GHZ] =
 				&__wl_band_2ghz;
-			index = IEEE80211_BAND_2GHZ;
+			index = NL80211_BAND_2GHZ;
 			if (bw_cap == WLC_N_BW_40ALL)
 				bands[index]->ht_cap.cap |= IEEE80211_HT_CAP_SGI_40;
 		}
@@ -13643,14 +13643,14 @@ s32 wl_update_wiphybands(struct bcm_cfg80211 *cfg, bool notify)
 
 	}
 
-	wiphy->bands[IEEE80211_BAND_2GHZ] = bands[IEEE80211_BAND_2GHZ];
-	wiphy->bands[IEEE80211_BAND_5GHZ] = bands[IEEE80211_BAND_5GHZ];
+	wiphy->bands[NL80211_BAND_2GHZ] = bands[NL80211_BAND_2GHZ];
+	wiphy->bands[NL80211_BAND_5GHZ] = bands[NL80211_BAND_5GHZ];
 
 	/* check if any bands populated otherwise makes 2Ghz as default */
-	if (wiphy->bands[IEEE80211_BAND_2GHZ] == NULL &&
-		wiphy->bands[IEEE80211_BAND_5GHZ] == NULL) {
+	if (wiphy->bands[NL80211_BAND_2GHZ] == NULL &&
+		wiphy->bands[NL80211_BAND_5GHZ] == NULL) {
 		/* Setup 2Ghz band as default */
-		wiphy->bands[IEEE80211_BAND_2GHZ] = &__wl_band_2ghz;
+		wiphy->bands[NL80211_BAND_2GHZ] = &__wl_band_2ghz;
 	}
 
 	if (notify)
@@ -14391,9 +14391,9 @@ s32 wl_cfg80211_channel_to_freq(u32 channel)
 	{
 		u16 band = 0;
 		if (channel <= CH_MAX_2G_CHANNEL)
-			band = IEEE80211_BAND_2GHZ;
+			band = NL80211_BAND_2GHZ;
 		else
-			band = IEEE80211_BAND_5GHZ;
+			band = NL80211_BAND_5GHZ;
 		freq = ieee80211_channel_to_frequency(channel, band);
 	}
 #endif
@@ -14944,7 +14944,7 @@ wl_cfg80211_get_best_channels(struct net_device *dev, char* cmd, int total_len)
 	}
 
 	if (CHANNEL_IS_2G(channel)) {
-		channel = ieee80211_channel_to_frequency(channel, IEEE80211_BAND_2GHZ);
+		channel = ieee80211_channel_to_frequency(channel, NL80211_BAND_2GHZ);
 	} else {
 		WL_ERR(("invalid 2.4GHz channel, channel = %d\n", channel));
 		channel = 0;
@@ -14967,7 +14967,7 @@ wl_cfg80211_get_best_channels(struct net_device *dev, char* cmd, int total_len)
 	}
 
 	if (CHANNEL_IS_5G(channel)) {
-		channel = ieee80211_channel_to_frequency(channel, IEEE80211_BAND_5GHZ);
+		channel = ieee80211_channel_to_frequency(channel, NL80211_BAND_5GHZ);
 	} else {
 		WL_ERR(("invalid 5GHz channel, channel = %d\n", channel));
 		channel = 0;
