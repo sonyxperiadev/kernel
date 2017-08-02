@@ -1379,7 +1379,19 @@ static void binder_send_failed_reply(struct binder_transaction *t,
 		target_thread = t->from;
 		if (target_thread) {
 			binder_proc_lock(target_thread->proc, __LINE__);
-
+			/*
+			 * It's possible that binder_free_thread() just marked
+			 * the thread a zombie before we took the lock; in that
+			 * case, there's no point in queueing any work to the
+			 * thread - proceed as if it's already dead.
+			 */
+			if (target_thread->is_zombie) {
+				binder_proc_unlock(target_thread->proc,
+						   __LINE__);
+				target_thread = NULL;
+			}
+		}
+		if (target_thread) {
 			binder_debug(BINDER_DEBUG_FAILED_TRANSACTION,
 				     "send failed reply for transaction %d to %d:%d\n",
 				      t->debug_id,
