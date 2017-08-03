@@ -824,28 +824,28 @@ static const char * const cam0_ldo_groups[] = {
 static const char * const sd_write_groups[] = {
 	"gpio50",
 };
-static const char * const uim1_data_groups[] = {
+static const char * const uim2_data_groups[] = {
 	"gpio51",
 };
-static const char * const uim1_clk_groups[] = {
+static const char * const uim2_clk_groups[] = {
 	"gpio52",
 };
-static const char * const uim1_reset_groups[] = {
+static const char * const uim2_reset_groups[] = {
 	"gpio53",
 };
-static const char * const uim1_present_groups[] = {
+static const char * const uim2_present_groups[] = {
 	"gpio54",
 };
-static const char * const uim2_data_groups[] = {
+static const char * const uim1_data_groups[] = {
 	"gpio55",
 };
-static const char * const uim2_clk_groups[] = {
+static const char * const uim1_clk_groups[] = {
 	"gpio56",
 };
-static const char * const uim2_reset_groups[] = {
+static const char * const uim1_reset_groups[] = {
 	"gpio57",
 };
-static const char * const uim2_present_groups[] = {
+static const char * const uim1_present_groups[] = {
 	"gpio58",
 };
 static const char * const ts_xvdd_groups[] = {
@@ -1306,14 +1306,14 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(48, NA, NA, qdss_tracedata_a, NA, NA, NA, NA, NA, NA),
 	PINGROUP(49, NA, NA, gcc_gp1_clk_a, NA, NA, NA, NA, NA, NA),
 	PINGROUP(50, NA, sd_write, gcc_gp2_clk_a, NA, NA, NA, NA, NA, NA),
-	PINGROUP(51, uim1_data, gcc_gp3_clk_a, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(52, uim1_clk, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(53, uim1_reset, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(54, uim1_present, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(55, uim2_data, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(56, uim2_clk, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(57, uim2_reset, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(58, uim2_present, NA, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(51, uim2_data, gcc_gp3_clk_a, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(52, uim2_clk, NA, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(53, uim2_reset, NA, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(54, uim2_present, NA, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(55, uim1_data, NA, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(56, uim1_clk, NA, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(57, uim1_reset, NA, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(58, uim1_present, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(59, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(60, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(61, uim_batt, NA, NA, NA, NA, NA, NA, NA, NA),
