@@ -702,10 +702,10 @@ static const char * const nfc_disable_groups[] = {
 	"gpio16",
 };
 static const char * const blsp_spi5_groups[] = {
-	"gpio16", "gpio17", "gpio18", "gpio19",
+	"gpio134", "gpio135", "gpio136", "gpio137",
 };
 static const char * const blsp_uart5_groups[] = {
-	"gpio16", "gpio17", "gpio18", "gpio19",
+	"gpio134", "gpio135", "gpio136", "gpio137",
 };
 static const char * const qdss_traceclk_a_groups[] = {
 	"gpio8",
@@ -726,7 +726,7 @@ static const char * const atest_bbrx0_groups[] = {
 	"gpio17",
 };
 static const char * const blsp_i2c5_groups[] = {
-	"gpio18", "gpio19",
+	"gpio136", "gpio137",
 };
 static const char * const qdss_tracectl_a_groups[] = {
 	"gpio9",
@@ -1123,7 +1123,7 @@ static const char * const cam1_ldo_groups[] = {
 	"gpio134",
 };
 static const char * const sec_mi2s_groups[] = {
-	"gpio135", "gpio136", "gpio137", "gpio138",
+	"gpio135", "gpio136",
 };
 static const char * const blsp_spi7_groups[] = {
 	"gpio135", "gpio136", "gpio137", "gpio138",
@@ -1444,11 +1444,11 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(131, ddr_bist, NA, NA, NA, qdss_tracedata_a, NA, NA, NA, NA),
 	PINGROUP(132, ddr_bist, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(133, cdc_pdm0, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(134, NA, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(135, sec_mi2s, blsp_spi7, blsp_i2c7, NA, NA, NA, NA, NA, NA),
-	PINGROUP(136, sec_mi2s, blsp_spi7, blsp_i2c7, NA, NA, NA, NA, NA, NA),
-	PINGROUP(137, sec_mi2s, blsp_spi7, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(138, sec_mi2s, blsp_spi7, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(134, blsp_spi5, blsp_uart5, sec_mi2s, NA, NA, NA, NA, NA, NA),
+	PINGROUP(135, blsp_spi5, blsp_uart5, sec_mi2s, NA, NA, NA, NA, NA, NA),
+	PINGROUP(136, blsp_spi5, blsp_uart5, blsp_i2c5, NA, NA, NA, NA, NA, NA),
+	PINGROUP(137, blsp_spi5, blsp_uart5, blsp_i2c5, NA, NA, NA, NA, NA, NA),
+	PINGROUP(138, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(139, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(140, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(141, NA, NA, NA, NA, NA, NA, NA, NA, NA),
