@@ -619,7 +619,6 @@ enum msm8976_functions {
 	msm_mux_blsp_spi7,
 	msm_mux_blsp_i2c7,
 	msm_mux_ss_switch,
-	msm_mux_tsens_max,
 	msm_mux_NA,
 };
 
@@ -1247,9 +1246,6 @@ static const char * const blsp_i2c7_groups[] = {
 static const char * const ss_switch_groups[] = {
 	"gpio139",
 };
-static const char * const tsens_max_groups[] = {
-	"gpio139",
-};
 
 static const struct msm_function msm8976_functions[] = {
 	FUNCTION(gpio),
@@ -1451,7 +1447,6 @@ static const struct msm_function msm8976_functions[] = {
 	FUNCTION(blsp_spi7),
 	FUNCTION(blsp_i2c7),
 	FUNCTION(ss_switch),
-	FUNCTION(tsens_max),
 };
 
 static const struct msm_pingroup msm8976_groups[] = {
@@ -1594,7 +1589,7 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(136, sec_mi2s, blsp_spi7, blsp_i2c7, NA, NA, NA, NA, NA, NA),
 	PINGROUP(137, sec_mi2s, blsp_spi7, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(138, sec_mi2s, blsp_spi7, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(139, tsens_max, NA, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(139, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(140, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(141, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(142, NA, NA, NA, NA, NA, NA, NA, NA, NA),
