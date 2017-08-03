@@ -691,7 +691,7 @@ static const char * const nfc_irq_groups[] = {
 	"gpio17",
 };
 static const char * const m_voc_groups[] = {
-	"gpio17", "gpio21",
+	"gpio123", "gpio124",
 };
 static const char * const qdss_cti_trig_in_a0_groups[] = {
 	"gpio20",
@@ -1272,11 +1272,11 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(14, blsp_spi4, NA, blsp_i2c4, NA, NA, NA, NA, NA, NA),
 	PINGROUP(15, blsp_spi4, NA, blsp_i2c4, NA, NA, NA, NA, NA, NA),
 	PINGROUP(16, blsp_spi8, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(17, blsp_spi8, NA, m_voc, NA, NA, NA, NA, NA, NA),
+	PINGROUP(17, blsp_spi8, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(18, blsp_spi8, NA, blsp_i2c8, NA, NA, NA, NA, NA, NA),
 	PINGROUP(19, blsp_spi8, NA, blsp_i2c8, NA, NA, NA, NA, NA, NA),
 	PINGROUP(20, blsp_spi6, blsp_uart6, NA, qdss_cti_trig_in_a0, NA, NA, NA, NA, NA),
-	PINGROUP(21, blsp_spi6, blsp_uart6, qdss_cti_trig_in_b0, m_voc, NA, NA, NA, NA, NA),
+	PINGROUP(21, blsp_spi6, blsp_uart6, qdss_cti_trig_in_b0, NA, NA, NA, NA, NA, NA),
 	PINGROUP(22, blsp_spi6, blsp_uart6, blsp_i2c6, qdss_cti_trig_out_b0, NA, NA, NA, NA, NA),
 	PINGROUP(23, blsp_spi6, blsp_uart6, blsp_i2c6, NA, NA, NA, NA, NA, NA),
 	PINGROUP(24, mdp_vsync, NA, NA, NA, NA, NA, NA, NA, NA),
@@ -1378,8 +1378,8 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(120, cdc_pdm0, qdss_tracedata_a, atest_char, ebi_cdc, NA, atest_tsens, NA, NA, NA),
 	PINGROUP(121, cdc_pdm0, qdss_tracedata_a, NA, NA, bimc_dte1, NA, NA, NA, NA),
 	PINGROUP(122, NA, NA, NA, bimc_dte1, NA, NA, NA, NA, NA),
-	PINGROUP(123, pri_mi2s, ssbi_wtr1, ebi_cdc, NA, NA, NA, NA, NA, NA),
-	PINGROUP(124, pri_mi2s, NA, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(123, pri_mi2s, m_voc, ssbi_wtr1, ebi_cdc, NA, NA, NA, NA, NA),
+	PINGROUP(124, pri_mi2s, m_voc, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(125, pri_mi2s, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(126, NA, NA, ldo_update, qdss_tracedata_b, NA, NA, NA, NA, NA),
 	PINGROUP(127, pri_mi2s, NA, NA, NA, NA, NA, NA, NA, NA),
