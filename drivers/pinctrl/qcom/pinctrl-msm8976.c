@@ -487,7 +487,6 @@ enum msm8976_functions {
 	msm_mux_cam1_rst,
 	msm_mux_gyro_int,
 	msm_mux_pressure_int,
-	msm_mux_blsp6_spi,
 	msm_mux_fp_int,
 	msm_mux_qdss_cti_trig_in_b1,
 	msm_mux_uim_batt,
@@ -809,9 +808,6 @@ static const char * const gyro_int_groups[] = {
 };
 static const char * const pressure_int_groups[] = {
 	"gpio46",
-};
-static const char * const blsp6_spi_groups[] = {
-	"gpio47", "gpio48",
 };
 static const char * const fp_int_groups[] = {
 	"gpio48",
@@ -1163,7 +1159,6 @@ static const struct msm_function msm8976_functions[] = {
 	FUNCTION(cam1_rst),
 	FUNCTION(gyro_int),
 	FUNCTION(pressure_int),
-	FUNCTION(blsp6_spi),
 	FUNCTION(fp_int),
 	FUNCTION(qdss_cti_trig_in_b1),
 	FUNCTION(uim_batt),
@@ -1307,8 +1302,8 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(44, wcss_wlan, NA, NA, NA, NA, NA, NA, sdc3, NA),
 	PINGROUP(45, NA, NA, qdss_tracectl_a, NA, NA, NA, NA, NA, NA),
 	PINGROUP(46, NA, NA, qdss_traceclk_a, NA, NA, NA, NA, NA, NA),
-	PINGROUP(47, blsp6_spi, NA, qdss_tracedata_a, NA, NA, NA, NA, NA, NA),
-	PINGROUP(48, blsp6_spi, NA, qdss_tracedata_a, NA, NA, NA, NA, NA, NA),
+	PINGROUP(47, NA, NA, qdss_tracedata_a, NA, NA, NA, NA, NA, NA),
+	PINGROUP(48, NA, NA, qdss_tracedata_a, NA, NA, NA, NA, NA, NA),
 	PINGROUP(49, NA, NA, gcc_gp1_clk_a, NA, NA, NA, NA, NA, NA),
 	PINGROUP(50, NA, sd_write, gcc_gp2_clk_a, NA, NA, NA, NA, NA, NA),
 	PINGROUP(51, uim1_data, gcc_gp3_clk_a, NA, NA, NA, NA, NA, NA, NA),
