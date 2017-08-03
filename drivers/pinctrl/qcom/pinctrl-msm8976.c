@@ -749,16 +749,16 @@ static const char * const flash_strobe_groups[] = {
 	"gpio33", "gpio34",
 };
 static const char * const cci_timer0_groups[] = {
-	"gpio33",
+	"gpio31",
 };
 static const char * const cci_timer1_groups[] = {
-	"gpio34",
+	"gpio32",
 };
 static const char * const cam_irq_groups[] = {
 	"gpio35",
 };
 static const char * const cci_timer2_groups[] = {
-	"gpio35",
+	"gpio33",
 };
 static const char * const blsp1_spi_groups[] = {
 	"gpio101",
@@ -767,10 +767,10 @@ static const char * const ois_sync_groups[] = {
 	"gpio36",
 };
 static const char * const cci_timer3_groups[] = {
-	"gpio36",
+	"gpio34",
 };
 static const char * const cci_timer4_groups[] = {
-	"gpio41",
+	"gpio35",
 };
 static const char * const blsp3_spi_groups[] = {
 	"gpio41", "gpio50",
@@ -1296,17 +1296,17 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(28, cam_mclk, NA, NA, NA, NA, qdss_tracectl_b, NA, NA, NA),
 	PINGROUP(29, cci_i2c, NA, NA, NA, NA, qdss_traceclk_b, NA, NA, NA),
 	PINGROUP(30, cci_i2c, NA, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
-	PINGROUP(31, NA, NA, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
-	PINGROUP(32, NA, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(33, cci_timer0, NA, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
-	PINGROUP(34, cci_timer1, NA, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
-	PINGROUP(35, cci_timer2, NA, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
-	PINGROUP(36, cci_timer3, NA, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
+	PINGROUP(31, cci_timer0, NA, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
+	PINGROUP(32, cci_timer1, NA, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(33, cci_timer2, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
+	PINGROUP(34, cci_timer3, NA, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
+	PINGROUP(35, cci_timer4, NA, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
+	PINGROUP(36, NA, NA, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
 	PINGROUP(37, NA, NA, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
 	PINGROUP(38, adsp_ext, cci_async, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
 	PINGROUP(39, NA, NA, NA, qdss_tracedata_a, NA, NA, NA, sdc3, NA),
 	PINGROUP(40, wcss_wlan2, NA, qdss_tracedata_a, NA, NA, NA, NA, sdc3, NA),
-	PINGROUP(41, wcss_wlan1, cci_timer4, blsp3_spi, NA, qdss_tracedata_a, NA, qdss_cti_trig_out_a0, sdc3, NA),
+	PINGROUP(41, wcss_wlan1, NA, blsp3_spi, NA, qdss_tracedata_a, NA, qdss_cti_trig_out_a0, sdc3, NA),
 	PINGROUP(42, wcss_wlan0, NA, qdss_tracedata_a, NA, NA, NA, NA, sdc3, NA),
 	PINGROUP(43, wcss_wlan, NA, qdss_tracedata_a, NA, NA, NA, NA, sdc3, NA),
 	PINGROUP(44, wcss_wlan, NA, qdss_tracedata_a, NA, NA, NA, NA, sdc3, NA),
