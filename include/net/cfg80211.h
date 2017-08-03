@@ -5787,4 +5787,11 @@ void cfg80211_ap_stopped(struct net_device *netdev, gfp_t gfp);
 #define wiphy_WARN(wiphy, format, args...)			\
 	WARN(1, "wiphy: %s\n" format, wiphy_name(wiphy), ##args);
 
+/* Due to our tree having a backport of
+ * 57fbcce37be7c1d2622b56587c10ade00e96afa3, this allows QC to support 4.7+
+ * kernels that use the newer NL80211_BAND_* and older kernels that use the
+ * older IEEE80211_BAND_* enums.
+ */
+#define CFG80211_REMOVE_IEEE80211_BACKPORT 1
+
 #endif /* __NET_CFG80211_H */
