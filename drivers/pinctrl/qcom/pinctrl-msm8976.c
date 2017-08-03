@@ -627,7 +627,7 @@ static const char * const smb_int_groups[] = {
 	"gpio1",
 };
 static const char * const adsp_ext_groups[] = {
-	"gpio1",
+	"gpio38",
 };
 static const char * const blsp_i2c1_groups[] = {
 	"gpio2", "gpio3",
@@ -1306,7 +1306,7 @@ static const struct msm_function msm8976_functions[] = {
 
 static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(0, blsp_spi1, blsp_uart1, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(1, blsp_spi1, blsp_uart1, adsp_ext, NA, NA, NA, NA, NA, NA),
+	PINGROUP(1, blsp_spi1, blsp_uart1, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(2, blsp_spi1, blsp_uart1, blsp_i2c1, NA, NA, NA, NA, NA, NA),
 	PINGROUP(3, blsp_spi1, blsp_uart1, blsp_i2c1, NA, NA, qdss_cti_trig_out_a1, NA, NA, NA),
 	PINGROUP(4, blsp_spi2, blsp_uart2, ldo_update, NA, NA, NA, NA, NA, qdss_tracedata_b),
@@ -1343,7 +1343,7 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(35, cci_timer2, blsp1_spi, pwr_nav_enabled_a, NA, NA, NA, NA, NA, qdss_tracedata_b),
 	PINGROUP(36, cci_timer3, blsp1_spi, NA, pwr_crypto_enabled_a, NA, NA, NA, NA, qdss_tracedata_b),
 	PINGROUP(37, NA, NA, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
-	PINGROUP(38, cci_async, NA, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
+	PINGROUP(38, adsp_ext, cci_async, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
 	PINGROUP(39, NA, NA, NA, qdss_tracedata_a, NA, NA, NA, sdc3, NA),
 	PINGROUP(40, wcss_wlan2, NA, qdss_tracedata_a, NA, NA, NA, NA, sdc3, NA),
 	PINGROUP(41, wcss_wlan1, cci_timer4, blsp3_spi, gcc_gp1_clk_b, qdss_tracedata_a, NA, qdss_cti_trig_out_a0, sdc3, NA),
