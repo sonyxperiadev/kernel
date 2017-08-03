@@ -445,7 +445,6 @@ enum msm8976_functions {
 	msm_mux_gcc_gp3_clk_b,
 	msm_mux_hall_int,
 	msm_mux_blsp_spi4,
-	msm_mux_blsp_uart4,
 	msm_mux_pwr_nav_enabled_b,
 	msm_mux_dac_calib1,
 	msm_mux_cap_int,
@@ -722,9 +721,6 @@ static const char * const hall_int_groups[] = {
 	"gpio12",
 };
 static const char * const blsp_spi4_groups[] = {
-	"gpio12", "gpio13", "gpio14", "gpio15",
-};
-static const char * const blsp_uart4_groups[] = {
 	"gpio12", "gpio13", "gpio14", "gpio15",
 };
 static const char * const pwr_nav_enabled_b_groups[] = {
@@ -1289,7 +1285,6 @@ static const struct msm_function msm8976_functions[] = {
 	FUNCTION(gcc_gp3_clk_b),
 	FUNCTION(hall_int),
 	FUNCTION(blsp_spi4),
-	FUNCTION(blsp_uart4),
 	FUNCTION(pwr_nav_enabled_b),
 	FUNCTION(dac_calib1),
 	FUNCTION(cap_int),
@@ -1472,7 +1467,7 @@ static const struct msm_function msm8976_functions[] = {
 static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(0, blsp_spi1, blsp_uart1, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(1, blsp_spi1, blsp_uart1, adsp_ext, NA, NA, NA, NA, NA, NA),
-	PINGROUP(2, blsp_spi1, blsp_uart1, 1blsp_i2c1, prng_rosc, NA, NA, NA, NA, NA),
+	PINGROUP(2, blsp_spi1, blsp_uart1, blsp_i2c1, prng_rosc, NA, NA, NA, NA, NA),
 	PINGROUP(3, blsp_spi1, blsp_uart1, blsp_i2c1, NA, NA, qdss_cti_trig_out_a1, NA, NA, NA),
 	PINGROUP(4, blsp_spi2, blsp_uart2, ldo_update, NA, dac_calib0, NA, NA, NA, qdss_tracedata_b),
 	PINGROUP(5, blsp_spi2, blsp_uart2, ldo_en, NA, NA, NA, NA, NA, qdss_tracedata_b),
@@ -1482,10 +1477,10 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(9, blsp_spi3, pwr_modem_enabled_b, NA, NA, qdss_tracectl_a, NA, NA, NA, NA),
 	PINGROUP(10, blsp_spi3, blsp_i2c3, gcc_gp2_clk_b, NA, qdss_tracedata_a, NA, NA, NA, NA),
 	PINGROUP(11, blsp_spi3, blsp_i2c3, gcc_gp3_clk_b, NA, NA, NA, NA, NA, NA),
-	PINGROUP(12, blsp_spi4, blsp_uart4, pwr_nav_enabled_b, NA, NA, NA, NA, dac_calib1, NA),
-	PINGROUP(13, blsp_spi4, blsp_uart4, pwr_crypto_enabled_b, NA, NA, NA, NA, NA, dac_calib2),
-	PINGROUP(14, blsp_spi4, blsp_uart4, blsp_i2c4, NA, NA, NA, NA, NA, NA),
-	PINGROUP(15, blsp_spi4, blsp_uart4, blsp_i2c4, NA, NA, NA, NA, NA, NA),
+	PINGROUP(12, blsp_spi4, NA, pwr_nav_enabled_b, NA, NA, NA, NA, dac_calib1, NA),
+	PINGROUP(13, blsp_spi4, NA, pwr_crypto_enabled_b, NA, NA, NA, NA, NA, dac_calib2),
+	PINGROUP(14, blsp_spi4, NA, blsp_i2c4, NA, NA, NA, NA, NA, NA),
+	PINGROUP(15, blsp_spi4, NA, blsp_i2c4, NA, NA, NA, NA, NA, NA),
 	PINGROUP(16, blsp_spi5, blsp_uart5, NA, NA, NA, NA, atest_bbrx1, NA, NA),
 	PINGROUP(17, blsp_spi5, blsp_uart5, m_voc, qdss_cti_trig_in_a0, NA, atest_bbrx0, NA, NA, NA),
 	PINGROUP(18, blsp_spi5, blsp_uart5, blsp_i2c8, NA, NA, atest_gpsadc_dtest1_native, NA, NA, NA),
