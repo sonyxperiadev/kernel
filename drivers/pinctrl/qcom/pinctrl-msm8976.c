@@ -645,10 +645,10 @@ static const char * const blsp_uart2_groups[] = {
 	"gpio4", "gpio5", "gpio6", "gpio7",
 };
 static const char * const ldo_update_groups[] = {
-	"gpio4",
+	"gpio126",
 };
 static const char * const ldo_en_groups[] = {
-	"gpio5",
+	"gpio128",
 };
 static const char * const blsp_i2c2_groups[] = {
 	"gpio6", "gpio7",
@@ -1309,8 +1309,8 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(1, blsp_spi1, blsp_uart1, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(2, blsp_spi1, blsp_uart1, blsp_i2c1, NA, NA, NA, NA, NA, NA),
 	PINGROUP(3, blsp_spi1, blsp_uart1, blsp_i2c1, NA, NA, qdss_cti_trig_out_a1, NA, NA, NA),
-	PINGROUP(4, blsp_spi2, blsp_uart2, ldo_update, NA, NA, NA, NA, NA, qdss_tracedata_b),
-	PINGROUP(5, blsp_spi2, blsp_uart2, ldo_en, NA, NA, NA, NA, NA, qdss_tracedata_b),
+	PINGROUP(4, blsp_spi2, blsp_uart2, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
+	PINGROUP(5, blsp_spi2, blsp_uart2, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
 	PINGROUP(6, blsp_spi2, blsp_uart2, blsp_i2c2, gcc_gp1_clk_b, NA, NA, NA, NA, NA),
 	PINGROUP(7, blsp_spi2, blsp_uart2, blsp_i2c2, NA, atest_gpsadc_dtest0_native, NA, NA, NA, NA),
 	PINGROUP(8, blsp_spi3, NA, NA, qdss_traceclk_a, NA, NA, NA, NA, NA),
@@ -1431,9 +1431,9 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(123, pri_mi2s, ssbi_wtr1, ebi_cdc, NA, NA, NA, NA, NA, NA),
 	PINGROUP(124, pri_mi2s, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(125, pri_mi2s, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(126, NA, NA, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
+	PINGROUP(126, NA, NA, ldo_update, NA, NA, NA, NA, NA, qdss_tracedata_b),
 	PINGROUP(127, pri_mi2s, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(128, cam_mclk, NA, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
+	PINGROUP(128, cam_mclk, ldo_en, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
 	PINGROUP(129, ddr_bist, NA, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
 	PINGROUP(130, ddr_bist, NA, NA, NA, qdss_tracedata_a, NA, NA, NA, NA),
 	PINGROUP(131, ddr_bist, NA, NA, NA, qdss_tracedata_a, NA, NA, NA, NA),
