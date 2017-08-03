@@ -572,7 +572,6 @@ enum msm8976_functions {
 	msm_mux_atest_tsens,
 	msm_mux_bimc_dte1,
 	msm_mux_cam2_rst,
-	msm_mux_ddr_bist,
 	msm_mux_cam2_standby,
 	msm_mux_cam3_rst,
 	msm_mux_cam3_standby,
@@ -1068,9 +1067,6 @@ static const char * const bimc_dte1_groups[] = {
 static const char * const cam2_rst_groups[] = {
 	"gpio129",
 };
-static const char * const ddr_bist_groups[] = {
-	"gpio129", "gpio130", "gpio131", "gpio132",
-};
 static const char * const cam2_standby_groups[] = {
 	"gpio130",
 };
@@ -1252,7 +1248,6 @@ static const struct msm_function msm8976_functions[] = {
 	FUNCTION(atest_tsens),
 	FUNCTION(bimc_dte1),
 	FUNCTION(cam2_rst),
-	FUNCTION(ddr_bist),
 	FUNCTION(cam2_standby),
 	FUNCTION(cam3_rst),
 	FUNCTION(cam3_standby),
@@ -1394,10 +1389,10 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(126, NA, NA, ldo_update, NA, NA, NA, NA, NA, qdss_tracedata_b),
 	PINGROUP(127, pri_mi2s, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(128, cam_mclk, ldo_en, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
-	PINGROUP(129, ddr_bist, NA, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
-	PINGROUP(130, ddr_bist, NA, NA, NA, qdss_tracedata_a, NA, NA, NA, NA),
-	PINGROUP(131, ddr_bist, NA, NA, NA, qdss_tracedata_a, NA, NA, NA, NA),
-	PINGROUP(132, ddr_bist, NA, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(129, NA, NA, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
+	PINGROUP(130, NA, NA, NA, NA, qdss_tracedata_a, NA, NA, NA, NA),
+	PINGROUP(131, NA, NA, NA, NA, qdss_tracedata_a, NA, NA, NA, NA),
+	PINGROUP(132, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(133, cdc_pdm0, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(134, blsp_spi5, blsp_uart5, sec_mi2s, NA, NA, NA, NA, NA, NA),
 	PINGROUP(135, blsp_spi5, blsp_uart5, sec_mi2s, NA, NA, NA, NA, NA, NA),
