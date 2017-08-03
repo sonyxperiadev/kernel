@@ -968,7 +968,7 @@ static const char * const pwr_down_groups[] = {
 	"gpio89",
 };
 static const char * const dmic0_clk_groups[] = {
-	"gpio89",
+	"gpio66",
 };
 static const char * const blsp7_spi_groups[] = {
 	"gpio89", "gpio90",
@@ -977,7 +977,7 @@ static const char * const hdmi_int_groups[] = {
 	"gpio90",
 };
 static const char * const dmic0_data_groups[] = {
-	"gpio90",
+	"gpio67",
 };
 static const char * const qdss_cti_trig_in_a1_groups[] = {
 	"gpio63",
@@ -1291,8 +1291,8 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(63, qdss_cti_trig_in_a1, NA, dbg_out, bimc_dte0, NA, NA, NA, NA, NA),
 	PINGROUP(64, qdss_cti_trig_in_b1, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(65, qdss_cti_trig_out_b1, bimc_dte0, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(66, NA, pri_mi2s, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(67, NA, NA, ebi_cdc, NA, NA, NA, NA, NA, NA),
+	PINGROUP(66, dmic0_clk, pri_mi2s, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(67, dmic0_data, NA, ebi_cdc, NA, NA, NA, NA, NA, NA),
 	PINGROUP(68, qdss_cti_trig_out_a1, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(69, qdss_tracedata_a, NA, ebi_cdc, NA, NA, NA, NA, NA, NA),
 	PINGROUP(70, NA, NA, NA, NA, NA, NA, NA, NA, NA),
@@ -1314,8 +1314,8 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(86, pbs1, cri_trng1, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(87, pbs2, cri_trng, NA, gcc_tlmm, NA, NA, NA, NA, NA),
 	PINGROUP(88, pri_mi2s, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(89, dmic0_clk, blsp7_spi, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(90, dmic0_data, blsp7_spi, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(89, NA, blsp7_spi, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(90, NA, blsp7_spi, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(91, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(92, pri_mi2s_ws, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(93, NA, NA, NA, NA, NA, NA, NA, NA, NA),
