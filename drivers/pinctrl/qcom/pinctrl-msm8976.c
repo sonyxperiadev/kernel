@@ -471,8 +471,6 @@ enum msm8976_functions {
 	msm_mux_dac_calib16,
 	msm_mux_blsp_i2c6,
 	msm_mux_qdss_traceclk_b,
-	msm_mux_atest_wlan0,
-	msm_mux_atest_wlan1,
 	msm_mux_mdp_vsync,
 	msm_mux_pri_mi2s_mclk_a,
 	msm_mux_sec_mi2s_mclk_a,
@@ -799,12 +797,6 @@ static const char * const blsp_i2c6_groups[] = {
 };
 static const char * const qdss_traceclk_b_groups[] = {
 	"gpio29",
-};
-static const char * const atest_wlan0_groups[] = {
-	"gpio22",
-};
-static const char * const atest_wlan1_groups[] = {
-	"gpio23",
 };
 static const char * const mdp_vsync_groups[] = {
 	"gpio24", "gpio25",
@@ -1299,8 +1291,6 @@ static const struct msm_function msm8976_functions[] = {
 	FUNCTION(dac_calib16),
 	FUNCTION(blsp_i2c6),
 	FUNCTION(qdss_traceclk_b),
-	FUNCTION(atest_wlan0),
-	FUNCTION(atest_wlan1),
 	FUNCTION(mdp_vsync),
 	FUNCTION(pri_mi2s_mclk_a),
 	FUNCTION(sec_mi2s_mclk_a),
@@ -1472,8 +1462,8 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(19, blsp_spi8, NA, blsp_i2c8, NA, NA, NA, NA, NA, NA),
 	PINGROUP(20, blsp_spi6, blsp_uart6, NA, NA, NA, NA, NA, dac_calib15, NA),
 	PINGROUP(21, blsp_spi6, blsp_uart6, m_voc, NA, NA, NA, qdss_cti_trig_in_b0, NA, dac_calib16),
-	PINGROUP(22, blsp_spi6, blsp_uart6, blsp_i2c6, NA, NA, atest_wlan0, qdss_cti_trig_out_b0, NA, NA),
-	PINGROUP(23, blsp_spi6, blsp_uart6, blsp_i2c6, NA, NA, atest_wlan1, NA, NA, NA),
+	PINGROUP(22, blsp_spi6, blsp_uart6, blsp_i2c6, NA, NA, NA, qdss_cti_trig_out_b0, NA, NA),
+	PINGROUP(23, blsp_spi6, blsp_uart6, blsp_i2c6, NA, NA, NA, NA, NA, NA),
 	PINGROUP(24, mdp_vsync, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(25, mdp_vsync, NA, sec_mi2s_mclk_a, qdss_cti_trig_out_b1, NA, NA, NA, NA, NA),
 	PINGROUP(26, cam_mclk, NA, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
