@@ -447,11 +447,9 @@ enum msm8976_functions {
 	msm_mux_blsp_spi5,
 	msm_mux_blsp_uart5,
 	msm_mux_qdss_traceclk_a,
-	msm_mux_atest_bbrx1,
 	msm_mux_nfc_irq,
 	msm_mux_m_voc,
 	msm_mux_qdss_cti_trig_in_a0,
-	msm_mux_atest_bbrx0,
 	msm_mux_blsp_i2c5,
 	msm_mux_qdss_tracectl_a,
 	msm_mux_qdss_tracedata_a,
@@ -691,9 +689,6 @@ static const char * const blsp_uart5_groups[] = {
 static const char * const qdss_traceclk_a_groups[] = {
 	"gpio8",
 };
-static const char * const atest_bbrx1_groups[] = {
-	"gpio16",
-};
 static const char * const nfc_irq_groups[] = {
 	"gpio17",
 };
@@ -701,9 +696,6 @@ static const char * const m_voc_groups[] = {
 	"gpio17", "gpio21",
 };
 static const char * const qdss_cti_trig_in_a0_groups[] = {
-	"gpio17",
-};
-static const char * const atest_bbrx0_groups[] = {
 	"gpio17",
 };
 static const char * const blsp_i2c5_groups[] = {
@@ -1135,11 +1127,9 @@ static const struct msm_function msm8976_functions[] = {
 	FUNCTION(blsp_spi5),
 	FUNCTION(blsp_uart5),
 	FUNCTION(qdss_traceclk_a),
-	FUNCTION(atest_bbrx1),
 	FUNCTION(nfc_irq),
 	FUNCTION(m_voc),
 	FUNCTION(qdss_cti_trig_in_a0),
-	FUNCTION(atest_bbrx0),
 	FUNCTION(blsp_i2c5),
 	FUNCTION(qdss_tracectl_a),
 	FUNCTION(qdss_tracedata_a),
@@ -1291,8 +1281,8 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(13, blsp_spi4, NA, gcc_gp3_clk_b, NA, NA, NA, NA, NA, NA),
 	PINGROUP(14, blsp_spi4, NA, blsp_i2c4, NA, NA, NA, NA, NA, NA),
 	PINGROUP(15, blsp_spi4, NA, blsp_i2c4, NA, NA, NA, NA, NA, NA),
-	PINGROUP(16, blsp_spi8, NA, NA, NA, NA, NA, atest_bbrx1, NA, NA),
-	PINGROUP(17, blsp_spi8, NA, m_voc, qdss_cti_trig_in_a0, NA, atest_bbrx0, NA, NA, NA),
+	PINGROUP(16, blsp_spi8, NA, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(17, blsp_spi8, NA, m_voc, qdss_cti_trig_in_a0, NA, NA, NA, NA, NA),
 	PINGROUP(18, blsp_spi8, NA, blsp_i2c8, NA, NA, NA, NA, NA, NA),
 	PINGROUP(19, blsp_spi8, NA, blsp_i2c8, NA, NA, NA, NA, NA, NA),
 	PINGROUP(20, blsp_spi6, blsp_uart6, NA, NA, NA, NA, NA, NA, NA),
