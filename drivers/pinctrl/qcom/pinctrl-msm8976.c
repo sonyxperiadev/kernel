@@ -904,13 +904,13 @@ static const char * const pri_mi2s_mclk_b_groups[] = {
 	"gpio62",
 };
 static const char * const lpass_slimbus_groups[] = {
-	"gpio70",
+	"gpio117",
 };
 static const char * const lpass_slimbus0_groups[] = {
-	"gpio71",
+	"gpio118",
 };
 static const char * const lpass_slimbus1_groups[] = {
-	"gpio72",
+	"gpio119",
 };
 static const char * const codec_int1_groups[] = {
 	"gpio73",
@@ -1325,9 +1325,9 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(67, NA, atest_char1, ebi_cdc, NA, NA, NA, NA, NA, NA),
 	PINGROUP(68, qdss_cti_trig_out_a1, atest_char0, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(69, qdss_tracedata_a, NA, ebi_cdc, NA, NA, NA, NA, NA, NA),
-	PINGROUP(70, lpass_slimbus, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(71, lpass_slimbus0, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(72, lpass_slimbus1, NA, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(70, NA, NA, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(71, NA, NA, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(72, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(73, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(74, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(75, wcss_bt, atest_char2, NA, ebi_ch0, NA, NA, NA, NA, NA),
@@ -1372,9 +1372,9 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(114, NA, ssbi_wtr1, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(115, NA, gsm1_tx, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(116, cdc_pdm0, NA, NA, qdss_tracedata_b, NA, NA, NA, NA, NA),
-	PINGROUP(117, cdc_pdm0, gsm0_tx, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(118, cdc_pdm0, ebi_cdc, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(119, cdc_pdm0, ebi_cdc, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(117, lpass_slimbus, cdc_pdm0, gsm0_tx, NA, NA, NA, NA, NA, NA),
+	PINGROUP(118, lpass_slimbus0, cdc_pdm0, ebi_cdc, NA, NA, NA, NA, NA, NA),
+	PINGROUP(119, lpass_slimbus1, cdc_pdm0, ebi_cdc, NA, NA, NA, NA, NA, NA),
 	PINGROUP(120, cdc_pdm0, qdss_tracedata_a, atest_char, ebi_cdc, NA, atest_tsens, NA, NA, NA),
 	PINGROUP(121, cdc_pdm0, qdss_tracedata_a, NA, NA, bimc_dte1, NA, NA, NA, NA),
 	PINGROUP(122, NA, NA, NA, bimc_dte1, NA, NA, NA, NA, NA),
