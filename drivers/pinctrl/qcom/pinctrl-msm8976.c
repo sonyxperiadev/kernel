@@ -443,7 +443,6 @@ enum msm8976_functions {
 	msm_mux_hall_int,
 	msm_mux_blsp_spi4,
 	msm_mux_cap_int,
-	msm_mux_pwr_crypto_enabled_b,
 	msm_mux_blsp_i2c4,
 	msm_mux_nfc_disable,
 	msm_mux_blsp_spi5,
@@ -487,7 +486,6 @@ enum msm8976_functions {
 	msm_mux_gcc_gp2_clk_a,
 	msm_mux_mag_int,
 	msm_mux_gcc_gp3_clk_a,
-	msm_mux_pwr_crypto_enabled_a,
 	msm_mux_cci_async,
 	msm_mux_cam1_standby,
 	msm_mux_cam1_rst,
@@ -683,9 +681,6 @@ static const char * const blsp_spi4_groups[] = {
 static const char * const cap_int_groups[] = {
 	"gpio13",
 };
-static const char * const pwr_crypto_enabled_b_groups[] = {
-	"gpio13",
-};
 static const char * const blsp_i2c4_groups[] = {
 	"gpio14", "gpio15",
 };
@@ -816,9 +811,6 @@ static const char * const mag_int_groups[] = {
 };
 static const char * const gcc_gp3_clk_a_groups[] = {
 	"gpio44",
-};
-static const char * const pwr_crypto_enabled_a_groups[] = {
-	"gpio36",
 };
 static const char * const cci_async_groups[] = {
 	"gpio38",
@@ -1147,7 +1139,6 @@ static const struct msm_function msm8976_functions[] = {
 	FUNCTION(hall_int),
 	FUNCTION(blsp_spi4),
 	FUNCTION(cap_int),
-	FUNCTION(pwr_crypto_enabled_b),
 	FUNCTION(blsp_i2c4),
 	FUNCTION(nfc_disable),
 	FUNCTION(blsp_spi5),
@@ -1191,7 +1182,6 @@ static const struct msm_function msm8976_functions[] = {
 	FUNCTION(gcc_gp2_clk_a),
 	FUNCTION(mag_int),
 	FUNCTION(gcc_gp3_clk_a),
-	FUNCTION(pwr_crypto_enabled_a),
 	FUNCTION(cci_async),
 	FUNCTION(cam1_standby),
 	FUNCTION(cam1_rst),
@@ -1308,7 +1298,7 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(10, blsp_spi3, NA, blsp_i2c3, gcc_gp2_clk_b, NA, qdss_tracedata_a, NA, NA, NA),
 	PINGROUP(11, blsp_spi3, NA, blsp_i2c3, gcc_gp3_clk_b, NA, NA, NA, NA, NA),
 	PINGROUP(12, blsp_spi4, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(13, blsp_spi4, NA, pwr_crypto_enabled_b, NA, NA, NA, NA, NA, NA),
+	PINGROUP(13, blsp_spi4, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(14, blsp_spi4, NA, blsp_i2c4, NA, NA, NA, NA, NA, NA),
 	PINGROUP(15, blsp_spi4, NA, blsp_i2c4, NA, NA, NA, NA, NA, NA),
 	PINGROUP(16, blsp_spi8, NA, NA, NA, NA, NA, atest_bbrx1, NA, NA),
@@ -1331,7 +1321,7 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(33, cci_timer0, NA, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
 	PINGROUP(34, cci_timer1, NA, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
 	PINGROUP(35, cci_timer2, blsp1_spi, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
-	PINGROUP(36, cci_timer3, blsp1_spi, NA, pwr_crypto_enabled_a, NA, NA, NA, NA, qdss_tracedata_b),
+	PINGROUP(36, cci_timer3, blsp1_spi, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
 	PINGROUP(37, NA, NA, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
 	PINGROUP(38, adsp_ext, cci_async, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
 	PINGROUP(39, NA, NA, NA, qdss_tracedata_a, NA, NA, NA, sdc3, NA),
