@@ -820,7 +820,7 @@ static const char * const qdss_cti_trig_in_b1_groups[] = {
 	"gpio64",
 };
 static const char * const uim_batt_groups[] = {
-	"gpio49",
+	"gpio61",
 };
 static const char * const cam0_ldo_groups[] = {
 	"gpio50",
@@ -1309,7 +1309,7 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(46, NA, NA, qdss_traceclk_a, NA, NA, NA, NA, NA, NA),
 	PINGROUP(47, blsp6_spi, NA, qdss_tracedata_a, NA, NA, NA, NA, NA, NA),
 	PINGROUP(48, blsp6_spi, NA, qdss_tracedata_a, NA, NA, NA, NA, NA, NA),
-	PINGROUP(49, uim_batt, NA, gcc_gp1_clk_a, NA, NA, NA, NA, NA, NA),
+	PINGROUP(49, NA, NA, gcc_gp1_clk_a, NA, NA, NA, NA, NA, NA),
 	PINGROUP(50, NA, sd_write, gcc_gp2_clk_a, NA, NA, NA, NA, NA, NA),
 	PINGROUP(51, uim1_data, gcc_gp3_clk_a, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(52, uim1_clk, NA, NA, NA, NA, NA, NA, NA, NA),
@@ -1321,7 +1321,7 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(58, uim2_present, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(59, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(60, NA, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(61, NA, NA, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(61, uim_batt, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(62, pri_mi2s_mclk_a, NA, qdss_tracedata_a, NA, NA, NA, NA, NA, NA),
 	PINGROUP(63, qdss_cti_trig_in_a1, atest_char3, dbg_out, bimc_dte0, NA, NA, NA, NA, NA),
 	PINGROUP(64, qdss_cti_trig_in_b1, NA, NA, NA, NA, NA, NA, NA, NA),
