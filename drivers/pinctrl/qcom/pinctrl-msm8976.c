@@ -521,7 +521,6 @@ enum msm8976_functions {
 	msm_mux_codec_int1,
 	msm_mux_codec_int2,
 	msm_mux_wcss_bt,
-	msm_mux_ebi_ch0,
 	msm_mux_sdc3,
 	msm_mux_wcss_wlan2,
 	msm_mux_wcss_wlan1,
@@ -907,9 +906,6 @@ static const char * const codec_int2_groups[] = {
 static const char * const wcss_bt_groups[] = {
 	"gpio75", "gpio83", "gpio84",
 };
-static const char * const ebi_ch0_groups[] = {
-	"gpio75",
-};
 static const char * const sdc3_groups[] = {
 	"gpio39", "gpio40", "gpio41",
 	"gpio42", "gpio43", "gpio44",
@@ -1173,7 +1169,6 @@ static const struct msm_function msm8976_functions[] = {
 	FUNCTION(codec_int1),
 	FUNCTION(codec_int2),
 	FUNCTION(wcss_bt),
-	FUNCTION(ebi_ch0),
 	FUNCTION(sdc3),
 	FUNCTION(wcss_wlan2),
 	FUNCTION(wcss_wlan1),
@@ -1305,7 +1300,7 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(72, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(73, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(74, NA, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(75, wcss_bt, NA, NA, ebi_ch0, NA, NA, NA, NA, NA),
+	PINGROUP(75, wcss_bt, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(76, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(77, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(78, NA, NA, NA, NA, NA, NA, NA, NA, NA),
