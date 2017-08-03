@@ -627,7 +627,7 @@ static const char * const qdss_cti_trig_out_b0_groups[] = {
 	"gpio22",
 };
 static const char * const qdss_cti_trig_out_a1_groups[] = {
-	"gpio3",
+	"gpio68",
 };
 static const char * const blsp_spi2_groups[] = {
 	"gpio4", "gpio5", "gpio6", "gpio7",
@@ -695,7 +695,7 @@ static const char * const m_voc_groups[] = {
 	"gpio17", "gpio21",
 };
 static const char * const qdss_cti_trig_in_a0_groups[] = {
-	"gpio17",
+	"gpio20",
 };
 static const char * const blsp_i2c5_groups[] = {
 	"gpio136", "gpio137",
@@ -736,7 +736,7 @@ static const char * const sec_mi2s_mclk_a_groups[] = {
 	"gpio25",
 };
 static const char * const qdss_cti_trig_out_b1_groups[] = {
-	"gpio25",
+	"gpio65",
 };
 static const char * const cam_mclk_groups[] = {
 	"gpio26", "gpio27", "gpio28", "gpio128",
@@ -775,7 +775,7 @@ static const char * const blsp3_spi_groups[] = {
 	"gpio106", "gpio107",
 };
 static const char * const qdss_cti_trig_out_a0_groups[] = {
-	"gpio41",
+	"gpio32",
 };
 static const char * const accel_int_groups[] = {
 	"gpio42",
@@ -817,7 +817,7 @@ static const char * const fp_int_groups[] = {
 	"gpio48",
 };
 static const char * const qdss_cti_trig_in_b1_groups[] = {
-	"gpio48",
+	"gpio64",
 };
 static const char * const uim_batt_groups[] = {
 	"gpio49",
@@ -1005,7 +1005,7 @@ static const char * const dmic0_data_groups[] = {
 	"gpio90",
 };
 static const char * const qdss_cti_trig_in_a1_groups[] = {
-	"gpio91",
+	"gpio63",
 };
 static const char * const pri_mi2s_ws_groups[] = {
 	"gpio92",
@@ -1263,7 +1263,7 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(0, blsp_spi1, blsp_uart1, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(1, blsp_spi1, blsp_uart1, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(2, blsp_spi1, blsp_uart1, blsp_i2c1, NA, NA, NA, NA, NA, NA),
-	PINGROUP(3, blsp_spi1, blsp_uart1, blsp_i2c1, NA, NA, qdss_cti_trig_out_a1, NA, NA, NA),
+	PINGROUP(3, blsp_spi1, blsp_uart1, blsp_i2c1, NA, NA, NA, NA, NA, NA),
 	PINGROUP(4, blsp_spi2, blsp_uart2, NA, qdss_tracectl_b, NA, NA, NA, NA, NA),
 	PINGROUP(5, blsp_spi2, blsp_uart2, NA, qdss_traceclk_b, NA, NA, NA, NA, NA),
 	PINGROUP(6, blsp_spi2, blsp_uart2, blsp_i2c2, NA, NA, NA, NA, NA, NA),
@@ -1277,22 +1277,22 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(14, blsp_spi4, NA, blsp_i2c4, NA, NA, NA, NA, NA, NA),
 	PINGROUP(15, blsp_spi4, NA, blsp_i2c4, NA, NA, NA, NA, NA, NA),
 	PINGROUP(16, blsp_spi8, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(17, blsp_spi8, NA, m_voc, qdss_cti_trig_in_a0, NA, NA, NA, NA, NA),
+	PINGROUP(17, blsp_spi8, NA, m_voc, NA, NA, NA, NA, NA, NA),
 	PINGROUP(18, blsp_spi8, NA, blsp_i2c8, NA, NA, NA, NA, NA, NA),
 	PINGROUP(19, blsp_spi8, NA, blsp_i2c8, NA, NA, NA, NA, NA, NA),
-	PINGROUP(20, blsp_spi6, blsp_uart6, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(21, blsp_spi6, blsp_uart6, m_voc, NA, NA, NA, qdss_cti_trig_in_b0, NA, NA),
-	PINGROUP(22, blsp_spi6, blsp_uart6, blsp_i2c6, NA, NA, NA, qdss_cti_trig_out_b0, NA, NA),
+	PINGROUP(20, blsp_spi6, blsp_uart6, NA, qdss_cti_trig_in_a0, NA, NA, NA, NA, NA),
+	PINGROUP(21, blsp_spi6, blsp_uart6, qdss_cti_trig_in_b0, m_voc, NA, NA, NA, NA, NA),
+	PINGROUP(22, blsp_spi6, blsp_uart6, blsp_i2c6, qdss_cti_trig_out_b0, NA, NA, NA, NA, NA),
 	PINGROUP(23, blsp_spi6, blsp_uart6, blsp_i2c6, NA, NA, NA, NA, NA, NA),
 	PINGROUP(24, mdp_vsync, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(25, mdp_vsync, NA, sec_mi2s_mclk_a, qdss_cti_trig_out_b1, NA, NA, NA, NA, NA),
+	PINGROUP(25, mdp_vsync, NA, sec_mi2s_mclk_a, NA, NA, NA, NA, NA, NA),
 	PINGROUP(26, cam_mclk, qdss_tracedata_b, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(27, cam_mclk, qdss_tracedata_b, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(28, cam_mclk, qdss_tracedata_b, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(29, cci_i2c, qdss_tracedata_b, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(30, cci_i2c, qdss_tracedata_b, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(31, cci_timer0, NA, qdss_tracedata_b, NA, NA, NA, NA, NA, NA),
-	PINGROUP(32, cci_timer1, NA, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(32, cci_timer1, NA, qdss_cti_trig_out_a0, NA, NA, NA, NA, NA, NA),
 	PINGROUP(33, cci_timer2, qdss_tracedata_b, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(34, cci_timer3, NA, qdss_tracedata_b, NA, NA, NA, NA, NA, NA),
 	PINGROUP(35, cci_timer4, NA, qdss_tracedata_b, NA, NA, NA, NA, NA, NA),
@@ -1301,14 +1301,14 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(38, adsp_ext, qdss_tracedata_b, cci_async, NA, NA, NA, NA, NA, NA),
 	PINGROUP(39, NA, qdss_tracedata_a, NA, NA, NA, NA, NA, sdc3, NA),
 	PINGROUP(40, wcss_wlan2, qdss_tracedata_a, NA, NA, NA, NA, NA, sdc3, NA),
-	PINGROUP(41, wcss_wlan1, qdss_tracedata_a, NA, NA, NA, NA, qdss_cti_trig_out_a0, sdc3, NA),
+	PINGROUP(41, wcss_wlan1, qdss_tracedata_a, NA, NA, NA, NA, NA, sdc3, NA),
 	PINGROUP(42, wcss_wlan0, qdss_tracedata_a, NA, NA, NA, NA, NA, sdc3, NA),
 	PINGROUP(43, wcss_wlan, qdss_tracedata_a, NA, NA, NA, NA, NA, sdc3, NA),
 	PINGROUP(44, wcss_wlan, NA, NA, NA, NA, NA, NA, sdc3, NA),
 	PINGROUP(45, NA, NA, qdss_tracectl_a, NA, NA, NA, NA, NA, NA),
 	PINGROUP(46, NA, NA, qdss_traceclk_a, NA, NA, NA, NA, NA, NA),
 	PINGROUP(47, blsp6_spi, NA, qdss_tracedata_a, NA, NA, NA, NA, NA, NA),
-	PINGROUP(48, blsp6_spi, qdss_cti_trig_in_b1, qdss_tracedata_a, NA, NA, NA, NA, NA, NA),
+	PINGROUP(48, blsp6_spi, NA, qdss_tracedata_a, NA, NA, NA, NA, NA, NA),
 	PINGROUP(49, uim_batt, NA, gcc_gp1_clk_a, NA, NA, NA, NA, NA, NA),
 	PINGROUP(50, NA, sd_write, gcc_gp2_clk_a, NA, NA, NA, NA, NA, NA),
 	PINGROUP(51, uim1_data, gcc_gp3_clk_a, NA, NA, NA, NA, NA, NA, NA),
@@ -1323,12 +1323,12 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(60, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(61, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(62, pri_mi2s_mclk_a, NA, qdss_tracedata_a, NA, NA, NA, NA, NA, NA),
-	PINGROUP(63, atest_char3, dbg_out, bimc_dte0, NA, NA, NA, NA, NA, NA),
-	PINGROUP(64, NA, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(65, bimc_dte0, NA, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(63, qdss_cti_trig_in_a1, atest_char3, dbg_out, bimc_dte0, NA, NA, NA, NA, NA),
+	PINGROUP(64, qdss_cti_trig_in_b1, NA, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(65, qdss_cti_trig_out_b1, bimc_dte0, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(66, sec_mi2s_mclk_b, pri_mi2s, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(67, NA, atest_char1, ebi_cdc, NA, NA, NA, NA, NA, NA),
-	PINGROUP(68, atest_char0, NA, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(68, qdss_cti_trig_out_a1, atest_char0, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(69, qdss_tracedata_a, pri_mi2s_mclk_b, ebi_cdc, NA, NA, NA, NA, NA, NA),
 	PINGROUP(70, lpass_slimbus, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(71, lpass_slimbus0, NA, NA, NA, NA, NA, NA, NA, NA),
@@ -1351,7 +1351,7 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(88, pri_mi2s, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(89, dmic0_clk, blsp7_spi, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(90, dmic0_data, blsp7_spi, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(91, NA, NA, NA, NA, qdss_cti_trig_in_a1, NA, NA, NA, NA),
+	PINGROUP(91, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(92, pri_mi2s_ws, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(93, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(94, NA, NA, NA, NA, NA, NA, NA, NA, NA),
