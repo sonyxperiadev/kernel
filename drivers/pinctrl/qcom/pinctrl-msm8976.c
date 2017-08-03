@@ -1126,10 +1126,10 @@ static const char * const sec_mi2s_groups[] = {
 	"gpio135", "gpio136",
 };
 static const char * const blsp_spi7_groups[] = {
-	"gpio135", "gpio136", "gpio137", "gpio138",
+	"gpio108", "gpio109", "gpio110", "gpio111",
 };
 static const char * const blsp_i2c7_groups[] = {
-	"gpio135", "gpio136",
+	"gpio110", "gpio111",
 };
 static const char * const ss_switch_groups[] = {
 	"gpio139",
@@ -1418,10 +1418,10 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(105, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(106, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(107, NA, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(108, wsa_io, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(109, wsa_io, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(110, NA, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(111, NA, NA, nav_pps_in_a, NA, NA, NA, NA, NA, NA),
+	PINGROUP(108, blsp_spi7,wsa_io, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(109, blsp_spi7,wsa_io, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(110, blsp_spi7, NA, blsp_i2c7, NA,  NA, NA, NA, NA, NA),
+	PINGROUP(111, blsp_spi7, NA, blsp_i2c7, nav_pps_in_a, NA, NA, NA, NA, NA),
 	PINGROUP(112, NA, pa_indicator, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(113, NA, nav_pps_in_b, nav_pps, modem_tsync, nav_tsync, NA, NA, NA, NA),
 	PINGROUP(114, NA, ssbi_wtr1, NA, NA, NA, NA, NA, NA, NA),
@@ -1436,7 +1436,7 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(123, pri_mi2s, ssbi_wtr1, ebi_cdc, NA, NA, NA, NA, NA, NA),
 	PINGROUP(124, pri_mi2s, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(125, pri_mi2s, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(126, NA, NA, NA, NA, NA, NA, NA, NA,		 qdss_tracedata_b),
+	PINGROUP(126, NA, NA, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
 	PINGROUP(127, pri_mi2s, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(128, cam_mclk, NA, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
 	PINGROUP(129, ddr_bist, NA, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
