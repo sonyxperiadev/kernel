@@ -790,19 +790,19 @@ static const char * const accel_int_groups[] = {
 	"gpio42",
 };
 static const char * const gcc_gp1_clk_a_groups[] = {
-	"gpio42",
+	"gpio49",
 };
 static const char * const alsp_int_groups[] = {
 	"gpio43",
 };
 static const char * const gcc_gp2_clk_a_groups[] = {
-	"gpio43",
+	"gpio50",
 };
 static const char * const mag_int_groups[] = {
 	"gpio44",
 };
 static const char * const gcc_gp3_clk_a_groups[] = {
-	"gpio44",
+	"gpio51",
 };
 static const char * const cci_async_groups[] = {
 	"gpio38",
@@ -1317,16 +1317,16 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(39, NA, NA, NA, qdss_tracedata_a, NA, NA, NA, sdc3, NA),
 	PINGROUP(40, wcss_wlan2, NA, qdss_tracedata_a, NA, NA, NA, NA, sdc3, NA),
 	PINGROUP(41, wcss_wlan1, cci_timer4, blsp3_spi, NA, qdss_tracedata_a, NA, qdss_cti_trig_out_a0, sdc3, NA),
-	PINGROUP(42, wcss_wlan0, gcc_gp1_clk_a, qdss_tracedata_a, NA, NA, NA, NA, sdc3, NA),
-	PINGROUP(43, wcss_wlan, gcc_gp2_clk_a, qdss_tracedata_a, NA, NA, NA, NA, sdc3, NA),
-	PINGROUP(44, wcss_wlan, gcc_gp3_clk_a, qdss_tracedata_a, NA, NA, NA, NA, sdc3, NA),
+	PINGROUP(42, wcss_wlan0, NA, qdss_tracedata_a, NA, NA, NA, NA, sdc3, NA),
+	PINGROUP(43, wcss_wlan, NA, qdss_tracedata_a, NA, NA, NA, NA, sdc3, NA),
+	PINGROUP(44, wcss_wlan, NA, qdss_tracedata_a, NA, NA, NA, NA, sdc3, NA),
 	PINGROUP(45, NA, qdss_tracedata_a, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(46, qdss_tracedata_a, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(47, blsp6_spi, qdss_tracedata_a, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(48, blsp6_spi, qdss_tracedata_a, qdss_cti_trig_in_b1, NA, NA, NA, NA, NA, NA),
-	PINGROUP(49, uim_batt, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(50, blsp3_spi, sd_write, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(51, uim1_data, NA, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(49, uim_batt, NA, gcc_gp1_clk_a, NA, NA, NA, NA, NA, NA),
+	PINGROUP(50, blsp3_spi, sd_write, gcc_gp2_clk_a, NA, NA, NA, NA, NA, NA),
+	PINGROUP(51, uim1_data, gcc_gp3_clk_a, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(52, uim1_clk, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(53, uim1_reset, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(54, uim1_present, NA, NA, NA, NA, NA, NA, NA, NA),
