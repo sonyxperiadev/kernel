@@ -1146,7 +1146,7 @@ static const char * const wsa_en_groups[] = {
 	"gpio96",
 };
 static const char * const blsp_spi8_groups[] = {
-	"gpio96", "gpio97", "gpio98", "gpio99",
+	"gpio16", "gpio17", "gpio18", "gpio19",
 };
 static const char * const wsa_irq_groups[] = {
 	"gpio97",
@@ -1471,10 +1471,10 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(13, blsp_spi4, NA, pwr_crypto_enabled_b, NA, NA, NA, NA, NA, dac_calib2),
 	PINGROUP(14, blsp_spi4, NA, blsp_i2c4, NA, NA, NA, NA, NA, NA),
 	PINGROUP(15, blsp_spi4, NA, blsp_i2c4, NA, NA, NA, NA, NA, NA),
-	PINGROUP(16, blsp_spi5, blsp_uart5, NA, NA, NA, NA, atest_bbrx1, NA, NA),
-	PINGROUP(17, blsp_spi5, blsp_uart5, m_voc, qdss_cti_trig_in_a0, NA, atest_bbrx0, NA, NA, NA),
-	PINGROUP(18, blsp_spi5, blsp_uart5, blsp_i2c8, NA, NA, atest_gpsadc_dtest1_native, NA, NA, NA),
-	PINGROUP(19, blsp_spi5, blsp_uart5, blsp_i2c8, NA, NA, NA, NA, NA, NA),
+	PINGROUP(16, blsp_spi8, NA, NA, NA, NA, NA, atest_bbrx1, NA, NA),
+	PINGROUP(17, blsp_spi8, NA, m_voc, qdss_cti_trig_in_a0, NA, atest_bbrx0, NA, NA, NA),
+	PINGROUP(18, blsp_spi8, NA, blsp_i2c8, NA, NA, atest_gpsadc_dtest1_native, NA, NA, NA),
+	PINGROUP(19, blsp_spi8, NA, blsp_i2c8, NA, NA, NA, NA, NA, NA),
 	PINGROUP(20, blsp_spi6, blsp_uart6, NA, NA, NA, NA, NA, dac_calib15, NA),
 	PINGROUP(21, blsp_spi6, blsp_uart6, m_voc, NA, NA, NA, qdss_cti_trig_in_b0, NA, dac_calib16),
 	PINGROUP(22, blsp_spi6, blsp_uart6, blsp_i2c6, NA, NA, atest_wlan0, qdss_cti_trig_out_b0, NA, NA),
@@ -1551,10 +1551,10 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(93, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(94, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(95, NA, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(96, blsp_spi8, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(97, blsp_spi8, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(98, NA, blsp_spi8, gcc_plltest, NA, NA, NA, NA, NA, NA),
-	PINGROUP(99, NA, blsp_spi8, gcc_plltest, NA, NA, NA, NA, NA, NA),
+	PINGROUP(96, NA, NA, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(97, NA, NA, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(98, NA, NA, gcc_plltest, NA, NA, NA, NA, NA, NA),
+	PINGROUP(99, NA, NA, gcc_plltest, NA, NA, NA, NA, NA, NA),
 	PINGROUP(100, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(101, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(102, NA, NA, NA, NA, NA, NA, NA, NA, NA),
