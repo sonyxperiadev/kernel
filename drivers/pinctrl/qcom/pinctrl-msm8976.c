@@ -425,7 +425,6 @@ enum msm8976_functions {
 	msm_mux_blsp_spi1,
 	msm_mux_smb_int,
 	msm_mux_adsp_ext,
-	msm_mux_prng_rosc,
 	msm_mux_blsp_i2c1,
 	msm_mux_qdss_cti_trig_out_b0,
 	msm_mux_qdss_cti_trig_out_a1,
@@ -629,9 +628,6 @@ static const char * const smb_int_groups[] = {
 };
 static const char * const adsp_ext_groups[] = {
 	"gpio1",
-};
-static const char * const prng_rosc_groups[] = {
-	"gpio2",
 };
 static const char * const blsp_i2c1_groups[] = {
 	"gpio2", "gpio3",
@@ -1140,7 +1136,6 @@ static const struct msm_function msm8976_functions[] = {
 	FUNCTION(blsp_spi1),
 	FUNCTION(smb_int),
 	FUNCTION(adsp_ext),
-	FUNCTION(prng_rosc),
 	FUNCTION(blsp_i2c1),
 	FUNCTION(qdss_cti_trig_out_b0),
 	FUNCTION(qdss_cti_trig_out_a1),
@@ -1312,7 +1307,7 @@ static const struct msm_function msm8976_functions[] = {
 static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(0, blsp_spi1, blsp_uart1, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(1, blsp_spi1, blsp_uart1, adsp_ext, NA, NA, NA, NA, NA, NA),
-	PINGROUP(2, blsp_spi1, blsp_uart1, blsp_i2c1, prng_rosc, NA, NA, NA, NA, NA),
+	PINGROUP(2, blsp_spi1, blsp_uart1, blsp_i2c1, NA, NA, NA, NA, NA, NA),
 	PINGROUP(3, blsp_spi1, blsp_uart1, blsp_i2c1, NA, NA, qdss_cti_trig_out_a1, NA, NA, NA),
 	PINGROUP(4, blsp_spi2, blsp_uart2, ldo_update, NA, NA, NA, NA, NA, qdss_tracedata_b),
 	PINGROUP(5, blsp_spi2, blsp_uart2, ldo_en, NA, NA, NA, NA, NA, qdss_tracedata_b),
