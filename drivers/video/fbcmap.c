@@ -163,8 +163,8 @@ void fb_dealloc_cmap(struct fb_cmap *cmap)
 
 int fb_copy_cmap(const struct fb_cmap *from, struct fb_cmap *to)
 {
-	int tooff = 0, fromoff = 0;
-	int size;
+	unsigned int tooff = 0, fromoff = 0;
+	size_t size;
 
 	if (!to || !from)
 		return -EINVAL;
@@ -173,10 +173,11 @@ int fb_copy_cmap(const struct fb_cmap *from, struct fb_cmap *to)
 		fromoff = to->start - from->start;
 	else
 		tooff = from->start - to->start;
-	size = to->len - tooff;
-	if (size > (int) (from->len - fromoff))
-		size = from->len - fromoff;
-	if (size <= 0)
+	if (fromoff >= from->len || tooff >= to->len)
+		return -EINVAL;
+
+	size = min_t(size_t, to->len - tooff, from->len - fromoff);
+	if (size == 0)
 		return -EINVAL;
 	size *= sizeof(u16);
 
@@ -195,6 +196,8 @@ int fb_cmap_to_user(const struct fb_cmap *from, struct fb_cmap_user *to)
 {
 	int tooff = 0, fromoff = 0;
 	int size;
+	unsigned int tooff = 0, fromoff = 0;
+	size_t size;
 
 	if (!to || !from)
 		return -EINVAL;
@@ -206,10 +209,12 @@ int fb_cmap_to_user(const struct fb_cmap *from, struct fb_cmap_user *to)
 	if ((to->len <= tooff) || (from->len <= fromoff))
 		return -EINVAL;
 
-	size = to->len - tooff;
+	if (fromoff >= from->len || tooff >= to->len)
+		return -EINVAL;
 
-	if (size > (int) (from->len - fromoff))
-		size = from->len - fromoff;
+	size = min_t(size_t, to->len - tooff, from->len - fromoff);
+	if (size == 0)
+ 		return -EINVAL;
 	size *= sizeof(u16);
 
 	if (from->red && to->red)
