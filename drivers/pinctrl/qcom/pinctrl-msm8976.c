@@ -561,7 +561,6 @@ enum msm8976_functions {
 	msm_mux_ssbi_wtr1,
 	msm_mux_gsm1_tx,
 	msm_mux_gsm0_tx,
-	msm_mux_atest_tsens,
 	msm_mux_cam2_rst,
 	msm_mux_cam2_standby,
 	msm_mux_cam3_rst,
@@ -1025,9 +1024,6 @@ static const char * const gsm1_tx_groups[] = {
 static const char * const gsm0_tx_groups[] = {
 	"gpio117",
 };
-static const char * const atest_tsens_groups[] = {
-	"gpio120",
-};
 static const char * const cam2_rst_groups[] = {
 	"gpio129",
 };
@@ -1201,7 +1197,6 @@ static const struct msm_function msm8976_functions[] = {
 	FUNCTION(ssbi_wtr1),
 	FUNCTION(gsm1_tx),
 	FUNCTION(gsm0_tx),
-	FUNCTION(atest_tsens),
 	FUNCTION(cam2_rst),
 	FUNCTION(cam2_standby),
 	FUNCTION(cam3_rst),
@@ -1335,7 +1330,7 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(117, lpass_slimbus, cdc_pdm0, gsm0_tx, NA, NA, NA, NA, NA, NA),
 	PINGROUP(118, lpass_slimbus0, cdc_pdm0, ebi_cdc, NA, NA, NA, NA, NA, NA),
 	PINGROUP(119, lpass_slimbus1, cdc_pdm0, ebi_cdc, NA, NA, NA, NA, NA, NA),
-	PINGROUP(120, cdc_pdm0, qdss_tracedata_a, NA, ebi_cdc, NA, atest_tsens, NA, NA, NA),
+	PINGROUP(120, cdc_pdm0, qdss_tracedata_a, NA, ebi_cdc, NA, NA, NA, NA, NA),
 	PINGROUP(121, cdc_pdm0, qdss_tracedata_a, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(122, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(123, pri_mi2s, m_voc, NA, ebi_cdc, NA, NA, NA, NA, NA),
