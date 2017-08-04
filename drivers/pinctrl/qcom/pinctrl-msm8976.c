@@ -524,7 +524,6 @@ enum msm8976_functions {
 	msm_mux_wcss_wlan0,
 	msm_mux_wcss_wlan,
 	msm_mux_wcss_fm,
-	msm_mux_ext_lpass,
 	msm_mux_mss_lte,
 	msm_mux_key_volp,
 	msm_mux_key_snapshot,
@@ -902,9 +901,6 @@ static const char * const wcss_wlan_groups[] = {
 static const char * const wcss_fm_groups[] = {
 	"gpio45", "gpio46",
 };
-static const char * const ext_lpass_groups[] = {
-	"gpio81",
-};
 static const char * const mss_lte_groups[] = {
 	"gpio82", "gpio83",
 };
@@ -1116,7 +1112,6 @@ static const struct msm_function msm8976_functions[] = {
 	FUNCTION(wcss_wlan0),
 	FUNCTION(wcss_wlan),
 	FUNCTION(wcss_fm),
-	FUNCTION(ext_lpass),
 	FUNCTION(mss_lte),
 	FUNCTION(key_volp),
 	FUNCTION(key_snapshot),
@@ -1236,7 +1231,7 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(78, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(79, NA, ssbi_wtr1, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(80, NA, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(81, NA, ext_lpass, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(81, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(82, NA, mss_lte, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(83, NA, mss_lte, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(84, NA, NA, NA, NA, NA, NA, NA, NA, NA),
