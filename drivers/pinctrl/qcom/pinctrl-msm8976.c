@@ -856,7 +856,6 @@ static const char * const codec_reset_groups[] = {
 };
 static const char * const cdc_pdm0_groups[] = {
 	"gpio116", "gpio117", "gpio118", "gpio119", "gpio120", "gpio121",
-	"gpio133",
 };
 static const char * const us_emitter_groups[] = {
 	"gpio68",
@@ -1283,7 +1282,7 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(130, qdss_tracedata_a, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(131, qdss_tracedata_a, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(132, NA, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(133, cdc_pdm0, NA, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(133, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(134, blsp_spi5, blsp_uart5, sec_mi2s_ws, NA, NA, NA, NA, NA, NA),
 	PINGROUP(135, blsp_spi5, blsp_uart5, sec_mi2s, NA, NA, NA, NA, NA, NA),
 	PINGROUP(136, blsp_spi5, blsp_uart5, blsp_i2c5, NA, NA, NA, NA, NA, NA),
