@@ -2667,7 +2667,11 @@ void mmc_power_up(struct mmc_host *host, u32 ocr)
 
 	mmc_host_clk_hold(host);
 
-	host->ios.vdd = fls(ocr) - 1;
+	if (host->caps2 & MMC_CAP2_NONSTANDARD_OCR)
+		host->ios.vdd = ffs(ocr) - 1;
+	else
+		host->ios.vdd = fls(ocr) - 1;
+
 	if (mmc_host_is_spi(host))
 		host->ios.chip_select = MMC_CS_HIGH;
 	else {
