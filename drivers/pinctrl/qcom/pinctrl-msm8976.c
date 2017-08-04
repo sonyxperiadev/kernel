@@ -528,13 +528,10 @@ enum msm8976_functions {
 	msm_mux_ext_lpass,
 	msm_mux_mss_lte,
 	msm_mux_key_volp,
-	msm_mux_pbs0,
 	msm_mux_cri_trng0,
 	msm_mux_key_snapshot,
-	msm_mux_pbs1,
 	msm_mux_cri_trng1,
 	msm_mux_key_focus,
-	msm_mux_pbs2,
 	msm_mux_cri_trng,
 	msm_mux_gcc_tlmm,
 	msm_mux_key_home,
@@ -923,25 +920,16 @@ static const char * const mss_lte_groups[] = {
 static const char * const key_volp_groups[] = {
 	"gpio85",
 };
-static const char * const pbs0_groups[] = {
-	"gpio85",
-};
 static const char * const cri_trng0_groups[] = {
 	"gpio85",
 };
 static const char * const key_snapshot_groups[] = {
 	"gpio86",
 };
-static const char * const pbs1_groups[] = {
-	"gpio86",
-};
 static const char * const cri_trng1_groups[] = {
 	"gpio86",
 };
 static const char * const key_focus_groups[] = {
-	"gpio87",
-};
-static const char * const pbs2_groups[] = {
 	"gpio87",
 };
 static const char * const cri_trng_groups[] = {
@@ -1156,13 +1144,10 @@ static const struct msm_function msm8976_functions[] = {
 	FUNCTION(ext_lpass),
 	FUNCTION(mss_lte),
 	FUNCTION(key_volp),
-	FUNCTION(pbs0),
 	FUNCTION(cri_trng0),
 	FUNCTION(key_snapshot),
-	FUNCTION(pbs1),
 	FUNCTION(cri_trng1),
 	FUNCTION(key_focus),
-	FUNCTION(pbs2),
 	FUNCTION(cri_trng),
 	FUNCTION(gcc_tlmm),
 	FUNCTION(key_home),
@@ -1285,9 +1270,9 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(82, NA, mss_lte, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(83, NA, mss_lte, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(84, NA, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(85, pbs0, cri_trng0, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(86, pbs1, cri_trng1, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(87, pbs2, cri_trng, NA, gcc_tlmm, NA, NA, NA, NA, NA),
+	PINGROUP(85, NA, cri_trng0, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(86, NA, cri_trng1, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(87, NA, cri_trng, NA, gcc_tlmm, NA, NA, NA, NA, NA),
 	PINGROUP(88, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(89, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(90, NA, NA, NA, NA, NA, NA, NA, NA, NA),
