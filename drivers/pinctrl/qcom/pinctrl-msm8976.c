@@ -542,7 +542,6 @@ enum msm8976_functions {
 	msm_mux_nav_pps_in_a,
 	msm_mux_pa_indicator,
 	msm_mux_nav_pps_in_b,
-	msm_mux_nav_pps,
 	msm_mux_modem_tsync,
 	msm_mux_nav_tsync,
 	msm_mux_ssbi_wtr1,
@@ -946,22 +945,19 @@ static const char * const blsp_i2c8_groups[] = {
 	"gpio18", "gpio19",
 };
 static const char * const nav_pps_in_a_groups[] = {
-	"gpio111",
+	"gpio91",
 };
 static const char * const pa_indicator_groups[] = {
 	"gpio112",
 };
 static const char * const nav_pps_in_b_groups[] = {
-	"gpio113",
-};
-static const char * const nav_pps_groups[] = {
-	"gpio113",
+	"gpio93",
 };
 static const char * const modem_tsync_groups[] = {
 	"gpio113",
 };
 static const char * const nav_tsync_groups[] = {
-	"gpio113",
+	"gpio93",
 };
 static const char * const ssbi_wtr1_groups[] = {
 	"gpio79", "gpio94",
@@ -1126,7 +1122,6 @@ static const struct msm_function msm8976_functions[] = {
 	FUNCTION(nav_pps_in_a),
 	FUNCTION(pa_indicator),
 	FUNCTION(nav_pps_in_b),
-	FUNCTION(nav_pps),
 	FUNCTION(modem_tsync),
 	FUNCTION(nav_tsync),
 	FUNCTION(ssbi_wtr1),
@@ -1236,9 +1231,9 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(88, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(89, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(90, NA, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(91, NA, NA, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(91, NA, nav_pps_in_a, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(92, NA, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(93, NA, NA, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(93, NA, NA, nav_tsync, nav_pps_in_b, NA, NA, NA, NA, NA),
 	PINGROUP(94, NA, ssbi_wtr1, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(95, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(96, NA, NA, NA, NA, NA, NA, NA, NA, NA),
@@ -1256,9 +1251,9 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(108, blsp_spi7, NA, wsa_io, NA, NA, NA, NA, NA, NA),
 	PINGROUP(109, blsp_spi7, NA, wsa_io, NA, NA, NA, NA, NA, NA),
 	PINGROUP(110, blsp_spi7, NA, blsp_i2c7, NA,  NA, NA, NA, NA, NA),
-	PINGROUP(111, blsp_spi7, NA, blsp_i2c7, nav_pps_in_a, NA, NA, NA, NA, NA),
+	PINGROUP(111, blsp_spi7, NA, blsp_i2c7, NA, NA, NA, NA, NA, NA),
 	PINGROUP(112, NA, pa_indicator, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(113, NA, nav_pps_in_b, nav_pps, modem_tsync, nav_tsync, NA, NA, NA, NA),
+	PINGROUP(113, NA, NA, NA, modem_tsync, NA, NA, NA, NA, NA),
 	PINGROUP(114, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(115, NA, gsm1_tx, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(116, cdc_pdm0, NA, NA, qdss_tracedata_b, NA, NA, NA, NA, NA),
