@@ -543,7 +543,6 @@ enum msm8976_functions {
 	msm_mux_blsp_spi8,
 	msm_mux_wsa_irq,
 	msm_mux_blsp_i2c8,
-	msm_mux_gcc_plltest,
 	msm_mux_nav_pps_in_a,
 	msm_mux_pa_indicator,
 	msm_mux_nav_pps_in_b,
@@ -962,9 +961,6 @@ static const char * const wsa_irq_groups[] = {
 static const char * const blsp_i2c8_groups[] = {
 	"gpio18", "gpio19",
 };
-static const char * const gcc_plltest_groups[] = {
-	"gpio98", "gpio99",
-};
 static const char * const nav_pps_in_a_groups[] = {
 	"gpio111",
 };
@@ -1147,7 +1143,6 @@ static const struct msm_function msm8976_functions[] = {
 	FUNCTION(blsp_spi8),
 	FUNCTION(wsa_irq),
 	FUNCTION(blsp_i2c8),
-	FUNCTION(gcc_plltest),
 	FUNCTION(nav_pps_in_a),
 	FUNCTION(pa_indicator),
 	FUNCTION(nav_pps_in_b),
@@ -1268,8 +1263,8 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(95, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(96, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(97, NA, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(98, NA, NA, gcc_plltest, NA, NA, NA, NA, NA, NA),
-	PINGROUP(99, NA, NA, gcc_plltest, NA, NA, NA, NA, NA, NA),
+	PINGROUP(98, NA, NA, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(99, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(100, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(101, blsp1_spi, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(102, NA, NA, NA, NA, NA, NA, NA, NA, NA),
