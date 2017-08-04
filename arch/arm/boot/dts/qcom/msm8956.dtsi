@@ -452,7 +452,7 @@
 
 	mincpubw: qcom,mincpubw {
 		compatible = "qcom,devbw";
-		governor = "cpufreq";
+		governor = "powersave";
 		qcom,src-dst-ports = <1 512>;
 		qcom,active-only;
 		qcom,bw-tbl =
@@ -481,6 +481,7 @@
 		governor = "powersave";
 		qcom,src-dst-ports = <1 512>;
 		qcom,active-only;
+		status="ok";
 		qcom,bw-tbl =
 			<   805 /*   52.8 MHz */ >,
 			<  1244 /*   81.6 MHz */ >,
@@ -498,6 +499,7 @@
 		governor = "powersave";
 		qcom,src-dst-ports = <1 512>;
 		qcom,active-only;
+		status="ok";
 		qcom,bw-tbl =
 			<   805 /*   52.8 MHz */ >,
 			<  1244 /*   81.6 MHz */ >,
@@ -512,14 +514,26 @@
 
 	qcom,arm-memlat-mon-0 {
 		compatible = "qcom,arm-memlat-mon";
-		qcom,cpulist =	<&CPU0 &CPU1 &CPU2 &CPU3>;
+		qcom,cpulist = <&CPU0 &CPU1 &CPU2 &CPU3>;
 		qcom,target-dev = <&memlat_cpu0>;
+		qcom,core-dev-table =
+			<  691200   805 >,
+			<  806400  4101 >,
+			< 1017600  5712 >,
+			< 1190400  6152 >,
+			< 1440000  7104 >;
 	};
 
 	qcom,arm-memlat-mon-4 {
 		compatible = "qcom,arm-memlat-mon";
-		qcom,cpulist =	<&CPU4 &CPU5>;
+		qcom,cpulist = <&CPU4 &CPU5>;
 		qcom,target-dev = <&memlat_cpu4>;
+		qcom,core-dev-table =
+			<  883200   805 >,
+			< 1190400  4101 >,
+			< 1382400  5712 >,
+			< 1612800  6152 >,
+			< 1804800  7104 >;
 	};
 
 	devfreq-cpufreq {
