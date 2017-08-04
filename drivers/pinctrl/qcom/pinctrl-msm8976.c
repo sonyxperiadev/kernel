@@ -504,7 +504,6 @@ enum msm8976_functions {
 	msm_mux_mipi_dsi0,
 	msm_mux_nfc_dwl,
 	msm_mux_us_euro,
-	msm_mux_dbg_out,
 	msm_mux_ts_resout,
 	msm_mux_ts_sample,
 	msm_mux_sec_mi2s_mclk_b,
@@ -851,9 +850,6 @@ static const char * const nfc_dwl_groups[] = {
 static const char * const us_euro_groups[] = {
 	"gpio63",
 };
-static const char * const dbg_out_groups[] = {
-	"gpio63",
-};
 static const char * const ts_resout_groups[] = {
 	"gpio64",
 };
@@ -1140,7 +1136,6 @@ static const struct msm_function msm8976_functions[] = {
 	FUNCTION(mipi_dsi0),
 	FUNCTION(nfc_dwl),
 	FUNCTION(us_euro),
-	FUNCTION(dbg_out),
 	FUNCTION(ts_resout),
 	FUNCTION(ts_sample),
 	FUNCTION(sec_mi2s_mclk_b),
@@ -1273,7 +1268,7 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(60, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(61, uim_batt, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(62, sec_mi2s_mclk_a, pri_mi2s_mclk_b, qdss_tracedata_a, NA, NA, NA, NA, NA, NA),
-	PINGROUP(63, qdss_cti_trig_in_a1, NA, dbg_out, NA, NA, NA, NA, NA, NA),
+	PINGROUP(63, qdss_cti_trig_in_a1, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(64, qdss_cti_trig_in_b1, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(65, qdss_cti_trig_out_b1, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(66, dmic0_clk, pri_mi2s, NA, NA, NA, NA, NA, NA, NA),
