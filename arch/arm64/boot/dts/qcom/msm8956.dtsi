@@ -27,6 +27,9 @@
 	};
 
 	aliases {
+		sdhc1 = &sdhc_1; /* SDC1 eMMC slot */
+		sdhc2 = &sdhc_2; /* SDC2 SD card slot */
+		sdhc3 = &sdhc_3; /* SDC3 SDIO card slot */
 		/* smdtty devices */
 		smd1 = &smdtty_apps_fm;
 		smd2 = &smdtty_apps_riva_bt_acl;
@@ -43,16 +46,10 @@
 		i2c4  = &i2c_4;
 		i2c6  = &i2c_6;
 		i2c8  = &i2c_8;
+		spi0  = &spi_0;
 	};
 
 	soc: soc { };
-
-	aliases {
-		sdhc1 = &sdhc_1; /* SDC1 eMMC slot */
-		sdhc2 = &sdhc_2; /* SDC2 SD card slot */
-		sdhc3 = &sdhc_3; /* SDC3 SDIO card slot */
-		spi0 = &spi_0;
-	};
 
 	reserved-memory {
 		#address-cells = <2>;
