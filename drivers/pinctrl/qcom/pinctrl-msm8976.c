@@ -554,6 +554,7 @@ enum msm8976_functions {
 	msm_mux_sdcard_det,
 	msm_mux_cam1_ldo,
 	msm_mux_sec_mi2s,
+	msm_mux_sec_mi2s_ws,
 	msm_mux_blsp_spi7,
 	msm_mux_blsp_i2c7,
 	msm_mux_ss_switch,
@@ -987,7 +988,10 @@ static const char * const cam1_ldo_groups[] = {
 	"gpio134",
 };
 static const char * const sec_mi2s_groups[] = {
-	"gpio135", "gpio136",
+	"gpio102", "gpio105", "gpio135",
+};
+static const char * const sec_mi2s_ws_groups[] = {
+	"gpio134",
 };
 static const char * const blsp_spi7_groups[] = {
 	"gpio108", "gpio109", "gpio110", "gpio111",
@@ -1134,6 +1138,7 @@ static const struct msm_function msm8976_functions[] = {
 	FUNCTION(sdcard_det),
 	FUNCTION(cam1_ldo),
 	FUNCTION(sec_mi2s),
+	FUNCTION(sec_mi2s_ws),
 	FUNCTION(blsp_spi7),
 	FUNCTION(blsp_i2c7),
 	FUNCTION(ss_switch),
@@ -1242,10 +1247,10 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(99, gsm0_tx, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(100, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(101, blsp1_spi, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(102, NA, NA, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(102, sec_mi2s, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(103, cci_i2c, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(104, cci_i2c, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(105, NA, gcc_gp1_clk_b, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(105, sec_mi2s, gcc_gp1_clk_b, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(106, blsp3_spi, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(107, blsp3_spi, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(108, blsp_spi7, NA, wsa_io, NA, NA, NA, NA, NA, NA),
@@ -1274,7 +1279,7 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(131, qdss_tracedata_a, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(132, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(133, cdc_pdm0, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(134, blsp_spi5, blsp_uart5, sec_mi2s, NA, NA, NA, NA, NA, NA),
+	PINGROUP(134, blsp_spi5, blsp_uart5, sec_mi2s_ws, NA, NA, NA, NA, NA, NA),
 	PINGROUP(135, blsp_spi5, blsp_uart5, sec_mi2s, NA, NA, NA, NA, NA, NA),
 	PINGROUP(136, blsp_spi5, blsp_uart5, blsp_i2c5, NA, NA, NA, NA, NA, NA),
 	PINGROUP(137, blsp_spi5, blsp_uart5, blsp_i2c5, NA, NA, NA, NA, NA, NA),
