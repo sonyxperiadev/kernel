@@ -540,7 +540,6 @@ enum msm8976_functions {
 	msm_mux_key_home,
 	msm_mux_pwr_down,
 	msm_mux_dmic0_clk,
-	msm_mux_blsp7_spi,
 	msm_mux_hdmi_int,
 	msm_mux_dmic0_data,
 	msm_mux_qdss_cti_trig_in_a1,
@@ -960,9 +959,6 @@ static const char * const pwr_down_groups[] = {
 static const char * const dmic0_clk_groups[] = {
 	"gpio66",
 };
-static const char * const blsp7_spi_groups[] = {
-	"gpio89", "gpio90",
-};
 static const char * const hdmi_int_groups[] = {
 	"gpio90",
 };
@@ -1172,7 +1168,6 @@ static const struct msm_function msm8976_functions[] = {
 	FUNCTION(key_home),
 	FUNCTION(pwr_down),
 	FUNCTION(dmic0_clk),
-	FUNCTION(blsp7_spi),
 	FUNCTION(hdmi_int),
 	FUNCTION(dmic0_data),
 	FUNCTION(qdss_cti_trig_in_a1),
@@ -1294,8 +1289,8 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(86, pbs1, cri_trng1, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(87, pbs2, cri_trng, NA, gcc_tlmm, NA, NA, NA, NA, NA),
 	PINGROUP(88, NA, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(89, NA, blsp7_spi, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(90, NA, blsp7_spi, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(89, NA, NA, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(90, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(91, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(92, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(93, NA, NA, NA, NA, NA, NA, NA, NA, NA),
