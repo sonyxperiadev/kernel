@@ -9989,7 +9989,7 @@ dhd_os_tcpackunlock(dhd_pub_t *pub, unsigned long flags)
 
 	if (dhd) {
 #ifdef BCMSDIO
-		spin_lock_bh(&dhd->tcpack_lock);
+		spin_unlock_bh(&dhd->tcpack_lock);
 #else
 		spin_unlock_irqrestore(&dhd->tcpack_lock, flags);
 #endif /* BCMSDIO */
