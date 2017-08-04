@@ -512,6 +512,7 @@ enum msm8976_functions {
 	msm_mux_cdc_pdm0,
 	msm_mux_us_emitter,
 	msm_mux_pri_mi2s_mclk_b,
+	msm_mux_pri_mi2s_mclk_c,
 	msm_mux_lpass_slimbus,
 	msm_mux_lpass_slimbus0,
 	msm_mux_lpass_slimbus1,
@@ -863,6 +864,9 @@ static const char * const us_emitter_groups[] = {
 static const char * const pri_mi2s_mclk_b_groups[] = {
 	"gpio62",
 };
+static const char * const pri_mi2s_mclk_c_groups[] = {
+	"gpio116",
+};
 static const char * const lpass_slimbus_groups[] = {
 	"gpio117",
 };
@@ -1096,6 +1100,7 @@ static const struct msm_function msm8976_functions[] = {
 	FUNCTION(cdc_pdm0),
 	FUNCTION(us_emitter),
 	FUNCTION(pri_mi2s_mclk_b),
+	FUNCTION(pri_mi2s_mclk_c),
 	FUNCTION(lpass_slimbus),
 	FUNCTION(lpass_slimbus0),
 	FUNCTION(lpass_slimbus1),
@@ -1261,7 +1266,7 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(113, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(114, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(115, NA, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(116, cdc_pdm0, NA, NA, qdss_tracedata_b, NA, NA, NA, NA, NA),
+	PINGROUP(116, pri_mi2s_mclk_c, cdc_pdm0, NA, qdss_tracedata_b, NA, NA, NA, NA, NA),
 	PINGROUP(117, lpass_slimbus, cdc_pdm0, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(118, lpass_slimbus0, cdc_pdm0, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(119, lpass_slimbus1, cdc_pdm0, NA, NA, NA, NA, NA, NA, NA),
