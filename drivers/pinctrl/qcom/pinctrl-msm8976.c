@@ -530,7 +530,6 @@ enum msm8976_functions {
 	msm_mux_key_volp,
 	msm_mux_key_snapshot,
 	msm_mux_key_focus,
-	msm_mux_gcc_tlmm,
 	msm_mux_key_home,
 	msm_mux_pwr_down,
 	msm_mux_dmic0_clk,
@@ -922,9 +921,6 @@ static const char * const key_snapshot_groups[] = {
 static const char * const key_focus_groups[] = {
 	"gpio87",
 };
-static const char * const gcc_tlmm_groups[] = {
-	"gpio87",
-};
 static const char * const key_home_groups[] = {
 	"gpio88",
 };
@@ -1130,7 +1126,6 @@ static const struct msm_function msm8976_functions[] = {
 	FUNCTION(key_volp),
 	FUNCTION(key_snapshot),
 	FUNCTION(key_focus),
-	FUNCTION(gcc_tlmm),
 	FUNCTION(key_home),
 	FUNCTION(pwr_down),
 	FUNCTION(dmic0_clk),
@@ -1252,7 +1247,7 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(84, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(85, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(86, NA, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(87, NA, NA, NA, gcc_tlmm, NA, NA, NA, NA, NA),
+	PINGROUP(87, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(88, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(89, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(90, NA, NA, NA, NA, NA, NA, NA, NA, NA),
