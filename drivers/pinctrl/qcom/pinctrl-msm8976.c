@@ -505,7 +505,6 @@ enum msm8976_functions {
 	msm_mux_nfc_dwl,
 	msm_mux_us_euro,
 	msm_mux_dbg_out,
-	msm_mux_bimc_dte0,
 	msm_mux_ts_resout,
 	msm_mux_ts_sample,
 	msm_mux_sec_mi2s_mclk_b,
@@ -563,7 +562,6 @@ enum msm8976_functions {
 	msm_mux_gsm1_tx,
 	msm_mux_gsm0_tx,
 	msm_mux_atest_tsens,
-	msm_mux_bimc_dte1,
 	msm_mux_cam2_rst,
 	msm_mux_cam2_standby,
 	msm_mux_cam3_rst,
@@ -857,9 +855,6 @@ static const char * const us_euro_groups[] = {
 static const char * const dbg_out_groups[] = {
 	"gpio63",
 };
-static const char * const bimc_dte0_groups[] = {
-	"gpio63", "gpio65",
-};
 static const char * const ts_resout_groups[] = {
 	"gpio64",
 };
@@ -1033,9 +1028,6 @@ static const char * const gsm0_tx_groups[] = {
 static const char * const atest_tsens_groups[] = {
 	"gpio120",
 };
-static const char * const bimc_dte1_groups[] = {
-	"gpio121", "gpio122",
-};
 static const char * const cam2_rst_groups[] = {
 	"gpio129",
 };
@@ -1153,7 +1145,6 @@ static const struct msm_function msm8976_functions[] = {
 	FUNCTION(nfc_dwl),
 	FUNCTION(us_euro),
 	FUNCTION(dbg_out),
-	FUNCTION(bimc_dte0),
 	FUNCTION(ts_resout),
 	FUNCTION(ts_sample),
 	FUNCTION(sec_mi2s_mclk_b),
@@ -1211,7 +1202,6 @@ static const struct msm_function msm8976_functions[] = {
 	FUNCTION(gsm1_tx),
 	FUNCTION(gsm0_tx),
 	FUNCTION(atest_tsens),
-	FUNCTION(bimc_dte1),
 	FUNCTION(cam2_rst),
 	FUNCTION(cam2_standby),
 	FUNCTION(cam3_rst),
@@ -1288,9 +1278,9 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(60, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(61, uim_batt, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(62, sec_mi2s_mclk_a, pri_mi2s_mclk_b, qdss_tracedata_a, NA, NA, NA, NA, NA, NA),
-	PINGROUP(63, qdss_cti_trig_in_a1, NA, dbg_out, bimc_dte0, NA, NA, NA, NA, NA),
+	PINGROUP(63, qdss_cti_trig_in_a1, NA, dbg_out, NA, NA, NA, NA, NA, NA),
 	PINGROUP(64, qdss_cti_trig_in_b1, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(65, qdss_cti_trig_out_b1, bimc_dte0, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(65, qdss_cti_trig_out_b1, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(66, dmic0_clk, pri_mi2s, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(67, dmic0_data, NA, ebi_cdc, NA, NA, NA, NA, NA, NA),
 	PINGROUP(68, qdss_cti_trig_out_a1, NA, NA, NA, NA, NA, NA, NA, NA),
@@ -1346,8 +1336,8 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(118, lpass_slimbus0, cdc_pdm0, ebi_cdc, NA, NA, NA, NA, NA, NA),
 	PINGROUP(119, lpass_slimbus1, cdc_pdm0, ebi_cdc, NA, NA, NA, NA, NA, NA),
 	PINGROUP(120, cdc_pdm0, qdss_tracedata_a, NA, ebi_cdc, NA, atest_tsens, NA, NA, NA),
-	PINGROUP(121, cdc_pdm0, qdss_tracedata_a, NA, NA, bimc_dte1, NA, NA, NA, NA),
-	PINGROUP(122, NA, NA, NA, bimc_dte1, NA, NA, NA, NA, NA),
+	PINGROUP(121, cdc_pdm0, qdss_tracedata_a, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(122, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(123, pri_mi2s, m_voc, NA, ebi_cdc, NA, NA, NA, NA, NA),
 	PINGROUP(124, pri_mi2s, m_voc, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(125, pri_mi2s, NA, NA, NA, NA, NA, NA, NA, NA),
