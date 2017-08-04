@@ -454,6 +454,8 @@ struct mmc_host {
 #define MMC_CAP2_SLEEP_AWAKE	(1 << 28)	/* Use Sleep/Awake (CMD5) */
 /* use max discard ignoring max_busy_timeout parameter */
 #define MMC_CAP2_MAX_DISCARD_SIZE	(1 << 29)
+/* Non standard OCR for some SDIO cards */
+#define MMC_CAP2_NONSTANDARD_OCR	(1 << 30)
 
 	mmc_pm_flag_t		pm_caps;	/* supported pm features */
 
