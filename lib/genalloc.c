@@ -254,6 +254,7 @@ void gen_pool_destroy(struct gen_pool *pool)
 		chunk = list_entry(_chunk, struct gen_pool_chunk, next_chunk);
 		list_del(&chunk->next_chunk);
 
+		start_bit = 0;
 		end_bit = chunk_size(chunk) >> order;
 		nbytes = sizeof(struct gen_pool_chunk) +
 				BITS_TO_LONGS(end_bit) * sizeof(long);
@@ -289,7 +290,7 @@ u64 gen_pool_alloc_aligned(struct gen_pool *pool, size_t size,
 	struct gen_pool_chunk *chunk;
 	u64 addr = 0, align_mask = 0;
 	int order = pool->min_alloc_order;
-	int nbits, start_bit = 0, remain;
+	int nbits, start_bit, end_bit, remain;
 
 #ifndef CONFIG_ARCH_HAVE_NMI_SAFE_CMPXCHG
 	BUG_ON(in_nmi());
