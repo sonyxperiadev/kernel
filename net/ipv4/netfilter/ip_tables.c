@@ -1548,6 +1548,8 @@ translate_compat_table(struct net *net,
 	void *pos, *entry0, *entry1;
 	struct compat_ipt_entry *iter0;
 	struct ipt_replace repl;
+	unsigned int size;
+	int ret;
 
 	size = compatr->size;
 	info->number = compatr->num_entries;

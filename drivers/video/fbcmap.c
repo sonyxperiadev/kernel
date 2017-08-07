@@ -194,8 +194,6 @@ int fb_copy_cmap(const struct fb_cmap *from, struct fb_cmap *to)
 
 int fb_cmap_to_user(const struct fb_cmap *from, struct fb_cmap_user *to)
 {
-	int tooff = 0, fromoff = 0;
-	int size;
 	unsigned int tooff = 0, fromoff = 0;
 	size_t size;
 
