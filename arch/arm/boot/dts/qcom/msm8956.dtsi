@@ -49,6 +49,263 @@
 		spi0  = &spi_0;
 	};
 
+	psci {
+		compatible = "arm,psci-1.0";
+		method = "smc";
+	};
+
+	cpus {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		CPU0: cpu@0 {
+			device_type = "cpu";
+			compatible = "arm,armv8";
+			reg = <0x0>;
+			enable-method = "psci";
+			qcom,limits-info = <&mitigation_profile0>;
+			qcom,ea = <&ea0>;
+			efficiency = <1024>;
+			next-level-cache = <&L2_0>;
+			L2_0: l2-cache {
+				compatible = "arm,arch-cache";
+				cache-level = <2>;
+				/* A53 L2 dump not supported */
+				qcom,dump-size = <0x0>;
+			};
+			L1_I_0: l1-icache {
+				compatible = "arm,arch-cache";
+				qcom,dump-size = <0x9040>;
+			};
+			L1_D_0: l1-dcache {
+				compatible = "arm,arch-cache";
+				qcom,dump-size = <0x9040>;
+			};
+			L1_TLB_0: l1-tlb {
+				qcom,dump-size = <0x2800>;
+			};
+		};
+
+		CPU1: cpu@1 {
+			device_type = "cpu";
+			compatible = "arm,armv8";
+			reg = <0x1>;
+			enable-method = "psci";
+			qcom,limits-info = <&mitigation_profile0>;
+			qcom,ea = <&ea1>;
+			efficiency = <1024>;
+			next-level-cache = <&L2_0>;
+			L1_I_1: l1-icache {
+				compatible = "arm,arch-cache";
+				qcom,dump-size = <0x9040>;
+			};
+			L1_D_1: l1-dcache {
+				compatible = "arm,arch-cache";
+				qcom,dump-size = <0x9040>;
+			};
+			L1_TLB_1: l1-tlb {
+				qcom,dump-size = <0x2800>;
+			};
+		};
+
+		CPU2: cpu@2 {
+			device_type = "cpu";
+			compatible = "arm,armv8";
+			reg = <0x2>;
+			enable-method = "psci";
+			qcom,limits-info = <&mitigation_profile0>;
+			qcom,ea = <&ea2>;
+			efficiency = <1024>;
+			next-level-cache = <&L2_0>;
+			L1_I_2: l1-icache {
+				compatible = "arm,arch-cache";
+				qcom,dump-size = <0x9040>;
+			};
+			L1_D_2: l1-dcache {
+				compatible = "arm,arch-cache";
+				qcom,dump-size = <0x9040>;
+			};
+			L1_TLB_2: l1-tlb {
+				qcom,dump-size = <0x2800>;
+			};
+		};
+
+		CPU3: cpu@3 {
+			device_type = "cpu";
+			compatible = "arm,armv8";
+			reg = <0x3>;
+			enable-method = "psci";
+			qcom,limits-info = <&mitigation_profile0>;
+			qcom,ea = <&ea3>;
+			efficiency = <1024>;
+			next-level-cache = <&L2_0>;
+			L1_I_3: l1-icache {
+				compatible = "arm,arch-cache";
+				qcom,dump-size = <0x9040>;
+			};
+			L1_D_3: l1-dcache {
+				compatible = "arm,arch-cache";
+				qcom,dump-size = <0x9040>;
+			};
+			L1_TLB_3: l1-tlb {
+				qcom,dump-size = <0x2800>;
+			};
+		};
+
+		CPU4: cpu@100 {
+			device_type = "cpu";
+			compatible = "arm,armv8";
+			reg = <0x100>;
+			enable-method = "psci";
+			qcom,limits-info = <&mitigation_profile1>;
+			qcom,ea = <&ea4>;
+			efficiency = <1830>;
+			next-level-cache = <&L2_1>;
+			L2_1: l2-cache {
+				compatible = "arm,arch-cache";
+				cache-level = <2>;
+			};
+			L1_I_100: l1-icache {
+				compatible = "arm,arch-cache";
+				qcom,dump-size = <0x12000>;
+			};
+			L1_D_100: l1-dcache {
+				compatible = "arm,arch-cache";
+				qcom,dump-size = <0x12000>;
+			};
+			L1_TLB_100: l1-tlb {
+				qcom,dump-size = <0x4800>;
+			};
+		};
+
+		CPU5: cpu@101 {
+			device_type = "cpu";
+			compatible = "arm,armv8";
+			reg = <0x101>;
+			enable-method = "psci";
+			qcom,limits-info = <&mitigation_profile2>;
+			qcom,ea = <&ea5>;
+			efficiency = <1830>;
+			next-level-cache = <&L2_1>;
+			L1_I_101: l1-icache {
+				compatible = "arm,arch-cache";
+				qcom,dump-size = <0x12000>;
+			};
+			L1_D_101: l1-dcache {
+				compatible = "arm,arch-cache";
+				qcom,dump-size = <0x12000>;
+			};
+			L1_TLB_101: l1-tlb {
+				qcom,dump-size = <0x4800>;
+			};
+		};
+
+		CPU6: cpu@102 {
+			device_type = "cpu";
+			compatible = "arm,armv8";
+			reg = <0x102>;
+			enable-method = "psci";
+			qcom,limits-info = <&mitigation_profile3>;
+			qcom,ea = <&ea6>;
+			efficiency = <1830>;
+			next-level-cache = <&L2_1>;
+			L1_I_102: l1-icache {
+				compatible = "arm,arch-cache";
+				qcom,dump-size = <0x12000>;
+			};
+			L1_D_102: l1-dcache {
+				compatible = "arm,arch-cache";
+				qcom,dump-size = <0x12000>;
+			};
+			L1_TLB_102: l1-tlb {
+				qcom,dump-size = <0x4800>;
+			};
+		};
+
+		CPU7: cpu@103 {
+			device_type = "cpu";
+			compatible = "arm,armv8";
+			reg = <0x103>;
+			enable-method = "psci";
+			qcom,limits-info = <&mitigation_profile4>;
+			qcom,ea = <&ea7>;
+			efficiency = <1830>;
+			next-level-cache = <&L2_1>;
+			L1_I_103: l1-icache {
+				compatible = "arm,arch-cache";
+				qcom,dump-size = <0x12000>;
+			};
+			L1_D_103: l1-dcache {
+				compatible = "arm,arch-cache";
+				qcom,dump-size = <0x12000>;
+			};
+			L1_TLB_103: l1-tlb {
+				qcom,dump-size = <0x4800>;
+			};
+		};
+
+		cpu-map {
+			cluster0 {
+				core0 {
+					cpu = <&CPU0>;
+				};
+
+				core1 {
+					cpu = <&CPU1>;
+				};
+
+				core2 {
+					cpu = <&CPU2>;
+				};
+
+				core3 {
+					cpu = <&CPU3>;
+				};
+			};
+
+			cluster1 {
+				core0 {
+					cpu = <&CPU4>;
+				};
+
+				core1 {
+					cpu = <&CPU5>;
+				};
+
+				core2 {
+					cpu = <&CPU6>;
+				};
+
+				core3 {
+					cpu = <&CPU7>;
+				};
+			};
+		};
+	};
+
+	clocks {
+		xo_board {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <19200000>;
+			clock-output-names = "xo_board";
+		};
+
+		sleep_clk {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <32764>;
+			clock-output-names = "sleep_clk";
+		};
+	};
+
+	vendor: vendor {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges = <0 0 0 0xffffffff>;
+		compatible = "simple-bus";
+	};
+
 	soc: soc { };
 
 	reserved-memory {
@@ -128,27 +385,6 @@
 		};
 	};
 
-       clocks {
-               xo_board {
-                       compatible = "fixed-clock";
-                       #clock-cells = <0>;
-                       clock-frequency = <19200000>;
-                       clock-output-names = "xo_board";
-		};
-               sleep_clk {
-                       compatible = "fixed-clock";
-                       #clock-cells = <0>;
-                       clock-frequency = <32764>;
-                       clock-output-names = "sleep_clk";
-		};
-	};
-
-	vendor: vendor {
-		#address-cells = <1>;
-		#size-cells = <1>;
-		ranges = <0 0 0 0xffffffff>;
-		compatible = "simple-bus";
-	};
 };
 
 #include "msm8956-pinctrl.dtsi"
@@ -160,7 +396,6 @@
 #include "msm8956-coresight.dtsi"
 #include "msm8956-pm.dtsi"
 #include "msm8956-gpu.dtsi"
-#include "msm8956-cpu.dtsi"
 #include "msm8956-mdss.dtsi"
 #include "msm8956-mdss-pll.dtsi"
 #include "msm-rdbg.dtsi"
@@ -191,9 +426,6 @@
 		#interrupt-cells = <4>;
                 cell-index = <0>;
 	};
-};
-
-&soc {
 
 	arm64-cpu-erp {
 		compatible = "arm,arm64-cpu-erp";
@@ -983,6 +1215,45 @@
 		interrupts = <0 264 4>;
 		reg = <0xb1db000 0x4>;
 		qcom,lmh-trim-err-offset = <18>;
+	};
+
+	qcom,msm-core@a0000 {
+		compatible = "qcom,apss-core-ea";
+		reg = <0xa0000 0x1000>;
+		qcom,low-hyst-temp = <10>;
+		qcom,high-hyst-temp = <5>;
+
+		ea0: ea0 {
+			sensor = <&sensor_information1>;
+		};
+
+		ea1: ea1 {
+			sensor = <&sensor_information1>;
+		};
+
+		ea2: ea2 {
+			sensor = <&sensor_information1>;
+		};
+
+		ea3: ea3 {
+			sensor = <&sensor_information1>;
+		};
+
+		ea4: ea4 {
+			sensor = <&sensor_information3>;
+		};
+
+		ea5: ea5 {
+			sensor = <&sensor_information4>;
+		};
+
+		ea6: ea6 {
+			sensor = <&sensor_information5>;
+		};
+
+		ea7: ea7 {
+			sensor = <&sensor_information6>;
+		};
 	};
 
 	rpm_bus: qcom,rpm-smd {
