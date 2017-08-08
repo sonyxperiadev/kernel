@@ -62,6 +62,7 @@
 #include <linux/kernel.h>
 #include <linux/slab.h>
 #include <linux/module.h>
+#include <linux/ctype.h>
 #include <linux/pm_runtime.h>
 #include <linux/usb/ch9.h>
 #include <linux/usb/gadget.h>
@@ -3654,6 +3655,140 @@ static int ci13xxx_stop(struct usb_gadget *gadget)
 	return 0;
 }
 
+static int __ci13xxx_ep_matches(
+	struct usb_gadget		*gadget,
+	struct usb_ep			*ep,
+	struct usb_endpoint_descriptor	*desc,
+	struct usb_ss_ep_comp_descriptor *ep_comp)
+{
+	u8		type;
+	const char	*tmp;
+	u16		max;
+
+	int		num_req_streams = 0;
+
+	/* endpoint already claimed? */
+	if (NULL != ep->driver_data)
+		return 0;
+
+	/* only support ep0 for portable CONTROL traffic */
+	type = usb_endpoint_type(desc);
+	if (USB_ENDPOINT_XFER_CONTROL == type)
+		return 0;
+
+	/* some other naming convention */
+	if ('e' != ep->name[0])
+		return 0;
+
+	/* type-restriction:  "-iso", "-bulk", or "-int".
+	 * direction-restriction:  "in", "out".
+	 */
+	if ('-' != ep->name[2]) {
+		tmp = strrchr (ep->name, '-');
+		if (tmp) {
+			switch (type) {
+			case USB_ENDPOINT_XFER_INT:
+				/* bulk endpoints handle interrupt transfers,
+				 * except the toggle-quirky iso-synch kind
+				 */
+				if ('s' == tmp[2])	// == "-iso"
+					return 0;
+				break;
+			case USB_ENDPOINT_XFER_BULK:
+				if ('b' != tmp[1])	// != "-bulk"
+					return 0;
+				break;
+			case USB_ENDPOINT_XFER_ISOC:
+				if ('s' != tmp[2])	// != "-iso"
+					return 0;
+			}
+		} else {
+			tmp = ep->name + strlen (ep->name);
+		}
+
+		/* direction-restriction:  "..in-..", "out-.." */
+		tmp--;
+		if (!isdigit (*tmp)) {
+			if (desc->bEndpointAddress & USB_DIR_IN) {
+				if ('n' != *tmp)
+					return 0;
+			} else {
+				if ('t' != *tmp)
+					return 0;
+			}
+		}
+	}
+
+	/*
+	 * Get the number of required streams from the EP companion
+	 * descriptor and see if the EP matches it
+	 */
+	if (usb_endpoint_xfer_bulk(desc)) {
+		if (ep_comp && gadget->max_speed >= USB_SPEED_SUPER) {
+			num_req_streams = ep_comp->bmAttributes & 0x1f;
+			if (num_req_streams > ep->max_streams)
+				return 0;
+		}
+
+	}
+
+	/*
+	 * If the protocol driver hasn't yet decided on wMaxPacketSize
+	 * and wants to know the maximum possible, provide the info.
+	 */
+	if (desc->wMaxPacketSize == 0)
+		desc->wMaxPacketSize = cpu_to_le16(ep->maxpacket_limit);
+
+	/* endpoint maxpacket size is an input parameter, except for bulk
+	 * where it's an output parameter representing the full speed limit.
+	 * the usb spec fixes high speed bulk maxpacket at 512 bytes.
+	 */
+	max = 0x7ff & usb_endpoint_maxp(desc);
+	switch (type) {
+	case USB_ENDPOINT_XFER_INT:
+		/* INT:  limit 64 bytes full speed, 1024 high/super speed */
+		if (!gadget_is_dualspeed(gadget) && max > 64)
+			return 0;
+		/* FALLTHROUGH */
+
+	case USB_ENDPOINT_XFER_ISOC:
+		/* ISO:  limit 1023 bytes full speed, 1024 high/super speed */
+		if (ep->maxpacket_limit < max)
+			return 0;
+		if (!gadget_is_dualspeed(gadget) && max > 1023)
+			return 0;
+
+		/* BOTH:  "high bandwidth" works only at high speed */
+		if ((desc->wMaxPacketSize & cpu_to_le16(3<<11))) {
+			if (!gadget_is_dualspeed(gadget))
+				return 0;
+			/* configure your hardware with enough buffering!! */
+		}
+		break;
+	}
+
+	/* MATCH!! */
+	return 1;
+}
+
+static struct usb_ep *ci13xxx_ep_matches(
+	struct usb_gadget		*gadget,
+	struct usb_endpoint_descriptor	*desc,
+	struct usb_ss_ep_comp_descriptor *ep_comp)
+{
+	struct usb_ep *ep;
+	u8		type;
+
+	type = desc->bmAttributes & USB_ENDPOINT_XFERTYPE_MASK;
+
+	list_for_each_entry(ep, &gadget->ep_list, ep_list) {
+		if (__ci13xxx_ep_matches(gadget, ep, desc, ep_comp))
+			return ep;
+	}
+
+	return NULL;
+}
+
 /**
  * Device operations part of the API to the USB controller hardware,
  * which don't involve endpoints (or i/o)
@@ -3666,6 +3801,7 @@ static const struct usb_gadget_ops usb_gadget_ops = {
 	.pullup		= ci13xxx_pullup,
 	.udc_start	= ci13xxx_start,
 	.udc_stop	= ci13xxx_stop,
+	.match_ep	= ci13xxx_ep_matches,
 };
 
 
