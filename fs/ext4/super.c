@@ -2013,7 +2013,6 @@ failed:
 static __le16 ext4_group_desc_csum(struct ext4_sb_info *sbi, __u32 block_group,
 				   struct ext4_group_desc *gdp)
 {
-	int offset;
 	int offset = offsetof(struct ext4_group_desc, bg_checksum);
 	__u16 crc = 0;
 	__le32 le_group = cpu_to_le32(block_group);
