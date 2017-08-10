@@ -106,35 +106,6 @@
 			};
 		};
 
-		pmx-uartconsole {
-			uart_console_active: uart_console_active {
-				mux {
-					pins = "gpio4", "gpio5";
-					function = "blsp_uart2";
-				};
-
-				config {
-					pins = "gpio4", "gpio5";
-					drive-strength = <2>;
-					bias-disable;
-				};
-			};
-
-			uart_console_sleep: uart_console_sleep {
-				mux {
-					pins = "gpio4", "gpio5";
-					function = "blsp_uart2";
-				};
-
-				config {
-					pins = "gpio4", "gpio5";
-					drive-strength = <2>;
-					bias-pull-down;
-				};
-			};
-
-		};
-
 		hsuart_active: default {
 			mux {
 				pins = "gpio0", "gpio1", "gpio2", "gpio3";
@@ -156,6 +127,32 @@
 
 			config {
 				pins = "gpio0", "gpio1", "gpio2", "gpio3";
+				drive-strength = <2>;
+				bias-disable;
+			};
+		};
+
+		blsp1_uart2_active: blsp1_uart2_active {
+			mux {
+				pins = "gpio4", "gpio5", "gpio6", "gpio7";
+				function = "blsp_uart2";
+			};
+
+			config {
+				pins = "gpio4", "gpio5", "gpio6", "gpio7";
+				drive-strength = <2>;
+				bias-disable;
+			};
+		};
+
+		blsp1_uart2_sleep: blsp1_uart2_sleep {
+			mux {
+				pins = "gpio4", "gpio5", "gpio6", "gpio7";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio4", "gpio5", "gpio6", "gpio7";
 				drive-strength = <2>;
 				bias-disable;
 			};

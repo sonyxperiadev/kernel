@@ -78,41 +78,26 @@
 	};
 
 	/* HS UART : BLSP2 */
-	blsp1_hsuart2: hsuart@78b0000 { /* BLSP1 UART2 */
+	uart@78b0000 { /* BLSP1 UART2 */
 		compatible = "qcom,msm-hsuart-v14";
 		reg = <0x78b0000 0x200>,
-			<0x7884000 0x1f000>;
+			    <0x7884000 0x1f000>;
 		reg-names = "core_mem", "bam_mem";
 		interrupt-names = "core_irq", "bam_irq";
 		#address-cells = <0>;
-		interrupt-parent = <&blsp1_hsuart2>;
+		interrupt-parent = <&blsp1_uart2>;
 		interrupts = <0 1>;
 		#interrupt-cells = <1>;
 		interrupt-map-mask = <0xffffffff>;
 		interrupt-map = <0 &intc 0 108 0
 				1 &intc 0 238 0>;
-
-		qcom,tx-gpio = <&msm_gpio 4 0>;
-		qcom,rx-gpio = <&msm_gpio 5 0>;
-		qcom,cts-gpio = <&msm_gpio 6 0>;
-		qcom,rfr-gpio = <&msm_gpio 7 0>;
 		/delete-property/ qcom,inject-rx-on-wakeup;
 		/delete-property/ qcom,rx-char-to-inject;
-		qcom,master-id = <86>;
-		clock-names = "core_clk", "iface_clk";
-		clocks = <&clock_gcc clk_gcc_blsp1_uart2_apps_clk>,
-				<&clock_gcc clk_gcc_blsp1_ahb_clk>;
+		qcom,bam-tx-ep-pipe-index = <2>;
+		qcom,bam-rx-ep-pipe-index = <3>;
 		pinctrl-names = "default", "sleep";
 		pinctrl-0 = <&msm_gpio_4_act &msm_gpio_5_def &msm_gpio_6_def &msm_gpio_7_act>;
 		pinctrl-1 = <&msm_gpio_4_sus &msm_gpio_5_def &msm_gpio_6_def &msm_gpio_7_sus>;
-		qcom,bam-tx-ep-pipe-index = <2>;
-		qcom,bam-rx-ep-pipe-index = <3>;
-		qcom,msm-bus,name = "blsp1_hsuart2";
-		qcom,msm-bus,num-cases = <2>;
-		qcom,msm-bus,num-paths = <1>;
-		qcom,msm-bus,vectors-KBps =
-					<86 512 0 0>,
-					<86 512 500 800>;
 		status = "okay";
 	};
 
@@ -1117,11 +1102,6 @@
 
 /* pm8004_VREG_L1 */
 /* Follow QTI */
-
-/* LS UART : BLSP2 */
-&blsp1_uart2 {
-	status = "disabled";
-};
 
 /* I2C : BLSP2 */
 &i2c_2 {

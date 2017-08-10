@@ -1668,16 +1668,6 @@
 		};
 	};
 
-	pmx-uartconsole {
-		mux {
-			pins = "gpio20", "gpio21";
-			function = "blsp_uart2";
-		};
-		config {
-			pins = "gpio20", "gpio21";
-		};
-	};
-
 	cam_sensor_rear_default {
 		/* RESET */
 		mux {
