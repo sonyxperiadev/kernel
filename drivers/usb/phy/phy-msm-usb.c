@@ -3520,7 +3520,7 @@ static int otg_power_set_property_usb(struct power_supply *psy,
 		}
 		break;
 	case POWER_SUPPLY_PROP_TYPE:
-		//psy->type = val->intval;
+		motg->usb_type = val->intval;
 
 		/*
 		 * If charger detection is done by the USB driver,
