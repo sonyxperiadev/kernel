@@ -3452,7 +3452,7 @@ static int otg_power_get_property_usb(struct power_supply *psy,
 		val->intval = motg->online;
 		break;
 	case POWER_SUPPLY_PROP_TYPE:
-		val->intval = motg->chg_type;
+		val->intval = motg->usb_type;
 		break;
 	case POWER_SUPPLY_PROP_HEALTH:
 		val->intval = motg->usbin_health;
