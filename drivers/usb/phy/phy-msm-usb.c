@@ -4076,7 +4076,6 @@ static int msm_otg_probe(struct platform_device *pdev)
 		pr_err("%s: Cannot get USB power_supply\n", __func__);
 		return -EPROBE_DEFER;
 	} else {
-		psy = motg->usb_psy;
 		power_supply_get_property(motg->usb_psy,
 			POWER_SUPPLY_PROP_PRESENT, &pval);
 	}
