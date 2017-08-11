@@ -449,7 +449,7 @@ struct msm_otg {
 	int phy_number;
 	struct workqueue_struct *otg_wq;
 	struct delayed_work chg_work;
-	struct work_struct id_status_work;
+	struct delayed_work id_status_work;
 	enum usb_chg_state chg_state;
 	enum usb_chg_type chg_type;
 	u8 dcd_retries;
