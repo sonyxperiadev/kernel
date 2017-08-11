@@ -1144,7 +1144,7 @@ static irqreturn_t msm_otg_phy_irq_handler(int irq, void *data)
 		msm_otg_kick_sm_work(motg);
 	} else {
 		pr_debug("PHY ID IRQ outside LPM\n");
-		msm_id_status_w(&motg->id_status_work);
+		msm_id_status_w(&motg->id_status_work.work);
 	}
 
 	return IRQ_HANDLED;
@@ -1496,7 +1496,7 @@ phcd_retry:
 		if (motg->vbus_state != test_bit(B_SESS_VLD, &motg->inputs))
 			msm_otg_set_vbus_state(motg->vbus_state);
 		if (motg->id_state != test_bit(ID, &motg->inputs))
-			msm_id_status_w(&motg->id_status_work);
+			msm_id_status_w(&motg->id_status_work.work);
 	}
 
 	return 0;
@@ -1657,7 +1657,7 @@ skip_phy_resume:
 
 	if (motg->phy_irq_pending) {
 		motg->phy_irq_pending = false;
-		msm_id_status_w(&motg->id_status_work);
+		msm_id_status_w(&motg->id_status_work.work);
 	}
 
 	if (motg->host_bus_suspend) {
@@ -3064,7 +3064,7 @@ out:
 static void msm_id_status_w(struct work_struct *w)
 {
 	struct msm_otg *motg = container_of(w, struct msm_otg,
-						id_status_work);
+						id_status_work.work);
 	int work = 0;
 
 	dev_dbg(motg->phy.dev, "ID status_w\n");
@@ -3102,14 +3102,14 @@ static void msm_id_status_w(struct work_struct *w)
 	}
 }
 
+#define MSM_ID_STATUS_DELAY	5 /* 5msec */
 static irqreturn_t msm_id_irq(int irq, void *data)
 {
 	struct msm_otg *motg = data;
 
-	/* Delay work of 5ms for ID line state to settle */
-	usleep_range(5000, 5000);
-
-	queue_work(motg->otg_wq, &motg->id_status_work);
+	/*schedule delayed work for 5msec for ID line state to settle*/
+	queue_delayed_work(motg->otg_wq, &motg->id_status_work,
+			msecs_to_jiffies(MSM_ID_STATUS_DELAY));
 
 	return IRQ_HANDLED;
 }
@@ -3479,7 +3479,7 @@ static int otg_power_set_property_usb(struct power_supply *psy,
 	switch (psp) {
 	case POWER_SUPPLY_PROP_USB_OTG:
 		motg->id_state = val->intval ? USB_ID_GROUND : USB_ID_FLOAT;
-		queue_work(motg->otg_wq, &motg->id_status_work);
+		queue_work(motg->otg_wq, &motg->id_status_work.work);
 		break;
 	/* PMIC notification for DP DM state */
 	case POWER_SUPPLY_PROP_DP_DM:
@@ -4222,7 +4222,7 @@ static int msm_otg_usbid_notifier(struct notifier_block *nb,
 
 	pr_debug("%s: Setting vbus state: %lu\n", __func__, event);
 	motg->id_state = event ? USB_ID_GROUND : USB_ID_FLOAT;
-	queue_work(motg->otg_wq, &motg->id_status_work);
+	queue_work(motg->otg_wq, &motg->id_status_work.work);
 
 	return NOTIFY_DONE;
 }
@@ -4709,7 +4709,7 @@ static int msm_otg_probe(struct platform_device *pdev)
 	wake_lock_init(&motg->wlock, WAKE_LOCK_SUSPEND, "msm_otg");
 	INIT_WORK(&motg->sm_work, msm_otg_sm_work);
 	INIT_DELAYED_WORK(&motg->chg_work, msm_chg_detect_work);
-	INIT_WORK(&motg->id_status_work, msm_id_status_w);
+	INIT_DELAYED_WORK(&motg->id_status_work, msm_id_status_w);
 	INIT_DELAYED_WORK(&motg->perf_vote_work, msm_otg_perf_vote_work);
 	setup_timer(&motg->chg_check_timer, msm_otg_chg_check_timer_func,
 				(unsigned long) motg);
@@ -5061,7 +5061,7 @@ static int msm_otg_remove(struct platform_device *pdev)
 		power_supply_unregister(psy);
 	msm_otg_debugfs_cleanup();
 	cancel_delayed_work_sync(&motg->chg_work);
-	cancel_work_sync(&motg->id_status_work);
+	cancel_delayed_work_sync(&motg->id_status_work);
 	cancel_delayed_work_sync(&motg->perf_vote_work);
 	msm_otg_perf_vote_update(motg, false);
 	cancel_work_sync(&motg->sm_work);
