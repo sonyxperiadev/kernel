@@ -2172,30 +2172,6 @@ static void isr_resume_handler(struct ci13xxx *ci)
 }
 
 /**
- * isr_resume_handler: USB SLI interrupt handler
- * @ci: UDC device
- *
- */
-static void isr_suspend_handler(struct ci13xxx *ci)
-{
-	if (ci->gadget.speed != USB_SPEED_UNKNOWN &&
-		ci->vbus_active) {
-		if (ci->suspended == 0) {
-			spin_unlock(&ci->lock);
-			ci->driver->suspend(&ci->gadget);
-			if (ci->udc_driver->notify_event)
-				ci->udc_driver->notify_event(ci,
-				CI13XXX_CONTROLLER_SUSPEND_EVENT);
-			if (ci->transceiver)
-				usb_phy_set_suspend(ci->transceiver, 1);
-			usb_gadget_set_state(&ci->gadget, USB_STATE_SUSPENDED);
-			spin_lock(&ci->lock);
-			ci->suspended = 1;
-		}
-	}
-}
-
-/**
  * isr_get_status_complete: get_status request complete function
  * @ep:  endpoint
  * @req: request handled
@@ -3361,7 +3337,21 @@ static irqreturn_t udc_irq(void)
 			isr_tr_complete_handler(ci);
 		}
 		if (USBi_SLI & intr) {
-			isr_suspend_handler(ci);
+			if (ci->gadget.speed != USB_SPEED_UNKNOWN &&
+			    ci->driver->suspend && ci->vbus_active) {
+				ci->suspended = 1;
+				spin_unlock(&ci->lock);
+				ci->driver->suspend(&ci->gadget);
+				if (ci->udc_driver->notify_event)
+					ci->udc_driver->notify_event(ci,
+					CI13XXX_CONTROLLER_SUSPEND_EVENT);
+				if (ci->transceiver)
+					usb_phy_set_suspend(
+						ci->transceiver, 1);
+				usb_gadget_set_state(&ci->gadget,
+						USB_STATE_SUSPENDED);
+				spin_lock(&ci->lock);
+			}
 		}
 		retval = IRQ_HANDLED;
 	} else {
