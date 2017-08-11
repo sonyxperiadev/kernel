@@ -1724,7 +1724,7 @@ static int msm_otg_notify_chg_type(struct msm_otg *motg)
 	pr_debug("setting usb power supply type %d\n", pval.intval);
 	msm_otg_dbg_log_event(&motg->phy, "SET USB PWR SUPPLY TYPE",
 			motg->chg_type, pval.intval);
-	power_supply_set_property(psy, POWER_SUPPLY_PROP_CHARGE_TYPE, &pval);
+	power_supply_set_property(psy, POWER_SUPPLY_PROP_TYPE, &pval);
 	return 0;
 }
 
