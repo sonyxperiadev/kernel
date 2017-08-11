@@ -2134,6 +2134,10 @@ __acquires(ci->lock)
 	if (retval)
 		goto done;
 
+	ci->status = usb_ep_alloc_request(&ci->ep0in->ep, GFP_ATOMIC);
+	if (!ci->status) {
+		retval = -ENOMEM;
+	}
 done:
 	spin_lock(&ci->lock);
 
@@ -2312,9 +2316,19 @@ __acquires(mEp->lock)
 	if (mEp == NULL || setup == NULL)
 		return -EINVAL;
 
+	spin_unlock(mEp->lock);
+	req = usb_ep_alloc_request(&mEp->ep, GFP_ATOMIC);
+	spin_lock(mEp->lock);
+	if (req == NULL)
+		return -ENOMEM;
+
 	req->complete = isr_get_status_complete;
 	req->length   = 2;
-	req->buf      = ci->status_buf;
+	req->buf      = kzalloc(req->length, GFP_ATOMIC);
+	if (req->buf == NULL) {
+		retval = -ENOMEM;
+		goto err_free_req;
+	}
 
 	if ((setup->bRequestType & USB_RECIP_MASK) == USB_RECIP_DEVICE) {
 		/* Assume that device is bus powered for now. */
@@ -2330,12 +2344,18 @@ __acquires(mEp->lock)
 	}
 	/* else do nothing; reserved for future use */
 
-//	retval = _ep_queue(&mEp->ep, req, GFP_ATOMIC);
+	retval = _ep_queue(&mEp->ep, req, GFP_ATOMIC);
+	if (retval)
+		goto err_free_buf;
 
+	return 0;
+
+ err_free_buf:
+	kfree(req->buf);
+ err_free_req:
 	spin_unlock(mEp->lock);
-	retval = usb_ep_queue(&mEp->ep, req, GFP_ATOMIC);
+	usb_ep_free_request(&mEp->ep, req);
 	spin_lock(mEp->lock);
-
 	return retval;
 }
 
@@ -2386,13 +2406,13 @@ __acquires(mEp->lock)
 	mEp = (ci->ep0_dir == TX) ? ci->ep0out : ci->ep0in;
 	ci->status->context = ci;
 	ci->status->complete = isr_setup_status_complete;
-	ci->status->length = 0;
-
+	//ci->status->length = 0;
+/*
 	spin_unlock(mEp->lock);
 	retval = usb_ep_queue(&mEp->ep, ci->status, GFP_ATOMIC);
 	spin_lock(mEp->lock);
 // freezes the device for some reason
-//	retval = _ep_queue(&mEp->ep, ci->status, GFP_ATOMIC);
+*/	retval = _ep_queue(&mEp->ep, ci->status, GFP_ATOMIC);
 
 	return retval;
 }
@@ -3221,19 +3241,7 @@ static int ci13xxx_start(struct usb_gadget *gadget,
 	retval = usb_ep_enable(&ci->ep0in->ep);
 	if (retval)
 		goto pm_put;
-	ci->status = usb_ep_alloc_request(&ci->ep0in->ep, GFP_KERNEL);
-	if (!ci->status) {
-		retval = -ENOMEM;
-		goto pm_put;
-	}
 
-	ci->status_buf = kzalloc(2 + EXTRA_ALLOCATION_SIZE,
-				GFP_KERNEL); /* for GET_STATUS */
-	if (!ci->status_buf) {
-		usb_ep_free_request(&ci->ep0in->ep, ci->status);
-		retval = -ENOMEM;
-		goto pm_put;
-	}
 	//spin_lock_irqsave(&ci->lock, flags);
 
 	ci->gadget.ep0 = &ci->ep0in->ep;
