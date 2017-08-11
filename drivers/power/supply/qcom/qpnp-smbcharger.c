@@ -6014,6 +6014,7 @@ static void update_typec_otg_status(struct smbchg_chip *chip, int mode,
 	}
 }
 
+#ifndef CONFIG_USB_MSM_OTG
 static int smbchg_usb_get_property(struct power_supply *psy,
 				  enum power_supply_property psp,
 				  union power_supply_propval *val)
@@ -6089,6 +6090,7 @@ static enum power_supply_property smbchg_usb_properties[] = {
 	POWER_SUPPLY_PROP_TYPE,
 	POWER_SUPPLY_PROP_HEALTH,
 };
+#endif
 
 #define CHARGE_OUTPUT_VTG_RATIO		840
 static int smbchg_get_iusb(struct smbchg_chip *chip)
@@ -8663,12 +8665,24 @@ static int smbchg_probe(struct platform_device *pdev)
 	struct power_supply *typec_psy = NULL;
 	struct qpnp_vadc_chip *vadc_dev, *vchg_vadc_dev;
 	const char *typec_psy_name;
+#ifdef CONFIG_USB_MSM_OTG
+	struct power_supply *usb_psy = NULL;
+#else
 	struct power_supply_config usb_psy_cfg = {};
+#endif
 	struct power_supply_config batt_psy_cfg = {};
 	struct power_supply_config dc_psy_cfg = {};
 #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
 #define TYPEC_PROBE_RETRY_MAX	5
 	static int typec_retry_cnt;
+#endif
+
+#ifdef CONFIG_USB_MSM_OTG
+	usb_psy = power_supply_get_by_name("usb");
+	if (!usb_psy) {
+		pr_smb(PR_STATUS, "USB supply not found, deferring probe\n");
+		return -EPROBE_DEFER;
+	}
 #endif
 
 	if (of_property_read_bool(pdev->dev.of_node, "qcom,external-typec")) {
@@ -8883,7 +8897,7 @@ static int smbchg_probe(struct platform_device *pdev)
 		dev_err(chip->dev, "failed to register extcon device\n");
 		goto votables_cleanup;
 	}
-
+#ifndef CONFIG_USB_MSM_OTG
 	chip->usb_psy_d.name = "usb";
 	chip->usb_psy_d.type = POWER_SUPPLY_TYPE_USB;
 	chip->usb_psy_d.get_property = smbchg_usb_get_property;
@@ -8904,7 +8918,9 @@ static int smbchg_probe(struct platform_device *pdev)
 		rc = PTR_ERR(chip->usb_psy);
 		goto votables_cleanup;
 	}
-
+#else
+	chip->usb_psy = usb_psy;
+#endif
 	if (of_find_property(chip->dev->of_node, "dpdm-supply", NULL)) {
 		chip->dpdm_reg = devm_regulator_get(chip->dev, "dpdm");
 		if (IS_ERR(chip->dpdm_reg)) {
