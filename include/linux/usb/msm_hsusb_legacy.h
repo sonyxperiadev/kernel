@@ -526,6 +526,7 @@ struct msm_otg {
 	unsigned int bc1p2_current_max;
 	unsigned int typec_current_max;
 	unsigned int usbin_health;
+	unsigned int usb_type;
 
 	dev_t ext_chg_dev;
 	struct cdev ext_chg_cdev;
