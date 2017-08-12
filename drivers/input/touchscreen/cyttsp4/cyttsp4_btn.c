@@ -272,7 +272,7 @@ static void cyttsp4_btn_early_suspend(struct early_suspend *h)
 
 	dev_dbg(dev, "%s\n", __func__);
 
-#ifndef CONFIG_PM_RUNTIME
+#ifndef CONFIG_PM
 	mutex_lock(&bd->report_lock);
 	bd->is_suspended = true;
 	cyttsp4_btn_lift_all(bd);
@@ -290,7 +290,7 @@ static void cyttsp4_btn_late_resume(struct early_suspend *h)
 
 	dev_dbg(dev, "%s\n", __func__);
 
-#ifndef CONFIG_PM_RUNTIME
+#ifndef CONFIG_PM
 	mutex_lock(&bd->report_lock);
 	bd->is_suspended = false;
 	mutex_unlock(&bd->report_lock);
@@ -300,7 +300,7 @@ static void cyttsp4_btn_late_resume(struct early_suspend *h)
 }
 #endif
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 static int cyttsp4_btn_suspend(struct device *dev)
 {
 	struct cyttsp4_btn_data *bd = dev_get_drvdata(dev);

@@ -854,7 +854,7 @@ struct cyttsp5_features {
 
 #define NEED_SUSPEND_NOTIFIER \
 	((LINUX_VERSION_CODE < KERNEL_VERSION(3, 3, 0)) \
-	&& defined(CONFIG_PM_SLEEP) && defined(CONFIG_PM_RUNTIME))
+	&& defined(CONFIG_PM))
 
 struct cyttsp5_core_data {
 	struct list_head node;

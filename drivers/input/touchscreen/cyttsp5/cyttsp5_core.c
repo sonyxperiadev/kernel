@@ -4544,7 +4544,7 @@ static void cyttsp5_startup_work_function(struct work_struct *work)
 			__func__, rc);
 }
 
-#if defined(CONFIG_PM_RUNTIME)
+#ifdef CONFIG_PM
 static int cyttsp5_core_rt_suspend(struct device *dev)
 {
 	struct cyttsp5_core_data *cd = dev_get_drvdata(dev);
@@ -4576,7 +4576,7 @@ static int cyttsp5_core_rt_resume(struct device *dev)
 }
 #endif
 
-#if defined(CONFIG_PM_SLEEP)
+#ifdef CONFIG_PM
 static int cyttsp5_core_suspend(struct device *dev)
 {
 	struct cyttsp5_core_data *cd = dev_get_drvdata(dev);

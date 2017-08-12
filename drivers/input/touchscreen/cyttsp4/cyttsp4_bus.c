@@ -593,15 +593,15 @@ static int cyttsp4_pm_resume(struct device *dev)
 #define cyttsp4_pm_resume		NULL
 #endif /* !CONFIG_SUSPEND */
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 #define cyttsp4_pm_rt_suspend		pm_generic_runtime_suspend
 #define cyytsp4_pm_rt_resume		pm_generic_runtime_resume
 #define cyytsp4_pm_rt_idle		pm_runtime_idle
-#else /* !CONFIG_PM_RUNTIME */
+#else /* !CONFIG_PM */
 #define cyttsp4_pm_rt_suspend		NULL
 #define cyytsp4_pm_rt_resume		NULL
 #define cyytsp4_pm_rt_idle		NULL
-#endif /* !CONFIG_PM_RUNTIME */
+#endif /* !CONFIG_PM */
 
 static const struct dev_pm_ops cyttsp4_dev_pm_ops = {
 	.suspend = cyttsp4_pm_suspend,

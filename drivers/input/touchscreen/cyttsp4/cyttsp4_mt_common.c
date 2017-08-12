@@ -35,7 +35,7 @@ static int fb_notifier_callback(struct notifier_block *self,
 				unsigned long event, void *data);
 #endif
 
-#if defined(CONFIG_PM_SLEEP) || defined(CONFIG_PM_RUNTIME)
+#ifdef CONFIG_PM
 static int cyttsp4_mt_suspend(struct device *dev);
 static int cyttsp4_mt_resume(struct device *dev);
 #endif
@@ -406,7 +406,7 @@ static void cyttsp4_mt_early_suspend(struct early_suspend *h)
 
 	dev_dbg(dev, "%s\n", __func__);
 
-#ifndef CONFIG_PM_RUNTIME
+#ifndef CONFIG_PM
 	mutex_lock(&md->report_lock);
 	md->is_suspended = true;
 	cyttsp4_lift_all(md);
@@ -424,7 +424,7 @@ static void cyttsp4_mt_late_resume(struct early_suspend *h)
 
 	dev_dbg(dev, "%s\n", __func__);
 
-#ifndef CONFIG_PM_RUNTIME
+#ifndef CONFIG_PM
 	mutex_lock(&md->report_lock);
 	md->is_suspended = false;
 	mutex_unlock(&md->report_lock);
@@ -502,16 +502,16 @@ static void cyttsp4_setup_early_suspend(struct cyttsp4_mt_data *md)
 
 #endif
 
-#if defined(CONFIG_PM_SLEEP) || defined(CONFIG_PM_RUNTIME)
+#ifdef CONFIG_PM
 static int cyttsp4_mt_suspend(struct device *dev)
 {
-#ifndef CONFIG_PM_RUNTIME
+#ifndef CONFIG_PM
 	struct cyttsp4_mt_data *md = dev_get_drvdata(dev);
 #endif
 
 	dev_dbg(dev, "%s\n", __func__);
 
-#ifndef CONFIG_PM_RUNTIME
+#ifndef CONFIG_PM
 	mutex_lock(&md->report_lock);
 	md->is_suspended = true;
 	cyttsp4_lift_all(md);
@@ -551,12 +551,12 @@ static int cyttsp4_mt_rt_resume(struct device *dev)
 
 static int cyttsp4_mt_resume(struct device *dev)
 {
-#ifndef CONFIG_PM_RUNTIME
+#ifndef CONFIG_PM
 	struct cyttsp4_mt_data *md = dev_get_drvdata(dev);
 #endif
 	dev_dbg(dev, "%s\n", __func__);
 
-#ifndef CONFIG_PM_RUNTIME
+#ifndef CONFIG_PM
 	mutex_lock(&md->report_lock);
 	md->is_suspended = false;
 	mutex_unlock(&md->report_lock);

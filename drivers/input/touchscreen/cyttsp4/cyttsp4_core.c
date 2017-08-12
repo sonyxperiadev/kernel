@@ -3327,7 +3327,7 @@ static void cyttsp4_free_si_ptrs(struct cyttsp4_core_data *cd)
 	kfree(si->btn_rec_data);
 }
 
-#if defined(CONFIG_PM_RUNTIME)
+#if defined(CONFIG_PM)
 static int cyttsp4_core_rt_suspend(struct device *dev)
 {
 	struct cyttsp4_core_data *cd = dev_get_drvdata(dev);
@@ -3356,7 +3356,7 @@ static int cyttsp4_core_rt_resume(struct device *dev)
 }
 #endif
 
-#if defined(CONFIG_PM_SLEEP)
+#if defined(CONFIG_PM)
 static int cyttsp4_core_suspend(struct device *dev)
 {
 	struct cyttsp4_core_data *cd = dev_get_drvdata(dev);

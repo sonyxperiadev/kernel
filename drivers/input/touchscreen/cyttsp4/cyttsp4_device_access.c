@@ -3270,7 +3270,7 @@ static DEVICE_ATTR(raw_data, S_IRUGO | S_IWUSR | S_IWGRP,
 	cyttsp4_raw_data_show, cyttsp4_raw_data_store);
 
 
-#ifdef CONFIG_PM_SLEEP
+#ifdef CONFIG_PM
 static int cyttsp4_device_access_suspend(struct device *dev)
 {
 	struct cyttsp4_device_access_data *dad = dev_get_drvdata(dev);

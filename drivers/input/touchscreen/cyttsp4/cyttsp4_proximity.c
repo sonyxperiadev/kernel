@@ -340,7 +340,7 @@ static int cyttsp4_startup_attention(struct cyttsp4_device *ttsp)
 	return 0;
 }
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 static int cyttsp4_proximity_suspend(struct device *dev)
 {
 	struct cyttsp4_proximity_data *pd = dev_get_drvdata(dev);
