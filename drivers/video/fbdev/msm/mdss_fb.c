@@ -2178,9 +2178,6 @@ static int mdss_fb_blank_unblank(struct msm_fb_data_type *mfd)
 {
 	int ret = 0;
 	int cur_power_state;
-#ifdef CONFIG_SOMC_PANEL_LEGACY
-	struct mdss_panel_data *pdata;
-#endif
 
 	if (!mfd)
 		return -EINVAL;
