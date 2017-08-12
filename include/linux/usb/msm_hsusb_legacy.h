@@ -293,9 +293,9 @@ struct msm_otg_platform_data {
 	int phy_init_sz;
 	int (*vbus_power)(bool on);
 	unsigned power_budget;
-	enum usb_mode_type mode;
+	enum usb_dr_mode mode;
 	enum otg_control_type otg_control;
-	enum usb_mode_type default_mode;
+	enum usb_dr_mode default_mode;
 	enum msm_usb_phy_type phy_type;
 	void (*setup_gpio)(enum usb_otg_state state);
 	int (*link_clk_reset)(struct clk *link_clk, bool assert);
@@ -449,7 +449,7 @@ struct msm_otg {
 	int phy_number;
 	struct workqueue_struct *otg_wq;
 	struct delayed_work chg_work;
-	struct work_struct id_status_work;
+	struct delayed_work id_status_work;
 	enum usb_chg_state chg_state;
 	enum usb_chg_type chg_type;
 	u8 dcd_retries;
@@ -526,6 +526,7 @@ struct msm_otg {
 	unsigned int bc1p2_current_max;
 	unsigned int typec_current_max;
 	unsigned int usbin_health;
+	unsigned int usb_type;
 
 	dev_t ext_chg_dev;
 	struct cdev ext_chg_cdev;

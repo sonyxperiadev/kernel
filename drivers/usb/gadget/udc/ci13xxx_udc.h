@@ -19,11 +19,12 @@
 /******************************************************************************
  * DEFINE
  *****************************************************************************/
+#define TD_PAGE_COUNT      5
 #define CI13XXX_PAGE_SIZE  4096ul /* page size for TD's */
-#define ENDPT_MAX          (32)
-#define CTRL_PAYLOAD_MAX   (64)
-#define RX        (0)  /* similar to USB_DIR_OUT but can be used as an index */
-#define TX        (1)  /* similar to USB_DIR_IN  but can be used as an index */
+#define ENDPT_MAX          32
+#define CTRL_PAYLOAD_MAX   64
+#define RX        0  /* similar to USB_DIR_OUT but can be used as an index */
+#define TX        1  /* similar to USB_DIR_IN  but can be used as an index */
 
 /* UDC private data:
  *  16MSb - Vendor ID | 16 LSb Vendor private data
@@ -68,6 +69,7 @@ struct ci13xxx_qh {
 #define QH_ZLT                BIT(29)
 #define QH_MULT               (0x0003UL << 30)
 #define QH_MULT_SHIFT         11
+#define QH_ISO_MULT(x)        ((x >> 11) & 0x03)
 	/* 1 */
 	u32 curr;
 	/* 2 - 8 */
@@ -77,29 +79,22 @@ struct ci13xxx_qh {
 	struct usb_ctrlrequest   setup;
 } __attribute__ ((packed, aligned(4)));
 
-/* cache of larger request's original attributes */
-struct ci13xxx_multi_req {
-	unsigned             len;
-	unsigned             actual;
-	void                *buf;
+struct td_node {
+	struct list_head	td;
+	dma_addr_t		dma;
+	struct ci13xxx_td	*ptr;
 };
 
 /* Extension of usb_request */
 struct ci13xxx_req {
 	struct usb_request   req;
-	unsigned             map;
 	struct list_head     queue;
-	struct ci13xxx_td   *ptr;
-	dma_addr_t           dma;
-	struct ci13xxx_td   *zptr;
-	dma_addr_t           zdma;
-	struct ci13xxx_multi_req multi;
+	struct list_head	tds;
 };
 
 /* Extension of usb_ep */
 struct ci13xxx_ep {
 	struct usb_ep                          ep;
-	const struct usb_endpoint_descriptor  *desc;
 	u8                                     dir;
 	u8                                     num;
 	u8                                     type;
@@ -113,9 +108,10 @@ struct ci13xxx_ep {
 	int                                    wedge;
 
 	/* global resources */
+	struct ci13xxx                        *udc;
 	spinlock_t                            *lock;
-	struct device                         *device;
 	struct dma_pool                       *td_pool;
+	struct td_node                        *pending_td;
 	struct ci13xxx_td                     *last_zptr;
 	dma_addr_t                            last_zdma;
 	unsigned long                         dTD_update_fail_count;
@@ -123,8 +119,6 @@ struct ci13xxx_ep {
 	unsigned long			      prime_fail_count;
 	int				      prime_timer_count;
 	struct timer_list		      prime_timer;
-
-	bool                                  multi_req;
 };
 
 struct ci13xxx;
@@ -152,9 +146,38 @@ struct ci13xxx_udc_driver {
 	bool    (*in_lpm)(struct ci13xxx *udc);
 };
 
+enum ci_role {
+	CI_ROLE_HOST = 0,
+	CI_ROLE_GADGET,
+	CI_ROLE_END,
+};
+
+/**
+ * struct ci_role_driver - host/gadget role driver
+ * start: start this role
+ * stop: stop this role
+ * irq: irq handler for this role
+ * name: role name string (host/gadget)
+ */
+struct ci_role_driver {
+	int		(*start)(struct ci13xxx *);
+	void		(*stop)(struct ci13xxx *);
+	irqreturn_t	(*irq)(struct ci13xxx *);
+	const char	*name;
+};
+
+struct hw_bank {
+	unsigned      lpm;    /* is LPM? */
+	void __iomem *abs;    /* bus map offset */
+	void __iomem *cap;    /* bus map offset + CAP offset */
+	void __iomem *op;     /* bus map offset + OP offset */
+	size_t        size;   /* bank size */
+	void *__iomem *regmap;
+};
+
 /* CI13XXX UDC descriptor & global resources */
 struct ci13xxx {
-	spinlock_t		  *lock;      /* ctrl register bank access */
+	spinlock_t		  lock;      /* ctrl register bank access */
 	void __iomem              *regs;      /* registers address space */
 
 	struct dma_pool           *qh_pool;   /* DMA pool for queue heads */
@@ -165,29 +188,104 @@ struct ci13xxx {
 	struct usb_gadget          gadget;     /* USB slave device */
 	struct ci13xxx_ep          ci13xxx_ep[ENDPT_MAX]; /* extended endpts */
 	u32                        ep0_dir;    /* ep0 direction */
-#define ep0out ci13xxx_ep[0]
-#define ep0in  ci13xxx_ep[hw_ep_max / 2]
+	struct ci13xxx_ep          *ep0out, *ep0in;
+	unsigned		   hw_ep_max;  /* number of hw endpoints */
 	u8                         suspended;  /* suspended by the host */
 	u8                         configured;  /* is device configured */
 	u8                         test_mode;  /* the selected test mode */
+
 	bool                       rw_pending; /* Remote wakeup pending flag */
 	struct delayed_work        rw_work;    /* remote wakeup delayed work */
+
+	struct hw_bank             hw_bank;
 	struct usb_gadget_driver  *driver;     /* 3rd party gadget driver */
 	struct ci13xxx_udc_driver *udc_driver; /* device controller driver */
 	int                        vbus_active; /* is VBUS active */
 	int                        softconnect; /* is pull-up enable allowed */
 	unsigned long dTD_update_fail_count;
 	struct usb_phy            *transceiver; /* Transceiver struct */
+
+	u8			  address;
+	bool                      setaddr;
 	bool                      skip_flush; /* skip flushing remaining EP
 						upon flush timeout for the
 						first EP. */
+
+	struct ci_role_driver     *roles[CI_ROLE_END];
+	enum ci_role               role;
+	bool			   is_otg;
+	struct work_struct	   work;
+	struct workqueue_struct	  *wq;
 };
+
+static inline struct ci_role_driver *ci_role(struct ci13xxx *ci)
+{
+	BUG_ON(ci->role >= CI_ROLE_END || !ci->roles[ci->role]);
+	return ci->roles[ci->role];
+}
+
+static inline int ci_role_start(struct ci13xxx *ci, enum ci_role role)
+{
+	int ret;
+
+	if (role >= CI_ROLE_END)
+		return -EINVAL;
+
+	if (!ci->roles[role])
+		return -ENXIO;
+
+	ret = ci->roles[role]->start(ci);
+	if (!ret)
+		ci->role = role;
+	return ret;
+}
+
+static inline void ci_role_stop(struct ci13xxx *ci)
+{
+	enum ci_role role = ci->role;
+
+	if (role == CI_ROLE_END)
+		return;
+
+	ci->role = CI_ROLE_END;
+
+	ci->roles[role]->stop(ci);
+}
 
 /******************************************************************************
  * REGISTERS
  *****************************************************************************/
+/* Default offset of capability registers */
+#define DEF_CAPOFFSET		0x100
+
 /* register size */
 #define REG_BITS   (32)
+
+/* register indices */
+enum ci13xxx_regs {
+	CAP_CAPLENGTH,
+	CAP_HCCPARAMS,
+	CAP_DCCPARAMS,
+	CAP_TESTMODE,
+	CAP_LAST = CAP_TESTMODE,
+	OP_USBCMD,
+	OP_USBSTS,
+	OP_USBINTR,
+	OP_DEVICEADDR,
+	OP_ENDPTLISTADDR,
+	OP_PORTSC,
+	OP_DEVLC,
+	OP_ENDPTPIPEID,
+	OP_USBMODE,
+	OP_ENDPTSETUPSTAT,
+	OP_ENDPTPRIME,
+	OP_ENDPTFLUSH,
+	OP_ENDPTSTAT,
+	OP_ENDPTCOMPLETE,
+	OP_ENDPTCTRL,
+	/* endptctrl1..15 follow */
+	OP_LAST = OP_ENDPTCTRL + ENDPT_MAX / 2,
+};
 
 /* HCCPARAMS */
 #define HCCPARAMS_LEN         BIT(17)
@@ -229,6 +327,46 @@ struct ci13xxx {
 /* DEVLC */
 #define DEVLC_PSPD            (0x03UL << 25)
 #define    DEVLC_PSPD_HS      (0x02UL << 25)
+
+/* OTGSC */
+#ifdef OTGSC_IDPU
+#undef OTGSC_IDPU
+#endif
+#ifdef OTGSC_ID
+#undef OTGSC_ID
+#endif
+#ifdef OTGSC_BSV
+#undef OTGSC_BSV
+#endif
+#ifdef OTGSC_IDIS
+#undef OTGSC_IDIS
+#endif
+#ifdef OTGSC_BSVIS
+#undef OTGSC_BSVIS
+#endif
+#ifdef OTGSC_BSVIE
+#undef OTGSC_BSVIE
+#endif
+#ifdef OTGSC_IDIE
+#undef OTGSC_IDIE
+#endif
+
+#define OTGSC_IDPU	      BIT(5)
+#define OTGSC_ID	      BIT(8)
+#define OTGSC_AVV	      BIT(9)
+#define OTGSC_ASV	      BIT(10)
+#define OTGSC_BSV	      BIT(11)
+#define OTGSC_BSE	      BIT(12)
+#define OTGSC_IDIS	      BIT(16)
+#define OTGSC_AVVIS	      BIT(17)
+#define OTGSC_ASVIS	      BIT(18)
+#define OTGSC_BSVIS	      BIT(19)
+#define OTGSC_BSEIS	      BIT(20)
+#define OTGSC_IDIE	      BIT(24)
+#define OTGSC_AVVIE	      BIT(25)
+#define OTGSC_ASVIE	      BIT(26)
+#define OTGSC_BSVIE	      BIT(27)
+#define OTGSC_BSEIE	      BIT(28)
 
 /* USBMODE */
 #define USBMODE_CM            (0x03UL <<  0)
