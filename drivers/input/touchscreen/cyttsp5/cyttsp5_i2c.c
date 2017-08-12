@@ -208,7 +208,7 @@ static int cyttsp5_i2c_probe(struct i2c_client *client,
 
 				} // Failed
 
-				if( regulator_set_optimum_mode( power, source->load_current ) < 0 )
+				if( regulator_set_load( power, source->load_current ) < 0 )
 				{ // Failed
 
 					printk( "PTUCH : Regulator %s set_opt failed\n", source->name );

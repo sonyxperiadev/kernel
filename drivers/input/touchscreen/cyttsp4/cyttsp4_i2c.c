@@ -238,9 +238,9 @@ static int cyttsp4_i2c_probe(struct i2c_client *client,
 		if(retval) {
 			printk("%s: regulator_set_voltage vdd falied!\n", __func__);
 		} else {
-			retval = regulator_set_optimum_mode(vdd, 15000);
+			retval = regulator_set_load(vdd, 15000);
 			if (retval < 0) {
-				printk("%s: regulator_set_optimum_mode vdd falied!\n", __func__);
+				printk("%s: regulator_set_load vdd falied!\n", __func__);
 			} else {
 				retval = regulator_enable(vdd);
 				if(retval)
@@ -266,9 +266,9 @@ static int cyttsp4_i2c_probe(struct i2c_client *client,
 		if(retval) {
 			printk("%s: regulator_set_voltage vreg_l27 falied!\n", __func__);
 		} else {
-			retval = regulator_set_optimum_mode(vreg_l27, 15000);
+			retval = regulator_set_load(vreg_l27, 15000);
 			if (retval < 0) {
-				printk("%s: regulator_set_optimum_mode vreg_l27 falied!\n", __func__);
+				printk("%s: regulator_set_load vreg_l27 falied!\n", __func__);
 			} else {
 				retval = regulator_enable(vreg_l27);
 				if(retval)
