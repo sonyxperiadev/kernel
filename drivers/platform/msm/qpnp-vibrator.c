@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2015, 2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -13,11 +13,12 @@
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/kernel.h>
+#include <linux/regmap.h>
 #include <linux/errno.h>
 #include <linux/slab.h>
 #include <linux/hrtimer.h>
 #include <linux/of_device.h>
-#include <linux/spmi.h>
+#include <linux/platform_device.h>
 #include <linux/qpnp/pwm.h>
 #include <linux/err.h>
 #include "../../staging/android/timed_output.h"
@@ -50,7 +51,8 @@ struct qpnp_pwm_info {
 };
 
 struct qpnp_vib {
-	struct spmi_device *spmi;
+	struct platform_device *pdev;
+	struct regmap *regmap;
 	struct hrtimer vib_timer;
 	struct timed_output_dev timed_dev;
 	struct work_struct work;
@@ -71,10 +73,9 @@ static int qpnp_vib_read_u8(struct qpnp_vib *vib, u8 *data, u16 reg)
 {
 	int rc;
 
-	rc = spmi_ext_register_readl(vib->spmi->ctrl, vib->spmi->sid,
-							reg, data, 1);
+	rc = regmap_bulk_read(vib->regmap, reg, data, 1);
 	if (rc < 0)
-		dev_err(&vib->spmi->dev,
+		dev_err(&vib->pdev->dev,
 			"Error reading address: %X - ret %X\n", reg, rc);
 
 	return rc;
@@ -84,10 +85,9 @@ static int qpnp_vib_write_u8(struct qpnp_vib *vib, u8 *data, u16 reg)
 {
 	int rc;
 
-	rc = spmi_ext_register_writel(vib->spmi->ctrl, vib->spmi->sid,
-							reg, data, 1);
+	rc = regmap_bulk_write(vib->regmap, reg, data, 1);
 	if (rc < 0)
-		dev_err(&vib->spmi->dev,
+		dev_err(&vib->pdev->dev,
 			"Error writing address: %X - ret %X\n", reg, rc);
 
 	return rc;
@@ -118,14 +118,14 @@ static int qpnp_vibrator_config(struct qpnp_vib *vib)
 		vib->pwm_info.pwm_dev = pwm_request(vib->pwm_info.pwm_channel,
 								 "qpnp-vib");
 		if (IS_ERR_OR_NULL(vib->pwm_info.pwm_dev)) {
-			dev_err(&vib->spmi->dev, "vib pwm request failed\n");
+			dev_err(&vib->pdev->dev, "vib pwm request failed\n");
 			return -ENODEV;
 		}
 
 		rc = pwm_config(vib->pwm_info.pwm_dev, vib->pwm_info.duty_us,
 						vib->pwm_info.period_us);
 		if (rc < 0) {
-			dev_err(&vib->spmi->dev, "vib pwm config failed\n");
+			dev_err(&vib->pdev->dev, "vib pwm config failed\n");
 			pwm_free(vib->pwm_info.pwm_dev);
 			return -ENODEV;
 		}
@@ -246,28 +246,28 @@ static SIMPLE_DEV_PM_OPS(qpnp_vibrator_pm_ops, qpnp_vibrator_suspend, NULL);
 
 static int qpnp_vib_parse_dt(struct qpnp_vib *vib)
 {
-	struct spmi_device *spmi = vib->spmi;
+	struct platform_device *pdev = vib->pdev;
 	int rc;
 	const char *mode;
 	u32 temp_val;
 
 	vib->timeout = QPNP_VIB_DEFAULT_TIMEOUT;
-	rc = of_property_read_u32(spmi->dev.of_node,
+	rc = of_property_read_u32(pdev->dev.of_node,
 			"qcom,vib-timeout-ms", &temp_val);
 	if (!rc) {
 		vib->timeout = temp_val;
 	} else if (rc != -EINVAL) {
-		dev_err(&spmi->dev, "Unable to read vib timeout\n");
+		dev_err(&pdev->dev, "Unable to read vib timeout\n");
 		return rc;
 	}
 
 	vib->vtg_level = QPNP_VIB_DEFAULT_VTG_LVL;
-	rc = of_property_read_u32(spmi->dev.of_node,
+	rc = of_property_read_u32(pdev->dev.of_node,
 			"qcom,vib-vtg-level-mV", &temp_val);
 	if (!rc) {
 		vib->vtg_level = temp_val;
 	} else if (rc != -EINVAL) {
-		dev_err(&spmi->dev, "Unable to read vtg level\n");
+		dev_err(&pdev->dev, "Unable to read vtg level\n");
 		return rc;
 	}
 
@@ -278,7 +278,7 @@ static int qpnp_vib_parse_dt(struct qpnp_vib *vib)
 		vib->vtg_level = QPNP_VIB_MAX_LEVEL;
 
 	vib->mode = QPNP_VIB_MANUAL;
-	rc = of_property_read_string(spmi->dev.of_node, "qcom,mode", &mode);
+	rc = of_property_read_string(pdev->dev.of_node, "qcom,mode", &mode);
 	if (!rc) {
 		if (strcmp(mode, "manual") == 0) {
 			vib->mode = QPNP_VIB_MANUAL;
@@ -289,30 +289,30 @@ static int qpnp_vib_parse_dt(struct qpnp_vib *vib)
 		} else if (strcmp(mode, "dtest3") == 0) {
 			vib->mode = QPNP_VIB_DTEST3;
 		} else {
-			dev_err(&spmi->dev, "Invalid mode\n");
+			dev_err(&pdev->dev, "Invalid mode\n");
 			return -EINVAL;
 		}
 	} else if (rc != -EINVAL) {
-		dev_err(&spmi->dev, "Unable to read mode\n");
+		dev_err(&pdev->dev, "Unable to read mode\n");
 		return rc;
 	}
 
 	if (vib->mode != QPNP_VIB_MANUAL) {
-		rc = of_property_read_u32(spmi->dev.of_node,
+		rc = of_property_read_u32(pdev->dev.of_node,
 				"qcom,pwm-channel", &temp_val);
 		if (!rc)
 			vib->pwm_info.pwm_channel = temp_val;
 		else
 			return rc;
 
-		rc = of_property_read_u32(spmi->dev.of_node,
+		rc = of_property_read_u32(pdev->dev.of_node,
 				"qcom,period-us", &temp_val);
 		if (!rc)
 			vib->pwm_info.period_us = temp_val;
 		else
 			return rc;
 
-		rc = of_property_read_u32(spmi->dev.of_node,
+		rc = of_property_read_u32(pdev->dev.of_node,
 				"qcom,duty-us", &temp_val);
 		if (!rc)
 			vib->pwm_info.duty_us = temp_val;
@@ -320,40 +320,49 @@ static int qpnp_vib_parse_dt(struct qpnp_vib *vib)
 			return rc;
 	}
 
-	vib->active_low = of_property_read_bool(spmi->dev.of_node,
+	vib->active_low = of_property_read_bool(pdev->dev.of_node,
 				"qcom,active-low");
 
 	return 0;
 }
 
-static int qpnp_vibrator_probe(struct spmi_device *spmi)
+static int qpnp_vibrator_probe(struct platform_device *pdev)
 {
 	struct qpnp_vib *vib;
-	struct resource *vib_resource;
+	unsigned int base;
 	int rc;
 
-	vib = devm_kzalloc(&spmi->dev, sizeof(*vib), GFP_KERNEL);
+	vib = devm_kzalloc(&pdev->dev, sizeof(*vib), GFP_KERNEL);
 	if (!vib)
 		return -ENOMEM;
 
-	vib->spmi = spmi;
-
-	vib_resource = spmi_get_resource(spmi, 0, IORESOURCE_MEM, 0);
-	if (!vib_resource) {
-		dev_err(&spmi->dev, "Unable to get vibrator base address\n");
+	vib->regmap = dev_get_regmap(pdev->dev.parent, NULL);
+	if (!vib->regmap) {
+		dev_err(&pdev->dev, "Couldn't get parent's regmap\n");
 		return -EINVAL;
 	}
-	vib->base = vib_resource->start;
+
+	vib->pdev = pdev;
+
+	rc = of_property_read_u32(pdev->dev.of_node, "reg", &base);
+	if (rc < 0) {
+		dev_err(&pdev->dev,
+				"Couldn't find reg in node = %s rc = %d\n",
+				pdev->dev.of_node->full_name, rc);
+		return rc;
+	}
+
+	vib->base = base;
 
 	rc = qpnp_vib_parse_dt(vib);
 	if (rc) {
-		dev_err(&spmi->dev, "DT parsing failed\n");
+		dev_err(&pdev->dev, "DT parsing failed\n");
 		return rc;
 	}
 
 	rc = qpnp_vibrator_config(vib);
 	if (rc) {
-		dev_err(&spmi->dev, "vib config failed\n");
+		dev_err(&pdev->dev, "vib config failed\n");
 		return rc;
 	}
 
@@ -367,7 +376,7 @@ static int qpnp_vibrator_probe(struct spmi_device *spmi)
 	vib->timed_dev.get_time = qpnp_vib_get_time;
 	vib->timed_dev.enable = qpnp_vib_enable;
 
-	dev_set_drvdata(&spmi->dev, vib);
+	dev_set_drvdata(&pdev->dev, vib);
 
 	rc = timed_output_dev_register(&vib->timed_dev);
 	if (rc < 0)
@@ -376,9 +385,9 @@ static int qpnp_vibrator_probe(struct spmi_device *spmi)
 	return rc;
 }
 
-static int qpnp_vibrator_remove(struct spmi_device *spmi)
+static int qpnp_vibrator_remove(struct platform_device *pdev)
 {
-	struct qpnp_vib *vib = dev_get_drvdata(&spmi->dev);
+	struct qpnp_vib *vib = dev_get_drvdata(&pdev->dev);
 
 	cancel_work_sync(&vib->work);
 	hrtimer_cancel(&vib->vib_timer);
@@ -388,16 +397,16 @@ static int qpnp_vibrator_remove(struct spmi_device *spmi)
 	return 0;
 }
 
-static struct of_device_id spmi_match_table[] = {
+static const struct of_device_id platform_match_table[] = {
 	{	.compatible = "qcom,qpnp-vibrator",
 	},
 	{}
 };
 
-static struct spmi_driver qpnp_vibrator_driver = {
+static struct platform_driver qpnp_vibrator_driver = {
 	.driver		= {
 		.name	= "qcom,qpnp-vibrator",
-		.of_match_table = spmi_match_table,
+		.of_match_table = platform_match_table,
 		.pm	= &qpnp_vibrator_pm_ops,
 	},
 	.probe		= qpnp_vibrator_probe,
@@ -406,13 +415,13 @@ static struct spmi_driver qpnp_vibrator_driver = {
 
 static int __init qpnp_vibrator_init(void)
 {
-	return spmi_driver_register(&qpnp_vibrator_driver);
+	return platform_driver_register(&qpnp_vibrator_driver);
 }
 module_init(qpnp_vibrator_init);
 
 static void __exit qpnp_vibrator_exit(void)
 {
-	return spmi_driver_unregister(&qpnp_vibrator_driver);
+	return platform_driver_unregister(&qpnp_vibrator_driver);
 }
 module_exit(qpnp_vibrator_exit);
 
