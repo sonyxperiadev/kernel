@@ -875,30 +875,3 @@
 	regulator-max-microvolt = <2850000>;
 	qcom,init-voltage = <2850000>;
 };
-
-
-/* Panel nodes: We're using pinctrl! */
-&dsi_nt35521_720_vid_jdi00 {
-        qcom,platform-reset-gpio = <&msm_gpio 25 0>;
-};
-
-&dsi_nt35521_720_vid_jdi61 {
-        qcom,platform-reset-gpio = <&msm_gpio 25 0>;
-};
-
-&dsi_nt35521_720_vid_truly63 {
-        qcom,platform-reset-gpio = <&msm_gpio 25 0>;
-};
-
-&dsi_nt35521_720_vid_truly64 {
-        qcom,platform-reset-gpio = <&msm_gpio 25 0>;
-};
-
-&dsi_nt35521_720_vid_innolux65 {
-        qcom,platform-reset-gpio = <&msm_gpio 25 0>;
-};
-
-&dsi_nt35521_720_vid_innolux66 {
-        qcom,platform-reset-gpio = <&msm_gpio 25 0>;
-};
-
