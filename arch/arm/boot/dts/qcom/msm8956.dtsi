@@ -2439,15 +2439,25 @@
 
 
 		/* IOMMU Contexts: Non Secure */
-		/* Address pool from 1500MB to 3532MB && 3532MB to 3548MB */
+		/* venus_ns
+		 * Address pool from 1500MB to 3532MB && 3532MB to 3548MB
+		 *
+		 *			 Pool 1
+		 *    Start: 0x5dc00000		Length: 0x7f000000
+		 *    Allowed Types: 0x7ff	SMEM Partition: 0
+		 *
+		 *			 Pool 2
+		 *    Start: 0xdcc00000		Length: 0x1000000
+		 *    Allowed Types: 0x800	SMEM Partition: 1
+		 */
+
 		non_secure_cb {
 			compatible = "qcom,msm-vidc,context-bank";
 			label = "venus_ns";
 			iommus = <&apps_smmu 21>;
 			/* Buffer types relative to the two address pools */
-			buffer-types = <0x7ff>, <0x800>;
-			virtual-addr-pool = <0x5dc00000 0x7f000000
-					     0xdcc00000 0x1000000>;
+			buffer-types = <0xfff>;
+			virtual-addr-pool = <0x5dc00000 0x80000000>;
 		};
 
 		/* IOMMU Contexts: Secure */
