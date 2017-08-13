@@ -20,6 +20,16 @@ config QPNP_COINCELL
 	  which is used to maintain PMIC register state when the main battery is
 	  removed from the mobile device.
 
+config QPNP_VIBRATOR
+	tristate "Vibrator support for QPNP PMIC"
+	depends on SPMI
+	help
+	  This option enables device driver support for the vibrator
+	  on the Qualcomm technologies Inc's QPNP PMICs. The vibrator
+	  is connected on the VIB_DRV_N line and can be controlled
+	  manually or by the DTEST lines.It uses the android timed-output
+	  framework.
+
 config SPS
 	bool "SPS support"
 	select GENERIC_ALLOCATOR
