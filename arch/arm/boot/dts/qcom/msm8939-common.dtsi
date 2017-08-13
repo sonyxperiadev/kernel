@@ -591,46 +591,55 @@
 		sensor_information0: qcom,sensor-information-0 {
 			qcom,sensor-type = "tsens";
 			qcom,sensor-name = "tsens_tz_sensor0";
+			qcom,scaling-factor = <10>;
 		};
 
 		sensor_information1: qcom,sensor-information-1 {
 			qcom,sensor-type =  "tsens";
 			qcom,sensor-name = "tsens_tz_sensor1";
+			qcom,scaling-factor = <10>;
 		};
 
 		sensor_information2: qcom,sensor-information-2 {
 			qcom,sensor-type =  "tsens";
 			qcom,sensor-name = "tsens_tz_sensor2";
+			qcom,scaling-factor = <10>;
 		};
 
 		sensor_information3: qcom,sensor-information-3 {
 			qcom,sensor-type =  "tsens";
 			qcom,sensor-name = "tsens_tz_sensor3";
+			qcom,scaling-factor = <10>;
 		};
 
 		sensor_information5: qcom,sensor-information-5 {
 			qcom,sensor-type = "tsens";
 			qcom,sensor-name = "tsens_tz_sensor5";
+			qcom,scaling-factor = <10>;
 		};
 
 		sensor_information6: qcom,sensor-information-6 {
 			qcom,sensor-type = "tsens";
 			qcom,sensor-name = "tsens_tz_sensor6";
+			qcom,scaling-factor = <10>;
 		};
 
 		sensor_information7: qcom,sensor-information-7 {
 			qcom,sensor-type = "tsens";
 			qcom,sensor-name = "tsens_tz_sensor7";
+			qcom,scaling-factor = <10>;
 		};
 
 		sensor_information8: qcom,sensor-information-8 {
 			qcom,sensor-type = "tsens";
 			qcom,sensor-name = "tsens_tz_sensor8";
+			qcom,scaling-factor = <10>;
 		};
 
 		sensor_information9: qcom,sensor-information-9 {
 			qcom,sensor-type = "tsens";
 			qcom,sensor-name = "tsens_tz_sensor9";
+			qcom,scaling-factor = <10>;
 		};
 	};
 
