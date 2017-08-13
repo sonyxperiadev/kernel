@@ -854,6 +854,9 @@ static int msm_audio_ion_probe(struct platform_device *pdev)
 		msm_audio_ion_data.smmu_sid_bits =
 			smmu_sid << MSM_AUDIO_SMMU_SID_OFFSET;
 
+		/* Give a chance to DMA APIs to register an IOMMU master */
+		of_dma_configure(dev, dev->of_node);
+
 		if (msm_audio_ion_data.smmu_version == 0x1) {
 			rc = msm_audio_smmu_init_legacy(dev);
 		} else if (msm_audio_ion_data.smmu_version == 0x2) {
