@@ -381,7 +381,8 @@ static int msm_ext_disp_process_display(struct msm_ext_disp *ext_disp,
 	}
 
 	reinit_completion(&ext_disp->hpd_comp);
-	ret = wait_for_completion_timeout(&ext_disp->hpd_comp, HZ * 5);
+	ret = wait_for_completion_timeout(&ext_disp->hpd_comp,
+			msecs_to_jiffies(5000));
 	if (!ret) {
 		pr_err("display timeout\n");
 		ret = -EINVAL;
@@ -414,7 +415,8 @@ static int msm_ext_disp_process_audio(struct msm_ext_disp *ext_disp,
 	}
 
 	reinit_completion(&ext_disp->hpd_comp);
-	ret = wait_for_completion_timeout(&ext_disp->hpd_comp, HZ * 2);
+	ret = wait_for_completion_timeout(&ext_disp->hpd_comp,
+			msecs_to_jiffies(2000));
 	if (!ret) {
 		pr_err("audio timeout\n");
 		ret = -EINVAL;

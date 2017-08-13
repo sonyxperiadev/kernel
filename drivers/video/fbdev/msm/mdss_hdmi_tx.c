@@ -1593,7 +1593,8 @@ static void hdmi_tx_hdcp_cb(void *ptr, enum hdcp_states status)
 
 	hdmi_ctrl->hdcp_status = status;
 
-	queue_delayed_work(hdmi_ctrl->workq, &hdmi_ctrl->hdcp_cb_work, HZ/4);
+	queue_delayed_work(hdmi_ctrl->workq, &hdmi_ctrl->hdcp_cb_work,
+						msecs_to_jiffies(250));
 }
 
 static inline bool hdmi_tx_is_stream_shareable(struct hdmi_tx_ctrl *hdmi_ctrl)
@@ -4101,7 +4102,7 @@ static int hdmi_tx_post_evt_handle_resume(struct hdmi_tx_ctrl *hdmi_ctrl)
 
 		reinit_completion(&hdmi_ctrl->hpd_int_done);
 		timeout = wait_for_completion_timeout(
-			&hdmi_ctrl->hpd_int_done, HZ/10);
+			&hdmi_ctrl->hpd_int_done, msecs_to_jiffies(100));
 		if (!timeout) {
 			pr_debug("cable removed during suspend\n");
 			hdmi_tx_send_cable_notification(hdmi_ctrl, 0);

@@ -106,7 +106,7 @@ static int hdmi_cec_msg_send(void *data, struct cec_msg *msg)
 		((msg->frame_size & 0x1F) << 4) | BIT(9));
 
 	if (!wait_for_completion_timeout(
-		&cec_ctrl->cec_msg_wr_done, HZ)) {
+		&cec_ctrl->cec_msg_wr_done, msecs_to_jiffies(1000))) {
 		DEV_ERR("%s: timedout", __func__);
 		return -ETIMEDOUT;
 	}

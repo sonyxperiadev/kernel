@@ -1551,7 +1551,7 @@ static int i2c_register_adapter(struct i2c_adapter *adap)
 
 	/* Set default timeout to 1 second if not already set */
 	if (adap->timeout == 0)
-		adap->timeout = HZ;
+		adap->timeout = 1000;
 
 	dev_set_name(&adap->dev, "i2c-%d", adap->nr);
 	adap->dev.bus = &i2c_bus_type;
@@ -2194,7 +2194,7 @@ int __i2c_transfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
 		ret = adap->algo->master_xfer(adap, msgs, num);
 		if (ret != -EAGAIN)
 			break;
-		if (time_after(jiffies, orig_jiffies + adap->timeout))
+		if (time_after(jiffies, orig_jiffies + msecs_to_jiffies(adap->timeout)))
 			break;
 	}
 

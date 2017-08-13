@@ -74,7 +74,7 @@
 #define HWTEST_SIZE_OF_TRX_SHORT_2		7
 #define HWTEST_SIZE_OF_TRX_SHORT_2_TAB		13
 #define HWTEST_MAX_DIGITS			10
-#define SYN_WATCHDOG_POLL_DEFAULT_INTERVAL	HZ
+#define SYN_WATCHDOG_POLL_DEFAULT_INTERVAL	1000
 #define SYN_WAKEUP_GESTURE			"wakeup_gesture"
 
 #define SYN_PAGE_ADDR(page, addr) ((page) << 8 | (addr))
@@ -5936,7 +5936,7 @@ static int clearpad_probe(struct platform_device *pdev)
 	if (this->pdata->watchdog_enable) {
 		this->wd_poll_t_jf = this->pdata->watchdog_poll_t_ms ?
 			msecs_to_jiffies(this->pdata->watchdog_poll_t_ms) :
-			SYN_WATCHDOG_POLL_DEFAULT_INTERVAL;
+			msecs_to_jiffies(SYN_WATCHDOG_POLL_DEFAULT_INTERVAL);
 		INIT_DELAYED_WORK(&this->wd_poll_work, clearpad_wd_status_poll);
 	}
 
