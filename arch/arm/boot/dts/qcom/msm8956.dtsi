@@ -2830,6 +2830,7 @@
 		compatible = "qcom,msm-audio-ion";
 		qcom,smmu-version = <2>;
 		qcom,smmu-enabled;
+		qcom,smmu-force-sid = <0x0 0x1>; /* u64 */
 		iommus = <&apps_smmu 14>;
 	};
 
