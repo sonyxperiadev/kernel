@@ -794,18 +794,34 @@ u32 msm_audio_populate_upper_32_bits(ion_phys_addr_t pa)
 static int msm_audio_ion_smmu_probe(struct device *dev)
 {
 	struct of_phandle_args iommuspec;
-
+	bool smmu_force_sid;
 	u64 smmu_sid = 0;
 	int rc = 0;
 
-	/* Get SMMU SID information from Devicetree */
-	rc = of_parse_phandle_with_args(dev->of_node, "iommus",
-					"#iommu-cells", 0, &iommuspec);
-	if (rc)
-		dev_err(dev, "%s: could not get smmu SID, ret = %d\n",
-			__func__, rc);
-	else
-		smmu_sid = iommuspec.args[0];
+	smmu_force_sid = !!of_find_property(dev->of_node,
+				"qcom,smmu-force-sid", NULL);
+
+	if (smmu_force_sid) {
+		rc = of_property_read_u64(dev->of_node,
+				"qcom,smmu-force-sid", &smmu_sid);
+		if (rc) {
+			dev_err(dev,
+				"%s: Invalid smmu-force-sid property value\n",
+				__func__);
+			return rc;
+		}
+	} else {
+		/* Get SMMU SID information from Devicetree */
+		rc = of_parse_phandle_with_args(dev->of_node, "iommus",
+						"#iommu-cells", 0, &iommuspec);
+		if (rc)
+			dev_err(dev, "%s: could not get smmu SID, ret = %d\n",
+				__func__, rc);
+		else
+			smmu_sid = iommuspec.args[0];
+	}
+
+	pr_err("msm_audio_ion sid bit is 0x%llx\n", smmu_sid);
 
 	msm_audio_ion_data.smmu_sid_bits =
 		smmu_sid << MSM_AUDIO_SMMU_SID_OFFSET;
