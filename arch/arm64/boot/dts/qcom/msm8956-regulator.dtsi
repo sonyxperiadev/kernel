@@ -718,4 +718,18 @@
 		regulator-name = "rome_vreg";
 		status = "disabled";
 	};
+
+	stub_mmagic_camss: stub_mmagic {
+		compatible = "qcom,stub-regulator";
+		regulator-name = "mmagic";
+		regulator-min-microvolt = <1>;
+		regulator-max-microvolt = <1800000>;
+	};
+
+	stub_camss_top: stub_gdscr {
+		compatible = "qcom,stub-regulator";
+		regulator-name = "gdscr";
+		regulator-min-microvolt = <1>;
+		regulator-max-microvolt = <1800000>;
+	};
 };
