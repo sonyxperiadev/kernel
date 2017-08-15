@@ -2618,6 +2618,18 @@
 		qcom,pins = <&gp 38>;
 		qcom,num-grp-pins = <1>;
 	};
+
+	cam_sensor_front1_default {
+		/* RESET */
+		qcom,pins = <&gp 38>;
+		qcom,num-grp-pins = <1>;
+	};
+
+	cam_sensor_front1_sleep {
+		/* RESET */
+		qcom,pins = <&gp 38>;
+		qcom,num-grp-pins = <1>;
+	};
 };
 
 /* LS UART : BLSP2 */
