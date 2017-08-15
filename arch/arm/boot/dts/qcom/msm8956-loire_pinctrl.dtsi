@@ -1711,6 +1711,28 @@
 			pins = "gpio38";
 		};
 	};
+
+	cam_sensor_front1_default {
+		/* RESET */
+		mux {
+			pins = "gpio38";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio38";
+		};
+	};
+
+	cam_sensor_front1_sleep {
+		/* RESET */
+		mux {
+			pins = "gpio38";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio38";
+		};
+	};
 };
 
 &sdc2_clk_on {
