@@ -468,10 +468,8 @@ enum msm8976_functions {
 	msm_mux_flash_strobe,
 	msm_mux_cci_timer0,
 	msm_mux_cci_timer1,
-	msm_mux_cam_irq,
 	msm_mux_cci_timer2,
 	msm_mux_blsp1_spi,
-	msm_mux_ois_sync,
 	msm_mux_cci_timer3,
 	msm_mux_cci_timer4,
 	msm_mux_blsp3_spi,
@@ -483,14 +481,11 @@ enum msm8976_functions {
 	msm_mux_mag_int,
 	msm_mux_gcc_gp3_clk_a,
 	msm_mux_cci_async,
-	msm_mux_cam1_standby,
-	msm_mux_cam1_rst,
 	msm_mux_gyro_int,
 	msm_mux_pressure_int,
 	msm_mux_fp_int,
 	msm_mux_qdss_cti_trig_in_b1,
 	msm_mux_uim_batt,
-	msm_mux_cam0_ldo,
 	msm_mux_sd_write,
 	msm_mux_uim1_data,
 	msm_mux_uim1_clk,
@@ -548,12 +543,7 @@ enum msm8976_functions {
 	msm_mux_ssbi_wtr1,
 	msm_mux_gsm1_tx,
 	msm_mux_gsm0_tx,
-	msm_mux_cam2_rst,
-	msm_mux_cam2_standby,
-	msm_mux_cam3_rst,
-	msm_mux_cam3_standby,
 	msm_mux_sdcard_det,
-	msm_mux_cam1_ldo,
 	msm_mux_sec_mi2s,
 	msm_mux_sec_mi2s_ws,
 	msm_mux_blsp_spi7,
@@ -731,17 +721,11 @@ static const char * const cci_timer0_groups[] = {
 static const char * const cci_timer1_groups[] = {
 	"gpio32",
 };
-static const char * const cam_irq_groups[] = {
-	"gpio35",
-};
 static const char * const cci_timer2_groups[] = {
 	"gpio33",
 };
 static const char * const blsp1_spi_groups[] = {
 	"gpio101",
-};
-static const char * const ois_sync_groups[] = {
-	"gpio36",
 };
 static const char * const cci_timer3_groups[] = {
 	"gpio34",
@@ -776,12 +760,6 @@ static const char * const gcc_gp3_clk_a_groups[] = {
 static const char * const cci_async_groups[] = {
 	"gpio34", "gpio35", "gpio36",
 };
-static const char * const cam1_standby_groups[] = {
-	"gpio39",
-};
-static const char * const cam1_rst_groups[] = {
-	"gpio40",
-};
 static const char * const gyro_int_groups[] = {
 	"gpio45",
 };
@@ -796,9 +774,6 @@ static const char * const qdss_cti_trig_in_b1_groups[] = {
 };
 static const char * const uim_batt_groups[] = {
 	"gpio61",
-};
-static const char * const cam0_ldo_groups[] = {
-	"gpio50",
 };
 static const char * const sd_write_groups[] = {
 	"gpio50",
@@ -972,23 +947,8 @@ static const char * const gsm1_tx_groups[] = {
 static const char * const gsm0_tx_groups[] = {
 	"gpio99",
 };
-static const char * const cam2_rst_groups[] = {
-	"gpio129",
-};
-static const char * const cam2_standby_groups[] = {
-	"gpio130",
-};
-static const char * const cam3_rst_groups[] = {
-	"gpio131",
-};
-static const char * const cam3_standby_groups[] = {
-	"gpio132",
-};
 static const char * const sdcard_det_groups[] = {
 	"gpio133",
-};
-static const char * const cam1_ldo_groups[] = {
-	"gpio134",
 };
 static const char * const sec_mi2s_groups[] = {
 	"gpio102", "gpio105", "gpio135",
@@ -1055,10 +1015,8 @@ static const struct msm_function msm8976_functions[] = {
 	FUNCTION(flash_strobe),
 	FUNCTION(cci_timer0),
 	FUNCTION(cci_timer1),
-	FUNCTION(cam_irq),
 	FUNCTION(cci_timer2),
 	FUNCTION(blsp1_spi),
-	FUNCTION(ois_sync),
 	FUNCTION(cci_timer3),
 	FUNCTION(cci_timer4),
 	FUNCTION(blsp3_spi),
@@ -1070,14 +1028,11 @@ static const struct msm_function msm8976_functions[] = {
 	FUNCTION(mag_int),
 	FUNCTION(gcc_gp3_clk_a),
 	FUNCTION(cci_async),
-	FUNCTION(cam1_standby),
-	FUNCTION(cam1_rst),
 	FUNCTION(gyro_int),
 	FUNCTION(pressure_int),
 	FUNCTION(fp_int),
 	FUNCTION(qdss_cti_trig_in_b1),
 	FUNCTION(uim_batt),
-	FUNCTION(cam0_ldo),
 	FUNCTION(sd_write),
 	FUNCTION(uim1_data),
 	FUNCTION(uim1_clk),
@@ -1135,12 +1090,7 @@ static const struct msm_function msm8976_functions[] = {
 	FUNCTION(ssbi_wtr1),
 	FUNCTION(gsm1_tx),
 	FUNCTION(gsm0_tx),
-	FUNCTION(cam2_rst),
-	FUNCTION(cam2_standby),
-	FUNCTION(cam3_rst),
-	FUNCTION(cam3_standby),
 	FUNCTION(sdcard_det),
-	FUNCTION(cam1_ldo),
 	FUNCTION(sec_mi2s),
 	FUNCTION(sec_mi2s_ws),
 	FUNCTION(blsp_spi7),
