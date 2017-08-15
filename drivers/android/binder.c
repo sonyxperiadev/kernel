@@ -2758,8 +2758,9 @@ static int binder_thread_write(struct binder_proc *proc,
 						buf_node->async_todo.list.next,
 						struct binder_work, entry);
 					binder_dequeue_work(w, __LINE__);
-					binder_enqueue_work(w, &thread->todo,
+					binder_enqueue_work(w, &proc->todo,
 							    __LINE__);
+					binder_wakeup_proc(proc);
 				}
 				binder_proc_unlock(buffer->target_node->proc,
 						   __LINE__);
