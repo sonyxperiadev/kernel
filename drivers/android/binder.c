@@ -3764,13 +3764,7 @@ static unsigned int binder_poll(struct file *filp,
 	wait_for_proc_work = binder_available_for_proc_work(thread);
 	binder_proc_unlock(thread->proc, __LINE__);
 
-	if (binder_has_work(thread, wait_for_proc_work))
-		goto ret_pollin;
-	binder_put_thread(thread);
 	poll_wait(filp, &thread->wait, wait);
-	thread = binder_get_thread(proc);
-	if (!thread)
-		return -ENOENT;
 	if (binder_has_work(thread, wait_for_proc_work))
 		goto ret_pollin;
 	binder_put_thread(thread);
