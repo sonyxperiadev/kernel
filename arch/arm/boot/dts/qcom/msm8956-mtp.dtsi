@@ -12,7 +12,6 @@
  */
 
 #include "msm8956-pinctrl.dtsi"
-#include "msm8956-camera-sensor-mtp.dtsi"
 #include "msm8956-mdss-mtp.dtsi"
 #include "msm8956-wsa881x.dtsi"
 
@@ -115,7 +114,6 @@
 &uartblsp1dm1 {
 	status = "ok";
 };
-
 
 &spmi_bus {
 	qcom,pmi8950@3 {
