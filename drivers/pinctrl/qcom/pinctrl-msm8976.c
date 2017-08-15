@@ -723,7 +723,7 @@ static const char * const cci_i2c_groups[] = {
 	"gpio29", "gpio30", "gpio103", "gpio104",
 };
 static const char * const flash_strobe_groups[] = {
-	"gpio33", "gpio34",
+	"gpio31", "gpio32",
 };
 static const char * const cci_timer0_groups[] = {
 	"gpio31",
