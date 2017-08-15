@@ -535,7 +535,7 @@
 	msm_gpio_36_def: msm_gpio_36def {
 		mux {
 			pins = "gpio36";
-			function = "gpio"; /*cam1_rst???*/
+			function = "gpio";
 		};
 		config {
 			pins = "gpio36";
@@ -1694,7 +1694,7 @@
 		/* RESET */
 		mux {
 			pins = "gpio38";
-			function = "cam2_rst";
+			function = "gpio";
 		};
 		config {
 			pins = "gpio38";
@@ -1705,7 +1705,7 @@
 		/* RESET */
 		mux {
 			pins = "gpio38";
-			function = "cam2_rst";
+			function = "gpio";
 		};
 		config {
 			pins = "gpio38";
