@@ -1,18 +1,25 @@
 /*
- * Copyright 2015 Mentor Graphics Corporation.
+ * Userspace implementations of gettimeofday() and friends.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; version 2 of the
- * License.
+ * Copyright (C) 2017 Cavium, Inc.
+ * Copyright (C) 2015 Mentor Graphics Corporation
+ * Copyright (C) 2012 ARM Limited
  *
- * This program is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * Author: Will Deacon <will.deacon@arm.com>
+ * Rewriten from arch64 version into C by: Andrew Pinski <apinski@cavium.com>
+ * Reworked and rebased over arm version by: Mark Salyzyn <salyzyn@android.com>
  */
 
 #include <linux/compiler.h>
@@ -31,32 +38,30 @@
 
 extern struct vdso_data *__get_datapage(void);
 
-static notrace u32 __vdso_read_begin(const struct vdso_data *vdata)
-{
-	u32 seq;
-repeat:
-	seq = ACCESS_ONCE(vdata->seq_count);
-	if (seq & 1) {
-		cpu_relax();
-		goto repeat;
-	}
-	return seq;
-}
-
 static notrace u32 vdso_read_begin(const struct vdso_data *vdata)
 {
 	u32 seq;
 
-	seq = __vdso_read_begin(vdata);
+	do {
+		seq = READ_ONCE(vdata->tb_seq_count);
 
-	smp_rmb(); /* Pairs with smp_wmb in vdso_write_end */
+		if ((seq & 1) == 0)
+			break;
+
+		cpu_relax();
+	} while (true);
+
+	smp_rmb(); /* Pairs with second smp_wmb in update_vsyscall */
 	return seq;
 }
 
 static notrace int vdso_read_retry(const struct vdso_data *vdata, u32 start)
 {
-	smp_rmb(); /* Pairs with smp_wmb in vdso_write_begin */
-	return vdata->seq_count != start;
+	u32 seq;
+
+	smp_rmb(); /* Pairs with first smp_wmb in update_vsyscall */
+	seq = READ_ONCE(vdata->tb_seq_count);
+	return seq != start;
 }
 
 static notrace long clock_gettime_fallback(clockid_t _clkid,
@@ -127,7 +132,7 @@ static notrace u64 get_ns(struct vdso_data *vdata)
 
 	cycle_delta = (cycle_now - vdata->cs_cycle_last) & vdata->cs_mask;
 
-	nsec = (cycle_delta * vdata->cs_mult) + vdata->xtime_clock_snsec;
+	nsec = (cycle_delta * vdata->cs_mono_mult) + vdata->xtime_clock_snsec;
 	nsec >>= vdata->cs_shift;
 
 	return nsec;
@@ -141,7 +146,7 @@ static notrace int do_realtime(struct timespec *ts, struct vdso_data *vdata)
 	do {
 		seq = vdso_read_begin(vdata);
 
-		if (!vdata->tk_is_cntvct)
+		if (vdata->use_syscall)
 			return -1;
 
 		ts->tv_sec = vdata->xtime_clock_sec;
@@ -164,7 +169,7 @@ static notrace int do_monotonic(struct timespec *ts, struct vdso_data *vdata)
 	do {
 		seq = vdso_read_begin(vdata);
 
-		if (!vdata->tk_is_cntvct)
+		if (vdata->use_syscall)
 			return -1;
 
 		ts->tv_sec = vdata->xtime_clock_sec;
