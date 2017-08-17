@@ -172,7 +172,7 @@
 		qcom,num-isps = <0x2>;
 		mmagic-vdd-supply = <&stub_mmagic_camss>;
 		camss-vdd-supply = <&stub_camss_top>;
-		vfe0-vdd-supply = <&gdsc_vfe>;
+		vfe0-vdd-supply = <&gdsc_vfe0>;
 		vfe1-vdd-supply = <&gdsc_vfe1>;
 		qcom,vdd-names = "camss-vdd", "mmagic-vdd",
 				 "vfe0-vdd", "vfe1-vdd";
@@ -231,7 +231,7 @@
 		reg-names = "vfe", "vfe_vbif";
 		interrupts = <0 57 0>;
 		interrupt-names = "vfe";
-		vdd-supply = <&gdsc_vfe>;
+		vdd-supply = <&gdsc_vfe0>;
 		mmagic-vdd-supply = <&stub_mmagic_camss>;
 		camss-vdd-supply = <&stub_camss_top>;
 		clocks = <&clock_gcc clk_gcc_camss_top_ahb_clk>,

@@ -33,9 +33,9 @@
 		status = "disabled";
 	};
 
-	gdsc_vfe: qcom,gdsc@1858034 {
+	gdsc_vfe0: qcom,gdsc@1858034 {
 		compatible = "qcom,gdsc";
-		regulator-name = "gdsc_vfe";
+		regulator-name = "gdsc_vfe0";
 		reg = <0x1858034 0x4>;
 		status = "disabled";
 	};
