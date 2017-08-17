@@ -24,6 +24,16 @@
 
 #include <asm/page.h>
 
+#ifndef _VDSO_WTM_CLOCK_SEC_T
+#define _VDSO_WTM_CLOCK_SEC_T
+typedef u32 vdso_wtm_clock_nsec_t;
+#endif
+
+#ifndef _VDSO_XTIME_CLOCK_SEC_T
+#define _VDSO_XTIME_CLOCK_SEC_T
+typedef u32 vdso_xtime_clock_sec_t;
+#endif
+
 /* Try to be cache-friendly on systems that don't implement the
  * generic timer: fit the unconditionally updated fields in the first
  * 32 bytes.
@@ -35,9 +45,11 @@ struct vdso_data {
 	u32 xtime_coarse_sec;	/* coarse time */
 	u32 xtime_coarse_nsec;
 
-	u32 wtm_clock_sec;	/* wall to monotonic offset */
-	u32 wtm_clock_nsec;
-	u32 xtime_clock_sec;	/* CLOCK_REALTIME - seconds */
+	/* wall to monotonic offset */
+	u32 wtm_clock_sec;
+	vdso_wtm_clock_nsec_t	wtm_clock_nsec;
+	/* CLOCK_REALTIME - seconds */
+	vdso_xtime_clock_sec_t	xtime_clock_sec;
 	u32 cs_mono_mult;	/* clocksource multiplier */
 
 	u64 cs_cycle_last;	/* last cycle value */

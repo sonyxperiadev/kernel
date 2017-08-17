@@ -24,7 +24,8 @@
 
 #include <asm/barrier.h>
 #include <linux/compiler.h>	/* for notrace				*/
-#include <linux/time.h>
+#include <linux/math64.h>	/* for __iter_div_u64_rem()		*/
+#include <uapi/linux/time.h>	/* for struct timespec			*/
 
 #include "compiler.h"
 #include "datapage.h"
@@ -79,6 +80,7 @@ static notrace int do_monotonic_coarse(const struct vdso_data *vd,
 {
 	struct timespec tomono;
 	u32 seq;
+	u64 nsec;
 
 	do {
 		seq = vdso_read_begin(vd);
@@ -92,33 +94,41 @@ static notrace int do_monotonic_coarse(const struct vdso_data *vd,
 	} while (vdso_read_retry(vd, seq));
 
 	ts->tv_sec += tomono.tv_sec;
-	timespec_add_ns(ts, tomono.tv_nsec);
+	/* open coding timespec_add_ns */
+	ts->tv_sec += __iter_div_u64_rem(ts->tv_nsec + tomono.tv_nsec,
+					 NSEC_PER_SEC, &nsec);
+	ts->tv_nsec = nsec;
 
 	return 0;
 }
 
 #ifdef CONFIG_ARM_ARCH_TIMER
 
-static notrace u64 get_ns(const struct vdso_data *vd)
+/*
+ * Returns the clock delta, in nanoseconds left-shifted by the clock
+ * shift.
+ */
+static notrace u64 get_clock_shifted_nsec(const u64 cycle_last,
+					  const u32 mult,
+					  const u64 mask)
 {
-	u64 cycle_delta;
-	u64 cycle_now;
-	u64 nsec;
+	u64 res;
 
-	cycle_now = arch_vdso_read_counter();
+	/* Read the virtual counter. */
+	res = arch_vdso_read_counter();
 
-	cycle_delta = (cycle_now - vd->cs_cycle_last) & vd->cs_mask;
+	res = res - cycle_last;
 
-	nsec = (cycle_delta * vd->cs_mono_mult) + vd->xtime_clock_snsec;
-	nsec >>= vd->cs_shift;
-
-	return nsec;
+	res &= mask;
+	return res * mult;
 }
 
 static notrace int do_realtime(const struct vdso_data *vd, struct timespec *ts)
 {
-	u64 nsecs;
-	u32 seq;
+	u32 seq, mult, shift;
+	u64 nsec, cycle_last;
+	u64 mask;
+	vdso_xtime_clock_sec_t sec;
 
 	do {
 		seq = vdso_read_begin(vd);
@@ -126,22 +136,33 @@ static notrace int do_realtime(const struct vdso_data *vd, struct timespec *ts)
 		if (vd->use_syscall)
 			return -1;
 
-		ts->tv_sec = vd->xtime_clock_sec;
-		nsecs = get_ns(vd);
+		cycle_last = vd->cs_cycle_last;
 
-	} while (vdso_read_retry(vd, seq));
+		mult = vd->cs_mono_mult;
+		shift = vd->cs_shift;
+		mask = vd->cs_mask;
 
-	ts->tv_nsec = 0;
-	timespec_add_ns(ts, nsecs);
+		sec = vd->xtime_clock_sec;
+		nsec = vd->xtime_clock_snsec;
+
+	} while (unlikely(vdso_read_retry(vd, seq)));
+
+	nsec += get_clock_shifted_nsec(cycle_last, mult, mask);
+	nsec >>= shift;
+	/* open coding timespec_add_ns to save a ts->tv_nsec = 0 */
+	ts->tv_sec = sec + __iter_div_u64_rem(nsec, NSEC_PER_SEC, &nsec);
+	ts->tv_nsec = nsec;
 
 	return 0;
 }
 
 static notrace int do_monotonic(const struct vdso_data *vd, struct timespec *ts)
 {
-	struct timespec tomono;
-	u64 nsecs;
-	u32 seq;
+	u32 seq, mult, shift;
+	u64 nsec, cycle_last;
+	u64 mask;
+	vdso_wtm_clock_nsec_t wtm_nsec;
+	__kernel_time_t sec;
 
 	do {
 		seq = vdso_read_begin(vd);
@@ -149,17 +170,26 @@ static notrace int do_monotonic(const struct vdso_data *vd, struct timespec *ts)
 		if (vd->use_syscall)
 			return -1;
 
-		ts->tv_sec = vd->xtime_clock_sec;
-		nsecs = get_ns(vd);
+		cycle_last = vd->cs_cycle_last;
 
-		tomono.tv_sec = vd->wtm_clock_sec;
-		tomono.tv_nsec = vd->wtm_clock_nsec;
+		mult = vd->cs_mono_mult;
+		shift = vd->cs_shift;
+		mask = vd->cs_mask;
 
-	} while (vdso_read_retry(vd, seq));
+		sec = vd->xtime_clock_sec;
+		nsec = vd->xtime_clock_snsec;
 
-	ts->tv_sec += tomono.tv_sec;
-	ts->tv_nsec = 0;
-	timespec_add_ns(ts, nsecs + tomono.tv_nsec);
+		sec += vd->wtm_clock_sec;
+		wtm_nsec = vd->wtm_clock_nsec;
+
+	} while (unlikely(vdso_read_retry(vd, seq)));
+
+	nsec += get_clock_shifted_nsec(cycle_last, mult, mask);
+	nsec >>= shift;
+	nsec += wtm_nsec;
+	/* open coding timespec_add_ns to save a ts->tv_nsec = 0 */
+	ts->tv_sec = sec + __iter_div_u64_rem(nsec, NSEC_PER_SEC, &nsec);
+	ts->tv_nsec = nsec;
 
 	return 0;
 }
