@@ -226,6 +226,17 @@ static void gic_unmask_irq(struct irq_data *d)
 	raw_spin_unlock_irqrestore(&irq_controller_lock, flags);
 }
 
+#ifdef CONFIG_MSM_LEGACY_QGIC
+static void gic_disable_irq(struct irq_data *d)
+{
+	/* don't lazy-disable PPIs */
+	if (gic_irq(d) < 32)
+		gic_mask_irq(d);
+	if (gic_arch_extn.irq_disable)
+		gic_arch_extn.irq_disable(d);
+}
+#endif
+
 static void gic_eoi_irq(struct irq_data *d)
 {
 	if (gic_arch_extn.irq_eoi) {
@@ -462,6 +473,9 @@ static struct irq_chip gic_chip = {
 #ifdef CONFIG_SMP
 	.irq_set_affinity	= gic_set_affinity,
 #endif
+#ifdef CONFIG_MSM_LEGACY_QGIC
+	.irq_disable		= gic_disable_irq,
+#endif
 	.irq_set_wake		= gic_set_wake,
 	.irq_get_irqchip_state	= gic_irq_get_irqchip_state,
 	.irq_set_irqchip_state	= gic_irq_set_irqchip_state,
@@ -478,6 +492,9 @@ static struct irq_chip gic_eoimode1_chip = {
 	.irq_set_type		= gic_set_type,
 #ifdef CONFIG_SMP
 	.irq_set_affinity	= gic_set_affinity,
+#endif
+#ifdef CONFIG_MSM_LEGACY_QGIC
+	.irq_disable		= gic_disable_irq,
 #endif
 	.irq_get_irqchip_state	= gic_irq_get_irqchip_state,
 	.irq_set_irqchip_state	= gic_irq_set_irqchip_state,
