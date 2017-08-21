@@ -101,6 +101,12 @@ SoCs:
 - SDA670
   compatible = "qcom,sda670"
 
+- SDM636
+  compatible = "qcom,sdm636"
+
+- SDA636
+  compatible = "qcom,sda636"
+
 - MSM8952
   compatible = "qcom,msm8952"
 
@@ -332,6 +338,12 @@ compatible = "qcom,sxr1120-cdp"
 compatible = "qcom,sda670-cdp"
 compatible = "qcom,sda670-mtp"
 compatible = "qcom,sda670-hdk"
+compatible = "qcom,sdm636-cdp"
+compatible = "qcom,sdm636-mtp"
+compatible = "qcom,sdm636-qrd"
+compatible = "qcom,sda636-qrd"
+compatible = "qcom,sda636-mtp"
+compatible = "qcom,sda636-cdp"
 compatible = "qcom,msm8952-rumi"
 compatible = "qcom,msm8952-sim"
 compatible = "qcom,msm8952-qrd"
