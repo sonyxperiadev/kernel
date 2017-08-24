@@ -2908,7 +2908,7 @@ static void binder_transaction(struct binder_proc *proc,
 		if (reply || !(tr->flags & TF_ONE_WAY)) {
 			preempt_disable();
 			wake_up_interruptible_sync(target_wait);
-			preempt_enable_no_resched();
+			sched_preempt_enable_no_resched();
 		}
 		else {
 			wake_up_interruptible(target_wait);
