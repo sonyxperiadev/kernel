@@ -4924,6 +4924,7 @@ static void handle_usb_removal(struct smbchg_chip *chip)
 #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
 	chip->somc_params.chg_det.settled_not_hvdcp = false;
 	chip->somc_params.chg_det.sub_type = POWER_SUPPLY_SUB_TYPE_UNKNOWN;
+	smbchg_relax(chip, PM_DETECT_HVDCP);
 	cancel_delayed_work_sync(&chip->hvdcp_det_work); // CHECKME
 #endif
 	smbchg_change_usb_supply_type(chip, POWER_SUPPLY_TYPE_UNKNOWN);
