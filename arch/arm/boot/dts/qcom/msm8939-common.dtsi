@@ -1942,7 +1942,7 @@
 	status = "okay";
 };
 
-&gdsc_vfe {
+&gdsc_vfe0 {
 	clock-names = "core_clk", "bus_clk", "micro_clk",
 			"cpp_clk", "csi_clk";
 	clocks = <&clock_gcc clk_gcc_camss_vfe0_clk>,

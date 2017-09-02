@@ -184,7 +184,7 @@
 		reg-names = "vfe", "vfe_vbif";
 		interrupts = <0 57 0>;
 		interrupt-names = "vfe";
-		vdd-supply = <&gdsc_vfe>;
+		vdd-supply = <&gdsc_vfe0>;
 		clocks = <&clock_gcc clk_gcc_camss_top_ahb_clk>,
 			<&clock_gcc clk_vfe0_clk_src>,
 			<&clock_gcc clk_gcc_camss_vfe0_clk>,
@@ -283,7 +283,7 @@
 		reg-names = "cpp", "cpp_vbif", "cpp_hw";
 		interrupts = <0 49 0>;
 		interrupt-names = "cpp";
-		vdd-supply = <&gdsc_vfe>;
+		vdd-supply = <&gdsc_vfe0>;
 		clocks = <&clock_gcc clk_gcc_camss_ispif_ahb_clk>,
 			<&clock_gcc clk_vfe0_clk_src>,
 			<&clock_gcc clk_gcc_camss_vfe0_clk>,
