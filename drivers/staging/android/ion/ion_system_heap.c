@@ -782,7 +782,8 @@ static void ion_system_heap_destroy_pools(struct ion_page_pool **pools)
  * ion_system_heap_destroy_pools to destroy the pools.
  */
 static int ion_system_heap_create_pools(struct device *dev,
-					struct ion_page_pool **pools)
+					struct ion_page_pool **pools,
+					bool movable)
 {
 	int i;
 	for (i = 0; i < num_orders; i++) {
@@ -791,7 +792,8 @@ static int ion_system_heap_create_pools(struct device *dev,
 
 		if (orders[i])
 			gfp_flags = high_order_gfp_flags;
-		pool = ion_page_pool_create(dev, gfp_flags, orders[i]);
+		pool = ion_page_pool_create(dev, gfp_flags, orders[i],
+					movable);
 		if (!pool)
 			goto err_create_pool;
 		pools[i] = pool;
@@ -830,15 +832,15 @@ struct ion_heap *ion_system_heap_create(struct ion_platform_heap *data)
 			if (!heap->secure_pools[i])
 				goto err_create_secure_pools;
 			if (ion_system_heap_create_pools(
-					dev, heap->secure_pools[i]))
+					dev, heap->secure_pools[i], false))
 				goto err_create_secure_pools;
 		}
 	}
 
-	if (ion_system_heap_create_pools(dev, heap->uncached_pools))
+	if (ion_system_heap_create_pools(dev, heap->uncached_pools, false))
 		goto err_create_uncached_pools;
 
-	if (ion_system_heap_create_pools(dev, heap->cached_pools))
+	if (ion_system_heap_create_pools(dev, heap->cached_pools, true))
 		goto err_create_cached_pools;
 
 	mutex_init(&heap->split_page_mutex);

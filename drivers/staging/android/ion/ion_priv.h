@@ -536,6 +536,7 @@ void ion_carveout_free(struct ion_heap *heap, ion_phys_addr_t addr,
  * @gfp_mask:		gfp_mask to use from alloc
  * @order:		order of pages in the pool
  * @list:		plist node for list of pools
+ * @inode:		inode for ion_pool pseudo filesystem
  *
  * Allows you to keep a pool of pre allocated pages to use from your heap.
  * Keeping a pool of pages that is ready for dma, ie any cached mapping have
@@ -552,10 +553,11 @@ struct ion_page_pool {
 	gfp_t gfp_mask;
 	unsigned int order;
 	struct plist_node list;
+	struct inode *inode;
 };
 
 struct ion_page_pool *ion_page_pool_create(struct device *dev, gfp_t gfp_mask,
-					   unsigned int order);
+					   unsigned int order, bool movable);
 void ion_page_pool_destroy(struct ion_page_pool *);
 void *ion_page_pool_alloc(struct ion_page_pool *a, bool *from_pool);
 void *ion_page_pool_alloc_pool_only(struct ion_page_pool *a);
