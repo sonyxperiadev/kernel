@@ -1,7 +1,8 @@
 /*
  * Linux cfg80211 driver
  *
- * Copyright (C) 1999-2016, Broadcom Corporation
+ * Copyright (C) 1999-2017, Broadcom Corporation
+ * Copyright (C) 2016 Sony Mobile Communications Inc.
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -70,7 +71,7 @@ struct wl_ibss;
 /* 0 invalidates all debug messages.  default is 1 */
 #define WL_DBG_LEVEL 0xFF
 
-#define CFG80211_ERROR_TEXT		"CFG80211-ERROR) "
+#define CFG80211_ERROR_TEXT		""
 
 #if defined(DHD_DEBUG)
 #define	WL_ERR(args)									\

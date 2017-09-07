@@ -4,7 +4,7 @@
  * Flow rings are transmit traffic (=propagating towards antenna) related entities
  *
  *
- * Copyright (C) 1999-2016, Broadcom Corporation
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -976,7 +976,7 @@ int dhd_update_flow_prio_map(dhd_pub_t *dhdp, uint8 map)
 /** Inform firmware on updated flow priority mapping, called on IOVAR */
 int dhd_flow_prio_map(dhd_pub_t *dhd, uint8 *map, bool set)
 {
-	uint8 iovbuf[24];
+	uint8 iovbuf[24] = {0};
 	if (!set) {
 		bcm_mkiovar("bus:fl_prio_map", NULL, 0, (char*)iovbuf, sizeof(iovbuf));
 		if (dhd_wl_ioctl_cmd(dhd, WLC_GET_VAR, iovbuf, sizeof(iovbuf), FALSE, 0) < 0) {

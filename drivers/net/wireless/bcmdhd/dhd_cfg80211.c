@@ -1,7 +1,7 @@
 /*
  * Linux cfg80211 driver - Dongle Host Driver (DHD) related
  *
- * Copyright (C) 1999-2016, Broadcom Corporation
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -171,7 +171,7 @@ wl_dongle_up(struct net_device *ndev)
 	s32 err = 0;
 	u32 up = 0;
 
-	err = wldev_ioctl(ndev, WLC_UP, &up, sizeof(up), true);
+	err = wldev_ioctl_set(ndev, WLC_UP, &up, sizeof(up));
 	if (unlikely(err)) {
 		WL_ERR(("WLC_UP error (%d)\n", err));
 	}
@@ -184,7 +184,7 @@ wl_dongle_down(struct net_device *ndev)
 	s32 err = 0;
 	u32 down = 0;
 
-	err = wldev_ioctl(ndev, WLC_DOWN, &down, sizeof(down), true);
+	err = wldev_ioctl_set(ndev, WLC_DOWN, &down, sizeof(down));
 	if (unlikely(err)) {
 		WL_ERR(("WLC_DOWN error (%d)\n", err));
 	}

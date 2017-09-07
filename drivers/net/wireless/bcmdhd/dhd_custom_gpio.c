@@ -1,7 +1,7 @@
 /*
  * Customer code to add GPIO control during WLAN start/stop
  *
- * Copyright (C) 1999-2016, Broadcom Corporation
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * Copyright (C) 2013 Sony Mobile Communications Inc.
  * 
  *      Unless you and Broadcom execute a separate written software license
@@ -320,7 +320,7 @@ const struct cntry_locales_custom translate_custom_table[] = {
 
 	{"XA", "XX", 4},	/* Default country code for INDONESIA */
 	{"XC", "XT", 998},	/* Default country code for RUSSIA */
-
+	{"XD", "XT", 65},	/* Default country code for CHILE */
 	{"AD", "AD", 0},
 	{"AE", "AE", 212},
 	{"AF", "AF", 0},
