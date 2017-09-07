@@ -206,6 +206,21 @@ static inline int msm_bus_scale_query_tcs_cmd_all(struct msm_bus_tcs_handle
 
 #endif
 
+#if defined(CONFIG_QCOM_BUS_SCALING) && defined(CONFIG_QCOM_BUS_CONFIG_RPMH)
+int msm_bus_noc_throttle_wa(bool enable);
+int msm_bus_noc_priority_wa(bool enable);
+#else
+static inline int msm_bus_noc_throttle_wa(bool enable)
+{
+	return 0;
+}
+
+static inline int msm_bus_noc_priority_wa(bool enable)
+{
+	return 0;
+}
+#endif
+
 #if defined(CONFIG_OF) && defined(CONFIG_QCOM_BUS_SCALING)
 struct msm_bus_scale_pdata *msm_bus_pdata_from_node(
 		struct platform_device *pdev, struct device_node *of_node);
