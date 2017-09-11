@@ -980,6 +980,11 @@
 				<87 512 0 0>,
 				<87 512 80000 0>,
 				<87 512 6000  6000>;
+
+		resets = <&clock_gcc RST_QUSB2_PHY_BCR>,
+			 <&clock_gcc RST_USB2_HS_PHY_ONLY_BCR>;
+		reset-names = "phy_reset", "phy_por_reset";
+
 		clocks = <&clock_gcc clk_gcc_usb_hs_ahb_clk>,
 			 <&clock_gcc clk_gcc_usb_hs_system_clk>,
 			 <&clock_gcc clk_gcc_usb2a_phy_sleep_clk>,
