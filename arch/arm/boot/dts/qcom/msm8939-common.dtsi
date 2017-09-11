@@ -948,13 +948,13 @@
 
 	usb_otg: usb@78d9000 {
 		compatible = "qcom,hsusb-otg";
+		reg = <0x78d9000 0x400>, <0x6c000 0x200>;
+		reg-names = "core", "phy_csr";
 		#address-cells = <1>;
 		#size-cells = <1>;
 		ranges;
 
-		reg = <0x78d9000 0x400>;
-		reg-names = "core";
-		interrupts = <0 134 0>,<0 140 0>;
+		interrupts = <0 134 0>, <0 140 0>;
 		interrupt-names = "core_irq", "async_irq";
 
 		hsusb_vdd_dig-supply = <&pm8916_s2_corner>;
