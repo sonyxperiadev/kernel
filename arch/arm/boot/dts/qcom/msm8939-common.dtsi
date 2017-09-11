@@ -1000,10 +1000,8 @@
 		qcom,usbbam@78c4000 {
 			compatible = "qcom,usb-bam-msm";
 			reg = <0x78c4000 0x15000>;
-			reg-names = "hsusb";
+			interrupt-parent = <&intc>;
 			interrupts = <0 135 0>;
-			interrupt-names = "hsusb";
-
 			qcom,bam-type = <1>;
 			qcom,usb-bam-num-pipes = <2>;
 			qcom,usb-bam-fifo-baseaddr = <0x08603800>;
