@@ -5455,10 +5455,10 @@ brain_work(struct work_struct *work)
 	if (chip->usb_present)
 		chg_type = get_chg_type();
 
-	pr_info("Cap=%d, %d, VBAT=%d, IBAT=%d, T=%d, USB=%d, Type=%d BMD=%d, Full=%d,%d Delta=%d\n",
+	pr_debug("Cap=%d, %d, VBAT=%d, IBAT=%d, T=%d, USB=%d, Type=%d BMD=%d, Full=%d,%d Delta=%d\n",
 		soc, real_soc, vbat_mv, ibat_ma, bat_temp, chip->usb_present, chg_type, chip->batt_present,
 		chip->batt_full, chip->force_batt_full, soc_delta);
-	pr_info("vdd_max=%d, rechg=%d, input_ma=%d, input_type=%d, fast_chg=%d time=%d, main=%d, en=%d\n",
+	pr_debug("vdd_max=%d, rechg=%d, input_ma=%d, input_type=%d, fast_chg=%d time=%d, main=%d, en=%d\n",
 		vdd_max, rechg, input_current, input_type, fast_chg, chip->safety_timer/1000,
 		chip->maintenance_timer/1000, en);
 
