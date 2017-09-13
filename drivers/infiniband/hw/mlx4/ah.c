@@ -65,6 +65,7 @@ static struct ib_ah *create_ib_ah(struct ib_pd *pd, struct ib_ah_attr *ah_attr,
 
 	ah->av.ib.port_pd = cpu_to_be32(to_mpd(pd)->pdn | (ah_attr->port_num << 24));
 	ah->av.ib.g_slid  = ah_attr->src_path_bits;
+	ah->av.ib.sl_tclass_flowlabel = cpu_to_be32(ah_attr->sl << 28);
 	if (ah_attr->ah_flags & IB_AH_GRH) {
 		ah->av.ib.g_slid   |= 0x80;
 		ah->av.ib.gid_index = ah_attr->grh.sgid_index;
@@ -82,7 +83,6 @@ static struct ib_ah *create_ib_ah(struct ib_pd *pd, struct ib_ah_attr *ah_attr,
 		       !(1 << ah->av.ib.stat_rate & dev->caps.stat_rate_support))
 			--ah->av.ib.stat_rate;
 	}
-	ah->av.ib.sl_tclass_flowlabel = cpu_to_be32(ah_attr->sl << 28);
 
 	return &ah->ibah;
 }
@@ -118,7 +118,9 @@ static struct ib_ah *create_iboe_ah(struct ib_pd *pd, struct ib_ah_attr *ah_attr
 		       !(1 << ah->av.eth.stat_rate & dev->caps.stat_rate_support))
 			--ah->av.eth.stat_rate;
 	}
-
+	ah->av.eth.sl_tclass_flowlabel |=
+			cpu_to_be32((ah_attr->grh.traffic_class << 20) |
+				    ah_attr->grh.flow_label);
 	/*
 	 * HW requires multicast LID so we just choose one.
 	 */
@@ -126,7 +128,7 @@ static struct ib_ah *create_iboe_ah(struct ib_pd *pd, struct ib_ah_attr *ah_attr
 		ah->av.ib.dlid = cpu_to_be16(0xc000);
 
 	memcpy(ah->av.eth.dgid, ah_attr->grh.dgid.raw, 16);
-	ah->av.eth.sl_tclass_flowlabel = cpu_to_be32(ah_attr->sl << 29);
+	ah->av.eth.sl_tclass_flowlabel |= cpu_to_be32(ah_attr->sl << 29);
 
 	return &ah->ibah;
 }
@@ -169,9 +171,13 @@ int mlx4_ib_query_ah(struct ib_ah *ibah, struct ib_ah_attr *ah_attr)
 	enum rdma_link_layer ll;
 
 	memset(ah_attr, 0, sizeof *ah_attr);
-	ah_attr->sl = be32_to_cpu(ah->av.ib.sl_tclass_flowlabel) >> 28;
 	ah_attr->port_num = be32_to_cpu(ah->av.ib.port_pd) >> 24;
 	ll = rdma_port_get_link_layer(ibah->device, ah_attr->port_num);
+	if (ll == IB_LINK_LAYER_ETHERNET)
+		ah_attr->sl = be32_to_cpu(ah->av.eth.sl_tclass_flowlabel) >> 29;
+	else
+		ah_attr->sl = be32_to_cpu(ah->av.ib.sl_tclass_flowlabel) >> 28;
+
 	ah_attr->dlid = ll == IB_LINK_LAYER_INFINIBAND ? be16_to_cpu(ah->av.ib.dlid) : 0;
 	if (ah->av.ib.stat_rate)
 		ah_attr->static_rate = ah->av.ib.stat_rate - MLX4_STAT_RATE_OFFSET;

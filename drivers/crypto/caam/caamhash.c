@@ -895,13 +895,14 @@ static int ahash_final_ctx(struct ahash_request *req)
 			  state->buflen_1;
 	u32 *sh_desc = ctx->sh_desc_fin, *desc;
 	dma_addr_t ptr = ctx->sh_desc_fin_dma;
-	int sec4_sg_bytes;
+	int sec4_sg_bytes, sec4_sg_src_index;
 	int digestsize = crypto_ahash_digestsize(ahash);
 	struct ahash_edesc *edesc;
 	int ret = 0;
 	int sh_len;
 
-	sec4_sg_bytes = (1 + (buflen ? 1 : 0)) * sizeof(struct sec4_sg_entry);
+	sec4_sg_src_index = 1 + (buflen ? 1 : 0);
+	sec4_sg_bytes = sec4_sg_src_index * sizeof(struct sec4_sg_entry);
 
 	/* allocate space for base edesc and hw desc commands, link tables */
 	edesc = kmalloc(sizeof(struct ahash_edesc) + DESC_JOB_IO_LEN +
@@ -928,7 +929,7 @@ static int ahash_final_ctx(struct ahash_request *req)
 	state->buf_dma = try_buf_map_to_sec4_sg(jrdev, edesc->sec4_sg + 1,
 						buf, state->buf_dma, buflen,
 						last_buflen);
-	(edesc->sec4_sg + sec4_sg_bytes - 1)->len |= SEC4_SG_LEN_FIN;
+	(edesc->sec4_sg + sec4_sg_src_index - 1)->len |= SEC4_SG_LEN_FIN;
 
 	append_seq_in_ptr(desc, edesc->sec4_sg_dma, ctx->ctx_len + buflen,
 			  LDST_SGF);
@@ -1792,6 +1793,7 @@ caam_hash_alloc(struct device *ctrldev, struct caam_hash_template *template,
 			 template->name);
 		snprintf(alg->cra_driver_name, CRYPTO_MAX_ALG_NAME, "%s",
 			 template->driver_name);
+		t_alg->ahash_alg.setkey = NULL;
 	}
 	alg->cra_module = THIS_MODULE;
 	alg->cra_init = caam_hash_cra_init;

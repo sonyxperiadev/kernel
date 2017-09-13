@@ -1253,8 +1253,27 @@ static int digi_port_init(struct usb_serial_port *port, unsigned port_num)
 
 static int digi_startup(struct usb_serial *serial)
 {
+	struct device *dev = &serial->interface->dev;
 	struct digi_serial *serial_priv;
 	int ret;
+	int i;
+
+	/* check whether the device has the expected number of endpoints */
+	if (serial->num_port_pointers < serial->type->num_ports + 1) {
+		dev_err(dev, "OOB endpoints missing\n");
+		return -ENODEV;
+	}
+
+	for (i = 0; i < serial->type->num_ports + 1 ; i++) {
+		if (!serial->port[i]->read_urb) {
+			dev_err(dev, "bulk-in endpoint missing\n");
+			return -ENODEV;
+		}
+		if (!serial->port[i]->write_urb) {
+			dev_err(dev, "bulk-out endpoint missing\n");
+			return -ENODEV;
+		}
+	}
 
 	serial_priv = kzalloc(sizeof(*serial_priv), GFP_KERNEL);
 	if (!serial_priv)
@@ -1470,16 +1489,20 @@ static int digi_read_oob_callback(struct urb *urb)
 	struct usb_serial *serial = port->serial;
 	struct tty_struct *tty;
 	struct digi_port *priv = usb_get_serial_port_data(port);
+	unsigned char *buf = urb->transfer_buffer;
 	int opcode, line, status, val;
 	int i;
 	unsigned int rts;
 
+	if (urb->actual_length < 4)
+		return -1;
+
 	/* handle each oob command */
-	for (i = 0; i < urb->actual_length - 3;) {
-		opcode = ((unsigned char *)urb->transfer_buffer)[i++];
-		line = ((unsigned char *)urb->transfer_buffer)[i++];
-		status = ((unsigned char *)urb->transfer_buffer)[i++];
-		val = ((unsigned char *)urb->transfer_buffer)[i++];
+	for (i = 0; i < urb->actual_length - 3; i += 4) {
+		opcode = buf[i];
+		line = buf[i + 1];
+		status = buf[i + 2];
+		val = buf[i + 3];
 
 		dev_dbg(&port->dev, "digi_read_oob_callback: opcode=%d, line=%d, status=%d, val=%d\n",
 			opcode, line, status, val);

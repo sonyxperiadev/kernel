@@ -1286,8 +1286,14 @@ next_slot:
 		num_bytes = 0;
 		btrfs_item_key_to_cpu(leaf, &found_key, path->slots[0]);
 
-		if (found_key.objectid > ino ||
-		    found_key.type > BTRFS_EXTENT_DATA_KEY ||
+		if (found_key.objectid > ino)
+			break;
+		if (WARN_ON_ONCE(found_key.objectid < ino) ||
+		    found_key.type < BTRFS_EXTENT_DATA_KEY) {
+			path->slots[0]++;
+			goto next_slot;
+		}
+		if (found_key.type > BTRFS_EXTENT_DATA_KEY ||
 		    found_key.offset > end)
 			break;
 
@@ -4650,7 +4656,8 @@ void btrfs_evict_inode(struct inode *inode)
 		goto no_delete;
 	}
 	/* do we really want it for ->i_nlink > 0 and zero btrfs_root_refs? */
-	btrfs_wait_ordered_range(inode, 0, (u64)-1);
+	if (!special_file(inode->i_mode))
+		btrfs_wait_ordered_range(inode, 0, (u64)-1);
 
 	if (root->fs_info->log_root_recovering) {
 		BUG_ON(test_bit(BTRFS_INODE_HAS_ORPHAN_ITEM,
@@ -7470,15 +7477,28 @@ int btrfs_readpage(struct file *file, struct page *page)
 static int btrfs_writepage(struct page *page, struct writeback_control *wbc)
 {
 	struct extent_io_tree *tree;
-
+	struct inode *inode = page->mapping->host;
+	int ret;
 
 	if (current->flags & PF_MEMALLOC) {
 		redirty_page_for_writepage(wbc, page);
 		unlock_page(page);
 		return 0;
 	}
+
+	/*
+	 * If we are under memory pressure we will call this directly from the
+	 * VM, we need to make sure we have the inode referenced for the ordered
+	 * extent.  If not just return like we didn't do anything.
+	 */
+	if (!igrab(inode)) {
+		redirty_page_for_writepage(wbc, page);
+		return AOP_WRITEPAGE_ACTIVATE;
+	}
 	tree = &BTRFS_I(page->mapping->host)->io_tree;
-	return extent_write_full_page(tree, page, btrfs_get_extent, wbc);
+	ret = extent_write_full_page(tree, page, btrfs_get_extent, wbc);
+	btrfs_add_delayed_iput(inode);
+	return ret;
 }
 
 static int btrfs_writepages(struct address_space *mapping,
@@ -8468,9 +8488,11 @@ static int btrfs_symlink(struct inode *dir, struct dentry *dentry,
 	/*
 	 * 2 items for inode item and ref
 	 * 2 items for dir items
+	 * 1 item for updating parent inode item
+	 * 1 item for the inline extent item
 	 * 1 item for xattr if selinux is on
 	 */
-	trans = btrfs_start_transaction(root, 5);
+	trans = btrfs_start_transaction(root, 7);
 	if (IS_ERR(trans))
 		return PTR_ERR(trans);
 

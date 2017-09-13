@@ -280,7 +280,8 @@ struct l2tp_session *l2tp_session_find(struct net *net, struct l2tp_tunnel *tunn
 }
 EXPORT_SYMBOL_GPL(l2tp_session_find);
 
-struct l2tp_session *l2tp_session_find_nth(struct l2tp_tunnel *tunnel, int nth)
+struct l2tp_session *l2tp_session_get_nth(struct l2tp_tunnel *tunnel, int nth,
+					  bool do_ref)
 {
 	int hash;
 	struct l2tp_session *session;
@@ -290,6 +291,9 @@ struct l2tp_session *l2tp_session_find_nth(struct l2tp_tunnel *tunnel, int nth)
 	for (hash = 0; hash < L2TP_HASH_SIZE; hash++) {
 		hlist_for_each_entry(session, &tunnel->session_hlist[hash], hlist) {
 			if (++count > nth) {
+				l2tp_session_inc_refcount(session);
+				if (do_ref && session->ref)
+					session->ref(session);
 				read_unlock_bh(&tunnel->hlist_lock);
 				return session;
 			}
@@ -300,7 +304,7 @@ struct l2tp_session *l2tp_session_find_nth(struct l2tp_tunnel *tunnel, int nth)
 
 	return NULL;
 }
-EXPORT_SYMBOL_GPL(l2tp_session_find_nth);
+EXPORT_SYMBOL_GPL(l2tp_session_get_nth);
 
 /* Lookup a session by interface name.
  * This is very inefficient but is only used by management interfaces.
@@ -1381,7 +1385,7 @@ static void l2tp_tunnel_del_work(struct work_struct *work)
 	tunnel = container_of(work, struct l2tp_tunnel, del_work);
 	sk = l2tp_tunnel_sock_lookup(tunnel);
 	if (!sk)
-		return;
+		goto out;
 
 	sock = sk->sk_socket;
 
@@ -1402,6 +1406,8 @@ static void l2tp_tunnel_del_work(struct work_struct *work)
 	}
 
 	l2tp_tunnel_sock_put(sk);
+out:
+	l2tp_tunnel_dec_refcount(tunnel);
 }
 
 /* Create a socket for the tunnel, if one isn't set up by
@@ -1731,8 +1737,13 @@ EXPORT_SYMBOL_GPL(l2tp_tunnel_create);
  */
 int l2tp_tunnel_delete(struct l2tp_tunnel *tunnel)
 {
+	l2tp_tunnel_inc_refcount(tunnel);
 	l2tp_tunnel_closeall(tunnel);
-	return (false == queue_work(l2tp_wq, &tunnel->del_work));
+	if (false == queue_work(l2tp_wq, &tunnel->del_work)) {
+		l2tp_tunnel_dec_refcount(tunnel);
+		return 1;
+	}
+	return 0;
 }
 EXPORT_SYMBOL_GPL(l2tp_tunnel_delete);
 

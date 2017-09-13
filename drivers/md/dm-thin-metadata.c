@@ -1191,6 +1191,12 @@ static int __reserve_metadata_snap(struct dm_pool_metadata *pmd)
 	dm_block_t held_root;
 
 	/*
+	 * We commit to ensure the btree roots which we increment in a
+	 * moment are up to date.
+	 */
+	__commit_transaction(pmd);
+
+	/*
 	 * Copy the superblock.
 	 */
 	dm_sm_inc_block(pmd->metadata_sm, THIN_SUPERBLOCK_LOCATION);
@@ -1281,8 +1287,8 @@ static int __release_metadata_snap(struct dm_pool_metadata *pmd)
 		return r;
 
 	disk_super = dm_block_data(copy);
-	dm_sm_dec_block(pmd->metadata_sm, le64_to_cpu(disk_super->data_mapping_root));
-	dm_sm_dec_block(pmd->metadata_sm, le64_to_cpu(disk_super->device_details_root));
+	dm_btree_del(&pmd->info, le64_to_cpu(disk_super->data_mapping_root));
+	dm_btree_del(&pmd->details_info, le64_to_cpu(disk_super->device_details_root));
 	dm_sm_dec_block(pmd->metadata_sm, held_root);
 
 	return dm_tm_unlock(pmd->tm, copy);

@@ -11,6 +11,7 @@
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
+#include <asm/ioctls.h>
 #include <linux/icmp.h>
 #include <linux/module.h>
 #include <linux/skbuff.h>
@@ -123,12 +124,11 @@ static int l2tp_ip_recv(struct sk_buff *skb)
 	struct l2tp_tunnel *tunnel = NULL;
 	int length;
 
-	/* Point to L2TP header */
-	optr = ptr = skb->data;
-
 	if (!pskb_may_pull(skb, 4))
 		goto discard;
 
+	/* Point to L2TP header */
+	optr = ptr = skb->data;
 	session_id = ntohl(*((__be32 *) ptr));
 	ptr += 4;
 
@@ -156,6 +156,9 @@ static int l2tp_ip_recv(struct sk_buff *skb)
 		if (!pskb_may_pull(skb, length))
 			goto discard;
 
+		/* Point to L2TP header */
+		optr = ptr = skb->data;
+		ptr += 4;
 		pr_debug("%s: ip recv\n", tunnel->name);
 		print_hex_dump_bytes("", DUMP_PREFIX_OFFSET, ptr, length);
 	}
@@ -379,7 +382,7 @@ static int l2tp_ip_backlog_recv(struct sock *sk, struct sk_buff *skb)
 drop:
 	IP_INC_STATS(sock_net(sk), IPSTATS_MIB_INDISCARDS);
 	kfree_skb(skb);
-	return -1;
+	return 0;
 }
 
 /* Userspace will call sendmsg() on the tunnel socket to send L2TP
@@ -552,6 +555,30 @@ out:
 	return err ? err : copied;
 }
 
+int l2tp_ioctl(struct sock *sk, int cmd, unsigned long arg)
+{
+	struct sk_buff *skb;
+	int amount;
+
+	switch (cmd) {
+	case SIOCOUTQ:
+		amount = sk_wmem_alloc_get(sk);
+		break;
+	case SIOCINQ:
+		spin_lock_bh(&sk->sk_receive_queue.lock);
+		skb = skb_peek(&sk->sk_receive_queue);
+		amount = skb ? skb->len : 0;
+		spin_unlock_bh(&sk->sk_receive_queue.lock);
+		break;
+
+	default:
+		return -ENOIOCTLCMD;
+	}
+
+	return put_user(amount, (int __user *)arg);
+}
+EXPORT_SYMBOL(l2tp_ioctl);
+
 static struct proto l2tp_ip_prot = {
 	.name		   = "L2TP/IP",
 	.owner		   = THIS_MODULE,
@@ -560,7 +587,7 @@ static struct proto l2tp_ip_prot = {
 	.bind		   = l2tp_ip_bind,
 	.connect	   = l2tp_ip_connect,
 	.disconnect	   = l2tp_ip_disconnect,
-	.ioctl		   = udp_ioctl,
+	.ioctl		   = l2tp_ioctl,
 	.destroy	   = l2tp_ip_destroy_sock,
 	.setsockopt	   = ip_setsockopt,
 	.getsockopt	   = ip_getsockopt,

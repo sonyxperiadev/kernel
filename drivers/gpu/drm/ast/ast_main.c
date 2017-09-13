@@ -120,11 +120,12 @@ static int ast_get_dram_info(struct drm_device *dev)
 	ast_write32(ast, 0x10000, 0xfc600309);
 
 	do {
-		;
+		if (pci_channel_offline(dev->pdev))
+			return -EIO;
 	} while (ast_read32(ast, 0x10000) != 0x01);
 	data = ast_read32(ast, 0x10004);
 
-	if (data & 0x400)
+	if (data & 0x40)
 		ast->dram_bus_width = 16;
 	else
 		ast->dram_bus_width = 32;
@@ -343,7 +344,9 @@ int ast_driver_load(struct drm_device *dev, unsigned long flags)
 	ast_detect_chip(dev);
 
 	if (ast->chip != AST1180) {
-		ast_get_dram_info(dev);
+		ret = ast_get_dram_info(dev);
+		if (ret)
+			goto out_free;
 		ast->vram_size = ast_get_vram_info(dev);
 		DRM_INFO("dram %d %d %d %08x\n", ast->mclk, ast->dram_type, ast->dram_bus_width, ast->vram_size);
 	}
@@ -359,6 +362,7 @@ int ast_driver_load(struct drm_device *dev, unsigned long flags)
 	dev->mode_config.min_height = 0;
 	dev->mode_config.preferred_depth = 24;
 	dev->mode_config.prefer_shadow = 1;
+	dev->mode_config.fb_base = pci_resource_start(ast->dev->pdev, 0);
 
 	if (ast->chip == AST2100 ||
 	    ast->chip == AST2200 ||

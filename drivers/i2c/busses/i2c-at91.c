@@ -63,6 +63,9 @@
 #define	AT91_TWI_UNRE		0x0080	/* Underrun Error */
 #define	AT91_TWI_NACK		0x0100	/* Not Acknowledged */
 
+#define	AT91_TWI_INT_MASK \
+	(AT91_TWI_TXCOMP | AT91_TWI_RXRDY | AT91_TWI_TXRDY | AT91_TWI_NACK)
+
 #define	AT91_TWI_IER		0x0024	/* Interrupt Enable Register */
 #define	AT91_TWI_IDR		0x0028	/* Interrupt Disable Register */
 #define	AT91_TWI_IMR		0x002c	/* Interrupt Mask Register */
@@ -118,13 +121,12 @@ static void at91_twi_write(struct at91_twi_dev *dev, unsigned reg, unsigned val)
 
 static void at91_disable_twi_interrupts(struct at91_twi_dev *dev)
 {
-	at91_twi_write(dev, AT91_TWI_IDR,
-		       AT91_TWI_TXCOMP | AT91_TWI_RXRDY | AT91_TWI_TXRDY);
+	at91_twi_write(dev, AT91_TWI_IDR, AT91_TWI_INT_MASK);
 }
 
 static void at91_twi_irq_save(struct at91_twi_dev *dev)
 {
-	dev->imr = at91_twi_read(dev, AT91_TWI_IMR) & 0x7;
+	dev->imr = at91_twi_read(dev, AT91_TWI_IMR) & AT91_TWI_INT_MASK;
 	at91_disable_twi_interrupts(dev);
 }
 
@@ -214,6 +216,14 @@ static void at91_twi_write_data_dma_callback(void *data)
 	dma_unmap_single(dev->dev, sg_dma_address(&dev->dma.sg),
 			 dev->buf_len, DMA_TO_DEVICE);
 
+	/*
+	 * When this callback is called, THR/TX FIFO is likely not to be empty
+	 * yet. So we have to wait for TXCOMP or NACK bits to be set into the
+	 * Status Register to be sure that the STOP bit has been sent and the
+	 * transfer is completed. The NACK interrupt has already been enabled,
+	 * we just have to enable TXCOMP one.
+	 */
+	at91_twi_write(dev, AT91_TWI_IER, AT91_TWI_TXCOMP);
 	at91_twi_write(dev, AT91_TWI_CR, AT91_TWI_STOP);
 }
 
@@ -263,8 +273,14 @@ error:
 
 static void at91_twi_read_next_byte(struct at91_twi_dev *dev)
 {
-	if (dev->buf_len <= 0)
+	/*
+	 * If we are in this case, it means there is garbage data in RHR, so
+	 * delete them.
+	 */
+	if (!dev->buf_len) {
+		at91_twi_read(dev, AT91_TWI_RHR);
 		return;
+	}
 
 	*dev->buf = at91_twi_read(dev, AT91_TWI_RHR) & 0xff;
 	--dev->buf_len;
@@ -308,7 +324,7 @@ static void at91_twi_read_data_dma_callback(void *data)
 	/* The last two bytes have to be read without using dma */
 	dev->buf += dev->buf_len - 2;
 	dev->buf_len = 2;
-	at91_twi_write(dev, AT91_TWI_IER, AT91_TWI_RXRDY);
+	at91_twi_write(dev, AT91_TWI_IER, AT91_TWI_RXRDY | AT91_TWI_TXCOMP);
 }
 
 static void at91_twi_read_data_dma(struct at91_twi_dev *dev)
@@ -361,18 +377,72 @@ static irqreturn_t atmel_twi_interrupt(int irq, void *dev_id)
 
 	if (!irqstatus)
 		return IRQ_NONE;
-	else if (irqstatus & AT91_TWI_RXRDY)
+	/*
+	 * In reception, the behavior of the twi device (before sama5d2) is
+	 * weird. There is some magic about RXRDY flag! When a data has been
+	 * almost received, the reception of a new one is anticipated if there
+	 * is no stop command to send. That is the reason why ask for sending
+	 * the stop command not on the last data but on the second last one.
+	 *
+	 * Unfortunately, we could still have the RXRDY flag set even if the
+	 * transfer is done and we have read the last data. It might happen
+	 * when the i2c slave device sends too quickly data after receiving the
+	 * ack from the master. The data has been almost received before having
+	 * the order to send stop. In this case, sending the stop command could
+	 * cause a RXRDY interrupt with a TXCOMP one. It is better to manage
+	 * the RXRDY interrupt first in order to not keep garbage data in the
+	 * Receive Holding Register for the next transfer.
+	 */
+	if (irqstatus & AT91_TWI_RXRDY)
 		at91_twi_read_next_byte(dev);
-	else if (irqstatus & AT91_TWI_TXRDY)
+
+	/*
+	 * When a NACK condition is detected, the I2C controller sets the NACK,
+	 * TXCOMP and TXRDY bits all together in the Status Register (SR).
+	 *
+	 * 1 - Handling NACK errors with CPU write transfer.
+	 *
+	 * In such case, we should not write the next byte into the Transmit
+	 * Holding Register (THR) otherwise the I2C controller would start a new
+	 * transfer and the I2C slave is likely to reply by another NACK.
+	 *
+	 * 2 - Handling NACK errors with DMA write transfer.
+	 *
+	 * By setting the TXRDY bit in the SR, the I2C controller also triggers
+	 * the DMA controller to write the next data into the THR. Then the
+	 * result depends on the hardware version of the I2C controller.
+	 *
+	 * 2a - Without support of the Alternative Command mode.
+	 *
+	 * This is the worst case: the DMA controller is triggered to write the
+	 * next data into the THR, hence starting a new transfer: the I2C slave
+	 * is likely to reply by another NACK.
+	 * Concurrently, this interrupt handler is likely to be called to manage
+	 * the first NACK before the I2C controller detects the second NACK and
+	 * sets once again the NACK bit into the SR.
+	 * When handling the first NACK, this interrupt handler disables the I2C
+	 * controller interruptions, especially the NACK interrupt.
+	 * Hence, the NACK bit is pending into the SR. This is why we should
+	 * read the SR to clear all pending interrupts at the beginning of
+	 * at91_do_twi_transfer() before actually starting a new transfer.
+	 *
+	 * 2b - With support of the Alternative Command mode.
+	 *
+	 * When a NACK condition is detected, the I2C controller also locks the
+	 * THR (and sets the LOCK bit in the SR): even though the DMA controller
+	 * is triggered by the TXRDY bit to write the next data into the THR,
+	 * this data actually won't go on the I2C bus hence a second NACK is not
+	 * generated.
+	 */
+	if (irqstatus & (AT91_TWI_TXCOMP | AT91_TWI_NACK)) {
+		at91_disable_twi_interrupts(dev);
+		complete(&dev->cmd_complete);
+	} else if (irqstatus & AT91_TWI_TXRDY) {
 		at91_twi_write_next_byte(dev);
+	}
 
 	/* catch error flags */
 	dev->transfer_status |= status;
-
-	if (irqstatus & AT91_TWI_TXCOMP) {
-		at91_disable_twi_interrupts(dev);
-		complete(&dev->cmd_complete);
-	}
 
 	return IRQ_HANDLED;
 }
@@ -382,22 +452,48 @@ static int at91_do_twi_transfer(struct at91_twi_dev *dev)
 	int ret;
 	bool has_unre_flag = dev->pdata->has_unre_flag;
 
+	/*
+	 * WARNING: the TXCOMP bit in the Status Register is NOT a clear on
+	 * read flag but shows the state of the transmission at the time the
+	 * Status Register is read. According to the programmer datasheet,
+	 * TXCOMP is set when both holding register and internal shifter are
+	 * empty and STOP condition has been sent.
+	 * Consequently, we should enable NACK interrupt rather than TXCOMP to
+	 * detect transmission failure.
+	 *
+	 * Besides, the TXCOMP bit is already set before the i2c transaction
+	 * has been started. For read transactions, this bit is cleared when
+	 * writing the START bit into the Control Register. So the
+	 * corresponding interrupt can safely be enabled just after.
+	 * However for write transactions managed by the CPU, we first write
+	 * into THR, so TXCOMP is cleared. Then we can safely enable TXCOMP
+	 * interrupt. If TXCOMP interrupt were enabled before writing into THR,
+	 * the interrupt handler would be called immediately and the i2c command
+	 * would be reported as completed.
+	 * Also when a write transaction is managed by the DMA controller,
+	 * enabling the TXCOMP interrupt in this function may lead to a race
+	 * condition since we don't know whether the TXCOMP interrupt is enabled
+	 * before or after the DMA has started to write into THR. So the TXCOMP
+	 * interrupt is enabled later by at91_twi_write_data_dma_callback().
+	 * Immediately after in that DMA callback, we still need to send the
+	 * STOP condition manually writing the corresponding bit into the
+	 * Control Register.
+	 */
+
 	dev_dbg(dev->dev, "transfer: %s %d bytes.\n",
 		(dev->msg->flags & I2C_M_RD) ? "read" : "write", dev->buf_len);
 
 	INIT_COMPLETION(dev->cmd_complete);
 	dev->transfer_status = 0;
 
+	/* Clear pending interrupts, such as NACK. */
+	at91_twi_read(dev, AT91_TWI_SR);
+
 	if (!dev->buf_len) {
 		at91_twi_write(dev, AT91_TWI_CR, AT91_TWI_QUICK);
 		at91_twi_write(dev, AT91_TWI_IER, AT91_TWI_TXCOMP);
 	} else if (dev->msg->flags & I2C_M_RD) {
 		unsigned start_flags = AT91_TWI_START;
-
-		if (at91_twi_read(dev, AT91_TWI_SR) & AT91_TWI_RXRDY) {
-			dev_err(dev->dev, "RXRDY still set!");
-			at91_twi_read(dev, AT91_TWI_RHR);
-		}
 
 		/* if only one byte is to be read, immediately stop transfer */
 		if (dev->buf_len <= 1 && !(dev->msg->flags & I2C_M_RECV_LEN))
@@ -412,26 +508,24 @@ static int at91_do_twi_transfer(struct at91_twi_dev *dev)
 		 * seems to be the best solution.
 		 */
 		if (dev->use_dma && (dev->buf_len > AT91_I2C_DMA_THRESHOLD)) {
+			at91_twi_write(dev, AT91_TWI_IER, AT91_TWI_NACK);
 			at91_twi_read_data_dma(dev);
-			/*
-			 * It is important to enable TXCOMP irq here because
-			 * doing it only when transferring the last two bytes
-			 * will mask NACK errors since TXCOMP is set when a
-			 * NACK occurs.
-			 */
+		} else {
 			at91_twi_write(dev, AT91_TWI_IER,
-			       AT91_TWI_TXCOMP);
-		} else
-			at91_twi_write(dev, AT91_TWI_IER,
-			       AT91_TWI_TXCOMP | AT91_TWI_RXRDY);
+				       AT91_TWI_TXCOMP |
+				       AT91_TWI_NACK |
+				       AT91_TWI_RXRDY);
+		}
 	} else {
 		if (dev->use_dma && (dev->buf_len > AT91_I2C_DMA_THRESHOLD)) {
+			at91_twi_write(dev, AT91_TWI_IER, AT91_TWI_NACK);
 			at91_twi_write_data_dma(dev);
-			at91_twi_write(dev, AT91_TWI_IER, AT91_TWI_TXCOMP);
 		} else {
 			at91_twi_write_next_byte(dev);
 			at91_twi_write(dev, AT91_TWI_IER,
-				AT91_TWI_TXCOMP | AT91_TWI_TXRDY);
+				       AT91_TWI_TXCOMP |
+				       AT91_TWI_NACK |
+				       AT91_TWI_TXRDY);
 		}
 	}
 

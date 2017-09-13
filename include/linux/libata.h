@@ -409,6 +409,7 @@ enum {
 	ATA_HORKAGE_ATAPI_DMADIR = (1 << 18),	/* device requires dmadir */
 	ATA_HORKAGE_NOLPM	= (1 << 20),	/* don't use LPM */
 	ATA_HORKAGE_WD_BROKEN_LPM = (1 << 21),	/* some WDs have broken LPM */
+	ATA_HORKAGE_NOTRIM = (1 << 24),		/* don't use TRIM */
 
 	 /* DMA mask for user DMA control: User visible values; DO NOT
 	    renumber */
@@ -665,7 +666,7 @@ struct ata_device {
 	union {
 		u16		id[ATA_ID_WORDS]; /* IDENTIFY xxx DEVICE data */
 		u32		gscr[SATA_PMP_GSCR_DWORDS]; /* PMP GSCR block */
-	};
+	} ____cacheline_aligned;
 
 	/* DEVSLP Timing Variables from Identify Device Data Log */
 	u8			devslp_timing[ATA_LOG_DEVSLP_SIZE];

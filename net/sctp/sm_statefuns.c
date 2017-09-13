@@ -3428,6 +3428,12 @@ sctp_disposition_t sctp_sf_ootb(struct net *net,
 			return sctp_sf_violation_chunklen(net, ep, asoc, type, arg,
 						  commands);
 
+		/* Report violation if chunk len overflows */
+		ch_end = ((__u8 *)ch) + WORD_ROUND(ntohs(ch->length));
+		if (ch_end > skb_tail_pointer(skb))
+			return sctp_sf_violation_chunklen(net, ep, asoc, type, arg,
+						  commands);
+
 		/* Now that we know we at least have a chunk header,
 		 * do things that are type appropriate.
 		 */
@@ -3458,12 +3464,6 @@ sctp_disposition_t sctp_sf_ootb(struct net *net,
 				}
 			}
 		}
-
-		/* Report violation if chunk len overflows */
-		ch_end = ((__u8 *)ch) + WORD_ROUND(ntohs(ch->length));
-		if (ch_end > skb_tail_pointer(skb))
-			return sctp_sf_violation_chunklen(net, ep, asoc, type, arg,
-						  commands);
 
 		ch = (sctp_chunkhdr_t *) ch_end;
 	} while (ch_end < skb_tail_pointer(skb));
@@ -4835,7 +4835,8 @@ sctp_disposition_t sctp_sf_do_9_1_prm_abort(
 
 	retval = SCTP_DISPOSITION_CONSUME;
 
-	sctp_add_cmd_sf(commands, SCTP_CMD_REPLY, SCTP_CHUNK(abort));
+	if (abort)
+		sctp_add_cmd_sf(commands, SCTP_CMD_REPLY, SCTP_CHUNK(abort));
 
 	/* Even if we can't send the ABORT due to low memory delete the
 	 * TCB.  This is a departure from our typical NOMEM handling.
@@ -4972,7 +4973,8 @@ sctp_disposition_t sctp_sf_cookie_wait_prm_abort(
 			SCTP_TO(SCTP_EVENT_TIMEOUT_T1_INIT));
 	retval = SCTP_DISPOSITION_CONSUME;
 
-	sctp_add_cmd_sf(commands, SCTP_CMD_REPLY, SCTP_CHUNK(abort));
+	if (abort)
+		sctp_add_cmd_sf(commands, SCTP_CMD_REPLY, SCTP_CHUNK(abort));
 
 	sctp_add_cmd_sf(commands, SCTP_CMD_NEW_STATE,
 			SCTP_STATE(SCTP_STATE_CLOSED));

@@ -843,6 +843,9 @@ static int xpad_probe(struct usb_interface *intf, const struct usb_device_id *id
 	struct usb_endpoint_descriptor *ep_irq_in;
 	int i, error;
 
+	if (intf->cur_altsetting->desc.bNumEndpoints != 2)
+		return -ENODEV;
+
 	for (i = 0; xpad_device[i].idVendor; i++) {
 		if ((le16_to_cpu(udev->descriptor.idVendor) == xpad_device[i].idVendor) &&
 		    (le16_to_cpu(udev->descriptor.idProduct) == xpad_device[i].idProduct))
@@ -898,6 +901,12 @@ static int xpad_probe(struct usb_interface *intf, const struct usb_device_id *id
 	input_dev->name = xpad_device[i].name;
 	input_dev->phys = xpad->phys;
 	usb_to_input_id(udev, &input_dev->id);
+
+	if (xpad->xtype == XTYPE_XBOX360W) {
+		/* x360w controllers and the receiver have different ids */
+		input_dev->id.product = 0x02a1;
+	}
+
 	input_dev->dev.parent = &intf->dev;
 
 	input_set_drvdata(input_dev, xpad);

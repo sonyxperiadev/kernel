@@ -289,7 +289,7 @@ u64 gen_pool_alloc_aligned(struct gen_pool *pool, size_t size,
 	struct gen_pool_chunk *chunk;
 	u64 addr = 0, align_mask = 0;
 	int order = pool->min_alloc_order;
-	int nbits, start_bit = 0, remain;
+	int nbits, start_bit, remain;
 
 #ifndef CONFIG_ARCH_HAVE_NMI_SAFE_CMPXCHG
 	BUG_ON(in_nmi());
@@ -308,6 +308,7 @@ u64 gen_pool_alloc_aligned(struct gen_pool *pool, size_t size,
 		unsigned long chunk_len;
 		if (size > atomic_read(&chunk->avail))
 			continue;
+		start_bit = 0;
 		chunk_len = chunk_size(chunk) >> order;
 
 retry:
