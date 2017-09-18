@@ -265,6 +265,15 @@ config ARCH_SONY_YOSHINO
         If you enable this config,
         please use SONY Mobile device tree.
 
+config MACH_SONY_LILAC
+        bool "Sony Mobile Lilac"
+        depends on ARCH_SONY_LILAC
+        help
+        Support for the SONY Mobile Lilac device
+        which is based on SONY Yoshino platform.
+        If you enable this config,
+        please use SONY Mobile device tree.
+
 config MACH_SONY_MAPLE
         bool "Sony Mobile Maple"
         depends on ARCH_SONY_YOSHINO
@@ -283,4 +292,21 @@ config MACH_SONY_MAPLE_DSDS
         If you enable this config,
         please use SONY Mobile device tree.
 
+config MACH_SONY_POPLAR
+        bool "Sony Mobile Poplar"
+        depends on ARCH_SONY_YOSHINO
+        help
+        Support for the SONY Mobile Poplar device
+        which is based on SONY Yoshino platform.
+        If you enable this config,
+        please use SONY Mobile device tree.
+
+config MACH_SONY_POPLAR_DSDS
+        bool "Sony Mobile Poplar Dsds"
+        depends on ARCH_SONY_YOSHINO
+        help
+        Support for the SONY Mobile Poplar Dsds device
+        which is based on SONY Yoshino platform.
+        If you enable this config,
+        please use SONY Mobile device tree.
 endmenu
