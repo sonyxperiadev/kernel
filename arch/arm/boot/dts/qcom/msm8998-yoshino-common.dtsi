@@ -485,16 +485,6 @@
 		};
 	};
 
-	sony,ric_info {
-		compatible = "sony_ric";
-		sony,num-partition = <7>;
-		sony,partition-names = "system", "userdata", "cache", "oem",
-				"appslog", "diag", "LTALabel";
-		sony,mount_paths = "/system", "/data", "/cache", "/oem",
-				"/rca", "/idd", "/lta-label";
-		sony,mount-flags = <0x1 0x2 0x6 0x1 0xE 0xE 0xE>;
-	};
-
 	cam_vio_verg: cam_vio_verg {
 		compatible = "regulator-fixed";
 		regulator-name = "cam_vio_verg";
