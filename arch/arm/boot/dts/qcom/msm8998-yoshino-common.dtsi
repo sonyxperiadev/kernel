@@ -257,6 +257,7 @@
 			pinctrl-1 = <&msm_gpio_11_suspend>;
 			ams,rgbcir-vdd-supply = <0>;
 			ams,rgbcir-gpio-vdd = <1>;
+			ams,rgbcir-vio-supply = <0>;
 		};
 		tof_sensor@52 {
 			compatible = "tof_sensor";
