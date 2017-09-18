@@ -1,0 +1,35 @@
+/* arch/arm64/boot/dts/qcom/msm8998-yoshino-poplar_dsds.dtsi
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+/*
+ * Copyright (C) 2017 Sony Mobile Communications Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2, as
+ * published by the Free Software Foundation.
+ */
+
+#include "msm8998-yoshino-poplar_common.dtsi"
+#include "msm8998-yoshino-poplar_generic.dtsi"
+
+&soc {
+	sim_detect {
+		sim2_det {
+			label = "sim2-detection";
+			gpios = <&tlmm 63 0x0>;
+			debounce-interval = <10>;
+		};
+	};
+};
+
+&sdhc_2 {
+	uim2-gpios = <&tlmm 39 0x0>;
+};
