@@ -300,6 +300,16 @@
 			vddio-supply = <&pm8998_l14>;
 			touch-avdd-supply = <&pm8998_l28>;
 		};
+		qcom,core-supply-entries {
+			qcom,core-supply-entry@0 {
+				/delete-property/ qcom,supply-lp-mode-disable-allowed;
+			};
+		};
+		qcom,phy-supply-entries {
+			qcom,phy-supply-entry@0 {
+				/delete-property/ qcom,supply-lp-mode-disable-allowed;
+			};
+		};
 	};
 
 	dsi_panel_pwr_supply_hybrid_incell: dsi_panel_pwr_supply_hybrid_incell {
