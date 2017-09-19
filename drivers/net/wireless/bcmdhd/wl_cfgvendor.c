@@ -1168,11 +1168,15 @@ static int wl_cfgvendor_significant_change_cfg(struct wiphy *wiphy,
 	const struct nlattr *outer, *inner, *iter;
 	bool flush = FALSE;
 	wl_pfn_significant_bssid_t *pbssid;
+	uint16 num_bssid = 0;
+	uint16 max_buf_size = sizeof(gscan_swc_params_t) +
+		sizeof(wl_pfn_significant_bssid_t) * (PFN_SWC_MAX_NUM_APS - 1);
 
-	significant_params = (gscan_swc_params_t *) kzalloc(len, GFP_KERNEL);
+	significant_params = kzalloc(max_buf_size, GFP_KERNEL);
+
 	if (!significant_params) {
-		WL_ERR(("Cannot Malloc mem to parse config commands size - %d bytes \n", len));
-		return -1;
+		WL_ERR(("Cannot Malloc mem size:%d\n", len));
+		return BCME_NOMEM;
 	}
 
 
@@ -1192,9 +1196,27 @@ static int wl_cfgvendor_significant_change_cfg(struct wiphy *wiphy,
 			case GSCAN_ATTRIBUTE_MIN_BREACHING:
 				significant_params->swc_threshold = nla_get_u16(iter);
 				break;
+			case GSCAN_ATTRIBUTE_NUM_BSSID:
+				num_bssid = nla_get_u16(iter);
+				if (num_bssid > PFN_SWC_MAX_NUM_APS) {
+					WL_ERR(("ovar max SWC bssids:%d\n",
+						num_bssid));
+					err = BCME_BADARG;
+					goto exit;
+				}
+				break;
 			case GSCAN_ATTRIBUTE_SIGNIFICANT_CHANGE_BSSIDS:
+				if (num_bssid == 0) {
+					WL_ERR(("num_bssid : 0\n"));
+					err = BCME_BADARG;
+					goto exit;
+				}
 				pbssid = significant_params->bssid_elem_list;
 				nla_for_each_nested(outer, iter, tmp) {
+					if (j >= num_bssid) {
+						j++;
+						break;
+					}
 					nla_for_each_nested(inner, outer, tmp1) {
 							switch (nla_type(inner)) {
 								case GSCAN_ATTRIBUTE_BSSID:
@@ -1216,6 +1238,12 @@ static int wl_cfgvendor_significant_change_cfg(struct wiphy *wiphy,
 				}
 				break;
 		}
+	}
+	if (j != num_bssid) {
+		WL_ERR(("swc bssids count:%d not matched to num_bssid:%d\n",
+			j, num_bssid));
+		err = BCME_BADARG;
+		goto exit;
 	}
 	significant_params->nbssid = j;
 
