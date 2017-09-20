@@ -200,3 +200,4 @@ source "drivers/bif/Kconfig"
 
 source "drivers/cpuquiet/Kconfig"
 
+endmenu
