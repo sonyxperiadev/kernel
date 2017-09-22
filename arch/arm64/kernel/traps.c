@@ -459,6 +459,19 @@ static void cntfrq_read_handler(unsigned int esr, struct pt_regs *regs)
 	regs->pc += 4;
 }
 
+static void cntpct_read_handler(unsigned int esr, struct pt_regs *regs)
+{
+	int rt = (esr & ESR_ELx_SYS64_ISS_RT_MASK) >> ESR_ELx_SYS64_ISS_RT_SHIFT;
+
+	isb();
+	if (rt != 31)
+		regs->regs[rt] = read_sysreg(cntpct_el0);
+	regs->pc += 4;
+}
+
+#define ESR_ELx_SYS64_ISS_SYS_CNTPCT    (ESR_ELx_SYS64_ISS_SYS_VAL(3, 3, 1, 14, 0) | \
+                                         ESR_ELx_SYS64_ISS_DIR_READ)
+
 asmlinkage void __exception do_sysinstr(unsigned int esr, struct pt_regs *regs)
 {
 	if ((esr & ESR_ELx_SYS64_ISS_SYS_OP_MASK) == ESR_ELx_SYS64_ISS_SYS_CNTVCT) {
@@ -466,6 +479,9 @@ asmlinkage void __exception do_sysinstr(unsigned int esr, struct pt_regs *regs)
 		return;
 	} else if ((esr & ESR_ELx_SYS64_ISS_SYS_OP_MASK) == ESR_ELx_SYS64_ISS_SYS_CNTFRQ) {
 		cntfrq_read_handler(esr, regs);
+		return;
+	} else if ((esr & ESR_ELx_SYS64_ISS_SYS_OP_MASK) == ESR_ELx_SYS64_ISS_SYS_CNTPCT) {
+		cntpct_read_handler(esr, regs);
 		return;
 	}
 
