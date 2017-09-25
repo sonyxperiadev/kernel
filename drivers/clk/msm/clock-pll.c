@@ -840,8 +840,13 @@ static long variable_rate_pll_round_rate(struct clk *c, unsigned long rate)
 	if (!pll->src_rate)
 		return 0;
 
+#ifdef CONFIG_ARCH_MSM8916
+	if (pll->no_prepared_reconfig && c->prepare_count)
+		return -EINVAL;
+#else
 	if (pll->no_prepared_reconfig && c->prepare_count && c->rate != rate)
 		return -EINVAL;
+#endif
 
 	if (rate < pll->min_rate)
 		rate = pll->min_rate;
