@@ -80,6 +80,7 @@ enum print_reason {
 #define OTG_VOTER			"OTG_VOTER"
 #define PL_FCC_LOW_VOTER		"PL_FCC_LOW_VOTER"
 #define WBC_VOTER			"WBC_VOTER"
+#define MOISTURE_VOTER			"MOISTURE_VOTER"
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
 #define PRODUCT_VOTER			"PRODUCT_VOTER"
 #define HIGH_VOLTAGE_VOTER		"HIGH_VOLTAGE_VOTER"
@@ -362,6 +363,7 @@ struct smb_charger {
 	struct votable		*hvdcp_hw_inov_dis_votable;
 	struct votable		*usb_irq_enable_votable;
 	struct votable		*typec_irq_disable_votable;
+	struct votable		*disable_power_role_switch;
 
 	/* work */
 	struct work_struct	bms_update_work;

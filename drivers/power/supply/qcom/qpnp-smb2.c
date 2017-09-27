@@ -640,6 +640,7 @@ static enum power_supply_property smb2_usb_props[] = {
 	POWER_SUPPLY_PROP_PD_VOLTAGE_MIN,
 	POWER_SUPPLY_PROP_SDP_CURRENT_MAX,
 	POWER_SUPPLY_PROP_CONNECTOR_TYPE,
+	POWER_SUPPLY_PROP_MOISTURE_DETECTED,
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
 	POWER_SUPPLY_PROP_CHARGER_TYPE,
 	POWER_SUPPLY_PROP_LEGACY_CABLE_STATUS,
@@ -776,6 +777,10 @@ static int smb2_usb_get_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CONNECTOR_TYPE:
 		val->intval = chg->connector_type;
 		break;
+	case POWER_SUPPLY_PROP_MOISTURE_DETECTED:
+		val->intval = get_client_vote(chg->disable_power_role_switch,
+					      MOISTURE_VOTER);
+		break;
 	default:
 		pr_err("get prop %d is not supported in usb\n", psp);
 		rc = -EINVAL;
@@ -805,7 +810,16 @@ static int smb2_usb_set_prop(struct power_supply *psy,
 		psp != POWER_SUPPLY_PROP_TYPEC_POWER_ROLE) {
 		pr_warn("set_prop is inhibited because typec is not present\n");
 #endif
-		rc = -EINVAL;
+		switch (psp) {
+		case POWER_SUPPLY_PROP_MOISTURE_DETECTED:
+			vote(chg->disable_power_role_switch, MOISTURE_VOTER,
+			     val->intval > 0, 0);
+			break;
+		default:
+			rc = -EINVAL;
+			break;
+		}
+
 		goto unlock;
 	}
 
