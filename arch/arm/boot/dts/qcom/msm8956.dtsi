@@ -3187,9 +3187,13 @@
 		qcom,fastrpc-smd;
 
 		qcom,msm_fastrpc_compute_cb1 {
-			compatible = "qcom,msm-fastrpc-compute-cb";
+			compatible = "qcom,msm-fastrpc-fixedsids-compute-cb";
 			label = "adsprpc-smd";
 			iommus = <&apps_smmu 16>;
+
+			qcom,virtual-addr-pool = <0x10000000 0x0FFFFFFF>;
+			qcom,adsp-shared-sids =
+					<0x8 0x9 0xa 0xb 0xc 0xd 0xe 0xf>;
 		};
 	};
 
