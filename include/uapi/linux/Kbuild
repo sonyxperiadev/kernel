@@ -121,7 +121,9 @@ header-y += errno.h
 header-y += errqueue.h
 header-y += esoc_ctrl.h
 header-y += ethtool.h
+ifeq ($(ANDROID_BUILD_TOP),)
 header-y += eventpoll.h
+endif
 header-y += fadvise.h
 header-y += falloc.h
 header-y += fanotify.h
