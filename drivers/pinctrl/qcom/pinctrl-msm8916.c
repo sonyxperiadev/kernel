@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015, 2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -415,7 +415,8 @@ enum msm8916_functions {
 	MSM_MUX_cam_mclk0,
 	MSM_MUX_cam_mclk1,
 	MSM_MUX_cci_async,
-	MSM_MUX_cci_i2c,
+	MSM_MUX_cci0_i2c,
+	MSM_MUX_cci1_i2c,
 	MSM_MUX_cci_timer0,
 	MSM_MUX_cci_timer1,
 	MSM_MUX_cci_timer2,
@@ -586,7 +587,8 @@ static const char * const cam1_standby_groups[] = { "gpio34" };
 static const char * const cam_mclk0_groups[] = { "gpio26" };
 static const char * const cam_mclk1_groups[] = { "gpio27" };
 static const char * const cci_async_groups[] = { "gpio33" };
-static const char * const cci_i2c_groups[] = { "gpio29", "gpio30" };
+static const char * const cci0_i2c_groups[] = { "gpio29", "gpio30" };
+static const char * const cci1_i2c_groups[] = { "gpio31", "gpio32" };
 static const char * const cci_timer0_groups[] = { "gpio31" };
 static const char * const cci_timer1_groups[] = { "gpio32" };
 static const char * const cci_timer2_groups[] = { "gpio38" };
@@ -738,7 +740,8 @@ static const struct msm_function msm8916_functions[] = {
 	FUNCTION(cam_mclk0),
 	FUNCTION(cam_mclk1),
 	FUNCTION(cci_async),
-	FUNCTION(cci_i2c),
+	FUNCTION(cci0_i2c),
+	FUNCTION(cci1_i2c),
 	FUNCTION(cci_timer0),
 	FUNCTION(cci_timer1),
 	FUNCTION(cci_timer2),
@@ -850,10 +853,10 @@ static const struct msm_pingroup msm8916_groups[] = {
 	PINGROUP(26, cam_mclk0, NA, NA, NA, NA, NA, qdss_tracedata_b, NA, NA),
 	PINGROUP(27, cam_mclk1, NA, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
 	PINGROUP(28, pwr_modem_enabled_a, NA, NA, NA, NA, NA, qdss_tracedata_b, NA, atest_combodac),
-	PINGROUP(29, cci_i2c, NA, NA, NA, NA, NA, qdss_tracedata_b, NA, atest_combodac),
-	PINGROUP(30, cci_i2c, NA, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
-	PINGROUP(31, cci_timer0, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(32, cci_timer1, NA, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(29, cci0_i2c, NA, NA, NA, NA, NA, qdss_tracedata_b, NA, atest_combodac),
+	PINGROUP(30, cci0_i2c, NA, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
+	PINGROUP(31, cci1_i2c, cci_timer0, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(32, cci1_i2c, cci_timer1, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(33, cci_async, NA, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
 	PINGROUP(34, pwr_nav_enabled_a, NA, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
 	PINGROUP(35, pwr_crypto_enabled_a, NA, NA, NA, NA, NA, NA, NA, qdss_tracedata_b),
