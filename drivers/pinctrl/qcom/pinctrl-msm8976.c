@@ -457,15 +457,9 @@ enum msm8976_functions {
 	msm_mux_flash_strobe,
 	msm_mux_blsp1_spi,
 	msm_mux_blsp3_spi,
-	msm_mux_accel_int,
 	msm_mux_gcc_gp1_clk_a,
-	msm_mux_alsp_int,
 	msm_mux_gcc_gp2_clk_a,
-	msm_mux_mag_int,
 	msm_mux_gcc_gp3_clk_a,
-	msm_mux_gyro_int,
-	msm_mux_pressure_int,
-	msm_mux_fp_int,
 	msm_mux_uim_batt,
 	msm_mux_sd_write,
 	msm_mux_uim1_data,
@@ -662,32 +656,14 @@ static const char * const blsp1_spi_groups[] = {
 static const char * const blsp3_spi_groups[] = {
 	"gpio106", "gpio107",
 };
-static const char * const accel_int_groups[] = {
-	"gpio42",
-};
 static const char * const gcc_gp1_clk_a_groups[] = {
 	"gpio49",
-};
-static const char * const alsp_int_groups[] = {
-	"gpio43",
 };
 static const char * const gcc_gp2_clk_a_groups[] = {
 	"gpio50",
 };
-static const char * const mag_int_groups[] = {
-	"gpio44",
-};
 static const char * const gcc_gp3_clk_a_groups[] = {
 	"gpio51",
-};
-static const char * const gyro_int_groups[] = {
-	"gpio45",
-};
-static const char * const pressure_int_groups[] = {
-	"gpio46",
-};
-static const char * const fp_int_groups[] = {
-	"gpio48",
 };
 static const char * const uim_batt_groups[] = {
 	"gpio61",
@@ -903,15 +879,9 @@ static const struct msm_function msm8976_functions[] = {
 	FUNCTION(flash_strobe),
 	FUNCTION(blsp1_spi),
 	FUNCTION(blsp3_spi),
-	FUNCTION(accel_int),
 	FUNCTION(gcc_gp1_clk_a),
-	FUNCTION(alsp_int),
 	FUNCTION(gcc_gp2_clk_a),
-	FUNCTION(mag_int),
 	FUNCTION(gcc_gp3_clk_a),
-	FUNCTION(gyro_int),
-	FUNCTION(pressure_int),
-	FUNCTION(fp_int),
 	FUNCTION(uim_batt),
 	FUNCTION(sd_write),
 	FUNCTION(uim1_data),
