@@ -121,7 +121,11 @@ header-y += errno.h
 header-y += errqueue.h
 header-y += esoc_ctrl.h
 header-y += ethtool.h
+
+ifneq ($(CONFIG_ANDROID),y)
 header-y += eventpoll.h
+endif
+
 header-y += fadvise.h
 header-y += falloc.h
 header-y += fanotify.h
