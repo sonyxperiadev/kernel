@@ -437,7 +437,6 @@ enum msm8976_functions {
 	msm_mux_blsp_spi4,
 	msm_mux_cap_int,
 	msm_mux_blsp_i2c4,
-	msm_mux_nfc_disable,
 	msm_mux_blsp_spi5,
 	msm_mux_blsp_uart5,
 	msm_mux_qdss_traceclk_a,
@@ -479,7 +478,6 @@ enum msm8976_functions {
 	msm_mux_uim2_present,
 	msm_mux_ts_xvdd,
 	msm_mux_mipi_dsi0,
-	msm_mux_nfc_dwl,
 	msm_mux_us_euro,
 	msm_mux_ts_resout,
 	msm_mux_ts_sample,
@@ -607,9 +605,6 @@ static const char * const cap_int_groups[] = {
 static const char * const blsp_i2c4_groups[] = {
 	"gpio14", "gpio15",
 };
-static const char * const nfc_disable_groups[] = {
-	"gpio16",
-};
 static const char * const blsp_spi5_groups[] = {
 	"gpio134", "gpio135", "gpio136", "gpio137",
 };
@@ -734,9 +729,6 @@ static const char * const ts_xvdd_groups[] = {
 };
 static const char * const mipi_dsi0_groups[] = {
 	"gpio61",
-};
-static const char * const nfc_dwl_groups[] = {
-	"gpio62",
 };
 static const char * const us_euro_groups[] = {
 	"gpio63",
@@ -908,7 +900,6 @@ static const struct msm_function msm8976_functions[] = {
 	FUNCTION(blsp_spi4),
 	FUNCTION(cap_int),
 	FUNCTION(blsp_i2c4),
-	FUNCTION(nfc_disable),
 	FUNCTION(blsp_spi5),
 	FUNCTION(blsp_uart5),
 	FUNCTION(qdss_traceclk_a),
@@ -950,7 +941,6 @@ static const struct msm_function msm8976_functions[] = {
 	FUNCTION(uim2_present),
 	FUNCTION(ts_xvdd),
 	FUNCTION(mipi_dsi0),
-	FUNCTION(nfc_dwl),
 	FUNCTION(us_euro),
 	FUNCTION(ts_resout),
 	FUNCTION(ts_sample),
