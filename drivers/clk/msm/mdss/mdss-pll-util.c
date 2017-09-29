@@ -260,6 +260,9 @@ static int mdss_pll_util_parse_dt_supply(struct platform_device *pdev,
 
 		mp->vreg_config[i].post_off_sleep = (!rc ? tmp : 0);
 
+		mp->vreg_config[i].drms_unsupported = of_property_read_bool(supply_node,
+					"qcom,supply-drms-unsupported");
+
 		pr_debug("%s min=%d, max=%d, enable=%d, disable=%d, preonsleep=%d, postonsleep=%d, preoffsleep=%d, postoffsleep=%d\n",
 					mp->vreg_config[i].vreg_name,
 					mp->vreg_config[i].min_voltage,
