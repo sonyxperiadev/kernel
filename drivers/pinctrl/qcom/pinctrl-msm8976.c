@@ -455,7 +455,6 @@ enum msm8976_functions {
 	msm_mux_cam_mclk,
 	msm_mux_cci0_i2c,
 	msm_mux_cci1_i2c,
-	msm_mux_flash_strobe,
 	msm_mux_blsp1_spi,
 	msm_mux_blsp3_spi,
 	msm_mux_gcc_gp1_clk_a,
@@ -650,9 +649,6 @@ static const char * const cci0_i2c_groups[] = {
 };
 static const char * const cci1_i2c_groups[] = {
 	"gpio104", "gpio103",
-};
-static const char * const flash_strobe_groups[] = {
-	"gpio31", "gpio32",
 };
 static const char * const blsp1_spi_groups[] = {
 	"gpio101",
@@ -881,7 +877,6 @@ static const struct msm_function msm8976_functions[] = {
 	FUNCTION(cam_mclk),
 	FUNCTION(cci0_i2c),
 	FUNCTION(cci1_i2c),
-	FUNCTION(flash_strobe),
 	FUNCTION(blsp1_spi),
 	FUNCTION(blsp3_spi),
 	FUNCTION(gcc_gp1_clk_a),
