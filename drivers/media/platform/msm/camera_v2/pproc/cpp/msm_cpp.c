@@ -4414,11 +4414,40 @@ struct v4l2_file_operations msm_cpp_v4l2_subdev_fops = {
 	.compat_ioctl32 = msm_cpp_subdev_fops_compat_ioctl,
 #endif
 };
-static  int msm_cpp_update_gdscr_status(struct cpp_device *cpp_dev,
+static  int msm_cpp_update_gdscrv1_status(struct cpp_device *cpp_dev,
+	bool status)
+{
+	int value = 0, rc = 0;
+
+	if (!cpp_dev) {
+		pr_err("%s: cpp device invalid\n", __func__);
+		rc = -EINVAL;
+		goto end;
+	}
+
+	if (cpp_dev->camss_cpp_base) {
+		value = msm_camera_io_r(cpp_dev->camss_cpp_base);
+		pr_debug("value from camss cpp %x, status %d\n", value, status);
+		if (status) {
+			value &= CPP_GDSCR_SW_COLLAPSE_ENABLE;
+			value |= CPP_GDSCR_HW_CONTROL_ENABLE;
+		} else {
+			value |= CPP_GDSCR_HW_CONTROL_DISABLE;
+			value &= CPP_GDSCR_SW_COLLAPSE_DISABLE;
+		}
+		pr_debug("value %x after camss cpp mask\n", value);
+		msm_camera_io_w(value, cpp_dev->camss_cpp_base);
+	}
+end:
+	return rc;
+}
+
+static  int msm_cpp_update_gdscrv2_status(struct cpp_device *cpp_dev,
 	bool status)
 {
 	int rc = 0;
 	uint32_t msm_cpp_reg_idx;
+
 	if (!cpp_dev) {
 		pr_err("%s: cpp device invalid\n", __func__);
 		rc = -EINVAL;
@@ -4437,6 +4466,18 @@ static  int msm_cpp_update_gdscr_status(struct cpp_device *cpp_dev,
 end:
 	return rc;
 }
+
+static  int msm_cpp_update_gdscr_status(struct cpp_device *cpp_dev,
+	bool status)
+{
+	if (of_machine_is_compatible("qcom,msm8936") ||
+	    of_machine_is_compatible("qcom,msm8939") ||
+	    of_machine_is_compatible("qcom,msm8956"))
+		return msm_cpp_update_gdscrv1_status(cpp_dev, status);
+
+	return msm_cpp_update_gdscrv2_status(cpp_dev, status);
+}
+
 static void msm_cpp_set_vbif_reg_values(struct cpp_device *cpp_dev)
 {
 	int i, reg, val;
@@ -4541,6 +4582,14 @@ static int cpp_probe(struct platform_device *pdev)
 	cpp_dev->pdev = pdev;
 	memset(&cpp_vbif, 0, sizeof(struct msm_cpp_vbif_data));
 	cpp_dev->vbif_data = &cpp_vbif;
+
+	/* camss_cpp is optional, only for MSM8916-class and family-B SoC */
+	cpp_dev->camss_cpp_base =
+		msm_camera_get_reg_base(pdev, "camss_cpp", true);
+	if (!cpp_dev->camss_cpp_base) {
+		rc = -ENOMEM;
+		pr_err("optional: camss_cpp_base not present\n");
+	}
 
 	cpp_dev->base =
 		msm_camera_get_reg_base(pdev, "cpp", true);
