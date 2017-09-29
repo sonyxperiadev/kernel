@@ -441,7 +441,6 @@ enum msm8976_functions {
 	msm_mux_blsp_spi5,
 	msm_mux_blsp_uart5,
 	msm_mux_qdss_traceclk_a,
-	msm_mux_nfc_irq,
 	msm_mux_m_voc,
 	msm_mux_blsp_i2c5,
 	msm_mux_qdss_tracectl_a,
@@ -620,10 +619,7 @@ static const char * const blsp_uart5_groups[] = {
 static const char * const qdss_traceclk_a_groups[] = {
 	"gpio46",
 };
-static const char * const nfc_irq_groups[] = {
-	"gpio17",
-};
-static const char * const m_voc_groups[] = {
+const char * const m_voc_groups[] = {
 	"gpio123", "gpio124",
 };
 static const char * const blsp_i2c5_groups[] = {
@@ -916,7 +912,6 @@ static const struct msm_function msm8976_functions[] = {
 	FUNCTION(blsp_spi5),
 	FUNCTION(blsp_uart5),
 	FUNCTION(qdss_traceclk_a),
-	FUNCTION(nfc_irq),
 	FUNCTION(m_voc),
 	FUNCTION(blsp_i2c5),
 	FUNCTION(qdss_tracectl_a),
