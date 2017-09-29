@@ -468,7 +468,6 @@ enum msm8976_functions {
 	msm_mux_gcc_gp2_clk_a,
 	msm_mux_mag_int,
 	msm_mux_gcc_gp3_clk_a,
-	msm_mux_cci_async,
 	msm_mux_gyro_int,
 	msm_mux_pressure_int,
 	msm_mux_fp_int,
@@ -706,9 +705,6 @@ static const char * const mag_int_groups[] = {
 };
 static const char * const gcc_gp3_clk_a_groups[] = {
 	"gpio51",
-};
-static const char * const cci_async_groups[] = {
-	"gpio34", "gpio35", "gpio36",
 };
 static const char * const gyro_int_groups[] = {
 	"gpio45",
@@ -959,7 +955,6 @@ static const struct msm_function msm8976_functions[] = {
 	FUNCTION(gcc_gp2_clk_a),
 	FUNCTION(mag_int),
 	FUNCTION(gcc_gp3_clk_a),
-	FUNCTION(cci_async),
 	FUNCTION(gyro_int),
 	FUNCTION(pressure_int),
 	FUNCTION(fp_int),
