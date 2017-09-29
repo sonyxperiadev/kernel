@@ -250,9 +250,6 @@ static const struct pinctrl_pin_desc msm8976_pins[] = {
 	PINCTRL_PIN(155, "QDSD_DATA1"),
 	PINCTRL_PIN(156, "QDSD_DATA2"),
 	PINCTRL_PIN(157, "QDSD_DATA3"),
-	PINCTRL_PIN(158, "QDSD_DATA4"),
-	PINCTRL_PIN(159, "QDSD_DATA5"),
-
 };
 
 #define DECLARE_MSM_GPIO_PINS(pin) \
@@ -416,8 +413,6 @@ static const unsigned int qdsd_data0_pins[] = { 154 };
 static const unsigned int qdsd_data1_pins[] = { 155 };
 static const unsigned int qdsd_data2_pins[] = { 156 };
 static const unsigned int qdsd_data3_pins[] = { 157 };
-static const unsigned int qdsd_data4_pins[] = { 158 };
-static const unsigned int qdsd_data5_pins[] = { 159 };
 
 enum msm8976_functions {
 	msm_mux_gpio,
@@ -1100,8 +1095,6 @@ static const struct msm_pingroup msm8976_groups[] = {
 	SDC_QDSD_PINGROUP(qdsd_data1, 0x19c000, 18, 15),
 	SDC_QDSD_PINGROUP(qdsd_data2, 0x19c000, 23, 20),
 	SDC_QDSD_PINGROUP(qdsd_data3, 0x19c000, 28, 25),
-//	SDC_QDSD_PINGROUP(qdsd_data4, 0x19c000, 33, 30),
-//	SDC_QDSD_PINGROUP(qdsd_data5, 0x19c000, 38, 35),
 };
 
 static const struct msm_pinctrl_soc_data msm8976_pinctrl = {
