@@ -525,8 +525,6 @@ enum msm8976_functions {
 	msm_mux_sdcard_det,
 	msm_mux_sec_mi2s,
 	msm_mux_sec_mi2s_ws,
-	msm_mux_blsp_spi7,
-	msm_mux_blsp_i2c7,
 	msm_mux_ss_switch,
 	msm_mux_NA,
 };
@@ -872,12 +870,6 @@ static const char * const sec_mi2s_groups[] = {
 static const char * const sec_mi2s_ws_groups[] = {
 	"gpio134",
 };
-static const char * const blsp_spi7_groups[] = {
-	"gpio108", "gpio109", "gpio110", "gpio111",
-};
-static const char * const blsp_i2c7_groups[] = {
-	"gpio110", "gpio111",
-};
 static const char * const ss_switch_groups[] = {
 	"gpio139",
 };
@@ -988,8 +980,6 @@ static const struct msm_function msm8976_functions[] = {
 	FUNCTION(sdcard_det),
 	FUNCTION(sec_mi2s),
 	FUNCTION(sec_mi2s_ws),
-	FUNCTION(blsp_spi7),
-	FUNCTION(blsp_i2c7),
 	FUNCTION(ss_switch),
 };
 
@@ -1102,10 +1092,10 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(105, sec_mi2s, gcc_gp1_clk_b, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(106, blsp3_spi, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(107, blsp3_spi, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(108, blsp_spi7, NA, wsa_io, NA, NA, NA, NA, NA, NA),
-	PINGROUP(109, blsp_spi7, NA, wsa_io, NA, NA, NA, NA, NA, NA),
-	PINGROUP(110, blsp_spi7, NA, blsp_i2c7, NA,  NA, NA, NA, NA, NA),
-	PINGROUP(111, blsp_spi7, NA, blsp_i2c7, NA, NA, NA, NA, NA, NA),
+	PINGROUP(108, NA, NA, wsa_io, NA, NA, NA, NA, NA, NA),
+	PINGROUP(109, NA, NA, wsa_io, NA, NA, NA, NA, NA, NA),
+	PINGROUP(110, NA, NA, NA, NA,  NA, NA, NA, NA, NA),
+	PINGROUP(111, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(112, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(113, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(114, NA, NA, NA, NA, NA, NA, NA, NA, NA),
