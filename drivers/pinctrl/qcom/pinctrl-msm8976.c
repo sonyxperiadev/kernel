@@ -434,7 +434,6 @@ enum msm8976_functions {
 	msm_mux_blsp_i2c3,
 	msm_mux_gcc_gp2_clk_b,
 	msm_mux_gcc_gp3_clk_b,
-	msm_mux_hall_int,
 	msm_mux_blsp_spi4,
 	msm_mux_cap_int,
 	msm_mux_blsp_i2c4,
@@ -599,9 +598,6 @@ static const char * const gcc_gp2_clk_b_groups[] = {
 };
 static const char * const gcc_gp3_clk_b_groups[] = {
 	"gpio13",
-};
-static const char * const hall_int_groups[] = {
-	"gpio12",
 };
 static const char * const blsp_spi4_groups[] = {
 	"gpio12", "gpio13", "gpio14", "gpio15",
@@ -913,7 +909,6 @@ static const struct msm_function msm8976_functions[] = {
 	FUNCTION(blsp_i2c3),
 	FUNCTION(gcc_gp2_clk_b),
 	FUNCTION(gcc_gp3_clk_b),
-	FUNCTION(hall_int),
 	FUNCTION(blsp_spi4),
 	FUNCTION(cap_int),
 	FUNCTION(blsp_i2c4),
