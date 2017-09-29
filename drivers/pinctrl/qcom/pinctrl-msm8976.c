@@ -453,7 +453,8 @@ enum msm8976_functions {
 	msm_mux_pri_mi2s_mclk_a,
 	msm_mux_sec_mi2s_mclk_a,
 	msm_mux_cam_mclk,
-	msm_mux_cci_i2c,
+	msm_mux_cci0_i2c,
+	msm_mux_cci1_i2c,
 	msm_mux_flash_strobe,
 	msm_mux_blsp1_spi,
 	msm_mux_blsp3_spi,
@@ -644,8 +645,11 @@ static const char * const sec_mi2s_mclk_a_groups[] = {
 static const char * const cam_mclk_groups[] = {
 	"gpio26", "gpio27", "gpio28",
 };
-static const char * const cci_i2c_groups[] = {
-	"gpio29", "gpio30", "gpio103", "gpio104",
+static const char * const cci0_i2c_groups[] = {
+	"gpio30", "gpio29",
+};
+static const char * const cci1_i2c_groups[] = {
+	"gpio104", "gpio103",
 };
 static const char * const flash_strobe_groups[] = {
 	"gpio31", "gpio32",
@@ -875,7 +879,8 @@ static const struct msm_function msm8976_functions[] = {
 	FUNCTION(pri_mi2s_mclk_a),
 	FUNCTION(sec_mi2s_mclk_a),
 	FUNCTION(cam_mclk),
-	FUNCTION(cci_i2c),
+	FUNCTION(cci0_i2c),
+	FUNCTION(cci1_i2c),
 	FUNCTION(flash_strobe),
 	FUNCTION(blsp1_spi),
 	FUNCTION(blsp3_spi),
@@ -971,8 +976,8 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(26, cam_mclk, NA, NA, NA, NA, qdss_tracedata_b, NA, NA, NA),
 	PINGROUP(27, cam_mclk, NA, NA, NA, NA, NA, qdss_tracedata_b, NA, NA),
 	PINGROUP(28, cam_mclk, NA, NA, NA, NA, qdss_tracedata_b, NA, NA, NA),
-	PINGROUP(29, cci_i2c, NA, NA, NA, NA, qdss_tracedata_b, NA, NA, NA),
-	PINGROUP(30, cci_i2c, NA, NA, NA, NA, NA, qdss_tracedata_b, NA, NA),
+	PINGROUP(29, cci0_i2c, NA, NA, NA, NA, qdss_tracedata_b, NA, NA, NA),
+	PINGROUP(30, cci0_i2c, NA, NA, NA, NA, NA, qdss_tracedata_b, NA, NA),
 	PINGROUP(31, NA, NA, NA, NA, NA, NA, NA, qdss_tracedata_b, NA),
 	PINGROUP(32, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(33, NA, NA, NA, NA, NA, NA, qdss_tracedata_b, NA, NA),
@@ -1045,8 +1050,8 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(100, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(101, blsp1_spi, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(102, sec_mi2s, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(103, cci_i2c, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(104, cci_i2c, NA, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(103, cci1_i2c, NA, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(104, cci1_i2c, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(105, sec_mi2s, gcc_gp1_clk_b, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(106, blsp3_spi, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(107, blsp3_spi, NA, NA, NA, NA, NA, NA, NA, NA),
