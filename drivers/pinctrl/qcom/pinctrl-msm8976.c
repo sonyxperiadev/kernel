@@ -514,11 +514,8 @@ enum msm8976_functions {
 	msm_mux_blsp_spi8,
 	msm_mux_wsa_irq,
 	msm_mux_blsp_i2c8,
-	msm_mux_nav_pps_in_a,
 	msm_mux_pa_indicator,
-	msm_mux_nav_pps_in_b,
 	msm_mux_modem_tsync,
-	msm_mux_nav_tsync,
 	msm_mux_ssbi_wtr1,
 	msm_mux_gsm1_tx,
 	msm_mux_gsm0_tx,
@@ -837,14 +834,8 @@ static const char * const wsa_irq_groups[] = {
 static const char * const blsp_i2c8_groups[] = {
 	"gpio18", "gpio19",
 };
-static const char * const nav_pps_in_a_groups[] = {
-	"gpio91",
-};
 static const char * const pa_indicator_groups[] = {
 	"gpio92",
-};
-static const char * const nav_pps_in_b_groups[] = {
-	"gpio93",
 };
 static const char * const modem_tsync_groups[] = {
 	"gpio93",
@@ -969,11 +960,8 @@ static const struct msm_function msm8976_functions[] = {
 	FUNCTION(blsp_spi8),
 	FUNCTION(wsa_irq),
 	FUNCTION(blsp_i2c8),
-	FUNCTION(nav_pps_in_a),
 	FUNCTION(pa_indicator),
-	FUNCTION(nav_pps_in_b),
 	FUNCTION(modem_tsync),
-	FUNCTION(nav_tsync),
 	FUNCTION(ssbi_wtr1),
 	FUNCTION(gsm1_tx),
 	FUNCTION(gsm0_tx),
@@ -1075,9 +1063,9 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(88, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(89, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(90, NA, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(91, NA, nav_pps_in_a, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(91, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(92, NA, NA, pa_indicator, NA, NA, NA, NA, NA, NA),
-	PINGROUP(93, NA, modem_tsync, nav_tsync, nav_pps_in_b, NA, NA, NA, NA, NA),
+	PINGROUP(93, NA, modem_tsync, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(94, NA, ssbi_wtr1, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(95, NA, gsm1_tx, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(96, NA, NA, NA, NA, NA, NA, NA, NA, NA),
