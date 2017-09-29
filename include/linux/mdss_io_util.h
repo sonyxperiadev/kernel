@@ -58,6 +58,7 @@ struct dss_vreg {
 	int post_on_sleep;
 	int pre_off_sleep;
 	int post_off_sleep;
+	bool drms_unsupported;
 };
 
 struct dss_gpio {
