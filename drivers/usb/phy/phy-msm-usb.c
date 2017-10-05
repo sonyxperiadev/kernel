@@ -127,7 +127,6 @@ static struct regulator *hsusb_3p3;
 static struct regulator *hsusb_1p8;
 static struct regulator *hsusb_vdd;
 static struct regulator *vbus_otg;
-static struct power_supply *psy;
 
 static int vdd_val[VDD_VAL_MAX];
 static u32 bus_freqs[USB_NOC_NUM_VOTE][USB_NUM_BUS_CLOCKS]  /*bimc,snoc,pcnoc*/;
@@ -1684,13 +1683,8 @@ skip_phy_resume:
 
 static void msm_otg_notify_host_mode(struct msm_otg *motg, bool host_mode)
 {
-	if (!psy) {
-		pr_err("No USB power supply registered!\n");
-		return;
-	}
-
 	motg->host_mode = host_mode;
-	power_supply_changed(psy);
+	power_supply_changed(motg->usb_psy);
 }
 
 static int msm_otg_notify_chg_type(struct msm_otg *motg)
@@ -1716,15 +1710,11 @@ static int msm_otg_notify_chg_type(struct msm_otg *motg)
 	else
 		pval.intval = POWER_SUPPLY_TYPE_UNKNOWN;
 
-	if (!psy) {
-		pr_err("No USB power supply registered!\n");
-		return -EINVAL;
-	}
-
 	pr_debug("setting usb power supply type %d\n", pval.intval);
 	msm_otg_dbg_log_event(&motg->phy, "SET USB PWR SUPPLY TYPE",
 			motg->chg_type, pval.intval);
-	power_supply_set_property(psy, POWER_SUPPLY_PROP_TYPE, &pval);
+	power_supply_set_property(motg->usb_psy,
+			POWER_SUPPLY_PROP_TYPE, &pval);
 	return 0;
 }
 
@@ -1733,40 +1723,35 @@ static int msm_otg_notify_power_supply(struct msm_otg *motg, unsigned mA)
 	union power_supply_propval pval = { true, };
 	union power_supply_propval limit = { mA*1000, };
 
-	if (!psy) {
-		dev_dbg(motg->phy.dev, "no usb power supply registered\n");
-		goto psy_error;
-	}
-
 	if (motg->cur_power == 0 && mA > 2) {
 		/* Enable charging */
-		if (power_supply_set_property(psy,
+		if (power_supply_set_property(motg->usb_psy,
 				POWER_SUPPLY_PROP_ONLINE, &pval))
 			goto psy_error;
-		if (power_supply_set_property(psy,
+		if (power_supply_set_property(motg->usb_psy,
 				POWER_SUPPLY_PROP_CURRENT_MAX, &limit))
 			goto psy_error;
 	} else if (motg->cur_power >= 0 && (mA == 0 || mA == 2)) {
 		pval.intval = false;
 		/* Disable charging */
-		if (power_supply_set_property(psy,
+		if (power_supply_set_property(motg->usb_psy,
 				POWER_SUPPLY_PROP_ONLINE, &pval))
 			goto psy_error;
 		/* Set max current limit in uA */
-		if (power_supply_set_property(psy,
+		if (power_supply_set_property(motg->usb_psy,
 				POWER_SUPPLY_PROP_CURRENT_MAX, &limit))
 			goto psy_error;
 	} else {
-		if (power_supply_set_property(psy,
+		if (power_supply_set_property(motg->usb_psy,
 				POWER_SUPPLY_PROP_ONLINE, &pval))
 			goto psy_error;
 		/* Current has changed (100/2 --> 500) */
-		if (power_supply_set_property(psy,
+		if (power_supply_set_property(motg->usb_psy,
 				POWER_SUPPLY_PROP_CURRENT_MAX, &limit))
 			goto psy_error;
 	}
 
-	power_supply_changed(psy);
+	power_supply_changed(motg->usb_psy);
 	return 0;
 
 psy_error:
@@ -1778,13 +1763,9 @@ static void msm_otg_set_online_status(struct msm_otg *motg)
 {
 	union power_supply_propval pval = { false, };
 
-	if (!psy) {
-		dev_dbg(motg->phy.dev, "no usb power supply registered\n");
-		return;
-	}
-
 	/* Set power supply online status to false */
-	if (power_supply_set_property(psy, POWER_SUPPLY_PROP_ONLINE, &pval))
+	if (power_supply_set_property(motg->usb_psy,
+			POWER_SUPPLY_PROP_ONLINE, &pval))
 		dev_dbg(motg->phy.dev, "error setting power supply property\n");
 }
 
@@ -4034,8 +4015,7 @@ static int msm_otg_setup_ext_chg_cdev(struct msm_otg *motg)
 	int ret;
 
 	if (motg->pdata->enable_sec_phy || motg->pdata->mode == USB_DR_MODE_HOST ||
-			motg->pdata->otg_control != OTG_PMIC_CONTROL ||
-			psy != motg->usb_psy) {
+			motg->pdata->otg_control != OTG_PMIC_CONTROL) {
 		pr_debug("usb ext chg is not supported by msm otg\n");
 		return -ENODEV;
 	}
@@ -4938,10 +4918,11 @@ static int msm_otg_probe(struct platform_device *pdev)
 
 	motg->usb_psy = power_supply_register(&pdev->dev,
 				&motg->usb_psy_d, &cfg);
-	if (ret < 0) {
+	if (IS_ERR(motg->usb_psy)) {
 		dev_err(motg->phy.dev,
 			"%s:power_supply_register usb failed\n",
 			__func__);
+		goto remove_phy;
 	}
 
 	ret = msm_otg_setup_ext_chg_cdev(motg);
@@ -4985,8 +4966,8 @@ remove_cdev:
 		class_destroy(motg->ext_chg_class);
 		unregister_chrdev_region(motg->ext_chg_dev, 1);
 	}
-	if (psy)
-		power_supply_unregister(psy);
+	if (!IS_ERR_OR_NULL(motg->usb_psy))
+		power_supply_unregister(motg->usb_psy);
 remove_phy:
 	usb_remove_phy(&motg->phy);
 free_async_irq:
@@ -5069,8 +5050,7 @@ static int msm_otg_remove(struct platform_device *pdev)
 
 	if (pdev->dev.of_node)
 		msm_otg_setup_devices(pdev, motg->pdata->mode, false);
-	if (psy)
-		power_supply_unregister(psy);
+	power_supply_unregister(motg->usb_psy);
 	msm_otg_debugfs_cleanup();
 	cancel_delayed_work_sync(&motg->chg_work);
 	cancel_delayed_work_sync(&motg->id_status_work);
