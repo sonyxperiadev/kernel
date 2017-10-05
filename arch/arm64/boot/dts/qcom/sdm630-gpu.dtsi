@@ -152,7 +152,7 @@
 			/* 8K Page Pool configuration */
 			qcom,gpu-mempool@1 {
 				reg = <1>;
-				qcom,mempool-page-size = <8196>;
+				qcom,mempool-page-size = <8192>;
 				qcom,mempool-allocate;
 			};
 			/* 64K Page Pool configuration */
