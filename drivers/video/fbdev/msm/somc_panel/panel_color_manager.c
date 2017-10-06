@@ -237,7 +237,7 @@ static void get_uv_data(struct mdss_dsi_ctrl_pdata *ctrl_pdata,
 }
 
 static int find_color_area(struct mdp_pcc_cfg_data *pcc_config,
-	struct mdss_pcc_data *pcc_data)
+	struct mdss_pcc_data *pcc_data, unsigned short profile_override)
 {
 	int i;
 	int ret = 0;
@@ -253,6 +253,7 @@ static int find_color_area(struct mdp_pcc_cfg_data *pcc_config,
 			continue;
 		break;
 	}
+	i += profile_override;
 	pcc_data->tbl_idx = i;
 	if (i >= pcc_data->tbl_size) {
 		ret = -EINVAL;
@@ -263,6 +264,32 @@ static int find_color_area(struct mdp_pcc_cfg_data *pcc_config,
 	pcc_config->g.g = pcc_data->color_tbl[i].g_data;
 	pcc_config->b.b = pcc_data->color_tbl[i].b_data;
 exit:
+	return ret;
+}
+
+static int somc_panel_colormgr_pcc_select(struct mdss_dsi_ctrl_pdata *ctrl,
+	int profile_number)
+{
+	struct somc_panel_color_mgr *color_mgr = ctrl->spec_pdata->color_mgr;
+	int ret = 0;
+
+	if (profile_number == color_mgr->pcc_profile) {
+		pr_debug("%s: Not applying: requested current profile\n",
+			__func__);
+		return 0;
+	}
+
+	if ((profile_number < PANEL_CALIB_6000K) ||
+	    (profile_number >= PANEL_CALIB_END)) {
+		pr_err("%s: Not applying: requested invalid profile\n",
+			__func__);
+		return -EINVAL;
+	}
+
+	color_mgr->pcc_profile = profile_number;
+	somc_panel_colormgr_reset(ctrl);
+	color_mgr->pcc_setup(&ctrl->panel_data);
+
 	return ret;
 }
 
@@ -337,7 +364,7 @@ static int somc_panel_pcc_setup(struct mdss_panel_data *pdata)
 	}
 
 	memset(&pcc_config, 0, sizeof(struct mdp_pcc_cfg_data));
-	ret = find_color_area(&pcc_config, pcc_data);
+	ret = find_color_area(&pcc_config, pcc_data, color_mgr->pcc_profile);
 	if (ret) {
 		pr_err("%s: Can't find color area!!!!\n", __func__);
 		goto exit;
@@ -378,7 +405,6 @@ static int somc_panel_pcc_setup(struct mdss_panel_data *pdata)
 		pcc_data->color_tbl[pcc_data->tbl_idx].r_data,
 		pcc_data->color_tbl[pcc_data->tbl_idx].g_data,
 		pcc_data->color_tbl[pcc_data->tbl_idx].b_data);
-
 exit:
 	return 0;
 }
@@ -584,8 +610,45 @@ exit:
 	return scnprintf(buf, PAGE_SIZE, "0x%x 0x%x 0x%x ", r, g, b);
 }
 
+static ssize_t somc_panel_colormgr_pcc_select_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct mdss_dsi_ctrl_pdata *ctrl = dev_get_drvdata(dev);
+	struct somc_panel_color_mgr *color_mgr = ctrl->spec_pdata->color_mgr;
+
+	return scnprintf(buf, PAGE_SIZE, "%hu\n", color_mgr->pcc_profile);
+}
+
+static ssize_t somc_panel_colormgr_pcc_select_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct mdss_dsi_ctrl_pdata *ctrl = dev_get_drvdata(dev);
+	int ret = count;
+	int profile = 0;
+
+	if (!ctrl || !ctrl->spec_pdata) {
+		pr_err("%s: Invalid input data\n", __func__);
+		return -EINVAL;
+	}
+
+	ret = kstrtoint(buf, 5, &profile);
+	if (ret < 0) {
+		pr_err("%s: Error: buf = %s\n", __func__, buf);
+		return -EINVAL;
+	}
+
+	ret = somc_panel_colormgr_pcc_select(ctrl, profile);
+	if (ret < 0)
+		return -EINVAL;
+
+	return count;
+}
+
 static struct device_attribute colormgr_attributes[] = {
 	__ATTR(cc, S_IRUGO, mdss_dsi_panel_pcc_show, NULL),
+	__ATTR(pcc_profile, S_IRUGO|S_IWUSR|S_IWGRP,
+				somc_panel_colormgr_pcc_select_show,
+				somc_panel_colormgr_pcc_select_store),
 };
 
 int somc_panel_colormgr_register_attr(struct device *dev)
@@ -636,6 +699,9 @@ int somc_panel_color_manager_init(struct mdss_dsi_ctrl_pdata *ctrl)
 		pr_err("%s: Color Manager is NULL!!!\n", __func__);
 		return -EINVAL;
 	}
+
+	/* Be sure of initialization to default profile */
+	color_mgr->pcc_profile = 0;
 
 	color_mgr->pcc_setup = somc_panel_pcc_setup;
 	color_mgr->picadj_setup = somc_panel_picadj_setup;
