@@ -42,6 +42,14 @@ enum {
 	PANEL_DRIVER_IC_NONE,
 };
 
+enum {
+	PANEL_CALIB_6000K,
+	PANEL_CALIB_F6,
+	PANEL_CALIB_D50,
+	PANEL_CALIB_D65,
+	PANEL_CALIB_END,
+};
+
 struct mdss_pcc_color_tbl {
 	u32 color_type;
 	u32 area_num;
@@ -161,6 +169,7 @@ struct somc_panel_color_mgr {
 	int (*picadj_setup)(struct mdss_panel_data *pdata);
 	int (*unblank_hndl)(struct mdss_dsi_ctrl_pdata *ctrl);
 
+	unsigned short pcc_profile;
 	bool mdss_force_pcc;
 
 	struct dsi_panel_cmds pre_uv_read_cmds;
