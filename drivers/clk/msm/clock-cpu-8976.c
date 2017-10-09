@@ -301,7 +301,7 @@ static struct mux_div_clk a53ssmux = {
 
 static struct mux_div_clk ccissmux = {
 	.ops = &rcg_mux_div_ops,
-	.safe_freq = 200000000,
+	SRC_SAFE_FREQ(200000000, 200000000),
 	.data = {
 		.max_div = 32,
 		.min_div = 2,
