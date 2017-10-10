@@ -149,6 +149,7 @@
 		compatible = "regulator-fixed";
 		regulator-name = "camera_rgbcir_vreg";
 		startup-delay-us = <0>;
+		vin-supply = <&pm8950_l5>;
 		gpio = <&msm_gpio 127 0>;
 	};
 };
