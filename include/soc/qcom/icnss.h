@@ -20,6 +20,17 @@
 enum icnss_uevent {
 	ICNSS_UEVENT_FW_READY,
 	ICNSS_UEVENT_FW_CRASHED,
+	ICNSS_UEVENT_FW_DOWN,
+};
+
+enum cnss_cc_src {
+	CNSS_SOURCE_CORE,
+	CNSS_SOURCE_11D,
+	CNSS_SOURCE_USER
+};
+
+struct icnss_uevent_fw_down_data {
+	bool crashed;
 };
 
 struct icnss_uevent_data {
@@ -70,13 +81,6 @@ struct icnss_wlan_enable_cfg {
 	struct ce_svc_pipe_cfg *ce_svc_cfg;
 	u32 num_shadow_reg_cfg;
 	struct icnss_shadow_reg_cfg *shadow_reg_cfg;
-};
-
-/* MSA Memory Regions Information */
-struct icnss_mem_region_info {
-	uint64_t reg_addr;
-	uint32_t size;
-	uint8_t secure_flag;
 };
 
 /* driver modes */
@@ -139,5 +143,10 @@ extern bool icnss_is_fw_ready(void);
 extern int icnss_set_wlan_mac_address(const u8 *in, const uint32_t len);
 extern u8 *icnss_get_wlan_mac_address(struct device *dev, uint32_t *num);
 extern int icnss_trigger_recovery(struct device *dev);
-
+extern void cnss_set_cc_source(enum cnss_cc_src cc_source);
+extern enum cnss_cc_src cnss_get_cc_source(void);
+extern int icnss_get_driver_load_cnt(void);
+extern void icnss_increment_driver_load_cnt(void);
+extern void icnss_set_cc_source(enum cnss_cc_src cc_source);
+extern enum cnss_cc_src icnss_get_cc_source(void);
 #endif /* _ICNSS_WLAN_H_ */
