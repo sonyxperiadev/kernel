@@ -50,6 +50,16 @@ enum {
 
 static const char *mux_names[] = { "c1", "cci", "c0"};
 
+#define SAFE_NUM 2
+
+#define SRC_SAFE_FREQ(f1, f2)				\
+	.safe_freq = f1,				\
+	.safe_freqs = (unsigned long[SAFE_NUM]) {	\
+		[0] = (f1),				\
+		[1] = (f2),				\
+	},						\
+	.safe_num = SAFE_NUM
+
 struct cpu_clk_8936 {
 	u32 cpu_reg_mask;
 	cpumask_t cpumask;
@@ -60,7 +70,7 @@ struct cpu_clk_8936 {
 
 static struct mux_div_clk a53ssmux_bc = {
 	.ops = &rcg_mux_div_ops,
-	.safe_freq = 400000000,
+	SRC_SAFE_FREQ(400000000, 400000000),
 	.data = {
 		.max_div = 32,
 		.min_div = 2,
@@ -79,7 +89,7 @@ static struct mux_div_clk a53ssmux_bc = {
 
 static struct mux_div_clk a53ssmux_lc = {
 	.ops = &rcg_mux_div_ops,
-	.safe_freq = 200000000,
+	SRC_SAFE_FREQ(200000000, 200000000),
 	.data = {
 		.max_div = 32,
 		.min_div = 2,
@@ -98,7 +108,7 @@ static struct mux_div_clk a53ssmux_lc = {
 
 static struct mux_div_clk a53ssmux_cci = {
 	.ops = &rcg_mux_div_ops,
-	.safe_freq = 200000000,
+	SRC_SAFE_FREQ(200000000, 200000000),
 	.data = {
 		.max_div = 32,
 		.min_div = 2,
