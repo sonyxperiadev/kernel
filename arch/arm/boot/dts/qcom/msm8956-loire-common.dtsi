@@ -716,6 +716,14 @@
 		clock-frequency = <32768>;
 	};
 
+	camera_rgbcir_vreg: camera_rgbcir_vreg {
+		compatible = "regulator-fixed";
+		regulator-name = "camera_rgbcir_vreg";
+		startup-delay-us = <0>;
+		vin-supply = <&pm8950_l5>;
+		gpio = <&msm_gpio 127 0>;
+	};
+
 	/delete-node/ qcom,iris-fm;
 	/delete-node/ qcom,pronto@a21b000;
 	/delete-node/ qcom,wcnss-wlan@0a000000;
