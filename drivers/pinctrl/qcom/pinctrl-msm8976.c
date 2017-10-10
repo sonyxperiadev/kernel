@@ -709,7 +709,7 @@ static const char * const sec_mi2s_mclk_b_groups[] = {
 	"gpio66",
 };
 static const char * const pri_mi2s_groups[] = {
-	"gpio122", "gpio124", "gpio125", "gpio127", "gpio128",
+	"gpio122", "gpio124", "gpio125", "gpio127",
 };
 static const char * const codec_reset_groups[] = {
 	"gpio67",
@@ -1065,7 +1065,7 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(125, pri_mi2s, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(126, pri_mi2s_mclk_a, sec_mi2s_mclk_b, NA , NA, NA, NA, NA, NA, qdss_tracedata_b),
 	PINGROUP(127, pri_mi2s, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(128, pri_mi2s, NA, NA, NA, NA, NA, qdss_tracedata_b, NA, NA),
+	PINGROUP(128, NA, NA, NA, NA, NA, NA, qdss_tracedata_b, NA, NA),
 	PINGROUP(129, qdss_tracedata_b, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(130, qdss_tracedata_a, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(131, qdss_tracedata_a, NA, NA, NA, NA, NA, NA, NA, NA),
