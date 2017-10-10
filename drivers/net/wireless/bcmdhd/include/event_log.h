@@ -46,6 +46,7 @@
 #define EVENT_LOG_PSM_BLOCK_SIZE	0x200
 #define EVENT_LOG_BUS_BLOCK_SIZE	0x200
 #define EVENT_LOG_ERROR_BLOCK_SIZE	0x200
+#define EVENT_LOG_BLOCK_HDRLEN		8
 
 /*
  * There are multiple levels of objects define here:
