@@ -34,6 +34,10 @@
 #error This code depends on AEABI system call conventions
 #endif
 
+#ifdef CONFIG_ARM_ARCH_TIMER
+#define ARCH_PROVIDES_TIMER
+#endif
+
 #define DEFINE_FALLBACK(name, type_arg1, name_arg1, type_arg2, name_arg2) \
 static notrace long name##_fallback(type_arg1 _##name_arg1,		  \
 				    type_arg2 _##name_arg2)		  \
