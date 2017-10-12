@@ -4924,11 +4924,11 @@ static void handle_usb_removal(struct smbchg_chip *chip)
 		chip->typec_current_ma = 0;
 #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
 	chip->somc_params.chg_det.settled_not_hvdcp = false;
-	chip->somc_params.chg_det.sub_type = POWER_SUPPLY_SUB_TYPE_UNKNOWN;
+	chip->somc_params.chg_det.sub_type = POWER_SUPPLY_SUB_TYPE_FLOATED;
 	smbchg_relax(chip, PM_DETECT_HVDCP);
 	cancel_delayed_work_sync(&chip->hvdcp_det_work); // CHECKME
 #endif
-	smbchg_change_usb_supply_type(chip, POWER_SUPPLY_TYPE_UNKNOWN);
+	smbchg_change_usb_supply_type(chip, POWER_SUPPLY_TYPE_USB);
 
 	extcon_set_cable_state_(chip->extcon, EXTCON_USB, chip->usb_present);
 
