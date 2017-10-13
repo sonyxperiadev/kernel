@@ -76,8 +76,8 @@
 		qcom,cam-vreg-op-mode = <85000 0 103000 300000>;
 		qcom,gpio-no-mux = <0>;
 		pinctrl-names = "cam_default", "cam_suspend";
-		pinctrl-0 = <&cam_sensor_mclk0_default &cam_sensor_rear_default>;
-		pinctrl-1 = <&cam_sensor_mclk0_sleep &cam_sensor_rear_sleep>;
+		pinctrl-0 = <&cam_sensor_mclk0_default &msm_gpio_35_def>;
+		pinctrl-1 = <&cam_sensor_mclk0_sleep &msm_gpio_35_def>;
 		gpios = <&msm_gpio 26 0>, <&msm_gpio 35 0>;
 		qcom,gpio-reset = <1>;
 		qcom,gpio-req-tbl-num = <0 1>;
@@ -111,8 +111,8 @@
 		qcom,cam-vreg-op-mode = <333000 0 46000 300000>;
 		qcom,gpio-no-mux = <0>;
 		pinctrl-names = "cam_default", "cam_suspend";
-		pinctrl-0 = <&cam_sensor_mclk2_default &cam_sensor_front1_default>;
-		pinctrl-1 = <&cam_sensor_mclk2_sleep &cam_sensor_front1_sleep>;
+		pinctrl-0 = <&cam_sensor_mclk2_default &msm_gpio_38_def>;
+		pinctrl-1 = <&cam_sensor_mclk2_sleep &msm_gpio_38_def>;
 		gpios = <&msm_gpio 28 0>, <&msm_gpio 38 0>;
 		qcom,gpio-reset = <1>;
 		qcom,gpio-req-tbl-num = <0 1>;
