@@ -786,7 +786,7 @@ static int mux_div_clk_set_rate(struct clk *c, unsigned long rate)
 	struct mux_div_clk *md = to_mux_div_clk(c);
 	unsigned long flags, rrate;
 	unsigned long new_prate, new_parent_orig_rate;
-	unsigned long old_safe_freq, max_safe_freq = 0;
+	unsigned long old_safe_freq = 0, max_safe_freq = 0;
 	struct clk *old_parent, *new_parent;
 	u32 new_div, old_div;
 	int rc, i;
