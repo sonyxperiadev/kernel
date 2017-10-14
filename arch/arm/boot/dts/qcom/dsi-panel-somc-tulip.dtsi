@@ -561,6 +561,7 @@
 		somc,panel-id-read-cmds;
 		somc,alt-panelid-cmd;
 		somc,dsi-restart-hack;
+		somc,reset-gpio-bad-design-quirk;
 	};
 
 	dsi_nt35521_720_vid_truly64: qcom,mdss_dsi_nt35521_720p_video_truly64 {
