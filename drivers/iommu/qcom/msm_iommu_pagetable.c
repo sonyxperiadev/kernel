@@ -331,13 +331,10 @@ static phys_addr_t get_phys_addr(struct scatterlist *sg)
 	return pa;
 }
 
-/*
- * For debugging we may want to force mappings to be 4K only
- */
-#ifdef CONFIG_IOMMU_FORCE_4K_MAPPINGS
 static inline int is_fully_aligned(unsigned int va, phys_addr_t pa, size_t len,
 				   int align)
 {
+	/* Force 4K mappings for AArch64 performance */
 	if (align == SZ_4K) {
 		return  IS_ALIGNED(va, align) && IS_ALIGNED(pa, align)
 			&& (len >= align);
@@ -345,7 +342,8 @@ static inline int is_fully_aligned(unsigned int va, phys_addr_t pa, size_t len,
 		return 0;
 	}
 }
-#else
+
+#if 0
 static inline int is_fully_aligned(unsigned int va, phys_addr_t pa, size_t len,
 				   int align)
 {
