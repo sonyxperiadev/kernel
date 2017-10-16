@@ -1129,7 +1129,6 @@ fail:
 	return len;
 }
 
-/*z
 static size_t msm_iommu_map_sg(struct iommu_domain *domain, unsigned long iova,
 			       struct scatterlist *sg, unsigned int nents,
 			       int prot)
@@ -1161,7 +1160,7 @@ fail:
 	spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
 	return ret;
 }
-
+/*
 static int msm_iommu_unmap_range(struct iommu_domain *domain, unsigned int va,
 				 unsigned int len)
 {
@@ -1876,7 +1875,7 @@ static struct iommu_ops msm_iommu_ops = {
 	.detach_dev = msm_iommu_detach_dev,
 	.map = msm_iommu_map,
 	.unmap = msm_iommu_unmap,
-	.map_sg = default_iommu_map_sg, /*msm_iommu_map_sg,*/
+	.map_sg = msm_iommu_map_sg, //default_iommu_map_sg,
 	.iova_to_phys = msm_iommu_iova_to_phys,
 	.add_device = msm_iommu_add_device,
 	.remove_device = msm_iommu_remove_device,
