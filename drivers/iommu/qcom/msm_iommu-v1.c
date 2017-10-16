@@ -1180,113 +1180,19 @@ static int msm_iommu_unmap_range(struct iommu_domain *domain, unsigned int va,
 	return 0;
 }
 */
-#ifdef CONFIG_IOMMU_LPAE
-static phys_addr_t msm_iommu_get_phy_from_PAR(unsigned long va, u64 par)
-{
-	phys_addr_t phy;
-
-	/* Upper 28 bits from PAR, lower 12 from VA */
-	phy = (par & 0xFFFFFFF000ULL) | (va & 0x00000FFF);
-
-	return phy;
-}
-#else
-static phys_addr_t msm_iommu_get_phy_from_PAR(unsigned long va, u64 par)
-{
-	phys_addr_t phy;
-
-	/* We are dealing with a supersection */
-	if (par & CB_PAR_SS)
-		phy = (par & 0xFF000000) | (va & 0x00FFFFFF);
-	else /* Upper 20 bits from PAR, lower 12 from VA */
-		phy = (par & 0xFFFFF000) | (va & 0x00000FFF);
-
-	return phy;
-}
-#endif
 
 static phys_addr_t msm_iommu_iova_to_phys(struct iommu_domain *domain,
 					  phys_addr_t va)
 {
-	struct msm_iommu_priv *priv;
-	struct msm_iommu_drvdata *iommu_drvdata;
-	struct msm_iommu_ctx_drvdata *ctx_drvdata;
-	u64 par;
-	void __iomem *base;
 	phys_addr_t ret = 0;
-	int ctx;
-	int i;
 	unsigned long flags;
 
 	mutex_lock(&msm_iommu_lock);
 
-	priv = to_msm_priv(domain);
-	if (list_empty(&priv->list_attached))
-		goto fail;
-
 	spin_lock_irqsave(&msm_iommu_spin_lock, flags);
-	ctx_drvdata = list_entry(priv->list_attached.next,
-				 struct msm_iommu_ctx_drvdata, attached_elm);
+	ret = msm_iommu_iova_to_phys_soft(domain, va);
 	spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
 
-	iommu_drvdata = dev_get_drvdata(ctx_drvdata->pdev->dev.parent);
-
-	if (iommu_drvdata->model == MMU_500) {
-		ret = msm_iommu_iova_to_phys_soft(domain, va);
-		mutex_unlock(&msm_iommu_lock);
-		return ret;
-	}
-
-	if (is_domain_dynamic(priv) || ctx_drvdata->dynamic)
-		goto fail;
-
-	base = iommu_drvdata->cb_base;
-	ctx = ctx_drvdata->num;
-
-	spin_lock_irqsave(&msm_iommu_spin_lock, flags);
-	SET_ATS1PR(base, ctx, va & CB_ATS1PR_ADDR);
-	mb();
-	for (i = 0; i < IOMMU_USEC_TIMEOUT; i += IOMMU_USEC_STEP)
-		if (GET_CB_ATSR_ACTIVE(base, ctx) == 0)
-			break;
-		else
-			udelay(IOMMU_USEC_STEP);
-
-	if (i >= IOMMU_USEC_TIMEOUT) {
-		pr_err("%s: iova to phys timed out on %pa for %s (%s)\n",
-			__func__, &va, iommu_drvdata->name, ctx_drvdata->name);
-		ret = 0;
-		spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
-		goto fail;
-	}
-
-	par = GET_PAR(base, ctx);
-	spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
-
-	if (par & CB_PAR_F) {
-		unsigned int level = (par & CB_PAR_PLVL) >> CB_PAR_PLVL_SHIFT;
-		pr_err("IOMMU translation fault!\n");
-		pr_err("name = %s\n", iommu_drvdata->name);
-		pr_err("context = %s (%d)\n", ctx_drvdata->name,
-						ctx_drvdata->num);
-		pr_err("Interesting registers:\n");
-		pr_err("PAR = %16llx [%s%s%s%s%s%s%s%sPLVL%u %s]\n", par,
-			(par & CB_PAR_F) ? "F " : "",
-			(par & CB_PAR_TF) ? "TF " : "",
-			(par & CB_PAR_AFF) ? "AFF " : "",
-			(par & CB_PAR_PF) ? "PF " : "",
-			(par & CB_PAR_EF) ? "EF " : "",
-			(par & CB_PAR_TLBMCF) ? "TLBMCF " : "",
-			(par & CB_PAR_TLBLKF) ? "TLBLKF " : "",
-			(par & CB_PAR_ATOT) ? "ATOT " : "",
-			level,
-			(par & CB_PAR_STAGE) ? "S2 " : "S1 ");
-		ret = 0;
-	} else {
-		ret = msm_iommu_get_phy_from_PAR(va, par);
-	}
-
-fail:
 	mutex_unlock(&msm_iommu_lock);
 
 	return ret;
