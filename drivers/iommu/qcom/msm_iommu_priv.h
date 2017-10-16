@@ -72,6 +72,8 @@ static inline struct msm_iommu_priv *to_msm_priv(struct iommu_domain *dom)
 	return container_of(dom, struct msm_iommu_priv, domain);
 }
 
+int msm_iommu_dma_supported(struct iommu_domain *domain,
+				  struct device *dev, u64 mask);
 int msm_iommu_init(struct device *dev);
 
 #endif

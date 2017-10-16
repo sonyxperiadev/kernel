@@ -805,6 +805,7 @@ static struct iommu_ops msm_iommu_ops = {
 /*	.unmap_range = msm_iommu_unmap_range,*/
 	.iova_to_phys = msm_iommu_iova_to_phys,
 	.pgsize_bitmap = MSM_IOMMU_PGSIZES,
+	.dma_supported = msm_iommu_dma_supported,
 };
 
 static int __init msm_iommu_sec_init(void)
