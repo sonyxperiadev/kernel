@@ -271,7 +271,8 @@
 			0xcccc0011	0xcccc0011
 			0xcccc0011	0xcccc0011
 			0xcccc0011	0x00000110>;
-		max-clk-nominal = <320000000>;
+		max-clk-svs = <300000000>;
+		max-clk-nominal = <466000000>;
 		max-clk-turbo = <466000000>;
 	};
 
@@ -323,7 +324,8 @@
 			0xcccc0011	0xcccc0011
 			0xcccc0011	0xcccc0011
 			0xcccc0011	0x00000110>;
-		max-clk-nominal = <320000000>;
+		max-clk-svs = <300000000>;
+		max-clk-nominal = <466000000>;
 		max-clk-turbo = <466000000>;
 	};
 
