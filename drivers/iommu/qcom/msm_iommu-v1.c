@@ -1019,7 +1019,7 @@ static void msm_iommu_detach_dev(struct iommu_domain *domain,
 	iommu_drvdata = master->iommu_drvdata;
 	ctx_drvdata = master->ctx_drvdata;
 
-	if (!iommu_drvdata || !ctx_drvdata || !ctx_drvdata->attached_domain)
+	if (!iommu_drvdata || !ctx_drvdata)
 		goto unlock;
 
 	if (is_domain_dynamic(priv)) {
@@ -1028,6 +1028,9 @@ static void msm_iommu_detach_dev(struct iommu_domain *domain,
 		mutex_unlock(&msm_iommu_lock);
 		return;
 	}
+
+	if (!ctx_drvdata->attached_domain)
+		goto unlock;
 
 	--ctx_drvdata->attach_count;
 	BUG_ON(ctx_drvdata->attach_count < 0);
