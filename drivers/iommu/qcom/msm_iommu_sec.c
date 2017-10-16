@@ -27,10 +27,14 @@
 #include <linux/of_device.h>
 #include <linux/kmemleak.h>
 #include <linux/dma-mapping.h>
+#include <linux/dma-iommu.h>
 #include <soc/qcom/scm.h>
 
 #include <asm/cacheflush.h>
 #include <asm/sizes.h>
+
+#include <soc/qcom/secure_buffer.h>
+
 
 #include "msm_iommu_perfmon.h"
 #include "msm_iommu_hw-v1.h"
@@ -735,6 +739,7 @@ fail:
 	len = ret ? 0 : len;
 	return len;
 }
+
 #if 0
 static int msm_iommu_map_range(struct iommu_domain *domain, unsigned int va,
 			       struct scatterlist *sg, unsigned int len,
@@ -796,6 +801,60 @@ int msm_iommu_get_scm_call_avail(void)
 	return is_secure;
 }
 
+static int msm_iommu_domain_set_attr(struct iommu_domain *domain,
+				enum iommu_attr attr, void *data)
+{
+	switch (attr) {
+	case DOMAIN_ATTR_SECURE_VMID:
+		/*
+		 * Not supported on MMU-500 driver as we are on preconfigured
+		 * secure context banks where the secure VMID is already set
+		 * from bootloader MMU initialization.
+		 * Also, the TZ in MSM SoC using this driver will not accept
+		 * hypervisor SCM calls which would be needed to change the
+		 * secure VMID mapping in the IOMMU!
+		 *
+		 * Note: This is valid for both secure and non-secure IOMMU.
+		 */
+		break;
+	case DOMAIN_ATTR_ATOMIC:
+		/* 
+		 * Map / unmap in legacy driver are by default atomic. So
+		 * we don't need to do anything here.
+		 */
+		break;
+	default:
+		return -EINVAL;
+	}
+	return 0;
+}
+
+static int msm_iommu_domain_get_attr(struct iommu_domain *domain,
+				enum iommu_attr attr, void *data)
+{
+	struct msm_iommu_priv *priv = to_msm_priv(domain);
+	struct msm_iommu_ctx_drvdata *ctx_drvdata = NULL;
+
+	if (!list_empty(&priv->list_attached))
+		ctx_drvdata = list_first_entry(&priv->list_attached,
+			struct msm_iommu_ctx_drvdata, attached_elm);
+
+	switch (attr) {
+	case DOMAIN_ATTR_SECURE_VMID:
+		*((int *) data) = -VMID_INVAL;
+		break;
+	case DOMAIN_ATTR_CONTEXT_BANK:
+		if (!ctx_drvdata)
+			return -ENODEV;
+
+		*((unsigned int *) data) = ctx_drvdata->num;
+		break;
+	default:
+		return -EINVAL;
+	}
+	return 0;
+}
+
 static struct iommu_ops msm_iommu_ops = {
 	.domain_alloc = msm_iommu_domain_alloc,
 	.domain_free = msm_iommu_domain_free,
@@ -807,6 +866,8 @@ static struct iommu_ops msm_iommu_ops = {
 	.map_sg = default_iommu_map_sg,
 /*	.unmap_range = msm_iommu_unmap_range,*/
 	.iova_to_phys = msm_iommu_iova_to_phys,
+	.domain_set_attr = msm_iommu_domain_set_attr,
+	.domain_get_attr = msm_iommu_domain_get_attr,
 	.pgsize_bitmap = MSM_IOMMU_PGSIZES,
 	.dma_supported = msm_iommu_dma_supported,
 };
