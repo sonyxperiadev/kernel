@@ -68,7 +68,7 @@ static const struct of_device_id msm_smmu_list[] = {
 };
 
 struct msm_scm_paddr_list {
-	unsigned int list;
+	phys_addr_t list;
 	unsigned int list_size;
 	unsigned int size;
 };
