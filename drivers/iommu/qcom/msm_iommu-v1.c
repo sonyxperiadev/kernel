@@ -844,6 +844,9 @@ static int msm_iommu_attach_dev(struct iommu_domain *domain, struct device *dev)
 		goto unlock;
 	}
 
+	if (!(priv->client_name))
+		priv->client_name = dev_name(dev);
+
 	master = msm_iommu_find_master(dev);
 	if (IS_ERR(master)) {
 		/* if error use legacy api */
