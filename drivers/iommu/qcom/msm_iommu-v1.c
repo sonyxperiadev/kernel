@@ -1868,6 +1868,12 @@ static int msm_iommu_of_xlate(struct device *dev, struct of_phandle_args *args)
 	return 0;
 }
 
+int msm_iommu_dma_supported(struct iommu_domain *domain,
+				  struct device *dev, u64 mask)
+{
+	return ((1ULL << 32) - 1) < mask ? 0 : 1;
+}
+
 static struct iommu_ops msm_iommu_ops = {
 	.domain_alloc = msm_iommu_domain_alloc,
 	.domain_free = msm_iommu_domain_free,
@@ -1884,6 +1890,7 @@ static struct iommu_ops msm_iommu_ops = {
 	.domain_set_attr = msm_iommu_domain_set_attr,
 	.domain_get_attr = msm_iommu_domain_get_attr,
 	.of_xlate = msm_iommu_of_xlate,
+	.dma_supported = msm_iommu_dma_supported,
 };
 
 int msm_iommu_init(struct device *dev)
