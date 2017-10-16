@@ -318,7 +318,7 @@
 		other_ext_mem: other_ext_region@85e00000 {
 			compatible = "removed-dma-pool";
 			no-map;
-			reg = <0x0 0x85e00000 0x0 0x0a00000>;
+			reg = <0x0 0x85b00000 0x0 0x0d00000>;
 			label = "other_ext_mem";
 		};
 
@@ -332,7 +332,7 @@
 		reloc_mem: reloc_region@8c200000 {
 			compatible = "removed-dma-pool";
 			no-map;
-			reg = <0x0 0x8c200000 0x0 0x1700000>;
+			reg = <0x0 0x8c200000 0x0 0x1800000>;
 			label = "reloc_mem";
 		};
 
@@ -348,7 +348,7 @@
 			compatible = "shared-dma-pool";
 			reusable;
 			alignment = <0 0x400000>;
-			size = <0 0x7C00000>;
+			size = <0 0x8100000>;
 		};
 
 		qseecom_mem: qseecom_region {
