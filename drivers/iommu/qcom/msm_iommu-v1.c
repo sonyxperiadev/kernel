@@ -52,8 +52,8 @@
 #define IS_CB_FORMAT_LONG	0
 #endif
 
-#define IOMMU_MSEC_STEP		10
-#define IOMMU_MSEC_TIMEOUT	5000
+#define IOMMU_USEC_STEP		10
+#define IOMMU_USEC_TIMEOUT	500
 
 /* Max ASID width is 8-bit */
 #define MAX_ASID	0xff
@@ -69,6 +69,8 @@ struct msm_iommu_master {
 static LIST_HEAD(iommu_masters);
 
 static DEFINE_MUTEX(msm_iommu_lock);
+static DEFINE_SPINLOCK(msm_iommu_spin_lock);
+
 struct dump_regs_tbl_entry dump_regs_tbl[MAX_DUMP_REGS];
 
 static int __enable_regulators(struct msm_iommu_drvdata *drvdata)
@@ -92,25 +94,25 @@ int __enable_clocks(struct msm_iommu_drvdata *drvdata)
 {
 	int ret;
 
-	ret = clk_prepare_enable(drvdata->iface);
+	ret = clk_enable(drvdata->iface);
 	if (ret)
 		return ret;
 
-	ret = clk_prepare_enable(drvdata->core);
+	ret = clk_enable(drvdata->core);
 	if (ret)
 		goto err;
 
 	return 0;
 
 err:
-	clk_disable_unprepare(drvdata->iface);
+	clk_disable(drvdata->iface);
 	return ret;
 }
 
 void __disable_clocks(struct msm_iommu_drvdata *drvdata)
 {
-	clk_disable_unprepare(drvdata->core);
-	clk_disable_unprepare(drvdata->iface);
+	clk_disable(drvdata->core);
+	clk_disable(drvdata->iface);
 }
 
 static void _iommu_lock_acquire(unsigned int need_extra_lock)
@@ -131,11 +133,11 @@ struct iommu_access_ops iommu_access_ops_v1 = {
 	.iommu_lock_release = _iommu_lock_release,
 };
 
-static BLOCKING_NOTIFIER_HEAD(msm_iommu_notifier_list);
+static ATOMIC_NOTIFIER_HEAD(msm_iommu_notifier_list);
 
 void msm_iommu_register_notify(struct notifier_block *nb)
 {
-	blocking_notifier_chain_register(&msm_iommu_notifier_list, nb);
+	atomic_notifier_chain_register(&msm_iommu_notifier_list, nb);
 }
 EXPORT_SYMBOL(msm_iommu_register_notify);
 
@@ -171,18 +173,14 @@ static void __dump_vbif_state(void __iomem *base, void __iomem *vbif_base)
 
 static int __check_vbif_state(struct msm_iommu_drvdata const *drvdata)
 {
-	phys_addr_t addr = (phys_addr_t) (drvdata->phys_base
-			   - (phys_addr_t) 0x4000);
-	void __iomem *base = ioremap(addr, 0x1000);
 	int ret = 0;
 
-	if (base) {
-		__dump_vbif_state(drvdata->base, base);
-		__halt_vbif_xin(base);
-		__dump_vbif_state(drvdata->base, base);
-		iounmap(base);
+	if (drvdata->vbif_base) {
+		__dump_vbif_state(drvdata->base, drvdata->vbif_base);
+		__halt_vbif_xin(drvdata->vbif_base);
+		__dump_vbif_state(drvdata->base, drvdata->vbif_base);
 	} else {
-		pr_err("%s: Unable to ioremap\n", __func__);
+		pr_err("%s: failed to get vbif state\n", __func__);
 		ret = -ENOMEM;
 	}
 	return ret;
@@ -202,8 +200,8 @@ static void check_halt_state(struct msm_iommu_drvdata const *drvdata)
 
 	pr_err("Checking if IOMMU halt completed for %s\n", name);
 
-	res = readl_poll_timeout(GLB_REG(MICRO_MMU_CTRL, base), val,
-			(val & MMU_CTRL_IDLE) == MMU_CTRL_IDLE, 0, 5000000);
+	res = readl_poll_timeout_atomic(GLB_REG(MICRO_MMU_CTRL, base), val,
+			(val & MMU_CTRL_IDLE) == MMU_CTRL_IDLE, 0, 5, 1000000);
 
 	if (res) {
 		pr_err("Timed out (again) waiting for IOMMU halt to complete for %s\n",
@@ -224,7 +222,7 @@ static void check_tlb_sync_state(struct msm_iommu_drvdata const *drvdata,
 
 	pr_err("Timed out waiting for TLB SYNC to complete for %s (client: %s)\n",
 		name, priv->client_name);
-	blocking_notifier_call_chain(&msm_iommu_notifier_list, TLB_SYNC_TIMEOUT,
+	atomic_notifier_call_chain(&msm_iommu_notifier_list, TLB_SYNC_TIMEOUT,
 				(void *) priv->client_name);
 	res = __check_vbif_state(drvdata);
 	if (res)
@@ -232,8 +230,8 @@ static void check_tlb_sync_state(struct msm_iommu_drvdata const *drvdata,
 
 	pr_err("Checking if TLB sync completed for %s\n", name);
 
-	res = readl_poll_timeout(CTX_REG(CB_TLBSTATUS, base, ctx), val,
-				(val & CB_TLBSTATUS_SACTIVE) == 0, 0, 5000000);
+	res = readl_poll_timeout_atomic(CTX_REG(CB_TLBSTATUS, base, ctx), val,
+				(val & CB_TLBSTATUS_SACTIVE) == 0, 5, 1000000);
 	if (res) {
 		pr_err("Timed out (again) waiting for TLB SYNC to complete for %s\n",
 			name);
@@ -314,8 +312,8 @@ static void __sync_tlb(struct msm_iommu_drvdata *iommu_drvdata, int ctx,
 	SET_TLBSYNC(base, ctx, 0);
 	/* No barrier needed due to read dependency */
 
-	res = readl_poll_timeout(CTX_REG(CB_TLBSTATUS, base, ctx), val,
-				(val & CB_TLBSTATUS_SACTIVE) == 0, 0, 5000000);
+	res = readl_poll_timeout_atomic(CTX_REG(CB_TLBSTATUS, base, ctx), val,
+				(val & CB_TLBSTATUS_SACTIVE) == 0, 5, 1000000);
 	if (res)
 		check_tlb_sync_state(iommu_drvdata, ctx, priv);
 }
@@ -836,6 +834,7 @@ static int msm_iommu_attach_dev(struct iommu_domain *domain, struct device *dev)
 	int is_secure;
 	bool secure_ctx;
 	bool set_m2v = false;
+	unsigned long flags;
 
 	mutex_lock(&msm_iommu_lock);
 
@@ -873,16 +872,21 @@ static int msm_iommu_attach_dev(struct iommu_domain *domain, struct device *dev)
 	if (ctx_drvdata->attach_count > 1)
 		goto already_attached;
 
+	spin_lock_irqsave(&msm_iommu_spin_lock, flags);
 	if (!list_empty(&ctx_drvdata->attached_elm)) {
 		ret = -EBUSY;
+		spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
 		goto unlock;
 	}
 
 	list_for_each_entry(tmp_drvdata, &priv->list_attached, attached_elm)
 		if (tmp_drvdata == ctx_drvdata) {
 			ret = -EBUSY;
+			spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
 			goto unlock;
 		}
+
+	spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
 
 	is_secure = iommu_drvdata->sec_id != -1;
 
@@ -941,7 +945,10 @@ static int msm_iommu_attach_dev(struct iommu_domain *domain, struct device *dev)
 	__disable_clocks(iommu_drvdata);
 
 add_domain:
+	spin_lock_irqsave(&msm_iommu_spin_lock, flags);
 	list_add(&(ctx_drvdata->attached_elm), &priv->list_attached);
+	spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
+
 	ctx_drvdata->attached_domain = domain;
 	++iommu_drvdata->ctx_attach_count;
 
@@ -991,6 +998,7 @@ static void msm_iommu_detach_dev(struct iommu_domain *domain,
 	struct msm_iommu_master *master;
 	int is_secure;
 	int ret;
+	unsigned long flags;
 
 	if (!dev)
 		return;
@@ -1057,7 +1065,10 @@ static void msm_iommu_detach_dev(struct iommu_domain *domain,
 
 	__disable_regulators(iommu_drvdata);
 
+	spin_lock_irqsave(&msm_iommu_spin_lock, flags);
 	list_del_init(&ctx_drvdata->attached_elm);
+	spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
+
 	ctx_drvdata->attached_domain = NULL;
 	BUG_ON(iommu_drvdata->ctx_attach_count == 0);
 	--iommu_drvdata->ctx_attach_count;
@@ -1070,8 +1081,9 @@ static int msm_iommu_map(struct iommu_domain *domain, unsigned long va,
 {
 	struct msm_iommu_priv *priv;
 	int ret = 0;
+	unsigned long flags;
 
-	mutex_lock(&msm_iommu_lock);
+	spin_lock_irqsave(&msm_iommu_spin_lock, flags);
 
 	priv = to_msm_priv(domain);
 	if (!priv) {
@@ -1085,6 +1097,7 @@ static int msm_iommu_map(struct iommu_domain *domain, unsigned long va,
 
 fail:
 	mutex_unlock(&msm_iommu_lock);
+	spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
 	return ret;
 }
 
@@ -1093,8 +1106,9 @@ static size_t msm_iommu_unmap(struct iommu_domain *domain, unsigned long va,
 {
 	struct msm_iommu_priv *priv;
 	int ret = -ENODEV;
+	unsigned long flags;
 
-	mutex_lock(&msm_iommu_lock);
+	spin_lock_irqsave(&msm_iommu_spin_lock, flags);
 
 	priv = to_msm_priv(domain);
 	if (!priv)
@@ -1108,7 +1122,7 @@ static size_t msm_iommu_unmap(struct iommu_domain *domain, unsigned long va,
 
 	msm_iommu_pagetable_free_tables(&priv->pt, va, len);
 fail:
-	mutex_unlock(&msm_iommu_lock);
+	spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
 
 	/* the IOMMU API requires us to return how many bytes were unmapped */
 	len = ret ? 0 : len;
@@ -1124,8 +1138,9 @@ static size_t msm_iommu_map_sg(struct iommu_domain *domain, unsigned long iova,
 	struct scatterlist *tmp;
 	unsigned int len = 0;
 	int ret, i;
+	unsigned long flags;
 
-	mutex_lock(&msm_iommu_lock);
+	spin_lock_irqsave(&msm_iommu_spin_lock, flags);
 
 	priv = to_msm_priv(domain);
 	if (!priv) {
@@ -1143,7 +1158,7 @@ static size_t msm_iommu_map_sg(struct iommu_domain *domain, unsigned long iova,
 	ret = len;
 
 fail:
-	mutex_unlock(&msm_iommu_lock);
+	spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
 	return ret;
 }
 
@@ -1151,8 +1166,9 @@ static int msm_iommu_unmap_range(struct iommu_domain *domain, unsigned int va,
 				 unsigned int len)
 {
 	struct msm_iommu_priv *priv;
+	unsigned long flags;
 
-	mutex_lock(&msm_iommu_lock);
+	spin_lock_irqsave(&msm_iommu_spin_lock, flags);
 
 	priv = to_msm_priv(domain);
 	msm_iommu_pagetable_unmap_range(&priv->pt, va, len);
@@ -1160,7 +1176,7 @@ static int msm_iommu_unmap_range(struct iommu_domain *domain, unsigned int va,
 	__flush_iotlb(domain);
 
 	msm_iommu_pagetable_free_tables(&priv->pt, va, len);
-	mutex_unlock(&msm_iommu_lock);
+	spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
 
 	return 0;
 }
@@ -1201,6 +1217,7 @@ static phys_addr_t msm_iommu_iova_to_phys(struct iommu_domain *domain,
 	phys_addr_t ret = 0;
 	int ctx;
 	int i;
+	unsigned long flags;
 
 	mutex_lock(&msm_iommu_lock);
 
@@ -1208,8 +1225,11 @@ static phys_addr_t msm_iommu_iova_to_phys(struct iommu_domain *domain,
 	if (list_empty(&priv->list_attached))
 		goto fail;
 
+	spin_lock_irqsave(&msm_iommu_spin_lock, flags);
 	ctx_drvdata = list_entry(priv->list_attached.next,
 				 struct msm_iommu_ctx_drvdata, attached_elm);
+	spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
+
 	iommu_drvdata = dev_get_drvdata(ctx_drvdata->pdev->dev.parent);
 
 	if (iommu_drvdata->model == MMU_500) {
@@ -1224,22 +1244,25 @@ static phys_addr_t msm_iommu_iova_to_phys(struct iommu_domain *domain,
 	base = iommu_drvdata->cb_base;
 	ctx = ctx_drvdata->num;
 
+	spin_lock_irqsave(&msm_iommu_spin_lock, flags);
 	SET_ATS1PR(base, ctx, va & CB_ATS1PR_ADDR);
 	mb();
-	for (i = 0; i < IOMMU_MSEC_TIMEOUT; i += IOMMU_MSEC_STEP)
+	for (i = 0; i < IOMMU_USEC_TIMEOUT; i += IOMMU_USEC_STEP)
 		if (GET_CB_ATSR_ACTIVE(base, ctx) == 0)
 			break;
 		else
-			msleep(IOMMU_MSEC_STEP);
+			udelay(IOMMU_USEC_STEP);
 
-	if (i >= IOMMU_MSEC_TIMEOUT) {
+	if (i >= IOMMU_USEC_TIMEOUT) {
 		pr_err("%s: iova to phys timed out on %pa for %s (%s)\n",
 			__func__, &va, iommu_drvdata->name, ctx_drvdata->name);
 		ret = 0;
+		spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
 		goto fail;
 	}
 
 	par = GET_PAR(base, ctx);
+	spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
 
 	if (par & CB_PAR_F) {
 		unsigned int level = (par & CB_PAR_PLVL) >> CB_PAR_PLVL_SHIFT;
