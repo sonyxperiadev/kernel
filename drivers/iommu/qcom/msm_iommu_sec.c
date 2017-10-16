@@ -361,11 +361,7 @@ static int msm_iommu_sec_map2(struct msm_scm_map2_req *map)
 	u32 resp, flags;
 	int ret;
 
-#ifdef CONFIG_MSM_IOMMU_TLBINVAL_ON_MAP
-	flags = IOMMU_TLBINVAL_FLAG;
-#else
 	flags = 0;
-#endif
 
 	desc.args[0] = map->plist.list;
 	desc.args[1] = map->plist.list_size;
