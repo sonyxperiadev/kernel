@@ -320,45 +320,6 @@ static void __sync_tlb(struct msm_iommu_drvdata *iommu_drvdata, int ctx,
 		check_tlb_sync_state(iommu_drvdata, ctx, priv);
 }
 
-#ifdef CONFIG_MSM_IOMMU_TLBINVAL_ON_MAP
-static int __flush_iotlb_va(struct iommu_domain *domain, unsigned int va)
-{
-	struct msm_iommu_priv *priv = to_msm_priv(domain);
-	struct msm_iommu_priv *base_priv;
-	struct msm_iommu_drvdata *iommu_drvdata;
-	struct msm_iommu_ctx_drvdata *ctx_drvdata;
-	int ret = 0;
-
-	if (is_domain_dynamic(priv)) {
-		if (!priv->base)
-			return 0;
-
-		base_priv = to_msm_priv(priv->base);
-	} else {
-		base_priv = priv;
-	}
-
-	list_for_each_entry(ctx_drvdata, &base_priv->list_attached, attached_elm) {
-		BUG_ON(!ctx_drvdata->pdev || !ctx_drvdata->pdev->dev.parent);
-
-		iommu_drvdata = dev_get_drvdata(ctx_drvdata->pdev->dev.parent);
-		BUG_ON(!iommu_drvdata);
-
-		ret = __enable_clocks(iommu_drvdata);
-		if (ret)
-			goto fail;
-
-		SET_TLBIVA(iommu_drvdata->cb_base, ctx_drvdata->num,
-			   priv->asid | (va & CB_TLBIVA_VA));
-		mb();
-		__sync_tlb(iommu_drvdata, ctx_drvdata->num, priv);
-		__disable_clocks(iommu_drvdata);
-	}
-fail:
-	return ret;
-}
-#endif
-
 static int __flush_iotlb(struct iommu_domain *domain)
 {
 	struct msm_iommu_priv *priv = to_msm_priv(domain);
@@ -1122,10 +1083,6 @@ static int msm_iommu_map(struct iommu_domain *domain, unsigned long va,
 	if (ret)
 		goto fail;
 
-#ifdef CONFIG_MSM_IOMMU_TLBINVAL_ON_MAP
-	ret = __flush_iotlb_va(domain, va);
-#endif
-
 fail:
 	mutex_unlock(&msm_iommu_lock);
 	return ret;
@@ -1158,7 +1115,7 @@ fail:
 	return len;
 }
 
-/*
+/*z
 static size_t msm_iommu_map_sg(struct iommu_domain *domain, unsigned long iova,
 			       struct scatterlist *sg, unsigned int nents,
 			       int prot)
@@ -1184,10 +1141,6 @@ static size_t msm_iommu_map_sg(struct iommu_domain *domain, unsigned long iova,
 		goto fail;
 
 	ret = len;
-
-#ifdef CONFIG_MSM_IOMMU_TLBINVAL_ON_MAP
-	__flush_iotlb(domain);
-#endif
 
 fail:
 	mutex_unlock(&msm_iommu_lock);
