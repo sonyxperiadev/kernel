@@ -434,9 +434,19 @@ static int msm_iommu_probe(struct platform_device *pdev)
 	if (IS_ERR(drvdata->iface))
 		return PTR_ERR(drvdata->iface);
 
+	ret = clk_prepare(drvdata->iface);
+	if (ret)
+		return ret;
+
 	drvdata->core = devm_clk_get(dev, "core_clk");
-	if (IS_ERR(drvdata->core))
+	if (IS_ERR(drvdata->core)) {
+		clk_unprepare(drvdata->iface);
 		return PTR_ERR(drvdata->core);
+	}
+
+	ret = clk_prepare(drvdata->core);
+	if (ret)
+		return ret;
 
 	if (!of_property_read_u32(np, "qcom,cb-base-offset", &temp))
 		drvdata->cb_base = drvdata->base + temp;
@@ -556,6 +566,8 @@ static int msm_iommu_remove(struct platform_device *pdev)
 		idr_destroy(&drv->asid_idr);
 		__disable_clocks(drv);
 		__put_bus_vote_client(drv);
+		clk_unprepare(drv->iface);
+		clk_unprepare(drv->core);
 		msm_iommu_remove_drv(drv);
 		platform_set_drvdata(pdev, NULL);
 	}
