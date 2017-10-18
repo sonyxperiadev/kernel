@@ -110,6 +110,7 @@
 		somc,change-fps-porch-mask-pos = <3>;
 		somc,change-fps-porch-mask = <0xF0>;
 		somc,mdss-dsi-pcc-enable;
+		somc,panel-colormgr-pcc-prof-avail;
 		somc,mdss-dsi-u-rev = <0 8>;
 		somc,mdss-dsi-v-rev = <0 8>;
 		somc,mdss-dsi-uv-command = [06 01 00 00 00 00 01 DA
