@@ -115,6 +115,9 @@ int somc_panel_parse_dt_colormgr_config(struct device_node *np,
 		color_mgr->pcc_data.rev_v[1] = res[1];
 	}
 
+	color_mgr->pcc_profile_avail = of_property_read_bool(np,
+					"somc,panel-colormgr-pcc-prof-avail");
+
 picadj_params:
 	/* Picture Adjustment (PicAdj) Parameters */
 	if (!of_find_property(np, "somc,mdss-dsi-use-picadj", NULL))
@@ -616,7 +619,7 @@ static ssize_t somc_panel_colormgr_pcc_select_show(struct device *dev,
 	struct mdss_dsi_ctrl_pdata *ctrl = dev_get_drvdata(dev);
 	struct somc_panel_color_mgr *color_mgr = ctrl->spec_pdata->color_mgr;
 
-	return scnprintf(buf, PAGE_SIZE, "%hu\n", color_mgr->pcc_profile);
+	return scnprintf(buf, PAGE_SIZE, "%hu\n", color_mgr->pcc_profile_avail);
 }
 
 static ssize_t somc_panel_colormgr_pcc_select_store(struct device *dev,
@@ -644,11 +647,23 @@ static ssize_t somc_panel_colormgr_pcc_select_store(struct device *dev,
 	return count;
 }
 
+static ssize_t somc_panel_colormgr_pcc_profile_avail_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct mdss_dsi_ctrl_pdata *ctrl = dev_get_drvdata(dev);
+	struct somc_panel_color_mgr *color_mgr = ctrl->spec_pdata->color_mgr;
+
+	return scnprintf(buf, PAGE_SIZE, "%hu\n", color_mgr->pcc_profile);
+}
+
 static struct device_attribute colormgr_attributes[] = {
 	__ATTR(cc, S_IRUGO, mdss_dsi_panel_pcc_show, NULL),
 	__ATTR(pcc_profile, S_IRUGO|S_IWUSR|S_IWGRP,
 				somc_panel_colormgr_pcc_select_show,
 				somc_panel_colormgr_pcc_select_store),
+	__ATTR(pcc_profile_avail, S_IRUGO,
+				somc_panel_colormgr_pcc_profile_avail_show,
+				NULL),
 };
 
 int somc_panel_colormgr_register_attr(struct device *dev)

@@ -170,6 +170,7 @@ struct somc_panel_color_mgr {
 	int (*unblank_hndl)(struct mdss_dsi_ctrl_pdata *ctrl);
 
 	unsigned short pcc_profile;
+	bool pcc_profile_avail;
 	bool mdss_force_pcc;
 
 	struct dsi_panel_cmds pre_uv_read_cmds;
