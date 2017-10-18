@@ -290,6 +290,7 @@ static void msm_restart_prepare(const char *cmd)
 				(cmd != NULL && cmd[0] != '\0'));
 	}
 
+#if defined(CONFIG_ARCH_SONY_LOIRE) || defined(CONFIG_ARCH_SONY_TONE)
 	/* Force warm reset and allow device to
 	 * preserve memory on restart 
 	 * only for bootloader and recovery commands */
@@ -297,9 +298,18 @@ static void msm_restart_prepare(const char *cmd)
 		if ((!strncmp(cmd, "bootloader", 10)) ||
 				(!strncmp(cmd, "recovery", 8)))
 			need_warm_reset = true;
+		else
+			need_warm_reset = false;
 	}
+#else
+	/* Force hard reset for SoMC XBOOT */
+	need_warm_reset = false;
+#endif
 
-	qpnp_pon_system_pwr_off(PON_POWER_OFF_WARM_RESET);
+	if (need_warm_reset)
+		qpnp_pon_system_pwr_off(PON_POWER_OFF_WARM_RESET);
+	else
+		qpnp_pon_system_pwr_off(PON_POWER_OFF_HARD_RESET);
 
 	if (cmd != NULL) {
 		if (!strncmp(cmd, "bootloader", 10)) {
