@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2015 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2015, 2017 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1044,7 +1044,7 @@ static int smb1360_alloc_otp_backup_register(struct smb1360_chip *chip,
 	rc = pool->start_now;
 	inv_pos = pool->reg_end - pool->start_now + 1;
 	for (i = 0; i < size; i = i + 2) {
-		inv_pos -= i;
+		inv_pos -= (i ? 2 : 0);
 		pool->alg_bitmap |= usage << (inv_pos - 2);
 	}
 	pr_debug("Allocation success, start = 0x%x, size = %d, alg_bitmap = 0x%x\n",
@@ -5541,13 +5541,6 @@ static int smb1360_probe(struct i2c_client *client,
 		return -ENOMEM;
 	}
 
-	/* probe the device to check if its actually connected */
-	rc = smb1360_read(chip, CFG_BATT_CHG_REG, &reg);
-	if (rc) {
-		pr_err("Failed to detect SMB1360, device may be absent\n");
-		return -ENODEV;
-	}
-	
 	chip->resume_completed = true;
 	chip->client = client;
 	chip->dev = &client->dev;
@@ -5566,6 +5559,15 @@ static int smb1360_probe(struct i2c_client *client,
 	init_completion(&chip->fg_mem_access_granted);
 	smb1360_wakeup_src_init(chip);
 
+	/* probe the device to check if its actually connected */
+	rc = smb1360_read(chip, CFG_BATT_CHG_REG, &reg);
+	if (rc) {
+		pr_err("Failed to detect SMB1360, device may be absent\n");
+		mutex_destroy(&chip->read_write_lock);
+		return -ENODEV;
+		goto destroy_mutex;
+	}
+	
 	rc = read_revision(chip, &chip->revision);
 	if (rc)
 		dev_err(chip->dev, "Couldn't read revision rc = %d\n", rc);
