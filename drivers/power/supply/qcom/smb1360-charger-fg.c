@@ -1746,10 +1746,10 @@ static int __smb1360_parallel_charger_enable(struct smb1360_chip *chip,
 		return 0;
 
 	pval.intval = (enable ? (chip->max_parallel_chg_current * 1000) : 0);
-	parallel_psy->set_property(parallel_psy,
+	power_supply_set_property(parallel_psy,
 		POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT_MAX, &pval);
 	pval.intval = (enable ? 1 : 0);
-	parallel_psy->set_property(parallel_psy,
+	power_supply_set_property(parallel_psy,
 		POWER_SUPPLY_PROP_CHARGING_ENABLED, &pval);
 
 	pr_debug("Parallel-charger %s max_chg_current=%d\n",
@@ -2315,7 +2315,7 @@ static void smb1360_external_power_changed(struct power_supply *psy)
 	union power_supply_propval prop = {0,};
 	int rc, current_limit = 0;
 
-	rc = chip->usb_psy->get_property(chip->usb_psy,
+	rc = power_supply_get_property(chip->usb_psy,
 				POWER_SUPPLY_PROP_CURRENT_MAX, &prop);
 	if (rc < 0)
 		dev_err(chip->dev,
@@ -2334,7 +2334,7 @@ static void smb1360_external_power_changed(struct power_supply *psy)
 		mutex_unlock(&chip->current_change_lock);
 	}
 
-	rc = chip->usb_psy->get_property(chip->usb_psy,
+	rc = power_supply_get_property(chip->usb_psy,
 				POWER_SUPPLY_PROP_ONLINE, &prop);
 	if (rc < 0)
 		pr_err("could not read USB ONLINE property, rc=%d\n", rc);
