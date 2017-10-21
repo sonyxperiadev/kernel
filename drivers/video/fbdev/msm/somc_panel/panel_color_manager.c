@@ -619,7 +619,7 @@ static ssize_t somc_panel_colormgr_pcc_select_show(struct device *dev,
 	struct mdss_dsi_ctrl_pdata *ctrl = dev_get_drvdata(dev);
 	struct somc_panel_color_mgr *color_mgr = ctrl->spec_pdata->color_mgr;
 
-	return scnprintf(buf, PAGE_SIZE, "%hu\n", color_mgr->pcc_profile_avail);
+	return scnprintf(buf, PAGE_SIZE, "%hu\n", color_mgr->pcc_profile);
 }
 
 static ssize_t somc_panel_colormgr_pcc_select_store(struct device *dev,
@@ -653,7 +653,7 @@ static ssize_t somc_panel_colormgr_pcc_profile_avail_show(struct device *dev,
 	struct mdss_dsi_ctrl_pdata *ctrl = dev_get_drvdata(dev);
 	struct somc_panel_color_mgr *color_mgr = ctrl->spec_pdata->color_mgr;
 
-	return scnprintf(buf, PAGE_SIZE, "%hu\n", color_mgr->pcc_profile);
+	return scnprintf(buf, PAGE_SIZE, "%hu\n", color_mgr->pcc_profile_avail);
 }
 
 static struct device_attribute colormgr_attributes[] = {
