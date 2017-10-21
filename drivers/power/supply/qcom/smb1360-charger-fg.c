@@ -2335,7 +2335,8 @@ static void smb1360_external_power_changed(struct power_supply *psy)
 	}
 
 	rc = power_supply_get_property(chip->usb_psy,
-				POWER_SUPPLY_PROP_ONLINE, &prop);
+				POWER_SUPPLY_PROP_ONLINE,
+				&prop);
 	if (rc < 0)
 		pr_err("could not read USB ONLINE property, rc=%d\n", rc);
 
@@ -2343,11 +2344,19 @@ static void smb1360_external_power_changed(struct power_supply *psy)
 	rc = 0;
 	if (chip->usb_present && !chip->charging_disabled_status
 					&& chip->usb_psy_ma != 0) {
-		if (prop.intval == 0)
-			rc = power_supply_set_online(chip->usb_psy, true);
+		if (prop.intval == 0) {
+			prop.intval = 1;
+			rc = power_supply_set_property(chip->usb_psy,
+							POWER_SUPPLY_PROP_ONLINE,
+							&prop);
+		}
 	} else {
-		if (prop.intval == 1 && !chip->usb_present)
-			rc = power_supply_set_online(chip->usb_psy, false);
+		if (prop.intval == 1 && !chip->usb_present) {
+			prop.intval = 0;
+			rc = power_supply_set_property(chip->usb_psy,
+							POWER_SUPPLY_PROP_ONLINE,
+							&prop);
+		}
 	}
 	if (rc < 0)
 		pr_err("could not set usb online, rc=%d\n", rc);
@@ -2649,6 +2658,7 @@ static int tulip_usbin_uv_handler(struct smb1360_chip *chip, u8 rt_stat)
 {
 	bool usb_present = !rt_stat;
 	int rc;
+	union power_supply_propval pval = {0, };
 
 	if (!chip->usb_present &&
 	    usb_present &&
@@ -2667,7 +2677,10 @@ static int tulip_usbin_uv_handler(struct smb1360_chip *chip, u8 rt_stat)
 		/* USB removed */
 		check_unplug_wakelock(chip);
 		chip->usb_present = usb_present;
-		power_supply_set_present(chip->usb_psy, usb_present);
+		pval.intval = chip->usb_present;
+		power_supply_set_property(chip->usb_psy,
+					POWER_SUPPLY_PROP_PRESENT,
+					&pval);
 		rc = smb1360_float_voltage_set(chip, chip->vfloat_mv);
 		if (rc)
 			pr_err("Couldn't set float voltage rc = %d\n", rc);
@@ -2677,7 +2690,10 @@ static int tulip_usbin_uv_handler(struct smb1360_chip *chip, u8 rt_stat)
 	if (!chip->usb_present && usb_present) {
 		/* USB inserted */
 		chip->usb_present = usb_present;
-		power_supply_set_present(chip->usb_psy, usb_present);
+		pval.intval = chip->usb_present;
+		power_supply_set_property(chip->usb_psy,
+					POWER_SUPPLY_PROP_PRESENT,
+					&pval);
 		pm_stay_awake(chip->dev);
 	}
 
@@ -2688,7 +2704,10 @@ static int tulip_usbin_uv_handler(struct smb1360_chip *chip, u8 rt_stat)
 static int usbin_uv_handler(struct smb1360_chip *chip, u8 rt_stat)
 {
 	bool usb_present = !rt_stat;
-
+#ifndef CONFIG_MACH_SONY_TULIP
+	union power_supply_propval pval = {0, };
+#endif
+	
 	pr_debug("chip->usb_present = %d usb_present = %d\n",
 				chip->usb_present, usb_present);
 #ifdef CONFIG_MACH_SONY_TULIP
@@ -2697,13 +2716,19 @@ static int usbin_uv_handler(struct smb1360_chip *chip, u8 rt_stat)
 	if (chip->usb_present && !usb_present) {
 		/* USB removed */
 		chip->usb_present = usb_present;
-		power_supply_set_present(chip->usb_psy, usb_present);
+		pval.intval = chip->usb_present;
+		power_supply_set_property(chip->usb_psy,
+					POWER_SUPPLY_PROP_PRESENT,
+					&pval);
 	}
 
 	if (!chip->usb_present && usb_present) {
 		/* USB inserted */
 		chip->usb_present = usb_present;
-		power_supply_set_present(chip->usb_psy, usb_present);
+		pval.intval = chip->usb_present;
+		power_supply_set_property(chip->usb_psy,
+					POWER_SUPPLY_PROP_PRESENT,
+					&pval);
 	}
 
 	return 0;
@@ -3922,6 +3947,7 @@ static int determine_initial_status(struct smb1360_chip *chip)
 {
 	int rc;
 	u8 reg = 0;
+	union power_supply_propval pval = {0, };
 
 	/*
 	 * It is okay to read the IRQ status as the irq's are
@@ -3978,7 +4004,10 @@ static int determine_initial_status(struct smb1360_chip *chip)
 	UPDATE_IRQ_STAT(IRQ_E_REG, reg);
 
 	chip->usb_present = (reg & IRQ_E_USBIN_UV_BIT) ? false : true;
-	power_supply_set_present(chip->usb_psy, chip->usb_present);
+	pval.intval = chip->usb_present;
+	power_supply_set_property(chip->usb_psy,
+				POWER_SUPPLY_PROP_PRESENT,
+				&pval);
 
 	return 0;
 }
