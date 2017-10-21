@@ -200,6 +200,9 @@ static int dload_set(const char *val, struct kernel_param *kp)
 #else
 static void set_dload_mode(int on)
 {
+	if (tcsr_boot_misc_detect)
+		scm_io_write(tcsr_boot_misc_detect, 0);
+
 	return;
 }
 
@@ -277,6 +280,8 @@ static void msm_restart_prepare(const char *cmd)
 
 	set_dload_mode(download_mode &&
 			(in_panic || restart_mode == RESTART_DLOAD));
+#else
+	set_dload_mode(0);
 #endif
 
 	if (qpnp_pon_check_hard_reset_stored()) {
