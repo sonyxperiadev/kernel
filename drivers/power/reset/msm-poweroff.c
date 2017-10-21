@@ -434,6 +434,7 @@ static void do_msm_poweroff(void)
 	set_dload_mode(0);
 	scm_disable_sdi();
 	qpnp_pon_system_pwr_off(PON_POWER_OFF_SHUTDOWN);
+	qpnp_pon_set_restart_reason(PON_RESTART_REASON_NONE);
 
 	halt_spmi_pmic_arbiter();
 	deassert_ps_hold();
