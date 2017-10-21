@@ -705,6 +705,10 @@ skip_sysfs_create:
 	if (!download_mode)
 		scm_disable_sdi();
 #endif
+
+	__raw_writel(0xC0DEDEAD, restart_reason);
+	qpnp_pon_set_restart_reason(PON_RESTART_REASON_KERNEL_PANIC);
+
 	return 0;
 
 err_restart_reason:
