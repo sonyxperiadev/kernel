@@ -506,7 +506,8 @@ struct smb1360_chip {
 	struct qpnp_vadc_chip		*vadc_dev;
 	struct power_supply		*parallel_psy;
 	struct power_supply		*usb_psy;
-	struct power_supply		batt_psy;
+	struct power_supply		*batt_psy;
+	struct power_supply_desc	batt_psy_d;
 	struct smb1360_otg_regulator	otg_vreg;
 	struct mutex			irq_complete;
 	struct mutex			charging_disable_lock;
@@ -2207,8 +2208,7 @@ static int smb1360_battery_set_property(struct power_supply *psy,
 				       enum power_supply_property prop,
 				       const union power_supply_propval *val)
 {
-	struct smb1360_chip *chip = container_of(psy,
-				struct smb1360_chip, batt_psy);
+	struct smb1360_chip *chip = power_supply_get_drvdata(psy);
 
 	switch (prop) {
 	case POWER_SUPPLY_PROP_CHARGING_ENABLED:
@@ -2216,13 +2216,13 @@ static int smb1360_battery_set_property(struct power_supply *psy,
 		if (chip->parallel_charging)
 			smb1360_parallel_charger_enable(chip,
 				PARALLEL_USER, val->intval);
-		power_supply_changed(&chip->batt_psy);
+		power_supply_changed(chip->batt_psy);
 		power_supply_changed(chip->usb_psy);
 		break;
 	case POWER_SUPPLY_PROP_CAPACITY:
 		chip->fake_battery_soc = val->intval;
 		pr_info("fake_soc set to %d\n", chip->fake_battery_soc);
-		power_supply_changed(&chip->batt_psy);
+		power_supply_changed(chip->batt_psy);
 		break;
 	case POWER_SUPPLY_PROP_SYSTEM_TEMP_LEVEL:
 		smb1360_system_temp_level_set(chip, val->intval);
@@ -2256,8 +2256,7 @@ static int smb1360_battery_get_property(struct power_supply *psy,
 				       enum power_supply_property prop,
 				       union power_supply_propval *val)
 {
-	struct smb1360_chip *chip = container_of(psy,
-				struct smb1360_chip, batt_psy);
+	struct smb1360_chip *chip = power_supply_get_drvdata(psy);
 
 	switch (prop) {
 	case POWER_SUPPLY_PROP_HEALTH:
@@ -2310,8 +2309,7 @@ static int smb1360_battery_get_property(struct power_supply *psy,
 
 static void smb1360_external_power_changed(struct power_supply *psy)
 {
-	struct smb1360_chip *chip = container_of(psy,
-				struct smb1360_chip, batt_psy);
+	struct smb1360_chip *chip = power_supply_get_drvdata(psy);
 	union power_supply_propval prop = {0,};
 	int rc, current_limit = 0;
 
@@ -3256,7 +3254,7 @@ static irqreturn_t smb1360_stat_handler(int irq, void *dev_id)
 
 	pr_debug("handler count = %d\n", handler_count);
 	if (handler_count)
-		power_supply_changed(&chip->batt_psy);
+		power_supply_changed(chip->batt_psy);
 
 	mutex_unlock(&chip->irq_complete);
 
@@ -4903,7 +4901,7 @@ static void smb1360_delayed_init_work_fn(struct work_struct *work)
 		 * power_supply to make sure the correct SoC reported
 		 * timely.
 		 */
-		power_supply_changed(&chip->batt_psy);
+		power_supply_changed(chip->batt_psy);
 	} else if (rc == -ETIMEDOUT) {
 		/*
 		 * If the delayed hw init failed causing by waiting for
@@ -5557,6 +5555,7 @@ static int smb1360_probe(struct i2c_client *client,
 	int rc;
 	struct smb1360_chip *chip;
 	struct power_supply *usb_psy;
+	struct power_supply_config batt_psy_cfg = {};
 
 	usb_psy = power_supply_get_by_name("usb");
 	if (!usb_psy) {
@@ -5575,6 +5574,7 @@ static int smb1360_probe(struct i2c_client *client,
 	chip->dev = &client->dev;
 	chip->usb_psy = usb_psy;
 	chip->fake_battery_soc = -EINVAL;
+
 	mutex_init(&chip->read_write_lock);
 	mutex_init(&chip->parallel_chg_lock);
 	mutex_init(&chip->otp_gain_lock);
@@ -5596,7 +5596,7 @@ static int smb1360_probe(struct i2c_client *client,
 		return -ENODEV;
 		goto destroy_mutex;
 	}
-	
+
 	rc = read_revision(chip, &chip->revision);
 	if (rc)
 		dev_err(chip->dev, "Couldn't read revision rc = %d\n", rc);
@@ -5627,7 +5627,7 @@ static int smb1360_probe(struct i2c_client *client,
 	rc = smb1360_regulator_init(chip);
 	if  (rc) {
 		dev_err(&client->dev,
-			"Couldn't initialize smb349 ragulator rc=%d\n", rc);
+			"Couldn't initialize smb1360 ragulator rc=%d\n", rc);
 		goto destroy_mutex;
 	}
 
@@ -5649,19 +5649,24 @@ static int smb1360_probe(struct i2c_client *client,
 	chip->chg_state = CSS_GENERAL;
 #endif
 
-	chip->batt_psy.name		= "battery";
-	chip->batt_psy.type		= POWER_SUPPLY_TYPE_BATTERY;
-	chip->batt_psy.get_property	= smb1360_battery_get_property;
-	chip->batt_psy.set_property	= smb1360_battery_set_property;
-	chip->batt_psy.properties	= smb1360_battery_properties;
-	chip->batt_psy.num_properties  = ARRAY_SIZE(smb1360_battery_properties);
-	chip->batt_psy.external_power_changed = smb1360_external_power_changed;
-	chip->batt_psy.property_is_writeable = smb1360_battery_is_writeable;
+	chip->batt_psy_d.name		= "battery";
+	chip->batt_psy_d.type		= POWER_SUPPLY_TYPE_BATTERY;
+	chip->batt_psy_d.get_property	= smb1360_battery_get_property;
+	chip->batt_psy_d.set_property	= smb1360_battery_set_property;
+	chip->batt_psy_d.properties	= smb1360_battery_properties;
+	chip->batt_psy_d.num_properties  = ARRAY_SIZE(smb1360_battery_properties);
+	chip->batt_psy_d.external_power_changed = smb1360_external_power_changed;
+	chip->batt_psy_d.property_is_writeable = smb1360_battery_is_writeable;
 
-	rc = power_supply_register(chip->dev, &chip->batt_psy);
-	if (rc < 0) {
-		dev_err(&client->dev,
-			"Unable to register batt_psy rc = %d\n", rc);
+	batt_psy_cfg.drv_data = chip;
+	batt_psy_cfg.num_supplicants = 0;
+
+	chip->batt_psy = devm_power_supply_register(chip->dev,
+							&chip->batt_psy_d, &batt_psy_cfg);
+
+	if (IS_ERR(chip->batt_psy)) {
+		dev_err(&client->dev, "Unable to register batt_psy rc = %ld\n",
+				PTR_ERR(chip->batt_psy));
 		goto fail_hw_init;
 	}
 
@@ -5808,7 +5813,7 @@ static int smb1360_probe(struct i2c_client *client,
 
 	return 0;
 unregister_batt_psy:
-	power_supply_unregister(&chip->batt_psy);
+	power_supply_unregister(chip->batt_psy);
 fail_hw_init:
 	regulator_unregister(chip->otg_vreg.rdev);
 destroy_mutex:
@@ -5832,7 +5837,7 @@ static int smb1360_remove(struct i2c_client *client)
 #endif
 
 	regulator_unregister(chip->otg_vreg.rdev);
-	power_supply_unregister(&chip->batt_psy);
+	power_supply_unregister(chip->batt_psy);
 	wakeup_source_trash(&chip->smb1360_ws.source);
 	mutex_destroy(&chip->charging_disable_lock);
 	mutex_destroy(&chip->current_change_lock);
@@ -5928,7 +5933,7 @@ static int smb1360_resume(struct device *dev)
 		mutex_unlock(&chip->irq_complete);
 	}
 
-	power_supply_changed(&chip->batt_psy);
+	power_supply_changed(chip->batt_psy);
 
 #ifdef CONFIG_MACH_SONY_TULIP
 	schedule_delayed_work(&chip->brain_work, msecs_to_jiffies(3000));
