@@ -560,7 +560,7 @@ static void rqbalance_work_func(struct work_struct *work)
 			// Next time recheck if CPU is balanced
 			rqbalance_state = UP;
 		}
-		else
+		else if(num_online_cpus() == nr_cpu_ids)
 			stop_load_timer();
 
 			queue_delayed_work(rqbalance_wq,
