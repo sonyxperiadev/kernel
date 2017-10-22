@@ -35,6 +35,7 @@
 
 #include <linux/amba/bus.h>
 #include <soc/qcom/secure_buffer.h>
+#include <linux/msm-bus.h>
 
 #include "qcom_iommu.h"
 #include "msm_iommu_hw-v1.h"
@@ -87,7 +88,16 @@ static void __disable_regulators(struct msm_iommu_drvdata *drvdata)
 
 static int apply_bus_vote(struct msm_iommu_drvdata *drvdata, unsigned int vote)
 {
-	return 0;
+	int ret = 0;
+
+	if (drvdata->bus_client) {
+		ret = msm_bus_scale_client_update_request(drvdata->bus_client,
+							  vote);
+		if (ret)
+			pr_err("%s: Failed to vote for bus: %d\n", __func__,
+				vote);
+	}
+	return ret;
 }
 
 int __enable_clocks(struct msm_iommu_drvdata *drvdata)
