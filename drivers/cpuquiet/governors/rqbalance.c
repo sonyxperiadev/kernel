@@ -555,8 +555,11 @@ static void rqbalance_work_func(struct work_struct *work)
 		break;
 	case DOWN:
 		cpu = get_slowest_cpu_n();
-		if (cpu < nr_cpu_ids)
+		if (cpu < nr_cpu_ids) {
 			up = false;
+			// Next time recheck if CPU is balanced
+			rqbalance_state = UP;
+		}
 		else
 			stop_load_timer();
 
