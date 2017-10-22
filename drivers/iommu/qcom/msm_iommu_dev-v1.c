@@ -19,6 +19,7 @@
 #include <linux/clk.h>
 #include <linux/iommu.h>
 #include <linux/interrupt.h>
+#include <linux/msm-bus.h>
 #include <linux/err.h>
 #include <linux/slab.h>
 #include <linux/of.h>
@@ -101,11 +102,31 @@ static int msm_iommu_parse_bfb_settings(struct platform_device *pdev,
 static int __get_bus_vote_client(struct platform_device *pdev,
 				 struct msm_iommu_drvdata *drvdata)
 {
-	return 0;
+	int ret = 0;
+	struct msm_bus_scale_pdata *bs_table;
+	const char *dummy;
+
+	/* Check whether bus scaling has been specified for this node */
+	ret = of_property_read_string(pdev->dev.of_node, "qcom,msm-bus,name",
+				      &dummy);
+	if (ret)
+		return 0;
+
+	bs_table = msm_bus_cl_get_pdata(pdev);
+
+	if (bs_table) {
+		drvdata->bus_client = msm_bus_scale_register_client(bs_table);
+		if (IS_ERR(&drvdata->bus_client)) {
+			pr_err("%s(): Bus client register failed.\n", __func__);
+			ret = -EINVAL;
+		}
+	}
+	return ret;
 }
 
 static void __put_bus_vote_client(struct msm_iommu_drvdata *drvdata)
 {
+	msm_bus_scale_unregister_client(drvdata->bus_client);
 	drvdata->bus_client = 0;
 }
 
