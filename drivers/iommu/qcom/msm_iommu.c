@@ -115,6 +115,25 @@ struct device *msm_iommu_get_ctx(const char *ctx_name)
 }
 EXPORT_SYMBOL(msm_iommu_get_ctx);
 
+/**
+ * Pass the context bank device here. Based on the context bank
+ * device, the bus is chosen and hence the respective IOMMU ops.
+ */
+struct bus_type *msm_iommu_get_bus(struct device *dev)
+{
+	if (!dev)
+		return NULL;
+
+	if (of_device_is_compatible(dev->of_node, "qcom,msm-smmu-v2-ctx")) {
+		if (of_property_read_bool(dev->of_node, "qcom,secure-context"))
+			return &msm_iommu_sec_bus_type;
+		else
+			return &platform_bus_type;
+	} else
+		return &platform_bus_type;
+}
+EXPORT_SYMBOL(msm_iommu_get_bus);
+
 #ifdef CONFIG_ARM
 #ifdef CONFIG_IOMMU_LPAE
 #ifdef CONFIG_ARM_LPAE
