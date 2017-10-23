@@ -313,10 +313,15 @@ static inline struct iommu_access_ops *msm_get_iommu_access_ops(void)
  * their platform devices.
  */
 struct device *msm_iommu_get_ctx(const char *ctx_name);
+struct bus_type *msm_iommu_get_bus(struct device *dev);
 #else
 static inline struct device *msm_iommu_get_ctx(const char *ctx_name)
 {
 	return NULL;
+}
+static inline struct bus_type *msm_iommu_get_bus(struct device *dev)
+{
+	return &platform_bus_type;
 }
 #endif
 
@@ -330,47 +335,10 @@ int msm_iommu_sec_program_iommu(struct msm_iommu_drvdata *drvdata,
 				struct msm_iommu_ctx_drvdata *ctx_drvdata);
 int is_vfe_secure(void);
 
-#ifdef CONFIG_MSM_IOMMU_V0
-static inline int msm_soc_version_supports_iommu_v0(void)
-{
-	static int soc_supports_v0 = -1;
-#ifdef CONFIG_OF
-	struct device_node *node;
-#endif
-
-	if (soc_supports_v0 != -1)
-		return soc_supports_v0;
-
-#ifdef CONFIG_OF
-	node = of_find_compatible_node(NULL, NULL, "qcom,msm-smmu-v0");
-	if (node) {
-		soc_supports_v0 = 1;
-		of_node_put(node);
-		return 1;
-	}
-#endif
-	if (cpu_is_msm8960() &&
-	    SOCINFO_VERSION_MAJOR(socinfo_get_version()) < 2) {
-		soc_supports_v0 = 0;
-		return 0;
-	}
-
-	if (cpu_is_msm8x60() &&
-	    (SOCINFO_VERSION_MAJOR(socinfo_get_version()) != 2 ||
-	    SOCINFO_VERSION_MINOR(socinfo_get_version()) < 1))	{
-		soc_supports_v0 = 0;
-		return 0;
-	}
-
-	soc_supports_v0 = 1;
-	return 1;
-}
-#else
 static inline int msm_soc_version_supports_iommu_v0(void)
 {
 	return 0;
 }
-#endif
 
 int msm_iommu_get_scm_call_avail(void);
 void msm_iommu_check_scm_call_avail(void);
