@@ -4908,13 +4908,13 @@ static void smblib_somc_jeita_work(struct work_struct *work)
 	struct smb_charger *chg = container_of(work, struct smb_charger,
 							jeita_work.work);
 	union power_supply_propval pval = {0, };
-	int rc;
-	int batt_temp, skin_temp;
-	u8 reg;
-	bool vbus_rising;
+	int rc = 0;
+	int batt_temp = 0, skin_temp = 0;
+	u8 reg = 0;
+	bool vbus_rising = false;
 	bool skin_temp_failed = false;
-	int interval_ms;
-	int synth_cond;
+	int interval_ms = 0;
+	int synth_cond = 0;
 
 	if (!chg->jeita_sw_ctl_en)
 		return;
