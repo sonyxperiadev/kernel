@@ -3190,7 +3190,7 @@ static int ci13xxx_start(struct usb_gadget *gadget,
 			 struct usb_gadget_driver *driver)
 {
 	struct ci13xxx *ci = _udc;
-	unsigned long flags;
+	unsigned long flags = 0;
 	int retval = -ENOMEM;
 
 	trace("%pK", driver);
