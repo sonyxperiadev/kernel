@@ -350,7 +350,7 @@ static int pn547_pinctrl_config(struct pn547_dev *dev, uint8_t active)
 static long pn547_dev_ioctl(struct file *filp,
 			   unsigned int cmd, unsigned long arg)
 {
-	int state, ret = 0;
+	int state = 0, ret = 0;
 	struct pn547_dev *pn547_dev = filp->private_data;
 
 	// Activate pinctrl
@@ -489,7 +489,7 @@ static int pn547_probe(struct i2c_client *client,
 	char tmp[4] = {0x20, 0x00, 0x01, 0x01};
 	int addrcnt;
 	struct pn547_i2c_platform_data *platform_data;
-	struct pinctrl *pinctrl;
+	struct pinctrl *pinctrl = NULL;
 	struct pn547_dev *pn547_dev;
 
 	if (client->dev.of_node) {
