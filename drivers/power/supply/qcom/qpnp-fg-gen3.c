@@ -644,7 +644,7 @@ static int fg_get_cc_soc_sw(struct fg_chip *chip, int *val)
 #endif /* CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION */
 static int fg_get_battery_temp(struct fg_chip *chip, int *val)
 {
-	int rc = 0, temp;
+	int rc = 0, temp = 0;
 	u8 buf[2];
 
 	rc = fg_read(chip, BATT_INFO_BATT_TEMP_LSB(chip), buf, 2);

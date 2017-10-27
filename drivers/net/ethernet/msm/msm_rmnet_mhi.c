@@ -600,7 +600,7 @@ static int rmnet_mhi_xmit(struct sk_buff *skb, struct net_device *dev)
 	struct rmnet_mhi_private *rmnet_mhi_ptr =
 			*(struct rmnet_mhi_private **)netdev_priv(dev);
 	int res = 0;
-	unsigned long flags;
+	unsigned long flags = 0;
 	int retry = 0;
 	struct mhi_skb_priv *tx_priv;
 

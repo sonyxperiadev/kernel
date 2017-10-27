@@ -118,7 +118,7 @@ static void kryo_write_pmresr(int reg, int l_h, u32 val)
 
 static u32 kryo_read_pmresr(int reg, int l_h)
 {
-	u32 val;
+	u32 val = 0;
 
 	if (reg > KRYO_MAX_L1_REG) {
 		pr_err("Invalid read of RESR reg %d\n", reg);
