@@ -2821,7 +2821,7 @@ bail:
 static int fastrpc_cb_subsids_probe(struct device *dev)
 {
 	struct fastrpc_channel_ctx *chan;
-	struct fastrpc_session_ctx *main_session, *sess;
+	struct fastrpc_session_ctx *main_session, *sess = NULL;
 	struct of_phandle_args iommuspec;
 	const char *name;
 	unsigned int *range = 0, range_size = 0;

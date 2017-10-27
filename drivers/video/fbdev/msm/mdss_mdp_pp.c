@@ -2733,7 +2733,7 @@ int mdss_mdp_pp_setup_locked(struct mdss_mdp_ctl *ctl,
 	struct mdss_data_type *mdata;
 	int ret = 0, i;
 	u32 flags, pa_v2_flags;
-	u32 max_bw_needed;
+	u32 max_bw_needed = 0;
 	u32 mixer_cnt;
 	u32 mixer_id[MDSS_MDP_INTF_MAX_LAYERMIXER];
 	u32 disp_num;
