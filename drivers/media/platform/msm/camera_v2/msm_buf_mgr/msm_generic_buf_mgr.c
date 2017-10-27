@@ -156,7 +156,8 @@ static int32_t msm_buf_mngr_buf_done(struct msm_buf_mngr_device *buf_mngr_dev,
 						buf_info->stream_id,
 						buf_info->frame_id,
 						&buf_info->timestamp,
-						buf_info->reserved);
+						buf_info->reserved,
+						VB2_BUF_STATE_DONE);
 			list_del_init(&bufs->entry);
 			kfree(bufs);
 			break;
@@ -209,7 +210,8 @@ static int32_t msm_generic_buf_mngr_flush(
 			(bufs->stream_id == buf_info->stream_id)) {
 			ret = buf_mngr_dev->vb2_ops.buf_done(bufs->vb2_v4l2_buf,
 						buf_info->session_id,
-						buf_info->stream_id, 0, &ts, 0);
+						buf_info->stream_id, 0, &ts, 0,
+						VB2_BUF_STATE_DONE);
 			pr_err("Bufs not flushed: str_id = %d buf_index = %d ret = %d\n",
 			buf_info->stream_id, bufs->index,
 			ret);
@@ -540,20 +542,24 @@ static long msm_buf_mngr_subdev_ioctl(struct v4l2_subdev *sd,
 		k_ioctl = *ptr;
 		switch (k_ioctl.id) {
 		case MSM_CAMERA_BUF_MNGR_IOCTL_ID_GET_BUF_BY_IDX: {
-			struct msm_buf_mngr_info buf_info, *tmp = NULL;
 
 			if (k_ioctl.size != sizeof(struct msm_buf_mngr_info))
 				return -EINVAL;
 			if (!k_ioctl.ioctl_ptr)
 				return -EINVAL;
+#ifndef CONFIG_COMPAT
+			{
+				struct msm_buf_mngr_info buf_info, *tmp = NULL;
 
-			MSM_CAM_GET_IOCTL_ARG_PTR(&tmp, &k_ioctl.ioctl_ptr,
-				sizeof(tmp));
-			if (copy_from_user(&buf_info, tmp,
-				sizeof(struct msm_buf_mngr_info))) {
-				return -EFAULT;
+				MSM_CAM_GET_IOCTL_ARG_PTR(&tmp,
+					&k_ioctl.ioctl_ptr, sizeof(tmp));
+				if (copy_from_user(&buf_info, tmp,
+					sizeof(struct msm_buf_mngr_info))) {
+					return -EFAULT;
+				}
+				k_ioctl.ioctl_ptr = (uintptr_t)&buf_info;
 			}
-			k_ioctl.ioctl_ptr = (uintptr_t)&buf_info;
+#endif
 			argp = &k_ioctl;
 			rc = msm_cam_buf_mgr_ops(cmd, argp);
 			}
@@ -674,6 +680,7 @@ static long msm_camera_buf_mgr_internal_compat_ioctl(struct file *file,
 			return -EINVAL;
 		}
 		k_ioctl.ioctl_ptr = (__u64)&buf_info;
+		k_ioctl.size = sizeof(struct msm_buf_mngr_info);
 		rc = msm_camera_buf_mgr_fetch_buf_info(&buf_info32, &buf_info,
 			(unsigned long)tmp_compat_ioctl_ptr);
 		if (rc < 0) {

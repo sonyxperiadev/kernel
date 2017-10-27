@@ -163,7 +163,8 @@ struct msm_isp_buf_ops {
 
 	int (*buf_done)(struct msm_isp_buf_mgr *buf_mgr,
 		uint32_t bufq_handle, uint32_t buf_index,
-		struct timeval *tv, uint32_t frame_id, uint32_t output_format);
+		struct timeval *tv, uint32_t frame_id, uint32_t output_format,
+		enum vb2_buffer_state state);
 	void (*register_ctx)(struct msm_isp_buf_mgr *buf_mgr,
 		struct device **iommu_ctx1, struct device **iommu_ctx2,
 		int num_iommu_ctx1, int num_iommu_ctx2);
