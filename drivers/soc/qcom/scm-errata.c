@@ -128,7 +128,7 @@ static struct notifier_block scm_errata_notifier = {
 
 static int __init scm_errata_init(void)
 {
-	int ret;
+	int ret = 0;
 
 	debugfs_base = debugfs_create_dir("scm_errata", NULL);
 	if (!debugfs_base)
