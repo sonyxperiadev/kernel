@@ -466,8 +466,8 @@ static void sde_rotator_stop_streaming(struct vb2_queue *q)
 		sde_rotator_cancel_all_requests(rot_dev->mgr, ctx->private);
 		sde_rot_mgr_unlock(rot_dev->mgr);
 		mutex_unlock(q->lock);
-		cancel_work_sync(&ctx->submit_work);
-		cancel_work_sync(&ctx->retire_work);
+		flush_kthread_work(&ctx->submit_work);
+		flush_kthread_work(&ctx->retire_work);
 		mutex_lock(q->lock);
 	}
 
