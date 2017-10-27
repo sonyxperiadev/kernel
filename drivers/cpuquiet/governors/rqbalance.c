@@ -427,7 +427,6 @@ static CPU_SPEED_BALANCE balanced_speed_balance(void)
 
 	unsigned int avg_nr_run = get_nr_run_avg();
 	unsigned int nr_run;
-	bool done;
 
 	/* First use the up thresholds to see if we need to bring CPUs online. */
 	pr_debug("%s: Current core count max runqueue: %d\n", __func__,
@@ -448,7 +447,7 @@ static CPU_SPEED_BALANCE balanced_speed_balance(void)
 	 * down threshold comparison loop.
 	 */
 	for ( ; nr_run > 1; --nr_run) {
-		if (done || avg_nr_run >= nr_down_run_thresholds[nr_run - 1]) {
+		if (avg_nr_run >= nr_down_run_thresholds[nr_run - 1]) {
 			/* We have fewer things running than our down threshold.
 			   Use one less CPU. */
 			break;
