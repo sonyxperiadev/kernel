@@ -1394,7 +1394,7 @@ static int cpr_pvs_init(struct cpr2_gfx_regulator *cpr_vreg)
 	struct device_node *of_node = cpr_vreg->dev->of_node;
 	u64 efuse_bits;
 	int i, size, sign, steps, step_size_uv, rc, pos;
-	u32 *fuse_sel, *tmp, *ref_uv;
+	u32 *fuse_sel = 0, *tmp = 0, *ref_uv;
 	struct property *prop;
 	size_t buflen;
 	char *buf;
