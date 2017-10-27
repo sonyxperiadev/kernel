@@ -30,7 +30,9 @@
 #include "compiler.h"
 #include "datapage.h"
 
+#ifdef ARCH_PROVIDES_TIMER
 DEFINE_FALLBACK(gettimeofday, struct timeval *, tv, struct timezone *, tz)
+#endif
 DEFINE_FALLBACK(clock_gettime, clockid_t, clock, struct timespec *, ts)
 DEFINE_FALLBACK(clock_getres, clockid_t, clock, struct timespec *, ts)
 
@@ -291,30 +293,6 @@ static notrace int do_boottime(const struct vdso_data *vd, struct timespec *ts)
 	return 0;
 }
 
-#else /* ARCH_PROVIDES_TIMER */
-
-static notrace int do_realtime(const struct vdso_data *vd, struct timespec *ts)
-{
-	return -1;
-}
-
-static notrace int do_monotonic(const struct vdso_data *vd, struct timespec *ts)
-{
-	return -1;
-}
-
-static notrace int do_monotonic_raw(const struct vdso_data *vd,
-				    struct timespec *ts)
-{
-	return -1;
-}
-
-static notrace int do_boottime(const struct vdso_data *vd,
-			       struct timespec *ts)
-{
-	return -1;
-}
-
 #endif /* ARCH_PROVIDES_TIMER */
 
 notrace int __vdso_clock_gettime(clockid_t clock, struct timespec *ts)
@@ -328,6 +306,7 @@ notrace int __vdso_clock_gettime(clockid_t clock, struct timespec *ts)
 	case CLOCK_MONOTONIC_COARSE:
 		do_monotonic_coarse(vd, ts);
 		break;
+#ifdef ARCH_PROVIDES_TIMER
 	case CLOCK_REALTIME:
 		if (do_realtime(vd, ts))
 			goto fallback;
@@ -344,6 +323,7 @@ notrace int __vdso_clock_gettime(clockid_t clock, struct timespec *ts)
 		if (do_boottime(vd, ts))
 			goto fallback;
 		break;
+#endif
 	default:
 		goto fallback;
 	}
@@ -353,6 +333,7 @@ fallback:
 	return clock_gettime_fallback(clock, ts);
 }
 
+#ifdef ARCH_PROVIDES_TIMER
 notrace int __vdso_gettimeofday(struct timeval *tv, struct timezone *tz)
 {
 	const struct vdso_data *vd = __get_datapage();
@@ -374,21 +355,28 @@ notrace int __vdso_gettimeofday(struct timeval *tv, struct timezone *tz)
 
 	return 0;
 }
+#endif
 
 int __vdso_clock_getres(clockid_t clock, struct timespec *res)
 {
 	long nsec;
 
-	if (clock == CLOCK_REALTIME ||
-	    clock == CLOCK_BOOTTIME ||
-	    clock == CLOCK_MONOTONIC ||
-	    clock == CLOCK_MONOTONIC_RAW)
-		nsec = MONOTONIC_RES_NSEC;
-	else if (clock == CLOCK_REALTIME_COARSE ||
-		 clock == CLOCK_MONOTONIC_COARSE)
+	switch (clock) {
+	case CLOCK_REALTIME_COARSE:
+	case CLOCK_MONOTONIC_COARSE:
 		nsec = LOW_RES_NSEC;
-	else
+		break;
+#ifdef ARCH_PROVIDES_TIMER
+	case CLOCK_REALTIME:
+	case CLOCK_MONOTONIC:
+	case CLOCK_MONOTONIC_RAW:
+	case CLOCK_BOOTTIME:
+		nsec = MONOTONIC_RES_NSEC;
+		break;
+#endif
+	default:
 		return clock_getres_fallback(clock, res);
+	}
 
 	if (likely(res != NULL)) {
 		res->tv_sec = 0;
