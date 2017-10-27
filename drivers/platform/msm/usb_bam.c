@@ -2764,7 +2764,7 @@ static void usb_bam_sps_events(enum sps_callback_case sps_cb_case, void *user)
 {
 	int i;
 	int bam;
-	struct usb_bam_ctx_type *ctx;
+	struct usb_bam_ctx_type *ctx = NULL;
 	struct usb_bam_pipe_connect *pipe_connect;
 	struct usb_bam_event_info *event_info;
 
