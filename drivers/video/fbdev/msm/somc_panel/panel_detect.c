@@ -112,7 +112,7 @@ static int dric_panel_detect(struct device_node **node,
 {
 	struct device_node *parent;
 	struct device_node *next;
-	int rc, dric = -EINVAL;
+	int rc = -EINVAL, dric = -EINVAL;
 
 	parent = of_get_parent(*node);
 
@@ -146,7 +146,7 @@ static int cmd_panel_detect(struct mdss_panel_data *pdata)
 	const char *data;
 	char *rx_data;
 	u32 tmp;
-	int i, len, rc;
+	int i, len, rc = 0;
 
 	if (pdata == NULL) {
 		pr_err("%s: Invalid input data\n", __func__);
@@ -258,7 +258,7 @@ static int postdetect_update_panel(struct mdss_panel_data *pdata)
 	struct mdss_panel_specific_pdata *spec_pdata = NULL;
 	struct mdss_panel_info *pinfo;
 	struct mipi_panel_info *mipi;
-	int rc;
+	int rc = 0;
 
 	if (pdata == NULL) {
 		pr_err("%s: Invalid input data\n", __func__);
@@ -307,7 +307,7 @@ static int adc_panel_detect(struct device_node **node,
 	struct device_node *parent;
 	struct device_node *next;
 	u32 res[ADC_PNUM], index, scaling = 1;
-	int rc;
+	int rc = 0;
 
 	parent = of_get_parent(*node);
 
