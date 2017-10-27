@@ -299,7 +299,7 @@ uintptr_t mhi_p2v_addr(struct mhi_device_ctxt *mhi_dev_ctxt,
 			enum MHI_RING_TYPE type,
 			u32 chan, uintptr_t phy_ptr)
 {
-	uintptr_t virtual_ptr;
+	uintptr_t virtual_ptr = 0;
 	struct mhi_ring_ctxt *cs = &mhi_dev_ctxt->dev_space.ring_ctxt;
 
 	switch (type) {
@@ -328,7 +328,7 @@ dma_addr_t mhi_v2p_addr(struct mhi_device_ctxt *mhi_dev_ctxt,
 			enum MHI_RING_TYPE type,
 			 u32 chan, uintptr_t va_ptr)
 {
-	dma_addr_t phy_ptr;
+	dma_addr_t phy_ptr = 0;
 	struct mhi_ring_ctxt *cs = &mhi_dev_ctxt->dev_space.ring_ctxt;
 
 	switch (type) {
