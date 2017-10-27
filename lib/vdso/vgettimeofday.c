@@ -385,3 +385,13 @@ int __vdso_clock_getres(clockid_t clock, struct timespec *res)
 
 	return 0;
 }
+
+notrace time_t __vdso_time(time_t *t)
+{
+	const struct vdso_data *vd = __get_datapage();
+	time_t result = READ_ONCE(vd->xtime_coarse_sec);
+
+	if (t)
+		*t = result;
+	return result;
+}

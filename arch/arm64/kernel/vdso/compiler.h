@@ -65,5 +65,6 @@ static __always_inline notrace u64 arch_vdso_read_counter(void)
 #define __vdso_clock_gettime __kernel_clock_gettime
 #define __vdso_gettimeofday __kernel_gettimeofday
 #define __vdso_clock_getres __kernel_clock_getres
+#define __vdso_time __kernel_time
 
 #endif /* __VDSO_COMPILER_H */
