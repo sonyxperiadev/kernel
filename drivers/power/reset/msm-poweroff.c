@@ -334,6 +334,10 @@ static void msm_restart_prepare(const char *cmd)
 			qpnp_pon_set_restart_reason(
 				PON_RESTART_REASON_OEM_F);
 			__raw_writel(0x6f656d46, restart_reason); //oem-F
+#elif defined(TARGET_SOMC_S1BOOT)
+			qpnp_pon_set_restart_reason(
+				PON_RESTART_REASON_RECOVERY);
+			__raw_writel(0x6f656d46, restart_reason); //oem-46
 #else
 			qpnp_pon_set_restart_reason(
 				PON_RESTART_REASON_RECOVERY);
