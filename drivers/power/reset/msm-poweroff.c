@@ -366,7 +366,7 @@ static void msm_restart_prepare(const char *cmd)
 			enable_emergency_dload_mode();
 		} else {
 			pr_notice("%s : cmd is %s, set to reboot mode\n", __func__, cmd);
-#ifdef TARGET_SOMC_XBOOT
+#if defined(TARGET_SOMC_XBOOT) || defined(TARGET_SOMC_S1BOOT)
 			qpnp_pon_set_restart_reason(PON_RESTART_REASON_UNKNOWN);
 #else
 			qpnp_pon_set_restart_reason(PON_RESTART_REASON_REBOOT);
@@ -378,6 +378,9 @@ static void msm_restart_prepare(const char *cmd)
 #ifdef TARGET_SOMC_XBOOT
 		qpnp_pon_set_restart_reason(PON_RESTART_REASON_UNKNOWN);
 		__raw_writel(0x77665501, restart_reason);
+#elif defined(TARGET_SOMC_S1BOOT)
+		qpnp_pon_set_restart_reason(PON_RESTART_REASON_UNKNOWN);
+		__raw_writel(0x776655AA, restart_reason);
 #else
 		qpnp_pon_set_restart_reason(PON_RESTART_REASON_REBOOT);
 		__raw_writel(0x776655AA, restart_reason);
