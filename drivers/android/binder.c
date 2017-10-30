@@ -1042,7 +1042,7 @@ static inline void binder_put_node(struct binder_node *node)
 }
 
 static struct binder_ref *binder_get_ref(struct binder_proc *proc,
-					 uint32_t desc, bool need_strong_ref)
+					 u32 desc, bool need_strong_ref)
 {
 	struct rb_node *n;
 	struct binder_ref *ref;
@@ -1626,7 +1626,6 @@ static void binder_transaction_buffer_release(struct binder_proc *proc,
 			fp = to_flat_binder_object(hdr);
 			ref = binder_get_ref(proc, fp->handle,
 					     hdr->type == BINDER_TYPE_HANDLE);
-
 			if (ref == NULL) {
 				pr_err("transaction release %d bad handle %d, target died\n",
 				 debug_id, fp->handle);
@@ -2289,9 +2288,9 @@ static void binder_transaction(struct binder_proc *proc,
 		goto err_bad_offset;
 	}
 	if (!IS_ALIGNED(extra_buffers_size, sizeof(u64))) {
-		binder_user_error("%d:%d got transaction with unaligned buffers size, %lld\n",
+		binder_user_error("%d:%d got transaction with unaligned buffers size, %llu\n",
 				  proc->pid, thread->pid,
-				  (u64)extra_buffers_size);
+				  extra_buffers_size);
 		return_error = BR_FAILED_REPLY;
 		return_error_line = __LINE__;
 		goto err_bad_offset;
@@ -2406,10 +2405,9 @@ static void binder_transaction(struct binder_proc *proc,
 				return_error_line = __LINE__;
 				goto err_bad_offset;
 			}
-			if (copy_from_user_preempt_disabled(
-					sg_bufp,
-					(const void __user *)(uintptr_t)
-					bp->buffer, bp->length)) {
+			if (copy_from_user(sg_bufp,
+					  (const void __user *)(uintptr_t)
+					  bp->buffer, bp->length)) {
 				binder_user_error("%d:%d got transaction with invalid offsets ptr\n",
 						  proc->pid, thread->pid);
 				return_error = BR_FAILED_REPLY;
@@ -2763,8 +2761,8 @@ static int binder_thread_write(struct binder_proc *proc,
 		case BC_REPLY_SG: {
 			struct binder_transaction_data_sg tr;
 
-			if (copy_from_user_preempt_disabled(&tr, ptr,
-							    sizeof(tr)))
+			if (copy_from_user(&tr, ptr,
+					   sizeof(tr)))
 				return -EFAULT;
 			ptr += sizeof(tr);
 			binder_transaction(proc, thread, &tr.transaction_data,
