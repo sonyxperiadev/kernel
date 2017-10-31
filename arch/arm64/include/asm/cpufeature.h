@@ -262,6 +262,11 @@ void arm64_set_ssbd_mitigation(bool state);
 static inline void arm64_set_ssbd_mitigation(bool state) {}
 #endif
 
+static inline bool system_supports_sve(void)
+{
+	return false;
+}
+
 #endif /* __ASSEMBLY__ */
 
 #endif
