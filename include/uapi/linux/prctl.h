@@ -218,4 +218,9 @@ struct prctl_mm_map {
 #define PR_SET_VMA		0x53564d41
 # define PR_SET_VMA_ANON_NAME		0
 
+/* arm64 Scalable Vector Extension controls */
+# define PR_SVE_SET_VL_ONEXEC		(1 << 18) /* defer effect until exec */
+# define PR_SVE_VL_LEN_MASK		0xffff
+# define PR_SVE_VL_INHERIT		(1 << 17) /* inherit across exec */
+
 #endif /* _LINUX_PRCTL_H */
