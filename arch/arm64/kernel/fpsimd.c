@@ -896,9 +896,10 @@ void kernel_neon_begin_partial(u32 num_regs)
 		 * registers.
 		 */
 		preempt_disable();
-		if (current->mm &&
-		    !test_and_set_thread_flag(TIF_FOREIGN_FPSTATE))
-			fpsimd_save_state(&current->thread.fpsimd_state);
+		if (current->mm) {
+			task_fpsimd_save();
+			set_thread_flag(TIF_FOREIGN_FPSTATE);
+		}
 		this_cpu_write(fpsimd_last_state, NULL);
 	}
 }
