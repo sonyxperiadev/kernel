@@ -3798,7 +3798,7 @@ static int smb1360_regulator_init(struct smb1360_chip *chip)
 	struct regulator_init_data *init_data;
 	struct regulator_config cfg = {};
 
-	init_data = of_get_regulator_init_data(chip->dev, chip->dev->of_node);
+	init_data = of_get_regulator_init_data(chip->dev, chip->dev->of_node, NULL);
 	if (!init_data) {
 		dev_err(chip->dev, "Unable to allocate memory\n");
 		return -ENOMEM;
