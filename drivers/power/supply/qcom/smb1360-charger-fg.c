@@ -5993,4 +5993,3 @@ module_i2c_driver(smb1360_driver);
 
 MODULE_DESCRIPTION("SMB1360 Charger and Fuel Gauge");
 MODULE_LICENSE("GPL v2");
-MODULE_ALIAS("i2c:smb1360-chg-fg");
