@@ -62,6 +62,8 @@ struct thread_info {
 #define thread_saved_fp(tsk)	\
 	((unsigned long)(tsk->thread.cpu_context.fp))
 
+void arch_release_task_struct(struct task_struct *tsk);
+
 #endif
 
 /*
@@ -91,6 +93,7 @@ struct thread_info {
 #define TIF_32BIT		22	/* 32bit process */
 #define TIF_SSBD		23	/* Wants SSB mitigation */
 #define TIF_MM_RELEASED		24
+#define TIF_SVE			25	/* Scalable Vector Extension in use */
 
 #define _TIF_SIGPENDING		(1 << TIF_SIGPENDING)
 #define _TIF_NEED_RESCHED	(1 << TIF_NEED_RESCHED)
@@ -102,6 +105,7 @@ struct thread_info {
 #define _TIF_SYSCALL_TRACEPOINT	(1 << TIF_SYSCALL_TRACEPOINT)
 #define _TIF_SECCOMP		(1 << TIF_SECCOMP)
 #define _TIF_32BIT		(1 << TIF_32BIT)
+#define _TIF_SVE		(1 << TIF_SVE)
 
 #define _TIF_WORK_MASK		(_TIF_NEED_RESCHED | _TIF_SIGPENDING | \
 				 _TIF_NOTIFY_RESUME | _TIF_FOREIGN_FPSTATE)
