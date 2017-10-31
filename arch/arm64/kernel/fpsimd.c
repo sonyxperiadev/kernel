@@ -20,6 +20,7 @@
 #include <linux/cpu.h>
 #include <linux/cpu_pm.h>
 #include <linux/kernel.h>
+#include <linux/linkage.h>
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/sched.h>
@@ -112,7 +113,7 @@ void fpsimd_settings_disable(void)
 /*
  * Trapped FP/ASIMD access.
  */
-void do_fpsimd_acc(unsigned int esr, struct pt_regs *regs)
+asmlinkage void do_fpsimd_acc(unsigned int esr, struct pt_regs *regs)
 {
 	if (!fpsimd_settings)
 		return;
@@ -135,7 +136,7 @@ void do_fpsimd_acc_compat(unsigned int esr, struct pt_regs *regs)
 /*
  * Raise a SIGFPE for the current process.
  */
-void do_fpsimd_exc(unsigned int esr, struct pt_regs *regs)
+asmlinkage void do_fpsimd_exc(unsigned int esr, struct pt_regs *regs)
 {
 	siginfo_t info;
 	unsigned int si_code = 0;
