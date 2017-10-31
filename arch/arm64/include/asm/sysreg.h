@@ -82,6 +82,7 @@
 
 #define SYS_ID_AA64PFR0_EL1		sys_reg(3, 0, 0, 4, 0)
 #define SYS_ID_AA64PFR1_EL1		sys_reg(3, 0, 0, 4, 1)
+#define SYS_ID_AA64ZFR0_EL1		sys_reg(3, 0, 0, 4, 4)
 
 #define SYS_ID_AA64DFR0_EL1		sys_reg(3, 0, 0, 5, 0)
 #define SYS_ID_AA64DFR1_EL1		sys_reg(3, 0, 0, 5, 1)
@@ -96,6 +97,9 @@
 #define SYS_CNTFRQ_EL0			sys_reg(3, 3, 14, 0, 0)
 #define SYS_CTR_EL0			sys_reg(3, 3, 0, 0, 1)
 #define SYS_DCZID_EL0			sys_reg(3, 3, 0, 0, 7)
+
+#define SYS_ZCR_EL1			sys_reg(3, 0, 1, 2, 0)
+#define SYS_ZCR_EL2			sys_reg(3, 4, 1, 2, 0)
 
 #define REG_PSTATE_PAN_IMM		sys_reg(0, 0, 4, 0, 4)
 #define REG_PSTATE_UAO_IMM		sys_reg(0, 0, 4, 0, 3)
@@ -157,6 +161,7 @@
 #define ID_AA64PFR0_EL1_SHIFT		4
 #define ID_AA64PFR0_EL0_SHIFT		0
 
+#define ID_AA64PFR0_SVE			0x1
 #define ID_AA64PFR0_FP_NI		0xf
 #define ID_AA64PFR0_FP_SUPPORTED	0x0
 #define ID_AA64PFR0_ASIMD_NI		0xf
@@ -256,6 +261,20 @@
 #define ID_AA64MMFR0_TGRAN_SHIFT	ID_AA64MMFR0_TGRAN64_SHIFT
 #define ID_AA64MMFR0_TGRAN_SUPPORTED	ID_AA64MMFR0_TGRAN64_SUPPORTED
 #endif
+
+
+/*
+ * The ZCR_ELx_LEN_* definitions intentionally include bits [8:4] which
+ * are reserved by the SVE architecture for future expansion of the LEN
+ * field, with compatible semantics.
+ */
+#define ZCR_ELx_LEN_SHIFT	0
+#define ZCR_ELx_LEN_SIZE	9
+#define ZCR_ELx_LEN_MASK	0x1ff
+
+#define CPACR_EL1_ZEN_EL1EN	(1 << 16) /* enable EL1 access */
+#define CPACR_EL1_ZEN_EL0EN	(1 << 17) /* enable EL0 access, if EL1EN set */
+#define CPACR_EL1_ZEN		(CPACR_EL1_ZEN_EL1EN | CPACR_EL1_ZEN_EL0EN)
 
 
 /* Safe value for MPIDR_EL1: Bit31:RES1, Bit30:U:0, Bit24:MT:0 */
