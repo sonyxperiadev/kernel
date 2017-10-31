@@ -94,6 +94,7 @@ void arch_release_task_struct(struct task_struct *tsk);
 #define TIF_SSBD		23	/* Wants SSB mitigation */
 #define TIF_MM_RELEASED		24
 #define TIF_SVE			25	/* Scalable Vector Extension in use */
+#define TIF_SVE_VL_INHERIT	26	/* Inherit sve_vl_onexec across exec */
 
 #define _TIF_SIGPENDING		(1 << TIF_SIGPENDING)
 #define _TIF_NEED_RESCHED	(1 << TIF_NEED_RESCHED)
