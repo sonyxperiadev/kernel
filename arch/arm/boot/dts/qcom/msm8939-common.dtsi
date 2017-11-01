@@ -1056,8 +1056,7 @@
 	};
 
 	blsp1_uart2: serial@78b0000 {
-		compatible = "qcom,msm-lsuart-v14", "qcom,msm-uartdm-v1.4",
-				"qcom,msm-uartdm", "qcom,msm-hsl-uart";
+		compatible = "qcom,msm-lsuart-v14";
 		reg = <0x78b0000 0x200>;
 		interrupts = <0 108 0>;
 		status = "disabled";
@@ -1392,8 +1391,8 @@
 		interrupt-map = <0 &intc 0 107 0
 				1 &intc 0 238 0
 				2 &msm_gpio 1 0>;
-		qcom,bam-tx-ep-pipe-index = <0>;
-		qcom,bam-rx-ep-pipe-index = <1>;
+		qcom,bam-tx-ep-pipe-index = <2>;
+		qcom,bam-rx-ep-pipe-index = <3>;
 		clocks = <&clock_gcc clk_gcc_blsp1_uart1_apps_clk>,
 			<&clock_gcc clk_gcc_blsp1_ahb_clk>;
 		clock-names = "core_clk", "iface_clk";
@@ -1406,7 +1405,6 @@
 		pinctrl-names = "default", "sleep";
 		pinctrl-0 = <&hsuart_active>;
 		pinctrl-1 = <&hsuart_sleep>;
-		status = "disabled";
 	};
 
 	qcom,venus@1de0000 {
