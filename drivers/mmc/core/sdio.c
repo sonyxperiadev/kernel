@@ -1331,6 +1331,9 @@ int mmc_attach_sdio(struct mmc_host *host)
 			goto remove_added;
 	}
 
+	if (host->caps2 & MMC_CAP2_NONSTANDARD_NONREMOVABLE)
+		host->caps |= MMC_CAP_NONREMOVABLE;
+
 	mmc_claim_host(host);
 	return 0;
 
