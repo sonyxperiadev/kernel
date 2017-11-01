@@ -47,7 +47,7 @@
 #define SCM_EDLOAD_MODE			0X01
 #define SCM_DLOAD_CMD			0x10
 
-#if defined(CONFIG_ARCH_SONY_LOIRE) || defined(CONFIG_ARCH_SONY_TONE)
+#if defined(CONFIG_ARCH_SONY_KANUTI) || defined(CONFIG_ARCH_SONY_LOIRE) || defined(CONFIG_ARCH_SONY_TONE)
  #define TARGET_SOMC_S1BOOT
 #endif
 #if defined(CONFIG_ARCH_SONY_YOSHINO)
