@@ -78,6 +78,9 @@ bool dhd_mp_halting(dhd_pub_t *dhdp);
 extern void bcmsdh_waitfor_iodrain(void *sdh);
 extern void bcmsdh_reject_ioreqs(void *sdh, bool reject);
 extern bool  bcmsdh_fatal_error(void *sdh);
+static int dhdsdio_suspend(void *context);
+static int dhdsdio_resume(void *context);
+
 
 #ifndef DHDSDIO_MEM_DUMP_FNAME
 #define DHDSDIO_MEM_DUMP_FNAME         "mem_dump"
@@ -606,7 +609,8 @@ static int dhdsdio_bussleep(dhd_bus_t *bus, bool sleep);
 static int dhdsdio_clkctl(dhd_bus_t *bus, uint target, bool pendok);
 static uint8 dhdsdio_sleepcsr_get(dhd_bus_t *bus);
 static bool dhdsdio_dpc(dhd_bus_t *bus);
-
+static int dhdsdio_set_sdmode(dhd_bus_t *bus, int32 sd_mode);
+static int dhdsdio_sdclk(dhd_bus_t *bus, bool on);
 
 int dhd_bcmsdh_send_buffer(void *bus, uint8 *frame, uint16 len);
 #ifdef DHD_ULP
@@ -1033,7 +1037,12 @@ dhdsdio_clk_devsleep_iovar(dhd_bus_t *bus, bool on)
 #ifdef USE_CMD14
 		err = bcmsdh_sleep(bus->sdh, TRUE);
 #else
-
+		if ((SLPAUTO_ENAB(bus)) && (bus->idleclock == DHD_IDLE_STOP)) {
+			if (sd1idle) {
+				/* Change to SD1 mode */
+				dhdsdio_set_sdmode(bus, 1);
+			}
+		}
 
 		err = dhdsdio_clk_kso_enab(bus, FALSE);
 		if (OOB_WAKEUP_ENAB(bus))
@@ -1041,6 +1050,12 @@ dhdsdio_clk_devsleep_iovar(dhd_bus_t *bus, bool on)
 			err = bcmsdh_gpioout(bus->sdh, GPIO_DEV_WAKEUP, FALSE);  /* GPIO_1 is off */
 		}
 #endif /* USE_CMD14 */
+
+		if ((SLPAUTO_ENAB(bus)) && (bus->idleclock != DHD_IDLE_ACTIVE)) {
+			DHD_TRACE(("%s: Turnoff SD clk\n", __FUNCTION__));
+			/* Now remove the SD clock */
+			err = dhdsdio_sdclk(bus, FALSE);
+		}
 	} else {
 		/* Exit Sleep */
 		/* Make sure we have SD bus access */
@@ -1101,7 +1116,9 @@ dhdsdio_clk_devsleep_iovar(dhd_bus_t *bus, bool on)
 			err = 0; /* continue anyway */
 		}
 
-
+		if ((SLPAUTO_ENAB(bus)) && (bus->idleclock == DHD_IDLE_STOP)) {
+			dhdsdio_set_sdmode(bus, bus->sd_mode);
+		}
 #endif /* !USE_CMD14 */
 
 		if (err == 0) {
@@ -1293,6 +1310,22 @@ dhdsdio_htclk(dhd_bus_t *bus, bool on, bool pendok)
 	return BCME_OK;
 }
 
+/* Change SD1/SD4 bus mode */
+static int
+dhdsdio_set_sdmode(dhd_bus_t *bus, int32 sd_mode)
+{
+	int err;
+
+	err = bcmsdh_iovar_op(bus->sdh, "sd_mode", NULL, 0,
+		&sd_mode, sizeof(sd_mode), TRUE);
+	if (err) {
+		DHD_ERROR(("%s: error changing sd_mode: %d\n",
+			__FUNCTION__, err));
+		return BCME_ERROR;
+	}
+	return BCME_OK;
+}
+
 /* Change idle/active SD state */
 static int
 dhdsdio_sdclk(dhd_bus_t *bus, bool on)
@@ -1314,14 +1347,6 @@ dhdsdio_sdclk(dhd_bus_t *bus, bool on)
 				return BCME_ERROR;
 			}
 
-			iovalue = bus->sd_mode;
-			err = bcmsdh_iovar_op(bus->sdh, "sd_mode", NULL, 0,
-			                      &iovalue, sizeof(iovalue), TRUE);
-			if (err) {
-				DHD_ERROR(("%s: error changing sd_mode: %d\n",
-				           __FUNCTION__, err));
-				return BCME_ERROR;
-			}
 		} else if (bus->idleclock != DHD_IDLE_ACTIVE) {
 			/* Restore clock speed */
 			iovalue = bus->sd_divisor;
@@ -1342,18 +1367,6 @@ dhdsdio_sdclk(dhd_bus_t *bus, bool on)
 			return BCME_ERROR;
 		}
 		if (bus->idleclock == DHD_IDLE_STOP) {
-			if (sd1idle) {
-				/* Change to SD1 mode and turn off clock */
-				iovalue = 1;
-				err = bcmsdh_iovar_op(bus->sdh, "sd_mode", NULL, 0,
-				                      &iovalue, sizeof(iovalue), TRUE);
-				if (err) {
-					DHD_ERROR(("%s: error changing sd_clock: %d\n",
-					           __FUNCTION__, err));
-					return BCME_ERROR;
-				}
-			}
-
 			iovalue = 0;
 			err = bcmsdh_iovar_op(bus->sdh, "sd_clock", NULL, 0,
 			                      &iovalue, sizeof(iovalue), TRUE);
@@ -2529,7 +2542,8 @@ enum {
 	IOV_TXGLOMSIZE,
 	IOV_TXGLOMMODE,
 	IOV_HANGREPORT,
-	IOV_TXINRX_THRES
+	IOV_TXINRX_THRES,
+	IOV_SDIO_SUSPEND
 };
 
 const bcm_iovar_t dhdsdio_iovars[] = {
@@ -2583,6 +2597,7 @@ const bcm_iovar_t dhdsdio_iovars[] = {
 	{"txglomsize", IOV_TXGLOMSIZE, 0, IOVT_UINT32, 0 },
 	{"fw_hang_report", IOV_HANGREPORT, 0, IOVT_BOOL, 0 },
 	{"txinrx_thres", IOV_TXINRX_THRES, 0, IOVT_INT32, 0 },
+	{"sdio_suspend", IOV_SDIO_SUSPEND, 0, IOVT_UINT32, 0 },
 	{NULL, 0, 0, 0, 0 }
 };
 
@@ -3897,6 +3912,20 @@ dhdsdio_doiovar(dhd_bus_t *bus, const bcm_iovar_t *vi, uint32 actionid, const ch
 			bcmerror = BCME_BADARG;
 		} else {
 			bus->txinrx_thres = int_val;
+		}
+		break;
+
+	case IOV_GVAL(IOV_SDIO_SUSPEND):
+		int_val = (bus->dhd->busstate == DHD_BUS_SUSPEND) ? 1 : 0;
+		bcopy(&int_val, arg, val_size);
+		break;
+
+	case IOV_SVAL(IOV_SDIO_SUSPEND):
+		if (bool_val) { /* Suspend */
+			dhdsdio_suspend(bus);
+		}
+		else { /* Resume */
+			dhdsdio_resume(bus);
 		}
 		break;
 
