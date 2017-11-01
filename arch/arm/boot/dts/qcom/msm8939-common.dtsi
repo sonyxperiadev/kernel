@@ -1749,12 +1749,12 @@
 
 		qcom,clock-freq-tbl {
 			qcom,profile-dec {
-				qcom,codec-mask = <0x030fcfff>; // TODO: CHECKME! (0x0c000000)
+				qcom,codec-mask = <0xffffffff>;
 				qcom,cycles-per-mb = <392>;
 				qcom,low-power-mode-factor = <65536>;
 			};
 			qcom,profile-enc {
-				qcom,codec-mask = <0x01000414>; // TODO: CHECKME!
+				qcom,codec-mask = <0x55555555>;
 				qcom,cycles-per-mb = <656>;
 				qcom,low-power-mode-factor = <65536>;
 			};
@@ -1763,12 +1763,12 @@
 		/* Bus governor tables */
 		venus-ddr-gov {
 			compatible = "qcom,msm-vidc,governor,table";
-
 			name = "venus-ddr-gov";
 			status = "ok";
 			qcom,bus-freq-table {
 				qcom,profile-enc {
-					qcom,codec-mask = <0x01000414>;
+					/* Codec mask for "all encoders" */
+					qcom,codec-mask = <0x55555555>;
 					qcom,load-busfreq-tbl =
 						<979200 1044000>,  /* UHD30E     */
 						<864000 887000>,   /* 720p240LPE */
@@ -1780,7 +1780,8 @@
 						<0 0>;
 				};
 				qcom,profile-dec {
-					qcom,codec-mask = <0x030fcfff>;
+					/* Codec mask for "all encoders" */
+					qcom,codec-mask = <0xffffffff>;
 					qcom,load-busfreq-tbl =
 						<979200 2365000>,  /* UHD30D     */
 						<864000 1978000>,  /* 720p240D   */
@@ -1792,7 +1793,7 @@
 						<0 0>;
 				};
 				qcom,profile-dec-ubwc {
-					qcom,codec-mask = <0x030fcfff>;
+					qcom,codec-mask = <0xffffffff>;
 					qcom,ubwc-mode;
 					qcom,load-busfreq-tbl =
 						<979200 1892000>,  /* UHD30D     */
@@ -1805,7 +1806,7 @@
 						<0 0>;
 				};
 				qcom,profile-dec-ubwc-10bit {
-					qcom,codec-mask = <0x030fcfff>;
+					qcom,codec-mask = <0xffffffff>;
 					qcom,ubwc-10bit;
 					qcom,load-busfreq-tbl =
 						<979200 2446336>,  /* UHD30D     */
