@@ -1167,9 +1167,11 @@ out:
 static int mmc_sdio_runtime_suspend(struct mmc_host *host)
 {
 	/* No references to the card, cut the power to it. */
-	mmc_claim_host(host);
-	mmc_power_off(host);
-	mmc_release_host(host);
+	if (!mmc_card_keep_power(host)) {
+		mmc_claim_host(host);
+		mmc_power_off(host);
+		mmc_release_host(host);
+	}
 
 	return 0;
 }
@@ -1180,7 +1182,8 @@ static int mmc_sdio_runtime_resume(struct mmc_host *host)
 
 	/* Restore power and re-initialize. */
 	mmc_claim_host(host);
-	mmc_power_up(host, host->card->ocr);
+	if (!mmc_card_keep_power(host))
+		mmc_power_up(host, host->card->ocr);
 	ret = mmc_sdio_power_restore(host);
 	mmc_release_host(host);
 
