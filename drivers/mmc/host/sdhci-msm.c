@@ -5185,12 +5185,18 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 	msm_host->pdata->sdiowakeup_irq = platform_get_irq_byname(pdev,
 							  "sdiowakeup_irq");
 	if (sdhci_is_valid_gpio_wakeup_int(msm_host)) {
+		unsigned long sdio_irq_flags = IRQF_SHARED;
+#ifdef CONFIG_BCMDHD_SDIO
+		sdio_irq_flags |= IRQF_TRIGGER_LOW;
+#else
+		sdio_irq_flags |= IRQF_TRIGGER_HIGH;
+#endif
 		dev_info(&pdev->dev, "%s: sdiowakeup_irq = %d\n", __func__,
 				msm_host->pdata->sdiowakeup_irq);
 		msm_host->is_sdiowakeup_enabled = true;
 		ret = request_irq(msm_host->pdata->sdiowakeup_irq,
 				  sdhci_msm_sdiowakeup_irq,
-				  IRQF_SHARED | IRQF_TRIGGER_HIGH,
+				  sdio_irq_flags,
 				  "sdhci-msm sdiowakeup", host);
 		if (ret) {
 			dev_err(&pdev->dev, "%s: request sdiowakeup IRQ %d: failed: %d\n",
