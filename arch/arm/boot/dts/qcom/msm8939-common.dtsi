@@ -1895,9 +1895,8 @@
 			label = "venus_ns";
 			iommus = <&apps_smmu 4>;
 			/* Buffer types relative to the two address pools */
-			buffer-types = <0x7ff>, <0x800>;
-			virtual-addr-pool = <0x5dc00000 0x7f000000
-					     0xdcc00000 0x1000000>;
+			buffer-types = <0xfff>;
+			virtual-addr-pool = <0x5dc00000 0x80000000>;
 		};
 
 		/* IOMMU Contexts: Secure */
