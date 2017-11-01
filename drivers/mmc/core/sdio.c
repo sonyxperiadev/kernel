@@ -1347,6 +1347,9 @@ int mmc_attach_sdio(struct mmc_host *host)
 	if (host->caps & MMC_CAP_POWER_OFF_CARD)
 		pm_runtime_put(&card->dev);
 
+	if (host->caps2 & MMC_CAP2_NONSTANDARD_NONREMOVABLE)
+		host->caps |= MMC_CAP_NONREMOVABLE;
+
 	mmc_claim_host(host);
 	return 0;
 

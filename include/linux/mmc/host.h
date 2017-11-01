@@ -542,6 +542,8 @@ struct mmc_host {
 #define MMC_CAP2_MAX_DISCARD_SIZE       (1 << 31)
 /* Non standard OCR for some SDIO cards */
 #define MMC_CAP2_NONSTANDARD_OCR	(1 << 32)
+/* The card cannot be removed once plugged in */
+#define MMC_CAP2_NONSTANDARD_NONREMOVABLE (1 << 33)
 
 	mmc_pm_flag_t		pm_caps;	/* supported pm features */
 
