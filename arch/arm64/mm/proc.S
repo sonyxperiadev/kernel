@@ -155,10 +155,10 @@ ENTRY(cpu_do_resume)
 	/*
 	 * __cpu_setup() cleared MDSCR_EL1.MDE and friends, before unmasking
 	 * debug exceptions. By restoring MDSCR_EL1 here, we may take a debug
-	 * exception. Mask them until local_dbg_restore() in cpu_suspend()
+	 * exception. Mask them until local_daif_restore() in cpu_suspend()
 	 * resets them.
 	 */
-	disable_dbg
+	disable_daif
 	msr	mdscr_el1, x10
 
 	msr	sctlr_el1, x12
@@ -215,15 +215,14 @@ ENDPROC(cpu_do_switch_mm)
  * called by anything else. It can only be executed from a TTBR0 mapping.
  */
 ENTRY(idmap_cpu_replace_ttbr1)
-	mrs	x2, daif
-	msr	daifset, #0xf
+	save_and_disable_daif flags=x2
 
 	__idmap_cpu_set_reserved_ttbr1 x1, x3
 
 	msr	ttbr1_el1, x0
 	isb
 
-	msr	daif, x2
+	restore_daif x2
 
 	ret
 ENDPROC(idmap_cpu_replace_ttbr1)
