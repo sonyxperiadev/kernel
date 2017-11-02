@@ -45,6 +45,7 @@
 #include <sound/msm-dts-eagle.h>
 
 #include "msm-pcm-routing-v2.h"
+#include "msm-qti-pp-config.h"
 
 #define DSP_PP_BUFFERING_IN_MSEC	25
 #define PARTIAL_DRAIN_ACK_EARLY_BY_MSEC	150
@@ -56,8 +57,8 @@
 #define FLAC_BLK_SIZE_LIMIT		65535
 
 /* Timestamp mode payload offsets */
-#define TS_LSW_OFFSET			6
-#define TS_MSW_OFFSET			7
+#define CAPTURE_META_DATA_TS_OFFSET_LSW	6
+#define CAPTURE_META_DATA_TS_OFFSET_MSW	7
 
 /* decoder parameter length */
 #define DDP_DEC_MAX_NUM_PARAM		18
@@ -67,6 +68,7 @@
 #define COMPR_PLAYBACK_MAX_FRAGMENT_SIZE (128 * 1024)
 #define COMPR_PLAYBACK_MIN_NUM_FRAGMENTS (4)
 #define COMPR_PLAYBACK_MAX_NUM_FRAGMENTS (16 * 4)
+#define COMPR_PLAYBACK_DSP_FRAGMEMT_SIZE (16 * 1024)
 
 #define COMPRESSED_LR_VOL_MAX_STEPS	0x2000
 const DECLARE_TLV_DB_LINEAR(msm_compr_vol_gain, 0,
@@ -176,6 +178,11 @@ struct msm_compr_audio {
 	wait_queue_head_t drain_wait;
 	wait_queue_head_t close_wait;
 	wait_queue_head_t wait_for_stream_avail;
+
+	uint32_t dsp_fragment_size;
+	uint32_t dsp_fragments;
+	uint32_t dsp_fragment_ratio;
+	uint32_t dsp_fragments_sent;
 
 	spinlock_t lock;
 };
@@ -313,6 +320,7 @@ static int msm_compr_send_buffer(struct msm_compr_audio *prtd)
 	int buffer_length;
 	uint64_t bytes_available;
 	struct audio_aio_write_param param;
+	struct snd_codec_metadata *buff_addr;
 
 	if (!atomic_read(&prtd->start)) {
 		pr_err("%s: stream is not in started state\n", __func__);
@@ -334,34 +342,50 @@ static int msm_compr_send_buffer(struct msm_compr_audio *prtd)
 				prtd->gapless_state.initial_samples_drop,
 				prtd->gapless_state.trailing_samples_drop);
 
-	buffer_length = prtd->codec_param.buffer.fragment_size;
 	bytes_available = prtd->bytes_received - prtd->copied_total;
-	if (bytes_available < prtd->codec_param.buffer.fragment_size)
+	if (bytes_available < prtd->dsp_fragment_size)
 		buffer_length = bytes_available;
+	else if (bytes_available > prtd->cstream->runtime->fragment_size)
+		buffer_length = prtd->cstream->runtime->fragment_size;
+	else
+		buffer_length =
+			(bytes_available / prtd->dsp_fragment_size) *
+			prtd->dsp_fragment_size;
 
 	if (prtd->byte_offset + buffer_length > prtd->buffer_size) {
 		buffer_length = (prtd->buffer_size - prtd->byte_offset);
-		pr_debug("wrap around situation, send partial data %d now", buffer_length);
-	}
+		pr_debug("wrap around situation, send partial data %d now",
+			 buffer_length); }
 
 	if (buffer_length) {
-		param.paddr	= prtd->buffer_paddr + prtd->byte_offset;
+		param.paddr = prtd->buffer_paddr + prtd->byte_offset;
 		WARN(prtd->byte_offset % 32 != 0, "offset %x not multiple of 32",
 		prtd->byte_offset);
 	}
 	else
-		param.paddr	= prtd->buffer_paddr;
-
+		param.paddr = prtd->buffer_paddr;
 	param.len	= buffer_length;
-	param.msw_ts	= 0;
-	param.lsw_ts	= 0;
-	param.flags	= NO_TIMESTAMP;
+	if (prtd->ts_header_offset) {
+		buff_addr = (struct snd_codec_metadata *)
+					(prtd->buffer + prtd->byte_offset);
+		param.len = buff_addr->length;
+		param.msw_ts = (uint32_t)
+			((buff_addr->timestamp & 0xFFFFFFFF00000000LL) >> 32);
+		param.lsw_ts = (uint32_t) (buff_addr->timestamp & 0xFFFFFFFFLL);
+		param.paddr += prtd->ts_header_offset;
+		param.flags = SET_TIMESTAMP;
+		param.metadata_len = prtd->ts_header_offset;
+	} else {
+		param.msw_ts = 0;
+		param.lsw_ts = 0;
+		param.flags = NO_TIMESTAMP;
+		param.metadata_len = 0;
+	}
 	param.uid	= buffer_length;
-	param.metadata_len = 0;
 	param.last_buffer = prtd->last_buffer;
 
 	pr_debug("%s: sending %d bytes to DSP byte_offset = %d\n",
-		__func__, buffer_length, prtd->byte_offset);
+		__func__, param.len, prtd->byte_offset);
 	if (q6asm_async_write(prtd->audio_client, &param) < 0) {
 		pr_err("%s:q6asm_async_write failed\n", __func__);
 	} else {
@@ -434,12 +458,20 @@ static void compr_event_handler(uint32_t opcode,
 	unsigned long flags;
 	uint64_t read_size;
 	uint32_t *buff_addr;
+	struct snd_soc_pcm_runtime *rtd;
+	uint32_t write_done_size;
+	int ret = 0;
 
 	if (!prtd) {
 		pr_err("%s: prtd is NULL\n", __func__);
 		return;
 	}
 	cstream = prtd->cstream;
+	if (!cstream) {
+		pr_err("%s: cstream is NULL\n", __func__);
+		return;
+	}
+
 	ac = prtd->audio_client;
 
 	/*
@@ -480,13 +512,28 @@ static void compr_event_handler(uint32_t opcode,
 		 * written to ADSP in the last write, update offset and
 		 * total copied data accordingly.
 		 */
-
-		prtd->byte_offset += token;
-		prtd->copied_total += token;
+		if (prtd->ts_header_offset) {
+			/* Always assume that the data will be sent to DSP on
+			 * frame boundary.
+			 * i.e, one frame of userspace write will result in
+			 * one kernel write to DSP. This is needed as
+			 * timestamp will be sent per frame.
+			 */
+			write_done_size =
+				prtd->codec_param.buffer.fragment_size;
+		} else {
+			write_done_size = token;
+		}
+		prtd->byte_offset += write_done_size;
+		prtd->copied_total += write_done_size;
 		if (prtd->byte_offset >= prtd->buffer_size)
 			prtd->byte_offset -= prtd->buffer_size;
 
-		snd_compr_fragment_elapsed(cstream);
+		prtd->dsp_fragments_sent += write_done_size / prtd->dsp_fragment_size;
+		if (prtd->dsp_fragments_sent >= prtd->dsp_fragment_ratio) {
+			snd_compr_fragment_elapsed(cstream);
+			prtd->dsp_fragments_sent = 0;
+		}
 
 		if (!atomic_read(&prtd->start)) {
 			/* Writes must be restarted from _copy() */
@@ -497,7 +544,7 @@ static void compr_event_handler(uint32_t opcode,
 		}
 
 		bytes_available = prtd->bytes_received - prtd->copied_total;
-		if (bytes_available < cstream->runtime->fragment_size) {
+		if (bytes_available == 0) {
 			pr_debug("WRITE_DONE Insufficient data to send. break out\n");
 			atomic_set(&prtd->xrun, 1);
 
@@ -509,7 +556,7 @@ static void compr_event_handler(uint32_t opcode,
 				wake_up(&prtd->drain_wait);
 				atomic_set(&prtd->drain, 0);
 			}
-		} else if ((bytes_available == cstream->runtime->fragment_size)
+		} else if ((bytes_available <= prtd->dsp_fragment_size)
 			   && atomic_read(&prtd->drain)) {
 			prtd->last_buffer = 1;
 			msm_compr_send_buffer(prtd);
@@ -537,10 +584,10 @@ static void compr_event_handler(uint32_t opcode,
 			*buff_addr = prtd->ts_header_offset;
 			buff_addr++;
 			/* Write the TS LSW */
-			*buff_addr = payload[TS_LSW_OFFSET];
+			*buff_addr = payload[CAPTURE_META_DATA_TS_OFFSET_LSW];
 			buff_addr++;
 			/* Write the TS MSW */
-			*buff_addr = payload[TS_MSW_OFFSET];
+			*buff_addr = payload[CAPTURE_META_DATA_TS_OFFSET_MSW];
 		}
 		/* Always assume read_size is same as fragment_size */
 		read_size = prtd->codec_param.buffer.fragment_size;
@@ -595,6 +642,23 @@ static void compr_event_handler(uint32_t opcode,
 			prtd->gapless_state.gapless_transition = 0;
 		spin_unlock_irqrestore(&prtd->lock, flags);
 		break;
+	case ASM_STREAM_PP_EVENT:
+		pr_debug("%s: ASM_STREAM_PP_EVENT\n", __func__);
+		rtd = cstream->private_data;
+		if (!rtd) {
+			pr_err("%s: rtd is NULL\n", __func__);
+			return;
+		}
+
+		ret = msm_adsp_inform_mixer_ctl(rtd, DSP_STREAM_CALLBACK,
+					payload);
+		if (ret) {
+			pr_err("%s: failed to inform mixer ctrl. err = %d\n",
+				__func__, ret);
+			return;
+		}
+
+		break;
 	case ASM_DATA_EVENT_SR_CM_CHANGE_NOTIFY:
 	case ASM_DATA_EVENT_ENC_SR_CM_CHANGE_NOTIFY: {
 		pr_debug("ASM_DATA_EVENT_SR_CM_CHANGE_NOTIFY\n");
@@ -624,7 +688,7 @@ static void compr_event_handler(uint32_t opcode,
 
 			if (!prtd->bytes_sent) {
 				bytes_available = prtd->bytes_received - prtd->copied_total;
-				if (bytes_available < cstream->runtime->fragment_size) {
+				if (bytes_available < prtd->dsp_fragment_size) {
 					pr_debug("CMD_RUN_V2 Insufficient data to send. break out\n");
 					atomic_set(&prtd->xrun, 1);
 				} else
@@ -693,6 +757,10 @@ static void compr_event_handler(uint32_t opcode,
 				wake_up(&prtd->close_wait);
 			}
 			atomic_set(&prtd->close, 0);
+			break;
+		case ASM_STREAM_CMD_REGISTER_PP_EVENTS:
+			pr_debug("%s: ASM_STREAM_CMD_REGISTER_PP_EVENTS:",
+				__func__);
 			break;
 		default:
 			break;
@@ -1203,12 +1271,32 @@ static int msm_compr_configure_dsp_for_playback
 
 	runtime->fragments = prtd->codec_param.buffer.fragments;
 	runtime->fragment_size = prtd->codec_param.buffer.fragment_size;
+
+	/* use smaller DSP fragments to ease gapless transition by reducing the
+	 * minimum amount of data necessary to start DSP decoding
+	 */
+	if (runtime->fragment_size < COMPR_PLAYBACK_DSP_FRAGMEMT_SIZE) {
+		prtd->dsp_fragment_size = runtime->fragment_size;
+	} else if ((runtime->fragment_size % COMPR_PLAYBACK_DSP_FRAGMEMT_SIZE) != 0) {
+		pr_err("%s: Invalid fragment size: %d", __func__,
+		       runtime->fragment_size);
+		return -EINVAL;
+	} else {
+		prtd->dsp_fragment_size = COMPR_PLAYBACK_DSP_FRAGMEMT_SIZE;
+	}
+	prtd->dsp_fragment_ratio = runtime->fragment_size / prtd->dsp_fragment_size;
+	prtd->dsp_fragments = runtime->fragments * prtd->dsp_fragment_ratio;
+
+	if (prtd->dsp_fragments > COMPR_PLAYBACK_MAX_NUM_FRAGMENTS) {
+		pr_err("%s: Invalid fragment count: %d", __func__, prtd->dsp_fragments);
+		return -EINVAL;
+	}
 	pr_debug("allocate %d buffers each of size %d\n",
 			runtime->fragments,
 			runtime->fragment_size);
 	ret = q6asm_audio_client_buf_alloc_contiguous(dir, ac,
-					runtime->fragment_size,
-					runtime->fragments);
+					prtd->dsp_fragment_size,
+					prtd->dsp_fragments);
 	if (ret < 0) {
 		pr_err("Audio Start: Buffer Allocation failed rc = %d\n", ret);
 		return -ENOMEM;
@@ -1219,9 +1307,16 @@ static int msm_compr_configure_dsp_for_playback
 	prtd->app_pointer  = 0;
 	prtd->bytes_received = 0;
 	prtd->bytes_sent = 0;
+	prtd->dsp_fragments_sent = 0;
 	prtd->buffer       = ac->port[dir].buf[0].data;
 	prtd->buffer_paddr = ac->port[dir].buf[0].phys;
 	prtd->buffer_size  = runtime->fragments * runtime->fragment_size;
+
+	/* Bit-0 of flags represent timestamp mode */
+	if (prtd->codec_param.codec.flags & COMPRESSED_TIMESTAMP_FLAG)
+		prtd->ts_header_offset = sizeof(struct snd_codec_metadata);
+	else
+		prtd->ts_header_offset = 0;
 
 	ret = msm_compr_send_media_format_block(cstream, ac->stream_id, false);
 	if (ret < 0) {
@@ -2031,6 +2126,7 @@ static int msm_compr_trigger(struct snd_compr_stream *cstream, int cmd)
 		prtd->bytes_received = 0;
 		prtd->bytes_sent = 0;
 		prtd->marker_timestamp = 0;
+		prtd->dsp_fragments_sent = 0;
 
 		atomic_set(&prtd->xrun, 0);
 		spin_unlock_irqrestore(&prtd->lock, flags);
@@ -2091,8 +2187,8 @@ static int msm_compr_trigger(struct snd_compr_stream *cstream, int cmd)
 			 */
 			bytes_to_write = prtd->bytes_received
 						- prtd->copied_total;
-			WARN(bytes_to_write > runtime->fragment_size,
-			     "last write %d cannot be > than fragment_size",
+			WARN(bytes_to_write > prtd->dsp_fragment_size,
+			     "last write %d cannot be > than dsp_fragment_size",
 			     bytes_to_write);
 
 			if (bytes_to_write > 0) {
@@ -2172,6 +2268,7 @@ static int msm_compr_trigger(struct snd_compr_stream *cstream, int cmd)
 			if (atomic_read(&prtd->eos))
 				prtd->gapless_state.gapless_transition = 1;
 			prtd->marker_timestamp = 0;
+			prtd->dsp_fragments_sent = 0;
 
 			/*
 			Don't reset these as these vars map to
@@ -2268,6 +2365,7 @@ static int msm_compr_trigger(struct snd_compr_stream *cstream, int cmd)
 			prtd->last_buffer = 0;
 			atomic_set(&prtd->drain, 0);
 			atomic_set(&prtd->xrun, 1);
+			prtd->dsp_fragments_sent = 0;
 			spin_unlock_irqrestore(&prtd->lock, flags);
 
 			pr_debug("%s:issue CMD_FLUSH ac->stream_id %d",
@@ -2544,8 +2642,8 @@ static int msm_compr_playback_copy(struct snd_compr_stream *cstream,
 	}
 
 	/*
-	 * If stream is started and there has been an xrun,
-	 * since the available bytes fits fragment_size, copy the data right away
+	 * If stream is started and there has been an xrun, since the available
+	 * bytes fits dsp_fragment_size, copy the data right away
 	 */
 	spin_lock_irqsave(&prtd->lock, flags);
 	prtd->bytes_received += count;
@@ -2553,7 +2651,7 @@ static int msm_compr_playback_copy(struct snd_compr_stream *cstream,
 		if (atomic_read(&prtd->xrun)) {
 			pr_debug("%s: in xrun, count = %zd\n", __func__, count);
 			bytes_available = prtd->bytes_received - prtd->copied_total;
-			if (bytes_available >= runtime->fragment_size) {
+			if (bytes_available >= prtd->dsp_fragment_size) {
 				pr_debug("%s: handle xrun, bytes_to_write = %llu\n",
 					 __func__,
 					 bytes_available);
@@ -3395,6 +3493,65 @@ end:
 	return rc;
 }
 
+static int msm_compr_adsp_stream_cmd_put(struct snd_kcontrol *kcontrol,
+				struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *comp = snd_kcontrol_chip(kcontrol);
+	unsigned long fe_id = kcontrol->private_value;
+	struct msm_compr_pdata *pdata = (struct msm_compr_pdata *)
+				snd_soc_component_get_drvdata(comp);
+	struct snd_compr_stream *cstream = NULL;
+	struct msm_compr_audio *prtd;
+	int ret = 0, param_length = 0;
+
+	if (fe_id >= MSM_FRONTEND_DAI_MAX) {
+		pr_err("%s Received invalid fe_id %lu\n",
+			__func__, fe_id);
+		ret = -EINVAL;
+		goto done;
+	}
+
+	cstream = pdata->cstream[fe_id];
+	if (cstream == NULL) {
+		pr_err("%s cstream is null.\n", __func__);
+		ret = -EINVAL;
+		goto done;
+	}
+
+	prtd = cstream->runtime->private_data;
+	if (!prtd) {
+		pr_err("%s: prtd is null.\n", __func__);
+		ret = -EINVAL;
+		goto done;
+	}
+
+	if (prtd->audio_client == NULL) {
+		pr_err("%s: audio_client is null.\n", __func__);
+		ret = -EINVAL;
+		goto done;
+	}
+
+	memcpy(&param_length, ucontrol->value.bytes.data,
+		sizeof(param_length));
+	if ((param_length + sizeof(param_length))
+		>= sizeof(ucontrol->value.bytes.data)) {
+		pr_err("%s param length=%d  exceeds limit",
+			__func__, param_length);
+		ret = -EINVAL;
+		goto done;
+	}
+
+	ret = q6asm_send_stream_cmd(prtd->audio_client,
+			ASM_STREAM_CMD_REGISTER_PP_EVENTS,
+			ucontrol->value.bytes.data + sizeof(param_length),
+			param_length);
+	if (ret < 0)
+		pr_err("%s: failed to register pp event. err = %d\n",
+			__func__, ret);
+done:
+	return ret;
+}
+
 static int msm_compr_gapless_put(struct snd_kcontrol *kcontrol,
 				struct snd_ctl_elem_value *ucontrol)
 {
@@ -3471,7 +3628,7 @@ static int msm_compr_probe(struct snd_soc_platform *platform)
 	 * control is used to decide if dsp gapless mode needs to be enabled.
 	 * Gapless is disabled by default.
 	 */
-	pdata->use_dsp_gapless_mode = false;
+	pdata->use_dsp_gapless_mode = true;
 	return 0;
 }
 
@@ -3671,6 +3828,117 @@ static int msm_compr_add_query_audio_effect_control(
 	return 0;
 }
 
+static int msm_compr_add_audio_adsp_stream_cmd_control(
+			struct snd_soc_pcm_runtime *rtd)
+{
+	const char *mixer_ctl_name = DSP_STREAM_CMD;
+	const char *deviceNo = "NN";
+	char *mixer_str = NULL;
+	int ctl_len = 0, ret = 0;
+	struct snd_kcontrol_new fe_audio_adsp_stream_cmd_config_control[1] = {
+		{
+		.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
+		.name = "?",
+		.access = SNDRV_CTL_ELEM_ACCESS_READWRITE,
+		.info = msm_adsp_stream_cmd_info,
+		.put = msm_compr_adsp_stream_cmd_put,
+		.private_value = 0,
+		}
+	};
+
+	if (!rtd) {
+		pr_err("%s NULL rtd\n", __func__);
+		ret = -EINVAL;
+		goto done;
+	}
+
+	ctl_len = strlen(mixer_ctl_name) + 1 + strlen(deviceNo) + 1;
+	mixer_str = kzalloc(ctl_len, GFP_KERNEL);
+	if (!mixer_str) {
+		ret = -ENOMEM;
+		goto done;
+	}
+
+	snprintf(mixer_str, ctl_len, "%s %d", mixer_ctl_name, rtd->pcm->device);
+	fe_audio_adsp_stream_cmd_config_control[0].name = mixer_str;
+	fe_audio_adsp_stream_cmd_config_control[0].private_value =
+				rtd->dai_link->be_id;
+	pr_debug("%s: Registering new mixer ctl %s\n", __func__, mixer_str);
+	ret = snd_soc_add_platform_controls(rtd->platform,
+		fe_audio_adsp_stream_cmd_config_control,
+		ARRAY_SIZE(fe_audio_adsp_stream_cmd_config_control));
+	if (ret < 0)
+		pr_err("%s: failed to add ctl %s. err = %d\n",
+			__func__, mixer_str, ret);
+
+	kfree(mixer_str);
+done:
+	return ret;
+}
+
+static int msm_compr_add_audio_adsp_stream_callback_control(
+			struct snd_soc_pcm_runtime *rtd)
+{
+	const char *mixer_ctl_name = DSP_STREAM_CALLBACK;
+	const char *deviceNo = "NN";
+	char *mixer_str = NULL;
+	int ctl_len = 0, ret = 0;
+	struct snd_kcontrol *kctl;
+
+	struct snd_kcontrol_new fe_audio_adsp_callback_config_control[1] = {
+		{
+		.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
+		.name = "?",
+		.access = SNDRV_CTL_ELEM_ACCESS_READWRITE,
+		.info = msm_adsp_stream_callback_info,
+		.get = msm_adsp_stream_callback_get,
+		.put = msm_adsp_stream_callback_put,
+		.private_value = 0,
+		}
+	};
+
+	if (!rtd) {
+		pr_err("%s: rtd is  NULL\n", __func__);
+		ret = -EINVAL;
+		goto done;
+	}
+
+	ctl_len = strlen(mixer_ctl_name) + 1 + strlen(deviceNo) + 1;
+	mixer_str = kzalloc(ctl_len, GFP_KERNEL);
+	if (!mixer_str) {
+		ret = -ENOMEM;
+		goto done;
+	}
+
+	snprintf(mixer_str, ctl_len, "%s %d", mixer_ctl_name, rtd->pcm->device);
+	fe_audio_adsp_callback_config_control[0].name = mixer_str;
+	fe_audio_adsp_callback_config_control[0].private_value =
+					rtd->dai_link->be_id;
+	pr_debug("%s: Registering new mixer ctl %s\n", __func__, mixer_str);
+	ret = snd_soc_add_platform_controls(rtd->platform,
+			fe_audio_adsp_callback_config_control,
+			ARRAY_SIZE(fe_audio_adsp_callback_config_control));
+	if (ret < 0) {
+		pr_err("%s: failed to add ctl %s. err = %d\n",
+			__func__, mixer_str, ret);
+		ret = -EINVAL;
+		goto free_mixer_str;
+	}
+
+	kctl = snd_soc_card_get_kcontrol(rtd->card, mixer_str);
+	if (!kctl) {
+		pr_err("%s: failed to get kctl %s.\n", __func__, mixer_str);
+		ret = -EINVAL;
+		goto free_mixer_str;
+	}
+
+	kctl->private_data = NULL;
+free_mixer_str:
+	kfree(mixer_str);
+done:
+	return ret;
+}
+
 static int msm_compr_add_dec_runtime_params_control(
 						struct snd_soc_pcm_runtime *rtd)
 {
@@ -3863,6 +4131,16 @@ static int msm_compr_new(struct snd_soc_pcm_runtime *rtd)
 	rc = msm_compr_add_audio_effects_control(rtd);
 	if (rc)
 		pr_err("%s: Could not add Compr Audio Effects Control\n",
+			__func__);
+
+	rc = msm_compr_add_audio_adsp_stream_cmd_control(rtd);
+	if (rc)
+		pr_err("%s: Could not add Compr ADSP Stream Cmd Control\n",
+			__func__);
+
+	rc = msm_compr_add_audio_adsp_stream_callback_control(rtd);
+	if (rc)
+		pr_err("%s: Could not add Compr ADSP Stream Callback Control\n",
 			__func__);
 
 	rc = msm_compr_add_query_audio_effect_control(rtd);
