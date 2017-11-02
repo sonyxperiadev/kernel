@@ -981,88 +981,88 @@
 		sensor_information0: qcom,sensor-information-0 {
 			qcom,sensor-type = "tsens";
 			qcom,sensor-name = "tsens_tz_sensor0";
-			qcom,scaling-factor = <10>;
+			qcom,scaling-factor = <1>;
 		};
 
 		sensor_information1: qcom,sensor-information-1 {
 			qcom,sensor-type =  "tsens";
 			qcom,sensor-name = "tsens_tz_sensor1";
-			qcom,scaling-factor = <10>;
+			qcom,scaling-factor = <1>;
 		};
 
 		sensor_information2: qcom,sensor-information-2 {
 			qcom,sensor-type =  "tsens";
 			qcom,sensor-name = "tsens_tz_sensor2";
 			qcom,alias-name = "pop_mem";
-			qcom,scaling-factor = <10>;
+			qcom,scaling-factor = <1>;
 		};
 
 		sensor_information3: qcom,sensor-information-3 {
 			qcom,sensor-type =  "tsens";
 			qcom,sensor-name = "tsens_tz_sensor3";
-			qcom,scaling-factor = <10>;
+			qcom,scaling-factor = <1>;
 		};
 
 		sensor_information4: qcom,sensor-information-4 {
 			qcom,sensor-type = "tsens";
 			qcom,sensor-name = "tsens_tz_sensor4";
-			qcom,scaling-factor = <10>;
+			qcom,scaling-factor = <1>;
 		};
 
 		sensor_information5: qcom,sensor-information-5 {
 			qcom,sensor-type = "tsens";
 			qcom,sensor-name = "tsens_tz_sensor5";
-			qcom,scaling-factor = <10>;
+			qcom,scaling-factor = <1>;
 		};
 
 		sensor_information6: qcom,sensor-information-6 {
 			qcom,sensor-type = "tsens";
 			qcom,sensor-name = "tsens_tz_sensor6";
-			qcom,scaling-factor = <10>;
+			qcom,scaling-factor = <1>;
 		};
 
 		sensor_information7: qcom,sensor-information-7 {
 			qcom,sensor-type = "tsens";
 			qcom,sensor-name = "tsens_tz_sensor7";
-			qcom,scaling-factor = <10>;
+			qcom,scaling-factor = <1>;
 		};
 
 		sensor_information8: qcom,sensor-information-8 {
 			qcom,sensor-type = "tsens";
 			qcom,sensor-name = "tsens_tz_sensor8";
-			qcom,scaling-factor = <10>;
+			qcom,scaling-factor = <1>;
 			qcom,alias-name = "L2_cache_1";
 		};
 
 		sensor_information9: qcom,sensor-information-9 {
 			qcom,sensor-type = "tsens";
 			qcom,sensor-name = "tsens_tz_sensor9";
-			qcom,scaling-factor = <10>;
+			qcom,scaling-factor = <1>;
 		};
 
 		sensor_information10: qcom,sensor-information-10 {
 			qcom,sensor-type = "tsens";
 			qcom,sensor-name = "tsens_tz_sensor10";
 			qcom,alias-name = "gpu";
-			qcom,scaling-factor = <10>;
+			qcom,scaling-factor = <1>;
 		};
 
 		sensor_information11: qcom,sensor-information-11 {
 			qcom,sensor-type = "adc";
 			qcom,sensor-name = "pa_therm0";
-			qcom,scaling-factor = <10>;
+			qcom,scaling-factor = <1>;
 		};
 
 		sensor_information12: qcom,sensor-information-12 {
 			qcom,sensor-type = "adc";
 			qcom,sensor-name = "pa_therm1";
-			qcom,scaling-factor = <10>;
+			qcom,scaling-factor = <1>;
 		};
 
 		sensor_information13: qcom,sensor-information-13 {
 			qcom,sensor-type = "adc";
 			qcom,sensor-name = "xo_therm";
-			qcom,scaling-factor = <10>;
+			qcom,scaling-factor = <1>;
 		};
 
 		sensor_information14: qcom,sensor-information-14 {
