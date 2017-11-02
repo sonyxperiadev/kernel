@@ -49,6 +49,10 @@
 };
 
 &soc {
+	pinctrl@1000000 {
+		disabled-pins = <0 1 2 3>;
+	};
+
 	fpc1145 {
 		status = "ok";
 		compatible = "fpc,fpc1020", "fpc1145";
