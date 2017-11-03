@@ -1657,7 +1657,7 @@ bool	enable_power_source( struct cm36686_info *lpi )
 
 			} // Failed
 
-			if( regulator_set_optimum_mode( power, source->load_current ) < 0 )
+			if( regulator_set_load( power, source->load_current ) < 0 )
 			{ // Failed
 
 				printk( "PLS : Regulator %s set_opt failed\n", source->name );
