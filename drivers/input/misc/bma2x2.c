@@ -8814,20 +8814,8 @@ static struct i2c_driver bma2x2_driver = {
 	.shutdown   = bma2x2_shutdown,
 };
 
-static int __init BMA2X2_init(void)
-{
-	return i2c_add_driver(&bma2x2_driver);
-}
-
-static void __exit BMA2X2_exit(void)
-{
-	i2c_del_driver(&bma2x2_driver);
-}
+module_i2c_driver(bma2x2_driver);
 
 MODULE_AUTHOR("contact@bosch-sensortec.com");
 MODULE_DESCRIPTION("BMA2X2 ACCELEROMETER SENSOR DRIVER");
 MODULE_LICENSE("GPL v2");
-
-module_init(BMA2X2_init);
-module_exit(BMA2X2_exit);
-

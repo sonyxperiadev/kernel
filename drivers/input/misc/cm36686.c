@@ -2121,18 +2121,7 @@ static struct i2c_driver cm36686_driver = {
 	},
 };
 
-static int __init cm36686_init(void)
-{
-	return i2c_add_driver(&cm36686_driver);
-}
-
-static void __exit cm36686_exit(void)
-{
-	i2c_del_driver(&cm36686_driver);
-}
-
-module_init(cm36686_init);
-module_exit(cm36686_exit);
+module_i2c_driver(cm36686_driver);
 
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("CM36686 Driver");
