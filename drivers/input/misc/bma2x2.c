@@ -8803,7 +8803,6 @@ static const struct of_device_id bma2x2_of_match[] = {
 
 static struct i2c_driver bma2x2_driver = {
 	.driver = {
-		.owner  = THIS_MODULE,
 		.name   = SENSOR_NAME,
 		.of_match_table = bma2x2_of_match,
 	},

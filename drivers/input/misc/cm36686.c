@@ -2117,7 +2117,6 @@ static struct i2c_driver cm36686_driver = {
 	.probe = cm36686_probe,
 	.driver = {
 		.name = CM36686_I2C_NAME,
-		.owner = THIS_MODULE,
 		.of_match_table = cm36286_match_table,
 	},
 };
