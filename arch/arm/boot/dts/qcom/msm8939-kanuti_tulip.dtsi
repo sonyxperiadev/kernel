@@ -455,12 +455,6 @@
 	qcom,platform-regulator-settings = [02 09 03 00 20 00 01];
 };
 
-&pm8916_mpps {
-	mpp@a300 { /* MPP4: NC */
-		status = "disabled";
-	};
-};
-
 &pm8916_gpios {
 	gpio@c100 { /* GPIO 2: NC */
 		status = "disabled";
