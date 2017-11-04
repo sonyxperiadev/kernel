@@ -377,7 +377,7 @@
 			reusable;
 			alloc-ranges = <0 0x00000000 0 0xffffffff>;
 			alignment = <0 0x100000>;
-			size = <0 0x400000>;
+			size = <0 0x800000>;
 		};
 
 		/* global autoconfigured region for contiguous allocations */
