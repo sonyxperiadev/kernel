@@ -347,6 +347,7 @@
 		secure_mem: secure_region {
 			compatible = "shared-dma-pool";
 			reusable;
+			alloc-ranges = <0 0x00000000 0 0xffffffff>;
 			alignment = <0 0x400000>;
 			size = <0 0x9800000>;
 		};
@@ -354,6 +355,7 @@
 		qseecom_mem: qseecom_region {
 			compatible = "shared-dma-pool";
 			reusable;
+			alloc-ranges = <0 0x00000000 0 0xffffffff>;
 			alignment = <0 0x400000>;
 			size = <0 0x1000000>;
 		};
@@ -361,7 +363,7 @@
 		audio_mem: audio_region {
 			compatible = "shared-dma-pool";
 			reusable;
-			//reg = <0x0 0x0 0x0 0x314000>;
+			alloc-ranges = <0 0x00000000 0 0xffffffff>;
 			alignment = <0 0x400000>;
 			size = <0 0x400000>;
 		};
@@ -373,6 +375,7 @@
 		adsp_mem: adsp_region {
 			compatible = "shared-dma-pool";
 			reusable;
+			alloc-ranges = <0 0x00000000 0 0xffffffff>;
 			size = <0 0x400000>;
 		};
 
