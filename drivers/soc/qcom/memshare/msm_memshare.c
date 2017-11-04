@@ -464,6 +464,7 @@ static struct notifier_block nb = {
 	.notifier_call = modem_notifier_cb,
 };
 
+#ifndef CONFIG_ARCH_MSM8916
 static void shared_hyp_mapping(int client_id)
 {
 	int ret;
@@ -488,6 +489,7 @@ static void shared_hyp_mapping(int client_id)
 	}
 	memblock[client_id].hyp_mapping = 1;
 }
+#endif
 
 static int handle_alloc_req(void *req_h, void *req, void *conn_h)
 {
@@ -591,6 +593,7 @@ static int handle_alloc_generic_req(void *req_h, void *req, void *conn_h)
 	memblock[client_id].alloc_request = 1;
 
 	fill_alloc_response(alloc_resp, client_id, &resp);
+#ifndef CONFIG_ARCH_MSM8916
 	/*
 	 * Perform the Hypervisor mapping in order to avoid XPU viloation
 	 * to the allocated region for Modem Clients
@@ -598,6 +601,7 @@ static int handle_alloc_generic_req(void *req_h, void *req, void *conn_h)
 	if (!memblock[client_id].hyp_mapping &&
 		memblock[client_id].allotted)
 		shared_hyp_mapping(client_id);
+#endif
 	mutex_unlock(&memsh_drv->mem_share);
 	pr_debug("memshare: alloc_resp.num_bytes :%d, alloc_resp.resp.result :%lx\n",
 			  alloc_resp->dhms_mem_alloc_addr_info[0].num_bytes,
