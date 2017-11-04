@@ -1240,35 +1240,35 @@
 		qcom,high-hyst-temp = <5>;
 
 		ea0: ea0 {
-			sensor = <&sensor_information1>;
+			sensor = <&sensor_information9>;
 		};
 
 		ea1: ea1 {
-			sensor = <&sensor_information1>;
+			sensor = <&sensor_information9>;
 		};
 
 		ea2: ea2 {
-			sensor = <&sensor_information1>;
+			sensor = <&sensor_information9>;
 		};
 
 		ea3: ea3 {
-			sensor = <&sensor_information1>;
+			sensor = <&sensor_information9>;
 		};
 
 		ea4: ea4 {
-			sensor = <&sensor_information3>;
-		};
-
-		ea5: ea5 {
 			sensor = <&sensor_information4>;
 		};
 
-		ea6: ea6 {
+		ea5: ea5 {
 			sensor = <&sensor_information5>;
 		};
 
-		ea7: ea7 {
+		ea6: ea6 {
 			sensor = <&sensor_information6>;
+		};
+
+		ea7: ea7 {
+			sensor = <&sensor_information7>;
 		};
 	};
 
