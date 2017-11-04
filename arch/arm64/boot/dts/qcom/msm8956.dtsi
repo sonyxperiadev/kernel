@@ -365,7 +365,7 @@
 			reusable;
 			alloc-ranges = <0 0x00000000 0 0xffffffff>;
 			alignment = <0 0x1000>;
-			size = <0 0x400000>;
+			size = <0 0x800000>;
 		};
 
 		cont_splash_mem: splash_region@83000000 {
