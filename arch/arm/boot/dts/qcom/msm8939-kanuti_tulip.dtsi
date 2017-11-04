@@ -274,8 +274,8 @@
 
 			bosch,int_pin = <&msm_gpio 69 0x00>;
 			bosch,layout=<0x8>;
-			bmavdd-supply = <&pm8916_l17>;
-			bmavio-supply = <&pm8916_l6>;
+			vdd-supply = <&pm8916_l17>;
+			vio-supply = <&pm8916_l6>;
 			bosch,vdd-current-level = <1 210>;
 		};
 
@@ -283,8 +283,8 @@
 			compatible = "bosch,bmm050";
 			reg = <0x12>;
 
-			bmmvdd-supply = <&pm8916_l17>;
-			bmmvio-supply = <&pm8916_l6>;
+			vdd-supply = <&pm8916_l17>;
+			vio-supply = <&pm8916_l6>;
 			bosch,vdd-current-level = <1 255>;
 		};
 
@@ -298,7 +298,7 @@
 			interrupt-parent = <&msm_gpio>;
 			interrupts = <115 0x00>;
 
-			bmgvdd-supply = <&pm8916_l17>;
+			vdd-supply = <&pm8916_l17>;
 			bosch,vdd-current-level = <1 255>;
 		};
 
