@@ -114,6 +114,8 @@ struct msm_scm_fault_regs_dump {
 	uint32_t dump_data[SEC_DUMP_SIZE];
 } __aligned(PAGE_SIZE);
 
+static DEFINE_SPINLOCK(msm_iommu_sec_spin_lock);
+
 void msm_iommu_sec_set_access_ops(struct iommu_access_ops *access_ops)
 {
 	iommu_access_ops = access_ops;
@@ -385,8 +387,11 @@ static int msm_iommu_sec_map2(struct msm_scm_map2_req *map)
 				IOMMU_SECURE_MAP2_FLAT), &desc);
 		resp = desc.ret[0];
 	}
-	if (ret || resp)
+	if (ret || resp) {
+		pr_debug("%s: SCM call failure. Response: 0x%x",
+			__func__, resp);
 		return -EINVAL;
+	}
 
 	return 0;
 }
@@ -400,8 +405,11 @@ static int msm_iommu_sec_ptbl_map(struct msm_iommu_drvdata *iommu_drvdata,
 	int ret = 0;
 
 	if (!IS_ALIGNED(va, SZ_1M) || !IS_ALIGNED(len, SZ_1M) ||
-		!IS_ALIGNED(pa, SZ_1M))
+		!IS_ALIGNED(pa, SZ_1M)) {
+		pr_debug("%s: ERROR: Unaligned secure mapping requested.\n",
+			__func__);
 		return -EINVAL;
+	}
 	map.plist.list = virt_to_phys(&pa);
 	map.plist.list_size = 1;
 	map.plist.size = len;
@@ -427,7 +435,7 @@ static int msm_iommu_sec_ptbl_map(struct msm_iommu_drvdata *iommu_drvdata,
 	return 0;
 }
 
-#if 0
+#if 1
 static unsigned int get_phys_addr(struct scatterlist *sg)
 {
 	/*
@@ -717,6 +725,38 @@ fail:
 	return ret;
 }
 
+static size_t msm_iommu_map_sg(struct iommu_domain *domain, unsigned long iova,
+			       struct scatterlist *sg, unsigned int nents,
+			       int prot)
+{
+	struct msm_iommu_drvdata *iommu_drvdata;
+	struct msm_iommu_ctx_drvdata *ctx_drvdata;
+	struct scatterlist *tmp;
+	unsigned int len = 0;
+	int ret, i;
+	unsigned long flags;
+
+	spin_lock_irqsave(&msm_iommu_sec_spin_lock, flags);
+
+	ret = get_drvdata(domain, &iommu_drvdata, &ctx_drvdata);
+	if (ret)
+		goto fail;
+
+	for_each_sg(sg, tmp, nents, i)
+		len += tmp->length;
+
+	ret = msm_iommu_sec_ptbl_map_range(iommu_drvdata, ctx_drvdata,
+						iova, sg, len);
+	if (ret < 0)
+		goto fail;
+
+	ret = len;
+
+fail:
+	spin_unlock_irqrestore(&msm_iommu_sec_spin_lock, flags);
+	return ret;
+}
+
 static size_t msm_iommu_unmap(struct iommu_domain *domain, unsigned long va,
 			    size_t len)
 {
@@ -863,7 +903,7 @@ static struct iommu_ops msm_iommu_ops = {
 	.map = msm_iommu_map,
 	.unmap = msm_iommu_unmap,
 /*	.map_range = msm_iommu_map_range,*/
-	.map_sg = default_iommu_map_sg,
+	.map_sg = msm_iommu_map_sg, //default_iommu_map_sg,
 /*	.unmap_range = msm_iommu_unmap_range,*/
 	.iova_to_phys = msm_iommu_iova_to_phys,
 	.domain_set_attr = msm_iommu_domain_set_attr,
