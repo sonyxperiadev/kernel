@@ -60,6 +60,10 @@
 		qcom,pm-qos-active-latency = <401>;
 		qcom,pm-qos-wakeup-latency = <101>;
 
+		/* Quirks */
+		qcom,gpu-quirk-dp2clockgating-disable;
+		qcom,gpu-quirk-lmloadkill-disable;
+
 		/* Avoid L2PC on big cluster CPUs (CPU 4,5,6,7) */
 		qcom,l2pc-cpu-mask = <0x000000F0>;
 
