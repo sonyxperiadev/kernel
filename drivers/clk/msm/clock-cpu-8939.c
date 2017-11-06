@@ -549,7 +549,8 @@ static int add_opp(struct clk *c, struct device *cpudev, struct device *vregdev,
 static void print_opp_table(int a53_c0_cpu, int a53_c1_cpu, bool single_cluster)
 {
 	struct dev_pm_opp *oppfmax, *oppfmin;
-	unsigned long apc0_fmax, apc1_fmax, apc0_fmin, apc1_fmin;
+	unsigned long apc0_fmax = 0, apc1_fmax = 0;
+	unsigned long apc0_fmin = 0, apc1_fmin = 0;
 	if (!single_cluster) {
 		apc0_fmax = a53_lc_clk.c.fmax[a53_lc_clk.c.num_fmax - 1];
 		apc0_fmin = a53_lc_clk.c.fmax[1];
@@ -587,9 +588,9 @@ static void print_opp_table(int a53_c0_cpu, int a53_c1_cpu, bool single_cluster)
 static void populate_opp_table(struct platform_device *pdev,
 					bool single_cluster)
 {
-	struct platform_device *apc0_dev, *apc1_dev;
-	struct device_node *apc0_node = NULL, *apc1_node;
-	unsigned long apc0_fmax, apc1_fmax;
+	struct platform_device *apc0_dev = NULL, *apc1_dev = NULL;
+	struct device_node *apc0_node = NULL, *apc1_node = NULL;
+	unsigned long apc0_fmax = 0, apc1_fmax = 0;
 	int cpu, a53_c0_cpu = 0, a53_c1_cpu = 0;
 
 	if (!single_cluster)
