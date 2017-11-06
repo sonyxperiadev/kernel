@@ -13796,6 +13796,9 @@ _Pragma("GCC diagnostic pop")
 	bcmcfg_to_prmry_ndev(cfg)->ieee80211_ptr->iftype =
 		NL80211_IFTYPE_STATION;
 #if defined(WL_CFG80211) && defined(WL_ENABLE_P2P_IF)
+#ifdef SUPPORT_DEEP_SLEEP
+	if (!trigger_deep_sleep)
+#endif /* SUPPORT_DEEP_SLEEP */
 		if (p2p_net)
 			dev_close(p2p_net);
 #endif 
