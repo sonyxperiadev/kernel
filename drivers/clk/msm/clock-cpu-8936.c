@@ -513,7 +513,7 @@ static void populate_opp_table(struct platform_device *pdev)
 	struct platform_device *apc1_dev;
 	struct device_node *apc1_node;
 	unsigned long apc1_fmax;
-	int cpu, a53_c1_cpu;
+	int cpu = 0, a53_c1_cpu = -1;
 
 	apc1_node = of_parse_phandle(pdev->dev.of_node, "vdd-c1-supply", 0);
 
