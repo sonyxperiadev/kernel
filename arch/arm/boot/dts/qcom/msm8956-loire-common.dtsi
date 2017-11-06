@@ -21,22 +21,10 @@
 
 / {
 	reserved-memory {
-		debug_region: debug_region@57e00000 {
-			compatible = "removed-dma-pool", "qcom,debug_memory";
-			no-map;
-			reg = <0 0x57E00000 0 0x100000>;
-			label = "debug_mem";
-		};
-
 		pstore_reserve_mem: pstore_reserve_mem_region@57f00000 {
 			compatible = "removed-dma-pool";
 			no-map;
 			reg = <0 0x57f00000 0 0x00100000>;
-		};
-
-		fb_mem: fb_region {
-			reg = <0 0 0 0x1000000>;
-			label = "fb_mem";
 		};
 
 		tz_app_mem: tz_app_mem@8dd00000 {
@@ -1132,7 +1120,6 @@
 };
 
 &mdss_fb0 {
-	memory-region = <&fb_mem>;
 	/delete-property/ qcom,mdss-fb-splash-logo-enabled;
 };
 
