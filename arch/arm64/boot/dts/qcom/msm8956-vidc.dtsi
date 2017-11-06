@@ -39,7 +39,7 @@
 		clock-names = "core_clk", "core0_clk", "iface_clk", "bus_clk";
 		qcom,clock-configs = <0x1 0x0 0x0 0x0>;
 		qcom,allowed-clock-rates = <466000000 400000000 360000000
-					    228570000 133330000 100000000
+					    228570000 133333333 100000000
 					    80000000 72727200>;
 		qcom,slave-side-cp;
 		qcom,sw-power-collapse;
