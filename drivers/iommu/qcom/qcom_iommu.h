@@ -155,6 +155,8 @@ struct iommu_access_ops {
 	int (*iommu_bus_vote)(struct msm_iommu_drvdata *drvdata,
 			      unsigned int vote);
 	void * (*iommu_lock_initialize)(void);
+	int  (*iommu_clk_on)(struct msm_iommu_drvdata *);
+	void (*iommu_clk_off)(struct msm_iommu_drvdata *);
 	void (*iommu_lock_acquire)(unsigned int need_extra_lock);
 	void (*iommu_lock_release)(unsigned int need_extra_lock);
 };

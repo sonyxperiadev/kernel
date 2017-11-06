@@ -114,8 +114,6 @@ struct msm_scm_fault_regs_dump {
 	uint32_t dump_data[SEC_DUMP_SIZE];
 } __aligned(PAGE_SIZE);
 
-static DEFINE_SPINLOCK(msm_iommu_sec_spin_lock);
-
 void msm_iommu_sec_set_access_ops(struct iommu_access_ops *access_ops)
 {
 	iommu_access_ops = access_ops;
@@ -287,6 +285,7 @@ irqreturn_t msm_iommu_secure_fault_handler_v2(int irq, void *dev_id)
 		goto free_regs;
 	}
 
+	iommu_access_ops->iommu_clk_on(drvdata);
 	tmp = msm_iommu_dump_fault_regs(drvdata->sec_id,
 					ctx_drvdata->num, regs);
 
@@ -335,6 +334,7 @@ irqreturn_t msm_iommu_secure_fault_handler_v2(int irq, void *dev_id)
 		}
 	}
 free_regs:
+	iommu_access_ops->iommu_clk_off(drvdata);
 	kfree(regs);
 lock_release:
 	iommu_access_ops->iommu_lock_release(0);
@@ -637,12 +637,24 @@ static int msm_iommu_attach_dev(struct iommu_domain *domain, struct device *dev)
 
 	/* We can only do this once */
 	if (!iommu_drvdata->ctx_attach_count) {
+		ret = iommu_access_ops->iommu_clk_on(iommu_drvdata);
+		if (ret) {
+			iommu_access_ops->iommu_power_off(iommu_drvdata);
+			goto fail;
+		}
+
 		ret = msm_iommu_sec_program_iommu(iommu_drvdata,
 						ctx_drvdata);
 
 		/* bfb settings are always programmed by HLOS */
 		program_iommu_bfb_settings(iommu_drvdata->base,
 					   iommu_drvdata->bfb_settings);
+
+		iommu_access_ops->iommu_clk_off(iommu_drvdata);
+		if (ret) {
+			iommu_access_ops->iommu_power_off(iommu_drvdata);
+			goto fail;
+		}
 	}
 
 	list_add(&(ctx_drvdata->attached_elm), &priv->list_attached);
@@ -719,8 +731,10 @@ static int msm_iommu_map(struct iommu_domain *domain, unsigned long va,
 	if (ret)
 		goto fail;
 
+	iommu_access_ops->iommu_clk_on(iommu_drvdata);
 	ret = msm_iommu_sec_ptbl_map(iommu_drvdata, ctx_drvdata,
 					va, pa, len);
+	iommu_access_ops->iommu_clk_off(iommu_drvdata);
 fail:
 	iommu_access_ops->iommu_lock_release(0);
 	return ret;
@@ -735,9 +749,8 @@ static size_t msm_iommu_map_sg(struct iommu_domain *domain, unsigned long iova,
 	struct scatterlist *tmp;
 	unsigned int len = 0;
 	int ret, i;
-	unsigned long flags;
 
-	spin_lock_irqsave(&msm_iommu_sec_spin_lock, flags);
+	iommu_access_ops->iommu_lock_acquire(0);
 
 	ret = get_drvdata(domain, &iommu_drvdata, &ctx_drvdata);
 	if (ret)
@@ -746,15 +759,17 @@ static size_t msm_iommu_map_sg(struct iommu_domain *domain, unsigned long iova,
 	for_each_sg(sg, tmp, nents, i)
 		len += tmp->length;
 
+	iommu_access_ops->iommu_clk_on(iommu_drvdata);
 	ret = msm_iommu_sec_ptbl_map_range(iommu_drvdata, ctx_drvdata,
 						iova, sg, len);
+	iommu_access_ops->iommu_clk_off(iommu_drvdata);
 	if (ret < 0)
 		goto fail;
 
 	ret = len;
 
 fail:
-	spin_unlock_irqrestore(&msm_iommu_sec_spin_lock, flags);
+	iommu_access_ops->iommu_lock_release(0);
 	return ret;
 }
 
