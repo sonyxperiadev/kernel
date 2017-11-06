@@ -5884,7 +5884,7 @@ dhd_open(struct net_device *net)
 #endif /* TOE */
 
 #if defined(WL_CFG80211)
-		if (unlikely(wl_cfg80211_up(NULL))) {
+		if (unlikely(wl_cfg80211_up(net))) {
 			DHD_ERROR(("%s: failed to bring up cfg80211\n", __FUNCTION__));
 			ret = -1;
 			goto exit;
