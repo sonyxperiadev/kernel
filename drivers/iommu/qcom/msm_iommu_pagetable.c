@@ -24,6 +24,11 @@
 #include <trace/events/kmem.h>
 #include "msm_iommu_pagetable.h"
 
+#ifdef IOMMU_PRIV
+#undef IOMMU_PRIV
+#endif
+#define IOMMU_PRIV	16
+
 #define NUM_FL_PTE      4096
 #define NUM_SL_PTE      256
 #define GUARD_PTE       2

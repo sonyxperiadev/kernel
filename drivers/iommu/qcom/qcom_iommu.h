@@ -19,12 +19,6 @@
 #include <linux/regulator/consumer.h>
 #include <linux/idr.h>
 
-/* Private pgprot flag */
-#ifdef IOMMU_PRIV
-#undef IOMMU_PRIV
-#endif
-#define IOMMU_PRIV	16
-
 extern pgprot_t     pgprot_kernel;
 extern struct bus_type msm_iommu_sec_bus_type;
 extern struct iommu_access_ops iommu_access_ops_v0;
