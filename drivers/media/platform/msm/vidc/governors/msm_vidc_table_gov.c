@@ -25,6 +25,7 @@ enum bus_profile {
 	VIDC_BUS_PROFILE_LOW			= BIT(1),
 	VIDC_BUS_PROFILE_UBWC			= BIT(2),
 	VIDC_BUS_PROFILE_UBWC_10_BIT		= BIT(3),
+	VIDC_BUS_PROFILE_LOW_LATENCY		= BIT(4),
 };
 
 struct bus_profile_entry {
@@ -268,6 +269,8 @@ static int msm_vidc_load_bus_table(struct platform_device *pdev,
 			entry->profile = VIDC_BUS_PROFILE_UBWC;
 		else if (of_find_property(child_node, "qcom,ubwc-10bit", NULL))
 			entry->profile = VIDC_BUS_PROFILE_UBWC_10_BIT;
+		else if (of_find_property(child_node, "qcom,low-latency-mode", NULL))
+			entry->profile = VIDC_BUS_PROFILE_LOW_LATENCY;
 		else
 			entry->profile = VIDC_BUS_PROFILE_NORMAL;
 
