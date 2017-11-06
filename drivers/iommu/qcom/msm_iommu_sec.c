@@ -436,14 +436,14 @@ static int msm_iommu_sec_ptbl_map(struct msm_iommu_drvdata *iommu_drvdata,
 }
 
 #if 1
-static unsigned int get_phys_addr(struct scatterlist *sg)
+static phys_addr_t get_phys_addr(struct scatterlist *sg)
 {
 	/*
 	 * Try sg_dma_address first so that we can
 	 * map carveout regions that do not have a
 	 * struct page associated with them.
 	 */
-	unsigned int pa = sg_dma_address(sg);
+	phys_addr_t pa = sg_dma_address(sg);
 	if (pa == 0)
 		pa = sg_phys(sg);
 	return pa;
@@ -455,8 +455,9 @@ static int msm_iommu_sec_ptbl_map_range(struct msm_iommu_drvdata *iommu_drvdata,
 {
 	struct scatterlist *sgiter;
 	struct msm_scm_map2_req map;
-	unsigned int *pa_list = 0;
-	unsigned int pa, cnt;
+	phys_addr_t *pa_list = 0;
+	phys_addr_t pa;
+	unsigned int cnt;
 	void *flush_va, *flush_va_end;
 	unsigned int offset = 0, chunk_offset = 0;
 	int ret;
