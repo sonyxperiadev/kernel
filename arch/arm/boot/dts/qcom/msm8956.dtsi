@@ -3197,7 +3197,7 @@
 			label = "adsprpc-smd";
 			iommus = <&apps_smmu 16>;
 
-			qcom,virtual-addr-pool = <0x10000000 0x0FFFFFFF>;
+			qcom,virtual-addr-pool = <0x80000000 0x7FFFFFFF>;
 			qcom,adsp-shared-sids =
 					<0x8 0x9 0xa 0xb 0xc 0xd 0xe 0xf>;
 		};
