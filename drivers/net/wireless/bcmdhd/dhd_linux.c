@@ -5772,17 +5772,18 @@ dhd_open(struct net_device *net)
 	int ifidx;
 	int32 ret = 0;
 
-	if (!dhd_download_fw_on_driverload && !dhd_driver_init_done) {
-		DHD_ERROR(("%s: WLAN driver is not initialized\n", __FUNCTION__));
-		return -1;
+	if (!dhd_download_fw_on_driverload) {
+		if (!dhd_driver_init_done) {
+			DHD_ERROR(("%s: WLAN driver is not initialized\n", __FUNCTION__));
+			return -1;
+		}
+		/* Init wakelock */
+		if (!(dhd->dhd_state & DHD_ATTACH_STATE_WAKELOCKS_INIT)) {
+			DHD_OS_WAKE_LOCK_INIT(dhd);
+			dhd->dhd_state |= DHD_ATTACH_STATE_WAKELOCKS_INIT;
+		}
 	}
 
-	/* Init wakelock */
-	if (!dhd_download_fw_on_driverload &&
-		!(dhd->dhd_state & DHD_ATTACH_STATE_WAKELOCKS_INIT)) {
-		DHD_OS_WAKE_LOCK_INIT(dhd);
-		dhd->dhd_state |= DHD_ATTACH_STATE_WAKELOCKS_INIT;
-	}
 
 
 
