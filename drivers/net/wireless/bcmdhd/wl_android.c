@@ -2844,6 +2844,9 @@ wl_handle_private_cmd(struct net_device *net, char *command, u32 cmd_len)
 
 	if (strnicmp(command, CMD_START, strlen(CMD_START)) == 0) {
 		DHD_INFO(("%s, Received regular START command\n", __FUNCTION__));
+#ifdef SUPPORT_DEEP_SLEEP
+		trigger_deep_sleep = 1;
+#endif /* SUPPORT_DEEP_SLEEP */
 		bytes_written = wl_android_wifi_on(net);
 	}
 	else if (strnicmp(command, CMD_SETFWPATH, strlen(CMD_SETFWPATH)) == 0) {
@@ -2857,6 +2860,9 @@ wl_handle_private_cmd(struct net_device *net, char *command, u32 cmd_len)
 	}
 
 	if (strnicmp(command, CMD_STOP, strlen(CMD_STOP)) == 0) {
+#ifdef SUPPORT_DEEP_SLEEP
+		trigger_deep_sleep = 1;
+#endif /* SUPPORT_DEEP_SLEEP */
 		bytes_written = wl_android_wifi_off(net, FALSE);
 	}
 	else if (strnicmp(command, CMD_SCAN_ACTIVE, strlen(CMD_SCAN_ACTIVE)) == 0) {

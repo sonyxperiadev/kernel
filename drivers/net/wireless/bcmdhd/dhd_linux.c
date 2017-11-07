@@ -5566,6 +5566,12 @@ exit:
 	return OSL_ERROR(ret);
 }
 
+#if defined(WL_CFG80211) && defined(SUPPORT_DEEP_SLEEP)
+/* Flags to indicate if we distingish power off policy when
+ * user set the memu "Keep Wi-Fi on during sleep" to "Never"
+ */
+int trigger_deep_sleep = 0;
+#endif /* WL_CFG80211 && SUPPORT_DEEP_SLEEP */
 
 
 static int
@@ -5685,6 +5691,18 @@ exit:
 #if defined(WL_CFG80211)
 	if (ifidx == 0 && !dhd_download_fw_on_driverload)
 			wl_android_wifi_off(net, TRUE);
+#ifdef SUPPORT_DEEP_SLEEP
+	else {
+		/* CSP#505233: Flags to indicate if we distingish
+		 * power off policy when user set the memu
+		 * "Keep Wi-Fi on during sleep" to "Never"
+		 */
+		if (trigger_deep_sleep) {
+			dhd_deepsleep(net, 1);
+			trigger_deep_sleep = 0;
+		}
+	}
+#endif /* SUPPORT_DEEP_SLEEP */
 #endif 
 	dhd->pub.hang_was_sent = 0;
 
@@ -5754,17 +5772,18 @@ dhd_open(struct net_device *net)
 	int ifidx;
 	int32 ret = 0;
 
-	if (!dhd_download_fw_on_driverload && !dhd_driver_init_done) {
-		DHD_ERROR(("%s: WLAN driver is not initialized\n", __FUNCTION__));
-		return -1;
+	if (!dhd_download_fw_on_driverload) {
+		if (!dhd_driver_init_done) {
+			DHD_ERROR(("%s: WLAN driver is not initialized\n", __FUNCTION__));
+			return -1;
+		}
+		/* Init wakelock */
+		if (!(dhd->dhd_state & DHD_ATTACH_STATE_WAKELOCKS_INIT)) {
+			DHD_OS_WAKE_LOCK_INIT(dhd);
+			dhd->dhd_state |= DHD_ATTACH_STATE_WAKELOCKS_INIT;
+		}
 	}
 
-	/* Init wakelock */
-	if (!dhd_download_fw_on_driverload &&
-		!(dhd->dhd_state & DHD_ATTACH_STATE_WAKELOCKS_INIT)) {
-		DHD_OS_WAKE_LOCK_INIT(dhd);
-		dhd->dhd_state |= DHD_ATTACH_STATE_WAKELOCKS_INIT;
-	}
 
 
 
@@ -5821,6 +5840,21 @@ dhd_open(struct net_device *net)
 				goto exit;
 			}
 		}
+#ifdef SUPPORT_DEEP_SLEEP
+		else {
+			/* Flags to indicate if we distingish
+			 * power off policy when user set the memu
+			 * "Keep Wi-Fi on during sleep" to "Never"
+			 */
+			if (trigger_deep_sleep) {
+#if defined(USE_INITIAL_2G_SCAN) || defined(USE_INITIAL_SHORT_DWELL_TIME)
+				g_first_broadcast_scan = TRUE;
+#endif /* USE_INITIAL_2G_SCAN || USE_INITIAL_SHORT_DWELL_TIME */
+				dhd_deepsleep(net, 0);
+				trigger_deep_sleep = 0;
+			}
+		}
+#endif /* SUPPORT_DEEP_SLEEP */
 #endif 
 
 		if (dhd->pub.busstate != DHD_BUS_DATA) {
@@ -5851,7 +5885,7 @@ dhd_open(struct net_device *net)
 #endif /* TOE */
 
 #if defined(WL_CFG80211)
-		if (unlikely(wl_cfg80211_up(NULL))) {
+		if (unlikely(wl_cfg80211_up(net))) {
 			DHD_ERROR(("%s: failed to bring up cfg80211\n", __FUNCTION__));
 			ret = -1;
 			goto exit;
@@ -12374,6 +12408,82 @@ int dhd_get_instance(dhd_pub_t *dhdp)
 	return dhdp->info->unit;
 }
 
+#if defined(WL_CFG80211) && defined(SUPPORT_DEEP_SLEEP)
+#define MAX_TRY_CNT             5 /* Number of tries to disable deepsleep */
+int dhd_deepsleep(struct net_device *dev, int flag)
+{
+	char iovbuf[20];
+	uint powervar = 0;
+	dhd_info_t *dhd;
+	dhd_pub_t *dhdp;
+	int cnt = 0;
+	int ret = 0;
+
+	dhd = DHD_DEV_INFO(dev);
+	dhdp = &dhd->pub;
+
+	switch (flag) {
+		case 1 :  /* Deepsleep on */
+			DHD_ERROR(("[WiFi] Deepsleep On\n"));
+			/* give some time to sysioc_work before deepsleep */
+			OSL_SLEEP(200);
+#ifdef PKT_FILTER_SUPPORT
+		/* disable pkt filter */
+		dhd_enable_packet_filter(0, dhdp);
+#endif /* PKT_FILTER_SUPPORT */
+			/* Disable MPC */
+			powervar = 0;
+			memset(iovbuf, 0, sizeof(iovbuf));
+			bcm_mkiovar("mpc", (char *)&powervar, 4, iovbuf, sizeof(iovbuf));
+			dhd_wl_ioctl_cmd(dhdp, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0);
+
+			/* Enable Deepsleep */
+			powervar = 1;
+			memset(iovbuf, 0, sizeof(iovbuf));
+			bcm_mkiovar("deepsleep", (char *)&powervar, 4, iovbuf, sizeof(iovbuf));
+			dhd_wl_ioctl_cmd(dhdp, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0);
+			break;
+
+		case 0: /* Deepsleep Off */
+			DHD_ERROR(("[WiFi] Deepsleep Off\n"));
+
+			/* Disable Deepsleep */
+			for (cnt = 0; cnt < MAX_TRY_CNT; cnt++) {
+				powervar = 0;
+				memset(iovbuf, 0, sizeof(iovbuf));
+				bcm_mkiovar("deepsleep", (char *)&powervar, 4,
+					iovbuf, sizeof(iovbuf));
+				dhd_wl_ioctl_cmd(dhdp, WLC_SET_VAR, iovbuf,
+					sizeof(iovbuf), TRUE, 0);
+
+
+				memset(iovbuf, 0, sizeof(iovbuf));
+				bcm_mkiovar("deepsleep", (char *)&powervar, 4,
+					iovbuf, sizeof(iovbuf));
+				if ((ret = dhd_wl_ioctl_cmd(dhdp, WLC_GET_VAR, iovbuf,
+					sizeof(iovbuf),	FALSE, 0)) < 0) {
+					DHD_ERROR(("the error of dhd deepsleep status"
+						" ret value :%d\n", ret));
+				} else {
+					if (!(*(int *)iovbuf)) {
+						DHD_ERROR(("deepsleep mode is 0,"
+							" count: %d\n", cnt));
+						break;
+					}
+				}
+			}
+
+			/* Enable MPC */
+			powervar = 1;
+			memset(iovbuf, 0, sizeof(iovbuf));
+			bcm_mkiovar("mpc", (char *)&powervar, 4, iovbuf, sizeof(iovbuf));
+			dhd_wl_ioctl_cmd(dhdp, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0);
+			break;
+	}
+
+	return 0;
+}
+#endif /* WL_CFG80211 && SUPPORT_DEEP_SLEEP */
 
 #ifdef PROP_TXSTATUS
 
