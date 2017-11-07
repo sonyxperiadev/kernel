@@ -676,6 +676,8 @@ skip_sysfs_create:
 	set_dload_mode(download_mode);
 	if (!download_mode)
 		scm_disable_sdi();
+#else
+	scm_disable_sdi();
 #endif
 
 #ifdef TARGET_SOMC_XBOOT
