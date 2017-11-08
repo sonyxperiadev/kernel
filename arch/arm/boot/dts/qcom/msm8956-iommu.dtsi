@@ -61,6 +61,7 @@
 			compatible = "qcom,msm-smmu-v2-ctx";
 			reg = <0x1f09000 0x1000>;
 			qcom,secure-context;
+			qcom,require-tz-mapping;
 			interrupts = <0 241 0>, <0 241 0>;
 			qcom,ctx-num = <2>;
 			qcom,iommu-ctx-sids = <0x2>;
@@ -209,6 +210,7 @@
 			compatible = "qcom,msm-smmu-v2-ctx";
 			reg = <0x1e24000 0x1000>;
 			qcom,secure-context;
+			qcom,require-tz-mapping;
 			qcom,ctx-num = <5>;
 			interrupts = <0 58 0>, <0 58 0>;
 			qcom,iommu-ctx-sids = <0x940 0x905 0x907
@@ -227,6 +229,7 @@
 			compatible = "qcom,msm-smmu-v2-ctx";
 			reg = <0x1e25000 0x1000>;
 			qcom,secure-context;
+			qcom,require-tz-mapping;
 			qcom,ctx-num = <6>;
 			interrupts = <0 60 0>, <0 60 0>;
 			qcom,iommu-ctx-sids = <0x902 0x90e 0x909
@@ -241,6 +244,7 @@
 			compatible = "qcom,msm-smmu-v2-ctx";
 			reg = <0x1e26000 0x1000>;
 			qcom,secure-context;
+			qcom,require-tz-mapping;
 			qcom,ctx-num = <7>;
 			interrupts = <0 61 0>, <0 61 0>;
 			qcom,iommu-ctx-sids = <0x904 0x90c 0x910
@@ -269,6 +273,7 @@
 			compatible = "qcom,msm-smmu-v2-ctx";
 			reg = <0x1e28000 0x1000>;
 			qcom,secure-context;
+			qcom,require-tz-mapping;
 			qcom,ctx-num = <9>;
 			interrupts = <0 77 0>, <0 77 0>;
 			qcom,iommu-ctx-sids = <0xc01 0x2401>;
@@ -339,6 +344,7 @@
 			compatible = "qcom,msm-smmu-v2-ctx";
 			reg = <0x1e31000 0x1000>;
 			interrupts = <0 109 0>;
+			qcom,require-tz-mapping;
 			qcom,ctx-num = <16>;
 			qcom,iommu-ctx-sids = <0x2c05 0x2c06 0x2c08 0x2c0c>;
 			qcom,iommu-sid-mask = <0x0 0x1 0x3 0x0>;
