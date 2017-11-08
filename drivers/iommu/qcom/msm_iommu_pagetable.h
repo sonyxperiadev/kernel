@@ -30,4 +30,17 @@ phys_addr_t msm_iommu_iova_to_phys_soft(struct iommu_domain *domain,
 						phys_addr_t va);
 void msm_iommu_pagetable_free_tables(struct msm_iommu_pt *pt, unsigned long va,
 				size_t len);
+
+/* Secure page table management */
+int msm_iommu_sec_map2(struct msm_scm_map2_req *map);
+int msm_iommu_sec_ptbl_map(struct msm_iommu_drvdata *iommu_drvdata,
+			struct msm_iommu_ctx_drvdata *ctx_drvdata,
+			unsigned long va, phys_addr_t pa, size_t len);
+int msm_iommu_sec_ptbl_map_range(struct msm_iommu_drvdata *iommu_drvdata,
+			struct msm_iommu_ctx_drvdata *ctx_drvdata,
+			unsigned long va, struct scatterlist *sg, size_t len);
+int msm_iommu_sec_ptbl_unmap(struct msm_iommu_drvdata *iommu_drvdata,
+			struct msm_iommu_ctx_drvdata *ctx_drvdata,
+			unsigned long va, size_t len);
+
 #endif

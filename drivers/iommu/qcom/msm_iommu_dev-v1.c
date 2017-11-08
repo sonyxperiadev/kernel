@@ -27,6 +27,8 @@
 #include <linux/of_device.h>
 #include <linux/of_iommu.h>
 
+#include <asm/cacheflush.h>
+
 #include "msm_iommu_hw-v1.h"
 #include "qcom_iommu.h"
 #include <soc/qcom/scm.h>
@@ -34,6 +36,7 @@
 #include "msm_iommu_priv.h"
 
 static const struct of_device_id msm_iommu_ctx_match_table[];
+static struct iommu_access_ops *iommu_access_ops;
 
 #ifdef CONFIG_IOMMU_LPAE
 static const char *BFB_REG_NODE_NAME = "qcom,iommu-lpae-bfb-regs";
@@ -136,36 +139,71 @@ static void __put_bus_vote_client(struct msm_iommu_drvdata *drvdata)
  * all SMMUs will be programmed by this driver.
  */
 #ifdef CONFIG_IOMMU_NON_SECURE
+static void msm_iommu_check_scm_call_avail(void)
+{
+}
+
+int msm_iommu_get_scm_call_avail(void)
+{
+	return -EINVAL;
+}
+
 static inline void get_secure_id(struct device_node *node,
 				 struct msm_iommu_drvdata *drvdata)
 {
 }
 
 static inline void get_secure_ctx(struct device_node *node,
-				  struct msm_iommu_drvdata *iommu_drvdata,
 				  struct msm_iommu_ctx_drvdata *ctx_drvdata)
 {
 	ctx_drvdata->secure_context = 0;
 }
+
+static inline void get_secure_mapping(struct device_node *node,
+			   struct msm_iommu_ctx_drvdata *ctx_drvdata)
+{
+	ctx_drvdata->needs_secure_map = false;
+}
 #else
+static int is_secure;
+static void msm_iommu_check_scm_call_avail(void)
+{
+	is_secure = scm_is_call_available(SCM_SVC_MP, IOMMU_SECURE_CFG);
+}
+
+int msm_iommu_get_scm_call_avail(void)
+{
+	return is_secure;
+}
+
 static void get_secure_id(struct device_node *node,
 			  struct msm_iommu_drvdata *drvdata)
 {
-	if (msm_iommu_get_scm_call_avail())
-		of_property_read_u32(node, "qcom,iommu-secure-id",
+	if (!msm_iommu_get_scm_call_avail())
+		return;
+
+	of_property_read_u32(node, "qcom,iommu-secure-id",
 				     &drvdata->sec_id);
 }
 
 static void get_secure_ctx(struct device_node *node,
-			   struct msm_iommu_drvdata *iommu_drvdata,
 			   struct msm_iommu_ctx_drvdata *ctx_drvdata)
 {
-	u32 secure_ctx = 0;
+	if (!msm_iommu_get_scm_call_avail())
+		return;
 
-	if (msm_iommu_get_scm_call_avail())
-		secure_ctx = of_property_read_bool(node, "qcom,secure-context");
+	ctx_drvdata->secure_context = of_property_read_bool(node,
+				"qcom,secure-context");
+}
 
-	ctx_drvdata->secure_context = secure_ctx;
+static void get_secure_mapping(struct device_node *node,
+			   struct msm_iommu_ctx_drvdata *ctx_drvdata)
+{
+	if (!msm_iommu_get_scm_call_avail())
+		return;
+
+	ctx_drvdata->needs_secure_map = of_property_read_bool(node,
+				"qcom,require-tz-mapping");
 }
 #endif
 
@@ -266,14 +304,6 @@ static int msm_iommu_pmon_parse_dt(struct platform_device *pdev,
 	return 0;
 }
 
-//#define SCM_SVC_MP		0xc
-#define IOMMU_SECURE_PTBL_SIZE  3
-#define IOMMU_SECURE_PTBL_INIT  4
-#define IOMMU_SEC_SET_CP_POOLSZ 5
-#define MAXIMUM_VIRT_SIZE	(300 * SZ_1M)
-#define MAKE_VERSION(major, minor, patch) \
-	(((major & 0x3FF) << 22) | ((minor & 0x3FF) << 12) | (patch & 0xFFF))
-
 static int iommu_scm_set_pool_size(void)
 {
 	struct scm_desc desc = {0};
@@ -283,7 +313,7 @@ static int iommu_scm_set_pool_size(void)
 	desc.args[1] = 0;
 	desc.arginfo = SCM_ARGS(2);
 
-	ret = scm_call2(SCM_SIP_FNID(SCM_SVC_MP, IOMMU_SEC_SET_CP_POOLSZ),
+	ret = scm_call2(SCM_SIP_FNID(SCM_SVC_MP, IOMMU_SET_CP_POOL_SIZE),
 			 &desc);
 	if (ret)
 		pr_err("%s: Failed to set CP pool size in secure env\n",
@@ -414,6 +444,229 @@ free_mem:
 	return ret;
 }
 
+static int msm_iommu_dump_fault_regs(int smmu_id, int cb_num,
+				struct msm_scm_fault_regs_dump *regs)
+{
+	int ret, resp;
+	struct scm_desc desc = {0};
+
+	struct msm_scm_fault_regs_dump_req {
+		uint32_t id;
+		uint32_t cb_num;
+		uint32_t buff;
+		uint32_t len;
+	} req_info;
+
+	desc.args[0] = req_info.id = smmu_id;
+	desc.args[1] = req_info.cb_num = cb_num;
+	/* virt_to_phys(regs) may be greater than 4GB */
+	req_info.buff = virt_to_phys(regs);
+	desc.args[2] =  virt_to_phys(regs);
+	desc.args[3] = req_info.len = sizeof(*regs);
+	desc.arginfo = SCM_ARGS(4, SCM_VAL, SCM_VAL, SCM_RW, SCM_VAL);
+
+	//__dma_flush_area(regs, sizeof(*regs));
+	dmac_clean_range(regs, regs + 1);
+	if (!is_scm_armv8())
+		ret = scm_call(SCM_SVC_UTIL, IOMMU_DUMP_SMMU_FAULT_REGS,
+			&req_info, sizeof(req_info), &resp, 1);
+	else
+		ret = scm_call2(SCM_SIP_FNID(SCM_SVC_UTIL,
+			IOMMU_DUMP_SMMU_FAULT_REGS), &desc);
+	dmac_inv_range(regs, regs + 1);
+	//__dma_flush_area(regs, sizeof(*regs));
+
+	return ret;
+}
+
+static int msm_iommu_reg_dump_to_regs(
+	struct msm_iommu_context_reg ctx_regs[],
+	struct msm_scm_fault_regs_dump *dump, struct msm_iommu_drvdata *drvdata,
+	struct msm_iommu_ctx_drvdata *ctx_drvdata)
+{
+	int i, j, ret = 0;
+	const uint32_t nvals = (dump->dump_size / sizeof(uint32_t));
+	uint32_t *it = (uint32_t *) dump->dump_data;
+	const uint32_t * const end = ((uint32_t *) dump) + nvals;
+	phys_addr_t phys_base = drvdata->phys_base;
+	int ctx = ctx_drvdata->num;
+
+	if (!nvals)
+		return -EINVAL;
+
+	for (i = 1; it < end; it += 2, i += 2) {
+		unsigned int reg_offset;
+		uint32_t addr	= *it;
+		uint32_t val	= *(it + 1);
+		struct msm_iommu_context_reg *reg = NULL;
+		if (addr < phys_base) {
+			pr_err("Bogus-looking register (0x%x) for Iommu with base at %pa. Skipping.\n",
+				addr, &phys_base);
+			continue;
+		}
+		reg_offset = addr - phys_base;
+
+		for (j = 0; j < MAX_DUMP_REGS; ++j) {
+			struct dump_regs_tbl_entry dump_reg = dump_regs_tbl[j];
+			void *test_reg;
+			unsigned int test_offset;
+			switch (dump_reg.dump_reg_type) {
+			case DRT_CTX_REG:
+				test_reg = CTX_REG(dump_reg.reg_offset,
+					drvdata->cb_base, ctx);
+				break;
+			case DRT_GLOBAL_REG:
+				test_reg = GLB_REG(
+					dump_reg.reg_offset, drvdata->glb_base);
+				break;
+			case DRT_GLOBAL_REG_N:
+				test_reg = GLB_REG_N(
+					drvdata->glb_base, ctx,
+					dump_reg.reg_offset);
+				break;
+			default:
+				pr_err("Unknown dump_reg_type: 0x%x\n",
+					dump_reg.dump_reg_type);
+				BUG();
+				break;
+			}
+			test_offset = test_reg - drvdata->glb_base;
+			if (test_offset == reg_offset) {
+				reg = &ctx_regs[j];
+				break;
+			}
+		}
+
+		if (reg == NULL) {
+			pr_debug("Unknown register in secure CB dump: %x\n",
+				addr);
+			continue;
+		}
+
+		if (reg->valid) {
+			WARN(1, "Invalid (repeated?) register in CB dump: %x\n",
+				addr);
+			continue;
+		}
+
+		reg->val = val;
+		reg->valid = true;
+	}
+
+	if (i != nvals) {
+		pr_err("Invalid dump! %d != %d\n", i, nvals);
+		ret = 1;
+	}
+
+	for (i = 0; i < MAX_DUMP_REGS; ++i) {
+		if (!ctx_regs[i].valid) {
+			if (dump_regs_tbl[i].must_be_present) {
+				pr_err("Register missing from dump for ctx %d: %s, 0x%x\n",
+					ctx,
+					dump_regs_tbl[i].name,
+					dump_regs_tbl[i].reg_offset);
+				ret = 1;
+			}
+			ctx_regs[i].val = 0xd00dfeed;
+		}
+	}
+
+	return ret;
+}
+
+irqreturn_t msm_iommu_secure_fault_handler_v2(int irq, void *dev_id)
+{
+	struct platform_device *pdev = dev_id;
+	struct msm_iommu_drvdata *drvdata;
+	struct msm_iommu_ctx_drvdata *ctx_drvdata;
+	struct msm_scm_fault_regs_dump *regs;
+	int tmp, ret = IRQ_HANDLED;
+
+	iommu_access_ops->iommu_lock_acquire(0);
+
+	BUG_ON(!pdev);
+
+	drvdata = dev_get_drvdata(pdev->dev.parent);
+	BUG_ON(!drvdata);
+
+	ctx_drvdata = dev_get_drvdata(&pdev->dev);
+	BUG_ON(!ctx_drvdata);
+
+	regs = kzalloc(sizeof(*regs), GFP_ATOMIC);
+	if (!regs) {
+		pr_err("%s: Couldn't allocate memory\n", __func__);
+		goto lock_release;
+	}
+
+	if (!drvdata->ctx_attach_count) {
+		pr_err("Unexpected IOMMU page fault from secure context bank!\n");
+		pr_err("name = %s\n", drvdata->name);
+		pr_err("Power is OFF. Unable to read page fault information\n");
+		/*
+		 * We cannot determine which context bank caused the issue so
+		 * we just return handled here to ensure IRQ handler code is
+		 * happy
+		 */
+		goto free_regs;
+	}
+
+	iommu_access_ops->iommu_clk_on(drvdata);
+	tmp = msm_iommu_dump_fault_regs(drvdata->sec_id,
+					ctx_drvdata->num, regs);
+
+	if (tmp) {
+		pr_err("%s: Couldn't dump fault registers (%d) %s, ctx: %d\n",
+			__func__, tmp, drvdata->name, ctx_drvdata->num);
+		goto free_regs;
+	} else {
+		struct msm_iommu_context_reg ctx_regs[MAX_DUMP_REGS];
+		memset(ctx_regs, 0, sizeof(ctx_regs));
+		tmp = msm_iommu_reg_dump_to_regs(
+			ctx_regs, regs, drvdata, ctx_drvdata);
+		if (tmp < 0) {
+			ret = IRQ_NONE;
+			pr_err("Incorrect response from secure environment\n");
+			goto free_regs;
+		}
+
+		if (ctx_regs[DUMP_REG_FSR].val) {
+			if (tmp)
+				pr_err("Incomplete fault register dump. Printout will be incomplete.\n");
+			if (!ctx_drvdata->attached_domain) {
+				pr_err("Bad domain in interrupt handler\n");
+				tmp = -ENOSYS;
+			} else {
+				tmp = report_iommu_fault(
+					ctx_drvdata->attached_domain,
+					&ctx_drvdata->pdev->dev,
+					COMBINE_DUMP_REG(
+						ctx_regs[DUMP_REG_FAR1].val,
+						ctx_regs[DUMP_REG_FAR0].val),
+					0);
+			}
+
+			/* if the fault wasn't handled by someone else: */
+			if (tmp == -ENOSYS) {
+				pr_err("Unexpected IOMMU page fault from secure context bank!\n");
+				pr_err("name = %s\n", drvdata->name);
+				pr_err("context = %s (%d)\n", ctx_drvdata->name,
+					ctx_drvdata->num);
+				pr_err("Interesting registers:\n");
+				print_ctx_regs(ctx_regs);
+			}
+		} else {
+			ret = IRQ_NONE;
+		}
+	}
+free_regs:
+	iommu_access_ops->iommu_clk_off(drvdata);
+	kfree(regs);
+lock_release:
+	iommu_access_ops->iommu_lock_release(0);
+	return ret;
+}
+
+
 
 static int msm_iommu_probe(struct platform_device *pdev)
 {
@@ -529,8 +782,7 @@ static int msm_iommu_probe(struct platform_device *pdev)
 		ret = devm_request_threaded_irq(dev, global_cfg_irq,
 						NULL,
 						msm_iommu_global_fault_handler,
-						IRQF_ONESHOT | IRQF_SHARED /*|
-						IRQF_TRIGGER_RISING*/,
+						IRQF_ONESHOT | IRQF_SHARED,
 						"msm_iommu_global_cfg_irq",
 						pdev);
 		if (ret < 0)
@@ -547,8 +799,7 @@ static int msm_iommu_probe(struct platform_device *pdev)
 		ret = devm_request_threaded_irq(dev, global_client_irq,
 						NULL,
 						msm_iommu_global_fault_handler,
-						IRQF_ONESHOT | IRQF_SHARED /*|
-						IRQF_TRIGGER_RISING*/,
+						IRQF_ONESHOT | IRQF_SHARED,
 						"msm_iommu_global_client_irq",
 						pdev);
 		if (ret < 0)
@@ -610,7 +861,8 @@ static int msm_iommu_ctx_parse_dt(struct platform_device *pdev,
 	if (!drvdata)
 		return -EPROBE_DEFER;
 
-	get_secure_ctx(pdev->dev.of_node, drvdata, ctx_drvdata);
+	get_secure_ctx(pdev->dev.of_node, ctx_drvdata);
+	get_secure_mapping(pdev->dev.of_node, ctx_drvdata);
 
 	if (ctx_drvdata->secure_context) {
 		irq = platform_get_irq(pdev, 1);
@@ -784,7 +1036,7 @@ static int __init msm_iommu_driver_init(void)//struct device_node *np)
 	msm_iommu_check_scm_call_avail();
 
 	msm_set_iommu_access_ops(&iommu_access_ops_v1);
-	msm_iommu_sec_set_access_ops(&iommu_access_ops_v1);
+	iommu_access_ops = &iommu_access_ops_v1;
 
 	ret = platform_driver_register(&msm_iommu_driver);
 	if (ret) {
