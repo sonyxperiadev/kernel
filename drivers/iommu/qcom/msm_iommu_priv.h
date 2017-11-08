@@ -13,6 +13,117 @@
 #ifndef MSM_IOMMU_PRIV_H
 #define MSM_IOMMU_PRIV_H
 
+/* commands for SCM_SVC_MP */
+#define IOMMU_SECURE_CFG	2
+#define IOMMU_SECURE_PTBL_SIZE  3
+#define IOMMU_SECURE_PTBL_INIT  4
+#define IOMMU_SET_CP_POOL_SIZE	5
+#define IOMMU_SECURE_MAP	6
+#define IOMMU_SECURE_UNMAP      7
+#define IOMMU_SECURE_MAP2 0x0B
+#define IOMMU_SECURE_MAP2_FLAT 0x12
+#define IOMMU_SECURE_UNMAP2 0x0C
+#define IOMMU_SECURE_UNMAP2_FLAT 0x13
+#define IOMMU_TLBINVAL_FLAG 0x00000001
+
+/* commands for SCM_SVC_UTIL */
+#define IOMMU_DUMP_SMMU_FAULT_REGS 0X0C
+
+/* Other SEC definitions */
+#define MAXIMUM_VIRT_SIZE	(300 * SZ_1M)
+#define MAKE_VERSION(major, minor, patch) \
+	(((major & 0x3FF) << 22) | ((minor & 0x3FF) << 12) | (patch & 0xFFF))
+
+/* Register dump */
+#define NUM_DUMP_REGS 14
+
+/* Each entry is a (reg_addr, reg_val) pair, plus some wiggle room */
+#define SEC_DUMP_SIZE (NUM_DUMP_REGS * 4)
+#define COMBINE_DUMP_REG(upper, lower) (((u64) upper << 32) | lower)
+
+enum dump_reg {
+	DUMP_REG_FIRST,
+	DUMP_REG_FAR0 = DUMP_REG_FIRST,
+	DUMP_REG_FAR1,
+	DUMP_REG_PAR0,
+	DUMP_REG_PAR1,
+	DUMP_REG_FSR,
+	DUMP_REG_FSYNR0,
+	DUMP_REG_FSYNR1,
+	DUMP_REG_TTBR0_0,
+	DUMP_REG_TTBR0_1,
+	DUMP_REG_TTBR1_0,
+	DUMP_REG_TTBR1_1,
+	DUMP_REG_SCTLR,
+	DUMP_REG_ACTLR,
+	DUMP_REG_PRRR,
+	DUMP_REG_MAIR0 = DUMP_REG_PRRR,
+	DUMP_REG_NMRR,
+	DUMP_REG_MAIR1 = DUMP_REG_NMRR,
+	DUMP_REG_CBAR_N,
+	DUMP_REG_CBFRSYNRA_N,
+	MAX_DUMP_REGS,
+};
+
+enum dump_reg_type {
+	DRT_CTX_REG,
+	DRT_GLOBAL_REG,
+	DRT_GLOBAL_REG_N,
+};
+
+enum model_id {
+	QSMMUv1 = 1,
+	QSMMUv2,
+	MMU_500 = 500,
+	MAX_MODEL,
+};
+
+struct dump_regs_tbl_entry {
+	/*
+	 * To keep things context-bank-agnostic, we only store the
+	 * register offset in `reg_offset'
+	 */
+	unsigned int reg_offset;
+	const char *name;
+	int must_be_present;
+	enum dump_reg_type dump_reg_type;
+};
+extern struct dump_regs_tbl_entry dump_regs_tbl[MAX_DUMP_REGS];
+
+struct msm_scm_paddr_list {
+	phys_addr_t list;
+	unsigned int list_size;
+	unsigned int size;
+};
+
+struct msm_scm_mapping_info {
+	unsigned int id;
+	unsigned int ctx_id;
+	unsigned int va;
+	unsigned int size;
+};
+
+struct msm_scm_map2_req {
+	struct msm_scm_paddr_list plist;
+	struct msm_scm_mapping_info info;
+	unsigned int flags;
+};
+
+struct msm_scm_unmap2_req {
+	struct msm_scm_mapping_info info;
+	unsigned int flags;
+};
+
+struct msm_cp_pool_size {
+	uint32_t size;
+	uint32_t spare;
+};
+
+struct msm_scm_fault_regs_dump {
+	uint32_t dump_size;
+	uint32_t dump_data[SEC_DUMP_SIZE];
+} __aligned(PAGE_SIZE);
+
 /**
  * struct msm_iommu_pt - Container for first level page table and its
  * attributes.
@@ -72,8 +183,18 @@ static inline struct msm_iommu_priv *to_msm_priv(struct iommu_domain *dom)
 	return container_of(dom, struct msm_iommu_priv, domain);
 }
 
-int msm_iommu_dma_supported(struct iommu_domain *domain,
-				  struct device *dev, u64 mask);
 int msm_iommu_init(struct device *dev);
+
+void print_ctx_regs(struct msm_iommu_context_reg regs[]);
+
+/*
+ * Interrupt handler for the IOMMU context fault interrupt. Hooking the
+ * interrupt is not supported in the API yet, but this will print an error
+ * message and dump useful IOMMU registers.
+ */
+irqreturn_t msm_iommu_global_fault_handler(int irq, void *dev_id);
+irqreturn_t msm_iommu_fault_handler(int irq, void *dev_id);
+irqreturn_t msm_iommu_fault_handler_v2(int irq, void *dev_id);
+irqreturn_t msm_iommu_secure_fault_handler_v2(int irq, void *dev_id);
 
 #endif

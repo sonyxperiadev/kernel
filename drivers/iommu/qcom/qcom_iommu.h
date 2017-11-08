@@ -163,8 +163,6 @@ struct iommu_access_ops {
 
 void msm_iommu_add_drv(struct msm_iommu_drvdata *drv);
 void msm_iommu_remove_drv(struct msm_iommu_drvdata *drv);
-void program_iommu_bfb_settings(void __iomem *base,
-			const struct msm_iommu_bfb_settings *bfb_settings);
 void iommu_halt(const struct msm_iommu_drvdata *iommu_drvdata);
 void iommu_resume(const struct msm_iommu_drvdata *iommu_drvdata);
 
@@ -201,75 +199,13 @@ struct msm_iommu_ctx_drvdata {
 	u32 sid_mask[MAX_NUM_SMR];
 	unsigned int n_sid_mask;
 	bool dynamic;
+	bool needs_secure_map;
 };
-
-enum dump_reg {
-	DUMP_REG_FIRST,
-	DUMP_REG_FAR0 = DUMP_REG_FIRST,
-	DUMP_REG_FAR1,
-	DUMP_REG_PAR0,
-	DUMP_REG_PAR1,
-	DUMP_REG_FSR,
-	DUMP_REG_FSYNR0,
-	DUMP_REG_FSYNR1,
-	DUMP_REG_TTBR0_0,
-	DUMP_REG_TTBR0_1,
-	DUMP_REG_TTBR1_0,
-	DUMP_REG_TTBR1_1,
-	DUMP_REG_SCTLR,
-	DUMP_REG_ACTLR,
-	DUMP_REG_PRRR,
-	DUMP_REG_MAIR0 = DUMP_REG_PRRR,
-	DUMP_REG_NMRR,
-	DUMP_REG_MAIR1 = DUMP_REG_NMRR,
-	DUMP_REG_CBAR_N,
-	DUMP_REG_CBFRSYNRA_N,
-	MAX_DUMP_REGS,
-};
-
-enum dump_reg_type {
-	DRT_CTX_REG,
-	DRT_GLOBAL_REG,
-	DRT_GLOBAL_REG_N,
-};
-
-enum model_id {
-	QSMMUv1 = 1,
-	QSMMUv2,
-	MMU_500 = 500,
-	MAX_MODEL,
-};
-
-struct dump_regs_tbl_entry {
-	/*
-	 * To keep things context-bank-agnostic, we only store the
-	 * register offset in `reg_offset'
-	 */
-	unsigned int reg_offset;
-	const char *name;
-	int must_be_present;
-	enum dump_reg_type dump_reg_type;
-};
-extern struct dump_regs_tbl_entry dump_regs_tbl[MAX_DUMP_REGS];
-
-#define COMBINE_DUMP_REG(upper, lower) (((u64) upper << 32) | lower)
 
 struct msm_iommu_context_reg {
 	uint32_t val;
 	bool valid;
 };
-
-void print_ctx_regs(struct msm_iommu_context_reg regs[]);
-
-/*
- * Interrupt handler for the IOMMU context fault interrupt. Hooking the
- * interrupt is not supported in the API yet, but this will print an error
- * message and dump useful IOMMU registers.
- */
-irqreturn_t msm_iommu_global_fault_handler(int irq, void *dev_id);
-irqreturn_t msm_iommu_fault_handler(int irq, void *dev_id);
-irqreturn_t msm_iommu_fault_handler_v2(int irq, void *dev_id);
-irqreturn_t msm_iommu_secure_fault_handler_v2(int irq, void *dev_id);
 
 enum {
 	PROC_APPS,
@@ -375,7 +311,6 @@ static inline int msm_soc_version_supports_iommu_v0(void)
 #endif
 
 int msm_iommu_get_scm_call_avail(void);
-void msm_iommu_check_scm_call_avail(void);
 
 u32 msm_iommu_get_mair0(void);
 u32 msm_iommu_get_mair1(void);

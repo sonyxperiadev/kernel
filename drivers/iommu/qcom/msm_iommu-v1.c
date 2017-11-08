@@ -34,6 +34,7 @@
 #include <linux/dma-iommu.h>
 
 #include <linux/amba/bus.h>
+#include <soc/qcom/scm.h>
 #include <soc/qcom/secure_buffer.h>
 #include <linux/msm-bus.h>
 
@@ -145,6 +146,37 @@ struct iommu_access_ops iommu_access_ops_v1 = {
 	.iommu_lock_release = _iommu_lock_release,
 };
 
+static int get_drvdata(struct iommu_domain *domain,
+			struct msm_iommu_drvdata **iommu_drvdata,
+			struct msm_iommu_ctx_drvdata **ctx_drvdata)
+{
+	struct msm_iommu_priv *priv = to_msm_priv(domain);
+	struct msm_iommu_priv *base_priv = NULL;
+	struct msm_iommu_ctx_drvdata *ctx;
+
+	list_for_each_entry(ctx, &priv->list_attached, attached_elm) {
+		if (ctx->attached_domain == domain)
+			goto found;
+	}
+
+	/* If not found, search between dynamic domains */
+	if (!priv->base)
+		return -EINVAL;
+
+	base_priv = to_msm_priv(priv->base);
+	list_for_each_entry(ctx, &base_priv->list_attached, attached_elm) {
+		if (ctx->attached_domain == domain)
+			break;
+	}
+found:
+	if (ctx->attached_domain != domain)
+		return -EINVAL;
+
+	*ctx_drvdata = ctx;
+	*iommu_drvdata = dev_get_drvdata(ctx->pdev->dev.parent);
+	return 0;
+}
+
 static ATOMIC_NOTIFIER_HEAD(msm_iommu_notifier_list);
 
 void msm_iommu_register_notify(struct notifier_block *nb)
@@ -152,108 +184,6 @@ void msm_iommu_register_notify(struct notifier_block *nb)
 	atomic_notifier_chain_register(&msm_iommu_notifier_list, nb);
 }
 EXPORT_SYMBOL(msm_iommu_register_notify);
-
-#ifdef CONFIG_MSM_IOMMU_VBIF_CHECK
-
-#define VBIF_XIN_HALT_CTRL0 0x200
-#define VBIF_XIN_HALT_CTRL1 0x204
-#define VBIF_AXI_HALT_CTRL0 0x208
-#define VBIF_AXI_HALT_CTRL1 0x20C
-
-static void __halt_vbif_xin(void __iomem *vbif_base)
-{
-	pr_err("Halting VBIF_XIN\n");
-	writel_relaxed(0xFFFFFFFF, vbif_base + VBIF_XIN_HALT_CTRL0);
-}
-
-static void __dump_vbif_state(void __iomem *base, void __iomem *vbif_base)
-{
-	unsigned int reg_val;
-
-	reg_val = readl_relaxed(base + MICRO_MMU_CTRL);
-	pr_err("Value of SMMU_IMPLDEF_MICRO_MMU_CTRL = 0x%x\n", reg_val);
-
-	reg_val = readl_relaxed(vbif_base + VBIF_XIN_HALT_CTRL0);
-	pr_err("Value of VBIF_XIN_HALT_CTRL0 = 0x%x\n", reg_val);
-	reg_val = readl_relaxed(vbif_base + VBIF_XIN_HALT_CTRL1);
-	pr_err("Value of VBIF_XIN_HALT_CTRL1 = 0x%x\n", reg_val);
-	reg_val = readl_relaxed(vbif_base + VBIF_AXI_HALT_CTRL0);
-	pr_err("Value of VBIF_AXI_HALT_CTRL0 = 0x%x\n", reg_val);
-	reg_val = readl_relaxed(vbif_base + VBIF_AXI_HALT_CTRL1);
-	pr_err("Value of VBIF_AXI_HALT_CTRL1 = 0x%x\n", reg_val);
-}
-
-static int __check_vbif_state(struct msm_iommu_drvdata const *drvdata)
-{
-	int ret = 0;
-
-	if (drvdata->vbif_base) {
-		__dump_vbif_state(drvdata->base, drvdata->vbif_base);
-		__halt_vbif_xin(drvdata->vbif_base);
-		__dump_vbif_state(drvdata->base, drvdata->vbif_base);
-	} else {
-		pr_err("%s: failed to get vbif state\n", __func__);
-		ret = -ENOMEM;
-	}
-	return ret;
-}
-
-static void check_halt_state(struct msm_iommu_drvdata const *drvdata)
-{
-	int res;
-	unsigned int val;
-	void __iomem *base = drvdata->base;
-	char const *name = drvdata->name;
-
-	pr_err("Timed out waiting for IOMMU halt to complete for %s\n", name);
-	res = __check_vbif_state(drvdata);
-	if (res)
-		BUG();
-
-	pr_err("Checking if IOMMU halt completed for %s\n", name);
-
-	res = readl_poll_timeout_atomic(GLB_REG(MICRO_MMU_CTRL, base), val,
-			(val & MMU_CTRL_IDLE) == MMU_CTRL_IDLE, 0, 5, 1000000);
-
-	if (res) {
-		pr_err("Timed out (again) waiting for IOMMU halt to complete for %s\n",
-			name);
-	} else {
-		pr_err("IOMMU halt completed. VBIF FIFO most likely not getting drained by master\n");
-	}
-	BUG();
-}
-
-static void check_tlb_sync_state(struct msm_iommu_drvdata const *drvdata,
-				int ctx, struct msm_iommu_priv *priv)
-{
-	int res;
-	unsigned int val;
-	void __iomem *base = drvdata->cb_base;
-	char const *name = drvdata->name;
-
-	pr_err("Timed out waiting for TLB SYNC to complete for %s (client: %s)\n",
-		name, priv->client_name);
-	atomic_notifier_call_chain(&msm_iommu_notifier_list, TLB_SYNC_TIMEOUT,
-				(void *) priv->client_name);
-	res = __check_vbif_state(drvdata);
-	if (res)
-		BUG();
-
-	pr_err("Checking if TLB sync completed for %s\n", name);
-
-	res = readl_poll_timeout_atomic(CTX_REG(CB_TLBSTATUS, base, ctx), val,
-				(val & CB_TLBSTATUS_SACTIVE) == 0, 5, 1000000);
-	if (res) {
-		pr_err("Timed out (again) waiting for TLB SYNC to complete for %s\n",
-			name);
-	} else {
-		pr_err("TLB Sync completed. VBIF FIFO most likely not getting drained by master\n");
-	}
-	BUG();
-}
-
-#else
 
 /*
  * For targets without VBIF or for targets with the VBIF check disabled
@@ -269,8 +199,6 @@ static void check_tlb_sync_state(struct msm_iommu_drvdata const *drvdata,
 {
 	BUG();
 }
-
-#endif
 
 void iommu_halt(struct msm_iommu_drvdata const *iommu_drvdata)
 {
@@ -470,7 +398,7 @@ static void __program_iommu(struct msm_iommu_drvdata *drvdata)
 	mb(); /* Make sure writes complete before returning */
 }
 
-void program_iommu_bfb_settings(void __iomem *base,
+static void program_iommu_bfb_settings(void __iomem *base,
 			const struct msm_iommu_bfb_settings *bfb_settings)
 {
 	unsigned int i;
@@ -482,6 +410,26 @@ void program_iommu_bfb_settings(void __iomem *base,
 
 	/* Make sure writes complete before returning */
 	mb();
+}
+
+int msm_iommu_sec_program_iommu(struct msm_iommu_drvdata *drvdata,
+			struct msm_iommu_ctx_drvdata *ctx_drvdata)
+{
+	int ret, scm_ret;
+
+	if (drvdata->smmu_local_base) {
+		writel_relaxed(0xFFFFFFFF,
+			       drvdata->smmu_local_base + SMMU_INTR_SEL_NS);
+		mb();
+	}
+
+	ret = scm_restore_sec_cfg(drvdata->sec_id, ctx_drvdata->num, &scm_ret);
+	if (ret || scm_ret) {
+		pr_err("scm call IOMMU_SECURE_CFG failed\n");
+		return ret ? ret : -EINVAL;
+	}
+
+	return ret;
 }
 
 static void __reset_context(struct msm_iommu_drvdata *iommu_drvdata, int ctx)
@@ -760,6 +708,11 @@ static struct iommu_domain *msm_iommu_domain_alloc(unsigned type)
 	struct msm_iommu_priv *priv;
 	int ret;
 
+	/*
+	 * Note: for secure mapping, the IOMMU_DOMAIN_DMA is not allowed,
+	 * hence only UNMANAGED is allowed. TODO: Find a way to differentiate
+	 * between secure mapping ONLY and insecure pagetable allocation.
+	 */
 	if (type != IOMMU_DOMAIN_UNMANAGED && type != IOMMU_DOMAIN_DMA)
 		return NULL;
 
@@ -875,12 +828,17 @@ static int msm_iommu_attach_dev(struct iommu_domain *domain, struct device *dev)
 	}
 
 	if (is_domain_dynamic(priv)) {
+		if (ctx_drvdata->needs_secure_map) {
+			pr_err("%s: BUG! IOMMU requires secure mapping!"
+				" This context cannot be dynamic!\n",
+				__func__);
+			BUG();
+		}
 		ret = msm_iommu_dynamic_attach(domain,
 				iommu_drvdata, ctx_drvdata);
 		mutex_unlock(&msm_iommu_lock);
 		return ret;
 	}
-
 
 	++ctx_drvdata->attach_count;
 
@@ -933,13 +891,15 @@ static int msm_iommu_attach_dev(struct iommu_domain *domain, struct device *dev)
 				goto unlock;
 			}
 		}
+
+		/* bfb settings are always programmed by HLOS */
 		program_iommu_bfb_settings(iommu_drvdata->base,
 					   iommu_drvdata->bfb_settings);
 		set_m2v = true;
 	}
 
 	secure_ctx = !!(ctx_drvdata->secure_context > 0);
-	if (secure_ctx) {
+	if (secure_ctx || ctx_drvdata->needs_secure_map) {
 		dev_dbg(dev, "Detected secure context.\n");
 		goto add_domain;
 	}
@@ -960,6 +920,9 @@ static int msm_iommu_attach_dev(struct iommu_domain *domain, struct device *dev)
 	__disable_clocks(iommu_drvdata);
 
 add_domain:
+	if (ctx_drvdata->needs_secure_map)
+		dev_dbg(dev, "Attaching secure domain %s (%d)\n",
+			ctx_drvdata->name, ctx_drvdata->num);
 	spin_lock_irqsave(&msm_iommu_spin_lock, flags);
 	list_add(&(ctx_drvdata->attached_elm), &priv->list_attached);
 	spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
@@ -1038,6 +1001,12 @@ static void msm_iommu_detach_dev(struct iommu_domain *domain,
 		goto unlock;
 
 	if (is_domain_dynamic(priv)) {
+		if (ctx_drvdata->needs_secure_map) {
+			pr_err("%s: BUG! IOMMU requires secure mapping!"
+				" This context cannot be dynamic!\n",
+				__func__);
+			BUG();
+		}
 		msm_iommu_dynamic_detach(domain,
 				iommu_drvdata, ctx_drvdata);
 		mutex_unlock(&msm_iommu_lock);
@@ -1098,6 +1067,8 @@ static int msm_iommu_map(struct iommu_domain *domain, unsigned long va,
 			 phys_addr_t pa, size_t len, int prot)
 {
 	struct msm_iommu_priv *priv;
+	struct msm_iommu_drvdata *iommu_drvdata;
+	struct msm_iommu_ctx_drvdata *ctx_drvdata;
 	int ret = 0;
 	unsigned long flags;
 
@@ -1109,6 +1080,29 @@ static int msm_iommu_map(struct iommu_domain *domain, unsigned long va,
 		goto fail;
 	}
 
+	/* Dynamic domains are always insecure */
+	if (is_domain_dynamic(priv))
+		goto insecure_map;
+
+	/* Secure mapping domains get attached at probe time */
+	ret = get_drvdata(domain, &iommu_drvdata, &ctx_drvdata);
+	if (ret)
+		goto insecure_map;
+
+	if (ctx_drvdata->needs_secure_map) {
+		__enable_clocks(iommu_drvdata);
+		ret = msm_iommu_sec_ptbl_map(iommu_drvdata,
+					ctx_drvdata, va, pa, len);
+		if (unlikely(ret)) {
+			pr_debug("%s: Secure partition table mapping"
+				 " failed.\n", __func__);
+		}
+		__disable_clocks(iommu_drvdata);
+	}
+	pr_debug("iommu_map %s (%d)\n",
+		ctx_drvdata->name, ctx_drvdata->num);
+
+insecure_map:
 	ret = msm_iommu_pagetable_map(&priv->pt, va, pa, len, prot);
 	if (ret)
 		goto fail;
@@ -1123,6 +1117,8 @@ static size_t msm_iommu_unmap(struct iommu_domain *domain, unsigned long va,
 			      size_t len)
 {
 	struct msm_iommu_priv *priv;
+	struct msm_iommu_drvdata *iommu_drvdata;
+	struct msm_iommu_ctx_drvdata *ctx_drvdata;
 	int ret = -ENODEV;
 	unsigned long flags;
 
@@ -1132,6 +1128,28 @@ static size_t msm_iommu_unmap(struct iommu_domain *domain, unsigned long va,
 	if (!priv)
 		goto fail;
 
+	/* Dynamic domains are always insecure */
+	if (is_domain_dynamic(priv))
+		goto insecure_unmap;
+
+	/* Secure mapping domains will never get detached */
+	ret = get_drvdata(domain, &iommu_drvdata, &ctx_drvdata);
+	if (ret)
+		goto insecure_unmap;
+
+	if (ctx_drvdata->needs_secure_map) {
+		__enable_clocks(iommu_drvdata);
+		ret = msm_iommu_sec_ptbl_unmap(iommu_drvdata,
+					ctx_drvdata, va, len);
+		if (unlikely(ret))
+			pr_debug("%s: Secure partition table unmapping"
+				 " failed.\n", __func__);
+		__disable_clocks(iommu_drvdata);
+	}
+	pr_debug("iommu_unmap %s (%d)\n",
+		ctx_drvdata->name, ctx_drvdata->num);
+
+insecure_unmap:
 	ret = msm_iommu_pagetable_unmap(&priv->pt, va, len);
 	if (ret < 0)
 		goto fail;
@@ -1152,6 +1170,8 @@ static size_t msm_iommu_map_sg(struct iommu_domain *domain, unsigned long iova,
 			       int prot)
 {
 	struct msm_iommu_priv *priv;
+	struct msm_iommu_drvdata *iommu_drvdata;
+	struct msm_iommu_ctx_drvdata *ctx_drvdata;
 	struct scatterlist *tmp;
 	unsigned int len = 0;
 	int ret, i;
@@ -1168,6 +1188,27 @@ static size_t msm_iommu_map_sg(struct iommu_domain *domain, unsigned long iova,
 	for_each_sg(sg, tmp, nents, i)
 		len += tmp->length;
 
+	/* Dynamic domains are always insecure */
+	if (is_domain_dynamic(priv))
+		goto insecure_map_range;
+
+	ret = get_drvdata(domain, &iommu_drvdata, &ctx_drvdata);
+	if (ret)
+		goto insecure_map_range;
+
+	if (ctx_drvdata->needs_secure_map) {
+		__enable_clocks(iommu_drvdata);
+		ret = msm_iommu_sec_ptbl_map_range(iommu_drvdata,
+					ctx_drvdata, iova, sg, len);
+		if (unlikely(ret))
+			pr_debug("%s: Secure partition table mapping"
+				 " failed.\n", __func__);
+		__disable_clocks(iommu_drvdata);
+	}
+	pr_debug("iommu_map_sg %s (%d)\n",
+		ctx_drvdata->name, ctx_drvdata->num);
+
+insecure_map_range:
 	ret = msm_iommu_pagetable_map_range(&priv->pt, iova, sg, len, prot);
 	if (ret < 0)
 		goto fail;
@@ -1178,32 +1219,19 @@ fail:
 	spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
 	return ret;
 }
-/*
-static int msm_iommu_unmap_range(struct iommu_domain *domain, unsigned int va,
-				 unsigned int len)
-{
-	struct msm_iommu_priv *priv;
-	unsigned long flags;
-
-	spin_lock_irqsave(&msm_iommu_spin_lock, flags);
-
-	priv = to_msm_priv(domain);
-	msm_iommu_pagetable_unmap_range(&priv->pt, va, len);
-
-	__flush_iotlb(domain);
-
-	msm_iommu_pagetable_free_tables(&priv->pt, va, len);
-	spin_unlock_irqrestore(&msm_iommu_spin_lock, flags);
-
-	return 0;
-}
-*/
 
 static phys_addr_t msm_iommu_iova_to_phys(struct iommu_domain *domain,
 					  phys_addr_t va)
 {
 	phys_addr_t ret = 0;
 	unsigned long flags;
+
+	/*
+	 * NOTE: The iova_to_phys for secure mapping ONLY is
+	 *       NEVER supported. Though, this should not give
+	 *       us any problem here, since we always support
+	 *       also the insecure pagetable mapping. Always.
+	 */
 
 	mutex_lock(&msm_iommu_lock);
 
@@ -1513,14 +1541,7 @@ fail:
 
 	return ret;
 }
-#if 0
-static phys_addr_t msm_iommu_get_pt_base_addr(struct iommu_domain *domain)
-{
-	struct msm_iommu_priv *priv = to_msm_priv(domain);
 
-	return __pa(priv->pt.fl_table);
-}
-#endif
 #define DUMP_REG_INIT(dump_reg, cb_reg, mbp, drt)		\
 	do {							\
 		dump_regs_tbl[dump_reg].reg_offset = cb_reg;	\
@@ -1792,7 +1813,7 @@ static int msm_iommu_of_xlate(struct device *dev, struct of_phandle_args *args)
 	return 0;
 }
 
-int msm_iommu_dma_supported(struct iommu_domain *domain,
+static int msm_iommu_dma_supported(struct iommu_domain *domain,
 				  struct device *dev, u64 mask)
 {
 	return ((1ULL << 32) - 1) < mask ? 0 : 1;
@@ -1805,7 +1826,7 @@ static struct iommu_ops msm_iommu_ops = {
 	.detach_dev = msm_iommu_detach_dev,
 	.map = msm_iommu_map,
 	.unmap = msm_iommu_unmap,
-	.map_sg = msm_iommu_map_sg, //default_iommu_map_sg,
+	.map_sg = msm_iommu_map_sg,
 	.iova_to_phys = msm_iommu_iova_to_phys,
 	.add_device = msm_iommu_add_device,
 	.remove_device = msm_iommu_remove_device,
