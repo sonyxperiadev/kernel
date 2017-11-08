@@ -121,16 +121,7 @@ EXPORT_SYMBOL(msm_iommu_get_ctx);
  */
 struct bus_type *msm_iommu_get_bus(struct device *dev)
 {
-	if (!dev)
-		return NULL;
-
-	if (of_device_is_compatible(dev->of_node, "qcom,msm-smmu-v2-ctx")) {
-		if (of_property_read_bool(dev->of_node, "qcom,secure-context"))
-			return &msm_iommu_sec_bus_type;
-		else
-			return &platform_bus_type;
-	} else
-		return &platform_bus_type;
+	return &platform_bus_type;
 }
 EXPORT_SYMBOL(msm_iommu_get_bus);
 
