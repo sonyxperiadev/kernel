@@ -235,7 +235,7 @@
 			synaptics,irq_gpio = <&tlmm 125 0x00>;
 			post_probe_start = <1>;
 			synaptics,firmware_name = "touch_module_id_0x%02x.img";
-			flash_on_post_probe = <1>;
+			flash_on_post_probe = <0>;
 			flip_config = <0>;
 			watchdog_enabled = <1>;
 			watchdog_delay_ms = <3000>;
