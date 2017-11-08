@@ -17,6 +17,7 @@
 #include <linux/iommu.h>
 #include <linux/scatterlist.h>
 
+#include <soc/qcom/scm.h>
 #include <asm/cacheflush.h>
 
 #include "qcom_iommu.h"
@@ -347,6 +348,7 @@ static struct msm_iommu_map_ops sg_ops = {
 	.get_next =	__get_next_sg,
 };
 
+#if 0
 static inline int is_fully_aligned(unsigned int va, phys_addr_t pa, size_t len,
 				   int align)
 {
@@ -358,8 +360,7 @@ static inline int is_fully_aligned(unsigned int va, phys_addr_t pa, size_t len,
 		return 0;
 	}
 }
-
-#if 0
+#else
 static inline int is_fully_aligned(unsigned int va, phys_addr_t pa, size_t len,
 				   int align)
 {
@@ -691,4 +692,211 @@ static void setup_iommu_tex_classes(void)
 void msm_iommu_pagetable_init(void)
 {
 	setup_iommu_tex_classes();
+}
+
+
+/* Secure page table management */
+
+static phys_addr_t sec_get_phys_addr(struct scatterlist *sg)
+{
+	/*
+	 * Try sg_dma_address first so that we can
+	 * map carveout regions that do not have a
+	 * struct page associated with them.
+	 */
+	phys_addr_t pa = sg_dma_address(sg);
+	if (pa == 0)
+		pa = sg_phys(sg);
+	return pa;
+}
+
+int msm_iommu_sec_map2(struct msm_scm_map2_req *map)
+{
+	struct scm_desc desc = {0};
+	u32 resp, flags;
+	int ret;
+
+	flags = 0;
+
+	desc.args[0] = map->plist.list;
+	desc.args[1] = map->plist.list_size;
+	desc.args[2] = map->plist.size;
+	desc.args[3] = map->info.id;
+	desc.args[4] = map->info.ctx_id;
+	desc.args[5] = map->info.va;
+	desc.args[6] = map->info.size;
+	desc.args[7] = flags;
+	desc.arginfo = SCM_ARGS(8, SCM_RW, SCM_VAL, SCM_VAL, SCM_VAL, SCM_VAL,
+				SCM_VAL, SCM_VAL, SCM_VAL);
+	if (!is_scm_armv8()) {
+		ret = scm_call(SCM_SVC_MP, IOMMU_SECURE_MAP2, map, sizeof(*map),
+				&resp, sizeof(resp));
+	} else {
+		ret = scm_call2(SCM_SIP_FNID(SCM_SVC_MP,
+				IOMMU_SECURE_MAP2_FLAT), &desc);
+		resp = desc.ret[0];
+	}
+	if (ret || resp) {
+		pr_debug("%s: SCM call failure. Response: 0x%x",
+			__func__, resp);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+int msm_iommu_sec_ptbl_map(struct msm_iommu_drvdata *iommu_drvdata,
+			struct msm_iommu_ctx_drvdata *ctx_drvdata,
+			unsigned long va, phys_addr_t pa, size_t len)
+{
+	struct msm_scm_map2_req map;
+	void *flush_va, *flush_va_end;
+	int ret = 0;
+
+	if (!IS_ALIGNED(va, SZ_1M) || !IS_ALIGNED(len, SZ_1M) ||
+		!IS_ALIGNED(pa, SZ_1M)) {
+		pr_debug("%s: ERROR: Unaligned secure mapping requested.\n",
+			__func__);
+		return -EINVAL;
+	}
+	map.plist.list = virt_to_phys(&pa);
+	map.plist.list_size = 1;
+	map.plist.size = len;
+	map.info.id = iommu_drvdata->sec_id;
+	map.info.ctx_id = ctx_drvdata->num;
+	map.info.va = va;
+	map.info.size = len;
+
+	flush_va = &pa;
+	flush_va_end = (void *)
+		(((unsigned long) flush_va) + sizeof(phys_addr_t));
+
+	/*
+	 * Ensure that the buffer is in RAM by the time it gets to TZ
+	 */
+	//__dma_flush_area(flush_va, sizeof(phys_addr_t));
+	dmac_clean_range(flush_va, flush_va_end);
+
+	ret = msm_iommu_sec_map2(&map);
+	if (ret)
+		return -EINVAL;
+
+	return 0;
+}
+
+int msm_iommu_sec_ptbl_map_range(struct msm_iommu_drvdata *iommu_drvdata,
+			struct msm_iommu_ctx_drvdata *ctx_drvdata,
+			unsigned long va, struct scatterlist *sg, size_t len)
+{
+	struct scatterlist *sgiter;
+	struct msm_scm_map2_req map;
+	phys_addr_t *pa_list = 0;
+	phys_addr_t pa;
+	unsigned int cnt;
+	void *flush_va, *flush_va_end;
+	unsigned int offset = 0, chunk_offset = 0;
+	int ret;
+
+	if (!IS_ALIGNED(va, SZ_1M) || !IS_ALIGNED(len, SZ_1M))
+		return -EINVAL;
+
+	map.info.id = iommu_drvdata->sec_id;
+	map.info.ctx_id = ctx_drvdata->num;
+	map.info.va = va;
+	map.info.size = len;
+
+	if (sg->length == len) {
+		/*
+		 * physical address for secure mapping needs
+		 * to be 1MB aligned
+		 */
+		pa = sec_get_phys_addr(sg);
+		if (!IS_ALIGNED(pa, SZ_1M))
+			return -EINVAL;
+		map.plist.list = virt_to_phys(&pa);
+		map.plist.list_size = 1;
+		map.plist.size = len;
+		flush_va = &pa;
+	} else {
+		sgiter = sg;
+		if (!IS_ALIGNED(sgiter->length, SZ_1M))
+			return -EINVAL;
+		cnt = sg->length / SZ_1M;
+		while ((sgiter = sg_next(sgiter))) {
+			if (!IS_ALIGNED(sgiter->length, SZ_1M))
+				return -EINVAL;
+			cnt += sgiter->length / SZ_1M;
+		}
+
+		pa_list = kmalloc(cnt * sizeof(*pa_list), GFP_KERNEL);
+		if (!pa_list)
+			return -ENOMEM;
+
+		sgiter = sg;
+		cnt = 0;
+		pa = sec_get_phys_addr(sgiter);
+		if (!IS_ALIGNED(pa, SZ_1M)) {
+			kfree(pa_list);
+			return -EINVAL;
+		}
+		while (offset < len) {
+			pa += chunk_offset;
+			pa_list[cnt] = pa;
+			chunk_offset += SZ_1M;
+			offset += SZ_1M;
+			cnt++;
+
+			if (chunk_offset >= sgiter->length && offset < len) {
+				chunk_offset = 0;
+				sgiter = sg_next(sgiter);
+				pa = sec_get_phys_addr(sgiter);
+			}
+		}
+
+		map.plist.list = virt_to_phys(pa_list);
+		map.plist.list_size = cnt;
+		map.plist.size = SZ_1M;
+		flush_va = pa_list;
+	}
+
+	/*
+	 * Ensure that the buffer is in RAM by the time it gets to TZ
+	 */
+	flush_va_end = (void *) (((unsigned long) flush_va) +
+			(map.plist.list_size * sizeof(*pa_list)));
+	//__dma_flush_area(flush_va, (map.plist.list_size * sizeof(*pa_list)));
+	dmac_clean_range(flush_va, flush_va_end);
+
+	ret = msm_iommu_sec_map2(&map);
+	kfree(pa_list);
+
+	return ret;
+}
+
+int msm_iommu_sec_ptbl_unmap(struct msm_iommu_drvdata *iommu_drvdata,
+			struct msm_iommu_ctx_drvdata *ctx_drvdata,
+			unsigned long va, size_t len)
+{
+	struct msm_scm_unmap2_req unmap;
+	int ret, scm_ret;
+	struct scm_desc desc = {0};
+
+	if (!IS_ALIGNED(va, SZ_1M) || !IS_ALIGNED(len, SZ_1M))
+		return -EINVAL;
+
+	desc.args[0] = unmap.info.id = iommu_drvdata->sec_id;
+	desc.args[1] = unmap.info.ctx_id = ctx_drvdata->num;
+	desc.args[2] = unmap.info.va = va;
+	desc.args[3] = unmap.info.size = len;
+	desc.args[4] = unmap.flags = IOMMU_TLBINVAL_FLAG;
+	desc.arginfo = SCM_ARGS(5);
+
+	if (!is_scm_armv8())
+		ret = scm_call(SCM_SVC_MP, IOMMU_SECURE_UNMAP2, &unmap,
+				sizeof(unmap), &scm_ret, sizeof(scm_ret));
+	else
+		ret = scm_call2(SCM_SIP_FNID(SCM_SVC_MP,
+				IOMMU_SECURE_UNMAP2_FLAT), &desc);
+
+	return ret;
 }
