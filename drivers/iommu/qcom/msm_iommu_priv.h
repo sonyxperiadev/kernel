@@ -1,4 +1,8 @@
-/* Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+/*
+ * Copyright (C) 2017-2018, AngeloGioacchino Del Regno <kholk11@gmail.com>
+ *
+ * May contain portions of code (c) 2013-2014, The Linux Foundation.
+ *
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -18,13 +22,6 @@
 #define IOMMU_SECURE_PTBL_SIZE  3
 #define IOMMU_SECURE_PTBL_INIT  4
 #define IOMMU_SET_CP_POOL_SIZE	5
-#define IOMMU_SECURE_MAP	6
-#define IOMMU_SECURE_UNMAP      7
-#define IOMMU_SECURE_MAP2 0x0B
-#define IOMMU_SECURE_MAP2_FLAT 0x12
-#define IOMMU_SECURE_UNMAP2 0x0C
-#define IOMMU_SECURE_UNMAP2_FLAT 0x13
-#define IOMMU_TLBINVAL_FLAG 0x00000001
 
 /* commands for SCM_SVC_UTIL */
 #define IOMMU_DUMP_SMMU_FAULT_REGS 0X0C
@@ -34,12 +31,26 @@
 #define MAKE_VERSION(major, minor, patch) \
 	(((major & 0x3FF) << 22) | ((minor & 0x3FF) << 12) | (patch & 0xFFF))
 
+/* Maximum number of SMT entries allowed by the system */
+#define MAX_NUM_SMR	128
+
+/* Maximum number of BFB registers */
+#define MAX_NUM_BFB_REGS	32
+
 /* Register dump */
 #define NUM_DUMP_REGS 14
 
 /* Each entry is a (reg_addr, reg_val) pair, plus some wiggle room */
 #define SEC_DUMP_SIZE (NUM_DUMP_REGS * 4)
 #define COMBINE_DUMP_REG(upper, lower) (((u64) upper << 32) | lower)
+
+#define DUMP_REG_INIT(dump_reg, cb_reg, mbp, drt)		\
+	do {							\
+		dump_regs_tbl[dump_reg].reg_offset = cb_reg;	\
+		dump_regs_tbl[dump_reg].name = #cb_reg;		\
+		dump_regs_tbl[dump_reg].must_be_present = mbp;	\
+		dump_regs_tbl[dump_reg].dump_reg_type = drt;	\
+	} while (0)
 
 enum dump_reg {
 	DUMP_REG_FIRST,
@@ -78,6 +89,11 @@ enum model_id {
 	MAX_MODEL,
 };
 
+struct msm_iommu_context_reg {
+	uint32_t val;
+	bool valid;
+};
+
 struct dump_regs_tbl_entry {
 	/*
 	 * To keep things context-bank-agnostic, we only store the
@@ -90,75 +106,11 @@ struct dump_regs_tbl_entry {
 };
 extern struct dump_regs_tbl_entry dump_regs_tbl[MAX_DUMP_REGS];
 
-struct msm_scm_paddr_list {
-	phys_addr_t list;
-	unsigned int list_size;
-	unsigned int size;
-};
-
-struct msm_scm_mapping_info {
-	unsigned int id;
-	unsigned int ctx_id;
-	unsigned int va;
-	unsigned int size;
-};
-
-struct msm_scm_map2_req {
-	struct msm_scm_paddr_list plist;
-	struct msm_scm_mapping_info info;
-	unsigned int flags;
-};
-
-struct msm_scm_unmap2_req {
-	struct msm_scm_mapping_info info;
-	unsigned int flags;
-};
-
-struct msm_cp_pool_size {
-	uint32_t size;
-	uint32_t spare;
-};
-
 struct msm_scm_fault_regs_dump {
 	uint32_t dump_size;
 	uint32_t dump_data[SEC_DUMP_SIZE];
 } __aligned(PAGE_SIZE);
 
-/**
- * struct msm_iommu_pt - Container for first level page table and its
- * attributes.
- * fl_table: Pointer to the first level page table.
- * redirect: Set to 1 if L2 redirect for page tables are enabled, 0 otherwise.
- * unaligned_fl_table: Original address of memory for the page table.
- * fl_table is manually aligned (as per spec) but we need the original address
- * to free the table.
- * fl_table_shadow: This is "copy" of the fl_table with some differences.
- * It stores the same information as fl_table except that instead of storing
- * second level page table address + page table entry descriptor bits it
- * stores the second level page table address and the number of used second
- * level page tables entries. This is used to check whether we need to free
- * the second level page table which allows us to also free the second level
- * page table after doing a TLB invalidate which should catch bugs with
- * clients trying to unmap an address that is being used.
- * fl_table_shadow will use the lower 9 bits for the use count and the upper
- * bits for the second level page table address.
- * sl_table_shadow uses the same concept as fl_table_shadow but for LPAE 2nd
- * level page tables.
- */
-#ifdef CONFIG_IOMMU_LPAE
-struct msm_iommu_pt {
-	u64 *fl_table;
-	u64 **sl_table_shadow;
-	int redirect;
-	u64 *unaligned_fl_table;
-};
-#else
-struct msm_iommu_pt {
-	u32 *fl_table;
-	int redirect;
-	u32 *fl_table_shadow;
-};
-#endif
 /**
  * struct msm_iommu_priv - Container for page table attributes and other
  * private iommu domain information.
@@ -168,10 +120,13 @@ struct msm_iommu_pt {
  * client_name: Name of the domain client.
  */
 struct msm_iommu_priv {
-	struct msm_iommu_pt pt;
 	struct list_head list_attached;
 	struct iommu_domain domain;
 	const char *client_name;
+	struct io_pgtable_cfg pgtbl_cfg;
+	struct io_pgtable_ops *pgtbl_ops;
+	spinlock_t pgtbl_lock;
+	struct mutex init_mutex;
 	u32 procid;
 	u32 asid;
 	u32 attributes;
@@ -182,6 +137,118 @@ static inline struct msm_iommu_priv *to_msm_priv(struct iommu_domain *dom)
 {
 	return container_of(dom, struct msm_iommu_priv, domain);
 }
+
+/**
+ * struct msm_iommu_bfb_settings - a set of IOMMU BFB tuning parameters
+ * regs		An array of register offsets to configure
+ * data		Values to write to corresponding registers
+ * length	Number of valid entries in the offset/val arrays
+ */
+struct msm_iommu_bfb_settings {
+	unsigned int regs[MAX_NUM_BFB_REGS];
+	unsigned int data[MAX_NUM_BFB_REGS];
+	int length;
+};
+
+/**
+ * struct msm_iommu_drvdata - A single IOMMU hardware instance
+ * @base:	IOMMU config port base address (VA)
+ * @glb_base:	IOMMU config port base address for global register space (VA)
+ * @phys_base:  IOMMU physical base address.
+ * @ncb		The number of contexts on this IOMMU
+ * @irq:	Interrupt number
+ * @core:	The bus clock for this IOMMU hardware instance
+ * @iface:	The clock for the IOMMU bus interconnect
+ * @name:	Human-readable name of this IOMMU device
+ * @bfb_settings: Optional BFB performance tuning parameters
+ * @dev:	Struct device this hardware instance is tied to
+ * @list:	List head to link all iommus together
+ * @halt_enabled: Set to 1 if IOMMU halt is supported in the IOMMU, 0 otherwise.
+ * @ctx_attach_count: Count of how many context are attached.
+ * @bus_client  : Bus client needed to vote for bus bandwidth.
+ *
+ * A msm_iommu_drvdata holds the global driver data about a single piece
+ * of an IOMMU hardware instance.
+ */
+struct msm_iommu_drvdata {
+	void __iomem *base;
+	phys_addr_t phys_base;
+	void __iomem *glb_base;
+	void __iomem *cb_base;
+	void __iomem *smmu_local_base;
+	int ncb;
+	struct clk *core;
+	struct clk *iface;
+	const char *name;
+	struct msm_iommu_bfb_settings *bfb_settings;
+	int sec_id;
+	struct device *dev;
+	struct list_head list;
+	int halt_enabled;
+	unsigned int ctx_attach_count;
+	unsigned int bus_client;
+	unsigned int model;
+	struct idr asid_idr;
+	struct list_head masters;
+};
+
+/**
+ * struct msm_iommu_ctx_drvdata - an IOMMU context bank instance
+ * @num:		Hardware context number of this context
+ * @pdev:		Platform device associated wit this HW instance
+ * @attached_elm:	List element for domains to track which devices are
+ *			attached to them
+ * @attached_domain	Domain currently attached to this context (if any)
+ * @name		Human-readable name of this context device
+ * @sids		List of Stream IDs mapped to this context
+ * @nsid		Number of Stream IDs mapped to this context
+ * @secure_context	true if this is a secure context programmed by
+			the secure environment, false otherwise
+ * @asid		ASID used with this context.
+ * @attach_count	Number of time this context has been attached.
+ * @dynamic		true if any dynamic domain is ever attached to this CB
+ *
+ * A msm_iommu_ctx_drvdata holds the driver data for a single context bank
+ * within each IOMMU hardware instance
+ */
+struct msm_iommu_ctx_drvdata {
+	int num;
+	struct platform_device *pdev;
+	struct list_head attached_elm;
+	struct iommu_domain *attached_domain;
+	const char *name;
+	u32 sids[MAX_NUM_SMR];
+	unsigned int nsid;
+	bool secure_context;
+	int asid;
+	int attach_count;
+	u32 sid_mask[MAX_NUM_SMR];
+	unsigned int n_sid_mask;
+	bool dynamic;
+	bool needs_secure_map;
+};
+
+/**
+ * struct iommu_access_ops - Callbacks for accessing IOMMU
+ * @iommu_bus_vote:     Vote for bus bandwidth
+ * @iommu_clk_on:       Enable IOMMU clocks
+ * @iommu_clk_off:      Disable IOMMU clocks
+ * @iommu_lock_acquire: Acquire any locks needed
+ * @iommu_lock_release: Release locks needed
+ */
+struct iommu_access_ops {
+	int (*iommu_bus_vote)(struct msm_iommu_drvdata *drvdata,
+			      unsigned int vote);
+	int  (*iommu_clk_on)(struct msm_iommu_drvdata *);
+	void (*iommu_clk_off)(struct msm_iommu_drvdata *);
+	void (*iommu_lock_acquire)(unsigned int need_extra_lock);
+	void (*iommu_lock_release)(unsigned int need_extra_lock);
+};
+
+int __enable_clocks(struct msm_iommu_drvdata *drvdata);
+void __disable_clocks(struct msm_iommu_drvdata *drvdata);
+void iommu_halt(const struct msm_iommu_drvdata *iommu_drvdata);
+void iommu_resume(const struct msm_iommu_drvdata *iommu_drvdata);
 
 int msm_iommu_init(struct device *dev);
 
