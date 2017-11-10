@@ -1,4 +1,8 @@
-/* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+/*
+ * MSM Secure IOMMU v1/v2 Driver
+ * Copyright (C) 2017-2018, AngeloGioacchino Del Regno <kholk11@gmail.com>
+ *
+ * May contain portions of code (c) 2012-2014, The Linux Foundation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -29,22 +33,79 @@
 
 #include <asm/cacheflush.h>
 
+#include "../io-pgtable.h"
 #include "msm_iommu_hw-v1.h"
 #include "qcom_iommu.h"
 #include <soc/qcom/scm.h>
-#include "msm_iommu_perfmon.h"
 #include "msm_iommu_priv.h"
 
 static const struct of_device_id msm_iommu_ctx_match_table[];
 static struct iommu_access_ops *iommu_access_ops;
+static int is_secure;
 
-#ifdef CONFIG_IOMMU_LPAE
+static DEFINE_MUTEX(iommu_list_lock);
+static LIST_HEAD(iommu_list);
+
+/* Support LPAE only */
 static const char *BFB_REG_NODE_NAME = "qcom,iommu-lpae-bfb-regs";
 static const char *BFB_DATA_NODE_NAME = "qcom,iommu-lpae-bfb-data";
-#else
-static const char *BFB_REG_NODE_NAME = "qcom,iommu-bfb-regs";
-static const char *BFB_DATA_NODE_NAME = "qcom,iommu-bfb-data";
-#endif
+
+extern struct iommu_access_ops iommu_access_ops_v1;
+
+static void msm_iommu_add_drv(struct msm_iommu_drvdata *drv)
+{
+	mutex_lock(&iommu_list_lock);
+	list_add(&drv->list, &iommu_list);
+	mutex_unlock(&iommu_list_lock);
+}
+
+static void msm_iommu_remove_drv(struct msm_iommu_drvdata *drv)
+{
+	mutex_lock(&iommu_list_lock);
+	list_del(&drv->list);
+	mutex_unlock(&iommu_list_lock);
+}
+
+static int find_iommu_ctx(struct device *dev, void *data)
+{
+	struct msm_iommu_ctx_drvdata *c;
+
+	c = dev_get_drvdata(dev);
+	if (!c || !c->name)
+		return 0;
+
+	return !strcmp(data, c->name);
+}
+
+static struct device *msm_iommu_find_context(
+			struct device *dev, const char *name)
+{
+	return device_find_child(dev, (void *)name, find_iommu_ctx);
+}
+
+struct device *msm_iommu_get_ctx(const char *ctx_name)
+{
+	struct msm_iommu_drvdata *drv;
+	struct device *dev = NULL;
+
+	mutex_lock(&iommu_list_lock);
+	list_for_each_entry(drv, &iommu_list, list) {
+		dev = msm_iommu_find_context(drv->dev, ctx_name);
+		if (dev)
+			break;
+	}
+	mutex_unlock(&iommu_list_lock);
+
+	put_device(dev);
+
+	if (!dev || !dev_get_drvdata(dev)) {
+		pr_debug("Could not find context <%s>\n", ctx_name);
+		dev = ERR_PTR(-EPROBE_DEFER);
+	}
+
+	return dev;
+}
+EXPORT_SYMBOL(msm_iommu_get_ctx);
 
 static int msm_iommu_parse_bfb_settings(struct platform_device *pdev,
 					struct msm_iommu_drvdata *drvdata)
@@ -133,45 +194,12 @@ static void __put_bus_vote_client(struct msm_iommu_drvdata *drvdata)
 	drvdata->bus_client = 0;
 }
 
-/*
- * CONFIG_IOMMU_NON_SECURE allows us to override the secure
- * designation of SMMUs in device tree. With this config enabled
- * all SMMUs will be programmed by this driver.
- */
-#ifdef CONFIG_IOMMU_NON_SECURE
-static void msm_iommu_check_scm_call_avail(void)
-{
-}
-
-int msm_iommu_get_scm_call_avail(void)
-{
-	return -EINVAL;
-}
-
-static inline void get_secure_id(struct device_node *node,
-				 struct msm_iommu_drvdata *drvdata)
-{
-}
-
-static inline void get_secure_ctx(struct device_node *node,
-				  struct msm_iommu_ctx_drvdata *ctx_drvdata)
-{
-	ctx_drvdata->secure_context = 0;
-}
-
-static inline void get_secure_mapping(struct device_node *node,
-			   struct msm_iommu_ctx_drvdata *ctx_drvdata)
-{
-	ctx_drvdata->needs_secure_map = false;
-}
-#else
-static int is_secure;
 static void msm_iommu_check_scm_call_avail(void)
 {
 	is_secure = scm_is_call_available(SCM_SVC_MP, IOMMU_SECURE_CFG);
 }
 
-int msm_iommu_get_scm_call_avail(void)
+static int msm_iommu_get_scm_call_avail(void)
 {
 	return is_secure;
 }
@@ -205,7 +233,6 @@ static void get_secure_mapping(struct device_node *node,
 	ctx_drvdata->needs_secure_map = of_property_read_bool(node,
 				"qcom,require-tz-mapping");
 }
-#endif
 
 static int msm_iommu_parse_dt(struct platform_device *pdev,
 			      struct msm_iommu_drvdata *drvdata)
@@ -244,64 +271,6 @@ static int msm_iommu_parse_dt(struct platform_device *pdev,
 fail:
 	__put_bus_vote_client(drvdata);
 	return ret;
-}
-
-static int msm_iommu_pmon_parse_dt(struct platform_device *pdev,
-				   struct iommu_pmon *pmon_info)
-{
-	struct device *dev = &pdev->dev;
-	struct device_node *np = pdev->dev.of_node;
-	unsigned int cls_prop_size;
-	int ret, irq;
-
-	irq = platform_get_irq(pdev, 0);
-	if (irq < 0 && irq == -EPROBE_DEFER)
-		return -EPROBE_DEFER;
-	if (irq <= 0) {
-		pmon_info->iommu.evt_irq = -1;
-		return irq;
-	}
-
-	pmon_info->iommu.evt_irq = irq;
-
-	ret = of_property_read_u32(np, "qcom,iommu-pmu-ngroups",
-				   &pmon_info->num_groups);
-	if (ret) {
-		dev_err(dev, "Error reading qcom,iommu-pmu-ngroups\n");
-		return ret;
-	}
-
-	ret = of_property_read_u32(np, "qcom,iommu-pmu-ncounters",
-				   &pmon_info->num_counters);
-	if (ret) {
-		dev_err(dev, "Error reading qcom,iommu-pmu-ncounters\n");
-		return ret;
-	}
-
-	if (!of_get_property(np, "qcom,iommu-pmu-event-classes",
-			     &cls_prop_size)) {
-		dev_err(dev, "Error reading qcom,iommu-pmu-event-classes\n");
-		return -EINVAL;
-	}
-
-	pmon_info->event_cls_supported = devm_kzalloc(dev, cls_prop_size,
-						      GFP_KERNEL);
-	if (!pmon_info->event_cls_supported) {
-		dev_err(dev, "Unable to get memory for event class array\n");
-		return -ENOMEM;
-	}
-
-	pmon_info->nevent_cls_supported = cls_prop_size / sizeof(u32);
-
-	ret = of_property_read_u32_array(np, "qcom,iommu-pmu-event-classes",
-					 pmon_info->event_cls_supported,
-					 pmon_info->nevent_cls_supported);
-	if (ret) {
-		dev_err(dev, "Error reading qcom,iommu-pmu-event-classes\n");
-		return ret;
-	}
-
-	return 0;
 }
 
 static int iommu_scm_set_pool_size(void)
@@ -411,13 +380,7 @@ static int msm_iommu_sec_ptbl_init(struct device *dev)
 			ret);
 		return ret;
 	}
-/*
-	if (psize[1]) {
-		dev_err(dev, "failed to get iommu secure pgtable size (%d)\n",
-			ret);
-		return psize[1];
-	}
-*/
+
 	dev_info(dev, "iommu sec: pgtable size: %zu\n", psize);
 
 	dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, &attrs);
@@ -672,7 +635,6 @@ static int msm_iommu_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct device_node *np = pdev->dev.of_node;
-	struct iommu_pmon *pmon_info;
 	struct msm_iommu_drvdata *drvdata;
 	struct resource *res;
 	int ret;
@@ -751,30 +713,6 @@ static int msm_iommu_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, drvdata);
 
-	pmon_info = msm_iommu_pm_alloc(dev);
-	if (pmon_info) {
-		ret = msm_iommu_pmon_parse_dt(pdev, pmon_info);
-		if (ret) {
-			msm_iommu_pm_free(dev);
-			dev_info(dev, "%s: pmon not available\n",
-				 drvdata->name);
-		} else {
-			pmon_info->iommu.base = drvdata->base;
-			pmon_info->iommu.ops = msm_get_iommu_access_ops();
-			pmon_info->iommu.hw_ops = iommu_pm_get_hw_ops_v1();
-			pmon_info->iommu.iommu_name = drvdata->name;
-			ret = msm_iommu_pm_iommu_register(pmon_info);
-			if (ret) {
-				dev_err(dev, "%s iommu register fail\n",
-					drvdata->name);
-				msm_iommu_pm_free(dev);
-			} else {
-				dev_dbg(dev, "%s iommu registered for pmon\n",
-					pmon_info->iommu.iommu_name);
-			}
-		}
-	}
-
 	global_cfg_irq = platform_get_irq_byname(pdev, "global_cfg_NS_irq");
 	if (global_cfg_irq < 0 && global_cfg_irq == -EPROBE_DEFER)
 		return -EPROBE_DEFER;
@@ -829,9 +767,6 @@ static int msm_iommu_probe(struct platform_device *pdev)
 static int msm_iommu_remove(struct platform_device *pdev)
 {
 	struct msm_iommu_drvdata *drv;
-
-	msm_iommu_pm_iommu_unregister(&pdev->dev);
-	msm_iommu_pm_free(&pdev->dev);
 
 	drv = platform_get_drvdata(pdev);
 	if (drv) {
@@ -1035,7 +970,6 @@ static int __init msm_iommu_driver_init(void)//struct device_node *np)
 
 	msm_iommu_check_scm_call_avail();
 
-	msm_set_iommu_access_ops(&iommu_access_ops_v1);
 	iommu_access_ops = &iommu_access_ops_v1;
 
 	ret = platform_driver_register(&msm_iommu_driver);
