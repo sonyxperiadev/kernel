@@ -536,6 +536,10 @@ static int arm_lpae_map(struct io_pgtable_ops *ops, unsigned long iova,
 	if (!(iommu_prot & (IOMMU_READ | IOMMU_WRITE)))
 		return 0;
 
+	if (WARN_ON(iova >= (1ULL << data->iop.cfg.ias) ||
+		    paddr >= (1ULL << data->iop.cfg.oas)))
+		return -ERANGE;
+
 	prot = arm_lpae_prot_to_pte(data, iommu_prot);
 	ret = __arm_lpae_map(data, iova, paddr, size, prot, lvl, ptep, NULL,
 				NULL);
@@ -802,6 +806,9 @@ static size_t arm_lpae_unmap(struct io_pgtable_ops *ops, unsigned long iova,
 	struct io_pgtable *iop = &data->iop;
 	arm_lpae_iopte *ptep = data->pgd;
 	int lvl = ARM_LPAE_START_LVL(data);
+
+	if (WARN_ON(iova >= (1ULL << data->iop.cfg.ias)))
+		return 0;
 
 	while (unmapped < size) {
 		size_t ret, size_to_unmap, remaining;
