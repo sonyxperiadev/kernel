@@ -278,7 +278,7 @@
 #define WD_CFG_CTRL_BIT			BIT(0)
 
 /* Wake locking time after charger unplugged */
-#define UNPLUG_WAKELOCK_TIME_SEC	(2 * HZ)
+#define UNPLUG_WAKELOCK_TIME_SEC	(2000)
 
 #define RESET_HW_SAFETY			3600*1000	/* ms */
 #define STEAL_SOC			60*1000		/* ms */
@@ -2649,7 +2649,7 @@ check_unplug_wakelock(struct smb1360_chip *chip)
 {
 	pr_debug("Set unplug wake_lock\n");
 	wake_lock_timeout(&chip->unplug_wake_lock,
-			UNPLUG_WAKELOCK_TIME_SEC);
+			msecs_to_jiffies(UNPLUG_WAKELOCK_TIME_SEC));
 }
 
 static int tulip_usbin_uv_handler(struct smb1360_chip *chip, u8 rt_stat)
