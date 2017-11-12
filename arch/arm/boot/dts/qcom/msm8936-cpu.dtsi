@@ -38,14 +38,12 @@
 			reg = <0x0>;
 			enable-method = "qcom,arm-cortex-acc";
 			qcom,limits-info = <&mitigation_profile0>;
-			qcom,acc = <&acc0>;
+			qcom,ea = <&ea0>;
 			next-level-cache = <&L2_1>;
-			qcom,sleep-status = <&cpu0_slp_sts>;
 			qcom,spm-spc-as-pc;
 			L2_1: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-level = <2>;
-			      power-domain = <&l2ccc_1>;
 			};
 		};
 
@@ -55,9 +53,8 @@
 			reg = <0x1>;
 			enable-method = "qcom,arm-cortex-acc";
 			qcom,limits-info = <&mitigation_profile1>;
-			qcom,acc = <&acc1>;
+			qcom,ea = <&ea1>;
 			next-level-cache = <&L2_1>;
-			qcom,sleep-status = <&cpu1_slp_sts>;
 		};
 
 		CPU2: cpu@2 {
@@ -66,9 +63,8 @@
 			reg = <0x2>;
 			enable-method = "qcom,arm-cortex-acc";
 			qcom,limits-info = <&mitigation_profile2>;
-			qcom,acc = <&acc2>;
+			qcom,ea = <&ea2>;
 			next-level-cache = <&L2_1>;
-			qcom,sleep-status = <&cpu2_slp_sts>;
 		};
 
 		CPU3: cpu@3 {
@@ -77,57 +73,33 @@
 			reg = <0x3>;
 			enable-method = "qcom,arm-cortex-acc";
 			qcom,limits-info = <&mitigation_profile3>;
-			qcom,acc = <&acc3>;
+			qcom,ea = <&ea3>;
 			next-level-cache = <&L2_1>;
-			qcom,sleep-status = <&cpu3_slp_sts>;
 		};
 	};
 };
 
 &soc {
-	l2ccc_1: clock-controller@b011000 {
-		compatible = "qcom,8916-l2ccc";
-		reg = <0x0b011000 0x1000>;
-		reg-names = "l2-base";
-	};
+	qcom,msm-core@a0000 {
+		compatible = "qcom,apss-core-ea";
+		reg = <0xa0000 0x1000>;
+		qcom,low-hyst-temp = <10>;
+		qcom,high-hyst-temp = <5>;
 
-	acc0:clock-controller@b088000 {
-		compatible = "qcom,arm-cortex-acc";
-		reg = <0x0b088000 0x1000>;
-	};
+		ea0: ea0 {
+			sensor = <&sensor_information5>;
+		};
 
-	acc1:clock-controller@b098000 {
-		compatible = "qcom,arm-cortex-acc";
-		reg = <0x0b098000 0x1000>;
-	};
+		ea1: ea1 {
+			sensor = <&sensor_information6>;
+		};
 
-	acc2:clock-controller@b0a8000 {
-		compatible = "qcom,arm-cortex-acc";
-		reg = <0x0b0a8000 0x1000>;
-	};
+		ea2: ea2 {
+			sensor = <&sensor_information7>;
+		};
 
-	acc3:clock-controller@b0b8000 {
-		compatible = "qcom,arm-cortex-acc";
-		reg = <0x0b0b8000 0x1000>;
-	};
-
-	cpu0_slp_sts: cpu-sleep-status@b088008 {
-		reg = <0xb088008 0x100>;
-		qcom,sleep-status-mask= <0x40000>;
-	};
-
-	cpu1_slp_sts: cpu-sleep-status@b098008 {
-		reg = <0xb098008 0x100>;
-		qcom,sleep-status-mask= <0x40000>;
-	};
-
-	cpu2_slp_sts: cpu-sleep-status@b0a8008 {
-		reg = <0xb0a8008 0x100>;
-		qcom,sleep-status-mask= <0x40000>;
-	};
-
-	cpu3_slp_sts: cpu-sleep-status@b0b8008 {
-		reg = <0xb0b8008 0x100>;
-		qcom,sleep-status-mask= <0x40000>;
+		ea3: ea3 {
+			sensor = <&sensor_information8>;
+		};
 	};
 };
