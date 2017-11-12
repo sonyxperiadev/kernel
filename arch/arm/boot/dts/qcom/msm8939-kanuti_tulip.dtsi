@@ -11,6 +11,10 @@
  */
 
 &soc {
+	pinctrl@10000000 {
+		disabled-pins = <0 1 2 3>;
+	};
+
 	i2c@78b9000 { /* BLSP1 QUP5 */
 		tsc@24 {
 			compatible = "cy,cyttsp4_i2c_adapter";
