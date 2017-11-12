@@ -26,6 +26,7 @@
 #include "adreno_iommu.h"
 #include "adreno_pm4types.h"
 #include "adreno_ringbuffer.h"
+#include "adreno_trace.h"
 
 #include "a3xx_reg.h"
 #include "adreno_a5xx.h"
@@ -58,6 +59,7 @@ static void _cff_write_ringbuffer(struct adreno_ringbuffer *rb)
 }
 
 static void adreno_get_submit_time(struct adreno_device *adreno_dev,
+		struct adreno_ringbuffer *rb,
 		struct adreno_submit_time *time)
 {
 	unsigned long flags;
@@ -86,6 +88,9 @@ static void adreno_get_submit_time(struct adreno_device *adreno_dev,
 			time->ticks &= 0xFFFFFFFF;
 	} else
 		time->ticks = 0;
+
+	/* Trace the GPU time to create a mapping to ftrace time */
+	trace_adreno_cmdbatch_sync(rb->drawctxt_active, time->ticks);
 
 	/* Get the kernel clock for time since boot */
 	time->ktime = local_clock();
@@ -128,7 +133,7 @@ void adreno_ringbuffer_submit(struct adreno_ringbuffer *rb,
 	_cff_write_ringbuffer(rb);
 
 	if (time != NULL)
-		adreno_get_submit_time(adreno_dev, time);
+		adreno_get_submit_time(adreno_dev, rb, time);
 
 	adreno_ringbuffer_wptr(adreno_dev, rb);
 }
@@ -813,10 +818,10 @@ int adreno_ringbuffer_submitcmd(struct adreno_device *adreno_dev,
 		dwords += 6;
 
 		/*
-		 * REG_TO_MEM packet on A5xx needs another ordinal.
+		 * REG_TO_MEM packet on A5xx and above needs another ordinal.
 		 * Add 2 more dwords since we do profiling before and after.
 		 */
-		if (adreno_is_a5xx(adreno_dev))
+		if (!ADRENO_LEGACY_PM4(adreno_dev))
 			dwords += 2;
 
 		/*
@@ -833,7 +838,7 @@ int adreno_ringbuffer_submitcmd(struct adreno_device *adreno_dev,
 	if (test_bit(CMDOBJ_PROFILE, &cmdobj->priv)) {
 		kernel_profiling = true;
 		dwords += 6;
-		if (adreno_is_a5xx(adreno_dev))
+		if (!ADRENO_LEGACY_PM4(adreno_dev))
 			dwords += 2;
 	}
 
