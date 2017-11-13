@@ -69,15 +69,6 @@ ifneq ($(dtbo-y),)
 include scripts/Makefile.dtbo
 endif
 
-ifneq ($(KBUILD_SRC),)
-# Create output directory if not already present
-_dummy := $(shell [ -d $(obj) ] || mkdir -p $(obj))
-
-# Create directories for object files if directory does not exist
-# Needed when obj-y := dir/file.o syntax is used
-_dummy := $(foreach d,$(obj-dirs), $(shell [ -d $(d) ] || mkdir -p $(d)))
-endif
-
 ifndef obj
 $(warning kbuild: Makefile.build is included improperly)
 endif
@@ -668,6 +659,12 @@ cmd_files := $(wildcard $(foreach f,$(sort $(targets)),$(dir $(f)).$(notdir $(f)
 
 ifneq ($(cmd_files),)
   include $(cmd_files)
+endif
+
+ifneq ($(KBUILD_SRC),)
+# Create directories for object files if they do not exist
+obj-dirs := $(sort $(obj) $(patsubst %/,%, $(dir $(targets))))
+$(shell mkdir -p $(obj-dirs))
 endif
 
 # Declare the contents of the .PHONY variable as phony.  We keep that
