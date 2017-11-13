@@ -643,7 +643,7 @@ $(call multi_depend, $(multi-used-y), .o, -objs -y)
 $(call multi_depend, $(multi-used-m), .o, -objs -y -m)
 
 targets += $(multi-used-y) $(multi-used-m)
-
+targets := $(filter-out $(PHONY), $(targets))
 
 # Descending
 # ---------------------------------------------------------------------------
