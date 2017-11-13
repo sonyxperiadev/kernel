@@ -41,6 +41,7 @@ static struct msm_actuator msm_piezo_actuator_table;
 static struct msm_actuator msm_hvcm_actuator_table;
 static struct msm_actuator msm_bivcm_actuator_table;
 static struct msm_actuator msm_vcm2_actuator_table;
+static struct msm_camera_i2c_seq_reg_setting vcm2_dac_params;
 
 static struct i2c_driver msm_actuator_i2c_driver;
 static struct msm_actuator *actuators[] = {
@@ -51,36 +52,57 @@ static struct msm_actuator *actuators[] = {
 	&msm_vcm2_actuator_table,
 };
 
+static int msm_actuator_vcm2_alloc(struct msm_actuator_ctrl_t *a_ctrl)
+{
+	vcm2_dac_params.reg_setting =
+		kzalloc(sizeof(struct msm_camera_i2c_seq_reg_array),
+			GFP_KERNEL);
+	if (!vcm2_dac_params.reg_setting) {
+		pr_err("%s: Cannot allocate VCM2 parameters array\n",
+			__func__);
+		return -ENOMEM;
+	}
+
+	vcm2_dac_params.delay = 0;
+	vcm2_dac_params.size = 1;
+	vcm2_dac_params.addr_type = a_ctrl->i2c_client.addr_type;
+	vcm2_dac_params.reg_setting->reg_addr = 0x8A;
+	vcm2_dac_params.reg_setting->reg_data_size = 9;
+	vcm2_dac_params.reg_setting->reg_data[0] = 0x00;
+	vcm2_dac_params.reg_setting->reg_data[1] = 0x00; /* Act position p1 */
+	vcm2_dac_params.reg_setting->reg_data[2] = 0x00; /* Act position p2 */
+	vcm2_dac_params.reg_setting->reg_data[3] = 0x55;
+	vcm2_dac_params.reg_setting->reg_data[4] = 0xa8;
+	vcm2_dac_params.reg_setting->reg_data[5] = 0x0;
+	vcm2_dac_params.reg_setting->reg_data[6] = 0x0;
+	vcm2_dac_params.reg_setting->reg_data[7] = 0x0;
+	vcm2_dac_params.reg_setting->reg_data[8] = 0x0;
+
+	CDBG("VCM2 parameters allocated.\n");
+
+	return 0;
+}
+
+static void msm_actuator_vcm2_dealloc(void)
+{
+	if (vcm2_dac_params.reg_setting)
+		kfree(vcm2_dac_params.reg_setting);
+}
+
 static void msm_actuator_vcm2_setdac(
 	struct msm_actuator_ctrl_t *a_ctrl,
 	int16_t target_pos)
 {
-	struct msm_camera_i2c_seq_reg_setting conf_array;
 	int32_t rc = 0;
 
-	conf_array.addr_type = a_ctrl->i2c_client.addr_type;
-	conf_array.delay = 0;
-	conf_array.size = 1;
-	conf_array.reg_setting =
-		kzalloc(sizeof(struct msm_camera_i2c_seq_reg_array),
-			GFP_KERNEL);
-	conf_array.reg_setting->reg_addr = 0x8A;
-	conf_array.reg_setting->reg_data_size = 9;
-	conf_array.reg_setting->reg_data[0] = 0x00;
-	conf_array.reg_setting->reg_data[1] = target_pos & 0xFF;
-	conf_array.reg_setting->reg_data[2] = (target_pos >> 8) & 0xFF;
-	conf_array.reg_setting->reg_data[3] = 0x55;
-	conf_array.reg_setting->reg_data[4] = 0xa8;
-	conf_array.reg_setting->reg_data[5] = 0x0;
-	conf_array.reg_setting->reg_data[6] = 0x0;
-	conf_array.reg_setting->reg_data[7] = 0x0;
-	conf_array.reg_setting->reg_data[8] = 0x0;
+	vcm2_dac_params.reg_setting->reg_data[1] = target_pos & 0xFF;
+	vcm2_dac_params.reg_setting->reg_data[2] = (target_pos >> 8) & 0xFF;
+
 	rc = a_ctrl->i2c_client.i2c_func_tbl->i2c_write_seq_table(
 		&a_ctrl->i2c_client,
-		&conf_array);
+		&vcm2_dac_params);
 	if (rc < 0)
 		pr_err("i2c_operation fail, rc = %d\n", rc);
-	kfree(conf_array.reg_setting);
 }
 
 static int32_t msm_actuator_piezo_set_default_focus(
@@ -574,6 +596,9 @@ static int32_t msm_actuator_vcm2_init_focus(struct msm_actuator_ctrl_t *a_ctrl,
 	 * settings are written.
 	 */
 	a_ctrl->i2c_client.addr_type = save_addr_type;
+
+	rc = msm_actuator_vcm2_alloc(a_ctrl);
+
 	CDBG("Exit\n");
 	return rc;
 }
@@ -1801,6 +1826,10 @@ static int32_t msm_actuator_config(struct msm_actuator_ctrl_t *a_ctrl,
 			pr_err("move focus failed %d\n", rc);
 		break;
 	case CFG_ACTUATOR_POWERDOWN:
+		if (cdata->cfg.set_info.actuator_params.act_type ==
+		    ACTUATOR_VCM2)
+			msm_actuator_vcm2_dealloc();
+
 		rc = msm_actuator_power_down(a_ctrl);
 		if (rc < 0)
 			pr_err("msm_actuator_power_down failed %d\n", rc);
