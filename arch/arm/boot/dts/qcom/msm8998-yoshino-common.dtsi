@@ -3006,6 +3006,14 @@
 	somc,pwm-channel = <4>;
 	linux,name = "led:rgb_red";
 	linux,default-trigger = "none";
+	qcom,start-idx = <0>;
+	qcom,idx-len = <8>;
+	qcom,lut-flags = <31>;
+	qcom,pause-lo = <500>;
+	qcom,pause-hi = <500>;
+	qcom,ramp-step-ms = <50>;
+	qcom,duty-pcts = [00 0E 1C 2A 38 46 54 64];
+	qcom,use-blink;
 	somc,color_variation_max_num = <4>;
 	somc,max_current = <
 		18 511 511
@@ -3017,6 +3025,14 @@
 	somc,pwm-channel = <3>;
 	linux,name = "led:rgb_green";
 	linux,default-trigger = "none";
+	qcom,start-idx = <0>;
+	qcom,idx-len = <8>;
+	qcom,lut-flags = <31>;
+	qcom,pause-lo = <500>;
+	qcom,pause-hi = <500>;
+	qcom,ramp-step-ms = <50>;
+	qcom,duty-pcts = [00 0E 1C 2A 38 46 54 64];
+	qcom,use-blink;
 	somc,color_variation_max_num = <4>;
 	somc,max_current = <
 		18 511 511
@@ -3029,6 +3045,14 @@
 	somc,pwm-channel = <2>;
 	linux,name = "led:rgb_blue";
 	linux,default-trigger = "none";
+	qcom,start-idx = <0>;
+	qcom,idx-len = <8>;
+	qcom,lut-flags = <31>;
+	qcom,pause-lo = <500>;
+	qcom,pause-hi = <500>;
+	qcom,ramp-step-ms = <50>;
+	qcom,duty-pcts = [00 0E 1C 2A 38 46 54 64];
+	qcom,use-blink;
 	somc,color_variation_max_num = <4>;
 	somc,max_current = <
 		18 511 511
