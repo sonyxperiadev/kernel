@@ -140,6 +140,7 @@
 		qcom,iommu-ctx@1e32000 {
 			compatible = "qcom,msm-smmu-v2-ctx";
 			qcom,secure-context;
+			qcom,require-tz-mapping;
 			reg = <0x1e32000 0x1000>;
 			qcom,ctx-num = <9>;
 			interrupts = <0 110 0>, <0 110 0>;
@@ -150,6 +151,7 @@
 		venus_sec_pixel: qcom,iommu-ctx@1e33000 {
 			compatible = "qcom,msm-smmu-v2-ctx";
 			qcom,secure-context;
+			qcom,require-tz-mapping;
 			reg = <0x1e33000 0x1000>;
 			qcom,ctx-num = <10>;
 			interrupts = <0 111 0>, <0 111 0>;
@@ -161,6 +163,7 @@
 		venus_sec_bitstream: qcom,iommu-ctx@1e34000 {
 			compatible = "qcom,msm-smmu-v2-ctx";
 			qcom,secure-context;
+			qcom,require-tz-mapping;
 			reg = <0x1e34000 0x1000>;
 			qcom,ctx-num = <11>;
 			interrupts = <0 112 0>, <0 112 0>;
@@ -172,6 +175,7 @@
 		venus_sec_non_pixel: qcom,iommu-ctx@1e35000 {
 			compatible = "qcom,msm-smmu-v2-ctx";
 			qcom,secure-context;
+			qcom,require-tz-mapping;
 			reg = <0x1e35000 0x1000>;
 			qcom,ctx-num = <12>;
 			interrupts = <0 113 0>, <0 113 0>;
