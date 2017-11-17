@@ -489,6 +489,7 @@ static int fpc1145_probe(struct platform_device *pdev)
 		goto exit;
 	}
 	dev_dbg(dev, "requested irq %d\n", gpio_to_irq(fpc1145->irq_gpio));
+	enable_irq_wake(gpio_to_irq(fpc1145->irq_gpio));
 
 	rc = sysfs_create_group(&dev->kobj, &attribute_group);
 	if (rc) {
