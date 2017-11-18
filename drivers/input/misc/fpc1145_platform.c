@@ -50,6 +50,7 @@
 #include <linux/of.h>
 #include <linux/of_gpio.h>
 #include <linux/uaccess.h>
+#include <linux/wakelock.h>
 #include <linux/regulator/consumer.h>
 #include <linux/platform_device.h>
 
@@ -62,6 +63,8 @@
 #define NUM_PARAMS_REG_ENABLE_SET 2
 #define FPC_SYMLINK "fpc1145_device"
 
+#define FPC_IRQPOLL_TIMEOUT_MS 250
+
 #define FPC_IOC_MAGIC	0x1145
 #define FPC_IOCWPREPARE	_IOW(FPC_IOC_MAGIC, 0x01, int)
 #define FPC_IOCWDEVWAKE	_IOW(FPC_IOC_MAGIC, 0x02, int)
@@ -69,6 +72,7 @@
 #define FPC_IOCRPREPARE	_IOR(FPC_IOC_MAGIC, 0x81, int)
 #define FPC_IOCRDEVWAKE	_IOR(FPC_IOC_MAGIC, 0x82, int)
 #define FPC_IOCRIRQ	_IOR(FPC_IOC_MAGIC, 0x83, int)
+#define FPC_IOCRIRQPOLL	_IOR(FPC_IOC_MAGIC, 0x84, int)
 
 static const char * const pctl_names[] = {
 	"fpc1145_reset_reset",
@@ -108,6 +112,12 @@ struct fpc1145_data {
 #ifdef CONFIG_ARCH_SONY_LOIRE
 	int ldo_gpio;
 #endif
+
+	int irq;
+	bool irq_fired;
+	wait_queue_head_t irq_evt;
+
+	struct wake_lock wakelock;
 	struct mutex lock;
 	bool prepared;
 };
@@ -427,11 +437,15 @@ static const struct attribute_group attribute_group = {
 
 static int fpc1145_device_open(struct inode *inode, struct file *fp)
 {
+	wake_lock_timeout(&fpc1145_drvdata->wakelock,
+				usecs_to_jiffies(250));
 	return 0;
 }
 
 static int fpc1145_device_release(struct inode *inode, struct file *fp)
 {
+	if (wake_lock_active(&fpc1145_drvdata->wakelock))
+		wake_unlock(&fpc1145_drvdata->wakelock);
 	return 0;
 }
 
@@ -440,9 +454,7 @@ static long fpc1145_device_ioctl(struct file *fp,
 {
 	int8_t val = 0;
 	int rc = -EINVAL;
-
-	if (unlikely(arg > 1))
-		return -EINVAL;
+	void __user *usr = (void __user*)arg;
 
 	switch (cmd) {
 	case FPC_IOCWPREPARE:
@@ -460,14 +472,36 @@ static long fpc1145_device_ioctl(struct file *fp,
 		break;
 	case FPC_IOCRPREPARE:
 		rc = put_user((int8_t)fpc1145_drvdata->prepared,
-				(uint32_t*) arg);
+				(int*) usr);
 		break;
 	case FPC_IOCRDEVWAKE:
 		dev_dbg(fpc1145_drvdata->dev, "RDEVWAKE Not implemented.\n");
 		break;
 	case FPC_IOCRIRQ:
 		val = gpio_get_value(fpc1145_drvdata->irq_gpio);
-		rc = put_user(val, (uint32_t*) arg);
+		rc = put_user(val, (int*) usr);
+		break;
+	case FPC_IOCRIRQPOLL:
+		val = gpio_get_value(fpc1145_drvdata->irq_gpio);
+		if (val) {
+			/* We don't need to wait: IRQ has already fired */
+			rc = put_user(val, (int*) usr);
+			return rc;
+		}
+
+		if (fpc1145_drvdata->irq_fired) {
+			fpc1145_drvdata->irq_fired = false;
+			enable_irq_wake(fpc1145_drvdata->irq);
+		}
+
+		rc = wait_event_interruptible_timeout(fpc1145_drvdata->irq_evt,
+				fpc1145_drvdata->irq_fired,
+				msecs_to_jiffies(FPC_IRQPOLL_TIMEOUT_MS));
+		if (rc == -ERESTARTSYS)
+			return rc;
+
+		val = gpio_get_value(fpc1145_drvdata->irq_gpio);
+		rc = put_user(val, (int*) usr);
 		break;
 	default:
 		rc = -ENOIOCTLCMD;
@@ -500,6 +534,12 @@ static irqreturn_t fpc1145_irq_handler(int irq, void *handle)
 	dev_dbg(fpc1145->dev, "%s\n", __func__);
 
 	sysfs_notify(&fpc1145->dev->kobj, NULL, dev_attr_irq.attr.name);
+
+	fpc1145->irq_fired = true;
+
+	wake_lock_timeout(&fpc1145->wakelock, usecs_to_jiffies(250));
+	wake_up_interruptible(&fpc1145->irq_evt);
+	disable_irq_nosync(fpc1145->irq);
 
 	return IRQ_HANDLED;
 }
@@ -600,7 +640,13 @@ static int fpc1145_probe(struct platform_device *pdev)
 
 	irqf = IRQF_TRIGGER_RISING | IRQF_ONESHOT;
 	mutex_init(&fpc1145->lock);
-	rc = devm_request_threaded_irq(dev, gpio_to_irq(fpc1145->irq_gpio),
+
+	wake_lock_init(&fpc1145->wakelock, WAKE_LOCK_SUSPEND, "fpc_wake");
+	init_waitqueue_head(&fpc1145->irq_evt);
+	fpc1145->irq_fired = false;
+
+	fpc1145->irq = gpio_to_irq(fpc1145->irq_gpio);
+	rc = devm_request_threaded_irq(dev, fpc1145->irq,
 			NULL, fpc1145_irq_handler, irqf,
 			dev_name(dev), fpc1145);
 	if (rc) {
@@ -609,7 +655,7 @@ static int fpc1145_probe(struct platform_device *pdev)
 		goto exit;
 	}
 	dev_dbg(dev, "requested irq %d\n", gpio_to_irq(fpc1145->irq_gpio));
-	enable_irq_wake(gpio_to_irq(fpc1145->irq_gpio));
+	enable_irq_wake(fpc1145->irq);
 
 	rc = sysfs_create_group(&dev->kobj, &attribute_group);
 	if (rc) {
@@ -643,6 +689,7 @@ static int fpc1145_remove(struct platform_device *pdev)
 
 	sysfs_remove_link(&pdev->dev.parent->kobj, FPC_SYMLINK);
 	sysfs_remove_group(&pdev->dev.kobj, &attribute_group);
+	wake_lock_destroy(&fpc1145->wakelock);
 	mutex_destroy(&fpc1145->lock);
 #ifdef CONFIG_ARCH_SONY_LOIRE
 	(void)vreg_setup(fpc1145, "vcc_spi", false);
