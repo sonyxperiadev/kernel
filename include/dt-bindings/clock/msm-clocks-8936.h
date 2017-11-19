@@ -149,6 +149,7 @@
 #define clk_gcc_camss_ahb_clk			0x9894b414
 #define clk_gcc_camss_top_ahb_clk		0x4e814a78
 #define clk_gcc_camss_cpp_ahb_clk		0x4ac95e14
+#define clk_gcc_camss_cpp_axi_clk		0xbbf73861
 #define clk_gcc_camss_cpp_clk			0x7118a0de
 #define clk_gcc_camss_vfe0_clk			0xaaa3cd97
 #define clk_gcc_camss_vfe_ahb_clk		0x4050f47a
@@ -265,5 +266,7 @@
 #define RST_USB_HS_BCR				1
 #define RST_QUSB2_PHY_BCR			2
 #define RST_USB2_HS_PHY_ONLY_BCR		3
+
+#define CAMSS_CPP_AXI_CBCR			0x58064
 
 #endif
