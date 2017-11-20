@@ -59,7 +59,7 @@
 #define PWR_ON_STEP_RANGE2 900
 #define NUM_PARAMS_REG_ENABLE_SET 2
 
-#define FPC_IRQPOLL_TIMEOUT_MS 250
+#define FPC_IRQPOLL_TIMEOUT_MS 500
 
 #define FPC_IOC_MAGIC	0x1145
 #define FPC_IOCWPREPARE	_IOW(FPC_IOC_MAGIC, 0x01, int)
@@ -357,7 +357,7 @@ static long fpc1145_device_ioctl(struct file *fp,
 
 		if (fpc1145_drvdata->irq_fired) {
 			fpc1145_drvdata->irq_fired = false;
-			enable_irq_wake(fpc1145_drvdata->irq);
+			enable_irq(fpc1145_drvdata->irq);
 		}
 
 		rc = wait_event_interruptible_timeout(fpc1145_drvdata->irq_evt,
@@ -376,6 +376,33 @@ static long fpc1145_device_ioctl(struct file *fp,
 	}
 
 	return rc;
+}
+
+static int fpc1145_device_suspend(struct device *dev)
+{
+	struct fpc1145_data *fpc1145 = dev_get_drvdata(dev);
+
+	dev_dbg(dev, "Suspending device\n");
+
+	/* HAL will already resume once the IRQ IOCTL is called */
+	if (fpc1145->irq_fired)
+		return 0;
+
+	/* Wakeup when finger detected */
+	enable_irq_wake(fpc1145->irq);
+
+	return 0;
+}
+
+static int fpc1145_device_resume(struct device *dev)
+{
+	struct fpc1145_data *fpc1145 = dev_get_drvdata(dev);
+
+	dev_dbg(dev, "Resuming device\n");
+
+	disable_irq_wake(fpc1145->irq);
+
+	return 0;
 }
 
 static const struct file_operations fpc1145_device_fops = {
@@ -470,6 +497,7 @@ static int fpc1145_probe(struct platform_device *pdev)
 
 	fpc1145->dev = dev;
 	platform_set_drvdata(pdev, fpc1145);
+	dev_set_drvdata(fpc1145->dev, fpc1145);
 	fpc1145_drvdata = fpc1145;
 
 	if (!np) {
@@ -588,11 +616,15 @@ static struct of_device_id fpc1145_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, fpc1145_of_match);
 
+static SIMPLE_DEV_PM_OPS(fpc1145_pm_ops, fpc1145_device_suspend,
+			 fpc1145_device_resume);
+
 static struct platform_driver fpc1145_driver = {
 	.driver = {
 		.name = "fpc1145",
 		.owner = THIS_MODULE,
 		.of_match_table = fpc1145_of_match,
+		.pm = &fpc1145_pm_ops,
 	},
 	.probe = fpc1145_probe,
 	.remove = fpc1145_remove,
