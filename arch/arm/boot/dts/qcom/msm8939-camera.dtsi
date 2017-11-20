@@ -14,6 +14,11 @@
 &soc {
 	qcom,msm-cam@1800000{
 		compatible = "qcom,msm-cam";
+		reg = <0x1800000 0x10000>;
+		reg-names = "msm-cam";
+		status = "ok";
+		bus-vectors = "suspend", "svs", "nominal", "turbo";
+		qcom,bus-votes = <0 160000000 320000000 320000000>;
 	};
 
 	qcom,csiphy@1b0ac00 {
