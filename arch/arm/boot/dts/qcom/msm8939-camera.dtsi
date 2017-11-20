@@ -276,6 +276,10 @@
 			"bus_clk0", "camss_top_ahb_clk",
 			"camss_ahb_clk";
 		qcom,clock-rates = <266670000 0 0 0 0>;
+		qcom,qos-reg-settings = <0x28 0x0000000e>,
+				<0xc8 0x00000000>;
+		qcom,vbif-reg-settings = <0xc 0x10101000>,
+				<0xb0 0x10100010>;
 		qcom,msm-bus,name = "msm_camera_jpeg0";
 		qcom,msm-bus,num-cases = <2>;
 		qcom,msm-bus,num-paths = <1>;
