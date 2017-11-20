@@ -80,20 +80,28 @@ static const char * const pctl_names[] = {
 #endif
 };
 
+typedef enum {
+	VCC_SPI = 0,
+#ifndef CONFIG_ARCH_SONY_LOIRE
+	VDD_ANA,
+	VDD_IO,
+#endif
+	FPC_VREG_MAX,
+} fpc_rails_t;
+
 struct vreg_config {
-	char *name;
+	char* name;
 	unsigned long vmin;
 	unsigned long vmax;
 	int ua_load;
+	bool is_optional;
 };
 
 static const struct vreg_config const vreg_conf[] = {
-#ifdef CONFIG_ARCH_SONY_LOIRE
-	{ "vcc_spi", 1800000UL, 1800000UL, 10, },
-#else
-	{ "vdd_ana", 1800000UL, 1800000UL, 6000, },
-	{ "vcc_spi", 1800000UL, 1800000UL, 10, },
-	{ "vdd_io", 1800000UL, 1800000UL, 6000, },
+	{ "vcc_spi", 1800000UL, 1800000UL, 10, true},
+#ifndef CONFIG_ARCH_SONY_LOIRE
+	{ "vdd_ana", 1800000UL, 1800000UL, 6000, false},
+	{ "vdd_io", 1800000UL, 1800000UL, 6000, true},
 #endif
 };
 
@@ -120,62 +128,43 @@ struct fpc1145_data {
 
 static struct fpc1145_data *fpc1145_drvdata = NULL;
 
-static int vreg_setup(struct fpc1145_data *fpc1145, const char *name,
+static int vreg_setup(struct fpc1145_data *fpc1145, fpc_rails_t fpc_rail,
 	bool enable)
 {
-	size_t i;
 	int rc;
-	struct regulator *vreg;
+	struct regulator *vreg = fpc1145->vreg[fpc_rail];
 	struct device *dev = fpc1145->dev;
 
-	for (i = 0; i < ARRAY_SIZE(fpc1145->vreg); i++) {
-		const char *n = vreg_conf[i].name;
+	if (!vreg)
+		return -EINVAL;
 
-		if (!strncmp(n, name, strlen(n)))
-			goto found;
-	}
-	dev_err(dev, "Regulator %s not found\n", name);
-	return -EINVAL;
-found:
-	vreg = fpc1145->vreg[i];
 	if (enable) {
-		if (!vreg) {
-			vreg = regulator_get(dev, name);
-			if (IS_ERR(vreg)) {
-				dev_err(dev, "Unable to get %s\n", name);
-				return PTR_ERR(vreg);
-			}
-		}
 		if (regulator_count_voltages(vreg) > 0) {
-			rc = regulator_set_voltage(vreg, vreg_conf[i].vmin,
-					vreg_conf[i].vmax);
+			rc = regulator_set_voltage(vreg,
+					vreg_conf[fpc_rail].vmin,
+					vreg_conf[fpc_rail].vmax);
 			if (rc)
 				dev_err(dev,
 					"Unable to set voltage on %s, %d\n",
-					name, rc);
+					vreg_conf[fpc_rail].name, rc);
 		}
-		rc = regulator_set_load(vreg, vreg_conf[i].ua_load);
+		rc = regulator_set_load(vreg, vreg_conf[fpc_rail].ua_load);
 		if (rc < 0)
 			dev_err(dev, "Unable to set current on %s, %d\n",
-					name, rc);
+					vreg_conf[fpc_rail].name, rc);
 		rc = regulator_enable(vreg);
 		if (rc) {
-			dev_err(dev, "error enabling %s: %d\n", name, rc);
-			regulator_put(vreg);
-			vreg = NULL;
+			dev_err(dev, "error enabling %s: %d\n",
+				vreg_conf[fpc_rail].name, rc);
 		}
-		fpc1145->vreg[i] = vreg;
 	} else {
-		if (vreg) {
-			if (regulator_is_enabled(vreg)) {
-				regulator_disable(vreg);
-				dev_dbg(dev, "disabled %s\n", name);
-			}
-			regulator_put(vreg);
-			fpc1145->vreg[i] = NULL;
+		if (regulator_is_enabled(vreg)) {
+			regulator_disable(vreg);
+			dev_dbg(dev, "disabled %s\n", vreg_conf[fpc_rail].name);
 		}
 		rc = 0;
 	}
+
 	return rc;
 }
 
@@ -264,18 +253,18 @@ static int device_prepare(struct fpc1145_data *fpc1145, bool enable)
 		fpc1145->prepared = true;
 		select_pin_ctl(fpc1145, "fpc1145_reset_reset");
 
-		rc = vreg_setup(fpc1145, "vcc_spi", true);
+		rc = vreg_setup(fpc1145, VCC_SPI, true);
 		if (rc)
 			goto exit;
 
 #ifdef CONFIG_ARCH_SONY_LOIRE
 		(void)select_pin_ctl(fpc1145, "fpc1145_ldo_enable");
 #else
-		rc = vreg_setup(fpc1145, "vdd_io", true);
+		rc = vreg_setup(fpc1145, VDD_IO, true);
 		if (rc)
 			goto exit_1;
 
-		rc = vreg_setup(fpc1145, "vdd_ana", true);
+		rc = vreg_setup(fpc1145, VDD_ANA, true);
 		if (rc)
 			goto exit_2;
 #endif
@@ -297,12 +286,12 @@ static int device_prepare(struct fpc1145_data *fpc1145, bool enable)
 #ifdef CONFIG_ARCH_SONY_LOIRE
 		(void)select_pin_ctl(fpc1145, "fpc1145_ldo_disable");
 #else
-		(void)vreg_setup(fpc1145, "vdd_ana", false);
+		(void)vreg_setup(fpc1145, VDD_ANA, false);
 exit_2:
-		(void)vreg_setup(fpc1145, "vdd_io", false);
+		(void)vreg_setup(fpc1145, VDD_IO, false);
 exit_1:
 #endif
-		(void)vreg_setup(fpc1145, "vcc_spi", false);
+		(void)vreg_setup(fpc1145, VCC_SPI, false);
 exit:
 		fpc1145->prepared = false;
 	} else {
@@ -440,6 +429,30 @@ static int fpc1145_request_named_gpio(struct fpc1145_data *fpc1145,
 	return 0;
 }
 
+static int fpc1145_get_regulators(struct fpc1145_data *fpc1145)
+{
+	struct device *dev = fpc1145->dev;
+	unsigned short i = 0;
+
+	for (i = 0; i < FPC_VREG_MAX; i++) {
+		if (!vreg_conf[i].is_optional)
+			fpc1145->vreg[i] = devm_regulator_get_optional(
+						dev, vreg_conf[i].name);
+		else
+			fpc1145->vreg[i] = devm_regulator_get(
+						dev, vreg_conf[i].name);
+
+		if (IS_ERR_OR_NULL(fpc1145->vreg[i])) {
+			fpc1145->vreg[i] = NULL;
+			dev_err(dev, "CRITICAL: Cannot get %s regulator.\n",
+				vreg_conf[i].name);
+			return -EINVAL;
+		}
+	}
+
+	return 0;
+}
+
 static int fpc1145_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -464,6 +477,10 @@ static int fpc1145_probe(struct platform_device *pdev)
 		rc = -EINVAL;
 		goto exit;
 	}
+
+	rc = fpc1145_get_regulators(fpc1145);
+	if (rc)
+		goto exit;
 
 	rc = fpc1145_request_named_gpio(fpc1145, "fpc,gpio_irq",
 			&fpc1145->irq_gpio);
@@ -553,11 +570,11 @@ static int fpc1145_remove(struct platform_device *pdev)
 	wake_lock_destroy(&fpc1145->wakelock);
 	mutex_destroy(&fpc1145->lock);
 #ifdef CONFIG_ARCH_SONY_LOIRE
-	(void)vreg_setup(fpc1145, "vcc_spi", false);
+	(void)vreg_setup(fpc1145, VCC_SPI, false);
 #else
-	(void)vreg_setup(fpc1145, "vdd_io", false);
-	(void)vreg_setup(fpc1145, "vcc_spi", false);
-	(void)vreg_setup(fpc1145, "vdd_ana", false);
+	(void)vreg_setup(fpc1145, VDD_IO, false);
+	(void)vreg_setup(fpc1145, VCC_SPI, false);
+	(void)vreg_setup(fpc1145, VDD_ANA, false);
 #endif
 
 	dev_info(&pdev->dev, "%s\n", __func__);
