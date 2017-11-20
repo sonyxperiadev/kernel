@@ -266,6 +266,7 @@
 		interrupts = <0 59 0>;
 		interrupt-names = "jpeg";
 		vdd-supply = <&gdsc_jpeg>;
+		qcom,vdd-names = "vdd";
 		clocks = <&clock_gcc clk_gcc_camss_jpeg0_clk>,
 			<&clock_gcc clk_gcc_camss_jpeg_ahb_clk>,
 			<&clock_gcc clk_gcc_camss_jpeg_axi_clk>,
