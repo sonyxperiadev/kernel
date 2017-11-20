@@ -369,6 +369,7 @@
 
 		qcom,clock-rates = <80000000 320000000 0 0 320000000 0 0 0 0 0>;
 		qcom,src-clock-rates = <160000000 320000000 465000000>;
+		qcom,micro-reset;
 		qcom,bus-master = <1>;
 		qcom,msm-bus,name = "msm_camera_cpp";
 		qcom,msm-bus,num-cases = <2>;
