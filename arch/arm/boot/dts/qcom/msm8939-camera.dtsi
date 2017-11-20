@@ -328,6 +328,10 @@
 			"camss_vfe_vfe_clk", "iface_clk", "cpp_core_clk",
 			"cpp_iface_clk", "cpp_bus_clk", "micro_iface_clk",
 			"camss_ahb_clk", "camss_top_ahb_clk";
+
+		resets = <&clock_gcc RST_CAMSS_MICRO_BCR>;
+		reset-names = "micro_iface_reset";
+
 		qcom,clock-rates = <80000000 320000000 0 0 320000000 0 0 0 0 0>;
 		qcom,bus-master = <1>;
 		qcom,msm-bus,name = "msm_camera_cpp";
