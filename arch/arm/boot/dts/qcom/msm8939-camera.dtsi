@@ -265,6 +265,7 @@
 				0xCCCC1111 0xCCCC1111 0xCCCC1111
 				0xCCCC1111 0xCCCC1111 0xCCCC1111
 				0xCCCC1111 0x00000103>;
+		max-clk-svs = <160000000>;
 		max-clk-nominal = <320000000>;
 		max-clk-turbo = <432000000>;
 	};
