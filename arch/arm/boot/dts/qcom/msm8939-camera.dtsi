@@ -329,7 +329,14 @@
 			"cpp_iface_clk", "cpp_bus_clk", "micro_iface_clk",
 			"camss_ahb_clk", "camss_top_ahb_clk";
 		qcom,clock-rates = <80000000 320000000 0 0 320000000 0 0 0 0 0>;
-		bus_master = <1>;
+		qcom,bus-master = <1>;
+		qcom,msm-bus,name = "msm_camera_cpp";
+		qcom,msm-bus,num-cases = <2>;
+		qcom,msm-bus,num-paths = <1>;
+		qcom,msm-bus,vectors-KBps =
+			<106 512 0 0>,
+			<106 512 0 0>;
+		qcom,msm-bus-vector-dyn-vote;
 		qcom,cpp-fw-payload-info {
 			qcom,stripe-base = <140>;
 			qcom,plane-base = <125>;
