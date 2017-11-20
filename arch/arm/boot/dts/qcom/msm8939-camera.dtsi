@@ -18,7 +18,7 @@
 		reg-names = "msm-cam";
 		status = "ok";
 		bus-vectors = "suspend", "svs", "nominal", "turbo";
-		qcom,bus-votes = <0 160000000 320000000 320000000>;
+		qcom,bus-votes = <0 160000000 320000000 432000000>;
 	};
 
 	qcom,csiphy@1b0ac00 {
