@@ -1331,7 +1331,7 @@
 				mux {
 					/* CLK, DATA */
 					pins = "gpio29", "gpio30";
-					function = "cci_i2c";
+					function = "cci0_i2c";
 				};
 
 				config {
@@ -1346,7 +1346,7 @@
 				mux {
 					/* CLK, DATA */
 					pins = "gpio29", "gpio30";
-					function = "cci_i2c";
+					function = "gpio";
 				};
 
 				config {
@@ -1361,7 +1361,7 @@
 				mux {
 					/* CLK, DATA */
 					pins = "gpio31", "gpio32";
-					function = "cci_i2c";
+					function = "cci1_i2c";
 				};
 
 				config {
@@ -1376,7 +1376,7 @@
 				mux {
 					/* CLK, DATA */
 					pins = "gpio31", "gpio32";
-					function = "cci_i2c";
+					function = "gpio";
 				};
 
 				config {
