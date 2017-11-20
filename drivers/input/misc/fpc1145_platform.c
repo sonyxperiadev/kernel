@@ -367,6 +367,10 @@ static long fpc1145_device_ioctl(struct file *fp,
 			return rc;
 
 		val = gpio_get_value(fpc1145_drvdata->irq_gpio);
+		if (val)
+			wake_lock_timeout(&fpc1145_drvdata->wakelock,
+					msecs_to_jiffies(400));
+
 		rc = put_user(val, (int*) usr);
 		break;
 	default:
@@ -428,7 +432,7 @@ static irqreturn_t fpc1145_irq_handler(int irq, void *handle)
 
 	fpc1145->irq_fired = true;
 
-	wake_lock_timeout(&fpc1145->wakelock, usecs_to_jiffies(250));
+	wake_lock_timeout(&fpc1145->wakelock, msecs_to_jiffies(20));
 	wake_up_interruptible(&fpc1145->irq_evt);
 	disable_irq_nosync(fpc1145->irq);
 
