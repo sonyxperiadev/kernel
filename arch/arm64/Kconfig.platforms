@@ -267,7 +267,7 @@ config ARCH_SONY_YOSHINO
 
 config MACH_SONY_LILAC
         bool "Sony Mobile Lilac"
-        depends on ARCH_SONY_LILAC
+        depends on ARCH_SONY_YOSHINO
         help
         Support for the SONY Mobile Lilac device
         which is based on SONY Yoshino platform.
