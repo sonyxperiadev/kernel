@@ -1195,10 +1195,11 @@ int wl_android_wifi_on(struct net_device *dev)
 	dhd_net_if_lock(dev);
 	if (!g_wifi_on) {
 		do {
-			dhd_net_wifi_platform_set_power(dev, TRUE, WIFI_TURNON_DELAY);
+			if (!dhd_net_wifi_platform_set_power(dev, TRUE, WIFI_TURNON_DELAY)) {
 #ifdef BCMSDIO
-			ret = dhd_net_bus_resume(dev, 0);
+				ret = dhd_net_bus_resume(dev, 0);
 #endif /* BCMSDIO */
+			}
 #ifdef BCMPCIE
 			ret = dhd_net_bus_devreset(dev, FALSE);
 #endif /* BCMPCIE */
