@@ -973,6 +973,31 @@ fail:
 	return ret;
 }
 
+static size_t msm_iommu_map_sg(struct iommu_domain *domain, unsigned long va,
+			   struct scatterlist *sg, unsigned int nents, int prot)
+{
+	struct msm_iommu_priv *priv;
+	int ret = 0;
+	size_t size;
+	unsigned long flags;
+
+	priv = to_msm_priv(domain);
+	if (!priv) {
+		ret = -EINVAL;
+		goto fail;
+	}
+
+	if (!priv->pgtbl_ops)
+		return -ENODEV;
+
+	spin_lock_irqsave(&priv->pgtbl_lock, flags);
+	ret = priv->pgtbl_ops->map_sg(priv->pgtbl_ops,
+		va, sg, nents, prot, &size);
+	spin_unlock_irqrestore(&priv->pgtbl_lock, flags);
+fail:
+	return ret;
+}
+
 static phys_addr_t msm_iommu_iova_to_phys(struct iommu_domain *domain,
 					  phys_addr_t va)
 {
@@ -1539,7 +1564,7 @@ static struct iommu_ops msm_iommu_ops = {
 	.detach_dev = msm_iommu_detach_dev,
 	.map = msm_iommu_map,
 	.unmap = msm_iommu_unmap,
-	.map_sg = default_iommu_map_sg,
+	.map_sg = msm_iommu_map_sg,
 	.iova_to_phys = msm_iommu_iova_to_phys,
 	.is_iova_coherent = msm_iommu_is_iova_coherent,
 	.add_device = msm_iommu_add_device,
