@@ -644,9 +644,11 @@ static int msm_iommu_dynamic_attach(struct iommu_domain *domain, struct device *
 
 	ret = idr_alloc_cyclic(&iommu_drvdata->asid_idr, priv,
 			iommu_drvdata->ncb + 2, MAX_ASID + 1, GFP_KERNEL);
-
-	if (ret < 0)
+	if (ret < 0) {
+		pr_err("Failed to allocate idr for dynamic domain.\n");
+		free_io_pgtable_ops(pgtbl_ops);
 		return -ENOSPC;
+	}
 
 	priv->asid = ret;
 	priv->base = ctx_drvdata->attached_domain;
