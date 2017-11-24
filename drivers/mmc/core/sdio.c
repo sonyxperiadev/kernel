@@ -1091,6 +1091,9 @@ static u32 mmc_select_low_voltage(struct mmc_host *host, u32 ocr)
 {
 	int bit;
 	u32 ocr_orig = ocr;
+#ifdef CONFIG_BCMDHD
+	u32 ocr_fake = 0x180;
+#endif
 
 	pr_debug("%s \n",__func__);
 
@@ -1102,10 +1105,10 @@ static u32 mmc_select_low_voltage(struct mmc_host *host, u32 ocr)
 		ocr = ocr >> 1;
 
  #ifdef CONFIG_BCMDHD
-		/* If standard OCR, send it as it is. BCMDHD only. */
-		pr_debug("%s: ocr = 0x%x", __func__, ocr);
-		if (ocr_orig > 0x30ffff00)
-			ocr = ocr_orig;
+		/* Always force a specific OCR. BCMDHD only. */
+		pr_debug("%s: forcing ocr to 0x%x instead of 0x%x",
+			 mmc_hostname(host), ocr_fake, ocr);
+		ocr = ocr_fake;
  #endif
 
 		/* Power cycle card to select lowest possible voltage */
