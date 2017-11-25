@@ -212,7 +212,7 @@
 		* The gpu can only program a single context bank
 		* at this fixed offset.
 		*/
-		qcom,protect = <0x40000 0x10000>;
+		qcom,protect = <0x40000 0x20000>;
 		qcom,micro-mmu-control = <0x6000>;
 
 		clocks = <&clock_gcc clk_gcc_smmu_cfg_clk>,
