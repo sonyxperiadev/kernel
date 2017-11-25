@@ -623,16 +623,16 @@ static int msm_iommu_dynamic_attach(struct iommu_domain *domain, struct device *
 		return -EBUSY;
 
 	/* Make sure the domain is initialized */
+	domain->geometry.aperture_end = (1ULL << priv->pgtbl_cfg.ias) - 1;
 	priv->pgtbl_cfg = (struct io_pgtable_cfg) {
 		.pgsize_bitmap	= msm_iommu_ops.pgsize_bitmap,
 		.ias		= 32,
 		.oas		= 40,
 		.tlb		= &msm_iommu_gather_ops,
 		.iommu_dev	= dev,
-		//.iova_base	= domain->geometry.aperture_start,
-		//.iova_end	= domain->geometry.aperture_end,
+		.iova_base	= domain->geometry.aperture_start,
+		.iova_end	= domain->geometry.aperture_end,
 	};
-	domain->geometry.aperture_end = (1ULL << priv->pgtbl_cfg.ias) - 1;
 	domain->geometry.force_aperture = true;
 
 
@@ -756,6 +756,7 @@ static int msm_iommu_attach_dev(struct iommu_domain *domain, struct device *dev)
 
 
 	/* Make sure the domain is initialized */
+	domain->geometry.aperture_end = (1ULL << priv->pgtbl_cfg.ias) - 1;
 	priv->pgtbl_cfg = (struct io_pgtable_cfg) {
 		.pgsize_bitmap	= msm_iommu_ops.pgsize_bitmap,
 		.ias		= 32,
@@ -766,11 +767,9 @@ static int msm_iommu_attach_dev(struct iommu_domain *domain, struct device *dev)
 			.cbndx  = ctx_drvdata->num,
 		},
 		.iommu_dev	= iommu_drvdata->dev,
-	//	.iova_base	= domain->geometry.aperture_start,
-	//	.iova_end	= domain->geometry.aperture_end,
+		.iova_base	= domain->geometry.aperture_start,
+		.iova_end	= domain->geometry.aperture_end,
 	};
-
-	domain->geometry.aperture_end = (1ULL << priv->pgtbl_cfg.ias) - 1;
 	domain->geometry.force_aperture = true;
 
 	pgtbl_ops = alloc_io_pgtable_ops(ARM_32_LPAE_S1, &priv->pgtbl_cfg, domain);
