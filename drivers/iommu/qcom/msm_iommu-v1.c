@@ -779,7 +779,9 @@ static int msm_iommu_attach_dev(struct iommu_domain *domain, struct device *dev)
 		goto unlock;
 	}
 
+	spin_lock_irqsave(&priv->pgtbl_lock, flags);
 	priv->pgtbl_ops = pgtbl_ops;
+	spin_unlock_irqrestore(&priv->pgtbl_lock, flags);
 
 	secure_ctx = !!(ctx_drvdata->secure_context > 0);
 	if (secure_ctx) {
