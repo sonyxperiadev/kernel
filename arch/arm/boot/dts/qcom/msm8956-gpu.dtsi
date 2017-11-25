@@ -110,6 +110,8 @@
 				<26 512 0 6451200>, /* 9. 806.4  MHz */
 				<26 512 0 7449600>; /*10. 931.2  MHz */
 
+		/* GDSC regulator names */
+		regulator-names = "vddcx", "vdd";
 		/* GDSC oxili regulators */
 		vddcx-supply = <&gdsc_oxili_cx>;
 		vdd-supply = <&gdsc_oxili_gx>;
@@ -130,26 +132,6 @@
 
 		/* Context aware jump target power level */
 		qcom,ca-target-pwrlevel = <5>;
-
-		/* GPU Mempools */
-		qcom,gpu-mempools {
-			#address-cells= <1>;
-			#size-cells = <0>;
-			compatible = "qcom,gpu-mempools";
-
-			qcom,mempool-max-pages = <32768>;
-
-			/* 4K Page Pool configuration */
-			qcom,gpu-mempool@0 {
-				reg = <0>;
-				qcom,mempool-page-size = <4096>;
-			};
-			/* 64K Page Pool configuration */
-			qcom,gpu-mempool@1 {
-				reg = <1>;
-				qcom,mempool-page-size  = <65536>;
-			};
-		};
 
 		/* Power levels */
 		qcom,gpu-pwrlevels {
@@ -230,7 +212,7 @@
 		* The gpu can only program a single context bank
 		* at this fixed offset.
 		*/
-		qcom,protect = <0x40000 0x10000>;
+		qcom,protect = <0x40000 0x20000>;
 		qcom,micro-mmu-control = <0x6000>;
 
 		clocks = <&clock_gcc clk_gcc_smmu_cfg_clk>,
