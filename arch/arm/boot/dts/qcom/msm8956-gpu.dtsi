@@ -110,6 +110,8 @@
 				<26 512 0 6451200>, /* 9. 806.4  MHz */
 				<26 512 0 7449600>; /*10. 931.2  MHz */
 
+		/* GDSC regulator names */
+		regulator-names = "vddcx", "vdd";
 		/* GDSC oxili regulators */
 		vddcx-supply = <&gdsc_oxili_cx>;
 		vdd-supply = <&gdsc_oxili_gx>;
