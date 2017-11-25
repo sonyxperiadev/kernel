@@ -1369,6 +1369,9 @@ static int msm_iommu_domain_set_attr(struct iommu_domain *domain,
 		 */
 		break;
 	case DOMAIN_ATTR_PROCID:
+		if (ctx_drvdata)
+			return -EBUSY;
+
 		priv->procid = *((u32 *)data);
 		break;
 	case DOMAIN_ATTR_DYNAMIC:
