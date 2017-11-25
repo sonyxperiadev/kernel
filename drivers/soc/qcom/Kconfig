@@ -817,11 +817,6 @@ config QMP_DEBUGFS_CLIENT
 	  This options enables a driver which allows clients to send messages
 	  to Alway On processor using QMP transport.
 
-config QCOM_UART_SETUP
-	bool "Setup UART console at boot"
-	help
-	  This is a driver to setup UART console at boot.
-
 source "drivers/soc/qcom/memshare/Kconfig"
 
 config MSM_REMOTEQDSS
