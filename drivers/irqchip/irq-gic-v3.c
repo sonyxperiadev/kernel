@@ -1616,6 +1616,9 @@ static int __init gic_of_init(struct device_node *node, struct device_node *pare
 	for (i = 0; i < ignore_irqs_len; i++)
 		set_bit(ignore_restore_irqs[i], irqs_ignore_restore);
 
+	if (IS_ENABLED(CONFIG_ARM_GIC_V2M))
+		gicv2m_init_gicv3(&node->fwnode, gic_data.domain);
+
 	return 0;
 
 out_unmap_rdist:
