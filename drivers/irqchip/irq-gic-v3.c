@@ -1582,6 +1582,9 @@ gic_acpi_init(struct acpi_subtable_header *header, const unsigned long end)
 	acpi_set_irq_model(ACPI_IRQ_MODEL_GIC, domain_handle);
 	gic_acpi_setup_kvm_info();
 
+	if (IS_ENABLED(CONFIG_ARM_GIC_V2M))
+		gicv2m_init_gicv3(&node->fwnode, gic_data.domain);
+
 	return 0;
 
 out_fwhandle_free:

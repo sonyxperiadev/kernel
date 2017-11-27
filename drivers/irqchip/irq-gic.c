@@ -1381,6 +1381,21 @@ static void __init gic_of_setup_kvm_info(struct device_node *node)
 }
 
 int __init
+msm_qgic2_of_init(struct device_node *node, struct device_node *parent)
+{
+	/*
+	 * QGIC2 requires MPM set_wake to exist due to the genirq API
+	 * being inflexible about a child interrupt controller calling
+	 * a function that does not exist on the parent.
+	 */
+#ifdef CONFIG_QTI_MPM
+	gic_chip.irq_set_wake = msm_qgic2_set_wake;
+#endif
+
+	return gic_of_init(node, parent);
+}
+
+int __init
 gic_of_init(struct device_node *node, struct device_node *parent)
 {
 	struct gic_chip_data *gic;
@@ -1434,7 +1449,7 @@ IRQCHIP_DECLARE(cortex_a15_gic, "arm,cortex-a15-gic", gic_of_init);
 IRQCHIP_DECLARE(cortex_a9_gic, "arm,cortex-a9-gic", gic_of_init);
 IRQCHIP_DECLARE(cortex_a7_gic, "arm,cortex-a7-gic", gic_of_init);
 IRQCHIP_DECLARE(msm_8660_qgic, "qcom,msm-8660-qgic", gic_of_init);
-IRQCHIP_DECLARE(msm_qgic2, "qcom,msm-qgic2", gic_of_init);
+IRQCHIP_DECLARE(msm_qgic2, "qcom,msm-qgic2", msm_qgic2_of_init);
 IRQCHIP_DECLARE(pl390, "arm,pl390", gic_of_init);
 #else
 int gic_of_init_child(struct device *dev, struct gic_chip_data **gic, int irq)

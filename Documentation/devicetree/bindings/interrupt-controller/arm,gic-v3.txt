@@ -57,6 +57,11 @@ Optional
   occupied by the redistributors. Required if more than one such
   region is present.
 
+- msi-controller : Boolean property. Identifies the node as an MSI controller
+
+- arm,spi-ranges : Tuples of GIC SPI interrupt ranges (base, size) indicating
+  SPIs available for use as MSIs.
+
 Sub-nodes:
 
 PPI affinity can be expressed as a single "ppi-partitions" node,
@@ -78,6 +83,28 @@ These nodes must have the following properties:
 The main GIC node must contain the appropriate #address-cells,
 #size-cells and ranges properties for the reg property of all ITS
 nodes.
+
+GICv3 has an IMPLEMENTATION DEFINED set of aliases for message-based interrupt
+requests.
+
+These nodes must have the following properties:
+- compatible : Should at least contain one of
+			"qcom,gic-msi-aliases".
+- msi-controller : Boolean property. Identifies the node as an MSI controller
+- #msi-cells: Must be <1>. The single msi-cell is the DeviceID of the device
+  which will generate the MSI.
+- reg: Specifies the base physical address and size of the message-based
+  interrupt request registers.
+- arm,spi-ranges:  Tuples of GIC SPI interrupt ranges (base, size) indicating
+  SPIs available for use as MSIs.
+
+Note: The main GIC node must contain the appropriate #address-cells,
+#size-cells and ranges properties for the reg property of all ITS and
+alias message-based interrupt nodes.
+
+Optional:
+- socionext,synquacer-pre-its: (u32, u32) tuple describing the untranslated
+  address and size of the pre-ITS window.
 
 Examples:
 
@@ -145,6 +172,27 @@ Examples:
 		};
 	};
 
+	intc: interrupt-controller@9bc0000 {
+		compatible = "arm,gic-v3";
+		#interrupt-cells = <3>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+		interrupt-controller;
+		#redistributor-regions = <1>;
+		redistributor-stride = <0x0 0x40000>;
+		reg = <0x09bc0000 0x10000>,
+		      <0x09c00000 0x100000>;
+		interrupts = <1 9 4>;
+
+		msi_alias0: interrupt-controller@9bd0000 {
+			compatible = "qcom,gic-msi-aliases";
+			reg = <0x9bd0000 0x1000>;
+			msi-controller;
+			#msi-cells = <1>;
+			arm,spi-ranges = <544 96>;
+		};
+	};
 
 	device@0 {
 		reg = <0 0 0 4>;
