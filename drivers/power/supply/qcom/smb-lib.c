@@ -3406,6 +3406,7 @@ int smblib_get_prop_usb_voltage_max(struct smb_charger *chg,
 {
 	switch (chg->real_charger_type) {
 	case POWER_SUPPLY_TYPE_USB_HVDCP:
+	case POWER_SUPPLY_TYPE_USB_HVDCP_3:
 	case POWER_SUPPLY_TYPE_USB_PD:
 #ifndef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
 		if (chg->smb_version == PM660_SUBTYPE)
