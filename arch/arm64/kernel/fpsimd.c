@@ -1018,10 +1018,10 @@ void fpsimd_update_current_state(struct fpsimd_state *state)
 {
 	preempt_disable();
 
-	if (system_supports_sve() && test_thread_flag(TIF_SVE)) {
-		current->thread.fpsimd_state = *state;
+	current->thread.fpsimd_state = *state;
+	if (system_supports_sve() && test_thread_flag(TIF_SVE))
 		fpsimd_to_sve(current);
-	}
+
 	task_fpsimd_load();
 
 	if (test_and_clear_thread_flag(TIF_FOREIGN_FPSTATE)) {
