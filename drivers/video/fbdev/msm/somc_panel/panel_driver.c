@@ -3266,6 +3266,9 @@ int mdss_panel_parse_dt(struct device_node *np,
 		"somc,pw-off-rst-b-seq",
 		(u32 **)&spec_pdata->off_seq.rst_b_seq,
 		&spec_pdata->off_seq.seq_b_num);
+	// if no poweroff reset sequence is declared, but B sequence is, use it
+	if(spec_pdata->off_seq.rst_b_seq && !spec_pdata->off_seq.rst_seq)
+		spec_pdata->off_seq.rst_seq = spec_pdata->off_seq.rst_b_seq;
 	rc = of_property_read_u32(np, "somc,pw-down-period", &tmp);
 	spec_pdata->down_period = !rc ? tmp : 0;
 
