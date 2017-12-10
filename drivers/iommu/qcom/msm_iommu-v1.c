@@ -252,7 +252,7 @@ static void __sync_tlb(struct msm_iommu_drvdata *iommu_drvdata, int ctx,
 	/* No barrier needed due to read dependency */
 
 	res = readl_poll_timeout_atomic(CTX_REG(CB_TLBSTATUS, base, ctx), val,
-				(val & CB_TLBSTATUS_SACTIVE) == 0, 5, 1000000);
+				(val & CB_TLBSTATUS_SACTIVE) == 0, 0, 1000000);
 	if (res)
 		BUG();
 }
