@@ -28,6 +28,7 @@
 #include <linux/gfp.h>
 #include <linux/kernel.h>
 #include <linux/mm.h>
+#include <linux/moduleparam.h>
 #include <linux/sched.h>
 #include <linux/signal.h>
 #include <linux/slab.h>
@@ -38,6 +39,19 @@
 #include <asm/signal32.h>
 #include <asm/vdso.h>
 #include <asm/vdso_datapage.h>
+
+#ifdef USE_SYSCALL
+#if defined(__LP64__)
+static int enable_64 = 1;
+module_param(enable_64, int, 0600);
+MODULE_PARM_DESC(enable_64, "enable vDSO for aarch64 0=off");
+#endif
+#if (!defined(__LP64) || (defined(CONFIG_COMPAT) && defined(CONFIG_VDSO32)))
+static int enable_32 = 1;
+module_param(enable_32, int, 0600);
+MODULE_PARM_DESC(enable_32, "enable vDSO for aarch64 0=off");
+#endif
+#endif
 
 struct vdso_mappings {
 	unsigned long num_code_pages;
@@ -326,6 +340,23 @@ void update_vsyscall(struct timekeeper *tk)
 {
 	u32 use_syscall = !tk->tkr_mono.clock->archdata.vdso_direct;
 
+#ifdef USE_SYSCALL
+	if (use_syscall) {
+		use_syscall = USE_SYSCALL | USE_SYSCALL_32 | USE_SYSCALL_64;
+	} else {
+#if (defined(__LP64__))
+		if (!enable_64)
+#endif
+			use_syscall = USE_SYSCALL_64;
+#if (!defined(__LP64) || (defined(CONFIG_COMPAT) && defined(CONFIG_VDSO32)))
+		if (!enable_32)
+#endif
+			use_syscall |= USE_SYSCALL_32;
+		if (use_syscall == (USE_SYSCALL_32 | USE_SYSCALL_64))
+			use_syscall |= USE_SYSCALL;
+	}
+#endif
+
 	++vdso_data->tb_seq_count;
 	smp_wmb();
 
@@ -339,7 +370,11 @@ void update_vsyscall(struct timekeeper *tk)
 	/* Read without the seqlock held by clock_getres() */
 	WRITE_ONCE(vdso_data->hrtimer_res, hrtimer_resolution);
 
+#ifdef USE_SYSCALL
+	if (!(use_syscall & USE_SYSCALL)) {
+#else
 	if (!use_syscall) {
+#endif
 		/* tkr_mono.cycle_last == tkr_raw.cycle_last */
 		vdso_data->cs_cycle_last	= tk->tkr_mono.cycle_last;
 		vdso_data->raw_time_sec         = tk->raw_sec;

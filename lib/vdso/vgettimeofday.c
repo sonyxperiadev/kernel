@@ -36,6 +36,16 @@ DEFINE_FALLBACK(gettimeofday, struct timeval *, tv, struct timezone *, tz)
 DEFINE_FALLBACK(clock_gettime, clockid_t, clock, struct timespec *, ts)
 DEFINE_FALLBACK(clock_getres, clockid_t, clock, struct timespec *, ts)
 
+#ifdef USE_SYSCALL
+#if defined(__LP64__)
+# define USE_SYSCALL_MASK (USE_SYSCALL | USE_SYSCALL_64)
+#else
+# define USE_SYSCALL_MASK (USE_SYSCALL | USE_SYSCALL_32)
+#endif
+#else
+# define USE_SYSCALL_MASK ((uint32_t)-1)
+#endif
+
 static notrace u32 vdso_read_begin(const struct vdso_data *vd)
 {
 	u32 seq;
@@ -140,7 +150,7 @@ static notrace int do_realtime(const struct vdso_data *vd, struct timespec *ts)
 	do {
 		seq = vdso_read_begin(vd);
 
-		if (vd->use_syscall)
+		if (vd->use_syscall & USE_SYSCALL_MASK)
 			return -1;
 
 		cycle_last = vd->cs_cycle_last;
@@ -180,7 +190,7 @@ static notrace int do_monotonic(const struct vdso_data *vd, struct timespec *ts)
 	do {
 		seq = vdso_read_begin(vd);
 
-		if (vd->use_syscall)
+		if (vd->use_syscall & USE_SYSCALL_MASK)
 			return -1;
 
 		cycle_last = vd->cs_cycle_last;
@@ -224,7 +234,7 @@ static notrace int do_monotonic_raw(const struct vdso_data *vd,
 	do {
 		seq = vdso_read_begin(vd);
 
-		if (vd->use_syscall)
+		if (vd->use_syscall & USE_SYSCALL_MASK)
 			return -1;
 
 		cycle_last = vd->cs_cycle_last;
@@ -263,7 +273,7 @@ static notrace int do_boottime(const struct vdso_data *vd, struct timespec *ts)
 	do {
 		seq = vdso_read_begin(vd);
 
-		if (vd->use_syscall)
+		if (vd->use_syscall & USE_SYSCALL_MASK)
 			return -1;
 
 		cycle_last = vd->cs_cycle_last;
@@ -298,6 +308,12 @@ static notrace int do_boottime(const struct vdso_data *vd, struct timespec *ts)
 notrace int __vdso_clock_gettime(clockid_t clock, struct timespec *ts)
 {
 	const struct vdso_data *vd = __get_datapage();
+
+#ifdef USE_SYSCALL
+	if (vd->use_syscall & USE_SYSCALL_MASK) {
+		goto fallback;
+	}
+#endif
 
 	switch (clock) {
 	case CLOCK_REALTIME_COARSE:
@@ -361,6 +377,14 @@ int __vdso_clock_getres(clockid_t clock, struct timespec *res)
 {
 	long nsec;
 
+#ifdef USE_SYSCALL
+	const struct vdso_data *vd = __get_datapage();
+
+	if (vd->use_syscall & USE_SYSCALL_MASK) {
+		return clock_getres_fallback(clock, res);
+	}
+#endif
+
 	switch (clock) {
 	case CLOCK_REALTIME_COARSE:
 	case CLOCK_MONOTONIC_COARSE:
@@ -389,7 +413,24 @@ int __vdso_clock_getres(clockid_t clock, struct timespec *res)
 notrace time_t __vdso_time(time_t *t)
 {
 	const struct vdso_data *vd = __get_datapage();
+
+#ifdef USE_SYSCALL
+	time_t result;
+
+	if (vd->use_syscall & USE_SYSCALL_MASK) {
+		/* Facsimile of syscall implementation (faster by a few ns) */
+		struct timeval tv;
+		int ret = gettimeofday_fallback(&tv, NULL);
+
+		if (ret < 0)
+			return ret;
+		result = tv.tv_sec;
+	} else {
+		result = READ_ONCE(vd->xtime_coarse_sec);
+	}
+#else
 	time_t result = READ_ONCE(vd->xtime_coarse_sec);
+#endif
 
 	if (t)
 		*t = result;

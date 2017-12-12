@@ -35,6 +35,10 @@ typedef __u64 vdso_xtime_clock_sec_t;
 typedef __u64 vdso_raw_time_sec_t;
 #endif
 
+#define USE_SYSCALL    0x1
+#define USE_SYSCALL_32 0x2
+#define USE_SYSCALL_64 0x4
+
 struct vdso_data {
 	__u64 cs_cycle_last;	/* Timebase at clocksource init */
 	vdso_raw_time_sec_t raw_time_sec;	/* Raw time */
