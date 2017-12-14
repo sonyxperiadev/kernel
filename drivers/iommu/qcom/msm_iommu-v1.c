@@ -434,7 +434,8 @@ static void program_iommu_bfb_settings(void __iomem *base,
 int msm_iommu_sec_program_iommu(struct msm_iommu_drvdata *drvdata,
 			struct msm_iommu_ctx_drvdata *ctx_drvdata)
 {
-	int ret, scm_ret;
+	int ret;
+	u64 scm_ret;
 
 	if (drvdata->smmu_local_base) {
 		writel_relaxed(0xFFFFFFFF,
