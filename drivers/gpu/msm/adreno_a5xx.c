@@ -539,14 +539,13 @@ static void a5xx_regulator_disable(struct adreno_device *adreno_dev)
 	unsigned int reg;
 	struct kgsl_device *device = KGSL_DEVICE(adreno_dev);
 
-	if (adreno_is_a512(adreno_dev) ||
-	    adreno_is_a510(adreno_dev) ||
-	    adreno_is_a508(adreno_dev))
+	if (adreno_is_a512(adreno_dev) || adreno_is_a508(adreno_dev))
 		return;
 
 	/* If feature is not supported or not enabled */
-	if (!ADRENO_FEATURE(adreno_dev, ADRENO_SPTP_PC) ||
-		!test_bit(ADRENO_SPTP_PC_CTRL, &adreno_dev->pwrctrl_flag)) {
+	if (!adreno_is_a510(adreno_dev) &&
+		(!ADRENO_FEATURE(adreno_dev, ADRENO_SPTP_PC) ||
+		!test_bit(ADRENO_SPTP_PC_CTRL, &adreno_dev->pwrctrl_flag))) {
 		/* Set the default register values; set SW_COLLAPSE to 1 */
 		kgsl_regwrite(device, A5XX_GPMU_SP_POWER_CNTL, 0x778001);
 		/*
@@ -580,7 +579,7 @@ static void a5xx_regulator_disable(struct adreno_device *adreno_dev)
 			KGSL_PWR_WARN(device, "GMEM is forced on\n");
 	}
 
-	if (adreno_is_a530(adreno_dev)) {
+	if (adreno_is_a530(adreno_dev) || adreno_is_a510(adreno_dev)) {
 		/* Reset VBIF before PC to avoid popping bogus FIFO entries */
 		kgsl_regwrite(device, A5XX_RBBM_BLOCK_SW_RESET_CMD,
 			0x003C0000);
@@ -2037,9 +2036,9 @@ static void a5xx_start(struct adreno_device *adreno_dev)
 	 *  (disable). For older A510 version this bit is unused.
 	 */
 	if (adreno_is_a510(adreno_dev)) {
-		kgsl_regread(device, A5XX_RB_DBG_ECO_CNT, &val);
-		val = (val & (~(1 << 11)));
-		kgsl_regwrite(device, A5XX_RB_DBG_ECO_CNT, val);
+		kgsl_regread(device, A5XX_RB_DBG_ECO_CNT, &bit);
+		bit = (bit & (~(1 << 11)));
+		kgsl_regwrite(device, A5XX_RB_DBG_ECO_CNT, bit);
 	}
 
 	/* Enable ISDB mode if requested */
