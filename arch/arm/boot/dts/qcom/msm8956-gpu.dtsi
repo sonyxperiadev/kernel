@@ -52,7 +52,7 @@
 		qcom,initial-pwrlevel = <5>;
 
 		qcom,idle-timeout = <80>; //msecs
-		qcom,deep-nap-timeout = <20>; //msecs
+		qcom,deep-nap-timeout = <100>; //msecs
 		qcom,strtstp-sleepwake;
 
 		qcom,snapshot-size = <1048576>; //bytes
