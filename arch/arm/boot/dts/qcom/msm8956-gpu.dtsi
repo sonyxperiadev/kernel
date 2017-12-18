@@ -75,20 +75,28 @@
 		 */
 		qcom,clk-map = <0x00000F9E>;
 
+
 		clocks = <&clock_gcc_gfx clk_gcc_oxili_gfx3d_clk>,
 			 <&clock_gcc_gfx clk_gcc_oxili_ahb_clk>,
 			 <&clock_gcc_gfx clk_gcc_oxili_gmem_clk>,
 			 <&clock_gcc_gfx clk_gcc_bimc_gfx_clk>,
-			 <&clock_gcc_gfx clk_gcc_gtcu_ahb_clk>,
+			// <&clock_gcc_gfx clk_gcc_gtcu_ahb_clk>,
 			 <&clock_gcc_gfx clk_gcc_oxili_timer_clk>,
 			 <&clock_gcc_gfx clk_gcc_gfx_tcu_clk>,
 			 <&clock_gcc_gfx clk_gcc_gfx_tbu_clk>,
-			 <&clock_gcc_gfx clk_gcc_oxili_aon_clk>,
-			 <&clock_gcc_gfx clk_gcc_gfx_1_tbu_clk>;
-
+			 <&clock_gcc_gfx clk_gcc_gfx_1_tbu_clk>,
+			 <&clock_gcc_gfx clk_gcc_oxili_aon_clk>;
+		/*
+		 * Note: The GTBU1 clock has been declared as gtcu_iface_clk.
+		 * This change is intentional and makes us able to get the
+		 * correct clock enablement and disablement sequences, due
+		 * to the seriously dumb kgsl_pwrctrl clocks management.
+		 */
 		clock-names =   "core_clk", "iface_clk", "mem_clk",
-				"mem_iface_clk", "gtcu_iface_clk", "rbbmtimer_clk",
-				"gtcu_clk", "gtbu_clk", "alwayson_clk", "gtbu1_clk";
+				"mem_iface_clk", //"alt_mem_iface_clk",
+				"rbbmtimer_clk",
+				"gtcu_clk", "gtbu_clk", "gtcu_iface_clk",
+				"alwayson_clk";
 
 		/* Bus Scale Settings */
 		qcom,gpubw-dev = <&gpubw>;
