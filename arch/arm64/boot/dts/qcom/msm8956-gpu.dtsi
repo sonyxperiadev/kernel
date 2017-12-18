@@ -218,9 +218,12 @@
 			<&clock_gcc_gfx clk_gcc_gfx_tcu_clk>,
 			<&clock_gcc_gfx clk_gcc_gtcu_ahb_clk>,
 			<&clock_gcc_gfx clk_gcc_gfx_tbu_clk>,
-			<&clock_gcc_gfx clk_gcc_gfx_1_tbu_clk>;
+			<&clock_gcc_gfx clk_gcc_gfx_1_tbu_clk>,
+			<&clock_gcc_gfx clk_gcc_oxili_ahb_clk>,
+			<&clock_gcc_gfx clk_gcc_bimc_gfx_clk>;
 		clock-names = "scfg_clk", "gtcu_clk", "gtcu_iface_clk",
-				"gtbu_clk", "gtbu1_clk";
+				"gtbu_clk", "gtbu1_clk", "gpu_ahb_clk",
+				"gcc_bimc_gfx_clk";
 
 		qcom,secure_align_mask = <0xfff>;
 		gfx3d_user: gfx3d_user {
