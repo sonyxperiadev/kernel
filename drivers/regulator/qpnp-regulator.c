@@ -1875,7 +1875,9 @@ static int qpnp_regulator_check_constraints(struct qpnp_regulator *vreg,
 			pdata->init_data.constraints.min_uV,
 			pdata->init_data.constraints.max_uV,
 			limit_min_uV, limit_max_uV);
+#ifndef CONFIG_ARCH_MSM8996
 		return -EINVAL;
+#endif
 	}
 
 	return 0;
