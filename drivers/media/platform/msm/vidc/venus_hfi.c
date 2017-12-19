@@ -1577,16 +1577,16 @@ static int __scale_clocks(struct venus_hfi_device *device,
 
 	return rc;
 }
-
+int msm_vidc_regulator_cx_control = -1;
 static int venus_hfi_set_cx_regulator_voltage(
 		struct venus_hfi_device *device, unsigned long freq)
 {
 	int rc = 0, i = 0, voltage_idx = -1;
 	struct regulator_info *rinfo = NULL;
 	struct clock_voltage_info *cv_info = &device->res->cv_info;
-
-	if (!cv_info->count || !msm_vidc_regulator_cx_control)
-		return 0;
+return 0;
+//	if (!cv_info->count || !msm_vidc_regulator_cx_control)
+//		return 0;
 
 	for (i = 0; i < cv_info->count; i++) {
 		if (freq == cv_info->cv_table[i].clock_freq) {
@@ -2286,6 +2286,7 @@ static int venus_hfi_core_init(void *device)
 	struct list_head *ptr, *next;
 	struct hal_session *session = NULL;
 	struct venus_hfi_device *dev;
+	struct clock_voltage_info *cv_info = NULL;
 
 	if (!device) {
 		dprintk(VIDC_ERR, "Invalid device\n");
@@ -2352,7 +2353,7 @@ static int venus_hfi_core_init(void *device)
 	 * to see if SW workaround for venus HW bug is enabled
 	 */
 	cv_info = &dev->res->cv_info;
-+	if (cv_info->count && msm_vidc_regulator_cx_control) {
+	if (0) {
 		u32 ctrl_init;
 		dprintk(VIDC_DBG, "Cx voltage control enabled\n");
 		ctrl_init = __read_register(device, VIDC_CTRL_INIT);
@@ -2511,7 +2512,6 @@ static int venus_hfi_core_trigger_ssr(void *device,
 	struct hfi_cmd_sys_test_ssr_packet pkt;
 	int rc = 0;
 	struct venus_hfi_device *dev;
-	struct clock_voltage_info *cv_info = NULL;
 
 	if (!device) {
 		dprintk(VIDC_ERR, "invalid device\n");

@@ -11,8 +11,8 @@
  */
 
 #include <linux/pm_runtime.h>
-#include <mhi_sys.h>
-#include <mhi.h>
+#include "mhi_sys.h"
+#include "mhi.h"
 #include <soc/qcom/subsystem_restart.h>
 #include <soc/qcom/subsystem_notif.h>
 #include <linux/esoc_client.h>
