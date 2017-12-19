@@ -8949,7 +8949,7 @@ static int smbchg_probe(struct platform_device *pdev)
 		goto votables_cleanup;
 	}
 
-	chip->usb_icl_votable = create_votable("USB_ICL",
+	chip->usb_icl_votable = create_votable("SMBCHG_USB_ICL",
 			VOTE_MIN,
 			set_usb_current_limit_vote_cb, chip);
 	if (IS_ERR(chip->usb_icl_votable)) {
