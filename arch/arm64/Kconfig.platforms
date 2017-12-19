@@ -58,6 +58,7 @@ config ARCH_QCOM
 	select THERMAL_WRITABLE_TRIPS
 	select RATIONAL
 	select ARCH_HAS_RESET_CONTROLLER
+	select HAVE_FUTEX_CMPXCHG
 	help
 	  This enables support for the ARMv8 based Qualcomm chipsets.
 
