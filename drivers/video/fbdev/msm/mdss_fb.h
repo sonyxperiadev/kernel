@@ -366,6 +366,21 @@ struct msm_fb_data_type {
 	int fb_mmap_type;
 	struct led_trigger *boot_notification_led;
 
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	bool suspend_avoided;
+
+	/* speed up wakeup */
+	/* do unblank (>150ms) on own kworker
+	 * so we don't starve other works
+	 */
+	struct workqueue_struct *unblank_kworker;
+	struct work_struct unblank_work;
+	bool early_unblank_completed;
+ #ifdef CONFIG_SOMC_PANEL_INCELL
+	bool off_sts;
+ #endif
+#endif
+
 	/* Following is used for dynamic mode switch */
 	enum dyn_mode_switch_state switch_state;
 	u32 switch_new_mode;
@@ -387,7 +402,7 @@ static inline void mdss_fb_update_notify_update(struct msm_fb_data_type *mfd)
 		if (mfd->no_update.timer.function)
 			del_timer(&(mfd->no_update.timer));
 
-		mfd->no_update.timer.expires = jiffies + (2 * HZ);
+		mfd->no_update.timer.expires = jiffies + msecs_to_jiffies(2000);
 		add_timer(&mfd->no_update.timer);
 		mutex_unlock(&mfd->no_update.lock);
 	}

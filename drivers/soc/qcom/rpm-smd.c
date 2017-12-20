@@ -31,7 +31,6 @@
 #include <linux/device.h>
 #include <linux/notifier.h>
 #include <linux/slab.h>
-#include <linux/workqueue.h>
 #include <linux/platform_device.h>
 #include <linux/of.h>
 #include <linux/of_platform.h>
@@ -125,8 +124,6 @@ int msm_rpm_unregister_notifier(struct notifier_block *nb)
 {
 	return atomic_notifier_chain_unregister(&msm_rpm_sleep_notifier, nb);
 }
-
-static struct workqueue_struct *msm_rpm_smd_wq;
 
 enum {
 	MSM_RPM_MSG_REQUEST_TYPE = 0,
@@ -748,15 +745,60 @@ static int msm_rpm_read_sleep_ack(void)
 {
 	int ret;
 	char buf[MAX_ERR_BUFFER_SIZE] = {0};
+	uint32_t msg_id;
 
 	if (glink_enabled)
 		ret = msm_rpm_glink_rx_poll(glink_data->glink_handle);
 	else {
+		int timeout = 10;
+
+		while (timeout) {
+			if (smd_is_pkt_avail(msm_rpm_data.ch_info))
+				break;
+			/*
+			 * Sleep for 50us at a time before checking
+			 * for packet availability. The 50us is based
+			 * on the the max time rpm could take to process
+			 * and send an ack for sleep set request.
+			 */
+			udelay(50);
+			timeout--;
+		}
+
+		/*
+		 * On timeout return an error and exit the spinlock
+		 * control on this cpu. This will allow any other
+		 * core that has wokenup and trying to acquire the
+		 * spinlock from being locked out.
+		 */
+
+		if (!timeout)
+			return -EAGAIN;
+
 		ret = msm_rpm_read_smd_data(buf);
-		if (!ret)
+		if (!ret) {
+			/*
+			 * Mimic Glink behavior to ensure that the
+			 * data is read and the msg is removed from
+			 * the wait list. We should have gotten here
+			 * only when there are no drivers waiting on
+			 * ACKs. msm_rpm_get_entry_from_msg_id()
+			 * return non-NULL only then.
+			 */
+			msg_id = msm_rpm_get_msg_id_from_ack(buf);
+			msm_rpm_process_ack(msg_id, 0);
 			ret = smd_is_pkt_avail(msm_rpm_data.ch_info);
+		}
 	}
 	return ret;
+}
+
+static void msm_rpm_flush_noack_messages(void)
+{
+	while (!list_empty(&msm_rpm_wait_list)) {
+		if (!msm_rpm_read_sleep_ack())
+			break;
+	}
 }
 
 static int msm_rpm_flush_requests(bool print)
@@ -764,6 +806,8 @@ static int msm_rpm_flush_requests(bool print)
 	struct rb_node *t;
 	int ret;
 	int count = 0;
+
+	msm_rpm_flush_noack_messages();
 
 	for (t = rb_first(&tr_root); t; t = rb_next(t)) {
 
@@ -801,8 +845,10 @@ static int msm_rpm_flush_requests(bool print)
 
 			if (ret >= 0)
 				count--;
-			else
+			else {
+				pr_err("Timed out waiting for RPM ACK\n");
 				return ret;
+			}
 		}
 	}
 	return 0;
@@ -1034,14 +1080,18 @@ static void msm_rpm_notify(void *data, unsigned event)
 
 bool msm_rpm_waiting_for_ack(void)
 {
-	bool ret;
+	bool ret = false;
 	unsigned long flags;
+	struct msm_rpm_wait_data *elem = NULL;
 
 	spin_lock_irqsave(&msm_rpm_list_lock, flags);
-	ret = list_empty(&msm_rpm_wait_list);
+	elem = list_first_entry_or_null(&msm_rpm_wait_list,
+				struct msm_rpm_wait_data, list);
+	if (elem)
+		ret = !elem->delete_on_ack;
 	spin_unlock_irqrestore(&msm_rpm_list_lock, flags);
 
-	return !ret;
+	return ret;
 }
 
 static struct msm_rpm_wait_data *msm_rpm_get_entry_from_msg_id(uint32_t msg_id)
@@ -1378,7 +1428,7 @@ static int msm_rpm_glink_send_buffer(char *buf, uint32_t size, bool noirq)
 {
 	int ret;
 	unsigned long flags;
-	int timeout = 50;
+	int timeout = 5;
 
 	spin_lock_irqsave(&msm_rpm_data.smd_lock_write, flags);
 	do {
@@ -1392,7 +1442,7 @@ static int msm_rpm_glink_send_buffer(char *buf, uint32_t size, bool noirq)
 				spin_lock_irqsave(
 					&msm_rpm_data.smd_lock_write, flags);
 			} else {
-				udelay(5);
+				udelay(100);
 			}
 			timeout--;
 		} else {
@@ -2125,15 +2175,6 @@ static int msm_rpm_dev_probe(struct platform_device *pdev)
 	wait_for_completion(&msm_rpm_data.smd_open);
 
 	smd_disable_read_intr(msm_rpm_data.ch_info);
-
-	msm_rpm_smd_wq = alloc_workqueue("rpm-smd",
-			WQ_UNBOUND | WQ_MEM_RECLAIM | WQ_HIGHPRI, 1);
-	if (!msm_rpm_smd_wq) {
-		pr_err("%s: Unable to alloc rpm-smd workqueue\n", __func__);
-		ret = -EINVAL;
-		goto fail;
-	}
-	queue_work(msm_rpm_smd_wq, &msm_rpm_data.work);
 
 	probe_status = ret;
 skip_init:

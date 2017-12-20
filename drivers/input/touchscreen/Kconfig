@@ -633,6 +633,34 @@ config TOUCHSCREEN_MIGOR
 	  To compile this driver as a module, choose M here: the
 	  module will be called migor_ts.
 
+config TOUCHSCREEN_CLEARPAD
+        tristate "Synaptics ClearPad"
+	default n
+        help
+          Say Y here to enable Synaptics ClearPad touchscreen.
+
+config TOUCHSCREEN_INCELL_CLEARPAD
+	tristate "Synaptics ClearPad for In-Cell power"
+	depends on SOMC_PANEL_INCELL && !TOUCHSCREEN_CLEARPAD
+	default y
+	help
+	  Say Y here to enable Synaptics ClearPad touchscreen.
+	  This driver is ONLY for In-Cell powered chip.
+
+config TOUCHSCREEN_CLEARPAD_I2C
+        tristate "Synaptics ClearPad I2C"
+	depends on I2C && (TOUCHSCREEN_CLEARPAD || TOUCHSCREEN_INCELL_CLEARPAD)
+	default n
+        help
+          Say Y here to enable Synaptics ClearPad I2C touchscreen.
+
+config TOUCHSCREEN_CLEARPAD_RMI_DEV
+        tristate "Synaptics ClearPad RMI Dev"
+	depends on GPIO_SYSFS && TOUCHSCREEN_CLEARPAD && TOUCHSCREEN_CLEARPAD_I2C
+	default n
+        help
+          Say Y here to enable Synaptics ClearPad RMI dev.
+
 config TOUCHSCREEN_TOUCHRIGHT
 	tristate "Touchright serial touchscreen"
 	select SERIO

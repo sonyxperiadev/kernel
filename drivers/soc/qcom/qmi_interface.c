@@ -2137,6 +2137,7 @@ static void qmi_svc_event_notifier_init(void)
  */
 void qmi_log_init(void)
 {
+#ifdef CONFIG_IPC_LOGGING
 	qmi_req_resp_log_ctx =
 		ipc_log_context_create(QMI_REQ_RESP_LOG_PAGES,
 			"kqmi_req_resp", 0);
@@ -2148,6 +2149,7 @@ void qmi_log_init(void)
 	if (!qmi_ind_log_ctx)
 		pr_err("%s: Unable to create QMI IPC %s",
 				"logging for Indications", __func__);
+#endif
 }
 
 /**

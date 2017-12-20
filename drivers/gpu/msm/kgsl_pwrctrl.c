@@ -37,13 +37,19 @@
 #define UPDATE_BUSY_VAL		1000000
 
 /* Number of jiffies for a full thermal cycle */
-#define TH_HZ			(HZ/5)
+#define TH_HZ			200
 
 #define KGSL_MAX_BUSLEVELS	20
 
 #define DEFAULT_BUS_P 25
 
 /* Order deeply matters here because reasons. New entries go on the end */
+/* kholk: Not because reasons. This is because they wanted to
+ *        set clocks through this array by hardcoding the array position
+ *        in the damn calls. It looks like the last clock to worry about
+ *        is rbbmtimer_clk, so after that one it should be safe to add
+ *        our clocks in our favourite order.
+ */
 static const char * const clocks[] = {
 	"src_clk",
 	"core_clk",
@@ -58,7 +64,8 @@ static const char * const clocks[] = {
 	"alwayson_clk",
 	"isense_clk",
 	"rbcpr_clk",
-	"iref_clk"
+	"iref_clk",
+	"gtbu1_clk"
 };
 
 static unsigned int ib_votes[KGSL_MAX_BUSLEVELS];
@@ -300,7 +307,7 @@ static void kgsl_pwrctrl_set_thermal_cycle(struct kgsl_pwrctrl *pwr,
 		if (pwr->thermal_cycle == CYCLE_ENABLE) {
 			pwr->thermal_cycle = CYCLE_ACTIVE;
 			mod_timer(&pwr->thermal_timer, jiffies +
-					(TH_HZ - pwr->thermal_timeout));
+					(msecs_to_jiffies(TH_HZ) - pwr->thermal_timeout));
 			pwr->thermal_highlow = 1;
 		}
 	} else {
@@ -740,7 +747,7 @@ static void kgsl_pwrctrl_max_clock_set(struct kgsl_device *device, int val)
 		hfreq = pwr->pwrlevels[i].gpu_freq;
 		diff =  hfreq - pwr->pwrlevels[i + 1].gpu_freq;
 		udiff = hfreq - val;
-		pwr->thermal_timeout = (udiff * TH_HZ) / diff;
+		pwr->thermal_timeout = (udiff * msecs_to_jiffies(TH_HZ)) / diff;
 		pwr->thermal_cycle = CYCLE_ENABLE;
 	} else {
 		pwr->thermal_cycle = CYCLE_DISABLE;
@@ -791,8 +798,9 @@ static unsigned int kgsl_pwrctrl_max_clock_get(struct kgsl_device *device)
 		unsigned int hfreq = freq;
 		unsigned int lfreq = pwr->pwrlevels[pwr->
 				thermal_pwrlevel + 1].gpu_freq;
-		freq = pwr->thermal_timeout * (lfreq / TH_HZ) +
-			(TH_HZ - pwr->thermal_timeout) * (hfreq / TH_HZ);
+		freq = pwr->thermal_timeout * (lfreq / msecs_to_jiffies(TH_HZ)) +
+			(msecs_to_jiffies(TH_HZ) - pwr->thermal_timeout) *
+			(hfreq / msecs_to_jiffies(TH_HZ));
 	}
 
 	return freq;
@@ -1907,7 +1915,7 @@ static void kgsl_thermal_timer(unsigned long data)
 		device->pwrctrl.thermal_highlow = 0;
 	} else {
 		mod_timer(&device->pwrctrl.thermal_timer,
-					jiffies + (TH_HZ -
+					jiffies + (msecs_to_jiffies(TH_HZ) -
 					device->pwrctrl.thermal_timeout));
 		device->pwrctrl.thermal_highlow = 1;
 	}

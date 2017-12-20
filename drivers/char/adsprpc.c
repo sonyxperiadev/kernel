@@ -2881,6 +2881,87 @@ bail:
 	return err;
 }
 
+static int fastrpc_cb_subsids_probe(struct device *dev)
+{
+	struct fastrpc_channel_ctx *chan;
+	struct fastrpc_session_ctx *main_session, *sess = NULL;
+	struct of_phandle_args iommuspec;
+	const char *name;
+	unsigned int *range = 0, range_size = 0;
+	unsigned int *sids = 0, sids_size = 0;
+	int err = 0, i;
+
+	VERIFY(err, 0 != (name = of_get_property(dev->of_node, "label", NULL)));
+	if (err)
+		goto bail;
+
+	VERIFY(err, !of_parse_phandle_with_args(dev->of_node, "iommus",
+						"#iommu-cells", 0, &iommuspec));
+	if (err)
+		goto bail;
+
+	err = of_property_read_u32_array(dev->of_node,
+					"qcom,virtual-addr-pool",
+					range,
+					range_size/sizeof(unsigned int));
+	if (err)
+		goto bail;
+
+	err = of_property_read_u32_array(dev->of_node,
+					"qcom,adsp-shared-sids",
+					sids,
+					sids_size/sizeof(unsigned int));
+	if (err)
+		goto bail;
+
+	chan = &gcinfo[0];
+
+	/* Main RPC session */
+	main_session = &chan->session[chan->sesscount];
+	VERIFY(err, !IS_ERR_OR_NULL(main_session->smmu.mapping =
+				arm_iommu_create_mapping(&platform_bus_type,
+						range[0], range[1])));
+	if (err)
+		goto bail;
+
+	iommu_set_fault_handler(main_session->smmu.mapping->domain,
+				fastrpc_smmu_fault_handler, sess);
+	VERIFY(err, !arm_iommu_attach_device(dev, main_session->smmu.mapping));
+	if (err)
+		goto bail;
+
+	main_session->smmu.dev = dev;
+
+	/* Secondary RPC sessions */
+	for (i = 0; i < (sids_size / sizeof(unsigned int)); i++) {
+		VERIFY(err, chan->sesscount < NUM_SESSIONS);
+		if (err)
+			goto bail;
+
+		sess = &chan->session[chan->sesscount];
+		sess->used = 0;
+
+		/* Configure coherency, if needed */
+		sess->smmu.coherent = of_property_read_bool(dev->of_node,
+						"dma-coherent");
+
+		/* Use the main session's IOMMU mapping and device */
+		sess->smmu.mapping = main_session->smmu.mapping;
+		sess->smmu.dev = main_session->smmu.dev;
+
+		/* Hack-in the sub context banks and enable */
+		sess->smmu.cb = sids[i];
+		sess->smmu.enabled = 1;
+		chan->sesscount++;
+	}
+	debugfs_global_file = debugfs_create_file("global", 0644, debugfs_root,
+							NULL, &debugfs_fops);
+bail:
+	kfree(sids);
+	kfree(range);
+	return err;
+}
+
 static int fastrpc_cb_legacy_probe(struct device *dev)
 {
 	struct device_node *domains_child_node = NULL;
@@ -2974,6 +3055,10 @@ static int fastrpc_probe(struct platform_device *pdev)
 	if (of_device_is_compatible(dev->of_node,
 					"qcom,msm-fastrpc-compute-cb"))
 		return fastrpc_cb_probe(dev);
+
+	if (of_device_is_compatible(dev->of_node,
+					"qcom,msm-fastrpc-fixedsids-compute-cb"))
+		return fastrpc_cb_subsids_probe(dev);
 
 	if (of_device_is_compatible(dev->of_node,
 					"qcom,msm-fastrpc-legacy-compute-cb"))

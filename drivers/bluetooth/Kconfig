@@ -193,6 +193,16 @@ config BT_HCIBPA10X
 	  Say Y here to compile support for HCI BPA10x devices into the
 	  kernel or say M to compile it as module (bpa10x).
 
+config BT_MSM_SLEEP
+	tristate "MSM Bluesleep driver"
+	depends on BT && SERIAL_MSM_HS
+	help
+	  Bluetooth MSM bluesleep driver.
+	  This driver provides support for BTS sleep.
+
+	  Say Y here to compile support for BTS sleep into the
+	  kernel or say M to compile it as module (bfusb).
+
 config BT_HCIBFUSB
 	tristate "HCI BlueFRITZ! USB driver"
 	depends on USB
@@ -328,6 +338,16 @@ config MSM_BT_POWER
 	  Provides a parameter to switch on/off power from PMIC
 	  to Bluetooth device.
 
+config BT_BCM43XX
+	tristate "Broadcom BCM43xx control driver"
+	depends on SERIAL_MSM_HS && RFKILL
+	help
+	  This enables the Bluetooth driver for Broadcom BCM43xx.
+	  This driver controls BT power/HOST_WAKE and BT_WAKE via GPIO.
+
+	  Say Y here to compile support for Broadcom BCM43xx control driver
+	  into the kernel or say M to compile it as module.
+
 config BTFM_SLIM
 	tristate "MSM Bluetooth/FM Slimbus Driver"
 	depends on MSM_BT_POWER
@@ -347,5 +367,15 @@ config BTFM_SLIM_WCN3990
 	  This enables specific driver handle for WCN3990 device.
 	  It is designed to adapt any future BT/FM device to implement a specific
 	  chip initialization process and control.
+
+config BT_BCM_COMBO
+	tristate "Broadcom BT/FM Combo chip driver"
+	help
+	  This enables the Broadcom BT/FM combo chip driver for
+	  certain BCM chips found primarily on various handheld
+	  devices.
+	  If unsure, say N.
+
+source drivers/bluetooth/broadcom/Kconfig
 
 endmenu

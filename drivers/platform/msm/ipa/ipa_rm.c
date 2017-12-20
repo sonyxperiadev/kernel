@@ -267,7 +267,7 @@ static int _ipa_rm_add_dependency_sync(enum ipa_rm_resource_name resource_name,
 		time = wait_for_completion_timeout(
 				&((struct ipa_rm_resource_cons *)consumer)->
 				request_consumer_in_progress,
-				HZ * 5);
+				msecs_to_jiffies(5000));
 		result = 0;
 		if (!time) {
 			IPA_RM_ERR("TIMEOUT waiting for %s GRANT event.",

@@ -207,7 +207,7 @@ static irqreturn_t msm_slim_interrupt(int irq, void *d)
 		 * signalling completion/exiting ISR
 		 */
 		mb();
-		msm_slim_manage_tx_msgq(dev, false, NULL);
+		msm_slim_manage_tx_msgq(dev, false, NULL, 0);
 	}
 	if (stat & MGR_INT_RX_MSG_RCVD) {
 		u32 rx_buf[10];
@@ -1478,7 +1478,7 @@ static int msm_slim_runtime_idle(struct device *device)
 /*
  * If PM_RUNTIME is not defined, these 2 functions become helper
  * functions to be called from system suspend/resume. So they are not
- * inside ifdef CONFIG_PM_RUNTIME
+ * inside ifdef CONFIG_PM
  */
 #ifdef CONFIG_PM
 static int msm_slim_runtime_suspend(struct device *device)

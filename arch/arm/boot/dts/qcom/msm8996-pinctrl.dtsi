@@ -9,6 +9,11 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
+/*
+ * NOTE: This file has been modified by Sony Mobile Communications Inc.
+ * Modifications are Copyright (c) 2015 Sony Mobile Communications Inc,
+ * and licensed under the license of the file.
+ */
 
 &soc {
 	tlmm: pinctrl@01010000 {
@@ -1144,7 +1149,8 @@
 				config {
 					pins = "gpio36";
 					drive-strength = <2>;
-					bias-disable;
+					/*bias-disable;*/
+					bias-pull-up;
 				};
 			};
 
@@ -1157,7 +1163,8 @@
 				config {
 					pins = "gpio37";
 					drive-strength = <2>;
-					bias-disable;
+					/*bias-disable;*/
+					bias-pull-up;
 				};
 			};
 		};

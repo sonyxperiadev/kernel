@@ -348,7 +348,7 @@ static struct mdss_mdp_format_params dest_scaler_fmt = {
 #define HIST_INTR_DSPP_MASK		0xFFF000
 #define HIST_V2_INTR_BIT_MASK		0xF33000
 #define HIST_V1_INTR_BIT_MASK		0X333333
-#define HIST_WAIT_TIMEOUT(frame) ((75 * HZ * (frame)) / 1000)
+#define HIST_WAIT_TIMEOUT(frame) ((75 * msecs_to_jiffies(1000) * (frame)) / 1000)
 #define HIST_KICKOFF_WAIT_FRACTION 4
 
 /* hist collect state */
@@ -2183,7 +2183,9 @@ static int pp_hist_setup(u32 *op, u32 block, struct mdss_mdp_mixer *mix,
 		goto error;
 	}
 
-	mutex_lock(&hist_info->hist_mutex);
+	if (!mutex_is_locked(&hist_info->hist_mutex))
+		mutex_lock(&hist_info->hist_mutex);
+
 	spin_lock_irqsave(&hist_info->hist_lock, flag);
 	/*
 	 * Set histogram interrupt if histogram collection is enabled. The
@@ -2348,8 +2350,7 @@ static int pp_dspp_setup(u32 disp_num, struct mdss_mdp_mixer *mixer,
 	mdata = ctl->mdata;
 	dspp_num = mixer->num;
 	/* no corresponding dspp */
-	if ((mixer->type != MDSS_MDP_MIXER_TYPE_INTF) ||
-		(dspp_num >= mdata->ndspp))
+	if (mixer->type != MDSS_MDP_MIXER_TYPE_INTF)
 		return -EINVAL;
 	base = mdss_mdp_get_dspp_addr_off(dspp_num);
 	if (IS_ERR(base))
@@ -2487,6 +2488,9 @@ static int pp_dspp_setup(u32 disp_num, struct mdss_mdp_mixer *mixer,
 
 	if ((flags & PP_FLAGS_DIRTY_DITHER) &&
 		(pp_program_mask & PP_PROGRAM_DITHER)) {
+#ifdef CONFIG_ARCH_MSM8916
+		addr = base + MDSS_MDP_REG_DSPP_DITHER_DEPTH;
+#endif
 		if (!pp_ops[DITHER].pp_set_config && addr) {
 			pp_dither_config(addr, pp_sts,
 				&mdss_pp_res->dither_disp_cfg[disp_num]);
@@ -2740,7 +2744,7 @@ int mdss_mdp_pp_setup_locked(struct mdss_mdp_ctl *ctl,
 	struct mdss_data_type *mdata;
 	int ret = 0, i;
 	u32 flags, pa_v2_flags;
-	u32 max_bw_needed;
+	u32 max_bw_needed = 0;
 	u32 mixer_cnt;
 	u32 mixer_id[MDSS_MDP_INTF_MAX_LAYERMIXER];
 	u32 disp_num;
@@ -7793,6 +7797,7 @@ static int pp_get_driver_ops(struct mdp_pp_driver_ops *ops)
 	case MDSS_MDP_HW_REV_109:
 	case MDSS_MDP_HW_REV_110:
 	case MDSS_MDP_HW_REV_200:
+	case MDSS_MDP_HW_REV_111:
 	case MDSS_MDP_HW_REV_112:
 		memset(ops, 0, sizeof(struct mdp_pp_driver_ops));
 		break;

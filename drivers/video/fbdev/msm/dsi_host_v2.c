@@ -1417,7 +1417,7 @@ static int msm_dsi_bta_status_check(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 									0x01);
 	wmb();
 	ret = wait_for_completion_killable_timeout(&ctrl_pdata->bta_comp,
-									HZ/10);
+									msecs_to_jiffies(100));
 	msm_dsi_clear_irq(ctrl_pdata, DSI_INTR_BTA_DONE_MASK);
 	msm_dsi_clk_ctrl(&ctrl_pdata->panel_data, 0);
 	mutex_unlock(&ctrl_pdata->cmd_mutex);

@@ -78,6 +78,8 @@ const struct msm_vidc_gov_data DEFAULT_BUS_VOTE = {
 
 const int max_packets = 1000;
 
+static int venus_hfi_set_cx_regulator_voltage(
+	struct venus_hfi_device *device, unsigned long freq);
 static void venus_hfi_pm_handler(struct work_struct *work);
 static DECLARE_DELAYED_WORK(venus_hfi_pm_work, venus_hfi_pm_handler);
 static inline int __resume(struct venus_hfi_device *device);
@@ -1151,11 +1153,11 @@ static struct clock_info *__get_clock(struct venus_hfi_device *device,
 	return NULL;
 }
 
-static unsigned long __get_clock_rate(struct clock_info *clock,
+static unsigned long __get_clock_rate(struct venus_hfi_device *device,
 	int num_mbs_per_sec, struct vidc_clk_scale_data *data)
 {
-	int num_rows = clock->count;
-	struct load_freq_table *table = clock->load_freq_tbl;
+	int num_rows = device->res->load_freq_tbl_size;
+	struct load_freq_table *table = device->res->load_freq_tbl;
 	unsigned long freq = table[0].freq, max_freq = 0;
 	int i = 0, j = 0;
 	unsigned long instance_freq[VIDC_MAX_SESSIONS] = {0};
@@ -1192,12 +1194,12 @@ print_clk:
 	return freq;
 }
 
-static unsigned long __get_clock_rate_with_bitrate(struct clock_info *clock,
+static unsigned long __get_clock_rate_with_bitrate(struct venus_hfi_device *device,
 		int num_mbs_per_sec, struct vidc_clk_scale_data *data,
 		unsigned long instant_bitrate)
 {
-	int num_rows = clock->count;
-	struct load_freq_table *table = clock->load_freq_tbl;
+	int num_rows = device->res->load_freq_tbl_size;
+	struct load_freq_table *table = device->res->load_freq_tbl;
 	unsigned long freq = table[0].freq, max_freq = 0;
 	unsigned long base_freq, supported_clk[VIDC_MAX_SESSIONS] = {0};
 	int i, j;
@@ -1212,7 +1214,7 @@ static unsigned long __get_clock_rate_with_bitrate(struct clock_info *clock,
 	}
 
 	/* Get clock rate based on current load only */
-	base_freq = __get_clock_rate(clock, num_mbs_per_sec, data);
+	base_freq = __get_clock_rate(device, num_mbs_per_sec, data);
 
 	/*
 	 * Supported bitrate = 40% of clock frequency
@@ -1533,10 +1535,11 @@ static int __scale_clocks_load(struct venus_hfi_device *device, int load,
 
 			if (!rate) {
 				if (!device->clk_bitrate)
-					rate = __get_clock_rate(cl, load,
+					rate = __get_clock_rate(device, load,
 							data);
 				else
-					rate = __get_clock_rate_with_bitrate(cl,
+					rate = __get_clock_rate_with_bitrate(
+							device,
 							load, data,
 							instant_bitrate);
 			}
@@ -1574,12 +1577,55 @@ static int __scale_clocks(struct venus_hfi_device *device,
 
 	return rc;
 }
+int msm_vidc_regulator_cx_control = -1;
+static int venus_hfi_set_cx_regulator_voltage(
+		struct venus_hfi_device *device, unsigned long freq)
+{
+	int rc = 0, i = 0, voltage_idx = -1;
+	struct regulator_info *rinfo = NULL;
+	struct clock_voltage_info *cv_info = &device->res->cv_info;
+return 0;
+//	if (!cv_info->count || !msm_vidc_regulator_cx_control)
+//		return 0;
+
+	for (i = 0; i < cv_info->count; i++) {
+		if (freq == cv_info->cv_table[i].clock_freq) {
+			voltage_idx = cv_info->cv_table[i].voltage_idx;
+			break;
+		}
+	}
+	if (voltage_idx == -1) {
+		dprintk(VIDC_ERR,
+			"%s: voltage_idx not found for freq %lu\n",
+			__func__, freq);
+		return 0;
+	}
+
+	venus_hfi_for_each_regulator(device, rinfo) {
+		if (strnstr(rinfo->name, "vdd-cx", strlen(rinfo->name))) {
+			rc = regulator_set_voltage(rinfo->regulator,
+					voltage_idx, voltage_idx);
+			if (rc) {
+				dprintk(VIDC_ERR,
+					"%s: Failed to set voltage_idx %d on %s: %d\n",
+					__func__, voltage_idx, rinfo->name, rc);
+			} else {
+				dprintk(VIDC_DBG,
+					"%s: set voltage_idx %d on %s\n",
+					__func__, voltage_idx, rinfo->name);
+			}
+		}
+	}
+
+	return 0;
+}
 
 static int venus_hfi_scale_clocks(void *dev, int load,
 					struct vidc_clk_scale_data *data,
 					unsigned long instant_bitrate)
 {
 	int rc = 0;
+	unsigned long rate = 0;
 	struct venus_hfi_device *device = dev;
 
 	if (!device) {
@@ -1588,6 +1634,14 @@ static int venus_hfi_scale_clocks(void *dev, int load,
 	}
 
 	mutex_lock(&device->lock);
+
+	rate = __get_clock_rate(device, load, data);
+
+	rc = venus_hfi_set_cx_regulator_voltage(device, rate);
+	if (rc) {
+		dprintk(VIDC_WARN, "%s: Failed to set regulators voltage\n",
+			__func__);
+	}
 
 	if (__resume(device)) {
 		dprintk(VIDC_ERR, "Resume from power collapse failed\n");
@@ -2232,6 +2286,7 @@ static int venus_hfi_core_init(void *device)
 	struct list_head *ptr, *next;
 	struct hal_session *session = NULL;
 	struct venus_hfi_device *dev;
+	struct clock_voltage_info *cv_info = NULL;
 
 	if (!device) {
 		dprintk(VIDC_ERR, "Invalid device\n");
@@ -2291,6 +2346,19 @@ static int venus_hfi_core_init(void *device)
 		dprintk(VIDC_ERR, "Failed to start core\n");
 		rc = -ENODEV;
 		goto err_core_init;
+	}
+
+	/*
+	 * firmware will check below register in sys_init parsing
+	 * to see if SW workaround for venus HW bug is enabled
+	 */
+	cv_info = &dev->res->cv_info;
+	if (0) {
+		u32 ctrl_init;
+		dprintk(VIDC_DBG, "Cx voltage control enabled\n");
+		ctrl_init = __read_register(device, VIDC_CTRL_INIT);
+		ctrl_init |= 0x80000000;
+		__write_register(dev, VIDC_CTRL_INIT, ctrl_init);
 	}
 
 	rc =  call_hfi_pkt_op(dev, sys_init, &pkt, HFI_VIDEO_ARCH_OX);
@@ -4437,11 +4505,21 @@ static int __load_fw(struct venus_hfi_device *device)
 		goto fail_init_res;
 	}
 
-	rc = __initialize_packetization(device);
-	if (rc) {
-		dprintk(VIDC_ERR, "Failed to initialize packetization\n");
-		goto fail_init_pkt;
+	/* kholk: Legacy SoCs cannot initialize packetization
+	 *        in firmware load path because old bootloader
+	 */
+	if (!of_machine_is_compatible("qcom,msm8956") &&
+	    !of_machine_is_compatible("qcom,msm8976") &&
+	    !of_machine_is_compatible("qcom,msm8974") &&
+	    !of_machine_is_compatible("qcom,msm8994") &&
+	    !of_machine_is_compatible("qcom,msm8226")) {
+		rc = __initialize_packetization(device);
+		if (rc) {
+			dprintk(VIDC_ERR, "Failed to initialize packetization\n");
+			goto fail_init_pkt;
+		}
 	}
+
 	trace_msm_v4l2_vidc_fw_load_start("msm_v4l2_vidc venus_fw load start");
 
 	rc = __venus_power_on(device);
@@ -4581,6 +4659,7 @@ static int venus_hfi_get_core_capabilities(void *dev)
 static int __initialize_packetization(struct venus_hfi_device *device)
 {
 	int rc = 0;
+	int major_version;
 	const char *hfi_version;
 
 	if (!device || !device->res) {
@@ -4589,6 +4668,16 @@ static int __initialize_packetization(struct venus_hfi_device *device)
 	}
 
 	hfi_version = device->res->hfi_version;
+
+	if (!hfi_version) {
+		rc = __read_register(device, VIDC_WRAPPER_HW_VERSION);
+		major_version = (rc &
+			VIDC_WRAPPER_HW_VERSION_MAJOR_VERSION_MASK) >>
+			VIDC_WRAPPER_HW_VERSION_MAJOR_VERSION_SHIFT;
+
+		if (major_version > 2)
+			hfi_version = "3xx";
+	};
 
 	if (!hfi_version) {
 		device->packetization_type = HFI_PACKETIZATION_LEGACY;

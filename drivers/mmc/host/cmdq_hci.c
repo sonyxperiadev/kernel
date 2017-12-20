@@ -39,7 +39,7 @@
 static int cmdq_halt_poll(struct mmc_host *mmc, bool halt);
 static int cmdq_halt(struct mmc_host *mmc, bool halt);
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 static int cmdq_runtime_pm_get(struct cmdq_host *host)
 {
 	return pm_runtime_get_sync(host->mmc->parent);
@@ -473,10 +473,10 @@ static int cmdq_enable(struct mmc_host *mmc)
 
 	if (cq_host->ops->clear_set_dumpregs)
 		cq_host->ops->clear_set_dumpregs(mmc, 1);
-
+#ifndef CONFIG_ARCH_SONY_LOIRE
 	if (cq_host->ops->enhanced_strobe_mask)
 		cq_host->ops->enhanced_strobe_mask(mmc, true);
-
+#endif
 pm_ref_count:
 	cmdq_runtime_pm_put(cq_host);
 out:
@@ -493,9 +493,10 @@ static void cmdq_disable_nosync(struct mmc_host *mmc, bool soft)
 				    cq_host, CQCFG) & ~(CQ_ENABLE),
 			    CQCFG);
 	}
+#ifndef CONFIG_ARCH_SONY_LOIRE
 	if (cq_host->ops->enhanced_strobe_mask)
 		cq_host->ops->enhanced_strobe_mask(mmc, false);
-
+#endif
 	cq_host->enabled = false;
 	mmc_host_set_cq_disable(mmc);
 	MMC_TRACE(mmc, "%s: CQ disabled\n", __func__);
@@ -886,7 +887,7 @@ irqreturn_t cmdq_irq(struct mmc_host *mmc, int err)
 	unsigned long tag = 0, comp_status;
 	struct cmdq_host *cq_host = (struct cmdq_host *)mmc_cmdq_private(mmc);
 	unsigned long err_info = 0;
-	struct mmc_request *mrq;
+	struct mmc_request *mrq = NULL;
 	int ret;
 	u32 dbr_set = 0;
 	u32 dev_pend_set = 0;
@@ -991,6 +992,13 @@ skip_cqterri:
 		 */
 		if (ret) {
 			cmdq_disable_nosync(mmc, true);
+
+			/* Temporary fix to avoid Null Pointer access */
+			if (!mrq || !mrq->cmdq_req) {
+				pr_err("%s: mrq is not initialized\n", __func__);
+				goto out;
+			}
+
 			/*
 			 * Enable legacy interrupts as CQE halt has failed.
 			 * This is needed to send legacy commands like status

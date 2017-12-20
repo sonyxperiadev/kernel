@@ -412,6 +412,8 @@ config S390_IOMMU
 	help
 	  Support for the IOMMU API for s390 PCI devices.
 
+source drivers/iommu/qcom/Kconfig
+
 menuconfig IOMMU_DEBUG
 	bool "IOMMU Profiling and Debugging"
 	help

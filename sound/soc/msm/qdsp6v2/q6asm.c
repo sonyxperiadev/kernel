@@ -2621,9 +2621,15 @@ EXPORT_SYMBOL(q6asm_open_read_v3);
 int q6asm_open_read_v4(struct audio_client *ac, uint32_t format,
 			uint16_t bits_per_sample, bool ts_mode)
 {
+#if !defined(CONFIG_ARCH_MSM8916) && !defined(CONFIG_ARCH_MSM8996)
 	return __q6asm_open_read(ac, format, bits_per_sample,
 				 PCM_MEDIA_FORMAT_V4 /*media fmt block ver*/,
 				 ts_mode);
+#else
+	return __q6asm_open_read(ac, format, bits_per_sample,
+				 PCM_MEDIA_FORMAT_V3/*media fmt block ver*/,
+				 false/*ts_mode*/);
+#endif
 }
 EXPORT_SYMBOL(q6asm_open_read_v4);
 
@@ -2924,9 +2930,15 @@ EXPORT_SYMBOL(q6asm_open_write_v3);
 int q6asm_open_write_v4(struct audio_client *ac, uint32_t format,
 			uint16_t bits_per_sample)
 {
+#if !defined(CONFIG_ARCH_MSM8916) && !defined(CONFIG_ARCH_MSM8996)
 	return __q6asm_open_write(ac, format, bits_per_sample,
 				  ac->stream_id, false /*gapless*/,
 				  PCM_MEDIA_FORMAT_V4 /*pcm_format_block_ver*/);
+#else
+	return __q6asm_open_write(ac, format, bits_per_sample,
+				  ac->stream_id, false /*gapless*/,
+				  PCM_MEDIA_FORMAT_V3 /*pcm_format_block_ver*/);
+#endif
 }
 EXPORT_SYMBOL(q6asm_open_write_v4);
 

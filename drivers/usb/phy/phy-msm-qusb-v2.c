@@ -74,6 +74,44 @@ unsigned int phy_tune1;
 module_param(phy_tune1, uint, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(phy_tune1, "QUSB PHY v2 TUNE1");
 
+#ifdef CONFIG_MSM_USB_PHY_SOMC_EXT
+#define QUSB2PHY_PORT_TUNE2		0x240
+#define QUSB2PHY_PORT_TUNE3		0x244
+#define QUSB2PHY_PORT_TUNE4		0x248
+
+#define USB_PHY_HSTX_TRIM		0xF0	/* TUNE1 7:4 */
+#define USB_PHY_HSTX_SR			0x0C	/* TUNE1 3:2 */
+#define USB_PHY_HSTX_SR_BIAS		0x03	/* TUNE1 1:0 */
+#define USB_PHY_SEL_EMPH_HALF_WIDTH	0x10	/* TUNE2   4 */
+#define USB_PHY_EN_EMPHASIS		0x0C	/* TUNE2 3:2 */
+#define USB_PHY_HS_DISCON_TRIM		0x03	/* TUNE2 1:0 */
+#define USB_PHY_CDR_WIDE		0x80	/* TUNE3   7 */
+#define USB_PHY_CDR_PULSE_SMPL		0x40	/* TUNE3   6 */
+#define USB_PHY_TX2RX_DLY		0x3F	/* TUNE3 5:0 */
+#define USB_PHY_HANDOFF_PHSEL		0xE0	/* TUNE4 7:5 */
+#define USB_PHY_FORCE_HSRX_ALWAYS_ON	0x10	/* TUNE4   4 */
+#define USB_PHY_SQ_FILTER_DIS		0x08	/* TUNE4   3 */
+#define USB_PHY_SQ_LEVEL		0x07	/* TUNE4 2:0 */
+
+unsigned int phy_tune2;
+unsigned int phy_tune3;
+unsigned int phy_tune4;
+unsigned int phy_host_tune1;
+unsigned int phy_host_tune2;
+
+module_param(phy_tune2, uint, S_IRUGO | S_IWUSR);
+module_param(phy_tune3, uint, S_IRUGO | S_IWUSR);
+module_param(phy_tune4, uint, S_IRUGO | S_IWUSR);
+module_param(phy_host_tune1, uint, S_IRUGO | S_IWUSR);
+module_param(phy_host_tune2, uint, S_IRUGO | S_IWUSR);
+
+MODULE_PARM_DESC(phy_tune2, "QUSB PHY v2 TUNE2");
+MODULE_PARM_DESC(phy_tune3, "QUSB PHY v2 TUNE3");
+MODULE_PARM_DESC(phy_tune4, "QUSB PHY v2 TUNE4");
+MODULE_PARM_DESC(phy_host_tune1, "QUSB PHY HOST v2 TUNE1");
+MODULE_PARM_DESC(phy_host_tune2, "QUSB PHY HOST v2 TUNE2");
+#endif /* CONFIG_MSM_USB_PHY_SOMC_EXT */
+
 struct qusb_phy {
 	struct usb_phy		phy;
 	struct mutex		lock;
@@ -100,6 +138,11 @@ struct qusb_phy {
 	u32			tune_val;
 	int			efuse_bit_pos;
 	int			efuse_num_of_bits;
+
+#ifdef CONFIG_MSM_USB_PHY_SOMC_EXT
+	u32			host_tune_val;
+	u32			efuse_offset;
+#endif /* CONFIG_MSM_USB_PHY_SOMC_EXT */
 
 	int			power_enabled_ref;
 	bool			clocks_enabled;
@@ -380,6 +423,43 @@ static int qusb_phy_update_dpdm(struct usb_phy *phy, int value)
 	return ret;
 }
 
+#ifdef CONFIG_MSM_USB_PHY_SOMC_EXT
+static u32 qusb_phy_get_tune1_param(struct qusb_phy *qphy)
+{
+	u8 reg;
+	u32 bit_mask = 1;
+	u32 tune_val;
+
+	pr_debug("%s(): num_of_bits:%d bit_pos:%d offset:%d\n", __func__,
+ 				qphy->efuse_num_of_bits,
+				qphy->efuse_bit_pos,
+				qphy->efuse_offset);
+
+	/* get bit mask based on number of bits to use with efuse reg */
+	bit_mask = (bit_mask << qphy->efuse_num_of_bits) - 1;
+
+	/*
+	 * if efuse reg is updated (i.e non-zero) then use it to program
+	 * tune parameters
+	 */
+	tune_val = readl_relaxed(qphy->efuse_reg);
+ 	pr_debug("%s(): bit_mask:%d efuse based tune1 value:%d\n",
+				__func__, bit_mask, tune_val);
+ 
+	tune_val = TUNE_VAL_MASK(tune_val, qphy->efuse_bit_pos, bit_mask);
+	reg = readb_relaxed(qphy->base + QUSB2PHY_PORT_TUNE1);
+	if (tune_val) {
+		tune_val += qphy->efuse_offset;
+		if ((s32)tune_val < 0)
+			tune_val = 0x00;
+		else if ((s32)tune_val > 0x0f)
+			tune_val = 0x0f;
+		reg = reg & 0x0f;
+		reg |= (tune_val << 4);
+ 	}
+	return reg;
+}
+#else
 static void qusb_phy_get_tune1_param(struct qusb_phy *qphy)
 {
 	u8 reg;
@@ -409,6 +489,9 @@ static void qusb_phy_get_tune1_param(struct qusb_phy *qphy)
 	}
 	qphy->tune_val = reg;
 }
+#endif /* CONFIG_MSM_USB_PHY_SOMC_EXT */
+
+
 
 static void qusb_phy_write_seq(void __iomem *base, u32 *seq, int cnt,
 		unsigned long delay)
@@ -443,6 +526,33 @@ static void qusb_phy_host_init(struct usb_phy *phy)
 
 	qusb_phy_write_seq(qphy->base, qphy->qusb_phy_host_init_seq,
 			qphy->host_init_seq_len, 0);
+
+#ifdef CONFIG_MSM_USB_PHY_SOMC_EXT
+	if (qphy->efuse_reg) {
+		if (!qphy->host_tune_val)
+			qphy->host_tune_val = qusb_phy_get_tune1_param(qphy);
+
+		pr_debug("%s(): Programming host TUNE1 parameter as:%x\n",
+				__func__, qphy->host_tune_val);
+		writel_relaxed(qphy->host_tune_val,
+				qphy->base + QUSB2PHY_PORT_TUNE1);
+	}
+
+	/* If phy_tune1 modparam set, override tune1 value */
+	if (phy_host_tune1) {
+		pr_debug("%s(): (modparam) HOST_TUNE1 val:0x%02x\n",
+						__func__, phy_host_tune1);
+		writel_relaxed(phy_host_tune1,
+				qphy->base + QUSB2PHY_PORT_TUNE1);
+	}
+	/* If phy_tune2 modparam set, override tune2 value */
+	if (phy_host_tune2) {
+		pr_debug("%s(): (modparam) HOST TUNE2 val:0x%02x\n",
+						__func__, phy_host_tune2);
+		writel_relaxed(phy_host_tune2,
+				qphy->base + QUSB2PHY_PORT_TUNE2);
+	}
+#endif /* CONFIG_MSM_USB_PHY_SOMC_EXT */
 
 	/* Ensure above write is completed before turning ON ref clk */
 	wmb();
@@ -519,8 +629,13 @@ static int qusb_phy_init(struct usb_phy *phy)
 		qusb_phy_write_seq(qphy->base, qphy->qusb_phy_init_seq,
 				qphy->init_seq_len, 0);
 	if (qphy->efuse_reg) {
+#ifdef CONFIG_MSM_USB_PHY_SOMC_EXT
+		if (!qphy->tune_val)
+			qphy->tune_val = qusb_phy_get_tune1_param(qphy);
+#else
 		if (!qphy->tune_val)
 			qusb_phy_get_tune1_param(qphy);
+#endif
 
 		pr_debug("%s(): Programming TUNE1 parameter as:%x\n", __func__,
 				qphy->tune_val);
@@ -535,6 +650,30 @@ static int qusb_phy_init(struct usb_phy *phy)
 		writel_relaxed(phy_tune1,
 				qphy->base + QUSB2PHY_PORT_TUNE1);
 	}
+
+#ifdef CONFIG_MSM_USB_PHY_SOMC_EXT
+	/* If phy_tune2 modparam set, override tune2 value */
+	if (phy_tune2) {
+		pr_debug("%s(): (modparam) TUNE2 val:0x%02x\n",
+						__func__, phy_tune2);
+		writel_relaxed(phy_tune2,
+				qphy->base + QUSB2PHY_PORT_TUNE2);
+	}
+	/* If phy_tune3 modparam set, override tune3 value */
+	if (phy_tune3) {
+		pr_debug("%s(): (modparam) TUNE3 val:0x%02x\n",
+						__func__, phy_tune3);
+		writel_relaxed(phy_tune3,
+				qphy->base + QUSB2PHY_PORT_TUNE3);
+	}
+	/* If phy_tune4 modparam set, override tune4 value */
+	if (phy_tune4) {
+		pr_debug("%s(): (modparam) TUNE4 val:0x%02x\n",
+						__func__, phy_tune4);
+		writel_relaxed(phy_tune4,
+				qphy->base + QUSB2PHY_PORT_TUNE4);
+	}
+#endif /* CONFIG_MSM_USB_PHY_SOMC_EXT */
 
 	/* ensure above writes are completed before re-enabling PHY */
 	wmb();
@@ -885,7 +1024,13 @@ static int qusb_phy_probe(struct platform_device *pdev)
 						"qcom,efuse-num-bits",
 						&qphy->efuse_num_of_bits);
 			}
-
+#ifdef CONFIG_MSM_USB_PHY_SOMC_EXT
+			if (!ret) {
+				ret = of_property_read_u32(dev->of_node,
+						"qcom,efuse-offset",
+						&qphy->efuse_offset);
+			}
+#endif /* CONFIG_MSM_USB_PHY_SOMC_EXT */
 			if (ret) {
 				dev_err(dev,
 				"DT Value for efuse is invalid.\n");

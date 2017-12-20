@@ -527,8 +527,9 @@ static struct msm_soc_info cpu_of_id[] = {
 	[256] = {FSM_CPU_9010, "FSM9010"},
 	[257] = {FSM_CPU_9010, "FSM9010"},
 
-	/* Tellurium ID */
-	[264] = {MSM_CPU_TELLURIUM, "MSMTELLURIUM"},
+	/* 8952 ID */
+	[264] = {MSM_CPU_8952, "MSM8952"},
+	[289] = {MSM_CPU_8952, "APQ8952"},
 
 	/* 8996 IDs */
 	[246] = {MSM_CPU_8996, "MSM8996"},
@@ -541,7 +542,11 @@ static struct msm_soc_info cpu_of_id[] = {
 	[316] = {MSM_CPU_8996, "APQ8096pro"},
 
 	/* 8976 ID */
-	[266] = {MSM_CPU_8976, "MSM8976"},
+	[278] = {MSM_CPU_8976, "MSM8976"},
+	[277] = {MSM_CPU_8976, "APQ8076"},
+	/* 8956 ID */
+	[266] = {MSM_CPU_8956, "MSM8956"},
+	[274] = {MSM_CPU_8956, "APQ8056"},
 
 	/* 8929 IDs */
 	[268] = {MSM_CPU_8929, "MSM8929"},
@@ -1248,12 +1253,16 @@ static void * __init setup_dummy_socinfo(void)
 		strlcpy(dummy_socinfo.build_id, "msm8992 - ",
 			sizeof(dummy_socinfo.build_id));
 	} else if (early_machine_is_msm8976()) {
-		dummy_socinfo.id = 266;
+		dummy_socinfo.id = 278;
 		strlcpy(dummy_socinfo.build_id, "msm8976 - ",
 			sizeof(dummy_socinfo.build_id));
-	} else if (early_machine_is_msmtellurium()) {
+	} else if (early_machine_is_msm8956()) {
+		dummy_socinfo.id = 266;
+		strlcpy(dummy_socinfo.build_id, "msm8956 - ",
+			sizeof(dummy_socinfo.build_id));
+	} else if (early_machine_is_msm8952()) {
 		dummy_socinfo.id = 264;
-		strlcpy(dummy_socinfo.build_id, "msmtellurium - ",
+		strlcpy(dummy_socinfo.build_id, "msm8952 - ",
 			sizeof(dummy_socinfo.build_id));
 	} else if (early_machine_is_msm8996()) {
 		dummy_socinfo.id = 246;

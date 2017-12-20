@@ -1458,7 +1458,7 @@ static inline struct mdss_mdp_misr_map *mdss_misr_get_map(u32 block_id,
 				}
 			}
 			/*
-			 * For msm8916/8939, additional offset of 0x10
+			 * For msm8916/8939/8952, additional offset of 0x10
 			 * is required
 			 */
 			if ((mdata->mdp_rev == MDSS_MDP_HW_REV_106) ||

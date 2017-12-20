@@ -909,6 +909,60 @@ u32 msm_audio_populate_upper_32_bits(ion_phys_addr_t pa)
 		return upper_32_bits(pa);
 }
 
+static int msm_audio_ion_smmu_probe(struct device *dev)
+{
+	struct of_phandle_args iommuspec;
+	bool smmu_force_sid;
+	u64 smmu_sid = 0;
+	int rc = 0;
+
+	smmu_force_sid = !!of_find_property(dev->of_node,
+				"qcom,smmu-force-sid", NULL);
+
+	if (smmu_force_sid) {
+		rc = of_property_read_u64(dev->of_node,
+				"qcom,smmu-force-sid", &smmu_sid);
+		if (rc) {
+			dev_err(dev,
+				"%s: Invalid smmu-force-sid property value\n",
+				__func__);
+			return rc;
+		}
+	} else {
+		/* Get SMMU SID information from Devicetree */
+		rc = of_parse_phandle_with_args(dev->of_node, "iommus",
+						"#iommu-cells", 0, &iommuspec);
+		if (rc)
+			dev_err(dev, "%s: could not get smmu SID, ret = %d\n",
+				__func__, rc);
+		else
+			smmu_sid = iommuspec.args[0];
+	}
+
+	pr_err("msm_audio_ion sid bit is 0x%llx\n", smmu_sid);
+
+	msm_audio_ion_data.smmu_sid_bits =
+		smmu_sid << MSM_AUDIO_SMMU_SID_OFFSET;
+
+	/* Give a chance to DMA APIs to register an IOMMU master */
+	of_dma_configure(dev, dev->of_node);
+
+	if (msm_audio_ion_data.smmu_version == 0x1) {
+		rc = msm_audio_smmu_init_legacy(dev);
+	} else if (msm_audio_ion_data.smmu_version == 0x2) {
+		rc = msm_audio_smmu_init(dev);
+	} else {
+		dev_err(dev, "%s: smmu version invalid %d\n",
+			__func__, msm_audio_ion_data.smmu_version);
+		rc = -EINVAL;
+	}
+	if (rc)
+		dev_err(dev, "%s: smmu init failed, err = %d\n",
+			__func__, rc);
+
+	return rc;
+}
+
 static int msm_audio_ion_probe(struct platform_device *pdev)
 {
 	int rc = 0;
@@ -951,41 +1005,17 @@ static int msm_audio_ion_probe(struct platform_device *pdev)
 		} else {
 			dev_dbg(dev, "%s: adsp is ready\n", __func__);
 		}
+
+		rc = msm_audio_ion_smmu_probe(dev);
+		if (rc) {
+			dev_err(dev, "FATAL: cannot probe SMMU: %d", rc);
+			goto end;
+		}
 	}
 
 	dev_dbg(dev, "%s: SMMU is %s\n", __func__,
 		(smmu_enabled) ? "Enabled" : "Disabled");
-
-	if (smmu_enabled) {
-		u64 smmu_sid = 0;
-		struct of_phandle_args iommuspec;
-
-		/* Get SMMU SID information from Devicetree */
-		rc = of_parse_phandle_with_args(dev->of_node, "iommus",
-						"#iommu-cells", 0, &iommuspec);
-		if (rc)
-			dev_err(dev, "%s: could not get smmu SID, ret = %d\n",
-				__func__, rc);
-		else
-			smmu_sid = iommuspec.args[0];
-
-		msm_audio_ion_data.smmu_sid_bits =
-			smmu_sid << MSM_AUDIO_SMMU_SID_OFFSET;
-
-		if (msm_audio_ion_data.smmu_version == 0x1) {
-			rc = msm_audio_smmu_init_legacy(dev);
-		} else if (msm_audio_ion_data.smmu_version == 0x2) {
-			rc = msm_audio_smmu_init(dev);
-		} else {
-			dev_err(dev, "%s: smmu version invalid %d\n",
-				__func__, msm_audio_ion_data.smmu_version);
-			rc = -EINVAL;
-		}
-		if (rc)
-			dev_err(dev, "%s: smmu init failed, err = %d\n",
-				__func__, rc);
-	}
-
+end:
 	if (!rc)
 		msm_audio_ion_data.device_status |= MSM_AUDIO_ION_PROBED;
 

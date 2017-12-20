@@ -95,6 +95,7 @@
 	 TASHA_CPE_SS_ERR_STATUS_MEM_ACCESS)
 
 #define SLIM_BW_CLK_GEAR_9 6200000
+#define SLIM_BW_CLK_GEAR_8 3600000
 #define SLIM_BW_UNVOTE 0
 
 #define CPE_FLL_CLK_75MHZ 75000000
@@ -110,7 +111,12 @@
 /* Convert from vout ctl to micbias voltage in mV */
 #define WCD_VOUT_CTL_TO_MICB(v) (1000 + v * 50)
 
+#ifdef CONFIG_ARCH_SONY_LOIRE
+#define TASHA_ZDET_NUM_MEASUREMENTS 60
+#else
 #define TASHA_ZDET_NUM_MEASUREMENTS 900
+#endif
+
 #define TASHA_MBHC_GET_C1(c)  ((c & 0xC000) >> 14)
 #define TASHA_MBHC_GET_X1(x)  (x & 0x3FFF)
 /* z value compared in milliOhm */
@@ -150,11 +156,13 @@ MODULE_PARM_DESC(cpe_debug_mode, "boot cpe in debug mode");
 
 #define TASHA_DIG_CORE_COLLAPSE_TIMER_MS  (5 * 1000)
 
+#ifndef CONFIG_ARCH_SONY_LOIRE
 #define MAX_ON_DEMAND_SUPPLY_NAME_LENGTH    64
 
 static char on_demand_supply_name[][MAX_ON_DEMAND_SUPPLY_NAME_LENGTH] = {
 	"cdc-vdd-mic-bias",
 };
+#endif
 
 enum {
 	POWER_COLLAPSE,
@@ -368,7 +376,9 @@ enum {
 	AIF2_CAP,
 	AIF3_PB,
 	AIF3_CAP,
+#ifndef CONFIG_ARCH_SONY_LOIRE
 	AIF4_PB,
+#endif
 	AIF_MIX1_PB,
 	AIF4_MAD_TX,
 	AIF4_VIFEED,
@@ -488,7 +498,9 @@ static const u32 vport_slim_check_table[NUM_CODEC_DAIS] = {
 	BIT(AIF1_CAP) | BIT(AIF3_CAP) | BIT(AIF4_MAD_TX) | BIT(AIF5_CPE_TX),
 	0,
 	BIT(AIF1_CAP) | BIT(AIF2_CAP) | BIT(AIF4_MAD_TX) | BIT(AIF5_CPE_TX),
+#ifndef CONFIG_ARCH_SONY_LOIRE
 	0,
+#endif
 	0,
 	BIT(AIF1_CAP) | BIT(AIF2_CAP) | BIT(AIF3_CAP) | BIT(AIF5_CPE_TX),
 	0,
@@ -1530,6 +1542,7 @@ static void tasha_mbhc_hph_l_pull_up_control(struct snd_soc_codec *codec,
 			    0xC0, 0x40);
 }
 
+#ifndef CONFIG_ARCH_SONY_LOIRE
 static int tasha_enable_ext_mb_source(struct wcd_mbhc *mbhc,
 		bool turn_on)
 {
@@ -1579,6 +1592,7 @@ static int tasha_enable_ext_mb_source(struct wcd_mbhc *mbhc,
 
 	return ret;
 }
+#endif
 
 static int tasha_micbias_control(struct snd_soc_codec *codec,
 				 int micb_num,
@@ -1987,7 +2001,11 @@ static void tasha_wcd_mbhc_calc_impedance(struct wcd_mbhc *mbhc, uint32_t *zl,
 	bool is_change = false;
 	struct tasha_mbhc_zdet_param zdet_param[] = {
 		{4, 0, 4, 0x08, 0x14, 0x18}, /* < 32ohm */
+#ifndef CONFIG_ARCH_SONY_LOIRE
 		{2, 0, 3, 0x18, 0x7C, 0x90}, /* 32ohm < Z < 400ohm */
+#else
+		{1, 0, 2, 0x18, 0x7C, 0x90}, /* 32ohm < Z < 400ohm */
+#endif
 		{1, 4, 5, 0x18, 0x7C, 0x90}, /* 400ohm < Z < 1200ohm */
 		{1, 6, 7, 0x18, 0x7C, 0x90}, /* >1200ohm */
 	};
@@ -2251,7 +2269,9 @@ static const struct wcd_mbhc_cb mbhc_cb = {
 	.free_irq = tasha_mbhc_free_irq,
 	.clk_setup = tasha_mbhc_clk_setup,
 	.map_btn_code_to_num = tasha_mbhc_btn_to_num,
+#ifndef CONFIG_ARCH_SONY_LOIRE
 	.enable_mb_source = tasha_enable_ext_mb_source,
+#endif
 	.mbhc_bias = tasha_mbhc_mbhc_bias_control,
 	.set_btn_thr = tasha_mbhc_program_btn_thr,
 	.lock_sleep = tasha_mbhc_lock_sleep,
@@ -2653,7 +2673,11 @@ static int slim_rx_mux_get(struct snd_kcontrol *kcontrol,
 }
 
 static const char *const slim_rx_mux_text[] = {
-	"ZERO", "AIF1_PB", "AIF2_PB", "AIF3_PB", "AIF4_PB", "AIF_MIX1_PB"
+	"ZERO", "AIF1_PB", "AIF2_PB", "AIF3_PB",
+#ifndef CONFIG_ARCH_SONY_LOIRE
+	"AIF4_PB",
+#endif
+	"AIF_MIX1_PB"
 };
 
 static int slim_rx_mux_put(struct snd_kcontrol *kcontrol,
@@ -2725,8 +2749,10 @@ static int slim_rx_mux_put(struct snd_kcontrol *kcontrol,
 			      &tasha_p->dai[AIF3_PB].wcd9xxx_ch_list);
 		break;
 	case 4:
+#ifndef CONFIG_ARCH_SONY_LOIRE
 		if (wcd9xxx_rx_vport_validation(port_id +
 			TASHA_RX_PORT_START_NUMBER,
+
 			&tasha_p->dai[AIF4_PB].wcd9xxx_ch_list)) {
 			dev_dbg(codec->dev, "%s: RX%u is used by current requesting AIF_PB itself\n",
 				__func__, port_id);
@@ -2736,6 +2762,7 @@ static int slim_rx_mux_put(struct snd_kcontrol *kcontrol,
 			      &tasha_p->dai[AIF4_PB].wcd9xxx_ch_list);
 		break;
 	case 5:
+#endif
 		if (wcd9xxx_rx_vport_validation(port_id +
 			TASHA_RX_PORT_START_NUMBER,
 			&tasha_p->dai[AIF_MIX1_PB].wcd9xxx_ch_list)) {
@@ -4117,7 +4144,15 @@ static int tasha_codec_enable_hphr_pa(struct snd_soc_dapm_widget *w,
 			/* Remove ANC Rx from reset */
 			ret = tasha_codec_enable_anc(w, kcontrol, event);
 		}
+#ifndef CONFIG_ARCH_SONY_LOIRE
 		tasha_codec_override(codec, hph_mode, event);
+#else
+		if (tasha->anc_func) {
+			/* Remove ANC Rx from reset */
+			snd_soc_update_bits(codec,
+				WCD9335_CDC_ANC1_CLK_RESET_CTL, 0x08, 0x00);
+		}
+#endif
 		break;
 
 	case SND_SOC_DAPM_PRE_PMD:
@@ -4213,7 +4248,15 @@ static int tasha_codec_enable_hphl_pa(struct snd_soc_dapm_widget *w,
 			/* Remove ANC Rx from reset */
 			ret = tasha_codec_enable_anc(w, kcontrol, event);
 		}
+#ifndef CONFIG_ARCH_SONY_LOIRE
 		tasha_codec_override(codec, hph_mode, event);
+#else
+		if (tasha->anc_func) {
+			/* Remove ANC Rx from reset */
+			snd_soc_update_bits(codec,
+				WCD9335_CDC_ANC1_CLK_RESET_CTL, 0x08, 0x00);
+		}
+#endif
 		break;
 	case SND_SOC_DAPM_PRE_PMD:
 		blocking_notifier_call_chain(&tasha->notifier,
@@ -5600,6 +5643,7 @@ static int tasha_codec_set_iir_gain(struct snd_soc_dapm_widget *w,
 	return 0;
 }
 
+#ifndef CONFIG_ARCH_SONY_LOIRE
 static int tasha_codec_enable_on_demand_supply(
 	struct snd_soc_dapm_widget *w,
 	struct snd_kcontrol *kcontrol, int event)
@@ -5650,7 +5694,7 @@ static int tasha_codec_enable_on_demand_supply(
 out:
 	return ret;
 }
-
+#endif
 static int tasha_codec_find_amic_input(struct snd_soc_codec *codec,
 				       int adc_mux_n)
 {
@@ -5725,6 +5769,9 @@ static int tasha_codec_tx_adc_cfg(struct snd_soc_dapm_widget *w,
 	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
 	struct tasha_priv *tasha = snd_soc_codec_get_drvdata(codec);
 	int amic_n;
+#ifdef CONFIG_ARCH_SONY_LOIRE
+	u16 amic_reg;
+#endif
 
 	dev_dbg(codec->dev, "%s: event: %d\n", __func__, event);
 
@@ -5732,6 +5779,7 @@ static int tasha_codec_tx_adc_cfg(struct snd_soc_dapm_widget *w,
 	case SND_SOC_DAPM_POST_PMU:
 		amic_n = tasha_codec_find_amic_input(codec, adc_mux_n);
 		if (amic_n) {
+#ifndef CONFIG_ARCH_SONY_LOIRE
 			/*
 			 * Prevent ANC Rx pop by leaving Tx FE in HOLD
 			 * state until PA is up. Track AMIC being used
@@ -5739,6 +5787,20 @@ static int tasha_codec_tx_adc_cfg(struct snd_soc_dapm_widget *w,
 			 */
 			set_bit(ANC_MIC_AMIC1 + amic_n - 1,
 				&tasha->status_mask);
+#else
+			if (!tasha->anc_func) {
+				amic_reg = WCD9335_ANA_AMIC1 + amic_n - 1;
+				tasha_codec_set_tx_hold(codec, amic_reg, false);
+			} else {
+				/*
+				 * Prevent ANC Rx pop by leaving Tx FE in HOLD
+				 * state until PA is up. Track AMIC being used
+				 * so we can release the HOLD later.
+				 */
+				set_bit(ANC_MIC_AMIC1 + amic_n - 1,
+					&tasha->status_mask);
+			}
+#endif
 		}
 		break;
 	default:
@@ -7236,6 +7298,7 @@ static const struct snd_soc_dapm_route audio_map[] = {
 	{"SLIM RX5 MUX", "AIF3_PB", "AIF3 PB"},
 	{"SLIM RX6 MUX", "AIF3_PB", "AIF3 PB"},
 	{"SLIM RX7 MUX", "AIF3_PB", "AIF3 PB"},
+#ifndef CONFIG_ARCH_SONY_LOIRE
 	/* SLIM_MUX("AIF4_PB", "AIF4 PB"),*/
 	{"SLIM RX0 MUX", "AIF4_PB", "AIF4 PB"},
 	{"SLIM RX1 MUX", "AIF4_PB", "AIF4 PB"},
@@ -7245,6 +7308,7 @@ static const struct snd_soc_dapm_route audio_map[] = {
 	{"SLIM RX5 MUX", "AIF4_PB", "AIF4 PB"},
 	{"SLIM RX6 MUX", "AIF4_PB", "AIF4 PB"},
 	{"SLIM RX7 MUX", "AIF4_PB", "AIF4 PB"},
+#endif
 
 	/* SLIM_MUX("AIF_MIX1_PB", "AIF MIX1 PB"),*/
 	{"SLIM RX0 MUX", "AIF_MIX1_PB", "AIF MIX1 PB"},
@@ -9175,6 +9239,7 @@ static const struct snd_kcontrol_new tasha_analog_gain_controls[] = {
 		line_gain),
 	SOC_SINGLE_TLV("HPHR Volume", WCD9335_HPH_R_EN, 0, 20, 1,
 		line_gain),
+#ifndef CONFIG_ARCH_SONY_LOIRE
 	SOC_SINGLE_TLV("LINEOUT1 Volume", WCD9335_DIFF_LO_LO1_COMPANDER,
 			3, 16, 1, line_gain),
 	SOC_SINGLE_TLV("LINEOUT2 Volume", WCD9335_DIFF_LO_LO2_COMPANDER,
@@ -9183,7 +9248,7 @@ static const struct snd_kcontrol_new tasha_analog_gain_controls[] = {
 			line_gain),
 	SOC_SINGLE_TLV("LINEOUT4 Volume", WCD9335_SE_LO_LO4_GAIN, 0, 20, 1,
 			line_gain),
-
+#endif
 	SOC_SINGLE_TLV("ADC1 Volume", WCD9335_ANA_AMIC1, 0, 20, 0,
 			analog_gain),
 	SOC_SINGLE_TLV("ADC2 Volume", WCD9335_ANA_AMIC2, 0, 20, 0,
@@ -10470,10 +10535,12 @@ static const struct snd_soc_dapm_widget tasha_dapm_widgets[] = {
 				AIF3_PB, 0, tasha_codec_enable_slimrx,
 				SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD |
 				SND_SOC_DAPM_POST_PMD),
+#ifndef CONFIG_ARCH_SONY_LOIRE
 	SND_SOC_DAPM_AIF_IN_E("AIF4 PB", "AIF4 Playback", 0, SND_SOC_NOPM,
 				AIF4_PB, 0, tasha_codec_enable_slimrx,
 				SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD |
 				SND_SOC_DAPM_POST_PMD),
+#endif
 	SND_SOC_DAPM_AIF_IN_E("AIF MIX1 PB", "AIF Mix Playback", 0,
 			       SND_SOC_NOPM, AIF_MIX1_PB, 0,
 			       tasha_codec_enable_slimrx,
@@ -11183,10 +11250,12 @@ static const struct snd_soc_dapm_widget tasha_dapm_widgets[] = {
 	SND_SOC_DAPM_OUTPUT("LINEOUT4"),
 	SND_SOC_DAPM_OUTPUT("ANC LINEOUT1"),
 	SND_SOC_DAPM_OUTPUT("ANC LINEOUT2"),
+#ifndef CONFIG_ARCH_SONY_LOIRE
 	SND_SOC_DAPM_SUPPLY("MICBIAS_REGULATOR", SND_SOC_NOPM,
 		ON_DEMAND_MICBIAS, 0,
 		tasha_codec_enable_on_demand_supply,
 		SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+#endif
 
 	SND_SOC_DAPM_SWITCH("ADC US MUX0", WCD9335_CDC_TX0_TX_PATH_192_CTL, 0,
 			    0, &adc_us_mux0_switch),
@@ -11250,7 +11319,9 @@ static int tasha_get_channel_map(struct snd_soc_dai *dai,
 	case AIF1_PB:
 	case AIF2_PB:
 	case AIF3_PB:
+#ifndef CONFIG_ARCH_SONY_LOIRE
 	case AIF4_PB:
+#endif
 	case AIF_MIX1_PB:
 		if (!rx_slot || !rx_num) {
 			pr_err("%s: Invalid rx_slot %pK or rx_num %pK\n",
@@ -11905,6 +11976,7 @@ static struct snd_soc_dai_driver tasha_dai[] = {
 		},
 		.ops = &tasha_dai_ops,
 	},
+#ifndef CONFIG_ARCH_SONY_LOIRE
 	{
 		.name = "tasha_rx4",
 		.id = AIF4_PB,
@@ -11919,6 +11991,7 @@ static struct snd_soc_dai_driver tasha_dai[] = {
 		},
 		.ops = &tasha_dai_ops,
 	},
+#endif
 	{
 		.name = "tasha_mix_rx1",
 		.id = AIF_MIX1_PB,
@@ -13310,7 +13383,11 @@ static int tasha_codec_vote_max_bw(struct snd_soc_codec *codec,
 	if (vote) {
 		tasha->ref_count++;
 		if (tasha->ref_count == 1) {
+#ifndef CONFIG_ARCH_SONY_LOIRE
 			bw_ops = SLIM_BW_CLK_GEAR_9;
+#else
+			bw_ops = SLIM_BW_CLK_GEAR_8;
+#endif
 			tasha_codec_slim_reserve_bw(codec,
 				bw_ops, true);
 		}
@@ -13412,8 +13489,13 @@ static int tasha_cpe_initialize(struct snd_soc_codec *codec)
 	cpe_svc_params.context = codec;
 	cpe_params.cpe_svc_params = &cpe_svc_params;
 
+#ifdef CONFIG_ARCH_SONY_LOIRE
+	tasha->cpe_core = wcd_cpe_init("cpe", codec,
+					&cpe_params);
+#else
 	tasha->cpe_core = wcd_cpe_init("cpe_9335", codec,
 					&cpe_params);
+#endif
 	if (IS_ERR_OR_NULL(tasha->cpe_core)) {
 		dev_err(codec->dev,
 			"%s: Failed to enable CPE\n",
@@ -13542,6 +13624,7 @@ err:
 	return ret;
 }
 
+#ifndef CONFIG_ARCH_SONY_LOIRE
 static struct regulator *tasha_codec_find_ondemand_regulator(
 		struct snd_soc_codec *codec, const char *name)
 {
@@ -13561,6 +13644,7 @@ static struct regulator *tasha_codec_find_ondemand_regulator(
 		name);
 	return NULL;
 }
+#endif
 
 static int tasha_codec_probe(struct snd_soc_codec *codec)
 {
@@ -13570,7 +13654,9 @@ static int tasha_codec_probe(struct snd_soc_codec *codec)
 	struct snd_soc_dapm_context *dapm = snd_soc_codec_get_dapm(codec);
 	int i, ret;
 	void *ptr = NULL;
+#ifndef CONFIG_ARCH_SONY_LOIRE
 	struct regulator *supply;
+#endif
 
 	control = dev_get_drvdata(codec->dev->parent);
 
@@ -13621,6 +13707,7 @@ static int tasha_codec_probe(struct snd_soc_codec *codec)
 		goto err;
 	}
 
+#ifndef CONFIG_ARCH_SONY_LOIRE
 	supply = tasha_codec_find_ondemand_regulator(codec,
 		on_demand_supply_name[ON_DEMAND_MICBIAS]);
 	if (supply) {
@@ -13628,6 +13715,7 @@ static int tasha_codec_probe(struct snd_soc_codec *codec)
 		tasha->on_demand_list[ON_DEMAND_MICBIAS].ondemand_supply_count =
 				0;
 	}
+#endif
 
 	tasha->fw_data = devm_kzalloc(codec->dev,
 				      sizeof(*(tasha->fw_data)), GFP_KERNEL);

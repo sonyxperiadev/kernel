@@ -65,6 +65,7 @@
  * where to place its SVC stack
  */
 struct secondary_data secondary_data;
+volatile unsigned long secondary_holding_pen_release = INVALID_HWID;
 
 enum ipi_msg_type {
 	IPI_RESCHEDULE,
@@ -187,7 +188,7 @@ asmlinkage void secondary_start_kernel(void)
 	 * the CPU migration code to notice that the CPU is online
 	 * before we continue.
 	 */
-	pr_info("CPU%u: Booted secondary processor [%08x]\n",
+	pr_debug("CPU%u: Booted secondary processor [%08x]\n",
 					 cpu, read_cpuid_id());
 	set_cpu_online(cpu, true);
 	complete(&cpu_running);
@@ -714,6 +715,11 @@ void arch_send_call_function_single_ipi(int cpu)
 void arch_send_wakeup_ipi_mask(const struct cpumask *mask)
 {
 	smp_cross_call(mask, IPI_WAKEUP);
+}
+#else
+void arch_send_wakeup_ipi_mask(const struct cpumask *mask)
+{
+        smp_cross_call_common(mask, IPI_WAKEUP);
 }
 #endif
 

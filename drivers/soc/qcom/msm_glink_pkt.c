@@ -1505,8 +1505,10 @@ static int __init glink_pkt_init(void)
 		return ret;
 	}
 
+#ifdef CONFIG_IPC_LOGGING
 	glink_pkt_ilctxt = ipc_log_context_create(GLINK_PKT_IPC_LOG_PAGE_CNT,
 						"glink_pkt", 0);
+#endif
 	glink_pkt_wq = create_singlethread_workqueue("glink_pkt_wq");
 	if (!glink_pkt_wq) {
 		GLINK_PKT_ERR("%s: Error creating glink_pkt_wq\n", __func__);

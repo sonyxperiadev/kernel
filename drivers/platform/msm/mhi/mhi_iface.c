@@ -176,9 +176,10 @@ static int mhi_pci_probe(struct pci_dev *pcie_device,
 
 	snprintf(node, sizeof(node), "mhi_%04x_%02u.%02u.%02u",
 		 core->dev_id, core->domain, core->bus, core->slot);
+#ifdef CONFIG_IPC_LOGGING
 	mhi_dev_ctxt->mhi_ipc_log =
 		ipc_log_context_create(MHI_IPC_LOG_PAGES, node, 0);
-
+#endif
 	mhi_log(mhi_dev_ctxt, MHI_MSG_INFO,
 		"Processing Domain:%02u Bus:%04u dev:0x%04x slot:%04u\n",
 		domain, bus, dev_id, slot);

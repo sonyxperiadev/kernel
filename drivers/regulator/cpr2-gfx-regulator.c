@@ -1394,7 +1394,7 @@ static int cpr_pvs_init(struct cpr2_gfx_regulator *cpr_vreg)
 	struct device_node *of_node = cpr_vreg->dev->of_node;
 	u64 efuse_bits;
 	int i, size, sign, steps, step_size_uv, rc, pos;
-	u32 *fuse_sel, *tmp, *ref_uv;
+	u32 *fuse_sel = 0, *tmp = 0, *ref_uv;
 	struct property *prop;
 	size_t buflen;
 	char *buf;
@@ -2276,7 +2276,15 @@ static int cpr2_gfx_regulator_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
-	init_data = of_get_regulator_init_data(dev, dev->of_node);
+	cpr_vreg = devm_kzalloc(dev, sizeof(*cpr_vreg), GFP_KERNEL);
+	if (!cpr_vreg)
+		return -ENOMEM;
+
+	cpr_vreg->dev = dev;
+	mutex_init(&cpr_vreg->cpr_mutex);
+
+	init_data = of_get_regulator_init_data(dev,
+				dev->of_node, &cpr_vreg->rdesc);
 	if (!init_data) {
 		dev_err(dev, "regulator init data is missing\n");
 		return -EINVAL;
@@ -2285,13 +2293,6 @@ static int cpr2_gfx_regulator_probe(struct platform_device *pdev)
 	init_data->constraints.input_uV = init_data->constraints.max_uV;
 	init_data->constraints.valid_ops_mask
 			|= REGULATOR_CHANGE_VOLTAGE | REGULATOR_CHANGE_STATUS;
-
-	cpr_vreg = devm_kzalloc(dev, sizeof(*cpr_vreg), GFP_KERNEL);
-	if (!cpr_vreg)
-		return -ENOMEM;
-
-	cpr_vreg->dev = dev;
-	mutex_init(&cpr_vreg->cpr_mutex);
 
 	cpr_vreg->rdesc.name = init_data->constraints.name;
 	if (cpr_vreg->rdesc.name == NULL) {

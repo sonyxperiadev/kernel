@@ -12,7 +12,7 @@
 
 #include "f_gsi.h"
 #include "rndis.h"
-#include "debug.h"
+#include "../debug.h"
 
 static unsigned int gsi_in_aggr_size;
 module_param(gsi_in_aggr_size, uint, S_IRUGO | S_IWUSR);
@@ -2518,6 +2518,16 @@ static int gsi_bind(struct usb_configuration *c, struct usb_function *f)
 					DEFAULT_PKT_ALIGNMENT_FACTOR);
 		rndis_set_pkt_alignment_factor(gsi->params,
 					DEFAULT_PKT_ALIGNMENT_FACTOR);
+		if(gsi->rndis_use_wceis) {
+			info.iad_desc->bFunctionClass =
+					USB_CLASS_WIRELESS_CONTROLLER;
+			info.iad_desc->bFunctionSubClass = 0x01;
+			info.iad_desc->bFunctionProtocol = 0x03;
+			info.ctrl_desc->bInterfaceClass =
+					USB_CLASS_WIRELESS_CONTROLLER;
+			info.ctrl_desc->bInterfaceSubClass = 0x1;
+			info.ctrl_desc->bInterfaceProtocol = 0x03;
+		}
 		break;
 	case IPA_USB_MBIM:
 		info.string_defs = mbim_gsi_string_defs;
@@ -2997,8 +3007,38 @@ static ssize_t gsi_info_show(struct config_item *item, char *page)
 
 CONFIGFS_ATTR_RO(gsi_, info);
 
+static ssize_t gsi_rndis_wceis_show(struct config_item *item, char *page)
+{
+	int ret;
+	struct f_gsi *gsi = to_gsi_opts(item)->gsi;
+
+	ret = sprintf(page, "%d\n",gsi->rndis_use_wceis);
+	return 0;
+}
+
+static ssize_t gsi_rndis_wceis_store(struct config_item *item,
+			const char *page, size_t len)
+{
+	struct f_gsi *gsi = to_gsi_opts(item)->gsi;
+	u8 val = 0;
+	int ret;
+
+	ret = kstrtou8(page, 0, &val);
+	if( ret !=0 || val > 1) {
+		pr_err("Wrong value written to wceis attr(%u)\n", val);
+		return len;
+	}
+
+	gsi->rndis_use_wceis = val;
+
+	return len;
+}
+
+CONFIGFS_ATTR(gsi_, rndis_wceis);
+
 static struct configfs_attribute *gsi_attrs[] = {
 	&gsi_attr_info,
+	&gsi_attr_rndis_wceis,
 	NULL,
 };
 

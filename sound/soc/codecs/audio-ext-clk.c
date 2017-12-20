@@ -21,8 +21,26 @@
 #include <linux/platform_device.h>
 #include <linux/gpio.h>
 #include <linux/of_gpio.h>
-#include <dt-bindings/clock/audio-ext-clk.h>
 #include <sound/q6afe-v2.h>
+
+#ifndef CONFIG_ARCH_MSM8916
+#include <dt-bindings/clock/audio-ext-clk.h>
+#else
+ #ifdef clk_audio_ap_clk
+  #undef clk_audio_ap_clk
+ #endif
+
+ #ifdef clk_audio_pmi_clk
+  #undef clk_audio_pmi_clk
+ #endif
+
+#include <dt-bindings/clock/msm-clocks-8976.h>
+
+/* Hacky: those clocks are not present in 8916-class SoC!! */
+#define clk_audio_ap_clk2       0x454d1e91
+#define clk_audio_lpass_mclk    0xf0f2a284
+#define clk_audio_pmi_lnbb_clk   0x57312343
+#endif
 
 struct pinctrl_info {
 	struct pinctrl *pinctrl;

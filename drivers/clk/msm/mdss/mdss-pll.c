@@ -152,6 +152,16 @@ static int mdss_pll_resource_parse(struct platform_device *pdev,
 		pll_res->pll_interface_type = MDSS_HDMI_PLL_8998_3_3;
 	} else if (!strcmp(compatible_stream, "qcom,mdss_hdmi_pll_8998_1p8")) {
 		pll_res->pll_interface_type = MDSS_HDMI_PLL_8998_1_8;
+	} else if (!strcmp(compatible_stream, "qcom,mdss_dsi_pll_8974")) {
+		pll_res->pll_interface_type = MDSS_DSI_PLL_HPM;
+		pll_res->target_id = MDSS_PLL_TARGET_8974;
+	} else if (!strcmp(compatible_stream, "qcom,mdss_dsi_pll_8976")) {
+		pll_res->pll_interface_type = MDSS_DSI_PLL_HPM;
+		pll_res->target_id = MDSS_PLL_TARGET_8976;
+	} else if (!strcmp(compatible_stream, "qcom,mdss_edp_pll")) {
+		pll_res->pll_interface_type = MDSS_EDP_PLL;
+	} else if (!strcmp(compatible_stream, "qcom,mdss_hdmi_pll")) {
+		pll_res->pll_interface_type = MDSS_HDMI_PLL;
 	} else {
 		goto err;
 	}
@@ -200,6 +210,9 @@ static int mdss_pll_clock_register(struct platform_device *pdev,
 		break;
 	case MDSS_HDMI_PLL_8998_1_8:
 		rc = hdmi_8998_1p8_pll_clock_register(pdev, pll_res);
+		break;
+	case MDSS_DSI_PLL_HPM:
+		rc = dsi_pll_clock_register_hpm(pdev, pll_res);
 		break;
 	case MDSS_UNKNOWN_PLL:
 	default:
@@ -338,6 +351,11 @@ static int mdss_pll_probe(struct platform_device *pdev)
 		goto gdsc_io_error;
 	}
 
+	pll_res->pll_en_90_phase = of_property_read_bool(pdev->dev.of_node,
+						"qcom,mdss-en-pll-90-phase");
+	if (pll_res->pll_en_90_phase)
+		pr_debug("%s: PLL configured to enable 90-Phase", __func__);
+
 	rc = mdss_pll_resource_init(pdev, pll_res);
 	if (rc) {
 		pr_err("Pll ndx=%d resource init failed rc=%d\n",
@@ -407,6 +425,7 @@ static const struct of_device_id mdss_pll_dt_match[] = {
 	{.compatible = "qcom,mdss_dp_pll_8998"},
 	{.compatible = "qcom,mdss_hdmi_pll_8998"},
 	{.compatible = "qcom,mdss_hdmi_pll_8998_1p8"},
+	{.compatible = "qcom,mdss_dsi_pll_8976"},
 	{}
 };
 

@@ -261,13 +261,9 @@ static struct fileIdentDesc *udf_find_entry(struct inode *dir,
 		if (!lfi)
 			continue;
 
-		flen = udf_get_filename(sb, nameptr, lfi, fname, UDF_NAME_LEN);
-		if (flen < 0) {
-			fi = ERR_PTR(flen);
-			goto out_err;
-		}
-
-		if (udf_match(flen, fname, child->len, child->name))
+		flen = udf_get_filename(dir->i_sb, nameptr, lfi, fname,
+					UDF_NAME_LEN);
+		if (flen && udf_match(flen, fname, child->len, child->name))
 			goto out_ok;
 	}
 

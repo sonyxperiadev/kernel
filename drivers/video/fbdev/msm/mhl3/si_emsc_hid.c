@@ -340,7 +340,7 @@ static int send_hid_wait(struct mhl3_hid_data *mhid,
 	 * conventional, but until I think of a better way,
 	 * this is it.
 	 */
-	if (down_timeout(&mhid->data_wait_lock, 1*HZ)) {
+	if (down_timeout(&mhid->data_wait_lock, msecs_to_jiffies(1000))) {
 		MHL3_HID_DBG_ERR("Could not acquire data_wait lock !!!\n");
 		return -ENODEV;
 	}
@@ -368,7 +368,7 @@ static int send_hid_wait(struct mhl3_hid_data *mhid,
 	up(&mdev->isr_lock);
 	if (ret == 0) {
 		/* Wait until a message is ready (when the driver unblocks). */
-		if (down_timeout(&mhid->data_wait_lock, 15*HZ)) {
+		if (down_timeout(&mhid->data_wait_lock, msecs_to_jiffies(15000))) {
 			MHL3_HID_DBG_WARN("Timed out waiting for HID msg!\n");
 			ret = -EBUSY;
 

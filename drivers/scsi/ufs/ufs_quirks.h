@@ -30,6 +30,23 @@
 #define UFS_MODEL_TOSHIBA_32GB "THGLF2G8D4KBADR"
 #define UFS_MODEL_TOSHIBA_64GB "THGLF2G9D8KBADG"
 
+#ifdef CONFIG_ARCH_SONY_YOSHINO
+#define UFS_ANY_VER    "ANY_VER"
+
+#define MAX_REVISION_LEN 8
+
+/* UFS SAMSUNG MODELS */
+#define UFS_MODEL_SAMSUNG_64GB "KLUCG4J1"
+#define UFS_REVISION_SAMSUNG   "0101"
+
+/* UFS SK HYNIX MODELS */
+#define UFS_MODEL_HYNIX_32GB   "hB8aL1"
+#define UFS_MODEL_HYNIX_64GB   "hC8aL1"
+#define UFS_REVISION_HYNIX     "D001"
+
+#define UFS_PURGE_SPEC_VER     0x210
+#endif
+
 /**
  * ufs_card_info - ufs device details
  * @wmanufacturerid: card details
@@ -38,6 +55,10 @@
 struct ufs_card_info {
 	u16 wmanufacturerid;
 	char *model;
+#ifdef CONFIG_ARCH_SONY_YOSHINO
+	u16 specver;
+	char *revision;
+#endif
 };
 
 /**
@@ -52,6 +73,24 @@ struct ufs_card_fix {
 
 #define END_FIX { { 0 } , 0 }
 
+#ifdef CONFIG_ARCH_SONY_YOSHINO
+/* add specific device quirk */
+#define UFS_FIX(_vendor, _model, _quirk) \
+		{						  \
+				.card.wmanufacturerid = (_vendor),\
+				.card.model = (_model),		  \
+				.card.revision = (UFS_ANY_VER),		\
+				.quirk = (_quirk),		  \
+		}
+
+#define UFS_FIX_REVISION(_vendor, _model, _revision, _quirk) \
+		{						  \
+				.card.wmanufacturerid = (_vendor),\
+				.card.model = (_model),		  \
+				.card.revision = (_revision),	  \
+				.quirk = (_quirk),		  \
+		}
+#else
 /* add specific device quirk */
 #define UFS_FIX(_vendor, _model, _quirk) \
 		{						  \
@@ -59,7 +98,7 @@ struct ufs_card_fix {
 				.card.model = (_model),		  \
 				.quirk = (_quirk),		  \
 		}
-
+#endif
 /*
  * If UFS device is having issue in processing LCC (Line Control
  * Command) coming from UFS host controller then enable this quirk.
@@ -146,6 +185,11 @@ struct ufs_card_fix {
  * device would apply this 2 steps gear switch workaround.
  */
 #define UFS_DEVICE_QUIRK_HS_G1_TO_HS_G3_SWITCH (1 << 8)
+
+#ifdef CONFIG_ARCH_SONY_YOSHINO
+#define UFS_DEVICE_QUIRK_EXTEND_SYNC_LENGTH	(1 << 23)
+#define UFS_DEVICE_QUIRK_NO_PURGE	(1 << 24)
+#endif
 
 struct ufs_hba;
 void ufs_advertise_fixup_device(struct ufs_hba *hba);

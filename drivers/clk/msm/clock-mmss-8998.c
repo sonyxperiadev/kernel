@@ -351,6 +351,7 @@ static struct clk_freq_tbl ftbl_mdp_clk_src[] = {
 	F_MM( 300000000,   mmsscc_gpll0,    2,    0,     0),
 	F_MM( 330000000, mmpll5_pll_out,  2.5,    0,     0),
 	F_MM( 412500000, mmpll5_pll_out,    2,    0,     0),
+	F_MM( 550000000, mmpll5_pll_out,  1.5,    0,     0),
 	F_END
 };
 
@@ -366,7 +367,7 @@ static struct rcg_clk mdp_clk_src = {
 		.ops = &clk_ops_rcg,
 		.flags = CLKFLAG_NO_RATE_CACHE,
 		VDD_DIG_FMAX_MAP4(LOWER, 171430000, LOW, 275000000,
-					NOMINAL, 330000000, HIGH, 412500000),
+					NOMINAL, 330000000, HIGH, 550000000),
 		CLK_INIT(mdp_clk_src.c),
 	},
 };
@@ -399,6 +400,9 @@ static struct rcg_clk maxi_clk_src = {
 static struct clk_freq_tbl ftbl_cpp_clk_src[] = {
 	F_MM( 100000000,    mmsscc_gpll0,    6,    0,     0),
 	F_MM( 200000000,    mmsscc_gpll0,    3,    0,     0),
+#if defined(CONFIG_SONY_CAM_V4L2)
+	F_MM( 384000000,  mmpll4_pll_out,    2,    0,     0),
+#endif
 	F_MM( 576000000, mmpll10_pll_out,    1,    0,     0),
 	F_MM( 600000000,    mmsscc_gpll0,    1,    0,     0),
 	F_END
@@ -467,6 +471,7 @@ static struct clk_freq_tbl ftbl_rot_clk_src[] = {
 	F_MM( 275000000, mmpll5_pll_out,    3,    0,     0),
 	F_MM( 330000000, mmpll5_pll_out,  2.5,    0,     0),
 	F_MM( 412500000, mmpll5_pll_out,    2,    0,     0),
+	F_MM( 550000000, mmpll5_pll_out,  1.5,    0,     0),
 	F_END
 };
 
@@ -481,7 +486,7 @@ static struct rcg_clk rot_clk_src = {
 		.ops = &clk_ops_rcg,
 		.flags = CLKFLAG_NO_RATE_CACHE,
 		VDD_DIG_FMAX_MAP4(LOWER, 171430000, LOW, 275000000,
-					NOMINAL, 330000000, HIGH, 412500000),
+					NOMINAL, 330000000, HIGH, 550000000),
 		CLK_INIT(rot_clk_src.c),
 	},
 };

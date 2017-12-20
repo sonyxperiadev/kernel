@@ -791,14 +791,19 @@ static void mdss_dsi_20nm_phy_regulator_enable(struct mdss_dsi_ctrl_pdata
 	phy_io_base = ctrl_pdata->phy_regulator_io.base;
 
 	if (pd->regulator_len != 7) {
-		pr_err("%s: wrong regulator settings\n", __func__);
-		return;
+		pr_err("%s: wrong regulator settings (len = %d) but going on\n", __func__, pd->regulator_len);
+	//	return;
 	}
 
 	if (pd->reg_ldo_mode) {
 		MIPI_OUTP(ctrl_pdata->phy_io.base + MDSS_DSI_DSIPHY_LDO_CNTRL,
 			0x1d);
 	} else {
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+		/* Regulator ctrl - TEST */
+		MIPI_OUTP(phy_io_base + MDSS_DSI_DSIPHY_REGULATOR_TEST,
+			pd->regulator[5]);
+#endif
 		MIPI_OUTP(phy_io_base + MDSS_DSI_DSIPHY_REGULATOR_CTRL_1,
 			pd->regulator[1]);
 		MIPI_OUTP(phy_io_base + MDSS_DSI_DSIPHY_REGULATOR_CTRL_2,
@@ -852,8 +857,8 @@ static void mdss_dsi_20nm_phy_config(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 	}
 
 	if (pd->lanecfg_len != 45) {
-		pr_err("%s: wrong lane cfg\n", __func__);
-		return;
+		pr_err("%s: wrong lane cfg but going on\n", __func__);
+		//return;
 	}
 
 	/* 4 lanes + clk lane configuration */
@@ -1300,6 +1305,8 @@ static void mdss_dsi_phy_regulator_ctrl(struct mdss_dsi_ctrl_pdata *ctrl,
 {
 	struct mdss_dsi_ctrl_pdata *other_ctrl;
 	struct dsi_shared_data *sdata;
+	struct mdss_panel_data *pdata;
+	struct mdss_panel_info *pinfo;
 
 	if (!ctrl) {
 		pr_err("%s: Invalid input data\n", __func__);
@@ -1308,6 +1315,8 @@ static void mdss_dsi_phy_regulator_ctrl(struct mdss_dsi_ctrl_pdata *ctrl,
 
 	sdata = ctrl->shared_data;
 	other_ctrl = mdss_dsi_get_other_ctrl(ctrl);
+	pdata = &ctrl->panel_data;
+	pinfo = &pdata->panel_info;
 
 	mutex_lock(&sdata->phy_reg_lock);
 	if (enable) {
@@ -1327,6 +1336,8 @@ static void mdss_dsi_phy_regulator_ctrl(struct mdss_dsi_ctrl_pdata *ctrl,
 			 * active.
 			 */
 			if (!mdss_dsi_is_hw_config_dual(sdata) ||
+				(mdss_dsi_is_ctrl_clk_master(ctrl) &&
+					pinfo->ulps_suspend_enabled) ||
 				(other_ctrl && (!other_ctrl->is_phyreg_enabled
 						|| other_ctrl->mmss_clamp)))
 				mdss_dsi_28nm_phy_regulator_enable(ctrl);
@@ -1461,6 +1472,10 @@ void mdss_dsi_core_clk_deinit(struct device *dev, struct dsi_shared_data *sdata)
 		devm_clk_put(dev, sdata->mnoc_clk);
 	if (sdata->mdp_core_clk)
 		devm_clk_put(dev, sdata->mdp_core_clk);
+	if (sdata->tbu_clk)
+		devm_clk_put(dev, sdata->tbu_clk);
+	if (sdata->tbu_rt_clk)
+		devm_clk_put(dev, sdata->tbu_rt_clk);
 }
 
 int mdss_dsi_clk_refresh(struct mdss_panel_data *pdata, bool update_phy)
@@ -1613,6 +1628,18 @@ int mdss_dsi_core_clk_init(struct platform_device *pdev,
 	if (IS_ERR(sdata->mnoc_clk)) {
 		pr_debug("%s: Unable to get mnoc clk\n", __func__);
 		sdata->mnoc_clk = NULL;
+	}
+
+	sdata->tbu_clk = devm_clk_get(dev, "tbu_clk");
+	if (IS_ERR(sdata->tbu_clk)) {
+		pr_debug("%s: can't find mdp tbu clk. rc=%d\n", __func__, rc);
+		sdata->tbu_clk = NULL;
+	}
+
+	sdata->tbu_rt_clk = devm_clk_get(dev, "tbu_rt_clk");
+	if (IS_ERR(sdata->tbu_rt_clk)) {
+		pr_debug("%s: can't find mdp tbu_rt clk rc=%d\n", __func__, rc);
+		sdata->tbu_rt_clk = NULL;
 	}
 
 error:
@@ -2059,11 +2086,19 @@ static int mdss_dsi_ulps_config(struct mdss_dsi_ctrl_pdata *ctrl,
 	int enable)
 {
 	int ret = 0;
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	struct mdss_panel_data *pdata = &ctrl->panel_data;
+#endif
 
 	if (!ctrl) {
 		pr_err("%s: invalid input\n", __func__);
 		return -EINVAL;
 	}
+
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	if (!mdss_dsi_ulps_feature_enabled(pdata))
+		return 0;
+#endif
 
 	if (!mdss_dsi_is_ulps_req_valid(ctrl, enable)) {
 		pr_debug("%s: skiping ULPS config for ctrl%d, enable=%d\n",

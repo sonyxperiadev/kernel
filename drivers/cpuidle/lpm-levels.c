@@ -495,7 +495,12 @@ int set_l2_mode(struct low_power_ops *ops, int mode, bool notify_rpm)
 		lpm = MSM_SPM_MODE_DISABLED;
 		break;
 	}
-	rc = msm_spm_config_low_power_mode(ops->spm, lpm, notify_rpm);
+
+	if (lpm_wa_get_skip_l2_spm())
+		rc = msm_spm_config_low_power_mode_addr(ops->spm, lpm,
+							notify_rpm);
+	else
+		rc = msm_spm_config_low_power_mode(ops->spm, lpm, notify_rpm);
 
 	if (rc)
 		pr_err("%s: Failed to set L2 low power mode %d, ERR %d",
@@ -1181,6 +1186,9 @@ static int cluster_configure(struct lpm_cluster *cluster, int idx,
 		}
 		us = sec + nsec;
 		msm_mpm_enter_sleep(us, from_idle, cpumask);
+
+		if (cluster->no_saw_devices && !use_psci)
+			msm_spm_set_rpm_hs(true);
 	}
 
 	/* Notify cluster enter event after successfully config completion */
@@ -1335,6 +1343,9 @@ static void cluster_unprepare(struct lpm_cluster *cluster,
 
 		lpm_wa_cx_unvote_send();
 		msm_mpm_exit_sleep(from_idle);
+
+		if (cluster->no_saw_devices && !use_psci)
+			msm_spm_set_rpm_hs(false);
 	}
 
 	update_debug_pc_event(CLUSTER_EXIT, cluster->last_level,
@@ -2038,3 +2049,62 @@ unlock_and_return:
 	spin_unlock(&cluster->sync_lock);
 	return retflag;
 }
+
+#if defined(CONFIG_MSM_PM) && defined(CONFIG_ARCH_MSM8916)
+/**
+ * lpm_cpu_hotplug_enter(): Called by dying CPU to terminate in low power mode
+ *
+ * @cpu: cpuid of the dying CPU
+ *
+ * Called from platform_cpu_kill() to terminate hotplug in a low power mode
+ */
+void lpm_cpu_hotplug_enter(unsigned int cpu)
+{
+	enum msm_pm_sleep_mode mode = MSM_PM_SLEEP_MODE_NR;
+	struct lpm_cluster *cluster = per_cpu(cpu_cluster, cpu);
+	int i;
+	int idx = -1;
+
+	/*
+	 * If lpm isn't probed yet, try to put cpu into the one of the modes
+	 * available
+	 */
+	if (!cluster) {
+		if (msm_spm_is_mode_avail(
+					MSM_SPM_MODE_POWER_COLLAPSE)){
+			mode = MSM_PM_SLEEP_MODE_POWER_COLLAPSE;
+		} else if (msm_spm_is_mode_avail(
+				MSM_SPM_MODE_FASTPC)) {
+			mode = MSM_PM_SLEEP_MODE_FASTPC;
+		} else if (msm_spm_is_mode_avail(
+				MSM_SPM_MODE_RETENTION)) {
+			mode = MSM_PM_SLEEP_MODE_RETENTION;
+		} else {
+			pr_err("No mode avail for cpu%d hotplug\n", cpu);
+			BUG_ON(1);
+			return;
+		}
+	} else {
+		struct lpm_cpu *lpm_cpu;
+		uint32_t ss_pwr = ~0U;
+
+		lpm_cpu = cluster->cpu;
+		for (i = 0; i < lpm_cpu->nlevels; i++) {
+			if (ss_pwr < lpm_cpu->levels[i].pwr.ss_power)
+				continue;
+			ss_pwr = lpm_cpu->levels[i].pwr.ss_power;
+			idx = i;
+			mode = lpm_cpu->levels[i].mode;
+		}
+
+		if (mode == MSM_PM_SLEEP_MODE_NR)
+			return;
+
+		BUG_ON(idx < 0);
+		cluster_prepare(cluster, get_cpu_mask(cpu), idx, false, 0);
+	}
+
+	msm_cpu_pm_enter_sleep(mode, false);
+}
+#endif
+

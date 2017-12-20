@@ -15,6 +15,13 @@ config ARM_GIC_V2M
 	depends on PCI && PCI_MSI
 	select PCI_MSI_IRQ_DOMAIN
 
+config MSM_LEGACY_QGIC
+	bool "Add legacy MSM QGIC code hacks"
+	depends on ARM_GIC_V2M && ARM_GIC && OF_IRQ
+	help
+	  This is code required for MSM8916-class SoCs
+	  which use MSM QGIC.
+
 config GIC_NON_BANKED
 	bool
 

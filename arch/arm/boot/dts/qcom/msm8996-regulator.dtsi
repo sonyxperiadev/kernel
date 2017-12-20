@@ -515,7 +515,7 @@
 			compatible = "qcom,spm-regulator";
 			reg = <0x3200 0x100>;
 			regulator-name = "pm8994_s11";
-			regulator-min-microvolt = <470000>;
+			regulator-min-microvolt = <475000>;
 			regulator-max-microvolt = <1140000>;
 			qcom,max-voltage-step = <150000>;
 			qcom,cpu-num = <0>;
@@ -523,7 +523,7 @@
 
 			pm8994_s11_limit: avs-limit-regulator {
 				regulator-name = "pm8994_s11_avs_limit";
-				regulator-min-microvolt = <470000>;
+				regulator-min-microvolt = <475000>;
 				regulator-max-microvolt = <1140000>;
 			};
 		};

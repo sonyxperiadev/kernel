@@ -455,7 +455,7 @@ static u64 cpr_read_remapped_efuse_row(struct cpr_regulator *cpr_vreg,
 static u64 cpr_read_efuse_row(struct cpr_regulator *cpr_vreg, u32 row_num,
 				bool use_tz_api)
 {
-	int rc;
+	int rc = 0;
 	u64 efuse_bits;
 	struct scm_desc desc = {0};
 	struct cpr_read_req {
@@ -773,7 +773,7 @@ static int cpr_mx_get(struct cpr_regulator *cpr_vreg, int corner, int apc_volt)
 static int cpr_mx_set(struct cpr_regulator *cpr_vreg, int corner,
 		      int vdd_mx_vmin)
 {
-	int rc;
+	int rc = 0;
 	int fuse_corner = cpr_vreg->corner_map[corner];
 
 	rc = regulator_set_voltage(cpr_vreg->vdd_mx, vdd_mx_vmin,
@@ -1406,7 +1406,7 @@ static int cpr_regulator_enable(struct regulator_dev *rdev)
 static int cpr_regulator_disable(struct regulator_dev *rdev)
 {
 	struct cpr_regulator *cpr_vreg = rdev_get_drvdata(rdev);
-	int rc;
+	int rc = 0;
 
 	rc = regulator_disable(cpr_vreg->vdd_apc);
 	if (!rc) {
@@ -1510,7 +1510,7 @@ static int cpr_regulator_set_voltage(struct regulator_dev *rdev,
 {
 	struct cpr_regulator *cpr_vreg = rdev_get_drvdata(rdev);
 	struct cpr_aging_info *aging_info = cpr_vreg->aging_info;
-	int rc;
+	int rc = 0;
 	int new_volt;
 	enum voltage_change_dir change_dir = NO_CHANGE;
 	int fuse_corner = cpr_vreg->corner_map[corner];
@@ -1569,7 +1569,7 @@ static int cpr_regulator_set_voltage_op(struct regulator_dev *rdev,
 		int corner, int corner_max, unsigned *selector)
 {
 	struct cpr_regulator *cpr_vreg = rdev_get_drvdata(rdev);
-	int rc;
+	int rc = 0;
 
 	mutex_lock(&cpr_vreg->cpr_mutex);
 	rc = cpr_regulator_set_voltage(rdev, corner, false);
@@ -1789,7 +1789,7 @@ static int cpr_voltage_uplift_wa_inc_volt(struct cpr_regulator *cpr_vreg,
 	u32 uplift_voltage;
 	u32 uplift_max_volt = 0;
 	int highest_fuse_corner = cpr_vreg->num_fuse_corners;
-	int rc;
+	int rc = 0;
 
 	rc = of_property_read_u32(of_node,
 		"qcom,cpr-uplift-voltage", &uplift_voltage);
@@ -2336,7 +2336,7 @@ static int cpr_voltage_uplift_wa_inc_quot(struct cpr_regulator *cpr_vreg,
 static void cpr_parse_pvs_version_fuse(struct cpr_regulator *cpr_vreg,
 				struct device_node *of_node)
 {
-	int rc;
+	int rc = 0;
 	u64 fuse_bits;
 	u32 fuse_sel[4];
 
@@ -3177,7 +3177,7 @@ static int cpr_check_redundant(struct platform_device *pdev,
 {
 	struct device_node *of_node = pdev->dev.of_node;
 	u32 cpr_fuse_redun_sel[5];
-	int rc;
+	int rc = 0;
 
 	if (of_find_property(of_node, "qcom,cpr-fuse-redun-sel", NULL)) {
 		rc = of_property_read_u32_array(of_node,
@@ -3205,7 +3205,7 @@ static int cpr_read_fuse_revision(struct platform_device *pdev,
 {
 	struct device_node *of_node = pdev->dev.of_node;
 	u32 fuse_sel[4];
-	int rc;
+	int rc = 0;
 
 	if (of_find_property(of_node, "qcom,cpr-fuse-revision", NULL)) {
 		rc = of_property_read_u32_array(of_node,
@@ -4972,7 +4972,7 @@ static int cpr_init_per_cpu_adjustments(struct cpr_regulator *cpr_vreg,
 
 static int cpr_init_pm_notification(struct cpr_regulator *cpr_vreg)
 {
-	int rc;
+	int rc = 0;
 
 	/* enabled only for single-core designs */
 	if (cpr_vreg->num_adj_cpus != 1) {
@@ -5182,7 +5182,7 @@ static int cpr_check_tsens(struct cpr_regulator *cpr_vreg)
 {
 	int rc = 0;
 	struct tsens_device tsens_dev;
-	unsigned long temp = 0;
+	int temp = 0;
 	bool disable;
 
 	if (tsens_is_ready() > 0) {
@@ -5205,7 +5205,7 @@ static int cpr_check_tsens(struct cpr_regulator *cpr_vreg)
 
 static int cpr_thermal_init(struct cpr_regulator *cpr_vreg)
 {
-	int rc;
+	int rc = 0;
 	struct device_node *of_node = cpr_vreg->dev->of_node;
 
 	if (!of_find_property(of_node, "qcom,cpr-thermal-sensor-id", NULL))
@@ -5466,7 +5466,7 @@ static void cpr_efuse_free(struct cpr_regulator *cpr_vreg)
 static void cpr_parse_cond_min_volt_fuse(struct cpr_regulator *cpr_vreg,
 						struct device_node *of_node)
 {
-	int rc;
+	int rc = 0;
 	u32 fuse_sel[5];
 	/*
 	 * Restrict all pvs corner voltages to a minimum value of
@@ -5485,7 +5485,7 @@ static void cpr_parse_cond_min_volt_fuse(struct cpr_regulator *cpr_vreg,
 static void cpr_parse_speed_bin_fuse(struct cpr_regulator *cpr_vreg,
 				struct device_node *of_node)
 {
-	int rc;
+	int rc = 0;
 	u64 fuse_bits;
 	u32 fuse_sel[4];
 	u32 speed_bits;
@@ -5509,7 +5509,7 @@ static void cpr_parse_speed_bin_fuse(struct cpr_regulator *cpr_vreg,
 static int cpr_voltage_uplift_enable_check(struct cpr_regulator *cpr_vreg,
 					struct device_node *of_node)
 {
-	int rc;
+	int rc = 0;
 	u32 fuse_sel[5];
 	u32 uplift_speed_bin;
 
@@ -5540,7 +5540,7 @@ static int cpr_voltage_uplift_enable_check(struct cpr_regulator *cpr_vreg,
 static int cpr_fuse_corner_array_alloc(struct device *dev,
 					struct cpr_regulator *cpr_vreg)
 {
-	int rc;
+	int rc = 0;
 	size_t len;
 
 	rc = of_property_read_u32(dev->of_node, "qcom,cpr-fuse-corners",
@@ -6029,14 +6029,15 @@ static int cpr_regulator_probe(struct platform_device *pdev)
 	struct regulator_desc *rdesc;
 	struct device *dev = &pdev->dev;
 	struct regulator_init_data *init_data = pdev->dev.platform_data;
-	int rc;
+	int rc = -EINVAL;
 
 	if (!pdev->dev.of_node) {
 		dev_err(dev, "Device tree node is missing\n");
 		return -EINVAL;
 	}
 
-	init_data = of_get_regulator_init_data(&pdev->dev, pdev->dev.of_node);
+	init_data = of_get_regulator_init_data(&pdev->dev,
+			pdev->dev.of_node, NULL);
 	if (!init_data) {
 		dev_err(dev, "regulator init data is missing\n");
 		return -EINVAL;
@@ -6288,7 +6289,7 @@ static struct platform_driver cpr_regulator_driver = {
 
 static int initialize_tsens_monitor(struct cpr_regulator *cpr_vreg)
 {
-	int rc;
+	int rc = 0;
 
 	rc = cpr_check_tsens(cpr_vreg);
 	if (rc < 0) {
@@ -6317,7 +6318,7 @@ static int initialize_tsens_monitor(struct cpr_regulator *cpr_vreg)
 
 int __init cpr_regulator_late_init(void)
 {
-	int rc;
+	int rc = 0;
 	struct cpr_regulator *cpr_vreg;
 
 	mutex_lock(&cpr_regulator_list_mutex);

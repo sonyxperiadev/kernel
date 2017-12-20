@@ -16,6 +16,8 @@
 #define MAX_DSI_PLL_EN_SEQS	10
 
 #define DSI_PHY_PLL_UNIPHY_PLL_GLB_CFG		(0x0020)
+#define DSI_PHY_PLL_UNIPHY_PLL_LKDET_CFG0	(0x005c)
+#define DSI_PHY_PLL_UNIPHY_PLL_LKDET_CFG1	(0x0060)
 #define DSI_PHY_PLL_UNIPHY_PLL_LKDET_CFG2	(0x0064)
 #define DSI_PHY_PLL_UNIPHY_PLL_TEST_CFG		(0x0068)
 #define DSI_PHY_PLL_UNIPHY_PLL_CAL_CFG1		(0x0070)
@@ -63,6 +65,7 @@ int dsi_pll_clock_register_8998(struct platform_device *pdev,
 
 int set_byte_mux_sel(struct mux_clk *clk, int sel);
 int get_byte_mux_sel(struct mux_clk *clk);
+int dsi_pll_div_prepare(struct clk *c);
 int dsi_pll_mux_prepare(struct clk *c);
 int fixed_4div_set_div(struct div_clk *clk, int div);
 int fixed_4div_get_div(struct div_clk *clk);

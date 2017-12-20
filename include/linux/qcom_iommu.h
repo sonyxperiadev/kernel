@@ -10,6 +10,10 @@
  * GNU General Public License for more details.
  */
 
+#if defined(CONFIG_ARCH_MSM8916) && defined(CONFIG_QCOM_IOMMU_V1)
+#include <../drivers/iommu/qcom/qcom_iommu.h>
+#else
+
 #ifndef MSM_IOMMU_H
 #define MSM_IOMMU_H
 
@@ -291,10 +295,12 @@ struct remote_iommu_petersons_spinlock {
 	uint32_t turn;
 };
 
-#ifdef CONFIG_MSM_IOMMU
-void *msm_iommu_lock_initialize(void);
-void msm_iommu_mutex_lock(void);
-void msm_iommu_mutex_unlock(void);
+#if defined(CONFIG_MSM_IOMMU) || defined(CONFIG_QCOM_IOMMU_V1)
+ #ifndef CONFIG_QCOM_IOMMU_V1
+ void *msm_iommu_lock_initialize(void);
+ void msm_iommu_mutex_lock(void);
+ void msm_iommu_mutex_unlock(void);
+ #endif
 void msm_set_iommu_access_ops(struct iommu_access_ops *ops);
 struct iommu_access_ops *msm_get_iommu_access_ops(void);
 #else
@@ -329,7 +335,7 @@ void msm_iommu_remote_p0_spin_unlock(unsigned int need_lock);
 #define msm_iommu_remote_spin_unlock(need_lock)
 #endif
 
-#ifdef CONFIG_MSM_IOMMU
+#if defined(CONFIG_MSM_IOMMU) || defined(CONFIG_QCOM_IOMMU_V1)
 /*
  * Look up an IOMMU context device by its context name. NULL if none found.
  * Useful for testing and drivers that do not yet fully have IOMMU stuff in
@@ -427,3 +433,5 @@ static inline void msm_iommu_register_notify(struct notifier_block *nb)
 #endif
 
 #endif
+
+#endif /* ARCH_MSM8916 */

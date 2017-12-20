@@ -735,6 +735,56 @@ int qpnp_pon_trigger_config(enum pon_trigger_source pon_src, bool enable)
 }
 EXPORT_SYMBOL(qpnp_pon_trigger_config);
 
+/* kholk note: reduced features implementation */
+#ifdef CONFIG_PON_SOMC_ORG
+#define QPNP_PON_SW_RESET_S2_CTL(base)		(base + 0x62)
+#define QPNP_PON_DVDD_SHUTDOWN_MASK		0xFF
+#define QPNP_PON_DVDD_SHUTDOWN_SET		0x05
+
+#define QPNP_PON_SW_RESET_S2_CTL2(base)		(base + 0x63)
+#define QPNP_PON_SW_RESET_EN_MASK		0xFF
+#define QPNP_PON_SW_RESET_EN_SET		0x80
+
+#define QPNP_PON_SW_RESET_GO(base)		(base + 0x64)
+#define QPNP_PON_SW_RESET_GO_MASK		0xFF
+#define QPNP_PON_SW_RESET_GO_SET		0xA5
+
+int qpnp_pon_dvdd_shutdown(void)
+{
+	struct qpnp_pon *pon = sys_reset_dev;
+	int rc;
+
+	if (!pon)
+		return -EPROBE_DEFER;
+
+	rc = qpnp_pon_masked_write(pon, QPNP_PON_SW_RESET_S2_CTL(pon->base),
+					QPNP_PON_DVDD_SHUTDOWN_MASK,
+					QPNP_PON_DVDD_SHUTDOWN_SET);
+	if (rc)
+		dev_err(&pon->pdev->dev,
+			"Unable to write to addr=%x, rc(%d)\n",
+			QPNP_PON_SW_RESET_S2_CTL(pon->base), rc);
+
+	rc = qpnp_pon_masked_write(pon, QPNP_PON_SW_RESET_S2_CTL2(pon->base),
+					QPNP_PON_SW_RESET_EN_MASK,
+					QPNP_PON_SW_RESET_EN_SET);
+	if (rc)
+		dev_err(&pon->pdev->dev,
+			"Unable to write to addr=%x, rc(%d)\n",
+			QPNP_PON_SW_RESET_S2_CTL2(pon->base), rc);
+
+	rc = qpnp_pon_masked_write(pon, QPNP_PON_SW_RESET_GO(pon->base),
+					QPNP_PON_SW_RESET_GO_MASK,
+					QPNP_PON_SW_RESET_GO_SET);
+	if (rc)
+		dev_err(&pon->pdev->dev,
+			"Unable to write to addr=%x, rc(%d)\n",
+			QPNP_PON_SW_RESET_GO(pon->base), rc);
+
+	return rc;
+}
+EXPORT_SYMBOL(qpnp_pon_dvdd_shutdown);
+#endif /* CONFIG_PON_SOMC_ORG */
 /*
  * This function stores the PMIC warm reset reason register values. It also
  * clears these registers if the qcom,clear-warm-reset device tree property
@@ -2360,6 +2410,20 @@ static int qpnp_pon_probe(struct platform_device *pdev)
 					"qcom,store-hard-reset-reason");
 
 	qpnp_pon_debugfs_init(pdev);
+
+#ifdef CONFIG_ARCH_SONY_YOSHINO
+	if (pon == sys_reset_dev) {
+		rc = qpnp_pon_reset_config(pon, PON_POWER_OFF_WARM_RESET);
+		if (rc) {
+			dev_err(&pon->pdev->dev,
+				"Error configuring primary PON rc: %d\n", rc);
+			return rc;
+		}
+
+		dev_info(&pon->pdev->dev, "Configured primary PON for warm reset\n");
+	}
+#endif
+
 	return 0;
 }
 

@@ -1,0 +1,577 @@
+/* arch/arm/boot/dts/qcom/msm8996-tone-keyaki-common.dtsi
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+/*
+ * Copyright (C) 2016 Sony Mobile Communications Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2, as
+ * published by the Free Software Foundation.
+ */
+
+&soc {
+	somc_pinctrl: somc_pinctrl {
+		/* If variant specific default setting is needed,
+		   fill pinctrl-1 value in <variant>.dtsi */
+		pinctrl-1 = <&msm_gpio_25 &msm_gpio_47 &msm_gpio_48
+			&msm_gpio_59 &msm_gpio_60 &msm_gpio_61 &msm_gpio_69
+			&msm_gpio_78 &msm_gpio_85 &msm_gpio_86 &msm_gpio_104
+			&msm_gpio_127 &msm_gpio_131>;
+	};
+
+	/* I2C : BLSP3 */
+	i2c_3: i2c@7577000 { /* BLSP1 QUP2 */
+		pinctrl-1 = <&msm_gpio_47_suspend &msm_gpio_48_suspend>;
+		status = "okay";
+		tcs3490@72 {
+			compatible = "ams,tcs3490";
+			reg = <0x72>;
+			interrupt-parent = <&tlmm>;
+			interrupts = <86 0x0>;
+			rgbcir_vdd-supply = <&pm8994_l30>;
+			rgbcir_vio-supply = <&pm8994_lvs1>;
+			ams,rgbcir-supply_name = "rgbcir_vdd", "rgbcir_vio";
+			pinctrl-names = "rgbcir_irq_active", "rgbcir_irq_suspend";
+			pinctrl-0 = <&msm_gpio_86>;
+			pinctrl-1 = <&msm_gpio_86_suspend>;
+		};
+		tof_sensor@52 {
+			compatible = "tof_sensor";
+			reg = <0x52>;
+			interrupt-parent = <&tlmm>;
+			interrupts = <85 0x0>;
+			tof_avdd-supply = <&pm8994_l30>;
+			tof_vio-supply = <&pm8994_lvs1>;
+			tof-supply_name = "tof_avdd", "tof_vio";
+			pinctrl-names = "tof_irq_active", "tof_irq_suspend";
+			pinctrl-0 = <&msm_gpio_85 &msm_gpio_26>;
+			pinctrl-1 = <&msm_gpio_85_suspend &msm_gpio_26_suspend>;
+			tof-reset-gpio = <&tlmm 26 0>;
+			sony,tof-sensor-name = "VL53L0";
+			sony,tof-need-cam-on = <0>;
+			sony,tof-sensor-facing = <0>;
+		};
+	};
+
+	/* I2C : BLSP12 */
+	i2c@75ba000 {
+		synaptics_clearpad@2c {
+			/* Stamina Mode */
+			stamina_mode_supported = <0x80000003>;
+
+			/* F01_RMI_CTRL05: Doze Holdoff */
+			doze_default_time = <35>;
+			doze_glove_mode_time = <35>;
+			doze_cover_mode_time = <35>;
+
+			/* chip settings */
+			S332U {
+				calibrate_on_fwflash = <0>;
+			};
+		};
+	};
+
+};
+
+/{
+	tone_keyaki_batterydata: qcom,battery-data {
+		#include "batterydata-tone-kagura-send.dtsi"
+	};
+};
+
+&pmi8994_mpps {
+	/* MPP_1: USB_ID_DISCHG */
+	mpp@a000 {
+		qcom,vin-sel = <2>;		/* VDD_MSM_IO(1.8V) */
+	};
+};
+
+&pmi8994_fg {
+	qcom,battery-data = <&tone_keyaki_batterydata>;
+	qcom,fg-iterm-ma = <150>;
+	qcom,fg-chg-iterm-ma = <150>;
+	qcom,cold-hot-jeita-hysteresis = <20 20>;
+	qcom,fg-cc-cv-threshold-mv = <4340>;
+	somc,cool-warm-jeita-hysteresis = <20 20>;
+	somc,vfloat-arrangement;
+	somc,vfloat-arrangement-threshold = <90>;
+	somc,soc-magnification = <106>;
+};
+
+&pmi8994_charger {
+	qcom,fastchg-current-ma = <2100>;
+	somc,usb-9v-current-max = <1500>;
+	qcom,float-voltage-comp = <0x08>;
+	qcom,float-voltage-mv = <4350>;
+	somc,fastchg-warm-current-ma = <800>;
+	somc,fastchg-cool-current-ma = <800>;
+	somc,thermal-engine-fastchg-current = <2100 2100 1950 1800 1000 700 500 300 300 300 300 300 300 0 0>;
+	somc,thermal-mitigation-usb-5v = <2400 2400 2400 2400 1500 1500 1500 1500 1200 900 700 500 300 0 0>;
+	somc,thermal-mitigation-usb-6v = <2000 2000 2000 2000 1500 1500 1500 1500 1200 900 700 500 300 0 0>;
+	somc,thermal-mitigation-usb-7v = <1800 1800 1800 1800 1200 1200 1200 1200 1200 900 700 500 300 0 0>;
+	somc,thermal-mitigation-usb-8v = <1600 1600 1600 1600 1100 1100 1100 1100 1200 900 700 500 300 0 0>;
+	somc,thermal-mitigation-usb-9v = <1500 1500 1500 1500 1000 1000 1000 1000 1200 900 700 500 300 0 0>;
+	somc,limit-usb-5v-level = <8>;
+	qcom,external-typec;
+	qcom,typec-psy-name = "typec";
+	somc,typec-current-max = <2500>;
+};
+
+&pm8994_l19 {
+	qcom,regulator-type = <0>;      /* LDO */
+	qcom,init-enable = <0>;
+	qcom,init-ldo-mode = <1>;
+	qcom,init-pin-ctrl-enable = <0>;
+	qcom,init-pin-ctrl-mode = <0>;
+	regulator-min-microvolt = <2700000>;
+	regulator-max-microvolt = <2700000>;
+	qcom,init-voltage = <2700000>;
+	status = "okay";
+};
+
+&pm8994_l30 {
+	qcom,regulator-type = <0>;      /* LDO */
+	qcom,init-enable = <0>;
+	qcom,init-ldo-mode = <1>;
+	qcom,init-pin-ctrl-enable = <0>;
+	qcom,init-pin-ctrl-mode = <0>;
+	regulator-min-microvolt = <2800000>;
+	regulator-max-microvolt = <2800000>;
+	qcom,init-voltage = <2800000>;
+	qcom,pull-down-enable = <1>;
+	status = "okay";
+};
+
+&tlmm {
+	/* GPIO_25 : USB_CABLE_SENSE_EN */
+	msm_gpio_25: msm_gpio_25 {
+		mux {
+			pins = "gpio25";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio25";
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	/* GPIO_26 :TOF SENSOR */
+	msm_gpio_26: msm_gpio_26 {
+		/* RESET, STANDBY */
+		mux {
+			pins = "gpio26";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio26";
+			bias-disable; /* No PULL */
+			drive-strength = <2>; /* 2 MA */
+			output-low;
+		};
+	};
+	msm_gpio_26_suspend: msm_gpio_26_suspend{
+		/* RESET, STANDBY */
+		mux {
+			pins = "gpio26";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio26";
+			bias-disable; /* No PULL */
+			drive-strength = <2>; /* 2 MA */
+		};
+	};
+
+
+	/* GPIO_47 : CAMSENSOR_I2C_SDA */
+	msm_gpio_47: msm_gpio_47 {
+		mux {
+			pins = "gpio47";
+			function = "blsp_i2c3";
+		};
+
+		config {
+			pins = "gpio47";
+			drive-strength = <2>;
+			bias-disable;
+			/delete-property/ output-low;
+		};
+	};
+
+	msm_gpio_47_suspend: msm_gpio_47_suspend {
+		mux {
+			pins = "gpio47";
+			function = "blsp_i2c3";
+		};
+
+		config {
+			pins = "gpio47";
+			drive-strength = <2>;
+			bias-pull-down;
+			input-enable;
+		};
+	};
+
+	/* GPIO_48 : CAMSENSOR_I2C_SCL */
+	msm_gpio_48: msm_gpio_48 {
+		mux {
+			pins = "gpio48";
+			function = "blsp_i2c3";
+		};
+
+		config {
+			pins = "gpio48";
+			drive-strength = <2>;
+			bias-disable;
+			/delete-property/ output-low;
+		};
+	};
+
+	msm_gpio_48_suspend: msm_gpio_48_suspend {
+		mux {
+			pins = "gpio48";
+			function = "blsp_i2c3";
+		};
+
+		config {
+			pins = "gpio48";
+			drive-strength = <2>;
+			bias-pull-down;
+			input-enable;
+		};
+	};
+
+	/* GPIO_59 : USB_CC_INT_N */
+	msm_gpio_59: msm_gpio_59 {
+		mux {
+			pins = "gpio59";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio59";
+			drive-strength = <2>;
+			/delete-property/ bias-disable;
+			/delete-property/ output-low;
+			bias-pull-up;
+			input-enable;
+		};
+	};
+
+	/* GPIO_60 : USB_CC_I2C_SDA */
+	msm_gpio_60: msm_gpio_60 {
+		mux {
+			pins = "gpio60";
+			function = "blsp_i2c11";
+		};
+
+		config {
+			pins = "gpio60";
+			drive-strength = <2>;
+			bias-disable;
+			/delete-property/ output-low;
+		};
+	};
+
+	/* GPIO_61 : USB_CC_I2C_SCL */
+	msm_gpio_61: msm_gpio_61 {
+		mux {
+			pins = "gpio61";
+			function = "blsp_i2c11";
+		};
+
+		config {
+			pins = "gpio61";
+			drive-strength = <2>;
+			bias-disable;
+			/delete-property/ output-low;
+		};
+	};
+
+	/* GPIO_69 : CAM_SOF */
+	msm_gpio_69: msm_gpio_69 {
+		mux {
+			pins = "gpio69";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio69";
+			drive-strength = <2>;
+			/delete-property/ bias-disable;
+			bias-pull-down;
+			/delete-property/ output-low;
+		};
+	};
+
+	msm_gpio_69_suspend: msm_gpio_69_suspend {
+		mux {
+			pins = "gpio69";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio69";
+			drive-strength = <2>;
+			bias-pull-down;
+			input-enable;
+		};
+	};
+
+	/* GPIO_78 : ACC_COVER_OPEN */
+	msm_gpio_78: msm_gpio_78 {
+		mux {
+			pins = "gpio78";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio78";
+			drive-strength = <2>;
+			/delete-property/ bias-disable;
+			bias-pull-up;
+		};
+	};
+
+	/* GPIO_85 : TOF_INT */
+	msm_gpio_85: msm_gpio_85 {
+		mux {
+			pins = "gpio85";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio85";
+			drive-strength = <2>;
+			/delete-property/ bias-disable;
+			bias-pull-up;
+			/delete-property/ output-low;
+		};
+	};
+	msm_gpio_85_suspend: msm_gpio_85_suspend {
+		mux {
+			pins = "gpio85";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio85";
+			drive-strength = <2>;
+			bias-pull-down;
+			input-enable;
+		};
+	};
+
+	/* GPIO_86 : RGBC_IR_INT */
+	msm_gpio_86: msm_gpio_86 {
+		mux {
+			pins = "gpio86";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio86";
+			drive-strength = <2>;
+			/delete-property/ bias-disable;
+			bias-pull-up;
+			/delete-property/ output-low;
+		};
+	};
+
+	msm_gpio_86_suspend: msm_gpio_86_suspend {
+		mux {
+			pins = "gpio86";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio86";
+			drive-strength = <2>;
+			bias-pull-down;
+			input-enable;
+		};
+	};
+
+	/* GPIO_104 : NC */
+	msm_gpio_104: msm_gpio_104 {
+		mux {
+			pins = "gpio104";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio104";
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	/* GPIO_127 : NC */
+	msm_gpio_127: msm_gpio_127 {
+		mux {
+			pins = "gpio127";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio127";
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	/* GPIO_131 : USB_CABLE_DET_N */
+	msm_gpio_131: msm_gpio_131 {
+		mux {
+			pins = "gpio131";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio131";
+			drive-strength = <2>;
+			/delete-property/ bias-disable;
+			/delete-property/ output-low;
+			bias-pull-up;
+			input-enable;
+		};
+	};
+};
+
+&spmi_bus {
+	qcom,pmi8994@3 {
+		qcom,leds@d000 {
+			status = "okay";
+			qcom,rgb_sync = <1>;
+
+			qcom,rgb_0 {
+				somc,pwm-channel = <2>;
+				linux,name = "led:rgb_red";
+				/delete-property/ linux,default-trigger;
+				somc,color_variation_max_num = <4>;
+				somc,max_current = <
+					18 511 511
+					19 511 511
+					20 511 511
+					21 511 511>;
+				qcom,start-idx = <0>;
+				qcom,idx-len = <8>;
+				qcom,lut-flags = <31>;
+				qcom,pause-lo = <500>;
+				qcom,pause-hi = <500>;
+				qcom,ramp-step-ms = <200>;
+				qcom,duty-pcts = [00 0E 1C 2A 38 46 54 64];
+				qcom,use-blink;
+			};
+			qcom,rgb_1 {
+				somc,pwm-channel = <1>;
+				linux,name = "led:rgb_green";
+				/delete-property/ linux,default-trigger;
+				somc,color_variation_max_num = <4>;
+				somc,max_current = <
+					18 511 511
+					19 511 511
+					20 511 511
+					21 511 511>;
+				qcom,start-idx = <0>;
+				qcom,idx-len = <8>;
+				qcom,lut-flags = <31>;
+				qcom,pause-lo = <500>;
+				qcom,pause-hi = <500>;
+				qcom,ramp-step-ms = <200>;
+				qcom,duty-pcts = [00 0E 1C 2A 38 46 54 64];
+				qcom,use-blink;
+			};
+			qcom,rgb_2 {
+				somc,pwm-channel = <0>;
+				linux,name = "led:rgb_blue";
+				/delete-property/ linux,default-trigger;
+				somc,color_variation_max_num = <4>;
+				somc,max_current = <
+					18 511 511
+					19 511 511
+					20 511 511
+					21 511 511>;
+				qcom,start-idx = <16>;
+				qcom,idx-len = <8>;
+				qcom,lut-flags = <31>;
+				qcom,pause-lo = <500>;
+				qcom,pause-hi = <500>;
+				qcom,ramp-step-ms = <200>;
+				qcom,duty-pcts = [00 0E 1C 2A 38 46 54 64];
+				qcom,use-blink;
+			};
+		};
+		qcom,leds@d800 {
+			qcom,fs-curr-ua = <20000>;
+			qcom,led-strings-list = [00 01 02];
+			somc,init-br-ua = <10000>;
+			somc-s1,br-power-save-ua = <800>;
+			qcom,ilim-ma = <660>;
+			somc,bl-scale-enabled;
+		};
+	};
+};
+
+&i2c_3 {
+	status = "okay";
+};
+
+/* I2C : BLSP11 */
+&i2c_11 {
+	status = "okay";
+
+	fusb301@25 {
+		status = "okay";
+		compatible = "fusb301";
+		reg = <0x25>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <59 0x02>, <131 0x03>;
+		fusb301,int-gpio = <&tlmm 59 0x00>;
+		fusb301,cbl_det-enabled;
+		fusb301,cbl_det-gpio = <&tlmm 131 0x00>;
+		fusb301,use-try-snk-emulation;
+		fusb301,drp_boot-enabled;
+	};
+};
+
+&usb3 {
+	id_polling_use;
+	id_polling_up_interval = <2000>;
+	id_polling_up_period = <500>;
+	id_polling_pd_gpio = <&tlmm 24 0>;
+	id_lv_vadc_channel = <0x39>;
+	qcom,usb_id_lv-vadc = <&pm8994_vadc>;
+	qcom,usbin-vadc = <&pmi8994_vadc>;
+	usb_switch_sel = <&pmi8994_gpios 9 0>;
+	usb_id_discharge = <&pmi8994_mpps 1 0>;
+};
+
+&pm8994_vadc {
+	chan@39 {
+		label = "usb_id_lv";
+		reg = <0x39>;
+		qcom,decimation = <0>;
+		qcom,pre-div-channel-scaling = <0>;
+		qcom,calibration-type = "absolute";
+		qcom,scale-function = <0>;
+		qcom,hw-settle-time = <5>;
+		qcom,fast-avg-setup = <0>;
+	};
+};
+

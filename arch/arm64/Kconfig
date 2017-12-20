@@ -274,7 +274,6 @@ config PCI_SYSCALL
 source "drivers/pci/Kconfig"
 source "drivers/pci/pcie/Kconfig"
 source "drivers/pci/hotplug/Kconfig"
-
 endmenu
 
 menu "Kernel Features"

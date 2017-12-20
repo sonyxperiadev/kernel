@@ -1029,7 +1029,7 @@ pmic_arb_ppid_to_apid_v5(struct spmi_pmic_arb *pa, u8 sid, u16 addr, u16 *apid)
 }
 
 static int
-pmic_arb_mode_v2(struct spmi_pmic_arb *pa, u8 sid, u16 addr, mode_t *mode)
+pmic_arb_mode_v5(struct spmi_pmic_arb *pa, u8 sid, u16 addr, mode_t *mode)
 {
 	u16 apid;
 	int rc;
@@ -1185,7 +1185,7 @@ static const struct pmic_arb_ver_ops pmic_arb_v1 = {
 static const struct pmic_arb_ver_ops pmic_arb_v2 = {
 	.ver_str		= "v2",
 	.ppid_to_apid		= pmic_arb_ppid_to_apid_v2,
-	.mode			= pmic_arb_mode_v2,
+	.mode			= pmic_arb_mode_v1_v3,
 	.non_data_cmd		= pmic_arb_non_data_cmd_v2,
 	.offset			= pmic_arb_offset_v2,
 	.fmt_cmd		= pmic_arb_fmt_cmd_v2,
@@ -1213,7 +1213,7 @@ static const struct pmic_arb_ver_ops pmic_arb_v3 = {
 static const struct pmic_arb_ver_ops pmic_arb_v5 = {
 	.ver_str		= "v5",
 	.ppid_to_apid		= pmic_arb_ppid_to_apid_v5,
-	.mode			= pmic_arb_mode_v2,
+	.mode			= pmic_arb_mode_v5,
 	.non_data_cmd		= pmic_arb_non_data_cmd_v2,
 	.offset			= pmic_arb_offset_v5,
 	.fmt_cmd		= pmic_arb_fmt_cmd_v2,

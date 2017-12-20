@@ -108,6 +108,11 @@ static inline bool is_low_power_session(struct msm_vidc_inst *inst)
 	return !!(inst->flags & VIDC_LOW_POWER);
 }
 
+static inline bool is_low_latency_session(struct msm_vidc_inst *inst)
+{
+	return !!(inst->flags & VIDC_LOW_LATENCY);
+}
+
 static inline bool is_realtime_session(struct msm_vidc_inst *inst)
 {
 	return !!(inst->flags & VIDC_REALTIME);
@@ -544,6 +549,8 @@ static int msm_comm_vote_bus(struct msm_vidc_core *core)
 			vote_data[i].power_mode = VIDC_POWER_TURBO;
 		else if (is_low_power_session(inst))
 			vote_data[i].power_mode = VIDC_POWER_LOW;
+		else if (is_low_latency_session(inst))
+			vote_data[i].power_mode = VIDC_POWER_LOW_LATENCY;
 		else
 			vote_data[i].power_mode = VIDC_POWER_NORMAL;
 		if (i == 0) {
@@ -2382,6 +2389,9 @@ int msm_comm_scale_clocks_load(struct msm_vidc_core *core,
 		else if (is_low_power_session(inst))
 			clk_scale_data.power_mode[num_sessions] =
 				VIDC_POWER_LOW;
+		else if (is_low_latency_session(inst))
+			clk_scale_data.power_mode[num_sessions] =
+				VIDC_POWER_LOW_LATENCY;
 		else
 			clk_scale_data.power_mode[num_sessions] =
 				VIDC_POWER_NORMAL;
@@ -5086,9 +5096,12 @@ int msm_comm_kill_session(struct msm_vidc_inst *inst)
 	if ((inst->state >= MSM_VIDC_OPEN_DONE &&
 			inst->state < MSM_VIDC_CLOSE_DONE) ||
 			inst->state == MSM_VIDC_CORE_INVALID) {
-		if (msm_comm_session_abort(inst)) {
+		rc = msm_comm_session_abort(inst);
+		if (rc == -EBUSY) {
 			msm_comm_generate_sys_error(inst);
 			return 0;
+		} else if (rc) {
+			return rc;
 		}
 		change_inst_state(inst, MSM_VIDC_CLOSE_DONE);
 		msm_comm_generate_session_error(inst);

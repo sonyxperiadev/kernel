@@ -940,7 +940,7 @@ static int qpnp_smps_init_step_rate(struct spm_vreg *vreg)
 
 	return rc;
 }
-
+#ifndef CONFIG_ARCH_MSM8996
 static int qpnp_smps_check_constraints(struct spm_vreg *vreg,
 					struct regulator_init_data *init_data)
 {
@@ -1022,7 +1022,7 @@ static int qpnp_smps_check_constraints(struct spm_vreg *vreg,
 
 	return rc;
 }
-
+#endif
 static bool spm_regulator_using_range0(struct spm_vreg *vreg)
 {
 	return vreg->range == &fts2_range0 || vreg->range == &fts2p5_range0
@@ -1203,14 +1203,14 @@ static int spm_regulator_probe(struct platform_device *pdev)
 			__func__);
 		return -EINVAL;
 	}
-
+#ifndef CONFIG_ARCH_MSM8996
 	rc = qpnp_smps_check_constraints(vreg, init_data);
 	if (rc) {
 		dev_err(&pdev->dev, "%s: regulator constraints check failed, rc=%d\n",
 			__func__, rc);
 		return rc;
 	}
-
+#endif
 	vreg->rdesc.name	= init_data->constraints.name;
 	vreg->rdesc.type	= REGULATOR_VOLTAGE;
 	vreg->rdesc.owner	= THIS_MODULE;

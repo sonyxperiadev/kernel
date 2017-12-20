@@ -2,6 +2,7 @@
  *  linux/drivers/mmc/host/sdhci.c - Secure Digital Host Controller Interface driver
  *
  *  Copyright (C) 2005-2008 Pierre Ossman, All Rights Reserved.
+ *  Copyright (C) 2014 Sony Mobile Communications Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -2659,9 +2660,13 @@ static int sdhci_pre_dma_transfer(struct sdhci_host *host,
 				       struct mmc_data *data)
 {
 	int sg_count;
+	unsigned long flags;
+
+	spin_lock_irqsave(&host->next_lock, flags);
 
 	if (data->host_cookie == COOKIE_MAPPED) {
 		data->host_cookie = COOKIE_GIVEN;
+		spin_unlock_irqrestore(&host->next_lock, flags);
 		return data->sg_count;
 	}
 
@@ -2671,11 +2676,15 @@ static int sdhci_pre_dma_transfer(struct sdhci_host *host,
 				data->flags & MMC_DATA_WRITE ?
 				DMA_TO_DEVICE : DMA_FROM_DEVICE);
 
-	if (sg_count == 0)
+	if (sg_count == 0) {
+		spin_unlock_irqrestore(&host->next_lock, flags);
 		return -ENOSPC;
+	}
 
 	data->sg_count = sg_count;
 	data->host_cookie = COOKIE_MAPPED;
+
+	spin_unlock_irqrestore(&host->next_lock, flags);
 
 	return sg_count;
 }
@@ -3617,6 +3626,7 @@ struct sdhci_host *sdhci_alloc_host(struct device *dev,
 	mmc->ops = &host->mmc_host_ops;
 
 	spin_lock_init(&host->lock);
+	spin_lock_init(&host->next_lock);
 	ratelimit_state_init(&host->dbg_dump_rs, SDHCI_DBG_DUMP_RS_INTERVAL,
 			SDHCI_DBG_DUMP_RS_BURST);
 

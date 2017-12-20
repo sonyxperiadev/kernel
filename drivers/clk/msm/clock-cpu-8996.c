@@ -68,6 +68,8 @@ static void *vbases[NUM_BASES];
 static bool cpu_clocks_v3;
 static bool cpu_clocks_pro;
 
+extern struct mutex scm_lmh_lock;
+
 static DEFINE_VDD_REGULATORS(vdd_dig, VDD_DIG_NUM, 1, vdd_corner, NULL);
 
 /* Power cluster primary PLL */

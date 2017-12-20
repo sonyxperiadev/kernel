@@ -20,6 +20,11 @@ obj-$(CONFIG_SND_SOC_MSM8996) += snd-soc-msm8996.o
 snd-soc-msm8998-objs := msm8998.o
 obj-$(CONFIG_SND_SOC_MSM8998) += snd-soc-msm8998.o
 
+# for MSM8952 sound card driver
+snd-soc-msm8952-objs := msm8952.o msm-audio-pinctrl.o
+snd-soc-msm8952-objs += msm8952-slimbus.o msm8952-dai-links.o
+obj-$(CONFIG_SND_SOC_MSM8952) += snd-soc-msm8952.o
+
 # for SDM660 sound card driver
 snd-soc-sdm660-common-objs := sdm660-common.o
 obj-$(CONFIG_SND_SOC_SDM660_COMMON) += snd-soc-sdm660-common.o

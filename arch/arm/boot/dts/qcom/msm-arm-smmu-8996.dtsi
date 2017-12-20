@@ -115,7 +115,12 @@
 		"jpeg_ahb_clk", "jpeg_axi_clk",
 		"mmagic_camss_axi_clk";
 	#clock-cells = <1>;
-	qcom,bus-master-id = <MSM_BUS_MASTER_JPEG>;
+	qcom,msm-bus,name = "smmu-bus-client-jpeg";
+	qcom,msm-bus,num-cases = <2>;
+	qcom,msm-bus,num-paths = <1>;
+	qcom,msm-bus,vectors-KBps =
+				<62 512 0 0>,
+				<62 512 0 1000>;
 };
 
 &vfe_smmu {
@@ -137,7 +142,12 @@
 		"vfe_ahb_clk", "vfe_axi_clk",
 		"mmagic_camss_axi_clk";
 	#clock-cells = <1>;
-	qcom,bus-master-id = <MSM_BUS_MASTER_VFE>;
+	qcom,msm-bus,name = "smmu-bus-client-vfe";
+	qcom,msm-bus,num-cases = <2>;
+	qcom,msm-bus,num-paths = <1>;
+	qcom,msm-bus,vectors-KBps =
+				<29 512 0 0>,
+				<29 512 0 1000>;
 };
 
 &cpp_fd_smmu {
@@ -160,7 +170,12 @@
 		"cpp_ahb_clk", "cpp_axi_clk",
 		"mmagic_camss_axi_clk";
 	#clock-cells = <1>;
-	qcom,bus-master-id = <MSM_BUS_MASTER_CPP>;
+	qcom,msm-bus,name = "smmu-bus-client-cpp";
+	qcom,msm-bus,num-cases = <2>;
+	qcom,msm-bus,num-paths = <1>;
+	qcom,msm-bus,vectors-KBps =
+				<106 512 0 0>,
+				<106 512 0 1000>;
 };
 
 &venus_smmu {
@@ -186,7 +201,12 @@
 		"video_ahb_clk", "video_axi_clk",
 		"mmagic_video_axi_clk";
 	#clock-cells = <1>;
-	qcom,bus-master-id = <MSM_BUS_MASTER_VIDEO_P0>;
+	qcom,msm-bus,name = "smmu-bus-client-video-p0";
+	qcom,msm-bus,num-cases = <2>;
+	qcom,msm-bus,num-paths = <1>;
+	qcom,msm-bus,vectors-KBps =
+				<63 512 0 0>,
+				<63 512 0 1000>;
 };
 
 &mdp_smmu {
@@ -208,7 +228,12 @@
 		"mdp_ahb_clk", "mdp_axi_clk",
 		"mmagic_mdss_axi_clk";
 	#clock-cells = <1>;
-	qcom,bus-master-id = <MSM_BUS_MASTER_MDP_PORT0>;
+	qcom,msm-bus,name = "smmu-bus-client-mdp-port0";
+	qcom,msm-bus,num-cases = <2>;
+	qcom,msm-bus,num-paths = <1>;
+	qcom,msm-bus,vectors-KBps =
+				<22 512 0 0>,
+				<22 512 0 1000>;
 };
 
 &rot_smmu {
@@ -229,7 +254,12 @@
 		"rot_ahb_clk", "rot_axi_clk",
 		"mmagic_mdss_axi_clk";
 	#clock-cells = <1>;
-	qcom,bus-master-id = <MSM_BUS_MASTER_ROTATOR>;
+	qcom,msm-bus,name = "smmu-bus-client-rotator";
+	qcom,msm-bus,num-cases = <2>;
+	qcom,msm-bus,num-paths = <1>;
+	qcom,msm-bus,vectors-KBps =
+				<25 512 0 0>,
+				<25 512 0 1000>;
 };
 
 &kgsl_smmu {

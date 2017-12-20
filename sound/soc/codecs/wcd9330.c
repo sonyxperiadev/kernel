@@ -737,7 +737,7 @@ int wcd9330_get_codec_info(struct wcd9xxx *wcd9xxx,
 {
 	u16 id_minor, id_major;
 	struct regmap *wcd_regmap;
-	int rc, val, version = 0;
+	int rc, version = 0;
 
 	if (!wcd9xxx || !wcd_type)
 		return -EINVAL;
@@ -1275,7 +1275,7 @@ static enum wcd9xxx_buck_volt tomtom_codec_get_buck_mv(
 	struct wcd9xxx_pdata *pdata = tomtom->resmgr.pdata;
 	int i;
 
-	for (i = 0; i < ARRAY_SIZE(pdata->regulator); i++) {
+	for (i = 0; i < pdata->num_supplies; i++) {
 		if (!strcmp(pdata->regulator[i].name,
 					 WCD9XXX_SUPPLY_BUCK_NAME)) {
 			if ((pdata->regulator[i].min_uV ==
@@ -7368,7 +7368,7 @@ static int tomtom_handle_pdata(struct tomtom_priv *tomtom)
 			0xE0, (pdata->ocp.hph_ocp_limit << 5));
 	}
 
-	for (i = 0; i < ARRAY_SIZE(pdata->regulator); i++) {
+	for (i = 0; i < pdata->num_supplies; i++) {
 		if (pdata->regulator[i].name &&
 		    !strcmp(pdata->regulator[i].name, "CDC_VDDA_RX")) {
 			if (pdata->regulator[i].min_uV == 1800000 &&

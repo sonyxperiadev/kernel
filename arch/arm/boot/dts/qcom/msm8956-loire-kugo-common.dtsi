@@ -1,0 +1,416 @@
+/* arch/arm/boot/dts/qcom/msm8956-loire-kugo-common.dtsi
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+/*
+ * Copyright (C) 2016 Sony Mobile Communications Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2, as
+ * published by the Free Software Foundation.
+ */
+
+&soc {
+	/* I2C : BLSP8 */
+	i2c@7af8000 { /* BLSP2 QUP4 */
+		compatible = "qcom,i2c-msm-v2";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		qcom,clk-freq-out = <355000>;
+		qcom,clk-freq-in = <19200000>;
+
+		qcom,master-id = <84>;
+		reg-names = "qup_phys_addr";
+		reg = <0x7AF8000 0x600>;
+		interrupt-names = "qup_irq";
+		interrupts = <0 302 0>;
+		clock-names = "iface_clk", "core_clk";
+		clocks = <&clock_gcc clk_gcc_blsp2_ahb_clk>,
+			 <&clock_gcc clk_gcc_blsp2_qup4_i2c_apps_clk>;
+		pinctrl-names = "i2c_active", "i2c_sleep";
+		pinctrl-0 = <&msm_gpio_18_act &msm_gpio_19_act>;
+		pinctrl-1 = <&msm_gpio_18_sus &msm_gpio_19_sus>;
+		status = "okay";
+		tcs3490@72 {
+			compatible = "ams,tcs3490";
+			reg = <0x72>;
+			interrupt-parent = <&msm_gpio>;
+			interrupts = <13 0x0>;
+			rgbcir_vdd-supply = <&pm8950_l5>;
+			ams,rgbcir-supply_name = "rgbcir_vdd";
+			rgbcir_gpio_vdd-supply = <&camera_rgbcir_vreg>;
+			ams,rgbcir-gpio-vreg-name = "rgbcir_gpio_vdd";
+			pinctrl-names = "rgbcir_irq_active", "rgbcir_irq_suspend";
+			pinctrl-0 = <&msm_gpio_13_act>;
+			pinctrl-1 = <&msm_gpio_13_sus>;
+		};
+		tof_sensor@52 {
+			compatible = "tof_sensor";
+			reg = <0x52>;
+			interrupt-parent = <&msm_gpio>;
+			interrupts = <12 0x0>;
+			tof_avdd-supply = <&pm8950_l5>;
+			tof-supply_name = "tof_avdd";
+			pinctrl-names = "tof_irq_active", "tof_irq_suspend";
+			pinctrl-0 = <&msm_gpio_12_act>;
+			pinctrl-1 = <&msm_gpio_12_sus>;
+			sony,tof-sensor-name = "VL53L0";
+			sony,tof-need-cam-on = <1>;
+			sony,tof-sensor-facing = <0>;
+		};
+	};
+
+	/* I2C : BLSP4 */
+	i2c@78b8000 { /* BLSP1 QUP3 */
+		synaptics_clearpad@2c {
+			preset_x_max = <719>;
+			preset_y_max = <1279>;
+
+			/* Stamina Mode */
+			stamina_mode_supported = <0x80000003>;
+
+			/* F01_RMI_CTRL05: Doze Holdoff */
+			doze_default_time = <50>;
+			doze_glove_mode_time = <50>;
+			doze_cover_mode_time = <50>;
+
+			/* chip settings */
+			S332U {
+				calibrate_on_fwflash = <0>;
+			};
+		};
+	};
+
+	somc_pinctrl: somc_pinctrl {
+		/* If variant specific default setting is needed,
+		   fill pinctrl-1 value in <variant>.dtsi */
+		pinctrl-1 = <&msm_gpio_107_def &msm_gpio_116_def
+			&msm_gpio_131_def>;
+	};
+
+	usb_otg: usb@78db000 {
+		qcom,hsusb-otg-phy-init-seq =
+			<0x74 0x80 0x68 0x81 0x3f 0x82 0x33 0x83 0xffffffff>;
+		qcom,hsusb-otg-phy-init-seq-host =
+			<0x74 0x80 0x64 0x81 0x3f 0x82 0x33 0x83 0xffffffff>;
+	};
+
+	i2c@7af6000 { /* BLSP2 QUP2 */
+		fusb301@25 {
+			status = "okay";
+			compatible = "fusb301";
+			reg = <0x25>;
+			interrupt-parent = <&msm_gpio>;
+			interrupts = <107 0x3>, <131 0x2>;
+			fusb301,cbl_sns-gpio = <&msm_gpio 116 0x00>;
+			fusb301,int-gpio = <&msm_gpio 131 0x00>;
+			fusb301,cbl_det-gpio = <&msm_gpio 107 0x00>;
+			fusb301,use-try-snk-emulation;
+		};
+		as3668@42 {
+			somc,max_current_uA = <0 12000 4500 2700 900 2000 2000>;
+		};
+	};
+
+	bluesleep {
+		compatible = "qcom,bluesleep";
+		bt_host_wake = <&msm_gpio 17 0x00>; /* BT_HOST_WAKE */
+		bt_ext_wake = <&msm_gpio 27 0x00>; /* BT_DEV_WAKE */
+		interrupt-parent = <&msm_gpio>;
+		interrupts = <17 0>;
+		interrupt-names = "host_wake";
+		pinctrl-names = "default", "sleep";
+		pinctrl-0 = <&msm_gpio_17_act &msm_gpio_27_def>;
+		pinctrl-1 = <&msm_gpio_17_sus &msm_gpio_27_def>;
+	};
+
+	bcm43xx {
+		compatible = "bcm,bcm43xx";
+		bcm,reg-on-gpio = <&msm_gpio 36 0x00>; /* BT_REG_ON */
+		pinctrl-names = "default", "sleep";
+		pinctrl-0 = <&msm_gpio_36_def>;
+		pinctrl-1 = <&msm_gpio_36_def>;
+	};
+
+	qcom,sensor-information {
+		sensor_information101: qcom,sensor-information-101 {
+			qcom,sensor-name = "flash_therm";
+		};
+	};
+};
+
+/{
+	loire_kugo_batterydata: qcom,battery-data {
+		#include "batterydata-loire-kugo-send.dtsi"
+	};
+};
+
+&pm8950_gpios {
+	/* GPIO_8: NC (USB_ID_DET_N) */
+	gpio@c700 {
+		qcom,master-en = <0>;		/* Disable */
+		status = "ok";
+	};
+};
+
+/* Regulator config */
+&pm8950_l1 {
+	regulator-min-microvolt = <1100000>;
+	regulator-max-microvolt = <1300000>;
+	qcom,init-voltage = <1200000>;
+	status = "okay";
+};
+
+&msm_gpio {
+	/* GPIO_12: TOF_INT */
+	msm_gpio_12_def: msm_gpio_12def {
+		mux {
+			pins = "gpio12";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio12";
+			drive-strength = <2>;
+			/delete-property/ bias-disable;
+			/delete-property/ output-low;
+			bias-pull-down;
+			input-enable;
+		};
+	};
+
+	msm_gpio_12_sus: msm_gpio_12sus {
+		mux {
+			pins = "gpio12";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio12";
+			drive-strength = <2>;
+			bias-pull-down;
+			input-enable;
+		};
+	};
+
+	msm_gpio_12_act: msm_gpio_12act {
+		mux {
+			pins = "gpio12";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio12";
+			drive-strength = <2>;
+			bias-pull-up;
+		};
+	};
+
+	/* GPIO_13: RGBC_IR_INT */
+	msm_gpio_13_def: msm_gpio_13def {
+		mux {
+			pins = "gpio13";
+			function = "blsp_spi4";
+		};
+		config {
+			pins = "gpio13";
+			drive-strength = <2>;
+			/delete-property/ bias-disable;
+			/delete-property/ output-low;
+			bias-pull-down;
+			input-enable;
+		};
+	};
+
+	msm_gpio_13_sus: msm_gpio_13sus {
+		mux {
+			pins = "gpio13";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio13";
+			drive-strength = <2>;
+			bias-pull-down;
+			input-enable;
+		};
+	};
+
+	msm_gpio_13_act: msm_gpio_13act {
+		mux {
+			pins = "gpio13";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio13";
+			drive-strength = <2>;
+			bias-pull-up;
+		};
+	};
+
+	/* GPIO_18: RGBC-IR & ToF I2C SDA */
+	msm_gpio_18_def: msm_gpio_18def {
+		mux {
+			pins = "gpio18";
+			function = "blsp_i2c8";
+		};
+		config {
+			pins = "gpio18";
+			drive-strength = <2>;
+			/delete-property/ bias-disable;
+			/delete-property/ output-low;
+			bias-pull-down;
+			input-enable;
+		};
+	};
+
+	msm_gpio_18_sus: msm_gpio_18sus {
+		mux {
+			pins = "gpio18";
+			function = "blsp_i2c8";
+		};
+		config {
+			pins = "gpio18";
+			drive-strength = <2>;
+			bias-pull-down;
+			input-enable;
+		};
+	};
+
+	msm_gpio_18_act: msm_gpio_18act {
+		mux {
+			pins = "gpio18";
+			function = "blsp_i2c8";
+		};
+		config {
+			pins = "gpio18";
+			drive-strength = <2>;
+			bias-disable;
+		};
+	};
+
+	/* GPIO_19: RGBC-IR & ToF I2C SCL */
+	msm_gpio_19_def: msm_gpio_19def {
+		mux {
+			pins = "gpio19";
+			function = "blsp_i2c8";
+		};
+		config {
+			pins = "gpio19";
+			drive-strength = <2>;
+			/delete-property/ bias-disable;
+			/delete-property/ output-low;
+			bias-pull-down;
+			input-enable;
+		};
+	};
+
+	msm_gpio_19_sus: msm_gpio_19sus {
+		mux {
+			pins = "gpio19";
+			function = "blsp_i2c8";
+		};
+		config {
+			pins = "gpio19";
+			drive-strength = <2>;
+			bias-pull-down;
+			input-enable;
+		};
+	};
+
+	msm_gpio_19_act: msm_gpio_19act {
+		mux {
+			pins = "gpio19";
+			function = "blsp_i2c8";
+		};
+		config {
+			pins = "gpio19";
+			drive-strength = <2>;
+			bias-disable;
+		};
+	};
+};
+
+/* GPIO_27: BT_DEV_WAKE */
+&msm_gpio_27_def {
+	mux {
+		function = "gpio";
+	};
+};
+
+/* GPIO_36: BT_REG_ON */
+&msm_gpio_36_def {
+	mux {
+		function = "gpio";
+	};
+};
+
+/* GPIO_107: USB_CABLE_DET_N */
+
+/* GPIO_116: USB_CABLE_SENSE_EN */
+
+/* GPIO_131: USB_CC_INT */
+&msm_gpio_131_def {
+	config {
+		/delete-property/ bias-disable;
+		/delete-property/ output-low;
+		bias-pull-up;
+		input-enable;
+	};
+};
+
+&sdc2_data_on {
+	config {
+		drive-strength = <8>;
+	};
+};
+
+&pmi8950_fg {
+	qcom,battery-data = <&loire_kugo_batterydata>;
+	qcom,cold-hot-jeita-hysteresis = <20 20>;
+	somc,cool-warm-jeita-hysteresis = <20 20>;
+};
+
+&pmi8950_charger {
+	qcom,fastchg-current-ma = <2000>;
+	somc,usb-9v-current-max = <1500>;
+	qcom,float-voltage-comp = <0x08>;
+	somc,fastchg-warm-current-ma = <700>;
+	somc,fastchg-cool-current-ma = <700>;
+	somc,thermal-engine-fastchg-current = <2000 1880 1600 1200 1000 700 500 300 300 300 300 300 300 0 0>;
+	somc,thermal-mitigation-usb-5v = <2000 2000 2000 1500 1500 1500 1500 1500 1200 900 700 500 300 0 0>;
+	somc,thermal-mitigation-usb-6v = <2000 2000 2000 1500 1500 1500 1500 1500 1200 900 700 500 300 0 0>;
+	somc,thermal-mitigation-usb-7v = <1800 1800 1800 1500 1200 1200 1200 1200 1200 900 700 500 300 0 0>;
+	somc,thermal-mitigation-usb-8v = <1600 1600 1600 1500 1100 1100 1100 1100 1200 900 700 500 300 0 0>;
+	somc,thermal-mitigation-usb-9v = <1500 1500 1500 1500 1000 1000 1000 1000 1200 900 700 500 300 0 0>;
+	somc,limit-usb-5v-level = <8>;
+	/delete-property/ id_poll_enable;
+	/delete-property/ id_poll_up_interval;
+	/delete-property/ id_poll_up_period;
+	/delete-property/ id_poll_pd_gpio;
+	/delete-property/ id_poll_pd_invert;
+	qcom,external-typec;
+	qcom,typec-psy-name = "typec";
+	somc,typec-current-max = <2000>;
+};
+
+&pmi8950_vadc {
+	chan@10 {
+		label = "flash_therm";
+	};
+};
+
+&spmi_bus {
+	qcom,pmi8950@3 {
+		qcom,leds@d800 {
+			linux,name = "wled:backlight";
+			somc,init-br-ua = <10000>;
+			somc-s1,br-power-save-ua = <800>;
+			qcom,led-strings-list = [00 01];
+			qcom,ilim-ma = <660>;
+		};
+	};
+};

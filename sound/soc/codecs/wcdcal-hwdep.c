@@ -22,7 +22,12 @@
 #include "wcdcal-hwdep.h"
 
 const int cal_size_info[WCD9XXX_MAX_CAL] = {
+#if defined(CONFIG_ARCH_SONY_LOIRE) || defined(CONFIG_ARCH_SONY_TONE) \
+    || defined(CONFIG_ARCH_SONY_YOSHINO)
+	[WCD9XXX_ANC_CAL] = 36864,
+#else
 	[WCD9XXX_ANC_CAL] = 16384,
+#endif
 	[WCD9XXX_MBHC_CAL] = 4096,
 	[WCD9XXX_MAD_CAL] = 4096,
 	[WCD9XXX_VBAT_CAL] = 72,

@@ -146,6 +146,9 @@
  */
 #define WCD9XXX_LINEIN_THRESHOLD 5000000
 
+#define WCD9XXX_COMP_VTH_OFFSET  3
+#define WCD9XXX_PLUG_TYPE_OFFSET 2
+
 static int impedance_detect_en;
 module_param(impedance_detect_en, int,
 			S_IRUGO | S_IWUSR | S_IWGRP);
@@ -851,6 +854,14 @@ static void wcd9xxx_insert_detect_setup(struct wcd9xxx_mbhc *mbhc, bool ins)
 	if (mbhc->mbhc_cfg->gpio_level_insert)
 		snd_soc_write(mbhc->codec, WCD9XXX_A_MBHC_INSERT_DETECT,
 			      (0x68 | (ins ? (1 << 1) : 0)));
+	else if (mbhc->mbhc_cfg->insert_detect_comp_vth ||
+			mbhc->mbhc_cfg->insert_detect_plug_type)
+		snd_soc_write(mbhc->codec, WCD9XXX_A_MBHC_INSERT_DETECT,
+				(mbhc->mbhc_cfg->insert_detect_comp_vth
+					<< WCD9XXX_COMP_VTH_OFFSET
+				| mbhc->mbhc_cfg->insert_detect_plug_type
+					<< WCD9XXX_PLUG_TYPE_OFFSET
+				| (ins ? (1 << 1) : 0)));
 	else
 		snd_soc_write(mbhc->codec, WCD9XXX_A_MBHC_INSERT_DETECT,
 			      (0x6C | (ins ? (1 << 1) : 0)));

@@ -1941,7 +1941,9 @@ static void __dump_mixer(struct seq_file *s, struct mdss_mdp_mixer *mixer,
 		return;
 
 	seq_printf(s, "\n%s Mixer #%d  res=%dx%d roi[%d, %d, %d, %d] %s\n",
-		mixer->type == MDSS_MDP_MIXER_TYPE_INTF ? "Intf" : "Writeback",
+		mixer->type != MDSS_MDP_MIXER_TYPE_WRITEBACK ?
+		(mixer->type != MDSS_MDP_MIXER_TYPE_INTF ?
+		 "Intf without DSPP" : "Intf") : "Writeback",
 		mixer->num, mixer->width, mixer->height,
 		mixer->roi.x, mixer->roi.y, mixer->roi.w, mixer->roi.h,
 		mixer->cursor_enabled ? "w/cursor" : "");

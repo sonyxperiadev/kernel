@@ -806,7 +806,7 @@
 
 	qcom,jpeg@caa0000 {
 		cell-index = <3>;
-		compatible = "qcom,jpegdma";
+		compatible = "qcom,jpeg_dma";
 		reg = <0xcaa0000 0x4000>,
 			<0xca60000 0x3000>;
 		reg-names = "jpeg_hw", "jpeg_vbif";

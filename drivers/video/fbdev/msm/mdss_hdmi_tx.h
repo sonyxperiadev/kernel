@@ -112,6 +112,9 @@ struct hdmi_tx_ctrl {
 	u32 edid_buf_size;
 	u32 s3d_mode;
 
+	u8 aksv[5];
+	//enum hdmi_hdcp_state hdcp_status;
+
 	u8 timing_gen_on;
 	u8 mhl_hpd_on;
 	u8 hdcp_status;

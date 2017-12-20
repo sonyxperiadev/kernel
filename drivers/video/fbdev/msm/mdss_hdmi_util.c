@@ -892,7 +892,7 @@ static int hdmi_ddc_read_retry(struct hdmi_tx_ddc_ctrl *ddc_ctrl)
 			atomic_set(&ddc_ctrl->read_busy_wait_done, 0);
 		} else {
 			reinit_completion(&ddc_ctrl->ddc_sw_done);
-			wait_time = HZ / 2;
+			wait_time = 500;
 		}
 
 		hdmi_ddc_trigger(ddc_ctrl, TRIGGER_READ, false);
@@ -912,7 +912,7 @@ static int hdmi_ddc_read_retry(struct hdmi_tx_ddc_ctrl *ddc_ctrl)
 			ddc_data->timeout_left = time_out_count;
 		} else {
 			time_out_count = wait_for_completion_timeout(
-				&ddc_ctrl->ddc_sw_done, wait_time);
+				&ddc_ctrl->ddc_sw_done, msecs_to_jiffies(wait_time));
 
 			ddc_data->timeout_left =
 				jiffies_to_msecs(time_out_count);
@@ -965,8 +965,8 @@ void hdmi_ddc_config(struct hdmi_tx_ddc_ctrl *ddc_ctrl)
 	 */
 	DSS_REG_W_ND(ddc_ctrl->io, HDMI_DDC_SETUP, 0xFF000000);
 
-	/* Enable reference timer to 19 micro-seconds */
-	DSS_REG_W_ND(ddc_ctrl->io, HDMI_DDC_REF, (1 << 16) | (19 << 0));
+	/* Enable reference timer to 32 micro-seconds */
+	DSS_REG_W_ND(ddc_ctrl->io, HDMI_DDC_REF, (1 << 16) | (32 << 0));
 } /* hdmi_ddc_config */
 
 static void hdmi_hdcp2p2_ddc_clear_status(struct hdmi_tx_ddc_ctrl *ctrl)
@@ -1298,7 +1298,7 @@ int hdmi_ddc_read_seg(struct hdmi_tx_ddc_ctrl *ddc_ctrl)
 		hdmi_ddc_trigger(ddc_ctrl, TRIGGER_READ, true);
 
 		time_out_count = wait_for_completion_timeout(
-			&ddc_ctrl->ddc_sw_done, HZ / 2);
+			&ddc_ctrl->ddc_sw_done, msecs_to_jiffies(500));
 
 		if (!time_out_count) {
 			pr_debug("%s: timedout\n", ddc_data->what);
@@ -1370,7 +1370,7 @@ int hdmi_ddc_write(struct hdmi_tx_ddc_ctrl *ddc_ctrl)
 			atomic_set(&ddc_ctrl->write_busy_wait_done, 0);
 		} else {
 			reinit_completion(&ddc_ctrl->ddc_sw_done);
-			wait_time = HZ / 2;
+			wait_time = 500;
 		}
 
 		hdmi_ddc_trigger(ddc_ctrl, TRIGGER_WRITE, false);
@@ -1390,7 +1390,7 @@ int hdmi_ddc_write(struct hdmi_tx_ddc_ctrl *ddc_ctrl)
 			ddc_data->timeout_left = time_out_count;
 		} else {
 			time_out_count = wait_for_completion_timeout(
-				&ddc_ctrl->ddc_sw_done, wait_time);
+				&ddc_ctrl->ddc_sw_done, msecs_to_jiffies(wait_time));
 
 			ddc_data->timeout_left =
 				jiffies_to_msecs(time_out_count);

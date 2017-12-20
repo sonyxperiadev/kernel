@@ -1,6 +1,13 @@
 #
 # QCOM Soc drivers
 #
+config MSM_CPU_ACC_CONTROLLER
+	bool "CPU Operations and ACC Clock Controller"
+	help
+	  This driver enables the kernel to manage the L2 Cache
+	  Clock Controller and program the SCM to bring up/down
+	  the CPUs in the SoC.
+
 config MSM_INRUSH_CURRENT_MITIGATION
 	bool "Inrush-current mitigation Driver"
 	help
@@ -498,7 +505,7 @@ config MSM_SECURE_BUFFER
 
 config MSM_TZ_SMMU
 	bool "Helper functions for SMMU configuration through TZ"
-	depends on ARCH_MSMTHULIUM
+	depends on ARCH_MSMTHULIUM || ARCH_MSM8916
 	help
 	  Say 'Y' here for targets that need to call into TZ to configure
 	  SMMUs for any reason (for example, for errata workarounds or
@@ -741,6 +748,15 @@ config MSM_PIL
 
 	  Say yes to support these devices.
 
+config MSM_PIL_LEGACY
+	bool "Peripheral image loading for Legacy devices"
+	depends on MSM_PIL
+	help
+	  Some peripherals need to be loaded into unprotected memory before they can be
+	  brought out of reset.
+
+	  Say yes to support these legacy devices.
+
 config MSM_PIL_SSR_GENERIC
 	tristate "MSM Subsystem Boot Support"
 	depends on MSM_PIL && MSM_SUBSYSTEM_RESTART
@@ -802,6 +818,13 @@ config MSM_AVTIMER
 	help
 		This driver gets the Q6 out of power collapsed state and
 		exposes ioctl control to read avtimer tick.
+
+config MSM_PACMAN
+	tristate "Enable the Peripheral Access Control Manager (PACMan)"
+	help
+	  Add support for the Peripheral Access Control Manager (PACMan). This
+	  driver allows reconfiguration of the Bus Access Manager Low Speed
+	  peripheral (BLSP) ownership.
 
 config MSM_KERNEL_PROTECT
 	bool "Protect kernel text by removing write permissions in stage-2"
@@ -923,6 +946,14 @@ config QCOM_CX_IPEAK
 	  clients are going to cross their thresholds then Cx ipeak hw module will raise
 	  an interrupt to cDSP block to throttle cDSP fmax.
 
+config MSM_CPU_PWR_CTL
+	bool "Cpu subsystem power control"
+	depends on SMP && (ARM || ARM64)
+	default y
+	help
+	Provides routines to power on cpu rails and l2 cache
+	controller during coldboot.
+
 config MSM_CACHE_M4M_ERP64
        bool "Cache and M4M error report"
        depends on ARCH_MSM8996
@@ -946,5 +977,14 @@ config MSM_CACHE_M4M_ERP64_PANIC_ON_UE
        help
          Say 'Y' here to cause kernel panic when uncorrectable cache/M4M errors
          are detected.
+
+config MSM_BAM_DMUX
+	bool "BAM Data Mux Driver"
+	depends on SPS
+	help
+	  Support Muxed Data Channels over BAM interface.
+	  BAM has a limited number of pipes.  This driver
+	  provides a means to support more logical channels
+	  via muxing than BAM could without muxing.
 
 source "drivers/soc/qcom/memshare/Kconfig"

@@ -586,6 +586,11 @@ static void msm_vfe40_read_and_clear_irq_status(struct vfe_device *vfe_dev,
 
 	*irq_status0 &= vfe_dev->irq0_mask;
 	*irq_status1 &= vfe_dev->irq1_mask;
+	if (*irq_status0 &&
+		(*irq_status0 == msm_camera_io_r(vfe_dev->vfe_base + 0x38))) {
+		msm_camera_io_w(*irq_status0, vfe_dev->vfe_base + 0x30);
+		msm_camera_io_w_mb(1, vfe_dev->vfe_base + 0x24);
+	}
 
 	if (*irq_status1 & (1 << 0)) {
 		vfe_dev->error_info.camif_status =
@@ -2188,7 +2193,7 @@ static struct msm_vfe_axi_hardware_info msm_vfe40_axi_hw_info = {
 	.num_comp_mask = 3,
 	.num_rdi = 3,
 	.num_rdi_master = 3,
-	.min_wm_ub = 64,
+	.min_wm_ub = 96,
 	.scratch_buf_range = SZ_32M + SZ_4M,
 };
 

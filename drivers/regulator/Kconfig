@@ -863,6 +863,20 @@ config REGULATOR_QPNP_OLEDB
 	  configuration via the regulator framework. The configurable range of
 	  this bias is 5 V to 8.1 V.
 
+config REGULATOR_QPNP_LABIBB_SOMC
+	depends on REGULATOR_QPNP_LABIBB
+	bool "QPNP LAB/IBB Regulator - SoMC enhancements"
+	help
+	  This activates SoMC specific enhancements to QTI QPNP LAB/IBB
+	  regulator driver.
+
+config SOMC_LCD_OCP_ENABLED
+	depends on REGULATOR_QPNP_LABIBB_SOMC
+	bool "QPNP LAB/IBB Regulator - SoMC LCD OverCurrent Protection"
+	help
+	  This activates SoMC specific LCD Over Current Protection (OCP)
+	  function in LAB/IBB driver.
+
 config REGULATOR_SPM
 	bool "SPM regulator driver"
 	depends on SPMI

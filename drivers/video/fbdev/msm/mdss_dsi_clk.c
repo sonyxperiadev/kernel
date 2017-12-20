@@ -107,15 +107,39 @@ static int dsi_core_clk_start(struct dsi_core_clks *c_clks)
 		}
 	}
 
+	if (c_clks->clks.tbu_clk) {
+		rc = clk_prepare_enable(c_clks->clks.tbu_clk);
+		if (rc) {
+			pr_err("%s: failed to enable mdp tbu clk.rc=%d\n",
+				__func__, rc);
+			goto disable_mmss_misc_clk;
+		}
+	}
+
+	if (c_clks->clks.tbu_rt_clk) {
+		rc = clk_prepare_enable(c_clks->clks.tbu_rt_clk);
+		if (rc) {
+			pr_err("%s: failed to enable mdp tbu rt clk.rc=%d\n",
+				__func__, rc);
+			goto disable_tbu_clk;
+		}
+	}
+
 	rc = mdss_update_reg_bus_vote(mngr->reg_bus_clt, VOTE_INDEX_LOW);
 	if (rc) {
 		pr_err("failed to vote for reg bus\n");
-		goto disable_mmss_misc_clk;
+		goto disable_tbu_rt_clk;
 	}
 
 	pr_debug("%s:CORE CLOCK IS ON\n", mngr->name);
 	return rc;
 
+disable_tbu_rt_clk:
+	if (c_clks->clks.tbu_rt_clk)
+		clk_disable_unprepare(c_clks->clks.tbu_rt_clk);
+disable_tbu_clk:
+	if (c_clks->clks.tbu_clk)
+		clk_disable_unprepare(c_clks->clks.tbu_clk);
 disable_mmss_misc_clk:
 	if (c_clks->clks.mmss_misc_ahb_clk)
 		clk_disable_unprepare(c_clks->clks.mmss_misc_ahb_clk);
@@ -141,6 +165,10 @@ static int dsi_core_clk_stop(struct dsi_core_clks *c_clks)
 	mngr = container_of(c_clks, struct mdss_dsi_clk_mngr, core_clks);
 
 	mdss_update_reg_bus_vote(mngr->reg_bus_clt, VOTE_INDEX_DISABLE);
+	if (c_clks->clks.tbu_clk)
+		clk_disable_unprepare(c_clks->clks.tbu_clk);
+	if (c_clks->clks.tbu_rt_clk)
+		clk_disable_unprepare(c_clks->clks.tbu_rt_clk);
 	if (c_clks->clks.mmss_misc_ahb_clk)
 		clk_disable_unprepare(c_clks->clks.mmss_misc_ahb_clk);
 	clk_disable_unprepare(c_clks->clks.axi_clk);

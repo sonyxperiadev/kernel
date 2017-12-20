@@ -820,3 +820,11 @@ config MMC_MTK
 	  If you have a machine with a integrated SD/MMC card reader, say Y or M here.
 	  This is needed if support for any SD/SDIO/MMC devices is required.
 	  If unsure, say N.
+
+config MMC_ENABLE_CLK_SCALE
+	bool "Clock Scaling of SDHCI support"
+	depends on MMC_SDHCI_MSM
+	default n
+	help
+	  This selects support for the SD/MMC Host Controller on
+	  Clock Scaling.

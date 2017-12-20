@@ -596,6 +596,15 @@ config LEDS_QPNP
 	  LEDs in both PWM and light pattern generator (LPG) modes.  For older
 	  PMICs, it also supports WLEDs and flash LEDs.
 
+config LEDS_QPNP_FLASH
+	tristate "Support for QPNP Flash LEDs"
+	depends on LEDS_CLASS && SPMI
+	help
+	  This driver supports the flash LED functionality of Qualcomm
+	  Technologies, Inc. QPNP PMICs.  This driver supports PMICs up through
+	  PM8994.  It can configure the flash LED target current for several
+	  independent channels.
+
 config LEDS_QPNP_FLASH_V2
 	tristate "Support for QPNP V2 Flash LEDs"
 	depends on LEDS_CLASS && MFD_SPMI_PMIC
@@ -632,6 +641,21 @@ config LEDS_VERSATILE
 	help
 	  This option enabled support for the LEDs on the ARM Versatile
 	  and RealView boards. Say Y to enabled these.
+
+config LEDS_AS3668
+	tristate "LED driver for AS3668"
+	depends on LEDS_CLASS
+	depends on I2C
+	help
+	  This option enables support for austriamicrosystems
+	  AS3668 led controller. It does not use LED framework
+	  but has its own sysfs API due to the special functionality
+	  it provides.
+
+config LEDS_AS3668_EXTENSION
+	tristate "AS3668 LED driver extension"
+	help
+	  This option enables extensional RGB LED function.
 
 comment "LED Triggers"
 source "drivers/leds/trigger/Kconfig"
