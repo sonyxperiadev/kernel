@@ -670,3 +670,5 @@
 		qcom,pluggable;
 	};
 };
+
+#include "msm8998-mdss-panels.dtsi"
