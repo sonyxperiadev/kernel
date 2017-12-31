@@ -44,14 +44,14 @@ config BCM4359
 config BCMDHD_FW_PATH
 	depends on BCMDHD
 	string "Firmware path"
-	default "/system/vendor/firmware/fw_bcmdhd.bin"
+	default "/vendor/firmware/fw_bcmdhd.bin"
 	---help---
 	  Path to the firmware file.
 
 config BCMDHD_NVRAM_PATH
 	depends on BCMDHD
 	string "NVRAM path"
-	default "/system/etc/wifi/bcmdhd.cal"
+	default "/vendor/firmware/bcmdhd.cal"
 	---help---
 	  Path to the calibration file.
 
