@@ -19,7 +19,6 @@
 
 &soc {
 	/delete-node/ qcom,camera-flash@0;
-	/delete-node/ qcom,camera-flash@1;
 	/delete-node/ qcom,gpio-regulator@0;
 
 	led_flash0: qcom,camera-flash@0 {
