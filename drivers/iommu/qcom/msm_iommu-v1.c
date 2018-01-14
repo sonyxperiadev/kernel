@@ -527,6 +527,12 @@ static void __program_context(struct msm_iommu_drvdata *iommu_drvdata,
 	 * both these registers are separated by more than 1KB. */
 	mb();
 
+	/* If requested, disable stall on this context bank */
+	if (priv->attributes & (1 << DOMAIN_ATTR_CB_STALL_DISABLE)) {
+		SET_CB_SCTLR_CFCFG(cb_base, ctx, 0);
+		SET_CB_SCTLR_HUPCF(cb_base, ctx, 1);
+	}
+
 	SET_CB_SCTLR_CFIE(cb_base, ctx, 1);
 	SET_CB_SCTLR_CFRE(cb_base, ctx, 1);
 	SET_CB_SCTLR_AFE(cb_base, ctx, 1);
@@ -1393,6 +1399,10 @@ static int msm_iommu_domain_set_attr(struct iommu_domain *domain,
 		 * does not support this mere trick.
 		 */
 		break;
+	case DOMAIN_ATTR_CB_STALL_DISABLE:
+		if (*((int *)data))
+			priv->attributes |= 1 << DOMAIN_ATTR_CB_STALL_DISABLE;
+		break;
 	default:
 		return -EINVAL;
 	}
@@ -1453,6 +1463,10 @@ static int msm_iommu_domain_get_attr(struct iommu_domain *domain,
 		 * does not support this mere trick.
 		 */
 		*((int *)data) = 0;
+		break;
+	case DOMAIN_ATTR_CB_STALL_DISABLE:
+		*((int *)data) = !!(priv->attributes
+			& (1 << DOMAIN_ATTR_CB_STALL_DISABLE));
 		break;
 	default:
 		return -EINVAL;
