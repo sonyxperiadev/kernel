@@ -190,6 +190,7 @@ struct msm_vidc_platform_resources {
 	struct regulator_set regulator_set;
 	struct clock_set clock_set;
 	struct clock_voltage_info cv_info;
+	struct clock_voltage_info cv_info_vp9d;
 	struct bus_set bus_set;
 	bool use_non_secure_pil;
 	bool sw_power_collapsible;
