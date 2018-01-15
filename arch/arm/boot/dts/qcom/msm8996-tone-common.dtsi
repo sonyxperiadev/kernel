@@ -22,13 +22,6 @@
 	};
 
 	reserved-memory {
-		debug_region: debug_region@a7e00000 {
-			compatible = "removed-dma-pool", "qcom,debug_memory";
-			no-map;
-			reg = <0 0xa7e00000 0 0x100000>;
-			label = "debug_mem";
-		};
-
 		pstore_reserve_mem: pstore_reserve_mem_region_region@a7f00000 {
 			compatible = "removed-dma-pool";
 			no-map;
