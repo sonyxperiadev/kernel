@@ -3144,6 +3144,14 @@
 	status = "disabled";
 };
 
+&mdss_fb0 {
+	/delete-node/ qcom,cont-splash-memory;
+};
+
+&mdss_fb2 {
+	/delete-node/ qcom,cont-splash-memory;
+};
+
 &labibb {
 	qcom,lab@de00 {
 		qcom,qpnp-lab-init-voltage = <5700000>;
