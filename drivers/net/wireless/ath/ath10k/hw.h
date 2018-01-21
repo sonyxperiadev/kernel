@@ -369,6 +369,7 @@ struct ath10k_hw_values {
 	u8 num_target_ce_config_wlan;
 	u16 ce_desc_meta_data_mask;
 	u8 ce_desc_meta_data_lsb;
+	u8 default_listen_interval;
 };
 
 extern const struct ath10k_hw_values qca988x_values;
@@ -628,6 +629,7 @@ ath10k_rx_desc_get_l3_pad_bytes(struct ath10k_hw_params *hw,
 #define TARGET_HL_10_TLV_NUM_PEERS		14
 #define TARGET_HL_10_TLV_AST_SKID_LIMIT		6
 #define TARGET_HL_10_TLV_NUM_WDS_ENTRIES	2
+#define TARGET_HL_1_0_NUM_MSDU_DESC		(3600)
 
 /* Diagnostic Window */
 #define CE_DIAG_PIPE	7
