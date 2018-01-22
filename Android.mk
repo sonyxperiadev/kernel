@@ -16,7 +16,7 @@
 # Android makefile to build kernel as a part of Android Build
 
 ifeq ($(BUILD_KERNEL),true)
-ifeq ($(filter-out loire tone yoshino,$(PRODUCT_PLATFORM)),)
+ifeq ($(PRODUCT_PLATFORM_SOD),true)
 
 KERNEL_SRC := $(call my-dir)
 
