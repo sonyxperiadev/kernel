@@ -38,6 +38,7 @@
 
 #include "qseecom_kernel.h"
 
+#define SRMAPP_NAME            "hdcpsrm"
 #define TZAPP_NAME            "hdcp2p2"
 #define HDCP1_APP_NAME        "hdcp1"
 #define QSEECOM_SBUFF_SIZE    0x1000
@@ -92,6 +93,8 @@
 #define RXINFO_SIZE           2
 #define SEQ_NUM_V_SIZE        3
 
+#define HDCP_SRM_CMD_CHECK_DEVICE_ID 2
+
 #define RCVR_ID_SIZE BITS_40_IN_BYTES
 #define MAX_RCVR_IDS_ALLOWED_IN_LIST 31
 #define MAX_RCVR_ID_LIST_SIZE \
@@ -116,7 +119,7 @@
 #define HDCP_CREATE_DEVICE_ID(x)               (HDCP_DEVICE_ID | (x))
 
 #define HDCP_TXMTR_HDMI                        HDCP_CREATE_DEVICE_ID(1)
-
+#define HDCP_TXMTR_DP                          HDCP_CREATE_DEVICE_ID(2)
 #define HDCP_TXMTR_SERVICE_ID                 0x0001000
 #define SERVICE_CREATE_CMD(x)                 (HDCP_TXMTR_SERVICE_ID | x)
 
@@ -138,6 +141,7 @@
 #define HDCP_SESSION_INIT                     SERVICE_CREATE_CMD(16)
 #define HDCP_SESSION_DEINIT                   SERVICE_CREATE_CMD(17)
 #define HDCP_TXMTR_START_AUTHENTICATE         SERVICE_CREATE_CMD(18)
+#define HDCP_TXMTR_VALIDATE_RECEIVER_ID_LIST  SERVICE_CREATE_CMD(19)
 
 #define HCDP_TXMTR_GET_MAJOR_VERSION(v) (((v) >> 16) & 0xFF)
 #define HCDP_TXMTR_GET_MINOR_VERSION(v) (((v) >> 8) & 0xFF)
@@ -435,6 +439,17 @@ struct __attribute__ ((__packed__)) hdcp_update_srm_rsp {
 	uint32_t commandid;
 };
 
+struct __attribute__ ((__packed__)) hdcp_srm_check_device_ids_req {
+	uint32_t commandid;
+	uint32_t num_device_ids;
+	uint8_t device_ids[1];
+};
+
+struct __attribute__ ((__packed__)) hdcp_srm_check_device_ids_rsp {
+	uint32_t commandid;
+	int32_t retval;
+};
+
 struct __attribute__ ((__packed__)) hdcp_get_topology_req {
 	uint32_t commandid;
 	uint32_t ctxhandle;
@@ -483,6 +498,29 @@ struct __attribute__ ((__packed__)) hdcp_start_auth_rsp {
 	uint32_t timeout;
 	uint32_t msglen;
 	uint8_t message[MAX_TX_MESSAGE_SIZE];
+};
+
+struct __attribute__ ((__packed__)) hdcp_rcv_id_list_req {
+	uint32_t commandid;
+	uint32_t ctxHandle;
+};
+struct __attribute__ ((__packed__)) hdcp_rcv_id_list_rsp {
+	uint32_t status;
+	uint32_t commandid;
+};
+
+/*
+ * struct hdcp1_lib_handle - handle for hdcp1 client
+ * @qseecom_handle - for sending commands to hdcp1 TA
+ * @srm_handle - for sending commands to SRM TA
+ * @client_ops - handle to call APIs exposed by hdcp1 client
+ * @client_ctx - client context maintained by hdmi
+ */
+struct hdcp1_lib_handle {
+	struct qseecom_handle *qsee_handle;
+	struct qseecom_handle *srm_handle;
+	struct hdcp_client_ops *client_ops;
+	void *client_ctx;
 };
 
 /*
@@ -574,7 +612,10 @@ static void hdcp_lib_stream(struct hdcp_lib_handle *handle);
 static int hdcp_lib_txmtr_init(struct hdcp_lib_handle *handle);
 static int hdcp_lib_txmtr_init_legacy(struct hdcp_lib_handle *handle);
 
-static struct qseecom_handle *hdcp1_handle;
+static struct qseecom_handle *hdcpsrm_handle;
+
+static struct hdcp1_lib_handle *hdcp1_handle;
+
 static bool hdcp1_supported = true;
 static bool hdcp1_enc_enabled;
 static struct mutex hdcp1_ta_cmd_lock;
@@ -639,7 +680,8 @@ static int hdcp_lib_get_next_message(struct hdcp_lib_handle *handle,
 	case LC_SEND_L_PRIME_MESSAGE_ID:
 		return SKE_SEND_EKS_MESSAGE_ID;
 	case SKE_SEND_EKS_MESSAGE_ID:
-		if (!handle->repeater_flag)
+		if (!handle->repeater_flag &&
+			handle->device_type == HDCP_TXMTR_DP)
 			return SKE_SEND_TYPE_ID;
 	case SKE_SEND_TYPE_ID:
 	case REPEATER_AUTH_STREAM_READY_MESSAGE_ID:
@@ -1043,6 +1085,15 @@ static int hdcp_lib_library_load(struct hdcp_lib_handle *handle)
 		goto exit;
 	}
 
+	if (!hdcpsrm_handle) {
+		rc = qseecom_start_app(&hdcpsrm_handle,
+					SRMAPP_NAME, QSEECOM_SBUFF_SIZE);
+		if (rc) {
+			pr_err("qseecom_start_app failed for SRM TA %d\n", rc);
+			goto exit;
+		}
+	}
+
 	handle->hdcp_state |= HDCP_STATE_APP_LOADED;
 	pr_debug("qseecom_start_app success\n");
 
@@ -1112,10 +1163,17 @@ static int hdcp_lib_library_unload(struct hdcp_lib_handle *handle)
 		goto exit;
 	}
 
-	/* deallocate the resources for qseecom handle */
+	/* deallocate the resources for qseecom hdcp2p2 handle */
 	rc = qseecom_shutdown_app(&handle->qseecom_handle);
 	if (rc) {
-		pr_err("qseecom_shutdown_app failed err: %d\n", rc);
+		pr_err("hdcp2p2 qseecom_shutdown_app failed err: %d\n", rc);
+		goto exit;
+	}
+
+	/* deallocate the resources for qseecom hdcpsrm handle */
+	rc = qseecom_shutdown_app(&hdcpsrm_handle);
+	if (rc) {
+		pr_err("hdcpsrm qseecom_shutdown_app failed err: %d\n", rc);
 		goto exit;
 	}
 
@@ -1778,6 +1836,19 @@ exit:
 	return rc;
 }
 
+static void hdcp_lib_prep_type_id(struct hdcp_lib_handle *handle,
+	struct hdmi_hdcp_wakeup_data *cdata)
+{
+	memset(handle->listener_buf, 0, MAX_TX_MESSAGE_SIZE);
+	handle->listener_buf[0] = SKE_SEND_TYPE_ID;
+	handle->msglen = 2;
+	cdata->cmd = HDMI_HDCP_WKUP_CMD_SEND_MESSAGE;
+	cdata->send_msg_buf = handle->listener_buf;
+	cdata->send_msg_len = handle->msglen;
+	handle->last_msg = hdcp_lib_get_next_message(handle,
+						cdata);
+}
+
 static void hdcp_lib_msg_sent(struct hdcp_lib_handle *handle)
 {
 	struct hdmi_hdcp_wakeup_data cdata = { HDMI_HDCP_WKUP_CMD_INVALID };
@@ -1802,18 +1873,29 @@ static void hdcp_lib_msg_sent(struct hdcp_lib_handle *handle)
 		cdata.cmd = HDMI_HDCP_WKUP_CMD_LINK_POLL;
 		break;
 	case SKE_SEND_EKS_MESSAGE_ID:
+		/*
+		 * a) if its a repeater irrespective of device type we
+		 *    start CMD_LINK_POLL to trigger repeater auth
+		 * b) if its not a repeater and device is DP we
+		 *    first send the SKE_SEND_TYPE_ID and upon success
+		 *    enable encryption
+		 * c) if its not a repeater and device is HDMI we
+		 *    dont send SKE_SEND_TYPE_ID and enable encryption
+		 *    and start part III of authentication
+		 */
 		if (handle->repeater_flag) {
 			/* poll for link check */
 			cdata.cmd = HDMI_HDCP_WKUP_CMD_LINK_POLL;
-		} else {
-			memset(handle->listener_buf, 0, MAX_TX_MESSAGE_SIZE);
-			handle->listener_buf[0] = SKE_SEND_TYPE_ID;
-			handle->msglen = 2;
-			cdata.cmd = HDMI_HDCP_WKUP_CMD_SEND_MESSAGE;
-			cdata.send_msg_buf = handle->listener_buf;
-			cdata.send_msg_len = handle->msglen;
-			handle->last_msg = hdcp_lib_get_next_message(handle,
-						&cdata);
+		} else if (handle->device_type == HDCP_TXMTR_DP) {
+			hdcp_lib_prep_type_id(handle, &cdata);
+		} else if (handle->device_type == HDCP_TXMTR_HDMI) {
+			if (!hdcp_lib_enable_encryption(handle)) {
+				handle->authenticated = true;
+				cdata.cmd = HDMI_HDCP_WKUP_CMD_STATUS_SUCCESS;
+				hdcp_lib_wakeup_client(handle, &cdata);
+			}
+			/* poll for link check */
+			cdata.cmd = HDMI_HDCP_WKUP_CMD_LINK_POLL;
 		}
 		break;
 	case REPEATER_AUTH_SEND_ACK_MESSAGE_ID:
@@ -2229,23 +2311,60 @@ static void hdcp_lib_wait_work(struct kthread_work *work)
 bool hdcp1_check_if_supported_load_app(void)
 {
 	int rc = 0;
+	bool hdcp1_srm_supported = true;
 
 	/* start hdcp1 app */
-	if (hdcp1_supported && !hdcp1_handle) {
-		rc = qseecom_start_app(&hdcp1_handle, HDCP1_APP_NAME,
-				       QSEECOM_SBUFF_SIZE);
+	if (hdcp1_supported && !hdcp1_handle->qsee_handle) {
+		rc = qseecom_start_app(&hdcp1_handle->qsee_handle,
+				HDCP1_APP_NAME,
+				QSEECOM_SBUFF_SIZE);
 		if (rc) {
-			pr_err("qseecom_start_app failed %d\n", rc);
+			pr_err("hdcp1 qseecom_start_app failed %d\n", rc);
 			hdcp1_supported = false;
-		} else {
-			mutex_init(&hdcp1_ta_cmd_lock);
+			kfree(hdcp1_handle);
+		}
+	}
+
+	/* if hdcp1 app succeeds load SRM TA as well */
+	if (hdcp1_supported && !hdcp1_handle->srm_handle) {
+		mutex_init(&hdcp1_ta_cmd_lock);
+		rc = qseecom_start_app(&hdcp1_handle->srm_handle,
+				SRMAPP_NAME,
+				QSEECOM_SBUFF_SIZE);
+		if (rc) {
+			hdcp1_srm_supported = false;
+			pr_err("hdcp1_srm qseecom_start_app failed %d\n", rc);
 		}
 	}
 
 	pr_debug("hdcp1 app %s loaded\n",
 		 hdcp1_supported ? "successfully" : "not");
+	pr_debug("hdcp1 srm app %s loaded\n",
+		 hdcp1_srm_supported ? "successfully" : "not");
 
 	return hdcp1_supported;
+}
+
+void hdcp1_client_register(void *client_ctx, struct hdcp_client_ops *ops)
+{
+	/* initialize the hdcp1 handle */
+	hdcp1_handle = kzalloc(sizeof(*hdcp1_handle), GFP_KERNEL);
+
+	if (hdcp1_handle) {
+		hdcp1_handle->client_ops = ops;
+		hdcp1_handle->client_ctx = client_ctx;
+	}
+}
+
+void hdcp1_client_unregister(void)
+{
+	if (hdcp1_handle && hdcp1_handle->qsee_handle)
+		qseecom_shutdown_app(&hdcp1_handle->qsee_handle);
+
+	if (hdcp1_handle && hdcp1_handle->srm_handle)
+		qseecom_shutdown_app(&hdcp1_handle->srm_handle);
+
+	kfree(hdcp1_handle);
 }
 
 /* APIs exposed to all clients */
@@ -2254,6 +2373,7 @@ int hdcp1_set_keys(uint32_t *aksv_msb, uint32_t *aksv_lsb)
 	int rc = 0;
 	struct hdcp1_key_set_req *key_set_req;
 	struct hdcp1_key_set_rsp *key_set_rsp;
+	struct qseecom_handle *hdcp1_qsee_handle;
 
 	if (aksv_msb == NULL || aksv_lsb == NULL)
 		return -EINVAL;
@@ -2261,12 +2381,17 @@ int hdcp1_set_keys(uint32_t *aksv_msb, uint32_t *aksv_lsb)
 	if (!hdcp1_supported || !hdcp1_handle)
 		return -EINVAL;
 
+	hdcp1_qsee_handle = hdcp1_handle->qsee_handle;
+
+	if (!hdcp1_qsee_handle)
+		return -EINVAL;
+
 	/* set keys and request aksv */
-	key_set_req = (struct hdcp1_key_set_req *)hdcp1_handle->sbuf;
+	key_set_req = (struct hdcp1_key_set_req *)hdcp1_qsee_handle->sbuf;
 	key_set_req->commandid = HDCP1_SET_KEY_MESSAGE_ID;
-	key_set_rsp = (struct hdcp1_key_set_rsp *)(hdcp1_handle->sbuf +
+	key_set_rsp = (struct hdcp1_key_set_rsp *)(hdcp1_qsee_handle->sbuf +
 			   QSEECOM_ALIGN(sizeof(struct hdcp1_key_set_req)));
-	rc = qseecom_send_command(hdcp1_handle, key_set_req,
+	rc = qseecom_send_command(hdcp1_qsee_handle, key_set_req,
 				  QSEECOM_ALIGN(sizeof
 						(struct hdcp1_key_set_req)),
 				  key_set_rsp,
@@ -2297,11 +2422,133 @@ int hdcp1_set_keys(uint32_t *aksv_msb, uint32_t *aksv_lsb)
 	return 0;
 }
 
+int hdcp1_validate_receiver_ids(struct hdcp_srm_device_id_t *device_ids,
+	uint32_t device_id_cnt)
+{
+	int rc = 0;
+	struct hdcp_srm_check_device_ids_req *recv_id_req;
+	struct hdcp_srm_check_device_ids_rsp *recv_id_rsp;
+	uint32_t sbuf_len;
+	uint32_t rbuf_len;
+	int i = 0;
+	struct qseecom_handle *hdcp1_srmhandle;
+
+	/* If client has not been registered return */
+	if (!hdcp1_supported || !hdcp1_handle)
+		return -EINVAL;
+
+	/* Start the hdcp srm app if not already started */
+	if (hdcp1_handle && !hdcp1_handle->srm_handle) {
+		rc = qseecom_start_app(&hdcp1_handle->srm_handle,
+					SRMAPP_NAME, QSEECOM_SBUFF_SIZE);
+		if (rc) {
+			pr_err("qseecom_start_app failed for SRM TA %d\n", rc);
+			goto end;
+		}
+	}
+
+	pr_debug("device_id_cnt = %d\n", device_id_cnt);
+
+	hdcp1_srmhandle = hdcp1_handle->srm_handle;
+
+	sbuf_len = sizeof(struct hdcp_srm_check_device_ids_req)
+		+ sizeof(struct hdcp_srm_device_id_t) * device_id_cnt
+		- 1;
+
+	rbuf_len = sizeof(struct hdcp_srm_check_device_ids_rsp);
+
+	/* Create a SRM validate receiver ID request */
+	recv_id_req = (struct hdcp_srm_check_device_ids_req *)
+					hdcp1_srmhandle->sbuf;
+	recv_id_req->commandid = HDCP_SRM_CMD_CHECK_DEVICE_ID;
+	recv_id_req->num_device_ids = device_id_cnt;
+	memcpy(recv_id_req->device_ids, device_ids,
+		   device_id_cnt * sizeof(struct hdcp_srm_device_id_t));
+
+	for (i = 0; i < device_id_cnt * sizeof(struct hdcp_srm_device_id_t);
+		i++) {
+		pr_debug("recv_id_req->device_ids[%d] = 0x%x\n", i,
+			   recv_id_req->device_ids[i]);
+	}
+
+	recv_id_rsp = (struct hdcp_srm_check_device_ids_rsp *)
+			(hdcp1_srmhandle->sbuf +
+			 QSEECOM_ALIGN(sbuf_len));
+
+	rc = qseecom_send_command(hdcp1_srmhandle,
+			recv_id_req,
+			QSEECOM_ALIGN(sbuf_len),
+			recv_id_rsp,
+			QSEECOM_ALIGN(rbuf_len));
+
+	if (rc < 0) {
+		pr_err("qseecom cmd failed err=%d\n", rc);
+		goto end;
+	}
+
+	rc = recv_id_rsp->retval;
+	if (rc) {
+		pr_err("enc cmd failed, rsp=%d\n", recv_id_rsp->retval);
+		rc = -EINVAL;
+		goto end;
+	}
+
+	pr_debug("rsp=%d\n", recv_id_rsp->retval);
+	pr_debug("commandid=%d\n", recv_id_rsp->commandid);
+
+end:
+	return rc;
+}
+
+
+static int hdcp_validate_recv_id(struct hdcp_lib_handle *handle)
+{
+	int rc = 0;
+	struct hdcp_rcv_id_list_req *recv_id_req;
+	struct hdcp_rcv_id_list_rsp *recv_id_rsp;
+
+	if (!handle || !handle->qseecom_handle ||
+		!handle->qseecom_handle->sbuf) {
+		pr_err("invalid handle\n");
+		return -EINVAL;
+	}
+
+	/* validate the receiver ID list against the new SRM blob */
+	recv_id_req = (struct hdcp_rcv_id_list_req *)
+					handle->qseecom_handle->sbuf;
+	recv_id_req->commandid = HDCP_TXMTR_VALIDATE_RECEIVER_ID_LIST;
+	recv_id_req->ctxHandle = handle->tz_ctxhandle;
+
+	recv_id_rsp = (struct hdcp_rcv_id_list_rsp *)
+		(handle->qseecom_handle->sbuf +
+		QSEECOM_ALIGN(sizeof(struct hdcp_rcv_id_list_req)));
+
+	rc = qseecom_send_command(handle->qseecom_handle,
+			recv_id_req,
+			QSEECOM_ALIGN(sizeof(struct hdcp_rcv_id_list_req)),
+			recv_id_rsp,
+			QSEECOM_ALIGN(sizeof(struct hdcp_rcv_id_list_rsp)));
+
+
+	if ((rc < 0) || (recv_id_rsp->status != HDCP_SUCCESS) ||
+		(recv_id_rsp->commandid !=
+			HDCP_TXMTR_VALIDATE_RECEIVER_ID_LIST)) {
+		pr_err("qseecom cmd failed with err = %d status = %d\n",
+			   rc, recv_id_rsp->status);
+		rc = -EINVAL;
+		goto exit;
+	}
+
+exit:
+	return rc;
+}
+
 int hdcp1_set_enc(bool enable)
 {
 	int rc = 0;
 	struct hdcp1_set_enc_req *set_enc_req;
 	struct hdcp1_set_enc_rsp *set_enc_rsp;
+	struct qseecom_handle *hdcp1_qsee_handle;
 
 	mutex_lock(&hdcp1_ta_cmd_lock);
 
@@ -2310,18 +2557,23 @@ int hdcp1_set_enc(bool enable)
 		goto end;
 	}
 
+	hdcp1_qsee_handle = hdcp1_handle->qsee_handle;
+
+	if (!hdcp1_qsee_handle)
+		return -EINVAL;
+
 	if (hdcp1_enc_enabled == enable) {
 		pr_info("already %s\n", enable ? "enabled" : "disabled");
 		goto end;
 	}
 
 	/* set keys and request aksv */
-	set_enc_req = (struct hdcp1_set_enc_req *)hdcp1_handle->sbuf;
+	set_enc_req = (struct hdcp1_set_enc_req *)hdcp1_qsee_handle->sbuf;
 	set_enc_req->commandid = HDCP1_SET_ENC_MESSAGE_ID;
 	set_enc_req->enable = enable;
-	set_enc_rsp = (struct hdcp1_set_enc_rsp *)(hdcp1_handle->sbuf +
+	set_enc_rsp = (struct hdcp1_set_enc_rsp *)(hdcp1_qsee_handle->sbuf +
 			QSEECOM_ALIGN(sizeof(struct hdcp1_set_enc_req)));
-	rc = qseecom_send_command(hdcp1_handle, set_enc_req,
+	rc = qseecom_send_command(hdcp1_qsee_handle, set_enc_req,
 				  QSEECOM_ALIGN(sizeof
 						(struct hdcp1_set_enc_req)),
 				  set_enc_rsp,
@@ -2576,11 +2828,54 @@ static ssize_t hdmi_hdcp2p2_sysfs_wta_min_level_change(struct device *dev,
 	return ret;
 }
 
+static ssize_t hdmi_hdcp_srm_updated(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	int rc;
+	int srm_updated;
+	struct hdcp_lib_handle *handle;
+	ssize_t ret = count;
+	struct hdcp_client_ops *client_ops;
+	void *hdcp_client_ctx;
+
+	handle = hdcp_drv_mgr->handle;
+
+	rc = kstrtoint(buf, 10, &srm_updated);
+	if (rc) {
+		pr_err("%s: kstrtoint failed. rc=%d\n", __func__, rc);
+		return -EINVAL;
+	}
+
+	if (srm_updated) {
+		if (handle && handle->qseecom_handle) {
+			client_ops = handle->client_ops;
+			hdcp_client_ctx = handle->client_ctx;
+			if (hdcp_validate_recv_id(handle)) {
+				pr_debug("HDCP 2.2 SRM check FAILED\n");
+				if (handle && client_ops->srm_cb)
+					client_ops->srm_cb(hdcp_client_ctx);
+			} else
+				pr_debug("HDCP 2.2 SRM check PASSED\n");
+		} else if (hdcp1_handle && hdcp1_handle->qsee_handle) {
+			pr_debug("HDCP 1.4 SRM check\n");
+			hdcp_client_ctx = hdcp1_handle->client_ctx;
+			client_ops = hdcp1_handle->client_ops;
+			if (client_ops->srm_cb)
+				client_ops->srm_cb(hdcp_client_ctx);
+		}
+	}
+
+	return ret;
+}
+
 static DEVICE_ATTR(tp, S_IRUGO | S_IWUSR, msm_hdcp_1x_sysfs_rda_tp,
 msm_hdcp_1x_sysfs_wta_tp);
 
 static DEVICE_ATTR(min_level_change, S_IWUSR, NULL,
 hdmi_hdcp2p2_sysfs_wta_min_level_change);
+
+static DEVICE_ATTR(srm_updated, S_IWUSR, NULL,
+hdmi_hdcp_srm_updated);
 
 void hdcp1_cache_repeater_topology(void *hdcp1_cached_tp)
 {
@@ -2592,6 +2887,7 @@ void hdcp1_cache_repeater_topology(void *hdcp1_cached_tp)
 static struct attribute *msm_hdcp_fs_attrs[] = {
 	&dev_attr_tp.attr,
 	&dev_attr_min_level_change.attr,
+	&dev_attr_srm_updated.attr,
 	NULL
 };
 

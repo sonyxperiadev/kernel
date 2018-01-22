@@ -110,6 +110,20 @@ void _sde_hdmi_bridge_destroy(struct drm_bridge *bridge)
 {
 }
 
+static void sde_hdmi_clear_hdr_info(struct drm_bridge *bridge)
+{
+	struct sde_hdmi_bridge *sde_hdmi_bridge = to_hdmi_bridge(bridge);
+	struct hdmi *hdmi = sde_hdmi_bridge->hdmi;
+	struct drm_connector *connector = hdmi->connector;
+
+	connector->hdr_eotf = SDE_HDMI_HDR_EOTF_NONE;
+	connector->hdr_metadata_type_one = false;
+	connector->hdr_max_luminance = SDE_HDMI_HDR_LUMINANCE_NONE;
+	connector->hdr_avg_luminance = SDE_HDMI_HDR_LUMINANCE_NONE;
+	connector->hdr_min_luminance = SDE_HDMI_HDR_LUMINANCE_NONE;
+	connector->hdr_supported = false;
+}
+
 static void _sde_hdmi_bridge_power_on(struct drm_bridge *bridge)
 {
 	struct sde_hdmi_bridge *sde_hdmi_bridge = to_hdmi_bridge(bridge);
@@ -435,6 +449,19 @@ static void _sde_hdmi_bridge_setup_deep_color(struct hdmi *hdmi)
 		vbi_pkt_reg = hdmi_read(hdmi, REG_HDMI_VBI_PKT_CTRL);
 		vbi_pkt_reg |= BIT(5) | BIT(4);
 		hdmi_write(hdmi, REG_HDMI_VBI_PKT_CTRL, vbi_pkt_reg);
+	} else {
+		hdmi_ctrl_reg = hdmi_read(hdmi, REG_HDMI_CTRL);
+
+		/* disable GC CD override */
+		hdmi_ctrl_reg &= ~BIT(27);
+		/* disable deep color for RGB888/YUV444/YUV420 30 bits */
+		hdmi_ctrl_reg &= ~BIT(24);
+		hdmi_write(hdmi, REG_HDMI_CTRL, hdmi_ctrl_reg);
+
+		/* disable the GC packet sending */
+		vbi_pkt_reg = hdmi_read(hdmi, REG_HDMI_VBI_PKT_CTRL);
+		vbi_pkt_reg &= ~(BIT(5) | BIT(4));
+		hdmi_write(hdmi, REG_HDMI_VBI_PKT_CTRL, vbi_pkt_reg);
 	}
 }
 
@@ -550,6 +577,10 @@ static void _sde_hdmi_bridge_disable(struct drm_bridge *bridge)
 	display->pll_update_enable = false;
 	display->sink_hdcp_ver = SDE_HDMI_HDCP_NONE;
 
+	if (sde_hdmi_tx_is_hdcp_enabled(display))
+		sde_hdmi_hdcp_off(display);
+
+	sde_hdmi_clear_hdr_info(bridge);
 	mutex_unlock(&display->display_lock);
 }
 
@@ -563,9 +594,6 @@ static void _sde_hdmi_bridge_post_disable(struct drm_bridge *bridge)
 
 	sde_hdmi_notify_clients(display, display->connected);
 
-	if (sde_hdmi_tx_is_hdcp_enabled(display))
-		sde_hdmi_hdcp_off(display);
-
 	sde_hdmi_audio_off(hdmi);
 
 	DRM_DEBUG("power down");
@@ -574,10 +602,16 @@ static void _sde_hdmi_bridge_post_disable(struct drm_bridge *bridge)
 	if (phy)
 		phy->funcs->powerdown(phy);
 
+	/* HDMI teardown sequence */
+	sde_hdmi_ctrl_reset(hdmi);
+
 	if (hdmi->power_on) {
 		_sde_hdmi_bridge_power_off(bridge);
 		hdmi->power_on = false;
 	}
+
+	/* Powering-on the controller for HPD */
+	sde_hdmi_ctrl_cfg(hdmi, 1);
 }
 
 static void _sde_hdmi_bridge_set_avi_infoframe(struct hdmi *hdmi,
