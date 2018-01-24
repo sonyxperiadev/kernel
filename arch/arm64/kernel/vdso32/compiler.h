@@ -23,6 +23,8 @@
 #ifndef __VDSO_COMPILER_H
 #define __VDSO_COMPILER_H
 
+#include <generated/autoconf.h>
+#undef CONFIG_64BIT
 #include <asm/barrier.h>	/* for isb() & dmb()	*/
 #include <asm/param.h>		/* for HZ		*/
 #include <asm/unistd32.h>

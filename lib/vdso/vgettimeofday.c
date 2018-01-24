@@ -262,7 +262,8 @@ static notrace int do_monotonic_raw(const struct vdso_data *vd,
 static notrace int do_boottime(const struct vdso_data *vd, struct timespec *ts)
 {
 	u32 seq, mult, shift;
-	u64 nsec, cycle_last, wtm_nsec;
+	u64 nsec, cycle_last;
+	vdso_wtm_clock_nsec_t wtm_nsec;
 #ifdef ARCH_CLOCK_FIXED_MASK
 	static const u64 mask = ARCH_CLOCK_FIXED_MASK;
 #else
@@ -287,7 +288,7 @@ static notrace int do_boottime(const struct vdso_data *vd, struct timespec *ts)
 		sec = vd->xtime_clock_sec;
 		nsec = vd->xtime_clock_snsec;
 
-		sec += vd->wtm_clock_sec;
+		sec += vd->wtm_clock_sec + vd->btm_sec;
 		wtm_nsec = vd->wtm_clock_nsec + vd->btm_nsec;
 
 	} while (unlikely(vdso_read_retry(vd, seq)));
