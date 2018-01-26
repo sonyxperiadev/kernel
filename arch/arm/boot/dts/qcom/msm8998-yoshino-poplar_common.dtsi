@@ -89,7 +89,7 @@
 	/delete-property/ qcom,dsi-pref-prim-pan;
 };
 
-/ {
+&vendor {
 	yoshino_poplar_batterydata: qcom,battery-data {
 		qcom,batt-id-range-pct = <17>;
 		#include "fg-gen3-batterydata-poplar-send-4380mv-2650mah.dtsi"
