@@ -224,3 +224,7 @@ int qpnp_pin_config(int gpio, struct qpnp_pin_cfg *param);
  * For such cases, use of_get_gpio() or friends instead.
  */
 int qpnp_pin_map(const char *name, uint32_t pmic_pin);
+
+#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+int qpnp_get_pin_config(int gpio, struct qpnp_pin_cfg *param);
+#endif
