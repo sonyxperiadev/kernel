@@ -2885,6 +2885,62 @@
 	};
 };
 
+&cam_sensor_rear_active {
+	mux {
+		pins = "gpio30";
+		function = "gpio";
+	};
+
+	config {
+		pins = "gpio30";
+		drive-strength = <2>;
+		bias-disable;
+		output-low;
+	};
+};
+
+&cam_sensor_rear_suspend {
+	mux {
+		pins = "gpio30";
+		function = "gpio";
+	};
+
+	config {
+		pins = "gpio30";
+		drive-strength = <2>;
+		bias-disable;
+		output-low;
+	};
+};
+
+&cam_sensor_front_active {
+	mux {
+		pins = "gpio28";
+		function = "gpio";
+	};
+
+	config {
+		pins = "gpio28";
+		drive-strength = <2>;
+		bias-disable;
+		output-low;
+	};
+};
+
+&cam_sensor_front_suspend {
+	mux {
+		pins = "gpio28";
+		function = "gpio";
+	};
+
+	config {
+		pins = "gpio28";
+		drive-strength = <2>;
+		bias-disable;
+		output-low;
+	};
+};
+
 &mdss_hdmi_tx {
 	/delete-property/ pinctrl-names;
 	/delete-property/ pinctrl-0;
