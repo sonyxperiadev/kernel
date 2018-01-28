@@ -212,7 +212,7 @@
 	};
 };
 
-/{
+&vendor {
 	yoshino_maple_batterydata: qcom,battery-data {
 		qcom,batt-id-range-pct = <17>;
 		#include "fg-gen3-batterydata-maple-send-4350mv-3230mah.dtsi"
