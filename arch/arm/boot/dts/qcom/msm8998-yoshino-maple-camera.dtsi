@@ -19,6 +19,7 @@
 
 &soc {
 	/delete-node/ qcom,camera-flash@0;
+	/delete-node/ qcom,camera-flash@1;
 	/delete-node/ qcom,gpio-regulator@0;
 
 	led_flash0: qcom,camera-flash@0 {
@@ -43,6 +44,7 @@
 &cci {
 	/delete-node/ qcom,actuator@0;
 	/delete-node/ qcom,actuator@1;
+	/delete-node/ qcom,laserled@0;
 	/delete-node/ qcom,ois@0;
 	/delete-node/ qcom,tof@0;
 	/delete-node/ qcom,eeprom@0;
@@ -51,6 +53,7 @@
 	/delete-node/ qcom,camera@0;
 	/delete-node/ qcom,camera@1;
 	/delete-node/ qcom,camera@2;
+	/delete-node/ qcom,camera@3;
 
 	actuator0: qcom,actuator@0 {
 		cell-index = <0>;
@@ -120,8 +123,8 @@
 		qcom,csid-sd-index = <2>;
 		qcom,mount-angle = <0>;
 		qcom,actuator-src = <&actuator1>;
-		cam_vdig-supply = <&pm8998_s3>;
-		cam_vio-supply = <&pm8998_lvs1>;
+		cam_vdig-supply = <&cam_vdig_front_verg>;
+		cam_vio-supply = <&cam_vio_verg>;
 		cam_vaf-supply = <&pm8998_l22>;
 		cam_vana-supply = <&vana_stub_vreg>;
 		qcom,cam-vreg-name = "cam_vdig", "cam_vio", "cam_vaf", "cam_vana";
@@ -132,15 +135,11 @@
 		pinctrl-names = "cam_default", "cam_suspend";
 		pinctrl-0 = <&cam_sensor_mclk1_active &cam_sensor_front_active>;
 		pinctrl-1 = <&cam_sensor_mclk1_suspend &cam_sensor_front_suspend>;
-		gpios = <&tlmm 14 0>, <&tlmm 28 0>,
-			<&pmi8998_gpios 1 0>, <&tlmm 25 0>;
+		gpios = <&tlmm 14 0>, <&tlmm 28 0>;
 		qcom,gpio-reset = <1>;
-		qcom,gpio-vio = <2>;
-		qcom,gpio-vdig = <3>;
-		qcom,gpio-req-tbl-num   = <0 1 2 3>;
-		qcom,gpio-req-tbl-flags = <1 0 0 0>;
-		qcom,gpio-req-tbl-label = "CAMIF_MCLK2", "CAM_RESET1",
-					  "GPIO_VIO", "GPIO_VDIG";
+		qcom,gpio-req-tbl-num   = <0 1>;
+		qcom,gpio-req-tbl-flags = <1 0>;
+		qcom,gpio-req-tbl-label = "CAMIF_MCLK2", "CAM_RESET1";
 		qcom,sensor-position = <1>;
 		qcom,sensor-mode = <1>;
 		qcom,cci-master = <1>;

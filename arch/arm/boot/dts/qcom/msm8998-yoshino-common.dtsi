@@ -505,6 +505,11 @@
 		startup-delay-us = <0>;
 		enable-active-high;
 		gpio = <&pmi8998_gpios 1 0>;
+
+		proxy-supply = <&pm8998_lvs1>;
+		qcom,proxy-consumer-enable;
+		qcom,proxy-consumer-current = <0>;
+		qcom,proxy-consumer-voltage = <0 0>;
 	};
 
 	cam_vdig_front_verg: cam_vdig_front_verg {
@@ -513,6 +518,11 @@
 		startup-delay-us = <0>;
 		enable-active-high;
 		gpio = <&tlmm 25 0>;
+
+		proxy-supply = <&pm8998_s3>;
+		qcom,proxy-consumer-enable;
+		qcom,proxy-consumer-current = <105000>;
+		qcom,proxy-consumer-voltage = <1352000 1352000>;
 	};
 
 	cam_vdig_rear_verg: cam_vdig_rear_verg {
@@ -2882,6 +2892,62 @@
 			drive-strength = <2>;
 			bias-pull-down;
 		};
+	};
+};
+
+&cam_sensor_rear_active {
+	mux {
+		pins = "gpio30";
+		function = "gpio";
+	};
+
+	config {
+		pins = "gpio30";
+		drive-strength = <2>;
+		bias-disable;
+		output-low;
+	};
+};
+
+&cam_sensor_rear_suspend {
+	mux {
+		pins = "gpio30";
+		function = "gpio";
+	};
+
+	config {
+		pins = "gpio30";
+		drive-strength = <2>;
+		bias-disable;
+		output-low;
+	};
+};
+
+&cam_sensor_front_active {
+	mux {
+		pins = "gpio28";
+		function = "gpio";
+	};
+
+	config {
+		pins = "gpio28";
+		drive-strength = <2>;
+		bias-disable;
+		output-low;
+	};
+};
+
+&cam_sensor_front_suspend {
+	mux {
+		pins = "gpio28";
+		function = "gpio";
+	};
+
+	config {
+		pins = "gpio28";
+		drive-strength = <2>;
+		bias-disable;
+		output-low;
 	};
 };
 
