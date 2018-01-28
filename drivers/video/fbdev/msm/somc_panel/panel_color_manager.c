@@ -581,6 +581,14 @@ static int somc_panel_picadj_setup(struct mdss_panel_data *pdata)
 				panel_data);
 
 	/*
+	 * In case of a split-dsi panel configuration, do not set
+	 * any picadj parameter for the second half, as that would
+	 * be useless and may reset the whole block.
+	 */
+	if (pdata->panel_info.pdest != pdata->panel_info.dsi_master)
+		return 0;
+
+	/*
 	 * Note: MDSS_DSI_HW_REV_101_1 is 8974Pro, which has MDP
 	 * revision 1.2.1 (102_1).
 	 * New picadj is required starting from MDP rev. 1.3.0 (103)
