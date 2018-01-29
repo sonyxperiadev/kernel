@@ -322,12 +322,16 @@ bool mhl_pf_check_vbus(void)
 		return false;
 	}
 
+#ifdef CONFIG_SONY_USB_EXTENSIONS
 	if (!mhl_info->check_vbus) {
 		pr_warn("%s: check_vbus is not registered\n", __func__);
 		return false;
 	}
 
 	return mhl_info->check_vbus(usb_ctx);
+#else
+	return false;
+#endif
 }
 EXPORT_SYMBOL(mhl_pf_check_vbus);
 
@@ -339,12 +343,14 @@ void mhl_pf_source_vbus_control(bool on)
 		return;
 	}
 
+#ifdef CONFIG_SONY_USB_EXTENSIONS
 	if (!mhl_info->vbus_control) {
 		pr_warn("%s: vbus_control is not registered\n", __func__);
 		return;
 	}
 
 	mhl_info->vbus_control(usb_ctx, on);
+#endif
 }
 EXPORT_SYMBOL(mhl_pf_source_vbus_control);
 
