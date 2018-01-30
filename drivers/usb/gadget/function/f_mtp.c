@@ -935,9 +935,13 @@ static void receive_file_work(struct work_struct *data)
 			read_req = dev->rx_req[cur_buf];
 			cur_buf = (cur_buf + 1) % RX_REQ_MAX;
 
-			/* some h/w expects size to be aligned to ep's MTU */
+#ifdef CONFIG_USB_CI13XXX_MSM
+			read_req->length = (count > MTP_BULK_BUFFER_SIZE
+				? MTP_BULK_BUFFER_SIZE : count);
+#else
+			 /* some h/w expects size to be aligned to ep's MTU */
 			read_req->length = mtp_rx_req_len;
-
+#endif
 			dev->rx_done = 0;
 			ret = usb_ep_queue(dev->ep_out, read_req, GFP_KERNEL);
 			if (ret < 0) {
