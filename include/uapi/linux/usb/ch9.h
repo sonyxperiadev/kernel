@@ -812,6 +812,8 @@ struct usb_wireless_cap_descriptor {	/* Ultra Wide Band */
 	__u8  bReserved;
 } __attribute__((packed));
 
+#define USB_DT_USB_WIRELESS_CAP_SIZE	11
+
 /* USB 2.0 Extension descriptor */
 #define	USB_CAP_TYPE_EXT		2
 
@@ -981,6 +983,22 @@ enum usb_device_speed {
 	USB_SPEED_SUPER_PLUS,			/* usb 3.1 */
 };
 
+/*
+ * Precision time measurement capability descriptor: advertised by devices and
+ * hubs that support PTM
+ */
+#define	USB_PTM_CAP_TYPE	0xb
+struct usb_ptm_cap_descriptor {
+	__u8  bLength;
+	__u8  bDescriptorType;
+	__u8  bDevCapabilityType;
+} __attribute__((packed));
+
+/*
+ * The size of the descriptor for the Sublink Speed Attribute Count
+ * (SSAC) specified in bmAttributes[4:0].
+ */
+#define USB_DT_USB_SSP_CAP_SIZE(ssac)	(16 + ssac * 4)
 
 enum usb_device_state {
 	/* NOTATTACHED isn't in the USB spec, and this state acts
@@ -1014,6 +1032,7 @@ enum usb3_link_state {
 	USB3_LPM_U3
 };
 
+#define USB_DT_USB_PTM_ID_SIZE		3
 /*
  * A U1 timeout of 0x0 means the parent hub will reject any transitions to U1.
  * 0xff means the parent hub will accept transitions to U1, but will not
