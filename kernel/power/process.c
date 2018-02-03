@@ -19,6 +19,7 @@
 #include <linux/kmod.h>
 #include <trace/events/power.h>
 #include <linux/wakeup_reason.h>
+#include <linux/cpuset.h>
 
 /* 
  * Timeout for stopping processes
