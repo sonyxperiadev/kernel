@@ -51,6 +51,10 @@
 /* Max ASID width is 8-bit */
 #define MAX_ASID	0xff
 
+#define MMU_IAS 36
+#define MMU_OAS 36
+#define MMU_SEP (MMU_IAS - 1)
+
 struct msm_iommu_master {
 	struct list_head list;
 	unsigned int ctx_num;
@@ -494,6 +498,35 @@ static void msm_iommu_setup_pg_l2_redirect(void __iomem *base, unsigned int ctx)
 }
 #endif
 
+#define SCM_SVC_SMMU_PROGRAM	0x15
+#define SMMU_USE_LPAE64_FMT	0X01
+static inline void __set_aarch64_format(
+		struct msm_iommu_drvdata *iommu_drvdata,
+		struct msm_iommu_ctx_drvdata *ctx_drvdata)
+{
+	struct scm_desc desc = {0};
+	unsigned int ret = 0;
+
+	if (iommu_drvdata->sec_id != -1) {
+		desc.args[0] = iommu_drvdata->sec_id;
+		desc.args[1] = ctx_drvdata->num;
+		desc.args[2] = 1;
+		desc.arginfo = SCM_ARGS(3, SCM_VAL, SCM_VAL, SCM_VAL);
+
+		ret = scm_call2(SCM_SIP_FNID(SCM_SVC_SMMU_PROGRAM,
+				SMMU_USE_LPAE64_FMT), &desc);
+		if (ret) {
+			pr_err("Cannot switch to LPAE64 addressing for ctx %d:"
+				" TZ Error %d",	ctx_drvdata->num, ret);
+			BUG();
+		}
+		return;
+	}
+
+	/* If the IOMMU is not secure, program the register from kernel */
+	SET_CBA2R_VA64(iommu_drvdata->base, ctx_drvdata->num, 1);
+}
+
 static void __program_context(struct msm_iommu_drvdata *iommu_drvdata,
 			      struct msm_iommu_ctx_drvdata *ctx_drvdata,
 			      struct msm_iommu_priv *priv)
@@ -504,6 +537,9 @@ static void __program_context(struct msm_iommu_drvdata *iommu_drvdata,
 	__reset_context(iommu_drvdata, ctx);
 
 	priv->asid = ctx_drvdata->num;
+
+	__set_aarch64_format(iommu_drvdata, ctx_drvdata);
+
 	SET_TTBR0(iommu_drvdata->cb_base, ctx_drvdata->num,
 			priv->pgtbl_cfg.arm_lpae_s1_cfg.ttbr[0] |
 			((u64)priv->asid << CB_TTBR0_ASID_SHIFT));
@@ -512,10 +548,11 @@ static void __program_context(struct msm_iommu_drvdata *iommu_drvdata,
 			priv->pgtbl_cfg.arm_lpae_s1_cfg.ttbr[1] |
 			((u64)priv->asid << CB_TTBR1_ASID_SHIFT));
 
-	SET_CB_TCR2_SEP(iommu_drvdata->cb_base, ctx_drvdata->num,
-			priv->pgtbl_cfg.arm_lpae_s1_cfg.tcr >> 32);
+	SET_TTBCR(iommu_drvdata->cb_base, ctx_drvdata->num,
+			priv->pgtbl_cfg.arm_lpae_s1_cfg.tcr);
 
-	SET_CB_TTBCR_EAE(iommu_drvdata->cb_base, ctx_drvdata->num, 1);
+	SET_TCR2(iommu_drvdata->cb_base, ctx_drvdata->num,
+			priv->pgtbl_cfg.arm_lpae_s1_cfg.tcr >> 32);
 
 	SET_CB_MAIR0(iommu_drvdata->cb_base, ctx_drvdata->num,
 			priv->pgtbl_cfg.arm_lpae_s1_cfg.mair[0]);
@@ -527,11 +564,9 @@ static void __program_context(struct msm_iommu_drvdata *iommu_drvdata,
 	 * both these registers are separated by more than 1KB. */
 	mb();
 
-	/* If requested, disable stall on this context bank */
-	if (priv->attributes & (1 << DOMAIN_ATTR_CB_STALL_DISABLE)) {
-		SET_CB_SCTLR_CFCFG(cb_base, ctx, 0);
-		SET_CB_SCTLR_HUPCF(cb_base, ctx, 1);
-	}
+	/* Disable stall unconditionally for AArch64 addressing */
+	SET_CB_SCTLR_CFCFG(cb_base, ctx, 0);
+	SET_CB_SCTLR_HUPCF(cb_base, ctx, 1);
 
 	SET_CB_SCTLR_CFIE(cb_base, ctx, 1);
 	SET_CB_SCTLR_CFRE(cb_base, ctx, 1);
@@ -633,8 +668,8 @@ static int msm_iommu_dynamic_attach(struct iommu_domain *domain, struct device *
 	domain->geometry.aperture_end = (1ULL << priv->pgtbl_cfg.ias) - 1;
 	priv->pgtbl_cfg = (struct io_pgtable_cfg) {
 		.pgsize_bitmap	= msm_iommu_ops.pgsize_bitmap,
-		.ias		= 32,
-		.oas		= 40,
+		.ias		= MMU_IAS,
+		.oas		= MMU_OAS,
 		.tlb		= &msm_iommu_gather_ops,
 		.iommu_dev	= dev,
 		.iova_base	= domain->geometry.aperture_start,
@@ -643,7 +678,7 @@ static int msm_iommu_dynamic_attach(struct iommu_domain *domain, struct device *
 	domain->geometry.force_aperture = true;
 
 
-	pgtbl_ops = alloc_io_pgtable_ops(ARM_32_LPAE_S1, &priv->pgtbl_cfg, domain);
+	pgtbl_ops = alloc_io_pgtable_ops(ARM_64_LPAE_S1, &priv->pgtbl_cfg, domain);
 	if (!pgtbl_ops) {
 		pr_err("failed to allocate pagetable ops\n");
 		return -ENOMEM;
@@ -766,8 +801,9 @@ static int msm_iommu_attach_dev(struct iommu_domain *domain, struct device *dev)
 	domain->geometry.aperture_end = (1ULL << priv->pgtbl_cfg.ias) - 1;
 	priv->pgtbl_cfg = (struct io_pgtable_cfg) {
 		.pgsize_bitmap	= msm_iommu_ops.pgsize_bitmap,
-		.ias		= 32,
-		.oas		= 40,
+		.ias		= MMU_IAS,
+		.oas		= MMU_OAS,
+		.sep		= MMU_SEP,
 		.tlb		= &msm_iommu_gather_ops,
 		.arm_msm_secure_cfg = {
 			.sec_id = iommu_drvdata->sec_id,
@@ -779,7 +815,7 @@ static int msm_iommu_attach_dev(struct iommu_domain *domain, struct device *dev)
 	};
 	domain->geometry.force_aperture = true;
 
-	pgtbl_ops = alloc_io_pgtable_ops(ARM_32_LPAE_S1, &priv->pgtbl_cfg, domain);
+	pgtbl_ops = alloc_io_pgtable_ops(ARM_64_LPAE_S1, &priv->pgtbl_cfg, domain);
 	if (!pgtbl_ops) {
 		pr_err("failed to allocate pagetable ops\n");
 		ret = -ENOMEM;
