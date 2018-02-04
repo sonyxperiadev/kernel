@@ -510,7 +510,9 @@ static void sctp_v6_to_addr(union sctp_addr *addr, struct in6_addr *saddr,
 {
 	addr->sa.sa_family = AF_INET6;
 	addr->v6.sin6_port = port;
+	addr->v6.sin6_flowinfo = 0;
 	addr->v6.sin6_addr = *saddr;
+	addr->v6.sin6_scope_id = 0;
 }
 
 /* Compare addresses exactly.
@@ -804,6 +806,8 @@ static void sctp_inet6_skb_msgname(struct sk_buff *skb, char *msgname,
 		if (ipv6_addr_type(&addr->v6.sin6_addr) & IPV6_ADDR_LINKLOCAL) {
 			struct sctp_ulpevent *ev = sctp_skb2event(skb);
 			addr->v6.sin6_scope_id = ev->iif;
+		} else {
+			addr->v6.sin6_scope_id = 0;
 		}
 	}
 

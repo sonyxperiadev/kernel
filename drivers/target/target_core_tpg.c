@@ -350,7 +350,7 @@ void core_tpg_del_initiator_node_acl(struct se_node_acl *acl)
 	if (acl->dynamic_node_acl) {
 		acl->dynamic_node_acl = 0;
 	}
-	list_del(&acl->acl_list);
+	list_del_init(&acl->acl_list);
 	tpg->num_node_acls--;
 	mutex_unlock(&tpg->acl_node_mutex);
 
@@ -572,7 +572,7 @@ int core_tpg_deregister(struct se_portal_group *se_tpg)
 	 * in transport_deregister_session().
 	 */
 	list_for_each_entry_safe(nacl, nacl_tmp, &node_list, acl_list) {
-		list_del(&nacl->acl_list);
+		list_del_init(&nacl->acl_list);
 		se_tpg->num_node_acls--;
 
 		core_tpg_wait_for_nacl_pr_ref(nacl);
@@ -673,6 +673,8 @@ void core_tpg_remove_lun(
 	 */
 	struct se_device *dev = rcu_dereference_raw(lun->lun_se_dev);
 
+	lun->lun_shutdown = true;
+
 	core_clear_lun_from_tpg(lun, tpg);
 	/*
 	 * Wait for any active I/O references to percpu se_lun->lun_ref to
@@ -694,6 +696,8 @@ void core_tpg_remove_lun(
 	}
 	if (!(dev->se_hba->hba_flags & HBA_FLAGS_INTERNAL_USE))
 		hlist_del_rcu(&lun->link);
+
+	lun->lun_shutdown = false;
 	mutex_unlock(&tpg->tpg_lun_mutex);
 
 	percpu_ref_exit(&lun->lun_ref);

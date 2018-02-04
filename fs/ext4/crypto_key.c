@@ -220,11 +220,9 @@ int _ext4_get_encryption_info(struct inode *inode)
 	int mode;
 	int res;
 
-	if (!ext4_read_workqueue) {
-		res = ext4_init_crypto();
-		if (res)
-			return res;
-	}
+	res = ext4_init_crypto();
+	if (res)
+		return res;
 
 retry:
 	crypt_info = ACCESS_ONCE(ei->i_crypt_info);
@@ -313,6 +311,12 @@ retry:
 	}
 	down_read(&keyring_key->sem);
 	ukp = user_key_payload(keyring_key);
+	if (!ukp) {
+		/* key was revoked before we acquired its semaphore */
+		res = -EKEYREVOKED;
+		up_read(&keyring_key->sem);
+		goto out;
+	}
 	if (ukp->datalen != sizeof(struct ext4_encryption_key)) {
 		res = -EINVAL;
 		up_read(&keyring_key->sem);
