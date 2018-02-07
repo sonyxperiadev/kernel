@@ -48,6 +48,8 @@
 					 * to first consumer that enables clk
 					 */
 #define CLK_IS_MEASURE          BIT(16) /* measure clock */
+/* do not call clk_change_rate on the clock's children */
+#define CLK_CHILD_NO_RATE_PROP	BIT(17)
 
 struct clk;
 struct clk_hw;
