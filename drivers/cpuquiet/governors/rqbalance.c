@@ -607,7 +607,7 @@ static int balanced_cpufreq_transition(struct notifier_block *nb,
 {
 	struct cpufreq_freqs *freqs = data;
 	unsigned long cpu_freq;
-	int n;
+	int n = 0;
 
 	/*
 	 * If we have at least one BIG CPU online, then take
