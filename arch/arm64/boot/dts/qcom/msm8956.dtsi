@@ -2652,8 +2652,12 @@
 		compatible = "qcom,msm-pcm-lpa";
 	};
 
-	compress: qcom,msm-compr-dsp {
+	compr: qcom,msm-compr-dsp {
 		compatible = "qcom,msm-compr-dsp";
+	};
+
+	compress: qcom,msm-compress-dsp {
+		compatible = "qcom,msm-compress-dsp";
 	};
 
 	voip: qcom,msm-voip-dsp {
