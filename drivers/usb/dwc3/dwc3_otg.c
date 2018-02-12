@@ -583,7 +583,8 @@ static int dwc3_otg_set_power(struct usb_phy *phy, unsigned mA)
 #ifdef CONFIG_SONY_USB_EXTENSIONS
 	if (not_use_sw_chg_det)
 #endif
-	if (dotg->charger->chg_type != DWC3_INVALID_CHARGER) {
+	if (dotg->psy->type == POWER_SUPPLY_TYPE_USB_HVDCP &&
+	    dotg->charger->chg_type == DWC3_DCP_CHARGER) {
 		dev_dbg(phy->dev,
 			"SKIP setting power supply type again,chg_type = %d\n",
 			dotg->charger->chg_type);
