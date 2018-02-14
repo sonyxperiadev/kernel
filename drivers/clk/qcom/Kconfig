@@ -264,6 +264,14 @@ config CLOCK_CPU_8976
 	help
 	  Support for the MSM8976 CPU clock controller.
 
+config MSM_APCC_8996
+	tristate "MSM8996 CPU Clock Controller"
+	depends on COMMON_CLK_QCOM
+	help
+	  Support for the CPU clock controller on msm8996 devices.
+	  Say Y if you want to support CPU clock scaling using CPUfreq
+	  drivers for dyanmic power management.
+
 config CLOCK_QPNP_DIV
 	tristate "QPNP PMIC clkdiv driver"
 	depends on COMMON_CLK_QCOM && SPMI
