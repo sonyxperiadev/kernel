@@ -176,6 +176,25 @@ static struct of_device_id cyttsp4_i2c_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, cyttsp4_i2c_of_match);
 
+static int cyttsp4_ping_hw(struct cyttsp4_i2c *ts_i2c)
+{
+	int rc, retry = 3;
+	char buf;
+
+	mutex_lock(&ts_i2c->lock);
+	while (retry--) {
+		rc = cyttsp4_i2c_read_block_data(ts_i2c, 0x00, 1, &buf, 1);
+		if (rc)
+			printk("%s: Read unsuccessful, try=%d\n", __func__, 3 - retry);
+		else
+			break;
+		msleep(100);
+	}
+	mutex_unlock(&ts_i2c->lock);
+
+	return rc;
+}
+
 static int cyttsp4_i2c_probe(struct i2c_client *client,
 	const struct i2c_device_id *i2c_id)
 {
@@ -278,6 +297,12 @@ static int cyttsp4_i2c_probe(struct i2c_client *client,
 	}
 
 	pm_runtime_enable(&client->dev);
+
+	rc = cyttsp4_ping_hw(ts_i2c);
+	if (rc) {
+		dev_err(dev, "%s: No HW detected\n", __func__);
+		goto add_adapter_err;
+	}
 
 	rc = cyttsp4_add_adapter(ts_i2c->id, &ops, dev);
 	if (rc) {
