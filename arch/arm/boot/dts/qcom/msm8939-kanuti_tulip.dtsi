@@ -29,11 +29,8 @@
 			pinctrl-names = "pmx_ts_active","pmx_ts_suspend";
 			pinctrl-0 = <&ts_int_active &ts_reset_active>;
 			pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
-			vdda-supply = <&pm8916_l17>;
-			vddio_EVM-supply = <&pm8916_l6>;
-			vddio_PD1-supply = <&pm8916_l16>;
-			vddio_DEFAULT-supply = <&pm8916_l6>;
-			qcom,module_adc-vadc = <&pm8916_vadc>;
+			vdd-supply = <&pm8916_l17>;
+			vcc_i2c-supply = <&pm8916_l6>;
 
 			cy,core {
 				cy,name = "cyttsp4_core";
@@ -112,11 +109,8 @@
 			pinctrl-names = "pmx_ts_active","pmx_ts_suspend";
 			pinctrl-0 = <&ts_int_active &ts_reset_active>;
 			pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
-			vdda-supply = <&pm8916_l17>;
-			vddio_EVM-supply = <&pm8916_l6>;
-			vddio_PD1-supply = <&pm8916_l16>;
-			vddio_DEFAULT-supply = <&pm8916_l6>;
-			qcom,module_adc-vadc = <&pm8916_vadc>;
+			vdd-supply = <&pm8916_l17>;
+			vcc_i2c-supply = <&pm8916_l6>;
 
 			cy,core {
 				cy,name = "cyttsp5_core";
