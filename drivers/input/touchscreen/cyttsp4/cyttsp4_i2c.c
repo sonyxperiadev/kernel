@@ -51,6 +51,11 @@
 
 #define CY_I2C_DATA_SIZE  (3 * 256)
 
+#ifdef CONFIG_MACH_SONY_TULIP
+/* cyttsp detection */
+extern bool cyttsp_i2c_driver;
+#endif
+
 struct cyttsp4_i2c {
 	struct i2c_client *client;
 	u8 wr_buf[CY_I2C_DATA_SIZE];
@@ -312,6 +317,11 @@ static int cyttsp4_i2c_probe(struct i2c_client *client,
 	}
 
 	dev_info(dev, "%s: Successful probe %s\n", __func__, CYTTSP4_I2C_NAME);
+
+#ifdef CONFIG_MACH_SONY_TULIP
+	/* cyttsp detection */
+	cyttsp_i2c_driver = true;
+#endif
 
 	return 0;
 
