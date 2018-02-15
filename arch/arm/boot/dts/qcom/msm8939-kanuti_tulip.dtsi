@@ -39,7 +39,7 @@
 				cy,name = "cyttsp4_core";
 				cy,id = "main_ttsp_core";
 
-				gpios = <&msm_gpio 12 0>, <&msm_gpio 13 0>, <&msm_gpio 52 0>, <&msm_gpio 60 0>;
+				gpios = <&msm_gpio 12 0>, <&msm_gpio 13 0>;
 
 				cy,irq_gpio = <13>;
 				cy,rst_gpio = <12>;
@@ -121,10 +121,11 @@
 			cy,core {
 				cy,name = "cyttsp5_core";
 
-				gpios = <&msm_gpio 12 0>, <&msm_gpio 13 0>, <&msm_gpio 52 0>, <&msm_gpio 60 0>;
+				gpios = <&msm_gpio 12 0>, <&msm_gpio 13 0>;
 
 				cy,irq_gpio = <13>;
 				cy,rst_gpio = <12>;
+
 				cy,hid_desc_register = <1>;
 				/* CY_CORE_FLAG_WAKE_ON_GESTURE | CY_CORE_FLAG_RESTORE_PARAMETERS */
 				cy,flags = <5>;
