@@ -75,9 +75,6 @@ typedef enum {
 	UP,
 } RQBALANCE_STATE;
 
-#define USERSPACE_RUNNING	0
-#define USERSPACE_LOW_POWER	1
-
 #define CLUSTER_LITTLE		0
 #define CLUSTER_BIG		1
 #define MAX_CLUSTERS		2
@@ -106,7 +103,6 @@ static unsigned long up_delay;
 static unsigned long down_delay;
 static unsigned long last_change_time;
 static unsigned int  load_sample_rate = 20; /* msec */
-static unsigned int  userspace_suspend_state = 0;
 static struct workqueue_struct *rqbalance_wq;
 static struct delayed_work rqbalance_work;
 static RQBALANCE_STATE rqbalance_state;
@@ -535,20 +531,6 @@ static void rqbalance_work_func(struct work_struct *work)
 
 	CPU_SPEED_BALANCE balance;
 
-	switch (userspace_suspend_state) {
-		case USERSPACE_RUNNING:
-			break;
-		case USERSPACE_LOW_POWER:
-		{
-			int i;
-			if (num_online_cpus() == 1)
-				return;
-			for (i = 1; i < nr_cpu_ids; i++)
-				cpu_down(cpu);
-			return;
-		}
-	}
-
 	switch (rqbalance_state) {
 	case IDLE:
 		break;
@@ -755,7 +737,6 @@ static ssize_t show_uint_array(struct cpuquiet_attribute *cattr,
 
 CPQ_SIMPLE_ATTRIBUTE(balance_level, 0644, uint);
 CPQ_SIMPLE_ATTRIBUTE(load_sample_rate, 0644, uint);
-CPQ_SIMPLE_ATTRIBUTE(userspace_suspend_state, 0644, uint);
 CPQ_CUSTOM_ATTRIBUTE(up_delay, 0644,
 			show_ulong_delay, store_ulong_delay);
 CPQ_CUSTOM_ATTRIBUTE(down_delay, 0644,
@@ -772,7 +753,6 @@ CPQ_CUSTOM_ATTRIBUTE(nr_run_thresholds, 0644,
 static struct attribute *rqbalance_attrs[] = {
 	&balance_level_attr.attr,
 	&load_sample_rate_attr.attr,
-	&userspace_suspend_state_attr.attr,
 	&up_delay_attr.attr,
 	&down_delay_attr.attr,
 	&idle_bottom_freq_attr.attr,
