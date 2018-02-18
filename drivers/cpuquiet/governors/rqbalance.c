@@ -57,6 +57,7 @@
 /* Don't put any CPU down prior at least 3x scheduling samplings */
 #define DNCORE_DELAY_MS		(3 * (RQ_SAMPLE_TIME_NS / NSEC_PER_MSEC))
 #define UPCORE_DELAY_MS		((RQ_SAMPLE_TIME_NS / NSEC_PER_MSEC) / 2)
+#define RECHECK_DELAY_MS	(6 * (RQ_SAMPLE_TIME_NS / NSEC_PER_MSEC))
 
 typedef enum {
 	/* Brings one more CPU core on-line */
@@ -101,6 +102,7 @@ static unsigned int  idle_top_freq[MAX_CLUSTERS];
 static unsigned int  num_of_cores[MAX_CLUSTERS];
 static unsigned long up_delay;
 static unsigned long down_delay;
+static unsigned long recheck_delay;
 static unsigned long last_change_time;
 static unsigned int  load_sample_rate = 20; /* msec */
 static struct workqueue_struct *rqbalance_wq;
@@ -536,13 +538,19 @@ static void rqbalance_work_func(struct work_struct *work)
 		break;
 	case DOWN:
 		cpu = get_slowest_cpu_n();
-		if (cpu < nr_cpu_ids)
+		if (cpu < nr_cpu_ids) {
 			up = false;
-		else
+			if (cpu_highest_speed() > 98) {
+				rqbalance_state = UP;
+				queue_delayed_work(rqbalance_wq,
+					&rqbalance_work, recheck_delay);
+				break;
+			}
+		} else {
 			stop_load_timer();
+		}
 
-			queue_delayed_work(rqbalance_wq,
-						 &rqbalance_work, up_delay);
+		queue_delayed_work(rqbalance_wq, &rqbalance_work, up_delay);
 		break;
 	case UP:
 		balance = balanced_speed_balance();
@@ -905,6 +913,7 @@ static int rqbalance_start(void)
 
 	up_delay = msecs_to_jiffies(UPCORE_DELAY_MS);
 	down_delay = msecs_to_jiffies(DNCORE_DELAY_MS);
+	recheck_delay = msecs_to_jiffies(RECHECK_DELAY_MS);
 
 	err = rqbalance_get_package_info();
 	if (err)
