@@ -1,5 +1,5 @@
 config SDFAT_FS
-	tristate
+	tristate "sdFAT filesystem support"
 	default y
 	select NLS
 	select NLS_UTF8
