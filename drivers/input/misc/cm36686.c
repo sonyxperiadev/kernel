@@ -949,7 +949,7 @@ static ssize_t ls_adc_show(struct device *dev,
 	return ret;
 }
 
-static DEVICE_ATTR(ls_adc, 0644, ls_adc_show, NULL);
+static DEVICE_ATTR(ls_adc, 0444, ls_adc_show, NULL);
 
 static ssize_t ls_current_adc_show(struct device *dev,
 				  struct device_attribute *attr, char *buf)
@@ -975,7 +975,7 @@ static ssize_t ls_current_adc_show(struct device *dev,
 
 }
 
-static DEVICE_ATTR(ls_current_adc, 0644, ls_current_adc_show, NULL);
+static DEVICE_ATTR(ls_current_adc, 0444, ls_current_adc_show, NULL);
 
 static ssize_t ls_lux_show(struct device *dev,
 				  struct device_attribute *attr, char *buf)
@@ -990,7 +990,7 @@ static ssize_t ls_lux_show(struct device *dev,
 	return ret;
 }
 
-static DEVICE_ATTR(ls_lux, 0644, ls_lux_show, NULL);
+static DEVICE_ATTR(ls_lux, 0444, ls_lux_show, NULL);
 
 static ssize_t ls_ir_ink_store(struct device *dev,
 				struct device_attribute *attr,

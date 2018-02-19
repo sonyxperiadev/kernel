@@ -29,17 +29,14 @@
 			pinctrl-names = "pmx_ts_active","pmx_ts_suspend";
 			pinctrl-0 = <&ts_int_active &ts_reset_active>;
 			pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
-			vdda-supply = <&pm8916_l17>;
-			vddio_EVM-supply = <&pm8916_l6>;
-			vddio_PD1-supply = <&pm8916_l16>;
-			vddio_DEFAULT-supply = <&pm8916_l6>;
-			qcom,module_adc-vadc = <&pm8916_vadc>;
+			vdd-supply = <&pm8916_l17>;
+			vcc_i2c-supply = <&pm8916_l6>;
 
 			cy,core {
 				cy,name = "cyttsp4_core";
 				cy,id = "main_ttsp_core";
 
-				gpios = <&msm_gpio 12 0>, <&msm_gpio 13 0>, <&msm_gpio 52 0>, <&msm_gpio 60 0>;
+				gpios = <&msm_gpio 12 0>, <&msm_gpio 13 0>;
 
 				cy,irq_gpio = <13>;
 				cy,rst_gpio = <12>;
@@ -112,19 +109,17 @@
 			pinctrl-names = "pmx_ts_active","pmx_ts_suspend";
 			pinctrl-0 = <&ts_int_active &ts_reset_active>;
 			pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
-			vdda-supply = <&pm8916_l17>;
-			vddio_EVM-supply = <&pm8916_l6>;
-			vddio_PD1-supply = <&pm8916_l16>;
-			vddio_DEFAULT-supply = <&pm8916_l6>;
-			qcom,module_adc-vadc = <&pm8916_vadc>;
+			vdd-supply = <&pm8916_l17>;
+			vcc_i2c-supply = <&pm8916_l6>;
 
 			cy,core {
 				cy,name = "cyttsp5_core";
 
-				gpios = <&msm_gpio 12 0>, <&msm_gpio 13 0>, <&msm_gpio 52 0>, <&msm_gpio 60 0>;
+				gpios = <&msm_gpio 12 0>, <&msm_gpio 13 0>;
 
 				cy,irq_gpio = <13>;
 				cy,rst_gpio = <12>;
+
 				cy,hid_desc_register = <1>;
 				/* CY_CORE_FLAG_WAKE_ON_GESTURE | CY_CORE_FLAG_RESTORE_PARAMETERS */
 				cy,flags = <5>;
@@ -274,8 +269,8 @@
 
 			bosch,int_pin = <&msm_gpio 69 0x00>;
 			bosch,layout=<0x8>;
-			bmavdd-supply = <&pm8916_l17>;
-			bmavio-supply = <&pm8916_l6>;
+			vdd-supply = <&pm8916_l17>;
+			vio-supply = <&pm8916_l6>;
 			bosch,vdd-current-level = <1 210>;
 		};
 
@@ -283,8 +278,8 @@
 			compatible = "bosch,bmm050";
 			reg = <0x12>;
 
-			bmmvdd-supply = <&pm8916_l17>;
-			bmmvio-supply = <&pm8916_l6>;
+			vdd-supply = <&pm8916_l17>;
+			vio-supply = <&pm8916_l6>;
 			bosch,vdd-current-level = <1 255>;
 		};
 
@@ -298,7 +293,7 @@
 			interrupt-parent = <&msm_gpio>;
 			interrupts = <115 0x00>;
 
-			bmgvdd-supply = <&pm8916_l17>;
+			vdd-supply = <&pm8916_l17>;
 			bosch,vdd-current-level = <1 255>;
 		};
 

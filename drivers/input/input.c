@@ -40,6 +40,11 @@ static DEFINE_IDA(input_ida);
 static LIST_HEAD(input_dev_list);
 static LIST_HEAD(input_handler_list);
 
+#ifdef CONFIG_MACH_SONY_TULIP
+/* cyttsp detection */
+bool cyttsp_i2c_driver = false;
+#endif
+
 /*
  * input_mutex protects access to both input_dev_list and input_handler_list.
  * This also causes input_[un]register_device and input_[un]register_handler
