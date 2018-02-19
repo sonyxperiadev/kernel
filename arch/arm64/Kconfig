@@ -560,6 +560,14 @@ config ENABLE_FP_SIMD_SETTINGS
 
 	  If you are not sure what to do, select 'N' here.
 
+config ARCH_MSM8953_SOC_SETTINGS
+	bool "Enable MSM8953 SOC settings"
+	help
+	  Enable generic MSM8953 related settings which are required for
+	  some of CPUSS sub-system functionality.
+
+	  If you are not sure what to do, select 'N' here.
+
 config MSM_APP_SETTINGS
 	bool "Support to enable / disable app settings for MSM8996"
 	depends on ARCH_MSM8996
