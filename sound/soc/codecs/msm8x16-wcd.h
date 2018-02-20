@@ -61,6 +61,10 @@ extern const u8 msm8x16_wcd_reg_readonly[MSM8X16_WCD_CACHE_SIZE];
 extern const u8 msm8x16_wcd_reset_reg_defaults[MSM8X16_WCD_CACHE_SIZE];
 extern const u8 cajon_digital_reg[MSM8X16_WCD_CACHE_SIZE];
 
+#ifdef CONFIG_MACH_SONY_TULIP
+extern int vdd_spkr_gpio;
+#endif
+
 enum codec_versions {
 	TOMBAK_1_0,
 	TOMBAK_2_0,
