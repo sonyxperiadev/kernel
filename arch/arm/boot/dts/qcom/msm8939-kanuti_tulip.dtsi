@@ -365,14 +365,7 @@
 	sound {
 		qcom,msm-mclk-freq = <9600000>;
 		qcom,msm-mbhc-hphl-swh = <1>;
-		/delete-property/ cdc_lines_quat_ext_act;
-		/delete-property/ cdc_lines_quat_ext_sus;
-
-		qcom,cdc-vdd-spkr-pd-gpios = <&msm_gpio 116 0>;
-		qcom,cdc-vdd-rcv-pd-gpios = <&msm_gpio 49 0>;
 		qcom,cdc-vdd-spkr-gpios = <&msm_gpio 49 0>;
-		qcom,cdc-vdd-hac-gpios = <&msm_gpio 116 0>;
-
 		/delete-node/ qcom,cdc-us-euro-gpios;
 	};
 };
