@@ -119,7 +119,6 @@
 	qcom,external-typec;
 	qcom,typec-psy-name = "typec";
 	somc,typec-current-max = <2500>;
-	somc,id-polling-enabled;
 };
 
 &tlmm {
@@ -458,7 +457,6 @@
 		fusb301,int-gpio = <&tlmm 59 0x00>;
 		fusb301,cbl_det-gpio = <&tlmm 131 0x00>;
 		fusb301,use-try-snk-emulation;
-		fusb301,ext_typec_ctrl-enabled;
 	};
 };
 
