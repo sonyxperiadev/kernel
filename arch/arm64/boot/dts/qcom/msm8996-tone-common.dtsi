@@ -3228,3 +3228,7 @@
 &pcie0 {
 	qcom,clk-power-manage-en;
 };
+
+&wil6210 {
+	status = "disabled";
+};
