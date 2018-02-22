@@ -543,7 +543,6 @@
 		fusb301,cbl_det-enabled;
 		fusb301,cbl_det-gpio = <&tlmm 131 0x00>;
 		fusb301,use-try-snk-emulation;
-		fusb301,drp_boot-enabled;
 	};
 };
 
