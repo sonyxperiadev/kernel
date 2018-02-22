@@ -465,8 +465,6 @@
 	id_polling_up_period = <500>;
 	id_polling_pd_gpio = <&tlmm 24 0>;
 	id_lv_vadc_channel = <0x79>;
-	id_polling_keep_not_dischg;
-	no_device_det_enable;
 	qcom,usb_id_lv-vadc = <&pm8994_vadc>;
 	qcom,usbin-vadc = <&pmi8994_vadc>;
 	usb_switch_sel = <&pmi8994_gpios 9 0>;
