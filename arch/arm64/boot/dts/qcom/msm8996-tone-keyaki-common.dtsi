@@ -539,8 +539,8 @@
 		reg = <0x25>;
 		interrupt-parent = <&tlmm>;
 		interrupts = <59 0x02>, <131 0x03>;
+		fusb301,cbl_sns-gpio = <&tlmm 25 0x00>;
 		fusb301,int-gpio = <&tlmm 59 0x00>;
-		fusb301,cbl_det-enabled;
 		fusb301,cbl_det-gpio = <&tlmm 131 0x00>;
 		fusb301,use-try-snk-emulation;
 	};
