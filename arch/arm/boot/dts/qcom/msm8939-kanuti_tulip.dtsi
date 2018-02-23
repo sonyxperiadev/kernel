@@ -460,18 +460,6 @@
 
 /* Pinctrl */
 &tlmm_pinmux {
-	hwid_pins {
-		qcom,pins = <&gp 0>, <&gp 1>, <&gp 2>, <&gp 3>,
-			    <&gp 8>, <&gp 9>, <&gp 107>, <&gp 35>;
-		qcom,num-grp-pins = <8>;
-		qcom,pin-func = <0>;
-		label = "fih_hwid_pin";
-		hwid_init: init {
-			drive-strength = <2>;
-			bias-disable;
-		};
-	};
-
 	/delete-node/ spi0_active;
 	/delete-node/ spi0_suspend;
 	/delete-node/ spi0_cs0_active;
