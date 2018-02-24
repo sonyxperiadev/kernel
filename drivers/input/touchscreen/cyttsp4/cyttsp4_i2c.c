@@ -366,22 +366,7 @@ static struct i2c_driver cyttsp4_i2c_driver = {
 	.id_table = cyttsp4_i2c_id,
 };
 
-static int __init cyttsp4_i2c_init(void)
-{
-	int rc = i2c_add_driver(&cyttsp4_i2c_driver);
-
-	pr_info("%s: Cypress TTSP I2C Touchscreen Driver (Built %s) rc=%d\n",
-		 __func__, CY_DRIVER_DATE, rc);
-	return rc;
-}
-module_init(cyttsp4_i2c_init);
-
-static void __exit cyttsp4_i2c_exit(void)
-{
-	i2c_del_driver(&cyttsp4_i2c_driver);
-	pr_info("%s: module exit\n", __func__);
-}
-module_exit(cyttsp4_i2c_exit);
+module_i2c_driver(cyttsp4_i2c_driver);
 
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("Cypress TrueTouch(R) Standard Product (TTSP) I2C driver");

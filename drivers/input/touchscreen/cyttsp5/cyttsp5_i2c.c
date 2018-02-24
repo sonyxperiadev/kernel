@@ -281,25 +281,7 @@ static struct i2c_driver cyttsp5_i2c_driver = {
 	.id_table = cyttsp5_i2c_id,
 };
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 3, 0))
 module_i2c_driver(cyttsp5_i2c_driver);
-#else
-static int __init cyttsp5_i2c_init(void)
-{
-	int rc = i2c_add_driver(&cyttsp5_i2c_driver);
-
-	pr_info("%s: Cypress TTSP v5 I2C Driver (Built %s) rc=%d\n",
-		 __func__, CY_DRIVER_DATE, rc);
-	return rc;
-}
-module_init(cyttsp5_i2c_init);
-
-static void __exit cyttsp5_i2c_exit(void)
-{
-	i2c_del_driver(&cyttsp5_i2c_driver);
-}
-module_exit(cyttsp5_i2c_exit);
-#endif
 
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("Cypress TrueTouch(R) Standard Product I2C driver");
