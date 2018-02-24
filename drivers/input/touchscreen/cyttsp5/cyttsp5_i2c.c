@@ -155,8 +155,10 @@ static int cyttsp5_i2c_probe(struct i2c_client *client,
 
 #ifdef CONFIG_MACH_SONY_TULIP
 	/* cyttsp detection */
-	if (cyttsp_i2c_driver)
-		return 0;
+	if (cyttsp_i2c_driver) {
+		dev_err(dev, "%s: CYTTSP4 detected. Stop probing.\n", __func__);
+		return -ENODEV;
+	}
 #endif
 
 	dev_info(dev, "%s: Starting %s probe...\n", __func__, CYTTSP5_I2C_NAME);
