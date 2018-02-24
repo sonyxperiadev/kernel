@@ -383,7 +383,6 @@ static void __exit cyttsp4_i2c_exit(void)
 }
 module_exit(cyttsp4_i2c_exit);
 
-MODULE_ALIAS(CYTTSP4_I2C_NAME);
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("Cypress TrueTouch(R) Standard Product (TTSP) I2C driver");
 MODULE_AUTHOR("Cypress");
