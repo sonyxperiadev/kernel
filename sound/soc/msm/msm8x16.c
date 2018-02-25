@@ -2640,10 +2640,11 @@ static int msm8x16_asoc_machine_probe(struct platform_device *pdev)
 		dev_dbg(&pdev->dev,
 			"%s: missing %s in dt node\n", __func__, vdd_spkr);
 	} else {
-		if (!gpio_is_valid(vdd_spkr_gpio)) {
-			pr_err("%s: Invalid vdd speaker gpio: %d",
+		ret = gpio_request(vdd_spkr_gpio, "vdd_spkr_gpio");
+		if (ret) {
+			/* GPIO to enable vdd spkr exists, but failed request */
+			pr_err("%s: Failed to request vdd spkr gpio %d\n",
 				__func__, vdd_spkr_gpio);
-			return -EINVAL;
 		}
 	}
 #endif
