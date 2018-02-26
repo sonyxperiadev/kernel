@@ -365,14 +365,7 @@
 	sound {
 		qcom,msm-mclk-freq = <9600000>;
 		qcom,msm-mbhc-hphl-swh = <1>;
-		/delete-property/ cdc_lines_quat_ext_act;
-		/delete-property/ cdc_lines_quat_ext_sus;
-
-		qcom,cdc-vdd-spkr-pd-gpios = <&msm_gpio 116 0>;
-		qcom,cdc-vdd-rcv-pd-gpios = <&msm_gpio 49 0>;
 		qcom,cdc-vdd-spkr-gpios = <&msm_gpio 49 0>;
-		qcom,cdc-vdd-hac-gpios = <&msm_gpio 116 0>;
-
 		/delete-node/ qcom,cdc-us-euro-gpios;
 	};
 };
@@ -512,11 +505,6 @@
 
 	tlmm_gpio_key {
 		qcom,pins = <&gp 108>, <&gp 109>, <&gp 51>, <&gp 11>;
-		qcom,num-grp-pins = <4>;
-	};
-
-	ext-cdc-tlmm-lines { /* Verify me. CAF or FIH? */
-		qcom,pins = <&gp 112>, <&gp 117>, <&gp 118>, <&gp 119>;
 		qcom,num-grp-pins = <4>;
 	};
 

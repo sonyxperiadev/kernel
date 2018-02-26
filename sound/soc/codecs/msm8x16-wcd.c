@@ -3072,6 +3072,13 @@ static int msm8x16_wcd_codec_enable_spk_pa(struct snd_soc_dapm_widget *w,
 	dev_dbg(w->codec->dev, "%s %d %s\n", __func__, event, w->name);
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
+#ifdef CONFIG_MACH_SONY_TULIP
+		if (vdd_spkr_gpio >= 0) {
+			gpio_direction_output(vdd_spkr_gpio, 1);
+			pr_debug("%s: Enabled 5V external supply for speaker\n",
+					__func__);
+		}
+#endif
 		snd_soc_update_bits(codec,
 			MSM8X16_WCD_A_DIGITAL_CDC_ANA_CLK_CTL, 0x10, 0x10);
 		snd_soc_update_bits(codec,
@@ -3170,6 +3177,13 @@ static int msm8x16_wcd_codec_enable_spk_pa(struct snd_soc_dapm_widget *w,
 		}
 		break;
 	case SND_SOC_DAPM_POST_PMD:
+#ifdef CONFIG_MACH_SONY_TULIP
+		if (vdd_spkr_gpio >= 0) {
+			gpio_direction_output(vdd_spkr_gpio, 0);
+			pr_debug("%s: Disabled 5V external supply for speaker\n",
+					__func__);
+		}
+#endif
 		snd_soc_update_bits(codec,
 			MSM8X16_WCD_A_ANALOG_SPKR_PWRSTG_CTL, 0xE0, 0x00);
 		usleep_range(CODEC_DELAY_1_MS, CODEC_DELAY_1_1_MS);
