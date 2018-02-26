@@ -254,6 +254,12 @@ static int cyttsp4_i2c_probe(struct i2c_client *client,
 	dev_dbg(dev, "%s: add adap='%s' (CYTTSP4_I2C_NAME=%s)\n", __func__,
 		ts_i2c->id, CYTTSP4_I2C_NAME);
 
+	rc = cyttsp4_ping_hw(ts_i2c);
+	if (rc) {
+		dev_err(dev, "%s: No HW detected\n", __func__);
+		goto add_adapter_err;
+	}
+
 	vdd = regulator_get(&client->dev, "vdd");
 	if (IS_ERR(vdd)) {
 		printk("%s: Failed to get vdd regulator\n", __func__);
@@ -302,12 +308,6 @@ static int cyttsp4_i2c_probe(struct i2c_client *client,
 	}
 
 	pm_runtime_enable(&client->dev);
-
-	rc = cyttsp4_ping_hw(ts_i2c);
-	if (rc) {
-		dev_err(dev, "%s: No HW detected\n", __func__);
-		goto add_adapter_err;
-	}
 
 	rc = cyttsp4_add_adapter(ts_i2c->id, &ops, dev);
 	if (rc) {
