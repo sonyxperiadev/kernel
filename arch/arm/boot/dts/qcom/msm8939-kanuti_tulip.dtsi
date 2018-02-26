@@ -13,6 +13,7 @@
 / {
         aliases {
                 /delete-property/ spi0;
+                /delete-property/ spi5;
         };
 };
 
@@ -343,6 +344,13 @@
 	status = "disabled";
 };
 
+&spi_5 {
+	/delete-property/ pinctrl-names;
+	/delete-property/ pinctrl-0;
+	/delete-property/ pinctrl-1;
+	status = "disabled";
+};
+
 &i2c_0 {
 	qcom,clk-freq-out = <400000>;
 };
@@ -468,6 +476,10 @@
 	/delete-node/ spi0_suspend;
 	/delete-node/ spi0_cs0_active;
 	/delete-node/ spi0_cs0_suspend;
+	/delete-node/ spi5_active;
+	/delete-node/ spi5_suspend;
+	/delete-node/ spi5_cs0_active;
+	/delete-node/ spi5_cs0_suspend;
 
 	tlmm_gpio_key {
 		qcom,pins = <&gp 108>, <&gp 109>, <&gp 51>, <&gp 11>;
