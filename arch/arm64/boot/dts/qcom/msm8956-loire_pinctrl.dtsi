@@ -1588,7 +1588,7 @@
 	pri_tlmm_lines_act: pri_tlmm_lines_act {
 		mux {
 			pins = "gpio123", "gpio124", "gpio125";
-			function = "gpio";
+			function = "pri_mi2s";
 		};
 		config {
 			pins = "gpio123", "gpio124", "gpio125";
@@ -1612,7 +1612,7 @@
 	sec_tlmm_lines_act: sec-tlmm-lines_act {
 		mux {
 			pins = "gpio102", "gpio105";
-			function = "gpio";
+			function = "sec_mi2s";
 		};
 		config {
 			pins = "gpio102", "gpio105";
@@ -1623,7 +1623,7 @@
 	sec_tlmm_lines_sus: sec-tlmm-lines_sus {
 		mux {
 			pins = "gpio102", "gpio105";
-			function = "gpio";
+			function = "sec_mi2s";
 		};
 		config {
 			pins = "gpio102", "gpio105";
@@ -1635,7 +1635,7 @@
 	sec_tlmm_2_lines_act: sec_tlmm_2_lines_act{
 		mux {
 			pins = "gpio134", "gpio135";
-			function = "gpio";
+			function = "sec_mi2s";
 		};
 		config {
 			pins = "gpio134", "gpio135";
@@ -1646,7 +1646,7 @@
 	sec_tlmm_2_lines_sus: sec_tlmm_2_lines_sus{
 		mux {
 			pins = "gpio134", "gpio135";
-			function = "gpio";
+			function = "sec_mi2s";
 		};
 		config {
 			pins = "gpio134", "gpio135";
