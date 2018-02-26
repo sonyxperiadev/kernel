@@ -497,7 +497,6 @@ enum msm8976_functions {
 	msm_mux_dmic0_clk,
 	msm_mux_hdmi_int,
 	msm_mux_dmic0_data,
-	msm_mux_pri_mi2s_ws,
 	msm_mux_wsa_vi,
 	msm_mux_wsa_en,
 	msm_mux_blsp_spi8,
@@ -510,7 +509,6 @@ enum msm8976_functions {
 	msm_mux_gsm0_tx,
 	msm_mux_sdcard_det,
 	msm_mux_sec_mi2s,
-	msm_mux_sec_mi2s_ws,
 	msm_mux_ss_switch,
 	msm_mux_NA,
 };
@@ -709,7 +707,7 @@ static const char * const sec_mi2s_mclk_b_groups[] = {
 	"gpio66",
 };
 static const char * const pri_mi2s_groups[] = {
-	"gpio122", "gpio124", "gpio125", "gpio127",
+	"gpio122", "gpio123", "gpio124", "gpio125", "gpio127",
 };
 static const char * const codec_reset_groups[] = {
 	"gpio67",
@@ -787,9 +785,6 @@ static const char * const hdmi_int_groups[] = {
 static const char * const dmic0_data_groups[] = {
 	"gpio67",
 };
-static const char * const pri_mi2s_ws_groups[] = {
-	"gpio123",
-};
 static const char * const wsa_vi_groups[] = {
 	"gpio108", "gpio109",
 };
@@ -827,11 +822,9 @@ static const char * const sdcard_det_groups[] = {
 	"gpio133",
 };
 static const char * const sec_mi2s_groups[] = {
-	"gpio102", "gpio105", "gpio135",
+	"gpio102", "gpio105", "gpio134", "gpio135",
 };
-static const char * const sec_mi2s_ws_groups[] = {
-	"gpio134",
-};
+
 static const char * const ss_switch_groups[] = {
 	"gpio139",
 };
@@ -919,7 +912,6 @@ static const struct msm_function msm8976_functions[] = {
 	FUNCTION(dmic0_clk),
 	FUNCTION(hdmi_int),
 	FUNCTION(dmic0_data),
-	FUNCTION(pri_mi2s_ws),
 	FUNCTION(wsa_vi),
 	FUNCTION(wsa_en),
 	FUNCTION(blsp_spi8),
@@ -932,7 +924,6 @@ static const struct msm_function msm8976_functions[] = {
 	FUNCTION(gsm0_tx),
 	FUNCTION(sdcard_det),
 	FUNCTION(sec_mi2s),
-	FUNCTION(sec_mi2s_ws),
 	FUNCTION(ss_switch),
 };
 
@@ -1060,7 +1051,7 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(120, cdc_pdm0, NA, NA, NA, NA, NA, NA, qdss_tracedata_a, NA),
 	PINGROUP(121, cdc_pdm0, NA, NA, NA, NA, NA, NA, qdss_tracedata_a, NA),
 	PINGROUP(122, pri_mi2s, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(123, pri_mi2s_ws, m_voc, NA, NA, NA, NA, NA, NA, NA),
+	PINGROUP(123, pri_mi2s, m_voc, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(124, pri_mi2s, m_voc, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(125, pri_mi2s, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(126, pri_mi2s_mclk_a, sec_mi2s_mclk_b, NA , NA, NA, NA, NA, NA, qdss_tracedata_b),
@@ -1071,7 +1062,7 @@ static const struct msm_pingroup msm8976_groups[] = {
 	PINGROUP(131, qdss_tracedata_a, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(132, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	PINGROUP(133, NA, NA, NA, NA, NA, NA, NA, NA, NA),
-	PINGROUP(134, blsp_spi5, blsp_uart5, sec_mi2s_ws, NA, NA, NA, NA, NA, NA),
+	PINGROUP(134, blsp_spi5, blsp_uart5, sec_mi2s, NA, NA, NA, NA, NA, NA),
 	PINGROUP(135, blsp_spi5, blsp_uart5, sec_mi2s, NA, NA, NA, NA, NA, NA),
 	PINGROUP(136, blsp_spi5, blsp_uart5, blsp_i2c5, NA, NA, NA, NA, NA, NA),
 	PINGROUP(137, blsp_spi5, blsp_uart5, blsp_i2c5, NA, NA, NA, NA, NA, NA),
