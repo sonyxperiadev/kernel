@@ -155,8 +155,10 @@ static int cyttsp5_i2c_probe(struct i2c_client *client,
 
 #ifdef CONFIG_MACH_SONY_TULIP
 	/* cyttsp detection */
-	if (cyttsp_i2c_driver)
-		return 0;
+	if (cyttsp_i2c_driver) {
+		dev_err(dev, "%s: CYTTSP4 detected. Stop probing.\n", __func__);
+		return -ENODEV;
+	}
 #endif
 
 	dev_info(dev, "%s: Starting %s probe...\n", __func__, CYTTSP5_I2C_NAME);
@@ -281,25 +283,7 @@ static struct i2c_driver cyttsp5_i2c_driver = {
 	.id_table = cyttsp5_i2c_id,
 };
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 3, 0))
 module_i2c_driver(cyttsp5_i2c_driver);
-#else
-static int __init cyttsp5_i2c_init(void)
-{
-	int rc = i2c_add_driver(&cyttsp5_i2c_driver);
-
-	pr_info("%s: Cypress TTSP v5 I2C Driver (Built %s) rc=%d\n",
-		 __func__, CY_DRIVER_DATE, rc);
-	return rc;
-}
-module_init(cyttsp5_i2c_init);
-
-static void __exit cyttsp5_i2c_exit(void)
-{
-	i2c_del_driver(&cyttsp5_i2c_driver);
-}
-module_exit(cyttsp5_i2c_exit);
-#endif
 
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("Cypress TrueTouch(R) Standard Product I2C driver");
