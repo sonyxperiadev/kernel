@@ -45,7 +45,9 @@
 #include "cyttsp4_regs.h"
 #include "cyttsp4_devtree.h"
 
+#ifndef CONFIG_MACH_SONY_TULIP
 #define ENABLE_VIRTUAL_KEYS
+#endif
 
 #define MAX_NAME_LENGTH		64
 
