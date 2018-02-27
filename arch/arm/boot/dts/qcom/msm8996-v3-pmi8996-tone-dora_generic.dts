@@ -26,7 +26,6 @@
 #include "msm8996-tone-common.dtsi"
 #include "msm8996-tone-dora-camera.dtsi"
 #include "msm8996-tone-dora-common.dtsi"
-#include "msm8996-tone-dora_generic-common.dtsi"
 #include "msm8996-tone-dora_generic.dtsi"
 #include "dsi-panel-somc-dora.dtsi"
 
