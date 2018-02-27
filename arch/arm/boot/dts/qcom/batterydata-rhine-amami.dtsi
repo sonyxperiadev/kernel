@@ -16,7 +16,7 @@
  */
 
 qcom,amami-batterydata {
-	qcom,fcc-mah = <3140>;
+	qcom,fcc-mah = <2420>;
 	qcom,default-rbatt-mohm = <100>;
 	qcom,rbatt-capacitive-mohm = <0>;
 	qcom,flat-ocv-threshold-uv = <3800000>;
