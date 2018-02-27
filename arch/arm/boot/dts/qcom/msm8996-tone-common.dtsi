@@ -35,6 +35,34 @@
 			reg = <0 0xa7f00000 0 0x00100000>;
 		};
 	};
+
+	firmware: firmware {
+		android {
+			compatible = "android,firmware";
+			fstab {
+				compatible = "android,fstab";
+				vendor {
+					status = "disabled";
+				};
+				system {
+					compatible = "android,system";
+					dev = "/dev/block/platform/soc/7464900.sdhci/by-name/system";
+					type = "ext4";
+					mnt_flags = "ro,barrier=1,discard";
+					fsmgr_flags = "wait";
+					status = "ok";
+				};
+				odm {
+					compatible = "android,odm";
+					dev = "/dev/block/platform/soc/7464900.sdhci/by-name/oem";
+					type = "ext4";
+					mnt_flags = "ro,barrier=1,discard";
+					fsmgr_flags = "wait";
+					status = "ok";
+				};
+			};
+		};
+	};
 };
 
 &soc {
