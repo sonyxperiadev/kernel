@@ -60,12 +60,6 @@ static int panel_detect_setup(struct device_node **node,
 	struct device_node *parent = of_get_parent(*node);
 	int rc, lcd_id;
 
-	if (of_machine_is_compatible("somc,fih-board")) {
-		spec_pdata->driver_ic = DRIVER_IC_FIH;
-		spec_pdata->lcd_id = spec_pdata->driver_ic;
-		return 0;
-	}
-
 	spec_pdata->driver_ic = PANEL_DRIVER_IC_NONE;
 
 	lcd_id = of_get_named_gpio(parent, "somc,dric-gpio", 0);
@@ -184,9 +178,6 @@ static int cmd_panel_detect(struct mdss_panel_data *pdata)
 	np = of_parse_phandle(
 			pdata->panel_pdev->dev.of_node,
 			"qcom,dsi-pref-prim-pan", 0);
-
-	if (of_machine_is_compatible("somc,tulip"))
-		ctrl_pdata->rx_buf.data[0] = ctrl_pdata->rx_buf.data[2];
 
 	rx_data = ctrl_pdata->rx_buf.data;
 

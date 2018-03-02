@@ -27,7 +27,6 @@
 #include "../mdss_fb.h"
 
 #define PCC_STS_UD	0x01	/* update request */
-#define DRIVER_IC_FIH	4
 
 /* Incell extensions */
 #define HYBRID_INCELL		((bool)true)
