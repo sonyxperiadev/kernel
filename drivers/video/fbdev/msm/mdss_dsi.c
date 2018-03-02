@@ -1645,11 +1645,6 @@ int mdss_dsi_pinctrl_set_state(
 	struct mdss_panel_info *pinfo = NULL;
 	int rc = -EFAULT;
 
-#ifdef CONFIG_SOMC_PANEL_LEGACY
-	if (ctrl_pdata->spec_pdata->disp_on_in_boot)
-		return 0;
-#endif
-
 	if (IS_ERR_OR_NULL(ctrl_pdata->pin_res.pinctrl))
 		return PTR_ERR(ctrl_pdata->pin_res.pinctrl);
 
@@ -2950,12 +2945,6 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 	case MDSS_EVENT_AVR_MODE:
 		mdss_dsi_avr_config(ctrl_pdata, (int)(unsigned long) arg);
 		break;
-#ifdef CONFIG_SOMC_PANEL_LEGACY
-	case MDSS_EVENT_DISP_ON:
-		if (ctrl_pdata->spec_pdata->disp_on)
-			ctrl_pdata->spec_pdata->disp_on(pdata);
-		break;
-#endif	/* CONFIG_SOMC_PANEL_LEGACY */
 	default:
 		pr_debug("%s: unhandled event=%d\n", __func__, event);
 		break;
@@ -4182,22 +4171,6 @@ int mdss_dsi_panel_power_detect(struct platform_device *pdev, int enable)
 #endif
 	return 0;
 }
-
-#ifdef CONFIG_SOMC_PANEL_LEGACY
-static int mdss_dsi_intf_ready(struct mdss_panel_data *pdata)
-{
-	struct mdss_dsi_ctrl_pdata *ctrl_pdata;
-
-	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
-				panel_data);
-	if (!ctrl_pdata) {
-		pr_err("%s: Invalid input data\n", __func__);
-		return -EINVAL;
-	}
-	ctrl_pdata->spec_pdata->disp_on(pdata);
-	return 0;
-}
-#endif  /* CONFIG_SOMC_PANEL_LEGACY */
 #endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 
 struct device dsi_dev;
@@ -4713,9 +4686,6 @@ int dsi_panel_device_register(struct platform_device *ctrl_pdev,
 	ctrl_pdata->panel_data.event_handler = mdss_dsi_event_handler;
 	ctrl_pdata->panel_data.get_fb_node = mdss_dsi_get_fb_node_cb;
 #ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
- #ifdef CONFIG_SOMC_PANEL_LEGACY
-	ctrl_pdata->panel_data.intf_ready = mdss_dsi_intf_ready;
- #endif
 	ctrl_pdata->panel_data.detect = spec_pdata->detect;
 	ctrl_pdata->panel_data.update_panel = spec_pdata->update_panel;
 	ctrl_pdata->panel_data.panel_pdev = ctrl_pdev;
