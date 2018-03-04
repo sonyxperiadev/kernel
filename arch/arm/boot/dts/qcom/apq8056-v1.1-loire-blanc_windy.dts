@@ -18,16 +18,27 @@
  * published by the Free Software Foundation.
  */
 
-/dts-v1/;
-#include "apq8056-v1.1.dtsi"
 #include "msm8956-mtp.dtsi"
 #include "msm8956-loire-common.dtsi"
 #include "msm8956-loire-blanc-common.dtsi"
 #include "msm8956-loire-blanc_camera.dtsi"
-#include "apq8056-v1.1-loire-blanc_windy.dtsi"
-#include "dsi-panel-blanc.dtsi"
+#include "dsi-panel-somc-blanc.dtsi"
+
 / {
 	model = "SoMC Blanc-ROW";
 	compatible = "somc,blanc-row", "qcom,apq8056";
-	qcom,board-id= <8 0>;
+	qcom,board-id = <8 0>;
+	qcom,msm-id = <274 0x10001>; /* APQ variant */
+};
+
+&soc {
+	/delete-node/ sim_detect;
+
+	qcom,rmnet-ipa {
+		status = "disabled";
+	};
+};
+
+&ipa_hw {
+	status = "disabled";
 };
