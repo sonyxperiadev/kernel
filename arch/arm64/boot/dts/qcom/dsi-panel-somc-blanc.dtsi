@@ -68,8 +68,8 @@
 		qcom,mdss-dsi-force-clock-lane-hs;
 		qcom,mdss-dsi-always-on;
 		qcom,dba-panel;
+		somc,lcd-id = <0>;
 		somc,lcd-id-adc = <565000 653000>;
-		somc,mdss-dsi-master;
 	};
 
 	dsi_default_panel: somc,default_cmd_panel {
@@ -123,8 +123,8 @@
 		qcom,mdss-dsi-force-clock-lane-hs;
 		qcom,mdss-dsi-always-on;
 		qcom,dba-panel;
+		somc,lcd-id = <0>;
 		somc,lcd-id-adc = <0 0x7fffffff>;
-		somc,mdss-dsi-master;
 	};
 
 };
