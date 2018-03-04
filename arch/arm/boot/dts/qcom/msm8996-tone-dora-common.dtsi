@@ -126,16 +126,18 @@
 	id_polling_up_interval = <2000>;
 	id_polling_up_period = <500>;
 	id_polling_pd_gpio = <&tlmm 24 0>;
-	id_lv_vadc_channel = <0x39>;
-	qcom,usb_id_lv-vadc = <&pm8994_vadc>;
-	qcom,usbin-vadc = <&pmi8994_vadc>;
-	usb_switch_sel = <&pmi8994_gpios 9 0>;
-	usb_id_discharge = <&pmi8994_mpps 1 0>;
+	qcom,usb_detect-vadc = <&pm8994_vadc>;
+	somc,usb_detect_adc_channel = <0x39>;
+	somc,disable-typec-otg;
+
+   /*  ***** Kept for hardware capability reference ***** */
+//	usb_switch_sel = <&pmi8994_gpios 9 0>;
+//	usb_id_discharge = <&pmi8994_mpps 1 0>;
 };
 
 &pm8994_vadc {
 	chan@39 {
-		label = "usb_id_lv";
+		label = "usb_detect";
 		reg = <0x39>;
 		qcom,decimation = <0>;
 		qcom,pre-div-channel-scaling = <0>;
