@@ -266,6 +266,7 @@ struct dwc3_msm {
 	int			id_polling_pd_gpio;
 	struct qpnp_vadc_chip	*usb_detect_adc;
 	unsigned int		usb_detect_adc_chan;
+	bool			usb_detect_no_typec;
 	spinlock_t		id_polling_lock;
 	unsigned int		lcd_blanked;
 	struct wakeup_source	id_polling_wu;
@@ -2806,9 +2807,16 @@ static void dwc3_id_polling_work(struct work_struct *w)
 	spin_unlock_irqrestore(&mdwc->id_polling_lock, flags);
 
 	if (mdwc->otg_present != otg_present) {
-		dwc3_msm_set_type_power_role(mdwc, mdwc->otg_present ?
-			POWER_SUPPLY_TYPEC_PR_DUAL :
-			POWER_SUPPLY_TYPEC_PR_SINK);
+		if (mdwc->usb_detect_no_typec) {
+			/* No external controller, do the job through DWC3 */
+			mdwc->id_state = id;
+			dbg_event(0xFF, "id_state", mdwc->id_state);
+			queue_work(mdwc->dwc3_wq, &mdwc->resume_work);
+		} else {
+			dwc3_msm_set_type_power_role(mdwc, mdwc->otg_present ?
+				POWER_SUPPLY_TYPEC_PR_DUAL :
+				POWER_SUPPLY_TYPEC_PR_SINK);
+		}
 		__pm_wakeup_event(&mdwc->id_polling_wu,
 				USB_ID_POLLING_WAKE_TIMEOUT);
 	}
@@ -3642,6 +3650,9 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 					&mdwc->usb_detect_adc_chan);
 		if (ret)
 			mdwc->usb_detect_adc_chan = 0x14; /* Default channel */
+
+		mdwc->usb_detect_no_typec = of_property_read_bool(node,
+					"somc,disable-typec-otg");
 
 		wakeup_source_init(&mdwc->id_polling_wu, "id_polling");
 		spin_lock_init(&mdwc->id_polling_lock);
