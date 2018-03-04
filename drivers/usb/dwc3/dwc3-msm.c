@@ -265,6 +265,7 @@ struct dwc3_msm {
 	unsigned int		id_polling_up_period;
 	int			id_polling_pd_gpio;
 	struct qpnp_vadc_chip	*usb_detect_adc;
+	unsigned int		usb_detect_adc_chan;
 	spinlock_t		id_polling_lock;
 	unsigned int		lcd_blanked;
 	struct wakeup_source	id_polling_wu;
@@ -2744,7 +2745,8 @@ static int dwc3_get_usb_detect_adc(struct dwc3_msm *mdwc)
 			return PTR_ERR(mdwc->usb_detect_adc);
 	}
 
-	rc = qpnp_vadc_read(mdwc->usb_detect_adc, 0x14, &results);
+	rc = qpnp_vadc_read(mdwc->usb_detect_adc,
+			mdwc->usb_detect_adc_chan, &results);
 	if (rc)
 		return 1;
 	else
@@ -3635,6 +3637,11 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 						"id_polling_pd_gpio", 0);
 		if (!gpio_is_valid(mdwc->id_polling_pd_gpio))
 			dev_info(&pdev->dev, "id_polling_pd is missing\n");
+
+		ret = of_property_read_u32(node, "somc,usb_detect_adc_channel",
+					&mdwc->usb_detect_adc_chan);
+		if (ret)
+			mdwc->usb_detect_adc_chan = 0x14; /* Default channel */
 
 		wakeup_source_init(&mdwc->id_polling_wu, "id_polling");
 		spin_lock_init(&mdwc->id_polling_lock);
