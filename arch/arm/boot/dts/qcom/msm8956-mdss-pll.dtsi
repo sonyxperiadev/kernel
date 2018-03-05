@@ -37,6 +37,7 @@
 				qcom,supply-max-voltage = <0>;
 				qcom,supply-enable-load = <0>;
 				qcom,supply-disable-load = <0>;
+				qcom,supply-drms-unsupported;
 			};
 		};
 	};

@@ -229,8 +229,9 @@ int msm_dss_enable_vreg(struct dss_vreg *in_vreg, int num_vreg, int enable)
 			if (in_vreg[i].pre_on_sleep && need_sleep)
 				usleep_range(in_vreg[i].pre_on_sleep * 1000,
 					in_vreg[i].pre_on_sleep * 1000);
-			rc = regulator_set_load(in_vreg[i].vreg,
-				in_vreg[i].enable_load);
+			if (!in_vreg[i].drms_unsupported)
+				rc = regulator_set_load(in_vreg[i].vreg,
+					in_vreg[i].enable_load);
 			if (rc < 0) {
 				DEV_ERR("%pS->%s: %s set opt m fail\n",
 					__builtin_return_address(0), __func__,
@@ -253,8 +254,9 @@ int msm_dss_enable_vreg(struct dss_vreg *in_vreg, int num_vreg, int enable)
 			if (in_vreg[i].pre_off_sleep)
 				usleep_range(in_vreg[i].pre_off_sleep * 1000,
 					in_vreg[i].pre_off_sleep * 1000);
-			regulator_set_load(in_vreg[i].vreg,
-				in_vreg[i].disable_load);
+			if (!in_vreg[i].drms_unsupported)
+				rc = regulator_set_load(in_vreg[i].vreg,
+					in_vreg[i].enable_load);
 			regulator_disable(in_vreg[i].vreg);
 			if (in_vreg[i].post_off_sleep)
 				usleep_range(in_vreg[i].post_off_sleep * 1000,
