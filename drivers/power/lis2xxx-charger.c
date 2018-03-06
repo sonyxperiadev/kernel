@@ -341,7 +341,6 @@ static enum power_supply_property lis2xxx_battery_properties[] = {
 	POWER_SUPPLY_PROP_CAPACITY,
 	POWER_SUPPLY_PROP_TEMP,
 	POWER_SUPPLY_PROP_VOLTAGE_NOW,
-	POWER_SUPPLY_PROP_CHARGE_ENABLED,
 };
 
 static int lis2xxx_battery_set_property(struct power_supply *psy,
@@ -355,23 +354,6 @@ static int lis2xxx_battery_set_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CAPACITY:
 		chip->fake_battery_soc = val->intval;
 		power_supply_changed(chip->lis_psy);
-		break;
-	case POWER_SUPPLY_PROP_CHARGE_ENABLED:
-		pr_debug("intval = %d, power_on = %d\n",
-			val->intval, chip->power_on);
-		if (!val->intval && chip->power_on == POWER_INIT) {
-			mutex_lock(&chip->lock);
-			pr_debug("pin ctrl disable\n");
-			lis2xxx_set_pinctrl(chip, false);
-			chip->power_on = POWER_OFF;
-			mutex_unlock(&chip->lock);
-		} else if (val->intval && chip->power_on != POWER_ON) {
-			mutex_lock(&chip->lock);
-			pr_debug("pin ctrl enable\n");
-			lis2xxx_set_pinctrl(chip, true);
-			chip->power_on = POWER_ON;
-			mutex_unlock(&chip->lock);
-		}
 		break;
 	default:
 		return -EINVAL;
@@ -387,7 +369,6 @@ static int lis2xxx_battery_is_writeable(struct power_supply *psy,
 
 	switch (prop) {
 	case POWER_SUPPLY_PROP_CAPACITY:
-	case POWER_SUPPLY_PROP_CHARGE_ENABLED:
 		rc = 1;
 		break;
 	default:
@@ -421,9 +402,6 @@ static int lis2xxx_battery_get_property(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
 		val->intval = chip->voltage * 1000;	/* convert to uV */
-		break;
-	case POWER_SUPPLY_PROP_CHARGE_ENABLED:
-		val->intval = chip->power_on;
 		break;
 	default:
 		return -EINVAL;
