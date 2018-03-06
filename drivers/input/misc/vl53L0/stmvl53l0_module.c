@@ -428,7 +428,14 @@ struct stmvl53l0_api_fn_t *papi_func_tbl;
 #define HIGH_SPEED_FINAL_RANGE_PULSE_PERIOD		10
 
 
+#ifdef INPUT_STMVL53L0_SOMC_PARAMS
+#define CALIBRATION_FILE 1
+#endif
 
+#ifdef CALIBRATION_FILE
+FixPoint1616_t offset_calib;
+FixPoint1616_t xtalk_calib;
+#endif
 
 
 static long stmvl53l0_ioctl(struct file *file,
@@ -440,6 +447,101 @@ static int stmvl53l0_start(struct stmvl53l0_data *data, uint8_t scaling,
 			init_mode_e mode);
 static int stmvl53l0_stop(struct stmvl53l0_data *data);
 static int stmvl53l0_config_use_case(struct stmvl53l0_data *data);
+
+#ifdef CALIBRATION_FILE
+#define UINT_MAX_LEN	11
+static void stmvl53l0_read_calibration_file(struct stmvl53l0_data *data)
+{
+	VL53L0_DEV vl53l0_dev = data;
+	struct file *f;
+	char buf[UINT_MAX_LEN] = {0};
+	mm_segment_t fs;
+
+	vl53l0_dbgmsg("stmvl53l0_read_calibration_file\n");
+	f = filp_open("/data/calibration/offset", O_RDONLY, 0);
+	if (f != NULL && !IS_ERR(f) && f->f_dentry != NULL) {
+		fs = get_fs();
+		set_fs(get_ds());
+		memset(buf, 0x00, sizeof(buf));
+		f->f_op->read(f, buf, UINT_MAX_LEN, &f->f_pos);
+		set_fs(fs);
+		vl53l0_dbgmsg("offset as:%s, buf[0]:%c\n", buf, buf[0]);
+		if (kstrtouint(buf, 10, &offset_calib)) {
+			vl53l0_errmsg("fail offset_calib\n");
+			offset_calib = 0;
+		} else {
+			vl53l0_errmsg("offset_calib as %d\n", offset_calib);
+			papi_func_tbl->SetOffsetCalibrationDataMicroMeter(
+				vl53l0_dev, offset_calib);
+		}
+		filp_close(f, NULL);
+	} else {
+		vl53l0_errmsg("no offset calibration file exist!\n");
+	}
+
+	f = filp_open("/data/calibration/xtalk", O_RDONLY, 0);
+	if (f != NULL && !IS_ERR(f) && f->f_dentry != NULL) {
+		fs = get_fs();
+		set_fs(get_ds());
+		memset(buf, 0x00, sizeof(buf));
+		f->f_op->read(f, buf, UINT_MAX_LEN, &f->f_pos);
+		set_fs(fs);
+		vl53l0_dbgmsg("xtalk as:%s, buf[0]:%c\n", buf, buf[0]);
+		if (kstrtouint(buf, 10, &xtalk_calib)) {
+			vl53l0_errmsg("fail xtalk_calib\n");
+			xtalk_calib = 0;
+		} else {
+			vl53l0_errmsg("xtalk_calib as %d\n", xtalk_calib);
+			papi_func_tbl->SetXTalkCompensationRateMegaCps(
+				vl53l0_dev, (FixPoint1616_t)xtalk_calib);
+			papi_func_tbl->SetXTalkCompensationEnable(
+				vl53l0_dev, true);
+		}
+		filp_close(f, NULL);
+	} else {
+		vl53l0_errmsg("no xtalk calibration file exist!\n");
+	}
+
+}
+
+static void stmvl53l0_write_offset_calibration_file(struct stmvl53l0_data *data)
+{
+	struct file *f;
+	char buf[UINT_MAX_LEN] = {0};
+	mm_segment_t fs;
+
+	f = filp_open("/data/calibration/offset", O_WRONLY|O_CREAT, 0644);
+	if (f != NULL) {
+		fs = get_fs();
+		set_fs(get_ds());
+		snprintf(buf, UINT_MAX_LEN, "%u", offset_calib);
+		vl53l0_dbgmsg("write offset as:%s, buf[0]:%c\n", buf, buf[0]);
+		f->f_op->write(f, buf, UINT_MAX_LEN, &f->f_pos);
+		set_fs(fs);
+	}
+	filp_close(f, NULL);
+	kobject_uevent(&data->input_dev_ps->dev.kobj, KOBJ_CHANGE);
+}
+
+static void stmvl53l0_write_xtalk_calibration_file(struct stmvl53l0_data *data)
+{
+	struct file *f;
+	char buf[UINT_MAX_LEN] = {0};
+	mm_segment_t fs;
+
+	f = filp_open("/data/calibration/xtalk", O_WRONLY|O_CREAT, 0644);
+	if (f != NULL) {
+		fs = get_fs();
+		set_fs(get_ds());
+		snprintf(buf, UINT_MAX_LEN, "%u", xtalk_calib);
+		vl53l0_dbgmsg("write xtalk as:%s, buf[0]:%c\n", buf, buf[0]);
+		f->f_op->write(f, buf, UINT_MAX_LEN, &f->f_pos);
+		set_fs(fs);
+	}
+	filp_close(f, NULL);
+	kobject_uevent(&data->input_dev_ps->dev.kobj, KOBJ_CHANGE);
+}
+#endif /* CALIBRATION_FILE */
 
 #ifdef DEBUG_TIME_LOG
 static void stmvl53l0_DebugTimeGet(struct timeval *ptv)
@@ -1606,6 +1708,14 @@ static int stmvl53l0_ioctl_handler(struct file *file,
 		}
 		vl53l0_dbgmsg("SETXTALK as 0x%x\n", xtalkint);
 
+#ifdef CALIBRATION_FILE
+		xtalk_calib = xtalkint;
+		stmvl53l0_write_xtalk_calibration_file(data);
+
+		papi_func_tbl->SetXTalkCompensationRateMegaCps(
+			vl53l0_dev, (FixPoint1616_t)xtalk_calib);
+#endif
+
 		/* later
 		* SetXTalkCompensationRate(vl53l0_dev, xtalkint);
 		*/
@@ -1634,6 +1744,14 @@ static int stmvl53l0_ioctl_handler(struct file *file,
 			return -EFAULT;
 		}
 		vl53l0_dbgmsg("SETOFFSET as %d\n", offsetint);
+
+#ifdef CALIBRATION_FILE
+		offset_calib = offsetint;
+		stmvl53l0_write_offset_calibration_file(data);
+
+		papi_func_tbl->SetOffsetCalibrationDataMicroMeter(
+			vl53l0_dev, offset_calib);
+#endif
 
 		/* later
 		* SetOffsetCalibrationData(vl53l0_dev, offsetint);
@@ -1823,7 +1941,10 @@ static int stmvl53l0_ioctl_handler(struct file *file,
 				  data->OffsetMicroMeter = parameter.value;
 				  data->setCalibratedValue
 			       |= SET_OFFSET_CALIB_DATA_MICROMETER_MASK;
-
+#ifdef CALIBRATION_FILE
+				offset_calib = (FixPoint1616_t)parameter.value;
+				stmvl53l0_write_offset_calibration_file(data);
+#endif
 			}
 			vl53l0_dbgmsg("get parameter value as %d\n",
 				 parameter.value);
@@ -1905,6 +2026,10 @@ static int stmvl53l0_ioctl_handler(struct file *file,
 				data->setCalibratedValue |=
 					 SET_XTALK_COMP_RATE_MCPS_MASK;
 
+#ifdef CALIBRATION_FILE
+				xtalk_calib = (FixPoint1616_t)parameter.value;
+				stmvl53l0_write_xtalk_calibration_file(data);
+#endif
 
 				/*0.7 KCps converted to MCps */
 				if (data->XTalkCompensationRateMegaCps <
@@ -2493,6 +2618,10 @@ static int stmvl53l0_start(struct stmvl53l0_data *data, uint8_t scaling,
 		vl53l0_dev->setCalibratedValue |=
 		 SET_OFFSET_CALIB_DATA_MICROMETER_MASK;
 
+#ifdef CALIBRATION_FILE
+		offset_calib = OffsetMicroMeter;
+		stmvl53l0_write_offset_calibration_file(data);
+#endif
 		return rc;
 	} else if (mode == XTALKCALIB_MODE) {
 		FixPoint1616_t XTalkCompensationRateMegaCps;
@@ -2508,8 +2637,15 @@ static int stmvl53l0_start(struct stmvl53l0_data *data, uint8_t scaling,
 				 XTalkCompensationRateMegaCps;
 		vl53l0_dev->setCalibratedValue |=
 			 SET_XTALK_COMP_RATE_MCPS_MASK;
-
+#ifdef CALIBRATION_FILE
+		xtalk_calib = XTalkCompensationRateMegaCps;
+		stmvl53l0_write_xtalk_calibration_file(data);
+#endif
 		return rc;
+#ifdef CALIBRATION_FILE
+	} else {
+		stmvl53l0_read_calibration_file(data);
+#endif
 	}
 	/* set up device parameters */
 	data->gpio_polarity = VL53L0_INTERRUPTPOLARITY_LOW;
