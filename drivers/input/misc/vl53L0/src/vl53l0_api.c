@@ -414,10 +414,25 @@ VL53L0_Error VL53L0_DataInit(VL53L0_DEV Dev)
 	PALDevDataSet(Dev, LinearityCorrectiveGain, 1000);
 
 	/* Dmax default Parameter */
+#ifdef CONFIG_INPUT_STMVL53L0_SOMC_PARAMS
+	/* Also the manual focus app in the stock ROM refers to this value */
+	PALDevDataSet(Dev, DmaxCalRangeMilliMeter, 600);
+
+	PALDevDataSet(Dev, DmaxCalSignalRateRtnMegaCps,
+		(FixPoint1616_t)((0x00016B85))); /* 1.42 No Cover Glass*/
+	/* Note: This is the default for both SoMC release and a non-SoMC
+	 *       driver for this sensor. Since this was the default and
+	 *       a couple of things have changed in the newest release of
+	 *       this driver, I've preferred to keep the new default value
+	 *       for the Signal Rate.
+	 * ToDo: In case any issue appears, this is the old setting:
+	 *       (FixPoint1616_t)((2 * 65536)));
+	 */
+#else
 	PALDevDataSet(Dev, DmaxCalRangeMilliMeter, 400);
 	PALDevDataSet(Dev, DmaxCalSignalRateRtnMegaCps,
 		(FixPoint1616_t)((0x00016B85))); /* 1.42 No Cover Glass*/
-
+#endif
 	/* Set Default static parameters
 	 *set first temporary values 9.44MHz * 65536 = 618660
 	 */
