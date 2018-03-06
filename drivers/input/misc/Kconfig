@@ -935,6 +935,46 @@ config INPUT_HISI_POWERKEY
 	  To compile this driver as a module, choose M here: the
 	  module will be called hisi_powerkey.
 
+config INPUT_ADUX1050
+	tristate "ADUX1050 sensor support"
+	depends on I2C
+	help
+	  Say Y here if you have ADUX1050 hooked to an I2C bus.
+	  To compile this driver as a module, choose M here:
+	  The module will be called adux1050.ko
+
+config ADUX1050_DEBUG
+	bool "Debug :To enable the Basic debug support for the driver"
+	depends on INPUT_ADUX1050
+	default n
+	help
+	  To add the basic debug support of the driver in the build.
+	  Used in printing the debug information on the console.
+
+config EVAL
+	bool "Eval : To enable the driver in evaluation mode for test "
+	depends on INPUT_ADUX1050
+	default y
+	help
+	  To use the generic sysfs path and modifications for the control attributes.
+
+config USE_FILP
+	bool "USE_FILP : To make use of the file access from the kernel driver "
+	depends on INPUT_ADUX1050
+	default y
+	help
+	  To enable the file access from the kernel for the purpose of
+	  storing and retrieving the calibration results in/from a file
+	  and further is been enhanced for extraction of configuration
+	  during runtime.
+
+config ADUX1050_POLL
+	bool "POLL : To make use of the Polling method instead of ISR "
+	depends on INPUT_ADUX1050
+	default n
+	help
+	  To enable the polling and to set the sleep time through the sysfs
+
  config FPC1145_PLATFORM
        tristate "Platform FPC1145 finger print driver"
        default n
