@@ -7,6 +7,12 @@ config QNS_SYSTEM
 	  kernel driver for a battery charging.
 	  This adds sysfs interface which enables QNS daemon to access it.
 
+config CHARGER_LIS2XXX
+	tristate "LIS2xxx Battery Charger driver"
+	depends on I2C
+	help
+	  Say Y to include support for LIS2xxx Battery Charger.
+
 source "drivers/power/avs/Kconfig"
 source "drivers/power/reset/Kconfig"
 source "drivers/power/supply/Kconfig"
