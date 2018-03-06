@@ -407,6 +407,12 @@ config CHARGER_LIS2XXX
 	help
 	  Say Y to include support for LIS2xxx Battery Charger.
 
+config BATTERY_CCG2
+	tristate "CCG2 driver"
+	depends on I2C
+	help
+	  Say Y to include support for CCG2 driver.
+
 config CHARGER_BQ2415X
 	tristate "TI BQ2415x battery charger driver"
 	depends on I2C
