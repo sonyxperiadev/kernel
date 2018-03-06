@@ -975,6 +975,13 @@ config ADUX1050_POLL
 	help
 	  To enable the polling and to set the sleep time through the sysfs
 
+config INPUT_S210ST0X
+	tristate "S210ST0X Pyroelectric IR Sensor driver"
+	default n
+	help
+	  Say Y here if you want to enable the S210ST0X pyroelectric
+	  infrared sensor device driver.
+
  config FPC1145_PLATFORM
        tristate "Platform FPC1145 finger print driver"
        default n

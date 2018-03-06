@@ -88,6 +88,7 @@ obj-$(CONFIG_INPUT_XEN_KBDDEV_FRONTEND)	+= xen-kbdfront.o
 obj-$(CONFIG_INPUT_YEALINK)		+= yealink.o
 obj-$(CONFIG_INPUT_IDEAPAD_SLIDEBAR)	+= ideapad_slidebar.o
 obj-$(CONFIG_INPUT_ADUX1050)		+= adux1050.o
+obj-$(CONFIG_INPUT_S210ST0X)		+= s210st0x.o
 obj-$(CONFIG_FPC1145_PLATFORM)          += fpc1145_platform.o
 obj-$(CONFIG_SENSORS_AKM8963)		+= akm8963.o
 obj-$(CONFIG_SENSORS_AKM09911)		+= akm09911.o
