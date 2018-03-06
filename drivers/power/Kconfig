@@ -13,6 +13,12 @@ config CHARGER_LIS2XXX
 	help
 	  Say Y to include support for LIS2xxx Battery Charger.
 
+config BATTERY_CCG2
+	tristate "CCG2 driver"
+	depends on I2C
+	help
+	  Say Y to include support for CCG2 driver.
+
 source "drivers/power/avs/Kconfig"
 source "drivers/power/reset/Kconfig"
 source "drivers/power/supply/Kconfig"
