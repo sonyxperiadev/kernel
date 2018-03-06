@@ -3632,103 +3632,85 @@ static void adux1050_hdmi_switch_work(struct work_struct *switch_work)
 The sysfs attributes used in the driver follows
 */
 /*--------------------------------------------------------------*/
-static DEVICE_ATTR(adux1050_enable, S_IRWXUGO,
+static DEVICE_ATTR(adux1050_enable, 0664,
 		show_enable, store_enable);
 /*--------------------------------------------------------------*/
 static DEVICE_ATTR(adux1050_device_name, S_IRUGO,
 	       adux1050_name_show, NULL);
-static struct device_attribute dev_attr_sensor_vendor =
-	__ATTR(adux1050_vendor, S_IRUGO,
+static DEVICE_ATTR(adux1050_vendor, S_IRUGO,
 	       adux1050_vendor_show, NULL);
-static struct device_attribute dev_attr_sensor_raw_data =
-	__ATTR(adux1050_raw_data, S_IWUGO | S_IRUGO,
+static DEVICE_ATTR(adux1050_raw_data, 0664, /* S_IWUGO | S_IRUGO */
 	       adux1050_raw_data_show, adux1050_raw_data_store);
-static struct device_attribute dev_attr_sensor_send_event =
-	__ATTR(adux1050_send_event, S_IWUGO | S_IRUGO,
+static DEVICE_ATTR(adux1050_send_event, 0664, /* S_IWUGO | S_IRUGO */
 	       adux1050_send_event_show, adux1050_send_event_store);
-static struct device_attribute dev_attr_sensor_threshold =
-	__ATTR(adux1050_threshold, S_IWUGO | S_IRUGO,
+static DEVICE_ATTR(adux1050_threshold, 0664, /* S_IWUGO | S_IRUGO */
 	       adux1050_threshold_show, adux1050_theshold_store);
-static struct device_attribute dev_attr_sensor_calibration =
-	__ATTR(adux1050_calibration, S_IWUGO | S_IRUGO,
+static DEVICE_ATTR(adux1050_calibration, 0664, /* S_IWUGO | S_IRUGO */
 	       adux1050_calibration_show, adux1050_calibration_store);
-static struct device_attribute dev_attr_sensor_update_calib =
-	__ATTR(adux1050_update_calib, S_IWUGO,
+static DEVICE_ATTR(adux1050_update_calib, 0220, /* S_IWUGO */
 	       NULL, adux1050_update_calib_store);
-static struct device_attribute dev_attr_sensor_dump =
-	__ATTR(adux1050_status, S_IRUGO,
+static DEVICE_ATTR(adux1050_status, S_IRUGO,
 	       show_dumpregs, NULL);
-static struct device_attribute dev_attr_sensor_calib_target =
-	__ATTR(adux1050_calib_target, S_IRUGO | S_IWUGO,
+static DEVICE_ATTR(adux1050_calib_target, S_IRUGO | 0220, /* S_IWUGO */
 	       calib_target_show, calib_target_store);
 #ifdef CONFIG_EVAL
-static struct device_attribute dev_attr_sensor_reg_read =
-	__ATTR(adux1050_reg_read, S_IWUGO | S_IRUGO,
+static DEVICE_ATTR(adux1050_reg_read, 0664, /* S_IWUGO | S_IRUGO */
 	       show_reg_read, store_reg_read);
-static struct device_attribute dev_attr_sensor_reg_write =
-	__ATTR(adux1050_reg_write, S_IWUGO,
+static DEVICE_ATTR(adux1050_reg_write, 0220, /* S_IWUGO */
 	       NULL, store_reg_write);
-static struct device_attribute dev_attr_sensor_update_config =
-	__ATTR(adux1050_update_config, S_IWUGO,
+static DEVICE_ATTR(adux1050_update_config, 0220, /* S_IWUGO */
 	       NULL, store_update_config);
-static struct device_attribute dev_attr_sensor_sw_reset =
-	__ATTR(adux1050_sw_reset, S_IWUGO,
+static DEVICE_ATTR(adux1050_sw_reset, 0220, /* S_IWUGO */
 	       NULL, store_sw_reset);
-static struct device_attribute dev_attr_sensor_force_calib =
-	__ATTR(adux1050_force_calib, S_IWUGO,
+static DEVICE_ATTR(adux1050_force_calib, 0220, /* S_IWUGO */
 	       NULL, store_force_calib);
 #endif
 #ifdef CONFIG_USE_FILP
-static struct device_attribute dev_attr_sensor_use_filp =
-	__ATTR(adux1050_filp, S_IWUGO,
+static DEVICE_ATTR(adux1050_filp, 0220, /* S_IWUGO */
 	       NULL, store_adux1050_filp_config);
 #endif
 #ifdef CONFIG_ADUX1050_POLL
-static struct device_attribute dev_attr_sensor_poll =
-	__ATTR(adux1050_poll_delay, S_IWUGO | S_IRUGO,
+static DEVICE_ATTR(adux1050_poll_delay, 0664, /* S_IWUGO | S_IRUGO */
 	       show_poll_delay, store_poll_delay);
 #endif
-static struct device_attribute dev_attr_sensor_fc_intr_err =
-	__ATTR(adux1050_intr_error, S_IWUGO | S_IRUGO,
+static DEVICE_ATTR(adux1050_intr_error, 0664, /* S_IWUGO | S_IRUGO */
 	       show_intr_err, store_intr_err);
-static struct device_attribute dev_attr_sensor_proxy_timer_enable =
-	__ATTR(adux1050_proxy_enable, S_IWUGO | S_IRUGO,
+static DEVICE_ATTR(adux1050_proxy_enable, 0664, /* S_IWUGO | S_IRUGO */
 	       show_proxy_enable, store_proxy_enable);
-static struct device_attribute dev_attr_sensor_set_proxy_time =
-	__ATTR(adux1050_proxy_time, S_IWUGO | S_IRUGO,
+static DEVICE_ATTR(adux1050_proxy_time, 0664, /* S_IWUGO | S_IRUGO */
 	       show_proxy_time, store_proxy_time);
 #ifdef CONFIG_SOMC_EXTENSION
-static struct device_attribute dev_attr_hdmi_detect =
-	__ATTR(hdmi_detect, S_IWUGO | S_IRUGO,
+static DEVICE_ATTR(hdmi_detect, 0664, /* S_IWUGO | S_IRUGO */
 	       show_hdmi_detect, store_hdmi_detect);
 #endif
+
 static struct attribute *adux1050_attrs[] = {
 	&dev_attr_adux1050_enable.attr,
-	&dev_attr_sensor_name.attr,
-	&dev_attr_sensor_vendor.attr,
-	&dev_attr_sensor_raw_data.attr,
-	&dev_attr_sensor_send_event.attr,
-	&dev_attr_sensor_threshold.attr,
-	&dev_attr_sensor_calibration.attr,
-	&dev_attr_sensor_update_calib.attr,
-	&dev_attr_sensor_dump.attr,
-	&dev_attr_sensor_calib_target.attr,
+	&dev_attr_adux1050_device_name.attr,
+	&dev_attr_adux1050_vendor.attr,
+	&dev_attr_adux1050_raw_data.attr,
+	&dev_attr_adux1050_send_event.attr,
+	&dev_attr_adux1050_threshold.attr,
+	&dev_attr_adux1050_calibration.attr,
+	&dev_attr_adux1050_update_calib.attr,
+	&dev_attr_adux1050_status.attr,
+	&dev_attr_adux1050_calib_target.attr,
 #ifdef CONFIG_EVAL
-	&dev_attr_sensor_reg_read.attr,
-	&dev_attr_sensor_reg_write.attr,
-	&dev_attr_sensor_update_config.attr,
-	&dev_attr_sensor_sw_reset.attr,
-	&dev_attr_sensor_force_calib.attr,
+	&dev_attr_adux1050_reg_read.attr,
+	&dev_attr_adux1050_reg_write.attr,
+	&dev_attr_adux1050_update_config.attr,
+	&dev_attr_adux1050_sw_reset.attr,
+	&dev_attr_adux1050_force_calib.attr,
 #endif
 #ifdef CONFIG_USE_FILP
-	&dev_attr_sensor_use_filp.attr,
+	&dev_attr_adux1050_filp.attr,
 #endif
 #ifdef CONFIG_ADUX1050_POLL
-	&dev_attr_sensor_poll.attr,
+	&dev_attr_adux1050_poll_delay.attr,
 #endif
-	&dev_attr_sensor_fc_intr_err.attr,
-	&dev_attr_sensor_proxy_timer_enable.attr,
-	&dev_attr_sensor_set_proxy_time.attr,
+	&dev_attr_adux1050_intr_error.attr,
+	&dev_attr_adux1050_proxy_enable.attr,
+	&dev_attr_adux1050_proxy_time.attr,
 #ifdef CONFIG_SOMC_EXTENSION
 	&dev_attr_hdmi_detect.attr,
 #endif
