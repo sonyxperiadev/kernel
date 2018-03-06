@@ -77,7 +77,8 @@ struct lis2xxx_charger {
 	int			temp;
 	int			voltage;
 
-	struct power_supply	lis_psy;
+	struct power_supply	*lis_psy;
+	struct power_supply_desc lis_psy_d;
 	struct pinctrl		*dcdc_pinctrl;
 	struct pinctrl_state	*pinctrl_state_active;
 	struct pinctrl_state	*pinctrl_state_suspend;
@@ -114,7 +115,7 @@ static void lis2xxx_set_pinctrl(struct lis2xxx_charger *chip, bool enabled)
 					__func__, PINCTRL_STATE_ACTIVE, ret);
 			}
 			/* Wait for wakeup */
-			usleep(DCDC_WAKEUP_MS);
+			usleep_range(DCDC_WAKEUP_MS, DCDC_WAKEUP_MS+20000);
 		}
 		chip->pin_enabled = true;
 	} else if (!enabled && chip->pin_enabled) {
@@ -180,7 +181,7 @@ static int get_property_from_batt(struct lis2xxx_charger *chip,
 		return -EINVAL;
 	}
 
-	rc = chip->batt_psy->get_property(chip->batt_psy, prop, &ret);
+	rc = power_supply_get_property(chip->batt_psy, prop, &ret);
 	if (rc) {
 		pr_err("batt psy doesn't support reading prop %d rc = %d\n",
 			prop, rc);
@@ -214,7 +215,7 @@ static bool is_batt_low_voltage(struct lis2xxx_charger *chip)
 	int i;
 
 	for (i = 0; i < 3; i++) {
-		usleep(I2C_WAIT_MS);
+		usleep_range(I2C_WAIT_MS, I2C_WAIT_MS+1000);
 		cell_voltage = 0;
 		if (!lis2xxx_read_block_reg(chip,
 				CELL_VOLTAGE3_REG + i, REG_BLOCK_SIZE, reg)) {
@@ -277,7 +278,7 @@ static void lis2xxx_soc_work(struct work_struct *work)
 		chip->temp = temp;
 		is_update = true;
 	}
-	usleep(I2C_WAIT_MS);
+	usleep_range(I2C_WAIT_MS, I2C_WAIT_MS+1000);
 
 	if (!lis2xxx_read_block_reg(chip,
 			VOLTAGE_REG, REG_BLOCK_SIZE, reg)) {
@@ -286,7 +287,7 @@ static void lis2xxx_soc_work(struct work_struct *work)
 	pr_debug("voltage = %d\n", voltage);
 	if (voltage != chip->voltage)
 		chip->voltage = voltage;
-	usleep(I2C_WAIT_MS);
+	usleep_range(I2C_WAIT_MS, I2C_WAIT_MS+1000);
 
 	if (!lis2xxx_read_block_reg(chip,
 			BATT_STATUS_REG, REG_BLOCK_SIZE, reg)) {
@@ -306,7 +307,7 @@ static void lis2xxx_soc_work(struct work_struct *work)
 				is_low_vol ? "low" : "normal");
 		}
 	}
-	usleep(I2C_WAIT_MS);
+	usleep_range(I2C_WAIT_MS, I2C_WAIT_MS+1000);
 
 	if (fully_discharged && !is_charging && is_low_vol) {
 		capacity = EMPTY_BATT_CAPACITY;
@@ -330,7 +331,7 @@ static void lis2xxx_soc_work(struct work_struct *work)
 	mutex_unlock(&chip->lock);
 
 	if (is_update)
-		power_supply_changed(&chip->lis_psy);
+		power_supply_changed(chip->lis_psy);
 	if (chip->capacity <= LOW_BATT_CAPACITY)
 		poll_ms = LOW_BATT_POOLING_TIME_MS;
 	schedule_delayed_work(&chip->soc_work, msecs_to_jiffies(poll_ms));
@@ -348,13 +349,12 @@ static int lis2xxx_battery_set_property(struct power_supply *psy,
 				       const union power_supply_propval *val)
 {
 	int rc = 0;
-	struct lis2xxx_charger *chip = container_of(psy,
-				struct lis2xxx_charger, lis_psy);
+	struct lis2xxx_charger *chip = power_supply_get_drvdata(psy);
 
 	switch (prop) {
 	case POWER_SUPPLY_PROP_CAPACITY:
 		chip->fake_battery_soc = val->intval;
-		power_supply_changed(&chip->lis_psy);
+		power_supply_changed(chip->lis_psy);
 		break;
 	case POWER_SUPPLY_PROP_CHARGE_ENABLED:
 		pr_debug("intval = %d, power_on = %d\n",
@@ -410,8 +410,7 @@ static int lis2xxx_battery_get_property(struct power_supply *psy,
 			enum power_supply_property prop,
 			union power_supply_propval *val)
 {
-	struct lis2xxx_charger *chip = container_of(psy,
-				struct lis2xxx_charger, lis_psy);
+	struct lis2xxx_charger *chip = power_supply_get_drvdata(psy);
 
 	switch (prop) {
 	case POWER_SUPPLY_PROP_CAPACITY:
@@ -434,10 +433,9 @@ static int lis2xxx_battery_get_property(struct power_supply *psy,
 
 static void lis2xxx_external_power_changed(struct power_supply *psy)
 {
-	struct lis2xxx_charger *chip = container_of(psy,
-				struct lis2xxx_charger, lis_psy);
+	struct lis2xxx_charger *chip = power_supply_get_drvdata(psy);
 
-	power_supply_changed(&chip->lis_psy);
+	power_supply_changed(chip->lis_psy);
 	pr_debug("updating lis psy\n");
 }
 
@@ -489,7 +487,7 @@ static ssize_t lis2xxx_str_dump_read(struct device *dev,
 		if (!rc)
 			size += scnprintf(buf + size,
 				PAGE_SIZE - size, "0x%02x = %s\n", i, reg);
-		usleep(I2C_WAIT_MS);
+		usleep_range(I2C_WAIT_MS, I2C_WAIT_MS+1000);
 	}
 	memset(reg, 0x00, sizeof(reg));
 	rc = lis2xxx_read_block_reg(chip, MANUFACTURER_DATA_REG,
@@ -498,7 +496,7 @@ static ssize_t lis2xxx_str_dump_read(struct device *dev,
 		size += scnprintf(buf + size,
 			PAGE_SIZE - size, "0x%02x = %x.%x.%x.%x\n",
 			MANUFACTURER_DATA_REG, reg[0], reg[1], reg[2], reg[3]);
-	usleep(I2C_WAIT_MS);
+	usleep_range(I2C_WAIT_MS, I2C_WAIT_MS+1000);
 
 	memset(reg, 0x00, sizeof(reg));
 	rc = lis2xxx_read_block_reg(chip, 0x2F, REG_MAX_SIZE, reg);
@@ -532,7 +530,7 @@ static ssize_t lis2xxx_dump_read(struct device *dev,
 				size += scnprintf(buf + size,
 						PAGE_SIZE - size,
 						"0x%02x = read error\n", y);
-			usleep(I2C_WAIT_MS);
+			usleep_range(I2C_WAIT_MS, I2C_WAIT_MS+1000);
 		}
 	}
 
@@ -657,6 +655,7 @@ static int lis2xxx_probe(struct i2c_client *client,
 {
 	int rc;
 	struct lis2xxx_charger *chip;
+	struct power_supply_config cfg = { };
 	u8 reg[MANUFACTURER_DATA_SIZE];
 
 	chip = devm_kzalloc(&client->dev, sizeof(*chip), GFP_KERNEL);
@@ -717,20 +716,25 @@ static int lis2xxx_probe(struct i2c_client *client,
 	INIT_DELAYED_WORK(&chip->soc_work, lis2xxx_soc_work);
 	schedule_delayed_work(&chip->soc_work, 0);
 
-	chip->lis_psy.name = "lis";
-	chip->lis_psy.type = POWER_SUPPLY_TYPE_BATTERY;
-	chip->lis_psy.get_property = lis2xxx_battery_get_property;
-	chip->lis_psy.set_property = lis2xxx_battery_set_property;
-	chip->lis_psy.properties = lis2xxx_battery_properties;
-	chip->lis_psy.num_properties =
+	chip->lis_psy_d.name = "lis";
+	chip->lis_psy_d.type = POWER_SUPPLY_TYPE_BATTERY;
+	chip->lis_psy_d.get_property = lis2xxx_battery_get_property;
+	chip->lis_psy_d.set_property = lis2xxx_battery_set_property;
+	chip->lis_psy_d.properties = lis2xxx_battery_properties;
+	chip->lis_psy_d.num_properties =
 				ARRAY_SIZE(lis2xxx_battery_properties);
-	chip->lis_psy.external_power_changed =
+	chip->lis_psy_d.external_power_changed =
 					lis2xxx_external_power_changed;
-	chip->lis_psy.property_is_writeable = lis2xxx_battery_is_writeable;
+	chip->lis_psy_d.property_is_writeable = lis2xxx_battery_is_writeable;
 
-	rc = power_supply_register(chip->dev, &chip->lis_psy);
-	if (rc) {
-		pr_err("Couldn't register lis psy rc=%d\n", rc);
+	cfg.drv_data = chip;
+	cfg.of_node = client->dev.of_node;
+
+	chip->lis_psy = power_supply_register(chip->dev,
+				&chip->lis_psy_d, &cfg);
+	if (IS_ERR(chip->lis_psy)) {
+		pr_err("Couldn't register lis psy rc=%ld\n",
+				PTR_ERR(chip->lis_psy));
 		goto err;
 	}
 	chip->batt_psy_name = "battery";
@@ -750,7 +754,7 @@ static int lis2xxx_remove(struct i2c_client *client)
 	struct lis2xxx_charger *chip = i2c_get_clientdata(client);
 	int i;
 
-	power_supply_unregister(&chip->lis_psy);
+	power_supply_unregister(chip->lis_psy);
 	for (i = 0; i < ARRAY_SIZE(lis2xxx_attrs); i++)
 		device_remove_file(chip->dev, &lis2xxx_attrs[i]);
 	return 0;
