@@ -62,7 +62,8 @@ struct ccg2_charger {
 	struct i2c_client	*client;
 	struct device		*dev;
 
-	struct power_supply	ccg2_psy;
+	struct power_supply	*ccg2_psy;
+	struct power_supply_desc ccg2_psy_d;
 	int			fake_charge_status;
 	int			response;
 };
@@ -111,13 +112,12 @@ static int ccg2_battery_set_property(struct power_supply *psy,
 				       const union power_supply_propval *val)
 {
 	int rc = 0;
-	struct ccg2_charger *chip = container_of(psy,
-				struct ccg2_charger, ccg2_psy);
+	struct ccg2_charger *chip = power_supply_get_drvdata(psy);
 
 	switch (prop) {
 	case POWER_SUPPLY_PROP_CHARGE_DONE:
 		chip->fake_charge_status = val->intval;
-		power_supply_changed(&chip->ccg2_psy);
+		power_supply_changed(chip->ccg2_psy);
 		break;
 	default:
 		return -EINVAL;
@@ -207,8 +207,7 @@ static int ccg2_battery_get_property(struct power_supply *psy,
 			enum power_supply_property prop,
 			union power_supply_propval *val)
 {
-	struct ccg2_charger *chip = container_of(psy,
-				struct ccg2_charger, ccg2_psy);
+	struct ccg2_charger *chip = power_supply_get_drvdata(psy);
 
 	switch (prop) {
 	case POWER_SUPPLY_PROP_CHARGE_DONE:
@@ -222,10 +221,9 @@ static int ccg2_battery_get_property(struct power_supply *psy,
 
 static void ccg2_external_power_changed(struct power_supply *psy)
 {
-	struct ccg2_charger *chip = container_of(psy,
-				struct ccg2_charger, ccg2_psy);
+	struct ccg2_charger *chip = power_supply_get_drvdata(psy);
 
-	power_supply_changed(&chip->ccg2_psy);
+	power_supply_changed(chip->ccg2_psy);
 	pr_debug("updating lis psy\n");
 }
 
@@ -381,6 +379,7 @@ static int ccg2_probe(struct i2c_client *client,
 {
 	int rc;
 	struct ccg2_charger *chip;
+	struct power_supply_config cfg = { };
 
 	chip = devm_kzalloc(&client->dev, sizeof(*chip), GFP_KERNEL);
 	if (chip == NULL) {
@@ -395,20 +394,25 @@ static int ccg2_probe(struct i2c_client *client,
 
 	chip->fake_charge_status = -1;
 
-	chip->ccg2_psy.name = "ccg2";
-	chip->ccg2_psy.type = POWER_SUPPLY_TYPE_BMS;
-	chip->ccg2_psy.get_property = ccg2_battery_get_property;
-	chip->ccg2_psy.set_property = ccg2_battery_set_property;
-	chip->ccg2_psy.properties = ccg2_battery_properties;
-	chip->ccg2_psy.num_properties =
+	chip->ccg2_psy_d.name = "ccg2";
+	chip->ccg2_psy_d.type = POWER_SUPPLY_TYPE_BMS;
+	chip->ccg2_psy_d.get_property = ccg2_battery_get_property;
+	chip->ccg2_psy_d.set_property = ccg2_battery_set_property;
+	chip->ccg2_psy_d.properties = ccg2_battery_properties;
+	chip->ccg2_psy_d.num_properties =
 				ARRAY_SIZE(ccg2_battery_properties);
-	chip->ccg2_psy.external_power_changed =
+	chip->ccg2_psy_d.external_power_changed =
 					ccg2_external_power_changed;
-	chip->ccg2_psy.property_is_writeable = ccg2_battery_is_writeable;
+	chip->ccg2_psy_d.property_is_writeable = ccg2_battery_is_writeable;
 
-	rc = power_supply_register(chip->dev, &chip->ccg2_psy);
-	if (rc) {
-		pr_err("Couldn't register ccg2 psy rc=%d\n", rc);
+	cfg.drv_data = chip;
+	cfg.of_node = client->dev.of_node;
+
+	chip->ccg2_psy = power_supply_register(chip->dev,
+				&chip->ccg2_psy_d, &cfg);
+	if (IS_ERR(chip->ccg2_psy)) {
+		pr_err("Couldn't register ccg2 psy rc=%ld\n",
+				PTR_ERR(chip->ccg2_psy));
 		return rc;
 	}
 
@@ -422,7 +426,7 @@ static int ccg2_remove(struct i2c_client *client)
 	struct ccg2_charger *chip = i2c_get_clientdata(client);
 	int i;
 
-	power_supply_unregister(&chip->ccg2_psy);
+	power_supply_unregister(chip->ccg2_psy);
 	for (i = 0; i < ARRAY_SIZE(ccg2_attrs); i++)
 		device_remove_file(chip->dev, &ccg2_attrs[i]);
 	return 0;
