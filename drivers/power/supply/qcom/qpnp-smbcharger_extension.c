@@ -1952,12 +1952,35 @@ static int somc_chg_smb_parse_dt(struct smbchg_chip *chip,
 			struct device_node *node)
 {
 	struct chg_somc_params *params = &chip->somc_params;
+	enum of_gpio_flags flags = 0;
 	int rc = 0;
 
 	if (!node) {
 		dev_err(chip->dev, "device tree info. missing\n");
 		return -EINVAL;
 	}
+
+	/* read the lis power supply name */
+	rc = of_property_read_string(node, "somc,lis-psy-name",
+						&chip->lis_psy_name);
+	if (rc) {
+		chip->lis_psy_name = NULL;
+		rc = 0;
+	}
+
+	chip->stat1_gpio = of_get_named_gpio_flags(node, "somc,stat1_gpio", 0, &flags);
+	if (!gpio_is_valid(chip->stat1_gpio)) {
+		dev_dbg(chip->dev, "stat1(%d) is missing\n", chip->stat1_gpio);
+		chip->stat1_gpio = -1;
+	}
+	chip->stat1_active_low = flags & OF_GPIO_ACTIVE_LOW;
+
+	chip->stat2_gpio = of_get_named_gpio_flags(node, "somc,stat2_gpio", 0, &flags);
+	if (!gpio_is_valid(chip->stat2_gpio)) {
+		dev_dbg(chip->dev, "stat2(%d) is missing\n", chip->stat2_gpio);
+		chip->stat2_gpio = -1;
+	}
+	chip->stat2_active_low = flags & OF_GPIO_ACTIVE_LOW;
 
 	SOMC_OF_PROP_READ(chip->dev, node,
 		params->thermal.usb_9v_current_max,

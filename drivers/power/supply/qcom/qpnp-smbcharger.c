@@ -299,6 +299,13 @@ struct smbchg_chip {
 	struct extcon_dev		*extcon;
 
 #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
+	struct power_supply		*lis_psy;
+	const char			*lis_psy_name;
+	int				stat1_gpio;
+	int				stat2_gpio;
+	int				stat1_active_low;
+	int				stat2_active_low;
+
 	struct chg_somc_params		somc_params;
 	struct usb_somc_params		usb_params;
 #endif
@@ -931,7 +938,7 @@ static void read_usb_type(struct smbchg_chip *chip, char **usb_type_name,
 #define BATT_TAPER_CHG_VAL		0x3
 #define CHG_INHIBIT_BIT			BIT(1)
 #define BAT_TCC_REACHED_BIT		BIT(7)
-static int get_prop_batt_status(struct smbchg_chip *chip)
+static int __get_prop_batt_status(struct smbchg_chip *chip)
 {
 	int rc, status = POWER_SUPPLY_STATUS_DISCHARGING;
 	u8 reg = 0, chg_type;
@@ -1037,6 +1044,48 @@ out:
 	return status;
 }
 
+#ifdef CONFIG_MACH_SONY_BLANC
+static int __lis_get_prop_batt_status(struct smbchg_chip *chip)
+{
+	int val, ret = POWER_SUPPLY_STATUS_DISCHARGING;
+
+	if (chip->fake_battery_status >= 0) {
+		ret = chip->fake_battery_status;
+		goto exit;
+	}
+	if (gpio_is_valid(chip->stat1_gpio)) {
+		val = gpio_get_value_cansleep(chip->stat1_gpio);
+		pr_smb(PR_STATUS, "stat1_gpio = 0x%02X ^ 0x%02X = 0x%02X\n",
+			val, chip->stat1_active_low,
+			(val ^ chip->stat1_active_low));
+		if (val ^ chip->stat1_active_low)
+			ret = POWER_SUPPLY_STATUS_CHARGING;
+	}
+
+	if (gpio_is_valid(chip->stat2_gpio)) {
+		val = gpio_get_value_cansleep(chip->stat2_gpio);
+		pr_smb(PR_STATUS, "stat2_gpio = 0x%02X ^ 0x%02X = 0x%02X\n",
+			val, chip->stat2_active_low,
+			(val ^ chip->stat2_active_low));
+		if (val ^ chip->stat2_active_low)
+			ret = POWER_SUPPLY_STATUS_FULL;
+	}
+
+exit:
+	pr_smb(PR_STATUS, "status = %d\n", ret);
+	return ret;
+}
+#endif
+
+static int get_prop_batt_status(struct smbchg_chip *chip)
+{
+#ifdef CONFIG_MACH_SONY_BLANC
+	return __lis_get_prop_batt_status(chip);
+#else
+	return __get_prop_batt_status(chip);
+#endif
+}
+
 #define BAT_PRES_STATUS			0x08
 #define BAT_PRES_BIT			BIT(7)
 static int get_prop_batt_present(struct smbchg_chip *chip)
@@ -1127,33 +1176,92 @@ static int get_property_from_fg(struct smbchg_chip *chip,
 	return rc;
 }
 
+#if defined(CONFIG_QPNP_SMBCHARGER_EXTENSION) && \
+    defined(CONFIG_MACH_SONY_BLANC)
+static int get_property_from_lis(struct smbchg_chip *chip,
+		enum power_supply_property prop, int *val)
+{
+	int rc;
+	union power_supply_propval ret = {0, };
+
+	if (!chip->lis_psy && chip->lis_psy_name)
+		chip->lis_psy =
+			power_supply_get_by_name((char *)chip->lis_psy_name);
+	if (!chip->lis_psy) {
+		pr_smb(PR_STATUS, "no lis psy found\n");
+		return -EINVAL;
+	}
+
+	rc = chip->lis_psy->get_property(chip->lis_psy, prop, &ret);
+	if (rc) {
+		pr_smb(PR_STATUS,
+			"lis psy doesn't support reading prop %d rc = %d\n",
+			prop, rc);
+		return rc;
+	}
+
+	*val = ret.intval;
+	return rc;
+}
+#endif
+
 #define DEFAULT_BATT_CAPACITY	50
-static int get_prop_batt_capacity(struct smbchg_chip *chip)
+
+#ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
+static int __somc_chg_get_prop_batt_capacity(struct smbchg_chip *chip)
 {
 	int capacity, rc;
 
-#ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
 	if (chip->fake_battery_soc >= 0) {
 		capacity = chip->fake_battery_soc;
 		goto exit;
 	}
+
+#ifdef CONFIG_MACH_SONY_BLANC
+	rc = get_property_from_lis(chip, POWER_SUPPLY_PROP_CAPACITY, &capacity);
+	if (rc) {
+		pr_smb(PR_STATUS, "Couldn't get capacity rc = %d\n", rc);
+		capacity = DEFAULT_BATT_CAPACITY;
+	}
 #else
+	rc = get_property_from_fg(chip, POWER_SUPPLY_PROP_CAPACITY, &capacity);
+	if (rc) {
+		pr_smb(PR_STATUS, "Couldn't get capacity rc = %d\n", rc);
+		capacity = DEFAULT_BATT_CAPACITY;
+	}
+#endif /* CONFIG_MACH_SONY_BLANC */
+exit:
+	somc_chg_lrc_check(chip);
+	capacity = somc_chg_lrc_get_capacity(&chip->somc_params, capacity);
+	somc_chg_shutdown_lowbatt(chip);
+
+	return capacity;
+}
+#else
+static int __get_prop_batt_capacity(struct smbchg_chip *chip)
+{
+	int capacity, rc;
+
 	if (chip->fake_battery_soc >= 0)
 		return chip->fake_battery_soc;
-#endif
 
 	rc = get_property_from_fg(chip, POWER_SUPPLY_PROP_CAPACITY, &capacity);
 	if (rc) {
 		pr_smb(PR_STATUS, "Couldn't get capacity rc = %d\n", rc);
 		capacity = DEFAULT_BATT_CAPACITY;
 	}
-#ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
-exit:
-	somc_chg_lrc_check(chip);
-	capacity = somc_chg_lrc_get_capacity(&chip->somc_params, capacity);
-	somc_chg_shutdown_lowbatt(chip);
-#endif
+
 	return capacity;
+}
+#endif /* CONFIG_QPNP_SMBCHARGER_EXTENSION */
+
+static int get_prop_batt_capacity(struct smbchg_chip *chip)
+{
+#ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
+	return __somc_chg_get_prop_batt_capacity(chip);
+#else
+	return __get_prop_batt_capacity(chip);
+#endif
 }
 
 #define DEFAULT_BATT_TEMP		200
@@ -1161,7 +1269,12 @@ static int get_prop_batt_temp(struct smbchg_chip *chip)
 {
 	int temp, rc;
 
+#if defined(CONFIG_QPNP_SMBCHARGER_EXTENSION) && \
+    defined(CONFIG_MACH_SONY_BLANC)
+	rc = get_property_from_lis(chip, POWER_SUPPLY_PROP_TEMP, &temp);
+#else
 	rc = get_property_from_fg(chip, POWER_SUPPLY_PROP_TEMP, &temp);
+#endif
 	if (rc) {
 		pr_smb(PR_STATUS, "Couldn't get temperature rc = %d\n", rc);
 		temp = DEFAULT_BATT_TEMP;
@@ -1187,7 +1300,12 @@ static int get_prop_batt_voltage_now(struct smbchg_chip *chip)
 {
 	int uv, rc;
 
+#if defined(CONFIG_QPNP_SMBCHARGER_EXTENSION) && \
+    defined(CONFIG_MACH_SONY_BLANC)
+	rc = get_property_from_lis(chip, POWER_SUPPLY_PROP_VOLTAGE_NOW, &uv);
+#else
 	rc = get_property_from_fg(chip, POWER_SUPPLY_PROP_VOLTAGE_NOW, &uv);
+#endif
 	if (rc) {
 		pr_smb(PR_STATUS, "Couldn't get voltage rc = %d\n", rc);
 		uv = DEFAULT_BATT_VOLTAGE_NOW;
@@ -4492,8 +4610,13 @@ static void smbchg_vfloat_adjust_work(struct work_struct *work)
 	}
 
 	set_property_on_fg(chip, POWER_SUPPLY_PROP_UPDATE_NOW, 1);
+#ifdef CONFIG_MACH_SONY_BLANC
+	rc = get_property_from_lis(chip,
+			POWER_SUPPLY_PROP_VOLTAGE_NOW, &vbat_uv);
+#else
 	rc = get_property_from_fg(chip,
 			POWER_SUPPLY_PROP_VOLTAGE_NOW, &vbat_uv);
+#endif
 	if (rc) {
 		pr_smb(PR_STATUS,
 			"bms psy does not support voltage rc = %d\n", rc);
