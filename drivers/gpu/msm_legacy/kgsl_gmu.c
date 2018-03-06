@@ -860,6 +860,19 @@ static irqreturn_t hfi_irq_handler(int irq, void *data)
 static int gmu_pwrlevel_probe(struct gmu_device *gmu, struct device_node *node)
 {
 	struct device_node *pwrlevel_node, *child;
+	int ret = 0;
+
+	/* Add the GMU OPP table if we define it */
+	if (of_find_property(gmu->pdev->dev.of_node,
+			"operating-points-v2", NULL)) {
+		ret = dev_pm_opp_of_add_table(&gmu->pdev->dev);
+		if (ret) {
+			dev_err(&gmu->pdev->dev,
+					"Unable to set the GMU OPP table: %d\n",
+					ret);
+			return ret;
+		}
+	}
 
 	pwrlevel_node = of_find_node_by_name(node, "qcom,gmu-pwrlevels");
 
