@@ -150,6 +150,18 @@ config PM_WAKELOCKS_GC
 	depends on PM_WAKELOCKS
 	default y
 
+config PM_WAKELOCKS_SENSOR_IND_HACK
+	bool "Poor timeout hack for stuck sensor_ind wakelock"
+	depends on PM_WAKELOCKS
+	default n
+	---help---
+	Adds a very poor hack that converts the sensor_ind wakelock
+	to a timed one on-the-fly. This is unfortunately necessary
+	for broken DSP firmwares on old devices, combined with
+	proprietary sensor binaries which don't account for that.
+	To mitigate this issue, this configuration option applies
+	a 5 seconds timeout to this wakelock.
+
 config PM
 	bool "Device power management core functionality"
 	---help---
