@@ -58,6 +58,7 @@
 #define MBPS                                      1000000
 #define SNPS_INTERPHY_OFFSET                      0x800
 #define SET_THE_BIT(x)                            (0x1 << x)
+#define GBPS                                      1000000000
 
 #undef CDBG
 #define CDBG(fmt, args...) pr_debug(fmt, ##args)
@@ -828,10 +829,20 @@ static int msm_csiphy_3phase_lane_config(
 				csiphy_3ph_reg.mipi_csiphy_3ph_lnn_ctrl51.addr +
 				0x200*i);
 		}
-		msm_camera_io_w(csiphy_dev->ctrl_reg->csiphy_3ph_reg.
-			mipi_csiphy_3ph_lnn_ctrl25.data,
-			csiphybase + csiphy_dev->ctrl_reg->csiphy_3ph_reg.
-			mipi_csiphy_3ph_lnn_ctrl25.addr + 0x200*i);
+		if ((csiphy_dev->hw_version == CSIPHY_VERSION_V35) &&
+			((csiphy_params->data_rate /
+			csiphy_params->lane_cnt) > 2 * GBPS)) {
+			msm_camera_io_w(0x40,
+				csiphybase +
+				csiphy_dev->ctrl_reg->csiphy_3ph_reg
+				.mipi_csiphy_3ph_lnn_ctrl25.addr + 0x200*i);
+		} else {
+			msm_camera_io_w(csiphy_dev->ctrl_reg->csiphy_3ph_reg
+				.mipi_csiphy_3ph_lnn_ctrl25.data,
+				csiphybase +
+				csiphy_dev->ctrl_reg->csiphy_3ph_reg
+				.mipi_csiphy_3ph_lnn_ctrl25.addr + 0x200*i);
+		}
 
 		lane_mask >>= 1;
 		i++;
