@@ -53,7 +53,7 @@
 #if defined(CONFIG_ARCH_SONY_LOIRE) || defined(CONFIG_ARCH_SONY_TONE)
  #define TARGET_SOMC_S1BOOT
 #endif
-#if defined(CONFIG_ARCH_SONY_YOSHINO)
+#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_NILE)
  #define TARGET_SOMC_XBOOT
 #endif
 
