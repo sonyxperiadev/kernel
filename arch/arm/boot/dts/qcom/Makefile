@@ -22,6 +22,9 @@ dtb-$(CONFIG_MACH_SONY_KEYAKI)          += msm8996-v3-pmi8996-tone-keyaki_generi
 dtb-$(CONFIG_MACH_SONY_SUZU)            += msm8956-v1.1-loire-suzu_generic.dtb
 dtb-$(CONFIG_MACH_SONY_KUGO)            += msm8956-v1.1-loire-kugo_generic.dtb
 
+dtb-$(CONFIG_MACH_SONY_PIONEER)            += sdm630-nile-pioneer.dtb
+dtb-$(CONFIG_MACH_SONY_DISCOVERY)          += sdm630-nile-discovery.dtb
+
 ifneq ($(CONFIG_ARCH_SONY_TONE),y)
 dtb-$(CONFIG_ARCH_MSM8996) += msm8996-v2-pmi8994-cdp.dtb \
 	msm8996-v2-pmi8994-mtp.dtb \
@@ -207,6 +210,7 @@ endif
 
 dtb-$(CONFIG_ARCH_MSMHAMSTER) += msmhamster-rumi.dtb
 
+ifneq ($(CONFIG_ARCH_SONY_NILE),y)
 dtb-$(CONFIG_ARCH_SDM660) += sdm660-sim.dtb \
 	sdm660-internal-codec-cdp.dtb \
 	sdm660-internal-codec-mtp.dtb \
@@ -314,6 +318,7 @@ dtb-$(CONFIG_ARCH_SDM630) += sdm630-rumi.dtb \
 	sdm630-headset-jacktype-no-rcm.dtb \
 	sdm630-pm660a-headset-jacktype-no-cdp.dtb \
 	sdm630-pm660a-headset-jacktype-no-rcm.dtb
+endif
 
 ifeq ($(CONFIG_ARM64),y)
 always          := $(dtb-y)
