@@ -1058,4 +1058,10 @@ config SENSORS_MPU6050
 	  To compile this driver as a module, choose M here: the
 	  module will be called mpu6050.
 
+config SENSORS_ET51X
+	tristate "ET51X fingerprint sensor support"
+	default n
+	help
+	  If you say yes here you get support for Egistec's
+	  fingerprint sensor ET51X.
 endif
