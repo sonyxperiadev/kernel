@@ -19,7 +19,7 @@
 #include "dsi-panel-somc-nile.dtsi"
 #include "sdm630-nile-common.dtsi"
 #include "sdm630-nile-discovery-common.dtsi"
-
+#include "sdm630-nile-discovery_camera.dtsi"
 
 / {
 	model = "Qualcomm Technologies, Inc. SDM 630 PM660 + PM660L MTP";
