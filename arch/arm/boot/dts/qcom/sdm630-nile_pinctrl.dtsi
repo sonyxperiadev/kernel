@@ -1824,7 +1824,7 @@
 			};
 		};
 
-		ts_int_suspend: ts_int_suspend {
+		ts_nile_int_suspend: ts_nile_int_suspend {
 			mux {
 				pins = "gpio45";
 				function = "gpio";
