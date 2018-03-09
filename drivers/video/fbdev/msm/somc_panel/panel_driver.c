@@ -968,9 +968,6 @@ chg_fps:
 		mdss_dba_utils_video_on(pinfo->dba_data, pinfo);
 
 end:
-#ifdef CONFIG_MACH_SONY_YUKON
-	spec_pdata->disp_on(pdata);
-#endif
 	pr_debug("%s:-\n", __func__);
 	return 0;
 }
