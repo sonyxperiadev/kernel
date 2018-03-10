@@ -1536,8 +1536,6 @@ static int mdss_fb_probe(struct platform_device *pdev)
 #ifdef CONFIG_SOMC_PANEL_INCELL
 	incell_driver_init(mfd->panel_info->cont_splash_enabled);
 #endif
-
-	mfd->suspend_avoided = false;
 #endif
 
 	INIT_DELAYED_WORK(&mfd->idle_notify_work, __mdss_fb_idle_notify_work);
@@ -1813,14 +1811,6 @@ static int mdss_fb_pm_resume(struct device *dev)
 		return -ENODEV;
 
 	dev_dbg(dev, "display pm resume\n");
-
-#ifdef CONFIG_SOMC_PANEL_LEGACY
-	if (mfd->suspend_avoided) {
-		pr_debug("fb%d: resume is not executed, return 0\n",
-			mfd->index);
-		return 0;
-	}
-#endif
 
 	/*
 	 * It is possible that the runtime status of the fb device may

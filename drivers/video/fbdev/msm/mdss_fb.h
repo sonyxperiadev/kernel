@@ -365,8 +365,6 @@ struct msm_fb_data_type {
 	struct led_trigger *boot_notification_led;
 
 #ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
-	bool suspend_avoided;
-
 	/* speed up wakeup */
 	/* do unblank (>150ms) on own kworker
 	 * so we don't starve other works
