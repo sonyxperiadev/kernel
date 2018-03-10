@@ -138,6 +138,10 @@
 	qcom,commonlib64-loaded-by-uefi;
 };
 
+&mdss_fb0 {
+	/delete-node/ qcom,cont-splash-memory;
+};
+
 &mdss_dsi0 {
 	qcom,display-id = "primary";
 	qcom,mdss-fb-map-prim = <&mdss_fb0>;
