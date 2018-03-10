@@ -19,14 +19,26 @@
 #include <linux/pinctrl/consumer.h>
 #include <linux/platform_device.h>
 #include <linux/pm.h>
-#include <linux/sim_detect.h>
 #include <linux/slab.h>
 #include <linux/switch.h>
 #include <linux/sysfs.h>
 #include <linux/types.h>
-#include <linux/cei_hw_id.h>
 
 #define SIM_DETECT_DEV_NAME "sim_detect"
+
+struct sim_detect_gpio_event {
+	int index;
+	int gpio;
+	int active_low;
+	const char *desc;
+	int debounce_interval;
+	unsigned int irq;
+};
+
+struct sim_detect_platform_data {
+	int n_events;
+	struct sim_detect_gpio_event *events;
+};
 
 struct sim_detect_event_data {
 	const struct sim_detect_gpio_event *event;
@@ -98,21 +110,45 @@ skip_report:
 	mutex_unlock(&ddata->lock);
 }
 
+static int __sim_detect_get_dt(struct device *dev,
+				struct sim_detect_platform_data *pdata,
+				struct device_node *pp, int eventno)
+{
+	struct sim_detect_gpio_event *events = pdata->events;
+	enum of_gpio_flags flags;
+	u32 reg;
+	int gpio;
+
+	if (!of_find_property(pp, "gpios", NULL)) {
+		pdata->n_events--;
+		dev_warn(dev, "Found button without gpios\n");
+		return -ENOKEY;
+	}
+
+	gpio = of_get_gpio_flags(pp, 0, &flags);
+	if (!gpio_is_valid(gpio)) {
+		dev_err(dev, "%s: invalid gpio %d\n", __func__, gpio);
+		return -EINVAL;
+	}
+	events[eventno].index = eventno;
+	events[eventno].gpio = gpio;
+	events[eventno].active_low = flags & OF_GPIO_ACTIVE_LOW;
+
+	events[eventno].desc = of_get_property(pp, "label", NULL);
+
+	if (of_property_read_u32(pp, "debounce-interval", &reg) == 0)
+		events[eventno].debounce_interval = reg;
+
+	return 0;
+}
+
 static int sim_detect_get_devtree(struct device *dev,
 				  struct sim_detect_platform_data *pdata)
 {
 	struct device_node *node, *pp = NULL;
 	int i = 0;
 	struct sim_detect_gpio_event *events;
-	u32 reg;
-	int gpio;
 	int ret = -ENODEV;
-	enum of_gpio_flags flags;
-	int index;
-	char *phase;
-
-	phase = get_cei_simslot_id();
-	index = get_simslot_name_index(phase);
 
 	node = dev->of_node;
 	if (node == NULL)
@@ -123,13 +159,8 @@ static int sim_detect_get_devtree(struct device *dev,
 	pdata->n_events = 0;
 	pp = NULL;
 
-	if (index) {
-		while ((pp = of_get_next_child(node, pp)))
-			pdata->n_events++;
-	} else {
-		if ((pp = of_get_child_by_name(node, "sim1_det")))
-			pdata->n_events++;
-	}
+	while ((pp = of_get_next_child(node, pp)))
+		pdata->n_events++;
 
 	if (pdata->n_events == 0)
 		goto fail;
@@ -140,54 +171,16 @@ static int sim_detect_get_devtree(struct device *dev,
 		goto fail;
 	}
 
-	if (index) {
-		while ((pp = of_get_next_child(node, pp))) {
-
-			if (!of_find_property(pp, "gpios", NULL)) {
-				pdata->n_events--;
-				dev_warn(dev, "Found button without gpios\n");
-				continue;
-			}
-
-			gpio = of_get_gpio_flags(pp, 0, &flags);
-			if (!gpio_is_valid(gpio)) {
-				dev_err(dev, "%s: invalid gpio %d\n", __func__, gpio);
-				goto out_fail;
-			}
-			events[i].index = i;
-			events[i].gpio = gpio;
-			events[i].active_low = flags & OF_GPIO_ACTIVE_LOW;
-
-			events[i].desc = of_get_property(pp, "label", NULL);
-
-			if (of_property_read_u32(pp, "debounce-interval", &reg) == 0)
-				events[i].debounce_interval = reg;
-			i++;
-		}
-	} else {
-		if ((pp = of_get_child_by_name(node, "sim1_det"))) {
-
-			if (!of_find_property(pp, "gpios", NULL)) {
-				pdata->n_events--;
-				dev_warn(dev, "Found button without gpios\n");
-			} else {
-				gpio = of_get_gpio_flags(pp, 0, &flags);
-				if (!gpio_is_valid(gpio)) {
-					dev_err(dev, "%s: invalid gpio %d\n", __func__, gpio);
-					goto out_fail;
-				}
-				events[i].index = i;
-				events[i].gpio = gpio;
-				events[i].active_low = flags & OF_GPIO_ACTIVE_LOW;
-
-				events[i].desc = of_get_property(pp, "label", NULL);
-
-				if (of_property_read_u32(pp, "debounce-interval", &reg) == 0)
-					events[i].debounce_interval = reg;
-			}
-		}
-	}
 	pdata->events = events;
+
+	while ((pp = of_get_next_child(node, pp))) {
+		ret = __sim_detect_get_dt(dev, pdata, pp, i);
+		if (ret == -EINVAL)
+			goto out_fail;
+
+		if (ret != -ENOKEY)
+			i++;
+	}
 
 	return 0;
 
