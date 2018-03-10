@@ -11,17 +11,10 @@
  */
 
 / {
-	mtp_batterydata: qcom,battery-data {
+	discovery_batterydata: qcom,battery-data {
 		qcom,batt-id-range-pct = <15>;
 		#include "fg-gen3-batterydata-3450mah.dtsi"
 	};
-};
-
-
-&uartblsp1dm1 {
-	status = "ok";
-	pinctrl-names = "default";
-	pinctrl-0 = <&uart_console_active>;
 };
 
 &ufsphy1 {
@@ -83,25 +76,9 @@
 };
 
 &soc {
-	somc_pinctrl: somc_pinctrl {
-		compatible = "somc-pinctrl";
-		pinctrl-names = "platform_common_default",
-						"product_common_default",
-						"variant_default";
-		pinctrl-0 = <>;
-
-		/* If product common default setting is needed,
-			fill pinctrl-1 value in <product>_common.dtsi */
-		pinctrl-1 = <>;
-
-		/* If variant specific default setting is needed,
-			fill pinctrl-2 value in <variant>.dtsi */
-		pinctrl-2 = <>;
-	};
-
 	gpio_keys {
 		status = "okay";
-		compatible = "gpio-keys-dp";
+		compatible = "gpio-keys";
 		input-name = "gpio-keys";
 		pinctrl-names = "tlmm_gpio_key_active","tlmm_gpio_key_suspend";
 		pinctrl-0 = <&gpio_key_active>;
@@ -135,123 +112,11 @@
 };
 
 &pm660_fg {
-	qcom,battery-data = <&mtp_batterydata>;
-	qcom,fg-jeita-thresholds = <5 10 45 55>;
-	qcom,battery-thermal-coefficients = [c7 50 ff];
-};
-
-&sdhc_1 {
-	/* device core power supply */
-	vdd-supply = <&pm660l_l4>;
-	qcom,vdd-voltage-level = <2950000 2950000>;
-	qcom,vdd-current-level = <200 570000>;
-
-	/* device communication power supply */
-	vdd-io-supply = <&pm660_l8>;
-	qcom,vdd-io-always-on;
-	qcom,vdd-io-lpm-sup;
-	qcom,vdd-io-voltage-level = <1800000 1800000>;
-	qcom,vdd-io-current-level = <110 325000>;
-
-	pinctrl-names = "active", "sleep";
-	pinctrl-0 = <&sdc1_clk_on &sdc1_cmd_on &sdc1_data_on &sdc1_rclk_on>;
-	pinctrl-1 = <&sdc1_clk_off &sdc1_cmd_off &sdc1_data_off &sdc1_rclk_off>;
-
-	status = "ok";
-};
-
-&sdhc_2 {
-	/* device core power supply */
-	vdd-supply = <&pm660l_l5>;
-	qcom,vdd-voltage-level = <2950000 2950000>;
-	qcom,vdd-current-level = <15000 800000>;
-
-	/* device communication power supply */
-	vdd-io-supply = <&pm660l_l2>;
-	qcom,vdd-io-voltage-level = <1800000 2950000>;
-	qcom,vdd-io-current-level = <200 22000>;
-
-	pinctrl-names = "active", "sleep";
-	pinctrl-0 = <&sdc2_clk_on &sdc2_cmd_on &sdc2_data_on &sdc2_cd_on>;
-	pinctrl-1 = <&sdc2_clk_off &sdc2_cmd_off &sdc2_data_off &sdc2_cd_off>;
-
-	#address-cells = <0>;
-	interrupt-parent = <&sdhc_2>;
-	interrupts = <0 1 2>;
-	#interrupt-cells = <1>;
-	interrupt-map-mask = <0xffffffff>;
-	interrupt-map = <0 &intc 0 0 125 0
-			1 &intc 0 0 221 0
-			2 &tlmm 54 0>;
-	interrupt-names = "hc_irq", "pwr_irq", "status_irq";
-	cd-gpios = <&tlmm 54 0x1>;
-
-	status = "ok";
-};
-
-&mdss_mdp {
-	qcom,mdss-pref-prim-intf = "dsi";
-};
-
-&mdss_dsi {
-	hw-config = "single_dsi";
+	qcom,battery-data = <&discovery_batterydata>;
 };
 
 &mdss_dsi0 {
 	qcom,dsi-pref-prim-pan = <&dsi_td4322_innolux_fhd_cmd>;
-	pinctrl-names = "mdss_default", "mdss_sleep";
-	pinctrl-0 = <&mdss_dsi_active &mdss_te_active>;
-	pinctrl-1 = <&mdss_dsi_suspend &mdss_te_suspend>;
-	qcom,platform-reset-gpio = <&tlmm 53 0>;
-	qcom,platform-te-gpio = <&tlmm 59 0>;
-};
-
-&mdss_dp_ctrl {
-	pinctrl-names = "mdss_dp_active", "mdss_dp_sleep";
-	pinctrl-0 = <&mdss_dp_aux_active &mdss_dp_usbplug_cc_active>;
-	pinctrl-1 = <&mdss_dp_aux_suspend &mdss_dp_usbplug_cc_suspend>;
-	qcom,aux-en-gpio = <&tlmm 55 0>;
-	qcom,aux-sel-gpio = <&tlmm 56 0>;
-	qcom,usbplug-cc-gpio = <&tlmm 58 0>;
-};
-
-&i2c_1 {
-	status = "okay";
-	synaptics@70 {
-		compatible = "synaptics,dsx-i2c";
-		reg = <0x70>;
-		interrupt-parent = <&tlmm>;
-		interrupts = <45 0x2008>;
-		pinctrl-names = "pmx_ts_active", "pmx_ts_suspend";
-		pinctrl-0 = <&ts_int_active &ts_lcd_id_active>;
-		pinctrl-1 = <&ts_nile_int_suspend &ts_lcd_id_suspend>;
-		synaptics,pwr-reg-name = "avdd";
-		synaptics,bus-reg-name = "vdd";
-		synaptics,ub-i2c-addr = <0x20>;
-		synaptics,irq-gpio = <&tlmm 45 0x2008>; /* IRQF_ONESHOT | IRQF_TRIGGER_LOW */
-		synaptics,irq-on-state = <0>;
-		synaptics,power-delay-ms = <200>;
-		synaptics,reset-delay-ms = <200>;
-		synaptics,reset-on-state = <0>;
-		synaptics,reset-active-ms = <20>;
-		/* uncomment and update line below as appropriate if there are 0D buttons */
-		/* synaptics,cap-button-codes = <102 158>; */
-		/* uncomment and update lines below as appropriate if there are virtual buttons */
-		/* synaptics,vir-button-codes = <102 100 900 100 60 158 300 900 100 60>; */
-		/* synaptics,max-y-for-2d = <800>; */
-	};
-};
-
-&i2c_2 {
-	status = "ok";
-	smb1351-charger@1d {
-		compatible = "qcom,smb1351-charger";
-		reg = <0x1d>;
-		qcom,parallel-charger;
-		qcom,float-voltage-mv = <4400>;
-		qcom,recharge-mv = <100>;
-		qcom,parallel-en-pin-polarity = <1>;
-	};
 };
 
 &qusb_phy0 {
@@ -267,6 +132,3 @@
 				  0x00 0x18>;
 };
 
-&dsi_rm67195_amoled_fhd_cmd {
-	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_labibb_amoled>;
-};
