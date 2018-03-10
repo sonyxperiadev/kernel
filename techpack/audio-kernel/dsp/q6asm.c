@@ -2878,6 +2878,15 @@ static int __q6asm_open_write(struct audio_client *ac, uint32_t format,
 	open.sink_endpointype = ASM_END_POINT_DEVICE_MATRIX;
 	open.bits_per_sample = bits_per_sample;
 
+#ifdef CONFIG_ARCH_SONY_NILE
+	if (ac->perf_mode == LOW_LATENCY_PCM_MODE ||
+	    ac->perf_mode == ULTRA_LOW_LATENCY_PCM_MODE ||
+	    ac->perf_mode == ULL_POST_PROCESSING_PCM_MODE)
+		open.bits_per_sample = bits_per_sample;
+	else
+		open.bits_per_sample = 24;
+#endif
+
 	rc = q6asm_get_asm_topology_apptype(&cal_info);
 	open.postprocopo_id = cal_info.topology_id;
 
