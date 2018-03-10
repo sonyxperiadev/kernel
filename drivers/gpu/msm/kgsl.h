@@ -51,7 +51,11 @@
 /* The number of memstore arrays limits the number of contexts allowed.
  * If more contexts are needed, update multiple for MEMSTORE_SIZE
  */
+#if defined (CONFIG_ARCH_MSM8916) || defined (CONFIG_ARCH_SDM630) || defined (CONFIG_ARCH_SDM660)
+#define KGSL_MEMSTORE_SIZE	((int)(PAGE_SIZE * 8))
+#else
 #define KGSL_MEMSTORE_SIZE	((int)(PAGE_SIZE * 2))
+#endif
 #define KGSL_MEMSTORE_GLOBAL	(0)
 #define KGSL_PRIORITY_MAX_RB_LEVELS 4
 #define KGSL_MEMSTORE_MAX	(KGSL_MEMSTORE_SIZE / \
