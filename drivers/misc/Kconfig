@@ -376,6 +376,15 @@ config SENSORS_APDS990X
 	   To compile this driver as a module, choose M here: the
 	   module will be called apds990x. If unsure, say N here.
 
+config SIM_DETECT
+	tristate "SIM_DETECT driver support"
+	default n
+	help
+	  Say Y here
+	  if you want to support SIM_DETECT as detection device.
+	  This driver can be used for sending notifications via
+	  switch_class when sim card is inserted or removed.
+
 config HMC6352
 	tristate "Honeywell HMC6352 compass"
 	depends on I2C
