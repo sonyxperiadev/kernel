@@ -2741,7 +2741,6 @@ static int mdss_dsi_panel_timing_from_dt(struct device_node *np,
 	if ((!data) || (len != 12)) {
 		pr_err("%s:%d, Unable to read Phy timing settings",
 		       __func__, __LINE__);
-		return -EINVAL;
 	} else {
 		for (i = 0; i < len; i++)
 			pt->phy_timing[i] = data[i];
