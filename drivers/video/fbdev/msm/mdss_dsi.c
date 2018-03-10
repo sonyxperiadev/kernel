@@ -1677,11 +1677,6 @@ int mdss_dsi_pinctrl_set_state(
 	struct mdss_panel_info *pinfo = NULL;
 	int rc = -EFAULT;
 
-#ifdef CONFIG_SOMC_PANEL_LEGACY
-	if (ctrl_pdata->spec_pdata->disp_on_in_boot)
-		return 0;
-#endif
-
 	if (IS_ERR_OR_NULL(ctrl_pdata->pin_res.pinctrl))
 		return PTR_ERR(ctrl_pdata->pin_res.pinctrl);
 
