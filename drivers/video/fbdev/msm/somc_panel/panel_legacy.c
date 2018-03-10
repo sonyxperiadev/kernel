@@ -208,9 +208,6 @@ static int legacy_panel_power_off_ex(struct mdss_panel_data *pdata)
 		return -EINVAL;
 	}
 
-	if (pdata->panel_info.pdest != DISPLAY_1)
-		return 0;
-
 	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
 
@@ -301,9 +298,6 @@ static int legacy_panel_power_on_ex(struct mdss_panel_data *pdata)
 	 */
 	if (display_power_on[ctrl_pdata->ndx] ||
 	    pdata->panel_info.dynamic_switch_pending)
-		return 0;
-
-	if (pdata->panel_info.pdest != DISPLAY_1)
 		return 0;
 
 	regulator_mgr = spec_pdata->regulator_mgr;
