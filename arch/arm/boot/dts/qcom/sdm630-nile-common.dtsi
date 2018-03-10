@@ -219,7 +219,7 @@
 	};
 
 	chan@4d {
-		//checkme msm_therm stock is qcom,scale-function = <17>;
+		qcom,scale-function = <17>;
 	};
 
 	chan@50 {
