@@ -4094,7 +4094,6 @@ static int synaptics_rmi4_probe(struct platform_device *pdev)
 	struct synaptics_rmi4_data *rmi4_data;
 	const struct synaptics_dsx_hw_interface *hw_if;
 	const struct synaptics_dsx_board_data *bdata;
-	char *project_id;
 
 	hw_if = pdev->dev.platform_data;
 	if (!hw_if) {
@@ -4121,33 +4120,28 @@ static int synaptics_rmi4_probe(struct platform_device *pdev)
 	mdelay(1);
 	rmi4_data->lcd_id = gpio_get_value(56);
 
-	/* Get project id */
-	project_id = get_cei_project_id();
-
 	/* tp_source default set to 0xFF (unknow) */
 	rmi4_data->tp_source = TP_SOURCE_UNKNOW;
+	rmi4_data->project_id = 0x00;
 
-	// TODO: Need add product id (info) detection here...
-
-	if (strncmp(project_id, "BY1", 3) == 0) {
-		rmi4_data->project_id = 0x01;
-		if (rmi4_data->lcd_id == 1)
-			rmi4_data->tp_source = TP_SOURCE_TRULY;
-		else if (rmi4_data->lcd_id == 0)
-			rmi4_data->tp_source = TP_SOURCE_CSOT;
-
-	} else if (strncmp(project_id, "BY2", 3) == 0) {
-		rmi4_data->project_id = 0x02;
-		rmi4_data->tp_source = TP_SOURCE_INX;
-	} else {
-		TP_LOGW("unknown project id %s, set project_id = 0x00\n", project_id);
-		rmi4_data->project_id = 0x00;
+	/* For TouchView TD4322 firmware upgrade -and repair- */
+	if (of_machine_is_compatible("somc,nile")) {
+		if (of_machine_is_compatible("somc,pioneer")) {
+			rmi4_data->project_id = 0x01;
+			if (rmi4_data->lcd_id == 1)
+				rmi4_data->tp_source = TP_SOURCE_TRULY;
+			else if (rmi4_data->lcd_id == 0)
+				rmi4_data->tp_source = TP_SOURCE_CSOT;
+		} else if (of_machine_is_compatible("somc,discovery")) {
+			rmi4_data->project_id = 0x02;
+			rmi4_data->tp_source = TP_SOURCE_INX;
+		}
 	}
 
-	TP_LOGI("rmi4_data->project_id = 0x%02X (%s), "
+	TP_LOGI("rmi4_data->project_id = 0x%02X, "
 		"rmi4_data->lcd_id = %d, "
 		"rmi4_data->tp_source = 0x%02X (%s)\n",
-		rmi4_data->project_id, project_id,
+		rmi4_data->project_id,
 		rmi4_data->lcd_id,
 		rmi4_data->tp_source,
 		rmi4_data->tp_source == TP_SOURCE_TRULY ? "Truly" :
