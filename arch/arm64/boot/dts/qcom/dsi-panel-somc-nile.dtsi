@@ -134,6 +134,7 @@
        23 1A 08 09 05 03 04 A0];
    qcom,mdss-dsi-t-clk-post = <0x0D>;
    qcom,mdss-dsi-t-clk-pre = <0x2F>;
+   qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
    somc,bootloader-panel-detect;
    qcom,esd-check-enabled;
    qcom,mdss-dsi-panel-status-check-mode = "reg_read";
@@ -151,6 +152,7 @@
        23 1A 08 09 05 03 04 A0];
    qcom,mdss-dsi-t-clk-post = <0x0D>;
    qcom,mdss-dsi-t-clk-pre = <0x2F>;
+   qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
    somc,bootloader-panel-detect;
    qcom,esd-check-enabled;
    qcom,mdss-dsi-panel-status-check-mode = "reg_read";
@@ -168,6 +170,7 @@
        23 19 08 08 05 03 04 A0];
    qcom,mdss-dsi-t-clk-post = <0x0D>;
    qcom,mdss-dsi-t-clk-pre = <0x2E>;
+   qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
    somc,bootloader-panel-detect;
    qcom,esd-check-enabled;
    qcom,mdss-dsi-panel-status-check-mode = "reg_read";
