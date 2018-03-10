@@ -60,10 +60,6 @@
 	};
 };
 
-&qcom_seecom {
-	qcom,commonlib64-loaded-by-uefi;
-};
-
 &soc {
 	ramoops {
 		compatible = "ramoops";
@@ -121,4 +117,172 @@
 			debounce-interval = <10>;
 		};
 	};
+
+	hall {
+		compatible = "hall-switch";
+		interrupt-parent = <&tlmm>;
+		interrupts = <75 0x3>;
+		//vddio-supply = <&pm660l_l14>;
+		linux,gpio-int = <&tlmm 75 0x1>;
+		linux,wakeup;
+		linux,min-uv = <1700000>;
+		linux,max-uv = <1900000>;
+	};
+};
+
+&wdog {
+	qcom,bark-time = <12000>;
+};
+
+&qcom_seecom {
+	qcom,commonlib64-loaded-by-uefi;
+};
+
+&rpm_bus {
+	rpm-regulator-ldoa18 {
+		status = "okay";
+		pm660_l18: regulator-l18 {
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			status = "okay";
+		};
+	};
+};
+
+&pm660l_l6 {
+	qcom,regulator-type = <0>;  /* LDO */
+	qcom,init-enable = <0>;
+	qcom,init-ldo-mode = <1>;
+	qcom,init-pin-ctrl-enable = <0>;
+	qcom,init-pin-ctrl-mode = <0>;
+	qcom,init-voltage = <3300000>;
+};
+
+/* PM660 */
+&spmi_bus {
+	qcom,power-on@800 {
+		qcom,s3-src = "resin";
+	};
+};
+
+&pm660_vadc {
+	chan@4e {
+		label = "ufs_therm";
+	};
+
+	chan@4d {
+		//checkme msm_therm stock is qcom,scale-function = <17>;
+	};
+
+	chan@50 {
+		label = "pa_therm2";
+		reg = <0x50>;
+		qcom,decimation = <2>;
+		qcom,pre-div-channel-scaling = <0>;
+		qcom,calibration-type = "ratiometric";
+		qcom,scale-function = <2>;
+		qcom,hw-settle-time = <2>;
+		qcom,fast-avg-setup = <0>;
+		qcom,vadc-thermal-node;
+	};
+
+	chan@53 {
+		label = "flash_therm";
+		reg = <0x53>;
+		qcom,decimation = <2>;
+		qcom,pre-div-channel-scaling = <0>;
+		qcom,calibration-type = "ratiometric";
+		qcom,scale-function = <17>;
+		qcom,hw-settle-time = <2>;
+		qcom,fast-avg-setup = <0>;
+		qcom,vadc-thermal-node;
+	};
+};
+
+&pm660_charger {
+	qcom,fv-max-uv = <4350000>;
+	qcom,chg-safety-time-enable = <1>;
+	qcom,chg-usb-pre-safety-time = <1>;
+	qcom,chg-ac-pre-safety-time = <1>;
+	qcom,chg-usb-fast-safety-time = <2>;
+	qcom,chg-ac-fast-safety-time = <2>;
+	qcom,float-option = <2>;
+	qcom,thermal-mitigation = <2400000 1000000 500000 200000>;
+};
+
+&pm660_fg {
+	qcom,fg-sys-term-current = <(-200)>;
+	qcom,fg-cutoff-voltage = <3400>;
+	qcom,fg-rsense-sel = <0>;
+	qcom,fg-chg-term-current = <150>;
+	qcom,fg-force-load-profile;
+	qcom,slope-limit-temp-threshold = <10>;
+	qcom,slope-limit-coeffs = <1 1 1 1>;
+};
+
+&pm660_rradc {
+	somc,reg-cfg =
+	      /* addr mask value */
+	      <0x83 0x07 0x04>, /* FG_ADC_RR_AUX_THERM_CFG */
+	      <0x88 0xFF 0xAF>, /* FG_ADC_RR_AUX_THERM_C1 */
+	      <0x89 0xFF 0x34>, /* FG_ADC_RR_AUX_THERM_C2 */
+	      <0x8A 0xFF 0xDF>, /* FG_ADC_RR_AUX_THERM_C3 */
+	      <0x8B 0xFF 0xA0>; /* FG_ADC_RR_AUX_THERM_HALF_RANGE */
+};
+
+&pm660_haptics {
+	qcom,actuator-type = "erm";
+	qcom,vmax-mv = <3000>;
+};
+
+
+/* PM660L */
+&red_led {
+	qcom,idx-len = <2>;
+	qcom,duty-pcts = [00 0F];
+	qcom,lut-flags = <25>;
+	qcom,ramp-step-ms = <100>;
+};
+
+&green_led {
+	qcom,start-idx = <2>;
+	qcom,idx-len = <2>;
+	qcom,duty-pcts = [00 64];
+	qcom,lut-flags = <25>;
+	qcom,ramp-step-ms = <100>;
+	qcom,use-blink;
+};
+
+&blue_led {
+	qcom,start-idx = <4>;
+	qcom,idx-len = <2>;
+	qcom,duty-pcts = [00 31];
+	qcom,lut-flags = <25>;
+	qcom,ramp-step-ms = <100>;
+	qcom,use-blink;
+};
+
+&pm660l_wled {
+	qcom,fs-curr-ua = <17500>;
+	qcom,led-strings-list = [00 01];
+};
+
+&pm660l_torch0 {
+	qcom,current-ma = <100>;
+};
+
+&pm660l_torch1 {
+	qcom,current-ma = <100>;
+};
+
+&pm660l_torch2 {
+	qcom,current-ma = <100>;
+};
+
+&pm660l_switch0 {
+	qcom,led-mask = <1>;
+};
+
+&pm660l_switch1 {
+	qcom,led-mask = <2>;
 };
