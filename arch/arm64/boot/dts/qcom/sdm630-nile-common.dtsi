@@ -283,6 +283,9 @@
 	qcom,vmax-mv = <3000>;
 };
 
+&pm660_coincell {
+	qcom,charge-enable = <0>;
+};
 
 /* PM660L */
 &red_led {
