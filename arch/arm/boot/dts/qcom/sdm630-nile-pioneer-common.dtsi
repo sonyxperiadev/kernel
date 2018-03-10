@@ -215,27 +215,6 @@
 	qcom,usbplug-cc-gpio = <&tlmm 58 0>;
 };
 
-&dsi_td4322_innolux_fhd_cmd {
-	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
-	qcom,mdss-dsi-bl-min-level = <1>;
-	qcom,mdss-dsi-bl-max-level = <4095>;
-	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_innolux>;
-};
-
-&dsi_td4322_truly_fhd_cmd {
-	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
-	qcom,mdss-dsi-bl-min-level = <1>;
-	qcom,mdss-dsi-bl-max-level = <4095>;
-	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_truly>;
-};
-
-&dsi_td4322_csot_fhd_cmd {
-	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
-	qcom,mdss-dsi-bl-min-level = <1>;
-	qcom,mdss-dsi-bl-max-level = <4095>;
-	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_csot>;
-};
-
 &i2c_1 {
 	status = "okay";
 	synaptics@70 {
