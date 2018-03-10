@@ -57,7 +57,11 @@ static unsigned int _dispatcher_q_inflight_hi = 15;
 static unsigned int _dispatcher_q_inflight_lo = 4;
 
 /* Command batch timeout (in milliseconds) */
+#if defined (CONFIG_ARCH_MSM8916) || defined (CONFIG_ARCH_SDM630) || defined (CONFIG_ARCH_SDM660)
+unsigned int adreno_drawobj_timeout = 4000;
+#else
 unsigned int adreno_drawobj_timeout = 2000;
+#endif
 
 /* Interval for reading and comparing fault detection registers */
 static unsigned int _fault_timer_interval = 200;
