@@ -354,6 +354,11 @@ int do_panel_detect(struct device_node **node,
 	bool use_dric_only =
 		of_property_read_bool(*node, "somc,dric-only-detect");
 
+	if (of_property_read_bool(*node, "somc,bootloader-panel-detect")) {
+		ctrl_pdata->spec_pdata->detected = true;
+		return 0;
+	};
+
 	rc = panel_detect_setup(node,
 			 ctrl_pdata->spec_pdata, pdev);
 	if (rc < 0)
