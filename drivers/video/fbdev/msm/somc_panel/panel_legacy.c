@@ -313,6 +313,9 @@ static int legacy_panel_power_on_ex(struct mdss_panel_data *pdata)
 
 	somc_panel_down_period_quirk(spec_pdata);
 
+	if (mdss_dsi_pinctrl_set_state(ctrl_pdata, true))
+		pr_info("reset enable: pinctrl not enabled\n");
+
 	ret = msm_dss_enable_vreg(
 		ctrl_pdata->panel_power_data.vreg_config,
 		ctrl_pdata->panel_power_data.num_vreg, 1);
@@ -321,9 +324,6 @@ static int legacy_panel_power_on_ex(struct mdss_panel_data *pdata)
 			__func__, __mdss_dsi_pm_name(DSI_PANEL_PM));
 		goto vreg_error;
 	}
-
-	if (mdss_dsi_pinctrl_set_state(ctrl_pdata, true))
-		pr_info("reset enable: pinctrl not enabled\n");
 
 	if (gpio_is_valid(spec_pdata->vsn_gpio) &&
 		gpio_is_valid(spec_pdata->vsp_gpio)) {
