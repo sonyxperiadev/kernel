@@ -59,9 +59,6 @@ static int legacy_panel_parse_dt(struct device_node *np,
 	rc = of_property_read_u32(np, "somc,disp-dcdc-en-off-post", &tmp);
 	spec_pdata->off_seq.disp_dcdc_en_post = !rc ? tmp : 0;
 
-	spec_pdata->postpwron_no_reset_quirk = of_property_read_bool(
-			parent, "somc,postpwron-no-reset-quirk");
-
 	return 0;
 }
 
@@ -345,9 +342,8 @@ static int legacy_panel_power_on_ex(struct mdss_panel_data *pdata)
 	 * bootloader. This needs to be done irresepective of whether
 	 * the lp11_init flag is set or not.
 	 */
-	if ((pdata->panel_info.cont_splash_enabled ||
-		!pdata->panel_info.mipi.lp11_init) &&
-		!spec_pdata->postpwron_no_reset_quirk) {
+	if (pdata->panel_info.cont_splash_enabled ||
+		!pdata->panel_info.mipi.lp11_init) {
 		ret = mdss_dsi_panel_reset(pdata, 1);
 		if (ret)
 			pr_err("%s: Panel reset failed. rc=%d\n",

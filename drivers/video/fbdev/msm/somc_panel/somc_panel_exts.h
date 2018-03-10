@@ -240,7 +240,6 @@ struct mdss_panel_specific_pdata {
 	int vsp_gpio;
 	bool pwron_reset;
 	bool dsi_seq_hack;
-	bool postpwron_no_reset_quirk;
 
 #ifdef CONFIG_SOMC_PANEL_INCELL
 	int disp_vddio_gpio;
