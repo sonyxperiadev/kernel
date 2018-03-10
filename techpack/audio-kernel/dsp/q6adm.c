@@ -2461,6 +2461,12 @@ int adm_open(int port_id, int path, int rate, int channel_mode, int topology,
 	    (topology == VPM_TX_DM_RFECNS_COPP_TOPOLOGY))
 		rate = 16000;
 
+#ifdef CONFIG_ARCH_SONY_NILE
+	if (path == ADM_PATH_PLAYBACK && !(perf_mode == LOW_LATENCY_PCM_MODE ||
+			perf_mode == ULTRA_LOW_LATENCY_PCM_MODE ||
+			perf_mode == ULL_POST_PROCESSING_PCM_MODE))
+		bit_width = 24;
+#endif
 	/*
 	 * Routing driver reuses the same adm for streams with the same
 	 * app_type, sample_rate etc.
