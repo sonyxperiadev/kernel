@@ -138,6 +138,11 @@
 	qcom,commonlib64-loaded-by-uefi;
 };
 
+&mdss_dsi0 {
+	qcom,display-id = "primary";
+	qcom,mdss-fb-map-prim = <&mdss_fb0>;
+};
+
 &rpm_bus {
 	rpm-regulator-ldoa18 {
 		status = "okay";
@@ -286,3 +291,4 @@
 &pm660l_switch1 {
 	qcom,led-mask = <2>;
 };
+
