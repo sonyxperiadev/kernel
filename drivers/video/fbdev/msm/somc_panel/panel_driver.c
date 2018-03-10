@@ -357,6 +357,11 @@ static int mdss_dsi_panel_reset_seq(struct mdss_panel_data *pdata, int enable)
 		return rc;
 	}
 
+	if (pinfo->cont_splash_enabled) {
+		pr_debug("%s: Skipping reset in cont splash\n", __func__);
+		return 0;
+	}
+
 	pw_seq = (enable) ? &ctrl_pdata->spec_pdata->on_seq :
 				&ctrl_pdata->spec_pdata->off_seq;
 
