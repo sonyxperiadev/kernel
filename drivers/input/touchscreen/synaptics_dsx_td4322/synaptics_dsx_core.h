@@ -40,7 +40,6 @@
 #define SYNAPTICS_DSX_DRIVER_VERSION 0x206a
 
 #include "cei_touch_log.h"
-#include <linux/cei_hw_id.h>
 #include <linux/version.h>
 #ifdef CONFIG_FB
 #include <linux/notifier.h>
