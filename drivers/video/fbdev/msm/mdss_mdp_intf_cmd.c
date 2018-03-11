@@ -112,11 +112,6 @@ struct mdss_mdp_cmd_ctx {
 
 struct mdss_mdp_cmd_ctx mdss_mdp_cmd_ctx_list[MAX_SESSIONS];
 
-#if defined(CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL) && \
-    !defined(CONFIG_SOMC_PANEL_INCELL)
-static bool disp_on_in_hs;
-#endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
-
 static int mdss_mdp_cmd_do_notifier(struct mdss_mdp_cmd_ctx *ctx);
 static inline void mdss_mdp_cmd_clk_on(struct mdss_mdp_cmd_ctx *ctx);
 static inline void mdss_mdp_cmd_clk_off(struct mdss_mdp_cmd_ctx *ctx);
@@ -2351,18 +2346,7 @@ static int mdss_mdp_cmd_panel_on(struct mdss_mdp_ctl *ctl,
 
 		}
 
-#if defined(CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL) && \
-    !defined(CONFIG_SOMC_PANEL_INCELL)
-		if (ctl->panel_data->panel_info.disp_on_in_hs) {
-			disp_on_in_hs = true;
-		} else {
-			rc = mdss_mdp_tearcheck_enable(ctl, true);
-			WARN(rc, "intf %d tearcheck enable error (%d)\n",
-					ctl->intf_num, rc);
-		}
-#else
-
-#ifdef CONFIG_SOMC_PANEL_INCELL
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 		rc = mdss_mdp_ctl_intf_event(ctl, MDSS_EVENT_POST_PANEL_ON,
 				NULL, CTL_INTF_EVENT_FLAG_DEFAULT);
 		WARN(rc, "intf %d post panel on error (%d)\n",
@@ -2371,7 +2355,6 @@ static int mdss_mdp_cmd_panel_on(struct mdss_mdp_ctl *ctl,
 		rc = mdss_mdp_tearcheck_enable(ctl, true);
 		WARN(rc, "intf %d tearcheck enable error (%d)\n",
 				ctl->intf_num, rc);
-#endif
 
 		ctx->panel_power_state = MDSS_PANEL_POWER_ON;
 		if (sctx)
@@ -3217,44 +3200,6 @@ static int mdss_mdp_cmd_kickoff(struct mdss_mdp_ctl *ctl, void *arg)
 
 	MDSS_XLOG(ctl->num, ctx->current_pp_num,
 		sctx ? sctx->current_pp_num : -1, atomic_read(&ctx->koff_cnt));
-
-#if defined(CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL) && \
-    !defined(CONFIG_SOMC_PANEL_INCELL)
-	if (!__mdss_mdp_cmd_is_panel_power_on_interactive(ctx)) {
-		if (ctl->mfd) {
-			struct mdss_panel_data *pdata;
-			pdata = dev_get_platdata(&ctl->mfd->pdev->dev);
-			if (!pdata) {
-				pr_err("no panel connected\n");
-				return -ENODEV;
-			}
-
-
-			if (pdata->intf_ready)
-				pdata->intf_ready(pdata);
-		}
-		ctx->panel_power_state = MDSS_PANEL_POWER_ON;
-		if (sctx)
-			sctx->panel_power_state = MDSS_PANEL_POWER_ON;
-	}
-
-	if (disp_on_in_hs) {
-		int rc;
-#ifdef CONFIG_SOMC_PANEL_INCELL
-		rc = mdss_mdp_ctl_intf_event(ctl, MDSS_EVENT_POST_PANEL_ON,
-			NULL, CTL_INTF_EVENT_FLAG_DEFAULT);
-#else
-		rc = mdss_mdp_ctl_intf_event(ctl, MDSS_EVENT_DISP_ON, NULL,
-			CTL_INTF_EVENT_FLAG_DEFAULT);
-#endif
-		WARN(rc, "intf %d disp on error (%d)\n", ctl->intf_num, rc);
-		disp_on_in_hs = false;
-
-		rc = mdss_mdp_tearcheck_enable(ctl, true);
-		WARN(rc, "intf %d tearcheck enable error (%d)\n",
-				ctl->intf_num, rc);
-	}
-#endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 
 	return 0;
 }
