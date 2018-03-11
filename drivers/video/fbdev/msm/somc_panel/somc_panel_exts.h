@@ -267,7 +267,6 @@ struct mdss_panel_specific_pdata {
 };
 
 void somc_panel_fpsd_data_update(struct msm_fb_data_type *mfd);
-int mdss_dsi_panel_power_detect(struct platform_device *pdev, int enable);
 int mdss_dsi_pinctrl_set_state(struct mdss_dsi_ctrl_pdata *ctrl_pdata,
 					bool active);
 int somc_panel_allocate(struct platform_device *pdev,
