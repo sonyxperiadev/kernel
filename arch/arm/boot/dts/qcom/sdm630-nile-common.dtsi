@@ -50,10 +50,10 @@
 			qcom,scaling-factor = <1000>;
 		};
 	};
+};
 
-	qcom_seecom: qseecom@86d00000 {
-		qcom,commonlib64-loaded-by-uefi;
-	};
+&qcom_seecom {
+	qcom,commonlib64-loaded-by-uefi;
 };
 
 &soc {
