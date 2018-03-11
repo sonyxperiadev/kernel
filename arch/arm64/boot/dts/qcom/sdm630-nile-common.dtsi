@@ -244,6 +244,13 @@
 	};
 };
 
+&usb3 {
+	dwc3@a800000 {
+		maximum-speed = "high-speed";
+		/delete-property/ snps,has-lpm-erratum;
+	};
+};
+
 &mdss_fb0 {
 	/delete-node/ qcom,cont-splash-memory;
 };
