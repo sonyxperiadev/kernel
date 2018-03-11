@@ -94,6 +94,10 @@
 	qcom,battery-data = <&pioneer_batterydata>;
 };
 
+&pm660_charger {
+	qcom,fv-max-uv = <4340000>;
+};
+
 &mdss_dsi0 {
 	qcom,dsi-pref-prim-pan = <&dsi_td4322_truly_fhd_cmd>;
 };

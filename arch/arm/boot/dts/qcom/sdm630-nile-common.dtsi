@@ -406,7 +406,7 @@
 };
 
 &pm660_charger {
-	qcom,fv-max-uv = <4350000>;
+	qcom,fv-max-uv = <4300000>;
 	qcom,chg-safety-time-enable = <1>;
 	qcom,chg-usb-pre-safety-time = <1>;
 	qcom,chg-ac-pre-safety-time = <1>;
