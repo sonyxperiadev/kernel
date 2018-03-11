@@ -93,9 +93,7 @@ static int panel_detect_setup(struct device_node **node,
 	}
 	usleep_range(20, 30);
 
-	mdss_dsi_panel_power_detect(ctrl_pdev, 1);
 	spec_pdata->driver_ic = gpio_get_value(lcd_id);
-	mdss_dsi_panel_power_detect(ctrl_pdev, 0);
 
 	pr_info("%s: DriverIC GPIO: %d\n", __func__, spec_pdata->driver_ic);
 
