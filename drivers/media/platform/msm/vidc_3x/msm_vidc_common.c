@@ -5268,7 +5268,7 @@ exit:
 int msm_vidc_comm_s_parm(struct msm_vidc_inst *inst, struct v4l2_streamparm *a)
 {
 	u32 property_id = 0;
-	u64 us_per_frame = 0;
+	u64 us_per_frame = 0, fps_u64 = 0;
 	void *pdata;
 	int rc = 0, fps = 0;
 	struct hal_frame_rate frame_rate;
@@ -5306,8 +5306,9 @@ int msm_vidc_comm_s_parm(struct msm_vidc_inst *inst, struct v4l2_streamparm *a)
 		goto exit;
 	}
 
-	fps = USEC_PER_SEC;
-	do_div(fps, us_per_frame);
+	fps_u64 = USEC_PER_SEC;
+	do_div(fps_u64, us_per_frame);
+	fps = fps_u64;
 
 	if (fps % 15 == 14 || fps % 24 == 23)
 		fps = fps + 1;
