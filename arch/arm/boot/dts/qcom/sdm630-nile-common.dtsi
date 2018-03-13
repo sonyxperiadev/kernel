@@ -136,9 +136,9 @@
 		fpc,enable-on-boot;
 		fpc,enable-wakeup;
 
-		pinctrl-names = "fpc1020_reset_reset",
-			"fpc1020_reset_active",
-			"fpc1020_irq_active";
+		pinctrl-names = "fpc1145_reset_reset",
+			"fpc1145_reset_active",
+			"fpc1145_irq_active";
 
 		pinctrl-0 = <&msm_gpio_20>;
 		pinctrl-1 = <&msm_gpio_20_output_high>;
