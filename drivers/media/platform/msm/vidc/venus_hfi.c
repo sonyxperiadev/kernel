@@ -1156,13 +1156,27 @@ static struct clock_info *__get_clock(struct venus_hfi_device *device,
 }
 
 static unsigned long __get_clock_rate(struct venus_hfi_device *device,
-	int num_mbs_per_sec, struct vidc_clk_scale_data *data)
+	int num_mbs_per_sec, struct vidc_clk_scale_data *data,
+	struct clock_info *clock)
 {
-	int num_rows = device->res->load_freq_tbl_size;
-	struct load_freq_table *table = device->res->load_freq_tbl;
-	unsigned long freq = table[0].freq, max_freq = 0;
+	int num_rows;
+	struct load_freq_table *table = NULL;
+	unsigned long freq = 0, max_freq = 0;
 	int i = 0, j = 0;
 	unsigned long instance_freq[VIDC_MAX_SESSIONS] = {0};
+
+#ifndef CONFIG_ARCH_MSM8916
+	if (clock == NULL)
+		return 0;
+
+	num_rows = clock->count;
+	table = clock->load_freq_tbl;
+#else
+	num_rows = device->res->load_freq_tbl_size;
+	table = device->res->load_freq_tbl;
+#endif
+
+	freq = table[0].freq;
 
 	if (!data && !num_rows) {
 		freq = 0;
@@ -1198,13 +1212,26 @@ print_clk:
 
 static unsigned long __get_clock_rate_with_bitrate(struct venus_hfi_device *device,
 		int num_mbs_per_sec, struct vidc_clk_scale_data *data,
-		unsigned long instant_bitrate)
+		unsigned long instant_bitrate, struct clock_info *clock)
 {
-	int num_rows = device->res->load_freq_tbl_size;
-	struct load_freq_table *table = device->res->load_freq_tbl;
-	unsigned long freq = table[0].freq, max_freq = 0;
+	int num_rows;
+	struct load_freq_table *table = NULL;
+	unsigned long freq = 0, max_freq = 0;
 	unsigned long base_freq, supported_clk[VIDC_MAX_SESSIONS] = {0};
 	int i, j;
+
+#ifndef CONFIG_ARCH_MSM8916
+	if (clock == NULL)
+		return 0;
+
+	num_rows = clock->count;
+	table = clock->load_freq_tbl;
+#else
+	num_rows = device->res->load_freq_tbl_size;
+	table = device->res->load_freq_tbl;
+#endif
+
+	freq = table[0].freq;
 
 	if (!data && !num_rows) {
 		freq = 0;
@@ -1216,7 +1243,7 @@ static unsigned long __get_clock_rate_with_bitrate(struct venus_hfi_device *devi
 	}
 
 	/* Get clock rate based on current load only */
-	base_freq = __get_clock_rate(device, num_mbs_per_sec, data);
+	base_freq = __get_clock_rate(device, num_mbs_per_sec, data, clock);
 
 	/*
 	 * Supported bitrate = 40% of clock frequency
@@ -1538,12 +1565,12 @@ static int __scale_clocks_load(struct venus_hfi_device *device, int load,
 			if (!rate) {
 				if (!device->clk_bitrate)
 					rate = __get_clock_rate(device, load,
-							data);
+							data, cl);
 				else
 					rate = __get_clock_rate_with_bitrate(
 							device,
 							load, data,
-							instant_bitrate);
+							instant_bitrate, cl);
 			}
 
 			rc = __set_clk_rate(device, cl, rate);
@@ -1722,12 +1749,14 @@ static int venus_hfi_scale_clocks(void *dev, int load,
 
 	mutex_lock(&device->lock);
 
-	device->clk_freq = __get_clock_rate(device, load, data);
+	if (of_machine_is_compatible("qcom,msm8956")) {
+		device->clk_freq = __get_clock_rate(device, load, data, NULL);
 
-	rc = venus_hfi_scale_regulators(device, data);
-	if (rc) {
-		dprintk(VIDC_WARN, "%s: Failed to scale regulators voltage\n",
-			__func__);
+		rc = venus_hfi_scale_regulators(device, data);
+		if (rc) {
+			dprintk(VIDC_WARN, "%s: Failed to scale regulators voltage\n",
+				__func__);
+		}
 	}
 
 	if (__resume(device)) {
@@ -3673,7 +3702,7 @@ static void venus_hfi_clock_adjust(struct venus_hfi_device *device)
 	mutex_lock(&device->clock_lock);
 
 	/* firmware requested to reduce clock rate */
-	rate = __get_clock_rate(device, 0, NULL);
+	rate = __get_clock_rate(device, 0, NULL, NULL);
 	rc = __set_clock_rate(device, rate);
 	if (rc) {
 		dprintk(VIDC_ERR, "%s: Clocks reduce failed\n", __func__);
