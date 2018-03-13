@@ -11,6 +11,11 @@
  */
 
 &tlmm {
+		/delete-node/ ts_active;
+		/delete-node/ ts_reset_suspend;
+		/delete-node/ ts_int_suspend;
+		/delete-node/ ts_mux;
+
 		 /* GPIO_20 : FP_RESET_N */
 		msm_gpio_20: msm_gpio_20 {
 			mux {
