@@ -357,6 +357,11 @@ static int mdss_dsi_panel_reset_seq(struct mdss_panel_data *pdata, int enable)
 		return rc;
 	}
 
+	if (pinfo->cont_splash_enabled) {
+		pr_debug("%s: Skipping reset in cont splash\n", __func__);
+		return 0;
+	}
+
 	pw_seq = (enable) ? &ctrl_pdata->spec_pdata->on_seq :
 				&ctrl_pdata->spec_pdata->off_seq;
 
@@ -2741,7 +2746,6 @@ static int mdss_dsi_panel_timing_from_dt(struct device_node *np,
 	if ((!data) || (len != 12)) {
 		pr_err("%s:%d, Unable to read Phy timing settings",
 		       __func__, __LINE__);
-		return -EINVAL;
 	} else {
 		for (i = 0; i < len; i++)
 			pt->phy_timing[i] = data[i];

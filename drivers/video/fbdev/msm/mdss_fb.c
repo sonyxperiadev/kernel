@@ -1553,8 +1553,6 @@ static int mdss_fb_probe(struct platform_device *pdev)
 #ifdef CONFIG_SOMC_PANEL_INCELL
 	incell_driver_init(mfd->panel_info->cont_splash_enabled);
 #endif
-
-	mfd->suspend_avoided = false;
 #endif
 
 	INIT_DELAYED_WORK(&mfd->idle_notify_work, __mdss_fb_idle_notify_work);
@@ -1844,14 +1842,6 @@ static int mdss_fb_pm_resume(struct device *dev)
 
 	dev_dbg(dev, "display pm resume\n");
 
-#ifdef CONFIG_SOMC_PANEL_LEGACY
-	if (mfd->suspend_avoided) {
-		pr_debug("fb%d: resume is not executed, return 0\n",
-			mfd->index);
-		return 0;
-	}
-#endif
-
 	/*
 	 * It is possible that the runtime status of the fb device may
 	 * have been active when the system was suspended. Reset the runtime
@@ -2105,9 +2095,6 @@ static int mdss_fb_blank_blank(struct msm_fb_data_type *mfd,
 {
 	int ret = 0;
 	int cur_power_state, current_bl;
-#ifdef CONFIG_SOMC_PANEL_LEGACY
-	struct mdss_panel_data *pdata;
-#endif
 
 	if (!mfd)
 		return -EINVAL;
@@ -2135,9 +2122,7 @@ static int mdss_fb_blank_blank(struct msm_fb_data_type *mfd,
 	complete(&mfd->no_update.comp);
 
 	mfd->op_enable = false;
-#ifdef CONFIG_SOMC_PANEL_LEGACY
-	pdata = dev_get_platdata(&mfd->pdev->dev);
-#endif
+
 	if (mdss_panel_is_power_off(req_power_state)) {
 		/* Stop Display thread */
 		if (mfd->disp_thread)
@@ -2148,18 +2133,6 @@ static int mdss_fb_blank_blank(struct msm_fb_data_type *mfd,
 		mdss_fb_set_backlight(mfd, 0);
 		mfd->allow_bl_update = false;
 		mfd->unset_bl_level = current_bl;
-#ifdef CONFIG_SOMC_PANEL_LEGACY
-/* TODO: CHECKME!! This piece of code may be deprecated by recent
- * 	 MDSS-Backlight bugfixes (and switch) on Sony devices!!!
- */
-		if (backlight_led.brightness) {
-			 mfd->unset_bl_level =
-				backlight_led.brightness >
-				mfd->panel_info->brightness_max ?
-				mfd->panel_info->brightness_max :
-				backlight_led.brightness;
-		}
-#endif /* CONFIG_SOMC_PANEL_LEGACY */
 		mutex_unlock(&mfd->bl_lock);
 	}
 	mfd->panel_power_state = req_power_state;
@@ -2167,21 +2140,9 @@ static int mdss_fb_blank_blank(struct msm_fb_data_type *mfd,
 	ret = mfd->mdp.off_fnc(mfd);
 	if (ret) {
 		mfd->panel_power_state = cur_power_state;
-#ifdef CONFIG_SOMC_PANEL_LEGACY
-		if ((pdata) && (pdata->set_backlight)) {
-			mutex_lock(&mfd->bl_lock);
-			mfd->bl_level = mfd->bl_level_scaled;
-			pdata->set_backlight(pdata, mfd->bl_level);
-			mutex_unlock(&mfd->bl_lock);
-		}
-#endif
 	} else if (mdss_panel_is_power_off(req_power_state))
 		mdss_fb_release_fences(mfd);
 	mfd->op_enable = true;
-
-#ifdef CONFIG_SOMC_PANEL_LEGACY
-	mfd->bl_level_scaled = mfd->bl_level;
-#endif
 
 	complete(&mfd->power_off_comp);
 
@@ -2192,9 +2153,6 @@ static int mdss_fb_blank_unblank(struct msm_fb_data_type *mfd)
 {
 	int ret = 0;
 	int cur_power_state;
-#ifdef CONFIG_SOMC_PANEL_LEGACY
-	struct mdss_panel_data *pdata;
-#endif
 
 	if (!mfd)
 		return -EINVAL;
@@ -2227,18 +2185,6 @@ static int mdss_fb_blank_unblank(struct msm_fb_data_type *mfd)
 			mdss_fb_stop_disp_thread(mfd);
 			goto error;
 		}
-
-#ifdef CONFIG_SOMC_PANEL_LEGACY
-		if (backlight_led.brightness) {
-			mutex_lock(&mfd->bl_lock);
-			mfd->unset_bl_level =
-			    backlight_led.brightness >
-			    mfd->panel_info->brightness_max ?
-			    mfd->panel_info->brightness_max :
-			    backlight_led.brightness;
-			mutex_unlock(&mfd->bl_lock);
-		}
-#endif
 
 		mfd->panel_power_state = MDSS_PANEL_POWER_ON;
 		mfd->panel_info->panel_dead = false;

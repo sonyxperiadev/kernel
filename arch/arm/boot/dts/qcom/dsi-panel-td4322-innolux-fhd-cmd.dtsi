@@ -71,6 +71,8 @@
 		qcom,mdss-dsi-off-command-state = "dsi_lp_mode";
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 		qcom,mdss-dsi-reset-sequence = <0 30>, <1 150>;
+		somc,pw-on-rst-seq = <0 30>, <1 150>;
+		somc,pw-off-rst-seq = <0 0>;
 		qcom,mdss-dsi-tx-eot-append;
 		qcom,mdss-dsi-post-init-delay = <1>;
 		qcom,mdss-pan-physical-width-dimension = <74>;

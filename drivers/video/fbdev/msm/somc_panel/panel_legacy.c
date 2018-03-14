@@ -59,9 +59,6 @@ static int legacy_panel_parse_dt(struct device_node *np,
 	rc = of_property_read_u32(np, "somc,disp-dcdc-en-off-post", &tmp);
 	spec_pdata->off_seq.disp_dcdc_en_post = !rc ? tmp : 0;
 
-	spec_pdata->postpwron_no_reset_quirk = of_property_read_bool(
-			parent, "somc,postpwron-no-reset-quirk");
-
 	return 0;
 }
 
@@ -97,8 +94,8 @@ static int legacy_panel_request_gpios(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 			goto bklt_en_gpio_err;
 		}
 	}
-	if (gpio_is_valid(ctrl_pdata->mode_gpio)) {
-		rc = gpio_request(ctrl_pdata->mode_gpio, "panel_mode");
+	if (gpio_is_valid(ctrl_pdata->lcd_mode_sel_gpio)) {
+		rc = gpio_request(ctrl_pdata->lcd_mode_sel_gpio, "mode_sel");
 		if (rc) {
 			pr_err("request panel mode gpio failed,rc=%d\n",
 								rc);
@@ -208,9 +205,6 @@ static int legacy_panel_power_off_ex(struct mdss_panel_data *pdata)
 		return -EINVAL;
 	}
 
-	if (pdata->panel_info.pdest != DISPLAY_1)
-		return 0;
-
 	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
 
@@ -303,15 +297,15 @@ static int legacy_panel_power_on_ex(struct mdss_panel_data *pdata)
 	    pdata->panel_info.dynamic_switch_pending)
 		return 0;
 
-	if (pdata->panel_info.pdest != DISPLAY_1)
-		return 0;
-
 	regulator_mgr = spec_pdata->regulator_mgr;
 
 	if (regulator_mgr->vreg_init)
 		regulator_mgr->vreg_init(ctrl_pdata);
 
 	somc_panel_down_period_quirk(spec_pdata);
+
+	if (mdss_dsi_pinctrl_set_state(ctrl_pdata, true))
+		pr_info("reset enable: pinctrl not enabled\n");
 
 	ret = msm_dss_enable_vreg(
 		ctrl_pdata->panel_power_data.vreg_config,
@@ -321,9 +315,6 @@ static int legacy_panel_power_on_ex(struct mdss_panel_data *pdata)
 			__func__, __mdss_dsi_pm_name(DSI_PANEL_PM));
 		goto vreg_error;
 	}
-
-	if (mdss_dsi_pinctrl_set_state(ctrl_pdata, true))
-		pr_info("reset enable: pinctrl not enabled\n");
 
 	if (gpio_is_valid(spec_pdata->vsn_gpio) &&
 		gpio_is_valid(spec_pdata->vsp_gpio)) {
@@ -351,9 +342,8 @@ static int legacy_panel_power_on_ex(struct mdss_panel_data *pdata)
 	 * bootloader. This needs to be done irresepective of whether
 	 * the lp11_init flag is set or not.
 	 */
-	if ((pdata->panel_info.cont_splash_enabled ||
-		!pdata->panel_info.mipi.lp11_init) &&
-		!spec_pdata->postpwron_no_reset_quirk) {
+	if (pdata->panel_info.cont_splash_enabled ||
+		!pdata->panel_info.mipi.lp11_init) {
 		ret = mdss_dsi_panel_reset(pdata, 1);
 		if (ret)
 			pr_err("%s: Panel reset failed. rc=%d\n",

@@ -93,9 +93,7 @@ static int panel_detect_setup(struct device_node **node,
 	}
 	usleep_range(20, 30);
 
-	mdss_dsi_panel_power_detect(ctrl_pdev, 1);
 	spec_pdata->driver_ic = gpio_get_value(lcd_id);
-	mdss_dsi_panel_power_detect(ctrl_pdev, 0);
 
 	pr_info("%s: DriverIC GPIO: %d\n", __func__, spec_pdata->driver_ic);
 
@@ -353,6 +351,11 @@ int do_panel_detect(struct device_node **node,
 		!use_adc_detection;
 	bool use_dric_only =
 		of_property_read_bool(*node, "somc,dric-only-detect");
+
+	if (of_property_read_bool(*node, "somc,bootloader-panel-detect")) {
+		ctrl_pdata->spec_pdata->detected = true;
+		return 0;
+	};
 
 	rc = panel_detect_setup(node,
 			 ctrl_pdata->spec_pdata, pdev);
