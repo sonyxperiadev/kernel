@@ -5568,6 +5568,10 @@ static int sdhci_msm_suspend_noirq(struct device *dev)
 	if (atomic_read(&msm_host->clks_on)) {
 		pr_warn("%s: %s: clock ON after suspend, aborting suspend\n",
 			mmc_hostname(host->mmc), __func__);
+		ret = sdhci_msm_enable_controller_clock(host);
+		if (ret)
+			pr_warn("%s: %s: failed to enable clock to avoid unclocked access!",
+				mmc_hostname(host->mmc), __func__);
 		ret = -EAGAIN;
 	}
 
