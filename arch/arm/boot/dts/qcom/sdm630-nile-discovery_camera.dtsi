@@ -14,7 +14,7 @@
  * VREGs mapping
  *
  * VDIG VIO VANA ACT OIS SENSOR
- * 52   13  50   L18 N   IMX300 (BACK)
+ * 52   13  50   L3  N   IMX300 (BACK)
  * 12   13  51   L3  L3  IMX234 (FRONT)
  * 52   13  51   N   N   IMX219 (FRONT)
  */
@@ -110,7 +110,7 @@
 		reg = <0x0>;
 		compatible = "qcom,actuator";
 		qcom,cci-master = <0>;
-		cam_vaf-supply = <&pm660l_l8>;
+		cam_vaf-supply = <&pm660l_l3>;
 		qcom,cam-vreg-name = "cam_vaf";
 		qcom,cam-vreg-min-voltage = <2800000>;
 		qcom,cam-vreg-max-voltage = <2800000>;
@@ -151,7 +151,7 @@
 		qcom,mount-angle = <0>;
 		qcom,led-flash-src = <&led_flash0>;
 		qcom,actuator-src = <&actuator0>;
-		cam_vaf-supply = <&pm660l_l8>;
+		cam_vaf-supply = <&pm660l_l3>;
 		cam_vdig-supply = <&cam_vdig_imx300_219_vreg>;
 		cam_vio-supply = <&cam_vio_vreg>;
 		cam_vana-supply = <&cam_vana_rear_vreg>;
