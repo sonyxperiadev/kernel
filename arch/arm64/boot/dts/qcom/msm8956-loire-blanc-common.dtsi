@@ -48,8 +48,8 @@
 		clocks = <&clock_gcc clk_gcc_blsp1_uart1_apps_clk>,
 				<&clock_gcc clk_gcc_blsp1_ahb_clk>;
 		pinctrl-names = "default", "sleep";
-		pinctrl-0 = <&msm_gpio_0_act &msm_gpio_1_act>;
-		pinctrl-1 = <&msm_gpio_0_sus &msm_gpio_1_sus>;
+		pinctrl-0 = <&msm_gpio_0_act &msm_gpio_1_def>;
+		pinctrl-1 = <&msm_gpio_0_sus &msm_gpio_1_def>;
 		qcom,bam-tx-ep-pipe-index = <0>;
 		qcom,bam-rx-ep-pipe-index = <1>;
 		qcom,msm-bus,name = "blsp1_hsuart1";
