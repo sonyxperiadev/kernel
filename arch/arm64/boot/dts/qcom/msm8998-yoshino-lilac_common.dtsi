@@ -60,6 +60,10 @@
 			sony,tof-avdd-supply = <1>;
 		};
 	};
+
+	qcom,cpp@ca04000 {
+		qcom,min-clock-rate = <384000000>;
+	};
 };
 
 &pm8998_gpios {
