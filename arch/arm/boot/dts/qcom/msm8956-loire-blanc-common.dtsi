@@ -369,7 +369,7 @@
 			&msm_gpio_141_def &msm_gpio_143_def &msm_gpio_144_def>;
 };
 
-&tlmm_pinmux {
+&msm_gpio {
 	/* GPIO_0: Projector UART_TX */
 	/* Default active */
 	msm_gpio_0_act: msm_gpio_0act {
@@ -438,7 +438,7 @@
 	};
 
 	/* GPIO_49: SUB_PWR_EN_2 */
-	msm_gpio_49_def: msm_gpio49def {
+	msm_gpio49def {
 		mux {
 			pins = "gpio49";
 			function = "gpio";
@@ -480,7 +480,7 @@
 	};
 
 	/* GPIO_50: SUB_PWR_EN_1 */
-	msm_gpio_50_def: msm_gpio50def {
+	msm_gpio50def {
 		mux {
 			pins = "gpio50";
 			function = "gpio";
@@ -520,7 +520,7 @@
 	};
 
 	/* GPIO_64: TS_RESET_N */
-	msm_gpio_64_def: msm_gpio64def {
+	msm_gpio64def {
 		mux {
 			pins = "gpio64";
 			function = "gpio";
@@ -534,7 +534,7 @@
 	};
 
 	/* GPIO_65: TS_INT_N */
-	msm_gpio_65_def: msm_gpio65def {
+	msm_gpio65def {
 		mux {
 			pins = "gpio65";
 			function = "gpio";
@@ -546,7 +546,7 @@
 		};
 	};
 
-	msm_gpio_65_act: msm_gpio65act {
+	msm_gpio65act {
 		mux {
 			pins = "gpio65";
 			function = "gpio";
@@ -559,7 +559,7 @@
 		};
 	};
 
-	msm_gpio_65_sus: msm_gpio65sus {
+	msm_gpio65sus {
 		mux {
 			pins = "gpio65";
 			function = "gpio";
@@ -573,7 +573,7 @@
 	};
 
 	/* GPIO_67: NC(DTV_INT) */
-	msm_gpio_67_def: msm_gpio67def {
+	msm_gpio67def {
 		mux {
 			pins = "gpio67";
 			function = "gpio";
@@ -589,7 +589,7 @@
 	};
 
 	/* GPIO_108: HDMICN_DET */
-	msm_gpio_108_def: msm_gpio108def {
+	msm_gpio108def {
 		mux {
 			pins = "gpio108";
 			function = "gpio";
@@ -631,7 +631,7 @@
 	};
 
 	/* GPIO_111: */
-	msm_gpio_111_def: msm_gpio111def {
+	msm_gpio111def {
 		mux {
 			pins = "gpio111";
 			function = "gpio";
