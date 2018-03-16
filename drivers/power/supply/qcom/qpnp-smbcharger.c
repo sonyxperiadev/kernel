@@ -116,6 +116,9 @@ struct smbchg_chip {
 	u16				otg_base;
 	u16				misc_base;
 
+#ifdef CONFIG_MACH_SONY_BLANC
+	int				fake_battery_status;
+#endif
 	int				fake_battery_soc;
 	u8				revision[4];
 
@@ -945,6 +948,7 @@ static void read_usb_type(struct smbchg_chip *chip, char **usb_type_name,
 #define BATT_TAPER_CHG_VAL		0x3
 #define CHG_INHIBIT_BIT			BIT(1)
 #define BAT_TCC_REACHED_BIT		BIT(7)
+#ifndef CONFIG_MACH_SONY_BLANC
 static int __get_prop_batt_status(struct smbchg_chip *chip)
 {
 	int rc, status = POWER_SUPPLY_STATUS_DISCHARGING;
@@ -1050,8 +1054,7 @@ out:
 	pr_smb_rt(PR_MISC, "CHGR_STS = 0x%02x\n", reg);
 	return status;
 }
-
-#ifdef CONFIG_MACH_SONY_BLANC
+#else
 static int __lis_get_prop_batt_status(struct smbchg_chip *chip)
 {
 	int val, ret = POWER_SUPPLY_STATUS_DISCHARGING;
@@ -1199,7 +1202,7 @@ static int get_property_from_lis(struct smbchg_chip *chip,
 		return -EINVAL;
 	}
 
-	rc = chip->lis_psy->get_property(chip->lis_psy, prop, &ret);
+	rc = power_supply_get_property(chip->lis_psy, prop, &ret);
 	if (rc) {
 		pr_smb(PR_STATUS,
 			"lis psy doesn't support reading prop %d rc = %d\n",
@@ -6438,9 +6441,18 @@ static int smbchg_battery_set_property(struct power_supply *psy,
 	struct smbchg_chip *chip = power_supply_get_drvdata(psy);
 
 	switch (prop) {
+#ifdef CONFIG_MACH_SONY_BLANC
+	case POWER_SUPPLY_PROP_STATUS:
+		chip->fake_battery_status = val->intval;
+		power_supply_changed(chip->batt_psy);
+		break;
+#endif
 	case POWER_SUPPLY_PROP_BATTERY_CHARGING_ENABLED:
 		vote(chip->battchg_suspend_votable, BATTCHG_USER_EN_VOTER,
 				!val->intval, 0);
+#ifdef CONFIG_MACH_SONY_BLANC
+		power_supply_changed(chip->batt_psy);
+#endif
 		break;
 	case POWER_SUPPLY_PROP_CHARGING_ENABLED:
 		rc = vote(chip->usb_suspend_votable, USER_EN_VOTER,
@@ -9253,6 +9265,9 @@ static int smbchg_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "somc usb register failed rc = %d\n", rc);
 		goto out;
 	}
+#endif
+#ifdef CONFIG_MACH_SONY_BLANC
+	chip->fake_battery_status = -EINVAL;
 #endif
 
 	rc = determine_initial_status(chip);
