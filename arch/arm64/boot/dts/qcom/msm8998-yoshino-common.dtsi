@@ -566,6 +566,11 @@
 			qcom,soc-low-threshold = <5>;
 		};
 	};
+
+	qcom,cpp@ca04000 {
+		qcom,src-clock-rates = <200000000 384000000
+					576000000 600000000>;
+	};
 };
 
 &qusb_phy0 {
