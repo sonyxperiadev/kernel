@@ -1781,8 +1781,8 @@ static void smbchg_usb_update_online_work(struct work_struct *work)
 	bool low_batt_enabled = !get_client_vote(chip->usb_suspend_votable,
 						LOW_BATT_EN_VOTER);
 
-	online = user_enabled && low_batt_enabled &&
-			chip->usb_present && !chip->very_weak_charger;
+	online = user_enabled && low_batt_enabled && chip->usb_present &&
+			!chip->somc_params.apsd.rerun_wait_irq;
 #else
 	online = user_enabled && chip->usb_present && !chip->very_weak_charger;
 #endif
@@ -2241,6 +2241,9 @@ static int smbchg_get_aicl_level_ma(struct smbchg_chip *chip)
 	}
 	if (reg & AICL_SUSP_BIT) {
 		pr_warn("AICL suspended: %02x\n", reg);
+#ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
+		somc_chg_charge_error_event(chip, CHGERR_AICL_SUSPENDED);
+#endif
 		return 0;
 	}
 	reg &= ICL_STS_MASK;
@@ -5389,6 +5392,10 @@ static void increment_aicl_count(struct smbchg_chip *chip)
 			pr_smb(PR_INTERRUPT, "Disable AICL rerun\n");
 			chip->very_weak_charger = true;
 			bad_charger = true;
+#ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
+			somc_chg_charge_error_event(chip,
+							CHGERR_FREQUENT_AICL);
+#endif
 
 			/*
 			 * Disable AICL rerun since many interrupts were
@@ -5423,6 +5430,10 @@ static void increment_aicl_count(struct smbchg_chip *chip)
 			 */
 			chip->very_weak_charger = true;
 			bad_charger = true;
+#ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
+			somc_chg_charge_error_event(chip,
+							CHGERR_AICL_SUSPENDED);
+#endif
 		}
 		if (bad_charger) {
 			pr_smb(PR_MISC,
@@ -6424,6 +6435,7 @@ static enum power_supply_property smbchg_battery_properties[] = {
 	POWER_SUPPLY_PROP_SMART_CHARGING_INTERRUPTION,
 	POWER_SUPPLY_PROP_SMART_CHARGING_STATUS,
 	POWER_SUPPLY_PROP_INPUT_CURRENT_STATE,
+	POWER_SUPPLY_PROP_CHGERR_STS,
 #endif
 };
 
@@ -6793,6 +6805,9 @@ static int smbchg_battery_get_property(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_INPUT_CURRENT_STATE:
 		val->intval = chip->somc_params.input_current.input_current_ave;
+		break;
+	case POWER_SUPPLY_PROP_CHGERR_STS:
+		val->intval = chip->somc_params.charge_error.status;
 		break;
 #endif
 	default:
@@ -7182,6 +7197,9 @@ static irqreturn_t usbin_ov_handler(int irq, void *_chip)
 	/* OV condition is detected. Notify it to USB psy */
 	if (reg & USBIN_OV_BIT) {
 		chip->usb_ov_det = true;
+#ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
+		somc_chg_charge_error_event(chip, CHGERR_USBIN_OV);
+#endif
 		pr_smb(PR_MISC, "setting usb psy health OV\n");
 		chip->usb_health = POWER_SUPPLY_HEALTH_OVERVOLTAGE;
 		power_supply_changed(chip->usb_psy);
@@ -7243,6 +7261,23 @@ static irqreturn_t usbin_uv_handler(int irq, void *_chip)
 
 	if (chip->hvdcp_3_det_ignore_uv)
 		goto out;
+
+#ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
+	if (!chip->somc_params.apsd.rerun_wait_irq) {
+		if (reg & USBIN_UV_BIT)
+			somc_chg_set_last_uv_time(chip);
+		else
+			somc_chg_check_short_uv(chip);
+	}
+
+	if (!chip->usb_present) {
+		union power_supply_propval prop = {0, };
+		prop.intval =
+			(!(reg & USBIN_UV_BIT) && !(reg & USBIN_SRC_DET_BIT));
+		power_supply_set_property(chip->usb_psy,
+					POWER_SUPPLY_PROP_USBIN_DET, &prop);
+	}
+#endif
 
 	if ((reg & USBIN_UV_BIT) && (reg & USBIN_SRC_DET_BIT)) {
 #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
@@ -7325,6 +7360,13 @@ static irqreturn_t src_detect_handler(int irq, void *_chip)
 
 		power_supply_set_property(chip->usb_psy,
 					POWER_SUPPLY_PROP_USBIN_DET, &prop);
+	}
+
+	if (!chip->somc_params.apsd.rerun_wait_irq) {
+		if (!src_detect)
+			somc_chg_start_charge_error_status_resetting(chip);
+		else
+			somc_chg_cancel_charge_error_status_resetting(chip);
 	}
 #endif
 

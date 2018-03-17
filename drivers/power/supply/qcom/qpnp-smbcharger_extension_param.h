@@ -124,6 +124,29 @@ struct somc_input_current_state {
 	u64			input_current_sum;
 };
 
+#define CHGERR_USBIN_SHORT_UV		0x00000001
+#define CHGERR_USBIN_UV_CONNECTED_ANY	0x00000002
+#define CHGERR_USBIN_UV_CONNECTED_HVDCP	0x00000004
+#define CHGERR_USBIN_OV			0x00000008
+#define CHGERR_AICL_SUSPENDED		0x00000010
+#define CHGERR_FREQUENT_AICL		0x00000020
+
+struct somc_charge_error {
+	u32			status;
+	ktime_t			last_uv_time_kt;
+	int			short_uv_count;
+	struct delayed_work	status_reset_work;
+};
+
+struct somc_charge_pin_ctrl {
+	struct pinctrl		*gpio111;
+	struct pinctrl_state	*gpio111_active;
+	struct pinctrl_state	*gpio111_suspend;
+	bool			gpio111_state;
+	int			pon_pon_val;
+	int			vbl_cfg;
+};
+
 struct chg_somc_params {
 	struct somc_thermal_mitigation	thermal;
 	struct somc_low_battery		low_batt;
@@ -140,5 +163,7 @@ struct chg_somc_params {
 	struct somc_chg_det		chg_det;
 	struct somc_hvdcp3		hvdcp3;
 	struct somc_input_current_state	input_current;
+	struct somc_charge_error	charge_error;
+	struct somc_charge_pin_ctrl	pin_ctrl;
 };
 #endif /* __QPNP_SMBCHARGER_EXTENSION_PARAM */
