@@ -64,6 +64,15 @@ static void somc_chg_hvdcp3_therm_adjust_stop(struct smbchg_chip *chip);
 static void somc_chg_hvdcp3_thermal_adjust_work(struct work_struct *work);
 static void somc_chg_input_current_state(struct work_struct *work);
 static void somc_chg_input_current_worker_start(struct smbchg_chip *chip);
+static void somc_chg_charge_error_event(struct smbchg_chip *chip,
+							u32 chgerr_evt);
+static void somc_chg_set_last_uv_time(struct smbchg_chip *chip);
+static void somc_chg_check_short_uv(struct smbchg_chip *chip);
+static void somc_chg_reset_charge_error_status_work(struct work_struct *work);
+static void somc_chg_start_charge_error_status_resetting(
+						struct smbchg_chip *chip);
+static void somc_chg_cancel_charge_error_status_resetting(
+						struct smbchg_chip *chip);
 static int somc_chg_smb_parse_dt(struct smbchg_chip *chip,
 			struct device_node *node);
 static int somc_chg_register(struct smbchg_chip *chip);

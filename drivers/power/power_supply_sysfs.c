@@ -47,7 +47,7 @@ static ssize_t power_supply_show_property(struct device *dev,
 		"Unknown", "Battery", "UPS", "Mains", "USB", "USB_DCP",
 		"USB_CDP", "USB_ACA", "USB_HVDCP", "USB_HVDCP_3", "USB_PD",
 		"Wireless", "USB_FLOAT", "BMS", "Parallel", "Main", "Wipower",
-		"TYPEC", "TYPEC_UFP", "TYPEC_DFP"
+		"TYPEC", "TYPEC_UFP", "TYPEC_DFP", "RETRY_DET"
 	};
 	static char *status_text[] = {
 		"Unknown", "Charging", "Discharging", "Not charging", "Full"
@@ -317,6 +317,7 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(fv_cmp_cfg),
 	POWER_SUPPLY_ATTR(batt_aging),
 	POWER_SUPPLY_ATTR(input_current_state),
+	POWER_SUPPLY_ATTR(chgerr_sts),
 #endif /* CONFIG_QPNP_SMBCHARGER_EXTENSION || CONFIG_QPNP_FG_EXTENSION */
 #if defined(CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION) || \
     defined(CONFIG_QPNP_SMBCHARGER_EXTENSION)   || \
