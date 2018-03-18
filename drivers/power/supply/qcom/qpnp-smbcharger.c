@@ -1215,7 +1215,8 @@ static int get_property_from_lis(struct smbchg_chip *chip,
 #define DEFAULT_BATT_CAPACITY	50
 
 #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
-static int __somc_chg_get_prop_batt_capacity(struct smbchg_chip *chip)
+__attribute__((always_inline))
+static inline int __somc_chg_get_prop_batt_capacity(struct smbchg_chip *chip)
 {
 	int capacity, rc;
 
@@ -1245,7 +1246,8 @@ exit:
 	return capacity;
 }
 #else
-static int __get_prop_batt_capacity(struct smbchg_chip *chip)
+__attribute__((always_inline))
+static inline int __get_prop_batt_capacity(struct smbchg_chip *chip)
 {
 	int capacity, rc;
 
