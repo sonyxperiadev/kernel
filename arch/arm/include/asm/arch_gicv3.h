@@ -276,6 +276,7 @@ static inline u64 __gic_readq_nonatomic(const volatile void __iomem *addr)
  *  The upper-word (aff3) will always be 0, so there is no need for a lock.
  */
 #define gic_write_irouter(v, c)		__gic_writeq_nonatomic(v, c)
+#define gic_read_irouter(c)		__gic_readq_nonatomic(c)
 
 /*
  * GICR_TYPER is an ID register and doesn't need atomicity.
