@@ -1667,8 +1667,9 @@
 				<87 512 6000  6000>;
 
 		resets = <&clock_gcc RST_QUSB2_PHY_BCR>,
-			 <&clock_gcc RST_USB2_HS_PHY_ONLY_BCR>;
-		reset-names = "phy_reset", "phy_por_reset";
+			 <&clock_gcc RST_USB2_HS_PHY_ONLY_BCR>,
+			 <&clock_gcc RST_USB_HS_BCR>;
+		reset-names = "phy_reset", "phy_por_reset", "core_reset";
 
 		clocks = <&clock_gcc clk_gcc_usb_hs_ahb_clk>,
 			 <&clock_gcc clk_gcc_usb_hs_system_clk>,
