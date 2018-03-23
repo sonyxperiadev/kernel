@@ -69,7 +69,7 @@
 					compatible = "android,vendor";
 					dev = "/dev/block/platform/soc/c0c4000.sdhci/by-name/vendor";
 					type = "ext4";
-					mnt_flags = "ro,barrier=1,discard";
+					mnt_flags = "ro,barrier=1";
 					fsmgr_flags = "wait,slotselect,verify";
 					status = "ok";
 				};
@@ -78,7 +78,7 @@
 					compatible = "android,odm";
 					dev = "/dev/block/platform/soc/c0c4000.sdhci/by-name/oem";
 					type = "ext4";
-					mnt_flags = "ro,barrier=1,discard";
+					mnt_flags = "ro,barrier=1";
 					fsmgr_flags = "wait,slotselect";
 					status = "ok";
 				};
