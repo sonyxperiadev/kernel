@@ -594,9 +594,10 @@ int wait_for_key_construction(struct key *key, bool intr)
 			  intr ? TASK_INTERRUPTIBLE : TASK_UNINTERRUPTIBLE);
 	if (ret)
 		return -ERESTARTSYS;
-	ret = key_read_state(key);
-	if (ret < 0)
-		return ret;
+	if (test_bit(KEY_FLAG_NEGATIVE, &key->flags)) {
+		smp_rmb();
+		return key->reject_error;
+	}
 	return key_validate(key);
 }
 EXPORT_SYMBOL(wait_for_key_construction);
