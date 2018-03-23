@@ -46,7 +46,7 @@
 					compatible = "android,system";
 					dev = "/dev/block/platform/soc/7824900.sdhci/by-name/system";
 					type = "ext4";
-					mnt_flags = "ro,barrier=1,discard";
+					mnt_flags = "ro,barrier=1";
 					fsmgr_flags = "wait";
 					status = "ok";
 				};
@@ -54,7 +54,7 @@
 					compatible = "android,odm";
 					dev = "/dev/block/platform/soc/7824900.sdhci/by-name/oem";
 					type = "ext4";
-					mnt_flags = "ro,barrier=1,discard";
+					mnt_flags = "ro,barrier=1";
 					fsmgr_flags = "wait";
 					status = "ok";
 				};
