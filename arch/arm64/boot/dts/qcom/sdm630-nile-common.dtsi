@@ -396,6 +396,52 @@
 	qcom,power-on@800 {
 		qcom,s3-src = "resin";
 	};
+
+	qcom,pm660l@3 {
+		qcom,leds@d000 {
+			status = "okay";
+			qcom,rgb_sync = <1>;
+
+			qcom,rgb_0 {
+				linux,name = "led:rgb_red";
+				qcom,start-idx = <0>;
+				qcom,idx-len = <2>;
+				qcom,duty-pcts =
+					[00 0E 1C 2A 38 46 54 64];
+				qcom,lut-flags = <25>;
+				qcom,pause-lo = <500>;
+				qcom,pause-hi = <500>;
+				qcom,ramp-step-ms = <100>;
+				qcom,use-blink;
+			};
+
+			qcom,rgb_1 {
+				linux,name = "led:rgb_green";
+				qcom,start-idx = <2>;
+				qcom,idx-len = <2>;
+				qcom,duty-pcts =
+					[00 0E 1C 2A 38 46 54 64];
+				qcom,lut-flags = <25>;
+				qcom,pause-lo = <500>;
+				qcom,pause-hi = <500>;
+				qcom,ramp-step-ms = <100>;
+				qcom,use-blink;
+			};
+
+			qcom,rgb_2 {
+				linux,name = "led:rgb_blue";
+				qcom,start-idx = <4>;
+				qcom,idx-len = <2>;
+				qcom,duty-pcts =
+					[00 0E 1C 2A 38 46 54 64];
+				qcom,lut-flags = <25>;
+				qcom,pause-lo = <500>;
+				qcom,pause-hi = <500>;
+				qcom,ramp-step-ms = <100>;
+				qcom,use-blink;
+			};
+		};
+	};
 };
 
 &pm660_vadc {
