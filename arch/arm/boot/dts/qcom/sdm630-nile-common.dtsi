@@ -497,7 +497,7 @@
 
 &green_led {
 	linux,name = "led:rgb_green";
-	qcom,start-idx = <2>;
+	qcom,start-idx = <0>;
 	qcom,idx-len = <2>;
 	qcom,duty-pcts =
 		[00 0E 1C 2A 38 46 54 64];
@@ -510,7 +510,7 @@
 
 &blue_led {
 	linux,name = "led:rgb_blue";
-	qcom,start-idx = <4>;
+	qcom,start-idx = <0>;
 	qcom,idx-len = <2>;
 	qcom,duty-pcts =
 		[00 0E 1C 2A 38 46 54 64];
