@@ -21,6 +21,7 @@
 #define pr_fmt(fmt)	"arm-lpae io-pgtable: " fmt
 
 #include <linux/atomic.h>
+#include <linux/bitops.h>
 #include <linux/iommu.h>
 #include <linux/io-pgtable.h>
 #include <linux/kernel.h>
@@ -32,7 +33,7 @@
 
 #include <asm/barrier.h>
 
-#define ARM_LPAE_MAX_ADDR_BITS		48
+#define ARM_LPAE_MAX_ADDR_BITS		52
 #define ARM_LPAE_S2_MAX_CONCAT_PAGES	16
 #define ARM_LPAE_MAX_LEVELS		4
 
@@ -90,6 +91,7 @@
 #define ARM_LPAE_PTE_TYPE_PAGE		3
 
 #define ARM_LPAE_PTE_SH_MASK		(((arm_lpae_iopte)0x3) << 8)
+#define ARM_LPAE_PTE_ADDR_MASK		GENMASK_ULL(47,12)
 #define ARM_LPAE_PTE_NSTABLE		(((arm_lpae_iopte)1) << 63)
 #define ARM_LPAE_PTE_XN			(((arm_lpae_iopte)3) << 53)
 #define ARM_LPAE_PTE_AF			(((arm_lpae_iopte)1) << 10)
@@ -166,6 +168,7 @@
 #define ARM_LPAE_TCR_PS_42_BIT		0x3ULL
 #define ARM_LPAE_TCR_PS_44_BIT		0x4ULL
 #define ARM_LPAE_TCR_PS_48_BIT		0x5ULL
+#define ARM_LPAE_TCR_PS_52_BIT		0x6ULL
 
 #define ARM_LPAE_MAIR_ATTR_SHIFT(n)	((n) << 3)
 #define ARM_LPAE_MAIR1_ATTR_SHIFT(n)	((n-4) << 3)
@@ -182,9 +185,7 @@
 #define ARM_LPAE_MAIR_ATTR_IDX_LLC_NWA	0x4ULL
 
 /* IOPTE accessors */
-#define iopte_deref(pte, d)						\
-	(__va(iopte_val(pte) & ((1ULL << ARM_LPAE_MAX_ADDR_BITS) - 1)	\
-	& ~(ARM_LPAE_GRANULE(d) - 1ULL)))
+#define iopte_deref(pte,d) __va(iopte_to_paddr(iopte_val(pte), d))
 
 #define iopte_type(pte,l)					\
 	(((pte) >> ARM_LPAE_PTE_TYPE_SHIFT) & ARM_LPAE_PTE_TYPE_MASK)
@@ -195,12 +196,6 @@
 	(l == (ARM_LPAE_MAX_LEVELS - 1) ?			\
 		(iopte_type(pte,l) == ARM_LPAE_PTE_TYPE_PAGE) :	\
 		(iopte_type(pte,l) == ARM_LPAE_PTE_TYPE_BLOCK))
-
-#define iopte_to_pfn(pte, d)					\
-	(((pte) & ((1ULL << ARM_LPAE_MAX_ADDR_BITS) - 1)) >> (d)->pg_shift)
-
-#define pfn_to_iopte(pfn, d)					\
-	(((pfn) << (d)->pg_shift) & ((1ULL << ARM_LPAE_MAX_ADDR_BITS) - 1))
 
 struct arm_lpae_io_pgtable {
 	struct io_pgtable	iop;
@@ -285,6 +280,27 @@ static void iopte_tblcnt_add(arm_lpae_iopte *table_ptep, int cnt)
 
 	current_cnt += cnt;
 	iopte_tblcnt_set(table_ptep, current_cnt);
+}
+
+static arm_lpae_iopte paddr_to_iopte(phys_addr_t paddr,
+				     struct arm_lpae_io_pgtable *data)
+{
+	arm_lpae_iopte pte = paddr;
+
+	/* Of the bits which overlap, either 51:48 or 15:12 are always RES0 */
+	return (pte | (pte >> (48 - 12))) & ARM_LPAE_PTE_ADDR_MASK;
+}
+
+static phys_addr_t iopte_to_paddr(arm_lpae_iopte pte,
+				  struct arm_lpae_io_pgtable *data)
+{
+	phys_addr_t paddr = pte & ARM_LPAE_PTE_ADDR_MASK;
+
+	if (data->pg_shift < 16)
+		return paddr;
+
+	/* Rotate the packed high-order bits back to the top */
+	return (paddr | (paddr << (48 - 12))) & (ARM_LPAE_PTE_ADDR_MASK << 4);
 }
 
 static bool selftest_running = false;
@@ -384,7 +400,7 @@ static void __arm_lpae_init_pte(struct arm_lpae_io_pgtable *data,
 		pte |= ARM_LPAE_PTE_TYPE_BLOCK;
 
 	pte |= ARM_LPAE_PTE_AF | ARM_LPAE_PTE_SH_OS;
-	pte |= pfn_to_iopte(paddr >> data->pg_shift, data);
+	pte |= paddr_to_iopte(paddr, data);
 
 	if (flush)
 		__arm_lpae_set_pte(ptep, pte, &data->iop.cfg);
@@ -776,7 +792,7 @@ static size_t arm_lpae_split_blk_unmap(struct arm_lpae_io_pgtable *data,
 	if (size == split_sz)
 		unmap_idx = ARM_LPAE_LVL_IDX(iova, lvl, data);
 
-	blk_paddr = iopte_to_pfn(blk_pte, data) << data->pg_shift;
+	blk_paddr = iopte_to_paddr(blk_pte, data);
 	pte = iopte_prot(blk_pte);
 
 	for (i = 0; i < tablesz / sizeof(pte); i++, blk_paddr += split_sz) {
@@ -976,8 +992,7 @@ static phys_addr_t arm_lpae_iova_to_phys(struct io_pgtable_ops *ops,
 
 	if (!arm_lpae_iova_to_pte(data, iova, &lvl, &pte)) {
 		iova &= ((1 << ARM_LPAE_LVL_SHIFT(lvl, data)) - 1);
-		phys = ((phys_addr_t)iopte_to_pfn(pte, data)
-				<< data->pg_shift) | iova;
+		phys = iopte_to_paddr(pte, data) | iova;
 	}
 
 	return phys;
@@ -1020,7 +1035,8 @@ static bool arm_lpae_is_iova_coherent(struct io_pgtable_ops *ops,
 
 static void arm_lpae_restrict_pgsizes(struct io_pgtable_cfg *cfg)
 {
-	unsigned long granule;
+	unsigned long granule, page_sizes;
+	unsigned int max_addr_bits = 48;
 
 	/*
 	 * We need to restrict the supported page sizes to match the
@@ -1040,17 +1056,24 @@ static void arm_lpae_restrict_pgsizes(struct io_pgtable_cfg *cfg)
 
 	switch (granule) {
 	case SZ_4K:
-		cfg->pgsize_bitmap &= (SZ_4K | SZ_2M | SZ_1G);
+		page_sizes = (SZ_4K | SZ_2M | SZ_1G);
 		break;
 	case SZ_16K:
-		cfg->pgsize_bitmap &= (SZ_16K | SZ_32M);
+		page_sizes = (SZ_16K | SZ_32M);
 		break;
 	case SZ_64K:
-		cfg->pgsize_bitmap &= (SZ_64K | SZ_512M);
+		max_addr_bits = 52;
+		page_sizes = (SZ_64K | SZ_512M);
+		if (cfg->oas > 48)
+			page_sizes |= 1ULL << 42; /* 4TB */
 		break;
 	default:
-		cfg->pgsize_bitmap = 0;
+		page_sizes = 0;
 	}
+
+	cfg->pgsize_bitmap &= page_sizes;
+	cfg->ias = min(cfg->ias, max_addr_bits);
+	cfg->oas = min(cfg->oas, max_addr_bits);
 }
 
 static struct arm_lpae_io_pgtable *
@@ -1178,6 +1201,9 @@ arm_64_lpae_alloc_pgtable_s1(struct io_pgtable_cfg *cfg, void *cookie)
 	case 48:
 		reg |= (ARM_LPAE_TCR_PS_48_BIT << ARM_LPAE_TCR_IPS_SHIFT);
 		break;
+	case 52:
+		reg |= (ARM_LPAE_TCR_PS_52_BIT << ARM_LPAE_TCR_IPS_SHIFT);
+		break;
 	default:
 		goto out_free_data;
 	}
@@ -1299,6 +1325,9 @@ arm_64_lpae_alloc_pgtable_s2(struct io_pgtable_cfg *cfg, void *cookie)
 		break;
 	case 48:
 		reg |= (ARM_LPAE_TCR_PS_48_BIT << ARM_LPAE_TCR_PS_SHIFT);
+		break;
+	case 52:
+		reg |= (ARM_LPAE_TCR_PS_52_BIT << ARM_LPAE_TCR_PS_SHIFT);
 		break;
 	default:
 		goto out_free_data;
