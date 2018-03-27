@@ -474,9 +474,11 @@ int mmc_recovery_fallback_lower_speed(struct mmc_host *host)
 		mmc_host_clear_sdr104(host);
 		err = mmc_hw_reset(host);
 		host->card->sdr104_blocked = true;
+#ifndef CONFIG_BCMDHD /* TODO: Not needed anymore? */
 	} else if (mmc_card_sd(host->card)) {
 		/* If sdr104_wa is not present, just return status */
 		err = host->bus_ops->alive(host);
+#endif
 	}
 	if (err)
 		pr_err("%s: %s: Fallback to lower speed mode failed with err=%d\n",
