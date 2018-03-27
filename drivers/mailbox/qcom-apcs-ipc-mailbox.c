@@ -102,6 +102,7 @@ static int qcom_apcs_ipc_remove(struct platform_device *pdev)
 static const struct of_device_id qcom_apcs_ipc_of_match[] = {
 	{ .compatible = "qcom,msm8916-apcs-kpss-global", .data = (void *)8 },
 	{ .compatible = "qcom,msm8996-apcs-hmss-global", .data = (void *)16 },
+	{ .compatible = "qcom,msm8998-apcs-hmss-global", .data = (void *)8 },
 	{ .compatible = "qcom,sm8150-apcs-hmss-global", .data = (void *)12 },
 	{ .compatible = "qcom,sm8150-spcs-global", .data = (void *)0 },
 	{ .compatible = "qcom,sdxprairie-apcs-gcc", .data = (void *)8 },

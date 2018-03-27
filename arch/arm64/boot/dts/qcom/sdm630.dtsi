@@ -1463,12 +1463,6 @@
 		#clock-cells = <1>;
 	};
 
-	qcom,ipc-spinlock@1f40000 {
-		compatible = "qcom,ipc-spinlock-sfpb";
-		reg = <0x1f40000 0x8000>;
-		qcom,num-locks = <8>;
-	};
-
 	qcom,smem@86000000 {
 		compatible = "qcom,smem";
 		reg = <0x86000000 0x200000>,
@@ -1479,6 +1473,23 @@
 			"smem_targ_info_reg";
 		qcom,mpu-enabled;
 	};
+
+	rpm_msg_ram: memory@778000 {
+		compatible = "qcom,rpm-msg-ram";
+		reg = <0x778000 0x7000>;
+	}
+
+	tcsr_mutex_block: syscon@1f40000 {
+		compatible = "syscon";
+		reg = <0x1f40000 0x20000>;
+	};
+
+	tcsr_mutex: hwlock {
+		compatible = "qcom,tcsr-mutex";
+		syscon = <&tcsr_mutex_block 0 0x8000>;
+		#hwlock-cells = <1>;
+	};
+
 
 	qcom,msm-adsprpc-mem {
 		compatible = "qcom,msm-adsprpc-mem-region";
