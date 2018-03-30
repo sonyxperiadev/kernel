@@ -55,6 +55,9 @@
 #endif
 #if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_NILE)
  #define TARGET_SOMC_XBOOT
+#if defined(CONFIG_ARCH_SONY_NILE)
+ #define TARGET_SOMC_XBOOT_FEATURE_AB
+#endif
 #endif
 
 static int restart_mode;
@@ -330,7 +333,7 @@ static void msm_restart_prepare(const char *cmd)
 				PON_RESTART_REASON_BOOTLOADER);
 			__raw_writel(0x77665500, restart_reason);
 		} else if (!strncmp(cmd, "recovery", 8)) {
-#ifdef TARGET_SOMC_XBOOT
+#if defined(TARGET_SOMC_XBOOT) && !defined(TARGET_SOMC_XBOOT_FEATURE_AB)
 			qpnp_pon_set_restart_reason(
 				PON_RESTART_REASON_OEM_F);
 			__raw_writel(0x6f656d46, restart_reason); //oem-F
