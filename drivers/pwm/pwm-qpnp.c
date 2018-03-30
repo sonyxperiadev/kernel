@@ -1600,7 +1600,7 @@ static void qpnp_pwm_disable(struct pwm_chip *pwm_chip,
  */
 int pwm_change_mode(struct pwm_device *pwm, enum pm_pwm_mode mode)
 {
-	int rc;
+	int rc = 0;
 	unsigned long flags;
 	struct qpnp_pwm_chip *chip;
 
@@ -2221,8 +2221,10 @@ static int qpnp_parse_dt_config(struct platform_device *pdev,
 	}
 
 	rc = of_property_read_u32(of_node, "qcom,mode-select", &mode);
-	if (rc)
+	if (rc) {
+		chip->pwm_mode = -EINVAL;
 		goto read_opt_props;
+	}
 
 	if (mode > PM_PWM_MODE_LPG ||
 		(mode == PM_PWM_MODE_PWM && found_pwm_subnode == 0) ||
