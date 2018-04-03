@@ -312,6 +312,7 @@ static int32_t stmvl53l0_platform_probe(struct platform_device *pdev)
 		kfree(vl53l0_data);
 		return rc;
 	}
+#ifndef CONFIG_INPUT_STMVL53L0_SOMC_PARAMS
 	vl53l0_data->irq_gpio = of_get_named_gpio_flags(pdev->dev.of_node,
 		"stm,irq-gpio", 0, NULL);
 
@@ -321,7 +322,7 @@ static int32_t stmvl53l0_platform_probe(struct platform_device *pdev)
 		kfree(vl53l0_data);
 		return -EINVAL;
 	}
-
+#endif
 	cci_object->subdev_id = pdev->id;
 
 	/* Set device type as platform device */

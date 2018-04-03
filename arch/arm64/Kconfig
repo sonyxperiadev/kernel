@@ -492,7 +492,6 @@ config CAVIUM_ERRATUM_27456
 
 endmenu
 
-
 choice
 	prompt "Page size"
 	default ARM64_4K_PAGES
