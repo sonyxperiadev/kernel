@@ -97,16 +97,16 @@ static int legacy_panel_request_gpios(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 			goto bklt_en_gpio_err;
 		}
 	}
-	if (gpio_is_valid(ctrl_pdata->mode_gpio)) {
-		rc = gpio_request(ctrl_pdata->mode_gpio, "panel_mode");
+	if (gpio_is_valid(ctrl_pdata->lcd_mode_sel_gpio)) {
+		rc = gpio_request(ctrl_pdata->lcd_mode_sel_gpio, "mode_sel");
 		if (rc) {
-			pr_err("request panel mode gpio failed,rc=%d\n",
+			pr_err("request dsc/dual mode gpio failed,rc=%d\n",
 								rc);
-			goto mode_gpio_err;
+			goto lcd_mode_sel_gpio_err;
 		}
 	}
 
-mode_gpio_err:
+lcd_mode_sel_gpio_err:
 	if (gpio_is_valid(ctrl_pdata->bklt_en_gpio))
 		gpio_free(ctrl_pdata->bklt_en_gpio);
 bklt_en_gpio_err:

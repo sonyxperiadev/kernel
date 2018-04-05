@@ -1,0 +1,105 @@
+/* Copyright (c) 2014-2015, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+/ {
+	cpus {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		cpu-map {
+			cluster0 {
+				core0 {
+					cpu = <&CPU0>;
+				};
+				core1 {
+					cpu = <&CPU1>;
+				};
+				core2 {
+					cpu = <&CPU2>;
+				};
+				core3 {
+					cpu = <&CPU3>;
+				};
+			};
+		};
+
+		CPU0: cpu@0 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a53";
+			reg = <0x0>;
+			enable-method = "qcom,arm-cortex-acc";
+			qcom,limits-info = <&mitigation_profile0>;
+			qcom,ea = <&ea0>;
+			next-level-cache = <&L2_1>;
+			qcom,spm-spc-as-pc;
+			L2_1: l2-cache {
+			      compatible = "arm,arch-cache";
+			      cache-level = <2>;
+			};
+		};
+
+		CPU1: cpu@1 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a53";
+			reg = <0x1>;
+			enable-method = "qcom,arm-cortex-acc";
+			qcom,limits-info = <&mitigation_profile1>;
+			qcom,ea = <&ea1>;
+			next-level-cache = <&L2_1>;
+		};
+
+		CPU2: cpu@2 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a53";
+			reg = <0x2>;
+			enable-method = "qcom,arm-cortex-acc";
+			qcom,limits-info = <&mitigation_profile2>;
+			qcom,ea = <&ea2>;
+			next-level-cache = <&L2_1>;
+		};
+
+		CPU3: cpu@3 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a53";
+			reg = <0x3>;
+			enable-method = "qcom,arm-cortex-acc";
+			qcom,limits-info = <&mitigation_profile3>;
+			qcom,ea = <&ea3>;
+			next-level-cache = <&L2_1>;
+		};
+	};
+};
+
+&soc {
+	qcom,msm-core@a0000 {
+		compatible = "qcom,apss-core-ea";
+		reg = <0xa0000 0x1000>;
+		qcom,low-hyst-temp = <10>;
+		qcom,high-hyst-temp = <5>;
+
+		ea0: ea0 {
+			sensor = <&sensor_information5>;
+		};
+
+		ea1: ea1 {
+			sensor = <&sensor_information6>;
+		};
+
+		ea2: ea2 {
+			sensor = <&sensor_information7>;
+		};
+
+		ea3: ea3 {
+			sensor = <&sensor_information8>;
+		};
+	};
+};

@@ -8762,9 +8762,9 @@ static int bma2x2_store_state(struct i2c_client *client,
 	return err;
 }
 
-#ifdef CONFIG_PM
-static int bma2x2_suspend(struct i2c_client *client, pm_message_t mesg)
+static int bma2x2_suspend(struct device *dev)
 {
+	struct i2c_client *client = to_i2c_client(dev);
 	struct bma2x2_data *data = i2c_get_clientdata(client);
 
 	data->suspend_state.powerEn = bma2x2_is_power_enabled(data);
@@ -8772,8 +8772,9 @@ static int bma2x2_suspend(struct i2c_client *client, pm_message_t mesg)
 	return 0;
 }
 
-static int bma2x2_resume(struct i2c_client *client)
+static int bma2x2_resume(struct device *dev)
 {
+	struct i2c_client *client = to_i2c_client(dev);
 	struct bma2x2_data *data = i2c_get_clientdata(client);
 
 	if (data->suspend_state.powerEn)
@@ -8782,12 +8783,10 @@ static int bma2x2_resume(struct i2c_client *client)
 	return 0;
 }
 
-#else
-
-#define bma2x2_suspend      NULL
-#define bma2x2_resume       NULL
-
-#endif /* CONFIG_PM */
+static const struct dev_pm_ops bma2x2_pm_ops = {
+	.resume		= bma2x2_resume,
+	.suspend	= bma2x2_suspend,
+};
 
 static const struct i2c_device_id bma2x2_id[] = {
 	{ SENSOR_NAME, 0 },
@@ -8803,32 +8802,18 @@ static const struct of_device_id bma2x2_of_match[] = {
 
 static struct i2c_driver bma2x2_driver = {
 	.driver = {
-		.owner  = THIS_MODULE,
 		.name   = SENSOR_NAME,
 		.of_match_table = bma2x2_of_match,
+		.pm     = &bma2x2_pm_ops,
 	},
-	.suspend    = bma2x2_suspend,
-	.resume     = bma2x2_resume,
 	.id_table   = bma2x2_id,
 	.probe      = bma2x2_probe,
 	.remove     = bma2x2_remove,
 	.shutdown   = bma2x2_shutdown,
 };
 
-static int __init BMA2X2_init(void)
-{
-	return i2c_add_driver(&bma2x2_driver);
-}
-
-static void __exit BMA2X2_exit(void)
-{
-	i2c_del_driver(&bma2x2_driver);
-}
+module_i2c_driver(bma2x2_driver);
 
 MODULE_AUTHOR("contact@bosch-sensortec.com");
 MODULE_DESCRIPTION("BMA2X2 ACCELEROMETER SENSOR DRIVER");
 MODULE_LICENSE("GPL v2");
-
-module_init(BMA2X2_init);
-module_exit(BMA2X2_exit);
-
