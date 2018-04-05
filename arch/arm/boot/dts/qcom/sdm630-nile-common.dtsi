@@ -171,6 +171,18 @@
 		linux,min-uv = <1700000>;
 		linux,max-uv = <1900000>;
 	};
+
+	gpio_keys {
+		/delete-node/ vol_up;
+		vol_down {
+			label = "volume_down";
+			gpios = <&pm660l_gpios 7 0x1>;
+			linux,input-type = <1>;
+			linux,code = <114>;
+			gpio-key,wakeup;
+			debounce-interval = <15>;
+		};
+	};
 };
 
 &wdog {
@@ -596,18 +608,4 @@
 
 &mem_client_3_size {
 	qcom,peripheral-size = <0x500000>;
-};
-
-&soc {
-	gpio_keys {
-		/delete-node/ vol_up;
-		vol_down {
-			label = "volume_down";
-			gpios = <&pm660l_gpios 7 0x1>;
-			linux,input-type = <1>;
-			linux,code = <114>;
-			gpio-key,wakeup;
-			debounce-interval = <15>;
-		};
-	};
 };
