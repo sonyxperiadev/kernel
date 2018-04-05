@@ -220,7 +220,6 @@
 		qcom,csid-sd-index = <2>;
 		qcom,mount-angle = <0>;
 		qcom,led-flash-src = <&led_flash1>;
-		cam_vaf-supply = <&pm660l_l3>;
 		cam_vdig-supply = <&cam_vdig_imx300_219_vreg>;
 		cam_vio-supply = <&cam_vio_vreg>;
 		cam_vana-supply = <&cam_vana_front_vreg>;
