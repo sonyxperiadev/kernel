@@ -3792,7 +3792,6 @@ static int msm_anlg_cdc_device_down(struct snd_soc_codec *codec)
 		MSM89XX_PMIC_ANALOG_SPKR_DAC_CTL, 0x93);
 
 	msm_anlg_cdc_dig_notifier_call(codec, DIG_CDC_EVENT_SSR_DOWN);
-	atomic_set(&pdata->int_mclk0_enabled, false);
 	set_bit(BUS_DOWN, &sdm660_cdc_priv->status_mask);
 	snd_soc_card_change_online_state(codec->component.card, 0);
 

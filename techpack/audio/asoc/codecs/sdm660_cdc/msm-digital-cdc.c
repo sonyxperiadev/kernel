@@ -1115,6 +1115,9 @@ static int msm_dig_cdc_event_notify(struct notifier_block *block,
 		break;
 	case DIG_CDC_EVENT_SSR_DOWN:
 		regcache_cache_only(msm_dig_cdc->regmap, true);
+		mutex_lock(&pdata->cdc_int_mclk0_mutex);
+		atomic_set(&pdata->int_mclk0_enabled, false);
+		mutex_unlock(&pdata->cdc_int_mclk0_mutex);
 		break;
 	case DIG_CDC_EVENT_SSR_UP:
 		regcache_cache_only(msm_dig_cdc->regmap, false);
