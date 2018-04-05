@@ -66,11 +66,6 @@
 		startup-delay-us = <0>;
 		enable-active-high;
 		gpio = <&tlmm 13 0>;
-
-		proxy-supply = <&pm660_l18>;
-		qcom,proxy-consumer-enable;
-		qcom,proxy-consumer-current = <105000>;
-		qcom,proxy-consumer-voltage = <1352000 1352000>;
 	};
 
 	cam_vana_rear_vreg: cam_vana_rear_vreg {
