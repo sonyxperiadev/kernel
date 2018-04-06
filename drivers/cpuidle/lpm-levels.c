@@ -1576,6 +1576,7 @@ static int lpm_cpuidle_enter(struct cpuidle_device *dev,
 	if (need_resched())
 		goto exit;
 
+#if defined(CONFIG_MSM_PM) && defined(CONFIG_ARCH_MSM8916)
 	if (!use_psci) {
 		if (idx > 0)
 			update_debug_pc_event(CPU_ENTER, idx, 0xdeaffeed,
@@ -1586,9 +1587,11 @@ static int lpm_cpuidle_enter(struct cpuidle_device *dev,
 		if (idx > 0)
 			update_debug_pc_event(CPU_EXIT, idx, success,
 							0xdeaffeed, true);
-	} else {
-		success = psci_enter_sleep(cluster, idx, true);
 	}
+#else
+	BUG_ON(!use_psci);
+	success = psci_enter_sleep(cluster, idx, true);
+#endif
 
 exit:
 	end_time = ktime_to_ns(ktime_get());
@@ -1833,10 +1836,13 @@ static int lpm_suspend_enter(suspend_state_t state)
 	 */
 	clock_debug_print_enabled();
 
+#if defined(CONFIG_MSM_PM) && defined(CONFIG_ARCH_MSM8916)
 	if (!use_psci)
 		msm_cpu_pm_enter_sleep(cluster->cpu->levels[idx].mode, false);
-	else
-		psci_enter_sleep(cluster, idx, true);
+#else
+	BUG_ON(!use_psci);
+	psci_enter_sleep(cluster, idx, true);
+#endif
 
 	if (idx > 0)
 		update_debug_pc_event(CPU_EXIT, idx, true, 0xdeaffeed,
