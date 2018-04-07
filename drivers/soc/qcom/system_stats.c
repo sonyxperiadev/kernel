@@ -378,7 +378,7 @@ static int msm_rpmstats_probe(struct platform_device *pdev)
 			return -ENOMEM;
 		}
 		strlcpy(ss.master[i], master_name,
-					strlen(master_name) + 1);
+					strlen(ss.master[i]) + 1);
 	}
 
 	dent = debugfs_create_file("system_stats", S_IRUGO, NULL,
