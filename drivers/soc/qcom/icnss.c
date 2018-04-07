@@ -1450,7 +1450,7 @@ out:
 	return ret;
 }
 
-static int wlfw_wlan_mode_send_sync_msg(enum wlfw_driver_mode_enum_v01 mode)
+static int wlfw_wlan_mode_send_sync_msg(u32 mode)
 {
 	int ret;
 	struct wlfw_wlan_mode_req_msg_v01 req;
