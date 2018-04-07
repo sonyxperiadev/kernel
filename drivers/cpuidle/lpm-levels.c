@@ -1587,6 +1587,8 @@ static int lpm_cpuidle_enter(struct cpuidle_device *dev,
 		if (idx > 0)
 			update_debug_pc_event(CPU_EXIT, idx, success,
 							0xdeaffeed, true);
+	} else {
+		success = psci_enter_sleep(cluster, idx, true);
 	}
 #else
 	BUG_ON(!use_psci);
@@ -1839,6 +1841,8 @@ static int lpm_suspend_enter(suspend_state_t state)
 #if defined(CONFIG_MSM_PM) && defined(CONFIG_ARCH_MSM8916)
 	if (!use_psci)
 		msm_cpu_pm_enter_sleep(cluster->cpu->levels[idx].mode, false);
+	else
+		psci_enter_sleep(cluster, idx, true);
 #else
 	BUG_ON(!use_psci);
 	psci_enter_sleep(cluster, idx, true);
