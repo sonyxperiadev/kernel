@@ -697,7 +697,7 @@ int apr_get_svc(const char *svc_name, int domain_id, int *client_id,
 	struct apr_svc_table *tbl;
 	int ret = 0;
 
-	if ((domain_id == APR_DOMAIN_ADSP)) {
+	if (domain_id == APR_DOMAIN_ADSP) {
 		tbl = (struct apr_svc_table *)&svc_tbl_qdsp6;
 		size = ARRAY_SIZE(svc_tbl_qdsp6);
 	} else {
