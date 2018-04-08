@@ -1532,7 +1532,7 @@ void ipahal_get_disable_aggr_valmask(struct ipahal_reg_valmask *valmask)
 
 	valmask->val = (1 & IPA_ENDP_INIT_AGGR_n_AGGR_FORCE_CLOSE_BMSK) <<
 		IPA_ENDP_INIT_AGGR_n_AGGR_FORCE_CLOSE_SHFT;
-	valmask->mask = IPA_ENDP_INIT_AGGR_n_AGGR_FORCE_CLOSE_BMSK <<
+	valmask->mask = (IPA_ENDP_INIT_AGGR_n_AGGR_FORCE_CLOSE_BMSK & 0x1f) <<
 		IPA_ENDP_INIT_AGGR_n_AGGR_FORCE_CLOSE_SHFT;
 
 	valmask->val |= ((0 & IPA_ENDP_INIT_AGGR_n_AGGR_EN_BMSK) <<
