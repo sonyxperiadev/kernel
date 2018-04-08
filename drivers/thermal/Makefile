@@ -58,5 +58,4 @@ obj-$(CONFIG_QCOM_THERMAL_LIMITS_DCVS)	+= msm_lmh_dcvs.o
 
 #TODO: remove me b/62058353
 subdir-ccflags-y += \
-	-Wno-parentheses-equality \
 	-Wno-enum-conversion
