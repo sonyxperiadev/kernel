@@ -142,6 +142,7 @@ static int clk_cbcr_set_flags(struct regmap *regmap, unsigned int reg,
 				unsigned long flags)
 {
 	u32 cbcr_val;
+	int delay_us = 1;
 
 	regmap_read(regmap, reg, &cbcr_val);
 
@@ -163,6 +164,7 @@ static int clk_cbcr_set_flags(struct regmap *regmap, unsigned int reg,
 		break;
 	case CLKFLAG_NORETAIN_MEM:
 		cbcr_val &= ~BIT(14);
+		delay_us = 0;
 		break;
 	default:
 		return -EINVAL;
@@ -172,7 +174,7 @@ static int clk_cbcr_set_flags(struct regmap *regmap, unsigned int reg,
 
 	/* Make sure power is enabled/disabled before returning. */
 	mb();
-	udelay(1);
+	udelay(delay_us);
 
 	return 0;
 }
