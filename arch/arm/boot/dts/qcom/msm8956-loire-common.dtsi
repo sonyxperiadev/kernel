@@ -20,6 +20,10 @@
 #include "msm8956-loire_pinctrl.dtsi"
 
 / {
+	aliases {
+		serial0 = &loire_uart;
+	};
+
 	reserved-memory {
 		pstore_reserve_mem: pstore_reserve_mem_region@57f00000 {
 			compatible = "removed-dma-pool";
@@ -152,7 +156,7 @@
                         nxp,ven = <&msm_gpio 34 0x01>;
                         qcom,clk-src = "BBCLK2";
                         qcom,clk-gpio = <&pm8950_gpios 5 0x00>;
-                        clocks = <&clock_gcc clk_bb_clk2_pin>;
+                        clocks = <&clock_rpmcc RPM_BB_CLK2_PIN>;
                         clock-names = "nfc_clk";
                         pinctrl-names = "pn547-active", "pn547-inactive";
                         pinctrl-0 = <&msm_gpio_33_def &msm_gpio_16_def>;
@@ -166,7 +170,7 @@
 	/* SPI : BLSP4 */
 	/* I2C : BLSP4 */
 	i2c@78b8000 { /* BLSP1 QUP3 */
-		qcom,clk-freq-out = <355000>;
+		//qcom,clk-freq-out = <355000>;
 		pinctrl-0 = <&msm_gpio_14_def &msm_gpio_15_def>;
 		pinctrl-1 = <&msm_gpio_14_sus &msm_gpio_15_sus>;
 		status = "okay";
@@ -253,13 +257,13 @@
 	/* Kernel default setting will be overridden by ADSP SW. */
 
 	/* UART: BLSP6 */
-	serial@7af0000 { /* BLSP2 UART2 */
+	loire_uart: serial@7af0000 { /* BLSP2 UART2 */
 		compatible = "qcom,msm-uartdm-v1.4", "qcom,msm-uartdm";
 		reg = <0x7af0000 0x200>;
 		interrupts = <0 307 0>;
 		clock-names = "core", "iface";
-		clocks = <&clock_gcc clk_gcc_blsp2_uart2_apps_clk>,
-				<&clock_gcc clk_gcc_blsp2_ahb_clk>;
+		clocks = <&clock_gcc GCC_BLSP2_UART2_APPS_CLK>,
+				<&clock_gcc GCC_BLSP2_AHB_CLK>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&msm_gpio_20_def &msm_gpio_21_def>;
 		status = "okay";
@@ -267,10 +271,11 @@
 
 	/* I2C : BLSP6 */
 	i2c@7af6000 { /* BLSP2 QUP1 */
-		qcom,clk-freq-out = <355000>;
+		//qcom,clk-freq-out = <355000>;
 		pinctrl-0 = <&msm_gpio_22_def &msm_gpio_23_def>;
 		pinctrl-1 = <&msm_gpio_22_def &msm_gpio_23_def>;
 		status = "okay";
+
 		as3668@42 {
 			compatible = "as3668";
 			reg = <0x42>;
@@ -372,6 +377,7 @@
 			vdd-supply = <&pm8950_l23>;
 			vddio-supply = <&pm8950_l6>;
 			touch-avdd-supply = <&pm8950_l22>;
+			//status="disabled";
 		};
 
 		mdss_dsi1: qcom,mdss_dsi_ctrl1@1a96000 {
@@ -714,10 +720,10 @@
 			<55 512 0 0>,
 			<55 512 120000 1200000>,
 			<55 512 393600 3936000>;
-		clocks = <&clock_gcc clk_crypto_clk_src>,
-			 <&clock_gcc clk_gcc_crypto_clk>,
-			 <&clock_gcc clk_gcc_crypto_ahb_clk>,
-			 <&clock_gcc clk_gcc_crypto_axi_clk>;
+		clocks = <&clock_gcc CRYPTO_CLK_SRC>,
+			 <&clock_gcc GCC_CRYPTO_CLK>,
+			 <&clock_gcc GCC_CRYPTO_AHB_CLK>,
+			 <&clock_gcc GCC_CRYPTO_AXI_CLK>;
 		clock-names = "core_clk_src", "core_clk",
 				"iface_clk", "bus_clk";
 		qcom,ce-opp-freq = <100000000>;
@@ -1175,7 +1181,7 @@
 &mdss_dsi1 {
 	status = "disabled";
 };
-
+/*
 &mdss_dsi0_pll {
 	qcom,dsi-pll-ssc-en;
 	qcom,ssc-frequency-hz = <30000>;
@@ -1189,7 +1195,7 @@
 	qcom,ssc-ppm = <5000>;
 	qcom,ssc-spread-mode = "down-spread";
 };
-
+*/
 &labibb {
 	qcom,qpnp-labibb-mode = "lcd";
 
@@ -1287,6 +1293,9 @@
 	/delete-property/ qcom,nonremovable;
 
 	qcom,vdd-io-current-level = <200 22000>;
+
+	qcom,devfreq,freq-table = <400000 200000000>;
+	qcom,scaling-power-bus-speed-mode = "DDR52";
 
 	pinctrl-names = "active", "sleep";
 	pinctrl-0 = <&sdc3_clk_on &sdc3_cmd_on &sdc3_dat_on>;
