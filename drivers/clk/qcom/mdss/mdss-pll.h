@@ -36,12 +36,14 @@
 			(base) + (offset))
 
 enum {
+	MDSS_DSI_PLL_8974,
 	MDSS_DSI_PLL_10NM,
 	MDSS_DP_PLL_10NM,
 	MDSS_UNKNOWN_PLL,
 };
 
 enum {
+	MDSS_PLL_TARGET_8976,
 	MDSS_PLL_TARGET_8996,
 };
 
