@@ -257,6 +257,13 @@ config MSM_DISPCC_SDM845
 	  Say Y if you want to support display devices and functionality such as
 	  splash screen.
 
+config CLOCK_CPU_8976
+	bool "MSM8976 CPU Clock Controller"
+	depends on COMMON_CLK_QCOM
+	select RCGWR_CLOCKS
+	help
+	  Support for the MSM8976 CPU clock controller.
+
 config CLOCK_QPNP_DIV
 	tristate "QPNP PMIC clkdiv driver"
 	depends on COMMON_CLK_QCOM && SPMI
