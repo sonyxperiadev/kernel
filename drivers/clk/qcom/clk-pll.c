@@ -226,15 +226,63 @@ const struct clk_ops clk_pll_vote_ops = {
 };
 EXPORT_SYMBOL_GPL(clk_pll_vote_ops);
 
+static DEFINE_SPINLOCK(acpu_soft_vote_lock);
+
+static void clk_pll_acpu_vote_disable(struct clk_hw *hw)
+{
+	struct clk_pll_acpu_vote *v = to_clk_pll_acpu_vote(hw);
+	unsigned long flags;
+
+	spin_lock_irqsave(&acpu_soft_vote_lock, flags);
+
+	*v->soft_voter &= ~(v->soft_voter_mask);
+	if (!*v->soft_voter)
+		clk_disable_regmap(hw);
+
+	spin_unlock_irqrestore(&acpu_soft_vote_lock, flags);
+
+	return;
+};
+
+static int clk_pll_acpu_vote_enable(struct clk_hw *hw)
+{
+	struct clk_pll_acpu_vote *v = to_clk_pll_acpu_vote(hw);
+	unsigned long flags;
+	int ret;
+
+	spin_lock_irqsave(&acpu_soft_vote_lock, flags);
+
+	if (!*v->soft_voter)
+		ret = clk_pll_vote_enable(hw);
+	if (ret == 0)
+		*v->soft_voter |= v->soft_voter_mask;
+
+	spin_unlock_irqrestore(&acpu_soft_vote_lock, flags);
+
+	return ret;
+}
+
+const struct clk_ops clk_pll_acpu_vote_ops = {
+	.enable = clk_pll_acpu_vote_enable,
+	.disable = clk_pll_acpu_vote_disable,
+};
+EXPORT_SYMBOL_GPL(clk_pll_acpu_vote_ops);
+
 static void clk_pll_configure(struct clk_pll *pll, struct regmap *regmap,
 	const struct pll_config *config)
 {
 	u32 val;
 	u32 mask;
 
-	regmap_write(regmap, pll->l_reg, config->l);
-	regmap_write(regmap, pll->m_reg, config->m);
-	regmap_write(regmap, pll->n_reg, config->n);
+	if (config->l != 0) {
+		regmap_write(regmap, pll->l_reg, config->l);
+		regmap_write(regmap, pll->m_reg, config->m);
+		regmap_write(regmap, pll->n_reg, config->n);
+	} else {
+		regmap_write(regmap, pll->m_reg, 0);
+		regmap_write(regmap, pll->n_reg, 1);
+	}
+
 
 	val = config->vco_val;
 	val |= config->pre_div_val;
@@ -250,7 +298,14 @@ static void clk_pll_configure(struct clk_pll *pll, struct regmap *regmap,
 	mask |= config->main_output_mask;
 	mask |= config->aux_output_mask;
 
-	regmap_update_bits(regmap, pll->config_reg, mask, val);
+	if (config->config_ctl_val)
+		regmap_write(regmap, pll->config_reg,
+				config->config_ctl_val);
+
+	if (pll->user_reg)
+		regmap_update_bits(regmap, pll->user_reg, mask, val);
+	else
+		regmap_update_bits(regmap, pll->config_reg, mask, val);
 }
 
 void clk_pll_configure_sr(struct clk_pll *pll, struct regmap *regmap,

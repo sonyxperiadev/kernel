@@ -48,6 +48,7 @@ struct clk_pll {
 	u32	l_reg;
 	u32	m_reg;
 	u32	n_reg;
+	u32	user_reg;
 	u32	config_reg;
 	u32	mode_reg;
 	u32	status_reg;
@@ -60,12 +61,26 @@ struct clk_pll {
 	struct clk_regmap clkr;
 };
 
+struct clk_pll_acpu_vote {
+	u32 *soft_voter;
+	u32 soft_voter_mask;
+/* Soft voting values */
+#define PLL_SOFT_VOTE_PRIMARY	BIT(0)
+#define PLL_SOFT_VOTE_CPU	BIT(1)
+#define PLL_SOFT_VOTE_AUX	BIT(2)
+
+	struct clk_regmap clkr;
+};
+
 extern const struct clk_ops clk_pll_ops;
 extern const struct clk_ops clk_pll_vote_ops;
+extern const struct clk_ops clk_pll_acpu_vote_ops;
 extern const struct clk_ops clk_pll_sr2_ops;
 extern const struct clk_ops clk_pll_hf_ops;
 
 #define to_clk_pll(_hw) container_of(to_clk_regmap(_hw), struct clk_pll, clkr)
+#define to_clk_pll_acpu_vote(_hw) \
+	container_of(to_clk_regmap(_hw), struct clk_pll_acpu_vote, clkr)
 
 struct pll_config {
 	u16 l;
@@ -77,6 +92,7 @@ struct pll_config {
 	u32 pre_div_mask;
 	u32 post_div_val;
 	u32 post_div_mask;
+	u32 mn_ena_val;
 	u32 mn_ena_mask;
 	u32 main_output_mask;
 	u32 aux_output_mask;
