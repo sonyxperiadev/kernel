@@ -129,6 +129,8 @@ static int update_config(struct clk_rcg2 *rcg)
 		udelay(1);
 	}
 
+	pr_err("%s CFG_RCGR old frequency configuration 0x%x !\n", name, cfg);
+
 	WARN(1, "clk: %s: rcg didn't update its configuration.", name);
 	return 0;
 }
