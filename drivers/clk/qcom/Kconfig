@@ -93,6 +93,12 @@ config IPQ_GCC_8074
 	  i2c, USB, SD/eMMC, etc. Select this for the root clock
 	  of ipq8074.
 
+config RCGWR_CLOCKS
+	bool "RCGwR Clock Controller"
+	depends on COMMON_CLK_QCOM
+	help
+	  Support for the RCGwR Clock Controller.
+
 config KPSS_XCC
 	tristate "KPSS Clock Controller"
 	depends on COMMON_CLK_QCOM

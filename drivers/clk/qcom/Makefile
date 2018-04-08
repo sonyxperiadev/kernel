@@ -16,6 +16,7 @@ clk-qcom-y += clk-hfpll.o
 clk-qcom-y += reset.o clk-voter.o
 clk-qcom-y += clk-dummy.o clk-debug.o
 clk-qcom-y += gdsc-regulator.o
+clk-qcom-$(CONFIG_RCGWR_CLOCKS) += clk-rcgwr.o
 clk-qcom-$(CONFIG_QCOM_GDSC) += gdsc.o
 
 # Keep alphabetically sorted by config
