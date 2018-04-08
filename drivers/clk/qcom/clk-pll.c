@@ -192,7 +192,6 @@ static int wait_for_pll(struct clk_pll *pll)
 	u32 val;
 	int count;
 	int ret;
-	const char *name = clk_hw_get_name(&pll->clkr.hw);
 
 	/* Wait for pll to enable. */
 	for (count = 200; count > 0; count--) {
@@ -204,7 +203,8 @@ static int wait_for_pll(struct clk_pll *pll)
 		udelay(1);
 	}
 
-	WARN(1, "%s didn't enable after voting for it!\n", name);
+	WARN(1, "%s didn't enable after voting for it!\n",
+			clk_hw_get_name(&pll->clkr.hw));
 	return -ETIMEDOUT;
 }
 
