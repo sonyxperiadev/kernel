@@ -200,6 +200,12 @@ config QCOM_HFPLL
 	  Say Y if you want to support CPU frequency scaling on devices
 	  such as MSM8974, APQ8084, etc.
 
+config RCGWR_CLOCKS
+	bool "RCGwR Clock Controller"
+	depends on COMMON_CLK_QCOM
+	help
+	  Support for the RCGwR Clock Controller.
+
 config KPSS_XCC
 	tristate "KPSS Clock Controller"
 	depends on COMMON_CLK_QCOM

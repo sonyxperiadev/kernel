@@ -35,6 +35,7 @@ obj-$(CONFIG_MSM_MMCC_8996) += mmcc-msm8996.o
 obj-$(CONFIG_MSM_GPUCC_660) += gpucc-sdm660.o
 obj-$(CONFIG_MSM_MMCC_660) += mmcc-sdm660.o
 obj-$(CONFIG_KPSS_XCC) += kpss-xcc.o
+obj-$(CONFIG_QCOM_HFPLL) += hfpll.o
 obj-$(CONFIG_KRAITCC) += krait-cc.o
 obj-$(CONFIG_QCOM_A53) += clk-a53.o
 obj-$(CONFIG_QCOM_CLK_RPM) += clk-rpm.o
