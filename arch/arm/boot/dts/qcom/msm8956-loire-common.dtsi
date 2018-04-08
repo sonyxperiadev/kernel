@@ -1181,14 +1181,14 @@
 };
 
 &mdss_dsi0_pll {
-	qcom,dsi-pll-ssc-en;
-	qcom,ssc-frequency-hz = <30000>;
+	/* qcom,dsi-pll-ssc-en; */
+	qcom,ssc-frequency-hz = <3000>;
 	qcom,ssc-ppm = <5000>;
 	qcom,dsi-pll-ssc-mode = "down-spread";
 };
 
 &mdss_dsi1_pll {
-	qcom,ssc-enable;
+	/* qcom,dsi-pll-ssc-en; */
 	qcom,ssc-frequency-hz = <30000>;
 	qcom,ssc-ppm = <5000>;
 	qcom,ssc-spread-mode = "down-spread";
