@@ -22,7 +22,7 @@
 
 		gdsc-supply = <&gdsc_mdss>;
 
-		clocks = <&clock_gcc clk_gcc_mdss_ahb_clk>;
+		clocks = <&clock_gcc GCC_MDSS_AHB_CLK>;
 		clock-names = "iface_clk";
 		clock-rate = <0>;
 
@@ -46,13 +46,13 @@
 		label = "MDSS DSI 1 PLL";
 		cell-index = <1>;
 		#clock-cells = <1>;
-
+		status = "disabled";
 		reg = <0x1a96a00 0xd4>, <0x0184d074 0x8>;
 		reg-names = "pll_base", "gdsc_base";
 
 		gdsc-supply = <&gdsc_mdss>;
 
-		clocks = <&clock_gcc clk_gcc_mdss_ahb_clk>;
+		clocks = <&clock_gcc GCC_MDSS_AHB_CLK>;
 		clock-names = "iface_clk";
 		clock-rate = <0>;
 

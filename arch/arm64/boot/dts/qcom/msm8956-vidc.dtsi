@@ -31,10 +31,10 @@
 		//qcom,platform-version = <0x600000000 0x1D>;
 
 		clocks =
-			<&clock_gcc clk_gcc_venus0_vcodec0_clk>,
-			<&clock_gcc clk_gcc_venus0_core0_vcodec0_clk>,
-			<&clock_gcc clk_gcc_venus0_ahb_clk>,
-			<&clock_gcc clk_gcc_venus0_axi_clk>;
+			<&clock_gcc GCC_VENUS0_VCODEC0_CLK>,
+			<&clock_gcc GCC_VENUS0_CORE0_VCODEC0_CLK>,
+			<&clock_gcc GCC_VENUS0_AHB_CLK>,
+			<&clock_gcc GCC_VENUS0_AXI_CLK>;
 
 		clock-names = "core_clk", "core0_clk", "iface_clk", "bus_clk";
 		qcom,clock-configs = <0x1 0x0 0x0 0x0>;

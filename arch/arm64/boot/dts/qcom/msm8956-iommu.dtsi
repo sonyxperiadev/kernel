@@ -42,8 +42,8 @@
 		interrupt-names = "global_cfg_NS_irq", "global_cfg_S_irq";
 		label = "gfx_iommu";
 		qcom,iommu-secure-id = <18>;
-		clocks = <&clock_gcc clk_gcc_smmu_cfg_clk>,
-			 <&clock_gcc_gfx clk_gcc_gfx_tcu_clk>;
+		clocks = <&clock_gcc GCC_SMMU_CFG_CLK>,
+			 <&clock_gcc_gfx GCC_GFX3D_TCU_CLK>;
 		clock-names = "iface_clk", "core_clk";
 		status = "ok";
 
@@ -155,8 +155,8 @@
 		interrupt-names = "global_cfg_NS_irq", "global_cfg_S_irq";
 		label = "apps_iommu";
 		qcom,iommu-secure-id = <17>;
-		clocks = <&clock_gcc clk_gcc_smmu_cfg_clk>,
-			 <&clock_gcc clk_gcc_apss_tcu_clk>;
+		clocks = <&clock_gcc GCC_SMMU_CFG_CLK>,
+			 <&clock_gcc GCC_APSS_TCU_CLK>;
 		clock-names = "iface_clk", "core_clk";
 		qcom,cb-base-offset = <0x20000>;
 		#iommu-cells = <1>;
