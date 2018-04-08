@@ -242,6 +242,13 @@ config QCOM_HFPLL
 	  Say Y if you want to support CPU frequency scaling on devices
 	  such as MSM8974, APQ8084, etc.
 
+config CLOCK_CPU_8976
+	bool "MSM8976 CPU Clock Controller"
+	depends on COMMON_CLK_QCOM
+	select RCGWR_CLOCKS
+	help
+	  Support for the MSM8976 CPU clock controller.
+
 config SPMI_PMIC_CLKDIV
 	tristate "SPMI PMIC clkdiv Support"
 	depends on (COMMON_CLK_QCOM && SPMI) || COMPILE_TEST
