@@ -3567,6 +3567,10 @@ static int msm_hs_probe(struct platform_device *pdev)
 	msm_uport->bam_irq = bam_irqres;
 
 	clk_set_rate(msm_uport->clk, msm_uport->uport.uartclk);
+
+	if (msm_uport->uport.uartclk > BLSP_UART_CLK_FMAX)
+		clk_set_rate(msm_uport->clk, BLSP_UART_CLK_FMAX);
+
 	msm_hs_clk_bus_vote(msm_uport);
 	ret = uartdm_init_port(uport);
 	if (unlikely(ret))
