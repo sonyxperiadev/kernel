@@ -134,4 +134,14 @@
 #define  AGGR2_NOC_SMMU_CLK			89
 #define  AGGR2_NOC_USB_CLK			90
 
+#define  BIMC_USB_A_CLK				200
+#define  BIMC_USB_CLK				201
+#define  PNOC_USB_A_CLK				202
+#define  PNOC_USB_CLK				203
+#define  SNOC_USB_A_CLK				204
+#define  SNOC_USB_CLK				205
+#define  CXO_PIL_MSS_CLK			206
+#define  CXO_PIL_PRONTO_CLK			207
+#define  CXO_WLAN_CLK				208
+
 #endif
