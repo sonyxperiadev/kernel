@@ -8,7 +8,3 @@ obj-y += sde/
 obj-y += broadcast/
 obj-$(CONFIG_DVB_MPQ) += dvb/
 obj-$(CONFIG_MSM_AIS) += ais/
-
-# TODO: remove me b/62058353
-subdir-ccflags-y += \
-	-Wno-parentheses-equality
