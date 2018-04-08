@@ -14,6 +14,7 @@ clk-qcom-y += clk-regmap-mux-div.o
 clk-qcom-y += clk-hfpll.o
 clk-qcom-y += reset.o clk-voter.o
 clk-qcom-y += clk-dummy.o clk-debug.o
+clk-qcom-$(CONFIG_RCGWR_CLOCKS) += clk-rcgwr.o
 clk-qcom-$(CONFIG_QCOM_GDSC) += gdsc.o gdsc-regulator.o
 
 # Keep alphabetically sorted by config
@@ -35,6 +36,7 @@ obj-$(CONFIG_MSM_CLK_RPMH) += clk-rpmh.o
 obj-$(CONFIG_MSM_DISPCC_SDM845) += dispcc-sdm845.o
 obj-$(CONFIG_MSM_GCC_8660) += gcc-msm8660.o
 obj-$(CONFIG_MSM_GCC_8916) += gcc-msm8916.o
+obj-$(CONFIG_MSM_GCC_8976) += gcc-msm8976.o
 obj-$(CONFIG_MSM_GCC_8960) += gcc-msm8960.o
 obj-$(CONFIG_MSM_GCC_8974) += gcc-msm8974.o
 obj-$(CONFIG_MSM_GCC_8996) += gcc-msm8996.o
@@ -45,7 +47,6 @@ obj-$(CONFIG_MSM_MMCC_8960) += mmcc-msm8960.o
 obj-$(CONFIG_MSM_MMCC_8974) += mmcc-msm8974.o
 obj-$(CONFIG_MSM_MMCC_8996) += mmcc-msm8996.o
 obj-$(CONFIG_KPSS_XCC) += kpss-xcc.o
-obj-$(CONFIG_QCOM_HFPLL) += hfpll.o
 obj-$(CONFIG_KRAITCC) += krait-cc.o
 obj-$(CONFIG_QCOM_A53) += clk-a53.o
 obj-$(CONFIG_QCOM_CLK_SMD_RPM) += clk-smd-rpm.o
