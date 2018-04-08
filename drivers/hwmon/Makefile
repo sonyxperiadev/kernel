@@ -170,5 +170,4 @@ ccflags-$(CONFIG_HWMON_DEBUG_CHIP) := -DDEBUG
 
 #TODO: remove me b/62058353
 subdir-ccflags-y += \
-	-Wno-logical-not-parentheses \
 	-Wno-enum-conversion
