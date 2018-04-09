@@ -76,16 +76,16 @@
 		qcom,clk-map = <0x00000F9E>;
 
 
-		clocks = <&clock_gcc_gfx clk_gcc_oxili_gfx3d_clk>,
-			 <&clock_gcc_gfx clk_gcc_oxili_ahb_clk>,
-			 <&clock_gcc_gfx clk_gcc_oxili_gmem_clk>,
-			 <&clock_gcc_gfx clk_gcc_bimc_gfx_clk>,
+		clocks = <&clock_gcc_gfx GCC_GFX3D_OXILI_CLK>,
+			 <&clock_gcc_gfx GCC_GFX3D_OXILI_AHB_CLK>,
+			 <&clock_gcc_gfx GCC_GFX3D_OXILI_GMEM_CLK>,
+			 <&clock_gcc_gfx GCC_GFX3D_BIMC_CLK>,
 			// <&clock_gcc_gfx clk_gcc_gtcu_ahb_clk>,
-			 <&clock_gcc_gfx clk_gcc_oxili_timer_clk>,
-			 <&clock_gcc_gfx clk_gcc_gfx_tcu_clk>,
-			 <&clock_gcc_gfx clk_gcc_gfx_tbu_clk>,
-			 <&clock_gcc_gfx clk_gcc_gfx_1_tbu_clk>,
-			 <&clock_gcc_gfx clk_gcc_oxili_aon_clk>;
+			 <&clock_gcc_gfx GCC_GFX3D_OXILI_TIMER_CLK>,
+			 <&clock_gcc_gfx GCC_GFX3D_TCU_CLK>,
+			 <&clock_gcc_gfx GCC_GFX3D_TBU0_CLK>,
+			 <&clock_gcc_gfx GCC_GFX3D_TBU1_CLK>,
+			 <&clock_gcc_gfx GCC_GFX3D_OXILI_AON_CLK>;
 		/*
 		 * Note: The GTBU1 clock has been declared as gtcu_iface_clk.
 		 * This change is intentional and makes us able to get the
@@ -214,13 +214,13 @@
 		qcom,protect = <0x40000 0x20000>;
 		qcom,micro-mmu-control = <0x6000>;
 
-		clocks = <&clock_gcc clk_gcc_smmu_cfg_clk>,
-			<&clock_gcc_gfx clk_gcc_gfx_tcu_clk>,
-			<&clock_gcc_gfx clk_gcc_gtcu_ahb_clk>,
-			<&clock_gcc_gfx clk_gcc_gfx_tbu_clk>,
-			<&clock_gcc_gfx clk_gcc_gfx_1_tbu_clk>,
-			<&clock_gcc_gfx clk_gcc_oxili_ahb_clk>,
-			<&clock_gcc_gfx clk_gcc_bimc_gfx_clk>;
+		clocks = <&clock_gcc GCC_SMMU_CFG_CLK>,
+			<&clock_gcc_gfx GCC_GFX3D_TCU_CLK>,
+			<&clock_gcc_gfx GCC_GFX3D_GTCU_AHB_CLK>,
+			<&clock_gcc_gfx GCC_GFX3D_TBU0_CLK>,
+			<&clock_gcc_gfx GCC_GFX3D_TBU1_CLK>,
+			<&clock_gcc_gfx GCC_GFX3D_OXILI_AHB_CLK>,
+			<&clock_gcc_gfx GCC_GFX3D_BIMC_CLK>;
 		clock-names = "scfg_clk", "gtcu_clk", "gtcu_iface_clk",
 				"gtbu_clk", "gtbu1_clk", "gpu_ahb_clk",
 				"gcc_bimc_gfx_clk";

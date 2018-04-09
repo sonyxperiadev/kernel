@@ -1,6 +1,9 @@
 /*
  * Copyright (c) 2015, The Linux Foundation. All rights reserved.
  *
+ * RCGwR Generic Clock Framework adaptation
+ * Copyright (C) 2018, AngeloGioacchino Del Regno <kholk11@gmail.com>
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
  * only version 2 as published by the Free Software Foundation.
@@ -24,8 +27,8 @@
 #include <linux/delay.h>
 #include <linux/of.h>
 #include <linux/clk.h>
-#include <linux/clk/msm-clk-provider.h>
-#include <linux/clk/msm-clock-generic.h>
+#include <linux/clk-provider.h>
+#include <linux/platform_device.h>
 #include <linux/debugfs.h>
 
 #define CMD_RCGR_REG		0x0

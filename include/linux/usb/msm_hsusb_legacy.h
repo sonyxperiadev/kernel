@@ -421,6 +421,7 @@ struct msm_otg {
 	struct clk *phy_csr_clk;
 	struct clk *bus_clks[USB_NUM_BUS_CLOCKS];
 	struct clk *phy_ref_clk;
+	struct reset_control *core_reset;
 	struct reset_control *phy_reset;
 	struct reset_control *phy_por_reset;
 	long core_clk_rate;

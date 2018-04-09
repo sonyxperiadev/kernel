@@ -67,7 +67,9 @@ config ARCH_MSM8916
 	depends on ARCH_QCOM
 	select HAVE_FUTEX_CMPXCHG
 	select RCU_BOOST if DEBUG_KMEMLEAK
-	select COMMON_CLK_MSM
+	select COMMON_CLK
+	select COMMON_CLK_QCOM
+	select QCOM_GDSC
 	help
 	  This enables support for the MSM8916 chipset. If you don't
 	  know what to do here, say N

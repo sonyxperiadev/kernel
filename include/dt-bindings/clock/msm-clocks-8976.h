@@ -131,8 +131,6 @@
 #define clk_gcc_mdss_esc0_clk			0xaec5cb25
 #define clk_gcc_mdss_esc1_clk			0x34653cc7
 #define clk_gcc_mdss_mdp_clk			0x22f3521f
-#define clk_gcc_mdss_mdp_vote_clk		0x588460a4
-#define clk_gcc_mdss_mdp_rotator_vote_clk	0x5b1f675e
 #define clk_gcc_mdss_pclk0_clk			0xcc5c5c77
 #define clk_gcc_mdss_pclk1_clk			0x9a9c430d
 #define clk_gcc_mdss_vsync_clk			0x32a09f1f
@@ -320,11 +318,5 @@
 
 #define clk_audio_ap_clk			0x312ac429
 #define clk_audio_pmi_clk			0xb7ba2274
-
-/* GCC block resets */
-#define RST_CAMSS_MICRO_BCR			0
-#define RST_USB_HS_BCR				1
-#define RST_QUSB2_PHY_BCR			2
-#define RST_USB2_HS_PHY_ONLY_BCR		3
 
 #endif

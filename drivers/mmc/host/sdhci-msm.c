@@ -4747,6 +4747,7 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 		msm_host->mmc->caps &= ~MMC_CAP_NEEDS_POLL;
 		msm_host->mmc->caps2 |= MMC_CAP2_NONSTANDARD_OCR;
 		msm_host->mmc->caps2 |= MMC_CAP2_NONSTANDARD_NONREMOVABLE;
+		msm_host->mmc->caps2 |= MMC_CAP2_CLK_SCALE;
 		somc_wifi_mmc_host_register(msm_host->mmc);
 	}
 #endif

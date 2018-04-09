@@ -301,7 +301,11 @@ static struct audio_ext_pmi_clk audio_pmi_clk = {
 		.div = 1,
 		.hw.init = &(struct clk_init_data){
 			.name = "audio_ext_pmi_clk",
+#ifdef CONFIG_ARCH_MSM8916
+			.parent_names = (const char *[]){ "div_clk2" },
+#else
 			.parent_names = (const char *[]){ "div_clk1" },
+#endif
 			.num_parents = 1,
 			.ops = &clk_dummy_ops,
 		},
