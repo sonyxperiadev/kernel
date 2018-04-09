@@ -1756,7 +1756,7 @@ void incell_ewu_mode_ctrl(incell_ewu_mode ewu)
 
 	pr_debug("%s: status:%d --->\n", __func__, ((int)(incell->state)));
 
-	if ((ewu == INCELL_DISPLAY_EWU_ENABLE))
+	if (ewu == INCELL_DISPLAY_EWU_ENABLE)
 		incell_ewu_mode_state_on(&(incell->state));
 	else
 		incell_ewu_mode_state_off(&(incell->state));
