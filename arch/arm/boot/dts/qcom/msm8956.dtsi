@@ -522,21 +522,8 @@
 	clock_gcc_gfx: gfx3d-clock-controller@1800000 {
                 compatible = "qcom,gcc-gfx-8976";
                 reg = <0x1800000 0x80000>;
-               // reg-names = "cc_base";
 		vdd_dig_gfx-supply = <&pm8950_s2_level>;
 		vdd_gfx-supply = <&gfx_vreg_corner>;
-		gpu_handle = <&msm_gpu>;
-                qcom,gfxfreq-corner =
-			<         0   0 >,
-			< 133333333   1 >,  /* Min SVS   */
-			< 200000000   2 >,  /* Low SVS   */
-			< 266666667   3 >,  /* SVS Minus */
-			< 300000000   4 >,  /* SVS       */
-			< 366670000   5 >,  /* SVS Plus  */
-			< 432000000   6 >,  /* NOM       */
-			< 480000000   7 >,  /* Turbo     */
-			< 550000000   8 >,  /* Super Turbo */
-			< 600000000   9 >;  /* Super Turbo */
 		#clock-cells = <1>;
 		status = "ok";
 	};
