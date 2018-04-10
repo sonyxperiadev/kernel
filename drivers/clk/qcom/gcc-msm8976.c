@@ -42,7 +42,7 @@
 /* Porting starts here */
 
 static DEFINE_VDD_REGULATORS(vdd_dig, VDD_DIG_NUM, 1, vdd_corner);
-static DEFINE_VDD_REGS_INIT(vdd_gfx, 1);
+static DEFINE_VDD_REGULATORS(vdd_gfx, VDD_GFX_MAX, 1, vdd_gfx_corner);
 
 #define F(f, s, h, m, n) { (f), (s), (2 * (h) - 1), (m), (n) }
 
@@ -1548,6 +1548,15 @@ static struct clk_init_data gfx3d_clk_params = {
 	.ops = &clk_gfx3d_src_ops,
 	.vdd_class = &vdd_gfx,
 	//.flags = CLK_SET_RATE_PARENT,
+	VDD_GFX_FMAX_MAP9(MIN_SVS,	133333333,
+			LOW_SVS,	200000000,
+			SVS_MINUS,	266666667,
+			SVS,		300000000,
+			SVS_PLUS,	366670000,
+			NOMINAL,	432000000,
+			TURBO,		480000000,
+			TURBO_L1,	550000000,
+			SUPER_TURBO,	600000000),
 };
 
 static struct clk_rcg2 gfx3d_clk_src = {
@@ -4820,149 +4829,6 @@ static struct of_device_id gcc_gfx_8976_match_table[] = {
 	{}
 };
 
-static int of_get_fmax_vdd_class(struct platform_device *pdev,
-				 struct clk_hw *hw, char *prop_name)
-{
-	struct device_node *of = pdev->dev.of_node;
-	int prop_len, i;
-	struct clk_vdd_class *vdd = hw->init->vdd_class;
-	u32 *array;
-
-	if (!of_find_property(of, prop_name, &prop_len)) {
-		dev_err(&pdev->dev, "missing %s\n", prop_name);
-		return -EINVAL;
-	}
-
-	prop_len /= sizeof(u32);
-	if (prop_len % 2) {
-		dev_err(&pdev->dev, "bad length %d\n", prop_len);
-		return -EINVAL;
-	}
-
-	prop_len /= 2;
-	vdd->level_votes = devm_kzalloc(&pdev->dev,
-				prop_len * sizeof(*vdd->level_votes),
-					GFP_KERNEL);
-	if (!vdd->level_votes)
-		return -ENOMEM;
-
-	vdd->vdd_uv = devm_kzalloc(&pdev->dev, prop_len * sizeof(int),
-					GFP_KERNEL);
-	if (!vdd->vdd_uv)
-		return -ENOMEM;
-
-	gfx3d_clk_params.rate_max = devm_kzalloc(&pdev->dev,
-			prop_len * sizeof(unsigned long), GFP_KERNEL);
-	if (!hw->init->rate_max)
-		return -ENOMEM;
-
-	array = devm_kzalloc(&pdev->dev,
-			prop_len * sizeof(u32) * 2, GFP_KERNEL);
-	if (!array)
-		return -ENOMEM;
-
-	of_property_read_u32_array(of, prop_name, array, prop_len * 2);
-	for (i = 0; i < prop_len; i++) {
-		gfx3d_clk_params.rate_max[i] = array[2 * i];
-		vdd->vdd_uv[i] = array[2 * i + 1];
-	}
-
-	devm_kfree(&pdev->dev, array);
-	vdd->num_levels = prop_len;
-	vdd->cur_level = prop_len;
-	gfx3d_clk_params.num_rate_max = prop_len;
-
-	return 0;
-}
-
-static void print_opp_table(struct device *dev, struct clk_hw *hw)
-{
-	struct dev_pm_opp *opp;
-	int i;
-
-	pr_debug("OPP table for GPU core clock:\n");
-	for (i = 1; i < hw->init->num_rate_max; i++) {
-		if (!hw->init->rate_max[i])
-			continue;
-		opp = dev_pm_opp_find_freq_exact(dev,
-				hw->init->rate_max[i], true);
-		pr_info("clock-gpu: OPP voltage for %lu Hz: %ld uV\n",
-			hw->init->rate_max[i], dev_pm_opp_get_voltage(opp));
-	}
-}
-
-/* Find the voltage level required for a given rate. */
-int find_vdd_level(struct clk_hw *hw, unsigned long rate)
-{
-	int level;
-
-	for (level = 0; level < hw->init->num_rate_max; level++)
-		if (rate <= hw->init->rate_max[level])
-			break;
-
-	if (level == hw->init->num_rate_max) {
-		pr_err("Rate %lu for %s is greater than highest Fmax of %lu\n",
-			rate, hw->init->name,
-			hw->init->rate_max[hw->init->num_rate_max-1]);
-		return -EINVAL;
-	}
-
-	return level;
-}
-
-static void populate_gpu_opp_table(struct platform_device *pdev,
-		struct clk_hw *hw)
-{
-	struct device_node *of = pdev->dev.of_node;
-	struct platform_device *gpu_dev;
-	struct device_node *gpu_node;
-	int i, ret, level;
-	unsigned long rate = 0;
-
-	gpu_node = of_parse_phandle(of, "gpu_handle", 0);
-	if (!gpu_node) {
-		pr_err("clock-gpu: %s: Unable to get device_node pointer for GPU\n",
-							__func__);
-		return;
-	}
-
-	gpu_dev = of_find_device_by_node(gpu_node);
-	if (!gpu_dev) {
-		pr_err("clock-gpu: %s: Unable to find platform_device node for GPU\n",
-							__func__);
-		return;
-	}
-
-	for (i = 0; i < hw->init->num_rate_max; i++) {
-		if (!hw->init->rate_max[i])
-			continue;
-
-		ret = clk_round_rate(hw->clk, hw->init->rate_max[i]);
-		if (ret < 0) {
-			pr_warn("clock-gpu: %s: round_rate failed at %lu - err: %d\n",
-							__func__, rate, ret);
-			return;
-		}
-		rate = ret;
-
-		level = find_vdd_level(hw, rate);
-		if (level <= 0) {
-			pr_warn("no uv for %lu.\n", rate);
-			return;
-		}
-
-		ret = dev_pm_opp_add(&gpu_dev->dev, rate,
-				hw->init->vdd_class->vdd_uv[level]);
-		if (ret) {
-			pr_warn("clock-gpu: %s: couldn't add OPP for %lu - err: %d\n",
-							__func__, rate, ret);
-			return;
-		}
-	}
-
-	print_opp_table(&gpu_dev->dev, hw);
-}
-
 static int msm_gcc_8976_gfx_probe(struct platform_device *pdev)
 {
 	void __iomem *base;
@@ -4992,13 +4858,6 @@ static int msm_gcc_8976_gfx_probe(struct platform_device *pdev)
 		return PTR_ERR(vdd_gfx.regulator[0]);
 	}
 
-	ret = of_get_fmax_vdd_class(pdev, &gfx3d_clk_src.clkr.hw,
-					"qcom,gfxfreq-corner");
-	if (ret) {
-		dev_err(&pdev->dev, "Unable to get gfx freq-corner mapping info\n");
-		return ret;
-	}
-
 	ret = qcom_cc_really_probe(pdev, &gcc_msm8976_gfx3d_desc, regmap);
 	if (ret) {
 		dev_err(&pdev->dev, "Failed to register GPUCC clocks\n");
@@ -5022,8 +4881,6 @@ static int msm_gcc_8976_gfx_probe(struct platform_device *pdev)
 	writel_relaxed(regval, GCC_REG_BASE(OXILI_GFX3D_CBCR));
 */
 	dev_info(&pdev->dev, "Registered GCC GFX clocks.\n");
-
-	populate_gpu_opp_table(pdev, &gfx3d_clk_src.clkr.hw);
 
 	return ret;
 }
