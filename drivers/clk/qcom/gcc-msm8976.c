@@ -42,6 +42,7 @@
 /* Porting starts here */
 
 static DEFINE_VDD_REGULATORS(vdd_dig, VDD_DIG_NUM, 1, vdd_corner);
+static DEFINE_VDD_REGULATORS(vdd_dig_gfx, VDD_DIG_NUM, 1, vdd_corner);
 static DEFINE_VDD_REGULATORS(vdd_gfx, VDD_GFX_MAX, 1, vdd_gfx_corner);
 
 #define F(f, s, h, m, n) { (f), (s), (2 * (h) - 1), (m), (n) }
@@ -3255,7 +3256,7 @@ static struct clk_branch gcc_oxili_gfx3d_clk = {
 			},
 			.num_parents = 1,
 			.flags = CLK_SET_RATE_PARENT,
-			VDD_DIG_FMAX_MAP5(LOWER, 300000000, LOW, 366670000,
+			VDD_DIG_GFX_FMAX_MAP5(LOWER, 300000000, LOW, 366670000,
 				NOMINAL, 432000000, NOM_PLUS, 480000000,
 				HIGH, 600000000),
 			.ops = &clk_branch2_ops,
@@ -4856,6 +4857,13 @@ static int msm_gcc_8976_gfx_probe(struct platform_device *pdev)
 		if (PTR_ERR(vdd_gfx.regulator[0]) != -EPROBE_DEFER)
 			dev_err(&pdev->dev, "Unable to get vdd_gfx regulator!");
 		return PTR_ERR(vdd_gfx.regulator[0]);
+	}
+
+	vdd_dig_gfx.regulator[0] = devm_regulator_get(&pdev->dev, "vdd_dig_gfx");
+	if (IS_ERR(vdd_gfx.regulator[0])) {
+		if (PTR_ERR(vdd_dig_gfx.regulator[0]) != -EPROBE_DEFER)
+			dev_err(&pdev->dev, "Unable to get vdd_dig_gfx regulator!");
+		return PTR_ERR(vdd_dig_gfx.regulator[0]);
 	}
 
 	ret = qcom_cc_really_probe(pdev, &gcc_msm8976_gfx3d_desc, regmap);
