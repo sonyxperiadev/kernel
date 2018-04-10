@@ -1565,7 +1565,7 @@ static struct clk_rcg2 gfx3d_clk_src = {
 	.hid_width = 5,
 	.parent_map = gcc_parent_map_gfx3d,
 	.freq_tbl = ftbl_gfx3d_clk_src,
-//	.flags = FORCE_ENABLE_RCGR,
+	.flags = FORCE_ENABLE_RCGR,
 	.clkr.hw.init = &gfx3d_clk_params,
 };
 
