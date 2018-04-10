@@ -514,7 +514,6 @@
 	clock_gcc_mdss: mdss-clock-controller@1800000 {
 		compatible = "qcom,gcc-mdss-8976";
 		reg = <0x1800000 0x80000>;
-                //reg-names = "cc_base";
 		#clock-cells = <1>;
 		status = "ok";
 	};
@@ -532,55 +531,7 @@
 		compatible = "qcom,cc-debug-8976";
 		#clock-cells = <1>;
 	};
-#if 0
-	clock_gcc: qcom,gcc@1800000 {
-		compatible = "qcom,gcc-8976";
-		reg = <0x1800000 0x80000>;
-		reg-names = "cc_base";
-		vdd_dig-supply = <&pm8950_s2_level>;
-		#reset-cells = <1>;
-	};
 
-	clock_debug: qcom,cc-debug@1874000 {
-		compatible = "qcom,cc-debug-8976";
-		clocks = <&clock_cpu clk_cpu_debug_pri_mux>;
-		clock-names = "debug_cpu_clk";
-		#clock-cells = <1>;
-	};
-
-	clock_gcc_gfx: qcom,gcc-gfx@1800000 {
-                compatible = "qcom,gcc-gfx-8976";
-                reg = <0x1800000 0x80000>;
-                reg-names = "cc_base";
-		vdd_gfx-supply = <&gfx_vreg_corner>;
-		gpu_handle = <&msm_gpu>;
-                qcom,gfxfreq-corner =
-			<         0   0 >,
-			< 133333333   1 >,  /* Min SVS   */
-			< 200000000   2 >,  /* Low SVS   */
-			< 266666667   3 >,  /* SVS Minus */
-			< 300000000   4 >,  /* SVS       */
-			< 366670000   5 >,  /* SVS Plus  */
-			< 432000000   6 >,  /* NOM       */
-			< 480000000   7 >,  /* Turbo     */
-			< 550000000   8 >,  /* Super Turbo */
-			< 600000000   9 >;  /* Super Turbo */
-		#clock-cells = <1>;
-	};
-
-	clock_gcc_mdss: qcom,gcc-mdss@1800000 {
-		compatible = "qcom,gcc-mdss-8976";
-		reg = <0x1800000 0x80000>;
-                reg-names = "cc_base";
-		clocks = <&mdss_dsi0_pll clk_dsi_pll0_pixel_clk_src>,
-			 <&mdss_dsi0_pll clk_dsi_pll0_byte_clk_src>,
-			 <&mdss_dsi1_pll clk_dsi_pll1_pixel_clk_src>,
-			 <&mdss_dsi1_pll clk_dsi_pll1_byte_clk_src>;
-		clock-names = "pclk0_src", "byte0_src", "pclk1_src",
-				 "byte1_src";
-		#clock-cells = <1>;
-	};
-#endif
 	clock_cpu: qcom,cpu-clock-8976@b016000 {
 		#address-cells = <1>;
 		#size-cells = <1>;
@@ -693,14 +644,6 @@
 			<  614400000 6>;
 		#clock-cells = <1>;
 		ranges;
-		qcom,spm@0 {
-			compatible = "qcom,cpu-spm-8976";
-			reg = <0x0b111200 0x100>,
-			      <0x0b011200 0x100>,
-			      <0x0b1d4000 0x100>;
-			reg-names = "spm_c0_base", "spm_c1_base",
-				     "spm_cci_base";
-		};
 	};
 
 	cci_cache: qcom,cci {
