@@ -315,7 +315,6 @@ static const char * const gcc_parent_names_mdss_byte1[] = {
 static const struct parent_map gcc_parent_map_gfx3d[] = {
 	{ P_XO, 0 },
 	{ P_GPLL0_OUT_MAIN, 1 },
-	{ P_GPLL3_OUT_MAIN, 2 },
 	{ P_GPLL4_GFX3D, 5 },
 	{ P_GPLL6_GFX3D, 3 },
 };
@@ -323,7 +322,6 @@ static const struct parent_map gcc_parent_map_gfx3d[] = {
 static const char * const gcc_parent_names_gfx3d[] = {
 	"xo",
 	"gpll0_out_main",
-	"gpll3_out_main",
 	"gpll4_out_main",
 	"gpll6_out_main",
 };
@@ -1540,11 +1538,11 @@ static const struct freq_tbl ftbl_gfx3d_clk_src[] = {
 	F( 240000000,   P_GPLL6_GFX3D,  4.5,    0,     0),
 	F( 266666667,P_GPLL0_OUT_MAIN,    3,    0,     0),
 	F( 300000000,   P_GPLL4_GFX3D,    4,    0,     0),
-	F( 366670000,P_GPLL3_OUT_MAIN,    3,    0,     0),
+	F( 360000000,   P_GPLL6_GFX3D,    3,    0,     0),
 	F( 400000000,P_GPLL0_OUT_MAIN,    2,    0,     0),
 	F( 432000000,   P_GPLL6_GFX3D,  2.5,    0,     0),
 	F( 480000000,   P_GPLL4_GFX3D,  2.5,    0,     0),
-	F( 550000000,P_GPLL3_OUT_MAIN,    2,    0,     0),
+	F( 540000000,   P_GPLL6_GFX3D,    2,    0,     0),
 	F( 600000000,   P_GPLL4_GFX3D,    2,    0,     0),
 	{ }
 };
@@ -1560,10 +1558,10 @@ static struct clk_init_data gfx3d_clk_params = {
 			LOW_SVS,	200000000,
 			SVS_MINUS,	266666667,
 			SVS,		300000000,
-			SVS_PLUS,	366670000,
+			SVS_PLUS,	360000000,
 			NOMINAL,	432000000,
 			TURBO,		480000000,
-			TURBO_L1,	550000000,
+			TURBO_L1,	540000000,
 			SUPER_TURBO,	600000000),
 };
 
@@ -3263,7 +3261,7 @@ static struct clk_branch gcc_oxili_gfx3d_clk = {
 			},
 			.num_parents = 1,
 			.flags = CLK_SET_RATE_PARENT,
-			VDD_DIG_GFX_FMAX_MAP5(LOWER, 300000000, LOW, 366670000,
+			VDD_DIG_GFX_FMAX_MAP5(LOWER, 300000000, LOW, 360000000,
 				NOMINAL, 432000000, NOM_PLUS, 480000000,
 				HIGH, 600000000),
 			.ops = &clk_branch2_ops,
