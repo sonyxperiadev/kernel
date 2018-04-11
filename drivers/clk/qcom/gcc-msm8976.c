@@ -432,6 +432,12 @@ static struct clk_regmap gpll2_out_main = {
 	},
 };
 
+#define F_GPLL(f, l, m, n) { (f), (l), (m), (n), 0 }
+
+static struct pll_freq_tbl gpll3_freq_tbl[] = {
+	F_GPLL(1100000000, 57, 7, 24),
+};
+
 static struct clk_pll gpll3 = {
 	.l_reg		= 0x22004,
 	.m_reg		= 0x22008,
@@ -440,6 +446,7 @@ static struct clk_pll gpll3 = {
 	.mode_reg	= 0x22000,
 	.status_reg	= 0x22024,
 	.status_bit	= 17,
+	.freq_tbl	= gpll3_freq_tbl,
 	.clkr.hw.init = &(struct clk_init_data) {
 		.name = "gpll3",
 		.parent_names = (const char*[]) { "xo" },
@@ -4269,6 +4276,8 @@ static int gcc_8976_probe(struct platform_device *pdev)
 
 	clk_pll_configure_sr_hpm_lp(&gpll3, regmap,
 					&gpll3_config, true);
+
+	clk_set_rate(gpll3.clkr.hw.clk, 1100000000);
 
 	/* Enable AUX2 clock for APSS */
 	regmap_update_bits(regmap, 0x60000, BIT(2), BIT(2));
