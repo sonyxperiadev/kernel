@@ -59,8 +59,8 @@
 		cam_vana-supply = <&pm8950_l9>;
 		cam_vaf-supply = <&pm8950_l17>;
 		qcom,cam-vreg-name = "cam_vdig", "cam_vio", "cam_vana", "cam_vaf";
-		qcom,cam-vreg-min-voltage = <1000000 0 2200000 2700000>;
-		qcom,cam-vreg-max-voltage = <1000000 0 2200000 2700000>;
+		qcom,cam-vreg-min-voltage = <1000000 0 2700000 2700000>;
+		qcom,cam-vreg-max-voltage = <1000000 0 2700000 2700000>;
 		qcom,cam-vreg-op-mode = <333000 0 46000 100000>;
 		qcom,gpio-no-mux = <0>;
 		pinctrl-names = "cam_default", "cam_suspend";
