@@ -48,7 +48,7 @@
 					dev = "/dev/block/platform/soc/1da4000.ufshc/by-name/vendor";
 					type = "ext4";
 					mnt_flags = "ro,barrier=1";
-					fsmgr_flags = "wait";
+					fsmgr_flags = "wait,verify";
 					status = "ok";
 				};
 				odm {
@@ -64,7 +64,7 @@
 					dev = "/dev/block/platform/soc/1da4000.ufshc/by-name/system";
 					type = "ext4";
 					mnt_flags = "ro,barrier=1";
-					fsmgr_flags = "wait";
+					fsmgr_flags = "wait,verify";
 					status = "ok";
 				};
 			};
