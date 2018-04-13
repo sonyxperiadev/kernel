@@ -105,6 +105,7 @@ GTAGS
 ID
 
 *.orig
+*.rej
 *~
 \#*#
 
