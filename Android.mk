@@ -118,6 +118,8 @@ ifeq ($(TARGET_KERNEL_CLANG_COMPILE),true)
         KERNEL_CLANG_VERSION := $(shell ls -d $(ANDROID_BUILD_TOP)/prebuilts/clang/host/$(HOST_OS)-x86/clang-* | xargs -n 1 basename | tail -1)
     endif
     TARGET_KERNEL_CLANG_PATH ?= $(ANDROID_BUILD_TOP)/prebuilts/clang/host/$(HOST_OS)-x86/$(KERNEL_CLANG_VERSION)/bin
+    KBUILD_COMPILER_STRING := $(shell $(TARGET_KERNEL_CLANG_PATH)/clang --version | head -n 1 | perl -pe 's/\(http.*?\)//gs' | sed -e 's/  */ /g')
+    export KBUILD_COMPILER_STRING
     ifeq ($(KERNEL_ARCH),arm64)
         KERNEL_CLANG_TRIPLE ?= CLANG_TRIPLE=aarch64-linux-gnu-
     else ifeq ($(KERNEL_ARCH),arm)
