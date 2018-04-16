@@ -2087,8 +2087,12 @@ static int load_to_index(u32 load)
 		return 0;
 	else if (load >= sched_ravg_window)
 		return NUM_LOAD_INDICES - 1;
-	else
-		return load / sched_load_granule;
+	else {
+		int value = load / sched_load_granule;
+		if (value >= NUM_LOAD_INDICES)
+			return NUM_LOAD_INDICES - 1;
+		return value;
+	}
 }
 
 static void update_top_tasks(struct task_struct *p, struct rq *rq,
