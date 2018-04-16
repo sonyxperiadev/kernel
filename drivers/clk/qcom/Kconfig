@@ -136,6 +136,15 @@ config MSM_MMCC_8974
 	  Say Y if you want to support multimedia devices such as display,
 	  graphics, video encode/decode, camera, etc.
 
+config MSM_GCC_8976
+	tristate "MSM8976 Global Clock Controller"
+	select QCOM_GDSC
+	depends on COMMON_CLK_QCOM
+	help
+	  Support for the global clock controller on msm8974 devices.
+	  Say Y if you want to use peripheral devices such as UART, SPI,
+	  i2c, USB, SD/eMMC, SATA, PCIe, etc.
+
 config MSM_GCC_8996
 	tristate "MSM8996 Global Clock Controller"
 	depends on COMMON_CLK_QCOM
@@ -191,6 +200,12 @@ config QCOM_HFPLL
 	  Say Y if you want to support CPU frequency scaling on devices
 	  such as MSM8974, APQ8084, etc.
 
+config RCGWR_CLOCKS
+	bool "RCGwR Clock Controller"
+	depends on COMMON_CLK_QCOM
+	help
+	  Support for the RCGwR Clock Controller.
+
 config KPSS_XCC
 	tristate "KPSS Clock Controller"
 	depends on COMMON_CLK_QCOM
@@ -230,6 +245,13 @@ config CLOCK_CPU_OSM
 	 frequency and voltage requests for multiple clusters via the
 	 existence of multiple OSM domains.
 	 Say Y if you want to support osm clocks.
+
+config CLOCK_CPU_8976
+	bool "MSM8976 CPU Clock Controller"
+	depends on COMMON_CLK_QCOM
+	select RCGWR_CLOCKS
+	help
+	  Support for the MSM8976 CPU clock controller.
 
 config CLOCK_QPNP_DIV
 	tristate "QPNP PMIC clkdiv driver"

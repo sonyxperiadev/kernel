@@ -3634,9 +3634,9 @@ static int msm_hs_probe(struct platform_device *pdev)
 	memset(name, 0, sizeof(name));
 	scnprintf(name, sizeof(name), "%s%s", dev_name(msm_uport->uport.dev),
 									"_rx");
+#ifdef CONFIG_IPC_LOGGING
 	msm_uport->rx.ipc_rx_ctxt = ipc_log_context_create(
 					IPC_MSM_HS_LOG_DATA_PAGES, name, 0);
-#ifdef CONFIG_IPC_LOGGING
 	if (!msm_uport->rx.ipc_rx_ctxt)
 		dev_err(&pdev->dev, "%s: error creating rx logging context",
 								__func__);
@@ -3655,6 +3655,10 @@ static int msm_hs_probe(struct platform_device *pdev)
 	msm_uport->bam_irq = bam_irqres;
 
 	clk_set_rate(msm_uport->clk, msm_uport->uport.uartclk);
+
+	if (msm_uport->uport.uartclk > BLSP_UART_CLK_FMAX)
+		clk_set_rate(msm_uport->clk, BLSP_UART_CLK_FMAX);
+
 	msm_hs_clk_bus_vote(msm_uport);
 	ret = uartdm_init_port(uport);
 	if (unlikely(ret))

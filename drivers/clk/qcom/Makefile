@@ -14,6 +14,7 @@ clk-qcom-$(CONFIG_KRAIT_CLOCKS) += clk-krait.o
 clk-qcom-y += clk-hfpll.o
 clk-qcom-y += reset.o clk-voter.o
 clk-qcom-y += clk-dummy.o clk-debug.o
+clk-qcom-$(CONFIG_RCGWR_CLOCKS) += clk-rcgwr.o
 clk-qcom-$(CONFIG_QCOM_GDSC) += gdsc.o gdsc-regulator.o
 
 obj-$(CONFIG_APQ_GCC_8084) += gcc-apq8084.o
@@ -22,6 +23,7 @@ obj-$(CONFIG_IPQ_GCC_806X) += gcc-ipq806x.o
 obj-$(CONFIG_IPQ_LCC_806X) += lcc-ipq806x.o
 obj-$(CONFIG_MSM_GCC_8660) += gcc-msm8660.o
 obj-$(CONFIG_MSM_GCC_8916) += gcc-msm8916.o
+obj-$(CONFIG_MSM_GCC_8976) += gcc-msm8976.o
 obj-$(CONFIG_MSM_GCC_8960) += gcc-msm8960.o
 obj-$(CONFIG_MSM_LCC_8960) += lcc-msm8960.o
 obj-$(CONFIG_MSM_GCC_8974) += gcc-msm8974.o
@@ -39,6 +41,7 @@ obj-$(CONFIG_QCOM_A53) += clk-a53.o
 obj-$(CONFIG_QCOM_CLK_RPM) += clk-rpm.o
 obj-$(CONFIG_QCOM_CLK_SMD_RPM) += clk-smd-rpm.o
 obj-$(CONFIG_CLOCK_CPU_OSM) += clk-cpu-osm.o
+obj-$(CONFIG_CLOCK_CPU_8976) += clk-cpu-8976.o
 obj-$(CONFIG_CLOCK_QPNP_DIV) += clk-qpnp-div.o
 
 obj-y += mdss/

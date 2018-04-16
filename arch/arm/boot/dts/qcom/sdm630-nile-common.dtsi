@@ -69,8 +69,8 @@
 					compatible = "android,vendor";
 					dev = "/dev/block/platform/soc/c0c4000.sdhci/by-name/vendor";
 					type = "ext4";
-					mnt_flags = "ro,barrier=1,discard";
-					fsmgr_flags = "wait,slotselect,verify";
+					mnt_flags = "ro,barrier=1";
+					fsmgr_flags = "wait,slotselect";
 					status = "ok";
 				};
 
@@ -78,7 +78,7 @@
 					compatible = "android,odm";
 					dev = "/dev/block/platform/soc/c0c4000.sdhci/by-name/oem";
 					type = "ext4";
-					mnt_flags = "ro,barrier=1,discard";
+					mnt_flags = "ro,barrier=1";
 					fsmgr_flags = "wait,slotselect";
 					status = "ok";
 				};
@@ -170,6 +170,18 @@
 		linux,wakeup;
 		linux,min-uv = <1700000>;
 		linux,max-uv = <1900000>;
+	};
+
+	gpio_keys {
+		/delete-node/ vol_up;
+		vol_down {
+			label = "volume_down";
+			gpios = <&pm660l_gpios 7 0x1>;
+			linux,input-type = <1>;
+			linux,code = <114>;
+			gpio-key,wakeup;
+			debounce-interval = <15>;
+		};
 	};
 };
 
@@ -371,17 +383,24 @@
 		"ADC3_IN", "ADC3_OUT";
 };
 
+
 &rpm_bus {
 	rpm-regulator-ldoa18 {
+		compatible = "qcom,rpm-smd-regulator-resource";
+		qcom,resource-name = "ldoa";
+		qcom,resource-id = <18>;
+		qcom,regulator-type = <0>;
 		status = "okay";
 		pm660_l18: regulator-l18 {
+			compatible = "qcom,rpm-smd-regulator";
+			regulator-name = "pm660_l18";
+			qcom,set = <3>;
 			regulator-min-microvolt = <1800000>;
 			regulator-max-microvolt = <1800000>;
 			status = "okay";
 		};
 	};
 };
-
 &pm660l_l6 {
 	qcom,regulator-type = <0>;  /* LDO */
 	qcom,init-enable = <0>;
@@ -395,6 +414,22 @@
 &spmi_bus {
 	qcom,power-on@800 {
 		qcom,s3-src = "resin";
+	};
+
+	qcom,pm660@0 {
+		qcom,power-on@800 {
+			/delete-property/ kpdpwr-sw-debounce;
+			qcom,pon_2 {
+				linux,code = <115>;
+			};
+		};
+	};
+
+	qcom,pm660l@3 {
+		qcom,leds@d000 {
+			status = "okay";
+			qcom,rgb_sync = <1>;
+		};
 	};
 };
 
@@ -476,26 +511,40 @@
 
 /* PM660L */
 &red_led {
+	linux,name = "led:rgb_red";
+	qcom,start-idx = <0>;
 	qcom,idx-len = <2>;
-	qcom,duty-pcts = [00 0F];
+	qcom,duty-pcts =
+		[00 0E 1C 2A 38 46 54 64];
 	qcom,lut-flags = <25>;
+	qcom,pause-lo = <500>;
+	qcom,pause-hi = <500>;
 	qcom,ramp-step-ms = <100>;
+	qcom,use-blink;
 };
 
 &green_led {
-	qcom,start-idx = <2>;
+	linux,name = "led:rgb_green";
+	qcom,start-idx = <0>;
 	qcom,idx-len = <2>;
-	qcom,duty-pcts = [00 64];
+	qcom,duty-pcts =
+		[00 0E 1C 2A 38 46 54 64];
 	qcom,lut-flags = <25>;
+	qcom,pause-lo = <500>;
+	qcom,pause-hi = <500>;
 	qcom,ramp-step-ms = <100>;
 	qcom,use-blink;
 };
 
 &blue_led {
-	qcom,start-idx = <4>;
+	linux,name = "led:rgb_blue";
+	qcom,start-idx = <0>;
 	qcom,idx-len = <2>;
-	qcom,duty-pcts = [00 31];
+	qcom,duty-pcts =
+		[00 0E 1C 2A 38 46 54 64];
 	qcom,lut-flags = <25>;
+	qcom,pause-lo = <500>;
+	qcom,pause-hi = <500>;
 	qcom,ramp-step-ms = <100>;
 	qcom,use-blink;
 };
@@ -525,3 +574,38 @@
 	qcom,led-mask = <2>;
 };
 
+&ufsphy1 {
+	vdda-phy-supply = <&pm660l_l1>;
+	vdda-pll-supply = <&pm660_l10>;
+	vddp-ref-clk-supply = <&pm660_l1>;
+	vdda-phy-max-microamp = <51400>;
+	vdda-pll-max-microamp = <14200>;
+	vddp-ref-clk-max-microamp = <100>;
+	vddp-ref-clk-always-on;
+	status = "ok";
+};
+
+&ufs1 {
+	vdd-hba-supply = <&gdsc_ufs>;
+	vdd-hba-fixed-regulator;
+	vcc-supply = <&pm660l_l4>;
+	vccq2-supply = <&pm660_l8>;
+	vcc-max-microamp = <500000>;
+	vccq2-max-microamp = <600000>;
+	status = "ok";
+};
+
+&pm660_gpios {
+	/* GPIO 4 (NFC_CLK_REQ) */
+	gpio@c300 {
+		qcom,mode = <0>;
+		qcom,vin-sel = <1>;
+		qcom,src-sel = <0>;
+		qcom,master-en = <1>;
+		status = "okay";
+	};
+};
+
+&mem_client_3_size {
+	qcom,peripheral-size = <0x500000>;
+};

@@ -66,11 +66,6 @@
 		startup-delay-us = <0>;
 		enable-active-high;
 		gpio = <&tlmm 13 0>;
-
-		proxy-supply = <&pm660_l18>;
-		qcom,proxy-consumer-enable;
-		qcom,proxy-consumer-current = <105000>;
-		qcom,proxy-consumer-voltage = <1352000 1352000>;
 	};
 
 	cam_vana_rear_vreg: cam_vana_rear_vreg {
@@ -225,7 +220,6 @@
 		qcom,csid-sd-index = <2>;
 		qcom,mount-angle = <0>;
 		qcom,led-flash-src = <&led_flash1>;
-		cam_vaf-supply = <&pm660l_l3>;
 		cam_vdig-supply = <&cam_vdig_imx300_219_vreg>;
 		cam_vio-supply = <&cam_vio_vreg>;
 		cam_vana-supply = <&cam_vana_front_vreg>;

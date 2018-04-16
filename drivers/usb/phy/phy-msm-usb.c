@@ -522,12 +522,12 @@ static int msm_otg_link_clk_reset(struct msm_otg *motg, bool assert)
 		dev_dbg(motg->phy.dev, "block_reset ASSERT\n");
 		clk_disable_unprepare(motg->pclk);
 		clk_disable_unprepare(motg->core_clk);
-		ret = clk_reset(motg->core_clk, CLK_RESET_ASSERT);
+		ret = reset_control_assert(motg->core_reset);
 		if (ret)
 			dev_err(motg->phy.dev, "usb hs_clk assert failed\n");
 	} else {
 		dev_dbg(motg->phy.dev, "block_reset DEASSERT\n");
-		ret = clk_reset(motg->core_clk, CLK_RESET_DEASSERT);
+		ret = reset_control_deassert(motg->core_reset);
 		ndelay(200);
 		ret = clk_prepare_enable(motg->core_clk);
 		WARN(ret, "USB core_clk enable failed\n");
@@ -4407,6 +4407,15 @@ static int msm_otg_probe(struct platform_device *pdev)
 	}
 
 	/*
+	 * Core reset-only clock. Mandatory.
+	 */
+	motg->core_reset = devm_reset_control_get(&pdev->dev, "phy_reset");
+	if (IS_ERR(motg->core_reset)) {
+		pr_err("%s: WARNING: core_reset not found!!\n", __func__);
+		goto core_reset_fail;
+	}
+
+	/*
 	 * If present, phy_reset is used to reset the PHY, ULPI bridge
 	 * and CSR Wrapper. This is a reset only clock.
 	 */
@@ -5016,6 +5025,7 @@ disable_phy_csr_clk:
 disable_sleep_clk:
 	if (motg->sleep_clk)
 		clk_disable_unprepare(motg->sleep_clk);
+core_reset_fail:
 put_xo_clk:
 	if (motg->xo_clk)
 		clk_put(motg->xo_clk);

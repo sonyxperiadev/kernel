@@ -1,5 +1,8 @@
 /* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
  *
+ * MDSS DSI PLL 28HPM Mainline clock API fixes/reimplementation
+ * Copyright (C) 2018 AngeloGioacchino Del Regno <kholk11@gmail.com>
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
  * only version 2 as published by the Free Software Foundation.
@@ -88,6 +91,11 @@
 #define HDMI_PLL_POLL_MAX_READS			10
 #define HDMI_PLL_POLL_TIMEOUT_US		50
 
+static inline struct hdmi_pll_vco_clk *to_hdmi_vco_clk(struct clk *clk)
+{
+	return container_of(clk, struct hdmi_pll_vco_clk, c);
+}
+
 static void hdmi_vco_disable(struct clk *c)
 {
 	struct hdmi_pll_vco_clk *vco = to_hdmi_vco_clk(c);
@@ -147,7 +155,7 @@ static int hdmi_vco_enable(struct clk *c)
 	/* poll for PLL ready status */
 	max_reads = 20;
 	timeout_us = 100;
-	if (readl_poll_timeout_atomic(
+	if (readl_poll_timeout_noirq(
 		(hdmi_pll_res->pll_base + HDMI_UNI_PLL_STATUS),
 		status, ((status & BIT(0)) == 1), max_reads, timeout_us)) {
 		pr_err("hdmi phy pll status=%x failed to Lock\n", status);
@@ -161,7 +169,7 @@ static int hdmi_vco_enable(struct clk *c)
 	/* poll for PHY ready status */
 	max_reads = 20;
 	timeout_us = 100;
-	if (readl_poll_timeout_atomic(
+	if (readl_poll_timeout_noirq(
 		(hdmi_pll_res->phy_base + HDMI_PHY_STATUS),
 		status, ((status & BIT(0)) == 1), max_reads, timeout_us)) {
 		pr_err("hdmi phy status=%x failed to Lock\n", status);
@@ -845,7 +853,7 @@ static int hdmi_pll_lock_status(struct mdss_pll_resources *hdmi_pll_res)
 	}
 
 	/* poll for PLL ready status */
-	if (readl_poll_timeout_atomic(
+	if (readl_poll_timeout_noirq(
 			(hdmi_pll_res->phy_base + HDMI_PHY_STATUS),
 			status, ((status & BIT(0)) == 1),
 			HDMI_PLL_POLL_MAX_READS,
