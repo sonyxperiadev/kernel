@@ -62,6 +62,7 @@ enum {
 	ATTR_THERMAL_PULSE_CNT,
 	ATTR_USB_USBIN_IL_CFG,
 	ATTR_APSD_RERUN_STATUS,
+	ATTR_GPIO_CTRL,
 };
 
 enum temp_status {
@@ -877,6 +878,8 @@ static void somc_chg_apsd_rerun_check_work(struct work_struct *work)
 	int rc;
 
 	if (somc_chg_is_usb_uv_hvdcp(chip)) {
+		somc_chg_charge_error_event(chip,
+					CHGERR_USBIN_UV_CONNECTED_HVDCP);
 		rc = somc_chg_apsd_wait_rerun(chip);
 		if (rc)
 			dev_err(chip->dev, "APSD rerun error rc=%d\n", rc);
@@ -1361,6 +1364,79 @@ static ssize_t somc_chg_output_voter_param(struct smbchg_chip *chip,
 	return size;
 }
 
+static void somc_chg_charge_error_event(struct smbchg_chip *chip,
+							u32 chgerr_evt)
+{
+	struct somc_charge_error *charge_error =
+					&chip->somc_params.charge_error;
+
+	if (!(charge_error->status & chgerr_evt)) {
+		charge_error->status |= chgerr_evt;
+		pr_smb(PR_SOMC, "send charge error status (%08x)\n",
+							charge_error->status);
+		power_supply_changed(chip->batt_psy);
+	}
+}
+
+static void somc_chg_set_last_uv_time(struct smbchg_chip *chip)
+{
+	struct somc_charge_error *charge_error =
+					&chip->somc_params.charge_error;
+
+	charge_error->last_uv_time_kt = ktime_get_boottime();
+}
+
+#define UV_PERIOD_VERY_SHORT_MS		35
+#define UNACCEPTABLE_SHORT_UV_COUNT	2
+static void somc_chg_check_short_uv(struct smbchg_chip *chip)
+{
+	ktime_t now_kt, uv_period_kt;
+	s64 uv_period_ms;
+	struct somc_charge_error *charge_error =
+					&chip->somc_params.charge_error;
+
+	now_kt = ktime_get_boottime();
+	uv_period_kt = ktime_sub(now_kt, charge_error->last_uv_time_kt);
+	uv_period_ms = ktime_to_ms(uv_period_kt);
+	if (uv_period_ms > UV_PERIOD_VERY_SHORT_MS)
+		return;
+
+	charge_error->short_uv_count++;
+	if (charge_error->short_uv_count == UNACCEPTABLE_SHORT_UV_COUNT)
+		somc_chg_charge_error_event(chip, CHGERR_USBIN_SHORT_UV);
+}
+
+static void somc_chg_reset_charge_error_status_work(struct work_struct *work)
+{
+	struct somc_charge_error *charge_error = container_of(work,
+						struct somc_charge_error,
+						status_reset_work.work);
+
+	charge_error->status = 0;
+	charge_error->last_uv_time_kt = ktime_set(0, 0);
+	charge_error->short_uv_count = 0;
+}
+
+#define CHGERR_STS_RESET_DELAY_MS	4000
+static void somc_chg_start_charge_error_status_resetting(
+						struct smbchg_chip *chip)
+{
+	struct somc_charge_error *charge_error =
+					&chip->somc_params.charge_error;
+
+	schedule_delayed_work(&charge_error->status_reset_work,
+				msecs_to_jiffies(CHGERR_STS_RESET_DELAY_MS));
+}
+
+static void somc_chg_cancel_charge_error_status_resetting(
+						struct smbchg_chip *chip)
+{
+	struct somc_charge_error *charge_error =
+					&chip->somc_params.charge_error;
+
+	cancel_delayed_work_sync(&charge_error->status_reset_work);
+}
+
 static ssize_t somc_chg_param_show(struct device *dev,
 				struct device_attribute *attr,
 				char *buf);
@@ -1707,6 +1783,96 @@ static ssize_t somc_chg_param_show(struct device *dev,
 	return size;
 }
 
+#define PULSE_START	0
+#define PULSE_END	50
+#define PULSE_STEP	1
+#define GPIO_WAIT	10000
+#define PON_PON_CNTL_2_TRIM	0x8F2
+#define PON_PON_MASK	0xFE
+#define PON_PON_MIN	0x04
+#define VBL_CFG		0xF1
+#define LOW_BAT_MASK	0x0F
+#define LOW_BAT_THRESH	0x01
+#define PINCTRL_GPIO111_ACTIVE	"gpio111_act"
+#define PINCTRL_GPIO111_SUSPEND	"gpio111_sus"
+static void somc_chg_set_gpio111_pinctrl(struct smbchg_chip *chip, bool state)
+{
+	struct chg_somc_params *params = &chip->somc_params;
+	int rc = 0;
+	u8 reg;
+
+	if (IS_ERR_OR_NULL(params->pin_ctrl.gpio111))
+		return;
+
+	if (state && !params->pin_ctrl.gpio111_state) {
+		pr_info("%s: GPIO_111 = ACTIVE\n", __func__);
+		rc = pinctrl_select_state(params->pin_ctrl.gpio111,
+				params->pin_ctrl.gpio111_active);
+		if (rc < 0)
+			pr_err("%s: Failed to select %s pinstate %d\n",
+				__func__, PINCTRL_GPIO111_ACTIVE, rc);
+
+		rc = smbchg_sec_masked_write(chip,
+			PON_PON_CNTL_2_TRIM, PON_PON_MASK,
+			params->pin_ctrl.pon_pon_val);
+		if (rc < 0)
+			dev_err(chip->dev,
+				"Couldn't set pon pon rc = %d\n", rc);
+		pr_info("%s: pon_pon_val = 0x%02X\n",
+			__func__, params->pin_ctrl.pon_pon_val);
+
+		smbchg_sec_masked_write(chip, chip->bat_if_base + VBL_CFG,
+				LOW_BAT_MASK, params->pin_ctrl.vbl_cfg);
+		if (rc < 0)
+			dev_err(chip->dev,
+				"Couldn't set vbl_cfg rc = %d\n", rc);
+		pr_info("%s: vbl_cfg = 0x%02X\n",
+			__func__, params->pin_ctrl.vbl_cfg);
+
+		params->pin_ctrl.gpio111_state = true;
+	} else if (!state && params->pin_ctrl.gpio111_state) {
+		pr_info("%s: GPIO_111 = SUSPEND\n", __func__);
+		rc = pinctrl_select_state(params->pin_ctrl.gpio111,
+				params->pin_ctrl.gpio111_suspend);
+		if (rc < 0)
+			pr_err("%s: Failed to select %s pinstate %d\n",
+				__func__, PINCTRL_GPIO111_SUSPEND, rc);
+
+		rc = smbchg_read(chip, &reg, PON_PON_CNTL_2_TRIM, 1);
+		if (rc < 0)
+			dev_err(chip->dev,
+				"Couldn't read pon pon rc = %d\n", rc);
+		else
+			params->pin_ctrl.pon_pon_val = reg & PON_PON_MASK;
+
+		rc = smbchg_sec_masked_write(chip,
+			PON_PON_CNTL_2_TRIM, PON_PON_MASK,
+			PON_PON_MIN);
+		if (rc < 0)
+			dev_err(chip->dev,
+				"Couldn't set pon pon rc = %d\n", rc);
+		pr_info("%s: pon_pon_val = 0x%02X\n",
+				__func__, params->pin_ctrl.pon_pon_val);
+
+		rc = smbchg_read(chip, &reg, chip->bat_if_base + VBL_CFG, 1);
+		if (rc < 0)
+			dev_err(chip->dev,
+				"Unable to read vbl_cfg rc = %d\n", rc);
+		else
+			params->pin_ctrl.vbl_cfg = reg & LOW_BAT_MASK;
+
+		smbchg_sec_masked_write(chip, chip->bat_if_base + VBL_CFG,
+				LOW_BAT_MASK, LOW_BAT_THRESH);
+		if (rc < 0)
+			dev_err(chip->dev,
+				"Couldn't set vbl_cfg rc = %d\n", rc);
+		pr_info("%s: vbl_cfg = 0x%02X\n",
+				__func__, params->pin_ctrl.vbl_cfg);
+
+		params->pin_ctrl.gpio111_state = false;
+	}
+}
+
 static ssize_t somc_chg_param_store(struct device *dev,
 				struct device_attribute *attr,
 				const char *buf, size_t count)
@@ -1714,7 +1880,7 @@ static ssize_t somc_chg_param_store(struct device *dev,
 	struct smbchg_chip *chip = dev_get_drvdata(dev);
 	struct chg_somc_params *params = &chip->somc_params;
 	const ptrdiff_t off = attr - somc_chg_attrs;
-	int ret;
+	int state = -1, ret = -EINVAL;
 
 	switch (off) {
 	case ATTR_LIMIT_USB_5V_LEVEL:
@@ -1744,6 +1910,16 @@ static ssize_t somc_chg_param_store(struct device *dev,
 			return ret;
 		}
 		break;
+	case ATTR_GPIO_CTRL:
+		ret = kstrtoint(buf, 10, &state);
+		if (ret) {
+			pr_err("Can't write GPIO: %d\n", ret);
+			return ret;
+		}
+
+		pr_info("%s: GPIO_CTRL state = %d\n", __func__, state);
+		somc_chg_set_gpio111_pinctrl(chip, !!state);
+		break;
 	default:
 		break;
 	}
@@ -1759,6 +1935,8 @@ static void somc_chg_init(struct chg_somc_params *params)
 			somc_chg_apsd_rerun_check_work);
 	INIT_DELAYED_WORK(&params->apsd.rerun_w,
 			somc_chg_apsd_rerun_work);
+	INIT_DELAYED_WORK(&params->charge_error.status_reset_work,
+			somc_chg_reset_charge_error_status_work);
 	pr_smb_ext(PR_INFO, "somc chg init success\n");
 }
 
@@ -1952,12 +2130,35 @@ static int somc_chg_smb_parse_dt(struct smbchg_chip *chip,
 			struct device_node *node)
 {
 	struct chg_somc_params *params = &chip->somc_params;
+	enum of_gpio_flags flags = 0;
 	int rc = 0;
 
 	if (!node) {
 		dev_err(chip->dev, "device tree info. missing\n");
 		return -EINVAL;
 	}
+
+	/* read the lis power supply name */
+	rc = of_property_read_string(node, "somc,lis-psy-name",
+						&chip->lis_psy_name);
+	if (rc) {
+		chip->lis_psy_name = NULL;
+		rc = 0;
+	}
+
+	chip->stat1_gpio = of_get_named_gpio_flags(node, "somc,stat1_gpio", 0, &flags);
+	if (!gpio_is_valid(chip->stat1_gpio)) {
+		dev_dbg(chip->dev, "stat1(%d) is missing\n", chip->stat1_gpio);
+		chip->stat1_gpio = -1;
+	}
+	chip->stat1_active_low = flags & OF_GPIO_ACTIVE_LOW;
+
+	chip->stat2_gpio = of_get_named_gpio_flags(node, "somc,stat2_gpio", 0, &flags);
+	if (!gpio_is_valid(chip->stat2_gpio)) {
+		dev_dbg(chip->dev, "stat2(%d) is missing\n", chip->stat2_gpio);
+		chip->stat2_gpio = -1;
+	}
+	chip->stat2_active_low = flags & OF_GPIO_ACTIVE_LOW;
 
 	SOMC_OF_PROP_READ(chip->dev, node,
 		params->thermal.usb_9v_current_max,
@@ -1974,6 +2175,32 @@ static int somc_chg_smb_parse_dt(struct smbchg_chip *chip,
 	SOMC_OF_PROP_READ(chip->dev, node,
 		params->chg_det.typec_current_max,
 		"typec-current-max", rc, 1);
+
+	params->pin_ctrl.gpio111 = devm_pinctrl_get(chip->dev);
+	if (!IS_ERR_OR_NULL(params->pin_ctrl.gpio111)) {
+		pr_info("%s: gpio111 supported\n", __func__);
+		params->pin_ctrl.gpio111_active =
+			pinctrl_lookup_state(params->pin_ctrl.gpio111,
+				PINCTRL_GPIO111_ACTIVE);
+		if (IS_ERR_OR_NULL(params->pin_ctrl.gpio111_active)) {
+			rc = PTR_ERR(params->pin_ctrl.gpio111_active);
+			pr_err("Can not lookup %s pinstate %d\n",
+					PINCTRL_GPIO111_ACTIVE, rc);
+			return -EINVAL;
+		}
+		params->pin_ctrl.gpio111_suspend =
+			pinctrl_lookup_state(params->pin_ctrl.gpio111,
+				PINCTRL_GPIO111_SUSPEND);
+		if (IS_ERR_OR_NULL(params->pin_ctrl.gpio111_suspend)) {
+			rc = PTR_ERR(params->pin_ctrl.gpio111_suspend);
+			pr_err("Can not lookup %s pinstate %d\n",
+					PINCTRL_GPIO111_SUSPEND, rc);
+			return -EINVAL;
+		}
+		params->pin_ctrl.gpio111_state = true;
+	} else {
+		pr_info("%s: gpio111 not supported\n", __func__);
+	}
 
 	if (!rc)
 		rc = somc_chg_set_step_charge_params(chip, node);

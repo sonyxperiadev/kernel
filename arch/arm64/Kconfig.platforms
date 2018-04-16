@@ -222,6 +222,15 @@ config MACH_SONY_KUGO
       If you enable this config,
       please use SONY Mobile device tree.
 
+config MACH_SONY_BLANC
+    bool "Sony Mobile BLANC"
+    depends on ARCH_SONY_LOIRE
+    help
+      Support for the SONY Mobile Blanc device
+      which is based on SONY Loire platform.
+      If you enable this config,
+      please use SONY Mobile device tree.
+
 config ARCH_SONY_TONE
     bool "Sony Mobile Tone platform"
     depends on ARCH_MSM8996

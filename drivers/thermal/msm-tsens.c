@@ -2451,6 +2451,7 @@ static int get_device_tree_data(struct platform_device *pdev,
 				"qcom,tsens-local-init");
 
 	if (of_machine_is_compatible("qcom,msm8956") ||
+	    of_machine_is_compatible("qcom,apq8056") ||
 	    of_machine_is_compatible("qcom,msm8976")) {
 		rc = get_calibration_data(pdev, tmdev);
 		if (rc) {
@@ -2712,6 +2713,7 @@ static int tsens_tm_probe(struct platform_device *pdev)
 	}
 
 	if (of_machine_is_compatible("qcom,msm8956") ||
+	    of_machine_is_compatible("qcom,apq8056") ||
 	    of_machine_is_compatible("qcom,msm8976")) {
 		tsens_generic_dt_calib_type_a(tmdev);
 	}

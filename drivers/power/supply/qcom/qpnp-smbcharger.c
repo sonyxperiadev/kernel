@@ -117,6 +117,9 @@ struct smbchg_chip {
 	u16				otg_base;
 	u16				misc_base;
 
+#ifdef CONFIG_MACH_SONY_BLANC
+	int				fake_battery_status;
+#endif
 	int				fake_battery_soc;
 	u8				revision[4];
 
@@ -299,6 +302,13 @@ struct smbchg_chip {
 	struct extcon_dev		*extcon;
 
 #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
+	struct power_supply		*lis_psy;
+	const char			*lis_psy_name;
+	int				stat1_gpio;
+	int				stat2_gpio;
+	int				stat1_active_low;
+	int				stat2_active_low;
+
 	struct chg_somc_params		somc_params;
 	struct usb_somc_params		usb_params;
 #endif
@@ -931,7 +941,8 @@ static void read_usb_type(struct smbchg_chip *chip, char **usb_type_name,
 #define BATT_TAPER_CHG_VAL		0x3
 #define CHG_INHIBIT_BIT			BIT(1)
 #define BAT_TCC_REACHED_BIT		BIT(7)
-static int get_prop_batt_status(struct smbchg_chip *chip)
+#ifndef CONFIG_MACH_SONY_BLANC
+static int __get_prop_batt_status(struct smbchg_chip *chip)
 {
 	int rc, status = POWER_SUPPLY_STATUS_DISCHARGING;
 	u8 reg = 0, chg_type;
@@ -1036,6 +1047,47 @@ out:
 	pr_smb_rt(PR_MISC, "CHGR_STS = 0x%02x\n", reg);
 	return status;
 }
+#else
+static int __lis_get_prop_batt_status(struct smbchg_chip *chip)
+{
+	int val, ret = POWER_SUPPLY_STATUS_DISCHARGING;
+
+	if (chip->fake_battery_status >= 0) {
+		ret = chip->fake_battery_status;
+		goto exit;
+	}
+	if (gpio_is_valid(chip->stat1_gpio)) {
+		val = gpio_get_value_cansleep(chip->stat1_gpio);
+		pr_smb(PR_STATUS, "stat1_gpio = 0x%02X ^ 0x%02X = 0x%02X\n",
+			val, chip->stat1_active_low,
+			(val ^ chip->stat1_active_low));
+		if (val ^ chip->stat1_active_low)
+			ret = POWER_SUPPLY_STATUS_CHARGING;
+	}
+
+	if (gpio_is_valid(chip->stat2_gpio)) {
+		val = gpio_get_value_cansleep(chip->stat2_gpio);
+		pr_smb(PR_STATUS, "stat2_gpio = 0x%02X ^ 0x%02X = 0x%02X\n",
+			val, chip->stat2_active_low,
+			(val ^ chip->stat2_active_low));
+		if (val ^ chip->stat2_active_low)
+			ret = POWER_SUPPLY_STATUS_FULL;
+	}
+
+exit:
+	pr_smb(PR_STATUS, "status = %d\n", ret);
+	return ret;
+}
+#endif
+
+static int get_prop_batt_status(struct smbchg_chip *chip)
+{
+#ifdef CONFIG_MACH_SONY_BLANC
+	return __lis_get_prop_batt_status(chip);
+#else
+	return __get_prop_batt_status(chip);
+#endif
+}
 
 #define BAT_PRES_STATUS			0x08
 #define BAT_PRES_BIT			BIT(7)
@@ -1127,33 +1179,94 @@ static int get_property_from_fg(struct smbchg_chip *chip,
 	return rc;
 }
 
+#if defined(CONFIG_QPNP_SMBCHARGER_EXTENSION) && \
+    defined(CONFIG_MACH_SONY_BLANC)
+static int get_property_from_lis(struct smbchg_chip *chip,
+		enum power_supply_property prop, int *val)
+{
+	int rc;
+	union power_supply_propval ret = {0, };
+
+	if (!chip->lis_psy && chip->lis_psy_name)
+		chip->lis_psy =
+			power_supply_get_by_name((char *)chip->lis_psy_name);
+	if (!chip->lis_psy) {
+		pr_smb(PR_STATUS, "no lis psy found\n");
+		return -EINVAL;
+	}
+
+	rc = power_supply_get_property(chip->lis_psy, prop, &ret);
+	if (rc) {
+		pr_smb(PR_STATUS,
+			"lis psy doesn't support reading prop %d rc = %d\n",
+			prop, rc);
+		return rc;
+	}
+
+	*val = ret.intval;
+	return rc;
+}
+#endif
+
 #define DEFAULT_BATT_CAPACITY	50
-static int get_prop_batt_capacity(struct smbchg_chip *chip)
+
+#ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
+__attribute__((always_inline))
+static inline int __somc_chg_get_prop_batt_capacity(struct smbchg_chip *chip)
 {
 	int capacity, rc;
 
-#ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
 	if (chip->fake_battery_soc >= 0) {
 		capacity = chip->fake_battery_soc;
 		goto exit;
 	}
+
+#ifdef CONFIG_MACH_SONY_BLANC
+	rc = get_property_from_lis(chip, POWER_SUPPLY_PROP_CAPACITY, &capacity);
+	if (rc) {
+		pr_smb(PR_STATUS, "Couldn't get capacity rc = %d\n", rc);
+		capacity = DEFAULT_BATT_CAPACITY;
+	}
 #else
+	rc = get_property_from_fg(chip, POWER_SUPPLY_PROP_CAPACITY, &capacity);
+	if (rc) {
+		pr_smb(PR_STATUS, "Couldn't get capacity rc = %d\n", rc);
+		capacity = DEFAULT_BATT_CAPACITY;
+	}
+#endif /* CONFIG_MACH_SONY_BLANC */
+exit:
+	somc_chg_lrc_check(chip);
+	capacity = somc_chg_lrc_get_capacity(&chip->somc_params, capacity);
+	somc_chg_shutdown_lowbatt(chip);
+
+	return capacity;
+}
+#else
+__attribute__((always_inline))
+static inline int __get_prop_batt_capacity(struct smbchg_chip *chip)
+{
+	int capacity, rc;
+
 	if (chip->fake_battery_soc >= 0)
 		return chip->fake_battery_soc;
-#endif
 
 	rc = get_property_from_fg(chip, POWER_SUPPLY_PROP_CAPACITY, &capacity);
 	if (rc) {
 		pr_smb(PR_STATUS, "Couldn't get capacity rc = %d\n", rc);
 		capacity = DEFAULT_BATT_CAPACITY;
 	}
-#ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
-exit:
-	somc_chg_lrc_check(chip);
-	capacity = somc_chg_lrc_get_capacity(&chip->somc_params, capacity);
-	somc_chg_shutdown_lowbatt(chip);
-#endif
+
 	return capacity;
+}
+#endif /* CONFIG_QPNP_SMBCHARGER_EXTENSION */
+
+static int get_prop_batt_capacity(struct smbchg_chip *chip)
+{
+#ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
+	return __somc_chg_get_prop_batt_capacity(chip);
+#else
+	return __get_prop_batt_capacity(chip);
+#endif
 }
 
 #define DEFAULT_BATT_TEMP		200
@@ -1161,7 +1274,12 @@ static int get_prop_batt_temp(struct smbchg_chip *chip)
 {
 	int temp, rc;
 
+#if defined(CONFIG_QPNP_SMBCHARGER_EXTENSION) && \
+    defined(CONFIG_MACH_SONY_BLANC)
+	rc = get_property_from_lis(chip, POWER_SUPPLY_PROP_TEMP, &temp);
+#else
 	rc = get_property_from_fg(chip, POWER_SUPPLY_PROP_TEMP, &temp);
+#endif
 	if (rc) {
 		pr_smb(PR_STATUS, "Couldn't get temperature rc = %d\n", rc);
 		temp = DEFAULT_BATT_TEMP;
@@ -1187,7 +1305,12 @@ static int get_prop_batt_voltage_now(struct smbchg_chip *chip)
 {
 	int uv, rc;
 
+#if defined(CONFIG_QPNP_SMBCHARGER_EXTENSION) && \
+    defined(CONFIG_MACH_SONY_BLANC)
+	rc = get_property_from_lis(chip, POWER_SUPPLY_PROP_VOLTAGE_NOW, &uv);
+#else
 	rc = get_property_from_fg(chip, POWER_SUPPLY_PROP_VOLTAGE_NOW, &uv);
+#endif
 	if (rc) {
 		pr_smb(PR_STATUS, "Couldn't get voltage rc = %d\n", rc);
 		uv = DEFAULT_BATT_VOLTAGE_NOW;
@@ -1642,8 +1765,8 @@ static void smbchg_usb_update_online_work(struct work_struct *work)
 	bool low_batt_enabled = !get_client_vote(chip->usb_suspend_votable,
 						LOW_BATT_EN_VOTER);
 
-	online = user_enabled && low_batt_enabled &&
-			chip->usb_present && !chip->very_weak_charger;
+	online = user_enabled && low_batt_enabled && chip->usb_present &&
+			!chip->somc_params.apsd.rerun_wait_irq;
 #else
 	online = user_enabled && chip->usb_present && !chip->very_weak_charger;
 #endif
@@ -2095,6 +2218,9 @@ static int smbchg_get_aicl_level_ma(struct smbchg_chip *chip)
 	}
 	if (reg & AICL_SUSP_BIT) {
 		pr_warn("AICL suspended: %02x\n", reg);
+#ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
+		somc_chg_charge_error_event(chip, CHGERR_AICL_SUSPENDED);
+#endif
 		return 0;
 	}
 	reg &= ICL_STS_MASK;
@@ -4492,8 +4618,13 @@ static void smbchg_vfloat_adjust_work(struct work_struct *work)
 	}
 
 	set_property_on_fg(chip, POWER_SUPPLY_PROP_UPDATE_NOW, 1);
+#ifdef CONFIG_MACH_SONY_BLANC
+	rc = get_property_from_lis(chip,
+			POWER_SUPPLY_PROP_VOLTAGE_NOW, &vbat_uv);
+#else
 	rc = get_property_from_fg(chip,
 			POWER_SUPPLY_PROP_VOLTAGE_NOW, &vbat_uv);
+#endif
 	if (rc) {
 		pr_smb(PR_STATUS,
 			"bms psy does not support voltage rc = %d\n", rc);
@@ -5277,6 +5408,10 @@ static void increment_aicl_count(struct smbchg_chip *chip)
 			pr_smb(PR_INTERRUPT, "Disable AICL rerun\n");
 			chip->very_weak_charger = true;
 			bad_charger = true;
+#ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
+			somc_chg_charge_error_event(chip,
+							CHGERR_FREQUENT_AICL);
+#endif
 
 			/*
 			 * Disable AICL rerun since many interrupts were
@@ -5311,6 +5446,10 @@ static void increment_aicl_count(struct smbchg_chip *chip)
 			 */
 			chip->very_weak_charger = true;
 			bad_charger = true;
+#ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
+			somc_chg_charge_error_event(chip,
+							CHGERR_AICL_SUSPENDED);
+#endif
 		}
 		if (bad_charger) {
 			pr_smb(PR_MISC,
@@ -6297,6 +6436,7 @@ static enum power_supply_property smbchg_battery_properties[] = {
 	POWER_SUPPLY_PROP_SMART_CHARGING_INTERRUPTION,
 	POWER_SUPPLY_PROP_SMART_CHARGING_STATUS,
 	POWER_SUPPLY_PROP_INPUT_CURRENT_STATE,
+	POWER_SUPPLY_PROP_CHGERR_STS,
 #endif
 };
 
@@ -6313,9 +6453,18 @@ static int smbchg_battery_set_property(struct power_supply *psy,
 	struct smbchg_chip *chip = power_supply_get_drvdata(psy);
 
 	switch (prop) {
+#ifdef CONFIG_MACH_SONY_BLANC
+	case POWER_SUPPLY_PROP_STATUS:
+		chip->fake_battery_status = val->intval;
+		power_supply_changed(chip->batt_psy);
+		break;
+#endif
 	case POWER_SUPPLY_PROP_BATTERY_CHARGING_ENABLED:
 		vote(chip->battchg_suspend_votable, BATTCHG_USER_EN_VOTER,
 				!val->intval, 0);
+#ifdef CONFIG_MACH_SONY_BLANC
+		power_supply_changed(chip->batt_psy);
+#endif
 		break;
 	case POWER_SUPPLY_PROP_CHARGING_ENABLED:
 		rc = vote(chip->usb_suspend_votable, USER_EN_VOTER,
@@ -6637,6 +6786,9 @@ static int smbchg_battery_get_property(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_INPUT_CURRENT_STATE:
 		val->intval = chip->somc_params.input_current.input_current_ave;
+		break;
+	case POWER_SUPPLY_PROP_CHGERR_STS:
+		val->intval = chip->somc_params.charge_error.status;
 		break;
 #endif
 	default:
@@ -7026,6 +7178,9 @@ static irqreturn_t usbin_ov_handler(int irq, void *_chip)
 	/* OV condition is detected. Notify it to USB psy */
 	if (reg & USBIN_OV_BIT) {
 		chip->usb_ov_det = true;
+#ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
+		somc_chg_charge_error_event(chip, CHGERR_USBIN_OV);
+#endif
 #ifdef CONFIG_USB_MSM_OTG
 		if (chip->usb_psy) {
 			pr_smb(PR_MISC, "setting usb psy health OV\n");
@@ -7109,6 +7264,23 @@ static irqreturn_t usbin_uv_handler(int irq, void *_chip)
 
 	if (chip->hvdcp_3_det_ignore_uv)
 		goto out;
+
+#ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
+	if (!chip->somc_params.apsd.rerun_wait_irq) {
+		if (reg & USBIN_UV_BIT)
+			somc_chg_set_last_uv_time(chip);
+		else
+			somc_chg_check_short_uv(chip);
+	}
+
+	if (!chip->usb_present) {
+		union power_supply_propval prop = {0, };
+		prop.intval =
+			(!(reg & USBIN_UV_BIT) && !(reg & USBIN_SRC_DET_BIT));
+		power_supply_set_property(chip->usb_psy,
+					POWER_SUPPLY_PROP_USBIN_DET, &prop);
+	}
+#endif
 
 	if ((reg & USBIN_UV_BIT) && (reg & USBIN_SRC_DET_BIT)) {
 #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
@@ -7199,6 +7371,13 @@ static irqreturn_t src_detect_handler(int irq, void *_chip)
 
 		power_supply_set_property(chip->usb_psy,
 					POWER_SUPPLY_PROP_USBIN_DET, &prop);
+	}
+
+	if (!chip->somc_params.apsd.rerun_wait_irq) {
+		if (!src_detect)
+			somc_chg_start_charge_error_status_resetting(chip);
+		else
+			somc_chg_cancel_charge_error_status_resetting(chip);
 	}
 #endif
 
@@ -9037,6 +9216,9 @@ static int smbchg_probe(struct platform_device *pdev)
 
 #ifdef CONFIG_USB_MSM_OTG
 	chip->usb_psy = usb_psy;
+#endif
+#ifdef CONFIG_MACH_SONY_BLANC
+	chip->fake_battery_status = -EINVAL;
 #endif
 
 	chip->typec_psy = typec_psy;

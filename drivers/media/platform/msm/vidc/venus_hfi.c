@@ -1749,7 +1749,8 @@ static int venus_hfi_scale_clocks(void *dev, int load,
 
 	mutex_lock(&device->lock);
 
-	if (of_machine_is_compatible("qcom,msm8956")) {
+	if (of_machine_is_compatible("qcom,msm8956") ||
+	    of_machine_is_compatible("qcom,apq8056")) {
 		device->clk_freq = __get_clock_rate(device, load, data, NULL);
 
 		rc = venus_hfi_scale_regulators(device, data);

@@ -4472,7 +4472,8 @@ static  int msm_cpp_update_gdscr_status(struct cpp_device *cpp_dev,
 {
 	if (of_machine_is_compatible("qcom,msm8936") ||
 	    of_machine_is_compatible("qcom,msm8939") ||
-	    of_machine_is_compatible("qcom,msm8956"))
+	    of_machine_is_compatible("qcom,msm8956") ||
+	    of_machine_is_compatible("qcom,apq8056"))
 		return msm_cpp_update_gdscrv1_status(cpp_dev, status);
 
 	return msm_cpp_update_gdscrv2_status(cpp_dev, status);

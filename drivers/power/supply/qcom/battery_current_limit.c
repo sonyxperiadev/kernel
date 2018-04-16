@@ -295,8 +295,13 @@ static int get_and_evaluate_battery_soc(void)
 	int battery_percentage;
 	enum bcl_threshold_state prev_soc_state;
 
+#ifdef CONFIG_MACH_SONY_BLANC
+	if (!batt_psy)
+		batt_psy = power_supply_get_by_name("lis");
+#else
 	if (!batt_psy)
 		batt_psy = power_supply_get_by_name("battery");
+#endif
 	if (batt_psy) {
 		battery_percentage = power_supply_get_property(batt_psy,
 				POWER_SUPPLY_PROP_CAPACITY, &ret);
