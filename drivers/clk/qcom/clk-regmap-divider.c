@@ -29,7 +29,8 @@ static long div_round_rate(struct clk_hw *hw, unsigned long rate,
 	struct clk_regmap_div *divider = to_clk_regmap_div(hw);
 
 	return divider_round_rate(hw, rate, prate, NULL, divider->width,
-				  CLK_DIVIDER_ROUND_CLOSEST);
+				  CLK_DIVIDER_ROUND_CLOSEST |
+				  divider->flags);
 }
 
 static int div_set_rate(struct clk_hw *hw, unsigned long rate,
