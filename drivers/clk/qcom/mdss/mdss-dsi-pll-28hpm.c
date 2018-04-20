@@ -749,6 +749,7 @@ static struct clk_regmap_div dsi_pll0_pixel_clk_src = {
 	.reg = 0x20,
 	.shift = 0,
 	.width = 4,
+	.flags = CLK_DIVIDER_POWER_OF_TWO,
 
 	.clkr = {
 		.hw.init = &(struct clk_init_data){
