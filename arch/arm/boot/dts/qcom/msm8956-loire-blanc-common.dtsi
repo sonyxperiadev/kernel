@@ -54,6 +54,7 @@
 		pinctrl-1 = <&msm_gpio_0_sus &msm_gpio_1_def>;
 		qcom,bam-tx-ep-pipe-index = <0>;
 		qcom,bam-rx-ep-pipe-index = <1>;
+		qcom,disallow-autosuspend;
 		qcom,msm-bus,name = "blsp1_hsuart1";
 		qcom,msm-bus,num-cases = <2>;
 		qcom,msm-bus,num-paths = <1>;
