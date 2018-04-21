@@ -54,6 +54,7 @@
 		pinctrl-1 = <&msm_gpio_0_sus &msm_gpio_1_def>;
 		qcom,bam-tx-ep-pipe-index = <0>;
 		qcom,bam-rx-ep-pipe-index = <1>;
+		qcom,disallow-autosuspend;
 		qcom,msm-bus,name = "blsp1_hsuart1";
 		qcom,msm-bus,num-cases = <2>;
 		qcom,msm-bus,num-paths = <1>;
@@ -71,6 +72,8 @@
 		adv7535@39 {
 			compatible = "adv7535";
 			reg = <0x39>;
+
+			instance_id = <0>;
 			adi,video-mode = <2>; /* 3 = 1080p */
 			adi,main-addr = <0x39>;
 			adi,cec-dsi-addr = <0x3C>;
@@ -311,6 +314,10 @@
 			qcom,fs-curr-ua = <10000>;
 		};
 	};
+};
+
+&mdss_dsi0_pll {
+	qcom,dsi-pll-video-mode-fixup;
 };
 
 &pm8950_l1 {
@@ -678,4 +685,6 @@
 	/delete-property/ pinctrl-3;
 	/delete-property/ qcom,platform-touch-vddio-gpio;
 	/delete-property/ qcom,platform-touch-int-gpio;
+	qcom,dsi-pref-prim-pan = <&dsi_adv7533_768p>;
+	qcom,bridge-index = <0>;
 };

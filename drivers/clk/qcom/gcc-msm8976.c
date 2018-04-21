@@ -272,9 +272,11 @@ static const char * const gcc_parent_names_cpp[] = {
 };
 
 static const struct parent_map gcc_parent_map_mdss_pix0[] = {
+	{ P_XO, 0 },
 	{ P_DSI0PLL, 1 },
 };
 static const char * const gcc_parent_names_mdss_pix0[] = {
+	"xo",
 	"dsi_pll0_pixel_clk_src",
 };
 
@@ -291,12 +293,12 @@ static const char * const gcc_parent_names_mdss_pix1[] = {
 };
 
 static const struct parent_map gcc_parent_map_mdss_byte0[] = {
-//	{ P_XO, 0 },
+	{ P_XO, 0 },
 	{ P_DSI0PLL_BYTE, 1 },
 };
 
 static const char * const gcc_parent_names_mdss_byte0[] = {
-	//"xo",
+	"xo",
 	"dsi_pll0_byte_clk_src",
 };
 
@@ -3672,7 +3674,7 @@ static struct clk_branch gcc_blsp1_ahb_clk = {
 		.enable_mask = BIT(10),
 		.hw.init = &(struct clk_init_data){
 			.name = "gcc_blsp1_ahb_clk",
-			.flags = CLK_SET_RATE_PARENT | CLK_ENABLE_HAND_OFF,
+			.flags = CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -3687,7 +3689,7 @@ static struct clk_branch gcc_blsp2_ahb_clk = {
 		.enable_mask = BIT(20),
 		.hw.init = &(struct clk_init_data){
 			.name = "gcc_blsp2_ahb_clk",
-			.flags = CLK_SET_RATE_PARENT | CLK_ENABLE_HAND_OFF,
+			.flags = CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
 	},

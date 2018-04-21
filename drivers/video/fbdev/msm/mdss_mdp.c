@@ -2115,7 +2115,6 @@ static void mdss_mdp_hw_rev_caps_init(struct mdss_data_type *mdata)
 		mdata->per_pipe_ib_factor.denom = 5;
 		mdata->apply_post_scale_bytes = false;
 		mdata->hflip_buffer_reused = false;
-		mdata->min_prefill_lines = 25;
 		set_bit(MDSS_QOS_OVERHEAD_FACTOR, mdata->mdss_qos_map);
 		set_bit(MDSS_QOS_PER_PIPE_LUT, mdata->mdss_qos_map);
 		set_bit(MDSS_QOS_SIMPLIFIED_PREFILL, mdata->mdss_qos_map);
@@ -2127,6 +2126,7 @@ static void mdss_mdp_hw_rev_caps_init(struct mdss_data_type *mdata)
 		mdss_set_quirk(mdata, MDSS_QUIRK_MIN_BUS_VOTE);
 		mdss_set_quirk(mdata, MDSS_QUIRK_DMA_BI_DIR);
 		mdss_set_quirk(mdata, MDSS_QUIRK_NEED_SECURE_MAP);
+		mdss_set_quirk(mdata, MDSS_QUIRK_MDP_CLK_SET_RATE);
 		break;
 	case MDSS_MDP_HW_REV_114:
 		/* disable ECG for 28nm PHY platform */
