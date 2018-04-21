@@ -72,6 +72,8 @@
 		adv7535@39 {
 			compatible = "adv7535";
 			reg = <0x39>;
+
+			instance_id = <0>;
 			adi,video-mode = <2>; /* 3 = 1080p */
 			adi,main-addr = <0x39>;
 			adi,cec-dsi-addr = <0x3C>;
@@ -683,4 +685,6 @@
 	/delete-property/ pinctrl-3;
 	/delete-property/ qcom,platform-touch-vddio-gpio;
 	/delete-property/ qcom,platform-touch-int-gpio;
+	qcom,dsi-pref-prim-pan = <&dsi_adv7533_768p>;
+	qcom,bridge-index = <0>;
 };
