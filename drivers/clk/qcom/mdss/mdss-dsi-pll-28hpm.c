@@ -625,6 +625,19 @@ int digital_get_div(void *context, unsigned int reg, unsigned int *div)
 	return rc;
 }
 
+int digital_get_div_video(void *context, unsigned int reg, unsigned int *div)
+{
+	int rc = digital_get_div(context, reg, div);
+
+	if (*div != 0) {
+		if (*div > 1)
+			*div -= 1;
+		*div -= 1;
+	}
+
+ 	return rc;
+}
+
 int set_byte_mux_sel(void *context, unsigned int reg, unsigned int val)
 {
 	struct mdss_pll_resources *dsi_pll_res = context;
@@ -936,6 +949,7 @@ int dsi_pll_clock_register_28hpm(struct platform_device *pdev,
 	struct clk *clk;
 	struct regmap *regmap;
 	int num_clks = ARRAY_SIZE(mdss_dsi_pllcc_28hpm);
+	bool video_fixup;
 
 	if (!pdev || !pdev->dev.of_node) {
 		pr_err("Invalid input parameters\n");
@@ -960,6 +974,14 @@ int dsi_pll_clock_register_28hpm(struct platform_device *pdev,
 	}
 
 	clk_data->clk_num = num_clks;
+
+	video_fixup = of_property_read_bool(pdev->dev.of_node,
+					"qcom,dsi-pll-video-mode-fixup");
+	if (video_fixup) {
+		dev_info(&pdev->dev,
+			"Applying pixel clock fixup for video mode\n");
+		digital_postdiv_regmap_bus.reg_read = digital_get_div_video;
+	}
 
 	if (!pll_res->index) {
 		regmap = devm_regmap_init(&pdev->dev, &fixed_4div_regmap_bus,
