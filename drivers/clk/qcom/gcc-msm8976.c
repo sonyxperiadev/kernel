@@ -272,9 +272,11 @@ static const char * const gcc_parent_names_cpp[] = {
 };
 
 static const struct parent_map gcc_parent_map_mdss_pix0[] = {
+	{ P_XO, 0 },
 	{ P_DSI0PLL, 1 },
 };
 static const char * const gcc_parent_names_mdss_pix0[] = {
+	"xo",
 	"dsi_pll0_pixel_clk_src",
 };
 
@@ -291,12 +293,12 @@ static const char * const gcc_parent_names_mdss_pix1[] = {
 };
 
 static const struct parent_map gcc_parent_map_mdss_byte0[] = {
-//	{ P_XO, 0 },
+	{ P_XO, 0 },
 	{ P_DSI0PLL_BYTE, 1 },
 };
 
 static const char * const gcc_parent_names_mdss_byte0[] = {
-	//"xo",
+	"xo",
 	"dsi_pll0_byte_clk_src",
 };
 
