@@ -314,6 +314,10 @@
 	};
 };
 
+&mdss_dsi0_pll {
+	qcom,dsi-pll-video-mode-fixup;
+};
+
 &pm8950_l1 {
 	regulator-min-microvolt = <1100000>;
 	regulator-max-microvolt = <1300000>;
