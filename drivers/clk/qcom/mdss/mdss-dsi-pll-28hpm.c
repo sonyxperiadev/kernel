@@ -510,7 +510,7 @@ int fixed_4div_set_div(void *context, unsigned int reg, unsigned int div)
 	}
 
 	MDSS_PLL_REG_W(dsi_pll_res->pll_base,
-				DSI_PHY_PLL_UNIPHY_PLL_POSTDIV2_CFG, div);
+				DSI_PHY_PLL_UNIPHY_PLL_POSTDIV2_CFG, div + 1);
 
 	mdss_pll_resource_enable(dsi_pll_res, false);
 	return rc;
@@ -531,11 +531,9 @@ int fixed_4div_get_div(void *context, unsigned int reg, unsigned int *div)
 	}
 
 	*div = MDSS_PLL_REG_R(dsi_pll_res->pll_base,
-				DSI_PHY_PLL_UNIPHY_PLL_POSTDIV2_CFG) + 1;
+				DSI_PHY_PLL_UNIPHY_PLL_POSTDIV2_CFG);
 
-	if (*div == 0)
-		*div = 1;
-	else
+	if (*div != 0)
 		*div -= 1;
 
 	mdss_pll_resource_enable(dsi_pll_res, false);
@@ -577,11 +575,9 @@ int analog_get_div(void *context, unsigned int reg, unsigned int *div)
 	}
 
 	*div = MDSS_PLL_REG_R(dsi_pll_res->pll_base,
-		DSI_PHY_PLL_UNIPHY_PLL_POSTDIV1_CFG) + 1;
+		DSI_PHY_PLL_UNIPHY_PLL_POSTDIV1_CFG);
 
-	if (*div == 0)
-		*div = 1;
-	else
+	if (*div != 0)
 		*div -= 1;
 
 	mdss_pll_resource_enable(dsi_pll_res, false);
@@ -622,12 +618,7 @@ int digital_get_div(void *context, unsigned int reg, unsigned int *div)
 	}
 
 	*div = MDSS_PLL_REG_R(dsi_pll_res->pll_base,
-				DSI_PHY_PLL_UNIPHY_PLL_POSTDIV3_CFG) + 1;
-
-	if (*div == 0)
-		*div = 1; 
-	else
-		*div -= 1;
+				DSI_PHY_PLL_UNIPHY_PLL_POSTDIV3_CFG);
 
 	mdss_pll_resource_enable(dsi_pll_res, false);
 
@@ -748,7 +739,7 @@ static struct clk_fixed_factor dsi_pll0_indirect_path_div2_clk = {
 static struct clk_regmap_div dsi_pll0_pixel_clk_src = {
 	.reg = 0x20,
 	.shift = 0,
-	.width = 4,
+	.width = 8,
 
 	.clkr = {
 		.hw.init = &(struct clk_init_data){
@@ -780,31 +771,31 @@ static struct clk_regmap_mux dsi_pll0_byte_mux = {
 	},
 };
 
-static struct clk_fixed_factor dsi_pll0_4div_clk = {
-	.div = 4,
-	.mult = 1,
+static struct clk_regmap_div dsi_pll0_4div_clk = {
+	.shift = 0,
+	.width = 1,
 
-	.hw.init = &(struct clk_init_data){
+	.clkr.hw.init = &(struct clk_init_data){
 		.name = "dsi_pll0_4div_clk",
 		.parent_names =
 			(const char *[]){ "dsi_pll0_byte_mux" },
 		.num_parents = 1,
 		.flags = (CLK_SET_RATE_PARENT),
-		.ops = &clk_fixed_factor_ops,
+		.ops = &clk_regmap_div_ops,
 	},
 };
 
-static struct clk_regmap_div dsi_pll0_byte_clk_src = {
-	.shift = 0,
-	.width = 1,
+static struct clk_fixed_factor dsi_pll0_byte_clk_src = {
+	.div = 4,
+	.mult = 1,
 
-	.clkr.hw.init = &(struct clk_init_data){
+	.hw.init = &(struct clk_init_data){
 		.name = "dsi_pll0_byte_clk_src",
 		.parent_names =
 			(const char *[]){ "dsi_pll0_4div_clk" },
 		.num_parents = 1,
 		.flags = (CLK_SET_RATE_PARENT),
-		.ops = &clk_regmap_div_ops,
+		.ops = &clk_fixed_factor_ops,
 	},
 };
 
@@ -859,7 +850,7 @@ static struct clk_fixed_factor dsi_pll1_indirect_path_div2_clk = {
 static struct clk_regmap_div dsi_pll1_pixel_clk_src = {
 	.reg = 0x20,
 	.shift = 0,
-	.width = 4,
+	.width = 8,
 
 	.clkr = {
 		.hw.init = &(struct clk_init_data){
@@ -891,48 +882,49 @@ static struct clk_regmap_mux dsi_pll1_byte_mux = {
 	},
 };
 
-static struct clk_fixed_factor dsi_pll1_4div_clk = {
+static struct clk_regmap_div dsi_pll1_4div_clk = {
+	.shift = 0,
+	.width = 1,
+
+	.clkr.hw.init = &(struct clk_init_data){
+		.name = "dsi_pll1_4div_clk",
+		.parent_names =
+			(const char *[]){ "dsi_pll1_byte_mux" },
+		.num_parents = 1,
+		.flags = (CLK_SET_RATE_PARENT),
+		.ops = &clk_regmap_div_ops,
+	},
+};
+
+static struct clk_fixed_factor dsi_pll1_byte_clk_src = {
 	.div = 4,
 	.mult = 1,
 
 	.hw.init = &(struct clk_init_data){
-		.name = "dsi_pll1_4div_clk",
+		.name = "dsi_pll1_byte_clk_src",
 		.parent_names =
-			(const char *[]){ "dsi_pll1_byte_mux" },
+			(const char *[]){ "dsi_pll1_4div_clk" },
 		.num_parents = 1,
 		.flags = (CLK_SET_RATE_PARENT),
 		.ops = &clk_fixed_factor_ops,
 	},
 };
 
-static struct clk_regmap_div dsi_pll1_byte_clk_src = {
-	.shift = 0,
-	.width = 1,
-
-	.clkr.hw.init = &(struct clk_init_data){
-		.name = "dsi_pll1_byte_clk_src",
-		.parent_names =
-			(const char *[]){ "dsi_pll1_4div_clk" },
-		.num_parents = 1,
-		.flags = (CLK_SET_RATE_PARENT),
-		.ops = &clk_regmap_div_ops,
-	},
-};
 static struct clk_hw *mdss_dsi_pllcc_28hpm[] = {
 	[HPM_BYTE0_MUX_CLK]		= &dsi_pll0_byte_mux.clkr.hw,
-	[HPM_BYTE0_SRC_CLK]		= &dsi_pll0_byte_clk_src.clkr.hw,
+	[HPM_BYTE0_SRC_CLK]		= &dsi_pll0_byte_clk_src.hw,
 	[HPM_PIX0_SRC_CLK]		= &dsi_pll0_pixel_clk_src.clkr.hw,
 	[HPM_ANALOG_POSTDIV_0_CLK]	= &dsi_pll0_analog_postdiv_clk.clkr.hw,
 	[HPM_INDIR_PATH_DIV2_0_CLK]	= &dsi_pll0_indirect_path_div2_clk.hw,
-	[HPM_4DIV_0_CLK]		= &dsi_pll0_4div_clk.hw,
+	[HPM_4DIV_0_CLK]		= &dsi_pll0_4div_clk.clkr.hw,
 	[HPM_VCO_CLK_0_CLK]		= &dsi_pll0_vco_clk.hw,
 
 	[HPM_BYTE1_MUX_CLK]		= &dsi_pll1_byte_mux.clkr.hw,
-	[HPM_BYTE1_SRC_CLK]		= &dsi_pll1_byte_clk_src.clkr.hw,
+	[HPM_BYTE1_SRC_CLK]		= &dsi_pll1_byte_clk_src.hw,
 	[HPM_PIX1_SRC_CLK]		= &dsi_pll1_pixel_clk_src.clkr.hw,
 	[HPM_ANALOG_POSTDIV_1_CLK]	= &dsi_pll1_analog_postdiv_clk.clkr.hw,
 	[HPM_INDIR_PATH_DIV2_1_CLK]	= &dsi_pll1_indirect_path_div2_clk.hw,
-	[HPM_4DIV_1_CLK]		= &dsi_pll1_4div_clk.hw,
+	[HPM_4DIV_1_CLK]		= &dsi_pll1_4div_clk.clkr.hw,
 	[HPM_VCO_CLK_1_CLK]		= &dsi_pll1_vco_clk.hw,
 };
 
@@ -972,7 +964,7 @@ int dsi_pll_clock_register_28hpm(struct platform_device *pdev,
 	if (!pll_res->index) {
 		regmap = devm_regmap_init(&pdev->dev, &fixed_4div_regmap_bus,
 					pll_res, &dsi_pll_28hpm_config);
-		dsi_pll0_byte_clk_src.clkr.regmap = regmap;
+		dsi_pll0_4div_clk.clkr.regmap = regmap;
 
 		regmap = devm_regmap_init(&pdev->dev, &digital_postdiv_regmap_bus,
 					pll_res, &dsi_pll_28hpm_config);
@@ -1009,7 +1001,7 @@ int dsi_pll_clock_register_28hpm(struct platform_device *pdev,
 	} else {
 		regmap = devm_regmap_init(&pdev->dev, &fixed_4div_regmap_bus,
 					pll_res, &dsi_pll_28hpm_config);
-		dsi_pll1_byte_clk_src.clkr.regmap = regmap;
+		dsi_pll1_4div_clk.clkr.regmap = regmap;
 
 		regmap = devm_regmap_init(&pdev->dev, &digital_postdiv_regmap_bus,
 					pll_res, &dsi_pll_28hpm_config);
