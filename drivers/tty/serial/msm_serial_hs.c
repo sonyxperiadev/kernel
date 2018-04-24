@@ -268,6 +268,7 @@ struct msm_hs_port {
 	void *ipc_msm_hs_pwr_ctxt;
 	int ipc_debug_mask;
 	bool no_autosuspend;
+	bool is_bt_port;
 };
 
 static const struct of_device_id msm_hs_match_table[] = {
@@ -317,14 +318,16 @@ static int msm_hs_ioctl(struct uart_port *uport, unsigned int cmd,
 	case MSM_ENABLE_UART_CLOCK: {
 		ret = msm_hs_request_clock_on(&msm_uport->uport);
 #ifdef CONFIG_BT_MSM_SLEEP
-		bluesleep_outgoing_data();
+		if (msm_uport->is_bt_port)
+			bluesleep_outgoing_data();
 #endif
 		break;
 	}
 	case MSM_DISABLE_UART_CLOCK: {
 		ret = msm_hs_request_clock_off(&msm_uport->uport);
 #ifdef CONFIG_BT_MSM_SLEEP
-		bluesleep_tx_allow_sleep();
+		if (msm_uport->is_bt_port)
+			bluesleep_tx_allow_sleep();
 #endif
 		break;
 	}
@@ -1490,7 +1493,8 @@ static void msm_hs_submit_tx_locked(struct uart_port *uport)
 
 #if defined(CONFIG_BT_MSM_SLEEP) && !defined(CONFIG_LINE_DISCIPLINE_DRIVER)
 	/* Notify the bluesleep driver of outgoing data, if available. */
-	bluesleep_outgoing_data();
+	if (msm_uport->is_bt_port)
+		bluesleep_outgoing_data();
 #endif
 
 	MSM_HS_DBG("%s():Enqueue Tx Cmd, ret %d\n", __func__, ret);
@@ -2776,7 +2780,13 @@ static int msm_hs_startup(struct uart_port *uport)
 
 
 	spin_lock_irqsave(&uport->lock, flags);
-#ifndef CONFIG_BT_MSM_SLEEP
+
+#ifdef CONFIG_BT_MSM_SLEEP
+	if (!msm_uport->is_bt_port) {
+		atomic_set(&msm_uport->client_count, 0);
+		atomic_set(&msm_uport->client_req_state, 0);
+	}
+#else
 	atomic_set(&msm_uport->client_count, 0);
 	atomic_set(&msm_uport->client_req_state, 0);
 #endif
@@ -3446,6 +3456,9 @@ static int msm_hs_probe(struct platform_device *pdev)
 
 	msm_uport->no_autosuspend = of_property_read_bool(pdev->dev.of_node,
 			"qcom,disallow-autosuspend");
+
+	msm_uport->is_bt_port = of_property_read_bool(pdev->dev.of_node,
+			"qcom,bluetooth-serial-port");
 
 	msm_hs_get_pinctrl_configs(uport);
 	/* Get required resources for BAM HSUART */
