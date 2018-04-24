@@ -123,6 +123,7 @@
 		/delete-property/ qcom,rx-char-to-inject;
 		qcom,bam-tx-ep-pipe-index = <2>;
 		qcom,bam-rx-ep-pipe-index = <3>;
+		qcom,bluetooth-serial-port;
 		pinctrl-names = "default", "sleep";
 		pinctrl-0 = <&msm_gpio_41 &msm_gpio_42 &msm_gpio_43 &msm_gpio_44_active>;
 		pinctrl-1 = <&msm_gpio_41 &msm_gpio_42 &msm_gpio_43 &msm_gpio_44_suspend>;
