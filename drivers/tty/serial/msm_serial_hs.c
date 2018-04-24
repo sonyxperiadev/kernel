@@ -3345,7 +3345,7 @@ static void  msm_serial_hs_rt_init(struct uart_port *uport)
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
 	int delay = 100;
 
-	if (!msm_uport->no_autosuspend)
+	if (msm_uport->no_autosuspend)
 		delay = -1;
 
 	MSM_HS_DBG("%s(): Enabling runtime pm\n", __func__);
