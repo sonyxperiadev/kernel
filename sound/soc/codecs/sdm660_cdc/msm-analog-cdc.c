@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -2796,7 +2796,7 @@ static void wcd_imped_config(struct snd_soc_codec *codec,
 					0x20, 0x00);
 				snd_soc_update_bits(codec,
 					MSM89XX_PMIC_ANALOG_NCP_VCTRL,
-					0x07, 0x04);
+					0x07, 0x07);
 			}
 			break;
 		}
@@ -2865,7 +2865,11 @@ static int msm_anlg_cdc_hphl_dac_event(struct snd_soc_dapm_widget *w,
 			MSM89XX_PMIC_ANALOG_RX_HPH_L_PA_DAC_CTL, 0x02, 0x00);
 		break;
 	case SND_SOC_DAPM_POST_PMD:
-		wcd_imped_config(codec, impedl, false);
+		if (!ret)
+			wcd_imped_config(codec, impedl, false);
+		else
+			dev_dbg(codec->dev, "Failed to get mbhc impedance %d\n",
+				ret);
 		snd_soc_update_bits(codec,
 			MSM89XX_PMIC_DIGITAL_CDC_ANA_CLK_CTL, 0x02, 0x00);
 		snd_soc_update_bits(codec,
