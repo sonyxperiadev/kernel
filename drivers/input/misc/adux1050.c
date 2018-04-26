@@ -609,7 +609,7 @@ inline int update_calib_settings(struct adux1050_chip *adux1050, u16 total_stg,
 
 	pr_info("Calib status = %d\n", adux1050->dac_calib.cal_flags);
 	/*Restoring the Auto threshold mode if enabled previously*/
-	if (temp_baseline_ctrl & AUTO_TH_MASK)
+	if (temp_baseline_ctrl & AUTO_TH_MASK) {
 		err = adux1050->write(adux1050->dev, BASELINE_CTRL_REG,
 				&temp_baseline_ctrl, DEF_WR);
 		if (err < DEF_WR) {
@@ -617,6 +617,7 @@ inline int update_calib_settings(struct adux1050_chip *adux1050, u16 total_stg,
 				err, __FILE__);
 			goto err_calib;
 		}
+	}
 	/* Reenable the interrupt */
 	err = adux1050->write(adux1050->dev, INT_CTRL_REG,
 			      &int_ctrl_reg, DEF_WR);
@@ -885,15 +886,16 @@ static int adux1050_hw_init(struct adux1050_chip *adux1050)
 		}
 	}
 	/* Baseline registers update */
-	if (adux1050->bs_reg[STG_ZERO].wr_flag == ADUX1050_ENABLE)
+	if (adux1050->bs_reg[STG_ZERO].wr_flag == ADUX1050_ENABLE) {
 		err = adux1050->write(adux1050->dev, BASELINE_STG0_REG,
 				&adux1050->bs_reg[STG_ZERO].value,
 				DEF_WR);
-	if (err < DEF_WR) {
-		dev_err(adux1050->dev, "I2C WR Err %d in %s\n", err, __FILE__);
-		return err;
+		if (err < DEF_WR) {
+			dev_err(adux1050->dev, "I2C WR Err %d in %s\n", err, __FILE__);
+			return err;
+		}
 	}
-	if (adux1050->bs_reg[STG_ONE].wr_flag == ADUX1050_ENABLE)
+	if (adux1050->bs_reg[STG_ONE].wr_flag == ADUX1050_ENABLE) {
 		err = adux1050->write(adux1050->dev, BASELINE_STG1_REG,
 				&adux1050->bs_reg[STG_ONE].value,
 				DEF_WR);
@@ -902,7 +904,8 @@ static int adux1050_hw_init(struct adux1050_chip *adux1050)
 				err, __FILE__);
 			return err;
 		}
-	if (adux1050->bs_reg[STG_TWO].wr_flag == ADUX1050_ENABLE)
+	}
+	if (adux1050->bs_reg[STG_TWO].wr_flag == ADUX1050_ENABLE) {
 		err = adux1050->write(adux1050->dev, BASELINE_STG2_REG,
 				&adux1050->bs_reg[STG_TWO].value,
 				DEF_WR);
@@ -911,7 +914,8 @@ static int adux1050_hw_init(struct adux1050_chip *adux1050)
 				err, __FILE__);
 			return err;
 		}
-	if (adux1050->bs_reg[STG_THREE].wr_flag == ADUX1050_ENABLE)
+	}
+	if (adux1050->bs_reg[STG_THREE].wr_flag == ADUX1050_ENABLE) {
 		err = adux1050->write(adux1050->dev, BASELINE_STG3_REG,
 				&adux1050->bs_reg[STG_THREE].value,
 				DEF_WR);
@@ -920,6 +924,7 @@ static int adux1050_hw_init(struct adux1050_chip *adux1050)
 				err, __FILE__);
 			return err;
 		}
+	}
 
 	/* Restoring the power mode given in configuration */
 	if (pwr_ctrl_buff) {
