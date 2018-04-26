@@ -85,6 +85,8 @@ static int msm_digcdc_clock_control(bool flag)
 	if (flag) {
 		mutex_lock(&pdata->cdc_int_mclk0_mutex);
 		if (atomic_read(&pdata->int_mclk0_enabled) == false) {
+			if (msm_dig_cdc->regmap->cache_only == true)
+				return ret;
 			if (pdata->native_clk_set)
 				pdata->digital_cdc_core_clk.clk_freq_in_hz =
 							NATIVE_MCLK_RATE;
@@ -104,8 +106,6 @@ static int msm_digcdc_clock_control(bool flag)
 				 */
 				msm_dig_cdc->regmap->cache_only = true;
 				return ret;
-			} else {
-				msm_dig_cdc->regmap->cache_only = false;
 			}
 			pr_debug("enabled digital codec core clk\n");
 			atomic_set(&pdata->int_mclk0_enabled, true);
