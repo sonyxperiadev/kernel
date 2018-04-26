@@ -449,13 +449,14 @@ static void diagfwd_data_read_untag_done(struct diagfwd_info *fwd_info,
 					fwd_info->buf_2->data_raw == buf) {
 			flag_buf_2 = 1;
 			temp_ptr_cpd = fwd_info->buf_2;
-			if (fwd_info->type == TYPE_DATA)
+			if (fwd_info->type == TYPE_DATA) {
 				temp_buf_upd_1 =
 				fwd_info->buf_upd_1_b->data_raw;
 				if (peripheral ==
 					PERIPHERAL_LPASS)
 					temp_buf_upd_2 =
 					fwd_info->buf_upd_2_b->data_raw;
+			}
 		} else {
 			pr_err("diag: In %s, no match for buffer %pK, peripheral %d, type: %d\n",
 			       __func__, buf, peripheral,
