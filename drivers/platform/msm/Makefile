@@ -20,4 +20,5 @@ obj-$(CONFIG_MSM_EXT_DISPLAY) += msm_ext_display.o
 
 #TODO: remove me b/62058353
 subdir-ccflags-y += \
-	-Wno-enum-conversion
+	-Wno-enum-conversion \
+	-Wno-ignored-attributes
