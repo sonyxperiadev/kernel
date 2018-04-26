@@ -15519,7 +15519,6 @@ wl_cfg80211_wbtext_config(struct net_device *ndev, char *data, char *command, in
 			data++;
 			rp->roam_prof[i].cu_avg_calc_dur = simple_strtol(data, &data, 10);
 			/* filling rows */
-			rp->roam_prof[i].roam_flags = WL_ROAM_PROF_DEFAULT;
 			rp->roam_prof[i].rssi_boost_thresh = WL_JOIN_PREF_RSSI_BOOST_MIN;
 			rp->roam_prof[i].rssi_boost_delta = 0;
 			rp->roam_prof[i].nfscan = WL_ROAM_FULLSCAN_NTIMES;
