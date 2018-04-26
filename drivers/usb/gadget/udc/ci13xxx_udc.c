@@ -2895,7 +2895,7 @@ static int ep_dequeue(struct usb_ep *ep, struct usb_request *req)
 
 	dbg_event(_usb_addr(mEp), "DEQUEUE", 0);
 
-	if ((mEp->type == USB_ENDPOINT_XFER_CONTROL)) {
+	if (mEp->type == USB_ENDPOINT_XFER_CONTROL) {
 		hw_ep_flush(ci, ci->ep0out->num, RX);
 		hw_ep_flush(ci, ci->ep0in->num, TX);
 	} else {
