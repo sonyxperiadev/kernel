@@ -1330,17 +1330,17 @@ static void mdss_dsi_phy_regulator_ctrl(struct mdss_dsi_ctrl_pdata *ctrl,
 				mdss_dsi_20nm_phy_regulator_enable(ctrl);
 				break;
 			default:
-			/*
-			 * For dual dsi case, do not reconfigure dsi phy
-			 * regulator if the other dsi controller is still
-			 * active.
-			 */
-			if (!mdss_dsi_is_hw_config_dual(sdata) ||
-				(mdss_dsi_is_ctrl_clk_master(ctrl) &&
-					pinfo->ulps_suspend_enabled) ||
-				(other_ctrl && (!other_ctrl->is_phyreg_enabled
-						|| other_ctrl->mmss_clamp)))
-				mdss_dsi_28nm_phy_regulator_enable(ctrl);
+				/*
+				 * For dual dsi case, do not reconfigure dsi phy
+				 * regulator if the other dsi controller is still
+				 * active.
+				 */
+				if (!mdss_dsi_is_hw_config_dual(sdata) ||
+					(mdss_dsi_is_ctrl_clk_master(ctrl) &&
+						pinfo->ulps_suspend_enabled) ||
+					(other_ctrl && (!other_ctrl->is_phyreg_enabled
+							|| other_ctrl->mmss_clamp)))
+					mdss_dsi_28nm_phy_regulator_enable(ctrl);
 				break;
 			}
 		}
