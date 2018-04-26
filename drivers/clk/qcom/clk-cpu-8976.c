@@ -1587,11 +1587,11 @@ static void __init cpu_clock_early_sel(u32 alias)
 
 	/* Wait for update to take effect */
 	for (count = 500; count > 0; count--) {
-		if (!(readl_relaxed(base)) & BIT(0))
+		if (!(readl_relaxed(base) & BIT(0)))
 			break;
 		udelay(1);
 	}
-	if (!(readl_relaxed(base)) & BIT(0))
+	if (!(readl_relaxed(base) & BIT(0)))
 		panic("RCG configuration didn't update!\n");
 
 	/* Enable the branch */
