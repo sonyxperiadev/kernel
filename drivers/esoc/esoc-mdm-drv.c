@@ -48,7 +48,7 @@ static int esoc_msm_restart_handler(struct notifier_block *nb,
 	struct mdm_drv *mdm_drv = container_of(nb, struct mdm_drv,
 					esoc_restart);
 	struct esoc_clink *esoc_clink = mdm_drv->esoc_clink;
-	const struct esoc_clink_ops const *clink_ops = esoc_clink->clink_ops;
+	const struct esoc_clink_ops *clink_ops = esoc_clink->clink_ops;
 	if (action == SYS_RESTART) {
 		if (mdm_dbg_stall_notify(ESOC_PRIMARY_REBOOT))
 			return NOTIFY_OK;
@@ -110,7 +110,7 @@ static void mdm_crash_shutdown(const struct subsys_desc *mdm_subsys)
 					container_of(mdm_subsys,
 							struct esoc_clink,
 								subsys);
-	const struct esoc_clink_ops const *clink_ops = esoc_clink->clink_ops;
+	const struct esoc_clink_ops *clink_ops = esoc_clink->clink_ops;
 	if (mdm_dbg_stall_notify(ESOC_PRIMARY_CRASH))
 		return;
 	clink_ops->notify(ESOC_PRIMARY_CRASH, esoc_clink);
@@ -123,7 +123,7 @@ static int mdm_subsys_shutdown(const struct subsys_desc *crashed_subsys,
 	struct esoc_clink *esoc_clink =
 	 container_of(crashed_subsys, struct esoc_clink, subsys);
 	struct mdm_drv *mdm_drv = esoc_get_drv_data(esoc_clink);
-	const struct esoc_clink_ops const *clink_ops = esoc_clink->clink_ops;
+	const struct esoc_clink_ops *clink_ops = esoc_clink->clink_ops;
 
 	if (mdm_drv->mode == CRASH || mdm_drv->mode == PEER_CRASH) {
 		if (mdm_dbg_stall_cmd(ESOC_PREPARE_DEBUG))
@@ -168,7 +168,7 @@ static int mdm_subsys_powerup(const struct subsys_desc *crashed_subsys)
 				container_of(crashed_subsys, struct esoc_clink,
 								subsys);
 	struct mdm_drv *mdm_drv = esoc_get_drv_data(esoc_clink);
-	const struct esoc_clink_ops const *clink_ops = esoc_clink->clink_ops;
+	const struct esoc_clink_ops *clink_ops = esoc_clink->clink_ops;
 	int timeout = INT_MAX;
 
 	if (!esoc_clink->auto_boot && !esoc_req_eng_enabled(esoc_clink)) {
@@ -220,7 +220,7 @@ static int mdm_subsys_ramdumps(int want_dumps,
 	struct esoc_clink *esoc_clink =
 				container_of(crashed_subsys, struct esoc_clink,
 								subsys);
-	const struct esoc_clink_ops const *clink_ops = esoc_clink->clink_ops;
+	const struct esoc_clink_ops *clink_ops = esoc_clink->clink_ops;
 
 	if (want_dumps) {
 		ret = clink_ops->cmd_exe(ESOC_EXE_DEBUG, esoc_clink);
