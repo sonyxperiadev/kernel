@@ -97,7 +97,7 @@ struct vreg_config {
 	bool is_optional;
 };
 
-static const struct vreg_config const vreg_conf[] = {
+static const struct vreg_config vreg_conf[] = {
 	{ "vcc_spi", 1800000UL, 1800000UL, 10, true},
 #ifndef CONFIG_ARCH_SONY_LOIRE
 	{ "vdd_ana", 1800000UL, 1800000UL, 6000, false},
