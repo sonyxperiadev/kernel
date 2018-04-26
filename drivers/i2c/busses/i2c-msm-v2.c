@@ -2856,7 +2856,7 @@ static const struct i2c_algorithm i2c_msm_frmwrk_algrtm = {
 	.functionality	= i2c_msm_frmwrk_func,
 };
 
-static const char const *i2c_msm_adapter_name = "MSM-I2C-v2-adapter";
+static const char *i2c_msm_adapter_name = "MSM-I2C-v2-adapter";
 
 static int i2c_msm_frmwrk_reg(struct platform_device *pdev,
 						struct i2c_msm_ctrl *ctrl)

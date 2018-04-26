@@ -361,7 +361,7 @@ static const struct regmap_config mux_blocks_regmap_config = {
 	.fast_io        = true,
 };
 
-static const char const *mux_names[] = {"c0", "c1", "cci"};
+static const char *mux_names[] = {"c0", "c1", "cci"};
 
 #define CPU_LATENCY_NO_L2_PC_US (280)
 
