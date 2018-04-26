@@ -3544,7 +3544,7 @@ static void clearpad_funcarea_initialize(struct clearpad_t *this)
 	struct clearpad_area_t pointer_area;
 	struct clearpad_button_data_t *button;
 	struct clearpad_pointer_data_t *pointer_data;
-	static const char const *func_name[] = {
+	static const char *func_name[] = {
 		[SYN_FUNCAREA_INSENSIBLE] = "insensible",
 		[SYN_FUNCAREA_POINTER] = "pointer",
 		[SYN_FUNCAREA_BUTTON] = "button",
