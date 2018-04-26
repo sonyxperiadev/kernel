@@ -1713,7 +1713,7 @@ int wl_android_set_ibss_beacon_ouidata(struct net_device *dev, char *command, in
 	vndr_ie_setbuf_t *vndr_ie = NULL;
 	s32 iecount;
 	uint32 pktflag;
-	u16 kflags = in_atomic() ? GFP_ATOMIC : GFP_KERNEL;
+	u32 kflags = in_atomic() ? GFP_ATOMIC : GFP_KERNEL;
 	s32 err = BCME_OK;
 
 	/* Check the VSIE (Vendor Specific IE) which was added.

@@ -3132,7 +3132,7 @@ channel_to_chanspec(struct wiphy *wiphy, struct net_device *dev, u32 channel, u3
 	int bw = 0, tmp_bw = 0;
 	int i;
 	u32 tmp_c;
-	u16 kflags = in_atomic() ? GFP_ATOMIC : GFP_KERNEL;
+	u32 kflags = in_atomic() ? GFP_ATOMIC : GFP_KERNEL;
 #define LOCAL_BUF_SIZE	1024
 	buf = (u8 *) kzalloc(LOCAL_BUF_SIZE, kflags);
 	if (!buf) {
