@@ -1653,7 +1653,7 @@ wl_android_set_auto_channel(struct net_device *dev, const char* cmd_str,
 done:
 	if ((retry == 0) || (ret < 0)) {
 		/* On failure, fallback to a default channel */
-		if ((band == WLC_BAND_5G)) {
+		if (band == WLC_BAND_5G) {
 			channel = 36;
 		} else {
 			channel = 1;
