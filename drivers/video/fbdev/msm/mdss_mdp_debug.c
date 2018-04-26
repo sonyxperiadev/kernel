@@ -1817,20 +1817,20 @@ static void __print_buf(struct seq_file *s, struct mdss_mdp_data *buf,
 {
 	char tmpbuf[20];
 	int i;
-	const char const *buf_stat_stmap[] = {
+	const char *buf_stat_stmap[] = {
 		[MDP_BUF_STATE_UNUSED]  = "UNUSED ",
 		[MDP_BUF_STATE_READY]   = "READY  ",
 		[MDP_BUF_STATE_ACTIVE]  = "ACTIVE ",
 		[MDP_BUF_STATE_CLEANUP] = "CLEANUP",
 	};
-	const char const *domain_stmap[] = {
+	const char *domain_stmap[] = {
 		[MDSS_IOMMU_DOMAIN_UNSECURE]     = "mdp_unsecure",
 		[MDSS_IOMMU_DOMAIN_ROT_UNSECURE] = "rot_unsecure",
 		[MDSS_IOMMU_DOMAIN_SECURE]       = "mdp_secure",
 		[MDSS_IOMMU_DOMAIN_ROT_SECURE]   = "rot_secure",
 		[MDSS_IOMMU_MAX_DOMAIN]          = "undefined",
 	};
-	const char const *dma_data_dir_stmap[] = {
+	const char *dma_data_dir_stmap[] = {
 		[DMA_BIDIRECTIONAL] = "read/write",
 		[DMA_TO_DEVICE]     = "read",
 		[DMA_FROM_DEVICE]   = "read/write",
@@ -1879,7 +1879,7 @@ static void __dump_pipe(struct seq_file *s, struct mdss_mdp_pipe *pipe,
 			pipe->mixer_stage, pipe->alpha,
 			pipe->transp, pipe->blend_op);
 	if (pipe->multirect.max_rects > 1) {
-		const char const *fmodes[] = {
+		const char *fmodes[] = {
 			[MDSS_MDP_PIPE_MULTIRECT_PARALLEL]	= "parallel",
 			[MDSS_MDP_PIPE_MULTIRECT_SERIAL]	= "serial",
 			[MDSS_MDP_PIPE_MULTIRECT_NONE]		= "single",
