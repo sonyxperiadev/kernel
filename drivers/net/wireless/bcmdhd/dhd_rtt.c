@@ -204,55 +204,6 @@ static const ftm_status_map_host_entry_t ftm_status_map_info[] = {
 	{WL_PROXD_E_OK, RTT_REASON_SUCCESS}
 };
 
-/* ftm tlv-id mapping */
-static const ftm_strmap_entry_t ftm_tlvid_loginfo[] = {
-	/* { WL_PROXD_TLV_ID_xxx,				"text for WL_PROXD_TLV_ID_xxx" }, */
-	{ WL_PROXD_TLV_ID_NONE,					"none" },
-	{ WL_PROXD_TLV_ID_METHOD,				"method" },
-	{ WL_PROXD_TLV_ID_FLAGS,				"flags" },
-	{ WL_PROXD_TLV_ID_CHANSPEC,				"chanspec" },
-	{ WL_PROXD_TLV_ID_TX_POWER,				"tx power" },
-	{ WL_PROXD_TLV_ID_RATESPEC,				"ratespec" },
-	{ WL_PROXD_TLV_ID_BURST_DURATION,		"burst duration" },
-	{ WL_PROXD_TLV_ID_BURST_PERIOD,			"burst period" },
-	{ WL_PROXD_TLV_ID_BURST_FTM_SEP,		"burst ftm sep" },
-	{ WL_PROXD_TLV_ID_BURST_NUM_FTM,		"burst num ftm" },
-	{ WL_PROXD_TLV_ID_NUM_BURST,			"num burst" },
-	{ WL_PROXD_TLV_ID_FTM_RETRIES,			"ftm retries" },
-	{ WL_PROXD_TLV_ID_BSS_INDEX,			"BSS index" },
-	{ WL_PROXD_TLV_ID_BSSID,				"bssid" },
-	{ WL_PROXD_TLV_ID_INIT_DELAY,			"burst init delay" },
-	{ WL_PROXD_TLV_ID_BURST_TIMEOUT,		"burst timeout" },
-	{ WL_PROXD_TLV_ID_EVENT_MASK,			"event mask" },
-	{ WL_PROXD_TLV_ID_FLAGS_MASK,			"flags mask" },
-	{ WL_PROXD_TLV_ID_PEER_MAC,				"peer addr" },
-	{ WL_PROXD_TLV_ID_FTM_REQ,				"ftm req" },
-	{ WL_PROXD_TLV_ID_LCI_REQ,				"lci req" },
-	{ WL_PROXD_TLV_ID_LCI,					"lci" },
-	{ WL_PROXD_TLV_ID_CIVIC_REQ,			"civic req" },
-	{ WL_PROXD_TLV_ID_CIVIC,				"civic" },
-	{ WL_PROXD_TLV_ID_AVAIL,				"availability" },
-	{ WL_PROXD_TLV_ID_SESSION_FLAGS,		"session flags" },
-	{ WL_PROXD_TLV_ID_SESSION_FLAGS_MASK,	"session flags mask" },
-	{ WL_PROXD_TLV_ID_RX_MAX_BURST,			"rx max bursts" },
-	{ WL_PROXD_TLV_ID_RANGING_INFO,			"ranging info" },
-	{ WL_PROXD_TLV_ID_RANGING_FLAGS,		"ranging flags" },
-	{ WL_PROXD_TLV_ID_RANGING_FLAGS_MASK,	"ranging flags mask" },
-	/* output - 512 + x */
-	{ WL_PROXD_TLV_ID_STATUS,				"status" },
-	{ WL_PROXD_TLV_ID_COUNTERS,				"counters" },
-	{ WL_PROXD_TLV_ID_INFO,					"info" },
-	{ WL_PROXD_TLV_ID_RTT_RESULT,			"rtt result" },
-	{ WL_PROXD_TLV_ID_AOA_RESULT,			"aoa result" },
-	{ WL_PROXD_TLV_ID_SESSION_INFO,			"session info" },
-	{ WL_PROXD_TLV_ID_SESSION_STATUS,		"session status" },
-	{ WL_PROXD_TLV_ID_SESSION_ID_LIST,		"session ids" },
-	/* debug tlvs can be added starting 1024 */
-	{ WL_PROXD_TLV_ID_DEBUG_MASK,			"debug mask" },
-	{ WL_PROXD_TLV_ID_COLLECT,				"collect" },
-	{ WL_PROXD_TLV_ID_STRBUF,				"result" }
-};
-
 static const ftm_strmap_entry_t ftm_event_type_loginfo[] = {
 	/* wl_proxd_event_type_t,			text-string */
 	{ WL_PROXD_EVENT_NONE,				"none" },
@@ -288,17 +239,6 @@ static const ftm_strmap_entry_t ftm_session_state_value_loginfo[] = {
 	{ WL_PROXD_SESSION_STATE_ENDED,			"ended" },
 	{ WL_PROXD_SESSION_STATE_DESTROYING,	"destroying" },
 	{ WL_PROXD_SESSION_STATE_NONE,			"none" }
-};
-
-/*
-* ranging-state --> text string mapping
-*/
-static const ftm_strmap_entry_t ftm_ranging_state_value_loginfo [] = {
-	/* wl_proxd_ranging_state_t,			text string */
-		{ WL_PROXD_RANGING_STATE_NONE, "none" },
-		{ WL_PROXD_RANGING_STATE_NOTSTARTED, "nonstarted" },
-		{ WL_PROXD_RANGING_STATE_INPROGRESS, "inprogress" },
-		{ WL_PROXD_RANGING_STATE_DONE, "done" },
 };
 
 /*
