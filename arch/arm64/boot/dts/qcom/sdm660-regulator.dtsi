@@ -716,9 +716,9 @@
 				regulator-max-microvolt = <8>;
 
 				qcom,cpr-fuse-corners = <5>;
-				qcom,cpr-fuse-combos = <32>;
-				qcom,cpr-speed-bins = <4>;
-				qcom,cpr-speed-bin-corners = <8 8 0 8>;
+				qcom,cpr-fuse-combos = <40>;
+				qcom,cpr-speed-bins = <5>;
+				qcom,cpr-speed-bin-corners = <8 8 0 8 8>;
 				qcom,cpr-corners =
 					/* Speed bin 0 */
 					<8 8 8 8 8 8 8 8>,
@@ -730,7 +730,11 @@
 					<0 0 0 0 0 0 0 0>,
 
 					/* Speed bin 3 */
+					<8 8 8 8 8 8 8 8>,
+
+					/* Speed bin 4 */
 					<8 8 8 8 8 8 8 8>;
+
 				qcom,cpr-corner-fmax-map =
 					/* Speed bin 0 */
 					<2 3 4 5 8>,
@@ -742,6 +746,9 @@
 					<0 0 0 0 0>,
 
 					/* Speed bin 3 */
+					<2 3 4 5 8>,
+
+					/* Speed bin 4 */
 					<2 3 4 5 8>;
 
 				qcom,cpr-voltage-ceiling =
@@ -766,7 +773,12 @@
 					/* Speed bin 3 */
 					<300000000  633600000  902400000
 					1113600000 1401600000 1536000000
-					1612800000 1843200000>;
+					1612800000 1843200000>,
+
+					/* Speed bin 4 */
+					<300000000  633600000  902400000
+					1113600000 1401600000 1536000000
+					1747200000 1843200000>;
 
 				qcom,allow-voltage-interpolation;
 				qcom,allow-quotient-interpolation;
@@ -855,9 +867,9 @@
 				regulator-max-microvolt = <7>;
 
 				qcom,cpr-fuse-corners = <5>;
-				qcom,cpr-fuse-combos = <32>;
-				qcom,cpr-speed-bins = <4>;
-				qcom,cpr-speed-bin-corners = <7 7 0 7>;
+				qcom,cpr-fuse-combos = <40>;
+				qcom,cpr-speed-bins = <5>;
+				qcom,cpr-speed-bin-corners = <7 7 0 7 7>;
 				qcom,cpr-corners =
 					/* Speed-bin 0 */
 					<7 7 7 7 7 7 7 7>,
@@ -869,6 +881,9 @@
 					<0 0 0 0 0 0 0 0>,
 
 					/* Speed-bin 3 */
+					<7 7 7 7 7 7 7 7>,
+
+					/* Speed-bin 4 */
 					<7 7 7 7 7 7 7 7>;
 
 				qcom,cpr-corner-fmax-map =
@@ -882,6 +897,9 @@
 					<0 0 0 0 0>,
 
 					/* Speed-bin 3 */
+					<2 3 4 6 7>,
+
+					/* Speed-bin 4 */
 					<2 3 4 6 7>;
 
 				qcom,cpr-voltage-ceiling =
@@ -906,6 +924,11 @@
 					/* Speed bin 3 */
 					<300000000  1113600000 1401600000
 					 1747200000 1804800000 2150400000
+					 2208000000>,
+
+					/* Speed bin 4 */
+					<300000000  1113600000 1401600000
+					 1747200000 1958400000 2150400000
 					 2208000000>;
 
 				qcom,allow-voltage-interpolation;
