@@ -14,7 +14,7 @@
 
 / {
 	reserved-memory {
-		pstore_reserve_mem: pstore_reserve_mem_region_region@ffc00000 {
+		pstore_reserve_mem: pstore_reserve_mem_region@ffc00000 {
 			compatible = "removed-dma-pool";
 			no-map;
 			reg = <0 0xffc00000 0 0x00100000>;
