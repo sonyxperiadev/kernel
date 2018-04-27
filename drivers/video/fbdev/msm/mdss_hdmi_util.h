@@ -466,8 +466,6 @@ struct hdmi_tx_ddc_ctrl {
 struct hdmi_util_ds_data {
 	bool ds_registered;
 	u32 ds_max_clk;
-	u32 modes_num;
-	u32 *modes;
 };
 
 static inline int hdmi_tx_get_v_total(const struct msm_hdmi_mode_timing_info *t)
