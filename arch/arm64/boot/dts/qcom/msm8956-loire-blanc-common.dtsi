@@ -206,6 +206,11 @@
 		};
 	};
 
+	hdmi_dba: qcom,msm-hdmi-dba-codec-rx {
+		compatible = "qcom,msm-hdmi-dba-codec-rx";
+		qcom,dba-bridge-chip = "adv7535";
+	};
+
 	sound-9335 {
 		qcom,spk-amp-gpios = <&msm_gpio 132 0>;
 		qcom,audio-routing =
@@ -230,6 +235,10 @@
 			"SpkrLeft IN", "SPK1 OUT",
 			"SpkrRight IN", "SPK2 OUT";
 		qcom,max-aux-codec = <0>;
+
+		/delete-property/ qcom,wsa-max-devs;
+		/delete-property/ qcom,wsa-devs;
+		/delete-property/ qcom,wsa-aux-dev-prefix;
 	};
 
 	ext_codec: sound-9335 {
