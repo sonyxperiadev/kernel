@@ -3906,12 +3906,12 @@ static int msm_dai_q6_dai_mi2s_hdmi_probe(struct snd_soc_dai *dai)
 		rc = -ENOMEM;
 		goto rtn;
 	} else {
-		rc = dev_set_drvdata(dai->dev, dai_data);
+		dev_set_drvdata(dai->dev, dai_data);
 	}
 	for (i = 0; i < ARRAY_SIZE(hdmi_config_controls); i++) {
 		kcontrol = &hdmi_config_controls[i];
-		rc = snd_ctl_add(dai->card->snd_card,
-				snd_ctl_new1(kcontrol, dai_data));
+		rc = snd_ctl_add(dai->component->card->snd_card,
+					snd_ctl_new1(kcontrol, dai_data));
 		if (IS_ERR_VALUE(rc)) {
 			dev_err(dai->dev, "%s: err in adding ctrls = %d\n",
 				__func__, rc);
@@ -8893,7 +8893,7 @@ static int __init msm_dai_q6_init(void)
 	return rc;
 
 dai_hdmi_q6_fail:
-	platform_driver_unregister(&msm_dai_q6_tdm);
+	platform_driver_unregister(&msm_dai_tdm_q6);
 dai_tdm_q6_fail:
 	platform_driver_unregister(&msm_dai_q6_tdm_driver);
 dai_q6_tdm_drv_fail:
