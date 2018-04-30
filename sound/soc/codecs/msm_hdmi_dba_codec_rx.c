@@ -20,7 +20,7 @@
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
 #include <video/msm_dba.h>
-#include <linux/msm_hdmi.h>
+#include <linux/msm_ext_display.h>
 
 #define CHANNEL_STATUS_SIZE 24
 #define MSM_DBA_AUDIO_N_SIZE 6144
@@ -215,7 +215,7 @@ static int msm_hdmi_dba_edid_ctl_info(struct snd_kcontrol *kcontrol,
 				struct snd_ctl_elem_info *uinfo)
 {
 	struct msm_hdmi_dba_codec_rx_data *codec_data;
-	struct msm_hdmi_audio_edid_blk edid_blk;
+	struct msm_ext_disp_audio_edid_blk edid_blk;
 
 	if (!kcontrol || !uinfo) {
 		pr_err_ratelimited("%s: invalid control\n", __func__);
@@ -252,7 +252,7 @@ static int msm_hdmi_dba_edid_get(struct snd_kcontrol *kcontrol,
 				struct snd_ctl_elem_value *ucontrol)
 {
 	struct msm_hdmi_dba_codec_rx_data *codec_data;
-	struct msm_hdmi_audio_edid_blk edid_blk;
+	struct msm_ext_disp_audio_edid_blk edid_blk;
 
 	if (!kcontrol || !ucontrol) {
 		pr_err_ratelimited("%s: invalid control\n", __func__);
