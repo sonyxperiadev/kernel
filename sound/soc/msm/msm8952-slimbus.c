@@ -314,6 +314,7 @@ struct msm8952_asoc_mach_data {
 	int ext_pa;
 	int us_euro_gpio;
 	int ear_en_gpio;
+	int spk_amp_en_gpio;
 	struct delayed_work hs_detect_dwork;
 	struct snd_soc_codec *codec;
 	struct msm8952_codec msm8952_codec_fn;
@@ -417,6 +418,30 @@ static void msm8952_ext_control(struct snd_soc_codec *codec)
 		snd_soc_dapm_disable_pin(dapm, "Lineout_3 amp");
 	}
 	snd_soc_dapm_sync(dapm);
+}
+
+int is_spk_amp_en_gpio_support(struct platform_device *pdev,
+			struct msm8952_asoc_mach_data *pdata)
+{
+	const char *spk_amp_en_gpio = "qcom,spk-amp-gpios";
+
+	pr_debug("%s:Enter\n", __func__);
+
+	pdata->spk_amp_en_gpio = of_get_named_gpio(pdev->dev.of_node,
+				spk_amp_en_gpio, 0);
+
+	if (pdata->spk_amp_en_gpio < 0) {
+		dev_dbg(&pdev->dev,
+			"%s: missing %s in dt node\n", __func__,
+			spk_amp_en_gpio);
+	} else {
+		if (!gpio_is_valid(pdata->spk_amp_en_gpio)) {
+			pr_err("%s: Invalid spk amp en gpio: %d",
+				__func__, pdata->spk_amp_en_gpio);
+			return -EINVAL;
+		}
+	}
+	return 0;
 }
 
 static int msm8952_get_spk(struct snd_kcontrol *kcontrol,
@@ -2943,6 +2968,10 @@ static int msm8952_asoc_machine_probe(struct platform_device *pdev)
 				__func__, ret);
 		goto err;
 	}
+
+	ret = is_spk_amp_en_gpio_support(pdev, pdata);
+	if (!ret)
+		tasha_set_spk_amp_gpio(pdata->codec, pdata->spk_amp_en_gpio);
 
 	return 0;
 err:

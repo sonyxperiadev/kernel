@@ -200,4 +200,5 @@ extern int tasha_codec_enable_standalone_micbias(struct snd_soc_codec *codec,
 extern int tasha_set_spkr_mode(struct snd_soc_codec *codec, int mode);
 extern int tasha_set_spkr_gain_offset(struct snd_soc_codec *codec, int offset);
 extern enum codec_variant tasha_codec_ver(void);
+extern int tasha_set_spk_amp_gpio(struct snd_soc_codec *codec, int gpio);
 #endif

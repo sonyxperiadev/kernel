@@ -605,6 +605,7 @@ static int tasha_config_compander(struct snd_soc_codec *, int, int);
 static void tasha_codec_set_tx_hold(struct snd_soc_codec *, u16, bool);
 static int tasha_codec_internal_rco_ctrl(struct snd_soc_codec *codec,
 				  bool enable);
+static int tasha_spk_amp_enable(struct snd_soc_codec *, bool);
 
 /* Hold instance to soundwire platform device */
 struct tasha_swr_ctrl_data {
@@ -855,6 +856,7 @@ struct tasha_priv {
 	int spkr_gain_offset;
 	int spkr_mode;
 	int ear_spkr_gain;
+	int spk_amp_en_gpio;
 	struct hpf_work tx_hpf_work[TASHA_NUM_DECIMATORS];
 	struct tx_mute_work tx_mute_dwork[TASHA_NUM_DECIMATORS];
 	struct spk_anc_work spk_anc_dwork;
@@ -4332,6 +4334,7 @@ static int tasha_codec_enable_lineout_pa(struct snd_soc_dapm_widget *w,
 		/* 5ms sleep is required after PA is enabled as per
 		 * HW requirement
 		 */
+		tasha_spk_amp_enable(codec, true);
 		usleep_range(5000, 5500);
 		snd_soc_update_bits(codec, lineout_vol_reg,
 				    0x10, 0x00);
@@ -4349,6 +4352,7 @@ static int tasha_codec_enable_lineout_pa(struct snd_soc_dapm_widget *w,
 		/* 5ms sleep is required after PA is disabled as per
 		 * HW requirement
 		 */
+		tasha_spk_amp_enable(codec, false);
 		usleep_range(5000, 5500);
 		tasha_codec_override(codec, CLS_AB, event);
 		if (!(strcmp(w->name, "ANC LINEOUT1 PA")) ||
@@ -5777,6 +5781,62 @@ static void tasha_codec_set_tx_hold(struct snd_soc_codec *codec,
 			__func__, amic_reg);
 		break;
 	}
+}
+
+static int tasha_set_spk_amp_gpio_init(struct snd_soc_codec *codec, int gpio)
+{
+	struct tasha_priv *priv = snd_soc_codec_get_drvdata(codec);
+	int ret = -EINVAL;
+
+	if (!priv)
+		goto out;
+
+	if (!gpio_is_valid(gpio)) {
+		dev_err(codec->dev, "%s: Invalid gpio: %d\n", __func__, gpio);
+		goto out;
+	}
+
+	ret = gpio_request(gpio, "spk_amp_gpio");
+	if (ret) {
+		if (ret == -EBUSY) {
+			dev_dbg(codec->dev,
+				 "%s: gpio %d is already requested\n",
+				 __func__, gpio);
+			ret = 0;
+		} else {
+			dev_err(codec->dev, "%s: Failed to request gpio %d\n",
+				__func__, gpio);
+			goto out;
+		}
+	}
+	priv->spk_amp_en_gpio = gpio;
+	tasha_spk_amp_enable(codec, false);
+out:
+	return ret;
+}
+
+int tasha_set_spk_amp_gpio(struct snd_soc_codec *codec, int gpio)
+{
+	int ret = 0;
+
+	ret = tasha_set_spk_amp_gpio_init(codec, gpio);
+	if (ret)
+		dev_err(codec->dev, "%s: Failed to init spk_amp_gpio: %d\n",
+			__func__, gpio);
+
+	return ret;
+}
+EXPORT_SYMBOL(tasha_set_spk_amp_gpio);
+
+static int tasha_spk_amp_enable(struct snd_soc_codec *codec, bool spk_amp_en)
+{
+	struct tasha_priv *priv = snd_soc_codec_get_drvdata(codec);
+
+	dev_dbg(codec->dev, "%s: speaker amp enable gpio: %d\n",
+		__func__, spk_amp_en);
+	gpio_set_value(priv->spk_amp_en_gpio, spk_amp_en);
+
+	return 0;
 }
 
 static int tasha_codec_tx_adc_cfg(struct snd_soc_dapm_widget *w,
