@@ -1216,6 +1216,7 @@ struct adm_cmd_connect_afe_port_v5 {
 /* ID of the Internal 6 MI2S Tx port */
 #define AFE_PORT_ID_INT6_MI2S_TX                 0x103B
 #define AFE_PORT_ID_SPDIF_RX                0x5000
+#define AFE_PORT_ID_MI2S_HDMI_RX	    AFE_PORT_ID_QUINARY_MI2S_RX
 #define  AFE_PORT_ID_RT_PROXY_PORT_001_RX   0x2000
 #define  AFE_PORT_ID_RT_PROXY_PORT_001_TX   0x2001
 #define AFE_PORT_ID_INTERNAL_BT_SCO_RX      0x3000
