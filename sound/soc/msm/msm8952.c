@@ -147,7 +147,11 @@ static struct afe_clk_cfg mi2s_tx_clk_v1 = {
 	AFE_API_VERSION_I2S_CONFIG,
 	Q6AFE_LPASS_IBIT_CLK_1_P536_MHZ,
 	Q6AFE_LPASS_OSR_CLK_12_P288_MHZ,
+#ifdef CONFIG_MACH_SONY_BLANC
+	Q6AFE_LPASS_CLK_SRC_EXTERNAL,
+#else
 	Q6AFE_LPASS_CLK_SRC_INTERNAL,
+#endif
 	Q6AFE_LPASS_CLK_ROOT_DEFAULT,
 	Q6AFE_LPASS_MODE_CLK1_VALID,
 	0,
@@ -506,6 +510,13 @@ static uint32_t get_mi2s_rx_clk_val(int port_id)
 	 */
 	if (is_mi2s_rx_port(port_id))
 		clk_val = (mi2s_rx_sample_rate * mi2s_rx_bits_per_sample * 2);
+
+#ifdef CONFIG_MACH_SONY_BLANC
+	if (mi2s_rx_bit_format == SNDRV_PCM_FORMAT_S24_LE)
+		return Q6AFE_LPASS_IBIT_CLK_3_P072_MHZ;
+	else
+		return Q6AFE_LPASS_IBIT_CLK_1_P536_MHZ;
+#endif
 
 	pr_debug("%s: MI2S Rx bit clock value: 0x%0x\n", __func__, clk_val);
 	return clk_val;
