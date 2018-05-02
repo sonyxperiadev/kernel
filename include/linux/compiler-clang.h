@@ -33,3 +33,5 @@
 
 #define __nocfi		__attribute__((no_sanitize("cfi")))
 #endif
+
+#define __noscs		__attribute__((no_sanitize("shadow-call-stack")))
