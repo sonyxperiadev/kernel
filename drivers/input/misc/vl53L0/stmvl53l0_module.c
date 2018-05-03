@@ -430,7 +430,7 @@ struct stmvl53l0_api_fn_t *papi_func_tbl;
 #define HIGH_SPEED_FINAL_RANGE_PULSE_PERIOD		10
 
 
-#ifdef INPUT_STMVL53L0_SOMC_PARAMS
+#ifdef CONFIG_INPUT_STMVL53L0_SOMC_PARAMS
 #define CALIBRATION_FILE 1
 #endif
 
