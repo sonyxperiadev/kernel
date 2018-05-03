@@ -459,6 +459,22 @@ static void stmvl53l0_read_calibration_file(struct stmvl53l0_data *data)
 	char buf[UINT_MAX_LEN] = {0};
 	mm_segment_t fs;
 
+	offset_calib = 7000;
+	vl53l0_errmsg("offset_calib as %d\n", offset_calib);
+	papi_func_tbl->SetOffsetCalibrationDataMicroMeter(
+			vl53l0_dev, offset_calib);
+
+	xtalk_calib = 0;
+	papi_func_tbl->SetXTalkCompensationRateMegaCps(
+			vl53l0_dev, (FixPoint1616_t)xtalk_calib);
+	papi_func_tbl->SetXTalkCompensationEnable(vl53l0_dev, true);
+
+	/*
+	 * HACK! For development purposes, using fixed calibration data.
+	 * This will get removed once development phase is ended.
+	 */
+	return;
+
 	vl53l0_dbgmsg("stmvl53l0_read_calibration_file\n");
 	f = filp_open("/data/calibration/offset", O_RDONLY, 0);
 	if (f != NULL && !IS_ERR(f) && f->f_path.dentry != NULL) {
