@@ -73,7 +73,7 @@
 #define ADUX1050_DRIVER_DBG(format, arg...) pr_info("[ADUX1050]:"format,\
 						    ## arg)
 #else
-#define ADUX1050_DRIVER_DBG(format, arg...) do { if (0); } while (0)
+#define ADUX1050_DRIVER_DBG(format, arg...)
 #endif
 
 
@@ -3874,7 +3874,7 @@ static inline void high_threshold_int_check(struct adux1050_chip *adux1050,
 		if ((!(temp_ht_intr_err & 1)) && (temp_ht_enable & 1)) {
 			if (high_status_change & 1) {
 				if (adux1050->high_status & 1) {
-					dev_info(adux1050->dev, "St = %de\n",
+					dev_dbg(adux1050->dev, "St = %de\n",
 						 stg_cnt);
 					if (adux1050->send_event) {
 #ifdef CONFIG_SOMC_EXTENSION
@@ -3898,7 +3898,7 @@ static inline void high_threshold_int_check(struct adux1050_chip *adux1050,
 								      TH_HIGH);
 					}
 				} else {
-					dev_info(adux1050->dev, "St = %dx\n",
+					dev_dbg(adux1050->dev, "St = %dx\n",
 						 stg_cnt);
 					if (adux1050->send_event) {
 #ifdef CONFIG_SOMC_EXTENSION
@@ -3950,7 +3950,7 @@ static inline void low_threshold_int_check(struct adux1050_chip *adux1050,
 		if ((!(temp_intr_err & 1)) && (temp_lt_enable & 1)) {
 			if (low_status_change & 1) {
 				if (adux1050->low_status & 1) {
-					dev_info(adux1050->dev, "St = %de\n",
+					dev_dbg(adux1050->dev, "St = %de\n",
 						 stg_cnt);
 					if (adux1050->send_event) {
 #ifdef CONFIG_SOMC_EXTENSION
@@ -3963,7 +3963,7 @@ static inline void low_threshold_int_check(struct adux1050_chip *adux1050,
 								      TH_LOW);
 					}
 				} else {
-					dev_info(adux1050->dev, "St = %dx\n",
+					dev_dbg(adux1050->dev, "St = %dx\n",
 						 stg_cnt);
 					if (adux1050->send_event) {
 						indicate_idle_state(adux1050,
@@ -4037,7 +4037,7 @@ static int adux1050_get_result_info(struct adux1050_chip *adux1050)
 							err);
 						return err;
 					}
-					dev_info(adux1050->dev,
+					dev_dbg(adux1050->dev,
 						 "STG %x CDC %x\t BS %x\t HS %x\t LS %x\n",
 						 stg_cnt,
 						 rs_reg[stg_cnt],
@@ -4085,7 +4085,7 @@ static void adux1050_isr_work_fn(struct work_struct *isr_work)
 	adux1050->low_status = GET_LOW_STATUS(adux1050->int_status);
 	adux1050->high_status = GET_HIGH_STATUS(adux1050->int_status);
 	adux1050->conv_status = GET_CONV_STATUS(adux1050->int_status);
-	dev_info(adux1050->dev, "HS:%x LS:%x CCS:%x\n", adux1050->high_status,
+	dev_dbg(adux1050->dev, "HS:%x LS:%x CCS:%x\n", adux1050->high_status,
 		 adux1050->low_status, adux1050->conv_status);
 
 /* conditions to handle error conditions for force calibration	 */
@@ -4148,7 +4148,7 @@ static void adux1050_isr_work_fn(struct work_struct *isr_work)
 		adux1050->prev_high_status = adux1050->high_status;
 		if (high_status_change) {
 				adux1050->proxy_count = 0;
-				dev_info(adux1050->dev, "H THRES CHANGE:");
+				dev_dbg(adux1050->dev, "H THRES CHANGE:");
 				adux1050_get_result_info(adux1050);
 		}
 		high_threshold_int_check(adux1050, high_status_change);
@@ -4161,7 +4161,7 @@ static void adux1050_isr_work_fn(struct work_struct *isr_work)
 		adux1050->prev_low_status = adux1050->low_status;
 		if (low_status_change) {
 				adux1050->proxy_count = 0;
-				dev_info(adux1050->dev, "L THRES CHANGE:");
+				dev_dbg(adux1050->dev, "L THRES CHANGE:");
 				adux1050_get_result_info(adux1050);
 		}
 		low_threshold_int_check(adux1050, low_status_change);
