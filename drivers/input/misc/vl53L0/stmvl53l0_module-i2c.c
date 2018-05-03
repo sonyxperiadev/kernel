@@ -200,6 +200,14 @@ int stmvl53l0_power_up_i2c(void *i2c_object, unsigned int *preset_flag)
 	return ret;
 }
 
+
+int stmvl53l0_i2c_power_status(void *i2c_object)
+{
+	struct i2c_data *data = (struct i2c_data *)i2c_object;
+
+	return data->power_up;
+}
+
 int stmvl53l0_power_down_i2c(void *i2c_object)
 {
 	int ret = 0;
