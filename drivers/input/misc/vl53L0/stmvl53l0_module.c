@@ -461,7 +461,7 @@ static void stmvl53l0_read_calibration_file(struct stmvl53l0_data *data)
 
 	vl53l0_dbgmsg("stmvl53l0_read_calibration_file\n");
 	f = filp_open("/data/calibration/offset", O_RDONLY, 0);
-	if (f != NULL && !IS_ERR(f) && f->f_dentry != NULL) {
+	if (f != NULL && !IS_ERR(f) && f->f_path.dentry != NULL) {
 		fs = get_fs();
 		set_fs(get_ds());
 		memset(buf, 0x00, sizeof(buf));
@@ -482,7 +482,7 @@ static void stmvl53l0_read_calibration_file(struct stmvl53l0_data *data)
 	}
 
 	f = filp_open("/data/calibration/xtalk", O_RDONLY, 0);
-	if (f != NULL && !IS_ERR(f) && f->f_dentry != NULL) {
+	if (f != NULL && !IS_ERR(f) && f->f_path.dentry != NULL) {
 		fs = get_fs();
 		set_fs(get_ds());
 		memset(buf, 0x00, sizeof(buf));
