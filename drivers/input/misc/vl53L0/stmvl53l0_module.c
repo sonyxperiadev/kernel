@@ -38,7 +38,7 @@
 #include "vl53l0_api.h"
 #include "vl53l010_api.h"
 
-#define USE_INT
+//#define USE_INT
 /* #define DEBUG_TIME_LOG */
 #ifdef DEBUG_TIME_LOG
 struct timeval start_tv, stop_tv;
@@ -57,12 +57,14 @@ static struct stmvl53l0_module_fn_t stmvl53l0_module_func_tbl = {
 	.query_power_status = stmvl53l0_cci_power_status,
 };
 #else
+extern int stmvl53l0_i2c_power_status(void *i2c_object);
+
 static struct stmvl53l0_module_fn_t stmvl53l0_module_func_tbl = {
 	.init = stmvl53l0_init_i2c,
 	.deinit = stmvl53l0_exit_i2c,
 	.power_up = stmvl53l0_power_up_i2c,
 	.power_down = stmvl53l0_power_down_i2c,
-	.stmv53l0_cci_power_status = NULL;
+	.query_power_status = stmvl53l0_i2c_power_status,
 };
 #endif
 struct stmvl53l0_module_fn_t *pmodule_func_tbl;
@@ -428,7 +430,7 @@ struct stmvl53l0_api_fn_t *papi_func_tbl;
 #define HIGH_SPEED_FINAL_RANGE_PULSE_PERIOD		10
 
 
-#ifdef INPUT_STMVL53L0_SOMC_PARAMS
+#ifdef CONFIG_INPUT_STMVL53L0_SOMC_PARAMS
 #define CALIBRATION_FILE 1
 #endif
 
@@ -457,9 +459,25 @@ static void stmvl53l0_read_calibration_file(struct stmvl53l0_data *data)
 	char buf[UINT_MAX_LEN] = {0};
 	mm_segment_t fs;
 
+	offset_calib = 7000;
+	vl53l0_errmsg("offset_calib as %d\n", offset_calib);
+	papi_func_tbl->SetOffsetCalibrationDataMicroMeter(
+			vl53l0_dev, offset_calib);
+
+	xtalk_calib = 0;
+	papi_func_tbl->SetXTalkCompensationRateMegaCps(
+			vl53l0_dev, (FixPoint1616_t)xtalk_calib);
+	papi_func_tbl->SetXTalkCompensationEnable(vl53l0_dev, true);
+
+	/*
+	 * HACK! For development purposes, using fixed calibration data.
+	 * This will get removed once development phase is ended.
+	 */
+	return;
+
 	vl53l0_dbgmsg("stmvl53l0_read_calibration_file\n");
 	f = filp_open("/data/calibration/offset", O_RDONLY, 0);
-	if (f != NULL && !IS_ERR(f) && f->f_dentry != NULL) {
+	if (f != NULL && !IS_ERR(f) && f->f_path.dentry != NULL) {
 		fs = get_fs();
 		set_fs(get_ds());
 		memset(buf, 0x00, sizeof(buf));
@@ -480,7 +498,7 @@ static void stmvl53l0_read_calibration_file(struct stmvl53l0_data *data)
 	}
 
 	f = filp_open("/data/calibration/xtalk", O_RDONLY, 0);
-	if (f != NULL && !IS_ERR(f) && f->f_dentry != NULL) {
+	if (f != NULL && !IS_ERR(f) && f->f_path.dentry != NULL) {
 		fs = get_fs();
 		set_fs(get_ds());
 		memset(buf, 0x00, sizeof(buf));

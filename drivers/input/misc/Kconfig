@@ -868,6 +868,14 @@ config INPUT_STMVL53L0_SOMC_PARAMS
 	  Say Y here if you want to enable extensional code and
 	  parameters from SoMC for the STM VL53L0.
 
+config SENSORS_STMVL53L0_USE_CCI
+	tristate "STM VL53L0 on MSM Camera CCI"
+	depends on INPUT_STMVL53L0
+	help
+	  Say Y here to enable the camera cci use in the vl53L0 driver.
+
+	  If unsure, say N.
+
 config INPUT_ADUX1050
 	tristate "ADUX1050 sensor support"
 	depends on I2C
