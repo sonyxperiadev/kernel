@@ -689,6 +689,22 @@
 	};
 };
 
+&adv7533_int_active {
+	config {
+		drive-strength = <8>;
+		/delete-property/ bias-disable;
+		bias-pull-up;
+	};
+};
+
+&adv7533_int_suspend {
+	config {
+		drive-strength = <2>;
+		/delete-property/ bias-disable;
+		bias-pull-down;
+	};
+};
+
 &mdss_dsi0 {
 	/delete-property/ pinctrl-2;
 	/delete-property/ pinctrl-3;
