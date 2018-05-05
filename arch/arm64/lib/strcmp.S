@@ -61,6 +61,7 @@ zeroones	.req	x10
 pos		.req	x11
 
 ENTRY(strcmp)
+.p2align 6
 	eor	tmp1, src1, src2
 	mov	zeroones, #REP8_01
 	tst	tmp1, #7
