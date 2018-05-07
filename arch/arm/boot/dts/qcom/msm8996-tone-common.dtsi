@@ -395,16 +395,12 @@
 		qcom,audio-routing =
 			"AIF4 VI", "MCLK",
 			"RX_BIAS", "MCLK",
-			"LDO_H", "MCLK",
-			"AMIC1", "LDO_H",
-			"LDO_H", "AHC ISNS",
+			"MADINPUT", "MCLK",
 			"AMIC2", "MIC BIAS2",
 			"MIC BIAS2", "Headset Mic",
 			"MIC BIAS2", "ANCRight Headset Mic",
 			"AMIC3", "MIC BIAS3",
 			"MIC BIAS3", "ANCLeft Headset Mic",
-			"AMIC4", "LDO_H",
-			"LDO_H", "AHC VSNS",
 			"DMIC0", "MIC BIAS1",
 			"MIC BIAS1", "Digital Mic0",
 			"DMIC3", "MIC BIAS4",
@@ -427,8 +423,8 @@
 	slim_msm: slim@91c0000 {
 		tasha_codec {
 			qcom,cdc-micbias1-mv = <1800>;
-			qcom,cdc-micbias2-mv = <2450>;
-			qcom,cdc-micbias3-mv = <2450>;
+			qcom,cdc-micbias2-mv = <1800>;
+			qcom,cdc-micbias3-mv = <1800>;
 			qcom,cdc-micbias4-mv = <1800>;
 			qcom,cdc-dmic-sample-rate = <2400000>;
 		};
