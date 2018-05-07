@@ -1170,12 +1170,20 @@
 
 &pm8994_l18_pin_ctrl {
 	regulator-min-microvolt = <1800000>;
-	regulator-max-microvolt = <2900000>;
 	qcom,init-voltage = <1800000>;
 };
 
-/* pm8994_l19 */
-/* Follow QTI */
+&pm8994_l19 {
+	qcom,regulator-type = <0>;      /* LDO */
+	qcom,init-enable = <0>;
+	qcom,init-ldo-mode = <1>;
+	qcom,init-pin-ctrl-enable = <0>;
+	qcom,init-pin-ctrl-mode = <0>;
+	regulator-min-microvolt = <2700000>;
+	regulator-max-microvolt = <2700000>;
+	qcom,init-voltage = <2700000>;
+	status = "okay";
+};
 
 /* pm8994_l20 */
 /* Follow QTI */
