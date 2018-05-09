@@ -578,7 +578,7 @@ int rmnet_vnd_create_dev(int id, struct net_device **new_device,
 		LOGE("Failed to to register netdev [%s]", dev->name);
 		free_netdev(dev);
 		*new_device = 0;
-		rc = RMNET_CONFIG_UNKNOWN_ERROR;
+		return RMNET_CONFIG_UNKNOWN_ERROR;
 	} else {
 		rmnet_devices[id] = dev;
 		*new_device = dev;
