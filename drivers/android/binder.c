@@ -2066,7 +2066,7 @@ static void binder_transaction(struct binder_proc *proc,
 	if (!IS_ALIGNED(extra_buffers_size, sizeof(u64))) {
 		binder_user_error("%d:%d got transaction with unaligned buffers size, %llu\n",
 				  proc->pid, thread->pid,
-				  (u64)extra_buffers_size);
+				  extra_buffers_size);
 		return_error = BR_FAILED_REPLY;
 		goto err_bad_offset;
 	}
