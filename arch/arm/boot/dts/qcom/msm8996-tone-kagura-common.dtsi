@@ -43,19 +43,16 @@
 			pinctrl-0 = <&msm_gpio_86>;
 			pinctrl-1 = <&msm_gpio_86_suspend>;
 		};
-		tof_sensor@52 {
-			compatible = "tof_sensor";
-			reg = <0x52>;
+		tof_sensor@29 {
+			compatible = "st,stmvl53l0";
+			reg = <0x29>;
 			interrupt-parent = <&tlmm>;
 			interrupts = <85 0x0>;
-			tof_avdd-supply = <&pm8994_lvs1>;
-			tof-supply_name = "tof_avdd";
+			vdd-supply = <&pm8994_lvs1>;
+			tof-supply_name = "vdd";
 			pinctrl-names = "tof_irq_active", "tof_irq_suspend";
 			pinctrl-0 = <&msm_gpio_85>;
 			pinctrl-1 = <&msm_gpio_85_suspend>;
-			sony,tof-sensor-name = "VL53L0";
-			sony,tof-need-cam-on = <1>;
-			sony,tof-sensor-facing = <0>;
 		};
 	};
 
