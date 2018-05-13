@@ -69,8 +69,56 @@ static int stmvl53l0_parse_vdd(struct device *dev, struct i2c_data *data)
 			vl53l0_errmsg("vdd supply is not provided\n");
 			ret = -1;
 		}
+
+		data->avdd = regulator_get(dev, "tof_avdd");
+		if (IS_ERR(data->avdd)) {
+			vl53l0_errmsg("tof_avdd supply not provided\n");
+			ret = -1;
+		}
 	}
 	vl53l0_dbgmsg("End\n");
+
+	return ret;
+}
+
+static int stmvl53l0_parse_pins(struct device *dev, struct i2c_data *data)
+{
+	int ret = 0;
+
+	if (dev->of_node) {
+		data->rst_gpio = of_get_named_gpio(dev->of_node,
+						"tof-reset-gpio", 0);
+	}
+
+	data->pinctrl = devm_pinctrl_get(dev);
+	if (IS_ERR(data->pinctrl)) {
+		dev_err(dev, "Failed to get pinctrl handle.\n");
+		return -EPROBE_DEFER;
+	}
+
+	data->pinstate_act = pinctrl_lookup_state(data->pinctrl,
+						"tof_irq_active");
+	if (IS_ERR(data->pinstate_act)) {
+		dev_err(dev, "Cannot lookup active state\n");
+		ret = -EPROBE_DEFER;
+		goto err_pinact;
+	}
+
+	data->pinstate_slp = pinctrl_lookup_state(data->pinctrl,
+						"tof_irq_suspend");
+	if (IS_ERR(data->pinstate_act)) {
+		dev_err(dev, "Cannot lookup sleep state\n");
+		ret = -EPROBE_DEFER;
+		goto err_pinslp;
+	}
+
+	data->pinctrl_avail = true;
+
+	return ret;
+
+err_pinact:
+err_pinslp:
+	devm_pinctrl_put(data->pinctrl);
 
 	return ret;
 }
@@ -106,6 +154,9 @@ static int stmvl53l0_probe(struct i2c_client *client,
 
 	/* setup regulator */
 	stmvl53l0_parse_vdd(&i2c_object->client->dev, i2c_object);
+
+	/* setup pinctrl and gpios */
+	stmvl53l0_parse_pins(&i2c_object->client->dev, i2c_object);
 
 	/* setup device name */
 	vl53l0_data->dev_name = dev_name(&client->dev);
@@ -177,7 +228,6 @@ int stmvl53l0_power_up_i2c(void *i2c_object, unsigned int *preset_flag)
 	/* actual power on */
 #ifndef STM_TEST
  #ifndef CONFIG_INPUT_STMVL53L0_SOMC_PARAMS
-asdasdasds
 	ret = regulator_set_voltage(data->vana, VL53L0_VDD_MIN, VL53L0_VDD_MAX);
 	if (ret < 0) {
 		vl53l0_errmsg("set_vol(%p) fail %d\n", data->vana, ret);
@@ -193,6 +243,22 @@ asdasdasds
 		return ret;
  #endif
 	}
+
+	if (!IS_ERR_OR_NULL(data->avdd)) {
+		ret = regulator_enable(data->avdd);
+		if (ret < 0) {
+			vl53l0_errmsg("Cannot enable AVDD VREG: %d\n", ret);
+			return ret;
+		}
+	}
+
+	if (data->pinctrl_avail)
+		pinctrl_select_state(data->pinctrl, data->pinstate_act);
+
+	/* Deassert RST if GPIO is available */
+	if (gpio_is_valid(data->rst_gpio))
+		gpio_set_value(data->rst_gpio, 1);
+
 	data->power_up = 1;
 	*preset_flag = 1;
 #endif
@@ -223,6 +289,19 @@ int stmvl53l0_power_down_i2c(void *i2c_object)
 	if (ret < 0)
 		vl53l0_errmsg("reg disable(%p) failed.rc=%d\n",
 			      data->vana, ret);
+
+	/* Assert RST if GPIO is available */
+	if (gpio_is_valid(data->rst_gpio))
+		gpio_set_value(data->rst_gpio, 0);
+
+	if (data->pinctrl_avail)
+		pinctrl_select_state(data->pinctrl, data->pinstate_slp);
+
+	if (!IS_ERR_OR_NULL(data->avdd)) {
+		ret = regulator_disable(data->avdd);
+		if (ret < 0)
+			vl53l0_errmsg("Cannot disable AVDD VREG: %d\n", ret);
+	}
 
 	data->power_up = 0;
 #endif

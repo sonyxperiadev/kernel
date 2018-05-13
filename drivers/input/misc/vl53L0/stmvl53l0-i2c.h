@@ -23,7 +23,13 @@
 #ifndef CAMERA_CCI
 struct i2c_data {
 	struct i2c_client *client;
+	struct pinctrl *pinctrl;
+	struct pinctrl_state *pinstate_act;
+	struct pinctrl_state *pinstate_slp;
 	struct regulator *vana;
+	struct regulator *avdd;
+	int rst_gpio;
+	bool pinctrl_avail;
 	uint8_t power_up;
 };
 int stmvl53l0_init_i2c(void);
