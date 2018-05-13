@@ -20,22 +20,6 @@
 &soc {
 	/* I2C : BLSP8 */
 	i2c@7af8000 { /* BLSP2 QUP4 */
-/*
-		compatible = "qcom,i2c-msm-v2";
-		#address-cells = <1>;
-		#size-cells = <0>;
-		//qcom,clk-freq-out = <355000>;
-		//qcom,clk-freq-in = <19200000>;
-
-		qcom,master-id = <84>;
-		reg-names = "qup_phys_addr";
-		reg = <0x7AF8000 0x600>;
-		interrupt-names = "qup_irq";
-		interrupts = <0 302 0>;
-		clock-names = "iface_clk", "core_clk";
-		clocks = <&clock_gcc GCC_BLSP2_AHB_CLK>,
-			 <&clock_gcc GCC_BLSP2_QUP4_I2C_APPS_CLK>;
-*/
                 compatible = "qcom,i2c-msm-v2";
                 #address-cells = <1>;
                 #size-cells = <0>;
@@ -54,7 +38,7 @@
                 dmas = <&dma_blsp2 10 64 0x20000020 0x20>,
                         <&dma_blsp2 11 32 0x20000020 0x20>;
                 dma-names = "tx", "rx";
-
+		status = "ok";
 
 		pinctrl-names = "i2c_active", "i2c_sleep";
 		pinctrl-0 = <&msm_gpio_18_act &msm_gpio_19_act>;
