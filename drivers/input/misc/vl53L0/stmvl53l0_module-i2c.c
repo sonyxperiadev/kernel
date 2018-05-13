@@ -250,14 +250,17 @@ int stmvl53l0_power_up_i2c(void *i2c_object, unsigned int *preset_flag)
 			vl53l0_errmsg("Cannot enable AVDD VREG: %d\n", ret);
 			return ret;
 		}
+		usleep_range(2950, 3000);
 	}
 
 	if (data->pinctrl_avail)
 		pinctrl_select_state(data->pinctrl, data->pinstate_act);
 
 	/* Deassert RST if GPIO is available */
-	if (gpio_is_valid(data->rst_gpio))
+	if (gpio_is_valid(data->rst_gpio)) {
 		gpio_set_value(data->rst_gpio, 1);
+		usleep_range(1000, 1500);
+	}
 
 	data->power_up = 1;
 	*preset_flag = 1;
