@@ -275,8 +275,9 @@ static int somc_panel_colormgr_pcc_select(struct mdss_dsi_ctrl_pdata *ctrl,
 {
 	struct somc_panel_color_mgr *color_mgr = ctrl->spec_pdata->color_mgr;
 	int ret = 0;
+	static bool first_boot_done = false;
 
-	if (profile_number == color_mgr->pcc_profile) {
+	if (profile_number == color_mgr->pcc_profile && first_boot_done) {
 		pr_debug("%s: Not applying: requested current profile\n",
 			__func__);
 		return 0;
@@ -292,6 +293,8 @@ static int somc_panel_colormgr_pcc_select(struct mdss_dsi_ctrl_pdata *ctrl,
 	color_mgr->pcc_profile = profile_number;
 	somc_panel_colormgr_reset(ctrl);
 	color_mgr->pcc_setup(&ctrl->panel_data);
+
+	first_boot_done = true;
 
 	return ret;
 }
