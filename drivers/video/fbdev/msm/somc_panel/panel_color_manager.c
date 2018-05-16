@@ -334,8 +334,8 @@ static int somc_panel_pcc_setup(struct mdss_panel_data *pdata)
 		goto exit;
 	}
 
-	if (!of_machine_is_compatible("qcom,msm8956") ||
-	    !of_machine_is_compatible("qcom,apq8056") ||
+	if (!of_machine_is_compatible("qcom,msm8956") &&
+	    !of_machine_is_compatible("qcom,apq8056") &&
 	    !of_machine_is_compatible("qcom,msm8939"))
 		mdss_dsi_op_mode_config(DSI_CMD_MODE, pdata);
 
