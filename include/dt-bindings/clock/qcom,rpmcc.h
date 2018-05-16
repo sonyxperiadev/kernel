@@ -1,6 +1,6 @@
 /*
  * Copyright 2015 Linaro Limited
- * Copyright (c) 2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -14,6 +14,30 @@
 
 #ifndef _DT_BINDINGS_CLK_MSM_RPMCC_H
 #define _DT_BINDINGS_CLK_MSM_RPMCC_H
+
+/* apq8064 */
+#define RPM_PXO_CLK				0
+#define RPM_PXO_A_CLK				1
+#define RPM_CXO_CLK				2
+#define RPM_CXO_A_CLK				3
+#define RPM_APPS_FABRIC_CLK			4
+#define RPM_APPS_FABRIC_A_CLK			5
+#define RPM_CFPB_CLK				6
+#define RPM_CFPB_A_CLK				7
+#define RPM_QDSS_CLK				8
+#define RPM_QDSS_A_CLK				9
+#define RPM_DAYTONA_FABRIC_CLK			10
+#define RPM_DAYTONA_FABRIC_A_CLK		11
+#define RPM_EBI1_CLK				12
+#define RPM_EBI1_A_CLK				13
+#define RPM_MM_FABRIC_CLK			14
+#define RPM_MM_FABRIC_A_CLK			15
+#define RPM_MMFPB_CLK				16
+#define RPM_MMFPB_A_CLK				17
+#define RPM_SYS_FABRIC_CLK			18
+#define RPM_SYS_FABRIC_A_CLK			19
+#define RPM_SFPB_CLK				20
+#define RPM_SFPB_A_CLK				21
 
 /* msm8916 and msm8996 */
 #define RPM_XO_CLK_SRC				0
@@ -104,15 +128,10 @@
 #define  CXO_PIL_SSC_CLK			83
 #define  CXO_PIL_CDSP_CLK			84
 #define  CNOC_PERIPH_KEEPALIVE_A_CLK		85
-
-#define  BIMC_USB_A_CLK				200
-#define  BIMC_USB_CLK				201
-#define  PNOC_USB_A_CLK				202
-#define  PNOC_USB_CLK				203
-#define  SNOC_USB_A_CLK				204
-#define  SNOC_USB_CLK				205
-#define  CXO_PIL_MSS_CLK			206
-#define  CXO_PIL_PRONTO_CLK			207
-#define  CXO_WLAN_CLK				208
+#define  MMSSNOC_A_CLK_CPU_VOTE			86
+#define  AGGR2_NOC_MSMBUS_CLK			87
+#define  AGGR2_NOC_MSMBUS_A_CLK			88
+#define  AGGR2_NOC_SMMU_CLK			89
+#define  AGGR2_NOC_USB_CLK			90
 
 #endif
