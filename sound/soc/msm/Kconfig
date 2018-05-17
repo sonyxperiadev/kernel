@@ -5,7 +5,7 @@ config SND_SOC_MSM_HOSTLESS_PCM
 
 config SND_SOC_MSM_QDSP6V2_INTF
 	bool "SoC Q6 audio driver for MSM/APQ"
-	depends on MSM_QDSP6_APRV2_GLINK
+	depends on MSM_QDSP6_APRV2 || MSM_QDSP6_APRV2_GLINK
 	help
 	 To add support for SoC audio on MSM/APQ.
 	 This will enable all the platform specific
