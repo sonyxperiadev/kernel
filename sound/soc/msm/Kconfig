@@ -243,7 +243,6 @@ config SND_SOC_MSM8952
 	select DOLBY_DS2
 	select SND_SOC_CPE
 	select SND_SOC_WCD_CPE
-	select SND_SOC_MSM_HDMI_DBA_CODEC_RX
 	select SND_HWDEP
         select DTS_EAGLE
 	help
