@@ -828,6 +828,7 @@ int rqbalance_pm_notify(struct notifier_block *notify_block,
  */
 static int rqbalance_get_package_info(void)
 {
+	struct cpufreq_policy *policy;
 	struct cpufreq_frequency_table *table;
 	int count, i, prev_cluster = -1, cur_cluster;
 
@@ -849,7 +850,11 @@ static int rqbalance_get_package_info(void)
 		 * tables composed of at least 4 frequency entries.
 		 * This requirement has to be fullfilled for ALL clusters.
 		 */
-		table = cpufreq_frequency_get_table(i);
+		policy = cpufreq_cpu_get(i);
+		if (!policy)
+			return -EINVAL;
+
+		table = policy->freq_table;
 		if (!table)
 			return -EINVAL;
 
