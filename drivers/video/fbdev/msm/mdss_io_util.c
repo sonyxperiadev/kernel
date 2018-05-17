@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2015, 2017-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -13,11 +13,12 @@
 #include <linux/clk.h>
 #include <linux/err.h>
 #include <linux/io.h>
+#include <linux/regulator/consumer.h>
 #include <linux/delay.h>
 #include <linux/mdss_io_util.h>
 
 #define MAX_I2C_CMDS  16
-void mdss_reg_w(struct mdss_io_data *io, u32 offset, u32 value, u32 debug)
+void dss_reg_w(struct dss_io_data *io, u32 offset, u32 value, u32 debug)
 {
 	u32 in_val;
 
@@ -38,16 +39,14 @@ void mdss_reg_w(struct mdss_io_data *io, u32 offset, u32 value, u32 debug)
 		in_val = readl_relaxed(io->base + offset);
 		DEV_DBG("[%08x] => %08x [%08x]\n",
 			(u32)(unsigned long)(io->base + offset),
-
 			value, in_val);
 	}
-} /* mdss_reg_w */
-EXPORT_SYMBOL(mdss_reg_w);
+} /* dss_reg_w */
+EXPORT_SYMBOL(dss_reg_w);
 
-u32 mdss_reg_r(struct mdss_io_data *io, u32 offset, u32 debug)
+u32 dss_reg_r(struct dss_io_data *io, u32 offset, u32 debug)
 {
 	u32 value;
-
 	if (!io || !io->base) {
 		DEV_ERR("%pS->%s: invalid input\n",
 			__builtin_return_address(0), __func__);
@@ -66,19 +65,19 @@ u32 mdss_reg_r(struct mdss_io_data *io, u32 offset, u32 debug)
 			(u32)(unsigned long)(io->base + offset), value);
 
 	return value;
-} /* mdss_reg_r */
-EXPORT_SYMBOL(mdss_reg_r);
+} /* dss_reg_r */
+EXPORT_SYMBOL(dss_reg_r);
 
-void mdss_reg_dump(void __iomem *base, u32 length, const char *prefix,
+void dss_reg_dump(void __iomem *base, u32 length, const char *prefix,
 	u32 debug)
 {
 	if (debug)
 		print_hex_dump(KERN_INFO, prefix, DUMP_PREFIX_OFFSET, 32, 4,
 			(void *)base, length, false);
-} /* mdss_reg_dump */
-EXPORT_SYMBOL(mdss_reg_dump);
+} /* dss_reg_dump */
+EXPORT_SYMBOL(dss_reg_dump);
 
-static struct resource *msm_mdss_get_res_byname(struct platform_device *pdev,
+static struct resource *msm_dss_get_res_byname(struct platform_device *pdev,
 	unsigned int type, const char *name)
 {
 	struct resource *res = NULL;
@@ -88,11 +87,11 @@ static struct resource *msm_mdss_get_res_byname(struct platform_device *pdev,
 		DEV_ERR("%s: '%s' resource not found\n", __func__, name);
 
 	return res;
-} /* msm_mdss_get_res_byname */
-EXPORT_SYMBOL(msm_mdss_get_res_byname);
+} /* msm_dss_get_res_byname */
+EXPORT_SYMBOL(msm_dss_get_res_byname);
 
-int msm_mdss_ioremap_byname(struct platform_device *pdev,
-	struct mdss_io_data *io_data, const char *name)
+int msm_dss_ioremap_byname(struct platform_device *pdev,
+	struct dss_io_data *io_data, const char *name)
 {
 	struct resource *res = NULL;
 
@@ -102,9 +101,9 @@ int msm_mdss_ioremap_byname(struct platform_device *pdev,
 		return -EINVAL;
 	}
 
-	res = msm_mdss_get_res_byname(pdev, IORESOURCE_MEM, name);
+	res = msm_dss_get_res_byname(pdev, IORESOURCE_MEM, name);
 	if (!res) {
-		DEV_ERR("%pS->%s: '%s' msm_mdss_get_res_byname failed\n",
+		DEV_ERR("%pS->%s: '%s' msm_dss_get_res_byname failed\n",
 			__builtin_return_address(0), __func__, name);
 		return -ENODEV;
 	}
@@ -118,10 +117,10 @@ int msm_mdss_ioremap_byname(struct platform_device *pdev,
 	}
 
 	return 0;
-} /* msm_mdss_ioremap_byname */
-EXPORT_SYMBOL(msm_mdss_ioremap_byname);
+} /* msm_dss_ioremap_byname */
+EXPORT_SYMBOL(msm_dss_ioremap_byname);
 
-void msm_mdss_iounmap(struct mdss_io_data *io_data)
+void msm_dss_iounmap(struct dss_io_data *io_data)
 {
 	if (!io_data) {
 		DEV_ERR("%pS->%s: invalid input\n",
@@ -134,15 +133,15 @@ void msm_mdss_iounmap(struct mdss_io_data *io_data)
 		io_data->base = NULL;
 	}
 	io_data->len = 0;
-} /* msm_mdss_iounmap */
-EXPORT_SYMBOL(msm_mdss_iounmap);
+} /* msm_dss_iounmap */
+EXPORT_SYMBOL(msm_dss_iounmap);
 
-int msm_mdss_config_vreg(struct device *dev, struct mdss_vreg *in_vreg,
+int msm_dss_config_vreg(struct device *dev, struct dss_vreg *in_vreg,
 	int num_vreg, int config)
 {
 	int i = 0, rc = 0;
-	struct mdss_vreg *curr_vreg = NULL;
-	enum mdss_vreg_type type;
+	struct dss_vreg *curr_vreg = NULL;
+	enum dss_vreg_type type;
 
 	if (!in_vreg || !num_vreg)
 		return rc;
@@ -210,60 +209,13 @@ vreg_get_fail:
 		goto vreg_unconfig;
 	}
 	return rc;
-} /* msm_mdss_config_vreg */
-EXPORT_SYMBOL(msm_mdss_config_vreg);
+} /* msm_dss_config_vreg */
+EXPORT_SYMBOL(msm_dss_config_vreg);
 
-int msm_mdss_config_vreg_opt_mode(struct mdss_vreg *in_vreg, int num_vreg,
-				 enum mdss_vreg_mode mode)
-{
-	int i = 0, rc = 0;
-
-	if (mode >= DSS_REG_MODE_MAX) {
-		pr_err("%pS->%s: invalid mode %d\n",
-			 __builtin_return_address(0), __func__, mode);
-		rc = -EINVAL;
-		goto error;
-	}
-
-	for (i = 0; i < num_vreg; i++) {
-		rc = PTR_RET(in_vreg[i].vreg);
-		if (rc) {
-			DEV_ERR("%pS->%s: %s regulator error. rc=%d\n",
-				__builtin_return_address(0), __func__,
-				in_vreg[i].vreg_name, rc);
-			goto error;
-		}
-
-		DEV_DBG("%s: Setting optimum mode %d for %s (load=%d)\n",
-			__func__, mode, in_vreg[i].vreg_name,
-			in_vreg[i].load[mode]);
-		rc = regulator_set_load(in_vreg[i].vreg,
-					in_vreg[i].load[mode]);
-		if (rc < 0) {
-			DEV_ERR("%pS->%s: %s set opt mode failed. rc=%d\n",
-				__builtin_return_address(0), __func__,
-				in_vreg[i].vreg_name, rc);
-			goto error;
-		} else {
-			/*
-			 * regulator_set_load can return non-zero
-			 * value for success. However, this API is expected
-			 * to return 0 for success.
-			 */
-			rc = 0;
-		}
-	}
-
-error:
-	return rc;
-}
-EXPORT_SYMBOL(msm_mdss_config_vreg_opt_mode);
-
-int msm_mdss_enable_vreg(struct mdss_vreg *in_vreg, int num_vreg, int enable)
+int msm_dss_enable_vreg(struct dss_vreg *in_vreg, int num_vreg, int enable)
 {
 	int i = 0, rc = 0;
 	bool need_sleep;
-
 	if (enable) {
 		for (i = 0; i < num_vreg; i++) {
 			rc = PTR_RET(in_vreg[i].vreg);
@@ -275,10 +227,10 @@ int msm_mdss_enable_vreg(struct mdss_vreg *in_vreg, int num_vreg, int enable)
 			}
 			need_sleep = !regulator_is_enabled(in_vreg[i].vreg);
 			if (in_vreg[i].pre_on_sleep && need_sleep)
-				usleep_range((in_vreg[i].pre_on_sleep * 1000),
-					(in_vreg[i].pre_on_sleep * 1000) + 10);
+				usleep_range(in_vreg[i].pre_on_sleep * 1000,
+					in_vreg[i].pre_on_sleep * 1000);
 			rc = regulator_set_load(in_vreg[i].vreg,
-				in_vreg[i].load[DSS_REG_MODE_ENABLE]);
+				in_vreg[i].enable_load);
 			if (rc < 0) {
 				DEV_ERR("%pS->%s: %s set opt m fail\n",
 					__builtin_return_address(0), __func__,
@@ -287,8 +239,8 @@ int msm_mdss_enable_vreg(struct mdss_vreg *in_vreg, int num_vreg, int enable)
 			}
 			rc = regulator_enable(in_vreg[i].vreg);
 			if (in_vreg[i].post_on_sleep && need_sleep)
-				usleep_range((in_vreg[i].post_on_sleep * 1000),
-					(in_vreg[i].post_on_sleep * 1000) + 10);
+				usleep_range(in_vreg[i].post_on_sleep * 1000,
+					in_vreg[i].post_on_sleep * 1000);
 			if (rc < 0) {
 				DEV_ERR("%pS->%s: %s enable failed\n",
 					__builtin_return_address(0), __func__,
@@ -299,46 +251,41 @@ int msm_mdss_enable_vreg(struct mdss_vreg *in_vreg, int num_vreg, int enable)
 	} else {
 		for (i = num_vreg-1; i >= 0; i--) {
 			if (in_vreg[i].pre_off_sleep)
-				usleep_range((in_vreg[i].pre_off_sleep * 1000),
-					(in_vreg[i].pre_off_sleep * 1000) + 10);
+				usleep_range(in_vreg[i].pre_off_sleep * 1000,
+					in_vreg[i].pre_off_sleep * 1000);
 			regulator_set_load(in_vreg[i].vreg,
-				in_vreg[i].load[DSS_REG_MODE_DISABLE]);
-
-			if (regulator_is_enabled(in_vreg[i].vreg))
-				regulator_disable(in_vreg[i].vreg);
-
+				in_vreg[i].disable_load);
+			regulator_disable(in_vreg[i].vreg);
 			if (in_vreg[i].post_off_sleep)
-				usleep_range((in_vreg[i].post_off_sleep * 1000),
-				(in_vreg[i].post_off_sleep * 1000) + 10);
+				usleep_range(in_vreg[i].post_off_sleep * 1000,
+					in_vreg[i].post_off_sleep * 1000);
 		}
 	}
 	return rc;
 
 disable_vreg:
-	regulator_set_load(in_vreg[i].vreg,
-					in_vreg[i].load[DSS_REG_MODE_DISABLE]);
+	regulator_set_load(in_vreg[i].vreg, in_vreg[i].disable_load);
 
 vreg_set_opt_mode_fail:
 	for (i--; i >= 0; i--) {
 		if (in_vreg[i].pre_off_sleep)
-			usleep_range((in_vreg[i].pre_off_sleep * 1000),
-				(in_vreg[i].pre_off_sleep * 1000) + 10);
+			usleep_range(in_vreg[i].pre_off_sleep * 1000,
+				in_vreg[i].pre_off_sleep * 1000);
 		regulator_set_load(in_vreg[i].vreg,
-			in_vreg[i].load[DSS_REG_MODE_DISABLE]);
+			in_vreg[i].disable_load);
 		regulator_disable(in_vreg[i].vreg);
 		if (in_vreg[i].post_off_sleep)
-			usleep_range((in_vreg[i].post_off_sleep * 1000),
-				(in_vreg[i].post_off_sleep * 1000) + 10);
+			usleep_range(in_vreg[i].post_off_sleep * 1000,
+				in_vreg[i].post_off_sleep * 1000);
 	}
 
 	return rc;
-} /* msm_mdss_enable_vreg */
-EXPORT_SYMBOL(msm_mdss_enable_vreg);
+} /* msm_dss_enable_vreg */
+EXPORT_SYMBOL(msm_dss_enable_vreg);
 
-int msm_mdss_enable_gpio(struct mdss_gpio *in_gpio, int num_gpio, int enable)
+int msm_dss_enable_gpio(struct dss_gpio *in_gpio, int num_gpio, int enable)
 {
 	int i = 0, rc = 0;
-
 	if (enable) {
 		for (i = 0; i < num_gpio; i++) {
 			DEV_DBG("%pS->%s: %s enable\n",
@@ -372,10 +319,10 @@ disable_gpio:
 			gpio_free(in_gpio[i].gpio);
 
 	return rc;
-} /* msm_mdss_enable_gpio */
-EXPORT_SYMBOL(msm_mdss_enable_gpio);
+} /* msm_dss_enable_gpio */
+EXPORT_SYMBOL(msm_dss_enable_gpio);
 
-void msm_mdss_put_clk(struct mdss_clk *clk_arry, int num_clk)
+void msm_dss_put_clk(struct dss_clk *clk_arry, int num_clk)
 {
 	int i;
 
@@ -384,10 +331,10 @@ void msm_mdss_put_clk(struct mdss_clk *clk_arry, int num_clk)
 			clk_put(clk_arry[i].clk);
 		clk_arry[i].clk = NULL;
 	}
-} /* msm_mdss_put_clk */
-EXPORT_SYMBOL(msm_mdss_put_clk);
+} /* msm_dss_put_clk */
+EXPORT_SYMBOL(msm_dss_put_clk);
 
-int msm_mdss_get_clk(struct device *dev, struct mdss_clk *clk_arry, int num_clk)
+int msm_dss_get_clk(struct device *dev, struct dss_clk *clk_arry, int num_clk)
 {
 	int i, rc = 0;
 
@@ -405,19 +352,19 @@ int msm_mdss_get_clk(struct device *dev, struct mdss_clk *clk_arry, int num_clk)
 	return rc;
 
 error:
-	msm_mdss_put_clk(clk_arry, num_clk);
+	msm_dss_put_clk(clk_arry, num_clk);
 
 	return rc;
-} /* msm_mdss_get_clk */
-EXPORT_SYMBOL(msm_mdss_get_clk);
+} /* msm_dss_get_clk */
+EXPORT_SYMBOL(msm_dss_get_clk);
 
-int msm_mdss_clk_set_rate(struct mdss_clk *clk_arry, int num_clk)
+int msm_dss_clk_set_rate(struct dss_clk *clk_arry, int num_clk)
 {
 	int i, rc = 0;
 
 	for (i = 0; i < num_clk; i++) {
 		if (clk_arry[i].clk) {
-			if (clk_arry[i].type != DSS_CLK_AHB) {
+			if (DSS_CLK_AHB != clk_arry[i].type) {
 				DEV_DBG("%pS->%s: '%s' rate %ld\n",
 					__builtin_return_address(0), __func__,
 					clk_arry[i].clk_name,
@@ -442,10 +389,10 @@ int msm_mdss_clk_set_rate(struct mdss_clk *clk_arry, int num_clk)
 	}
 
 	return rc;
-} /* msm_mdss_clk_set_rate */
-EXPORT_SYMBOL(msm_mdss_clk_set_rate);
+} /* msm_dss_clk_set_rate */
+EXPORT_SYMBOL(msm_dss_clk_set_rate);
 
-int msm_mdss_enable_clk(struct mdss_clk *clk_arry, int num_clk, int enable)
+int msm_dss_enable_clk(struct dss_clk *clk_arry, int num_clk, int enable)
 {
 	int i, rc = 0;
 
@@ -469,7 +416,7 @@ int msm_mdss_enable_clk(struct mdss_clk *clk_arry, int num_clk, int enable)
 			}
 
 			if (rc) {
-				msm_mdss_enable_clk(&clk_arry[i],
+				msm_dss_enable_clk(&clk_arry[i],
 					i, false);
 				break;
 			}
@@ -490,8 +437,8 @@ int msm_mdss_enable_clk(struct mdss_clk *clk_arry, int num_clk, int enable)
 	}
 
 	return rc;
-} /* msm_mdss_enable_clk */
-EXPORT_SYMBOL(msm_mdss_enable_clk);
+} /* msm_dss_enable_clk */
+EXPORT_SYMBOL(msm_dss_enable_clk);
 
 
 int mdss_i2c_byte_read(struct i2c_client *client, uint8_t slave_addr,

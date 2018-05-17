@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2015, 2017-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2015, 2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -58,7 +58,6 @@ static int dsi_update_pconfig(struct mdss_panel_data *pdata,
 	int ret = 0;
 	struct mdss_panel_info *pinfo = &pdata->panel_info;
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
-
 	if (!pdata)
 		return -ENODEV;
 	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
@@ -241,7 +240,7 @@ static int dsi_parse_gpio(struct platform_device *pdev,
 }
 
 static void mdss_dsi_put_dt_vreg_data(struct device *dev,
-	struct mdss_module_power *module_power)
+	struct dss_module_power *module_power)
 {
 	if (!module_power) {
 		pr_err("%s: invalid input\n", __func__);
@@ -256,7 +255,7 @@ static void mdss_dsi_put_dt_vreg_data(struct device *dev,
 }
 
 static int mdss_dsi_get_dt_vreg_data(struct device *dev,
-	struct mdss_module_power *mp, enum dsi_pm_type module)
+	struct dss_module_power *mp, enum dsi_pm_type module)
 {
 	int i = 0, rc = 0;
 	u32 tmp = 0;
@@ -291,9 +290,10 @@ static int mdss_dsi_get_dt_vreg_data(struct device *dev,
 		pr_debug("%s: vreg found. count=%d\n", __func__, mp->num_vreg);
 	}
 
-	mp->vreg_config = devm_kzalloc(dev, sizeof(struct mdss_vreg) *
+	mp->vreg_config = devm_kzalloc(dev, sizeof(struct dss_vreg) *
 		mp->num_vreg, GFP_KERNEL);
 	if (!mp->vreg_config) {
+		pr_err("%s: can't alloc vreg mem\n", __func__);
 		rc = -ENOMEM;
 		goto error;
 	}
@@ -338,7 +338,7 @@ static int mdss_dsi_get_dt_vreg_data(struct device *dev,
 				__func__, rc);
 			goto error;
 		}
-		mp->vreg_config[i].load[DSS_REG_MODE_ENABLE] = tmp;
+		mp->vreg_config[i].enable_load = tmp;
 
 		/* disable-load */
 		rc = of_property_read_u32(supply_node,
@@ -348,17 +348,7 @@ static int mdss_dsi_get_dt_vreg_data(struct device *dev,
 				__func__, rc);
 			goto error;
 		}
-		mp->vreg_config[i].load[DSS_REG_MODE_DISABLE] = tmp;
-
-		/* ulp-load */
-		rc = of_property_read_u32(supply_node,
-			"qcom,supply-ulp-load", &tmp);
-		if (rc)
-			pr_warn("%s: error reading ulp load. rc=%d\n",
-				__func__, rc);
-
-		mp->vreg_config[i].load[DSS_REG_MODE_ULP] = (!rc ? tmp :
-			mp->vreg_config[i].load[DSS_REG_MODE_ENABLE]);
+		mp->vreg_config[i].disable_load = tmp;
 
 		/* pre-sleep */
 		rc = of_property_read_u32(supply_node,
@@ -402,14 +392,13 @@ static int mdss_dsi_get_dt_vreg_data(struct device *dev,
 			mp->vreg_config[i].post_off_sleep = tmp;
 		}
 
-		pr_debug("%s: %s min=%d, max=%d, enable=%d, disable=%d, ulp=%d, preonsleep=%d, postonsleep=%d, preoffsleep=%d, postoffsleep=%d\n",
+		pr_debug("%s: %s min=%d, max=%d, enable=%d, disable=%d, preonsleep=%d, postonsleep=%d, preoffsleep=%d, postoffsleep=%d\n",
 			__func__,
 			mp->vreg_config[i].vreg_name,
 			mp->vreg_config[i].min_voltage,
 			mp->vreg_config[i].max_voltage,
-			mp->vreg_config[i].load[DSS_REG_MODE_ENABLE]
-			mp->vreg_config[i].load[DSS_REG_MODE_DISABLE]
-			mp->vreg_config[i].load[DSS_REG_MODE_ULP]
+			mp->vreg_config[i].enable_load,
+			mp->vreg_config[i].disable_load,
 			mp->vreg_config[i].pre_on_sleep,
 			mp->vreg_config[i].post_on_sleep,
 			mp->vreg_config[i].pre_off_sleep,

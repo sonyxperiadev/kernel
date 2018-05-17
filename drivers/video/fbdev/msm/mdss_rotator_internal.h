@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2016, 2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -20,6 +20,8 @@
 #include <linux/mutex.h>
 #include <linux/types.h>
 #include <linux/cdev.h>
+#include <sync.h>
+#include <sw_sync.h>
 
 #include  "mdss_mdp.h"
 
@@ -50,7 +52,7 @@ struct mdss_rot_entry_cb_intf {
 
 struct mdss_rot_timeline {
 	struct mutex lock;
-	struct mdss_timeline *timeline;
+	struct sw_sync_timeline *timeline;
 	u32 next_value;
 	char fence_name[32];
 };
@@ -93,10 +95,10 @@ struct mdss_rot_entry {
 	struct mdss_mdp_data src_buf;
 	struct mdss_mdp_data dst_buf;
 
-	struct mdss_fence *input_fence;
+	struct sync_fence *input_fence;
 
 	int output_fence_fd;
-	struct mdss_fence *output_fence;
+	struct sync_fence *output_fence;
 	bool output_signaled;
 
 	u32 dnsc_factor_w;
@@ -154,7 +156,7 @@ struct mdss_rot_mgr {
 
 	/*
 	 * mangaing rotation queues, depends on
-	 * how many hw pipes available on the system
+	 * how many hw pipes availabe on the system
 	 */
 	int queue_count;
 	struct mdss_rot_queue *queues;
@@ -172,7 +174,7 @@ struct mdss_rot_mgr {
 	struct mdss_rot_bus_data_type reg_bus;
 
 	/* Module power is only used for regulator management */
-	struct mdss_module_power module_power;
+	struct dss_module_power module_power;
 	bool regulator_enable;
 
 	struct mutex clk_lock;

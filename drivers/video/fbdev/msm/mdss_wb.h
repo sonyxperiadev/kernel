@@ -1,4 +1,4 @@
-/* Copyright (c) 2013, 2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -14,12 +14,12 @@
 #ifndef MDSS_WB_H
 #define MDSS_WB_H
 
-#include <linux/extcon.h>
+#include <linux/switch.h>
 
 struct mdss_wb_ctrl {
 	struct platform_device *pdev;
 	struct mdss_panel_data pdata;
-	struct extcon_dev sdev;
+	struct switch_dev sdev;
 };
 
 #endif

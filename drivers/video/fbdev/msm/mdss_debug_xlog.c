@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2016, 2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -91,6 +91,48 @@ static inline bool mdss_xlog_is_enabled(u32 flag)
 {
 	return (flag & mdss_dbg_xlog.xlog_enable) ||
 		(flag == MDSS_XLOG_ALL && mdss_dbg_xlog.xlog_enable);
+}
+
+static void __halt_vbif_xin(void)
+{
+	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
+
+	pr_err("Halting VBIF-XIN\n");
+	MDSS_VBIF_WRITE(mdata, MMSS_VBIF_XIN_HALT_CTRL0, 0xFFFFFFFF, false);
+}
+
+static void __halt_vbif_axi(void)
+{
+	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
+
+	pr_err("Halting VBIF-AXI\n");
+	MDSS_VBIF_WRITE(mdata, MMSS_VBIF_AXI_HALT_CTRL0, 0xFFFFFFFF, false);
+}
+
+static void __dump_vbif_state(void)
+{
+	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
+	unsigned int reg_vbif_src_err, reg_vbif_err_info,
+		reg_vbif_xin_halt_ctrl0, reg_vbif_xin_halt_ctrl1,
+		reg_vbif_axi_halt_ctrl0, reg_vbif_axi_halt_ctrl1;
+
+	reg_vbif_src_err = MDSS_VBIF_READ(mdata,
+					MMSS_VBIF_SRC_ERR, false);
+	reg_vbif_err_info = MDSS_VBIF_READ(mdata,
+					MMSS_VBIF_ERR_INFO, false);
+	reg_vbif_xin_halt_ctrl0 = MDSS_VBIF_READ(mdata,
+					MMSS_VBIF_XIN_HALT_CTRL0, false);
+	reg_vbif_xin_halt_ctrl1 = MDSS_VBIF_READ(mdata,
+					MMSS_VBIF_XIN_HALT_CTRL1, false);
+	reg_vbif_axi_halt_ctrl0 = MDSS_VBIF_READ(mdata,
+					MMSS_VBIF_AXI_HALT_CTRL0, false);
+	reg_vbif_axi_halt_ctrl1 = MDSS_VBIF_READ(mdata,
+					MMSS_VBIF_AXI_HALT_CTRL1, false);
+	pr_err("VBIF SRC_ERR=%x, ERR_INFO=%x\n",
+				reg_vbif_src_err, reg_vbif_err_info);
+	pr_err("VBIF XIN_HALT_CTRL0=%x, XIN_HALT_CTRL1=%x, AXI_HALT_CTRL0=%x, AXI_HALT_CTRL1=%x\n"
+			, reg_vbif_xin_halt_ctrl0, reg_vbif_xin_halt_ctrl1,
+			reg_vbif_axi_halt_ctrl0, reg_vbif_axi_halt_ctrl1);
 }
 
 void mdss_xlog(const char *name, int line, int flag, ...)
@@ -238,6 +280,7 @@ static void mdss_dump_debug_bus(u32 bus_dump_flag,
 	phys_addr_t phys = 0;
 	int list_size = mdata->dbg_bus_size;
 	int i;
+	u32 offset;
 
 	if (!(mdata->dbg_bus && list_size))
 		return;
@@ -271,8 +314,14 @@ static void mdss_dump_debug_bus(u32 bus_dump_flag,
 		writel_relaxed(TEST_MASK(head->block_id, head->test_id),
 				mdss_res->mdp_base + head->wr_addr);
 		wmb(); /* make sure test bits were written */
+
+		if (mdata->dbg_bus_flags & DEBUG_FLAGS_DSPP)
+			offset = MDSS_MDP_DSPP_DEBUGBUS_STATUS;
+		else
+			offset = head->wr_addr + 0x4;
+
 		status = readl_relaxed(mdss_res->mdp_base +
-			head->wr_addr + 0x4);
+			offset);
 
 		if (in_log)
 			pr_err("waddr=0x%x blk=%d tst=%d val=0x%x\n",
@@ -309,7 +358,7 @@ static void __vbif_debug_bus(struct vbif_debug_bus *head,
 				vbif_base + head->block_bus_addr);
 		/* make sure that current bus blcok enable */
 		wmb();
-		for (j = 0; j < head->test_pnt_cnt; j++) {
+		for (j = head->test_pnt_start; j < head->test_pnt_cnt; j++) {
 			writel_relaxed(j, vbif_base + head->block_bus_addr + 4);
 			/* make sure that test point is enabled */
 			wmb();
@@ -353,7 +402,7 @@ static void mdss_dump_vbif_debug_bus(u32 bus_dump_flag,
 		bus_size = mdata->nrt_vbif_dbg_bus_size;
 	}
 
-	if (!dbg_bus || !bus_size)
+	if (!vbif_base || !dbg_bus || !bus_size)
 		return;
 
 	/* allocate memory for each test point */
@@ -568,7 +617,7 @@ struct mdss_debug_base *get_dump_blk_addr(const char *blk_name)
 	list_for_each_entry_safe(blk_base, tmp, &mdd->base_list, head) {
 		if (strlen(blk_base->name) &&
 			!strcmp(blk_base->name, blk_name))
-			return blk_base;
+				return blk_base;
 	}
 
 	return NULL;
@@ -604,8 +653,17 @@ static void mdss_xlog_dump_array(struct mdss_debug_base *blk_arr[],
 		mdss_dump_dsi_debug_bus(mdss_dbg_xlog.enable_dsi_dbgbus_dump,
 			&mdss_dbg_xlog.dsi_dbgbus_dump);
 
-	if (dead && mdss_dbg_xlog.panic_on_err)
+	if (dead && mdss_dbg_xlog.panic_on_err) {
+		mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_ON);
+		__dump_vbif_state();
+		__halt_vbif_xin();
+		usleep_range(10000, 10010);
+		__halt_vbif_axi();
+		usleep_range(10000, 10010);
+		__dump_vbif_state();
+		mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF);
 		panic(name);
+	}
 }
 
 static void xlog_debug_work(struct work_struct *work)
@@ -697,11 +755,6 @@ static ssize_t mdss_xlog_dump_read(struct file *file, char __user *buff,
 
 	if (__mdss_xlog_dump_calc_range()) {
 		len = mdss_xlog_dump_entry(xlog_buf, MDSS_XLOG_BUF_MAX);
-		if (len < 0 || len > count) {
-			pr_err("len is more than the size of user buffer\n");
-			return 0;
-		}
-
 		if (copy_to_user(buff, xlog_buf, len))
 			return -EFAULT;
 		*ppos += len;
@@ -752,8 +805,8 @@ int mdss_create_xlog_debug(struct mdss_debug_data *mdd)
 						&mdss_xlog_fops);
 	debugfs_create_u32("enable", 0644, mdss_dbg_xlog.xlog,
 			    &mdss_dbg_xlog.xlog_enable);
-	debugfs_create_bool("panic", 0644, mdss_dbg_xlog.xlog,
-			    (bool *)&mdss_dbg_xlog.panic_on_err);
+	debugfs_create_u32("panic", 0644, mdss_dbg_xlog.xlog,
+			    &mdss_dbg_xlog.panic_on_err);
 	debugfs_create_u32("reg_dump", 0644, mdss_dbg_xlog.xlog,
 			    &mdss_dbg_xlog.enable_reg_dump);
 	debugfs_create_u32("dbgbus_dump", 0644, mdss_dbg_xlog.xlog,

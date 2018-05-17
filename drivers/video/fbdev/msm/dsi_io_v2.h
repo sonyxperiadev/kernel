@@ -1,4 +1,4 @@
-/* Copyright (c) 2013, 2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -18,10 +18,10 @@
 void msm_dsi_ahb_ctrl(int enable);
 
 int msm_dsi_io_init(struct platform_device *dev,
-				struct mdss_module_power *mp);
+				struct dss_module_power *mp);
 
 void msm_dsi_io_deinit(struct platform_device *dev,
-				struct mdss_module_power *mp);
+				struct dss_module_power *mp);
 
 int msm_dsi_clk_init(struct platform_device *dev);
 

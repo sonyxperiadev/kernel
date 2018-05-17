@@ -1,4 +1,4 @@
-/* Copyright (c) 2009-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2009-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -38,8 +38,6 @@
 #define PANEL_TX_MAX_BUF 256
 #define PANEL_CMD_MIN_TX_COUNT 2
 #define PANEL_DATA_NODE_LEN 80
-/* MDP3 HW Version */
-#define MDP_CORE_HW_VERSION 0x03050306
 
 /* Hex number + whitespace */
 #define NEXT_VALUE_OFFSET 3
@@ -97,7 +95,6 @@ static int panel_debug_base_open(struct inode *inode, struct file *file)
 static int panel_debug_base_release(struct inode *inode, struct file *file)
 {
 	struct mdss_debug_base *dbg = file->private_data;
-
 	mutex_lock(&mdss_debug_lock);
 	if (dbg && dbg->buf) {
 		kfree(dbg->buf);
@@ -187,10 +184,8 @@ static ssize_t panel_debug_base_reg_write(struct file *file,
 	char *bufp;
 
 	struct mdss_data_type *mdata = mdss_res;
-	struct mdss_mdp_ctl *ctl = mdata->ctl_off + 0;
-	struct mdss_panel_data *panel_data = NULL;
-	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
-
+	struct mdss_mdp_ctl *ctl;
+	struct mdss_dsi_ctrl_pdata *ctrl_pdata;
 	struct dsi_cmd_desc dsi_write_cmd = {
 		{0/*data type*/, 1, 0, 0, 0, 0/* len */}, reg};
 	struct dcs_cmd_req cmdreq;
@@ -204,15 +199,6 @@ static ssize_t panel_debug_base_reg_write(struct file *file,
 
 	if (copy_from_user(buf, user_buf, count))
 		return -EFAULT;
-
-	if ((mdata->mdp_rev <= MDSS_MDP_HW_REV_105) ||
-			(mdata->mdp_rev == MDP_CORE_HW_VERSION))
-		panel_data = mdss_res->pdata;
-	else
-		panel_data = ctl->panel_data;
-
-	ctrl_pdata = container_of(panel_data,
-		struct mdss_dsi_ctrl_pdata, panel_data);
 
 	buf[count] = 0;	/* end of string */
 
@@ -274,8 +260,9 @@ static ssize_t panel_debug_base_reg_read(struct file *file,
 	char *panel_reg_buf, *rx_buf;
 	struct mdss_data_type *mdata = mdss_res;
 	struct mdss_mdp_ctl *ctl = mdata->ctl_off + 0;
-	struct mdss_panel_data *panel_data = NULL;
-	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
+	struct mdss_panel_data *panel_data = ctl->panel_data;
+	struct mdss_dsi_ctrl_pdata *ctrl_pdata = container_of(panel_data,
+					struct mdss_dsi_ctrl_pdata, panel_data);
 	int rc = -EFAULT;
 
 	if (!dbg)
@@ -308,17 +295,8 @@ static ssize_t panel_debug_base_reg_read(struct file *file,
 		mdata->debug_inf.debug_enable_clock(1);
 
 	panel_reg[0] = dbg->off;
-	if ((mdata->mdp_rev <= MDSS_MDP_HW_REV_105) ||
-			(mdata->mdp_rev == MDP_CORE_HW_VERSION))
-		panel_data = mdss_res->pdata;
-	else
-		panel_data = ctl->panel_data;
-
-	ctrl_pdata = container_of(panel_data,
-			struct mdss_dsi_ctrl_pdata, panel_data);
-
-	mdss_dsi_panel_cmd_read(ctrl_pdata, panel_reg[0],
-		panel_reg[1], NULL, rx_buf, dbg->cnt);
+	mdss_dsi_panel_cmd_read(ctrl_pdata, panel_reg[0], panel_reg[1],
+				NULL, rx_buf, dbg->cnt);
 
 	len = scnprintf(panel_reg_buf, reg_buf_len, "0x%02zx: ", dbg->off);
 
@@ -445,7 +423,6 @@ static int mdss_debug_base_open(struct inode *inode, struct file *file)
 static int mdss_debug_base_release(struct inode *inode, struct file *file)
 {
 	struct mdss_debug_base *dbg = file->private_data;
-
 	mutex_lock(&mdss_debug_lock);
 	if (dbg && dbg->buf) {
 		kfree(dbg->buf);
@@ -475,11 +452,10 @@ static ssize_t mdss_debug_base_offset_write(struct file *file,
 
 	buf[count] = 0;	/* end of string */
 
+	sscanf(buf, "%5x %x", &off, &cnt);
+
 	if (off % sizeof(u32))
 		return -EINVAL;
-
-	if (sscanf(buf, "%5x %x", &off, &cnt) != 2)
-		return -EFAULT;
 
 	if (off > dbg->max_offset)
 		return -EINVAL;
@@ -596,6 +572,7 @@ static ssize_t mdss_debug_base_reg_read(struct file *file,
 		dbg->buf = kzalloc(dbg->buf_len, GFP_KERNEL);
 
 		if (!dbg->buf) {
+			pr_err("not enough memory to hold reg dump\n");
 			mutex_unlock(&mdss_debug_lock);
 			return -ENOMEM;
 		}
@@ -756,6 +733,7 @@ static int parse_dt_xlog_dump_list(const u32 *arr, int count,
 	u32 len;
 	int i, total_names, total_xin_ids, rc;
 	u32 *offsets = NULL;
+	struct property *pp;
 
 	/* Get the property with the name of the ranges */
 	total_names = of_property_count_strings(pdev->dev.of_node,
@@ -765,8 +743,8 @@ static int parse_dt_xlog_dump_list(const u32 *arr, int count,
 		total_names = 0;
 	}
 
-	of_find_property(pdev->dev.of_node, xin_prop, &total_xin_ids);
-	if (total_xin_ids > 0) {
+	pp = of_find_property(pdev->dev.of_node, xin_prop, &total_xin_ids);
+	if (pp && total_xin_ids > 0) {
 		total_xin_ids /= sizeof(u32);
 		offsets = kcalloc(total_xin_ids, sizeof(u32), GFP_KERNEL);
 		if (offsets) {
@@ -922,7 +900,7 @@ static ssize_t mdss_debug_perf_mode_write(struct file *file,
 
 	buf[count] = 0;	/* end of string */
 
-	if (kstrtoint(buf, 10, &perf_mode) != 1)
+	if (sscanf(buf, "%d", &perf_mode) != 1)
 		return -EFAULT;
 
 	if (perf_mode) {
@@ -1059,7 +1037,7 @@ static ssize_t mdss_debug_perf_panic_write(struct file *file,
 
 	buf[count] = 0;	/* end of string */
 
-	if (kstrtoint(buf, 10, &disable_panic) != 1)
+	if (sscanf(buf, "%d", &disable_panic) != 1)
 		return -EFAULT;
 
 	if (disable_panic) {
@@ -1095,7 +1073,7 @@ static int mdss_debugfs_cleanup(struct mdss_debug_data *mdd)
 		kfree(base);
 	}
 
-	if (mdd)
+	if (mdd->root)
 		debugfs_remove_recursive(mdd->root);
 
 	kfree(mdd);
@@ -1109,7 +1087,7 @@ static ssize_t mdss_debug_perf_bw_limit_read(struct file *file,
 	struct mdss_data_type *mdata = file->private_data;
 	struct mdss_max_bw_settings *temp_settings;
 	int len = 0, i;
-	char buf[256];
+	char buf[256] = {'\0'};
 
 	if (!mdata)
 		return -ENODEV;
@@ -1172,9 +1150,9 @@ static ssize_t mdss_debug_perf_bw_limit_write(struct file *file,
 		if (mode == temp_settings->mdss_max_bw_mode) {
 			temp_settings->mdss_max_bw_val = val;
 			break;
+		} else {
+			temp_settings++;
 		}
-		temp_settings++;
-
 	}
 
 	if (cnt == 0)
@@ -1204,11 +1182,11 @@ static int mdss_debugfs_perf_init(struct mdss_debug_data *mdd,
 	debugfs_create_file("disable_panic", 0644, mdd->perf,
 		(struct mdss_data_type *)mdata, &mdss_perf_panic_enable);
 
-	debugfs_create_bool("enable_bw_release", 0644, mdd->perf,
-		(bool *)&mdata->enable_bw_release);
+	debugfs_create_u32("enable_bw_release", 0644, mdd->perf,
+		(u32 *)&mdata->enable_bw_release);
 
-	debugfs_create_bool("enable_rotator_bw_release", 0644, mdd->perf,
-		(bool *)&mdata->enable_rotator_bw_release);
+	debugfs_create_u32("enable_rotator_bw_release", 0644, mdd->perf,
+		(u32 *)&mdata->enable_rotator_bw_release);
 
 	debugfs_create_file("ab_factor", 0644, mdd->perf,
 		&mdata->ab_factor, &mdss_factor_fops);
@@ -1258,9 +1236,10 @@ int mdss_debugfs_init(struct mdss_data_type *mdata)
 	}
 
 	mdd = kzalloc(sizeof(*mdd), GFP_KERNEL);
-	if (!mdd)
+	if (!mdd) {
+		pr_err("no memory to create mdss debug data\n");
 		return -ENOMEM;
-
+	}
 	INIT_LIST_HEAD(&mdd->base_list);
 
 	mdd->root = debugfs_create_dir("mdp", NULL);
@@ -1293,9 +1272,6 @@ int mdss_debugfs_init(struct mdss_data_type *mdata)
 	mdss_debugfs_perf_init(mdd, mdata);
 
 	if (mdss_create_xlog_debug(mdd))
-		goto err;
-
-	if (mdss_create_frc_debug(mdd))
 		goto err;
 
 	mdata->debug_inf.debug_data = mdd;
@@ -1466,7 +1442,11 @@ static inline struct mdss_mdp_misr_map *mdss_misr_get_map(u32 block_id,
 						(mdata->mdp_rev ==
 							MDSS_MDP_HW_REV_300) ||
 						(mdata->mdp_rev ==
-							MDSS_MDP_HW_REV_301)) {
+							MDSS_MDP_HW_REV_301) ||
+						(mdata->mdp_rev ==
+							MDSS_MDP_HW_REV_320) ||
+						(mdata->mdp_rev ==
+							MDSS_MDP_HW_REV_330)) {
 						ctrl_reg += 0x8;
 						value_reg += 0x8;
 					}
@@ -1650,7 +1630,7 @@ int mdss_misr_set(struct mdss_data_type *mdata,
 	map->is_ping_full = false;
 	map->is_pong_full = false;
 
-	if (map->crc_op_mode != MISR_OP_BM) {
+	if (MISR_OP_BM != map->crc_op_mode) {
 
 		writel_relaxed(config,
 				mdata->mdp_base + map->ctrl_reg);
@@ -1757,7 +1737,7 @@ int mdss_misr_get(struct mdss_data_type *mdata,
 		resp->crc_op_mode = map->crc_op_mode;
 		break;
 	default:
-		ret = -ENOTSUPP;
+		ret = -ENOSYS;
 		break;
 	}
 
@@ -1832,7 +1812,7 @@ void mdss_misr_crc_collect(struct mdss_data_type *mdata, int block_id,
 				mdata->mdp_base + map->ctrl_reg);
 		}
 
-	} else if (status == 0) {
+	} else if (0 == status) {
 
 		if (mdata->mdp_rev < MDSS_MDP_HW_REV_105)
 			writel_relaxed(MISR_CRC_BATCH_CFG,
@@ -1849,7 +1829,7 @@ void mdss_misr_crc_collect(struct mdss_data_type *mdata, int block_id,
 		vsync_count, crc, map->crc_index);
 	trace_mdp_misr_crc(block_id, vsync_count, crc);
 
-	if (vsync_count == MAX_VSYNC_COUNT) {
+	if (MAX_VSYNC_COUNT == vsync_count) {
 		pr_debug("RESET vsync_count(%d)\n", vsync_count);
 		vsync_count = 0;
 	} else {

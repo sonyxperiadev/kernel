@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -52,7 +52,7 @@ static int hdmi_cec_msg_send(void *data, struct cec_msg *msg)
 	u32 frame_retransmit = RETRANSMIT_MAX_NUM;
 	bool frame_type;
 	unsigned long flags;
-	struct mdss_io_data *io = NULL;
+	struct dss_io_data *io = NULL;
 	struct hdmi_cec_ctrl *cec_ctrl = (struct hdmi_cec_ctrl *)data;
 
 	if (!cec_ctrl || !cec_ctrl->init_data.io || !msg) {
@@ -106,7 +106,7 @@ static int hdmi_cec_msg_send(void *data, struct cec_msg *msg)
 		((msg->frame_size & 0x1F) << 4) | BIT(9));
 
 	if (!wait_for_completion_timeout(
-		&cec_ctrl->cec_msg_wr_done, HZ)) {
+		&cec_ctrl->cec_msg_wr_done, msecs_to_jiffies(1000))) {
 		DEV_ERR("%s: timedout", __func__);
 		return -ETIMEDOUT;
 	}
@@ -186,7 +186,7 @@ static void hdmi_cec_msg_recv(struct work_struct *work)
 	int i;
 	u32 data;
 	struct hdmi_cec_ctrl *cec_ctrl = NULL;
-	struct mdss_io_data *io = NULL;
+	struct dss_io_data *io = NULL;
 	struct cec_msg msg;
 	struct cec_cbs *cbs;
 
@@ -279,7 +279,7 @@ int hdmi_cec_isr(void *input)
 	int rc = 0;
 	u32 cec_intr, cec_status;
 	unsigned long flags;
-	struct mdss_io_data *io = NULL;
+	struct dss_io_data *io = NULL;
 	struct hdmi_cec_ctrl *cec_ctrl = (struct hdmi_cec_ctrl *)input;
 
 	if (!cec_ctrl || !cec_ctrl->init_data.io) {
@@ -385,7 +385,7 @@ static int hdmi_cec_enable(void *input, bool enable)
 {
 	int ret = 0;
 	u32 hdmi_hw_version, reg_val;
-	struct mdss_io_data *io = NULL;
+	struct dss_io_data *io = NULL;
 	struct hdmi_cec_ctrl *cec_ctrl = (struct hdmi_cec_ctrl *)input;
 	struct mdss_panel_info *pinfo;
 

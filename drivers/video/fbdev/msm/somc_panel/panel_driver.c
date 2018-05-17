@@ -357,11 +357,6 @@ static int mdss_dsi_panel_reset_seq(struct mdss_panel_data *pdata, int enable)
 		return rc;
 	}
 
-	if (pinfo->cont_splash_enabled) {
-		pr_debug("%s: Skipping reset in cont splash\n", __func__);
-		return 0;
-	}
-
 	pw_seq = (enable) ? &ctrl_pdata->spec_pdata->on_seq :
 				&ctrl_pdata->spec_pdata->off_seq;
 
@@ -3438,7 +3433,6 @@ int mdss_dsi_panel_init(struct device_node *node,
 	struct mdss_panel_info *pinfo;
 	struct poll_ctrl *polling = NULL;
 	struct mdss_panel_specific_pdata *spec_pdata = NULL;
-	bool cont_splash_enabled;
 	u32 index;
 
 	if (!node || !ctrl_pdata) {
@@ -3473,8 +3467,6 @@ int mdss_dsi_panel_init(struct device_node *node,
 	}
 
 	pr_debug("%s:%d, debug info", __func__, __LINE__);
-
-	spec_pdata->disp_on_in_boot = display_on_in_boot;
 
 	dsi_ctrl_np = of_parse_phandle(node,
 		"qcom,mdss-dsi-panel-controller", 0);
@@ -3514,19 +3506,12 @@ int mdss_dsi_panel_init(struct device_node *node,
 				__func__, spec_pdata->vsn_gpio);
 	}
 
-	if ((!spec_pdata->disp_on_in_boot) || (!index))
-		mdss_dsi_pinctrl_set_state(ctrl_pdata, true);
-
 	alt_panelid_cmd = of_property_read_bool(node,
 						"somc,alt-panelid-cmd");
 	if (alt_panelid_cmd)
 		mdss_dsi_panel_gpios(parent, ctrl_pdata);
 
-#ifdef CONFIG_SOMC_PANEL_INCELL
 	rc = incell_panel_driver_init(ctrl_pdata);
-#else
-	rc = legacy_panel_driver_init(ctrl_pdata);
-#endif
 	if (rc < 0)
 		WARN(1, "Panel specific implementation init FAIL!!\n");
 
@@ -3536,9 +3521,6 @@ int mdss_dsi_panel_init(struct device_node *node,
 		pr_err("%s: CRITICAL: Panel detection failed!!!\n", __func__);
 		return rc;
 	}
-
-	if (!spec_pdata->disp_on_in_boot)
-		mdss_dsi_pinctrl_set_state(ctrl_pdata, false);
 
 	rc = mdss_panel_parse_dt(node, ctrl_pdata);
 	if (rc) {
@@ -3550,31 +3532,6 @@ int mdss_dsi_panel_init(struct device_node *node,
 	if (pinfo->dsi_master == pinfo->pdest) {
 		if (polling->enable)
 			panel_polling_init(ctrl_pdata);
-	}
-
-	cont_splash_enabled = spec_pdata->disp_on_in_boot;
-
-	if (!cont_splash_enabled) {
-		pr_info("%s:%d Continuous splash flag not found.\n",
-				__func__, __LINE__);
-		pinfo->cont_splash_enabled = 0;
-		if (pinfo->dsi_master == pinfo->pdest)
-			spec_pdata->disp_onoff_state = false;
-	} else {
-		pr_info("%s:%d Continuous splash flag enabled.\n",
-				__func__, __LINE__);
-		pinfo->cont_splash_enabled = 1;
-
-		if (pinfo->dsi_master == pinfo->pdest) {
-			spec_pdata->disp_onoff_state = true;
-
-			if (polling->enable) {
-				rc = polling->intervals;
-				polling->intervals = FIRST_POLL_REG_INTERVAL;
-				poll_worker_schedule(ctrl_pdata);
-				polling->intervals = rc;
-			}
-		}
 	}
 
 	//mdss_dsi_set_prim_panel(ctrl_pdata);

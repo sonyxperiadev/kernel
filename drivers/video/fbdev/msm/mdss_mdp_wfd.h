@@ -1,4 +1,4 @@
-/* Copyright (c) 2015, 2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -14,18 +14,13 @@
 #ifndef __MDSS_MDP_WFD_H__
 #define __MDSS_MDP_WFD_H__
 
+#include <sync.h>
+#include <sw_sync.h>
 #include <linux/mutex.h>
 #include <linux/types.h>
 #include <linux/msm_mdp_ext.h>
 
 #include "mdss_mdp.h"
-
-struct mdss_mdp_wfd_data {
-	struct mdp_output_layer layer;
-	struct mdss_mdp_data data;
-	bool signal_required;
-	struct list_head next;
-};
 
 struct mdss_mdp_wfd {
 	struct mutex lock;
@@ -45,12 +40,12 @@ int mdss_mdp_wfd_setup(struct mdss_mdp_wfd *wfd,
 
 void mdss_mdp_wfd_destroy(struct mdss_mdp_wfd *wfd);
 
-struct mdss_mdp_wfd_data *mdss_mdp_wfd_add_data(
+struct mdss_mdp_wb_data *mdss_mdp_wfd_add_data(
 	struct mdss_mdp_wfd *wfd,
 	struct mdp_output_layer *layer);
 
 void mdss_mdp_wfd_remove_data(struct mdss_mdp_wfd *wfd,
-	struct mdss_mdp_wfd_data *data);
+	struct mdss_mdp_wb_data *data);
 
 int mdss_mdp_wfd_validate(struct mdss_mdp_wfd *wfd,
 	struct mdp_output_layer *layer);

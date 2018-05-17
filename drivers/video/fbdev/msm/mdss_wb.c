@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2015, 2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -14,6 +14,7 @@
 #include <linux/init.h>
 #include <linux/ioctl.h>
 #include <linux/kernel.h>
+#include <linux/module.h>
 #include <linux/list.h>
 #include <linux/msm_mdp.h>
 #include <linux/of.h>
@@ -22,11 +23,11 @@
 #include <linux/spinlock.h>
 #include <linux/types.h>
 #include <linux/version.h>
-#include <linux/extcon.h>
-#include <linux/module.h>
+#include <linux/switch.h>
 
 #include "mdss_panel.h"
 #include "mdss_wb.h"
+#include "mdss.h"
 
 /**
  * mdss_wb_check_params - check new panel info params
@@ -95,25 +96,16 @@ static int mdss_wb_parse_dt(struct platform_device *pdev,
 	return 0;
 }
 
-static const unsigned int mdss_wb_disp_supported_cable[] = {
-	EXTCON_DISP_HMD + 1, /* For WFD */
-	EXTCON_NONE,
-};
-
 static int mdss_wb_dev_init(struct mdss_wb_ctrl *wb_ctrl)
 {
 	int rc = 0;
-
 	if (!wb_ctrl) {
 		pr_err("%s: no driver data\n", __func__);
 		return -ENODEV;
 	}
 
-	memset(&wb_ctrl->sdev, 0x0, sizeof(wb_ctrl->sdev));
-	wb_ctrl->sdev.supported_cable = mdss_wb_disp_supported_cable;
-	wb_ctrl->sdev.dev.parent = &wb_ctrl->pdev->dev;
 	wb_ctrl->sdev.name = "wfd";
-	rc = extcon_dev_register(&wb_ctrl->sdev);
+	rc = switch_dev_register(&wb_ctrl->sdev);
 	if (rc) {
 		pr_err("Failed to setup switch dev for writeback panel");
 		return rc;
@@ -129,7 +121,7 @@ static int mdss_wb_dev_uninit(struct mdss_wb_ctrl *wb_ctrl)
 		return -ENODEV;
 	}
 
-	extcon_dev_unregister(&wb_ctrl->sdev);
+	switch_dev_unregister(&wb_ctrl->sdev);
 	return 0;
 }
 
@@ -137,10 +129,22 @@ static int mdss_wb_probe(struct platform_device *pdev)
 {
 	struct mdss_panel_data *pdata = NULL;
 	struct mdss_wb_ctrl *wb_ctrl = NULL;
+	struct mdss_util_intf *util;
 	int rc = 0;
 
 	if (!pdev->dev.of_node)
 		return -ENODEV;
+
+	util = mdss_get_util_intf();
+	if (util == NULL) {
+		pr_err("%s: Failed to get mdss utility functions\n", __func__);
+		return -ENODEV;
+	}
+
+	if (!util->mdp_probe_done) {
+		pr_err("%s: MDP not probed yet!\n", __func__);
+		return -EPROBE_DEFER;
+	}
 
 	wb_ctrl = devm_kzalloc(&pdev->dev, sizeof(*wb_ctrl), GFP_KERNEL);
 	if (!wb_ctrl)
@@ -186,7 +190,6 @@ error_no_mem:
 static int mdss_wb_remove(struct platform_device *pdev)
 {
 	struct mdss_wb_ctrl *wb_ctrl = platform_get_drvdata(pdev);
-
 	if (!wb_ctrl) {
 		pr_err("%s: no driver data\n", __func__);
 		return -ENODEV;
@@ -214,7 +217,6 @@ static struct platform_driver mdss_wb_driver = {
 static int __init mdss_wb_driver_init(void)
 {
 	int rc = 0;
-
 	rc = platform_driver_register(&mdss_wb_driver);
 	return rc;
 }

@@ -1,5 +1,4 @@
-/* Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
- *
+/* Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
  *
  * This file has been modified by Sony Mobile Communications Inc.
  * Modifications are Copyright (c) 2015 Sony Mobile Communications Inc,
@@ -138,7 +137,7 @@ struct adv7533 {
 #endif
 	bool audio;
 	bool disable_gpios;
-	struct mdss_module_power power_data;
+	struct dss_module_power power_data;
 	bool hdcp_enabled;
 	bool cec_enabled;
 	bool is_power_on;
@@ -524,7 +523,7 @@ static int adv7533_program_i2c_addr(struct adv7533 *pdata)
 }
 
 static void adv7533_parse_vreg_dt(struct device *dev,
-				struct mdss_module_power *mp)
+				struct dss_module_power *mp)
 {
 	int i, rc = 0;
 	int dt_vreg_total = 0;
@@ -540,7 +539,7 @@ static void adv7533_parse_vreg_dt(struct device *dev,
 		goto end;
 	}
 	mp->num_vreg = dt_vreg_total;
-	mp->vreg_config = devm_kzalloc(dev, sizeof(struct mdss_vreg) *
+	mp->vreg_config = devm_kzalloc(dev, sizeof(struct dss_vreg) *
 			dt_vreg_total, GFP_KERNEL);
 	if (!mp->vreg_config)
 		goto end;
@@ -853,15 +852,15 @@ static int adv7533_gpio_configure(struct adv7533 *pdata, bool on)
 		}
 
 		return 0;
-	}
-	if (gpio_is_valid(pdata->irq_gpio))
-		gpio_free(pdata->irq_gpio);
-	if (gpio_is_valid(pdata->hpd_irq_gpio))
-		gpio_free(pdata->hpd_irq_gpio);
-	if (gpio_is_valid(pdata->switch_gpio))
-		gpio_free(pdata->switch_gpio);
+	} else {
+		if (gpio_is_valid(pdata->irq_gpio))
+			gpio_free(pdata->irq_gpio);
+		if (gpio_is_valid(pdata->hpd_irq_gpio))
+			gpio_free(pdata->hpd_irq_gpio);
+		if (gpio_is_valid(pdata->switch_gpio))
+			gpio_free(pdata->switch_gpio);
 
-	return 0;
+		return 0;
 	}
 
 #ifndef CONFIG_MSM_DBA_ADV7533_SOMC_EXTN
@@ -904,7 +903,7 @@ static void adv7533_notify_clients(struct msm_dba_device_info *dev,
 u32 adv7533_read_edid(struct adv7533 *pdata, u32 size, char *edid_buf)
 {
 	u32 ret = 0, read_size = size / 2;
-	u8 edid_addr = 0;
+	u8 edid_addr;
 	int ndx;
 
 	if (!pdata || !edid_buf)
@@ -1591,7 +1590,7 @@ static void adv7533_video_setup(struct adv7533 *pdata,
 	vfp = cfg->v_front_porch;
 	vbp = cfg->v_back_porch;
 
-	pr_debug("h_total 0x%x, h_active 0x%x, hfp 0x%x, hpw 0x%x, hbp 0x%x\n",
+	pr_debug("h_total 0x%x, h_active 0x%x, hfp 0x%d, hpw 0x%x, hbp 0x%x\n",
 		h_total, cfg->h_active, cfg->h_front_porch,
 		cfg->h_pulse_width, cfg->h_back_porch);
 
@@ -1636,7 +1635,7 @@ static void adv7533_video_setup(struct adv7533 *pdata,
 static int adv7533_config_vreg(struct adv7533 *pdata, int enable)
 {
 	int rc = 0;
-	struct mdss_module_power *power_data = NULL;
+	struct dss_module_power *power_data = NULL;
 
 	if (!pdata) {
 		pr_err("invalid input\n");
@@ -1651,7 +1650,7 @@ static int adv7533_config_vreg(struct adv7533 *pdata, int enable)
 	}
 
 	if (enable) {
-		rc = msm_mdss_config_vreg(&pdata->i2c_client->dev,
+		rc = msm_dss_config_vreg(&pdata->i2c_client->dev,
 					power_data->vreg_config,
 					power_data->num_vreg, 1);
 		if (rc) {
@@ -1660,7 +1659,7 @@ static int adv7533_config_vreg(struct adv7533 *pdata, int enable)
 			goto exit;
 		}
 	} else {
-		rc = msm_mdss_config_vreg(&pdata->i2c_client->dev,
+		rc = msm_dss_config_vreg(&pdata->i2c_client->dev,
 					power_data->vreg_config,
 					power_data->num_vreg, 0);
 		if (rc) {
@@ -1677,7 +1676,7 @@ exit:
 static int adv7533_enable_vreg(struct adv7533 *pdata, int enable)
 {
 	int rc = 0;
-	struct mdss_module_power *power_data = NULL;
+	struct dss_module_power *power_data = NULL;
 
 	if (!pdata) {
 		pr_err("invalid input\n");
@@ -1692,7 +1691,7 @@ static int adv7533_enable_vreg(struct adv7533 *pdata, int enable)
 	}
 
 	if (enable) {
-		rc = msm_mdss_enable_vreg(power_data->vreg_config,
+		rc = msm_dss_enable_vreg(power_data->vreg_config,
 					power_data->num_vreg, 1);
 		if (rc) {
 			pr_err("%s: Failed to enable vreg. Err=%d\n",
@@ -1700,7 +1699,7 @@ static int adv7533_enable_vreg(struct adv7533 *pdata, int enable)
 			goto exit;
 		}
 	} else {
-		rc = msm_mdss_enable_vreg(power_data->vreg_config,
+		rc = msm_dss_enable_vreg(power_data->vreg_config,
 					power_data->num_vreg, 0);
 		if (rc) {
 			pr_err("%s: Failed to disable vreg. Err=%d\n",
@@ -2463,7 +2462,7 @@ static void __exit adv7533_exit(void)
 	i2c_del_driver(&adv7533_driver);
 }
 
-module_param_string(panel, mdss_mdp_panel, MDSS_MAX_PANEL_LEN, 0000);
+module_param_string(panel, mdss_mdp_panel, MDSS_MAX_PANEL_LEN, 0);
 
 module_init(adv7533_init);
 module_exit(adv7533_exit);

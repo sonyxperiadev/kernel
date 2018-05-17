@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -23,12 +23,11 @@
 #include <linux/msm-bus.h>
 #include <linux/msm-bus-board.h>
 #include <linux/regulator/consumer.h>
-#include <linux/sync_file.h>
+#include <sync.h>
 
 #include "mdss_rotator_internal.h"
 #include "mdss_mdp.h"
 #include "mdss_debug.h"
-#include "mdss_sync.h"
 
 /* waiting for hw time out, 3 vsync for 30fps*/
 #define ROT_HW_ACQUIRE_TIMEOUT_IN_MS 100
@@ -174,7 +173,6 @@ static unsigned long mdss_rotator_clk_rate_calc(
 	mutex_lock(&private->perf_lock);
 	list_for_each_entry(perf, &private->perf_list, list) {
 		bool rate_accounted_for = false;
-
 		mutex_lock(&perf->work_dis_lock);
 		/*
 		 * If there is one session that has two work items across
@@ -231,7 +229,7 @@ static void mdss_rotator_set_clk_rate(struct mdss_rot_mgr *mgr,
 			pr_err("unable to round rate err=%ld\n", clk_rate);
 		} else if (clk_rate != clk_get_rate(clk)) {
 			ret = clk_set_rate(clk, clk_rate);
-			if (IS_ERR_VALUE((unsigned long)ret)) {
+			if (IS_ERR_VALUE(ret)) {
 				pr_err("clk_set_rate failed, err:%d\n", ret);
 			} else {
 				pr_debug("rotator clk rate=%lu\n", clk_rate);
@@ -254,7 +252,7 @@ static void mdss_rotator_footswitch_ctrl(struct mdss_rot_mgr *mgr, bool on)
 	}
 
 	pr_debug("%s: rotator regulators", on ? "Enable" : "Disable");
-	ret = msm_mdss_enable_vreg(mgr->module_power.vreg_config,
+	ret = msm_dss_enable_vreg(mgr->module_power.vreg_config,
 		mgr->module_power.num_vreg, on);
 	if (ret) {
 		pr_warn("Rotator regulator failed to %s\n",
@@ -375,29 +373,21 @@ static bool mdss_rotator_is_work_pending(struct mdss_rot_mgr *mgr,
 	return false;
 }
 
-static int mdss_rotator_install_fence_fd(struct mdss_rot_entry_container *req)
+static void mdss_rotator_install_fence_fd(struct mdss_rot_entry_container *req)
 {
-	int i;
-	int ret = 0;
-	struct sync_file *sync_file;
+	int i = 0;
 
-	for (i = 0; i < req->count; i++) {
-		sync_file = sync_file_create((struct fence *)
-				(req->entries[i].output_fence));
-		if (!sync_file) {
-			ret = -ENOMEM;
-			break;
-		}
-		fd_install(req->entries[i].output_fence_fd, sync_file->file);
-	}
-	return ret;
+	for (i = 0; i < req->count; i++)
+		sync_fence_install(req->entries[i].output_fence,
+				req->entries[i].output_fence_fd);
 }
 
 static int mdss_rotator_create_fence(struct mdss_rot_entry *entry)
 {
 	int ret = 0, fd;
 	u32 val;
-	struct mdss_fence *fence;
+	struct sync_pt *sync_pt;
+	struct sync_fence *fence;
 	struct mdss_rot_timeline *rot_timeline;
 
 	if (!entry->queue)
@@ -408,16 +398,24 @@ static int mdss_rotator_create_fence(struct mdss_rot_entry *entry)
 	mutex_lock(&rot_timeline->lock);
 	val = rot_timeline->next_value + 1;
 
-	fence = mdss_get_sync_fence(rot_timeline->timeline,
-					rot_timeline->fence_name, NULL, val);
-	if (fence == NULL) {
+	sync_pt = sw_sync_pt_create(rot_timeline->timeline, val);
+	if (sync_pt == NULL) {
 		pr_err("cannot create sync point\n");
 		goto sync_pt_create_err;
 	}
 
-	fd = get_unused_fd_flags(O_CLOEXEC);
+	/* create fence */
+	fence = sync_fence_create(rot_timeline->fence_name, sync_pt);
+	if (fence == NULL) {
+		pr_err("%s: cannot create fence\n", rot_timeline->fence_name);
+		sync_pt_free(sync_pt);
+		ret = -ENOMEM;
+		goto sync_pt_create_err;
+	}
+
+	fd = get_unused_fd_flags(0);
 	if (fd < 0) {
-		pr_err("fail to get unused fd\n");
+		pr_err("get_unused_fd_flags failed error:0x%x\n", fd);
 		ret = fd;
 		goto get_fd_err;
 	}
@@ -427,13 +425,12 @@ static int mdss_rotator_create_fence(struct mdss_rot_entry *entry)
 
 	entry->output_fence_fd = fd;
 	entry->output_fence = fence;
-	pr_debug("output sync point created at %s:val=%u\n",
-		mdss_get_sync_fence_name(fence), val);
+	pr_debug("output sync point created at val=%u\n", val);
 
 	return 0;
 
 get_fd_err:
-	mdss_put_sync_fence(fence);
+	sync_fence_put(fence);
 sync_pt_create_err:
 	mutex_unlock(&rot_timeline->lock);
 	return ret;
@@ -444,7 +441,7 @@ static void mdss_rotator_clear_fence(struct mdss_rot_entry *entry)
 	struct mdss_rot_timeline *rot_timeline;
 
 	if (entry->input_fence) {
-		mdss_put_sync_fence(entry->input_fence);
+		sync_fence_put(entry->input_fence);
 		entry->input_fence = NULL;
 	}
 
@@ -452,7 +449,7 @@ static void mdss_rotator_clear_fence(struct mdss_rot_entry *entry)
 
 	/* fence failed to copy to user space */
 	if (entry->output_fence) {
-		mdss_put_sync_fence(entry->output_fence);
+		sync_fence_put(entry->output_fence);
 		entry->output_fence = NULL;
 		put_unused_fd(entry->output_fence_fd);
 
@@ -477,7 +474,7 @@ static int mdss_rotator_signal_output(struct mdss_rot_entry *entry)
 	}
 
 	mutex_lock(&rot_timeline->lock);
-	mdss_inc_timeline(rot_timeline->timeline, 1);
+	sw_sync_timeline_inc(rot_timeline->timeline, 1);
 	mutex_unlock(&rot_timeline->lock);
 
 	entry->output_signaled = true;
@@ -494,8 +491,8 @@ static int mdss_rotator_wait_for_input(struct mdss_rot_entry *entry)
 		return 0;
 	}
 
-	ret = mdss_wait_sync_fence(entry->input_fence, ROT_FENCE_WAIT_TIMEOUT);
-	mdss_put_sync_fence(entry->input_fence);
+	ret = sync_fence_wait(entry->input_fence, ROT_FENCE_WAIT_TIMEOUT);
+	sync_fence_put(entry->input_fence);
 	entry->input_fence = NULL;
 	return ret;
 }
@@ -547,7 +544,7 @@ static int mdss_rotator_map_and_check_data(struct mdss_rot_entry *entry)
 
 	ATRACE_BEGIN(__func__);
 	ret = mdss_iommu_ctrl(1);
-	if (IS_ERR_VALUE((unsigned long)ret)) {
+	if (IS_ERR_VALUE(ret)) {
 		ATRACE_END(__func__);
 		return ret;
 	}
@@ -620,7 +617,6 @@ static struct mdss_rot_perf *__mdss_rotator_find_session(
 {
 	struct mdss_rot_perf *perf, *perf_next;
 	bool found = false;
-
 	list_for_each_entry_safe(perf, perf_next, &private->perf_list, list) {
 		if (perf->config.session_id == session_id) {
 			found = true;
@@ -680,7 +676,7 @@ static int mdss_rotator_import_data(struct mdss_rot_mgr *mgr,
 	}
 
 	/*
-	 * driver assumes output buffer is ready to be written
+	 * driver assumes ouput buffer is ready to be written
 	 * immediately
 	 */
 	ret = mdss_rotator_import_buffer(output, &entry->dst_buf, flag,
@@ -869,7 +865,7 @@ static int mdss_rotator_init_queue(struct mdss_rot_mgr *mgr)
 		snprintf(name, sizeof(name), "rot_timeline_%d", i);
 		pr_debug("timeline name=%s\n", name);
 		mgr->queues[i].timeline.timeline =
-			mdss_create_timeline(name);
+			sw_sync_timeline_create(name);
 		if (!mgr->queues[i].timeline.timeline) {
 			ret = -EPERM;
 			break;
@@ -898,11 +894,10 @@ static void mdss_rotator_deinit_queue(struct mdss_rot_mgr *mgr)
 			destroy_workqueue(mgr->queues[i].rot_work_queue);
 
 		if (mgr->queues[i].timeline.timeline) {
-			struct mdss_timeline *obj;
-
-			obj = (struct mdss_timeline *)
+			struct sync_timeline *obj;
+			obj = (struct sync_timeline *)
 				mgr->queues[i].timeline.timeline;
-			mdss_destroy_timeline(obj);
+			sync_timeline_destroy(obj);
 		}
 	}
 	devm_kfree(&mgr->pdev->dev, mgr->queues);
@@ -1056,13 +1051,11 @@ static int mdss_rotator_calc_perf(struct mdss_rot_perf *perf)
 	if (!config->input.width ||
 		(0xffffffff/config->input.width < config->input.height))
 		return -EINVAL;
-
-	perf->clk_rate = config->input.width * config->input.height;
-
 	if (!perf->clk_rate ||
 		(0xffffffff/perf->clk_rate < config->frame_rate))
 		return -EINVAL;
 
+	perf->clk_rate = config->input.width * config->input.height;
 	perf->clk_rate *= config->frame_rate;
 	/* rotator processes 4 pixels per clock */
 	perf->clk_rate /= 4;
@@ -1204,17 +1197,13 @@ static int mdss_rotator_config_dnsc_factor(struct mdss_rot_mgr *mgr,
 		}
 		entry->dnsc_factor_w = src_w / dst_w;
 		bit = fls(entry->dnsc_factor_w);
-		/*
-		 * New Chipsets supports downscale upto 1/64
-		 * change the Bit check from 5 to 7 to support 1/64 down scale
-		 */
-		if ((entry->dnsc_factor_w & ~BIT(bit - 1)) || (bit > 7)) {
+		if ((entry->dnsc_factor_w & ~BIT(bit - 1)) || (bit > 5)) {
 			ret = -EINVAL;
 			goto dnsc_err;
 		}
 		entry->dnsc_factor_h = src_h / dst_h;
 		bit = fls(entry->dnsc_factor_h);
-		if ((entry->dnsc_factor_h & ~BIT(bit - 1)) || (bit > 7)) {
+		if ((entry->dnsc_factor_h & ~BIT(bit - 1)) || (bit > 5)) {
 			ret = -EINVAL;
 			goto dnsc_err;
 		}
@@ -1526,8 +1515,8 @@ static int mdss_rotator_add_request(struct mdss_rot_mgr *mgr,
 		}
 
 		if (item->input.fence >= 0) {
-			entry->input_fence = mdss_get_fd_sync_fence(
-							    item->input.fence);
+			entry->input_fence =
+				sync_fence_fdget(item->input.fence);
 			if (!entry->input_fence) {
 				pr_err("invalid input fence fd\n");
 				return -EINVAL;
@@ -1611,7 +1600,6 @@ static void mdss_rotator_cancel_all_requests(struct mdss_rot_mgr *mgr,
 	struct mdss_rot_file_private *private)
 {
 	struct mdss_rot_entry_container *req, *req_next;
-
 	pr_debug("Canceling all rotator requests\n");
 
 	mutex_lock(&private->req_lock);
@@ -1930,7 +1918,6 @@ static int mdss_rotator_validate_request(struct mdss_rot_mgr *mgr,
 static u32 mdss_rotator_generator_session_id(struct mdss_rot_mgr *mgr)
 {
 	u32 id;
-
 	mutex_lock(&mgr->lock);
 	id = mgr->session_id_generator++;
 	mutex_unlock(&mgr->lock);
@@ -1957,13 +1944,16 @@ static int mdss_rotator_open_session(struct mdss_rot_mgr *mgr,
 	}
 
 	perf = devm_kzalloc(&mgr->pdev->dev, sizeof(*perf), GFP_KERNEL);
-	if (!perf)
+	if (!perf) {
+		pr_err("fail to allocate session\n");
 		return -ENOMEM;
+	}
 
 	ATRACE_BEGIN(__func__); /* Open session votes for bw */
 	perf->work_distribution = devm_kzalloc(&mgr->pdev->dev,
 		sizeof(u32) * mgr->queue_count, GFP_KERNEL);
 	if (!perf->work_distribution) {
+		pr_err("fail to allocate work_distribution\n");
 		ret = -ENOMEM;
 		goto alloc_err;
 	}
@@ -2148,9 +2138,10 @@ struct mdss_rot_entry_container *mdss_rotator_req_init(
 	size += sizeof(struct mdss_rot_entry) * count;
 	req = devm_kzalloc(&mgr->pdev->dev, size, GFP_KERNEL);
 
-	if (!req)
+	if (!req) {
+		pr_err("fail to allocate rotation request\n");
 		return ERR_PTR(-ENOMEM);
-
+	}
 
 	INIT_LIST_HEAD(&req->list);
 	req->count = count;
@@ -2196,12 +2187,6 @@ static int mdss_rotator_handle_request(struct mdss_rot_mgr *mgr,
 	struct mdss_rot_entry_container *req = NULL;
 	int size, ret;
 	uint32_t req_count;
-	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
-
-	if (mdata->handoff_pending) {
-		pr_err("Rotator request failed. Handoff pending\n");
-		return -EPERM;
-	}
 
 	if (mdss_get_sd_client_cnt()) {
 		pr_err("rot request not permitted during secure display session\n");
@@ -2265,13 +2250,7 @@ static int mdss_rotator_handle_request(struct mdss_rot_mgr *mgr,
 		goto handle_request_err1;
 	}
 
-	ret = mdss_rotator_install_fence_fd(req);
-	if (ret) {
-		pr_err("get_unused_fd_flags failed error:0x%x\n", ret);
-		mdss_rotator_remove_request(mgr, private, req);
-		goto handle_request_err1;
-	}
-
+	mdss_rotator_install_fence_fd(req);
 	mdss_rotator_queue_request(mgr, private, req);
 
 	mutex_unlock(&mgr->lock);
@@ -2299,9 +2278,10 @@ static int mdss_rotator_open(struct inode *inode, struct file *file)
 
 	private = devm_kzalloc(&rot_mgr->pdev->dev, sizeof(*private),
 		GFP_KERNEL);
-	if (!private)
+	if (!private) {
+		pr_err("fail to allocate rotation file private data\n");
 		return -ENOMEM;
-
+	}
 	mutex_init(&private->req_lock);
 	mutex_init(&private->perf_lock);
 	INIT_LIST_HEAD(&private->req_list);
@@ -2431,13 +2411,7 @@ static int mdss_rotator_handle_request32(struct mdss_rot_mgr *mgr,
 		goto handle_request32_err1;
 	}
 
-	ret = mdss_rotator_install_fence_fd(req);
-	if (ret) {
-		pr_err("get_unused_fd_flags failed error:0x%x\n", ret);
-		mdss_rotator_remove_request(mgr, private, req);
-		goto handle_request32_err1;
-	}
-
+	mdss_rotator_install_fence_fd(req);
 	mdss_rotator_queue_request(mgr, private, req);
 
 	mutex_unlock(&mgr->lock);
@@ -2592,7 +2566,7 @@ static ssize_t mdss_rotator_show_capabilities(struct device *dev,
 	return cnt;
 }
 
-static DEVICE_ATTR(caps, 0444, mdss_rotator_show_capabilities, NULL);
+static DEVICE_ATTR(caps, S_IRUGO, mdss_rotator_show_capabilities, NULL);
 
 static struct attribute *mdss_rotator_fs_attrs[] = {
 	&dev_attr_caps.attr,
@@ -2691,14 +2665,14 @@ static int mdss_rotator_parse_dt(struct mdss_rot_mgr *mgr,
 }
 
 static void mdss_rotator_put_dt_vreg_data(struct device *dev,
-	struct mdss_module_power *mp)
+	struct dss_module_power *mp)
 {
 	if (!mp) {
 		DEV_ERR("%s: invalid input\n", __func__);
 		return;
 	}
 
-	msm_mdss_config_vreg(dev, mp->vreg_config, mp->num_vreg, 0);
+	msm_dss_config_vreg(dev, mp->vreg_config, mp->num_vreg, 0);
 	if (mp->vreg_config) {
 		devm_kfree(dev, mp->vreg_config);
 		mp->vreg_config = NULL;
@@ -2707,7 +2681,7 @@ static void mdss_rotator_put_dt_vreg_data(struct device *dev,
 }
 
 static int mdss_rotator_get_dt_vreg_data(struct device *dev,
-	struct mdss_module_power *mp)
+	struct dss_module_power *mp)
 {
 	const char *st = NULL;
 	struct device_node *of_node = NULL;
@@ -2729,7 +2703,7 @@ static int mdss_rotator_get_dt_vreg_data(struct device *dev,
 		return 0;
 	}
 	mp->num_vreg = dt_vreg_total;
-	mp->vreg_config = devm_kzalloc(dev, sizeof(struct mdss_vreg) *
+	mp->vreg_config = devm_kzalloc(dev, sizeof(struct dss_vreg) *
 		dt_vreg_total, GFP_KERNEL);
 	if (!mp->vreg_config) {
 		DEV_ERR("%s: can't alloc vreg mem\n", __func__);
@@ -2747,7 +2721,7 @@ static int mdss_rotator_get_dt_vreg_data(struct device *dev,
 		}
 		snprintf(mp->vreg_config[i].vreg_name, 32, "%s", st);
 	}
-	msm_mdss_config_vreg(dev, mp->vreg_config, mp->num_vreg, 1);
+	msm_dss_config_vreg(dev, mp->vreg_config, mp->num_vreg, 1);
 
 	for (i = 0; i < dt_vreg_total; i++) {
 		DEV_DBG("%s: %s min=%d, max=%d, enable=%d disable=%d\n",
@@ -2755,8 +2729,8 @@ static int mdss_rotator_get_dt_vreg_data(struct device *dev,
 			mp->vreg_config[i].vreg_name,
 			mp->vreg_config[i].min_voltage,
 			mp->vreg_config[i].max_voltage,
-			mp->vreg_config[i].load[DSS_REG_MODE_ENABLE],
-			mp->vreg_config[i].load[DSS_REG_MODE_DISABLE]);
+			mp->vreg_config[i].enable_load,
+			mp->vreg_config[i].disable_load);
 	}
 	return rc;
 
@@ -2817,7 +2791,6 @@ static int mdss_rotator_clk_register(struct platform_device *pdev,
 	struct mdss_rot_mgr *mgr, char *clk_name, u32 clk_idx)
 {
 	struct clk *tmp;
-
 	pr_debug("registered clk_reg\n");
 
 	if (clk_idx >= MDSS_CLK_ROTATOR_END_IDX) {
@@ -2874,8 +2847,10 @@ static int mdss_rotator_probe(struct platform_device *pdev)
 
 	rot_mgr = devm_kzalloc(&pdev->dev, sizeof(struct mdss_rot_mgr),
 		GFP_KERNEL);
-	if (!rot_mgr)
+	if (!rot_mgr) {
+		pr_err("fail to allocate memory\n");
 		return -ENOMEM;
+	}
 
 	rot_mgr->pdev = pdev;
 	ret = mdss_rotator_parse_dt(rot_mgr, pdev);

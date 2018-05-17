@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2016, 2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -735,8 +735,7 @@ struct dcs_cmd_req *mdss_dsi_cmdlist_get(struct mdss_dsi_ctrl_pdata *ctrl,
 	if (clist->get != clist->put) {
 		req = &clist->list[clist->get];
 		/*dont let commit thread steal ESD thread's
-		 * command
-		 */
+		command*/
 		if (from_mdp && (req->flags & CMD_REQ_COMMIT)) {
 			mutex_unlock(&ctrl->cmdlist_mutex);
 			return NULL;
