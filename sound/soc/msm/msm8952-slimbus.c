@@ -32,7 +32,6 @@
 #include "msm-audio-pinctrl.h"
 #include "msm8952-slimbus.h"
 #include "../codecs/wcd9xxx-common.h"
-#include "../codecs/wcd9330.h"
 #include "../codecs/wcd9335.h"
 #include "../codecs/wcd-mbhc-v2.h"
 #include "../codecs/wsa881x.h"
@@ -137,30 +136,6 @@ static struct wcd_mbhc_config wcd_mbhc_cfg = {
 #endif
 };
 
-static struct wcd9xxx_mbhc_config wcd9xxx_mbhc_cfg = {
-	.read_fw_bin = false,
-	.calibration = NULL,
-	.micbias = MBHC_MICBIAS2,
-	.anc_micbias = MBHC_MICBIAS2,
-	.mclk_cb_fn = msm8952_enable_codec_mclk,
-	.mclk_rate = CODEC_EXT_CLK_RATE,
-	.gpio = 0,
-	.gpio_irq = 0,
-	.gpio_level_insert = 0,
-	.detect_extn_cable = true,
-	.micbias_enable_flags = 1 << MBHC_MICBIAS_ENABLE_THRESHOLD_HEADSET,
-	.insert_detect = true,
-	.swap_gnd_mic = NULL,
-	.cs_enable_flags = (1 << MBHC_CS_ENABLE_POLLING |
-			    1 << MBHC_CS_ENABLE_INSERTION |
-			    1 << MBHC_CS_ENABLE_REMOVAL |
-			    1 << MBHC_CS_ENABLE_DET_ANC),
-	.do_recalibration = true,
-	.use_vddio_meas = true,
-	.enable_anc_mic_detect = false,
-	.hw_jack_type = FOUR_POLE_JACK,
-};
-
 static void *def_tasha_mbhc_cal(void)
 {
 	void *tasha_wcd_cal;
@@ -208,84 +183,6 @@ static void *def_tasha_mbhc_cal(void)
 	return tasha_wcd_cal;
 }
 
-static void *def_codec_mbhc_cal(void)
-{
-	void *codec_cal;
-	struct wcd9xxx_mbhc_btn_detect_cfg *btn_cfg;
-	u16 *btn_low, *btn_high;
-	u8 *n_ready, *n_cic, *gain;
-
-	codec_cal = kzalloc(WCD9XXX_MBHC_CAL_SIZE(WCD9XXX_MBHC_DEF_BUTTONS,
-						WCD9XXX_MBHC_DEF_RLOADS),
-			    GFP_KERNEL);
-	if (!codec_cal) {
-		pr_err("%s: out of memory\n", __func__);
-		return NULL;
-	}
-
-#define S(X, Y) ((WCD9XXX_MBHC_CAL_GENERAL_PTR(codec_cal)->X) = (Y))
-	S(t_ldoh, 100);
-	S(t_bg_fast_settle, 100);
-	S(t_shutdown_plug_rem, 255);
-	S(mbhc_nsa, 4);
-	S(mbhc_navg, 4);
-#undef S
-#define S(X, Y) ((WCD9XXX_MBHC_CAL_PLUG_DET_PTR(codec_cal)->X) = (Y))
-	S(mic_current, TOMTOM_PID_MIC_5_UA);
-	S(hph_current, TOMTOM_PID_MIC_5_UA);
-	S(t_mic_pid, 100);
-	S(t_ins_complete, 250);
-	S(t_ins_retry, 200);
-#undef S
-#define S(X, Y) ((WCD9XXX_MBHC_CAL_PLUG_TYPE_PTR(codec_cal)->X) = (Y))
-	S(v_no_mic, 30);
-	S(v_hs_max, 2400);
-#undef S
-#define S(X, Y) ((WCD9XXX_MBHC_CAL_BTN_DET_PTR(codec_cal)->X) = (Y))
-	S(c[0], 62);
-	S(c[1], 124);
-	S(nc, 1);
-	S(n_meas, 3);
-	S(mbhc_nsc, 11);
-	S(n_btn_meas, 1);
-	S(n_btn_con, 2);
-	S(num_btn, WCD9XXX_MBHC_DEF_BUTTONS);
-	S(v_btn_press_delta_sta, 100);
-	S(v_btn_press_delta_cic, 50);
-#undef S
-	btn_cfg = WCD9XXX_MBHC_CAL_BTN_DET_PTR(codec_cal);
-	btn_low = wcd9xxx_mbhc_cal_btn_det_mp(btn_cfg, MBHC_BTN_DET_V_BTN_LOW);
-	btn_high = wcd9xxx_mbhc_cal_btn_det_mp(btn_cfg,
-					       MBHC_BTN_DET_V_BTN_HIGH);
-	btn_low[0] = -50;
-	btn_high[0] = 90;
-	btn_low[1] = 130;
-	btn_high[1] = 220;
-	btn_low[2] = 235;
-	btn_high[2] = 335;
-	btn_low[3] = 375;
-	btn_high[3] = 655;
-	btn_low[4] = 656;
-	btn_high[4] = 660;
-	btn_low[5] = 661;
-	btn_high[5] = 670;
-	btn_low[6] = 671;
-	btn_high[6] = 680;
-	btn_low[7] = 681;
-	btn_high[7] = 690;
-	n_ready = wcd9xxx_mbhc_cal_btn_det_mp(btn_cfg, MBHC_BTN_DET_N_READY);
-	n_ready[0] = 80;
-	n_ready[1] = 68;
-	n_cic = wcd9xxx_mbhc_cal_btn_det_mp(btn_cfg, MBHC_BTN_DET_N_CIC);
-	n_cic[0] = 60;
-	n_cic[1] = 47;
-	gain = wcd9xxx_mbhc_cal_btn_det_mp(btn_cfg, MBHC_BTN_DET_GAIN);
-	gain[0] = 11;
-	gain[1] = 9;
-
-	return codec_cal;
-}
-
 static struct afe_clk_set mi2s_tx_clk = {
 	AFE_API_VERSION_I2S_CONFIG,
 	Q6AFE_LPASS_CLK_ID_TER_MI2S_IBIT,
@@ -308,7 +205,7 @@ struct msm8952_codec {
 	void* (*get_afe_config_fn)(struct snd_soc_codec *codec,
 				   enum afe_config_type config_type);
 	int (*mbhc_hs_detect)(struct snd_soc_codec *codec,
-			       struct wcd9xxx_mbhc_config *mbhc_cfg);
+			       struct wcd_mbhc_config *mbhc_cfg);
 };
 
 struct msm8952_asoc_mach_data {
@@ -475,9 +372,7 @@ static int msm8952_enable_codec_mclk(struct snd_soc_codec *codec, int enable,
 {
 	pr_debug("%s: enable = %d\n", __func__, enable);
 
-	if (!strcmp(dev_name(codec->dev), "tomtom_codec"))
-		tomtom_codec_mclk_enable(codec, enable, dapm);
-	else if (!strcmp(dev_name(codec->dev), "tasha_codec"))
+	if (!strcmp(dev_name(codec->dev), "tasha_codec"))
 		tasha_cdc_mclk_enable(codec, enable, dapm);
 
 	return 0;
@@ -2410,28 +2305,6 @@ static int msm8952_mclk_event(struct snd_soc_dapm_widget *w,
 	return 0;
 }
 
-static const struct snd_soc_dapm_widget msm8952_tomtom_dapm_widgets[] = {
-
-	SND_SOC_DAPM_SUPPLY_S("MCLK", -1, SND_SOC_NOPM, 0, 0,
-	msm8952_mclk_event, SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
-
-	SND_SOC_DAPM_MIC("Handset Mic", NULL),
-	SND_SOC_DAPM_MIC("Headset Mic", NULL),
-	SND_SOC_DAPM_MIC("ANCRight Headset Mic", NULL),
-	SND_SOC_DAPM_MIC("ANCLeft Headset Mic", NULL),
-	SND_SOC_DAPM_MIC("Analog Mic4", NULL),
-	SND_SOC_DAPM_MIC("Analog Mic5", NULL),
-	SND_SOC_DAPM_MIC("Analog Mic6", NULL),
-	SND_SOC_DAPM_MIC("Analog Mic7", NULL),
-
-	SND_SOC_DAPM_MIC("Digital Mic1", NULL),
-	SND_SOC_DAPM_MIC("Digital Mic2", NULL),
-	SND_SOC_DAPM_MIC("Digital Mic3", NULL),
-	SND_SOC_DAPM_MIC("Digital Mic4", NULL),
-	SND_SOC_DAPM_MIC("Digital Mic5", NULL),
-	SND_SOC_DAPM_MIC("Digital Mic6", NULL),
-};
-
 #ifdef CONFIG_ARCH_SONY_LOIRE
 static const struct snd_soc_dapm_widget loire_msm8952_dapm_widgets[] = {
 
@@ -2491,19 +2364,6 @@ static struct snd_soc_dapm_route wcd9335_audio_paths[] = {
 	{"MIC BIAS4", NULL, "MCLK"},
 };
 
-static int msm8952_codec_event_cb(struct snd_soc_codec *codec,
-		enum wcd9xxx_codec_event codec_event)
-{
-	switch (codec_event) {
-	case WCD9XXX_CODEC_EVENT_CODEC_UP:
-		return msm8952_wcd93xx_codec_up(codec);
-	default:
-		pr_err("%s: UnSupported codec event %d\n",
-				__func__, codec_event);
-		return -EINVAL;
-	}
-}
-
 static int msm8976_tasha_codec_event_cb(struct snd_soc_codec *codec,
 					enum wcd9335_codec_event codec_event)
 {
@@ -2535,9 +2395,10 @@ int msm_audrx_init(struct snd_soc_pcm_runtime *rtd)
 	 * TX1, TX2, TX3, TX4, TX5, TX6, TX7, TX8, TX9, TX10, TX11, TX12, TX13
 	 * TX14, TX15, TX16
 	 */
-	unsigned int rx_ch[TOMTOM_RX_MAX] = {144, 145, 146, 147, 148, 149, 150,
+
+	unsigned int rx_ch[TASHA_RX_MAX] = {144, 145, 146, 147, 148, 149, 150,
 					    151, 152, 153, 154, 155, 156};
-	unsigned int tx_ch[TOMTOM_TX_MAX]  = {128, 129, 130, 131, 132, 133,
+	unsigned int tx_ch[TASHA_TX_MAX]  = {128, 129, 130, 131, 132, 133,
 					     134, 135, 136, 137, 138, 139,
 					     140, 141, 142, 143};
 
@@ -2553,13 +2414,7 @@ int msm_audrx_init(struct snd_soc_pcm_runtime *rtd)
 		return err;
 	}
 
-	if (!strcmp(dev_name(codec_dai->dev), "tomtom_codec")) {
-		pdata->msm8952_codec_fn.get_afe_config_fn =
-			tomtom_get_afe_config;
-		pdata->msm8952_codec_fn.mbhc_hs_detect = tomtom_hs_detect;
-		snd_soc_dapm_new_controls(dapm, msm8952_tomtom_dapm_widgets,
-				ARRAY_SIZE(msm8952_tomtom_dapm_widgets));
-	} else if (!strcmp(dev_name(codec_dai->dev), "tasha_codec")) {
+	if (!strcmp(dev_name(codec_dai->dev), "tasha_codec")) {
 		pdata->msm8952_codec_fn.get_afe_config_fn =
 			tasha_get_afe_config;
 #if defined(CONFIG_ARCH_SONY_LOIRE) && !defined(CONFIG_MACH_SONY_BLANC)
@@ -2626,12 +2481,7 @@ int msm_audrx_init(struct snd_soc_pcm_runtime *rtd)
 	snd_soc_dapm_ignore_suspend(dapm, "Digital Mic6");
 	snd_soc_dapm_ignore_suspend(dapm, "ANC EAR");
 	snd_soc_dapm_ignore_suspend(dapm, "ANC HEADPHONE");
-	if (!strcmp(dev_name(codec_dai->dev), "tomtom_codec")) {
-		snd_soc_dapm_ignore_suspend(dapm, "DMIC6");
-		snd_soc_dapm_ignore_suspend(dapm, "Digital Mic6");
-		snd_soc_dapm_ignore_suspend(dapm, "SPK_OUT");
-		snd_soc_dapm_ignore_suspend(dapm, "HEADPHONE");
-	} else if (!strcmp(dev_name(codec_dai->dev), "tasha_codec")) {
+	if (!strcmp(dev_name(codec_dai->dev), "tasha_codec")) {
 		snd_soc_dapm_ignore_suspend(dapm, "Digital Mic0");
 		snd_soc_dapm_ignore_suspend(dapm, "DMIC0");
 		snd_soc_dapm_ignore_suspend(dapm, "SPK1 OUT");
@@ -2675,30 +2525,7 @@ int msm_audrx_init(struct snd_soc_pcm_runtime *rtd)
 				RX_GAIN_OFFSET_M1P5_DB);
 		}
 
-	if (!strcmp(dev_name(codec_dai->dev), "tomtom_codec")) {
-
-		wcd9xxx_mbhc_cfg.gpio_level_insert = of_property_read_bool(
-						codec->component.card->dev->of_node,
-						"qcom,headset-jack-type-NC");
-		/* start mbhc */
-		wcd9xxx_mbhc_cfg.calibration = def_codec_mbhc_cal();
-		if (wcd9xxx_mbhc_cfg.calibration) {
-			/*
-			 * mbhc initial calibration needs mclk to be enabled,
-			 * so schedule headset detection for 4sec so that
-			 * adsp gets loaded and will be ready to accept
-			 * mclk request command.
-			 */
-			pdata->codec = codec;
-			schedule_delayed_work(&pdata->hs_detect_dwork,
-					msecs_to_jiffies(HS_STARTWORK_TIMEOUT));
-		} else {
-			pr_err("%s: wcd9xxx_mbhc_cfg calibration is NULL\n",
-					__func__);
-			err = -ENOMEM;
-			goto out;
-		}
-	} else if (!strcmp(dev_name(codec_dai->dev), "tasha_codec")) {
+	if (!strcmp(dev_name(codec_dai->dev), "tasha_codec")) {
 		wcd_mbhc_cfg.calibration = def_tasha_mbhc_cal();
 		if (wcd_mbhc_cfg.calibration) {
 			pdata->codec = codec;
@@ -2715,9 +2542,7 @@ int msm_audrx_init(struct snd_soc_pcm_runtime *rtd)
 
 	}
 
-	if (!strcmp(dev_name(codec_dai->dev), "tomtom_codec"))
-		tomtom_event_register(msm8952_codec_event_cb, rtd->codec);
-	else if (!strcmp(dev_name(codec_dai->dev), "tasha_codec"))
+	if (!strcmp(dev_name(codec_dai->dev), "tasha_codec"))
 		tasha_event_register(msm8976_tasha_codec_event_cb, rtd->codec);
 
 	codec_reg_done = true;
@@ -2756,10 +2581,9 @@ static void hs_detect_work(struct work_struct *work)
 			!pdata->msm8952_codec_fn.mbhc_hs_detect)
 		return;
 	ret = pdata->msm8952_codec_fn.mbhc_hs_detect(pdata->codec,
-						&wcd9xxx_mbhc_cfg);
+						&wcd_mbhc_cfg);
 	if (ret < 0)
 		pr_err("%s: Failed to intialise mbhc %d\n", __func__, ret);
-	tomtom_enable_qfuse_sensing(pdata->codec);
 	/*
 	 * Set pdata->codec back to NULL, to ensure codec pointer
 	 * is not referenced further from this structure.
@@ -2826,7 +2650,6 @@ static int is_us_eu_switch_gpio_support(struct platform_device *pdev,
 						__func__, "us_eu_gpio");
 			return ret;
 		}
-		wcd9xxx_mbhc_cfg.swap_gnd_mic = msm8952_swap_gnd_mic;
 		wcd_mbhc_cfg.swap_gnd_mic = msm8952_swap_gnd_mic;
 	}
 	return 0;

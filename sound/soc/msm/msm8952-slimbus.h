@@ -14,7 +14,6 @@
 #define __MSM8952_SLIMBUS_AUDIO
 
 enum codecs {
-	TOMTOM_CODEC,
 	TASHA_CODEC,
 	MAX_CODECS,
 };
