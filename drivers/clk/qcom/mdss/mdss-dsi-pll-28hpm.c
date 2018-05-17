@@ -72,7 +72,7 @@ static void dsi_pll_software_reset(struct mdss_pll_resources *dsi_pll_res)
 static int dsi_pll_enable(struct clk_hw *hw)
 {
 	int i, rc;
-	struct dsi_pll_vco_clk *vco = to_vco_hw(hw);
+	struct dsi_pll_vco_clk *vco = to_vco_clk_hw(hw);
 	struct mdss_pll_resources *dsi_pll_res = vco->priv;
 
 	rc = mdss_pll_resource_enable(dsi_pll_res, true);
@@ -99,7 +99,7 @@ static int dsi_pll_enable(struct clk_hw *hw)
 
 static void dsi_pll_disable(struct clk_hw *hw)
 {
-	struct dsi_pll_vco_clk *vco = to_vco_hw(hw);
+	struct dsi_pll_vco_clk *vco = to_vco_clk_hw(hw);
 	struct mdss_pll_resources *dsi_pll_res = vco->priv;
 
 	if (!dsi_pll_res->pll_on &&
@@ -300,7 +300,7 @@ static int vco_set_rate_hpm(struct clk_hw *hw, unsigned long rate,
 		unsigned long parent_rate)
 {
 	int rc;
-	struct dsi_pll_vco_clk *vco = to_vco_hw(hw);
+	struct dsi_pll_vco_clk *vco = to_vco_clk_hw(hw);
 	struct mdss_pll_resources *dsi_pll_res = vco->priv;
 
 	rc = mdss_pll_resource_enable(dsi_pll_res, true);
@@ -328,7 +328,7 @@ unsigned long vco_recalc_rate(struct clk_hw *hw, unsigned long parent_rate)
 	u32 sdm0, doubler, sdm_byp_div;
 	u64 vco_rate;
 	u32 sdm_dc_off, sdm_freq_seed, sdm2, sdm3;
-	struct dsi_pll_vco_clk *vco = to_vco_hw(hw);
+	struct dsi_pll_vco_clk *vco = to_vco_clk_hw(hw);
 	u64 ref_clk = vco->ref_clk_rate;
 	int rc;
 	struct mdss_pll_resources *dsi_pll_res = vco->priv;
@@ -382,7 +382,7 @@ long vco_round_rate(struct clk_hw *hw, unsigned long rate,
 		unsigned long *parent_rate)
 {
 	unsigned long rrate = rate;
-	struct dsi_pll_vco_clk *vco = to_vco_hw(hw);
+	struct dsi_pll_vco_clk *vco = to_vco_clk_hw(hw);
 
 	if (rate < vco->min_rate)
 		rrate = vco->min_rate;
@@ -395,7 +395,7 @@ long vco_round_rate(struct clk_hw *hw, unsigned long rate,
 int vco_prepare(struct clk_hw *hw)
 {
 	int rc = 0;
-	struct dsi_pll_vco_clk *vco = to_vco_hw(hw);
+	struct dsi_pll_vco_clk *vco = to_vco_clk_hw(hw);
 	struct mdss_pll_resources *dsi_pll_res = vco->priv;
 
 	if (!dsi_pll_res) {
@@ -421,7 +421,7 @@ error:
 
 void vco_unprepare(struct clk_hw *hw)
 {
-	struct dsi_pll_vco_clk *vco = to_vco_hw(hw);
+	struct dsi_pll_vco_clk *vco = to_vco_clk_hw(hw);
 	struct mdss_pll_resources *dsi_pll_res = vco->priv;
 
 	if (!dsi_pll_res) {
