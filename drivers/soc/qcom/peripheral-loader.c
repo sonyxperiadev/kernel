@@ -929,6 +929,7 @@ static int pil_parse_devicetree(struct pil_desc *desc)
 	return 0;
 }
 
+#ifdef CONFIG_MAILBOX
 static int pil_notify_aop(struct pil_desc *desc, char *status)
 {
 	struct qmp_pkt pkt;
@@ -945,6 +946,12 @@ static int pil_notify_aop(struct pil_desc *desc, char *status)
 
 	return mbox_send_message(desc->mbox, &pkt);
 }
+#else
+static int pil_notify_aop(struct pil_desc *desc, char *status)
+{
+	return 0;
+}
+#endif
 
 /* Synchronize request_firmware() with suspend */
 static DECLARE_RWSEM(pil_pm_rwsem);
