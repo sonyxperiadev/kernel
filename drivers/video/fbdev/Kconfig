@@ -2341,20 +2341,6 @@ config FB_MSM
 	  a way for users to display graphics
 	  on connected display panels.
 
-config FB_MSM
-	tristate "MSM Framebuffer support"
-	depends on FB && ARCH_QCOM
-	select FB_CFB_FILLRECT
-	select FB_CFB_COPYAREA
-	select FB_CFB_IMAGEBLIT
-	select SYNC
-	select SW_SYNC
-	---help---
-	  The MSM driver implements a frame buffer interface to
-	  provide access to the display hardware and provide
-	  a way for users to display graphics
-	  on connected display panels.
-
 config FB_MX3
 	tristate "MX3 Framebuffer support"
 	depends on FB && MX3_IPU
