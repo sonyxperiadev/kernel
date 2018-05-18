@@ -19,6 +19,7 @@
 #include <dt-bindings/clock/mdss-pll-clk.h>
 #include <dt-bindings/clock/qcom,audio-ext-clk.h>
 #include <dt-bindings/regulator/qcom,rpm-smd-regulator.h>
+#include <dt-bindings/spmi/spmi.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 
 / {
@@ -75,6 +76,7 @@
 			qcom,ea = <&ea0>;
 			efficiency = <1024>;
 			next-level-cache = <&L2_0>;
+			#cooling-cells = <2>;
 			L2_0: l2-cache {
 				compatible = "arm,arch-cache";
 				cache-level = <2>;
@@ -103,6 +105,7 @@
 			qcom,ea = <&ea1>;
 			efficiency = <1024>;
 			next-level-cache = <&L2_0>;
+			#cooling-cells = <2>;
 			L1_I_1: l1-icache {
 				compatible = "arm,arch-cache";
 				qcom,dump-size = <0x9040>;
@@ -125,6 +128,7 @@
 			qcom,ea = <&ea2>;
 			efficiency = <1024>;
 			next-level-cache = <&L2_0>;
+			#cooling-cells = <2>;
 			L1_I_2: l1-icache {
 				compatible = "arm,arch-cache";
 				qcom,dump-size = <0x9040>;
@@ -147,6 +151,7 @@
 			qcom,ea = <&ea3>;
 			efficiency = <1024>;
 			next-level-cache = <&L2_0>;
+			#cooling-cells = <2>;
 			L1_I_3: l1-icache {
 				compatible = "arm,arch-cache";
 				qcom,dump-size = <0x9040>;
@@ -169,6 +174,7 @@
 			qcom,ea = <&ea4>;
 			efficiency = <1830>;
 			next-level-cache = <&L2_1>;
+			#cooling-cells = <2>;
 			L2_1: l2-cache {
 				compatible = "arm,arch-cache";
 				cache-level = <2>;
@@ -195,6 +201,7 @@
 			qcom,ea = <&ea5>;
 			efficiency = <1830>;
 			next-level-cache = <&L2_1>;
+			#cooling-cells = <2>;
 			L1_I_101: l1-icache {
 				compatible = "arm,arch-cache";
 				qcom,dump-size = <0x12000>;
@@ -217,6 +224,7 @@
 			qcom,ea = <&ea6>;
 			efficiency = <1830>;
 			next-level-cache = <&L2_1>;
+			#cooling-cells = <2>;
 			L1_I_102: l1-icache {
 				compatible = "arm,arch-cache";
 				qcom,dump-size = <0x12000>;
@@ -239,6 +247,7 @@
 			qcom,ea = <&ea7>;
 			efficiency = <1830>;
 			next-level-cache = <&L2_1>;
+			#cooling-cells = <2>;
 			L1_I_103: l1-icache {
 				compatible = "arm,arch-cache";
 				qcom,dump-size = <0x12000>;
@@ -936,6 +945,7 @@
 		reg-names = "tsens_physical", "tsens_eeprom_physical";
 		interrupts = <0 184 0>;
 		interrupt-names = "tsens-upper-lower";
+		#thermal-sensor-cells = <1>;
 		qcom,sensors = <11>;
 		qcom,slope = <3313 3275 3320 3246 3279 3257 3234 3269 3255 3239 3286>;
 		qcom,sensor-id = <0 1 2 3 4 5 6 7 8 9 10>;
@@ -970,6 +980,8 @@
 					   <9 0x228 0x07e00000 0x15 6>,
 					   <10 0x22c 0x0000007e 0x1 6>;
 	};
+
+	thermal_zones: thermal-zones {};
 
 	qcom,sensor-information {
 		compatible = "qcom,sensor-information";
@@ -1301,6 +1313,7 @@
 			<78 512 1000 0>; /* Max. bandwidth */
 		qcom,bus-vector-names = "MIN", "MAX";
 		qcom,instance-type = "sdcc";
+		status = "disabled";
 	};
 
 	sdhc_1: sdhci@7824900 {
@@ -1308,7 +1321,7 @@
 		reg = <0x7824900 0x500>, <0x7824000 0x800>, <0x7824e00 0x200>;
 		reg-names = "hc_mem", "core_mem", "cmdq_mem";
 
-		sdhc-msm-crypto = <&sdcc1_ice>;
+		//sdhc-msm-crypto = <&sdcc1_ice>;
 		interrupts = <0 123 0>, <0 138 0>;
 		interrupt-names = "hc_irq", "pwr_irq";
 
@@ -1675,7 +1688,7 @@
 		qcom,bus-clk-rate = <320000000 200000000 100000000>;
 		qcom,max-nominal-sysclk-rate = <133330000>;
 
-		extcon = <&pmi8950_charger>;
+		//extcon = <&pmi8950_charger>;
 
 		qcom,usbbam@78c4000 {
 			compatible = "qcom,usb-bam-msm";
@@ -2273,6 +2286,7 @@
 
 		vdd-supply = <&gdsc_venus>;
 		qcom,proxy-reg-names = "vdd";
+		qcom,mas-crypto = <&mas_crypto>;
 
 		clocks = <&clock_gcc GCC_VENUS0_VCODEC0_CLK>,
 			 <&clock_gcc GCC_VENUS0_AHB_CLK>,
@@ -2311,7 +2325,8 @@
 
 		vdd_cx-supply = <&pm8950_s2_level>;
 		qcom,proxy-reg-names = "vdd_cx";
-		qcom,vdd_cx-uV-uA = <7 100000>;
+		//qcom,vdd_cx-uV-uA = <7 100000>;
+		qcom,vdd_cx-uV-uA = <RPM_SMD_REGULATOR_LEVEL_TURBO 100000>;
 
 		clocks = <&clock_rpmcc CXO_PIL_LPASS_CLK>,
 			 <&clock_gcc GCC_CRYPTO_CLK>,
@@ -2324,6 +2339,7 @@
 				 "scm_bus_clk", "scm_core_clk_src";
 		qcom,scm_core_clk_src-freq = <80000000>;
 
+		qcom,mas-crypto = <&mas_crypto>;
 		qcom,pas-id = <1>;
 		qcom,proxy-timeout-ms = <10000>;
 		qcom,smem-id = <423>;
@@ -2374,6 +2390,7 @@
 		compatible = "qcom,pil-tz-generic";
 		reg = <0x0a21b000 0x3000>;
 		interrupts = <0 149 1>;
+		qcom,mas-crypto = <&mas_crypto>;
 
 		vdd_pronto_pll-supply = <&pm8950_l7>;
 		proxy-reg-names = "vdd_pronto_pll";
@@ -2439,6 +2456,7 @@
 		vdd_mx-uV = <RPM_SMD_REGULATOR_LEVEL_TURBO>;
 		vdd_pll-supply = <&pm8950_l7>;
 		qcom,vdd_pll = <1800000>;
+		vdd_mss-uV = <RPM_SMD_REGULATOR_LEVEL_TURBO>;
 
 		clocks = <&clock_rpmcc RPM_XO_CLK_SRC>,
 			 <&clock_gcc GCC_MSS_CFG_AHB_CLK>,
@@ -2457,6 +2475,7 @@
 		qcom,sysmon-id = <0>;
 		qcom,ssctl-instance-id = <0x12>;
 		qcom,qdsp6v56-1-8;
+		qcom,reset-clk;
 
 		/* GPIO inputs from mss */
 		qcom,gpio-err-fatal = <&smp2pgpio_ssr_smp2p_1_in 0 0>;
@@ -2961,10 +2980,14 @@
 };
 
 #include "msm-pm8950-rpm-regulator.dtsi"
-#include "msm-pm8950.dtsi"
-#include "msm-pmi8950.dtsi"
-#include "msm-pm8004.dtsi"
+//#include "msm-pm8950.dtsi"
+//#include "msm-pmi8950.dtsi"
+//#include "msm-pm8004.dtsi"
+#include "pm8950.dtsi"
+#include "pmi8950.dtsi"
+#include "pm8004.dtsi"
 #include "msm8956-regulator.dtsi"
+#include "msm8956-thermal.dtsi"
 #include "msm-gdsc-8916.dtsi"
 #include "msm8956-vidc.dtsi"
 #include "msm8956-camera.dtsi"

@@ -45,6 +45,7 @@
 		reg-names = "kgsl_3d0_reg_memory" , "kgsl_3d0_shader_memory";
 		interrupts = <0 33 0>;
 		interrupt-names = "kgsl_3d0_irq";
+		#cooling-cells = <2>;
 		qcom,id = <0>;
 
 		qcom,chipid = <0x05010000>;
