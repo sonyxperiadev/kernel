@@ -315,13 +315,13 @@ static int get_prop_proprietary_charger(struct smbchg_chip *chip)
 	int i;
 
 	dp = get_prop_usb_dp_voltage_now(chip);
-	if (IS_ERR_VALUE(dp)) {
+	if (IS_ERR_VALUE((unsigned long)dp)) {
 		dev_err(chip->dev, "%s: read D+ voltage fail\n", __func__);
 		return dp;
 	}
 
 	dm = get_prop_usb_dm_voltage_now(chip);
-	if (IS_ERR_VALUE(dm)) {
+	if (IS_ERR_VALUE((unsigned long)dm)) {
 		dev_err(chip->dev, "%s: read D- voltage fail\n", __func__);
 		return dm;
 	}
@@ -358,14 +358,14 @@ static int is_floated_charger(struct smbchg_chip *chip)
 
 	ret = power_supply_get_property(chip->usb_psy,
 					POWER_SUPPLY_PROP_DP_DM, &dp_dm);
-	if (IS_ERR_VALUE(ret)) {
+	if (IS_ERR_VALUE((unsigned long)ret)) {
 		dev_err(chip->dev, "%s: read D+/D- state fail\n", __func__);
 		return ret;
 	}
 
 	ret = power_supply_set_property(chip->usb_psy,
 			POWER_SUPPLY_PROP_DP_DM, &dpdm_3v3);
-	if (IS_ERR_VALUE(ret)) {
+	if (IS_ERR_VALUE((unsigned long)ret)) {
 		dev_err(chip->dev, "%s: set D+/D- 3.3V fail\n", __func__);
 		return ret;
 	}
@@ -373,14 +373,14 @@ static int is_floated_charger(struct smbchg_chip *chip)
 	msleep(100);
 
 	ret = get_prop_usb_dp_voltage_now(chip);
-	if (IS_ERR_VALUE(ret)) {
+	if (IS_ERR_VALUE((unsigned long)ret)) {
 		dev_err(chip->dev, "%s: read D+ voltage fail\n", __func__);
 		goto out;
 	}
 	dp = ret;
 
 	ret = get_prop_usb_dm_voltage_now(chip);
-	if (IS_ERR_VALUE(ret)) {
+	if (IS_ERR_VALUE((unsigned long)ret)) {
 		dev_err(chip->dev, "%s: read D- voltage fail\n", __func__);
 		goto out;
 	}

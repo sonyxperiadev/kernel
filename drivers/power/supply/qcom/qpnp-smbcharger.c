@@ -5177,7 +5177,7 @@ static void handle_usb_insertion(struct smbchg_chip *chip)
 	/* If APSD returned "OTHER". */
 	if (rc == 1) {
 		rc = get_prop_proprietary_charger(chip);
-		if (IS_ERR_VALUE(rc)) {
+		if (IS_ERR_VALUE((unsigned long)rc)) {
 			if (rc == -EPROBE_DEFER) {
 				/* change types to notify like as floated. */
 				usb_supply_type = POWER_SUPPLY_TYPE_USB;
@@ -5197,7 +5197,7 @@ static void handle_usb_insertion(struct smbchg_chip *chip)
 	/* If APSD returned "SDP". */
 	} else if (rc == 0) {
 		rc = is_floated_charger(chip);
-		if (IS_ERR_VALUE(rc)) {
+		if (IS_ERR_VALUE((unsigned long)rc)) {
 			pr_err("failed to check floated charger rc=%d\n", rc);
 		} else if (rc) {
 			pr_smb(PR_SOMC, "may be a FLOATED charger\n");
