@@ -23,6 +23,10 @@ config ANDROID_VSOC
 	  a 'cuttlefish' Android image inside QEmu. The driver interacts with
 	  a QEmu ivshmem device. If built as a module, it will be called vsoc.
 
+config ANDROID_TIMED_OUTPUT
+	bool "Timed output class driver"
+	default y
+
 config ANDROID_LOW_MEMORY_KILLER
 	bool "Android Low Memory Killer"
 	select HAVE_LOW_MEMORY_KILLER
