@@ -68,6 +68,8 @@
 struct msm_iommu_master {
 	struct list_head list;
 	unsigned int ctx_num;
+	bool dev_added;
+	bool is_kgsl_iommu;
 	struct device *dev;
 	struct msm_iommu_drvdata *iommu_drvdata;
 	struct msm_iommu_ctx_drvdata *ctx_drvdata;
@@ -762,15 +764,13 @@ static int msm_iommu_attach_dev(struct iommu_domain *domain, struct device *dev)
 	if (!(priv->client_name))
 		priv->client_name = dev_name(dev);
 
-	master = msm_iommu_find_master(dev);
-	if (IS_ERR(master)) {
-		/* if error use legacy api */
-		iommu_drvdata = dev_get_drvdata(dev->parent);
-		ctx_drvdata = dev_get_drvdata(dev);
-	} else {
-		iommu_drvdata = master->iommu_drvdata;
-		ctx_drvdata = master->ctx_drvdata;
+	master = dev->archdata.iommu;
+	if (unlikely(!master->dev_added)) {
+		pr_info("Using workaround for broken ARM IOMMU groups\n");
+		return 0;
 	}
+	iommu_drvdata = master->iommu_drvdata;
+	ctx_drvdata = master->ctx_drvdata;
 
 	if (!iommu_drvdata || !ctx_drvdata) {
 		ret = -EINVAL;
@@ -903,6 +903,7 @@ add_domain:
 
 unlock:
 	mutex_unlock(&priv->init_mutex);
+
 	return ret;
 }
 
@@ -1127,10 +1128,21 @@ static bool msm_iommu_is_iova_coherent(struct iommu_domain *domain,
 static int msm_iommu_add_device(struct device *dev)
 {
 	struct iommu_group *group;
+	struct msm_iommu_master *master = NULL;
 
-	group = iommu_group_get_for_dev(dev);
-	if (IS_ERR(group))
-		return PTR_ERR(group);
+	if (dev->archdata.iommu == NULL)
+		return -ENODEV;
+
+	master = dev->archdata.iommu;
+
+	/* k4.9 ugly workaround */
+	if (!master->is_kgsl_iommu) {
+		group = iommu_group_get_for_dev(dev);
+		if (IS_ERR(group))
+			return PTR_ERR(group);
+	}
+
+	master->dev_added = true;
 
 	return 0;
 }
@@ -1576,6 +1588,7 @@ static int msm_iommu_of_xlate(struct device *dev, struct of_phandle_args *args)
 	struct msm_iommu_master *master;
 	struct device_node *child;
 	bool found = false;
+	bool is_kgsl_iommu;
 	u32 val;
 	int ret;
 
@@ -1607,6 +1620,8 @@ static int msm_iommu_of_xlate(struct device *dev, struct of_phandle_args *args)
 
 		if (val == args->args[0]) {
 			found = true;
+			is_kgsl_iommu = of_property_read_bool(child,
+				"qcom,is-kgsl-ctx");
 			break;
 		}
 	}
@@ -1626,10 +1641,12 @@ static int msm_iommu_of_xlate(struct device *dev, struct of_phandle_args *args)
 	master->dev = dev;
 	master->iommu_drvdata = iommu_drvdata;
 	master->ctx_drvdata = ctx_drvdata;
+	master->is_kgsl_iommu = is_kgsl_iommu;
 
 	dev_dbg(dev, "adding master for device %s\n", dev_name(dev));
 
 	list_add_tail(&master->list, &iommu_masters);
+	dev->archdata.iommu = master;
 
 	return 0;
 }

@@ -54,6 +54,7 @@
 			qcom,ctx-num = <0>;
 			qcom,iommu-ctx-sids = <0x0>;
 			qcom,iommu-sid-mask = <0x400>;
+			qcom,is-kgsl-ctx;
 			label = "gfx3d_user";
 		};
 
@@ -66,6 +67,7 @@
 			qcom,ctx-num = <2>;
 			qcom,iommu-ctx-sids = <0x2>;
 			qcom,iommu-sid-mask = <0x401>;
+			qcom,is-kgsl-ctx;
 			label = "gfx3d_secure";
 		};
 
@@ -76,6 +78,7 @@
 			interrupts = <0 242 0>;
 			qcom,iommu-ctx-sids = <0x1>;
 			qcom,iommu-sid-mask = <0x400>;
+			qcom,is-kgsl-ctx;
 			label = "gfx3d_priv";
 		};
 	};
