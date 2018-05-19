@@ -2187,12 +2187,12 @@ int arm_iommu_attach_device(struct device *dev,
 		dev_err(dev, "No iommu associated with device\n");
 		return -EINVAL;
 	}
-
+#ifndef CONFIG_QCOM_IOMMU_V1
 	if (iommu_get_domain_for_dev(dev)) {
 		dev_err(dev, "Device already attached to other iommu_domain\n");
 		return -EINVAL;
 	}
-
+#endif
 	err = iommu_attach_group(domain, group);
 	if (err)
 		return err;
