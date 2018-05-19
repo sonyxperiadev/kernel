@@ -5766,7 +5766,15 @@ static s32 wl_cfg80211_suspend(struct wiphy *wiphy)
 		}
 	spin_lock_irqsave(&cfg->cfgdrv_lock, flags);
 	if (cfg->scan_request) {
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 9, 0))
+		struct cfg80211_scan_info info = {
+			.aborted = true,
+		};
+
+		cfg80211_scan_done(cfg->scan_request, &info);
+#else
 		cfg80211_scan_done(cfg->scan_request, true);
+#endif
 		cfg->scan_request = NULL;
 	}
 	for_each_ndev(cfg, iter, next) {
@@ -10542,6 +10550,9 @@ wl_bss_roaming_done(struct bcm_cfg80211 *cfg, struct net_device *ndev,
 	u32 *channel;
 	u32 freq;
 #endif /* LINUX_VERSION > 2.6.39 || WL_COMPAT_WIRELESS */
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 9, 0))
+	struct cfg80211_roam_info roam_info = {};
+#endif
 
 #ifdef WLFBT
 	uint32 data_len = 0;
@@ -10594,13 +10605,22 @@ wl_bss_roaming_done(struct bcm_cfg80211 *cfg, struct net_device *ndev,
 	printk("wl_bss_roaming_done succeeded to " MACDBG "\n",
 		MAC2STRDBG((const u8*)(&e->addr)));
 
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 9, 0))
+	roam_info.channel = notify_channel;
+	roam_info.bssid = curbssid;
+	roam_info.req_ie = conn_info->req_ie;
+	roam_info.req_ie_len = conn_info->req_ie_len;
+	roam_info.resp_ie = conn_info->resp_ie;
+	roam_info.resp_ie_len = conn_info->resp_ie_len;
+
+	cfg80211_roamed(ndev, &roam_info, GFP_KERNEL);
+#else
 	cfg80211_roamed(ndev,
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 39)) || defined(WL_COMPAT_WIRELESS)
 		notify_channel,
-#endif
 		curbssid,
 		conn_info->req_ie, conn_info->req_ie_len,
 		conn_info->resp_ie, conn_info->resp_ie_len, GFP_KERNEL);
+#endif /* LINUX_VERSION > 4.9.0 */
 	WL_DBG(("Report roaming result\n"));
 
 	memcpy(&cfg->last_roamed_addr, (void *)&e->addr, ETHER_ADDR_LEN);
@@ -10941,7 +10961,15 @@ scan_done_out:
 	del_timer_sync(&cfg->scan_timeout);
 	spin_lock_irqsave(&cfg->cfgdrv_lock, flags);
 	if (cfg->scan_request) {
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 9, 0))
+		struct cfg80211_scan_info info = {
+			.aborted = false,
+		};
+
+		cfg80211_scan_done(cfg->scan_request, &info);
+#else
 		cfg80211_scan_done(cfg->scan_request, false);
+#endif
 		cfg->scan_request = NULL;
 	}
 	spin_unlock_irqrestore(&cfg->cfgdrv_lock, flags);
@@ -11965,7 +11993,15 @@ static s32 wl_notify_escan_complete(struct bcm_cfg80211 *cfg,
 	}
 #endif /* WL_SCHED_SCAN */
 	if (likely(cfg->scan_request)) {
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 9, 0))
+		struct cfg80211_scan_info info = {
+			.aborted = aborted,
+		};
+
+		cfg80211_scan_done(cfg->scan_request, &info);
+#else
 		cfg80211_scan_done(cfg->scan_request, aborted);
+#endif
 		cfg->scan_request = NULL;
 		DHD_OS_SCAN_WAKE_UNLOCK((dhd_pub_t *)(cfg->pub));
 		DHD_ENABLE_RUNTIME_PM((dhd_pub_t *)(cfg->pub));
@@ -13434,7 +13470,11 @@ s32 wl_update_wiphybands(struct bcm_cfg80211 *cfg, bool notify)
 	bool rollback_lock = false;
 	s32 bw_cap = 0;
 	s32 cur_band = -1;
-	struct ieee80211_supported_band *bands[IEEE80211_NUM_BANDS] = {NULL, };
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0))
+	struct ieee80211_supported_band *bands[NUM_NL80211_BANDS] = {NULL, };
+#else
+	struct ieee80211_supported_band *bands[NL80211_NUM_BANDS] = {NULL, };
+#endif
 
 	if (cfg == NULL) {
 		cfg = g_bcm_cfg;
@@ -13801,7 +13841,15 @@ _Pragma("GCC diagnostic pop")
 
 	spin_lock_irqsave(&cfg->cfgdrv_lock, flags);
 	if (cfg->scan_request) {
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 9, 0))
+		struct cfg80211_scan_info info = {
+			.aborted = true,
+		};
+
+		cfg80211_scan_done(cfg->scan_request, &info);
+#else
 		cfg80211_scan_done(cfg->scan_request, true);
+#endif
 		cfg->scan_request = NULL;
 	}
 	spin_unlock_irqrestore(&cfg->cfgdrv_lock, flags);
@@ -14025,7 +14073,15 @@ int wl_cfg80211_cleanup(void)
 	ndev = bcmcfg_to_prmry_ndev(cfg);
 	spin_lock_irqsave(&cfg->cfgdrv_lock, flags);
 	if (cfg->scan_request) {
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 9, 0))
+		struct cfg80211_scan_info info = {
+			.aborted = true,
+		};
+
+		cfg80211_scan_done(cfg->scan_request, &info);
+#else
 		cfg80211_scan_done(cfg->scan_request, true);
+#endif
 		cfg->scan_request = NULL;
 	}
 	spin_unlock_irqrestore(&cfg->cfgdrv_lock, flags);
@@ -15857,7 +15913,15 @@ int wl_cfg80211_scan_stop(bcm_struct_cfgdev *cfgdev)
 #else
 	if (cfg->scan_request && cfg->scan_request->dev == cfgdev) {
 #endif
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 9, 0))
+		struct cfg80211_scan_info info = {
+			.aborted = true,
+		};
+
+		cfg80211_scan_done(cfg->scan_request, &info);
+#else
 		cfg80211_scan_done(cfg->scan_request, true);
+#endif
 		cfg->scan_request = NULL;
 		clear_flag = 1;
 	}
