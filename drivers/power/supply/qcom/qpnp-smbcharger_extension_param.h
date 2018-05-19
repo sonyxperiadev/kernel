@@ -17,8 +17,6 @@
 #ifndef __QPNP_SMBCHARGER_EXTENSION_PARAM
 #define __QPNP_SMBCHARGER_EXTENSION_PARAM
 
-#include <linux/wakelock.h>
-
 enum somc_lrc_status {
 	LRC_DISABLE,
 	LRC_CHG_OFF,
@@ -155,7 +153,7 @@ struct chg_somc_params {
 	struct somc_vfloat_cfg_params	fv_cfg;
 	struct somc_usb_remove		usb_remove;
 	struct somc_limit_range_charge	lrc;
-	struct wake_lock	unplug_wakelock;
+	struct wakeup_source		unplug_wakelock;
 	struct somc_batt_log		batt_log;
 	struct somc_daemon		daemon;
 	struct somc_apsd	apsd;

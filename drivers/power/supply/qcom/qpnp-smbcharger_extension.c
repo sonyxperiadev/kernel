@@ -384,10 +384,10 @@ exit:
 	return;
 }
 
-#define UNPLUG_WAKE_PERIOD		(3 * HZ)
+#define UNPLUG_WAKE_PERIOD		3000 /* milliseconds */
 void somc_unplug_wakelock(struct chg_somc_params *params)
 {
-	wake_lock_timeout(&params->unplug_wakelock, UNPLUG_WAKE_PERIOD);
+	__pm_wakeup_event(&params->unplug_wakelock, UNPLUG_WAKE_PERIOD);
 }
 
 static void somc_chg_set_low_batt_suspend_en(struct smbchg_chip *chip)
@@ -2262,8 +2262,7 @@ static int somc_chg_register(struct smbchg_chip *chip)
 		rc = -ENOMEM;
 		goto free_input_dev;
 	}
-	wake_lock_init(&params->unplug_wakelock, WAKE_LOCK_SUSPEND,
-							"unplug_wakelock");
+	wakeup_source_init(&params->unplug_wakelock, "unplug_wakelock");
 	INIT_DELAYED_WORK(&params->thermal.therm_level_set_work,
 					somc_chg_therm_level_set_work);
 	INIT_DELAYED_WORK(&params->usb_remove.work, somc_chg_remove_work);
@@ -2291,7 +2290,7 @@ static void somc_chg_unregister(struct smbchg_chip *chip)
 	struct chg_somc_params *params = &chip->somc_params;
 
 	somc_chg_remove_sysfs_entries(chip->dev);
-	wake_lock_destroy(&params->unplug_wakelock);
+	wakeup_source_trash(&params->unplug_wakelock);
 	if (params->apsd.wq)
 		destroy_workqueue(params->apsd.wq);
 }
