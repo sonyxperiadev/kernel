@@ -248,7 +248,7 @@ static int clk_pll_acpu_vote_enable(struct clk_hw *hw)
 {
 	struct clk_pll_acpu_vote *v = to_clk_pll_acpu_vote(hw);
 	unsigned long flags;
-	int ret;
+	int ret = 0;
 
 	spin_lock_irqsave(&acpu_soft_vote_lock, flags);
 
