@@ -3523,6 +3523,21 @@ static int fastrpc_get_service_location_notify(struct notifier_block *nb,
 	return NOTIFY_DONE;
 }
 
+static int fastrpc_smmu_fault_handler(struct iommu_domain *domain,
+	struct device *dev, unsigned long iova, int flags, void *token)
+{
+	struct fastrpc_session_ctx *sess = (struct fastrpc_session_ctx *)token;
+	int err = 0;
+
+	VERIFY(err, sess != NULL);
+	if (err)
+		return err;
+	sess->smmu.faults++;
+	dev_err(dev, "ADSPRPC context fault: iova=0x%08lx, cb = %d, faults=%d",
+					iova, sess->smmu.cb, sess->smmu.faults);
+	return 0;
+}
+
 static const struct file_operations fops = {
 	.open = fastrpc_device_open,
 	.release = fastrpc_device_release,
@@ -3650,7 +3665,7 @@ static int fastrpc_cb_subsids_probe(struct device *dev)
 		goto bail;
 
 	iommu_set_fault_handler(main_session->smmu.mapping->domain,
-				fastrpc_smmu_fault_handler, sess);
+				fastrpc_smmu_fault_handler, main_session);
 	VERIFY(err, !arm_iommu_attach_device(dev, main_session->smmu.mapping));
 	if (err)
 		goto bail;
