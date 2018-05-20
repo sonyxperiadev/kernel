@@ -1927,6 +1927,7 @@ out:
 
 
 static enum dual_role_property fusb_drp_properties[] = {
+	DUAL_ROLE_PROP_SUPPORTED_MODES,
 	DUAL_ROLE_PROP_MODE,
 	DUAL_ROLE_PROP_PR,
 	DUAL_ROLE_PROP_DR,
@@ -1975,6 +1976,10 @@ static int dual_role_get_local_prop(struct dual_role_phy_instance *dual_role,
 		else
 			ret = -EINVAL;
 	}
+
+	if (prop == DUAL_ROLE_PROP_SUPPORTED_MODES)
+		*val = DUAL_ROLE_SUPPORTED_MODES_DFP_AND_UFP;
+
 	mutex_unlock(&chip->mlock);
 
 	return ret;
