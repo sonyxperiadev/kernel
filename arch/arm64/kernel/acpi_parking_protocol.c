@@ -133,11 +133,10 @@ static void acpi_parking_protocol_cpu_postboot(void)
 	WARN_ON(entry_point);
 }
 
-static const struct cpu_operations acpi_parking_protocol_ops = {
+const struct cpu_operations acpi_parking_protocol_ops = {
 	.name		= "parking-protocol",
 	.cpu_init	= acpi_parking_protocol_cpu_init,
 	.cpu_prepare	= acpi_parking_protocol_cpu_prepare,
 	.cpu_boot	= acpi_parking_protocol_cpu_boot,
 	.cpu_postboot	= acpi_parking_protocol_cpu_postboot
 };
-CPU_METHOD_OF_DECLARE(acpi_parking, &acpi_parking_protocol_ops);

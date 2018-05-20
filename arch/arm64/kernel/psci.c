@@ -111,7 +111,7 @@ static int cpu_psci_cpu_kill(unsigned int cpu)
 }
 #endif
 
-static struct cpu_operations cpu_psci_ops = {
+const struct cpu_operations cpu_psci_ops = {
 	.name		= "psci",
 #ifdef CONFIG_CPU_IDLE
 	.cpu_init_idle	= psci_cpu_init_idle,
@@ -126,4 +126,4 @@ static struct cpu_operations cpu_psci_ops = {
 	.cpu_kill	= cpu_psci_cpu_kill,
 #endif
 };
-CPU_METHOD_OF_DECLARE(psci, "psci", &cpu_psci_ops);
+
