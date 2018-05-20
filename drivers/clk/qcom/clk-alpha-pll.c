@@ -869,7 +869,7 @@ static int clk_alpha_pll_slew_set_rate(struct clk_hw *hw, unsigned long rate,
 	u32 l;
 	u64 a;
 
-	freq_hz = alpha_pll_round_rate(rate, parent_rate, &l, &a);
+	freq_hz = alpha_pll_round_rate(pll, rate, parent_rate, &l, &a);
 	if (freq_hz != rate) {
 		pr_err("alpha_pll: Call clk_set_rate with rounded rates!\n");
 		return -EINVAL;

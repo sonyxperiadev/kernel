@@ -53,6 +53,7 @@ struct clk_alpha_pll {
 	const struct pll_vco *vco_table;
 	size_t num_vco;
 
+	u8 flags;
 /* associated with soft_vote for multiple PLL software instances */
 #define SUPPORTS_FSM_VOTE	BIT(3)
 
