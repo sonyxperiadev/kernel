@@ -12,7 +12,12 @@
 
 #ifndef __MDSS_PLL_H
 #define __MDSS_PLL_H
+
+#ifdef CONFIG_FB_MSM_MDSS /* MDSS - FBDEV */
+#include <linux/mdss_io_util.h>
+#else /* SDE - DRM */
 #include <linux/sde_io_util.h>
+#endif
 #include <linux/clk-provider.h>
 #include <linux/io.h>
 #include <linux/clk.h>
@@ -202,7 +207,12 @@ static inline bool is_gdsc_disabled(struct mdss_pll_resources *pll_res)
 		WARN(1, "gdsc_base register is not defined\n");
 		return true;
 	}
+#ifdef CONFIG_FB_MSM_MDSS /* MDSS - FBDEV */
+	return ((readl_relaxed(pll_res->gdsc_base + 0x4) & BIT(31)) &&
+		(!(readl_relaxed(pll_res->gdsc_base) & BIT(0)))) ? false : true;
+#else /* SDE - DRM */
 	return readl_relaxed(pll_res->gdsc_base) & BIT(31) ? false : true;
+#endif
 }
 
 static inline int mdss_pll_div_prepare(struct clk_hw *hw)
