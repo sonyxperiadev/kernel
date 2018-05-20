@@ -22,8 +22,6 @@
 void *msm_iommu_lock_initialize(void);
 void msm_iommu_mutex_lock(void);
 void msm_iommu_mutex_unlock(void);
-void msm_set_iommu_access_ops(struct iommu_access_ops *ops);
-struct iommu_access_ops *msm_get_iommu_access_ops(void);
 #else
 static inline void *msm_iommu_lock_initialize(void)
 {
@@ -31,14 +29,6 @@ static inline void *msm_iommu_lock_initialize(void)
 }
 static inline void msm_iommu_mutex_lock(void) { }
 static inline void msm_iommu_mutex_unlock(void) { }
-static inline void msm_set_iommu_access_ops(struct iommu_access_ops *ops)
-{
-
-}
-static inline struct iommu_access_ops *msm_get_iommu_access_ops(void)
-{
-	return NULL;
-}
 #endif
 
 #ifdef CONFIG_QCOM_IOMMU_V1

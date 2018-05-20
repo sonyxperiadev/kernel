@@ -244,6 +244,8 @@ struct iommu_access_ops {
 	void (*iommu_lock_acquire)(unsigned int need_extra_lock);
 	void (*iommu_lock_release)(unsigned int need_extra_lock);
 };
+void msm_set_iommu_access_ops(struct iommu_access_ops *ops);
+struct iommu_access_ops *msm_get_iommu_access_ops(void);
 
 int __enable_clocks(struct msm_iommu_drvdata *drvdata);
 void __disable_clocks(struct msm_iommu_drvdata *drvdata);

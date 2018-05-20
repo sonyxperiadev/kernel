@@ -45,7 +45,7 @@
 #include "../io-pgtable.h"
 
 #include "msm_iommu_priv.h"
-#include "qcom_iommu.h"
+#include <linux/qcom_iommu.h>
 #include "msm_iommu_hw-v1.h"
 
 /* Max ASID width is 8-bit */
