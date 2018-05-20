@@ -524,12 +524,11 @@ int mdss_mdp_get_plane_sizes(struct mdss_mdp_format_params *fmt, u32 w, u32 h,
 	if (ps == NULL)
 		return -EINVAL;
 
-	memset(ps, 0, sizeof(struct mdss_mdp_plane_sizes));
-
 	if ((w > MAX_IMG_WIDTH) || (h > MAX_IMG_HEIGHT))
 		return -ERANGE;
 
 	bpp = fmt->bpp;
+	memset(ps, 0, sizeof(struct mdss_mdp_plane_sizes));
 
 	if (mdss_mdp_is_ubwc_format(fmt)) {
 		rc = mdss_mdp_get_ubwc_plane_size(fmt, w, h, ps);
@@ -1058,7 +1057,7 @@ static int mdss_mdp_get_img(struct msmfb_data *img,
 		} else {
 			struct sg_table *sg_ptr = NULL;
 
-			data->ihandle = ion_import_dma_buf(iclient,
+			data->ihandle = ion_import_dma_buf_fd(iclient,
 					img->memory_id);
 			if (IS_ERR_OR_NULL(data->ihandle)) {
 				ret = -EINVAL;
@@ -1146,7 +1145,7 @@ static int mdss_mdp_map_buffer(struct mdss_mdp_img_data *data, bool rotator,
 			ret = mdss_smmu_map_dma_buf(data->srcp_dma_buf,
 					data->srcp_table, domain,
 					&data->addr, &data->len, dir);
-			if (IS_ERR_VALUE(ret)) {
+			if (IS_ERR_VALUE((unsigned long)ret)) {
 				pr_err("smmu map dma buf failed: (%d)\n", ret);
 				goto err_unmap;
 			}

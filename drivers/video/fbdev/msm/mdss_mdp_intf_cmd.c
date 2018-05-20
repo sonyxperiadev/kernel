@@ -1404,7 +1404,6 @@ static void mdss_mdp_cmd_pingpong_done(void *arg)
 			       atomic_read(&ctx->koff_cnt));
 		if (sync_ppdone) {
 			atomic_inc(&ctx->pp_done_cnt);
-			if (!ctl->commit_in_progress)
 				schedule_work(&ctx->pp_done_work);
 
 			mdss_mdp_resource_control(ctl,
@@ -3494,7 +3493,7 @@ int mdss_mdp_cmd_stop(struct mdss_mdp_ctl *ctl, int panel_power_state)
 
 	pr_debug("%s: turn off interface clocks\n", __func__);
 	ret = mdss_mdp_cmd_stop_sub(ctl, panel_power_state);
-	if (IS_ERR_VALUE(ret)) {
+	if (IS_ERR_VALUE((unsigned long)ret)) {
 		pr_err("%s: unable to stop interface: %d\n",
 				__func__, ret);
 		goto end;
@@ -3502,7 +3501,7 @@ int mdss_mdp_cmd_stop(struct mdss_mdp_ctl *ctl, int panel_power_state)
 
 	if (sctl) {
 		mdss_mdp_cmd_stop_sub(sctl, panel_power_state);
-		if (IS_ERR_VALUE(ret)) {
+		if (IS_ERR_VALUE((unsigned long)ret)) {
 			pr_err("%s: unable to stop slave intf: %d\n",
 					__func__, ret);
 			goto end;
@@ -3546,7 +3545,7 @@ panel_events:
 	ctl->ops.wait_for_vsync_fnc = NULL;
 
 end:
-	if (!IS_ERR_VALUE(ret)) {
+	if (!IS_ERR_VALUE((unsigned long)ret)) {
 		struct mdss_mdp_cmd_ctx *sctx = NULL;
 
 		ctx->panel_power_state = panel_power_state;
@@ -3947,7 +3946,7 @@ int mdss_mdp_cmd_start(struct mdss_mdp_ctl *ctl)
 	/* Command mode is supported only starting at INTF1 */
 	session = ctl->intf_num - MDSS_MDP_INTF1;
 	ret = mdss_mdp_cmd_intfs_setup(ctl, session);
-	if (IS_ERR_VALUE(ret)) {
+	if (IS_ERR_VALUE((unsigned long)ret)) {
 		pr_err("unable to set cmd interface: %d\n", ret);
 		return ret;
 	}

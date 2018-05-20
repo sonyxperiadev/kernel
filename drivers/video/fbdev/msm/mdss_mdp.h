@@ -977,7 +977,7 @@ struct mdss_overlay_private {
 	u32 sd_enabled;
 	u32 sc_enabled;
 
-	struct sw_sync_timeline *vsync_timeline;
+	struct mdss_timeline *vsync_timeline;
 	struct mdss_mdp_vsync_handler vsync_retire_handler;
 	int retire_cnt;
 	bool kickoff_released;

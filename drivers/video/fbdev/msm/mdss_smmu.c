@@ -17,7 +17,8 @@
 #include <linux/debugfs.h>
 #include <linux/kernel.h>
 #include <linux/iommu.h>
-#include <linux/qcom_iommu.h>
+#include <linux/module.h>
+//#include <linux/qcom_iommu.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/clk/msm-clk.h>
@@ -39,6 +40,27 @@
 #include "mdss_debug.h"
 
 #define SZ_4G		0xF0000000
+
+#ifdef CONFIG_QCOM_IOMMU
+#include <linux/qcom_iommu.h>
+static inline struct bus_type *mdss_mmu_get_bus(struct device *dev)
+{
+	return msm_iommu_get_bus(dev);
+}
+static inline struct device *mdss_mmu_get_ctx(const char *name)
+{
+	return msm_iommu_get_ctx(name);
+}
+#else
+static inline struct bus_type *mdss_mmu_get_bus(struct device *dev)
+{
+	return &platform_bus_type;
+}
+static inline struct device *mdss_mmu_get_ctx(const char *name)
+{
+	return ERR_PTR(-ENODEV);
+}
+#endif
 
 static DEFINE_MUTEX(mdp_iommu_lock);
 
@@ -700,7 +722,10 @@ void mdss_smmu_device_create(struct device *dev)
 
 	parent = dev->of_node;
 	for_each_child_of_node(parent, child) {
-		if (is_mdss_smmu_compatible_device(child->name))
+		char name[MDSS_SMMU_COMPAT_STR_LEN] = {};
+
+		strlcpy(name, child->name, sizeof(name));
+		if (is_mdss_smmu_compatible_device(name))
 			of_platform_device_create(child, NULL, dev);
 	}
 	prv->pdev = parent;
@@ -784,7 +809,7 @@ int mdss_smmu_probe(struct platform_device *pdev)
 		 * For old iommu driver we query the context bank device
 		 * rather than getting it from dt.
 		 */
-		dev = msm_iommu_get_ctx(smmu_domain.ctx_name);
+		dev = mdss_mmu_get_ctx(smmu_domain.ctx_name);
 		if (!dev) {
 			pr_err("Invalid SMMU ctx for domain:%d\n",
 				smmu_domain.domain);
@@ -844,7 +869,7 @@ int mdss_smmu_probe(struct platform_device *pdev)
 	}
 
 	mdss_smmu->mmu_mapping = arm_iommu_create_mapping(
-		msm_iommu_get_bus(dev), smmu_domain.start, smmu_domain.size);
+		mdss_mmu_get_bus(dev), smmu_domain.start, smmu_domain.size);
 	if (IS_ERR(mdss_smmu->mmu_mapping)) {
 		pr_err("iommu create mapping failed for domain[%d]\n",
 			smmu_domain.domain);

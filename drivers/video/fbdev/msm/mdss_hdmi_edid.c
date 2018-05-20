@@ -761,7 +761,7 @@ static ssize_t hdmi_edid_sysfs_wta_add_resolution(struct device *dev,
 	}
 
 	rc = sscanf(buf,
-		"%lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu",
+		"%lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %u",
 		(unsigned long *) &timing.active_h,
 		(unsigned long *) &timing.front_porch_h,
 		(unsigned long *) &timing.pulse_width_h,
@@ -776,7 +776,7 @@ static ssize_t hdmi_edid_sysfs_wta_add_resolution(struct device *dev,
 		(unsigned long *) &timing.refresh_rate,
 		(unsigned long *) &timing.interlaced,
 		(unsigned long *) &timing.supported,
-		(unsigned long *) &timing.ar);
+		(unsigned int *) &timing.ar);
 
 	if (rc != 15) {
 		DEV_ERR("%s: error reading buf\n", __func__);
@@ -785,7 +785,7 @@ static ssize_t hdmi_edid_sysfs_wta_add_resolution(struct device *dev,
 
 	rc = hdmi_set_resv_timing_info(&timing);
 
-	if (!IS_ERR_VALUE(rc)) {
+	if (!IS_ERR_VALUE((unsigned long)rc)) {
 		DEV_DBG("%s: added new res %d\n", __func__, rc);
 	} else {
 		DEV_ERR("%s: error adding new res %d\n", __func__, rc);
@@ -1712,7 +1712,7 @@ static void hdmi_edid_detail_desc(struct hdmi_edid_ctrl *edid_ctrl,
 		rc = -EINVAL;
 	}
 
-	if (!IS_ERR_VALUE(rc)) {
+	if (!IS_ERR_VALUE((unsigned long)rc)) {
 		*disp_mode = rc;
 		DEV_DBG("%s: DTD mode found: %d\n", __func__, *disp_mode);
 	} else {

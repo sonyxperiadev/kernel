@@ -19,7 +19,7 @@
 #include <linux/mutex.h>
 #include <linux/iopoll.h>
 #include <linux/types.h>
-#include <linux/switch.h>
+#include <linux/extcon.h>
 #include <linux/gcd.h>
 
 #include "mdss_hdmi_audio.h"

@@ -983,6 +983,7 @@ static u32 mdss_mdp_calc_prefill_line_time(struct mdss_mdp_ctl *ctl,
 	if (!ctl || !ctl->mdata)
 		return 0;
 
+	mdata = ctl->mdata;
 	mixer = pipe->mixer_left;
 	if (!mixer)
 		return -EINVAL;
@@ -6106,15 +6107,11 @@ int mdss_mdp_display_commit(struct mdss_mdp_ctl *ctl, void *arg,
 		mdss_mdp_ctl_read(ctl, MDSS_MDP_REG_CTL_FLUSH), split_lm_valid);
 
 	mdss_mdp_ctl_write(ctl, MDSS_MDP_REG_CTL_FLUSH, ctl_flush_bits);
-	if (sctl) {
-		if (sctl_flush_bits) {
-			mdss_mdp_ctl_write(sctl, MDSS_MDP_REG_CTL_FLUSH,
-				sctl_flush_bits);
-			sctl->flush_bits = 0;
-		}
-		sctl->commit_in_progress = false;
+	if (sctl && sctl_flush_bits) {
+		mdss_mdp_ctl_write(sctl, MDSS_MDP_REG_CTL_FLUSH,
+				   sctl_flush_bits);
+		sctl->flush_bits = 0;
 	}
-	ctl->commit_in_progress = false;
 
 	wmb();
 	ctl->flush_reg_data = ctl_flush_bits;

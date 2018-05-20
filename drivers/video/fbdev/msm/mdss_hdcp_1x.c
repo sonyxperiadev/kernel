@@ -19,6 +19,7 @@
 #include <linux/stat.h>
 #include <linux/iopoll.h>
 #include <linux/hdcp_qseecom.h>
+#include <linux/errno.h>
 #include "mdss_hdcp.h"
 #include "mdss_fb.h"
 #include "mdss_dp_util.h"
@@ -609,12 +610,12 @@ static int hdcp_1x_read_bcaps(struct hdcp_1x *hdcp)
 
 	rc = hdcp_1x_read(hdcp, &hdcp->sink_addr.bcaps,
 		&hdcp->bcaps, false);
-	if (IS_ERR_VALUE(rc)) {
+	if (IS_ERR_VALUE((unsigned long)rc)) {
 		pr_err("error reading bcaps\n");
 		goto error;
 	}
 
-	pr_debug("bcaps read: 0x%x\n", hdcp->bcaps);
+	*pr_debug("bcaps read: 0x%x\n", hdcp->bcaps);
 
 	hdcp->current_tp.ds_type = hdcp->bcaps & reg_set->repeater ?
 			DS_REPEATER : DS_RECEIVER;
@@ -646,7 +647,7 @@ static int hdcp_1x_wait_for_hw_ready(struct hdcp_1x *hdcp)
 					== HDCP_KEYS_STATE_VALID ||
 				!hdcp_1x_state(HDCP_STATE_AUTHENTICATING),
 				HDCP_POLL_SLEEP_US, HDCP_POLL_TIMEOUT_US);
-	if (IS_ERR_VALUE(rc)) {
+	if (IS_ERR_VALUE((unsigned long)rc)) {
 		pr_err("key not ready\n");
 		goto error;
 	}
@@ -662,7 +663,7 @@ static int hdcp_1x_wait_for_hw_ready(struct hdcp_1x *hdcp)
 				(link0_status & (BIT(8) | BIT(9))) ||
 				!hdcp_1x_state(HDCP_STATE_AUTHENTICATING),
 				HDCP_POLL_SLEEP_US, HDCP_POLL_TIMEOUT_US);
-	if (IS_ERR_VALUE(rc)) {
+	if (IS_ERR_VALUE((unsigned long)rc)) {
 		pr_err("An not ready\n");
 		goto error;
 	}
@@ -699,7 +700,7 @@ static int hdcp_1x_send_an_aksv_to_sink(struct hdcp_1x *hdcp)
 		an[7], an[6], an[5], an[4], an[3], an[2], an[1], an[0]);
 
 	rc = hdcp_1x_write(hdcp, &hdcp->sink_addr.an, an);
-	if (IS_ERR_VALUE(rc)) {
+	if (IS_ERR_VALUE((unsigned long)rc)) {
 		pr_err("error writing an to sink\n");
 		goto error;
 	}
@@ -715,7 +716,7 @@ static int hdcp_1x_send_an_aksv_to_sink(struct hdcp_1x *hdcp)
 		aksv[4], aksv[3], aksv[2], aksv[1], aksv[0]);
 
 	rc = hdcp_1x_write(hdcp, &hdcp->sink_addr.aksv, aksv);
-	if (IS_ERR_VALUE(rc)) {
+	if (IS_ERR_VALUE((unsigned long)rc)) {
 		pr_err("error writing aksv to sink\n");
 		goto error;
 	}
@@ -761,7 +762,7 @@ static int hdcp_1x_get_bksv_from_sink(struct hdcp_1x *hdcp)
 	struct dss_io_data *hdcp_io  = hdcp->init_data.hdcp_io;
 
 	rc = hdcp_1x_read(hdcp, &hdcp->sink_addr.bksv, bksv, false);
-	if (IS_ERR_VALUE(rc)) {
+	if (IS_ERR_VALUE((unsigned long)rc)) {
 		pr_err("error reading bksv from sink\n");
 		goto error;
 	}
@@ -909,7 +910,7 @@ static void hdcp_1x_enable_sink_irq_hpd(struct hdcp_1x *hdcp)
 		return;
 
 	rc = hdcp_1x_write(hdcp, &hdcp->sink_addr.ainfo, &enable_hpd_irq);
-	if (IS_ERR_VALUE(rc))
+	if (IS_ERR_VALUE((unsigned long)rc))
 		pr_debug("error writing ainfo to sink\n");
 }
 
@@ -933,7 +934,7 @@ static int hdcp_1x_verify_r0(struct hdcp_1x *hdcp)
 				(link0_status & BIT(reg_set->r0_offset)) ||
 				!hdcp_1x_state(HDCP_STATE_AUTHENTICATING),
 				HDCP_POLL_SLEEP_US, HDCP_POLL_TIMEOUT_US);
-	if (IS_ERR_VALUE(rc)) {
+	if (IS_ERR_VALUE((unsigned long)rc)) {
 		pr_err("R0 not ready\n");
 		goto error;
 	}
@@ -963,7 +964,7 @@ static int hdcp_1x_verify_r0(struct hdcp_1x *hdcp)
 
 		rc = hdcp_1x_read(hdcp, &hdcp->sink_addr.r0,
 			buf, false);
-		if (IS_ERR_VALUE(rc)) {
+		if (IS_ERR_VALUE((unsigned long)rc)) {
 			pr_err("error reading R0' from sink\n");
 			goto error;
 		}
@@ -1067,7 +1068,7 @@ static int hdcp_1x_transfer_v_h(struct hdcp_1x *hdcp)
 	sink.len = len;
 
 	rc = hdcp_1x_read(hdcp, &sink, buf, false);
-	if (IS_ERR_VALUE(rc)) {
+	if (IS_ERR_VALUE((unsigned long)rc)) {
 		pr_err("error reading %s\n", sink.name);
 		goto end;
 	}
@@ -1100,7 +1101,7 @@ static int hdcp_1x_validate_downstream(struct hdcp_1x *hdcp)
 
 	rc = hdcp_1x_read(hdcp, &hdcp->sink_addr.bstatus,
 			buf, false);
-	if (IS_ERR_VALUE(rc)) {
+	if (IS_ERR_VALUE((unsigned long)rc)) {
 		pr_err("error reading bstatus\n");
 		goto end;
 	}
@@ -1171,7 +1172,7 @@ static int hdcp_1x_read_ksv_fifo(struct hdcp_1x *hdcp)
 	while (ksv_bytes && --ksv_read_retry) {
 		rc = hdcp_1x_read(hdcp, &hdcp->sink_addr.ksv_fifo,
 				ksv_fifo, true);
-		if (IS_ERR_VALUE(rc))
+		if (IS_ERR_VALUE((unsigned long)rc))
 			pr_err("could not read ksv fifo (%d)\n",
 				ksv_read_retry);
 		else
@@ -1216,7 +1217,7 @@ static int hdcp_1x_write_ksv_fifo(struct hdcp_1x *hdcp)
 				sha_status, (sha_status & BIT(0)) ||
 				!hdcp_1x_state(HDCP_STATE_AUTHENTICATING),
 				HDCP_POLL_SLEEP_US, HDCP_POLL_TIMEOUT_US);
-			if (IS_ERR_VALUE(rc)) {
+			if (IS_ERR_VALUE((unsigned long)rc)) {
 				pr_err("block not done\n");
 				goto error;
 			}
@@ -1232,7 +1233,7 @@ static int hdcp_1x_write_ksv_fifo(struct hdcp_1x *hdcp)
 				(sha_status & BIT(4)) ||
 				!hdcp_1x_state(HDCP_STATE_AUTHENTICATING),
 				HDCP_POLL_SLEEP_US, HDCP_POLL_TIMEOUT_US);
-	if (IS_ERR_VALUE(rc)) {
+	if (IS_ERR_VALUE((unsigned long)rc)) {
 		pr_err("V computation not done\n");
 		goto error;
 	}
@@ -1242,7 +1243,7 @@ static int hdcp_1x_write_ksv_fifo(struct hdcp_1x *hdcp)
 				(status & BIT(reg_set->v_offset)) ||
 				!hdcp_1x_state(HDCP_STATE_AUTHENTICATING),
 				HDCP_POLL_SLEEP_US, HDCP_POLL_TIMEOUT_US);
-	if (IS_ERR_VALUE(rc)) {
+	if (IS_ERR_VALUE((unsigned long)rc)) {
 		pr_err("V mismatch\n");
 		rc = -EINVAL;
 	}
@@ -1268,7 +1269,7 @@ static int hdcp_1x_wait_for_ksv_ready(struct hdcp_1x *hdcp)
 	 */
 	rc = hdcp_1x_read(hdcp, &hdcp->sink_addr.bcaps,
 		&hdcp->bcaps, false);
-	if (IS_ERR_VALUE(rc)) {
+	if (IS_ERR_VALUE((unsigned long)rc)) {
 		pr_err("error reading bcaps\n");
 		goto error;
 	}
@@ -1280,7 +1281,7 @@ static int hdcp_1x_wait_for_ksv_ready(struct hdcp_1x *hdcp)
 			rc = hdcp_1x_read(hdcp,
 				&hdcp->sink_addr.bcaps,
 				&hdcp->bcaps, false);
-			if (IS_ERR_VALUE(rc) ||
+			if (IS_ERR_VALUE((unsigned long)rc) ||
 			   !hdcp_1x_state(HDCP_STATE_AUTHENTICATING)) {
 				pr_err("error reading bcaps\n");
 				goto error;

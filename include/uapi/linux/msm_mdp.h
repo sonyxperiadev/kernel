@@ -1404,6 +1404,11 @@ enum {
 	MDP_IOMMU_DOMAIN_NS,
 };
 
+/*
+ * These definitions are a continuation of the mdp_color_space enum above
+ */
+#define MDP_CSC_ITU_R_2020	(MDP_CSC_ITU_R_709 + 1)
+#define MDP_CSC_ITU_R_2020_FR	(MDP_CSC_ITU_R_2020 + 1)
 enum {
 	MDP_WRITEBACK_MIRROR_OFF,
 	MDP_WRITEBACK_MIRROR_ON,

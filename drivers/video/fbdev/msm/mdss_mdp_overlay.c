@@ -26,7 +26,6 @@
 #include <linux/memblock.h>
 #include <linux/sort.h>
 #include <linux/kmemleak.h>
-#include <sw_sync.h>
 
 #include <soc/qcom/event_timer.h>
 #include <linux/msm-bus.h>
@@ -37,6 +36,7 @@
 #include "mdss_smmu.h"
 #include "mdss_mdp_wfd.h"
 #include "mdss_dsi_clk.h"
+#include "mdss_sync.h"
 
 #define VSYNC_PERIOD 16
 #define BORDERFILL_NDX	0x0BF000BF
@@ -871,7 +871,7 @@ int mdss_mdp_overlay_pipe_setup(struct msm_fb_data_type *mfd,
 		}
 
 		ret = mdss_mdp_pipe_map(pipe);
-		if (IS_ERR_VALUE(ret)) {
+		if (IS_ERR_VALUE((unsigned long)ret)) {
 			pr_err("Unable to map used pipe%d ndx=%x\n",
 					pipe->num, pipe->ndx);
 			return ret;
@@ -1501,7 +1501,7 @@ int mdss_mdp_overlay_start(struct msm_fb_data_type *mfd)
 	if (!mdp5_data->mdata->idle_pc_enabled ||
 		(mfd->panel_info->type != MIPI_CMD_PANEL)) {
 		rc = pm_runtime_get_sync(&mfd->pdev->dev);
-		if (IS_ERR_VALUE(rc)) {
+		if (IS_ERR_VALUE((unsigned long)rc)) {
 			pr_err("unable to resume with pm_runtime_get_sync rc=%d\n",
 				rc);
 			goto end;
@@ -1518,7 +1518,7 @@ int mdss_mdp_overlay_start(struct msm_fb_data_type *mfd)
 	 */
 	if (!mfd->panel_info->cont_splash_enabled) {
 		rc = mdss_iommu_ctrl(1);
-		if (IS_ERR_VALUE(rc)) {
+		if (IS_ERR_VALUE((unsigned long)rc)) {
 			pr_err("iommu attach failed rc=%d\n", rc);
 			goto end;
 		}
@@ -1723,10 +1723,10 @@ static int __overlay_queue_pipes(struct msm_fb_data_type *mfd)
 		 * if we reach here without errors and buf == NULL
 		 * then solid fill will be set
 		 */
-		if (!IS_ERR_VALUE(ret))
+		if (!IS_ERR_VALUE((unsigned long)ret))
 			ret = mdss_mdp_pipe_queue_data(pipe, buf);
 
-		if (IS_ERR_VALUE(ret)) {
+		if (IS_ERR_VALUE((unsigned long)ret)) {
 			pr_warn("Unable to queue data for pnum=%d rect=%d\n",
 					pipe->num, pipe->multirect.num);
 
@@ -2544,7 +2544,7 @@ int mdss_mdp_overlay_kickoff(struct msm_fb_data_type *mfd,
 	}
 
 	ret = mdss_iommu_ctrl(1);
-	if (IS_ERR_VALUE(ret)) {
+	if (IS_ERR_VALUE((unsigned long)ret)) {
 		pr_err("iommu attach failed rc=%d\n", ret);
 		mutex_unlock(&mdp5_data->ov_lock);
 		if (ctl->shared_lock)
@@ -2585,7 +2585,7 @@ int mdss_mdp_overlay_kickoff(struct msm_fb_data_type *mfd,
 	    ((mdp5_data->secure_transition_state == SD_SECURE_TO_NON_SECURE) ||
 	    (mdp5_data->secure_transition_state == SC_SECURE_TO_NON_SECURE)))) {
 		ret = __overlay_secure_ctrl(mfd);
-		if (IS_ERR_VALUE(ret)) {
+		if (IS_ERR_VALUE((unsigned long)ret)) {
 			pr_err("secure operation failed %d\n", ret);
 			goto commit_fail;
 		}
@@ -2632,7 +2632,7 @@ int mdss_mdp_overlay_kickoff(struct msm_fb_data_type *mfd,
 	if (!mdp5_data->kickoff_released)
 		mdss_mdp_ctl_notify(ctl, MDP_NOTIFY_FRAME_CTX_DONE);
 
-	if (IS_ERR_VALUE(ret))
+	if (IS_ERR_VALUE((unsigned long)ret))
 		goto commit_fail;
 
 	mutex_unlock(&mdp5_data->ov_lock);
@@ -2666,7 +2666,7 @@ int mdss_mdp_overlay_kickoff(struct msm_fb_data_type *mfd,
 	ret = mdss_mdp_ctl_update_fps(ctl);
 	ATRACE_END("fps_update");
 
-	if (IS_ERR_VALUE(ret)) {
+	if (IS_ERR_VALUE((unsigned long)ret)) {
 		pr_err("failed to update fps!\n");
 		goto commit_fail;
 	}
@@ -2678,7 +2678,7 @@ int mdss_mdp_overlay_kickoff(struct msm_fb_data_type *mfd,
 	    ((mdp5_data->secure_transition_state == SD_SECURE_TO_NON_SECURE) ||
 	    (mdp5_data->secure_transition_state == SC_SECURE_TO_NON_SECURE))) {
 		ret = __overlay_secure_ctrl(mfd);
-		if (IS_ERR_VALUE(ret)) {
+		if (IS_ERR_VALUE((unsigned long)ret)) {
 			pr_err("secure operation failed %d\n", ret);
 			goto commit_fail;
 		}
@@ -2848,7 +2848,7 @@ static int mdss_mdp_overlay_queue(struct msm_fb_data_type *mfd,
 	}
 
 	ret = mdss_mdp_pipe_map(pipe);
-	if (IS_ERR_VALUE(ret)) {
+	if (IS_ERR_VALUE((unsigned long)ret)) {
 		pr_err("Unable to map used pipe%d ndx=%x\n",
 				pipe->num, pipe->ndx);
 		return ret;
@@ -2875,7 +2875,7 @@ static int mdss_mdp_overlay_queue(struct msm_fb_data_type *mfd,
 		ret = mdss_mdp_data_get_and_validate_size(src_data, &req->data,
 			1, flags, &mfd->pdev->dev, false, DMA_TO_DEVICE,
 			&buffer);
-		if (IS_ERR_VALUE(ret)) {
+		if (IS_ERR_VALUE((unsigned long)ret)) {
 			mdss_mdp_overlay_buf_free(mfd, src_data);
 			pr_err("src_data pmem error\n");
 		}
@@ -3130,7 +3130,7 @@ static void mdss_mdp_overlay_pan_display(struct msm_fb_data_type *mfd)
 	}
 
 	ret = mdss_iommu_ctrl(1);
-	if (IS_ERR_VALUE(ret)) {
+	if (IS_ERR_VALUE((unsigned long)ret)) {
 		pr_err("IOMMU attach failed\n");
 		goto iommu_disable;
 	}
@@ -5330,7 +5330,7 @@ static int __handle_overlay_prepare(struct msm_fb_data_type *mfd,
 			left_blend_pipe, is_single_layer);
 		req->z_order -= MDSS_MDP_STAGE_0;
 
-		if (IS_ERR_VALUE(ret))
+		if (IS_ERR_VALUE((unsigned long)ret))
 			goto validate_exit;
 
 		pr_debug("pnum:%d id:0x%x flags:0x%x dst_x:%d l_blend_pnum%d\n",
@@ -5370,7 +5370,7 @@ validate_exit:
 	else
 		ovlist->processed_overlays = i;
 
-	if (IS_ERR_VALUE(ret)) {
+	if (IS_ERR_VALUE((unsigned long)ret)) {
 		pr_debug("err=%d total_ovs:%d processed:%d left:%d right:%d\n",
 			ret, num_ovs, ovlist->processed_overlays, left_lm_ovs,
 			right_lm_ovs);
@@ -5424,7 +5424,7 @@ static int __handle_ioctl_overlay_prepare(struct msm_fb_data_type *mfd,
 	}
 
 	ret = __handle_overlay_prepare(mfd, &ovlist, overlays);
-	if (!IS_ERR_VALUE(ret)) {
+	if (!IS_ERR_VALUE((unsigned long)ret)) {
 		for (i = 0; i < ovlist.num_overlays; i++) {
 			if (copy_to_user(req_list[i], overlays + i,
 					sizeof(struct mdp_overlay))) {
@@ -5491,7 +5491,7 @@ static int mdss_mdp_overlay_ioctl_handler(struct msm_fb_data_type *mfd,
 		if (!ret) {
 			ret = mdss_mdp_overlay_get(mfd, req);
 
-			if (!IS_ERR_VALUE(ret))
+			if (!IS_ERR_VALUE((unsigned long)ret))
 				ret = copy_to_user(argp, req, sizeof(*req));
 		}
 
@@ -5507,7 +5507,7 @@ static int mdss_mdp_overlay_ioctl_handler(struct msm_fb_data_type *mfd,
 		if (!ret) {
 			ret = mdss_mdp_overlay_set(mfd, req);
 
-			if (!IS_ERR_VALUE(ret))
+			if (!IS_ERR_VALUE((unsigned long)ret))
 				ret = copy_to_user(argp, req, sizeof(*req));
 		}
 		if (ret)
@@ -5780,7 +5780,7 @@ static int mdss_mdp_overlay_on(struct msm_fb_data_type *mfd)
 	}
 
 panel_on:
-	if (IS_ERR_VALUE(rc)) {
+	if (IS_ERR_VALUE((unsigned long)rc)) {
 		pr_err("Failed to turn on fb%d\n", mfd->index);
 		mdss_mdp_overlay_off(mfd);
 		goto end;
@@ -5939,7 +5939,7 @@ ctl_stop:
 		 * retire_signal api checks for retire_cnt with sync_mutex lock.
 		 */
 
-		flush_kthread_work(&mdp5_data->vsync_work);
+		kthread_flush_work(&mdp5_data->vsync_work);
 	}
 
 	mutex_lock(&mdp5_data->ov_lock);
@@ -6142,7 +6142,7 @@ static void __vsync_retire_handle_vsync(struct mdss_mdp_ctl *ctl, ktime_t t)
 	}
 
 	mdp5_data = mfd_to_mdp5_data(mfd);
-	queue_kthread_work(&mdp5_data->worker, &mdp5_data->vsync_work);
+	kthread_queue_work(&mdp5_data->worker, &mdp5_data->vsync_work);
 }
 
 static void __vsync_retire_work_handler(struct kthread_work *work)
@@ -6165,12 +6165,12 @@ static void __vsync_retire_signal(struct msm_fb_data_type *mfd, int val)
 
 	mutex_lock(&mfd->mdp_sync_pt_data.sync_mutex);
 	if (mdp5_data->retire_cnt > 0) {
-		sw_sync_timeline_inc(mdp5_data->vsync_timeline, val);
+		mdss_inc_timeline(mdp5_data->vsync_timeline, val);
 
 		mdp5_data->retire_cnt -= min(val, mdp5_data->retire_cnt);
 		pr_debug("Retire signaled! timeline val=%d remaining=%d\n",
-				mdp5_data->vsync_timeline->value,
-				mdp5_data->retire_cnt);
+			mdss_get_timeline_retire_ts(mdp5_data->vsync_timeline),
+			mdp5_data->retire_cnt);
 		if (mdp5_data->retire_cnt == 0) {
 			mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_ON);
 			mdp5_data->ctl->ops.remove_vsync_handler(mdp5_data->ctl,
@@ -6181,7 +6181,7 @@ static void __vsync_retire_signal(struct msm_fb_data_type *mfd, int val)
 	mutex_unlock(&mfd->mdp_sync_pt_data.sync_mutex);
 }
 
-static struct sync_fence *
+static struct mdss_fence *
 __vsync_retire_get_fence(struct msm_sync_pt_data *sync_pt_data)
 {
 	struct msm_fb_data_type *mfd;
@@ -6204,7 +6204,7 @@ __vsync_retire_get_fence(struct msm_sync_pt_data *sync_pt_data)
 		return ERR_PTR(-EPERM);
 	}
 
-	value = mdp5_data->vsync_timeline->value + 1 + mdp5_data->retire_cnt;
+	value = 1 + mdp5_data->retire_cnt;
 	mdp5_data->retire_cnt++;
 
 	return mdss_fb_sync_get_fence(mdp5_data->vsync_timeline,
@@ -6268,14 +6268,14 @@ static int __vsync_retire_setup(struct msm_fb_data_type *mfd)
 	struct sched_param param = { .sched_priority = 5 };
 
 	snprintf(name, sizeof(name), "mdss_fb%d_retire", mfd->index);
-	mdp5_data->vsync_timeline = sw_sync_timeline_create(name);
+	mdp5_data->vsync_timeline = mdss_create_timeline(name);
 	if (mdp5_data->vsync_timeline == NULL) {
 		pr_err("cannot vsync create time line");
 		return -ENOMEM;
 	}
 
-	init_kthread_worker(&mdp5_data->worker);
-	init_kthread_work(&mdp5_data->vsync_work, __vsync_retire_work_handler);
+	kthread_init_worker(&mdp5_data->worker);
+	kthread_init_work(&mdp5_data->vsync_work, __vsync_retire_work_handler);
 
 	mdp5_data->thread = kthread_run(kthread_worker_fn,
 					&mdp5_data->worker, "vsync_retire_work");
@@ -6490,7 +6490,7 @@ int mdss_mdp_overlay_init(struct msm_fb_data_type *mfd)
 	snprintf(timeline_name, sizeof(timeline_name), "cwb%d", mfd->index);
 	mdp5_data->cwb.cwb_sync_pt_data.fence_name = "cwb-fence";
 	mdp5_data->cwb.cwb_sync_pt_data.timeline =
-		sw_sync_timeline_create(timeline_name);
+		mdss_create_timeline(timeline_name);
 	if (mdp5_data->cwb.cwb_sync_pt_data.timeline == NULL) {
 		pr_err("failed to create sync pt timeline for cwb\n");
 		return -ENOMEM;
@@ -6598,7 +6598,7 @@ int mdss_mdp_overlay_init(struct msm_fb_data_type *mfd)
 	if (mfd->panel_info->mipi.dms_mode ||
 			mfd->panel_info->type == MIPI_CMD_PANEL) {
 		rc = __vsync_retire_setup(mfd);
-		if (IS_ERR_VALUE(rc)) {
+		if (IS_ERR_VALUE((unsigned long)rc)) {
 			pr_err("unable to create vsync timeline\n");
 			goto init_fail;
 		}

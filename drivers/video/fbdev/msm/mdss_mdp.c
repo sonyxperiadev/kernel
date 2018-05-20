@@ -39,7 +39,7 @@
 #include <linux/spinlock.h>
 #include <linux/semaphore.h>
 #include <linux/uaccess.h>
-#include <linux/clk/msm-clk.h>
+#include <linux/clk/qcom.h>
 #include <linux/irqdomain.h>
 #include <linux/irq.h>
 
@@ -1272,12 +1272,12 @@ void mdss_mdp_set_clk_rate(unsigned long rate, bool locked)
 			clk_rate = mdata->max_mdp_clk_rate;
 
 		curr_clk_rate = clk_get_rate(clk);
-		if (IS_ERR_VALUE(clk_rate)) {
+		if (IS_ERR_VALUE((unsigned long)clk_rate)) {
 			pr_err("unable to round rate err=%ld\n", clk_rate);
 		} else if (clk_rate != curr_clk_rate) {
 			mdss_mdp_cxipeak_vote(true, clk_rate, curr_clk_rate);
 			mdata->mdp_clk_rate = clk_rate;
-			if (IS_ERR_VALUE(clk_set_rate(clk, clk_rate))) {
+			if (IS_ERR_VALUE((unsigned long)clk_set_rate(clk, clk_rate))) {
 				pr_err("clk_set_rate failed\n");
 			} else {
 				mdss_mdp_cxipeak_vote(false, clk_rate,
@@ -1405,7 +1405,7 @@ static void __mdss_mdp_clk_control(struct mdss_data_type *mdata, bool enable)
 			VOTE_INDEX_LOW);
 
 		rc = mdss_iommu_ctrl(1);
-		if (IS_ERR_VALUE(rc))
+		if (IS_ERR_VALUE((unsigned long)rc))
 			pr_err("IOMMU attach failed\n");
 
 		/* Active+Sleep */
@@ -1549,7 +1549,7 @@ int mdss_iommu_ctrl(int enable)
 	}
 	mutex_unlock(&mdp_iommu_ref_cnt_lock);
 
-	if (IS_ERR_VALUE(rc))
+	if (IS_ERR_VALUE((unsigned long)rc))
 		return rc;
 	else
 		return mdata->iommu_ref_cnt;
@@ -1635,7 +1635,7 @@ static int mdss_mdp_idle_pc_restore(void)
 
 	pr_debug("called from %pS\n", __builtin_return_address(0));
 	rc = mdss_iommu_ctrl(1);
-	if (IS_ERR_VALUE(rc)) {
+	if (IS_ERR_VALUE((unsigned long)rc)) {
 		pr_err("mdss iommu attach failed rc=%d\n", rc);
 		goto end;
 	}
@@ -1806,7 +1806,7 @@ static inline int mdss_mdp_irq_clk_register(struct mdss_data_type *mdata,
 static void __mdss_restore_sec_cfg(struct mdss_data_type *mdata)
 {
 	int ret;
-	u64 scm_ret = 0;
+	int scm_ret = 0;
 
 	if (test_bit(MDSS_CAPS_SCM_RESTORE_NOT_REQUIRED, mdata->mdss_caps_map))
 		return;
@@ -1817,7 +1817,7 @@ static void __mdss_restore_sec_cfg(struct mdss_data_type *mdata)
 
 	ret = scm_restore_sec_cfg(SEC_DEVICE_MDSS, 0, &scm_ret);
 	if (ret || scm_ret)
-		pr_warn("scm_restore_sec_cfg failed %d %llu\n",
+		pr_warn("scm_restore_sec_cfg failed %d %d\n",
 				ret, scm_ret);
 
 	__mdss_mdp_reg_access_clk_enable(mdata, false);
@@ -3217,7 +3217,7 @@ static int mdss_mdp_probe(struct platform_device *pdev)
 		num_of_display_on, intf_sel);
 
 probe_done:
-	if (IS_ERR_VALUE(rc)) {
+	if (IS_ERR_VALUE((unsigned long)rc)) {
 		if (!num_of_display_on)
 			mdss_mdp_footswitch_ctrl_splash(false);
 
@@ -3643,28 +3643,28 @@ static int mdss_mdp_parse_dt_pipe(struct platform_device *pdev)
 
 	rc = mdss_mdp_parse_dt_pipe_helper(pdev, MDSS_MDP_PIPE_TYPE_VIG, "vig",
 			&mdata->vig_pipes, mdata->nvig_pipes, 0);
-	if (IS_ERR_VALUE(rc))
+	if (IS_ERR_VALUE((unsigned long)rc))
 		goto parse_fail;
 	mdata->nvig_pipes = rc;
 
 	rc = mdss_mdp_parse_dt_pipe_helper(pdev, MDSS_MDP_PIPE_TYPE_RGB, "rgb",
 			&mdata->rgb_pipes, mdata->nrgb_pipes,
 			mdata->nvig_pipes);
-	if (IS_ERR_VALUE(rc))
+	if (IS_ERR_VALUE((unsigned long)rc))
 		goto parse_fail;
 	mdata->nrgb_pipes = rc;
 
 	rc = mdss_mdp_parse_dt_pipe_helper(pdev, MDSS_MDP_PIPE_TYPE_DMA, "dma",
 			&mdata->dma_pipes, mdata->ndma_pipes,
 			mdata->nvig_pipes + mdata->nrgb_pipes);
-	if (IS_ERR_VALUE(rc))
+	if (IS_ERR_VALUE((unsigned long)rc))
 		goto parse_fail;
 	mdata->ndma_pipes = rc;
 
 	rc = mdss_mdp_parse_dt_pipe_helper(pdev, MDSS_MDP_PIPE_TYPE_CURSOR,
 			"cursor", &mdata->cursor_pipes, mdata->ncursor_pipes,
 			0);
-	if (IS_ERR_VALUE(rc))
+	if (IS_ERR_VALUE((unsigned long)rc))
 		goto parse_fail;
 	mdata->ncursor_pipes = rc;
 
