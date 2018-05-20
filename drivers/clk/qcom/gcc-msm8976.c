@@ -1572,7 +1572,7 @@ static struct clk_rcg2 gfx3d_clk_src = {
 	.hid_width = 5,
 	.parent_map = gcc_parent_map_gfx3d,
 	.freq_tbl = ftbl_gfx3d_clk_src,
-	.flags = FORCE_ENABLE_RCGR,
+	.flags = FORCE_ENABLE_RCG,
 	.clkr.hw.init = &gfx3d_clk_params,
 };
 
@@ -4198,8 +4198,8 @@ static const struct qcom_cc_desc gcc_msm8976_desc = {
 	.config		= &gcc_msm8976_regmap_config,
 	.clks		= gcc_msm8976_clocks,
 	.num_clks	= ARRAY_SIZE(gcc_msm8976_clocks),
-	.hwclks		= gcc_msm8976_hws,
-	.num_hwclks	= ARRAY_SIZE(gcc_msm8976_hws),
+//	.hwclks		= gcc_msm8976_hws,
+//	.num_hwclks	= ARRAY_SIZE(gcc_msm8976_hws),
 	.resets		= gcc_msm8976_resets,
 	.num_resets	= ARRAY_SIZE(gcc_msm8976_resets),
 };
@@ -4217,8 +4217,9 @@ static struct platform_driver gcc_gfx_8976_driver;
 static int gcc_8976_probe(struct platform_device *pdev)
 {
 	struct regmap *regmap;
+	struct clk *clk;
 	void __iomem *base;
-	int ret;
+	int i, ret;
 	u32 val;
 	bool compat_bin = false;
 
@@ -4244,6 +4245,13 @@ static int gcc_8976_probe(struct platform_device *pdev)
 
 	/* Vote for GPLL0 to turn on. Needed by acpuclock. */
 	regmap_update_bits(regmap, 0x45000, BIT(0), BIT(0));
+
+	/* Register the hws */
+	for (i = 0; i < ARRAY_SIZE(gcc_msm8976_hws); i++) {
+		clk = devm_clk_register(&pdev->dev, gcc_msm8976_hws[i]);
+		if (IS_ERR(clk))
+			return PTR_ERR(clk);
+	}
 
 	ret = qcom_cc_really_probe(pdev, &gcc_msm8976_desc, regmap);
 	if (ret) {
@@ -4464,8 +4472,13 @@ static const char *const debug_mux_parent_names[] = {
 
 static struct clk_debug_mux gcc_debug_mux = {
 	.priv = &debug_mux_priv,
-	.en_mask = BIT(16),
-	.mask = 0x3FF,
+	//.en_mask = BIT(16), // Disappeared!
+	.src_sel_mask = 0x3FF,
+	/* TODO: CHECKME */
+	.src_sel_shift = 0,
+	.post_div_mask = 0xF,
+	.post_div_shift = 0,
+	/*               */
 	MUX_SRC_LIST(
 		{ "debug_cpu_clk",			0x016A },
 		{ "snoc_clk",				0x0000 },
@@ -4657,7 +4670,7 @@ static int msm_clock_debug_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
-	gcc_debug_mux.num_parent_regmap = count;
+	//gcc_debug_mux.num_parent_regmap = count;
 	gcc_debug_mux.regmap = devm_kzalloc(&pdev->dev,
 				sizeof(struct regmap *) * count, GFP_KERNEL);
 	if (!gcc_debug_mux.regmap)
@@ -4680,11 +4693,11 @@ static int msm_clock_debug_probe(struct platform_device *pdev)
 	}
 
 	if (of_get_property(pdev->dev.of_node, "qcom,gpu", NULL)) {
-		gcc_debug_mux.regmap[GPU] =
+		gcc_debug_mux.regmap[GPU_CC] =
 			syscon_regmap_lookup_by_phandle(pdev->dev.of_node,
 					"qcom,gpu");
-		if (IS_ERR(gcc_debug_mux.regmap[GPU]))
-			return PTR_ERR(gcc_debug_mux.regmap[GPU]);
+		if (IS_ERR(gcc_debug_mux.regmap[GPU_CC]))
+			return PTR_ERR(gcc_debug_mux.regmap[GPU_CC]);
 	}
 
 	clk = devm_clk_register(&pdev->dev, &gcc_debug_mux.hw);
@@ -4693,7 +4706,7 @@ static int msm_clock_debug_probe(struct platform_device *pdev)
 		return PTR_ERR(clk);
 	}
 
-	ret = clk_register_debug(&gcc_debug_mux.hw);
+	ret = clk_debug_measure_register(&gcc_debug_mux.hw);
 	if (ret)
 		dev_err(&pdev->dev, "Could not register Measure clock\n");
 	else
