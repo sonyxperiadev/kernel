@@ -413,6 +413,12 @@ int vco_prepare(struct clk_hw *hw)
 			pr_err("vco_set_rate failed. rc=%d\n", rc);
 			goto error;
 		}
+		MDSS_PLL_REG_W(dsi_pll_res->pll_base,
+				DSI_PHY_PLL_UNIPHY_PLL_POSTDIV1_CFG,
+				dsi_pll_res->cached_cfg1);
+		MDSS_PLL_REG_W(dsi_pll_res->pll_base,
+				DSI_PHY_PLL_UNIPHY_PLL_POSTDIV3_CFG,
+				dsi_pll_res->cached_outdiv);
 	}
 
 	rc = dsi_pll_enable(hw);
@@ -430,6 +436,22 @@ void vco_unprepare(struct clk_hw *hw)
 		pr_err("Dsi pll resources are not available\n");
 		return;
 	}
+
+	/*
+	 * The common clock framework does not reconfigure clocks
+	 * that didn't change their rates, but our hardware loses
+	 * configuration whenever we shut it down hence, to get it
+	 * back up and running, we need to reprogram the postdiv
+	 * bits everytime we want to bring it back up.
+	 * Cache the current postdividers to set them back at vco
+	 * prepare time.
+	 */
+	MDSS_PLL_REG_W(dsi_pll_res->pll_base,
+				DSI_PHY_PLL_UNIPHY_PLL_POSTDIV1_CFG,
+				dsi_pll_res->cached_cfg1);
+	MDSS_PLL_REG_W(dsi_pll_res->pll_base,
+				DSI_PHY_PLL_UNIPHY_PLL_POSTDIV3_CFG,
+				dsi_pll_res->cached_outdiv);
 
 	dsi_pll_res->vco_cached_rate = clk_hw_get_rate(hw);
 	dsi_pll_disable(hw);
@@ -559,6 +581,8 @@ int analog_set_div(void *context, unsigned int reg, unsigned int div)
 
 	mdss_pll_resource_enable(dsi_pll_res, false);
 
+	dsi_pll_res->cached_cfg1 = div;
+
 	return rc;
 }
 
@@ -604,6 +628,8 @@ int digital_set_div(void *context, unsigned int reg, unsigned int div)
 
 	MDSS_PLL_REG_W(dsi_pll_res->pll_base,
 				DSI_PHY_PLL_UNIPHY_PLL_POSTDIV3_CFG, final_div);
+
+	dsi_pll_res->cached_outdiv = final_div;
 
 	mdss_pll_resource_enable(dsi_pll_res, false);
 	return rc;
