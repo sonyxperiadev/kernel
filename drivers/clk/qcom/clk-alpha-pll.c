@@ -934,10 +934,10 @@ static int clk_alpha_pll_calibrate(struct clk_hw *hw)
 	 * should have only one entry table, i.e. index = 0, find the
 	 * calibration frequency.
 	 */
-	calibration_freq = (pll->vco_table[0].min_freq 
+	calibration_freq = (pll->vco_table[0].min_freq +
 					pll->vco_table[0].max_freq)/2;
 
-	freq_hz = alpha_pll_round_rate(calibration_freq,
+	freq_hz = alpha_pll_round_rate(pll, calibration_freq,
 			clk_hw_get_rate(clk_hw_get_parent(hw)), &l, &a);
 	if (freq_hz != calibration_freq) {
 		pr_err("alpha_pll: call clk_set_rate with rounded rates!\n");
@@ -969,7 +969,7 @@ static int clk_alpha_pll_calibrate(struct clk_hw *hw)
 	 * PLL is already running at calibration frequency.
 	 * So slew pll to the previously set frequency.
 	 */
-	freq_hz = alpha_pll_round_rate(clk_hw_get_rate(hw),
+	freq_hz = alpha_pll_round_rate(pll, clk_hw_get_rate(hw),
 			clk_hw_get_rate(clk_hw_get_parent(hw)), &l, &a);
 
 	pr_debug("pll %s: setting back to required rate %lu, freq_hz %ld\n",
