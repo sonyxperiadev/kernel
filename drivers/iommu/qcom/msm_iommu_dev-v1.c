@@ -37,7 +37,7 @@
 #include "../io-pgtable.h"
 #include "msm_iommu_hw-v1.h"
 #include "msm_iommu_priv.h"
-#include "qcom_iommu.h"
+#include <linux/qcom_iommu.h>
 #include <soc/qcom/scm.h>
 
 static const struct of_device_id msm_iommu_ctx_match_table[];
