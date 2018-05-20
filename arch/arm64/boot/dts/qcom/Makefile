@@ -294,7 +294,6 @@ dtb-$(CONFIG_ARCH_SDM670) += sdm670-rumi.dtb \
 	sdm710-tasha-codec-cdp.dtb \
 	sdm710-pm660a-tasha-codec-cdp.dtb
 endif
-endif
 
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
 dtbo-$(CONFIG_ARCH_MSM8953) += msm8953-mtp-overlay.dtbo \
