@@ -488,22 +488,22 @@ static void clk_hf2_pll_list_registers(struct seq_file *f, struct clk_hw *hw)
 	u32 val;
 
 	regmap_read(regmap, hd->l_reg, &val);
-	clock_debug_output(f, false, "L_REG: 0x%.8x\n", val);
+	pr_info("L_REG: 0x%.8x\n", val);
 
 	regmap_read(regmap, hd->m_reg, &val);
-	clock_debug_output(f, false, "M_REG: 0x%.8x\n", val);
+	pr_info("M_REG: 0x%.8x\n", val);
 
 	regmap_read(regmap, hd->n_reg, &val);
-	clock_debug_output(f, false, "N_REG: 0x%.8x\n", val);
+	pr_info("N_REG: 0x%.8x\n", val);
 
 	regmap_read(regmap, hd->user_reg, &val);
-	clock_debug_output(f, false, "USER_REG: 0x%.8x\n", val);
+	pr_info("USER_REG: 0x%.8x\n", val);
 
 	regmap_read(regmap, hd->config_reg, &val);
-	clock_debug_output(f, false, "CONFIG_REG: 0x%.8x\n", val);
+	pr_info("CONFIG_REG: 0x%.8x\n", val);
 
 	regmap_read(regmap, hd->status_reg, &val);
-	clock_debug_output(f, false, "STATUS_REG: 0x%.8x\n", val);
+	pr_info("STATUS_REG: 0x%.8x\n", val);
 }
 
 static unsigned long clk_hfpll_recalc_rate(struct clk_hw *hw,
