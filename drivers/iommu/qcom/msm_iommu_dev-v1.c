@@ -23,6 +23,7 @@
 #include <linux/clk.h>
 #include <linux/iommu.h>
 #include <linux/interrupt.h>
+#include <linux/dma-mapping.h>
 #include <linux/msm-bus.h>
 #include <linux/err.h>
 #include <linux/slab.h>
@@ -35,9 +36,9 @@
 
 #include "../io-pgtable.h"
 #include "msm_iommu_hw-v1.h"
+#include "msm_iommu_priv.h"
 #include "qcom_iommu.h"
 #include <soc/qcom/scm.h>
-#include "msm_iommu_priv.h"
 
 static const struct of_device_id msm_iommu_ctx_match_table[];
 static struct iommu_access_ops *iommu_access_ops;
@@ -354,22 +355,20 @@ static int msm_iommu_sec_ptbl_init(struct device *dev)
 	size_t psize;
 	unsigned int spare = 0;
 	int ret;
-	u64 version;
 	void *cpu_addr;
 	dma_addr_t paddr;
-	DEFINE_DMA_ATTRS(attrs);
 	static bool allocated = false;
 
 	if (allocated)
 		return 0;
 
-	ret = scm_get_feat_version(SCM_SVC_MP, &version);
-	if (ret) {
+	ret = scm_get_feat_version(SCM_SVC_MP);
+	if (ret < 0) {
 		pr_err("ERROR: Cannot get SCM version!\n");
 		return -EINVAL;
 	}
 
-	if (version >= MAKE_VERSION(1, 1, 1)) {
+	if (ret >= MAKE_VERSION(1, 1, 1)) {
 		ret = iommu_scm_set_pool_size();
 		if (ret) {
 			dev_err(dev, "failed setting max virtual size (%d)\n",
@@ -387,9 +386,8 @@ static int msm_iommu_sec_ptbl_init(struct device *dev)
 
 	dev_info(dev, "iommu sec: pgtable size: %zu\n", psize);
 
-	dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, &attrs);
-
-	cpu_addr = dma_alloc_attrs(dev, psize, &paddr, GFP_KERNEL, &attrs);
+	cpu_addr = dma_alloc_attrs(dev, psize, &paddr, GFP_KERNEL,
+			DMA_ATTR_NO_KERNEL_MAPPING);
 	if (!cpu_addr) {
 		dev_err(dev, "failed to allocate %zu bytes for pgtable\n",
 			psize);
@@ -407,7 +405,8 @@ static int msm_iommu_sec_ptbl_init(struct device *dev)
 	return 0;
 
 free_mem:
-	dma_free_attrs(dev, psize, cpu_addr, paddr, &attrs);
+	dma_free_attrs(dev, psize, cpu_addr, paddr,
+		DMA_ATTR_NO_KERNEL_MAPPING);
 	return ret;
 }
 
