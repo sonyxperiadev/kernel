@@ -57,7 +57,6 @@ static const struct regmap_config hfpll_regmap_config = {
 
 static int qcom_hfpll_probe(struct platform_device *pdev)
 {
-	struct clk *clk;
 	struct resource *res;
 	struct device *dev = &pdev->dev;
 	void __iomem *base;
@@ -90,9 +89,7 @@ static int qcom_hfpll_probe(struct platform_device *pdev)
 	h->clkr.hw.init = &init;
 	spin_lock_init(&h->lock);
 
-	clk = devm_clk_register_regmap(&pdev->dev, &h->clkr);
-
-	return PTR_ERR_OR_ZERO(clk);
+	return devm_clk_register_regmap(dev, &h->clkr);
 }
 
 static struct platform_driver qcom_hfpll_driver = {
