@@ -20,7 +20,7 @@
 #undef TRACE_SYSTEM
 #define TRACE_SYSTEM mdss_pll
 #undef TRACE_INCLUDE_FILE
-#define TRACE_INCLUDE_FILE mdss_pll_trace
+#define TRACE_INCLUDE_FILE ../../../../drivers/clk/qcom/mdss/mdss_pll_trace
 
 
 TRACE_EVENT(mdss_pll_lock_start,
