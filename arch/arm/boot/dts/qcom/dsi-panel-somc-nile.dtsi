@@ -14,7 +14,7 @@
 #include "dsi-panel-td4322-csot-fhd-cmd.dtsi"
 
 &soc {
-	dsi_panel_pwr_supply_csot: dsi_panel_pwr_supply_csot {
+	dsi_panel_pwr_supply_truly: dsi_panel_pwr_supply_truly {
 		#address-cells = <1>;
 		#size-cells = <0>;
 
@@ -88,7 +88,7 @@
 		};
 	};
 
-	dsi_panel_pwr_supply_truly: dsi_panel_pwr_supply_truly {
+	dsi_panel_pwr_supply_csot: dsi_panel_pwr_supply_csot {
 		#address-cells = <1>;
 		#size-cells = <0>;
 
