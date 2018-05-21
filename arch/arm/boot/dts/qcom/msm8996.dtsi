@@ -1731,6 +1731,7 @@
 		qcom,boot-option = <0x1>;
 
 		qcom,ep-latency = <10>;
+		qcom,wr-halt-size = <0xa>;
 
 		linux,pci-domain = <2>;
 
@@ -2583,7 +2584,7 @@
 		qcom,msm-bus,num-paths = <1>;
 		qcom,msm-bus,vectors-KBps =
 				<55 512 0 0>,
-				<55 512 3936000 393600>;
+				<55 512 393600 393600>;
 		clock-names = "core_clk_src", "core_clk",
 				"iface_clk", "bus_clk";
 		clocks = <&clock_gcc clk_qcrypto_ce1_clk>,
@@ -2615,7 +2616,7 @@
 		qcom,msm-bus,num-paths = <1>;
 		qcom,msm-bus,vectors-KBps =
 				<55 512 0 0>,
-				<55 512 3936000 393600>;
+				<55 512 393600 393600>;
 		clock-names = "core_clk_src", "core_clk",
 				"iface_clk", "bus_clk";
 		clocks = <&clock_gcc clk_qcedev_ce1_clk>,
