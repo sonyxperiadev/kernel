@@ -4216,7 +4216,6 @@ static struct platform_driver gcc_gfx_8976_driver;
 static int gcc_8976_probe(struct platform_device *pdev)
 {
 	struct regmap *regmap;
-	struct clk *clk;
 	void __iomem *base;
 	int i, ret;
 	u32 val;
@@ -4247,9 +4246,9 @@ static int gcc_8976_probe(struct platform_device *pdev)
 
 	/* Register the hws */
 	for (i = 0; i < ARRAY_SIZE(gcc_msm8976_hws); i++) {
-		clk = devm_clk_register(&pdev->dev, gcc_msm8976_hws[i]);
-		if (IS_ERR(clk))
-			return PTR_ERR(clk);
+		ret = devm_clk_hw_register(&pdev->dev, gcc_msm8976_hws[i]);
+		if (ret)
+			return ret;
 	}
 
 	ret = qcom_cc_really_probe(pdev, &gcc_msm8976_desc, regmap);
