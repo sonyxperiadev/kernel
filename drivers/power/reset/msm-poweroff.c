@@ -61,14 +61,13 @@
 #endif
 
 static int restart_mode;
-static void __iomem *restart_reason, *dload_type_addr;
+static void __iomem *restart_reason;
 static bool scm_pmic_arbiter_disable_supported;
 static bool scm_deassert_ps_hold_supported;
 /* Download mode master kill-switch */
 static void __iomem *msm_ps_hold;
 static phys_addr_t tcsr_boot_misc_detect;
 static int download_mode;
-static struct kobject dload_kobj;
 
 static int in_panic;
 static int panic_prep_restart(struct notifier_block *this,
@@ -82,24 +81,9 @@ static struct notifier_block panic_blk = {
 	.notifier_call	= panic_prep_restart,
 };
 
-
-#ifdef CONFIG_QCOM_DLOAD_MODE
-#define EDL_MODE_PROP "qcom,msm-imem-emergency_download_mode"
-#define DL_MODE_PROP "qcom,msm-imem-download_mode"
 #ifdef CONFIG_RANDOMIZE_BASE
-#define KASLR_OFFSET_PROP "qcom,msm-imem-kaslr_offset"
-#endif
+static void __iomem *dload_type_addr;
 
-static int dload_type = SCM_DLOAD_FULLDUMP;
-static void *dload_mode_addr;
-static bool dload_mode_enabled;
-static void *emergency_dload_mode_addr;
-#ifdef CONFIG_RANDOMIZE_BASE
-static void *kaslr_imem_addr;
-#endif
-static bool scm_dload_supported;
-
-static int dload_set(const char *val, const struct kernel_param *kp);
 /* interface for exporting attributes */
 struct reset_attribute {
 	struct attribute        attr;
@@ -113,6 +97,26 @@ struct reset_attribute {
 #define RESET_ATTR(_name, _mode, _show, _store)	\
 	static struct reset_attribute reset_attr_##_name = \
 			__ATTR(_name, _mode, _show, _store)
+#endif
+
+#ifdef CONFIG_QCOM_DLOAD_MODE
+#define EDL_MODE_PROP "qcom,msm-imem-emergency_download_mode"
+#define DL_MODE_PROP "qcom,msm-imem-download_mode"
+#ifdef CONFIG_RANDOMIZE_BASE
+#define KASLR_OFFSET_PROP "qcom,msm-imem-kaslr_offset"
+#endif
+
+static struct kobject dload_kobj;
+static int dload_type = SCM_DLOAD_FULLDUMP;
+static void *dload_mode_addr;
+static bool dload_mode_enabled;
+static void *emergency_dload_mode_addr;
+#ifdef CONFIG_RANDOMIZE_BASE
+static void *kaslr_imem_addr;
+#endif
+static bool scm_dload_supported;
+
+static int dload_set(const char *val, const struct kernel_param *kp);
 
 module_param_call(download_mode, dload_set, param_get_int,
 			&download_mode, 0644);
@@ -492,6 +496,7 @@ static void do_msm_poweroff(void)
 	pr_err("Powering off has failed\n");
 }
 
+#ifdef CONFIG_RANDOMIZE_BASE
 static ssize_t attr_show(struct kobject *kobj, struct attribute *attr,
 				char *buf)
 {
@@ -622,6 +627,7 @@ static struct attribute *reset_attrs[] = {
 static struct attribute_group reset_attr_group = {
 	.attrs = reset_attrs,
 };
+#endif /* CONFIG_RANDOMIZE_BASE */
 
 static int msm_reboot_call(struct notifier_block *this,
 			   unsigned long code, void *_cmd)
