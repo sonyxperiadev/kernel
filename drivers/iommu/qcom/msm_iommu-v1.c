@@ -685,6 +685,7 @@ static int msm_iommu_dynamic_attach(struct iommu_domain *domain, struct device *
 	int ret;
 	struct msm_iommu_priv *priv;
 	struct io_pgtable_ops *pgtbl_ops;
+	unsigned long pgtable_quirks = 0;
 
 	priv = to_msm_priv(domain);
 
@@ -692,9 +693,14 @@ static int msm_iommu_dynamic_attach(struct iommu_domain *domain, struct device *
 	if (priv->asid < MAX_ASID && priv->asid > 0)
 		return -EBUSY;
 
+	if (priv->attributes & (1 << DOMAIN_ATTR_USE_UPSTREAM_HINT)) {
+		pgtable_quirks |= IO_PGTABLE_QUIRK_QCOM_USE_UPSTREAM_HINT;
+		pgtable_quirks |= IO_PGTABLE_QUIRK_QSMMUV500_NON_SHAREABLE;
+	}
+
 	/* Make sure the domain is initialized */
-	domain->geometry.aperture_end = (1ULL << priv->pgtbl_cfg.ias) - 1;
 	priv->pgtbl_cfg = (struct io_pgtable_cfg) {
+		.quirks		= pgtable_quirks,
 		.pgsize_bitmap	= msm_iommu_ops.pgsize_bitmap,
 		.ias		= MMU_IAS,
 		.oas		= MMU_OAS,
@@ -703,6 +709,7 @@ static int msm_iommu_dynamic_attach(struct iommu_domain *domain, struct device *
 		//.iova_base	= domain->geometry.aperture_start,
 		//.iova_end	= domain->geometry.aperture_end,
 	};
+	domain->geometry.aperture_end = (1ULL << priv->pgtbl_cfg.ias) - 1;
 	domain->geometry.force_aperture = true;
 
 
@@ -743,7 +750,7 @@ static int msm_iommu_attach_dev(struct iommu_domain *domain, struct device *dev)
 	int ret = 0;
 	int is_secure;
 	bool secure_ctx;
-	unsigned long flags;
+	unsigned long flags, pgtable_quirks = 0;
 
 	priv = to_msm_priv(domain);
 	if (!priv || !dev) {
@@ -825,10 +832,14 @@ static int msm_iommu_attach_dev(struct iommu_domain *domain, struct device *dev)
 					   iommu_drvdata->bfb_settings);
 	}
 
+	if (priv->attributes & (1 << DOMAIN_ATTR_USE_UPSTREAM_HINT)) {
+		pgtable_quirks |= IO_PGTABLE_QUIRK_QCOM_USE_UPSTREAM_HINT;
+		pgtable_quirks |= IO_PGTABLE_QUIRK_QSMMUV500_NON_SHAREABLE;
+	}
 
 	/* Make sure the domain is initialized */
-	domain->geometry.aperture_end = (1ULL << priv->pgtbl_cfg.ias) - 1;
 	priv->pgtbl_cfg = (struct io_pgtable_cfg) {
+		.quirks		= pgtable_quirks,
 		.pgsize_bitmap	= msm_iommu_ops.pgsize_bitmap,
 		.ias		= MMU_IAS,
 		.oas		= MMU_OAS,
@@ -842,6 +853,7 @@ static int msm_iommu_attach_dev(struct iommu_domain *domain, struct device *dev)
 		//.iova_base	= domain->geometry.aperture_start,
 		//.iova_end	= domain->geometry.aperture_end,
 	};
+	domain->geometry.aperture_end = (1ULL << priv->pgtbl_cfg.ias) - 1;
 	domain->geometry.force_aperture = true;
 
 	pgtbl_ops = alloc_io_pgtable_ops(QCIOMMU_PGTABLE_OPS,
@@ -1397,7 +1409,7 @@ static int msm_iommu_domain_set_attr(struct iommu_domain *domain,
 {
 	struct msm_iommu_priv *priv = to_msm_priv(domain);
 	struct msm_iommu_ctx_drvdata *ctx_drvdata = NULL;
-	int dynamic;
+	int dynamic = 0, tmp = 0;
 
 	if (!priv)
 		return -EINVAL;
@@ -1446,6 +1458,18 @@ static int msm_iommu_domain_set_attr(struct iommu_domain *domain,
 			return -EBUSY;
 
 		priv->procid = *((u32 *)data);
+		break;
+	case DOMAIN_ATTR_USE_UPSTREAM_HINT:
+		tmp = *((int *) data);
+		if (ctx_drvdata)
+			return -EBUSY;
+
+		if (tmp)
+			priv->attributes |=
+				1 << DOMAIN_ATTR_USE_UPSTREAM_HINT;
+		else
+			priv->attributes &=
+				~(1 << DOMAIN_ATTR_USE_UPSTREAM_HINT);
 		break;
 	case DOMAIN_ATTR_DYNAMIC:
 		dynamic = *((int *)data);
@@ -1517,6 +1541,10 @@ static int msm_iommu_domain_get_attr(struct iommu_domain *domain,
 		break;
 	case DOMAIN_ATTR_PROCID:
 		*((u32 *)data) = priv->procid;
+		break;
+	case DOMAIN_ATTR_USE_UPSTREAM_HINT:
+		*((int *)data) = !!(priv->attributes &
+					(1 << DOMAIN_ATTR_USE_UPSTREAM_HINT));
 		break;
 	case DOMAIN_ATTR_DYNAMIC:
 		*((int *)data) = !!(priv->attributes
