@@ -591,6 +591,7 @@ int digital_set_div(void *context, unsigned int reg, unsigned int div)
 {
 	int rc;
 	struct mdss_pll_resources *dsi_pll_res = context;
+	unsigned int final_div = 0;
 
 	rc = mdss_pll_resource_enable(dsi_pll_res, true);
 	if (rc) {
@@ -598,8 +599,11 @@ int digital_set_div(void *context, unsigned int reg, unsigned int div)
 		return rc;
 	}
 
+	if (likely(div >= 2))
+		final_div = div - 2;
+
 	MDSS_PLL_REG_W(dsi_pll_res->pll_base,
-				DSI_PHY_PLL_UNIPHY_PLL_POSTDIV3_CFG, div);
+				DSI_PHY_PLL_UNIPHY_PLL_POSTDIV3_CFG, final_div);
 
 	mdss_pll_resource_enable(dsi_pll_res, false);
 	return rc;
@@ -620,7 +624,7 @@ int digital_get_div(void *context, unsigned int reg, unsigned int *div)
 	}
 
 	*div = MDSS_PLL_REG_R(dsi_pll_res->pll_base,
-				DSI_PHY_PLL_UNIPHY_PLL_POSTDIV3_CFG);
+				DSI_PHY_PLL_UNIPHY_PLL_POSTDIV3_CFG) + 1;
 
 	mdss_pll_resource_enable(dsi_pll_res, false);
 
