@@ -310,7 +310,7 @@ void clk_pll_configure_sr(struct clk_pll *pll, struct regmap *regmap,
 {
 	clk_pll_configure(pll, regmap, config);
 	if (fsm_mode)
-		qcom_pll_set_fsm_mode(pll, regmap, pll->mode_reg, 1, 8);
+		qcom_pll_set_fsm_mode(regmap, pll->mode_reg, 1, 8);
 }
 EXPORT_SYMBOL_GPL(clk_pll_configure_sr);
 
@@ -319,7 +319,7 @@ void clk_pll_configure_sr_hpm_lp(struct clk_pll *pll, struct regmap *regmap,
 {
 	clk_pll_configure(pll, regmap, config);
 	if (fsm_mode)
-		qcom_pll_set_fsm_mode(pll, regmap, pll->mode_reg, 1, 0);
+		qcom_pll_set_fsm_mode(regmap, pll->mode_reg, 1, 0);
 }
 EXPORT_SYMBOL_GPL(clk_pll_configure_sr_hpm_lp);
 
