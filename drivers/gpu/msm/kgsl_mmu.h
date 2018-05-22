@@ -399,7 +399,7 @@ kgsl_mmu_pagetable_get_contextidr(struct kgsl_pagetable *pagetable)
 	return 0;
 }
 
-#ifdef CONFIG_QCOM_IOMMU
+#ifdef CONFIG_QCOM_IOMMU_V1
 #include <linux/qcom_iommu.h>
 #ifndef CONFIG_ARM_SMMU
 static inline bool kgsl_mmu_bus_secured(struct device *dev)
