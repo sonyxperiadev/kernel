@@ -51,7 +51,7 @@
 /* Max ASID width is 8-bit */
 #define MAX_ASID	0xff
 
-#define QCOM_IOMMU_V1_USE_AARCH64
+//#define QCOM_IOMMU_V1_USE_AARCH64
 
 #ifdef QCOM_IOMMU_V1_USE_AARCH64
  #define MMU_IAS 36
