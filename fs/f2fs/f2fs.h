@@ -3297,4 +3297,14 @@ static inline bool f2fs_may_encrypt(struct inode *inode)
 #endif
 }
 
+static inline bool f2fs_may_encrypt_bio(struct inode *inode,
+		struct f2fs_io_info *fio)
+{
+	if (fio && (fio->type != DATA || fio->encrypted_page))
+		return false;
+
+	return (f2fs_encrypted_file(inode) &&
+			fscrypt_using_hardware_encryption(inode));
+}
+
 #endif

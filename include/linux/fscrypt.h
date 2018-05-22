@@ -23,6 +23,10 @@
 
 #define FS_CRYPTO_BLOCK_SIZE		16
 
+/* iv sector for security/pfe/pfk_fscrypt.c and f2fs */
+#define PG_DUN(i, p)                                            \
+	((((i)->i_ino & 0xffffffff) << 32) | ((p)->index & 0xffffffff))
+
 struct fscrypt_info;
 
 struct fscrypt_ctx {
@@ -83,6 +87,7 @@ struct fscrypt_operations {
 	bool (*dummy_context)(struct inode *);
 	bool (*empty_dir)(struct inode *);
 	unsigned (*max_namelen)(struct inode *);
+	bool (*is_encrypted)(struct inode *);
 };
 
 static inline bool fscrypt_dummy_context_enabled(struct inode *inode)
