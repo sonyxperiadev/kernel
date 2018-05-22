@@ -549,6 +549,9 @@ static long clk_alpha_pll_round_rate(struct clk_hw *hw, unsigned long rate,
 	u64 a;
 	unsigned long min_freq, max_freq;
 
+	if (rate < pll->min_supported_freq)
+		return pll->min_supported_freq;
+
 	rate = alpha_pll_round_rate(rate, *prate, &l, &a, alpha_width);
 	if (!pll->vco_table || alpha_pll_find_vco(pll, rate))
 		return rate;

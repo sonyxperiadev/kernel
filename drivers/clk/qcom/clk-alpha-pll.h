@@ -65,6 +65,8 @@ struct clk_alpha_pll {
 #define SUPPORTS_DYNAMIC_UPDATE	BIT(3)
 	u8 flags;
 
+	unsigned long min_supported_freq;
+
 	struct clk_regmap clkr;
 };
 
