@@ -243,6 +243,19 @@
 #define FD_BCR						55
 #define MMSS_SPDM_RM_BCR				56
 
+/* GPU clocks */
+#define GFX3D_CLK_SRC					0
+#define RBBMTIMER_CLK_SRC				1
+#define GPU_AHB_CLK					2
+#define GPU_AON_ISENSE_CLK				3
+#define GPU_GX_GFX3D_CLK				4
+#define GPU_GX_RBBMTIMER_CLK				5
+
+/* GPU resets */
+#define GPU_BCR						0
+#define GPU_GX_BCR					1
+#define GPU_AON_BCR					2
+
 /* Indexes for GDSCs */
 #define MMAGIC_VIDEO_GDSC				0
 #define MMAGIC_MDSS_GDSC				1

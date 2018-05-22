@@ -26,6 +26,7 @@
 #include <dt-bindings/clock/qcom,mmcc-msm8996.h>
 
 #include "common.h"
+#include "clk-pll.h"
 #include "clk-regmap.h"
 #include "clk-regmap-divider.h"
 #include "clk-alpha-pll.h"
@@ -38,7 +39,30 @@
 
 #define F(f, s, h, m, n) { (f), (s), (2 * (h) - 1), (m), (n) }
 
+#define GFX_MIN_SVS_LEVEL	2
+#define GPU_REQ_ID		0x3
+
+#define EFUSE_SHIFT_v3	29
+#define EFUSE_MASK_v3	0x7
+#define EFUSE_SHIFT_PRO	28
+#define EFUSE_MASK_PRO	0x3
+
+static int vdd_gfx_corner[] = {
+	VDD_GFX_NONE,		/* OFF			*/
+	VDD_GFX_MIN_SVS,	/* MIN:  MinSVS		*/
+	VDD_GFX_LOW_SVS,	/* LOW:  LowSVS		*/
+	VDD_GFX_SVS_MINUS,	/* LOW:  SVS-		*/
+	VDD_GFX_SVS,		/* LOW:  SVS		*/
+	VDD_GFX_SVS_PLUS,	/* LOW:  SVS+		*/
+	VDD_GFX_NOMINAL,	/*       NOMINAL	*/
+	VDD_GFX_TURBO,		/* HIGH: TURBO		*/
+	VDD_GFX_TURBO_L1,	/* HIGH: TURBO_L1	*/
+	VDD_GFX_SUPER_TURBO,	/* HIGH: SUPER_TURBO	*/
+};
+
 static DEFINE_VDD_REGULATORS(vdd_dig, VDD_DIG_NUM, 1, vdd_corner);
+static DEFINE_VDD_REGULATORS(vdd_gfx, VDD_GFX_MAX, 1, vdd_gfx_corner);
+static DEFINE_VDD_REGS_INIT(vdd_gpu_mx, 1);
 
 static int vdd_mmpll4_levels[] = {
 	RPM_REGULATOR_CORNER_NONE, 0,
@@ -280,11 +304,11 @@ static struct pll_vco mmpll_t_vco[] = {
 };
 
 /* Initial configuration for 800MHz rate */
-static const struct pll_config mmpll0_config = {
+static const struct alpha_pll_config mmpll0_config = {
 	.l = 0x29,
 	.config_ctl_val = 0x4001051b,
 	.alpha = 0xaaaaab00,
-	.alpha_u = 0xaa,
+	.alpha_hi = 0xaa,
 	.alpha_en_mask = BIT(24),
 	.vco_val = 0x2 << 20,
 	.vco_mask = 0x3 << 20,
@@ -293,6 +317,7 @@ static const struct pll_config mmpll0_config = {
 
 static struct clk_alpha_pll mmpll0_early = {
 	.offset = 0x0,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.vco_table = mmpll_p_vco,
 	.num_vco = ARRAY_SIZE(mmpll_p_vco),
 	.clkr = {
@@ -310,6 +335,7 @@ static struct clk_alpha_pll mmpll0_early = {
 
 static struct clk_alpha_pll_postdiv mmpll0 = {
 	.offset = 0x0,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.width = 4,
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "mmpll0",
@@ -321,11 +347,11 @@ static struct clk_alpha_pll_postdiv mmpll0 = {
 };
 
 /* Initial configuration for 810MHz rate */
-static const struct pll_config mmpll1_config = {
+static const struct alpha_pll_config mmpll1_config = {
 	.l = 0x2a,
 	.config_ctl_val = 0x4001051b,
 	.alpha = 0x00,
-	.alpha_u = 0x30,
+	.alpha_hi = 0x30,
 	.alpha_en_mask = BIT(24),
 	.vco_val = 0x2 << 20,
 	.vco_mask = 0x3 << 20,
@@ -334,6 +360,7 @@ static const struct pll_config mmpll1_config = {
 
 static struct clk_alpha_pll mmpll1_early = {
 	.offset = 0x30,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.vco_table = mmpll_p_vco,
 	.num_vco = ARRAY_SIZE(mmpll_p_vco),
 	.clkr = {
@@ -351,6 +378,7 @@ static struct clk_alpha_pll mmpll1_early = {
 
 static struct clk_alpha_pll_postdiv mmpll1 = {
 	.offset = 0x30,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.width = 4,
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "mmpll1",
@@ -362,11 +390,11 @@ static struct clk_alpha_pll_postdiv mmpll1 = {
 };
 
 /* Initial configuration for 400MHz rate */
-static const struct pll_config mmpll2_config = {
+static const struct alpha_pll_config mmpll2_config = {
 	.l = 0x14,
 	.config_ctl_val = 0x4001051b,
 	.alpha = 0x55555600,
-	.alpha_u = 0xd5,
+	.alpha_hi = 0xd5,
 	.alpha_en_mask = BIT(24),
 	.vco_val = 0x2 << 20,
 	.vco_mask = 0x3 << 20,
@@ -375,6 +403,7 @@ static const struct pll_config mmpll2_config = {
 
 static struct clk_alpha_pll mmpll2_early = {
 	.offset = 0x4100,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.vco_table = mmpll_gfx_vco,
 	.num_vco = ARRAY_SIZE(mmpll_gfx_vco),
 	.clkr.hw.init = &(struct clk_init_data){
@@ -388,6 +417,7 @@ static struct clk_alpha_pll mmpll2_early = {
 
 static struct clk_alpha_pll_postdiv mmpll2 = {
 	.offset = 0x4100,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.width = 4,
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "mmpll2",
@@ -399,11 +429,11 @@ static struct clk_alpha_pll_postdiv mmpll2 = {
 };
 
 /* Initial configuration for 1040MHz rate */
-static const struct pll_config mmpll3_config = {
+static const struct alpha_pll_config mmpll3_config = {
 	.l = 0x36,
 	.config_ctl_val = 0x4001051b,
 	.alpha = 0xaaaaab00,
-	.alpha_u = 0x2a,
+	.alpha_hi = 0x2a,
 	.alpha_en_mask = BIT(24),
 	.vco_val = 0x1 << 20,
 	.vco_mask = 0x3 << 20,
@@ -412,6 +442,7 @@ static const struct pll_config mmpll3_config = {
 
 static struct clk_alpha_pll mmpll3_early = {
 	.offset = 0x60,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.vco_table = mmpll_p_vco,
 	.num_vco = ARRAY_SIZE(mmpll_p_vco),
 	.clkr.hw.init = &(struct clk_init_data){
@@ -425,6 +456,7 @@ static struct clk_alpha_pll mmpll3_early = {
 
 static struct clk_alpha_pll_postdiv mmpll3 = {
 	.offset = 0x60,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.width = 4,
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "mmpll3",
@@ -436,11 +468,11 @@ static struct clk_alpha_pll_postdiv mmpll3 = {
 };
 
 /* Initial configuration for 960MHz rate */
-static const struct pll_config mmpll4_config = {
+static const struct alpha_pll_config mmpll4_config = {
 	.l = 0x32,
 	.config_ctl_val = 0x4289,
 	.alpha = 0x00,
-	.alpha_u = 0x00,
+	.alpha_hi = 0x00,
 	.alpha_en_mask = BIT(24),
 	.vco_val = 0x0 << 20,
 	.vco_mask = 0x3 << 20,
@@ -449,6 +481,7 @@ static const struct pll_config mmpll4_config = {
 
 static struct clk_alpha_pll mmpll4_early = {
 	.offset = 0x90,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.vco_table = mmpll_t_vco,
 	.num_vco = ARRAY_SIZE(mmpll_t_vco),
 	.clkr.hw.init = &(struct clk_init_data){
@@ -462,6 +495,7 @@ static struct clk_alpha_pll mmpll4_early = {
 
 static struct clk_alpha_pll_postdiv mmpll4 = {
 	.offset = 0x90,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.width = 2,
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "mmpll4",
@@ -473,11 +507,11 @@ static struct clk_alpha_pll_postdiv mmpll4 = {
 };
 
 /* Initial configuration for 825MHz rate */
-static const struct pll_config mmpll5_config = {
+static const struct alpha_pll_config mmpll5_config = {
 	.l = 0x2a,
 	.config_ctl_val = 0x4001051b,
 	.alpha = 0x00,
-	.alpha_u = 0xf8,
+	.alpha_hi = 0xf8,
 	.alpha_en_mask = BIT(24),
 	.vco_val = 0x2 << 20,
 	.vco_mask = 0x3 << 20,
@@ -486,6 +520,7 @@ static const struct pll_config mmpll5_config = {
 
 static struct clk_alpha_pll mmpll5_early = {
 	.offset = 0xc0,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.vco_table = mmpll_p_vco,
 	.num_vco = ARRAY_SIZE(mmpll_p_vco),
 	.clkr.hw.init = &(struct clk_init_data){
@@ -499,6 +534,7 @@ static struct clk_alpha_pll mmpll5_early = {
 
 static struct clk_alpha_pll_postdiv mmpll5 = {
 	.offset = 0xc0,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.width = 4,
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "mmpll5",
@@ -510,11 +546,11 @@ static struct clk_alpha_pll_postdiv mmpll5 = {
 };
 
 /* Initial configuration for 532MHz rate */
-static const struct pll_config mmpll8_config = {
+static const struct alpha_pll_config mmpll8_config = {
 	.l = 0x1b,
 	.config_ctl_val = 0x4001051b,
 	.alpha = 0x55555600,
-	.alpha_u = 0xb5,
+	.alpha_hi = 0xb5,
 	.alpha_en_mask = BIT(24),
 	.vco_val = 0x2 << 20,
 	.vco_mask = 0x3 << 20,
@@ -523,6 +559,7 @@ static const struct pll_config mmpll8_config = {
 
 static struct clk_alpha_pll mmpll8_early = {
 	.offset = 0x4130,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.vco_table = mmpll_gfx_vco,
 	.num_vco = ARRAY_SIZE(mmpll_gfx_vco),
 	.clkr.hw.init = &(struct clk_init_data){
@@ -536,6 +573,7 @@ static struct clk_alpha_pll mmpll8_early = {
 
 static struct clk_alpha_pll_postdiv mmpll8 = {
 	.offset = 0x4130,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.width = 4,
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "mmpll8",
@@ -547,11 +585,11 @@ static struct clk_alpha_pll_postdiv mmpll8 = {
 };
 
 /* Initial configuration for 1248MHz rate */
-static const struct pll_config mmpll9_config = {
+static const struct alpha_pll_config mmpll9_config = {
 	.l = 0x41,
 	.config_ctl_val = 0x4289,
 	.alpha = 0x00,
-	.alpha_u = 0x00,
+	.alpha_hi = 0x00,
 	.alpha_en_mask = BIT(24),
 	.vco_val = 0x0 << 20,
 	.vco_mask = 0x3 << 20,
@@ -560,6 +598,7 @@ static const struct pll_config mmpll9_config = {
 
 static struct clk_alpha_pll mmpll9_early = {
 	.offset = 0x4200,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.vco_table = mmpll_t_vco,
 	.num_vco = ARRAY_SIZE(mmpll_t_vco),
 	.flags = SUPPORTS_DYNAMIC_UPDATE,
@@ -575,6 +614,7 @@ static struct clk_alpha_pll mmpll9_early = {
 
 static struct clk_alpha_pll_postdiv mmpll9 = {
 	.offset = 0x4200,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.width = 2,
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "mmpll9",
@@ -636,7 +676,7 @@ static struct clk_rcg2 gfx3d_clk_src = {
 	.cmd_rcgr = 0x4000,
 	.hid_width = 5,
 	.parent_map = mmss_xo_mmpll0_mmpll9_mmpll2_mmpll8_gpll0_map,
-	.flags = FORCE_ENABLE_RCGR,
+	.flags = FORCE_ENABLE_RCG,
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "gfx3d_clk_src",
 		.parent_names = mmss_xo_mmpll0_mmpll9_mmpll2_mmpll8_gpll0,
@@ -2999,8 +3039,6 @@ static struct clk_regmap *mmcc_msm8996_clocks[] = {
 	[MMPLL9_PLL] = &mmpll9.clkr,
 	[AHB_CLK_SRC] = &ahb_clk_src.clkr,
 	[MAXI_CLK_SRC] = &maxi_clk_src.clkr,
-	[GFX3D_CLK_SRC] = &gfx3d_clk_src.clkr,
-	[RBBMTIMER_CLK_SRC] = &rbbmtimer_clk_src.clkr,
 	[RBCPR_CLK_SRC] = &rbcpr_clk_src.clkr,
 	[VIDEO_CORE_CLK_SRC] = &video_core_clk_src.clkr,
 	[VIDEO_SUBCORE0_CLK_SRC] = &video_subcore0_clk_src.clkr,
@@ -3063,10 +3101,6 @@ static struct clk_regmap *mmcc_msm8996_clocks[] = {
 	[SMMU_VIDEO_AHB_CLK] = &smmu_video_ahb_clk.clkr,
 	[SMMU_VIDEO_AXI_CLK] = &smmu_video_axi_clk.clkr,
 	[MMAGIC_BIMC_NOC_CFG_AHB_CLK] = &mmagic_bimc_noc_cfg_ahb_clk.clkr,
-	[GPU_GX_GFX3D_CLK] = &gpu_gx_gfx3d_clk.clkr,
-	[GPU_GX_RBBMTIMER_CLK] = &gpu_gx_rbbmtimer_clk.clkr,
-	[GPU_AHB_CLK] = &gpu_ahb_clk.clkr,
-	[GPU_AON_ISENSE_CLK] = &gpu_aon_isense_clk.clkr,
 	[VMEM_MAXI_CLK] = &vmem_maxi_clk.clkr,
 	[VMEM_AHB_CLK] = &vmem_ahb_clk.clkr,
 	[MMSS_RBCPR_CLK] = &mmss_rbcpr_clk.clkr,
@@ -3173,9 +3207,6 @@ static const struct qcom_reset_map mmcc_msm8996_resets[] = {
 	[THROTTLE_VIDEO_BCR] = { 0x1180 },
 	[SMMU_VIDEO_BCR] = { 0x1170 },
 	[MMAGIC_BIMC_BCR] = { 0x5290 },
-	[GPU_GX_BCR] = { 0x4020 },
-	[GPU_BCR] = { 0x4030 },
-	[GPU_AON_BCR] = { 0x4040 },
 	[VMEM_BCR] = { 0x1200 },
 	[MMSS_RBCPR_BCR] = { 0x4080 },
 	[VIDEO_BCR] = { 0x1020 },
@@ -3226,8 +3257,6 @@ static const struct regmap_config mmcc_msm8996_regmap_config = {
 static const struct qcom_cc_desc mmcc_msm8996_desc = {
 	.config = &mmcc_msm8996_regmap_config,
 	.clks = mmcc_msm8996_clocks,
-	.hwclks = mmcc_msm8996_hws,
-	.num_hwclks = ARRAY_SIZE(mmcc_msm8996_hws),
 	.num_clks = ARRAY_SIZE(mmcc_msm8996_clocks),
 	.resets = mmcc_msm8996_resets,
 	.num_resets = ARRAY_SIZE(mmcc_msm8996_resets),
@@ -3239,11 +3268,178 @@ static const struct of_device_id mmcc_msm8996_match_table[] = {
 };
 MODULE_DEVICE_TABLE(of, mmcc_msm8996_match_table);
 
+
+enum {
+	GPUCC_MSM8996_V1,
+	GPUCC_MSM8996_V2,
+	GPUCC_MSM8996_V3_0,
+	GPUCC_MSM8996_V3,
+	GPUCC_MSM8996_PRO,
+};
+
+static struct clk_regmap *gpucc_msm8996_clocks[] = {
+	[GFX3D_CLK_SRC] = &gfx3d_clk_src.clkr,
+	[RBBMTIMER_CLK_SRC] = &rbbmtimer_clk_src.clkr,
+	[GPU_AHB_CLK] = &gpu_ahb_clk.clkr,
+	[GPU_AON_ISENSE_CLK] = &gpu_aon_isense_clk.clkr,
+	[GPU_GX_GFX3D_CLK] = &gpu_gx_gfx3d_clk.clkr,
+	[GPU_GX_RBBMTIMER_CLK] = &gpu_gx_rbbmtimer_clk.clkr,
+};
+
+static const struct qcom_reset_map gpucc_msm8996_resets[] = {
+	[GPU_GX_BCR] = { 0x4020 },
+	[GPU_BCR] = { 0x4030 },
+	[GPU_AON_BCR] = { 0x4040 },
+};
+
+static const struct qcom_cc_desc gpucc_msm8996_desc = {
+	.config = &mmcc_msm8996_regmap_config,
+	.clks = gpucc_msm8996_clocks,
+	.num_clks = ARRAY_SIZE(gpucc_msm8996_clocks),
+	.resets = mmcc_msm8996_resets,
+	.num_resets = ARRAY_SIZE(mmcc_msm8996_resets),
+};
+
+static const struct of_device_id gpucc_msm8996_match_table[] = {
+	{ .compatible = "qcom,gpucc-msm8996",
+	  .data = (void *)GPUCC_MSM8996_V1, },
+	{ .compatible = "qcom,gpucc-msm8996-v2",
+	  .data = (void *)GPUCC_MSM8996_V2, },
+	{ .compatible = "qcom,gpucc-msm8996-v3",
+	  .data = (void *)GPUCC_MSM8996_V3_0, },
+	{ .compatible = "qcom,gpucc-msm8996-v3.0",
+	  .data = (void *)GPUCC_MSM8996_V3, },
+	{ .compatible = "qcom,gpucc-msm8996-pro",
+	  .data = (void *)GPUCC_MSM8996_PRO, },
+	{ }
+};
+MODULE_DEVICE_TABLE(of, gpucc_msm8996_match_table);
+
+static int gpucc_msm8996_set_vdd_class(struct regmap *regmap, const int *gpuver)
+{
+	const struct clk_init_data *clk_data = gfx3d_clk_src.clkr.hw.init;
+	int ret = 0;
+
+	/* Ensure first entry is initialized to zero */
+	clk_data->rate_max[VDD_GFX_NONE] = 0;
+
+	switch (*gpuver) {
+	case GPUCC_MSM8996_V1:
+		clk_data->rate_max[VDD_GFX_SVS_MINUS] = 205000000;
+		clk_data->rate_max[VDD_GFX_SVS] = 360000000;
+		clk_data->rate_max[VDD_GFX_SVS_PLUS] = 480000000;
+		break;
+	case GPUCC_MSM8996_V2:
+		clk_data->rate_max[VDD_GFX_SVS_MINUS] = 300000000;
+		clk_data->rate_max[VDD_GFX_SVS] = 500000000;
+		clk_data->rate_max[VDD_GFX_SVS_PLUS] = 604800000;
+		break;
+	case GPUCC_MSM8996_V3_0:
+		clk_data->rate_max[VDD_GFX_SVS_MINUS] = 315000000;
+		clk_data->rate_max[VDD_GFX_SVS] = 401800000;
+		clk_data->rate_max[VDD_GFX_SVS_PLUS] = 510000000;
+		clk_data->rate_max[VDD_GFX_NOMINAL] = 560000000;
+		clk_data->rate_max[VDD_GFX_TURBO] = 624000000;
+		break;
+	case GPUCC_MSM8996_PRO:
+		clk_data->rate_max[VDD_GFX_SUPER_TURBO] = 652800000;
+		/* Fall through */
+	case GPUCC_MSM8996_V3:
+		clk_data->rate_max[VDD_GFX_LOW_SVS] = 133000000;
+		clk_data->rate_max[VDD_GFX_SVS_MINUS] = 214000000;
+		clk_data->rate_max[VDD_GFX_SVS] = 315000000;
+		clk_data->rate_max[VDD_GFX_SVS_PLUS] = 401800000;
+		clk_data->rate_max[VDD_GFX_NOMINAL] = 510000000;
+		clk_data->rate_max[VDD_GFX_TURBO] = 560000000;
+		clk_data->rate_max[VDD_GFX_TURBO_L1] = 624000000;
+		break;
+	default:
+		ret = -EINVAL;
+		break;
+	}
+
+	return ret;
+}
+
+static int gpucc_msm8996_probe(struct platform_device *pdev)
+{
+	void __iomem *base;
+	struct resource *res;
+	struct device *dev = &pdev->dev;
+	struct regmap *regmap;
+	const struct of_device_id *id;
+	int ret;
+
+	id = of_match_device(gpucc_msm8996_match_table, dev);
+	if (!id)
+		return -ENODEV;
+
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	base = devm_ioremap(dev, res->start, resource_size(res));
+	if (IS_ERR(base)) {
+		dev_err(dev, "Unable to map GFX3D clock controller.\n");
+		return -EINVAL;
+	}
+
+	regmap = devm_regmap_init_mmio(dev, base, &mmcc_msm8996_regmap_config);
+	if (IS_ERR(regmap)) {
+		dev_err(dev, "Unable to map GFX3D MMIO.\n");
+		return PTR_ERR(regmap);
+	}
+
+	vdd_gfx.regulator[0] = devm_regulator_get(&pdev->dev, "vdd_gfx");
+	if (IS_ERR(vdd_gfx.regulator[0])) {
+		if (PTR_ERR(vdd_gfx.regulator[0]) != -EPROBE_DEFER)
+			dev_err(dev, "Unable to get vdd_gfx regulator!");
+		return PTR_ERR(vdd_gfx.regulator[0]);
+	}
+
+	vdd_gfx.regulator[1] = devm_regulator_get(&pdev->dev, "vdd_mx");
+	if (IS_ERR(vdd_gfx.regulator[1])) {
+		if (PTR_ERR(vdd_gfx.regulator[1]) != -EPROBE_DEFER)
+			dev_err(dev, "Unable to get vdd_mx regulator!");
+		return PTR_ERR(vdd_gfx.regulator[1]);
+	}
+	vdd_gfx.use_max_uV = true;
+
+	vdd_gpu_mx.regulator[0] = devm_regulator_get(&pdev->dev, "vdd_gpu_mx");
+	if (IS_ERR(vdd_gpu_mx.regulator[0])) {
+		if (PTR_ERR(vdd_gpu_mx.regulator[0]) != -EPROBE_DEFER)
+			dev_err(dev, "Unable to get vdd_gpu_mx regulator!");
+		return PTR_ERR(vdd_gpu_mx.regulator[0]);
+	}
+	vdd_gpu_mx.use_max_uV = true;
+
+	ret = gpucc_msm8996_set_vdd_class(regmap, id->data);
+	if (ret) {
+		dev_err(dev, "Failed to fill VDD class table for GPU\n");
+		return ret;
+	}
+
+	ret = qcom_cc_really_probe(pdev, &gpucc_msm8996_desc, regmap);
+	if (ret) {
+		dev_err(dev, "Failed to register GPUCC clocks\n");
+		return ret;
+	}
+
+	dev_info(&pdev->dev, "Registered GPUCC clocks.\n");
+
+	return ret;
+}
+
+static struct platform_driver gpucc_msm8996_driver = {
+	.probe		= gpucc_msm8996_probe,
+	.driver		= {
+		.name	= "gpucc-msm8996",
+		.of_match_table = gpucc_msm8996_match_table,
+	},
+};
+
 static int mmcc_msm8996_probe(struct platform_device *pdev)
 {
 	struct regmap *regmap;
 	struct regulator *reg;
-	int ret = 0;
+	int i, ret = 0;
 
 	regmap = qcom_cc_map(pdev, &mmcc_msm8996_desc);
 	if (IS_ERR(regmap))
@@ -3287,6 +3483,13 @@ static int mmcc_msm8996_probe(struct platform_device *pdev)
 	clk_alpha_pll_configure(&mmpll8_early, regmap, &mmpll8_config);
 	clk_alpha_pll_configure(&mmpll9_early, regmap, &mmpll9_config);
 
+	/* Register the hws */
+	for (i = 0; i < ARRAY_SIZE(mmcc_msm8996_hws); i++) {
+		ret = devm_clk_hw_register(&pdev->dev, mmcc_msm8996_hws[i]);
+		if (ret)
+			return ret;
+	}
+
 	ret = qcom_cc_really_probe(pdev, &mmcc_msm8996_desc, regmap);
 	if (ret) {
 		dev_err(&pdev->dev, "Failed to register MMCC clocks\n");
@@ -3294,6 +3497,9 @@ static int mmcc_msm8996_probe(struct platform_device *pdev)
 	}
 
 	dev_info(&pdev->dev, "Registered MMCC clocks\n");
+
+	/* Now register the GPUCC! */
+	ret = platform_driver_register(&gpucc_msm8996_driver);
 
 	return ret;
 }

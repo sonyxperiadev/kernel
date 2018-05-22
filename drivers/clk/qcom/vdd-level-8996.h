@@ -84,6 +84,20 @@ enum vdd_dig_levels {
 	VDD_DIG_NUM
 };
 
+enum vdd_gfx_levels {
+	VDD_GFX_NONE,		/* OFF			*/
+	VDD_GFX_MIN_SVS,	/* MIN:  MinSVS		*/
+	VDD_GFX_LOW_SVS,	/* LOW:  LowSVS		*/
+	VDD_GFX_SVS_MINUS,	/* LOW:  SVS-		*/
+	VDD_GFX_SVS,		/* LOW:  SVS		*/
+	VDD_GFX_SVS_PLUS,	/* LOW:  SVS+		*/
+	VDD_GFX_NOMINAL,	/*       NOMINAL	*/
+	VDD_GFX_TURBO,		/* HIGH: TURBO		*/
+	VDD_GFX_TURBO_L1,	/* HIGH: TURBO_L1	*/
+	VDD_GFX_SUPER_TURBO,	/* HIGH: SUPER_TURBO	*/
+	VDD_GFX_MAX,		/*    FURNACE MODE!	*/
+};
+
 static int vdd_corner[] = {
 	RPM_REGULATOR_CORNER_NONE,		/* VDD_DIG_NONE */
 	RPM_REGULATOR_CORNER_SVS_SOC,		/* SVS2 is remapped to SVS */

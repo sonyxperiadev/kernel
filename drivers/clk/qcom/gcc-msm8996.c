@@ -22,6 +22,7 @@
 #include <linux/regmap.h>
 #include <linux/reset-controller.h>
 #include <linux/clk.h>
+#include <linux/clk/qcom.h>
 
 #include <dt-bindings/clock/qcom,gcc-msm8996.h>
 
@@ -236,6 +237,7 @@ static struct clk_fixed_factor xo = {
 
 static struct clk_alpha_pll gpll0_early = {
 	.offset = 0x00000,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.clkr = {
 		.enable_reg = 0x52000,
 		.enable_mask = BIT(0),
@@ -261,6 +263,7 @@ static struct clk_fixed_factor gpll0_early_div = {
 
 static struct clk_alpha_pll_postdiv gpll0 = {
 	.offset = 0x00000,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "gpll0",
 		.parent_names = (const char *[]){ "gpll0_early" },
@@ -271,6 +274,7 @@ static struct clk_alpha_pll_postdiv gpll0 = {
 
 static struct clk_alpha_pll gpll4_early = {
 	.offset = 0x77000,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.clkr = {
 		.enable_reg = 0x52000,
 		.enable_mask = BIT(4),
@@ -285,6 +289,7 @@ static struct clk_alpha_pll gpll4_early = {
 
 static struct clk_alpha_pll_postdiv gpll4 = {
 	.offset = 0x77000,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "gpll4",
 		.parent_names = (const char *[]){ "gpll4_early" },
@@ -3416,8 +3421,6 @@ static const struct regmap_config gcc_msm8996_regmap_config = {
 static const struct qcom_cc_desc gcc_msm8996_desc = {
 	.config = &gcc_msm8996_regmap_config,
 	.clks = gcc_msm8996_clocks,
-	.hwclks = gcc_msm8996_hws,
-	.num_hwclks = ARRAY_SIZE(gcc_msm8996_hws),
 	.num_clks = ARRAY_SIZE(gcc_msm8996_clocks),
 	.resets = gcc_msm8996_resets,
 	.num_resets = ARRAY_SIZE(gcc_msm8996_resets),
@@ -3431,7 +3434,7 @@ MODULE_DEVICE_TABLE(of, gcc_msm8996_match_table);
 
 static int gcc_msm8996_probe(struct platform_device *pdev)
 {
-	int ret = 0;
+	int i, ret = 0;
 	struct regmap *regmap;
 
 	regmap = qcom_cc_map(pdev, &gcc_msm8996_desc);
@@ -3451,8 +3454,14 @@ static int gcc_msm8996_probe(struct platform_device *pdev)
 		return PTR_ERR(vdd_dig.regulator[0]);
 	}
 
-	ret = qcom_cc_really_probe(pdev, &gcc_msm8996_desc, regmap);
+	/* Register the hws */
+	for (i = 0; i < ARRAY_SIZE(gcc_msm8996_hws); i++) {
+		ret = devm_clk_hw_register(&pdev->dev, gcc_msm8996_hws[i]);
+		if (ret)
+			return ret;
+	}
 
+	ret = qcom_cc_really_probe(pdev, &gcc_msm8996_desc, regmap);
 	if (ret) {
 		dev_err(&pdev->dev, "Failed to register GCC clocks\n");
 		return ret;
