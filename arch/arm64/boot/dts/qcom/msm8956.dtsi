@@ -1691,7 +1691,7 @@
 		qcom,bus-clk-rate = <320000000 200000000 100000000>;
 		qcom,max-nominal-sysclk-rate = <133330000>;
 
-		//extcon = <&pmi8950_charger>;
+		extcon = <&qpnp_smbcharger>;
 
 		qcom,usbbam@78c4000 {
 			compatible = "qcom,usb-bam-msm";
