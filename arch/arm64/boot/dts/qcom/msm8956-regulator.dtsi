@@ -57,7 +57,7 @@
 
 		cx_cdev: regulator-cx-cdev {
 			compatible = "qcom,regulator-cooling-device";
-			regulator-cdev-supply = <&pm8953_s2_floor_level>;
+			regulator-cdev-supply = <&pm8950_s2_floor_level>;
 			regulator-levels = <RPM_SMD_REGULATOR_LEVEL_NOM
 					RPM_SMD_REGULATOR_LEVEL_RETENTION>;
 			#cooling-cells = <2>;
@@ -371,7 +371,7 @@
 		};
 	};
 
-	qcom,pm8004@5 {
+	pm8004@5 {
 		/* Note: declaration nodes are probably not required */
 		compatible = "qcom,spmi-pmic";
 		reg = <0x5 SPMI_USID>;
@@ -694,12 +694,6 @@
 			<1188 1135 1317 1246 720 753 562 605>,
 			<1276 1212 1405 1323 776 816 604 654>;
 		qcom,cpr-enable;
-	};
-};
-
-&pmi8950_charger {
-	smbcharger_charger_otg: qcom,smbcharger-boost-otg {
-		regulator-name = "smbcharger_charger_otg";
 	};
 };
 
