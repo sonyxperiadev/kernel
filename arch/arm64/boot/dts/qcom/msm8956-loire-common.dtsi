@@ -17,7 +17,15 @@
  * published by the Free Software Foundation.
  */
 
+#include <dt-bindings/pinctrl/qcom,pmic-mpp.h>
+#include <dt-bindings/pinctrl/qcom,pmic-gpio.h>
 #include "msm8956-loire_pinctrl.dtsi"
+
+#define PM8004_MPP_MSMIO	0
+#define PMI8950_MPP_MSMIO	0
+#define PM8950_MPP_VPH		0
+#define PM8950_MPP_1P8		2
+#define PM8950_MPP_L5		3
 
 / {
 	aliases {
@@ -757,19 +765,25 @@
 };
 
 &pm8950_gpios {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pm8950_gpio_2 &pm8950_gpio_5
+		     &pm8950_gpio_6 &pm8950_gpio_8>;
+
 	/* GPIO_1: CDC_PM_MCLK */
 	/* Follow QCT */
 
 	/* GPIO_2: WL_SLEEP_CLKK */
-	gpio@c100 {
-		qcom,src-sel = <2>;		/* SF1 SLEEP_CLK2 */
-		qcom,mode = <1>;		/* Out */
-		qcom,output-type = <0>;		/* CMOS */
-		qcom,vin-sel = <0>;		/* VREG_L5 */
-		qcom,out-strength = <1>;	/* Low */
-		qcom,pull = <5>;		/* NP */
-		qcom,master-en = <1>;		/* Enable */
-		status = "ok";
+	pm8950_gpio_2: wl_sleep_clkk {
+		wl_sleep {
+			pins = "gpio2";
+			function = "func1"; /* SF1 SLEEP_CLK2 */
+			output-high;
+			bias-disable;
+			drive-push-pull;
+			/* Note: QCOM uses 1 (LOW) -- Mainline LOW is 3!?! */
+			qcom,drive-strength = <PMIC_GPIO_STRENGTH_HIGH>;
+			power-source = <PM8950_MPP_VPH>;
+		};
 	};
 
 	/* GPIO_3: BATT_UICC_ALARM */
@@ -779,131 +793,191 @@
 	/* Follow QCT */
 
 	/* GPIO_5: NFC_CLK_REQ */
-	gpio@c400 {
-		qcom,src-sel = <0>;		/* GPIO */
-		qcom,mode = <0>;		/* In */
-		qcom,vin-sel = <3>;		/* VREG_L5 */
-		qcom,out-strength = <1>;	/* Low */
-		qcom,pull = <4>;		/* PD */
-		qcom,master-en = <1>;		/* Enable */
-		status = "ok";
+	pm8950_gpio_5: nfc_clk_req {
+		nfc_clk_gp {
+			pins = "gpio5";
+			function = "normal";
+			input-enable;
+			bias-pull-down;
+			drive-push-pull;
+			/* Note: QCOM uses 1 (LOW) -- Mainline LOW is 3!?! */
+			qcom,drive-strength = <PMIC_GPIO_STRENGTH_HIGH>;
+			power-source = <PM8950_MPP_L5>;
+		};
 	};
 
-	/* GPIO_6: (USB_SHELL_SEL) */
-	gpio@c500 {
-		qcom,master-en = <0>;		/* Disable */
-		status = "ok";
+	/* GPIO_6: USB_SHELL_SEL - DISABLE*/
+	pm8950_gpio_6: usb_shell_select {
+		usb_shell_sel {
+			pins = "gpio6";
+			function = "normal";
+			drive-push-pull;
+			bias-high-impedance; /* High-Z mode (disable) */
+		};
 	};
 
 	/* GPIO_7: WCD_ELDO_EN */
 	/* Follow QCT */
 
 	/* GPIO_8: USB_ID_DET_N */
-	gpio@c700 {
-		qcom,src-sel = <0>;		/* GPIO */
-		qcom,mode = <1>;		/* Out */
-		qcom,output-type = <0>;		/* CMOS */
-		qcom,vin-sel = <0>;		/* VPH_PWR */
-		qcom,out-strength = <1>;	/* Low */
-		qcom,invert = <0>;		/* Low */
-		qcom,master-en = <1>;		/* Enable */
-		status = "ok";
+	pm8950_gpio_8: usb_id_det_n {
+		usbid_detection {
+			pins = "gpio8";
+			function = "normal";
+			bias-pull-down;
+			drive-push-pull;
+			/* Note: QCOM uses 1 (LOW) -- Mainline LOW is 3!?! */
+			qcom,drive-strength = <PMIC_GPIO_STRENGTH_HIGH>;
+			power-source = <PM8950_MPP_VPH>;
+		};
 	};
 };
 
 &pmi8950_gpios {
-	/* GPIO_1: USB_SWITCH_SEL */
-	gpio@c000 {
-		qcom,src-sel = <0>;		/* GPIO */
-		qcom,mode = <1>;		/* Out */
-		qcom,output-type = <0>;		/* CMOS */
-		qcom,vin-sel = <0>;		/* VDD_MSM_IO */
-		qcom,out-strength = <1>;	/* Low */
-		qcom,invert = <0>;		/* Low */
-		qcom,master-en = <1>;		/* Enable */
-		status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&pmi8950_gpio_1 &pmi8950_gpio_2>;
+
+	/* GPIO_1: USB_SWITCH_SEL - GPIO CMOS output - drive strength low*/
+	usb_switch_sel {
+		pmi8950_gpio_1: usb_switch {
+			pins = "gpio1";
+			function = "normal";
+			output-low;
+			drive-push-pull;
+			/* Note: QCOM uses 1 (LOW) -- Mainline LOW is 3!?! */
+			qcom,drive-strength = <PMIC_GPIO_STRENGTH_HIGH>;
+			power-source = <PMI8950_MPP_MSMIO>;
+		};
 	};
 
-	/* GPIO_2: VIB_LDO_EN */
-	gpio@c100 {
-		qcom,src-sel = <0>;		/* GPIO */
-		qcom,mode = <1>;		/* Out */
-		qcom,output-type = <0>;		/* CMOS */
-		qcom,vin-sel = <0>;		/* VDD_MSM_IO */
-		qcom,out-strength = <1>;	/* Low */
-		qcom,invert = <0>;		/* Low */
-		qcom,master-en = <1>;		/* Enable */
-		status = "okay";
+	/* GPIO_2: VIB_LDO_EN - GPIO CMOS output - drive strength low*/
+	vib_ldo_en {
+		pmi8950_gpio_2: vibrator_ldo {
+			pins = "gpio2";
+			function = "normal";
+			output-low;
+			drive-push-pull;
+			/* Note: QCOM uses 1 (LOW) -- Mainline LOW is 3!?! */
+			qcom,drive-strength = <PMIC_GPIO_STRENGTH_HIGH>;
+			power-source = <PMI8950_MPP_MSMIO>;
+		};
 	};
 };
-
+#if 0
 &pm8950_mpps {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pm8950_mpp2_def &pm8950_mpp4_def>;
+
 	/* MPP_1: VDD_PX_BIAS */
 	/* Follow QTI */
 
 	/* MPP_2: PA_THERM1 */
 	/* Follow QTI */
+	pm8950_mpp2_def: pa_therm {
+		gpio {
+			pins = "mpp2";
+			function = "analog";
+			input-enable;
+			qcom,amux-route = <PMIC_MPP_AMUX_ROUTE_CH6>;
+			/* Function constant, Enable MPP */
+		};
+	};
 
 	/* MPP_3: VREF_TXDAC_0_1 */
 	/* Follow QTI */
 
 	/* MPP_4: QUIET_THERM */
+	pm8950_mpp4_def: case_therm {
+		gpio {
+			pins = "mpp4";
+			function = "analog";
+			input-enable;
+			qcom,amux-route = <PMIC_MPP_AMUX_ROUTE_CH8>;
+			/* Function constant, Enable MPP */
+		};
+	};
 	/* Follow QTI */
 };
-
+#endif
 &pmi8950_mpps {
-	/* MPP_1: PMI8952_ADC_IN */
-	mpp@a000 {
-		qcom,mode = <4>;		/* AIN */
-		qcom,ain-route = <0>;		/* AMUX 5 Ch#16 */
-		qcom,master-en = <1>;		/* Enable */
-		status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&pmi_mpp1_def &pmi_mpp3_def &pmi_mpp4_def>;
+
+	/* MPP_1: PMI8952_ADC_IN */ /* AMUX 5 Ch#16 */
+	pmi8952_adc_in {
+		pmi_mpp1_def: gpio {
+			pins = "mpp1";
+			function = "analog";
+			input-enable;
+			qcom,amux-route = <PMIC_MPP_AMUX_ROUTE_CH5>;
+		};
 	};
 
 	/* MPP_2: BOOST_BYP_VSEL */
 	/* Follow QTI */
-
-	/* MPP_3: EXT_FET_WLED_PWR_EN */
-	mpp@a200 {
-		qcom,master-en = <0>;		/* Disable */
-		status = "okay";
+	boost_byp_vsel {
+		pmi_mpp2_def: gpio {
+			pins = "mpp2";
+		};
 	};
 
-	/* MPP_4: FLASH_STROBE_NOW */
-	mpp@a300 {
-		qcom,mode = <0>;		/* DIN */
-		qcom,master-en = <1>;		/* Enable */
-		qcom,vin-sel = <2>;		/* 1.8v */
-		status = "okay";
+	/* MPP_3: EXT_FET_WLED_PWR_EN - DISABLED*/
+	ext_fet_wled_pwr_en {
+		pmi_mpp3_def: gpio {
+			pins = "mpp3";
+			bias-high-impedance; /* High-Z mode (disable) */
+		};
+	};
+
+	/* MPP_4: FLASH_STROBE_NOW - DIGITAL INPUT 1P8*/
+	flash_strobe_now {
+		pmi_mpp4_def: gpio {
+			pins = "mpp4";
+			function = "digital";
+			input-enable;
+			power-source = <PM8950_MPP_1P8>;
+		};
 	};
 };
 
 &pm8004_mpps {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pm8004_mpp3_def &pm8004_mpp4_def>;
+
+
 	/* MPP_1: pull-down to GND (PM8004_PON_SYNC) */
 	/* Follow QTI */
-
-	/* MPP_2: NC */
-	mpp@a100 {
-		qcom,master-en = <0>;		/* Disable */
-		status = "okay";
+	pm8004_pon_sync {
+		pm8004_mpp1_def: gpio {
+			pins = "mpp1";
+		};
 	};
 
-	/* MPP_3: DEBUG_GPIO_0 */
-	mpp@a200 {
-		qcom,invert = <0>;		/* Low */
-		qcom,mode = <1>;		/* DOUT */
-		qcom,vin-sel = <3>;		/* VDD_MSM_IO */
-		qcom,master-en = <1>;	/* Enable */
-		status = "okay";
+	/* MPP_2: NC - DISABLE*/
+	pm8004_nc {
+		pm8004_mpp2_def: gpio {
+			pins = "mpp2";
+		};
 	};
 
-	/* MPP_4: DEBUG_GPIO_1 */
-	mpp@a300 {
-		qcom,invert = <0>;		/* Low */
-		qcom,mode = <1>;		/* DOUT */
-		qcom,vin-sel = <3>;		/* VDD_MSM_IO */
-		qcom,master-en = <1>;	/* Enable */
-		status = "okay";
+	/* MPP_3: DEBUG_GPIO_0 - DOUT Low VDD_MSM_IO*/
+	pm8004_debug_gpio_0 {
+		pm8004_mpp3_def: gpio {
+			pins = "mpp3";
+			function = "digital";
+			output-low;
+			power-source = <PM8004_MPP_MSMIO>;
+		};
+	};
+
+	/* MPP_4: DEBUG_GPIO_1 - DOUT Low VDD_MSM_IO*/
+	pm8004_debug_gpio_0 {
+		pm8004_mpp4_def: gpio {
+			pins = "mpp3";
+			function = "digital";
+			output-low;
+			power-source = <PM8004_MPP_MSMIO>;
+		};
 	};
 };
 
@@ -915,7 +989,7 @@
 	};
 };
 
-&pmi8950_fg {
+&qpnp_fg {
 	qcom,battery-data = <&loire_batterydata>;
 	qcom,hot-bat-decidegc = <550>;
 	qcom,warm-bat-decidegc = <450>;
@@ -936,7 +1010,7 @@
 	qcom,fg-cc-cv-threshold-mv = <4290>;
 };
 
-&pmi8950_charger {
+&qpnp_smbcharger {
 	/delete-property/ qcom,parallel-usb-min-current-ma;
 	/delete-property/ qcom,parallel-usb-9v-min-current-ma;
 	qcom,charge-unknown-battery;
@@ -1209,7 +1283,7 @@
 };
 
 &spmi_bus {
-	qcom,pm8004@4 {
+	pm8004@4 {
 		qcom,leds@a100 {
 			status = "disabled";
 		};

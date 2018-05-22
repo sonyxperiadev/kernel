@@ -50,13 +50,13 @@
 	};
 };
 
-&pmi8950_fg {
+&qpnp_fg {
 	qcom,battery-data = <&loire_suzu_batterydata>;
 	qcom,cold-hot-jeita-hysteresis = <20 20>;
 	somc,cool-warm-jeita-hysteresis = <20 20>;
 };
 
-&pmi8950_charger {
+&qpnp_smbcharger {
 	qcom,fastchg-current-ma = <1850>;
 	somc,usb-9v-current-max = <1500>;
 	qcom,float-voltage-comp = <0x05>;
