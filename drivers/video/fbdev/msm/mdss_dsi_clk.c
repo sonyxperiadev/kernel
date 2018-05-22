@@ -12,7 +12,7 @@
  */
 
 #define pr_fmt(fmt) "mdss-dsi-clk:[%s] " fmt, __func__
-#include <linux/clk/msm-clk.h>
+#include <linux/clk/qcom.h>
 #include <linux/clk.h>
 #include <linux/list.h>
 
