@@ -51,8 +51,18 @@
 /* Max ASID width is 8-bit */
 #define MAX_ASID	0xff
 
-#define MMU_IAS 36
-#define MMU_OAS 36
+#define QCOM_IOMMU_V1_USE_AARCH64
+
+#ifdef QCOM_IOMMU_V1_USE_AARCH64
+ #define MMU_IAS 36
+ #define MMU_OAS 36
+ #define QCIOMMU_PGTABLE_OPS	ARM_64_LPAE_S1
+#else /* AArch32 LPAE */
+ #define MMU_IAS 32
+ #define MMU_OAS 40
+ #define QCIOMMU_PGTABLE_OPS	ARM_32_LPAE_S1
+#endif
+
 #define MMU_SEP (MMU_IAS - 1)
 
 struct msm_iommu_master {
@@ -498,6 +508,8 @@ static void msm_iommu_setup_pg_l2_redirect(void __iomem *base, unsigned int ctx)
 }
 #endif
 
+#ifdef QCOM_IOMMU_V1_USE_AARCH64
+
 #define SCM_SVC_SMMU_PROGRAM	0x15
 #define SMMU_USE_LPAE64_FMT	0X01
 static inline void __set_aarch64_format(
@@ -526,6 +538,7 @@ static inline void __set_aarch64_format(
 	/* If the IOMMU is not secure, program the register from kernel */
 	SET_CBA2R_VA64(iommu_drvdata->base, ctx_drvdata->num, 1);
 }
+#endif
 
 static void __program_context(struct msm_iommu_drvdata *iommu_drvdata,
 			      struct msm_iommu_ctx_drvdata *ctx_drvdata,
@@ -538,7 +551,9 @@ static void __program_context(struct msm_iommu_drvdata *iommu_drvdata,
 
 	priv->asid = ctx_drvdata->num;
 
+#ifdef QCOM_IOMMU_V1_USE_AARCH64
 	__set_aarch64_format(iommu_drvdata, ctx_drvdata);
+#endif
 
 	SET_TTBR0(iommu_drvdata->cb_base, ctx_drvdata->num,
 			priv->pgtbl_cfg.arm_lpae_s1_cfg.ttbr[0] |
@@ -548,11 +563,17 @@ static void __program_context(struct msm_iommu_drvdata *iommu_drvdata,
 			priv->pgtbl_cfg.arm_lpae_s1_cfg.ttbr[1] |
 			((u64)priv->asid << CB_TTBR1_ASID_SHIFT));
 
+#ifdef QCOM_IOMMU_V1_USE_AARCH64
 	SET_TTBCR(iommu_drvdata->cb_base, ctx_drvdata->num,
 			priv->pgtbl_cfg.arm_lpae_s1_cfg.tcr);
 
 	SET_TCR2(iommu_drvdata->cb_base, ctx_drvdata->num,
 			priv->pgtbl_cfg.arm_lpae_s1_cfg.tcr >> 32);
+#else /* AArch32 LPAE */
+	SET_CB_TCR2_SEP(iommu_drvdata->cb_base, ctx_drvdata->num,
+			priv->pgtbl_cfg.arm_lpae_s1_cfg.tcr >> 32);
+	SET_CB_TTBCR_EAE(iommu_drvdata->cb_base, ctx_drvdata->num, 1);
+#endif
 
 	SET_CB_MAIR0(iommu_drvdata->cb_base, ctx_drvdata->num,
 			priv->pgtbl_cfg.arm_lpae_s1_cfg.mair[0]);
@@ -564,9 +585,16 @@ static void __program_context(struct msm_iommu_drvdata *iommu_drvdata,
 	 * both these registers are separated by more than 1KB. */
 	mb();
 
+#ifdef QCOM_IOMMU_V1_USE_AARCH64
 	/* Disable stall unconditionally for AArch64 addressing */
 	SET_CB_SCTLR_CFCFG(cb_base, ctx, 0);
 	SET_CB_SCTLR_HUPCF(cb_base, ctx, 1);
+#else /* AArch32 LPAE */
+	if (priv->attributes & (1 << DOMAIN_ATTR_CB_STALL_DISABLE)) {
+		SET_CB_SCTLR_CFCFG(cb_base, ctx, 0);
+		SET_CB_SCTLR_HUPCF(cb_base, ctx, 1);
+	}
+#endif
 
 	SET_CB_SCTLR_CFIE(cb_base, ctx, 1);
 	SET_CB_SCTLR_CFRE(cb_base, ctx, 1);
@@ -678,7 +706,8 @@ static int msm_iommu_dynamic_attach(struct iommu_domain *domain, struct device *
 	domain->geometry.force_aperture = true;
 
 
-	pgtbl_ops = alloc_io_pgtable_ops(ARM_64_LPAE_S1, &priv->pgtbl_cfg, domain);
+	pgtbl_ops = alloc_io_pgtable_ops(QCIOMMU_PGTABLE_OPS,
+			&priv->pgtbl_cfg, domain);
 	if (!pgtbl_ops) {
 		pr_err("failed to allocate pagetable ops\n");
 		return -ENOMEM;
@@ -815,7 +844,8 @@ static int msm_iommu_attach_dev(struct iommu_domain *domain, struct device *dev)
 	};
 	domain->geometry.force_aperture = true;
 
-	pgtbl_ops = alloc_io_pgtable_ops(ARM_64_LPAE_S1, &priv->pgtbl_cfg, domain);
+	pgtbl_ops = alloc_io_pgtable_ops(QCIOMMU_PGTABLE_OPS,
+			&priv->pgtbl_cfg, domain);
 	if (!pgtbl_ops) {
 		pr_err("failed to allocate pagetable ops\n");
 		ret = -ENOMEM;
