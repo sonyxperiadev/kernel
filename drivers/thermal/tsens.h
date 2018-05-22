@@ -158,7 +158,7 @@ struct tsens_device {
 };
 
 extern const struct tsens_data data_tsens2xxx, data_tsens23xx, data_tsens24xx;
-extern const struct tsens_data data_tsens14xx;
+extern const struct tsens_data data_tsens14xx, data_tsens14xx_8976;
 extern struct list_head tsens_device_list;
 
 #endif /* __QCOM_TSENS_H__ */
