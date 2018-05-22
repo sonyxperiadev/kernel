@@ -25,6 +25,7 @@
 	model = "Qualcomm Technologies, Inc. MSM 8956";
 	compatible = "qcom,msm8956";
 	qcom,msm-id = <266 0x0>;
+	qcom,msm-name = "MSM8956";
 	interrupt-parent = <&intc>;
 
 	aliases {
