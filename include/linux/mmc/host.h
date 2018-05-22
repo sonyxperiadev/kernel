@@ -506,6 +506,8 @@ struct mmc_host {
 
 #define MMC_CAP2_BOOTPART_NOACC (1 << 0)        /* Boot partition no access */
 #define MMC_CAP2_FULL_PWR_CYCLE (1 << 2)        /* Can do full power cycle */
+#define MMC_CAP2_NONSTANDARD_OCR (1 << 3)	/* Non standard OCR for some SDIO cards */
+#define MMC_CAP2_NONSTANDARD_NONREMOVABLE (1 << 4) /* The card cannot be removed once plugged in */
 #define MMC_CAP2_HS200_1_8V_SDR (1 << 5)        /* can support */
 #define MMC_CAP2_HS200_1_2V_SDR (1 << 6)        /* can support */
 #define MMC_CAP2_HS200		(MMC_CAP2_HS200_1_8V_SDR | \
@@ -540,10 +542,6 @@ struct mmc_host {
 #define MMC_CAP2_SLEEP_AWAKE    (1 << 30)       /* Use Sleep/Awake (CMD5) */
 /* use max discard ignoring max_busy_timeout parameter */
 #define MMC_CAP2_MAX_DISCARD_SIZE       (1 << 31)
-/* Non standard OCR for some SDIO cards */
-#define MMC_CAP2_NONSTANDARD_OCR	(1 << 32)
-/* The card cannot be removed once plugged in */
-#define MMC_CAP2_NONSTANDARD_NONREMOVABLE (1 << 33)
 
 	mmc_pm_flag_t		pm_caps;	/* supported pm features */
 
