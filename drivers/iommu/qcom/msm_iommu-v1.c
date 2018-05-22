@@ -1595,7 +1595,6 @@ static bool msm_iommu_capable(enum iommu_cap cap)
 	}
 }
 
-#if 0
 static unsigned long msm_iommu_get_pgsize_bitmap(struct iommu_domain *domain)
 {
 	struct msm_iommu_priv *priv = to_msm_priv(domain);
@@ -1612,7 +1611,7 @@ static unsigned long msm_iommu_get_pgsize_bitmap(struct iommu_domain *domain)
 	 */
 	return priv->pgtbl_cfg.pgsize_bitmap;
 }
-#endif
+
 static struct iommu_ops msm_iommu_ops = {
 	.capable = msm_iommu_capable,
 	.domain_alloc = msm_iommu_domain_alloc,
@@ -1628,7 +1627,7 @@ static struct iommu_ops msm_iommu_ops = {
 	.remove_device = msm_iommu_remove_device,
 	.device_group = msm_iommu_device_group,
 	.pgsize_bitmap = (SZ_4K | SZ_64K | SZ_2M | SZ_32M | SZ_1G),
-	//.get_pgsize_bitmap = msm_iommu_get_pgsize_bitmap,
+	.get_pgsize_bitmap = msm_iommu_get_pgsize_bitmap,
 	.domain_set_attr = msm_iommu_domain_set_attr,
 	.domain_get_attr = msm_iommu_domain_get_attr,
 	.of_xlate = msm_iommu_of_xlate,
