@@ -4169,8 +4169,6 @@ static struct clk_hw *gcc_msm8976_hws[] = {
 	[GCC_CE1_AHB_M_CLK]	= &gcc_ce1_ahb_m_clk.hw,
 	[GCC_CE1_AXI_M_CLK]	= &gcc_ce1_axi_m_clk.hw,
 	[GCC_WCNSS_M_CLK]	= &wcnss_m_clk.hw,
-	[GCC_MDSS_MDP_VOTE_CLK]	= &gcc_mdss_mdp_vote_clk.hw,
-	[GCC_MDSS_MDP_ROTATOR_VOTE_CLK] = &gcc_mdss_mdp_rotator_vote_clk.hw,
 };
 
 static const struct qcom_reset_map gcc_msm8976_resets[] = {
@@ -4210,6 +4208,7 @@ static struct of_device_id msm_clock_gcc_match_table[] = {
 	{},
 };
 
+static struct platform_driver gcc_voters_8976_driver;
 static struct platform_driver gcc_mdss_8976_driver;
 static struct platform_driver gcc_gfx_8976_driver;
 
@@ -4293,6 +4292,7 @@ static int gcc_8976_probe(struct platform_device *pdev)
 	dev_info(&pdev->dev, "Registered GCC clocks\n");
 
 	ret = platform_driver_register(&gcc_mdss_8976_driver);
+	ret = platform_driver_register(&gcc_voters_8976_driver);
 	ret = platform_driver_register(&gcc_gfx_8976_driver);
 
 	return 0;
@@ -4303,6 +4303,65 @@ static struct platform_driver gcc_8976_driver = {
 	.driver = {
 		.name = "qcom,gcc-8976",
 		.of_match_table = msm_clock_gcc_match_table,
+	},
+};
+
+/* Voters */
+static struct clk_hw *gcc_voters_8976_hws[] = {
+	[GCC_MDSS_MDP_VOTE_CLK]	= &gcc_mdss_mdp_vote_clk.hw,
+	[GCC_MDSS_MDP_ROTATOR_VOTE_CLK] = &gcc_mdss_mdp_rotator_vote_clk.hw,
+};
+
+static struct of_device_id gcc_voters_8976_match_table[] = {
+	{ .compatible = "qcom,gcc-voters-8976" },
+	{ }
+};
+
+static int msm_gcc_8976_voters_probe(struct platform_device *pdev)
+{
+	int rc, i, num_clks;
+	struct clk *clk;
+	struct clk_onecell_data *onecell;
+
+	num_clks = ARRAY_SIZE(gcc_voters_8976_hws);
+
+	onecell = devm_kzalloc(&pdev->dev,
+			sizeof(struct clk_onecell_data), GFP_KERNEL);
+	if (!onecell)
+		return -ENOMEM;
+
+	onecell->clks = devm_kzalloc(&pdev->dev,
+			(num_clks * sizeof(struct clk*)), GFP_KERNEL);
+	if (!onecell->clks)
+		return -ENOMEM;
+
+	onecell->clk_num = num_clks;
+
+	for (i = 0; i < num_clks; i++) {
+		if (!gcc_voters_8976_hws[i])
+			continue;
+
+		clk = devm_clk_register(&pdev->dev, gcc_voters_8976_hws[i]);
+		if (IS_ERR(clk)) {
+			dev_err(&pdev->dev, "Cannot register clock no %d\n",i);
+			return PTR_ERR(clk);
+		}
+		onecell->clks[i] = clk;
+	}
+
+	rc = of_clk_add_provider(pdev->dev.of_node,
+			of_clk_src_onecell_get, onecell);
+	if (rc == 0)
+		dev_info(&pdev->dev, "Registered GCC Software Voters\n");
+
+	return rc;
+}
+
+static struct platform_driver gcc_voters_8976_driver = {
+	.probe = msm_gcc_8976_voters_probe,
+	.driver = {
+		.name = "gcc-voters-8976",
+		.of_match_table = gcc_voters_8976_match_table,
 	},
 };
 

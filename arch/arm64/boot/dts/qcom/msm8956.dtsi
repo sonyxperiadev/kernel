@@ -511,6 +511,13 @@
 		status = "ok";
 	};
 
+	clock_gcc_vote: vote-clock-controller@1800000 {
+		compatible = "qcom,gcc-voters-8976";
+		reg = <0x1800000 0x80000>;
+		#clock-cells = <1>;
+		status = "ok";
+	};
+
 	clock_gcc_mdss: mdss-clock-controller@1800000 {
 		compatible = "qcom,gcc-mdss-8976";
 		reg = <0x1800000 0x80000>;

@@ -110,7 +110,7 @@
 		clocks = <&clock_gcc GCC_MDSS_AHB_CLK>,
 			 <&clock_gcc GCC_MDSS_AXI_CLK>,
 			 <&clock_gcc MDP_CLK_SRC>,
-			 <&clock_gcc GCC_MDSS_MDP_VOTE_CLK>,
+			 <&clock_gcc_vote GCC_MDSS_MDP_VOTE_CLK>,
 			 <&clock_gcc GCC_MDSS_VSYNC_CLK>,
 			 <&clock_gcc GCC_MDP_TBU_CLK>,
 			 <&clock_gcc GCC_MDP_RT_TBU_CLK>;
@@ -236,7 +236,7 @@
 		      0x1a96b80 0x1a96b80 0x30
 		      0x193e000 0x193e000 0x30>;
 
-		clocks = <&clock_gcc GCC_MDSS_MDP_VOTE_CLK>,
+		clocks = <&clock_gcc_vote GCC_MDSS_MDP_VOTE_CLK>,
 			<&clock_gcc GCC_MDSS_AHB_CLK>,
 			<&clock_gcc GCC_MDSS_AXI_CLK>,
 			<&mdss_dsi0_pll HPM_BYTE0_SRC_CLK>,
@@ -398,7 +398,7 @@
 		qcom,supply-names = "rot-vdd";
 
 		clocks = <&clock_gcc GCC_MDSS_AHB_CLK>,
-			<&clock_gcc GCC_MDSS_MDP_ROTATOR_VOTE_CLK>;
+			<&clock_gcc_vote GCC_MDSS_MDP_ROTATOR_VOTE_CLK>;
 		clock-names = "iface_clk", "rot_core_clk";
 
 
