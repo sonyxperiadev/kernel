@@ -2288,8 +2288,10 @@
 		reg = <0x1de0000 0x4000>;
 
 		vdd-supply = <&gdsc_venus>;
-		qcom,proxy-reg-names = "vdd";
+		qcom,proxy-reg-names = "vdd", "vdd_cx";
 		qcom,mas-crypto = <&mas_crypto>;
+		vdd_cx-supply = <&pm8950_s2_level>;
+		qcom,vdd_cx-uV-uA = <RPM_SMD_REGULATOR_LEVEL_TURBO 100000>;
 
 		clocks = <&clock_gcc GCC_VENUS0_VCODEC0_CLK>,
 			 <&clock_gcc GCC_VENUS0_AHB_CLK>,
