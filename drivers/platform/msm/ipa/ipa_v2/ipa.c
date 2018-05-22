@@ -4489,8 +4489,10 @@ fail_bus_reg:
 fail_bind:
 	kfree(ipa_ctx->ctrl);
 fail_mem_ctrl:
+#ifdef CONFIG_IPC_LOGGING
 	ipc_log_context_destroy(ipa_ctx->logbuf);
 fail_logbuf:
+#endif
 	kfree(ipa_ctx);
 	ipa_ctx = NULL;
 fail_mem_ctx:
