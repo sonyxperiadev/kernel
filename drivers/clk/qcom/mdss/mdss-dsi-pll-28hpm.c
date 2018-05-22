@@ -22,6 +22,8 @@
 #include <linux/workqueue.h>
 #include <linux/iopoll.h>
 
+#include <dt-bindings/clock/mdss-pll-clk.h>
+
 #include "mdss-pll.h"
 #include "mdss-dsi-pll.h"
 #include "mdss-dsi-pll-28hpm.h"
