@@ -23,6 +23,8 @@
 #include "vdd-level-8996.h"
 #include <soc/qcom/kryo-l2-accessors.h>
 
+#include <dt-bindings/clock/qcom,cpu-8996.h>
+
 #define VCO(a, b, c) { \
 	.val = a,\
 	.min_freq = b,\
@@ -459,7 +461,7 @@ static const struct regmap_config cbf_msm8996_regmap_config = {
 };
 
 static const struct of_device_id match_table[] = {
-	{ .compatible = "qcom-msm8996-apcc" },
+	{ .compatible = "qcom,msm8996-apcc" },
 	{ .compatible = "qcom,cpu-clock-8996" },
 	{}
 };
@@ -1073,9 +1075,9 @@ static int qcom_cpu_clk_msm8996_driver_probe(struct platform_device *pdev)
 
 	qcom_cpu_clk_msm8996_acd_init();
 
-	data->hws[0] = &pwrcl_pmux.clkr.hw;
-	data->hws[1] = &perfcl_pmux.clkr.hw;
-	data->hws[2] = &cbf_mux.clkr.hw;
+	data->hws[P_PWRCL_MUX] = &pwrcl_pmux.clkr.hw;
+	data->hws[P_PERFCL_MUX] = &perfcl_pmux.clkr.hw;
+	data->hws[P_CBF_MUX] = &cbf_mux.clkr.hw;
 
 	data->num = 3;
 
