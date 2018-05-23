@@ -16,7 +16,11 @@
 #include <linux/platform_device.h>
 #include <linux/regmap.h>
 #include <linux/clk-provider.h>
+#include <linux/of.h>
+#include <linux/of_platform.h>
+#include <linux/pm_opp.h>
 #include "clk-alpha-pll.h"
+#include "vdd-level-8996.h"
 #include <soc/qcom/kryo-l2-accessors.h>
 
 #define VCO(a, b, c) { \
@@ -46,11 +50,25 @@ SSTPAPMSWEN=1
 */
 #define SSSCTL_VAL 0xF
 
+/* VREGS */
+static DEFINE_VDD_REGULATORS(vdd_dig, VDD_DIG_NUM, 1,
+				vdd_corner);
+DEFINE_VDD_REGS_INIT(vdd_pwrcl, 1);
+DEFINE_VDD_REGS_INIT(vdd_perfcl, 1);
+DEFINE_VDD_REGS_INIT(vdd_cbf, 1);
+
 enum {
 	APC_BASE,
 	CBF_BASE,
 	EFUSE_BASE,
 	NUM_BASES
+};
+
+enum {
+	PWRCL_MUX,
+	PERFCL_MUX,
+	CBF_MUX,
+	NUM_MAX_MUX
 };
 
 static void __iomem *vbases[NUM_BASES];
@@ -111,6 +129,7 @@ static struct clk_alpha_pll perfcl_pll = {
 		.parent_names = (const char *[]){ "xo" },
 		.num_parents = 1,
 		.ops = &clk_alpha_pll_huayra_ops,
+		VDD_DIG_FMAX_MAP1(LOW, 3000000000),
 	},
 };
 
@@ -123,6 +142,7 @@ static struct clk_alpha_pll pwrcl_pll = {
 		.parent_names = (const char *[]){ "xo" },
 		.num_parents = 1,
 		.ops = &clk_alpha_pll_huayra_ops,
+		VDD_DIG_FMAX_MAP1(LOW, 3000000000),
 	},
 };
 
@@ -312,14 +332,8 @@ static struct clk_cpu_8996_mux perfcl_smux = {
 	},
 };
 
-static struct clk_cpu_8996_mux pwrcl_pmux = {
-	.reg = PWRCL_REG_OFFSET + MUX_OFFSET,
-	.shift = 0,
-	.width = 2,
-	.pll = &pwrcl_pll.clkr.hw,
-	.pll_div_2 = &pwrcl_smux.clkr.hw,
-	.nb.notifier_call = cpu_clk_notifier_cb,
-	.clkr.hw.init = &(struct clk_init_data) {
+static struct clk_init_data cpu_8996_clk_init_data[NUM_MAX_MUX] = {
+	[PWRCL_MUX] = {
 		.name = "pwrcl_pmux",
 		.parent_names = (const char *[]){
 			"pwrcl_smux",
@@ -331,16 +345,7 @@ static struct clk_cpu_8996_mux pwrcl_pmux = {
 		.ops = &clk_cpu_8996_mux_ops,
 		.flags = CLK_SET_RATE_PARENT | CLK_IS_CRITICAL,
 	},
-};
-
-static struct clk_cpu_8996_mux perfcl_pmux = {
-	.reg = PERFCL_REG_OFFSET + MUX_OFFSET,
-	.shift = 0,
-	.width = 2,
-	.pll = &perfcl_pll.clkr.hw,
-	.pll_div_2 = &perfcl_smux.clkr.hw,
-	.nb.notifier_call = cpu_clk_notifier_cb,
-	.clkr.hw.init = &(struct clk_init_data) {
+	[PERFCL_MUX] = {
 		.name = "perfcl_pmux",
 		.parent_names = (const char *[]){
 			"perfcl_smux",
@@ -352,6 +357,37 @@ static struct clk_cpu_8996_mux perfcl_pmux = {
 		.ops = &clk_cpu_8996_mux_ops,
 		.flags = CLK_SET_RATE_PARENT | CLK_IS_CRITICAL,
 	},
+	[CBF_MUX] = {
+		.name = "cbf_mux",
+		.parent_names = (const char *[]){
+			"cbf_div_mux",
+			"cbf_pll",
+			"cbf_pll_acd",
+		},
+		.num_parents = 3,
+		.ops = &clk_cpu_8996_mux_ops,
+		.flags = CLK_SET_RATE_PARENT | CLK_IS_CRITICAL,
+	},
+};
+
+static struct clk_cpu_8996_mux pwrcl_pmux = {
+	.reg = PWRCL_REG_OFFSET + MUX_OFFSET,
+	.shift = 0,
+	.width = 2,
+	.pll = &pwrcl_pll.clkr.hw,
+	.pll_div_2 = &pwrcl_smux.clkr.hw,
+	.nb.notifier_call = cpu_clk_notifier_cb,
+	.clkr.hw.init = &cpu_8996_clk_init_data[PWRCL_MUX],
+};
+
+static struct clk_cpu_8996_mux perfcl_pmux = {
+	.reg = PERFCL_REG_OFFSET + MUX_OFFSET,
+	.shift = 0,
+	.width = 2,
+	.pll = &perfcl_pll.clkr.hw,
+	.pll_div_2 = &perfcl_smux.clkr.hw,
+	.nb.notifier_call = cpu_clk_notifier_cb,
+	.clkr.hw.init = &cpu_8996_clk_init_data[PERFCL_MUX],
 };
 
 
@@ -401,17 +437,7 @@ static struct clk_cpu_8996_mux cbf_mux = {
 	.pll = &cbf_pll.clkr.hw,
 	.pll_div_2 = &cbf_div_mux.clkr.hw,
 	.nb.notifier_call = cpu_clk_notifier_cb,
-	.clkr.hw.init = &(struct clk_init_data) {
-		.name = "cbf_mux",
-		.parent_names = (const char *[]){
-			"cbf_div_mux",
-			"cbf_pll",
-			"cbf_pll_acd",
-		},
-		.num_parents = 2,
-		.ops = &clk_cpu_8996_mux_ops,
-		.flags = CLK_SET_RATE_PARENT | CLK_IS_CRITICAL,
-	},
+	.clkr.hw.init = &cpu_8996_clk_init_data[CBF_MUX],
 };
 
 static const struct regmap_config cpu_msm8996_regmap_config = {
@@ -434,6 +460,7 @@ static const struct regmap_config cbf_msm8996_regmap_config = {
 
 static const struct of_device_id match_table[] = {
 	{ .compatible = "qcom-msm8996-apcc" },
+	{ .compatible = "qcom,cpu-clock-8996" },
 	{}
 };
 
@@ -599,6 +626,363 @@ static void qcom_cpu_clk_msm8996_acd_init(void)
 
 	spin_unlock_irqrestore(&acd_lock, flags);
 }
+
+static int of_get_fmax_vdd_class(struct platform_device *pdev,
+				 int mux_id, char *prop_name)
+{
+	struct device_node *of = pdev->dev.of_node;
+	int prop_len, i, j;
+	struct clk_vdd_class *vdd = NULL;
+	int nreg = 2;
+	u32 *array;
+
+	if (!of_find_property(of, prop_name, &prop_len)) {
+		dev_err(&pdev->dev, "missing %s\n", prop_name);
+		return -EINVAL;
+	}
+
+	prop_len /= sizeof(u32);
+	if (prop_len % nreg) {
+		dev_err(&pdev->dev, "bad length %d\n", prop_len);
+		return -EINVAL;
+	}
+
+	prop_len /= nreg;
+
+	vdd = cpu_8996_clk_init_data[mux_id].vdd_class;
+
+	vdd->level_votes = devm_kzalloc(&pdev->dev,
+				prop_len * sizeof(*vdd->level_votes),
+					GFP_KERNEL);
+	if (!vdd->level_votes) {
+		pr_err("Cannot allocate memory for level_votes\n");
+		return -ENOMEM;
+	}
+
+	vdd->vdd_uv = devm_kzalloc(&pdev->dev,
+		prop_len * sizeof(int) * (nreg - 1), GFP_KERNEL);
+	if (!vdd->vdd_uv) {
+		pr_err("Cannot allocate memory for vdd_uv\n");
+		return -ENOMEM;
+	}
+
+	cpu_8996_clk_init_data[mux_id].rate_max = devm_kzalloc(&pdev->dev,
+					prop_len * sizeof(unsigned long),
+					GFP_KERNEL);
+	if (!cpu_8996_clk_init_data[mux_id].rate_max) {
+		pr_err("Cannot allocate memory for rate_max\n");
+		return -ENOMEM;
+	}
+
+	array = devm_kzalloc(&pdev->dev,
+			prop_len * sizeof(u32) * nreg, GFP_KERNEL);
+	if (!array)
+		return -ENOMEM;
+
+	of_property_read_u32_array(of, prop_name, array, prop_len * nreg);
+	for (i = 0; i < prop_len; i++) {
+		cpu_8996_clk_init_data[mux_id].rate_max[i] = array[nreg * i];
+		for (j = 1; j < nreg; j++)
+			vdd->vdd_uv[(nreg - 1) * i + (j - 1)] =
+					array[nreg * i + j];
+	}
+
+	devm_kfree(&pdev->dev, array);
+	vdd->num_levels = prop_len;
+	vdd->cur_level = prop_len;
+	vdd->use_max_uV = true;
+	cpu_8996_clk_init_data[mux_id].num_rate_max = prop_len;
+
+	return 0;
+}
+
+static int find_vdd_level(struct clk_init_data *clk_data, unsigned long rate)
+{
+	int level;
+
+	for (level = 0; level < clk_data->num_rate_max; level++)
+		if (rate <= clk_data->rate_max[level])
+			break;
+
+	if (level == clk_data->num_rate_max) {
+		pr_err("Rate %lu for %s is greater than highest Fmax\n", rate,
+				clk_data->name);
+		return -EINVAL;
+	}
+
+	return level;
+}
+
+static int add_opp(struct clk_hw *hw, struct device *cpudev,
+			struct device *vregdev, unsigned long max_rate)
+{
+	struct clk_init_data *clk_data = NULL;
+	struct clk_vdd_class *voltspec = NULL;
+	unsigned long rate = 0;
+	long ret, uv;
+	int level, j = 1;
+
+	if (IS_ERR_OR_NULL(cpudev)) {
+		pr_err("%s: Invalid parameters\n", __func__);
+		return -EINVAL;
+	}
+
+	clk_data = (struct clk_init_data *)hw->init;
+	voltspec = clk_data->vdd_class;
+
+	while (1) {
+		rate = clk_data->rate_max[j++];
+		level = find_vdd_level(clk_data, rate);
+		if (level <= 0) {
+			pr_warn("clock-cpu: no corner for %lu.\n", rate);
+			return -EINVAL;
+		}
+
+		uv = voltspec->vdd_uv[level];
+		if (uv < 0) {
+			pr_warn("clock-cpu: no uv for %lu.\n", rate);
+			return -EINVAL;
+		}
+
+		ret = dev_pm_opp_add(cpudev, rate, uv);
+		if (ret) {
+			pr_warn("clock-cpu: failed to add OPP for %lu\n", rate);
+			return rate;
+		}
+
+		if (rate >= max_rate)
+			break;
+	}
+
+	return 0;
+}
+
+static void populate_opp_table(struct platform_device *pdev)
+{
+	struct platform_device *apc0_dev, *apc1_dev;
+	struct platform_device *cbf_dev;
+	struct device_node *apc0_node = NULL, *apc1_node = NULL;
+	struct device_node *cbf_node = NULL;
+	unsigned long apc0_fmax, apc1_fmax;
+	unsigned long cbf_fmax;
+	unsigned int apc0_rate_max = 0, apc1_rate_max = 0;
+	unsigned int cbf_rate_max = 0;
+	int cpu, pwr_cpu = 0, perf_cpu = 0;
+
+	apc0_node = of_parse_phandle(pdev->dev.of_node,
+					"vdd-pwrcl-supply", 0);
+	if (!apc0_node) {
+		pr_err("can't find the apc0 vreg dt node.\n");
+		return;
+	}
+
+	apc1_node = of_parse_phandle(pdev->dev.of_node,
+					"vdd-perfcl-supply", 0);
+	if (!apc1_node) {
+		pr_err("can't find the apc1 vreg dt node.\n");
+		return;
+	}
+
+	cbf_node = of_parse_phandle(pdev->dev.of_node,
+					"vdd-cbf-supply", 0);
+	if (!cbf_node) {
+		pr_err("can't find the cbf vreg dt node.\n");
+		return;
+	}
+
+	apc0_dev = of_find_device_by_node(apc0_node);
+	if (!apc0_dev) {
+		pr_err("can't find the apc0 vreg device node.\n");
+		return;
+	}
+
+	apc1_dev = of_find_device_by_node(apc1_node);
+	if (!apc1_dev) {
+		pr_err("can't find the apc1 vreg device node.\n");
+		return;
+	}
+
+	cbf_dev = of_find_device_by_node(apc1_node);
+	if (!cbf_dev) {
+		pr_err("can't find the cbf vreg device node.\n");
+		return;
+	}
+
+	apc0_rate_max = pwrcl_pmux.clkr.hw.init->num_rate_max - 1;
+	apc1_rate_max = perfcl_pmux.clkr.hw.init->num_rate_max - 1;
+	cbf_rate_max = cbf_mux.clkr.hw.init->num_rate_max - 1;
+	apc0_fmax = pwrcl_pmux.clkr.hw.init->rate_max[apc0_rate_max];
+	apc1_fmax = perfcl_pmux.clkr.hw.init->rate_max[apc1_rate_max];
+	cbf_fmax = cbf_mux.clkr.hw.init->rate_max[cbf_rate_max];
+
+	for_each_possible_cpu(cpu) {
+		if (cpu <= 1) {
+			pwr_cpu = cpu;
+			WARN(add_opp(&pwrcl_pmux.clkr.hw, get_cpu_device(cpu),
+				&apc0_dev->dev, apc0_fmax),
+				"Failed to add OPP levels for pwr cluster\n");
+		} else {
+			perf_cpu = cpu;
+			WARN(add_opp(&perfcl_pmux.clkr.hw, get_cpu_device(cpu),
+				&apc1_dev->dev, apc1_fmax),
+				"Failed to add OPP levels for perf cluster\n");
+		}
+	}
+
+	WARN(add_opp(&perfcl_pmux.clkr.hw, get_cpu_device(cpu),
+		&apc1_dev->dev, apc1_fmax),
+		"Failed to add OPP levels for CBF\n");
+
+	/* One time print during bootup */
+	pr_info("clock-cpu-8996: OPP tables populated (cpu 0-%d and %d-%d)\n",
+						pwr_cpu, pwr_cpu+1, perf_cpu);
+
+	//print_opp_table(pwr_cpu, perf_cpu);
+}
+
+static void get_efuse_speed_bin(struct platform_device *pdev, int *bin,
+								int *version)
+{
+	struct resource *res;
+	void __iomem *base;
+	u32 pte_efuse;
+
+	*bin = 0;
+	*version = 0;
+
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "efuse");
+	if (!res) {
+		dev_info(&pdev->dev,
+			 "No speed/PVS binning available. Defaulting to 0!\n");
+		return;
+	}
+
+	base = devm_ioremap(&pdev->dev, res->start, resource_size(res));
+	if (!base) {
+		dev_warn(&pdev->dev,
+			 "Unable to read efuse data. Defaulting to 0!\n");
+		return;
+	}
+
+	pte_efuse = readl_relaxed(base);
+	devm_iounmap(&pdev->dev, base);
+
+	*bin = (pte_efuse >> 29) & 0x7;
+
+	dev_info(&pdev->dev, "Speed bin: %d PVS Version: %d\n", *bin,
+								*version);
+}
+
+static int qcom_cpu_parse_speedbin(struct platform_device *pdev)
+{
+	char perfclspeedbinstr[] = "qcom,perfcl-speedbinXX-vXX";
+	char pwrclspeedbinstr[] = "qcom,pwrcl-speedbinXX-vXX";
+	char cbfspeedbinstr[] = "qcom,cbf-speedbinXX-vXX";
+	int ret, speed_bin, pvs_version;
+
+	get_efuse_speed_bin(pdev, &speed_bin, &pvs_version);
+	pvs_version = 0; // MSM8996 has only PVS 0
+
+	snprintf(perfclspeedbinstr, ARRAY_SIZE(perfclspeedbinstr),
+			"qcom,perfcl-speedbin%d-v%d", speed_bin, pvs_version);
+	ret = of_get_fmax_vdd_class(pdev, PERFCL_MUX, perfclspeedbinstr);
+	if (ret) {
+		dev_err(&pdev->dev, "Unable to load voltage plan %s!\n", 
+			perfclspeedbinstr);
+
+		ret = of_get_fmax_vdd_class(pdev, PERFCL_MUX,
+					    "qcom,perfcl-speedbin0-v0");
+		if (ret) {
+			dev_err(&pdev->dev,
+				"Unable to load safe voltage plan\n");
+			return ret;
+		}
+		dev_info(&pdev->dev, "Safe voltage plan loaded for perfcl.\n");
+	}
+
+	snprintf(pwrclspeedbinstr, ARRAY_SIZE(pwrclspeedbinstr),
+			"qcom,pwrcl-speedbin%d-v%d", speed_bin, pvs_version);
+	ret = of_get_fmax_vdd_class(pdev, PWRCL_MUX, pwrclspeedbinstr);
+	if (ret) {
+		dev_err(&pdev->dev, "Unable to load voltage plan %s!\n", 
+			pwrclspeedbinstr);
+
+		ret = of_get_fmax_vdd_class(pdev, PWRCL_MUX,
+					    "qcom,pwrcl-speedbin0-v0");
+		if (ret) {
+			dev_err(&pdev->dev,
+				"Unable to load safe voltage plan\n");
+			return ret;
+		}
+		dev_info(&pdev->dev, "Safe voltage plan loaded for pwrcl.\n");
+	}
+
+	snprintf(cbfspeedbinstr, ARRAY_SIZE(cbfspeedbinstr),
+			"qcom,cbf-speedbin%d-v%d", speed_bin, pvs_version);
+	ret = of_get_fmax_vdd_class(pdev, CBF_MUX, cbfspeedbinstr);
+	if (ret) {
+		dev_err(&pdev->dev, "Unable to load voltage plan %s!\n", 
+			cbfspeedbinstr);
+
+		ret = of_get_fmax_vdd_class(pdev, CBF_MUX,
+					    "qcom,cbf-speedbin0-v0");
+		if (ret) {
+			dev_err(&pdev->dev,
+				"Unable to load safe voltage plan\n");
+			return ret;
+		}
+		dev_info(&pdev->dev, "Safe voltage plan loaded for cbf.\n");
+	}
+
+	dev_info(&pdev->dev, "Voltage plans loaded.\n");
+
+	return ret;
+}
+
+static int cpu_parse_devicetree(struct platform_device *pdev)
+{
+	int rc = 0;
+
+	vdd_dig.regulator[0] = devm_regulator_get(&pdev->dev, "vdd-dig");
+	if (IS_ERR(vdd_dig.regulator[0])) {
+		if (PTR_ERR(vdd_dig.regulator[0]) != -EPROBE_DEFER)
+			dev_err(&pdev->dev, "Unable to get the CX regulator");
+		return PTR_ERR(vdd_dig.regulator[0]);
+	}
+
+	vdd_pwrcl.regulator[0] = devm_regulator_get(&pdev->dev, "vdd-pwrcl");
+	if (IS_ERR(vdd_pwrcl.regulator[0])) {
+		if (PTR_ERR(vdd_pwrcl.regulator[0]) != -EPROBE_DEFER)
+			dev_err(&pdev->dev, "Unable to get the pwrcl vreg\n");
+		return PTR_ERR(vdd_pwrcl.regulator[0]);
+	}
+	vdd_pwrcl.use_max_uV = true;
+	vdd_perfcl.regulator[0] = devm_regulator_get(&pdev->dev, "vdd-perfcl");
+	if (IS_ERR(vdd_perfcl.regulator[0])) {
+		if (PTR_ERR(vdd_perfcl.regulator[0]) != -EPROBE_DEFER)
+			dev_err(&pdev->dev, "Unable to get the perfcl vreg\n");
+		return PTR_ERR(vdd_perfcl.regulator[0]);
+	}
+	vdd_perfcl.use_max_uV = true;
+
+	/* Leakage constraints disallow a turbo vote during bootup */
+	vdd_perfcl.skip_handoff = true;
+
+	vdd_cbf.regulator[0] = devm_regulator_get(&pdev->dev, "vdd-cbf");
+	if (IS_ERR(vdd_cbf.regulator[0])) {
+		if (PTR_ERR(vdd_cbf.regulator[0]) != -EPROBE_DEFER)
+			dev_err(&pdev->dev, "Unable to get the cbf vreg\n");
+		return PTR_ERR(vdd_cbf.regulator[0]);
+	}
+	vdd_cbf.use_max_uV = true;
+
+	rc = qcom_cpu_parse_speedbin(pdev);
+	if (rc)
+		return rc;
+
+	return rc;
+}
+
 static int qcom_cpu_clk_msm8996_driver_probe(struct platform_device *pdev)
 {
 	int ret;
@@ -608,7 +992,38 @@ static int qcom_cpu_clk_msm8996_driver_probe(struct platform_device *pdev)
 	struct clk_hw_onecell_data *data;
 	struct device *dev = &pdev->dev;
 	struct device_node *node = dev->of_node;
+	struct clk *tmpclk = NULL;
 
+	/*
+	 * Require the CXO_A and APCS AUX clocks to be registered
+	 * prior to the CPU driver: we are using the AUX clock to
+	 * get a safe rate for all of our clocks!
+	 */
+	tmpclk = devm_clk_get(&pdev->dev, "xo_ao");
+	if (IS_ERR(tmpclk)) {
+		dev_err(&pdev->dev, "The XO_AO clock cannot be found.\n");
+
+		if (PTR_ERR(tmpclk) != -EPROBE_DEFER)
+			dev_err(&pdev->dev,
+				"Critical error %ld. Bailing out.\n",
+				PTR_ERR(tmpclk));
+
+		return PTR_ERR(tmpclk);
+	}
+
+	tmpclk = devm_clk_get(&pdev->dev, "aux_clk");
+	if (IS_ERR(tmpclk)) {
+		dev_err(&pdev->dev, "The AUX clock cannot be found.\n");
+
+		if (PTR_ERR(tmpclk) != -EPROBE_DEFER)
+			dev_err(&pdev->dev,
+				"Critical error %ld. Bailing out.\n",
+				PTR_ERR(tmpclk));
+
+		return PTR_ERR(tmpclk);
+	}
+
+	/* Parent clocks are available! Initialize the APCC! */
 	data = devm_kzalloc(dev, sizeof(*data) + 2 * sizeof(struct clk_hw *),
 			    GFP_KERNEL);
 	if (!data)
@@ -644,6 +1059,10 @@ static int qcom_cpu_clk_msm8996_driver_probe(struct platform_device *pdev)
 	cbf_div_mux.clkr.regmap = regmap_cbf;
 	cbf_mux.clkr.regmap = regmap_cbf;
 
+	ret = cpu_parse_devicetree(pdev);
+	if (ret)
+		return ret;
+
 	ret = qcom_cpu_clk_msm8996_register_clks(dev, hws, regmap_cpu);
 	if (ret)
 		return ret;
@@ -662,7 +1081,15 @@ static int qcom_cpu_clk_msm8996_driver_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, hws);
 
-	return of_clk_add_hw_provider(node, of_clk_hw_onecell_get, data);
+	ret = of_clk_add_hw_provider(node, of_clk_hw_onecell_get, data);
+	if (ret) {
+		dev_err(dev, "CRITICAL: Cannot add clock provider!\n");
+		return ret;
+	}
+
+	populate_opp_table(pdev);
+
+	return ret;
 }
 
 static int qcom_cpu_clk_msm8996_driver_remove(struct platform_device *pdev)
