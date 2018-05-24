@@ -164,8 +164,8 @@
 		qcom,clk-freq-out = <355000>;
 		qcom,clk-freq-in  = <19200000>;
 		clock-names = "iface_clk", "core_clk";
-		clocks = <&clock_gcc clk_gcc_blsp1_ahb_clk>,
-			<&clock_gcc clk_gcc_blsp1_qup3_i2c_apps_clk>;
+		clocks = <&clock_gcc GCC_BLSP1_AHB_CLK>,
+			<&clock_gcc GCC_BLSP1_QUP3_I2C_APPS_CLK>;
 		pinctrl-names = "i2c_active", "i2c_sleep";
 		pinctrl-0 = <&msm_gpio_47 &msm_gpio_48>;
 		pinctrl-1 = <&msm_gpio_47 &msm_gpio_48>;
@@ -206,7 +206,7 @@
 			nxp,ven = <&pm8994_gpios 7 0x01>;
 			qcom,clk-src = "BBCLK2";
 			qcom,clk-gpio = <&pm8994_gpios 10 0x00>;
-			clocks = <&clock_gcc clk_bb_clk2_pin>;
+			clocks = <&clock_rpmcc RPM_BB_CLK2_PIN>;
 			clock-names = "nfc_clk";
 			pinctrl-names = "pn547-active", "pn547-inactive";
 			pinctrl-0 = <&msm_gpio_9 &msm_gpio_12>;
@@ -230,8 +230,8 @@
 		qcom,clk-freq-out = <355000>;
 		qcom,clk-freq-in  = <19200000>;
 		clock-names = "iface_clk", "core_clk";
-		clocks = <&clock_gcc clk_gcc_blsp2_ahb_clk>,
-			 <&clock_gcc clk_gcc_blsp2_qup5_i2c_apps_clk>;
+		clocks = <&clock_gcc GCC_BLSP2_AHB_CLK>,
+			 <&clock_gcc GCC_BLSP2_QUP5_I2C_APPS_CLK>;
 		pinctrl-names = "i2c_active", "i2c_sleep";
 		pinctrl-0 = <&msm_gpio_60 &msm_gpio_61>;
 		pinctrl-1 = <&msm_gpio_60 &msm_gpio_61>;

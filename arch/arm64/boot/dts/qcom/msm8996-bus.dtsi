@@ -40,8 +40,8 @@
 			qcom,base-offset = <12288>;
 			qcom,enable-only-clk;
 			clock-names = "bus_clk", "bus_a_clk";
-			clocks = <&clock_gcc clk_gcc_aggre0_snoc_axi_clk>,
-			     <&clock_gcc clk_gcc_aggre0_snoc_axi_clk>;
+			clocks = <&clock_gcc GCC_AGGRE0_SNOC_AXI_CLK>,
+			     <&clock_gcc GCC_AGGRE0_SNOC_AXI_CLK>;
 			bus-gdsc-supply = <&gdsc_aggre0_noc>;
 			bus-a-gdsc-supply = <&gdsc_aggre0_noc>;
 
@@ -57,9 +57,9 @@
 				"aggre0-cnoc-ahb-no-rate",
 				"aggre0-noc-mpu-cfg-no-rate";
 				clocks =
-				<&clock_gcc clk_gcc_aggre0_snoc_axi_clk>,
-				<&clock_gcc clk_gcc_aggre0_cnoc_ahb_clk>,
-				<&clock_gcc clk_gcc_aggre0_noc_mpu_cfg_ahb_clk>;
+				<&clock_gcc GCC_AGGRE0_SNOC_AXI_CLK>,
+				<&clock_gcc GCC_AGGRE0_CNOC_AHB_CLK>,
+				<&clock_gcc GCC_AGGRE0_NOC_MPU_CFG_AHB_CLK>;
 			};
 		};
 
@@ -72,8 +72,8 @@
 			qcom,qos-off = <4096>;
 			qcom,base-offset = <8192>;
 			clock-names = "bus_clk", "bus_a_clk";
-			clocks = <&clock_gcc  clk_aggre1_noc_clk>,
-			     <&clock_gcc  clk_aggre1_noc_a_clk>;
+			clocks = <&clock_rpmcc RPM_AGGR1_NOC_CLK>,
+			     <&clock_rpmcc RPM_AGGR1_NOC_A_CLK>;
 			coresight-id = <205>;
 			coresight-name = "coresight-a1noc";
 			coresight-nr-inports = <0>;
@@ -91,8 +91,8 @@
 			qcom,qos-off = <4096>;
 			qcom,base-offset = <12288>;
 			clock-names = "bus_clk", "bus_a_clk";
-			clocks = <&clock_gcc  clk_aggre2_noc_clk>,
-			     <&clock_gcc  clk_aggre2_noc_a_clk>;
+			clocks = <&clock_rpmcc RPM_AGGR2_NOC_CLK>,
+			     <&clock_rpmcc RPM_AGGR2_NOC_A_CLK>;
 			coresight-id = <204>;
 			coresight-name = "coresight-a2noc";
 			coresight-nr-inports = <0>;
@@ -103,9 +103,9 @@
 				clock-names = "clk-aggre2-noc-clk-no-rate",
 				"clk-gcc-ufs-axi-clk",
 				"clk-aggre2-ufs-axi-clk-no-rate";
-				clocks = <&clock_gcc clk_aggre2_noc_clk>,
-				<&clock_gcc clk_gcc_ufs_axi_clk>,
-				<&clock_gcc clk_gcc_aggre2_ufs_axi_clk>;
+				clocks = <&clock_rpmcc RPM_AGGR2_NOC_CLK>,
+				<&clock_gcc GCC_UFS_AXI_CLK>,
+				<&clock_gcc GCC_AGGRE2_UFS_AXI_CLK>;
 			};
 		};
 
@@ -119,8 +119,8 @@
 			qcom,util-fact = <154>;
 			qcom,bus-type = <2>;
 			clock-names = "bus_clk", "bus_a_clk";
-			clocks = <&clock_gcc  clk_bimc_msmbus_clk>,
-			     <&clock_gcc  clk_bimc_msmbus_a_clk>;
+			clocks = <&clock_rpmcc BIMC_MSMBUS_CLK>,
+			     <&clock_rpmcc BIMC_MSMBUS_A_CLK>;
 			coresight-id = <203>;
 			coresight-name = "coresight-bimc";
 			coresight-nr-inports = <0>;
@@ -137,8 +137,8 @@
 			qcom,bypass-qos-prg;
 			qcom,bus-type = <1>;
 			clock-names = "bus_clk", "bus_a_clk";
-			clocks = <&clock_gcc clk_cnoc_msmbus_clk>,
-			     <&clock_gcc clk_cnoc_msmbus_a_clk>;
+			clocks = <&clock_rpmcc CNOC_MSMBUS_CLK>,
+			     <&clock_rpmcc CNOC_MSMBUS_A_CLK>;
 		};
 
 		fab_mnoc: fab-mnoc {
@@ -151,8 +151,8 @@
 			qcom,bus-type = <1>;
 			qcom,util-fact = <154>;
 			clock-names = "bus_clk", "bus_a_clk";
-			clocks = <&clock_gcc clk_mmssnoc_axi_clk>,
-				 <&clock_gcc clk_mmssnoc_axi_a_clk>;
+			clocks = <&clock_rpmcc MMSSNOC_AXI_CLK>,
+				 <&clock_rpmcc MMSSNOC_AXI_A_CLK>;
 			coresight-id = <202>;
 			coresight-name = "coresight-mnoc";
 			coresight-nr-inports = <0>;
@@ -175,14 +175,14 @@
 				"mmagic-camss-cfg-noc-ahb-no-rate",
 				"mmagic-video-axi-no-rate",
 				"mmagic-video-cfg-noc-ahb-no-rate";
-				clocks = <&clock_mmss clk_mmss_mmagic_ahb_clk>,
-			     <&clock_mmss clk_mmss_mmagic_cfg_ahb_clk>,
-			     <&clock_mmss clk_mmagic_mdss_axi_clk>,
-			     <&clock_mmss clk_mmagic_mdss_noc_cfg_ahb_clk>,
-			     <&clock_mmss clk_mmagic_camss_axi_clk>,
-			     <&clock_mmss clk_mmagic_camss_noc_cfg_ahb_clk>,
-			     <&clock_mmss clk_mmagic_video_axi_clk>,
-			     <&clock_mmss clk_mmagic_video_noc_cfg_ahb_clk>;
+				clocks = <&clock_mmss MMSS_MMAGIC_AHB_CLK>,
+			     <&clock_mmss MMSS_MMAGIC_CFG_AHB_CLK>,
+			     <&clock_mmss MMAGIC_MDSS_AXI_CLK>,
+			     <&clock_mmss MMAGIC_MDSS_NOC_CFG_AHB_CLK>,
+			     <&clock_mmss MMAGIC_CAMSS_AXI_CLK>,
+			     <&clock_mmss MMAGIC_CAMSS_NOC_CFG_AHB_CLK>,
+			     <&clock_mmss MMAGIC_VIDEO_AXI_CLK>,
+			     <&clock_mmss MMAGIC_VIDEO_NOC_CFG_AHB_CLK>;
 			};
 		};
 
@@ -195,8 +195,8 @@
 			qcom,setrate-only-clk;
 			qcom,bus-type = <1>;
 			clock-names = "bus_clk", "bus_a_clk";
-			clocks = <&clock_mmss clk_ahb_clk_src>,
-			     <&clock_mmss clk_ahb_clk_src>;
+			clocks = <&clock_mmss AHB_CLK_SRC>,
+			     <&clock_mmss AHB_CLK_SRC>;
 			bus-gdsc-supply = <&gdsc_mmagic_bimc>;
 			bus-a-gdsc-supply = <&gdsc_mmagic_bimc>;
 		};
@@ -209,8 +209,8 @@
 			qcom,bypass-qos-prg;
 			qcom,bus-type = <1>;
 			clock-names = "bus_clk", "bus_a_clk";
-			clocks = <&clock_gcc  clk_pnoc_msmbus_clk>,
-			     <&clock_gcc  clk_pnoc_msmbus_a_clk>;
+			clocks = <&clock_rpmcc PNOC_MSMBUS_CLK>,
+			     <&clock_rpmcc PNOC_MSMBUS_A_CLK>;
 			coresight-id = <201>;
 			coresight-name = "coresight-pnoc";
 			coresight-nr-inports = <0>;
@@ -228,8 +228,8 @@
 			qcom,qos-off = <4096>;
 			qcom,base-offset = <16384>;
 			clock-names = "bus_clk", "bus_a_clk";
-			clocks = <&clock_gcc  clk_snoc_msmbus_clk>,
-			     <&clock_gcc  clk_snoc_msmbus_a_clk>;
+			clocks = <&cclock_rpmcc SNOC_MSMBUS_CLK>,
+			     <&cclock_rpmcc SNOC_MSMBUS_A_CLK>;
 			coresight-id = <200>;
 			coresight-name = "coresight-snoc";
 			coresight-nr-inports = <0>;
@@ -845,7 +845,7 @@
 			qcom,slv-rpm-id = <ICBID_SLAVE_A0NOC_SNOC>;
 			qcom,enable-only-clk;
 			clock-names = "node_clk";
-			clocks = <&clock_gcc clk_gcc_aggre0_cnoc_ahb_clk>;
+			clocks = <&clock_gcc GCC_AGGRE0_CNOC_AHB_CLK>;
 		};
 
 		slv_a1noc_snoc: slv-a1noc-snoc {
@@ -1346,7 +1346,7 @@
 			qcom,slv-rpm-id = <ICBID_SLAVE_VMEM_CFG>;
 			qcom,enable-only-clk;
 			clock-names = "node_clk";
-			clocks = <&clock_mmss clk_mmss_mmagic_maxi_clk>;
+			clocks = <&clock_mmss MMSS_MMAGIC_MAXI_CLK>;
 			node-gdsc-supply = <&gdsc_mmagic_video>;
 		};
 
@@ -1511,7 +1511,7 @@
 			qcom,slv-rpm-id = <ICBID_SLAVE_MNOC_BIMC>;
 			qcom,enable-only-clk;
 			clock-names = "node_clk";
-			clocks = <&clock_gcc clk_mmssnoc_axi_clk>;
+			clocks = <&clock_rpmcc MMSSNOC_AXI_CLK>;
 		};
 
 		slv_vmem: slv-vmem {
@@ -1523,7 +1523,7 @@
 			qcom,bus-dev = <&fab_mnoc>;
 			qcom,slv-rpm-id = <ICBID_SLAVE_VMEM>;
 			clock-names = "node_clk";
-			clocks = <&clock_mmss clk_mmss_mmagic_maxi_clk>;
+			clocks = <&clock_mmss MMSS_MMAGIC_MAXI_CLK>;
 			node-gdsc-supply = <&gdsc_mmagic_video>;
 		};
 
@@ -1780,7 +1780,7 @@
 		qcom,spdm-client = <0>;
 
 		clock-names = "cci_clk";
-		clocks = <&clock_cpu clk_cbf_clk>;
+		clocks = <&clock_cpu P_CBF_MUX>;
 
 		qcom,bw-upstep = <1000>;
 		qcom,bw-dwnstep = <1000>;

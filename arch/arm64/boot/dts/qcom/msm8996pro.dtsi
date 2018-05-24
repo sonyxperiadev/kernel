@@ -919,7 +919,7 @@
 };
 
 &clock_cpu {
-	compatible = "qcom,cpu-clock-8996-pro";
+	compatible = "qcom,msm8996-apcc";
 	qcom,pwrcl-speedbin0-v0 =
 		<          0  0 >,
 		<  307200000  1 >,
@@ -1128,14 +1128,14 @@
 };
 
 &clock_mmss {
-	compatible = "qcom,mmsscc-8996-pro";
+	compatible = "qcom,mmcc-msm8996";
 	reg = <0x8c0000 0xb00c>,
 	      < 0x7013c 0x8 >;
 	reg-names = "cc_base", "efuse";
 };
 
 &clock_gpu {
-	compatible = "qcom,gpucc-8996-pro";
+	compatible = "qcom,gpucc-msm8996-pro";
 	qcom,gfxfreq-speedbin0 =
 		<	   0  0  0 >,
 		<  133000000  2  4 >,

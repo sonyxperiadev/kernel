@@ -631,8 +631,8 @@
 		atmel,ignore-crc;
 		/* Underlying clocks used by secure touch */
 		clock-names = "iface_clk", "core_clk";
-		clocks = <&clock_gcc clk_gcc_blsp2_ahb_clk>,
-			 <&clock_gcc clk_gcc_blsp2_qup6_i2c_apps_clk>;
+		clocks = <&clock_gcc GCC_BLSP2_AHB_CLK>,
+			 <&clock_gcc GCC_BLSP2_QUP6_I2C_APPS_CLK>;
 		atmel,cfg-name = "maxtouch_8996_liquid_cfg.raw";
 		atmel,cfg_1 {
 			atmel,version = <0x10>;

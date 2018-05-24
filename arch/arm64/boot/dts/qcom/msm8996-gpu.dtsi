@@ -96,17 +96,21 @@
 		qcom,gpmu-version = <1 0>;
 		qcom,zap-shader = "a530_zap";
 
-		clocks = <&clock_gpu clk_gpu_gx_gfx3d_clk>,
-			<&clock_gpu clk_gpu_ahb_clk>,
-			<&clock_gpu clk_gpu_gx_rbbmtimer_clk>,
-			<&clock_gcc clk_gcc_bimc_gfx_clk>,
-			<&clock_gcc clk_gcc_mmss_bimc_gfx_clk>,
-			<&clock_mmss clk_mmss_mmagic_ahb_clk>,
-			<&clock_gpu clk_gpu_mx_clk>;
+		clocks = <&clock_gpucc GPU_GX_GFX3D_CLK>,
+			<&clock_gpucc GPU_AHB_CLK>,
+			<&clock_gpucc GPU_GX_RBBMTIMER_CLK>,
+			<&clock_gcc GCC_BIMC_GFX_CLK>,
+			<&clock_gcc GCC_MMSS_BIMC_GFX_CLK>,
+			<&clock_mmss MMSS_MMAGIC_AHB_CLK>;
+			/*
+			 * This is a fake clock meant to manage the vdd_gpu_mx
+			 * vreg. For us, vdd_gpu_mx == vdd_mx == s2_corner!!
+			 */
+			//<&clock_mmss clk_gpu_mx_clk>;
 
 		clock-names = "core_clk", "iface_clk", "rbbmtimer_clk",
-			"mem_clk", "mem_iface_clk", "alt_mem_iface_clk",
-			"mx_clk";
+			"mem_clk", "mem_iface_clk", "alt_mem_iface_clk";
+			//"mx_clk";
 
 		/* Bus Scale Settings */
 		qcom,gpubw-dev = <&gpubw>;
@@ -235,11 +239,11 @@
 		qcom,protect = <0x40000 0x20000>;
 		qcom,micro-mmu-control = <0x6000>;
 
-		clocks = <&clock_mmss clk_mmss_mmagic_ahb_clk>,
-			<&clock_mmss clk_mmss_mmagic_cfg_ahb_clk>,
-			<&clock_gpu clk_gpu_ahb_clk>,
-			<&clock_gcc clk_gcc_mmss_bimc_gfx_clk>,
-			<&clock_gcc clk_gcc_bimc_gfx_clk>;
+		clocks = <&clock_mmss MMSS_MMAGIC_AHB_CLK>,
+			<&clock_mmss MMSS_MMAGIC_CFG_AHB_CLK>,
+			<&clock_mmss GPU_AHB_CLK>,
+			<&clock_gcc GCC_MMSS_BIMC_GFX_CLK>,
+			<&clock_gcc GCC_BIMC_GFX_CLK>;
 		clock-names = "mmagic_ahb_clk", "mmagic_cfg_ahb_clk", "gpu_ahb_clk",
 			"gcc_mmss_bimc_gfx_clk", "gcc_bimc_gfx_clk";
 
