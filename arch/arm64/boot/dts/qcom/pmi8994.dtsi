@@ -62,6 +62,36 @@
 			#gpio-cells = <2>;
 		};
 
+		pmi8994_vadc: vadc@3100 {
+			compatible = "qcom,qpnp-vadc";
+			reg = <0x3100 0x100>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			interrupts = <0x2 0x31 0x0 IRQ_TYPE_NONE>,
+					<0x2 0x31 0x3 IRQ_TYPE_NONE>,
+				     <0x2 0x31 0x4 IRQ_TYPE_NONE>;
+			interrupt-names =	"eoc-int-en-set",
+						"high-thr-en-set",
+						"low-thr-en-set";
+			qcom,adc-bit-resolution = <15>;
+			qcom,adc-vdd-reference = <1800>;
+			qcom,vadc-poll-eoc;
+			qcom,vadc-meas-int-mode;
+			qcom,pmic-revid = <&pmi8994_revid>;
+			#thermal-sensor-cells = <1>;
+
+			chan@d {
+				label = "chg_temp";
+				reg = <0xd>;
+				qcom,decimation = <0>;
+				qcom,pre-div-channel-scaling = <0>;
+				qcom,calibration-type = "absolute";
+				qcom,scale-function = <16>;
+				qcom,hw-settle-time = <0>;
+				qcom,fast-avg-setup = <0>;
+			};
+		};
+
 		qpnp_smbcharger: qcom,qpnp-smbcharger {
 			compatible = "qcom,qpnp-smbcharger";
 			#address-cells = <1>;
