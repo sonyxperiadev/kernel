@@ -3428,6 +3428,8 @@ static const struct qcom_cc_desc gcc_msm8996_desc = {
 
 static const struct of_device_id gcc_msm8996_match_table[] = {
 	{ .compatible = "qcom,gcc-msm8996" },
+	{ .compatible = "qcom,gcc-msm8996-v2" },
+	{ .compatible = "qcom,gcc-msm8996-v3" },
 	{ }
 };
 MODULE_DEVICE_TABLE(of, gcc_msm8996_match_table);
