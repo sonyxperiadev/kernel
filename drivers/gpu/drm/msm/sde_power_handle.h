@@ -306,6 +306,17 @@ struct clk *sde_power_clk_get_clk(struct sde_power_handle *phandle,
 		char *clock_name);
 
 /**
+ * sde_power_clk_set_flags() - set the clock flags
+ * @pdata:  power handle containing the resources
+ * @clock_name: clock name to get the clk pointer.
+ * @flags: flags to set
+ *
+ * Return: error code.
+ */
+int sde_power_clk_set_flags(struct sde_power_handle *pdata,
+		char *clock_name, unsigned long flags);
+
+/**
  * sde_power_data_bus_set_quota() - set data bus quota for power client
  * @phandle:  power handle containing the resources
  * @client: client information to set quota
