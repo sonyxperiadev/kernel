@@ -47,6 +47,8 @@ struct dsi_pll_vco_clk {
 
 int dsi_pll_clock_register_10nm(struct platform_device *pdev,
 				struct mdss_pll_resources *pll_res);
+int dsi_pll_clock_register_14nm(struct platform_device *pdev,
+				struct mdss_pll_resources *pll_res);
 int dsi_pll_clock_register_28hpm(struct platform_device *pdev,
 				struct mdss_pll_resources *pll_res);
 
