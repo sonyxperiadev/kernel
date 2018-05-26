@@ -2066,7 +2066,7 @@ static int arm_smmu_master_configure_smrs(struct arm_smmu_device *smmu,
 	for (i = 0; i < cfg->num_streamids; ++i) {
 		int idx = arm_smmu_alloc_smr_idx(smmu, 0,
 				smmu->num_mapping_groups, cfg->streamids[i]);
-		if (IS_ERR_VALUE(idx)) {
+		if (IS_ERR_VALUE((unsigned long)idx)) {
 			dev_err(smmu->dev, "failed to allocate free SMR\n");
 			goto err_free_smrs;
 		}
@@ -3048,7 +3048,7 @@ static int arm_smmu_init_pci_device(struct pci_dev *pdev,
 	if (cfg->num_streamids >= MAX_MASTER_STREAMIDS)
 		return -ENOSPC;
 
-	ret = msm_pcie_configure_sid(dev, &sid, &tmp);
+	ret = msm_pcie_configure_sid_legacy(dev, &sid, &tmp);
 	if (ret) {
 		dev_err(dev,
 			"Couldn't configure SID through PCI-e driver: %d\n",
@@ -3461,6 +3461,7 @@ static int arm_smmu_enable_s1_translations(struct arm_smmu_domain *smmu_domain)
 	return ret;
 }
 
+#if 0
 static int arm_smmu_dma_supported(struct iommu_domain *domain,
 				  struct device *dev, u64 mask)
 {
@@ -3481,6 +3482,7 @@ static int arm_smmu_dma_supported(struct iommu_domain *domain,
 	mutex_unlock(&smmu_domain->init_mutex);
 	return ret;
 }
+#endif
 
 static unsigned long arm_smmu_get_pgsize_bitmap(struct iommu_domain *domain)
 {
@@ -3517,7 +3519,7 @@ static struct iommu_ops arm_smmu_ops = {
 	.domain_set_attr	= arm_smmu_domain_set_attr,
 	.pgsize_bitmap		= -1UL, /* Restricted during device attach */
 	.get_pgsize_bitmap	= arm_smmu_get_pgsize_bitmap,
-	.dma_supported		= arm_smmu_dma_supported,
+	//.dma_supported		= arm_smmu_dma_supported,
 	.trigger_fault		= arm_smmu_trigger_fault,
 	.reg_read		= arm_smmu_reg_read,
 	.reg_write		= arm_smmu_reg_write,
