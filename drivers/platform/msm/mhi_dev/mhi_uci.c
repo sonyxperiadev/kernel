@@ -705,7 +705,7 @@ static ssize_t mhi_uci_client_read(struct file *file, char __user *ubuf,
 				"reading from mhi_core local_buf = %p",
 				local_buf);
 			uci_log(UCI_DBG_VERBOSE,
-					"buf_size = 0x%x bytes_read = 0x%x\n",
+					"buf_size = 0x%lx bytes_read = 0x%x\n",
 					 ureq.len, bytes_avail);
 
 			if (bytes_avail < 0) {
@@ -722,7 +722,7 @@ static ssize_t mhi_uci_client_read(struct file *file, char __user *ubuf,
 
 				*bytes_pending = (loff_t)uci_handle->pkt_size;
 				uci_log(UCI_DBG_VERBOSE,
-					"Got pkt of sz 0x%x at adr %p, ch %d\n",
+					"Got pkt of sz 0x%lx at adr %p, ch %d\n",
 					uci_handle->pkt_size,
 					ureq.buf, ureq.chan);
 			} else {
@@ -782,7 +782,7 @@ static ssize_t mhi_uci_client_read(struct file *file, char __user *ubuf,
 
 		bytes_copied = *bytes_pending;
 		*bytes_pending = 0;
-		uci_log(UCI_DBG_VERBOSE, "Copied 0x%x of 0x%x, chan %d\n",
+		uci_log(UCI_DBG_VERBOSE, "Copied 0x%lx of 0x%x, chan %d\n",
 				bytes_copied, (u32)*bytes_pending, ureq.chan);
 	} else {
 		addr_offset = uci_handle->pkt_size - *bytes_pending;
@@ -793,7 +793,7 @@ static ssize_t mhi_uci_client_read(struct file *file, char __user *ubuf,
 		}
 		bytes_copied = uspace_buf_size;
 		*bytes_pending -= uspace_buf_size;
-		uci_log(UCI_DBG_VERBOSE, "Copied 0x%x of 0x%x,chan %d\n",
+		uci_log(UCI_DBG_VERBOSE, "Copied 0x%lx of 0x%x,chan %d\n",
 				bytes_copied,
 				(u32)*bytes_pending,
 				ureq.chan);
@@ -807,7 +807,7 @@ static ssize_t mhi_uci_client_read(struct file *file, char __user *ubuf,
 		uci_handle->pkt_size = 0;
 	}
 	uci_log(UCI_DBG_VERBOSE,
-			"Returning 0x%x bytes, 0x%x bytes left\n",
+			"Returning 0x%lx bytes, 0x%x bytes left\n",
 			bytes_copied, (u32)*bytes_pending);
 	mutex_unlock(mutex);
 	return bytes_copied;
@@ -844,7 +844,7 @@ static ssize_t mhi_uci_client_write(struct file *file,
 				(void *)buf, count, 1);
 		if (ret_val < 0) {
 			uci_log(UCI_DBG_ERROR,
-				"Error while writing data to MHI, chan %d, buf %p, size %d\n",
+				"Error while writing data to MHI, chan %d, buf %p, size %ld\n",
 				chan, (void *)buf, count);
 			ret_val = -EIO;
 			break;
@@ -1060,14 +1060,14 @@ int mhi_uci_init(void)
 	r = alloc_chrdev_region(&uci_ctxt.start_ctrl_nr,
 			0, MHI_MAX_SOFTWARE_CHANNELS,
 			DEVICE_NAME);
-	if (IS_ERR_VALUE(r)) {
+	if (IS_ERR_VALUE((unsigned long)r)) {
 		uci_log(UCI_DBG_ERROR,
 				"Failed to alloc char devs, ret 0x%x\n", r);
 		goto failed_char_alloc;
 	}
 
 	r = alloc_chrdev_region(&uci_ctxt.ctrl_nr, 0, 1, DEVICE_NAME);
-	if (IS_ERR_VALUE(r)) {
+	if (IS_ERR_VALUE((unsigned long)r)) {
 		uci_log(UCI_DBG_ERROR,
 				"Failed to alloc char ctrl devs, 0x%x\n", r);
 		goto failed_char_alloc;
@@ -1092,7 +1092,7 @@ int mhi_uci_init(void)
 		uci_ctxt.cdev[i].owner = THIS_MODULE;
 		r = cdev_add(&uci_ctxt.cdev[i],
 				uci_ctxt.start_ctrl_nr + i, 1);
-		if (IS_ERR_VALUE(r)) {
+		if (IS_ERR_VALUE(unsigned long)(r)) {
 			uci_log(UCI_DBG_ERROR,
 				"Failed to add cdev %d, ret 0x%x\n",
 				i, r);
@@ -1122,7 +1122,7 @@ int mhi_uci_init(void)
 	cdev_init(uci_ctxt.cdev_ctrl, &mhi_uci_ctrl_client_fops);
 	uci_ctxt.cdev_ctrl->owner = THIS_MODULE;
 	r = cdev_add(uci_ctxt.cdev_ctrl, uci_ctxt.ctrl_nr, 1);
-	if (IS_ERR_VALUE(r)) {
+	if (IS_ERR_VALUE((unsigned long)r)) {
 		uci_log(UCI_DBG_ERROR,
 		"Failed to add ctrl cdev %d, ret 0x%x\n", i, r);
 		kfree(uci_ctxt.cdev_ctrl);

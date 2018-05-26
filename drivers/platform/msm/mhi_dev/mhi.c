@@ -122,7 +122,7 @@ void mhi_dev_read_from_host(struct mhi_dev *mhi, struct mhi_addr *transfer)
 	}
 
 	mhi_log(MHI_MSG_VERBOSE,
-		"device 0x%x <<-- host 0x%llx, size %d\n",
+		"device 0x%llx <<-- host 0x%llx, size %d\n",
 		transfer->phy_addr, host_addr_pa,
 		(int) transfer->size);
 	rc = ipa_dma_async_memcpy((u64)transfer->phy_addr, host_addr_pa,
@@ -188,7 +188,7 @@ void mhi_dev_write_to_host(struct mhi_dev *mhi, struct mhi_addr *transfer,
 }
 EXPORT_SYMBOL(mhi_dev_write_to_host);
 
-int mhi_transfer_host_to_device(void *dev, uint64_t host_pa, uint32_t len,
+int mhi_transfer_host_to_device(void *dev, uint64_t host_pa, size_t len,
 		struct mhi_dev *mhi, struct mhi_req *mreq)
 {
 	int rc = 0;
@@ -608,13 +608,13 @@ int mhi_dev_send_event(struct mhi_dev *mhi, int evnt_ring,
 	if (mhi->use_ipa)
 		transfer_addr.host_pa = (mhi->ev_ctx_shadow.host_pa +
 			sizeof(struct mhi_dev_ev_ctx) *
-			evnt_ring) + (uint32_t) &ring->ring_ctx->ev.rp -
-			(uint32_t) ring->ring_ctx;
+			evnt_ring) + (uint32_t*) &ring->ring_ctx->ev.rp -
+			(uint32_t*) ring->ring_ctx;
 	else
 		transfer_addr.device_va = (mhi->ev_ctx_shadow.device_va +
 			sizeof(struct mhi_dev_ev_ctx) *
-			evnt_ring) + (uint32_t) &ring->ring_ctx->ev.rp -
-			(uint32_t) ring->ring_ctx;
+			evnt_ring) + (uint32_t*) &ring->ring_ctx->ev.rp -
+			(uint32_t*) ring->ring_ctx;
 
 	transfer_addr.virt_addr = &ring->ring_ctx_shadow->ev.rp;
 	transfer_addr.size = sizeof(uint64_t);
@@ -748,13 +748,13 @@ static int mhi_dev_send_multiple_tr_events(struct mhi_dev *mhi, int evnt_ring,
 	if (mhi->use_ipa)
 		transfer_addr.host_pa = (mhi->ev_ctx_shadow.host_pa +
 		sizeof(struct mhi_dev_ev_ctx) *
-		evnt_ring) + (uint32_t)&ring->ring_ctx->ev.rp -
-		(uint32_t)ring->ring_ctx;
+		evnt_ring) + (uint32_t*)&ring->ring_ctx->ev.rp -
+		(uint32_t*)ring->ring_ctx;
 	else
 		transfer_addr.device_va = (mhi->ev_ctx_shadow.device_va +
 		sizeof(struct mhi_dev_ev_ctx) *
-		evnt_ring) + (uint32_t)&ring->ring_ctx->ev.rp -
-		(uint32_t)ring->ring_ctx;
+		evnt_ring) + (uint32_t*)&ring->ring_ctx->ev.rp -
+		(uint32_t*)ring->ring_ctx;
 
 	transfer_addr.virt_addr = &ring->ring_ctx_shadow->ev.rp;
 	transfer_addr.size = sizeof(uint64_t);
@@ -2025,6 +2025,7 @@ int mhi_dev_read_channel(struct mhi_req *mreq)
 	int td_done = 0, rc = 0;
 	struct mhi_dev_client *handle_client;
 
+
 	if (!mreq) {
 		mhi_log(MHI_MSG_ERROR, "invalid mhi request\n");
 		return -ENXIO;
@@ -2056,7 +2057,7 @@ int mhi_dev_read_channel(struct mhi_req *mreq)
 
 		if (ch->tre_loc) {
 			bytes_to_read = min(usr_buf_remaining,
-						ch->tre_bytes_left);
+						(size_t)ch->tre_bytes_left);
 			mreq->chain = 1;
 			mhi_log(MHI_MSG_VERBOSE,
 				"remaining buffered data size %d\n",
@@ -2082,24 +2083,26 @@ int mhi_dev_read_channel(struct mhi_req *mreq)
 			ch->tre_bytes_left = ch->tre_size;
 
 			mhi_log(MHI_MSG_VERBOSE,
-			"user_buf_remaining %d, ch->tre_size %d\n",
+			"user_buf_remaining %lx, ch->tre_size %u\n",
 			usr_buf_remaining, ch->tre_size);
-			bytes_to_read = min(usr_buf_remaining, ch->tre_size);
+			bytes_to_read = min(usr_buf_remaining, (size_t)ch->tre_size);
 		}
 
 		bytes_read += bytes_to_read;
 		addr_offset = ch->tre_size - ch->tre_bytes_left;
 		read_from_loc = ch->tre_loc + addr_offset;
-		write_to_loc = (uint32_t) mreq->buf +
+		write_to_loc = (size_t)mreq->buf +
 			(mreq->len - usr_buf_remaining);
 		ch->tre_bytes_left -= bytes_to_read;
 		mreq->el = el;
 		mreq->actual_len = bytes_read;
 		mreq->rd_offset = ring->rd_offset;
-		mhi_log(MHI_MSG_VERBOSE, "reading %d bytes from chan %d\n",
+		mhi_log(MHI_MSG_VERBOSE, "reading %lu bytes from chan %u\n",
 				bytes_to_read, mreq->chan);
-		rc = mhi_transfer_host_to_device((void *) write_to_loc,
-				read_from_loc, bytes_to_read, mhi_ctx, mreq);
+
+		rc = mhi_transfer_host_to_device((void*)((uint64_t)write_to_loc),
+				(uint64_t)read_from_loc, bytes_to_read,
+				mhi_ctx, mreq);
 		if (rc) {
 			mhi_log(MHI_MSG_ERROR,
 					"Error while reading chan (%d) rc %d\n",
@@ -2128,6 +2131,7 @@ int mhi_dev_read_channel(struct mhi_req *mreq)
 			bytes_read = -EIO;
 		}
 	}
+
 exit:
 	mutex_unlock(&ch->ch_lock);
 	return bytes_read;
@@ -2246,20 +2250,20 @@ int mhi_dev_write_channel(struct mhi_req *wreq)
 		el = &ring->ring_cache[ring->rd_offset];
 		tre_len = el->tre.len;
 		if (wreq->len > tre_len) {
-			pr_err("%s(): rlen = %d, tlen = %d: client buf > tre len\n",
+			pr_err("%s(): rlen = %lu, tlen = %u: client buf > tre len\n",
 					__func__, wreq->len, tre_len);
 			bytes_written = -ENOMEM;
 			goto exit;
 		}
 
-		bytes_to_write = min(usr_buf_remaining, tre_len);
+		bytes_to_write = min(usr_buf_remaining, (size_t)tre_len);
 		usr_buf_offset = wreq->len - bytes_to_write;
-		read_from_loc = (uint32_t) wreq->buf + usr_buf_offset;
+		read_from_loc = (size_t)wreq->buf + usr_buf_offset;
 		write_to_loc = el->tre.data_buf_ptr;
 		wreq->rd_offset = ring->rd_offset;
 		wreq->el = el;
 		rc = mhi_transfer_device_to_host(write_to_loc,
-						(void *) read_from_loc,
+						(void *) ((uint64_t)read_from_loc),
 						bytes_to_write,
 						mhi_ctx, wreq);
 		if (rc) {

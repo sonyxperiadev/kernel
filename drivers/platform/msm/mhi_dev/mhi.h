@@ -871,7 +871,7 @@ int mhi_transfer_device_to_host(uint64_t dst_pa, void *src, uint32_t len,
  * @mhi:	MHI dev structure.
  * @req:        mhi_req structure
  */
-int mhi_transfer_host_to_device(void *device, uint64_t src_pa, uint32_t len,
+int mhi_transfer_host_to_device(void *device, uint64_t src_pa, size_t len,
 				struct mhi_dev *mhi, struct mhi_req *mreq);
 
 /**
