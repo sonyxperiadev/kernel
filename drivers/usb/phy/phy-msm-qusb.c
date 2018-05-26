@@ -177,9 +177,16 @@ static void qusb_phy_enable_clocks(struct qusb_phy *qphy, bool on)
 
 	if (!qphy->clocks_enabled && on) {
 		clk_prepare_enable(qphy->ref_clk_src);
-		clk_prepare_enable(qphy->ref_clk);
-		clk_prepare_enable(qphy->iface_clk);
-		clk_prepare_enable(qphy->core_clk);
+
+		if (!IS_ERR_OR_NULL(qphy->ref_clk))
+			clk_prepare_enable(qphy->ref_clk);
+
+		if (!IS_ERR_OR_NULL(qphy->iface_clk))
+			clk_prepare_enable(qphy->iface_clk);
+
+		if (!IS_ERR_OR_NULL(qphy->core_clk))
+			clk_prepare_enable(qphy->core_clk);
+
 		clk_prepare_enable(qphy->cfg_ahb_clk);
 		qphy->clocks_enabled = true;
 	}
@@ -190,9 +197,15 @@ static void qusb_phy_enable_clocks(struct qusb_phy *qphy, bool on)
 		 * FSM depedency beween iface_clk and core_clk.
 		 * Hence turned off core_clk before iface_clk.
 		 */
-		clk_disable_unprepare(qphy->core_clk);
-		clk_disable_unprepare(qphy->iface_clk);
-		clk_disable_unprepare(qphy->ref_clk);
+		if (!IS_ERR_OR_NULL(qphy->core_clk))
+			clk_disable_unprepare(qphy->core_clk);
+
+		if (!IS_ERR_OR_NULL(qphy->iface_clk))
+			clk_disable_unprepare(qphy->iface_clk);
+
+		if (!IS_ERR_OR_NULL(qphy->ref_clk))
+			clk_disable_unprepare(qphy->ref_clk);
+
 		clk_disable_unprepare(qphy->ref_clk_src);
 		qphy->clocks_enabled = false;
 	}
