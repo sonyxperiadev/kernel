@@ -3104,7 +3104,9 @@ int sde_rotator_core_init(struct sde_rot_mgr **pmgr,
 	SDEROT_DBG("mdss revision %x\n", mdata->mdss_version);
 
 	if (IS_SDE_MAJOR_MINOR_SAME(mdata->mdss_version,
-			SDE_MDP_HW_REV_107)) {
+			SDE_MDP_HW_REV_107) ||
+	    IS_SDE_MAJOR_MINOR_SAME(mdata->mdss_version,
+			SDE_MDP_HW_REV_172)) {
 		mgr->ops_hw_init = sde_rotator_r1_init;
 	} else if (IS_SDE_MAJOR_MINOR_SAME(mdata->mdss_version,
 			SDE_MDP_HW_REV_300) ||

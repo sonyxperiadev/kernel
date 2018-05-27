@@ -37,6 +37,7 @@
 	  ((step)  & 0xFFFF))
 
 #define SDE_MDP_HW_REV_107	SDE_MDP_REV(1, 0, 7)	/* 8996 v1.0 */
+#define SDE_MDP_HW_REV_172	SDE_MDP_REV(1, 7, 2)	/* 8996 v3   */
 #define SDE_MDP_HW_REV_300	SDE_MDP_REV(3, 0, 0)	/* 8998 v1.0 */
 #define SDE_MDP_HW_REV_301	SDE_MDP_REV(3, 0, 1)	/* 8998 v1.1 */
 #define SDE_MDP_HW_REV_400	SDE_MDP_REV(4, 0, 0)	/* sdm845 v1.0 */
