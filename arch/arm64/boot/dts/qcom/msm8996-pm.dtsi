@@ -133,9 +133,11 @@
 					#size-cells = <0>;
 					qcom,psci-mode-shift = <0>;
 					qcom,psci-mode-mask = <0xf>;
+					qcom,cpu = <&CPU0 &CPU1>;
 
 					qcom,pm-cpu-level@0 { /* C1 */
 						reg = <0>;
+						label = "wfi";
 						qcom,psci-cpu-mode = <1>;
 						qcom,spm-cpu-mode = "wfi";
 						qcom,latency-us = <20>;
@@ -146,6 +148,7 @@
 
 					qcom,pm-cpu-level@1 {  /* C4 */
 						reg = <1>;
+						label = "fpc-def";
 						qcom,spm-cpu-mode = "fpc-def";
 						qcom,psci-cpu-mode = <4>;
 						qcom,latency-us = <40>;
@@ -157,6 +160,7 @@
 
 					qcom,pm-cpu-level@2 {  /* C4 */
 						reg = <2>;
+						label = "fpc";
 						qcom,spm-cpu-mode = "fpc";
 						qcom,psci-cpu-mode = <4>;
 						qcom,latency-us = <80>;
@@ -222,9 +226,11 @@
 					#size-cells = <0>;
 					qcom,psci-mode-shift = <0>;
 					qcom,psci-mode-mask = <0xf>;
+					qcom,cpu = <&CPU2 &CPU3>;
 
 					qcom,pm-cpu-level@0 { /* C1 */
 						reg = <0>;
+						label = "wfi";
 						qcom,psci-cpu-mode = <1>;
 						qcom,spm-cpu-mode = "wfi";
 						qcom,latency-us = <25>;
@@ -235,6 +241,7 @@
 
 					qcom,pm-cpu-level@1 {  /* C4 */
 						reg = <1>;
+						label = "fpc-def";
 						qcom,spm-cpu-mode = "fpc-def";
 						qcom,psci-cpu-mode = <4>;
 						qcom,latency-us = <40>;
@@ -246,6 +253,7 @@
 
 					qcom,pm-cpu-level@2 {  /* C4 */
 						reg = <2>;
+						label = "fpc";
 						qcom,spm-cpu-mode = "fpc";
 						qcom,psci-cpu-mode = <4>;
 						qcom,latency-us = <80>;
