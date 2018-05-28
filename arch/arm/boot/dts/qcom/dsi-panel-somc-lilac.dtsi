@@ -87,7 +87,7 @@
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
-		qcom,mdss-brightness-max-level = <4095>;
+		qcom,mdss-brightness-max-level = <255>;
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 
 		qcom,mdss-dsi-panel-hdr-enabled;
@@ -226,7 +226,7 @@
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
-		qcom,mdss-brightness-max-level = <4095>;
+		qcom,mdss-brightness-max-level = <255>;
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 
 		qcom,mdss-dsi-panel-hdr-enabled;
@@ -370,7 +370,7 @@
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
-		qcom,mdss-brightness-max-level = <4095>;
+		qcom,mdss-brightness-max-level = <255>;
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 
 		qcom,mdss-dsi-panel-hdr-enabled;
