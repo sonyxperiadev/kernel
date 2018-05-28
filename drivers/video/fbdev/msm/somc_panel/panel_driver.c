@@ -3474,7 +3474,9 @@ int mdss_dsi_panel_init(struct device_node *node,
 
 	pr_debug("%s:%d, debug info", __func__, __LINE__);
 
+#ifdef CONFIG_SOMC_PANEL_LEGACY
 	spec_pdata->disp_on_in_boot = display_on_in_boot;
+#endif
 
 	dsi_ctrl_np = of_parse_phandle(node,
 		"qcom,mdss-dsi-panel-controller", 0);
@@ -3514,8 +3516,10 @@ int mdss_dsi_panel_init(struct device_node *node,
 				__func__, spec_pdata->vsn_gpio);
 	}
 
+#ifdef CONFIG_SOMC_PANEL_LEGACY
 	if ((!spec_pdata->disp_on_in_boot) || (!index))
 		mdss_dsi_pinctrl_set_state(ctrl_pdata, true);
+#endif
 
 	alt_panelid_cmd = of_property_read_bool(node,
 						"somc,alt-panelid-cmd");
@@ -3537,8 +3541,10 @@ int mdss_dsi_panel_init(struct device_node *node,
 		return rc;
 	}
 
+#ifdef CONFIG_SOMC_PANEL_LEGACY
 	if (!spec_pdata->disp_on_in_boot)
 		mdss_dsi_pinctrl_set_state(ctrl_pdata, false);
+#endif
 
 	rc = mdss_panel_parse_dt(node, ctrl_pdata);
 	if (rc) {
@@ -3552,6 +3558,7 @@ int mdss_dsi_panel_init(struct device_node *node,
 			panel_polling_init(ctrl_pdata);
 	}
 
+#ifdef CONFIG_SOMC_PANEL_LEGACY
 	cont_splash_enabled = spec_pdata->disp_on_in_boot;
 
 	if (!cont_splash_enabled) {
@@ -3576,6 +3583,7 @@ int mdss_dsi_panel_init(struct device_node *node,
 			}
 		}
 	}
+#endif
 
 	//mdss_dsi_set_prim_panel(ctrl_pdata);
 	pinfo->dynamic_switch_pending = false;
