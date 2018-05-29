@@ -151,11 +151,6 @@ int somc_panel_vregs_dt(struct device_node *np,
 #define somc_panel_vregs_dt(x, y) 0
 #endif
 
-#ifdef CONFIG_SOMC_PANEL_LEGACY
-/* Legacy */
-int legacy_panel_driver_init(struct mdss_dsi_ctrl_pdata *ctrl_pdata);
-#endif
-
 #ifdef CONFIG_SOMC_PANEL_INCELL
 /* Incell */
 int  incell_panel_driver_init(struct mdss_dsi_ctrl_pdata *ctrl_pdata);
