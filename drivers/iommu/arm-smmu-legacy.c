@@ -1865,8 +1865,13 @@ static int arm_smmu_init_domain_context(struct iommu_domain *domain,
 
 	smmu_domain->smmu = smmu;
 
+	if (smmu_domain->attributes & (1 << DOMAIN_ATTR_USE_UPSTREAM_HINT))
+		quirks |= IO_PGTABLE_QUIRK_QCOM_USE_UPSTREAM_HINT;
 	if (is_iommu_pt_coherent(smmu_domain))
 		quirks |= IO_PGTABLE_QUIRK_PAGE_TABLE_COHERENT;
+
+	if (is_fast)
+		fmt = ARM_V8L_FAST;
 
 	if (arm_smmu_is_slave_side_secure(smmu_domain)) {
 		smmu_domain->pgtbl_cfg = (struct io_pgtable_cfg) {
@@ -1893,9 +1898,6 @@ static int arm_smmu_init_domain_context(struct iommu_domain *domain,
 			.iova_end	= domain->geometry.aperture_end,
 		};
 	}
-
-	if (is_fast)
-		fmt = ARM_V8L_FAST;
 
 	cfg->asid = cfg->cbndx + 1;
 	cfg->vmid = cfg->cbndx + 2;
@@ -3211,6 +3213,16 @@ static int arm_smmu_domain_get_attr(struct iommu_domain *domain,
 		ret = 0;
 		break;
 	}
+	case DOMAIN_ATTR_UPSTREAM_IOVA_ALLOCATOR:
+		*((int *)data) = !!(smmu_domain->attributes
+			& (1 << DOMAIN_ATTR_UPSTREAM_IOVA_ALLOCATOR));
+		ret = 0;
+		break;
+	case DOMAIN_ATTR_USE_UPSTREAM_HINT:
+		*((int *)data) = !!(smmu_domain->attributes &
+				   (1 << DOMAIN_ATTR_USE_UPSTREAM_HINT));
+		ret = 0;
+		break;
 	case DOMAIN_ATTR_EARLY_MAP:
 		*((int *)data) = !!(smmu_domain->attributes
 				    & (1 << DOMAIN_ATTR_EARLY_MAP));
@@ -3337,9 +3349,37 @@ static int arm_smmu_domain_set_attr(struct iommu_domain *domain,
 		ret = 0;
 		break;
 	}
+	/*
+	 * fast_smmu_unmap_page() and fast_smmu_alloc_iova() both
+	 * expect that the bus/clock/regulator are already on. Thus also
+	 * force DOMAIN_ATTR_ATOMIC to bet set.
+	 */
 	case DOMAIN_ATTR_FAST:
-		if (*((int *)data))
+	{
+		int fast = *((int *)data);
+
+		if (fast) {
 			smmu_domain->attributes |= 1 << DOMAIN_ATTR_FAST;
+			smmu_domain->attributes |= 1 << DOMAIN_ATTR_ATOMIC;
+		}
+		ret = 0;
+		break;
+	}
+	case DOMAIN_ATTR_UPSTREAM_IOVA_ALLOCATOR:
+		if (*((int *)data))
+			smmu_domain->attributes |=
+				1 << DOMAIN_ATTR_UPSTREAM_IOVA_ALLOCATOR;
+		ret = 0;
+		break;
+	case DOMAIN_ATTR_USE_UPSTREAM_HINT:
+		/* can't be changed while attached */
+		if (smmu_domain->smmu != NULL) {
+			ret = -EBUSY;
+			break;
+		}
+		if (*((int *)data))
+			smmu_domain->attributes |=
+				1 << DOMAIN_ATTR_USE_UPSTREAM_HINT;
 		ret = 0;
 		break;
 	case DOMAIN_ATTR_EARLY_MAP: {
