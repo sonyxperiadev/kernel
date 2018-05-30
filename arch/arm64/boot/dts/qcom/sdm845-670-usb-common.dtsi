@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -36,6 +36,7 @@
 		qcom,dwc-usb3-msm-tx-fifo-size = <21288>;
 		qcom,num-gsi-evt-buffs = <0x3>;
 		qcom,use-pdc-interrupts;
+		qcom,pm-qos-latency = <44>;
 		extcon = <0>, <0>, <&eud>, <0>, <0>;
 
 		clocks = <&clock_gcc GCC_USB30_PRIM_MASTER_CLK>,
