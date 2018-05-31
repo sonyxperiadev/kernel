@@ -425,6 +425,12 @@ static void __cpuhp_kick_ap_work(struct cpuhp_cpu_state *st);
 
 static void __cpuhp_kick_ap_work(struct cpuhp_cpu_state *st);
 
+static int notify_starting(unsigned int cpu)
+{
+	cpu_notify(CPU_STARTING, cpu);
+	return 0;
+}
+
 static int bringup_wait_for_ap(unsigned int cpu)
 {
 	struct cpuhp_cpu_state *st = per_cpu_ptr(&cpuhp_state, cpu);
@@ -790,6 +796,12 @@ static int notify_down_prepare(unsigned int cpu)
 	return err;
 }
 
+static int notify_dying(unsigned int cpu)
+{
+	cpu_notify(CPU_DYING, cpu);
+	return 0;
+}
+
 /* Take this CPU down. */
 static int take_cpu_down(void *_param)
 {
@@ -848,7 +860,7 @@ static int takedown_cpu(unsigned int cpu)
 	BUG_ON(cpu_online(cpu));
 
 	/*
-	 * The CPUHP_AP_SCHED_MIGRATE_DYING callback will have removed all
+	 * The migration_call() CPU_DYING callback will have removed all
 	 * runnable tasks from the cpu, there's only the idle task left now
 	 * that the migration thread is done doing the stop_machine thing.
 	 *
@@ -901,6 +913,7 @@ void cpuhp_report_idle_dead(void)
 #define notify_down_prepare	NULL
 #define takedown_cpu		NULL
 #define notify_dead		NULL
+#define notify_dying		NULL
 #endif
 
 #ifdef CONFIG_HOTPLUG_CPU
@@ -997,9 +1010,10 @@ EXPORT_SYMBOL(cpu_down);
 #endif /*CONFIG_HOTPLUG_CPU*/
 
 /**
- * notify_cpu_starting(cpu) - Invoke the callbacks on the starting CPU
+ * notify_cpu_starting(cpu) - call the CPU_STARTING notifiers
  * @cpu: cpu that just started
  *
+ * This function calls the cpu_chain notifiers with CPU_STARTING.
  * It must be called by the arch code on the new cpu, before the new cpu
  * enables interrupts and before the "boot" cpu returns from __cpu_up().
  */
@@ -1451,6 +1465,18 @@ static struct cpuhp_step cpuhp_ap_states[] = {
 		.name			= "smpcfd:dying",
 		.startup.single		= NULL,
 		.teardown.single	= smpcfd_dying_cpu,
+	},
+	/*
+	 * Low level startup.single/teardown notifiers. Run with interrupts
+	 * disabled. Will be removed once the notifiers are converted to
+	 * states.
+	 */
+	[CPUHP_AP_NOTIFY_STARTING] = {
+		.name			= "notify:starting",
+		.startup.single		= notify_starting,
+		.teardown.single		= notify_dying,
+		.skip_onerr		= true,
+		.cant_stop		= true,
 	},
 	/* Entry state on starting. Interrupts enabled from here on. Transient
 	 * state for synchronsization */
