@@ -941,7 +941,7 @@ static int fast_smmu_errata_init(struct dma_iommu_mapping *mapping)
 int fast_smmu_init_mapping(struct device *dev,
 			    struct dma_iommu_mapping *mapping)
 {
-	int err;
+	int err = 0;
 	struct iommu_domain *domain = mapping->domain;
 	struct iommu_pgtbl_info info;
 	u64 size = (u64)mapping->bits << PAGE_SHIFT;

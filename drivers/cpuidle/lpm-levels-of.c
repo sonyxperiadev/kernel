@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -178,8 +178,8 @@ static ssize_t lpm_latency_show(struct kobject *kobj,
 	struct kernel_param kp;
 	struct lpm_level_avail *avail = get_avail_ptr(kobj, attr);
 
-	if (!avail)
-		pr_info("Error\n");
+	if (WARN_ON(!avail))
+		return -EINVAL;
 
 	kp.arg = &avail->latency_us;
 
@@ -197,8 +197,15 @@ ssize_t lpm_enable_show(struct kobject *kobj, struct kobj_attribute *attr,
 {
 	int ret = 0;
 	struct kernel_param kp;
+	struct lpm_level_avail *avail = get_avail_ptr(kobj, attr);
 
-	kp.arg = get_enabled_ptr(attr, get_avail_ptr(kobj, attr));
+	if (WARN_ON(!avail))
+		return -EINVAL;
+
+	kp.arg = get_enabled_ptr(attr, avail);
+	if (WARN_ON(!kp.arg))
+		return -EINVAL;
+
 	ret = param_get_bool(buf, &kp);
 	if (ret > 0) {
 		strlcat(buf, "\n", PAGE_SIZE);
@@ -453,10 +460,21 @@ static int parse_cluster_params(struct device_node *node,
 	if (ret)
 		goto fail;
 
+	key = "qcom,disable-prediction";
+	c->lpm_prediction = !(of_property_read_bool(node, key));
+
+	if (c->lpm_prediction) {
+		key = "qcom,clstr-tmr-add";
+		ret = of_property_read_u32(node, key, &c->tmr_add);
+		if (ret || c->tmr_add < TIMER_ADD_LOW ||
+					c->tmr_add > TIMER_ADD_HIGH)
+			c->tmr_add = DEFAULT_TIMER_ADD;
+	}
+
 	/* Set default_level to 0 as default */
 	c->default_level = 0;
 
-	return ret;
+	return 0;
 fail:
 	pr_err("Failed to read key: %s ret: %d\n", key, ret);
 
@@ -690,7 +708,7 @@ static int parse_cpu(struct device_node *node, struct lpm_cpu *cpu)
 
 static int parse_cpu_levels(struct device_node *node, struct lpm_cluster *c)
 {
-	int ret, i;
+	int ret;
 	char *key;
 	struct lpm_cpu *cpu;
 
@@ -706,33 +724,47 @@ static int parse_cpu_levels(struct device_node *node, struct lpm_cluster *c)
 	key = "qcom,psci-mode-shift";
 	ret = of_property_read_u32(node, key, &cpu->psci_mode_shift);
 	if (ret)
-		goto failed_parse_params;
+		goto failed;
 
 	key = "qcom,psci-mode-mask";
 	ret = of_property_read_u32(node, key, &cpu->psci_mode_mask);
 	if (ret)
-		goto failed_parse_params;
+		goto failed;
 
-	key = "qcom,use-prediction";
-	cpu->lpm_prediction = of_property_read_bool(node, key);
+	key = "qcom,disable-prediction";
+	cpu->lpm_prediction = !(of_property_read_bool(node, key));
+
+	if (cpu->lpm_prediction) {
+		key = "qcom,ref-stddev";
+		ret = of_property_read_u32(node, key, &cpu->ref_stddev);
+		if (ret || cpu->ref_stddev < STDDEV_LOW ||
+					cpu->ref_stddev > STDDEV_HIGH)
+			cpu->ref_stddev = DEFAULT_STDDEV;
+
+		key = "qcom,tmr-add";
+		ret = of_property_read_u32(node, key, &cpu->tmr_add);
+		if (ret || cpu->tmr_add < TIMER_ADD_LOW ||
+					cpu->tmr_add > TIMER_ADD_HIGH)
+			cpu->tmr_add = DEFAULT_TIMER_ADD;
+
+		key = "qcom,ref-premature-cnt";
+		ret = of_property_read_u32(node, key, &cpu->ref_premature_cnt);
+		if (ret || cpu->ref_premature_cnt < PREMATURE_CNT_LOW ||
+				cpu->ref_premature_cnt > PREMATURE_CNT_HIGH)
+			cpu->ref_premature_cnt = DEFAULT_PREMATURE_CNT;
+	}
 
 	key = "parse_cpu";
 	ret = parse_cpu(node, cpu);
 	if (ret)
-		goto failed_parse_cpu;
+		goto failed;
 
 	cpumask_or(&c->child_cpus, &c->child_cpus, &cpu->related_cpus);
 	list_add(&cpu->list, &c->cpu);
 
 	return ret;
 
-failed_parse_cpu:
-	for (i = 0; i < cpu->nlevels; i++) {
-		kfree(cpu->levels[i].name);
-		cpu->levels[i].name = NULL;
-	}
-
-failed_parse_params:
+failed:
 	pr_err("Failed to read key: %s node: %s\n", key, node->name);
 	return ret;
 }
@@ -747,15 +779,8 @@ void free_cluster_node(struct lpm_cluster *cluster)
 		free_cluster_node(cl);
 	};
 
-	list_for_each_entry_safe(cpu, n, &cluster->cpu, list) {
-		int i;
-
+	list_for_each_entry_safe(cpu, n, &cluster->cpu, list)
 		list_del(&cpu->list);
-		for (i = 0; i < cpu->nlevels; i++) {
-			kfree(cpu->levels[i].name);
-			cpu->levels[i].name = NULL;
-		}
-	}
 }
 
 /*
@@ -848,7 +873,6 @@ failed_parse_cluster:
 		list_del(&c->list);
 	free_cluster_node(c);
 failed_parse_params:
-	c->parent = NULL;
 	pr_err("Failed parse params\n");
 	return NULL;
 }
