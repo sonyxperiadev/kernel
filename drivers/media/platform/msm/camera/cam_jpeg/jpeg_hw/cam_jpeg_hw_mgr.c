@@ -828,7 +828,7 @@ static int cam_jpeg_mgr_flush_req(void *hw_mgr_priv,
 {
 	struct cam_jpeg_hw_mgr *hw_mgr = hw_mgr_priv;
 	struct cam_jpeg_hw_cfg_req *cfg_req, *req_temp;
-	int64_t request_id;
+	int64_t request_id = -1;
 
 	CAM_DBG(CAM_JPEG, "E: JPEG flush req");
 
@@ -840,7 +840,12 @@ static int cam_jpeg_mgr_flush_req(void *hw_mgr_priv,
 	if (flush_args->num_req_pending)
 		return 0;
 
-	request_id = *(int64_t *)flush_args->flush_req_active[0];
+	if (flush_args->num_req_active)
+		request_id = (int64_t)(flush_args->flush_req_active[0]);
+	else
+		return 0;
+
+
 	list_for_each_entry_safe(cfg_req, req_temp,
 		&hw_mgr->hw_config_req_list, list) {
 		if ((cfg_req) && (cfg_req->hw_cfg_args.ctxt_to_hw_map
