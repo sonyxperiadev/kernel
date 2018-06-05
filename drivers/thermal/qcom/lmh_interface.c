@@ -14,6 +14,7 @@
 
 #include <linux/module.h>
 #include <linux/device.h>
+#include <linux/platform_device.h>
 #include <linux/interrupt.h>
 #include <linux/kernel.h>
 #include <linux/io.h>
@@ -27,6 +28,8 @@
 #include "lmh_interface.h"
 #include <linux/string.h>
 #include <linux/uaccess.h>
+
+#include "../thermal_core.h"
 
 #define LMH_MON_NAME			"lmh_monitor"
 #define LMH_ISR_POLL_DELAY		"interrupt_poll_delay_msec"
@@ -67,7 +70,8 @@ struct lmh_mon_sensor_data {
 	struct rw_semaphore		lock;
 	struct lmh_mon_threshold	trip[LMH_TRIP_MAX];
 	struct thermal_zone_device	*tzdev;
-	enum thermal_device_mode	mode;
+	struct device			dev;
+//	enum thermal_device_mode	mode;
 };
 
 struct lmh_mon_driver_data {
@@ -319,6 +323,9 @@ static struct lmh_mon_sensor_data *lmh_match_sensor_name(char *sensor_name)
 	return NULL;
 }
 
+static int lmh_activate_trip(struct lmh_mon_sensor_data *lmh_sensor,
+		int trip, enum thermal_trip_activation_mode mode);
+
 static void lmh_evaluate_and_notify(struct lmh_mon_sensor_data *lmh_sensor,
 	       int val)
 {
@@ -337,7 +344,9 @@ static void lmh_evaluate_and_notify(struct lmh_mon_sensor_data *lmh_sensor,
 		}
 		if (cond) {
 			lmh_sensor->trip[idx].active = false;
-			thermal_sensor_trip(lmh_sensor->tzdev, trip, val);
+			lmh_activate_trip(lmh_sensor, trip, val);
+			of_thermal_handle_trip(lmh_sensor->tzdev);
+//			thermal_sensor_trip(lmh_sensor->tzdev, trip, val);
 		}
 	}
 }
@@ -368,16 +377,16 @@ interrupt_exit:
 	return;
 }
 
-static int lmh_sensor_read(struct thermal_zone_device *dev, int *val)
+static int lmh_sensor_read(void *data, int *val)
 {
 	int ret = 0;
 	struct lmh_mon_sensor_data *lmh_sensor;
 
-	if (!val || !dev || !dev->devdata) {
+	if (!val || !data) {
 		pr_err("Invalid input\n");
 		return -EINVAL;
 	}
-	lmh_sensor = dev->devdata;
+	lmh_sensor = (struct lmh_mon_sensor_data *)data;
 	down_read(&lmh_mon_access_lock);
 	down_read(&lmh_sensor->lock);
 	ret = lmh_sensor->sensor_ops->read(lmh_sensor->sensor_ops, val);
@@ -393,55 +402,14 @@ unlock_and_exit:
 	return ret;
 }
 
-static int lmh_get_mode(struct thermal_zone_device *dev,
-		enum thermal_device_mode *mode)
-{
-	struct lmh_mon_sensor_data *lmh_sensor;
-
-	if (!dev || !dev->devdata || !mode) {
-		pr_err("Invalid input\n");
-		return -EINVAL;
-	}
-	lmh_sensor = dev->devdata;
-	*mode = lmh_sensor->mode;
-
-	return 0;
-}
-
-static int lmh_get_trip_type(struct thermal_zone_device *dev,
-		int trip, enum thermal_trip_type *type)
-{
-	if (!type || !dev || !dev->devdata || trip < 0
-		|| trip >= LMH_TRIP_MAX) {
-		pr_err("Invalid input\n");
-		return -EINVAL;
-	}
-
-	switch (trip) {
-	case LMH_HIGH_TRIP:
-		*type = THERMAL_TRIP_CONFIGURABLE_HI;
-		break;
-	case LMH_LOW_TRIP:
-		*type = THERMAL_TRIP_CONFIGURABLE_LOW;
-		break;
-	default:
-		return -EINVAL;
-	}
-
-	return 0;
-}
-
-static int lmh_activate_trip(struct thermal_zone_device *dev,
+static int lmh_activate_trip(struct lmh_mon_sensor_data *lmh_sensor,
 		int trip, enum thermal_trip_activation_mode mode)
 {
-	struct lmh_mon_sensor_data *lmh_sensor;
-
-	if (!dev || !dev->devdata || trip < 0 || trip >= LMH_TRIP_MAX) {
+	if (trip < 0 || trip >= LMH_TRIP_MAX) {
 		pr_err("Invalid input\n");
 		return -EINVAL;
 	}
 
-	lmh_sensor = dev->devdata;
 	down_read(&lmh_mon_access_lock);
 	down_write(&lmh_sensor->lock);
 	lmh_sensor->trip[trip].active = (mode ==
@@ -452,70 +420,33 @@ static int lmh_activate_trip(struct thermal_zone_device *dev,
 	return 0;
 }
 
-static int lmh_get_trip_value(struct thermal_zone_device *dev,
-		int trip, int *value)
-{
-	struct lmh_mon_sensor_data *lmh_sensor;
 
-	if (!dev || !dev->devdata || trip < 0 || trip >= LMH_TRIP_MAX
-		|| !value) {
-		pr_err("Invalid input\n");
-		return -EINVAL;
-	}
-
-	lmh_sensor = dev->devdata;
-	down_read(&lmh_mon_access_lock);
-	down_read(&lmh_sensor->lock);
-	*value = lmh_sensor->trip[trip].value;
-	up_read(&lmh_sensor->lock);
-	up_read(&lmh_mon_access_lock);
-
-	return 0;
-}
-
-static int lmh_set_trip_value(struct thermal_zone_device *dev,
-		int trip, int value)
-{
-	struct lmh_mon_sensor_data *lmh_sensor;
-
-	if (!dev || !dev->devdata || trip < 0 || trip >= LMH_TRIP_MAX) {
-		pr_err("Invalid input\n");
-		return -EINVAL;
-	}
-
-	lmh_sensor = dev->devdata;
-	down_read(&lmh_mon_access_lock);
-	down_write(&lmh_sensor->lock);
-	lmh_sensor->trip[trip].value = value;
-	up_write(&lmh_sensor->lock);
-	up_read(&lmh_mon_access_lock);
-
-	return 0;
-}
-
-static struct thermal_zone_device_ops lmh_sens_ops = {
+static struct thermal_zone_of_device_ops lmh_sens_ops = {
 	.get_temp = lmh_sensor_read,
-	.get_mode = lmh_get_mode,
-	.get_trip_type = lmh_get_trip_type,
-	.activate_trip_type = lmh_activate_trip,
-	.get_trip_temp = lmh_get_trip_value,
-	.set_trip_temp = lmh_set_trip_value,
+	//.activate_trip_type = lmh_activate_trip,
 };
 
-static int lmh_register_sensor(struct lmh_mon_sensor_data *lmh_sensor)
+static int lmh_register_sensor(struct platform_device *pdev, int sns_id,
+				struct lmh_mon_sensor_data *lmh_sensor)
 {
 	int ret = 0;
 
+	lmh_sensor->tzdev = thermal_zone_of_sensor_register(&pdev->dev,
+			sns_id, lmh_sensor, &lmh_sens_ops);
+/*
 	lmh_sensor->tzdev = thermal_zone_device_register(
 			lmh_sensor->sensor_name, LMH_TRIP_MAX,
 			(1 << LMH_TRIP_MAX) - 1, lmh_sensor, &lmh_sens_ops,
 			NULL, 0 , 0);
+*/
 	if (IS_ERR_OR_NULL(lmh_sensor->tzdev)) {
 		ret = PTR_ERR(lmh_sensor->tzdev);
 		pr_err("Error registering sensor:[%s] with thermal. err:%d\n",
 			lmh_sensor->sensor_name, ret);
 		return ret;
 	}
+
+	lmh_sensor->dev = pdev->dev;
 
 	return ret;
 }
@@ -541,7 +472,8 @@ static int lmh_sensor_init(struct lmh_mon_sensor_data *lmh_sensor,
 	return ret;
 }
 
-int lmh_sensor_register(char *sensor_name, struct lmh_sensor_ops *ops)
+int lmh_sensor_register(struct platform_device *pdev, int sns_id,
+			char *sensor_name, struct lmh_sensor_ops *ops)
 {
 	int ret = 0;
 	struct lmh_mon_sensor_data *lmh_sensor = NULL;
@@ -582,7 +514,7 @@ register_exit:
 	up_write(&lmh_mon_access_lock);
 	if (ret)
 		return ret;
-	ret = lmh_register_sensor(lmh_sensor);
+	ret = lmh_register_sensor(pdev, sns_id, lmh_sensor);
 	if (ret) {
 		pr_err("Thermal Zone register failed for Sensor:[%s]\n"
 			, sensor_name);
@@ -602,7 +534,7 @@ static void lmh_sensor_remove(struct lmh_sensor_ops *ops)
 		goto deregister_exit;
 	}
 	down_write(&lmh_sensor->lock);
-	thermal_zone_device_unregister(lmh_sensor->tzdev);
+	thermal_zone_of_sensor_unregister(&lmh_sensor->dev, lmh_sensor->tzdev);
 	list_del(&lmh_sensor->list_ptr);
 	up_write(&lmh_sensor->lock);
 	pr_debug("Deregistered sensor:[%s]\n", lmh_sensor->sensor_name);
@@ -1093,7 +1025,7 @@ static const struct file_operations lmh_dbgfs_config_type_fops = {
 	.release	= single_release,
 };
 
-int lmh_debug_register(struct lmh_debug_ops *ops)
+int lmh_interface_debug_register(struct lmh_debug_ops *ops)
 {
 	int ret = 0;
 
