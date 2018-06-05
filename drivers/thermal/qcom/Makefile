@@ -8,3 +8,5 @@ obj-$(CONFIG_REGULATOR_COOLING_DEVICE) += regulator_cdev.o
 obj-$(CONFIG_QTI_QMI_COOLING_DEVICE) += thermal_mitigation_device_service_v01.o qmi_cooling.o
 obj-$(CONFIG_QTI_BCL_PMIC5) += bcl_pmic5.o
 obj-$(CONFIG_QTI_BCL_SOC_DRIVER) += bcl_soc.o
+obj-$(CONFIG_LIMITS_MONITOR)	+= lmh_interface.o
+obj-$(CONFIG_LIMITS_LITE_HW)	+= lmh_lite.o
