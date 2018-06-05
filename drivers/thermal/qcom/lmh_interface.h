@@ -54,11 +54,12 @@ struct lmh_debug_ops {
 int lmh_get_all_dev_levels(char *, int *);
 int lmh_set_dev_level(char *, int);
 int lmh_get_curr_level(char *, int *);
-int lmh_sensor_register(char *, struct lmh_sensor_ops *);
+int lmh_sensor_register(struct platform_device *pdev, int sns_id,
+			char *sensor_name, struct lmh_sensor_ops *ops);
 void lmh_sensor_deregister(struct lmh_sensor_ops *);
 int lmh_device_register(char *, struct lmh_device_ops *);
 void lmh_device_deregister(struct lmh_device_ops *);
-int lmh_debug_register(struct lmh_debug_ops *);
+int lmh_interface_debug_register(struct lmh_debug_ops *);
 void lmh_debug_deregister(struct lmh_debug_ops *ops);
 int lmh_get_poll_interval(void);
 #else
@@ -99,7 +100,7 @@ static inline void lmh_device_deregister(struct lmh_device_ops *ops)
 	return;
 }
 
-static inline int lmh_debug_register(struct lmh_debug_ops *)
+static inline int lmh_interface_debug_register(struct lmh_debug_ops *)
 {
 	return -ENOSYS;
 }

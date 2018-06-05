@@ -29,9 +29,14 @@
 #include <linux/dma-mapping.h>
 #include <linux/regulator/consumer.h>
 
-#define CREATE_TRACE_POINTS
-#define TRACE_MSM_LMH
-#include <trace/trace_thermal.h>
+//#define CREATE_TRACE_POINTS
+//#define TRACE_MSM_LMH
+//#include <trace/trace_thermal.h>
+
+#define trace_lmh_event_call(x) {}
+#define trace_lmh_sensor_interrupt(x, y) {}
+#define trace_lmh_sensor_reading(x, y) {}
+#define trace_lmh_debug_data(x, y, z) {}
 
 #define LMH_DRIVER_NAME			"lmh-lite-driver"
 #define LMH_INTERRUPT			"lmh-interrupt"
@@ -595,7 +600,8 @@ static int lmh_check_tz_sensor_cmds(void)
 	return 0;
 }
 
-static int lmh_parse_sensor(struct lmh_sensor_info *sens_info)
+static int lmh_parse_sensor(struct platform_device *pdev,
+				struct lmh_sensor_info *sens_info)
 {
 	int ret = 0, idx = 0, size = 0;
 	struct lmh_sensor_data *lmh_sensor = NULL;
@@ -628,7 +634,8 @@ static int lmh_parse_sensor(struct lmh_sensor_info *sens_info)
 	lmh_sensor->sensor_sw_id = lmh_data->max_sensor_count++;
 	lmh_sensor->sensor_hw_name = sens_info->name;
 	lmh_sensor->sensor_hw_node_id = sens_info->node_id;
-	ret = lmh_sensor_register(lmh_sensor->sensor_name, &lmh_sensor->ops);
+	ret = lmh_sensor_register(pdev, lmh_sensor->sensor_sw_id,
+				lmh_sensor->sensor_name, &lmh_sensor->ops);
 	if (ret) {
 		pr_err("Sensor:[%s] registration failed. err:%d\n",
 			lmh_sensor->sensor_name, ret);
@@ -643,7 +650,7 @@ sens_exit:
 	return ret;
 }
 
-static int lmh_get_sensor_list(void)
+static int lmh_get_sensor_list(struct platform_device *pdev)
 {
 	int ret = 0, buf_size = 0;
 	uint32_t size = 0, next = 0, idx = 0, count = 0;
@@ -697,7 +704,7 @@ static int lmh_get_sensor_list(void)
 				(size - next);
 		next += LMH_MAX_SENSOR;
 		for (idx = 0; idx < count; idx++) {
-			ret = lmh_parse_sensor(&payload->sensor[idx]);
+			ret = lmh_parse_sensor(pdev, &payload->sensor[idx]);
 			if (ret)
 				goto get_exit;
 		}
@@ -1246,7 +1253,7 @@ static int lmh_debug_init(void)
 		= lmh_debug_lmh_config;
 	lmh_data->debug_info.debug_ops.debug_get_types
 		= lmh_debug_get_types;
-	ret = lmh_debug_register(&lmh_data->debug_info.debug_ops);
+	ret = lmh_interface_debug_register(&lmh_data->debug_info.debug_ops);
 	if (ret) {
 		pr_err("Error registering debug ops. err:%d\n", ret);
 		goto debug_init_exit;
@@ -1263,7 +1270,7 @@ static int lmh_sensor_init(struct platform_device *pdev)
 		return -ENODEV;
 
 	down_write(&lmh_sensor_access);
-	ret = lmh_get_sensor_list();
+	ret = lmh_get_sensor_list(pdev);
 	if (ret)
 		goto init_exit;
 
