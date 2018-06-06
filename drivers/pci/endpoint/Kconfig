@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-2.0
 #
 # PCI Endpoint Support
 #
@@ -6,6 +7,7 @@ menu "PCI Endpoint"
 
 config PCI_ENDPOINT
 	bool "PCI Endpoint Support"
+	depends on HAS_DMA
 	help
 	   Enable this configuration option to support configurable PCI
 	   endpoint. This should be enabled if the platform has a PCI
@@ -16,5 +18,16 @@ config PCI_ENDPOINT
 	   library.
 
 	   If in doubt, say "N" to disable Endpoint support.
+
+config PCI_ENDPOINT_CONFIGFS
+	bool "PCI Endpoint Configfs Support"
+	depends on PCI_ENDPOINT
+	select CONFIGFS_FS
+	help
+	   This will enable the configfs entry that can be used to
+	   configure the endpoint function and used to bind the
+	   function with a endpoint controller.
+
+source "drivers/pci/endpoint/functions/Kconfig"
 
 endmenu
