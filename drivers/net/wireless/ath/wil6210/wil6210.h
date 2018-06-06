@@ -649,6 +649,7 @@ struct wil6210_priv {
 	const char *hw_name;
 	const char *wil_fw_name;
 	DECLARE_BITMAP(hw_capabilities, hw_capability_last);
+	char board_file_country[3]; /* alpha2 */
 	DECLARE_BITMAP(fw_capabilities, WMI_FW_CAPABILITY_MAX);
 	DECLARE_BITMAP(platform_capa, WIL_PLATFORM_CAPA_MAX);
 	u8 n_mids; /* number of additional MIDs as reported by FW */
@@ -759,6 +760,8 @@ struct wil6210_priv {
 	} snr_thresh;
 
 	int fw_calib_result;
+	/* current reg domain configured in kernel */
+	char regdomain[3]; /* alpha2 */
 
 #ifdef CONFIG_PM
 #ifdef CONFIG_PM_SLEEP
@@ -830,6 +833,8 @@ static inline void wil_c(struct wil6210_priv *wil, u32 reg, u32 val)
 {
 	wil_w(wil, reg, wil_r(wil, reg) & ~val);
 }
+
+void wil_get_board_file(struct wil6210_priv *wil, char *buf, size_t len);
 
 #if defined(CONFIG_DYNAMIC_DEBUG)
 #define wil_hex_dump_txrx(prefix_str, prefix_type, rowsize,	\
