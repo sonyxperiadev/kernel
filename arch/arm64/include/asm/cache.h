@@ -18,7 +18,12 @@
 
 #include <asm/cachetype.h>
 
+#ifdef CONFIG_ARCH_THUNDER
 #define L1_CACHE_SHIFT		7
+#else
+#define L1_CACHE_SHIFT		6
+#endif
+
 #define L1_CACHE_BYTES		(1 << L1_CACHE_SHIFT)
 
 /*
