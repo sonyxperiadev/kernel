@@ -24,7 +24,6 @@
 #include <linux/bio.h>
 #include <linux/namei.h>
 #include "fscrypt_private.h"
-
 /*
  * Call fscrypt_decrypt_page on every single page, reusing the encryption
  * context.
@@ -39,14 +38,17 @@ static void completion_pages(struct work_struct *work)
 
 	bio_for_each_segment_all(bv, bio, i) {
 		struct page *page = bv->bv_page;
-		int ret = fscrypt_decrypt_page(page->mapping->host, page,
-				PAGE_SIZE, 0, page->index);
-
-		if (ret) {
-			WARN_ON_ONCE(1);
-			SetPageError(page);
-		} else {
+		if (fs_is_ice_enabled()) {
 			SetPageUptodate(page);
+		} else {
+			int ret = fscrypt_decrypt_page(page->mapping->host,
+				page, PAGE_SIZE, 0, page->index);
+			if (ret) {
+				WARN_ON_ONCE(1);
+				SetPageError(page);
+			} else {
+				SetPageUptodate(page);
+			}
 		}
 		unlock_page(page);
 	}
