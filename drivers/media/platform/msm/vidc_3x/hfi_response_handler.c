@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -30,7 +30,6 @@ static enum vidc_status hfi_parse_init_done_properties(
 static enum vidc_status hfi_map_err_status(u32 hfi_err)
 {
 	enum vidc_status vidc_err;
-
 	switch (hfi_err) {
 	case HFI_ERR_NONE:
 	case HFI_ERR_SESSION_SAME_STATE_OPERATION:
@@ -114,9 +113,6 @@ static int hfi_process_sess_evt_seq_changed(u32 device_id,
 	int prop_id;
 	enum msm_vidc_pixel_depth luma_bit_depth, chroma_bit_depth;
 	struct hfi_colour_space *colour_info;
-
-	 /* Initialize pic_struct to unknown as default */
-	event_notify.pic_struct = MSM_VIDC_PIC_STRUCT_UNKNOWN;
 
 	if (sizeof(struct hfi_msg_event_notify_packet) > pkt->size) {
 		dprintk(VIDC_ERR,
@@ -277,7 +273,6 @@ static int hfi_process_evt_release_buffer_ref(u32 device_id,
 static int hfi_process_sys_error(u32 device_id, struct msm_vidc_cb_info *info)
 {
 	struct msm_vidc_cb_cmd_done cmd_done = {0};
-
 	cmd_done.device_id = device_id;
 
 	*info = (struct msm_vidc_cb_info) {
@@ -293,7 +288,6 @@ static int hfi_process_session_error(u32 device_id,
 		struct msm_vidc_cb_info *info)
 {
 	struct msm_vidc_cb_cmd_done cmd_done = {0};
-
 	cmd_done.device_id = device_id;
 	cmd_done.session_id = (void *)(uintptr_t)pkt->session_id;
 	cmd_done.status = hfi_map_err_status(pkt->event_data1);
@@ -408,7 +402,6 @@ static int hfi_process_sys_rel_resource_done(u32 device_id,
 	struct msm_vidc_cb_cmd_done cmd_done = {0};
 	enum vidc_status status = VIDC_ERR_NONE;
 	u32 pkt_size;
-
 	dprintk(VIDC_DBG, "RECEIVED: SYS_RELEASE_RESOURCE_DONE\n");
 	pkt_size = sizeof(struct hfi_msg_sys_release_resource_done_packet);
 	if (pkt_size > pkt->size) {
@@ -573,6 +566,8 @@ static inline void copy_cap_prop(
 		out->max = in->max;
 		out->step_size = in->step_size;
 	}
+
+	return;
 }
 
 static int hfi_fill_codec_info(u8 *data_ptr,
@@ -846,7 +841,6 @@ static enum vidc_status hfi_parse_init_done_properties(
 
 			while (num_format_entries) {
 				u32 bytes_to_skip;
-
 				plane_info =
 				(struct hfi_uncompressed_plane_info *) fmt_ptr;
 
@@ -1071,7 +1065,6 @@ static void hfi_process_sess_get_prop_profile_level(
 {
 	struct hfi_profile_level *hfi_profile_level;
 	u32 req_bytes;
-
 	dprintk(VIDC_DBG, "Entered %s\n", __func__);
 	if (!prop) {
 		dprintk(VIDC_ERR,
@@ -1134,11 +1127,11 @@ static void hfi_process_sess_get_prop_buf_req(
 		if (hfi_buf_req->buffer_size &&
 			hfi_buf_req->buffer_count_min > hfi_buf_req->
 			buffer_count_actual)
-			dprintk(VIDC_WARN,
-				"Bad buffer requirements for %#x: min %d, actual %d\n",
-				hfi_buf_req->buffer_type,
-				hfi_buf_req->buffer_count_min,
-				hfi_buf_req->buffer_count_actual);
+				dprintk(VIDC_WARN,
+					"Bad buffer requirements for %#x: min %d, actual %d\n",
+					hfi_buf_req->buffer_type,
+					hfi_buf_req->buffer_count_min,
+					hfi_buf_req->buffer_count_actual);
 
 		dprintk(VIDC_DBG, "got buffer requirements for: %d\n",
 					hfi_buf_req->buffer_type);
@@ -1223,7 +1216,7 @@ static int hfi_process_session_prop_info(u32 device_id,
 {
 	struct msm_vidc_cb_cmd_done cmd_done = {0};
 	struct hfi_profile_level profile_level = {0};
-	enum hal_h264_entropy entropy = HAL_UNUSED_ENTROPY;
+	enum hal_h264_entropy entropy = {0};
 	struct buffer_requirements buff_req = { { {0} } };
 
 	dprintk(VIDC_DBG, "Received SESSION_PROPERTY_INFO[%#x]\n",
@@ -1331,7 +1324,6 @@ static int hfi_process_session_load_res_done(u32 device_id,
 		struct msm_vidc_cb_info *info)
 {
 	struct msm_vidc_cb_cmd_done cmd_done = {0};
-
 	dprintk(VIDC_DBG, "RECEIVED: SESSION_LOAD_RESOURCES_DONE[%#x]\n",
 		pkt->session_id);
 
@@ -1761,10 +1753,9 @@ static int hfi_process_session_get_seq_hdr_done(
 		struct msm_vidc_cb_info *info)
 {
 	struct msm_vidc_cb_data_done data_done = {0};
-
 	if (!pkt || pkt->size !=
-			sizeof(struct
-			hfi_msg_session_get_sequence_header_done_packet)) {
+		sizeof(struct
+		hfi_msg_session_get_sequence_header_done_packet)) {
 		dprintk(VIDC_ERR, "%s: bad packet/packet size\n",
 			__func__);
 		return -E2BIG;

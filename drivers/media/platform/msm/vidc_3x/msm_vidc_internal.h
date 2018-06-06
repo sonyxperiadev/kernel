@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -37,7 +37,7 @@
 #include "vidc_hfi_api.h"
 
 #define MSM_VIDC_DRV_NAME "msm_vidc_driver"
-#define MSM_VIDC_VERSION KERNEL_VERSION(0, 0, 1)
+#define MSM_VIDC_VERSION KERNEL_VERSION(0, 0, 1);
 #define MAX_DEBUGFS_NAME 50
 #define DEFAULT_TIMEOUT 3
 #define DEFAULT_HEIGHT 1088
@@ -83,8 +83,7 @@ enum vidc_core_state {
 };
 
 /* Do not change the enum values unless
- * you know what you are doing
- */
+ * you know what you are doing*/
 enum instance_state {
 	MSM_VIDC_CORE_UNINIT_DONE = 0x0001,
 	MSM_VIDC_CORE_INIT,
@@ -121,6 +120,11 @@ static inline void INIT_MSM_VIDC_LIST(struct msm_vidc_list *mlist)
 	INIT_LIST_HEAD(&mlist->list);
 }
 
+static inline void DEINIT_MSM_VIDC_LIST(struct msm_vidc_list *mlist)
+{
+	mutex_destroy(&mlist->lock);
+}
+
 enum buffer_owner {
 	DRIVER,
 	FIRMWARE,
@@ -139,7 +143,6 @@ struct msm_vidc_format {
 	char name[MAX_NAME_LENGTH];
 	u8 description[32];
 	u32 fourcc;
-	int num_planes;
 	int type;
 	u32 (*get_frame_size)(int plane, u32 height, u32 width);
 };
@@ -151,7 +154,6 @@ struct msm_vidc_drv {
 	struct dentry *debugfs_root;
 	int thermal_level;
 	u32 platform_version;
-	u32 capability_version;
 };
 
 struct msm_video_device {
@@ -162,6 +164,8 @@ struct msm_video_device {
 struct session_prop {
 	u32 width[MAX_PORT_NUM];
 	u32 height[MAX_PORT_NUM];
+	u32 num_planes[MAX_PORT_NUM];
+	u32 extradata[MAX_PORT_NUM];
 	u32 fps;
 	u32 bitrate;
 };
@@ -172,7 +176,6 @@ struct buf_queue {
 	unsigned int plane_sizes[VB2_MAX_PLANES];
 	int num_planes;
 };
-
 
 enum profiling_points {
 	SYS_INIT = 0,
@@ -204,9 +207,9 @@ struct dcvs_stats {
 	int load_high;
 	int min_threshold;
 	int max_threshold;
-	bool is_clock_scaled;
 	int etb_counter;
 	bool is_power_save_mode;
+	unsigned int extra_buffer_count;
 	u32 supported_codecs;
 };
 
@@ -230,6 +233,8 @@ enum msm_vidc_modes {
 	VIDC_TURBO = BIT(1),
 	VIDC_THUMBNAIL = BIT(2),
 	VIDC_LOW_POWER = BIT(3),
+	VIDC_REALTIME = BIT(4),
+	VIDC_LOW_LATENCY = BIT(5),
 };
 
 struct msm_vidc_core {
@@ -275,11 +280,9 @@ struct msm_vidc_inst {
 	struct completion completions[SESSION_MSG_END - SESSION_MSG_START + 1];
 	struct v4l2_ctrl **cluster;
 	struct v4l2_fh event_handler;
-	struct msm_smem *extradata_handle;
 	bool in_reconfig;
 	u32 reconfig_width;
 	u32 reconfig_height;
-	u32 seqchanged_count;
 	struct dentry *debugfs_root;
 	void *priv;
 	struct msm_vidc_debug debug;
@@ -299,6 +302,7 @@ struct msm_vidc_inst {
 	atomic_t in_flush;
 	u32 pic_struct;
 	u32 colour_space;
+	u32 operating_rate;
 };
 
 extern struct msm_vidc_drv *vidc_driver;
@@ -328,14 +332,6 @@ int msm_vidc_check_session_supported(struct msm_vidc_inst *inst);
 int msm_vidc_check_scaling_supported(struct msm_vidc_inst *inst);
 void msm_vidc_queue_v4l2_event(struct msm_vidc_inst *inst, int event_type);
 
-struct crop_info {
-	u32 nLeft;
-	u32 nTop;
-	u32 nWidth;
-	u32 nHeight;
-	u32 width_height[MAX_PORT_NUM];
-};
-
 struct buffer_info {
 	struct list_head list;
 	int type;
@@ -355,7 +351,6 @@ struct buffer_info {
 	bool mapped[VIDEO_MAX_PLANES];
 	int same_fd_ref[VIDEO_MAX_PLANES];
 	struct timeval timestamp;
-	struct crop_info crop_data;
 };
 
 struct buffer_info *device_to_uvaddr(struct msm_vidc_list *buf_list,
@@ -363,7 +358,7 @@ struct buffer_info *device_to_uvaddr(struct msm_vidc_list *buf_list,
 int buf_ref_get(struct msm_vidc_inst *inst, struct buffer_info *binfo);
 int buf_ref_put(struct msm_vidc_inst *inst, struct buffer_info *binfo);
 int output_buffer_cache_invalidate(struct msm_vidc_inst *inst,
-				struct buffer_info *binfo);
+		struct buffer_info *binfo, struct v4l2_buffer *b);
 int qbuf_dynamic_buf(struct msm_vidc_inst *inst,
 			struct buffer_info *binfo);
 int unmap_and_deregister_buf(struct msm_vidc_inst *inst,
@@ -377,7 +372,7 @@ struct msm_smem *msm_smem_alloc(void *clt, size_t size, u32 align, u32 flags,
 void msm_smem_free(void *clt, struct msm_smem *mem);
 void msm_smem_delete_client(void *clt);
 int msm_smem_cache_operations(void *clt, struct msm_smem *mem,
-		enum smem_cache_ops);
+		enum smem_cache_ops, int size);
 struct msm_smem *msm_smem_user_to_kernel(void *clt, int fd, u32 offset,
 				enum hal_buffer buffer_type);
 struct context_bank_info *msm_smem_get_context_bank(void *clt,
@@ -385,7 +380,6 @@ struct context_bank_info *msm_smem_get_context_bank(void *clt,
 void msm_vidc_fw_unload_handler(struct work_struct *work);
 bool msm_smem_compare_buffers(void *clt, int fd, void *priv);
 /* XXX: normally should be in msm_vidc.h, but that's meant for public APIs,
- * whereas this is private
- */
+ * whereas this is private */
 int msm_vidc_destroy(struct msm_vidc_inst *inst);
 #endif

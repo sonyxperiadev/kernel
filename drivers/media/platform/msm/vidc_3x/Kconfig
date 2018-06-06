@@ -6,5 +6,5 @@ menuconfig MSM_VIDC_3X_V4L2
 		depends on ARCH_QCOM && VIDEO_V4L2
 		select VIDEOBUF2_CORE
 
-source "drivers/media/platform/msm/vidc_3x/governors/Kconfig"
+source "drivers/media/platform/msm/vidc_3x/vmem/Kconfig"
 source "drivers/media/platform/msm/vidc_3x/governors/Kconfig"

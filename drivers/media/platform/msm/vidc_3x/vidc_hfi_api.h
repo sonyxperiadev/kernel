@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -124,9 +124,9 @@ enum hal_extradata_id {
 	HAL_EXTRADATA_OUTPUT_CROP,
 	HAL_EXTRADATA_MASTERING_DISPLAY_COLOUR_SEI,
 	HAL_EXTRADATA_CONTENT_LIGHT_LEVEL_SEI,
+	HAL_EXTRADATA_PQ_INFO,
 	HAL_EXTRADATA_VUI_DISPLAY_INFO,
 	HAL_EXTRADATA_VPX_COLORSPACE,
-	HAL_EXTRADATA_PQ_INFO,
 };
 
 enum hal_property {
@@ -239,9 +239,9 @@ enum hal_property {
 	HAL_PARAM_VENC_LOW_LATENCY,
 	HAL_PARAM_VENC_CONSTRAINED_INTRA_PRED,
 	HAL_CONFIG_VENC_BLUR_RESOLUTION,
-	HAL_PARAM_VENC_VIDEO_SIGNAL_INFO,
 	HAL_PARAM_VENC_SESSION_QP_RANGE_PACKED,
 	HAL_PARAM_VENC_H264_TRANSFORM_8x8,
+	HAL_PARAM_VENC_VIDEO_SIGNAL_INFO,
 	HAL_PARAM_VENC_IFRAMESIZE_TYPE,
 };
 
@@ -1415,8 +1415,7 @@ enum vidc_vote_data_session {
 /* Careful modifying VIDC_VOTE_DATA_SESSION_VAL().
  *
  * This macro assigns two bits to each codec: the lower bit denoting the codec
- * type, and the higher bit denoting session type.
- */
+ * type, and the higher bit denoting session type. */
 static inline enum vidc_vote_data_session VIDC_VOTE_DATA_SESSION_VAL(
 		enum hal_video_codec c, enum hal_domain d) {
 	if (d != HAL_VIDEO_DOMAIN_ENCODER && d != HAL_VIDEO_DOMAIN_DECODER)
@@ -1434,9 +1433,9 @@ struct msm_vidc_gov_data {
 enum msm_vidc_power_mode {
 	VIDC_POWER_NORMAL = 0,
 	VIDC_POWER_LOW,
-	VIDC_POWER_TURBO
+	VIDC_POWER_TURBO,
+	VIDC_POWER_LOW_LATENCY,
 };
-
 
 struct vidc_bus_vote_data {
 	enum hal_domain domain;
@@ -1449,7 +1448,6 @@ struct vidc_bus_vote_data {
 	u32 imem_ab_tbl_size;
 	unsigned long core_freq;
 };
-
 
 struct vidc_clk_scale_data {
 	enum vidc_vote_data_session session[VIDC_MAX_SESSIONS];
@@ -1483,9 +1481,7 @@ struct hfi_device {
 
 	/*Add function pointers for all the hfi functions below*/
 	int (*core_init)(void *device);
-	int (*core_early_init)(void *device);
 	int (*core_release)(void *device);
-	int (*core_early_release)(void *device);
 	int (*core_ping)(void *device);
 	int (*core_trigger_ssr)(void *device, enum hal_ssr_trigger_type);
 	int (*session_init)(void *device, void *session_id,
@@ -1525,6 +1521,7 @@ struct hfi_device {
 	int (*session_clean)(void *sess);
 	int (*get_core_capabilities)(void *dev);
 	int (*suspend)(void *dev);
+	int (*flush_debug_queue)(void *dev);
 	unsigned long (*get_core_clock_rate)(void *dev, bool actual_rate);
 	enum hal_default_properties (*get_default_properties)(void *dev);
 };

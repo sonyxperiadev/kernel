@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -68,7 +68,7 @@ struct dentry *vmem_debugfs_init(struct platform_device *pdev)
 		goto exit;
 	}
 
-	debugfs_create_file("alloc", 0600, debugfs_root,
+	debugfs_create_file("alloc", S_IRUSR | S_IWUSR, debugfs_root,
 			alloc_cookie, &fops_vmem_alloc);
 
 exit:

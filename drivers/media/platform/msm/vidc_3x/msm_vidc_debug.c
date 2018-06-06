@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -12,25 +12,31 @@
  */
 
 #define CREATE_TRACE_POINTS
-#include "msm_vidc_common.h"
 #define MAX_SSR_STRING_LEN 10
 #include "msm_vidc_debug.h"
 #include "vidc_hfi_api.h"
 
 int msm_vidc_debug = VIDC_ERR | VIDC_WARN;
+EXPORT_SYMBOL(msm_vidc_debug);
+
 int msm_vidc_debug_out = VIDC_OUT_PRINTK;
+EXPORT_SYMBOL(msm_vidc_debug_out);
+
 int msm_vidc_fw_debug = 0x18;
 int msm_vidc_fw_debug_mode = 1;
 int msm_vidc_fw_low_power_mode = 1;
-int msm_vidc_hw_rsp_timeout = 1000;
-bool msm_vidc_fw_coverage = true;
+int msm_vidc_hw_rsp_timeout = 2000;
+bool msm_vidc_fw_coverage = false;
+int msm_vidc_reset_clock_control = 0x0;
+int msm_vidc_regulator_scaling = 0x0;
+bool msm_vidc_vpe_csc_601_to_709 = false;
 bool msm_vidc_dec_dcvs_mode = true;
 bool msm_vidc_enc_dcvs_mode = true;
-bool msm_vidc_sys_idle_indicator = true;
+bool msm_vidc_sys_idle_indicator = false;
 int msm_vidc_firmware_unload_delay = 15000;
-bool msm_vidc_thermal_mitigation_disabled = true;
-bool msm_vidc_bitrate_clock_scaling = 1;
-bool msm_vidc_debug_timeout = true;
+bool msm_vidc_thermal_mitigation_disabled = false;
+bool msm_vidc_bitrate_clock_scaling = true;
+bool msm_vidc_debug_timeout = false;
 
 #define MAX_DBG_BUF_SIZE 4096
 
@@ -178,7 +184,7 @@ struct dentry *msm_vidc_debugfs_init_drv(void)
 	}
 
 #define __debugfs_create(__type, __name, __value) ({                          \
-	struct dentry *f = debugfs_create_##__type(__name, 0644, \
+	struct dentry *f = debugfs_create_##__type(__name, S_IRUGO | S_IWUSR, \
 		dir, __value);                                                \
 	if (IS_ERR_OR_NULL(f)) {                                              \
 		dprintk(VIDC_ERR, "Failed creating debugfs file '%pd/%s'\n",  \
@@ -197,6 +203,10 @@ struct dentry *msm_vidc_debugfs_init_drv(void)
 	__debugfs_create(bool, "dcvs_enc_mode", &msm_vidc_enc_dcvs_mode) &&
 	__debugfs_create(u32, "fw_low_power_mode",
 			&msm_vidc_fw_low_power_mode) &&
+	__debugfs_create(u32, "reset_clock_control",
+			&msm_vidc_reset_clock_control) &&
+	__debugfs_create(u32, "regulator_scaling",
+			&msm_vidc_regulator_scaling) &&
 	__debugfs_create(u32, "debug_output", &msm_vidc_debug_out) &&
 	__debugfs_create(u32, "hw_rsp_timeout", &msm_vidc_hw_rsp_timeout) &&
 	__debugfs_create(bool, "sys_idle_indicator",
@@ -229,7 +239,6 @@ struct dentry *msm_vidc_debugfs_init_core(struct msm_vidc_core *core,
 {
 	struct dentry *dir = NULL;
 	char debugfs_name[MAX_DEBUGFS_NAME];
-
 	if (!core) {
 		dprintk(VIDC_ERR, "Invalid params, core: %pK\n", core);
 		goto failed_create_dir;
@@ -242,11 +251,11 @@ struct dentry *msm_vidc_debugfs_init_core(struct msm_vidc_core *core,
 		goto failed_create_dir;
 	}
 
-	if (!debugfs_create_file("info", 0444, dir, core, &core_info_fops)) {
+	if (!debugfs_create_file("info", S_IRUGO, dir, core, &core_info_fops)) {
 		dprintk(VIDC_ERR, "debugfs_create_file: fail\n");
 		goto failed_create_dir;
 	}
-	if (!debugfs_create_file("trigger_ssr", 0200,
+	if (!debugfs_create_file("trigger_ssr", S_IWUSR,
 			dir, core, &ssr_fops)) {
 		dprintk(VIDC_ERR, "debugfs_create_file: fail\n");
 		goto failed_create_dir;
@@ -364,11 +373,10 @@ static ssize_t inst_info_read(struct file *file, char __user *buf,
 		cur += write_str(cur, end - cur, "name : %s\n",
 			inst->fmts[i].name);
 		cur += write_str(cur, end - cur, "planes : %d\n",
-			inst->fmts[i].num_planes);
+			inst->prop.num_planes[i]);
 		cur += write_str(cur, end - cur,
 			"type: %s\n", inst->fmts[i].type == OUTPUT_PORT ?
 			"Output" : "Capture");
-
 		switch (inst->buffer_mode_set[i]) {
 		case HAL_BUFFER_MODE_STATIC:
 			cur += write_str(cur, end - cur,
@@ -390,7 +398,7 @@ static ssize_t inst_info_read(struct file *file, char __user *buf,
 		cur += write_str(cur, end - cur, "count: %u\n",
 				inst->bufq[i].vb2_bufq.num_buffers);
 
-		for (j = 0; j < inst->fmts[i].num_planes; j++)
+		for (j = 0; j < inst->prop.num_planes[i]; j++)
 			cur += write_str(cur, end - cur,
 			"size for plane %d: %u\n", j,
 			inst->bufq[i].plane_sizes[j]);
@@ -404,7 +412,6 @@ static ssize_t inst_info_read(struct file *file, char __user *buf,
 		completion_done(&inst->completions[SESSION_MSG_INDEX(i)]) ?
 		"pending" : "done");
 	}
-
 	cur += write_str(cur, end - cur, "ETB Count: %d\n", inst->count.etb);
 	cur += write_str(cur, end - cur, "EBD Count: %d\n", inst->count.ebd);
 	cur += write_str(cur, end - cur, "FTB Count: %d\n", inst->count.ftb);
@@ -461,7 +468,7 @@ struct dentry *msm_vidc_debugfs_init_inst(struct msm_vidc_inst *inst,
 		goto failed_create_dir;
 	}
 
-	info = debugfs_create_file("info", 0444, dir,
+	info = debugfs_create_file("info", S_IRUGO, dir,
 			idata, &inst_info_fops);
 	if (!info) {
 		dprintk(VIDC_ERR, "debugfs_create_file: fail\n");
@@ -503,7 +510,6 @@ void msm_vidc_debugfs_update(struct msm_vidc_inst *inst,
 {
 	struct msm_vidc_debug *d = &inst->debug;
 	char a[64] = "Frame processing";
-
 	switch (e) {
 	case MSM_VIDC_DEBUGFS_EVENT_ETB:
 		mutex_lock(&inst->lock);
