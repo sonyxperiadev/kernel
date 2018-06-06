@@ -62,7 +62,7 @@
 #define WLAN_SCAN_BUF_SIZE		(64 * 1024)
 
 #if defined(CONFIG_64BIT)
-#define WLAN_DHD_INFO_BUF_SIZE		(24 * 1024)
+#define WLAN_DHD_INFO_BUF_SIZE		(32 * 1024)
 #define WLAN_DHD_WLFC_BUF_SIZE		(64 * 1024)
 #define WLAN_DHD_IF_FLOW_LKUP_SIZE	(36 * 1024)
 #else
