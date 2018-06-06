@@ -1,15 +1,11 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Designware application register space functions for Keystone PCI controller
+ * DesignWare application register space functions for Keystone PCI controller
  *
  * Copyright (C) 2013-2014 Texas Instruments., Ltd.
  *		http://www.ti.com
  *
  * Author: Murali Karicheri <m-karicheri2@ti.com>
- *
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
  */
 
 #include <linux/irq.h>
@@ -72,7 +68,7 @@
 /* Config space registers */
 #define DEBUG0				0x728
 
-#define to_keystone_pcie(x)	container_of(x, struct keystone_pcie, pp)
+#define to_keystone_pcie(x)	dev_get_drvdata((x)->dev)
 
 static inline void update_reg_offset_bit_pos(u32 offset, u32 *reg_offset,
 					     u32 *bit_pos)
@@ -83,7 +79,8 @@ static inline void update_reg_offset_bit_pos(u32 offset, u32 *reg_offset,
 
 phys_addr_t ks_dw_pcie_get_msi_addr(struct pcie_port *pp)
 {
-	struct keystone_pcie *ks_pcie = to_keystone_pcie(pp);
+	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
+	struct keystone_pcie *ks_pcie = to_keystone_pcie(pci);
 
 	return ks_pcie->app.start + MSI_IRQ;
 }
@@ -100,8 +97,9 @@ static void ks_dw_app_writel(struct keystone_pcie *ks_pcie, u32 offset, u32 val)
 
 void ks_dw_pcie_handle_msi_irq(struct keystone_pcie *ks_pcie, int offset)
 {
-	struct pcie_port *pp = &ks_pcie->pp;
-	struct device *dev = pp->dev;
+	struct dw_pcie *pci = ks_pcie->pci;
+	struct pcie_port *pp = &pci->pp;
+	struct device *dev = pci->dev;
 	u32 pending, vector;
 	int src, virq;
 
@@ -122,18 +120,15 @@ void ks_dw_pcie_handle_msi_irq(struct keystone_pcie *ks_pcie, int offset)
 	}
 }
 
-static void ks_dw_pcie_msi_irq_ack(struct irq_data *d)
+void ks_dw_pcie_msi_irq_ack(int irq, struct pcie_port *pp)
 {
-	u32 offset, reg_offset, bit_pos;
+	u32 reg_offset, bit_pos;
 	struct keystone_pcie *ks_pcie;
-	struct msi_desc *msi;
-	struct pcie_port *pp;
+	struct dw_pcie *pci;
 
-	msi = irq_data_get_msi_desc(d);
-	pp = (struct pcie_port *) msi_desc_to_pci_sysdata(msi);
-	ks_pcie = to_keystone_pcie(pp);
-	offset = d->irq - irq_linear_revmap(pp->irq_domain, 0);
-	update_reg_offset_bit_pos(offset, &reg_offset, &bit_pos);
+	pci = to_dw_pcie_from_pp(pp);
+	ks_pcie = to_keystone_pcie(pci);
+	update_reg_offset_bit_pos(irq, &reg_offset, &bit_pos);
 
 	ks_dw_app_writel(ks_pcie, MSI0_IRQ_STATUS + (reg_offset << 4),
 			 BIT(bit_pos));
@@ -143,7 +138,8 @@ static void ks_dw_pcie_msi_irq_ack(struct irq_data *d)
 void ks_dw_pcie_msi_set_irq(struct pcie_port *pp, int irq)
 {
 	u32 reg_offset, bit_pos;
-	struct keystone_pcie *ks_pcie = to_keystone_pcie(pp);
+	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
+	struct keystone_pcie *ks_pcie = to_keystone_pcie(pci);
 
 	update_reg_offset_bit_pos(irq, &reg_offset, &bit_pos);
 	ks_dw_app_writel(ks_pcie, MSI0_IRQ_ENABLE_SET + (reg_offset << 4),
@@ -153,109 +149,31 @@ void ks_dw_pcie_msi_set_irq(struct pcie_port *pp, int irq)
 void ks_dw_pcie_msi_clear_irq(struct pcie_port *pp, int irq)
 {
 	u32 reg_offset, bit_pos;
-	struct keystone_pcie *ks_pcie = to_keystone_pcie(pp);
+	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
+	struct keystone_pcie *ks_pcie = to_keystone_pcie(pci);
 
 	update_reg_offset_bit_pos(irq, &reg_offset, &bit_pos);
 	ks_dw_app_writel(ks_pcie, MSI0_IRQ_ENABLE_CLR + (reg_offset << 4),
 			 BIT(bit_pos));
 }
 
-static void ks_dw_pcie_msi_irq_mask(struct irq_data *d)
+int ks_dw_pcie_msi_host_init(struct pcie_port *pp)
 {
-	struct keystone_pcie *ks_pcie;
-	struct msi_desc *msi;
-	struct pcie_port *pp;
-	u32 offset;
-
-	msi = irq_data_get_msi_desc(d);
-	pp = (struct pcie_port *) msi_desc_to_pci_sysdata(msi);
-	ks_pcie = to_keystone_pcie(pp);
-	offset = d->irq - irq_linear_revmap(pp->irq_domain, 0);
-
-	/* Mask the end point if PVM implemented */
-	if (IS_ENABLED(CONFIG_PCI_MSI)) {
-		if (msi->msi_attrib.maskbit)
-			pci_msi_mask_irq(d);
-	}
-
-	ks_dw_pcie_msi_clear_irq(pp, offset);
-}
-
-static void ks_dw_pcie_msi_irq_unmask(struct irq_data *d)
-{
-	struct keystone_pcie *ks_pcie;
-	struct msi_desc *msi;
-	struct pcie_port *pp;
-	u32 offset;
-
-	msi = irq_data_get_msi_desc(d);
-	pp = (struct pcie_port *) msi_desc_to_pci_sysdata(msi);
-	ks_pcie = to_keystone_pcie(pp);
-	offset = d->irq - irq_linear_revmap(pp->irq_domain, 0);
-
-	/* Mask the end point if PVM implemented */
-	if (IS_ENABLED(CONFIG_PCI_MSI)) {
-		if (msi->msi_attrib.maskbit)
-			pci_msi_unmask_irq(d);
-	}
-
-	ks_dw_pcie_msi_set_irq(pp, offset);
-}
-
-static struct irq_chip ks_dw_pcie_msi_irq_chip = {
-	.name = "Keystone-PCIe-MSI-IRQ",
-	.irq_ack = ks_dw_pcie_msi_irq_ack,
-	.irq_mask = ks_dw_pcie_msi_irq_mask,
-	.irq_unmask = ks_dw_pcie_msi_irq_unmask,
-};
-
-static int ks_dw_pcie_msi_map(struct irq_domain *domain, unsigned int irq,
-			      irq_hw_number_t hwirq)
-{
-	irq_set_chip_and_handler(irq, &ks_dw_pcie_msi_irq_chip,
-				 handle_level_irq);
-	irq_set_chip_data(irq, domain->host_data);
-
-	return 0;
-}
-
-static const struct irq_domain_ops ks_dw_pcie_msi_domain_ops = {
-	.map = ks_dw_pcie_msi_map,
-};
-
-int ks_dw_pcie_msi_host_init(struct pcie_port *pp, struct msi_controller *chip)
-{
-	struct keystone_pcie *ks_pcie = to_keystone_pcie(pp);
-	struct device *dev = pp->dev;
-	int i;
-
-	pp->irq_domain = irq_domain_add_linear(ks_pcie->msi_intc_np,
-					MAX_MSI_IRQS,
-					&ks_dw_pcie_msi_domain_ops,
-					chip);
-	if (!pp->irq_domain) {
-		dev_err(dev, "irq domain init failed\n");
-		return -ENXIO;
-	}
-
-	for (i = 0; i < MAX_MSI_IRQS; i++)
-		irq_create_mapping(pp->irq_domain, i);
-
-	return 0;
+	return dw_pcie_allocate_domains(pp);
 }
 
 void ks_dw_pcie_enable_legacy_irqs(struct keystone_pcie *ks_pcie)
 {
 	int i;
 
-	for (i = 0; i < MAX_LEGACY_IRQS; i++)
+	for (i = 0; i < PCI_NUM_INTX; i++)
 		ks_dw_app_writel(ks_pcie, IRQ_ENABLE_SET + (i << 4), 0x1);
 }
 
 void ks_dw_pcie_handle_legacy_irq(struct keystone_pcie *ks_pcie, int offset)
 {
-	struct pcie_port *pp = &ks_pcie->pp;
-	struct device *dev = pp->dev;
+	struct dw_pcie *pci = ks_pcie->pci;
+	struct device *dev = pci->dev;
 	u32 pending;
 	int virq;
 
@@ -285,7 +203,7 @@ irqreturn_t ks_dw_pcie_handle_error_irq(struct keystone_pcie *ks_pcie)
 		return IRQ_NONE;
 
 	if (status & ERR_FATAL_IRQ)
-		dev_err(ks_pcie->pp.dev, "fatal error (status %#010x)\n",
+		dev_err(ks_pcie->pci->dev, "fatal error (status %#010x)\n",
 			status);
 
 	/* Ack the IRQ; status bits are RW1C */
@@ -366,15 +284,16 @@ static void ks_dw_pcie_clear_dbi_mode(struct keystone_pcie *ks_pcie)
 
 void ks_dw_pcie_setup_rc_app_regs(struct keystone_pcie *ks_pcie)
 {
-	struct pcie_port *pp = &ks_pcie->pp;
+	struct dw_pcie *pci = ks_pcie->pci;
+	struct pcie_port *pp = &pci->pp;
 	u32 start = pp->mem->start, end = pp->mem->end;
 	int i, tr_size;
 	u32 val;
 
 	/* Disable BARs for inbound access */
 	ks_dw_pcie_set_dbi_mode(ks_pcie);
-	dw_pcie_writel_rc(pp, PCI_BASE_ADDRESS_0, 0);
-	dw_pcie_writel_rc(pp, PCI_BASE_ADDRESS_1, 0);
+	dw_pcie_writel_dbi(pci, PCI_BASE_ADDRESS_0, 0);
+	dw_pcie_writel_dbi(pci, PCI_BASE_ADDRESS_1, 0);
 	ks_dw_pcie_clear_dbi_mode(ks_pcie);
 
 	/* Set outbound translation size per window division */
@@ -415,11 +334,12 @@ static void __iomem *ks_pcie_cfg_setup(struct keystone_pcie *ks_pcie, u8 bus,
 				       unsigned int devfn)
 {
 	u8 device = PCI_SLOT(devfn), function = PCI_FUNC(devfn);
-	struct pcie_port *pp = &ks_pcie->pp;
+	struct dw_pcie *pci = ks_pcie->pci;
+	struct pcie_port *pp = &pci->pp;
 	u32 regval;
 
 	if (bus == 0)
-		return pp->dbi_base;
+		return pci->dbi_base;
 
 	regval = (bus << 16) | (device << 8) | function;
 
@@ -438,25 +358,27 @@ static void __iomem *ks_pcie_cfg_setup(struct keystone_pcie *ks_pcie, u8 bus,
 int ks_dw_pcie_rd_other_conf(struct pcie_port *pp, struct pci_bus *bus,
 			     unsigned int devfn, int where, int size, u32 *val)
 {
-	struct keystone_pcie *ks_pcie = to_keystone_pcie(pp);
+	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
+	struct keystone_pcie *ks_pcie = to_keystone_pcie(pci);
 	u8 bus_num = bus->number;
 	void __iomem *addr;
 
 	addr = ks_pcie_cfg_setup(ks_pcie, bus_num, devfn);
 
-	return dw_pcie_cfg_read(addr + where, size, val);
+	return dw_pcie_read(addr + where, size, val);
 }
 
 int ks_dw_pcie_wr_other_conf(struct pcie_port *pp, struct pci_bus *bus,
 			     unsigned int devfn, int where, int size, u32 val)
 {
-	struct keystone_pcie *ks_pcie = to_keystone_pcie(pp);
+	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
+	struct keystone_pcie *ks_pcie = to_keystone_pcie(pci);
 	u8 bus_num = bus->number;
 	void __iomem *addr;
 
 	addr = ks_pcie_cfg_setup(ks_pcie, bus_num, devfn);
 
-	return dw_pcie_cfg_write(addr + where, size, val);
+	return dw_pcie_write(addr + where, size, val);
 }
 
 /**
@@ -466,14 +388,15 @@ int ks_dw_pcie_wr_other_conf(struct pcie_port *pp, struct pci_bus *bus,
  */
 void ks_dw_pcie_v3_65_scan_bus(struct pcie_port *pp)
 {
-	struct keystone_pcie *ks_pcie = to_keystone_pcie(pp);
+	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
+	struct keystone_pcie *ks_pcie = to_keystone_pcie(pci);
 
 	/* Configure and set up BAR0 */
 	ks_dw_pcie_set_dbi_mode(ks_pcie);
 
 	/* Enable BAR0 */
-	dw_pcie_writel_rc(pp, PCI_BASE_ADDRESS_0, 1);
-	dw_pcie_writel_rc(pp, PCI_BASE_ADDRESS_0, SZ_4K - 1);
+	dw_pcie_writel_dbi(pci, PCI_BASE_ADDRESS_0, 1);
+	dw_pcie_writel_dbi(pci, PCI_BASE_ADDRESS_0, SZ_4K - 1);
 
 	ks_dw_pcie_clear_dbi_mode(ks_pcie);
 
@@ -481,17 +404,17 @@ void ks_dw_pcie_v3_65_scan_bus(struct pcie_port *pp)
 	  * For BAR0, just setting bus address for inbound writes (MSI) should
 	  * be sufficient.  Use physical address to avoid any conflicts.
 	  */
-	dw_pcie_writel_rc(pp, PCI_BASE_ADDRESS_0, ks_pcie->app.start);
+	dw_pcie_writel_dbi(pci, PCI_BASE_ADDRESS_0, ks_pcie->app.start);
 }
 
 /**
  * ks_dw_pcie_link_up() - Check if link up
  */
-int ks_dw_pcie_link_up(struct pcie_port *pp)
+int ks_dw_pcie_link_up(struct dw_pcie *pci)
 {
 	u32 val;
 
-	val = dw_pcie_readl_rc(pp, DEBUG0);
+	val = dw_pcie_readl_dbi(pci, DEBUG0);
 	return (val & LTSSM_STATE_MASK) == LTSSM_STATE_L0;
 }
 
@@ -519,22 +442,23 @@ void ks_dw_pcie_initiate_link_train(struct keystone_pcie *ks_pcie)
 int __init ks_dw_pcie_host_init(struct keystone_pcie *ks_pcie,
 				struct device_node *msi_intc_np)
 {
-	struct pcie_port *pp = &ks_pcie->pp;
-	struct device *dev = pp->dev;
+	struct dw_pcie *pci = ks_pcie->pci;
+	struct pcie_port *pp = &pci->pp;
+	struct device *dev = pci->dev;
 	struct platform_device *pdev = to_platform_device(dev);
 	struct resource *res;
 
 	/* Index 0 is the config reg. space address */
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	pp->dbi_base = devm_ioremap_resource(dev, res);
-	if (IS_ERR(pp->dbi_base))
-		return PTR_ERR(pp->dbi_base);
+	pci->dbi_base = devm_pci_remap_cfg_resource(dev, res);
+	if (IS_ERR(pci->dbi_base))
+		return PTR_ERR(pci->dbi_base);
 
 	/*
 	 * We set these same and is used in pcie rd/wr_other_conf
 	 * functions
 	 */
-	pp->va_cfg0_base = pp->dbi_base + SPACE0_REMOTE_CFG_OFFSET;
+	pp->va_cfg0_base = pci->dbi_base + SPACE0_REMOTE_CFG_OFFSET;
 	pp->va_cfg1_base = pp->va_cfg0_base;
 
 	/* Index 1 is the application reg. space address */
@@ -548,7 +472,7 @@ int __init ks_dw_pcie_host_init(struct keystone_pcie *ks_pcie,
 	/* Create legacy IRQ domain */
 	ks_pcie->legacy_irq_domain =
 			irq_domain_add_linear(ks_pcie->legacy_intc_np,
-					MAX_LEGACY_IRQS,
+					PCI_NUM_INTX,
 					&ks_dw_pcie_legacy_irq_domain_ops,
 					NULL);
 	if (!ks_pcie->legacy_irq_domain) {
