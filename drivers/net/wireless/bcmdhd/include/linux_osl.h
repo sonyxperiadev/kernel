@@ -208,8 +208,7 @@ extern void osl_cpu_relax(void);
 #define OSL_CPU_RELAX() osl_cpu_relax()
 
 #if (!defined(DHD_USE_COHERENT_MEM_FOR_RING) && defined(__ARM_ARCH_7A__)) || \
-	(defined(STBLINUX) && defined(__ARM_ARCH_7A__)) || (defined(CONFIG_ARCH_MSM8996) || \
-	defined(CONFIG_SOC_EXYNOS8890))
+	(defined(STBLINUX) && defined(__ARM_ARCH_7A__))
 	extern void osl_cache_flush(void *va, uint size);
 	extern void osl_cache_inv(void *va, uint size);
 	extern void osl_prefetch(const void *ptr);

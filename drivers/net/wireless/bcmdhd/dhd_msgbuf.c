@@ -918,6 +918,11 @@ dhd_dma_buf_reset(dhd_pub_t *dhd, dhd_dma_buf_t *dma_buf)
 
 	(void)dhd_dma_buf_audit(dhd, dma_buf);
 
+	if (dma_buf->va == NULL) {
+		pr_err("VA IS NULL!!!\n");
+		return;
+	}
+
 	/* Zero out the entire buffer and cache flush */
 	memset((void*)dma_buf->va, 0, dma_buf->len);
 	OSL_CACHE_FLUSH((void *)dma_buf->va, dma_buf->len);

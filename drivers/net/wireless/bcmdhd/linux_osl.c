@@ -1615,8 +1615,7 @@ osl_cpu_relax(void)
 }
 
 
-#if (defined(__ARM_ARCH_7A__) && !defined(DHD_USE_COHERENT_MEM_FOR_RING) || \
-	defined(CONFIG_ARCH_MSM8996) || defined(CONFIG_SOC_EXYNOS8890))
+#if (defined(__ARM_ARCH_7A__) && !defined(DHD_USE_COHERENT_MEM_FOR_RING))
 
 #include <asm/dma-mapping.h>
 
@@ -1642,6 +1641,9 @@ osl_cache_flush(void *va, uint size)
 	unsigned long end_cache_line_start;
 	unsigned long end_addr;
 	unsigned long next_cache_line_start;
+
+	if (va == NULL)
+		return;
 
 	end_addr = (unsigned long)va + size;
 
