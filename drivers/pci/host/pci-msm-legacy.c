@@ -31,7 +31,7 @@
 #include <linux/slab.h>
 #include <linux/types.h>
 #include <linux/of_gpio.h>
-#include <linux/clk/msm-clk.h>
+#include <linux/clk/qcom.h>
 #include <linux/reset.h>
 #include <linux/msm-bus.h>
 #include <linux/msm-bus-board.h>
@@ -1739,8 +1739,7 @@ static bool pcie_phy_is_ready(struct msm_pcie_dev_t *dev)
 
 static int msm_pcie_restore_sec_config(struct msm_pcie_dev_t *dev)
 {
-	int ret;
-	u64 scm_ret;
+	int ret, scm_ret;
 
 	if (!dev) {
 		pr_err("PCIe: the input pcie dev is NULL.\n");
@@ -1750,7 +1749,7 @@ static int msm_pcie_restore_sec_config(struct msm_pcie_dev_t *dev)
 	ret = scm_restore_sec_cfg(dev->scm_dev_id, 0, &scm_ret);
 	if (ret || scm_ret) {
 		PCIE_ERR(dev,
-			"PCIe: RC%d failed(%d) to restore sec config, scm_ret=%llu\n",
+			"PCIe: RC%d failed(%d) to restore sec config, scm_ret=%d\n",
 			dev->rc_idx, ret, scm_ret);
 		return ret ? ret : -EINVAL;
 	}
@@ -5047,6 +5046,12 @@ int msm_pcie_configure_sid(struct device *dev, u32 *sid, int *domain)
 }
 EXPORT_SYMBOL(msm_pcie_configure_sid);
 
+int msm_pcie_configure_sid_legacy(struct device *dev, u32 *sid, int *domain)
+{
+	return msm_pcie_configure_sid(dev, sid, domain);
+}
+EXPORT_SYMBOL(msm_pcie_configure_sid_legacy);
+
 int msm_pcie_enumerate(u32 rc_idx)
 {
 	int ret = 0, bus_ret = 0, scan_ret = 0;
@@ -5876,7 +5881,7 @@ static int msm_pcie_map_qgic_addr(struct msm_pcie_dev_t *dev,
 	}
 
 	ret = iommu_map(domain, iova, rounddown(dev->msi_gicm_addr, PAGE_SIZE),
-			PAGE_SIZE, IOMMU_READ | IOMMU_WRITE | IOMMU_DEVICE);
+			PAGE_SIZE, IOMMU_READ | IOMMU_WRITE);
 	if (ret < 0) {
 		PCIE_ERR(dev,
 			"PCIe: RC%d: ret: %d: Could not do iommu map for QGIC address\n",
@@ -6712,7 +6717,7 @@ static void __exit pcie_exit(void)
 		msm_pcie_sysfs_exit(&msm_pcie_dev[i]);
 }
 
-subsys_initcall_sync(pcie_init);
+fs_initcall_sync(pcie_init);
 module_exit(pcie_exit);
 
 
