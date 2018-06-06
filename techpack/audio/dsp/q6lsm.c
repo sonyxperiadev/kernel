@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2017, Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2018, Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -323,6 +323,11 @@ struct lsm_client *q6lsm_client_alloc(lsm_app_cb cb, void *priv)
 		kfree(client);
 		return NULL;
 	}
+
+	init_waitqueue_head(&client->cmd_wait);
+	mutex_init(&client->cmd_lock);
+	atomic_set(&client->cmd_state, CMD_STATE_CLEARED);
+
 	pr_debug("%s: Client Session %d\n", __func__, client->session);
 	client->apr = apr_register("ADSP", "LSM", q6lsm_callback,
 				   ((client->session) << 8 | client->session),
@@ -340,9 +345,6 @@ struct lsm_client *q6lsm_client_alloc(lsm_app_cb cb, void *priv)
 		goto fail;
 	}
 
-	init_waitqueue_head(&client->cmd_wait);
-	mutex_init(&client->cmd_lock);
-	atomic_set(&client->cmd_state, CMD_STATE_CLEARED);
 	pr_debug("%s: New client allocated\n", __func__);
 	return client;
 fail:
