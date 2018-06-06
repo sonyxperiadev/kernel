@@ -43,6 +43,10 @@
 #define CBF_DIV_2_INDEX		2
 #define CBF_SAFE_INDEX		3
 
+#define PWRCL_EARLY_BOOT_CLK_RATE	1478400000
+#define PERFCL_EARLY_BOOT_CLK_RATE	1785600000
+#define CBF_EARLY_BOOT_CLK_RATE		1305600000
+
 #define DIV_2_THRESHOLD		600000000
 #define PWRCL_REG_OFFSET 0x0
 #define PERFCL_REG_OFFSET 0x80000
@@ -1341,8 +1345,15 @@ static int qcom_cpu_clk_msm8996_driver_probe(struct platform_device *pdev)
 
 	BUG_ON(register_hotcpu_notifier(&clk_cpu_8996_hotplug_notifier));
 
+	/* Once per core.... */
+	clk_prepare_enable(pwrcl_pmux.clkr.hw.clk);
 	clk_prepare_enable(pwrcl_pmux.clkr.hw.clk);
 	clk_prepare_enable(perfcl_pmux.clkr.hw.clk);
+	clk_prepare_enable(perfcl_pmux.clkr.hw.clk);
+
+	/* Set performance boot rates */
+	clk_set_rate(pwrcl_pmux.clkr.hw.clk, PWRCL_EARLY_BOOT_CLK_RATE);
+	clk_set_rate(perfcl_pmux.clkr.hw.clk, PERFCL_EARLY_BOOT_CLK_RATE);
 
 	pr_err("Registered AP Clock Controller clocks\n");
 	return ret;
@@ -1418,7 +1429,21 @@ static int qcom_cbf_clk_msm8996_driver_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	clk_set_rate(cbf_mux.clkr.hw.clk, 614400000);
+	clk_set_rate(cbf_mux.clkr.hw.clk, CBF_EARLY_BOOT_CLK_RATE);
+
+	/*
+	 * HACK: The qcom-cpufreq driver wants to disable the CBF clock for
+	 *	 X times, where X is equal to the number of hotpluggable CPUs.
+	 *	 The only way to solve this in a fast manner and anyway
+	 *	 stay compatible with all the other SoCs using the same qcom
+	 *	 cpufreq driver is to raise the refcount of the CBF MUX clock
+	 *	 so that it never gets disabled. MSM8996 has four cores,
+	 *	 hence we need to raise the refcount to 4 to avoid shutting
+	 *	 down the CBF.
+	 */
+	clk_prepare_enable(cbf_mux.clkr.hw.clk);
+	clk_prepare_enable(cbf_mux.clkr.hw.clk);
+	clk_prepare_enable(cbf_mux.clkr.hw.clk);
 	clk_prepare_enable(cbf_mux.clkr.hw.clk);
 
 	pr_err("Registered AP Interconnect clocks\n");
