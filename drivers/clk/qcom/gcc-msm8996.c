@@ -235,9 +235,14 @@ static struct clk_fixed_factor xo = {
 	},
 };
 
+static unsigned int gpll0_voter;
+
 static struct clk_alpha_pll gpll0_early = {
 	.offset = 0x00000,
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
+	.soft_vote = &gpll0_voter,
+	.soft_vote_mask = PLL_SOFT_VOTE_PRIMARY,
+	.flags = SUPPORTS_FSM_VOTE,
 	.clkr = {
 		.enable_reg = 0x52000,
 		.enable_mask = BIT(0),
@@ -247,6 +252,20 @@ static struct clk_alpha_pll gpll0_early = {
 			.num_parents = 1,
 			.ops = &clk_alpha_pll_ops,
 		},
+	},
+};
+
+static struct clk_alpha_pll gpll0_ao = {
+	.offset = 0x00000,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
+	.soft_vote = &gpll0_voter,
+	.soft_vote_mask = PLL_SOFT_VOTE_CPU,
+	.flags = SUPPORTS_FSM_VOTE,
+	.clkr.hw.init = &(struct clk_init_data){
+		.name = "gpll0_ao",
+		.parent_names = (const char *[]){ "xo_a" },
+		.num_parents = 1,
+		.ops = &clk_alpha_pll_ops,
 	},
 };
 
@@ -3163,6 +3182,7 @@ static struct clk_hw *gcc_msm8996_hws[] = {
 static struct clk_regmap *gcc_msm8996_clocks[] = {
 	[GPLL0_EARLY] = &gpll0_early.clkr,
 	[GPLL0] = &gpll0.clkr,
+	[GPLL0_AO] = &gpll0_ao.clkr,
 	[GPLL4_EARLY] = &gpll4_early.clkr,
 	[GPLL4] = &gpll4.clkr,
 	[USB30_MASTER_CLK_SRC] = &usb30_master_clk_src.clkr,
