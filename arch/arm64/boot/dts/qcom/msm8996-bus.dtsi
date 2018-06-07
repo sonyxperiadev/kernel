@@ -228,8 +228,8 @@
 			qcom,qos-off = <4096>;
 			qcom,base-offset = <16384>;
 			clock-names = "bus_clk", "bus_a_clk";
-			clocks = <&cclock_rpmcc SNOC_MSMBUS_CLK>,
-			     <&cclock_rpmcc SNOC_MSMBUS_A_CLK>;
+			clocks = <&clock_rpmcc SNOC_MSMBUS_CLK>,
+			     <&clock_rpmcc SNOC_MSMBUS_A_CLK>;
 			coresight-id = <200>;
 			coresight-name = "coresight-snoc";
 			coresight-nr-inports = <0>;

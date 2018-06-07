@@ -996,7 +996,7 @@
 	};
 };
 
-&pmi8994_fg {
+&qpnp_fg {
 	qcom,battery-data = <&tone_batterydata>;
 	qcom,hot-bat-decidegc = <550>;
 	qcom,warm-bat-decidegc = <450>;
@@ -1017,7 +1017,7 @@
 	somc,resume-soc-raw-not-full-aging = <0xEF>;
 };
 
-&pmi8994_charger {
+&qpnp_smbcharger {
 	/delete-property/ qcom,parallel-usb-min-current-ma;
 	/delete-property/ qcom,parallel-usb-9v-min-current-ma;
 	/delete-property/ qcom,charging-disabled;

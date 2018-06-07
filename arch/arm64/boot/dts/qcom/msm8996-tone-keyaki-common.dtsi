@@ -88,7 +88,7 @@
 	};
 };
 
-&pmi8994_fg {
+&qpnp_fg {
 	qcom,battery-data = <&tone_keyaki_batterydata>;
 	qcom,fg-iterm-ma = <150>;
 	qcom,fg-chg-iterm-ma = <150>;
@@ -100,7 +100,7 @@
 	somc,soc-magnification = <106>;
 };
 
-&pmi8994_charger {
+&qpnp_smbcharger {
 	qcom,fastchg-current-ma = <2100>;
 	somc,usb-9v-current-max = <1500>;
 	qcom,float-voltage-comp = <0x08>;

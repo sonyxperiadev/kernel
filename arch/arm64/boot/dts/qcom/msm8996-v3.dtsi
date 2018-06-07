@@ -29,15 +29,16 @@
 	compatible = "qcom,gcc-msm8996-v3";
 };
 
+/*
 &clock_debug {
 	compatible = "qcom,cc-debug-msm8996-v3";
 };
-
+*/
 &clock_mmss {
 	compatible = "qcom,mmcc-msm8996";
 };
 
-&clock_gpucc {
+&clock_gpu {
 	compatible = "qcom,gpucc-msm8996-v3";
 	qcom,gfx3d_clk_src_v2-opp-handle = <&msm_gpu>;
 	qcom,gfxfreq-speedbin0 =
@@ -94,8 +95,8 @@
 
 &gdsc_gpu_gx {
 	clock-names = "core_clk", "core_root_clk";
-	clocks = <&clock_gpucc GPU_GX_GFX3D_CLK>,
-		 <&clock_gpucc GFX3D_CLK_SRC>;
+	clocks = <&clock_gpu GPU_GX_GFX3D_CLK>,
+		 <&clock_gpu GFX3D_CLK_SRC>;
 };
 
 &pcie0 {

@@ -11,7 +11,14 @@
  */
 
 #include "skeleton64.dtsi"
-#include <dt-bindings/clock/msm-clocks-8996.h>
+#include <dt-bindings/clock/qcom,rpmcc.h>
+#include <dt-bindings/clock/qcom,cpu-8996.h>
+#include <dt-bindings/clock/qcom,gcc-msm8996.h>
+#include <dt-bindings/clock/qcom,mmcc-msm8996.h>
+#include <dt-bindings/clock/mdss-pll-clk.h>
+#include <dt-bindings/clock/qcom,audio-ext-clk.h>
+#include <dt-bindings/spmi/spmi.h>
+#include <dt-bindings/regulator/qcom,rpm-smd-regulator.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 
 / {
@@ -755,6 +762,12 @@
 			< 1593600 >;
 	};
 
+	clock_rpmcc: qcom,rpmcc {
+		compatible = "qcom,rpmcc-msm8996", "qcom,rpmcc";
+		#clock-cells = <1>;
+		status = "ok";
+	};
+
 	clock_cpu: qcom,cpu-clock-8996@ {
 		compatible = "qcom,msm8996-apcc";
 /*
@@ -830,7 +843,7 @@
 			< 1036800000 10 >;
 		clock-names = "xo_ao", "aux_clk";
 		clocks = <&clock_rpmcc RPM_XO_A_CLK_SRC>,
-			 <&clock_gcc clk_gpll0_ao>;
+			 <&clock_gcc GPLL0_EARLY>;
 		#clock-cells = <1>;
 	};
 
@@ -1025,8 +1038,8 @@
 			qcom,wcd-rst-gpio-node = <&wcd_rst_gpio>;
 
 			clock-names = "wcd_clk", "wcd_native_clk";
-			clocks = <&clock_audio clk_audio_pmi_clk>,
-				 <&clock_audio clk_audio_ap_clk2>;
+			clocks = <&clock_audio AUDIO_PMI_CLK>,
+				 <&clock_audio AUDIO_AP_CLK2>;
 
 			cdc-vdd-buck-supply = <&pm8994_s4>;
 			qcom,cdc-vdd-buck-voltage = <1800000 1800000>;
@@ -1616,10 +1629,10 @@
 			"pcie_1_slv_axi_clk", "pcie_1_ldo", "pcie_1_smmu_clk",
 			"pcie_phy_cfg_ahb_clk", "pcie_phy_aux_clk";
 
-		resets = <&clock_gcc PCIE_PHY_BCR>,
-			<&clock_gcc PCIE_PHY_COM_BCR>,
-			<&clock_gcc PCIE_PHY_NOCSR_COM_PHY_BCR>,
-			<&clock_gcc PCIE_1_PHY_BCR>;
+		resets = <&clock_gcc GCC_PCIE_PHY_BCR>,
+			<&clock_gcc GCC_PCIE_PHY_COM_BCR>,
+			<&clock_gcc GCC_PCIE_PHY_NOCSR_COM_PHY_BCR>,
+			<&clock_gcc GCC_PCIE_1_PHY_BCR>;
 
 		reset-names = "pcie_phy_reset", "pcie_phy_com_reset",
 			"pcie_phy_nocsr_com_phy_reset","pcie_1_phy_reset";
@@ -1772,10 +1785,10 @@
 			"pcie_2_slv_axi_clk", "pcie_2_ldo", "pcie_2_smmu_clk",
 			"pcie_phy_cfg_ahb_clk", "pcie_phy_aux_clk";
 
-		resets = <&clock_gcc PCIE_PHY_BCR>,
-			<&clock_gcc PCIE_PHY_COM_BCR>,
-			<&clock_gcc PCIE_PHY_NOCSR_COM_PHY_BCR>,
-			<&clock_gcc PCIE_2_PHY_BCR>;
+		resets = <&clock_gcc GCC_PCIE_PHY_BCR>,
+			<&clock_gcc GCC_PCIE_PHY_COM_BCR>,
+			<&clock_gcc GCC_PCIE_PHY_NOCSR_COM_PHY_BCR>,
+			<&clock_gcc GCC_PCIE_2_PHY_BCR>;
 
 		reset-names = "pcie_phy_reset", "pcie_phy_com_reset",
 			"pcie_phy_nocsr_com_phy_reset","pcie_2_phy_reset";
@@ -2123,7 +2136,7 @@
 		clock-names = "core_clk", "iface_clk", "utmi_clk", "sleep_clk",
 				"xo", "cfg_ahb_clk";
 		qcom,core-clk-rate = <60000000>;
-		resets = <&clock_gcc USB_20_BCR>;
+		resets = <&clock_gcc GCC_USB_20_BCR>;
 		reset-names = "core_reset";
 
 		dwc3@7600000 {
@@ -2177,7 +2190,7 @@
 			 <&clock_rpmcc RPM_LN_BB_CLK>;
 		clock-names = "cfg_ahb_clk", "ref_clk_src";
 
-		resets = <&clock_gcc QUSB2PHY_PRIM_BCR>;
+		resets = <&clock_gcc GCC_QUSB2PHY_PRIM_BCR>;
 		reset-names = "phy_reset";
 	};
 
@@ -2214,7 +2227,7 @@
 			<&clock_rpmcc RPM_LN_BB_CLK>;
 		clock-names = "cfg_ahb_clk", "ref_clk_src";
 
-		resets = <&clock_gcc QUSB2PHY_SEC_BCR>;
+		resets = <&clock_gcc GCC_QUSB2PHY_SEC_BCR>;
 		reset-names = "phy_reset";
 	};
 
@@ -4032,7 +4045,7 @@
 
 &gdsc_cpp {
 	clock-names = "core_clk";
-	clocks = <&clock_mmss clk_camss_cpp_clk>;
+	clocks = <&clock_mmss CAMSS_CPP_CLK>;
 	parent-supply = <&gdsc_camss_top>;
 	qcom,support-hw-trigger;
 	status = "ok";
@@ -4082,8 +4095,8 @@
 
 &gdsc_gpu_gx {
 	clock-names = "core_clk", "core_root_clk";
-	clocks = <&clock_gpucc GPU_GX_GFX3D_CLK>,
-		 <&clock_gpucc GFX3D_CLK_SRC>;
+	clocks = <&clock_gpu GPU_GX_GFX3D_CLK>,
+		 <&clock_gpu GFX3D_CLK_SRC>;
 	qcom,force-enable-root-clk;
 	parent-supply = <&gfx_vreg>;
 	status = "ok";

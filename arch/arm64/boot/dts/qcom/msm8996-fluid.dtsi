@@ -272,7 +272,7 @@
 		&mdss_hdmi_cec_suspend>;
 };
 
-&pmi8994_charger {
+&qpnp_smbcharger {
 	qcom,dc-psy-type = "Wipower";
 	qcom,dcin-vadc = <&pmi8994_vadc>;
 	qcom,wipower-default-ilim-map = <4000000 20000000 550 700 300>;
@@ -340,7 +340,7 @@
 	};
 };
 
-&pmi8994_fg {
+&qpnp_fg {
 	qcom,battery-data = <&mtp_batterydata>;
 	qcom,ext-sense-type;
 	qcom,fg-vbatt-low-threshold = <3700>;

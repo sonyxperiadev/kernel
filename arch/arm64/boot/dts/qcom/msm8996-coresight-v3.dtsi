@@ -1352,7 +1352,7 @@
 
 		clocks = <&clock_rpmcc RPM_QDSS_CLK>,
 			 <&clock_rpmcc RPM_QDSS_A_CLK>,
-			 <&clock_mmss clk_mmss_misc_ahb_clk>;
+			 <&clock_mmss MMSS_MISC_AHB_CLK>;
 		clock-names = "core_clk", "core_a_clk", "core_mmss_clk";
 
 		qcom,hwevent-clks = "core_mmss_clk";

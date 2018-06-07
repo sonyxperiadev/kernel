@@ -522,7 +522,7 @@
 
 /* SPM controlled regulators: */
 &spmi_bus {
-	qcom,pm8994@1 {
+	pm8994@1 {
 		/*
 		 * PM8994 S8 + S9 + S10 + S11 = 4 phase VDD_APCC supply
 		 * S11 is the gang leader.
@@ -548,7 +548,7 @@
 
 /* SPMI controlled regulators: */
 &spmi_bus {
-	qcom,pmi8994@3 {
+	pmi8994@3 {
 		/* PMI8994 S2 + S3 = 2 phase VDD_GFX supply */
 		pmi8994_s2: regulator@1700 {
 			compatible = "qcom,qpnp-regulator";
@@ -560,7 +560,7 @@
 		};
 	};
 
-	qcom,pm8004@5 {
+	pm8004@5 {
 		compatible ="qcom,spmi-pmic";
 		reg = <0x5 SPMI_USID>;
 		#address-cells = <2>;
@@ -1950,7 +1950,7 @@
 	};
 };
 
-&pmi8994_charger {
+&qpnp_smbcharger {
 	otg-parent-supply = <&pmi8994_boost_5v>;
 	smbcharger_charger_otg: qcom,smbcharger-boost-otg {
 		regulator-name = "smbcharger_charger_otg";

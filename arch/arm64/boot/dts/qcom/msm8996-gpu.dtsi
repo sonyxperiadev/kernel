@@ -96,9 +96,9 @@
 		qcom,gpmu-version = <1 0>;
 		qcom,zap-shader = "a530_zap";
 
-		clocks = <&clock_gpucc GPU_GX_GFX3D_CLK>,
-			<&clock_gpucc GPU_AHB_CLK>,
-			<&clock_gpucc GPU_GX_RBBMTIMER_CLK>,
+		clocks = <&clock_gpu GPU_GX_GFX3D_CLK>,
+			<&clock_gpu GPU_AHB_CLK>,
+			<&clock_gpu GPU_GX_RBBMTIMER_CLK>,
 			<&clock_gcc GCC_BIMC_GFX_CLK>,
 			<&clock_gcc GCC_MMSS_BIMC_GFX_CLK>,
 			<&clock_mmss MMSS_MMAGIC_AHB_CLK>;

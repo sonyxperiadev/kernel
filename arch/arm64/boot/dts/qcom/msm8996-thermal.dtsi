@@ -349,6 +349,7 @@
 					<&CPU3 THERMAL_NO_LIMIT
 						(THERMAL_MAX_LIMIT-1)>;
 			};
+		};
 	};
 
 	aoss0-lowf {

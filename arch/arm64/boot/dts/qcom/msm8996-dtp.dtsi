@@ -63,11 +63,11 @@
 	};
 };
 
-&pmi8994_charger {
+&qpnp_smbcharger {
 	qcom,battery-data = <&qrd_batterydata>;
 };
 
-&pmi8994_fg {
+&qpnp_fg {
 	qcom,battery-data = <&qrd_batterydata>;
 	qcom,ext-sense-type;
 	qcom,hold-soc-while-full;

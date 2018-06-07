@@ -10,6 +10,8 @@
  * GNU General Public License for more details.
  */
 
+#include <dt-bindings/clock/mdss-pll-clk.h>
+
 &soc {
 	mdss_mdp: qcom,mdss_mdp@900000 {
 		compatible = "qcom,mdss_mdp";

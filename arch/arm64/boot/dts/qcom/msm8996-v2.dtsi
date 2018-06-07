@@ -58,8 +58,8 @@
 
 &gdsc_gpu_gx {
 	clock-names = "core_clk", "core_root_clk";
-	clocks = <&clock_gpucc GPU_GX_GFX3D_CLK>,
-		 <&clock_gpucc GFX3D_CLK_SRC>;
+	clocks = <&clock_gpu GPU_GX_GFX3D_CLK>,
+		 <&clock_gpu GFX3D_CLK_SRC>;
 };
 
 &pm8994_s11 {
