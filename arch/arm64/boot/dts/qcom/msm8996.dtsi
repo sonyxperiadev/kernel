@@ -2658,8 +2658,8 @@
 				"iface_clk", "bus_clk";
 		clocks = <&clock_rpmcc QCRYPTO_CE1_CLK>,
 			 <&clock_rpmcc QCRYPTO_CE1_CLK>,
-			 <&clock_gcc GCC_CE1_AHB_M_CLK>,
-			 <&clock_gcc GCC_CE1_AXI_M_CLK>;
+			 <&clock_rpmcc QCRYPTO_CE1_CLK>,
+			 <&clock_rpmcc QCRYPTO_CE1_CLK>;
 		qcom,ce-opp-freq = <171430000>;
 		qcom,use-sw-aes-cbc-ecb-ctr-algo;
 		qcom,use-sw-aes-xts-algo;
@@ -2690,8 +2690,9 @@
 				"iface_clk", "bus_clk";
 		clocks = <&clock_rpmcc QCEDEV_CE1_CLK>,
 			 <&clock_rpmcc QCEDEV_CE1_CLK>,
-			 <&clock_gcc GCC_CE1_AHB_M_CLK>,
-			 <&clock_gcc GCC_CE1_AXI_M_CLK>;
+			 <&clock_rpmcc QCEDEV_CE1_CLK>,
+			 <&clock_rpmcc QCEDEV_CE1_CLK>;
+		qcom,support-core-clk-only;
 		qcom,ce-opp-freq = <171430000>;
 	};
 
@@ -2718,8 +2719,8 @@
 				"iface_clk", "bus_clk";
 		clocks = <&clock_rpmcc RPM_CE1_CLK>,
 			 <&clock_rpmcc QSEECOM_CE1_CLK>,
-			 <&clock_gcc GCC_CE1_AHB_M_CLK>,
-			 <&clock_gcc GCC_CE1_AXI_M_CLK>;
+			 <&clock_rpmcc QSEECOM_CE1_CLK>,
+			 <&clock_rpmcc QSEECOM_CE1_CLK>;
 		qcom,ce-opp-freq = <171430000>;
 		qcom,qsee-reentrancy-support = <2>;
 	};
@@ -4016,8 +4017,8 @@
 			"iface_clk", "bus_clk";
 		clocks = <&clock_rpmcc RPM_CE1_CLK>,
 			<&clock_rpmcc QSEECOM_CE1_CLK>,
-			<&clock_gcc GCC_CE1_AHB_M_CLK>,
-			<&clock_gcc GCC_CE1_AXI_M_CLK>;
+			<&clock_rpmcc QSEECOM_CE1_CLK>,
+			<&clock_rpmcc QSEECOM_CE1_CLK>;
 			qcom,ce-opp-freq = <171430000>;
 	};
 
