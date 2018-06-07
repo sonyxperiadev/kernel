@@ -60,7 +60,7 @@
 };
 
 &spmi_bus {
-	qcom,pmi8994@3 {
+	pmi8994@3 {
 		qcom,leds@d000 {
 			status = "okay";
 			qcom,rgb_sync = <1>;

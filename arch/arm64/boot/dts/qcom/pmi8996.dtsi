@@ -24,7 +24,7 @@
 };
 
 &spmi_bus {
-	qcom,pmi8994@2 {
+	pmi8994@2 {
 		bcl@4200 {
 			qcom,inhibit-derating-ua = <0>;
 		};

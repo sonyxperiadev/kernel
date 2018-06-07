@@ -768,7 +768,7 @@
 		status = "ok";
 	};
 
-	clock_cpu: qcom,cpu-clock-8996@ {
+	clock_cpu: qcom,msm8996-apcc@6400000 {
 		compatible = "qcom,msm8996-apcc";
 /*
 		reg = <0x06400000 0x1000>,

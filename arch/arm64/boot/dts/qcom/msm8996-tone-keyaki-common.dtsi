@@ -81,13 +81,6 @@
 	};
 };
 
-&pmi8994_mpps {
-	/* MPP_1: USB_ID_DISCHG */
-	mpp@a000 {
-		qcom,vin-sel = <2>;		/* VDD_MSM_IO(1.8V) */
-	};
-};
-
 &qpnp_fg {
 	qcom,battery-data = <&tone_keyaki_batterydata>;
 	qcom,fg-iterm-ma = <150>;
@@ -448,7 +441,7 @@
 };
 
 &spmi_bus {
-	qcom,pmi8994@3 {
+	pmi8994@3 {
 		qcom,leds@d000 {
 			status = "okay";
 			qcom,rgb_sync = <1>;

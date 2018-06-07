@@ -643,345 +643,330 @@
 	};
 };
 
-&pm8994_gpios {
-	/* GPIO_1: NC(P_SENSE_CNTL) */
-	gpio@c000 {
-		qcom,master-en = <0>;		/* Disable */
-		status = "okay";
-	};
-
-	/* GPIO_2: VOL_DOWN_N */
-	gpio@c100 {
-		qcom,src-sel = <0>;		/* GPIO */
-		qcom,mode = <0>;		/* In */
-		qcom,vin-sel = <2>;		/* S4 */
-		qcom,pull = <0>;		/* PU */
-		qcom,master-en = <1>;		/* Enable */
-		status = "ok";
-	};
-
-	/* GPIO_3: VOL_UP_N */
-	gpio@c200 {
-		qcom,src-sel = <0>;		/* GPIO */
-		qcom,mode = <0>;		/* In */
-		qcom,vin-sel = <2>;		/* S4 */
-		qcom,pull = <0>;		/* PU */
-		qcom,master-en = <1>;		/* Enable */
-		status = "ok";
-	};
-
-	/* GPIO_4: SNAPSHOT_N */
-	gpio@c300 {
-		qcom,src-sel = <0>;		/* GPIO */
-		qcom,mode = <0>;		/* In */
-		qcom,vin-sel = <2>;		/* S4 */
-		qcom,pull = <0>;		/* PU */
-		qcom,master-en = <1>;		/* Enable */
-		status = "ok";
-	};
-
-	/* GPIO_5: FOCUS_N */
-	gpio@c400 {
-		qcom,src-sel = <0>;		/* GPIO */
-		qcom,mode = <0>;		/* In */
-		qcom,vin-sel = <2>;		/* S4 */
-		qcom,pull = <0>;		/* PU */
-		qcom,master-en = <1>;		/* Enable */
-		status = "ok";
-	};
-
-	/* GPIO_6: NC(PGOOD_SMB1351) */
-	gpio@c500 {
-		qcom,master-en = <0>;		/* Disable */
-		status = "okay";
-	};
-
-	/* GPIO_7: NFC_VEN */
-	gpio@c600 {
-		qcom,src-sel = <0>;		/* GPIO */
-		qcom,mode = <1>;		/* Out */
-		qcom,output-type = <0>;		/* CMOS */
-		qcom,vin-sel = <2>;		/* S4 */
-		qcom,out-strength = <1>;	/* Low */
-		qcom,invert = <0>;		/* Low */
-		qcom,master-en = <1>;		/* Enable */
-		status = "ok";
-	};
-
-	/* GPIO_8: NC */
-	gpio@c700 {
-		qcom,master-en = <0>;		/* Disable */
-		status = "okay";
-	};
-
-	/* GPIO_9: NC */
-	gpio@c800 {
-		qcom,master-en = <0>;		/* Disable */
-		status = "okay";
-	};
-
-	/* GPIO_10: NFC_CLK_REQ */
-	gpio@c900 {
-		qcom,src-sel = <0>;		/* GPIO */
-		qcom,mode = <0>;		/* In */
-		qcom,vin-sel = <2>;		/* S4 */
-		qcom,pull = <4>;		/* PD */
-		qcom,master-en = <1>;		/* Enable */
-		status = "ok";
-	};
-
-	/* GPIO_11: NC */
-	gpio@ca00 {
-		qcom,master-en = <0>;		/* Disable */
-		status = "okay";
-	};
-
-	/* GPIO_12: NC */
-	gpio@cb00 {
-		qcom,master-en = <0>;		/* Disable */
-		status = "okay";
-	};
-
-	/* GPIO_13: EAR_EN */
-	gpio@cc00 {
-		qcom,src-sel = <0>;		/* GPIO */
-		qcom,mode = <1>;		/* Out */
-		qcom,output-type = <0>;		/* CMOS */
-		qcom,vin-sel = <2>;		/* S4 */
-		qcom,out-strength = <1>;	/* Low */
-		qcom,invert = <0>;		/* Low */
-		qcom,master-en = <1>;		/* Enable */
-		status = "ok";
-	};
-
-	/* GPIO_14: EAR_EN */
-	gpio@cd00 {
-		qcom,master-en = <0>;		/* Disable */
-		status = "okay";
-	};
-
-	/* GPIO_15: PM_DIVCLK1 */
-	/* Follow QTI */
-
-	/* GPIO_16: PMI_CLK */
-	/* Follow QTI */
-
-	/* GPIO_17: NC(DIVCLK3) */
-	gpio@d000 {
-		qcom,master-en = <0>;		/* Disable */
-		status = "okay";
-	};
-
-
-	/* GPIO_18: WL_SLEEP_CLK */
-	gpio@d100 {
-		qcom,src-sel = <3>;		/* SPECIAL_FUNCTION2 */
-		qcom,mode = <1>;		/* Out */
-		qcom,output-type = <0>;		/* CMOS */
-		qcom,vin-sel = <2>;		/* S4 */
-		qcom,out-strength = <1>;	/* Low */
-		qcom,pull = <5>;		/* NP */
-		qcom,master-en = <1>;		/* Enable */
-		status = "ok";
-	};
-
-	/* GPIO_19: NC */
-	gpio@d200 {
-		qcom,master-en = <0>;		/* Disable */
-		status = "okay";
-	};
-
-	/* GPIO_20: PMIC_SPON */
-	/* Follow QTI */
-
-	/* GPIO_21: UIM_BATT_ALARM */
-	/* Follow QTI */
-
-	/* GPIO_22: NC(PMK_SLEEP_CLK) */
-	gpio@d500 {
-		qcom,master-en = <0>;		/* Disable */
-		status = "okay";
-	};
-
-	/* VCTRL: SSC_PWR_EN */
-	/* Follow QTI */
+/* GPIO_1: NC(P_SENSE_CNTL) */
+&pm8994_gpio_1 {
+	bias-high-impedance;
 };
 
-&pmi8994_gpios {
-	/* GPIO_1: VIB_LDO_EN */
-	gpio@c000 {
-		qcom,src-sel = <0>;		/* GPIO */
-		qcom,mode = <1>;		/* Out */
-		qcom,output-type = <0>;		/* CMOS */
-		qcom,vin-sel = <2>;		/* S4 */
-		qcom,out-strength = <1>;	/* Low */
-		qcom,invert = <0>;		/* Low */
-		qcom,master-en = <1>;		/* Enable */
-		status = "okay";
-	};
+/* GPIO_2: VOL_DOWN_N */
+&pm8994_gpio_2 {
+	/delete-property/ bias-high-impedance;
+	input-enable;
+	bias-pull-up;
+	power-source = <PM8994_VPP_1P8>;
+};
 
-	/* GPIO_2: NC */
-	gpio@c100 {
-		qcom,master-en = <0>;		/* Disable */
-		status = "okay";
-	};
+/* GPIO_3: VOL_UP_N */
+&pm8994_gpio_3 {
+	input-enable;
+	bias-pull-up;
+	power-source = <PM8994_VPP_1P8>;
+};
 
-	/* GPIO_3: NC(Backup for SPKR_AMP_EN2) */
-	gpio@c200 {
-		qcom,master-en = <0>;		/* Disable */
-		status = "okay";
-	};
+/* GPIO_4: SNAPSHOT_N */
+&pm8994_gpio_4 {
+	/delete-property/ bias-high-impedance;
+	input-enable;
+	bias-pull-up;
+	power-source = <PM8994_VPP_1P8>;
+};
 
-	/* GPIO_4: NC */
-	gpio@c300 {
-		qcom,src-sel = <0>;		/* GPIO */
-		qcom,mode = <1>;		/* Out */
-		qcom,output-type = <0>;		/* CMOS */
-		qcom,vin-sel = <2>;		/* S4 */
-		qcom,out-strength = <1>;	/* Low */
-		qcom,invert = <1>;		/* High */
-		qcom,master-en = <1>;		/* Enable */
-		status = "okay";
-	};
+/* GPIO_5: FOCUS_N */
+&pm8994_gpio_5 {
+	/delete-property/ bias-high-impedance;
+	input-enable;
+	bias-pull-up;
+	power-source = <PM8994_VPP_1P8>;
+};
 
-	/* GPIO_5: NC */
-	gpio@c400 {
-		qcom,src-sel = <0>;		/* GPIO */
-		qcom,mode = <1>;		/* Out */
-		qcom,output-type = <0>;		/* CMOS */
-		qcom,vin-sel = <2>;		/* S4 */
-		qcom,out-strength = <1>;	/* Low */
-		qcom,invert = <0>;		/* Low */
-		qcom,master-en = <1>;		/* Enable */
-		status = "okay";
-	};
+/* GPIO_6: NC(PGOOD_SMB1351) */
+&pm8994_gpio_6 {
+	bias-high-impedance;
+	power-source = <PM8994_VPP_VPH>;
+};
 
-	/* GPIO_6: NC */
-	gpio@c500 {
-		qcom,src-sel = <0>;		/* GPIO */
-		qcom,mode = <1>;		/* Out */
-		qcom,output-type = <0>;		/* CMOS */
-		qcom,vin-sel = <2>;		/* S4 */
-		qcom,out-strength = <1>;	/* Low */
-		qcom,invert = <0>;		/* Low */
-		qcom,master-en = <1>;		/* Enable */
-		status = "okay";
-	};
+/* GPIO_7: NFC_VEN */
+&pm8994_gpio_7 {
+	output-low;
+	drive-push-pull;
+	bias-disable;
+	qcom,drive-strength = <PMIC_GPIO_STRENGTH_LOW>;
+	power-source = <PM8994_VPP_1P8>;
+};
 
-	/* GPIO_7: NC */
-	gpio@c600 {
-		qcom,src-sel = <0>;		/* GPIO */
-		qcom,mode = <1>;		/* Out */
-		qcom,output-type = <0>;		/* CMOS */
-		qcom,vin-sel = <0>;		/* VPH */
-		qcom,out-strength = <1>;	/* Low */
-		qcom,invert = <0>;		/* Low */
-		qcom,master-en = <1>;		/* Enable */
-		status = "okay";
-	};
+/* GPIO_8: NC */
+&pm8994_gpio_8 {
+	/delete-property/ bias-pull-down;
+	/delete-property/ output-low;
+	input-enable;
+	bias-high-impedance;
+	power-source = <PM8994_VPP_VPH>;
+};
 
-	/* GPIO_8: NC */
-	gpio@c700 {
-		qcom,src-sel = <0>;		/* GPIO */
-		qcom,mode = <1>;		/* Out */
-		qcom,output-type = <0>;		/* CMOS */
-		qcom,vin-sel = <2>;		/* S4 */
-		qcom,out-strength = <1>;	/* Low */
-		qcom,invert = <0>;		/* Low */
-		qcom,master-en = <1>;		/* Enable */
-		status = "okay";
-	};
+/* GPIO_9: NC */
+&pm8994_gpio_9 {
+	/delete-property/ bias-pull-down;
+	/delete-property/ output-high;
+	input-enable;
+	bias-high-impedance;
+	power-source = <PM8994_VPP_VPH>;
+};
 
-	/* GPIO_9: USB_SWITCH_SEL */
-	gpio@c800 {
-		status = "okay";
-	};
+/* GPIO_10: NFC_CLK_REQ */
+&pm8994_gpio_10 {
+	bias-pull-down;
+};
 
-	/* GPIO_10: NC */
-	gpio@c900 {
-		qcom,src-sel = <0>;		/* GPIO */
-		qcom,mode = <1>;		/* Out */
-		qcom,output-type = <0>;		/* CMOS */
-		qcom,vin-sel = <2>;		/* S4 */
-		qcom,out-strength = <1>;	/* Low */
-		qcom,invert = <0>;		/* Low */
-		qcom,master-en = <1>;		/* Enable */
-		status = "okay";
-	};
+/* GPIO_11: NC */
+&pm8994_gpio_11 {
+	bias-high-impedance;
+	power-source = <PM8994_VPP_VPH>;
+};
+
+/* GPIO_12: NC */
+&pm8994_gpio_12 {
+	bias-high-impedance;
+	power-source = <PM8994_VPP_VPH>;
+};
+
+/* GPIO_13: EAR_EN */
+&pm8994_gpio_13 {
+	/* Inherited from MTP */
+/*
+	output-low;
+	drive-push-pull;
+	bias-disable;
+	qcom,drive-strength = <PMIC_GPIO_STRENGTH_LOW>;
+	power-source = <PM8994_VPP_1P8>;
+*/
+};
+
+/* GPIO_14: NC */
+&pm8994_gpio_14 {
+	/delete-property/ bias-pull-down;
+	/delete-property/ output-high;
+	input-enable;
+	bias-high-impedance;
+	power-source = <PM8994_VPP_VPH>;
+};
+
+/* GPIO_15: PM_DIVCLK1 */
+/* Follow QTI */
+
+/* GPIO_16: PMI_CLK */
+/* Follow QTI */
+
+/* GPIO_17: NC(DIVCLK3) */
+&pm8994_gpio_17 {
+	input-enable;
+	bias-high-impedance;
+	power-source = <PM8994_VPP_VPH>;
+};
+
+/* GPIO_18: WL_SLEEP_CLK */
+&pm8994_gpio_18 {
+	/* Inherited from MTP */
+};
+
+/* GPIO_19: NC */
+&pm8994_gpio_19 {
+	/delete-property/ bias-pull-down;
+	/delete-property/ output-low;
+	input-enable;
+	bias-high-impedance;
+	power-source = <PM8994_VPP_VPH>;
+};
+
+/* GPIO_20: PMIC_SPON */
+/* Follow QTI */
+
+/* GPIO_21: UIM_BATT_ALARM */
+/* Follow QTI */
+
+/* GPIO_22: NC(PMK_SLEEP_CLK) */
+&pm8994_gpio_22 {
+	bias-high-impedance;
+};
+
+/* VCTRL: SSC_PWR_EN */
+/* Follow QTI */
+
+
+/* GPIO_1: VIB_LDO_EN */
+&pmi8994_gpio_1 {
+	output-low;
+	bias-disable;
+	power-source = <PM8994_VPP_1P8>;
+};
+
+/* GPIO_2: NC */
+&pmi8994_gpio_2 {
+	/delete-property/ bias-disable;
+	/delete-property/ output-low;
+	input-enable;
+	bias-high-impedance;
+	power-source = <PM8994_VPP_VPH>;
+};
+
+/* GPIO_3: NC (Backup for SPKR_AMP_EN2)*/
+&pmi8994_gpio_3 {
+	/delete-property/ bias-disable;
+	/delete-property/ output-low;
+	input-enable;
+	bias-high-impedance;
+	power-source = <PM8994_VPP_VPH>;
+};
+
+/* GPIO_4: NC (wtf??) */
+&pmi8994_gpio_4 {
+	/* Sony configured them (4-8,10) like this: */
+	output-high;
+	qcom,drive-strength = <PMIC_GPIO_STRENGTH_LOW>;
+	power-source = <PM8994_VPP_1P8>;
+	/* But I think that's way more proper for NC GPIOs
+	input-enable;
+	bias-high-impedance;
+	power-source = <PM8994_VPP_VPH>;
+	*/
+};
+
+/* GPIO_5: NC (wtf??) */
+&pmi8994_gpio_5 {
+	/delete-property/ output-low;
+	output-high;
+	qcom,drive-strength = <PMIC_GPIO_STRENGTH_LOW>;
+	power-source = <PM8994_VPP_1P8>;
+};
+
+/* GPIO_6: NC (wtf??) */
+&pmi8994_gpio_6 {
+	output-high;
+	qcom,drive-strength = <PMIC_GPIO_STRENGTH_LOW>;
+	power-source = <PM8994_VPP_1P8>;
+};
+
+/* GPIO_7: NC (wtf??) */
+&pmi8994_gpio_7{
+	output-high;
+	qcom,drive-strength = <PMIC_GPIO_STRENGTH_LOW>;
+	power-source = <PM8994_VPP_1P8>;
+};
+
+/* GPIO_8: NC (wtf??) */
+&pmi8994_gpio_8 {
+	output-high;
+	qcom,drive-strength = <PMIC_GPIO_STRENGTH_LOW>;
+	power-source = <PM8994_VPP_1P8>;
+};
+
+/* GPIO_9: USB_SWITCH_SEL */
+&pmi8994_gpio_9 {
+	/* Inherit the configuration from bootloader... */
+/*
+	output-low;
+	qcom,drive-strength = <PMIC_GPIO_STRENGTH_NO>;
+	power-source = <PM8994_VPP_1P8>;
+*/
+};
+
+/* GPIO_10: NC (wtf??) */
+&pmi8994_gpio_10{
+	output-high;
+	qcom,drive-strength = <PMIC_GPIO_STRENGTH_LOW>;
+	power-source = <PM8994_VPP_1P8>;
 };
 
 &pm8994_mpps {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pm_mpp2_def &pm_mpp4_def &pm_mpp5_def
+		     &pm_mpp6_def &pm_mpp8_def>;
+
 	/* MPP_1: SDC_UIM_VBIAS */
 	/* Follow QTI */
-
-	/* MPP_2: LCD_ID_ADC */
-	mpp@a100 {
-		qcom,mode = <4>;		/* AIN */
-		qcom,ain-route = <1>;		/* AMUX 6(Ch #17)*/
-		qcom,master-en = <1>;		/* Enable */
-		status = "okay";
-	};
 
 	/* MPP_3: VREF_DACX */
 	/* Follow QTI */
 
-	/* MPP_4: NC(HDMI_EN) */
-	mpp@a300 {
-		qcom,master-en = <0>;		/* Disable */
-		status = "okay";
-	};
-
 	/* MPP_5: FLASH_THERM */
-	mpp@a400 {
-		qcom,mode = <4>;		/* AIN */
-		qcom,ain-route = <0>;		/* AMUX 5 */
-		qcom,master-en = <1>;		/* Enable */
-		status = "okay";
+	pm8994_mpp5 {
+		pm_mpp5_def: gpio {
+			pins = "mpp5";
+			function = "analog";
+			input-enable;
+			qcom,amux-route = <PMIC_MPP_AMUX_ROUTE_CH5>;
+		};
 	};
 
 	/* MPP_6: NC(STAT_SMB1351) */
-	mpp@a500 {
-		qcom,master-en = <0>;		/* Disable */
-		status = "okay";
+	pm8994_mpp6 {
+		pm_mpp6_def: gpio {
+			pins = "mpp5";
+			function = "digital";
+			bias-high-impedance;
+		};
 	};
+
 
 	/* MPP_7: NC */
 	/* Follow QTI */
 
 	/* MPP_8: RF_ID */
-	mpp@a700 {
-		qcom,mode = <4>;		/* AIN */
-		qcom,ain-route = <3>;		/* AMUX 8(Ch #39)*/
-		qcom,master-en = <1>;		/* Enable */
-		status = "okay";
+	pm8994_mpp8 {
+		pm_mpp8_def: gpio {
+			pins = "mpp5";
+			function = "analog";
+			input-enable;
+			qcom,amux-route = <PMIC_MPP_AMUX_ROUTE_CH8>;
+		};
 	};
 };
 
+/* MPP_2: LCD_ID_ADC */
+&pm_mpp2_def {
+	/delete-property/ output-low;
+	/delete-property/ power-source;
+	function = "analog";
+	input-enable;
+	qcom,amux-route = <PMIC_MPP_AMUX_ROUTE_CH6>;
+};
+
+/* MPP_4: NC(HDMI_EN) */
+&pm_mpp4_def {
+	/delete-property/ output-high;
+	bias-high-impedance;
+};
+
 &pmi8994_mpps {
-	/* MPP_1: USB_ID_DISCHG */
-	mpp@a000 {
-		qcom,mode = <0>;		/* DIN */
-		qcom,vin-sel = <0>;		/* VPH */
-		qcom,master-en = <1>;		/* Enable */
-		status = "okay";
-	};
-
+	pinctrl-names = "default";
+	pinctrl-0 = <&pmi_mpp1_def &pmi_mpp2_def
+		     &pmi_mpp4_def>;
+	
 	/* MPP_2: FLASH_LED_NOW */
-	mpp@a100 {
-		qcom,mode = <0>;		/* DIN */
-		qcom,master-en = <1>;	/* Enable */
-		qcom,vin-sel = <2>;		/* 1.8v */
-		status = "okay";
+	pmi8994_mpp2 {
+		pmi_mpp2_def: gpio {
+			pins = "mpp4";
+			function = "digital";
+			input-enable;
+			power-source = <PM8994_VPP_1P8>;
+		};
 	};
+};
 
-	/* MPP_3: PMI_SPON */
-	/* Follow QTI */
+/* MPP_1: USB_ID_DISCHG */
+&pmi_mpp1_def {
+	/delete-property/ qcom,dtest;
+	/delete-property/ output-low;
+	input-enable;
+	power-source = <PM8994_VPP_1P8>;
+};
 
-	/* MPP_4: NC (Reserved for EXT_FET_WLED_PWR_EN) */
-	mpp@a300 {
-		qcom,master-en = <0>;		/* Disable */
-		status = "okay";
-	};
+/* MPP_3: PMI_SPON */
+/* Follow QTI */
+
+/* MPP_4: NC (Reserved for EXT_FET_WLED_PWR_EN) */
+&pmi_mpp4_def {
+	/delete-property/ output-low;
+	bias-high-impedance;
 };
 
 /{
@@ -3191,7 +3176,7 @@
 };
 
 &spmi_bus {
-	qcom,pm8994@0 {
+	pm8994@0 {
 		qcom,power-on@800 {
 			qcom,s3-debounce = <16>;
 			qcom,s3-src = "resin";
@@ -3207,7 +3192,7 @@
 		};
 	};
 
-	qcom,pmi8994@2 {
+	pmi8994@2 {
 		qcom,power-on@800 {
 			qcom,s3-debounce = <128>;
 		};
