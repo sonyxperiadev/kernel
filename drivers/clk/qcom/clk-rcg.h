@@ -175,6 +175,7 @@ struct clk_rcg2 {
 	struct clk_regmap	clkr;
 	u8			cfg_off;
 	u8			flags;
+	struct notifier_block	clk_nb;
 #define FORCE_ENABLE_RCG	BIT(0)
 #define DFS_ENABLE_RCG		BIT(1)
 #define HW_CLK_CTRL_MODE	BIT(2)
