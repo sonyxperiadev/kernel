@@ -3234,6 +3234,7 @@ EXPORT_SYMBOL_GPL(regulator_sync_voltage);
 static int _regulator_get_voltage(struct regulator_dev *rdev)
 {
 	int sel, ret;
+#ifndef CONFIG_ARCH_MSM8996
 	bool bypassed;
 
 	if (rdev->desc->ops->get_bypass) {
@@ -3251,7 +3252,7 @@ static int _regulator_get_voltage(struct regulator_dev *rdev)
 			return _regulator_get_voltage(rdev->supply->rdev);
 		}
 	}
-
+#endif
 	if (rdev->desc->ops->get_voltage_sel) {
 		sel = rdev->desc->ops->get_voltage_sel(rdev);
 		if (sel < 0)
