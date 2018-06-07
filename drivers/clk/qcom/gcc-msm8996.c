@@ -93,7 +93,7 @@ static const struct parent_map gcc_xo_gpll0_gpll4_map[] = {
 static const char * const gcc_xo_gpll0_gpll4[] = {
 	"xo",
 	"gpll0",
-	"gpll4_early"
+	"gpll4"
 };
 
 static const struct parent_map gcc_xo_gpll0_aud_ref_clk_map[] = {
@@ -132,7 +132,7 @@ static const struct parent_map gcc_xo_gpll0_gpll4_gpll0_early_div_map[] = {
 static const char * const gcc_xo_gpll0_gpll4_gpll0_early_div[] = {
 	"xo",
 	"gpll0",
-	"gpll4_early",
+	"gpll4",
 	"gpll0_early_div"
 };
 
@@ -166,7 +166,7 @@ static const char * const gcc_xo_gpll0_gpll1_early_div_gpll1_gpll4_gpll0_early_d
 	"gpll0",
 	"gpll1_early_div",
 	"gpll1",
-	"gpll4_early",
+	"gpll4",
 	"gpll0_early_div"
 };
 
@@ -206,7 +206,7 @@ static const char * const gcc_xo_gpll0_gpll2_gpll3_gpll1_gpll4_gpll0_early_div[]
 	"gpll2",
 	"gpll3",
 	"gpll1",
-	"gpll4_early",
+	"gpll4",
 	"gpll0_early_div"
 };
 
@@ -1288,7 +1288,8 @@ static struct clk_rcg2 ufs_ice_core_clk_src = {
 static const struct freq_tbl ftbl_qspi_ser_clk_src[] = {
 	F(75000000, P_GPLL0, 8, 0, 0),
 	F(150000000, P_GPLL0, 4, 0, 0),
-	F(256000000, P_GPLL4, 1.5, 0, 0),
+//	F(256000000, P_GPLL4, 1.5, 0, 0),
+	F(256000000, P_GPLL4, 3, 0, 0),
 	F(300000000, P_GPLL0, 2, 0, 0),
 	{ }
 };
