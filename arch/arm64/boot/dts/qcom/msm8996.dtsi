@@ -875,7 +875,7 @@
 			< 1593600000 18 >;
 		clock-names = "xo_ao", "aux_clk";
 		clocks = <&clock_rpmcc RPM_XO_A_CLK_SRC>,
-			 <&clock_gcc GPLL0_EARLY>;
+			 <&clock_gcc GPLL0_AO>;
 		#clock-cells = <1>;
 	};
 
@@ -898,7 +898,7 @@
 			< 1036800000 10 >;
 		clock-names = "xo_ao", "aux_clk";
 		clocks = <&clock_rpmcc RPM_XO_A_CLK_SRC>,
-			 <&clock_gcc GPLL0_EARLY>;
+			 <&clock_gcc GPLL0_AO>;
 		#clock-cells = <1>;
 	};
 
