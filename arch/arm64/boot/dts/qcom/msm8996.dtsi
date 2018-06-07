@@ -541,7 +541,7 @@
 	m4m_cache: qcom,m4m {
 		compatible = "devfreq-simple-dev";
 		clock-names = "devfreq_clk";
-		clocks = <&clock_cpu P_CBF_MUX>;
+		clocks = <&clock_cbf P_CBF_MUX>;
 		governor = "cpufreq";
 		freq-tbl-khz =
 			<  150000 >,
@@ -714,7 +714,7 @@
 		compatible = "qcom,msm-cpufreq";
 		clock-names = "l2_clk", "cpu0_clk", "cpu1_clk", "cpu2_clk",
 				"cpu3_clk";
-		clocks = <&clock_cpu P_CBF_MUX>,
+		clocks = <&clock_cbf P_CBF_MUX>,
 			 <&clock_cpu P_PWRCL_MUX>,
 			 <&clock_cpu P_PWRCL_MUX>,
 			 <&clock_cpu P_PERFCL_MUX>,
@@ -830,6 +830,18 @@
 			< 1420800000 16 >,
 			< 1497600000 17 >,
 			< 1593600000 18 >;
+		clock-names = "xo_ao", "aux_clk";
+		clocks = <&clock_rpmcc RPM_XO_A_CLK_SRC>,
+			 <&clock_gcc GPLL0_EARLY>;
+		#clock-cells = <1>;
+	};
+
+	clock_cbf: qcom,msm8996-interconnect@9A11000 {
+		compatible = "qcom,msm8996-interconnect";
+		reg = <0x09A11000 0x10000>;
+		reg-names = "cbf_base";
+		vdd-cbf-supply = <&apc0_cbf_vreg>;
+		cbf-dev = <&m4m_cache>;
 		qcom,cbf-speedbin0-v0 =
 			<	   0  0 >,
 			<  307200000  2 >,
