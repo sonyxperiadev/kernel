@@ -59,6 +59,7 @@ obj-$(CONFIG_JS_RTC)		+= js-rtc.o
 js-rtc-y = rtc.o
 
 obj-$(CONFIG_TILE_SROM)		+= tile-srom.o
+
 obj-$(CONFIG_DIAG_CHAR)		+= diag/
 obj-$(CONFIG_XILLYBUS)		+= xillybus/
 obj-$(CONFIG_POWERNV_OP_PANEL)	+= powernv-op-panel.o
@@ -67,3 +68,11 @@ ifdef CONFIG_COMPAT
 obj-$(CONFIG_MSM_ADSPRPC)       += adsprpc_compat.o
 endif
 obj-$(CONFIG_MSM_RDBG)		+= rdbg.o
+
+ifdef CONFIG_DIAG_CHAR
+  ifdef CONFIG_DIAG_CHAR_LEGACY
+    obj-y			+= diag_legacy/
+  else
+    obj-y			+= diag/
+  endif
+endif

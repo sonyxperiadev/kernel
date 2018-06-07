@@ -1,4 +1,5 @@
 menu "Diag Support"
+	depends on !DIAG_CHAR_LEGACY
 
 config DIAG_CHAR
 	tristate "DIAG CHAR Interface Core"

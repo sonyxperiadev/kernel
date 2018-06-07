@@ -48,6 +48,7 @@ config SGI_MBCS
 
 source "drivers/tty/serial/Kconfig"
 
+source "drivers/char/diag_legacy/Kconfig"
 source "drivers/char/diag/Kconfig"
 
 config TTY_PRINTK
