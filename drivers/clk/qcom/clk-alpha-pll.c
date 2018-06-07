@@ -1255,8 +1255,8 @@ static int alpha_trion_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 }
 
 const struct clk_ops clk_alpha_pll_ops = {
-	.enable = alpha_fabia_pll_enable,
-	.disable = alpha_fabia_pll_disable,
+	.enable = clk_alpha_pll_enable,
+	.disable = clk_alpha_pll_disable,
 	.is_enabled = clk_alpha_pll_is_enabled,
 	.recalc_rate = clk_alpha_pll_recalc_rate,
 	.round_rate = clk_alpha_pll_round_rate,
