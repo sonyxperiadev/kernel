@@ -324,20 +324,37 @@ static const struct freq_tbl ftbl_usb30_master_clk_src[] = {
 	{ }
 };
 
+static struct clk_init_data usb30_master_clk_src_data_v1 =
+{
+	.name = "usb30_master_clk_src",
+	.parent_names = gcc_xo_gpll0_gpll0_early_div,
+	.num_parents = 3,
+	.ops = &clk_rcg2_ops,
+	VDD_DIG_FMAX_MAP3(LOWER, 60000000,
+			  LOW, 120000000,
+			  NOMINAL, 150000000),
+};
+
+static struct clk_init_data usb30_master_clk_src_data_v2 =
+{
+	.name = "usb30_master_clk_src",
+	.parent_names = gcc_xo_gpll0_gpll0_early_div,
+	.num_parents = 3,
+	.ops = &clk_rcg2_ops,
+	VDD_DIG_FMAX_MAP4(LOWER, 60000000,
+			  LOW, 133333000,
+			  NOMINAL, 200000000,
+			  HIGH, 240000000),
+};
+
+
 static struct clk_rcg2 usb30_master_clk_src = {
 	.cmd_rcgr = 0x0f014,
 	.mnd_width = 8,
 	.hid_width = 5,
 	.parent_map = gcc_xo_gpll0_gpll0_early_div_map,
 	.freq_tbl = ftbl_usb30_master_clk_src,
-	.clkr.hw.init = &(struct clk_init_data){
-		.name = "usb30_master_clk_src",
-		.parent_names = gcc_xo_gpll0_gpll0_early_div,
-		.num_parents = 3,
-		.ops = &clk_rcg2_ops,
-		VDD_DIG_FMAX_MAP3(LOWER, 60000000, LOW, 120000000,
-						NOMINAL, 150000000),
-	},
+	.clkr.hw.init = &usb30_master_clk_src_data_v1,
 };
 
 static const struct freq_tbl ftbl_usb30_mock_utmi_clk_src[] = {
@@ -419,10 +436,32 @@ static const struct freq_tbl ftbl_sdcc1_apps_clk_src[] = {
 	F(20000000, P_GPLL0, 15, 1, 2),
 	F(25000000, P_GPLL0, 12, 1, 2),
 	F(50000000, P_GPLL0, 12, 0, 0),
-	F(96000000, P_GPLL4, 4, 0, 0),
-	F(192000000, P_GPLL4, 2, 0, 0),
-	F(384000000, P_GPLL4, 1, 0, 0),
+	F(96000000, P_GPLL4, 8, 0, 0),
+	F(192000000, P_GPLL4, 4, 0, 0),
+	F(384000000, P_GPLL4, 2, 0, 0),
 	{ }
+};
+
+static struct clk_init_data sdcc1_apps_clk_data_v1 =
+{
+	.name = "sdcc1_apps_clk_src",
+	.parent_names = gcc_xo_gpll0_gpll4_gpll0_early_div,
+	.num_parents = 4,
+	.ops = &clk_rcg2_floor_ops,
+	VDD_DIG_FMAX_MAP3(LOWER, 19200000,
+			  LOW, 200000000,
+			  NOMINAL, 384000000),
+};
+
+static struct clk_init_data sdcc1_apps_clk_data_v2 =
+{
+	.name = "sdcc1_apps_clk_src",
+	.parent_names = gcc_xo_gpll0_gpll4_gpll0_early_div,
+	.num_parents = 4,
+	.ops = &clk_rcg2_floor_ops,
+	VDD_DIG_FMAX_MAP3(LOWER, 19200000,
+			  LOW, 50000000,
+			  NOMINAL, 384000000),
 };
 
 static struct clk_rcg2 sdcc1_apps_clk_src = {
@@ -431,14 +470,8 @@ static struct clk_rcg2 sdcc1_apps_clk_src = {
 	.hid_width = 5,
 	.parent_map = gcc_xo_gpll0_gpll4_gpll0_early_div_map,
 	.freq_tbl = ftbl_sdcc1_apps_clk_src,
-	.clkr.hw.init = &(struct clk_init_data){
-		.name = "sdcc1_apps_clk_src",
-		.parent_names = gcc_xo_gpll0_gpll4_gpll0_early_div,
-		.num_parents = 4,
-		.ops = &clk_rcg2_ops,
-		VDD_DIG_FMAX_MAP3(LOWER, 19200000, LOW, 200000000,
-						NOMINAL, 400000000),
-	},
+	//.enable_safe_config = true,
+	.clkr.hw.init = &sdcc1_apps_clk_data_v1,
 };
 
 static struct freq_tbl ftbl_sdcc1_ice_core_clk_src[] = {
@@ -474,20 +507,35 @@ static const struct freq_tbl ftbl_sdcc2_apps_clk_src[] = {
 	{ }
 };
 
+static struct clk_init_data sdcc2_apps_clk_data_v1 =
+{
+	.name = "sdcc2_apps_clk_src",
+	.parent_names = gcc_xo_gpll0_gpll4,
+	.num_parents = 3,
+	.ops = &clk_rcg2_floor_ops,
+	VDD_DIG_FMAX_MAP3(LOWER, 19200000,
+			  LOW, 50000000,
+			  NOMINAL, 200000000),
+};
+
+static struct clk_init_data sdcc2_apps_clk_data_v2 =
+{
+	.name = "sdcc2_apps_clk_src",
+	.parent_names = gcc_xo_gpll0_gpll4,
+	.num_parents = 3,
+	.ops = &clk_rcg2_floor_ops,
+	VDD_DIG_FMAX_MAP3(LOWER, 19200000,
+			  LOW, 50000000,
+			  NOMINAL, 200000000),
+};
+
 static struct clk_rcg2 sdcc2_apps_clk_src = {
 	.cmd_rcgr = 0x14010,
 	.mnd_width = 8,
 	.hid_width = 5,
 	.parent_map = gcc_xo_gpll0_gpll4_map,
 	.freq_tbl = ftbl_sdcc2_apps_clk_src,
-	.clkr.hw.init = &(struct clk_init_data){
-		.name = "sdcc2_apps_clk_src",
-		.parent_names = gcc_xo_gpll0_gpll4,
-		.num_parents = 3,
-		.ops = &clk_rcg2_ops,
-		VDD_DIG_FMAX_MAP3(LOWER, 19200000, LOW, 100000000,
-						NOMINAL, 200000000),
-	},
+	.clkr.hw.init = &sdcc2_apps_clk_data_v1,
 };
 
 static struct clk_rcg2 sdcc3_apps_clk_src = {
@@ -500,7 +548,7 @@ static struct clk_rcg2 sdcc3_apps_clk_src = {
 		.name = "sdcc3_apps_clk_src",
 		.parent_names = gcc_xo_gpll0_gpll4,
 		.num_parents = 3,
-		.ops = &clk_rcg2_ops,
+		.ops = &clk_rcg2_floor_ops,
 		VDD_DIG_FMAX_MAP3(LOWER, 19200000, LOW, 100000000,
 						NOMINAL, 200000000),
 	},
@@ -526,7 +574,7 @@ static struct clk_rcg2 sdcc4_apps_clk_src = {
 		.name = "sdcc4_apps_clk_src",
 		.parent_names = gcc_xo_gpll0,
 		.num_parents = 2,
-		.ops = &clk_rcg2_ops,
+		.ops = &clk_rcg2_floor_ops,
 		VDD_DIG_FMAX_MAP3(LOWER, 19200000, LOW, 50000000,
 						NOMINAL, 100000000),
 	},
@@ -1244,19 +1292,34 @@ static const struct freq_tbl ftbl_pcie_aux_clk_src[] = {
 	{ }
 };
 
+static struct clk_init_data pcie_aux_clk_src_data_v1 =
+{
+	.name = "pcie_aux_clk_src",
+	.parent_names = gcc_xo_sleep_clk,
+	.num_parents = 2,
+	.ops = &clk_rcg2_ops,
+	VDD_DIG_FMAX_MAP1(LOWER, 1011000),
+};
+
+static struct clk_init_data pcie_aux_clk_src_data_v2 =
+{
+	.name = "pcie_aux_clk_src",
+	.parent_names = gcc_xo_sleep_clk,
+	.num_parents = 2,
+	.ops = &clk_rcg2_ops,
+	VDD_DIG_FMAX_MAP4(LOWER, 9600000,
+			  LOW, 19200000,
+			  NOMINAL, 19200000,
+			  HIGH, 19200000),
+};
+
 static struct clk_rcg2 pcie_aux_clk_src = {
 	.cmd_rcgr = 0x6c000,
 	.mnd_width = 16,
 	.hid_width = 5,
 	.parent_map = gcc_xo_sleep_clk_map,
 	.freq_tbl = ftbl_pcie_aux_clk_src,
-	.clkr.hw.init = &(struct clk_init_data){
-		.name = "pcie_aux_clk_src",
-		.parent_names = gcc_xo_sleep_clk,
-		.num_parents = 2,
-		.ops = &clk_rcg2_ops,
-		VDD_DIG_FMAX_MAP1(LOWER, 1011000),
-	},
+	.clkr.hw.init = &pcie_aux_clk_src_data_v1,
 };
 
 static const struct freq_tbl ftbl_ufs_axi_clk_src[] = {
@@ -3500,17 +3563,50 @@ static const struct qcom_cc_desc gcc_msm8996_desc = {
 };
 
 static const struct of_device_id gcc_msm8996_match_table[] = {
-	{ .compatible = "qcom,gcc-msm8996" },
-	{ .compatible = "qcom,gcc-msm8996-v2" },
-	{ .compatible = "qcom,gcc-msm8996-v3" },
+	{
+		.compatible = "qcom,gcc-msm8996",
+		.data = (void *)(uintptr_t)1
+	},
+	{
+		.compatible = "qcom,gcc-msm8996-v2",
+		.data = (void *)(uintptr_t)2
+	},
+	{
+		.compatible = "qcom,gcc-msm8996-v3",
+		.data = (void *)(uintptr_t)3
+	},
 	{ }
 };
 MODULE_DEVICE_TABLE(of, gcc_msm8996_match_table);
+
+static inline void gcc_msm8996_set_vdd_class(int socrev)
+{
+	if (socrev <= 1)
+		return;
+
+	/* Fixup the clocks for later MSM8996 revisions */
+	pcie_aux_clk_src.clkr.hw.init = &pcie_aux_clk_src_data_v2;
+	usb30_master_clk_src.clkr.hw.init = &usb30_master_clk_src_data_v2;
+	sdcc1_apps_clk_src.clkr.hw.init = &sdcc1_apps_clk_data_v2;
+	sdcc2_apps_clk_src.clkr.hw.init = &sdcc2_apps_clk_data_v2;
+
+	return;
+}
 
 static int gcc_msm8996_probe(struct platform_device *pdev)
 {
 	int i, ret = 0;
 	struct regmap *regmap;
+	const struct of_device_id *match;
+	int socrev = 1;
+
+	match = of_match_node(gcc_msm8996_match_table, pdev->dev.of_node);
+	if (match) {
+		socrev = (uintptr_t)match->data;
+		gcc_msm8996_set_vdd_class(socrev);
+	} else {
+		pr_err("Cannot find compatible string match!\n");
+	}
 
 	regmap = qcom_cc_map(pdev, &gcc_msm8996_desc);
 	if (IS_ERR(regmap))
