@@ -38,7 +38,7 @@ static int mhi_pci_probe(struct pci_dev *pcie_device,
 		const struct pci_device_id *mhi_device_id);
 static int __exit mhi_plat_remove(struct platform_device *pdev);
 
-static DEFINE_PCI_DEVICE_TABLE(mhi_pcie_device_id) = {
+static const struct pci_device_id mhi_pcie_device_id[] = {
 	{ MHI_PCIE_VENDOR_ID, MHI_PCIE_DEVICE_ID_9x35,
 		PCI_ANY_ID, PCI_ANY_ID, 0, 0, 0},
 	{ MHI_PCIE_VENDOR_ID, MHI_PCIE_DEVICE_ID_ZIRC,
@@ -256,7 +256,7 @@ static int mhi_pci_probe(struct pci_dev *pcie_device,
 		msi_requested <<= 1;
 
 	ret_val = pci_enable_msi_range(pcie_device, 1, msi_requested);
-	if (IS_ERR_VALUE(ret_val) || (ret_val < msi_requested)) {
+	if (IS_ERR_VALUE((unsigned long)ret_val) || (ret_val < msi_requested)) {
 		mhi_log(mhi_dev_ctxt, MHI_MSG_ERROR,
 			"Failed to enable MSIs for pcie dev ret_val %d.\n",
 			ret_val);

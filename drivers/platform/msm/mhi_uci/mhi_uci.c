@@ -1355,7 +1355,7 @@ static int mhi_uci_probe(struct platform_device *pdev)
 	ret_val = alloc_chrdev_region(&uci_ctxt->dev_t, 0,
 				      MHI_SOFTWARE_CLIENT_LIMIT,
 				      DEVICE_NAME);
-	if (IS_ERR_VALUE(ret_val)) {
+	if (IS_ERR_VALUE((unsigned long)ret_val)) {
 		uci_log(mhi_uci_drv_ctxt.mhi_uci_ipc_log, UCI_DBG_ERROR,
 			"Failed to alloc char devs, ret 0x%x\n", ret_val);
 		return ret_val;
