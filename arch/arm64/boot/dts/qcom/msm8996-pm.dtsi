@@ -268,14 +268,9 @@
 		};
 	};
 
-	qcom,mpm@681b8 {
-		compatible = "qcom,mpm-v2";
-		reg = <0x681B8 0x1000>, /* MSM_RPM_MPM_BASE 4K */
-		    <0x9820010 0x4>;   /* MSM_APCS_GCC_BASE 4K */
-		reg-names = "vmpm", "ipc";
-		interrupts = <GIC_SPI 171 IRQ_TYPE_EDGE_RISING>;
-		clocks = <&clock_rpmcc CXO_LPM_CLK>;
-		clock-names = "xo";
+
+
+#if 0
 		qcom,num-mpm-irqs = <96>;
 
 		qcom,ipc-bit-offset = <1>;
@@ -535,7 +530,7 @@
 			<69  145>,
 			<70  85>; /* hwirq */
 	};
-
+#endif
 	rpm_msg_ram: memory@0x200000 {
 		compatible = "qcom,rpm-msg-ram";
 		reg = <0x200000 0x1000>,

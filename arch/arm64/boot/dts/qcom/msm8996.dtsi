@@ -26,7 +26,8 @@
 	compatible = "qcom,msm8996";
 	qcom,msm-id = <246 0x0>;
 	qcom,pmic-id = <0x20009 0x2000A 0x0 0x0>;
-	interrupt-parent = <&intc>;
+	qcom,msm-name = "MSM8996";
+	interrupt-parent = <&wakegic>;
 
 	chosen {
 		bootargs = "fpsimd.fpsimd_settings=1 app_setting.use_app_setting=1 app_setting.use_32bit_app_setting=1";
@@ -336,8 +337,6 @@
 
 	intc: interrupt-controller@09bc0000 {
 		compatible = "arm,gic-v3";
-		reg = <0x9bc0000 0x10000>,       /* GICD */
-		      <0x9c00000 0x100000>;      /* GICR * 4 */
 		#interrupt-cells = <3>;
 		#address-cells = <1>;
 		#size-cells = <1>;
@@ -346,13 +345,30 @@
 		#redistributor-regions = <1>;
 		redistributor-stride = <0x0 0x40000>;
 
-		interrupts = <1 9 4>;
+		reg = <0x9bc0000 0x10000>,       /* GICD */
+		      <0x9c00000 0x100000>;      /* GICR * 4 */
+		interrupts = <GIC_PPI 9 IRQ_TYPE_LEVEL_HIGH>;
 
-		gic-its@09BE0000 {
-			compatible = "arm,gic-v3-its";
-			msi-contoller;
-			reg = <0x9be0000 0x20000>;
-		};
+		interrupt-parent = <&intc>;
+	};
+
+	wakegic: qcom,mpm@681b8 {
+		compatible = "qcom,mpm-gic-msm8996", "qcom,mpm-gic";
+		interrupts = <GIC_SPI 171 IRQ_TYPE_EDGE_RISING>;
+		reg = <0x681B8 0x1000>, /* MSM_RPM_MPM_BASE 4K */
+		    <0x9820010 0x4>;   /* MSM_APCS_GCC_BASE 4K */
+		reg-names = "vmpm", "ipc";
+		qcom,num-mpm-irqs = <96>;
+		interrupt-controller;
+		interrupt-parent = <&intc>;
+		#interrupt-cells = <3>;
+	};
+
+	wakegpio: wake-gpio {
+		compatible = "qcom,mpm-gpio-msm8996", "qcom,mpm-gpio";
+		interrupt-controller;
+		interrupt-parent = <&intc>;
+		#interrupt-cells = <2>;
 	};
 
 	timer {
