@@ -734,12 +734,9 @@
 
 	msm_cpufreq: qcom,msm-cpufreq {
 		compatible = "qcom,msm-cpufreq";
-		clock-names = "l2_clk", "cpu0_clk", "cpu1_clk", "cpu2_clk",
-				"cpu3_clk";
+		clock-names = "l2_clk", "cpu0_clk", "cpu2_clk";
 		clocks = <&clock_cbf P_CBF_MUX>,
 			 <&clock_cpu P_PWRCL_MUX>,
-			 <&clock_cpu P_PWRCL_MUX>,
-			 <&clock_cpu P_PERFCL_MUX>,
 			 <&clock_cpu P_PERFCL_MUX>;
 
 		qcom,governor-per-policy;
@@ -2380,6 +2377,7 @@
 		vdd_cx-supply = <&pm8994_s1_corner>;
 		qcom,proxy-reg-names = "vdd_cx";
 		qcom,vdd_cx-uV-uA = <7 100000>;
+		qcom,mas-crypto = <&mas_crypto_c0>;
 
 		clocks = <&clock_rpmcc CXO_PIL_LPASS_CLK>;
 		clock-names = "xo";
@@ -2410,6 +2408,7 @@
 
 		vdd-supply = <&gdsc_venus>;
 		qcom,proxy-reg-names = "vdd";
+		qcom,mas-crypto = <&mas_crypto_c0>;
 
 		clocks = <&clock_mmss VIDEO_CORE_CLK>,
 			<&clock_mmss VIDEO_AHB_CLK>,
@@ -2487,6 +2486,7 @@
 		qcom,vdd_cx-uV-uA = <5 0>;
 		qcom,proxy-reg-names = "vdd_cx", "vdd_px";
 		qcom,keep-proxy-regs-on;
+		qcom,mas-crypto = <&mas_crypto_c0>;
 
 		clocks = <&clock_rpmcc CXO_PIL_SSC_CLK>,
 			 <&clock_rpmcc RPM_AGGR2_NOC_CLK>;
