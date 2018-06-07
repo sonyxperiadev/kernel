@@ -486,7 +486,7 @@
 			};
 		};
 
-		pmi8994_wled: qcom,leds@d000 {
+		pmi8994_wled: qcom,leds@d800 {
 			compatible = "qcom,qpnp-wled";
 			reg = <0xd800 0x100>,
 				<0xd900 0x100>,
@@ -611,7 +611,6 @@
 				     <0x3 0xc0 0x1 IRQ_TYPE_EDGE_BOTH>;
 			interrupt-names = "hap-sc-irq", "hap-play-irq";
 			qcom,pmic-revid = <&pmi8994_revid>;
-			qcom,pmic-misc = <&pmi8994_misc>;
 			vcc_pon-supply = <&pon_perph_reg>;
 			qcom,play-mode = "direct";
 			qcom,wave-play-rate-us = <5263>;
