@@ -448,7 +448,6 @@ int cpu_clk_hotplug_notifier_cb(struct notifier_block *nb, unsigned long event,
 
 	case CPU_STARTING:
 		/* This is needed for the first time that CPUs come up */
-		pr_err("INITING ACD - HOTPLUGNOTI\n");
 		qcom_cpu_clk_msm8996_acd_init();
 		break;
 
