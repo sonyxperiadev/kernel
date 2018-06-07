@@ -110,7 +110,8 @@
 			<&clock_gpu GPU_GX_RBBMTIMER_CLK>,
 			<&clock_gcc GCC_BIMC_GFX_CLK>,
 			<&clock_gcc GCC_MMSS_BIMC_GFX_CLK>,
-			<&clock_mmss MMSS_MMAGIC_AHB_CLK>;
+			<&clock_mmss MMSS_MMAGIC_AHB_CLK>,
+			<&clock_gpu GPU_AON_ISENSE_CLK>;
 			/*
 			 * This is a fake clock meant to manage the vdd_gpu_mx
 			 * vreg. For us, vdd_gpu_mx == vdd_mx == s2_corner!!
@@ -118,7 +119,8 @@
 			//<&clock_mmss clk_gpu_mx_clk>;
 
 		clock-names = "core_clk", "iface_clk", "rbbmtimer_clk",
-			"mem_clk", "mem_iface_clk", "alt_mem_iface_clk";
+			"mem_clk", "mem_iface_clk", "alt_mem_iface_clk",
+			"alwayson_clk";
 			//"mx_clk";
 
 		/* Bus Scale Settings */
