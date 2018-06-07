@@ -114,7 +114,7 @@
 		clocks = <&clock_mmss MDSS_AHB_CLK>,
 			 <&clock_mmss MDSS_AXI_CLK>,
 			 <&clock_mmss MDP_CLK_SRC>,
-			 <&clock_mmss MDSS_MDP_VOTE_CLK>,
+			 <&clock_mmss_vote MDSS_MDP_VOTE_CLK>,
 			 <&clock_mmss MDSS_VSYNC_CLK>;
 		clock-names = "iface_clk", "bus_clk", "core_clk_src",
 				"core_clk", "vsync_clk";
@@ -309,7 +309,7 @@
 		qcom,mdss-fb-map-prim = <&mdss_fb0>;
 		qcom,mdss-fb-map-sec = <&mdss_fb3>;
 
-		clocks = <&clock_mmss MDSS_MDP_VOTE_CLK>,
+		clocks = <&clock_mmss_vote MDSS_MDP_VOTE_CLK>,
 			 <&clock_mmss MDSS_AHB_CLK>,
 			 <&clock_mmss MMSS_MISC_AHB_CLK>,
 			 <&clock_mmss MDSS_AXI_CLK>,
@@ -488,7 +488,7 @@
 		qcom,disable-load = <0>;
 
 		qcom,msm_ext_disp = <&msm_ext_disp>;
-		clocks = <&clock_mmss MDSS_MDP_VOTE_CLK>,
+		clocks = <&clock_mmss_vote MDSS_MDP_VOTE_CLK>,
 			 <&clock_mmss MDSS_AHB_CLK>,
 			 <&clock_mmss MDSS_HDMI_CLK>,
 			 <&clock_mmss MDSS_HDMI_AHB_CLK>,
@@ -530,7 +530,7 @@
 		qcom,supply-names = "rot-mmagic-mdss-gdsc", "rot-vdd";
 
 		clocks = <&clock_mmss MMSS_MISC_AHB_CLK>,
-			<&clock_mmss MDSS_ROTATOR_VOTE_CLK>,
+			<&clock_mmss_vote MDSS_ROTATOR_VOTE_CLK>,
 			<&clock_mmss MDSS_AHB_CLK>,
 			<&clock_mmss MDSS_AXI_CLK>,
 			<&clock_mmss MDP_CLK_SRC>;
