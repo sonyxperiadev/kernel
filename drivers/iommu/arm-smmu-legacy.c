@@ -2335,14 +2335,20 @@ static int arm_smmu_attach_dev(struct iommu_domain *domain, struct device *dev)
 		ret = arm_smmu_enable_clocks(smmu);
 		if (ret)
 			goto err_disable_regulators;
-		arm_smmu_device_reset(smmu);
+
+		/* Cannot reset secure contexts */
+		if (0) { //!arm_smmu_has_secure_vmid(smmu_domain)) {
+			pr_err("Resetting IOMMU\n");
+			arm_smmu_device_reset(smmu);
+			pr_err("Resetted\n");
+		}
+
 		arm_smmu_impl_def_programming(smmu);
 	} else {
 		ret = arm_smmu_enable_clocks(smmu);
 		if (ret)
 			goto err_unlock;
 	}
-	smmu->attach_count++;
 
 	if (atomic_ctx) {
 		ret = arm_smmu_enable_regulators(smmu);
@@ -2370,6 +2376,13 @@ static int arm_smmu_attach_dev(struct iommu_domain *domain, struct device *dev)
 	ret = arm_smmu_init_domain_context(domain, smmu, cfg);
 	if (IS_ERR_VALUE((unsigned long)ret))
 		goto err_atomic_ctx;
+
+	if (arm_smmu_is_slave_side_secure(smmu_domain) &&
+			!smmu->attach_count) {
+		pr_err("--------___RESTORE SEC CFG__------\n");
+		arm_smmu_restore_sec_cfg(smmu);
+	}
+	smmu->attach_count++;
 
 	/*
 	 * Sanity check the domain. We don't support domains across
