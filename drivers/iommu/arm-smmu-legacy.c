@@ -1851,7 +1851,7 @@ static int arm_smmu_init_domain_context(struct iommu_domain *domain,
 		ret = arm_smmu_alloc_context_idx(smmu, start,
 			smmu->num_context_banks, master_cfg->streamids,
 			master_cfg->num_streamids);
-		if (IS_ERR_VALUE(ret))
+		if (IS_ERR_VALUE((unsigned long)ret))
 			goto out;
 		cfg->cbndx = ret;
 	}
@@ -1926,7 +1926,7 @@ static int arm_smmu_init_domain_context(struct iommu_domain *domain,
 	ret = request_threaded_irq(irq, NULL, arm_smmu_context_fault,
 				IRQF_ONESHOT | IRQF_SHARED,
 				"arm-smmu-context-fault", domain);
-	if (IS_ERR_VALUE(ret)) {
+	if (IS_ERR_VALUE((unsigned long)ret)) {
 		dev_err(smmu->dev, "failed to request context IRQ %d (%u)\n",
 			cfg->irptndx, irq);
 		cfg->irptndx = INVALID_IRPTNDX;
@@ -2366,7 +2366,7 @@ static int arm_smmu_attach_dev(struct iommu_domain *domain, struct device *dev)
 
 	/* Ensure that the domain is finalised */
 	ret = arm_smmu_init_domain_context(domain, smmu, cfg);
-	if (IS_ERR_VALUE(ret))
+	if (IS_ERR_VALUE((unsigned long)ret))
 		goto err_atomic_ctx;
 
 	/*
