@@ -105,11 +105,20 @@ struct clk_alpha_pll {
 
 	struct alpha_pll_config *config;
 
+	u32 *soft_vote;
+	u32 soft_vote_mask;
+/* Soft voting values */
+#define PLL_SOFT_VOTE_PRIMARY	BIT(0)
+#define PLL_SOFT_VOTE_CPU	BIT(1)
+#define PLL_SOFT_VOTE_AUX	BIT(2)
+
 	const struct pll_vco *vco_table;
 	size_t num_vco;
 #define SUPPORTS_OFFLINE_REQ	BIT(0)
 #define SUPPORTS_FSM_MODE	BIT(2)
 #define SUPPORTS_DYNAMIC_UPDATE	BIT(3)
+	/* associated with soft_vote for multiple PLL software instances */
+#define SUPPORTS_FSM_VOTE	BIT(4)
 	u8 flags;
 
 	unsigned long min_supported_freq;
