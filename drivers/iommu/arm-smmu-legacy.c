@@ -3740,7 +3740,7 @@ static int arm_smmu_init_bus_scaling(struct platform_device *pdev,
 	smmu->bus_client = msm_bus_scale_register_client(smmu->bus_pdata);
 	if (!smmu->bus_client) {
 		dev_err(&pdev->dev, "Bus client registration failed\n");
-		return -EINVAL;
+		return smmu->bus_client;
 	}
 
 	return 0;
