@@ -3664,7 +3664,7 @@ static int __init gcc_msm8996_init(void)
 {
 	return platform_driver_register(&gcc_msm8996_driver);
 }
-core_initcall(gcc_msm8996_init);
+postcore_initcall(gcc_msm8996_init);
 
 static void __exit gcc_msm8996_exit(void)
 {
