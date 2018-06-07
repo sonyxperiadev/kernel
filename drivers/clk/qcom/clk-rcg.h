@@ -172,6 +172,7 @@ struct clk_rcg2 {
 	unsigned long		current_freq;
 	bool			enable_safe_config;
 	struct clk_regmap	clkr;
+	struct notifier_block	clk_nb;
 	u8			flags;
 #define FORCE_ENABLE_RCG	BIT(0)
 #define DFS_ENABLE_RCG		BIT(1)
