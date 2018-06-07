@@ -1101,5 +1101,5 @@ static void __exit kryo_regulator_exit(void)
 MODULE_DESCRIPTION("Kryo regulator driver");
 MODULE_LICENSE("GPL v2");
 
-arch_initcall(kryo_regulator_init);
+core_initcall(kryo_regulator_init);
 module_exit(kryo_regulator_exit);
