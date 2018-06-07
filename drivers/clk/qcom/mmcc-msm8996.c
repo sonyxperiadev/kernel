@@ -23,6 +23,9 @@
 #include <linux/reset-controller.h>
 #include <linux/clk.h>
 
+#include <linux/soc/qcom/smd-rpm.h>
+#include <soc/qcom/rpm-smd.h>
+
 #include <dt-bindings/clock/qcom,mmcc-msm8996.h>
 
 #include "common.h"
@@ -38,8 +41,9 @@
 #include "vdd-level-8996.h"
 
 #define F(f, s, h, m, n) { (f), (s), (2 * (h) - 1), (m), (n) }
+#define F_GFX(f, s, h, m, n, sf) { (f), (s), (2 * (h) - 1), (m), (n), (sf) }
 
-#define GFX_MIN_SVS_LEVEL	2
+#define QCOM_RPM_SMD_KEY_STATE	0x54415453
 #define GPU_REQ_ID		0x3
 
 #define EFUSE_SHIFT_v3	29
@@ -60,9 +64,22 @@ static int vdd_gfx_corner[] = {
 	VDD_GFX_SUPER_TURBO,	/* HIGH: SUPER_TURBO	*/
 };
 
+static int vdd_gpu_mx_corner[] = {
+	VDD_MX_NONE,		/* OFF			*/
+	VDD_MX_MIN_SVS,		/* MIN:  MinSVS		*/
+	VDD_MX_LOW_SVS,		/* LOW:  LowSVS		*/
+	VDD_MX_SVS_MINUS,	/* LOW:  SVS-		*/
+	VDD_MX_SVS,		/* LOW:  SVS		*/
+	VDD_MX_SVS_PLUS,	/* LOW:  SVS+		*/
+	VDD_MX_NOMINAL,		/*       NOMINAL	*/
+	VDD_MX_TURBO,		/* HIGH: TURBO		*/
+	VDD_MX_TURBO_L1,	/* HIGH: TURBO_L1	*/
+	VDD_MX_SUPER_TURBO,	/* HIGH: SUPER_TURBO	*/
+};
+
 static DEFINE_VDD_REGULATORS(vdd_dig, VDD_DIG_NUM, 1, vdd_corner);
 static DEFINE_VDD_REGULATORS(vdd_gfx, VDD_GFX_MAX, 1, vdd_gfx_corner);
-static DEFINE_VDD_REGS_INIT(vdd_gpu_mx, 1);
+static DEFINE_VDD_REGULATORS(vdd_gpu_mx, VDD_MX_MAX, 1, vdd_gpu_mx_corner);
 
 static int vdd_mmpll4_levels[] = {
 	RPM_REGULATOR_CORNER_NONE, 0,
@@ -233,6 +250,20 @@ static const char * const mmss_xo_mmpll0_mmpll9_mmpll2_mmpll8_gpll0[] = {
 	"mmpll2",
 	"mmpll8",
 	"gpll0"
+};
+
+static const struct parent_map gpu_parents_0_map[] = {
+	{ P_XO, 0 },
+	{ P_MMPLL9, 2 },
+	{ P_MMPLL2, 3 },
+	{ P_MMPLL8, 4 },
+};
+
+static const char * const gpu_parents_0[] = {
+	"xo",
+	"mmpll9",
+	"mmpll2",
+	"mmpll8",
 };
 
 static const struct parent_map mmss_xo_mmpll0_mmpll9_mmpll2_mmpll8_gpll0_gpll0_div_map[] = {
@@ -503,6 +534,7 @@ static struct clk_alpha_pll_postdiv mmpll4 = {
 		.num_parents = 1,
 		.ops = &clk_alpha_pll_postdiv_ops,
 		.flags = CLK_SET_RATE_PARENT,
+		VDD_MMPLL4_FMAX_MAP2(LOWER, 480000000, NOMINAL, 960000000),
 	},
 };
 
@@ -581,6 +613,7 @@ static struct clk_alpha_pll_postdiv mmpll8 = {
 		.num_parents = 1,
 		.ops = &clk_alpha_pll_postdiv_ops,
 		.flags = CLK_SET_RATE_PARENT,
+		VDD_DIG_FMAX_MAP1(LOWER, 360000000),
 	},
 };
 
@@ -622,6 +655,9 @@ static struct clk_alpha_pll_postdiv mmpll9 = {
 		.num_parents = 1,
 		.ops = &clk_alpha_pll_postdiv_ops,
 		.flags = CLK_SET_RATE_PARENT,
+		VDD_MMPLL4_FMAX_MAP3(LOWER, 624000000,
+				     NOMINAL, 921600000,
+				     HIGH, 1248000000),
 	},
 };
 
@@ -650,7 +686,7 @@ static const struct freq_tbl ftbl_axi_clk_src[] = {
 	F(19200000, P_XO, 1, 0, 0),
 	F(75000000, P_GPLL0_DIV, 4, 0, 0),
 	F(100000000, P_GPLL0, 6, 0, 0),
-	F(171428571, P_GPLL0, 3.5, 0, 0),
+	F(171430000, P_GPLL0, 3.5, 0, 0),
 	F(200000000, P_GPLL0, 3, 0, 0),
 	F(320000000, P_MMPLL0, 2.5, 0, 0),
 	F(405000000, P_MMPLL1, 2, 0, 0),
@@ -672,19 +708,40 @@ static struct clk_rcg2 maxi_clk_src = {
 	},
 };
 
+static const struct freq_tbl ftbl_gfx3d_clk_src[] = {
+	F( 19200000, P_XO,      1, 0, 0),
+	F(133000000, P_MMPLL0,  6, 0, 0),
+//	F(214000000, P_MMPLL8,  1, 0, 0),
+//	F(315000000, P_MMPLL8,  1, 0, 0),
+	F(401800000, P_MMPLL2,  1, 0, 0),
+	F(510000000, P_MMPLL2,  1, 0, 0),
+	F(560000000, P_MMPLL2,  1, 0, 0),
+	F(624000000, P_MMPLL9,  1, 0, 0),
+	F(652800000, P_MMPLL9,  1, 0, 0),
+	{ }
+};
+
+static struct clk_init_data gfx3d_clk_src_init_data =
+{
+	.name = "gfx3d_clk_src",
+	.parent_names = mmss_xo_mmpll0_mmpll9_mmpll2_mmpll8_gpll0,
+	.num_parents = 6,
+	.ops = &clk_rcg2_ops,
+	.vdd_class = &vdd_gfx,
+	.flags = CLK_SET_RATE_PARENT,
+	VDD_GFX_FMAX_MAP3(SVS_MINUS, 133000000, SVS, 360000000,
+			  SVS_PLUS, 604800000),
+};
+
+
 static struct clk_rcg2 gfx3d_clk_src = {
 	.cmd_rcgr = 0x4000,
+	.mnd_width = 0,
 	.hid_width = 5,
+	.freq_tbl = ftbl_gfx3d_clk_src,
 	.parent_map = mmss_xo_mmpll0_mmpll9_mmpll2_mmpll8_gpll0_map,
 	.flags = FORCE_ENABLE_RCG,
-	.clkr.hw.init = &(struct clk_init_data){
-		.name = "gfx3d_clk_src",
-		.parent_names = mmss_xo_mmpll0_mmpll9_mmpll2_mmpll8_gpll0,
-		.num_parents = 6,
-		.ops = &clk_gfx3d_ops,
-		.vdd_class = &vdd_gfx,
-		.flags = CLK_SET_RATE_PARENT,
-	},
+	.clkr.hw.init = &gfx3d_clk_src_init_data,
 };
 
 static const struct freq_tbl ftbl_rbbmtimer_clk_src[] = {
@@ -1444,7 +1501,7 @@ static struct clk_branch mmss_mmagic_ahb_clk = {
 			.name = "mmss_mmagic_ahb_clk",
 			.parent_names = (const char *[]){ "ahb_clk_src" },
 			.num_parents = 1,
-			//.flags = CLK_ENABLE_HAND_OFF,
+			.flags = CLK_SET_RATE_PARENT | CLK_IS_CRITICAL, //CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -1462,7 +1519,7 @@ static struct clk_branch mmss_mmagic_cfg_ahb_clk = {
 				"mmss_mmagic_ahb_clk"
 			},
 			.num_parents = 1,
-			.flags = CLK_ENABLE_HAND_OFF,
+			.flags = CLK_SET_RATE_PARENT | CLK_IS_CRITICAL, // CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -1479,7 +1536,7 @@ static struct clk_branch mmss_misc_ahb_clk = {
 				"mmss_mmagic_ahb_clk"
 			},
 			.num_parents = 1,
-			.flags = CLK_ENABLE_HAND_OFF,
+			.flags = CLK_SET_RATE_PARENT | CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -1522,7 +1579,9 @@ static struct clk_branch mmagic_camss_axi_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data){
 			.name = "mmagic_camss_axi_clk",
-			.flags = CLK_ENABLE_HAND_OFF,
+ 			.parent_names = (const char *[]){ "axi_clk_src" },
+ 			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT | CLK_IS_CRITICAL, //CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -1645,7 +1704,9 @@ static struct clk_branch mmagic_mdss_axi_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data){
 			.name = "mmagic_mdss_axi_clk",
-			.flags = CLK_ENABLE_HAND_OFF,
+ 			.parent_names = (const char *[]){ "axi_clk_src" },
+ 			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT | CLK_IS_CRITICAL, // CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -1658,7 +1719,9 @@ static struct clk_branch mmagic_mdss_noc_cfg_ahb_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data){
 			.name = "mmagic_mdss_noc_cfg_ahb_clk",
-			.flags = CLK_ENABLE_HAND_OFF,
+ 			.parent_names = (const char *[]){ "gcc_mmss_noc_cfg_ahb_clk" },
+ 			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT | CLK_IS_CRITICAL, //CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -1808,7 +1871,11 @@ static struct clk_branch gpu_gx_gfx3d_clk = {
 			.name = "gpu_gx_gfx3d_clk",
 			.parent_names = (const char *[]){ "gfx3d_clk_src" },
 			.num_parents = 1,
-			.flags = CLK_SET_RATE_PARENT | CLK_ENABLE_HAND_OFF,
+			.flags = CLK_SET_RATE_PARENT,
+			VDD_GPU_MX_FMAX_MAP3(
+					  SVS, 133000000,
+					  NOMINAL, 510000000,
+					  TURBO_L1, 624000000),
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -1841,6 +1908,18 @@ static struct clk_branch gpu_ahb_clk = {
 			.flags = CLK_SET_RATE_PARENT | CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
+	},
+};
+
+static struct clk_rcg2 isense_clk_src = {
+	.cmd_rcgr = 0x4010,
+	.hid_width = 5,
+	.parent_map = mmss_xo_mmpll0_mmpll9_mmpll2_mmpll8_gpll0_gpll0_div_map,
+	.clkr.hw.init = &(struct clk_init_data){
+		.name = "isense_clk_src",
+		.parent_names = mmss_xo_mmpll0_mmpll9_mmpll2_mmpll8_gpll0_gpll0_div,
+		.num_parents = 7,
+		.ops = &clk_rcg2_ops,
 	},
 };
 
@@ -3373,7 +3452,7 @@ static int msm_mmcc_8996_voters_probe(struct platform_device *pdev)
 	rc = of_clk_add_provider(pdev->dev.of_node,
 			of_clk_src_onecell_get, onecell);
 	if (rc == 0)
-		dev_info(&pdev->dev, "Registered GCC Software Voters\n");
+		dev_info(&pdev->dev, "Registered MMCC Software Voters\n");
 
 	return rc;
 }
@@ -3397,6 +3476,7 @@ enum {
 static struct clk_regmap *gpucc_msm8996_clocks[] = {
 	[GFX3D_CLK_SRC] = &gfx3d_clk_src.clkr,
 	[RBBMTIMER_CLK_SRC] = &rbbmtimer_clk_src.clkr,
+	[ISENSE_CLK_SRC] = &isense_clk_src.clkr,
 	[GPU_AHB_CLK] = &gpu_ahb_clk.clkr,
 	[GPU_AON_ISENSE_CLK] = &gpu_aon_isense_clk.clkr,
 	[GPU_GX_GFX3D_CLK] = &gpu_gx_gfx3d_clk.clkr,
@@ -3419,59 +3499,109 @@ static const struct qcom_cc_desc gpucc_msm8996_desc = {
 
 static const struct of_device_id gpucc_msm8996_match_table[] = {
 	{ .compatible = "qcom,gpucc-msm8996",
-	  .data = (void *)GPUCC_MSM8996_V1, },
+	  .data = (void *)(uintptr_t)GPUCC_MSM8996_V1, },
 	{ .compatible = "qcom,gpucc-msm8996-v2",
-	  .data = (void *)GPUCC_MSM8996_V2, },
-	{ .compatible = "qcom,gpucc-msm8996-v3",
-	  .data = (void *)GPUCC_MSM8996_V3_0, },
+	  .data = (void *)(uintptr_t)GPUCC_MSM8996_V2, },
 	{ .compatible = "qcom,gpucc-msm8996-v3.0",
-	  .data = (void *)GPUCC_MSM8996_V3, },
+	  .data = (void *)(uintptr_t)GPUCC_MSM8996_V3_0, },
+	{ .compatible = "qcom,gpucc-msm8996-v3",
+	  .data = (void *)(uintptr_t)GPUCC_MSM8996_V3, },
 	{ .compatible = "qcom,gpucc-msm8996-pro",
-	  .data = (void *)GPUCC_MSM8996_PRO, },
+	  .data = (void *)(uintptr_t)GPUCC_MSM8996_PRO, },
 	{ }
 };
 MODULE_DEVICE_TABLE(of, gpucc_msm8996_match_table);
 
-static int gpucc_msm8996_set_vdd_class(struct regmap *regmap, const int *gpuver)
+#define GFX3D_V3_MIN_SVS_FREQ 133000000
+
+int gpu_clk_notifier_cb(struct notifier_block *nb, unsigned long evt,
+			void *data)
 {
-	const struct clk_init_data *clk_data = gfx3d_clk_src.clkr.hw.init;
+	struct clk_notifier_data *ndata = data;
+	struct msm_rpm_kvp kvp;
+	int rpm_val = 0;
+	int ret;
+
+	if (evt != PRE_RATE_CHANGE)
+		return notifier_from_errno(0);
+
+	if (ndata->new_rate == GFX3D_V3_MIN_SVS_FREQ)
+		rpm_val = 1;
+
+	kvp.key = QCOM_RPM_SMD_KEY_STATE;
+	kvp.data = (void *)&rpm_val;
+	kvp.length = sizeof(rpm_val);
+
+	ret = msm_rpm_send_message(MSM_RPM_CTX_ACTIVE_SET,
+					QCOM_SMD_RPM_MISC_CLK,
+					GPU_REQ_ID, &kvp, 1);
+
+	return notifier_from_errno(ret);
+}
+
+static int gpucc_msm8996_set_vdd_class(int gpuver)
+{
+	struct clk_init_data *clk_data = &gfx3d_clk_src_init_data;
 	int ret = 0;
 
 	/* Ensure first entry is initialized to zero */
 	clk_data->rate_max[VDD_GFX_NONE] = 0;
-
-	switch (*gpuver) {
+	switch (gpuver) {
 	case GPUCC_MSM8996_V1:
+		pr_debug("Setting MSM8996v1 GPU DVFS boundaries\n");
 		clk_data->rate_max[VDD_GFX_SVS_MINUS] = 205000000;
 		clk_data->rate_max[VDD_GFX_SVS] = 360000000;
 		clk_data->rate_max[VDD_GFX_SVS_PLUS] = 480000000;
+		vdd_gfx.num_levels = VDD_GFX_SVS_PLUS + 1;
+		vdd_gpu_mx.num_levels = VDD_MX_SVS_PLUS + 1;
 		break;
 	case GPUCC_MSM8996_V2:
+		pr_debug("Setting MSM8996v2 GPU DVFS boundaries\n");
 		clk_data->rate_max[VDD_GFX_SVS_MINUS] = 300000000;
 		clk_data->rate_max[VDD_GFX_SVS] = 500000000;
 		clk_data->rate_max[VDD_GFX_SVS_PLUS] = 604800000;
+		vdd_gfx.num_levels = VDD_GFX_SVS_PLUS + 1;
+		vdd_gpu_mx.num_levels = VDD_MX_SVS_PLUS + 1;
 		break;
 	case GPUCC_MSM8996_V3_0:
+		pr_debug("Setting MSM8996v3.0 GPU DVFS boundaries\n");
 		clk_data->rate_max[VDD_GFX_SVS_MINUS] = 315000000;
 		clk_data->rate_max[VDD_GFX_SVS] = 401800000;
 		clk_data->rate_max[VDD_GFX_SVS_PLUS] = 510000000;
 		clk_data->rate_max[VDD_GFX_NOMINAL] = 560000000;
 		clk_data->rate_max[VDD_GFX_TURBO] = 624000000;
+		vdd_gfx.num_levels = VDD_GFX_TURBO + 1;
+		vdd_gpu_mx.num_levels = VDD_MX_TURBO + 1;
 		break;
 	case GPUCC_MSM8996_PRO:
-		clk_data->rate_max[VDD_GFX_SUPER_TURBO] = 652800000;
-		/* Fall through */
-	case GPUCC_MSM8996_V3:
-		clk_data->rate_max[VDD_GFX_LOW_SVS] = 133000000;
+		pr_debug("Setting MSM8996PRO GPU DVFS boundaries\n");
+		clk_data->rate_max[VDD_GFX_LOW_SVS] = GFX3D_V3_MIN_SVS_FREQ;
 		clk_data->rate_max[VDD_GFX_SVS_MINUS] = 214000000;
 		clk_data->rate_max[VDD_GFX_SVS] = 315000000;
 		clk_data->rate_max[VDD_GFX_SVS_PLUS] = 401800000;
 		clk_data->rate_max[VDD_GFX_NOMINAL] = 510000000;
 		clk_data->rate_max[VDD_GFX_TURBO] = 560000000;
 		clk_data->rate_max[VDD_GFX_TURBO_L1] = 624000000;
+		clk_data->rate_max[VDD_GFX_SUPER_TURBO] = 652800000;
+		vdd_gpu_mx.num_levels = VDD_MX_TURBO + 1;
+		gfx3d_clk_src.clk_nb.notifier_call = gpu_clk_notifier_cb;
+		break;
+	case GPUCC_MSM8996_V3:
+		pr_debug("Setting MSM8996v3 GPU DVFS boundaries\n");
+		clk_data->rate_max[VDD_GFX_LOW_SVS] = GFX3D_V3_MIN_SVS_FREQ;
+		clk_data->rate_max[VDD_GFX_SVS_MINUS] = 214000000;
+		clk_data->rate_max[VDD_GFX_SVS] = 315000000;
+		clk_data->rate_max[VDD_GFX_SVS_PLUS] = 401800000;
+		clk_data->rate_max[VDD_GFX_NOMINAL] = 510000000;
+		clk_data->rate_max[VDD_GFX_TURBO] = 560000000;
+		clk_data->rate_max[VDD_GFX_TURBO_L1] = 624000000;
+		vdd_gfx.num_levels = VDD_GFX_TURBO_L1 + 1;
+		vdd_gpu_mx.num_levels = VDD_MX_TURBO + 1;
+		gfx3d_clk_src.clk_nb.notifier_call = gpu_clk_notifier_cb;
 		break;
 	default:
 		ret = -EINVAL;
+		pr_err("CANNOT SET GPU DVFS BOUNDARIES\n");
 		break;
 	}
 
@@ -3485,11 +3615,14 @@ static int gpucc_msm8996_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct regmap *regmap;
 	const struct of_device_id *id;
-	int ret;
+	int gpu_version;
+	int ret = 0;
 
-	id = of_match_device(gpucc_msm8996_match_table, dev);
+	id = of_match_node(gpucc_msm8996_match_table, dev->of_node);
 	if (!id)
 		return -ENODEV;
+
+	gpu_version = (uintptr_t)id->data;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	base = devm_ioremap(dev, res->start, resource_size(res));
@@ -3511,23 +3644,14 @@ static int gpucc_msm8996_probe(struct platform_device *pdev)
 		return PTR_ERR(vdd_gfx.regulator[0]);
 	}
 
-	vdd_gfx.regulator[1] = devm_regulator_get(&pdev->dev, "vdd_mx");
-	if (IS_ERR(vdd_gfx.regulator[1])) {
-		if (PTR_ERR(vdd_gfx.regulator[1]) != -EPROBE_DEFER)
-			dev_err(dev, "Unable to get vdd_mx regulator!");
-		return PTR_ERR(vdd_gfx.regulator[1]);
-	}
-	vdd_gfx.use_max_uV = true;
-
-	vdd_gpu_mx.regulator[0] = devm_regulator_get(&pdev->dev, "vdd_gpu_mx");
+	vdd_gpu_mx.regulator[0] = devm_regulator_get(&pdev->dev, "vdd_mx");
 	if (IS_ERR(vdd_gpu_mx.regulator[0])) {
 		if (PTR_ERR(vdd_gpu_mx.regulator[0]) != -EPROBE_DEFER)
 			dev_err(dev, "Unable to get vdd_gpu_mx regulator!");
 		return PTR_ERR(vdd_gpu_mx.regulator[0]);
 	}
-	vdd_gpu_mx.use_max_uV = true;
 
-	ret = gpucc_msm8996_set_vdd_class(regmap, id->data);
+	ret = gpucc_msm8996_set_vdd_class(gpu_version);
 	if (ret) {
 		dev_err(dev, "Failed to fill VDD class table for GPU\n");
 		return ret;
@@ -3538,6 +3662,11 @@ static int gpucc_msm8996_probe(struct platform_device *pdev)
 		dev_err(dev, "Failed to register GPUCC clocks\n");
 		return ret;
 	}
+
+	ret = clk_notifier_register(gfx3d_clk_src.clkr.hw.clk,
+				&gfx3d_clk_src.clk_nb);
+
+	clk_prepare_enable(mmpll2.clkr.hw.clk);
 
 	dev_info(&pdev->dev, "Registered GPUCC clocks.\n");
 
@@ -3640,7 +3769,7 @@ static int __init msm_mmcc_8996_init(void)
 {
 	return platform_driver_register(&mmcc_msm8996_driver);
 }
-arch_initcall(msm_mmcc_8996_init);
+postcore_initcall(msm_mmcc_8996_init);
 
 static void __exit mmcc_msm8996_exit(void)
 {
