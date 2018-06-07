@@ -131,6 +131,7 @@
 		compatible = "qcom,gdsc";
 		regulator-name = "gdsc_pcie_0";
 		reg = <0x36b004 0x4>;
+		#power-domain-cells = <1>;
 		status = "disabled";
 	};
 
@@ -138,6 +139,7 @@
 		compatible = "qcom,gdsc";
 		regulator-name = "gdsc_pcie_1";
 		reg = <0x36d004 0x4>;
+		#power-domain-cells = <1>;
 		status = "disabled";
 	};
 
@@ -145,6 +147,7 @@
 		compatible = "qcom,gdsc";
 		regulator-name = "gdsc_pcie_2";
 		reg = <0x36e004 0x4>;
+		#power-domain-cells = <1>;
 		status = "disabled";
 	};
 
@@ -231,6 +234,7 @@
 		regulator-name = "gdsc_aggre0_noc";
 		reg = <0x381004 0x4>;
 		hw-ctrl-addr = <&gdsc_aggre0_noc_hw_ctrl>;
+		#power-domain-cells = <1>;
 		qcom,no-status-check-on-disable;
 		qcom,gds-timeout = <500>;
 		status = "disabled";
