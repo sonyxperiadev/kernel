@@ -250,7 +250,7 @@
 
 		clocks = <&clock_mmss MMSS_MMAGIC_AHB_CLK>,
 			<&clock_mmss MMSS_MMAGIC_CFG_AHB_CLK>,
-			<&clock_mmss GPU_AHB_CLK>,
+			<&clock_gpu GPU_AHB_CLK>,
 			<&clock_gcc GCC_MMSS_BIMC_GFX_CLK>,
 			<&clock_gcc GCC_BIMC_GFX_CLK>;
 		clock-names = "mmagic_ahb_clk", "mmagic_cfg_ahb_clk", "gpu_ahb_clk",
