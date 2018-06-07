@@ -17,6 +17,8 @@
 /* CPU clock IDs */
 #define P_PWRCL_MUX		0
 #define P_PERFCL_MUX		1
-#define P_CBF_MUX		2
+
+/* CBF clocks */
+#define P_CBF_MUX		0
 
 #endif
