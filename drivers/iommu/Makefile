@@ -14,7 +14,6 @@ obj-$(CONFIG_IOMMU_DEBUG) += iommu-debug.o
 obj-$(CONFIG_MSM_IOMMU) += msm_iommu.o
 obj-$(CONFIG_AMD_IOMMU) += amd_iommu.o amd_iommu_init.o
 obj-$(CONFIG_AMD_IOMMU_V2) += amd_iommu_v2.o
-obj-$(CONFIG_ARM_SMMU) += arm-smmu.o arm-smmu-errata.o
 obj-$(CONFIG_ARM_SMMU_V3) += arm-smmu-v3.o
 obj-$(CONFIG_DMAR_TABLE) += dmar.o
 obj-$(CONFIG_INTEL_IOMMU) += intel-iommu.o
@@ -32,3 +31,14 @@ obj-$(CONFIG_EXYNOS_IOMMU) += exynos-iommu.o
 obj-$(CONFIG_FSL_PAMU) += fsl_pamu.o fsl_pamu_domain.o
 obj-$(CONFIG_S390_IOMMU) += s390-iommu.o
 obj-$(CONFIG_QCOM_IOMMU_V1) += qcom/
+
+obj-$(CONFIG_ARM_SMMU) += arm-smmu-errata.o
+
+ifeq ($(CONFIG_ARM_SMMU),y)
+  ifeq ($(CONFIG_ARM_SMMU_LEGACY),y)
+    obj-y += arm-smmu-legacy.o
+  else
+    obj-y += arm-smmu.o
+  endif
+endif
+

@@ -344,6 +344,16 @@ config ARM_SMMU
 	  Say Y here if your SoC includes an IOMMU device implementing
 	  the ARM SMMU architecture.
 
+config ARM_SMMU_LEGACY
+	bool "ARM Ltd. System MMU (SMMU) LEGACY Support"
+	depends on ARM_SMMU
+	help
+	  Support for implementations of the ARM System MMU architecture
+	  versions 1 and 2. This is a legacy driver to support some
+	  relatively old QCOM SoCs.
+
+	  Say Y here if you need support for legacy qcom SoCs.
+
 config ARM_SMMU_V3
 	bool "ARM Ltd. System MMU Version 3 (SMMUv3) Support"
 	depends on ARM64
