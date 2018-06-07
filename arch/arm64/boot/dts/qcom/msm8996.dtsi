@@ -67,7 +67,7 @@
 
 		CPU0: cpu@0 {
 			device_type = "cpu";
-			compatible = "qcom,kryo";
+			compatible = "arm,armv8";
 			reg = <0x0 0x0>;
 			qcom,limits-info = <&mitigation_profile0>;
 			enable-method = "psci";
@@ -76,12 +76,12 @@
 			next-level-cache = <&L2_0>;
 			#cooling-cells = <2>;
 			L2_0: l2-cache {
-			      compatible = "cache";
+			      compatible = "arm,arch-cache";
 			      cache-level = <2>;
 			      qcom,dump-size = <0x88000>;
 			};
 			L1_D_0: l1-dcache {
-				compatible = "cache";
+				compatible = "arm,arch-cache";
 				qcom,dump-size = <0x7800>;
 			};
 			L1_TLB_0: l1-tlb {
@@ -91,7 +91,7 @@
 
 		CPU1: cpu@1 {
 			device_type = "cpu";
-			compatible = "qcom,kryo";
+			compatible = "arm,armv8";
 			reg = <0x0 0x1>;
 			qcom,limits-info = <&mitigation_profile1>;
 			enable-method = "psci";
@@ -100,7 +100,7 @@
 			next-level-cache = <&L2_0>;
 			#cooling-cells = <2>;
 			L1_D_1: l1-dcache {
-				compatible = "cache";
+				compatible = "arm,arch-cache";
 				qcom,dump-size = <0x7800>;
 			};
 			L1_TLB_1: l1-tlb {
@@ -110,7 +110,7 @@
 
 		CPU2: cpu@100 {
 			device_type = "cpu";
-			compatible = "qcom,kryo";
+			compatible = "arm,armv8";
 			reg = <0x0 0x100>;
 			qcom,limits-info = <&mitigation_profile2>;
 			enable-method = "psci";
@@ -119,12 +119,12 @@
 			next-level-cache = <&L2_1>;
 			#cooling-cells = <2>;
 			L2_1: l2-cache {
-			      compatible = "cache";
+			      compatible = "arm,arch-cache";
 			      cache-level = <2>;
 			      qcom,dump-size = <0x110000>;
 			};
 			L1_D_100: l1-dcache {
-				compatible = "cache";
+				compatible = "arm,arch-cache";
 				qcom,dump-size = <0x7800>;
 			};
 			L1_TLB_100: l1-tlb {
@@ -134,7 +134,7 @@
 
 		CPU3: cpu@101 {
 			device_type = "cpu";
-			compatible = "qcom,kryo";
+			compatible = "arm,armv8";
 			reg = <0x0 0x101>;
 			enable-method = "psci";
 			qcom,limits-info = <&mitigation_profile3>;
@@ -143,7 +143,7 @@
 			next-level-cache = <&L2_1>;
 			#cooling-cells = <2>;
 			L1_D_101: l1-dcache {
-				compatible = "cache";
+				compatible = "arm,arch-cache";
 				qcom,dump-size = <0x7800>;
 			};
 			L1_TLB_101: l1-tlb {
