@@ -335,7 +335,7 @@
 		qcom,clock-source-override;
 	};
 
-	intc: interrupt-controller@09bc0000 {
+	intc: interrupt-controller@9bc0000 {
 		compatible = "arm,gic-v3";
 		#interrupt-cells = <3>;
 		#address-cells = <1>;
@@ -350,6 +350,12 @@
 		interrupts = <GIC_PPI 9 IRQ_TYPE_LEVEL_HIGH>;
 
 		interrupt-parent = <&intc>;
+		msi_alias0: interrupt-controller@9bd0000 {
+			compatible = "qcom,gic-msi-aliases";
+			reg = <0x9bd0000 0x1000>;
+			msi-controller;
+			arm,spi-ranges = <544 96>;
+		};
 	};
 
 	wakegic: qcom,mpm@681b8 {
