@@ -719,6 +719,13 @@ struct cpr3_panic_regs_info {
  * @aging_sensor:	Array of CPR3 aging sensors which are used to perform
  *			aging measurements at a runtime.
  * @aging_sensor_count:	Number of elements in the aging_sensor array
+ * @aging_gcnt_scaling_factor: The scaling factor used to derive the gate count
+ *			used for aging measurements. This value is divided by
+ *			1000 when used as shown in the below equation:
+ *			      Aging_GCNT = GCNT_REF * scaling_factor / 1000.
+ *			For example, a value of 1500 specifies that the gate
+ *			count (GCNT) used for aging measurement should be 1.5
+ *			times of reference gate count (GCNT_REF).
  * @aging_possible_mask: Optional bitmask used to mask off the
  *			aging_possible_reg register.
  * @aging_possible_val:	Optional value that the masked aging_possible_reg
@@ -865,6 +872,7 @@ struct cpr3_controller {
 	bool			aging_failed;
 	struct cpr3_aging_sensor_info *aging_sensor;
 	int			aging_sensor_count;
+	u32			aging_gcnt_scaling_factor;
 	u32			aging_possible_mask;
 	u32			aging_possible_val;
 
