@@ -16,7 +16,7 @@
 #include <linux/pm_qos.h>
 #include <linux/clk.h>
 #include <linux/io.h>
-#include <linux/clk/msm-clk.h>
+#include <linux/clk/qcom.h>
 #include <linux/msm-bus.h>
 #include <linux/msm-bus-board.h>
 #include <linux/iommu.h>

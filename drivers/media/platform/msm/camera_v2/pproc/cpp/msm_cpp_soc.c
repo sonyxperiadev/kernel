@@ -12,8 +12,8 @@
 
 #define pr_fmt(fmt) "MSM-CPP-SOC %s:%d " fmt, __func__, __LINE__
 
-#include <linux/clk/msm-clk.h>
-#include <linux/clk/msm-clk-provider.h>
+#include <linux/clk/qcom.h>
+#include <linux/clk-provider.h>
 #include <linux/delay.h>
 #include <media/msmb_pproc.h>
 #include "msm_cpp.h"
