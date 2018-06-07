@@ -3077,8 +3077,6 @@ static struct clk_branch fd_ahb_clk = {
 
 static struct clk_hw *mmcc_msm8996_hws[] = {
 	[GPLL0_DIV] = &gpll0_div.hw,
-	[MDSS_MDP_VOTE_CLK] = &mdss_mdp_vote_clk.hw,
-	[MDSS_ROTATOR_VOTE_CLK] = &mdss_rotator_vote_clk.hw,
 };
 
 static struct clk_regmap *mmcc_msm8996_clocks[] = {
@@ -3329,6 +3327,64 @@ static const struct of_device_id mmcc_msm8996_match_table[] = {
 };
 MODULE_DEVICE_TABLE(of, mmcc_msm8996_match_table);
 
+/* Voters */
+static struct clk_hw *mmcc_voters_8996_hws[] = {
+	[MDSS_MDP_VOTE_CLK] = &mdss_mdp_vote_clk.hw,
+	[MDSS_ROTATOR_VOTE_CLK] = &mdss_rotator_vote_clk.hw,
+};
+
+static struct of_device_id mmcc_voters_8996_match_table[] = {
+	{ .compatible = "qcom,mmsscc-voters-8996" },
+	{ }
+};
+
+static int msm_mmcc_8996_voters_probe(struct platform_device *pdev)
+{
+	int rc, i, num_clks;
+	struct clk *clk;
+	struct clk_onecell_data *onecell;
+
+	num_clks = ARRAY_SIZE(mmcc_voters_8996_hws);
+
+	onecell = devm_kzalloc(&pdev->dev,
+			sizeof(struct clk_onecell_data), GFP_KERNEL);
+	if (!onecell)
+		return -ENOMEM;
+
+	onecell->clks = devm_kzalloc(&pdev->dev,
+			(num_clks * sizeof(struct clk*)), GFP_KERNEL);
+	if (!onecell->clks)
+		return -ENOMEM;
+
+	onecell->clk_num = num_clks;
+
+	for (i = 0; i < num_clks; i++) {
+		if (!mmcc_voters_8996_hws[i])
+			continue;
+
+		clk = devm_clk_register(&pdev->dev, mmcc_voters_8996_hws[i]);
+		if (IS_ERR(clk)) {
+			dev_err(&pdev->dev, "Cannot register clock no %d\n",i);
+			return PTR_ERR(clk);
+		}
+		onecell->clks[i] = clk;
+	}
+
+	rc = of_clk_add_provider(pdev->dev.of_node,
+			of_clk_src_onecell_get, onecell);
+	if (rc == 0)
+		dev_info(&pdev->dev, "Registered GCC Software Voters\n");
+
+	return rc;
+}
+
+static struct platform_driver mmcc_voters_8996_driver = {
+	.probe = msm_mmcc_8996_voters_probe,
+	.driver = {
+		.name = "gcc-voters-8996",
+		.of_match_table = mmcc_voters_8996_match_table,
+	},
+};
 
 enum {
 	GPUCC_MSM8996_V1,
@@ -3561,8 +3617,13 @@ static int mmcc_msm8996_probe(struct platform_device *pdev)
 
 	dev_info(&pdev->dev, "Registered MMCC clocks\n");
 
+	/* TODO: Clean up this mess! */
+
 	/* Now register the GPUCC! */
 	ret = platform_driver_register(&gpucc_msm8996_driver);
+
+	/* And the MMCC voters... */
+	ret = platform_driver_register(&mmcc_voters_8996_driver);
 
 	return ret;
 }
