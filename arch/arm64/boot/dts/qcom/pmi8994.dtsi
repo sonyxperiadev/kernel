@@ -27,7 +27,7 @@
 
 		pmi8994_gpios: pinctrl@c000 {
 			compatible = "qcom,spmi-gpio";
-			reg = <0xc000 0xe00>;
+			reg = <0xc000 0xa00>;
 			interrupts = <0x2 0xc0 0 IRQ_TYPE_NONE>,
 					<0x2 0xc1 0 IRQ_TYPE_NONE>,
 					<0x2 0xc2 0 IRQ_TYPE_NONE>,

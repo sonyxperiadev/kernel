@@ -66,7 +66,7 @@
 
 		pm8994_gpios: gpios@c000 {
 			compatible = "qcom,spmi-gpio";
-			reg = <0xc000 0x1600>;
+			reg = <0xc000 0x1500>;
 			interrupts = <0 0xc0 0 IRQ_TYPE_NONE>,
 				     <0 0xc1 0 IRQ_TYPE_NONE>,
 				     <0 0xc2 0 IRQ_TYPE_NONE>,
