@@ -245,6 +245,7 @@
 #define GCC_AGGRE0_NOC_MPU_CFG_AHB_CLK				225
 #define GCC_MMSS_GPLL0_DIV_CLK					226
 #define GPLL0_OUT_MSSCC_CLK					227
+#define GPLL0_AO						228
 
 /* Block resets */
 #define GCC_SYSTEM_NOC_BCR					0
