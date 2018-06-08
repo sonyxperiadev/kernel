@@ -618,6 +618,9 @@
 		};
 	};
 
+
+	thermal_zones: thermal-zones {};
+
 	tsens: tsens@10ad000 {
 		compatible = "qcom,sdm630-tsens";
 		reg = <0x10ad000 0x2000>;
@@ -2154,6 +2157,7 @@
 #include "sdm660-vidc.dtsi"
 #include "sdm630-mdss.dtsi"
 #include "sdm630-mdss-pll.dtsi"
+#include "sdm630-thermal.dtsi"
 
 &gdsc_usb30 {
 	status = "ok";
