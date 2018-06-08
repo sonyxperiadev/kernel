@@ -331,6 +331,7 @@ static const char * const mmcc_parent_names_12[] = {
 /* Voteable PLL */
 static struct clk_alpha_pll mmpll0_pll_out_main = {
 	.offset = 0xc000,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.clkr = {
 		.enable_reg = 0x1f0,
 		.enable_mask = BIT(0),
@@ -347,6 +348,7 @@ static struct clk_alpha_pll mmpll0_pll_out_main = {
 
 static struct clk_alpha_pll mmpll6_pll_out_main =  {
 	.offset = 0xf0,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.clkr = {
 		.enable_reg = 0x1f0,
 		.enable_mask = BIT(2),
@@ -369,7 +371,7 @@ static struct pll_vco vco[] = {
 	{ 250000000, 500000000, 3 },
 };
 
-static const struct pll_config mmpll10_config = {
+static const struct alpha_pll_config mmpll10_config = {
 	.l = 0x1e,
 	.config_ctl_val = 0x00004289,
 	.main_output_mask = 0x1,
@@ -377,6 +379,7 @@ static const struct pll_config mmpll10_config = {
 
 static struct clk_alpha_pll mmpll10_pll_out_main = {
 	.offset = 0x190,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.clkr = {
 		.hw.init = &(struct clk_init_data){
 			.name = "mmpll10_pll_out_main",
@@ -392,7 +395,7 @@ static struct pll_vco mmpll3_vco[] = {
 	{ 750000000, 1500000000, 1 },
 };
 
-static const struct pll_config mmpll3_config = {
+static const struct alpha_pll_config mmpll3_config = {
 	.l = 0x2e,
 	.config_ctl_val = 0x4001055b,
 	.vco_val = 0x1 << 20,
@@ -402,6 +405,7 @@ static const struct pll_config mmpll3_config = {
 
 static struct clk_alpha_pll mmpll3_pll_out_main = {
 	.offset = 0x0,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.vco_table = mmpll3_vco,
 	.num_vco = ARRAY_SIZE(mmpll3_vco),
 	.clkr = {
@@ -416,7 +420,7 @@ static struct clk_alpha_pll mmpll3_pll_out_main = {
 	},
 };
 
-static const struct pll_config mmpll4_config = {
+static const struct alpha_pll_config mmpll4_config = {
 	.l = 0x28,
 	.config_ctl_val = 0x4001055b,
 	.vco_val = 0x2 << 20,
@@ -426,6 +430,7 @@ static const struct pll_config mmpll4_config = {
 
 static struct clk_alpha_pll mmpll4_pll_out_main = {
 	.offset = 0x50,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.vco_table = vco,
 	.num_vco = ARRAY_SIZE(vco),
 	.clkr = {
@@ -440,10 +445,10 @@ static struct clk_alpha_pll mmpll4_pll_out_main = {
 	},
 };
 
-static const struct pll_config mmpll5_config = {
+static const struct alpha_pll_config mmpll5_config = {
 	.l = 0x2a,
 	.config_ctl_val = 0x4001055b,
-	.alpha_u = 0xf8,
+	.alpha_hi = 0xf8,
 	.alpha_en_mask = BIT(24),
 	.vco_val = 0x2 << 20,
 	.vco_mask = 0x3 << 20,
@@ -452,6 +457,7 @@ static const struct pll_config mmpll5_config = {
 
 static struct clk_alpha_pll mmpll5_pll_out_main = {
 	.offset = 0xa0,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.vco_table = vco,
 	.num_vco = ARRAY_SIZE(vco),
 	.clkr = {
@@ -466,7 +472,7 @@ static struct clk_alpha_pll mmpll5_pll_out_main = {
 	},
 };
 
-static const struct pll_config mmpll7_config = {
+static const struct alpha_pll_config mmpll7_config = {
 	.l = 0x32,
 	.config_ctl_val = 0x4001055b,
 	.vco_val = 0x2 << 20,
@@ -476,6 +482,7 @@ static const struct pll_config mmpll7_config = {
 
 static struct clk_alpha_pll mmpll7_pll_out_main = {
 	.offset = 0x140,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.vco_table = vco,
 	.num_vco = ARRAY_SIZE(vco),
 	.clkr = {
@@ -490,9 +497,9 @@ static struct clk_alpha_pll mmpll7_pll_out_main = {
 	},
 };
 
-static const struct pll_config mmpll8_config = {
+static const struct alpha_pll_config mmpll8_config = {
 	.l = 0x30,
-	.alpha_u = 0x70,
+	.alpha_hi = 0x70,
 	.alpha_en_mask = BIT(24),
 	.config_ctl_val = 0x4001055b,
 	.vco_val = 0x2 << 20,
@@ -502,6 +509,7 @@ static const struct pll_config mmpll8_config = {
 
 static struct clk_alpha_pll mmpll8_pll_out_main = {
 	.offset = 0x1c0,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.vco_table = vco,
 	.num_vco = ARRAY_SIZE(vco),
 	.clkr = {
@@ -1281,7 +1289,7 @@ static struct clk_rcg2 video_core_clk_src = {
 	.hid_width = 5,
 	.parent_map = mmcc_parent_map_12,
 	.freq_tbl = ftbl_video_core_clk_src,
-	.flags = FORCE_ENABLE_RCGR,
+	.flags = FORCE_ENABLE_RCG,
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "video_core_clk_src",
 		.parent_names = mmcc_parent_names_12,
