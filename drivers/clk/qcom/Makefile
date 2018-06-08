@@ -21,6 +21,7 @@ clk-qcom-$(CONFIG_QCOM_GDSC) += gdsc.o gdsc-regulator.o
 obj-$(CONFIG_APQ_GCC_8084) += gcc-apq8084.o
 obj-$(CONFIG_APQ_MMCC_8084) += mmcc-apq8084.o
 obj-$(CONFIG_CLOCK_CPU_OSM) += clk-cpu-osm.o
+obj-$(CONFIG_CLOCK_CPU_OSM_LEGACY) += clk-cpu-osm-legacy.o
 obj-$(CONFIG_CLOCK_CPU_8976) += clk-cpu-8976.o
 obj-$(CONFIG_MSM_APCC_8996) += clk-cpu-8996.o
 obj-$(CONFIG_CLOCK_QPNP_DIV) += clk-qpnp-div.o
