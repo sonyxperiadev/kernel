@@ -292,6 +292,7 @@ cmd_record_mcount =						\
 		$(sub_cmd_record_mcount)			\
 	fi;
 endif
+endif # -record-mcount
 endif # CONFIG_FTRACE_MCOUNT_RECORD
 
 ifdef CONFIG_STACK_VALIDATION
@@ -313,7 +314,6 @@ objtool_args += $(call cc-ifversion, -lt, 0405, --no-unreachable)
 endif
 ifdef CONFIG_RETPOLINE
   objtool_args += --retpoline
-endif
 endif
 
 
