@@ -1117,6 +1117,7 @@
 		qcom,mmss = <&mmss_debug>;
 		qcom,gpu = <&gpu_debug>;
 		#clock-cells = <1>;
+		status = "disabled";
 	};
 
 	cpubw: qcom,cpubw {
