@@ -15,7 +15,7 @@
 #include <dt-bindings/clock/qcom,gpu-sdm660.h>
 #include <dt-bindings/clock/qcom,mmcc-sdm660.h>
 #include <dt-bindings/clock/qcom,rpmcc.h>
-#include <dt-bindings/clock/audio-ext-clk.h>
+#include <dt-bindings/clock/qcom,audio-ext-clk.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/regulator/qcom,rpm-smd-regulator.h>
 #include <dt-bindings/clock/qcom,cpu-osm.h>
