@@ -802,7 +802,7 @@
 		};
 
 		slv_tlmm_south:slv-tlmm-south {
-			cell-id = <MSM_BUS_SLAVE_TLMM_SOUTH>;
+			cell-id = <MSM_BUS_SLAVE_TLMM_SOUTH_660>;
 			label = "slv-tlmm-south";
 			qcom,buswidth = <4>;
 			qcom,agg-ports = <1>;
