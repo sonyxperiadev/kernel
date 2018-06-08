@@ -97,6 +97,14 @@
 				<RPM_SMD_REGULATOR_LEVEL_TURBO>;
 			qcom,use-voltage-level;
 		};
+
+		cx_cdev: regulator-cx-cdev {
+			compatible = "qcom,regulator-cooling-device";
+			regulator-cdev-supply = <&pm660l_s3_level>;
+			regulator-levels = <RPM_SMD_REGULATOR_LEVEL_NOM
+					RPM_SMD_REGULATOR_LEVEL_RETENTION>;
+			#cooling-cells = <2>;
+		};
 	};
 
 	/* PM660L S5 - VDD_MX supply */
@@ -134,6 +142,14 @@
 			regulator-max-microvolt =
 				<RPM_SMD_REGULATOR_LEVEL_TURBO>;
 			qcom,use-voltage-level;
+		};
+
+		mx_cdev: regulator-mx-cdev {
+			compatible = "qcom,regulator-cooling-device";
+			regulator-cdev-supply = <&pm660l_s5_level>;
+			regulator-levels = <RPM_SMD_REGULATOR_LEVEL_NOM
+					RPM_SMD_REGULATOR_LEVEL_RETENTION>;
+			#cooling-cells = <2>;
 		};
 	};
 
