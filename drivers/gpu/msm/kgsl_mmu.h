@@ -130,6 +130,8 @@ struct kgsl_mmu_pt_ops {
 #define KGSL_MMU_GLOBAL_PAGETABLE BIT(3)
 /* MMU uses hypervisor for content protection */
 #define KGSL_MMU_HYP_SECURE_ALLOC BIT(4)
+/* MMU needs early secure pagetable setting */
+#define KGSL_MMU_PT_EARLY_ALLOC BIT(40)
 /* Force 32 bit, even if the MMU can do 64 bit */
 #define KGSL_MMU_FORCE_32BIT BIT(5)
 /* 64 bit address is live */
