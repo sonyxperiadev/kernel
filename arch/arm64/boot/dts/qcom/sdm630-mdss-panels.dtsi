@@ -16,7 +16,6 @@
 #include "dsi-panel-truly-1080p-cmd.dtsi"
 #include "dsi-panel-truly-1080p-video.dtsi"
 #include "dsi-panel-rm67195-amoled-fhd-cmd.dtsi"
-#include "dsi-panel-sharp-split-link-wuxga-video.dtsi"
 
 &soc {
 	dsi_panel_pwr_supply: dsi_panel_pwr_supply {
@@ -232,14 +231,3 @@
 	qcom,mdss-dsi-t-clk-pre = <0x2f>;
 };
 
-&dsi_sharp_split_link_wuxga_video {
-	qcom,mdss-dsi-panel-timings-phy-v2 = [25 1f 09 0a 06 03 04 a0
-		25 1f 09 0a 06 03 04 a0
-		25 1f 09 0a 06 03 04 a0
-		25 1f 09 0a 06 03 04 a0
-		25 1f 08 0a 06 03 04 a0];
-	qcom,mdss-dsi-min-refresh-rate = <48>;
-	qcom,mdss-dsi-max-refresh-rate = <60>;
-	qcom,mdss-dsi-pan-enable-dynamic-fps;
-	qcom,mdss-dsi-pan-fps-update = "dfps_immediate_porch_mode_vfp";
-};
