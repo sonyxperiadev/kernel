@@ -2700,8 +2700,6 @@ static const struct qcom_cc_desc gcc_660_desc = {
 	.config = &gcc_660_regmap_config,
 	.clks = gcc_660_clocks,
 	.num_clks = ARRAY_SIZE(gcc_660_clocks),
-	.hwclks = gcc_sdm660_hws,
-	.num_hwclks = ARRAY_SIZE(gcc_sdm660_hws),
 	.resets = gcc_660_resets,
 	.num_resets = ARRAY_SIZE(gcc_660_resets),
 };
@@ -2735,6 +2733,13 @@ static int gcc_660_probe(struct platform_device *pdev)
 			dev_err(&pdev->dev,
 					"Unable to get vdd_dig_ao regulator\n");
 		return PTR_ERR(vdd_dig_ao.regulator[0]);
+	}
+
+	/* Register the hws */
+	for (i = 0; i < ARRAY_SIZE(gcc_sdm660_hws); i++) {
+		ret = devm_clk_hw_register(&pdev->dev, gcc_sdm660_hws[i]);
+		if (ret)
+			return ret;
 	}
 
 	ret = qcom_cc_really_probe(pdev, &gcc_660_desc, regmap);
