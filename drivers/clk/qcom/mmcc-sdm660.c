@@ -2884,11 +2884,6 @@ static struct clk_branch mmss_video_subcore0_clk = {
 	},
 };
 
-struct clk_hw *mmcc_sdm660_hws[] = {
-	[MMSS_CAMSS_JPEG0_VOTE_CLK] = &mmss_camss_jpeg0_vote_clk.hw,
-	[MMSS_CAMSS_JPEG0_DMA_VOTE_CLK] = &mmss_camss_jpeg0_dma_vote_clk.hw,
-};
-
 static struct clk_regmap *mmcc_660_clocks[] = {
 	[AHB_CLK_SRC] = &ahb_clk_src.clkr,
 	[BYTE0_CLK_SRC] = &byte0_clk_src.clkr,
@@ -3042,8 +3037,6 @@ static const struct qcom_cc_desc mmcc_660_desc = {
 	.config = &mmcc_660_regmap_config,
 	.clks = mmcc_660_clocks,
 	.num_clks = ARRAY_SIZE(mmcc_660_clocks),
-	.hwclks = mmcc_sdm660_hws,
-	.num_hwclks = ARRAY_SIZE(mmcc_sdm660_hws),
 	.resets = mmcc_660_resets,
 	.num_resets = ARRAY_SIZE(mmcc_660_resets),
 };
@@ -3054,6 +3047,8 @@ static const struct of_device_id mmcc_660_match_table[] = {
 	{ }
 };
 MODULE_DEVICE_TABLE(of, mmcc_660_match_table);
+
+static struct platform_driver mmcc_voters_sdm660_driver;
 
 static int mmcc_660_probe(struct platform_device *pdev)
 {
@@ -3120,7 +3115,7 @@ static int mmcc_660_probe(struct platform_device *pdev)
 
 	dev_info(&pdev->dev, "Registered MMSS clocks\n");
 
-	return ret;
+	return platform_driver_register(&mmcc_voters_sdm660_driver);
 }
 
 static struct platform_driver mmcc_660_driver = {
@@ -3128,6 +3123,66 @@ static struct platform_driver mmcc_660_driver = {
 	.driver		= {
 		.name	= "mmcc-sdm660",
 		.of_match_table = mmcc_660_match_table,
+	},
+};
+
+
+/* Voters */
+struct clk_hw *mmcc_voters_sdm660_hws[] = {
+	[MMSS_CAMSS_JPEG0_VOTE_CLK] = &mmss_camss_jpeg0_vote_clk.hw,
+	[MMSS_CAMSS_JPEG0_DMA_VOTE_CLK] = &mmss_camss_jpeg0_dma_vote_clk.hw,
+};
+
+static struct of_device_id mmcc_voters_sdm660_match_table[] = {
+	{ .compatible = "qcom,mmsscc-voters-sdm660" },
+	{ }
+};
+
+static int mmcc_660_voters_probe(struct platform_device *pdev)
+{
+	int rc, i, num_clks;
+	struct clk *clk;
+	struct clk_onecell_data *onecell;
+
+	num_clks = ARRAY_SIZE(mmcc_voters_sdm660_hws);
+
+	onecell = devm_kzalloc(&pdev->dev,
+			sizeof(struct clk_onecell_data), GFP_KERNEL);
+	if (!onecell)
+		return -ENOMEM;
+
+	onecell->clks = devm_kzalloc(&pdev->dev,
+			(num_clks * sizeof(struct clk*)), GFP_KERNEL);
+	if (!onecell->clks)
+		return -ENOMEM;
+
+	onecell->clk_num = num_clks;
+
+	for (i = 0; i < num_clks; i++) {
+		if (!mmcc_voters_sdm660_hws[i])
+			continue;
+
+		clk = devm_clk_register(&pdev->dev, mmcc_voters_sdm660_hws[i]);
+		if (IS_ERR(clk)) {
+			dev_err(&pdev->dev, "Cannot register clock no %d\n",i);
+			return PTR_ERR(clk);
+		}
+		onecell->clks[i] = clk;
+	}
+
+	rc = of_clk_add_provider(pdev->dev.of_node,
+			of_clk_src_onecell_get, onecell);
+	if (rc == 0)
+		dev_info(&pdev->dev, "Registered MMCC Software Voters\n");
+
+	return rc;
+}
+
+static struct platform_driver mmcc_voters_sdm660_driver = {
+	.probe = mmcc_660_voters_probe,
+	.driver = {
+		.name = "mmsscc-voters-660",
+		.of_match_table = mmcc_voters_sdm660_match_table,
 	},
 };
 
