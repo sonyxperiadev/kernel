@@ -2670,7 +2670,7 @@ static ssize_t debugfs_trace_method_get(struct file *file, char __user *buf,
 					size_t count, loff_t *ppos)
 {
 	struct clk_osm *c;
-	int len, rc;
+	int len = 0, rc;
 
 	if (IS_ERR(file) || file == NULL) {
 		pr_err("input error %ld\n", PTR_ERR(file));
