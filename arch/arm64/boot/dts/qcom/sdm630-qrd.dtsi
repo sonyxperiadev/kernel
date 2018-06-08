@@ -10,7 +10,7 @@
  * GNU General Public License for more details.
  */
 
-#include "msm-pm660a.dtsi"
+#include "pm660a.dtsi"
 #include "sdm660-pinctrl.dtsi"
 #include "sdm630-camera-sensor-qrd.dtsi"
 

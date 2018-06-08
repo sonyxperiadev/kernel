@@ -2506,8 +2506,8 @@
 
 #include "sdm660-ion.dtsi"
 #include "sdm660-bus.dtsi"
-#include "msm-pm660.dtsi"
-#include "msm-pm660l.dtsi"
+#include "pm660.dtsi"
+#include "pm660l.dtsi"
 #include "msm-pm660-rpm-regulator.dtsi"
 #include "msm-pm660l-rpm-regulator.dtsi"
 #include "sdm660-regulator.dtsi"
