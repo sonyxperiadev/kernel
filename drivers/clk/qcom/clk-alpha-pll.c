@@ -47,6 +47,7 @@
 #define PLL_USER_CTL(p)		((p)->offset + (p)->regs[PLL_OFF_USER_CTL])
 # define PLL_POST_DIV_SHIFT	8
 # define PLL_POST_DIV_MASK(p)	GENMASK((p)->width, 0)
+# define PLL_STD_POST_DIV_MASK	0xf
 # define PLL_ALPHA_EN		BIT(24)
 # define PLL_ALPHA_MODE		BIT(25)
 # define PLL_VCO_SHIFT		20
@@ -548,6 +549,41 @@ static int clk_alpha_pll_update_latch(struct clk_alpha_pll *pll,
 	return 0;
 }
 
+static const struct pll_vco_data
+	*find_vco_data(const struct pll_vco_data *data,
+			unsigned long rate, size_t size)
+{
+	int i;
+
+	if (!data)
+		return NULL;
+
+	for (i = 0; i < size; i++) {
+		if (rate == data[i].freq)
+			return &data[i];
+	}
+
+	return &data[i - 1];
+}
+
+static void __clk_alpha_pll_set_manual_vco(struct clk_alpha_pll *pll,
+					   unsigned long rate)
+{
+	const struct pll_vco_data *data;
+
+	data = find_vco_data(pll->vco_data, rate, pll->num_vco_data);
+	if (data) {
+		if (data->freq == rate)
+			regmap_update_bits(pll->clkr.regmap, PLL_USER_CTL(pll),
+				PLL_STD_POST_DIV_MASK << PLL_POST_DIV_SHIFT,
+				data->post_div_val << PLL_POST_DIV_SHIFT);
+		else
+			regmap_update_bits(pll->clkr.regmap, PLL_USER_CTL(pll),
+				PLL_STD_POST_DIV_MASK << PLL_POST_DIV_SHIFT,
+				0x0 << PLL_VCO_SHIFT);
+	}
+}
+
 static int __clk_alpha_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 				    unsigned long prate,
 				    int (*is_enabled)(struct clk_hw *))
@@ -579,6 +615,8 @@ static int __clk_alpha_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 				   PLL_VCO_MASK << PLL_VCO_SHIFT,
 				   vco->val << PLL_VCO_SHIFT);
 	}
+
+	__clk_alpha_pll_set_manual_vco(pll, rate);
 
 	regmap_update_bits(pll->clkr.regmap, PLL_USER_CTL(pll),
 			   PLL_ALPHA_EN, PLL_ALPHA_EN);
