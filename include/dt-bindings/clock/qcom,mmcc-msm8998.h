@@ -1,0 +1,180 @@
+/*
+ * Linux mainline API clocks implementation for MSM8998
+ * MultiMedia Clock Controller (MMCC) driver
+ * Copyright (C) 2018, AngeloGioacchino Del Regno <kholk11@gmail.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+/* PLLs */
+#define MMPLL0_PLL			0
+#define MMPLL1_PLL			1
+#define MMPLL3_PLL			2
+#define MMPLL4_PLL			3
+#define MMPLL5_PLL			4
+#define MMPLL6_PLL			5
+#define MMPLL7_PLL			6
+#define MMPLL10_PLL			7
+
+/* MMCC block clocks */
+#define AHB_CLK_SRC			20
+#define CSI0_CLK_SRC			21
+#define VFE0_CLK_SRC			22
+#define VFE1_CLK_SRC			23
+#define MDP_CLK_SRC			24
+#define MAXI_CLK_SRC			25
+#define CPP_CLK_SRC			26
+#define JPEG0_CLK_SRC			27
+#define ROT_CLK_SRC			28
+#define VIDEO_CORE_CLK_SRC		29
+#define CSI1_CLK_SRC			30
+#define CSI2_CLK_SRC			31
+#define CSI3_CLK_SRC			32
+#define FD_CORE_CLK_SRC			33
+#define VIDEO_SUBCORE0_CLK_SRC		34
+#define VIDEO_SUBCORE1_CLK_SRC		35
+#define CCI_CLK_SRC			36
+#define CSIPHY_CLK_SRC			37
+#define CAMSS_GP0_CLK_SRC		38
+#define CAMSS_GP1_CLK_SRC		39
+#define MCLK0_CLK_SRC			40
+#define MCLK1_CLK_SRC			41
+#define MCLK2_CLK_SRC			42
+#define MCLK3_CLK_SRC			43
+#define EXT_BYTE0_CLK_SRC		44
+#define EXT_BYTE1_CLK_SRC		45
+#define BYTE0_CLK_SRC			46
+#define BYTE1_CLK_SRC			47
+#define EXT_PCLK0_CLK_SRC		48
+#define EXT_PCLK1_CLK_SRC		49
+#define PCLK0_CLK_SRC			50
+#define PCLK1_CLK_SRC			51
+#define EXT_EXTPCLK_CLK_SRC		52
+#define EXTPCLK_CLK_SRC			53
+#define EXT_DP_PHY_PLL_VCO		54
+#define EXT_DP_PHY_PLL_LINK		55
+#define DP_PIXEL_CLK_SRC		56
+#define DP_LINK_CLK_SRC			57
+#define DP_CRYPTO_CLK_SRC		58
+#define CSI0PHYTIMER_CLK_SRC		59
+#define CSI1PHYTIMER_CLK_SRC		60
+#define CSI2PHYTIMER_CLK_SRC		61
+#define DP_AUX_CLK_SRC			62
+#define DP_GTC_CLK_SRC			63
+#define ESC0_CLK_SRC			64
+#define ESC1_CLK_SRC			65
+#define HDMI_CLK_SRC			66
+#define VSYNC_CLK_SRC			67
+#define MMSS_BIMC_SMMU_AHB_CLK		68
+#define MMSS_BIMC_SMMU_AXI_CLK		69
+#define MMSS_SNOC_DVM_AXI_CLK		70
+#define MMSS_CAMSS_AHB_CLK		71
+#define MMSS_CAMSS_CCI_AHB_CLK		72
+#define MMSS_CAMSS_CCI_CLK		73
+#define MMSS_CAMSS_CPP_AHB_CLK		74
+#define MMSS_CAMSS_CPP_CLK		75
+#define MMSS_CAMSS_CPP_AXI_CLK		76
+#define MMSS_CAMSS_CPP_VBIF_AHB_CLK	77
+#define MMSS_CAMSS_CPHY_CSID0_CLK	78
+#define MMSS_CAMSS_CSI0_AHB_CLK		79
+#define MMSS_CAMSS_CSI0_CLK		80
+#define MMSS_CAMSS_CSI0PIX_CLK		81
+#define MMSS_CAMSS_CSI0RDI_CLK		82
+#define MMSS_CAMSS_CPHY_CSID1_CLK	83
+#define MMSS_CAMSS_CSI1_AHB_CLK		84
+#define MMSS_CAMSS_CSI1_CLK		85
+#define MMSS_CAMSS_CSI1PIX_CLK		86
+#define MMSS_CAMSS_CSI1RDI_CLK		87
+#define MMSS_CAMSS_CPHY_CSID2_CLK	88
+#define MMSS_CAMSS_CSI2_AHB_CLK		89
+#define MMSS_CAMSS_CSI2_CLK		90
+#define MMSS_CAMSS_CSI2PIX_CLK		91
+#define MMSS_CAMSS_CSI2RDI_CLK		92
+#define MMSS_CAMSS_CPHY_CSID3_CLK	93
+#define MMSS_CAMSS_CSI3_AHB_CLK		94
+#define MMSS_CAMSS_CSI3_CLK		95
+#define MMSS_CAMSS_CSI3PIX_CLK		96
+#define MMSS_CAMSS_CSI3RDI_CLK		97
+#define MMSS_CAMSS_CSI_VFE0_CLK		98
+#define MMSS_CAMSS_CSI_VFE1_CLK		99
+#define MMSS_CAMSS_CSIPHY0_CLK		100
+#define MMSS_CAMSS_CSIPHY1_CLK		101
+#define MMSS_CAMSS_CSIPHY2_CLK		102
+#define MMSS_FD_AHB_CLK			103
+#define MMSS_FD_CORE_CLK		104
+#define MMSS_FD_CORE_UAR_CLK		105
+#define MMSS_CAMSS_GP0_CLK		106
+#define MMSS_CAMSS_GP1_CLK		107
+#define MMSS_CAMSS_ISPIF_AHB_CLK	108
+#define MMSS_CAMSS_JPEG0_CLK		109
+#define MMSS_CAMSS_JPEG_AHB_CLK		112
+#define MMSS_CAMSS_JPEG_AXI_CLK		113
+#define MMSS_CAMSS_MCLK0_CLK		114
+#define MMSS_CAMSS_MCLK1_CLK		115
+#define MMSS_CAMSS_MCLK2_CLK		116
+#define MMSS_CAMSS_MCLK3_CLK		117
+#define MMSS_CAMSS_MICRO_AHB_CLK	118
+#define MMSS_CAMSS_CSI0PHYTIMER_CLK	119
+#define MMSS_CAMSS_CSI1PHYTIMER_CLK	120
+#define MMSS_CAMSS_CSI2PHYTIMER_CLK	121
+#define MMSS_CAMSS_TOP_AHB_CLK		122
+#define MMSS_CAMSS_VFE0_AHB_CLK		123
+#define MMSS_CAMSS_VFE0_CLK		124
+#define MMSS_CAMSS_VFE0_STREAM_CLK	125
+#define MMSS_CAMSS_VFE1_AHB_CLK		126
+#define MMSS_CAMSS_VFE1_CLK		127
+#define MMSS_CAMSS_VFE1_STREAM_CLK	128
+#define MMSS_CAMSS_VFE_VBIF_AHB_CLK	129
+#define MMSS_CAMSS_VFE_VBIF_AXI_CLK	130
+#define MMSS_MDSS_AHB_CLK		131
+#define MMSS_MDSS_AXI_CLK		132
+#define MMSS_MDSS_BYTE0_CLK		133
+#define MMSS_MDSS_BYTE0_INTF_DIV_CLK	134
+#define MMSS_MDSS_BYTE0_INTF_CLK	135
+#define MMSS_MDSS_BYTE1_CLK		136
+#define MMSS_MDSS_BYTE1_INTF_DIV_CLK	137
+#define MMSS_MDSS_BYTE1_INTF_CLK	138
+#define MMSS_MDSS_DP_AUX_CLK		139
+#define MMSS_MDSS_DP_CRYPTO_CLK		140
+#define MMSS_MDSS_DP_PIXEL_CLK		141
+#define MMSS_MDSS_DP_LINK_CLK		142
+#define MMSS_MDSS_DP_LINK_INTF_CLK	143
+#define MMSS_MDSS_DP_GTC_CLK		144
+#define MMSS_MDSS_ESC0_CLK		145
+#define MMSS_MDSS_ESC1_CLK		146
+#define MMSS_MDSS_EXTPCLK_CLK		147
+#define MMSS_MDSS_HDMI_CLK		148
+#define MMSS_MDSS_HDMI_DP_AHB_CLK	149
+#define MMSS_MDSS_MDP_CLK		150
+#define MMSS_MDSS_MDP_LUT_CLK		151
+#define MMSS_MDSS_PCLK0_CLK		152
+#define MMSS_MDSS_PCLK1_CLK		153
+#define MMSS_MDSS_ROT_CLK		154
+#define MMSS_MDSS_VSYNC_CLK		155
+#define MMSS_MISC_AHB_CLK		156
+#define MMSS_MISC_CXO_CLK		157
+#define MMSS_MNOC_AHB_CLK		158
+#define MMSS_VIDEO_SUBCORE0_CLK		159
+#define MMSS_VIDEO_SUBCORE1_CLK		160
+#define MMSS_VIDEO_AHB_CLK		161
+#define MMSS_VIDEO_AXI_CLK		162
+#define MMSS_VIDEO_CORE_CLK		163
+#define MMSS_VIDEO_MAXI_CLK		164
+#define MMSS_VMEM_AHB_CLK		165
+#define MMSS_VMEM_MAXI_CLK		166
+#define MMSS_MNOC_MAXI_CLK		167
+
+/* Voters */
+#define MMSS_CAMSS_JPEG0_VOTE_CLK	0
+#define MMSS_CAMSS_JPEG0_DMA_VOTE_CLK	1
+
+/* Resets */
+#define CAMSS_MICRO_BCR			0
+	
