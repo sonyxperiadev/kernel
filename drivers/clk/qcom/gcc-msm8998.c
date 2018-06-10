@@ -352,55 +352,75 @@ static struct clk_alpha_pll_postdiv gpll4_out_main = {
 	},
 };
 
+static struct clk_branch gcc_mmss_gpll0_clk = {
+	.halt_reg = 0x5200c,
+	.halt_check = BRANCH_HALT_DELAY,
+	.clkr = {
+		.enable_reg = 0x5200c,
+		.enable_mask = BIT(1),
+		.hw.init = &(struct clk_init_data){
+			.name = "gcc_mmss_gpll0_clk",
+			.parent_names = (const char *[]){
+				"gpll0",
+			},
+			.num_parents = 1,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_mmss_gpll0_div_clk = {
+	.halt_reg = 0x5200c,
+	.halt_check = BRANCH_HALT_DELAY,
+	.clkr = {
+		.enable_reg = 0x5200c,
+		.enable_mask = BIT(0),
+		.hw.init = &(struct clk_init_data){
+			.name = "gcc_mmss_gpll0_div_clk",
+			.parent_names = (const char *[]){
+				"gpll0_early_div",
+			},
+			.num_parents = 1,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_gpu_gpll0_clk = {
+	.halt_reg = 0x5200c,
+	.halt_check = BRANCH_HALT_DELAY,
+	.clkr = {
+		.enable_reg = 0x5200c,
+		.enable_mask = BIT(4),
+		.hw.init = &(struct clk_init_data){
+			.name = "gcc_gpu_gpll0_clk",
+			.parent_names = (const char *[]){
+				"gpll0",
+			},
+			.num_parents = 1,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
+static struct clk_branch gcc_gpu_gpll0_div_clk = {
+	.halt_reg = 0x5200c,
+	.halt_check = BRANCH_HALT_DELAY,
+	.clkr = {
+		.enable_reg = 0x5200c,
+		.enable_mask = BIT(3),
+		.hw.init = &(struct clk_init_data){
+			.name = "gcc_gpu_gpll0_div_clk",
+			.parent_names = (const char *[]){
+				"gpll0_early_div",
+			},
+			.num_parents = 1,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
 /*
-static struct local_vote_clk gcc_mmss_gpll0_clk = {
-	.halt_reg = 0x52004_1,
-	.vote_reg = 0x52004_1,
-	.en_mask = BIT(1),
-	.halt_check = BRANCH_HALT_DELAY,
-	.clkr.hw.init = &(struct clk_init_data) {
-		.name = "gcc_mmss_gpll0_clk",
-		.parent = &gpll0.c,
-		.ops = &clk_ops_vote,
-	},
-};
-
-static struct local_vote_clk gcc_mmss_gpll0_div_clk = {
-	.halt_reg = 0x52004_1,
-	.vote_reg = 0x52004_1,
-	.en_mask = BIT(0),
-	.halt_check = BRANCH_HALT_DELAY,
-	.clkr.hw.init = &(struct clk_init_data) {
-		.name = "gcc_mmss_gpll0_div_clk",
-		.parent = &gpll0.c,
-		.ops = &clk_ops_vote,
-	},
-};
-
-static struct local_vote_clk gcc_gpu_gpll0_clk = {
-	.halt_reg = 0x52004_1,
-	.vote_reg = 0x52004_1,
-	.en_mask = BIT(4),
-	.halt_check = BRANCH_HALT_DELAY,
-	.clkr.hw.init = &(struct clk_init_data) {
-		.name = "gcc_gpu_gpll0_clk",
-		.parent = &gpll0.c,
-		.ops = &clk_ops_vote,
-	},
-};
-
-static struct local_vote_clk gcc_gpu_gpll0_div_clk = {
-	.halt_reg = 0x52004_1,
-	.vote_reg = 0x52004_1,
-	.en_mask = BIT(3),
-	.halt_check = BRANCH_HALT_DELAY,
-	.clkr.hw.init = &(struct clk_init_data) {
-		.name = "gcc_gpu_gpll0_div_clk",
-		.parent = &gpll0.c,
-		.ops = &clk_ops_vote,
-	},
-};
-
 static struct pll_vote_clk gpll4 = {
 	.en_reg = (void __iomem *)0x52000,
 	.en_mask = BIT(4),
@@ -3117,6 +3137,10 @@ static struct clk_regmap *gcc_msm8998_clocks[] = {
 	[HLOS1_VOTE_LPASS_ADSP_SMMU_CLK] = &hlos1_vote_lpass_adsp_smmu_clk.clkr,
 	[GCC_QSPI_AHB_CLK] = &gcc_qspi_ahb_clk.clkr,
 	[GCC_QSPI_REF_CLK] = &gcc_qspi_ref_clk.clkr,
+	[GCC_GPU_GPLL0_CLK] = &gcc_gpu_gpll0_clk.clkr,
+	[GCC_GPU_GPLL0_DIV_CLK] = &gcc_gpu_gpll0_div_clk.clkr,
+	[GCC_MMSS_GPLL0_CLK] = &gcc_mmss_gpll0_clk.clkr,
+	[GCC_MMSS_GPLL0_DIV_CLK] = &gcc_mmss_gpll0_div_clk.clkr,
 };
 
 static const struct qcom_reset_map gcc_msm8998_resets[] = {

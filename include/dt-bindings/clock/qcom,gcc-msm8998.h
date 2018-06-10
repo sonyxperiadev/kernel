@@ -183,6 +183,10 @@
 #define HLOS1_VOTE_LPASS_ADSP_SMMU_CLK		168
 #define GCC_QSPI_AHB_CLK			169
 #define GCC_QSPI_REF_CLK			170
+#define GCC_GPU_GPLL0_CLK			171
+#define GCC_GPU_GPLL0_DIV_CLK			172
+#define GCC_MMSS_GPLL0_CLK			173
+#define GCC_MMSS_GPLL0_DIV_CLK			174
 
 /* GCC block resets */
 #define QUSB2PHY_PRIM_BCR			0
