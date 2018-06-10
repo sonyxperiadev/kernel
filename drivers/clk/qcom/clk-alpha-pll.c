@@ -46,6 +46,7 @@
 
 #define PLL_USER_CTL(p)		((p)->offset + (p)->regs[PLL_OFF_USER_CTL])
 # define PLL_POST_DIV_SHIFT	8
+# define PLL_POST_DIV_ODD_SHIFT	12
 # define PLL_POST_DIV_MASK(p)	GENMASK((p)->width, 0)
 # define PLL_STD_POST_DIV_MASK	0xf
 # define PLL_ALPHA_EN		BIT(24)
@@ -1571,6 +1572,14 @@ static const struct clk_div_table clk_alpha_div_table[] = {
 	{ }
 };
 
+static const struct clk_div_table clk_alpha_odd_div_table[] = {
+	{ 0x0, 1 },
+	{ 0x3, 3 },
+	{ 0x5, 5 },
+	{ 0x7, 7 },
+	{ }
+};
+
 static const struct clk_div_table clk_alpha_2bit_div_table[] = {
 	{ 0x0, 1 },
 	{ 0x1, 2 },
@@ -1653,6 +1662,115 @@ static int clk_alpha_v2_pll_postdiv_set_rate(struct clk_hw *hw,
 				  div << PLL_POST_DIV_SHIFT);
 }
 
+static unsigned long fabia_pll_postdiv_recalc_rate(struct clk_hw *hw,
+				const struct clk_div_table *div_tbl,
+				int num_post_div, u8 shift,
+				unsigned long parent_rate)
+{
+	struct clk_alpha_pll_postdiv *pll = to_clk_alpha_pll_postdiv(hw);
+	u32 i, div = 1, val;
+
+	regmap_read(pll->clkr.regmap, PLL_USER_CTL(pll), &val);
+
+	val >>= shift;
+	val &= BIT(pll->width) - 1;
+
+	for (i = 0; i < num_post_div; i++) {
+		if (div_tbl[i].val == val) {
+			div = div_tbl[i].div;
+			break;
+		}
+	}
+
+	return (parent_rate / div);
+}
+
+static int fabia_pll_postdiv_set_rate(struct clk_hw *hw,
+				const struct clk_div_table *div_tbl,
+				int num_post_div, u8 shift,
+				unsigned long rate, unsigned long parent_rate)
+{
+	struct clk_alpha_pll_postdiv *pll = to_clk_alpha_pll_postdiv(hw);
+	int i, val = 0, div, ret;
+
+	/*
+	 * If the PLL is in FSM mode, then treat the set_rate callback
+	 * as a no-operation.
+	 */
+	ret = regmap_read(pll->clkr.regmap, PLL_MODE(pll), &val);
+	if (ret)
+		return ret;
+
+	if (val & PLL_VOTE_FSM_ENA)
+		return 0;
+
+	div = DIV_ROUND_UP_ULL((u64)parent_rate, rate);
+	for (i = 0; i < num_post_div; i++) {
+		if (div_tbl[i].div == div) {
+			val = div_tbl[i].val;
+			break;
+		}
+	}
+
+	return regmap_update_bits(pll->clkr.regmap, PLL_USER_CTL(pll),
+				  (BIT(pll->width) - 1) << shift,
+				  val << shift);
+}
+
+static unsigned long clk_alpha_fabia_pll_postdiv_even_recalc_rate(
+				struct clk_hw *hw, unsigned long parent_rate)
+{
+	return fabia_pll_postdiv_recalc_rate(hw, clk_alpha_div_table,
+					     ARRAY_SIZE(clk_alpha_div_table),
+					     PLL_POST_DIV_SHIFT, parent_rate);
+}
+
+static long clk_alpha_fabia_pll_postdiv_even_round_rate(struct clk_hw *hw,
+				unsigned long rate, unsigned long *prate)
+{
+	struct clk_alpha_pll_postdiv *pll = to_clk_alpha_pll_postdiv(hw);
+
+	return divider_round_rate(hw, rate, prate, clk_alpha_div_table,
+					pll->width, CLK_DIVIDER_ROUND_KHZ);
+}
+
+static int clk_alpha_fabia_pll_postdiv_even_set_rate(struct clk_hw *hw,
+				unsigned long rate, unsigned long parent_rate)
+{
+	return fabia_pll_postdiv_set_rate(hw, clk_alpha_div_table,
+					  ARRAY_SIZE(clk_alpha_div_table),
+					  PLL_POST_DIV_SHIFT,
+					  rate, parent_rate);
+}
+
+static unsigned long clk_alpha_fabia_pll_postdiv_odd_recalc_rate(
+				struct clk_hw *hw, unsigned long parent_rate)
+{
+	return fabia_pll_postdiv_recalc_rate(hw, clk_alpha_odd_div_table,
+					     ARRAY_SIZE(clk_alpha_odd_div_table),
+					     PLL_POST_DIV_ODD_SHIFT,
+					     parent_rate);
+}
+
+static long clk_alpha_fabia_pll_postdiv_odd_round_rate(struct clk_hw *hw,
+				unsigned long rate, unsigned long *prate)
+{
+	struct clk_alpha_pll_postdiv *pll = to_clk_alpha_pll_postdiv(hw);
+
+	return divider_round_rate(hw, rate, prate, clk_alpha_odd_div_table,
+					pll->width, CLK_DIVIDER_ROUND_KHZ);
+}
+
+static int clk_alpha_fabia_pll_postdiv_odd_set_rate(struct clk_hw *hw,
+				unsigned long rate, unsigned long parent_rate)
+{
+	return fabia_pll_postdiv_set_rate(hw, clk_alpha_odd_div_table,
+					  ARRAY_SIZE(clk_alpha_odd_div_table),
+					  PLL_POST_DIV_ODD_SHIFT,
+					  rate, parent_rate);
+}
+
+
 const struct clk_ops clk_alpha_pll_postdiv_ops = {
 	.recalc_rate = clk_alpha_pll_postdiv_recalc_rate,
 	.round_rate = clk_alpha_pll_postdiv_round_rate,
@@ -1672,3 +1790,17 @@ const struct clk_ops clk_alpha_pll_postdiv_ro_ops = {
 	.recalc_rate = clk_alpha_pll_postdiv_recalc_rate,
 };
 EXPORT_SYMBOL_GPL(clk_alpha_pll_postdiv_ro_ops);
+
+const struct clk_ops clk_alpha_fabia_pll_postdiv_ops = {
+	.recalc_rate = clk_alpha_fabia_pll_postdiv_even_recalc_rate,
+	.round_rate = clk_alpha_fabia_pll_postdiv_even_round_rate,
+	.set_rate = clk_alpha_fabia_pll_postdiv_even_set_rate,
+};
+EXPORT_SYMBOL_GPL(clk_alpha_fabia_pll_postdiv_ops);
+
+const struct clk_ops clk_alpha_fabia_pll_postdiv_odd_ops = {
+	.recalc_rate = clk_alpha_fabia_pll_postdiv_odd_recalc_rate,
+	.round_rate = clk_alpha_fabia_pll_postdiv_odd_round_rate,
+	.set_rate = clk_alpha_fabia_pll_postdiv_odd_set_rate,
+};
+EXPORT_SYMBOL_GPL(clk_alpha_fabia_pll_postdiv_odd_ops);
