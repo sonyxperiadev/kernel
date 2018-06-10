@@ -1420,7 +1420,6 @@ static struct clk_branch mmss_camss_ahb_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data) {
 			.name = "mmss_camss_ahb_clk",
-			.flags = CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -1434,7 +1433,6 @@ static struct clk_branch mmss_camss_cci_ahb_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data) {
 			.name = "mmss_camss_cci_ahb_clk",
-			.flags = CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -1466,7 +1464,6 @@ static struct clk_branch mmss_camss_cpp_ahb_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data) {
 			.name = "mmss_camss_cpp_ahb_clk",
-			.flags = CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -1484,7 +1481,6 @@ static struct clk_branch mmss_camss_cpp_clk = {
 				"cpp_clk_src",
 			},
 			.num_parents = 1,
-			.flags = CLK_SET_RATE_PARENT,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -1498,7 +1494,6 @@ static struct clk_branch mmss_camss_cpp_axi_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data) {
 			.name = "mmss_camss_cpp_axi_clk",
-			.flags = CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -1512,7 +1507,6 @@ static struct clk_branch mmss_camss_cpp_vbif_ahb_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data) {
 			.name = "mmss_camss_cpp_vbif_ahb_clk",
-			.flags = CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -1544,7 +1538,6 @@ static struct clk_branch mmss_camss_csi0_ahb_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data) {
 			.name = "mmss_camss_csi0_ahb_clk",
-			.flags = CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -1630,7 +1623,6 @@ static struct clk_branch mmss_camss_csi1_ahb_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data) {
 			.name = "mmss_camss_csi1_ahb_clk",
-			.flags = CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -1716,7 +1708,6 @@ static struct clk_branch mmss_camss_csi2_ahb_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data) {
 			.name = "mmss_camss_csi2_ahb_clk",
-			.flags = CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -1802,7 +1793,6 @@ static struct clk_branch mmss_camss_csi3_ahb_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data) {
 			.name = "mmss_camss_csi3_ahb_clk",
-			.flags = CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -1960,7 +1950,6 @@ static struct clk_branch mmss_fd_ahb_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data) {
 			.name = "mmss_fd_ahb_clk",
-			.flags = CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -2046,7 +2035,6 @@ static struct clk_branch mmss_camss_ispif_ahb_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data) {
 			.name = "mmss_camss_ispif_ahb_clk",
-			.flags = CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -2082,7 +2070,6 @@ static struct clk_branch mmss_camss_jpeg_ahb_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data) {
 			.name = "mmss_camss_jpeg_ahb_clk",
-			.flags = CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -2096,7 +2083,6 @@ static struct clk_branch mmss_camss_jpeg_axi_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data) {
 			.name = "mmss_camss_jpeg_axi_clk",
-			.flags = CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -2182,7 +2168,6 @@ static struct clk_branch mmss_camss_micro_ahb_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data) {
 			.name = "mmss_camss_micro_ahb_clk",
-			.flags = CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -2250,7 +2235,6 @@ static struct clk_branch mmss_camss_top_ahb_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data) {
 			.name = "mmss_camss_top_ahb_clk",
-			.flags = CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -2264,7 +2248,6 @@ static struct clk_branch mmss_camss_vfe0_ahb_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data) {
 			.name = "mmss_camss_vfe0_ahb_clk",
-			.flags = CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -2314,7 +2297,6 @@ static struct clk_branch mmss_camss_vfe1_ahb_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data) {
 			.name = "mmss_camss_vfe1_ahb_clk",
-			.flags = CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -2364,7 +2346,6 @@ static struct clk_branch mmss_camss_vfe_vbif_ahb_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data) {
 			.name = "mmss_camss_vfe_vbif_ahb_clk",
-			.flags = CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -2378,7 +2359,6 @@ static struct clk_branch mmss_camss_vfe_vbif_axi_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data) {
 			.name = "mmss_camss_vfe_vbif_axi_clk",
-			.flags = CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -2406,6 +2386,7 @@ static struct clk_branch mmss_mdss_axi_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data) {
 			.name = "mmss_mdss_axi_clk",
+			.flags = CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -2713,7 +2694,7 @@ static struct clk_branch mmss_mdss_hdmi_dp_ahb_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data) {
 			.name = "mmss_mdss_hdmi_dp_ahb_clk",
-			.flags = CLK_ENABLE_HAND_OFF,
+			//.flags = CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -2839,7 +2820,7 @@ static struct clk_branch mmss_mnoc_ahb_clk = {
 				"ahb_clk_src",
 			},
 			.num_parents = 1,
-			.flags = CLK_SET_RATE_PARENT,
+			.flags = CLK_ENABLE_HAND_OFF | CLK_SET_RATE_PARENT,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -2874,7 +2855,6 @@ static struct clk_branch mmss_misc_cxo_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data) {
 			.name = "mmss_misc_cxo_clk",
-			.flags = CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -2892,7 +2872,7 @@ static struct clk_branch mmss_mnoc_maxi_clk = {
 				"maxi_clk_src",
 			},
 			.num_parents = 1,
-			.flags = CLK_SET_RATE_PARENT,
+			.flags = CLK_ENABLE_HAND_OFF | CLK_SET_RATE_PARENT,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -2942,7 +2922,6 @@ static struct clk_branch mmss_video_ahb_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data) {
 			.name = "mmss_video_ahb_clk",
-			.flags = CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -2956,7 +2935,6 @@ static struct clk_branch mmss_video_axi_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data) {
 			.name = "mmss_video_axi_clk",
-			.flags = CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -3024,7 +3002,7 @@ static struct clk_branch mmss_vmem_maxi_clk = {
 				"maxi_clk_src",
 			},
 			.num_parents = 1,
-			.flags = CLK_SET_RATE_PARENT,
+			.flags = CLK_ENABLE_HAND_OFF | CLK_SET_RATE_PARENT,
 			.ops = &clk_branch2_ops,
 		},
 	},
