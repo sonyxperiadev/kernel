@@ -83,14 +83,14 @@
 	.num_rate_max = VDD_DIG_NUM
 
 
-#define VDD_GPU_PLL_FMAX_MAP1(l1, f1)  \
+#define VDD_GPU_MX_FMAX_MAP1(l1, f1)  \
 	.vdd_class = &vdd_gpucc_mx,		\
 	.rate_max = (unsigned long[VDD_DIG_NUM]) {	\
 		[VDD_DIG_##l1] = (f1),		\
 	},					\
 	.num_rate_max = VDD_DIG_NUM
 
-#define VDD_GPU_PLL_FMAX_MAP3(l1, f1, l2, f2, l3, f3)  \
+#define VDD_GPU_MX_FMAX_MAP3(l1, f1, l2, f2, l3, f3)  \
 	.vdd_class = &vdd_gpucc_mx,			\
 	.rate_max = (unsigned long[VDD_DIG_NUM]) {		\
 		[VDD_DIG_##l1] = (f1),			\
@@ -98,6 +98,21 @@
 		[VDD_DIG_##l3] = (f3),			\
 	},						\
 	.num_rate_max = VDD_DIG_NUM
+
+#define VDD_GFX_FMAX_MAP8(l1, f1, l2, f2, l3, f3, l4, f4, l5, f5, l6, f6, \
+				l7, f7, l8, f8) \
+	.vdd_class = &vdd_gpucc,			\
+	.rate_max = (unsigned long[VDD_GFX_MAX]) {	\
+		[VDD_GFX_##l1] = (f1),		\
+		[VDD_GFX_##l2] = (f2),		\
+		[VDD_GFX_##l3] = (f3),		\
+		[VDD_GFX_##l4] = (f4),		\
+		[VDD_GFX_##l5] = (f5),		\
+		[VDD_GFX_##l6] = (f6),		\
+		[VDD_GFX_##l7] = (f7),		\
+		[VDD_GFX_##l8] = (f8),		\
+	},					\
+	.num_rate_max = VDD_GFX_MAX
 
 enum vdd_dig_levels {
 	VDD_DIG_NONE,
@@ -108,6 +123,31 @@ enum vdd_dig_levels {
 	VDD_DIG_NOMINAL,	/* NOM */
 	VDD_DIG_HIGH,		/* TURBO */
 	VDD_DIG_NUM
+};
+
+enum vdd_mx_levels {
+	VDD_MX_NONE,
+	VDD_MX_MIN,		/* MIN SVS */
+	VDD_MX_LOWER,		/* SVS2 */
+	VDD_MX_LOW,		/* SVS */
+	VDD_MX_LOW_L1,		/* SVSL1 */
+	VDD_MX_NOMINAL,		/* NOM */
+	VDD_MX_HIGH,		/* TURBO */
+	VDD_MX_NUM
+};
+
+enum vdd_gpucc_levels {
+	VDD_GFX_NONE,		/* OFF			*/
+	VDD_GFX_MIN_SVS,	/* MIN:  MinSVS		*/
+	VDD_GFX_LOW_SVS,	/* LOW:  LowSVS		*/
+	VDD_GFX_SVS_MINUS,	/* LOW:  SVS-		*/
+	VDD_GFX_SVS,		/* LOW:  SVS		*/
+	VDD_GFX_SVS_PLUS,	/* LOW:  SVS+		*/
+	VDD_GFX_NOMINAL,	/*       NOMINAL	*/
+	VDD_GFX_TURBO,		/* HIGH: TURBO		*/
+	VDD_GFX_TURBO_L1,	/* HIGH: TURBO_L1	*/
+	VDD_GFX_SUPER_TURBO,	/* HIGH: SUPER_TURBO	*/
+	VDD_GFX_MAX,		/*    FURNACE MODE!	*/
 };
 
 static int vdd_corner[] = {
