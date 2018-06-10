@@ -120,7 +120,7 @@
 	status = "okay";
 };
 
-&clock_gfx {
+&clock_gpu {
 	vdd_gpucc-supply = <&gfx_stub_vreg>;
 };
 
@@ -216,14 +216,14 @@
 		clock-names = "cpu0_clk", "cpu1_clk", "cpu2_clk",
 				"cpu3_clk", "cpu4_clk", "cpu5_clk",
 				"cpu6_clk", "cpu7_clk";
-		clocks = <&clock_cpu clk_pwrcl_clk>,
-			 <&clock_cpu clk_pwrcl_clk>,
-			 <&clock_cpu clk_pwrcl_clk>,
-			 <&clock_cpu clk_pwrcl_clk>,
-			 <&clock_cpu clk_perfcl_clk>,
-			 <&clock_cpu clk_perfcl_clk>,
-			 <&clock_cpu clk_perfcl_clk>,
-			 <&clock_cpu clk_perfcl_clk>;
+		clocks = <&clock_cpu PWRCL_CLK>,
+			 <&clock_cpu PWRCL_CLK>,
+			 <&clock_cpu PWRCL_CLK>,
+			 <&clock_cpu PWRCL_CLK>,
+			 <&clock_cpu PERFCL_CLK>,
+			 <&clock_cpu PERFCL_CLK>,
+			 <&clock_cpu PERFCL_CLK>,
+			 <&clock_cpu PERFCL_CLK>;
 
 		qcom,governor-per-policy;
 

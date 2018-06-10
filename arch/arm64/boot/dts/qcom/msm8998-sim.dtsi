@@ -75,7 +75,7 @@
 	status = "okay";
 };
 
-&clock_gfx {
+&clock_gpu {
 	vdd_gpucc-supply = <&gfx_stub_vreg>;
 };
 

@@ -18,17 +18,17 @@
 		reg-names = "mdp_phys", "vbif_phys";
 
 		/* clock and supply entries */
-		clocks = <&clock_gcc clk_mmssnoc_axi_clk>,
-			<&clock_mmss clk_mmss_mnoc_ahb_clk>,
-			<&clock_mmss clk_mmss_bimc_smmu_ahb_clk>,
-			<&clock_mmss clk_mmss_bimc_smmu_axi_clk>,
-			<&clock_mmss clk_mmss_mnoc_ahb_clk>,
-			 <&clock_mmss clk_mmss_mdss_ahb_clk>,
-			 <&clock_mmss clk_mmss_mdss_axi_clk>,
-			 <&clock_mmss clk_mdp_clk_src>,
-			 <&clock_mmss clk_mmss_mdss_mdp_clk>,
-			 <&clock_mmss clk_mmss_mdss_vsync_clk>,
-			 <&clock_mmss clk_mmss_mdss_mdp_lut_clk>;
+		clocks = <&clock_rpmcc MMSSNOC_AXI_CLK>,
+			<&clock_mmss MMSS_MNOC_AHB_CLK>,
+			<&clock_mmss MMSS_BIMC_SMMU_AHB_CLK>,
+			<&clock_mmss MMSS_BIMC_SMMU_AXI_CLK>,
+			<&clock_mmss MMSS_MNOC_AHB_CLK>,
+			 <&clock_mmss MMSS_MDSS_AHB_CLK>,
+			 <&clock_mmss MMSS_MDSS_AXI_CLK>,
+			 <&clock_mmss MDP_CLK_SRC>,
+			 <&clock_mmss MMSS_MDSS_MDP_CLK>,
+			 <&clock_mmss MMSS_MDSS_VSYNC_CLK>,
+			 <&clock_mmss MMSS_MDSS_MDP_LUT_CLK>;
 		clock-names = "mmss_noc_axi_clk",
 					"mmss_noc_ahb_clk",
 					"mmss_smmu_ahb_clk",
@@ -223,15 +223,15 @@
 		qcom,enable-load = <0>;
 		qcom,disable-load = <0>;
 
-		clocks = <&clock_mmss clk_mmss_mnoc_ahb_clk>,
-			 <&clock_mmss clk_mmss_mdss_ahb_clk>,
-			 <&clock_mmss clk_mmss_mdss_hdmi_clk>,
-			 <&clock_mmss clk_mmss_mdss_mdp_clk>,
-			 <&clock_mmss clk_mmss_mdss_hdmi_dp_ahb_clk>,
-			 <&clock_mmss clk_mmss_mdss_extpclk_clk>,
-			 <&clock_mmss clk_mmss_mnoc_ahb_clk>,
-			 <&clock_mmss clk_mmss_misc_ahb_clk>,
-			 <&clock_mmss clk_mmss_mdss_axi_clk>;
+		clocks = <&clock_mmss MMSS_MNOC_AHB_CLK>,
+			 <&clock_mmss MMSS_MDSS_AHB_CLK>,
+			 <&clock_mmss MMSS_MDSS_HDMI_CLK>,
+			 <&clock_mmss MMSS_MDSS_MDP_CLK>,
+			 <&clock_mmss MMSS_MDSS_HDMI_DP_AHB_CLK>,
+			 <&clock_mmss MMSS_MDSS_EXTPCLK_CLK>,
+			 <&clock_mmss MMSS_MNOC_AHB_CLK>,
+			 <&clock_mmss MMSS_MISC_AHB_CLK>,
+			 <&clock_mmss MMSS_MDSS_AXI_CLK>;
 		clock-names = "hpd_mnoc_clk", "hpd_iface_clk",
 				"hpd_core_clk", "hpd_mdp_core_clk",
 				"hpd_alt_iface_clk", "core_extp_clk",

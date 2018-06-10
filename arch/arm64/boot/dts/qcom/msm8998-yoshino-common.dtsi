@@ -268,8 +268,8 @@
 		qcom,clk-freq-out = <355000>;
 		qcom,clk-freq-in  = <19200000>;
 		clock-names = "iface_clk", "core_clk";
-		clocks = <&clock_gcc clk_gcc_blsp2_ahb_clk>,
-			<&clock_gcc clk_gcc_blsp2_qup2_i2c_apps_clk>;
+		clocks = <&clock_gcc GCC_BLSP2_AHB_CLK>,
+			<&clock_gcc GCC_BLSP2_QUP2_I2C_APPS_CLK>;
 		pinctrl-names = "i2c_active", "i2c_sleep";
 		pinctrl-0 = <&msm_gpio_6 &msm_gpio_7>;
 		pinctrl-1 = <&msm_gpio_6_suspend &msm_gpio_7_suspend>;
@@ -3242,7 +3242,7 @@
 
 &pmi8998_charger {
 	clock-names = "xo";
-	clocks = <&clock_gcc clk_cxo_clk_src>;
+	clocks = <&clock_rpmcc RPM_CXO_CLK>;
 	usb_switch_sel = <&pmi8998_gpios 8 0>;
 	qcom,usb-icl-ua = <1500000>;
 	io-channels = <&pmi8998_rradc 2>,

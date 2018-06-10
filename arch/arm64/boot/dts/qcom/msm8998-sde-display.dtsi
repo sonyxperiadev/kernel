@@ -44,9 +44,9 @@
 		reg = <0xc9a0000 0x50c>;
 		reg-names = "hdmi_cec";
 
-		clocks = <&clock_mmss clk_mmss_mnoc_ahb_clk>,
-		       <&clock_mmss clk_mmss_mdss_ahb_clk>,
-		       <&clock_mmss clk_mmss_mdss_hdmi_clk>;
+		clocks = <&clock_mmss MMSS_MNOC_AHB_CLK>,
+		       <&clock_mmss MMSS_MDSS_AHB_CLK>,
+		       <&clock_mmss MMSS_MDSS_HDMI_CLK>;
 		clock-names = "cec_mnoc_clk", "cec_iface_clk", "cec_core_clk";
 
 		pinctrl-names = "cec_active", "cec_sleep";

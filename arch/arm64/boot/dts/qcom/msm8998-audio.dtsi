@@ -336,7 +336,7 @@
 		compatible = "qcom,audio-ref-clk";
 		qcom,audio-ref-clk-gpio = <&pm8998_gpios 13 0>;
 		clock-names = "osr_clk";
-		clocks = <&clock_gcc clk_div_clk1>;
+		clocks = <&clock_rpmcc RPM_DIV_CLK1>;
 		qcom,node_has_rpm_clock;
 		#clock-cells = <1>;
 		pinctrl-names = "sleep", "active";
@@ -348,7 +348,7 @@
 		status = "ok";
 		compatible = "qcom,audio-ref-clk";
 		clock-names = "osr_clk";
-		clocks = <&clock_gcc clk_ln_bb_clk2>;
+		clocks = <&clock_rpmcc RPM_LN_BB_CLK2>;
 		qcom,node_has_rpm_clock;
 		#clock-cells = <1>;
 	};
@@ -384,8 +384,8 @@
 		qcom,wcd-rst-gpio-node = <&wcd_rst_gpio>;
 
 		clock-names = "wcd_clk", "wcd_native_clk";
-		clocks = <&clock_audio clk_audio_pmi_clk>,
-			 <&clock_audio clk_audio_ap_clk2>;
+		clocks = <&clock_audio AUDIO_PMI_CLK>,
+			 <&clock_audio AUDIO_AP_CLK2>;
 
 		cdc-vdd-buck-supply = <&pm8998_s4>;
 		qcom,cdc-vdd-buck-voltage = <1800000 1800000>;

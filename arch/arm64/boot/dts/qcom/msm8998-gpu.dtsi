@@ -92,14 +92,14 @@
 		qcom,gpmu-version = <3 0>;
 		qcom,zap-shader = "a540_zap";
 
-		clocks = <&clock_gfx clk_gpucc_gfx3d_clk>,
-			<&clock_gcc clk_gcc_gpu_cfg_ahb_clk>,
-			<&clock_gpu clk_gpucc_rbbmtimer_clk>,
-			<&clock_gcc clk_gcc_bimc_gfx_clk>,
-			<&clock_gcc clk_gcc_gpu_bimc_gfx_clk>,
-			<&clock_gpu clk_gpucc_gfx3d_isense_clk>,
-			<&clock_gpu clk_gpucc_rbcpr_clk>,
-			<&clock_gcc clk_gcc_gpu_iref_clk>;
+		clocks = <&clock_gpu GPUCC_GFX3D_CLK>,
+			<&clock_gcc GCC_GPU_CFG_AHB_CLK>,
+			<&clock_gpu GPUCC_RBBMTIMER_CLK>,
+			<&clock_gcc GCC_BIMC_GFX_CLK>,
+			<&clock_gcc GCC_GPU_BIMC_GFX_CLK>,
+			<&clock_gpu GPUCC_GFX3D_ISENSE_CLK>,
+			<&clock_gpu GPUCC_RBCPR_CLK>,
+			<&clock_gcc GCC_GPU_IREF_CLK>;
 
 		clock-names = "core_clk", "iface_clk", "rbbmtimer_clk",
 			"mem_clk", "mem_iface_clk", "isense_clk", "rbcpr_clk",
@@ -252,9 +252,9 @@
 		qcom,protect = <0x40000 0x10000>;
 		qcom,micro-mmu-control = <0x6000>;
 
-		clocks =<&clock_gcc clk_gcc_gpu_cfg_ahb_clk>,
-			<&clock_gcc clk_gcc_bimc_gfx_clk>,
-			<&clock_gcc clk_gcc_gpu_bimc_gfx_clk>;
+		clocks =<&clock_gcc GCC_GPU_CFG_AHB_CLK>,
+			<&clock_gcc GCC_BIMC_GFX_CLK>,
+			<&clock_gcc GCC_GPU_BIMC_GFX_CLK>;
 
 		clock-names = "iface_clk", "mem_clk", "mem_iface_clk";
 

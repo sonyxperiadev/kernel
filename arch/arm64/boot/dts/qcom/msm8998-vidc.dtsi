@@ -12,7 +12,6 @@
 
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/msm/msm-bus-ids.h>
-#include <dt-bindings/clock/msm-clocks-8998.h>
 
 &soc {
 	msm_vidc: qcom,vidc@cc00000 {
@@ -85,18 +84,18 @@
 			"mnoc_maxi_clk",
 			"core_clk", "iface_clk", "bus_clk",
 			"maxi_clk", "core0_clk", "core1_clk";
-		clocks = <&clock_gcc clk_gcc_mmss_sys_noc_axi_clk>,
-			<&clock_gcc clk_mmssnoc_axi_clk>,
-			<&clock_mmss clk_mmss_mnoc_ahb_clk>,
-			<&clock_mmss clk_mmss_bimc_smmu_ahb_clk>,
-			<&clock_mmss clk_mmss_bimc_smmu_axi_clk>,
-			<&clock_mmss clk_mmss_mnoc_maxi_clk>,
-			<&clock_mmss clk_mmss_video_core_clk>,
-			<&clock_mmss clk_mmss_video_ahb_clk>,
-			<&clock_mmss clk_mmss_video_axi_clk>,
-			<&clock_mmss clk_mmss_video_maxi_clk>,
-			<&clock_mmss clk_mmss_video_subcore0_clk>,
-			<&clock_mmss clk_mmss_video_subcore1_clk>;
+		clocks = <&clock_gcc GCC_MMSS_SYS_NOC_AXI_CLK>,
+			<&clock_rpmcc MMSSNOC_AXI_CLK>,
+			<&clock_mmss MMSS_MNOC_AHB_CLK>,
+			<&clock_mmss MMSS_BIMC_SMMU_AHB_CLK>,
+			<&clock_mmss MMSS_BIMC_SMMU_AXI_CLK>,
+			<&clock_mmss MMSS_MNOC_MAXI_CLK>,
+			<&clock_mmss MMSS_VIDEO_CORE_CLK>,
+			<&clock_mmss MMSS_VIDEO_AHB_CLK>,
+			<&clock_mmss MMSS_VIDEO_AXI_CLK>,
+			<&clock_mmss MMSS_VIDEO_MAXI_CLK>,
+			<&clock_mmss MMSS_VIDEO_SUBCORE0_CLK>,
+			<&clock_mmss MMSS_VIDEO_SUBCORE1_CLK>;
 		qcom,clock-configs = <0x0 0x0 0x0 0x0 0x0 0x0
 				0x3 0x0 0x2 0x2 0x3 0x3>;
 
@@ -229,10 +228,10 @@
 		    <0x14800000 0x80000>;
 		reg-names = "reg-base", "mem-base";
 
-		clocks = <&clock_mmss clk_mmss_mnoc_ahb_clk>,
-			<&clock_mmss clk_mmss_mnoc_maxi_clk>,
-			<&clock_mmss clk_mmss_vmem_ahb_clk>,
-			<&clock_mmss clk_mmss_vmem_maxi_clk>;
+		clocks = <&clock_mmss MMSS_MNOC_AHB_CLK>,
+			<&clock_mmss MMSS_MNOC_MAXI_CLK>,
+			<&clock_mmss MMSS_VMEM_AHB_CLK>,
+			<&clock_mmss MMSS_VMEM_MAXI_CLK>;
 		clock-names = "mnoc_ahb","mnoc_maxi",
 			"ahb", "maxi";
 		clock-config = <0x0 0x0 0x0 0x1>;

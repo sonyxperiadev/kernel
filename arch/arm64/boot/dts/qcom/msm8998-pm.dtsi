@@ -331,7 +331,7 @@
 		    <0x17911008 0x4>;   /* MSM_APCS_GCC_BASE 4K */
 		reg-names = "vmpm", "ipc";
 		interrupts = <GIC_SPI 171 IRQ_TYPE_EDGE_RISING>;
-		clocks = <&clock_gcc clk_cxo_lpm_clk>;
+		clocks = <&clock_rpmcc CXO_LPM_CLK>;
 		clock-names = "xo";
 		qcom,num-mpm-irqs = <96>;
 

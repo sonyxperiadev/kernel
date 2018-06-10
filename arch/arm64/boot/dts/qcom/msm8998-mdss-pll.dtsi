@@ -25,7 +25,7 @@
 
 		gdsc-supply = <&gdsc_mdss>;
 
-		clocks = <&clock_mmss clk_mmss_mdss_ahb_clk>;
+		clocks = <&clock_mmss MMSS_MDSS_AHB_CLK>;
 		clock-names = "iface_clk";
 		clock-rate = <0>;
 		qcom,dsi-pll-ssc-en;
@@ -61,7 +61,7 @@
 
 		gdsc-supply = <&gdsc_mdss>;
 
-		clocks = <&clock_mmss clk_mmss_mdss_ahb_clk>;
+		clocks = <&clock_mmss MMSS_MDSS_AHB_CLK>;
 		clock-names = "iface_clk";
 		clock-rate = <0>;
 		qcom,dsi-pll-ssc-en;
@@ -96,9 +96,9 @@
 
 		gdsc-supply = <&gdsc_mdss>;
 
-		clocks = <&clock_mmss clk_mmss_mdss_ahb_clk>,
-			 <&clock_gcc clk_ln_bb_clk1>,
-			 <&clock_gcc clk_gcc_usb3_clkref_clk>;
+		clocks = <&clock_mmss MMSS_MDSS_AHB_CLK>,
+			 <&clock_rpmcc RPM_LN_BB_CLK1>,
+			 <&clock_gcc GCC_USB3_CLKREF_CLK>;
 		clock-names = "iface_clk", "ref_clk_src", "ref_clk";
 		clock-rate = <0>;
 
@@ -133,9 +133,9 @@
 		vdda-pll-supply = <&pm8998_l2>;
 		vdda-phy-supply = <&pm8998_l12>;
 
-		clocks = <&clock_mmss clk_mmss_mdss_ahb_clk>,
-			 <&clock_gcc clk_gcc_hdmi_clkref_clk>,
-			 <&clock_gcc clk_ln_bb_clk1>;
+		clocks = <&clock_mmss MMSS_MDSS_AHB_CLK>,
+			 <&clock_gcc GCC_HDMI_CLKREF_CLK>,
+			 <&clock_rpmcc RPM_LN_BB_CLK1>;
 		clock-names = "iface_clk", "ref_clk", "ref_clk_src";
 		clock-rate = <0>;
 

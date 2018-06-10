@@ -32,7 +32,7 @@
 			nxp,ven = <&tlmm 12 0x01>;
 			qcom,clk-src = "BBCLK2";
 			qcom,clk-gpio = <&pm8998_gpios 21 0x00>;
-			clocks = <&clock_gcc clk_ln_bb_clk3_pin>;
+			clocks = <&clock_rpmcc RPM_LN_BB_CLK3_PIN>;
 			clock-names = "nfc_clk";
 			pinctrl-names = "pn547-active", "pn547-inactive";
 			pinctrl-0 = <&msm_gpio_92 &msm_gpio_93>;

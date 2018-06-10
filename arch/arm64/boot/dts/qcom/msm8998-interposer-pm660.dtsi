@@ -99,7 +99,7 @@
 	/delete-property/vdd_dig-supply;
 };
 
-&clock_gfx {
+&clock_gpu {
 	/delete-property/vdd_mx-supply;
 	/delete-property/vdd_gpu_mx-supply;
 };

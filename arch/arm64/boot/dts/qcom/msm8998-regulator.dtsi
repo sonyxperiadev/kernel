@@ -10,7 +10,6 @@
  * GNU General Public License for more details.
  */
 
-#include <dt-bindings/clock/msm-clocks-8998.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 
 &rpm_bus {
@@ -593,7 +592,7 @@
 		compatible = "qcom,cprh-msm8998-v1-kbss-regulator";
 		reg = <0x179c8000 0x4000>, <0x00784000 0x1000>;
 		reg-names = "cpr_ctrl", "fuse_base";
-		clocks = <&clock_gcc clk_gcc_hmss_rbcpr_clk>;
+		clocks = <&clock_gcc GCC_HMSS_RBCPR_CLK>;
 		clock-names = "core_clk";
 		qcom,cpr-ctrl-name = "apc0";
 		qcom,cpr-controller-id = <0>;
@@ -766,7 +765,7 @@
 		compatible = "qcom,cprh-msm8998-v1-kbss-regulator";
 		reg = <0x179c4000 0x4000>, <0x00784000 0x1000>;
 		reg-names = "cpr_ctrl", "fuse_base";
-		clocks = <&clock_gcc clk_gcc_hmss_rbcpr_clk>;
+		clocks = <&clock_gcc GCC_HMSS_RBCPR_CLK>;
 		clock-names = "core_clk";
 		qcom,cpr-ctrl-name = "apc1";
 		qcom,cpr-controller-id = <1>;
@@ -961,8 +960,8 @@
 			<0x00784000 0x1000>,
 			<0x05065204 0x4>;
 		reg-names = "cpr_ctrl", "fuse_base", "aging_allowed";
-		clocks = <&clock_gpu clk_gpucc_rbcpr_clk>,
-			 <&clock_gcc clk_cnoc_clk>;
+		clocks = <&clock_gpu GPUCC_RBCPR_CLK>,
+			 <&clock_rpmcc RPM_CNOC_CLK>;
 		clock-names = "core_clk", "bus_clk";
 		interrupts = <GIC_SPI 285 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "cpr";

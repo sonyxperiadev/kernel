@@ -25,8 +25,8 @@
 
 &slim_aud {
 	tasha_codec {
-		clocks = <&clock_audio clk_audio_pmi_clk>,
-			<&clock_audio clk_audio_ap_clk2>;
+		clocks = <&clock_audio AUDIO_PMI_CLK>,
+			<&clock_audio AUDIO_AP_CLK2>;
 	};
 	tavil_codec {
 		clocks = <&clock_audio_lnbb clk_audio_pmi_lnbb_clk>;
@@ -45,13 +45,13 @@
 
 &clock_audio {
 	qcom,audio-ref-clk-gpio = <&pm660_gpios 3 0>;
-	clocks = <&clock_gcc clk_div_clk1>;
+	clocks = <&clock_rpmcc RPM_DIV_CLK1>;
 	pinctrl-0 = <&spkr_i2s_clk_sleep>;
 	pinctrl-1 = <&spkr_i2s_clk_active>;
 };
 
 &clock_audio_lnbb {
-	clocks = <&clock_gcc clk_ln_bb_clk2>;
+	clocks = <&clock_rpmcc RPM_LN_BB_CLK2>;
 };
 
 &wcd_rst_gpio {

@@ -113,13 +113,13 @@
 		qcom,mdss-highest-bank-bit = <0x2>;
 		qcom,mdss-has-decimation;
 		qcom,mdss-idle-power-collapse-enabled;
-		clocks = <&clock_mmss clk_mmss_mnoc_ahb_clk>,
-			 <&clock_mmss clk_mmss_mdss_ahb_clk>,
-			 <&clock_mmss clk_mmss_mdss_axi_clk>,
-			 <&clock_mmss clk_mdp_clk_src>,
-			 <&clock_mmss clk_mmss_mdss_mdp_clk>,
-			 <&clock_mmss clk_mmss_mdss_vsync_clk>,
-			 <&clock_mmss clk_mmss_mdss_mdp_lut_clk>;
+		clocks = <&clock_mmss MMSS_MNOC_AHB_CLK>,
+			 <&clock_mmss MMSS_MDSS_AHB_CLK>,
+			 <&clock_mmss MMSS_MDSS_AXI_CLK>,
+			 <&clock_mmss MDP_CLK_SRC>,
+			 <&clock_mmss MMSS_MDSS_MDP_CLK>,
+			 <&clock_mmss MMSS_MDSS_VSYNC_CLK>,
+			 <&clock_mmss MMSS_MDSS_MDP_LUT_CLK>;
 		clock-names = "mnoc_clk", "iface_clk", "bus_clk",
 				"core_clk_src", "core_clk", "vsync_clk",
 				"lut_clk";
@@ -234,10 +234,10 @@
 			compatible = "qcom,smmu_mdp_unsec";
 			iommus = <&mmss_smmu 0>;
 			gdsc-mmagic-mdss-supply = <&gdsc_bimc_smmu>;
-			clocks = <&clock_gcc clk_mmssnoc_axi_clk>,
-				<&clock_mmss clk_mmss_mnoc_ahb_clk>,
-				<&clock_mmss clk_mmss_bimc_smmu_ahb_clk>,
-				<&clock_mmss clk_mmss_bimc_smmu_axi_clk>;
+			clocks = <&clock_rpmcc MMSSNOC_AXI_CLK>,
+				<&clock_mmss MMSS_MNOC_AHB_CLK>,
+				<&clock_mmss MMSS_BIMC_SMMU_AHB_CLK>,
+				<&clock_mmss MMSS_BIMC_SMMU_AXI_CLK>;
 			clock-names = "mmss_noc_axi_clk",
 					"mmss_noc_ahb_clk",
 					"mmss_smmu_ahb_clk",
@@ -248,10 +248,10 @@
 			compatible = "qcom,smmu_mdp_sec";
 			iommus = <&mmss_smmu 1>;
 			gdsc-mmagic-mdss-supply = <&gdsc_bimc_smmu>;
-			clocks = <&clock_gcc clk_mmssnoc_axi_clk>,
-				<&clock_mmss clk_mmss_mnoc_ahb_clk>,
-				<&clock_mmss clk_mmss_bimc_smmu_ahb_clk>,
-				<&clock_mmss clk_mmss_bimc_smmu_axi_clk>;
+			clocks = <&clock_rpmcc MMSSNOC_AXI_CLK>,
+				<&clock_mmss MMSS_MNOC_AHB_CLK>,
+				<&clock_mmss MMSS_BIMC_SMMU_AHB_CLK>,
+				<&clock_mmss MMSS_BIMC_SMMU_AXI_CLK>;
 			clock-names = "mmss_noc_axi_clk",
 					"mmss_noc_ahb_clk",
 					"mmss_smmu_ahb_clk",
@@ -309,15 +309,15 @@
 
 		qcom,mmss-ulp-clamp-ctrl-offset = <0x14>;
 
-		clocks = <&clock_mmss clk_mmss_mdss_mdp_clk>,
-			 <&clock_mmss clk_mmss_mnoc_ahb_clk>,
-			 <&clock_mmss clk_mmss_mdss_ahb_clk>,
-			 <&clock_mmss clk_mmss_mdss_axi_clk>,
-			 <&clock_mmss clk_mmss_misc_ahb_clk>,
-			 <&clock_mmss clk_ext_byte0_clk_src>,
-			 <&clock_mmss clk_ext_byte1_clk_src>,
-			 <&clock_mmss clk_ext_pclk0_clk_src>,
-			 <&clock_mmss clk_ext_pclk1_clk_src>;
+		clocks = <&clock_mmss MMSS_MDSS_MDP_CLK>,
+			 <&clock_mmss MMSS_MNOC_AHB_CLK>,
+			 <&clock_mmss MMSS_MDSS_AHB_CLK>,
+			 <&clock_mmss MMSS_MDSS_AXI_CLK>,
+			 <&clock_mmss MMSS_MISC_AHB_CLK>,
+			 <&clock_mmss EXT_BYTE0_CLK_SRC>,
+			 <&clock_mmss EXT_BYTE1_CLK_SRC>,
+			 <&clock_mmss EXT_PCLK0_CLK_SRC>,
+			 <&clock_mmss EXT_PCLK1_CLK_SRC>;
 		clock-names = "mdp_core_clk",
 			"mnoc_clk", "iface_clk",
 			"bus_clk", "core_mmss_clk",
@@ -389,12 +389,12 @@
 
 			qcom,null-insertion-enabled;
 
-			clocks = <&clock_mmss clk_mmss_mdss_byte0_clk>,
-				 <&clock_mmss clk_mmss_mdss_pclk0_clk>,
-				 <&clock_mmss clk_mmss_mdss_esc0_clk>,
-				 <&clock_mmss clk_byte0_clk_src>,
-				 <&clock_mmss clk_pclk0_clk_src>,
-				 <&clock_mmss clk_mmss_mdss_byte0_intf_clk>;
+			clocks = <&clock_mmss MMSS_MDSS_BYTE0_CLK>,
+				 <&clock_mmss MMSS_MDSS_PCLK0_CLK>,
+				 <&clock_mmss MMSS_MDSS_ESC0_CLK>,
+				 <&clock_mmss BYTE0_CLK_SRC>,
+				 <&clock_mmss PCLK0_CLK_SRC>,
+				 <&clock_mmss MMSS_MDSS_BYTE0_INTF_CLK>;
 			clock-names = "byte_clk", "pixel_clk", "core_clk",
 				"byte_clk_rcg", "pixel_clk_rcg",
 				"byte_intf_clk";
@@ -429,12 +429,12 @@
 
 			qcom,null-insertion-enabled;
 
-			clocks = <&clock_mmss clk_mmss_mdss_byte1_clk>,
-				 <&clock_mmss clk_mmss_mdss_pclk1_clk>,
-				 <&clock_mmss clk_mmss_mdss_esc1_clk>,
-				 <&clock_mmss clk_byte1_clk_src>,
-				 <&clock_mmss clk_pclk1_clk_src>,
-				 <&clock_mmss clk_mmss_mdss_byte1_intf_clk>;
+			clocks = <&clock_mmss MMSS_MDSS_BYTE1_CLK>,
+				 <&clock_mmss MMSS_MDSS_PCLK1_CLK>,
+				 <&clock_mmss MMSS_MDSS_ESC1_CLK>,
+				 <&clock_mmss BYTE1_CLK_SRC>,
+				 <&clock_mmss PCLK1_CLK_SRC>,
+				 <&clock_mmss MMSS_MDSS_BYTE1_INTF_CLK>;
 			clock-names = "byte_clk", "pixel_clk", "core_clk",
 				"byte_clk_rcg", "pixel_clk_rcg",
 				"byte_intf_clk";
@@ -486,21 +486,21 @@
 		reg-names = "dp_ctrl", "dp_phy", "tcsr_regs", "dp_mmss_cc",
 				"qfprom_physical","hdcp_physical";
 
-		clocks = <&clock_mmss clk_mmss_mnoc_ahb_clk>,
-			 <&clock_mmss clk_mmss_mdss_ahb_clk>,
-			 <&clock_mmss clk_mmss_mdss_axi_clk>,
-			 <&clock_mmss clk_mmss_mdss_mdp_clk>,
-			 <&clock_mmss clk_mmss_mdss_hdmi_dp_ahb_clk>,
-			 <&clock_mmss clk_mmss_mdss_dp_aux_clk>,
-			 <&clock_gcc clk_ln_bb_clk1>,
-			 <&clock_gcc clk_gcc_usb3_clkref_clk>,
-			 <&clock_mmss clk_mmss_mdss_dp_link_clk>,
-			 <&clock_mmss clk_mmss_mdss_dp_link_intf_clk>,
-			 <&clock_mmss clk_mmss_mdss_dp_crypto_clk>,
-			 <&clock_mmss clk_mmss_mdss_dp_pixel_clk>,
-			 <&mdss_dp_pll clk_vco_divided_clk_src_mux>,
-			 <&mdss_dp_pll clk_vco_divsel_two_clk_src>,
-			 <&mdss_dp_pll clk_vco_divsel_four_clk_src>;
+		clocks = <&clock_mmss MMSS_MNOC_AHB_CLK>,
+			 <&clock_mmss MMSS_MDSS_AHB_CLK>,
+			 <&clock_mmss MMSS_MDSS_AXI_CLK>,
+			 <&clock_mmss MMSS_MDSS_MDP_CLK>,
+			 <&clock_mmss MMSS_MDSS_HDMI_DP_AHB_CLK>,
+			 <&clock_mmss MMSS_MDSS_DP_AUX_CLK>,
+			 <&clock_rpmcc RPM_LN_BB_CLK1>,
+			 <&clock_gcc GCC_USB3_CLKREF_CLK>,
+			 <&clock_mmss MMSS_MDSS_DP_LINK_CLK>,
+			 <&clock_mmss MMSS_MDSS_DP_LINK_INTF_CLK>,
+			 <&clock_mmss MMSS_MDSS_DP_CRYPTO_CLK>,
+			 <&clock_mmss MMSS_MDSS_DP_PIXEL_CLK>,
+			 <&mdss_dp_pll DP_VCO_DIVIDED_CLK_SRC_MUX>,
+			 <&mdss_dp_pll DP_VCO_DIVSEL_TWO_CLK_SRC>,
+			 <&mdss_dp_pll DP_VCO_DIVSEL_FOUR_CLK_SRC>;
 		clock-names = "core_mnoc_clk", "core_iface_clk", "core_bus_clk",
 			"core_mdp_core_clk", "core_alt_iface_clk",
 			"core_aux_clk", "core_ref_clk_src", "core_ref_clk",
@@ -589,11 +589,11 @@
 		rot-vdd-supply = <&gdsc_mdss>;
 		qcom,supply-names = "rot-vdd";
 
-		clocks = <&clock_mmss clk_mmss_mnoc_ahb_clk>,
-			<&clock_mmss clk_mmss_mdss_ahb_clk>,
-			<&clock_mmss clk_rot_clk_src>,
-			<&clock_mmss clk_mmss_mdss_rot_clk>,
-			<&clock_mmss clk_mmss_mdss_axi_clk>;
+		clocks = <&clock_mmss MMSS_MNOC_AHB_CLK>,
+			<&clock_mmss MMSS_MDSS_AHB_CLK>,
+			<&clock_mmss ROT_CLK_SRC>,
+			<&clock_mmss MMSS_MDSS_ROT_CLK>,
+			<&clock_mmss MMSS_MDSS_AXI_CLK>;
 		clock-names = "mnoc_clk",
 			"iface_clk", "rot_core_clk",
 			"rot_clk", "axi_clk";
@@ -611,10 +611,10 @@
 			compatible = "qcom,smmu_sde_rot_unsec";
 			iommus = <&mmss_smmu 0xe00>;
 			gdsc-mdss-supply = <&gdsc_bimc_smmu>;
-			clocks = <&clock_gcc clk_mmssnoc_axi_clk>,
-				<&clock_mmss clk_mmss_mnoc_ahb_clk>,
-				<&clock_mmss clk_mmss_bimc_smmu_ahb_clk>,
-				<&clock_mmss clk_mmss_bimc_smmu_axi_clk>;
+			clocks = <&clock_rpmcc MMSSNOC_AXI_CLK>,
+				<&clock_mmss MMSS_MNOC_AHB_CLK>,
+				<&clock_mmss MMSS_BIMC_SMMU_AHB_CLK>,
+				<&clock_mmss MMSS_BIMC_SMMU_AXI_CLK>;
 			clock-names = "mmss_noc_axi_clk",
 					"mmss_noc_ahb_clk",
 					"mmss_smmu_ahb_clk",
@@ -625,10 +625,10 @@
 			compatible = "qcom,smmu_sde_rot_sec";
 			iommus = <&mmss_smmu 0xe01>;
 			gdsc-mdss-supply = <&gdsc_bimc_smmu>;
-			clocks = <&clock_gcc clk_mmssnoc_axi_clk>,
-				<&clock_mmss clk_mmss_mnoc_ahb_clk>,
-				<&clock_mmss clk_mmss_bimc_smmu_ahb_clk>,
-				<&clock_mmss clk_mmss_bimc_smmu_axi_clk>;
+			clocks = <&clock_rpmcc MMSSNOC_AXI_CLK>,
+				<&clock_mmss MMSS_MNOC_AHB_CLK>,
+				<&clock_mmss MMSS_BIMC_SMMU_AHB_CLK>,
+				<&clock_mmss MMSS_BIMC_SMMU_AXI_CLK>;
 			clock-names = "mmss_noc_axi_clk",
 					"mmss_noc_ahb_clk",
 					"mmss_smmu_ahb_clk",
@@ -655,12 +655,12 @@
 
 		qcom,msm_ext_disp = <&msm_ext_disp>;
 
-		clocks = <&clock_mmss clk_mmss_mnoc_ahb_clk>,
-			 <&clock_mmss clk_mmss_mdss_ahb_clk>,
-			 <&clock_mmss clk_mmss_mdss_hdmi_clk>,
-			 <&clock_mmss clk_mmss_mdss_mdp_clk>,
-			 <&clock_mmss clk_mmss_mdss_hdmi_dp_ahb_clk>,
-			 <&clock_mmss clk_mmss_mdss_extpclk_clk>;
+		clocks = <&clock_mmss MMSS_MNOC_AHB_CLK>,
+			 <&clock_mmss MMSS_MDSS_AHB_CLK>,
+			 <&clock_mmss MMSS_MDSS_HDMI_CLK>,
+			 <&clock_mmss MMSS_MDSS_MDP_CLK>,
+			 <&clock_mmss MMSS_MDSS_HDMI_DP_AHB_CLK>,
+			 <&clock_mmss MMSS_MDSS_EXTPCLK_CLK>;
 
 		clock-names = "hpd_mnoc_clk", "hpd_iface_clk",
 				"hpd_core_clk", "hpd_mdp_core_clk",
