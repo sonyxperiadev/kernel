@@ -109,6 +109,7 @@ static struct clk_branch gpucc_xo = {
 			"cxo_a",
 		},
 		.num_parents = 1,
+		.flags = CLK_ENABLE_HAND_OFF,
 		.ops = &clk_branch2_ops,
 	},
 };
