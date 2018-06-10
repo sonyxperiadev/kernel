@@ -142,6 +142,9 @@ extern const struct clk_ops clk_alpha_pll_postdiv_ops;
 extern const struct clk_ops clk_alpha_pll_huayra_ops;
 extern const struct clk_ops clk_alpha_pll_slew_ops;
 extern const struct clk_ops clk_alpha_pll_postdiv_ro_ops;
+
+extern const struct clk_ops clk_alpha_pll_fabia_ops;
+extern const struct clk_ops clk_alpha_pll_fabia_fixed_ops;
 extern const struct clk_ops clk_alpha_fabia_pll_postdiv_ops;
 extern const struct clk_ops clk_alpha_fabia_pll_postdiv_odd_ops;
 
