@@ -1,4 +1,4 @@
-/* Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -31,6 +31,15 @@
 
 &mdss_mdp {
 	qcom,mdss-pref-prim-intf = "dsi";
+};
+
+&mdss_dp_ctrl {
+	pinctrl-names = "mdss_dp_active", "mdss_dp_sleep";
+	pinctrl-0 = <&mdss_dp_aux_active &mdss_dp_usbplug_cc_active>;
+	pinctrl-1 = <&mdss_dp_aux_suspend &mdss_dp_usbplug_cc_suspend>;
+	qcom,aux-en-gpio = <&tlmm 55 0>;
+	qcom,aux-sel-gpio = <&tlmm 56 0>;
+	qcom,usbplug-cc-gpio = <&tlmm 58 0>;
 };
 
 &mdss_dsi {

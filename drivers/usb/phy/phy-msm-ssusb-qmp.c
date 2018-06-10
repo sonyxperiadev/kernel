@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -473,11 +473,11 @@ static int msm_ssphy_qmp_set_suspend(struct usb_phy *uphy, int suspend)
 	}
 
 	if (suspend) {
-		if (!phy->cable_connected)
+		if (phy->cable_connected)
+			msm_ssusb_qmp_enable_autonomous(phy, 1);
+		else
 			writel_relaxed(0x00,
 			phy->base + phy->phy_reg[USB3_PHY_POWER_DOWN_CONTROL]);
-		else
-			msm_ssusb_qmp_enable_autonomous(phy, 1);
 
 		/* Make sure above write completed with PHY */
 		wmb();
@@ -539,6 +539,10 @@ static int msm_ssphy_qmp_notify_disconnect(struct usb_phy *uphy,
 {
 	struct msm_ssphy_qmp *phy = container_of(uphy, struct msm_ssphy_qmp,
 					phy);
+
+	writel_relaxed(0x00,
+		phy->base + phy->phy_reg[USB3_PHY_POWER_DOWN_CONTROL]);
+	readl_relaxed(phy->base + phy->phy_reg[USB3_PHY_POWER_DOWN_CONTROL]);
 
 	dev_dbg(uphy->dev, "QMP phy disconnect notification\n");
 	dev_dbg(uphy->dev, " cable_connected=%d\n", phy->cable_connected);
