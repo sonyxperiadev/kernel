@@ -25,9 +25,14 @@
 
 	reserved-memory {
 		pstore_reserve_mem: pstore_reserve_mem_region@ffc00000 {
-			compatible = "removed-dma-pool";
+			compatible = "removed-dma-pool", "ramoops";
 			no-map;
 			reg = <0 0xffc00000 0 0x00100000>;
+			record-size = <0x10000>;
+			console-size = <0x60000>;
+			ftrace-size = <0x10000>;
+			pmsg-size = <0x20000>;
+			ecc-size = <16>;
 		};
 	};
 
@@ -503,16 +508,6 @@
 			gpios = <&tlmm 63 0x0>;
 			debounce-interval = <10>;
 		};
-	};
-
-	ramoops {
-		compatible = "ramoops";
-		memory-region = <&pstore_reserve_mem>;
-		record-size = <0x0 0x10000>;
-		console-size = <0x0 0x60000>;
-		ftrace-size = <0x0 0x10000>;
-		pmsg-size = <0x0 0x20000>;
-		ecc-size = <16>;
 	};
 
 	gpio_keys {
