@@ -3,4 +3,4 @@ obj-$(CONFIG_QTI_PDC_SDM845)		+= pdc-sdm845.o
 obj-$(CONFIG_QTI_PDC_SDM670)		+= pdc-sdm670.o
 obj-$(CONFIG_QTI_PDC_SDXPOORWILLS)	+= pdc-sdxpoorwills.o
 obj-$(CONFIG_QTI_MPM)			+= mpm.o mpm-8909.o mpm-8953.o mpm-8937.o mpm-8956.o mpm-8996.o
-obj-$(CONFIG_QTI_MPM)			+= mpm-8998.o
+obj-$(CONFIG_QTI_MPM)			+= mpm-8998.o mpm-sdm630.o mpm-sdm660.o
