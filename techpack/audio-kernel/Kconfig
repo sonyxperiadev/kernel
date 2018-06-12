@@ -1,0 +1,111 @@
+config PINCTRL_LPI
+	tristate "PINCTRL_LPI"
+config PINCTRL_WCD
+	tristate "PINCTRL_WCD"
+config AUDIO_EXT_CLK
+	tristate "AUDIO_EXT_CLK"
+config SND_SOC_WCD9XXX_V2
+	tristate "SND_SOC_WCD9XXX_V2"
+config SND_SOC_WCD_MBHC
+	tristate "SND_SOC_WCD_MBHC"
+config SND_SOC_WSA881X
+	tristate "SND_SOC_WSA881X"
+config SND_SOC_WCD_DSP_MGR
+	tristate "SND_SOC_WCD_DSP_MGR"
+config SND_SOC_WCD_SPI
+	tristate "SND_SOC_WCD_SPI"
+config SND_SOC_WCD_CPE
+	tristate "SND_SOC_WCD_CPE"
+config SND_SOC_WCD9335
+	tristate "SND_SOC_WCD9335"
+config SND_SOC_WCD934X
+	tristate "SND_SOC_WCD934X"
+config SND_SOC_WCD934X_MBHC
+	tristate "SND_SOC_WCD934X_MBHC"
+config SND_SOC_WCD934X_DSD
+	tristate "SND_SOC_WCD934X_DSD"
+config MSM_QDSP6V2_CODECS
+	tristate "MSM_QDSP6V2_CODECS"
+config MSM_ULTRASOUND
+	tristate "MSM_ULTRASOUND"
+config MSM_QDSP6_APRV2_GLINK
+	tristate "MSM_QDSP6_APRV2_GLINK"
+config MSM_ADSP_LOADER
+	tristate "MSM_ADSP_LOADER"
+config REGMAP_SWR
+	tristate "REGMAP_SWR"
+config MSM_QDSP6_SSR
+	tristate "MSM_QDSP6_SSR"
+config MSM_QDSP6_PDR
+	tristate "MSM_QDSP6_PDR"
+config MSM_QDSP6_NOTIFIER
+	tristate "MSM_QDSP6_NOTIFIER"
+config SND_SOC_MSM_HOSTLESS_PCM
+	tristate "SND_SOC_MSM_HOSTLESS_PCM"
+config SND_SOC_MSM_QDSP6V2_INTF
+	tristate "SND_SOC_MSM_QDSP6V2_INTF"
+config SND_SOC_SDM670
+	tristate "SND_SOC_SDM670"
+config MSM_GLINK_SPI_XPRT
+	tristate "MSM_GLINK_SPI_XPRT"
+config SOUNDWIRE
+	tristate "SOUNDWIRE"
+config SOUNDWIRE_WCD_CTRL
+	tristate "SOUNDWIRE_WCD_CTRL"
+config SND_SOC_QDSP6V2
+	tristate "SND_SOC_QDSP6V2"
+config SND_SOC_MSM_QDSP6V2_INTF
+	tristate "SND_SOC_MSM_QDSP6V2_INTF"
+config WCD9XXX_CODEC_CORE
+	tristate "WCD9XXX_CODEC_CORE"
+config MSM_CDC_PINCTRL
+	tristate "MSM_CDC_PINCTRL"
+config SND_SOC_WCD_MBHC_ADC
+	tristate "SND_SOC_WCD_MBHC_ADC"
+config SND_SOC_WCD_MBHC_LEGACY
+	tristate "SND_SOC_WCD_MBHC_LEGACY"
+config QTI_PP
+	tristate "QTI_PP"
+config SND_HWDEP_ROUTING
+	tristate "SND_HWDEP_ROUTING"
+config DTS_EAGLE
+	tristate "DTS_EAGLE"
+config DOLBY_DS2
+	tristate "DOLBY_DS2"
+config DOLBY_LICENSE
+	tristate "DOLBY_LICENSE"
+config DTS_SRS_TM
+	tristate "DTS_SRS_TM"
+config SND_SOC_EXT_CODEC
+	tristate "SND_SOC_EXT_CODEC"
+config SND_SOC_INT_CODEC
+	tristate "SND_SOC_INT_CODEC"
+config SND_SOC_MSM_STUB
+	tristate "SND_SOC_MSM_STUB"
+config WCD_DSP_GLINK
+	tristate "WCD_DSP_GLINK"
+config MSM_AVTIMER
+	tristate "MSM_AVTIMER"
+config SND_SOC_SDM660_CDC
+	tristate "SND_SOC_SDM660_CDC"
+config SND_SOC_ANALOG_CDC
+	tristate "SND_SOC_ANALOG_CDC"
+config SND_SOC_DIGITAL_CDC
+	tristate "SND_SOC_DIGITAL_CDC"
+config SND_SOC_MSM_SDW
+	tristate "SND_SOC_MSM_SDW"
+config SND_SOC_MSM_HDMI_CODEC_RX
+	tristate "SND_SOC_MSM_HDMI_CODEC_RX"
+config SND_SOC_SDM845
+	tristate "SND_SOC_SDM845"
+config SND_SOC_SDM670
+	tristate "SND_SOC_SDM670"
+config SND_SOC_SDM660
+	tristate "SND_SOC_SDM660"
+config SND_SOC_MSM8956
+	tristate "SND_SOC_MSM8956"
+config SND_SOC_MSM8996
+	tristate "SND_SOC_MSM8996"
+config SND_SOC_MSM8998
+	tristate "SND_SOC_MSM8998"
+
