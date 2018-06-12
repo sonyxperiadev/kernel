@@ -26,16 +26,16 @@
 #include <sound/soc-dapm.h>
 #include <sound/pcm.h>
 #include <sound/jack.h>
-#include <sound/q6afe-v2.h>
-#include <sound/q6core.h>
+#include <dsp/q6afe-v2.h>
+#include <dsp/q6core.h>
 #include <sound/pcm_params.h>
 #include <sound/info.h>
-#include <device_event.h>
-#include "qdsp6v2/msm-pcm-routing-v2.h"
-#include "../codecs/wcd9xxx-common.h"
-#include "../codecs/wcd9330.h"
-#include "../codecs/wcd9335.h"
-#include "../codecs/wsa881x.h"
+#include "device_event.h"
+#include "msm-pcm-routing-v2.h"
+#include "codecs/wcd9xxx-common-v2.h"
+//#include "codecs/wcd9330.h"
+#include "codecs/wcd9335.h"
+#include "codecs/wsa881x.h"
 
 #define DRV_NAME "msm8996-asoc-snd"
 
@@ -1529,7 +1529,7 @@ static const struct snd_kcontrol_new msm_snd_controls[] = {
 			msm_vi_feed_tx_ch_get, msm_vi_feed_tx_ch_put),
 };
 
-static bool msm8996_swap_gnd_mic(struct snd_soc_codec *codec)
+static bool msm8996_swap_gnd_mic(struct snd_soc_codec *codec, bool active)
 {
 	struct snd_soc_card *card = codec->component.card;
 	struct msm8996_asoc_mach_data *pdata =
