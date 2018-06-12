@@ -263,7 +263,7 @@ static struct clk_alpha_pll gpll0_ao = {
 	.flags = SUPPORTS_FSM_VOTE,
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "gpll0_ao",
-		.parent_names = (const char *[]){ "xo_a" },
+		.parent_names = (const char *[]){ "cxo_a" },
 		.num_parents = 1,
 		.ops = &clk_alpha_pll_ops,
 	},
