@@ -106,3 +106,13 @@ config SDFAT_STATISTICS
 	bool "enable statistics for bigdata"
 	depends on SDFAT_FS
 	default y
+
+config SDFAT_DISALLOW_FAT16
+	bool "disable support for mounting FAT16"
+	depends on SDFAT_FS
+	default y
+
+config SDFAT_DISALLOW_FAT32
+	bool "disable support for mounting FAT32"
+	depends on SDFAT_FS
+	default y

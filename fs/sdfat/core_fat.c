@@ -1239,6 +1239,9 @@ static FS_FUNC_T amap_fat_fs_func = {
 
 s32 mount_fat16(struct super_block *sb, pbr_t *p_pbr)
 {
+#ifdef CONFIG_SDFAT_DISALLOW_FAT16
+	return -ENXIO;
+#endif
 	s32 num_root_sectors;
 	bpb16_t *p_bpb = &(p_pbr->bpb.f16);
 	FS_INFO_T *fsi = &(SDFAT_SB(sb)->fsi);
@@ -1342,6 +1345,9 @@ out:
 
 s32 mount_fat32(struct super_block *sb, pbr_t *p_pbr)
 {
+#ifdef CONFIG_SDFAT_DISALLOW_FAT32
+	return -ENXIO;
+#endif
 	pbr32_t *p_bpb = (pbr32_t *)p_pbr;
 	FS_INFO_T *fsi = &(SDFAT_SB(sb)->fsi);
 
