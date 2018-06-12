@@ -2128,7 +2128,7 @@
 	};
 
 	tsens0: tsens@10aa000 {
-		compatible = "qcom,msm8998-tsens";
+		compatible = "qcom,tsens24xx";
 		reg = <0x10aa000 0x1000>,
 		      <0x10ab000 0x1000>;
 		reg-names = "tsens_srot_physical",
@@ -2139,7 +2139,7 @@
 	};
 
 	tsens1: tsens@10ad000 {
-		compatible = "qcom,msm8998-tsens";
+		compatible = "qcom,tsens24xx";
 		reg = <0x10ad000 0x1000>,
 		      <0x10ae000 0x1000>;
 		reg-names = "tsens_srot_physical",
