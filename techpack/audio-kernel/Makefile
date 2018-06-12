@@ -12,6 +12,10 @@ include $(srctree)/techpack/audio-kernel/config/sdxpoorwillsauto.conf
 export
 endif
 
+ifeq ($(CONFIG_ARCH_MSM8996), y)
+include $(srctree)/techpack/audio-kernel/config/msm8998auto.conf
+export
+endif
 ifeq ($(CONFIG_ARCH_MSM8998), y)
 include $(srctree)/techpack/audio-kernel/config/msm8998auto.conf
 export
@@ -40,6 +44,10 @@ LINUXINCLUDE    += \
                 -include $(srctree)/techpack/audio-kernel/config/sdxpoorwillsautoconf.h
 endif
 
+ifeq ($(CONFIG_ARCH_MSM8996), y)
+LINUXINCLUDE    += \
+                -include $(srctree)/techpack/audio-kernel/config/msm8998autoconf.h
+endif
 ifeq ($(CONFIG_ARCH_MSM8998), y)
 LINUXINCLUDE    += \
                 -include $(srctree)/techpack/audio-kernel/config/msm8998autoconf.h
