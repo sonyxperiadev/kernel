@@ -3158,6 +3158,18 @@
 		21 511 511>;
 };
 
+&spmi_bus {
+	qcom,pmi8998@3 {
+		qcom,leds@d800 {
+			somc,init-br-ua = <10000>;
+			somc-s1,br-power-save-ua = <800>;
+			somc,bl-scale-enabled;
+			somc,area_count_table_size = <0>;
+			status = "okay";
+		};
+	};
+};
+
 &pmi8998_wled {
 	linux,name = "wled";
 	qcom,fs-curr-ua = <24000>;
@@ -3233,6 +3245,8 @@
 	somc,therm-coeff-c1 = <199>;
 	somc,therm-coeff-c2 = <80>;
 	somc,therm-coeff-c3 = <255>;
+	/delete-property/ qcom,fg-auto-recharge-soc;
+	/delete-property/ qcom,fg-recharge-soc-thr;
 };
 
 &pmi8998_charger {
@@ -3251,6 +3265,8 @@
 			   "charger_temp",
 			   "charger_temp_max";
 	somc,jeita-sw-ctrl-en;
+	/delete-property/ qcom,auto-recharge-soc;
+	/delete-property/ qcom,suspend-input-on-debug-batt;
 };
 
 &pmi8998_rradc {
