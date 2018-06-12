@@ -3351,3 +3351,44 @@
 &pmi8998_pdphy {
 	vbus-supply = <&smb2_vbus>;
 };
+
+&lab_regulator {
+	qcom,qpnp-lab-ps-threshold = <20>;
+};
+
+&bcl_sensor {
+	interrupts = <0x2 0x42 0x0 IRQ_TYPE_NONE>,
+		     <0x2 0x42 0x2 IRQ_TYPE_NONE>;
+	interrupt-names = "bcl-high-ibat-int",
+			  "bcl-low-vbat-int";
+	qcom,vbat-polling-delay-ms = <100>;
+	qcom,ibat-polling-delay-ms = <100>;
+};
+
+&pm8998_vadc {
+	qcom,adc-bit-resolution = <15>;
+};
+
+&pm8998_adc_tm {
+	qcom,adc-bit-resolution = <15>;
+};
+
+&pm8998_div_clk1 {
+	status = "disabled";
+};
+
+&pm8998_div_clk2 {
+	status = "disabled";
+};
+
+&pm8998_div_clk3 {
+	status = "disabled";
+};
+
+&spmi_bus {
+	qcom,pm8998@0 {
+		qcom,power-on@800 {
+			/delete-property/ qcom,kpdpwr-sw-debounce;
+		};
+	};
+};

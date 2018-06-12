@@ -298,6 +298,7 @@
 };
 
 &pmi8998_wled {
+	status = "ok";
 	qcom,led-strings-list = [00 01];
 };
 
@@ -312,6 +313,10 @@
 
 &green_led {
 	/delete-property/ linux,default-trigger;
+};
+
+&blue_led {
+	linux,default-trigger = "boot-indication";
 };
 
 &dsi_dual_nt35597_video {
