@@ -12,6 +12,11 @@ include $(srctree)/techpack/audio-kernel/config/sdxpoorwillsauto.conf
 export
 endif
 
+ifeq ($(CONFIG_ARCH_MSM8998), y)
+include $(srctree)/techpack/audio-kernel/config/msm8998auto.conf
+export
+endif
+
 # Use USERINCLUDE when you must reference the UAPI directories only.
 USERINCLUDE     += \
                 -I$(srctree)/techpack/audio-kernel/include/uapi \
@@ -33,6 +38,11 @@ endif
 ifeq ($(CONFIG_ARCH_SDXPOORWILLS), y)
 LINUXINCLUDE    += \
                 -include $(srctree)/techpack/audio-kernel/config/sdxpoorwillsautoconf.h
+endif
+
+ifeq ($(CONFIG_ARCH_MSM8998), y)
+LINUXINCLUDE    += \
+                -include $(srctree)/techpack/audio-kernel/config/msm8998autoconf.h
 endif
 
 obj-y += asoc/
