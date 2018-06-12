@@ -24,7 +24,7 @@
 #include <linux/of.h>
 #include <linux/of_slimbus.h>
 #include <linux/msm-sps.h>
-#include <linux/qdsp6v2/apr.h>
+#include <../techpack/audio-kernel/include/ipc/apr.h>
 #include "slim-msm.h"
 
 #define MSM_SLIM_NAME	"msm_slim_ctrl"
