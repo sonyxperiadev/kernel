@@ -3345,3 +3345,7 @@
 #include "msm8998-audio.dtsi"
 #include "msm-smb138x.dtsi"
 #include "msm8998-sde.dtsi"
+
+&pmi8998_pdphy {
+	vbus-supply = <&smb2_vbus>;
+};
