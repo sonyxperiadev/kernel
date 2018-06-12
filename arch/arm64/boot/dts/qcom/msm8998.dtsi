@@ -3281,8 +3281,6 @@
 	lmh_dcvs1: qcom,limits-dcvs@1 {
 		compatible = "qcom,msm-hw-limits";
 		interrupts = <GIC_SPI 38 IRQ_TYPE_LEVEL_HIGH>;
-		isens_vref-supply = <&pm8998_l1_ao>;
-		isens-vref-settings = <880000 880000 20000>;
 	};
 };
 
