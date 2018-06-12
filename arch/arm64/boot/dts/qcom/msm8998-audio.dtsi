@@ -23,6 +23,11 @@
 };
 
 &soc {
+	trans_loopback: qcom,msm-transcode-loopback {
+		compatible = "qcom,msm-transcode-loopback";
+	};
+
+
 	qcom,avtimer@170f7000 {
 		compatible = "qcom,avtimer";
 		reg = <0x170f700c 0x4>,
