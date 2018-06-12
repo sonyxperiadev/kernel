@@ -1,8 +1,0 @@
-# ignore all subdirs except stub
-*
-!/stub/
-
-# AngeloG. Del Regno (kholk) - 13/04/2018:
-# We want the kernel audio drivers to be in GIT.
-# Do not ignore the audio drivers folder.
-!/audio-kernel/
