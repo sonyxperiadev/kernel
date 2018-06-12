@@ -82,7 +82,6 @@ static struct notifier_block panic_blk = {
 };
 
 #ifdef CONFIG_RANDOMIZE_BASE
-static void __iomem *dload_type_addr;
 
 /* interface for exporting attributes */
 struct reset_attribute {
@@ -102,6 +101,7 @@ struct reset_attribute {
 #ifdef CONFIG_QCOM_DLOAD_MODE
 #define EDL_MODE_PROP "qcom,msm-imem-emergency_download_mode"
 #define DL_MODE_PROP "qcom,msm-imem-download_mode"
+static void __iomem *dload_type_addr;
 #ifdef CONFIG_RANDOMIZE_BASE
 #define KASLR_OFFSET_PROP "qcom,msm-imem-kaslr_offset"
 #endif
@@ -496,7 +496,7 @@ static void do_msm_poweroff(void)
 	pr_err("Powering off has failed\n");
 }
 
-#ifdef CONFIG_RANDOMIZE_BASE
+#if defined(CONFIG_RANDOMIZE_BASE) && defined(CONFIG_QCOM_DLOAD_MODE)
 static ssize_t attr_show(struct kobject *kobj, struct attribute *attr,
 				char *buf)
 {
@@ -758,6 +758,8 @@ skip_sysfs_create:
 		scm_deassert_ps_hold_supported = true;
 
 	set_dload_mode(download_mode);
+
+	qpnp_pon_system_pwr_off(PON_POWER_OFF_WARM_RESET);
 
 #ifdef TARGET_SOMC_XBOOT
 	__raw_writel(0xC0DEDEAD, restart_reason);
