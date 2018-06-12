@@ -589,11 +589,7 @@ static const struct fault_info fault_info[] = {
 	{ do_bad,		SIGBUS,  0,		"unknown 45"			},
 	{ do_bad,		SIGBUS,  0,		"unknown 46"			},
 	{ do_bad,		SIGBUS,  0,		"unknown 47"			},
-#ifdef CONFIG_QCOM_TLB_EL2_HANDLER
 	{ do_tlb_conf_fault,	SIGBUS,  0,		"TLB conflict abort"		},
-#else
-	{ do_bad,		SIGBUS,  0,		"TLB conflict abort"		},
-#endif
 	{ do_bad,		SIGBUS,  0,		"unknown 49"			},
 	{ do_bad,		SIGBUS,  0,		"unknown 50"			},
 	{ do_bad,		SIGBUS,  0,		"unknown 51"			},
