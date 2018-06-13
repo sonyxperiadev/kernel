@@ -13,8 +13,8 @@
 
 #ifndef _MSM_COMPR_H
 #define _MSM_COMPR_H
-#include <sound/apr_audio-v2.h>
-#include <sound/q6asm-v2.h>
+#include <dsp/apr_audio-v2.h>
+#include <dsp/q6asm-v2.h>
 #include <sound/compress_params.h>
 #include <sound/compress_offload.h>
 #include <sound/compress_driver.h>

@@ -4179,7 +4179,7 @@ static int msm_dai_q6_dai_mi2s_hdmi_probe(struct snd_soc_dai *dai)
 		kcontrol = &hdmi_config_controls[i];
 		rc = snd_ctl_add(dai->component->card->snd_card,
 					snd_ctl_new1(kcontrol, dai_data));
-		if (IS_ERR_VALUE(rc)) {
+		if (IS_ERR_VALUE((unsigned long)rc)) {
 			dev_err(dai->dev, "%s: err in adding ctrls = %d\n",
 				__func__, rc);
 			goto err;
@@ -4217,7 +4217,7 @@ static int msm_dai_q6_dai_mi2s_hdmi_remove(struct snd_soc_dai *dai)
 	if (test_bit(STATUS_PORT_STARTED,
 		     mi2s_dai_data->status_mask)) {
 		rc = afe_close(dai->id); /* can block */
-		if (IS_ERR_VALUE(rc))
+		if (IS_ERR_VALUE((unsigned long)rc))
 			dev_err(dai->dev, "fail to close MI2S_RX port\n");
 		clear_bit(STATUS_PORT_STARTED,
 			  mi2s_dai_data->status_mask);
