@@ -68,6 +68,8 @@ config SND_SOC_WCD_MBHC_LEGACY
 	tristate "SND_SOC_WCD_MBHC_LEGACY"
 config QTI_PP
 	tristate "QTI_PP"
+config SND_SOC_CPE
+	tristate "CPE"
 config SND_HWDEP_ROUTING
 	tristate "SND_HWDEP_ROUTING"
 config DTS_EAGLE
