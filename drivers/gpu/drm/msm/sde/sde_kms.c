@@ -1130,6 +1130,8 @@ static void sde_kms_wait_for_commit_done(struct msm_kms *kms,
 			SDE_ERROR("wait for commit done returned %d\n", ret);
 			break;
 		}
+
+		sde_crtc_complete_flip(crtc, NULL);
 	}
 }
 
@@ -2348,8 +2350,9 @@ static void sde_kms_preclose(struct msm_kms *kms, struct drm_file *file)
 	struct drm_atomic_state *state = NULL;
 	int ret = 0;
 
+	/* cancel pending flip event */
 	for (i = 0; i < priv->num_crtcs; i++)
-		sde_crtc_cancel_pending_flip(priv->crtcs[i], file);
+		sde_crtc_complete_flip(priv->crtcs[i], file);
 
 	drm_modeset_lock_all(dev);
 	state = drm_atomic_state_alloc(dev);
