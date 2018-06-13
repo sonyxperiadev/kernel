@@ -155,6 +155,16 @@ int apr_tal_rx_intents_config(struct apr_svc_ch_dev *apr_ch,
 	return 0;
 }
 
+int apr_tal_start_rx_rt(struct apr_svc_ch_dev *apr_ch)
+{
+	return 0;
+}
+
+int apr_tal_end_rx_rt(struct apr_svc_ch_dev *apr_ch)
+{
+	return 0;
+}
+
 struct apr_svc_ch_dev *apr_tal_open(uint32_t clnt, uint32_t dest,
 				uint32_t dl, apr_svc_cb_fn func, void *priv)
 {
