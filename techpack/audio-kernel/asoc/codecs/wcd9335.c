@@ -13659,6 +13659,9 @@ static int tasha_codec_probe(struct snd_soc_codec *codec)
 	}
 #endif
 
+	/* Setting default mbhc detection logic to LEGACY for Tasha */
+	tasha->mbhc.mbhc_detection_logic = WCD_DETECTION_LEGACY;
+
 	tasha->fw_data = devm_kzalloc(codec->dev,
 				      sizeof(*(tasha->fw_data)), GFP_KERNEL);
 	if (!tasha->fw_data)
