@@ -405,7 +405,7 @@ static int msm_compr_playback_prepare(struct snd_pcm_substream *substream)
 		return -ENOMEM;
 	}
 	msm_pcm_routing_reg_phy_stream(
-			soc_prtd->dai_link->be_id,
+			soc_prtd->dai_link->id,
 			prtd->audio_client->perf_mode,
 			prtd->session_id,
 			substream->stream);
@@ -531,7 +531,7 @@ static int msm_compr_capture_prepare(struct snd_pcm_substream *substream)
 		}
 		pr_debug("msm_pcm_routing_reg_phy_stream\n");
 		msm_pcm_routing_reg_phy_stream(
-				soc_prtd->dai_link->be_id,
+				soc_prtd->dai_link->id,
 				prtd->audio_client->perf_mode,
 				prtd->session_id, substream->stream);
 		break;
@@ -656,7 +656,7 @@ static int msm_compr_trigger(struct snd_pcm_substream *substream, int cmd)
 				break;
 			default:
 				msm_pcm_routing_reg_psthr_stream(
-					soc_prtd->dai_link->be_id,
+					soc_prtd->dai_link->id,
 					prtd->session_id, substream->stream);
 				break;
 			}
@@ -676,7 +676,7 @@ static int msm_compr_trigger(struct snd_pcm_substream *substream, int cmd)
 				break;
 			default:
 				msm_pcm_routing_reg_psthr_stream(
-					soc_prtd->dai_link->be_id,
+					soc_prtd->dai_link->id,
 					prtd->session_id, substream->stream);
 				break;
 			}
@@ -819,7 +819,7 @@ static int msm_compr_playback_close(struct snd_pcm_substream *substream)
 	q6asm_audio_client_buf_free_contiguous(dir,
 				prtd->audio_client);
 		msm_pcm_routing_dereg_phy_stream(
-			soc_prtd->dai_link->be_id,
+			soc_prtd->dai_link->id,
 			SNDRV_PCM_STREAM_PLAYBACK);
 	q6asm_audio_client_free(prtd->audio_client);
 	kfree(prtd);
@@ -839,7 +839,7 @@ static int msm_compr_capture_close(struct snd_pcm_substream *substream)
 	q6asm_cmd(prtd->audio_client, CMD_CLOSE);
 	q6asm_audio_client_buf_free_contiguous(dir,
 				prtd->audio_client);
-	msm_pcm_routing_dereg_phy_stream(soc_prtd->dai_link->be_id,
+	msm_pcm_routing_dereg_phy_stream(soc_prtd->dai_link->id,
 				SNDRV_PCM_STREAM_CAPTURE);
 	q6asm_audio_client_free(prtd->audio_client);
 	kfree(prtd);
@@ -1596,7 +1596,7 @@ static int msm_compr_add_controls(struct snd_soc_pcm_runtime *rtd)
 
 	dev_dbg(rtd->dev, "%s, Volume cntrl add\n", __func__);
 	ret = snd_pcm_add_volume_ctls(pcm, SNDRV_PCM_STREAM_PLAYBACK,
-				      NULL, 1, rtd->dai_link->be_id,
+				      NULL, 1, rtd->dai_link->id,
 				      &volume_info);
 	if (ret < 0)
 		return ret;
