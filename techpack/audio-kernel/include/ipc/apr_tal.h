@@ -76,6 +76,8 @@ int apr_tal_rx_intents_config(struct apr_svc_ch_dev *apr_ch,
 int apr_tal_start_rx_rt(struct apr_svc_ch_dev *apr_ch);
 int apr_tal_end_rx_rt(struct apr_svc_ch_dev *apr_ch);
 
+#if defined(CONFIG_MSM_QDSP6_APRV2_GLINK) || \
+	 defined(CONFIG_MSM_QDSP6_APRV3_GLINK)
 struct apr_svc_ch_dev {
 	void               *handle;
 	spinlock_t         w_lock;
@@ -84,8 +86,23 @@ struct apr_svc_ch_dev {
 	apr_svc_cb_fn      func;
 	wait_queue_head_t  wait;
 	void               *priv;
-	unsigned int       channel_state;
+	unsigned           channel_state;
 	bool               if_remote_intent_ready;
 };
+#else
+struct apr_svc_ch_dev {
+	struct smd_channel *ch;
+	spinlock_t         lock;
+	spinlock_t         w_lock;
+	struct mutex       m_lock;
+	apr_svc_cb_fn      func;
+	char               data[APR_MAX_BUF];
+	wait_queue_head_t  wait;
+	void               *priv;
+	uint32_t           smd_state;
+	wait_queue_head_t  dest;
+	uint32_t           dest_state;
+};
+#endif
 
 #endif
