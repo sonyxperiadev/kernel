@@ -4655,7 +4655,7 @@ static int msm_dai_q6_mi2s_hdmi_prepare(struct snd_pcm_substream *substream,
 		rc = afe_port_start(dai->id, &dai_data->port_config,
 				    dai_data->rate);
 
-		if (IS_ERR_VALUE(rc))
+		if (IS_ERR_VALUE((unsigned long)rc))
 			dev_err(dai->dev, "fail to open AFE port 0x%x\n",
 				dai->id);
 		else
@@ -4777,7 +4777,7 @@ static void msm_dai_q6_mi2s_hdmi_shutdown(struct snd_pcm_substream *substream,
 
 	if (test_bit(STATUS_PORT_STARTED, dai_data->status_mask)) {
 		rc = afe_close(dai->id);
-		if (IS_ERR_VALUE(rc))
+		if (IS_ERR_VALUE((unsigned long)rc))
 			dev_err(dai->dev, "fail to close AFE port\n");
 		clear_bit(STATUS_PORT_STARTED, dai_data->status_mask);
 	}
@@ -7059,7 +7059,7 @@ static int msm_dai_q6_mi2s_hdmi_dev_probe(struct platform_device *pdev)
 	rc = snd_soc_register_component(&pdev->dev,
 			&msm_dai_q6_mi2s_hdmi_component,
 			&msm_dai_q6_mi2s_hdmi_dai, 1);
-	if (IS_ERR_VALUE(rc))
+	if (IS_ERR_VALUE((unsigned long)rc))
 		goto err;
 
 	return rc;
