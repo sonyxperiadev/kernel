@@ -5173,7 +5173,7 @@ dhdpcie_readshared(dhd_bus_t *bus)
 		/* read ringmem and ringstate ptrs from shared area and store in host variables */
 		dhd_fillup_ring_sharedptr_info(bus, &ring_info);
 
-		bcm_print_bytes("ring_info_raw", (uchar *)&ring_info, sizeof(ring_info_t));
+		//bcm_print_bytes("ring_info_raw", (uchar *)&ring_info, sizeof(ring_info_t));
 		DHD_INFO(("ring_info\n"));
 
 		DHD_ERROR(("%s: max H2D queues %d\n",
