@@ -210,6 +210,8 @@ dtb-$(CONFIG_ARCH_SDM660) += sdm660-sim.dtb \
 	sdm660-pm660a-headset-jacktype-no-rcm.dtb \
 	sdm660-usbc-audio-mtp.dtb \
 	sdm660-usbc-audio-rcm.dtb \
+	sdm660-fhd-cdp.dtb \
+	sdm660-pm660a-fhd-cdp.dtb \
 	sdm658-mtp.dtb \
 	sdm658-cdp.dtb \
 	sdm658-rcm.dtb \
