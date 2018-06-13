@@ -703,6 +703,7 @@ err:
 static int msm_audio_smmu_init(struct device *dev)
 {
 	struct dma_iommu_mapping *mapping;
+	struct iommu_group *grp = NULL;
 	int ret;
 
 	mapping = arm_iommu_create_mapping(&platform_bus_type,
@@ -710,6 +711,12 @@ static int msm_audio_smmu_init(struct device *dev)
 					   MSM_AUDIO_ION_VA_LEN);
 	if (IS_ERR(mapping))
 		return PTR_ERR(mapping);
+
+	if (!dev->iommu_group) {
+		grp = iommu_group_get_for_dev(dev);
+		if (IS_ERR_OR_NULL(grp))
+			return PTR_ERR(grp);
+	}
 
 	ret = arm_iommu_attach_device(dev, mapping);
 	if (ret) {
