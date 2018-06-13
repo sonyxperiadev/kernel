@@ -25,13 +25,14 @@
 #include <sound/pcm.h>
 #include <sound/initval.h>
 #include <sound/control.h>
-#include <sound/q6asm-v2.h>
 #include <sound/pcm_params.h>
+#include <sound/timer.h>
+
 #include <asm/dma.h>
 #include <linux/dma-mapping.h>
-#include <linux/msm_audio_ion.h>
 
-#include <sound/timer.h>
+#include <dsp/q6asm-v2.h>
+#include <dsp/msm_audio_ion.h>
 
 #include "msm-compr-q6-v2.h"
 #include "msm-pcm-routing-v2.h"
