@@ -14,7 +14,7 @@ obj-$(CONFIG_SND_SOC_CPE) += snd-soc-cpe.o
 # for MSM8956 sound card driver
 snd-soc-msm8956-objs := msm8952.o msm-audio-pinctrl.o
 snd-soc-msm8956-objs += msm8952-slimbus.o msm8952-dai-links.o
-obj-$(CONFIG_SND_SOC_MSM8956) += snd-soc-msm8x16.o
+obj-$(CONFIG_SND_SOC_MSM8956) += snd-soc-msm8956.o
 
 # for MSM8996 sound card driver
 snd-soc-msm8996-objs := msm8996.o
