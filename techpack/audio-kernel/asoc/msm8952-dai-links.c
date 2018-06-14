@@ -10,15 +10,15 @@
  * GNU General Public License for more details.
  */
 
-#include <linux/mfd/wcd9xxx/core.h>
+//#include <linux/mfd/wcd9xxx/core.h>
 #include <linux/of.h>
 #include <sound/core.h>
 #include <sound/soc.h>
 #include <sound/soc-dapm.h>
 #include <sound/pcm.h>
 #include "msm8952-slimbus.h"
-#include "qdsp6v2/msm-pcm-routing-v2.h"
-#include "../codecs/wcd9335.h"
+#include "msm-pcm-routing-v2.h"
+#include "codecs/wcd9335.h"
 
 #define DEV_NAME_STR_LEN            32
 enum TASHA_LITE_DEVICE {
@@ -75,7 +75,7 @@ static struct snd_soc_dai_link msm8952_tasha_fe_dai[] = {
 		.platform_name = "msm-pcm-hostless",
 		.codec_name = "tasha_codec",
 		.codec_dai_name = "tasha_vifeedback",
-		.be_id = MSM_BACKEND_DAI_SLIMBUS_4_TX,
+		.id = MSM_BACKEND_DAI_SLIMBUS_4_TX,
 		.be_hw_params_fixup = msm_slim_4_tx_be_hw_params_fixup,
 		.ops = &msm8952_slimbus_be_ops,
 		.no_host_mode = SND_SOC_DAI_LINK_NO_HOST,
@@ -172,7 +172,7 @@ static struct snd_soc_dai_link msm8952_tasha_fe_dai[] = {
 		.ignore_pmdown_time = 1,
 		.codec_dai_name = "snd-soc-dummy-dai",
 		.codec_name = "snd-soc-dummy",
-		.be_id = MSM_FRONTEND_DAI_QCHAT,
+		.id = MSM_FRONTEND_DAI_QCHAT,
 	},
 };
 
@@ -187,7 +187,7 @@ static struct snd_soc_dai_link msm8952_tasha_be_dai[] = {
 		.codec_dai_name = "tasha_mix_rx1",
 		.no_pcm = 1,
 		.dpcm_playback = 1,
-		.be_id = MSM_BACKEND_DAI_SLIMBUS_0_RX,
+		.id = MSM_BACKEND_DAI_SLIMBUS_0_RX,
 		.init = &msm_audrx_init,
 		.be_hw_params_fixup = msm_slim_0_rx_be_hw_params_fixup,
 		/* this dainlink has playback support */
@@ -204,7 +204,7 @@ static struct snd_soc_dai_link msm8952_tasha_be_dai[] = {
 		.codec_dai_name = "tasha_tx1",
 		.no_pcm = 1,
 		.dpcm_capture = 1,
-		.be_id = MSM_BACKEND_DAI_SLIMBUS_0_TX,
+		.id = MSM_BACKEND_DAI_SLIMBUS_0_TX,
 		.be_hw_params_fixup = msm_slim_0_tx_be_hw_params_fixup,
 		.ignore_suspend = 1,
 		.ops = &msm8952_slimbus_be_ops,
@@ -218,7 +218,7 @@ static struct snd_soc_dai_link msm8952_tasha_be_dai[] = {
 		.codec_dai_name = "tasha_mix_rx1",
 		.no_pcm = 1,
 		.dpcm_playback = 1,
-		.be_id = MSM_BACKEND_DAI_SLIMBUS_1_RX,
+		.id = MSM_BACKEND_DAI_SLIMBUS_1_RX,
 		.be_hw_params_fixup = msm_slim_0_rx_be_hw_params_fixup,
 		.ops = &msm8952_slimbus_be_ops,
 		/* dai link has playback support */
@@ -234,7 +234,7 @@ static struct snd_soc_dai_link msm8952_tasha_be_dai[] = {
 		.codec_dai_name = "tasha_tx3",
 		.no_pcm = 1,
 		.dpcm_capture = 1,
-		.be_id = MSM_BACKEND_DAI_SLIMBUS_1_TX,
+		.id = MSM_BACKEND_DAI_SLIMBUS_1_TX,
 		.be_hw_params_fixup = msm_slim_1_tx_be_hw_params_fixup,
 		.ops = &msm8952_slimbus_be_ops,
 		.ignore_suspend = 1,
@@ -248,7 +248,7 @@ static struct snd_soc_dai_link msm8952_tasha_be_dai[] = {
 		.codec_dai_name = "tasha_mix_rx1",
 		.no_pcm = 1,
 		.dpcm_playback = 1,
-		.be_id = MSM_BACKEND_DAI_SLIMBUS_3_RX,
+		.id = MSM_BACKEND_DAI_SLIMBUS_3_RX,
 		.be_hw_params_fixup = msm_slim_0_rx_be_hw_params_fixup,
 		.ops = &msm8952_slimbus_be_ops,
 		/* dai link has playback support */
@@ -264,7 +264,7 @@ static struct snd_soc_dai_link msm8952_tasha_be_dai[] = {
 		.codec_dai_name = "tasha_tx1",
 		.no_pcm = 1,
 		.dpcm_capture = 1,
-		.be_id = MSM_BACKEND_DAI_SLIMBUS_3_TX,
+		.id = MSM_BACKEND_DAI_SLIMBUS_3_TX,
 		.be_hw_params_fixup = msm_slim_0_tx_be_hw_params_fixup,
 		.ops = &msm8952_slimbus_be_ops,
 		.ignore_suspend = 1,
@@ -278,7 +278,7 @@ static struct snd_soc_dai_link msm8952_tasha_be_dai[] = {
 		.codec_dai_name = "tasha_mix_rx1",
 		.no_pcm = 1,
 		.dpcm_playback = 1,
-		.be_id = MSM_BACKEND_DAI_SLIMBUS_4_RX,
+		.id = MSM_BACKEND_DAI_SLIMBUS_4_RX,
 		.be_hw_params_fixup = msm_slim_0_rx_be_hw_params_fixup,
 		.ops = &msm8952_slimbus_be_ops,
 		/* dai link has playback support */
@@ -294,7 +294,7 @@ static struct snd_soc_dai_link msm8952_tasha_be_dai[] = {
 		.codec_dai_name = "tasha_rx3",
 		.no_pcm = 1,
 		.dpcm_playback = 1,
-		.be_id = MSM_BACKEND_DAI_SLIMBUS_5_RX,
+		.id = MSM_BACKEND_DAI_SLIMBUS_5_RX,
 		.be_hw_params_fixup = msm_slim_5_rx_be_hw_params_fixup,
 		.ops = &msm8952_slimbus_be_ops,
 		/* dai link has playback support */
@@ -311,7 +311,7 @@ static struct snd_soc_dai_link msm8952_tasha_be_dai[] = {
 		.codec_dai_name = "tasha_mad1",
 		.no_pcm = 1,
 		.dpcm_capture = 1,
-		.be_id = MSM_BACKEND_DAI_SLIMBUS_5_TX,
+		.id = MSM_BACKEND_DAI_SLIMBUS_5_TX,
 		.be_hw_params_fixup = msm_slim_5_tx_be_hw_params_fixup,
 		.ops = &msm8952_slimbus_be_ops,
 		.ignore_suspend = 1,
@@ -326,7 +326,7 @@ static struct snd_soc_dai_link msm8952_tasha_be_dai[] = {
 		.codec_dai_name = "tasha_rx4",
 		.no_pcm = 1,
 		.dpcm_playback = 1,
-		.be_id = MSM_BACKEND_DAI_SLIMBUS_6_RX,
+		.id = MSM_BACKEND_DAI_SLIMBUS_6_RX,
 		.be_hw_params_fixup = msm_slim_6_rx_be_hw_params_fixup,
 		.ops = &msm8952_slimbus_be_ops,
 		/* dai link has playback support */
@@ -345,7 +345,7 @@ static struct snd_soc_dai_link msm8952_tomtom_fe_dai[] = {
 		.codec_name = "tomtom_codec",
 		.codec_dai_name = "tomtom_vifeedback",
 		.dpcm_capture = 1,
-		.be_id = MSM_BACKEND_DAI_SLIMBUS_4_TX,
+		.id = MSM_BACKEND_DAI_SLIMBUS_4_TX,
 		.be_hw_params_fixup = msm_slim_4_tx_be_hw_params_fixup,
 		.ops = &msm8952_slimbus_be_ops,
 		.no_host_mode = SND_SOC_DAI_LINK_NO_HOST,
@@ -380,7 +380,7 @@ static struct snd_soc_dai_link msm8952_tomtom_be_dai[] = {
 		.codec_dai_name	= "tomtom_rx1",
 		.no_pcm = 1,
 		.dpcm_playback = 1,
-		.be_id = MSM_BACKEND_DAI_SLIMBUS_0_RX,
+		.id = MSM_BACKEND_DAI_SLIMBUS_0_RX,
 		.init = &msm_audrx_init,
 		.be_hw_params_fixup = msm_slim_0_rx_be_hw_params_fixup,
 		.ignore_pmdown_time = 1, /* dai link has playback support */
@@ -396,7 +396,7 @@ static struct snd_soc_dai_link msm8952_tomtom_be_dai[] = {
 		.codec_dai_name = "tomtom_tx1",
 		.no_pcm = 1,
 		.dpcm_capture = 1,
-		.be_id = MSM_BACKEND_DAI_SLIMBUS_0_TX,
+		.id = MSM_BACKEND_DAI_SLIMBUS_0_TX,
 		.be_hw_params_fixup = msm_slim_0_tx_be_hw_params_fixup,
 		.ignore_suspend = 1,
 		.ops = &msm8952_slimbus_be_ops,
@@ -410,7 +410,7 @@ static struct snd_soc_dai_link msm8952_tomtom_be_dai[] = {
 		.codec_dai_name	= "tomtom_rx1",
 		.no_pcm = 1,
 		.dpcm_playback = 1,
-		.be_id = MSM_BACKEND_DAI_SLIMBUS_1_RX,
+		.id = MSM_BACKEND_DAI_SLIMBUS_1_RX,
 		.be_hw_params_fixup = msm_slim_0_rx_be_hw_params_fixup,
 		.ops = &msm8952_slimbus_be_ops,
 		/* dai link has playback support */
@@ -426,7 +426,7 @@ static struct snd_soc_dai_link msm8952_tomtom_be_dai[] = {
 		.codec_dai_name	= "tomtom_tx1",
 		.no_pcm = 1,
 		.dpcm_capture = 1,
-		.be_id = MSM_BACKEND_DAI_SLIMBUS_1_TX,
+		.id = MSM_BACKEND_DAI_SLIMBUS_1_TX,
 		.be_hw_params_fixup = msm_slim_0_tx_be_hw_params_fixup,
 		.ops = &msm8952_slimbus_be_ops,
 		.ignore_suspend = 1,
@@ -440,7 +440,7 @@ static struct snd_soc_dai_link msm8952_tomtom_be_dai[] = {
 		.codec_dai_name	= "tomtom_rx1",
 		.no_pcm = 1,
 		.dpcm_playback = 1,
-		.be_id = MSM_BACKEND_DAI_SLIMBUS_3_RX,
+		.id = MSM_BACKEND_DAI_SLIMBUS_3_RX,
 		.be_hw_params_fixup = msm_slim_0_rx_be_hw_params_fixup,
 		.ops = &msm8952_slimbus_be_ops,
 		/* dai link has playback support */
@@ -456,7 +456,7 @@ static struct snd_soc_dai_link msm8952_tomtom_be_dai[] = {
 		.codec_dai_name	= "tomtom_tx1",
 		.no_pcm = 1,
 		.dpcm_capture = 1,
-		.be_id = MSM_BACKEND_DAI_SLIMBUS_3_TX,
+		.id = MSM_BACKEND_DAI_SLIMBUS_3_TX,
 		.be_hw_params_fixup = msm_slim_0_tx_be_hw_params_fixup,
 		.ops = &msm8952_slimbus_be_ops,
 		.ignore_suspend = 1,
@@ -470,7 +470,7 @@ static struct snd_soc_dai_link msm8952_tomtom_be_dai[] = {
 		.codec_dai_name	= "tomtom_rx1",
 		.no_pcm = 1,
 		.dpcm_playback = 1,
-		.be_id = MSM_BACKEND_DAI_SLIMBUS_4_RX,
+		.id = MSM_BACKEND_DAI_SLIMBUS_4_RX,
 		.be_hw_params_fixup = msm_slim_0_rx_be_hw_params_fixup,
 		.ops = &msm8952_slimbus_be_ops,
 		/* dai link has playback support */
@@ -488,7 +488,7 @@ static struct snd_soc_dai_link msm8952_tomtom_be_dai[] = {
 		.no_pcm = 1,
 		.dpcm_capture = 1,
 		.async_ops = ASYNC_DPCM_SND_SOC_PREPARE,
-		.be_id = MSM_BACKEND_DAI_SLIMBUS_5_TX,
+		.id = MSM_BACKEND_DAI_SLIMBUS_5_TX,
 		.be_hw_params_fixup = msm_slim_5_tx_be_hw_params_fixup,
 		.ignore_suspend = 1,
 	},
@@ -511,7 +511,7 @@ static struct snd_soc_dai_link msm8952_common_fe_dai[] = {
 		.dpcm_capture = 1,
 		/* this dai link has playback support */
 		.ignore_pmdown_time = 1,
-		.be_id = MSM_FRONTEND_DAI_MULTIMEDIA1
+		.id = MSM_FRONTEND_DAI_MULTIMEDIA1
 	},
 	{/* hw:x,1 */
 		.name = "MSM8X16 Media2",
@@ -528,7 +528,7 @@ static struct snd_soc_dai_link msm8952_common_fe_dai[] = {
 		.ignore_suspend = 1,
 		/* this dai link has playback support */
 		.ignore_pmdown_time = 1,
-		.be_id = MSM_FRONTEND_DAI_MULTIMEDIA2,
+		.id = MSM_FRONTEND_DAI_MULTIMEDIA2,
 	},
 	{/* hw:x,2 */
 		.name = "Circuit-Switch Voice",
@@ -546,7 +546,7 @@ static struct snd_soc_dai_link msm8952_common_fe_dai[] = {
 		.ignore_suspend = 1,
 		/* this dai link has playback support */
 		.ignore_pmdown_time = 1,
-		.be_id = MSM_FRONTEND_DAI_CS_VOICE,
+		.id = MSM_FRONTEND_DAI_CS_VOICE,
 	},
 	{/* hw:x,3 */
 		.name = "MSM VoIP",
@@ -563,7 +563,7 @@ static struct snd_soc_dai_link msm8952_common_fe_dai[] = {
 		.ignore_suspend = 1,
 		/* this dai link has playback support */
 		.ignore_pmdown_time = 1,
-		.be_id = MSM_FRONTEND_DAI_VOIP,
+		.id = MSM_FRONTEND_DAI_VOIP,
 	},
 	{/* hw:x,4 */
 		.name = "MSM8X16 ULL",
@@ -579,7 +579,7 @@ static struct snd_soc_dai_link msm8952_common_fe_dai[] = {
 		.ignore_suspend = 1,
 		/* this dai link has playback support */
 		.ignore_pmdown_time = 1,
-		.be_id = MSM_FRONTEND_DAI_MULTIMEDIA3,
+		.id = MSM_FRONTEND_DAI_MULTIMEDIA3,
 	},
 	/* Hostless PCM purpose */
 	{/* hw:x,5 */
@@ -651,7 +651,7 @@ static struct snd_soc_dai_link msm8952_common_fe_dai[] = {
 		.ignore_suspend = 1,
 		.ignore_pmdown_time = 1,
 		 /* this dai link has playback support */
-		.be_id = MSM_FRONTEND_DAI_MULTIMEDIA4,
+		.id = MSM_FRONTEND_DAI_MULTIMEDIA4,
 	},
 	{/* hw:x,10 */
 		.name = "AUXPCM Hostless",
@@ -701,7 +701,7 @@ static struct snd_soc_dai_link msm8952_common_fe_dai[] = {
 		.ignore_suspend = 1,
 		/* this dai link has playback support */
 		.ignore_pmdown_time = 1,
-		.be_id = MSM_FRONTEND_DAI_MULTIMEDIA5,
+		.id = MSM_FRONTEND_DAI_MULTIMEDIA5,
 	},
 	{/* hw:x,13 */
 		.name = "Voice2",
@@ -719,7 +719,7 @@ static struct snd_soc_dai_link msm8952_common_fe_dai[] = {
 		.ignore_pmdown_time = 1,
 		.codec_dai_name = "snd-soc-dummy-dai",
 		.codec_name = "snd-soc-dummy",
-		.be_id = MSM_FRONTEND_DAI_VOICE2,
+		.id = MSM_FRONTEND_DAI_VOICE2,
 	},
 	{/* hw:x,14 */
 		.name = "MSM8952 Media9",
@@ -736,7 +736,7 @@ static struct snd_soc_dai_link msm8952_common_fe_dai[] = {
 		.ignore_suspend = 1,
 		/* This dailink has playback support */
 		.ignore_pmdown_time = 1,
-		.be_id = MSM_FRONTEND_DAI_MULTIMEDIA9,
+		.id = MSM_FRONTEND_DAI_MULTIMEDIA9,
 	},
 	{ /* hw:x,15 */
 		.name = "VoLTE",
@@ -754,7 +754,7 @@ static struct snd_soc_dai_link msm8952_common_fe_dai[] = {
 		.ignore_pmdown_time = 1,
 		.codec_dai_name = "snd-soc-dummy-dai",
 		.codec_name = "snd-soc-dummy",
-		.be_id = MSM_FRONTEND_DAI_VOLTE,
+		.id = MSM_FRONTEND_DAI_VOLTE,
 	},
 	{ /* hw:x,16 */
 		.name = "VoWLAN",
@@ -771,7 +771,7 @@ static struct snd_soc_dai_link msm8952_common_fe_dai[] = {
 		.ignore_pmdown_time = 1,
 		.codec_dai_name = "snd-soc-dummy-dai",
 		.codec_name = "snd-soc-dummy",
-		.be_id = MSM_FRONTEND_DAI_VOWLAN,
+		.id = MSM_FRONTEND_DAI_VOWLAN,
 	},
 	{/* hw:x,17 */
 		.name = "INT_HFP_BT Hostless",
@@ -806,7 +806,7 @@ static struct snd_soc_dai_link msm8952_common_fe_dai[] = {
 		.no_host_mode = SND_SOC_DAI_LINK_NO_HOST,
 		/* this dai link has playback support */
 		.ignore_pmdown_time = 1,
-		.be_id = MSM_FRONTEND_DAI_MULTIMEDIA6,
+		.id = MSM_FRONTEND_DAI_MULTIMEDIA6,
 	},
 	/* LSM FE */
 	{/* hw:x,19 */
@@ -823,7 +823,7 @@ static struct snd_soc_dai_link msm8952_common_fe_dai[] = {
 		.ignore_pmdown_time = 1,
 		.codec_dai_name = "snd-soc-dummy-dai",
 		.codec_name = "snd-soc-dummy",
-		.be_id = MSM_FRONTEND_DAI_LSM1,
+		.id = MSM_FRONTEND_DAI_LSM1,
 	},
 	{/* hw:x,20 */
 		.name = "Listen 2 Audio Service",
@@ -839,7 +839,7 @@ static struct snd_soc_dai_link msm8952_common_fe_dai[] = {
 		.ignore_pmdown_time = 1,
 		.codec_dai_name = "snd-soc-dummy-dai",
 		.codec_name = "snd-soc-dummy",
-		.be_id = MSM_FRONTEND_DAI_LSM2,
+		.id = MSM_FRONTEND_DAI_LSM2,
 	},
 	{/* hw:x,21 */
 		.name = "Listen 3 Audio Service",
@@ -855,7 +855,7 @@ static struct snd_soc_dai_link msm8952_common_fe_dai[] = {
 		.ignore_pmdown_time = 1,
 		.codec_dai_name = "snd-soc-dummy-dai",
 		.codec_name = "snd-soc-dummy",
-		.be_id = MSM_FRONTEND_DAI_LSM3,
+		.id = MSM_FRONTEND_DAI_LSM3,
 	},
 	{/* hw:x,22 */
 		.name = "Listen 4 Audio Service",
@@ -871,7 +871,7 @@ static struct snd_soc_dai_link msm8952_common_fe_dai[] = {
 		.ignore_pmdown_time = 1,
 		.codec_dai_name = "snd-soc-dummy-dai",
 		.codec_name = "snd-soc-dummy",
-		.be_id = MSM_FRONTEND_DAI_LSM4,
+		.id = MSM_FRONTEND_DAI_LSM4,
 	},
 	{/* hw:x,23 */
 		.name = "Listen 5 Audio Service",
@@ -887,7 +887,7 @@ static struct snd_soc_dai_link msm8952_common_fe_dai[] = {
 		.ignore_pmdown_time = 1,
 		.codec_dai_name = "snd-soc-dummy-dai",
 		.codec_name = "snd-soc-dummy",
-		.be_id = MSM_FRONTEND_DAI_LSM5,
+		.id = MSM_FRONTEND_DAI_LSM5,
 	},
 	{/* hw:x,24 */
 		.name = "MSM8X16 Compress2",
@@ -903,7 +903,7 @@ static struct snd_soc_dai_link msm8952_common_fe_dai[] = {
 		.ignore_suspend = 1,
 		/* this dai link has playback support */
 		.ignore_pmdown_time = 1,
-		.be_id = MSM_FRONTEND_DAI_MULTIMEDIA7,
+		.id = MSM_FRONTEND_DAI_MULTIMEDIA7,
 	},
 	{/* hw:x,25 */
 		.name = "SLIMBUS_3 Hostless",
@@ -967,7 +967,7 @@ static struct snd_soc_dai_link msm8952_common_fe_dai[] = {
 		.ignore_suspend = 1,
 		.ignore_pmdown_time = 1,
 		 /* this dai link has playback support */
-		.be_id = MSM_FRONTEND_DAI_MULTIMEDIA10,
+		.id = MSM_FRONTEND_DAI_MULTIMEDIA10,
 	},
 	{/* hw:x,29 */
 		.name = "MSM8X16 Compress4",
@@ -983,7 +983,7 @@ static struct snd_soc_dai_link msm8952_common_fe_dai[] = {
 		.ignore_suspend = 1,
 		.ignore_pmdown_time = 1,
 		 /* this dai link has playback support */
-		.be_id = MSM_FRONTEND_DAI_MULTIMEDIA11,
+		.id = MSM_FRONTEND_DAI_MULTIMEDIA11,
 	},
 	{/* hw:x,30 */
 		.name = "MSM8X16 Compress5",
@@ -999,7 +999,7 @@ static struct snd_soc_dai_link msm8952_common_fe_dai[] = {
 		.ignore_suspend = 1,
 		.ignore_pmdown_time = 1,
 		 /* this dai link has playback support */
-		.be_id = MSM_FRONTEND_DAI_MULTIMEDIA12,
+		.id = MSM_FRONTEND_DAI_MULTIMEDIA12,
 	},
 	{/* hw:x,31 */
 		.name = "MSM8X16 Compress6",
@@ -1015,7 +1015,7 @@ static struct snd_soc_dai_link msm8952_common_fe_dai[] = {
 		.ignore_suspend = 1,
 		.ignore_pmdown_time = 1,
 		 /* this dai link has playback support */
-		.be_id = MSM_FRONTEND_DAI_MULTIMEDIA13,
+		.id = MSM_FRONTEND_DAI_MULTIMEDIA13,
 	},
 	{/* hw:x,32 */
 		.name = "MSM8X16 Compress7",
@@ -1031,7 +1031,7 @@ static struct snd_soc_dai_link msm8952_common_fe_dai[] = {
 		.ignore_suspend = 1,
 		.ignore_pmdown_time = 1,
 		 /* this dai link has playback support */
-		.be_id = MSM_FRONTEND_DAI_MULTIMEDIA14,
+		.id = MSM_FRONTEND_DAI_MULTIMEDIA14,
 	},
 	{/* hw:x,33 */
 		.name = "MSM8X16 Compress8",
@@ -1047,7 +1047,7 @@ static struct snd_soc_dai_link msm8952_common_fe_dai[] = {
 		.ignore_suspend = 1,
 		.ignore_pmdown_time = 1,
 		 /* this dai link has playback support */
-		.be_id = MSM_FRONTEND_DAI_MULTIMEDIA15,
+		.id = MSM_FRONTEND_DAI_MULTIMEDIA15,
 	},
 	{/* hw:x,34 */
 		.name = "MSM8X16 Compress9",
@@ -1063,7 +1063,7 @@ static struct snd_soc_dai_link msm8952_common_fe_dai[] = {
 		.ignore_suspend = 1,
 		.ignore_pmdown_time = 1,
 		 /* this dai link has playback support */
-		.be_id = MSM_FRONTEND_DAI_MULTIMEDIA16,
+		.id = MSM_FRONTEND_DAI_MULTIMEDIA16,
 	},
 	{/* hw:x,35 */
 		.name = "VoiceMMode1",
@@ -1080,7 +1080,7 @@ static struct snd_soc_dai_link msm8952_common_fe_dai[] = {
 		.ignore_pmdown_time = 1,
 		.codec_dai_name = "snd-soc-dummy-dai",
 		.codec_name = "snd-soc-dummy",
-		.be_id = MSM_FRONTEND_DAI_VOICEMMODE1,
+		.id = MSM_FRONTEND_DAI_VOICEMMODE1,
 	},
 	{/* hw:x,36 */
 		.name = "VoiceMMode2",
@@ -1097,7 +1097,7 @@ static struct snd_soc_dai_link msm8952_common_fe_dai[] = {
 		.ignore_pmdown_time = 1,
 		.codec_dai_name = "snd-soc-dummy-dai",
 		.codec_name = "snd-soc-dummy",
-		.be_id = MSM_FRONTEND_DAI_VOICEMMODE2,
+		.id = MSM_FRONTEND_DAI_VOICEMMODE2,
 	},
 };
 
@@ -1112,7 +1112,7 @@ static struct snd_soc_dai_link msm8952_common_be_dai[] = {
 		.codec_name = "snd-soc-dummy",
 		.no_pcm = 1,
 		.dpcm_playback = 1,
-		.be_id = MSM_BACKEND_DAI_QUATERNARY_MI2S_RX,
+		.id = MSM_BACKEND_DAI_QUATERNARY_MI2S_RX,
 		.be_hw_params_fixup = msm_be_hw_params_fixup,
 		.ops = &msm8952_quat_mi2s_be_ops,
 		.ignore_pmdown_time = 1, /* dai link has playback support */
@@ -1128,7 +1128,7 @@ static struct snd_soc_dai_link msm8952_common_be_dai[] = {
 		.codec_dai_name = "msm-stub-rx",
 		.no_pcm = 1,
 		.dpcm_playback = 1,
-		.be_id = MSM_BACKEND_DAI_AUXPCM_RX,
+		.id = MSM_BACKEND_DAI_AUXPCM_RX,
 		.be_hw_params_fixup = msm_auxpcm_be_params_fixup,
 		.ops = &msm_pri_auxpcm_be_ops,
 		.ignore_pmdown_time = 1,
@@ -1143,7 +1143,7 @@ static struct snd_soc_dai_link msm8952_common_be_dai[] = {
 		.codec_dai_name = "msm-stub-tx",
 		.no_pcm = 1,
 		.dpcm_capture = 1,
-		.be_id = MSM_BACKEND_DAI_AUXPCM_TX,
+		.id = MSM_BACKEND_DAI_AUXPCM_TX,
 		.be_hw_params_fixup = msm_auxpcm_be_params_fixup,
 		.ops = &msm_pri_auxpcm_be_ops,
 		.ignore_suspend = 1,
@@ -1157,7 +1157,7 @@ static struct snd_soc_dai_link msm8952_common_be_dai[] = {
 		.codec_name = "msm-stub-codec.1",
 		.codec_dai_name = "msm-stub-rx",
 		.no_pcm = 1,
-		.be_id = MSM_BACKEND_DAI_SEC_AUXPCM_RX,
+		.id = MSM_BACKEND_DAI_SEC_AUXPCM_RX,
 		.be_hw_params_fixup = msm_auxpcm_be_params_fixup,
 		.ops = &msm_sec_auxpcm_be_ops,
 		.ignore_pmdown_time = 1,
@@ -1172,7 +1172,7 @@ static struct snd_soc_dai_link msm8952_common_be_dai[] = {
 		.codec_name = "msm-stub-codec.1",
 		.codec_dai_name = "msm-stub-tx",
 		.no_pcm = 1,
-		.be_id = MSM_BACKEND_DAI_SEC_AUXPCM_TX,
+		.id = MSM_BACKEND_DAI_SEC_AUXPCM_TX,
 		.be_hw_params_fixup = msm_auxpcm_be_params_fixup,
 		.ops = &msm_sec_auxpcm_be_ops,
 		.ignore_suspend = 1,
@@ -1186,7 +1186,7 @@ static struct snd_soc_dai_link msm8952_common_be_dai[] = {
 		.codec_name = "snd-soc-dummy",
 		.no_pcm = 1,
 		.dpcm_capture = 1,
-		.be_id = MSM_BACKEND_DAI_QUATERNARY_MI2S_TX,
+		.id = MSM_BACKEND_DAI_QUATERNARY_MI2S_TX,
 		.be_hw_params_fixup = msm_be_hw_params_fixup,
 		.ops = &msm8952_quat_mi2s_be_ops,
 		.ignore_suspend = 1,
@@ -1200,7 +1200,7 @@ static struct snd_soc_dai_link msm8952_common_be_dai[] = {
 		.codec_dai_name	= "msm-stub-rx",
 		.no_pcm = 1,
 		.dpcm_playback = 1,
-		.be_id = MSM_BACKEND_DAI_INT_BT_SCO_RX,
+		.id = MSM_BACKEND_DAI_INT_BT_SCO_RX,
 		.be_hw_params_fixup = msm_btsco_be_hw_params_fixup,
 		/* this dai link has playback support */
 		.ignore_pmdown_time = 1,
@@ -1215,7 +1215,7 @@ static struct snd_soc_dai_link msm8952_common_be_dai[] = {
 		.codec_dai_name	= "msm-stub-tx",
 		.no_pcm = 1,
 		.dpcm_capture = 1,
-		.be_id = MSM_BACKEND_DAI_INT_BT_SCO_TX,
+		.id = MSM_BACKEND_DAI_INT_BT_SCO_TX,
 		.be_hw_params_fixup = msm_btsco_be_hw_params_fixup,
 		.ignore_suspend = 1,
 	},
@@ -1228,7 +1228,7 @@ static struct snd_soc_dai_link msm8952_common_be_dai[] = {
 		.codec_dai_name = "msm-stub-rx",
 		.no_pcm = 1,
 		.dpcm_playback = 1,
-		.be_id = MSM_BACKEND_DAI_INT_FM_RX,
+		.id = MSM_BACKEND_DAI_INT_FM_RX,
 		.be_hw_params_fixup = msm_be_hw_params_fixup,
 		/* this dai link has playback support */
 		.ignore_pmdown_time = 1,
@@ -1243,7 +1243,7 @@ static struct snd_soc_dai_link msm8952_common_be_dai[] = {
 		.codec_dai_name = "msm-stub-tx",
 		.no_pcm = 1,
 		.dpcm_capture = 1,
-		.be_id = MSM_BACKEND_DAI_INT_FM_TX,
+		.id = MSM_BACKEND_DAI_INT_FM_TX,
 		.be_hw_params_fixup = msm_be_hw_params_fixup,
 		.ignore_suspend = 1,
 	},
@@ -1256,7 +1256,7 @@ static struct snd_soc_dai_link msm8952_common_be_dai[] = {
 		.codec_dai_name = "msm-stub-rx",
 		.no_pcm = 1,
 		.dpcm_playback = 1,
-		.be_id = MSM_BACKEND_DAI_AFE_PCM_RX,
+		.id = MSM_BACKEND_DAI_AFE_PCM_RX,
 		.be_hw_params_fixup = msm_proxy_rx_be_hw_params_fixup,
 		/* this dai link has playback support */
 		.ignore_pmdown_time = 1,
@@ -1271,7 +1271,7 @@ static struct snd_soc_dai_link msm8952_common_be_dai[] = {
 		.codec_dai_name = "msm-stub-tx",
 		.no_pcm = 1,
 		.dpcm_capture = 1,
-		.be_id = MSM_BACKEND_DAI_AFE_PCM_TX,
+		.id = MSM_BACKEND_DAI_AFE_PCM_TX,
 		.be_hw_params_fixup = msm_proxy_tx_be_hw_params_fixup,
 		.ignore_suspend = 1,
 	},
@@ -1285,7 +1285,7 @@ static struct snd_soc_dai_link msm8952_common_be_dai[] = {
 		.codec_dai_name = "msm-stub-tx",
 		.no_pcm = 1,
 		.dpcm_capture = 1,
-		.be_id = MSM_BACKEND_DAI_INCALL_RECORD_TX,
+		.id = MSM_BACKEND_DAI_INCALL_RECORD_TX,
 		.be_hw_params_fixup = msm_be_hw_params_fixup,
 		.ignore_suspend = 1,
 	},
@@ -1299,7 +1299,7 @@ static struct snd_soc_dai_link msm8952_common_be_dai[] = {
 		.codec_dai_name = "msm-stub-tx",
 		.no_pcm = 1,
 		.dpcm_capture = 1,
-		.be_id = MSM_BACKEND_DAI_INCALL_RECORD_RX,
+		.id = MSM_BACKEND_DAI_INCALL_RECORD_RX,
 		.be_hw_params_fixup = msm_be_hw_params_fixup,
 		.ignore_suspend = 1,
 	},
@@ -1313,7 +1313,7 @@ static struct snd_soc_dai_link msm8952_common_be_dai[] = {
 		.codec_dai_name = "msm-stub-rx",
 		.no_pcm = 1,
 		.dpcm_playback = 1,
-		.be_id = MSM_BACKEND_DAI_VOICE_PLAYBACK_TX,
+		.id = MSM_BACKEND_DAI_VOICE_PLAYBACK_TX,
 		.be_hw_params_fixup = msm_be_hw_params_fixup,
 		.ignore_suspend = 1,
 	},
@@ -1327,7 +1327,7 @@ static struct snd_soc_dai_link msm8952_common_be_dai[] = {
 		.codec_dai_name = "msm-stub-rx",
 		.no_pcm = 1,
 		.dpcm_playback = 1,
-		.be_id = MSM_BACKEND_DAI_VOICE2_PLAYBACK_TX,
+		.id = MSM_BACKEND_DAI_VOICE2_PLAYBACK_TX,
 		.be_hw_params_fixup = msm_be_hw_params_fixup,
 		.ignore_suspend = 1,
 	},
@@ -1341,7 +1341,7 @@ static struct snd_soc_dai_link msm8952_common_be_dai[] = {
 		.codec_name = "snd-soc-dummy",
 		.no_pcm = 1,
 		.dpcm_capture = 1,
-		.be_id = MSM_BACKEND_DAI_QUINARY_MI2S_TX,
+		.id = MSM_BACKEND_DAI_QUINARY_MI2S_TX,
 		.be_hw_params_fixup = msm_be_hw_params_fixup,
 		.ops = &msm8952_quin_mi2s_be_ops,
 		.ignore_suspend = 1,
@@ -1358,7 +1358,7 @@ static struct snd_soc_dai_link msm8952_hdmi_dba_dai_link[] = {
 		.codec_name = "msm-hdmi-dba-codec-rx",
 		.no_pcm = 1,
 		.dpcm_playback = 1,
-		.be_id = MSM_BACKEND_DAI_QUINARY_MI2S_RX,
+		.id = MSM_BACKEND_DAI_QUINARY_MI2S_RX,
 		.be_hw_params_fixup = msm_quin_be_hw_params_fixup,
 		.ops = &msm8952_quin_mi2s_be_ops,
 		.ignore_pmdown_time = 1, /* dai link has playback support */
@@ -1375,7 +1375,7 @@ static struct snd_soc_dai_link msm8952_quin_dai_link[] = {
 		.codec_name = "snd-soc-dummy",
 		.no_pcm = 1,
 		.dpcm_playback = 1,
-		.be_id = MSM_BACKEND_DAI_QUINARY_MI2S_RX,
+		.id = MSM_BACKEND_DAI_QUINARY_MI2S_RX,
 		.be_hw_params_fixup = msm_quin_be_hw_params_fixup,
 		.ops = &msm8952_quin_mi2s_be_ops,
 		.ignore_pmdown_time = 1, /* dai link has playback support */
