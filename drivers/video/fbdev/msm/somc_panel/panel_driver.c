@@ -357,11 +357,6 @@ static int mdss_dsi_panel_reset_seq(struct mdss_panel_data *pdata, int enable)
 		return rc;
 	}
 
-	if (pinfo->cont_splash_enabled) {
-		pr_debug("%s: Skipping reset in cont splash\n", __func__);
-		return 0;
-	}
-
 	pw_seq = (enable) ? &ctrl_pdata->spec_pdata->on_seq :
 				&ctrl_pdata->spec_pdata->off_seq;
 
@@ -3438,7 +3433,6 @@ int mdss_dsi_panel_init(struct device_node *node,
 	struct mdss_panel_info *pinfo;
 	struct poll_ctrl *polling = NULL;
 	struct mdss_panel_specific_pdata *spec_pdata = NULL;
-	bool cont_splash_enabled;
 	u32 index;
 
 	if (!node || !ctrl_pdata) {
