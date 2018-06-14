@@ -28,6 +28,10 @@
 #define CLK_DIS_WAIT_MASK	(0xF << 12)
 #define CLK_DIS_WAIT_SHIFT	(12)
 #define RETAIN_FF_ENABLE_MASK	BIT(11)
+#define EN_FEW_WAIT_MASK	(0xF << 16)
+#define EN_FEW_WAIT_SHIFT	(16)
+#define EN_REST_WAIT_MASK	(0xF << 20)
+#define EN_REST_WAIT_SHIFT	(20)
 #define SW_OVERRIDE_MASK	BIT(2)
 #define HW_CONTROL_MASK		BIT(1)
 #define SW_COLLAPSE_MASK	BIT(0)
@@ -887,6 +891,7 @@ static int gdsc_probe(struct platform_device *pdev)
 	struct regulator_init_data *init_data = NULL;
 	struct gdsc *sc;
 	uint32_t regval, clk_dis_wait_val = 0;
+	uint32_t en_few_wait_val, en_rest_wait_val;
 	int i, ret;
 
 	sc = devm_kzalloc(&pdev->dev, sizeof(*sc), GFP_KERNEL);
@@ -930,6 +935,22 @@ static int gdsc_probe(struct platform_device *pdev)
 		/* Configure wait time between states. */
 		regval &= ~(CLK_DIS_WAIT_MASK);
 		regval |= clk_dis_wait_val;
+	}
+
+	if (!of_property_read_u32(pdev->dev.of_node, "qcom,en-few-wait-val",
+				  &en_few_wait_val)) {
+		en_few_wait_val <<= EN_FEW_WAIT_SHIFT;
+
+		regval &= ~(EN_FEW_WAIT_MASK);
+		regval |= en_few_wait_val;
+	}
+
+	if (!of_property_read_u32(pdev->dev.of_node, "qcom,en-rest-wait-val",
+				  &en_rest_wait_val)) {
+		en_rest_wait_val <<= EN_REST_WAIT_SHIFT;
+
+		regval &= ~(EN_REST_WAIT_MASK);
+		regval |= en_rest_wait_val;
 	}
 
 	regmap_write(sc->regmap, REG_OFFSET, regval);
