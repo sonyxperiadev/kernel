@@ -87,6 +87,7 @@ obj-$(CONFIG_INPUT_WM831X_ON)		+= wm831x-on.o
 obj-$(CONFIG_INPUT_XEN_KBDDEV_FRONTEND)	+= xen-kbdfront.o
 obj-$(CONFIG_INPUT_YEALINK)		+= yealink.o
 obj-$(CONFIG_INPUT_IDEAPAD_SLIDEBAR)	+= ideapad_slidebar.o
+obj-$(CONFIG_INPUT_STMVL53L0)		+= vl53L0/
 obj-$(CONFIG_INPUT_ADUX1050)		+= adux1050.o
 obj-$(CONFIG_INPUT_S210ST0X)		+= s210st0x.o
 obj-$(CONFIG_FPC1145_PLATFORM)          += fpc1145_platform.o
