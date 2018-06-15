@@ -1063,7 +1063,7 @@
 		#reset-cells = <1>;
 	};
 
-	clock_mmss: clock-controller@c8c0000 {
+	clock_mmss_vote: clock-controller@c8c0000 {
 		compatible = "qcom,mmsscc-voters-sdm660";
 		reg = <0xc8c0000 0x40000>;
 		#clock-cells = <1>;
