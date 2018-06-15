@@ -1022,6 +1022,12 @@
 		#reset-cells = <1>;
 	};
 
+	clock_mmss: clock-controller@c8c0000 {
+		compatible = "qcom,mmsscc-voters-sdm660";
+		reg = <0xc8c0000 0x40000>;
+		#clock-cells = <1>;
+	};
+
 	clock_gpu: clock-controller@5065000 {
 		compatible = "qcom,gpu-sdm660";
 		reg = <0x5065000 0x10000>;
