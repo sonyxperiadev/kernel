@@ -522,7 +522,7 @@ int gpucc_msm8998_probe(struct platform_device *pdev)
 		return PTR_ERR(tmp);
 	}
 
-	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, 0);
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
 		dev_err(&pdev->dev, "Unable to retrieve register base\n");
 		return -ENOMEM;
