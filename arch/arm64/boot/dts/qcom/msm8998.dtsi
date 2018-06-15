@@ -870,6 +870,14 @@
 		#reset-cells = <1>;
 	};
 
+	clock_mmss_vote: vote-clock-controller@8c0000 {
+		compatible = "qcom,mmsscc-voters-8996";
+		reg = <0xc8c0000 0x40000>;
+		#clock-cells = <1>;
+		status = "ok";
+	};
+
+
 	clock_gpu: qcom,gpucc@5065000 {
 		compatible = "qcom,gpucc-msm8998";
 		reg = <0x5065000 0x9000>;

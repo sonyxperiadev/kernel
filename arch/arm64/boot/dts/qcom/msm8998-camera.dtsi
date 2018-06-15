@@ -786,7 +786,7 @@
 			<&clock_mmss MMSS_BIMC_SMMU_AXI_CLK>,
 			<&clock_mmss MMSS_CAMSS_AHB_CLK>,
 			<&clock_mmss MMSS_CAMSS_TOP_AHB_CLK>,
-			<&clock_mmss MMSS_CAMSS_JPEG0_VOTE_CLK>,
+			<&clock_mmss_vote MMSS_CAMSS_JPEG0_VOTE_CLK>,
 			<&clock_mmss MMSS_CAMSS_JPEG_AHB_CLK>,
 			<&clock_mmss MMSS_CAMSS_JPEG_AXI_CLK>;
 		qcom,clock-rates = <0 0 0 0 0 0 480000000 0 0>;
@@ -830,7 +830,7 @@
 			<&clock_mmss MMSS_BIMC_SMMU_AXI_CLK>,
 			<&clock_mmss MMSS_CAMSS_AHB_CLK>,
 			<&clock_mmss MMSS_CAMSS_TOP_AHB_CLK>,
-			<&clock_mmss MMSS_CAMSS_JPEG0_DMA_VOTE_CLK>,
+			<&clock_mmss_vote MMSS_CAMSS_JPEG0_DMA_VOTE_CLK>,
 			<&clock_mmss MMSS_CAMSS_JPEG_AHB_CLK>,
 			<&clock_mmss MMSS_CAMSS_JPEG_AXI_CLK>;
 		qcom,clock-rates = <0 0 0 0 0 0 480000000 0 0>;
