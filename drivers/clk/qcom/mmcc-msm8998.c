@@ -941,7 +941,7 @@ static struct freq_tbl ftbl_video_subcore_clk_src_vq[] = {
 
 static struct clk_rcg2 video_subcore0_clk_src = {
 	.cmd_rcgr = 0x01060,
-	.mnd_width = 8,
+	.mnd_width = 0,
 	.hid_width = 5,
 	.parent_map = mmcc_parent_map_7,
 	.freq_tbl = ftbl_video_subcore_clk_src,
@@ -950,7 +950,6 @@ static struct clk_rcg2 video_subcore0_clk_src = {
 		.parent_names = mmcc_parent_names_7,
 		.num_parents = ARRAY_SIZE(mmcc_parent_names_7),
 		.ops = &clk_rcg2_ops,
-		.flags = CLK_GET_RATE_NOCACHE,
 		VDD_DIG_FMAX_MAP4(LOWER, 100000000, LOW, 186000000,
 					NOMINAL, 360000000, HIGH, 465000000),
 	},
@@ -958,7 +957,7 @@ static struct clk_rcg2 video_subcore0_clk_src = {
 
 static struct clk_rcg2 video_subcore1_clk_src = {
 	.cmd_rcgr = 0x01080,
-	.mnd_width = 8,
+	.mnd_width = 0,
 	.hid_width = 5,
 	.parent_map = mmcc_parent_map_7,
 	.freq_tbl = ftbl_video_subcore_clk_src,
@@ -967,7 +966,6 @@ static struct clk_rcg2 video_subcore1_clk_src = {
 		.parent_names = mmcc_parent_names_7,
 		.num_parents = ARRAY_SIZE(mmcc_parent_names_7),
 		.ops = &clk_rcg2_ops,
-		.flags = CLK_GET_RATE_NOCACHE,
 		VDD_DIG_FMAX_MAP4(LOWER, 100000000, LOW, 186000000,
 					NOMINAL, 360000000, HIGH, 465000000),
 	},
