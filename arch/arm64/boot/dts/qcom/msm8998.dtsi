@@ -887,13 +887,13 @@
 		vdd_gpu_mx-supply = <&pm8998_s9_level>;
 		qcom,gfx3d_clk_src-opp-handle = <&msm_gpu>;
 		clock-names = "xo_ao", "gpll0";
-		clocks = <&clock_rpmcc RPM_CXO_A_CLK>,
+		clocks = <&clock_rpmcc RPM_XO_A_CLK_SRC>,
 			<&clock_gcc GCC_GPU_GPLL0_CLK>;
 		#clock-cells = <1>;
 	};
 
 	clock_cpu: qcom,cpu-clock-8998@179c0000 {
-		compatible = "qcom,cpu-clock-osm-msm8998-v1";
+		compatible = "qcom,clk-cpu-osm-msm8998-v1";
 		reg = <0x179c0000 0x4000>,
 		      <0x17916000 0x1000>,
 		      <0x17816000 0x1000>,
@@ -1023,9 +1023,9 @@
 			<0x00000000 0x00000000 0x00000000>,
 			<0x00000000 0x00000000 0x00000001>;
 
-		clock-names = "aux_clk", "xo_ao";
+		clock-names = "aux_clk", "xo_a";
 		clocks = <&clock_gcc HMSS_GPLL0_CLK_SRC>,
-			<&clock_rpmcc RPM_CXO_A_CLK>;
+			<&clock_rpmcc RPM_XO_A_CLK_SRC>;
 		#clock-cells = <1>;
 	};
 /* TODO: Re-enable when driver will be done
