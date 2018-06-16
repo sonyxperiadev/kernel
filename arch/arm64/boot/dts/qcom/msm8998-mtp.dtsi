@@ -11,7 +11,11 @@
  */
 
 #include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/pinctrl/qcom,pmic-gpio.h>
+#include <dt-bindings/pinctrl/qcom,pmic-mpp.h>
+
 #include "msm8998-camera-sensor-mtp.dtsi"
+
 &vendor {
 	bluetooth: bt_wcn3990 {
 		compatible = "qca,wcn3990";
@@ -100,96 +104,108 @@
 
 &pm8998_gpios {
 	/* GPIO 2 for Home Key */
-	gpio@c100 {
-		status = "okay";
-		qcom,mode = <0>;
-		qcom,pull = <0>;
-		qcom,vin-sel = <0>;
-		qcom,src-sel = <0>;
-		qcom,out-strength = <1>;
+	key_home {
+		key_home_default: key_home_default {
+			pins = "gpio2";
+			function = "normal";
+			input-enable;
+			bias-pull-up;
+			power-source = <0>;
+		};
 	};
 
 	/* GPIO 6 for Vol+ Key */
-	gpio@c500 {
-		status = "okay";
-		qcom,mode = <0>;
-		qcom,pull = <0>;
-		qcom,vin-sel = <0>;
-		qcom,src-sel = <0>;
-		qcom,out-strength = <1>;
+	key_vol_up {
+		key_vol_up_default: key_vol_up_default {
+			pins = "gpio6";
+			function = "normal";
+			input-enable;
+			bias-pull-up;
+			power-source = <0>;
+		};
 	};
 
 	/* GPIO 7 for Snapshot Key */
-	gpio@c600 {
-		status = "okay";
-		qcom,mode = <0>;
-		qcom,pull = <0>;
-		qcom,vin-sel = <0>;
-		qcom,src-sel = <0>;
-		qcom,out-strength = <1>;
+	key_cam_snapshot {
+		key_cam_snapshot_default: key_cam_snapshot_default {
+			pins = "gpio7";
+			function = "normal";
+			input-enable;
+			bias-pull-up;
+			power-source = <0>;
+		};
 	};
 
 	/* GPIO 8 for Focus Key */
-	gpio@c700 {
-		status = "okay";
-		qcom,mode = <0>;
-		qcom,pull = <0>;
-		qcom,vin-sel = <0>;
-		qcom,src-sel = <0>;
-		qcom,out-strength = <1>;
+	key_cam_focus {
+		key_cam_focus_default: key_cam_focus_default {
+			pins = "gpio8";
+			function = "normal";
+			input-enable;
+			bias-pull-up;
+			power-source = <0>;
+		};
 	};
 
-	gpio@cc00 { /* GPIO 13 */
-		qcom,mode = <1>;
-		qcom,output-type = <0>;
-		qcom,pull = <5>;
-		qcom,vin-sel = <0>;
-		qcom,out-strength = <1>;
-		qcom,src-sel = <3>;
-		qcom,master-en = <1>;
-		status = "okay";
+	pm8998_gp13 {
+		pm8998_gpio_13: gp13 {
+			pins = "gpio13";
+			function = "func2";
+			output-low;
+			drive-push-pull;
+			bias-disable;
+			qcom,drive-strength = <PMIC_GPIO_STRENGTH_HIGH>;
+			power-source = <0>;
+		};
 	};
 
-	gpio@d200 { /* GPIO 19 - wil6210 refclk3_en */
-		qcom,mode = <0>;		/* Input */
-		qcom,pull = <5>;		/* No Pull */
-		qcom,vin-sel = <1>;		/* VIN1 GPIO_MV */
-		qcom,src-sel = <0>;		/* GPIO */
-		qcom,invert = <0>;		/* Invert */
-		qcom,master-en = <1>;		/* Enable GPIO */
-		status = "okay";
+	/* GPIO 19 - wil6210 refclk3_en */
+	wil6210_refclk3_en {
+		pm8998_gpio_19: wil6210_refclk3_en_default {
+			pins = "gpio19";
+			function = "normal";
+			output-low;
+			drive-push-pull;
+			bias-disable;
+			qcom,drive-strength = <PMIC_GPIO_STRENGTH_HIGH>;
+			power-source = <1>; /* VIN1 GPIO_MV */
+		};
 	};
 
 	/* GPIO 21 (NFC_CLK_REQ) */
-	gpio@d400 {
-		qcom,mode = <0>;
-		qcom,vin-sel = <1>;
-		qcom,src-sel = <0>;
-		qcom,master-en = <1>;
-		status = "okay";
+	nfc_clk {
+		nfc_clk_default: nfc_clk_default {
+			pins = "gpio21";
+			function = "normal";
+			input-enable;
+			power-source = <1>;
+		};
 	};
 
 	/* GPIO 18 SMB138X */
-	gpio@d100 {
-		qcom,mode = <0>;
-		qcom,pull = <0>;
-		qcom,vin-sel = <0>;
-		qcom,src-sel = <0>;
-		qcom,master-en = <1>;
-		status = "okay";
+	gpio_smb138x {
+		gpio_smb138x_default: gpio_smb138x_default {
+			pins = "gpio18";
+			function = "normal";
+			input-enable;
+			bias-pull-up;
+			power-source = <0>;
+		};
 	};
 };
 
 &pmi8998_gpios {
 	/* GPIO 6 for the internal QNOVO discharge FET control signal */
-	gpio@c500 {
-		status = "okay";
-		qcom,mode = <1>;
-		qcom,pull = <5>;
-		qcom,vin-sel = <0>;
-		qcom,src-sel = <2>;
-		qcom,out-strength = <1>;
-		qcom,master-en = <1>;
+	qnovo_fet {
+		qnovo_fet_default: qnovo_fet_default {
+			pins = "gpio6";
+			function = "sink";
+			output-low;
+			drive-push-pull;
+			bias-disable;
+			qcom,drive-strength = <PMIC_GPIO_STRENGTH_HIGH>;
+			power-source = <0>;
+		};
 	};
 };
 

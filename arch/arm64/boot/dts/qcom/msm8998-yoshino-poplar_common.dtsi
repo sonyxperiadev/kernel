@@ -140,38 +140,49 @@
 
 &pm8998_gpios {
 	/* GPIO_20: DTV_PWR_EN */
-	gpio@d300 {
-		qcom,src-sel = <0>;             /* GPIO */
-		qcom,mode = <1>;                /* Out */
-		qcom,output-type = <0>;         /* CMOS */
-		qcom,vin-sel = <1>;             /* 1.8V */
-		qcom,out-strength = <1>;        /* Low */
-		qcom,invert = <0>;              /* Low */
-		qcom,master-en = <1>;           /* Enable */
-		status = "okay";
+	dtv_pwr_en {
+		dtv_pwr_en_default: dtv_pwr_en_default {
+			pins = "gpio20";
+			function = "normal";
+			output-low;
+			drive-push-pull;
+			bias-disable;
+			qcom,drive-strength = <1>;
+			power-source = <1>; /* 1.8V */
+		};
 	};
 };
 
 &pmi8998_gpios {
 	/* GPIO_8: NC */
-	gpio@c700 {
-		qcom,master-en = <0>;           /* Disable */
-		status = "okay";
-	};
-
-	/* GPIO_10: NC */
-	gpio@c900 {
-		qcom,master-en = <0>;           /* Disable */
-		status = "okay";
+	pmi8998_gp8 {
+		pmi8998_gp8_default: pmi8998_gp8_default {
+			pins = "gpio8";
+			function = "normal";
+			input-enable;
+			bias-high-impedance;
+		};
 	};
 };
 
-&pm8005_gpios {
-	/* GPIO_1: NC */
-	gpio@c000 {
-		qcom,master-en = <0>;           /* Disable */
-		status = "okay";
-	};
+/* GPIO_10: 4K_DISP_DCDC_EN (NC) */
+&disp_dcdc_en_default {
+	/delete-property/ output-low;
+	/delete-property/ drive-push-pull;
+	/delete-property/ bias-disable;
+	/delete-property/ power-source;
+	input-enable;
+	bias-high-impedance;
+};
+
+/* PM8005 GPIO_1: NC */
+&ear_en_default {
+	/delete-property/ output-low;
+	/delete-property/ drive-push-pull;
+	/delete-property/ bias-disable;
+	/delete-property/ power-source;
+	input-enable;
+	bias-high-impedance;
 };
 
 /* Regulator config */
