@@ -1071,6 +1071,7 @@
 			<0 432 0>,
 			<0 432 0>;
 		interrupt-names = "ipa-irq", "bam-irq", "gsi-irq";
+		status = "ok";
 		qcom,ipa-hw-ver = <11>; /* IPA core version = IPAv3.1 */
 		qcom,ipa-hw-mode = <0>; /* IPA hw type = Normal */
 		qcom,ee = <0>;
@@ -1203,17 +1204,20 @@
 		ipa_smmu_ap: ipa_smmu_ap {
 			compatible = "qcom,ipa-smmu-ap-cb";
 			iommus = <&anoc2_smmu 0x18e0>;
+			qcom,smmu-s1-bypass;
 			qcom,iova-mapping = <0x10000000 0x40000000>;
 		};
 
 		ipa_smmu_wlan: ipa_smmu_wlan {
 			compatible = "qcom,ipa-smmu-wlan-cb";
+			qcom,smmu-s1-bypass;
 			iommus = <&anoc2_smmu 0x18e1>;
 		};
 
 		ipa_smmu_uc: ipa_smmu_uc {
 			compatible = "qcom,ipa-smmu-uc-cb";
 			iommus = <&anoc2_smmu 0x18e2>;
+			qcom,smmu-s1-bypass;
 			qcom,iova-mapping = <0x40000000 0x20000000>;
 		};
 	};
