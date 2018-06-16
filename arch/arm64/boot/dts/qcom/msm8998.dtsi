@@ -462,7 +462,7 @@
 		};
 	};
 
-	wakegic: qcom,mpm@681b8 {
+	wakegic: qcom,mpm@7781b8 {
 		compatible = "qcom,mpm-gic-msm8998", "qcom,mpm-gic";
 		reg = <0x7781b8 0x1000>, /* MSM_RPM_MPM_BASE 4K */
 		    <0x17911008 0x4>;   /* MSM_APCS_GCC_BASE 4K */
