@@ -226,6 +226,7 @@ config ARCH_SDM439
 config ARCH_MSM8998
     bool "Enable Support for Qualcomm Technologies, Inc. MSM8998"
 	depends on ARCH_QCOM
+	select ARM64_FORCE_NO_16K_GRANULE
 	select COMMON_CLK
 	select COMMON_CLK_QCOM
 	select QCOM_GDSC
