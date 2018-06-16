@@ -534,6 +534,20 @@ config ARM64_64K_PAGES
 
 endchoice
 
+config ARM64_FORCE_NO_16K_GRANULE
+	bool "Force de-advertising 16K granule support"
+	help
+	  Some big.LITTLE SoCs featuring Cortex-A53 and Cortex-A73 do
+	  support 16K granule only on the A73 cluster of CPUs: this
+	  means that the system cannot use the 16K granule, unless
+	  the A53 CPUs are disabled and never used.
+	  To avoid failing the CPU Features sanity check, force the
+	  removal of 16K granule support from the features detected
+	  in the AArch64 MMFR0 register.
+	  If you want to force un-detecting 16K pages, say Y.
+
+	  If unsure, say N.
+
 config MSM_APP_API
 	bool "API support to enable / disable app settings for MSM8996"
 	depends on ARCH_MSM8996 && (ENABLE_FP_SIMD_SETTINGS || MSM_APP_SETTINGS)
