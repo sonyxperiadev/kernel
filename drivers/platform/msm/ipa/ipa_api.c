@@ -3496,7 +3496,11 @@ static int __init ipa_module_init(void)
 	/* Register as a platform device driver */
 	return platform_driver_register(&ipa_plat_drv);
 }
+#ifdef CONFIG_QCOM_BUS_CONFIG_RPMH
 subsys_initcall(ipa_module_init);
+#else
+fs_initcall(ipa_module_init);
+#endif
 
 MODULE_LICENSE("GPL v2");
 MODULE_DESCRIPTION("IPA HW device driver");
