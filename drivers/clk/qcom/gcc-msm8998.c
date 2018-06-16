@@ -2593,14 +2593,11 @@ static struct clk_branch gcc_usb30_master_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data) {
 			.name = "gcc_usb30_master_clk",
-			/* TODO: Should the clk_src be removed?
-			 * The cfg_noc_usb3_axi clock has the same src!
-			 */
+			/*TODO: Should we depend on gcc_cfg_noc_usb3_axi_clk?*/
 			.parent_names = (const char*[]) {
 				"usb30_master_clk_src",
-				"gcc_cfg_noc_usb3_axi_clk",
 			},
-			.num_parents = 2,
+			.num_parents = 1,
 			.flags = CLK_ENABLE_HAND_OFF | CLK_SET_RATE_PARENT,
 			.ops = &clk_branch2_ops,
 		},
