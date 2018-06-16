@@ -134,6 +134,7 @@ struct qusb_phy {
 	struct mutex		lock;
 	void __iomem		*base;
 	void __iomem		*efuse_reg;
+	void __iomem		*tcsr_clamp_dig_n;
 	void __iomem		*refgen_north_bg_reg;
 
 	struct clk		*ref_clk_src;
@@ -726,6 +727,170 @@ static u32 qusb_phy_get_linestate(struct qusb_phy *qphy)
 }
 
 /**
+ * Performs QUSB2 PHY suspend/resume functionality on v2.0 PHY.
+ *
+ * Note: The PLL_CORE_INPUT_OVERRIDE register is erroneously
+ *       called like that. On V2.0 this in reality is
+ *       PLL_ANALOG_CONTROLS_ONE.
+ *       The PLL_ANALOG_CONTROLS_TWO is ONE + 0x4.
+ *
+ * @uphy - usb phy pointer.
+ * @suspend - to enable suspend or not. 1 - suspend, 0 - resume
+ *
+ */
+#if defined(CONFIG_ARCH_MSM8998) || defined(CONFIG_ARCH_SDM660) || \
+    defined(CONFIG_ARCH_SDM630)
+static int qusb_phy_set_suspend_legacy(struct usb_phy *phy, int suspend)
+{
+	struct qusb_phy *qphy = container_of(phy, struct qusb_phy, phy);
+	u32 linestate = 0, intr_mask = 0;
+	static u8 analog_ctrl_two;
+	int ret;
+
+	if (qphy->suspended && suspend) {
+		dev_dbg(phy->dev, "%s: USB PHY is already suspended\n",
+			__func__);
+		return 0;
+	}
+
+	if (suspend) {
+		/* Bus suspend case */
+		if (qphy->cable_connected ||
+			(qphy->phy.flags & PHY_HOST_MODE)) {
+
+			/* store clock settings like cmos/cml (TWO)*/
+			analog_ctrl_two = readl_relaxed(qphy->base +
+				qphy->phy_reg[PLL_CORE_INPUT_OVERRIDE] + 0x4);
+
+
+			/* use CSR & switch to SE clk (TWO)*/
+			writel_relaxed(0xb, qphy->base +
+				qphy->phy_reg[PLL_CORE_INPUT_OVERRIDE] + 0x4);
+
+			/* enable clock bypass (ONE) */
+			writel_relaxed(0x90, qphy->base +
+				qphy->phy_reg[PLL_CORE_INPUT_OVERRIDE]);
+
+			/* Disable all interrupts */
+			writel_relaxed(0x00,
+				qphy->base + qphy->phy_reg[INTR_CTRL]);
+
+			linestate = qusb_phy_get_linestate(qphy);
+			/*
+			 * D+/D- interrupts are level-triggered, but we are
+			 * only interested if the line state changes, so enable
+			 * the high/low trigger based on current state. In
+			 * other words, enable the triggers _opposite_ of what
+			 * the current D+/D- levels are.
+			 * e.g. if currently D+ high, D- low (HS 'J'/Suspend),
+			 * configure the mask to trigger on D+ low OR D- high
+			 */
+			intr_mask = DPSE_INTR_EN | DMSE_INTR_EN;
+			if (!(linestate & LINESTATE_DP)) /* D+ low */
+				intr_mask |= DPSE_INTR_HIGH_SEL;
+			if (!(linestate & LINESTATE_DM)) /* D- low */
+				intr_mask |= DMSE_INTR_HIGH_SEL;
+
+			writel_relaxed(intr_mask,
+				qphy->base + qphy->phy_reg[INTR_CTRL]);
+
+			if (linestate & (LINESTATE_DP | LINESTATE_DM)) {
+				/* enable phy auto-resume */
+				writel_relaxed(0x91,
+					qphy->base + qphy->phy_reg[TEST1]);
+				/* flush the previous write before next write */
+				wmb();
+				writel_relaxed(0x90,
+					qphy->base + qphy->phy_reg[TEST1]);
+			}
+
+			dev_dbg(phy->dev, "%s: intr_mask = %x\n",
+			__func__, intr_mask);
+
+			/* Makes sure that above write goes through */
+			wmb();
+			qusb_phy_enable_clocks(qphy, false);
+		} else { /* Cable disconnect case */
+
+			ret = reset_control_assert(qphy->phy_reset);
+			if (ret)
+				dev_err(phy->dev, "%s: phy_reset assert failed\n",
+						__func__);
+			usleep_range(100, 150);
+			ret = reset_control_deassert(qphy->phy_reset);
+			if (ret)
+				dev_err(phy->dev, "%s: phy_reset deassert failed\n",
+						__func__);
+
+			/* TWO */
+			writel_relaxed(0x1b, qphy->base +
+				qphy->phy_reg[PLL_CORE_INPUT_OVERRIDE] + 0x4);
+
+			/* enable clock bypass (ONE) */
+			writel_relaxed(0x90, qphy->base +
+				qphy->phy_reg[PLL_CORE_INPUT_OVERRIDE]);
+
+			writel_relaxed(0x0, qphy->tcsr_clamp_dig_n);
+			/*
+			 * clamp needs asserted before
+			 * power/clocks can be turned off
+			 */
+			wmb();
+
+			qusb_phy_enable_clocks(qphy, false);
+			qusb_phy_enable_power(qphy, false);
+		}
+		qphy->suspended = true;
+	} else {
+		/* Bus resume case */
+		if (qphy->cable_connected ||
+			(qphy->phy.flags & PHY_HOST_MODE)) {
+			qusb_phy_enable_clocks(qphy, true);
+
+			/* restore the default clock settings (TWO) */
+			writel_relaxed(analog_ctrl_two, qphy->base +
+				qphy->phy_reg[PLL_CORE_INPUT_OVERRIDE] + 0x4);
+
+			/* disable clock bypass (ONE) */
+			writel_relaxed(0x80, qphy->base +
+				qphy->phy_reg[PLL_CORE_INPUT_OVERRIDE]);
+
+			/* Clear all interrupts on resume */
+			writel_relaxed(0x00,
+				qphy->base + qphy->phy_reg[INTR_CTRL]);
+
+			/* Makes sure that above write goes through */
+			wmb();
+		} else { /* Cable connect case */
+			writel_relaxed(0x1, qphy->tcsr_clamp_dig_n);
+
+			/*
+			 * clamp needs de-asserted before
+			 * power/clocks can be turned on
+			 */
+			wmb();
+
+			qusb_phy_enable_power(qphy, true);
+			ret = reset_control_assert(qphy->phy_reset);
+			if (ret)
+				dev_err(phy->dev, "%s: phy_reset assert failed\n",
+						__func__);
+			usleep_range(100, 150);
+			ret = reset_control_deassert(qphy->phy_reset);
+			if (ret)
+				dev_err(phy->dev, "%s: phy_reset deassert failed\n",
+						__func__);
+
+			qusb_phy_enable_clocks(qphy, true);
+		}
+		qphy->suspended = false;
+	}
+
+	return 0;
+}
+#endif
+
+/**
  * Performs QUSB2 PHY suspend/resume functionality.
  *
  * @uphy - usb phy pointer.
@@ -899,6 +1064,7 @@ static int qusb_phy_dpdm_regulator_disable(struct regulator_dev *rdev)
 
 	return ret;
 }
+#endif
 
 static int qusb_phy_dpdm_regulator_is_enabled(struct regulator_dev *rdev)
 {
@@ -1010,6 +1176,16 @@ static int qusb_phy_probe(struct platform_device *pdev)
 		if (IS_ERR(qphy->emu_phy_base)) {
 			dev_dbg(dev, "couldn't ioremap emu_phy_base\n");
 			qphy->emu_phy_base = NULL;
+		}
+	}
+
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
+						"tcsr_clamp_dig_n_1p8");
+	if (res) {
+		qphy->tcsr_clamp_dig_n = devm_ioremap_resource(dev, res);
+		if (IS_ERR(qphy->tcsr_clamp_dig_n)) {
+			dev_dbg(dev, "couldn't ioremap tcsr_clamp_dig_n\n");
+			return PTR_ERR(qphy->tcsr_clamp_dig_n);
 		}
 	}
 
@@ -1263,6 +1439,11 @@ static int qusb_phy_probe(struct platform_device *pdev)
 	qphy->phy.notify_connect        = qusb_phy_notify_connect;
 	qphy->phy.notify_disconnect     = qusb_phy_notify_disconnect;
 
+#if defined(CONFIG_ARCH_MSM8998) || defined(CONFIG_ARCH_SDM660) || \
+    defined(CONFIG_ARCH_SDM630)
+	qphy->phy.set_suspend           = qusb_phy_set_suspend_legacy;
+#endif
+
 	ret = usb_add_phy_dev(&qphy->phy);
 	if (ret)
 		return ret;
@@ -1273,6 +1454,10 @@ static int qusb_phy_probe(struct platform_device *pdev)
 
 	qphy->suspended = true;
 	qusb_phy_create_debugfs(qphy);
+
+	/* de-asseert clamp dig n to reduce leakage on 1p8 upon boot up */
+	if (qphy->tcsr_clamp_dig_n)
+		writel_relaxed(0x0, qphy->tcsr_clamp_dig_n);
 
 	return ret;
 }
