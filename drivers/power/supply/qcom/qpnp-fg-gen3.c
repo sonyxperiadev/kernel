@@ -630,14 +630,15 @@ static int fg_get_charge_raw(struct fg_chip *chip, int *val)
 		return rc;
 	}
 
-	*val = div_s64(cc_soc * chip->cl.nom_cap_uah, CC_SOC_30BIT);
+	*val = div_s64((int64_t)cc_soc * chip->cl.nom_cap_uah, CC_SOC_30BIT);
 	return 0;
 }
 
 #define BATT_SOC_32BIT	GENMASK(31, 0)
 static int fg_get_charge_counter_shadow(struct fg_chip *chip, int *val)
 {
-	int rc, batt_soc;
+	int rc;
+	unsigned int batt_soc;
 
 	rc = fg_get_sram_prop(chip, FG_SRAM_BATT_SOC, &batt_soc);
 	if (rc < 0) {
@@ -645,7 +646,8 @@ static int fg_get_charge_counter_shadow(struct fg_chip *chip, int *val)
 		return rc;
 	}
 
-	*val = div_u64((u32)batt_soc * chip->cl.learned_cc_uah, BATT_SOC_32BIT);
+	*val = div_u64((uint64_t)batt_soc * chip->cl.learned_cc_uah,
+							BATT_SOC_32BIT);
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
 	if (*val < 1)
 		*val = 1;
@@ -656,7 +658,8 @@ static int fg_get_charge_counter_shadow(struct fg_chip *chip, int *val)
 
 static int fg_get_charge_counter(struct fg_chip *chip, int *val)
 {
-	int rc, cc_soc;
+	int rc;
+	int cc_soc;
 
 	rc = fg_get_sram_prop(chip, FG_SRAM_CC_SOC_SW, &cc_soc);
 	if (rc < 0) {
@@ -664,7 +667,7 @@ static int fg_get_charge_counter(struct fg_chip *chip, int *val)
 		return rc;
 	}
 
-	*val = div_s64(cc_soc * chip->cl.learned_cc_uah, CC_SOC_30BIT);
+	*val = div_s64((int64_t)cc_soc * chip->cl.learned_cc_uah, CC_SOC_30BIT);
 	return 0;
 }
 
@@ -1588,7 +1591,7 @@ static bool is_parallel_charger_available(struct fg_chip *chip)
 	return true;
 }
 
-static int fg_prime_cc_soc_sw(struct fg_chip *chip, int cc_soc_sw)
+static int fg_prime_cc_soc_sw(struct fg_chip *chip, unsigned int cc_soc_sw)
 {
 	int rc;
 
@@ -1598,7 +1601,7 @@ static int fg_prime_cc_soc_sw(struct fg_chip *chip, int cc_soc_sw)
 	if (rc < 0)
 		pr_err("Error in writing cc_soc_sw, rc=%d\n", rc);
 	else
-		fg_dbg(chip, FG_STATUS, "cc_soc_sw: %x\n", cc_soc_sw);
+		fg_dbg(chip, FG_STATUS, "cc_soc_sw: %u\n", cc_soc_sw);
 
 	return rc;
 }
@@ -1806,12 +1809,13 @@ static void fg_cap_learning_post_process(struct fg_chip *chip)
 
 static int fg_cap_learning_process_full_data(struct fg_chip *chip)
 {
-	int rc, cc_soc_sw;
+	int rc;
+	unsigned int cc_soc_sw;
 	int64_t delta_cc_uah;
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
 	int64_t cc_soc_delta_100pct;
 #else
-	int cc_soc_delta_pct;
+	unsigned int cc_soc_delta_pct;
 #endif
 
 	rc = fg_get_sram_prop(chip, FG_SRAM_CC_SOC_SW, &cc_soc_sw);
@@ -1824,7 +1828,7 @@ static int fg_cap_learning_process_full_data(struct fg_chip *chip)
 	cc_soc_delta_100pct = DIV_ROUND_CLOSEST(
 				(s64)(abs(cc_soc_sw - chip->cl.init_cc_soc_sw))
 				* 10000, CC_SOC_30BIT);
-	delta_cc_uah = div64_s64(chip->cl.learned_cc_uah * cc_soc_delta_100pct,
+	delta_cc_uah = div64_u64(chip->cl.learned_cc_uah * cc_soc_delta_100pct,
 				10000);
 #else
 	cc_soc_delta_pct =
@@ -1833,21 +1837,21 @@ static int fg_cap_learning_process_full_data(struct fg_chip *chip)
 
 	/* If the delta is < 50%, then skip processing full data */
 	if (cc_soc_delta_pct < 50) {
-		pr_err("cc_soc_delta_pct: %d\n", cc_soc_delta_pct);
+		pr_err("cc_soc_delta_pct: %u\n", cc_soc_delta_pct);
 		return -ERANGE;
 	}
 
-	delta_cc_uah = div64_s64(chip->cl.learned_cc_uah * cc_soc_delta_pct,
-				100);
+	delta_cc_uah = div64_u64(chip->cl.learned_cc_uah * cc_soc_delta_pct,
+ 				100);
 #endif
 	chip->cl.final_cc_uah = chip->cl.init_cc_uah + delta_cc_uah;
 
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
 	fg_dbg(chip, FG_CAP_LEARN,
-		"cc_soc_sw=%d cc_soc_delta_100pct=%lld total_cc_uah=%lld\n",
+		"cc_soc_sw=%d cc_soc_delta_100pct=%lld total_cc_uah=%llu\n",
 		cc_soc_sw, cc_soc_delta_100pct, chip->cl.final_cc_uah);
 #else
-	fg_dbg(chip, FG_CAP_LEARN, "Current cc_soc=%d cc_soc_delta_pct=%d total_cc_uah=%lld\n",
+	fg_dbg(chip, FG_CAP_LEARN, "Current cc_soc=%d cc_soc_delta_pct=%u total_cc_uah=%llu\n",
 		cc_soc_sw, cc_soc_delta_pct, chip->cl.final_cc_uah);
 #endif
 	return 0;
@@ -1855,21 +1859,22 @@ static int fg_cap_learning_process_full_data(struct fg_chip *chip)
 
 static int fg_cap_learning_begin(struct fg_chip *chip, u32 batt_soc)
 {
-	int rc, cc_soc_sw, batt_soc_msb;
+	int rc;
+	unsigned int batt_soc_msb, cc_soc_sw;
 
 	batt_soc_msb = batt_soc >> 24;
 	if (DIV_ROUND_CLOSEST(batt_soc_msb * 100, FULL_SOC_RAW) >
 		chip->dt.cl_start_soc) {
-		fg_dbg(chip, FG_CAP_LEARN, "Battery SOC %d is high!, not starting\n",
+		fg_dbg(chip, FG_CAP_LEARN, "Battery SOC %u is high!, not starting\n",
 			batt_soc_msb);
 		return -EINVAL;
 	}
 
-	chip->cl.init_cc_uah = div64_s64(chip->cl.learned_cc_uah * batt_soc_msb,
+	chip->cl.init_cc_uah = div64_u64(chip->cl.learned_cc_uah * batt_soc_msb,
 					FULL_SOC_RAW);
 
 	/* Prime cc_soc_sw with battery SOC when capacity learning begins */
-	cc_soc_sw = div64_s64((int64_t)batt_soc * CC_SOC_30BIT,
+	cc_soc_sw = div64_u64((uint64_t)batt_soc * CC_SOC_30BIT,
 				BATT_SOC_32BIT);
 	rc = fg_prime_cc_soc_sw(chip, cc_soc_sw);
 	if (rc < 0) {
@@ -1885,7 +1890,7 @@ static int fg_cap_learning_begin(struct fg_chip *chip, u32 batt_soc)
 	chip->cl.max_bsoc_time_ms = ktime_to_ms(ktime_get_boottime());
 	chip->cl.start_time_ms = chip->cl.max_bsoc_time_ms;
 	fg_dbg(chip, FG_CAP_LEARN,
-		"Capacity learning started. bsoc:%d cc_soc_sw:%d time:%lld\n",
+		"Capacity learning started. bsoc:%d cc_soc_sw:%u time:%lld\n",
 		batt_soc, cc_soc_sw, chip->cl.start_time_ms);
 #else
 	fg_dbg(chip, FG_CAP_LEARN, "Capacity learning started @ battery SOC %d init_cc_soc_sw:%d\n",
@@ -1897,7 +1902,8 @@ out:
 
 static int fg_cap_learning_done(struct fg_chip *chip)
 {
-	int rc, cc_soc_sw;
+	int rc;
+	unsigned int cc_soc_sw;
 
 	rc = fg_cap_learning_process_full_data(chip);
 	if (rc < 0) {
@@ -1939,7 +1945,8 @@ out:
 
 static void fg_cap_learning_update(struct fg_chip *chip)
 {
-	int rc, batt_soc, batt_soc_msb, cc_soc_sw;
+	int rc;
+	unsigned int batt_soc, batt_soc_msb, cc_soc_sw;
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
 	int msoc;
 #else
@@ -2105,7 +2112,7 @@ deactive:
 		if (chip->charge_done)
 			cc_soc_sw = CC_SOC_30BIT;
 		else
-			cc_soc_sw = div_u64((u32)batt_soc *
+			cc_soc_sw = div_u64((uint64_t)batt_soc *
 					CC_SOC_30BIT, BATT_SOC_32BIT);
 
 		rc = fg_prime_cc_soc_sw(chip, cc_soc_sw);
