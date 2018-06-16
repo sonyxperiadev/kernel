@@ -1879,6 +1879,15 @@
 		vdda33-supply = <&pm8998_l24>;
 		qcom,vdd-voltage-level = <0 880000 880000>;
 		qcom,vdda33-voltage-level = <2400000 3088000 3088000>;
+		qcom,qusb-phy-reg-offset =
+				<0x23c /* QUSB2PHY_PORT_TUNE1 */
+				 0x1a0 /* QUSB2PHY_PLL_COMMON_STATUS_ONE */
+				 0x210 /* QUSB2PHY_PWR_CTRL1 */
+				 0x22c /* QUSB2PHY_INTR_CTRL */
+				 0x0   /* QUSB2PHY_PLL_ANALOG_CONTROLS_ONE */
+				 0x24C /* QUSB2PHY_TEST1 */
+				 0x0 0x0 0x0 0x0>;
+
 		qcom,qusb-phy-init-seq =
 				/* <value reg_offset> */
 					<0x80 0x0
