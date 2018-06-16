@@ -139,9 +139,11 @@
 					#size-cells = <0>;
 					qcom,psci-mode-shift = <0>;
 					qcom,psci-mode-mask = <0xf>;
+					qcom,cpu = <&CPU0 &CPU1 &CPU2 &CPU3>;
 
 					qcom,pm-cpu-level@0 { /* C1 */
 						reg = <0>;
+						label = "wfi";
 						qcom,spm-cpu-mode = "wfi";
 						qcom,psci-cpu-mode = <0x1>;
 						qcom,latency-us = <43>;
@@ -152,6 +154,7 @@
 
 					qcom,pm-cpu-level@1 { /* C2D */
 						reg = <1>;
+						label = "ret";
 						qcom,psci-cpu-mode = <2>;
 						qcom,spm-cpu-mode = "ret";
 						qcom,latency-us = <86>;
@@ -162,6 +165,7 @@
 
 					qcom,pm-cpu-level@2 {  /* C3 */
 						reg = <2>;
+						label = "pc";
 						qcom,spm-cpu-mode = "pc";
 						qcom,psci-cpu-mode = <0x3>;
 						qcom,latency-us = <612>;
@@ -230,11 +234,13 @@
 				qcom,pm-cpu {
 					#address-cells = <1>;
 					#size-cells = <0>;
+					qcom,cpu = <&CPU4 &CPU5 &CPU6 &CPU7>;
 					qcom,psci-mode-shift = <0>;
 					qcom,psci-mode-mask = <0xf>;
 
 					qcom,pm-cpu-level@0 { /* C1 */
 						reg = <0>;
+						label = "wfi";
 						qcom,spm-cpu-mode = "wfi";
 						qcom,psci-cpu-mode = <0x1>;
 						qcom,latency-us = <43>;
@@ -245,6 +251,7 @@
 
 					qcom,pm-cpu-level@1 { /* C2D */
 						reg = <1>;
+						label = "ret";
 						qcom,psci-cpu-mode = <2>;
 						qcom,spm-cpu-mode = "ret";
 						qcom,latency-us = <82>;
@@ -255,6 +262,7 @@
 
 					qcom,pm-cpu-level@2 { /* C3 */
 						reg = <2>;
+						label = "pc";
 						qcom,spm-cpu-mode = "pc";
 						qcom,psci-cpu-mode = <0x3>;
 						qcom,latency-us = <525>;
