@@ -708,10 +708,10 @@ static struct clk_rcg2 blsp1_qup6_spi_apps_clk_src = {
 };
 
 static struct freq_tbl ftbl_blsp_uart_apps_clk_src[] = {
-	F(   3686400, P_GPLL0_EARLY_DIV,   1,  192, 15625),
-	F(   7372800, P_GPLL0_EARLY_DIV,   1,  384, 15625),
-	F(  14745600, P_GPLL0_EARLY_DIV,   1,  768, 15625),
-	F(  16000000, P_GPLL0_EARLY_DIV,   1,    4,    75),
+	F(   3686400,   P_GPLL0,    1,   96, 15625),
+	F(   7372800,   P_GPLL0,    1,  192, 15625),
+	F(  14745600,   P_GPLL0,    1,  384, 15625),
+	F(  16000000,   P_GPLL0,    5,    2,    15),
 	F(  19200000,	P_XO,       1,    0,     0),
 	F(  24000000,	P_GPLL0,    5,    1,     5),
 	F(  32000000,	P_GPLL0,    1,    4,    75),
@@ -728,7 +728,7 @@ static struct freq_tbl ftbl_blsp_uart_apps_clk_src[] = {
 
 static struct clk_rcg2 blsp1_uart1_apps_clk_src = {
 	.cmd_rcgr = 0x1A00C,
-	.mnd_width = 8,
+	.mnd_width = 16,
 	.hid_width = 5,
 	.parent_map = gcc_parent_map_2,
 	.freq_tbl = ftbl_blsp_uart_apps_clk_src,
@@ -744,7 +744,7 @@ static struct clk_rcg2 blsp1_uart1_apps_clk_src = {
 
 static struct clk_rcg2 blsp1_uart2_apps_clk_src = {
 	.cmd_rcgr = 0x1C00C,
-	.mnd_width = 8,
+	.mnd_width = 16,
 	.hid_width = 5,
 	.parent_map = gcc_parent_map_2,
 	.freq_tbl = ftbl_blsp_uart_apps_clk_src,
@@ -760,7 +760,7 @@ static struct clk_rcg2 blsp1_uart2_apps_clk_src = {
 
 static struct clk_rcg2 blsp1_uart3_apps_clk_src = {
 	.cmd_rcgr = 0x1E00C,
-	.mnd_width = 8,
+	.mnd_width = 16,
 	.hid_width = 5,
 	.parent_map = gcc_parent_map_2,
 	.freq_tbl = ftbl_blsp_uart_apps_clk_src,
@@ -956,7 +956,7 @@ static struct clk_rcg2 blsp2_qup6_spi_apps_clk_src = {
 
 static struct clk_rcg2 blsp2_uart1_apps_clk_src = {
 	.cmd_rcgr = 0x2700C,
-	.mnd_width = 8,
+	.mnd_width = 16,
 	.hid_width = 5,
 	.parent_map = gcc_parent_map_2,
 	.freq_tbl = ftbl_blsp_uart_apps_clk_src,
@@ -972,7 +972,7 @@ static struct clk_rcg2 blsp2_uart1_apps_clk_src = {
 
 static struct clk_rcg2 blsp2_uart2_apps_clk_src = {
 	.cmd_rcgr = 0x2900C,
-	.mnd_width = 8,
+	.mnd_width = 16,
 	.hid_width = 5,
 	.parent_map = gcc_parent_map_2,
 	.freq_tbl = ftbl_blsp_uart_apps_clk_src,
@@ -988,7 +988,7 @@ static struct clk_rcg2 blsp2_uart2_apps_clk_src = {
 
 static struct clk_rcg2 blsp2_uart3_apps_clk_src = {
 	.cmd_rcgr = 0x2B00C,
-	.mnd_width = 8,
+	.mnd_width = 16,
 	.hid_width = 5,
 	.parent_map = gcc_parent_map_2,
 	.freq_tbl = ftbl_blsp_uart_apps_clk_src,
@@ -1732,7 +1732,7 @@ static struct clk_branch gcc_blsp2_ahb_clk = {
 		.enable_mask = BIT(15),
 		.hw.init = &(struct clk_init_data){
 			.name = "gcc_blsp2_ahb_clk",
-			.flags = CLK_SET_RATE_PARENT | CLK_ENABLE_HAND_OFF,
+			.flags = CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
 	},
