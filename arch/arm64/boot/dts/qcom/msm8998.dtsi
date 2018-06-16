@@ -29,6 +29,7 @@
 	interrupt-parent = <&wakegic>;
 
 	aliases {
+		ufshc1 = &ufs1;
 		serial0 = &uartblsp2dm1;
 		pci-domain0 = &pcie0;
 		sdhc2 = &sdhc_2; /* SDC2 SD card slot */
