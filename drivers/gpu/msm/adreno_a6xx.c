@@ -1982,6 +1982,7 @@ static int a6xx_wait_for_lowest_idle(struct adreno_device *adreno_dev)
 	unsigned int reg, reg1;
 	unsigned long t;
 	uint64_t ts1, ts2, ts3;
+	unsigned long start_jiffies, end_jiffies;
 
 	if (!kgsl_gmu_isenabled(device))
 		return 0;
@@ -1989,6 +1990,9 @@ static int a6xx_wait_for_lowest_idle(struct adreno_device *adreno_dev)
 	ts1 = read_AO_counter(device);
 
 	t = jiffies + msecs_to_jiffies(GMU_IDLE_TIMEOUT);
+	start_jiffies = jiffies;
+
+retry:
 	do {
 		kgsl_gmu_regread(device,
 			A6XX_GPU_GMU_CX_GMU_RPMH_POWER_STATE, &reg);
@@ -2001,9 +2005,22 @@ static int a6xx_wait_for_lowest_idle(struct adreno_device *adreno_dev)
 		usleep_range(10, 100);
 	} while (!time_after(jiffies, t));
 
+	end_jiffies = jiffies;
 	ts2 = read_AO_counter(device);
-	/* Check one last time */
 
+	/*
+	 * If AO counter values indicates that loop has exited
+	 * earlier then expected timeout value. Retry till we
+	 * reach the expected timeout value.
+	 */
+	if ((((ts2 - ts1) * 10) / 192) < (GMU_IDLE_TIMEOUT * USEC_PER_MSEC)) {
+		dev_err_ratelimited(&gmu->pdev->dev,
+			"Invalid wait loop exit: %08x %llx %llx %x %lx %lx %lx\n",
+			reg, ts1, ts2, reg1, t, start_jiffies, end_jiffies);
+		goto retry;
+	}
+
+	/* Check one last time */
 	kgsl_gmu_regread(device, A6XX_GPU_GMU_CX_GMU_RPMH_POWER_STATE, &reg);
 	kgsl_gmu_regread(device, A6XX_GMU_SPTPRAC_PWR_CLK_STATUS, &reg1);
 
@@ -2011,8 +2028,8 @@ static int a6xx_wait_for_lowest_idle(struct adreno_device *adreno_dev)
 		return 0;
 
 	ts3 = read_AO_counter(device);
-	WARN(1, "Timeout waiting for lowest idle: %08x %llx %llx %llx %x\n",
-		reg, ts1, ts2, ts3, reg1);
+	WARN(1, "Timeout waiting for lowest idle: %08x %llx %llx %llx %x %lx %lx %lx\n",
+		reg, ts1, ts2, ts3, reg1, t, start_jiffies, end_jiffies);
 
 	return -ETIMEDOUT;
 }
