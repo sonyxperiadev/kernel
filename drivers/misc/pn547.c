@@ -36,7 +36,7 @@
 #include <linux/miscdevice.h>
 #include <linux/spinlock.h>
 #include <linux/pn547.h>
-#include <linux/wakelock.h>
+#include <linux/pm_wakeup.h>
 #include <linux/of_gpio.h>
 #include <linux/pinctrl/consumer.h>
 
@@ -74,7 +74,7 @@ struct pn547_dev {
 	atomic_t irq_enabled;
 	atomic_t read_flag;
 	bool cancel_read;
-	struct wake_lock nfc_wake_lock;
+	struct wakeup_source nfc_wake_lock;
 #ifdef CONFIG_NFC_PN547_PMC_CLK_REQ
 	struct clk *nfc_clk;
 #endif
@@ -109,7 +109,7 @@ static irqreturn_t pn547_dev_irq_handler(int irq, void *dev_id)
 #if NFC_DEBUG
 	pr_info("pn547 : call\n");
 #endif
-	wake_lock_timeout(&pn547_dev->nfc_wake_lock, msecs_to_jiffies(2000));
+	__pm_wakeup_event(&pn547_dev->nfc_wake_lock, 2000);
 	return IRQ_HANDLED;
 }
 
@@ -636,8 +636,7 @@ static int pn547_probe(struct i2c_client *client,
 #endif
 
 	i2c_set_clientdata(client, pn547_dev);
-	wake_lock_init(&pn547_dev->nfc_wake_lock,
-			WAKE_LOCK_SUSPEND, "nfc_wake_lock");
+	wakeup_source_init(&pn547_dev->nfc_wake_lock, "nfc_wake_lock");
 #ifdef CONFIG_NFC_PN547_CLOCK_REQUEST
 	pn547_dev->wq_clock = create_singlethread_workqueue("nfc_wq");
 	if (!pn547_dev->wq_clock) {
@@ -703,7 +702,7 @@ err_request_irq_failed:
 err_create_workqueue:
 #endif
 	misc_deregister(&pn547_dev->pn547_device);
-	wake_lock_destroy(&pn547_dev->nfc_wake_lock);
+	wakeup_source_trash(&pn547_dev->nfc_wake_lock);
 err_misc_register:
 	mutex_destroy(&pn547_dev->read_mutex);
 #ifdef CONFIG_NFC_PN547_CLOCK_REQUEST
@@ -736,7 +735,7 @@ static int pn547_remove(struct i2c_client *client)
 	if (pn547_dev->nfc_clk)
 		clk_unprepare(pn547_dev->nfc_clk);
 #endif
-	wake_lock_destroy(&pn547_dev->nfc_wake_lock);
+	wakeup_source_trash(&pn547_dev->nfc_wake_lock);
 	free_irq(client->irq, pn547_dev);
 	if (nfc_has_pinctrl) {
 		ret = pn547_pinctrl_config(pn547_dev, 0);
