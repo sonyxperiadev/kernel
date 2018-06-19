@@ -47,7 +47,7 @@
 #include <linux/of.h>
 #include <linux/of_gpio.h>
 #include <linux/uaccess.h>
-#include <linux/wakelock.h>
+#include <linux/pm_wakeup.h>
 #include <linux/regulator/consumer.h>
 #include <linux/platform_device.h>
 
@@ -121,7 +121,7 @@ struct fpc1145_data {
 	bool irq_fired;
 	wait_queue_head_t irq_evt;
 
-	struct wake_lock wakelock;
+	struct wakeup_source wakelock;
 	struct mutex lock;
 	bool prepared;
 };
@@ -303,15 +303,14 @@ exit:
 
 static int fpc1145_device_open(struct inode *inode, struct file *fp)
 {
-	wake_lock_timeout(&fpc1145_drvdata->wakelock,
-				usecs_to_jiffies(250));
+	__pm_wakeup_event(&fpc1145_drvdata->wakelock, 1);
 	return 0;
 }
 
 static int fpc1145_device_release(struct inode *inode, struct file *fp)
 {
-	if (wake_lock_active(&fpc1145_drvdata->wakelock))
-		wake_unlock(&fpc1145_drvdata->wakelock);
+	if (fpc1145_drvdata->wakelock.active)
+		__pm_relax(&fpc1145_drvdata->wakelock);
 	return 0;
 }
 
@@ -368,8 +367,7 @@ static long fpc1145_device_ioctl(struct file *fp,
 
 		val = gpio_get_value(fpc1145_drvdata->irq_gpio);
 		if (val)
-			wake_lock_timeout(&fpc1145_drvdata->wakelock,
-					msecs_to_jiffies(400));
+			__pm_wakeup_event(&fpc1145_drvdata->wakelock, 400);
 
 		rc = put_user(val, (int*) usr);
 		break;
@@ -432,7 +430,7 @@ static irqreturn_t fpc1145_irq_handler(int irq, void *handle)
 
 	fpc1145->irq_fired = true;
 
-	wake_lock_timeout(&fpc1145->wakelock, msecs_to_jiffies(20));
+	__pm_wakeup_event(&fpc1145->wakelock, 20);
 	wake_up_interruptible(&fpc1145->irq_evt);
 	disable_irq_nosync(fpc1145->irq);
 
@@ -565,7 +563,7 @@ static int fpc1145_probe(struct platform_device *pdev)
 	irqf = IRQF_TRIGGER_HIGH | IRQF_ONESHOT;
 	mutex_init(&fpc1145->lock);
 
-	wake_lock_init(&fpc1145->wakelock, WAKE_LOCK_SUSPEND, "fpc_wake");
+	wakeup_source_init(&fpc1145->wakelock, "fpc_wake");
 	init_waitqueue_head(&fpc1145->irq_evt);
 	fpc1145->irq_fired = false;
 
@@ -599,7 +597,7 @@ static int fpc1145_remove(struct platform_device *pdev)
 {
 	struct fpc1145_data *fpc1145 = platform_get_drvdata(pdev);
 
-	wake_lock_destroy(&fpc1145->wakelock);
+	wakeup_source_trash(&fpc1145->wakelock);
 	mutex_destroy(&fpc1145->lock);
 #ifdef CONFIG_ARCH_SONY_LOIRE
 	(void)vreg_setup(fpc1145, VCC_SPI, false);
