@@ -24,7 +24,6 @@
 #include <linux/regulator/consumer.h>
 #include <linux/extcon.h>
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
-#include <linux/wakelock.h>
 #include <linux/regulator/machine.h>
 #endif
 #include "storm-watch.h"
@@ -293,7 +292,7 @@ struct reg_info {
 
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
 struct somc_wake_lock {
-	struct wake_lock	lock;
+	struct wakeup_source	lock;
 	bool			enabled;
 };
 
