@@ -30,6 +30,22 @@
 #define UFS_MODEL_TOSHIBA_32GB "THGLF2G8D4KBADR"
 #define UFS_MODEL_TOSHIBA_64GB "THGLF2G9D8KBADG"
 
+#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA)
+#define UFS_ANY_VER		"ANY_VER"
+#define MAX_REVISION_LEN	8
+
+/* UFS SAMSUNG MODELS */
+#define UFS_MODEL_SAMSUNG_64GB	"KLUCG4J1"
+#define UFS_REVISION_SAMSUNG	"0101"
+
+/* UFS SK HYNIX MODELS */
+#define UFS_MODEL_HYNIX_32GB	"hB8aL1"
+#define UFS_MODEL_HYNIX_64GB	"hC8aL1"
+#define UFS_REVISION_HYNIX	"D001"
+
+#define UFS_PURGE_SPEC_VER	0x210
+#endif
+
 /**
  * ufs_card_fix - ufs device quirk info
  * @card: ufs card details
@@ -38,11 +54,31 @@
 struct ufs_card_fix {
 	u16 w_manufacturer_id;
 	char *model;
+#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA)
+	char *revision;
+#endif
 	unsigned int quirk;
 };
 
 #define END_FIX { 0 }
 
+#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA)
+/* add specific device quirk */
+#define UFS_FIX(_vendor, _model, _quirk) \
+		{						  \
+				.w_manufacturer_id = (_vendor),   \
+				.model = (_model),		  \
+				.revision = (UFS_ANY_VER),	  \
+				.quirk = (_quirk),		  \
+		}
+#define UFS_FIX_REVISION(_vendor, _model, _revision, _quirk) \
+		{						  \
+				.w_manufacturer_id = (_vendor),   \
+				.model = (_model),		  \
+				.revision = (_revision),	  \
+				.quirk = (_quirk),                \
+		}
+#else
 /* add specific device quirk */
 #define UFS_FIX(_vendor, _model, _quirk) \
 		{						  \
@@ -50,6 +86,7 @@ struct ufs_card_fix {
 				.model = (_model),		  \
 				.quirk = (_quirk),		  \
 		}
+#endif
 
 /*
  * If UFS device is having issue in processing LCC (Line Control
@@ -137,6 +174,12 @@ struct ufs_card_fix {
  * device would apply this 2 steps gear switch workaround.
  */
 #define UFS_DEVICE_QUIRK_HS_G1_TO_HS_G3_SWITCH (1 << 8)
+
+#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA)
+#define UFS_DEVICE_QUIRK_EXTEND_SYNC_LENGTH	(1 << 23)
+
+#define UFS_DEVICE_QUIRK_NO_PURGE		(1 << 24)
+#endif
 
 
 struct ufs_hba;

@@ -106,6 +106,13 @@ config SCSI_UFS_QCOM_ICE
 	  Select this if you have ICE supported for UFS on QCOM chipset.
 	  If unsure, say N.
 
+config SCSI_UFS_RESTRICT_TX_LANES
+	bool "Restrict the number of TX lanes to 1"
+	default n
+	help
+	  Say Y here to restrict the number of TX lanes to 1.
+	  This will save the power consumption in exchange for
+	  the write performance.
 
 config SCSI_UFS_TEST
 	tristate "Universal Flash Storage host controller driver unit-tests"
