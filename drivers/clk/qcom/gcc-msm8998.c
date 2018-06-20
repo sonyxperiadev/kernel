@@ -2411,7 +2411,6 @@ static struct clk_branch gcc_ufs_ahb_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data) {
 			.name = "gcc_ufs_ahb_clk",
-			.flags = CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -2431,7 +2430,7 @@ static struct clk_branch gcc_ufs_axi_clk = {
 				"ufs_axi_clk_src"
 			},
 			.num_parents = 1,
-			.flags = CLK_ENABLE_HAND_OFF | CLK_SET_RATE_PARENT,
+			.flags = CLK_SET_RATE_PARENT,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -2468,7 +2467,7 @@ static struct clk_branch gcc_ufs_ice_core_clk = {
 				"ufs_ice_core_clk_src"
 			},
 			.num_parents = 1,
-			.flags = CLK_ENABLE_HAND_OFF | CLK_SET_RATE_PARENT,
+			.flags = CLK_SET_RATE_PARENT,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -2505,7 +2504,7 @@ static struct clk_branch gcc_ufs_phy_aux_clk = {
 				"ufs_phy_aux_clk_src"
 			},
 			.num_parents = 1,
-			.flags = CLK_ENABLE_HAND_OFF | CLK_SET_RATE_PARENT,
+			.flags = CLK_SET_RATE_PARENT,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -2578,7 +2577,7 @@ static struct clk_branch gcc_ufs_unipro_core_clk = {
 				"ufs_unipro_core_clk_src"
 			},
 			.num_parents = 1,
-			.flags = CLK_ENABLE_HAND_OFF | CLK_SET_RATE_PARENT,
+			.flags = CLK_SET_RATE_PARENT,
 			.ops = &clk_branch2_ops,
 		},
 	},
