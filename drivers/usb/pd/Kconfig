@@ -26,4 +26,12 @@ config QPNP_USB_PDPHY
 	  which communicates over the SPMI bus. The is used to handle
 	  the PHY layer communication of the Power Delivery stack.
 
+config USBPD_SMBFG_NEWGEN_EXTENSION
+	bool "SoMC additional SMB2/FG3 Extensions for USB_PD"
+	depends on USB_PD_POLICY
+	depends on QPNP_SMBFG_NEWGEN_EXTENSION
+	help
+	  Say Y here to enable additional SMB2/FG3 extensions for
+	  USB PD framework.
+
 endmenu
