@@ -10,6 +10,7 @@
  * GNU General Public License for more details.
  */
 
+#include <linux/ratelimit.h>
 #include <linux/slab.h>
 #include <linux/delay.h>
 #include <linux/diagchar.h>

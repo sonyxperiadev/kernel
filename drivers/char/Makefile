@@ -69,10 +69,5 @@ obj-$(CONFIG_MSM_ADSPRPC)       += adsprpc_compat.o
 endif
 obj-$(CONFIG_MSM_RDBG)		+= rdbg.o
 
-ifdef CONFIG_DIAG_CHAR
-  ifdef CONFIG_DIAG_CHAR_LEGACY
-    obj-y			+= diag_legacy/
-  else
-    obj-y			+= diag/
-  endif
-endif
+obj-$(CONFIG_DIAG_CHAR)		+= diag/
+obj-$(CONFIG_DIAG_CHAR_LEGACY)	+= diag_legacy/
