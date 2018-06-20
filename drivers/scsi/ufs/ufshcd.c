@@ -3892,6 +3892,11 @@ int ufshcd_map_desc_id_to_length(struct ufs_hba *hba,
 	case QUERY_DESC_IDN_RFU_1:
 		*desc_len = 0;
 		break;
+#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA)
+	case QUERY_DESC_IDN_DEVICE_HEALTH:
+		*desc_len = hba->desc_size.dev_health_desc;
+		break;
+#endif
 	default:
 		*desc_len = 0;
 		return -EINVAL;
@@ -4001,6 +4006,13 @@ int ufshcd_read_device_desc(struct ufs_hba *hba, u8 *buf, u32 size)
 {
 	return ufshcd_read_desc(hba, QUERY_DESC_IDN_DEVICE, 0, buf, size);
 }
+
+#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA)
+int ufshcd_read_device_health_desc(struct ufs_hba *hba, u8 *buf, u32 size)
+{
+	return ufshcd_read_desc(hba, QUERY_DESC_IDN_DEVICE_HEALTH, 0, buf, size);
+}
+#endif
 
 /**
  * ufshcd_read_string_desc - read string descriptor
@@ -4929,6 +4941,14 @@ int ufshcd_change_power_mode(struct ufs_hba *hba,
 	ufshcd_dme_set(hba, UIC_ARG_MIB(DME_LocalAFC0ReqTimeOutVal),
 			DL_AFC0ReqTimeOutVal_Default);
 
+#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA)
+	if (hba->dev_info.quirks & UFS_DEVICE_QUIRK_EXTEND_SYNC_LENGTH) {
+		ufshcd_dme_set(hba, UIC_ARG_MIB(PA_TxHsG1SyncLength), 0x48);
+		ufshcd_dme_set(hba, UIC_ARG_MIB(PA_TxHsG2SyncLength), 0x48);
+		ufshcd_dme_set(hba, UIC_ARG_MIB(PA_TxHsG3SyncLength), 0x48);
+	}
+#endif
+
 	ret = ufshcd_uic_change_pwr_mode(hba, pwr_mode->pwr_rx << 4
 			| pwr_mode->pwr_tx);
 
@@ -5211,6 +5231,10 @@ static int ufshcd_link_startup(struct ufs_hba *hba)
 	 */
 	if (!ufshcd_is_ufs_dev_active(hba))
 		link_startup_again = true;
+
+#ifdef CONFIG_SCSI_UFS_RESTRICT_TX_LANES
+	ufshcd_dme_set(hba, UIC_ARG_MIB(PA_AVAILTXDATALANES), 0x1);
+#endif
 
 link_startup:
 	do {
@@ -7902,6 +7926,13 @@ static int ufs_read_device_desc_data(struct ufs_hba *hba)
 		desc_buf[DEVICE_DESC_PARAM_DEVICE_SUB_CLASS];
 	hba->dev_info.i_product_name = desc_buf[DEVICE_DESC_PARAM_PRDCT_NAME];
 
+#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA)
+	hba->dev_info.specver = desc_buf[DEVICE_DESC_PARAM_SPEC_VER] << 8 |
+		desc_buf[DEVICE_DESC_PARAM_SPEC_VER + 1];
+
+	hba->dev_info.revision = desc_buf[DEVICE_DESC_PARAM_PRODUCT_REVISION];
+#endif
+
 	return 0;
 }
 
@@ -7938,6 +7969,13 @@ static void ufshcd_init_desc_sizes(struct ufs_hba *hba)
 		&hba->desc_size.geom_desc);
 	if (err)
 		hba->desc_size.geom_desc = QUERY_DESC_GEOMETRY_DEF_SIZE;
+
+#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA)
+	err = ufshcd_read_desc_length(hba, QUERY_DESC_IDN_DEVICE_HEALTH, 0,
+		&hba->desc_size.dev_health_desc);
+	if (err)
+		hba->desc_size.dev_health_desc = QUERY_DESC_DEVICE_HEALTH_DEF_SIZE;
+#endif
 }
 
 static void ufshcd_def_desc_sizes(struct ufs_hba *hba)
@@ -7948,6 +7986,10 @@ static void ufshcd_def_desc_sizes(struct ufs_hba *hba)
 	hba->desc_size.conf_desc = QUERY_DESC_CONFIGURATION_DEF_SIZE;
 	hba->desc_size.unit_desc = QUERY_DESC_UNIT_DEF_SIZE;
 	hba->desc_size.geom_desc = QUERY_DESC_GEOMETRY_DEF_SIZE;
+
+#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA)
+	hba->desc_size.dev_health_desc = QUERY_DESC_DEVICE_HEALTH_DEF_SIZE;
+#endif
 }
 
 /**
@@ -8260,7 +8302,11 @@ static void ufshcd_async_scan(void *data, async_cookie_t cookie)
  * It will read the opcode, idn and buf_length parameters, and, put the
  * response in the buffer field while updating the used size in buf_length.
  */
+#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA)
+static int ufshcd_query_ioctl(struct scsi_device *dev, u8 lun, void __user *buffer)
+#else
 static int ufshcd_query_ioctl(struct ufs_hba *hba, u8 lun, void __user *buffer)
+#endif
 {
 	struct ufs_ioctl_query_data *ioctl_data;
 	int err = 0;
@@ -8270,6 +8316,10 @@ static int ufshcd_query_ioctl(struct ufs_hba *hba, u8 lun, void __user *buffer)
 	u32 att;
 	u8 index;
 	u8 *desc = NULL;
+
+#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA)
+	struct ufs_hba *hba = shost_priv(dev->host);
+#endif
 
 	ioctl_data = kzalloc(sizeof(struct ufs_ioctl_query_data), GFP_KERNEL);
 	if (!ioctl_data) {
@@ -8332,7 +8382,9 @@ static int ufshcd_query_ioctl(struct ufs_hba *hba, u8 lun, void __user *buffer)
 		case QUERY_ATTR_IDN_ACTIVE_ICC_LVL:
 		case QUERY_ATTR_IDN_OOO_DATA_EN:
 		case QUERY_ATTR_IDN_BKOPS_STATUS:
+#if !defined(CONFIG_ARCH_SONY_YOSHINO) && !defined(CONFIG_ARCH_SONY_TAMA)
 		case QUERY_ATTR_IDN_PURGE_STATUS:
+#endif
 		case QUERY_ATTR_IDN_MAX_DATA_IN:
 		case QUERY_ATTR_IDN_MAX_DATA_OUT:
 		case QUERY_ATTR_IDN_REF_CLK_FREQ:
@@ -8341,12 +8393,24 @@ static int ufshcd_query_ioctl(struct ufs_hba *hba, u8 lun, void __user *buffer)
 		case QUERY_ATTR_IDN_EE_CONTROL:
 		case QUERY_ATTR_IDN_EE_STATUS:
 		case QUERY_ATTR_IDN_SECONDS_PASSED:
+#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA)
+		case QUERY_ATTR_IDN_FFU_STATUS:
+#endif
 			index = 0;
 			break;
 		case QUERY_ATTR_IDN_DYN_CAP_NEEDED:
 		case QUERY_ATTR_IDN_CORR_PRG_BLK_NUM:
 			index = lun;
 			break;
+#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA)
+	case QUERY_ATTR_IDN_PURGE_STATUS:
+			index = 0;
+			if (hba->dev_info.quirks & UFS_DEVICE_QUIRK_NO_PURGE) {
+				err = -EPERM;
+				goto out_release_mem;
+			}
+			break;
+#endif
 		default:
 			goto out_einval;
 		}
@@ -8390,16 +8454,43 @@ static int ufshcd_query_ioctl(struct ufs_hba *hba, u8 lun, void __user *buffer)
 		case QUERY_FLAG_IDN_PERMANENT_WPE:
 		case QUERY_FLAG_IDN_PWR_ON_WPE:
 		case QUERY_FLAG_IDN_BKOPS_EN:
+#if !defined(CONFIG_ARCH_SONY_YOSHINO) && !defined(CONFIG_ARCH_SONY_TAMA)
 		case QUERY_FLAG_IDN_PURGE_ENABLE:
+#endif
 		case QUERY_FLAG_IDN_FPHYRESOURCEREMOVAL:
 		case QUERY_FLAG_IDN_BUSY_RTC:
 			break;
+#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA)
+		case QUERY_FLAG_IDN_PURGE_ENABLE:
+			if (hba->dev_info.quirks & UFS_DEVICE_QUIRK_NO_PURGE) {
+				err = -EPERM;
+				goto out_release_mem;
+			}
+			break;
+#endif
 		default:
 			goto out_einval;
 		}
 		err = ufshcd_query_flag_retry(hba, ioctl_data->opcode,
 				ioctl_data->idn, &flag);
 		break;
+#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA)
+	case UPIU_QUERY_OPCODE_SET_FLAG:
+		switch (ioctl_data->idn) {
+		case QUERY_FLAG_IDN_PURGE_ENABLE:
+			if (hba->dev_info.quirks & UFS_DEVICE_QUIRK_NO_PURGE) {
+				err = -EPERM;
+				goto out_release_mem;
+			}
+			pm_runtime_disable(&dev->sdev_gendev);
+			break;
+		default:
+			goto out_einval;
+		}
+		err = ufshcd_query_flag_retry(hba, ioctl_data->opcode,
+				ioctl_data->idn, NULL);
+		break;
+#endif
 	default:
 		goto out_einval;
 	}
@@ -8430,6 +8521,9 @@ static int ufshcd_query_ioctl(struct ufs_hba *hba, u8 lun, void __user *buffer)
 		data_ptr = &flag;
 		break;
 	case UPIU_QUERY_OPCODE_WRITE_ATTR:
+#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA)
+	case UPIU_QUERY_OPCODE_SET_FLAG:
+#endif
 		goto out_release_mem;
 	default:
 		goto out_einval;
@@ -8460,6 +8554,94 @@ out:
 	return err;
 }
 
+#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA)
+static int ufshcd_write_buffer(struct ufs_hba *hba, void __user *buffer)
+{
+	int err = 0;
+	unsigned char cmd[11] = {WRITE_BUFFER, 0x0E, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+	struct ufs_ioctl_write_buffer_data *ioctl_data = NULL;
+	struct ufs_ioctl_write_buffer_data *fw_data = NULL;
+	struct Scsi_Host *shost = NULL;
+	struct scsi_device *sdev = NULL;
+	unsigned char sense[SCSI_SENSE_BUFFERSIZE];
+	struct scsi_sense_hdr sshdr;
+
+	ioctl_data = kmalloc(sizeof(struct ufs_ioctl_write_buffer_data), GFP_KERNEL);
+	if (!ioctl_data) {
+		dev_err(hba->dev, "%s: Failed allocating ioctl_data\n", __func__);
+		err = -ENOMEM;
+		goto out;
+	}
+
+	err = copy_from_user(ioctl_data, buffer, sizeof(struct ufs_ioctl_write_buffer_data));
+	if (err) {
+		dev_err(hba->dev, "%s: Failed copying ioctl_data from user, err %d\n", __func__, err);
+		goto out;
+	}
+
+	fw_data = kmalloc(sizeof(struct ufs_ioctl_write_buffer_data) + ioctl_data->buf_size, GFP_KERNEL);
+	if (!fw_data) {
+		dev_err(hba->dev, "%s: Failed allocating fw_data\n", __func__);
+		err = -ENOMEM;
+		goto out;
+	}
+
+	err = copy_from_user(fw_data, buffer, sizeof(struct ufs_ioctl_write_buffer_data) + ioctl_data->buf_size);
+	if (err) {
+		dev_err(hba->dev, "%s: Failed copying fw_data from user, err %d\n", __func__, err);
+		goto out;
+	}
+
+	cmd[6] = (ioctl_data->buf_size >> 16) & 0xff;
+	cmd[7] = (ioctl_data->buf_size >> 8) & 0xff;
+	cmd[8] = ioctl_data->buf_size & 0xff;
+
+	shost = scsi_host_lookup(0);
+	if (!shost) {
+		dev_err(hba->dev, "%s: Failed to get scsi_host\n", __func__);
+		err = -ENODEV;
+		goto out;
+	}
+
+	sdev = scsi_device_lookup(shost, 0, 0, 0);
+	if (!sdev) {
+		dev_err(hba->dev, "%s: Failed to get scsi_device\n", __func__);
+		err = -ENODEV;
+		goto out;
+	}
+
+	err = scsi_execute(sdev, cmd, DMA_TO_DEVICE, fw_data->buffer, ioctl_data->buf_size, sense, 10000, 1,
+						REQ_FAILFAST_DEV | REQ_FAILFAST_TRANSPORT | REQ_FAILFAST_DRIVER, NULL);
+	if (err) {
+		dev_err(hba->dev, "%s: Failed write buffer %d\n", __func__, err);
+		goto out;
+	}
+
+	if (scsi_normalize_sense(sense, SCSI_SENSE_BUFFERSIZE, &sshdr)) {
+		dev_err(hba->dev, "%s: print sense hdr\n", __func__);
+		scsi_print_sense_hdr(sdev, "ffu", &sshdr);
+	}
+
+out:
+	if (sdev) {
+		scsi_device_put(sdev);
+	}
+
+	if (shost) {
+		scsi_host_put(shost);
+	}
+
+	if (fw_data) {
+		kfree(fw_data);
+	}
+
+	if (ioctl_data) {
+		kfree(ioctl_data);
+	}
+	return err;
+}
+#endif
+
 /**
  * ufshcd_ioctl - ufs ioctl callback registered in scsi_host
  * @dev: scsi device required for per LUN queries
@@ -8483,10 +8665,22 @@ static int ufshcd_ioctl(struct scsi_device *dev, int cmd, void __user *buffer)
 	switch (cmd) {
 	case UFS_IOCTL_QUERY:
 		pm_runtime_get_sync(hba->dev);
+#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA)
+		err = ufshcd_query_ioctl(dev, ufshcd_scsi_to_upiu_lun(dev->lun),
+				buffer);
+#else
 		err = ufshcd_query_ioctl(hba, ufshcd_scsi_to_upiu_lun(dev->lun),
 				buffer);
+#endif
 		pm_runtime_put_sync(hba->dev);
 		break;
+#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA)
+	case UFS_IOCTL_WRITE_BUFFER:
+		pm_runtime_get_sync(hba->dev);
+		err = ufshcd_write_buffer(hba, buffer);
+		pm_runtime_put_sync(hba->dev);
+		break;
+#endif
 	default:
 		err = -ENOIOCTLCMD;
 		dev_dbg(hba->dev, "%s: Unsupported ioctl cmd %d\n", __func__,

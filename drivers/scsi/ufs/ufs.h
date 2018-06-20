@@ -155,6 +155,9 @@ enum ufs_desc_def_size {
 	QUERY_DESC_INTERCONNECT_DEF_SIZE	= 0x06,
 	QUERY_DESC_GEOMETRY_DEF_SIZE		= 0x44,
 	QUERY_DESC_POWER_DEF_SIZE		= 0x62,
+#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA)
+	QUERY_DESC_DEVICE_HEALTH_DEF_SIZE	= 0x25,
+#endif
 };
 
 /* Unit descriptor parameters offsets in bytes*/
@@ -206,6 +209,16 @@ enum device_desc_param {
 	DEVICE_DESC_PARAM_UD_LEN		= 0x1B,
 	DEVICE_DESC_PARAM_RTT_CAP		= 0x1C,
 	DEVICE_DESC_PARAM_FRQ_RTC		= 0x1D,
+#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA)
+	DEVICE_DESC_PARAM_FFU_SUPPORT		= 0x1F,
+	DEVICE_DESC_PARAM_FFU_TIMEOUT		= 0x20,
+	DEVICE_DESC_PARAM_QUEUE_DEPTH		= 0x21,
+	DEVICE_DESC_PARAM_DEVICE_VER		= 0x22,
+	DEVICE_DESC_PARAM_NUM_SEC_WP_AREA	= 0x24,
+	DEVICE_DESC_PARAM_PSM_MAX_DATA_SIZE	= 0x25,
+	DEVICE_DESC_PARAM_PSA_STATE_TIMEOUT	= 0x29,
+	DEVICE_DESC_PARAM_PRODUCT_REVISION	= 0x2A,
+#endif
 };
 /*
  * Logical Unit Write Protect
@@ -505,6 +518,10 @@ struct ufs_dev_info {
 	u8	b_device_sub_class;
 	u16	w_manufacturer_id;
 	u8	i_product_name;
+#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA)
+	u16	specver;
+	u8	revision;
+#endif
 
 	/* query flags */
 	bool f_power_on_wp_en;
