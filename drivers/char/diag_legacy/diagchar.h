@@ -21,7 +21,6 @@
 #include <linux/spinlock.h>
 #include <linux/workqueue.h>
 #include <linux/sched.h>
-#include <linux/wakelock.h>
 #include <soc/qcom/smd.h>
 #include <asm/atomic.h>
 #include "diagfwd_bridge.h"
