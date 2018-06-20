@@ -79,6 +79,13 @@ config QPNP_SMB2
 	  VBUS and VCONN regulators are registered for supporting OTG,
 	  and powered Type-C cables respectively.
 
+config QPNP_SMBFG_NEWGEN_EXTENSION
+	bool "SoMC Charger Extension for new-gen QC SMB2 and FG3"
+	depends on QPNP_SMB2 && QPNP_FG_GEN3
+	help
+	  Say Y here to enable extensional code from SoMC for the
+	  new generation Qualcomm SMBcharger2 and Fuel Gauge Gen3
+
 config QPNP_SMB5
 	tristate "SMB5 Battery Charger"
 	depends on MFD_SPMI_PMIC
