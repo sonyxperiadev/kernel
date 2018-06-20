@@ -328,6 +328,16 @@ static void *usbpd_ipc_log;
 #define ID_HDR_VID		0x05c6 /* qcom */
 #define PROD_VDO_PID		0x0a00 /* TBD */
 
+#ifdef CONFIG_EXTCON_SOMC_EXTENSION
+#define USB_VBUS_WAIT_VOLT	900	/* mV */
+#define USB_VBUS_WAIT_ITVL	5	/* mS */
+#define USB_VBUS_WAIT_TMOUT	200	/* mS */
+#undef ID_HDR_VID
+#undef PROD_VDO_PID
+#define ID_HDR_VID		0x0FCE /* Sony Mobile Communications */
+#define PROD_VDO_PID		0x01F9
+#endif
+
 static bool check_vsafe0v = true;
 module_param(check_vsafe0v, bool, 0600);
 
@@ -1097,7 +1107,7 @@ static void phy_wait_vbus_settled_down(struct usbpd *pd, int mv,
 		msleep(itvl);
 		rc = power_supply_get_property(pd->usb_psy,
 				POWER_SUPPLY_PROP_VOLTAGE_NOW, &pval);
-		if (IS_ERR_VALUE(rc))
+		if (IS_ERR_VALUE((unsigned long)rc))
 			goto waitremain;
 		usbin = pval.intval / 1000;
 		cnt++;
@@ -1121,12 +1131,17 @@ static void phy_shutdown(struct usbpd *pd)
 		regulator_disable(pd->vbus);
 		pd->vbus_enabled = false;
 
+	}
+
 #ifdef CONFIG_EXTCON_SOMC_EXTENSION
+	if (regulator_is_enabled(pd->vbus)) {
+		usbpd_info(&pd->dev, "turn off VBUS");
+		regulator_disable(pd->vbus);
 		phy_wait_vbus_settled_down(pd,
 				USB_VBUS_WAIT_VOLT, USB_VBUS_WAIT_ITVL,
 				USB_VBUS_WAIT_TMOUT);
-#endif
 	}
+#endif
 }
 
 static enum hrtimer_restart pd_timeout(struct hrtimer *timer)
