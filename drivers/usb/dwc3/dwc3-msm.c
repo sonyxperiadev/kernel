@@ -51,7 +51,6 @@
 #ifdef CONFIG_USB_DWC3_MSM_ID_POLL
 #include <linux/qpnp/qpnp-adc.h>
 #include <linux/fb.h>
-#include <linux/wakelock.h>
 #endif /* CONFIG_USB_DWC3_MSM_ID_POLL */
 
 #include "power.h"
@@ -306,7 +305,7 @@ struct dwc3_msm {
 	unsigned int		lcd_blanked;
 	struct wakeup_source	id_polling_wu;
 	struct delayed_work	setsink_work;
-	struct wake_lock	setsink_lock;
+	struct wakeup_source	setsink_lock;
 	int			setsink_cnt;
  #ifdef CONFIG_FB
 	struct notifier_block	fb_notif;
@@ -2764,8 +2763,7 @@ static void dwc3_setsink_work(struct work_struct *w)
 	int ret;
 
 	if (!mdwc->otg_present && mdwc->setsink_cnt < SETSINK_RETRY_MAX) {
-		wake_lock_timeout(&mdwc->setsink_lock,
-				msecs_to_jiffies(WAKELOCK_RETRY_INTERVAL));
+		__pm_wakeup_event(&mdwc->setsink_lock, WAKELOCK_RETRY_INTERVAL);
 		mdwc->setsink_cnt++;
 		power_supply_get_property(mdwc->usb_psy,
 				POWER_SUPPLY_PROP_TYPEC_POWER_ROLE, &val);
@@ -2944,8 +2942,7 @@ static int dwc3_msm_set_type_power_role(struct dwc3_msm *mdwc,
 
 	if (typec_power_role == POWER_SUPPLY_TYPEC_PR_SINK) {
 		mdwc->setsink_cnt = 0;
-		wake_lock_timeout(&mdwc->setsink_lock,
-				msecs_to_jiffies(WAKELOCK_RETRY_INTERVAL));
+		__pm_wakeup_event(&mdwc->setsink_lock, WAKELOCK_RETRY_INTERVAL);
 		schedule_delayed_work(&mdwc->setsink_work,
 				msecs_to_jiffies(SETSINK_RETRY_INTERVAL));
 	}
@@ -3608,7 +3605,7 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 		mdwc->id_state = DWC3_ID_FLOAT;
 	}
 
-	wake_lock_init(&mdwc->setsink_lock, WAKE_LOCK_SUSPEND, "typecsink_lock");
+	wakeup_source_init(&mdwc->setsink_lock, "typecsink_lock");
 #endif /* CONFIG_USB_DWC3_MSM_ID_POLL */
 
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "tcsr_base");
@@ -3942,7 +3939,7 @@ uninit_iommu:
 	of_platform_depopulate(&pdev->dev);
 err:
 #ifdef CONFIG_USB_DWC3_MSM_ID_POLL
-	wake_lock_destroy(&mdwc->setsink_lock);
+	wakeup_source_trash(&mdwc->setsink_lock);
 #endif
 	destroy_workqueue(mdwc->dwc3_wq);
 	return ret;
@@ -3984,7 +3981,7 @@ static int dwc3_msm_remove(struct platform_device *pdev)
 	cancel_delayed_work_sync(&mdwc->perf_vote_work);
 #ifdef CONFIG_USB_DWC3_MSM_ID_POLL
 	cancel_delayed_work_sync(&mdwc->setsink_work);
-	wake_lock_destroy(&mdwc->setsink_lock);
+	wakeup_source_trash(&mdwc->setsink_lock);
 	if (mdwc->id_polling_use) {
 #ifdef CONFIG_FB
 		fb_unregister_client(&mdwc->fb_notif);
