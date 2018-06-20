@@ -1754,8 +1754,8 @@ static int msm_sdw_notifier_service_cb(struct notifier_block *nb,
 		}
 		mutex_lock(&msm_sdw->cdc_int_mclk1_mutex);
 		msm_sdw->int_mclk1_enabled = false;
-		mutex_unlock(&msm_sdw->cdc_int_mclk1_mutex);
 		msm_sdw->dev_up = false;
+		mutex_unlock(&msm_sdw->cdc_int_mclk1_mutex);
 		snd_soc_card_change_online_state(
 			msm_sdw->codec->component.card, 0);
 		for (i = 0; i < msm_sdw->nr; i++)
@@ -1786,7 +1786,9 @@ static int msm_sdw_notifier_service_cb(struct notifier_block *nb,
 		}
 powerup:
 		if (adsp_ready) {
+			mutex_lock(&msm_sdw->cdc_int_mclk1_mutex);
 			msm_sdw->dev_up = true;
+			mutex_unlock(&msm_sdw->cdc_int_mclk1_mutex);
 			msm_sdw_init_reg(msm_sdw->codec);
 			regcache_mark_dirty(msm_sdw->regmap);
 			regcache_sync(msm_sdw->regmap);
