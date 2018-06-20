@@ -29,6 +29,10 @@
 #include <linux/usb/usbpd.h>
 #include "usbpd.h"
 
+#ifdef CONFIG_USB_PD_WATER_DETECTION
+#include "water_detection.h"
+#endif
+
 /* To start USB stack for USB3.1 complaince testing */
 static bool usb_compliance_mode;
 module_param(usb_compliance_mode, bool, 0644);
@@ -475,6 +479,9 @@ struct usbpd {
 	u8			get_battery_status_db;
 	bool			send_get_battery_status;
 	u32			battery_sts_dobj;
+#ifdef CONFIG_USB_PD_WATER_DETECTION
+	struct wdet		*wdet;
+#endif
 };
 
 static LIST_HEAD(_usbpd);	/* useful for debugging */
@@ -1243,6 +1250,9 @@ static void usbpd_set_state(struct usbpd *pd, enum usbpd_state next_state)
 #ifdef CONFIG_USBPD_SMBFG_NEWGEN_EXTENSION
 		pd->dr_desc.supported_modes = DUAL_ROLE_SUPPORTED_MODES_DFP;
 #endif
+#ifdef CONFIG_USB_PD_WATER_DETECTION
+		wdet_polling_set(pd->wdet, WDET_POLLING_STOP);
+#endif
 
 		dual_role_instance_changed(pd->dual_role);
 
@@ -1415,6 +1425,9 @@ static void usbpd_set_state(struct usbpd *pd, enum usbpd_state next_state)
 		}
 #ifdef CONFIG_USBPD_SMBFG_NEWGEN_EXTENSION
 		pd->dr_desc.supported_modes = DUAL_ROLE_SUPPORTED_MODES_UFP;
+#endif
+#ifdef CONFIG_USB_PD_WATER_DETECTION
+		wdet_polling_set(pd->wdet, WDET_POLLING_STOP);
 #endif
 
 		dual_role_instance_changed(pd->dual_role);
@@ -2177,8 +2190,12 @@ static void usbpd_sm(struct work_struct *w)
 
 		pd->current_state = PE_UNKNOWN;
 
-#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#ifdef CONFIG_USBPD_SMBFG_NEWGEN_EXTENSION
 		pd->dr_desc.supported_modes = DUAL_ROLE_SUPPORTED_MODES_DFP_AND_UFP;
+#endif
+#ifdef CONFIG_USB_PD_WATER_DETECTION
+		wdet_invalid_during_negotiation(pd->wdet);
+		wdet_polling_set(pd->wdet, WDET_POLLING_START);
 #endif
 
 		kobject_uevent(&pd->dev.kobj, KOBJ_CHANGE);

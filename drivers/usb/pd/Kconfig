@@ -34,4 +34,12 @@ config USBPD_SMBFG_NEWGEN_EXTENSION
 	  Say Y here to enable additional SMB2/FG3 extensions for
 	  USB PD framework.
 
+config USB_PD_WATER_DETECTION
+	bool "SoMC Water Detection driver"
+	depends on USBPD_SMBFG_NEWGEN_EXTENSION
+	help
+	  Say Y here to enable the SoMC Water Detection driver,
+	  made to detect water presence in the Type-C port and
+	  to prevent damage to the hardware for short circuit.
+
 endmenu
