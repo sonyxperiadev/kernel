@@ -179,6 +179,7 @@ int msm_audio_ion_alloc(const char *name, struct ion_client **client,
 	*vaddr = ion_map_kernel(*client, *handle);
 	if (IS_ERR_OR_NULL((void *)*vaddr)) {
 		pr_err("%s: ION memory mapping for AUDIO failed\n", __func__);
+		rc = -ENOMEM;
 		goto err_ion_handle;
 	}
 	pr_debug("%s: mapped address = %pK, size=%zd\n", __func__,
