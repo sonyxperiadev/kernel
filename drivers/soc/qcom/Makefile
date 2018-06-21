@@ -53,6 +53,7 @@ ifdef CONFIG_DEBUG_FS
 obj-$(CONFIG_MSM_RPM_SMD)   +=  rpm-smd-debug.o
 endif
 obj-$(CONFIG_QTI_SYSTEM_PM) += system_pm.o
+obj-$(CONFIG_QCOM_REMOTEQDSS) += remoteqdss.o
 obj-$(CONFIG_MSM_SERVICE_NOTIFIER) += service-notifier.o
 obj-$(CONFIG_MSM_SERVICE_LOCATOR) += service-locator.o
 obj-$(CONFIG_MSM_SMP2P) += msm_smp2p.o smp2p_loopback.o smp2p_debug.o smp2p_sleepstate.o

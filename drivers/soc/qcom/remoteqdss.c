@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -166,7 +166,7 @@ static int remoteqdss_do_scm_call(struct scm_desc *desc,
 	int ret;
 
 	memset(desc, 0, sizeof(*desc));
-	desc->args[0] = dma_to_phys(&dma_dev, addr);
+	desc->args[0] = dma_to_phys(NULL, addr);
 	desc->args[1] = size;
 	desc->arginfo = SCM_ARGS(2, SCM_RO, SCM_VAL);
 
@@ -382,32 +382,32 @@ static void __init enumerate_scm_devices(struct dentry *parent)
 	if (IS_ERR_OR_NULL(data->dir))
 		goto out;
 
-	dentry = debugfs_create_file("sw_trace_output", 0644,
+	dentry = debugfs_create_file("sw_trace_output", S_IRUGO | S_IWUSR,
 			data->dir, data, &fops_sw_trace_output);
 	if (IS_ERR_OR_NULL(dentry))
 		goto out;
 
-	dentry = debugfs_create_u32("sw_entity_group", 0644,
+	dentry = debugfs_create_u32("sw_entity_group", S_IRUGO | S_IWUSR,
 			data->dir, &data->sw_entity_group);
 	if (IS_ERR_OR_NULL(dentry))
 		goto out;
 
-	dentry = debugfs_create_u32("sw_event_group", 0644,
+	dentry = debugfs_create_u32("sw_event_group", S_IRUGO | S_IWUSR,
 			data->dir, &data->sw_event_group);
 	if (IS_ERR_OR_NULL(dentry))
 		goto out;
 
-	dentry = debugfs_create_file("tag", 0444,
+	dentry = debugfs_create_file("tag", S_IRUGO,
 			data->dir, data, &fops_tag);
 	if (IS_ERR_OR_NULL(dentry))
 		goto out;
 
-	dentry = debugfs_create_file("swevent", 0644,
+	dentry = debugfs_create_file("swevent", S_IRUGO | S_IWUSR,
 			data->dir, data, &fops_swevent);
 	if (IS_ERR_OR_NULL(dentry))
 		goto out;
 
-	dentry = debugfs_create_file("swentity", 0644,
+	dentry = debugfs_create_file("swentity", S_IRUGO | S_IWUSR,
 			data->dir, data, &fops_swentity);
 	if (IS_ERR_OR_NULL(dentry))
 		goto out;
