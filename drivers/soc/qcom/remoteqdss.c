@@ -166,7 +166,7 @@ static int remoteqdss_do_scm_call(struct scm_desc *desc,
 	int ret;
 
 	memset(desc, 0, sizeof(*desc));
-	desc->args[0] = dma_to_phys(NULL, addr);
+	desc->args[0] = (phys_addr_t)addr;
 	desc->args[1] = size;
 	desc->arginfo = SCM_ARGS(2, SCM_RO, SCM_VAL);
 
