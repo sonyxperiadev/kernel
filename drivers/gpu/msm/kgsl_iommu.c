@@ -1252,6 +1252,7 @@ static int _init_global_pt(struct kgsl_mmu *mmu, struct kgsl_pagetable *pt)
 	}
 	context_bank_number = cb_num;
 	if (!MMU_FEATURE(mmu, KGSL_MMU_GLOBAL_PAGETABLE) &&
+		!of_machine_is_compatible("qcom,msm8998") &&
 		scm_is_call_available(SCM_SVC_MP, CP_SMMU_APERTURE_ID)) {
 		ret = kgsl_program_smmu_aperture();
 		if (ret) {
