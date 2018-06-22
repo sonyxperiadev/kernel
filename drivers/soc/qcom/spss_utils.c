@@ -47,6 +47,7 @@ enum spss_firmware_type {
 	SPSS_FW_TYPE_DEV = 'd',
 	SPSS_FW_TYPE_TEST = 't',
 	SPSS_FW_TYPE_PROD = 'p',
+	SPSS_FW_TYPE_HYBRID = 'h',
 	SPSS_FW_TYPE_NONE = 'z',
 };
 
@@ -54,6 +55,7 @@ static enum spss_firmware_type firmware_type = SPSS_FW_TYPE_TEST;
 static const char *dev_firmware_name;
 static const char *test_firmware_name;
 static const char *prod_firmware_name;
+static const char *hybr_firmware_name;
 static const char *none_firmware_name = "nospss";
 static const char *firmware_name = "NA";
 static struct device *spss_dev;
@@ -119,6 +121,9 @@ static ssize_t test_fuse_state_show(struct device *dev,
 		break;
 	case SPSS_FW_TYPE_PROD:
 		ret = snprintf(buf, PAGE_SIZE, "%s", "prod");
+		break;
+	case SPSS_FW_TYPE_HYBRID:
+		ret = snprintf(buf, PAGE_SIZE, "%s", "hybrid");
 		break;
 	default:
 		return -EINVAL;
@@ -217,6 +222,44 @@ static int spss_create_sysfs(struct device *dev)
 /*		Device Tree */
 /*==========================================================================*/
 
+static inline void spss_set_fw_type_sdm845(u32 val1, u32 spss_fuse1_mask,
+					   u32 val2, u32 spss_fuse2_mask)
+{
+	/**
+	 * Set firmware_type based on fuses:
+	 *	SPSS_CONFIG_MODE 11:        dev
+	 *	SPSS_CONFIG_MODE 01 or 10:  test
+	 *	SPSS_CONFIG_MODE 00:        prod
+	 */
+	if ((val1 & spss_fuse1_mask) && (val2 & spss_fuse2_mask))
+		firmware_type = SPSS_FW_TYPE_DEV;
+	else if ((val1 & spss_fuse1_mask) || (val2 & spss_fuse2_mask))
+		firmware_type = SPSS_FW_TYPE_TEST;
+	else
+		firmware_type = SPSS_FW_TYPE_PROD;
+
+	return;
+}
+
+static inline void spss_set_fw_type_8998(u32 val1, u32 spss_fuse1_mask,
+					 u32 val2, u32 spss_fuse2_mask)
+{
+	/**
+	 * Set firmware_type based on fuses:
+	 *	SPSS_CONFIG_MODE 10:        test
+	 *	SPSS_CONFIG_MODE 01:        prod
+	 *	SPSS_CONFIG_MODE 00 or 11:  hybrid
+	 */
+	if (val1 & spss_fuse1_mask)
+		firmware_type = SPSS_FW_TYPE_TEST;
+	else if (val2 & spss_fuse2_mask)
+		firmware_type = SPSS_FW_TYPE_PROD;
+	else
+		firmware_type = SPSS_FW_TYPE_HYBRID;
+
+	return;
+}
+
 /**
  * spss_parse_dt() - Parse Device Tree info.
  */
@@ -235,10 +278,11 @@ static int spss_parse_dt(struct device_node *node)
 	u32 val2 = 0;
 	void __iomem *spss_emul_type_reg = NULL;
 	u32 spss_emul_type_val = 0;
+	bool is_msm8998 = of_machine_is_compatible("qcom,msm8998");
 
 	ret = of_property_read_string(node, "qcom,spss-dev-firmware-name",
 		&dev_firmware_name);
-	if (ret < 0) {
+	if (ret < 0 && !is_msm8998) {
 		pr_err("can't get dev fw name.\n");
 		return -EFAULT;
 	}
@@ -254,6 +298,13 @@ static int spss_parse_dt(struct device_node *node)
 		&prod_firmware_name);
 	if (ret < 0) {
 		pr_err("can't get prod fw name.\n");
+		return -EFAULT;
+	}
+
+	ret = of_property_read_string(node, "qcom,spss-hybr-firmware-name",
+		&hybr_firmware_name);
+	if (ret < 0 && is_msm8998) {
+		pr_err("can't get hybr fw name.\n");
 		return -EFAULT;
 	}
 
@@ -284,7 +335,6 @@ static int spss_parse_dt(struct device_node *node)
 		pr_err("can't get fuse2 bit.\n");
 		return -EFAULT;
 	}
-
 
 	spss_fuse1_mask = BIT(spss_fuse1_bit);
 	spss_fuse2_mask = BIT(spss_fuse2_bit);
@@ -318,18 +368,12 @@ static int spss_parse_dt(struct device_node *node)
 	pr_debug("spss fuse1 mask [0x%08x].\n", (int) spss_fuse1_mask);
 	pr_debug("spss fuse2 mask [0x%08x].\n", (int) spss_fuse2_mask);
 
-	/**
-	 * Set firmware_type based on fuses:
-	 *	SPSS_CONFIG_MODE 11:        dev
-	 *	SPSS_CONFIG_MODE 01 or 10:  test
-	 *	SPSS_CONFIG_MODE 00:        prod
-	 */
-	if ((val1 & spss_fuse1_mask) && (val2 & spss_fuse2_mask))
-		firmware_type = SPSS_FW_TYPE_DEV;
-	else if ((val1 & spss_fuse1_mask) || (val2 & spss_fuse2_mask))
-		firmware_type = SPSS_FW_TYPE_TEST;
+	if (is_msm8998)
+		spss_set_fw_type_8998(val1, spss_fuse1_mask,
+				      val2, spss_fuse2_mask);
 	else
-		firmware_type = SPSS_FW_TYPE_PROD;
+		spss_set_fw_type_sdm845(val1, spss_fuse1_mask,
+					val2, spss_fuse2_mask);
 
 	iounmap(spss_fuse1_reg);
 	iounmap(spss_fuse2_reg);
@@ -417,6 +461,9 @@ static int spss_probe(struct platform_device *pdev)
 		break;
 	case SPSS_FW_TYPE_NONE:
 		firmware_name = none_firmware_name;
+		break;
+	case SPSS_FW_TYPE_HYBRID:
+		firmware_name = hybr_firmware_name;
 		break;
 	default:
 		return -EINVAL;
