@@ -477,7 +477,7 @@ static u32 qusb_phy_get_tune1_param(struct qusb_phy *qphy)
 				__func__, bit_mask, tune_val);
  
 	tune_val = TUNE_VAL_MASK(tune_val, qphy->efuse_bit_pos, bit_mask);
-	reg = readb_relaxed(qphy->base + QUSB2PHY_PORT_TUNE1);
+	reg = readb_relaxed(qphy->base + qphy->phy_reg[PORT_TUNE1]);
 	if (tune_val) {
 		tune_val += qphy->efuse_offset;
 		if ((s32)tune_val < 0)
@@ -591,7 +591,7 @@ static void qusb_phy_host_init(struct usb_phy *phy)
 		pr_debug("%s(): Programming host TUNE1 parameter as:%x\n",
 				__func__, qphy->host_tune_val);
 		writel_relaxed(qphy->host_tune_val,
-				qphy->base + QUSB2PHY_PORT_TUNE1);
+				qphy->base + qphy->phy_reg[PORT_TUNE1]);
 	}
 
 	/* If phy_tune1 modparam set, override tune1 value */
@@ -599,14 +599,14 @@ static void qusb_phy_host_init(struct usb_phy *phy)
 		pr_debug("%s(): (modparam) HOST_TUNE1 val:0x%02x\n",
 						__func__, phy_host_tune1);
 		writel_relaxed(phy_host_tune1,
-				qphy->base + QUSB2PHY_PORT_TUNE1);
+				qphy->base + qphy->phy_reg[PORT_TUNE1]);
 	}
 	/* If phy_tune2 modparam set, override tune2 value */
 	if (phy_host_tune2) {
 		pr_debug("%s(): (modparam) HOST TUNE2 val:0x%02x\n",
 						__func__, phy_host_tune2);
 		writel_relaxed(phy_host_tune2,
-				qphy->base + QUSB2PHY_PORT_TUNE2);
+				qphy->base + qphy->phy_reg[PORT_TUNE1] + 0x4);
 	}
 #endif /* CONFIG_MSM_USB_PHY_SOMC_EXT */
 
@@ -716,21 +716,21 @@ static int qusb_phy_init(struct usb_phy *phy)
 		pr_debug("%s(): (modparam) TUNE2 val:0x%02x\n",
 						__func__, phy_tune2);
 		writel_relaxed(phy_tune2,
-				qphy->base + QUSB2PHY_PORT_TUNE2);
+				qphy->base + qphy->phy_reg[PORT_TUNE1] + 0x4);
 	}
 	/* If phy_tune3 modparam set, override tune3 value */
 	if (phy_tune3) {
 		pr_debug("%s(): (modparam) TUNE3 val:0x%02x\n",
 						__func__, phy_tune3);
 		writel_relaxed(phy_tune3,
-				qphy->base + QUSB2PHY_PORT_TUNE3);
+				qphy->base + qphy->phy_reg[PORT_TUNE1] + 0x8);
 	}
 	/* If phy_tune4 modparam set, override tune4 value */
 	if (phy_tune4) {
 		pr_debug("%s(): (modparam) TUNE4 val:0x%02x\n",
 						__func__, phy_tune4);
 		writel_relaxed(phy_tune4,
-				qphy->base + QUSB2PHY_PORT_TUNE4);
+				qphy->base + qphy->phy_reg[PORT_TUNE1] + 0xC);
 	}
 #endif /* CONFIG_MSM_USB_PHY_SOMC_EXT */
 
