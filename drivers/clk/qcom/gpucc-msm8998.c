@@ -474,20 +474,23 @@ static struct mux_clk gfxcc_dbg_clk = {
 */
 
 static struct clk_regmap *gpucc_msm8998_clocks[] = {
-	[GPUCC_XO] = &gpucc_xo.clkr,
 	[GPU_PLL0_PLL] = &gpu_pll0_pll.clkr,
 	[GPU_PLL0_PLL_OUT_EVEN] = &gpu_pll0_out_even.clkr,
 	[GPU_PLL0_PLL_OUT_ODD] = &gpu_pll0_out_odd.clkr,
 	[GFX3D_CLK_SRC] = &gfx3d_clk_src.clkr,
 	[RBBMTIMER_CLK_SRC] = &rbbmtimer_clk_src.clkr,
 	[GFX3D_ISENSE_CLK_SRC] = &gfx3d_isense_clk_src.clkr,
-	[RBCPR_CLK_SRC] = &rbcpr_clk_src.clkr,
 	[GPUCC_RBBMTIMER_CLK] = &gpucc_rbbmtimer_clk.clkr,
 	[GPUCC_GFX3D_ISENSE_CLK] = &gpucc_gfx3d_isense_clk.clkr,
-	[GPUCC_RBCPR_CLK] = &gpucc_rbcpr_clk.clkr,
 	[GPUCC_GFX3D_CLK] = &gpucc_gfx3d_clk.clkr,
 	//[GPUCC_DBG_CLK] = &gfxcc_dbg_clk.clkr,
 	//[GPUCC_GCC_DBG_CLK] = &gpucc_gcc_dbg_clk.clkr,
+};
+
+static struct clk_regmap *gpucc_msm8998_early_clocks[] = {
+	[GPUCC_XO] = &gpucc_xo.clkr,
+	[RBCPR_CLK_SRC] = &rbcpr_clk_src.clkr,
+	[GPUCC_RBCPR_CLK] = &gpucc_rbcpr_clk.clkr,
 };
 
 static const struct regmap_config gpucc_msm8998_regmap_config = {
@@ -579,12 +582,6 @@ int gpucc_msm8998_probe(struct platform_device *pdev)
 		return rc;
 	}
 
-	/*
-	 * gpucc_xo works as the root clock for all GPUCC RCGs and GDSCs.
-	 *  Keep it enabled always.
-	 */
-	clk_prepare_enable(gpucc_xo.clkr.hw.clk);
-
 	enable_gfx_crc();
 
 	/*
@@ -623,4 +620,89 @@ int __init gpucc_msm8998_init(void)
 {
 	return platform_driver_register(&gpucc_msm8998_driver);
 }
-subsys_initcall(gpucc_msm8998_init);
+arch_initcall(gpucc_msm8998_init);
+
+static const struct qcom_cc_desc gpucc_early_msm8998_desc = {
+	.config = &gpucc_msm8998_regmap_config,
+	.clks = gpucc_msm8998_early_clocks,
+	.num_clks = ARRAY_SIZE(gpucc_msm8998_early_clocks),
+};
+
+int gpucc_early_msm8998_probe(struct platform_device *pdev)
+{
+	struct resource *res;
+	struct regmap *regmap;
+	struct clk *tmp;
+	int rc;
+
+	tmp = devm_clk_get(&pdev->dev, "gpll0");
+	if (IS_ERR(tmp)) {
+		if (PTR_ERR(tmp) != -EPROBE_DEFER)
+			dev_err(&pdev->dev,
+				"The GPLL0 clock cannot be found.\n");
+		return PTR_ERR(tmp);
+	}
+
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!res) {
+		dev_err(&pdev->dev, "Unable to retrieve register base\n");
+		return -ENOMEM;
+	}
+
+	virt_base_gfx = devm_ioremap(&pdev->dev, res->start,
+					resource_size(res));
+	if (IS_ERR(virt_base_gfx)) {
+		dev_err(&pdev->dev, "Unable to map GFX3D clock controller.\n");
+		return -EINVAL;
+	}
+
+	regmap = devm_regmap_init_mmio(&pdev->dev, virt_base_gfx,
+					gpucc_early_msm8998_desc.config);
+	if (IS_ERR(regmap)) {
+		dev_err(&pdev->dev, "Failed to init regmap\n");
+		return PTR_ERR(regmap);
+	}
+
+	vdd_dig.regulator[0] = devm_regulator_get(&pdev->dev, "vdd_dig");
+	if (IS_ERR(vdd_dig.regulator[0])) {
+		if (PTR_ERR(vdd_dig.regulator[0]) != -EPROBE_DEFER)
+			dev_err(&pdev->dev,
+				"Unable to get vdd_dig regulator\n");
+		return PTR_ERR(vdd_dig.regulator[0]);
+	}
+
+	rc = qcom_cc_really_probe(pdev, &gpucc_early_msm8998_desc, regmap);
+	if (rc) {
+		dev_err(&pdev->dev, "Failed to register GPUCC clocks\n");
+		return rc;
+	}
+
+	/*
+	 * gpucc_xo works as the root clock for all GPUCC RCGs and GDSCs.
+	 *  Keep it enabled always.
+	 */
+	clk_prepare_enable(gpucc_xo.clkr.hw.clk);
+
+	dev_info(&pdev->dev, "Registered early GPUCC clocks\n");
+	return 0;
+}
+
+static const struct of_device_id gpucc_early_msm8998_match_table[] = {
+	{ .compatible = "qcom,gpucc-early-msm8998" },
+	{},
+};
+
+static struct platform_driver gpucc_early_msm8998_driver = {
+	.probe = gpucc_early_msm8998_probe,
+	.driver = {
+		.name = "qcom,gpucc-early-msm8998",
+		.of_match_table = gpucc_early_msm8998_match_table,
+		.owner = THIS_MODULE,
+	},
+};
+
+int __init gpucc_early_msm8998_init(void)
+{
+	return platform_driver_register(&gpucc_early_msm8998_driver);
+}
+arch_initcall(gpucc_early_msm8998_init);

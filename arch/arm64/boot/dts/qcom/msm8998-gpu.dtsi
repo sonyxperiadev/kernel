@@ -107,7 +107,7 @@
 			<&clock_gcc GCC_BIMC_GFX_CLK>,
 			<&clock_gcc GCC_GPU_BIMC_GFX_CLK>,
 			<&clock_gpu GPUCC_GFX3D_ISENSE_CLK>,
-			<&clock_gpu GPUCC_RBCPR_CLK>,
+			<&clock_early_gpu GPUCC_RBCPR_CLK>,
 			<&clock_gcc GCC_GPU_IREF_CLK>;
 
 		clock-names = "core_clk", "iface_clk", "rbbmtimer_clk",

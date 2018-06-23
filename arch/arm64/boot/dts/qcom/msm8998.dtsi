@@ -870,6 +870,15 @@
 		status = "ok";
 	};
 
+	clock_early_gpu: qcom,early_gpucc@5065000 {
+		compatible = "qcom,gpucc-early-msm8998";
+		reg = <0x5065000 0x9000>;
+		vdd_dig-supply = <&pm8998_s1_level>;
+		clock-names = "xo_ao", "gpll0";
+		clocks = <&clock_rpmcc RPM_XO_A_CLK_SRC>,
+			<&clock_gcc GCC_GPU_GPLL0_CLK>;
+		#clock-cells = <1>;
+	};
 
 	clock_gpu: qcom,gpucc@5065000 {
 		compatible = "qcom,gpucc-msm8998";
