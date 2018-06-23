@@ -1644,6 +1644,7 @@
 		reg = <0x1da7000 0xda8>;
 		reg-names = "phy_mem";
 		#phy-cells = <0>;
+		lanes-per-direction = <2>;
 		clock-names = "ref_clk_src",
 			"ref_clk",
 			"ref_aux_clk";
@@ -1719,7 +1720,9 @@
 			<0 0>;
 
 		lanes-per-direction = <1>;
+		dev-ref-clk-freq = <0>; /* 19.2 MHz */
 
+		non-removable;
 		qcom,msm-bus,name = "ufs1";
 		qcom,msm-bus,num-cases = <22>;
 		qcom,msm-bus,num-paths = <2>;
