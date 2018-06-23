@@ -10,6 +10,8 @@
  * GNU General Public License for more details.
  */
 
+#include <dt-bindings/clock/mdss-10nm-pll-clk.h>
+
 &soc {
 	mdss_mdp: qcom,mdss_mdp@c900000 {
 		compatible = "qcom,mdss_mdp";
@@ -314,10 +316,10 @@
 			 <&clock_mmss MMSS_MDSS_AHB_CLK>,
 			 <&clock_mmss MMSS_MDSS_AXI_CLK>,
 			 <&clock_mmss MMSS_MISC_AHB_CLK>,
-			 <&clock_mmss EXT_BYTE0_CLK_SRC>,
-			 <&clock_mmss EXT_BYTE1_CLK_SRC>,
-			 <&clock_mmss EXT_PCLK0_CLK_SRC>,
-			 <&clock_mmss EXT_PCLK1_CLK_SRC>;
+			 <&mdss_dsi0_pll BYTECLK_MUX_0_CLK>,
+			 <&mdss_dsi1_pll BYTECLK_MUX_1_CLK>,
+			 <&mdss_dsi0_pll PCLK_SRC_MUX_0_CLK>,
+			 <&mdss_dsi1_pll PCLK_SRC_MUX_1_CLK>;
 		clock-names = "mdp_core_clk",
 			"mnoc_clk", "iface_clk",
 			"bus_clk", "core_mmss_clk",
@@ -499,8 +501,8 @@
 			 <&clock_mmss MMSS_MDSS_DP_CRYPTO_CLK>,
 			 <&clock_mmss MMSS_MDSS_DP_PIXEL_CLK>,
 			 <&mdss_dp_pll DP_VCO_DIVIDED_CLK_SRC_MUX>,
-			 <&mdss_dp_pll DP_VCO_DIVSEL_TWO_CLK_SRC>,
-			 <&mdss_dp_pll DP_VCO_DIVSEL_FOUR_CLK_SRC>;
+			 <&mdss_dp_pll DP_VCO_DIVIDED_TWO_CLK_SRC>,
+			 <&mdss_dp_pll DP_VCO_DIVIDED_FOUR_CLK_SRC>;
 		clock-names = "core_mnoc_clk", "core_iface_clk", "core_bus_clk",
 			"core_mdp_core_clk", "core_alt_iface_clk",
 			"core_aux_clk", "core_ref_clk_src", "core_ref_clk",
