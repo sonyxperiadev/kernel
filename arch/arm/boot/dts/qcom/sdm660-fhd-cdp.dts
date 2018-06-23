@@ -1,0 +1,53 @@
+/* Copyright (c) 2018, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+
+/dts-v1/;
+
+#include "sdm660.dtsi"
+#include "sdm660-cdp.dtsi"
+#include "sdm660-internal-codec.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. SDM 660 PM660 + PM660L Int. FHD Display";
+	compatible = "qcom,sdm660-cdp", "qcom,sdm660", "qcom,cdp";
+	qcom,board-id = <1 3>;
+	qcom,pmic-id = <0x0001001b 0x0101011a 0x0 0x0>,
+			<0x0001001b 0x0201011a 0x0 0x0>;
+};
+
+&mdss_mdp {
+	qcom,mdss-pref-prim-intf = "dsi";
+};
+
+&mdss_dsi {
+	hw-config = "single_dsi";
+};
+
+&mdss_dsi0 {
+	qcom,dsi-pref-prim-pan = <&dsi_nt35695b_truly_fhd_video>;
+	pinctrl-names = "mdss_default", "mdss_sleep";
+	pinctrl-0 = <&mdss_dsi_active &mdss_te_active>;
+	pinctrl-1 = <&mdss_dsi_suspend &mdss_te_suspend>;
+	qcom,platform-reset-gpio = <&tlmm 53 0>;
+	qcom,platform-te-gpio = <&tlmm 59 0>;
+};
+
+&mdss_dsi1 {
+	status = "disabled";
+	qcom,dsi-pref-prim-pan = <&dsi_dual_nt35597_truly_video>;
+	pinctrl-names = "mdss_default", "mdss_sleep";
+	pinctrl-0 = <&mdss_dsi_active &mdss_te_active>;
+	pinctrl-1 = <&mdss_dsi_suspend &mdss_te_suspend>;
+	qcom,platform-reset-gpio = <&tlmm 53 0>;
+	qcom,platform-te-gpio = <&tlmm 59 0>;
+};
