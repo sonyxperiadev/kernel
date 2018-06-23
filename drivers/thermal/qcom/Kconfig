@@ -42,12 +42,25 @@ config LIMITS_LITE_HW
 config QTI_THERMAL_LIMITS_DCVS
 	bool "QTI LMH DCVS Driver"
 	depends on THERMAL_OF
+	depends on !QTI_THERMAL_LIMITS_DCVS_LEGACY
 	help
 	  This enables the driver for Limits Management Hardware - DCVS block
 	  for the application processors. The h/w block that is available for
 	  each cluster can be used to perform quick thermal mitigations by
 	  tracking temperatures of the CPUs and taking thermal action in the
 	  hardware without s/w intervention.
+
+config QTI_THERMAL_LIMITS_DCVS_LEGACY
+	bool "QTI LMH DCVS LEGACY Driver"
+	depends on THERMAL_OF
+	depends on !QTI_RPMH_API
+	help
+	  This enables the driver for Limits Management Hardware - DCVS block
+	  for the application processors. The h/w block that is available for
+	  each cluster can be used to perform quick thermal mitigations by
+	  tracking temperatures of the CPUs and taking thermal action in the
+	  hardware without s/w intervention.
+	  This legacy driver is meant for pre-SDM845 SoC.
 
 config QTI_VIRTUAL_SENSOR
 	bool "QTI Virtual Sensor driver"
