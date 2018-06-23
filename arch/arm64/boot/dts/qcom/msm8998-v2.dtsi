@@ -1250,6 +1250,10 @@
 	qcom,spss-hybr-firmware-name = "spss2h";	/* 8 chars max */
 };
 
+&ufsphy1 {
+	lanes-per-direction = <2>;
+};
+
 &ufs1 {
 	clock-names =
 		"core_clk",
