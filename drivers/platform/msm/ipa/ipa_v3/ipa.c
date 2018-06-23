@@ -5208,7 +5208,12 @@ int ipa3_tz_unlock_reg(struct ipa_tz_unlock_reg_info *reg_info, u16 num_regs)
 	struct tz_smmu_ipa_protect_region_s cmd_buf;
 	struct scm_desc desc = {0};
 
-	if (reg_info ==  NULL || num_regs == 0) {
+	if (num_regs == 0) {
+		pr_info("No registers to unlock through TZ\n");
+		return 0;
+	}
+
+	if (reg_info ==  NULL) {
 		IPAERR("Bad parameters\n");
 		return -EFAULT;
 	}
