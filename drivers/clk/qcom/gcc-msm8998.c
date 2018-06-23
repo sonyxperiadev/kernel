@@ -2021,7 +2021,7 @@ static struct clk_branch gcc_cfg_noc_usb3_axi_clk = {
 				"usb30_master_clk_src"
 			},
 			.num_parents = 1,
-			.flags = CLK_ENABLE_HAND_OFF | CLK_SET_RATE_PARENT,
+			.flags = CLK_SET_RATE_PARENT, //HANDOFF?
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -2106,12 +2106,15 @@ static struct clk_branch gcc_gpu_bimc_gfx_clk = {
 
 static struct clk_branch gcc_gpu_cfg_ahb_clk = {
 	.halt_reg = 0x71004,
+	.halt_check = BRANCH_HALT,
+	.hwcg_reg = 0x71004,
+	.hwcg_bit = 1,
 	.clkr = {
 		.enable_reg = 0x71004,
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data) {
 			.name = "gcc_gpu_cfg_ahb_clk",
-			.flags = CLK_ENABLE_HAND_OFF,
+			.flags = CLK_ENABLE_HAND_OFF, /* CLK_IS_CRITICAL?!?! */
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -2289,6 +2292,9 @@ static struct clk_branch gcc_pdm2_clk = {
 
 static struct clk_branch gcc_pdm_ahb_clk = {
 	.halt_reg = 0x33004,
+	.halt_check = BRANCH_HALT,
+	.hwcg_reg = 0x33004,
+	.hwcg_bit = 1,
 	.clkr = {
 		.enable_reg = 0x33004,
 		.enable_mask = BIT(0),
@@ -2303,6 +2309,8 @@ static struct clk_branch gcc_pdm_ahb_clk = {
 static struct clk_branch gcc_prng_ahb_clk = {
 	.halt_reg = 0x34004,
 	.halt_check = BRANCH_HALT_VOTED,
+	.hwcg_reg = 0x34004,
+	.hwcg_bit = 1,
 	.clkr = {
 		.enable_reg = 0x52004,
 		.enable_mask = BIT(13),
@@ -2321,7 +2329,6 @@ static struct clk_branch gcc_sdcc2_ahb_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data) {
 			.name = "gcc_sdcc2_ahb_clk",
-			.flags = CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -2351,7 +2358,7 @@ static struct clk_branch gcc_sdcc4_ahb_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data) {
 			.name = "gcc_sdcc4_ahb_clk",
-			.flags = CLK_SET_RATE_PARENT | CLK_ENABLE_HAND_OFF,
+			.flags = CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -2609,7 +2616,7 @@ static struct clk_branch gcc_usb30_master_clk = {
 			.name = "gcc_usb30_master_clk",
 			/*TODO: Should we depend on gcc_cfg_noc_usb3_axi_clk?*/
 			.parent_names = (const char*[]) {
-				"usb30_master_clk_src",
+				"gcc_cfg_noc_usb3_axi_clk",
 			},
 			.num_parents = 1,
 			.flags = CLK_ENABLE_HAND_OFF | CLK_SET_RATE_PARENT,
@@ -2682,6 +2689,9 @@ static struct clk_gate2 gcc_usb3_phy_pipe_clk = {
 
 static struct clk_branch gcc_mss_cfg_ahb_clk = {
 	.halt_reg = 0x8A000,
+	.halt_check = BRANCH_HALT,
+	.hwcg_reg = 0x8a000,
+	.hwcg_bit = 1,
 	.clkr = {
 		.enable_reg = 0x8A000,
 		.enable_mask = BIT(0),
