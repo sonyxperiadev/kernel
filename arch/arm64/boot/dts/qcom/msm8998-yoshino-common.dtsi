@@ -158,7 +158,7 @@
 		pinctrl-0 = <&msm_gpio_87 &msm_gpio_88>;
 		pinctrl-1 = <&msm_gpio_87 &msm_gpio_88>;
 		qcom,clk-freq-out = <355000>;
-		status = "disabled";
+		status = "ok";
 
 		/delete-node/ synaptics@20;
 
@@ -278,7 +278,7 @@
 		pinctrl-names = "i2c_active", "i2c_sleep";
 		pinctrl-0 = <&msm_gpio_6 &msm_gpio_7>;
 		pinctrl-1 = <&msm_gpio_6_suspend &msm_gpio_7_suspend>;
-		status = "disabled";
+		status = "ok";
 		tcs3490@72 {
 			compatible = "ams,tcs3490";
 			reg = <0x72>;
