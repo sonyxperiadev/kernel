@@ -1832,11 +1832,13 @@
 			interrupts = <0 131 0>;
 			usb-phy = <&qusb_phy0>, <&ssphy>;
 			tx-fifo-resize;
+			linux,sysdev_is_parent;
 			snps,nominal-elastic-buffer;
 			snps,disable-clk-gating;
 			snps,has-lpm-erratum;
 			snps,hird-threshold = /bits/ 8 <0x10>;
 			snps,num-gsi-evt-buffs = <0x3>;
+			usb-core-id = <0>;
 		};
 
 		qcom,usbbam@a904000 {
