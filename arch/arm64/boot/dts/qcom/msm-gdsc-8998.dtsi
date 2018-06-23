@@ -53,12 +53,17 @@
 	};
 
 	/* MMSS GDSCs */
+	gdsc_bimc_smmu_hw_ctrl: syscon@c8ce024 {
+		compatible = "syscon";
+		reg = <0xc8ce024 0x4>;
+	};
+
 	gdsc_bimc_smmu: qcom,gdsc@c8ce020 {
 		compatible = "qcom,gdsc";
 		regulator-name = "gdsc_bimc_smmu";
-		reg = <0xc8ce020 0x4>,
-		      <0xc8ce024 0x4>;
-		reg-names = "base", "hw_ctrl_addr";
+		reg = <0xc8ce020 0x4>;
+		reg-names = "base";
+		hw-ctrl-addr = <&gdsc_bimc_smmu_hw_ctrl>;
 		qcom,no-status-check-on-disable;
 		qcom,gds-timeout = <500>;
 		status = "disabled";
