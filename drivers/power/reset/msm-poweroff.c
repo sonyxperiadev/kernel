@@ -306,6 +306,17 @@ static void msm_restart_prepare(const char *cmd)
 	else
 		qpnp_pon_system_pwr_off(PON_POWER_OFF_HARD_RESET);
 
+#if defined(TARGET_SOMC_XBOOT)
+	if (in_panic) {
+		qpnp_pon_system_pwr_off(PON_POWER_OFF_WARM_RESET);
+		__raw_writel(0xC0DEDEAD, restart_reason);
+		qpnp_pon_set_restart_reason(PON_RESTART_REASON_KERNEL_PANIC);
+		flush_cache_all();
+
+		return;
+	}
+#endif
+
 	if (cmd != NULL) {
 		if (!strncmp(cmd, "bootloader", 10)) {
 			qpnp_pon_set_restart_reason(
