@@ -1218,6 +1218,7 @@
 	qcom,ipa_fws@1e08000 {
 		compatible = "qcom,pil-tz-generic";
 		qcom,pas-id = <0xF>;
+		qcom,mas-crypto = <&mas_crypto_c0>;
 		qcom,firmware-name = "ipa_fws";
 	};
 
@@ -2082,6 +2083,7 @@
 		vdd_cx-supply = <&pm8998_s1_level>;
 		qcom,proxy-reg-names = "vdd_cx";
 		qcom,vdd_cx-uV-uA = <RPM_SMD_REGULATOR_LEVEL_TURBO 100000>;
+		qcom,mas-crypto = <&mas_crypto_c0>;
 
 		clocks = <&clock_rpmcc CXO_PIL_LPASS_CLK>;
 		clock-names = "xo";
@@ -2825,6 +2827,7 @@
 		qcom,vdd_cx-uV-uA = <RPM_SMD_REGULATOR_LEVEL_TURBO 0>;
 		qcom,proxy-reg-names = "vdd_cx", "vdd_px";
 		qcom,keep-proxy-regs-on;
+		qcom,mas-crypto = <&mas_crypto_c0>;
 
 		clocks = <&clock_rpmcc CXO_PIL_SSC_CLK>,
 			 <&clock_rpmcc RPM_AGGR2_NOC_CLK>;
@@ -2856,6 +2859,7 @@
 
 		vdd-supply = <&gdsc_venus>;
 		qcom,proxy-reg-names = "vdd";
+		qcom,mas-crypto = <&mas_crypto_c0>;
 
 		clocks = <&clock_mmss MMSS_VIDEO_CORE_CLK>,
 			 <&clock_mmss MMSS_MNOC_AHB_CLK>,
@@ -2907,13 +2911,13 @@
 		vdd_cx-supply = <&pm8998_s1_level>;
 		qcom,proxy-reg-names = "vdd_cx";
 		qcom,vdd_cx-uV-uA = <RPM_SMD_REGULATOR_LEVEL_TURBO 100000>;
+		qcom,mas-crypto = <&mas_crypto_c0>;
 
 		clocks = <&clock_rpmcc CXO_PIL_SPSS_CLK>;
 		clock-names = "xo";
 		qcom,proxy-clock-names = "xo";
 		qcom,pil-generic-irq-handler;
 		status = "ok";
-
 		qcom,pas-id = <14>;
 		qcom,proxy-timeout-ms = <10000>;
 		qcom,firmware-name = "spss";
