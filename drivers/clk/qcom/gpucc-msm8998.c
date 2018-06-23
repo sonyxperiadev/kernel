@@ -79,16 +79,16 @@ enum {
 
 static const struct parent_map gpucc_parent_map_0[] = {
 	{ P_GPU_XO, 0 },
-	{ P_GPLL0, 5 },
 	{ P_GPU_CC_PLL0_OUT_EVEN, 1 },
 	{ P_GPU_CC_PLL0_OUT_ODD, 2 },
+	//{ P_GPLL0, 5 },
 };
 
 static const char * const gpucc_parent_names_0[] = {
 	"gpucc_xo",
-	"gpll0",
 	"gpucc_pll0_out_even",
 	"gpucc_pll0_out_odd",
+	//"gpll0",
 };
 
 static const struct parent_map gpucc_parent_map_1[] = {
@@ -132,28 +132,12 @@ static struct clk_alpha_pll gpu_pll0_pll = {
 	.vco_table = fabia_vco,
 	.num_vco = ARRAY_SIZE(fabia_vco),
 	.clkr.hw.init = &(struct clk_init_data) {
-			.name = "gpu_pll0_pll",
+			.name = "gpu_cc_pll0",
 			.parent_names = (const char *[]){ "gpucc_xo" },
 			.num_parents = 1,
 			.ops = &clk_alpha_pll_fabia_ops,
 			VDD_GPU_MX_FMAX_MAP1(MIN, 1420000500),
 	},
-};
-
-static const struct clk_div_table post_div_table_fabia_even[] = {
-	{ 0x0, 1 },
-	{ 0x1, 2 },
-	{ 0x3, 4 },
-	{ 0x7, 8 },
-	{ }
-};
-
-static const struct clk_div_table post_div_table_fabia_odd[] = {
-	{ 0x0, 1 },
-	{ 0x3, 3 },
-	{ 0x5, 5 },
-	{ 0x7, 7 },
-	{ }
 };
 
 static struct clk_alpha_pll_postdiv gpu_pll0_out_even = {
@@ -182,6 +166,7 @@ static struct clk_alpha_pll_postdiv gpu_pll0_out_odd = {
 	},
 };
 
+#if 0 /* Should we go that way with clk_gfx3d_src_ops? */
 static struct freq_tbl ftbl_gfx3d_clk_src[] = {
 	F_GFX( 180000000, 0, 1, 0, 0,  360000000),
 	F_GFX( 257000000, 0, 1, 0, 0,  514000000),
@@ -194,12 +179,25 @@ static struct freq_tbl ftbl_gfx3d_clk_src[] = {
 /*	F_GFX( 750000000, 0, 1, 0, 0, 1500000000),*/
 	{ }
 };
+#endif
+
+static struct freq_tbl ftbl_gfx3d_clk_src[] = {
+	F(180000000, P_GPU_CC_PLL0_OUT_EVEN,  1, 0, 0),
+	F(257000000, P_GPU_CC_PLL0_OUT_EVEN,  1, 0, 0),
+	F(342000000, P_GPU_CC_PLL0_OUT_EVEN,  1, 0, 0),
+	F(414000000, P_GPU_CC_PLL0_OUT_EVEN,  1, 0, 0),
+	F(515000000, P_GPU_CC_PLL0_OUT_EVEN,  1, 0, 0),
+	F(596000000, P_GPU_CC_PLL0_OUT_EVEN,  1, 0, 0),
+	F(670000000, P_GPU_CC_PLL0_OUT_EVEN,  1, 0, 0),
+	F(710000000, P_GPU_CC_PLL0_OUT_EVEN,  1, 0, 0),
+	{ }
+};
 
 static struct clk_init_data gfx3d_clk_data = {
 	.name = "gfx3d_clk_src",
 	.parent_names = gpucc_parent_names_0,
 	.num_parents = ARRAY_SIZE(gpucc_parent_names_0),
-	.ops = &clk_gfx3d_src_ops,
+	.ops = &clk_rcg2_ops,
 	.flags = CLK_SET_RATE_PARENT,
 	VDD_GFX_FMAX_MAP8(MIN_SVS,  180000000,
 			  LOW_SVS,  257000000,
@@ -313,6 +311,7 @@ static struct clk_branch gpucc_rbbmtimer_clk = {
 				"rbbmtimer_clk_src",
 			},
 			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -329,6 +328,7 @@ static struct clk_branch gpucc_gfx3d_isense_clk = {
 				"gfx3d_isense_clk_src",
 			},
 			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -345,6 +345,7 @@ static struct clk_branch gpucc_rbcpr_clk = {
 				"rbcpr_clk_src",
 			},
 			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -374,9 +375,6 @@ static void __iomem *virt_base_gfx;
 static void enable_gfx_crc(void)
 {
 	u32 regval;
-
-	/* Set graphics clock at a safe frequency */
-	clk_set_rate(gpucc_gfx3d_clk.clkr.hw.clk, 342000000);
 
 	/* Turn on the GPU_CX GDSC */
 	regval = readl_relaxed(virt_base_gfx + GPU_CX_GDSCR_OFFSET);
@@ -431,9 +429,9 @@ static void enable_gfx_crc(void)
 	writel_relaxed(0x00015010, virt_base_gfx + CRC_MND_CFG_OFFSET);
 	writel_relaxed(0x00800000, virt_base_gfx + CRC_SID_FSM_OFFSET);
 
-	/* Wait for 16 cycles before continuing */
-	udelay(1);
-	clk_set_rate(gpucc_gfx3d_clk.clkr.hw.clk, 670000000);
+	/* Wait for 32 cycles before continuing */
+	udelay(2);
+	//clk_set_rate(gpucc_gfx3d_clk.clkr.hw.clk, 670000000);
 
 	/* Disable the graphics clock */
 	clk_disable_unprepare(gpucc_gfx3d_clk.clkr.hw.clk);
