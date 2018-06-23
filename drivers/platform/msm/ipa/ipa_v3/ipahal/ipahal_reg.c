@@ -776,6 +776,18 @@ static void ipareg_parse_clkon_cfg_common(
 			IPA_CLKON_CFG_OPEN_RX_BMSK);
 }
 
+static void ipareg_construct_clkon_open_misc_cfg(
+	enum ipahal_reg_name reg, const void *fields, u32 *val)
+{
+	struct ipahal_reg_clkon_cfg *clkon_cfg =
+		(struct ipahal_reg_clkon_cfg *)fields;
+
+	IPA_SETFIELD_IN_REG(*val, clkon_cfg->open_misc,
+			IPA_CLKON_CFG_OPEN_MISC_SHFT,
+			IPA_CLKON_CFG_OPEN_MISC_BMSK);
+}
+
+
 static void ipareg_parse_clkon_cfg(
 	enum ipahal_reg_name reg, void *fields, u32 val)
 {
@@ -2616,6 +2628,9 @@ static struct ipahal_reg_obj ipahal_reg_objs[IPA_HW_MAX][IPA_REG_MAX] = {
 
 
 	/* IPAv3.1 */
+	[IPA_HW_v3_1][IPA_CLKON_CFG] = {
+		ipareg_construct_clkon_open_misc_cfg, ipareg_parse_dummy,
+		0x00000044, 0},
 	[IPA_HW_v3_1][IPA_SUSPEND_IRQ_INFO_EE_n] = {
 		ipareg_construct_dummy, ipareg_parse_dummy,
 		0x00003030, 0x1000, 0, 0, 0},
@@ -2625,7 +2640,6 @@ static struct ipahal_reg_obj ipahal_reg_objs[IPA_HW_MAX][IPA_REG_MAX] = {
 	[IPA_HW_v3_1][IPA_SUSPEND_IRQ_CLR_EE_n] = {
 		ipareg_construct_dummy, ipareg_parse_dummy,
 		0x00003038, 0x1000, 0, 0, 0},
-
 
 	/* IPAv3.5 */
 	[IPA_HW_v3_5][IPA_TX_CFG] = {
