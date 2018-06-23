@@ -978,6 +978,11 @@ qpnp_pon_input_dispatch(struct qpnp_pon *pon, u32 pon_type)
 	if (!cfg)
 		return -EINVAL;
 
+#ifdef CONFIG_QPNP_POWER_ON_PANIC_ON_KPDPWR_RESIN
+	if (cfg->key_code == 115)
+		panic("Provoking kernel panic to retrieve pstore logs.\n");
+#endif
+
 	/* Check if key reporting is supported */
 	if (!cfg->key_code)
 		return 0;

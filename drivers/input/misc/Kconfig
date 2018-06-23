@@ -184,6 +184,24 @@ config INPUT_QPNP_POWER_ON
 	  reporting the change in status of the KPDPWR_N line (connected to the
 	  power-key) as well as reset features.
 
+config QPNP_POWER_ON_PANIC_ON_KPDPWR_RESIN
+	bool "Provoke kernel panic on KPDPWR+RESIN keypress"
+	depends on INPUT_QPNP_POWER_ON
+	default n
+	help
+	  This option enables code that provokes a kernel panic whenever
+	  KPDPWR and RESIN get pressed: this combination normally triggers
+	  a PMIC-driven emergency reboot after a predefined time, but some
+	  devices powered by an EFI bootloader will delete the pstore logs
+	  in RAM for security purposes if certain bits signaling kernel
+	  panic are not set before rebooting.
+
+	  This is an option used for early kernel porting or some kind of
+	  debugging that would be impossible otherwise.
+
+	  If unsure, DEFINITELY say N.
+	  This option shall be used ONLY temporarily and ONLY FOR DEBUGGING.
+
 config PON_SOMC_ORG
 	bool "SoMC specific power on interface"
 	depends on INPUT_QPNP_POWER_ON
