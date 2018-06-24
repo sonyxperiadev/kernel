@@ -14,9 +14,10 @@
 
 /* HWs */
 #define GCC_XO					0
-#define GCC_CE1_AHB_M_CLK			1
-#define GCC_CE1_AXI_M_CLK			2
-#define GCC_GPLL0_EARLY_DIV			3
+#define GCC_BI_TCXO				1
+#define GCC_CE1_AHB_M_CLK			2
+#define GCC_CE1_AXI_M_CLK			3
+#define GCC_GPLL0_EARLY_DIV			4
 
 /* PLLs */
 #define GPLL0					0
@@ -187,6 +188,7 @@
 #define GCC_GPU_GPLL0_DIV_CLK			172
 #define GCC_MMSS_GPLL0_CLK			173
 #define GCC_MMSS_GPLL0_DIV_CLK			174
+#define GCC_USB_PHY_CFG_AHB2PHY_CLK		175
 
 /* GCC block resets */
 #define QUSB2PHY_PRIM_BCR			0

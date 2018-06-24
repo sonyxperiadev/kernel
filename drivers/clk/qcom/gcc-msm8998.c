@@ -132,7 +132,7 @@ static const struct parent_map gcc_parent_map_6[] = {
 static const char * const gcc_parent_names_6[] = {
 	"xo",
 	"gpll0",
-	"core_pi_sleep_clk",
+	"sleep_clk",
 	"gpll0_early_div",
 };
 
@@ -143,7 +143,7 @@ static const struct parent_map gcc_parent_map_7[] = {
 
 static const char * const gcc_parent_names_7[] = {
 	"xo",
-	"core_pi_sleep_clk",
+	"sleep_clk",
 };
 
 static struct clk_fixed_factor gcc_ce1_ahb_m_clk = {
@@ -167,6 +167,19 @@ static struct clk_fixed_factor xo = {
 		.name = "xo",
 		.parent_names = (const char *[]){ "xo_board" },
 		.num_parents = 1,
+		.ops = &clk_fixed_factor_ops,
+	},
+};
+
+static struct clk_fixed_factor bi_tcxo = {
+	.mult = 1,
+	.div = 1,
+	.hw.init = &(struct clk_init_data){
+		.name = "bi_tcxo",
+		.parent_names = (const char *[]){ "cxo" },
+		.num_parents = 1,
+		/* To enable MISC through the RPM SMD key */
+		.flags = CLK_SET_RATE_PARENT,
 		.ops = &clk_fixed_factor_ops,
 	},
 };
@@ -3019,6 +3032,7 @@ static struct clk_debug_mux gcc_debug_mux = {
 
 static struct clk_hw *gcc_msm8998_hws[] = {
 	[GCC_XO] = &xo.hw,
+	[GCC_BI_TCXO] = &bi_tcxo.hw,
 	[GCC_CE1_AHB_M_CLK] = &gcc_ce1_ahb_m_clk.hw,
 	[GCC_CE1_AXI_M_CLK] = &gcc_ce1_axi_m_clk.hw,
 	[GCC_GPLL0_EARLY_DIV] = &gpll0_early_div.hw,
