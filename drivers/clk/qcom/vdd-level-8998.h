@@ -51,6 +51,18 @@
 	},					\
 	.num_rate_max = VDD_DIG_NUM
 
+#define VDD_DIG_FMAX_MAP5(l1, f1, l2, f2, l3, f3, l4, f4, l5, f5) \
+	.vdd_class = &vdd_dig,			\
+	.rate_max = (unsigned long[VDD_DIG_NUM]) {	\
+		[VDD_DIG_##l1] = (f1),		\
+		[VDD_DIG_##l2] = (f2),		\
+		[VDD_DIG_##l3] = (f3),		\
+		[VDD_DIG_##l4] = (f4),		\
+		[VDD_DIG_##l5] = (f5),		\
+	},					\
+	.num_rate_max = VDD_DIG_NUM
+
+
 #define VDD_DIG_FMAX_MAP1_AO(l1, f1)		 \
 	.vdd_class = &vdd_dig_ao,		\
 	.rate_max = (unsigned long[VDD_DIG_NUM]) {	\

@@ -144,11 +144,15 @@ static const char * const mmcc_parent_names_2a[] = {
 
 static const struct parent_map mmcc_parent_map_3[] = {
 	{ P_XO, 0 },
+	{ P_GPLL0, 5 },
+	{ P_GPLL0_DIV, 6 },
 	{ P_MMPLL5, 2 },
 };
 
 static const char * const mmcc_parent_names_3[] = {
 	"xo",
+	"gpll0",
+	"gpll0_early_div",
 	"mmpll5",
 };
 
@@ -481,12 +485,12 @@ static struct clk_rcg2 ahb_clk_src = {
 	.hid_width = 5,
 	.parent_map = mmcc_parent_map_1,
 	.freq_tbl = ftbl_ahb_clk_src,
+	.enable_safe_config = true,
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "ahb_clk_src",
 		.parent_names = mmcc_parent_names_1,
 		.num_parents = ARRAY_SIZE(mmcc_parent_names_1),
 		.ops = &clk_rcg2_ops,
-		.flags = CLK_GET_RATE_NOCACHE,
 		VDD_DIG_FMAX_MAP3(LOWER, 19200000, LOW, 40000000,
 					NOMINAL, 80800000),
 	},
@@ -596,12 +600,13 @@ static struct clk_rcg2 mdp_clk_src = {
 	.hid_width = 5,
 	.parent_map = mmcc_parent_map_3,
 	.freq_tbl = ftbl_mdp_clk_src,
+	.enable_safe_config = true,
 	.clkr.hw.init = &(struct clk_init_data) {
 		.name = "mdp_clk_src",
 		.parent_names = mmcc_parent_names_3,
 		.num_parents = ARRAY_SIZE(mmcc_parent_names_3),
 		.ops = &clk_rcg2_ops,
-		.flags = CLK_GET_RATE_NOCACHE,
+		//.flags = CLK_GET_RATE_NOCACHE,
 		VDD_DIG_FMAX_MAP4(LOWER, 171430000, LOW, 275000000,
 					NOMINAL, 330000000, HIGH, 550000000),
 	},
@@ -619,12 +624,12 @@ static struct freq_tbl ftbl_maxi_clk_src[] = {
 static struct clk_rcg2 maxi_clk_src = {
 	.cmd_rcgr = 0x0F020,
 	.hid_width = 5,
-	.parent_map = mmcc_parent_map_3,
+	.parent_map = mmcc_parent_map_4,
 	.freq_tbl = ftbl_maxi_clk_src,
 	.clkr.hw.init = &(struct clk_init_data) {
 		.name = "maxi_clk_src",
-		.parent_names = mmcc_parent_names_3,
-		.num_parents = ARRAY_SIZE(mmcc_parent_names_3),
+		.parent_names = mmcc_parent_names_4,
+		.num_parents = ARRAY_SIZE(mmcc_parent_names_4),
 		.ops = &clk_rcg2_ops,
 		VDD_DIG_FMAX_MAP4(LOWER, 75000000, LOW, 171428571,
 					NOMINAL, 323200000, HIGH, 406000000),
@@ -701,6 +706,7 @@ static struct clk_rcg2 jpeg0_clk_src = {
 static struct freq_tbl ftbl_rot_clk_src[] = {
 	F( 171428571, P_GPLL0,    3.5,    0,     0),
 	F( 275000000, P_MMPLL5,     3,    0,     0),
+	F( 300000000, P_GPLL0,      2,    0,     0),
 	F( 330000000, P_MMPLL5,   2.5,    0,     0),
 	F( 412500000, P_MMPLL5,     2,    0,     0),
 	F( 550000000, P_MMPLL5,   1.5,    0,     0),
@@ -712,13 +718,18 @@ static struct clk_rcg2 rot_clk_src = {
 	.hid_width = 5,
 	.parent_map = mmcc_parent_map_3,
 	.freq_tbl = ftbl_rot_clk_src,
+	//.enable_safe_config = true,
 	.clkr.hw.init = &(struct clk_init_data) {
 		.name = "rot_clk_src",
 		.parent_names = mmcc_parent_names_3,
 		.num_parents = ARRAY_SIZE(mmcc_parent_names_3),
 		.ops = &clk_rcg2_ops,
-		VDD_DIG_FMAX_MAP4(LOWER, 171430000, LOW, 275000000,
-					NOMINAL, 330000000, HIGH, 550000000),
+		VDD_DIG_FMAX_MAP5(
+			LOWER, 171428571,
+			LOW, 275000000,
+			LOW_L1, 300000000,
+			NOMINAL, 330000000,
+			HIGH, 550000000),
 	},
 };
 
@@ -870,7 +881,8 @@ static struct clk_rcg2 byte0_clk_src = {
 		.name = "byte0_clk_src",
 		.parent_names = disp_cc_parent_names_0,
 		.num_parents = ARRAY_SIZE(disp_cc_parent_names_0),
-		.ops = &clk_rcg2_ops,
+		.flags = CLK_SET_RATE_PARENT | CLK_GET_RATE_NOCACHE,
+		.ops = &clk_byte2_ops,
 		VDD_DIG_FMAX_MAP3(LOWER, 131250000, LOW, 210000000,
 						NOMINAL, 312500000),
 	},
@@ -884,7 +896,8 @@ static struct clk_rcg2 byte1_clk_src = {
 		.name = "byte1_clk_src",
 		.parent_names = disp_cc_parent_names_0,
 		.num_parents = ARRAY_SIZE(disp_cc_parent_names_0),
-		.ops = &clk_rcg2_ops,
+		.flags = CLK_SET_RATE_PARENT | CLK_GET_RATE_NOCACHE,
+		.ops = &clk_byte2_ops,
 		VDD_DIG_FMAX_MAP3(LOWER, 131250000, LOW, 210000000,
 						NOMINAL, 312500000),
 	},
@@ -1238,7 +1251,8 @@ static struct clk_rcg2 extpclk_clk_src = {
 		.name = "extpclk_clk_src",
 		.parent_names = disp_cc_parent_names_5,
 		.num_parents = ARRAY_SIZE(disp_cc_parent_names_5),
-		.ops = &clk_rcg2_ops,
+		.ops = &clk_byte_ops,
+		.flags = CLK_SET_RATE_PARENT,
 		VDD_DIG_FMAX_MAP3(LOWER, 150000000, LOW, 300000000,
 					NOMINAL, 600000000),
 	},
@@ -2370,6 +2384,10 @@ static struct clk_branch mmss_mdss_ahb_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data) {
 			.name = "mmss_mdss_ahb_clk",
+			.parent_names = (const char *[]){
+				"ahb_clk_src",
+			},
+			.num_parents = 1,
 			.flags = CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
@@ -2384,7 +2402,6 @@ static struct clk_branch mmss_mdss_axi_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data) {
 			.name = "mmss_mdss_axi_clk",
-			.flags = CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -2402,7 +2419,7 @@ static struct clk_branch mmss_mdss_byte0_clk = {
 				"byte0_clk_src",
 			},
 			.num_parents = 1,
-			.flags = CLK_SET_RATE_PARENT,
+			.flags = CLK_SET_RATE_PARENT | CLK_GET_RATE_NOCACHE,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -2459,7 +2476,7 @@ static struct clk_branch mmss_mdss_byte1_clk = {
 				"byte1_clk_src",
 			},
 			.num_parents = 1,
-			.flags = CLK_SET_RATE_PARENT,
+			.flags = CLK_SET_RATE_PARENT | CLK_GET_RATE_NOCACHE,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -2718,7 +2735,7 @@ static struct clk_branch mmss_mdss_mdp_clk = {
 
 static struct clk_branch mmss_mdss_mdp_lut_clk = {
 	.halt_reg = 0x02320,
-	.halt_check = BRANCH_HALT,
+	.halt_check = BRANCH_HALT_DELAY,
 	.clkr = {
 		.enable_reg = 0x02320,
 		.enable_mask = BIT(0),
@@ -2746,7 +2763,7 @@ static struct clk_branch mmss_mdss_pclk0_clk = {
 				"pclk0_clk_src",
 			},
 			.num_parents = 1,
-			.flags = CLK_SET_RATE_PARENT,
+			.flags = CLK_SET_RATE_PARENT | CLK_GET_RATE_NOCACHE,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -2764,7 +2781,7 @@ static struct clk_branch mmss_mdss_pclk1_clk = {
 				"pclk1_clk_src",
 			},
 			.num_parents = 1,
-			.flags = CLK_SET_RATE_PARENT,
+			.flags = CLK_SET_RATE_PARENT | CLK_GET_RATE_NOCACHE,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -3000,7 +3017,7 @@ static struct clk_branch mmss_vmem_maxi_clk = {
 				"maxi_clk_src",
 			},
 			.num_parents = 1,
-			.flags = CLK_ENABLE_HAND_OFF | CLK_SET_RATE_PARENT,
+			.flags = CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED,
 			.ops = &clk_branch2_ops,
 		},
 	},
