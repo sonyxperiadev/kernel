@@ -200,6 +200,7 @@ static unsigned int soft_vote_gpll0;
 
 static struct clk_alpha_pll gpll0_out_main = {
 	.offset = 0x0,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.soft_vote = &soft_vote_gpll0,
 	.soft_vote_mask = PLL_SOFT_VOTE_PRIMARY,
 	.flags = SUPPORTS_FSM_VOTE,
@@ -217,6 +218,7 @@ static struct clk_alpha_pll gpll0_out_main = {
 
 static struct clk_alpha_pll gpll0_ao_out_main = {
 	.offset = 0x0,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.soft_vote = &soft_vote_gpll0,
 	.soft_vote_mask = PLL_SOFT_VOTE_CPU,
 	.flags = SUPPORTS_FSM_VOTE,
@@ -245,6 +247,7 @@ static struct clk_fixed_factor gpll0_out_early_div = {
 
 static struct clk_alpha_pll gpll1_out_main = {
 	.offset = 0x1000,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.clkr = {
 		.enable_reg = 0x52000,
 		.enable_mask = BIT(1),
@@ -270,6 +273,7 @@ static struct clk_fixed_factor gpll1_out_early_div = {
 
 static struct clk_alpha_pll gpll4_out_main = {
 	.offset = 0x77000,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.clkr = {
 		.enable_reg = 0x52000,
 		.enable_mask = BIT(4),

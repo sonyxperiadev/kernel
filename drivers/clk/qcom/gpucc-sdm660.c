@@ -103,6 +103,7 @@ static struct pll_vco_data pll_data[] = {
 
 static struct clk_alpha_pll gpu_pll0_pll_out_main = {
 	.offset = 0x0,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.vco_table = gpu_vco,
 	.num_vco = ARRAY_SIZE(gpu_vco),
 	.vco_data = pll_data,
@@ -120,6 +121,7 @@ static struct clk_alpha_pll gpu_pll0_pll_out_main = {
 
 static struct clk_alpha_pll gpu_pll1_pll_out_main = {
 	.offset = 0x40,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.vco_table = gpu_vco,
 	.num_vco = ARRAY_SIZE(gpu_vco),
 	.vco_data = pll_data,
