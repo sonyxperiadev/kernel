@@ -1093,9 +1093,9 @@ static int rpm_smd_clk_probe(struct platform_device *pdev)
 		 */
 		clk_prepare_enable(msm8998_cxo_a.hw.clk);
 
-		/* Hold an active set vote for the pnoc_keepalive_a_clk */
-		clk_set_rate(pnoc_keepalive_a_clk.hw.clk, 19200000);
-		clk_prepare_enable(pnoc_keepalive_a_clk.hw.clk);
+		/* Hold an active set vote for the cnoc_periph resource */
+		clk_set_rate(cnoc_periph_keepalive_a_clk.hw.clk, 19200000);
+		clk_prepare_enable(cnoc_periph_keepalive_a_clk.hw.clk);
 	} else if (is_8996) {
 		/*
 		 * Keep an active vote on CXO in case no other driver
