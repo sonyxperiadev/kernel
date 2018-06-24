@@ -864,7 +864,7 @@
 	};
 
 	clock_mmss_vote: vote-clock-controller@8c0000 {
-		compatible = "qcom,mmsscc-voters-8996";
+		compatible = "qcom,mmsscc-voters-msm8998";
 		reg = <0xc8c0000 0x40000>;
 		#clock-cells = <1>;
 		status = "ok";
