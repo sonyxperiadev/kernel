@@ -264,7 +264,7 @@
 			cell-index = <0>;
 			compatible = "qcom,mdss-fb";
 			qcom,cont-splash-memory {
-				linux,contiguous-region = <&cont_splash_mem>;
+				//linux,contiguous-region = <&cont_splash_mem>;
 			};
 		};
 
@@ -318,8 +318,8 @@
 			 <&clock_mmss MMSS_MISC_AHB_CLK>,
 			 <&mdss_dsi0_pll BYTECLK_MUX_0_CLK>,
 			 <&mdss_dsi1_pll BYTECLK_MUX_1_CLK>,
-			 <&mdss_dsi0_pll PCLK_SRC_MUX_0_CLK>,
-			 <&mdss_dsi1_pll PCLK_SRC_MUX_1_CLK>;
+			 <&mdss_dsi0_pll PCLK_MUX_0_CLK>,
+			 <&mdss_dsi1_pll PCLK_MUX_1_CLK>;
 		clock-names = "mdp_core_clk",
 			"mnoc_clk", "iface_clk",
 			"bus_clk", "core_mmss_clk",
