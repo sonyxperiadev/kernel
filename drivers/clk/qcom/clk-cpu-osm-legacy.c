@@ -3115,6 +3115,9 @@ static int clk_osm_acd_init(struct clk_osm *c)
 	auto_xfer_mask |= ACD_REG_RELATIVE_ADDR_BITMASK(ACD_GFMUX_CFG);
 	clk_osm_acd_master_write_reg(c, auto_xfer_mask, ACD_AUTOXFER_CFG);
 
+	/* ACD has been initialized and enabled for this cluster */
+	c->acd_init = false;
+
 	return 0;
 }
 
@@ -3240,7 +3243,19 @@ static int clk_cpu_osm_driver_probe(struct platform_device *pdev)
 		return rc;
 	}
 
-	rc = clk_osm_resolve_crossover_corners(&pwrcl_clk, pdev, NULL);
+	is_sdm630 = of_device_is_compatible(pdev->dev.of_node,
+					"qcom,clk-cpu-osm-sdm630");
+
+	is_msm8998 =    of_device_is_compatible(pdev->dev.of_node,
+					"qcom,clk-cpu-osm-msm8998-v1") ||
+			of_device_is_compatible(pdev->dev.of_node,
+					"qcom,clk-cpu-osm-msm8998-v2");
+
+	if (is_msm8998)
+		rc = clk_osm_resolve_crossover_corners(&pwrcl_clk, pdev,
+				"qcom,pwrcl-apcs-mem-acc-threshold-voltage");
+	else
+		rc = clk_osm_resolve_crossover_corners(&pwrcl_clk, pdev, NULL);
 	if (rc)
 		dev_info(&pdev->dev, "No APM crossover corner programmed\n");
 
@@ -3389,17 +3404,11 @@ static int clk_cpu_osm_driver_probe(struct platform_device *pdev)
 		     "Failed to enable clock for cpu %d\n", cpu);
 	}
 
-	is_sdm630 = of_device_is_compatible(pdev->dev.of_node,
-					"qcom,clk-cpu-osm-sdm630");
 	if (is_sdm630) {
 		pwrcl_boot_rate = 1382400000;
 		perfcl_boot_rate = 1670400000;
 	}
 
-	is_msm8998 =    of_device_is_compatible(pdev->dev.of_node,
-					"qcom,clk-cpu-osm-msm8998-v1") ||
-			of_device_is_compatible(pdev->dev.of_node,
-					"qcom,clk-cpu-osm-msm8998-v2");
 	if (is_msm8998) {
 		pwrcl_boot_rate = 1555200000;
 		perfcl_boot_rate = 1728000000;
