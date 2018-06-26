@@ -1814,10 +1814,11 @@
 			<&clock_gcc GCC_AGGRE1_USB3_AXI_CLK>,
 			<&clock_gcc GCC_USB30_MOCK_UTMI_CLK>,
 			<&clock_gcc GCC_USB30_SLEEP_CLK>,
+			<&clock_gcc GCC_USB_PHY_CFG_AHB2PHY_CLK>,
 			<&clock_rpmcc CXO_DWC3_CLK>;
 
 		clock-names = "core_clk", "iface_clk", "bus_aggr_clk",
-				"utmi_clk", "sleep_clk", "xo";
+				"utmi_clk", "sleep_clk", "cfg_ahb_clk", "xo";
 
 		qcom,core-clk-rate = <120000000>;
 		qcom,core-clk-rate-hs = <60000000>;
@@ -1906,8 +1907,9 @@
 		phy_type= "utmi";
 
 		clocks = <&clock_rpmcc RPM_LN_BB_CLK1>,
-			 <&clock_gcc GCC_RX1_USB2_CLKREF_CLK>;
-		clock-names = "ref_clk_src", "ref_clk";
+			 <&clock_gcc GCC_RX1_USB2_CLKREF_CLK>,
+			 <&clock_gcc GCC_USB_PHY_CFG_AHB2PHY_CLK>;
+		clock-names = "ref_clk_src", "ref_clk", "cfg_ahb_clk";
 
 		resets = <&clock_gcc QUSB2PHY_PRIM_BCR>;
 		reset-names = "phy_reset";
@@ -2058,11 +2060,12 @@
 
 		clocks = <&clock_gcc GCC_USB3_PHY_AUX_CLK>,
 			 <&clock_gcc GCC_USB3_PHY_PIPE_CLK>,
+			 <&clock_gcc GCC_USB_PHY_CFG_AHB2PHY_CLK>,
 			 <&clock_rpmcc RPM_LN_BB_CLK1>,
 			 <&clock_gcc GCC_USB3_CLKREF_CLK>;
 
-		clock-names = "aux_clk", "pipe_clk", "ref_clk_src",
-				"ref_clk";
+		clock-names = "aux_clk", "pipe_clk", "cfg_ahb_clk",
+				"ref_clk_src", "ref_clk";
 
 		resets = <&clock_gcc USB3_PHY_BCR>,
 			 <&clock_gcc USB3PHY_PHY_BCR>;
