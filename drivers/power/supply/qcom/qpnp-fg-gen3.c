@@ -1006,10 +1006,12 @@ static int fg_get_prop_capacity(struct fg_chip *chip, int *val)
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
 	if (!chip->profile_available) {
 		*val = UNKNOWN_BATT_SOC;
+		pr_err("FG: Battery profile unavailable!!\n");
 		return 0;
 	}
 
 	if (!chip->profile_loaded) {
+		pr_err("FG: Battery profile NOT LOADED!!\n");
 		if (chip->last_soc)
 			*val = chip->last_soc;
 		else
@@ -3694,6 +3696,7 @@ static void profile_load_work(struct work_struct *work)
 			}
 			fg_dbg(chip, FG_SOMC, "SOC is ready\n");
 		}
+		chip->profile_load_status = PROFILE_LOADED;
 		goto done;
 	}
 #endif
@@ -3786,6 +3789,8 @@ done:
 
 	if (chip->profile_load_status == PROFILE_LOADED)
 		chip->profile_loaded = true;
+	else
+		pr_err("FG: cannot load profile\n");
 
 	fg_dbg(chip, FG_STATUS, "profile loaded successfully");
 out:
