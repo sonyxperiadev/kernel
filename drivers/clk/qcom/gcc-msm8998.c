@@ -45,14 +45,13 @@ static DEFINE_VDD_REGULATORS(vdd_dig, VDD_DIG_NUM, 1, vdd_corner);
 static DEFINE_VDD_REGULATORS(vdd_dig_ao, VDD_DIG_NUM, 1, vdd_corner);
 
 enum {
-	P_XO,
-	P_XO_AO,
+	P_CORE_BI_PLL_TEST_SE,
 	P_GPLL0,
-	P_GPLL0_AO,
 	P_GPLL0_EARLY_DIV,
 	P_GPLL4,
 	P_SLEEP_CLK,
 	P_AUD_REF_CLK,
+	P_XO,
 };
 
 
@@ -67,13 +66,15 @@ static const char * const gcc_parent_names_1[] = {
 };
 
 static const struct parent_map gcc_parent_map_1_ao[] = {
-	{ P_XO_AO, 0 },
-	{ P_GPLL0_AO, 1 },
+	{ P_XO, 0 },
+	{ P_GPLL0, 1 },
+	{ P_CORE_BI_PLL_TEST_SE, 7 },
 };
 
 static const char * const gcc_parent_names_1_ao[] = {
 	"cxo_a",
 	"gpll0_ao",
+	"core_bi_pll_test_se",
 };
 
 static const struct parent_map gcc_parent_map_2[] = {
@@ -86,16 +87,6 @@ static const char * const gcc_parent_names_2[] = {
 	"xo",
 	"gpll0",
 	"gpll0_early_div",
-};
-
-static const struct parent_map gcc_parent_map_3[] = {
-	{ P_XO, 0},
-	{ P_GPLL0_AO, 1 },
-};
-
-static const char * const gcc_parent_names_3[] = {
-	"xo",
-	"gpll0_ao",
 };
 
 static const struct parent_map gcc_parent_map_4[] = {
@@ -1072,7 +1063,7 @@ static struct clk_rcg2 gp3_clk_src = {
 };
 
 static struct freq_tbl ftbl_hmss_rbcpr_clk_src[] = {
-	F(  19200000,     P_XO_AO,    1,    0,     0),
+	F(  19200000,     P_XO,    1,    0,     0),
 	{ }
 };
 
@@ -1283,7 +1274,8 @@ static struct clk_rcg2 usb3_phy_aux_clk_src = {
 };
 
 static struct freq_tbl ftbl_hmss_gpll0_clk_src[] = {
-	F( 300000000,   P_GPLL0_AO,    2,    0,     0),
+	F( 300000000,   P_GPLL0,    2,    0,     0),
+	F( 600000000,   P_GPLL0,    1,    0,     0),
 	{ }
 };
 
@@ -1300,6 +1292,24 @@ static struct clk_rcg2 hmss_gpll0_clk_src = {
 		VDD_DIG_FMAX_MAP1_AO(LOWER, 600000000),
 	},
 };
+
+static struct clk_branch gcc_hmss_rbcpr_clk = {
+	.halt_reg = 0x48008,
+	.clkr = {
+		.enable_reg = 0x48008,
+		.enable_mask = BIT(0),
+		.hw.init = &(struct clk_init_data) {
+			.name = "gcc_hmss_rbcpr_clk",
+			.parent_names = (const char*[]) {
+				"hmss_rbcpr_clk_src"
+			},
+			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
+
 
 static struct freq_tbl ftbl_qspi_ref_clk_src[] = {
 	F(  75000000,	P_GPLL0,    8,    0,     0),
@@ -2154,24 +2164,7 @@ static struct clk_branch gcc_hmss_dvm_bus_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data) {
 			.name = "gcc_hmss_dvm_bus_clk",
-			.flags = CLK_IGNORE_UNUSED,
-			.ops = &clk_branch2_ops,
-		},
-	},
-};
-
-static struct clk_branch gcc_hmss_rbcpr_clk = {
-	.halt_reg = 0x48008,
-	.clkr = {
-		.enable_reg = 0x48008,
-		.enable_mask = BIT(0),
-		.hw.init = &(struct clk_init_data) {
-			.name = "gcc_hmss_rbcpr_clk",
-			.parent_names = (const char*[]) {
-				"hmss_rbcpr_clk_src"
-			},
-			.num_parents = 1,
-			.flags = CLK_ENABLE_HAND_OFF | CLK_SET_RATE_PARENT,
+			.flags = CLK_IS_CRITICAL,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -3303,7 +3296,7 @@ static int gcc_msm8998_probe(struct platform_device *pdev)
 	 * Clear the HMSS_AHB_CLK_ENA bit to allow the gcc_hmss_ahb_clk clock
 	 * to be gated by RPM during VDD_MIN.
 	 */
-	ret = regmap_update_bits(regmap, 0x52008, BIT(21), BIT(21));
+	ret = regmap_update_bits(regmap, 0x52008, BIT(21), 0); //BIT(21));
 	if (ret)
 		return ret;
 
@@ -3339,8 +3332,8 @@ static int gcc_msm8998_probe(struct platform_device *pdev)
 	//clk_set_rate(gpll0_early_div.clkr.hw.clk, 300000000);
 
 	/* Disable the GPLL0 active input to MMSS and GPU via MISC registers */
-	regmap_write(regmap, 0x0902C, 0x10003); /* MMSS*/
-	regmap_write(regmap, 0x71028, 0x10003); /* GPU */
+	regmap_update_bits(regmap, 0x0902C, 0x3, 0x3); /* MMSS*/
+	regmap_update_bits(regmap, 0x71028, 0x3, 0x3); /* GPU */
 
 	/* This clock is used for all MMSSCC register access */
 	clk_prepare_enable(gcc_mmss_noc_cfg_ahb_clk.clkr.hw.clk);
@@ -3350,6 +3343,9 @@ static int gcc_msm8998_probe(struct platform_device *pdev)
 
 	/* This clock is used for all GPUCC register access */
 	clk_prepare_enable(gcc_gpu_cfg_ahb_clk.clkr.hw.clk);
+
+	/* Set the HMSS_GPLL0_SRC for 300MHz to CPU subsystem */
+	clk_set_rate(hmss_gpll0_clk_src.clkr.hw.clk, 300000000);
 
 	clk_set_flags(gcc_gpu_bimc_gfx_clk.clkr.hw.clk, CLKFLAG_RETAIN_MEM);
 
