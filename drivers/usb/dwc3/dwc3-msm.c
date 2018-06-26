@@ -3430,6 +3430,16 @@ static int dwc3_msm_extcon_register(struct dwc3_msm *mdwc, int start_idx)
 			dev_err(mdwc->dev, "failed to register blocking notifier\n");
 			goto err1;
 		}
+#ifdef CONFIG_EXTCON_SOMC_EXTENSION
+		mdwc->extcon_vbus_drop = edev;
+		mdwc->vbus_drop_nb.notifier_call = dwc3_msm_vbus_drop_notifier;
+		ret = extcon_register_notifier(edev, EXTCON_VBUS_DROP,
+				&mdwc->vbus_drop_nb);
+		if (ret < 0) {
+			dev_err(mdwc->dev, "failed to register notifier for USB-DropT\n");
+			goto err2;
+		}
+#endif /* CONFIG_EXTCON_SOMC_EXTENSION */
 	}
 
 	edev = NULL;
@@ -3438,7 +3448,11 @@ static int dwc3_msm_extcon_register(struct dwc3_msm *mdwc, int start_idx)
 		edev = extcon_get_edev_by_phandle(mdwc->dev, 2);
 		if (IS_ERR(edev) && PTR_ERR(edev) != -ENODEV) {
 			ret = PTR_ERR(edev);
+#ifdef CONFIG_EXTCON_SOMC_EXTENSION
+			goto err3;
+#else
 			goto err2;
+#endif
 		}
 	}
 
@@ -3449,20 +3463,13 @@ static int dwc3_msm_extcon_register(struct dwc3_msm *mdwc, int start_idx)
 				&mdwc->eud_event_nb);
 		if (ret < 0) {
 			dev_err(mdwc->dev, "failed to register notifier for EUD-USB\n");
+#ifdef CONFIG_EXTCON_SOMC_EXTENSION
+			goto err3;
+#else
 			goto err2;
+#endif
 		}
 	}
-
-#ifdef CONFIG_EXTCON_SOMC_EXTENSION
-		mdwc->extcon_vbus_drop = edev;
-		mdwc->vbus_drop_nb.notifier_call = dwc3_msm_vbus_drop_notifier;
-		ret = extcon_register_notifier(edev, EXTCON_VBUS_DROP,
-				&mdwc->vbus_drop_nb);
-		if (ret < 0) {
-			dev_err(mdwc->dev, "failed to register notifier for USB-DropT\n");
-			goto err3;
-		}
-#endif /* CONFIG_EXTCON_SOMC_EXTENSION */
 
 	return 0;
 
@@ -4046,12 +4053,6 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 	else if (mdwc->extcon_id && extcon_get_state(mdwc->extcon_id,
 							EXTCON_USB_HOST))
 		dwc3_msm_id_notifier(&mdwc->id_nb, true, mdwc->extcon_id);
-#ifdef CONFIG_EXTCON_SOMC_EXTENSION
-	else if (mdwc->extcon_vbus_drop && extcon_get_cable_state_(
-				mdwc->extcon_vbus_drop, EXTCON_VBUS_DROP))
-		dwc3_msm_vbus_drop_notifier(&mdwc->vbus_drop_nb, true,
-				mdwc->extcon_vbus_drop);
-#endif
 	else if (!pval.intval) {
 		/* USB cable is not connected */
 		schedule_delayed_work(&mdwc->sm_work, 0);
@@ -4059,6 +4060,13 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 		if (pval.intval > 0)
 			dev_info(mdwc->dev, "charger detection in progress\n");
 	}
+
+#ifdef CONFIG_EXTCON_SOMC_EXTENSION
+	if (mdwc->extcon_vbus_drop && extcon_get_cable_state_(
+				mdwc->extcon_vbus_drop, EXTCON_VBUS_DROP))
+		dwc3_msm_vbus_drop_notifier(&mdwc->vbus_drop_nb, true,
+				mdwc->extcon_vbus_drop);
+#endif
 
 	device_create_file(&pdev->dev, &dev_attr_mode);
 	device_create_file(&pdev->dev, &dev_attr_speed);
