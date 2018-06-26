@@ -97,7 +97,7 @@
 		pinctrl-2 = <&msm_gpio_121>;
 	};
 
-	somc_pinctrl: somc_pinctrl {
+	somc_pinctrl: somc_pinctrl@0 {
 		compatible = "somc-pinctrl";
 		pinctrl-names = "platform_common_default",
 				"product_common_default",
@@ -123,6 +123,34 @@
 			     &msm_gpio_116 &msm_gpio_120 &msm_gpio_121 &msm_gpio_122 &msm_gpio_123
 			     &msm_gpio_124 &msm_gpio_125 &msm_gpio_126 &msm_gpio_128 &msm_gpio_129
 			     &msm_gpio_133>;
+
+		/* If product common default setting is needed,
+		   fill pinctrl-1 value in <product>_common.dtsi */
+		pinctrl-1 = <>;
+
+		/* If variant specific default setting is needed,
+		   fill pinctrl-2 value in <variant>.dtsi */
+		pinctrl-2 = <>;
+
+		/* If variant specific default setting is needed,
+		   fill pinctrl-3 value in <variant>.dtsi */
+		pinctrl-3 = <>;
+	};
+
+	somc_pinctrl_pmic: somc_pinctrl@1 {
+		compatible = "somc-pinctrl";
+		pinctrl-names = "platform_common_default",
+				"product_common_default",
+				"variant_default";
+		pinctrl-0 = </* PM8998 */
+			     &flash_therm_default &pm8998_gp14_default
+			     &pm8998_gp17_default &pm8998_gp18_default &pm8998_gp19_default
+			     /* PMI8998 */
+			     &rear_cam_vddio_en_default &pmi8998_gp2_default &pmi8998_gp3_default
+			     &pmi8998_gp5_default &pmi8998_gp6_default &pmi8998_gp9_default
+			     &disp_dcdc_en_default &pmi8998_gp11_default &pmi8998_gp14_default
+			     /* PM8005 */
+			     &ear_en_default &pm8005_gp2_default>;
 
 		/* If product common default setting is needed,
 		   fill pinctrl-1 value in <product>_common.dtsi */
@@ -507,6 +535,12 @@
 	};
 
 	gpio_keys {
+		pinctrl-names = "default";
+		pinctrl-0 = <&key_vol_up_default
+			     &key_vol_down_default
+			     &key_cam_snapshot_default
+			     &key_cam_focus_default>;
+
 		vol_dn {
 			label = "volume_down";
 			gpios = <&pm8998_gpios 5 0x1>;
@@ -3156,18 +3190,12 @@
 			};
 		};
 	};
+};
 
-	qcom,pmi8998@2 {
-		pmi8998_charger: qcom,qpnp-smb2 {
-			qcom,otg-cl-ua = <1000000>;
-		};
-	};
-
-	qcom,pmi8998@3 {
-		qcom,leds@d000 {
-			status = "okay";
-			qcom,rgb_sync = <1>;
-		};
+&pmi8998_lsid1 {
+	qcom,leds@d000 {
+		status = "okay";
+		qcom,rgb_sync = <1>;
 	};
 };
 
@@ -3325,6 +3353,7 @@
 	clock-names = "xo";
 	clocks = <&clock_rpmcc RPM_CXO_CLK>;
 	usb_switch_sel = <&pmi8998_gpios 8 0>;
+	qcom,otg-cl-ua = <1000000>;
 	qcom,usb-icl-ua = <1500000>;
 	io-channels = <&pmi8998_rradc 2>,
 		      <&pmi8998_rradc 3>,

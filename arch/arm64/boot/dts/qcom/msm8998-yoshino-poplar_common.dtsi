@@ -35,17 +35,17 @@
 		};
 	};
 
-	somc_pinctrl: somc_pinctrl {
-		pinctrl-1 = <&msm_gpio_89 &msm_gpio_102 &msm_gpio_103 &msm_gpio_115 &msm_gpio_132
-			     &msm_gpio_133>;
-	};
-
 	mdss_dsi0_pll: qcom,mdss_dsi_pll@c994400 {
 		qcom,dsi-pll-ssc-en;
 		qcom,dsi-pll-ssc-mode = "down-spread";
 		qcom,ssc-frequency-hz = <31500>;
 		qcom,ssc-ppm = <5000>;
 	};
+};
+
+&somc_pinctrl {
+	pinctrl-1 = <&msm_gpio_89 &msm_gpio_102 &msm_gpio_103
+		     &msm_gpio_115 &msm_gpio_132 &msm_gpio_133>;
 };
 
 &pmi8998_gpios {

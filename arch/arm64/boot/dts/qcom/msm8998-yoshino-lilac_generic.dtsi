@@ -39,11 +39,12 @@
 			pinctrl-1 = <&msm_gpio_92 &msm_gpio_93>;
 		};
 	};
-	somc_pinctrl: somc_pinctrl {
-		/* If variant specific default setting is needed,
-		   fill pinctrl-2 value in <variant>.dtsi */
-		pinctrl-2 = <&msm_gpio_92>;
-	};
+};
+
+&somc_pinctrl {
+	/* If variant specific default setting is needed,
+	   fill pinctrl-2 value in <variant>.dtsi */
+	pinctrl-2 = <&msm_gpio_92>;
 };
 
 &tlmm {

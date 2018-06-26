@@ -34,14 +34,6 @@
 };
 
 &soc {
-
-	somc_pinctrl: somc_pinctrl {
-		/* If product common default setting is needed,
-		   fill pinctrl-1 value in <product>_common.dtsi */
-		pinctrl-1 = <&msm_gpio_102 &msm_gpio_103 &msm_gpio_115
-			     &msm_gpio_127 &msm_gpio_132 &msm_gpio_133 &msm_gpio_136>;
-	};
-
 	/* I2C: BLSP5 */
 	i2c@c179000 { /* BLSP1 QUP5 */
 		synaptics_clearpad@2c {
@@ -68,6 +60,13 @@
 		qcom,ssc-ppm = <5000>;
 	};
 
+};
+
+&somc_pinctrl {
+	/* If product common default setting is needed,
+	   fill pinctrl-1 value in <product>_common.dtsi */
+	pinctrl-1 = <&msm_gpio_102 &msm_gpio_103 &msm_gpio_115
+		     &msm_gpio_127 &msm_gpio_132 &msm_gpio_133 &msm_gpio_136>;
 };
 
 &qusb_phy0 {

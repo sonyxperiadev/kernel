@@ -345,8 +345,8 @@
 		qcom,node_has_rpm_clock;
 		#clock-cells = <1>;
 		pinctrl-names = "sleep", "active";
-		pinctrl-0 = <&spkr_i2s_clk_sleep>;
-		pinctrl-1 = <&spkr_i2s_clk_active>;
+		pinctrl-0 = <&spkr_i2s_clk_sleep &pm8998_gpio_13>;
+		pinctrl-1 = <&spkr_i2s_clk_active &pm8998_gpio_13>;
 	};
 
 	clock_audio_lnbb: audio_ext_clk_lnbb {
