@@ -74,10 +74,6 @@
 	reg = <0x0 0x9d400000 0x0 0x02400000>;
 };
 
-&mdss_fb0 {
-	/delete-node/ qcom,cont-splash-memory;
-};
-
 &soc {
 	pinctrl@03400000 {
 		disabled-pins = <0 1 2 3 81 82 83 84>;
