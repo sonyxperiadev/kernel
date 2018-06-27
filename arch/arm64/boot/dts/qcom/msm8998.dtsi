@@ -2534,9 +2534,10 @@
 		qcom,hotplug-mitigation-enable;
 	};
 
-	qcom,lmh {
+	lmh_lite: qcom,lmh {
 		compatible = "qcom,lmh_v1";
 		interrupts = <GIC_SPI 134 IRQ_TYPE_LEVEL_HIGH>;
+		#thermal-sensor-cells = <1>;
 	};
 
 	qcom,msm-thermal {
