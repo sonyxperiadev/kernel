@@ -73,7 +73,7 @@ static const struct parent_map gcc_parent_map_1_ao[] = {
 
 static const char * const gcc_parent_names_1_ao[] = {
 	"cxo_a",
-	"gpll0",
+	"gpll0_ao",
 };
 
 static const struct parent_map gcc_parent_map_2[] = {
@@ -459,6 +459,7 @@ static struct freq_tbl ftbl_usb30_master_clk_src[] = {
 	F(  19200000,	P_XO,       1,    0,     0),
 	F( 60000000,	P_GPLL0,    10,    0,     0),
 	F( 120000000,	P_GPLL0,    5,    0,     0),
+	F( 133333333,	P_GPLL0,  4.5,    0,     0),
 	F( 150000000,	P_GPLL0,    4,    0,     0),
 	{ }
 };
@@ -474,7 +475,7 @@ static struct clk_rcg2 usb30_master_clk_src = {
 		.parent_names = gcc_parent_names_1,
 		.num_parents = ARRAY_SIZE(gcc_parent_names_1),
 		.ops = &clk_rcg2_ops,
-		VDD_DIG_FMAX_MAP4(LOWER, 66670000, LOW, 133330000,
+		VDD_DIG_FMAX_MAP4(LOWER, 66670000, LOW, 133333333,
 				NOMINAL, 200000000, HIGH, 240000000),
 	},
 };
@@ -1289,12 +1290,12 @@ static struct freq_tbl ftbl_hmss_gpll0_clk_src[] = {
 static struct clk_rcg2 hmss_gpll0_clk_src = {
 	.cmd_rcgr = 0x4805C,
 	.hid_width = 5,
-	.parent_map = gcc_parent_map_2,
+	.parent_map = gcc_parent_map_1_ao,
 	.freq_tbl = ftbl_hmss_gpll0_clk_src,
 	.clkr.hw.init = &(struct clk_init_data) {
 		.name = "hmss_gpll0_clk_src",
-		.parent_names = gcc_parent_names_2,
-		.num_parents = ARRAY_SIZE(gcc_parent_names_2),
+		.parent_names = gcc_parent_names_1_ao,
+		.num_parents = ARRAY_SIZE(gcc_parent_names_1_ao),
 		.ops = &clk_rcg2_ops,
 		VDD_DIG_FMAX_MAP1_AO(LOWER, 600000000),
 	},
@@ -2034,7 +2035,8 @@ static struct clk_branch gcc_cfg_noc_usb3_axi_clk = {
 				"usb30_master_clk_src"
 			},
 			.num_parents = 1,
-			.flags = CLK_SET_RATE_PARENT, //HANDOFF?
+			.flags = CLK_ENABLE_HAND_OFF,
+			//.flags = CLK_SET_RATE_PARENT, //HANDOFF?
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -2106,12 +2108,12 @@ static struct clk_branch gcc_gp3_clk = {
 
 static struct clk_branch gcc_gpu_bimc_gfx_clk = {
 	.halt_reg = 0x71010,
+	.halt_check = BRANCH_VOTED,
 	.clkr = {
 		.enable_reg = 0x71010,
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data) {
 			.name = "gcc_gpu_bimc_gfx_clk",
-			.flags = CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -2119,7 +2121,7 @@ static struct clk_branch gcc_gpu_bimc_gfx_clk = {
 
 static struct clk_branch gcc_gpu_cfg_ahb_clk = {
 	.halt_reg = 0x71004,
-	.halt_check = BRANCH_HALT,
+	.halt_check = BRANCH_VOTED,
 	.hwcg_reg = 0x71004,
 	.hwcg_bit = 1,
 	.clkr = {
@@ -2127,7 +2129,6 @@ static struct clk_branch gcc_gpu_cfg_ahb_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data) {
 			.name = "gcc_gpu_cfg_ahb_clk",
-			.flags = CLK_ENABLE_HAND_OFF, /* CLK_IS_CRITICAL?!?! */
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -2628,7 +2629,7 @@ static struct clk_branch gcc_usb30_master_clk = {
 			.name = "gcc_usb30_master_clk",
 			/*TODO: Should we depend on gcc_cfg_noc_usb3_axi_clk?*/
 			.parent_names = (const char*[]) {
-				"gcc_cfg_noc_usb3_axi_clk",
+				"usb30_master_clk_src",
 			},
 			.num_parents = 1,
 			.flags = CLK_ENABLE_HAND_OFF | CLK_SET_RATE_PARENT,
@@ -2685,6 +2686,7 @@ static struct clk_branch gcc_usb3_phy_aux_clk = {
 	},
 };
 
+/*
 static struct clk_gate2 gcc_usb3_phy_pipe_clk = {
 	.udelay = 50,
 	.clkr = {
@@ -2696,7 +2698,20 @@ static struct clk_gate2 gcc_usb3_phy_pipe_clk = {
 		},
 	},
 };
+*/
 
+static struct clk_branch gcc_usb3_phy_pipe_clk = {
+	.halt_reg = 0x50004,
+	.halt_check = BRANCH_HALT_DELAY,
+	.clkr = {
+		.enable_reg = 0x50004,
+		.enable_mask = BIT(0),
+		.hw.init = &(struct clk_init_data){
+			.name = "gcc_usb3_phy_pipe_clk",
+			.ops = &clk_branch2_ops,
+		},
+	},
+};
 
 
 static struct clk_branch gcc_mss_cfg_ahb_clk = {
