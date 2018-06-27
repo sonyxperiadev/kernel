@@ -247,7 +247,7 @@
 		pinctrl-0 = <&msm_gpio_55 &msm_gpio_56>;
 		pinctrl-1 = <&msm_gpio_55 &msm_gpio_56>;
 		qcom,clk-freq-out = <355000>;
-		status = "disabled";
+		status = "okay";
 	};
 
 	/* UART: BLSP8 */
