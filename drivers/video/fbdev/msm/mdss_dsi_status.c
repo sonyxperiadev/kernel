@@ -213,7 +213,7 @@ static int fb_event_callback(struct notifier_block *self,
 	return 0;
 }
 
-static int param_dsi_status_disable(const char *val, struct kernel_param *kp)
+static int param_dsi_status_disable(const char *val, const struct kernel_param *kp)
 {
 	int ret = 0;
 	int int_val;
@@ -228,7 +228,7 @@ static int param_dsi_status_disable(const char *val, struct kernel_param *kp)
 	return ret;
 }
 
-static int param_set_interval(const char *val, struct kernel_param *kp)
+static int param_set_interval(const char *val, const struct kernel_param *kp)
 {
 	int ret = 0;
 	int int_val;

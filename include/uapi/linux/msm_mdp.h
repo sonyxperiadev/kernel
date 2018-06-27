@@ -117,8 +117,10 @@
 #define MDSS_MDP_HW_REV_114	MDSS_MDP_REV(1, 14, 0) /* 8937 v1.0 */
 #define MDSS_MDP_HW_REV_115	MDSS_MDP_REV(1, 15, 0) /* msmgold */
 #define MDSS_MDP_HW_REV_116	MDSS_MDP_REV(1, 16, 0) /* msmtitanium */
-#define MDSS_MDP_HW_REV_300	MDSS_MDP_REV(3, 0, 0)  /* msmcobalt */
-#define MDSS_MDP_HW_REV_301	MDSS_MDP_REV(3, 0, 1)  /* msmcobalt v1.0 */
+#define MDSS_MDP_HW_REV_300	MDSS_MDP_REV(3, 0, 0)  /* msm8998 */
+#define MDSS_MDP_HW_REV_301	MDSS_MDP_REV(3, 0, 1)  /* msm8998 v1.0 */
+#define MDSS_MDP_HW_REV_320	MDSS_MDP_REV(3, 2, 0)  /* sdm660 */
+#define MDSS_MDP_HW_REV_330	MDSS_MDP_REV(3, 3, 0)  /* sdm630 */
 
 enum {
 	NOTIFY_UPDATE_INIT,
@@ -327,8 +329,8 @@ struct mult_factor {
  * {3x3} + {3} ccs matrix
  */
 
-#define MDP_CCS_RGB2YUV	0
-#define MDP_CCS_YUV2RGB	1
+#define MDP_CCS_RGB2YUV 	0
+#define MDP_CCS_YUV2RGB 	1
 
 #define MDP_CCS_SIZE	9
 #define MDP_BV_SIZE	3
@@ -906,15 +908,17 @@ struct mdp_misr {
 };
 
 /*
- * mdp_block_type defines the identifiers for pipes in MDP 4.3 and up
- *
- * MDP_BLOCK_RESERVED is provided for backward compatibility and is
- * deprecated. It corresponds to DMA_P. So MDP_BLOCK_DMA_P should be used
- * instead.
- *
- * MDP_LOGICAL_BLOCK_DISP_0 identifies the display pipe which fb0 uses,
- * same for others.
- */
+
+	mdp_block_type defines the identifiers for pipes in MDP 4.3 and up
+
+	MDP_BLOCK_RESERVED is provided for backward compatibility and is
+	deprecated. It corresponds to DMA_P. So MDP_BLOCK_DMA_P should be used
+	instead.
+
+	MDP_LOGICAL_BLOCK_DISP_0 identifies the display pipe which fb0 uses,
+	same for others.
+
+*/
 
 enum {
 	MDP_BLOCK_RESERVED = 0,
@@ -1416,6 +1420,9 @@ enum {
 	MDP_WRITEBACK_MIRROR_RESUME,
 };
 
+/*
+ * The enum values are continued below as preprocessor macro definitions
+ */
 enum mdp_color_space {
 	MDP_CSC_ITU_R_601,
 	MDP_CSC_ITU_R_601_FR,
@@ -1427,6 +1434,7 @@ enum mdp_color_space {
  */
 #define MDP_CSC_ITU_R_2020	(MDP_CSC_ITU_R_709 + 1)
 #define MDP_CSC_ITU_R_2020_FR	(MDP_CSC_ITU_R_2020 + 1)
+
 enum {
 	mdp_igc_v1_7 = 1,
 	mdp_igc_vmax,
