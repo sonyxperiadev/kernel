@@ -771,7 +771,7 @@
 				"byte0_src", "byte1_src",
 				"dp_link_src", "dp_vco_div",
 				"extpclk_src";
-		clocks = <&clock_rpmcc RPM_CXO_CLK>,
+		clocks = <&clock_rpmcc RPM_XO_CLK_SRC>,
 			 <&clock_gcc GCC_MMSS_GPLL0_CLK>,
 			 <&clock_gcc GCC_MMSS_GPLL0_DIV_CLK>,
 			 <&mdss_dsi0_pll DSI0PLL_PCLK_MUX>,
@@ -791,7 +791,7 @@
 		reg-names = "cc_base";
 		vdd_dig-supply = <&pm8998_s1_level>;
 		clock-names = "xo_ao", "gpll0";
-		clocks = <&clock_rpmcc RPM_CXO_A_CLK>,
+		clocks = <&clock_rpmcc RPM_XO_A_CLK_SRC>,
 			<&clock_gcc GCC_GPU_GPLL0_CLK>;
 		#clock-cells = <1>;
 	};

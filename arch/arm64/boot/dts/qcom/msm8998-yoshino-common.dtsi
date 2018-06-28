@@ -3351,7 +3351,7 @@
 
 &pmi8998_charger {
 	clock-names = "xo";
-	clocks = <&clock_rpmcc RPM_CXO_CLK>;
+	clocks = <&clock_rpmcc RPM_XO_CLK_SRC>;
 	usb_switch_sel = <&pmi8998_gpios 8 0>;
 	qcom,otg-cl-ua = <1000000>;
 	qcom,usb-icl-ua = <1500000>;
