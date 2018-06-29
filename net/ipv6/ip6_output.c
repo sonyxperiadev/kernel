@@ -1260,14 +1260,16 @@ static int ip6_setup_cork(struct sock *sk, struct inet_cork_full *cork,
 	v6_cork->tclass = ipc6->tclass;
 	if (rt->dst.flags & DST_XFRM_TUNNEL)
 		mtu = np->pmtudisc >= IPV6_PMTUDISC_PROBE ?
-		      rt->dst.dev->mtu : dst_mtu(&rt->dst);
+		      READ_ONCE(rt->dst.dev->mtu) : dst_mtu(&rt->dst);
 	else
 		mtu = np->pmtudisc >= IPV6_PMTUDISC_PROBE ?
-		      rt->dst.dev->mtu : dst_mtu(rt->dst.path);
+		      READ_ONCE(rt->dst.dev->mtu) : dst_mtu(rt->dst.path);
 	if (np->frag_size < mtu) {
 		if (np->frag_size)
 			mtu = np->frag_size;
 	}
+	if (mtu < IPV6_MIN_MTU)
+		return -EINVAL;
 	cork->base.fragsize = mtu;
 	if (dst_allfrag(rt->dst.path))
 		cork->base.flags |= IPCORK_ALLFRAG;
@@ -1798,11 +1800,13 @@ struct sk_buff *ip6_make_skb(struct sock *sk,
 	cork.base.flags = 0;
 	cork.base.addr = 0;
 	cork.base.opt = NULL;
+	cork.base.dst = NULL;
 	v6_cork.opt = NULL;
 	err = ip6_setup_cork(sk, &cork, &v6_cork, ipc6, rt, fl6);
-	if (err)
+	if (err) {
+		ip6_cork_release(&cork, &v6_cork);
 		return ERR_PTR(err);
-
+	}
 	if (ipc6->dontfrag < 0)
 		ipc6->dontfrag = inet6_sk(sk)->dontfrag;
 
