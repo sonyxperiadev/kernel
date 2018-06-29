@@ -28,7 +28,7 @@ static struct kparam_string kps = {
 	.string			= lib_str,
 	.maxlen			= MAX_LEN,
 };
-static int set_name(const char *str, struct kernel_param *kp);
+static int set_name(const char *str, const struct kernel_param *kp);
 module_param_call(lib_name, set_name, param_get_string, &kps, S_IWUSR);
 
 bool use_app_setting = true;
@@ -43,7 +43,7 @@ bool use_32bit_app_setting_pro;
 module_param(use_32bit_app_setting_pro, bool, 0644);
 MODULE_PARM_DESC(use_32bit_app_setting_pro, "control use of 32 bit app specific settings");
 
-static int set_name(const char *str, struct kernel_param *kp)
+static int set_name(const char *str, const struct kernel_param *kp)
 {
 	int len = strlen(str);
 	char *name;
