@@ -2167,6 +2167,16 @@ static int icnss_smmu_init(struct icnss_priv *priv)
 
 	if (priv->bypass_s1_smmu) {
 		ret = iommu_domain_set_attr(mapping->domain,
+					    DOMAIN_ATTR_ATOMIC,
+					    &atomic_ctx);
+		if (ret < 0) {
+			icnss_pr_err("Set atomic_ctx attribute failed, err = %d\n",
+				     ret);
+			goto set_attr_fail;
+		}
+		icnss_pr_dbg("SMMU ATTR ATOMIC\n");
+
+		ret = iommu_domain_set_attr(mapping->domain,
 					    DOMAIN_ATTR_S1_BYPASS,
 					    &s1_bypass);
 		if (ret < 0) {
