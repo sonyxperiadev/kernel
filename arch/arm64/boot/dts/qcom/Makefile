@@ -2,6 +2,7 @@ dtb-$(CONFIG_ARCH_QCOM)	+= apq8016-sbc.dtb msm8916-mtp.dtb
 #dtb-$(CONFIG_ARCH_QCOM)	+= msm8996-mtp.dtb
 #dtb-$(CONFIG_ARCH_QCOM)	+= apq8096-db820c.dtb
 
+ifeq ($(CONFIG_ARCH_QCOM_BUILD_REFERENCE),y)
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
 	dtbo-$(CONFIG_ARCH_SDM845) += \
 		sdm845-cdp-overlay.dtbo \
@@ -406,34 +407,6 @@ sdm429-cdp-overlay.dtbo-base := sdm429.dtb \
 sdm429-qrd-overlay.dtbo-base := sdm429.dtb \
 	msm8937-interposer-sdm429.dtb
 else
-# MSM8998
-dtb-$(CONFIG_MACH_SONY_LILAC) += msm8998-v2-yoshino-lilac_generic.dtb
-dtb-$(CONFIG_MACH_SONY_LILAC) += msm8998-v2.1-yoshino-lilac_generic.dtb
-dtb-$(CONFIG_MACH_SONY_MAPLE) += msm8998-v2-yoshino-maple_generic.dtb
-dtb-$(CONFIG_MACH_SONY_MAPLE) += msm8998-v2.1-yoshino-maple_generic.dtb
-dtb-$(CONFIG_MACH_SONY_POPLAR) += msm8998-v2-yoshino-poplar_generic.dtb
-dtb-$(CONFIG_MACH_SONY_POPLAR) += msm8998-v2.1-yoshino-poplar_generic.dtb
-
-# MSM8996
-dtb-$(CONFIG_MACH_SONY_DORA)            += msm8996-v3.0-pmi8996-tone-dora_generic.dtb
-dtb-$(CONFIG_MACH_SONY_DORA)            += msm8996-v3-pmi8996-tone-dora_generic.dtb
-dtb-$(CONFIG_MACH_SONY_KAGURA)          += msm8996-v3.0-pmi8996-tone-kagura_generic.dtb
-dtb-$(CONFIG_MACH_SONY_KAGURA)          += msm8996-v3-pmi8996-tone-kagura_generic.dtb
-dtb-$(CONFIG_MACH_SONY_KEYAKI)          += msm8996-v3.0-pmi8996-tone-keyaki_generic.dtb
-dtb-$(CONFIG_MACH_SONY_KEYAKI)          += msm8996-v3-pmi8996-tone-keyaki_generic.dtb
-
-# SDM660
-dtb-$(CONFIG_MACH_SONY_PIONEER)            += sdm630-nile-pioneer.dtb
-dtb-$(CONFIG_MACH_SONY_DISCOVERY)          += sdm630-nile-discovery.dtb
-
-# MSM8956
-dtb-$(CONFIG_MACH_SONY_SUZU)            += msm8956-v1.1-loire-suzu_generic.dtb
-dtb-$(CONFIG_MACH_SONY_KUGO)            += msm8956-v1.1-loire-kugo_generic.dtb
-dtb-$(CONFIG_MACH_SONY_BLANC)		+= msm8956-v1.1-loire-blanc_generic.dtb
-dtb-$(CONFIG_MACH_SONY_BLANC)		+= apq8056-v1.1-loire-blanc_windy.dtb
-dtb-$(CONFIG_MACH_SONY_BLANC)           += msm8956-loire-blanc_generic.dtb
-dtb-$(CONFIG_MACH_SONY_BLANC)		+= apq8056-loire-blanc_windy.dtb
-
 dtb-$(CONFIG_ARCH_MSM8953) += msm8953-cdp.dtb \
 	msm8953-mtp.dtb \
 	msm8953-ext-codec-mtp.dtb \
@@ -543,6 +516,38 @@ dtb-$(CONFIG_ARCH_SDM429) += sdm429-mtp.dtb \
 	sda429-mtp.dtb \
 	sda429-cdp.dtb
 
+endif
+endif # CONFIG_ARCH_QCOM_BUILD_REFERENCE
+
+ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
+else
+# MSM8998
+dtb-$(CONFIG_MACH_SONY_LILAC)		+= msm8998-v2-yoshino-lilac_generic.dtb
+dtb-$(CONFIG_MACH_SONY_LILAC)		+= msm8998-v2.1-yoshino-lilac_generic.dtb
+dtb-$(CONFIG_MACH_SONY_MAPLE)		+= msm8998-v2-yoshino-maple_generic.dtb
+dtb-$(CONFIG_MACH_SONY_MAPLE)		+= msm8998-v2.1-yoshino-maple_generic.dtb
+dtb-$(CONFIG_MACH_SONY_POPLAR)		+= msm8998-v2-yoshino-poplar_generic.dtb
+dtb-$(CONFIG_MACH_SONY_POPLAR)		+= msm8998-v2.1-yoshino-poplar_generic.dtb
+
+# MSM8996
+dtb-$(CONFIG_MACH_SONY_DORA)            += msm8996-v3.0-pmi8996-tone-dora_generic.dtb
+dtb-$(CONFIG_MACH_SONY_DORA)            += msm8996-v3-pmi8996-tone-dora_generic.dtb
+dtb-$(CONFIG_MACH_SONY_KAGURA)          += msm8996-v3.0-pmi8996-tone-kagura_generic.dtb
+dtb-$(CONFIG_MACH_SONY_KAGURA)          += msm8996-v3-pmi8996-tone-kagura_generic.dtb
+dtb-$(CONFIG_MACH_SONY_KEYAKI)          += msm8996-v3.0-pmi8996-tone-keyaki_generic.dtb
+dtb-$(CONFIG_MACH_SONY_KEYAKI)          += msm8996-v3-pmi8996-tone-keyaki_generic.dtb
+
+# SDM660
+dtb-$(CONFIG_MACH_SONY_PIONEER)            += sdm630-nile-pioneer.dtb
+dtb-$(CONFIG_MACH_SONY_DISCOVERY)          += sdm630-nile-discovery.dtb
+
+# MSM8956
+dtb-$(CONFIG_MACH_SONY_SUZU)            += msm8956-v1.1-loire-suzu_generic.dtb
+dtb-$(CONFIG_MACH_SONY_KUGO)            += msm8956-v1.1-loire-kugo_generic.dtb
+dtb-$(CONFIG_MACH_SONY_BLANC)		+= msm8956-v1.1-loire-blanc_generic.dtb
+dtb-$(CONFIG_MACH_SONY_BLANC)		+= apq8056-v1.1-loire-blanc_windy.dtb
+dtb-$(CONFIG_MACH_SONY_BLANC)           += msm8956-loire-blanc_generic.dtb
+dtb-$(CONFIG_MACH_SONY_BLANC)		+= apq8056-loire-blanc_windy.dtb
 endif
 
 always		:= $(dtb-y)
