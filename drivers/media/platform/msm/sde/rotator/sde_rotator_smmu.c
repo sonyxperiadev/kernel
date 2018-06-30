@@ -51,6 +51,17 @@ struct sde_smmu_domain {
 	unsigned long size;
 };
 
+int sde_smmu_dma_direction(int dir)
+{
+	struct sde_rot_data_type *mdata = sde_rot_get_mdata();
+
+	return (IS_SDE_MAJOR_MINOR_SAME(mdata->mdss_version,
+			SDE_MDP_HW_REV_320) ||
+		IS_SDE_MAJOR_MINOR_SAME(mdata->mdss_version,
+			SDE_MDP_HW_REV_330)) ?
+		DMA_BIDIRECTIONAL : dir;
+}
+
 static inline bool sde_smmu_is_valid_domain_type(
 		struct sde_rot_data_type *mdata, int domain_type)
 {
@@ -341,8 +352,8 @@ int sde_smmu_map_dma_buf(struct dma_buf *dma_buf,
 		return -EINVAL;
 	}
 
-	rc = msm_dma_map_sg_lazy(sde_smmu->dev, table->sgl, table->nents, dir,
-		dma_buf);
+	rc = msm_dma_map_sg_lazy(sde_smmu->dev, table->sgl, table->nents,
+		sde_smmu_dma_direction(dir), dma_buf);
 	if (rc != table->nents) {
 		SDEROT_ERR("dma map sg failed\n");
 		return -ENOMEM;
@@ -363,8 +374,8 @@ void sde_smmu_unmap_dma_buf(struct sg_table *table, int domain,
 		return;
 	}
 
-	msm_dma_unmap_sg(sde_smmu->dev, table->sgl, table->nents, dir,
-		 dma_buf);
+	msm_dma_unmap_sg(sde_smmu->dev, table->sgl, table->nents,
+		 sde_smmu_dma_direction(dir), dma_buf);
 }
 
 static DEFINE_MUTEX(sde_smmu_ref_cnt_lock);
