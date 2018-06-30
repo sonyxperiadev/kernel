@@ -2480,7 +2480,7 @@ static ssize_t test_sysfs_get_report_polling(void)
 {
 	int retval = 0;
 	unsigned char report_index[2];
-	unsigned int byte_delay_us;
+	unsigned int byte_delay_us = 0;
 	struct synaptics_rmi4_data *rmi4_data = f54->rmi4_data;
 
 	retval = test_wait_for_command_completion();
@@ -5620,7 +5620,7 @@ static void test_report_work(struct work_struct *work)
 {
 	int retval;
 	unsigned char report_index[2];
-	unsigned int byte_delay_us;
+	unsigned int byte_delay_us = 0;
 	struct synaptics_rmi4_data *rmi4_data = f54->rmi4_data;
 
 	mutex_lock(&f54->status_mutex);
