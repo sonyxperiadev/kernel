@@ -466,8 +466,8 @@ static void update_temperature(struct thermal_zone_device *tz)
 	if (ret) {
 		if (ret != -EAGAIN)
 			dev_warn(&tz->device,
-				 "failed to read out thermal zone (%d)\n",
-				 ret);
+				 "failed to read out %s thermal zone (%d)\n",
+				 tz->type, ret);
 		return;
 	}
 	store_temperature(tz, temp);
