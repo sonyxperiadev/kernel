@@ -20,6 +20,7 @@
 #include <linux/platform_device.h>
 #include <linux/ipa_uc_offload.h>
 #include <linux/pci.h>
+#include <linux/msm-bus.h>
 #include "ipa_api.h"
 
 /*
@@ -2980,6 +2981,11 @@ static int ipa_generic_plat_drv_probe(struct platform_device *pdev_p)
 	pr_debug("ipa: IPA driver probing started for %s\n",
 		pdev_p->dev.of_node->name);
 
+#ifndef CONFIG_QCOM_BUS_CONFIG_RPMH
+	if (!msm_bus_scale_driver_ready())
+		return -EPROBE_DEFER;
+#endif
+
 	if (!ipa_api_ctrl) {
 		ipa_api_ctrl = kzalloc(sizeof(*ipa_api_ctrl), GFP_KERNEL);
 		if (!ipa_api_ctrl)
@@ -3429,6 +3435,11 @@ static int ipa_pci_probe(
 		    pci_dev, ent);
 		return -EOPNOTSUPP;
 	}
+
+#ifndef CONFIG_QCOM_BUS_CONFIG_RPMH
+	if (!msm_bus_scale_driver_ready())
+		return -EPROBE_DEFER;
+#endif
 
 	if (!ipa_api_ctrl) {
 		ipa_api_ctrl = kzalloc(sizeof(*ipa_api_ctrl), GFP_KERNEL);
