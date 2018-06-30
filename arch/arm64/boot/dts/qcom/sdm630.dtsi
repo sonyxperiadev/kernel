@@ -1023,7 +1023,7 @@
 		#clock-cells = <1>;
 	};
 
-	clock_gcc: clock-controller@100000 {
+	clock_gcc: qcom,gcc@100000 {
 		compatible = "qcom,gcc-sdm660", "syscon";
 		reg = <0x100000 0x94000>;
 		vdd_dig-supply = <&pm660l_s3_level>;
@@ -1032,7 +1032,7 @@
 		#reset-cells = <1>;
 	};
 
-	clock_mmss: clock-controller@c8c0000 {
+	clock_mmss: qcom,mmcc@c8c0000 {
 		compatible = "qcom,mmcc-sdm630";
 		reg = <0xc8c0000 0x40000>;
 		vdd_mx_mmss-supply = <&pm660l_s5_level>;
@@ -1040,22 +1040,24 @@
 		vdda-supply = <&pm660_l10>;
 		#clock-cells = <1>;
 		#reset-cells = <1>;
+		status = "ok";
 	};
 
-	clock_mmss_vote: clock-controller@c8c0000 {
+	clock_mmss_vote: qcom,mmcc-voters@c8c0000 {
 		compatible = "qcom,mmsscc-voters-sdm660";
 		reg = <0xc8c0000 0x40000>;
 		#clock-cells = <1>;
+		status = "ok";
 	};
 
-	clock_gpu: clock-controller@5065000 {
+	clock_gpu: qcom,gpucc@5065000 {
 		compatible = "qcom,gpu-sdm660";
 		reg = <0x5065000 0x10000>;
 		#clock-cells = <1>;
 		#reset-cells = <1>;
 	};
 
-	clock_gfx: gfx@5065000 {
+	clock_gfx: qcom,gfxcc@5065000 {
 		compatible = "qcom,gpucc-sdm630";
 		reg = <0x5065000 0x10000>;
 		vdd_dig_gfx-supply = <&pm660l_s3_level>;
