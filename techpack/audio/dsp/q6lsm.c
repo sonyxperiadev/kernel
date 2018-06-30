@@ -78,6 +78,7 @@ struct lsm_module_param_ids {
 	uint32_t param_id;
 };
 
+static DEFINE_MUTEX(session_lock);
 static struct lsm_common lsm_common;
 /*
  * mmap_handle_p can point either client->sound_model.mem_map_handle or
@@ -148,6 +149,12 @@ static int q6lsm_callback(struct apr_client_data *data, void *priv)
 			 __func__, data->opcode, data->reset_event,
 			 data->reset_proc);
 
+		mutex_lock(&session_lock);
+		if (!client) {
+			pr_err("%s: client already freed, return\n", __func__);
+			mutex_unlock(&session_lock);
+			return 0;
+		}
 		apr_reset(client->apr);
 		client->apr = NULL;
 		atomic_set(&client->cmd_state, CMD_STATE_CLEARED);
@@ -157,6 +164,7 @@ static int q6lsm_callback(struct apr_client_data *data, void *priv)
 		mutex_lock(&lsm_common.cal_data[LSM_CUSTOM_TOP_IDX]->lock);
 		lsm_common.set_custom_topology = 1;
 		mutex_unlock(&lsm_common.cal_data[LSM_CUSTOM_TOP_IDX]->lock);
+		mutex_unlock(&session_lock);
 		return 0;
 	}
 
@@ -350,6 +358,7 @@ void q6lsm_client_free(struct lsm_client *client)
 		pr_err("%s: Invalid Session %d\n", __func__, client->session);
 		return;
 	}
+	mutex_lock(&session_lock);
 	apr_deregister(client->apr);
 	client->mmap_apr = NULL;
 	q6lsm_session_free(client);
@@ -357,6 +366,7 @@ void q6lsm_client_free(struct lsm_client *client)
 	mutex_destroy(&client->cmd_lock);
 	kfree(client);
 	client = NULL;
+	mutex_unlock(&session_lock);
 }
 
 /*
