@@ -95,6 +95,8 @@ struct limits_dcvs_hw {
 	atomic_t is_irq_enabled;
 };
 
+static bool lmh_enabled = false;
+
 LIST_HEAD(lmh_dcvs_hw_list);
 
 static int limits_dcvs_get_freq_limits(uint32_t cpu, unsigned long *max_freq,
@@ -303,6 +305,9 @@ static int enable_lmh(void)
 	int ret = 0;
 	struct scm_desc desc_arg;
 
+	if (lmh_enabled)
+		return 0;
+
 	desc_arg.args[0] = 1;
 	desc_arg.arginfo = SCM_ARGS(1, SCM_VAL);
 	ret = scm_call2(SCM_SIP_FNID(SCM_SVC_LMH, LIMITS_PROFILE_CHANGE),
@@ -311,6 +316,8 @@ static int enable_lmh(void)
 		pr_err("Error switching profile:[1]. err:%d\n", ret);
 		return ret;
 	}
+
+	lmh_enabled = true;
 
 	return ret;
 }
@@ -406,6 +413,7 @@ static int limits_dcvs_probe(struct platform_device *pdev)
 		 LIMITS_ALGO_MODE_ENABLE, 1);
 	if (ret)
 		return ret;
+
 	/* Enable the LMH outer loop algorithm */
 	ret = limits_dcvs_write(hw->affinity, LIMITS_SUB_FN_CRNT,
 		 LIMITS_ALGO_MODE_ENABLE, 1);
@@ -421,6 +429,7 @@ static int limits_dcvs_probe(struct platform_device *pdev)
 		 LIMITS_ALGO_MODE_ENABLE, 1);
 	if (ret)
 		return ret;
+
 	ret = enable_lmh();
 	if (ret)
 		return ret;
