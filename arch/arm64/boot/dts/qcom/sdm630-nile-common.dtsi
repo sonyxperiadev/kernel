@@ -560,7 +560,7 @@
 };
 
 &pm660_haptics {
-	qcom,actuator-type = "erm";
+	qcom,actuator-type = <1>;
 	qcom,vmax-mv = <3000>;
 };
 
