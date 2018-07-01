@@ -180,6 +180,10 @@ static const struct ipa_ep_confing ep_mapping[3][IPA_CLIENT_MAX] = {
 	[IPA_2_6L][IPA_CLIENT_TEST3_PROD]         = {true, 13},
 	[IPA_2_6L][IPA_CLIENT_TEST4_PROD]         = {true, 14},
 
+	[IPA_2_6L][IPA_CLIENT_WLAN1_CONS]         = {true, 17},
+	[IPA_2_6L][IPA_CLIENT_WLAN2_CONS]         = {true, 16},
+	[IPA_2_6L][IPA_CLIENT_WLAN3_CONS]         = {true, 15},
+	[IPA_2_6L][IPA_CLIENT_WLAN4_CONS]         = {true, 19},
 	[IPA_2_6L][IPA_CLIENT_USB_CONS]           = {true,  0},
 	[IPA_2_6L][IPA_CLIENT_USB_DPL_CONS]       = {true, 10},
 	[IPA_2_6L][IPA_CLIENT_APPS_LAN_CONS]      = {true,  2},
