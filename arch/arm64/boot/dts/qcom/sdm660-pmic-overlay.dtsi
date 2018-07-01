@@ -227,15 +227,15 @@
 
 &pm660_1 {
 	pm660_haptics: qcom,haptic@c000 {
-		compatible = "qcom,qpnp-haptic";
+		compatible = "qcom,qpnp-haptics";
 		reg = <0xc000 0x100>;
 		interrupts = <0x1 0xc0 0x0 IRQ_TYPE_EDGE_BOTH>,
 			     <0x1 0xc0 0x1 IRQ_TYPE_EDGE_BOTH>;
-		interrupt-names = "sc-irq", "play-irq";
+		interrupt-names = "hap-sc-irq", "hap-play-irq";
 		qcom,pmic-revid = <&pm660_revid>;
 		qcom,pmic-misc = <&pm660_misc>;
 		qcom,misc-clk-trim-error-reg = <0xf3>;
-		qcom,actuator-type = "lra";
+		qcom,actuator-type = <0>;
 		qcom,play-mode = "direct";
 		qcom,vmax-mv = <3200>;
 		qcom,ilim-ma = <800>;
@@ -244,7 +244,7 @@
 		qcom,int-pwm-freq-khz = <505>;
 		qcom,sc-deb-cycles = <8>;
 		qcom,en-brake;
-		qcom,brake-pattern = [03 03 00 00];
+		qcom,brake-pattern = <0x3 0x3 0x0 0x0>;
 		qcom,lra-high-z = "opt0";
 		qcom,lra-auto-res-mode = "qwd";
 		qcom,lra-calibrate-at-eop = <0>;
