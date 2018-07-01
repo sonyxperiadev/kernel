@@ -3522,6 +3522,8 @@ EXPORT_SYMBOL(icnss_trigger_recovery);
 static int icnss_smmu_init(struct icnss_priv *priv)
 {
 	struct dma_iommu_mapping *mapping;
+	struct device *dev = &priv->pdev->dev;
+	struct iommu_group *grp = NULL;
 	int atomic_ctx = 1;
 	int s1_bypass = 1;
 	int fast = 1;
@@ -3536,6 +3538,12 @@ static int icnss_smmu_init(struct icnss_priv *priv)
 		icnss_pr_err("Create mapping failed, err = %d\n", ret);
 		ret = PTR_ERR(mapping);
 		goto map_fail;
+	}
+
+	if (!dev->iommu_group) {
+		grp = iommu_group_get_for_dev(dev);
+		if (IS_ERR_OR_NULL(grp))
+			return PTR_ERR(grp);
 	}
 
 	if (priv->bypass_s1_smmu) {
