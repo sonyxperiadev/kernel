@@ -615,6 +615,16 @@ config MSM_ADSPRPC
           applications DSP processor. Say M if you want to enable this
           module.
 
+config MSM_ADSPRPC_LEGACY
+        tristate "QTI ADSP RPC driver (Legacy 4x)"
+        depends on MSM_GLINK || MSM_SMD
+	depends on MSM_ADSPRPC
+        help
+          Provides a communication mechanism that allows for clients to
+          make remote method invocations across processor boundary to
+          applications DSP processor. Say M if you want to enable this
+          module.
+
 config MSM_RDBG
 	tristate "QTI Remote debug driver"
 	help
