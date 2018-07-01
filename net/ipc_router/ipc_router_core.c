@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -224,6 +224,25 @@ void msm_ipc_router_set_ws_allowed(bool flag)
 	is_wakeup_source_allowed = flag;
 }
 
+/**
+ * is_sensor_port() - Check if the remote port is sensor service or not
+ * @rport: Pointer to the remote port.
+ *
+ * Return: true if the remote port is sensor service else false.
+ */
+static int is_sensor_port(struct msm_ipc_router_remote_port *rport)
+{
+	u32 svcid = 0;
+
+	if (rport && rport->server) {
+		svcid = rport->server->name.service;
+		if (svcid == 400 || (svcid >= 256 && svcid <= 320))
+			return true;
+	}
+
+	return false;
+}
+
 static void init_routing_table(void)
 {
 	int i;
@@ -277,7 +296,7 @@ static uint32_t ipc_router_calc_checksum(union rr_control_msg *msg)
  */
 static void skb_copy_to_log_buf(struct sk_buff_head *skb_head,
 				unsigned int pl_len, unsigned int hdr_offset,
-				uint64_t *log_buf)
+				unsigned char *log_buf)
 {
 	struct sk_buff *temp_skb;
 	unsigned int copied_len = 0, copy_len = 0;
@@ -357,7 +376,8 @@ static void ipc_router_log_msg(void *log_ctx, uint32_t xchng_type,
 			else if (hdr->version == IPC_ROUTER_V2)
 				hdr_offset = sizeof(struct rr_header_v2);
 		}
-		skb_copy_to_log_buf(skb_head, buf_len, hdr_offset, &pl_buf);
+		skb_copy_to_log_buf(skb_head, buf_len, hdr_offset,
+				    (unsigned char *)&pl_buf);
 
 		if (port_ptr && rport_ptr && (port_ptr->type == CLIENT_PORT)
 				&& (rport_ptr->server != NULL)) {
@@ -2730,7 +2750,6 @@ static void do_read_data(struct work_struct *work)
 	struct rr_packet *pkt = NULL;
 	struct msm_ipc_port *port_ptr;
 	struct msm_ipc_router_remote_port *rport_ptr;
-	int ret;
 
 	struct msm_ipc_router_xprt_info *xprt_info =
 		container_of(work,
@@ -2738,16 +2757,7 @@ static void do_read_data(struct work_struct *work)
 			     read_data);
 
 	while ((pkt = rr_read(xprt_info)) != NULL) {
-		if (pkt->length < calc_rx_header_size(xprt_info) ||
-		    pkt->length > MAX_IPC_PKT_SIZE) {
-			IPC_RTR_ERR("%s: Invalid pkt length %d\n",
-				__func__, pkt->length);
-			goto read_next_pkt1;
-		}
 
-		ret = extract_header(pkt);
-		if (ret < 0)
-			goto read_next_pkt1;
 		hdr = &(pkt->hdr);
 
 		if ((hdr->dst_node_id != IPC_ROUTER_NID_LOCAL) &&
@@ -4200,6 +4210,7 @@ void msm_ipc_router_xprt_notify(struct msm_ipc_router_xprt *xprt,
 {
 	struct msm_ipc_router_xprt_info *xprt_info = xprt->priv;
 	struct msm_ipc_router_xprt_work *xprt_work;
+	struct msm_ipc_router_remote_port *rport_ptr = NULL;
 	struct rr_packet *pkt;
 	int ret;
 
@@ -4252,16 +4263,40 @@ void msm_ipc_router_xprt_notify(struct msm_ipc_router_xprt *xprt,
 	if (!pkt)
 		return;
 
+	if (pkt->length < calc_rx_header_size(xprt_info) ||
+	    pkt->length > MAX_IPC_PKT_SIZE) {
+		IPC_RTR_ERR("%s: Invalid pkt length %d\n",
+			    __func__, pkt->length);
+		release_pkt(pkt);
+		return;
+	}
+
+	ret = extract_header(pkt);
+	if (ret < 0) {
+		release_pkt(pkt);
+		return;
+	}
+
 	pkt->ws_need = false;
+
+	if (pkt->hdr.type == IPC_ROUTER_CTRL_CMD_DATA)
+		rport_ptr = ipc_router_get_rport_ref(pkt->hdr.src_node_id,
+						     pkt->hdr.src_port_id);
+
 	mutex_lock(&xprt_info->rx_lock_lhb2);
 	list_add_tail(&pkt->list, &xprt_info->pkt_list);
-	if (!xprt_info->dynamic_ws) {
-		__pm_stay_awake(&xprt_info->ws);
-		pkt->ws_need = true;
-	} else {
-		if (is_wakeup_source_allowed) {
+	/* check every pkt is from SENSOR services or not and
+	 * avoid holding both edge and port specific wake-up sources
+	 */
+	if (!is_sensor_port(rport_ptr)) {
+		if (!xprt_info->dynamic_ws) {
 			__pm_stay_awake(&xprt_info->ws);
 			pkt->ws_need = true;
+		} else {
+			if (is_wakeup_source_allowed) {
+				__pm_stay_awake(&xprt_info->ws);
+				pkt->ws_need = true;
+			}
 		}
 	}
 	mutex_unlock(&xprt_info->rx_lock_lhb2);

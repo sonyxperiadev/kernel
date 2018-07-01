@@ -17,6 +17,7 @@
 #include "mac.h"
 
 #include <net/mac80211.h>
+#include <net/addrconf.h>
 #include "hif.h"
 #include "core.h"
 #include "debug.h"
@@ -232,6 +233,116 @@ static int ath10k_wow_wakeup(struct ath10k *ar)
 }
 
 static int
+ath10k_wow_fill_vdev_ns_offload_struct(struct ath10k_vif *arvif,
+				       bool enable_offload)
+{
+	struct in6_addr addr[TARGET_NUM_STATIONS];
+	struct wmi_ns_arp_offload_req *ns;
+	struct wireless_dev *wdev;
+	struct inet6_dev *in6_dev;
+	struct in6_addr addr_type;
+	struct inet6_ifaddr *ifa;
+	struct ifacaddr6 *ifaca;
+	struct list_head *addr_list;
+	u32 scope, count = 0;
+	int i;
+
+	ns = &arvif->ns_offload;
+	if (!enable_offload) {
+		ns->offload_type = __cpu_to_le16(WMI_NS_ARP_OFFLOAD);
+		ns->enable_offload = __cpu_to_le16(WMI_ARP_NS_OFFLOAD_DISABLE);
+		return 0;
+	}
+
+	wdev = ieee80211_vif_to_wdev(arvif->vif);
+	if (!wdev)
+		return -ENODEV;
+
+	in6_dev = __in6_dev_get(wdev->netdev);
+	if (!in6_dev)
+		return -ENODEV;
+
+	memset(&addr, 0, TARGET_NUM_STATIONS * sizeof(struct in6_addr));
+	memset(&addr_type, 0, sizeof(struct in6_addr));
+
+	/* Unicast Addresses */
+	read_lock_bh(&in6_dev->lock);
+	list_for_each(addr_list, &in6_dev->addr_list) {
+		if (count >= TARGET_NUM_STATIONS) {
+			read_unlock_bh(&in6_dev->lock);
+			return -EINVAL;
+		}
+
+		ifa = list_entry(addr_list, struct inet6_ifaddr, if_list);
+		if (ifa->flags & IFA_F_DADFAILED)
+			continue;
+		scope = ipv6_addr_src_scope(&ifa->addr);
+		switch (scope) {
+		case IPV6_ADDR_SCOPE_GLOBAL:
+		case IPV6_ADDR_SCOPE_LINKLOCAL:
+			memcpy(&addr[count], &ifa->addr.s6_addr,
+			       sizeof(ifa->addr.s6_addr));
+			addr_type.s6_addr[count] = IPV6_ADDR_UNICAST;
+			count += 1;
+			break;
+		}
+	}
+
+	/* Anycast Addresses */
+	for (ifaca = in6_dev->ac_list; ifaca; ifaca = ifaca->aca_next) {
+		if (count >= TARGET_NUM_STATIONS) {
+			read_unlock_bh(&in6_dev->lock);
+			return -EINVAL;
+		}
+
+		scope = ipv6_addr_src_scope(&ifaca->aca_addr);
+		switch (scope) {
+		case IPV6_ADDR_SCOPE_GLOBAL:
+		case IPV6_ADDR_SCOPE_LINKLOCAL:
+			memcpy(&addr[count], &ifaca->aca_addr,
+			       sizeof(ifaca->aca_addr));
+			addr_type.s6_addr[count] = IPV6_ADDR_ANY;
+			count += 1;
+			break;
+		}
+	}
+	read_unlock_bh(&in6_dev->lock);
+
+	/* Filling up the request structure
+	 * Filling the self_addr with solicited address
+	 * A Solicited-Node multicast address is created by
+	 * taking the last 24 bits of a unicast or anycast
+	 * address and appending them to the prefix
+	 *
+	 * FF02:0000:0000:0000:0000:0001:FFXX:XXXX
+	 *
+	 * here XX is the unicast/anycast bits
+	 */
+	for (i = 0; i < count; i++) {
+		ns->info.self_addr[i].s6_addr[0] = 0xFF;
+		ns->info.self_addr[i].s6_addr[1] = 0x02;
+		ns->info.self_addr[i].s6_addr[11] = 0x01;
+		ns->info.self_addr[i].s6_addr[12] = 0xFF;
+		ns->info.self_addr[i].s6_addr[13] = addr[i].s6_addr[13];
+		ns->info.self_addr[i].s6_addr[14] = addr[i].s6_addr[14];
+		ns->info.self_addr[i].s6_addr[15] = addr[i].s6_addr[15];
+		ns->info.slot_idx = i;
+		memcpy(&ns->info.target_addr[i], &addr[i],
+		       sizeof(struct in6_addr));
+		ns->info.target_addr_valid.s6_addr[i] = 1;
+		ns->info.target_ipv6_ac.s6_addr[i] = addr_type.s6_addr[i];
+		memcpy(&ns->params.ipv6_addr, &ns->info.target_addr[i],
+		       sizeof(struct in6_addr));
+	}
+
+	ns->offload_type = __cpu_to_le16(WMI_NS_ARP_OFFLOAD);
+	ns->enable_offload = __cpu_to_le16(WMI_ARP_NS_OFFLOAD_ENABLE);
+	ns->num_ns_offload_count = __cpu_to_le16(count);
+
+	return 0;
+}
+
+static int
 ath10k_wow_fill_vdev_arp_offload_struct(struct ath10k_vif *arvif,
 					bool enable_offload)
 {
@@ -291,6 +402,13 @@ static int ath10k_wow_enable_ns_arp_offload(struct ath10k *ar, bool offload)
 			return ret;
 		}
 
+		ret = ath10k_wow_fill_vdev_ns_offload_struct(arvif, offload);
+		if (ret) {
+			ath10k_err(ar, "NS-offload config failed, vdev: %d\n",
+				   arvif->vdev_id);
+			return ret;
+		}
+
 		ret = ath10k_wmi_set_arp_ns_offload(ar, arvif);
 		if (ret) {
 			ath10k_err(ar, "failed to send offload cmd, vdev: %d\n",
@@ -325,22 +443,6 @@ static int ath10k_config_wow_listen_interval(struct ath10k *ar)
 	}
 
 	return 0;
-}
-
-void ath10k_wow_op_set_rekey_data(struct ieee80211_hw *hw,
-				  struct ieee80211_vif *vif,
-				  struct cfg80211_gtk_rekey_data *data)
-{
-	struct ath10k *ar = hw->priv;
-	struct ath10k_vif *arvif = ath10k_vif_to_arvif(vif);
-
-	mutex_lock(&ar->conf_mutex);
-	memcpy(&arvif->gtk_rekey_data.kek, data->kek, NL80211_KEK_LEN);
-	memcpy(&arvif->gtk_rekey_data.kck, data->kck, NL80211_KCK_LEN);
-	arvif->gtk_rekey_data.replay_ctr =
-		cpu_to_le64(be64_to_cpup((__be64 *)data->replay_ctr));
-	arvif->gtk_rekey_data.valid = true;
-	mutex_unlock(&ar->conf_mutex);
 }
 
 static int ath10k_wow_config_gtk_offload(struct ath10k *ar, bool gtk_offload)
@@ -391,6 +493,13 @@ int ath10k_wow_op_suspend(struct ieee80211_hw *hw,
 		goto exit;
 	}
 
+	ret =  ath10k_wow_cleanup(ar);
+	if (ret) {
+		ath10k_warn(ar, "failed to clear wow wakeup events: %d\n",
+			    ret);
+		goto exit;
+	}
+
 	ret = ath10k_wow_config_gtk_offload(ar, true);
 	if (ret) {
 		ath10k_warn(ar, "failed to enable GTK offload: %d\n", ret);
@@ -403,18 +512,11 @@ int ath10k_wow_op_suspend(struct ieee80211_hw *hw,
 		goto disable_gtk_offload;
 	}
 
-	ret =  ath10k_wow_cleanup(ar);
-	if (ret) {
-		ath10k_warn(ar, "failed to clear wow wakeup events: %d\n",
-			    ret);
-		goto disable_ns_arp_offload;
-	}
-
 	ret = ath10k_wow_set_wakeups(ar, wowlan);
 	if (ret) {
 		ath10k_warn(ar, "failed to set wow wakeup events: %d\n",
 			    ret);
-		goto cleanup;
+		goto disable_ns_arp_offload;
 	}
 
 	ret = ath10k_config_wow_listen_interval(ar);
@@ -577,8 +679,15 @@ int ath10k_wow_init(struct ath10k *ar)
 	ar->wow.wowlan_support = ath10k_wowlan_support;
 	ar->wow.wowlan_support.n_patterns = ar->wow.max_num_patterns;
 	ar->hw->wiphy->wowlan = &ar->wow.wowlan_support;
-
-	device_set_wakeup_capable(ar->dev, true);
+	device_init_wakeup(ar->dev, true);
 
 	return 0;
+}
+
+void ath10k_wow_deinit(struct ath10k *ar)
+{
+	if (test_bit(ATH10K_FW_FEATURE_WOWLAN_SUPPORT,
+		     ar->running_fw->fw_file.fw_features) &&
+		test_bit(WMI_SERVICE_WOW, ar->wmi.svc_map))
+		device_init_wakeup(ar->dev, false);
 }
