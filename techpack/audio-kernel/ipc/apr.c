@@ -28,6 +28,7 @@
 #include <linux/of.h>
 #include <linux/slab.h>
 #include <linux/ipc_logging.h>
+#include <linux/of_platform.h>
 #include <soc/qcom/subsystem_restart.h>
 #include <soc/qcom/scm.h>
 #include <dsp/apr_audio-v2.h>
@@ -62,8 +63,6 @@ struct apr_private {
 	spinlock_t apr_lock;
 	bool is_initial_boot;
 	struct work_struct add_chld_dev_work;
-	spinlock_t apr_chld_lock;
-	struct list_head apr_chlds;
 };
 
 static struct apr_private *apr_priv;
@@ -284,44 +283,12 @@ static void apr_adsp_down(unsigned long opcode)
 static void apr_add_child_devices(struct work_struct *work)
 {
 	int ret;
-	struct device_node *node;
-	struct platform_device *pdev;
-	struct apr_chld_device *apr_chld_dev;
 
-	for_each_child_of_node(apr_priv->dev->of_node, node) {
-		apr_chld_dev = kzalloc(sizeof(*apr_chld_dev), GFP_KERNEL);
-		if (!apr_chld_dev)
-			continue;
-		pdev = platform_device_alloc(node->name, -1);
-		if (!pdev) {
-			dev_err(apr_priv->dev,
-				"%s: pdev memory alloc failed for %s\n",
-				__func__, node->name);
-			kfree(apr_chld_dev);
-			continue;
-		}
-		pdev->dev.parent = apr_priv->dev;
-		pdev->dev.of_node = node;
-
-		ret = platform_device_add(pdev);
-		if (ret) {
-			dev_err(apr_priv->dev,
-				"%s: Cannot add platform device %s\n",
-				__func__, node->name);
-			platform_device_put(pdev);
-			kfree(apr_chld_dev);
-			continue;
-		}
-
-		apr_chld_dev->pdev = pdev;
-
-		spin_lock(&apr_priv->apr_chld_lock);
-		list_add_tail(&apr_chld_dev->node, &apr_priv->apr_chlds);
-		spin_unlock(&apr_priv->apr_chld_lock);
-
-		dev_dbg(apr_priv->dev, "%s: Added APR child dev: %s\n",
-			 __func__, dev_name(&pdev->dev));
-	}
+	ret = of_platform_populate(apr_priv->dev->of_node,
+			NULL, NULL, apr_priv->dev);
+	 if (ret)
+		dev_dbg(apr_priv->dev, "%s: failed to add child nodes, ret=%d\n",
+			 __func__, ret);
 }
 
 static void apr_adsp_up(void)
@@ -545,6 +512,11 @@ struct apr_svc *apr_register(char *dest, char *svc_name, apr_fn svc_fn,
 	}
 
 	clnt = &client[dest_id][client_id];
+	if (clnt == NULL) {
+		pr_err("APR: NULL client!\n");
+		return NULL;
+	}
+
 	mutex_lock(&clnt->m_lock);
 	if (!clnt->handle && can_open_channel) {
 		clnt->handle = apr_tal_open(client_id, dest_id,
@@ -1091,6 +1063,7 @@ static void apr_cleanup(void)
 {
 	int i, j, k;
 
+	of_platform_depopulate(apr_priv->dev);
 	if (apr_reset_workqueue) {
 		flush_workqueue(apr_reset_workqueue);
 		destroy_workqueue(apr_reset_workqueue);
@@ -1119,8 +1092,6 @@ static int apr_probe(struct platform_device *pdev)
 
 	apr_priv->dev = &pdev->dev;
 	spin_lock_init(&apr_priv->apr_lock);
-	spin_lock_init(&apr_priv->apr_chld_lock);
-	INIT_LIST_HEAD(&apr_priv->apr_chlds);
 	INIT_WORK(&apr_priv->add_chld_dev_work, apr_add_child_devices);
 
 	for (i = 0; i < APR_DEST_MAX; i++)
@@ -1157,16 +1128,7 @@ static int apr_probe(struct platform_device *pdev)
 
 static int apr_remove(struct platform_device *pdev)
 {
-	struct apr_chld_device *chld, *tmp;
-
 	apr_cleanup();
-	spin_lock(&apr_priv->apr_chld_lock);
-	list_for_each_entry_safe(chld, tmp, &apr_priv->apr_chlds, node) {
-		platform_device_unregister(chld->pdev);
-		list_del(&chld->node);
-		kfree(chld);
-	}
-	spin_unlock(&apr_priv->apr_chld_lock);
 	apr_priv = NULL;
 	return 0;
 }

@@ -643,8 +643,8 @@ static const struct tavil_reg_mask_val tavil_spkr_default[] = {
 	{WCD934X_CDC_COMPANDER8_CTL3, 0x80, 0x80},
 	{WCD934X_CDC_COMPANDER7_CTL7, 0x01, 0x01},
 	{WCD934X_CDC_COMPANDER8_CTL7, 0x01, 0x01},
-	{WCD934X_CDC_BOOST0_BOOST_CTL, 0x7C, 0x50},
-	{WCD934X_CDC_BOOST1_BOOST_CTL, 0x7C, 0x50},
+	{WCD934X_CDC_BOOST0_BOOST_CTL, 0x7C, 0x58},
+	{WCD934X_CDC_BOOST1_BOOST_CTL, 0x7C, 0x58},
 };
 
 static const struct tavil_reg_mask_val tavil_spkr_mode1[] = {
@@ -8977,8 +8977,10 @@ static int tavil_dig_core_power_collapse(struct tavil_priv *tavil,
 		goto unlock_mutex;
 
 	if (tavil->power_active_ref < 0) {
-		dev_dbg(tavil->dev, "%s: power_active_ref is negative\n",
+		dev_dbg(tavil->dev,
+			"%s: power_active_ref is negative, reset it\n",
 			__func__);
+		tavil->power_active_ref = 0;
 		goto unlock_mutex;
 	}
 
@@ -9405,8 +9407,8 @@ static const struct tavil_reg_mask_val tavil_codec_reg_init_common_val[] = {
 	{WCD934X_CDC_CLSH_K2_MSB, 0x0F, 0x00},
 	{WCD934X_CDC_CLSH_K2_LSB, 0xFF, 0x60},
 	{WCD934X_CPE_SS_DMIC_CFG, 0x80, 0x00},
-	{WCD934X_CDC_BOOST0_BOOST_CTL, 0x70, 0x50},
-	{WCD934X_CDC_BOOST1_BOOST_CTL, 0x70, 0x50},
+	{WCD934X_CDC_BOOST0_BOOST_CTL, 0x7C, 0x58},
+	{WCD934X_CDC_BOOST1_BOOST_CTL, 0x7C, 0x58},
 	{WCD934X_CDC_RX7_RX_PATH_CFG1, 0x08, 0x08},
 	{WCD934X_CDC_RX8_RX_PATH_CFG1, 0x08, 0x08},
 	{WCD934X_CDC_TOP_TOP_CFG1, 0x02, 0x02},

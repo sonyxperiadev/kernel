@@ -4282,6 +4282,66 @@ struct asm_softvolume_params {
 /* Rear right of center. */
 #define PCM_CHANNEL_RRC  16
 
+/* Secondary low frequency effect channel. */
+#define PCM_CHANNEL_LFE2  17
+
+/* Side left channel. */
+#define PCM_CHANNEL_SL  18
+
+/* Side right channel. */
+#define PCM_CHANNEL_SR  19
+
+/* Top front left channel. */
+#define PCM_CHANNEL_TFL  20
+
+/* Left vertical height channel. */
+#define PCM_CHANNEL_LVH  PCM_CHANNEL_TFL
+
+/* Top front right channel. */
+#define PCM_CHANNEL_TFR 21
+
+/* Right vertical height channel. */
+#define PCM_CHANNEL_RVH PCM_CHANNEL_TFR
+
+/* Top center channel. */
+#define PCM_CHANNEL_TC  22
+
+/* Top back left channel. */
+#define PCM_CHANNEL_TBL  23
+
+/* Top back right channel. */
+#define PCM_CHANNEL_TBR  24
+
+/* Top side left channel. */
+#define PCM_CHANNEL_TSL  25
+
+/* Top side right channel. */
+#define PCM_CHANNEL_TSR  26
+
+/* Top back center channel. */
+#define PCM_CHANNEL_TBC  27
+
+/* Bottom front center channel. */
+#define PCM_CHANNEL_BFC  28
+
+/* Bottom front left channel. */
+#define PCM_CHANNEL_BFL  29
+
+/* Bottom front right channel. */
+#define PCM_CHANNEL_BFR  30
+
+/* Left wide channel. */
+#define PCM_CHANNEL_LW  31
+
+/* Right wide channel. */
+#define PCM_CHANNEL_RW  32
+
+/* Left side direct channel. */
+#define PCM_CHANNEL_LSD  33
+
+/* Right side direct channel. */
+#define PCM_CHANNEL_RSD  34
+
 #define PCM_FORMAT_MAX_NUM_CHANNEL  8
 
 #define ASM_MEDIA_FMT_MULTI_CHANNEL_PCM_V2 0x00010DA5
