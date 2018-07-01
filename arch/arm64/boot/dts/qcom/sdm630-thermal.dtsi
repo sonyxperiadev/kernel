@@ -348,8 +348,8 @@
 			};
 			cpu4_vdd_cdev {
 				trip = <&aoss0_trip>;
-				cooling-device = <&CPU4 (THERMAL_MAX_LIMIT-8)
-							(THERMAL_MAX_LIMIT-8)>;
+				cooling-device = <&CPU4 (THERMAL_MAX_LIMIT-5)
+							(THERMAL_MAX_LIMIT-5)>;
 			};
 			gpu_vdd_cdev {
 				trip = <&aoss0_trip>;
