@@ -22,7 +22,7 @@ obj-$(CONFIG_SND_SOC_MSM8996) += snd-soc-msm8996.o
 
 # for MSM8998 sound card driver
 snd-soc-msm8998-objs := msm8998.o
-obj-$(CONFIG_SND_SOC_MACHINE_MSM8998) += snd-soc-msm8998.o
+obj-$(CONFIG_SND_SOC_MSM8998) += snd-soc-msm8998.o
 
 # for SDM670 sound card driver
 snd-soc-sdm670-objs := sdm660-common.o sdm660-internal.o sdm660-external.o sdm660-ext-dai-links.o
@@ -30,7 +30,7 @@ obj-$(CONFIG_SND_SOC_SDM670) += snd-soc-sdm670.o
 
 # for SDM845 sound card driver
 snd-soc-sdm845-objs := sdm845.o
-obj-$(CONFIG_SND_SOC_MACHINE_SDM845) += snd-soc-sdm845.o
+obj-$(CONFIG_SND_SOC_SDM845) += snd-soc-sdm845.o
 
 # for SDXPOORWILLS sound card driver
 snd-soc-sdxpoorwills-objs := sdxpoorwills.o
