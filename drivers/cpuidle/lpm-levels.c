@@ -50,6 +50,7 @@
 #include "../clk/clk.h"
 #define CREATE_TRACE_POINTS
 #include <trace/events/trace_msm_low_power.h>
+#include <linux/arm-smccc.h>
 
 #define SCLK_HZ (32768)
 #define PSCI_POWER_STATE(reset) (reset << 30)
@@ -1319,6 +1320,15 @@ static bool psci_enter_sleep(struct lpm_cpu *cpu, int idx, bool from_idle)
 	if (from_idle && cpu->levels[idx].use_bc_timer) {
 		if (tick_broadcast_enter())
 			return success;
+	}
+
+	if (cpu->levels[idx].hyp_psci) {
+		struct arm_smccc_res res;
+
+		stop_critical_timings();
+		arm_smccc_smc(0xC4000021, 0, 0, 0, 0, 0, 0, 0, &res);
+		start_critical_timings();
+		return 1;
 	}
 
 	state_id = get_cluster_id(cpu->parent, &affinity_level, from_idle);
