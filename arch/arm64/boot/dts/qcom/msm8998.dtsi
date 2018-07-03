@@ -1877,26 +1877,18 @@
 	};
 
 	qusb_phy0: qusb@c012000 {
-		compatible = "qcom,qusb2phy-v2";
+		compatible = "qcom,qusb2phy";
 		reg = <0x0c012000 0x2a8>,
-		      <0x01fcb24c 0x4>;
+			<0x01fcb24c 0x4>,
+			<0x00188014 0x4>;
 		reg-names = "qusb_phy_base",
-				"tcsr_clamp_dig_n_1p8";
+			"tcsr_clamp_dig_n_1p8",
+			"ref_clk_addr";
 		vdd-supply = <&pm8998_l1>;
-		vdda12-supply = <&pm8998_l2>;
+		//vdda12-supply = <&pm8998_l2>;
 		vdda18-supply = <&pm8998_l12>;
 		vdda33-supply = <&pm8998_l24>;
 		qcom,vdd-voltage-level = <0 880000 880000>;
-		qcom,vdda33-voltage-level = <2400000 3088000 3088000>;
-		qcom,qusb-phy-reg-offset =
-				<0x23c /* QUSB2PHY_PORT_TUNE1 */
-				 0x1a0 /* QUSB2PHY_PLL_COMMON_STATUS_ONE */
-				 0x210 /* QUSB2PHY_PWR_CTRL1 */
-				 0x22c /* QUSB2PHY_INTR_CTRL */
-				 0x0   /* QUSB2PHY_PLL_ANALOG_CONTROLS_ONE */
-				 0x24C /* QUSB2PHY_TEST1 */
-				 0x0 0x0 0x0 0x0>;
-
 		qcom,qusb-phy-init-seq =
 				/* <value reg_offset> */
 					<0x80 0x0
@@ -1906,11 +1898,14 @@
 					0x0a 0x184
 					0x00 0x240>;
 		phy_type= "utmi";
+		qcom,phy-clk-scheme = "cml";
+		qcom,major-rev = <2>;
 
 		clocks = <&clock_rpmcc RPM_LN_BB_CLK1>,
-			 <&clock_gcc GCC_RX1_USB2_CLKREF_CLK>,
-			 <&clock_gcc GCC_USB_PHY_CFG_AHB2PHY_CLK>;
-		clock-names = "ref_clk_src", "ref_clk", "cfg_ahb_clk";
+			<&clock_gcc GCC_RX1_USB2_CLKREF_CLK>,
+			<&clock_gcc GCC_USB_PHY_CFG_AHB2PHY_CLK>;
+
+		clock-names =  "ref_clk_src", "ref_clk", "cfg_ahb_clk";
 
 		resets = <&clock_gcc QUSB2PHY_PRIM_BCR>;
 		reset-names = "phy_reset";
