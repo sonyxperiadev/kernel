@@ -3527,33 +3527,6 @@ int regulator_allow_bypass(struct regulator *regulator, bool enable)
 }
 EXPORT_SYMBOL_GPL(regulator_allow_bypass);
 
-/*
- * regulator_register_ocp_notification - register ocp notification
- * @regulator: regulator source
- * @notification: pointer of client ocp_notification
- *
- */
-int regulator_register_ocp_notification(struct regulator *regulator,
-			struct regulator_ocp_notification *notification)
-{
-	struct regulator_dev *rdev = regulator->rdev;
-	int ret;
-
-	mutex_lock(&rdev->mutex);
-
-	/* sanity check */
-	if (!rdev->desc->ops->register_ocp_notification) {
-		ret = -EINVAL;
-		goto out;
-	}
-
-	ret = rdev->desc->ops->register_ocp_notification(rdev, notification);
-out:
-	mutex_unlock(&rdev->mutex);
-	return ret;
-}
-EXPORT_SYMBOL_GPL(regulator_register_ocp_notification);
-
 /**
  * regulator_register_ocp_notification - register ocp notification
  * @regulator: regulator source
