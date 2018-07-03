@@ -1756,7 +1756,7 @@ static int msm_add_stream_pan_scale_controls(struct snd_soc_pcm_runtime *rtd)
 			 strlen(suffix) + 1;
 
 	ret = snd_pcm_add_usr_ctls(pcm, SNDRV_PCM_STREAM_PLAYBACK,
-				   NULL, 1, ctl_len, rtd->dai_link->be_id,
+				   NULL, 1, ctl_len, rtd->dai_link->id,
 				   &pan_ctl_info);
 
 	if (ret < 0) {
@@ -1880,7 +1880,7 @@ static int msm_add_device_down_mix_controls(struct snd_soc_pcm_runtime *rtd)
 	ctl_len = strlen(playback_mixer_ctl_name) + 1 +
 			 strlen(deviceNo) + 1 + strlen(suffix) + 1;
 	ret = snd_pcm_add_usr_ctls(pcm, SNDRV_PCM_STREAM_PLAYBACK,
-				   NULL, 1, ctl_len, rtd->dai_link->be_id,
+				   NULL, 1, ctl_len, rtd->dai_link->id,
 				   &usr_info);
 	if (ret < 0) {
 		pr_err("%s: downmix control add failed: %d\n",
