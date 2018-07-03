@@ -3198,6 +3198,7 @@
 		clock-names = "cxo_ref_clk_pin";
 		iommus = <&anoc2_smmu 0x1900>,
 			 <&anoc2_smmu 0x1901>;
+		qcom,smmu-s1-bypass;
 		interrupts = <0 413 0 /* CE0 */ >,
 			     <0 414 0 /* CE1 */ >,
 			     <0 415 0 /* CE2 */ >,
