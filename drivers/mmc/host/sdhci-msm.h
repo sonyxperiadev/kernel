@@ -161,6 +161,9 @@ struct sdhci_msm_pltfm_data {
 	bool rclk_wa;
 	u32 *bus_clk_table;
 	unsigned char bus_clk_cnt;
+#ifdef CONFIG_WIFI_CONTROL_FUNC
+	bool use_for_wifi;
+#endif
 };
 
 struct sdhci_msm_bus_vote {

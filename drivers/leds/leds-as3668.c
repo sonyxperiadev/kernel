@@ -2530,7 +2530,7 @@ static int as3668_parse_dt(struct device *dev,
 	struct device_node *node, *temp = NULL;
 	int rc = 0, num_leds = 0, parsed_leds = 0;
 	struct as3668_platform_led *pled;
-	struct as3668_led *led;
+	struct as3668_led *led = NULL;
 	const char *led_label;
 	u32 tmp_data;
 
