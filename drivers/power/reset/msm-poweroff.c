@@ -200,6 +200,11 @@ static int dload_set(const char *val, struct kernel_param *kp)
 
 	return 0;
 }
+
+static bool get_dload_mode(void)
+{
+	return false;
+}
 #else
 #define set_dload_mode(x) do {} while (0)
 
