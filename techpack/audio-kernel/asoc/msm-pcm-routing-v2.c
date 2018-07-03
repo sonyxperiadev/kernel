@@ -37,7 +37,7 @@
 #include <dsp/q6afe-v2.h>
 #include <dsp/q6lsm.h>
 #include <dsp/q6core.h>
-#include <dssp/apr_audio-v2.h>
+#include <dsp/apr_audio-v2.h>
 #include <dsp/audio_cal_utils.h>
 
 #include "msm-pcm-routing-v2.h"
