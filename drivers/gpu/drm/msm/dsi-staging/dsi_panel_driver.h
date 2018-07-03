@@ -309,7 +309,7 @@ int dsi_panel_driver_parse_gpios(struct dsi_panel *panel,
 				 struct device_node *of_node);
 int dsi_panel_driver_reset_panel(struct dsi_panel *panel, bool en);
 void dsi_panel_driver_en_dcdc(struct dsi_panel *panel, int en);
-int dsi_panel_driver_create_fs(struct dsi_display *display);
+int dsi_panel_driver_create_fs(const struct dsi_display *display);
 int dsi_panel_tx_cmd(struct dsi_panel *panel, struct dsi_cmd_desc *cmds);
 int dsi_panel_rx_cmd(struct dsi_display *display, struct dsi_cmd_desc *cmds,
 			struct dsi_display_ctrl *ctrl, char *rbuf, int len);

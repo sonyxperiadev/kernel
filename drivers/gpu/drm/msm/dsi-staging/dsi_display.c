@@ -3411,6 +3411,9 @@ static bool dsi_display_is_seamless_dfps_possible(
 		const enum dsi_dfps_type dfps_type)
 {
 	struct dsi_display_mode *cur;
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+	int rc;
+#endif
 
 	if (!display || !tgt || !display->panel) {
 		pr_err("Invalid params\n");

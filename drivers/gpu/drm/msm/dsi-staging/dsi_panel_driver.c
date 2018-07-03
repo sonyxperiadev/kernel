@@ -38,7 +38,6 @@ static BLOCKING_NOTIFIER_HEAD(drm_notifier_list);
 
 static u32 down_period;
 static unsigned long lcdid_adc = 1505000;
-struct device virtdev;
 
 static char *res_buf;
 static int buf_sz;
@@ -2737,10 +2736,11 @@ error:
 	return -ENODEV;
 }
 
-int dsi_panel_driver_create_fs(struct dsi_display *display)
+int dsi_panel_driver_create_fs(const struct dsi_display *display)
 {
 	int rc = 0;
 	char *path_name = "dsi_panel_driver";
+	struct device virtdev;
 
 	dev_set_name(&virtdev, "%s", path_name);
 	rc = device_register(&virtdev);
@@ -2754,7 +2754,7 @@ int dsi_panel_driver_create_fs(struct dsi_display *display)
 		device_unregister(&virtdev);
 		goto err;
 	}
-	dev_set_drvdata(&virtdev, display);
+	dev_set_drvdata(&virtdev, (void*)display);
 err:
 	return rc;
 }
