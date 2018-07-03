@@ -11,12 +11,20 @@
  * GNU General Public License for more details.
  *
  */
+/*
+ * NOTE: This file has been modified by Sony Mobile Communications Inc.
+ * Modifications are Copyright (c) 2017 Sony Mobile Communications Inc,
+ * and licensed under the license of the file.
+ */
 
 #include <linux/of.h>
 #include <linux/delay.h>
 #include <linux/slab.h>
 
 #include "dsi_pwr.h"
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+#include <soc/qcom/socinfo.h>
+#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 
 /*
  * dsi_pwr_parse_supply_node() - parse power supply node from root device node
@@ -340,6 +348,11 @@ int dsi_pwr_get_dt_vreg_data(struct device *dev,
 int dsi_pwr_enable_regulator(struct dsi_regulator_info *regs, bool enable)
 {
 	int rc = 0;
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+	uint32_t version;
+
+	version = socinfo_get_version();
+#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 
 	if (!regs->vregs) {
 		pr_err("Invalid params\n");

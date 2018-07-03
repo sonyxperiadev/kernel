@@ -149,3 +149,11 @@ config DRM_SDE_RSC
           avoids the display core power collapse. A client can also register
           for display core power collapse events on rsc.
 
+config DRM_SDE_SPECIFIC_PANEL
+	depends on DRM_MSM
+	bool
+	prompt "MDSS Specific panel"
+	default n
+	---help---
+	The MDSS Specific Panel provides support for specific panel driver
+	file.

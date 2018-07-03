@@ -11,6 +11,11 @@
  * GNU General Public License for more details.
  *
  */
+/*
+ * NOTE: This file has been modified by Sony Mobile Communications Inc.
+ * Modifications are Copyright (c) 2017 Sony Mobile Communications Inc,
+ * and licensed under the license of the file.
+ */
 
 #define pr_fmt(fmt)	"msm-dsi-display:[%s] " fmt, __func__
 
@@ -31,6 +36,10 @@
 #include "dsi_pwr.h"
 #include "sde_dbg.h"
 
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+#include "dsi_panel_driver.h"
+#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
+
 #define to_dsi_display(x) container_of(x, struct dsi_display, host)
 #define INT_BASE_10 10
 #define NO_OVERRIDE -1
@@ -42,6 +51,11 @@
 
 #define DSI_CLOCK_BITRATE_RADIX 10
 
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+#define DELAY_SET_BACKLIGHT_TIME 100
+#define SET_BRIGHTNESS_VALUE 2047
+#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
+
 static DEFINE_MUTEX(dsi_display_list_lock);
 static LIST_HEAD(dsi_display_list);
 static char dsi_display_primary[MAX_CMDLINE_PARAM_LEN];
@@ -49,11 +63,17 @@ static char dsi_display_secondary[MAX_CMDLINE_PARAM_LEN];
 static struct dsi_display_boot_param boot_displays[MAX_DSI_ACTIVE_DISPLAY];
 static struct device_node *default_active_node;
 static const struct of_device_id dsi_display_dt_match[] = {
+	{.compatible = "somc,dsi-display"},
 	{.compatible = "qcom,dsi-display"},
 	{}
 };
 
 static struct dsi_display *main_display;
+
+struct dsi_display *dsi_display_get_main_display(void)
+{
+	return main_display;
+}
 
 static void dsi_display_mask_ctrl_error_interrupts(struct dsi_display *display)
 {
@@ -165,7 +185,11 @@ error:
 	return rc;
 }
 
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+int dsi_display_cmd_engine_enable(struct dsi_display *display)
+#else
 static int dsi_display_cmd_engine_enable(struct dsi_display *display)
+#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 {
 	int rc = 0;
 	int i;
@@ -209,7 +233,11 @@ done:
 	return rc;
 }
 
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+int dsi_display_cmd_engine_disable(struct dsi_display *display)
+#else
 static int dsi_display_cmd_engine_disable(struct dsi_display *display)
+#endif  /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 {
 	int rc = 0;
 	int i;
@@ -1289,6 +1317,7 @@ error:
 	kfree(buf);
 	return len;
 }
+
 
 static const struct file_operations dump_info_fops = {
 	.open = simple_open,
@@ -3369,6 +3398,9 @@ static int dsi_display_validate_mode_set(struct dsi_display *display,
 		}
 	}
 
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+	dsi_panel_driver_detection(display->pdev, &(display->panel_of));
+#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 error:
 	return rc;
 }
@@ -3399,6 +3431,13 @@ static bool dsi_display_is_seamless_dfps_possible(
 				tgt->timing.h_back_porch);
 		return false;
 	}
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+	rc = dsi_panel_driver_create_fs(display);
+	if (rc) {
+		pr_err("%s: faild dsi_panel_driver_create_fs rc=%d\n", __func__, rc);
+		return rc;
+	}
+#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 
 	if (cur->timing.h_sync_width != tgt->timing.h_sync_width) {
 		pr_debug("timing.h_sync_width differs %d %d\n",
@@ -5403,6 +5442,33 @@ end:
 			DSI_ALL_CLKS, DSI_CLK_OFF);
 }
 
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+static void dsi_display_set_backlight_det_tmr_func(unsigned long func_data)
+{
+	struct dsi_display *display =
+		(struct dsi_display *)func_data;
+
+	schedule_work(&display->set_backlight_work);
+}
+
+static void dsi_display_set_backlight_work(struct work_struct *work)
+{
+	struct dsi_display *display = NULL;
+	int rc = 0;
+
+	display =  container_of(work, struct dsi_display, set_backlight_work);
+
+	pr_info("[%s] set backlight\n", display->name);
+	rc = dsi_panel_set_backlight(display->panel, SET_BRIGHTNESS_VALUE);
+	if (rc) {
+		pr_err("[%s] set backlight error , rc=%d\n",
+				display->name, rc);
+		return;
+	}
+	dsi_panel_driver_reset_chargemon_exit();
+}
+#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
+
 static int dsi_display_cb_error_handler(void *data,
 		uint32_t event_idx, uint32_t instance_idx,
 		uint32_t data0, uint32_t data1,
@@ -5452,6 +5518,14 @@ static void dsi_display_register_error_handler(struct dsi_display *display)
 				dsi_display_handle_fifo_overflow);
 	INIT_WORK(&display->lp_rx_timeout_work,
 				dsi_display_handle_lp_rx_timeout);
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+	INIT_WORK(&display->set_backlight_work,
+				dsi_display_set_backlight_work);
+
+	setup_timer(&display->det_timer,
+			dsi_display_set_backlight_det_tmr_func,
+			(unsigned long)display);
+#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 
 	memset(&event_info, 0, sizeof(event_info));
 
@@ -5485,6 +5559,9 @@ static void dsi_display_unregister_error_handler(struct dsi_display *display)
 int dsi_display_prepare(struct dsi_display *display)
 {
 	int rc = 0;
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+	int chargemon_exit = 0;
+#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 	struct dsi_display_mode *mode;
 
 	if (!display) {
@@ -5613,6 +5690,17 @@ int dsi_display_prepare(struct dsi_display *display)
 			goto error_ctrl_link_off;
 		}
 	}
+
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+	chargemon_exit = dsi_panel_driver_get_chargemon_exit();
+	pr_debug("[%s] check chargemon_exit = %d\n",
+			display->name, chargemon_exit);
+	if (chargemon_exit) {
+		pr_info("[%s] set timer\n", display->name);
+		mod_timer(&display->det_timer,
+			jiffies + msecs_to_jiffies(DELAY_SET_BACKLIGHT_TIME));
+	}
+#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 	goto error;
 
 error_ctrl_link_off:
@@ -5865,6 +5953,19 @@ int dsi_display_enable(struct dsi_display *display)
 
 		display->panel->panel_initialized = true;
 		pr_debug("cont splash enabled, display enable not required\n");
+
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+		rc = dsi_panel_driver_enable(display->panel);
+		pr_debug("Try to allocate cmd tx buffer memory\n");
+		if (display->tx_cmd_buf == NULL) {
+			rc = dsi_host_alloc_cmd_tx_buffer(display);
+			if (rc)
+				pr_err("failed to allocate cmd tx buffer memory\n");
+		}
+		pr_debug("Try to pcc_setup\n");
+		rc = dsi_panel_pcc_setup(display);
+#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
+
 		return 0;
 	}
 
@@ -5889,7 +5990,11 @@ int dsi_display_enable(struct dsi_display *display)
 	}
 
 	if (mode->priv_info->dsc_enabled) {
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+		mode->priv_info->dsc.pic_width = mode->timing.h_active * display->ctrl_count;
+#else
 		mode->priv_info->dsc.pic_width *= display->ctrl_count;
+#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 		rc = dsi_panel_update_pps(display->panel);
 		if (rc) {
 			pr_err("[%s] panel pps cmd update failed, rc=%d\n",
@@ -5947,10 +6052,19 @@ int dsi_display_post_enable(struct dsi_display *display)
 
 	mutex_lock(&display->display_lock);
 
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+	if (!display->panel->spec_pdata->display_onoff_state) {
+		rc = dsi_panel_post_enable(display->panel);
+		if (rc)
+			pr_err("[%s] panel post-enable failed, rc=%d\n",
+				display->name, rc);
+	}
+#else
 	rc = dsi_panel_post_enable(display->panel);
 	if (rc)
 		pr_err("[%s] panel post-enable failed, rc=%d\n",
 		       display->name, rc);
+#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 
 	/* remove the clk vote for CMD mode panels */
 	if (display->config.panel_mode == DSI_OP_CMD_MODE)

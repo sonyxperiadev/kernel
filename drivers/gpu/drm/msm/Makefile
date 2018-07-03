@@ -137,6 +137,11 @@ msm_drm-$(CONFIG_DRM_MSM_DSI_STAGING) += dsi-staging/dsi_phy.o \
 				dsi-staging/dsi_clk_manager.o \
 				dsi-staging/dsi_display_test.o
 
+ifeq ($(CONFIG_DRM_SDE_SPECIFIC_PANEL),y)
+msm_drm-$(CONFIG_DRM_MSM_DSI_STAGING) += dsi-staging/dsi_panel_driver.o \
+					dsi-staging/incell.o
+endif
+
 msm_drm-$(CONFIG_DRM_MSM_DSI_PLL) += dsi/pll/dsi_pll.o \
 				dsi/pll/dsi_pll_28nm.o
 

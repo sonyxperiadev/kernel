@@ -266,6 +266,7 @@ struct sde_crtc {
 	struct list_head ad_dirty;
 	struct list_head ad_active;
 	struct list_head user_event_list;
+	bool mdss_bus_vote;
 
 	struct mutex crtc_lock;
 	struct mutex crtc_cp_lock;

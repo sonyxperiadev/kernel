@@ -11,6 +11,11 @@
  * GNU General Public License for more details.
  *
  */
+/*
+ * NOTE: This file has been modified by Sony Mobile Communications Inc.
+ * Modifications are Copyright (c) 2017 Sony Mobile Communications Inc,
+ * and licensed under the license of the file.
+ */
 
 
 #define pr_fmt(fmt)	"dsi-drm:[%s] " fmt, __func__
@@ -326,6 +331,12 @@ static bool dsi_bridge_mode_fixup(struct drm_bridge *bridge,
 			(!crtc_state->active_changed ||
 			 display->is_cont_splash_enabled))
 			dsi_mode.dsi_mode_flags |= DSI_MODE_FLAG_DMS;
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+		else if (c_bridge->display->is_cont_splash_enabled &&
+				(!(dsi_mode.dsi_mode_flags &
+					DSI_MODE_FLAG_VRR)))
+			dsi_mode.dsi_mode_flags |= DSI_MODE_FLAG_DMS;
+#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 	}
 
 	/* convert back to drm mode, propagating the private info & flags */
@@ -603,6 +614,11 @@ int dsi_connector_get_modes(struct drm_connector *connector,
 		m->width_mm = connector->display_info.width_mm;
 		m->height_mm = connector->display_info.height_mm;
 		drm_mode_probed_add(connector, m);
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+		if (modes[i].isDefault)
+			drm_set_preferred_mode(
+				connector, m->hdisplay, m->vdisplay);
+#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 	}
 end:
 	pr_debug("MODE COUNT =%d\n\n", count);

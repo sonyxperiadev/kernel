@@ -11,6 +11,11 @@
  * GNU General Public License for more details.
  *
  */
+/*
+ * NOTE: This file has been modified by Sony Mobile Communications Inc.
+ * Modifications are Copyright (c) 2017 Sony Mobile Communications Inc,
+ * and licensed under the license of the file.
+ */
 
 #ifndef _DSI_PANEL_H_
 #define _DSI_PANEL_H_
@@ -35,6 +40,11 @@
 #define DSI_CMD_PPS_SIZE 135
 
 #define DSI_MODE_MAX 5
+
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+#define SDE_PINCTRL_STATE_TOUCH_ACTIVE "sde_touch_active"
+#define SDE_PINCTRL_STATE_TOUCH_SUSPEND  "sde_touch_suspend"
+#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 
 enum dsi_panel_rotation {
 	DSI_PANEL_ROTATE_NONE = 0,
@@ -75,6 +85,10 @@ struct dsi_pinctrl_info {
 	struct pinctrl *pinctrl;
 	struct pinctrl_state *active;
 	struct pinctrl_state *suspend;
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+	struct pinctrl_state *touch_state_active;
+	struct pinctrl_state *touch_state_suspend;
+#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 };
 
 struct dsi_panel_phy_props {
@@ -180,6 +194,10 @@ struct dsi_panel {
 	enum dsi_dms_mode dms_mode;
 
 	bool sync_broadcast_en;
+
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+	struct panel_specific_pdata *spec_pdata;
+#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 };
 
 static inline bool dsi_panel_ulps_feature_enabled(struct dsi_panel *panel)
@@ -243,6 +261,16 @@ int dsi_panel_set_lp1(struct dsi_panel *panel);
 int dsi_panel_set_lp2(struct dsi_panel *panel);
 
 int dsi_panel_set_nolp(struct dsi_panel *panel);
+
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+int dsi_panel_set_aod_on(struct dsi_panel *panel);
+
+int dsi_panel_set_aod_off(struct dsi_panel *panel);
+
+int dsi_panel_set_vr_on(struct dsi_panel *panel);
+
+int dsi_panel_set_vr_off(struct dsi_panel *panel);
+#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 
 int dsi_panel_prepare(struct dsi_panel *panel);
 
