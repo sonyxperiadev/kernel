@@ -15,7 +15,7 @@
 
 #include <media/cam_sensor.h>
 
-#include "cam_sensor_cmn_header.h"
+#include "../cam_sensor_utils/cam_sensor_cmn_header.h"
 
 #define CCI_MASTER 1
 #define I2C_MASTER 2
