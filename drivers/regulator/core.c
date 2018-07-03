@@ -13,6 +13,11 @@
  *  option) any later version.
  *
  */
+/*
+ * NOTE: This file has been modified by Sony Mobile Communications Inc.
+ * Modifications are Copyright (c) 2013 Sony Mobile Communications Inc,
+ * and licensed under the license of the file.
+ */
 
 #include <linux/kernel.h>
 #include <linux/init.h>
@@ -3521,6 +3526,33 @@ int regulator_allow_bypass(struct regulator *regulator, bool enable)
 	return ret;
 }
 EXPORT_SYMBOL_GPL(regulator_allow_bypass);
+
+/*
+ * regulator_register_ocp_notification - register ocp notification
+ * @regulator: regulator source
+ * @notification: pointer of client ocp_notification
+ *
+ */
+int regulator_register_ocp_notification(struct regulator *regulator,
+			struct regulator_ocp_notification *notification)
+{
+	struct regulator_dev *rdev = regulator->rdev;
+	int ret;
+
+	mutex_lock(&rdev->mutex);
+
+	/* sanity check */
+	if (!rdev->desc->ops->register_ocp_notification) {
+		ret = -EINVAL;
+		goto out;
+	}
+
+	ret = rdev->desc->ops->register_ocp_notification(rdev, notification);
+out:
+	mutex_unlock(&rdev->mutex);
+	return ret;
+}
+EXPORT_SYMBOL_GPL(regulator_register_ocp_notification);
 
 /**
  * regulator_register_ocp_notification - register ocp notification
