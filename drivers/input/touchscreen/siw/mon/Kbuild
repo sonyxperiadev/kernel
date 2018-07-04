@@ -1,0 +1,4 @@
+EXTRA_CFLAGS += -DCONFIG_TOUCHSCREEN_SIWMON
+obj-y := ssw_mon.o
+ssw_mon-objs := siw_touch_mon.o
+ssw_mon-objs += siw_touch_mon_prt.o
