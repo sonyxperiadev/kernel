@@ -160,6 +160,3 @@
 		};
 	};
 };
-
-#include "dsi-panel-apollo-id4_pcc.dtsi"
-#include "dsi-panel-apollo-id8_pcc.dtsi"
