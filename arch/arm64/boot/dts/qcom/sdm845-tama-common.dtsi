@@ -3288,6 +3288,14 @@
 		vbmeta {
 			parts = "vbmeta,boot,system,vendor,dtbo,rdimage,oem";
 		};
+		odm {
+			compatible = "android,odm";
+			dev = "/dev/block/platform/soc/1d84000.ufshc/by-name/oem";
+			type = "ext4";
+			mnt_flags = "ro,barrier=1";
+			fsmgr_flags = "wait,slotselect";
+			status = "ok";
+		};
 	};
 };
 
