@@ -207,7 +207,3 @@
 	status = "disabled";
 };
 
-#include "dsi-panel-somc-synaptics-jdi-1080p2160-cmd.dtsi"
-#include "dsi-panel-somc-synaptics-lgd-1080p2160-cmd.dtsi"
-#include "dsi-panel-somc-synaptics-auo-1080p2160-cmd.dtsi"
-

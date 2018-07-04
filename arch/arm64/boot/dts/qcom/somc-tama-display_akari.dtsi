@@ -17,6 +17,11 @@
  * published by the Free Software Foundation.
  */
 
+#include "dsi-panel-somc-synaptics-lgd-1080p2160-cmd.dtsi"
+#include "dsi-panel-somc-synaptics-jdi-1080p2160-cmd.dtsi"
+#include "dsi-panel-akari-id3_pcc.dtsi"
+#include "dsi-panel-akari-id7_pcc.dtsi"
+
 &dsi_default_panel {
 	/delete-property/ qcom,panel-touch-supply-entries;
 	qcom,mdss-dsi-t-clk-post = <0x0E>;
@@ -75,5 +80,3 @@
 	status = "disabled";
 };
 
-#include "dsi-panel-akari-id3_pcc.dtsi"
-#include "dsi-panel-akari-id7_pcc.dtsi"
