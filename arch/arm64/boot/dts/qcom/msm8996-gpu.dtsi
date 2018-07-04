@@ -17,6 +17,7 @@
 		qcom,pas-id = <13>;
 		qcom,firmware-name = "a530_zap";
 		memory-region = <&peripheral_mem>;
+		qcom,mas-crypto = <&mas_crypto_c0>;
 		clock-names = "scm_core_clk", "scm_iface_clk",
 				"scm_bus_clk", "aggre2";
 		qcom,proxy-clock-names = "scm_core_clk", "scm_iface_clk",
