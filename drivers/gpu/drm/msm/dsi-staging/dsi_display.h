@@ -237,6 +237,10 @@ struct dsi_display {
 	struct work_struct fifo_underflow_work;
 	struct work_struct fifo_overflow_work;
 	struct work_struct lp_rx_timeout_work;
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+	struct timer_list det_timer;
+	struct work_struct set_backlight_work;
+#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 };
 
 /**
@@ -664,5 +668,9 @@ int dsi_display_cont_splash_config(void *display);
  */
 int dsi_display_get_panel_vfp(void *display,
 	int h_active, int v_active);
+
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+struct dsi_display *dsi_display_get_main_display(void);
+#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 
 #endif /* _DSI_DISPLAY_H_ */
