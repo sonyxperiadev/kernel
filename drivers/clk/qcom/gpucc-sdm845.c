@@ -137,12 +137,12 @@ static struct pll_vco fabia_vco[] = {
 	{ 125000000, 1000000000, 1 },
 };
 
-static const struct pll_config gpu_cc_pll0_config = {
+static const struct alpha_pll_config gpu_cc_pll0_config = {
 	.l = 0x1d,
 	.frac = 0x2aaa,
 };
 
-static const struct pll_config gpu_cc_pll1_config = {
+static const struct alpha_pll_config gpu_cc_pll1_config = {
 	.l = 0x1a,
 	.frac = 0xaaaa,
 };
@@ -157,7 +157,7 @@ static struct clk_alpha_pll gpu_cc_pll0 = {
 			.name = "gpu_cc_pll0",
 			.parent_names = (const char *[]){ "bi_tcxo" },
 			.num_parents = 1,
-			.ops = &clk_fabia_pll_ops,
+			.ops = &clk_alpha_pll_fabia_ops,
 			VDD_MX_FMAX_MAP4(
 				MIN, 615000000,
 				LOW, 1066000000,
@@ -176,7 +176,7 @@ static struct clk_alpha_pll_postdiv gpu_cc_pll0_out_even = {
 		.parent_names = (const char *[]){ "gpu_cc_pll0" },
 		.num_parents = 1,
 		.flags = CLK_SET_RATE_PARENT,
-		.ops = &clk_generic_pll_postdiv_ops,
+		.ops = &clk_alpha_fabia_pll_postdiv_ops,
 	},
 };
 
@@ -190,7 +190,7 @@ static struct clk_alpha_pll gpu_cc_pll1 = {
 			.name = "gpu_cc_pll1",
 			.parent_names = (const char *[]){ "bi_tcxo" },
 			.num_parents = 1,
-			.ops = &clk_fabia_pll_ops,
+			.ops = &clk_alpha_pll_fabia_ops,
 			VDD_MX_FMAX_MAP4(
 				MIN, 615000000,
 				LOW, 1066000000,

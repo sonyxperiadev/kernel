@@ -130,12 +130,12 @@ static struct pll_vco fabia_vco[] = {
 	{ 125000000, 1000000000, 1 },
 };
 
-static const struct pll_config disp_cc_pll0_config = {
+static const struct alpha_pll_config disp_cc_pll0_config = {
 	.l = 0x15,
 	.frac = 0x7c00,
 };
 
-static const struct pll_config disp_cc_pll0_config_v2 = {
+static const struct alpha_pll_config disp_cc_pll0_config_v2 = {
 	.l = 0x2c,
 	.frac = 0xcaaa,
 };
@@ -150,7 +150,7 @@ static struct clk_alpha_pll disp_cc_pll0 = {
 			.name = "disp_cc_pll0",
 			.parent_names = (const char *[]){ "bi_tcxo" },
 			.num_parents = 1,
-			.ops = &clk_fabia_pll_ops,
+			.ops = &clk_alpha_pll_fabia_ops,
 			VDD_CX_FMAX_MAP4(
 				MIN, 615000000,
 				LOW, 1066000000,

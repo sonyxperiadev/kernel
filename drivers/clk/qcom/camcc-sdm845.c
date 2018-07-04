@@ -93,7 +93,7 @@ static struct pll_vco fabia_vco[] = {
 	{ 125000000, 1000000000, 1 },
 };
 
-static const struct pll_config cam_cc_pll0_config = {
+static const struct alpha_pll_config cam_cc_pll0_config = {
 	.l = 0x1f,
 	.frac = 0x4000,
 };
@@ -108,7 +108,7 @@ static struct clk_alpha_pll cam_cc_pll0 = {
 			.name = "cam_cc_pll0",
 			.parent_names = (const char *[]){ "bi_tcxo" },
 			.num_parents = 1,
-			.ops = &clk_fabia_pll_ops,
+			.ops = &clk_alpha_pll_fabia_ops,
 			VDD_CX_FMAX_MAP4(
 				MIN, 615000000,
 				LOW, 1066000000,
@@ -130,7 +130,7 @@ static struct clk_alpha_pll_postdiv cam_cc_pll0_out_even = {
 	},
 };
 
-static const struct pll_config cam_cc_pll1_config = {
+static const struct alpha_pll_config cam_cc_pll1_config = {
 	.l = 0x2a,
 	.frac = 0x1556,
 };
@@ -145,7 +145,7 @@ static struct clk_alpha_pll cam_cc_pll1 = {
 			.name = "cam_cc_pll1",
 			.parent_names = (const char *[]){ "bi_tcxo" },
 			.num_parents = 1,
-			.ops = &clk_fabia_pll_ops,
+			.ops = &clk_alpha_pll_fabia_ops,
 			VDD_CX_FMAX_MAP4(
 				MIN, 615000000,
 				LOW, 1066000000,
@@ -167,7 +167,7 @@ static struct clk_alpha_pll_postdiv cam_cc_pll1_out_even = {
 	},
 };
 
-static const struct pll_config cam_cc_pll2_config = {
+static const struct alpha_pll_config cam_cc_pll2_config = {
 	.l = 0x32,
 	.frac = 0x0,
 };
@@ -182,7 +182,7 @@ static struct clk_alpha_pll cam_cc_pll2 = {
 			.name = "cam_cc_pll2",
 			.parent_names = (const char *[]){ "bi_tcxo" },
 			.num_parents = 1,
-			.ops = &clk_fabia_pll_ops,
+			.ops = &clk_alpha_pll_fabia_ops,
 			VDD_MX_FMAX_MAP4(
 				MIN, 615000000,
 				LOW, 1066000000,
@@ -200,7 +200,7 @@ static struct clk_alpha_pll_postdiv cam_cc_pll2_out_even = {
 		.name = "cam_cc_pll2_out_even",
 		.parent_names = (const char *[]){ "cam_cc_pll2" },
 		.num_parents = 1,
-		.ops = &clk_generic_pll_postdiv_ops,
+		.ops = &clk_alpha_fabia_pll_postdiv_ops,
 	},
 };
 
@@ -220,11 +220,11 @@ static struct clk_alpha_pll_postdiv cam_cc_pll2_out_odd = {
 		.name = "cam_cc_pll2_out_odd",
 		.parent_names = (const char *[]){ "cam_cc_pll2" },
 		.num_parents = 1,
-		.ops = &clk_generic_pll_postdiv_ops,
+		.ops = &clk_alpha_fabia_pll_postdiv_ops,
 	},
 };
 
-static const struct pll_config cam_cc_pll3_config = {
+static const struct alpha_pll_config cam_cc_pll3_config = {
 	.l = 0x14,
 	.frac = 0x0,
 };
@@ -239,7 +239,7 @@ static struct clk_alpha_pll cam_cc_pll3 = {
 			.name = "cam_cc_pll3",
 			.parent_names = (const char *[]){ "bi_tcxo" },
 			.num_parents = 1,
-			.ops = &clk_fabia_pll_ops,
+			.ops = &clk_alpha_pll_fabia_ops,
 			VDD_CX_FMAX_MAP4(
 				MIN, 615000000,
 				LOW, 1066000000,
@@ -257,7 +257,7 @@ static struct clk_alpha_pll_postdiv cam_cc_pll3_out_even = {
 		.name = "cam_cc_pll3_out_even",
 		.parent_names = (const char *[]){ "cam_cc_pll3" },
 		.num_parents = 1,
-		.ops = &clk_generic_pll_postdiv_ops,
+		.ops = &clk_alpha_fabia_pll_postdiv_ops,
 	},
 };
 
