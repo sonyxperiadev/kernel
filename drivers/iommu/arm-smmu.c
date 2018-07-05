@@ -3810,6 +3810,23 @@ static void arm_smmu_disable_config_clocks(struct iommu_domain *domain)
 	arm_smmu_power_off(smmu_domain->smmu->pwr);
 }
 
+static unsigned long arm_smmu_get_pgsize_bitmap(struct iommu_domain *domain)
+{
+	struct arm_smmu_domain *smmu_domain = to_smmu_domain(domain);
+
+	/*
+	 * if someone is calling map before attach just return the
+	 * supported page sizes for the hardware itself.
+	 */
+	if (!smmu_domain->pgtbl_cfg.pgsize_bitmap)
+		return arm_smmu_ops.pgsize_bitmap;
+	/*
+	 * otherwise return the page sizes supported by this specific page
+	 * table configuration
+	 */
+	return smmu_domain->pgtbl_cfg.pgsize_bitmap;
+}
+
 static struct iommu_ops arm_smmu_ops = {
 	.capable		= arm_smmu_capable,
 	.domain_alloc		= arm_smmu_domain_alloc,
@@ -3830,6 +3847,7 @@ static struct iommu_ops arm_smmu_ops = {
 	.get_resv_regions	= arm_smmu_get_resv_regions,
 	.put_resv_regions	= arm_smmu_put_resv_regions,
 	.pgsize_bitmap		= -1UL, /* Restricted during device attach */
+	.get_pgsize_bitmap	= arm_smmu_get_pgsize_bitmap,
 	.trigger_fault		= arm_smmu_trigger_fault,
 	.reg_read		= arm_smmu_reg_read,
 	.reg_write		= arm_smmu_reg_write,
