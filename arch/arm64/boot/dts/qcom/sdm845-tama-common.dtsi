@@ -3285,9 +3285,6 @@
 
 &firmware {
 	android {
-		vbmeta {
-			parts = "vbmeta,boot,system,vendor,dtbo,rdimage,oem";
-		};
 		odm {
 			compatible = "android,odm";
 			dev = "/dev/block/platform/soc/1d84000.ufshc/by-name/oem_a";
