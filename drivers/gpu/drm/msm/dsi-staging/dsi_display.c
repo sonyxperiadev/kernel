@@ -3575,9 +3575,6 @@ static int dsi_display_validate_mode_set(struct dsi_display *display,
 		}
 	}
 
-#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
-	rc = somc_panel_detect(display->pdev, &(display->panel_of), 0);
-#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 error:
 	return rc;
 }
@@ -3996,6 +3993,15 @@ static int _dsi_display_dev_init(struct dsi_display *display)
 		pr_err("[%s] failed to parse dt, rc=%d\n", display->name, rc);
 		goto error;
 	}
+
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+	rc = somc_panel_detect(display->pdev, &(display->panel_of), 0);
+	if (rc) {
+		pr_err("[%s] Panel detection failed, rc=%d\n",
+			display->name, rc);
+		goto error;
+	}
+#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 
 	rc = dsi_display_res_init(display);
 	if (rc) {
