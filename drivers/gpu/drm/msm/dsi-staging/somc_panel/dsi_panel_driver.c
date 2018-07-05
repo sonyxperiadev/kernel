@@ -823,6 +823,12 @@ int dsi_panel_driver_parse_dt(struct dsi_panel *panel,
 		pr_err("%s: Invalid input panel\n", __func__);
 		return -EINVAL;
 	}
+
+	if (!panel->spec_pdata) {
+		pr_err("%s: spec_pdata not initialized!!\n", __func__);
+		return -EINVAL;
+	}
+
 	spec_pdata = panel->spec_pdata;
 
 	rc = somc_panel_parse_dt_colormgr_config(panel, np);

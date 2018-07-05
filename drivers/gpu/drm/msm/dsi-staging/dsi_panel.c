@@ -3021,11 +3021,10 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 		return ERR_PTR(-ENOMEM);
 
 #ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
-	panel->spec_pdata = kzalloc(
-				sizeof(struct panel_specific_pdata),
-				GFP_KERNEL);
-	if (!panel->spec_pdata) {
-		pr_err("%s Unable to alloc spec_pdata\n", __func__);
+	/* Allocate on the dsi_display pdev */
+	rc = somc_panel_allocate(parent, panel);
+	if (rc) {
+		pr_err("%s somc_panel allocation failed\n", __func__);
 		kfree(panel);
 		return ERR_PTR(-ENOMEM);
 	}

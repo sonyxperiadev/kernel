@@ -32,10 +32,22 @@
 int somc_panel_parse_dt_chgfps_config(struct dsi_panel *panel,
 			struct device_node *np)
 {
-	struct dsi_fps_mode *chg_fps = &panel->spec_pdata->fps_mode;
+	struct dsi_fps_mode *chg_fps = NULL;
 	const char *panel_mode;
 	const char *panel_type;
 	int rc = 0;
+
+	if (!panel) {
+		pr_err("%s: Invalid input panel\n", __func__);
+		return -EINVAL;
+	}
+
+	if (!panel->spec_pdata) {
+		pr_err("%s: spec_pdata not initialized!!\n", __func__);
+		return -EINVAL;
+	}
+
+	chg_fps = &panel->spec_pdata->fps_mode;
 
 	chg_fps->enable = of_property_read_bool(np,
 					"somc,fps-mode-enable");

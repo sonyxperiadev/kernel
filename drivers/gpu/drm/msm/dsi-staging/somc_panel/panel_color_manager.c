@@ -330,6 +330,11 @@ int somc_panel_parse_dt_colormgr_config(struct dsi_panel *panel,
 		return -EINVAL;
 	}
 
+	if (!panel->spec_pdata) {
+		pr_err("%s: spec_pdata not initialized!!\n", __func__);
+		return -EINVAL;
+	}
+
 	color_mgr = panel->spec_pdata->color_mgr;
 	color_mgr->standard_pcc_enable =
 		of_property_read_bool(np, "somc,mdss-dsi-pcc-enable");

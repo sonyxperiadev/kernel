@@ -191,3 +191,42 @@ int somc_panel_regulators_put(struct dsi_panel *panel)
 
 	return rc;
 }
+
+int somc_panel_allocate(struct device *dev, struct dsi_panel *panel)
+{
+	panel->spec_pdata = devm_kzalloc(dev,
+		sizeof(struct panel_specific_pdata),
+		GFP_KERNEL);
+	if (!panel->spec_pdata) {
+		pr_err("%s: FAILED: cannot allocate spec_pdata\n", __func__);
+		goto fail_specific;
+	};
+
+	panel->spec_pdata->color_mgr = devm_kzalloc(dev,
+		sizeof(struct somc_panel_color_mgr), GFP_KERNEL);
+	if (!panel->spec_pdata->color_mgr) {
+		pr_err("%s: FAILED: Cannot allocate color_mgr\n", __func__);
+		goto fail_color_mgr;
+	};
+
+/*
+	panel->spec_pdata->regulator_mgr = devm_kzalloc(dev,
+		sizeof (struct somc_panel_regulator_mgr), GFP_KERNEL);
+	if (!panel->spec_pdata->regulator_mgr) {
+		pr_err("%s: FAILED: Cannot allocate regulator_mgr\n",
+			__func__);
+		goto fail_regulator_mgr;
+	};
+*/
+	return 0;
+/*
+fail_regulator_mgr:
+	devm_kfree(dev, panel->spec_pdata->regulator_mgr);
+*/
+fail_color_mgr:
+	devm_kfree(dev, panel->spec_pdata->color_mgr);
+fail_specific:
+	devm_kfree(dev, panel->spec_pdata);
+
+	return -ENOMEM;
+}
