@@ -40,6 +40,9 @@
 #include <linux/notifier.h>
 #include <linux/fb.h>
 #endif
+#ifdef CONFIG_DRM_MSM_DSI_SOMC_PANEL
+#include <linux/drm_notify.h>
+#endif
 #ifdef CONFIG_ARM
 #include <asm/mach-types.h>
 #endif
@@ -921,8 +924,11 @@ struct clearpad_t {
 	int irq;
 	bool irq_enabled;
 	enum clearpad_force_sleep_e force_sleep;
-#ifdef CONFIG_FB
+#if defined(CONFIG_FB) && !defined(CONFIG_DRM_MSM_DSI_SOMC_PANEL)
 	struct notifier_block fb_notif;
+#endif
+#ifdef CONFIG_DRM_MSM_DSI_SOMC_PANEL
+	struct notifier_block drm_notif;
 #endif
 	char fwname[SYN_STRING_LENGTH + 1];
 	char result_info[SYN_STRING_LENGTH + 1];
@@ -1149,6 +1155,8 @@ static int touchctrl_hwreset(struct clearpad_t *this, int mode)
 	int retry;
 
 	LOGI(this, "execute '%s'\n", NAME_OF(clearpad_reset_name, mode));
+	this->wakeup.unblank_done = false;
+	this->wakeup.unblank_early_done = false;
 	switch (mode) {
 	case SYN_HWRESET:
 		raw_mode = INCELL_DISPLAY_HW_RESET;
@@ -1170,6 +1178,7 @@ static int touchctrl_hwreset(struct clearpad_t *this, int mode)
 static int touchctrl_display_off(struct clearpad_t *this)
 {
 	int rc = 0;
+#ifndef CONFIG_DRM_MSM_DSI_SOMC_PANEL
 	int retry;
 
 	LOGI(this, "turn display off\n");
@@ -1179,7 +1188,7 @@ static int touchctrl_display_off(struct clearpad_t *this)
 		if (rc != INCELL_EBUSY)
 			break;
 	}
-
+#endif
 	return rc;
 }
 
@@ -1359,10 +1368,12 @@ unlocked:
 static void touchctrl_notify_wakeup_gesture_mode(struct clearpad_t *this,
 						bool enabled)
 {
+#ifndef CONFIG_DRM_MSM_DSI_SOMC_PANEL
 	LOG_STAT(this, "%s\n", enabled ? "enable" : "disable");
 
 	incell_ewu_mode_ctrl(enabled ? INCELL_DISPLAY_EWU_ENABLE
 				     : INCELL_DISPLAY_EWU_DISABLE);
+#endif
 }
 
 /* Begin a session to use touch device requiring power supply */
@@ -5049,11 +5060,11 @@ end:
 static int clearpad_do_calibration(struct clearpad_t *this, int mode,
 				   u8 calibration_crc)
 {
-	unsigned long timeout;
+	unsigned long timeout = 0;
 	int rc = 0;
 	int reset_rc = 0;
 	bool calibrate = false;
-	u8 status, bit, need_bit, offset;
+	u8 status = 0, bit = 0, need_bit = 0, offset = 0;
 
 	switch (mode) {
 	case SYN_CALIBRATION_NORMAL:
@@ -5618,6 +5629,8 @@ err_in_session_begin:
 not_ready_to_access_i2c:
 err_in_check_post_probe:
 	LOCK(&this->lock);
+	this->wakeup.unblank_done = false;
+	this->wakeup.unblank_early_done = false;
 	old = this->force_sleep;
 
 	rc = kstrtoint(buf, 0, &value);
@@ -6317,8 +6330,7 @@ static int clearpad_pm_resume(struct device *dev)
  * fb and display
  */
 
-#ifdef CONFIG_FB
-
+#if defined(CONFIG_FB) || defined(CONFIG_DRM_MSM_DSI_SOMC_PANEL)
 /* need LOCK(&this->lock) */
 static void clearpad_powerdown_core(struct clearpad_t *this, const char *id)
 {
@@ -6361,7 +6373,7 @@ end:
 	return;
 }
 
-static void clearpad_fb_early_powerdown_handler(struct clearpad_t *this)
+static void clearpad_cb_early_powerdown_handler(struct clearpad_t *this)
 {
 	LOCK(&this->lock);
 	if (this->wakeup_gesture.enabled)
@@ -6369,11 +6381,12 @@ static void clearpad_fb_early_powerdown_handler(struct clearpad_t *this)
 
 	clearpad_powerdown_core(this, "EARLY POWERDOWN");
 end:
+	this->wakeup.unblank_early_done = false;
 	UNLOCK(&this->lock);
 	return;
 }
 
-static void clearpad_fb_powerdown_handler(struct clearpad_t *this)
+static void clearpad_cb_powerdown_handler(struct clearpad_t *this)
 {
 	if (unlikely(!first_blank_done))
 		first_blank_done = true;
@@ -6381,17 +6394,24 @@ static void clearpad_fb_powerdown_handler(struct clearpad_t *this)
 	LOCK(&this->lock);
 	if (this->wakeup_gesture.enabled)
 		clearpad_powerdown_core(this, "POWERDOWN");
+	this->wakeup.unblank_done = false;
 	UNLOCK(&this->lock);
 	return;
 }
 
-static void clearpad_fb_early_unblank_handler(struct clearpad_t *this)
+static void clearpad_cb_early_unblank_handler(struct clearpad_t *this)
 {
 	struct timespec ts;
 	unsigned long flags;
 
+#ifdef CONFIG_DRM_MSM_DSI_SOMC_PANEL
+	if (this->wakeup.unblank_early_done)
+		return;
+#endif
+
 	get_monotonic_boottime(&ts);
 	LOCK(&this->lock);
+	this->wakeup.unblank_early_done = true;
 
 	if (this->touchctrl.will_powerdown && this->touchctrl.power_user == 0) {
 		this->interrupt.count = 0;
@@ -6406,19 +6426,30 @@ static void clearpad_fb_early_unblank_handler(struct clearpad_t *this)
 	HWLOGI(this, "EARLY UNBLANK @ %ld.%06ld\n", ts.tv_sec, ts.tv_nsec);
 }
 
-static void clearpad_fb_unblank_handler(struct clearpad_t *this)
+static void clearpad_cb_unblank_handler(struct clearpad_t *this)
 {
 	struct timespec ts;
+	bool power = touchctrl_is_touch_powered(this);
 
 	get_monotonic_boottime(&ts);
 	HWLOGI(this, "UNBLANK (power=%s icount=%u active=%s) @ %ld.%06ld\n",
-	       touchctrl_is_touch_powered(this) ? "OK" : "NG",
+	       power ? "OK" : "NG",
 	       this->interrupt.count,
 	       this->dev_active ? "true" : "false",
 	       ts.tv_sec, ts.tv_nsec);
 
-	LOCK(&this->lock);
+#ifdef CONFIG_DRM_MSM_DSI_SOMC_PANEL
+	if (!power) {
+		HWLOGI(this, "ignore UNBLANK event before power on\n");
+		return;
+	}
 
+	if (this->wakeup.unblank_early_done)
+		return;
+#endif
+
+	LOCK(&this->lock);
+	this->wakeup.unblank_done = true;
 	if (!this->post_probe.done) {
 		HWLOGI(this, "ignore UNBLANK event before post probe\n");
 		if (this->post_probe.start) {
@@ -6442,8 +6473,13 @@ err_in_post_probe_done:
 	HWLOGI(this, "end UNBLANK @ %ld.%06ld\n",
 	       ts.tv_sec, ts.tv_nsec);
 }
+#else
+#error Need CONFIG_FB or CONFIG_DRM_MSM_DSI_SOMC_PANEL
+#endif
 
-static int clearpad_fb_notifier_callback(struct notifier_block *self,
+#if defined(CONFIG_FB) && !defined(CONFIG_DRM_MSM_DSI_SOMC_PANEL)
+/* Only for fbdev-based somc_panel. NOT FOR DRM/KMS. */
+static int clearpad_cb_notifier_callback(struct notifier_block *self,
 				unsigned long event, void *data)
 {
 	struct fb_event *evdata = data;
@@ -6463,10 +6499,10 @@ static int clearpad_fb_notifier_callback(struct notifier_block *self,
 				 "???");
 			switch (blank) {
 			case FB_BLANK_POWERDOWN:
-				clearpad_fb_early_powerdown_handler(this);
+				clearpad_cb_early_powerdown_handler(this);
 				break;
 			case FB_BLANK_UNBLANK:
-				clearpad_fb_early_unblank_handler(this);
+				clearpad_cb_early_unblank_handler(this);
 				break;
 			default:
 				break;
@@ -6482,10 +6518,10 @@ static int clearpad_fb_notifier_callback(struct notifier_block *self,
 				 "???");
 			switch (blank) {
 			case FB_BLANK_POWERDOWN:
-				clearpad_fb_powerdown_handler(this);
+				clearpad_cb_powerdown_handler(this);
 				break;
 			case FB_BLANK_UNBLANK:
-				clearpad_fb_unblank_handler(this);
+				clearpad_cb_unblank_handler(this);
 			default:
 				break;
 			}
@@ -6493,11 +6529,59 @@ static int clearpad_fb_notifier_callback(struct notifier_block *self,
 	}
 	return 0;
 }
-
-#else
-#error Need CONFIG_FB
 #endif
 
+#ifdef CONFIG_DRM_MSM_DSI_SOMC_PANEL
+/* Only for DRM-based somc_panel. NOT FOR FBDEV. */
+static int clearpad_drm_notifier_callback(struct notifier_block *self,
+				unsigned long event, void *data)
+{
+	struct drm_ext_event *evdata = (struct drm_ext_event *)data;
+	int blank;
+	struct clearpad_t *this = container_of(self, struct clearpad_t, drm_notif);
+
+	if (evdata && evdata->data) {
+		if (event == DRM_EXT_EVENT_BEFORE_BLANK) {
+			blank = *(int *)evdata->data;
+			HWLOGI(this, "Before: %s\n",
+				(blank == DRM_BLANK_POWERDOWN) ? "Powerdown" :
+				(blank == DRM_BLANK_UNBLANK) ? "Unblank" :
+				 "???");
+			switch (blank) {
+			case DRM_BLANK_POWERDOWN:
+				clearpad_cb_early_powerdown_handler(this);
+				if (clearpad_set_suspend_mode(this))
+					LOGE(this, "failed to set suspend mode\n");
+				if (this->watchdog.enabled)
+					cancel_delayed_work(&this->watchdog.work);
+				break;
+			case DRM_BLANK_UNBLANK:
+				clearpad_cb_early_unblank_handler(this);
+				break;
+			default:
+				break;
+			}
+		} else if (event == DRM_EXT_EVENT_AFTER_BLANK) {
+			blank = *(int *)evdata->data;
+			HWLOGI(this, "After: %s\n",
+				(blank == DRM_BLANK_POWERDOWN) ? "Powerdown" :
+				(blank == DRM_BLANK_UNBLANK) ? "Unblank" :
+				 "???");
+			switch (blank) {
+			case DRM_BLANK_POWERDOWN:
+				clearpad_cb_powerdown_handler(this);
+				break;
+			case DRM_BLANK_UNBLANK:
+				clearpad_cb_unblank_handler(this);
+			default:
+				break;
+			}
+		}
+	}
+
+	return 0;
+}
+#endif
 
 /*
  * analog test
@@ -8714,15 +8798,27 @@ static int clearpad_probe(struct platform_device *pdev)
 	}
 #endif
 
-#ifdef CONFIG_FB
+/* FBDEV-ONLY somc_panel notifier */
+#if defined(CONFIG_FB) && !defined(CONFIG_DRM_MSM_DSI_SOMC_PANEL)
 	/* Execute post probe the first UNBLANK event
 	   TODO : Must update after API update. */
 	HWLOGI(this, "register fb callback\n");
-	this->fb_notif.notifier_call = clearpad_fb_notifier_callback;
+	this->fb_notif.notifier_call = clearpad_cb_notifier_callback;
 	rc = fb_register_client(&this->fb_notif);
 	if (rc) {
 		HWLOGE(this, "unable to register fb_notifier\n");
 		goto err_in_fb_register_client;
+	}
+#endif
+
+/* DRM-ONLY somc_panel notifier */
+#ifdef CONFIG_DRM_MSM_DSI_SOMC_PANEL
+	HWLOGI(this, "register drm callback\n");
+	this->drm_notif.notifier_call = clearpad_drm_notifier_callback;
+	rc = drm_register_client(&this->drm_notif);
+	if (rc) {
+		HWLOGE(this, "unable to register drm_notifier\n");
+		goto err_in_drm_register_client;
 	}
 #endif
 
@@ -8806,9 +8902,13 @@ err_in_ev_init:
 err_in_input_init:
 err_in_request_threaded_irq_gpio_noise_det:
 err_in_request_threaded_irq:
-#ifdef CONFIG_FB
+#if defined(CONFIG_FB) && !defined(CONFIG_DRM_MSM_DSI_SOMC_PANEL)
 	fb_unregister_client(&this->fb_notif);
 err_in_fb_register_client:
+#endif
+#ifdef CONFIG_DRM_MSM_DSI_SOMC_PANEL
+	drm_unregister_client(&this->drm_notif);
+err_in_drm_register_client:
 #endif
 #ifdef CONFIG_DEBUG_FS
 	debugfs_remove_recursive(this->debugfs);
@@ -9050,9 +9150,14 @@ static int clearpad_remove(struct platform_device *pdev)
 	debugfs_remove_recursive(this->debugfs);
 #endif
 	clearpad_remove_sysfs_entries(this, clearpad_sysfs_attrs);
-#ifdef CONFIG_FB
+
+#if defined(CONFIG_FB) && !defined(CONFIG_DRM_MSM_DSI_SOMC_PANEL)
 	fb_unregister_client(&this->fb_notif);
 #endif
+#ifdef CONFIG_DRM_MSM_DSI_SOMC_PANEL
+	drm_unregister_client(&this->drm_notif);
+#endif
+
 	input_unregister_device(this->input);
 #ifdef CONFIG_TOUCHSCREEN_CLEARPAD_RMI_DEV
 	platform_device_unregister(cdata->rmi_dev);
