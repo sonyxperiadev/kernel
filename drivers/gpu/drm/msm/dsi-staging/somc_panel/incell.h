@@ -50,6 +50,9 @@ typedef enum {
 	INCELL_DISPLAY_POWER_LOCK,
 } incell_pw_lock;
 
+/* Compatibility with older incell */
+#define INCELL_DISPLAY_HW_RESET		INCELL_TOUCH_RESET
+
 /**
  * @brief Get incell power status.
  * @param[in] power_status : touch_power/display_power <br>
