@@ -291,7 +291,9 @@ static void msm_smmu_destroy(struct msm_mmu *mmu)
 
 	if (smmu->client_dev)
 		platform_device_unregister(pdev);
-	kfree(smmu);
+
+	if (smmu)
+		kfree(smmu);
 }
 
 static int msm_smmu_map_dma_buf(struct msm_mmu *mmu, struct sg_table *sgt,
