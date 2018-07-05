@@ -76,6 +76,9 @@
 #define SYN_PAYLOAD_LENGTH		1
 #define SYN_DEVICE_INFO_SIZE		5
 #define SYN_DEVICE_BL_INFO_SIZE		2
+#define SYN_DEVICE_BL70_READ_SIZE	2
+#define SYN_DEVICE_BL60_READ_SIZE	4
+#define SYN_DEVICE_BL_MAX_SIZE		4
 #define HWTEST_SIZE_OF_COMMAND_PREFIX		2
 #define HWTEST_SIZE_OF_ONE_DIMENSION		1
 #define HWTEST_SIZE_OF_ONE_HIGH_RX		3
@@ -92,6 +95,11 @@
 #define FLASH_READ_CONFIGURATION_SIZE			21
 #define FLASH_READ_FIRMWARE_INFO_SIZE_BL6X		4
 #define FLASH_READ_FIRMWARE_INFO_SIZE_BL7X		5
+#define LOCKDOWN_READ_SIZE		10
+#define LOCKDOWN_DATA_OFFSET		4
+#define LOCKDOWN_DATA_SIZE	(LOCKDOWN_READ_SIZE - LOCKDOWN_DATA_OFFSET)
+#define LOCKDOWN_FAMILY_ID_MIN	0x0000
+#define LOCKDOWN_FAMILY_ID_MAX	0xffff
 
 #define SYN_PAGE_ADDR(page, addr) ((page) << 8 | (addr))
 #define SYN_F_ADDR(th, func, type, reg) ((th)->pdt[func].base[type] + (reg))
@@ -164,11 +172,19 @@ BIT_DEF(DEVICE_STATUS_CODE,				0x0f, 0,
 	DEVICE_STATUS_CODE_INVALID_CONFIGURATION	= 0x02,
 	DEVICE_STATUS_CODE_DEVICE_FAILURE		= 0x03,
 	DEVICE_STATUS_CODE_CONFIGURATION_CRC_FAILURE	= 0x04,
+	DEVICE_STATUS_CODE_INVALID_PARTITION_TABLE_V2	= 0x04,
 	DEVICE_STATUS_CODE_FIRMWARE_CRC_FAILURE		= 0x05,
 	DEVICE_STATUS_CODE_CRC_IN_PROGRESS		= 0x06,
 	DEVICE_STATUS_CODE_GUEST_CRC_FAILURE		= 0x07,
 	DEVICE_STATUS_CODE_EXTERNAL_AFE_FAILURE		= 0x08,
-	DEVICE_STATUS_CODE_DISPLAY_FAILURE		= 0x09);
+	DEVICE_STATUS_CODE_CHECKSUM_PROGRESS_V2		= 0x08,
+	DEVICE_STATUS_CODE_DISPLAY_FAILURE		= 0x09,
+	DEVICE_STATUS_CODE_FLASHCONFIG_CHECKSUM_FAIL_V2	= 0x09,
+	DEVICE_STATUS_CODE_CORECONFIG_CHECKSUM_FAIL	= 0x0A,
+	DEVICE_STATUS_CODE_COREFIRMWARE_CHECKSUM_FAIL	= 0x0B,
+	DEVICE_STATUS_CODE_GUESTCODE_CHECKSUM_FAIL	= 0x0C,
+	DEVICE_STATUS_CODE_DISPCONFIG_CHECKSUM_FAIL	= 0x0D,
+	DEVICE_STATUS_CODE_DEVICECONFIG_CHECKSUM_FAIL	= 0x0E);
 BIT_DEF(DEVICE_STATUS_FLASH_PROG,			0x40, 6);
 BIT_DEF(DEVICE_STATUS_UNCONFIGURED,			0x80, 7);
 
@@ -240,7 +256,8 @@ BIT_DEF(FLASH_CONTROL,					0x3F, 0,
 	FLASH_CONTROL_READ_CONFIGURATION_BLOCK		= 0x05,
 	FLASH_CONTROL_WRITE_CONFIGURATION_BLOCK		= 0x06,
 	FLASH_CONTROL_ERASE_CONFIGURATION		= 0x07,
-	FLASH_CONTROL_ENABLE_FLASH_PROGRAMMING		= 0x0F);
+	FLASH_CONTROL_ENABLE_FLASH_PROGRAMMING		= 0x0F,
+	FLASH_CONTROL_READ_LOCKDOWN_BLOCK		= 0x1B);
 /* F34_FLASH_DATA03: Flash Status */
 BIT_DEF(FLASH_STATUS_PROGRAM_ENABLED,			0x80, 7);
 
@@ -401,6 +418,7 @@ enum clearpad_chip_e {
 	SYN_CHIP_3330	= 0x3A, /* Hybrid incell */
 	SYN_CHIP_3700	= 0x3B, /* Sydney */
 	SYN_CHIP_332U	= 0x40, /* Full incell */
+	SYN_CHIP_4353	= 0x44,
 };
 
 static const char * const clearpad_chip_name[] = {
@@ -413,6 +431,7 @@ static const char * const clearpad_chip_name[] = {
 	[SYN_CHIP_3330]	= "S3330", /* Hybrid incell */
 	[SYN_CHIP_3700]	= "S3700", /* Sydney */
 	[SYN_CHIP_332U]	= "S332U", /* Full incell */
+	[SYN_CHIP_4353]	= "TD4353jdi",
 };
 
 enum clearpad_function_e {
@@ -527,10 +546,13 @@ enum firmware_container_id_const_e {
 };
 
 enum firmware_bootloader_version_const_e {
+	BV6	= 0x06,
+	BV6_8	= 0x08,
 	BV7	= 0x10,
 };
 
 static const int clearpad_bootloader_version_dec[] = {
+	[BV6]	= 6,
 	[BV7]	= 7,
 };
 
@@ -639,6 +661,7 @@ struct clearpad_device_info_t {
 	u8 product_id[HEADER_PRODUCT_ID_SIZE];
 	u8 boot_loader_version_major;
 	u8 boot_loader_version_minor;
+	u32 bootloader_version;
 };
 
 struct clearpad_point_t {
@@ -830,6 +853,7 @@ enum clearpad_f54_command_e {
 	F54_FULLINCELL_CAL_DATA_CHK_REPORT = 84,
 	F54_FULLINCELL_SENSOR_SPEED_REPORT = 86,
 	F54_TRX_TO_TRX_SHORT_RAW_IMAGE_REPORT = 100,
+	F54_HIC_RX_SHORT_TEST_REPORT    = 125,
 };
 
 enum clearpad_f12_2d_reporting_control_e {
@@ -856,6 +880,19 @@ enum clearpad_force_sleep_e {
 	FSMODE_OFF	= 0,	/* Normal suspend/resume */
 	FSMODE_KEEP	= 1,	/* Sleep forever */
 	FSMODE_ONESHOT	= 2,	/* Oneshot (will be FSMODE_OFF by resume) */
+};
+
+struct fb_t {
+	bool unblank_done;
+	bool unblank_early_done;
+};
+
+struct clearpad_lockdown_area_t {
+	u8 data[LOCKDOWN_DATA_SIZE];
+	u8 somc_id;	/* 0x02 */
+	u8 supplier_id;	/* 0x01 (Synaptics) */
+	u16 chip_id;
+	u16 family_id;
 };
 
 struct clearpad_t {
@@ -912,6 +949,8 @@ struct clearpad_t {
 	bool irq_pending;
 	bool last_irq;
 	bool is_sol;
+	struct fb_t wakeup;
+	struct clearpad_lockdown_area_t lda;
 };
 
 /*
@@ -928,6 +967,8 @@ static void clearpad_reset(struct clearpad_t *this,
 static void clearpad_funcarea_invalidate_all(struct clearpad_t *this);
 static int clearpad_set_resume_mode(struct clearpad_t *this);
 static int clearpad_set_suspend_mode(struct clearpad_t *this);
+static int clearpad_read_lockdown_area(struct clearpad_t *this);
+static unsigned int clearpad_get_lockdown_family_id(struct clearpad_t *this);
 static int clearpad_read_pca_block(struct clearpad_t *this,
 				  u16 block_num, u8 *data);
 static int clearpad_write_pca_block(struct clearpad_t *this,
@@ -1675,8 +1716,10 @@ static int clearpad_set_glove_mode(struct clearpad_t *this, bool enable)
 		LOGE(this, "error in setting for object report enable\n");
 		goto end;
 	}
-	if (this->chip_id == SYN_CHIP_3330 ||
-	    this->chip_id == SYN_CHIP_332U) {
+
+	switch (this->chip_id) {
+	case SYN_CHIP_3330:
+	case SYN_CHIP_332U:
 		/* F12_2D_CTRL26: Feature Enable */
 		rc = clearpad_put_bit(SYNA(this, F12_2D, CTRL, 26),
 		      enable ?
@@ -1686,6 +1729,22 @@ static int clearpad_set_glove_mode(struct clearpad_t *this, bool enable)
 			LOGE(this, "error in setting for feature enable\n");
 			goto end;
 		}
+
+		break;
+	case SYN_CHIP_4353:
+		/* F54_ANALOG_CMD00: Analog Command */
+		rc = clearpad_put(SYNF(this, F54_ANALOG, COMMAND, 0x00),
+			ANALOG_COMMAND_FORCE_UPDATE_MASK);
+		if (rc) {
+			LOGE(this, "failed to set force update\n");
+			goto end;
+		}
+
+		break;
+	default:
+		LOGE(this, "not supported chip id (0x%02x)\n", this->chip_id);
+		rc = -EINVAL;
+		break;
 	}
 
 end:
@@ -1715,6 +1774,7 @@ static int clearpad_set_cover_status(struct clearpad_t *this)
 	switch (this->chip_id) {
 	case SYN_CHIP_3330:
 	case SYN_CHIP_332U:
+	case SYN_CHIP_4353:
 		/* F12_2D_CTRL26: Feature Enable */
 		rc = clearpad_put_bit(SYNA(this, F12_2D, CTRL, 26),
 		      this->cover.status ?
@@ -1748,6 +1808,7 @@ static int clearpad_set_cover_status(struct clearpad_t *this)
 		break;
 	case SYN_CHIP_3500:
 	case SYN_CHIP_7500:
+	case SYN_CHIP_4353:
 		/* F12_2D_CTRL23_02: Report As Finger */
 		rc = clearpad_get_block(SYNA(this, F12_2D, CTRL, 23), buf,
 					buf_size);
@@ -1784,7 +1845,8 @@ static int clearpad_set_cover_window(struct clearpad_t *this)
 	u8 block_buf[8];
 
 	if (this->chip_id == SYN_CHIP_3330 ||
-	    this->chip_id == SYN_CHIP_332U) {
+	    this->chip_id == SYN_CHIP_332U ||
+	    this->chip_id == SYN_CHIP_4353) {
 		/* Cover window size register F12_2D_CTRL25 */
 		if (!clearpad_is_valid_function(this, SYN_F12_2D)) {
 			LOGE(this, "F12_2D is required to set cover window");
@@ -2248,13 +2310,37 @@ static void clearpad_firmware_reset(struct clearpad_t *this)
 	HWLOGI(this, "firmware image has been reset\n");
 }
 
+static bool clearpad_status_check(u8 device_status)
+{
+	bool status_error = false;
+
+	switch (BIT_GET(device_status, DEVICE_STATUS_CODE)) {
+	case DEVICE_STATUS_CODE_INVALID_PARTITION_TABLE_V2:
+	case DEVICE_STATUS_CODE_CHECKSUM_PROGRESS_V2:
+	case DEVICE_STATUS_CODE_FLASHCONFIG_CHECKSUM_FAIL_V2:
+	case DEVICE_STATUS_CODE_CORECONFIG_CHECKSUM_FAIL:
+	case DEVICE_STATUS_CODE_COREFIRMWARE_CHECKSUM_FAIL:
+	case DEVICE_STATUS_CODE_GUESTCODE_CHECKSUM_FAIL:
+	case DEVICE_STATUS_CODE_DISPCONFIG_CHECKSUM_FAIL:
+	case DEVICE_STATUS_CODE_DEVICECONFIG_CHECKSUM_FAIL:
+		status_error = true;
+		break;
+	default:
+		break;
+	}
+
+	return status_error;
+}
+
 static int clearpad_initialize(struct clearpad_t *this)
 {
 	int rc;
-	u8 fw_info[SYN_DEVICE_INFO_SIZE], bl_ver[SYN_DEVICE_BL_INFO_SIZE];
-	u8 device_status, fw_status, bl_cmd;
+	u8 fw_info[SYN_DEVICE_INFO_SIZE], bl_ver[SYN_DEVICE_BL_MAX_SIZE];
+	u8 device_status, fw_status, bl_cmd, bl_read_sz;
 	struct clearpad_device_info_t *info = &this->device_info;
 	u8 product_id[HEADER_PRODUCT_ID_SIZE];
+	u8 status_code_bit;
+	bool fw_recovery = false;
 
 	LOGI(this, "initialize device\n");
 
@@ -2269,9 +2355,12 @@ static int clearpad_initialize(struct clearpad_t *this)
 
 	this->is_sol = false;
 	bl_cmd = 0x01;
-	if (this->chip_id == SYN_CHIP_3500) {
+	bl_read_sz = SYN_DEVICE_BL70_READ_SIZE;
+	if (this->chip_id == SYN_CHIP_3500 ||
+	    this->chip_id == SYN_CHIP_4353) {
 		this->is_sol = true;
 		bl_cmd = 0x00;
+		bl_read_sz = SYN_DEVICE_BL60_READ_SIZE;
 	}
 
 	/* read device status */
@@ -2282,7 +2371,13 @@ static int clearpad_initialize(struct clearpad_t *this)
 
 	LOGI(this, "device status 0x%02x\n", device_status);
 
+	if ((this->chip_id == SYN_CHIP_4353) &&
+	    clearpad_status_check(device_status)) {
+		LOGE(this, "initialize status error reset\n");
+		clearpad_reset(this, SYN_SWRESET, __func__);
+	}
 
+#if 0 /* Keep old way for reference */
 	/* F34_FLASH_QUERY01: Bootloader Revision */
 	rc = clearpad_get_block(SYNF(this, F34_FLASH, QUERY, bl_cmd),
 				bl_ver, SYN_DEVICE_BL_INFO_SIZE);
@@ -2295,48 +2390,100 @@ static int clearpad_initialize(struct clearpad_t *this)
 		bl_ver[1] -= 0x30;
 		bl_ver[0] = 0x00;
 	}
+#endif
+
+	/* F34_FLASH_QUERY01: Bootloader Revision */
+	rc = clearpad_get_block(SYNF(this, F34_FLASH, QUERY, bl_cmd),
+				bl_ver, bl_read_sz);
+	if (rc)
+		goto end;
+
+	if (this->is_sol) {
+		/* Flash memory management, Version 1         */
+		/* Bootloader Revision is stored as character */
+		LOGI(this, "bl[2]:%c\n", bl_ver[2]);
+		LOGI(this, "bl[3]:%c\n", bl_ver[3]);
+
+		/* change character to decimal */
+		bl_ver[0] = bl_ver[2] - 0x30;
+		bl_ver[1] = bl_ver[3] - 0x30;
+		LOGI(this, "bootloader revision %d.%d\n", bl_ver[1], bl_ver[0]);
+		if (bl_ver[0] == BV6_8)
+			info->bootloader_version = BV6_8;
+		else
+			info->bootloader_version = BV6;
+	} else {
+		info->bootloader_version = BV7;
+	}
 
 	LOGI(this, "bootloader revision %d.%03d\n", bl_ver[1], bl_ver[0]);
 
-	switch (BIT_GET(device_status, DEVICE_STATUS_CODE)) {
-	case DEVICE_STATUS_CODE_CONFIGURATION_CRC_FAILURE:
-	case DEVICE_STATUS_CODE_FIRMWARE_CRC_FAILURE:
-	case DEVICE_STATUS_CODE_CRC_IN_PROGRESS:
+	status_code_bit = BIT_GET(device_status, DEVICE_STATUS_CODE);
+
+	/* Firmware status check for firmware recovery */
+	if ((info->bootloader_version == BV6_8) &&
+	    clearpad_status_check(device_status)) {
+		fw_recovery = true;
+	} else {
+		switch (status_code_bit) {
+		case DEVICE_STATUS_CODE_CONFIGURATION_CRC_FAILURE:
+		case DEVICE_STATUS_CODE_FIRMWARE_CRC_FAILURE:
+		case DEVICE_STATUS_CODE_CRC_IN_PROGRESS:
+			fw_recovery = true;
+			break;
+		default:
+			break;
+		}
+	}
+
+	if (fw_recovery) {
+		LOGE(this, "Device status error. Forcing FW recovery.\n");
 		/* force firmware recovery */
 		memset(fw_info, 0, sizeof(fw_info));
-		break;
-	default:
-		rc = clearpad_get_block(
-			SYNF(this, F34_FLASH, CTRL, 0x00), fw_info, 5);
+		goto skip_fw_status;
+	}
+
+	rc = clearpad_get_block(SYNF(this, F34_FLASH, CTRL, 0x00), fw_info, 5);
+	if (rc)
+		goto end;
+
+	if (bl_ver[1] >= clearpad_bootloader_version_dec[BV7]) {
+		/* F34_FLASH_DATA00: Status */
+		rc = clearpad_get(SYNF(this, F34_FLASH, DATA, 0x00),
+					  &fw_status);
 		if (rc)
 			goto end;
 
-		if (bl_ver[1] >= clearpad_bootloader_version_dec[BV7]) {
-			/* F34_FLASH_DATA00: Status */
-			rc = clearpad_get(SYNF(this, F34_FLASH, DATA, 0x00),
-					  &fw_status);
-			if (rc)
-				goto end;
+		LOGI(this, "FW status 0x%02x\n", fw_status);
 
-			LOGI(this, "FW status 0x%02x\n", fw_status);
-
-			switch (BIT_GET(fw_status, STATUS_FLASH_STATUS)) {
-			case STATUS_FLASH_STATUS_BAD_PARTITION_TABLE:
-			case STATUS_FLASH_STATUS_CHECKSUM_FAILED:
-				/* force firmware recovery */
-				memset(fw_info, 0, sizeof(fw_info));
-				break;
-			default:
-				break;
-			}
+		switch (BIT_GET(fw_status, STATUS_FLASH_STATUS)) {
+		case STATUS_FLASH_STATUS_BAD_PARTITION_TABLE:
+		case STATUS_FLASH_STATUS_CHECKSUM_FAILED:
+			/* force firmware recovery */
+			memset(fw_info, 0, sizeof(fw_info));
+			break;
+		default:
+			break;
 		}
-		break;
+
+		rc = clearpad_get_block(SYNF(this, F34_FLASH, CTRL, 0x00),
+				fw_info, FLASH_READ_FIRMWARE_INFO_SIZE_BL7X);
+		if (rc)
+			goto end;
+
+		info->analog_id = fw_info[4];
+	} else if (bl_ver[1] >= clearpad_bootloader_version_dec[BV6]) {
+		rc = clearpad_get_block(SYNF(this, F34_FLASH, CTRL, 0x00),
+				fw_info, FLASH_READ_FIRMWARE_INFO_SIZE_BL6X);
+		if (rc)
+			goto end;
 	}
+
+skip_fw_status:
 	info->customer_family = fw_info[0];
 	info->firmware_revision_major = fw_info[1];
 	info->firmware_revision_minor = fw_info[2];
 	info->firmware_revision_extra = fw_info[3];
-	info->analog_id = fw_info[4];
 	info->boot_loader_version_minor = bl_ver[0];
 	info->boot_loader_version_major = bl_ver[1];
 
@@ -2681,6 +2828,7 @@ static int clearpad_judge_firmware_flash(struct clearpad_t *this,
 	int pca_module_id;
 	int rc = 0;
 	int blank_block;
+	unsigned int family_id;
 	char filename[SYN_STRING_LENGTH] = "";
 	u8 fw_info[SYN_PCA_BLOCK_SIZE] = {PCA_FW_INFO, SYN_CLEARPAD_VENDOR};
 
@@ -2697,7 +2845,26 @@ static int clearpad_judge_firmware_flash(struct clearpad_t *this,
 	else
 		HWLOGI(this, "device is normal\n");
 
-	if (flash_cmd != SYN_FORCE_FLASH) {
+	if ((this->chip_id == SYN_CHIP_4353) &&
+	    flash_cmd != SYN_FORCE_FLASH) {
+		rc = clearpad_read_lockdown_area(this);
+		if (rc) {
+			HWLOGE(this, "failed to get lockdown area\n");
+			goto end;
+		}
+		family_id = clearpad_get_lockdown_family_id(this);
+		if (family_id > LOCKDOWN_FAMILY_ID_MIN &&
+		    family_id < LOCKDOWN_FAMILY_ID_MAX) {
+			id = family_id;
+			HWLOGI(this, "lockdown value is valid\n");
+		} else if (this->device_info.customer_family > 0) {
+			id = this->device_info.customer_family;
+			HWLOGI(this,
+				"use device id since lockdown was invalid\n");
+		} else {
+			HWLOGE(this, "failed to get valid id\n");
+		}
+	} else if (flash_cmd != SYN_FORCE_FLASH) {
 		pca_module_id = clearpad_get_pca_module_id(this);
 		if (pca_module_id < 0)
 			rc = pca_module_id;
@@ -3405,6 +3572,7 @@ bool clearpad_is_healthy(struct clearpad_t *this)
 	case SYN_CHIP_3330:
 	case SYN_CHIP_3500:
 	case SYN_CHIP_7500:
+	case SYN_CHIP_4353:
 		/* F01_RMI_DATA00: Device Status */
 		rc = clearpad_get(SYNF(this, F01_RMI, DATA, 0x00), &status);
 		if (rc) {
@@ -6472,6 +6640,19 @@ static void clearpad_analog_test(struct clearpad_t *this,
 			goto end;
 		}
 		break;
+	case SYN_CHIP_4353:
+		switch (mode) {
+		case F54_16_IMAGE_REPORT:
+		case F54_RAW_CAP_RX_COUPLING_REPORT:
+		case F54_SENSOR_SPEED_REPORT:
+		case F54_ABS_RAW_REPORT:
+		case F54_HIC_RX_SHORT_TEST_REPORT:
+			break;
+		default:
+			HWLOGE(this, "mode %u is not supported\n", mode);
+			goto end;
+		}
+		break;
 	default:
 		HWLOGE(this, "unsupported chip id\n");
 		goto end;
@@ -7820,6 +8001,82 @@ end:
 	return rc;
 }
 
+static int clearpad_read_lockdown_area(struct clearpad_t *this)
+{
+	int rc = 0;
+	u8 data[LOCKDOWN_READ_SIZE];
+	const int somcId_offset = 0x04;
+	const int supplierId_offset = 0x05;
+	const int chipId_upper_offset = 0x06;
+	const int chipId_lower_offset = 0x07;
+	const int familyId_upper_offset = 0x08;
+	const int familyId_lower_offset = 0x09;
+
+	if (this->chip_id != SYN_CHIP_4353) {
+		//HWLOGE(this, "not supported lockdown area\n");
+		this->lda.family_id = LOCKDOWN_FAMILY_ID_MIN;
+		goto end;
+	}
+	/* parse image file and PDT */
+	rc = clearpad_read_pdt(this);
+	if (rc) {
+		HWLOGE(this, "failed to read pdt\n");
+		goto end;
+	}
+
+	clearpad_prepare_for_interrupt(this, &this->interrupt.for_F34,
+				       "F34_FLASH_DATA02 for read lockdown");
+	rc = clearpad_put(SYNF(this, F34_FLASH, DATA, 0x02),
+			FLASH_CONTROL_READ_LOCKDOWN_BLOCK);
+	if (rc) {
+		HWLOGE(this, "unable to read lockdown\n");
+		goto end;
+	}
+	UNLOCK(&this->lock);
+	rc = clearpad_wait_for_interrupt(this, &this->interrupt.for_F34,
+						this->interrupt.wait_ms);
+	LOCK(&this->lock);
+	if (rc) {
+		HWLOGE(this, "wait for interrupt status failed %d\n", rc);
+		goto end;
+	}
+
+	rc = clearpad_get_block(SYNF(this, F34_FLASH, DATA, 0x01),
+			data, LOCKDOWN_READ_SIZE);
+	if (rc) {
+		HWLOGE(this, "read data error\n");
+		goto end;
+	}
+
+	memcpy(this->lda.data, &data[LOCKDOWN_DATA_OFFSET], LOCKDOWN_DATA_SIZE);
+	HWLOGI(this, "lockdown data %02x %02x %02x %02x %02x %02x\n",
+		this->lda.data[somcId_offset - LOCKDOWN_DATA_OFFSET],
+		this->lda.data[supplierId_offset - LOCKDOWN_DATA_OFFSET],
+		this->lda.data[chipId_upper_offset - LOCKDOWN_DATA_OFFSET],
+		this->lda.data[chipId_lower_offset - LOCKDOWN_DATA_OFFSET],
+		this->lda.data[familyId_upper_offset - LOCKDOWN_DATA_OFFSET],
+		this->lda.data[familyId_lower_offset - LOCKDOWN_DATA_OFFSET]);
+
+	this->lda.somc_id = data[somcId_offset];
+	this->lda.supplier_id = data[supplierId_offset];
+	this->lda.chip_id = data[chipId_upper_offset] << 8 |
+			    data[chipId_lower_offset];
+	this->lda.family_id = data[familyId_upper_offset] << 8 |
+			      data[familyId_lower_offset];
+	HWLOGI(this, "somc id 0x%02x supplier id 0x%02x "
+	       "chip id 0x%04x family id 0x%04x\n",
+	       this->lda.somc_id, this->lda.supplier_id,
+	       this->lda.chip_id, this->lda.family_id);
+end:
+	return rc;
+}
+
+static unsigned int clearpad_get_lockdown_family_id(struct clearpad_t *this)
+{
+	HWLOGI(this, "module　id:0x%04x\n", this->lda.family_id);
+	return this->lda.family_id;
+}
+
 /* for Bootloader v6.0 */
 /* need LOCK(&this->lock) */
 static int clearpad_read_pca_block_v6(struct clearpad_t *this,
@@ -8711,6 +8968,7 @@ static void clearpad_thread_resume_work(struct work_struct *work)
 				struct clearpad_t, thread_resume);
 	struct timespec ts;
 	bool locked = false;
+	int rc = 0;
 
 	get_monotonic_boottime(&ts);
 	LOCK(&this->lock);
