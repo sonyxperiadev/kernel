@@ -8123,9 +8123,29 @@ static void clearpad_post_probe_work(struct work_struct *work)
 		}
 	}
 
+	if (this->flash.on_post_probe && this->chip_id == SYN_CHIP_3500) {
+		/* Remove this part after firmware flash sequence released */
+		/* @ Yoshino1.0 */
+		HWLOGW(this, "WA for Yoshino BU\n");
+		clearpad_reset(this, SYN_SWRESET, __func__);
+
+		this->state = SYN_STATE_RUNNING;
+		UNLOCK(&this->lock);
+
+		rc = clearpad_wait_for_interrupt(this,
+			&this->interrupt.for_reset, this->interrupt.wait_ms);
+		if (rc)
+			LOGE(this, "failed to get interrupt (rc=%d)\n", rc);
+	} else {
+		this->state = SYN_STATE_RUNNING;
+
+		UNLOCK(&this->lock);
+	}
+
 	this->state = SYN_STATE_RUNNING;
 
 	UNLOCK(&this->lock);
+
 
 	clearpad_ctrl_session_end(this, session);
 
@@ -8199,6 +8219,27 @@ static void clearpad_thread_resume_work(struct work_struct *work)
 	this->interrupt.count = 0;
 	if (clearpad_handle_if_first_event(this) < 0)
 		LOGE(this, "failed to handle first event\n");
+
+	/* Workaround for SoMC Yoshino Maple */
+	/*
+	 * TODO: This is valid also for Kagura sharp panel id 9:
+	 *       find a way to recognize that panel here!!!
+	 */
+	if (this->chip_id == SYN_CHIP_3500) {
+		switch (this->device_info.customer_family) {
+		case 0xd0:
+		case 0xd1:
+			HWLOGW(this, "Force Calibration for Maple\n");
+			rc = clearpad_put(
+				SYNF(this, F54_ANALOG, COMMAND, 0x00),
+				ANALOG_COMMAND_FORCE_CALIBRATION_MASK);
+			if (rc)
+				LOGE(this, "failed to force calibrate\n");
+			break;
+		default:
+			break;
+		}
+	}
 
 	touchctrl_unlock_power(this, "fb_unblank");
 
