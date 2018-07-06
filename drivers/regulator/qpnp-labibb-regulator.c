@@ -3802,7 +3802,7 @@ static void vreg_check_worker(struct work_struct *work)
 		goto read_error;
 	}
 
-	if (!(val & LAB_STATUS1_VREG_OK))
+	if (!(val & LAB_STATUS1_VREG_OK_BIT))
 		goto status_error;
 
 	/* ibb vreg status check */
@@ -3814,7 +3814,7 @@ static void vreg_check_worker(struct work_struct *work)
 		goto read_error;
 	}
 
-	if (!(val & IBB_STATUS1_VREG_OK))
+	if (!(val & IBB_STATUS1_VREG_OK_BIT))
 		goto status_error;
 
 	rc = qpnp_labibb_interrupt_enable_ctl(labibb, VREG_WORKER_ACTIVE);
@@ -4870,7 +4870,7 @@ static irqreturn_t lab_vreg_handler(int irq, void *_chip)
 		goto exit;
 	}
 
-	if (!(val & LAB_STATUS1_VREG_OK))
+	if (!(val & LAB_STATUS1_VREG_OK_BIT))
 		pr_err("%s: LAB VREG NG!!!\n", __func__);
 	else
 		goto false_detection;
@@ -4918,7 +4918,7 @@ static irqreturn_t ibb_vreg_handler(int irq, void *_chip)
 		goto exit;
 	}
 
-	if (!(val & IBB_STATUS1_VREG_OK))
+	if (!(val & IBB_STATUS1_VREG_OK_BIT))
 		pr_err("%s: IBB VREG NG!!!\n", __func__);
 	else
 		goto false_detection;
