@@ -368,7 +368,7 @@ struct msm_camera_csiphy_params {
 	unsigned char csid_core;
 	unsigned int csiphy_clk;
 	unsigned char csi_3phase;
-	uint64_t data_rate;
+	unsigned long data_rate;
 };
 
 struct msm_camera_i2c_seq_reg_array {
