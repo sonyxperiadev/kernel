@@ -1,4 +1,4 @@
-/* arch/arm64/boot/ddsi-panel-apollo-id4_pcc.dtsi
+/* arch/arm64/boot/ddsi-panel-somc-apollo-id4_pcc.dtsi
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and

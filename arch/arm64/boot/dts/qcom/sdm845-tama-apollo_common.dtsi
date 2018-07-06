@@ -155,6 +155,6 @@
 	qcom,fg-chg-term-current = <135>;
 };
 
-#include "dsi-panel-apollo.dtsi"
+#include "dsi-panel-somc-apollo.dtsi"
 #include "somc-tama-display.dtsi"
 #include "somc-tama-display_apollo.dtsi"

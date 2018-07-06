@@ -19,8 +19,8 @@
 
 #include "dsi-panel-somc-synaptics-lgd-1080p2160-cmd.dtsi"
 #include "dsi-panel-somc-synaptics-jdi-1080p2160-cmd.dtsi"
-#include "dsi-panel-akari-id3_pcc.dtsi"
-#include "dsi-panel-akari-id7_pcc.dtsi"
+#include "dsi-panel-somc-akari-id3_pcc.dtsi"
+#include "dsi-panel-somc-akari-id7_pcc.dtsi"
 
 &dsi_default_panel {
 	/delete-property/ qcom,panel-touch-supply-entries;
@@ -79,4 +79,3 @@
 &sde_rscc {
 	status = "disabled";
 };
-
