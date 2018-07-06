@@ -324,7 +324,7 @@ int somc_panel_vreg_ctrl(struct dsi_regulator_info *regs,
 void somc_panel_vregs_init(struct dsi_panel *panel);
 #ifdef CONFIG_SOMC_PANEL_LABIBB
 int somc_panel_vregs_parse_dt(struct dsi_panel *panel,
-					struct device_node *np)
+					struct device_node *np);
 #else
 #define somc_panel_vregs_parse_dt(x, y) 0
 #endif
