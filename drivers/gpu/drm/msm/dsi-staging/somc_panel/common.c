@@ -30,7 +30,7 @@
 #include "dsi_display.h"
 #include "dsi_panel.h"
 
-static int vreg_name_to_config(struct dsi_regulator_info *regs,
+int vreg_name_to_config(struct dsi_regulator_info *regs,
 			struct dsi_vreg *config, char *name)
 {
 	int num_vreg = regs->count;

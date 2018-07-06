@@ -319,6 +319,8 @@ int somc_panel_detect(struct platform_device *pdev,
 
 int somc_panel_regulators_get(struct dsi_panel *panel);
 int somc_panel_regulators_put(struct dsi_panel *panel);
+int vreg_name_to_config(struct dsi_regulator_info *regs,
+			struct dsi_vreg *config, char *name);
 int somc_panel_vreg_ctrl(struct dsi_regulator_info *regs,
 				char *vreg_name, bool enable);
 void somc_panel_vregs_init(struct dsi_panel *panel);
