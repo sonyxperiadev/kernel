@@ -16,6 +16,56 @@
  * it under the terms of the GNU General Public License version 2, as
  * published by the Free Software Foundation.
  */
+#include "dsi-panel-somc-synaptics-lgd-1080p2160-cmd.dtsi"
+#include "dsi-panel-somc-synaptics-jdi-1080p2160-cmd.dtsi"
+#include "dsi-panel-somc-akari-id3_pcc.dtsi"
+#include "dsi-panel-somc-akari-id7_pcc.dtsi"
+
+&dsi_3 {
+	qcom,panel-supply-entries = <&dsi_panel_lcd_pwr_supply>;
+	qcom,panel-vspvsn-supply-entries = <&dsi_panel_vspvsn_pwr_supply>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,platform-reset-gpio = <&tlmm 6 0>;
+	qcom,platform-touch-reset-gpio = <&tlmm 99 0>;
+	qcom,mdss-dsi-t-clk-post = <0x0E>;
+	qcom,mdss-dsi-t-clk-pre = <0x33>;
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,display-topology = <1 0 1>;
+			qcom,default-topology-index = <0>;
+			qcom,mdss-dsi-panel-phy-timings = [00 21 08 08 25 23 08 08 06 03 04 00];
+		};
+	};
+};
+
+&dsi_7 {
+	qcom,panel-supply-entries = <&dsi_panel_lcd_pwr_supply>;
+	qcom,panel-vspvsn-supply-entries = <&dsi_panel_vspvsn_pwr_supply>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,platform-reset-gpio = <&tlmm 6 0>;
+	qcom,platform-touch-reset-gpio = <&tlmm 99 0>;
+	qcom,mdss-dsi-t-clk-post = <0x0E>;
+	qcom,mdss-dsi-t-clk-pre = <0x33>;
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,display-topology = <1 0 1>;
+			qcom,default-topology-index = <0>;
+			qcom,mdss-dsi-panel-phy-timings = [00 21 08 08 25 23 08 08 06 03 04 00];
+		};
+	};
+};
+
+&mdss_mdp {
+        connectors = <&sde_wb>;
+};
+
+&sde_rscc {
+        status = "disabled";
+};
 
 &mdss_mdp {
 	/* Default */
@@ -89,6 +139,10 @@
 		somc,qpnp-ibb-pull-down-enable;
 		somc,qpnp-ibb-full-pull-down;
 
+		/delete-property/ qcom,panel-touch-supply-entries;
+		qcom,mdss-dsi-t-clk-post = <0x0E>;
+		qcom,mdss-dsi-t-clk-pre = <0x33>;
+
 		qcom,mdss-dsi-display-timings {
 			timing@0 {
 				qcom,mdss-dsi-panel-width = <1080>;
@@ -126,6 +180,7 @@
 				qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
 
 				qcom,mdss-dsi-panel-clockrate = <964260000>;
+				qcom,mdss-dsi-panel-phy-timings = [00 21 08 08 25 23 08 08 06 03 04 00];
 			};
 		};
 	};

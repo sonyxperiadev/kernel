@@ -18,6 +18,8 @@
  */
 
 #include "sdm845-tama-common.dtsi"
+#include "dsi-panel-somc-apollo.dtsi"
+#include "somc-tama-display.dtsi"
 
 &somc_pinctrl_pmic {
 	pinctrl-1 = <&pmi8998_gpio_5>;
@@ -154,7 +156,3 @@
 	qcom,fg-sys-term-current = <(-160)>;
 	qcom,fg-chg-term-current = <135>;
 };
-
-#include "dsi-panel-somc-apollo.dtsi"
-#include "somc-tama-display.dtsi"
-#include "somc-tama-display_apollo.dtsi"

@@ -18,6 +18,8 @@
  */
 
 #include "sdm845-tama-common.dtsi"
+#include "dsi-panel-somc-akari.dtsi"
+#include "somc-tama-display.dtsi"
 
 &vendor {
 	tama_batterydata: qcom,battery-data {
@@ -222,7 +224,3 @@
 	qcom,fg-sys-term-current = <(-180)>;
 	qcom,fg-chg-term-current = <155>;
 };
-
-#include "dsi-panel-somc-akari.dtsi"
-#include "somc-tama-display.dtsi"
-#include "somc-tama-display_akari.dtsi"
