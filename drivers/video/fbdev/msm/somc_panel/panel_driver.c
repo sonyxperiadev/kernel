@@ -360,7 +360,7 @@ static int mdss_dsi_panel_reset_seq(struct mdss_panel_data *pdata, int enable)
 	pw_seq = (enable) ? &ctrl_pdata->spec_pdata->on_seq :
 				&ctrl_pdata->spec_pdata->off_seq;
 
-#ifdef CONFIG_SOMC_PANEL_INCELL
+#ifdef CONFIG_FBDEV_SOMC_PANEL_INCELL
 	if (incell_panel_is_seq_for_ewu() && enable)
 		pw_seq = &ctrl_pdata->spec_pdata->ewu_seq ?
 				&ctrl_pdata->spec_pdata->ewu_seq :
@@ -957,7 +957,7 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 	}
 
 chg_fps:
-#ifndef CONFIG_SOMC_PANEL_INCELL
+#ifndef CONFIG_FBDEV_SOMC_PANEL_INCELL
 	somc_panel_chg_fps_cmds_send(ctrl_pdata);
 #endif
 
@@ -1093,7 +1093,7 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 
 	somc_panel_fpsman_panel_off();
 
-#ifndef CONFIG_SOMC_PANEL_INCELL
+#ifndef CONFIG_FBDEV_SOMC_PANEL_INCELL
 	mdss_dsi_panel_reset(pdata, 0);
 #endif
 
@@ -1250,7 +1250,7 @@ static int mdss_dsi_panel_power_ctrl_ex(struct mdss_panel_data *pdata, int enabl
 		pr_err("%s: unknown panel power state requested (%d)\n",
 			__func__, enable);
 	}
-#ifndef CONFIG_SOMC_PANEL_INCELL
+#ifndef CONFIG_FBDEV_SOMC_PANEL_INCELL
 	if (ret) {
 		msm_dss_enable_vreg(
 			ctrl_pdata->panel_power_data.vreg_config,

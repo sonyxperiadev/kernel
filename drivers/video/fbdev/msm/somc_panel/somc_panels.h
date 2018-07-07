@@ -152,13 +152,13 @@ int somc_panel_vregs_dt(struct device_node *np,
 #endif
 
 /* Incell */
-#ifdef CONFIG_SOMC_PANEL_INCELL
+#ifdef CONFIG_FBDEV_SOMC_PANEL_INCELL
 int  incell_panel_driver_init(struct mdss_dsi_ctrl_pdata *ctrl_pdata);
 #else
 #define incell_panel_driver_init(x) 0
 #endif
 
-#ifdef CONFIG_SOMC_PANEL_INCELL
+#ifdef CONFIG_FBDEV_SOMC_PANEL_INCELL
 bool incell_panel_is_seq_for_ewu(void);
 void incell_panel_free_gpios(struct mdss_dsi_ctrl_pdata *ctrl_pdata);
 int incell_driver_post_power_on(struct mdss_panel_data *pdata);

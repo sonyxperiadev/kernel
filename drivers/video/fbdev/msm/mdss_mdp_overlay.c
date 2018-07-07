@@ -4925,7 +4925,7 @@ static int mdss_mdp_histo_ioctl(struct msm_fb_data_type *mfd, u32 cmd,
 	if (!mdata)
 		return -EPERM;
 
-#ifdef CONFIG_SOMC_PANEL_INCELL
+#ifdef CONFIG_FBDEV_SOMC_PANEL_INCELL
 	if (mfd->off_sts)
 		return 0;
 #endif /* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */

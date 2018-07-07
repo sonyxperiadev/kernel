@@ -90,7 +90,7 @@ int somc_panel_vreg_ctrl(
 	struct dss_vreg vreg_config;
 	struct mdss_panel_power_seq *pw_seq = NULL;
 	int valid = 0;
-#ifdef CONFIG_SOMC_PANEL_INCELL
+#ifdef CONFIG_FBDEV_SOMC_PANEL_INCELL
 	int wait = 0;
 #endif
 	int ret = 0;
@@ -107,7 +107,7 @@ int somc_panel_vreg_ctrl(
 			pw_seq = &ctrl_pdata->spec_pdata->off_seq;
 		}
 
-#ifdef CONFIG_SOMC_PANEL_INCELL
+#ifdef CONFIG_FBDEV_SOMC_PANEL_INCELL
 		if (!strcmp(vreg, "vdd"))
 			wait = pw_seq->disp_vdd;
 		else if (!strcmp(vreg, "vddio"))

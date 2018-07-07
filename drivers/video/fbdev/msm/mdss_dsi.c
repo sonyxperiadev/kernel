@@ -1520,7 +1520,7 @@ int mdss_dsi_reset_dual_display(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 }
 #endif
 
-#ifdef CONFIG_SOMC_PANEL_INCELL
+#ifdef CONFIG_FBDEV_SOMC_PANEL_INCELL
 extern bool incell_dsi_execute_lp11_init(void);
 #endif
 
@@ -1612,7 +1612,7 @@ int mdss_dsi_on(struct mdss_panel_data *pdata)
 	 * Issue hardware reset line after enabling the DSI clocks and data
 	 * data lanes for LP11 init
 	 */
-#ifdef CONFIG_SOMC_PANEL_INCELL
+#ifdef CONFIG_FBDEV_SOMC_PANEL_INCELL
 	if (incell_dsi_execute_lp11_init())
 #endif
 	if (mipi->lp11_init) {
@@ -1674,7 +1674,7 @@ int mdss_dsi_pinctrl_set_state(
 	return rc;
 }
 
-#ifdef CONFIG_SOMC_PANEL_INCELL
+#ifdef CONFIG_FBDEV_SOMC_PANEL_INCELL
 extern int incell_pinctrl_init(struct mdss_dsi_ctrl_pdata *ctrl_pdata);
 #endif
 
@@ -1701,7 +1701,7 @@ static int mdss_dsi_pinctrl_init(struct platform_device *pdev)
 	if (IS_ERR_OR_NULL(ctrl_pdata->pin_res.gpio_state_suspend))
 		pr_warn("%s: can not get sleep pinstate\n", __func__);
 
-#ifdef CONFIG_SOMC_PANEL_INCELL
+#ifdef CONFIG_FBDEV_SOMC_PANEL_INCELL
 	return incell_pinctrl_init(ctrl_pdata);
 #endif
 	return 0;
@@ -4436,7 +4436,7 @@ static int mdss_dsi_parse_gpio_params(struct platform_device *ctrl_pdev,
 		pr_err("%s:%d, disp_dcdc_en gpio gpio not specified\n",
 						__func__, __LINE__);
 
- #ifdef CONFIG_SOMC_PANEL_INCELL
+ #ifdef CONFIG_FBDEV_SOMC_PANEL_INCELL
 	ctrl_pdata->spec_pdata->disp_vddio_gpio = of_get_named_gpio(
 			ctrl_pdev->dev.of_node,
 			"qcom,platform-vddio-gpio", 0);
@@ -4467,7 +4467,7 @@ static int mdss_dsi_parse_gpio_params(struct platform_device *ctrl_pdev,
 	if (!gpio_is_valid(ctrl_pdata->spec_pdata->touch_int_gpio))
 		pr_err("%s:%d, touch int gpio not specified\n",
 						__func__, __LINE__);
- #endif /* CONFIG_SOMC_PANEL_INCELL */
+ #endif /* CONFIG_FBDEV_SOMC_PANEL_INCELL */
 #endif
 
 	return 0;

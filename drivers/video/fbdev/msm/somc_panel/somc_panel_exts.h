@@ -82,7 +82,7 @@ struct mdss_panel_power_seq {
 	int *rst_seq;
 	int seq_b_num;
 	int *rst_b_seq;
-#ifdef CONFIG_SOMC_PANEL_INCELL
+#ifdef CONFIG_FBDEV_SOMC_PANEL_INCELL
 	int disp_vdd;
 	int disp_vddio;
 	int disp_vsp;
@@ -241,7 +241,7 @@ struct mdss_panel_specific_pdata {
 	bool pwron_reset;
 	bool dsi_seq_hack;
 
-#ifdef CONFIG_SOMC_PANEL_INCELL
+#ifdef CONFIG_FBDEV_SOMC_PANEL_INCELL
 	int disp_vddio_gpio;
 	int touch_reset_gpio;
 	int touch_vddio_gpio;
