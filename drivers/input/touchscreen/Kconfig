@@ -647,7 +647,8 @@ config TOUCHSCREEN_CLEARPAD
 
 config TOUCHSCREEN_INCELL_CLEARPAD
 	tristate "Synaptics ClearPad for In-Cell power"
-	depends on SOMC_PANEL_INCELL && !TOUCHSCREEN_CLEARPAD
+	depends on !TOUCHSCREEN_CLEARPAD
+	depends on FBDEV_SOMC_PANEL_INCELL || SOMC_PANEL_INCELL
 	default y
 	help
 	  Say Y here to enable Synaptics ClearPad touchscreen.
