@@ -5895,6 +5895,15 @@ static int rerun_apsd(struct smbchg_chip *chip)
 			pr_err("wait for src detect failed rc = %d\n", rc);
 			goto out;
 		}
+
+#ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
+		/* set scheduler to detect QC2.0 and update ICL for thermal */
+		cancel_delayed_work_sync(&chip->hvdcp_det_work);
+		schedule_delayed_work(&chip->hvdcp_det_work,
+					msecs_to_jiffies(HVDCP_NOTIFY_MS));
+		somc_chg_hvdcp3_therm_adjust_stop(chip);
+		chip->somc_params.hvdcp3.hvdcp3_detected = false;
+#endif
 	} else {
 		pr_smb(PR_STATUS, "Faking Removal\n");
 		rc = fake_insertion_removal(chip, false);
@@ -6209,14 +6218,6 @@ static int smbchg_dp_dm(struct smbchg_chip *chip, int val)
 		break;
 	}
 
-#ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
-	/* set scheduler to detect QC2.0 and update ICL for thermal */
-	cancel_delayed_work_sync(&chip->hvdcp_det_work);
-	schedule_delayed_work(&chip->hvdcp_det_work,
-				msecs_to_jiffies(HVDCP_NOTIFY_MS));
-	somc_chg_hvdcp3_therm_adjust_stop(chip);
-	chip->somc_params.hvdcp3.hvdcp3_detected = false;
-#endif
 	return rc;
 }
 
@@ -6300,8 +6301,10 @@ static int smbchg_usb_get_property(struct power_supply *psy,
 		val->intval = chip->usb_online;
 		break;
 	case POWER_SUPPLY_PROP_TYPE:
+#ifndef CONFIG_QPNP_SMBCHARGER_EXTENSION
 		val->intval = chip->usb_psy_d.type;
 		break;
+#endif
 	case POWER_SUPPLY_PROP_REAL_TYPE:
 		val->intval = chip->usb_supply_type;
 		break;
@@ -6321,6 +6324,7 @@ static int smbchg_usb_set_property(struct power_supply *psy,
 	struct smbchg_chip *chip = power_supply_get_drvdata(psy);
 
 	switch (psp) {
+	case POWER_SUPPLY_PROP_SDP_CURRENT_MAX:
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
 		chip->usb_current_max = val->intval;
 		break;
@@ -6340,6 +6344,7 @@ smbchg_usb_is_writeable(struct power_supply *psy,
 			enum power_supply_property psp)
 {
 	switch (psp) {
+	case POWER_SUPPLY_PROP_SDP_CURRENT_MAX:
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
 		return 1;
 	default:
@@ -6358,6 +6363,7 @@ static char *smbchg_usb_supplicants[] = {
 static enum power_supply_property smbchg_usb_properties[] = {
 	POWER_SUPPLY_PROP_PRESENT,
 	POWER_SUPPLY_PROP_ONLINE,
+	POWER_SUPPLY_PROP_SDP_CURRENT_MAX,
 	POWER_SUPPLY_PROP_CURRENT_MAX,
 	POWER_SUPPLY_PROP_TYPE,
 	POWER_SUPPLY_PROP_REAL_TYPE,
