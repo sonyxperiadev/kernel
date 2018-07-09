@@ -285,6 +285,8 @@ struct panel_specific_pdata {
 	u32 count_touch;
 	int touch_vddio_en_gpio;
 	int reset_touch_gpio;
+	int touch_int_gpio;
+	int disp_vddio_gpio;
 	int disp_dcdc_en_gpio;
 
 	int touch_vddio;

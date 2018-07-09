@@ -310,24 +310,21 @@ exit:
 	return rc;
 }
 
-int dsi_panel_driver_touch_power(struct dsi_panel *panel, bool enable)
+static int dsi_panel_driver_touch_power_on(struct dsi_panel *panel)
 {
-	struct panel_specific_pdata *spec_pdata = NULL;
+	struct panel_specific_pdata *spec_pdata = panel->spec_pdata;
 	int rc = 0;
 
-	if (!panel) {
-		pr_err("%s: Invalid input panel\n", __func__);
-		return -EINVAL;
+	if (gpio_is_valid(spec_pdata->disp_vddio_gpio)) {
+		rc = gpio_direction_output(spec_pdata->disp_vddio_gpio, 0);
+		if (rc) {
+			pr_err("unable to set dir for disp_vddio gpio rc=%d\n", rc);
+			goto exit;
+		}
 	}
-	spec_pdata = panel->spec_pdata;
 
 	if (gpio_is_valid(spec_pdata->touch_vddio_en_gpio)) {
-		if (enable)
-			rc = gpio_direction_output(
-				spec_pdata->touch_vddio_en_gpio, 0);
-		else
-			rc = gpio_direction_output(
-				spec_pdata->touch_vddio_en_gpio, 1);
+		rc = gpio_direction_output(spec_pdata->touch_vddio_en_gpio, 0);
 		if (rc) {
 			pr_err("unable to set dir for touch_vddio_en gpio rc=%d\n", rc);
 			goto exit;
@@ -335,6 +332,43 @@ int dsi_panel_driver_touch_power(struct dsi_panel *panel, bool enable)
 	}
 exit:
 	return rc;
+}
+
+static int dsi_panel_driver_touch_power_off(struct dsi_panel *panel)
+{
+	struct panel_specific_pdata *spec_pdata = panel->spec_pdata;
+	int rc = 0;
+
+	if (gpio_is_valid(spec_pdata->disp_vddio_gpio)) {
+		rc = gpio_direction_output(spec_pdata->disp_vddio_gpio, 1);
+		if (rc) {
+			pr_err("unable to set dir for disp_vddio gpio rc=%d\n", rc);
+			goto exit;
+		}
+	}
+
+	if (gpio_is_valid(spec_pdata->touch_vddio_en_gpio)) {
+		rc = gpio_direction_output(spec_pdata->touch_vddio_en_gpio, 1);
+		if (rc) {
+			pr_err("unable to set dir for touch_vddio_en gpio rc=%d\n", rc);
+			goto exit;
+		}
+	}
+exit:
+	return rc;
+}
+
+int dsi_panel_driver_touch_power(struct dsi_panel *panel, bool enable)
+{
+	if (!panel) {
+		pr_err("%s: Invalid input panel\n", __func__);
+		return -EINVAL;
+	}
+
+	if (enable)
+		return dsi_panel_driver_touch_power_on(panel);
+	else
+		return dsi_panel_driver_touch_power_off(panel);
 }
 
 static void dsi_panel_driver_power_off_ctrl(void)
@@ -1028,6 +1062,13 @@ int dsi_panel_driver_parse_gpios(struct dsi_panel *panel,
 		pr_err("%s: failed get touch-vddio-en gpio\n", __func__);
 	}
 
+	spec_pdata->touch_int_gpio = of_get_named_gpio(of_node,
+					      "qcom,platform-touch-int-gpio",
+					      0);
+	if (!gpio_is_valid(spec_pdata->touch_int_gpio)) {
+		pr_err("%s: failed get touch-int-gpio\n", __func__);
+	}
+
 	spec_pdata->reset_touch_gpio = of_get_named_gpio(of_node,
 					      "qcom,platform-touch-reset-gpio",
 					      0);
@@ -1040,6 +1081,13 @@ int dsi_panel_driver_parse_gpios(struct dsi_panel *panel,
 		pr_err("%s: failed to parse reset touch sequence, rc=%d\n",
 		       __func__, rc);
 		goto error;
+	}
+
+	spec_pdata->disp_vddio_gpio = of_get_named_gpio(of_node,
+					      "qcom,platform-vddio-gpio",
+					      0);
+	if (!gpio_is_valid(spec_pdata->disp_vddio_gpio)) {
+		pr_err("%s: failed get vddio-gpio\n", __func__);
 	}
 
 	spec_pdata->disp_dcdc_en_gpio = of_get_named_gpio(of_node,
