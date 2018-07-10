@@ -1507,7 +1507,7 @@ module_exit(zram_exit);
 
 module_param(num_devices, uint, 0);
 MODULE_PARM_DESC(num_devices, "Number of pre-created zram devices");
-module_param_string(backend, backend_par_buf, BACKEND_PAR_BUF_SIZE, S_IRUGO);
+module_param_string(backend, backend_par_buf, BACKEND_PAR_BUF_SIZE, 0444);
 MODULE_PARM_DESC(backend, "Compression storage (backend) name");
 
 MODULE_LICENSE("Dual BSD/GPL");
