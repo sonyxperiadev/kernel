@@ -34,6 +34,7 @@
 	qcom,mdss-dsi-t-clk-pre = <0x33>;
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
+			qcom,mdss-dsi-timing-default;
 			qcom,display-topology = <1 0 1>;
 			qcom,default-topology-index = <0>;
 			qcom,mdss-dsi-panel-phy-timings = [00 21 08 08 25 23 08 08 06 03 04 00];
@@ -53,6 +54,7 @@
 	qcom,mdss-dsi-t-clk-pre = <0x33>;
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
+			qcom,mdss-dsi-timing-default;
 			qcom,display-topology = <1 0 1>;
 			qcom,default-topology-index = <0>;
 			qcom,mdss-dsi-panel-phy-timings = [00 21 08 08 25 23 08 08 06 03 04 00];
@@ -146,6 +148,7 @@
 
 		qcom,mdss-dsi-display-timings {
 			timing@0 {
+				qcom,mdss-dsi-timing-default;
 				qcom,mdss-dsi-panel-width = <1080>;
 				qcom,mdss-dsi-panel-height = <2160>;
 				qcom,mdss-dsi-h-back-porch = <8>;
