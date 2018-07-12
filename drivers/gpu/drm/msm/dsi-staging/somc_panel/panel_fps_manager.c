@@ -62,18 +62,17 @@ int somc_panel_parse_dt_chgfps_config(struct dsi_panel *panel,
 	if (!panel_type) {
 		pr_err("%s:%d, Panel type not specified\n",
 						__func__, __LINE__);
-		goto error;
-	}
-
-	if (!strncmp(panel_type, "uhd_4k_type", 11)) {
-		chg_fps->type = FPS_TYPE_UHD_4K;
-	} else if (!strncmp(panel_type, "hybrid_incell_type", 18)) {
-		chg_fps->type = FPS_TYPE_HYBRID_INCELL;
-	} else if (!strncmp(panel_type, "full_incell_type", 16)) {
-		chg_fps->type = FPS_TYPE_FULL_INCELL;
 	} else {
-		pr_err("%s: Unable to read fps panel type\n", __func__);
-		goto error;
+		if (!strncmp(panel_type, "uhd_4k_type", 11)) {
+			chg_fps->type = FPS_TYPE_UHD_4K;
+		} else if (!strncmp(panel_type, "hybrid_incell_type", 18)) {
+			chg_fps->type = FPS_TYPE_HYBRID_INCELL;
+		} else if (!strncmp(panel_type, "full_incell_type", 16)) {
+			chg_fps->type = FPS_TYPE_FULL_INCELL;
+		} else {
+			pr_err("%s: Unable to read fps panel type\n", __func__);
+			goto error;
+		}
 	}
 
 	panel_mode = of_get_property(np, "somc,fps-mode-panel-mode", NULL);
