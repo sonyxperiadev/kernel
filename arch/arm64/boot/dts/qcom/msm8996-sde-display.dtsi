@@ -97,6 +97,12 @@
 		};
 	};
 
+	sde_wb: qcom,wb-display@0 {
+		compatible = "qcom,wb-display";
+		cell-index = <0>;
+		label = "wb_display";
+	};
+
 	sde_hdmi: qcom,hdmi-display {
 		compatible = "qcom,hdmi-display";
 		label = "sde_hdmi";
@@ -106,6 +112,6 @@
 };
 
 &mdss_mdp {
-	connectors = <&sde_hdmi_tx &sde_hdmi>;
+	connectors = <&sde_wb>; // &sde_hdmi_tx &sde_hdmi>;
 };
 
