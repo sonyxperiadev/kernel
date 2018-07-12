@@ -68,6 +68,7 @@ static int msm_smmu_attach(struct msm_mmu *mmu, const char * const *names,
 {
 	struct msm_smmu *smmu = to_msm_smmu(mmu);
 	struct msm_smmu_client *client = msm_smmu_to_client(smmu);
+	struct iommu_group *grp = NULL;
 	int rc = 0;
 
 	if (!client) {
@@ -78,6 +79,12 @@ static int msm_smmu_attach(struct msm_mmu *mmu, const char * const *names,
 	/* domain attach only once */
 	if (client->domain_attached)
 		return 0;
+
+	if (!client->dev->iommu_group) {
+		 grp = iommu_group_get_for_dev(client->dev);
+		 if (IS_ERR_OR_NULL(grp))
+			  return PTR_ERR(grp);
+	}
 
 	rc = arm_iommu_attach_device(client->dev,
 			client->mmu_mapping);
