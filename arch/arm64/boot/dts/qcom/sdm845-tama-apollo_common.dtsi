@@ -18,8 +18,8 @@
  */
 
 #include "sdm845-tama-common.dtsi"
+#include "sdm845-tama-common-display.dtsi"
 #include "dsi-panel-somc-apollo.dtsi"
-#include "somc-tama-display.dtsi"
 
 &somc_pinctrl_pmic {
 	pinctrl-1 = <&pmi8998_gpio_5>;
