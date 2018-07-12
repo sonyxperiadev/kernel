@@ -18,8 +18,8 @@
  */
 
 #include "sdm845-tama-common.dtsi"
+#include "sdm845-tama-common-display.dtsi"
 #include "dsi-panel-somc-akari.dtsi"
-#include "somc-tama-display.dtsi"
 
 &vendor {
 	tama_batterydata: qcom,battery-data {
