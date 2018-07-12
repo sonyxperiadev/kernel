@@ -1660,6 +1660,9 @@ static int dsi_ctrl_dts_parse(struct dsi_ctrl *dsi_ctrl,
 	dsi_ctrl->null_insertion_enabled = of_property_read_bool(of_node,
 					"qcom,null-insertion-enabled");
 
+	dsi_ctrl->hw.cont_splash_enabled = of_property_read_bool(of_node,
+					"qcom,cont-splash-enabled");
+
 	return 0;
 }
 
