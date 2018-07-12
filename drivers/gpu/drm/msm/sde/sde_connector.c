@@ -2081,16 +2081,19 @@ struct drm_connector *sde_connector_init(struct drm_device *dev,
 	c_conn->last_panel_power_mode = SDE_MODE_DPMS_ON;
 
 	sde_kms = to_sde_kms(priv->kms);
-	if (sde_kms->vbif[VBIF_NRT]) {
-		c_conn->aspace[SDE_IOMMU_DOMAIN_UNSECURE] =
-			sde_kms->aspace[MSM_SMMU_DOMAIN_NRT_UNSECURE];
-		c_conn->aspace[SDE_IOMMU_DOMAIN_SECURE] =
-			sde_kms->aspace[MSM_SMMU_DOMAIN_NRT_SECURE];
-	} else {
-		c_conn->aspace[SDE_IOMMU_DOMAIN_UNSECURE] =
+
+	c_conn->aspace[SDE_IOMMU_DOMAIN_UNSECURE] =
 			sde_kms->aspace[MSM_SMMU_DOMAIN_UNSECURE];
-		c_conn->aspace[SDE_IOMMU_DOMAIN_SECURE] =
+	c_conn->aspace[SDE_IOMMU_DOMAIN_SECURE] =
 			sde_kms->aspace[MSM_SMMU_DOMAIN_SECURE];
+
+	if (sde_kms->vbif[VBIF_NRT]) {
+		if (sde_kms->aspace[MSM_SMMU_DOMAIN_NRT_UNSECURE])
+			c_conn->aspace[SDE_IOMMU_DOMAIN_UNSECURE] =
+				sde_kms->aspace[MSM_SMMU_DOMAIN_NRT_UNSECURE];
+		if (sde_kms->aspace[MSM_SMMU_DOMAIN_NRT_SECURE])
+			c_conn->aspace[SDE_IOMMU_DOMAIN_SECURE] =
+				sde_kms->aspace[MSM_SMMU_DOMAIN_NRT_SECURE];
 	}
 
 	if (ops)

@@ -1526,16 +1526,18 @@ struct sde_encoder_phys *sde_encoder_phys_wb_init(
 
 	phys_enc = &wb_enc->base;
 
-	if (p->sde_kms->vbif[VBIF_NRT]) {
-		wb_enc->aspace[SDE_IOMMU_DOMAIN_UNSECURE] =
-			p->sde_kms->aspace[MSM_SMMU_DOMAIN_NRT_UNSECURE];
-		wb_enc->aspace[SDE_IOMMU_DOMAIN_SECURE] =
-			p->sde_kms->aspace[MSM_SMMU_DOMAIN_NRT_SECURE];
-	} else {
-		wb_enc->aspace[SDE_IOMMU_DOMAIN_UNSECURE] =
+	wb_enc->aspace[SDE_IOMMU_DOMAIN_UNSECURE] =
 			p->sde_kms->aspace[MSM_SMMU_DOMAIN_UNSECURE];
-		wb_enc->aspace[SDE_IOMMU_DOMAIN_SECURE] =
+	wb_enc->aspace[SDE_IOMMU_DOMAIN_SECURE] =
 			p->sde_kms->aspace[MSM_SMMU_DOMAIN_SECURE];
+
+	if (p->sde_kms->vbif[VBIF_NRT]) {
+		if (p->sde_kms->aspace[MSM_SMMU_DOMAIN_NRT_UNSECURE])
+			wb_enc->aspace[SDE_IOMMU_DOMAIN_UNSECURE] =
+				p->sde_kms->aspace[MSM_SMMU_DOMAIN_NRT_UNSECURE];
+		if (p->sde_kms->aspace[MSM_SMMU_DOMAIN_NRT_SECURE])
+			wb_enc->aspace[SDE_IOMMU_DOMAIN_SECURE] =
+				p->sde_kms->aspace[MSM_SMMU_DOMAIN_NRT_SECURE];
 	}
 
 	hw_mdp = sde_rm_get_mdp(&p->sde_kms->rm);
