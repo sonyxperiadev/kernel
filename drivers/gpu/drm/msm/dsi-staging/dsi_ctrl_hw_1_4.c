@@ -22,6 +22,18 @@
 
 #define MMSS_MISC_CLAMP_REG_OFF           0x0014
 
+/*
+ * dsi_ctrl_hw_14_get_cont_splash_status() - to verify whether continuous
+ *                                           splash is enabled or not
+ * @ctrl:          Pointer to the controller host hardware.
+ *
+ * Return:         Return Continuous splash status
+ */
+bool dsi_ctrl_hw_14_get_cont_splash_status(struct dsi_ctrl_hw *ctrl)
+{
+	return ctrl->cont_splash_enabled;
+}
+
 /**
  * dsi_ctrl_hw_14_setup_lane_map() - setup mapping between
  *	logical and physical lanes

@@ -1670,6 +1670,9 @@ static int dsi_enable_io_clamp(struct dsi_ctrl *dsi_ctrl,
 		dsi_ctrl->hw.ops.clamp_disable(&dsi_ctrl->hw,
 			lanes, ulps_enabled);
 
+	dsi_ctrl->hw.cont_splash_enabled = of_property_read_bool(of_node,
+					"qcom,cont-splash-enabled");
+
 	return 0;
 }
 

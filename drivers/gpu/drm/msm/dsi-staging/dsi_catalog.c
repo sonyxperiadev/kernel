@@ -89,7 +89,7 @@ static void dsi_catalog_cmn_init(struct dsi_ctrl_hw *ctrl,
 		ctrl->ops.reg_dump_to_buffer =
 			dsi_ctrl_hw_14_reg_dump_to_buffer;
 		ctrl->ops.schedule_dma_cmd = NULL;
-		ctrl->ops.get_cont_splash_status = NULL;
+		ctrl->ops.get_cont_splash_status = dsi_ctrl_hw_14_get_cont_splash_status;
 		ctrl->ops.kickoff_command_non_embedded_mode = NULL;
 		ctrl->ops.config_clk_gating = NULL;
 		break;
