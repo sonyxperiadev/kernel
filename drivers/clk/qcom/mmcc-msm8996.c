@@ -890,6 +890,7 @@ static struct clk_rcg2 mdp_clk_src = {
 	.hid_width = 5,
 	.parent_map = mmss_xo_mmpll0_mmpll5_gpll0_gpll0_div_map,
 	.freq_tbl = ftbl_mdp_clk_src,
+	.enable_safe_config = true,
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "mdp_clk_src",
 		.parent_names = mmss_xo_mmpll0_mmpll5_gpll0_gpll0_div,
