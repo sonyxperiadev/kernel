@@ -847,6 +847,7 @@ struct dsi_ctrl_hw {
 
 	bool phy_isolation_enabled;
 	bool null_insertion_enabled;
+	bool cont_splash_enabled;
 };
 
 #endif /* _DSI_CTRL_HW_H_ */
