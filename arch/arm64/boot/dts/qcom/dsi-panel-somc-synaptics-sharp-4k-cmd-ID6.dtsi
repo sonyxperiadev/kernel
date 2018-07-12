@@ -1074,6 +1074,7 @@
 				qcom,mdss-dsi-h-back-porch = <300>;
 				qcom,mdss-dsi-h-pulse-width = <40>;
 				qcom,mdss-dsi-h-front-porch = <400>;
+				qcom,mdss-dsi-h-sync-skew = <0>;
 				qcom,mdss-dsi-v-back-porch = <10>;
 				qcom,mdss-dsi-v-pulse-width = <2>;
 				qcom,mdss-dsi-v-front-porch = <12>;
@@ -1132,6 +1133,7 @@
 				qcom,mdss-dsi-h-back-porch = <300>;
 				qcom,mdss-dsi-h-pulse-width = <40>;
 				qcom,mdss-dsi-h-front-porch = <400>;
+				qcom,mdss-dsi-h-sync-skew = <0>;
 				qcom,mdss-dsi-v-back-porch = <10>;
 				qcom,mdss-dsi-v-pulse-width = <2>;
 				qcom,mdss-dsi-v-front-porch = <12>;
@@ -1190,6 +1192,7 @@
 				qcom,mdss-dsi-h-back-porch = <104>;
 				qcom,mdss-dsi-h-pulse-width = <40>;
 				qcom,mdss-dsi-h-front-porch = <140>;
+				qcom,mdss-dsi-h-sync-skew = <0>;
 				qcom,mdss-dsi-v-back-porch = <10>;
 				qcom,mdss-dsi-v-pulse-width = <2>;
 				qcom,mdss-dsi-v-front-porch = <12>;
@@ -1319,6 +1322,7 @@
 				qcom,mdss-dsi-h-back-porch = <300>;
 				qcom,mdss-dsi-h-pulse-width = <40>;
 				qcom,mdss-dsi-h-front-porch = <400>;
+				qcom,mdss-dsi-h-sync-skew = <0>;
 				qcom,mdss-dsi-v-back-porch = <10>;
 				qcom,mdss-dsi-v-pulse-width = <2>;
 				qcom,mdss-dsi-v-front-porch = <12>;
@@ -1342,6 +1346,7 @@
 				qcom,mdss-dsi-h-back-porch = <300>;
 				qcom,mdss-dsi-h-pulse-width = <40>;
 				qcom,mdss-dsi-h-front-porch = <400>;
+				qcom,mdss-dsi-h-sync-skew = <0>;
 				qcom,mdss-dsi-v-back-porch = <10>;
 				qcom,mdss-dsi-v-pulse-width = <2>;
 				qcom,mdss-dsi-v-front-porch = <12>;
@@ -1365,6 +1370,7 @@
 				qcom,mdss-dsi-h-back-porch = <104>;
 				qcom,mdss-dsi-h-pulse-width = <40>;
 				qcom,mdss-dsi-h-front-porch = <140>;
+				qcom,mdss-dsi-h-sync-skew = <0>;
 				qcom,mdss-dsi-v-back-porch = <10>;
 				qcom,mdss-dsi-v-pulse-width = <2>;
 				qcom,mdss-dsi-v-front-porch = <12>;
