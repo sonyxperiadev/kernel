@@ -46,7 +46,15 @@
 		qcom,dynamic-mode-switch-type = "dynamic-resolution-switch-susres";
 		qcom,mdss-dsi-display-timings {
 			1080p60 {
+				qcom,display-topology = <1 0 1>;
+				qcom,default-topology-index = <0>;
 				qcom,mdss-dsi-panel-timings-phy-v2 = [
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1b 08 09 05 03 04 a0];
+				qcom,mdss-dsi-panel-phy-timings = [
 						24 1f 08 09 05 03 04 a0
 						24 1f 08 09 05 03 04 a0
 						24 1f 08 09 05 03 04 a0
@@ -55,7 +63,15 @@
 			};
 
 			1080p120 {
+				qcom,display-topology = <1 0 1>;
+				qcom,default-topology-index = <0>;
 				qcom,mdss-dsi-panel-timings-phy-v2 = [
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1b 08 09 05 03 04 a0];
+				qcom,mdss-dsi-panel-phy-timings = [
 						24 1f 08 09 05 03 04 a0
 						24 1f 08 09 05 03 04 a0
 						24 1f 08 09 05 03 04 a0
@@ -88,7 +104,15 @@
 		qcom,dynamic-mode-switch-type = "dynamic-resolution-switch-susres";
 		qcom,mdss-dsi-display-timings {
 			1080p60 {
+				qcom,display-topology = <1 0 1>;
+				qcom,default-topology-index = <0>;
 				qcom,mdss-dsi-panel-timings-phy-v2 = [
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1b 08 09 05 03 04 a0];
+				qcom,mdss-dsi-panel-phy-timings = [
 						24 1f 08 09 05 03 04 a0
 						24 1f 08 09 05 03 04 a0
 						24 1f 08 09 05 03 04 a0
@@ -97,7 +121,15 @@
 			};
 
 			1080p120 {
+				qcom,display-topology = <1 0 1>;
+				qcom,default-topology-index = <0>;
 				qcom,mdss-dsi-panel-timings-phy-v2 = [
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1b 08 09 05 03 04 a0];
+				qcom,mdss-dsi-panel-phy-timings = [
 						24 1f 08 09 05 03 04 a0
 						24 1f 08 09 05 03 04 a0
 						24 1f 08 09 05 03 04 a0
@@ -130,7 +162,15 @@
 		qcom,dynamic-mode-switch-type = "dynamic-resolution-switch-susres";
 		qcom,mdss-dsi-display-timings {
 			1080p60 {
+				qcom,display-topology = <1 0 1>;
+				qcom,default-topology-index = <0>;
 				qcom,mdss-dsi-panel-timings-phy-v2 = [
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1b 08 09 05 03 04 a0];
+				qcom,mdss-dsi-panel-phy-timings = [
 						24 1f 08 09 05 03 04 a0
 						24 1f 08 09 05 03 04 a0
 						24 1f 08 09 05 03 04 a0
@@ -139,7 +179,15 @@
 			};
 
 			1080p120 {
+				qcom,display-topology = <1 0 1>;
+				qcom,default-topology-index = <0>;
 				qcom,mdss-dsi-panel-timings-phy-v2 = [
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1b 08 09 05 03 04 a0];
+				qcom,mdss-dsi-panel-phy-timings = [
 						24 1f 08 09 05 03 04 a0
 						24 1f 08 09 05 03 04 a0
 						24 1f 08 09 05 03 04 a0
@@ -172,7 +220,15 @@
 		qcom,dynamic-mode-switch-type = "dynamic-resolution-switch-susres";
 		qcom,mdss-dsi-display-timings {
 			1080p60 {
+				qcom,display-topology = <1 0 1>;
+				qcom,default-topology-index = <0>;
 				qcom,mdss-dsi-panel-timings-phy-v2 = [
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1b 08 09 05 03 04 a0];
+				qcom,mdss-dsi-panel-phy-timings = [
 						24 1f 08 09 05 03 04 a0
 						24 1f 08 09 05 03 04 a0
 						24 1f 08 09 05 03 04 a0
@@ -181,7 +237,15 @@
 			};
 
 			1080p120 {
+				qcom,display-topology = <1 0 1>;
+				qcom,default-topology-index = <0>;
 				qcom,mdss-dsi-panel-timings-phy-v2 = [
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1b 08 09 05 03 04 a0];
+				qcom,mdss-dsi-panel-phy-timings = [
 						24 1f 08 09 05 03 04 a0
 						24 1f 08 09 05 03 04 a0
 						24 1f 08 09 05 03 04 a0
@@ -214,7 +278,15 @@
 		qcom,dynamic-mode-switch-type = "dynamic-resolution-switch-susres";
 		qcom,mdss-dsi-display-timings {
 			1080p60 {
+				qcom,display-topology = <1 0 1>;
+				qcom,default-topology-index = <0>;
 				qcom,mdss-dsi-panel-timings-phy-v2 = [
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1b 08 09 05 03 04 a0];
+				qcom,mdss-dsi-panel-phy-timings = [
 						24 1f 08 09 05 03 04 a0
 						24 1f 08 09 05 03 04 a0
 						24 1f 08 09 05 03 04 a0
@@ -223,7 +295,15 @@
 			};
 
 			1080p120 {
+				qcom,display-topology = <1 0 1>;
+				qcom,default-topology-index = <0>;
 				qcom,mdss-dsi-panel-timings-phy-v2 = [
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1f 08 09 05 03 04 a0
+						24 1b 08 09 05 03 04 a0];
+				qcom,mdss-dsi-panel-phy-timings = [
 						24 1f 08 09 05 03 04 a0
 						24 1f 08 09 05 03 04 a0
 						24 1f 08 09 05 03 04 a0
