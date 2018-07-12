@@ -237,6 +237,28 @@
 			iommus = <&mdp_smmu 1>;
 		};
 
+		smmu_sde_nrt_unsec: qcom,smmu_rot_unsec_cb {
+			compatible = "qcom,smmu_sde_nrt_unsec";
+			iommus = <&rot_smmu 0>;
+			gdsc-mdss-supply = <&gdsc_mmagic_mdss>;
+			clocks = <&clock_mmss SMMU_ROT_AHB_CLK>,
+				<&clock_mmss MMAGIC_MDSS_AXI_CLK>,
+				<&clock_mmss SMMU_ROT_AXI_CLK>;
+			clock-names = "rot_ahb_clk", "mmagic_mdss_axi_clk",
+				"rot_axi_clk";
+		};
+
+		smmu_sde_nrt_sec: qcom,smmu_rot_sec_cb {
+			compatible = "qcom,smmu_sde_nrt_sec";
+			iommus = <&rot_smmu 1>;
+			gdsc-mdss-supply = <&gdsc_mmagic_mdss>;
+			clocks = <&clock_mmss SMMU_ROT_AHB_CLK>,
+				<&clock_mmss MMAGIC_MDSS_AXI_CLK>,
+				<&clock_mmss SMMU_ROT_AXI_CLK>;
+			clock-names = "rot_ahb_clk", "mmagic_mdss_axi_clk",
+				"rot_axi_clk";
+		};
+
 		/* data and reg bus scale settings */
 		qcom,sde-data-bus {
 			qcom,msm-bus,name = "mdss_sde";
