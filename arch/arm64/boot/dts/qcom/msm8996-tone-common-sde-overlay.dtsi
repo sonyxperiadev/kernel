@@ -117,3 +117,7 @@ msm_drm.dsi_display0=dsi_panel_cmd_display:config0";
 		ibb-supply = <&ibb_regulator>;
 	};	
 };
+
+&mdss_dsi0 {
+	qcom,cont-splash-enabled;
+};
