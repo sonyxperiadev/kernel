@@ -708,8 +708,8 @@ static int msm_iommu_dynamic_attach(struct iommu_domain *domain, struct device *
 		.oas		= MMU_OAS,
 		.tlb		= &msm_iommu_gather_ops,
 		.iommu_dev	= dev,
-		//.iova_base	= domain->geometry.aperture_start,
-		//.iova_end	= domain->geometry.aperture_end,
+		.iova_base	= domain->geometry.aperture_start,
+		.iova_end	= domain->geometry.aperture_end,
 	};
 	domain->geometry.aperture_end = (1ULL << priv->pgtbl_cfg.ias) - 1;
 	domain->geometry.force_aperture = true;
@@ -843,15 +843,15 @@ static int msm_iommu_attach_dev(struct iommu_domain *domain, struct device *dev)
 		.pgsize_bitmap	= msm_iommu_ops.pgsize_bitmap,
 		.ias		= MMU_IAS,
 		.oas		= MMU_OAS,
-		//.sep		= MMU_SEP,
+		.sep		= MMU_SEP,
 		.tlb		= &msm_iommu_gather_ops,
 		.arm_msm_secure_cfg = {
 			.sec_id = iommu_drvdata->sec_id,
 			.cbndx  = ctx_drvdata->num,
 		},
 		.iommu_dev	= iommu_drvdata->dev,
-		//.iova_base	= domain->geometry.aperture_start,
-		//.iova_end	= domain->geometry.aperture_end,
+		.iova_base	= domain->geometry.aperture_start,
+		.iova_end	= domain->geometry.aperture_end,
 	};
 	domain->geometry.aperture_end = (1ULL << priv->pgtbl_cfg.ias) - 1;
 	domain->geometry.force_aperture = true;
