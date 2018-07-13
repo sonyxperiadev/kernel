@@ -953,6 +953,7 @@ static struct snd_soc_dai_link msm8952_common_fe_dai[] = {
 		.codec_dai_name = "snd-soc-dummy-dai",
 		.codec_name = "snd-soc-dummy",
 	},
+#if 0
 	{/* hw:x,28 */
 		.name = "MSM8X16 Compress3",
 		.stream_name = "Compress3",
@@ -969,6 +970,7 @@ static struct snd_soc_dai_link msm8952_common_fe_dai[] = {
 		 /* this dai link has playback support */
 		.id = MSM_FRONTEND_DAI_MULTIMEDIA10,
 	},
+#endif
 	{/* hw:x,29 */
 		.name = "MSM8X16 Compress4",
 		.stream_name = "Compress4",
