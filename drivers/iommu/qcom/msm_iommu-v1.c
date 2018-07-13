@@ -640,7 +640,7 @@ static struct iommu_domain *msm_iommu_domain_alloc(unsigned type)
 	 * hence only UNMANAGED is allowed. TODO: Find a way to differentiate
 	 * between secure mapping ONLY and insecure pagetable allocation.
 	 */
-	if (type != IOMMU_DOMAIN_UNMANAGED && type != IOMMU_DOMAIN_DMA)
+	if (type != IOMMU_DOMAIN_UNMANAGED)
 		return NULL;
 
 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
