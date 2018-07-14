@@ -19,6 +19,7 @@
 
 qcom,apollo_tmm_4250mv {
 	qcom, = <24>;
+	somc,initial-capacity-uah = <2899000>;
 	qcom,max-voltage-uv = <4245000>;
 	qcom,fg-cc-cv-threshold-mv = <4235>;
 	qcom,fastchg-current-ma = <2760>;
