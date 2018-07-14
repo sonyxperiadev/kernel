@@ -460,6 +460,12 @@ config QCOM_SPMI_TEMP_ALARM
 	  real time die temperature if an ADC is present or an estimate of the
 	  temperature based upon the over temperature stage value.
 
+config VIRTUAL_THERMAL
+	tristate "Virtual thermal OF driver"
+	depends on OF
+	help
+	  This enables the virtual thermal sensors driver
+
 config GENERIC_ADC_THERMAL
 	tristate "Generic ADC based thermal sensor"
 	depends on IIO
