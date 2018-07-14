@@ -120,6 +120,7 @@ static unsigned long recheck_delay;
 static unsigned long last_change_time;
 static unsigned int  load_sample_rate = 20; /* msec */
 static struct cpu_limits rqb_freq_limits[MAX_CLUSTERS];
+static enum cpuhp_state rqb_hp_online;
 static struct workqueue_struct *rqbalance_wq;
 static struct delayed_work rqbalance_work;
 static RQBALANCE_STATE rqbalance_state;
@@ -1034,6 +1035,11 @@ static void rqbalance_stop(void)
 	cpufreq_unregister_notifier(&balanced_cpufreq_nb,
 		CPUFREQ_TRANSITION_NOTIFIER);
 
+	cpufreq_unregister_notifier(&frequency_limits_nb,
+		CPUFREQ_POLICY_NOTIFIER);
+
+	cpuhp_remove_state_nocalls(rqb_hp_online);
+
 	unregister_pm_notifier(&pm_notifier_block);
 
 	/* now we can force the governor to be idle */
@@ -1050,11 +1056,19 @@ static void rqbalance_stop(void)
 
 static int rqbalance_cfl_start(void)
 {
+	int rc = 0;
+
 	cpufreq_register_notifier(&frequency_limits_nb,
 		CPUFREQ_POLICY_NOTIFIER);
 	
-	return cpuhp_setup_state_nocalls(CPUHP_AP_ONLINE,
+	rc = cpuhp_setup_state_nocalls(CPUHP_AP_ONLINE,
 		"rqbalance_cpuhp", cfl_hotplug_notify, NULL);
+	if (rc < 0)
+		goto end;
+	rqb_hp_online = rc;
+	rc = 0;
+end:
+	return rc;
 }
 
 static int rqbalance_start(void)
