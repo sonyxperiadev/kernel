@@ -63,14 +63,6 @@
 };
 
 &mdss_mdp {
-	connectors = <&sde_wb>;
-};
-
-&sde_rscc {
-	status = "disabled";
-};
-
-&mdss_mdp {
 	/* Default */
 	dsi_default_panel: somc,default_cmd_panel{
 		qcom,mdss-dsi-panel-name = "apollo default";
