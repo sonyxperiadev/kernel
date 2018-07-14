@@ -68,8 +68,6 @@
 struct msm_iommu_master {
 	struct list_head list;
 	unsigned int ctx_num;
-	bool dev_added;
-	bool is_kgsl_iommu;
 	struct device *dev;
 	struct msm_iommu_drvdata *iommu_drvdata;
 	struct msm_iommu_ctx_drvdata *ctx_drvdata;
@@ -765,10 +763,7 @@ static int msm_iommu_attach_dev(struct iommu_domain *domain, struct device *dev)
 		priv->client_name = dev_name(dev);
 
 	master = dev->archdata.iommu;
-	if (unlikely(!master->dev_added)) {
-		pr_info("Using workaround for broken ARM IOMMU groups\n");
-		return 0;
-	}
+
 	iommu_drvdata = master->iommu_drvdata;
 	ctx_drvdata = master->ctx_drvdata;
 
@@ -1135,14 +1130,9 @@ static int msm_iommu_add_device(struct device *dev)
 
 	master = dev->archdata.iommu;
 
-	/* k4.9 ugly workaround */
-	if (!master->is_kgsl_iommu) {
-		group = iommu_group_get_for_dev(dev);
-		if (IS_ERR(group))
-			return PTR_ERR(group);
-	}
-
-	master->dev_added = true;
+	group = iommu_group_get_for_dev(dev);
+	if (IS_ERR(group))
+		return PTR_ERR(group);
 
 	return 0;
 }
@@ -1588,7 +1578,6 @@ static int msm_iommu_of_xlate(struct device *dev, struct of_phandle_args *args)
 	struct msm_iommu_master *master;
 	struct device_node *child;
 	bool found = false;
-	bool is_kgsl_iommu;
 	u32 val;
 	int ret;
 
@@ -1620,8 +1609,6 @@ static int msm_iommu_of_xlate(struct device *dev, struct of_phandle_args *args)
 
 		if (val == args->args[0]) {
 			found = true;
-			is_kgsl_iommu = of_property_read_bool(child,
-				"qcom,is-kgsl-ctx");
 			break;
 		}
 	}
@@ -1641,7 +1628,6 @@ static int msm_iommu_of_xlate(struct device *dev, struct of_phandle_args *args)
 	master->dev = dev;
 	master->iommu_drvdata = iommu_drvdata;
 	master->ctx_drvdata = ctx_drvdata;
-	master->is_kgsl_iommu = is_kgsl_iommu;
 
 	dev_dbg(dev, "adding master for device %s\n", dev_name(dev));
 
