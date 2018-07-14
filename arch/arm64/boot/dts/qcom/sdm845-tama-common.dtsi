@@ -203,12 +203,12 @@
 			    &sdm_gpio_78 &sdm_gpio_79 &sdm_gpio_80 &sdm_gpio_87 &sdm_gpio_88
 			    &sdm_gpio_89 &sdm_gpio_90 &sdm_gpio_91
 			    &sdm_gpio_92 &sdm_gpio_93 &sdm_gpio_94 &sdm_gpio_95 &sdm_gpio_96
-			    &sdm_gpio_102 &sdm_gpio_103 &sdm_gpio_104
+			    &sdm_gpio_99 &sdm_gpio_102 &sdm_gpio_103 &sdm_gpio_104
 			    &sdm_gpio_105 &sdm_gpio_106 &sdm_gpio_107 &sdm_gpio_108 &sdm_gpio_109
 			    &sdm_gpio_110 &sdm_gpio_111 &sdm_gpio_112 &sdm_gpio_113 &sdm_gpio_114
 			    &sdm_gpio_115 &sdm_gpio_116 &sdm_gpio_120 &sdm_gpio_121 &sdm_gpio_122
 			    &sdm_gpio_123 &sdm_gpio_124 &sdm_gpio_125 &sdm_gpio_126 &sdm_gpio_128
-			    &sdm_gpio_129>;
+			    &sdm_gpio_129 &sdm_gpio_133>;
 
 		/* If product common default setting is needed,
 		fill pinctrl-1 value in <product>_common.dtsi */
@@ -3083,31 +3083,6 @@
 		config {
 			pins = "gpio125";
 			drive-strength = <2>;
-			bias-pull-down;
-		};
-	};
-	pmx_ts_active: pmx_ts_active {
-		mux {
-			pins = "gpio125";
-			function = "gpio";
-		};
-
-		config {
-			pins = "gpio125";
-			driver-strength = <2>;
-			bias-pull-up;
-		};
-	};
-
-	pmx_ts_suspend: pmx_ts_suspend {
-		mux {
-			pins = "gpio125";
-			function = "gpio";
-		};
-
-		config {
-			pins = "gpio125";
-			driver-strength = <2>;
 			bias-pull-down;
 		};
 	};
