@@ -3114,21 +3114,26 @@
 };
 
 &pm8950_gpios {
-	gpio@c000 {
-		status = "ok";
-		qcom,mode = <1>;
-		qcom,pull = <5>;
-		qcom,vin-sel = <0>;
-		qcom,src-sel = <2>;
-		qcom,master-en = <1>;
-		qcom,out-strength = <2>;
+	pm8950_gpio_1: cdc_pm_mclk {
+		cdc_pm {
+			pins = "gpio1";
+			function = "func1"; /* SF1 */
+			output-high;
+			bias-disable;
+			drive-push-pull;
+			qcom,drive-strength = <2>;
+			power-source = <0>; /* VPH_PWR */
+		};
 	};
-	gpio@c600 {
-		status = "ok";
-		qcom,mode = <1>;
-		qcom,pull = <5>;
-		qcom,vin-sel = <0>;
-		qcom,src-sel = <0>;
-		qcom,master-en = <1>;
+
+	pm8950_gpio_7: wcd_eldo_en {
+		wcd_eldo {
+			pins = "gpio7";
+			function = "gpio";
+			output-high;
+			bias-disable;
+			drive-push-pull;
+			power-source = <0>; /* VPH_PWR */
+		};
 	};
 };
