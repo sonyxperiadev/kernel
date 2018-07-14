@@ -19,6 +19,7 @@
 
 qcom,akari_tmm_4380mv {
 	qcom, = <24>;
+	somc,initial-capacity-uah = <3217000>;
 	qcom,max-voltage-uv = <4380000>;
 	qcom,fg-cc-cv-threshold-mv = <4370>;
 	qcom,fastchg-current-ma = <2275>;
