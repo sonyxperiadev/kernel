@@ -499,6 +499,7 @@ struct smb_charger {
 	bool			jeita_vbus_rising;
 	bool			jeita_rb_warm_hi_vbatt_en;
 	bool			jeita_keep_fake_charging;
+	int			jeita_debug_log_interval;
 
 	/* low batt shutdown */
 	int			low_batt_shutdown_enabled;

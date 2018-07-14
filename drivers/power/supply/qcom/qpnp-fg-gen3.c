@@ -1305,6 +1305,13 @@ static int fg_get_batt_profile(struct fg_chip *chip)
 		strlcpy(chip->org_batt_type_str,
 				chip->bp.batt_type_str, ORG_BATT_TYPE_SIZE + 1);
 
+	rc = of_property_read_u32(profile_node, "somc,initial-capacity-uah",
+			&chip->bp.initial_capacity);
+	if (rc < 0) {
+		pr_err("battery initial capacity unavailable, rc:%d\n", rc);
+		chip->bp.initial_capacity = -EINVAL;
+	}
+
 #endif
 
 	rc = of_property_read_u32(profile_node, "qcom,max-voltage-uv",
@@ -1628,7 +1635,11 @@ static int fg_save_learned_cap_to_sram(struct fg_chip *chip)
 	return 0;
 }
 
+#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+#define CAPACITY_DELTA_DECIPCT	400
+#else
 #define CAPACITY_DELTA_DECIPCT	500
+#endif
 static int fg_load_learned_cap_from_sram(struct fg_chip *chip)
 {
 	int rc, act_cap_mah;
@@ -1648,6 +1659,29 @@ static int fg_load_learned_cap_from_sram(struct fg_chip *chip)
 
 		delta_cc_uah = abs(chip->cl.learned_cc_uah -
 					chip->cl.nom_cap_uah);
+#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+		if (chip->cl.learned_cc_uah > chip->cl.nom_cap_uah) {
+			fg_dbg(chip, FG_SOMC,
+				"learned_cc_uah: %lld is higher than expected,"
+				" capping it to nom_cap_uah: %lld\n",
+				chip->cl.learned_cc_uah, chip->cl.nom_cap_uah);
+			chip->cl.learned_cc_uah = chip->cl.nom_cap_uah;
+		} else {
+			pct_nom_cap_uah =
+				div64_s64((int64_t)chip->cl.nom_cap_uah *
+				CAPACITY_DELTA_DECIPCT, 1000);
+			if (chip->cl.learned_cc_uah < pct_nom_cap_uah) {
+				fg_dbg(chip, FG_SOMC,
+					"learned_cc_uah: %lld is lower than "
+					"expected, capping it to %d%% of "
+					"nom_cap_uah: %lld\n",
+					chip->cl.learned_cc_uah,
+					CAPACITY_DELTA_DECIPCT / 10,
+					pct_nom_cap_uah);
+				chip->cl.learned_cc_uah = pct_nom_cap_uah;
+			}
+		}
+#else
 		pct_nom_cap_uah = div64_s64((int64_t)chip->cl.nom_cap_uah *
 				CAPACITY_DELTA_DECIPCT, 1000);
 		/*
@@ -1660,7 +1694,7 @@ static int fg_load_learned_cap_from_sram(struct fg_chip *chip)
 				chip->cl.learned_cc_uah, chip->cl.nom_cap_uah);
 			chip->cl.learned_cc_uah = chip->cl.nom_cap_uah;
 		}
-
+#endif
 		rc = fg_save_learned_cap_to_sram(chip);
 		if (rc < 0)
 			pr_err("Error in saving learned_cc_uah, rc=%d\n", rc);
@@ -4516,6 +4550,10 @@ static int fg_psy_get_property(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN:
 		pval->intval = chip->cl.nom_cap_uah;
+#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+		if (chip->bp.initial_capacity >= 0)
+			pval->intval = chip->bp.initial_capacity;
+#endif
 		break;
 	case POWER_SUPPLY_PROP_RESISTANCE_ID:
 		pval->intval = chip->batt_id_ohms;
@@ -4656,11 +4694,39 @@ static int fg_psy_set_property(struct power_supply *psy,
 			pr_warn("Capacity learning active!\n");
 			return 0;
 		}
+#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+		if (pval->intval > chip->cl.nom_cap_uah) {
+			fg_dbg(chip, FG_SOMC,
+				"replaced charge_full: %d is higher than "
+				"expected, capping it to nom_cap_uah: %lld\n",
+				pval->intval, chip->cl.nom_cap_uah);
+			chip->cl.learned_cc_uah = chip->cl.nom_cap_uah;
+		} else {
+			int64_t pct_nom_cap_uah;
+
+			pct_nom_cap_uah =
+				div64_s64((int64_t)chip->cl.nom_cap_uah *
+				CAPACITY_DELTA_DECIPCT, 1000);
+			if (pval->intval < pct_nom_cap_uah) {
+				fg_dbg(chip, FG_SOMC,
+					"replaced charge_full: %d is lower "
+					"than expected, capping it to %d%% "
+					"of nom_cap_uah: %lld\n",
+					pval->intval,
+					CAPACITY_DELTA_DECIPCT / 10,
+					pct_nom_cap_uah);
+				chip->cl.learned_cc_uah = pct_nom_cap_uah;
+			} else {
+				chip->cl.learned_cc_uah = pval->intval;
+			}
+		}
+#else
 		if (pval->intval <= 0 || pval->intval > chip->cl.nom_cap_uah) {
 			pr_err("charge_full is out of bounds\n");
 			return -EINVAL;
 		}
 		chip->cl.learned_cc_uah = pval->intval;
+#endif
 		rc = fg_save_learned_cap_to_sram(chip);
 		if (rc < 0)
 			pr_err("Error in saving learned_cc_uah, rc=%d\n", rc);

@@ -878,6 +878,9 @@ int smblib_rerun_apsd_if_required(struct smb_charger *chg)
 {
 	union power_supply_propval val;
 	int rc;
+#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+	const struct apsd_result *apsd_result;
+#endif
 
 	rc = smblib_get_prop_usb_present(chg, &val);
 	if (rc < 0) {
@@ -889,7 +892,14 @@ int smblib_rerun_apsd_if_required(struct smb_charger *chg)
 		return 0;
 
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
-	smblib_dbg(chg, PR_SOMC, "start type-c reconnection\n");
+	apsd_result = smblib_get_apsd_result(chg);
+	if (apsd_result->pst == POWER_SUPPLY_TYPE_USB ||
+		apsd_result->pst == POWER_SUPPLY_TYPE_USB_CDP) {
+		goto skip_typec_reconnection;
+	}
+	smblib_dbg(chg, PR_SOMC, "start type-c reconnection (%s)\n",
+			apsd_result->name);
+
 	rc = smblib_masked_write(chg,
 				TYPE_C_INTRPT_ENB_SOFTWARE_CTRL_REG,
 				TYPEC_DISABLE_CMD_BIT,
@@ -910,6 +920,7 @@ int smblib_rerun_apsd_if_required(struct smb_charger *chg)
 	msleep(200);
 	smblib_dbg(chg, PR_SOMC, "complete type-c reconnection\n");
 
+skip_ypec_reconnection:
 #endif
 	rc = smblib_request_dpdm(chg, true);
 	if (rc < 0)
@@ -6894,7 +6905,8 @@ static void smblib_somc_jeita_work(struct work_struct *work)
 		chg->jeita_keep_fake_charging = false;
 	}
 
-	if (synth_cond != chg->jeita_synth_condition || condition_changed) {
+	if ((synth_cond != chg->jeita_synth_condition) ||
+	    condition_changed || chg->jeita_debug_log_interval) {
 		power_supply_changed(chg->batt_psy);
 		if (chg->jeita_use_aux && chg->jeita_use_wlc)
 			smblib_dbg(chg, PR_SOMC,
@@ -6924,7 +6936,9 @@ static void smblib_somc_jeita_work(struct work_struct *work)
 	chg->jeita_synth_condition = synth_cond;
 
 reschedule:
-	if (usbin_valid && skin_temp_failed)
+	if (chg->jeita_debug_log_interval)
+		interval_ms = chg->jeita_debug_log_interval;
+	else if (usbin_valid && skin_temp_failed)
 		interval_ms = JEITA_WORK_DELAY_RETRY_MS;
 	else if (usbin_valid && !skin_temp_failed)
 		interval_ms = JEITA_WORK_DELAY_CHARGING_MS;
