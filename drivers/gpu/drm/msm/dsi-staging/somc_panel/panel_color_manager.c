@@ -336,6 +336,7 @@ int somc_panel_parse_dt_colormgr_config(struct dsi_panel *panel,
 	}
 
 	color_mgr = panel->spec_pdata->color_mgr;
+	color_mgr->dsi_pcc_applied = false;
 	color_mgr->standard_pcc_enable =
 		of_property_read_bool(np, "somc,mdss-dsi-pcc-enable");
 
@@ -374,7 +375,7 @@ int somc_panel_parse_dt_colormgr_config(struct dsi_panel *panel,
 			pr_err("%s:%d, Unable to read pcc table",
 				__func__, __LINE__);
 		}
-		color_mgr->standard_pcc_data.pcc_sts |= PCC_STS_UD;
+		//color_mgr->standard_pcc_data.pcc_sts |= PCC_STS_UD;
 	} else {
 		pr_err("%s:%d, Unable to read pcc table\n",
 			__func__, __LINE__);
@@ -559,6 +560,17 @@ int somc_panel_pcc_setup(struct dsi_display *display)
 
 	color_mgr = panel->spec_pdata->color_mgr;
 
+	if (color_mgr->dsi_pcc_applied) {
+		pr_notice("%s (%d): PCC already applied\n", __func__, __LINE__);
+		goto exit;
+	}
+
+	if (display->tx_cmd_buf == NULL) {
+		ret = dsi_host_alloc_cmd_tx_buffer(display);
+		if (ret)
+			pr_err("failed to allocate cmd tx buffer memory\n");
+	}
+
 	if (color_mgr->uv_read_cmds.cmds.send_cmd) {
 		get_uv_data(display, &color_mgr->u_data, &color_mgr->v_data);
 	}
@@ -682,6 +694,7 @@ int somc_panel_pcc_setup(struct dsi_display *display)
 			__func__, __LINE__);
 		goto exit;
 	}
+	color_mgr->dsi_pcc_applied = true;
 
 exit:
 	return 0;
@@ -919,6 +932,25 @@ error:
 	for (--i; i >= 0 ; i--)
 		device_remove_file(dev, colormgr_attributes + i);
 	return -ENODEV;
+}
+
+
+int somc_panel_colormgr_apply_calibrations(void)
+{
+	struct dsi_display *display = dsi_display_get_main_display();
+	int rc = 0;
+
+	if (!display)
+		return -EINVAL;
+
+	rc = somc_panel_pcc_setup(display);
+	if (rc) {
+		pr_err("%s: Couldn't apply PCC calibration\n", __func__);
+	}
+
+	/* rc += somc_panel_pa_setup(panel); */
+
+	return rc;
 }
 
 int somc_panel_color_manager_init(struct dsi_display *display)

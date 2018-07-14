@@ -29,6 +29,8 @@
 #include <linux/export.h>
 #include <linux/drm_notify.h>
 #include <linux/sde_io_util.h>
+#include <linux/workqueue.h>
+#include <linux/interrupt.h>
 #include "somc_panel_exts.h"
 #include "dsi_display.h"
 #include "dsi_panel.h"
@@ -165,8 +167,20 @@ int dsi_panel_driver_gpio_request(struct dsi_panel *panel)
 		}
 	}
 
-	goto error;
+	if (gpio_is_valid(spec_pdata->disp_err_fg_gpio)) {
+		rc = gpio_request(spec_pdata->disp_err_fg_gpio,
+							"disp_err_fg_gpio");
+		if (rc) {
+			pr_err("request disp err fg gpio failed, rc=%d\n", rc);
+			goto error_release_disp_err_fg;
+		}
+	}
 
+	goto no_error;
+
+error_release_disp_err_fg:
+	if (gpio_is_valid(spec_pdata->disp_err_fg_gpio))
+		gpio_free(spec_pdata->disp_err_fg_gpio);
 error_release_disp_dcdc_en:
 	if (gpio_is_valid(spec_pdata->disp_dcdc_en_gpio))
 		gpio_free(spec_pdata->disp_dcdc_en_gpio);
@@ -176,7 +190,7 @@ error_release_touch_reset:
 error_release_touch_vddio_en:
 	if (gpio_is_valid(spec_pdata->touch_vddio_en_gpio))
 		gpio_free(spec_pdata->touch_vddio_en_gpio);
-error:
+no_error:
 	return rc;
 }
 
@@ -485,13 +499,17 @@ int dsi_panel_driver_post_power_off(struct dsi_panel *panel)
 	}
 	spec_pdata = panel->spec_pdata;
 
-	rc = somc_panel_vreg_ctrl(&spec_pdata->vspvsn_power_info, "ibb", false);
-	if (rc)
-		pr_err("%s: failed to disable vsn, rc=%d\n", __func__, rc);
+	if (!spec_pdata->oled_disp) {
+		rc = somc_panel_vreg_ctrl(
+			&spec_pdata->vspvsn_power_info, "ibb", false);
+		if (rc)
+			pr_err("%s: failed to disable vsn, rc=%d\n", __func__, rc);
 
-	rc = somc_panel_vreg_ctrl(&spec_pdata->vspvsn_power_info, "lab", false);
-	if (rc)
-		pr_err("%s: failed to disable vsp, rc=%d\n", __func__, rc);
+		rc = somc_panel_vreg_ctrl(
+			&spec_pdata->vspvsn_power_info, "lab", false);
+		if (rc)
+			pr_err("%s: failed to disable vsp, rc=%d\n", __func__, rc);
+	}
 
 	if (!spec_pdata->rst_b_seq) {
 		rc = dsi_panel_driver_reset_panel(panel, 0);
@@ -625,16 +643,20 @@ int dsi_panel_driver_power_on(struct dsi_panel *panel)
 		}
 	}
 
-	rc = somc_panel_vreg_ctrl(&spec_pdata->vspvsn_power_info, "lab", true);
-	if (rc) {
-		pr_err("%s: failed to enable vsp, rc=%d\n", __func__, rc);
-		goto exit;
-	}
+	if (!spec_pdata->oled_disp) {
+		rc = somc_panel_vreg_ctrl(
+			&spec_pdata->vspvsn_power_info, "lab", true);
+		if (rc) {
+			pr_err("%s: failed to enable vsp, rc=%d\n", __func__, rc);
+			goto exit;
+		}
 
-	rc = somc_panel_vreg_ctrl(&spec_pdata->vspvsn_power_info, "ibb", true);
-	if (rc) {
-		pr_err("%s: failed to enable vsn, rc=%d\n", __func__, rc);
-		goto exit;
+		rc = somc_panel_vreg_ctrl(
+			&spec_pdata->vspvsn_power_info, "ibb", true);
+		if (rc) {
+			pr_err("%s: failed to enable vsn, rc=%d\n", __func__, rc);
+			goto exit;
+		}
 	}
 
 	pr_notice("@@@@ panel power on @@@@\n");
@@ -659,7 +681,9 @@ int dsi_panel_driver_power_on(struct dsi_panel *panel)
 		}
 	}
 
-	dsi_panel_driver_en_dcdc(panel, 1);
+	if (!spec_pdata->oled_disp)
+		dsi_panel_driver_en_dcdc(panel, 1);
+
 	incell->state |= INCELL_POWER_STATE_ON;
 
 	goto exit;
@@ -851,7 +875,7 @@ int dsi_panel_driver_parse_dt(struct dsi_panel *panel,
 	int i = 0;
 	int rc = 0;
 	int valid = -EINVAL;
-	const char *rst_seq;
+	const char *rst_seq, *panel_type;
 
 	if (!panel) {
 		pr_err("%s: Invalid input panel\n", __func__);
@@ -976,6 +1000,17 @@ int dsi_panel_driver_parse_dt(struct dsi_panel *panel,
 								__func__);
 	}
 
+	panel_type = of_get_property(np, "somc,dsi-panel-type", NULL);
+	if (!panel_type) {
+		pr_debug("%s:failed parse dsi-panel-type \n", __func__);
+		spec_pdata->oled_disp = false;
+	} else if (!strcmp(panel_type, "oled")) {
+		spec_pdata->oled_disp = true;
+	} else {
+		pr_err("%s:failed parse dsi-panel-type \n", __func__);
+		spec_pdata->oled_disp = false;
+	}
+
 	rc = of_property_read_u32(np,
 			"somc,pw-down-period", &tmp);
 	spec_pdata->down_period = !rc ? tmp : 0;
@@ -1097,6 +1132,13 @@ int dsi_panel_driver_parse_gpios(struct dsi_panel *panel,
 		pr_err("%s: disp dcdc en gpio not specified\n", __func__);
 	}
 
+	spec_pdata->disp_err_fg_gpio = of_get_named_gpio(of_node,
+					      "somc,disp-err-flag-gpio",
+					      0);
+	if (!gpio_is_valid(spec_pdata->disp_err_fg_gpio)) {
+		pr_err("%s: failed get disp error flag gpio\n", __func__);
+	}
+
 error:
 	return rc;
 }
@@ -1168,18 +1210,39 @@ static void dsi_panel_driver_notify_suspend(struct dsi_panel *panel)
 
 	drm_notifier_call_chain(DRM_EXT_EVENT_BEFORE_BLANK, &event);
 
- }
+}
+
+static void dsi_panel_driver_oled_short_det_setup(struct dsi_panel *panel,
+								bool enable)
+{
+	if (!panel) {
+		pr_err("%s: Invalid input data\n", __func__);
+		return;
+	}
+
+	if (!panel->spec_pdata->oled_disp)
+		return;
+
+	if (enable)
+		dsi_panel_driver_oled_short_det_enable(
+				panel->spec_pdata, SHORT_WORKER_PASSIVE);
+	else
+		dsi_panel_driver_oled_short_det_disable(panel->spec_pdata);
+}
 
 void dsi_panel_driver_post_enable(struct dsi_panel *panel)
 {
 	panel->spec_pdata->display_onoff_state = true;
 
+	dsi_panel_driver_oled_short_det_setup(panel, true);
+	somc_panel_colormgr_apply_calibrations();
 	somc_panel_fps_cmd_send(panel);
 	dsi_panel_driver_notify_resume(panel);
 }
 
 void dsi_panel_driver_pre_disable(struct dsi_panel  *panel)
 {
+	dsi_panel_driver_oled_short_det_setup(panel, false);
 	dsi_panel_driver_notify_suspend(panel);
 }
 
@@ -1211,6 +1274,12 @@ static ssize_t dsi_panel_aod_mode_store(struct device *dev,
 	int mode;
 
 	spec_pdata = panel->spec_pdata;
+
+	if (!spec_pdata->display_onoff_state) {
+		pr_err("%s: Disp-On is not yet completed. Please retry\n",
+			__func__);
+		return -EINVAL;
+	}
 
 	if (sscanf(buf, "%d", &mode) < 0) {
 		pr_err("sscanf failed to set mode. keep current mode=%d\n",
@@ -1770,6 +1839,195 @@ int dsi_panel_driver_get_chargemon_exit(void)
 void dsi_panel_driver_reset_chargemon_exit(void)
 {
 	s_chargemon_exit = 0;
+}
+
+int dsi_panel_driver_active_touch_reset(struct dsi_panel *panel)
+{
+	struct panel_specific_pdata *spec_pdata = NULL;
+	int rc = 0;
+
+	if (!panel) {
+		pr_err("%s: Invalid input panel\n", __func__);
+		return -EINVAL;
+	}
+	spec_pdata = panel->spec_pdata;
+	gpio_set_value(spec_pdata->reset_touch_gpio, 1);
+
+	return rc;
+}
+
+static irqreturn_t dsi_panel_driver_oled_short_det_handler(int irq, void *dev)
+{
+	struct dsi_display *display = dev;
+	struct short_detection_ctrl *short_det =
+				&display->panel->spec_pdata->short_det;
+
+	if (display == NULL || short_det == NULL) {
+		pr_err("%s: Invalid input data\n", __func__);
+		goto exit;
+	}
+
+	pr_err("%s: VREG_NG interrupt!\n", __func__);
+
+	if ((gpio_get_value(display->panel->spec_pdata->disp_err_fg_gpio)) == 1)
+		pr_err("%s: VREG NG!!!\n", __func__);
+	else
+		goto exit;
+
+	if (short_det->short_check_working) {
+		pr_debug("%s already being check work.\n", __func__);
+		goto exit;
+	}
+
+	short_det->current_chatter_cnt = SHORT_CHATTER_CNT_START;
+
+	schedule_delayed_work(&short_det->check_work,
+		msecs_to_jiffies(short_det->target_chatter_check_interval));
+
+	goto exit;
+
+exit:
+	return IRQ_HANDLED;
+}
+
+void dsi_panel_driver_oled_short_det_enable(
+		struct panel_specific_pdata *spec_pdata, bool inWork)
+{
+	struct short_detection_ctrl *short_det = &spec_pdata->short_det;
+
+	if (short_det == NULL) {
+		pr_err("%s: Invalid input data\n", __func__);
+		return;
+	}
+
+	if (short_det->short_check_working && !inWork) {
+		pr_debug("%s: short_check_worker is already being processed.\n",
+								__func__);
+		return;
+	}
+
+	if (short_det->irq_enable)
+		return;
+
+	short_det->irq_enable = true;
+	enable_irq(short_det->irq_num);
+
+	return;
+}
+
+void dsi_panel_driver_oled_short_det_disable(
+		struct panel_specific_pdata *spec_pdata)
+{
+	struct short_detection_ctrl *short_det =
+				&spec_pdata->short_det;
+
+	if (spec_pdata == NULL || short_det == NULL) {
+		pr_err("%s: Invalid input data\n", __func__);
+		return;
+	}
+
+	disable_irq(short_det->irq_num);
+	short_det->irq_enable = false;
+
+	return;
+}
+
+void dsi_panel_driver_oled_short_det_init_works(struct dsi_display *display)
+{
+	struct short_detection_ctrl *short_det =
+			&display->panel->spec_pdata->short_det;
+	int rc = 0;
+
+	if (display == NULL || short_det == NULL) {
+		pr_err("%s: Invalid input data\n", __func__);
+		return;
+	}
+
+	INIT_DELAYED_WORK(&short_det->check_work,
+				dsi_panel_driver_oled_short_check_worker);
+
+	short_det->current_chatter_cnt = 0;
+	short_det->short_check_working = false;
+	short_det->target_chatter_check_interval =
+				SHORT_DEFAULT_TARGET_CHATTER_INTERVAL;
+	short_det->irq_num = gpio_to_irq(SHORT_FLAG);
+
+	rc = request_irq(short_det->irq_num,
+			dsi_panel_driver_oled_short_det_handler,
+			SHORT_IRQF_FLAGS, "disp_err_fg_gpio", display);
+	if (rc) {
+		pr_err("Failed to irq request rc=%d\n",	rc);
+		return;
+		}
+
+	dsi_panel_driver_oled_short_det_disable(display->panel->spec_pdata);
+	if (display->is_cont_splash_enabled)
+		dsi_panel_driver_oled_short_det_enable(
+			display->panel->spec_pdata, SHORT_WORKER_PASSIVE);
+}
+
+void dsi_panel_driver_oled_short_check_worker(struct work_struct *work)
+{
+	int rc = 0;
+	struct delayed_work *dwork = to_delayed_work(work);
+	struct short_detection_ctrl *short_det =
+		container_of(dwork, struct short_detection_ctrl, check_work);
+	struct panel_specific_pdata *spec_pdata =
+		container_of(short_det, struct panel_specific_pdata, short_det);
+
+	if (spec_pdata == NULL || short_det == NULL) {
+		pr_err("%s: Invalid input data\n", __func__);
+		return;
+	}
+
+	if (!spec_pdata->display_onoff_state) {
+		pr_err("%s: power status failed\n", __func__);
+		return;
+	}
+
+	if (short_det->short_check_working) {
+		pr_debug("%s: already status check\n", __func__);
+		return;
+	}
+	short_det->short_check_working = true;
+
+	dsi_panel_driver_oled_short_det_disable(spec_pdata);
+
+	/* status check */
+	rc = gpio_get_value(spec_pdata->disp_err_fg_gpio);
+	if (rc)
+		goto status_error;
+
+	dsi_panel_driver_oled_short_det_enable(spec_pdata, SHORT_WORKER_ACTIVE);
+
+	pr_debug("%s: short_check_worker done.\n", __func__);
+	goto status_passed;
+
+status_error:
+	short_det->current_chatter_cnt++;
+	pr_err("%s: Short Detection [%d]\n",
+			__func__, short_det->current_chatter_cnt);
+	if (short_det->current_chatter_cnt >=
+			SHORT_DEFAULT_TARGET_CHATTER_CNT) {
+		pr_err("%s: execute shutdown.\n", __func__);
+
+		/* shutdown */
+		do {
+			pm_power_off();
+			msleep(SHORT_POWER_OFF_RETRY_INTERVAL);
+		} while (1);
+
+		/* initialize */
+		short_det->current_chatter_cnt = 0;
+		short_det->short_check_working = false;
+		return;
+	}
+
+status_passed:
+	short_det->short_check_working = false;
+	schedule_delayed_work(&short_det->check_work,
+		msecs_to_jiffies(short_det->target_chatter_check_interval));
+	return;
 }
 
 int somc_panel_init(struct dsi_display *display)
