@@ -110,6 +110,10 @@
 #define IDTP9221_REG_RPP_L			0x88
 #define IDTP9221_REG_RPP_H			0x89
 #define IDTP9221_REG_SIGSTR			0x8A
+#define IDTP9221_REG_TXID_L			0xF4
+#define IDTP9221_REG_TXID_H			0xF5
+#define IDTP9221_REG_PING_FREQ_L		0xFC
+#define IDTP9221_REG_PING_FREQ_H		0xFD
 
 #define FOD_REG_START_ADDR	IDTP9221_REG_FOD_0_A
 #define FOD_REG_END_ADDR	IDTP9221_REG_FOD_EPP_MODE_1_B
@@ -248,6 +252,8 @@ struct idtp9221 {
 	int			rpp_raw;
 	int			rpp_mw;
 	int			sigstr_pc;
+	int			txid;
+	int			ping_freq_khz;
 
 	/* write resister items */
 	int			vout_set_mv;
@@ -277,6 +283,8 @@ struct idtp9221 {
 	int			debug_ilim_set_ma;
 	u8			fod_adj[FOD_REG_NUM];
 	bool			fod_adj_en;
+	u8			cmd_reg_addr;
+	u8			cmd_reg_data;
 
 	/* configration from device tree */
 	int			bpp_ilim_ma;
@@ -671,30 +679,39 @@ error:
 
 static int idtp9221_set_ilim_set(struct idtp9221 *chip, int val)
 {
-	u8 reg;
 	int rc;
+	u8 current_ilim_reg, target_ilim_reg;
 
 	if (chip->debug_ilim_set_ma)
 		val = chip->debug_ilim_set_ma;
 
-	if (val > 1300)
+	if (val > 1300) {
+		pr_err("Invalid ilim parameter val:%d\n", val);
 		return -EINVAL;
+	}
+	target_ilim_reg = val / 100;
 
-	val = (val / 100) * 100;
-	if (chip->ilim_set_ma == val)
+	if (chip->status == IDTP9221_STATUS_PWR_OFF)
 		return 0;
 
-	idtp9221_dbg(chip, PR_MISC, "set ilim_set to %dmA (from %d)\n",
-							val, chip->ilim_set_ma);
-	reg = val / 100;
-	rc = idtp9221_i2c_write_byte(chip, IDTP9221_REG_ILIM_SET, reg);
+	rc = idtp9221_i2c_read_byte(chip, IDTP9221_REG_ILIM_SET,
+						&current_ilim_reg);
 	if (rc < 0) {
-		dev_err(chip->dev, "read error ILIM_SET %d\n", rc);
+		pr_err("Can't read reg %d\n", rc);
 		return rc;
 	}
 
-	chip->ilim_set_ma = val;
-
+	if (current_ilim_reg != target_ilim_reg) {
+		idtp9221_dbg(chip, PR_MISC, "set ilim_set to %dmA (from %d)\n",
+				target_ilim_reg * 100, current_ilim_reg * 100);
+		rc = idtp9221_i2c_write_byte(chip, IDTP9221_REG_ILIM_SET,
+							target_ilim_reg);
+		if (rc < 0) {
+			dev_err(chip->dev, "read error ILIM_SET %d\n", rc);
+			return rc;
+		}
+		chip->ilim_set_ma = val;
+	}
 	return 0;
 }
 
@@ -745,6 +762,67 @@ static int idtp9221_set_fod_all(struct idtp9221 *chip)
 		}
 	}
 	return (rc < 0) ? rc : 0;
+}
+
+static int idtp9221_read_cmd_reg_byte(struct idtp9221 *chip, u8 addr, u8 *data)
+{
+	int rc = 0;
+
+	if (chip->status != IDTP9221_STATUS_PWR_OFF) {
+		rc = idtp9221_i2c_read_byte(chip, addr, data);
+		if (rc < 0) {
+			dev_err(chip->dev, "Can't read register %d\n", rc);
+			return rc;
+		}
+	}
+
+	return rc;
+}
+
+static int idtp9221_write_cmd_reg_byte(struct idtp9221 *chip, u8 addr, u8 data)
+{
+	int rc = 0;
+
+	if (chip->status != IDTP9221_STATUS_PWR_OFF) {
+		rc = idtp9221_i2c_write_byte(chip, addr, data);
+		if (rc < 0) {
+			dev_err(chip->dev, "write error register %d\n", rc);
+			return rc;
+		}
+	}
+
+	return rc;
+}
+
+#define IDTP9221_EPT_MODE_UNKNOWN	0
+#define IDTP9221_EPT_MODE_MAX		8
+#define IDTP9221_EPT_SEND_COM		0x08
+static int idtp9221_set_ept(struct idtp9221 *chip, int mode)
+{
+	int rc = 0;
+
+	if (mode <= IDTP9221_EPT_MODE_UNKNOWN || mode > IDTP9221_EPT_MODE_MAX) {
+		pr_err("Invalid mode %d\n", mode);
+		return -EINVAL;
+	}
+
+	if (chip->status != IDTP9221_STATUS_PWR_OFF) {
+		rc = idtp9221_i2c_write_byte(chip, IDTP9221_REG_E_REASON, mode);
+		if (rc < 0) {
+			dev_err(chip->dev, "write error of EPT mode %d\n", rc);
+			return rc;
+		}
+		rc = idtp9221_i2c_write_byte(chip, IDTP9221_REG_COM,
+							IDTP9221_EPT_SEND_COM);
+		if (rc < 0) {
+			dev_err(chip->dev, "write error of EPT send cmd %d\n",
+									rc);
+			return rc;
+		}
+		idtp9221_dbg(chip, PR_MISC, "Sent EPT command. mode:%d\n",
+									mode);
+	}
+	return rc;
 }
 
 static int idtp9221_read_regs_oneshot_in_driver(struct idtp9221 *chip)
@@ -811,30 +889,52 @@ static int idtp9221_read_regs_oneshot_in_driver(struct idtp9221 *chip)
 static int idtp9221_read_regs_oneshot_in_pwr_ok(struct idtp9221 *chip)
 {
 	int rc;
-	u8 reg_buf;
-	u8 reg_status_h;
+	u8 start_addr;
+	int length;
+	u8 reg_buf[4];
 
-	rc = idtp9221_i2c_read_byte(chip, IDTP9221_REG_STATUS_H, &reg_buf);
+	rc = idtp9221_i2c_read_byte(chip, IDTP9221_REG_STATUS_H, &reg_buf[0]);
 	if (rc < 0) {
 		pr_err("Can't read reg %d\n", rc);
 		return rc;
 	}
-	reg_status_h = reg_buf;
-	if (reg_status_h & IDTP9221_REG_AUTH_BIT)
+	if (reg_buf[0] & IDTP9221_REG_AUTH_BIT)
 		chip->wireless_auth = 1;
 	else
 		chip->wireless_auth = 0;
 
-	rc = idtp9221_i2c_read_byte(chip, IDTP9221_REG_SIGSTR, &reg_buf);
+	rc = idtp9221_i2c_read_byte(chip, IDTP9221_REG_SIGSTR, &reg_buf[0]);
 	if (rc < 0) {
 		pr_err("Can't read reg %d\n", rc);
 		return rc;
 	}
-	chip->sigstr_pc = IDTP9221_ADC_TO_SIGSTR_PC(reg_buf);
+	chip->sigstr_pc = IDTP9221_ADC_TO_SIGSTR_PC(reg_buf[0]);
 
-	idtp9221_dbg(chip, PR_MONITOR, "[%s] auth=%d SigStr=%d%%\n",
-					str_status[chip->status],
-					chip->wireless_auth, chip->sigstr_pc);
+	start_addr = IDTP9221_REG_TXID_L;
+	length = 2;
+	rc = idtp9221_i2c_read_sequential(chip, start_addr, reg_buf,
+								length);
+	if (rc < 0) {
+		pr_err("Can't read reg %d to %d. %d\n",
+			start_addr, start_addr + length - 1, rc);
+		return rc;
+	}
+	chip->txid = reg_buf[0] | (reg_buf[1] << 8);
+
+	start_addr = IDTP9221_REG_PING_FREQ_L;
+	length = 2;
+	rc = idtp9221_i2c_read_sequential(chip, start_addr, reg_buf, length);
+	if (rc < 0) {
+		pr_err("Can't read reg %d to %d. %d\n",
+				start_addr, start_addr + length - 1, rc);
+		return rc;
+	}
+	chip->ping_freq_khz = reg_buf[0] | (reg_buf[1] << 8);
+
+	idtp9221_dbg(chip, PR_MONITOR,
+		     "[%s] TxID:0x%04X(%d), Ping:%dkHz, Auth:%d, SigStr:%d%%\n",
+		     str_status[chip->status], chip->txid, chip->txid,
+		     chip->ping_freq_khz, chip->wireless_auth, chip->sigstr_pc);
 
 	return 0;
 }
@@ -1032,6 +1132,9 @@ enum {
 	ATTR_FOD_EPP_MODE_1_A,
 	ATTR_FOD_EPP_MODE_1_B,
 	ATTR_FOD_ADJUST_EN,
+	ATTR_SEND_EPT,
+	ATTR_CMD_REG_ADDR,
+	ATTR_CMD_REG_DATA,
 	ATTR_FW_REV,
 	ATTR_VRECT_MV,
 	ATTR_VOUT_MV,
@@ -1043,6 +1146,8 @@ enum {
 	ATTR_VTHERM_TEMP_DC,
 	ATTR_SIGSTR_PC,
 	ATTR_RPP_MW,
+	ATTR_TXID,
+	ATTR_PING_FREQ_KHZ,
 };
 
 static ssize_t idt9221_param_show(struct device *dev,
@@ -1104,6 +1209,12 @@ static struct device_attribute wireless_attrs[] = {
 						idt9221_param_store),
 	__ATTR(fod_adjust_en,		0644, idt9221_param_show,
 						idt9221_param_store),
+	__ATTR(send_ept,		0644, idt9221_param_show,
+						idt9221_param_store),
+	__ATTR(cmd_reg_addr,		0644, idt9221_param_show,
+						idt9221_param_store),
+	__ATTR(cmd_reg_data,		0644, idt9221_param_show,
+						idt9221_param_store),
 	__ATTR(fw_rev,			0444, idt9221_param_show, NULL),
 	__ATTR(vrect_mv,		0444, idt9221_param_show, NULL),
 	__ATTR(vout_mv,			0444, idt9221_param_show, NULL),
@@ -1115,6 +1226,8 @@ static struct device_attribute wireless_attrs[] = {
 	__ATTR(vtherm_temp_dc,		0444, idt9221_param_show, NULL),
 	__ATTR(sigstr_pc,		0444, idt9221_param_show, NULL),
 	__ATTR(rpp_mw,			0444, idt9221_param_show, NULL),
+	__ATTR(txid,			0444, idt9221_param_show, NULL),
+	__ATTR(ping_freq_khz,		0444, idt9221_param_show, NULL),
 };
 
 static ssize_t idt9221_param_show(struct device *dev,
@@ -1125,6 +1238,7 @@ static ssize_t idt9221_param_show(struct device *dev,
 	const ptrdiff_t off = attr - wireless_attrs;
 	struct idtp9221 *chip = dev_get_drvdata(dev);
 	u8 reg_offset;
+	int ret;
 
 	switch (off) {
 	case ATTR_INTERVAL_POWER_OK_MS:
@@ -1191,6 +1305,26 @@ static ssize_t idt9221_param_show(struct device *dev,
 						chip->fod_adj_en);
 		break;
 
+	case ATTR_SEND_EPT:
+		size = 0;
+		break;
+
+	case ATTR_CMD_REG_ADDR:
+		size = scnprintf(buf, PAGE_SIZE, "0x%02X\n",
+						chip->cmd_reg_addr);
+		break;
+
+	case ATTR_CMD_REG_DATA:
+		ret = idtp9221_read_cmd_reg_byte(chip, chip->cmd_reg_addr,
+						&chip->cmd_reg_data);
+		if (ret < 0)
+			break;
+
+		size = scnprintf(buf, PAGE_SIZE,
+				"reg_addr:0x%02X\nreg_data:0x%02X\n",
+				chip->cmd_reg_addr, chip->cmd_reg_data);
+		break;
+
 	case ATTR_FW_REV:
 		if (chip->fw_src == IDTP9221_FW_SRC_OTP)
 			size = scnprintf(buf, PAGE_SIZE, "OTP:%02x%02x%02x\n",
@@ -1246,6 +1380,15 @@ static ssize_t idt9221_param_show(struct device *dev,
 	case ATTR_RPP_MW:
 		size = scnprintf(buf, PAGE_SIZE, "%d(raw:%d)\n",
 					chip->rpp_mw, chip->rpp_raw);
+		break;
+
+	case ATTR_TXID:
+		size = scnprintf(buf, PAGE_SIZE, "0x%04X(%d)\n",
+							chip->txid, chip->txid);
+		break;
+
+	case ATTR_PING_FREQ_KHZ:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n", chip->ping_freq_khz);
 		break;
 
 	default:
@@ -1401,6 +1544,38 @@ static ssize_t idt9221_param_store(struct device *dev,
 			idtp9221_dbg(chip, PR_MISC,
 						"Disabled FOD Adjustment\n");
 		}
+		break;
+
+	case ATTR_SEND_EPT:
+		ret = kstrtoint(buf, 10, &val);
+		if (ret < 0) {
+			size = 0;
+			break;
+		}
+		idtp9221_dbg(chip, PR_MISC, "Send EPT Packet. mode:%d\n", val);
+		ret = idtp9221_set_ept(chip, val);
+		if (ret < 0)
+			size = 0;
+		break;
+
+	case ATTR_CMD_REG_ADDR:
+		ret = kstrtoint(buf, 0, &val);
+		if (ret < 0) {
+			size = 0;
+			break;
+		}
+		chip->cmd_reg_addr = (u8)val;
+		break;
+
+	case ATTR_CMD_REG_DATA:
+		ret = kstrtoint(buf, 0, &val);
+		if (ret < 0) {
+			size = 0;
+			break;
+		}
+		chip->cmd_reg_data = (u8)val;
+		ret = idtp9221_write_cmd_reg_byte(chip, chip->cmd_reg_addr,
+							chip->cmd_reg_data);
 		break;
 
 	default:
@@ -1584,12 +1759,12 @@ static void idtp9221_detect_work(struct work_struct *work)
 		idtp9221_dump_reg(chip);
 
 	rc = idtp9221_handle_vout_set(chip);
-	if (chip->status == IDTP9221_STATUS_PWR_POWER_OK) {
-		if (chip->old_status != IDTP9221_STATUS_PWR_POWER_OK) {
-			rc = idtp9221_set_fod_all(chip);
-			if (rc)
-				pr_err("Error in set_fod_all rc=%d\n", rc);
-		}
+	if (chip->status == IDTP9221_STATUS_PWR_POWER_OK &&
+			chip->old_status != IDTP9221_STATUS_PWR_POWER_OK) {
+		rc = idtp9221_set_fod_all(chip);
+		if (rc)
+			pr_err("Error in set_fod_all rc=%d\n", rc);
+
 		if (chip->op_mode == IDTP9221_OP_MODE_QI_EPP) {
 			if (chip->wireless_auth)
 				rc = idtp9221_set_ilim_set(chip,
