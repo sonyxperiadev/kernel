@@ -2752,6 +2752,9 @@ static int qpnp_labibb_regulator_enable(struct qpnp_labibb *labibb)
 	int dly;
 	int retries;
 	bool enabled = false;
+#ifdef CONFIG_SOMC_LCD_OCP_ENABLED
+	u8 try_again = 2;
+#endif
 
 	if (labibb->ttw_en && !labibb->ibb_vreg.vreg_enabled &&
 		labibb->in_ttw_mode) {
@@ -2773,6 +2776,9 @@ static int qpnp_labibb_regulator_enable(struct qpnp_labibb *labibb)
 				+ labibb->ibb_vreg.pwrup_dly;
 	usleep_range(dly, dly + 100);
 
+#ifdef CONFIG_SOMC_LCD_OCP_ENABLED
+try_agn:
+#endif
 	/* after this delay, lab should be enabled */
 	rc = qpnp_labibb_read(labibb, labibb->lab_base + REG_LAB_STATUS1,
 			&val, 1);
@@ -2785,6 +2791,14 @@ static int qpnp_labibb_regulator_enable(struct qpnp_labibb *labibb)
 	pr_debug("soft=%d %d up=%d dly=%d\n",
 		labibb->lab_vreg.soft_start, labibb->ibb_vreg.soft_start,
 				labibb->ibb_vreg.pwrup_dly, dly);
+
+#ifdef CONFIG_SOMC_LCD_OCP_ENABLED
+	if ((!(val & LAB_STATUS1_VREG_OK_BIT)) && try_again) {
+		pr_err("LAB vreg ok not UP ! checking again");
+		try_again--;
+		goto try_agn;
+	}
+#endif
 
 	if (!(val & LAB_STATUS1_VREG_OK_BIT)) {
 		pr_err("failed for LAB %x\n", val);
