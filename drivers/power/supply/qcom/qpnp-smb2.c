@@ -3108,6 +3108,7 @@ enum smb2_somc_sysfs {
 	ATTR_JEITA_WIRELESS_CONDITION,
 	ATTR_VBUS_REG_EN,
 	ATTR_BATTERY_CHARGER_STATUS,
+	ATTR_JEITA_DEBUG_LOG_INTERVAL,
 };
 
 static ssize_t smb2_somc_param_show(struct device *dev,
@@ -3189,6 +3190,8 @@ static struct device_attribute smb2_somc_attrs[] = {
 				S_IRUGO, smb2_somc_param_show, NULL),
 	__ATTR(vbus_reg_en,	0444, smb2_somc_param_show, NULL),
 	__ATTR(battery_charger_status, S_IRUGO, smb2_somc_param_show, NULL),
+	__ATTR(jeita_debug_log_interval, S_IRUGO|S_IWUSR,
+				smb2_somc_param_show, smb2_somc_param_store),
 };
 
 static ssize_t smb2_somc_param_show(struct device *dev,
@@ -3596,6 +3599,10 @@ static ssize_t smb2_somc_param_show(struct device *dev,
 		else
 			size = scnprintf(buf, PAGE_SIZE, "%d\n", reg);
 		break;
+	case ATTR_JEITA_DEBUG_LOG_INTERVAL:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n",
+						chg->jeita_debug_log_interval);
+		break;
 	default:
 		size = 0;
 		break;
@@ -3678,6 +3685,9 @@ static ssize_t smb2_somc_param_store(struct device *dev,
 			count = 0;
 			break;
 		}
+		break;
+	case ATTR_JEITA_DEBUG_LOG_INTERVAL:
+		ret = kstrtoint(buf, 10, &chg->jeita_debug_log_interval);
 		break;
 	default:
 		break;
