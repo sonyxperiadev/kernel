@@ -433,7 +433,11 @@ static bool dsi_display_is_te_based_esd(struct dsi_display *display)
 }
 
 /* Allocate memory for cmd dma tx buffer */
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+int dsi_host_alloc_cmd_tx_buffer(struct dsi_display *display)
+#else
 static int dsi_host_alloc_cmd_tx_buffer(struct dsi_display *display)
+#endif
 {
 	int rc = 0, cnt = 0;
 	struct dsi_display_ctrl *display_ctrl;
@@ -4587,6 +4591,12 @@ static int dsi_display_bind(struct device *dev,
 	/* register te irq handler */
 	dsi_display_register_te_irq(display);
 
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+	if (display->is_cont_splash_enabled) {
+		dsi_panel_driver_active_touch_reset(display->panel);
+	}
+#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
+
 	goto error;
 
 error_host_deinit:
@@ -4806,6 +4816,12 @@ int dsi_display_dev_probe(struct platform_device *pdev)
 		pr_debug("Component_add success: %s\n", display->name);
 		if (!display_from_cmdline)
 			default_active_node = pdev->dev.of_node;
+
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+		if (display->panel->spec_pdata->oled_disp) {
+			dsi_panel_driver_oled_short_det_init_works(display);
+		}
+#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 	}
 	return rc;
 }
@@ -6310,14 +6326,6 @@ int dsi_display_enable(struct dsi_display *display)
 
 #ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
 		rc = dsi_panel_driver_enable(display->panel);
-		pr_debug("Try to allocate cmd tx buffer memory\n");
-		if (display->tx_cmd_buf == NULL) {
-			rc = dsi_host_alloc_cmd_tx_buffer(display);
-			if (rc)
-				pr_err("failed to allocate cmd tx buffer memory\n");
-		}
-		pr_debug("Try to pcc_setup\n");
-		rc = somc_panel_pcc_setup(display);
 #endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 
 		return 0;

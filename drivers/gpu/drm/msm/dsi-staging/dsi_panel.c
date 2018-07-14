@@ -764,6 +764,10 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 		return 0;
 
 	pr_debug("backlight type:%d lvl:%d\n", bl->type, bl_lvl);
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+	if (panel->spec_pdata->aod_mode)
+		return rc;
+#endif
 	switch (bl->type) {
 	case DSI_BACKLIGHT_WLED:
 		led_trigger_event(bl->wled, bl_lvl);

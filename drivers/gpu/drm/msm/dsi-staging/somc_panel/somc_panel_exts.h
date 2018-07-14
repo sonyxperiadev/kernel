@@ -236,6 +236,29 @@ struct dsi_m_plus {
 #define LAB_SOFT_START_TIME		((u32)300)
 #define IBB_SOFT_START_RESISTOR		((u32)32)
 
+/* short flag control default data */
+#define SHORT_CHATTER_CNT_START			1
+#define SHORT_DEFAULT_TARGET_CHATTER_CNT	3
+#define SHORT_DEFAULT_TARGET_CHATTER_INTERVAL	500
+#define SHORT_POWER_OFF_RETRY_INTERVAL		500
+
+#define SHORT_WORKER_ACTIVE		true
+#define SHORT_WORKER_PASSIVE		false
+#define SHORT_IRQF_DISABLED		0x00000020
+#define SHORT_IRQF_FLAGS		(SHORT_IRQF_DISABLED | IRQF_ONESHOT | \
+					 IRQF_TRIGGER_HIGH | IRQF_TRIGGER_RISING)
+#define SHORT_FLAG			44
+
+struct short_detection_ctrl {
+	struct delayed_work check_work;
+	int current_chatter_cnt;
+	int target_chatter_cnt;
+	int target_chatter_check_interval;
+	int irq_num;
+	bool short_check_working;
+	bool irq_enable;
+};
+
 struct dsi_panel_labibb_data {
 	u16 labibb_ctrl_state;
 
@@ -271,6 +294,7 @@ struct somc_panel_color_mgr {
 	bool vivid_pcc_enable;
 	bool hdr_pcc_enable;
 	bool pcc_profile_avail;
+	bool dsi_pcc_applied;
 	bool mdss_force_pcc;
 };
 
@@ -288,6 +312,7 @@ struct panel_specific_pdata {
 	int touch_int_gpio;
 	int disp_vddio_gpio;
 	int disp_dcdc_en_gpio;
+	int disp_err_fg_gpio;
 
 	int touch_vddio;
 	int touch_intn;
@@ -300,6 +325,7 @@ struct panel_specific_pdata {
 	struct dsi_reset_cfg off_seq;
 	bool rst_after_pon;
 	bool rst_b_seq;
+	bool oled_disp;
 
 	struct somc_panel_color_mgr *color_mgr;
 
@@ -311,6 +337,7 @@ struct panel_specific_pdata {
 	struct dsi_m_plus m_plus;
 
 	struct dsi_panel_labibb_data labibb;
+	struct short_detection_ctrl short_det;
 
 	bool display_onoff_state;
 };
@@ -337,6 +364,7 @@ int somc_panel_pcc_setup(struct dsi_display *display);
 int somc_panel_parse_dt_colormgr_config(struct dsi_panel *panel,
 			struct device_node *np);
 int somc_panel_colormgr_register_attr(struct device *dev);
+int somc_panel_colormgr_apply_calibrations(void);
 int somc_panel_color_manager_init(struct dsi_display *display);
 
 void somc_panel_fps_cmd_send(struct dsi_panel *panel);
@@ -381,6 +409,13 @@ int dsi_panel_driver_enable(struct dsi_panel *panel);
 void dsi_panel_driver_labibb_vreg_init(struct dsi_panel *panel);
 int dsi_panel_driver_get_chargemon_exit(void);
 void dsi_panel_driver_reset_chargemon_exit(void);
+int dsi_panel_driver_active_touch_reset(struct dsi_panel *panel);
+void dsi_panel_driver_oled_short_det_init_works(struct dsi_display *display);
+void dsi_panel_driver_oled_short_check_worker(struct work_struct *work);
+void dsi_panel_driver_oled_short_det_enable(
+			struct panel_specific_pdata *spec_pdata, bool inWork);
+void dsi_panel_driver_oled_short_det_disable(
+			struct panel_specific_pdata *spec_pdata);
 
 /* For incell driver */
 struct incell_ctrl *incell_get_info(void);
@@ -396,4 +431,5 @@ int dsi_panel_tx_cmd_set(struct dsi_panel *panel,
 				enum dsi_cmd_set_type type);
 int dsi_display_cmd_engine_enable(struct dsi_display *display);
 int dsi_display_cmd_engine_disable(struct dsi_display *display);
+int dsi_host_alloc_cmd_tx_buffer(struct dsi_display *display);
 #endif /* DSI_PANEL_DRIVER_H */
