@@ -20,6 +20,7 @@
 #include <dt-bindings/pinctrl/qcom,pmic-mpp.h>
 #include <dt-bindings/pinctrl/qcom,pmic-gpio.h>
 #include "msm8956-loire_pinctrl.dtsi"
+#include "msm8956-loire-common-thermal.dtsi"
 
 #define PM8004_MPP_MSMIO	0
 #define PMI8950_MPP_MSMIO	0
