@@ -173,6 +173,7 @@
 			compatible = "qcom,qpnp-smbcharger";
 			#address-cells = <1>;
 			#size-cells = <1>;
+			#cooling-cells = <2>;
 
 			qcom,iterm-ma = <100>;
 			qcom,float-voltage-mv = <4200>;
