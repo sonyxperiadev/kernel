@@ -40,6 +40,19 @@
 			};
 		};
 	};
+
+	virtual_thermal: virtual_therm@0 {
+		compatible = "linux,virtual-thermal";
+		status = "ok";
+
+		avg-sensor-cpu-package {
+			virt-zone-name = "avg-cpu-package";
+			thermal-sensors = "apc0-cpu0-usr", "apc1-cpu0-usr",
+					  "apc1-cpu1-usr", "apc1-cpu2-usr",
+					  "apc1-cpu3-usr", "apc1-l2-usr";
+			aggregation-logic = <0>; /* WEIGHTED_AVG */
+		};
+	};
 };
 
 &thermal_zones {
@@ -234,62 +247,76 @@
 		};
 	};
 
-	deca-cpu-max-step {
-		polling-delay-passive = <50>;
-		polling-delay = <100>;
+	avg-cpu-package {
+		polling-delay-passive = <300>;
+		polling-delay = <500>;
 		thermal-governor = "step_wise";
 		trips {
-			cpu_trip:cpu-trip {
+			avg_cpu_trip0: avg-cpu-trip0 {
+				temperature = <105000>;
+				hysteresis = <3000>;
+				type = "critical";
+			};
+
+			avg_cpu_trip1: avg-cpu-trip1 {
 				temperature = <95000>;
-				hysteresis = <0>;
+				hysteresis = <1000>;
+				type = "hot";
+			};
+
+			avg_cpu_trip2: avg-cpu-trip2 {
+				temperature = <90000>;
+				hysteresis = <1000>;
 				type = "passive";
 			};
+
 		};
 		cooling-maps {
+			/* Throttle to C0 691MHz / C1 883MHz */
 			cpu0_cdev {
-				trip = <&cpu_trip>;
+				trip = <&avg_cpu_trip1>;
 				cooling-device =
 					<&CPU0 THERMAL_NO_LIMIT
 						(THERMAL_MAX_LIMIT-1)>;
 			};
 			cpu1_cdev {
-				trip = <&cpu_trip>;
+				trip = <&avg_cpu_trip1>;
 				cooling-device =
 					<&CPU1 THERMAL_NO_LIMIT
 						(THERMAL_MAX_LIMIT-1)>;
 			};
 			cpu2_cdev {
-				trip = <&cpu_trip>;
+				trip = <&avg_cpu_trip1>;
 				cooling-device =
 					<&CPU2 THERMAL_NO_LIMIT
 						(THERMAL_MAX_LIMIT-1)>;
 			};
 			cpu3_cdev {
-				trip = <&cpu_trip>;
+				trip = <&avg_cpu_trip1>;
 				cooling-device =
 					<&CPU3 THERMAL_NO_LIMIT
 						(THERMAL_MAX_LIMIT-1)>;
 			};
 			cpu4_cdev {
-				trip = <&cpu_trip>;
+				trip = <&avg_cpu_trip1>;
 				cooling-device =
 					<&CPU4 THERMAL_NO_LIMIT
 						(THERMAL_MAX_LIMIT-1)>;
 			};
 			cpu5_cdev {
-				trip = <&cpu_trip>;
+				trip = <&avg_cpu_trip1>;
 				cooling-device =
 					<&CPU5 THERMAL_NO_LIMIT
 						(THERMAL_MAX_LIMIT-1)>;
 			};
 			cpu6_cdev {
-				trip = <&cpu_trip>;
+				trip = <&avg_cpu_trip1>;
 				cooling-device =
 					<&CPU6 THERMAL_NO_LIMIT
 						(THERMAL_MAX_LIMIT-1)>;
 			};
 			cpu7_cdev {
-				trip = <&cpu_trip>;
+				trip = <&avg_cpu_trip1>;
 				cooling-device =
 					<&CPU7 THERMAL_NO_LIMIT
 						(THERMAL_MAX_LIMIT-1)>;
