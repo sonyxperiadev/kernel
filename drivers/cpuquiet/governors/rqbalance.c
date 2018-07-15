@@ -98,6 +98,7 @@ struct cpu_limits {
 	unsigned int main_cpu;
 	unsigned int freq_min;
 	unsigned int freq_max;
+	bool cpuhp_scheduled;
 };
 
 static DEFINE_PER_CPU(struct idle_info, idleinfo);
@@ -690,6 +691,29 @@ static struct notifier_block frequency_limits_nb = {
 	.notifier_call = frequency_limits_set,
 };
 
+static int cfl_hotplug_notify(struct notifier_block *nfb,
+		unsigned long action, void *cpu_ptr)
+{
+	uint32_t cpu = (uintptr_t)cpu_ptr;
+	unsigned int cluster;
+
+	if (action != CPU_ONLINE)
+		return NOTIFY_OK;
+
+	cluster = topology_physical_package_id(cpu);
+	if (!rqb_freq_limits[cluster].cpuhp_scheduled)
+		return NOTIFY_OK;
+
+	rqb_freq_limits[cluster].cpuhp_scheduled = false;
+	cpufreq_update_policy(rqb_freq_limits[cluster].main_cpu);
+
+	return NOTIFY_OK;
+}
+
+static struct notifier_block rqb_cfl_notifier = {
+	.notifier_call = cfl_hotplug_notify,
+};
+
 static ssize_t store_ulong_delay(struct cpuquiet_attribute *cattr, const char *buf,
 				size_t count)
 {
@@ -779,6 +803,24 @@ static ssize_t show_uint_array(struct cpuquiet_attribute *cattr,
 	return temp - buf;
 }
 
+static inline void __set_cluster_vote(unsigned int cluster)
+{
+	struct cpufreq_policy cfpol;
+
+	if (cpufreq_get_policy(&cfpol, rqb_freq_limits[cluster].main_cpu)) {
+		/* The cluster is down. Schedule for the next upcore event */
+		rqb_freq_limits[cluster].cpuhp_scheduled = true;
+
+		/* Make sure we upcore ASAP to set the limits */
+		cpuquiet_wake_cpu(rqb_freq_limits[cluster].main_cpu, false);
+	} else {
+		/* The cluster is available. Set limits right now! */
+		get_online_cpus();
+		cpufreq_update_policy(rqb_freq_limits[cluster].main_cpu);
+		put_online_cpus();
+	}
+}
+
 /*
  * Set a vote for MAX cluster frequency.
  * The function wants a string that contains "NCLUSTER FREQUENCY(KHz)".
@@ -795,13 +837,9 @@ static ssize_t show_uint_array(struct cpuquiet_attribute *cattr,
 static ssize_t set_cluster_vote_max(struct cpuquiet_attribute *cattr,
 					const char *buf, size_t count)
 {
-	struct cpufreq_policy cfpol;
 	unsigned int cluster, req_freq;
 
 	if (sscanf(buf, "%u %u", &cluster, &req_freq) != 2)
-		return -EINVAL;
-
-	if (cpufreq_get_policy(&cfpol, rqb_freq_limits[cluster].main_cpu))
 		return -EINVAL;
 
 	if (req_freq == 0)
@@ -809,9 +847,7 @@ static ssize_t set_cluster_vote_max(struct cpuquiet_attribute *cattr,
 
 	rqb_freq_limits[cluster].freq_max = req_freq;
 
-	get_online_cpus();
-	cpufreq_update_policy(rqb_freq_limits[cluster].main_cpu);
-	put_online_cpus();
+	__set_cluster_vote(cluster);
 
 	return count;
 }
@@ -819,20 +855,14 @@ static ssize_t set_cluster_vote_max(struct cpuquiet_attribute *cattr,
 static ssize_t set_cluster_vote_min(struct cpuquiet_attribute *cattr,
 					const char *buf, size_t count)
 {
-	struct cpufreq_policy cfpol;
 	unsigned int cluster, req_freq;
 
 	if (sscanf(buf, "%u %u", &cluster, &req_freq) != 2)
 		return -EINVAL;
 
-	if (cpufreq_get_policy(&cfpol, rqb_freq_limits[cluster].main_cpu))
-		return -EINVAL;
-
 	rqb_freq_limits[cluster].freq_min = req_freq;
 
-	get_online_cpus();
-	cpufreq_update_policy(rqb_freq_limits[cluster].main_cpu);
-	put_online_cpus();
+	__set_cluster_vote(cluster);
 
 	return count;
 }
@@ -1008,6 +1038,11 @@ static void rqbalance_stop(void)
 	cpufreq_unregister_notifier(&balanced_cpufreq_nb,
 		CPUFREQ_TRANSITION_NOTIFIER);
 
+	cpufreq_unregister_notifier(&frequency_limits_nb,
+		CPUFREQ_POLICY_NOTIFIER);
+
+	unregister_cpu_notifier(&rqb_cfl_notifier);
+
 	unregister_pm_notifier(&pm_notifier_block);
 
 	/* now we can force the governor to be idle */
@@ -1020,6 +1055,16 @@ static void rqbalance_stop(void)
 	kfree(rq_data);
 
 	rqbalance_sysfs_exit();
+}
+
+static int rqbalance_cfl_start(void)
+{
+	cpufreq_register_notifier(&frequency_limits_nb,
+		CPUFREQ_POLICY_NOTIFIER);
+
+	register_cpu_notifier(&rqb_cfl_notifier);
+
+	return 0;
 }
 
 static int rqbalance_start(void)
@@ -1061,8 +1106,9 @@ static int rqbalance_start(void)
 	cpufreq_register_notifier(&balanced_cpufreq_nb,
 		CPUFREQ_TRANSITION_NOTIFIER);
 
-	cpufreq_register_notifier(&frequency_limits_nb,
-		CPUFREQ_POLICY_NOTIFIER);
+	err = rqbalance_cfl_start();
+	if (err)
+		pr_warn("%s: Couldn't start RQB-CFL!\n", __func__);
 
 	init_timer(&load_timer);
 	load_timer.function = calculate_load_timer;
