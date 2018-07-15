@@ -21,6 +21,14 @@ config MSM_BCL_PERIPHERAL_CTL
 	  threshold input and notify the thermal core when the threshold is
 	  reached.
 
+config MSM_BCL_PERIPHERAL_CTL_LEGACY
+	bool "PMIC BCL peripheral driver for legacy SoC"
+	depends on MSM_BCL_PERIPHERAL_CTL
+	help
+	  Say Y here to enable this BCL PMIC legacy peripheral driver.
+	  This driver supports legacy SoC with PMI8950, PMI8994 and
+	  PMI8996.
+
 config LIMITS_MONITOR
 	bool "LMH monitor driver"
 	depends on THERMAL
