@@ -6405,6 +6405,8 @@ static enum power_supply_property smbchg_battery_properties[] = {
 	POWER_SUPPLY_PROP_HEALTH,
 	POWER_SUPPLY_PROP_TECHNOLOGY,
 	POWER_SUPPLY_PROP_SYSTEM_TEMP_LEVEL,
+	POWER_SUPPLY_PROP_CHARGE_CONTROL_LIMIT,
+	POWER_SUPPLY_PROP_CHARGE_CONTROL_LIMIT_MAX,
 	POWER_SUPPLY_PROP_FLASH_CURRENT_MAX,
 	POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT_MAX,
 	POWER_SUPPLY_PROP_VOLTAGE_MAX,
@@ -6487,6 +6489,13 @@ static int smbchg_battery_set_property(struct power_supply *psy,
 			power_supply_changed(chip->batt_psy);
 		break;
 	case POWER_SUPPLY_PROP_SYSTEM_TEMP_LEVEL:
+#ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
+		somc_chg_therm_level_set(chip, val->intval);
+#else
+		smbchg_system_temp_level_set(chip, val->intval);
+#endif
+		break;
+	case POWER_SUPPLY_PROP_CHARGE_CONTROL_LIMIT:
 #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
 		somc_chg_therm_level_set(chip, val->intval);
 #else
@@ -6715,6 +6724,12 @@ static int smbchg_battery_get_property(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_RESTRICTED_CHARGING:
 		val->intval = (int)chip->restricted_charging;
+		break;
+	case POWER_SUPPLY_PROP_CHARGE_CONTROL_LIMIT:
+		val->intval = chip->therm_lvl_sel;
+		break;
+	case POWER_SUPPLY_PROP_CHARGE_CONTROL_LIMIT_MAX:
+		val->intval = chip->thermal_levels;
 		break;
 	/* properties from fg */
 	case POWER_SUPPLY_PROP_CAPACITY:
