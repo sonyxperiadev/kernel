@@ -120,7 +120,6 @@ static unsigned long recheck_delay;
 static unsigned long last_change_time;
 static unsigned int  load_sample_rate = 20; /* msec */
 static struct cpu_limits rqb_freq_limits[MAX_CLUSTERS];
-static enum cpuhp_state rqb_hp_online;
 static struct workqueue_struct *rqbalance_wq;
 static struct delayed_work rqbalance_work;
 static RQBALANCE_STATE rqbalance_state;
@@ -692,19 +691,28 @@ static struct notifier_block frequency_limits_nb = {
 	.notifier_call = frequency_limits_set,
 };
 
-static int cfl_hotplug_notify(unsigned int cpu)
+static int cfl_hotplug_notify(struct notifier_block *nfb,
+		unsigned long action, void *cpu_ptr)
 {
+	uint32_t cpu = (uintptr_t)cpu_ptr;
 	unsigned int cluster;
+
+	if (action != CPU_ONLINE)
+		return NOTIFY_OK;
 
 	cluster = topology_physical_package_id(cpu);
 	if (!rqb_freq_limits[cluster].cpuhp_scheduled)
-		return 0;
+		return NOTIFY_OK;
 
 	rqb_freq_limits[cluster].cpuhp_scheduled = false;
 	cpufreq_update_policy(rqb_freq_limits[cluster].main_cpu);
 
-	return 0;
+	return NOTIFY_OK;
 }
+
+static struct notifier_block rqb_cfl_notifier = {
+	.notifier_call = cfl_hotplug_notify,
+};
 
 static ssize_t store_ulong_delay(struct cpuquiet_attribute *cattr, const char *buf,
 				size_t count)
@@ -1033,7 +1041,7 @@ static void rqbalance_stop(void)
 	cpufreq_unregister_notifier(&frequency_limits_nb,
 		CPUFREQ_POLICY_NOTIFIER);
 
-	cpuhp_remove_state_nocalls(rqb_hp_online);
+	unregister_cpu_notifier(&rqb_cfl_notifier);
 
 	unregister_pm_notifier(&pm_notifier_block);
 
@@ -1051,19 +1059,12 @@ static void rqbalance_stop(void)
 
 static int rqbalance_cfl_start(void)
 {
-	int rc = 0;
-
 	cpufreq_register_notifier(&frequency_limits_nb,
 		CPUFREQ_POLICY_NOTIFIER);
-	
-	rc = cpuhp_setup_state_nocalls(CPUHP_AP_ONLINE,
-		"rqbalance_cpuhp", cfl_hotplug_notify, NULL);
-	if (rc < 0)
-		goto end;
-	rqb_hp_online = rc;
-	rc = 0;
-end:
-	return rc;
+
+	register_cpu_notifier(&rqb_cfl_notifier);
+
+	return 0;
 }
 
 static int rqbalance_start(void)
