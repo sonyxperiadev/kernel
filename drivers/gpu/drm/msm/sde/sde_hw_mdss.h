@@ -293,9 +293,12 @@ enum sde_vbif {
 	VBIF_NRT = VBIF_1
 };
 
+/* Must match order of msm_mmu_domain_type */
 enum sde_iommu_domain {
-	SDE_IOMMU_DOMAIN_UNSECURE,
+	SDE_IOMMU_DOMAIN_NRT_UNSECURE,
+	SDE_IOMMU_DOMAIN_NRT_SECURE,
 	SDE_IOMMU_DOMAIN_SECURE,
+	SDE_IOMMU_DOMAIN_UNSECURE,
 	SDE_IOMMU_DOMAIN_MAX
 };
 

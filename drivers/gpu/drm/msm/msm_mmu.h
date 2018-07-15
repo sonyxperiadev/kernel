@@ -22,6 +22,7 @@
 
 struct msm_mmu;
 
+/* Must match order of sde_iommu_domain */
 enum msm_mmu_domain_type {
 	MSM_SMMU_DOMAIN_NRT_UNSECURE,
 	MSM_SMMU_DOMAIN_NRT_SECURE,
