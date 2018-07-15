@@ -269,7 +269,7 @@
 		tracks-low;
 
 		trips {
-			critical_low_soc: low-soc {
+			crit_low_soc: crit-low-soc {
 				temperature = <5>;
 				hysteresis = <0>;
 				type = "passive";
