@@ -3537,6 +3537,12 @@ static int psy_changed(struct notifier_block *nb, unsigned long evt, void *ptr)
 
 	pd->vbus_present = val.intval;
 
+#ifdef CONFIG_USB_PD_WATER_DETECTION
+	if (typec_mode == POWER_SUPPLY_TYPEC_SINK_AUDIO_ADAPTER) {
+		wdet_polling_reset(pd->wdet);
+	}
+#endif
+
 	/*
 	 * For sink hard reset, state machine needs to know when VBUS changes
 	 *   - when in PE_SNK_TRANSITION_TO_DEFAULT, notify when VBUS falls
@@ -3560,7 +3566,8 @@ static int psy_changed(struct notifier_block *nb, unsigned long evt, void *ptr)
 	if (pd->typec_mode == typec_mode)
 		return 0;
 
-#ifdef CONFIG_EXTCON_SOMC_EXTENSION
+#if defined(CONFIG_EXTCON_SOMC_EXTENSION) && \
+    (defined(CONFIG_ARCH_MSM8998) || defined(CONFIG_ARCH_SDM630))
 	switch (typec_mode) {
 	/* Sink states */
 	case POWER_SUPPLY_TYPEC_SOURCE_DEFAULT:
@@ -4740,6 +4747,12 @@ struct usbpd *usbpd_create(struct device *parent)
 	/* force read initial power_supply values */
 	psy_changed(&pd->psy_nb, PSY_EVENT_PROP_CHANGED, pd->usb_psy);
 
+#ifdef CONFIG_USB_PD_WATER_DETECTION
+	pd->wdet = wdet_create(parent);
+	if (IS_ERR_OR_NULL(pd->wdet))
+		goto del_inst;
+#endif
+
 	return pd;
 
 del_inst:
@@ -4765,6 +4778,10 @@ void usbpd_destroy(struct usbpd *pd)
 {
 	if (!pd)
 		return;
+
+#ifdef CONFIG_USB_PD_WATER_DETECTION
+	wdet_destroy(pd->wdet);
+#endif
 
 	list_del(&pd->instance);
 	power_supply_unreg_notifier(&pd->psy_nb);
