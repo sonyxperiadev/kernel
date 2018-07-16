@@ -337,6 +337,9 @@ struct fg_batt_props {
 	int		float_volt_uv;
 	int		vbatt_full_mv;
 	int		fastchg_curr_ma;
+#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+	int		initial_capacity;
+#endif
 };
 
 struct fg_cyc_ctr_data {
