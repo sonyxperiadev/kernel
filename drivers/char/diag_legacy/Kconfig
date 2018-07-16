@@ -2,7 +2,7 @@ menu "Diag Support"
 
 config DIAG_CHAR_LEGACY
 	tristate "char driver interface and diag forwarding to/from modem"
-	default m
+	default n
 	depends on USB_CONFIGFS_F_DIAG || USB_FUNCTION_DIAG || USB_QCOM_MAEMO
 	depends on ARCH_QCOM
 	depends on POWER_RESET_QCOM
