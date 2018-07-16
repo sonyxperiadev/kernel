@@ -920,7 +920,7 @@ int smblib_rerun_apsd_if_required(struct smb_charger *chg)
 	msleep(200);
 	smblib_dbg(chg, PR_SOMC, "complete type-c reconnection\n");
 
-skip_ypec_reconnection:
+skip_typec_reconnection:
 #endif
 	rc = smblib_request_dpdm(chg, true);
 	if (rc < 0)
