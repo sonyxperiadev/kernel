@@ -91,6 +91,8 @@
 		pinctrl-2 = <&sde_touch_active>;
 		pinctrl-3 = <&sde_touch_suspend>;
 
+		qcom,dsi-display-active;
+
 		qcom,platform-te-gpio = <&tlmm 10 0>;
 		qcom,platform-reset-gpio = <&tlmm 6 0>;
 		/delete-property/ qcom,panel-mode-gpio;
@@ -136,10 +138,6 @@
 
 &mdss_mdp {
 	connectors = <&sde_rscc &sde_wb>;
-};
-
-&dsi_panel_cmd_display {
-	qcom,dsi-display-active;
 };
 
 &dsi_sharp_4k_dsc_video_display {
