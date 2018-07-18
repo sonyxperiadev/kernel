@@ -17,6 +17,7 @@
  * published by the Free Software Foundation.
  */
 
+#include "msm8998-yoshino-common-thermal.dtsi"
 
 / {
 	aliases {
