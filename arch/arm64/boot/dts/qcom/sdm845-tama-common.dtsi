@@ -570,6 +570,11 @@
 	extcon = <0>;
 };
 
+&pil_modem {
+	interrupts = <0 266 1>,
+		     <GIC_SPI 390 IRQ_TYPE_EDGE_RISING>;
+};
+
 &qupv3_se3_i2c {
 	status = "disabled";
 };
