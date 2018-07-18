@@ -183,6 +183,10 @@
 		pinctrl-2 = <&sdm_gpio_121>;
 	};
 
+	qcom,icnss@18800000 {
+		qcom,smmu-s1-bypass;
+	};
+
 	somc_pinctrl: somc_pinctrl {
 		compatible = "somc-pinctrl";
 		pinctrl-names = "platform_common_default",
