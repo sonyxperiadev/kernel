@@ -347,12 +347,6 @@ static bool dsi_bridge_mode_fixup(struct drm_bridge *bridge,
 			(!crtc_state->active_changed ||
 			 display->is_cont_splash_enabled))
 			dsi_mode.dsi_mode_flags |= DSI_MODE_FLAG_DMS;
-#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
-		else if (c_bridge->display->is_cont_splash_enabled &&
-				(!(dsi_mode.dsi_mode_flags &
-					DSI_MODE_FLAG_VRR)))
-			dsi_mode.dsi_mode_flags |= DSI_MODE_FLAG_DMS;
-#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 	}
 
 	/* convert back to drm mode, propagating the private info & flags */
