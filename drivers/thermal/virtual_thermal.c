@@ -168,6 +168,9 @@ int virtual_thermal_of_sensors_register(struct device *dev)
 	struct thermal_zone_device *tz;
 	static int idx;
 
+	if (virtual_therm == NULL)
+		return -ENODEV;
+
 	if (virtual_therm->num_entries == 0)
 		return 0;
 
