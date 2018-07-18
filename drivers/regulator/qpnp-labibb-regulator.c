@@ -2454,8 +2454,15 @@ static int qpnp_labibb_regulator_disable(struct qpnp_labibb *labibb)
 			pr_err("Error in entering TTW mode rc = %d\n", rc);
 			return rc;
 		}
+#ifdef CONFIG_ARCH_SONY_TAMA
+		if (labibb->lab_vreg.rdev->use_count == 1)
+			labibb->lab_vreg.vreg_enabled = 0;
+		if (labibb->ibb_vreg.rdev->use_count == 1)
+			labibb->ibb_vreg.vreg_enabled = 0;
+#else
 		labibb->lab_vreg.vreg_enabled = 0;
 		labibb->ibb_vreg.vreg_enabled = 0;
+#endif /* CONFIG_ARCH_SONY_TAMA */
 		return 0;
 	}
 
@@ -2498,8 +2505,15 @@ static int qpnp_labibb_regulator_disable(struct qpnp_labibb *labibb)
 		}
 	}
 
+#ifdef CONFIG_ARCH_SONY_TAMA
+	if (labibb->lab_vreg.rdev->use_count == 1)
+		labibb->lab_vreg.vreg_enabled = 0;
+	if (labibb->ibb_vreg.rdev->use_count == 1)
+		labibb->ibb_vreg.vreg_enabled = 0;
+#else
 	labibb->lab_vreg.vreg_enabled = 0;
 	labibb->ibb_vreg.vreg_enabled = 0;
+#endif /* CONFIG_ARCH_SONY_TAMA */
 
 	return 0;
 }
@@ -2559,8 +2573,12 @@ static int qpnp_lab_regulator_disable(struct regulator_dev *rdev)
 				REG_LAB_ENABLE_CTL, rc);
 			return rc;
 		}
-
+#ifdef CONFIG_ARCH_SONY_TAMA
+		if (rdev->use_count == 1)
+			labibb->lab_vreg.vreg_enabled = 0;
+#else
 		labibb->lab_vreg.vreg_enabled = 0;
+#endif /* CONFIG_ARCH_SONY_TAMA */
 	}
 	return 0;
 }
@@ -3223,6 +3241,9 @@ static int register_qpnp_lab_regulator(struct qpnp_labibb *labibb,
 
 			return rc;
 		}
+#ifdef CONFIG_ARCH_SONY_TAMA
+		labibb->lab_vreg.rdev->use_count = 1;
+#endif /* CONFIG_ARCH_SONY_TAMA */
 	} else {
 		dev_err(labibb->dev, "qpnp lab regulator name missing\n");
 		return -EINVAL;
@@ -3756,7 +3777,12 @@ static int qpnp_ibb_regulator_disable(struct regulator_dev *rdev)
 			return rc;
 		}
 
+#ifdef CONFIG_ARCH_SONY_TAMA
+		if (rdev->use_count == 1)
+			labibb->ibb_vreg.vreg_enabled = 0;
+#else
 		labibb->ibb_vreg.vreg_enabled = 0;
+#endif /* CONFIG_ARCH_SONY_TAMA */
 	}
 	return 0;
 }
@@ -4136,6 +4162,9 @@ static int register_qpnp_ibb_regulator(struct qpnp_labibb *labibb,
 
 			return rc;
 		}
+#ifdef CONFIG_ARCH_SONY_TAMA
+		labibb->ibb_vreg.rdev->use_count = 1;
+#endif /* CONFIG_ARCH_SONY_TAMA */
 	} else {
 		dev_err(labibb->dev, "qpnp ibb regulator name missing\n");
 		return -EINVAL;
