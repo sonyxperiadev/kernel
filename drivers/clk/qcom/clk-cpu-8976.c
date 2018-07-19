@@ -30,7 +30,7 @@
 #include <linux/of.h>
 #include <linux/of_platform.h>
 #include <linux/regmap.h>
-#include <linux/suspend.h>
+#include <linux/syscore_ops.h>
 #include <linux/regulator/rpm-smd-regulator.h>
 
 #include <dt-bindings/clock/qcom,cpu-8976.h>
@@ -400,8 +400,21 @@ struct cpu_desc_8976 {
 	cpumask_t cpumask;
 	struct pm_qos_request req;
 };
-static struct cpu_desc_8976 a53ssmux_desc;
-static struct cpu_desc_8976 a72ssmux_desc;
+
+enum {
+	AUX_DIV2,
+	AUX_FULL,
+	AUX_MAX_AVAILABLE_RATES,
+};
+
+struct clk_cpu_8976_data {
+	struct cpu_desc_8976 a53ssmux_desc;
+	struct cpu_desc_8976 a72ssmux_desc;
+	unsigned long aux3_rates[AUX_MAX_AVAILABLE_RATES];
+	unsigned long aux2_rates[AUX_MAX_AVAILABLE_RATES];
+};
+static struct clk_cpu_8976_data cpu_data;
+
 static void do_nothing(void *unused) { }
 
 static int cpu_clk_8976_set_rate(struct clk_hw *hw, unsigned long rate,
@@ -440,11 +453,11 @@ static int cpu_clk_8976_set_rate_little(struct clk_hw *hw, unsigned long rate,
 {
 	int rc;
 
-	cpu_clk_8976_pm_qos_add_req(&a53ssmux_desc);
+	cpu_clk_8976_pm_qos_add_req(&cpu_data.a53ssmux_desc);
 
 	rc = cpu_clk_8976_set_rate(hw, rate, parent_rate);
 
-	pm_qos_remove_request(&a53ssmux_desc.req);
+	pm_qos_remove_request(&cpu_data.a53ssmux_desc.req);
 
 	return rc;
 }
@@ -456,11 +469,11 @@ static int cpu_clk_8976_set_rate_and_parent_little(struct clk_hw *hw,
 {
 	int rc;
 
-	cpu_clk_8976_pm_qos_add_req(&a53ssmux_desc);
+	cpu_clk_8976_pm_qos_add_req(&cpu_data.a53ssmux_desc);
 
 	rc = cpu_clk_8976_set_rate_and_parent(hw, rate, prate, index);
 
-	pm_qos_remove_request(&a53ssmux_desc.req);
+	pm_qos_remove_request(&cpu_data.a53ssmux_desc.req);
 
 	return rc;
 }
@@ -471,11 +484,11 @@ static int cpu_clk_8976_set_rate_big(struct clk_hw *hw, unsigned long rate,
 {
 	int rc;
 
-	cpu_clk_8976_pm_qos_add_req(&a72ssmux_desc);
+	cpu_clk_8976_pm_qos_add_req(&cpu_data.a72ssmux_desc);
 
 	rc = cpu_clk_8976_set_rate(hw, rate, parent_rate);
 
-	pm_qos_remove_request(&a72ssmux_desc.req);
+	pm_qos_remove_request(&cpu_data.a72ssmux_desc.req);
 
 	return rc;
 }
@@ -487,11 +500,11 @@ static int cpu_clk_8976_set_rate_and_parent_big(struct clk_hw *hw,
 {
 	int rc;
 
-	cpu_clk_8976_pm_qos_add_req(&a72ssmux_desc);
+	cpu_clk_8976_pm_qos_add_req(&cpu_data.a72ssmux_desc);
 
 	rc = cpu_clk_8976_set_rate_and_parent(hw, rate, prate, index);
 
-	pm_qos_remove_request(&a72ssmux_desc.req);
+	pm_qos_remove_request(&cpu_data.a72ssmux_desc.req);
 
 	return rc;
 }
@@ -503,7 +516,12 @@ static int cpu_clk_8976_enable(struct clk_hw *hw)
 
 static void cpu_clk_8976_disable(struct clk_hw *hw)
 {
+	struct clk_regmap_mux_div *cpuclk = to_clk_regmap_mux_div(hw);
+
 	clk_regmap_mux_div_ops.disable(hw);
+
+	cpuclk->div = cpuclk->safe_div;
+	cpuclk->src = cpuclk->safe_src;
 }
 
 static u8 cpu_clk_8976_get_parent(struct clk_hw *hw)
@@ -522,38 +540,45 @@ static int cpu_clk_8976_set_parent(struct clk_hw *hw, u8 index)
 	return 0;
 }
 
-#define MAX_CLOCK_TOLERANCE	66667000
 static int cpu_clk_8976_determine_rate(struct clk_hw *hw,
 					struct clk_rate_request *req)
 {
 	int ret;
 	u32 div = 1;
-	struct clk_hw *apc_auxclk_hw, *cpu_pll_main_hw, *cpu_pll_hw;
-	unsigned long pll_rate, rate = req->rate;
+	struct clk_hw *clk_parent, *cpu_pll_hw;
+	unsigned long mask, pll_rate, rate = req->rate;
 	struct clk_rate_request parent_req = { };
 	struct clk_regmap_mux_div *cpuclk = to_clk_regmap_mux_div(hw);
-	unsigned long mask = BIT(cpuclk->hid_width) - 1;
-	int pll_clk_index = I_CLUSTER_PLL;
-	int aux_clk_index = I_APCSAUX3;
+	int clk_index = I_APCSAUX3; /* Default to GPLL0_AO auxiliary */
 
-	/* Try to use GPLL0_AO as auxiliary clock source */
-	apc_auxclk_hw = clk_hw_get_parent_by_index(hw, I_APCSAUX3);
-
-	cpu_pll_main_hw = clk_hw_get_parent_by_index(hw, I_CLUSTER_PLL_MAIN);
 	cpu_pll_hw = clk_hw_get_parent_by_index(hw, I_CLUSTER_PLL);
 	if (!cpu_pll_hw) {
-		pll_clk_index = I_APCSAUX3;
-		cpu_pll_hw = clk_hw_get_parent_by_index(hw, I_APCSAUX3);
+		/* Force using the APCS safe auxiliary source (GPLL0_AO) */
+		pll_rate = ULONG_MAX;
+	} else {
+		pll_rate = cpu_data.aux3_rates[AUX_FULL];
+
+		/* If GPLL0_AO is out of range, try to use GPLL4 */
+		if (rate > cpu_data.aux3_rates[AUX_DIV2] &&
+		    rate != pll_rate) {
+			clk_index = I_APCSAUX2;
+			clk_parent =
+				clk_hw_get_parent_by_index(hw, I_APCSAUX2);
+			pll_rate = cpu_data.aux2_rates[AUX_FULL];
+		}
 	}
 
-	pll_rate = clk_hw_get_rate(apc_auxclk_hw);
 	if (rate <= pll_rate) {
+		/* Use one of the APCSAUX as clock source */
+		clk_parent = clk_hw_get_parent_by_index(hw, clk_index);
+		mask = BIT(cpuclk->hid_width) - 1;
+
 		/*
 		 * Avoid powering on the specific cluster PLL to save
 		 * power whenever a low CPU frequency is requested for
 		 * that cluster.
 		 */
-		req->best_parent_hw = apc_auxclk_hw;
+		req->best_parent_hw = clk_parent;
 		req->best_parent_rate = pll_rate;
 
 		div = DIV_ROUND_UP((2 * req->best_parent_rate), rate) - 1;
@@ -562,8 +587,12 @@ static int cpu_clk_8976_determine_rate(struct clk_hw *hw,
 		req->rate = req->best_parent_rate * 2;
 		req->rate /= div + 1;
 
-		cpuclk->src = cpuclk->parent_map[aux_clk_index].cfg;
+		cpuclk->src = cpuclk->parent_map[clk_index].cfg;
 	} else {
+		/* Use the cluster specific PLL as clock source */
+		clk_index = I_CLUSTER_PLL_MAIN;
+		clk_parent = clk_hw_get_parent_by_index(hw, clk_index);
+
 		/*
 		 * Originally, we would run the PLL _always_ at maximum
 		 * frequency and postdivide the frequency to get where
@@ -573,12 +602,12 @@ static int cpu_clk_8976_determine_rate(struct clk_hw *hw,
 		 * the clock that we want.
 		 */
 		parent_req.rate = rate;
-		parent_req.best_parent_hw = cpu_pll_main_hw;
+		parent_req.best_parent_hw = clk_parent;
 
-		req->best_parent_hw = cpu_pll_main_hw;
+		req->best_parent_hw = clk_parent;
 		ret = __clk_determine_rate(req->best_parent_hw, &parent_req);
 
-		cpuclk->src = cpuclk->parent_map[pll_clk_index].cfg;
+		cpuclk->src = cpuclk->parent_map[I_CLUSTER_PLL].cfg;
 		req->best_parent_rate = parent_req.rate;
 	}
 	cpuclk->div = div;
@@ -1340,6 +1369,12 @@ static int clock_cpu_probe(struct platform_device *pdev)
 		return PTR_ERR(safe_req);
 	}
 
+	/* Initialize the data to avoid more calculations in determine_date */
+	cpu_data.aux3_rates[AUX_FULL] = clk_get_rate(safe_req);
+	cpu_data.aux3_rates[AUX_DIV2] = cpu_data.aux3_rates[AUX_FULL] / 2;
+	cpu_data.aux2_rates[AUX_FULL] = clk_get_rate(aux_clk_req);
+	cpu_data.aux2_rates[AUX_DIV2] = cpu_data.aux2_rates[AUX_FULL] / 2;
+
 	get_speed_bin(pdev, &speed_bin, &version);
 
 	rc = cpu_parse_devicetree(pdev);
@@ -1477,9 +1512,9 @@ static int clock_cpu_probe(struct platform_device *pdev)
 	/* Assign cpumask to the CPU descriptors */
 	for_each_possible_cpu(cpu) {
 		if (cpu <= 3)
-			cpumask_set_cpu(cpu, &a53ssmux_desc.cpumask);
+			cpumask_set_cpu(cpu, &cpu_data.a53ssmux_desc.cpumask);
 		else
-			cpumask_set_cpu(cpu, &a72ssmux_desc.cpumask);
+			cpumask_set_cpu(cpu, &cpu_data.a72ssmux_desc.cpumask);
 	}
 
 	/* Put a proxy vote for the PLLs until initial configuration ends */
@@ -1527,6 +1562,7 @@ static int clock_cpu_probe(struct platform_device *pdev)
 
 	atomic_notifier_chain_register(&panic_notifier_list,
 					&clock_panic_notifier);
+
 	put_online_cpus();
 
 	/* Clocks are configured. Now we can remove the proxy vote. */
