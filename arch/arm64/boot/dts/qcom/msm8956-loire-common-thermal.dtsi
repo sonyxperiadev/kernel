@@ -138,7 +138,7 @@
 
 		};
 		cooling-maps {
-			/* Throttle to FMIN */
+			/* Shut down C1 */
 			cpu4_cdev0 {
 				trip = <&c1_crit>;
 				cooling-device =
@@ -148,23 +148,23 @@
 			cpu5_cdev0 {
 				trip = <&c1_crit>;
 				cooling-device =
-					<&CPU4 THERMAL_MAX_LIMIT
+					<&CPU5 THERMAL_MAX_LIMIT
 						THERMAL_MAX_LIMIT>;
 			};
 
-			/* Throttle C1 from FMAX to 883.2MHz */
+			/* Throttle C1 from FMAX to 800.2MHz */
 			/* Throttle C0 from FMAX to 1305.6MHz */
 			cpu4_cdev1 {
 				trip = <&c1_trip1>;
 				cooling-device =
 					<&CPU4 THERMAL_NO_LIMIT
-						(THERMAL_MAX_LIMIT-1)>;
+						(THERMAL_MAX_LIMIT-2)>;
 			};
 			cpu5_cdev1 {
 				trip = <&c1_trip1>;
 				cooling-device =
 					<&CPU4 THERMAL_MAX_LIMIT
-						(THERMAL_MAX_LIMIT-1)>;
+						(THERMAL_MAX_LIMIT-2)>;
 			};
 			cpu0_cdev10 {
 				trip = <&c1_trip1>;
@@ -191,18 +191,18 @@
 						(THERMAL_MAX_LIMIT-6)>;
 			};
 
-			/* Throttle from FMAX to 940.8MHz */
+			/* Throttle from FMAX to 1200.8MHz */
 			cpu4_cdev2 {
 				trip = <&c1_trip2>;
 				cooling-device =
 					<&CPU4 THERMAL_NO_LIMIT
-						(THERMAL_MAX_LIMIT-2)>;
+						(THERMAL_MAX_LIMIT-7)>;
 			};
 			cpu5_cdev2 {
 				trip = <&c1_trip2>;
 				cooling-device =
-					<&CPU4 THERMAL_MAX_LIMIT
-						(THERMAL_MAX_LIMIT-2)>;
+					<&CPU5 THERMAL_MAX_LIMIT
+						(THERMAL_MAX_LIMIT-7)>;
 			};
 		};
 	};
@@ -575,7 +575,7 @@
 							(THERMAL_MAX_LIMIT-1)>;
 			};
 
-			/* Throttle from FMAX to 883.2MHz */
+			/* Throttle from FMAX to 800MHz */
 			skin1_cpu4 {
 				trip = <&cpu_ct_c1_trip1>;
 				cooling-device = <&CPU4 THERMAL_NO_LIMIT
@@ -587,16 +587,16 @@
 							(THERMAL_MAX_LIMIT-2)>;
 			};
 
-			/* Throttle from FMAX to 1248MHz */
+			/* Throttle from FMAX to 1200MHz */
 			skin1_cpu4 {
-				trip = <&cpu_ct_c1_trip1>;
+				trip = <&cpu_ct_c1_trip2>;
 				cooling-device = <&CPU4 THERMAL_NO_LIMIT
-							(THERMAL_MAX_LIMIT-8)>;
+							(THERMAL_MAX_LIMIT-7)>;
 			};
 			skin1_cpu5 {
-				trip = <&cpu_ct_c1_trip1>;
+				trip = <&cpu_ct_c1_trip2>;
 				cooling-device = <&CPU5 THERMAL_NO_LIMIT
-							(THERMAL_MAX_LIMIT-8)>;
+							(THERMAL_MAX_LIMIT-7)>;
 			};
 
 			/* Throttle from FMAX to 266.6MHz */
