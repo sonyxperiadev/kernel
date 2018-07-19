@@ -342,7 +342,7 @@
 		};
 	};
 
-	somc_pinctrl: somc_pinctrl {
+	somc_pinctrl: somc_pinctrl@0 {
 		compatible = "somc-pinctrl";
 		pinctrl-names = "platform_common_default",
 				"product_common_default",
@@ -389,6 +389,26 @@
 
 		/* If variant specific default setting is needed,
 		   fill pinctrl-3 value in <variant>.dtsi */
+		pinctrl-3 = <>;
+	};
+
+	somc_pinctrl_pmic: somc_pinctrl@1 {
+		compatible = "somc-pinctrl";
+		pinctrl-names = "platform_common_default",
+				"product_common_default",
+				"variant_default";
+		pinctrl-0 = </* PM8950 */
+			     &pm8950_gpio_1 &pm8950_gpio_5
+			     &pm8950_gpio_6 &pm8950_gpio_7 &pm8950_gpio_8
+			     &pm8950_mpp2_def &pm8950_mpp4_def
+			     /* PMI8950 */
+			     &pmi8950_gpio_1 &pmi8950_gpio_2
+			     &pmi_mpp1_def &pmi_mpp3_def &pmi_mpp4_def
+			     /* PM8004 */
+			     &pm8004_mpp3_def &pm8004_mpp4_def>;
+
+		pinctrl-1 = <>;
+		pinctrl-2 = <>;
 		pinctrl-3 = <>;
 	};
 

@@ -2579,8 +2579,8 @@
 		pinctrl-names =
 			"all_off",
 			"us_eu_gpio_act";
-		pinctrl-0 = <&cross_conn_det_sus &pm8950_gpio_7>;
-		pinctrl-1 = <&cross_conn_det_act &pm8950_gpio_7>;
+		pinctrl-0 = <&cross_conn_det_sus>;// &pm8950_gpio_7>;
+		pinctrl-1 = <&cross_conn_det_act>;// &pm8950_gpio_7>;
 		qcom,cdc-us-euro-gpios = <&msm_gpio 144 0>;
 
 		qcom,msm-mbhc-hphl-swh = <0>;
@@ -2656,9 +2656,9 @@
 
 	clock_audio: audio_ext_clk {
 		compatible = "qcom,audio-ref-clk";
-		pinctrl-names = "active", "sleep";
-		pinctrl-0 = <&pm8950_gpio_1>;
-		pinctrl-1 = <&pm8950_gpio_1>;
+//		pinctrl-names = "active", "sleep";
+//		pinctrl-0 = <&pm8950_gpio_1>;
+//		pinctrl-1 = <&pm8950_gpio_1>;
 		qcom,audio-ref-clk-gpio = <&pm8950_gpios 1 0>;
 		clock-names = "osr_clk";
 		clocks = <&clock_rpmcc RPM_DIV_CLK2>;
