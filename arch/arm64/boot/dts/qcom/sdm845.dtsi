@@ -504,6 +504,13 @@
 					fsmgr_flags = "wait,slotselect,avb";
 					status = "ok";
 				};
+				odm {
+					compatible = "android,odm";
+					dev = "/dev/block/platform/soc/1d84000.ufshc/by-name/oem_a";
+					type = "ext4";
+					mnt_flags = "ro,barrier=1,discard";
+					fsmgr_flags = "wait";
+				};
 			};
 		};
 	};
