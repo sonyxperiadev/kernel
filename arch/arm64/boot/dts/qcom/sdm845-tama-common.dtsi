@@ -3267,19 +3267,6 @@
 	uim2-gpios = <&tlmm 129 0x0>;
 };
 
-&firmware {
-	android {
-		odm {
-			compatible = "android,odm";
-			dev = "/dev/block/platform/soc/1d84000.ufshc/by-name/oem_a";
-			type = "ext4";
-			mnt_flags = "ro,barrier=1";
-			fsmgr_flags = "wait";
-			status = "ok";
-		};
-	};
-};
-
 &pm8998_vadc {
 	chan@4e {
 		label = "ufs_therm";
