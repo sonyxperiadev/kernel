@@ -89,7 +89,7 @@ config FW_LOADER
 config FIRMWARE_IN_KERNEL
 	bool "Include in-kernel firmware blobs in kernel binary"
 	depends on FW_LOADER
-	default y
+	default n
 	help
 	  Various drivers in the kernel source tree may require firmware,
 	  which is generally available in your distribution's linux-firmware
