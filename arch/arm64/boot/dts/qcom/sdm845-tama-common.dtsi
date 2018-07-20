@@ -579,6 +579,22 @@
 		     <GIC_SPI 390 IRQ_TYPE_EDGE_RISING>;
 };
 
+&ipa_hw {
+	/delete-property/ qcom,smmu-fast-map;
+};
+
+&ipa_smmu_ap {
+	qcom,smmu-s1-bypass;
+};
+
+&ipa_smmu_wlan {
+	qcom,smmu-s1-bypass;
+};
+
+&ipa_smmu_uc {
+	qcom,smmu-s1-bypass;
+};
+
 &qupv3_se3_i2c {
 	status = "disabled";
 };
