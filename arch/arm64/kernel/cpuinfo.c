@@ -354,6 +354,11 @@ static void __cpuinfo_store_cpu(struct cpuinfo_arm64 *info)
 	info->reg_id_aa64pfr0 = read_cpuid(ID_AA64PFR0_EL1);
 	info->reg_id_aa64pfr1 = read_cpuid(ID_AA64PFR1_EL1);
 
+#ifdef CONFIG_ARM64_FORCE_NO_16K_GRANULE
+#define MMFR0_EL1_16KGRAN_MASK	(15 << 20)
+	info->reg_id_aa64mmfr0 &= ~MMFR0_EL1_16KGRAN_MASK;
+#endif
+
 	/* Update the 32bit ID registers only if AArch32 is implemented */
 	if (id_aa64pfr0_32bit_el0(info->reg_id_aa64pfr0)) {
 		info->reg_id_dfr0 = read_cpuid(ID_DFR0_EL1);

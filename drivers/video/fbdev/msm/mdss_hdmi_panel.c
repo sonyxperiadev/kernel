@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2016, 2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -73,7 +73,7 @@
  * 0b01 Photo
  * 0b10 Cinema
  * 0b11 Game
- */
+*/
 #define CONFIG_CN_BITS(bits, byte) \
 		(byte = (byte & ~(BIT(4) | BIT(5))) |\
 			((bits & (BIT(0) | BIT(1))) << 4))
@@ -108,7 +108,7 @@ struct hdmi_video_config {
 };
 
 struct hdmi_panel {
-	struct mdss_io_data *io;
+	struct dss_io_data *io;
 	struct hdmi_util_ds_data *ds_data;
 	struct hdmi_panel_data *data;
 	struct hdmi_video_config vid_cfg;
@@ -149,74 +149,6 @@ enum hdmi_scaling_info {
 	HDMI_SCALING_VERT,
 	HDMI_SCALING_HORZ_VERT,
 };
-
-static int hdmi_panel_get_vic(struct mdss_panel_info *pinfo,
-		struct hdmi_util_ds_data *ds_data)
-{
-	int new_vic = -1;
-	u32 h_total, v_total;
-	struct msm_hdmi_mode_timing_info timing;
-
-	if (!pinfo) {
-		pr_err("invalid panel data\n");
-		return -EINVAL;
-	}
-
-	if (pinfo->vic) {
-		struct msm_hdmi_mode_timing_info info = {0};
-		u32 ret = hdmi_get_supported_mode(&info, ds_data, pinfo->vic);
-		u32 supported = info.supported;
-
-		if (!ret && supported) {
-			new_vic = pinfo->vic;
-		} else {
-			pr_err("invalid or not supported vic %d\n",
-				pinfo->vic);
-			return -EPERM;
-		}
-	} else {
-		timing.active_h      = pinfo->xres;
-		timing.back_porch_h  = pinfo->lcdc.h_back_porch;
-		timing.front_porch_h = pinfo->lcdc.h_front_porch;
-		timing.pulse_width_h = pinfo->lcdc.h_pulse_width;
-
-		h_total = timing.active_h + timing.back_porch_h +
-			timing.front_porch_h + timing.pulse_width_h;
-
-		pr_debug("ah=%d bph=%d fph=%d pwh=%d ht=%d\n",
-			timing.active_h, timing.back_porch_h,
-			timing.front_porch_h, timing.pulse_width_h,
-			h_total);
-
-		timing.active_v      = pinfo->yres;
-		timing.back_porch_v  = pinfo->lcdc.v_back_porch;
-		timing.front_porch_v = pinfo->lcdc.v_front_porch;
-		timing.pulse_width_v = pinfo->lcdc.v_pulse_width;
-
-		v_total = timing.active_v + timing.back_porch_v +
-			timing.front_porch_v + timing.pulse_width_v;
-
-		pr_debug("av=%d bpv=%d fpv=%d pwv=%d vt=%d\n",
-			timing.active_v, timing.back_porch_v,
-			timing.front_porch_v, timing.pulse_width_v, v_total);
-
-		timing.pixel_freq = ((unsigned long int)pinfo->clk_rate / 1000);
-		if (h_total && v_total) {
-			timing.refresh_rate = ((timing.pixel_freq * 1000) /
-				(h_total * v_total)) * 1000;
-		} else {
-			pr_err("cannot cal refresh rate\n");
-			return -EPERM;
-		}
-
-		pr_debug("pixel_freq=%d refresh_rate=%d\n",
-			timing.pixel_freq, timing.refresh_rate);
-
-		new_vic = hdmi_get_video_id_code(&timing, ds_data);
-	}
-
-	return new_vic;
-}
 
 static void hdmi_panel_update_dfps_data(struct hdmi_panel *panel)
 {
@@ -275,7 +207,7 @@ static int hdmi_panel_setup_video(struct hdmi_panel *panel)
 	u32 total_h, start_h, end_h;
 	u32 total_v, start_v, end_v;
 	u32 div = 0;
-	struct mdss_io_data *io = panel->io;
+	struct dss_io_data *io = panel->io;
 	struct msm_hdmi_mode_timing_info *timing;
 
 	timing = panel->vid_cfg.timing;
@@ -342,7 +274,7 @@ static void hdmi_panel_set_avi_infoframe(struct hdmi_panel *panel)
 	u8  avi_iframe[AVI_MAX_DATA_BYTES] = {0};
 	u8 checksum;
 	u32 sum, reg_val;
-	struct mdss_io_data *io = panel->io;
+	struct dss_io_data *io = panel->io;
 	struct hdmi_avi_infoframe_config *avi;
 	struct msm_hdmi_mode_timing_info *timing;
 
@@ -477,7 +409,7 @@ static void hdmi_panel_set_vendor_specific_infoframe(void *input)
 	u32 sum, reg_val;
 	u32 hdmi_vic, hdmi_video_format, s3d_struct = 0;
 	struct hdmi_panel *panel = input;
-	struct mdss_io_data *io = panel->io;
+	struct dss_io_data *io = panel->io;
 
 	/* HDMI Spec 1.4a Table 8-10 */
 	vs_iframe[0] = 0x81; /* type */
@@ -564,7 +496,7 @@ static void hdmi_panel_set_spd_infoframe(struct hdmi_panel *panel)
 	u32 packet_control = 0;
 	u8 *vendor_name = NULL;
 	u8 *product_description = NULL;
-	struct mdss_io_data *io = panel->io;
+	struct dss_io_data *io = panel->io;
 
 	vendor_name = panel->spd_vendor_name;
 	product_description = panel->spd_product_description;
@@ -670,14 +602,51 @@ end:
 	return rc;
 }
 
+static int hdmi_panel_setup_dc(struct hdmi_panel *panel)
+{
+	u32 hdmi_ctrl_reg;
+	u32 vbi_pkt_reg;
+	int rc = 0;
+
+	pr_debug("Deep Color: %s\n", panel->data->dc_enable ? "ON" : "OFF");
+
+	/* enable deep color if supported */
+	if (panel->data->dc_enable) {
+		hdmi_ctrl_reg = DSS_REG_R(panel->io, HDMI_CTRL);
+
+		/* GC CD override */
+		hdmi_ctrl_reg |= BIT(27);
+
+		/* enable deep color for RGB888 30 bits */
+		hdmi_ctrl_reg |= BIT(24);
+		DSS_REG_W(panel->io, HDMI_CTRL, hdmi_ctrl_reg);
+
+		/* Enable GC_CONT and GC_SEND in General Control Packet
+		 * (GCP) register so that deep color data is
+		 * transmitted to the sink on every frame, allowing
+		 * the sink to decode the data correctly.
+		 *
+		 * GC_CONT: 0x1 - Send GCP on every frame
+		 * GC_SEND: 0x1 - Enable GCP Transmission
+		 */
+		vbi_pkt_reg = DSS_REG_R(panel->io, HDMI_VBI_PKT_CTRL);
+		vbi_pkt_reg |= BIT(5) | BIT(4);
+		DSS_REG_W(panel->io, HDMI_VBI_PKT_CTRL, vbi_pkt_reg);
+	}
+
+	return rc;
+}
+
 static int hdmi_panel_setup_scrambler(struct hdmi_panel *panel)
 {
 	int rc = 0;
 	int timeout_hsync;
 	u32 reg_val = 0;
 	u32 tmds_clock_ratio = 0;
+	u32 tmds_clock = 0;
 	bool scrambler_on = false;
 	struct msm_hdmi_mode_timing_info *timing = NULL;
+	struct mdss_panel_info *pinfo = NULL;
 
 	if (!panel) {
 		pr_err("invalid input\n");
@@ -690,13 +659,22 @@ static int hdmi_panel_setup_scrambler(struct hdmi_panel *panel)
 		return -EINVAL;
 	}
 
+	pinfo = panel->data->pinfo;
+	if (!pinfo) {
+		pr_err("invalid panel data\n");
+		return -EINVAL;
+	}
+
 	/* Scrambling is supported from HDMI TX 4.0 */
 	if (panel->version < HDMI_TX_SCRAMBLER_MIN_TX_VERSION) {
 		pr_debug("scrambling not supported by tx\n");
 		return 0;
 	}
 
-	if (timing->pixel_freq > HDMI_TX_SCRAMBLER_THRESHOLD_RATE_KHZ) {
+	tmds_clock = hdmi_tx_setup_tmds_clk_rate(timing->pixel_freq,
+		pinfo->out_format, panel->data->dc_enable);
+
+	if (tmds_clock > HDMI_TX_SCRAMBLER_THRESHOLD_RATE_KHZ) {
 		scrambler_on = true;
 		tmds_clock_ratio = 1;
 	} else {
@@ -866,6 +844,12 @@ static int hdmi_panel_power_on(void *input)
 		pr_err("scrambler setup failed. rc=%d\n", rc);
 		goto err;
 	}
+
+	rc = hdmi_panel_setup_dc(panel);
+	if (rc) {
+		pr_err("Deep Color setup failed. rc=%d\n", rc);
+		goto err;
+	}
 end:
 	panel->on = true;
 
@@ -916,7 +900,6 @@ void *hdmi_panel_init(struct hdmi_panel_init_data *data)
 	if (data->ops) {
 		data->ops->on = hdmi_panel_power_on;
 		data->ops->off = hdmi_panel_power_off;
-		data->ops->get_vic = hdmi_panel_get_vic;
 		data->ops->vendor = hdmi_panel_set_vendor_specific_infoframe;
 		data->ops->update_fps = hdmi_panel_update_fps;
 	}

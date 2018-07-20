@@ -253,7 +253,7 @@ static struct clk_alpha_pll gpll0 = {
 	.offset = 0x0,
 	.vco_table = fabia_vco,
 	.num_vco = ARRAY_SIZE(fabia_vco),
-	.type = FABIA_PLL,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.clkr = {
 		.enable_reg = 0x52000,
 		.enable_mask = BIT(0),
@@ -261,7 +261,7 @@ static struct clk_alpha_pll gpll0 = {
 			.name = "gpll0",
 			.parent_names = (const char *[]){ "bi_tcxo" },
 			.num_parents = 1,
-			.ops = &clk_fabia_fixed_pll_ops,
+			.ops = &clk_alpha_pll_fabia_fixed_ops,
 			VDD_CX_FMAX_MAP4(
 				MIN, 615000000,
 				LOW, 1066000000,
@@ -275,7 +275,7 @@ static struct clk_alpha_pll gpll4 = {
 	.offset = 0x76000,
 	.vco_table = fabia_vco,
 	.num_vco = ARRAY_SIZE(fabia_vco),
-	.type = FABIA_PLL,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.clkr = {
 		.enable_reg = 0x52000,
 		.enable_mask = BIT(4),
@@ -283,7 +283,7 @@ static struct clk_alpha_pll gpll4 = {
 			.name = "gpll4",
 			.parent_names = (const char *[]){ "bi_tcxo" },
 			.num_parents = 1,
-			.ops = &clk_fabia_fixed_pll_ops,
+			.ops = &clk_alpha_pll_fabia_fixed_ops,
 			VDD_CX_FMAX_MAP4(
 				MIN, 615000000,
 				LOW, 1066000000,
@@ -293,25 +293,15 @@ static struct clk_alpha_pll gpll4 = {
 	},
 };
 
-static const struct clk_div_table post_div_table_fabia_even[] = {
-	{ 0x0, 1 },
-	{ 0x1, 2 },
-	{ 0x3, 4 },
-	{ 0x7, 8 },
-	{ }
-};
-
 static struct clk_alpha_pll_postdiv gpll0_out_even = {
 	.offset = 0x0,
-	.post_div_shift = 8,
-	.post_div_table = post_div_table_fabia_even,
-	.num_post_div = ARRAY_SIZE(post_div_table_fabia_even),
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.width = 4,
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "gpll0_out_even",
 		.parent_names = (const char *[]){ "gpll0" },
 		.num_parents = 1,
-		.ops = &clk_generic_pll_postdiv_ops,
+		.ops = &clk_alpha_fabia_pll_postdiv_ops,
 	},
 };
 
@@ -319,7 +309,7 @@ static struct clk_alpha_pll gpll6 = {
 	.offset = 0x13000,
 	.vco_table = fabia_vco,
 	.num_vco = ARRAY_SIZE(fabia_vco),
-	.type = FABIA_PLL,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.clkr = {
 		.enable_reg = 0x52000,
 		.enable_mask = BIT(6),
@@ -327,7 +317,7 @@ static struct clk_alpha_pll gpll6 = {
 			.name = "gpll6",
 			.parent_names = (const char *[]){ "bi_tcxo" },
 			.num_parents = 1,
-			.ops = &clk_fabia_fixed_pll_ops,
+			.ops = &clk_alpha_pll_fabia_fixed_ops,
 			VDD_CX_FMAX_MAP4(
 				MIN, 615000000,
 				LOW, 1066000000,
@@ -382,7 +372,6 @@ static struct clk_rcg2 gcc_cpuss_rbcpr_clk_src = {
 		.name = "gcc_cpuss_rbcpr_clk_src",
 		.parent_names = gcc_parent_names_8,
 		.num_parents = 3,
-		.flags = CLK_SET_RATE_PARENT,
 		.ops = &clk_rcg2_ops,
 		VDD_CX_FMAX_MAP1_AO(
 			MIN, 19200000),
@@ -408,7 +397,6 @@ static struct clk_rcg2 gcc_gp1_clk_src = {
 		.name = "gcc_gp1_clk_src",
 		.parent_names = gcc_parent_names_1,
 		.num_parents = 5,
-		.flags = CLK_SET_RATE_PARENT,
 		.ops = &clk_rcg2_ops,
 		VDD_CX_FMAX_MAP4(
 			MIN, 19200000,
@@ -428,7 +416,6 @@ static struct clk_rcg2 gcc_gp2_clk_src = {
 		.name = "gcc_gp2_clk_src",
 		.parent_names = gcc_parent_names_1,
 		.num_parents = 5,
-		.flags = CLK_SET_RATE_PARENT,
 		.ops = &clk_rcg2_ops,
 		VDD_CX_FMAX_MAP4(
 			MIN, 19200000,
@@ -448,7 +435,6 @@ static struct clk_rcg2 gcc_gp3_clk_src = {
 		.name = "gcc_gp3_clk_src",
 		.parent_names = gcc_parent_names_1,
 		.num_parents = 5,
-		.flags = CLK_SET_RATE_PARENT,
 		.ops = &clk_rcg2_ops,
 		VDD_CX_FMAX_MAP4(
 			MIN, 19200000,
@@ -474,7 +460,6 @@ static struct clk_rcg2 gcc_pcie_0_aux_clk_src = {
 		.name = "gcc_pcie_0_aux_clk_src",
 		.parent_names = gcc_parent_names_2,
 		.num_parents = 3,
-		.flags = CLK_SET_RATE_PARENT,
 		.ops = &clk_rcg2_ops,
 		VDD_CX_FMAX_MAP2(
 			MIN, 9600000,
@@ -492,7 +477,6 @@ static struct clk_rcg2 gcc_pcie_1_aux_clk_src = {
 		.name = "gcc_pcie_1_aux_clk_src",
 		.parent_names = gcc_parent_names_2,
 		.num_parents = 3,
-		.flags = CLK_SET_RATE_PARENT,
 		.ops = &clk_rcg2_ops,
 		VDD_CX_FMAX_MAP2(
 			MIN, 9600000,
@@ -516,7 +500,6 @@ static struct clk_rcg2 gcc_pcie_phy_refgen_clk_src = {
 		.name = "gcc_pcie_phy_refgen_clk_src",
 		.parent_names = gcc_parent_names_0,
 		.num_parents = 4,
-		.flags = CLK_SET_RATE_PARENT,
 		.ops = &clk_rcg2_ops,
 		VDD_CX_FMAX_MAP2(
 			MIN, 19200000,
@@ -541,7 +524,6 @@ static struct clk_rcg2 gcc_pdm2_clk_src = {
 		.name = "gcc_pdm2_clk_src",
 		.parent_names = gcc_parent_names_0,
 		.num_parents = 4,
-		.flags = CLK_SET_RATE_PARENT,
 		.ops = &clk_rcg2_ops,
 		VDD_CX_FMAX_MAP3(
 			MIN, 9600000,
@@ -923,7 +905,6 @@ static struct clk_rcg2 gcc_sdcc1_ice_core_clk_src = {
 		.name = "gcc_sdcc1_ice_core_clk_src",
 		.parent_names = gcc_parent_names_0,
 		.num_parents = 4,
-		.flags = CLK_SET_RATE_PARENT,
 		.ops = &clk_rcg2_ops,
 		VDD_CX_FMAX_MAP3(
 			MIN, 75000000,
@@ -955,7 +936,6 @@ static struct clk_rcg2 gcc_sdcc1_apps_clk_src = {
 		.name = "gcc_sdcc1_apps_clk_src",
 		.parent_names = gcc_parent_names_11,
 		.num_parents = 5,
-		.flags = CLK_SET_RATE_PARENT,
 		.ops = &clk_rcg2_ops,
 		VDD_CX_FMAX_MAP4(
 			MIN, 19200000,
@@ -987,7 +967,6 @@ static struct clk_rcg2 gcc_sdcc2_apps_clk_src = {
 		.name = "gcc_sdcc2_apps_clk_src",
 		.parent_names = gcc_parent_names_10,
 		.num_parents = 5,
-		.flags = CLK_SET_RATE_PARENT,
 		.ops = &clk_rcg2_ops,
 		VDD_CX_FMAX_MAP4(
 			MIN, 9600000,
@@ -1029,7 +1008,6 @@ static struct clk_rcg2 gcc_sdcc4_apps_clk_src = {
 		.name = "gcc_sdcc4_apps_clk_src",
 		.parent_names = gcc_parent_names_0,
 		.num_parents = 4,
-		.flags = CLK_SET_RATE_PARENT,
 		.ops = &clk_rcg2_ops,
 		VDD_CX_FMAX_MAP4(
 			MIN, 9600000,
@@ -1054,7 +1032,6 @@ static struct clk_rcg2 gcc_tsif_ref_clk_src = {
 		.name = "gcc_tsif_ref_clk_src",
 		.parent_names = gcc_parent_names_6,
 		.num_parents = 5,
-		.flags = CLK_SET_RATE_PARENT,
 		.ops = &clk_rcg2_ops,
 		VDD_CX_FMAX_MAP1(
 			MIN, 105495),
@@ -1089,7 +1066,6 @@ static struct clk_rcg2 gcc_ufs_card_axi_clk_src = {
 		.name = "gcc_ufs_card_axi_clk_src",
 		.parent_names = gcc_parent_names_0,
 		.num_parents = 4,
-		.flags = CLK_SET_RATE_PARENT,
 		.ops = &clk_rcg2_ops,
 		VDD_CX_FMAX_MAP3(
 			MIN, 50000000,
@@ -1117,7 +1093,6 @@ static struct clk_rcg2 gcc_ufs_card_ice_core_clk_src = {
 		.name = "gcc_ufs_card_ice_core_clk_src",
 		.parent_names = gcc_parent_names_0,
 		.num_parents = 4,
-		.flags = CLK_SET_RATE_PARENT,
 		.ops = &clk_rcg2_ops,
 		VDD_CX_FMAX_MAP3(
 			MIN, 75000000,
@@ -1137,7 +1112,6 @@ static struct clk_rcg2 gcc_ufs_card_phy_aux_clk_src = {
 		.name = "gcc_ufs_card_phy_aux_clk_src",
 		.parent_names = gcc_parent_names_4,
 		.num_parents = 2,
-		.flags = CLK_SET_RATE_PARENT,
 		.ops = &clk_rcg2_ops,
 		VDD_CX_FMAX_MAP1(
 			MIN, 19200000),
@@ -1162,7 +1136,6 @@ static struct clk_rcg2 gcc_ufs_card_unipro_core_clk_src = {
 		.name = "gcc_ufs_card_unipro_core_clk_src",
 		.parent_names = gcc_parent_names_0,
 		.num_parents = 4,
-		.flags = CLK_SET_RATE_PARENT,
 		.ops = &clk_rcg2_ops,
 		VDD_CX_FMAX_MAP3(
 			MIN, 37500000,
@@ -1191,7 +1164,6 @@ static struct clk_rcg2 gcc_ufs_phy_axi_clk_src = {
 		.name = "gcc_ufs_phy_axi_clk_src",
 		.parent_names = gcc_parent_names_0,
 		.num_parents = 4,
-		.flags = CLK_SET_RATE_PARENT,
 		.ops = &clk_rcg2_ops,
 		VDD_CX_FMAX_MAP4(
 			MIN, 50000000,
@@ -1212,7 +1184,6 @@ static struct clk_rcg2 gcc_ufs_phy_ice_core_clk_src = {
 		.name = "gcc_ufs_phy_ice_core_clk_src",
 		.parent_names = gcc_parent_names_0,
 		.num_parents = 4,
-		.flags = CLK_SET_RATE_PARENT,
 		.ops = &clk_rcg2_ops,
 		VDD_CX_FMAX_MAP3(
 			MIN, 75000000,
@@ -1232,7 +1203,6 @@ static struct clk_rcg2 gcc_ufs_phy_phy_aux_clk_src = {
 		.name = "gcc_ufs_phy_phy_aux_clk_src",
 		.parent_names = gcc_parent_names_4,
 		.num_parents = 2,
-		.flags = CLK_SET_RATE_PARENT,
 		.ops = &clk_rcg2_ops,
 		VDD_CX_FMAX_MAP1(
 			MIN, 19200000),
@@ -1250,7 +1220,6 @@ static struct clk_rcg2 gcc_ufs_phy_unipro_core_clk_src = {
 		.name = "gcc_ufs_phy_unipro_core_clk_src",
 		.parent_names = gcc_parent_names_0,
 		.num_parents = 4,
-		.flags = CLK_SET_RATE_PARENT,
 		.ops = &clk_rcg2_ops,
 		VDD_CX_FMAX_MAP3(
 			MIN, 37500000,
@@ -1279,7 +1248,6 @@ static struct clk_rcg2 gcc_usb30_prim_master_clk_src = {
 		.name = "gcc_usb30_prim_master_clk_src",
 		.parent_names = gcc_parent_names_0,
 		.num_parents = 4,
-		.flags = CLK_SET_RATE_PARENT,
 		.ops = &clk_rcg2_ops,
 		VDD_CX_FMAX_MAP5(
 			MIN, 33333333,
@@ -1309,7 +1277,6 @@ static struct clk_rcg2 gcc_usb30_prim_mock_utmi_clk_src = {
 		.name = "gcc_usb30_prim_mock_utmi_clk_src",
 		.parent_names = gcc_parent_names_0,
 		.num_parents = 4,
-		.flags = CLK_SET_RATE_PARENT,
 		.ops = &clk_rcg2_ops,
 		VDD_CX_FMAX_MAP3(
 			MIN, 19200000,
@@ -1328,7 +1295,6 @@ static struct clk_rcg2 gcc_usb30_sec_master_clk_src = {
 		.name = "gcc_usb30_sec_master_clk_src",
 		.parent_names = gcc_parent_names_0,
 		.num_parents = 4,
-		.flags = CLK_SET_RATE_PARENT,
 		.ops = &clk_rcg2_ops,
 		VDD_CX_FMAX_MAP5(
 			MIN, 33333333,
@@ -1349,7 +1315,6 @@ static struct clk_rcg2 gcc_usb30_sec_mock_utmi_clk_src = {
 		.name = "gcc_usb30_sec_mock_utmi_clk_src",
 		.parent_names = gcc_parent_names_0,
 		.num_parents = 4,
-		.flags = CLK_SET_RATE_PARENT,
 		.ops = &clk_rcg2_ops,
 		VDD_CX_FMAX_MAP3(
 			MIN, 19200000,
@@ -1368,7 +1333,6 @@ static struct clk_rcg2 gcc_usb3_prim_phy_aux_clk_src = {
 		.name = "gcc_usb3_prim_phy_aux_clk_src",
 		.parent_names = gcc_parent_names_2,
 		.num_parents = 3,
-		.flags = CLK_SET_RATE_PARENT,
 		.ops = &clk_rcg2_ops,
 		VDD_CX_FMAX_MAP1(
 			MIN, 19200000),
@@ -1386,7 +1350,6 @@ static struct clk_rcg2 gcc_usb3_sec_phy_aux_clk_src = {
 		.name = "gcc_usb3_sec_phy_aux_clk_src",
 		.parent_names = gcc_parent_names_2,
 		.num_parents = 3,
-		.flags = CLK_SET_RATE_PARENT,
 		.ops = &clk_rcg2_ops,
 		VDD_CX_FMAX_MAP1(
 			MIN, 19200000),
@@ -1403,7 +1366,6 @@ static struct clk_rcg2 gcc_vs_ctrl_clk_src = {
 		.name = "gcc_vs_ctrl_clk_src",
 		.parent_names = gcc_parent_names_3,
 		.num_parents = 3,
-		.flags = CLK_SET_RATE_PARENT,
 		.ops = &clk_rcg2_ops,
 		VDD_CX_FMAX_MAP1(
 			MIN, 19200000),
@@ -1427,7 +1389,6 @@ static struct clk_rcg2 gcc_vsensor_clk_src = {
 		.name = "gcc_vsensor_clk_src",
 		.parent_names = gcc_parent_names_9,
 		.num_parents = 4,
-		.flags = CLK_SET_RATE_PARENT,
 		.ops = &clk_rcg2_ops,
 		VDD_CX_FMAX_MAP3(
 			MIN, 19200000,

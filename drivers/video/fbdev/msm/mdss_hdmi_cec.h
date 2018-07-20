@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2013, 2015-2016, 2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2013, 2015-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -30,7 +30,7 @@
  */
 struct hdmi_cec_init_data {
 	struct workqueue_struct *workq;
-	struct mdss_io_data *io;
+	struct dss_io_data *io;
 	struct mdss_panel_info *pinfo;
 	struct cec_cbs *cbs;
 	struct cec_ops *ops;

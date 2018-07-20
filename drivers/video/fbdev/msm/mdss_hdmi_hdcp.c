@@ -850,6 +850,14 @@ static int hdmi_hdcp_authentication_part2(struct hdmi_hdcp_ctrl *hdcp_ctrl)
 	u32 ret  = 0;
 	u32 resp = 0;
 
+	memset(&ddc_data, 0, sizeof(ddc_data));
+	ddc_data.dev_addr = 0x74;
+	ddc_data.data_buf = buf;
+	ddc_data.data_len = 4;
+	ddc_data.request_len = 4;
+	ddc_data.retry = 5;
+	ddc_data.what = what;
+
 	if (!hdcp_ctrl || !hdcp_ctrl->init_data.core_io) {
 		DEV_ERR("%s: invalid input\n", __func__);
 		rc = -EINVAL;

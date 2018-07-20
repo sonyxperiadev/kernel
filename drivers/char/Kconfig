@@ -48,6 +48,7 @@ config SGI_MBCS
 
 source "drivers/tty/serial/Kconfig"
 
+source "drivers/char/diag_legacy/Kconfig"
 source "drivers/char/diag/Kconfig"
 
 config TTY_PRINTK
@@ -608,6 +609,16 @@ source "drivers/char/xillybus/Kconfig"
 config MSM_ADSPRPC
         tristate "QTI ADSP RPC driver"
         depends on MSM_GLINK || MSM_SMD
+        help
+          Provides a communication mechanism that allows for clients to
+          make remote method invocations across processor boundary to
+          applications DSP processor. Say M if you want to enable this
+          module.
+
+config MSM_ADSPRPC_LEGACY
+        tristate "QTI ADSP RPC driver (Legacy 4x)"
+        depends on MSM_GLINK || MSM_SMD
+	depends on MSM_ADSPRPC
         help
           Provides a communication mechanism that allows for clients to
           make remote method invocations across processor boundary to

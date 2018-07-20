@@ -1050,8 +1050,10 @@ static int glink_ssr_init(void)
 {
 	int ret;
 
+#ifdef CONFIG_IPC_LOGGING
 	glink_ssr_log_ctx =
 		ipc_log_context_create(NUM_LOG_PAGES, "glink_ssr", 0);
+#endif
 	glink_ssr_wq = create_singlethread_workqueue("glink_ssr_wq");
 	ret = platform_driver_register(&glink_ssr_driver);
 	if (ret)

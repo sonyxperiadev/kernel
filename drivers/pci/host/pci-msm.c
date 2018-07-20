@@ -589,6 +589,7 @@ struct msm_pcie_dev_t {
 	uint32_t			phy_status_offset;
 	uint32_t			cpl_timeout;
 	uint32_t			current_bdf;
+	short				current_short_bdf;
 	uint32_t			perst_delay_us_min;
 	uint32_t			perst_delay_us_max;
 	uint32_t			tlp_rd_size;
@@ -3757,7 +3758,7 @@ static int msm_pcie_enable(struct msm_pcie_dev_t *dev, u32 options)
 
 	/* assert PCIe reset link to keep EP in reset */
 
-	PCIE_INFO(dev, "PCIe: Assert the reset of endpoint of RC%d.\n",
+	PCIE_DBG(dev, "PCIe: Assert the reset of endpoint of RC%d.\n",
 		dev->rc_idx);
 	gpio_set_value(dev->gpio[MSM_PCIE_GPIO_PERST].num,
 				dev->gpio[MSM_PCIE_GPIO_PERST].on);
@@ -3880,7 +3881,7 @@ static int msm_pcie_enable(struct msm_pcie_dev_t *dev, u32 options)
 		dev->rc_idx, retries);
 
 	if (pcie_phy_is_ready(dev))
-		PCIE_INFO(dev, "PCIe RC%d PHY is ready!\n", dev->rc_idx);
+		PCIE_DBG(dev, "PCIe RC%d PHY is ready!\n", dev->rc_idx);
 	else {
 		PCIE_ERR(dev, "PCIe PHY RC%d failed to come up!\n",
 			dev->rc_idx);
@@ -3898,7 +3899,7 @@ static int msm_pcie_enable(struct msm_pcie_dev_t *dev, u32 options)
 
 	/* de-assert PCIe reset link to bring EP out of reset */
 
-	PCIE_INFO(dev, "PCIe: Release the reset of endpoint of RC%d.\n",
+	PCIE_DBG(dev, "PCIe: Release the reset of endpoint of RC%d.\n",
 		dev->rc_idx);
 	gpio_set_value(dev->gpio[MSM_PCIE_GPIO_PERST].num,
 				1 - dev->gpio[MSM_PCIE_GPIO_PERST].on);
@@ -3943,9 +3944,9 @@ static int msm_pcie_enable(struct msm_pcie_dev_t *dev, u32 options)
 		msm_pcie_confirm_linkup(dev, false, false, NULL)) {
 		PCIE_DBG(dev, "Link is up after %d checkings\n",
 			link_check_count);
-		PCIE_INFO(dev, "PCIe RC%d link initialized\n", dev->rc_idx);
+		PCIE_DBG(dev, "PCIe RC%d link initialized\n", dev->rc_idx);
 	} else {
-		PCIE_INFO(dev, "PCIe: Assert the reset of endpoint of RC%d.\n",
+		PCIE_DBG(dev, "PCIe: Assert the reset of endpoint of RC%d.\n",
 			dev->rc_idx);
 		gpio_set_value(dev->gpio[MSM_PCIE_GPIO_PERST].num,
 			dev->gpio[MSM_PCIE_GPIO_PERST].on);
@@ -4049,7 +4050,7 @@ static void msm_pcie_disable(struct msm_pcie_dev_t *dev, u32 options)
 	dev->power_on = false;
 	dev->link_turned_off_counter++;
 
-	PCIE_INFO(dev, "PCIe: Assert the reset of endpoint of RC%d.\n",
+	PCIE_DBG(dev, "PCIe: Assert the reset of endpoint of RC%d.\n",
 		dev->rc_idx);
 
 	gpio_set_value(dev->gpio[MSM_PCIE_GPIO_PERST].num,
@@ -4232,6 +4233,108 @@ static int msm_pcie_config_device_table(struct device *dev, void *pdev)
 	}
 	return ret;
 }
+
+int msm_pcie_configure_sid_legacy(struct device *dev, u32 *sid, int *domain)
+{
+	struct pci_dev *pcidev;
+	struct msm_pcie_dev_t *pcie_dev;
+	struct pci_bus *bus;
+	int i;
+	u32 bdf;
+
+	if (!dev) {
+		pr_err("%s: PCIe: endpoint device passed in is NULL\n",
+			__func__);
+		return MSM_PCIE_ERROR;
+	}
+
+	pcidev = to_pci_dev(dev);
+	if (!pcidev) {
+		pr_err("%s: PCIe: PCI device of endpoint is NULL\n",
+			__func__);
+		return MSM_PCIE_ERROR;
+	}
+
+	bus = pcidev->bus;
+	if (!bus) {
+		pr_err("%s: PCIe: Bus of PCI device is NULL\n",
+			__func__);
+		return MSM_PCIE_ERROR;
+	}
+
+	while (!pci_is_root_bus(bus))
+		bus = bus->parent;
+
+	pcie_dev = (struct msm_pcie_dev_t *)(bus->sysdata);
+	if (!pcie_dev) {
+		pr_err("%s: PCIe: Could not get PCIe structure\n",
+			__func__);
+		return MSM_PCIE_ERROR;
+	}
+
+	if (!pcie_dev->smmu_exist) {
+		PCIE_DBG(pcie_dev,
+			"PCIe: RC:%d: smmu does not exist\n",
+			pcie_dev->rc_idx);
+		return MSM_PCIE_ERROR;
+	}
+
+	PCIE_DBG(pcie_dev, "PCIe: RC%d: device address is: %p\n",
+		pcie_dev->rc_idx, dev);
+	PCIE_DBG(pcie_dev, "PCIe: RC%d: PCI device address is: %p\n",
+		pcie_dev->rc_idx, pcidev);
+
+	*domain = pcie_dev->rc_idx;
+
+	if (pcie_dev->current_short_bdf < (MAX_SHORT_BDF_NUM - 1)) {
+		pcie_dev->current_short_bdf++;
+	} else {
+		PCIE_ERR(pcie_dev,
+			"PCIe: RC%d: No more short BDF left\n",
+			pcie_dev->rc_idx);
+		return MSM_PCIE_ERROR;
+	}
+
+	bdf = BDF_OFFSET(pcidev->bus->number, pcidev->devfn);
+
+	for (i = 0; i < MAX_DEVICE_NUM; i++) {
+		if (pcie_dev->pcidev_table[i].bdf == bdf) {
+			*sid = pcie_dev->smmu_sid_base +
+				((pcie_dev->rc_idx << 4) |
+				pcie_dev->current_short_bdf);
+
+			msm_pcie_write_reg(pcie_dev->parf,
+				PCIE20_PARF_BDF_TRANSLATE_N +
+				pcie_dev->current_short_bdf * 4,
+				bdf >> 16);
+
+			pcie_dev->pcidev_table[i].sid = *sid;
+			pcie_dev->pcidev_table[i].short_bdf =
+				pcie_dev->current_short_bdf;
+			break;
+		}
+	}
+
+
+	if (i == MAX_DEVICE_NUM) {
+		pcie_dev->current_short_bdf--;
+		PCIE_ERR(pcie_dev,
+			"PCIe: RC%d could not find BDF:%d\n",
+			pcie_dev->rc_idx, bdf);
+		return MSM_PCIE_ERROR;
+	}
+
+	PCIE_DBG(pcie_dev,
+		"PCIe: RC%d: Device: %02x:%02x.%01x received SID %d\n",
+		pcie_dev->rc_idx,
+		bdf >> 24,
+		bdf >> 19 & 0x1f,
+		bdf >> 16 & 0x07,
+		*sid);
+
+	return 0;
+}
+EXPORT_SYMBOL(msm_pcie_configure_sid_legacy);
 
 static void msm_pcie_configure_sid(struct msm_pcie_dev_t *pcie_dev,
 				struct pci_dev *dev)
@@ -5943,6 +6046,7 @@ static int msm_pcie_probe(struct platform_device *pdev)
 	if (msm_pcie_invert_aer_support)
 		msm_pcie_dev[rc_idx].aer_enable = false;
 	msm_pcie_dev[rc_idx].power_on = false;
+	msm_pcie_dev[rc_idx].current_short_bdf = 0;
 	msm_pcie_dev[rc_idx].use_msi = false;
 	msm_pcie_dev[rc_idx].use_pinctrl = false;
 	msm_pcie_dev[rc_idx].linkdown_panic = false;
@@ -6140,6 +6244,7 @@ static int __init pcie_init(void)
 
 	for (i = 0; i < MAX_RC_NUM; i++) {
 		snprintf(rc_name, MAX_RC_NAME_LEN, "pcie%d-short", i);
+#ifdef CONFIG_IPC_LOGGING
 		msm_pcie_dev[i].ipc_log =
 			ipc_log_context_create(PCIE_LOG_PAGES, rc_name, 0);
 		if (msm_pcie_dev[i].ipc_log == NULL)
@@ -6169,6 +6274,7 @@ static int __init pcie_init(void)
 			PCIE_DBG(&msm_pcie_dev[i],
 				"PCIe IPC logging %s is enable for RC%d\n",
 				rc_name, i);
+#endif
 		spin_lock_init(&msm_pcie_dev[i].cfg_lock);
 		msm_pcie_dev[i].cfg_access = true;
 		mutex_init(&msm_pcie_dev[i].enumerate_lock);

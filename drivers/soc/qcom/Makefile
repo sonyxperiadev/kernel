@@ -39,6 +39,7 @@ obj-$(CONFIG_MSM_SMD)	+= msm_smd.o smd_debug.o smd_private.o smd_init_dt.o smsm_
 obj-$(CONFIG_MSM_GLINK) += glink.o glink_debugfs.o glink_ssr.o
 obj-$(CONFIG_MSM_TZ_SMMU) += msm_tz_smmu.o
 obj-$(CONFIG_MSM_GLINK_LOOPBACK_SERVER) += glink_loopback_server.o
+obj-$(CONFIG_MSM_GLINK_SMD_XPRT)	+= glink_smd_xprt.o
 obj-$(CONFIG_MSM_GLINK_BGCOM_XPRT) += glink_bgcom_xprt.o
 obj-$(CONFIG_MSM_GLINK_SMEM_NATIVE_XPRT) += glink_smem_native_xprt.o
 obj-$(CONFIG_MSM_GLINK_SPI_XPRT) += glink_spi_xprt.o
@@ -52,6 +53,7 @@ ifdef CONFIG_DEBUG_FS
 obj-$(CONFIG_MSM_RPM_SMD)   +=  rpm-smd-debug.o
 endif
 obj-$(CONFIG_QTI_SYSTEM_PM) += system_pm.o
+obj-$(CONFIG_QCOM_REMOTEQDSS) += remoteqdss.o
 obj-$(CONFIG_MSM_SERVICE_NOTIFIER) += service-notifier.o
 obj-$(CONFIG_MSM_SERVICE_LOCATOR) += service-locator.o
 obj-$(CONFIG_MSM_SMP2P) += msm_smp2p.o smp2p_loopback.o smp2p_debug.o smp2p_sleepstate.o
@@ -75,6 +77,8 @@ obj-$(CONFIG_MSM_PIL_MSS_QDSP6V5) += pil-q6v5.o pil-msa.o pil-q6v5-mss.o
 obj-$(CONFIG_MSM_BGCOM) += bgcom_spi.o
 
 obj-$(CONFIG_MSM_PERFORMANCE) += msm_performance.o
+obj-$(CONFIG_MSM_CPU_PWR_CTL)	+=	cpu_pwr_ctl.o
+obj-$(CONFIG_MSM_PACMAN) += msm_pacman.o
 
 ifdef CONFIG_MSM_SUBSYSTEM_RESTART
        obj-y += subsystem_notif.o
@@ -106,4 +110,5 @@ obj-$(CONFIG_QSEE_IPC_IRQ_BRIDGE) += qsee_ipc_irq_bridge.o
 obj-$(CONFIG_QCOM_QDSS_BRIDGE) += qdss_bridge.o
 obj-$(CONFIG_MSM_BAM_DMUX) += bam_dmux.o
 obj-$(CONFIG_WCNSS_CORE) += wcnss/
+obj-$(CONFIG_ARCH_MSM8996) +=	kryo-l2-accessors.o
 obj-$(CONFIG_BIG_CLUSTER_MIN_FREQ_ADJUST) += big_cluster_min_freq_adjust.o

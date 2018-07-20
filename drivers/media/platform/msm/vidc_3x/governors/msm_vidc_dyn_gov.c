@@ -1,4 +1,4 @@
-/* Copyright (c) 2015, 2017-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015, 2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -13,9 +13,9 @@
 #include <linux/module.h>
 #include "governor.h"
 #include "fixedpoint.h"
-#include "../msm_vidc_internal.h"
-#include "../msm_vidc_debug.h"
-#include "../vidc_hfi_api.h"
+#include "msm_vidc_internal.h"
+#include "msm_vidc_debug.h"
+#include "vidc_hfi_api.h"
 
 static bool debug;
 module_param(debug, bool, 0644);
@@ -293,8 +293,7 @@ static unsigned long __calculate_vmem_plus_ab(struct vidc_bus_vote_data *d)
 	}
 
 	/* Incase we get an unsupported freq throw a warning
-	 * and set ab to the minimum value.
-	 */
+	 * and set ab to the minimum value. */
 	if (!vmem_plus) {
 		vmem_plus = 1;
 		dprintk(VIDC_WARN,
@@ -305,7 +304,6 @@ static unsigned long __calculate_vmem_plus_ab(struct vidc_bus_vote_data *d)
 exit:
 	return vmem_plus;
 }
-
 
 static unsigned long __calculate_decoder(struct vidc_bus_vote_data *d,
 		enum governor_mode gm) {
@@ -623,7 +621,6 @@ static unsigned long __calculate_decoder(struct vidc_bus_vote_data *d,
 
 	return ret;
 }
-
 
 static unsigned long __calculate_encoder(struct vidc_bus_vote_data *d,
 		enum governor_mode gm)
@@ -1043,6 +1040,7 @@ static unsigned long __calculate(struct vidc_bus_vote_data *d,
 	return calc[d->domain](d, gm);
 }
 
+
 static int __get_target_freq(struct devfreq *dev, unsigned long *freq)
 {
 	unsigned long ab_kbps = 0, c = 0;
@@ -1050,7 +1048,7 @@ static int __get_target_freq(struct devfreq *dev, unsigned long *freq)
 	struct msm_vidc_gov_data *vidc_data = NULL;
 	struct governor *gov = NULL;
 
-	if (!dev || !freq)
+	if (!dev || !freq )
 		return -EINVAL;
 
 	gov = container_of(dev->governor,

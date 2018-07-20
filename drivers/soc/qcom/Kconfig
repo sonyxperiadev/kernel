@@ -109,6 +109,15 @@ config MSM_SERVICE_LOCATOR
 	  to what process domain exports the service, and which subsystem
 	  that process domain will execute in.
 
+config QCOM_REMOTEQDSS
+	bool "Allow debug tools to enable events on other processors"
+	depends on QCOM_SCM && DEBUG_FS
+	help
+	  Other onchip processors/execution environments may support debug
+	  events. Provide a sysfs interface for debug tools to dynamically
+	  enable/disable these events. Interface located in
+	  /sys/class/remoteqdss.
+
 config MSM_SERVICE_NOTIFIER
 	bool "Service Notifier"
 	depends on MSM_SERVICE_LOCATOR && MSM_SUBSYSTEM_RESTART
@@ -403,6 +412,17 @@ config MSM_GLINK_LOOPBACK_SERVER
 	  remote clients to configure the loopback server and echo back the
 	  data received from the clients.
 
+config MSM_GLINK_SMD_XPRT
+	depends on MSM_SMD
+	depends on MSM_GLINK
+	bool "Generic Link (G-Link) SMD Transport"
+	help
+	  G-Link SMD Transport is a G-Link Transport plug-in.  It allows G-Link
+	  communication to remote entities through a SMD physical transport
+	  channel.  The remote side is assumed to be pure SMD.  The nature of
+	  SMD limits this G-Link transport to only connecting with entities
+	  internal to the System-on-Chip.
+
 config MSM_GLINK_SMEM_NATIVE_XPRT
 	depends on MSM_SMEM
 	depends on MSM_GLINK
@@ -585,6 +605,15 @@ config MSM_SYSMON_GLINK_COMM
          subsystems within the SoC about other subsystems' power-up/down
          state-changes.
 
+config MSM_PIL_LEGACY
+	bool "Peripheral image loading for Legacy devices"
+	depends on MSM_PIL
+	help
+	  Some peripherals need to be loaded into unprotected memory before they can be
+	  brought out of reset.
+
+	  Say yes to support these legacy devices.
+
 config MSM_PIL_SSR_GENERIC
        tristate "MSM Subsystem Boot Support"
        depends on MSM_PIL && MSM_SUBSYSTEM_RESTART
@@ -637,6 +666,21 @@ config MSM_PERFORMANCE
 	  It ensures that no more than a user specified number of CPUs stay
 	  online at any given point in time. This module can also restrict
 	  max freq or min freq of cpu cluster
+
+config MSM_CPU_PWR_CTL
+	bool "CPU subsystem power control"
+	depends on SMP && (ARM || ARM64)
+	default y
+	help
+	Provides routines to power on cpu rails and l2 cache
+	controller during coldboot.
+
+config MSM_PACMAN
+	tristate "Enable the Peripheral Access Control Manager (PACMan)"
+	help
+	  Add support for the Peripheral Access Control Manager (PACMan). This
+	  driver allows reconfiguration of the Bus Access Manager Low Speed
+	  peripheral (BLSP) ownership.
 
 config MSM_CDSP_LOADER
 	tristate "CDSP loader support"

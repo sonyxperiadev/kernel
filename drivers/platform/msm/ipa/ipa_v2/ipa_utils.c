@@ -37,7 +37,7 @@
 
 #define IPA_TAG_SLEEP_MIN_USEC (1000)
 #define IPA_TAG_SLEEP_MAX_USEC (2000)
-#define IPA_FORCE_CLOSE_TAG_PROCESS_TIMEOUT (10 * HZ)
+#define IPA_FORCE_CLOSE_TAG_PROCESS_TIMEOUT IPA_TIMEOUT(10)
 #define IPA_BCR_REG_VAL (0x001FFF7F)
 #define IPA_AGGR_GRAN_MIN (1)
 #define IPA_AGGR_GRAN_MAX (32)
@@ -180,6 +180,10 @@ static const struct ipa_ep_confing ep_mapping[3][IPA_CLIENT_MAX] = {
 	[IPA_2_6L][IPA_CLIENT_TEST3_PROD]         = {true, 13},
 	[IPA_2_6L][IPA_CLIENT_TEST4_PROD]         = {true, 14},
 
+	[IPA_2_6L][IPA_CLIENT_WLAN1_CONS]         = {true, 17},
+	[IPA_2_6L][IPA_CLIENT_WLAN2_CONS]         = {true, 16},
+	[IPA_2_6L][IPA_CLIENT_WLAN3_CONS]         = {true, 15},
+	[IPA_2_6L][IPA_CLIENT_WLAN4_CONS]         = {true, 19},
 	[IPA_2_6L][IPA_CLIENT_USB_CONS]           = {true,  0},
 	[IPA_2_6L][IPA_CLIENT_USB_DPL_CONS]       = {true, 10},
 	[IPA_2_6L][IPA_CLIENT_APPS_LAN_CONS]      = {true,  2},
@@ -4986,7 +4990,7 @@ static int ipa2_generate_tag_process(void)
 {
 	int res;
 
-	res = ipa_tag_process(NULL, 0, HZ);
+	res = ipa_tag_process(NULL, 0, IPA_TIMEOUT(1));
 	if (res)
 		IPAERR("TAG process failed\n");
 

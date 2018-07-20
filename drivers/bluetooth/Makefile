@@ -26,6 +26,9 @@ obj-$(CONFIG_BT_RTL)		+= btrtl.o
 obj-$(CONFIG_BT_QCA)		+= btqca.o
 
 obj-$(CONFIG_MSM_BT_POWER)	+= bluetooth-power.o
+obj-$(CONFIG_BT_BCM43XX)	+= bcm43xx.o
+obj-$(CONFIG_BT_MSM_SLEEP)	+= msm_bt_sleep.o
+msm_bt_sleep-objs		:= bluesleep.o
 
 obj-$(CONFIG_BTFM_SLIM)		+= btfm_slim.o
 obj-$(CONFIG_BTFM_SLIM)		+= btfm_slim_codec.o
@@ -46,5 +49,7 @@ hci_uart-$(CONFIG_BT_HCIUART_QCA)	+= hci_qca.o
 hci_uart-$(CONFIG_BT_HCIUART_AG6XX)	+= hci_ag6xx.o
 hci_uart-$(CONFIG_BT_HCIUART_MRVL)	+= hci_mrvl.o
 hci_uart-objs				:= $(hci_uart-y)
+
+obj-$(CONFIG_BT_BCM_COMBO)		+= broadcom/
 
 ccflags-y += -D__CHECK_ENDIAN__

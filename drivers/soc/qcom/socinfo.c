@@ -534,8 +534,9 @@ static struct msm_soc_info cpu_of_id[] = {
 	[256] = {FSM_CPU_9010, "FSM9010"},
 	[257] = {FSM_CPU_9010, "FSM9010"},
 
-	/* Tellurium ID */
-	[264] = {MSM_CPU_TELLURIUM, "MSMTELLURIUM"},
+	/* 8952 ID */
+	[264] = {MSM_CPU_8952, "MSM8952"},
+	[289] = {MSM_CPU_8952, "APQ8952"},
 
 	/* 8996 IDs */
 	[246] = {MSM_CPU_8996, "MSM8996"},
@@ -546,17 +547,17 @@ static struct msm_soc_info cpu_of_id[] = {
 	[312] = {MSM_CPU_8996, "APQ8096pro"},
 
 	/* 8976 ID */
-	[266] = {MSM_CPU_8976, "MSM8976"},
+	[278] = {MSM_CPU_8976, "MSM8976"},
+	[277] = {MSM_CPU_8976, "APQ8076"},
+	/* 8956 ID */
+	[266] = {MSM_CPU_8956, "MSM8956"},
+	[274] = {MSM_CPU_8956, "APQ8056"},
 
 	/* 8929 IDs */
 	[268] = {MSM_CPU_8929, "MSM8929"},
 	[269] = {MSM_CPU_8929, "MSM8629"},
 	[270] = {MSM_CPU_8929, "MSM8229"},
 	[271] = {MSM_CPU_8929, "APQ8029"},
-
-	/* Cobalt IDs */
-	[292] = {MSM_CPU_COBALT, "MSMCOBALT"},
-	[319] = {MSM_CPU_COBALT, "APQCOBALT"},
 
 	/* Hamster ID */
 	[306] = {MSM_CPU_HAMSTER, "MSMHAMSTER"},
@@ -632,6 +633,25 @@ static struct msm_soc_info cpu_of_id[] = {
 	[354] = {MSM_CPU_SDM429, "SDM429"},
 	[363] = {MSM_CPU_SDA439, "SDA439"},
 	[364] = {MSM_CPU_SDA429, "SDA429"},
+
+	/* Cobalt IDs */
+	[292] = {MSM_CPU_8998, "MSM8998"},
+	[319] = {MSM_CPU_8998, "APQ8098"},
+
+	/* 660 ID */
+	[317] = {MSM_CPU_660, "SDM660"},
+	[324] = {MSM_CPU_660, "SDA660"},
+	[325] = {MSM_CPU_660, "SDM658"},
+	[326] = {MSM_CPU_660, "SDA658"},
+
+	/* 630 ID */
+	[318] = {MSM_CPU_630, "SDM630"},
+	[327] = {MSM_CPU_630, "SDA630"},
+
+	/* 636 ID */
+	[345] = {MSM_CPU_636, "SDM636"},
+	[346] = {MSM_CPU_636, "SDA636"},
+
 
 	/* Uninitialized IDs are not known to run Linux.
 	 * MSM_CPU_UNKNOWN is set to 0 to ensure these IDs are
@@ -1501,12 +1521,16 @@ static void * __init setup_dummy_socinfo(void)
 		strlcpy(dummy_socinfo.build_id, "msm8992 - ",
 			sizeof(dummy_socinfo.build_id));
 	} else if (early_machine_is_msm8976()) {
-		dummy_socinfo.id = 266;
+		dummy_socinfo.id = 278;
 		strlcpy(dummy_socinfo.build_id, "msm8976 - ",
 			sizeof(dummy_socinfo.build_id));
-	} else if (early_machine_is_msmtellurium()) {
+	} else if (early_machine_is_msm8956()) {
+		dummy_socinfo.id = 266;
+		strlcpy(dummy_socinfo.build_id, "msm8956 - ",
+			sizeof(dummy_socinfo.build_id));
+	} else if (early_machine_is_msm8952()) {
 		dummy_socinfo.id = 264;
-		strlcpy(dummy_socinfo.build_id, "msmtellurium - ",
+		strlcpy(dummy_socinfo.build_id, "msm8952 - ",
 			sizeof(dummy_socinfo.build_id));
 	} else if (early_machine_is_msm8996()) {
 		dummy_socinfo.id = 246;
@@ -1520,9 +1544,45 @@ static void * __init setup_dummy_socinfo(void)
 		dummy_socinfo.id = 268;
 		strlcpy(dummy_socinfo.build_id, "msm8929 - ",
 			sizeof(dummy_socinfo.build_id));
-	} else if (early_machine_is_msmcobalt()) {
+	} else if (early_machine_is_msm8998()) {
 		dummy_socinfo.id = 292;
-		strlcpy(dummy_socinfo.build_id, "msmcobalt - ",
+		strlcpy(dummy_socinfo.build_id, "msm8998 - ",
+			sizeof(dummy_socinfo.build_id));
+	} else if (early_machine_is_apq8098()) {
+		dummy_socinfo.id = 319;
+		strlcpy(dummy_socinfo.build_id, "apq8098 - ",
+			sizeof(dummy_socinfo.build_id));
+	} else if (early_machine_is_sdm660()) {
+		dummy_socinfo.id = 317;
+		strlcpy(dummy_socinfo.build_id, "sdm660 - ",
+			sizeof(dummy_socinfo.build_id));
+	} else if (early_machine_is_sda660()) {
+		dummy_socinfo.id = 324;
+		strlcpy(dummy_socinfo.build_id, "sda660 - ",
+			sizeof(dummy_socinfo.build_id));
+	} else if (early_machine_is_sdm658()) {
+		dummy_socinfo.id = 325;
+		strlcpy(dummy_socinfo.build_id, "sdm658 - ",
+			sizeof(dummy_socinfo.build_id));
+	} else if (early_machine_is_sda658()) {
+		dummy_socinfo.id = 326;
+		strlcpy(dummy_socinfo.build_id, "sda658 - ",
+			sizeof(dummy_socinfo.build_id));
+	} else if (early_machine_is_sdm630()) {
+		dummy_socinfo.id = 318;
+		strlcpy(dummy_socinfo.build_id, "sdm630 - ",
+			sizeof(dummy_socinfo.build_id));
+	} else if (early_machine_is_sda630()) {
+		dummy_socinfo.id = 327;
+		strlcpy(dummy_socinfo.build_id, "sda630 - ",
+			sizeof(dummy_socinfo.build_id));
+	} else if (early_machine_is_sdm636()) {
+		dummy_socinfo.id = 345;
+		strlcpy(dummy_socinfo.build_id, "sdm636 - ",
+			sizeof(dummy_socinfo.build_id));
+	} else if (early_machine_is_sda636()) {
+		dummy_socinfo.id = 346;
+		strlcpy(dummy_socinfo.build_id, "sda636 - ",
 			sizeof(dummy_socinfo.build_id));
 	} else if (early_machine_is_msmhamster()) {
 		dummy_socinfo.id = 306;
@@ -1531,10 +1591,6 @@ static void * __init setup_dummy_socinfo(void)
 	} else if (early_machine_is_msmfalcon()) {
 		dummy_socinfo.id = 317;
 		strlcpy(dummy_socinfo.build_id, "msmfalcon - ",
-			sizeof(dummy_socinfo.build_id));
-	} else if (early_machine_is_apqcobalt()) {
-		dummy_socinfo.id = 319;
-		strlcpy(dummy_socinfo.build_id, "apqcobalt - ",
 			sizeof(dummy_socinfo.build_id));
 	} else if (early_machine_is_sdm845()) {
 		dummy_socinfo.id = 321;

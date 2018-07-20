@@ -74,6 +74,8 @@
 
 #define IPA_MAX_NUM_REQ_CACHE 10
 
+#define IPA_TIMEOUT(value) (msecs_to_jiffies(value * 1000))
+
 #define IPADBG(fmt, args...) \
 	do { \
 		pr_debug(DRV_NAME " %s:%d " fmt, __func__, __LINE__, ## args);\
@@ -2317,6 +2319,7 @@ void ipa3_dump_buff_internal(void *base, dma_addr_t phy_base, u32 size);
 #else
 #define IPA_DUMP_BUFF(base, phy_base, size)
 #endif
+int ipa3_cfg_clkon_cfg(struct ipahal_reg_clkon_cfg *clkon_cfg);
 int ipa3_init_mem_partition(struct device_node *dev_node);
 int ipa3_controller_static_bind(struct ipa3_controller *controller,
 		enum ipa_hw_type ipa_hw_type);

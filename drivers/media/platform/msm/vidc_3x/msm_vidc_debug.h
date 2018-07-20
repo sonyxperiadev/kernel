@@ -1,5 +1,4 @@
-/* Copyright (c) 2012-2015, 2017-2018, The Linux Foundation.
- * All rights reserved.
+/* Copyright (c) 2012-2015, 2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -61,7 +60,9 @@ extern int msm_vidc_fw_debug_mode;
 extern int msm_vidc_fw_low_power_mode;
 extern int msm_vidc_hw_rsp_timeout;
 extern bool msm_vidc_fw_coverage;
-extern int msm_vidc_vpe_csc_601_to_709;
+extern int msm_vidc_reset_clock_control;
+extern int msm_vidc_regulator_scaling;
+extern bool msm_vidc_vpe_csc_601_to_709;
 extern bool msm_vidc_dec_dcvs_mode;
 extern bool msm_vidc_enc_dcvs_mode;
 extern bool msm_vidc_sys_idle_indicator;
@@ -70,38 +71,38 @@ extern bool msm_vidc_thermal_mitigation_disabled;
 extern bool msm_vidc_bitrate_clock_scaling;
 extern bool msm_vidc_debug_timeout;
 
-static inline char *VIDC_MSG_PRIO2STRING(int __level)
-{
-	char *__str;
-
-	switch (__level) {
-	case VIDC_ERR:
-		__str = "err";
-		break;
-	case VIDC_WARN:
-		__str = "warn";
-		break;
-	case VIDC_INFO:
-		__str = "info";
-		break;
-	case VIDC_DBG:
-		__str = "dbg";
-		break;
-	case VIDC_PROF:
-		__str = "prof";
-		break;
-	case VIDC_PKT:
-		__str = "pkt";
-		break;
-	case VIDC_FW:
-		__str = "fw";
-		break;
-	default:
-		__str = "????";
-		break;
-	}
-	return __str;
-}
+#define VIDC_MSG_PRIO2STRING(__level) ({ \
+	char *__str; \
+	\
+	switch (__level) { \
+	case VIDC_ERR: \
+		__str = "err"; \
+		break; \
+	case VIDC_WARN: \
+		__str = "warn"; \
+		break; \
+	case VIDC_INFO: \
+		__str = "info"; \
+		break; \
+	case VIDC_DBG: \
+		__str = "dbg"; \
+		break; \
+	case VIDC_PROF: \
+		__str = "prof"; \
+		break; \
+	case VIDC_PKT: \
+		__str = "pkt"; \
+		break; \
+	case VIDC_FW: \
+		__str = "fw"; \
+		break; \
+	default: \
+		__str = "????"; \
+		break; \
+	} \
+	\
+	__str; \
+	})
 
 #define dprintk(__level, __fmt, arg...)	\
 	do { \
@@ -133,7 +134,6 @@ static inline void tic(struct msm_vidc_inst *i, enum profiling_points p,
 				 char *b)
 {
 	struct timeval __ddl_tv;
-
 	if (!i->debug.pdata[p].name[0])
 		memcpy(i->debug.pdata[p].name, b, 64);
 	if ((msm_vidc_debug & VIDC_PROF) &&
@@ -148,7 +148,6 @@ static inline void tic(struct msm_vidc_inst *i, enum profiling_points p,
 static inline void toc(struct msm_vidc_inst *i, enum profiling_points p)
 {
 	struct timeval __ddl_tv;
-
 	if ((msm_vidc_debug & VIDC_PROF) &&
 		!i->debug.pdata[p].sampling) {
 		do_gettimeofday(&__ddl_tv);
@@ -163,7 +162,6 @@ static inline void toc(struct msm_vidc_inst *i, enum profiling_points p)
 static inline void show_stats(struct msm_vidc_inst *i)
 {
 	int x;
-
 	for (x = 0; x < MAX_PROFILING_POINTS; x++) {
 		if (i->debug.pdata[x].name[0] &&
 				(msm_vidc_debug & VIDC_PROF)) {

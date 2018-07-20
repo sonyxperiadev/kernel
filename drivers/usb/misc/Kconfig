@@ -267,6 +267,13 @@ config USB_CHAOSKEY
 	  To compile this driver as a module, choose M here: the
 	  module will be called chaoskey.
 
+config USB_CC_FUSB301
+	bool "FUSB301 Configuration Channel Controller for USB Type-C"
+	depends on USB || I2C
+	default n
+	help
+	  Enable this to support FUSB310 CC Controller for USB Type C.
+
 config UCSI
 	tristate "USB Type-C Connector System Software Interface driver"
 	depends on ACPI

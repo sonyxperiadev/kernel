@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -38,7 +38,6 @@ struct mdss_dba_utils_data {
 	struct mdss_panel_info *pinfo;
 	void *dba_data;
 	void *edid_data;
-	void *timing_data;
 	void *cec_abst_data;
 	u8 *edid_buf;
 	u32 edid_buf_size;
@@ -245,13 +244,13 @@ static ssize_t mdss_dba_utils_sysfs_rda_hpd(struct device *dev,
 	return ret;
 }
 
-static DEVICE_ATTR(connected, 0444,
+static DEVICE_ATTR(connected, S_IRUGO,
 		mdss_dba_utils_sysfs_rda_connected, NULL);
 
-static DEVICE_ATTR(video_mode, 0444,
+static DEVICE_ATTR(video_mode, S_IRUGO,
 		mdss_dba_utils_sysfs_rda_video_mode, NULL);
 
-static DEVICE_ATTR(hpd, 0644, mdss_dba_utils_sysfs_rda_hpd,
+static DEVICE_ATTR(hpd, S_IRUGO | S_IWUSR, mdss_dba_utils_sysfs_rda_hpd,
 		mdss_dba_utils_sysfs_wta_hpd);
 
 static struct attribute *mdss_dba_utils_fs_attrs[] = {
@@ -297,7 +296,7 @@ static bool mdss_dba_check_audio_support(struct mdss_dba_utils_data *udata)
 {
 	bool dvi_mode = false;
 	int audio_blk_size = 0;
-	struct msm_hdmi_audio_edid_blk audio_blk;
+	struct msm_ext_disp_audio_edid_blk audio_blk;
 
 	if (!udata) {
 		pr_debug("%s: Invalid input\n", __func__);
@@ -306,7 +305,7 @@ static bool mdss_dba_check_audio_support(struct mdss_dba_utils_data *udata)
 	memset(&audio_blk, 0, sizeof(audio_blk));
 
 	/* check if sink is in DVI mode */
-	dvi_mode = !hdmi_edid_get_sink_mode(udata->edid_data);
+	dvi_mode = hdmi_edid_is_dvi_mode(udata->edid_data);
 
 	/* get the audio block size info from EDID */
 	hdmi_edid_get_audio_blk(udata->edid_data, &audio_blk);
@@ -327,7 +326,7 @@ static void mdss_dba_utils_dba_cb(void *data, enum msm_dba_callback_event event)
 	bool operands_present = false;
 	u32 no_of_operands, size, i;
 	u32 operands_offset = MAX_CEC_FRAME_SIZE - MAX_OPERAND_SIZE;
-	struct msm_hdmi_audio_edid_blk blk;
+	struct msm_ext_disp_audio_edid_blk blk;
 
 	if (!udata) {
 		pr_err("Invalid data\n");
@@ -577,7 +576,7 @@ int mdss_dba_utils_video_on(void *data, struct mdss_panel_info *pinfo)
 	video_cfg.h_pulse_width = pinfo->lcdc.h_pulse_width;
 	video_cfg.v_pulse_width = pinfo->lcdc.v_pulse_width;
 	video_cfg.pclk_khz = (unsigned long)pinfo->clk_rate / 1000;
-	video_cfg.hdmi_mode = hdmi_edid_get_sink_mode(ud->edid_data);
+	video_cfg.hdmi_mode = !hdmi_edid_is_dvi_mode(ud->edid_data);
 
 	/* Calculate number of DSI lanes configured */
 	video_cfg.num_of_input_lanes = 0;
@@ -647,72 +646,6 @@ void mdss_dba_utils_hdcp_enable(void *data, bool enable)
 
 	if (ud->ops.hdcp_enable)
 		ud->ops.hdcp_enable(ud->dba_data, enable, enable, 0);
-}
-
-void mdss_dba_update_lane_cfg(struct mdss_panel_info *pinfo)
-{
-	struct mdss_dba_utils_data *dba_data;
-	struct mdss_dba_timing_info *cfg_tbl;
-	int i = 0, lanes;
-
-	if (pinfo == NULL)
-		return;
-
-	/*
-	 * Restore to default value from DT
-	 * if resolution not found in
-	 * supported resolutions
-	 */
-	lanes = pinfo->mipi.default_lanes;
-
-	dba_data = (struct mdss_dba_utils_data *)(pinfo->dba_data);
-	if (dba_data == NULL)
-		goto lane_cfg;
-
-	/* get adv supported timing info */
-	cfg_tbl = (struct mdss_dba_timing_info *)(dba_data->timing_data);
-	if (cfg_tbl == NULL)
-		goto lane_cfg;
-
-	while (cfg_tbl[i].xres != 0xffff) {
-		if (cfg_tbl[i].xres == pinfo->xres &&
-			cfg_tbl[i].yres == pinfo->yres &&
-			cfg_tbl[i].bpp == pinfo->bpp &&
-			cfg_tbl[i].fps == pinfo->mipi.frame_rate) {
-			lanes = cfg_tbl[i].lanes;
-			break;
-		}
-		i++;
-	}
-
-lane_cfg:
-	switch (lanes) {
-	case 1:
-		pinfo->mipi.data_lane0 = 1;
-		pinfo->mipi.data_lane1 = 0;
-		pinfo->mipi.data_lane2 = 0;
-		pinfo->mipi.data_lane3 = 0;
-		break;
-	case 2:
-		pinfo->mipi.data_lane0 = 1;
-		pinfo->mipi.data_lane1 = 1;
-		pinfo->mipi.data_lane2 = 0;
-		pinfo->mipi.data_lane3 = 0;
-		break;
-	case 3:
-		pinfo->mipi.data_lane0 = 1;
-		pinfo->mipi.data_lane1 = 1;
-		pinfo->mipi.data_lane2 = 1;
-		pinfo->mipi.data_lane3 = 0;
-		break;
-	case 4:
-	default:
-		pinfo->mipi.data_lane0 = 1;
-		pinfo->mipi.data_lane1 = 1;
-		pinfo->mipi.data_lane2 = 1;
-		pinfo->mipi.data_lane3 = 1;
-		break;
-	}
 }
 
 /**
@@ -826,12 +759,6 @@ void *mdss_dba_utils_init(struct mdss_dba_utils_init_data *uid)
 		ret = PTR_ERR(cec_abst_data);
 		goto error;
 	}
-
-	/* get the timing data for the adv chip */
-	if (udata->ops.get_supp_timing_info)
-		udata->timing_data = udata->ops.get_supp_timing_info();
-	else
-		udata->timing_data = NULL;
 
 	/* update cec data to retrieve it back in cec abstract module */
 	if (uid->pinfo) {

@@ -1713,8 +1713,18 @@ static int qpnp_adc_tm_set_trip_temp(void *data, int low_temp, int high_temp)
 
 	pr_debug("requested a high - %d and low - %d\n",
 			tm_config.high_thr_temp, tm_config.low_thr_temp);
+#ifdef CONFIG_ARCH_SONY_YOSHINO
+	if (adc_tm->btm_channel_num == QPNP_ADC_TM_M1_ADC_CH_SEL_CTL ||
+	    adc_tm->btm_channel_num == QPNP_ADC_TM_M2_ADC_CH_SEL_CTL)
+		rc = qpnp_adc_tm_scale_therm_voltage_pu2_decidegc(chip->vadc_dev,
+					chip->adc->adc_prop, &tm_config);
+	else
+		rc = qpnp_adc_tm_scale_therm_voltage_pu2(chip->vadc_dev,
+					chip->adc->adc_prop, &tm_config);
+#else
 	rc = qpnp_adc_tm_scale_therm_voltage_pu2(chip->vadc_dev,
 				chip->adc->adc_prop, &tm_config);
+#endif
 	if (rc < 0) {
 		pr_err("Failed to lookup the adc-tm thresholds\n");
 		return rc;

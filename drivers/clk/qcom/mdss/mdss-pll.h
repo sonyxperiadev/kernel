@@ -12,7 +12,12 @@
 
 #ifndef __MDSS_PLL_H
 #define __MDSS_PLL_H
+
+#ifdef CONFIG_FB_MSM_MDSS /* MDSS - FBDEV */
+#include <linux/mdss_io_util.h>
+#else /* SDE - DRM */
 #include <linux/sde_io_util.h>
+#endif
 #include <linux/clk-provider.h>
 #include <linux/io.h>
 #include <linux/clk.h>
@@ -21,6 +26,12 @@
 #include "../clk-regmap.h"
 #include "../clk-regmap-divider.h"
 #include "../clk-regmap-mux.h"
+
+#define LEGACY_GDSC_TARGET \
+	defined(CONFIG_ARCH_MSM8916) || defined(CONFIG_ARCH_MSM8953) || \
+	defined(CONFIG_ARCH_MSM8937) || defined(CONFIG_ARCH_MSM8917) || \
+	defined(CONFIG_ARCH_MSM8996) || defined(CONFIG_ARCH_MSM8998) || \
+	defined(CONFIG_ARCH_SDM630) || defined(CONFIG_ARCH_SDM660)
 
 
 #define MDSS_PLL_REG_W(base, offset, data)	\
@@ -36,12 +47,16 @@
 			(base) + (offset))
 
 enum {
+	MDSS_DSI_PLL_8974,
+	MDSS_DSI_PLL_14NM,
+	MDSS_DP_PLL_14NM,
 	MDSS_DSI_PLL_10NM,
 	MDSS_DP_PLL_10NM,
 	MDSS_UNKNOWN_PLL,
 };
 
 enum {
+	MDSS_PLL_TARGET_8976,
 	MDSS_PLL_TARGET_8996,
 };
 
@@ -200,7 +215,12 @@ static inline bool is_gdsc_disabled(struct mdss_pll_resources *pll_res)
 		WARN(1, "gdsc_base register is not defined\n");
 		return true;
 	}
+#if LEGACY_GDSC_TARGET
+	return ((readl_relaxed(pll_res->gdsc_base + 0x4) & BIT(31)) &&
+		(!(readl_relaxed(pll_res->gdsc_base) & BIT(0)))) ? false : true;
+#else
 	return readl_relaxed(pll_res->gdsc_base) & BIT(31) ? false : true;
+#endif
 }
 
 static inline int mdss_pll_div_prepare(struct clk_hw *hw)

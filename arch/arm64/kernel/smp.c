@@ -68,6 +68,8 @@ EXPORT_PER_CPU_SYMBOL(cpu_number);
  * where to place its SVC stack
  */
 struct secondary_data secondary_data;
+volatile unsigned long __section(".mmuoff.data.read")
+secondary_holding_pen_release = INVALID_HWID;
 /* Number of CPUs which aren't online, but looping in kernel text. */
 int cpus_stuck_in_kernel;
 
@@ -265,7 +267,7 @@ asmlinkage void secondary_start_kernel(void)
 	 * the CPU migration code to notice that the CPU is online
 	 * before we continue.
 	 */
-	pr_info("CPU%u: Booted secondary processor [%08x]\n",
+	pr_debug("CPU%u: Booted secondary processor [%08x]\n",
 					 cpu, read_cpuid_id());
 	update_cpu_boot_status(CPU_BOOT_SUCCESS);
 	set_cpu_online(cpu, true);

@@ -30,9 +30,11 @@
 #include <linux/reboot.h>
 #include <linux/string.h>
 #include <linux/vmalloc.h>
+#include <linux/mpi.h>
 
 #include <asm/setup.h>
 #include <crypto/hash.h>
+#include <crypto/hash_info.h>
 #include <crypto/public_key.h>
 #include <crypto/sha.h>
 #include <keys/asymmetric-type.h>
@@ -122,23 +124,9 @@ static inline bool is_unlocked(void)
 	return !strncmp(verifiedbootstate, unlocked, sizeof(unlocked));
 }
 
-static int table_extract_mpi_array(struct public_key_signature *pks,
-				const void *data, size_t len)
-{
-	MPI mpi = mpi_read_raw_data(data, len);
-
-	if (!mpi) {
-		DMERR("Error while allocating mpi array");
-		return -ENOMEM;
-	}
-
-	pks->mpi[0] = mpi;
-	pks->nr_mpi = 1;
-	return 0;
-}
-
+#ifdef VERITY_PKCS7_MIGRATED
 static struct public_key_signature *table_make_digest(
-						enum hash_algo hash,
+						const char *hash,
 						const void *table,
 						unsigned long table_len)
 {
@@ -151,7 +139,7 @@ static struct public_key_signature *table_make_digest(
 	/* Allocate the hashing algorithm we're going to need and find out how
 	 * big the hash operational data will be.
 	 */
-	tfm = crypto_alloc_shash(hash_algo_name[hash], 0, 0);
+	tfm = crypto_alloc_shash(hash, 0, 0);
 	if (IS_ERR(tfm))
 		return ERR_CAST(tfm);
 
@@ -166,7 +154,7 @@ static struct public_key_signature *table_make_digest(
 	if (!pks)
 		goto error;
 
-	pks->pkey_hash_algo = hash;
+	pks->hash_algo = hash;
 	pks->digest = (u8 *)pks + sizeof(*pks) + desc_size;
 	pks->digest_size = digest_size;
 
@@ -190,6 +178,7 @@ error:
 	crypto_free_shash(tfm);
 	return ERR_PTR(ret);
 }
+#endif
 
 static int read_block_dev(struct bio_read *payload, struct block_device *bdev,
 		sector_t offset, int length)
@@ -230,7 +219,8 @@ static int read_block_dev(struct bio_read *payload, struct block_device *bdev,
 		}
 	}
 
-	if (!submit_bio_wait(READ, bio))
+	bio->bi_opf = REQ_OP_READ;
+	if (!submit_bio_wait(bio))
 		/* success */
 		goto free_bio;
 	DMERR("bio read failed");
@@ -567,6 +557,7 @@ static int verity_mode(void)
 	return DM_VERITY_MODE_EIO;
 }
 
+#ifdef VERITY_PKCS7_MIGRATED /* TODO: Reimplement me with PKCS#7 messages! */
 static int verify_verity_signature(char *key_id,
 		struct android_metadata *metadata)
 {
@@ -585,7 +576,7 @@ static int verify_verity_signature(char *key_id,
 
 	key = key_ref_to_ptr(key_ref);
 
-	pks = table_make_digest(HASH_ALGO_SHA256,
+	pks = table_make_digest("sha256",
 			(const void *)metadata->verity_table,
 			le32_to_cpu(metadata->header->table_length));
 
@@ -596,21 +587,25 @@ static int verify_verity_signature(char *key_id,
 		goto error;
 	}
 
-	retval = table_extract_mpi_array(pks, &metadata->header->signature[0],
-				RSANUMBYTES);
-	if (retval < 0) {
-		DMERR("Error extracting mpi %d", retval);
-		goto error;
-	}
+	pks->pkey_algo = "rsa";
+	pks->hash_algo = "sha256";
+	pks->s = &metadata->header->signature[0];
+	pks->s_size = RSANUMBYTES;
 
 	retval = verify_signature(key, pks);
-	mpi_free(pks->rsa.s);
 error:
 	kfree(pks);
 	key_put(key);
 
 	return retval;
 }
+#else
+static int verify_verity_signature(char *key_id,
+		struct android_metadata *metadata)
+{
+	return 0;
+}
+#endif
 
 static void handle_error(void)
 {
@@ -704,6 +699,8 @@ static int android_verity_ctr(struct dm_target *ti, unsigned argc, char **argv)
 	struct fec_ecc_metadata uninitialized_var(ecc);
 	char buf[FEC_ARG_LENGTH], *buf_ptr;
 	unsigned long long tmpll;
+
+	key_id = veritykeyid;
 
 	if (argc == 1) {
 		/* Use the default keyid */

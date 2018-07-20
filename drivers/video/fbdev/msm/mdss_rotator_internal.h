@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2016, 2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -154,7 +154,7 @@ struct mdss_rot_mgr {
 
 	/*
 	 * mangaing rotation queues, depends on
-	 * how many hw pipes available on the system
+	 * how many hw pipes availabe on the system
 	 */
 	int queue_count;
 	struct mdss_rot_queue *queues;
@@ -172,7 +172,7 @@ struct mdss_rot_mgr {
 	struct mdss_rot_bus_data_type reg_bus;
 
 	/* Module power is only used for regulator management */
-	struct mdss_module_power module_power;
+	struct dss_module_power module_power;
 	bool regulator_enable;
 
 	struct mutex clk_lock;

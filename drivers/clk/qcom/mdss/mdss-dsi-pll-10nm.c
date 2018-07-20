@@ -21,7 +21,7 @@
 #include "mdss-pll.h"
 #include <dt-bindings/clock/mdss-10nm-pll-clk.h>
 #define CREATE_TRACE_POINTS
-#include "mdss_pll_trace.h"
+#include <../drivers/clk/qcom/mdss/mdss_pll_trace.h>
 
 #define VCO_DELAY_USEC 1
 

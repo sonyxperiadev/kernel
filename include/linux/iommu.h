@@ -146,6 +146,7 @@ enum iommu_attr {
 	DOMAIN_ATTR_PAGE_TABLE_IS_COHERENT,
 	DOMAIN_ATTR_PAGE_TABLE_FORCE_COHERENT,
 	DOMAIN_ATTR_CB_STALL_DISABLE,
+	DOMAIN_ATTR_ENABLE_TTBR1,
 	DOMAIN_ATTR_UPSTREAM_IOVA_ALLOCATOR,
 	DOMAIN_ATTR_MMU500_ERRATA_MIN_ALIGN,
 	DOMAIN_ATTR_FORCE_IOVA_GUARD_PAGE,
@@ -246,6 +247,10 @@ struct iommu_ops {
 	u32 (*domain_get_windows)(struct iommu_domain *domain);
 	void (*trigger_fault)(struct iommu_domain *domain, unsigned long flags);
 	void (*tlbi_domain)(struct iommu_domain *domain);
+	unsigned long (*reg_read)(struct iommu_domain *domain,
+				  unsigned long offset);
+	void (*reg_write)(struct iommu_domain *domain, unsigned long val,
+			  unsigned long offset);
 	int (*enable_config_clocks)(struct iommu_domain *domain);
 	void (*disable_config_clocks)(struct iommu_domain *domain);
 	uint64_t (*iova_to_pte)(struct iommu_domain *domain,
@@ -254,6 +259,7 @@ struct iommu_ops {
 	int (*of_xlate)(struct device *dev, struct of_phandle_args *args);
 
 	bool (*is_iova_coherent)(struct iommu_domain *domain, dma_addr_t iova);
+	unsigned long (*get_pgsize_bitmap)(struct iommu_domain *domain);
 	unsigned long pgsize_bitmap;
 };
 
@@ -349,6 +355,10 @@ extern int report_iommu_fault(struct iommu_domain *domain, struct device *dev,
 
 extern void iommu_trigger_fault(struct iommu_domain *domain,
 				unsigned long flags);
+extern unsigned long iommu_reg_read(struct iommu_domain *domain,
+				    unsigned long offset);
+extern void iommu_reg_write(struct iommu_domain *domain, unsigned long offset,
+			    unsigned long val);
 
 extern unsigned long iommu_reg_read(struct iommu_domain *domain,
 				    unsigned long offset);
@@ -513,6 +523,17 @@ static inline void iommu_put_dm_regions(struct device *dev,
 static inline int iommu_request_dm_for_dev(struct device *dev)
 {
 	return -ENODEV;
+}
+
+static inline unsigned long iommu_reg_read(struct iommu_domain *domain,
+					   unsigned long offset)
+{
+	return 0;
+}
+
+static inline void iommu_reg_write(struct iommu_domain *domain,
+				   unsigned long val, unsigned long offset)
+{
 }
 
 static inline int iommu_attach_group(struct iommu_domain *domain,

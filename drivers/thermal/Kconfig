@@ -443,6 +443,12 @@ config THERMAL_QPNP
 	  results in shifting PMIC over temperature shutdown control from
 	  hardware to software.
 
+config VIRTUAL_THERMAL
+	tristate "Virtual thermal OF driver"
+	depends on OF
+	help
+	  This enables the virtual thermal sensors driver
+
 config GENERIC_ADC_THERMAL
 	tristate "Generic ADC based thermal sensor"
 	depends on IIO

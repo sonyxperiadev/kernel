@@ -915,7 +915,10 @@ static int dsi_ctrl_copy_and_pad_cmd(struct dsi_ctrl *dsi_ctrl,
 	/* send embedded BTA for read commands */
 	if ((buf[2] & 0x3f) == MIPI_DSI_DCS_READ)
 		buf[3] |= BIT(5);
-
+	if (((buf[2] & 0x3f) == MIPI_DSI_GENERIC_READ_REQUEST_0_PARAM) ||
+		((buf[2] & 0x3f) == MIPI_DSI_GENERIC_READ_REQUEST_1_PARAM) ||
+		((buf[2] & 0x3f) == MIPI_DSI_GENERIC_READ_REQUEST_2_PARAM))
+		buf[3] |= BIT(5);
 	*buffer = buf;
 	*size = len;
 
@@ -1656,6 +1659,9 @@ static int dsi_ctrl_dts_parse(struct dsi_ctrl *dsi_ctrl,
 
 	dsi_ctrl->null_insertion_enabled = of_property_read_bool(of_node,
 					"qcom,null-insertion-enabled");
+
+	dsi_ctrl->hw.cont_splash_enabled = of_property_read_bool(of_node,
+					"qcom,cont-splash-enabled");
 
 	return 0;
 }

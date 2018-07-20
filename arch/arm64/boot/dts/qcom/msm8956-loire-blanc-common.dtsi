@@ -1,0 +1,715 @@
+/* arch/arm64/boot/dts/qcom/msm8956-loire-blanc-common.dtsi
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+/*
+ * Copyright (C) 2015 Sony Mobile Communications Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2, as
+ * published by the Free Software Foundation.
+ */
+
+&soc {
+	/delete-node/ fpc1145;
+
+	usb_otg: usb@78db000 {
+		qcom,hsusb-otg-phy-init-seq =
+			<0x74 0x80 0x6f 0x81 0x3f 0x82 0x33 0x83 0xffffffff>;
+		qcom,hsusb-otg-phy-init-seq-host =
+			<0x74 0x80 0x64 0x81 0x3f 0x82 0x33 0x83 0xffffffff>;
+	};
+
+	/* HS UART : BLSP1 */
+	blsp1_hsuart1: hsuart@78af000 { /* BLSP1 UART1 */
+		compatible = "qcom,msm-hsuart-v14";
+		reg = <0x78af000 0x200>,
+			<0x7884000 0x1f000>;
+		reg-names = "core_mem", "bam_mem";
+		interrupt-names = "core_irq", "bam_irq";
+		#address-cells = <0>;
+		interrupt-parent = <&blsp1_hsuart1>;
+		interrupts = <0 1>;
+		#interrupt-cells = <1>;
+		interrupt-map-mask = <0xffffffff>;
+		interrupt-map = <0 &intc 0 107 0
+				1 &intc 0 238 0>;
+
+		qcom,tx-gpio = <&msm_gpio 0 0>;
+		qcom,rx-gpio = <&msm_gpio 1 0>;
+		qcom,ext-reset-gpio = <&msm_gpio 66 0>;
+		qcom,master-id = <86>;
+		clock-names = "core_clk", "iface_clk";
+		clocks = <&clock_gcc GCC_BLSP1_UART1_APPS_CLK>,
+				<&clock_gcc GCC_BLSP1_AHB_CLK>;
+		pinctrl-names = "default", "sleep";
+		pinctrl-0 = <&msm_gpio_0_act &msm_gpio_1_def>;
+		pinctrl-1 = <&msm_gpio_0_sus &msm_gpio_1_def>;
+		qcom,bam-tx-ep-pipe-index = <0>;
+		qcom,bam-rx-ep-pipe-index = <1>;
+		qcom,disallow-autosuspend;
+		qcom,msm-bus,name = "blsp1_hsuart1";
+		qcom,msm-bus,num-cases = <2>;
+		qcom,msm-bus,num-paths = <1>;
+		qcom,msm-bus,vectors-KBps =
+					<86 512 0 0>,
+					<86 512 500 800>;
+		status = "okay";
+	};
+
+	/* I2C : BLSP4 */
+	i2c@78b8000 { /* BLSP1 QUP3 */
+		/delete-node/ synaptics_clearpad@2c;
+
+		/* DSI_TO_HDMI I2C configuration */
+		adv7535@39 {
+			compatible = "adv7535";
+			reg = <0x39>;
+
+			instance_id = <0>;
+			adi,video-mode = <2>; /* 3 = 1080p */
+			adi,main-addr = <0x39>;
+			adi,cec-dsi-addr = <0x3C>;
+
+			pinctrl-names = "pmx_adv7533_active","pmx_adv7533_suspend",
+					"mipi_hdmi_active","mipi_hdmi_suspend";
+			pinctrl-0 = <&adv7533_int_active>;
+			pinctrl-1 = <&adv7533_int_suspend>;
+			pinctrl-2 = <&msm_gpio_50_act>;
+			pinctrl-3 = <&msm_gpio_50_sus>;
+			adi,irq-gpio = <&msm_gpio 65 0x2002>;
+			hpd-5v-en-supply = <&adv_vreg>;
+			qcom,supply-names = "hpd-5v-en";
+			qcom,min-voltage-level = <0>;
+			qcom,max-voltage-level = <0>;
+			qcom,enable-load = <0>;
+			qcom,disable-load = <0>;
+		};
+
+		/* HDMI Scaler I2C configuration */
+		sil,sil9612@18 {
+			compatible = "sil,sil9612";
+			interrupts = <65 2>;
+			reg = <0x18>;
+			sil,main-addr = <0x18>;
+			somc,hdmi-det-irq-gpio = <&msm_gpio 108 0>;
+			somc,sil-int-irq = <&msm_gpio 65 0>;
+			pinctrl-names = "sil9612_act","sil9612_sus";
+			pinctrl-0 = <&msm_gpio_49_act &msm_gpio_109_act &msm_gpio_65_act>;
+			pinctrl-1 = <&msm_gpio_49_sus &msm_gpio_109_sus &msm_gpio_65_sus>;
+		};
+
+		as3668@42 {
+			compatible = "as3668";
+			reg = <0x42>;
+			label = "rgb";
+			status = "okay";
+			somc,led_num = <3>;
+			somc,pattern_start_source = <0>;
+			somc,pwm_source = <0>;
+			somc,pattern_pwm_dim_speed_down_ms = <0>;
+			somc,pattern_pwm_dim_speed_up_ms = <0>;
+			somc,pattern_source_mask = <3>;
+			somc,pattern_multiple_pulse = <1>;
+			somc,pattern_tp_led = <0>;
+			somc,pattern_fade_out = <0>;
+			somc,volume_down {
+				label = "rgb";
+				linux,name = "as3668:volume_down";
+				somc,max_single_current_uA = <5000>;
+				somc,max_mix_current_uA = <5000>;
+				somc,pattern_frame_mask = <0>;
+				somc,pattern_frame_delay = <0>;
+				somc,fade_max_brightness = <50>;
+				somc,fade_min_brightness = <15>;
+				somc,fade_led_off_delay = <2000>;
+				linux,default-trigger = "none";
+			};
+			somc,volume_up {
+				label = "rgb";
+				linux,name = "as3668:volume_up";
+				somc,max_single_current_uA = <5000>;
+				somc,max_mix_current_uA = <5000>;
+				somc,pattern_frame_mask = <0>;
+				somc,pattern_frame_delay = <0>;
+				somc,fade_max_brightness = <50>;
+				somc,fade_min_brightness = <15>;
+				somc,fade_led_off_delay = <2000>;
+				linux,default-trigger = "none";
+			};
+			somc,hdmi_switch {
+				label = "rgb";
+				linux,name = "as3668:hdmi_switch";
+				somc,max_single_current_uA = <5000>;
+				somc,max_mix_current_uA = <5000>;
+				somc,pattern_frame_mask = <0>;
+				somc,pattern_frame_delay = <0>;
+				somc,fade_max_brightness = <50>;
+				somc,fade_min_brightness = <15>;
+				somc,fade_led_off_delay = <2000>;
+				linux,default-trigger = "none";
+			};
+		};
+
+		adux1050@2c {
+			compatible = "adi,adux1050";
+			reg = <0x2c>;
+			interrupt-parent = <&msm_gpio>;
+			interrupts = <67 0x2>;
+			interrupts-name = "adux1050_2c";
+
+			/* Specifies the initial configuration registers */
+			adi,adux1050_reg = [ 00010009 00020170 00030188 00050f04 00069b7e 00070200 00080100 00092000 000a000c 000b9b7b 000c0120 000d0100 000e3800 000f000c 00109b6f 00110190 00120100 00132000 0014000c 00150000 00160000 00170000 00180000 00190000 00798000 007a8000 007b8000 007c8000 ];
+			adi,adux1050_irq_flags = [ 00000002 ];
+			somc,volume_up_stg = <2>;
+			somc,volume_down_stg = <1>;
+			somc,hdmi_switch_stg = <0>;
+		};
+	};
+	/* I2C : BLSP6 */
+	i2c@7af6000 { /* BLSP2 QUP1 */
+		qcom,clk-freq-out = <100000>;
+		as3668@42 {
+			somc,color_variation_max_num = <1>;
+			somc,max_current_uA = <0 100 100 200 200 100 100>;
+		};
+		tof_sensor@29 {
+			compatible = "st,stmvl53l0";
+			reg = <0x29>;
+			vdd-supply = <&pm8950_l5>;
+			tof-supply_name = "vdd";
+		};
+		lis2xxx@b {
+			compatible = "somc,lis2xxx";
+			reg = <0x0b>;
+			pinctrl-names = "lis2xxx_act","lis2xxx_sus";
+			pinctrl-0 = <&msm_gpio_2_act>;
+			pinctrl-1 = <&msm_gpio_2_sus>;
+		};
+		ccg2@8 {
+			compatible = "somc,ccg2";
+			reg = <0x08>;
+		};
+	};
+
+	slim_msm: slim@c140000 {
+		tasha_codec {
+			qcom,cdc-micbias1-mv = <2700>;
+			qcom,cdc-micbias4-mv = <2700>;
+		};
+	};
+
+	hdmi_dba: qcom,msm-hdmi-dba-codec-rx {
+		compatible = "qcom,msm-hdmi-dba-codec-rx";
+		qcom,dba-bridge-chip = "adv7535";
+	};
+
+	sound-9335 {
+		qcom,spk-amp-gpios = <&msm_gpio 132 0>;
+		qcom,audio-routing =
+			"AIF4 VI", "MCLK",
+			"RX_BIAS", "MCLK",
+			"MADINPUT", "MCLK",
+			"Lineout_1 amp", "LINEOUT1",
+			"Lineout_2 amp", "LINEOUT2",
+			"AMIC2", "MIC BIAS2",
+			"MIC BIAS2", "Headset Mic",
+			"MIC BIAS2", "ANCRight Headset Mic",
+			"AMIC3", "MIC BIAS3",
+			"MIC BIAS3", "ANCLeft Headset Mic",
+			"AMIC5", "MIC BIAS1",
+			"MIC BIAS1", "Analog Mic5",
+			"AMIC6", "MIC BIAS4",
+			"MIC BIAS4", "Analog Mic6",
+			"DMIC0", "MIC BIAS1",
+			"MIC BIAS1", "Digital Mic0",
+			"DMIC3", "MIC BIAS4",
+			"MIC BIAS4", "Digital Mic3",
+			"SpkrLeft IN", "SPK1 OUT",
+			"SpkrRight IN", "SPK2 OUT";
+		qcom,max-aux-codec = <0>;
+
+		/delete-property/ qcom,wsa-max-devs;
+		/delete-property/ qcom,wsa-devs;
+		/delete-property/ qcom,wsa-aux-dev-prefix;
+	};
+
+	ext_codec: sound-9335 {
+		reg = <0xc051000 0x4>,
+			<0xc051004 0x4>,
+			<0xc055000 0x4>,
+			<0xc056000 0x4>,
+			<0xc054008 0x4>,
+			<0xc052000 0x4>;
+
+		reg-names = "csr_gp_io_mux_mic_ctl",
+			"csr_gp_io_mux_spkr_ctl",
+			"csr_gp_io_lpaif_pri_pcm_pri_mode_muxsel",
+			"csr_gp_io_lpaif_sec_pcm_sec_mode_muxsel",
+			"csr_gp_io_mux_quin_ext_ctl",
+			"csr_gp_io_mux_quin_ctl";
+	};
+
+	/delete-node/ bu520x1nvx;
+
+	s210st0x {
+		compatible = "murata,s210st0x";
+
+		motion_detect {
+			label = "m_det";
+			gpios = <&msm_gpio 68 0x1>;
+			debounce-interval = <120>;
+		};
+	};
+
+	gpio_keys {
+		/delete-node/ camera_focus;
+		/delete-node/ camera_snapshot;
+	};
+};
+
+/{
+	loire_blanc_batterydata: qcom,battery-data {
+		#include "batterydata-loire-blanc-send.dtsi"
+		#include "batterydata-loire-blanc-atl.dtsi"
+	};
+};
+
+&qpnp_fg {
+	qcom,battery-data = <&loire_blanc_batterydata>;
+	qcom,cold-hot-jeita-hysteresis = <20 20>;
+	somc,cool-warm-jeita-hysteresis = <20 20>;
+};
+
+&qpnp_smbcharger {
+	qcom,charging-disabled;
+	qcom,fastchg-current-ma = <1850>;
+	somc,usb-9v-current-max = <1500>;
+	qcom,float-voltage-comp = <0x05>;
+	somc,fastchg-warm-current-ma = <700>;
+	somc,fastchg-cool-current-ma = <700>;
+	somc,thermal-engine-fastchg-current = <1850 1850 1850 1100 900 700 500 300 300 300 300 300 300 0 0>;
+	somc,thermal-mitigation-usb-9v = <1500 1400 1200 1000 1000 1000 1000 1000 1200 900 700 500 300 0 0>;
+	somc,thermal-mitigation-usb-8v = <1800 1800 1800 1500 1100 1100 1100 1100 1200 900 700 500 300 0 0>;
+	somc,thermal-mitigation-usb-7v = <2000 2000 2000 1500 1200 1200 1200 1200 1200 900 700 500 300 0 0>;
+	somc,thermal-mitigation-usb-6v = <2000 2000 2000 1500 1500 1500 1500 1500 1200 900 700 500 300 0 0>;
+	somc,thermal-mitigation-usb-5v = <1500 1500 1500 1500 1500 1500 1500 1500 1200 900 700 500 300 0 0>;
+	somc,limit-usb-5v-level = <8>;
+	somc,stat1_gpio = <&msm_gpio 114 0x1>;
+	somc,stat2_gpio = <&msm_gpio 115 0x1>;
+	somc,lis-psy-name = "lis";
+	pinctrl-names = "gpio111_act","gpio111_sus";
+	pinctrl-0 = <&msm_gpio_111_act>;
+	pinctrl-1 = <&msm_gpio_111_sus>;
+};
+
+&spmi_bus {
+	qcom,pmi8950@3 {
+		qcom,leds@d800 {
+			somc,init-br-ua = <622>;
+			somc-s1,br-power-save-ua = <800>;
+			qcom,led-strings-list = [00];
+			qcom,ilim-ma = <660>;
+			qcom,fdbk-output = "wled1";
+			qcom,ilim-ma = <385>;
+			qcom,sync-dly-us = <0>;
+			qcom,fs-curr-ua = <10000>;
+		};
+	};
+};
+
+&mdss_dsi0_pll {
+	qcom,dsi-pll-video-mode-fixup;
+};
+
+&pm8950_l1 {
+	regulator-min-microvolt = <1100000>;
+	regulator-max-microvolt = <1300000>;
+	qcom,init-voltage = <1200000>;
+};
+
+&pm8950_l3 {
+	regulator-min-microvolt = <900000>;
+	regulator-max-microvolt = <1100000>;
+	qcom,init-voltage = <1000000>;
+};
+
+&pm8950_l9 {
+	regulator-min-microvolt = <2500000>;
+	regulator-max-microvolt = <2900000>;
+	qcom,init-voltage = <2700000>;
+};
+
+&pm8950_l10 {
+	regulator-min-microvolt = <2600000>;
+	regulator-max-microvolt = <2700000>;
+	qcom,init-voltage = <2800000>;
+};
+
+&somc_pinctrl {
+	pinctrl-0 = <&msm_gpio_2_act &msm_gpio_4_sus &msm_gpio_5_def
+			&msm_gpio_6_def &msm_gpio_7_sus &msm_gpio_8_def
+			&msm_gpio_9_def &msm_gpio_10_def &msm_gpio_11_def
+			&msm_gpio_12_def &msm_gpio_13_def &msm_gpio_14_def
+			&msm_gpio_15_def &msm_gpio_16_def &msm_gpio_17_sus
+			&msm_gpio_18_def &msm_gpio_19_def &msm_gpio_20_def
+			&msm_gpio_21_def &msm_gpio_22_def &msm_gpio_23_def
+			&msm_gpio_24_def &msm_gpio_25_def &msm_gpio_26_def
+			&msm_gpio_27_def &msm_gpio_28_def &msm_gpio_29_def
+			&msm_gpio_30_def &msm_gpio_31_def &msm_gpio_32_def
+			&msm_gpio_33_def &msm_gpio_34_def &msm_gpio_35_def
+			&msm_gpio_36_def &msm_gpio_37_def &msm_gpio_38_def
+			&msm_gpio_39_def &msm_gpio_40_def &msm_gpio_41_def
+			&msm_gpio_42_def &msm_gpio_43_def &msm_gpio_44_def
+			&msm_gpio_45_def &msm_gpio_46_def &msm_gpio_47_def
+			&msm_gpio_48_def &msm_gpio_49_def &msm_gpio_50_def
+			&msm_gpio_51_def &msm_gpio_52_def &msm_gpio_56_def
+			&msm_gpio_60_def &msm_gpio_62_def &msm_gpio_63_def
+			&msm_gpio_64_def &msm_gpio_65_def &msm_gpio_66_def
+			&msm_gpio_67_def &msm_gpio_68_def &msm_gpio_69_def
+			&msm_gpio_74_def &msm_gpio_75_def &msm_gpio_92_def
+			&msm_gpio_94_def &msm_gpio_95_def &msm_gpio_96_def
+			&msm_gpio_97_def &msm_gpio_100_def &msm_gpio_101_def
+			&msm_gpio_103_def &msm_gpio_104_def &msm_gpio_106_def
+			&msm_gpio_107_def &msm_gpio_108_def &msm_gpio_109_def
+			&msm_gpio_110_def &msm_gpio_111_def &msm_gpio_112_def
+			&msm_gpio_116_def &msm_gpio_122_def &msm_gpio_124_def
+			&msm_gpio_126_def &msm_gpio_127_def &msm_gpio_128_def
+			&msm_gpio_129_def &msm_gpio_130_def &msm_gpio_131_def
+			&msm_gpio_132_def &msm_gpio_136_def &msm_gpio_137_def
+			&msm_gpio_141_def &msm_gpio_143_def &msm_gpio_144_def>;
+};
+
+&msm_gpio {
+	/* GPIO_0: Projector UART_TX */
+	/* Default active */
+	msm_gpio_0_act: msm_gpio_0act {
+		mux {
+			pins = "gpio0";
+			function = "blsp_uart1";
+		};
+		config {
+			pins = "gpio0";
+			drive-strength = <2>;
+			bias-disable;
+		};
+	};
+
+	msm_gpio_0_sus: msm_gpio_0sus {
+		mux {
+			pins = "gpio0";
+			function = "blsp_uart1";
+		};
+		config {
+			pins = "gpio0";
+			drive-strength = <2>;
+			bias-disable;
+			output-high;
+		};
+	};
+
+	/* GPIO_1: Projector UART_RX */
+	msm_gpio_1_def: msm_gpio_1def {
+		mux {
+			pins = "gpio1";
+			function = "blsp_uart1";
+		};
+		config {
+			pins = "gpio1";
+			drive-strength = <2>;
+			bias-pull-up;
+		};
+	};
+
+	/* GPIO_2: DCDC_EN */
+	msm_gpio_2_act: msm_gpio_2act {
+		mux {
+			pins = "gpio2";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio2";
+			drive-strength = <2>;
+			bias-pull-down;
+			output-high;
+		};
+	};
+
+	msm_gpio_2_sus: msm_gpio_2sus {
+		mux {
+			pins = "gpio2";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio2";
+			drive-strength = <2>;
+			bias-pull-down;
+			output-low;
+		};
+	};
+
+	/* GPIO_49: SUB_PWR_EN_2 */
+	msm_gpio49def {
+		mux {
+			pins = "gpio49";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio49";
+			drive-strength = <2>;
+			/delete-property/ bias-pull-up;
+			/delete-property/ input-enable;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	msm_gpio_49_act: msm_gpio49act {
+		mux {
+			pins = "gpio49";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio49";
+			drive-strength = <2>;
+			bias-disable;
+			output-high;
+		};
+	};
+
+	msm_gpio_49_sus: msm_gpio49sus {
+		mux {
+			pins = "gpio49";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio49";
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	/* GPIO_50: SUB_PWR_EN_1 */
+	msm_gpio50def {
+		mux {
+			pins = "gpio50";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio50";
+			drive-strength = <2>;
+			bias-pull-up;
+			input-enable;
+		};
+	};
+
+	msm_gpio_50_act: msm_gpio50act {
+		mux {
+			pins = "gpio50";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio50";
+			drive-strength = <2>;
+			bias-pull-up;
+			input-enable;
+		};
+	};
+
+	msm_gpio_50_sus: msm_gpio50sus {
+		mux {
+			pins = "gpio50";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio50";
+			drive-strength = <2>;
+			bias-pull-down;
+			input-enable;
+		};
+	};
+
+	/* GPIO_64: TS_RESET_N */
+	msm_gpio64def {
+		mux {
+			pins = "gpio64";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio64";
+			drive-strength = <2>;
+			bias-disable;
+			output-high;
+		};
+	};
+
+	/* GPIO_65: TS_INT_N */
+	msm_gpio65def {
+		mux {
+			pins = "gpio65";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio65";
+			drive-strength = <2>;
+			input-enable;
+		};
+	};
+
+	msm_gpio65act {
+		mux {
+			pins = "gpio65";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio65";
+			drive-strength = <2>;
+			input-enable;
+			bias-pull-up;
+		};
+	};
+
+	msm_gpio65sus {
+		mux {
+			pins = "gpio65";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio65";
+			drive-strength = <2>;
+			input-enable;
+			bias-pull-down;
+		};
+	};
+
+	/* GPIO_67: NC(DTV_INT) */
+	msm_gpio67def {
+		mux {
+			pins = "gpio67";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio67";
+			drive-strength = <2>;
+			/delete-property/ bias-disable;
+			/delete-property/ output-low;
+			bias-pull-up;
+			input-enable;
+		};
+	};
+
+	/* GPIO_108: HDMICN_DET */
+	msm_gpio108def {
+		mux {
+			pins = "gpio108";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio108";
+			drive-strength = <2>;
+			bias-disable;
+			/delete-property/ output-low;
+			input-enable;
+		};
+	};
+
+	/* GPIO_109: INPUT_SEL */
+	msm_gpio_109_act: msm_gpio109act {
+		mux {
+			pins = "gpio109";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio109";
+			drive-strength = <2>;
+			bias-disable;
+			output-high;
+		};
+	};
+
+	msm_gpio_109_sus: msm_gpio109sus {
+		mux {
+			pins = "gpio109";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio109";
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	/* GPIO_111: */
+	msm_gpio111def {
+		mux {
+			pins = "gpio111";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio111";
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	msm_gpio_111_act: msm_gpio111act {
+		mux {
+			pins = "gpio111";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio111";
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	msm_gpio_111_sus: msm_gpio111sus {
+		mux {
+			pins = "gpio111";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio111";
+			drive-strength = <2>;
+			bias-disable;
+			output-high;
+		};
+	};
+};
+
+&adv7533_int_active {
+	config {
+		drive-strength = <8>;
+		/delete-property/ bias-disable;
+		bias-pull-up;
+	};
+};
+
+&adv7533_int_suspend {
+	config {
+		drive-strength = <2>;
+		/delete-property/ bias-disable;
+		bias-pull-down;
+	};
+};
+
+&mdss_dsi0 {
+	/delete-property/ pinctrl-2;
+	/delete-property/ pinctrl-3;
+	/delete-property/ qcom,platform-touch-vddio-gpio;
+	/delete-property/ qcom,platform-touch-int-gpio;
+	qcom,dsi-pref-prim-pan = <&dsi_adv7533_768p>;
+	qcom,bridge-index = <0>;
+};

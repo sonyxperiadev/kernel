@@ -610,13 +610,17 @@ static void msm_isp_calculate_bandwidth(
 }
 
 #ifdef CONFIG_MSM_AVTIMER
+extern int avcs_core_open(void);
+extern int avcs_core_disable_power_collapse(int enable);
+extern int avcs_core_query_timer(uint64_t *avtimer_tick);
+
 void msm_isp_start_avtimer(void)
 {
 	avcs_core_open();
 	avcs_core_disable_power_collapse(1);
 }
 
-static inline void msm_isp_get_avtimer_ts(
+inline void msm_isp_get_avtimer_ts(
 		struct msm_isp_timestamp *time_stamp)
 {
 	int rc = 0;

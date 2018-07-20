@@ -17,7 +17,7 @@
 #include <media/v4l2-subdev.h>
 #include <media/cam_sensor.h>
 #include <media/cam_sensor.h>
-#include "cam_cci_dev.h"
+#include "../cam_cci/cam_cci_dev.h"
 #include "cam_sensor_io.h"
 
 #define I2C_POLL_TIME_MS 5

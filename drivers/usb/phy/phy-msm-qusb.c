@@ -27,6 +27,14 @@
 #include <linux/usb/phy.h>
 #include <linux/reset.h>
 
+#ifdef CONFIG_ARCH_MSM8998
+ #define QUSB2PHY_TUNE_BASE		0x1BC
+ #define QUSB2PHY_PORT_BASE		0x194
+#else
+ #define QUSB2PHY_TUNE_BASE		0x0
+ #define QUSB2PHY_PORT_BASE		0x0
+#endif
+
 #define QUSB2PHY_PLL_STATUS	0x38
 #define QUSB2PHY_PLL_LOCK	BIT(5)
 
@@ -45,7 +53,7 @@
 #define FREEZIO_N			BIT(1)
 #define POWER_DOWN			BIT(0)
 
-#define QUSB2PHY_PORT_TEST_CTRL		0xB8
+#define QUSB2PHY_PORT_TEST_CTRL		QUSB2PHY_PORT_BASE + 0xB8
 
 #define QUSB2PHY_PWR_CTRL1		0x210
 #define PWR_CTRL1_CLAMP_N_EN		BIT(1)
@@ -66,11 +74,11 @@
 #define QUSB2PHY_PLL_TEST		0x04
 #define CLK_REF_SEL			BIT(7)
 
-#define QUSB2PHY_PORT_TUNE1             0x80
-#define QUSB2PHY_PORT_TUNE2             0x84
-#define QUSB2PHY_PORT_TUNE3             0x88
-#define QUSB2PHY_PORT_TUNE4             0x8C
-#define QUSB2PHY_PORT_TUNE5             0x90
+#define QUSB2PHY_PORT_TUNE1             QUSB2PHY_TUNE_BASE + 0x80
+#define QUSB2PHY_PORT_TUNE2             QUSB2PHY_TUNE_BASE + 0x84
+#define QUSB2PHY_PORT_TUNE3             QUSB2PHY_TUNE_BASE + 0x88
+#define QUSB2PHY_PORT_TUNE4             QUSB2PHY_TUNE_BASE + 0x8C
+#define QUSB2PHY_PORT_TUNE5             QUSB2PHY_TUNE_BASE + 0x90
 
 /* Get TUNE2's high nibble value read from efuse */
 #define TUNE2_HIGH_NIBBLE_VAL(val, pos, mask)	((val >> pos) & mask)
@@ -91,8 +99,13 @@
 #define QUSB2PHY_1P8_VOL_MAX           1800000 /* uV */
 #define QUSB2PHY_1P8_HPM_LOAD          30000   /* uA */
 
+#ifdef CONFIG_ARCH_MSM8998
+#define QUSB2PHY_3P3_VOL_MIN		2400000 /* uV */
+#define QUSB2PHY_3P3_VOL_MAX		3088000 /* uV */
+#else
 #define QUSB2PHY_3P3_VOL_MIN		3075000 /* uV */
 #define QUSB2PHY_3P3_VOL_MAX		3200000 /* uV */
+#endif
 #define QUSB2PHY_3P3_HPM_LOAD		30000	/* uA */
 
 #define QUSB2PHY_REFCLK_ENABLE		BIT(0)
@@ -177,9 +190,16 @@ static void qusb_phy_enable_clocks(struct qusb_phy *qphy, bool on)
 
 	if (!qphy->clocks_enabled && on) {
 		clk_prepare_enable(qphy->ref_clk_src);
-		clk_prepare_enable(qphy->ref_clk);
-		clk_prepare_enable(qphy->iface_clk);
-		clk_prepare_enable(qphy->core_clk);
+
+		if (!IS_ERR_OR_NULL(qphy->ref_clk))
+			clk_prepare_enable(qphy->ref_clk);
+
+		if (!IS_ERR_OR_NULL(qphy->iface_clk))
+			clk_prepare_enable(qphy->iface_clk);
+
+		if (!IS_ERR_OR_NULL(qphy->core_clk))
+			clk_prepare_enable(qphy->core_clk);
+
 		clk_prepare_enable(qphy->cfg_ahb_clk);
 		qphy->clocks_enabled = true;
 	}
@@ -190,9 +210,15 @@ static void qusb_phy_enable_clocks(struct qusb_phy *qphy, bool on)
 		 * FSM depedency beween iface_clk and core_clk.
 		 * Hence turned off core_clk before iface_clk.
 		 */
-		clk_disable_unprepare(qphy->core_clk);
-		clk_disable_unprepare(qphy->iface_clk);
-		clk_disable_unprepare(qphy->ref_clk);
+		if (!IS_ERR_OR_NULL(qphy->core_clk))
+			clk_disable_unprepare(qphy->core_clk);
+
+		if (!IS_ERR_OR_NULL(qphy->iface_clk))
+			clk_disable_unprepare(qphy->iface_clk);
+
+		if (!IS_ERR_OR_NULL(qphy->ref_clk))
+			clk_disable_unprepare(qphy->ref_clk);
+
 		clk_disable_unprepare(qphy->ref_clk_src);
 		qphy->clocks_enabled = false;
 	}

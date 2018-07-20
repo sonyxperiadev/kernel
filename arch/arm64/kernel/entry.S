@@ -444,6 +444,9 @@ ENDPROC(el1_error_invalid)
  */
 	.align	6
 el1_sync:
+#ifdef CONFIG_QCOM_TLB_EL2_HANDLER
+	smc #0xffff
+#endif
 	kernel_entry 1
 	mrs	x1, esr_el1			// read the syndrome register
 	lsr	x24, x1, #ESR_ELx_EC_SHIFT	// exception class
@@ -595,7 +598,7 @@ el0_sync_compat:
 	cmp	x24, #ESR_ELx_EC_IABT_LOW	// instruction abort in EL0
 	b.eq	el0_ia
 	cmp	x24, #ESR_ELx_EC_FP_ASIMD	// FP/ASIMD access
-	b.eq	el0_fpsimd_acc
+	b.eq	el0_fpsimd_acc_compat
 	cmp	x24, #ESR_ELx_EC_FP_EXC32	// FP/ASIMD exception
 	b.eq	el0_fpsimd_exc
 	cmp	x24, #ESR_ELx_EC_PC_ALIGN	// pc alignment exception
@@ -689,6 +692,16 @@ el0_fpsimd_acc:
 	mov	x0, x25
 	mov	x1, sp
 	bl	do_fpsimd_acc
+	b	ret_to_user
+el0_fpsimd_acc_compat:
+	/*
+	 * Floating Point or Advanced SIMD access
+	 */
+	enable_dbg
+	ct_user_exit
+	mov	x0, x25
+	mov	x1, sp
+	bl	do_fpsimd_acc_compat
 	b	ret_to_user
 el0_fpsimd_exc:
 	/*
@@ -807,6 +820,33 @@ ENTRY(cpu_switch_to)
 	ldp	x27, x28, [x8], #16
 	ldp	x29, x9, [x8], #16
 	ldr	lr, [x8]
+#ifdef CONFIG_ARM64_REG_REBALANCE_ON_CTX_SW
+	orr	x13, x13, x13
+	orr	x14, x14, x14
+	orr	x15, x15, x15
+	orr	x16, x16, x16
+	orr	x17, x17, x17
+	orr	x18, x18, x18
+	orr	x19, x19, x19
+	orr	x20, x20, x20
+	orr	x21, x21, x21
+	mov	v0.16b, v0.16b
+	mov	v1.16b, v1.16b
+	mov	v2.16b, v2.16b
+	mov	v3.16b, v3.16b
+	mov	v4.16b, v4.16b
+	mov	v5.16b, v5.16b
+	mov	v6.16b, v6.16b
+	mov	v7.16b, v7.16b
+	mov	v8.16b, v8.16b
+	mov	v9.16b, v9.16b
+	mov	v10.16b, v10.16b
+	mov	v11.16b, v11.16b
+	mov	v12.16b, v12.16b
+	mov	v13.16b, v13.16b
+	mov	v14.16b, v14.16b
+	mov	v15.16b, v15.16b
+#endif
 	mov	sp, x9
 	msr	sp_el0, x1
 	ret

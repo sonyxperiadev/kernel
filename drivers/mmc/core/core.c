@@ -2,6 +2,7 @@
  *  linux/drivers/mmc/core/core.c
  *
  *  Copyright (C) 2003-2004 Russell King, All Rights Reserved.
+ *  Copyright (c) 2015 Sony Mobile Communications Inc.
  *  SD support Copyright (C) 2004 Ian Molton, All Rights Reserved.
  *  Copyright (C) 2005-2008 Pierre Ossman, All Rights Reserved.
  *  MMCv4 support Copyright (C) 2006 Philip Langdale, All Rights Reserved.
@@ -60,6 +61,9 @@
  * operations the card has to perform.
  */
 #define MMC_BKOPS_MAX_TIMEOUT	(4 * 60 * 1000) /* max time to wait in ms */
+
+/* Flushing a large amount of cached data may take a long time. */
+#define MMC_FLUSH_REQ_TIMEOUT_MS 180000 /* msec */
 
 /* The max erase timeout, used when host->max_busy_timeout isn't specified */
 #define MMC_ERASE_TIMEOUT_MS	(60 * 1000) /* 60 s */
@@ -470,9 +474,11 @@ int mmc_recovery_fallback_lower_speed(struct mmc_host *host)
 		mmc_host_clear_sdr104(host);
 		err = mmc_hw_reset(host);
 		host->card->sdr104_blocked = true;
+#ifndef CONFIG_BCMDHD /* TODO: Not needed anymore? */
 	} else if (mmc_card_sd(host->card)) {
 		/* If sdr104_wa is not present, just return status */
 		err = host->bus_ops->alive(host);
+#endif
 	}
 	if (err)
 		pr_err("%s: %s: Fallback to lower speed mode failed with err=%d\n",
@@ -2539,6 +2545,7 @@ void mmc_ungate_clock(struct mmc_host *host)
 		WARN_ON(host->ios.clock);
 		/* This call will also set host->clk_gated to false */
 		__mmc_set_clock(host, host->clk_old);
+#ifndef CONFIG_ARCH_SONY_LOIRE
 		/*
 		 * We have seen that host controller's clock tuning circuit may
 		 * go out of sync if controller clocks are gated.
@@ -2546,6 +2553,7 @@ void mmc_ungate_clock(struct mmc_host *host)
 		 * tuning circuit after ungating the controller clocks.
 		 */
 		mmc_retune_needed(host);
+#endif
 	}
 }
 
@@ -3166,7 +3174,14 @@ int mmc_set_signal_voltage(struct mmc_host *host, int signal_voltage, u32 ocr)
 
 	host->card_clock_off = false;
 	/* Wait for at least 1 ms according to spec */
-	mmc_delay(1);
+#ifndef CONFIG_MMC_SUPPORT_SVS_INTERVAL
+		mmc_delay(1);
+#else
+	if (host->caps & MMC_CAP_NONREMOVABLE)
+		mmc_delay(1);
+	else
+		mmc_delay(40);
+#endif
 
 	/*
 	 * Failure to switch is indicated by the card holding
@@ -3268,7 +3283,11 @@ void mmc_power_up(struct mmc_host *host, u32 ocr)
 
 	mmc_pwrseq_pre_power_on(host);
 
-	host->ios.vdd = fls(ocr) - 1;
+	if (host->caps2 & MMC_CAP2_NONSTANDARD_OCR)
+		host->ios.vdd = ffs(ocr) - 1;
+	else
+		host->ios.vdd = fls(ocr) - 1;
+
 	host->ios.power_mode = MMC_POWER_UP;
 	/* Set initial state and call mmc_set_ios */
 	mmc_set_initial_state(host);
@@ -4357,9 +4376,12 @@ static int mmc_rescan_try_freq(struct mmc_host *host, unsigned freq)
 		if (!mmc_attach_sdio(host))
 			return 0;
 
-	if (!(host->caps2 & MMC_CAP2_NO_SD))
+	if (!(host->caps2 & MMC_CAP2_NO_SD)) {
 		if (!mmc_attach_sd(host))
 			return 0;
+		else
+			mmc_gpio_tray_close_set_uim2(host, 1);
+	}
 
 	if (!(host->caps2 & MMC_CAP2_NO_MMC))
 		if (!mmc_attach_mmc(host))
@@ -4562,6 +4584,8 @@ void mmc_stop_host(struct mmc_host *host)
 	host->rescan_disable = 1;
 	cancel_delayed_work_sync(&host->detect);
 
+	mmc_gpio_set_uim2_en(host, 0);
+
 	/* clear pm flags now and let card drivers set them as needed */
 	host->pm_flags = 0;
 
@@ -4707,6 +4731,59 @@ int mmc_flush_cache(struct mmc_card *card)
 }
 EXPORT_SYMBOL(mmc_flush_cache);
 
+/*
+ * Turn the cache ON/OFF.
+ * Turning the cache OFF shall trigger flushing of the data
+ * to the non-volatile storage.
+ * This function should be called with host claimed
+ */
+int mmc_cache_ctrl(struct mmc_host *host, u8 enable)
+{
+	struct mmc_card *card = host->card;
+	unsigned int timeout;
+	int err = 0, rc;
+
+	BUG_ON(!card);
+	timeout = card->ext_csd.generic_cmd6_time;
+
+	if (mmc_card_is_removable(host) ||
+			(card->quirks & MMC_QUIRK_CACHE_DISABLE))
+		return err;
+
+	if (card && mmc_card_mmc(card) &&
+			(card->ext_csd.cache_size > 0)) {
+		enable = !!enable;
+
+		if (card->ext_csd.cache_ctrl ^ enable) {
+			if (!enable)
+				timeout = MMC_FLUSH_REQ_TIMEOUT_MS;
+
+			err = mmc_switch_ignore_timeout(card,
+					EXT_CSD_CMD_SET_NORMAL,
+					EXT_CSD_CACHE_CTRL, enable, timeout);
+
+			if (err == -ETIMEDOUT && !enable) {
+				pr_err("%s:cache disable operation timeout\n",
+						mmc_hostname(card->host));
+				rc = mmc_interrupt_hpi(card);
+				if (rc)
+					pr_err("%s: mmc_interrupt_hpi() failed (%d)\n",
+							mmc_hostname(host), rc);
+			} else if (err) {
+				pr_err("%s: cache %s error %d\n",
+						mmc_hostname(card->host),
+						enable ? "on" : "off",
+						err);
+			} else {
+				card->ext_csd.cache_ctrl = enable;
+			}
+		}
+	}
+
+	return err;
+}
+EXPORT_SYMBOL(mmc_cache_ctrl);
+
 #ifdef CONFIG_PM_SLEEP
 /* Do the card removal on suspend if card is assumed removeable
  * Do that in pm notifier while userspace isn't yet frozen, so we will be able
@@ -4719,6 +4796,9 @@ static int mmc_pm_notify(struct notifier_block *notify_block,
 		notify_block, struct mmc_host, pm_notify);
 	unsigned long flags;
 	int err = 0;
+#ifdef CONFIG_MMC_SD_DEFERRED_RESUME
+	bool pending_detect = false;
+#endif
 
 	switch (mode) {
 	case PM_RESTORE_PREPARE:
@@ -4729,7 +4809,15 @@ static int mmc_pm_notify(struct notifier_block *notify_block,
 		spin_lock_irqsave(&host->lock, flags);
 		host->rescan_disable = 1;
 		spin_unlock_irqrestore(&host->lock, flags);
+#ifdef CONFIG_MMC_SD_DEFERRED_RESUME
+		if (cancel_delayed_work_sync(&host->detect)) {
+			pending_detect = true;
+		}
+
+		mmc_cd_prepare_suspend(host, pending_detect);
+#else
 		cancel_delayed_work_sync(&host->detect);
+#endif
 
 		if (!host->bus_ops)
 			break;
@@ -4771,6 +4859,10 @@ static int mmc_pm_notify(struct notifier_block *notify_block,
 			break;
 		}
 		spin_unlock_irqrestore(&host->lock, flags);
+#ifdef CONFIG_MMC_SD_DEFERRED_RESUME
+		if (!mmc_cd_is_pending_detect(host))
+			break; /* IRQ should be triggered if CD changed */
+#endif
 		_mmc_detect_change(host, 0, false);
 
 	}

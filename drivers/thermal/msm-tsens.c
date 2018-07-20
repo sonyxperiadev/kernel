@@ -90,6 +90,9 @@ static const struct of_device_id tsens_table[] = {
 	{	.compatible = "qcom,msm8937-tsens",
 		.data = &data_tsens14xx,
 	},
+	{	.compatible = "qcom,msm8976-tsens",
+		.data = &data_tsens14xx_8976,
+	},
 	{}
 };
 MODULE_DEVICE_TABLE(of, tsens_table);
@@ -182,6 +185,13 @@ static int get_device_tree_data(struct platform_device *pdev,
 	return rc;
 }
 
+#ifdef CONFIG_VIRTUAL_THERMAL
+int virtual_thermal_of_sensors_register(struct device *dev);
+#else
+static int virtual_thermal_of_sensors_register(struct device *dev)
+{ return 0; }
+#endif
+
 static int tsens_thermal_zone_register(struct tsens_device *tmdev)
 {
 	int i = 0, sensor_missing = 0;
@@ -211,6 +221,7 @@ static int tsens_thermal_zone_register(struct tsens_device *tmdev)
 
 	/* Register virtual thermal sensors. */
 	qti_virtual_sensor_register(&tmdev->pdev->dev);
+	virtual_thermal_of_sensors_register(&tmdev->pdev->dev);
 
 	return 0;
 }

@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2016, 2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -14,6 +14,9 @@
 #define __HDMI_UTIL_H__
 #include <linux/mdss_io_util.h>
 #include "video/msm_hdmi_modes.h"
+
+#include "mdss_panel.h"
+#include "mdss_hdmi_panel.h"
 
 /* HDMI_TX Registers */
 #define HDMI_CTRL                        (0x00000000)
@@ -422,6 +425,12 @@ enum hdmi_tx_hdcp2p2_rxstatus_intr_mask {
 	RXSTATUS_REAUTH_REQ = BIT(14),
 };
 
+enum hdmi_hdr_op {
+	HDR_UNSUPPORTED_OP,
+	HDR_SEND_INFO,
+	HDR_CLEAR_INFO
+};
+
 struct hdmi_tx_hdcp2p2_ddc_data {
 	enum hdmi_tx_hdcp2p2_rxstatus_intr_mask intr_mask;
 	u32 timeout_ms;
@@ -447,7 +456,7 @@ struct hdmi_tx_ddc_ctrl {
 	atomic_t write_busy_wait_done;
 	atomic_t read_busy_wait_done;
 	atomic_t rxstatus_busy_wait_done;
-	struct mdss_io_data *io;
+	struct dss_io_data *io;
 	struct completion ddc_sw_done;
 	struct hdmi_tx_ddc_data ddc_data;
 	struct hdmi_tx_hdcp2p2_ddc_data hdcp2p2_ddc_data;
@@ -489,17 +498,23 @@ const char *msm_hdmi_mode_2string(u32 mode);
 int hdmi_set_resv_timing_info(struct msm_hdmi_mode_timing_info *mode);
 bool hdmi_is_valid_resv_timing(int mode);
 void hdmi_reset_resv_timing_info(void);
+int hdmi_panel_get_vic(struct mdss_panel_info *pinfo,
+		struct hdmi_util_ds_data *ds_data);
+int hdmi_tx_setup_tmds_clk_rate(u32 pixel_freq, u32 out_format, bool dc_enable);
 
 /* todo: Fix this. Right now this is defined in mdss_hdmi_tx.c */
 void *hdmi_get_featuredata_from_sysfs_dev(struct device *device, u32 type);
 
+/* get hdmi panel power is on or not*/
+ssize_t hdmi_tx_is_HDMI_panel_power_on(struct device *device);
+
 /* DDC */
-void hdmi_ddc_config(struct hdmi_tx_ddc_ctrl *ctrl);
-int hdmi_ddc_isr(struct hdmi_tx_ddc_ctrl *ctrl, u32 version);
-int hdmi_ddc_write(struct hdmi_tx_ddc_ctrl *ctrl);
-int hdmi_ddc_read_seg(struct hdmi_tx_ddc_ctrl *ctrl);
-int hdmi_ddc_read(struct hdmi_tx_ddc_ctrl *ctrl);
-int hdmi_ddc_abort_transaction(struct hdmi_tx_ddc_ctrl *ctrl);
+void hdmi_ddc_config(struct hdmi_tx_ddc_ctrl *);
+int hdmi_ddc_isr(struct hdmi_tx_ddc_ctrl *, u32 version);
+int hdmi_ddc_write(struct hdmi_tx_ddc_ctrl *);
+int hdmi_ddc_read_seg(struct hdmi_tx_ddc_ctrl *);
+int hdmi_ddc_read(struct hdmi_tx_ddc_ctrl *);
+int hdmi_ddc_abort_transaction(struct hdmi_tx_ddc_ctrl *);
 
 int hdmi_scdc_read(struct hdmi_tx_ddc_ctrl *ctrl, u32 data_type, u32 *val);
 int hdmi_scdc_write(struct hdmi_tx_ddc_ctrl *ctrl, u32 data_type, u32 val);
@@ -510,5 +525,5 @@ void hdmi_hdcp2p2_ddc_disable(struct hdmi_tx_ddc_ctrl *ctrl);
 int hdmi_hdcp2p2_ddc_read_rxstatus(struct hdmi_tx_ddc_ctrl *ctrl);
 int hdmi_utils_get_timeout_in_hysnc(struct msm_hdmi_mode_timing_info *timing,
 	u32 timeout_ms);
-
+u8 hdmi_hdr_get_ops(u8 curr_state, u8 new_state);
 #endif /* __HDMI_UTIL_H__ */

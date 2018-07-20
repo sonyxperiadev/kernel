@@ -2,6 +2,7 @@
  *  linux/drivers/mmc/sdio.c
  *
  *  Copyright 2006-2007 Pierre Ossman
+ *  Copyright 2016 Sony Mobile Communications Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1084,9 +1085,43 @@ static int mmc_sdio_resume(struct mmc_host *host)
 	return err;
 }
 
+#ifdef CONFIG_MMC_SOMC_LOW_VOLTAGE
+static u32 mmc_select_low_voltage(struct mmc_host *host, u32 ocr)
+{
+	int bit;
+	u32 ocr_orig = ocr;
+#ifdef CONFIG_BCMDHD
+	u32 ocr_fake = 0x180;
+#endif
+
+	pr_debug("%s \n",__func__);
+
+	if ((host->ocr_avail == MMC_VDD_165_195) && mmc_host_uhs(host) &&
+		((ocr & host->ocr_avail) == 0)) {
+		/* Interpret non-standard IO_OP_COND */
+		bit = ffs(ocr) - 1;
+		ocr &= 3 << bit;
+		ocr = ocr >> 1;
+
+ #ifdef CONFIG_BCMDHD
+		/* Always force a specific OCR. BCMDHD only. */
+		pr_debug("%s: forcing ocr to 0x%x instead of 0x%x",
+			 mmc_hostname(host), ocr_fake, ocr);
+		ocr = ocr_fake;
+ #endif
+
+		/* Power cycle card to select lowest possible voltage */
+		mmc_power_cycle(host, ocr);
+	}
+
+	return ocr_orig;
+}
+#endif
+
 static int mmc_sdio_power_restore(struct mmc_host *host)
 {
 	int ret;
+	u32 ocr;
 
 	BUG_ON(!host);
 	BUG_ON(!host->card);
@@ -1114,10 +1149,13 @@ static int mmc_sdio_power_restore(struct mmc_host *host)
 	mmc_go_idle(host);
 	mmc_send_if_cond(host, host->card->ocr);
 
-	ret = mmc_send_io_op_cond(host, 0, NULL);
+	ret = mmc_send_io_op_cond(host, 0, &ocr);
 	if (ret)
 		goto out;
 
+#ifdef CONFIG_MMC_SOMC_LOW_VOLTAGE
+	ocr = mmc_select_low_voltage(host, ocr);
+#endif
 	ret = mmc_sdio_init_card(host, host->card->ocr, host->card,
 				mmc_card_keep_power(host));
 	if (!ret && host->sdio_irqs)
@@ -1132,9 +1170,11 @@ out:
 static int mmc_sdio_runtime_suspend(struct mmc_host *host)
 {
 	/* No references to the card, cut the power to it. */
-	mmc_claim_host(host);
-	mmc_power_off(host);
-	mmc_release_host(host);
+	if (!mmc_card_keep_power(host)) {
+		mmc_claim_host(host);
+		mmc_power_off(host);
+		mmc_release_host(host);
+	}
 
 	return 0;
 }
@@ -1145,7 +1185,8 @@ static int mmc_sdio_runtime_resume(struct mmc_host *host)
 
 	/* Restore power and re-initialize. */
 	mmc_claim_host(host);
-	mmc_power_up(host, host->card->ocr);
+	if (!mmc_card_keep_power(host))
+		mmc_power_up(host, host->card->ocr);
 	ret = mmc_sdio_power_restore(host);
 	mmc_release_host(host);
 
@@ -1192,7 +1233,9 @@ int mmc_attach_sdio(struct mmc_host *host)
 	if (host->ocr_avail_sdio)
 		host->ocr_avail = host->ocr_avail_sdio;
 
-
+#ifdef CONFIG_MMC_SOMC_LOW_VOLTAGE
+	rocr = mmc_select_low_voltage(host, ocr);
+#else
 	rocr = mmc_select_voltage(host, ocr);
 
 	/*
@@ -1202,6 +1245,7 @@ int mmc_attach_sdio(struct mmc_host *host)
 		err = -EINVAL;
 		goto err;
 	}
+#endif // CONFIG_MMC_SOMC_LOW_VOLTAGE
 
 	/*
 	 * Detect and init the card.
@@ -1289,6 +1333,9 @@ int mmc_attach_sdio(struct mmc_host *host)
 		if (err)
 			goto remove_added;
 	}
+
+	if (host->caps2 & MMC_CAP2_NONSTANDARD_NONREMOVABLE)
+		host->caps |= MMC_CAP_NONREMOVABLE;
 
 	mmc_claim_host(host);
 	return 0;

@@ -355,6 +355,7 @@ static int probe(struct platform_device *pdev)
 {
 	int ret = -EINVAL;
 	int *irq = 0;
+	unsigned long intr_flags = 0;
 
 	irq = devm_kzalloc(&pdev->dev, sizeof(int), GFP_KERNEL);
 	if (!irq)
@@ -364,6 +365,11 @@ static int probe(struct platform_device *pdev)
 	ret = devfreq_add_governor(&spdm_hyp_gov);
 	if (ret)
 		goto nogov;
+
+	if (of_machine_is_compatible("qcom,msm8998"))
+		intr_flags = IRQF_ONESHOT;
+	else
+		intr_flags = IRQF_TRIGGER_HIGH | IRQF_ONESHOT;
 
 	*irq = platform_get_irq_byname(pdev, "spdm-irq");
 	ret = request_threaded_irq(*irq, isr, threaded_isr,

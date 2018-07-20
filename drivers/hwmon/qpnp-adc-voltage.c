@@ -9,6 +9,11 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
+/*
+ * NOTE: This file has been modified by Sony Mobile Communications Inc.
+ * Modifications are Copyright (c) 2015 Sony Mobile Communications Inc,
+ * and licensed under the license of the file.
+ */
 
 #define pr_fmt(fmt) "%s: " fmt, __func__
 
@@ -106,7 +111,7 @@
 #define QPNP_VADC_CONV_TIMEOUT_ERR				2
 #define QPNP_VADC_CONV_TIME_MIN					1000
 #define QPNP_VADC_CONV_TIME_MAX					1100
-#define QPNP_ADC_COMPLETION_TIMEOUT				HZ
+#define QPNP_ADC_COMPLETION_TIMEOUT				1000
 #define QPNP_VADC_ERR_COUNT					20
 #define QPNP_OP_MODE_SHIFT					3
 
@@ -228,6 +233,7 @@ static struct qpnp_vadc_scale_fn vadc_scale_fn[] = {
 	[SCALE_SMB1390_DIE_TEMP] = {qpnp_adc_scale_die_temp_1390},
 	[SCALE_BATT_THERM_TEMP_PU30] = {qpnp_adc_batt_therm_pu30},
 	[SCALE_BATT_THERM_TEMP_PU400] = {qpnp_adc_batt_therm_pu400},
+	[SCALE_THERM_100K_PULLUP_DECI] = {qpnp_adc_scale_therm_pu2_decidegc},
 };
 
 static struct qpnp_vadc_rscale_fn adc_vadc_rscale_fn[] = {
@@ -550,7 +556,7 @@ int32_t qpnp_vadc_hc_read(struct qpnp_vadc_chip *vadc,
 	} else {
 		rc = wait_for_completion_timeout(
 					&vadc->adc->adc_rslt_completion,
-					QPNP_ADC_COMPLETION_TIMEOUT);
+					msecs_to_jiffies(QPNP_ADC_COMPLETION_TIMEOUT));
 		if (!rc) {
 			rc = qpnp_vadc_hc_check_conversion_status(vadc);
 			if (rc < 0) {
@@ -1954,7 +1960,7 @@ recalibrate:
 	} else {
 		rc = wait_for_completion_timeout(
 					&vadc->adc->adc_rslt_completion,
-					QPNP_ADC_COMPLETION_TIMEOUT);
+					msecs_to_jiffies(QPNP_ADC_COMPLETION_TIMEOUT));
 		if (!rc) {
 			rc = qpnp_vadc_read_reg(vadc, QPNP_VADC_STATUS1,
 							&status1, 1);

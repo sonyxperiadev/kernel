@@ -214,6 +214,8 @@ static int dsp_domr_notify_cb(struct notifier_block *n, unsigned long code,
 						dsp);
 	struct pd_qmi_client_data *reg;
 
+	/* Resetting the log level */
+	SLIM_RST_LOGLVL(dev);
 	SLIM_INFO(dev, "SLIM DSP SSR/PDR notify cb:0x%lx, type:%d\n",
 			code, dsp->dom_t);
 	switch (code) {
@@ -1778,6 +1780,7 @@ static int ngd_slim_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, dev);
 	slim_set_ctrldata(&dev->ctrl, dev);
 
+#ifdef CONFIG_IPC_LOGGING
 	/* Create IPC log context */
 	dev->ipc_slimbus_log = ipc_log_context_create(IPC_SLIMBUS_LOG_PAGES,
 						dev_name(dev->dev), 0);
@@ -1790,6 +1793,7 @@ static int ngd_slim_probe(struct platform_device *pdev)
 		SLIM_INFO(dev, "start logging for slim dev %s\n",
 				dev_name(dev->dev));
 	}
+#endif
 	ret = sysfs_create_file(&dev->dev->kobj, &dev_attr_debug_mask.attr);
 	if (ret) {
 		dev_err(&pdev->dev, "Failed to create dev. attr\n");
@@ -2034,7 +2038,7 @@ static int ngd_slim_runtime_idle(struct device *device)
 /*
  * If PM_RUNTIME is not defined, these 2 functions become helper
  * functions to be called from system suspend/resume. So they are not
- * inside ifdef CONFIG_PM_RUNTIME
+ * inside ifdef CONFIG_PM
  */
 static int ngd_slim_runtime_resume(struct device *device)
 {

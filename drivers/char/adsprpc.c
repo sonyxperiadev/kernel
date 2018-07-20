@@ -3523,6 +3523,21 @@ static int fastrpc_get_service_location_notify(struct notifier_block *nb,
 	return NOTIFY_DONE;
 }
 
+static int fastrpc_smmu_fault_handler(struct iommu_domain *domain,
+	struct device *dev, unsigned long iova, int flags, void *token)
+{
+	struct fastrpc_session_ctx *sess = (struct fastrpc_session_ctx *)token;
+	int err = 0;
+
+	VERIFY(err, sess != NULL);
+	if (err)
+		return err;
+	sess->smmu.faults++;
+	dev_err(dev, "ADSPRPC context fault: iova=0x%08lx, cb = %d, faults=%d",
+					iova, sess->smmu.cb, sess->smmu.faults);
+	return 0;
+}
+
 static const struct file_operations fops = {
 	.open = fastrpc_device_open,
 	.release = fastrpc_device_release,
@@ -3603,6 +3618,87 @@ static int fastrpc_cb_probe(struct device *dev)
 	debugfs_global_file = debugfs_create_file("global", 0644, debugfs_root,
 							NULL, &debugfs_fops);
 bail:
+	return err;
+}
+
+static int fastrpc_cb_subsids_probe(struct device *dev)
+{
+	struct fastrpc_channel_ctx *chan;
+	struct fastrpc_session_ctx *main_session, *sess;
+	struct of_phandle_args iommuspec;
+	const char *name;
+	unsigned int *range = 0, range_size = 0;
+	unsigned int *sids = 0, sids_size = 0;
+	int err = 0, i;
+
+	VERIFY(err, 0 != (name = of_get_property(dev->of_node, "label", NULL)));
+	if (err)
+		goto bail;
+
+	VERIFY(err, !of_parse_phandle_with_args(dev->of_node, "iommus",
+						"#iommu-cells", 0, &iommuspec));
+	if (err)
+		goto bail;
+
+	err = of_property_read_u32_array(dev->of_node,
+					"qcom,virtual-addr-pool",
+					range,
+					range_size/sizeof(unsigned int));
+	if (err)
+		goto bail;
+
+	err = of_property_read_u32_array(dev->of_node,
+					"qcom,adsp-shared-sids",
+					sids,
+					sids_size/sizeof(unsigned int));
+	if (err)
+		goto bail;
+
+	chan = &gcinfo[0];
+
+	/* Main RPC session */
+	main_session = &chan->session[chan->sesscount];
+	VERIFY(err, !IS_ERR_OR_NULL(main_session->smmu.mapping =
+				arm_iommu_create_mapping(&platform_bus_type,
+						range[0], range[1])));
+	if (err)
+		goto bail;
+
+	iommu_set_fault_handler(main_session->smmu.mapping->domain,
+				fastrpc_smmu_fault_handler, main_session);
+	VERIFY(err, !arm_iommu_attach_device(dev, main_session->smmu.mapping));
+	if (err)
+		goto bail;
+
+	main_session->smmu.dev = dev;
+
+	/* Secondary RPC sessions */
+	for (i = 0; i < (sids_size / sizeof(unsigned int)); i++) {
+		VERIFY(err, chan->sesscount < NUM_SESSIONS);
+		if (err)
+			goto bail;
+
+		sess = &chan->session[chan->sesscount];
+		sess->used = 0;
+
+		/* Configure coherency, if needed */
+		sess->smmu.coherent = of_property_read_bool(dev->of_node,
+						"dma-coherent");
+
+		/* Use the main session's IOMMU mapping and device */
+		sess->smmu.mapping = main_session->smmu.mapping;
+		sess->smmu.dev = main_session->smmu.dev;
+
+		/* Hack-in the sub context banks and enable */
+		sess->smmu.cb = sids[i];
+		sess->smmu.enabled = 1;
+		chan->sesscount++;
+	}
+	debugfs_global_file = debugfs_create_file("global", 0644, debugfs_root,
+							NULL, &debugfs_fops);
+bail:
+	kfree(sids);
+	kfree(range);
 	return err;
 }
 
@@ -3731,9 +3827,14 @@ static int fastrpc_probe(struct platform_device *pdev)
 	struct device_node *ion_node, *node;
 	struct platform_device *ion_pdev;
 	struct cma *cma;
+	uint32_t vmid_ssc_q6;
 	uint32_t val;
 	int ret = 0;
 
+
+	if (of_device_is_compatible(dev->of_node,
+					"qcom,msm-fastrpc-fixedsids-compute-cb"))
+		return fastrpc_cb_subsids_probe(dev);
 
 	if (of_device_is_compatible(dev->of_node,
 					"qcom,msm-fastrpc-compute")) {
@@ -3758,6 +3859,9 @@ static int fastrpc_probe(struct platform_device *pdev)
 					"qcom,msm-fastrpc-legacy-compute-cb")){
 		return fastrpc_cb_legacy_probe(dev);
 	}
+
+	if (of_property_read_u32(dev->of_node, "qcom,vmid-ssc-q6", &vmid_ssc_q6))
+		vmid_ssc_q6 = VMID_SSC_Q6;
 
 	if (of_device_is_compatible(dev->of_node,
 					"qcom,msm-adsprpc-mem-region")) {
@@ -3784,7 +3888,7 @@ static int fastrpc_probe(struct platform_device *pdev)
 		if (me->range.addr && !of_property_read_bool(dev->of_node,
 							 "restrict-access")) {
 			int srcVM[1] = {VMID_HLOS};
-			int destVM[4] = {VMID_HLOS, VMID_MSS_MSA, VMID_SSC_Q6,
+			int destVM[4] = {VMID_HLOS, VMID_MSS_MSA, vmid_ssc_q6,
 						VMID_ADSP_Q6};
 			int destVMperm[4] = {PERM_READ | PERM_WRITE | PERM_EXEC,
 				PERM_READ | PERM_WRITE | PERM_EXEC,

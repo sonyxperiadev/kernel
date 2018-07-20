@@ -4360,6 +4360,21 @@ static enum gsi_ver ipa3_get_gsi_ver(enum ipa_hw_type ipa_hw_type)
 	return gsi_ver;
 }
 
+static int ipa3_clkon_cfg_wa(void)
+{
+	struct ipahal_reg_clkon_cfg clkon_cfg = { 0 };
+	int ret = 0;
+
+	clkon_cfg.open_misc = 1;
+
+	if (ipa3_cfg_clkon_cfg(&clkon_cfg)) {
+		IPAERR("fail to set cgc_open_misc = 1\n");
+		ret = -EPERM;
+	}
+
+	return ret;
+}
+
 /**
  * ipa3_post_init() - Initialize the IPA Driver (Part II).
  * This part contains all initialization which requires interaction with
@@ -4643,6 +4658,13 @@ static int ipa3_post_init(const struct ipa3_plat_drv_res *resource_p,
 
 	ipa3_trigger_ipa_ready_cbs();
 	complete_all(&ipa3_ctx->init_completion_obj);
+
+	/* WA to disable MISC clock gating for IPA_HW_v3_1 */
+	if (ipa3_ctx->ipa_hw_type == IPA_HW_v3_1) {
+		pr_info(" WA to set cgc_open_misc = 1\n");
+		ipa3_clkon_cfg_wa();
+	}
+
 	pr_info("IPA driver initialization was successful.\n");
 
 	return 0;
@@ -4869,7 +4891,12 @@ int ipa3_tz_unlock_reg(struct ipa_tz_unlock_reg_info *reg_info, u16 num_regs)
 	struct tz_smmu_ipa_protect_region_s cmd_buf;
 	struct scm_desc desc = {0};
 
-	if (reg_info ==  NULL || num_regs == 0) {
+	if (num_regs == 0) {
+		pr_info("No registers to unlock through TZ\n");
+		return 0;
+	}
+
+	if (reg_info ==  NULL) {
 		IPAERR("Bad parameters\n");
 		return -EFAULT;
 	}
@@ -5013,9 +5040,11 @@ static int ipa3_pre_init(const struct ipa3_plat_drv_res *resource_p,
 		goto fail_mem_ctx;
 	}
 
+#ifdef CONFIG_IPC_LOGGING
 	ipa3_ctx->logbuf = ipc_log_context_create(IPA_IPC_LOG_PAGES, "ipa", 0);
 	if (ipa3_ctx->logbuf == NULL)
 		IPAERR("failed to create IPC log, continue...\n");
+#endif
 
 	/* ipa3_ctx->pdev and ipa3_ctx->uc_pdev will be set in the smmu probes*/
 	ipa3_ctx->master_pdev = ipa_pdev;

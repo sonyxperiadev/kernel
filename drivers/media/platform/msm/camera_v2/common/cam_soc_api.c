@@ -24,7 +24,7 @@
 #include <linux/module.h>
 #include <linux/of_platform.h>
 #include <linux/msm-bus.h>
-#include <linux/clk/msm-clk.h>
+#include <linux/clk/qcom.h>
 #include "cam_soc_api.h"
 
 struct msm_cam_bus_pscale_data {

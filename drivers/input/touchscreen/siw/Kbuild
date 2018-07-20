@@ -1,0 +1,22 @@
+EXTRA_CFLAGS += -DSOMC_TOUCH_BRINGUP
+EXTRA_CFLAGS += -DCONFIG_TOUCHSCREEN_SIWMON
+EXTRA_CFLAGS += -DCONFIG_TOUCHSCREEN_SIW_SW49501
+
+MODULE_NAME = ssw49501
+
+obj-m := $(MODULE_NAME).o
+
+$(MODULE_NAME)-objs := siw_touch.o
+$(MODULE_NAME)-objs += siw_touch_hal.o siw_touch_hal_sysfs.o
+$(MODULE_NAME)-objs += siw_touch_hal_abt.o
+$(MODULE_NAME)-objs += siw_touch_hal_prd.o
+$(MODULE_NAME)-objs += siw_touch_hal_watch.o
+$(MODULE_NAME)-objs += siw_touch_bus.o
+$(MODULE_NAME)-objs += siw_touch_bus_i2c.o
+$(MODULE_NAME)-objs += siw_touch_of.o
+$(MODULE_NAME)-objs += siw_touch_irq.o siw_touch_gpio.o
+$(MODULE_NAME)-objs += siw_touch_event.o siw_touch_notify.o
+$(MODULE_NAME)-objs += siw_touch_sys.o siw_touch_sysfs.o
+$(MODULE_NAME)-objs += siw_touch_misc.o
+$(MODULE_NAME)-objs += touch_sw49501.o
+

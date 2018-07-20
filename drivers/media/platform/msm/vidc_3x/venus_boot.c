@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2016, 2018 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -20,6 +20,7 @@
 #include <linux/err.h>
 #include <linux/io.h>
 #include <linux/iommu.h>
+#include <linux/qcom_iommu.h>
 #include <linux/iopoll.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -136,11 +137,11 @@ static int venus_clock_prepare_enable(void)
 
 static void venus_clock_disable_unprepare(void)
 {
-	int i;
 	struct msm_vidc_platform_resources *res = venus_data->resources;
 	struct clock_info *cl;
+	int i = res->clock_set.count;
 
-	for (i = 0; i < res->clock_set.count; i++) {
+	for (i--; i >= 0; i--) {
 		cl = &res->clock_set.clock_tbl[i];
 		clk_disable_unprepare(cl->clk);
 	}
@@ -153,7 +154,7 @@ static int venus_setup_cb(struct device *dev,
 	size_t va_size = size;
 
 	venus_data->mapping = arm_iommu_create_mapping(
-		dev->bus, va_start, va_size);
+		msm_iommu_get_bus(dev), va_start, va_size);
 	if (IS_ERR_OR_NULL(venus_data->mapping)) {
 		dprintk(VIDC_ERR, "%s: failed to create mapping for %s\n",
 		__func__, dev_name(dev));
@@ -419,7 +420,7 @@ static int venus_notifier_cb(struct notifier_block *this, unsigned long code,
 		if (is_iommu_present(venus_data->resources))
 			pil_venus_mem_setup(VENUS_REGION_SIZE);
 		pil_venus_auth_and_reset();
-	} else if (code == SUBSYS_AFTER_SHUTDOWN)
+	 } else if (code == SUBSYS_AFTER_SHUTDOWN)
 		pil_venus_shutdown();
 
 	venus_clock_disable_unprepare();

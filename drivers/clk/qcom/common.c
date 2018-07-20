@@ -51,6 +51,22 @@ struct freq_tbl *qcom_find_freq(const struct freq_tbl *f, unsigned long rate)
 }
 EXPORT_SYMBOL_GPL(qcom_find_freq);
 
+const struct freq_tbl *qcom_find_freq_floor(const struct freq_tbl *f,
+					    unsigned long rate)
+{
+	const struct freq_tbl *best = NULL;
+
+	for ( ; f->freq; f++) {
+		if (rate >= f->freq)
+			best = f;
+		else
+			break;
+	}
+
+	return best;
+}
+EXPORT_SYMBOL_GPL(qcom_find_freq_floor);
+
 int qcom_find_src_index(struct clk_hw *hw, const struct parent_map *map, u8 src)
 {
 	int i, num_parents = clk_hw_get_num_parents(hw);
@@ -78,6 +94,27 @@ qcom_cc_map(struct platform_device *pdev, const struct qcom_cc_desc *desc)
 	return devm_regmap_init_mmio(dev, base, desc->config);
 }
 EXPORT_SYMBOL_GPL(qcom_cc_map);
+
+void
+qcom_pll_set_fsm_mode(struct regmap *map, u32 reg, u8 bias_count, u8 lock_count)
+{
+	u32 val;
+	u32 mask;
+
+	/* De-assert reset to FSM */
+	regmap_update_bits(map, reg, PLL_VOTE_FSM_RESET, 0);
+
+	/* Program bias count and lock count */
+	val = bias_count << PLL_BIAS_COUNT_SHIFT |
+		lock_count << PLL_LOCK_COUNT_SHIFT;
+	mask = PLL_BIAS_COUNT_MASK << PLL_BIAS_COUNT_SHIFT;
+	mask |= PLL_LOCK_COUNT_MASK << PLL_LOCK_COUNT_SHIFT;
+	regmap_update_bits(map, reg, mask, val);
+
+	/* Enable PLL FSM voting */
+	regmap_update_bits(map, reg, PLL_VOTE_FSM_ENA, PLL_VOTE_FSM_ENA);
+}
+EXPORT_SYMBOL_GPL(qcom_pll_set_fsm_mode);
 
 static void qcom_cc_del_clk_provider(void *data)
 {

@@ -1,0 +1,21 @@
+menu "SiW Touch Support"
+
+config TOUCHSCREEN_SIW
+	tristate "Silicon Works Touch Driver Core"
+	depends on SPI_MASTER && I2C
+	default n
+	help
+	  Say Y here if you have a touchscreen interface using
+	  the Silicon Works touch device.
+
+config TOUCHSCREEN_SIW_SW49501
+	bool "Silicon Works Touch Driver for SW49501"
+	depends on TOUCHSCREEN_SIW
+	default n
+	help
+	  If your device is SW49501, say Y
+
+source "drivers/input/touchscreen/siw/mon/Kconfig"
+
+endmenu
+

@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -182,8 +182,12 @@ static int msm_slim_iommu_attach(struct msm_slim_ctrl *ctrl_dev)
 	if (!ctrl_dev->iommu_desc.cb_dev)
 		return 0;
 
-	if (!IS_ERR_OR_NULL(ctrl_dev->iommu_desc.iommu_map))
-		return 0;
+	if (!IS_ERR_OR_NULL(ctrl_dev->iommu_desc.iommu_map)) {
+		arm_iommu_detach_device(ctrl_dev->iommu_desc.cb_dev);
+		arm_iommu_release_mapping(ctrl_dev->iommu_desc.iommu_map);
+		ctrl_dev->iommu_desc.iommu_map = NULL;
+		SLIM_INFO(ctrl_dev, "NGD IOMMU Dettach complete\n");
+	}
 
 	dev = ctrl_dev->iommu_desc.cb_dev;
 	iommu_map = arm_iommu_create_mapping(&platform_bus_type,
@@ -490,26 +494,32 @@ enum slim_port_err msm_slim_port_xfer_status(struct slim_controller *ctr,
 	return SLIM_P_INPROGRESS;
 }
 
-static dma_addr_t msm_slim_iommu_map(struct msm_slim_ctrl *dev, void *buf_addr,
+static int msm_slim_iommu_map(struct msm_slim_ctrl *dev, phys_addr_t iobuf,
 			      u32 len)
 {
-	dma_addr_t ret;
-	struct device *devp = dev->iommu_desc.cb_dev ? dev->iommu_desc.cb_dev :
-							dev->dev;
-	ret = dma_map_single(devp, buf_addr, len, DMA_BIDIRECTIONAL);
+	int ret;
 
-	if (dma_mapping_error(devp, ret))
-		return DMA_ERROR_CODE;
+	if (!dev->iommu_desc.cb_dev)
+		return 0;
 
+	ret = iommu_map(dev->iommu_desc.iommu_map->domain,
+			rounddown(iobuf, PAGE_SIZE),
+			rounddown(iobuf, PAGE_SIZE),
+			roundup((len + (iobuf - rounddown(iobuf, PAGE_SIZE))),
+				PAGE_SIZE), IOMMU_READ | IOMMU_WRITE);
 	return ret;
 }
 
-static void msm_slim_iommu_unmap(struct msm_slim_ctrl *dev, dma_addr_t buf_addr,
+static void msm_slim_iommu_unmap(struct msm_slim_ctrl *dev, phys_addr_t iobuf,
 				u32 len)
 {
-	struct device *devp = dev->iommu_desc.cb_dev ? dev->iommu_desc.cb_dev :
-							dev->dev;
-	dma_unmap_single(devp, buf_addr, len, DMA_BIDIRECTIONAL);
+	if (!dev->iommu_desc.cb_dev)
+		return;
+
+	iommu_unmap(dev->iommu_desc.iommu_map->domain,
+		    rounddown(iobuf, PAGE_SIZE),
+		    roundup((len + (iobuf - rounddown(iobuf, PAGE_SIZE))),
+			    PAGE_SIZE));
 }
 
 static void msm_slim_port_cb(struct sps_event_notify *ev)
@@ -533,12 +543,11 @@ static void msm_slim_port_cb(struct sps_event_notify *ev)
 		complete(comp);
 }
 
-int msm_slim_port_xfer(struct slim_controller *ctrl, u8 pn, void *buf,
+int msm_slim_port_xfer(struct slim_controller *ctrl, u8 pn, phys_addr_t iobuf,
 			u32 len, struct completion *comp)
 {
 	struct sps_register_event sreg;
 	int ret;
-	dma_addr_t dma_buf;
 	struct msm_slim_ctrl *dev = slim_get_ctrldata(ctrl);
 
 	if (pn >= dev->port_nums)
@@ -547,11 +556,9 @@ int msm_slim_port_xfer(struct slim_controller *ctrl, u8 pn, void *buf,
 	if (!dev->pipes[pn].connected)
 		return -ENOTCONN;
 
-	dma_buf =  msm_slim_iommu_map(dev, buf, len);
-	if (dma_buf == DMA_ERROR_CODE) {
-		dev_err(dev->dev, "error DMA mapping buffers\n");
-		return -ENOMEM;
-	}
+	ret = msm_slim_iommu_map(dev, iobuf, len);
+	if (ret)
+		return ret;
 
 	sreg.options = (SPS_EVENT_DESC_DONE|SPS_EVENT_ERROR);
 	sreg.mode = SPS_TRIGGER_WAIT;
@@ -561,10 +568,10 @@ int msm_slim_port_xfer(struct slim_controller *ctrl, u8 pn, void *buf,
 	ret = sps_register_event(dev->pipes[pn].sps, &sreg);
 	if (ret) {
 		dev_dbg(dev->dev, "sps register event error:%x\n", ret);
-		msm_slim_iommu_unmap(dev, dma_buf, len);
+		msm_slim_iommu_unmap(dev, iobuf, len);
 		return ret;
 	}
-	ret = sps_transfer_one(dev->pipes[pn].sps, dma_buf, len, comp,
+	ret = sps_transfer_one(dev->pipes[pn].sps, iobuf, len, comp,
 				SPS_IOVEC_FLAG_INT);
 	dev_dbg(dev->dev, "sps submit xfer error code:%x\n", ret);
 	if (!ret) {
@@ -578,7 +585,7 @@ int msm_slim_port_xfer(struct slim_controller *ctrl, u8 pn, void *buf,
 		/* Make sure that port registers are updated before returning */
 		mb();
 	} else {
-		msm_slim_iommu_unmap(dev, dma_buf, len);
+		msm_slim_iommu_unmap(dev, iobuf, len);
 	}
 
 	return ret;
@@ -1298,12 +1305,6 @@ void msm_slim_sps_exit(struct msm_slim_ctrl *dev, bool dereg)
 	for (i = 0; i < dev->port_nums; i++) {
 		if (dev->pipes[i].connected)
 			msm_slim_disconn_pipe_port(dev, i);
-	}
-
-	if (!IS_ERR_OR_NULL(dev->iommu_desc.iommu_map)) {
-		arm_iommu_detach_device(dev->iommu_desc.cb_dev);
-		arm_iommu_release_mapping(dev->iommu_desc.iommu_map);
-		dev->iommu_desc.iommu_map = NULL;
 	}
 
 	if (dereg) {

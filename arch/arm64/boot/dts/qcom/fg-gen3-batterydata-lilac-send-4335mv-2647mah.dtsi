@@ -1,0 +1,87 @@
+/* Copyright (c) 2016, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+/*
+ * Copyright (C) 2017 Sony Mobile Communications Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2, as
+ * published by the Free Software Foundation.
+ */
+
+qcom,send_2647mah {
+	qcom,max-voltage-uv = <4335000>;
+	qcom,fg-cc-cv-threshold-mv = <4325>;
+	qcom,fastchg-current-ma = <2025>;
+	qcom,batt-id-kohm = <330>;
+	qcom,battery-beta = <4050>;
+	qcom,battery-type = "1308-1851-2";
+	qcom,checksum = <0xF252>;
+	qcom,gui-version = "PMI8998GUI - 2.0.0.55";
+	qcom,fg-profile-data = [
+		 5A 1F EE 05
+		 0D 0A 7B FD
+		 AD 1C 21 FB
+		 E9 06 05 EC
+		 47 18 95 22
+		 33 3C F5 4B
+		 53 00 00 00
+		 0F 00 00 00
+		 00 00 62 C2
+		 F8 07 D8 C2
+		 2E 00 08 00
+		 F1 DC 1B DD
+		 5D FC 22 F3
+		 81 06 AF 02
+		 59 FC 13 3A
+		 18 06 09 20
+		 27 00 14 00
+		 FF 1B 96 01
+		 2A 07 96 F3
+		 77 1C 25 03
+		 50 0C 61 0B
+		 97 18 D5 22
+		 96 45 F8 52
+		 81 00 00 00
+		 0D 00 00 00
+		 00 00 29 C5
+		 B7 C3 B6 CD
+		 26 00 00 00
+		 37 EA 1B DD
+		 9B FC C2 F2
+		 E1 FD 30 03
+		 3B D4 8E 12
+		 99 33 CC FF
+		 07 10 00 00
+		 9D 0A 5C 45
+		 26 00 40 00
+		 89 01 0A FA
+		 FF 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+	];
+};

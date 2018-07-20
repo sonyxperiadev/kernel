@@ -3804,7 +3804,7 @@ void diag_ws_release(void)
 		pm_relax(driver->diag_dev);
 }
 
-#ifdef DIAG_DEBUG
+#if defined (DIAG_DEBUG) && defined (CONFIG_IPC_LOGGING)
 static void diag_debug_init(void)
 {
 	diag_ipc_log = ipc_log_context_create(DIAG_IPC_LOG_PAGES, "diag", 0);

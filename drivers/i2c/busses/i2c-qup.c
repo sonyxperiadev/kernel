@@ -822,7 +822,7 @@ static int qup_i2c_bam_do_xfer(struct qup_i2c_dev *qup, struct i2c_msg *msg,
 		qup_i2c_flush(qup);
 
 		/* wait for remaining interrupts to occur */
-		if (!wait_for_completion_timeout(&qup->xfer, HZ))
+		if (!wait_for_completion_timeout(&qup->xfer, msecs_to_jiffies(1000)))
 			dev_err(qup->dev, "flush timed out\n");
 
 		qup_i2c_rel_dma(qup);
@@ -883,7 +883,7 @@ static int qup_i2c_wait_for_complete(struct qup_i2c_dev *qup,
 	unsigned long left;
 	int ret = 0;
 
-	left = wait_for_completion_timeout(&qup->xfer, HZ);
+	left = wait_for_completion_timeout(&qup->xfer, msecs_to_jiffies(1000));
 	if (!left) {
 		writel(1, qup->base + QUP_SW_RESET);
 		ret = -ETIMEDOUT;

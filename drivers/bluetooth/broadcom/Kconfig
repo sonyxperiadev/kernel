@@ -1,0 +1,16 @@
+menu "BROADCOM V4L2 BT/FM device drivers"
+  depends on BT
+
+config BT_PROTOCOL_DRIVER
+	tristate "BROADCOM BT Protocol Driver"
+	default n
+
+config LINE_DISCIPLINE_DRIVER
+	tristate "BROADCOM Line Discipline Driver"
+	default n
+
+config V4L2_FM_DRIVER
+	tristate "BROADCOM V4L2 FM Driver"
+	default n
+
+endmenu

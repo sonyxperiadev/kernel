@@ -831,13 +831,13 @@ static void msm_usb_phy_reset(struct msm_otg *motg)
 				motg->phy_csr_regs + QUSB2PHY_PORT_POWERDOWN);
 		break;
 	case SNPS_FEMTO_PHY:
-		if (!motg->phy_por_clk) {
-			pr_err("phy_por_clk missing\n");
+		if (!motg->phy_por_reset) {
+			pr_err("phy_por_reset missing\n");
 			break;
 		}
 		ret = reset_control_assert(motg->phy_por_reset);
 		if (ret) {
-			pr_err("phy_por_clk assert failed %d\n", ret);
+			pr_err("phy_por_reset assert failed %d\n", ret);
 			break;
 		}
 		/*
@@ -862,7 +862,7 @@ static void msm_usb_phy_reset(struct msm_otg *motg)
 		usleep_range(10, 20);
 		ret = reset_control_deassert(motg->phy_por_reset);
 		if (ret) {
-			pr_err("phy_por_clk de-assert failed %d\n", ret);
+			pr_err("phy_por_reset de-assert failed %d\n", ret);
 			break;
 		}
 		/*
@@ -3967,27 +3967,15 @@ static int msm_otg_probe(struct platform_device *pdev)
 	}
 
 	/*
-	 * If present, phy_por_clk is used to assert/de-assert phy POR
+	 * If present, phy_por_reset is used to assert/de-assert phy POR
 	 * input. This is a reset only clock. phy POR must be asserted
 	 * after overriding the parameter registers via CSR wrapper or
 	 * ULPI bridge.
 	 */
-	if (of_property_match_string(pdev->dev.of_node,
-				"clock-names", "phy_por_clk") >= 0) {
-		motg->phy_por_clk = devm_clk_get(&pdev->dev, "phy_por_clk");
-		if (IS_ERR(motg->phy_por_clk)) {
-			ret = PTR_ERR(motg->phy_por_clk);
-			goto disable_sleep_clk;
-		}
-
-		motg->phy_por_reset = devm_reset_control_get(&pdev->dev,
+	motg->phy_por_reset = devm_reset_control_get(&pdev->dev,
 							"phy_por_reset");
-		if (IS_ERR(motg->phy_por_reset)) {
-			dev_err(&pdev->dev, "failed to get phy_por_reset\n");
-			ret = PTR_ERR(motg->phy_por_reset);
-			goto disable_sleep_clk;
-		}
-	}
+	if (IS_ERR(motg->phy_por_reset))
+		pr_err("%s: WARNING: phy_por_reset not found!!\n", __func__);
 
 	/*
 	 * If present, phy_csr_clk is required for accessing PHY

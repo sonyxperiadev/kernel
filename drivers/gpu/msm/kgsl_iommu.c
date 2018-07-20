@@ -1221,6 +1221,9 @@ static int _init_global_pt(struct kgsl_mmu *mmu, struct kgsl_pagetable *pt)
 	}
 
 	if (!MMU_FEATURE(mmu, KGSL_MMU_GLOBAL_PAGETABLE) &&
+		(!of_machine_is_compatible("qcom,msm8998") &&
+		 !of_machine_is_compatible("qcom,sdm660") &&
+		 !of_machine_is_compatible("qcom,sdm630")) &&
 		scm_is_call_available(SCM_SVC_MP, CP_SMMU_APERTURE_ID)) {
 		ret = program_smmu_aperture(cb_num, CP_APERTURE_REG);
 		if (ret) {
@@ -1551,7 +1554,7 @@ static int kgsl_iommu_init(struct kgsl_mmu *mmu)
 	kgsl_setup_qdss_desc(device);
 	kgsl_setup_qtimer_desc(device);
 
-	if (!mmu->secured)
+	if (!mmu->secured || MMU_FEATURE(mmu, KGSL_MMU_PT_EARLY_ALLOC))
 		goto done;
 
 	mmu->securepagetable = kgsl_mmu_getpagetable(mmu,
@@ -1643,6 +1646,15 @@ static int _setup_secure_context(struct kgsl_mmu *mmu)
 
 	if (ctx->dev == NULL || !mmu->secured)
 		return 0;
+
+	if (MMU_FEATURE(mmu, KGSL_MMU_PT_EARLY_ALLOC)) {
+		mmu->securepagetable = kgsl_mmu_getpagetable(mmu,
+					KGSL_MMU_SECURE_PT);
+		if (IS_ERR(mmu->securepagetable)) {
+			ret = PTR_ERR(mmu->securepagetable);
+			mmu->securepagetable = NULL;
+		}
+	}
 
 	if (mmu->securepagetable == NULL)
 		return -ENOMEM;
@@ -2595,6 +2607,7 @@ static const struct {
 	{ "qcom,retention", KGSL_MMU_RETENTION },
 	{ "qcom,global_pt", KGSL_MMU_GLOBAL_PAGETABLE },
 	{ "qcom,hyp_secure_alloc", KGSL_MMU_HYP_SECURE_ALLOC },
+	{ "qcom,secure_pt_early_alloc", KGSL_MMU_PT_EARLY_ALLOC },
 	{ "qcom,force-32bit", KGSL_MMU_FORCE_32BIT },
 };
 

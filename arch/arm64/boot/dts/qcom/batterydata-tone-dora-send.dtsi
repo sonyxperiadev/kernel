@@ -1,0 +1,61 @@
+/* Copyright (c) 2015, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+/*
+ * Copyright (C) 2015 Sony Mobile Communications Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2, as
+ * published by the Free Software Foundation.
+ */
+
+qcom,tone-dora-send {
+	qcom,batt-id-kohm = <330>;
+	qcom,battery-type = "1300-3513";
+	qcom,chg-rslow-comp-c1 = <2249713>;
+	qcom,chg-rslow-comp-c2 = <2633053>;
+	qcom,chg-rs-to-rslow = <810853>;
+	qcom,chg-rslow-comp-thr = <0x99>;
+	qcom,fg-profile-data = [
+		E9 83 B2 7C
+		86 80 35 76
+		3F 83 E9 68
+		99 78 15 84
+		02 82 B9 98
+		AA B5 94 C0
+		5A 12 DE 83
+		8C 77 82 7B
+		B0 74 42 83
+		61 70 45 73
+		C5 85 27 82
+		B1 99 E9 BC
+		37 CA 5C 0E
+		91 0A FD 5A
+		88 6D AC FC
+		74 31 DA 46
+		7B 40 00 00
+		11 47 A3 3B
+		5F 30 00 00
+		00 00 00 00
+		00 00 00 00
+		7F 70 8E 6B
+		81 77 FA 80
+		39 7C 6C 70
+		B1 75 25 80
+		AD 77 66 6B
+		33 7F 27 BA
+		11 22 5B DF
+		56 A0 71 0C
+		28 00 FF 36
+		F0 11 30 03
+		00 00 00 0C
+	];
+};

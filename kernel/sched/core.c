@@ -85,6 +85,9 @@
 #ifdef CONFIG_PARAVIRT
 #include <asm/paravirt.h>
 #endif
+#ifdef CONFIG_MSM_APP_SETTINGS
+#include <asm/app_api.h>
+#endif
 
 #include "sched.h"
 #include "walt.h"
@@ -2845,6 +2848,10 @@ prepare_task_switch(struct rq *rq, struct task_struct *prev,
 	fire_sched_out_preempt_notifiers(prev, next);
 	prepare_lock_switch(rq, next);
 	prepare_arch_switch(next);
+#ifdef CONFIG_MSM_APP_SETTINGS
+	if (use_app_setting)
+		switch_app_setting_bit(prev, next);
+#endif
 }
 
 /**
@@ -8084,6 +8091,7 @@ static void sched_rq_cpu_starting(unsigned int cpu)
 	set_window_start(rq);
 	raw_spin_unlock_irqrestore(&rq->lock, flags);
 	rq->calc_load_update = calc_load_update;
+	rq->next_balance = jiffies;
 	update_max_interval();
 }
 

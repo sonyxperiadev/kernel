@@ -420,6 +420,9 @@ static const int msm8996_vdd_mx_fuse_ret_volt[] = {
 #define MSM8996_HMSS_AGING_SENSOR_ID		11
 #define MSM8996_HMSS_AGING_BYPASS_MASK0		(GENMASK(7, 0) & ~BIT(3))
 
+/* Use scaled gate count (GCNT) for aging measurements */
+#define MSM8996_HMSS_AGING_GCNT_SCALING_FACTOR	1500
+
 /**
  * cpr3_msm8996_hmss_use_voltage_offset_fuse() - return if this part utilizes
  *		voltage offset fuses or not
@@ -1501,7 +1504,7 @@ static int cpr3_hmss_init_regulator(struct cpr3_regulator *vreg)
 static int cpr3_hmss_init_aging(struct cpr3_controller *ctrl)
 {
 	struct cpr3_msm8996_hmss_fuses *fuse = NULL;
-	struct cpr3_regulator *vreg;
+	struct cpr3_regulator *vreg = NULL;
 	u32 aging_ro_scale;
 	int i, j, rc;
 
@@ -1541,6 +1544,8 @@ static int cpr3_hmss_init_aging(struct cpr3_controller *ctrl)
 	ctrl->aging_sensor->sensor_id = MSM8996_HMSS_AGING_SENSOR_ID;
 	ctrl->aging_sensor->bypass_mask[0] = MSM8996_HMSS_AGING_BYPASS_MASK0;
 	ctrl->aging_sensor->ro_scale = aging_ro_scale;
+	ctrl->aging_gcnt_scaling_factor
+				= MSM8996_HMSS_AGING_GCNT_SCALING_FACTOR;
 
 	ctrl->aging_sensor->init_quot_diff
 		= cpr3_convert_open_loop_voltage_fuse(0,
@@ -1704,7 +1709,7 @@ static int cpr3_hmss_regulator_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	const struct of_device_id *match;
 	struct cpr3_controller *ctrl;
-	struct cpr3_regulator *vreg;
+	struct cpr3_regulator *vreg = NULL;
 	int i, j, rc;
 
 	if (!dev->of_node) {

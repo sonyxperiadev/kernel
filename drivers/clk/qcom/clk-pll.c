@@ -22,17 +22,12 @@
 
 #include <asm/div64.h>
 
+#include "common.h"
 #include "clk-pll.h"
 
 #define PLL_OUTCTRL		BIT(0)
 #define PLL_BYPASSNL		BIT(1)
 #define PLL_RESET_N		BIT(2)
-#define PLL_LOCK_COUNT_SHIFT	8
-#define PLL_LOCK_COUNT_MASK	0x3f
-#define PLL_BIAS_COUNT_SHIFT	14
-#define PLL_BIAS_COUNT_MASK	0x3f
-#define PLL_VOTE_FSM_ENA	BIT(20)
-#define PLL_VOTE_FSM_RESET	BIT(21)
 
 static int clk_pll_enable(struct clk_hw *hw)
 {
@@ -194,7 +189,6 @@ static int wait_for_pll(struct clk_pll *pll)
 	u32 val;
 	int count;
 	int ret;
-	const char *name = clk_hw_get_name(&pll->clkr.hw);
 
 	/* Wait for pll to enable. */
 	for (count = 200; count > 0; count--) {
@@ -206,7 +200,8 @@ static int wait_for_pll(struct clk_pll *pll)
 		udelay(1);
 	}
 
-	WARN(1, "%s didn't enable after voting for it!\n", name);
+	WARN(1, "%s didn't enable after voting for it!\n",
+			clk_hw_get_name(&pll->clkr.hw));
 	return -ETIMEDOUT;
 }
 
@@ -228,25 +223,47 @@ const struct clk_ops clk_pll_vote_ops = {
 };
 EXPORT_SYMBOL_GPL(clk_pll_vote_ops);
 
-static void
-clk_pll_set_fsm_mode(struct clk_pll *pll, struct regmap *regmap, u8 lock_count)
+static DEFINE_SPINLOCK(acpu_soft_vote_lock);
+
+static void clk_pll_acpu_vote_disable(struct clk_hw *hw)
 {
-	u32 val;
-	u32 mask;
+	struct clk_pll_acpu_vote *v = to_clk_pll_acpu_vote(hw);
+	unsigned long flags;
 
-	/* De-assert reset to FSM */
-	regmap_update_bits(regmap, pll->mode_reg, PLL_VOTE_FSM_RESET, 0);
+	spin_lock_irqsave(&acpu_soft_vote_lock, flags);
 
-	/* Program bias count and lock count */
-	val = 1 << PLL_BIAS_COUNT_SHIFT | lock_count << PLL_LOCK_COUNT_SHIFT;
-	mask = PLL_BIAS_COUNT_MASK << PLL_BIAS_COUNT_SHIFT;
-	mask |= PLL_LOCK_COUNT_MASK << PLL_LOCK_COUNT_SHIFT;
-	regmap_update_bits(regmap, pll->mode_reg, mask, val);
+	*v->soft_voter &= ~(v->soft_voter_mask);
+	if (!*v->soft_voter)
+		clk_disable_regmap(hw);
 
-	/* Enable PLL FSM voting */
-	regmap_update_bits(regmap, pll->mode_reg, PLL_VOTE_FSM_ENA,
-		PLL_VOTE_FSM_ENA);
+	spin_unlock_irqrestore(&acpu_soft_vote_lock, flags);
+
+	return;
+};
+
+static int clk_pll_acpu_vote_enable(struct clk_hw *hw)
+{
+	struct clk_pll_acpu_vote *v = to_clk_pll_acpu_vote(hw);
+	unsigned long flags;
+	int ret = 0;
+
+	spin_lock_irqsave(&acpu_soft_vote_lock, flags);
+
+	if (!*v->soft_voter)
+		ret = clk_pll_vote_enable(hw);
+	if (ret == 0)
+		*v->soft_voter |= v->soft_voter_mask;
+
+	spin_unlock_irqrestore(&acpu_soft_vote_lock, flags);
+
+	return ret;
 }
+
+const struct clk_ops clk_pll_acpu_vote_ops = {
+	.enable = clk_pll_acpu_vote_enable,
+	.disable = clk_pll_acpu_vote_disable,
+};
+EXPORT_SYMBOL_GPL(clk_pll_acpu_vote_ops);
 
 static void clk_pll_configure(struct clk_pll *pll, struct regmap *regmap,
 	const struct pll_config *config)
@@ -254,9 +271,15 @@ static void clk_pll_configure(struct clk_pll *pll, struct regmap *regmap,
 	u32 val;
 	u32 mask;
 
-	regmap_write(regmap, pll->l_reg, config->l);
-	regmap_write(regmap, pll->m_reg, config->m);
-	regmap_write(regmap, pll->n_reg, config->n);
+	if (config->l != 0) {
+		regmap_write(regmap, pll->l_reg, config->l);
+		regmap_write(regmap, pll->m_reg, config->m);
+		regmap_write(regmap, pll->n_reg, config->n);
+	} else {
+		regmap_write(regmap, pll->m_reg, 0);
+		regmap_write(regmap, pll->n_reg, 1);
+	}
+
 
 	val = config->vco_val;
 	val |= config->pre_div_val;
@@ -272,7 +295,14 @@ static void clk_pll_configure(struct clk_pll *pll, struct regmap *regmap,
 	mask |= config->main_output_mask;
 	mask |= config->aux_output_mask;
 
-	regmap_update_bits(regmap, pll->config_reg, mask, val);
+	if (config->config_ctl_val)
+		regmap_write(regmap, pll->config_reg,
+				config->config_ctl_val);
+
+	if (pll->user_reg)
+		regmap_update_bits(regmap, pll->user_reg, mask, val);
+	else
+		regmap_update_bits(regmap, pll->config_reg, mask, val);
 }
 
 void clk_pll_configure_sr(struct clk_pll *pll, struct regmap *regmap,
@@ -280,7 +310,7 @@ void clk_pll_configure_sr(struct clk_pll *pll, struct regmap *regmap,
 {
 	clk_pll_configure(pll, regmap, config);
 	if (fsm_mode)
-		clk_pll_set_fsm_mode(pll, regmap, 8);
+		qcom_pll_set_fsm_mode(regmap, pll->mode_reg, 1, 8);
 }
 EXPORT_SYMBOL_GPL(clk_pll_configure_sr);
 
@@ -289,7 +319,7 @@ void clk_pll_configure_sr_hpm_lp(struct clk_pll *pll, struct regmap *regmap,
 {
 	clk_pll_configure(pll, regmap, config);
 	if (fsm_mode)
-		clk_pll_set_fsm_mode(pll, regmap, 0);
+		qcom_pll_set_fsm_mode(regmap, pll->mode_reg, 1, 0);
 }
 EXPORT_SYMBOL_GPL(clk_pll_configure_sr_hpm_lp);
 

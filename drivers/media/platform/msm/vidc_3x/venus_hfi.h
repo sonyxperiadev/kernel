@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2015, 2018 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -55,6 +55,8 @@ struct hfi_queue_table_header {
 	u32 qtbl_qhdr_size;
 	u32 qtbl_num_q;
 	u32 qtbl_num_active_q;
+	void *device_addr;
+	char name[256];
 };
 
 struct hfi_queue_header {
@@ -185,6 +187,11 @@ struct vidc_iface_q_info {
 #define venus_hfi_for_each_clock_reverse(__device, __cinfo) \
 	venus_hfi_for_each_thing_reverse(__device, __cinfo, clock)
 
+#define venus_hfi_for_each_clock_reverse_continue(__device, __rinfo, \
+		__from) \
+	venus_hfi_for_each_thing_reverse_continue(__device, __rinfo, \
+			clock, __from)
+
 /* Bus set helpers */
 #define venus_hfi_for_each_bus(__device, __binfo) \
 	venus_hfi_for_each_thing(__device, __binfo, bus)
@@ -222,13 +229,14 @@ struct venus_hfi_device {
 	struct list_head sess_head;
 	u32 intr_status;
 	u32 device_id;
-	u32 clk_freq;
+	unsigned long clk_freq;
 	u32 last_packet_type;
 	unsigned long clk_bitrate;
 	unsigned long scaled_rate;
 	struct msm_vidc_gov_data bus_vote;
 	bool power_enabled;
 	struct mutex lock;
+	struct mutex clock_lock;
 	msm_vidc_callback callback;
 	struct vidc_mem_addr iface_q_table;
 	struct vidc_mem_addr qdss;
@@ -247,6 +255,7 @@ struct venus_hfi_device {
 	struct hfi_packetization_ops *pkt_ops;
 	enum hfi_packetization_type packetization_type;
 	struct msm_vidc_cb_info *response_pkt;
+	u8 *raw_packet;
 	struct pm_qos_request qos;
 	unsigned int skip_pc_count;
 	struct msm_vidc_capability *sys_init_capabilities;

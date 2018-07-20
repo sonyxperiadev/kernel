@@ -127,7 +127,7 @@
 #define QPNP_RAW_CODE_16_BIT_LSB_MASK			0xff
 #define QPNP_BIT_SHIFT_8				8
 #define QPNP_RSENSE_MSB_SIGN_CHECK			0x80
-#define QPNP_ADC_COMPLETION_TIMEOUT			HZ
+#define QPNP_ADC_COMPLETION_TIMEOUT			1000
 #define SMBB_BAT_IF_TRIM_CNST_RDS_MASK			0x7
 #define SMBB_BAT_IF_TRIM_CNST_RDS_MASK_CONST_0		0
 #define SMBB_BAT_IF_TRIM_CNST_RDS_MASK_CONST_2		2
@@ -842,7 +842,7 @@ static int32_t qpnp_iadc_configure(struct qpnp_iadc_chip *iadc,
 	} else {
 		rc = wait_for_completion_timeout(
 				&iadc->adc->adc_rslt_completion,
-				QPNP_ADC_COMPLETION_TIMEOUT);
+				msecs_to_jiffies(QPNP_ADC_COMPLETION_TIMEOUT));
 		if (!rc) {
 			rc = qpnp_iadc_read_reg(iadc, QPNP_STATUS1, &status1);
 			if (rc < 0)

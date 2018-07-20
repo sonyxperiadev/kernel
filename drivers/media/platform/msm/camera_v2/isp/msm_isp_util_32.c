@@ -25,6 +25,8 @@
 #define UINT16_MAX             (65535U)
 #endif
 
+extern int avcs_core_disable_power_collapse(int enable);
+
 #define MAX_ISP_V4l2_EVENTS 100
 #define MAX_ISP_REG_LIST 100
 static DEFINE_MUTEX(bandwidth_mgr_mutex);

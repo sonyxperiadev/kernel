@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2016, 2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -20,7 +20,7 @@
 #include <linux/kthread.h>
 
 #include <linux/hdcp_qseecom.h>
-#include "mdss_hdmi_hdcp.h"
+#include "mdss_hdcp.h"
 #include "video/msm_hdmi_hdcp_mgr.h"
 #include "mdss_hdmi_util.h"
 
@@ -56,11 +56,11 @@ struct hdmi_hdcp2p2_ctrl {
 	atomic_t auth_state;
 	bool tethered;
 	enum hdmi_hdcp2p2_sink_status sink_status; /* Is sink connected */
-	struct hdmi_hdcp_init_data init_data; /* Feature data from HDMI drv */
+	struct hdcp_init_data init_data; /* Feature data from HDMI drv */
 	struct mutex mutex; /* mutex to protect access to ctrl */
 	struct mutex msg_lock; /* mutex to protect access to msg buffer */
 	struct mutex wakeup_mutex; /* mutex to protect access to wakeup call*/
-	struct hdmi_hdcp_ops *ops;
+	struct hdcp_ops *ops;
 	void *lib_ctx; /* Handle to HDCP 2.2 Trustzone library */
 	struct hdcp_txmtr_ops *lib; /* Ops for driver to call into TZ */
 
@@ -401,7 +401,7 @@ static ssize_t hdmi_hdcp2p2_sysfs_wta_min_level_change(struct device *dev,
 	struct hdcp_lib_wakeup_data cdata = {
 		HDCP_LIB_WKUP_CMD_QUERY_STREAM_TYPE};
 	bool enc_notify = true;
-	enum hdmi_hdcp_state enc_lvl;
+	enum hdcp_states enc_lvl;
 	int min_enc_lvl;
 	int rc;
 
@@ -461,6 +461,41 @@ static void hdmi_hdcp2p2_auth_failed(struct hdmi_hdcp2p2_ctrl *ctrl)
 	/* notify hdmi tx about HDCP failure */
 	ctrl->init_data.notify_status(ctrl->init_data.cb_data,
 		HDCP_STATE_AUTH_FAIL);
+}
+
+static void hdmi_hdcp2p2_fail_noreauth(struct hdmi_hdcp2p2_ctrl *ctrl)
+{
+	if (!ctrl) {
+		pr_err("invalid input\n");
+		return;
+	}
+
+	atomic_set(&ctrl->auth_state, HDCP_STATE_AUTH_FAIL);
+
+	hdmi_hdcp2p2_ddc_disable(ctrl->init_data.cb_data);
+
+	/* notify hdmi tx about HDCP failure */
+	ctrl->init_data.notify_status(ctrl->init_data.cb_data,
+		HDCP_STATE_AUTH_FAIL_NOREAUTH);
+}
+
+static void hdmi_hdcp2p2_srm_cb(void *client_ctx)
+{
+	struct hdmi_hdcp2p2_ctrl *ctrl =
+		(struct hdmi_hdcp2p2_ctrl *)client_ctx;
+	struct hdcp_lib_wakeup_data cdata = {
+		HDCP_LIB_WKUP_CMD_INVALID};
+
+	if (!ctrl) {
+		pr_err("invalid input\n");
+		return;
+	}
+
+	cdata.context = ctrl->lib_ctx;
+	cdata.cmd = HDCP_LIB_WKUP_CMD_STOP;
+	hdmi_hdcp2p2_wakeup_lib(ctrl, &cdata);
+
+	hdmi_hdcp2p2_fail_noreauth(ctrl);
 }
 
 static int hdmi_hdcp2p2_ddc_read_message(struct hdmi_hdcp2p2_ctrl *ctrl,
@@ -549,9 +584,9 @@ static int hdmi_hdcp2p2_read_version(struct hdmi_hdcp2p2_ctrl *ctrl,
 	return rc;
 }
 
-static DEVICE_ATTR(min_level_change, 0200, NULL,
+static DEVICE_ATTR(min_level_change, S_IWUSR, NULL,
 		hdmi_hdcp2p2_sysfs_wta_min_level_change);
-static DEVICE_ATTR(tethered, 0644, hdmi_hdcp2p2_sysfs_rda_tethered,
+static DEVICE_ATTR(tethered, S_IRUGO | S_IWUSR, hdmi_hdcp2p2_sysfs_rda_tethered,
 		hdmi_hdcp2p2_sysfs_wta_tethered);
 
 static struct attribute *hdmi_hdcp2p2_fs_attrs[] = {
@@ -666,7 +701,7 @@ static void hdmi_hdcp2p2_link_cb(void *data)
 
 static void hdmi_hdcp2p2_recv_msg(struct hdmi_hdcp2p2_ctrl *ctrl)
 {
-	int rc = 0, timeout_hsync;
+	int timeout_hsync = 0, rc = 0;
 	char *recvd_msg_buf = NULL;
 	struct hdmi_tx_hdcp2p2_ddc_data *ddc_data;
 	struct hdmi_tx_ddc_ctrl *ddc_ctrl;
@@ -982,19 +1017,20 @@ void hdmi_hdcp2p2_deinit(void *input)
 	kfree(ctrl);
 }
 
-void *hdmi_hdcp2p2_init(struct hdmi_hdcp_init_data *init_data)
+void *hdmi_hdcp2p2_init(struct hdcp_init_data *init_data)
 {
 	int rc;
 	struct hdmi_hdcp2p2_ctrl *ctrl;
-	static struct hdmi_hdcp_ops ops = {
-		.hdmi_hdcp_reauthenticate = hdmi_hdcp2p2_reauthenticate,
-		.hdmi_hdcp_authenticate = hdmi_hdcp2p2_authenticate,
+	static struct hdcp_ops ops = {
+		.reauthenticate = hdmi_hdcp2p2_reauthenticate,
+		.authenticate = hdmi_hdcp2p2_authenticate,
 		.feature_supported = hdmi_hdcp2p2_feature_supported,
-		.hdmi_hdcp_off = hdmi_hdcp2p2_off
+		.off = hdmi_hdcp2p2_off
 	};
 
 	static struct hdcp_client_ops client_ops = {
 		.wakeup = hdmi_hdcp2p2_wakeup,
+		.srm_cb = hdmi_hdcp2p2_srm_cb,
 	};
 
 	static struct hdcp_txmtr_ops txmtr_ops;
@@ -1041,6 +1077,7 @@ void *hdmi_hdcp2p2_init(struct hdmi_hdcp_init_data *init_data)
 	register_data.hdcp_ctx = &ctrl->lib_ctx;
 	register_data.client_ops = &client_ops;
 	register_data.txmtr_ops = &txmtr_ops;
+	register_data.device_type = HDCP_TXMTR_HDMI;
 	register_data.client_ctx = ctrl;
 	//register_data.tethered = ctrl->tethered;
 
@@ -1077,10 +1114,9 @@ error:
 
 static bool hdmi_hdcp2p2_supported(struct hdmi_hdcp2p2_ctrl *ctrl)
 {
-	u8 hdcp2version;
+	u8 hdcp2version = 0;
 
 	int rc = hdmi_hdcp2p2_read_version(ctrl, &hdcp2version);
-
 	if (rc)
 		goto error;
 
@@ -1094,7 +1130,7 @@ error:
 	return false;
 }
 
-struct hdmi_hdcp_ops *hdmi_hdcp2p2_start(void *input)
+struct hdcp_ops *hdmi_hdcp2p2_start(void *input)
 {
 	struct hdmi_hdcp2p2_ctrl *ctrl = input;
 

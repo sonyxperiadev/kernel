@@ -1,0 +1,111 @@
+/* Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+/*
+ * - 11/03/2018 - AngeloGioacchino Del Regno <kholk11@gmail.com>
+ * IMPORTANT:
+ * CEI has heavily hacked the SMB2/FG3 driver to prevent battery
+ * swelling when Nile batteries get aging.
+ * Implementing these really bad hacks in the driver is not really
+ * feasible, then it's better to just use the aging values in any
+ * battery condition for safety purposes.
+ * The standard values are commented out and left there ONLY for
+ * documentation purposes.
+ *
+ * This makes us lose around 2% of battery charge: an acceptable
+ * compromise.
+ */
+
+qcom,sm12_tdk_3200mah {
+	qcom, = <24>;
+	//qcom,max-voltage-uv = <4380000>;
+	qcom,nom-batt-capacity-mah = <3200>;
+	//qcom,fg-cc-cv-threshold-mv = <4370>;
+	qcom,fastchg-current-ma = <2400>;
+	qcom,batt-id-kohm = <15>;
+	qcom,battery-beta = <4050>;
+	qcom,battery-type = "1309-2682";
+	qcom,checksum = <0x4593>;
+	qcom,gui-version = "PM660GUI - 0.0.0.43";
+
+	qcom,bp-jeita-hyst-temp = <2>;
+	qcom,bp-jeita-ccc-en;
+	qcom,bp-jeita-hot-sl-fvc;
+	qcom,bp-jeita-cold-sl-fvc;
+	qcom,bp-jeita-fvc-cfg = <200>;
+	qcom,bp-jeita-ccc-cfg = <1750>;
+	//qcom,bp-recharge-voltage = <4280>;
+
+	/* Safe values */
+	qcom,max-voltage-uv = <4340000>;
+	qcom,fg-cc-cv-threshold-mv = <4325>;
+	qcom,bp-recharge-voltage = <4240>;
+
+	qcom,fg-profile-data = [
+		 5C 1F D5 05
+		 51 0A CF FC
+		 87 1D 16 07
+		 81 12 EB 1D
+		 A0 18 F4 22
+		 8F 45 BD 52
+		 56 00 00 00
+		 0F 00 00 00
+		 00 00 36 C5
+		 88 CD 86 CA
+		 1D 00 08 00
+		 82 DB 99 E4
+		 2B FD A3 F2
+		 3B FB 45 13
+		 50 05 6E 2B
+		 1B 06 09 20
+		 27 00 14 00
+		 A5 1F C6 05
+		 43 0A 13 FD
+		 6D 1D B9 E2
+		 04 0B D8 14
+		 69 19 B3 22
+		 AA 45 B9 52
+		 55 00 00 00
+		 0E 00 00 00
+		 00 00 F8 CC
+		 C4 B2 62 C2
+		 18 00 00 00
+		 87 EA 99 E4
+		 E0 06 B3 EB
+		 DB EB B9 0A
+		 63 D4 D9 1A
+		 A7 33 CC FF
+		 07 10 00 00
+		 17 0D 66 46
+		 18 00 40 00
+		 C9 01 0A FA
+		 FF 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+	];
+};

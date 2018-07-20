@@ -898,6 +898,15 @@ config REGULATOR_CPR
 	  to voltage value before writing to a voltage regulator API, such as
 	  that provided by spm-regulator driver.
 
+config REGULATOR_CPR2_GFX
+	bool "RBCPR regulator driver for GFX"
+	depends on OF
+	help
+	  This driver supports the CPR (core power reduction) controller for the
+	  graphics (GFX) rail. The GFX CPR2 controller monitors the graphics voltage
+	  requirements. This driver reads initial voltage values out of hardware
+	  fuses and CPR target quotient values out of device tree.
+
 config REGULATOR_CPR3
 	bool "CPR3 regulator core support"
 	help
@@ -1066,6 +1075,20 @@ config REGULATOR_RPM_SMD
 	  supplied by some Qualcomm PMICs. The RPM SMD regulator driver should
 	  be used on systems which contain an RPM which communicates with the
 	  application processor over SMD.
+
+config REGULATOR_QPNP_LABIBB_SOMC
+	depends on REGULATOR_QPNP_LABIBB
+	bool "QPNP LAB/IBB Regulator - SoMC enhancements"
+	help
+	  This activates SoMC specific enhancements to QTI QPNP LAB/IBB
+	  regulator driver.
+
+config SOMC_LCD_OCP_ENABLED
+	depends on REGULATOR_QPNP_LABIBB_SOMC
+	bool "QPNP LAB/IBB Regulator - SoMC LCD OverCurrent Protection"
+	help
+	  This activates SoMC specific LCD Over Current Protection (OCP)
+	  function in LAB/IBB driver.
 
 config REGULATOR_SPM
 	bool "SPM regulator driver"

@@ -912,7 +912,8 @@ static int ipa_mhi_test_initialize_driver(bool skip_start_and_conn)
 	}
 
 	IPA_UT_LOG("Wait async ready event\n");
-	if (wait_for_completion_timeout(&mhi_test_ready_comp, 10 * HZ) == 0) {
+	if (wait_for_completion_timeout(&mhi_test_ready_comp,
+			IPA_TIMEOUT(10)) == 0) {
 		IPA_UT_LOG("timeout waiting for READY event");
 		IPA_UT_TEST_FAIL_REPORT("failed waiting for state ready");
 		return -ETIME;
@@ -1901,7 +1902,8 @@ static int ipa_mhi_test_suspend_aggr_open(bool force)
 	IPA_UT_LOG("AFTER suspend\n");
 
 	if (force) {
-		if (!wait_for_completion_timeout(&mhi_test_wakeup_comp, HZ)) {
+		if (!wait_for_completion_timeout(&mhi_test_wakeup_comp,
+				IPA_TIMEOUT(10))) {
 			IPA_UT_LOG("timeout waiting for wakeup event\n");
 			IPA_UT_TEST_FAIL_REPORT("timeout waitinf wakeup event");
 			return -ETIME;
@@ -2016,7 +2018,8 @@ static int ipa_mhi_test_suspend_host_wakeup(void)
 		return rc;
 	}
 
-	if (wait_for_completion_timeout(&mhi_test_wakeup_comp, HZ) == 0) {
+	if (wait_for_completion_timeout(&mhi_test_wakeup_comp,
+			IPA_TIMEOUT(10)) == 0) {
 		IPA_UT_LOG("timeout waiting for wakeup event\n");
 		IPA_UT_TEST_FAIL_REPORT("timeout waiting for wakeup event");
 		return -ETIME;

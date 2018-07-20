@@ -23,6 +23,8 @@ struct freq_tbl {
 	u8 pre_div;
 	u16 m;
 	u16 n;
+	unsigned long src_freq;
+#define FIXED_FREQ_SRC   0
 };
 
 /**
@@ -170,6 +172,7 @@ struct clk_rcg2 {
 	unsigned long		current_freq;
 	bool			enable_safe_config;
 	struct clk_regmap	clkr;
+	struct notifier_block	clk_nb;
 	u8			flags;
 #define FORCE_ENABLE_RCG	BIT(0)
 #define DFS_ENABLE_RCG		BIT(1)
@@ -178,12 +181,14 @@ struct clk_rcg2 {
 #define to_clk_rcg2(_hw) container_of(to_clk_regmap(_hw), struct clk_rcg2, clkr)
 
 extern const struct clk_ops clk_rcg2_ops;
+extern const struct clk_ops clk_rcg2_floor_ops;
 extern const struct clk_ops clk_rcg2_shared_ops;
 extern const struct clk_ops clk_edp_pixel_ops;
 extern const struct clk_ops clk_byte_ops;
 extern const struct clk_ops clk_byte2_ops;
 extern const struct clk_ops clk_pixel_ops;
 extern const struct clk_ops clk_gfx3d_ops;
+extern const struct clk_ops clk_gfx3d_src_ops;
 extern const struct clk_ops clk_dp_ops;
 extern const struct clk_ops clk_esc_ops;
 

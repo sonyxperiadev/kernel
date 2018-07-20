@@ -12,8 +12,8 @@
 
 #define pr_fmt(fmt) "MSM-CPP-SOC %s:%d " fmt, __func__, __LINE__
 
-#include <linux/clk/msm-clk.h>
-#include <linux/clk/msm-clk-provider.h>
+#include <linux/clk/qcom.h>
+#include <linux/clk-provider.h>
 #include <linux/delay.h>
 #include <media/msmb_pproc.h>
 #include "msm_cpp.h"
@@ -90,14 +90,11 @@ static int cpp_get_clk_freq_tbl(struct clk *clk, struct cpp_hw_info *hw_info,
 	uint32_t idx = 0;
 	signed long freq_tbl_entry = 0;
 
-	if ((clk == NULL) || (hw_info == NULL) || (clk->ops == NULL) ||
-		(clk->ops->list_rate == NULL)) {
-		pr_err("Bad parameter\n");
+	if ((clk == NULL) || (hw_info == NULL))
 		return -EINVAL;
-	}
 
 	for (i = 0; i < MAX_FREQ_TBL; i++) {
-		freq_tbl_entry = clk->ops->list_rate(clk, i);
+		freq_tbl_entry = clk_list_frequency(clk, i);
 		pr_debug("entry=%ld\n", freq_tbl_entry);
 		if (freq_tbl_entry >= 0) {
 			if (freq_tbl_entry >= min_clk_rate) {
