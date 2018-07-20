@@ -1515,8 +1515,9 @@ static int clock_cpu_probe(struct platform_device *pdev)
 				"Unable to Turn on CCI clock");
 		WARN(clk_prepare_enable(a53ssmux.clkr.hw.clk),
 				"Unable to Turn on A53 clock");
-		WARN(clk_prepare_enable(a72ssmux.clkr.hw.clk),
-				"Unable to Turn on A72 clock");
+		if (cpu >= 4)
+			WARN(clk_prepare_enable(a72ssmux.clkr.hw.clk),
+					"Unable to Turn on A72 clock");
 	}
 
 	rc = clk_set_rate(a53ssmux.clkr.hw.clk, a53ss_boot_rate);
