@@ -206,7 +206,7 @@ static void smp2p_ut_local_gpio_out(struct seq_file *s)
 		strlcpy(mock->remote_item.entries[0].name, "smp2p",
 			SMP2P_MAX_ENTRY_NAME);
 		SMP2P_SET_ENT_VALID(
-			mock->remote_item.header.valid_total_ent, 1);
+			&mock->remote_item.header, valid_total_ent, 1);
 		msm_smp2p_set_remote_mock_exists(true);
 		mock->tx_interrupt();
 
@@ -306,7 +306,7 @@ static void smp2p_ut_local_gpio_in(struct seq_file *s)
 		strlcpy(mock->remote_item.entries[0].name, "smp2p",
 			SMP2P_MAX_ENTRY_NAME);
 		SMP2P_SET_ENT_VALID(
-			mock->remote_item.header.valid_total_ent, 1);
+			&mock->remote_item.header, valid_total_ent, 1);
 		msm_smp2p_set_remote_mock_exists(true);
 		mock->tx_interrupt();
 
@@ -474,7 +474,7 @@ static void smp2p_ut_local_gpio_in_update_open(struct seq_file *s)
 		strlcpy(mock->remote_item.entries[0].name, "smp2p",
 			SMP2P_MAX_ENTRY_NAME);
 		SMP2P_SET_ENT_VALID(
-			mock->remote_item.header.valid_total_ent, 1);
+			&mock->remote_item.header, valid_total_ent, 1);
 
 		/* register for interrupts */
 		smp2p_gpio_open_test_entry("smp2p",

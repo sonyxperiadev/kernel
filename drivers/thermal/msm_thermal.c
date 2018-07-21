@@ -2788,7 +2788,7 @@ static int do_vdd_mx(void)
 		}
 	}
 
-	if ((dis_cnt == thresh[MSM_VDD_MX_RESTRICTION].thresh_ct)) {
+	if (dis_cnt == thresh[MSM_VDD_MX_RESTRICTION].thresh_ct) {
 		ret = remove_vdd_mx_restriction();
 		if (ret)
 			pr_err("Failed to remove vdd mx restriction\n");
@@ -6329,7 +6329,7 @@ static int fetch_cpu_mitigaiton_info(struct msm_thermal_data *data,
 			goto fetch_mitig_exit;
 		}
 		strlcpy((char *) cpus[_cpu].sensor_type, sensor_name,
-			strlen(sensor_name) + 1);
+			strlen((char *) cpus[_cpu].sensor_type) + 1);
 		create_alias_name(_cpu, limits, pdev);
 	}
 

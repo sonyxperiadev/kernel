@@ -1482,7 +1482,7 @@ int32_t qpnp_adc_scale_default(struct qpnp_vadc_chip *vadc,
 	} else {
 		qpnp_adc_scale_with_calib_param(adc_code, adc_properties,
 					chan_properties, &scale_voltage);
-		if (!chan_properties->calib_type == CALIB_ABSOLUTE)
+		if (CALIB_ABSOLUTE == !chan_properties->calib_type)
 			scale_voltage *= 1000;
 	}
 

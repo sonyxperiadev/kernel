@@ -7568,7 +7568,6 @@ typedef struct wl_bssload_cfg {
 #define WL_FACTOR_TABLE_MAX_LIMIT 5
 
 typedef struct wl_roam_prof {
-	int8	roam_flags;		/* bit flags */
 	int8	roam_trigger;		/* RSSI trigger level per profile/RSSI bracket */
 	int8	rssi_lower;
 	int8	roam_delta;

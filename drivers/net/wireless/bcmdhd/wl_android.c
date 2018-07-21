@@ -1653,7 +1653,7 @@ wl_android_set_auto_channel(struct net_device *dev, const char* cmd_str,
 done:
 	if ((retry == 0) || (ret < 0)) {
 		/* On failure, fallback to a default channel */
-		if ((band == WLC_BAND_5G)) {
+		if (band == WLC_BAND_5G) {
 			channel = 36;
 		} else {
 			channel = 1;
@@ -1713,7 +1713,7 @@ int wl_android_set_ibss_beacon_ouidata(struct net_device *dev, char *command, in
 	vndr_ie_setbuf_t *vndr_ie = NULL;
 	s32 iecount;
 	uint32 pktflag;
-	u16 kflags = in_atomic() ? GFP_ATOMIC : GFP_KERNEL;
+	u32 kflags = in_atomic() ? GFP_ATOMIC : GFP_KERNEL;
 	s32 err = BCME_OK;
 
 	/* Check the VSIE (Vendor Specific IE) which was added.
