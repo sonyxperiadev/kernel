@@ -773,6 +773,8 @@ static ssize_t store_##file_name					\
 	struct cpufreq_policy new_policy;				\
 									\
 	memcpy(&new_policy, policy, sizeof(*policy));			\
+	new_policy.min = policy->user_policy.min;			\
+	new_policy.max = policy->user_policy.max;			\
 									\
 	new_policy.min = new_policy.user_policy.min;			\
 	new_policy.max = new_policy.user_policy.max;			\
@@ -1409,13 +1411,13 @@ static int cpufreq_online(unsigned int cpu)
 	return 0;
 
 out_exit_policy:
+	for_each_cpu(j, policy->real_cpus)
+		remove_cpu_dev_symlink(policy, get_cpu_device(j));
+
 	up_write(&policy->rwsem);
 
 	if (cpufreq_driver->exit)
 		cpufreq_driver->exit(policy);
-
-	for_each_cpu(j, policy->real_cpus)
-		remove_cpu_dev_symlink(policy, get_cpu_device(j));
 
 out_free_policy:
 	cpufreq_policy_free(policy, !new_policy);
