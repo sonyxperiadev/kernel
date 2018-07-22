@@ -27,11 +27,12 @@
 #include "../clk-regmap-divider.h"
 #include "../clk-regmap-mux.h"
 
-#define LEGACY_GDSC_TARGET \
-	defined(CONFIG_ARCH_MSM8916) || defined(CONFIG_ARCH_MSM8953) || \
-	defined(CONFIG_ARCH_MSM8937) || defined(CONFIG_ARCH_MSM8917) || \
-	defined(CONFIG_ARCH_MSM8996) || defined(CONFIG_ARCH_MSM8998) || \
-	defined(CONFIG_ARCH_SDM630) || defined(CONFIG_ARCH_SDM660)
+#if defined(CONFIG_ARCH_MSM8916) || defined(CONFIG_ARCH_MSM8953) || \
+    defined(CONFIG_ARCH_MSM8937) || defined(CONFIG_ARCH_MSM8917) || \
+    defined(CONFIG_ARCH_MSM8996) || defined(CONFIG_ARCH_MSM8998) || \
+    defined(CONFIG_ARCH_SDM630) || defined(CONFIG_ARCH_SDM660)
+#define LEGACY_GDSC_TARGET
+#endif
 
 
 #define MDSS_PLL_REG_W(base, offset, data)	\
@@ -215,7 +216,7 @@ static inline bool is_gdsc_disabled(struct mdss_pll_resources *pll_res)
 		WARN(1, "gdsc_base register is not defined\n");
 		return true;
 	}
-#if LEGACY_GDSC_TARGET
+#ifdef LEGACY_GDSC_TARGET
 	return ((readl_relaxed(pll_res->gdsc_base + 0x4) & BIT(31)) &&
 		(!(readl_relaxed(pll_res->gdsc_base) & BIT(0)))) ? false : true;
 #else
