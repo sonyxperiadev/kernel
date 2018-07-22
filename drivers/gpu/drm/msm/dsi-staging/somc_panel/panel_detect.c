@@ -81,6 +81,10 @@ static int adc_panel_detect(struct platform_device *pdev,
 			continue;
 
 		*node = next;
+
+		/* If we have just detected the default panel, go on */
+		if (res[ADC_RNG_MIN] == 0 && res[ADC_RNG_MAX] == 0x7fffffff)
+			continue;
 		break;
 	}
 
