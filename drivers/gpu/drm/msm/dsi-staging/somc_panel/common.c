@@ -54,11 +54,11 @@ int somc_panel_vreg_ctrl(struct dsi_regulator_info *regs,
 	struct dsi_vreg vreg;
 	int num_of_v = 0;
 	int rc = 0;
-	int valid = 0;
+	int is_invalid = 0;
 
-	valid = vreg_name_to_config(regs, &vreg, vreg_name);
+	is_invalid = vreg_name_to_config(regs, &vreg, vreg_name);
 
-	if (!valid) {
+	if (!is_invalid) {
 		if (enable) {
 			pr_debug("%s: vreg on, name:%s\n", __func__,
 							vreg.vreg_name);

@@ -1841,21 +1841,6 @@ void dsi_panel_driver_reset_chargemon_exit(void)
 	s_chargemon_exit = 0;
 }
 
-int dsi_panel_driver_active_touch_reset(struct dsi_panel *panel)
-{
-	struct panel_specific_pdata *spec_pdata = NULL;
-	int rc = 0;
-
-	if (!panel) {
-		pr_err("%s: Invalid input panel\n", __func__);
-		return -EINVAL;
-	}
-	spec_pdata = panel->spec_pdata;
-	gpio_set_value(spec_pdata->reset_touch_gpio, 1);
-
-	return rc;
-}
-
 static irqreturn_t dsi_panel_driver_oled_short_det_handler(int irq, void *dev)
 {
 	struct dsi_display *display = dev;

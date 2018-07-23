@@ -4591,12 +4591,6 @@ static int dsi_display_bind(struct device *dev,
 	/* register te irq handler */
 	dsi_display_register_te_irq(display);
 
-#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
-	if (display->is_cont_splash_enabled) {
-		dsi_panel_driver_active_touch_reset(display->panel);
-	}
-#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
-
 	goto error;
 
 error_host_deinit:
@@ -6062,6 +6056,9 @@ int dsi_display_prepare(struct dsi_display *display)
 		mod_timer(&display->det_timer,
 			jiffies + msecs_to_jiffies(DELAY_SET_BACKLIGHT_TIME));
 	}
+
+	if (display->is_cont_splash_enabled)
+		dsi_panel_driver_touch_reset(display->panel);
 #endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 	goto error;
 
