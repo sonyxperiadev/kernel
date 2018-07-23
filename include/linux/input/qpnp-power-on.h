@@ -50,7 +50,8 @@ enum pon_power_off_type {
 	PON_POWER_OFF_MAX_TYPE		= 0x10,
 };
 
-#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_NILE)
+#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_NILE) || \
+    defined(CONFIG_ARCH_SONY_TAMA)
 enum pon_restart_reason {
 	PON_RESTART_REASON_NONE			= 0x00,
 	PON_RESTART_REASON_UNKNOWN		= 0x01,
