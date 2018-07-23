@@ -409,7 +409,6 @@ int dsi_panel_driver_enable(struct dsi_panel *panel);
 void dsi_panel_driver_labibb_vreg_init(struct dsi_panel *panel);
 int dsi_panel_driver_get_chargemon_exit(void);
 void dsi_panel_driver_reset_chargemon_exit(void);
-int dsi_panel_driver_active_touch_reset(struct dsi_panel *panel);
 void dsi_panel_driver_oled_short_det_init_works(struct dsi_display *display);
 void dsi_panel_driver_oled_short_check_worker(struct work_struct *work);
 void dsi_panel_driver_oled_short_det_enable(
