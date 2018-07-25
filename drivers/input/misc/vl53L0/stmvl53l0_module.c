@@ -2912,6 +2912,13 @@ int stmvl53l0_setup(struct stmvl53l0_data *data)
 
 	input_set_abs_params(data->input_dev_ps, ABS_GAS, 0, 0xffffffff,
 		0, 0);
+
+	/* advertise coordinates
+	 * this makes android not mistake the input device for a stylus
+	 */
+	input_set_abs_params(data->input_dev_ps, ABS_X, 0, 0, 0, 0);
+	input_set_abs_params(data->input_dev_ps, ABS_Y, 0, 0, 0, 0);
+
 	data->input_dev_ps->name = "STM VL53L0 proximity sensor";
 
 	rc = input_register_device(data->input_dev_ps);
