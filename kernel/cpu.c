@@ -617,7 +617,6 @@ static int cpuhp_up_callbacks(unsigned int cpu, struct cpuhp_cpu_state *st,
 		if (ret) {
 			st->target = prev_state;
 			undo_cpu_up(cpu, st);
-			cpu_notify(CPU_UP_CANCELED, cpu);
 			break;
 		}
 	}
@@ -1488,7 +1487,6 @@ static struct cpuhp_step cpuhp_bp_states[] = {
 		.name			= "notify:prepare",
 		.startup.single		= notify_prepare,
 		.teardown.single	= notify_dead,
-		.skip_onerr		= true,
 		.cant_stop		= true,
 	},
 	/*
@@ -1606,7 +1604,6 @@ static struct cpuhp_step cpuhp_ap_states[] = {
 		.name			= "notify:online",
 		.startup.single		= notify_online,
 		.teardown.single	= notify_down_prepare,
-		.skip_onerr		= true,
 	},
 #endif
 	/*
