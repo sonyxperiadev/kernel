@@ -1,0 +1,22 @@
+#include "sdm630-mdss-panels.dtsi"
+
+&soc {
+	msm_ext_disp: qcom,msm_ext_disp {
+		compatible = "qcom,msm-ext-disp";
+
+		ext_disp_audio_codec: qcom,msm-ext-disp-audio-codec-rx {
+			compatible = "qcom,msm-ext-disp-audio-codec-rx";
+			qcom,msm_ext_disp = <&msm_ext_disp>;
+		};
+	};
+
+	sde_wb: qcom,wb-display@0 {
+		compatible = "qcom,wb-display";
+		cell-index = <0>;
+		label = "wb_display";
+	};
+};
+
+&mdss_mdp {
+	connectors = <&sde_wb>;
+};

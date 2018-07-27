@@ -575,6 +575,10 @@ dtb-$(CONFIG_MACH_SONY_KEYAKI)          += msm8996-v3-pmi8996-tone-keyaki-sde_ge
 dtb-$(CONFIG_MACH_SONY_PIONEER)            += sdm630-nile-pioneer.dtb
 dtb-$(CONFIG_MACH_SONY_DISCOVERY)          += sdm630-nile-discovery.dtb
 
+# SDM660 - SDE
+dtb-$(CONFIG_MACH_SONY_PIONEER)            += sdm630-nile-pioneer-sde.dtb
+dtb-$(CONFIG_MACH_SONY_DISCOVERY)            += sdm630-nile-discovery-sde.dtb
+
 # MSM8956
 dtb-$(CONFIG_MACH_SONY_SUZU)            += msm8956-v1.1-loire-suzu_generic.dtb
 dtb-$(CONFIG_MACH_SONY_KUGO)            += msm8956-v1.1-loire-kugo_generic.dtb

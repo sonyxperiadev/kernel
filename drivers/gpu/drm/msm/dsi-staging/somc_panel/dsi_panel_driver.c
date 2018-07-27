@@ -1112,7 +1112,7 @@ int dsi_panel_driver_parse_gpios(struct dsi_panel *panel,
 	}
 
 	rc = dsi_panel_driver_parse_reset_touch_sequence(panel, of_node);
-	if (rc) {
+	if (rc && rc != -EINVAL) {
 		pr_err("%s: failed to parse reset touch sequence, rc=%d\n",
 		       __func__, rc);
 		goto error;
