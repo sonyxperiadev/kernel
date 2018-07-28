@@ -329,14 +329,6 @@ static int dsi_panel_driver_touch_power_on(struct dsi_panel *panel)
 	struct panel_specific_pdata *spec_pdata = panel->spec_pdata;
 	int rc = 0;
 
-	if (gpio_is_valid(spec_pdata->disp_vddio_gpio)) {
-		rc = gpio_direction_output(spec_pdata->disp_vddio_gpio, 0);
-		if (rc) {
-			pr_err("unable to set dir for disp_vddio gpio rc=%d\n", rc);
-			goto exit;
-		}
-	}
-
 	if (gpio_is_valid(spec_pdata->touch_vddio_en_gpio)) {
 		rc = gpio_direction_output(spec_pdata->touch_vddio_en_gpio, 0);
 		if (rc) {
@@ -352,14 +344,6 @@ static int dsi_panel_driver_touch_power_off(struct dsi_panel *panel)
 {
 	struct panel_specific_pdata *spec_pdata = panel->spec_pdata;
 	int rc = 0;
-
-	if (gpio_is_valid(spec_pdata->disp_vddio_gpio)) {
-		rc = gpio_direction_output(spec_pdata->disp_vddio_gpio, 1);
-		if (rc) {
-			pr_err("unable to set dir for disp_vddio gpio rc=%d\n", rc);
-			goto exit;
-		}
-	}
 
 	if (gpio_is_valid(spec_pdata->touch_vddio_en_gpio)) {
 		rc = gpio_direction_output(spec_pdata->touch_vddio_en_gpio, 1);
@@ -531,6 +515,12 @@ int dsi_panel_driver_post_power_off(struct dsi_panel *panel)
 	if (rc)
 		pr_err("%s: failed to disable vddio, rc=%d\n", __func__, rc);
 
+	if (gpio_is_valid(spec_pdata->disp_vddio_gpio)) {
+		rc = gpio_direction_output(spec_pdata->disp_vddio_gpio, 1);
+		if (rc)
+			pr_err("unable to set dir for disp_vddio gpio rc=%d\n", rc);
+	}
+
 	if (rc)
 		pr_err("%s: failed to power off\n", __func__);
 	else
@@ -592,6 +582,14 @@ int dsi_panel_driver_pre_power_on(struct dsi_panel *panel)
 	if (rc) {
 		pr_err("%s: failed to enable touch-avdd, rc=%d\n", __func__, rc);
 		goto exit;
+	}
+
+	if (gpio_is_valid(spec_pdata->disp_vddio_gpio)) {
+		rc = gpio_direction_output(spec_pdata->disp_vddio_gpio, 0);
+		if (rc) {
+			pr_err("unable to set dir for disp_vddio gpio rc=%d\n", rc);
+			goto exit;
+		}
 	}
 
 	rc = dsi_panel_driver_touch_power(panel, true);
