@@ -5164,6 +5164,8 @@ succeeded:
 	}
 	HWLOGI(this, "%s : %s\n", NAME_OF(clearpad_calibration_name, mode),
 		     status & need_bit ? "Failed" : "Succeed");
+
+	clearpad_set_delay(20);
 end:
 	switch (mode) {
 	case SYN_CALIBRATION_EW:
@@ -6396,8 +6398,10 @@ end:
 
 static void clearpad_cb_powerdown_handler(struct clearpad_t *this)
 {
+#ifndef CONFIG_DRM_MSM_DSI_SOMC_PANEL
 	if (unlikely(!first_blank_done))
 		first_blank_done = true;
+#endif
 
 	LOCK(&this->lock);
 	if (this->wakeup_gesture.enabled)
@@ -6452,7 +6456,7 @@ static void clearpad_cb_unblank_handler(struct clearpad_t *this)
 		return;
 	}
 
-	if (this->wakeup.unblank_early_done)
+	if (this->wakeup.unblank_done)
 		return;
 #endif
 
@@ -8712,6 +8716,8 @@ static int clearpad_probe(struct platform_device *pdev)
 			  "start probe @ %ld.%06ld\n", ts.tv_sec, ts.tv_nsec);
 
 	this->state = SYN_STATE_INIT;
+	this->wakeup.unblank_done = false;
+	this->wakeup.unblank_early_done = false;
 	mutex_init(&this->lock.lock);
 	spin_lock_init(&this->slock);
 
@@ -8796,6 +8802,8 @@ static int clearpad_probe(struct platform_device *pdev)
 		cdata->rmi_dev = rmi_dev;
 	}
 #endif
+
+	device_init_wakeup(&this->pdev->dev, 1);
 
 #ifdef CONFIG_DEBUG_FS
 	/* debugfs */
