@@ -4752,10 +4752,18 @@ static irqreturn_t clearpad_hard_handler(int irq, void *dev_id)
 	struct clearpad_t *this = dev_id;
 	unsigned long flags;
 	irqreturn_t ret;
+	bool val;
 
 	get_monotonic_boottime(&this->interrupt.hard_handler_ts);
 
 	spin_lock_irqsave(&this->slock, flags);
+
+	val = gpio_get_value(this->pdata->irq_gpio);
+	if (val) {
+		spin_unlock_irqrestore(&this->slock, flags);
+		return IRQ_HANDLED;
+	}
+
 	if (unlikely(this->dev_busy)) {
 		this->irq_pending = true;
 		ret = IRQ_HANDLED;
