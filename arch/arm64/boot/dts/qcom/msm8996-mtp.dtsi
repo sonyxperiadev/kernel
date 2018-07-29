@@ -566,14 +566,14 @@
 	};
 
 	/* GPIO 10 - HPH_EN1 */
-	hph_en0 {
-		pmi8994_gpio_10: hph0_enable {
+	hph_en1 {
+		pmi8994_gpio_10: hph1_enable {
 			pins = "gpio10";
 			function = "normal";
 			output-low;
 			drive-push-pull;
 			bias-disable;
-			//qcom,drive-strength = <PMIC_GPIO_STRENGTH_NO>;
+			qcom,drive-strength = <PMIC_GPIO_STRENGTH_NO>;
 			power-source = <PM8994_VPP_1P8>;
 		};
 	};
@@ -809,7 +809,7 @@
 			drive-push-pull;
 			//qcom,pull-up-strength = <PMIC_GPIO_PULL_UP_NO>;
 			bias-disable;
-			qcom,drive-strength = <PMIC_GPIO_STRENGTH_LOW>;
+			qcom,drive-strength = <PMIC_GPIO_STRENGTH_HIGH>;
 			power-source = <PM8994_VPP_1P8>;
 		};
 	};
@@ -836,7 +836,7 @@
 			output-high;
 			drive-push-pull;
 			bias-pull-down;
-			qcom,drive-strength = <PMIC_GPIO_STRENGTH_HIGH>;
+			qcom,drive-strength = <PMIC_GPIO_STRENGTH_LOW>;
 			power-source = <PM8994_VPP_VPH>;
 		};
 	};
@@ -874,10 +874,10 @@
 		pm8994_gpio_13: hph0_enable {
 			pins = "gpio13";
 			function = "normal";
-			output-low;
+			output-high;
 			drive-push-pull;
 			bias-disable;
-			qcom,drive-strength = <PMIC_GPIO_STRENGTH_HIGH>;
+			qcom,drive-strength = <PMIC_GPIO_STRENGTH_LOW>;
 			power-source = <PM8994_VPP_1P8>;
 		};
 	};
@@ -890,7 +890,7 @@
 			output-high;
 			drive-push-pull;
 			bias-pull-down;
-			qcom,drive-strength = <PMIC_GPIO_STRENGTH_HIGH>;
+			qcom,drive-strength = <PMIC_GPIO_STRENGTH_LOW>;
 			power-source = <PM8994_VPP_1P8>;
 		};
 	};
@@ -902,7 +902,7 @@
 			output-low;
 			drive-push-pull;
 			bias-pull-down;
-			qcom,drive-strength = <PMIC_GPIO_STRENGTH_HIGH>;
+			qcom,drive-strength = <PMIC_GPIO_STRENGTH_LOW>;
 			power-source = <PM8994_VPP_1P8>;
 		};
 	};

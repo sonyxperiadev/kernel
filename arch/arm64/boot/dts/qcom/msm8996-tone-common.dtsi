@@ -350,7 +350,7 @@
 			<45 512 500 5448000>; /* High Vote */
 	};
 
-	somc_pinctrl: somc_pinctrl {
+	somc_pinctrl: somc_pinctrl@0 {
 		compatible = "somc-pinctrl";
 		pinctrl-names = "platform_common_default",
 				"product_common_default",
@@ -391,6 +391,33 @@
 
 		/* If variant specific default setting is needed,
 		   fill pinctrl-3 value in <variant>.dtsi */
+		pinctrl-3 = <>;
+	};
+
+	somc_pinctrl_pmic: somc_pinctrl_pmic@1 {
+		compatible = "somc-pinctrl";
+		pinctrl-names = "platform_common_default",
+				"product_common_default",
+				"variant_default";
+		pinctrl-0 = </* PM8994 */
+			     &pm8994_gpio_1 &pm8994_gpio_2 &pm8994_gpio_3
+			     &pm8994_gpio_4 &pm8994_gpio_5 &pm8994_gpio_6
+			     &pm8994_gpio_7 &pm8994_gpio_8 &pm8994_gpio_9
+			     &pm8994_gpio_10 &pm8994_gpio_11 &pm8994_gpio_11
+			     &pm8994_gpio_13 &pm8994_gpio_14 &pm8994_gpio_15
+			     &pm8994_gpio_16 &pm8994_gpio_17 &pm8994_gpio_18
+			     &pm8994_gpio_19
+			     &pm_mpp2_def &pm_mpp4_def &pm_mpp5_def
+			     &pm_mpp6_def &pm_mpp8_def
+			     /* PMI8994 */
+			     &pmi8994_gpio_1 &pmi8994_gpio_2 &pmi8994_gpio_3
+			     &pmi8994_gpio_4 &pmi8994_gpio_5 &pmi8994_gpio_6
+			     &pmi8994_gpio_7 &pmi8994_gpio_8 &pmi8994_gpio_9
+			     &pmi8994_gpio_10
+			     &pmi_mpp1_def &pmi_mpp2_def &pmi_mpp4_def>;
+
+		pinctrl-1 = <>;
+		pinctrl-2 = <>;
 		pinctrl-3 = <>;
 	};
 
@@ -875,10 +902,14 @@
 	power-source = <PM8994_VPP_1P8>;
 };
 
+&pm8994_gpios {
+	/delete-property/ pinctrl-names;
+	/delete-property/ pinctrl-0;
+};
+
 &pm8994_mpps {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pm_mpp2_def &pm_mpp4_def &pm_mpp5_def
-		     &pm_mpp6_def &pm_mpp8_def>;
+	/delete-property/ pinctrl-names;
+	/delete-property/ pinctrl-0;
 
 	/* MPP_1: SDC_UIM_VBIAS */
 	/* Follow QTI */
@@ -935,10 +966,14 @@
 	bias-high-impedance;
 };
 
+&pmi8994_gpios {
+	/delete-property/ pinctrl-names;
+	/delete-property/ pinctrl-0;
+};
+
 &pmi8994_mpps {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pmi_mpp1_def &pmi_mpp2_def
-		     &pmi_mpp4_def>;
+	/delete-property/ pinctrl-names;
+	/delete-property/ pinctrl-0;
 	
 	/* MPP_2: FLASH_LED_NOW */
 	pmi8994_mpp2 {

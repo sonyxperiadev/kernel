@@ -17,13 +17,11 @@
  * published by the Free Software Foundation.
  */
 
-&soc {
-	somc_pinctrl: somc_pinctrl {
-		/* If variant specific default setting is needed,
-		   fill pinctrl-2 value in <variant>.dtsi */
-		pinctrl-2 = <&msm_gpio_49 &msm_gpio_73 &msm_gpio_74
-				&msm_gpio_77>;
-	};
+&somc_pinctrl {
+	/* If variant specific default setting is needed,
+	   fill pinctrl-2 value in <variant>.dtsi */
+	pinctrl-2 = <&msm_gpio_49 &msm_gpio_73 &msm_gpio_74
+			&msm_gpio_77>;
 };
 
 &tlmm {
