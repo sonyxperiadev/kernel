@@ -122,18 +122,18 @@
 		qcom,sde-sspp-type = "vig", "vig", "vig",
 				      "vig", "rgb", "rgb",
 				      "rgb", "rgb", "dma",
-				      "dma"; //, "cursor", "cursor";
+				      "dma", "cursor", "cursor";
 
 		qcom,sde-sspp-off = <0x5000 0x7000 0x9000
 				      0xb000 0x15000 0x17000
 				      0x19000 0x1b000 0x25000
-				      0x27000>; // 0x35000 0x37000>;
+				      0x27000 0x35000 0x37000>;
 		qcom,sde-sspp-src-size = <0x150>;
 
 		qcom,sde-sspp-xin-id = <0 4 8
 					12 1 5
 					9 13 2
-					10>; // 7 7>;
+					10 7 7>;
 
 		qcom,sde-mixer-pair-mask = <2 1 6 0 0 3>;
 		qcom,sde-mixer-blend-op-off = <0x20 0x50 0x80 0xb0
@@ -142,8 +142,8 @@
 		/* offsets are relative to "mdp_phys + qcom,sde-off */
 		qcom,sde-sspp-clk-ctrl = <0x2ac 0>, <0x2b4 0>, <0x2bc 0>,
 				  <0x2c4 0>, <0x2ac 4>, <0x2b4 4>, <0x2bc 4>,
-				  <0x2c4 4>, <0x2ac 8>, <0x2b4 8>; //, <0x3a8 16>,
-				 // <0x3b0 16>;
+				  <0x2c4 4>, <0x2ac 8>, <0x2b4 8>, <0x3a8 16>,
+				  <0x3b0 16>;
 		qcom,sde-qseed-type = "qseedv2";
 		qcom,sde-csc-type = "csc";
 		qcom,sde-mixer-linewidth = <2560>;
