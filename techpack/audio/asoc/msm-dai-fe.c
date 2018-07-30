@@ -2869,11 +2869,39 @@ static struct snd_soc_dai_driver msm_fe_dais[] = {
 	},
 };
 
+static void msm_fe_dais_fixup_legacy(void)
+{
+	int i;
+
+	/* Check our current SoC to decide whether to fixup or not */
+	if (!of_machine_is_compatible("qcom,msm8956") &&
+	    !of_machine_is_compatible("qcom,apq8056") &&
+	    !of_machine_is_compatible("qcom,msm8996") &&
+	    !of_machine_is_compatible("qcom,msm8998") &&
+	    !of_machine_is_compatible("qcom,sdm630")  &&
+	    !of_machine_is_compatible("qcom,sdm660"))
+		return;
+
+	for (i = 0; i < ARRAY_SIZE(msm_fe_dais); i++) {
+		if (strncmp("MultiMedia10", msm_fe_dais[i].name, 12) != 0)
+			continue;
+
+		/* MM10 Capture unsupported. Use for offload playback. */
+		memset(&msm_fe_dais[i].capture, 0,
+			sizeof(struct snd_soc_pcm_stream));
+		msm_fe_dais[i].compress_new = snd_soc_new_compress;
+	}
+
+	return;
+}
+
 static int msm_fe_dai_dev_probe(struct platform_device *pdev)
 {
-
 	dev_dbg(&pdev->dev, "%s: dev name %s\n", __func__,
 		dev_name(&pdev->dev));
+
+	msm_fe_dais_fixup_legacy();
+
 	return snd_soc_register_component(&pdev->dev, &msm_fe_dai_component,
 		msm_fe_dais, ARRAY_SIZE(msm_fe_dais));
 }
