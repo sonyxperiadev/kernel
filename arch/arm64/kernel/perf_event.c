@@ -25,6 +25,7 @@
 #include <asm/virt.h>
 
 #include <linux/acpi.h>
+#include <linux/clocksource.h>
 #include <linux/of.h>
 #include <linux/perf/arm_pmu.h>
 #include <linux/platform_device.h>
@@ -1281,3 +1282,32 @@ static struct platform_driver armv8_pmu_driver = {
 };
 
 builtin_platform_driver(armv8_pmu_driver);
+
+void arch_perf_update_userpage(struct perf_event *event,
+			       struct perf_event_mmap_page *userpg, u64 now)
+{
+	u32 freq;
+	u32 shift;
+
+	/*
+	 * Internal timekeeping for enabled/running/stopped times
+	 * is always computed with the sched_clock.
+	 */
+	freq = arch_timer_get_rate();
+	userpg->cap_user_time = 1;
+
+	clocks_calc_mult_shift(&userpg->time_mult, &shift, freq,
+			NSEC_PER_SEC, 0);
+	/*
+	 * time_shift is not expected to be greater than 31 due to
+	 * the original published conversion algorithm shifting a
+	 * 32-bit value (now specifies a 64-bit value) - refer
+	 * perf_event_mmap_page documentation in perf_event.h.
+	 */
+	if (shift == 32) {
+		shift = 31;
+		userpg->time_mult >>= 1;
+	}
+	userpg->time_shift = (u16)shift;
+	userpg->time_offset = -now;
+}
