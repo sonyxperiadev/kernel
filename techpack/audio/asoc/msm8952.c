@@ -1889,7 +1889,6 @@ static struct snd_soc_dai_link msm8952_dai[] = {
 		.dpcm_capture = 1,
 		.ignore_pmdown_time = 1,
 	},
-#if 0
 	{/* hw:x,27 */
 		.name = "MSM8X16 Compress3",
 		.stream_name = "Compress3",
@@ -1906,7 +1905,6 @@ static struct snd_soc_dai_link msm8952_dai[] = {
 		 /* this dai link has playback support */
 		.id = MSM_FRONTEND_DAI_MULTIMEDIA10,
 	},
-#endif
 	{/* hw:x,28 */
 		.name = "MSM8X16 Compress4",
 		.stream_name = "Compress4",

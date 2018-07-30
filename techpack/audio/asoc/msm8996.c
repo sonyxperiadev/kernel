@@ -2513,7 +2513,6 @@ static struct snd_soc_dai_link msm8996_common_dai_links[] = {
 		 /* this dainlink has playback support */
 		.id = MSM_FRONTEND_DAI_MULTIMEDIA7,
 	},
-#if 0 /* TODO: Kernel panic with that one! */
 	{
 		.name = "MSM8996 Compress3",
 		.stream_name = "Compress3",
@@ -2530,7 +2529,6 @@ static struct snd_soc_dai_link msm8996_common_dai_links[] = {
 		 /* this dainlink has playback support */
 		.id = MSM_FRONTEND_DAI_MULTIMEDIA10,
 	},
-#endif
 	{
 		.name = "MSM8996 ULL NOIRQ",
 		.stream_name = "MM_NOIRQ",
