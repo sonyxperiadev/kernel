@@ -9,9 +9,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
-#include "dsi-panel-td4322-innolux-fhd-cmd.dtsi"
-#include "dsi-panel-td4322-truly-fhd-cmd.dtsi"
-#include "dsi-panel-td4322-csot-fhd-cmd.dtsi"
+#include "dsi-panel-somc-td4322-innolux-fhd-cmd.dtsi"
+#include "dsi-panel-somc-td4322-truly-fhd-cmd.dtsi"
+#include "dsi-panel-somc-td4322-csot-fhd-cmd.dtsi"
 
 &soc {
 	dsi_panel_pwr_supply_csot: dsi_panel_pwr_supply_csot {
