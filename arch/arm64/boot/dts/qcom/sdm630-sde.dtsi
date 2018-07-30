@@ -92,12 +92,12 @@
 
 		qcom,sde-intf-max-prefetch-lines = <0x15 0x15>;
 
-		qcom,sde-sspp-type = "vig", "dma", "dma", "dma"/*,"cursor"*/;
+		qcom,sde-sspp-type = "vig", "dma", "dma", "dma", "cursor";
 
-		qcom,sde-sspp-off = <0x5000 0x25000 0x27000 0x29000/* 0x35000*/>;
+		qcom,sde-sspp-off = <0x5000 0x25000 0x27000 0x29000 0x35000>;
 		qcom,sde-sspp-src-size = <0x184>;
 
-		qcom,sde-sspp-xin-id = <0 1 5 9 /*2*/>;
+		qcom,sde-sspp-xin-id = <0 1 5 9 2>;
 
 		qcom,sde-mixer-pair-mask = <2 1>;
 		qcom,sde-mixer-blend-op-off = <0x20 0x50 0x80 0xb0
