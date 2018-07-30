@@ -1085,7 +1085,9 @@ static void _sde_sspp_setup_cursor(struct sde_mdss_cfg *sde_cfg,
 	struct sde_sspp_cfg *sspp, struct sde_sspp_sub_blks *sblk,
 	struct sde_prop_value *prop_value, u32 *cursor_count)
 {
-	if (!IS_SDE_MAJOR_MINOR_SAME(sde_cfg->hwversion, SDE_HW_VER_300))
+	if (!(IS_MSM8996_TARGET(sde_cfg->hwversion)) &&
+	    !(IS_MSM8998_TARGET(sde_cfg->hwversion)) &&
+	    !(IS_SDM630_TARGET(sde_cfg->hwversion)))
 		SDE_ERROR("invalid sspp type %d, xin id %d\n",
 				sspp->type, sspp->xin_id);
 	set_bit(SDE_SSPP_CURSOR, &sspp->features);
@@ -3144,7 +3146,8 @@ static int sde_hardware_format_caps(struct sde_mdss_cfg *sde_cfg,
 	uint32_t cursor_list_size = 0;
 	uint32_t index = 0;
 
-	if (IS_SDE_MAJOR_MINOR_SAME((hw_rev), SDE_HW_VER_300)) {
+	if (IS_MSM8996_TARGET(hw_rev) || IS_MSM8998_TARGET(hw_rev) ||
+	    IS_SDM630_TARGET(hw_rev)) {
 		cursor_list_size = ARRAY_SIZE(cursor_formats);
 		sde_cfg->cursor_formats = kcalloc(cursor_list_size,
 			sizeof(struct sde_format_extended), GFP_KERNEL);
@@ -3247,6 +3250,7 @@ static int _sde_hardware_pre_caps(struct sde_mdss_cfg *sde_cfg, uint32_t hw_rev)
 
 	if (IS_MSM8996_TARGET(hw_rev) || IS_SDM630_TARGET(hw_rev)) {
 		/* update msm8996/sdm630 target here */
+		sde_cfg->has_wb_ubwc = true;
 		sde_cfg->perf.min_prefill_lines = 21;
 	} else if (IS_MSM8998_TARGET(hw_rev)) {
 		/* update msm8998 target here */
