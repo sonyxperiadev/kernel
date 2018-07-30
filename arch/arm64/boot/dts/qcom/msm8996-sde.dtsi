@@ -43,8 +43,8 @@
 			"iommu_rot_ahb_clk",
 			"mmagic_clk",
 			"vsync_clk";
-		clock-rate = <0 0 412500000 412500000 0 0 0 0>;
-		clock-max-rate = <0 0 412500000 412500000 0 0 0 0>;
+		clock-rate = <0 0 412500000 412500000 0 0 0 0 0 19200000>;
+		clock-max-rate = <0 0 412500000 412500000 0 0 0 0 0 19200000>;
 
 		/* interrupt config */
 		interrupt-parent = <&intc>;
@@ -148,18 +148,34 @@
 		qcom,sde-csc-type = "csc";
 		qcom,sde-mixer-linewidth = <2560>;
 		qcom,sde-sspp-linewidth = <2560>;
+		qcom,sde-wb-linewidth = <4096>;
 		qcom,sde-mixer-blendstages = <0x7>;
 		qcom,sde-highest-bank-bit = <0x2>;
 		qcom,sde-panic-per-pipe;
 		qcom,sde-has-cdp;
 		qcom,sde-has-src-split;
+		qcom,sde-has-idle-pc;
+		qcom,sde-has-dest-scaler;
+		qcom,sde-max-dest-scaler-input-linewidth = <2048>;
+		qcom,sde-max-dest-scaler-output-linewidth = <2560>;
+		qcom,sde-max-per-pipe-bw-kbps = <4500000>;
 		qcom,sde-max-bw-low-kbps = <9600000>;
 		qcom,sde-max-bw-high-kbps = <9600000>;
+		qcom,sde-min-core-ib-kbps = <2400000>;
+		qcom,sde-min-llcc-ib-kbps = <800000>;
+		qcom,sde-min-dram-ib-kbps = <800000>;
 		qcom,sde-dram-channels = <2>;
 		qcom,sde-num-nrt-paths = <1>;
 
-		qcom,sde-sspp-danger-lut = <0x000f 0xffff 0x0000>;
-		qcom,sde-sspp-safe-lut = <0xfffc 0xff00 0xffff>;
+		/* VBIF QoS remapper settings*/
+		qcom,sde-vbif-qos-rt-remap = <1 2 2 2>;
+		qcom,sde-vbif-qos-nrt-remap = <1 1 1 1>;
+		qcom,sde-cdp-setting = <1 1>, <1 0>;
+
+		qcom,sde-danger-lut = <0x000f 0xffff 0x0000>;
+		qcom,sde-safe-lut-linear = <0 0xfffc>;
+		qcom,sde-safe-lut-macrotile = <0 0xff00>;
+		qcom,sde-safe-lut-nrt = <0 0xffff>;
 
 		qcom,sde-vbif-off = <0 0>;
 		qcom,sde-vbif-size = <0x1040>;
