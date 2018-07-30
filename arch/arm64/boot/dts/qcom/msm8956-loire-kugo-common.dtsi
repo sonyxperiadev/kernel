@@ -88,7 +88,7 @@
 		};
 	};
 
-	somc_pinctrl: somc_pinctrl {
+	somc_pinctrl: somc_pinctrl@0 {
 		/* If variant specific default setting is needed,
 		   fill pinctrl-1 value in <variant>.dtsi */
 		pinctrl-1 = <&msm_gpio_107_def &msm_gpio_116_def
