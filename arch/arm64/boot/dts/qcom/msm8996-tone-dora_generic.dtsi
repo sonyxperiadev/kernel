@@ -18,13 +18,6 @@
  */
 
 &soc {
-	somc_pinctrl: somc_pinctrl {
-		/* If variant specific default setting is needed,
-		   fill pinctrl-3 value in <variant>.dtsi */
-		pinctrl-3 = <&msm_gpio_49 &msm_gpio_73 &msm_gpio_74
-				&msm_gpio_77>;
-	};
-
 	/* I2C : BLSP12 */
 	i2c@75ba000 {
 		synaptics_clearpad@2c {
@@ -32,6 +25,13 @@
 			noise_det_retrytime_ms = <200>;
 		};
 	};
+};
+
+&somc_pinctrl {
+	/* If variant specific default setting is needed,
+	   fill pinctrl-3 value in <variant>.dtsi */
+	pinctrl-3 = <&msm_gpio_49 &msm_gpio_73 &msm_gpio_74
+			&msm_gpio_77>;
 };
 
 &tlmm {
