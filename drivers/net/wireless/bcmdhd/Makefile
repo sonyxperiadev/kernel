@@ -77,7 +77,7 @@ ifeq ($(BUS_IFACE_PCIE),y)
 	# Enable Link down recovery
 	DHDCFLAGS += -DSUPPORT_LINKDOWN_RECOVERY
 	# Enable Firmware Coredump
-	DHDCFLAGS += -DDHD_FW_COREDUMP
+	#DHDCFLAGS += -DDHD_FW_COREDUMP
 	# Enable PKTID AUDIT
 	DHDCFLAGS += -DDHD_PKTID_AUDIT_ENABLED
 	# Enable Load Balancing support by default.
