@@ -237,7 +237,7 @@ static struct clk_fixed_factor xo = {
 
 static unsigned int gpll0_voter;
 
-static struct clk_alpha_pll gpll0_early = {
+static struct clk_alpha_pll gpll0 = {
 	.offset = 0x00000,
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.soft_vote = &gpll0_voter,
@@ -247,7 +247,7 @@ static struct clk_alpha_pll gpll0_early = {
 		.enable_reg = 0x52000,
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data){
-			.name = "gpll0_early",
+			.name = "gpll0",
 			.parent_names = (const char *[]){ "xo" },
 			.num_parents = 1,
 			.ops = &clk_alpha_pll_ops,
@@ -274,46 +274,24 @@ static struct clk_fixed_factor gpll0_early_div = {
 	.div = 2,
 	.hw.init = &(struct clk_init_data){
 		.name = "gpll0_early_div",
-		.parent_names = (const char *[]){ "gpll0_early" },
+		.parent_names = (const char *[]){ "gpll0" },
 		.num_parents = 1,
 		.ops = &clk_fixed_factor_ops,
 	},
 };
 
-static struct clk_alpha_pll_postdiv gpll0 = {
-	.offset = 0x00000,
-	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
-	.clkr.hw.init = &(struct clk_init_data){
-		.name = "gpll0",
-		.parent_names = (const char *[]){ "gpll0_early" },
-		.num_parents = 1,
-		.ops = &clk_alpha_pll_postdiv_ops,
-	},
-};
-
-static struct clk_alpha_pll gpll4_early = {
+static struct clk_alpha_pll gpll4 = {
 	.offset = 0x77000,
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.clkr = {
 		.enable_reg = 0x52000,
 		.enable_mask = BIT(4),
 		.hw.init = &(struct clk_init_data){
-			.name = "gpll4_early",
+			.name = "gpll4",
 			.parent_names = (const char *[]){ "xo" },
 			.num_parents = 1,
 			.ops = &clk_alpha_pll_ops,
 		},
-	},
-};
-
-static struct clk_alpha_pll_postdiv gpll4 = {
-	.offset = 0x77000,
-	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
-	.clkr.hw.init = &(struct clk_init_data){
-		.name = "gpll4",
-		.parent_names = (const char *[]){ "gpll4_early" },
-		.num_parents = 1,
-		.ops = &clk_alpha_pll_postdiv_ops,
 	},
 };
 
@@ -436,9 +414,9 @@ static const struct freq_tbl ftbl_sdcc1_apps_clk_src[] = {
 	F(20000000, P_GPLL0, 15, 1, 2),
 	F(25000000, P_GPLL0, 12, 1, 2),
 	F(50000000, P_GPLL0, 12, 0, 0),
-	F(96000000, P_GPLL4, 8, 0, 0),
-	F(192000000, P_GPLL4, 4, 0, 0),
-	F(384000000, P_GPLL4, 2, 0, 0),
+	F(96000000, P_GPLL4, 16, 0, 0),
+	F(192000000, P_GPLL4, 8, 0, 0),
+	F(384000000, P_GPLL4, 4, 0, 0),
 	{ }
 };
 
@@ -1371,7 +1349,7 @@ static const struct freq_tbl ftbl_qspi_ser_clk_src[] = {
 	F(75000000, P_GPLL0, 8, 0, 0),
 	F(150000000, P_GPLL0, 4, 0, 0),
 //	F(256000000, P_GPLL4, 1.5, 0, 0),
-	F(256000000, P_GPLL4, 3, 0, 0),
+	F(256000000, P_GPLL4, 6, 0, 0),
 	F(300000000, P_GPLL0, 2, 0, 0),
 	{ }
 };
@@ -3243,10 +3221,8 @@ static struct clk_hw *gcc_msm8996_hws[] = {
 };
 
 static struct clk_regmap *gcc_msm8996_clocks[] = {
-	[GPLL0_EARLY] = &gpll0_early.clkr,
 	[GPLL0] = &gpll0.clkr,
 	[GPLL0_AO] = &gpll0_ao.clkr,
-	[GPLL4_EARLY] = &gpll4_early.clkr,
 	[GPLL4] = &gpll4.clkr,
 	[USB30_MASTER_CLK_SRC] = &usb30_master_clk_src.clkr,
 	[USB30_MOCK_UTMI_CLK_SRC] = &usb30_mock_utmi_clk_src.clkr,
