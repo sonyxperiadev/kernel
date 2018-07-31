@@ -1448,6 +1448,8 @@ static int qcrndis_set_inst_name(struct usb_function_instance *fi,
 		return -ENOMEM;
 	}
 
+	rndis->use_wceis = true;
+
 	spin_lock_init(&rndis_lock);
 	opts->rndis = rndis;
 	ret = misc_register(&rndis_qc_device);

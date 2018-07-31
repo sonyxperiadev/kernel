@@ -2929,6 +2929,8 @@ static struct f_gsi *gsi_function_init(enum ipa_usb_teth_prot prot_id)
 		goto error;
 	}
 
+	gsi->rndis_use_wceis = true;
+
 	spin_lock_init(&gsi->d_port.lock);
 
 	init_waitqueue_head(&gsi->d_port.wait_for_ipa_ready);
