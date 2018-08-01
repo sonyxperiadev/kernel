@@ -28,6 +28,11 @@
 #include "somc_panel_exts.h"
 #include "dsi_display.h"
 #include "dsi_panel.h"
+#include "../sde/sde_crtc.h"
+#include "../sde/sde_plane.h"
+
+#undef pr_fmt
+#define pr_fmt(fmt) "somc_panel_color_manager: " fmt
 
 #define PA_V2_BASIC_FEAT_ENB (PA_HSIC_HUE_ENABLE | PA_HSIC_SAT_ENABLE | \
 			      PA_HSIC_VAL_ENABLE | PA_HSIC_CONT_ENABLE)
@@ -934,6 +939,188 @@ error:
 	return -ENODEV;
 }
 
+/*
+ * somc_panel_pa_validate_params - Validate PicADJ HSIC parameters
+ *
+ * The parameters have the following ranges:
+ * Saturation: 0-224 - 12000-65534  EXCL: 128
+ * Hue:            0 - 1536         EXCL: NO
+ * Value:          0 -  383         EXCL: 0
+ * Contrast:       0 -  383         EXCL: 0
+ *
+ * @return Returns true if parameters are valid, otherwise false.
+ */
+static inline bool somc_panel_pa_validate_params(struct drm_msm_pa_hsic *hsic_blk)
+{
+	if ( ((hsic_blk->saturation  < 224 || hsic_blk->saturation  > 12000)
+				&& hsic_blk->saturation != 128) ||
+	      (hsic_blk->hue         < 0   || hsic_blk->hue         > 1536) ||
+	     ((hsic_blk->value       < 0   || hsic_blk->value       > 383)
+				&& hsic_blk->value  != 0) ||
+	     ((hsic_blk->contrast    < 0   || hsic_blk->contrast    > 383)
+				&& hsic_blk->contrast != 0) )
+	{
+		return true;
+	}
+	return false;
+}
+
+static int somc_panel_send_pa(struct dsi_display *display)
+{
+	struct drm_msm_pa_hsic hsic_blk;
+	struct msm_drm_private *priv;
+	struct drm_property *prop;
+	struct drm_property_blob *pblob;
+	struct drm_crtc *crtc = NULL;
+	struct drm_plane *prim_plane = NULL;
+	struct somc_panel_color_mgr *color_mgr =
+			display->panel->spec_pdata->color_mgr;
+	int rc;
+	uint64_t val;
+
+	if (!display->drm_conn) {
+		pr_err("The display is not connected!!\n");
+		return -EINVAL;
+	}
+
+	if (!display->drm_conn->state->crtc) {
+		pr_err("No CRTC on display connector!!\n");
+		return -ENODEV;
+	}
+	crtc = display->drm_conn->state->crtc;
+
+	if (!crtc->primary) {
+		pr_err("No plane on CRTC!! Bailing out.\n");
+		return -ENODEV;
+	}
+	prim_plane = crtc->primary;
+
+	priv = crtc->dev->dev_private;
+	prop = priv->cp_property[3]; /* SDE_CP_CRTC_DSPP_HSIC == 3 !! */
+	if (prop == NULL) {
+		pr_err("FAIL! HSIC is not supported!!?!?!\n");
+		return -EINVAL;
+	};
+	pr_debug("prop->name = %s\n", prop->name);
+
+	rc = sde_cp_crtc_get_property(crtc, prop, &val);
+	if (rc) {
+		pr_err("Cannot get CRTC property. Things may go wrong.\n");
+	};
+
+	memset(&hsic_blk, 0, sizeof(struct drm_msm_pa_hsic));
+	hsic_blk.hue = color_mgr->picadj_data.hue;
+	hsic_blk.saturation = color_mgr->picadj_data.saturation;
+	hsic_blk.value = color_mgr->picadj_data.value;
+	hsic_blk.contrast = color_mgr->picadj_data.contrast;
+
+	if (!somc_panel_pa_validate_params(&hsic_blk)) {
+		pr_debug("PA HSIC parameters are invalid. Bailing out.\n");
+		return -EINVAL;
+	}
+
+	hsic_blk.flags = PA_V2_BASIC_FEAT_ENB;
+
+	/* Setup CRTC global to send calibration to DSPP */
+	pblob = drm_property_create_blob(crtc->dev,
+			sizeof(struct drm_msm_pa_hsic), &hsic_blk);
+	if (IS_ERR_OR_NULL(pblob)) {
+		pr_err("Failed to create blob. Bailing out.\n");
+		return -EINVAL;
+	}
+	pr_debug("DSPP Blob ID %d has length %zu\n",
+			prop->base.id, pblob->length);
+
+	rc = sde_cp_crtc_set_property(crtc, prop, pblob->base.id);
+	if (rc) {
+		pr_err("DSPP: Cannot set HSIC: %d. Setting SSPP anyway.\n",
+			rc);
+	}
+
+	/* Setup planes to send calibration to SSPP */
+	rc = sde_plane_set_property(prim_plane, prim_plane->state,
+				    priv->plane_property[PLANE_PROP_HUE_ADJUST],
+				    hsic_blk.hue);
+	rc += sde_plane_set_property(prim_plane, prim_plane->state,
+				     priv->plane_property[PLANE_PROP_SATURATION_ADJUST],
+				     hsic_blk.hue);
+	rc += sde_plane_set_property(prim_plane, prim_plane->state,
+				     priv->plane_property[PLANE_PROP_VALUE_ADJUST],
+				     hsic_blk.hue);
+	rc += sde_plane_set_property(prim_plane, prim_plane->state,
+				     priv->plane_property[PLANE_PROP_CONTRAST_ADJUST],
+				     hsic_blk.hue);
+
+	pr_info("%s (%d):sat=%d hue=%d val=%d cont=%d",
+		__func__, __LINE__, hsic_blk.saturation,
+		hsic_blk.hue, hsic_blk.value,
+		hsic_blk.contrast);
+
+	return rc;
+}
+
+static int somc_panel_send_pcc(struct dsi_display *display,
+			       int color_table_offset)
+{
+	struct drm_msm_pcc pcc_blk;
+	struct msm_drm_private *priv;
+	struct drm_property *prop;
+	struct drm_property_blob *pblob;
+	struct drm_crtc *crtc = NULL;
+	struct dsi_pcc_data *pcc_data = NULL;
+	struct somc_panel_color_mgr *color_mgr =
+			display->panel->spec_pdata->color_mgr;
+	int table_idx, rc;
+	uint64_t val;
+
+	if (!display->drm_conn) {
+		pr_err("The display is not connected!!\n");
+		return -EINVAL;
+	};
+
+	if (!display->drm_conn->state->crtc) {
+		pr_err("No CRTC on display connector!!\n");
+		return -ENODEV;
+	}
+
+	crtc = display->drm_conn->state->crtc;
+	pcc_data = &color_mgr->standard_pcc_data;
+	table_idx = pcc_data->tbl_idx + color_table_offset;
+
+	priv = crtc->dev->dev_private;
+	prop = priv->cp_property[1]; /* SDE_CP_CRTC_DSPP_PCC == 1 !! */
+	if (prop == NULL) {
+		pr_err("FAIL! PCC is not supported!!?!?!\n");
+		return -EINVAL;
+	};
+	pr_debug("prop->name = %s\n", prop->name);
+
+	rc = sde_cp_crtc_get_property(crtc, prop, &val);
+	if (rc) {
+		pr_err("Cannot get CRTC property. Things may go wrong.\n");
+	};
+
+	memset(&pcc_blk, 0, sizeof(struct drm_msm_pcc));
+	pcc_blk.r.r = pcc_data->color_tbl[table_idx].r_data;
+	pcc_blk.g.g = pcc_data->color_tbl[table_idx].g_data;
+	pcc_blk.b.b = pcc_data->color_tbl[table_idx].b_data;
+
+	pblob = drm_property_create_blob(crtc->dev,
+			sizeof(struct drm_msm_pcc), &pcc_blk);
+	if (IS_ERR_OR_NULL(pblob)) {
+		pr_err("Failed to create blob. Bailing out.\n");
+		return -EINVAL;
+	}
+	pr_debug("DSPP Blob ID %d has length %zu\n",
+			prop->base.id, pblob->length);
+
+	rc = sde_cp_crtc_set_property(crtc, prop, pblob->base.id);
+	if (rc) {
+		pr_err("DSPP: Cannot set PCC: %d.\n", rc);
+	}
+
+	return rc;
+}
 
 int somc_panel_colormgr_apply_calibrations(void)
 {
@@ -948,7 +1135,15 @@ int somc_panel_colormgr_apply_calibrations(void)
 		pr_err("%s: Couldn't apply PCC calibration\n", __func__);
 	}
 
-	/* rc += somc_panel_pa_setup(panel); */
+	rc = somc_panel_send_pcc(display, 0);
+	if (rc) {
+		pr_err("%s: Cannot send PCC calibration\n", __func__);
+	}
+
+	rc += somc_panel_send_pa(display);
+	if (rc) {
+		pr_err("%s: Cannot send HSIC calibration\n", __func__);
+	}
 
 	return rc;
 }

@@ -270,6 +270,20 @@ int sde_plane_kickoff_rot(struct drm_plane *plane);
  */
 void sde_plane_set_error(struct drm_plane *plane, bool error);
 
+#ifdef CONFIG_DRM_MSM_DSI_SOMC_PANEL
+/**
+ * sde_plane_set_property: Set property on SDE planes
+ * @plane: Pointer to DRM plane object
+ * @state: Pointer to DRM plane state object
+ * @property: Pointer to DRM property to set
+ * @val: Value to set to the DRM property
+ * Returns: Zero on success
+ */
+int sde_plane_set_property(struct drm_plane *plane,
+		struct drm_plane_state *state, struct drm_property *property,
+		uint64_t val);
+#endif
+
 /**
  * sde_plane_init - create new sde plane for the given pipe
  * @dev:   Pointer to DRM device
