@@ -148,14 +148,13 @@
 
 					qcom,pm-cpu-level@1 {  /* C4 */
 						reg = <1>;
-						label = "fpc-def";
-						qcom,spm-cpu-mode = "fpc-def";
-						qcom,psci-cpu-mode = <4>;
+						label = "ret";
+						qcom,psci-cpu-mode = <2>;
+						qcom,spm-cpu-mode = "ret";
 						qcom,latency-us = <40>;
 						qcom,ss-power = <198>;
 						qcom,energy-overhead = <21850>;
 						qcom,time-overhead = <120>;
-						qcom,use-broadcast-timer;
 						qcom,hyp-psci;
 					};
 
@@ -243,14 +242,13 @@
 
 					qcom,pm-cpu-level@1 {  /* C4 */
 						reg = <1>;
-						label = "fpc-def";
-						qcom,spm-cpu-mode = "fpc-def";
-						qcom,psci-cpu-mode = <4>;
+						label = "ret";
+						qcom,psci-cpu-mode = <2>;
+						qcom,spm-cpu-mode = "ret";
 						qcom,latency-us = <40>;
 						qcom,ss-power = <198>;
 						qcom,energy-overhead = <21850>;
 						qcom,time-overhead = <120>;
-						qcom,use-broadcast-timer;
 						qcom,hyp-psci;
 					};
 
