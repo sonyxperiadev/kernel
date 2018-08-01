@@ -22,6 +22,7 @@
 #include <linux/miscdevice.h>
 #include <linux/delay.h>
 #include <linux/slab.h>
+#include <linux/of.h>
 
 #include <linux/debugfs.h>
 #include <linux/time.h>
@@ -955,7 +956,7 @@ int q6asm_unmap_rtac_block(uint32_t *mem_map_handle)
 			__func__, result2);
 		result = result2;
 	} else {
-		mem_map_handle = 0;
+		*mem_map_handle = 0;
 	}
 
 	result2 = q6asm_mmap_apr_dereg();
@@ -2733,13 +2734,17 @@ EXPORT_SYMBOL(q6asm_open_read_v3);
 int q6asm_open_read_v4(struct audio_client *ac, uint32_t format,
 			uint16_t bits_per_sample, bool ts_mode)
 {
-#if defined(CONFIG_ARCH_MSM8916) || defined(CONFIG_ARCH_MSM8996)
-	return q6asm_open_read_v3(ac, format, bits_per_sample);
-#else
+
+	if (of_machine_is_compatible("qcom,msm8956") ||
+	    of_machine_is_compatible("qcom,apq8056"))
+		return q6asm_open_read_v2(ac, format, bits_per_sample);
+
+	if (of_machine_is_compatible("qcom,msm8996"))
+		return q6asm_open_read_v3(ac, format, bits_per_sample);
+
 	return __q6asm_open_read(ac, format, bits_per_sample,
 				 PCM_MEDIA_FORMAT_V4 /*media fmt block ver*/,
 				 ts_mode);
-#endif
 }
 EXPORT_SYMBOL(q6asm_open_read_v4);
 
@@ -3053,13 +3058,17 @@ EXPORT_SYMBOL(q6asm_open_write_v3);
 int q6asm_open_write_v4(struct audio_client *ac, uint32_t format,
 			uint16_t bits_per_sample)
 {
-#if defined(CONFIG_ARCH_MSM8916) || defined(CONFIG_ARCH_MSM8996)
-	return q6asm_open_write_v3(ac, format, bits_per_sample);
-#else
+	if (of_machine_is_compatible("qcom,msm8956") ||
+	    of_machine_is_compatible("qcom,apq8056"))
+		return q6asm_open_write_v3(ac, format, bits_per_sample);
+
+	if (of_machine_is_compatible("qcom,msm8996"))
+		return q6asm_open_write_v3(ac, format, bits_per_sample);
+
 	return __q6asm_open_write(ac, format, bits_per_sample,
 				  ac->stream_id, false /*gapless*/,
 				  PCM_MEDIA_FORMAT_V4 /*pcm_format_block_ver*/);
-#endif
+
 }
 EXPORT_SYMBOL(q6asm_open_write_v4);
 
@@ -3104,14 +3113,19 @@ int q6asm_stream_open_write_v4(struct audio_client *ac, uint32_t format,
 			       uint16_t bits_per_sample, int32_t stream_id,
 			       bool is_gapless_mode)
 {
-#if defined(CONFIG_ARCH_MSM8916) || defined(CONFIG_ARCH_MSM8996)
-	return q6asm_stream_open_write_v3(ac, format, bits_per_sample,
+
+	if (of_machine_is_compatible("qcom,msm8956") ||
+	    of_machine_is_compatible("qcom,apq8056"))
+		return q6asm_stream_open_write_v2(ac, format, bits_per_sample,
 						stream_id, is_gapless_mode);
-#else
+
+	if (of_machine_is_compatible("qcom,msm8996"))
+		return q6asm_stream_open_write_v3(ac, format, bits_per_sample,
+						stream_id, is_gapless_mode);
+
 	return __q6asm_open_write(ac, format, bits_per_sample,
 				  stream_id, is_gapless_mode,
 				  PCM_MEDIA_FORMAT_V4 /*pcm_format_block_ver*/);
-#endif
 }
 EXPORT_SYMBOL(q6asm_stream_open_write_v4);
 
@@ -4143,6 +4157,10 @@ fail_cmd:
 		return rc;
 }
 
+int q6asm_enc_cfg_blk_pcm_v2(struct audio_client *ac,
+		uint32_t rate, uint32_t channels, uint16_t bits_per_sample,
+		bool use_default_chmap, bool use_back_flavor, u8 *channel_map);
+
 int q6asm_enc_cfg_blk_pcm_v3(struct audio_client *ac,
 			     uint32_t rate, uint32_t channels,
 			     uint16_t bits_per_sample, bool use_default_chmap,
@@ -4176,11 +4194,16 @@ int q6asm_enc_cfg_blk_pcm_v4(struct audio_client *ac,
 	u32 frames_per_buf = 0;
 	int rc;
 
-#if defined(CONFIG_ARCH_MSM8916) || defined(CONFIG_ARCH_MSM8996)
-	return q6asm_enc_cfg_blk_pcm_v3(ac, rate, channels, bits_per_sample,
+	if (of_machine_is_compatible("qcom,msm8956") ||
+	    of_machine_is_compatible("qcom,apq8056"))
+		return q6asm_enc_cfg_blk_pcm_v2(ac, rate, channels, bits_per_sample,
+					use_default_chmap, use_back_flavor,
+					channel_map);
+
+	if (of_machine_is_compatible("qcom,msm8996"))
+		return q6asm_enc_cfg_blk_pcm_v3(ac, rate, channels, bits_per_sample,
 					use_default_chmap, use_back_flavor,
 					channel_map, sample_word_size);
-#endif
 
 	if (!use_default_chmap && (channel_map == NULL)) {
 		pr_err("%s: No valid chan map and can't use default\n",
@@ -4513,6 +4536,14 @@ int q6asm_enc_cfg_blk_pcm_format_support_v4(struct audio_client *ac,
 					    uint16_t endianness,
 					    uint16_t mode)
 {
+	if (of_machine_is_compatible("qcom,msm8956") ||
+	    of_machine_is_compatible("qcom,apq8056"))
+		return __q6asm_enc_cfg_blk_pcm(ac, rate, channels, bits_per_sample);
+
+	if (of_machine_is_compatible("qcom,msm8996"))
+	 	return __q6asm_enc_cfg_blk_pcm_v3(ac, rate, channels,
+					   bits_per_sample, sample_word_size);
+
 	return __q6asm_enc_cfg_blk_pcm_v4(ac, rate, channels,
 					   bits_per_sample, sample_word_size,
 					   endianness, mode);
@@ -5180,12 +5211,17 @@ static int __q6asm_media_format_block_pcm_v4(struct audio_client *ac,
 	u8 *channel_mapping;
 	int rc;
 
-#if defined(CONFIG_ARCH_MSM8916) || defined(CONFIG_ARCH_MSM8996)
-	return __q6asm_media_format_block_pcm_v3(ac, rate, channels,
+	if (of_machine_is_compatible("qcom,msm8956") ||
+	    of_machine_is_compatible("qcom,apq8056"))
+		return __q6asm_media_format_block_pcm(ac, rate, channels,
+					stream_id, bits_per_sample,
+					use_default_chmap, channel_map);
+
+	if (of_machine_is_compatible("qcom,msm8996"))
+		return __q6asm_media_format_block_pcm_v3(ac, rate, channels,
 					bits_per_sample, stream_id,
 					use_default_chmap, channel_map,
 					sample_word_size);
-#endif
 
 	pr_debug("%s: session[%d]rate[%d]ch[%d]bps[%d]wordsize[%d]\n", __func__,
 		 ac->session, rate, channels,
@@ -5513,11 +5549,16 @@ static int __q6asm_media_format_block_multi_ch_pcm_v4(struct audio_client *ac,
 	u8 *channel_mapping;
 	int rc;
 
-#if defined(CONFIG_ARCH_MSM8916) || defined(CONFIG_ARCH_MSM8996)
-	return __q6asm_media_format_block_multi_ch_pcm_v3(ac, rate, channels,
+	if (of_machine_is_compatible("qcom,msm8956") ||
+	    of_machine_is_compatible("qcom,apq8056"))
+		return __q6asm_media_format_block_multi_ch_pcm(ac, rate, channels,
+					use_default_chmap, channel_map,
+					bits_per_sample);
+
+	if (of_machine_is_compatible("qcom,msm8996"))
+		return __q6asm_media_format_block_multi_ch_pcm_v3(ac, rate, channels,
 					use_default_chmap, channel_map,
 					bits_per_sample, sample_word_size);
-#endif
 
 	pr_debug("%s: session[%d]rate[%d]ch[%d]bps[%d]wordsize[%d]\n", __func__,
 		 ac->session, rate, channels,
