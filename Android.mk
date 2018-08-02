@@ -17,6 +17,7 @@
 
 ifeq ($(BUILD_KERNEL),true)
 ifeq ($(PRODUCT_PLATFORM_SOD),true)
+ifeq ($(SOMC_KERNEL_VERSION),4.9)
 
 KERNEL_SRC := $(call my-dir)
 
@@ -225,5 +226,6 @@ kernelconfig: $(KERNEL_OUT_STAMP)
 $(PRODUCT_OUT)/kernel: $(KERNEL_BIN)
 	cp $(KERNEL_BIN) $(PRODUCT_OUT)/kernel
 
+endif # Sony Kernel version
 endif # Sony AOSP devices
 endif # BUILD_KERNEL
