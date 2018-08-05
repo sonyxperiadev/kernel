@@ -3246,18 +3246,18 @@
 		qcom,decimation = <0>;
 		qcom,pre-div-channel-scaling = <0>;
 		qcom,calibration-type = "ratiometric";
-		qcom,scale-function = <17>;
+		qcom,scale-function = <26>;
 		qcom,hw-settle-time = <2>;
 		qcom,fast-avg-setup = <0>;
 		qcom,vadc-thermal-node;
 	};
 
 	chan@73 { /* msm_therm */
-		qcom,scale-function = <17>;
+		qcom,scale-function = <26>;
 	};
 
 	chan@74 { /* emmc_therm */
-		qcom,scale-function = <17>;
+		qcom,scale-function = <26>;
 	};
 };
 
