@@ -1043,7 +1043,7 @@
 	};
 
 	chan@4d { /* msm_therm */
-		qcom,scale-function = <17>;
+		qcom,scale-function = <26>;
 	};
 
 	chan@4e {
@@ -1052,7 +1052,7 @@
 		qcom,decimation = <2>;
 		qcom,pre-div-channel-scaling = <0>;
 		qcom,calibration-type = "ratiometric";
-		qcom,scale-function = <17>;
+		qcom,scale-function = <26>;
 		qcom,hw-settle-time = <2>;
 		qcom,fast-avg-setup = <0>;
 		qcom,vadc-thermal-node;
@@ -1083,7 +1083,7 @@
 	};
 
 	chan@51 { /* quiet_therm */
-		qcom,scale-function = <17>;
+		qcom,scale-function = <26>;
 	};
 
 	chan@53 {
@@ -1092,7 +1092,7 @@
 		qcom,decimation = <2>;
 		qcom,pre-div-channel-scaling = <0>;
 		qcom,calibration-type = "ratiometric";
-		qcom,scale-function = <17>;
+		qcom,scale-function = <26>;
 		qcom,hw-settle-time = <2>;
 		qcom,fast-avg-setup = <0>;
 		qcom,vadc-thermal-node;
