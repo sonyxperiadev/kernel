@@ -3060,7 +3060,7 @@ int q6asm_open_write_v4(struct audio_client *ac, uint32_t format,
 {
 	if (of_machine_is_compatible("qcom,msm8956") ||
 	    of_machine_is_compatible("qcom,apq8056"))
-		return q6asm_open_write_v3(ac, format, bits_per_sample);
+		return q6asm_open_write_v2(ac, format, bits_per_sample);
 
 	if (of_machine_is_compatible("qcom,msm8996"))
 		return q6asm_open_write_v3(ac, format, bits_per_sample);
