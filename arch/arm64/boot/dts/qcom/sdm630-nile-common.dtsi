@@ -430,7 +430,7 @@
 	};
 
 	chan@4d {
-		qcom,scale-function = <17>;
+		qcom,scale-function = <26>;
 	};
 
 	chan@50 {
@@ -451,7 +451,7 @@
 		qcom,decimation = <2>;
 		qcom,pre-div-channel-scaling = <0>;
 		qcom,calibration-type = "ratiometric";
-		qcom,scale-function = <17>;
+		qcom,scale-function = <26>;
 		qcom,hw-settle-time = <2>;
 		qcom,fast-avg-setup = <0>;
 		qcom,vadc-thermal-node;
