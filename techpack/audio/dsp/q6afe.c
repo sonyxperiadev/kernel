@@ -3128,7 +3128,8 @@ static int q6afe_send_enc_config(u16 port_id,
 		goto exit;
 	}
 
-	if (format == ASM_MEDIA_FMT_LDAC) {
+	if (format == ASM_MEDIA_FMT_LDAC &&
+	    cfg->ldac_config.abr_config.is_abr_enabled) {
 		config.param.payload_size =
 			payload_size + sizeof(config.port.map_param);
 		pr_debug("%s:sending AFE_ENCODER_PARAM_ID_BIT_RATE_LEVEL_MAP to DSP payload = %d\n",
