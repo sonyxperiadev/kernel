@@ -1,8 +1,7 @@
 config ZRAM
 	tristate "Compressed RAM block device support"
-	depends on BLOCK && SYSFS && CRYPTO
+	depends on BLOCK && SYSFS && ZSMALLOC && CRYPTO
 	select CRYPTO_LZO
-	select ZPOOL
 	default n
 	help
 	  Creates virtual block devices called /dev/zramX (X = 0, 1, ...).
@@ -14,34 +13,3 @@ config ZRAM
 	  disks and maybe many more.
 
 	  See zram.txt for more information.
-
-if ZRAM
-
-choice
-	prompt "Default zRAM compressed memory allocator"
-	default ZRAM_DEFAULT_ZSMALLOC
-	help
-	  Select the compressed memory allocator that will be used by default
-	  for all devices.
-
-	config ZRAM_DEFAULT_ZBUD
-		bool "zbud"
-		select ZBUD
-
-	config ZRAM_DEFAULT_Z3FOLD
-		bool "z3fold"
-		select Z3FOLD
-
-	config ZRAM_DEFAULT_ZSMALLOC
-		bool "zsmalloc"
-		select ZSMALLOC
-
-endchoice
-
-config ZRAM_DEFAULT_POOL
-	string
-	default "zbud" if ZRAM_DEFAULT_ZBUD
-	default "z3fold" if ZRAM_DEFAULT_Z3FOLD
-	default "zsmalloc" if ZRAM_DEFAULT_ZSMALLOC
-
-endif
