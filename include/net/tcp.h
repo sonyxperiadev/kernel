@@ -380,7 +380,7 @@ extern int tcp_proc_delayed_ack_control(struct ctl_table *table, int write,
 				void __user *buffer, size_t *length,
 				loff_t *ppos);
 
-void tcp_enter_quickack_mode(struct sock *sk);
+void tcp_enter_quickack_mode(struct sock *sk, unsigned int max_quickacks);
 static inline void tcp_dec_quickack_mode(struct sock *sk,
 					 const unsigned int pkts)
 {
