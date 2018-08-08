@@ -1380,6 +1380,9 @@ static const struct freq_tbl ftbl_cpp_clk_src[] = {
 	F(100000000, P_GPLL0_DIV, 3, 0, 0),
 	F(200000000, P_GPLL0, 3, 0, 0),
 	F(320000000, P_MMPLL0, 2.5, 0, 0),
+#if defined(CONFIG_SONY_CAM_V4L2)
+	F(384000000, P_MMPLL4, 2.5, 0, 0),
+#endif
 	F(480000000, P_MMPLL4, 2, 0, 0),
 	F(640000000, P_MMPLL4, 1.5, 0, 0),
 	{ }
