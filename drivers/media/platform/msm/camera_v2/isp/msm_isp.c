@@ -36,6 +36,14 @@
 #include "msm_isp40.h"
 #include "msm_isp32.h"
 
+#if defined(CONFIG_SONY_CAM_V4L2) && defined(CONFIG_MSM_AVTIMER)
+extern int avcs_core_open(void);
+extern int avcs_core_disable_power_collapse(int enable);
+extern int avcs_core_query_timer(uint64_t *avtimer_tick);
+
+static struct avtimer_fptr_t avtimer_func;
+#endif
+
 static struct msm_sd_req_vb2_q vfe_vb2_ops;
 static struct msm_isp_buf_mgr vfe_buf_mgr;
 static struct msm_vfe_common_dev_data vfe_common_data;
@@ -601,6 +609,14 @@ static int vfe_probe(struct platform_device *pdev)
 
 	vfe_parent_dev->num_sd = vfe_parent_dev->num_hw_sd;
 	vfe_parent_dev->pdev = pdev;
+
+#if defined(CONFIG_SONY_CAM_V4L2) && defined(CONFIG_MSM_AVTIMER)
+	avtimer_func.fptr_avtimer_open = avcs_core_open;
+	avtimer_func.fptr_avtimer_enable = avcs_core_disable_power_collapse;
+	avtimer_func.fptr_avtimer_get_time = avcs_core_query_timer;
+
+	msm_isp_set_avtimer_fptr(avtimer_func);
+#endif
 
 	return rc;
 

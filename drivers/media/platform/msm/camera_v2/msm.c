@@ -226,11 +226,12 @@ static inline int __msm_queue_find_command_ack_q(void *d1, void *d2)
 static void msm_pm_qos_add_request(void)
 {
 	pr_info("%s: add request", __func__);
-	pm_qos_add_request(&msm_v4l2_pm_qos_request, PM_QOS_CPU_DMA_LATENCY,
-	PM_QOS_DEFAULT_VALUE);
+	if (!pm_qos_request_active(&msm_v4l2_pm_qos_request))
+		pm_qos_add_request(&msm_v4l2_pm_qos_request,
+			PM_QOS_CPU_DMA_LATENCY, PM_QOS_DEFAULT_VALUE);
 }
 
-static void msm_pm_qos_remove_request(void)
+static __attribute__((unused)) void msm_pm_qos_remove_request(void)
 {
 	pr_info("%s: remove request", __func__);
 	pm_qos_remove_request(&msm_v4l2_pm_qos_request);
@@ -1046,7 +1047,8 @@ static int msm_close(struct file *filep)
 	mutex_unlock(&ordered_sd_mtx);
 
 	/* remove msm_v4l2_pm_qos_request */
-	msm_pm_qos_remove_request();
+	//msm_pm_qos_remove_request();
+	msm_pm_qos_update_request(CAMERA_DISABLE_PC_LATENCY);
 
 	/* send v4l2_event to HAL next*/
 	msm_queue_traverse_action(msm_session_q, struct msm_session, list,
