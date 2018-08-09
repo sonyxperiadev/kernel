@@ -1930,6 +1930,9 @@ static int arm_smmu_init_domain_context(struct iommu_domain *domain,
 	if (is_fast)
 		fmt = ARM_V8L_FAST;
 
+	/* Make sure to assign a suitable aperture end */
+	domain->geometry.aperture_end = (1UL << ias) - 1;
+
 	if (arm_smmu_is_slave_side_secure(smmu_domain)) {
 		smmu_domain->pgtbl_cfg = (struct io_pgtable_cfg) {
 			.quirks		= quirks,
@@ -1974,6 +1977,10 @@ static int arm_smmu_init_domain_context(struct iommu_domain *domain,
 		arm_smmu_assign_table(smmu_domain);
 		arm_smmu_secure_domain_unlock(smmu_domain);
 	}
+
+	/* Update the domain's page sizes to reflect the page table format */
+	domain->pgsize_bitmap = smmu_domain->pgtbl_cfg.pgsize_bitmap;
+	domain->geometry.force_aperture = true;
 
 	/* Initialise the context bank with our page table cfg */
 	arm_smmu_init_context_bank(smmu_domain, &smmu_domain->pgtbl_cfg);
