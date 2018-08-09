@@ -4261,6 +4261,7 @@ static int arm_smmu_device_dt_probe(struct platform_device *pdev)
 	mutex_init(&smmu->power_lock);
 	spin_lock_init(&smmu->atos_lock);
 	spin_lock_init(&smmu->clock_refs_lock);
+	spin_lock_init(&smmu->global_sync_lock);
 	INIT_LIST_HEAD(&smmu->static_cbndx_list);
 
 	of_id = of_match_node(arm_smmu_of_match, dev->of_node);
