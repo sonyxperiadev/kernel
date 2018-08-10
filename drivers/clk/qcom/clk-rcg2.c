@@ -50,6 +50,15 @@
 #define CFG_MODE_DUAL_EDGE	(0x2 << CFG_MODE_SHIFT)
 #define CFG_HW_CLK_CTRL_MASK	BIT(20)
 
+/*
+ * Workaround: Some old SoCs support this mask and it's unwanted.
+ * WARNING: This breaks multiplatform boot images!
+ */
+#if defined(CONFIG_ARCH_MSM8998) || defined(CONFIG_ARCH_SDM630)
+ #undef CFG_HW_CLK_CTRL_MASK
+ #define CFG_HW_CLK_CTRL_MASK 0
+#endif
+
 #define M_REG			0x8
 #define N_REG			0xc
 #define D_REG			0x10
