@@ -34,12 +34,6 @@
 	};
 
 	reserved-memory {
-		pstore_reserve_mem: pstore_reserve_mem_region@57f00000 {
-			compatible = "removed-dma-pool";
-			no-map;
-			reg = <0 0x57f00000 0 0x00100000>;
-		};
-
 		tz_app_mem: tz_app_mem@8dd00000 {
 			compatible = "removed-dma-pool";
 			no-map;
