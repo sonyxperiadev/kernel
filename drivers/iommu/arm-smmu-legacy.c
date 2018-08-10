@@ -1074,9 +1074,6 @@ static void arm_smmu_disable_clocks_atomic(struct arm_smmu_device *smmu)
 /* Wait for any pending TLB invalidations to complete */
 static void __arm_smmu_tlb_sync(struct arm_smmu_device *smmu)
 {
-#ifndef ARM_SMMU_TLBI_TLBSYNC_BUG_SOLVED
-	return;
-#else
 	int count = 0;
 	void __iomem *gr0_base = ARM_SMMU_GR0(smmu);
 
@@ -1091,7 +1088,6 @@ static void __arm_smmu_tlb_sync(struct arm_smmu_device *smmu)
 		}
 		udelay(1);
 	}
-#endif
 }
 
 static void arm_smmu_tlb_sync_global(struct arm_smmu_device *smmu)
@@ -3761,11 +3757,9 @@ static void arm_smmu_device_reset(struct arm_smmu_device *smmu)
 		}
 	}
 
-#ifdef ARM_SMMU_TLBI_TLBSYNC_BUG_SOLVED
 	/* Invalidate the TLB, just in case */
 	writel_relaxed(0, gr0_base + ARM_SMMU_GR0_TLBIALLH);
 	writel_relaxed(0, gr0_base + ARM_SMMU_GR0_TLBIALLNSNH);
-#endif
 
 	reg = readl_relaxed(ARM_SMMU_GR0_NS(smmu) + ARM_SMMU_GR0_sCR0);
 
