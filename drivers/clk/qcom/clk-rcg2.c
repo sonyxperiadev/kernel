@@ -391,11 +391,22 @@ static int __clk_rcg2_configure(struct clk_rcg2 *rcg, const struct freq_tbl *f)
 {
 	u32 cfg, mask;
 	struct clk_hw *hw = &rcg->clkr.hw;
-	int ret, index = qcom_find_src_index(hw, rcg->parent_map, f->src);
+	int ret, index;
 
 	/* Skip configuration if DFS control has been enabled for the RCG. */
 	if (rcg->flags & DFS_ENABLE_RCG)
 		return 0;
+
+	/*
+	 * In case the frequency table of cxo_f is used, the src in parent_map
+	 * and the source in cxo_f.src could be different. Update the index to
+	 * '0' since it's assumed that CXO is always fed to port 0 of RCGs HLOS
+	 * controls.
+	 */
+	if (f == &cxo_f)
+		index = 0;
+	else
+		index = qcom_find_src_index(hw, rcg->parent_map, f->src);
 
 	if (index < 0)
 		return index;
