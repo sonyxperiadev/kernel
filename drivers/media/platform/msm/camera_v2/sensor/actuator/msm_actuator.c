@@ -435,10 +435,10 @@ static int32_t msm_actuator_init_focus(struct msm_actuator_ctrl_t *a_ctrl,
 	for (i = 0; i < size; i++) {
 
 		switch (settings[i].addr_type) {
-		case MSM_CAMERA_I2C_BYTE_ADDR:
+		case MSM_ACTUATOR_BYTE_ADDR:
 			a_ctrl->i2c_client.addr_type = MSM_CAMERA_I2C_BYTE_ADDR;
 			break;
-		case MSM_CAMERA_I2C_WORD_ADDR:
+		case MSM_ACTUATOR_WORD_ADDR:
 			a_ctrl->i2c_client.addr_type = MSM_CAMERA_I2C_WORD_ADDR;
 			break;
 		default:

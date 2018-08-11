@@ -1367,8 +1367,8 @@ static int msm_probe(struct platform_device *pdev)
 	if (WARN_ON(rc < 0))
 		goto media_fail;
 
-	if (WARN_ON((rc == media_entity_pads_init(&pvdev->vdev->entity,
-			0, NULL)) < 0))
+	rc = media_entity_pads_init(&pvdev->vdev->entity, 0, NULL);
+	if (WARN_ON(rc < 0))
 		goto entity_fail;
 
 	pvdev->vdev->entity.function = QCAMERA_VNODE_GROUP_ID;

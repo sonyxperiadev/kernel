@@ -1505,7 +1505,7 @@ static struct clk_branch mmss_mmagic_ahb_clk = {
 			.name = "mmss_mmagic_ahb_clk",
 			.parent_names = (const char *[]){ "ahb_clk_src" },
 			.num_parents = 1,
-			.flags = CLK_SET_RATE_PARENT | CLK_IS_CRITICAL, //CLK_ENABLE_HAND_OFF,
+			.flags = CLK_SET_RATE_PARENT | CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
 	},
@@ -1523,7 +1523,7 @@ static struct clk_branch mmss_mmagic_cfg_ahb_clk = {
 				"mmss_mmagic_ahb_clk"
 			},
 			.num_parents = 1,
-			.flags = CLK_SET_RATE_PARENT | CLK_IS_CRITICAL, // CLK_ENABLE_HAND_OFF,
+			.flags = CLK_SET_RATE_PARENT | CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
 	},

@@ -3605,7 +3605,7 @@ STREAM_BUFF_END:
 			break;
 		}
 		buff_mgr_info.frame_id = frame_info.frame_id;
-		rc = msm_cpp_buffer_ops(cpp_dev, VIDIOC_MSM_BUF_MNGR_BUF_ERROR,
+		rc = msm_cpp_buffer_ops(cpp_dev, VIDIOC_MSM_BUF_MNGR_BUF_DONE,
 			0x0, &buff_mgr_info);
 		if (rc < 0) {
 			pr_err("error in buf done\n");
@@ -4459,7 +4459,8 @@ static  int msm_cpp_update_gdscr_status(struct cpp_device *cpp_dev,
 {
 	if (of_machine_is_compatible("qcom,msm8936") ||
 	    of_machine_is_compatible("qcom,msm8939") ||
-	    of_machine_is_compatible("qcom,msm8956"))
+	    of_machine_is_compatible("qcom,msm8956") ||
+	    of_machine_is_compatible("qcom,apq8056"))
 		return msm_cpp_update_gdscrv1_status(cpp_dev, status);
 
 	return msm_cpp_update_gdscrv2_status(cpp_dev, status);
@@ -4627,6 +4628,15 @@ static int cpp_probe(struct platform_device *pdev)
 			msm_camera_set_clk_flags(cpp_dev->cpp_clk[i],
 				CLKFLAG_NORETAIN_PERIPH);
 		}
+	}
+
+	if (of_find_property(pdev->dev.of_node, "qcom,cpp-cx-ipeak", NULL)) {
+		cpp_dev->cpp_cx_ipeak = cx_ipeak_register(
+			pdev->dev.of_node, "qcom,cpp-cx-ipeak");
+		if (cpp_dev->cpp_cx_ipeak)
+			CPP_DBG("Cx ipeak Registration Successful ");
+		else
+			pr_err("Cx ipeak Registration Unsuccessful");
 	}
 
 	rc = msm_camera_get_reset_info(pdev,

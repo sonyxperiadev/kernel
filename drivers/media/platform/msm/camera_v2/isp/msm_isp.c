@@ -562,6 +562,7 @@ static int vfe_probe(struct platform_device *pdev)
 	}
 
 	vfe_parent_dev->common_sd->common_data = &vfe_common_data;
+	memset(&vfe_common_data, 0, sizeof(vfe_common_data));
 	mutex_init(&vfe_common_data.vfe_common_mutex);
 	spin_lock_init(&vfe_common_data.common_dev_data_lock);
 	spin_lock_init(&vfe_common_data.vfe_irq_dump.

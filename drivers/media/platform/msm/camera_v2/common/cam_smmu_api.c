@@ -2071,7 +2071,7 @@ static int cam_smmu_populate_sids(struct device *dev,
 	/* set the name of the context bank */
 	property = of_get_property(dev->of_node, "iommus", &cnt);
 	cnt /= 4;
-	for (i = 0, j = 0; i < cnt; i = i + 3, j++) {
+	for (i = 0, j = 0; i < cnt; i = i + 2, j++) {
 		rc = of_property_read_u32_index(dev->of_node,
 			"iommus", i + 1, &cb->sids[j]);
 		if (rc < 0)

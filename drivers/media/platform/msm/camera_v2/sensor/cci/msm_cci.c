@@ -1922,7 +1922,7 @@ static int32_t msm_cci_init_gpio_params(struct cci_device *cci_dev)
 			gpio_tbl[i].gpio);
 	}
 
-	val_array = kcalloc(tbl_size, sizeof(uint32_t), GFP_KERNEL);
+	val_array = kzalloc(sizeof(uint32_t) * tbl_size, GFP_KERNEL);
 	if (!val_array) {
 		rc = -ENOMEM;
 		goto ERROR1;

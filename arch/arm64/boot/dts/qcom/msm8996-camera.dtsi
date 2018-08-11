@@ -318,15 +318,17 @@
 			<&clock_mmss CAMSS_VFE0_AHB_CLK>,
 			<&clock_mmss CAMSS_VFE_AXI_CLK>,
 			<&clock_mmss CAMSS_VFE0_STREAM_CLK>,
-			<&clock_mmss SMMU_VFE_AXI_CLK>;
+			<&clock_mmss SMMU_VFE_AXI_CLK>,
+			<&clock_mmss SMMU_VFE_AHB_CLK>;
 		clock-names = "mmagic_ahb_clk",
 			"camss_axi_clk",
 			"camss_top_ahb_clk" , "camss_ahb_clk",
 			"vfe_clk_src", "camss_vfe_clk",
 			"camss_csi_vfe_clk",
 			"vfe_vbif_ahb_clk", "vfe_ahb_clk",
-			"bus_clk", "camss_vfe_stream_clk", "smmu_vfe_axi_clk";
-		qcom,clock-rates = <0 0 0 0 320000000 0 0 0 0 0 0 0>;
+			"bus_clk", "camss_vfe_stream_clk",
+			"smmu_vfe_axi_clk", "smmu_vfe_ahb_clk";
+		qcom,clock-rates = <0 0 0 0 320000000 0 0 0 0 0 0 0 0>;
 		status = "ok";
 		qos-entries = <8>;
 		qos-regs = <0x404 0x408 0x40c 0x410 0x414 0x418
@@ -390,15 +392,17 @@
 			<&clock_mmss CAMSS_VFE1_AHB_CLK>,
 			<&clock_mmss CAMSS_VFE_AXI_CLK>,
 			<&clock_mmss CAMSS_VFE1_STREAM_CLK>,
-			<&clock_mmss SMMU_VFE_AXI_CLK>;
+			<&clock_mmss SMMU_VFE_AXI_CLK>,
+			<&clock_mmss SMMU_VFE_AHB_CLK>;
 		clock-names = "mmagic_ahb_clk",
 			"camss_axi_clk",
 			"camss_top_ahb_clk" , "camss_ahb_clk",
 			"vfe_clk_src", "camss_vfe_clk",
 			"camss_csi_vfe_clk",
 			"vfe_vbif_ahb_clk", "vfe_ahb_clk",
-			"bus_clk", "camss_vfe_stream_clk", "smmu_vfe_axi_clk";
-		qcom,clock-rates = <0 0 0 0 320000000 0 0 0 0 0 0 0>;
+			"bus_clk", "camss_vfe_stream_clk",
+			"smmu_vfe_axi_clk", "smmu_vfe_ahb_clk";
+		qcom,clock-rates = <0 0 0 0 320000000 0 0 0 0 0 0 0 0>;
 		status = "ok";
 		qos-entries = <8>;
 		qos-regs = <0x404 0x408 0x40c 0x410 0x414 0x418
@@ -504,7 +508,10 @@
 		clock-names = "mmss_mmagic_ahb_clk",
 			      "core_clk", "iface_clk", "bus_clk0",
 			      "camss_top_ahb_clk", "camss_ahb_clk",
-			      "smmu_jpeg_axi_clk", "mmagic_camss_axi_clk";
+			      "smmu_jpeg_axi_clk", "mmagic_camss_axi_clk",
+				"smmu_jpeg_ahb",
+				"smmu_cpp_axi", "smmu_cpp_ahb",
+				"smmu_vfe_axi", "smmu_vfe_ahb";
 		clocks = <&clock_mmss MMSS_MMAGIC_AHB_CLK>,
 			<&clock_mmss CAMSS_JPEG0_CLK>,
 			<&clock_mmss CAMSS_JPEG_AHB_CLK>,
@@ -512,8 +519,13 @@
 			<&clock_mmss CAMSS_TOP_AHB_CLK>,
 			<&clock_mmss CAMSS_AHB_CLK>,
 			<&clock_mmss SMMU_JPEG_AXI_CLK>,
-			<&clock_mmss MMAGIC_CAMSS_AXI_CLK>;
-		qcom,clock-rates = <0 320000000 0 0 0 0 0 0>;
+			<&clock_mmss MMAGIC_CAMSS_AXI_CLK>,
+			<&clock_mmss SMMU_JPEG_AHB_CLK>,
+			<&clock_mmss SMMU_CPP_AXI_CLK>,
+			<&clock_mmss SMMU_CPP_AHB_CLK>,
+			<&clock_mmss SMMU_VFE_AXI_CLK>,
+			<&clock_mmss SMMU_VFE_AHB_CLK>;
+		qcom,clock-rates = <0 320000000 0 0 0 0 0 0 0 0 0 0 0>;
 		qcom,vbif-reg-settings = <0x4 0x1>;
 		qcom,prefetch-reg-settings = <0x30c 0x1111>,
 			<0x318 0x31>,
@@ -543,7 +555,10 @@
 		clock-names =  "mmss_mmagic_ahb_clk",
 				"core_clk", "iface_clk", "bus_clk0",
 				"camss_top_ahb_clk", "camss_ahb_clk",
-				"smmu_jpeg_axi_clk", "mmagic_camss_axi_clk";
+				"smmu_jpeg_axi_clk", "mmagic_camss_axi_clk",
+				"smmu_jpeg_ahb",
+				"smmu_cpp_axi", "smmu_cpp_ahb",
+				"smmu_vfe_axi", "smmu_vfe_ahb";
 		clocks = <&clock_mmss MMSS_MMAGIC_AHB_CLK>,
 			<&clock_mmss CAMSS_JPEG2_CLK>,
 			<&clock_mmss CAMSS_JPEG_AHB_CLK>,
@@ -551,8 +566,13 @@
 			<&clock_mmss CAMSS_TOP_AHB_CLK>,
 			<&clock_mmss CAMSS_AHB_CLK>,
 			<&clock_mmss SMMU_JPEG_AXI_CLK>,
-			<&clock_mmss MMAGIC_CAMSS_AXI_CLK>;
-		qcom,clock-rates = <0 266670000 0 0 0 0 0 0>;
+			<&clock_mmss MMAGIC_CAMSS_AXI_CLK>,
+			<&clock_mmss SMMU_JPEG_AHB_CLK>,
+			<&clock_mmss SMMU_CPP_AXI_CLK>,
+			<&clock_mmss SMMU_CPP_AHB_CLK>,
+			<&clock_mmss SMMU_VFE_AXI_CLK>,
+			<&clock_mmss SMMU_VFE_AHB_CLK>;
+		qcom,clock-rates = <0 266670000 0 0 0 0 0 0 0 0 0 0 0>;
 		qcom,vbif-reg-settings = <0x4 0x1>;
 		qcom,prefetch-reg-settings = <0x30c 0x1111>,
 			<0x318 0x0>,
@@ -582,7 +602,8 @@
 		clock-names =  "mmss_mmagic_ahb_clk",
 				"core_clk", "iface_clk", "bus_clk0",
 				"camss_top_ahb_clk", "camss_ahb_clk",
-				"smmu_jpeg_axi_clk", "mmagic_camss_axi_clk";
+				"smmu_jpeg_axi_clk", "mmagic_camss_axi_clk",
+				"smmu_jpeg_ahb_clk";
 		clocks = <&clock_mmss MMSS_MMAGIC_AHB_CLK>,
 			<&clock_mmss CAMSS_JPEG_DMA_CLK>,
 			<&clock_mmss CAMSS_JPEG_AHB_CLK>,
@@ -590,8 +611,9 @@
 			<&clock_mmss CAMSS_TOP_AHB_CLK>,
 			<&clock_mmss CAMSS_AHB_CLK>,
 			<&clock_mmss SMMU_JPEG_AXI_CLK>,
-			<&clock_mmss MMAGIC_CAMSS_AXI_CLK>;
-		qcom,clock-rates = <0 266670000 0 0 0 0 0 0>;
+			<&clock_mmss MMAGIC_CAMSS_AXI_CLK>,
+			<&clock_mmss SMMU_JPEG_AHB_CLK>;
+		qcom,clock-rates = <0 266670000 0 0 0 0 0 0 0>;
 		qcom,vbif-reg-settings = <0x4 0x1>;
 		qcom,prefetch-reg-settings = <0x18c 0x11>,
 			<0x1a0 0x31>,
@@ -635,18 +657,20 @@
 			<&clock_mmss CAMSS_MICRO_AHB_CLK>,
 			<&clock_mmss CAMSS_AHB_CLK>,
 			<&clock_mmss SMMU_CPP_AXI_CLK>,
+			<&clock_mmss SMMU_CPP_AHB_CLK>,
 			<&clock_mmss CAMSS_CPP_VBIF_AHB_CLK>;
 		clock-names = "mmss_mmagic_ahb_clk",
 			"mmagic_camss_axi_clk", "camss_top_ahb_clk",
 			"cpp_core_clk",	"camss_cpp_ahb_clk",
 			"camss_cpp_axi_clk", "camss_cpp_clk",
 			"micro_iface_clk", "camss_ahb_clk",
-			"smmu_cpp_axi_clk", "cpp_vbif_ahb_clk";
+			"smmu_cpp_axi_clk", "smmu_cpp_ahb_clk",
+			"cpp_vbif_ahb_clk";
 
 		resets = <&clock_mmss CAMSS_MICRO_BCR>;
 		reset-names = "micro_iface_reset";
 
-		qcom,clock-rates = <0 0 0 480000000 0 0 480000000 0 0 0 0>;
+		qcom,clock-rates = <0 0 0 480000000 0 0 480000000 0 0 0 0 0>;
 		qcom,min-clock-rate = <200000000>;
 		qcom,bus-master = <1>;
 		qcom,vbif-qos-setting = <0x20 0x10000000>,
@@ -752,15 +776,21 @@
 		qcom,cam-vreg-name = "mmagic", "gdscr";
 		clocks = <&clock_mmss MMSS_MMAGIC_AHB_CLK>,
 			<&clock_mmss CAMSS_TOP_AHB_CLK>,
+			<&clock_mmss SMMU_CPP_AXI_CLK>,
+			<&clock_mmss SMMU_CPP_AHB_CLK>,
+			<&clock_mmss SMMU_VFE_AXI_CLK>,
+			<&clock_mmss SMMU_VFE_AHB_CLK>,
 			<&clock_mmss CCI_CLK_SRC>,
 			<&clock_mmss CAMSS_CCI_AHB_CLK>,
 			<&clock_mmss CAMSS_CCI_CLK>,
 			<&clock_mmss CAMSS_AHB_CLK>;
 		clock-names = "mmagic_camss_ahb_clk", "camss_top_ahb_clk",
+			"smmu_cpp_axi", "smmu_cpp_ahb",
+			"smmu_vfe_axi", "smmu_vfe_ahb",
                         "cci_src_clk", "cci_ahb_clk", "camss_cci_clk",
 			"camss_ahb_clk";
-		qcom,clock-rates = <0 0 19200000 0 0 0>,
-			<0 0 37500000 0 0 0>;
+		qcom,clock-rates = <0 0 0 0 0 0 19200000 0 0 0>,
+			<0 0 0 0 0 0 37500000 0 0 0>;
 		pinctrl-names = "cci_default", "cci_suspend";
 			pinctrl-0 = <&cci0_active &cci1_active>;
 			pinctrl-1 = <&cci0_suspend &cci1_suspend>;
