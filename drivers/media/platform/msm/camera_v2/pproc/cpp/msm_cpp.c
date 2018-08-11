@@ -4630,6 +4630,15 @@ static int cpp_probe(struct platform_device *pdev)
 		}
 	}
 
+	if (of_find_property(pdev->dev.of_node, "qcom,cpp-cx-ipeak", NULL)) {
+		cpp_dev->cpp_cx_ipeak = cx_ipeak_register(
+			pdev->dev.of_node, "qcom,cpp-cx-ipeak");
+		if (cpp_dev->cpp_cx_ipeak)
+			CPP_DBG("Cx ipeak Registration Successful ");
+		else
+			pr_err("Cx ipeak Registration Unsuccessful");
+	}
+
 	rc = msm_camera_get_reset_info(pdev,
 			&cpp_dev->micro_iface_reset);
 	if (rc < 0) {
