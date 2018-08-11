@@ -57,7 +57,6 @@ enum {
 	A53SS_MUX_NUM,
 };
 
-
 enum {
 	A72_CLUSTER_PLL,
 	A53_CLUSTER_PLL,
@@ -1071,7 +1070,7 @@ static int cpu_8976_map_pll(struct platform_device *pdev,
 
 	virt_bases[virt_id] = devm_ioremap(&pdev->dev, res->start,
 						resource_size(res));
-	if (!virt_bases[APCS_C0_PLL_BASE]) {
+	if (!virt_bases[virt_id]) {
 		dev_err(&pdev->dev, "Cannot remap cluster %s PLL\n", res_name);
 		return -EINVAL;
 	}
@@ -1351,7 +1350,7 @@ static int clock_cpu_probe(struct platform_device *pdev)
 	}
 
 	aux_clk_req = devm_clk_get(&pdev->dev, "aux_clk_2");
-	if (IS_ERR(safe_req)) {
+	if (IS_ERR(aux_clk_req)) {
 		dev_err(&pdev->dev, "The AUX2 clock cannot be found.\n");
 
 		if (PTR_ERR(aux_clk_req) != -EPROBE_DEFER)
@@ -1359,6 +1358,7 @@ static int clock_cpu_probe(struct platform_device *pdev)
 
 		return PTR_ERR(aux_clk_req);
 	}
+
 	safe_req = devm_clk_get(&pdev->dev, "aux_clk_3");
 	if (IS_ERR(safe_req)) {
 		dev_err(&pdev->dev, "The AUX3 clock cannot be found.\n");
