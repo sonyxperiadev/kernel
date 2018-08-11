@@ -42,6 +42,7 @@
 #define VFE40_EQUAL_SLICE_UB_8916 236
 #define VFE40_TOTAL_WM_UB 1144 /* UB_SIZE - STATS SIZE */
 #define VFE40_TOTAL_WM_UB_8916 2680
+#define VFE40_TOTAL_WM_UB_8976 1656
 #define VFE40_WM_BASE(idx) (0x6C + 0x24 * idx)
 #define VFE40_RDI_BASE(idx) (0x2E8 + 0x4 * idx)
 #define VFE40_XBAR_BASE(idx) (0x58 + 0x4 * (idx / 2))
@@ -105,15 +106,24 @@ static uint32_t msm_vfe40_ub_reg_offset(struct vfe_device *vfe_dev, int idx)
 
 static uint32_t msm_vfe40_get_ub_size(struct vfe_device *vfe_dev)
 {
+	uint32_t ub_size = VFE40_TOTAL_WM_UB;
+
 	if (vfe_dev->vfe_hw_version == VFE40_8916_VERSION ||
 		vfe_dev->vfe_hw_version == VFE40_8939_VERSION ||
 		vfe_dev->vfe_hw_version == VFE40_8937_VERSION ||
 		vfe_dev->vfe_hw_version == VFE40_8953_VERSION ||
 		vfe_dev->vfe_hw_version == VFE40_8917_VERSION) {
-		vfe_dev->ub_info->wm_ub = VFE40_TOTAL_WM_UB_8916;
-		return VFE40_TOTAL_WM_UB_8916;
+		ub_size = VFE40_TOTAL_WM_UB_8916;
 	}
-	return VFE40_TOTAL_WM_UB;
+
+	/* Special handling for 8x56/8x76 */
+	if (of_machine_is_compatible("qcom,msm8956") ||
+	    of_machine_is_compatible("qcom,apq8056") ||
+	    of_machine_is_compatible("qcom,msm8976"))
+		ub_size = VFE40_TOTAL_WM_UB_8976;
+
+	vfe_dev->ub_info->wm_ub = ub_size;
+	return ub_size;
 }
 
 static void msm_vfe40_config_irq(struct vfe_device *vfe_dev,
