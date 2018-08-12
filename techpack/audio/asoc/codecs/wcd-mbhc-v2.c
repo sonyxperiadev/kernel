@@ -402,9 +402,10 @@ EXPORT_SYMBOL(wcd_cancel_btn_work);
 
 bool wcd_swch_level_remove(struct wcd_mbhc *mbhc)
 {
-	u16 result2 = 0;
+	int result2 = 0;
 
 	WCD_MBHC_REG_READ(WCD_MBHC_SWCH_LEVEL_REMOVE, result2);
+
 	return (result2) ? true : false;
 }
 EXPORT_SYMBOL(wcd_swch_level_remove);
