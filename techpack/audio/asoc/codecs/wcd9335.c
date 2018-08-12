@@ -13436,8 +13436,13 @@ static int tasha_cpe_initialize(struct snd_soc_codec *codec)
 	cpe_svc_params.context = codec;
 	cpe_params.cpe_svc_params = &cpe_svc_params;
 
-	tasha->cpe_core = wcd_cpe_init("cpe_9335", codec,
-					&cpe_params);
+	if (of_machine_is_compatible("qcom,msm8956") ||
+	    of_machine_is_compatible("qcom,apq8056"))
+		tasha->cpe_core = wcd_cpe_init("cpe", codec,
+						&cpe_params);
+	else
+		tasha->cpe_core = wcd_cpe_init("cpe_9335", codec,
+						&cpe_params);
 	if (IS_ERR_OR_NULL(tasha->cpe_core)) {
 		dev_err(codec->dev,
 			"%s: Failed to enable CPE\n",
