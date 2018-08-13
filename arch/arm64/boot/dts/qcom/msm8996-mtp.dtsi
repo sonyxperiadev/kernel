@@ -940,7 +940,7 @@
 	pm8994_gp19 {
 		pm8994_gpio_19: gpio19 {
 			pins = "gpio19";
-			function = "gpio";
+			function = "normal";
 			output-low;
 			drive-push-pull;
 			bias-pull-down;
