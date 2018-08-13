@@ -112,8 +112,6 @@ const u8 clk_alpha_pll_regs[][PLL_OFF_MAX_REGS] = {
 	},
 	[CLK_ALPHA_PLL_TYPE_FABIA] =  {
 		[PLL_OFF_L_VAL] = 0x04,
-		[PLL_OFF_ALPHA_VAL] = 0x08,
-		[PLL_OFF_ALPHA_VAL_U] = 0x0c,
 		[PLL_OFF_USER_CTL] = 0x0c,
 		[PLL_OFF_USER_CTL_U] = 0x10,
 		[PLL_OFF_CONFIG_CTL] = 0x14,
@@ -158,7 +156,9 @@ EXPORT_SYMBOL_GPL(clk_alpha_pll_regs);
 #define PLL_HUAYRA_N_MASK		0xff
 #define PLL_HUAYRA_ALPHA_WIDTH		16
 
-#define pll_alpha_width(p)					\
+//#define pll_alpha_width(p) ALPHA_REG_16BIT_WIDTH
+
+#define pll_alpha_width(p) 					\
 		((PLL_ALPHA_VAL_U(p) - PLL_ALPHA_VAL(p) == 4) ?	\
 				 ALPHA_REG_BITWIDTH : ALPHA_REG_16BIT_WIDTH)
 
