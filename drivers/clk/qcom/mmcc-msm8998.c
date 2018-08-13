@@ -319,7 +319,7 @@ static const char * const disp_cc_parent_names_5[] = {
 static const struct alpha_pll_config mmpll0_config = {
 	/*.config_ctl_val = 0x20485699,*/
 	.l = 0x2a,
-	.frac = 0x1555,
+	.frac = 0x1556,
 };
 
 static struct clk_alpha_pll mmpll0 = {
@@ -333,7 +333,7 @@ static struct clk_alpha_pll mmpll0 = {
 			.parent_names = (const char *[]){ "xo" },
 			.num_parents = 1,
 			.ops = &clk_alpha_pll_fabia_ops,
-			VDD_MM_PLL_FMAX_MAP2(LOWER, 404000000, NOMINAL, 808000000),
+			VDD_MM_PLL_FMAX_MAP2(LOWER, 404000000, NOMINAL, 808000195),
 		},
 	},
 };
@@ -343,7 +343,7 @@ static struct clk_alpha_pll mmpll0 = {
 static const struct alpha_pll_config mmpll1_config = {
 	/*.config_ctl_val = 0x20485699,*/
 	.l = 0x2a,
-	.frac = 0x4aaa,
+	.frac = 0x4aab,
 };
 
 static struct clk_alpha_pll mmpll1 = {
@@ -357,7 +357,7 @@ static struct clk_alpha_pll mmpll1 = {
 			.parent_names = (const char *[]){ "xo" },
 			.num_parents = 1,
 			.ops = &clk_alpha_pll_fabia_ops,
-			VDD_MM_PLL_FMAX_MAP2(LOWER, 406000000, NOMINAL, 812000000),
+			VDD_MM_PLL_FMAX_MAP2(LOWER, 406000000, NOMINAL, 812000097),
 		},
 	},
 };
