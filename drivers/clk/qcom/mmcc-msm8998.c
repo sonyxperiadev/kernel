@@ -80,7 +80,7 @@ static const struct parent_map mmcc_parent_map_gcc_0[] = {
 
 static const char * const mmcc_parent_names_gcc_0[] = {
 	"xo",
-	"gpll0",
+	"gcc_mmss_gpll0_clk",
 };
 
 static const struct parent_map mmcc_parent_map_gcc_1[] = {
@@ -91,8 +91,8 @@ static const struct parent_map mmcc_parent_map_gcc_1[] = {
 
 static const char * const mmcc_parent_names_gcc_1[] = {
 	"xo",
-	"gpll0",
-	"gpll0_early_div",
+	"gcc_mmss_gpll0_clk",
+	"gcc_mmss_gpll0_div_clk",
 };
 
 static const struct parent_map mmcc_parent_map_1[] = {
@@ -103,7 +103,7 @@ static const struct parent_map mmcc_parent_map_1[] = {
 
 static const char * const mmcc_parent_names_1[] = {
 	"xo",
-	"gpll0",
+	"gcc_mmss_gpll0_clk",
 	"mmpll0",
 };
 
@@ -117,7 +117,7 @@ static const struct parent_map mmcc_parent_map_2[] = {
 
 static const char * const mmcc_parent_names_2[] = {
 	"xo",
-	"gpll0",
+	"gcc_mmss_gpll0_clk",
 	"mmpll4",
 	"mmpll7",
 	"mmpll10",
@@ -134,7 +134,7 @@ static const struct parent_map mmcc_parent_map_2a[] = {
 
 static const char * const mmcc_parent_names_2a[] = {
 	"xo",
-	"gpll0",
+	"gcc_mmss_gpll0_clk",
 	"mmpll0",
 	"mmpll4",
 	"mmpll7",
@@ -151,8 +151,8 @@ static const struct parent_map mmcc_parent_map_3[] = {
 
 static const char * const mmcc_parent_names_3[] = {
 	"xo",
-	"gpll0",
-	"gpll0_early_div",
+	"gcc_mmss_gpll0_clk",
+	"gcc_mmss_gpll0_div_clk",
 	"mmpll5",
 };
 
@@ -166,8 +166,8 @@ static const struct parent_map mmcc_parent_map_4[] = {
 
 static const char * const mmcc_parent_names_4[] = {
 	"xo",
-	"gpll0",
-	"gpll0_early_div",
+	"gcc_mmss_gpll0_clk",
+	"gcc_mmss_gpll0_div_clk",
 	"mmpll0",
 	"mmpll1",
 };
@@ -180,7 +180,7 @@ static const struct parent_map mmcc_parent_map_5[] = {
 
 static const char * const mmcc_parent_names_5[] = {
 	"xo",
-	"gpll0",
+	"gcc_mmss_gpll0_clk",
 	"mmpll5",
 };
 
@@ -192,7 +192,7 @@ static const struct parent_map mmcc_parent_map_6[] = {
 
 static const char * const mmcc_parent_names_6[] = {
 	"xo",
-	"gpll0",
+	"gcc_mmss_gpll0_clk",
 	"mmpll7",
 };
 
@@ -205,7 +205,7 @@ static const struct parent_map mmcc_parent_map_7[] = {
 
 static const char * const mmcc_parent_names_7[] = {
 	"xo",
-	"gpll0",
+	"gcc_mmss_gpll0_clk",
 	"mmpll3",
 	"mmpll6",
 };
@@ -220,7 +220,7 @@ static const struct parent_map mmcc_parent_map_7a[] = {
 
 static const char * const mmcc_parent_names_7a[] = {
 	"xo",
-	"gpll0",
+	"gcc_mmss_gpll0_clk",
 	"mmpll0",
 	"mmpll3",
 	"mmpll6",
@@ -237,7 +237,7 @@ static const struct parent_map mmcc_parent_map_8[] = {
 
 static const char * const mmcc_parent_names_8[] = {
 	"xo",
-	"gpll0",
+	"gcc_mmss_gpll0_clk",
 	"mmpll0",
 	"mmpll7",
 	"mmpll10",
@@ -276,8 +276,8 @@ static const struct parent_map disp_cc_parent_map_2[] = {
 
 static const char * const disp_cc_parent_names_2[] = {
 	"xo",
-	"gpll0",
-	"gpll0_early_div",
+	"gcc_mmss_gpll0_clk",
+	"gcc_mmss_gpll0_div_clk",
 };
 static const struct parent_map disp_cc_parent_map_3[] = {
 	{ P_XO, 0 },
@@ -289,8 +289,8 @@ static const struct parent_map disp_cc_parent_map_3[] = {
 static const char * const disp_cc_parent_names_3[] = {
 	"xo",
 	"mmpll5",
-	"gpll0",
-	"gpll0_early_div",
+	"gcc_mmss_gpll0_clk",
+	"gcc_mmss_gpll0_div_clk",
 };
 
 static const struct parent_map disp_cc_parent_map_4[] = {
