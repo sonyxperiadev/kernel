@@ -169,8 +169,6 @@ static struct clk_fixed_factor bi_tcxo = {
 		.name = "bi_tcxo",
 		.parent_names = (const char *[]){ "cxo" },
 		.num_parents = 1,
-		/* To enable MISC through the RPM SMD key */
-		.flags = CLK_SET_RATE_PARENT,
 		.ops = &clk_fixed_factor_ops,
 	},
 };
