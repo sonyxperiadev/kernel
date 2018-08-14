@@ -2162,7 +2162,7 @@ static struct clk_branch gcc_hmss_dvm_bus_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data) {
 			.name = "gcc_hmss_dvm_bus_clk",
-			.flags = CLK_IS_CRITICAL,
+			.flags = CLK_IGNORE_UNUSED,
 			.ops = &clk_branch2_ops,
 		},
 	},
