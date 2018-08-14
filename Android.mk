@@ -23,7 +23,7 @@ KERNEL_SRC := $(call my-dir)
 
 ## Internal variables
 ifeq ($(OUT_DIR),out)
-KERNEL_OUT := $(ANDROID_BUILD_TOP)/$(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ
+KERNEL_OUT := $(shell pwd)/$(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ
 else
 KERNEL_OUT := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ
 endif
@@ -111,7 +111,7 @@ endif
 endif
 
 ifneq ($(USE_CCACHE),)
-    ccache := $(ANDROID_BUILD_TOP)/prebuilts/misc/$(HOST_PREBUILT_TAG)/ccache/ccache
+    ccache := $(shell pwd)/prebuilts/misc/$(HOST_PREBUILT_TAG)/ccache/ccache
     # Check that the executable is here.
     ccache := $(strip $(wildcard $(ccache)))
 endif
@@ -138,9 +138,9 @@ endef
 
 ifeq ($(HOST_OS),darwin)
 ifeq (1,$(filter 1,$(shell echo "$$(( $(PLATFORM_SDK_VERSION) >= 24 ))" )))
-  MAKE_FLAGS += C_INCLUDE_PATH=$(ANDROID_BUILD_TOP)/external/elfutils/libelf/
+  MAKE_FLAGS += C_INCLUDE_PATH=$(shell pwd)/external/elfutils/libelf/
 else
-  MAKE_FLAGS += C_INCLUDE_PATH=$(ANDROID_BUILD_TOP)/external/elfutils/src/libelf/
+  MAKE_FLAGS += C_INCLUDE_PATH=$(shell pwd)/external/elfutils/src/libelf/
 endif
 endif
 
