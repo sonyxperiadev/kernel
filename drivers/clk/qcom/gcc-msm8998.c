@@ -176,7 +176,7 @@ static struct clk_fixed_factor bi_tcxo = {
 };
 
 static struct pll_vco fabia_vco[] = {
-	{ 250000000, 2000000000, 0 },
+	{ 249600000, 2000000000, 0 },
 	{ 125000000, 1000000000, 1 },
 };
 
@@ -184,7 +184,7 @@ static unsigned int soft_vote_gpll0;
 
 static struct clk_alpha_pll gpll0 = {
 	.offset = 0x0,
-	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.vco_table = fabia_vco,
 	.num_vco = ARRAY_SIZE(fabia_vco),
 	.soft_vote = &soft_vote_gpll0,
@@ -197,7 +197,7 @@ static struct clk_alpha_pll gpll0 = {
 			.name = "gpll0",
 			.parent_names = (const char *[]){ "xo" },
 			.num_parents = 1,
-			.ops = &clk_alpha_pll_ops,
+			.ops = &clk_alpha_pll_fabia_fixed_ops,
 		}
 	},
 };
@@ -207,7 +207,7 @@ static struct clk_fixed_factor gpll0_early_div = {
 	.div = 2,
 	.hw.init = &(struct clk_init_data){
 		.name = "gpll0_early_div",
-		.parent_names = (const char *[]){ "gpll0_early" },
+		.parent_names = (const char *[]){ "gpll0" },
 		.num_parents = 1,
 		.ops = &clk_fixed_factor_ops,
 	},
@@ -215,36 +215,34 @@ static struct clk_fixed_factor gpll0_early_div = {
 
 static struct clk_alpha_pll gpll0_ao = {
 	.offset = 0x00000,
-	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.soft_vote = &soft_vote_gpll0,
 	.soft_vote_mask = PLL_SOFT_VOTE_CPU,
 	.flags = SUPPORTS_FSM_VOTE,
 	.clkr = {
-		.enable_reg = 0x52000,
-		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data){
 			.name = "gpll0_ao",
 			.parent_names = (const char *[]){ "cxo_a" },
 			.num_parents = 1,
-			.ops = &clk_alpha_pll_ops,
+			.ops = &clk_alpha_pll_fabia_fixed_ops,
 		},
 	},
 };
 
 static struct clk_alpha_pll_postdiv gpll0_out_main = {
 	.offset = 0x0,
-	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "gpll0_out_main",
 		.parent_names = (const char *[]){ "gpll0" },
 		.num_parents = 1,
-		.ops = &clk_alpha_pll_postdiv_ops,
+		.ops = &clk_alpha_fabia_pll_postdiv_ops,
 	},
 };
 
 static struct clk_alpha_pll gpll1 = {
 	.offset = 0x1000,
-	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.vco_table = fabia_vco,
 	.num_vco = ARRAY_SIZE(fabia_vco),
 	.clkr = {
@@ -254,25 +252,25 @@ static struct clk_alpha_pll gpll1 = {
 			.name = "gpll1",
 			.parent_names = (const char *[]){ "xo" },
 			.num_parents = 1,
-			.ops = &clk_alpha_pll_ops,
+			.ops = &clk_alpha_pll_fabia_fixed_ops,
 		}
 	},
 };
 
 static struct clk_alpha_pll_postdiv gpll1_out_main = {
 	.offset = 0x1000,
-	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "gpll1_out_main",
 		.parent_names = (const char *[]){ "gpll1" },
 		.num_parents = 1,
-		.ops = &clk_alpha_pll_postdiv_ops,
+		.ops = &clk_alpha_fabia_pll_postdiv_ops,
 	},
 };
 
 static struct clk_alpha_pll gpll2 = {
 	.offset = 0x2000,
-	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.vco_table = fabia_vco,
 	.num_vco = ARRAY_SIZE(fabia_vco),
 	.clkr = {
@@ -282,25 +280,25 @@ static struct clk_alpha_pll gpll2 = {
 			.name = "gpll2",
 			.parent_names = (const char *[]){ "xo" },
 			.num_parents = 1,
-			.ops = &clk_alpha_pll_ops,
+			.ops = &clk_alpha_pll_fabia_fixed_ops,
 		}
 	},
 };
 
 static struct clk_alpha_pll_postdiv gpll2_out_main = {
 	.offset = 0x2000,
-	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "gpll2_out_main",
 		.parent_names = (const char *[]){ "gpll2" },
 		.num_parents = 1,
-		.ops = &clk_alpha_pll_postdiv_ops,
+		.ops = &clk_alpha_fabia_pll_postdiv_ops,
 	},
 };
 
 static struct clk_alpha_pll gpll3 = {
 	.offset = 0x3000,
-	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.vco_table = fabia_vco,
 	.num_vco = ARRAY_SIZE(fabia_vco),
 	.clkr = {
@@ -310,25 +308,25 @@ static struct clk_alpha_pll gpll3 = {
 			.name = "gpll3",
 			.parent_names = (const char *[]){ "xo" },
 			.num_parents = 1,
-			.ops = &clk_alpha_pll_ops,
+			.ops = &clk_alpha_pll_fabia_fixed_ops,
 		}
 	},
 };
 
 static struct clk_alpha_pll_postdiv gpll3_out_main = {
 	.offset = 0x3000,
-	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "gpll3_out_main",
 		.parent_names = (const char *[]){ "gpll3" },
 		.num_parents = 1,
-		.ops = &clk_alpha_pll_postdiv_ops,
+		.ops = &clk_alpha_fabia_pll_postdiv_ops,
 	},
 };
 
 static struct clk_alpha_pll gpll4 = {
 	.offset = 0x77000,
-	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.vco_table = fabia_vco,
 	.num_vco = ARRAY_SIZE(fabia_vco),
 	.clkr = {
@@ -338,7 +336,7 @@ static struct clk_alpha_pll gpll4 = {
 			.name = "gpll4",
 			.parent_names = (const char *[]){ "xo" },
 			.num_parents = 1,
-			.ops = &clk_alpha_pll_ops,
+			.ops = &clk_alpha_pll_fabia_fixed_ops,
 			VDD_DIG_FMAX_MAP3(LOWER, 400000000, LOW, 800000000,
 					NOMINAL, 1600000000),
 		}
@@ -347,18 +345,17 @@ static struct clk_alpha_pll gpll4 = {
 
 static struct clk_alpha_pll_postdiv gpll4_out_main = {
 	.offset = 0x77000,
-	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "gpll4_out_main",
 		.parent_names = (const char *[]){ "gpll4" },
 		.num_parents = 1,
-		.ops = &clk_alpha_pll_postdiv_ops,
+		.ops = &clk_alpha_fabia_pll_postdiv_ops,
 	},
 };
 
-static struct clk_branch gcc_mmss_gpll0_clk = {
-	.halt_reg = 0x5200c,
-	.halt_check = BRANCH_HALT_DELAY,
+static struct clk_gate2 gcc_mmss_gpll0_clk = {
+	.udelay = 500,
 	.clkr = {
 		.enable_reg = 0x5200c,
 		.enable_mask = BIT(1),
@@ -368,14 +365,14 @@ static struct clk_branch gcc_mmss_gpll0_clk = {
 				"gpll0",
 			},
 			.num_parents = 1,
-			.ops = &clk_branch2_ops,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_gate2_ops,
 		},
 	},
 };
 
-static struct clk_branch gcc_mmss_gpll0_div_clk = {
-	.halt_reg = 0x5200c,
-	.halt_check = BRANCH_HALT_DELAY,
+static struct clk_gate2 gcc_mmss_gpll0_div_clk = {
+	.udelay = 500,
 	.clkr = {
 		.enable_reg = 0x5200c,
 		.enable_mask = BIT(0),
@@ -385,14 +382,14 @@ static struct clk_branch gcc_mmss_gpll0_div_clk = {
 				"gpll0_early_div",
 			},
 			.num_parents = 1,
-			.ops = &clk_branch2_ops,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_gate2_ops,
 		},
 	},
 };
 
-static struct clk_branch gcc_gpu_gpll0_clk = {
-	.halt_reg = 0x5200c,
-	.halt_check = BRANCH_HALT_DELAY,
+static struct clk_gate2 gcc_gpu_gpll0_clk = {
+	.udelay = 500,
 	.clkr = {
 		.enable_reg = 0x5200c,
 		.enable_mask = BIT(4),
@@ -402,14 +399,14 @@ static struct clk_branch gcc_gpu_gpll0_clk = {
 				"gpll0",
 			},
 			.num_parents = 1,
-			.ops = &clk_branch2_ops,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_gate2_ops,
 		},
 	},
 };
 
-static struct clk_branch gcc_gpu_gpll0_div_clk = {
-	.halt_reg = 0x5200c,
-	.halt_check = BRANCH_HALT_DELAY,
+static struct clk_gate2 gcc_gpu_gpll0_div_clk = {
+	.udelay = 500,
 	.clkr = {
 		.enable_reg = 0x5200c,
 		.enable_mask = BIT(3),
@@ -419,7 +416,8 @@ static struct clk_branch gcc_gpu_gpll0_div_clk = {
 				"gpll0_early_div",
 			},
 			.num_parents = 1,
-			.ops = &clk_branch2_ops,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_gate2_ops,
 		},
 	},
 };
@@ -2164,7 +2162,7 @@ static struct clk_branch gcc_hmss_dvm_bus_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data) {
 			.name = "gcc_hmss_dvm_bus_clk",
-			.flags = CLK_IS_CRITICAL,
+			.flags = CLK_IGNORE_UNUSED,
 			.ops = &clk_branch2_ops,
 		},
 	},

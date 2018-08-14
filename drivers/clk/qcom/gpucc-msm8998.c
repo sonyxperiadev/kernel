@@ -88,7 +88,7 @@ static const char * const gpucc_parent_names_0[] = {
 	"gpucc_xo",
 	"gpucc_pll0_out_even",
 	"gpucc_pll0_out_odd",
-	//"gpll0",
+	//"gcc_gpu_gpll0_clk",
 };
 
 static const struct parent_map gpucc_parent_map_1[] = {
@@ -98,7 +98,7 @@ static const struct parent_map gpucc_parent_map_1[] = {
 
 static const char * const gpucc_parent_names_1[] = {
 	"gpucc_xo",
-	"gpll0",
+	"gcc_gpu_gpll0_clk",
 };
 
 static struct clk_branch gpucc_xo = {
