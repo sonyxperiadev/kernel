@@ -354,9 +354,8 @@ static struct clk_alpha_pll_postdiv gpll4_out_main = {
 	},
 };
 
-static struct clk_branch gcc_mmss_gpll0_clk = {
-	.halt_reg = 0x5200c,
-	.halt_check = BRANCH_HALT_DELAY,
+static struct clk_gate2 gcc_mmss_gpll0_clk = {
+	.udelay = 500,
 	.clkr = {
 		.enable_reg = 0x5200c,
 		.enable_mask = BIT(1),
@@ -366,14 +365,14 @@ static struct clk_branch gcc_mmss_gpll0_clk = {
 				"gpll0",
 			},
 			.num_parents = 1,
-			.ops = &clk_branch2_ops,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_gate2_ops,
 		},
 	},
 };
 
-static struct clk_branch gcc_mmss_gpll0_div_clk = {
-	.halt_reg = 0x5200c,
-	.halt_check = BRANCH_HALT_DELAY,
+static struct clk_gate2 gcc_mmss_gpll0_div_clk = {
+	.udelay = 500,
 	.clkr = {
 		.enable_reg = 0x5200c,
 		.enable_mask = BIT(0),
@@ -383,14 +382,14 @@ static struct clk_branch gcc_mmss_gpll0_div_clk = {
 				"gpll0_early_div",
 			},
 			.num_parents = 1,
-			.ops = &clk_branch2_ops,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_gate2_ops,
 		},
 	},
 };
 
-static struct clk_branch gcc_gpu_gpll0_clk = {
-	.halt_reg = 0x5200c,
-	.halt_check = BRANCH_HALT_DELAY,
+static struct clk_gate2 gcc_gpu_gpll0_clk = {
+	.udelay = 500,
 	.clkr = {
 		.enable_reg = 0x5200c,
 		.enable_mask = BIT(4),
@@ -400,14 +399,14 @@ static struct clk_branch gcc_gpu_gpll0_clk = {
 				"gpll0",
 			},
 			.num_parents = 1,
-			.ops = &clk_branch2_ops,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_gate2_ops,
 		},
 	},
 };
 
-static struct clk_branch gcc_gpu_gpll0_div_clk = {
-	.halt_reg = 0x5200c,
-	.halt_check = BRANCH_HALT_DELAY,
+static struct clk_gate2 gcc_gpu_gpll0_div_clk = {
+	.udelay = 500,
 	.clkr = {
 		.enable_reg = 0x5200c,
 		.enable_mask = BIT(3),
@@ -417,7 +416,8 @@ static struct clk_branch gcc_gpu_gpll0_div_clk = {
 				"gpll0_early_div",
 			},
 			.num_parents = 1,
-			.ops = &clk_branch2_ops,
+			.flags = CLK_SET_RATE_PARENT,
+			.ops = &clk_gate2_ops,
 		},
 	},
 };
