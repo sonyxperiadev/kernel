@@ -9031,11 +9031,6 @@ static void clearpad_post_probe_work(struct work_struct *work)
 		UNLOCK(&this->lock);
 	}
 
-	this->state = SYN_STATE_RUNNING;
-
-	UNLOCK(&this->lock);
-
-
 	clearpad_ctrl_session_end(this, session);
 
 err_in_ctrl_session_begin:
