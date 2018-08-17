@@ -3628,15 +3628,19 @@ int msm_vidc_comm_cmd(void *instance, union msm_v4l2_cmd *cmd)
 static void populate_frame_data(struct vidc_frame_data *data,
 		const struct vb2_buffer *vb, struct msm_vidc_inst *inst)
 {
+	u64 time_usec;
 	int extra_idx;
 	enum v4l2_buf_type type = vb->type;
 	enum vidc_ports port = type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE ?
 		OUTPUT_PORT : CAPTURE_PORT;
 	struct vb2_v4l2_buffer *vbuf = to_vb2_v4l2_buffer(vb);
 
+	time_usec = vb->timestamp;
+	do_div(time_usec, NSEC_PER_USEC);
+
 	data->alloc_len = vb->planes[0].length;
 	data->device_addr = vb->planes[0].m.userptr;
-	data->timestamp = vb->timestamp;
+	data->timestamp = time_usec;
 	data->flags = 0;
 	data->clnt_data = data->device_addr;
 
