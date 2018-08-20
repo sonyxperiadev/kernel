@@ -490,6 +490,7 @@
 		clock-names = "xo";
 		qcom,num-mpm-irqs = <96>;
 		qcom,ipc-bit-offset = <1>;
+		interrupt-controller;
 		interrupt-parent = <&intc>;
 		#interrupt-cells = <3>;
 	};
