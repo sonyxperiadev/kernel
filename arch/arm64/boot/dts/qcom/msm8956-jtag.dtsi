@@ -95,30 +95,4 @@
 
 		qcom,coresight-jtagmm-cpu = <&CPU5>;
 	};
-
-	jtag_mm6: jtagmm@6e40000 {
-		compatible = "qcom,jtagv8-mm";
-		reg = <0x6e40000 0x1000>,
-		      <0x6e10000 0x1000>;
-		reg-names = "etm-base", "debug-base";
-
-		clocks = <&clock_rpmcc RPM_QDSS_CLK>,
-		         <&clock_rpmcc RPM_QDSS_A_CLK>;
-		clock-names = "core_clk", "core_a_clk";
-
-		qcom,coresight-jtagmm-cpu = <&CPU6>;
-	};
-
-	jtag_mm7: jtagmm@6f40000 {
-		compatible = "qcom,jtagv8-mm";
-		reg = <0x6f40000 0x1000>,
-		      <0x6f10000 0x1000>;
-		reg-names = "etm-base", "debug-base";
-
-		clocks = <&clock_rpmcc RPM_QDSS_CLK>,
-		         <&clock_rpmcc RPM_QDSS_A_CLK>;
-		clock-names = "core_clk", "core_a_clk";
-
-		qcom,coresight-jtagmm-cpu = <&CPU7>;
-	};
 };

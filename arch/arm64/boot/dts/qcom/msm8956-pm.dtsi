@@ -41,7 +41,7 @@
 		qcom,saw2-cfg = <0x14>;
 		qcom,saw2-spm-dly = <0x3c11840a>;
 		qcom,saw2-spm-ctl = <0x8>;
-		qcom,cpu-vctl-list = <&CPU4 &CPU5 &CPU6 &CPU7>;
+		qcom,cpu-vctl-list = <&CPU4 &CPU5>;
 		qcom,vctl-timeout-us = <50>;
 		qcom,vctl-port = <0x0>;
 		qcom,phase-port = <0x1>;
@@ -196,7 +196,7 @@
 				label = "a72";
 				qcom,spm-device-names = "l2";
 				qcom,default-level=<0>;
-				qcom,cpu = <&CPU4 &CPU5 &CPU6 &CPU7>;
+				qcom,cpu = <&CPU4 &CPU5>;
 				qcom,psci-mode-shift = <4>;
 				qcom,psci-mode-mask = <0xf>;
 
@@ -249,7 +249,7 @@
 					#size-cells = <0>;
 					qcom,psci-mode-shift = <0>;
 					qcom,psci-mode-mask = <0xf>;
-					qcom,cpu = <&CPU4 &CPU5 &CPU6 &CPU7>;
+					qcom,cpu = <&CPU4 &CPU5>;
 
 					qcom,pm-cpu-level@0 {
 						reg = <0>;
