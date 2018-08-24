@@ -25,7 +25,7 @@ config SDFAT_DELAYED_META_DIRTY
 
 config SDFAT_SUPPORT_DIR_SYNC
 	bool "Enable supporting dir sync"
-	default n
+	default y
 	depends on SDFAT_FS
 	help
 	  If you enable this feature, the modification for directory operation
@@ -50,7 +50,7 @@ config SDFAT_DEFAULT_IOCHARSET
 
 config SDFAT_CHECK_RO_ATTR
 	bool "Check read-only attribute"
-	default n
+	default y
 	depends on SDFAT_FS
 
 config SDFAT_ALIGNED_MPAGE_WRITE
@@ -67,7 +67,7 @@ config SDFAT_VIRTUAL_XATTR
 
 config SDFAT_VIRTUAL_XATTR_SELINUX_LABEL
 	string "Default string for SELinux label"
-	default "u:object_r:sdcard_external:s0"
+	default "u:object_r:vfat:s0"
 	depends on SDFAT_FS && SDFAT_VIRTUAL_XATTR
 	help
 	  Set this to the default string for SELinux label.
@@ -80,7 +80,7 @@ config SDFAT_SUPPORT_STLOG
 config SDFAT_DEBUG
 	bool "enable debug features"
 	depends on SDFAT_FS
-	default y
+	default n
 
 config SDFAT_DBG_IOCTL
 	bool "enable debug-ioctl features"
