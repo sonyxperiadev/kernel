@@ -187,11 +187,13 @@ static ssize_t cei_dynamic_log_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count);
 #endif
 
+#ifdef TOUCHSCREEN_SYNAPTICS_DSX_TD_FW_UPDATE
 static ssize_t synaptics_rmi4_tpfwver_show(struct device *dev,
 		struct device_attribute *attr, char *buf);
 
 static ssize_t synaptics_rmi4_tpfullfwver_show(struct device *dev,
 		struct device_attribute *attr, char *buf);
+#endif
 
 static ssize_t synaptics_rmi4_tpsource_show(struct device *dev,
 		struct device_attribute *attr, char *buf);
@@ -734,12 +736,14 @@ static struct device_attribute attrs[] = {
 			cei_dynamic_log_show,
 			cei_dynamic_log_store),
 #endif
+#ifdef TOUCHSCREEN_SYNAPTICS_DSX_TD_FW_UPDATE
 	__ATTR(tpfwver, S_IRUGO,
 			synaptics_rmi4_tpfwver_show,
 			synaptics_rmi4_store_error),
 	__ATTR(tpfullfwver, S_IRUGO,
 			synaptics_rmi4_tpfullfwver_show,
 			synaptics_rmi4_store_error),
+#endif
 	__ATTR(tpsource, S_IRUGO,
 			synaptics_rmi4_tpsource_show,
 			NULL),
@@ -977,6 +981,7 @@ static ssize_t cei_dynamic_log_store(struct device *dev,
 
 #define BASE_FWID 2400000 /* DO NOT CHANGE!!! */
 
+#ifdef TOUCHSCREEN_SYNAPTICS_DSX_TD_FW_UPDATE
 static ssize_t synaptics_rmi4_tpfwver_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -1045,6 +1050,7 @@ static ssize_t synaptics_rmi4_tpfullfwver_show(struct device *dev,
 			rmi4_data->firmware_id,
 			rmi4_data->config_id);
 }
+#endif
 
 static ssize_t synaptics_rmi4_tpsource_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
