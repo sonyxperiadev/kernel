@@ -480,7 +480,6 @@ static int hci_uart_tty_open(struct tty_struct *tty)
 	INIT_WORK(&hu->init_ready, hci_uart_init_work);
 	INIT_WORK(&hu->write_work, hci_uart_write_work);
 
-	spin_lock_init(&hu->rx_lock);
 	mutex_init(&hu->proto_lock);
 
 	/* Flush any pending characters in the driver and line discipline. */
