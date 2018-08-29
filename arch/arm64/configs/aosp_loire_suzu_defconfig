@@ -37,7 +37,7 @@ CONFIG_BLK_DEV_INITRD=y
 # CONFIG_RD_XZ is not set
 # CONFIG_RD_LZO is not set
 # CONFIG_RD_LZ4 is not set
-# CONFIG_AIO is not set
+CONFIG_AIO=y
 # CONFIG_MEMBARRIER is not set
 CONFIG_EMBEDDED=y
 # CONFIG_SLUB_DEBUG is not set
