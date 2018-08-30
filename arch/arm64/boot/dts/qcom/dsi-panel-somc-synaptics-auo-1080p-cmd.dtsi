@@ -364,6 +364,7 @@
 				qcom,mdss-tear-check-sync-init-val = <1920>;
 				qcom,mdss-tear-check-start-pos = <1920>;
 				qcom,mdss-tear-check-rd-ptr-trigger-intr = <1921>;
+                                qcom,mdss-dsi-panel-clockrate = <899000000>;
 			};
 
 			1080p120 {
@@ -395,6 +396,7 @@
 				qcom,mdss-tear-check-sync-init-val = <1920>;
 				qcom,mdss-tear-check-start-pos = <1920>;
 				qcom,mdss-tear-check-rd-ptr-trigger-intr = <1921>;
+                                qcom,mdss-dsi-panel-clockrate = <899000000>;
 			};
 		};
 	};
