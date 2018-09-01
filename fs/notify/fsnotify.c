@@ -48,7 +48,7 @@ void __fsnotify_vfsmount_delete(struct vfsmount *mnt)
  * Called during unmount with no locks held, so needs to be safe against
  * concurrent modifiers. We temporarily drop sb->s_inode_list_lock and CAN block.
  */
-void fsnotify_unmount_inodes(struct super_block *sb)
+static void fsnotify_unmount_inodes(struct super_block *sb)
 {
 	struct inode *inode, *iput_inode = NULL;
 
@@ -100,6 +100,12 @@ void fsnotify_unmount_inodes(struct super_block *sb)
 	/* Wait for outstanding inode references from connectors */
 	wait_var_event(&sb->s_fsnotify_inode_refs,
 		       !atomic_long_read(&sb->s_fsnotify_inode_refs));
+}
+
+void fsnotify_sb_delete(struct super_block *sb)
+{
+	fsnotify_unmount_inodes(sb);
+	fsnotify_clear_marks_by_sb(sb);
 }
 
 /*
