@@ -420,7 +420,7 @@
 		synaptics,irq_gpio = <&tlmm 125 0x2008>;
 		post_probe_start = <1>;
 		synaptics,firmware_name = "touch_module_id_0x%02x.img";
-		//flash_on_post_probe = <1>;
+		flash_on_post_probe = <0>;
 		flip_config = <0>;
 		watchdog_enabled = <1>;
 		watchdog_delay_ms = <10000>;
@@ -434,15 +434,6 @@
 		preset_x_max = <1079>;
 		preset_y_max = <2159>;
 		preset_n_fingers = <10>;
-		wakeup_gesture_supported = <1>;
-		wakeup_gesture_lpm_disabled = <1>;
-		wakeup_gesture_timeout = <0>;
-		stamina_mode_supported = <0x80000007>;
-		doze_default_time = <35>;
-		doze_glove_mode_time = <35>;
-		doze_cover_mode_time = <35>;
-		doze_force_doze_mode_time = <1>;
-
 		wakeup_gesture {
 			double_tap {
 				gesture_code = <0x0003>;
