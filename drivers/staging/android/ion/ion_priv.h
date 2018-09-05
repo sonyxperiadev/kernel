@@ -542,11 +542,11 @@ int ion_walk_heaps(struct ion_client *client, int heap_id,
 		   enum ion_heap_type type, void *data,
 		   int (*f)(struct ion_heap *heap, void *data));
 
-struct ion_handle *ion_handle_get_by_id(struct ion_client *client,
-					int id);
-
 int ion_handle_put(struct ion_handle *handle);
 
 void show_ion_usage(struct ion_device *dev);
+
+int ion_share_dma_buf_fd_nolock(struct ion_client *client,
+				struct ion_handle *handle);
 
 #endif /* _ION_PRIV_H */
