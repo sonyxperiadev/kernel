@@ -69,9 +69,9 @@ struct tsens_dbg_context {
 };
 
 struct tsens_context {
-	enum thermal_device_mode	high_th_state;
-	enum thermal_device_mode	low_th_state;
-	enum thermal_device_mode	crit_th_state;
+	int				high_th_state;
+	int				low_th_state;
+	int				crit_th_state;
 	int				high_temp;
 	int				low_temp;
 	int				crit_temp;
