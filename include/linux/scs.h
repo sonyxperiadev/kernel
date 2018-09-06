@@ -38,6 +38,7 @@ extern void scs_set_init_magic(struct task_struct *tsk);
 extern void scs_task_init(struct task_struct *tsk);
 extern void scs_task_reset(struct task_struct *tsk);
 extern int scs_prepare(struct task_struct *tsk, int node);
+extern bool scs_corrupted(struct task_struct *tsk);
 extern void scs_release(struct task_struct *tsk);
 
 #else /* CONFIG_SHADOW_CALL_STACK */
@@ -70,6 +71,11 @@ static inline void scs_task_reset(struct task_struct *tsk)
 static inline int scs_prepare(struct task_struct *tsk, int node)
 {
 	return 0;
+}
+
+static inline bool scs_corrupted(struct task_struct *tsk)
+{
+	return false;
 }
 
 static inline void scs_release(struct task_struct *tsk)
