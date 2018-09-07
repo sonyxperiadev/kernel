@@ -2476,13 +2476,12 @@ struct nft_set *nf_tables_set_lookup_byid(const struct net *net,
 	u32 id = ntohl(nla_get_be32(nla));
 
 	list_for_each_entry(trans, &net->nft.commit_list, list) {
-		if (trans->msg_type == NFT_MSG_NEWSET) {
-			struct nft_set *set = nft_trans_set(trans);
+		struct nft_set *set = nft_trans_set(trans);
 
-			if (id == nft_trans_set_id(trans) &&
-			    nft_active_genmask(set, genmask))
-				return set;
-		}
+		if (trans->msg_type == NFT_MSG_NEWSET &&
+		    id == nft_trans_set_id(trans) &&
+		    nft_active_genmask(set, genmask))
+			return set;
 	}
 	return ERR_PTR(-ENOENT);
 }
