@@ -850,7 +850,7 @@
 	};
 
 	clock_mmss: qcom,mmsscc@c8c0000 {
-		compatible = "qcom,mmcc-msm8998";
+		compatible = "qcom,mmsscc-8998";
 		reg = <0xc8c0000 0x40000>;
 		reg-names = "cc_base";
 		vdd_dig-supply = <&pm8998_s1_level>;
