@@ -40,7 +40,7 @@
 		qcom,flash-source = <&pm660l_flash1>;
 		qcom,torch-source = <&pm660l_torch1>;
 		qcom,switch-source = <&pm660l_switch1>;
-		status = "disabled";
+		status = "ok";
 	};
 
 	cam_vdig_imx300_219_vreg: cam_vdig_imx300_219_vreg {
