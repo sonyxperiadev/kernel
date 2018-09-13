@@ -538,14 +538,6 @@ sdm845-v2-tama-apollo_generic-overlay.dtbo-base := sdm845-v2.dtb
 sdm845-v2.1-tama-apollo_generic-overlay.dtbo-base := sdm845-v2.1.dtb
 
 else
-# SDM845
-dtb-$(CONFIG_MACH_SONY_AKARI)		+= sdm845-tama-akari_generic.dtb
-dtb-$(CONFIG_MACH_SONY_AKARI)		+= sdm845-v2-tama-akari_generic.dtb
-dtb-$(CONFIG_MACH_SONY_AKARI)		+= sdm845-v2.1-tama-akari_generic.dtb
-dtb-$(CONFIG_MACH_SONY_APOLLO)		+= sdm845-tama-apollo_generic.dtb
-dtb-$(CONFIG_MACH_SONY_APOLLO)		+= sdm845-v2-tama-apollo_generic.dtb
-dtb-$(CONFIG_MACH_SONY_APOLLO)		+= sdm845-v2.1-tama-apollo_generic.dtb
-
 # MSM8998
 dtb-$(CONFIG_MACH_SONY_LILAC)		+= msm8998-v2-yoshino-lilac_generic.dtb
 dtb-$(CONFIG_MACH_SONY_LILAC)		+= msm8998-v2.1-yoshino-lilac_generic.dtb
