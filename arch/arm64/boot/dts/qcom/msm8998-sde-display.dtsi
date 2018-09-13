@@ -71,5 +71,5 @@
 };
 
 &sde_kms {
-	connectors = <&sde_hdmi_tx &sde_hdmi &sde_wb>;
+	connectors = <&sde_wb>; //<&sde_hdmi_tx &sde_hdmi &sde_wb>;
 };
