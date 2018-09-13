@@ -345,15 +345,6 @@
 	};
 
 	mdss_dsi: qcom,mdss_dsi@0 {
-		mdss_dsi0: qcom,mdss_dsi_ctrl0@c994000 {
-			vddio-supply = <&pm8998_l14>;
-			touch-avdd-supply = <&pm8998_l28>;
-		};
-
-		mdss_dsi1: qcom,mdss_dsi_ctrl1@c996000 {
-			vddio-supply = <&pm8998_l14>;
-			touch-avdd-supply = <&pm8998_l28>;
-		};
 		qcom,core-supply-entries {
 			qcom,core-supply-entry@0 {
 				/delete-property/ qcom,supply-lp-mode-disable-allowed;
@@ -3140,11 +3131,15 @@
 	qcom,platform-touch-int-gpio = <&tlmm 125 0>;
 	qcom,platform-touch-vddio-gpio = <&tlmm 133 0>;
 	somc,disp-dcdc-en-gpio = <&pmi8998_gpios 10 0>;
+	vddio-supply = <&pm8998_l14>;
+	touch-avdd-supply = <&pm8998_l28>;
 	/delete-property/ qcom,platform-bklight-en-gpio;
 	/delete-property/ qcom,panel-mode-gpio;
 };
 
 &mdss_dsi1 {
+	vddio-supply = <&pm8998_l14>;
+	touch-avdd-supply = <&pm8998_l28>;
 	/delete-property/ qcom,panel-mode-gpio;
 };
 

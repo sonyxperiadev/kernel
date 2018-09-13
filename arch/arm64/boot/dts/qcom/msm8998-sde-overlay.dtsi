@@ -12,27 +12,21 @@
 
 /* Remove all FBDEV related configuration */
 /delete-node/ &mdss_mdp;
+
 /delete-node/ &mdss_dsi0;
 /delete-node/ &mdss_dsi1;
 /delete-node/ &mdss_dsi;
+
 /delete-node/ &msm_ext_disp;
 /delete-node/ &mdss_dp_ctrl;
 /delete-node/ &mdss_hdmi_tx;
-/delete-node/ &mdss_rotator;
+
+// /delete-node/ &mdss_rotator;
 
 &soc {
 	/delete-node/ qcom,mdss_wb_panel;
 
-	mdss_hdmi_tx: mdss_hdmi_tx {
-	};
-
 	mdss_dp_ctrl: dummy-fb-mdss_dp {
-	};
-
-	mdss_dsi: dummy-fb-mdss_dsi {
-	};
-
-	mdss_mdp: mdss_mdp {
 	};
 
 	mdss_fb0: mdss_fb0 {
