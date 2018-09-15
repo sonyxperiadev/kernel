@@ -47,8 +47,6 @@ config SND_SOC_MSM_HOSTLESS_PCM
 	tristate "SND_SOC_MSM_HOSTLESS_PCM"
 config SND_SOC_MSM_QDSP6V2_INTF
 	tristate "SND_SOC_MSM_QDSP6V2_INTF"
-config SND_SOC_SDM670
-	tristate "SND_SOC_SDM670"
 config MSM_GLINK_SPI_XPRT
 	tristate "MSM_GLINK_SPI_XPRT"
 config SOUNDWIRE
@@ -103,11 +101,6 @@ config SND_SOC_MSM_SDW
 	tristate "SND_SOC_MSM_SDW"
 config SND_SOC_MSM_HDMI_CODEC_RX
 	tristate "SND_SOC_MSM_HDMI_CODEC_RX"
-config SND_SOC_SDM845
-	tristate "SND_SOC_SDM845"
-config SND_SOC_SDM670
-	tristate "SND_SOC_SDM670"
-
 config SND_SOC_WCD_CPE_SOMC_EXT
 	bool "WCD CPE SoMC Extensions"
 	depends on SND_SOC_WCD_CPE
@@ -117,3 +110,7 @@ config SND_SOC_MSM8996
 	tristate "SND_SOC_MSM8996"
 config SND_SOC_MSM8998
 	tristate "SND_SOC_MSM8998"
+config SND_SOC_SDM670
+	tristate "SND_SOC_SDM670"
+config SND_SOC_SDM845
+	tristate "SND_SOC_SDM845"
