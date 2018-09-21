@@ -125,9 +125,11 @@
 			   <GIC_SPI 272 IRQ_TYPE_LEVEL_HIGH>;
 		vdd-supply = <&gdsc_bimc_smmu>;
 		clocks = <&clock_mmss MMSS_MNOC_AHB_CLK>,
+			 <&clock_rpmcc MMSSNOC_AXI_CLK>,
 			<&clock_mmss MMSS_BIMC_SMMU_AHB_CLK>,
 			<&clock_mmss MMSS_BIMC_SMMU_AXI_CLK>;
 		clock-names = "mmss_mnoc_ahb_clk",
+			      "mmssnoc_axi_clk",
 			"mmss_bimc_smmu_ahb_clk",
 			"mmss_bimc_smmu_axi_clk";
 		#clock-cells = <1>;
