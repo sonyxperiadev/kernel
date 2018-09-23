@@ -316,8 +316,8 @@
 			 <&clock_mmss MMSS_MDSS_AHB_CLK>,
 			 <&clock_mmss MMSS_MDSS_AXI_CLK>,
 			 <&clock_mmss MMSS_MISC_AHB_CLK>,
-			 <&mdss_dsi0_pll BYTECLK_SRC_0_CLK>,
-			 <&mdss_dsi1_pll BYTECLK_SRC_1_CLK>,
+			 <&mdss_dsi0_pll BYTECLK_MUX_0_CLK>,
+			 <&mdss_dsi1_pll BYTECLK_MUX_1_CLK>,
 			 <&mdss_dsi0_pll PCLK_MUX_0_CLK>,
 			 <&mdss_dsi1_pll PCLK_MUX_1_CLK>;
 		clock-names = "mdp_core_clk",
