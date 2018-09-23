@@ -3675,6 +3675,9 @@ static s32 brcmf_cfg80211_resume(struct wiphy *wiphy)
 	struct brcmf_if *ifp = netdev_priv(ndev);
 
 	brcmf_dbg(TRACE, "Enter\n");
+	
+	if (brcmf_feat_is_quirk_enabled(ifp, BRCMF_FEAT_QUIRK_FAKE_WOWL))
+		return 0;
 
 	if (cfg->wowl.active) {
 		brcmf_report_wowl_wakeind(wiphy, ifp);
@@ -3775,6 +3778,9 @@ static s32 brcmf_cfg80211_suspend(struct wiphy *wiphy,
 	/* end any scanning */
 	if (test_bit(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status))
 		brcmf_abort_scanning(cfg);
+
+	if (brcmf_feat_is_quirk_enabled(ifp, BRCMF_FEAT_QUIRK_FAKE_WOWL))
+		goto exit;
 
 	if (wowl == NULL) {
 		brcmf_bus_wowl_config(cfg->pub->bus_if, false);
@@ -4875,6 +4881,8 @@ brcmf_cfg80211_mgmt_tx(struct wiphy *wiphy, struct wireless_dev *wdev,
 		       struct cfg80211_mgmt_tx_params *params, u64 *cookie)
 {
 	struct brcmf_cfg80211_info *cfg = wiphy_to_cfg(wiphy);
+	struct net_device *ndev = cfg_to_ndev(cfg);
+	struct brcmf_if *ifp = netdev_priv(ndev);
 	struct ieee80211_channel *chan = params->chan;
 	const u8 *buf = params->buf;
 	size_t len = params->len;
@@ -4926,6 +4934,11 @@ brcmf_cfg80211_mgmt_tx(struct wiphy *wiphy, struct wireless_dev *wdev,
 		cfg80211_mgmt_tx_status(wdev, *cookie, buf, len, true,
 					GFP_KERNEL);
 	} else if (ieee80211_is_action(mgmt->frame_control)) {
+		if (brcmf_feat_is_quirk_enabled(ifp,
+					BRCMF_FEAT_QUIRK_SKIP_ACTION_FRAMES)) {
+			brcmf_err("firmware does not handle action frames\n");
+			goto exit;
+		}		
 		if (len > BRCMF_FIL_ACTION_FRAME_SIZE + DOT11_MGMT_HDR_LEN) {
 			brcmf_err("invalid action frame length\n");
 			err = -EINVAL;
@@ -5579,7 +5592,8 @@ brcmf_notify_connect_status(struct brcmf_if *ifp,
 		brcmf_net_setcarrier(ifp, true);
 	} else if (brcmf_is_linkdown(e)) {
 		brcmf_dbg(CONN, "Linkdown\n");
-		if (!brcmf_is_ibssmode(ifp->vif)) {
+		if (!brcmf_is_ibssmode(ifp->vif) &&
+		    !brcmf_feat_is_quirk_enabled(ifp, BRCMF_FEAT_QUIRK_FAKE_WOWL)) {
 			brcmf_bss_connect_done(cfg, ndev, e, false);
 			brcmf_link_down(ifp->vif,
 					brcmf_map_fw_linkdown_reason(e));
@@ -6465,6 +6479,9 @@ static void brcmf_wiphy_wowl_params(struct wiphy *wiphy, struct brcmf_if *ifp)
 		brcmf_wowlan_support.flags |= WIPHY_WOWLAN_GTK_REKEY_FAILURE;
 	}
 
+	if (brcmf_feat_is_quirk_enabled(ifp, BRCMF_FEAT_QUIRK_FAKE_WOWL))
+		brcmf_wowlan_support.flags = WIPHY_WOWLAN_ANY;
+
 	wiphy->wowlan = &brcmf_wowlan_support;
 #endif
 }
@@ -6530,7 +6547,8 @@ static int brcmf_setup_wiphy(struct wiphy *wiphy, struct brcmf_if *ifp)
 	wiphy->vendor_commands = brcmf_vendor_cmds;
 	wiphy->n_vendor_commands = BRCMF_VNDR_CMDS_LAST - 1;
 
-	if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_WOWL))
+	if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_WOWL) ||
+	    brcmf_feat_is_quirk_enabled(ifp, BRCMF_FEAT_QUIRK_FAKE_WOWL))
 		brcmf_wiphy_wowl_params(wiphy, ifp);
 	err = brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_BANDLIST, &bandlist,
 				     sizeof(bandlist));

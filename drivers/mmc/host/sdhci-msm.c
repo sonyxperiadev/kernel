@@ -2154,7 +2154,7 @@ struct sdhci_msm_pltfm_data *sdhci_msm_populate_pdata(struct device *dev,
 	if (msm_host->soc_min_rev != 0)
 		pdata->rclk_wa = false;
 
-#ifdef CONFIG_WIFI_CONTROL_FUNC
+#if defined(CONFIG_WIFI_CONTROL_FUNC) || defined(CONFIG_BRCMFMAC)
 	if (of_get_property(np, "somc,use-for-wifi", NULL))
 		pdata->use_for_wifi = true;
 #endif
@@ -5200,6 +5200,11 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 		msm_host->mmc->caps2 |= MMC_CAP2_CLK_SCALE;
 		somc_wifi_mmc_host_register(msm_host->mmc);
 	}
+#endif
+
+#ifdef CONFIG_BRCMFMAC
+	if (msm_host->pdata->use_for_wifi)
+		msm_host->mmc->caps2 |= MMC_CAP2_NONSTANDARD_OCR;
 #endif
 
 	msm_host->msm_bus_vote.max_bus_bw.show = show_sdhci_max_bus_bw;
