@@ -2745,7 +2745,6 @@ static struct clk_branch mmss_mdss_mdp_lut_clk = {
 				"mdp_clk_src",
 			},
 			.num_parents = 1,
-			.flags = CLK_SET_RATE_PARENT,
 			.ops = &clk_branch2_ops,
 		},
 	},
