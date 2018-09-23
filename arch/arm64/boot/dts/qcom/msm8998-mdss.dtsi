@@ -390,6 +390,7 @@
 			qcom,mdss-fb-map = <&mdss_fb0>;
 
 			qcom,null-insertion-enabled;
+			qcom,link-clks-reconf-platform-hack;
 
 			clocks = <&clock_mmss MMSS_MDSS_BYTE0_CLK>,
 				 <&clock_mmss MMSS_MDSS_PCLK0_CLK>,
@@ -430,6 +431,7 @@
 			qcom,mdss-fb-map = <&mdss_fb0>;
 
 			qcom,null-insertion-enabled;
+			qcom,link-clks-reconf-platform-hack;
 
 			clocks = <&clock_mmss MMSS_MDSS_BYTE1_CLK>,
 				 <&clock_mmss MMSS_MDSS_PCLK1_CLK>,
