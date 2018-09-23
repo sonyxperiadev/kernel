@@ -1059,6 +1059,15 @@ const struct clk_ops clk_byte2_ops = {
 };
 EXPORT_SYMBOL_GPL(clk_byte2_ops);
 
+#ifdef CONFIG_ARCH_MSM8998
+static const struct frac_entry frac_table_pixel[] = {
+	{ 3, 8 },
+	{ 2, 9 },
+	{ 4, 9 },
+	{ 1, 1 },
+	{ }
+};
+#else
 static const struct frac_entry frac_table_pixel[] = {
 	{ 1, 1 },
 	{ 2, 3 },
@@ -1067,6 +1076,7 @@ static const struct frac_entry frac_table_pixel[] = {
 	{ 2, 9 },
 	{ }
 };
+#endif
 
 static int clk_pixel_determine_rate(struct clk_hw *hw,
 				    struct clk_rate_request *req)
