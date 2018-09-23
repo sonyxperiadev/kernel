@@ -738,8 +738,8 @@ static struct clk_hw *msm8998_clks[] = {
 	[RPM_CNOC_A_CLK]	= &msm8998_cnoc_a_clk.hw,
 	[RPM_CNOC_PERIPH_CLK]	= &msm8998_cnoc_periph_clk.hw,
 	[RPM_CNOC_PERIPH_A_CLK]	= &msm8998_cnoc_periph_a_clk.hw,
-	[RPM_MMAXI_CLK]		= &msm8998_mmssnoc_axi_rpm_clk.hw,
-	[RPM_MMAXI_A_CLK]	= &msm8998_mmssnoc_axi_rpm_a_clk.hw,
+	[MMSSNOC_AXI_CLK]	= &msm8998_mmssnoc_axi_rpm_clk.hw,
+	[MMSSNOC_AXI_A_CLK]	= &msm8998_mmssnoc_axi_rpm_a_clk.hw,
 	[RPM_IPA_CLK]		= &msm8998_ipa_clk.hw,
 	[RPM_IPA_A_CLK]		= &msm8998_ipa_a_clk.hw,
 	[RPM_CE1_CLK]		= &msm8998_ce1_clk.hw,
@@ -750,8 +750,6 @@ static struct clk_hw *msm8998_clks[] = {
 	[RPM_DIV_CLK2_AO]	= &msm8998_div_clk2_ao.hw,
 	[RPM_DIV_CLK3]		= &msm8998_div_clk3.hw,
 	[RPM_DIV_CLK3_AO]	= &msm8998_div_clk3_ao.hw,
-	[MMSSNOC_AXI_CLK]	= &mmssnoc_axi_clk.hw,
-	[MMSSNOC_AXI_A_CLK]	= &mmssnoc_axi_a_clk.hw,
 	[BIMC_MSMBUS_CLK]	= &bimc_msmbus_clk.hw,
 	[BIMC_MSMBUS_A_CLK]	= &bimc_msmbus_a_clk.hw,
 	[CNOC_MSMBUS_CLK]	= &cnoc_msmbus_clk.hw,
@@ -773,7 +771,7 @@ static struct clk_hw *msm8998_clks[] = {
 };
 static const struct rpm_smd_clk_desc rpm_clk_msm8998 = {
 	.clks = msm8998_clks,
-	.num_rpm_clks = RPM_CNOC_PERIPH_A_CLK,
+	.num_rpm_clks = MMSSNOC_AXI_A_CLK,
 	.num_clks = ARRAY_SIZE(msm8998_clks),
 };
 
