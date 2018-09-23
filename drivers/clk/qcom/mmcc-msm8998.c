@@ -1204,21 +1204,15 @@ static struct clk_rcg2 dp_gtc_clk_src = {
 	},
 };
 
-static struct freq_tbl ftbl_esc_clk_src[] = {
-	F(  19200000,      P_XO,         1,    0,     0),
-	{ }
-};
-
 static struct clk_rcg2 esc0_clk_src = {
 	.cmd_rcgr = 0x02160,
 	.hid_width = 5,
-	.parent_map = mmcc_parent_map_gcc_0,
-	.freq_tbl = ftbl_esc_clk_src,
+	.parent_map = disp_cc_parent_map_0,
 	.clkr.hw.init = &(struct clk_init_data) {
 		.name = "esc0_clk_src",
-		.parent_names = mmcc_parent_names_gcc_0,
-		.num_parents = ARRAY_SIZE(mmcc_parent_names_gcc_0),
-		.ops = &clk_rcg2_ops,
+		.parent_names = disp_cc_parent_names_0,
+		.num_parents = ARRAY_SIZE(disp_cc_parent_names_0),
+		.ops = &clk_esc_ops,
 		VDD_DIG_FMAX_MAP2(LOWER, 19200000, NOMINAL, 19200000),
 	},
 };
@@ -1226,13 +1220,12 @@ static struct clk_rcg2 esc0_clk_src = {
 static struct clk_rcg2 esc1_clk_src = {
 	.cmd_rcgr = 0x02180,
 	.hid_width = 5,
-	.parent_map = mmcc_parent_map_gcc_0,
-	.freq_tbl = ftbl_esc_clk_src,
+	.parent_map = disp_cc_parent_map_0,
 	.clkr.hw.init = &(struct clk_init_data) {
 		.name = "esc1_clk_src",
-		.parent_names = mmcc_parent_names_gcc_0,
-		.num_parents = ARRAY_SIZE(mmcc_parent_names_gcc_0),
-		.ops = &clk_rcg2_ops,
+		.parent_names = disp_cc_parent_names_0,
+		.num_parents = ARRAY_SIZE(disp_cc_parent_names_0),
+		.ops = &clk_esc_ops,
 		VDD_DIG_FMAX_MAP2(LOWER, 19200000, NOMINAL, 19200000),
 	},
 };
