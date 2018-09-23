@@ -20,9 +20,9 @@
 #include "dsi-panel-somc-lilac-id5_pcc.dtsi"
 #include "dsi-panel-somc-lilac-id8_pcc.dtsi"
 
-&mdss_mdp {
+&sde_kms {
 	/* LGD ID5 */
-	dsi_5: somc,5_panel {
+	sde_dsi_5: somc,5_panel {
 		qcom,mdss-dsi-panel-name = "5";
 		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
@@ -195,7 +195,7 @@
 	};
 
 	/* JDI ID8 */
-	dsi_8: somc,8_panel {
+	sde_dsi_8: somc,8_panel {
 		qcom,mdss-dsi-panel-name = "8";
 		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
@@ -388,7 +388,7 @@
 	};
 
 	/* Default */
-	dsi_default_panel: somc,default_cmd_panel {
+	sde_dsi_default_panel: somc,default_cmd_panel {
 		qcom,mdss-dsi-panel-name = "default";
 		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;

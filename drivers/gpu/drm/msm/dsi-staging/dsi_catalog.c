@@ -99,7 +99,7 @@ static void dsi_catalog_cmn_init(struct dsi_ctrl_hw *ctrl,
 		ctrl->ops.clamp_enable = NULL;
 		ctrl->ops.clamp_disable = NULL;
 		ctrl->ops.schedule_dma_cmd = NULL;
-		ctrl->ops.get_cont_splash_status = NULL;
+		ctrl->ops.get_cont_splash_status = dsi_ctrl_hw_14_get_cont_splash_status;
 		ctrl->ops.kickoff_command_non_embedded_mode = NULL;
 		break;
 	case DSI_CTRL_VERSION_2_2:
@@ -214,9 +214,13 @@ static void dsi_catalog_phy_3_0_init(struct dsi_phy_hw *phy)
 	phy->ops.ulps_ops.is_lanes_in_ulps =
 		dsi_phy_hw_v3_0_is_lanes_in_ulps;
 	phy->ops.phy_timing_val = dsi_phy_hw_timing_val_v3_0;
-	phy->ops.clamp_ctrl = dsi_phy_hw_v3_0_clamp_ctrl;
 	phy->ops.phy_lane_reset = dsi_phy_hw_v3_0_lane_reset;
-	phy->ops.toggle_resync_fifo = dsi_phy_hw_v3_0_toggle_resync_fifo;
+
+	if (!of_machine_is_compatible("qcom,msm8998")) {
+		phy->ops.clamp_ctrl = dsi_phy_hw_v3_0_clamp_ctrl;
+		phy->ops.toggle_resync_fifo =
+			dsi_phy_hw_v3_0_toggle_resync_fifo;
+	}
 }
 
 /**

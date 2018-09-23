@@ -4612,6 +4612,10 @@ int dsi_panel_device_register(struct platform_device *ctrl_pdev,
 	mdss_dsi_ctrl_init(&ctrl_pdev->dev, ctrl_pdata);
 	mdss_dsi_set_prim_panel(ctrl_pdata);
 
+	ctrl_pdata->platform_clk_reconf_hack = of_property_read_bool(
+				ctrl_pdev->dev.of_node,
+				"qcom,link-clks-reconf-platform-hack");
+
 	ctrl_pdata->dsi_irq_line = of_property_read_bool(
 				ctrl_pdev->dev.of_node, "qcom,dsi-irq-line");
 

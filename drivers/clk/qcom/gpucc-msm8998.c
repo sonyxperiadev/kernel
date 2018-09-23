@@ -677,6 +677,9 @@ int gpucc_early_msm8998_probe(struct platform_device *pdev)
 		return rc;
 	}
 
+	/* Set the rate for GPU XO to make the clk API happy */
+	clk_set_rate(gpucc_xo.clkr.hw.clk, 19200000);
+
 	/*
 	 * gpucc_xo works as the root clock for all GPUCC RCGs and GDSCs.
 	 *  Keep it enabled always.

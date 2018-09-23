@@ -425,9 +425,9 @@
 			linux,cma-default;
 		};
 
-		cont_splash_mem: splash_region@9d600000 {
+		cont_splash_mem: cont_splash_region@9d600000 {
 			reg = <0x0 0x9d600000 0x0 0x02400000>;
-			label = "cont_splash_mem";
+			label = "cont_splash_region";
 		};
 	};
 };
@@ -515,6 +515,7 @@
 		interrupt-controller;
 		#interrupt-cells = <4>;
 		cell-index = <0>;
+		qcom,enable-ahb-bus-workaround;
 	};
 
 	qcom,sps {
@@ -3422,7 +3423,7 @@
 #include "msm8998-blsp.dtsi"
 #include "msm8998-audio.dtsi"
 #include "msm-smb138x.dtsi"
-#include "msm8998-sde.dtsi"
+//#include "msm8998-sde.dtsi"
 
 &pmi8998_pdphy {
 	vbus-supply = <&smb2_vbus>;

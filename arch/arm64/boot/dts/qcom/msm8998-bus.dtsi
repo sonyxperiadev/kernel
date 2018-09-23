@@ -140,6 +140,7 @@
 			qcom,node-qos-clks {
 				clock-names =
 				"clk-noc-cfg-ahb-no-rate",
+				"clk-mmss-noc-cfg-ahb-no-rate",
 				"clk-mnoc-ahb-no-rate",
 				"clk-camss-ahb-no-rate",
 				"clk-video-ahb-no-rate",
