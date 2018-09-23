@@ -1100,7 +1100,7 @@ static u32 mmc_select_low_voltage(struct mmc_host *host, u32 ocr)
 {
 	int bit;
 	u32 ocr_orig = ocr;
-#ifdef CONFIG_BCMDHD
+#if defined(CONFIG_BCMDHD) || defined(CONFIG_BRCMFMAC)
 	u32 ocr_fake = 0x180;
 #endif
 
@@ -1113,7 +1113,7 @@ static u32 mmc_select_low_voltage(struct mmc_host *host, u32 ocr)
 		ocr &= 3 << bit;
 		ocr = ocr >> 1;
 
- #ifdef CONFIG_BCMDHD
+#if defined(CONFIG_BCMDHD) || defined(CONFIG_BRCMFMAC)
 		/* Always force a specific OCR. BCMDHD only. */
 		pr_debug("%s: forcing ocr to 0x%x instead of 0x%x",
 			 mmc_hostname(host), ocr_fake, ocr);
