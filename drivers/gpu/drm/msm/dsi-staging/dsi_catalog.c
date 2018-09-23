@@ -234,9 +234,7 @@ static void dsi_catalog_phy_3_0_init(struct dsi_phy_hw *phy)
 	phy->ops.ulps_ops.is_lanes_in_ulps =
 		dsi_phy_hw_v3_0_is_lanes_in_ulps;
 	phy->ops.phy_timing_val = dsi_phy_hw_timing_val_v3_0;
-	phy->ops.clamp_ctrl = dsi_phy_hw_v3_0_clamp_ctrl;
 	phy->ops.phy_lane_reset = dsi_phy_hw_v3_0_lane_reset;
-	phy->ops.toggle_resync_fifo = dsi_phy_hw_v3_0_toggle_resync_fifo;
 	phy->ops.dyn_refresh_ops.dyn_refresh_config =
 		dsi_phy_hw_v3_0_dyn_refresh_config;
 	phy->ops.dyn_refresh_ops.dyn_refresh_pipe_delay =
@@ -245,6 +243,12 @@ static void dsi_catalog_phy_3_0_init(struct dsi_phy_hw *phy)
 		dsi_phy_hw_v3_0_dyn_refresh_helper;
 	phy->ops.dyn_refresh_ops.cache_phy_timings =
 		dsi_phy_hw_v3_0_cache_phy_timings;
+
+	if (!of_machine_is_compatible("qcom,msm8998")) {
+		phy->ops.clamp_ctrl = dsi_phy_hw_v3_0_clamp_ctrl;
+		phy->ops.toggle_resync_fifo =
+			dsi_phy_hw_v3_0_toggle_resync_fifo;
+	}
 }
 
 /**

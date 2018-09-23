@@ -182,6 +182,10 @@ static void dsi_phy_hw_v3_0_lane_settings(struct dsi_phy_hw *phy,
 	int i;
 	u8 tx_dctrl[] = {0x00, 0x00, 0x00, 0x04, 0x01};
 
+	if (of_machine_is_compatible("qcom,msm8998")) {
+		tx_dctrl[3] = 0x02;
+	}
+
 	/* Strength ctrl settings */
 	for (i = DSI_LOGICAL_LANE_0; i < DSI_LANE_MAX; i++) {
 		DSI_W32(phy, DSIPHY_LNX_LPTX_STR_CTRL(i),
