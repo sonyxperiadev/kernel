@@ -3325,8 +3325,10 @@ static bool is_lab_vreg_ok_irq_available(struct qpnp_labibb *labibb)
 
 	if (labibb->pmic_rev_id->pmic_subtype == PMI8998_SUBTYPE &&
 		labibb->mode == QPNP_LABIBB_LCD_MODE) {
+#ifndef CONFIG_SOMC_LCD_OCP_ENABLED
 		if (labibb->ttw_en)
 			return false;
+#endif
 		return true;
 	}
 
