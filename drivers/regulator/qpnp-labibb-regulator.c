@@ -3895,11 +3895,13 @@ status_error:
 		/* shutdown */
 		do {
 			pm_power_off();
+#ifdef SOMC_LABIBB_LEGACY_TARGET
 			rc = qpnp_pon_dvdd_shutdown();
 			if (rc) {
 				pr_debug("%s: qpnp_pon_dvdd_shutdown failed rc=%d\n",
 						__func__, rc);
 			}
+#endif
 			msleep(DVDD_SHUTDOWN_RETRY_INTERVAL);
 		} while (1);
 		goto exit;
