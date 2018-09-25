@@ -225,3 +225,15 @@
 	qcom,fg-sys-term-current = <(-180)>;
 	qcom,fg-chg-term-current = <155>;
 };
+
+&labibb {
+	qcom,qpnp-labibb-mode = "lcd";
+};
+
+&lab_regulator {
+	regulator-max-microvolt = <5600000>;
+};
+
+&ibb_regulator {
+	regulator-max-microvolt = <5500000>;
+};

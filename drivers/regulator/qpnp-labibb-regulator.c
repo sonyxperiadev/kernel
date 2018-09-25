@@ -42,6 +42,22 @@
 #include <linux/input/qpnp-power-on.h>
 #endif /* CONFIG_SOMC_LCD_OCP_ENABLED */
 
+/* Build barrier for SoMC legacy targets using LAB/IBB regulator */
+#ifdef CONFIG_REGULATOR_QPNP_LABIBB_SOMC
+ #undef SOMC_LABIBB_LEGACY_TARGET
+
+ #if defined(CONFIG_ARCH_SONY_LOIRE) || defined(CONFIG_ARCH_SONY_TONE) || \
+     defined(CONFIG_ARCH_SONY_NILE)  || defined(CONFIG_ARCH_SONY_YOSHINO)
+	#define SOMC_LABIBB_LEGACY_TARGET 1
+ #endif
+#endif
+
+/* Enforce IBB current limit for new SoMC targets */
+#if defined(CONFIG_REGULATOR_QPNP_LABIBB_SOMC) && \
+    !defined(SOMC_LABIBB_LEGACY_TARGET)
+#define IBB_CURRENT_LIMIT_VALUE		16	/* 800mA */
+#endif
+
 #define QPNP_LABIBB_REGULATOR_DRIVER_NAME	"qcom,qpnp-labibb-regulator"
 
 #define REG_REVISION_2			0x01
@@ -1947,6 +1963,10 @@ static int qpnp_lab_dt_init(struct qpnp_labibb *labibb,
 	if (of_property_read_bool(of_node,
 		"qcom,qpnp-lab-limit-max-current-enable")) {
 		val = LAB_CURRENT_LIMIT_EN_BIT;
+#if defined(CONFIG_REGULATOR_QPNP_LABIBB_SOMC) && \
+    !defined(SOMC_LABIBB_LEGACY_TARGET)
+		val |= LAB_CURRENT_LIMIT_OVERRIDE;
+#endif
 
 		rc = of_property_read_u32(of_node,
 			"qcom,qpnp-lab-limit-maximum-current", &tmp);
@@ -2751,14 +2771,14 @@ static int qpnp_labibb_regulator_enable(struct qpnp_labibb *labibb)
 		return rc;
 	}
 
+#ifdef CONFIG_SOMC_LCD_OCP_ENABLED
+try_agn:
+#endif
 	/* total delay time */
 	dly = labibb->lab_vreg.soft_start + labibb->ibb_vreg.soft_start
 				+ labibb->ibb_vreg.pwrup_dly;
 	usleep_range(dly, dly + 100);
 
-#ifdef CONFIG_SOMC_LCD_OCP_ENABLED
-try_agn:
-#endif
 	/* after this delay, lab should be enabled */
 	rc = qpnp_labibb_read(labibb, labibb->lab_base + REG_LAB_STATUS1,
 			&val, 1);
@@ -2832,10 +2852,6 @@ static int qpnp_labibb_regulator_disable(struct qpnp_labibb *labibb)
 	int dly;
 	int retries;
 	bool disabled = false;
-
-#ifdef CONFIG_SOMC_LCD_OCP_ENABLED
-	qpnp_labibb_interrupt_disable_ctl(labibb);
-#endif /* CONFIG_SOMC_LCD_OCP_ENABLED */
 
 	/*
 	 * When TTW mode is enabled and LABIBB regulators are disabled, it is
@@ -2959,6 +2975,10 @@ static int qpnp_lab_regulator_disable(struct regulator_dev *rdev)
 	int rc;
 	u8 val;
 	struct qpnp_labibb *labibb  = rdev_get_drvdata(rdev);
+
+#ifdef CONFIG_SOMC_LCD_OCP_ENABLED
+	qpnp_lab_interrupt_disable_ctl(labibb);
+#endif /* CONFIG_SOMC_LCD_OCP_ENABLED */
 
 	if (labibb->lab_vreg.vreg_enabled && !labibb->swire_control) {
 
@@ -3305,8 +3325,10 @@ static bool is_lab_vreg_ok_irq_available(struct qpnp_labibb *labibb)
 
 	if (labibb->pmic_rev_id->pmic_subtype == PMI8998_SUBTYPE &&
 		labibb->mode == QPNP_LABIBB_LCD_MODE) {
+#ifndef CONFIG_SOMC_LCD_OCP_ENABLED
 		if (labibb->ttw_en)
 			return false;
+#endif
 		return true;
 	}
 
@@ -3878,11 +3900,13 @@ status_error:
 		/* shutdown */
 		do {
 			pm_power_off();
+#ifdef SOMC_LABIBB_LEGACY_TARGET
 			rc = qpnp_pon_dvdd_shutdown();
 			if (rc) {
 				pr_debug("%s: qpnp_pon_dvdd_shutdown failed rc=%d\n",
 						__func__, rc);
 			}
+#endif
 			msleep(DVDD_SHUTDOWN_RETRY_INTERVAL);
 		} while (1);
 		goto exit;
@@ -3921,7 +3945,7 @@ int qpnp_lab_set_precharge(struct regulator *regulator, u32 time, bool en)
 		if (lab_max_precharge_table[val] == time)
 			break;
 
-	if (val == ARRAY_SIZE(lab_soft_start_table))
+	if (val == ARRAY_SIZE(lab_max_precharge_table))
 		val = ARRAY_SIZE(lab_max_precharge_table) - 1;
 
 	if (en)
@@ -4120,9 +4144,20 @@ int qpnp_ibb_set_current_max(struct regulator *regulator, u32 limit)
 
 	labibb = regulator_get_drvdata(regulator);
 
+#if defined(CONFIG_REGULATOR_QPNP_LABIBB_SOMC) && \
+    !defined(SOMC_LABIBB_LEGACY_TARGET)
+	/* Not strictly required but let's be paranoid */
+	reg = IBB_CURRENT_LIMIT_VALUE;
+
+	if (!(ibb_current_limit_table[reg] == limit)) {
+		pr_err("%s value mismatch\n", __func__);
+		return rc;
+	}
+#else
 	for (reg = 0; reg < ARRAY_SIZE(ibb_current_limit_table); reg++)
 		if (ibb_current_limit_table[reg] == limit)
 			break;
+#endif
 
 	if (reg == ARRAY_SIZE(ibb_current_limit_table))
 		reg = ARRAY_SIZE(ibb_current_limit_table) - 1;
@@ -4442,7 +4477,7 @@ static int qpnp_ibb_regulator_disable(struct regulator_dev *rdev)
 	struct qpnp_labibb *labibb  = rdev_get_drvdata(rdev);
 
 #ifdef CONFIG_SOMC_LCD_OCP_ENABLED
-		qpnp_lab_interrupt_disable_ctl(labibb);
+	qpnp_ibb_interrupt_disable_ctl(labibb);
 #endif /* CONFIG_SOMC_LCD_OCP_ENABLED */
 
 	if (labibb->ibb_vreg.vreg_enabled && !labibb->swire_control) {
@@ -5199,7 +5234,12 @@ static int qpnp_labibb_regulator_probe(struct platform_device *pdev)
 		case QPNP_IBB_TYPE:
 			labibb->ibb_base = base;
 			labibb->ibb_dig_major = revision;
-			qpnp_ibb_register_irq(child, labibb);
+			rc = qpnp_ibb_register_irq(child, labibb);
+			if (rc) {
+				pr_err("Failed to register IBB IRQ rc=%d\n",
+							rc);
+				goto fail_registration;
+			}
 			rc = register_qpnp_ibb_regulator(labibb, child);
 			if (rc < 0)
 				goto fail_registration;
