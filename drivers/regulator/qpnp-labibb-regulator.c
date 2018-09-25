@@ -42,6 +42,22 @@
 #include <linux/input/qpnp-power-on.h>
 #endif /* CONFIG_SOMC_LCD_OCP_ENABLED */
 
+/* Build barrier for SoMC legacy targets using LAB/IBB regulator */
+#ifdef CONFIG_REGULATOR_QPNP_LABIBB_SOMC
+ #undef SOMC_LABIBB_LEGACY_TARGET
+
+ #if defined(CONFIG_ARCH_SONY_LOIRE) || defined(CONFIG_ARCH_SONY_TONE) || \
+     defined(CONFIG_ARCH_SONY_NILE)  || defined(CONFIG_ARCH_SONY_YOSHINO)
+	#define SOMC_LABIBB_LEGACY_TARGET 1
+ #endif
+#endif
+
+/* Enforce IBB current limit for new SoMC targets */
+#if defined(CONFIG_REGULATOR_QPNP_LABIBB_SOMC) && \
+    !defined(SOMC_LABIBB_LEGACY_TARGET)
+#define IBB_CURRENT_LIMIT_VALUE		16	/* 800mA */
+#endif
+
 #define QPNP_LABIBB_REGULATOR_DRIVER_NAME	"qcom,qpnp-labibb-regulator"
 
 #define REG_REVISION_2			0x01
@@ -1947,6 +1963,10 @@ static int qpnp_lab_dt_init(struct qpnp_labibb *labibb,
 	if (of_property_read_bool(of_node,
 		"qcom,qpnp-lab-limit-max-current-enable")) {
 		val = LAB_CURRENT_LIMIT_EN_BIT;
+#if defined(CONFIG_REGULATOR_QPNP_LABIBB_SOMC) && \
+    !defined(SOMC_LABIBB_LEGACY_TARGET)
+		val |= LAB_CURRENT_LIMIT_OVERRIDE;
+#endif
 
 		rc = of_property_read_u32(of_node,
 			"qcom,qpnp-lab-limit-maximum-current", &tmp);
@@ -4103,9 +4123,20 @@ int qpnp_ibb_set_current_max(struct regulator *regulator, u32 limit)
 
 	labibb = regulator_get_drvdata(regulator);
 
+#if defined(CONFIG_REGULATOR_QPNP_LABIBB_SOMC) && \
+    !defined(SOMC_LABIBB_LEGACY_TARGET)
+	/* Not strictly required but let's be paranoid */
+	reg = IBB_CURRENT_LIMIT_VALUE;
+
+	if (!(ibb_current_limit_table[reg] == limit)) {
+		pr_err("%s value mismatch\n", __func__);
+		return rc;
+	}
+#else
 	for (reg = 0; reg < ARRAY_SIZE(ibb_current_limit_table); reg++)
 		if (ibb_current_limit_table[reg] == limit)
 			break;
+#endif
 
 	if (reg == ARRAY_SIZE(ibb_current_limit_table))
 		reg = ARRAY_SIZE(ibb_current_limit_table) - 1;
