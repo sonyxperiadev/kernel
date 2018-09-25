@@ -5207,7 +5207,12 @@ static int qpnp_labibb_regulator_probe(struct platform_device *pdev)
 		case QPNP_IBB_TYPE:
 			labibb->ibb_base = base;
 			labibb->ibb_dig_major = revision;
-			qpnp_ibb_register_irq(child, labibb);
+			rc = qpnp_ibb_register_irq(child, labibb);
+			if (rc) {
+				pr_err("Failed to register IBB IRQ rc=%d\n",
+							rc);
+				goto fail_registration;
+			}
 			rc = register_qpnp_ibb_regulator(labibb, child);
 			if (rc < 0)
 				goto fail_registration;
