@@ -3938,7 +3938,7 @@ int qpnp_lab_set_precharge(struct regulator *regulator, u32 time, bool en)
 		if (lab_max_precharge_table[val] == time)
 			break;
 
-	if (val == ARRAY_SIZE(lab_soft_start_table))
+	if (val == ARRAY_SIZE(lab_max_precharge_table))
 		val = ARRAY_SIZE(lab_max_precharge_table) - 1;
 
 	if (en)
