@@ -2771,14 +2771,14 @@ static int qpnp_labibb_regulator_enable(struct qpnp_labibb *labibb)
 		return rc;
 	}
 
+#ifdef CONFIG_SOMC_LCD_OCP_ENABLED
+try_agn:
+#endif
 	/* total delay time */
 	dly = labibb->lab_vreg.soft_start + labibb->ibb_vreg.soft_start
 				+ labibb->ibb_vreg.pwrup_dly;
 	usleep_range(dly, dly + 100);
 
-#ifdef CONFIG_SOMC_LCD_OCP_ENABLED
-try_agn:
-#endif
 	/* after this delay, lab should be enabled */
 	rc = qpnp_labibb_read(labibb, labibb->lab_base + REG_LAB_STATUS1,
 			&val, 1);
