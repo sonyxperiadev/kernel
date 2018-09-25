@@ -160,3 +160,11 @@
 &labibb {
 	qcom,qpnp-labibb-mode = "lcd";
 };
+
+&lab_regulator {
+	regulator-max-microvolt = <5500000>;
+};
+
+&ibb_regulator {
+	regulator-max-microvolt = <5500000>;
+};
