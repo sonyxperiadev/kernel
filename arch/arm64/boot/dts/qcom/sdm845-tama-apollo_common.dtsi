@@ -156,3 +156,7 @@
 	qcom,fg-sys-term-current = <(-160)>;
 	qcom,fg-chg-term-current = <135>;
 };
+
+&labibb {
+	qcom,qpnp-labibb-mode = "lcd";
+};
