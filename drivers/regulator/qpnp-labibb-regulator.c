@@ -3860,13 +3860,14 @@ status_error:
 		force_labibb_regulator_disable(labibb);
 		/* shutdown */
 		do {
+			pm_power_off();
 			rc = qpnp_pon_dvdd_shutdown();
 			if (rc) {
 				pr_debug("%s: qpnp_pon_dvdd_shutdown failed rc=%d\n",
 						__func__, rc);
-				msleep(DVDD_SHUTDOWN_RETRY_INTERVAL);
 			}
-		} while (rc);
+			msleep(DVDD_SHUTDOWN_RETRY_INTERVAL);
+		} while (1);
 		goto exit;
 	}
 
