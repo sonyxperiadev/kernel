@@ -705,6 +705,13 @@ config LEDS_QPNP_WLED
 	  variable brightness.  It also supports outputting the Avdd supply for
 	  AMOLED displays.
 
+config LEDS_QPNP_WLED_SOMC_EXTENSION
+	tristate "SoMC Extensions for QPNP WLED"
+	depends on LEDS_QPNP_WLED
+	help
+	  This enables extensional code for WLED from Sony Mobile.
+	  If unsure, say n.
+
 config LEDS_QPNP_HAPTICS
 	tristate "Haptics support for QPNP PMIC"
 	depends on LEDS_CLASS && MFD_SPMI_PMIC
