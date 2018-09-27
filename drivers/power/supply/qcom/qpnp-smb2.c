@@ -1537,16 +1537,10 @@ static int smb2_batt_set_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_INPUT_SUSPEND:
 		rc = smblib_set_prop_input_suspend(chg, val);
 		break;
-#ifndef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
 	case POWER_SUPPLY_PROP_CHARGE_CONTROL_LIMIT:
 		rc = smblib_set_prop_system_temp_level(chg, val);
 		break;
-#endif
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
-	case POWER_SUPPLY_PROP_CHARGE_CONTROL_LIMIT:
-		pr_err("set prop %d(charge_control_limit) is not supported.\n",
-									prop);
-		break;
 	case POWER_SUPPLY_PROP_SYSTEM_TEMP_LEVEL:
 		rc = smblib_set_prop_system_temp_level(chg, val);
 		break;

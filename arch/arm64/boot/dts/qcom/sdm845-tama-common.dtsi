@@ -3361,3 +3361,5 @@
 	/delete-property/ power-source;
 	/delete-property/ output-low;
 };
+
+#include "sdm845-tama-common-thermal.dtsi"
