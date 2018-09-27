@@ -498,7 +498,6 @@
 		interrupt-parent = <&tlmm>;
 		interrupts = <125 0x2008>;
 		vdd-supply = <&pm8998_l14>;
-		avdd-supply = <&pm8998_l28>;
 		pinctrl-names = "pmx_ts_active", "pmx_ts_suspend";
 		pinctrl-0 = <&sde_dsi_active &sde_te_active>;
 		pinctrl-1 = <&sde_dsi_suspend &sde_te_suspend>;
