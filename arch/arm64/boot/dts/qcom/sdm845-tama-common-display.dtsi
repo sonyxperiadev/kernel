@@ -99,7 +99,6 @@
 		qcom,platform-touch-reset-gpio = <&tlmm 99 0>;
 		qcom,dsi-panel = <&dsi_default_panel>;
 		vddio-supply = <&pm8998_l14>;
-		touch-avdd-supply = <&pm8998_l28>;
 		lab-supply = <&lab_regulator>;
 		ibb-supply = <&ibb_regulator>;
 	};
@@ -120,7 +119,6 @@
 
 	dsi_default_panel: somc,default_cmd_panel {
 		qcom,panel-supply-entries = <&dsi_panel_lcd_pwr_supply>;
-		qcom,panel-touch-supply-entries = <&dsi_panel_touch_pwr_supply>;
 		qcom,panel-vspvsn-supply-entries = <&dsi_panel_vspvsn_pwr_supply>;
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 		qcom,mdss-dsi-bl-min-level = <1>;
