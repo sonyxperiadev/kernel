@@ -1282,6 +1282,14 @@ void brcmf_chip_set_passive(struct brcmf_chip *pub)
 
 	brcmf_dbg(TRACE, "Enter\n");
 
+	/* Some 43596 are declaring themselves as 4359 Rev 9 */
+	if (pub->chip == BRCM_CC_43596_CHIP_ID ||
+	    (pub->chip == BRCM_CC_4359_CHIP_ID &&
+	     pub->chiprev >= 9)) {
+		brcmf_dbg(TRACE, "Skipping set passive for BCM43596\n");
+		return;
+	}
+
 	chip = container_of(pub, struct brcmf_chip_priv, pub);
 	arm = brcmf_chip_get_core(pub, BCMA_CORE_ARM_CR4);
 	if (arm) {
