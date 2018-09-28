@@ -1,0 +1,37 @@
+config BACKPORT_INTEGRATE
+	bool
+	def_bool y
+
+config BACKPORT_DIR
+	string
+	default "backports/"
+
+config BACKPORT_VERSION
+	string
+	default "v4.19-rc5-1-1-g17729e9d"
+
+config BACKPORT_KERNEL_VERSION
+	string
+	default "v4.19-rc4-0-g7876320f8880"
+
+config BACKPORT_KERNEL_NAME
+	string
+	default "Linux"
+
+menuconfig BACKPORT_LINUX
+	bool "Backport Linux v4.19-rc4-0-g7876320f8880 (backports v4.19-rc5-1-1-g17729e9d)"
+	default n
+	---help---
+	  Enabling this will let give you the opportunity to use features and
+	  drivers backported from Linux v4.19-rc4-0-g7876320f8880
+	  on the kernel your are using. This is experimental and you should
+	  say no unless you'd like to help test things or want to help debug
+	  this should we run into any issues.
+
+if BACKPORT_LINUX
+
+source "$BACKPORT_DIR/Kconfig.versions"
+source "$BACKPORT_DIR/Kconfig.sources"
+# source "$BACKPORT_DIR/Kconfig.local"
+
+endif # BACKPORT_LINUX

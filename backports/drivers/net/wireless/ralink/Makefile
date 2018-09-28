@@ -1,0 +1,1 @@
+obj-$(CONFIG_BACKPORT_RT2X00)	+= rt2x00/

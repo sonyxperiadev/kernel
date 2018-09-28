@@ -1,0 +1,26 @@
+config BACKPORT_R8188EU
+	tristate "Realtek RTL8188EU Wireless LAN NIC driver"
+	depends on !R8188EU
+	depends on WLAN && USB && BACKPORT_CFG80211
+	depends on m
+	depends on WIRELESS_EXT
+	depends on WEXT_PRIV
+	select BACKPORT_LIB80211
+	select BACKPORT_LIB80211_CRYPT_WEP
+	select BACKPORT_LIB80211_CRYPT_CCMP
+	---help---
+	This option adds the Realtek RTL8188EU USB device such as TP-Link TL-WN725N.
+	If built as a module, it will be called r8188eu.
+
+if BACKPORT_R8188EU
+
+config BACKPORT_88EU_AP_MODE
+	bool "Realtek RTL8188EU AP mode"
+	depends on !88EU_AP_MODE
+	default y
+	---help---
+	This option enables Access Point mode. Unless you know that your system
+	will never be used as an AP, or the target system has limited memory,
+	"Y" should be selected.
+
+endif

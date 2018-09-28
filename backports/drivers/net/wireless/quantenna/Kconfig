@@ -1,0 +1,17 @@
+config BACKPORT_WLAN_VENDOR_QUANTENNA
+	bool "Quantenna wireless cards support"
+	depends on !WLAN_VENDOR_QUANTENNA
+	default y
+	---help---
+	  If you have a wireless card belonging to this class, say Y.
+
+	  Note that the answer to this question doesn't directly affect the
+	  kernel: saying N will just cause the configurator to skip all the
+	  questions about these cards. If you say Y, you will be asked for
+	  your specific card in the following questions.
+
+if BACKPORT_WLAN_VENDOR_QUANTENNA
+
+source "$BACKPORT_DIR/drivers/net/wireless/quantenna/qtnfmac/Kconfig"
+
+endif # BACKPORT_WLAN_VENDOR_QUANTENNA

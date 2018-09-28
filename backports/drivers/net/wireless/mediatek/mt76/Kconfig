@@ -1,0 +1,43 @@
+config BACKPORT_MT76_CORE
+	tristate
+	depends on !MT76_CORE
+
+config BACKPORT_MT76_USB
+	tristate
+	depends on !MT76_USB
+	depends on BACKPORT_MT76_CORE
+
+config BACKPORT_MT76x2_COMMON
+	tristate
+	depends on !MT76x2_COMMON
+	depends on BACKPORT_MT76_CORE
+
+config BACKPORT_MT76x0U
+	tristate "MediaTek MT76x0U (USB) support"
+	depends on !MT76x0U
+	select BACKPORT_MT76_CORE
+	depends on BACKPORT_MAC80211
+	depends on USB
+	help
+	  This adds support for MT7610U-based wireless USB dongles.
+
+config BACKPORT_MT76x2E
+	tristate "MediaTek MT76x2E (PCIe) support"
+	depends on !MT76x2E
+	select BACKPORT_MT76_CORE
+	select BACKPORT_MT76x2_COMMON
+	depends on BACKPORT_MAC80211
+	depends on PCI
+	---help---
+	  This adds support for MT7612/MT7602/MT7662-based wireless PCIe devices.
+
+config BACKPORT_MT76x2U
+	tristate "MediaTek MT76x2U (USB) support"
+	depends on !MT76x2U
+	select BACKPORT_MT76_CORE
+	select BACKPORT_MT76_USB
+	select BACKPORT_MT76x2_COMMON
+	depends on BACKPORT_MAC80211
+	depends on USB
+	help
+	  This adds support for MT7612U-based wireless USB dongles.

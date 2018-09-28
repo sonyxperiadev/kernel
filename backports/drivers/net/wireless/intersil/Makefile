@@ -1,0 +1,4 @@
+obj-$(CONFIG_BACKPORT_HOSTAP)		+= hostap/
+obj-$(CONFIG_BACKPORT_HERMES)		+= orinoco/
+obj-$(CONFIG_BACKPORT_P54_COMMON)	+= p54/
+obj-$(CONFIG_BACKPORT_PRISM54)		+= prism54/

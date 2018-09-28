@@ -1,0 +1,62 @@
+config BACKPORT_WLAN_VENDOR_ATMEL
+	bool "Atmel devices"
+	depends on !WLAN_VENDOR_ATMEL
+	default y
+	---help---
+	  If you have a wireless card belonging to this class, say Y.
+
+	  Note that the answer to this question doesn't directly affect the
+	  kernel: saying N will just cause the configurator to skip all the
+	  questions about these cards. If you say Y, you will be asked for
+	  your specific card in the following questions.
+
+if BACKPORT_WLAN_VENDOR_ATMEL
+
+config BACKPORT_ATMEL
+      tristate "Atmel at76c50x chipset  802.11b support"
+	depends on !ATMEL
+      depends on BACKPORT_CFG80211 && (PCI || PCMCIA)
+      depends on WIRELESS_EXT
+      depends on WEXT_PRIV
+      depends on FW_LOADER
+      depends on CRC32
+       ---help---
+        A driver 802.11b wireless cards based on the Atmel fast-vnet
+        chips. This driver supports standard Linux wireless extensions.
+
+        Many  cards based on this chipset do not have flash memory
+        and need their firmware loaded at start-up. If yours is
+        one of these, you will need to provide a firmware image
+        to be loaded into the card by the driver. The Atmel
+        firmware package can be downloaded from
+        <http://www.thekelleys.org.uk/atmel>
+
+config BACKPORT_PCI_ATMEL
+      tristate "Atmel at76c506 PCI cards"
+	depends on !PCI_ATMEL
+      depends on BACKPORT_ATMEL && PCI
+       ---help---
+        Enable support for PCI and mini-PCI cards containing the
+        Atmel at76c506 chip.
+
+config BACKPORT_PCMCIA_ATMEL
+	tristate "Atmel at76c502/at76c504 PCMCIA cards"
+	depends on !PCMCIA_ATMEL
+	depends on BACKPORT_ATMEL && PCMCIA
+	depends on WIRELESS_EXT
+	depends on FW_LOADER
+	depends on CRC32
+	---help---
+	  Enable support for PCMCIA cards containing the
+	  Atmel at76c502 and at76c504 chips.
+
+config BACKPORT_AT76C50X_USB
+        tristate "Atmel at76c503/at76c505/at76c505a USB cards"
+	depends on !AT76C50X_USB
+        depends on BACKPORT_MAC80211 && USB
+        depends on FW_LOADER
+        ---help---
+          Enable support for USB Wireless devices using Atmel at76c503,
+          at76c505 or at76c505a chips.
+
+endif # BACKPORT_WLAN_VENDOR_ATMEL
