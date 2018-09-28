@@ -54,7 +54,7 @@
 #
 
 config BACKPORT_BP_MODULES
-	option modules
+	option bp_modules
 	depends on !BP_MODULES
 	bool
 	default MODULES

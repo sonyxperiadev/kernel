@@ -1,14 +1,14 @@
 config BACKPORT_MAC80211
 	tristate "Generic IEEE 802.11 Networking Stack (mac80211)"
 	depends on !MAC80211
-	depends on BACKPORT_CFG80211
+	#depends on BACKPORT_CFG80211
 	depends on CRYPTO
 	depends on CRYPTO_ARC4
 	depends on CRYPTO_AES
 	depends on CRYPTO_CCM
 	depends on CRYPTO_GCM
 	depends on CRYPTO_CMAC
-	depends on CRC32
+	#depends on CRC32
 	---help---
 	  This option enables the hardware independent IEEE 802.11
 	  networking stack.

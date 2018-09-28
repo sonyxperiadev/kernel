@@ -41,12 +41,12 @@ static inline u32 prandom_u32_max(u32 ep_ro)
 	return (u32)(((u64) prandom_u32() * ep_ro) >> 32);
 }
 #endif /* LINUX_VERSION_IS_LESS(3,14,0) */
-
+/*
 #if LINUX_VERSION_IS_LESS(4,11,0)
 static inline u32 get_random_u32(void)
 {
 	return get_random_int();
 }
 #endif
-
+*/
 #endif /* __BACKPORT_RANDOM_H */
