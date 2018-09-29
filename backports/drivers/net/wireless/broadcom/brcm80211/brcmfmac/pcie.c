@@ -196,6 +196,7 @@ static const struct brcmf_firmware_mapping brcmf_pcie_fwnames[] = {
 
 #define BRCMF_PCIE_MBDATA_TIMEOUT		msecs_to_jiffies(2000)
 
+#define BRCMF_PCIE_CFGREG_POWERMGMT_CAP		0x1
 #define BRCMF_PCIE_CFGREG_STATUS_CMD		0x4
 #define BRCMF_PCIE_CFGREG_PM_CSR		0x4C
 #define BRCMF_PCIE_CFGREG_MSI_CAP		0x58
@@ -209,6 +210,17 @@ static const struct brcmf_firmware_mapping brcmf_pcie_fwnames[] = {
 #define BRCMF_PCIE_CFGREG_REG_BAR2_CONFIG	0x4E0
 #define BRCMF_PCIE_CFGREG_REG_BAR3_CONFIG	0x4F4
 #define BRCMF_PCIE_LINK_STATUS_CTRL_ASPM_ENAB	3
+
+/* BRCM PME */
+#define BRCMF_PME_CSR_OFFSET			0x4
+#define BRCMF_PME_CSR_EN			0x100
+#define BRCMF_PME_CSR_STAT			0x8000
+
+#define PCI_CFG_STAT		0x06
+#define PCI_CFG_HDR		0x0e
+#define PCI_CFG_CAPPTR		0x34
+
+#define PCI_CAPPTR_PRESENT	0x10
 
 /* Magic number at a magic location to find RAM size */
 #define BRCMF_RAMSIZE_MAGIC			0x534d4152	/* SMAR */
@@ -530,6 +542,90 @@ brcmf_pcie_copy_dev_tomem(struct brcmf_pciedev_info *devinfo, u32 mem_offset,
 
 #define WRITECC32(devinfo, reg, value) brcmf_pcie_write_reg32(devinfo, \
 		CHIPCREGOFFS(reg), value)
+
+
+static u32
+read_pci_cfg_byte(struct brcmf_pciedev_info *devinfo, u32 addr)
+{
+	u32 cfgread;
+
+	pci_read_config_dword(devinfo->pdev, (addr & ~0x03), &cfgread);
+
+	return ((cfgread >> (8 * (addr & 0x3))) & 0xFF);
+}
+
+
+static u32
+brcmf_pcie_find_pci_capability(struct brcmf_pciedev_info *devinfo,
+				u32 req_cap_id)
+{
+	u32 cap_id;
+	u32 cap_ptr = 0;
+	u32 byte_val;
+
+	/* check for Header type 0 */
+	byte_val = read_pci_cfg_byte(devinfo, PCI_CFG_HDR);
+	if ((byte_val & 0x7f) != 0) {
+		brcmf_err("PCI config header not normal.\n");
+		goto end;
+	}
+
+	/* check if the capability pointer field exists */
+	byte_val = read_pci_cfg_byte(devinfo, PCI_CFG_STAT);
+	if (!(byte_val & PCI_CAPPTR_PRESENT)) {
+		brcmf_err("PCI CAP pointer not present.\n");
+		goto end;
+	}
+
+	cap_ptr = read_pci_cfg_byte(devinfo, PCI_CFG_CAPPTR);
+	/* check if the capability pointer is 0x00 */
+	if (cap_ptr == 0x00) {
+		brcmf_err(" PCI CAP pointer is 0x00.\n");
+		goto end;
+	}
+
+	/* loop through the capability list and
+	 * see if the pcie capabilty exists */
+	cap_id = read_pci_cfg_byte(devinfo, cap_ptr);
+
+	while (cap_id != req_cap_id) {
+		cap_ptr = read_pci_cfg_byte(devinfo, (cap_ptr + 1));
+		if (cap_ptr == 0x00) break;
+		cap_id = read_pci_cfg_byte(devinfo, cap_ptr);
+	}
+
+end:
+	return cap_ptr;
+}
+
+
+static int brcmf_pcie_pme_active(struct brcmf_pciedev_info *devinfo, bool enb)
+{
+	u32 cap_ptr;
+	u32 pme_csr;
+	u32 address;
+
+	cap_ptr = brcmf_pcie_find_pci_capability(devinfo,
+					BRCMF_PCIE_CFGREG_POWERMGMT_CAP);
+	if (!cap_ptr) {
+		brcmf_err("Power Management capability not present\n");
+		return -ENOTSUPP;
+	}
+
+	address = cap_ptr + BRCMF_PME_CSR_OFFSET;
+
+	pci_read_config_dword(devinfo->pdev, address, &pme_csr);
+	brcmf_dbg(PCIE, "PME Status control is 0x%x\n", pme_csr);
+
+	if (enb)
+		pme_csr |= BRCMF_PME_CSR_EN;
+	else
+		pme_csr &= ~BRCMF_PME_CSR_EN;
+
+	pci_write_config_dword(devinfo->pdev, address, pme_csr);
+
+	return 0;
+}
 
 
 static void
@@ -1947,6 +2043,8 @@ static int brcmf_pcie_pm_enter_D3(struct device *dev)
 	bus = dev_get_drvdata(dev);
 	devinfo = bus->bus_priv.pcie->devinfo;
 
+	brcmf_pcie_pme_active(devinfo, true);
+
 	brcmf_bus_change_state(bus, BRCMF_BUS_DOWN);
 
 	devinfo->mbdata_completed = false;
@@ -2013,6 +2111,7 @@ static int brcmf_pcie_pm_leave_D3(struct device *dev)
 		brcmf_bus_change_state(bus, BRCMF_BUS_UP);
 		brcmf_pcie_intr_enable(devinfo);
 		brcmf_pcie_hostready(devinfo);
+		brcmf_pcie_pme_active(devinfo, false);
 		return 0;
 	}
 
