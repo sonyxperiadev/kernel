@@ -48,6 +48,13 @@
 #include <linux/ipc_logging.h>
 #include <linux/msm_pcie.h>
 
+#undef BROADCOM_WIFI_FIXUP
+#if defined(CONFIG_BRCMFMAC_PCIE) || \
+    defined(CONFIG_BACKPORT_BRCMFMAC_PCIE) || \
+    defined(CONFIG_BCMDHD_PCIE)
+#define BROADCOM_WIFI_FIXUP
+#endif
+
 #ifdef CONFIG_ARCH_MDMCALIFORNIUM
 #define PCIE_VENDOR_ID_RCP		0x17cb
 #define PCIE_DEVICE_ID_RCP		0x0302
@@ -246,13 +253,13 @@
 #define PCIE20_DEVICE_CONTROL2_STATUS2 0x98
 
 /* BRCM: correct the EP regs offset for 435x */
-#ifdef CONFIG_BCMDHD_PCIE
+#ifdef BROADCOM_WIFI_FIXUP
 #define PCIE20_L1SUB_CONTROL2		0x15C
 #define PCIE20_L1SUB_CONTROL2_BRCM		0x24C
 #define PCIE20_CAP_LINKCTRLSTATUS_BRCM		0xBC
 #define PCIE20_DEVICE_CONTROL2_STATUS2_BRCM	0xD4
 #define PCIE20_LTR_MAX_SNOOP_LATENCY_BRCM	0x1B4
-#endif /* CONFIG_BCMDHD_PCIE */
+#endif /* BROADCOM_WIFI_FIXUP */
 
 #define PCIE20_AUX_CLK_FREQ_REG		0xB40
 #define PCIE20_ACK_F_ASPM_CTRL_REG     0x70C
@@ -3980,7 +3987,7 @@ static void msm_pcie_config_link_state(struct msm_pcie_dev_t *dev)
 		msm_pcie_write_mask(dev->dm_core + PCIE20_CAP_LINKCTRLSTATUS,
 					0, BIT(0));
 
-#ifdef CONFIG_BCMDHD_PCIE
+#ifdef BROADCOM_WIFI_FIXUP
 		if (dev->rc_idx == 0) {
 			/* config EP */
 			msm_pcie_write_mask(dev->conf + PCIE20_CAP_LINKCTRLSTATUS_BRCM,
@@ -4001,7 +4008,7 @@ static void msm_pcie_config_link_state(struct msm_pcie_dev_t *dev)
 						PCIE20_CAP_LINKCTRLSTATUS_BRCM);
 			}
 		} else {
-#endif /* CONFIG_BCMDHD_PCIE */
+#endif /* BROADCOM_WIFI_FIXUP */
 		msm_pcie_write_mask(dev->conf + ep_link_ctrlstts_offset,
 					0, BIT(0));
 		if (dev->shadow_en) {
@@ -4017,15 +4024,15 @@ static void msm_pcie_config_link_state(struct msm_pcie_dev_t *dev)
 			PCIE20_CAP_LINKCTRLSTATUS));
 		PCIE_DBG2(dev, "EP's CAP_LINKCTRLSTATUS:0x%x\n",
 			readl_relaxed(dev->conf + ep_link_ctrlstts_offset));
-#ifdef CONFIG_BCMDHD_PCIE
+#ifdef BROADCOM_WIFI_FIXUP
 		}
-#endif /* CONFIG_BCMDHD_PCIE */
+#endif /* BROADCOM_WIFI_FIXUP */
 	}
 
 	if (dev->l1_supported) {
 		msm_pcie_write_mask(dev->dm_core + PCIE20_CAP_LINKCTRLSTATUS,
 					0, BIT(1));
-#ifdef CONFIG_BCMDHD_PCIE
+#ifdef BROADCOM_WIFI_FIXUP
 		if (dev->rc_idx == 0) {
 			/* config EP */
 			msm_pcie_write_mask(dev->conf + PCIE20_CAP_LINKCTRLSTATUS_BRCM,
@@ -4046,7 +4053,7 @@ static void msm_pcie_config_link_state(struct msm_pcie_dev_t *dev)
 						PCIE20_CAP_LINKCTRLSTATUS_BRCM);
 			}
 		} else {
-#endif /* CONFIG_BCMDHD_PCIE */
+#endif /* BROADCOM_WIFI_FIXUP */
 		msm_pcie_write_mask(dev->conf + ep_link_ctrlstts_offset,
 					0, BIT(1));
 		if (dev->shadow_en) {
@@ -4062,9 +4069,9 @@ static void msm_pcie_config_link_state(struct msm_pcie_dev_t *dev)
 			PCIE20_CAP_LINKCTRLSTATUS));
 		PCIE_DBG2(dev, "EP's CAP_LINKCTRLSTATUS:0x%x\n",
 			readl_relaxed(dev->conf + ep_link_ctrlstts_offset));
-#ifdef CONFIG_BCMDHD_PCIE
+#ifdef BROADCOM_WIFI_FIXUP
 		}
-#endif /* CONFIG_BCMDHD_PCIE */
+#endif /* BROADCOM_WIFI_FIXUP */
 	}
 
 	if (dev->l1ss_supported) {
@@ -4096,7 +4103,7 @@ static void msm_pcie_config_link_state(struct msm_pcie_dev_t *dev)
 
 		val &= 0xf;
 
-#ifdef CONFIG_BCMDHD_PCIE
+#ifdef BROADCOM_WIFI_FIXUP
 		if (dev->rc_idx == 0) {
 			/* EP: disable ASPM(0xbc) */
 			msm_pcie_write_mask(dev->conf + PCIE20_CAP_LINKCTRLSTATUS_BRCM,
@@ -4199,7 +4206,7 @@ static void msm_pcie_config_link_state(struct msm_pcie_dev_t *dev)
 						PCIE20_LTR_MAX_SNOOP_LATENCY_BRCM);
 			}
 		} else {
-#endif /* CONFIG_BCMDHD_PCIE */
+#endif /* BROADCOM_WIFI_FIXUP */
 
 		msm_pcie_write_reg_field(dev->dm_core, PCIE20_L1SUB_CONTROL1,
 					0xf, val);
@@ -4234,9 +4241,9 @@ static void msm_pcie_config_link_state(struct msm_pcie_dev_t *dev)
 		PCIE_DBG2(dev, "EP's DEVICE_CONTROL2_STATUS2:0x%x\n",
 			readl_relaxed(dev->conf +
 			ep_dev_ctrl2stts2_offset));
-#ifdef CONFIG_BCMDHD_PCIE
+#ifdef BROADCOM_WIFI_FIXUP
 		}
-#endif /* CONFIG_BCMDHD_PCIE */
+#endif /* BROADCOM_WIFI_FIXUP */
 	}
 }
 
@@ -5569,7 +5576,7 @@ static irqreturn_t handle_aer_irq(int irq, void *data)
 		msm_pcie_write_mask(ep_base + ep_dev_ctrlstts_offset, 0,
 					BIT(18)|BIT(17)|BIT(16));
 
-#ifdef CONFIG_BCMDHD_PCIE
+#ifdef BROADCOM_WIFI_FIXUP
 		if (dev->rc_idx == 0) {
 			msm_pcie_write_reg_field(ep_base,
 					PCIE20_AER_UNCORR_ERR_STATUS_REG,
@@ -5578,16 +5585,16 @@ static irqreturn_t handle_aer_irq(int irq, void *data)
 					PCIE20_AER_CORR_ERR_STATUS_REG,
 					0x31c1, 0x31c1);
 		} else {
-#endif /* CONFIG_BCMDHD_PCIE */
+#endif /* BROADCOM_WIFI_FIXUP */
 		msm_pcie_write_reg_field(ep_base,
 				PCIE20_AER_UNCORR_ERR_STATUS_REG,
 				0x3fff031, 0x3fff031);
 		msm_pcie_write_reg_field(ep_base,
 				PCIE20_AER_CORR_ERR_STATUS_REG,
 				0xf1c1, 0xf1c1);
-#ifdef CONFIG_BCMDHD_PCIE
+#ifdef BROADCOM_WIFI_FIXUP
 		}
-#endif /* CONFIG_BCMDHD_PCIE */
+#endif /* BROADCOM_WIFI_FIXUP */
 	}
 out:
 	if (((dev->rc_corr_counter < corr_counter_limit) &&
