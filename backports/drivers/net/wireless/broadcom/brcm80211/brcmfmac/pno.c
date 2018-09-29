@@ -74,7 +74,8 @@ static int brcmf_pno_remove_request(struct brcmf_pno_info *pi, u64 reqid)
 			break;
 	}
 	/* request not found */
-	if (WARN(i == pi->n_reqs, "reqid not found\n")) {
+	if (i == pi->n_reqs) {
+		pr_warn("reqid not found\n");
 		err = -ENOENT;
 		goto done;
 	}
