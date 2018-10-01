@@ -28,6 +28,7 @@
 #include <asm/signal32.h>
 #include <linux/uaccess.h>
 #include <asm/unistd.h>
+#include <asm/vdso.h>
 
 struct compat_vfp_sigframe {
 	compat_ulong_t	magic;
@@ -433,6 +434,19 @@ static void compat_setup_return(struct pt_regs *regs, struct k_sigaction *ka,
 		retcode = ptr_to_compat(ka->sa.sa_restorer);
 	} else {
 		/* Set up sigreturn pointer */
+#ifdef CONFIG_VDSO32
+               void *vdso_base = current->mm->context.vdso;
+               void *trampoline =
+                       (ka->sa.sa_flags & SA_SIGINFO
+                        ? (thumb
+                           ? VDSO_SYMBOL(vdso_base, compat_rt_sigreturn_thumb)
+                           : VDSO_SYMBOL(vdso_base, compat_rt_sigreturn_arm))
+                        : (thumb
+                           ? VDSO_SYMBOL(vdso_base, compat_sigreturn_thumb)
+                           : VDSO_SYMBOL(vdso_base, compat_sigreturn_arm)));
+
+               retcode = ptr_to_compat(trampoline) + thumb;
+#else
 		void *sigreturn_base = current->mm->context.vdso;
 		unsigned int idx = thumb << 1;
 
@@ -440,6 +454,7 @@ static void compat_setup_return(struct pt_regs *regs, struct k_sigaction *ka,
 			idx += 3;
 
 		retcode = ptr_to_compat(sigreturn_base) + (idx << 2) + thumb;
+#endif
 	}
 
 	regs->regs[0]	= usig;
