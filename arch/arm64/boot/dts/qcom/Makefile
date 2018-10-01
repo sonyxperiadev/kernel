@@ -558,6 +558,7 @@ dtb-$(CONFIG_MACH_SONY_POPLAR)		+= msm8998-v2.1-yoshino-poplar-sde_generic.dtb
 # SDM660 - SDE
 dtb-$(CONFIG_MACH_SONY_PIONEER)		+= sdm630-nile-pioneer-sde.dtb
 dtb-$(CONFIG_MACH_SONY_DISCOVERY)	+= sdm630-nile-discovery-sde.dtb
+dtb-$(CONFIG_MACH_SONY_VOYAGER)		+= sdm630-nile-voyager-sde.dtb
 else
 # MSM8998
 dtb-$(CONFIG_MACH_SONY_LILAC)		+= msm8998-v2-yoshino-lilac_generic.dtb
@@ -578,6 +579,7 @@ dtb-$(CONFIG_MACH_SONY_KEYAKI)		+= msm8996-v3-pmi8996-tone-keyaki_generic.dtb
 # SDM660
 dtb-$(CONFIG_MACH_SONY_PIONEER)		+= sdm630-nile-pioneer.dtb
 dtb-$(CONFIG_MACH_SONY_DISCOVERY)	+= sdm630-nile-discovery.dtb
+dtb-$(CONFIG_MACH_SONY_VOYAGER)		+= sdm630-nile-voyager.dtb
 
 # MSM8956
 dtb-$(CONFIG_MACH_SONY_SUZU)		+= msm8956-v1.1-loire-suzu_generic.dtb
