@@ -194,6 +194,40 @@ static notrace int do_monotonic(const struct vdso_data *vd, struct timespec *ts)
 	return 0;
 }
 
+static notrace int do_monotonic_raw(const struct vdso_data *vd,
+				    struct timespec *ts)
+{
+	u32 seq, mult, shift;
+	u64 nsec, cycle_last;
+	u64 mask;
+	vdso_raw_time_sec_t sec;
+
+	do {
+		seq = vdso_read_begin(vd);
+
+		if (vd->use_syscall)
+			return -1;
+
+		cycle_last = vd->cs_cycle_last;
+
+		mult = vd->cs_raw_mult;
+		shift = vd->cs_shift;
+		mask = vd->cs_mask;
+
+		sec = vd->raw_time_sec;
+		nsec = vd->raw_time_nsec;
+
+	} while (unlikely(vdso_read_retry(vd, seq)));
+
+	nsec += get_clock_shifted_nsec(cycle_last, mult, mask);
+	nsec >>= shift;
+	/* open coding timespec_add_ns to save a ts->tv_nsec = 0 */
+	ts->tv_sec = sec + __iter_div_u64_rem(nsec, NSEC_PER_SEC, &nsec);
+	ts->tv_nsec = nsec;
+
+	return 0;
+}
+
 #else /* CONFIG_ARM_ARCH_TIMER */
 
 static notrace int do_realtime(const struct vdso_data *vd, struct timespec *ts)
@@ -202,6 +236,12 @@ static notrace int do_realtime(const struct vdso_data *vd, struct timespec *ts)
 }
 
 static notrace int do_monotonic(const struct vdso_data *vd, struct timespec *ts)
+{
+	return -1;
+}
+
+static notrace int do_monotonic_raw(const struct vdso_data *vd,
+				    struct timespec *ts)
 {
 	return -1;
 }
@@ -225,6 +265,10 @@ notrace int __vdso_clock_gettime(clockid_t clock, struct timespec *ts)
 		break;
 	case CLOCK_MONOTONIC:
 		if (do_monotonic(vd, ts))
+			goto fallback;
+		break;
+	case CLOCK_MONOTONIC_RAW:
+		if (do_monotonic_raw(vd, ts))
 			goto fallback;
 		break;
 	default:
