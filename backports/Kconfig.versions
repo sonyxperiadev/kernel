@@ -1,0 +1,9 @@
+config BACKPORT_KERNEL_4_10
+    def_bool y
+config BACKPORT_KERNEL_4_12
+    def_bool y
+config BACKPORT_KERNEL_4_18
+    def_bool y
+config BACKPORT_KERNEL_4_19
+    def_bool y
+

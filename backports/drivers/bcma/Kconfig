@@ -1,0 +1,133 @@
+# SPDX-License-Identifier: GPL-2.0
+config BACKPORT_BCMA_POSSIBLE
+	bool
+	depends on !BCMA_POSSIBLE
+	depends on HAS_IOMEM && HAS_DMA
+	default y
+
+menuconfig BACKPORT_BCMA
+	tristate "Broadcom specific AMBA"
+	depends on !BCMA
+	depends on BACKPORT_BCMA_POSSIBLE
+	help
+	  Bus driver for Broadcom specific Advanced Microcontroller Bus
+	  Architecture.
+
+if BACKPORT_BCMA
+
+# Support for Block-I/O. SELECT this from the driver that needs it.
+config BACKPORT_BCMA_BLOCKIO
+	bool
+	depends on !BCMA_BLOCKIO
+
+config BACKPORT_BCMA_HOST_PCI_POSSIBLE
+	bool
+	depends on !BCMA_HOST_PCI_POSSIBLE
+	depends on PCI = y
+	default y
+
+config BACKPORT_BCMA_HOST_PCI
+	bool "Support for BCMA on PCI-host bus"
+	depends on !BCMA_HOST_PCI
+	depends on BACKPORT_BCMA_HOST_PCI_POSSIBLE
+	select BACKPORT_BCMA_DRIVER_PCI
+	default y
+
+config BACKPORT_BCMA_HOST_SOC
+	bool "Support for BCMA in a SoC"
+	depends on !BCMA_HOST_SOC
+	depends on HAS_IOMEM
+	help
+	  Host interface for a Broadcom AIX bus directly mapped into
+	  the memory. This only works with the Broadcom SoCs from the
+	  BCM47XX line.
+
+	  If unsure, say N
+
+config BACKPORT_BCMA_DRIVER_PCI
+	bool "BCMA Broadcom PCI core driver"
+	depends on !BCMA_DRIVER_PCI
+	depends on PCI
+	default y
+	help
+	  BACKPORT_BCMA bus may have many versions of PCIe core. This driver
+	  supports:
+	  1) PCIe core working in clientmode
+	  2) PCIe Gen 2 clientmode core
+
+	  In general PCIe (Gen 2) clientmode core is required on PCIe
+	  hosted buses. It's responsible for initialization and basic
+	  hardware management.
+	  This driver is also prerequisite for a hostmode PCIe core
+	  support.
+
+config BACKPORT_BCMA_DRIVER_PCI_HOSTMODE
+	bool "Driver for PCI core working in hostmode"
+	depends on !BCMA_DRIVER_PCI_HOSTMODE
+	depends on MIPS && BACKPORT_BCMA_DRIVER_PCI && PCI_DRIVERS_LEGACY && BACKPORT_BCMA = y
+	help
+	  PCI core hostmode operation (external PCI bus).
+
+config BACKPORT_BCMA_DRIVER_MIPS
+	bool "BCMA Broadcom MIPS core driver"
+	depends on !BCMA_DRIVER_MIPS
+	depends on MIPS || COMPILE_TEST
+	help
+	  Driver for the Broadcom MIPS core attached to Broadcom specific
+	  Advanced Microcontroller Bus.
+
+	  If unsure, say N
+
+config BACKPORT_BCMA_PFLASH
+	bool
+	depends on !BCMA_PFLASH
+	depends on BACKPORT_BCMA_DRIVER_MIPS
+	default y
+
+config BACKPORT_BCMA_SFLASH
+	bool "ChipCommon-attached serial flash support"
+	depends on !BCMA_SFLASH
+	depends on BACKPORT_BCMA_HOST_SOC
+	default y
+	help
+	  Some cheap devices have serial flash connected to the ChipCommon
+	  instead of independent SPI controller. It requires using a separated
+	  driver that implements ChipCommon specific interface communication.
+
+	  Enabling this symbol will let bcma recognize serial flash and register
+	  it as platform device.
+
+config BACKPORT_BCMA_NFLASH
+	bool
+	depends on !BCMA_NFLASH
+	depends on BACKPORT_BCMA_DRIVER_MIPS
+	default y
+
+config BACKPORT_BCMA_DRIVER_GMAC_CMN
+	bool "BCMA Broadcom GBIT MAC COMMON core driver"
+	depends on !BCMA_DRIVER_GMAC_CMN
+	help
+	  Driver for the Broadcom GBIT MAC COMMON core attached to Broadcom
+	  specific Advanced Microcontroller Bus.
+
+	  If unsure, say N
+
+config BACKPORT_BCMA_DRIVER_GPIO
+	bool "BCMA GPIO driver"
+	depends on !BCMA_DRIVER_GPIO
+	depends on GPIOLIB
+	select GPIOLIB_IRQCHIP if BACKPORT_BCMA_HOST_SOC
+	help
+	  Driver to provide access to the GPIO pins of the bcma bus.
+
+	  If unsure, say N
+
+config BACKPORT_BCMA_DEBUG
+	bool "BCMA debugging"
+	depends on !BCMA_DEBUG
+	help
+	  This turns on additional debugging messages.
+
+	  If unsure, say N
+
+endif # BACKPORT_BCMA

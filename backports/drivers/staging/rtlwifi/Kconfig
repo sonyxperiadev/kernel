@@ -1,0 +1,14 @@
+config BACKPORT_R8822BE
+	tristate "Realtek RTL8822BE Wireless Network Adapter"
+	depends on !R8822BE
+	depends on PCI && BACKPORT_MAC80211 && m
+	depends on FW_LOADER
+	---help---
+	This is the staging driver for Realtek RTL8822BE 802.11ac PCIe
+	wireless network adapters.
+
+config BACKPORT_RTLWIFI_DEBUG_ST
+	bool
+	depends on !RTLWIFI_DEBUG_ST
+	depends on BACKPORT_R8822BE
+	default y

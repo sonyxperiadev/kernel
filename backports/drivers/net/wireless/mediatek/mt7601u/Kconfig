@@ -1,0 +1,7 @@
+config BACKPORT_MT7601U
+	tristate "MediaTek MT7601U (USB) support"
+	depends on !MT7601U
+	depends on BACKPORT_MAC80211
+	depends on USB
+	---help---
+	  This adds support for BACKPORT_MT7601U-based wireless USB dongles.

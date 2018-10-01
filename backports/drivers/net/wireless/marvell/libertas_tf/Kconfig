@@ -1,0 +1,21 @@
+config BACKPORT_LIBERTAS_THINFIRM
+	tristate "Marvell 8xxx Libertas WLAN driver support with thin firmware"
+	depends on !LIBERTAS_THINFIRM
+	depends on BACKPORT_MAC80211
+	depends on FW_LOADER
+	---help---
+	  A library for Marvell Libertas 8xxx devices using thinfirm.
+
+config BACKPORT_LIBERTAS_THINFIRM_DEBUG
+	bool "Enable full debugging output in the Libertas thin firmware module."
+	depends on !LIBERTAS_THINFIRM_DEBUG
+	depends on BACKPORT_LIBERTAS_THINFIRM
+	---help---
+	  Debugging support.
+
+config BACKPORT_LIBERTAS_THINFIRM_USB
+	tristate "Marvell Libertas 8388 USB 802.11b/g cards with thin firmware"
+	depends on !LIBERTAS_THINFIRM_USB
+	depends on BACKPORT_LIBERTAS_THINFIRM && USB
+	---help---
+	  A driver for Marvell Libertas 8388 USB devices using thinfirm.
