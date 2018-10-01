@@ -347,4 +347,13 @@ config MACH_SONY_DISCOVERY
         which is based on SONY Nile platform.
         If you enable this config,
         please use SONY Mobile device tree.
+
+config MACH_SONY_VOYAGER
+        bool "Sony Mobile Voyager"
+        depends on ARCH_SONY_NILE
+        help
+        Support for the SONY Mobile Voyager device
+        which is based on SONY Nile platform.
+        If you enable this config,
+        please use SONY Mobile device tree.
 endmenu
