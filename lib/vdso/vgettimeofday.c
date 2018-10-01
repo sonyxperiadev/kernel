@@ -247,6 +247,51 @@ static notrace int do_monotonic_raw(const struct vdso_data *vd,
 	return 0;
 }
 
+static notrace int do_boottime(const struct vdso_data *vd, struct timespec *ts)
+{
+	u32 seq, mult, shift;
+	u64 nsec, cycle_last;
+	vdso_wtm_clock_nsec_t wtm_nsec;
+#ifdef ARCH_CLOCK_FIXED_MASK
+	static const u64 mask = ARCH_CLOCK_FIXED_MASK;
+#else
+	u64 mask;
+#endif
+	__kernel_time_t sec;
+
+	do {
+		seq = vdso_read_begin(vd);
+
+		if (vd->use_syscall)
+			return -1;
+
+		cycle_last = vd->cs_cycle_last;
+
+		mult = vd->cs_mono_mult;
+		shift = vd->cs_shift;
+#ifndef ARCH_CLOCK_FIXED_MASK
+		mask = vd->cs_mask;
+#endif
+
+		sec = vd->xtime_clock_sec;
+		nsec = vd->xtime_clock_snsec;
+
+		sec += vd->wtm_clock_sec + vd->btm_sec;
+		wtm_nsec = vd->wtm_clock_nsec + vd->btm_nsec;
+
+	} while (unlikely(vdso_read_retry(vd, seq)));
+
+	nsec += get_clock_shifted_nsec(cycle_last, mult, mask);
+	nsec >>= shift;
+	nsec += wtm_nsec;
+
+	/* open coding timespec_add_ns to save a ts->tv_nsec = 0 */
+	ts->tv_sec = sec + __iter_div_u64_rem(nsec, NSEC_PER_SEC, &nsec);
+	ts->tv_nsec = nsec;
+
+	return 0;
+}
+
 #else /* ARCH_PROVIDES_TIMER */
 
 static notrace int do_realtime(const struct vdso_data *vd, struct timespec *ts)
@@ -261,6 +306,12 @@ static notrace int do_monotonic(const struct vdso_data *vd, struct timespec *ts)
 
 static notrace int do_monotonic_raw(const struct vdso_data *vd,
 				    struct timespec *ts)
+{
+	return -1;
+}
+
+static notrace int do_boottime(const struct vdso_data *vd,
+			       struct timespec *ts)
 {
 	return -1;
 }
@@ -288,6 +339,10 @@ notrace int __vdso_clock_gettime(clockid_t clock, struct timespec *ts)
 		break;
 	case CLOCK_MONOTONIC_RAW:
 		if (do_monotonic_raw(vd, ts))
+			goto fallback;
+		break;
+	case CLOCK_BOOTTIME:
+		if (do_boottime(vd, ts))
 			goto fallback;
 		break;
 	default:
@@ -326,6 +381,7 @@ int __vdso_clock_getres(clockid_t clock, struct timespec *res)
 	long nsec;
 
 	if (clock == CLOCK_REALTIME ||
+	    clock == CLOCK_BOOTTIME ||
 	    clock == CLOCK_MONOTONIC ||
 	    clock == CLOCK_MONOTONIC_RAW)
 		nsec = MONOTONIC_RES_NSEC;
