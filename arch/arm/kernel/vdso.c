@@ -192,6 +192,7 @@ static void __init patch_vdso(void *ehdr)
 		vdso_nullpatch_one(&einfo, "__vdso_gettimeofday");
 		vdso_nullpatch_one(&einfo, "__vdso_clock_gettime");
 		vdso_nullpatch_one(&einfo, "__vdso_clock_getres");
+		/* do not zero out __vdso_time, no cntvct_ok dependency */
 	}
 }
 
