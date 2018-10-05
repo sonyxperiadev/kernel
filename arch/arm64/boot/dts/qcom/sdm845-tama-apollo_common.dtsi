@@ -19,6 +19,7 @@
 
 #include "sdm845-tama-common.dtsi"
 #include "sdm845-tama-common-display.dtsi"
+#include "sdm845-tama-akari-camera.dtsi"
 #include "dsi-panel-somc-apollo.dtsi"
 
 &somc_pinctrl_pmic {
