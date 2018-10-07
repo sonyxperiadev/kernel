@@ -668,23 +668,6 @@
 		qcom,msm-pcm-bit;
 	};
 
-	bcmdhd_wlan {
-		compatible = "android,bcmdhd_wlan";
-		gpios = <&msm_gpio 48 0x00>, /* WL_REG_ON */
-			<&msm_gpio 45 0x00>; /* WL_HOST_WAKE */
-		pinctrl-names = "default", "sleep";
-		pinctrl-0 = <&msm_gpio_48_def &msm_gpio_45_def>;
-		pinctrl-1 = <&msm_gpio_48_def &msm_gpio_45_def>;
-
-		qcom,msm-bus,name = "msm-bcmdhd";
-		qcom,msm-bus,num-cases = <3>;
-		qcom,msm-bus,num-paths = <1>;
-		qcom,msm-bus,vectors-KBps =
-			<45 512 0 0>, /* None vote */
-			<45 512 500 800>, /* Low vote */
-			<45 512 500 5448000>; /* High Vote */
-	};
-
 	usb_otg: usb@78db000 {
 		qcom,usb-switch-sel-gpio = <&pmi8950_gpios 1 0>;
 		qcom,usbin-vadc = <&pmi8950_vadc>;
