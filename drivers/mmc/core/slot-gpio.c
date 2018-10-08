@@ -222,6 +222,12 @@ void mmc_gpiod_request_cd_irq(struct mmc_host *host)
 	if (irq >= 0 && host->caps & MMC_CAP_NEEDS_POLL)
 		irq = -EINVAL;
 
+       ret = mmc_gpio_get_status(host);
+       if (ret < 0)
+               pr_warn("%s: failed to init cd_gpio status\n", mmc_hostname(host));
+       else
+               ctx->status = ret;
+
 	if (irq >= 0) {
 		if (!ctx->cd_gpio_isr)
 			ctx->cd_gpio_isr = mmc_gpio_cd_irqt;
