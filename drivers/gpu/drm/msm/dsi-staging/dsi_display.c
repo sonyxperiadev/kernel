@@ -889,6 +889,17 @@ int dsi_display_cmd_transfer(void *display, const char *cmd_buf,
 
 	mutex_lock(&dsi_display->display_lock);
 	rc = dsi_display_ctrl_get_host_init_state(dsi_display, &state);
+
+	/**
+	 * Handle scenario where a command transfer is initiated through
+	 * sysfs interface when device is in suepnd state.
+	 */
+	if (!rc && !state) {
+		pr_warn_ratelimited("Command xfer attempted while device is in suspend state\n"
+				);
+		rc = -EPERM;
+		goto end;
+	}
 	if (rc || !state) {
 		pr_err("[DSI] Invalid host state %d rc %d\n",
 				state, rc);
