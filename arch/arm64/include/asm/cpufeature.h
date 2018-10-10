@@ -37,7 +37,8 @@
 #define ARM64_WORKAROUND_CAVIUM_27456		11
 #define ARM64_HAS_VIRT_HOST_EXTN		12
 #define ARM64_HARDEN_BRANCH_PREDICTOR		13
-#define ARM64_NCAPS				14
+#define ARM64_HAS_32BIT_EL0			14
+#define ARM64_NCAPS				15
 
 #ifndef __ASSEMBLY__
 
@@ -187,6 +188,11 @@ u64 read_system_reg(u32 id);
 static inline bool cpu_supports_mixed_endian_el0(void)
 {
 	return id_aa64mmfr0_mixed_endian_el0(read_cpuid(SYS_ID_AA64MMFR0_EL1));
+}
+
+static inline bool system_supports_32bit_el0(void)
+{
+	return cpus_have_cap(ARM64_HAS_32BIT_EL0);
 }
 
 static inline bool system_supports_mixed_endian_el0(void)
