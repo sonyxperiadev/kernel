@@ -264,6 +264,8 @@ struct tcs3490_chip {
 	struct pinctrl *pinctrl;
 	struct pinctrl_state *gpio_state_active;
 	struct pinctrl_state *gpio_state_suspend;
+	struct delayed_work work;
+	bool work_scheduled;
 };
 
 static int tcs3490_power_on(struct tcs3490_chip *chip);
@@ -744,6 +746,10 @@ static irqreturn_t tcs3490_irq(int irq, void *handle)
 
     (void)tcs3490_check_and_report(chip);
 	sysfs_notify(&chip->a_idev->dev.kobj, NULL, "notify");
+	if (!chip->work_scheduled) {
+		schedule_delayed_work(&chip->work, 0);
+		chip->work_scheduled = true;
+	}
     return IRQ_HANDLED;
 }
 
@@ -1208,6 +1214,31 @@ static ssize_t tcs3490_notify(struct device *dev,
 	return snprintf(buf, PAGE_SIZE, "%d", 1);
 }
 
+/* work handler */
+static void tcs3490_work(struct work_struct *work)
+{
+	struct tcs3490_chip *chip = container_of(work, struct tcs3490_chip,
+					work.work);
+
+	mutex_lock(&chip->lock);
+
+	if (!chip->unpowered && chip->als_enabled) {
+		input_report_abs(chip->a_idev, ABS_MISC,
+					chip->als_inf.clear_raw);
+		input_report_abs(chip->a_idev, ABS_HAT0X,
+					chip->als_inf.red_raw);
+		input_report_abs(chip->a_idev, ABS_HAT0Y,
+					chip->als_inf.green_raw);
+		input_report_abs(chip->a_idev, ABS_HAT1X,
+					chip->als_inf.blue_raw);
+		input_report_abs(chip->a_idev, ABS_HAT1Y, 
+					chip->als_inf.ir_raw);
+	}
+
+	chip->work_scheduled = false;
+	mutex_unlock(&chip->lock);
+}
+
 /*=========== DEFINE DEVICE_ATTR ==================*/
 static DEVICE_ATTR(chip_pow, S_IRUGO | S_IWUSR | S_IWGRP,
 			tcs3490_chip_pow_show, tcs3490_chip_pow_store);
@@ -1407,6 +1438,17 @@ static int tcs3490_probe(struct i2c_client *client,
 
 	dev_info(&chip->client->dev, "tcs3490: Set ABS params\n");
 	input_set_abs_params(chip->a_idev, ABS_MISC, 0, 65535, 0, 0); /*check*/
+	input_set_abs_params(chip->a_idev, ABS_HAT0X, 0, 65535, 0, 0);
+	input_set_abs_params(chip->a_idev, ABS_HAT0Y, 0, 65535, 0, 0);
+	input_set_abs_params(chip->a_idev, ABS_HAT1X, 0, 65535, 0, 0);
+	input_set_abs_params(chip->a_idev, ABS_HAT1Y, 0, 65535, 0, 0);
+
+	/*
+	 * advertise coordinates
+	 * this makes android not mistake the input device for a stylus
+	 */
+	input_set_abs_params(chip->a_idev, ABS_X, 0, 0, 0, 0);
+	input_set_abs_params(chip->a_idev, ABS_Y, 0, 0, 0, 0);
 
 	dev_info(&chip->client->dev,
 		"tcs3490: assigning open/close functions\n");
@@ -1438,6 +1480,9 @@ static int tcs3490_probe(struct i2c_client *client,
 			"%s: failed to create sysfs link", __func__);
 		goto exit_unregister_dev_ps;
 	}
+
+	/* init work handler */
+	INIT_DELAYED_WORK(&chip->work, tcs3490_work);
 
 	dev_info(&client->dev, "Probe ok.\n");
 	return 0;
