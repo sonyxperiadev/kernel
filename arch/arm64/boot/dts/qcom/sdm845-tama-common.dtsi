@@ -624,7 +624,7 @@
 
 &red_led {
 	somc,pwm-channel = <4>;
-	linux,name = "red";
+	linux,name = "led:rgb_red";
 	linux,default-trigger = "none";
 	somc,color_variation_max_num = <4>;
 	somc,max_current = <
@@ -636,7 +636,7 @@
 
 &green_led {
 	somc,pwm-channel = <3>;
-	linux,name = "green";
+	linux,name = "led:rgb_green";
 	linux,default-trigger = "none";
 	somc,color_variation_max_num = <4>;
 	somc,max_current = <
@@ -648,7 +648,7 @@
 
 &blue_led {
 	somc,pwm-channel = <2>;
-	linux,name = "blue";
+	linux,name = "led:rgb_blue";
 	linux,default-trigger = "none";
 	somc,color_variation_max_num = <4>;
 	somc,max_current = <
