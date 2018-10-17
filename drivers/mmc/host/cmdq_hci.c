@@ -923,6 +923,8 @@ irqreturn_t cmdq_irq(struct mmc_host *mmc, int err)
 		err_info = cmdq_readl(cq_host, CQTERRI);
 		pr_err("%s: err: %d status: 0x%08x task-err-info (0x%08lx)\n",
 		       mmc_hostname(mmc), err, status, err_info);
+		/* Dump the registers before clearing Interrupt */
+		cmdq_dumpregs(cq_host);
 
 		/*
 		 * Need to halt CQE in case of error in interrupt context itself
@@ -946,7 +948,6 @@ irqreturn_t cmdq_irq(struct mmc_host *mmc, int err)
 		 */
 		cmdq_writel(cq_host, status, CQIS);
 
-		cmdq_dumpregs(cq_host);
 
 		if (!err_info) {
 			/*
@@ -1108,6 +1109,7 @@ skip_cqterri:
 			}
 		}
 		cmdq_finish_data(mmc, tag);
+		goto hac;
 	} else {
 		cmdq_writel(cq_host, status, CQIS);
 	}
