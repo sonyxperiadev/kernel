@@ -965,7 +965,7 @@ static ssize_t tcs3490_als_red_show(struct device *dev,
     struct tcs3490_chip *chip = dev_get_drvdata(dev);
 	mutex_lock(&chip->lock);
 	ret = snprintf(buf, PAGE_SIZE, "%d", chip->als_inf.red_raw);
-	mutex_lock(&chip->lock);
+	mutex_unlock(&chip->lock);
 	return ret;
 }
 
