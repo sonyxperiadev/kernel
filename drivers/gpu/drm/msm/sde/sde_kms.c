@@ -1111,6 +1111,11 @@ static void sde_kms_wait_for_commit_done(struct msm_kms *kms,
 		return;
 	}
 
+	if (!sde_kms_power_resource_is_enabled(crtc->dev)) {
+		SDE_ERROR("power resource is not enabled\n");
+		return;
+	}
+
 	list_for_each_entry(encoder, &dev->mode_config.encoder_list, head) {
 		if (encoder->crtc != crtc)
 			continue;
