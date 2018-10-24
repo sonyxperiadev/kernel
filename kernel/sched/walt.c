@@ -304,12 +304,7 @@ update_window_start(struct rq *rq, u64 wallclock, int event)
 	u64 old_window_start = rq->window_start;
 
 	delta = wallclock - rq->window_start;
-	/* If the MPM global timer is cleared, set delta as 0 to avoid kernel BUG happening */
-	if (delta < 0) {
-		delta = 0;
-		WARN_ONCE(1, "WALT wallclock appears to have gone backwards or reset\n");
-	}
-
+	BUG_ON(delta < 0);
 	if (delta < sched_ravg_window)
 		return old_window_start;
 
@@ -395,6 +390,13 @@ void sched_account_irqstart(int cpu, struct task_struct *curr, u64 wallclock)
 	struct rq *rq = cpu_rq(cpu);
 
 	if (!rq->window_start || sched_disable_window_stats)
+		return;
+
+	/*
+	 * We don’t have to note down an irqstart event when cycle
+	 * counter is not used.
+	 */
+	if (!use_cycle_counter)
 		return;
 
 	if (is_idle_task(curr)) {

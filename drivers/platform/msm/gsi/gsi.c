@@ -1293,6 +1293,7 @@ int gsi_alloc_evt_ring(struct gsi_evt_ring_props *props, unsigned long dev_hdl,
 		if (!props->evchid_valid)
 			clear_bit(evt_id, &gsi_ctx->evt_bmap);
 		mutex_unlock(&gsi_ctx->mlock);
+		BUG();
 		return -GSI_STATUS_RES_ALLOC_FAILURE;
 	}
 
@@ -2685,7 +2686,7 @@ int gsi_start_xfer(unsigned long chan_hdl)
 		return -GSI_STATUS_UNSUPPORTED_OP;
 	}
 
-	if (ctx->state != GSI_CHAN_STATE_STARTED) {
+	if (ctx->state == GSI_CHAN_STATE_NOT_ALLOCATED) {
 		GSIERR("bad state %d\n", ctx->state);
 		return -GSI_STATUS_UNSUPPORTED_OP;
 	}

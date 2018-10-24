@@ -2472,9 +2472,12 @@ static int ipa3_q6_set_ex_path_to_apps(void)
 		/* disable statuses for all modem controlled prod pipes */
 		if (IPA_CLIENT_IS_Q6_PROD(client_idx) ||
 			(ipa3_ctx->ep[ep_idx].valid &&
-			ipa3_ctx->ep[ep_idx].skip_ep_cfg)) {
+			ipa3_ctx->ep[ep_idx].skip_ep_cfg) ||
+			(ipa3_ctx->ep[ep_idx].client == IPA_CLIENT_APPS_WAN_PROD
+			&& ipa3_ctx->modem_cfg_emb_pipe_flt)) {
 			ipa_assert_on(num_descs >= ipa3_ctx->ipa_num_pipes);
 
+			ipa3_ctx->ep[ep_idx].status.status_en = false;
 			reg_write.skip_pipeline_clear = false;
 			reg_write.pipeline_clear_options =
 				IPAHAL_HPS_CLEAR;
@@ -4285,7 +4288,7 @@ static int ipa3_panic_notifier(struct notifier_block *this,
 		IPAERR("uC panic handler failed %d\n", res);
 
 	if (atomic_read(&ipa3_ctx->ipa3_active_clients.cnt) != 0)
-		ipahal_print_all_regs();
+		ipahal_print_all_regs(false);
 
 	return NOTIFY_DONE;
 }
@@ -5906,10 +5909,10 @@ static int get_ipa_dts_configuration(struct platform_device *pdev,
 	}
 
 	ipa_drv_res->wdi_over_pcie =
-			of_property_read_bool(pdev->dev.of_node,
-			"qcom,wlan-ce-db-over-pcie");
+		of_property_read_bool(pdev->dev.of_node,
+		"qcom,wlan-ce-db-over-pcie");
 	IPADBG("Is wdi_over_pcie ? (%s)\n",
-				ipa3_ctx->wdi_over_pcie ? "Yes":"No");
+		ipa_drv_res->wdi_over_pcie ? "Yes":"No");
 
 	/*
 	 * If we're on emulator, get its interrupt controller's mem

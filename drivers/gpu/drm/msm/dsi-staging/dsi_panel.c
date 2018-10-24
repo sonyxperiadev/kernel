@@ -396,7 +396,7 @@ static int dsi_panel_reset(struct dsi_panel *panel)
 
 		if (r_config->sequence[i].sleep_ms)
 			usleep_range(r_config->sequence[i].sleep_ms * 1000,
-				     r_config->sequence[i].sleep_ms * 1000);
+				(r_config->sequence[i].sleep_ms * 1000) + 100);
 	}
 
 	if (gpio_is_valid(panel->bl_config.en_gpio)) {
@@ -4021,11 +4021,14 @@ int dsi_panel_disable(struct dsi_panel *panel)
 
 	mutex_lock(&panel->panel_lock);
 
-	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_OFF);
-	if (rc) {
-		pr_err("[%s] failed to send DSI_CMD_SET_OFF cmds, rc=%d\n",
-		       panel->name, rc);
-		goto error;
+	/* Avoid sending panel off commands when ESD recovery is underway */
+	if (!atomic_read(&panel->esd_recovery_pending)) {
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_OFF);
+		if (rc) {
+			pr_err("[%s] failed to send DSI_CMD_SET_OFF cmds, rc=%d\n",
+					panel->name, rc);
+			goto error;
+		}
 	}
 	panel->panel_initialized = false;
 

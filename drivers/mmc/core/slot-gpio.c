@@ -81,48 +81,13 @@ static irqreturn_t mmc_gpio_cd_irqt(int irq, void *dev_id)
 {
 	/* Schedule a card detection after a debounce timeout */
 	struct mmc_host *host = dev_id;
-	struct mmc_gpio *ctx = host->slot.handler_priv;
-	int status;
-#ifdef CONFIG_MMC_SD_DEFERRED_RESUME
-	unsigned long flags;
-#endif
+	int present = host->ops->get_cd(host);
 
-	if (!host->ops)
-		goto out;
+	pr_debug("%s: cd gpio irq, gpio state %d (CARD_%s)\n",
+		mmc_hostname(host), present, present?"INSERT":"REMOVAL");
 
-	status = mmc_gpio_get_status(host);
-	if (unlikely(status < 0))
-		goto out;
-
-	if (status == 0)
-		mmc_gpio_set_uim2_en(host, 0);
-
-	if (status ^ ctx->status) {
-		pr_info("%s: slot status change detected (%d -> %d), GPIO_ACTIVE_%s\n",
-				mmc_hostname(host), ctx->status, status,
-				(host->caps2 & MMC_CAP2_CD_ACTIVE_HIGH) ?
-				"HIGH" : "LOW");
-		ctx->status = status;
-
-		host->trigger_card_event = true;
-#ifdef CONFIG_MMC_SD_DEFERRED_RESUME
-		if (ctx->suspended) {
-			/*
-			 * host->rescan_disable is normally set to 0 in
-			 * PM_POST_RESTORE of mmc_pm_notify but in case
-			 * of a deferred resume we might get IRQ before
-			 * it is called.
-			 */
-			spin_lock_irqsave(&host->lock, flags);
-			host->rescan_disable = 0;
-			spin_unlock_irqrestore(&host->lock, flags);
-		}
-		ctx->suspended = false;
-#endif
-		/* Schedule a card detection after a debounce timeout */
-		mmc_detect_change(host, msecs_to_jiffies(200));
-	}
-out:
+	host->trigger_card_event = true;
+	mmc_detect_change(host, msecs_to_jiffies(200));
 
 	return IRQ_HANDLED;
 }

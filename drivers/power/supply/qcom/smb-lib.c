@@ -2446,13 +2446,8 @@ int smblib_get_prop_batt_health(struct smb_charger *chg,
 
 #ifndef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
 	if (stat & CHARGER_ERROR_STATUS_BAT_OV_BIT) {
-#endif
-#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
-	if (stat & CHARGER_ERROR_STATUS_BAT_OV_BIT &&
-	    (!chg->jeita_sw_ctl_en ||
-	     chg->jeita_synth_condition != TEMP_CONDITION_WARM)) {
-#endif
-		rc = smblib_get_prop_batt_voltage_now(chg, &pval);
+		rc = smblib_get_prop_from_bms(chg,
+				POWER_SUPPLY_PROP_VOLTAGE_NOW, &pval);
 		if (!rc) {
 			/*
 			 * If Vbatt is within 40mV above Vfloat, then don't
@@ -2556,114 +2551,6 @@ int smblib_get_prop_input_current_limited(struct smb_charger *chg,
 	return 0;
 }
 
-int smblib_get_prop_batt_voltage_now(struct smb_charger *chg,
-				     union power_supply_propval *val)
-{
-	int rc;
-
-	if (!chg->bms_psy)
-		return -EINVAL;
-
-	rc = power_supply_get_property(chg->bms_psy,
-				       POWER_SUPPLY_PROP_VOLTAGE_NOW, val);
-	return rc;
-}
-
-int smblib_get_prop_batt_current_now(struct smb_charger *chg,
-				     union power_supply_propval *val)
-{
-	int rc;
-
-	if (!chg->bms_psy)
-		return -EINVAL;
-
-	rc = power_supply_get_property(chg->bms_psy,
-				       POWER_SUPPLY_PROP_CURRENT_NOW, val);
-	return rc;
-}
-
-int smblib_get_prop_batt_temp(struct smb_charger *chg,
-			      union power_supply_propval *val)
-{
-	int rc;
-
-	if (!chg->bms_psy)
-		return -EINVAL;
-
-	rc = power_supply_get_property(chg->bms_psy,
-				       POWER_SUPPLY_PROP_TEMP, val);
-	return rc;
-}
-
-#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
-#define ECELSIUS_DEGREE (-2730)
-int smblib_get_prop_real_temp(struct smb_charger *chg,
-			      union power_supply_propval *val)
-{
-	union power_supply_propval pval = {0, };
-	int rc;
-	int batt_temp = ECELSIUS_DEGREE;
-	int skin_temp = ECELSIUS_DEGREE;
-	int wlc_temp = ECELSIUS_DEGREE;
-	int corrected_batt_temp = ECELSIUS_DEGREE;
-	int corrected_skin_temp = ECELSIUS_DEGREE;
-	int corrected_wlc_temp = ECELSIUS_DEGREE;
-	int real_temp = 0;
-
-	rc = smblib_get_prop_batt_temp(chg, &pval);
-	if (rc < 0) {
-		smblib_err(chg, "Couldn't get batt temp rc=%d\n", rc);
-		return rc;
-	} else {
-		batt_temp = pval.intval;
-		corrected_batt_temp = batt_temp + chg->batt_temp_correctton;
-	}
-
-	if (chg->real_temp_use_aux) {
-		rc = smblib_get_prop_skin_temp(chg, &pval);
-		if (rc < 0) {
-			smblib_err(chg, "Couldn't get skin temp rc=%d\n", rc);
-		} else {
-			skin_temp = pval.intval;
-			corrected_skin_temp =
-					skin_temp + chg->skin_temp_correctton;
-		}
-	}
-
-	if (chg->real_temp_use_wlc) {
-		if (!chg->wireless_psy)
-			chg->wireless_psy =
-					power_supply_get_by_name("wireless");
-
-		if (chg->wireless_psy) {
-			rc = power_supply_get_property(chg->wireless_psy,
-							POWER_SUPPLY_PROP_TEMP,
-							&pval);
-			if (rc) {
-				smblib_dbg(chg, PR_MISC,
-					   "Couldn't get wlc_temp rc = %d\n",
-					   rc);
-			} else {
-				wlc_temp = pval.intval;
-				corrected_wlc_temp =
-					wlc_temp + chg->wlc_temp_correctton;
-			}
-		} else {
-			smblib_err(chg, "Couldn't get wireless_psy\n");
-		}
-	}
-
-	real_temp = max(corrected_batt_temp,
-				max(corrected_skin_temp, corrected_wlc_temp));
-
-	smblib_dbg(chg, PR_MISC,
-			"battery temp: batt=%d aux=%d wlc=%d real_temp=%d\n",
-			batt_temp, skin_temp, wlc_temp, real_temp);
-	val->intval = real_temp;
-	return 0;
-}
-
-#endif
 int smblib_get_prop_batt_charge_done(struct smb_charger *chg,
 					union power_supply_propval *val)
 {
@@ -2699,16 +2586,17 @@ int smblib_get_prop_charge_qnovo_enable(struct smb_charger *chg,
 	return 0;
 }
 
-int smblib_get_prop_batt_charge_counter(struct smb_charger *chg,
-				     union power_supply_propval *val)
+int smblib_get_prop_from_bms(struct smb_charger *chg,
+				enum power_supply_property psp,
+				union power_supply_propval *val)
 {
 	int rc;
 
 	if (!chg->bms_psy)
 		return -EINVAL;
 
-	rc = power_supply_get_property(chg->bms_psy,
-				       POWER_SUPPLY_PROP_CHARGE_COUNTER, val);
+	rc = power_supply_get_property(chg->bms_psy, psp, val);
+
 	return rc;
 }
 
@@ -3360,6 +3248,28 @@ int smblib_get_prop_usb_online(struct smb_charger *chg,
 
 int smblib_get_prop_usb_voltage_max(struct smb_charger *chg,
 				    union power_supply_propval *val)
+{
+	switch (chg->real_charger_type) {
+	case POWER_SUPPLY_TYPE_USB_HVDCP:
+	case POWER_SUPPLY_TYPE_USB_HVDCP_3:
+		if (chg->smb_version == PM660_SUBTYPE)
+			val->intval = MICRO_9V;
+		else
+			val->intval = MICRO_12V;
+		break;
+	case POWER_SUPPLY_TYPE_USB_PD:
+		val->intval = chg->voltage_max_uv;
+		break;
+	default:
+		val->intval = MICRO_5V;
+		break;
+	}
+
+	return 0;
+}
+
+int smblib_get_prop_usb_voltage_max_design(struct smb_charger *chg,
+					union power_supply_propval *val)
 {
 	switch (chg->real_charger_type) {
 	case POWER_SUPPLY_TYPE_USB_HVDCP:
@@ -6217,6 +6127,7 @@ static void rdstd_cc2_detach_work(struct work_struct *work)
 {
 	int rc;
 	u8 stat4, stat5;
+	bool lock = false;
 	struct smb_charger *chg = container_of(work, struct smb_charger,
 						rdstd_cc2_detach_work);
 
@@ -6285,15 +6196,22 @@ static void rdstd_cc2_detach_work(struct work_struct *work)
 	 * during pd_hard_reset from the function smblib_cc2_sink_removal_exit
 	 * which is called in the same lock context that we try to acquire in
 	 * this work routine.
-	 * Check if this work is running during pd_hard_reset and skip holding
-	 * mutex if lock is already held.
+	 * Check if this work is running during pd_hard_reset and use trylock
+	 * instead of mutex_lock to prevent any deadlock if mutext is already
+	 * held.
 	 */
-	if (!chg->in_chg_lock)
+	if (chg->pd_hard_reset) {
+		if (mutex_trylock(&chg->lock))
+			lock = true;
+	} else {
 		mutex_lock(&chg->lock);
-	smblib_usb_typec_change(chg);
-	if (!chg->in_chg_lock)
-		mutex_unlock(&chg->lock);
+		lock = true;
+	}
 
+	smblib_usb_typec_change(chg);
+
+	if (lock)
+		mutex_unlock(&chg->lock);
 	return;
 
 rerun:

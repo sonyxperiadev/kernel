@@ -36,7 +36,7 @@
 		peripheral2_mem: peripheral2_region@8fe00000 {
 			compatible = "removed-dma-pool";
 			no-map;
-			reg = <0x8fe00000 0x200000>;
+			reg = <0x8fe00000 0xe00000>;
 			label = "peripheral2_mem";
 		};
 
@@ -65,7 +65,7 @@
 		mss_mem: mss_region@87400000 {
 			compatible = "removed-dma-pool";
 			no-map;
-			reg = <0x87400000 0x8300000>;
+			reg = <0x87000000 0x8700000>;
 			label = "mss_mem";
 		};
 
@@ -79,6 +79,20 @@
 			compatible = "shared-dma-pool";
 			reusable;
 			size = <0x400000>;
+		};
+
+		qseecom_mem: qseecom_region@0 {
+			compatible = "shared-dma-pool";
+			reusable;
+			alignment = <0x400000>;
+			size = <0x1400000>;
+		};
+
+		qseecom_ta_mem: qseecom_ta_region@0 {
+			compatible = "shared-dma-pool";
+			reusable;
+			alignment = <0x400000>;
+			size = <0x1000000>;
 		};
 	};
 
@@ -937,24 +951,24 @@
 		<MSM_BUS_MASTER_IPA_CORE MSM_BUS_SLAVE_IPA_CORE 0 0>,
 
 		/* SVS2 */
-		<MSM_BUS_MASTER_IPA MSM_BUS_SLAVE_SNOC_MEM_NOC_GC 240000 480000>,
-		<MSM_BUS_MASTER_SNOC_GC_MEM_NOC MSM_BUS_SLAVE_EBI_CH0 900000 1800000>,
-		<MSM_BUS_MASTER_IPA MSM_BUS_SLAVE_OCIMEM 300000 600000>,
-		<MSM_BUS_MASTER_AMPSS_M0 MSM_BUS_SLAVE_IPA_CFG 90000 179000>,
+		<MSM_BUS_MASTER_IPA MSM_BUS_SLAVE_SNOC_MEM_NOC_GC 116000 480000>,
+		<MSM_BUS_MASTER_SNOC_GC_MEM_NOC MSM_BUS_SLAVE_EBI_CH0 116000 1800000>,
+		<MSM_BUS_MASTER_IPA MSM_BUS_SLAVE_OCIMEM 60000 600000>,
+		<MSM_BUS_MASTER_AMPSS_M0 MSM_BUS_SLAVE_IPA_CFG 17900 179000>,
 		<MSM_BUS_MASTER_IPA_CORE MSM_BUS_SLAVE_IPA_CORE 0 120>,
 
 		/* SVS */
-		<MSM_BUS_MASTER_IPA MSM_BUS_SLAVE_SNOC_MEM_NOC_GC 360000 720000>,
-		<MSM_BUS_MASTER_SNOC_GC_MEM_NOC MSM_BUS_SLAVE_EBI_CH0 1530000 3060000>,
-		<MSM_BUS_MASTER_IPA MSM_BUS_SLAVE_OCIMEM 400000 800000>,
-		<MSM_BUS_MASTER_AMPSS_M0 MSM_BUS_SLAVE_IPA_CFG 100000 199000>,
+		<MSM_BUS_MASTER_IPA MSM_BUS_SLAVE_SNOC_MEM_NOC_GC 225000 720000>,
+		<MSM_BUS_MASTER_SNOC_GC_MEM_NOC MSM_BUS_SLAVE_EBI_CH0 225000 3060000>,
+		<MSM_BUS_MASTER_IPA MSM_BUS_SLAVE_OCIMEM 80000 800000>,
+		<MSM_BUS_MASTER_AMPSS_M0 MSM_BUS_SLAVE_IPA_CFG 19900 199000>,
 		<MSM_BUS_MASTER_IPA_CORE MSM_BUS_SLAVE_IPA_CORE 0 250>,
 
 		/* NOMINAL */
-		<MSM_BUS_MASTER_IPA MSM_BUS_SLAVE_SNOC_MEM_NOC_GC 780000 1560000>,
-		<MSM_BUS_MASTER_SNOC_GC_MEM_NOC MSM_BUS_SLAVE_EBI_CH0 2592000 5184000>,
-		<MSM_BUS_MASTER_IPA MSM_BUS_SLAVE_OCIMEM 800000 1600000>,
-		<MSM_BUS_MASTER_AMPSS_M0 MSM_BUS_SLAVE_IPA_CFG 200000 399000>,
+		<MSM_BUS_MASTER_IPA MSM_BUS_SLAVE_SNOC_MEM_NOC_GC 375000 1560000>,
+		<MSM_BUS_MASTER_SNOC_GC_MEM_NOC MSM_BUS_SLAVE_EBI_CH0 375000 5184000>,
+		<MSM_BUS_MASTER_IPA MSM_BUS_SLAVE_OCIMEM 160000 1600000>,
+		<MSM_BUS_MASTER_AMPSS_M0 MSM_BUS_SLAVE_IPA_CFG 39900 399000>,
 		<MSM_BUS_MASTER_IPA_CORE MSM_BUS_SLAVE_IPA_CORE 0 440>,
 
 		/* TURBO */
@@ -1152,6 +1166,33 @@
 		clock-names = "iface_clk";
 	};
 
+	qcom_seecom: qseecom@90000000{
+		compatible = "qcom,qseecom";
+		reg = <0x90000000 0x600000>;
+		reg-names = "secapp-region";
+		qcom,hlos-num-ce-hw-instances = <1>;
+		qcom,hlos-ce-hw-instance = <0>;
+		qcom,qsee-ce-hw-instance = <0>;
+		qcom,no-clock-support;
+		qcom,msm-bus,name = "qseecom-noc";
+		qcom,msm-bus,num-cases = <4>;
+		qcom,msm-bus,num-paths = <1>;
+		clocks = <&clock_gcc GCC_CE1_CLK>,
+			<&clock_gcc GCC_CE1_CLK>,
+			<&clock_gcc GCC_CE1_AHB_CLK>,
+			<&clock_gcc GCC_CE1_AXI_CLK>;
+		qcom,msm-bus,vectors-KBps =
+			<125 512 0 0>,
+			<125 512 20000 40000>,
+			<125 512 30000 80000>,
+			<125 512 40000 100000>;
+		clock-names = "core_clk_src", "core_clk",
+			"iface_clk", "bus_clk";
+		qcom,ce-opp-freq = <171430000>;
+		qcom,qsee-reentrancy-support = <2>;
+		status = "disabled";
+	};
+
 	qcom_cedev: qcedev@1de0000 {
 		compatible = "qcom,qcedev";
 		reg = <0x1de0000 0x20000>,
@@ -1248,7 +1289,6 @@
 				/* Upto 800 Mbps */
 				<45 512 207108 1146880>, <1 512 207108 3124992>;
 
-		iommus = <&apps_smmu 0x00A1 0x0>;
 		qcom,wlan-smmu-iova-address = <0x10000000 0x10000000>;
 		qcom,wlan-smmu-iova-ipa = <0x20000000 0x10000>;
 	};
@@ -1284,6 +1324,7 @@
 	emac_hw: qcom,emac@00020000 {
 		compatible = "qcom,emac-dwc-eqos";
 		qcom,arm-smmu;
+		emac-core-version = <1>;
 		reg = <0x20000 0x10000>,
 			<0x36000 0x100>,
 			<0x3900000 0x300000>;
@@ -1305,9 +1346,9 @@
 		qcom,msm-bus,num-paths = <2>;
 		qcom,msm-bus,vectors-KBps =
 			<98 512 0 0>, <1 781 0 0>,  /* No vote */
-			<98 512 1250 0>, <1 781 0 40000>,  /* 10Mbps vote */
-			<98 512 12500 0>, <1 781 0 40000>,  /* 100Mbps vote */
-			<98 512 125000 0>, <1 781 0 40000>; /* 1000Mbps vote */
+			<98 512 2500 0>, <1 781 0 40000>,  /* 10Mbps vote */
+			<98 512 25000 0>, <1 781 0 40000>,  /* 100Mbps vote */
+			<98 512 250000 0>, <1 781 0 40000>; /* 1000Mbps vote */
 		qcom,bus-vector-names = "0", "10", "100", "1000";
 		clocks = <&clock_gcc GCC_ETH_AXI_CLK>,
 			<&clock_gcc GCC_ETH_PTP_CLK>,
@@ -1321,6 +1362,8 @@
 		vreg_emac_phy-supply =  <&vreg_emac_phy>;
 		vreg_rgmii_io_pads-supply = <&vreg_rgmii_io_pads>;
 		gdsc_emac-supply = <&gdsc_emac>;
+		mboxes = <&qmp_aop 0>;
+		mbox-names = "emac_aop";
 		io-macro-info {
 			io-macro-bypass-mode = <0>;
 			io-interface = "rgmii";
@@ -1339,15 +1382,15 @@
 			compatible = "qcom,ess-switch-qca83xx";
 			qcom,switch-access-mode = "mdio";
 			qcom,ar8327-initvals = <
-				0x0000c 0x7600000   /* PAD6_MODE */
+				0x00004 0x7600000   /* PAD0_MODE */
 				0x00008 0x0         /* PAD5_MODE */
 				0x000e4 0xaa545     /* MAC_POWER_SEL */
 				0x000e0 0xc74164de  /* SGMII_CTRL */
 				0x0007c 0x4e        /* PORT0_STATUS */
 				0x00094 0x4e        /* PORT6_STATUS */
 			>;
-			qcom,link-intr-gpio = <2>;
-			qcom,switch-cpu-bmp = <0x40>;    /* cpu port bitmap */
+			qcom,link-intr-gpio = <84>;
+			qcom,switch-cpu-bmp = <0x01>;    /* cpu port bitmap */
 			qcom,switch-lan-bmp = <0x3e>;    /* lan port bitmap */
 			qcom,switch-wan-bmp = <0x0>;     /* wan port bitmap */
 		};
