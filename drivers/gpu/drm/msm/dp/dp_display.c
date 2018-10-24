@@ -1462,6 +1462,9 @@ int dp_display_get_displays(void **displays, int count)
 
 int dp_display_get_num_of_displays(void)
 {
+	if (!g_dp_display)
+		return 0;
+
 	return 1;
 }
 
@@ -1488,6 +1491,7 @@ static struct platform_driver dp_display_driver = {
 	.driver = {
 		.name = "msm-dp-display",
 		.of_match_table = dp_dt_match,
+		.suppress_bind_attrs = true,
 	},
 };
 
