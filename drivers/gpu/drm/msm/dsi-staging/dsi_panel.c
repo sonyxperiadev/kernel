@@ -3392,6 +3392,7 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 		pr_err("failed to parse panel specific, rc=%d\n", rc);
 #endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 
+	panel->power_mode = SDE_MODE_DPMS_OFF;
 	drm_panel_init(&panel->drm_panel);
 	mutex_init(&panel->panel_lock);
 

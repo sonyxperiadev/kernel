@@ -216,6 +216,7 @@ struct dsi_panel {
 	enum dsi_dms_mode dms_mode;
 
 	bool sync_broadcast_en;
+	int power_mode;
 
 #ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
 	struct panel_specific_pdata *spec_pdata;
