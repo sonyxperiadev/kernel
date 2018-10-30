@@ -926,6 +926,12 @@ static void sde_kms_prepare_commit(struct msm_kms *kms,
 		return;
 	}
 
+	if (sde_kms->first_kickoff) {
+		sde_power_scale_reg_bus(&priv->phandle, sde_kms->core_client,
+			VOTE_INDEX_HIGH, false);
+		sde_kms->first_kickoff = false;
+	}
+
 	for_each_crtc_in_state(state, crtc, crtc_state, i) {
 		list_for_each_entry(encoder, &dev->mode_config.encoder_list,
 				head) {
@@ -3091,8 +3097,10 @@ static void sde_kms_handle_power_event(u32 event_type, void *usr)
 	if (event_type == SDE_POWER_EVENT_POST_ENABLE) {
 		sde_irq_update(msm_kms, true);
 		sde_vbif_init_memtypes(sde_kms);
+		sde_kms->first_kickoff = true;
 	} else if (event_type == SDE_POWER_EVENT_PRE_DISABLE) {
 		sde_irq_update(msm_kms, false);
+		sde_kms->first_kickoff = false;
 	}
 }
 
@@ -3311,6 +3319,22 @@ static int sde_kms_hw_init(struct msm_kms *kms)
 		goto power_error;
 	}
 
+	sde_kms->splash_data.resource_handoff_pending = true;
+
+	rc = _sde_kms_mmu_init(sde_kms);
+	if (rc) {
+		SDE_ERROR("sde_kms_mmu_init failed: %d\n", rc);
+		goto power_error;
+	}
+
+	/* Initialize reg dma block which is a singleton */
+	rc = sde_reg_dma_init(sde_kms->reg_dma, sde_kms->catalog,
+			sde_kms->dev);
+	if (rc) {
+		SDE_ERROR("failed: reg dma init failed\n");
+		goto power_error;
+	}
+
 	sde_dbg_init_dbg_buses(sde_kms->core_rev);
 
 	rm = &sde_kms->rm;
@@ -3340,21 +3364,6 @@ static int sde_kms_hw_init(struct msm_kms *kms)
 					&sde_kms->splash_data,
 					sde_kms->catalog);
 
-	sde_kms->splash_data.resource_handoff_pending = true;
-
-	/* Initialize reg dma block which is a singleton */
-	rc = sde_reg_dma_init(sde_kms->reg_dma, sde_kms->catalog,
-			sde_kms->dev);
-	if (rc) {
-		SDE_ERROR("failed: reg dma init failed\n");
-		goto power_error;
-	}
-
-	rc = _sde_kms_mmu_init(sde_kms);
-	if (rc) {
-		SDE_ERROR("sde_kms_mmu_init failed: %d\n", rc);
-		goto power_error;
-	}
 	sde_kms->hw_mdp = sde_rm_get_mdp(&sde_kms->rm);
 	if (IS_ERR_OR_NULL(sde_kms->hw_mdp)) {
 		rc = PTR_ERR(sde_kms->hw_mdp);

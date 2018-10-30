@@ -641,7 +641,7 @@ static void _sde_crtc_deinit_events(struct sde_crtc *sde_crtc)
 static int _sde_debugfs_fps_status_show(struct seq_file *s, void *data)
 {
 	struct sde_crtc *sde_crtc;
-	unsigned int fps_int, fps_float;
+	u64 fps_int, fps_float;
 	ktime_t current_time_us;
 	u64 fps, diff_us;
 
@@ -670,7 +670,7 @@ static int _sde_debugfs_fps_status_show(struct seq_file *s, void *data)
 	fps_int = (unsigned int) sde_crtc->fps_info.measured_fps;
 	fps_float = do_div(fps_int, 10);
 
-	seq_printf(s, "fps: %d.%d\n", fps_int, fps_float);
+	seq_printf(s, "fps: %llu.%llu\n", fps_int, fps_float);
 
 	return 0;
 }
@@ -3689,6 +3689,7 @@ void sde_crtc_commit_kickoff(struct drm_crtc *crtc,
 	struct sde_kms *sde_kms;
 	struct sde_crtc_state *cstate;
 	bool is_error, reset_req;
+	enum sde_crtc_idle_pc_state idle_pc_state;
 
 	if (!crtc) {
 		SDE_ERROR("invalid argument\n");
@@ -3719,6 +3720,8 @@ void sde_crtc_commit_kickoff(struct drm_crtc *crtc,
 
 	is_error = _sde_crtc_prepare_for_kickoff_rot(dev, crtc);
 
+	idle_pc_state = sde_crtc_get_property(cstate, CRTC_PROP_IDLE_PC_STATE);
+
 	list_for_each_entry(encoder, &dev->mode_config.encoder_list, head) {
 		struct sde_encoder_kickoff_params params = { 0 };
 
@@ -3734,6 +3737,10 @@ void sde_crtc_commit_kickoff(struct drm_crtc *crtc,
 				crtc->state);
 		if (sde_encoder_prepare_for_kickoff(encoder, &params))
 			reset_req = true;
+
+		if (idle_pc_state != IDLE_PC_NONE)
+			sde_encoder_control_idle_pc(encoder,
+			    (idle_pc_state == IDLE_PC_ENABLE) ? true : false);
 	}
 
 	/*
@@ -4233,6 +4240,13 @@ static void sde_crtc_disable(struct drm_crtc *crtc)
 		sde_encoder_register_frame_event_callback(encoder, NULL, NULL);
 		cstate->rsc_client = NULL;
 		cstate->rsc_update = false;
+
+		/*
+		 * reset idle power-collapse to original state during suspend;
+		 * user-mode will change the state on resume, if required
+		 */
+		if (sde_kms->catalog->has_idle_pc)
+			sde_encoder_control_idle_pc(encoder, true);
 	}
 
 	if (sde_crtc->power_event)
@@ -4918,6 +4932,8 @@ int sde_crtc_helper_reset_custom_properties(struct drm_crtc *crtc,
 	sde_crtc = to_sde_crtc(crtc);
 	cstate = to_sde_crtc_state(crtc_state);
 
+	sde_cp_crtc_clear(crtc);
+
 	for (prop_idx = 0; prop_idx < CRTC_PROP_COUNT; prop_idx++) {
 		uint64_t val = cstate->property_values[prop_idx].value;
 		uint64_t def;
@@ -4972,6 +4988,12 @@ static void sde_crtc_install_properties(struct drm_crtc *crtc,
 	static const struct drm_prop_enum_list e_cwb_data_points[] = {
 		{CAPTURE_MIXER_OUT, "capture_mixer_out"},
 		{CAPTURE_DSPP_OUT, "capture_pp_out"},
+	};
+
+	static const struct drm_prop_enum_list e_idle_pc_state[] = {
+		{IDLE_PC_NONE, "idle_pc_none"},
+		{IDLE_PC_ENABLE, "idle_pc_enable"},
+		{IDLE_PC_DISABLE, "idle_pc_disable"},
 	};
 
 	SDE_DEBUG("\n");
@@ -5052,6 +5074,12 @@ static void sde_crtc_install_properties(struct drm_crtc *crtc,
 	msm_property_install_range(&sde_crtc->property_info,
 		"enable_sui_enhancement", 0, 0, U64_MAX, 0,
 		CRTC_PROP_ENABLE_SUI_ENHANCEMENT);
+
+	if (catalog->has_idle_pc)
+		msm_property_install_enum(&sde_crtc->property_info,
+			"idle_pc_state", 0x0, 0, e_idle_pc_state,
+			ARRAY_SIZE(e_idle_pc_state),
+			CRTC_PROP_IDLE_PC_STATE);
 
 	if (catalog->has_cwb_support)
 		msm_property_install_enum(&sde_crtc->property_info,
@@ -5268,14 +5296,16 @@ static int sde_crtc_atomic_set_property(struct drm_crtc *crtc,
 		_sde_crtc_set_input_fence_timeout(cstate);
 		break;
 	case CRTC_PROP_DIM_LAYER_V1:
-		_sde_crtc_set_dim_layer_v1(cstate, (void __user *)val);
+		_sde_crtc_set_dim_layer_v1(cstate,
+					(void __user *)(uintptr_t)val);
 		break;
 	case CRTC_PROP_ROI_V1:
-		ret = _sde_crtc_set_roi_v1(state, (void __user *)val);
+		ret = _sde_crtc_set_roi_v1(state,
+					(void __user *)(uintptr_t)val);
 		break;
 	case CRTC_PROP_DEST_SCALER:
 		ret = _sde_crtc_set_dest_scaler(sde_crtc, cstate,
-				(void __user *)val);
+				(void __user *)(uintptr_t)val);
 		break;
 	case CRTC_PROP_DEST_SCALER_LUT_ED:
 	case CRTC_PROP_DEST_SCALER_LUT_CIR:
@@ -5307,7 +5337,7 @@ static int sde_crtc_atomic_set_property(struct drm_crtc *crtc,
 			goto exit;
 		}
 
-		ret = copy_to_user((uint64_t __user *)val, &fence_fd,
+		ret = copy_to_user((uint64_t __user *)(uintptr_t)val, &fence_fd,
 				sizeof(uint64_t));
 		if (ret) {
 			SDE_ERROR("copy to user failed rc:%d\n", ret);
@@ -5554,8 +5584,8 @@ static int _sde_debugfs_status_show(struct seq_file *s, void *data)
 
 	if (sde_crtc->vblank_cb_count) {
 		ktime_t diff = ktime_sub(ktime_get(), sde_crtc->vblank_cb_time);
-		s64 diff_ms = ktime_to_ms(diff);
-		s64 fps = diff_ms ? DIV_ROUND_CLOSEST(
+		u32 diff_ms = ktime_to_ms(diff);
+		u64 fps = diff_ms ? DIV_ROUND_CLOSEST(
 				sde_crtc->vblank_cb_count * 1000, diff_ms) : 0;
 
 		seq_printf(s,
