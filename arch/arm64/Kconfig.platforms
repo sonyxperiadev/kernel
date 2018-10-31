@@ -168,6 +168,15 @@ config MACH_SONY_AKARI
 	If you enable this config,
 	please use SONY Mobile device tree.
 
+config MACH_SONY_AKATSUKI
+	bool "Sony Mobile Akatsuki"
+	depends on ARCH_SONY_TAMA
+	help
+	Support for the SONY Mobile Akatsuki device
+	which is based on SONY Tama platform.
+	If you enable this config,
+	please use SONY Mobile device tree.
+
 config MACH_SONY_APOLLO
 	bool "Sony Mobile Apollo"
 	depends on ARCH_SONY_TAMA
