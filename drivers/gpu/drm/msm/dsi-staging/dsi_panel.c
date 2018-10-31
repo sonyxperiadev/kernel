@@ -119,7 +119,11 @@ int dsi_dsc_create_pps_buf_cmd(struct msm_display_dsc_info *dsc, char *buf,
 	*bp++ = 1;
 	*bp++ = 0;
 	*bp++ = 0;
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+	*bp++ = 28;
+#else
 	*bp++ = 10;
+#endif
 	*bp++ = 0;
 	*bp++ = 128;
 
