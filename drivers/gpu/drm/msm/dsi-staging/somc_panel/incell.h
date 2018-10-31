@@ -111,5 +111,17 @@ extern int incell_get_panel_name(void);
 static inline int incell_get_panel_name(void) {return 0; }
 #endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+extern bool incell_get_system_status(void);
+#else
+static inline bool incell_get_system_status(void) {return true; }
+#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
+
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+extern int incell_get_display_sod(void);
+#else
+static inline int incell_get_display_sod(void) {return 0; }
+#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
+
 #endif /* __INCELL_H__ */
 

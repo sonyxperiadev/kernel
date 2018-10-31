@@ -161,6 +161,12 @@ typedef enum M_PLUS_MODE {
 
 #define M_PLUS_MODE_INIT M_PLUS_MODE_3
 
+enum {
+	SOD_POWER_ON = 0,
+	SOD_POWER_OFF_SKIP,
+	SOD_POWER_OFF,
+};
+
 struct dsi_reset_cfg {
 	struct dsi_reset_seq *seq;
 	u32 count;
@@ -332,7 +338,10 @@ struct panel_specific_pdata {
 	struct dsi_fps_mode fps_mode;
 
 	int aod_mode;
+	int sod_mode;
+	int pre_sod_mode;
 	int vr_mode;
+	bool light_state;
 
 	struct dsi_m_plus m_plus;
 
@@ -415,6 +424,7 @@ void dsi_panel_driver_oled_short_det_enable(
 			struct panel_specific_pdata *spec_pdata, bool inWork);
 void dsi_panel_driver_oled_short_det_disable(
 			struct panel_specific_pdata *spec_pdata);
+int dsi_panel_driver_toggle_light_off(struct dsi_panel *panel, bool state);
 
 /* For incell driver */
 struct incell_ctrl *incell_get_info(void);
@@ -422,6 +432,7 @@ int dsi_panel_driver_touch_reset_ctrl(struct dsi_panel *panel, bool en);
 bool dsi_panel_driver_is_power_on(unsigned char state);
 bool dsi_panel_driver_is_power_lock(unsigned char state);
 void incell_driver_init(struct msm_drm_private *priv);
+int get_display_sod_mode(void);
 
 /* Qualcomm Original function */
 int dsi_panel_reset(struct dsi_panel *panel);

@@ -39,6 +39,10 @@
 #ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
 #define SDE_PINCTRL_STATE_TOUCH_ACTIVE "sde_touch_active"
 #define SDE_PINCTRL_STATE_TOUCH_SUSPEND  "sde_touch_suspend"
+#define DISPLAY_BL_MIN 4
+#define DISPLAY_BL_OFF 0
+#define DISPLAY_BL_ON 1
+#define AOD_MODE_THRESHOLD 8
 #endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 
 enum dsi_panel_rotation {

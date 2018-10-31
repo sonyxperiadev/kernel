@@ -38,6 +38,7 @@
 static BLOCKING_NOTIFIER_HEAD(drm_notifier_list);
 
 static u32 down_period;
+static short display_sod_mode = 0;
 
 struct device virtdev;
 
@@ -1191,6 +1192,45 @@ int dsi_panel_mplus_mode_set(struct dsi_panel *panel, int m_mode)
 	return rc;
 }
 
+int dsi_panel_driver_toggle_light_off(struct dsi_panel *panel, bool bl_on)
+{
+	int rc = 0;
+	struct panel_specific_pdata *spec_pdata;
+
+	spec_pdata = panel->spec_pdata;
+
+	if (spec_pdata->light_state != bl_on) {
+		if (!bl_on) {
+			rc = dsi_panel_tx_cmd_set(panel,
+				DSI_CMD_SET_DISPLAY_OFF);
+			if (rc) {
+				pr_err("failed to set display off.\
+					keep current bl_on=%d\n",
+					spec_pdata->light_state);
+				return -EINVAL;
+			} else {
+				spec_pdata->light_state = bl_on;
+				pr_debug("success. bl_on=%d\n",
+					spec_pdata->light_state);
+			}
+		} else {
+			rc = dsi_panel_tx_cmd_set(panel,
+				DSI_CMD_SET_DISPLAY_ON);
+			if (rc) {
+				pr_err("failed to set display on.\
+					keep current bl_on=%d\n",
+					spec_pdata->light_state);
+				return -EINVAL;
+			} else {
+				spec_pdata->light_state = bl_on;
+				pr_debug("success. bl_on=%d\n",
+					spec_pdata->light_state);
+			}
+		}
+	}
+	return rc;
+}
+
 static void dsi_panel_driver_notify_resume(struct dsi_panel *panel)
 {
 	struct drm_ext_event event;
@@ -1305,6 +1345,103 @@ static ssize_t dsi_panel_aod_mode_show(struct device *dev,
 
 	return scnprintf(buf, PAGE_SIZE, "aod_mode = %u\n",
 				spec_pdata->aod_mode);
+}
+
+static ssize_t dsi_panel_pre_sod_mode_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	int mode;
+	struct panel_specific_pdata *spec_pdata = NULL;
+	struct dsi_display *display = dev_get_drvdata(dev);
+
+	spec_pdata = display->panel->spec_pdata;
+
+	if (sscanf(buf, "%d", &mode) < 0) {
+		pr_err("sscanf failed to set mode. keep current mode=%d\n",
+			spec_pdata->pre_sod_mode);
+		return -EINVAL;
+	}
+
+	spec_pdata->pre_sod_mode = mode;
+	pr_info("%s: sod mode setting %d\n", __func__, spec_pdata->pre_sod_mode);
+
+	return count;
+
+}
+
+static ssize_t dsi_panel_pre_sod_mode_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct panel_specific_pdata *spec_pdata = NULL;
+	struct dsi_display *display = dev_get_drvdata(dev);
+
+	spec_pdata = display->panel->spec_pdata;
+
+	return scnprintf(buf, PAGE_SIZE, "pre_sod_mode = %u\n",
+				spec_pdata->pre_sod_mode);
+}
+
+static ssize_t dsi_panel_sod_mode_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	int mode;
+	struct panel_specific_pdata *spec_pdata = NULL;
+	struct dsi_display *display = dev_get_drvdata(dev);
+	struct dsi_panel *panel = display->panel;
+
+	spec_pdata = display->panel->spec_pdata;
+
+	if (sscanf(buf, "%d", &mode) < 0) {
+		pr_err("sscanf failed to set mode. keep current mode=%d\n",
+			spec_pdata->sod_mode);
+		return -EINVAL;
+	}
+	mutex_lock(&display->display_lock);
+
+	if (spec_pdata->sod_mode != mode) {
+		pr_info("%s: current %d request %d\n", __func__,
+			spec_pdata->sod_mode, mode);
+		if (mode == SOD_POWER_ON && spec_pdata->display_onoff_state) {
+			spec_pdata->sod_mode = mode;
+			display_sod_mode = spec_pdata->sod_mode;
+			dsi_panel_driver_notify_resume(panel);
+		} else if (mode == SOD_POWER_ON) {
+			spec_pdata->sod_mode = mode;
+			display_sod_mode = spec_pdata->sod_mode;
+		} else if (mode == SOD_POWER_OFF &&
+			   spec_pdata->display_onoff_state &&
+			   spec_pdata->aod_mode) {
+			pr_info("%s: power off\n", __func__);
+			spec_pdata->sod_mode = mode;
+			display_sod_mode = spec_pdata->sod_mode;
+			dsi_panel_driver_notify_suspend(panel);
+		} else if (mode == SOD_POWER_OFF &&
+			   !spec_pdata->display_onoff_state) {
+			pr_info("%s: power off\n", __func__);
+			spec_pdata->sod_mode = mode;
+			display_sod_mode = spec_pdata->sod_mode;
+			dsi_panel_driver_notify_suspend(panel);
+		}
+	}
+	mutex_unlock(&display->display_lock);
+	return count;
+}
+
+static ssize_t dsi_panel_sod_mode_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct panel_specific_pdata *spec_pdata = NULL;
+	struct dsi_display *display = dev_get_drvdata(dev);
+
+	spec_pdata = display->panel->spec_pdata;
+
+	return scnprintf(buf, PAGE_SIZE, "sod_mode = %u\n", spec_pdata->sod_mode);
+}
+
+int get_display_sod_mode(void)
+{
+	pr_debug("%s: sod mode setting %d\n", __func__, display_sod_mode);
+	return display_sod_mode;
 }
 
 static ssize_t dsi_panel_mplus_mode_store(struct device *dev,
@@ -1731,6 +1868,12 @@ static struct device_attribute panel_attributes[] = {
 	__ATTR(aod_mode,  S_IRUSR|S_IRGRP|S_IWUSR|S_IWGRP,
 		dsi_panel_aod_mode_show,
 		dsi_panel_aod_mode_store),
+	__ATTR(pre_sod_mode,  S_IRUSR|S_IRGRP|S_IWUSR|S_IWGRP,
+		dsi_panel_pre_sod_mode_show,
+		dsi_panel_pre_sod_mode_store),
+	__ATTR(sod_mode,  S_IRUSR|S_IRGRP|S_IWUSR|S_IWGRP,
+		dsi_panel_sod_mode_show,
+		dsi_panel_sod_mode_store),
 	__ATTR(mplus_mode,  S_IRUSR|S_IRGRP|S_IWUSR|S_IWGRP,
 		dsi_panel_mplus_mode_show,
 		dsi_panel_mplus_mode_store),
