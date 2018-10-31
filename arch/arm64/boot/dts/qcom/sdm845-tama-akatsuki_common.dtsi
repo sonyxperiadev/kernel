@@ -18,23 +18,40 @@
  */
 
 #include "sdm845-tama-common.dtsi"
+#include "sdm845-tama-common-display.dtsi"
+#include "sdm845-tama-akatsuki-camera.dtsi"
+#include "dsi-panel-somc-akatsuki.dtsi"
 
-&somc_pinctrl {
-	/* If product common default setting is needed,
-	fill pinctrl-1 value in <product>_common.dtsi */
-	pinctrl-1 = <&sdm_gpio_7 &sdm_gpio_16 &sdm_gpio_31 &sdm_gpio_44
-		     &sdm_gpio_52 &sdm_gpio_58 &sdm_gpio_59 &sdm_gpio_60
-		     &sdm_gpio_78 &sdm_gpio_116 &sdm_gpio_125
-		     /*&sdm_gpio_133*/>;
-};
 
-&somc_pinctrl_pmic {
-	/* If product common PMIC default setting is needed,
-	fill pinctrl-1 value in <product>_common.dtsi */
-	pinctrl-1 = <&pmi8998_gpio_8>;
+&vendor {
+	tama_batterydata: qcom,battery-data {
+		qcom,batt-id-range-pct = <17>;
+		#include "fg-gen3-batterydata-akatsuki-tmm-4380mv.dtsi"
+		#include "fg-gen3-batterydata-akatsuki-tmm-4340mv.dtsi"
+		#include "fg-gen3-batterydata-akatsuki-tmm-4300mv.dtsi"
+		#include "fg-gen3-batterydata-akatsuki-tmm-4250mv.dtsi"
+	};
 };
 
 &soc {
+	/* I2C: QUP10 - WLC */
+	i2c@a88000 {
+		idtp9221@61 {
+			compatible = "idtp,idtp9221";
+			reg = <0x61>;
+			status = "ok";
+			somc,wlc-en-gpio = <&pmi8998_gpios 8 0>;
+			somc,wlc-irq-gpio = <&tlmm 31 0>;
+			somc,ilim-bpp = <1100>;
+			somc,ilim-epp = <1100>;
+			somc,ilim-epp-boost = <1100>;
+			somc,vout-bpp = <5000>;
+			somc,vout-epp = <9000>;
+			somc,vout-limit-batt-therm = <340>;
+			somc,vout-limit-charge-full;
+		};
+	};
+
 	/* I2C: QUP14 */
 	i2c@a98000 {
 		tcs3490@72 {
@@ -50,96 +67,19 @@
 	};
 };
 
-&sony_camera_module_1 {
-	module_names = "LGI13BS0", "MTM13BS0";
-	default_module_name = "LGI13BS0";
-	cam_vaf-supply = <&pm8998_l22>;
-	cam-vreg-name = "cam_vaf", "cam_vdig", "cam_vio", "cam_vana", "cam_clk";
-	cam-vreg-type = <0 0 0 0 0>;
-	cam-vreg-min-voltage = <2700000 1352000 0 0 0>;
-	cam-vreg-max-voltage = <2700000 1352000 0 0 0>;
-	cam-vreg-op-mode = <150000 105000 0 0 0>;
-	eeprom_addr = <0xA2>;
-	eeprom_type = <2>;
-	eeprom_max_len = <2048>;
+&somc_pinctrl {
+	/* If product common default setting is needed,
+	fill pinctrl-1 value in <product>_common.dtsi */
+	pinctrl-1 = <&sdm_gpio_7 &sdm_gpio_16 &sdm_gpio_31 &sdm_gpio_44
+		     &sdm_gpio_52 &sdm_gpio_58 &sdm_gpio_59 &sdm_gpio_60
+		     &sdm_gpio_78 &sdm_gpio_116 &sdm_gpio_125
+		     /*&sdm_gpio_133*/>;
+};
 
-	/delete-node/ LGI05BN1;
-	/delete-node/ CHI05BN1;
-
-	LGI13BS0 {
-		i2c_freq_mode = <1>;
-		power_off {
-			commands =
-				"gpio_reset",
-				"cam_clk",
-				"cam_vana",
-				"cam_vdig",
-				"cam_vio",
-				"cam_vaf",
-				"exit";
-			cam_vdig = <0 0xffffffff 0 2>;
-			cam_vio = <1 0xffffffff 0 1>;
-			cam_vaf = <3 0xffffffff 0 2>;
-			gpio_reset = <5 0x0 0 5>;
-			cam_vana = <2 0xffffffff 0 5>;
-			cam_clk = <4 0xffffffff 0 0>;
-			exit = <14 0x0 0 0>;
-		};
-		power_on {
-			commands =
-				"cam_vdig",
-				"cam_vio",
-				"cam_vaf",
-				"cam_vana",
-				"cam_clk",
-				"gpio_reset",
-				"exit";
-			cam_vdig = <0 1352 105000 0>;
-			cam_vio = <1 0 0 1>;
-			cam_vaf = <3 2700 150000 0>;
-			gpio_reset = <5 1 0 1>;
-			cam_vana = <2 0 0 1>;
-			cam_clk = <4 0 0 1>;
-			exit = <14 0x0 0 0>;
-		};
-	};
-	MTM13BS0 {
-		i2c_freq_mode = <3>;
-		power_off {
-			commands =
-				"gpio_reset",
-				"cam_clk",
-				"cam_vana",
-				"cam_vdig",
-				"cam_vio",
-				"cam_vaf",
-				"exit";
-			cam_vdig = <0 0xffffffff 0 2>;
-			cam_vio = <1 0xffffffff 0 1>;
-			cam_vaf = <3 0xffffffff 0 2>;
-			gpio_reset = <5 0x0 0 5>;
-			cam_vana = <2 0xffffffff 0 5>;
-			cam_clk = <4 0xffffffff 0 0>;
-			exit = <14 0x0 0 0>;
-		};
-		power_on {
-			commands =
-				"cam_vdig",
-				"cam_vio",
-				"cam_vaf",
-				"cam_vana",
-				"cam_clk",
-				"gpio_reset",
-				"exit";
-			cam_vdig = <0 1352 105000 0>;
-			cam_vio = <1 0 0 1>;
-			cam_vaf = <3 2700 150000 0>;
-			gpio_reset = <5 1 0 1>;
-			cam_vana = <2 0 0 1>;
-			cam_clk = <4 0 0 1>;
-			exit = <14 0x0 0 0>;
-		};
-	};
+&somc_pinctrl_pmic {
+	/* If product common PMIC default setting is needed,
+	fill pinctrl-1 value in <product>_common.dtsi */
+	pinctrl-1 = <&pmi8998_gpio_8>;
 };
 
 /* GPIO_7 : SAMD_RSTEN_N */
@@ -427,6 +367,39 @@
 		67 140 28>;
 };
 
+&qupv3_se5_i2c {
+	atmel_mxt640u: atmel_mxt640u@4a {
+		compatible = "atmel,mxt640u";
+		reg = <0x4a>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <125 0x2008>;
+		avdd-supply = <&pm8998_l28>;
+		atmel,fw_name = "touch_module_id_0x01.img";
+		atmel,reset-gpio = <&tlmm 99 0x00>;
+		atmel,irq-gpio = <&tlmm 125 0x2008>;
+		atmel,vddio-gpio = <&tlmm 133 0x00>;
+		atmel,numtouch = <10>;
+		atmel,knock_on_type = <1>;
+		atmel,lcd_x = <1440>;
+		atmel,lcd_y = <2880>;
+		atmel,global_access_pixel = <0>;
+		atmel,use_mfts = <1>;
+		atmel,butt_check_enable = <0>;
+		atmel,use_debug_reason = <1>;
+		atmel,use_lpwg_test = <1>;
+
+		/* feature */
+		atmel,watchdog_supported = <1>;
+		atmel,watchdog_delay_ms = <10000>;
+		atmel,side_key_supported = <1>;
+		atmel,glove_mode_supported = <1>;
+		atmel,cover_mode_supported = <1>;
+		atmel,aod_mode_supported = <1>;
+		atmel,stamina_mode_supported = <1>;
+		atmel,sod_mode_supported = <1>;
+	};
+};
+
 &qusb_phy0 {
 	qcom,efuse-offset = <0x00000000>;
 	qcom,qusb-phy-init-seq =
@@ -452,10 +425,75 @@
 	somc,qusb-phy-init-bias_ctrl2_sp = <0x25>;
 };
 
-#include "dsi-panel-akatsuki.dtsi"
-#include "somc-tama-display.dtsi"
-#include "somc-tama-display_akatsuki.dtsi"
-#include "somc-tama-touch.dtsi"
-#include "somc-tama-touch_akatsuki.dtsi"
-#include "charger-tama-common.dtsi"
-#include "charger-tama-akatsuki.dtsi"
+&pmi8998_charger {
+	qcom,fv-max-uv = <4380000>;
+	somc,thermal-fcc-ua = <2400000 2200000 2000000
+				1800000 1500000 1400000
+				1300000 1000000 800000
+				700000 500000 200000
+				100000 0 0>;
+	somc,thermal-lo-volt-icl-ua = <2000000 1500000 1500000
+					1500000 1300000 1100000
+					1100000 1000000 900000
+					900000 500000 200000
+					100000 0 0>;
+	somc,thermal-hi-volt-icl-ua = <1700000 1700000 1700000
+					1700000 1500000 1500000
+					1000000 1000000 1000000
+					600000 500000 200000
+					100000 0 0>;
+	somc,thermal-dcin-icl-ua = <1000000 950000 900000
+					850000 800000 750000
+					700000 600000 500000
+					400000 300000 200000
+					100000 0 0>;
+	somc,thermal-wireless-v-limit = <9000 9000 9000
+					9000 9000 9000
+					9000 9000 9000
+					9000 5000 5000
+					5000 5000 5000>;
+	somc,fake-charging-temp-level = <13>;
+	somc,wireless-support;
+	somc,jeita-use-aux-therm;
+	somc,jeita-use-wlc-therm;
+	somc,jeita-aux-thresh-hot = <900>;
+	somc,jeita-aux-thresh-warm = <700>;
+	somc,jeita-wlc-thresh-hot = <568>;
+	somc,jeita-wlc-thresh-warm = <468>;
+	somc,jeita-warm-fcc-ua = <950000>;
+	somc,jeita-cool-fcc-ua = <950000>;
+	somc,jeita-warm-fv-uv = <4200000>;
+	somc,product-icl-ua = <2000000>;
+	somc,high-voltage-icl-ua = <1700000>;
+	qcom,dc-icl-ua = <1000000>;
+	somc,dc-h-volt-boost-icl-ua = <1000000>;
+	somc,dc-h-volt-icl-ua = <1000000>;
+	somc,dc-l-volt-icl-ua = <1000000>;
+	somc,batt-temp-correction = <0>;
+	somc,wlc-temp-correction = <(-18)>;
+	qcom,hvdcp-disable;
+};
+
+&pmi8998_fg {
+	qcom,battery-data = <&tama_batterydata>;
+	qcom,fg-sys-term-current = <(-185)>;
+	qcom,fg-chg-term-current = <160>;
+};
+
+&pmi8998_pdphy {
+	qcom,default-sink-caps = <5000 2000>, /* 5V @ 2A */
+				 <9000 1700>; /* 9V @ 1.7A */
+};
+
+/* SoMC Akatsuki uses fixed DCDC instead of LAB/IBB for OLED panel */
+&labibb {
+	status = "disabled";
+};
+
+&lab_regulator {
+	status = "disabled";
+};
+
+&ibb_regulator {
+	status = "disabled";
+};
