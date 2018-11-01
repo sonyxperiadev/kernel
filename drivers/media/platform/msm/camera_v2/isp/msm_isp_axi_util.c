@@ -581,6 +581,11 @@ static int msm_isp_composite_irq(struct vfe_device *vfe_dev,
 				struct msm_vfe_axi_stream *stream_info,
 				enum msm_isp_comp_irq_types irq)
 {
+	/* for dual vfe mode need not check anything*/
+	if (vfe_dev->dual_vfe_sync_mode) {
+		stream_info->composite_irq[irq] = 0;
+		return 0;
+	}
 	/* interrupt recv on same vfe w/o recv on other vfe */
 	if (stream_info->composite_irq[irq] & (1 << vfe_dev->pdev->id)) {
 		msm_isp_dump_ping_pong_mismatch(vfe_dev);
@@ -2321,6 +2326,7 @@ static void msm_isp_input_disable(struct vfe_device *vfe_dev, int cmd_type)
 	int total_stream_count = 0;
 	int i;
 	struct msm_vfe_src_info *src_info;
+	struct msm_vfe_hardware_info *hw_info;
 	int ext_read =
 		(axi_data->src_info[VFE_PIX_0].input_mux == EXTERNAL_READ);
 
@@ -2381,6 +2387,7 @@ static void msm_isp_input_disable(struct vfe_device *vfe_dev, int cmd_type)
 				update_camif_state(vfe_dev,
 				DISABLE_CAMIF);
 	}
+	hw_info = &vfe_dev->hw_info;
 	/*
 	 * halt and reset hardware if all streams are disabled, in this case
 	 * ispif is halted immediately as well
@@ -2393,6 +2400,10 @@ static void msm_isp_input_disable(struct vfe_device *vfe_dev, int cmd_type)
 			vfe_dev->hw_info->vfe_ops.core_ops.reset_hw(vfe_dev,
 								0, 1);
 		vfe_dev->hw_info->vfe_ops.core_ops.init_hw_reg(vfe_dev);
+
+		if (vfe_dev->dual_vfe_sync_mode)
+			hw_info->vfe_ops.platform_ops.clear_dual_vfe_mode(
+				vfe_dev);
 	}
 
 }
@@ -2413,6 +2424,12 @@ static void msm_isp_input_enable(struct vfe_device *vfe_dev,
 		(axi_data->src_info[VFE_PIX_0].input_mux == EXTERNAL_READ);
 	int stream_count;
 	int i;
+
+	/* if dual vfe mode is enabled and split needed, set dual vfe mode */
+	if (vfe_dev->dual_vfe_sync_mode) {
+		vfe_dev->hw_info->vfe_ops.platform_ops.set_dual_vfe_mode(
+			vfe_dev);
+	}
 
 	for (i = 0; i < VFE_SRC_MAX; i++) {
 		stream_count = axi_data->src_info[i].stream_count +
@@ -4329,7 +4346,7 @@ void msm_isp_process_axi_irq_stream(struct vfe_device *vfe_dev,
 }
 
 void msm_isp_process_axi_irq(struct vfe_device *vfe_dev,
-	uint32_t irq_status0, uint32_t irq_status1,
+	uint32_t irq_status0, uint32_t irq_status1, uint32_t dual_irq_status,
 	uint32_t pingpong_status, struct msm_isp_timestamp *ts)
 {
 	int i, rc = 0;
