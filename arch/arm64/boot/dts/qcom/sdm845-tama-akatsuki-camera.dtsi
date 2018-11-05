@@ -1,4 +1,4 @@
-/* arch/arm64/boot/dts/qcom/sdm845-tama-akari-camera.dtsi
+/* arch/arm64/boot/dts/qcom/sdm845-tama-akatsuki-camera.dtsi
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -147,9 +147,9 @@
 		sensor-position-roll = <90>;
 		sensor-position-pitch = <0>;
 		sensor-position-yaw = <180>;
+		actuator-src = <&actuator0>;
 		eeprom-src = <&eeprom0>;
 		led-flash-src = <&led_flash0>;
-		actuator-src = <&actuator0>;
 		cam_vio-supply = <&cam_vio_vreg>;
 		cam_vana-supply = <&cam_vana_rear_verg>;
 		cam_vdig-supply = <&cam_vdig_rear_verg>;
@@ -206,8 +206,8 @@
 		sensor-position-roll = <90>;
 		sensor-position-pitch = <0>;
 		sensor-position-yaw = <0>;
-		eeprom-src = <&eeprom1>;
 		actuator-src = <&actuator1>;
+		eeprom-src = <&eeprom1>;
 		cam_vio-supply = <&cam_vio_vreg>;
 		cam_vana-supply = <&cam_vana_front_verg>;
 		cam_vdig-supply = <&pm8998_s3>;
