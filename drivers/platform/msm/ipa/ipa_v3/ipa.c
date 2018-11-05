@@ -5906,10 +5906,10 @@ static int get_ipa_dts_configuration(struct platform_device *pdev,
 	}
 
 	ipa_drv_res->wdi_over_pcie =
-			of_property_read_bool(pdev->dev.of_node,
-			"qcom,wlan-ce-db-over-pcie");
+		of_property_read_bool(pdev->dev.of_node,
+		"qcom,wlan-ce-db-over-pcie");
 	IPADBG("Is wdi_over_pcie ? (%s)\n",
-				ipa3_ctx->wdi_over_pcie ? "Yes":"No");
+		ipa_drv_res->wdi_over_pcie ? "Yes":"No");
 
 	/*
 	 * If we're on emulator, get its interrupt controller's mem
@@ -6237,15 +6237,17 @@ static int ipa_smmu_ap_cb_probe(struct device *dev)
 		}
 		IPADBG("AP/USB SMMU atomic set\n");
 
-		if (iommu_domain_set_attr(cb->mapping->domain,
+		if (smmu_info.fast_map) {
+			if (iommu_domain_set_attr(cb->mapping->domain,
 				DOMAIN_ATTR_FAST,
 				&fast)) {
-			IPAERR("couldn't set fast map\n");
-			arm_iommu_release_mapping(cb->mapping);
-			cb->valid = false;
-			return -EIO;
+				IPAERR("couldn't set fast map\n");
+				arm_iommu_release_mapping(cb->mapping);
+				cb->valid = false;
+				return -EIO;
+			}
+			IPADBG("SMMU fast map set\n");
 		}
-		IPADBG("SMMU fast map set\n");
 	}
 
 	pr_info("IPA smmu_info.s1_bypass_arr[AP]=%d smmu_info.fast_map=%d\n",

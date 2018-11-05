@@ -284,6 +284,8 @@ enum icnss_driver_state {
 	ICNSS_HOST_TRIGGERED_PDR,
 	ICNSS_FW_DOWN,
 	ICNSS_DRIVER_UNLOADING,
+	ICNSS_REJUVENATE,
+	ICNSS_MODE_ON,
 };
 
 struct ce_irq_list {
@@ -1172,6 +1174,14 @@ bool icnss_is_fw_down(void)
 }
 EXPORT_SYMBOL(icnss_is_fw_down);
 
+bool icnss_is_rejuvenate(void)
+{
+	if (!penv)
+		return false;
+	else
+		return test_bit(ICNSS_REJUVENATE, &penv->state);
+}
+EXPORT_SYMBOL(icnss_is_rejuvenate);
 
 int icnss_power_off(struct device *dev)
 {
@@ -1600,6 +1610,16 @@ static int wlfw_wlan_mode_send_sync_msg(enum wlfw_driver_mode_enum_v01 mode)
 		goto out;
 	}
 	penv->stats.mode_resp++;
+
+	if (mode == QMI_WLFW_OFF_V01) {
+		icnss_pr_dbg("Clear mode on 0x%lx, mode: %d\n",
+			     penv->state, mode);
+		clear_bit(ICNSS_MODE_ON, &penv->state);
+	} else {
+		icnss_pr_dbg("Set mode on 0x%lx, mode: %d\n",
+			     penv->state, mode);
+		set_bit(ICNSS_MODE_ON, &penv->state);
+	}
 
 	return 0;
 
@@ -2093,6 +2113,7 @@ static void icnss_qmi_wlfw_clnt_ind(struct qmi_handle *handle,
 		event_data->crashed = true;
 		event_data->fw_rejuvenate = true;
 		fw_down_data.crashed = true;
+		set_bit(ICNSS_REJUVENATE, &penv->state);
 		icnss_call_driver_uevent(penv, ICNSS_UEVENT_FW_DOWN,
 					 &fw_down_data);
 		icnss_driver_event_post(ICNSS_DRIVER_EVENT_PD_SERVICE_DOWN,
@@ -2190,6 +2211,7 @@ static int icnss_driver_event_server_arrive(void *data)
 
 err_setup_msa:
 	icnss_assign_msa_perm_all(penv, ICNSS_MSA_PERM_HLOS_ALL);
+	clear_bit(ICNSS_MSA0_ASSIGNED, &penv->state);
 err_power_on:
 	icnss_hw_power_off(penv);
 fail:
@@ -2283,6 +2305,7 @@ static int icnss_pd_restart_complete(struct icnss_priv *priv)
 
 	icnss_call_driver_shutdown(priv);
 
+	clear_bit(ICNSS_REJUVENATE, &penv->state);
 	clear_bit(ICNSS_PD_RESTART, &priv->state);
 	priv->early_crash_ind = false;
 
@@ -2333,6 +2356,7 @@ static int icnss_driver_event_fw_ready_ind(void *data)
 		return -ENODEV;
 
 	set_bit(ICNSS_FW_READY, &penv->state);
+	clear_bit(ICNSS_MODE_ON, &penv->state);
 
 	icnss_pr_info("WLAN FW is ready: 0x%lx\n", penv->state);
 
@@ -2484,11 +2508,19 @@ out:
 static int icnss_driver_event_early_crash_ind(struct icnss_priv *priv,
 					      void *data)
 {
+	struct icnss_uevent_fw_down_data fw_down_data = {0};
 	int ret = 0;
 
 	if (!test_bit(ICNSS_WLFW_EXISTS, &priv->state)) {
 		icnss_ignore_qmi_timeout(false);
 		goto out;
+	}
+
+	if (test_bit(ICNSS_FW_READY, &priv->state) &&
+	    !test_bit(ICNSS_DRIVER_UNLOADING, &priv->state)) {
+		fw_down_data.crashed = true;
+		icnss_call_driver_uevent(priv, ICNSS_UEVENT_FW_DOWN,
+					 &fw_down_data);
 	}
 
 	priv->early_crash_ind = true;
@@ -3287,6 +3319,12 @@ int icnss_wlan_enable(struct device *dev, struct icnss_wlan_enable_cfg *config,
 		return -EINVAL;
 	}
 
+	if (test_bit(ICNSS_MODE_ON, &penv->state)) {
+		icnss_pr_err("Already Mode on, ignoring wlan_enable state: 0x%lx\n",
+			     penv->state);
+		return -EINVAL;
+	}
+
 	icnss_pr_dbg("Mode: %d, config: %p, host_version: %s\n",
 		     mode, config, host_version);
 
@@ -3500,7 +3538,6 @@ int icnss_trigger_recovery(struct device *dev)
 		goto out;
 	}
 
-	WARN_ON(1);
 	icnss_pr_warn("Initiate PD restart at WLAN FW, state: 0x%lx\n",
 		      priv->state);
 
@@ -3527,6 +3564,7 @@ static int icnss_smmu_init(struct icnss_priv *priv)
 	int atomic_ctx = 1;
 	int s1_bypass = 1;
 	int fast = 1;
+	int stall_disable = 1;
 	int ret = 0;
 
 	icnss_pr_dbg("Initializing SMMU\n");
@@ -3586,6 +3624,16 @@ static int icnss_smmu_init(struct icnss_priv *priv)
 			goto set_attr_fail;
 		}
 		icnss_pr_dbg("SMMU FAST map set\n");
+
+		ret = iommu_domain_set_attr(mapping->domain,
+					    DOMAIN_ATTR_CB_STALL_DISABLE,
+					    &stall_disable);
+		if (ret < 0) {
+			icnss_pr_err("Set stall disable map attribute failed, err = %d\n",
+				     ret);
+			goto set_attr_fail;
+		}
+		icnss_pr_dbg("SMMU STALL DISABLE map set\n");
 	}
 
 	ret = arm_iommu_attach_device(&priv->pdev->dev, mapping);
@@ -4007,8 +4055,14 @@ static int icnss_stats_show_state(struct seq_file *s, struct icnss_priv *priv)
 		case ICNSS_FW_DOWN:
 			seq_puts(s, "FW DOWN");
 			continue;
+		case ICNSS_REJUVENATE:
+			seq_puts(s, "FW REJUVENATE");
+			continue;
 		case ICNSS_DRIVER_UNLOADING:
 			seq_puts(s, "DRIVER UNLOADING");
+			continue;
+		case ICNSS_MODE_ON:
+			seq_puts(s, "MODE ON DONE");
 		}
 
 		seq_printf(s, "UNKNOWN-%d", i);
