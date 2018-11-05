@@ -1,4 +1,4 @@
-/* arch/arm64/boot/dts/qcom/sdm845-tama-akari-camera.dtsi
+/* arch/arm64/boot/dts/qcom/sdm845-tama-apollo-camera.dtsi
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -147,6 +147,7 @@
 		sensor-position-roll = <90>;
 		sensor-position-pitch = <0>;
 		sensor-position-yaw = <180>;
+		actuator-src = <&actuator0>;
 		eeprom-src = <&eeprom0>;
 		led-flash-src = <&led_flash0>;
 		cam_vio-supply = <&cam_vio_vreg>;
