@@ -471,7 +471,7 @@ static void __init map_mem(pgd_t *pgd)
 	struct memblock_region *reg;
 	int flags = 0;
 
-	if (debug_pagealloc_enabled())
+	if (rodata_full || debug_pagealloc_enabled())
 		flags = NO_BLOCK_MAPPINGS | NO_CONT_MAPPINGS;
 
 	/*
@@ -573,7 +573,19 @@ static void __init map_kernel_segment(pgd_t *pgd, void *va_start, void *va_end,
 #if defined(CONFIG_STRICT_KERNEL_RWX) || defined(CONFIG_STRICT_MODULE_RWX)
 static int __init parse_rodata(char *arg)
 {
-	return strtobool(arg, &rodata_enabled);
+	int ret = strtobool(arg, &rodata_enabled);
+	if (!ret) {
+		rodata_full = false;
+		return 0;
+	}
+
+	/* permit 'full' in addition to boolean options */
+	if (strcmp(arg, "full"))
+		return -EINVAL;
+
+	rodata_enabled = true;
+	rodata_full = true;
+	return 0;
 }
 early_param("rodata", parse_rodata);
 #else
