@@ -15,37 +15,32 @@
  * and licensed under the license of the file.
  */
 
-/ {
-	reserved-memory {
-		debug_region: debug_region@ffb00000 {
-			compatible = "removed-dma-pool", "qcom,debug_memory";
-			no-map;
-			reg = <0 0xffb00000 0 0x100000>;
-			label = "debug_mem";
-		};
-
-		ramoops: ramoops@ffc00000 {
-			compatible = "removed-dma-pool", "ramoops";
-			no-map;
-			reg = <0 0xffc00000 0 0x00100000>;
-			record-size = <0x1000>;
-			console-size = <0x40000>;
-			ftrace-size = <0x0>;
-			msg-size = <0x0>;
-			cc-size = <0x0>;
-		};
-
-		qseecom_region@0x8ab00000 {
-			reg = <0 0x8ab00000 0 0x1900000>;
-		};
-
-		/delete-node/ camera_region@0x8bf00000;
-		pil_camera_mem: camera_region@0x97c00000 {
-			compatible = "removed-dma-pool";
-			no-map;
-			reg = <0 0x97c00000 0 0x500000>;
-		};
+&reserved_mem {
+	debug_region: debug_region@ffb00000 {
+		compatible = "removed-dma-pool", "qcom,debug_memory";
+		no-map;
+		reg = <0 0xffb00000 0 0x100000>;
+		label = "debug_mem";
 	};
+
+	ramoops: ramoops@ffc00000 {
+		compatible = "removed-dma-pool", "ramoops";
+		no-map;
+		reg = <0 0xffc00000 0 0x00100000>;
+		record-size = <0x10000>;
+		console-size = <0x60000>;
+		ftrace-size = <0x10000>;
+		pmsg-size = <0x20000>;
+		ecc-size = <16>;
+	};
+};
+
+&pil_camera_mem {
+	reg = <0 0x97c00000 0 0x500000>;
+};
+
+&qseecom_mem {
+	reg = <0 0x8ab00000 0 0x1900000>;
 };
 
 &cam_cci {
