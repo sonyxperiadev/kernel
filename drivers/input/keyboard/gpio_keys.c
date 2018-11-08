@@ -637,6 +637,23 @@ static void gpio_keys_report_state(struct gpio_keys_drvdata *ddata)
 	input_sync(input);
 }
 
+static bool gpio_keys_pinctrl_conf_valid(struct gpio_keys_drvdata *ddata)
+{
+	struct pinctrl_state *state;
+
+	state = pinctrl_lookup_state(ddata->key_pinctrl,
+						"tlmm_gpio_key_active");
+	if (IS_ERR(state))
+		return false;
+
+	state = pinctrl_lookup_state(ddata->key_pinctrl,
+						"tlmm_gpio_key_suspend");
+	if (IS_ERR(state))
+		return false;
+
+	return true;
+}
+
 static int gpio_keys_pinctrl_configure(struct gpio_keys_drvdata *ddata,
 							bool active)
 {
@@ -847,6 +864,12 @@ static int gpio_keys_probe(struct platform_device *pdev)
 
 		pr_debug("Target does not use pinctrl\n");
 		ddata->key_pinctrl = NULL;
+	} else {
+		if (!gpio_keys_pinctrl_conf_valid(ddata)) {
+			dev_info(dev, "Invalid pinctrl configuration. "
+					"Skipping pinctrl usage.");
+			ddata->key_pinctrl = NULL;
+		}
 	}
 
 	if (ddata->key_pinctrl) {
