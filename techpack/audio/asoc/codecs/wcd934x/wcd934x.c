@@ -144,6 +144,10 @@ static const struct snd_kcontrol_new name##_mux = \
 #define  CF_MIN_3DB_75HZ		0x1
 #define  CF_MIN_3DB_150HZ		0x2
 
+#ifdef CONFIG_ARCH_SONY_TAMA
+#define  SB_OF_UF_MAX_RETRY_CNT		5
+#endif
+
 #define CPE_ERR_WDOG_BITE BIT(0)
 #define CPE_FATAL_IRQS CPE_ERR_WDOG_BITE
 
@@ -627,6 +631,10 @@ struct tavil_priv {
 	int main_clk_users[WCD934X_NUM_INTERPOLATORS];
 	struct tavil_dsd_config *dsd_config;
 	struct tavil_idle_detect_config idle_det_cfg;
+
+#ifdef CONFIG_ARCH_SONY_TAMA
+	unsigned short slim_tx_of_uf_cnt[WCD934X_TX_MAX][SB_PORT_ERR_MAX];
+#endif
 
 	int power_active_ref;
 	u8 sidetone_coeff_array[IIR_MAX][BAND_MAX]
@@ -1861,6 +1869,9 @@ static int tavil_codec_enable_tx(struct snd_soc_dapm_widget *w,
 	struct wcd9xxx_codec_dai_data *dai;
 	struct wcd9xxx *core;
 	int ret = 0;
+#ifdef CONFIG_ARCH_SONY_TAMA
+	struct wcd9xxx_ch *ch;
+#endif
 
 	dev_dbg(codec->dev,
 		"%s: w->name %s, w->shift = %d, num_dai %d stream name %s\n",
@@ -1896,6 +1907,15 @@ static int tavil_codec_enable_tx(struct snd_soc_dapm_widget *w,
 			dev_dbg(codec->dev, "%s: Disconnect RX port, ret = %d\n",
 				 __func__, ret);
 		}
+#ifdef CONFIG_ARCH_SONY_TAMA
+		/* reset overflow and underflow counts */
+		list_for_each_entry(ch, &dai->wcd9xxx_ch_list, list) {
+			tavil_p->slim_tx_of_uf_cnt[ch->port][SB_PORT_ERR_OF]
+									= 0;
+			tavil_p->slim_tx_of_uf_cnt[ch->port][SB_PORT_ERR_UF]
+									= 0;
+		}
+#endif
 		break;
 	}
 	return ret;
@@ -1910,6 +1930,9 @@ static int tavil_codec_enable_slimvi_feedback(struct snd_soc_dapm_widget *w,
 	struct tavil_priv *tavil_p = NULL;
 	int ret = 0;
 	struct wcd9xxx_codec_dai_data *dai = NULL;
+#ifdef CONFIG_ARCH_SONY_TAMA
+	struct wcd9xxx_ch *ch;
+#endif
 
 	codec = snd_soc_dapm_to_codec(w->dapm);
 	tavil_p = snd_soc_codec_get_drvdata(codec);
@@ -2002,6 +2025,15 @@ static int tavil_codec_enable_slimvi_feedback(struct snd_soc_dapm_widget *w,
 			dev_dbg(codec->dev, "%s: Disconnect TX port, ret = %d\n",
 				__func__, ret);
 		}
+#ifdef CONFIG_ARCH_SONY_TAMA
+		/* reset overflow and underflow counts */
+		list_for_each_entry(ch, &dai->wcd9xxx_ch_list, list) {
+			tavil_p->slim_tx_of_uf_cnt[ch->port][SB_PORT_ERR_OF]
+									= 0;
+			tavil_p->slim_tx_of_uf_cnt[ch->port][SB_PORT_ERR_UF]
+									= 0;
+		}
+#endif
 		if (test_bit(VI_SENSE_1, &tavil_p->status_mask)) {
 			/* Disable V&I sensing */
 			dev_dbg(codec->dev, "%s: spkr1 disabled\n", __func__);
@@ -3857,6 +3889,24 @@ static int tavil_codec_set_idle_detect_thr(struct snd_soc_codec *codec,
 	return 0;
 }
 
+#ifdef CONFIG_ARCH_SONY_TAMA
+static void tavil_codec_set_offset_val(int *offset_val, int gain_offset,
+				       int mult)
+{
+	switch (gain_offset) {
+	case WCD934X_RX_GAIN_OFFSET_M0P5_DB:
+		*offset_val = 1 * mult;
+		break;
+	case WCD934X_RX_GAIN_OFFSET_M1P5_DB:
+		*offset_val = 2 * mult;
+		break;
+	default:
+		pr_err("Improper gain offset\n");
+		break;
+	}
+}
+#endif
+
 static int tavil_codec_enable_mix_path(struct snd_soc_dapm_widget *w,
 				       struct snd_kcontrol *kcontrol,
 				       int event)
@@ -3891,8 +3941,13 @@ static int tavil_codec_enable_mix_path(struct snd_soc_dapm_widget *w,
 		snd_soc_update_bits(codec, mix_reg, 0x20, 0x20);
 		break;
 	case SND_SOC_DAPM_POST_PMU:
+#ifdef CONFIG_ARCH_SONY_TAMA
+		if ((tavil->swr.spkr_gain_offset ==
+		     WCD934X_RX_GAIN_OFFSET_0_DB) &&
+#else
 		if ((tavil->swr.spkr_gain_offset ==
 		     WCD934X_RX_GAIN_OFFSET_M1P5_DB) &&
+#endif
 		    (tavil->comp_enabled[COMPANDER_7] ||
 		     tavil->comp_enabled[COMPANDER_8]) &&
 		    (gain_reg == WCD934X_CDC_RX7_RX_VOL_MIX_CTL ||
@@ -3907,7 +3962,12 @@ static int tavil_codec_enable_mix_path(struct snd_soc_dapm_widget *w,
 			snd_soc_update_bits(codec,
 					    WCD934X_CDC_RX8_RX_PATH_MIX_SEC0,
 					    0x01, 0x01);
+#ifdef CONFIG_ARCH_SONY_TAMA
+			tavil_codec_set_offset_val(&offset_val,
+						   tavil->swr.spkr_gain_offset, -1);
+#else
 			offset_val = -2;
+#endif
 		}
 		val = snd_soc_read(codec, gain_reg);
 		val += offset_val;
@@ -3922,8 +3982,13 @@ static int tavil_codec_enable_mix_path(struct snd_soc_dapm_widget *w,
 		snd_soc_update_bits(codec, mix_reg, 0x40, 0x40);
 		snd_soc_update_bits(codec, mix_reg, 0x40, 0x00);
 
+#ifdef CONFIG_ARCH_SONY_TAMA
+		if ((tavil->swr.spkr_gain_offset ==
+		     WCD934X_RX_GAIN_OFFSET_0_DB) &&
+#else
 		if ((tavil->swr.spkr_gain_offset ==
 		     WCD934X_RX_GAIN_OFFSET_M1P5_DB) &&
+#endif
 		    (tavil->comp_enabled[COMPANDER_7] ||
 		     tavil->comp_enabled[COMPANDER_8]) &&
 		    (gain_reg == WCD934X_CDC_RX7_RX_VOL_MIX_CTL ||
@@ -3938,7 +4003,12 @@ static int tavil_codec_enable_mix_path(struct snd_soc_dapm_widget *w,
 			snd_soc_update_bits(codec,
 					    WCD934X_CDC_RX8_RX_PATH_MIX_SEC0,
 					    0x01, 0x00);
+#ifdef CONFIG_ARCH_SONY_TAMA
+			tavil_codec_set_offset_val(&offset_val,
+						   tavil->swr.spkr_gain_offset, 1);
+#else
 			offset_val = 2;
+#endif
 			val = snd_soc_read(codec, gain_reg);
 			val += offset_val;
 			snd_soc_write(codec, gain_reg, val);
@@ -4007,8 +4077,13 @@ static int tavil_codec_enable_main_path(struct snd_soc_dapm_widget *w,
 		break;
 	case SND_SOC_DAPM_POST_PMU:
 		/* apply gain after int clk is enabled */
+#ifdef CONFIG_ARCH_SONY_TAMA
+		if ((tavil->swr.spkr_gain_offset ==
+		     			WCD934X_RX_GAIN_OFFSET_0_DB) &&
+#else
 		if ((tavil->swr.spkr_gain_offset ==
 					WCD934X_RX_GAIN_OFFSET_M1P5_DB) &&
+#endif
 		    (tavil->comp_enabled[COMPANDER_7] ||
 		     tavil->comp_enabled[COMPANDER_8]) &&
 		    (gain_reg == WCD934X_CDC_RX7_RX_VOL_CTL ||
@@ -4023,7 +4098,12 @@ static int tavil_codec_enable_main_path(struct snd_soc_dapm_widget *w,
 			snd_soc_update_bits(codec,
 					    WCD934X_CDC_RX8_RX_PATH_MIX_SEC0,
 					    0x01, 0x01);
+#ifdef CONFIG_ARCH_SONY_TAMA
+			tavil_codec_set_offset_val(&offset_val,
+						   tavil->swr.spkr_gain_offset, -1);
+#else
 			offset_val = -2;
+#endif
 		}
 		val = snd_soc_read(codec, gain_reg);
 		val += offset_val;
@@ -4033,8 +4113,13 @@ static int tavil_codec_enable_main_path(struct snd_soc_dapm_widget *w,
 	case SND_SOC_DAPM_POST_PMD:
 		tavil_codec_enable_interp_clk(codec, event, w->shift);
 
+#ifdef CONFIG_ARCH_SONY_TAMA
+		if ((tavil->swr.spkr_gain_offset ==
+		     			WCD934X_RX_GAIN_OFFSET_0_DB) &&
+#else
 		if ((tavil->swr.spkr_gain_offset ==
 					WCD934X_RX_GAIN_OFFSET_M1P5_DB) &&
+#endif
 		    (tavil->comp_enabled[COMPANDER_7] ||
 		     tavil->comp_enabled[COMPANDER_8]) &&
 		    (gain_reg == WCD934X_CDC_RX7_RX_VOL_CTL ||
@@ -4049,7 +4134,12 @@ static int tavil_codec_enable_main_path(struct snd_soc_dapm_widget *w,
 			snd_soc_update_bits(codec,
 					    WCD934X_CDC_RX8_RX_PATH_MIX_SEC0,
 					    0x01, 0x00);
+#ifdef CONFIG_ARCH_SONY_TAMA
+			tavil_codec_set_offset_val(&offset_val,
+						   tavil->swr.spkr_gain_offset, 1);
+#else
 			offset_val = 2;
+#endif
 			val = snd_soc_read(codec, gain_reg);
 			val += offset_val;
 			snd_soc_write(codec, gain_reg, val);
@@ -9432,6 +9522,9 @@ static const struct tavil_reg_mask_val tavil_codec_reg_init_common_val[] = {
 	{WCD934X_MICB2_TEST_CTL_1, 0xff, 0xfa},
 	{WCD934X_MICB3_TEST_CTL_1, 0xff, 0xfa},
 	{WCD934X_MICB4_TEST_CTL_1, 0xff, 0xfa},
+#ifdef CONFIG_ARCH_SONY_TAMA
+	{WCD934X_CDC_RX3_RX_PATH_CFG1, 0x64, 0x00}
+#endif
 };
 
 static void tavil_codec_init_reg(struct tavil_priv *priv)
@@ -9599,14 +9692,47 @@ static irqreturn_t tavil_slimbus_irq(int irq, void *data)
 		if (val & WCD934X_SLIM_IRQ_UNDERFLOW)
 			dev_err_ratelimited(tavil->dev, "%s: underflow error on %s port %d, value %x\n",
 			   __func__, (tx ? "TX" : "RX"), port_id, val);
+#ifdef CONFIG_ARCH_SONY_TAMA
+		if (tx) {
+			/* inc count */
+			if (val & WCD934X_SLIM_IRQ_OVERFLOW) {
+				tavil->slim_tx_of_uf_cnt[port_id]
+							[SB_PORT_ERR_OF]++;
+				dev_err_ratelimited(tavil->dev, "%s: tx port(%d) overflow cnt: %d\n",
+					__func__, port_id,
+					tavil->slim_tx_of_uf_cnt[port_id]
+							[SB_PORT_ERR_OF]);
+			}
+			if (val & WCD934X_SLIM_IRQ_UNDERFLOW) {
+				tavil->slim_tx_of_uf_cnt[port_id]
+							[SB_PORT_ERR_UF]++;
+				dev_err_ratelimited(tavil->dev, "%s: tx port(%d) underflow cnt: %d\n",
+						__func__, port_id,
+					tavil->slim_tx_of_uf_cnt[port_id]
+							[SB_PORT_ERR_UF]);
+			}
+
+		}
+#endif
 		if ((val & WCD934X_SLIM_IRQ_OVERFLOW) ||
 			(val & WCD934X_SLIM_IRQ_UNDERFLOW)) {
 			if (!tx)
 				reg = WCD934X_SLIM_PGD_PORT_INT_RX_EN0 +
 					(port_id / 8);
+#ifdef CONFIG_ARCH_SONY_TAMA
+			else if ((tavil->slim_tx_of_uf_cnt[port_id]
+				[SB_PORT_ERR_OF] > SB_OF_UF_MAX_RETRY_CNT) ||
+				(tavil->slim_tx_of_uf_cnt[port_id]
+				[SB_PORT_ERR_UF] > SB_OF_UF_MAX_RETRY_CNT))
+ 				reg = WCD934X_SLIM_PGD_PORT_INT_TX_EN0 +
+ 					(port_id / 8);
+			else
+				goto skip_port_disable;
+#else
 			else
 				reg = WCD934X_SLIM_PGD_PORT_INT_TX_EN0 +
 					(port_id / 8);
+#endif
 			int_val = wcd9xxx_interface_reg_read(
 				tavil->wcd9xxx, reg);
 			if (int_val & (1 << (port_id % 8))) {
@@ -9615,6 +9741,9 @@ static irqreturn_t tavil_slimbus_irq(int irq, void *data)
 					reg, int_val);
 			}
 		}
+#ifdef CONFIG_ARCH_SONY_TAMA
+skip_port_disable:
+#endif
 		if (val & WCD934X_SLIM_IRQ_PORT_CLOSED) {
 			/*
 			 * INT SOURCE register starts from RX to TX
@@ -10935,6 +11064,10 @@ static int tavil_probe(struct platform_device *pdev)
 	tavil->swr.plat_data.clk = tavil_swrm_clock;
 	tavil->swr.plat_data.handle_irq = tavil_swrm_handle_irq;
 	tavil->swr.spkr_gain_offset = WCD934X_RX_GAIN_OFFSET_0_DB;
+
+#ifdef CONFIG_ARCH_SONY_TAMA
+	tavil->swr.spkr_gain_offset = WCD934X_RX_GAIN_OFFSET_M0P5_DB;
+#endif
 
 	/* Register for Clock */
 	wcd_ext_clk = clk_get(tavil->wcd9xxx->dev, "wcd_clk");
