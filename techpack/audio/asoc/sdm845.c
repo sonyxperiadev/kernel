@@ -4039,8 +4039,16 @@ static void *def_tavil_mbhc_cal(void)
 	if (!tavil_wcd_cal)
 		return NULL;
 
+#ifdef CONFIG_ARCH_SONY_TAMA
+ #define VHSMAX 1700
+ #define BTN_H1 137
+#else
+ #define VHSMAX 1600
+ #define BTN_H1 150
+#endif
+
 #define S(X, Y) ((WCD_MBHC_CAL_PLUG_TYPE_PTR(tavil_wcd_cal)->X) = (Y))
-	S(v_hs_max, 1600);
+	S(v_hs_max, VHSMAX);
 #undef S
 #define S(X, Y) ((WCD_MBHC_CAL_BTN_DET_PTR(tavil_wcd_cal)->X) = (Y))
 	S(num_btn, WCD_MBHC_DEF_BUTTONS);
@@ -4051,7 +4059,7 @@ static void *def_tavil_mbhc_cal(void)
 		(sizeof(btn_cfg->_v_btn_low[0]) * btn_cfg->num_btn);
 
 	btn_high[0] = 75;
-	btn_high[1] = 150;
+	btn_high[1] = BTN_H1;
 	btn_high[2] = 237;
 	btn_high[3] = 500;
 	btn_high[4] = 500;

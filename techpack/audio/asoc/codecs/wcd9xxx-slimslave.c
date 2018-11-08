@@ -14,6 +14,17 @@
 #include <linux/mfd/wcd9xxx/wcd9xxx_registers.h>
 #include "wcd9xxx-slimslave.h"
 
+#undef SLIMSLAVE_TARGET_SOMC
+#if defined(CONFIG_ARCH_SONY_LOIRE) || defined(CONFIG_ARCH_SONY_TONE)    || \
+    defined(CONFIG_ARCH_SONY_NILE)  || defined(CONFIG_ARCH_SONY_YOSHINO) || \
+    defined(CONFIG_ARCH_SONY_TAMA)
+ #define SLIMSLAVE_TARGET_SOMC
+#endif
+
+#ifdef SLIMSLAVE_TARGET_SOMC
+  #define SB_PGD_PORT_TX_OR_UR_CFG(port)  (0x1F0 + port)
+#endif
+
 struct wcd9xxx_slim_sch {
 	u16 rx_port_ch_reg_base;
 	u16 port_tx_cfg_reg_base;
@@ -324,6 +335,29 @@ err:
 }
 EXPORT_SYMBOL(wcd9xxx_cfg_slim_sch_rx);
 
+#ifdef SLIMSLAVE_TARGET_SOMC
+static void wcd9xxx_slim_tx_auto_recovery_cfg(struct wcd9xxx *wcd9xxx,
+					   u16 codec_port)
+{
+	int ret;
+
+	if (wcd9xxx->codec_type->id_major != TAVIL_MAJOR)
+		return;
+
+	ret = wcd9xxx_interface_reg_write(wcd9xxx,
+			SB_PGD_PORT_TX_OR_UR_CFG(codec_port),
+			0x02);
+	if (ret < 0)
+		pr_err("%s:auto_recovery set failure for port[%d] ret[%d]",
+			__func__, codec_port, ret);
+	else
+		pr_debug("%s: auto recovery register 0x%x value: 0x%x\n",
+			__func__, SB_PGD_PORT_TX_OR_UR_CFG(codec_port),
+			wcd9xxx_interface_reg_read(wcd9xxx,
+					SB_PGD_PORT_TX_OR_UR_CFG(codec_port)));
+}
+#endif
+
 /* Enable slimbus slave device for RX path */
 int wcd9xxx_cfg_slim_sch_tx(struct wcd9xxx *wcd9xxx,
 			    struct list_head *wcd9xxx_ch_list,
@@ -375,6 +409,9 @@ int wcd9xxx_cfg_slim_sch_tx(struct wcd9xxx *wcd9xxx,
 		codec_port = tx->port;
 		pr_debug("%s: codec_port %d tx 0x%p, payload 0x%x\n",
 			 __func__, codec_port, tx, payload);
+#ifdef SLIMSLAVE_TARGET_SOMC
+		wcd9xxx_slim_tx_auto_recovery_cfg(wcd9xxx, codec_port);
+#endif
 		/* write to interface device */
 		ret = wcd9xxx_interface_reg_write(wcd9xxx,
 				SB_PGD_TX_PORT_MULTI_CHANNEL_0(codec_port),
