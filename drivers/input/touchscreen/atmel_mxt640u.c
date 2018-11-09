@@ -9086,6 +9086,8 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		}
 	}
 
+	data->first_unblank = true;
+
 	return 0;
 
 err_create_sysfs_link:
@@ -9455,7 +9457,10 @@ static int drm_notifier_callback(struct notifier_block *self, unsigned long even
 					if (mxt_init_recover(ts->client, ts))
 						return 0;
 				}
-				if (!ts->charge_out) {
+				if (ts->first_unblank) {
+					ts->first_unblank = false;
+					ts->charge_out = true;
+				} else if (!ts->charge_out) {
 					LOGN("not already sleep out\n");
 					return 0;
 				}

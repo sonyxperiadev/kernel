@@ -1148,6 +1148,7 @@ struct mxt_data {
 
 	bool after_work;
 	bool charge_out;
+	bool first_unblank;
 	bool wireless_charge;
 	bool landscape;
 
