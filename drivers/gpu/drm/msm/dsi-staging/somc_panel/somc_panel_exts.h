@@ -383,6 +383,9 @@ int somc_panel_parse_dt_chgfps_config(struct dsi_panel *panel,
 int somc_panel_fps_register_attr(struct device *dev);
 int somc_panel_fps_manager_init(struct dsi_display *display);
 
+int somc_panel_get_display_pre_sod_mode(void);
+int somc_panel_set_doze_mode(struct drm_connector *connector,
+		int power_mode, void *disp);
 int somc_panel_allocate(struct device *dev, struct dsi_panel *panel);
 int somc_panel_init(struct dsi_display *display);
 
