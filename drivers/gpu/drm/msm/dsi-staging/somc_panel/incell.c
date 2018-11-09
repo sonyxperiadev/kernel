@@ -226,6 +226,12 @@ int incell_get_panel_name(void)
 }
 EXPORT_SYMBOL(incell_get_panel_name);
 
+int incell_get_display_pre_sod(void)
+{
+	return somc_panel_get_display_pre_sod_mode();
+}
+EXPORT_SYMBOL(incell_get_display_pre_sod);
+
 int incell_get_display_sod(void)
 {
 	return get_display_sod_mode();

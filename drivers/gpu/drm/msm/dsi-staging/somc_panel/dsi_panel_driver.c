@@ -39,6 +39,7 @@ static BLOCKING_NOTIFIER_HEAD(drm_notifier_list);
 
 static u32 down_period;
 static short display_sod_mode = 0;
+static short display_pre_sod_mode = 0;
 
 struct device virtdev;
 
@@ -570,6 +571,10 @@ int dsi_panel_driver_pre_power_on(struct dsi_panel *panel)
 			usleep_range(down_time * 1000, down_time * 1000 + 100);
 		}
 	}
+
+	spec_pdata->sod_mode = SOD_POWER_ON;
+	spec_pdata->pre_sod_mode = SOD_POWER_ON;
+	spec_pdata->aod_mode = SDE_MODE_DPMS_ON;
 
 	drm_notifier_call_chain(DRM_EXT_EVENT_BEFORE_BLANK, &event);
 
@@ -1276,6 +1281,9 @@ void dsi_panel_driver_post_enable(struct dsi_panel *panel)
 	somc_panel_colormgr_apply_calibrations();
 	somc_panel_fps_cmd_send(panel);
 	dsi_panel_driver_notify_resume(panel);
+
+	/* Set it after resume so that the mXT640u can cancel SOD */
+	display_sod_mode = SOD_POWER_ON;
 }
 
 void dsi_panel_driver_pre_disable(struct dsi_panel  *panel)
@@ -1300,7 +1308,68 @@ static ssize_t dsi_panel_driver_id_show(struct device *dev,
 }
 
 
+int somc_panel_set_doze_mode(struct drm_connector *connector,
+		int power_mode, void *disp)
+{
+	struct dsi_display *display = disp;
+	struct dsi_panel *panel = display->panel;
+	struct panel_specific_pdata *spec_pdata;
+	int rc = 0;
 
+	if (!display || !display->panel) {
+		pr_err("invalid display/panel\n");
+		return -EINVAL;
+	}
+	spec_pdata = panel->spec_pdata;
+
+	/* AOD/SOD supported only on OLED display */
+	if (!spec_pdata->oled_disp)
+		return 0;
+
+	mutex_lock(&display->display_lock);
+
+	switch (power_mode) {
+		case SDE_MODE_DPMS_ON:
+			pr_debug("Requested DPMS ON state.\n");
+			if (spec_pdata->aod_mode != SDE_MODE_DPMS_ON)
+				rc = dsi_panel_set_aod_off(panel);
+			break;
+		case SDE_MODE_DPMS_LP1:
+			pr_info("Entering LP1 state from %d\n",
+					spec_pdata->aod_mode);
+
+			spec_pdata->sod_mode = SOD_POWER_ON;
+			spec_pdata->pre_sod_mode = SOD_POWER_OFF_SKIP;
+			display_sod_mode = spec_pdata->sod_mode;
+			display_pre_sod_mode = spec_pdata->pre_sod_mode;
+
+			spec_pdata->aod_mode = power_mode;
+			rc = dsi_panel_set_aod_on(panel);
+			dsi_panel_driver_notify_suspend(panel);
+			break;
+		case SDE_MODE_DPMS_LP2:
+			pr_info("Entering LP2 state from %d\n",
+					spec_pdata->aod_mode);
+
+			spec_pdata->sod_mode = SOD_POWER_OFF;
+			spec_pdata->pre_sod_mode = SOD_POWER_OFF;
+			display_sod_mode = spec_pdata->sod_mode;
+			display_pre_sod_mode = spec_pdata->pre_sod_mode;
+
+			spec_pdata->aod_mode = power_mode;
+			dsi_panel_driver_notify_suspend(panel);
+			break;
+		default:
+			pr_info("Requested state %d. Disabling AOD.\n",
+				power_mode);
+			rc = dsi_panel_set_aod_off(panel);
+			break;
+	}
+
+	mutex_unlock(&display->display_lock);
+
+	return rc;
+}
 
 
 static ssize_t dsi_panel_aod_mode_store(struct device *dev,
@@ -1436,6 +1505,12 @@ static ssize_t dsi_panel_sod_mode_show(struct device *dev,
 	spec_pdata = display->panel->spec_pdata;
 
 	return scnprintf(buf, PAGE_SIZE, "sod_mode = %u\n", spec_pdata->sod_mode);
+}
+
+int somc_panel_get_display_pre_sod_mode(void)
+{
+	pr_debug("%s: pre_sod mode setting %d\n", __func__, display_sod_mode);
+	return display_sod_mode;
 }
 
 int get_display_sod_mode(void)

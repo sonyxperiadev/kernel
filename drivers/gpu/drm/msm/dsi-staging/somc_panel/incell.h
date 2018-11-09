@@ -123,5 +123,11 @@ extern int incell_get_display_sod(void);
 static inline int incell_get_display_sod(void) {return 0; }
 #endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+extern int incell_get_display_pre_sod(void);
+#else
+static inline int incell_get_display_pre_sod(void) {return 0; }
+#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
+
 #endif /* __INCELL_H__ */
 
