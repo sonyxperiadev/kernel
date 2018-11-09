@@ -646,12 +646,10 @@ struct mxt_driver_data {
 	int usb_type;
 	int factory_boot;
 
-#if defined(CONFIG_TOUCHSCREEN_LGE_LPWG)
 	struct tci_abs tci_press[MAX_POINT_SIZE_FOR_LPWG];
 	struct tci_abs tci_report[MAX_POINT_SIZE_FOR_LPWG];
 
 	struct workqueue_struct* touch_multi_tap_wq;
-#endif
 };
 
 /* The platform data for the Atmel maXTouch touchscreen driver */
