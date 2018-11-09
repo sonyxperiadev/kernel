@@ -8574,8 +8574,6 @@ ts_rest_init:
 	}
 
 out:
-	if (fw)
-		release_firmware(fw);
 	mxt_power_unblock(data, POWERLOCK_FW_UP);
 	return error;
 }
@@ -8887,6 +8885,10 @@ skip_fw:
 	/* power unlock */
 	ret = mxt_pw_lock(INCELL_DISPLAY_POWER_UNLOCK);
 	data->after_work = true;
+
+	if (fw)
+		release_firmware(fw);
+
 	return ret;
 
 err_free_irq:
