@@ -646,12 +646,10 @@ struct mxt_driver_data {
 	int usb_type;
 	int factory_boot;
 
-#if defined(CONFIG_TOUCHSCREEN_LGE_LPWG)
 	struct tci_abs tci_press[MAX_POINT_SIZE_FOR_LPWG];
 	struct tci_abs tci_report[MAX_POINT_SIZE_FOR_LPWG];
 
 	struct workqueue_struct* touch_multi_tap_wq;
-#endif
 };
 
 /* The platform data for the Atmel maXTouch touchscreen driver */
@@ -1174,7 +1172,7 @@ int mxt_read_mem(struct mxt_data *data, u16 reg, u16 len, void *buf);
 int mxt_write_object(struct mxt_data *data, u8 type, u8 offset, u8 val);
 struct mxt_object *mxt_get_object(struct mxt_data *data, u8 type);
 int mxt_read_object(struct mxt_data *data, u8 type, u8 offset, u8 *val);
-int mxt_update_firmware(struct mxt_data *data, const char *fwname);
+int mxt_update_firmware(struct mxt_data *data, const struct firmware *fw);
 int mxt_get_reference_chk(struct mxt_data *data);
 
 #endif /* __LINUX_ATMEL_MXT_TS_H__ */

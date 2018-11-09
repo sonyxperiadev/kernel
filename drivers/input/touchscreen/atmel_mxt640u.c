@@ -4502,6 +4502,7 @@ static ssize_t mxt_update_fw_store(struct mxt_data *data, const char *buf, size_
 	int error = 0;
 	int wait_cnt = 0;
 	struct mxt_data *mxt_data = data->mxt_drv_data->mxt_data;
+	const struct firmware *fw = NULL;
 
 	LOGD("%s\n", __func__);
 
@@ -4531,7 +4532,17 @@ static ssize_t mxt_update_fw_store(struct mxt_data *data, const char *buf, size_
 		goto exit;
 	}
 
-	error = mxt_update_firmware(data, package_name);
+	LOGN("%s [%s]\n", __func__, package_name);
+	if (package_name) {
+		error = request_firmware(&fw, package_name, &data->client->dev);
+		if (error) {
+			LOGE("%s error request_firmware %d\n", __func__, error);
+			error = 1;
+			goto exit;
+		}
+	}
+
+	error = mxt_update_firmware(data, fw);
 	if (error) {
 		LOGE("%s error\n", __func__);
 		goto exit;
@@ -8569,20 +8580,10 @@ out:
 	return error;
 }
 
-int mxt_update_firmware(struct mxt_data *data, const char *fwname)
+int mxt_update_firmware(struct mxt_data *data, const struct firmware *fw)
 {
 	int error = 0;
-	const struct firmware *fw = NULL;
 
-	LOGN("%s [%s]\n", __func__, fwname);
-
-	if (fwname) {
-		error = request_firmware(&fw, fwname, &data->client->dev);
-		if (error) {
-			LOGE("%s error request_firmware %d\n", __func__, error);
-			return 1;
-		}
-	}
 	LOGN("%s %lu\n", __func__, sizeof(*(fw->data)));
 	error = mxt_request_firmware_work(fw, data);
 	if (error) {
@@ -8759,7 +8760,8 @@ exit:
 	return ret;
 }
 
-static int mxt_after_init_work(struct i2c_client *client, struct mxt_data *data)
+static int mxt_after_init_work(struct i2c_client *client,
+		struct mxt_data *data, const struct firmware *fw)
 {
 	int ret = 0;
 	int cnt = 0;
@@ -8772,21 +8774,22 @@ static int mxt_after_init_work(struct i2c_client *client, struct mxt_data *data)
 		return ret;
 	}
 
-	if (data->pdata->fw_name) {
-		for (cnt = 0; cnt < MXT_FW_RETRY_NUM; cnt++) {
-			ret = mxt_update_firmware(data, data->pdata->fw_name);
-			if (!ret)
-				break;
-			mxt_hw_reset(data);
-		}
-		if (ret)
-			LOGE("Failed to request firmware\n");
-	} else {
-		LOGE("FW_NAME is NULL\n");
+	if (!fw) {
 		ret = -ENOENT;
+		goto skip_fw;
 	}
 
+	for (cnt = 0; cnt < MXT_FW_RETRY_NUM; cnt++) {
+		ret = mxt_update_firmware(data, fw);
+		if (!ret)
+			break;
+		mxt_hw_reset(data);
+	}
+
+skip_fw:
 	if (ret) {
+		LOGE("Firmware load failed. Initializing anyway.\n");
+
 		ret = mxt_no_fw_initialize(data);
 		if (ret) {
 			LOGE("Failed mxt_no_fw_initialize\n");
@@ -8896,6 +8899,30 @@ unlock:
 	if (ret)
 		LOGE("Failed to unlock power\n");
 	return -EINVAL;
+}
+
+static void mxt_after_init_load_fw(const struct firmware *fw, void *ctx)
+{
+	struct mxt_data *data = ctx;
+	struct i2c_client *client = data->client;
+
+	mxt_after_init_work(client, data, fw);
+}
+
+static int mxt_init_recover(struct i2c_client *client, struct mxt_data *data)
+{
+	const struct firmware *fw = NULL;
+	int ret;
+
+	if (data->pdata->fw_name) {
+		ret = request_firmware(&fw, data->pdata->fw_name, &data->client->dev);
+		if (ret) {
+			LOGE("%s error request_firmware %d\n", __func__, ret);
+			return 1;
+		}
+	}
+
+	return mxt_after_init_work(client, data, fw);
 }
 
 static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
@@ -9045,7 +9072,11 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		goto err_create_sysfs_link;
 	}
 	if (!mxt_get_pw_status()) {
-		error = mxt_after_init_work(client, data);
+		LOGN("Requesting firmware [%s]\n", data->pdata->fw_name);
+		error = request_firmware_nowait(THIS_MODULE, true,
+						data->pdata->fw_name,
+						&client->dev, GFP_KERNEL,
+						data, mxt_after_init_load_fw);
 		if (error) {
 			LOGE("failed after init on probe\n");
 			drm_unregister_client(&data->drm_notif);
@@ -9419,7 +9450,7 @@ static int drm_notifier_callback(struct notifier_block *self, unsigned long even
 				break;
 			case DRM_BLANK_UNBLANK:
 				if (!ts->after_work) {
-					if (mxt_after_init_work(ts->client, ts))
+					if (mxt_init_recover(ts->client, ts))
 						return 0;
 				}
 				if (!ts->charge_out) {

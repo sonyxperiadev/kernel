@@ -367,6 +367,14 @@
 		67 140 28>;
 };
 
+&synaptics_clearpad {
+	status = "disabled";
+};
+
+&synaptics_tcm {
+	status = "disabled";
+};
+
 &qupv3_se5_i2c {
 	atmel_mxt640u: atmel_mxt640u@4a {
 		compatible = "atmel,mxt640u";
