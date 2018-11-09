@@ -9225,6 +9225,7 @@ static int mxt_drm_suspend(struct mxt_data *data)
 	LOGN("%s\n", __func__);
 
 	data->sod_mode.status = incell_get_display_sod();
+	data->sod_mode.pre_status = incell_get_display_pre_sod();
 	if (data->sod_mode.pre_status && data->sod_mode.status == SOD_POWER_OFF) {
 		LOGN("%s　power off\n", __func__);
 	} else if (data->sod_mode.pre_status) {
