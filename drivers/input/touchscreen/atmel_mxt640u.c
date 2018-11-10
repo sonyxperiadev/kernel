@@ -9190,7 +9190,7 @@ static int mxt_resume(struct device *dev)
 
 static void mxt_prepare_sod_mode(struct mxt_data *data)
 {
-	int value[4] = {1, 0, 0, 0};
+	int value[4] = {1, 0, 1, 0};
 
 	if (!data->sod_mode.supported) {
 		LOGN("SOD mode is not supported\n");
