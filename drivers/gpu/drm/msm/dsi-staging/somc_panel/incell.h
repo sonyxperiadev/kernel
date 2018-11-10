@@ -118,6 +118,12 @@ static inline bool incell_get_system_status(void) {return true; }
 #endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 
 #ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+extern int incell_get_display_aod(void);
+#else
+static inline int incell_get_display_aod(void) {return 0; }
+#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
+
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
 extern int incell_get_display_sod(void);
 #else
 static inline int incell_get_display_sod(void) {return 0; }
