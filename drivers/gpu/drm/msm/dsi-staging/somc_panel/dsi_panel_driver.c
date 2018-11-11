@@ -40,6 +40,7 @@ static BLOCKING_NOTIFIER_HEAD(drm_notifier_list);
 static u32 down_period;
 static short display_sod_mode = 0;
 static short display_pre_sod_mode = 0;
+static short display_aod_mode = 0;
 
 struct device virtdev;
 
@@ -1307,7 +1308,6 @@ static ssize_t dsi_panel_driver_id_show(struct device *dev,
 	return scnprintf(buf, PAGE_SIZE, "%s\n", id);
 }
 
-
 int somc_panel_set_doze_mode(struct drm_connector *connector,
 		int power_mode, void *disp)
 {
@@ -1326,13 +1326,17 @@ int somc_panel_set_doze_mode(struct drm_connector *connector,
 	if (!spec_pdata->oled_disp)
 		return 0;
 
+	pr_debug("somc_panel: set doze mode %d\n", power_mode);
+
 	mutex_lock(&display->display_lock);
 
 	switch (power_mode) {
 		case SDE_MODE_DPMS_ON:
 			pr_debug("Requested DPMS ON state.\n");
-			if (spec_pdata->aod_mode != SDE_MODE_DPMS_ON)
-				rc = dsi_panel_set_aod_off(panel);
+			rc = dsi_panel_set_aod_off(panel);
+			spec_pdata->aod_mode = power_mode;
+			display_aod_mode = 0;
+			dsi_panel_driver_notify_resume(panel);
 			break;
 		case SDE_MODE_DPMS_LP1:
 			pr_info("Entering LP1 state from %d\n",
@@ -1343,12 +1347,39 @@ int somc_panel_set_doze_mode(struct drm_connector *connector,
 			display_sod_mode = spec_pdata->sod_mode;
 			display_pre_sod_mode = spec_pdata->pre_sod_mode;
 
+			if (spec_pdata->aod_mode != SDE_MODE_DPMS_ON)
+				break;
+
 			spec_pdata->aod_mode = power_mode;
+			display_aod_mode = power_mode;
+
 			rc = dsi_panel_set_aod_on(panel);
 			dsi_panel_driver_notify_suspend(panel);
 			break;
 		case SDE_MODE_DPMS_LP2:
 			pr_info("Entering LP2 state from %d\n",
+					spec_pdata->aod_mode);
+
+			/* If we're coming from ON state, pass through LP1 */
+			if (spec_pdata->aod_mode == SDE_MODE_DPMS_ON) {
+				mutex_unlock(&display->display_lock);
+				somc_panel_set_doze_mode(connector,
+							 SDE_MODE_DPMS_LP1,
+							 disp);
+				mutex_lock(&display->display_lock);
+			}
+
+			spec_pdata->sod_mode = SOD_POWER_ON;
+			spec_pdata->pre_sod_mode = SOD_POWER_OFF_SKIP;
+			display_sod_mode = spec_pdata->sod_mode;
+			display_pre_sod_mode = spec_pdata->pre_sod_mode;
+
+			spec_pdata->aod_mode = power_mode;
+			display_aod_mode = power_mode;
+			dsi_panel_driver_notify_suspend(panel);
+			break;
+		case SDE_MODE_DPMS_OFF:
+			pr_info("Entering OFF state from %d\n",
 					spec_pdata->aod_mode);
 
 			spec_pdata->sod_mode = SOD_POWER_OFF;
@@ -1357,11 +1388,13 @@ int somc_panel_set_doze_mode(struct drm_connector *connector,
 			display_pre_sod_mode = spec_pdata->pre_sod_mode;
 
 			spec_pdata->aod_mode = power_mode;
+			display_aod_mode = power_mode;
 			dsi_panel_driver_notify_suspend(panel);
+			rc = dsi_panel_set_aod_off(panel);
 			break;
 		default:
-			pr_info("Requested state %d. Disabling AOD.\n",
-				power_mode);
+			pr_err("Requested unexpected state %d. "
+			       "Disabling AOD.\n", power_mode);
 			rc = dsi_panel_set_aod_off(panel);
 			break;
 	}
@@ -1510,13 +1543,19 @@ static ssize_t dsi_panel_sod_mode_show(struct device *dev,
 int somc_panel_get_display_pre_sod_mode(void)
 {
 	pr_debug("%s: pre_sod mode setting %d\n", __func__, display_sod_mode);
-	return display_sod_mode;
+	return display_pre_sod_mode;
 }
 
 int get_display_sod_mode(void)
 {
 	pr_debug("%s: sod mode setting %d\n", __func__, display_sod_mode);
 	return display_sod_mode;
+}
+
+int somc_panel_get_display_aod_mode(void)
+{
+	pr_debug("%s: sod mode setting %d\n", __func__, display_sod_mode);
+	return display_aod_mode;
 }
 
 static ssize_t dsi_panel_mplus_mode_store(struct device *dev,

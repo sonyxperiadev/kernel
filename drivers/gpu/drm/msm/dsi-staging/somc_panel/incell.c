@@ -238,6 +238,12 @@ int incell_get_display_sod(void)
 }
 EXPORT_SYMBOL(incell_get_display_sod);
 
+int incell_get_display_aod(void)
+{
+	return somc_panel_get_display_aod_mode();
+}
+EXPORT_SYMBOL(incell_get_display_aod);
+
 bool incell_get_system_status(void)
 {
 	struct incell_ctrl *incell = incell_get_info();

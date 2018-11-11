@@ -4990,7 +4990,10 @@ static void mxt_set_feature_status(struct mxt_data *data)
 
 	mxt_set_side_key(data);
 	mxt_set_stamina_mode(data);
+
+	data->aod_mode.status = incell_get_display_aod();
 	mxt_set_aod_mode(data);
+
 	mxt_set_cover_mode(data);
 	mxt_set_glove_mode(data);
 	mxt_patch_event(data, PATCH_EVENT_CODE_GRIP_SUPPRESSSION_PORTRAIT);
@@ -9187,7 +9190,7 @@ static int mxt_resume(struct device *dev)
 
 static void mxt_prepare_sod_mode(struct mxt_data *data)
 {
-	int value[4] = {1, 0, 0, 0};
+	int value[4] = {1, 0, 1, 0};
 
 	if (!data->sod_mode.supported) {
 		LOGN("SOD mode is not supported\n");
