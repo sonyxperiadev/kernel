@@ -762,7 +762,7 @@ static bool unmap_kernel_at_el0(const struct arm64_cpu_capabilities *entry,
 	 * ThunderX leads to apparent I-cache corruption of kernel text, which
 	 * ends as well as you might imagine. Don't even try.
 	 */
-	if (cpus_have_cap(ARM64_WORKAROUND_CAVIUM_27456)) {
+	if (cpus_have_const_cap(ARM64_WORKAROUND_CAVIUM_27456)) {
 		str = "ARM64_WORKAROUND_CAVIUM_27456";
 		__kpti_forced = -1;
 	}
