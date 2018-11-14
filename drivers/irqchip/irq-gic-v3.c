@@ -98,6 +98,11 @@ struct gic_chip_data {
 	u32 changed_spi_enable[NUM_IRQ_WORDS(GICD_ISENABLER_BITS)];
 	u32 changed_spi_cfg[NUM_IRQ_WORDS(GICD_ICFGR_BITS)];
 	u32 changed_spi_priority[NUM_IRQ_WORDS(GICD_IPRIORITYR_BITS)];
+
+#ifdef CONFIG_PM
+	unsigned int wakeup_irqs[SPI_START_IRQ];
+	unsigned int enabled_irqs[SPI_START_IRQ];
+#endif
 };
 
 static struct gic_chip_data gic_data __read_mostly;
@@ -748,13 +753,28 @@ static void gic_resume(void)
 	gic_resume_one(&gic_data);
 }
 
+static int gic_v3_plat_suspend(void)
+{
+	return 0;
+}
+
+static void gic_v3_plat_resume(void)
+{
+}
+
 static struct syscore_ops gic_syscore_ops = {
 	.suspend = gic_suspend,
 	.resume = gic_resume,
 };
 
+static struct syscore_ops gic_v3_plat_syscore_ops = {
+	.suspend = gic_v3_plat_suspend,
+	.resume = gic_v3_plat_resume,
+};
+
 static int __init gic_init_sys(void)
 {
+	register_syscore_ops(&gic_v3_plat_syscore_ops);
 	register_syscore_ops(&gic_syscore_ops);
 	return 0;
 }
@@ -1109,6 +1129,67 @@ static int gic_set_affinity(struct irq_data *d, const struct cpumask *mask_val,
 #define gic_set_affinity	NULL
 #define gic_smp_init()		do { } while(0)
 #endif
+
+#ifdef CONFIG_PM
+int gic_v3_qcom_set_wake(struct irq_data *d, unsigned int on)
+{
+	int ret = 0; //-ENXIO;
+	unsigned int reg_offset, bit_offset;
+	unsigned int gicirq = gic_irq(d);
+	struct gic_chip_data *gic_data = irq_data_get_irq_chip_data(d);
+
+	/* per-cpu interrupts cannot be wakeup interrupts */
+	WARN_ON(gicirq < 32);
+
+	reg_offset = gicirq / 32;
+	bit_offset = gicirq % 32;
+
+	if (on)
+		gic_data->wakeup_irqs[reg_offset] |=  1 << bit_offset;
+	else
+		gic_data->wakeup_irqs[reg_offset] &=  ~(1 << bit_offset);
+
+	return ret;
+}
+
+int gic_v3_qcom_suspend(void)
+{
+	void __iomem *base = gic_data.dist_base;
+	unsigned int i;
+
+	for (i = 0; i * 32 < gic_data.irq_nr; i++) {
+		gic_data.enabled_irqs[i]
+			= readl_relaxed(base + GICD_ISENABLER + i * 4);
+		/* disable all of them */
+		writel_relaxed(0xffffffff, base + GICD_ICENABLER + i * 4);
+		/* enable the wakeup set */
+		writel_relaxed(gic_data.wakeup_irqs[i],
+			base + GICD_ISENABLER + i * 4);
+	}
+	return 0;
+}
+
+void gic_v3_qcom_resume(void)
+{
+	void __iomem *base = gic_data.dist_base;
+	unsigned int i;
+
+	for (i = 0; i * 32 < gic_data.irq_nr; i++) {
+		/* disable all of them */
+		writel_relaxed(0xffffffff, base + GICD_ICENABLER + i * 4);
+		/* enable the enabled set */
+		writel_relaxed(gic_data.enabled_irqs[i],
+			base + GICD_ISENABLER + i * 4);
+	}
+}
+#endif
+
+static void gic_v3_qcom_disable_irq(struct irq_data *d)
+{
+	/* don't lazy-disable PPIs */
+	if (gic_irq(d) < 32)
+		gic_mask_irq(d);
+};
 
 #ifdef CONFIG_CPU_PM
 /* Check whether it's single security state view */
@@ -1531,6 +1612,19 @@ out_put_node:
 	of_node_put(parts_node);
 }
 
+void gic_plat_init_qcom_quirks(void)
+{
+#ifdef CONFIG_PM
+	gic_v3_plat_syscore_ops.suspend = gic_v3_qcom_suspend;
+	gic_v3_plat_syscore_ops.resume = gic_v3_qcom_resume;
+
+	gic_chip.irq_set_wake = gic_v3_qcom_set_wake;
+#endif
+
+	gic_chip.irq_disable = gic_v3_qcom_disable_irq;
+	gic_eoimode1_chip.irq_disable = gic_v3_qcom_disable_irq;
+}
+
 static void __init gic_of_setup_kvm_info(struct device_node *node)
 {
 	int ret;
@@ -1604,6 +1698,11 @@ static int __init gic_of_init(struct device_node *node, struct device_node *pare
 
 	if (of_property_read_u64(node, "redistributor-stride", &redist_stride))
 		redist_stride = 0;
+
+	if (of_property_read_bool(node, "arm,gicv3-plat-qcom-legacy")) {
+		pr_info("Using quirks for legacy QCOM\n");
+		gic_plat_init_qcom_quirks();
+	}
 
 	err = gic_init_bases(dist_base, rdist_regs, nr_redist_regions,
 			     redist_stride, &node->fwnode);
