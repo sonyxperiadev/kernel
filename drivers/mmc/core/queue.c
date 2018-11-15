@@ -94,6 +94,8 @@ static inline void mmc_cmdq_ready_wait(struct mmc_host *host,
 		   (req_op(mq->cmdq_req_peeked) == REQ_OP_DISCARD) ||
 		   (req_op(mq->cmdq_req_peeked) == REQ_OP_SECURE_ERASE))
 		  && test_bit(CMDQ_STATE_DCMD_ACTIVE, &ctx->curr_state))
+		&& !(mmc_req_is_special(mq->cmdq_req_peeked)
+		     && ctx->active_reqs)
 		&& !(!host->card->part_curr && !mmc_card_suspended(host->card)
 		     && mmc_host_halt(host))
 		&& !(!host->card->part_curr && mmc_host_cq_disable(host) &&
