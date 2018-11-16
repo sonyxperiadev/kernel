@@ -709,6 +709,7 @@ static ssize_t somc_panel_pcc_show(struct dsi_pcc_data *pcc_data,
 		struct somc_panel_color_mgr *color_mgr, char *buf)
 {
 	u32 r, g, b;
+	int tbl_idx = pcc_data->tbl_idx + color_mgr->pcc_profile;
 
 	r = g = b = 0x8000;
 	if (!pcc_data->color_tbl) {
@@ -719,19 +720,19 @@ static ssize_t somc_panel_pcc_show(struct dsi_pcc_data *pcc_data,
 		pr_err("%s: u,v are 0.\n", __func__);
 		goto exit;
 	}
-	if (pcc_data->tbl_idx >= pcc_data->tbl_size) {
+	if (tbl_idx >= pcc_data->tbl_size) {
 		pr_err("%s: Invalid color area(idx=%d)\n",
 			__func__, pcc_data->tbl_idx);
 		goto exit;
 	}
-	if (pcc_data->color_tbl[pcc_data->tbl_idx].color_type == UNUSED) {
+	if (pcc_data->color_tbl[tbl_idx].color_type == UNUSED) {
 		pr_err("%s: Unsupported color type(idx=%d)\n",
-			__func__, pcc_data->tbl_idx);
+			__func__, tbl_idx);
 		goto exit;
 	}
-	r = pcc_data->color_tbl[pcc_data->tbl_idx].r_data;
-	g = pcc_data->color_tbl[pcc_data->tbl_idx].g_data;
-	b = pcc_data->color_tbl[pcc_data->tbl_idx].b_data;
+	r = pcc_data->color_tbl[tbl_idx].r_data;
+	g = pcc_data->color_tbl[tbl_idx].g_data;
+	b = pcc_data->color_tbl[tbl_idx].b_data;
 exit:
 	return scnprintf(buf, PAGE_SIZE, "0x%x 0x%x 0x%x \n", r, g, b);
 }
@@ -1125,17 +1126,20 @@ static int somc_panel_send_pcc(struct dsi_display *display,
 int somc_panel_colormgr_apply_calibrations(void)
 {
 	struct dsi_display *display = dsi_display_get_main_display();
+	struct somc_panel_color_mgr *color_mgr = NULL;
 	int rc = 0;
 
 	if (!display)
 		return -EINVAL;
+
+	color_mgr = display->panel->spec_pdata->color_mgr;
 
 	rc = somc_panel_pcc_setup(display);
 	if (rc) {
 		pr_err("%s: Couldn't apply PCC calibration\n", __func__);
 	}
 
-	rc = somc_panel_send_pcc(display, 0);
+	rc = somc_panel_send_pcc(display, color_mgr->pcc_profile);
 	if (rc) {
 		pr_err("%s: Cannot send PCC calibration\n", __func__);
 	}
