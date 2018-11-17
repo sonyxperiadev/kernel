@@ -510,14 +510,16 @@ int somc_panel_parse_dt_colormgr_config(struct dsi_panel *panel,
 
 	color_mgr->picadj_data.flags |= MDP_PP_OPS_ENABLE;
 
+	rc = somc_panel_parse_dt_adaptivecolor_config(panel, np);
+
 end:
 	return rc;
 }
 
-void somc_panel_colormgr_reset(struct dsi_display *display)
+void somc_panel_colormgr_reset(struct dsi_panel *panel)
 {
 	struct somc_panel_color_mgr *color_mgr =
-				display->panel->spec_pdata->color_mgr;
+				panel->spec_pdata->color_mgr;
 
 	color_mgr->standard_pcc_data.pcc_sts = PCC_STS_UD;
 	color_mgr->picadj_data.flags = MDP_PP_OPS_ENABLE;
@@ -544,7 +546,7 @@ static int somc_panel_colormgr_pcc_select(struct dsi_display *display,
 	}
 
 	color_mgr->pcc_profile = profile_number;
-	somc_panel_colormgr_reset(display);
+	somc_panel_colormgr_reset(display->panel);
 	somc_panel_pcc_setup(display);
 
 	return ret;
@@ -966,7 +968,7 @@ static inline bool somc_panel_pa_validate_params(struct drm_msm_pa_hsic *hsic_bl
 	return false;
 }
 
-static int somc_panel_send_pa(struct dsi_display *display)
+int somc_panel_send_pa(struct dsi_display *display)
 {
 	struct drm_msm_pa_hsic hsic_blk;
 	struct msm_drm_private *priv;
@@ -1034,44 +1036,27 @@ static int somc_panel_send_pa(struct dsi_display *display)
 
 	rc = sde_cp_crtc_set_property(crtc, prop, pblob->base.id);
 	if (rc) {
-		pr_err("DSPP: Cannot set HSIC: %d. Setting SSPP anyway.\n",
-			rc);
+		pr_err("DSPP: Cannot set HSIC: %d.\n", rc);
+		goto end;
 	}
 
-	/* Setup planes to send calibration to SSPP */
-	rc = sde_plane_set_property(prim_plane, prim_plane->state,
-				    priv->plane_property[PLANE_PROP_HUE_ADJUST],
-				    hsic_blk.hue);
-	rc += sde_plane_set_property(prim_plane, prim_plane->state,
-				     priv->plane_property[PLANE_PROP_SATURATION_ADJUST],
-				     hsic_blk.hue);
-	rc += sde_plane_set_property(prim_plane, prim_plane->state,
-				     priv->plane_property[PLANE_PROP_VALUE_ADJUST],
-				     hsic_blk.hue);
-	rc += sde_plane_set_property(prim_plane, prim_plane->state,
-				     priv->plane_property[PLANE_PROP_CONTRAST_ADJUST],
-				     hsic_blk.hue);
-
-	pr_info("%s (%d):sat=%d hue=%d val=%d cont=%d",
+	pr_debug("%s (%d):sat=%d hue=%d val=%d cont=%d",
 		__func__, __LINE__, hsic_blk.saturation,
 		hsic_blk.hue, hsic_blk.value,
 		hsic_blk.contrast);
-
+end:
 	return rc;
 }
 
-static int somc_panel_send_pcc(struct dsi_display *display,
-			       int color_table_offset)
+static int somc_panel_crtc_send_pcc(struct dsi_display *display,
+			       u32 r_data, u32 g_data, u32 b_data)
 {
 	struct drm_msm_pcc pcc_blk;
 	struct msm_drm_private *priv;
 	struct drm_property *prop;
 	struct drm_property_blob *pblob;
 	struct drm_crtc *crtc = NULL;
-	struct dsi_pcc_data *pcc_data = NULL;
-	struct somc_panel_color_mgr *color_mgr =
-			display->panel->spec_pdata->color_mgr;
-	int table_idx, rc;
+	int rc;
 	uint64_t val;
 
 	if (!display->drm_conn) {
@@ -1085,8 +1070,6 @@ static int somc_panel_send_pcc(struct dsi_display *display,
 	}
 
 	crtc = display->drm_conn->state->crtc;
-	pcc_data = &color_mgr->standard_pcc_data;
-	table_idx = pcc_data->tbl_idx + color_table_offset;
 
 	priv = crtc->dev->dev_private;
 	prop = priv->cp_property[1]; /* SDE_CP_CRTC_DSPP_PCC == 1 !! */
@@ -1102,9 +1085,9 @@ static int somc_panel_send_pcc(struct dsi_display *display,
 	};
 
 	memset(&pcc_blk, 0, sizeof(struct drm_msm_pcc));
-	pcc_blk.r.r = pcc_data->color_tbl[table_idx].r_data;
-	pcc_blk.g.g = pcc_data->color_tbl[table_idx].g_data;
-	pcc_blk.b.b = pcc_data->color_tbl[table_idx].b_data;
+	pcc_blk.r.r = r_data;
+	pcc_blk.g.g = g_data;
+	pcc_blk.b.b = b_data;
 
 	pblob = drm_property_create_blob(crtc->dev,
 			sizeof(struct drm_msm_pcc), &pcc_blk);
@@ -1121,6 +1104,25 @@ static int somc_panel_send_pcc(struct dsi_display *display,
 	}
 
 	return rc;
+}
+
+static int somc_panel_send_pcc(struct dsi_display *display,
+			       int color_table_offset)
+{
+	struct dsi_pcc_data *pcc_data = NULL;
+	struct somc_panel_color_mgr *color_mgr =
+			display->panel->spec_pdata->color_mgr;
+	int table_idx;
+	u32 r_data, g_data, b_data;
+
+	pcc_data = &color_mgr->standard_pcc_data;
+	table_idx = pcc_data->tbl_idx + color_table_offset;
+
+	r_data = pcc_data->color_tbl[table_idx].r_data;
+	g_data = pcc_data->color_tbl[table_idx].g_data;
+	b_data = pcc_data->color_tbl[table_idx].b_data;
+
+	return somc_panel_crtc_send_pcc(display, r_data, g_data, b_data);
 }
 
 int somc_panel_colormgr_apply_calibrations(void)

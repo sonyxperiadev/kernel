@@ -815,6 +815,9 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 			dsi_panel_driver_toggle_light_off(panel,
 				DISPLAY_BL_ON);
 			rc = dsi_panel_update_backlight(panel, bl_lvl);
+			if (rc == 0)
+				somc_panel_colormgr_update_backlight(panel,
+								     bl_lvl);
 		}
 		break;
 #else

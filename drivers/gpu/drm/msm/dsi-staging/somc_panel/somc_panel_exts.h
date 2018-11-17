@@ -281,6 +281,15 @@ struct dsi_panel_labibb_data {
 	bool ibb_pd_full;
 };
 
+struct somc_panel_adaptive_color {
+	struct drm_msm_pa_hsic picadj_data_br_max;
+	struct drm_msm_pa_hsic picadj_data_default;
+	unsigned int picadj_br_min;
+	unsigned int picadj_br_max;
+	unsigned int pa_invert;
+	bool enable;
+};
+
 struct somc_panel_color_mgr {
 	struct dsi_panel_cmds pre_uv_read_cmds;
 	struct dsi_panel_cmds uv_read_cmds;
@@ -290,10 +299,12 @@ struct somc_panel_color_mgr {
 	struct dsi_pcc_data vivid_pcc_data;
 	struct dsi_pcc_data hdr_pcc_data;
 	struct drm_msm_pa_hsic picadj_data;
+	struct somc_panel_adaptive_color adaptive_color;
 
 	u32 u_data;
 	u32 v_data;
 	int color_mode;
+	unsigned int   cal_bl_point;
 	unsigned short pcc_profile;
 	bool standard_pcc_enable;
 	bool srgb_pcc_enable;
@@ -373,9 +384,16 @@ int somc_panel_pcc_setup(struct dsi_display *display);
 int somc_panel_parse_dt_colormgr_config(struct dsi_panel *panel,
 			struct device_node *np);
 int somc_panel_colormgr_register_attr(struct device *dev);
+int somc_panel_send_pa(struct dsi_display *display);
 int somc_panel_colormgr_apply_calibrations(void);
 int somc_panel_color_manager_init(struct dsi_display *display);
 
+/* ColorManager: Adaptive Color */
+int somc_panel_parse_dt_adaptivecolor_config(struct dsi_panel *panel,
+			struct device_node *np);
+void somc_panel_colormgr_update_backlight(struct dsi_panel *panel, u32 bl_lvl);
+
+/* Main */
 void somc_panel_fps_cmd_send(struct dsi_panel *panel);
 int somc_panel_fps_check_state(struct dsi_display *display, int mode_type);
 int somc_panel_parse_dt_chgfps_config(struct dsi_panel *panel,
