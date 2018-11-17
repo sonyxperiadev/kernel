@@ -35,6 +35,8 @@
 	somc,panel-adacolor-br-max = <20>;
 	somc,panel-adacolor-pa-invert;
 
+	somc,panel-colormgr-pcc-prof-avail;
+
 	somc,mdss-dsi-pcc-enable;
 	somc,mdss-dsi-uv-command = [
 		06 01 00 00 00 00 01 DA
