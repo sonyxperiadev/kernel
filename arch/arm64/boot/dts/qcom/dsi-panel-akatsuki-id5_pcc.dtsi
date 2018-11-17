@@ -19,6 +19,22 @@
 
 /* pcc-table for Akatsuki */
 &dsi_5{
+	somc,mdss-dsi-use-picadj;
+	somc,mdss-dsi-picadj-sat = <3>;
+	somc,mdss-dsi-picadj-hue = <0>;
+	somc,mdss-dsi-picadj-val = <0>;
+	somc,mdss-dsi-picadj-cont = <0>;
+
+	somc,panel-adaptivecolor-enable;
+	somc,panel-adacolor-sat-max = <50>;
+	somc,panel-adacolor-hue-max = <0>;
+	somc,panel-adacolor-val-max = <5>;
+	somc,panel-adacolor-cont-max = <5>;
+
+	somc,panel-adacolor-br-min = <7>;
+	somc,panel-adacolor-br-max = <20>;
+	somc,panel-adacolor-pa-invert;
+
 	somc,mdss-dsi-pcc-enable;
 	somc,mdss-dsi-uv-command = [
 		06 01 00 00 00 00 01 DA
