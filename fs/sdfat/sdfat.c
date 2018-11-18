@@ -4969,7 +4969,7 @@ static void sdfat_debug_kill_sb(struct super_block *sb)
 
 static struct file_system_type sdfat_fs_type = {
 	.owner       = THIS_MODULE,
-	.name        = "sdfat",
+	.name        = "exfat",
 	.mount       = sdfat_fs_mount,
 #ifdef CONFIG_SDFAT_DBG_IOCTL
 	.kill_sb    = sdfat_debug_kill_sb,
