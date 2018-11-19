@@ -150,42 +150,6 @@ config ARCH_SDM845
 	  This enables support for the SDM845 chipset. If you do not
 	  wish to build a kernel that runs on this chipset, say 'N' here.
 
-config ARCH_SONY_TAMA
-	bool "Sony Mobile Tama platform"
-	depends on ARCH_SDM845
-	help
-	Support for the SONY Mobile Tama platform
-	which is based on QCOM SDM845 chipset.
-	If you enable this config,
-	please use SONY Mobile device tree.
-
-config MACH_SONY_AKARI
-	bool "Sony Mobile Akari"
-	depends on ARCH_SONY_TAMA
-	help
-	Support for the SONY Mobile Akari device
-	which is based on SONY Tama platform.
-	If you enable this config,
-	please use SONY Mobile device tree.
-
-config MACH_SONY_AKATSUKI
-	bool "Sony Mobile Akatsuki"
-	depends on ARCH_SONY_TAMA
-	help
-	Support for the SONY Mobile Akatsuki device
-	which is based on SONY Tama platform.
-	If you enable this config,
-	please use SONY Mobile device tree.
-
-config MACH_SONY_APOLLO
-	bool "Sony Mobile Apollo"
-	depends on ARCH_SONY_TAMA
-	help
-	Support for the SONY Mobile Apollo device
-	which is based on SONY Tama platform.
-	If you enable this config,
-	please use SONY Mobile device tree.
-
 config ARCH_SDM670
 	bool "Enable Support for Qualcomm Technologies Inc. SDM670"
 	depends on ARCH_QCOM
@@ -556,4 +520,40 @@ config MACH_SONY_VOYAGER
         which is based on SONY Nile platform.
         If you enable this config,
         please use SONY Mobile device tree.
+
+config ARCH_SONY_TAMA
+	bool "Sony Mobile Tama platform"
+	depends on ARCH_SDM845
+	help
+	Support for the SONY Mobile Tama platform
+	which is based on QCOM SDM845 chipset.
+	If you enable this config,
+	please use SONY Mobile device tree.
+
+config MACH_SONY_AKARI
+	bool "Sony Mobile Akari"
+	depends on ARCH_SONY_TAMA
+	help
+	Support for the SONY Mobile Akari device
+	which is based on SONY Tama platform.
+	If you enable this config,
+	please use SONY Mobile device tree.
+
+config MACH_SONY_AKATSUKI
+	bool "Sony Mobile Akatsuki"
+	depends on ARCH_SONY_TAMA
+	help
+	Support for the SONY Mobile Akatsuki device
+	which is based on SONY Tama platform.
+	If you enable this config,
+	please use SONY Mobile device tree.
+
+config MACH_SONY_APOLLO
+	bool "Sony Mobile Apollo"
+	depends on ARCH_SONY_TAMA
+	help
+	Support for the SONY Mobile Apollo device
+	which is based on SONY Tama platform.
+	If you enable this config,
+	please use SONY Mobile device tree.
 endmenu
