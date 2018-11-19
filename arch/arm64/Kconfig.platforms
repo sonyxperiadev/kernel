@@ -512,29 +512,11 @@ config MACH_SONY_MAPLE
         If you enable this config,
         please use SONY Mobile device tree.
 
-config MACH_SONY_MAPLE_DSDS
-        bool "Sony Mobile Maple Dsds"
-        depends on ARCH_SONY_YOSHINO
-        help
-        Support for the SONY Mobile Maple Dsds device
-        which is based on SONY Yoshino platform.
-        If you enable this config,
-        please use SONY Mobile device tree.
-
 config MACH_SONY_POPLAR
         bool "Sony Mobile Poplar"
         depends on ARCH_SONY_YOSHINO
         help
         Support for the SONY Mobile Poplar device
-        which is based on SONY Yoshino platform.
-        If you enable this config,
-        please use SONY Mobile device tree.
-
-config MACH_SONY_POPLAR_DSDS
-        bool "Sony Mobile Poplar Dsds"
-        depends on ARCH_SONY_YOSHINO
-        help
-        Support for the SONY Mobile Poplar Dsds device
         which is based on SONY Yoshino platform.
         If you enable this config,
         please use SONY Mobile device tree.
