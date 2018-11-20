@@ -5518,7 +5518,6 @@ int msm_vidc_check_scaling_supported(struct msm_vidc_inst *inst)
 {
 	u32 x_min, x_max, y_min, y_max;
 	u32 input_height, input_width, output_height, output_width;
-	u32 rotation;
 
 	if (is_heic_encode_session(inst)) {
 		dprintk(VIDC_DBG, "Skip downscale check for HEIC\n");
@@ -5557,20 +5556,6 @@ int msm_vidc_check_scaling_supported(struct msm_vidc_inst *inst)
 		dprintk(VIDC_DBG, "%s: supported WxH = %dx%d\n",
 			__func__, input_width, input_height);
 		return 0;
-	}
-
-	rotation =  msm_comm_g_ctrl_for_id(inst,
-					V4L2_CID_MPEG_VIDC_VIDEO_ROTATION);
-
-	if ((output_width != output_height) &&
-		(rotation == V4L2_CID_MPEG_VIDC_VIDEO_ROTATION_90 ||
-		rotation == V4L2_CID_MPEG_VIDC_VIDEO_ROTATION_270)) {
-
-		output_width = inst->prop.height[CAPTURE_PORT];
-		output_height = inst->prop.width[CAPTURE_PORT];
-		dprintk(VIDC_DBG,
-			"Rotation=%u Swapped Output W=%u H=%u to check scaling",
-			rotation, output_width, output_height);
 	}
 
 	x_min = (1<<16)/inst->capability.scale_x.min;
@@ -5618,7 +5603,6 @@ int msm_vidc_check_session_supported(struct msm_vidc_inst *inst)
 	struct hfi_device *hdev;
 	struct msm_vidc_core *core;
 	u32 output_height, output_width, input_height, input_width;
-	u32 rotation;
 
 	if (!inst || !inst->core || !inst->core->device) {
 		dprintk(VIDC_WARN, "%s: Invalid parameter\n", __func__);
@@ -5657,22 +5641,8 @@ int msm_vidc_check_session_supported(struct msm_vidc_inst *inst)
 		rc = -ENOTSUPP;
 	}
 
-	rotation =  msm_comm_g_ctrl_for_id(inst,
-					V4L2_CID_MPEG_VIDC_VIDEO_ROTATION);
-
 	output_height = ALIGN(inst->prop.height[CAPTURE_PORT], 16);
 	output_width = ALIGN(inst->prop.width[CAPTURE_PORT], 16);
-
-	if ((output_width != output_height) &&
-		(rotation == V4L2_CID_MPEG_VIDC_VIDEO_ROTATION_90 ||
-		rotation == V4L2_CID_MPEG_VIDC_VIDEO_ROTATION_270)) {
-
-		output_width = ALIGN(inst->prop.height[CAPTURE_PORT], 16);
-		output_height = ALIGN(inst->prop.width[CAPTURE_PORT], 16);
-		dprintk(VIDC_DBG,
-			"Rotation=%u Swapped Output W=%u H=%u to check capability",
-			rotation, output_width, output_height);
-	}
 
 	if (!rc) {
 		if (output_width < capability->width.min ||
