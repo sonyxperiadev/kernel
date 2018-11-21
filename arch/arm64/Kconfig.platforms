@@ -150,42 +150,6 @@ config ARCH_SDM845
 	  This enables support for the SDM845 chipset. If you do not
 	  wish to build a kernel that runs on this chipset, say 'N' here.
 
-config ARCH_SONY_TAMA
-	bool "Sony Mobile Tama platform"
-	depends on ARCH_SDM845
-	help
-	Support for the SONY Mobile Tama platform
-	which is based on QCOM SDM845 chipset.
-	If you enable this config,
-	please use SONY Mobile device tree.
-
-config MACH_SONY_AKARI
-	bool "Sony Mobile Akari"
-	depends on ARCH_SONY_TAMA
-	help
-	Support for the SONY Mobile Akari device
-	which is based on SONY Tama platform.
-	If you enable this config,
-	please use SONY Mobile device tree.
-
-config MACH_SONY_AKATSUKI
-	bool "Sony Mobile Akatsuki"
-	depends on ARCH_SONY_TAMA
-	help
-	Support for the SONY Mobile Akatsuki device
-	which is based on SONY Tama platform.
-	If you enable this config,
-	please use SONY Mobile device tree.
-
-config MACH_SONY_APOLLO
-	bool "Sony Mobile Apollo"
-	depends on ARCH_SONY_TAMA
-	help
-	Support for the SONY Mobile Apollo device
-	which is based on SONY Tama platform.
-	If you enable this config,
-	please use SONY Mobile device tree.
-
 config ARCH_SDM670
 	bool "Enable Support for Qualcomm Technologies Inc. SDM670"
 	depends on ARCH_QCOM
@@ -260,25 +224,25 @@ config ARCH_SDM439
 	  wish to build a kernel that runs on this chipset, say 'N' here.
 
 config ARCH_MSM8998
-    bool "Enable Support for Qualcomm Technologies, Inc. MSM8998"
+	bool "Enable Support for Qualcomm Technologies, Inc. MSM8998"
 	depends on ARCH_QCOM
 	select ARM64_FORCE_NO_16K_GRANULE
 	select COMMON_CLK
 	select COMMON_CLK_QCOM
 	select QCOM_GDSC
 	help
-	This enables support for the MSM8998 chipset. If you do not
-	wish to build a kernel that runs on this chipset, say 'N' here.
+	  This enables support for the MSM8998 chipset. If you do not
+	  wish to build a kernel that runs on this chipset, say 'N' here.
 
 config ARCH_MSM8996
-    bool "Enable Support for Qualcomm Technologies, Inc. MSM8996"
+	bool "Enable Support for Qualcomm Technologies, Inc. MSM8996"
 	depends on ARCH_QCOM
 	select COMMON_CLK
 	select COMMON_CLK_QCOM
 	select QCOM_GDSC
 	help
-	This enables support for the MSM8996 chipset. If you do not
-	wish to build a kernel that runs on this chipset, say 'N' here.
+	  This enables support for the MSM8996 chipset. If you do not
+	  wish to build a kernel that runs on this chipset, say 'N' here.
 
 config ARCH_SDM660
 	bool "Enable Support for Qualcomm Technologies Inc SDM660"
@@ -414,164 +378,182 @@ config ARCH_ZYNQMP
 	  This enables support for Xilinx ZynqMP Family
 
 config ARCH_SONY_LOIRE
-    bool "Sony Mobile Loire platform"
-    depends on ARCH_MSM8916
-    help
-      Support for the SONY Mobile Loire platform
-      which is based on QCOM MSM8956 chipset.
-      If you enable this config,
-      please use SONY Mobile device tree.
+	bool "Sony Mobile Loire platform"
+	depends on ARCH_MSM8916
+	help
+	  Support for the SONY Mobile Loire platform
+	  which is based on QCOM MSM8956 chipset.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
 
 config MACH_SONY_SUZU
-    bool "Sony Mobile SUZU"
-    depends on ARCH_SONY_LOIRE
-    help
-      Support for the SONY Mobile Suzu device
-      which is based on SONY Loire platform.
-      If you enable this config,
-      please use SONY Mobile device tree.
+	bool "Sony Mobile SUZU"
+	depends on ARCH_SONY_LOIRE
+	help
+	  Support for the SONY Mobile Suzu device
+	  which is based on SONY Loire platform.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
 
 config MACH_SONY_KUGO
-    bool "Sony Mobile KUGO"
-    depends on ARCH_SONY_LOIRE
-    help
-      Support for the SONY Mobile Kugo device
-      which is based on SONY Loire platform.
-      If you enable this config,
-      please use SONY Mobile device tree.
+	bool "Sony Mobile KUGO"
+	depends on ARCH_SONY_LOIRE
+	help
+	  Support for the SONY Mobile Kugo device
+	  which is based on SONY Loire platform.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
 
 config MACH_SONY_BLANC
-    bool "Sony Mobile BLANC"
-    depends on ARCH_SONY_LOIRE
-    help
-      Support for the SONY Mobile Blanc device
-      which is based on SONY Loire platform.
-      If you enable this config,
-      please use SONY Mobile device tree.
+	bool "Sony Mobile BLANC"
+	depends on ARCH_SONY_LOIRE
+	help
+	  Support for the SONY Mobile Blanc device
+	  which is based on SONY Loire platform.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
 
 config ARCH_SONY_TONE
-    bool "Sony Mobile Tone platform"
-    depends on ARCH_MSM8996
-    help
-      Support for the SONY Mobile Tone platform
-      which is based on QCOM MSM8996 chipset.
-      If you enable this config,
-      please use SONY Mobile device tree.
+	bool "Sony Mobile Tone platform"
+	depends on ARCH_MSM8996
+	help
+	  Support for the SONY Mobile Tone platform
+	  which is based on QCOM MSM8996 chipset.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
 
 config MACH_SONY_DORA
-    bool "Sony Mobile Dora"
-    depends on ARCH_SONY_TONE
-    help
-      Support for the SONY Mobile Dora device
-      which is based on SONY Tone platform.
-      If you enable this config,
-      please use SONY Mobile device tree.
+	bool "Sony Mobile Dora"
+	depends on ARCH_SONY_TONE
+	help
+	  Support for the SONY Mobile Dora device
+	  which is based on SONY Tone platform.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
 
 config MACH_SONY_KAGURA
-    bool "Sony Mobile Kagura"
-    depends on ARCH_SONY_TONE
-    help
-      Support for the SONY Mobile Kagura device
-      which is based on SONY Tone platform.
-      If you enable this config,
-      please use SONY Mobile device tree.
+	bool "Sony Mobile Kagura"
+	depends on ARCH_SONY_TONE
+	help
+	  Support for the SONY Mobile Kagura device
+	  which is based on SONY Tone platform.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
 
 config MACH_SONY_KEYAKI
-    bool "Sony Mobile Keyaki"
-    depends on ARCH_SONY_TONE
-    help
-      Support for the SONY Mobile Keyaki device
-      which is based on SONY Tone platform.
-      If you enable this config,
-      please use SONY Mobile device tree.
+	bool "Sony Mobile Keyaki"
+	depends on ARCH_SONY_TONE
+	help
+	  Support for the SONY Mobile Keyaki device
+	  which is based on SONY Tone platform.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
 
 config ARCH_SONY_YOSHINO
-        bool "Sony Mobile Yoshino platform"
-        depends on ARCH_MSM8998
-        help
-        Support for the SONY Mobile Yoshino platform
-        which is based on QCOM MSM8998 chipset.
-        If you enable this config,
-        please use SONY Mobile device tree.
+	bool "Sony Mobile Yoshino platform"
+	depends on ARCH_MSM8998
+	help
+	  Support for the SONY Mobile Yoshino platform
+	  which is based on QCOM MSM8998 chipset.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
 
 config MACH_SONY_LILAC
-        bool "Sony Mobile Lilac"
-        depends on ARCH_SONY_YOSHINO
-        help
-        Support for the SONY Mobile Lilac device
-        which is based on SONY Yoshino platform.
-        If you enable this config,
-        please use SONY Mobile device tree.
+	bool "Sony Mobile Lilac"
+	depends on ARCH_SONY_YOSHINO
+	help
+	  Support for the SONY Mobile Lilac device
+	  which is based on SONY Yoshino platform.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
 
 config MACH_SONY_MAPLE
-        bool "Sony Mobile Maple"
-        depends on ARCH_SONY_YOSHINO
-        help
-        Support for the SONY Mobile Maple device
-        which is based on SONY Yoshino platform.
-        If you enable this config,
-        please use SONY Mobile device tree.
-
-config MACH_SONY_MAPLE_DSDS
-        bool "Sony Mobile Maple Dsds"
-        depends on ARCH_SONY_YOSHINO
-        help
-        Support for the SONY Mobile Maple Dsds device
-        which is based on SONY Yoshino platform.
-        If you enable this config,
-        please use SONY Mobile device tree.
+	bool "Sony Mobile Maple"
+	depends on ARCH_SONY_YOSHINO
+	help
+	  Support for the SONY Mobile Maple device
+	  which is based on SONY Yoshino platform.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
 
 config MACH_SONY_POPLAR
-        bool "Sony Mobile Poplar"
-        depends on ARCH_SONY_YOSHINO
-        help
-        Support for the SONY Mobile Poplar device
-        which is based on SONY Yoshino platform.
-        If you enable this config,
-        please use SONY Mobile device tree.
-
-config MACH_SONY_POPLAR_DSDS
-        bool "Sony Mobile Poplar Dsds"
-        depends on ARCH_SONY_YOSHINO
-        help
-        Support for the SONY Mobile Poplar Dsds device
-        which is based on SONY Yoshino platform.
-        If you enable this config,
-        please use SONY Mobile device tree.
+	bool "Sony Mobile Poplar"
+	depends on ARCH_SONY_YOSHINO
+	help
+	  Support for the SONY Mobile Poplar device
+	  which is based on SONY Yoshino platform.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
 
 config ARCH_SONY_NILE
-        bool "Sony Mobile Nile platform"
-        depends on ARCH_SDM630
-        help
-        Support for the SONY Mobile Nile platform
-        which is based on QCOM SDM630 chipset.
-        If you enable this config,
-        please use SONY Mobile device tree.
+	bool "Sony Mobile Nile platform"
+	depends on ARCH_SDM630
+	help
+	  Support for the SONY Mobile Nile platform
+	  which is based on QCOM SDM630 chipset.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
 
 config MACH_SONY_PIONEER
-        bool "Sony Mobile Pioneer"
-        depends on ARCH_SONY_NILE
-        help
-        Support for the SONY Mobile Pioneer device
-        which is based on SONY Nile platform.
-        If you enable this config,
-        please use SONY Mobile device tree.
+	bool "Sony Mobile Pioneer"
+	depends on ARCH_SONY_NILE
+	help
+	  Support for the SONY Mobile Pioneer device
+	  which is based on SONY Nile platform.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
 
 config MACH_SONY_DISCOVERY
-        bool "Sony Mobile Discovery"
-        depends on ARCH_SONY_NILE
-        help
-        Support for the SONY Mobile Discovery device
-        which is based on SONY Nile platform.
-        If you enable this config,
-        please use SONY Mobile device tree.
+	bool "Sony Mobile Discovery"
+	depends on ARCH_SONY_NILE
+	help
+	  Support for the SONY Mobile Discovery device
+	  which is based on SONY Nile platform.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
 
 config MACH_SONY_VOYAGER
-        bool "Sony Mobile Discovery"
-        depends on ARCH_SONY_NILE
-        help
-        Support for the SONY Mobile Discovery device
-        which is based on SONY Nile platform.
-        If you enable this config,
-        please use SONY Mobile device tree.
+	bool "Sony Mobile Discovery"
+	depends on ARCH_SONY_NILE
+	help
+	  Support for the SONY Mobile Discovery device
+	  which is based on SONY Nile platform.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
+config ARCH_SONY_TAMA
+	bool "Sony Mobile Tama platform"
+	depends on ARCH_SDM845
+	help
+	  Support for the SONY Mobile Tama platform
+	  which is based on QCOM SDM845 chipset.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
+config MACH_SONY_AKARI
+	bool "Sony Mobile Akari"
+	depends on ARCH_SONY_TAMA
+	help
+	  Support for the SONY Mobile Akari device
+	  which is based on SONY Tama platform.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
+config MACH_SONY_AKATSUKI
+	bool "Sony Mobile Akatsuki"
+	depends on ARCH_SONY_TAMA
+	help
+	  Support for the SONY Mobile Akatsuki device
+	  which is based on SONY Tama platform.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
+config MACH_SONY_APOLLO
+	bool "Sony Mobile Apollo"
+	depends on ARCH_SONY_TAMA
+	help
+	  Support for the SONY Mobile Apollo device
+	  which is based on SONY Tama platform.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
 endmenu
