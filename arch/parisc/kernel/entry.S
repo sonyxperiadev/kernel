@@ -185,7 +185,7 @@
 	bv,n	0(%r3)
 	nop
 	.word	0		/* checksum (will be patched) */
-	.word	PA(os_hpmc)	/* address of handler */
+	.word	0		/* address of handler */
 	.word	0		/* length of handler */
 	.endm
 
@@ -481,6 +481,8 @@
 	/* Release pa_tlb_lock lock without reloading lock address. */
 	.macro		tlb_unlock0	spc,tmp
 #ifdef CONFIG_SMP
+	or,COND(=)	%r0,\spc,%r0
+	sync
 	or,COND(=)	%r0,\spc,%r0
 	stw             \spc,0(\tmp)
 #endif
