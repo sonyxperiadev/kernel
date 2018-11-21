@@ -1510,6 +1510,7 @@ config SYSVIPC_COMPAT
 config COMPAT_VDSO
 	bool "32-bit vDSO"
 	depends on COMPAT
+	select ARM_ARCH_TIMER_VCT_ACCESS
 	default n
 	help
 	  Warning: a 32-bit toolchain is necessary to build the vDSO. You
