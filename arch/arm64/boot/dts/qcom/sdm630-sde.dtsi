@@ -132,8 +132,42 @@
 		qcom,sde-vbif-qos-rt-remap = <1 2 2 2>;
 		qcom,sde-vbif-qos-nrt-remap = <1 1 1 1>;
 
-		qcom,sde-sspp-danger-lut = <0x000f 0xffff 0x0000>;
-		qcom,sde-sspp-safe-lut = <0xfffc 0xff00 0xffff>;
+		qcom,sde-danger-lut = <0x0000000f 0x0000ffff 0x00000000
+			0x00000000>;
+		qcom,sde-safe-lut-linear =
+			<0 0xfffc>;
+		qcom,sde-safe-lut-macrotile =
+			<0 0xff00>;
+		qcom,sde-safe-lut-nrt =
+			<0 0xffff>;
+		qcom,sde-safe-lut-cwb =
+			<0 0xffff>;
+
+		qcom,sde-qos-lut-linear =
+			<4 0x00000000 0x0000001B>,
+			<5 0x00000000 0x0000005B>,
+			<6 0x00000000 0x0000015B>,
+			<7 0x00000000 0x0000055B>,
+			<8 0x00000000 0x0000155B>,
+			<9 0x00000000 0x0000555B>,
+			<10 0x00000000 0x0001555B>,
+			<11 0x00000000 0x0005555B>,
+			<12 0x00000000 0x0015555B>,
+			<13 0x00000000 0x0055555B>,
+			<14 0x00000000 0x00000000>,
+			<1 0x00000000 0x0000001B>,
+			<0 0x00000000 0x00000000>;
+		qcom,sde-qos-lut-macrotile =
+			<10 0x00000000 0x0001AAFF>,
+			<11 0x00000000 0x0005AAFF>,
+			<12 0x00000000 0x0015AAFF>,
+			<13 0x00000000 0x0055AAFF>,
+			<1  0x00000000 0x0001AAFF>,
+			<0  0x00000000 0x00000000>;
+		qcom,sde-qos-lut-nrt =
+			<0 0x00000000 0x00000000>;
+		qcom,sde-qos-lut-cwb =
+			<0 0x00000000 0x00000000>;
 
 		qcom,sde-vbif-off = <0 0>;
 		qcom,sde-vbif-size = <0x1040>;
