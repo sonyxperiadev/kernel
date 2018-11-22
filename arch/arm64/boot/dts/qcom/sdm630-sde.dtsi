@@ -341,7 +341,7 @@
 		compatible = "qcom,dsi-phy-v2.0";
 		label = "dsi-phy-0";
 		cell-index = <0>;
-		reg = <0x994400 0x588>;
+		reg = <0xc994400 0x588>;
 		reg-names = "dsi_phy";
 
 		gdsc-supply = <&gdsc_mdss>;
