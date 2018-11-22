@@ -127,6 +127,9 @@
 		qcom,sde-has-src-split;
 		qcom,sde-max-bw-low-kbps = <4100000>;
 		qcom,sde-max-bw-high-kbps = <4100000>;
+		qcom,sde-min-core-ib-kbps = <2400000>;
+		qcom,sde-min-llcc-ib-kbps = <800000>;
+		qcom,sde-min-dram-ib-kbps = <800000>;
 		qcom,sde-dram-channels = <2>;
 		qcom,sde-num-nrt-paths = <1>;
 
@@ -267,7 +270,7 @@
 	};
 
 	mdss_dsi0: qcom,sde_dsi_ctrl0@c994000 {
-		compatible = "qcom,dsi-ctrl-hw-v1.4";
+		compatible = "qcom,dsi-ctrl-hw-v2.0";
 		label = "dsi-ctrl-0";
 		cell-index = <0>;
 		reg =   <0xc994000 0x400>,
@@ -285,12 +288,14 @@
 			 <&clock_mmss MMSS_MDSS_PCLK0_CLK>,
 			 <&clock_mmss MMSS_MDSS_ESC0_CLK>,
 			 <&clock_mmss BYTE0_CLK_SRC>,
-			 <&clock_mmss PCLK0_CLK_SRC>;
+			 <&clock_mmss PCLK0_CLK_SRC>,
+			 <&clock_mmss MMSS_MDSS_BYTE0_INTF_CLK>;
 
 		clock-names = "mdp_core_clk", "iface_clk",
 			"core_mmss_clk", "bus_clk",
 			"byte_clk", "pixel_clk", "esc_clk",
-			"byte_clk_rcg", "pixel_clk_rcg";
+			"byte_clk_rcg", "pixel_clk_rcg",
+			"byte_intf_clk";
 
 		/* axi bus scale settings */
 		qcom,msm-bus,name = "mdss_dsi0";
@@ -343,10 +348,11 @@
 		vdda-supply = <&pm660l_l1>;
 
 		clocks = <&clock_mmss MMSS_MDSS_MDP_CLK>,
+			 <&clock_mmss MMSS_MNOC_AHB_CLK>,
 			 <&clock_mmss MMSS_MDSS_AHB_CLK>,
 			 <&clock_mmss MMSS_MISC_AHB_CLK>,
 			 <&clock_mmss MMSS_MDSS_AXI_CLK>;
-		clock-names = "mdp_core_clk", "iface_clk",
+		clock-names = "mdp_core_clk", "mnoc_clk", "iface_clk",
 			"core_mmss_clk", "bus_clk";
 
 		qcom,platform-strength-ctrl = [ff 06
