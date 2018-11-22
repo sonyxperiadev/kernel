@@ -107,7 +107,7 @@
 		qcom,sde-sspp-clk-ctrl = <0x2ac 0>, <0x2ac 8>, <0x2b4 8>,
 					 <0x2c4 8>, <0x3a8 16>;
 
-		qcom,sde-qseed-type = "qseedv2";
+		qcom,sde-qseed-type = "qseedv3";
 		qcom,sde-csc-type = "csc";
 		qcom,sde-mixer-linewidth = <2048>;
 		qcom,sde-sspp-linewidth = <2048>;
@@ -120,6 +120,9 @@
 		qcom,sde-max-bw-high-kbps = <4100000>;
 		qcom,sde-dram-channels = <2>;
 		qcom,sde-num-nrt-paths = <1>;
+
+		qcom,sde-vbif-qos-rt-remap = <1 2 2 2>;
+		qcom,sde-vbif-qos-nrt-remap = <1 1 1 1>;
 
 		qcom,sde-sspp-danger-lut = <0x000f 0xffff 0x0000>;
 		qcom,sde-sspp-safe-lut = <0xfffc 0xff00 0xffff>;
