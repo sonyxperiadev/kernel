@@ -115,8 +115,9 @@
 		qcom,sde-sspp-clk-ctrl = <0x2ac 0>, <0x2ac 8>, <0x2b4 8>,
 					 <0x2c4 8>, <0x3a8 16>;
 
+		qcom,sde-sspp-csc-off = <0x1a00>;
+		qcom,sde-csc-type = "csc-10bit";
 		qcom,sde-qseed-type = "qseedv3";
-		qcom,sde-csc-type = "csc";
 		qcom,sde-mixer-linewidth = <2048>;
 		qcom,sde-sspp-linewidth = <2048>;
 		qcom,sde-mixer-blendstages = <0x7>;
@@ -183,8 +184,9 @@
 		vdd-supply = <&gdsc_mdss>;
 
 		qcom,sde-sspp-vig-blocks {
-			qcom,sde-vig-csc-off = <0x320>;
-			qcom,sde-vig-qseed-off = <0x200>;
+			qcom,sde-vig-csc-off = <0x1a00>;
+			qcom,sde-vig-qseed-off = <0xa00>;
+			qcom,sde-vig-qseed-size = <0xa0>;
 			/* Offset from vig top, version of HSIC */
 			qcom,sde-vig-hsic = <0x200 0x00010007>;
 			qcom,sde-vig-memcolor = <0x200 0x00010007>;
