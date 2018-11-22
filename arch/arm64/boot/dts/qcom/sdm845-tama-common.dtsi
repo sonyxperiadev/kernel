@@ -506,6 +506,26 @@
 	};
 };
 
+&qupv3_se10_i2c {
+	nfc@28 {
+		compatible = "nxp,pn547";
+		reg = <0x28>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <63 0x1>;
+		nxp,irq_gpio = <&tlmm 63 0x00>;
+		nxp,dwld_en = <&tlmm 62 0x00>;
+		nxp,ven = <&tlmm 12 0x01>;
+		qcom,clk-src = "BBCLK3";
+		qcom,clk-gpio = <&pm8998_gpios 21 0x00>;
+		clock-names = "nfc_clk";
+		clocks = <&clock_rpmh RPMH_LN_BB_CLK3>;
+		pinctrl-names = "pn547-active", "pn547-inactive";
+		pinctrl-0 = <&nfc_int_active &nfc_enable_active>;
+		pinctrl-1 = <&nfc_int_suspend &nfc_enable_suspend>;
+	};
+};
+
+
 &spmi_bus {
 	qcom,pm8998@0 {
 		/* Reset Configuration */
