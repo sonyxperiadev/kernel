@@ -1093,6 +1093,8 @@
 	clock_gpu: qcom,gpucc@5065000 {
 		compatible = "qcom,gpu-sdm660";
 		reg = <0x5065000 0x10000>;
+		clocks = <&clock_gcc GPLL0>;
+		clock-names = "gpll0";
 		#clock-cells = <1>;
 		#reset-cells = <1>;
 	};
