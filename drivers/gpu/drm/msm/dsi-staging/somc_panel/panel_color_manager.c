@@ -584,7 +584,7 @@ int somc_panel_pcc_setup(struct dsi_display *display)
 
 	if (color_mgr->u_data == 0 && color_mgr->v_data == 0) {
 		pr_err("%s (%d): u,v is flashed 0.\n", __func__, __LINE__);
-		goto exit;
+		return -EINVAL;
 	}
 	pr_notice("%s (%d) udata = %x vdata = %x \n", __func__, __LINE__,
 		color_mgr->u_data, color_mgr->v_data);
@@ -1134,16 +1134,22 @@ int somc_panel_colormgr_apply_calibrations(void)
 	if (!display)
 		return -EINVAL;
 
+	if (!display->panel)
+		return -EINVAL;
+
+	if (!display->panel->spec_pdata->color_mgr)
+		return -EINVAL;
+
 	color_mgr = display->panel->spec_pdata->color_mgr;
 
 	rc = somc_panel_pcc_setup(display);
 	if (rc) {
 		pr_err("%s: Couldn't apply PCC calibration\n", __func__);
-	}
-
-	rc = somc_panel_send_pcc(display, color_mgr->pcc_profile);
-	if (rc) {
-		pr_err("%s: Cannot send PCC calibration\n", __func__);
+	} else {
+		rc = somc_panel_send_pcc(display, color_mgr->pcc_profile);
+		if (rc) {
+			pr_err("%s: Cannot send PCC calibration\n", __func__);
+		}
 	}
 
 	rc += somc_panel_send_pa(display);
