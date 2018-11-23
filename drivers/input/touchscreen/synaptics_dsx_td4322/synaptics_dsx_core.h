@@ -373,8 +373,12 @@ struct synaptics_rmi4_data {
 	struct mutex rmi4_irq_enable_mutex;
 	struct delayed_work rb_work;
 	struct workqueue_struct *rb_workqueue;
-#ifdef CONFIG_FB
+#if defined(CONFIG_FB) && !defined(CONFIG_DRM_MSM_DSI_SOMC_PANEL)
 	struct notifier_block fb_notifier;
+#elif defined(CONFIG_DRM) && defined(CONFIG_DRM_MSM_DSI_SOMC_PANEL)
+	struct notifier_block drm_notifier;
+#endif
+#ifdef CONFIG_FB
 	struct work_struct reset_work;
 	struct workqueue_struct *reset_workqueue;
 #endif
