@@ -231,6 +231,9 @@ int dsi_panel_driver_touch_reset(struct dsi_panel *panel)
 	}
 	spec_pdata = panel->spec_pdata;
 
+	if (!gpio_is_valid(spec_pdata->reset_touch_gpio))
+		return 0;
+
 	if (spec_pdata->count_touch) {
 		rc = gpio_direction_output(spec_pdata->reset_touch_gpio,
 			spec_pdata->sequence_touch[0].level);
@@ -263,6 +266,9 @@ int dsi_panel_driver_touch_reset_ctrl(struct dsi_panel *panel, bool en)
 		return -EINVAL;
 	}
 	spec_pdata = panel->spec_pdata;
+
+	if (!gpio_is_valid(spec_pdata->reset_touch_gpio))
+		return 0;
 
 	gpio_set_value(spec_pdata->reset_touch_gpio, 0);
 	usleep_range(spec_pdata->touch_reset_off * 1000,
@@ -1114,13 +1120,14 @@ int dsi_panel_driver_parse_gpios(struct dsi_panel *panel,
 					      0);
 	if (!gpio_is_valid(spec_pdata->reset_touch_gpio)) {
 		pr_err("%s: failed get reset touch gpio\n", __func__);
-	}
-
-	rc = dsi_panel_driver_parse_reset_touch_sequence(panel, of_node);
-	if (rc && rc != -EINVAL) {
-		pr_err("%s: failed to parse reset touch sequence, rc=%d\n",
-		       __func__, rc);
-		goto error;
+	} else {
+		rc = dsi_panel_driver_parse_reset_touch_sequence(panel,
+								 of_node);
+		if (rc) {
+			pr_err("%s: failed to parse reset touch sequence\n",
+			       __func__);
+			goto error;
+		}
 	}
 
 	spec_pdata->disp_vddio_gpio = of_get_named_gpio(of_node,
