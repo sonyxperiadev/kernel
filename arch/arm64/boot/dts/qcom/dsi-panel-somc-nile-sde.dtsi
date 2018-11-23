@@ -7,8 +7,8 @@
 	somc,pw-on-rst-seq = "after_power_on";
 
 	qcom,mdss-dsi-display-timings {
-		1080p60 {
-			qcom,mdss-dsi-panel-framerate = <60>;
+		1080p120 {
+			qcom,mdss-dsi-panel-framerate = <120>;
 			qcom,mdss-dsi-panel-width = <1080>;
 			qcom,mdss-dsi-panel-height = <1920>;
 			qcom,mdss-dsi-h-front-porch = <100>;
@@ -25,6 +25,8 @@
 			qcom,mdss-dsi-h-sync-pulse = <0>;
 			qcom,mdss-dsi-t-clk-post = <0x0D>;
 			qcom,mdss-dsi-t-clk-pre = <0x2E>;
+
+			qcom,mdss-dsi-panel-clockrate = <1998000000>;
 
 			qcom,mdss-dsi-on-command = [29 01 00 00 00 00 02 B0 00
 						    29 01 00 00 00 00 04 B3 00 00 06
@@ -108,8 +110,8 @@
 	somc,pw-on-rst-seq = "after_power_on";
 
 	qcom,mdss-dsi-display-timings {
-		1080p60 {
-			qcom,mdss-dsi-panel-framerate = <60>;
+		1080p120 {
+			qcom,mdss-dsi-panel-framerate = <120>;
 			qcom,mdss-dsi-panel-width = <1080>;
 			qcom,mdss-dsi-panel-height = <1920>;
 			qcom,mdss-dsi-h-front-porch = <104>;
@@ -126,6 +128,8 @@
 			qcom,mdss-dsi-h-sync-pulse = <0>;
 			qcom,mdss-dsi-t-clk-post = <0x0D>;
 			qcom,mdss-dsi-t-clk-pre = <0x2F>;
+
+			qcom,mdss-dsi-panel-clockrate = <1998000000>;
 
 			qcom,mdss-dsi-off-command = [05 01 00 00 14 00 02 28 00
 						     05 01 00 00 78 00 02 10 00];
@@ -172,8 +176,8 @@
 	somc,pw-on-rst-seq = "after_power_on";
 
 	qcom,mdss-dsi-display-timings {
-		1080p60 {
-			qcom,mdss-dsi-panel-framerate = <60>;
+		1080p120 {
+			qcom,mdss-dsi-panel-framerate = <120>;
 			qcom,mdss-dsi-panel-width = <1080>;
 			qcom,mdss-dsi-panel-height = <1920>;
 			qcom,mdss-dsi-h-front-porch = <96>;
@@ -190,6 +194,8 @@
 			qcom,mdss-dsi-h-sync-pulse = <0>;
 			qcom,mdss-dsi-t-clk-post = <0x0D>;
 			qcom,mdss-dsi-t-clk-pre = <0x2F>;
+
+			qcom,mdss-dsi-panel-clockrate = <1998000000>;
 
 			qcom,mdss-dsi-on-command = [05 01 00 00 00 00 02 29 00
 						    05 01 00 00 46 00 02 11 00];
