@@ -173,9 +173,9 @@
 		qcom,sde-qos-lut-cwb =
 			<0 0x00000000 0x00000000>;
 
-		qcom,sde-vbif-off = <0 0>;
+		qcom,sde-vbif-off = <0>;
 		qcom,sde-vbif-size = <0x1040>;
-		qcom,sde-vbif-id = <0 1>;
+		qcom,sde-vbif-id = <0>;
 		qcom,sde-vbif-default-ot-rd-limit = <32>;
 		qcom,sde-vbif-default-ot-wr-limit = <32>;
 /*		qcom,sde-vbif-dynamic-ot-rd-limit = <62208000 2>,
