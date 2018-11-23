@@ -125,6 +125,8 @@
 		qcom,sde-panic-per-pipe;
 		qcom,sde-has-cdp;
 		qcom,sde-has-src-split;
+		qcom,sde-has-idle-pc;
+
 		qcom,sde-max-bw-low-kbps = <6400000>;
 		qcom,sde-max-bw-high-kbps = <6400000>;
 		qcom,sde-min-core-ib-kbps = <2400000>;
