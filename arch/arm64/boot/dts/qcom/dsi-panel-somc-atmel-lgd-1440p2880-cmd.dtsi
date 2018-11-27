@@ -216,5 +216,3 @@
 		};
 	};
 };
-
-#include "dsi-panel-akatsuki-id5_pcc.dtsi"

@@ -18,6 +18,7 @@
  */
 
 #include "dsi-panel-somc-atmel-lgd-1440p2880-cmd.dtsi"
+#include "dsi-panel-somc-akatsuki-id5_pcc.dtsi"
 
 &mdss_dsi0 {
 	/delete-property/ qcom,null-insertion-enabled;
