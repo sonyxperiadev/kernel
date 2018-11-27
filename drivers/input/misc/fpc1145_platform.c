@@ -50,6 +50,7 @@
 #include <linux/pm_wakeup.h>
 #include <linux/regulator/consumer.h>
 #include <linux/platform_device.h>
+#include <linux/poll.h>
 
 #define FPC1145_RESET_LOW_US 1000
 #define FPC1145_RESET_HIGH1_US 100
@@ -380,6 +381,35 @@ static long fpc1145_device_ioctl(struct file *fp,
 	return rc;
 }
 
+static unsigned int fpc1145_poll_interrupt(struct file *file,
+		struct poll_table_struct *wait)
+{
+	int mask = 0;
+	int val = 0;
+	struct device *dev = fpc1145_drvdata->dev;
+
+	val = gpio_get_value(fpc1145_drvdata->irq_gpio);
+	if (val) {
+		dev_dbg(dev, "gpio already triggered\n");
+		return POLLIN | POLLRDNORM;
+	}
+
+	if (fpc1145_drvdata->irq_fired) {
+		fpc1145_drvdata->irq_fired = false;
+		enable_irq(fpc1145_drvdata->irq);
+	}
+
+	poll_wait(file, &fpc1145_drvdata->irq_evt, wait);
+	val = gpio_get_value(fpc1145_drvdata->irq_gpio);
+	dev_dbg(dev, "gpio val %d, irq fired: %d\n", val, fpc1145_drvdata->irq_fired);
+	if (val) {
+		__pm_wakeup_event(&fpc1145_drvdata->wakelock, 400);
+		mask |= POLLIN | POLLRDNORM;
+	}
+
+	return mask;
+}
+
 static int fpc1145_device_suspend(struct device *dev)
 {
 	struct fpc1145_data *fpc1145 = dev_get_drvdata(dev);
@@ -414,6 +444,7 @@ static const struct file_operations fpc1145_device_fops = {
 	.release = fpc1145_device_release,
 	.unlocked_ioctl = fpc1145_device_ioctl,
 	.compat_ioctl = fpc1145_device_ioctl,
+	.poll = fpc1145_poll_interrupt,
 };
 
 static struct miscdevice fpc1145_misc = {
