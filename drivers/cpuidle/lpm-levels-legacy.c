@@ -100,7 +100,7 @@ static const int num_dbg_elements = 0x100;
 
 static void cluster_unprepare(struct lpm_cluster *cluster,
 		const struct cpumask *cpu, int child_idx, bool from_idle,
-		int64_t time);
+		int64_t time, bool success);
 static void cluster_prepare(struct lpm_cluster *cluster,
 		const struct cpumask *cpu, int child_idx, bool from_idle,
 		int64_t time);
@@ -734,7 +734,7 @@ failed:
 
 static void cluster_unprepare(struct lpm_cluster *cluster,
 		const struct cpumask *cpu, int child_idx, bool from_idle,
-		int64_t end_time)
+		int64_t end_time, bool success)
 {
 	struct lpm_cluster_level *level;
 	bool first_cpu;
@@ -767,12 +767,12 @@ static void cluster_unprepare(struct lpm_cluster *cluster,
 	if (cluster->stats->sleep_time)
 		cluster->stats->sleep_time = end_time -
 			cluster->stats->sleep_time;
-	lpm_stats_cluster_exit(cluster->stats, cluster->last_level, true);
+	lpm_stats_cluster_exit(cluster->stats, cluster->last_level, success);
 
 	level = &cluster->levels[cluster->last_level];
 	if (level->notify_rpm) {
 		if (sys_pm_ops && sys_pm_ops->exit)
-			sys_pm_ops->exit();
+			sys_pm_ops->exit(success);
 
 		/* If RPM bumps up CX to turbo, unvote CX turbo vote
 		 * during exit of rpm assisted power collapse to
@@ -805,7 +805,7 @@ static void cluster_unprepare(struct lpm_cluster *cluster,
 
 	cluster_notify(cluster, &cluster->levels[last_level], false);
 	cluster_unprepare(cluster->parent, &cluster->child_cpus,
-			last_level, from_idle, end_time);
+			last_level, from_idle, end_time, success);
 unlock_return:
 	spin_unlock(&cluster->sync_lock);
 }
@@ -1037,7 +1037,7 @@ exit:
 	end_time = ktime_to_ns(ktime_get());
 	lpm_stats_cpu_exit(idx, end_time, success);
 
-	cluster_unprepare(cluster, cpumask, idx, true, end_time);
+	cluster_unprepare(cluster, cpumask, idx, true, end_time, success);
 	cpu_unprepare(cluster, idx, true);
 
 	trace_cpu_idle_exit(idx, success);
@@ -1246,6 +1246,7 @@ static int lpm_suspend_enter(suspend_state_t state)
 	struct lpm_cpu *lpm_cpu = cluster->cpu;
 	const struct cpumask *cpumask = get_cpu_mask(cpu);
 	int idx;
+	bool success = true;
 
 	for (idx = lpm_cpu->nlevels - 1; idx >= 0; idx--) {
 
@@ -1273,13 +1274,13 @@ static int lpm_suspend_enter(suspend_state_t state)
 	if (!use_psci)
 		msm_cpu_pm_enter_sleep(cluster->cpu->levels[idx].mode, false);
 	else
-		psci_enter_sleep(cluster, idx, true);
+		success = psci_enter_sleep(cluster, idx, true);
 
 	if (idx > 0)
 		update_debug_pc_event(CPU_EXIT, idx, true, 0xdeaffeed,
 					false);
 
-	cluster_unprepare(cluster, cpumask, idx, false, 0);
+	cluster_unprepare(cluster, cpumask, idx, false, 0, success);
 	cpu_unprepare(cluster, idx, false);
 	return 0;
 }
@@ -1302,7 +1303,8 @@ static int lpm_starting_cpu(unsigned int cpu)
 	update_debug_pc_event(CPU_HP_STARTING, cpu,
 				cluster->num_children_in_sync.bits[0],
 				cluster->child_cpus.bits[0], false);
-	cluster_unprepare(cluster, get_cpu_mask(cpu), NR_LPM_LEVELS, false, 0);
+	cluster_unprepare(cluster, get_cpu_mask(cpu), NR_LPM_LEVELS,
+							false, 0, true);
 	return 0;
 }
 
