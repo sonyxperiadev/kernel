@@ -384,37 +384,42 @@ static long fpc1145_device_ioctl(struct file *fp,
 static unsigned int fpc1145_poll_interrupt(struct file *file,
 		struct poll_table_struct *wait)
 {
-	int mask = 0;
 	int val = 0;
 	struct device *dev = fpc1145_drvdata->dev;
 
 	val = gpio_get_value(fpc1145_drvdata->irq_gpio);
 	if (val) {
+		/* Early out */
 		dev_dbg(dev, "gpio already triggered\n");
+		__pm_wakeup_event(&fpc1145_drvdata->wakelock, 1000);
 		return POLLIN | POLLRDNORM;
 	}
 
+	/* Add current file to the waiting list  */
+	poll_wait(file, &fpc1145_drvdata->irq_evt, wait);
+
+	/* Enable the irq */
 	if (fpc1145_drvdata->irq_fired) {
 		fpc1145_drvdata->irq_fired = false;
 		enable_irq(fpc1145_drvdata->irq);
 	}
 
-	poll_wait(file, &fpc1145_drvdata->irq_evt, wait);
 	val = gpio_get_value(fpc1145_drvdata->irq_gpio);
-	dev_dbg(dev, "gpio val %d, irq fired: %d\n", val, fpc1145_drvdata->irq_fired);
 	if (val) {
-		__pm_wakeup_event(&fpc1145_drvdata->wakelock, 400);
-		mask |= POLLIN | POLLRDNORM;
+		dev_dbg(dev, "gpio triggered after poll_wait\n");
+		__pm_wakeup_event(&fpc1145_drvdata->wakelock, 1000);
+		return POLLIN | POLLRDNORM;
 	}
 
-	return mask;
+	/* Nothing happened yet; make the poll wait for irq_evt. */
+	return 0;
 }
 
 static int fpc1145_device_suspend(struct device *dev)
 {
 	struct fpc1145_data *fpc1145 = dev_get_drvdata(dev);
 
-	dev_dbg(dev, "Suspending device\n");
+	dev_dbg(dev, "Suspending device; irq_fired is %d\n", fpc1145->irq_fired);
 
 	/* HAL will already resume once the IRQ IOCTL is called */
 	if (fpc1145->irq_fired)
@@ -457,11 +462,13 @@ static irqreturn_t fpc1145_irq_handler(int irq, void *handle)
 {
 	struct fpc1145_data *fpc1145 = handle;
 
-	dev_dbg(fpc1145->dev, "%s\n", __func__);
+	int val = gpio_get_value(fpc1145->irq_gpio);
+
+	dev_dbg(fpc1145->dev, "%s: gpio=%d\n", __func__, val);
 
 	fpc1145->irq_fired = true;
 
-	__pm_wakeup_event(&fpc1145->wakelock, 20);
+	__pm_wakeup_event(&fpc1145->wakelock, 1000);
 	wake_up_interruptible(&fpc1145->irq_evt);
 	disable_irq_nosync(fpc1145->irq);
 
