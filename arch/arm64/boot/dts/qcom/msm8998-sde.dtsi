@@ -370,6 +370,7 @@
 			"byte_intf_clk";
 
 		qcom,null-insertion-enabled;
+		qcom,link-hs-clk-always-full-reconfigure;
 
 		/* Bus Scale Settings */
 		qcom,msm-bus,name = "mdss_dsi";
@@ -438,6 +439,7 @@
 			"byte_intf_clk";
 
 		qcom,null-insertion-enabled;
+		qcom,link-hs-clk-always-full-reconfigure;
 
 		/* Bus Scale Settings */
 		qcom,msm-bus,name = "mdss_dsi1";
