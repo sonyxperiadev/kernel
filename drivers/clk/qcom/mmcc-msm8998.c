@@ -2717,7 +2717,7 @@ static struct clk_branch mmss_mdss_mdp_clk = {
 		.hw.init = &(struct clk_init_data) {
 			.name = "mmss_mdss_mdp_clk",
 			.parent_names = (const char*[]) {
-				"mdp_clk_src",
+				"mmss_mdss_mdp_lut_clk",
 			},
 			.num_parents = 1,
 			.flags = CLK_SET_RATE_PARENT | CLK_ENABLE_HAND_OFF,
@@ -2738,6 +2738,7 @@ static struct clk_branch mmss_mdss_mdp_lut_clk = {
 				"mdp_clk_src",
 			},
 			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
 			.ops = &clk_branch2_ops,
 		},
 	},
