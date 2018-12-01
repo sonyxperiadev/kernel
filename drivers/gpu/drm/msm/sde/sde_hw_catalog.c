@@ -3591,6 +3591,7 @@ static int _sde_hardware_pre_caps(struct sde_mdss_cfg *sde_cfg, uint32_t hw_rev)
 		sde_cfg->perf.min_prefill_lines = 21;
 	} else if (IS_MSM8998_TARGET(hw_rev) || IS_SDM630_TARGET(hw_rev)) {
 		sde_cfg->has_wb_ubwc = true;
+		sde_cfg->has_cwb_support = true;
 		sde_cfg->perf.min_prefill_lines = 25;
 		sde_cfg->vbif_qos_nlvl = 4;
 		sde_cfg->ts_prefill_rev = 1;
