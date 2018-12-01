@@ -1213,7 +1213,7 @@ static struct clk_rcg2 esc0_clk_src = {
 		.parent_names = disp_cc_parent_names_0,
 		.num_parents = ARRAY_SIZE(disp_cc_parent_names_0),
 		.ops = &clk_esc_ops,
-		VDD_DIG_FMAX_MAP2(LOWER, 19200000, NOMINAL, 19200000),
+		VDD_DIG_FMAX_MAP1(LOWER, 19200000),
 	},
 };
 
@@ -1226,7 +1226,7 @@ static struct clk_rcg2 esc1_clk_src = {
 		.parent_names = disp_cc_parent_names_0,
 		.num_parents = ARRAY_SIZE(disp_cc_parent_names_0),
 		.ops = &clk_esc_ops,
-		VDD_DIG_FMAX_MAP2(LOWER, 19200000, NOMINAL, 19200000),
+		VDD_DIG_FMAX_MAP1(LOWER, 19200000),
 	},
 };
 
