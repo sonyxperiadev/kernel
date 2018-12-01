@@ -415,7 +415,15 @@ static unsigned int fpc1145_poll_interrupt(struct file *file,
 		return POLLIN | POLLRDNORM;
 	}
 
-	/* Nothing happened yet; make the poll wait for irq_evt. */
+	/*
+	 * Nothing happened yet; make the poll wait for irq_evt.
+	 * The wakelock can be relaxed preemptively, as no processing has to
+	 * be done until the next wake-enabled IRQ fires.
+	 */
+
+	if (fpc1145_drvdata->wakelock.active)
+		__pm_relax(&fpc1145_drvdata->wakelock);
+
 	return 0;
 }
 
