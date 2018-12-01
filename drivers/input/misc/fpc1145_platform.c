@@ -60,6 +60,7 @@
 #define NUM_PARAMS_REG_ENABLE_SET 2
 
 #define FPC_IRQPOLL_TIMEOUT_MS 500
+#define FPC_MAX_HAL_PROCESSING_TIME 400
 
 #define FPC_IOC_MAGIC	0x1145
 #define FPC_IOCWPREPARE	_IOW(FPC_IOC_MAGIC, 0x01, int)
@@ -367,7 +368,8 @@ static long fpc1145_device_ioctl(struct file *fp,
 
 		val = gpio_get_value(fpc1145_drvdata->irq_gpio);
 		if (val)
-			__pm_wakeup_event(&fpc1145_drvdata->wakelock, 400);
+			__pm_wakeup_event(&fpc1145_drvdata->wakelock,
+					FPC_MAX_HAL_PROCESSING_TIME);
 
 		rc = put_user(val, (int*) usr);
 		break;
@@ -390,7 +392,8 @@ static unsigned int fpc1145_poll_interrupt(struct file *file,
 	if (val) {
 		/* Early out */
 		dev_dbg(dev, "gpio already triggered\n");
-		__pm_wakeup_event(&fpc1145_drvdata->wakelock, 1000);
+		__pm_wakeup_event(&fpc1145_drvdata->wakelock,
+				FPC_MAX_HAL_PROCESSING_TIME);
 		return POLLIN | POLLRDNORM;
 	}
 
@@ -406,7 +409,8 @@ static unsigned int fpc1145_poll_interrupt(struct file *file,
 	val = gpio_get_value(fpc1145_drvdata->irq_gpio);
 	if (val) {
 		dev_dbg(dev, "gpio triggered after poll_wait\n");
-		__pm_wakeup_event(&fpc1145_drvdata->wakelock, 1000);
+		__pm_wakeup_event(&fpc1145_drvdata->wakelock,
+				FPC_MAX_HAL_PROCESSING_TIME);
 		return POLLIN | POLLRDNORM;
 	}
 
@@ -463,7 +467,7 @@ static irqreturn_t fpc1145_irq_handler(int irq, void *handle)
 
 	fpc1145->irq_fired = true;
 
-	__pm_wakeup_event(&fpc1145->wakelock, 1000);
+	__pm_wakeup_event(&fpc1145->wakelock, FPC_MAX_HAL_PROCESSING_TIME);
 	wake_up_interruptible(&fpc1145->irq_evt);
 	disable_irq_nosync(fpc1145->irq);
 
