@@ -234,6 +234,13 @@ struct dsi_clk_link_set {
 void dsi_display_clk_mngr_update_splash_status(void *clk_mgr, bool status);
 
 /**
+ * dsi_display_clk_mngr_set_clk_full_reconf() - Update HS clks reconf setting
+ * @clk_mngr:     Structure containing DSI clock information
+ * @status:       HS Clocks full reconfiguration setting
+ */
+void dsi_display_clk_mngr_set_clk_full_reconf(void *clk_mgr, bool status);
+
+/**
  * dsi_display_clk_mgr_register() - Register DSI clock manager
  * @info:     Structure containing DSI clock information
  */
