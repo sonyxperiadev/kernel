@@ -123,7 +123,6 @@ struct fpc1145_data {
 	bool irq_fired;
 	wait_queue_head_t irq_evt;
 
-	struct wakeup_source wakelock;
 	struct mutex lock;
 	bool prepared;
 };
@@ -305,14 +304,13 @@ exit:
 
 static int fpc1145_device_open(struct inode *inode, struct file *fp)
 {
-	__pm_wakeup_event(&fpc1145_drvdata->wakelock, 1);
+	pm_wakeup_event(fpc1145_drvdata->dev, 1);
 	return 0;
 }
 
 static int fpc1145_device_release(struct inode *inode, struct file *fp)
 {
-	if (fpc1145_drvdata->wakelock.active)
-		__pm_relax(&fpc1145_drvdata->wakelock);
+	pm_relax(fpc1145_drvdata->dev);
 	return 0;
 }
 
@@ -369,7 +367,7 @@ static long fpc1145_device_ioctl(struct file *fp,
 
 		val = gpio_get_value(fpc1145_drvdata->irq_gpio);
 		if (val)
-			__pm_wakeup_event(&fpc1145_drvdata->wakelock,
+			pm_wakeup_event(fpc1145_drvdata->dev,
 					FPC_MAX_HAL_PROCESSING_TIME);
 
 		rc = put_user(val, (int*) usr);
@@ -393,8 +391,7 @@ static unsigned int fpc1145_poll_interrupt(struct file *file,
 	if (val) {
 		/* Early out */
 		dev_dbg(dev, "gpio already triggered\n");
-		__pm_wakeup_event(&fpc1145_drvdata->wakelock,
-				FPC_MAX_HAL_PROCESSING_TIME);
+		pm_wakeup_event(dev, FPC_MAX_HAL_PROCESSING_TIME);
 		return POLLIN | POLLRDNORM;
 	}
 
@@ -410,8 +407,7 @@ static unsigned int fpc1145_poll_interrupt(struct file *file,
 	val = gpio_get_value(fpc1145_drvdata->irq_gpio);
 	if (val) {
 		dev_dbg(dev, "gpio triggered after poll_wait\n");
-		__pm_wakeup_event(&fpc1145_drvdata->wakelock,
-				FPC_MAX_HAL_PROCESSING_TIME);
+		pm_wakeup_event(dev, FPC_MAX_HAL_PROCESSING_TIME);
 		return POLLIN | POLLRDNORM;
 	}
 
@@ -421,8 +417,7 @@ static unsigned int fpc1145_poll_interrupt(struct file *file,
 	 * be done until the next wake-enabled IRQ fires.
 	 */
 
-	if (fpc1145_drvdata->wakelock.active)
-		__pm_relax(&fpc1145_drvdata->wakelock);
+	pm_relax(dev);
 
 	return 0;
 }
@@ -476,7 +471,7 @@ static irqreturn_t fpc1145_irq_handler(int irq, void *handle)
 
 	fpc1145->irq_fired = true;
 
-	__pm_wakeup_event(&fpc1145->wakelock, FPC_MAX_HAL_PROCESSING_TIME);
+	pm_wakeup_event(fpc1145->dev, FPC_MAX_HAL_PROCESSING_TIME);
 	wake_up_interruptible(&fpc1145->irq_evt);
 	disable_irq_nosync(fpc1145->irq);
 
@@ -609,7 +604,7 @@ static int fpc1145_probe(struct platform_device *pdev)
 	irqf = IRQF_TRIGGER_HIGH | IRQF_ONESHOT;
 	mutex_init(&fpc1145->lock);
 
-	wakeup_source_init(&fpc1145->wakelock, "fpc_wake");
+	device_init_wakeup(dev, true);
 	init_waitqueue_head(&fpc1145->irq_evt);
 	fpc1145->irq_fired = false;
 
@@ -643,7 +638,7 @@ static int fpc1145_remove(struct platform_device *pdev)
 {
 	struct fpc1145_data *fpc1145 = platform_get_drvdata(pdev);
 
-	wakeup_source_trash(&fpc1145->wakelock);
+	device_init_wakeup(fpc1145->dev, false);
 	mutex_destroy(&fpc1145->lock);
 #ifdef CONFIG_ARCH_SONY_LOIRE
 	(void)vreg_setup(fpc1145, VCC_SPI, false);
