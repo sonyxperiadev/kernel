@@ -286,34 +286,6 @@
 					"mmss_smmu_ahb_clk",
 					"mmss_smmu_axi_clk";
 		};
-		
-		smmu_sde_unsec: qcom,smmu_sde_nrt_unsec_cb {
-			compatible = "qcom,smmu_sde_nrt_unsec";
-			iommus = <&mmss_smmu 0xe00>;
-			gdsc-mdss-supply = <&gdsc_bimc_smmu>;
-			clocks = <&clock_rpmcc MMSSNOC_AXI_CLK>,
-				<&clock_mmss MMSS_MNOC_AHB_CLK>,
-				<&clock_mmss MMSS_BIMC_SMMU_AHB_CLK>,
-				<&clock_mmss MMSS_BIMC_SMMU_AXI_CLK>;
-			clock-names = "mmss_noc_axi_clk",
-					"mmss_noc_ahb_clk",
-					"mmss_smmu_ahb_clk",
-					"mmss_smmu_axi_clk";
-		};
-
-		smmu_sde_sec: qcom,smmu_sde_nrt_sec_cb {
-			compatible = "qcom,smmu_sde_nrt_sec";
-			iommus = <&mmss_smmu 0xe01>;
-			gdsc-mdss-supply = <&gdsc_bimc_smmu>;
-			clocks = <&clock_rpmcc MMSSNOC_AXI_CLK>,
-				<&clock_mmss MMSS_MNOC_AHB_CLK>,
-				<&clock_mmss MMSS_BIMC_SMMU_AHB_CLK>,
-				<&clock_mmss MMSS_BIMC_SMMU_AXI_CLK>;
-			clock-names = "mmss_noc_axi_clk",
-					"mmss_noc_ahb_clk",
-					"mmss_smmu_ahb_clk",
-					"mmss_smmu_axi_clk";
-		};
 
 		/* data and reg bus scale settings */
 		qcom,sde-data-bus {
@@ -636,6 +608,9 @@
 
 		#list-cells = <1>;
 
+		qcom,mdss-wb-count = <1>;
+		qcom,mdss-wb-id = <0>;
+		qcom,mdss-ctl-id = <4>;
 		qcom,mdss-rot-mode = <1>;
 		qcom,mdss-highest-bank-bit = <0x2>;
 
@@ -660,14 +635,32 @@
 			"iface_clk", "rot_core_clk",
 			"rot_clk", "axi_clk";
 
+		power-domains = <&sde_kms>;
 		interrupt-parent = <&sde_kms>;
 		interrupts = <2 0>;
 
 		/* Offline rotator QoS setting */
 		qcom,mdss-rot-vbif-qos-setting = <1 1 1 1>;
+		qcom,mdss-rot-xin-id = <14 15>;
+		qcom,mdss-rot-vbif-memtype = <3 3>;
+		qcom,mdss-rot-cdp-setting = <1 1>;
+		qcom,mdss-rot-qos-lut = <0x0 0x0 0x0 0x0>;
+		qcom,mdss-rot-danger-lut = <0x0 0x0>;
+		qcom,mdss-rot-safe-lut = <0x0000ffff 0x0000ffff>;
 
 		qcom,mdss-default-ot-rd-limit = <32>;
 		qcom,mdss-default-ot-wr-limit = <32>;
+
+		/* reg bus scale settings */
+		rot_reg: qcom,rot-reg-bus {
+			qcom,msm-bus,name = "mdss_rot_reg";
+			qcom,msm-bus,num-cases = <2>;
+			qcom,msm-bus,num-paths = <1>;
+			qcom,msm-bus,active-only;
+			qcom,msm-bus,vectors-KBps =
+				<1 590 0 0>,
+				<1 590 0 76800>;
+		};
 
 		smmu_rot_unsec: qcom,smmu_rot_unsec_cb {
 			compatible = "qcom,smmu_sde_rot_unsec";
