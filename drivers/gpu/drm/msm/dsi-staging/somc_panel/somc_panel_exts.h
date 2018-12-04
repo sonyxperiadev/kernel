@@ -409,7 +409,7 @@ int somc_panel_allocate(struct device *dev, struct dsi_panel *panel);
 int somc_panel_init(struct dsi_display *display);
 
 
-
+int somc_panel_cont_splash_touch_enable(struct dsi_panel *panel);
 int dsi_panel_driver_pinctrl_init(struct dsi_panel *panel);
 int dsi_panel_driver_gpio_request(struct dsi_panel *panel);
 int dsi_panel_driver_gpio_release(struct dsi_panel *panel);

@@ -6176,7 +6176,8 @@ int dsi_display_prepare(struct dsi_display *display)
 	}
 
 	if (display->is_cont_splash_enabled)
-		dsi_panel_driver_touch_reset(display->panel);
+		somc_panel_cont_splash_touch_enable(display->panel);
+
 #endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 	goto error;
 
