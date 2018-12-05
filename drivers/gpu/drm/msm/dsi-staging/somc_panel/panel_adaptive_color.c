@@ -166,7 +166,10 @@ static void somc_panel_colormgr_adj_pa(struct dsi_panel *panel,
 void somc_panel_colormgr_update_backlight(struct dsi_panel *panel, u32 bl_lvl)
 {
 	struct dsi_display *display = NULL;
-	struct somc_panel_color_mgr *color_mgr = NULL;
+	struct somc_panel_color_mgr *color_mgr = panel->spec_pdata->color_mgr;
+
+	if (!color_mgr)
+		return;
 
 	if (!color_mgr->adaptive_color.enable)
 		return;
@@ -176,8 +179,6 @@ void somc_panel_colormgr_update_backlight(struct dsi_panel *panel, u32 bl_lvl)
 		pr_err("ERROR: Cannot update for Adaptive Color\n");
 		return;
 	}
-
-	color_mgr = panel->spec_pdata->color_mgr;
 
 	/* PA adjustment */
 	somc_panel_colormgr_adj_pa(panel, bl_lvl,
