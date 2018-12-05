@@ -21,7 +21,7 @@
 /delete-node/ &mdss_dp_ctrl;
 /delete-node/ &mdss_hdmi_tx;
 
-// /delete-node/ &mdss_rotator;
+/delete-node/ &mdss_rotator;
 
 &soc {
 	/delete-node/ qcom,mdss_wb_panel;

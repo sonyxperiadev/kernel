@@ -995,6 +995,33 @@ static bool dsi_display_get_cont_splash_status(struct dsi_display *display)
 	return true;
 }
 
+/**
+ * dsi_display_get_clk_always_full_reconf - Get HS clks full reconf setting
+ * @dsi_display:         DSI display handle.
+ *
+ * Return: boolean to signify whether full reconfiguration of
+ *	   DSI HS clocks is set to "always enabled".
+ */
+static bool dsi_display_get_clk_always_full_reconf(struct dsi_display *display)
+{
+	u32 val = 0;
+	int i;
+	struct dsi_display_ctrl *ctrl;
+	struct dsi_ctrl_hw *hw;
+
+	for (i = 0; i < display->ctrl_count ; i++) {
+		ctrl = &(display->ctrl[i]);
+		if (!ctrl || !ctrl->ctrl)
+			continue;
+
+		hw = &(ctrl->ctrl->hw);
+		val = hw->link_hsclk_fullrec;
+		if (val)
+			return true;
+	}
+	return false;
+}
+
 int dsi_display_set_power(struct drm_connector *connector,
 		int power_mode, void *disp)
 {
@@ -4157,6 +4184,10 @@ int dsi_display_cont_splash_config(void *dsi_display)
 		return -EINVAL;
 	}
 
+	/* Check for always fully reconfigure HS clocks setting */
+	dsi_display_clk_mngr_set_clk_full_reconf(display->clk_mngr,
+			dsi_display_get_clk_always_full_reconf(display));
+
 	/*
 	 * Verify whether continuous splash is enabled or not.
 	 */
@@ -6145,7 +6176,8 @@ int dsi_display_prepare(struct dsi_display *display)
 	}
 
 	if (display->is_cont_splash_enabled)
-		dsi_panel_driver_touch_reset(display->panel);
+		somc_panel_cont_splash_touch_enable(display->panel);
+
 #endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 	goto error;
 

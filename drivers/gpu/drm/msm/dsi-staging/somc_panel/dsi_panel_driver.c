@@ -378,6 +378,34 @@ int dsi_panel_driver_touch_power(struct dsi_panel *panel, bool enable)
 		return dsi_panel_driver_touch_power_off(panel);
 }
 
+int somc_panel_cont_splash_touch_enable(struct dsi_panel *panel)
+{
+	struct panel_specific_pdata *spec_pdata = NULL;
+	int rc;
+
+	if (!panel) {
+		pr_err("%s: Invalid input panel\n", __func__);
+		return -EINVAL;
+	}
+
+	spec_pdata = panel->spec_pdata;
+
+	rc = somc_panel_vreg_ctrl(&spec_pdata->touch_power_info,
+						"touch-avdd", true);
+	if (rc)
+		pr_warn("%s: failed to enable touch-avdd, rc=%d\n",
+				__func__, rc);
+
+	rc = dsi_panel_driver_touch_power(panel, true);
+	if (rc)
+		pr_warn("%s: failed to enable touch vddio, rc=%d\n",
+				__func__, rc);
+
+	dsi_panel_driver_touch_reset(panel);
+
+	return 0;
+}
+
 static void dsi_panel_driver_power_off_ctrl(void)
 {
 	struct incell_ctrl *incell = incell_get_info();
