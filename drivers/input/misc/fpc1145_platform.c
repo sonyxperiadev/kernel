@@ -419,11 +419,7 @@ static int fpc1145_device_suspend(struct device *dev)
 {
 	struct fpc1145_data *fpc1145 = dev_get_drvdata(dev);
 
-	dev_dbg(dev, "Suspending device; irq_fired is %d\n", fpc1145->irq_fired);
-
-	/* HAL will already resume once the IRQ IOCTL is called */
-	if (fpc1145->irq_fired)
-		return 0;
+	dev_dbg(dev, "Suspending device\n");
 
 	/* Wakeup when finger detected */
 	enable_irq_wake(fpc1145->irq);
