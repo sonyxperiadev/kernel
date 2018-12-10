@@ -1,0 +1,111 @@
+ARM64 ELF AT_FLAGS
+==================
+
+This document describes the usage and semantics of AT_FLAGS on arm64.
+
+1. Introduction
+---------------
+
+AT_FLAGS is part of the Auxiliary Vector, contains the flags and it
+is currently set to zero by the kernel on arm64.
+
+The auxiliary vector can be accessed by the userspace using the
+getauxval() API provided by the C library.
+getauxval() returns an unsigned long and when a flag is present in
+the AT_FLAGS, the corresponding bit in the returned value is set to 1.
+
+The AT_FLAGS with a "defined semantic" on arm64 are exposed to the
+userspace via user API (uapi/asm/atflags.h).
+The AT_FLAGS bits with "undefined semantics" are set to zero by default.
+This means that the AT_FLAGS bits to which this document does not assign
+an explicit meaning are to be intended reserved for future use.
+The kernel will populate all such bits with zero until meanings are
+assigned to them. If and when meanings are assigned, it is guaranteed
+that they will not impact the functional operation of existing userspace
+software. Userspace software should ignore any AT_FLAGS bit whose meaning
+is not defined when the software is written.
+
+The userspace software can test for features by acquiring the AT_FLAGS
+entry of the auxiliary vector, and testing whether a relevant flag
+is set.
+
+Example of a userspace test function:
+
+bool feature_x_is_present(void)
+{
+	unsigned long at_flags = getauxval(AT_FLAGS);
+	if (at_flags & FEATURE_X)
+		return true;
+
+	return false;
+}
+
+Where the software relies on a feature advertised by AT_FLAGS, it
+should check that the feature is present before attempting to
+use it.
+
+2. Features exposed via AT_FLAGS
+--------------------------------
+
+bit[0]: ARM64_AT_FLAGS_SYSCALL_TBI
+
+    On arm64 the TCR_EL1.TBI0 bit has been set since Linux 3.x hence
+    the userspace (EL0) is allowed to set a non-zero value in the top
+    byte but the resulting pointers are not allowed at the user-kernel
+    syscall ABI boundary.
+    When bit[0] is set to 1 the kernel is advertising to the userspace
+    that a relaxed ABI is supported hence this type of pointers are now
+    allowed to be passed to the syscalls, when these pointers are in
+    memory ranges obtained by anonymous (MAP_ANONYMOUS) mmap() or brk().
+    In these cases the tag is preserved as the pointer goes through the
+    kernel. Only when the kernel needs to check if a pointer is coming
+    from userspace (i.e. access_ok()) an untag operation is required.
+
+3. ARM64_AT_FLAGS_SYSCALL_TBI
+-----------------------------
+
+When ARM64_AT_FLAGS_SYSCALL_TBI is enabled every syscalls can accept tagged
+pointers, when these pointers are in memory ranges obtained by an anonymous
+(MAP_ANONYMOUS) mmap() or brk().
+
+A definition of the meaning of tagged pointers on arm64 can be found in:
+Documentation/arm64/tagged-pointers.txt.
+
+When a pointer does not are in a memory range obtained by an anonymous mmap()
+or brk(), this can not be passed to a syscall if it is tagged.
+
+To be more explicit: a syscall can accept pointers whose memory range is
+obtained by a non-anonymous mmap() or brk() if and only if the tag encoded in
+the top-byte is 0x00.
+
+When a new syscall is added, this can accept tagged pointers if and only if
+these pointers are in memory ranges obtained by an anonymous (MAP_ANONYMOUS)
+mmap() or brk(). In all the other cases, the tag encoded in the top-byte is
+expected to be 0x00.
+
+Example of correct usage (pseudo-code) for a userspace application:
+
+bool arm64_syscall_tbi_is_present(void)
+{
+	unsigned long at_flags = getauxval(AT_FLAGS);
+	if (at_flags & ARM64_AT_FLAGS_SYSCALL_TBI)
+			return true;
+
+	return false;
+}
+
+void main(void)
+{
+	char *addr = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE,
+			  MAP_ANONYMOUS, -1, 0);
+
+	/* Check if the relaxed ABI is supported */
+	if (arm64_syscall_tbi_is_present()) {
+		/* Add a tag to the pointer and to the memory */
+		addr = tag_pointer_and_memory(addr);
+	}
+
+	/* Write to memory */
+	strcpy("Hello World\n", addr);
+}
+
