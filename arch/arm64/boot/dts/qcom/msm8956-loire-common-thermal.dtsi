@@ -667,4 +667,11 @@
 			};
 		};
 	};
+
+	bl-therm-adc {
+		polling-delay-passive = <0>;
+		polling-delay = <0>;
+		thermal-sensors = <&pmi8950_vadc 0x10>;
+		thermal-governor = "user_space";
+	};
 };
