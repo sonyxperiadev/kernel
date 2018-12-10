@@ -50,6 +50,7 @@
 #include <linux/pm_wakeup.h>
 #include <linux/regulator/consumer.h>
 #include <linux/platform_device.h>
+#include <linux/poll.h>
 
 #define FPC1145_RESET_LOW_US 1000
 #define FPC1145_RESET_HIGH1_US 100
@@ -60,11 +61,13 @@
 #define NUM_PARAMS_REG_ENABLE_SET 2
 
 #define FPC_IRQPOLL_TIMEOUT_MS 500
+#define FPC_MAX_HAL_PROCESSING_TIME 400
 
 #define FPC_IOC_MAGIC	0x1145
 #define FPC_IOCWPREPARE	_IOW(FPC_IOC_MAGIC, 0x01, int)
 #define FPC_IOCWDEVWAKE	_IOW(FPC_IOC_MAGIC, 0x02, int)
 #define FPC_IOCWRESET	_IOW(FPC_IOC_MAGIC, 0x03, int)
+#define FPC_IOCWAWAKE	_IOW(FPC_IOC_MAGIC, 0x04, int)
 #define FPC_IOCRPREPARE	_IOR(FPC_IOC_MAGIC, 0x81, int)
 #define FPC_IOCRDEVWAKE	_IOR(FPC_IOC_MAGIC, 0x82, int)
 #define FPC_IOCRIRQ	_IOR(FPC_IOC_MAGIC, 0x83, int)
@@ -121,9 +124,13 @@ struct fpc1145_data {
 	bool irq_fired;
 	wait_queue_head_t irq_evt;
 
-	struct wakeup_source wakelock;
 	struct mutex lock;
 	bool prepared;
+};
+
+struct fpc1145_awake_args {
+	int awake;
+	unsigned int timeout;
 };
 
 static struct fpc1145_data *fpc1145_drvdata = NULL;
@@ -303,14 +310,13 @@ exit:
 
 static int fpc1145_device_open(struct inode *inode, struct file *fp)
 {
-	__pm_wakeup_event(&fpc1145_drvdata->wakelock, 1);
+	pm_wakeup_event(fpc1145_drvdata->dev, 1);
 	return 0;
 }
 
 static int fpc1145_device_release(struct inode *inode, struct file *fp)
 {
-	if (fpc1145_drvdata->wakelock.active)
-		__pm_relax(&fpc1145_drvdata->wakelock);
+	pm_relax(fpc1145_drvdata->dev);
 	return 0;
 }
 
@@ -319,6 +325,8 @@ static long fpc1145_device_ioctl(struct file *fp,
 {
 	int8_t val = 0;
 	int rc = -EINVAL;
+	unsigned int timeout = 0;
+	struct fpc1145_awake_args awake_args;
 	void __user *usr = (void __user*)arg;
 
 	switch (cmd) {
@@ -334,6 +342,24 @@ static long fpc1145_device_ioctl(struct file *fp,
 	case FPC_IOCWRESET:
 		dev_dbg(fpc1145_drvdata->dev, "Resetting device\n");
 		rc = hw_reset(fpc1145_drvdata);
+		break;
+	case FPC_IOCWAWAKE:
+		rc = copy_from_user(&awake_args,
+				(struct fpc1145_awake_args *)usr,
+				sizeof(awake_args));
+		if (rc)
+			break;
+		timeout = min(awake_args.timeout,
+				(unsigned int)FPC_MAX_HAL_PROCESSING_TIME);
+		if (awake_args.awake) {
+			dev_dbg(fpc1145_drvdata->dev,
+					"Extending wakelock for %dms\n",
+					timeout);
+			pm_wakeup_event(fpc1145_drvdata->dev, timeout);
+		} else {
+			dev_dbg(fpc1145_drvdata->dev, "Relaxing wakelock\n");
+			pm_relax(fpc1145_drvdata->dev);
+		}
 		break;
 	case FPC_IOCRPREPARE:
 		rc = put_user((int8_t)fpc1145_drvdata->prepared,
@@ -367,7 +393,8 @@ static long fpc1145_device_ioctl(struct file *fp,
 
 		val = gpio_get_value(fpc1145_drvdata->irq_gpio);
 		if (val)
-			__pm_wakeup_event(&fpc1145_drvdata->wakelock, 400);
+			pm_wakeup_event(fpc1145_drvdata->dev,
+					FPC_MAX_HAL_PROCESSING_TIME);
 
 		rc = put_user(val, (int*) usr);
 		break;
@@ -380,15 +407,52 @@ static long fpc1145_device_ioctl(struct file *fp,
 	return rc;
 }
 
+static unsigned int fpc1145_poll_interrupt(struct file *file,
+		struct poll_table_struct *wait)
+{
+	int val = 0;
+	struct device *dev = fpc1145_drvdata->dev;
+
+	val = gpio_get_value(fpc1145_drvdata->irq_gpio);
+	if (val) {
+		/* Early out */
+		dev_dbg(dev, "gpio already triggered\n");
+		pm_wakeup_event(dev, FPC_MAX_HAL_PROCESSING_TIME);
+		return POLLIN | POLLRDNORM;
+	}
+
+	/* Add current file to the waiting list  */
+	poll_wait(file, &fpc1145_drvdata->irq_evt, wait);
+
+	/* Enable the irq */
+	if (fpc1145_drvdata->irq_fired) {
+		fpc1145_drvdata->irq_fired = false;
+		enable_irq(fpc1145_drvdata->irq);
+	}
+
+	val = gpio_get_value(fpc1145_drvdata->irq_gpio);
+	if (val) {
+		dev_dbg(dev, "gpio triggered after poll_wait\n");
+		pm_wakeup_event(dev, FPC_MAX_HAL_PROCESSING_TIME);
+		return POLLIN | POLLRDNORM;
+	}
+
+	/*
+	 * Nothing happened yet; make the poll wait for irq_evt.
+	 * The wakelock can be relaxed preemptively, as no processing has to
+	 * be done until the next wake-enabled IRQ fires.
+	 */
+
+	pm_relax(dev);
+
+	return 0;
+}
+
 static int fpc1145_device_suspend(struct device *dev)
 {
 	struct fpc1145_data *fpc1145 = dev_get_drvdata(dev);
 
 	dev_dbg(dev, "Suspending device\n");
-
-	/* HAL will already resume once the IRQ IOCTL is called */
-	if (fpc1145->irq_fired)
-		return 0;
 
 	/* Wakeup when finger detected */
 	enable_irq_wake(fpc1145->irq);
@@ -414,6 +478,7 @@ static const struct file_operations fpc1145_device_fops = {
 	.release = fpc1145_device_release,
 	.unlocked_ioctl = fpc1145_device_ioctl,
 	.compat_ioctl = fpc1145_device_ioctl,
+	.poll = fpc1145_poll_interrupt,
 };
 
 static struct miscdevice fpc1145_misc = {
@@ -426,11 +491,13 @@ static irqreturn_t fpc1145_irq_handler(int irq, void *handle)
 {
 	struct fpc1145_data *fpc1145 = handle;
 
-	dev_dbg(fpc1145->dev, "%s\n", __func__);
+	int val = gpio_get_value(fpc1145->irq_gpio);
+
+	dev_dbg(fpc1145->dev, "%s: gpio=%d\n", __func__, val);
 
 	fpc1145->irq_fired = true;
 
-	__pm_wakeup_event(&fpc1145->wakelock, 20);
+	pm_wakeup_event(fpc1145->dev, FPC_MAX_HAL_PROCESSING_TIME);
 	wake_up_interruptible(&fpc1145->irq_evt);
 	disable_irq_nosync(fpc1145->irq);
 
@@ -563,7 +630,7 @@ static int fpc1145_probe(struct platform_device *pdev)
 	irqf = IRQF_TRIGGER_HIGH | IRQF_ONESHOT;
 	mutex_init(&fpc1145->lock);
 
-	wakeup_source_init(&fpc1145->wakelock, "fpc_wake");
+	device_init_wakeup(dev, true);
 	init_waitqueue_head(&fpc1145->irq_evt);
 	fpc1145->irq_fired = false;
 
@@ -597,7 +664,7 @@ static int fpc1145_remove(struct platform_device *pdev)
 {
 	struct fpc1145_data *fpc1145 = platform_get_drvdata(pdev);
 
-	wakeup_source_trash(&fpc1145->wakelock);
+	device_init_wakeup(fpc1145->dev, false);
 	mutex_destroy(&fpc1145->lock);
 #ifdef CONFIG_ARCH_SONY_LOIRE
 	(void)vreg_setup(fpc1145, VCC_SPI, false);
