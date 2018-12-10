@@ -555,4 +555,11 @@
 			};
 		};
 	};
+
+	flash-therm-adc {
+		polling-delay-passive = <0>;
+		polling-delay = <0>;
+		thermal-sensors = <&pm8994_vadc 0x14>;
+		thermal-governor = "user_space";
+	};
 };
