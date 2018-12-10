@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1078,6 +1078,7 @@ struct ipa3_nat_ipv6ct_common_mem {
  * @index_table_expansion_addr: index expansion table address
  * @public_ip_addr: ip address of nat table
  * @pdn_mem: pdn config table SW cache memory structure
+ * @is_tmp_mem_allocated: indicate if tmp mem has been allocated
  */
 struct ipa3_nat_mem {
 	struct ipa3_nat_ipv6ct_common_mem dev;
@@ -1085,6 +1086,7 @@ struct ipa3_nat_mem {
 	char *index_table_expansion_addr;
 	u32 public_ip_addr;
 	struct ipa_mem_buffer pdn_mem;
+	bool is_tmp_mem_allocated;
 };
 
 /**
