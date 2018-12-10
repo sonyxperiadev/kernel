@@ -681,16 +681,12 @@
 	qcom,current-ma = <625>;
 	qcom,max-current = <1000>;
 	qcom,hw-strobe-edge-trigger;
-	qcom,strobe-sel = <1>;
-	somc,sw-strobe-init;
 };
 
 &pmi8998_flash1 {
 	qcom,current-ma = <625>;
 	qcom,max-current = <1000>;
 	qcom,hw-strobe-edge-trigger;
-	qcom,strobe-sel = <1>;
-	somc,sw-strobe-init;
 };
 
 &pmi8998_flash2 {
@@ -700,15 +696,11 @@
 &pmi8998_torch0 {
 	qcom,current-ma = <120>;
 	qcom,max-current = <200>;
-	qcom,strobe-sel = <1>;
-	somc,sw-strobe-init;
 };
 
 &pmi8998_torch1 {
 	qcom,current-ma = <120>;
 	qcom,max-current = <200>;
-	qcom,strobe-sel = <1>;
-	somc,sw-strobe-init;
 };
 
 &pmi8998_torch2 {
