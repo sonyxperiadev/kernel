@@ -63,23 +63,20 @@
 #define FPC_IRQPOLL_TIMEOUT_MS 500
 #define FPC_MAX_HAL_PROCESSING_TIME 400
 
-#define FPC_IOC_MAGIC	0x1145
-#define FPC_IOCWPREPARE	_IOW(FPC_IOC_MAGIC, 0x01, int)
-#define FPC_IOCWDEVWAKE	_IOW(FPC_IOC_MAGIC, 0x02, int)
-#define FPC_IOCWRESET	_IOW(FPC_IOC_MAGIC, 0x03, int)
-#define FPC_IOCWAWAKE	_IOW(FPC_IOC_MAGIC, 0x04, int)
-#define FPC_IOCRPREPARE	_IOR(FPC_IOC_MAGIC, 0x81, int)
-#define FPC_IOCRDEVWAKE	_IOR(FPC_IOC_MAGIC, 0x82, int)
-#define FPC_IOCRIRQ	_IOR(FPC_IOC_MAGIC, 0x83, int)
-#define FPC_IOCRIRQPOLL	_IOR(FPC_IOC_MAGIC, 0x84, int)
+#define FPC_IOC_MAGIC 0x1145
+#define FPC_IOCWPREPARE _IOW(FPC_IOC_MAGIC, 0x01, int)
+#define FPC_IOCWDEVWAKE _IOW(FPC_IOC_MAGIC, 0x02, int)
+#define FPC_IOCWRESET _IOW(FPC_IOC_MAGIC, 0x03, int)
+#define FPC_IOCWAWAKE _IOW(FPC_IOC_MAGIC, 0x04, int)
+#define FPC_IOCRPREPARE _IOR(FPC_IOC_MAGIC, 0x81, int)
+#define FPC_IOCRDEVWAKE _IOR(FPC_IOC_MAGIC, 0x82, int)
+#define FPC_IOCRIRQ _IOR(FPC_IOC_MAGIC, 0x83, int)
+#define FPC_IOCRIRQPOLL _IOR(FPC_IOC_MAGIC, 0x84, int)
 
-static const char * const pctl_names[] = {
-	"fpc1145_reset_reset",
-	"fpc1145_reset_active",
-	"fpc1145_irq_active",
+static const char *const pctl_names[] = {
+	"fpc1145_reset_reset", "fpc1145_reset_active", "fpc1145_irq_active",
 #ifdef CONFIG_ARCH_SONY_LOIRE
-	"fpc1145_ldo_enable",
-	"fpc1145_ldo_disable",
+	"fpc1145_ldo_enable",  "fpc1145_ldo_disable",
 #endif
 };
 
@@ -93,7 +90,7 @@ typedef enum {
 } fpc_rails_t;
 
 struct vreg_config {
-	char* name;
+	char *name;
 	unsigned long vmin;
 	unsigned long vmax;
 	int ua_load;
@@ -101,10 +98,10 @@ struct vreg_config {
 };
 
 static const struct vreg_config vreg_conf[] = {
-	{ "vcc_spi", 1800000UL, 1800000UL, 10, true},
+	{ "vcc_spi", 1800000UL, 1800000UL, 10, true },
 #ifndef CONFIG_ARCH_SONY_LOIRE
-	{ "vdd_ana", 1800000UL, 1800000UL, 6000, false},
-	{ "vdd_io", 1800000UL, 1800000UL, 6000, true},
+	{ "vdd_ana", 1800000UL, 1800000UL, 6000, false },
+	{ "vdd_io", 1800000UL, 1800000UL, 6000, true },
 #endif
 };
 
@@ -136,7 +133,7 @@ struct fpc1145_awake_args {
 static struct fpc1145_data *fpc1145_drvdata = NULL;
 
 static int vreg_setup(struct fpc1145_data *fpc1145, fpc_rails_t fpc_rail,
-	bool enable)
+		      bool enable)
 {
 	int rc;
 	struct regulator *vreg = fpc1145->vreg[fpc_rail];
@@ -148,8 +145,8 @@ static int vreg_setup(struct fpc1145_data *fpc1145, fpc_rails_t fpc_rail,
 	if (enable) {
 		if (regulator_count_voltages(vreg) > 0) {
 			rc = regulator_set_voltage(vreg,
-					vreg_conf[fpc_rail].vmin,
-					vreg_conf[fpc_rail].vmax);
+						   vreg_conf[fpc_rail].vmin,
+						   vreg_conf[fpc_rail].vmax);
 			if (rc)
 				dev_err(dev,
 					"Unable to set voltage on %s, %d\n",
@@ -158,7 +155,7 @@ static int vreg_setup(struct fpc1145_data *fpc1145, fpc_rails_t fpc_rail,
 		rc = regulator_set_load(vreg, vreg_conf[fpc_rail].ua_load);
 		if (rc < 0)
 			dev_err(dev, "Unable to set current on %s, %d\n",
-					vreg_conf[fpc_rail].name, rc);
+				vreg_conf[fpc_rail].name, rc);
 		rc = regulator_enable(vreg);
 		if (rc) {
 			dev_err(dev, "error enabling %s: %d\n",
@@ -198,7 +195,7 @@ static int select_pin_ctl(struct fpc1145_data *fpc1145, const char *name)
 
 		if (!strncmp(n, name, strlen(n))) {
 			rc = pinctrl_select_state(fpc1145->fingerprint_pinctrl,
-					fpc1145->pinctrl_state[i]);
+						  fpc1145->pinctrl_state[i]);
 			if (rc)
 				dev_err(dev, "cannot select '%s'\n", name);
 			else
@@ -256,7 +253,6 @@ static int device_prepare(struct fpc1145_data *fpc1145, bool enable)
 
 	mutex_lock(&fpc1145->lock);
 	if (enable && !fpc1145->prepared) {
-
 		fpc1145->prepared = true;
 		select_pin_ctl(fpc1145, "fpc1145_reset_reset");
 
@@ -277,29 +273,29 @@ static int device_prepare(struct fpc1145_data *fpc1145, bool enable)
 #endif
 
 		usleep_range(PWR_ON_STEP_SLEEP,
-				PWR_ON_STEP_SLEEP + PWR_ON_STEP_RANGE2);
+			     PWR_ON_STEP_SLEEP + PWR_ON_STEP_RANGE2);
 
 		(void)select_pin_ctl(fpc1145, "fpc1145_reset_active");
 		usleep_range(PWR_ON_STEP_SLEEP,
-				PWR_ON_STEP_SLEEP + PWR_ON_STEP_RANGE1);
+			     PWR_ON_STEP_SLEEP + PWR_ON_STEP_RANGE1);
 
 	} else if (!enable && fpc1145->prepared) {
 		rc = 0;
 
 		(void)select_pin_ctl(fpc1145, "fpc1145_reset_reset");
 		usleep_range(PWR_ON_STEP_SLEEP,
-				PWR_ON_STEP_SLEEP + PWR_ON_STEP_RANGE2);
+			     PWR_ON_STEP_SLEEP + PWR_ON_STEP_RANGE2);
 
 #ifdef CONFIG_ARCH_SONY_LOIRE
 		(void)select_pin_ctl(fpc1145, "fpc1145_ldo_disable");
 #else
 		(void)vreg_setup(fpc1145, VDD_ANA, false);
-exit_2:
+	exit_2:
 		(void)vreg_setup(fpc1145, VDD_IO, false);
-exit_1:
+	exit_1:
 #endif
 		(void)vreg_setup(fpc1145, VCC_SPI, false);
-exit:
+	exit:
 		fpc1145->prepared = false;
 	} else {
 		rc = 0;
@@ -320,14 +316,14 @@ static int fpc1145_device_release(struct inode *inode, struct file *fp)
 	return 0;
 }
 
-static long fpc1145_device_ioctl(struct file *fp,
-		unsigned int cmd, unsigned long arg)
+static long fpc1145_device_ioctl(struct file *fp, unsigned int cmd,
+				 unsigned long arg)
 {
 	int8_t val = 0;
 	int rc = -EINVAL;
 	unsigned int timeout = 0;
 	struct fpc1145_awake_args awake_args;
-	void __user *usr = (void __user*)arg;
+	void __user *usr = (void __user *)arg;
 
 	switch (cmd) {
 	case FPC_IOCWPREPARE:
@@ -345,16 +341,15 @@ static long fpc1145_device_ioctl(struct file *fp,
 		break;
 	case FPC_IOCWAWAKE:
 		rc = copy_from_user(&awake_args,
-				(struct fpc1145_awake_args *)usr,
-				sizeof(awake_args));
+				    (struct fpc1145_awake_args *)usr,
+				    sizeof(awake_args));
 		if (rc)
 			break;
 		timeout = min(awake_args.timeout,
-				(unsigned int)FPC_MAX_HAL_PROCESSING_TIME);
+			      (unsigned int)FPC_MAX_HAL_PROCESSING_TIME);
 		if (awake_args.awake) {
 			dev_dbg(fpc1145_drvdata->dev,
-					"Extending wakelock for %dms\n",
-					timeout);
+				"Extending wakelock for %dms\n", timeout);
 			pm_wakeup_event(fpc1145_drvdata->dev, timeout);
 		} else {
 			dev_dbg(fpc1145_drvdata->dev, "Relaxing wakelock\n");
@@ -362,21 +357,20 @@ static long fpc1145_device_ioctl(struct file *fp,
 		}
 		break;
 	case FPC_IOCRPREPARE:
-		rc = put_user((int8_t)fpc1145_drvdata->prepared,
-				(int*) usr);
+		rc = put_user((int8_t)fpc1145_drvdata->prepared, (int *)usr);
 		break;
 	case FPC_IOCRDEVWAKE:
 		dev_dbg(fpc1145_drvdata->dev, "RDEVWAKE Not implemented.\n");
 		break;
 	case FPC_IOCRIRQ:
 		val = gpio_get_value(fpc1145_drvdata->irq_gpio);
-		rc = put_user(val, (int*) usr);
+		rc = put_user(val, (int *)usr);
 		break;
 	case FPC_IOCRIRQPOLL:
 		val = gpio_get_value(fpc1145_drvdata->irq_gpio);
 		if (val) {
 			/* We don't need to wait: IRQ has already fired */
-			rc = put_user(val, (int*) usr);
+			rc = put_user(val, (int *)usr);
 			return rc;
 		}
 
@@ -385,9 +379,9 @@ static long fpc1145_device_ioctl(struct file *fp,
 			enable_irq(fpc1145_drvdata->irq);
 		}
 
-		rc = wait_event_interruptible_timeout(fpc1145_drvdata->irq_evt,
-				fpc1145_drvdata->irq_fired,
-				msecs_to_jiffies(FPC_IRQPOLL_TIMEOUT_MS));
+		rc = wait_event_interruptible_timeout(
+			fpc1145_drvdata->irq_evt, fpc1145_drvdata->irq_fired,
+			msecs_to_jiffies(FPC_IRQPOLL_TIMEOUT_MS));
 		if (rc == -ERESTARTSYS)
 			return rc;
 
@@ -396,7 +390,7 @@ static long fpc1145_device_ioctl(struct file *fp,
 			pm_wakeup_event(fpc1145_drvdata->dev,
 					FPC_MAX_HAL_PROCESSING_TIME);
 
-		rc = put_user(val, (int*) usr);
+		rc = put_user(val, (int *)usr);
 		break;
 	default:
 		rc = -ENOIOCTLCMD;
@@ -408,7 +402,7 @@ static long fpc1145_device_ioctl(struct file *fp,
 }
 
 static unsigned int fpc1145_poll_interrupt(struct file *file,
-		struct poll_table_struct *wait)
+					   struct poll_table_struct *wait)
 {
 	int val = 0;
 	struct device *dev = fpc1145_drvdata->dev;
@@ -505,7 +499,7 @@ static irqreturn_t fpc1145_irq_handler(int irq, void *handle)
 }
 
 static int fpc1145_request_named_gpio(struct fpc1145_data *fpc1145,
-	const char *label, int *gpio)
+				      const char *label, int *gpio)
 {
 	struct device *dev = fpc1145->dev;
 	struct device_node *np = dev->of_node;
@@ -533,10 +527,10 @@ static int fpc1145_get_regulators(struct fpc1145_data *fpc1145)
 	for (i = 0; i < FPC_VREG_MAX; i++) {
 		if (!vreg_conf[i].is_optional)
 			fpc1145->vreg[i] = devm_regulator_get_optional(
-						dev, vreg_conf[i].name);
+				dev, vreg_conf[i].name);
 		else
-			fpc1145->vreg[i] = devm_regulator_get(
-						dev, vreg_conf[i].name);
+			fpc1145->vreg[i] =
+				devm_regulator_get(dev, vreg_conf[i].name);
 
 		if (IS_ERR_OR_NULL(fpc1145->vreg[i])) {
 			fpc1145->vreg[i] = NULL;
@@ -557,8 +551,8 @@ static int fpc1145_probe(struct platform_device *pdev)
 	int irqf;
 	struct device_node *np = dev->of_node;
 
-	struct fpc1145_data *fpc1145 = devm_kzalloc(dev, sizeof(*fpc1145),
-			GFP_KERNEL);
+	struct fpc1145_data *fpc1145 =
+		devm_kzalloc(dev, sizeof(*fpc1145), GFP_KERNEL);
 	if (!fpc1145) {
 		rc = -ENOMEM;
 		goto exit;
@@ -580,16 +574,16 @@ static int fpc1145_probe(struct platform_device *pdev)
 		goto exit;
 
 	rc = fpc1145_request_named_gpio(fpc1145, "fpc,gpio_irq",
-			&fpc1145->irq_gpio);
+					&fpc1145->irq_gpio);
 	if (rc)
 		goto exit;
 	rc = fpc1145_request_named_gpio(fpc1145, "fpc,gpio_rst",
-			&fpc1145->rst_gpio);
+					&fpc1145->rst_gpio);
 	if (rc)
 		goto exit;
 #ifdef CONFIG_ARCH_SONY_LOIRE
 	rc = fpc1145_request_named_gpio(fpc1145, "fpc,gpio_ldo",
-			&fpc1145->ldo_gpio);
+					&fpc1145->ldo_gpio);
 	if (rc)
 		goto exit;
 #endif
@@ -635,12 +629,12 @@ static int fpc1145_probe(struct platform_device *pdev)
 	fpc1145->irq_fired = false;
 
 	fpc1145->irq = gpio_to_irq(fpc1145->irq_gpio);
-	rc = devm_request_threaded_irq(dev, fpc1145->irq,
-			NULL, fpc1145_irq_handler, irqf,
-			dev_name(dev), fpc1145);
+	rc = devm_request_threaded_irq(dev, fpc1145->irq, NULL,
+				       fpc1145_irq_handler, irqf, dev_name(dev),
+				       fpc1145);
 	if (rc) {
 		dev_err(dev, "could not request irq %d\n",
-				gpio_to_irq(fpc1145->irq_gpio));
+			gpio_to_irq(fpc1145->irq_gpio));
 		goto exit;
 	}
 	dev_dbg(dev, "requested irq %d\n", gpio_to_irq(fpc1145->irq_gpio));
@@ -679,8 +673,12 @@ static int fpc1145_remove(struct platform_device *pdev)
 }
 
 static struct of_device_id fpc1145_of_match[] = {
-	{ .compatible = "fpc,fpc1020", },
-	{ .compatible = "fpc,fpc1145", },
+	{
+		.compatible = "fpc,fpc1020",
+	},
+	{
+		.compatible = "fpc,fpc1145",
+	},
 	{}
 };
 MODULE_DEVICE_TABLE(of, fpc1145_of_match);
