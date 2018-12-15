@@ -776,6 +776,9 @@ skip_sysfs_create:
 #ifdef TARGET_SOMC_XBOOT
 	__raw_writel(0xC0DEDEAD, restart_reason);
 	qpnp_pon_set_restart_reason(PON_RESTART_REASON_KERNEL_PANIC);
+#elif defined(TARGET_SOMC_S1BOOT)
+	__raw_writel(0x77665501, restart_reason);
+	qpnp_pon_set_restart_reason(PON_RESTART_REASON_UNKNOWN);
 #endif
 
 	return 0;
