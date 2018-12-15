@@ -106,6 +106,7 @@ static const struct vreg_config vreg_conf[] = {
 };
 
 struct fpc1145_data {
+	struct miscdevice misc;
 	struct device *dev;
 	struct pinctrl *fingerprint_pinctrl;
 	struct pinctrl_state *pinctrl_state[ARRAY_SIZE(pctl_names)];
@@ -130,7 +131,12 @@ struct fpc1145_awake_args {
 	unsigned int timeout;
 };
 
-static struct fpc1145_data *fpc1145_drvdata = NULL;
+struct fpc1145_data *to_fpc1145_data(struct file *fp)
+{
+	struct miscdevice *md = (struct miscdevice *)fp->private_data;
+
+	return container_of(md, struct fpc1145_data, misc);
+}
 
 static int vreg_setup(struct fpc1145_data *fpc1145, fpc_rails_t fpc_rail,
 		      bool enable)
@@ -306,13 +312,15 @@ static int device_prepare(struct fpc1145_data *fpc1145, bool enable)
 
 static int fpc1145_device_open(struct inode *inode, struct file *fp)
 {
-	pm_wakeup_event(fpc1145_drvdata->dev, 1);
+	struct fpc1145_data *fpc1145 = to_fpc1145_data(fp);
+	pm_wakeup_event(fpc1145->dev, 1);
 	return 0;
 }
 
 static int fpc1145_device_release(struct inode *inode, struct file *fp)
 {
-	pm_relax(fpc1145_drvdata->dev);
+	struct fpc1145_data *fpc1145 = to_fpc1145_data(fp);
+	pm_relax(fpc1145->dev);
 	return 0;
 }
 
@@ -324,20 +332,21 @@ static long fpc1145_device_ioctl(struct file *fp, unsigned int cmd,
 	unsigned int timeout = 0;
 	struct fpc1145_awake_args awake_args;
 	void __user *usr = (void __user *)arg;
+	struct fpc1145_data *fpc1145 = to_fpc1145_data(fp);
 
 	switch (cmd) {
 	case FPC_IOCWPREPARE:
-		dev_dbg(fpc1145_drvdata->dev, "%s device\n",
+		dev_dbg(fpc1145->dev, "%s device\n",
 			(arg == 0 ? "Unpreparing" : "Preparing"));
-		rc = device_prepare(fpc1145_drvdata, !!arg);
+		rc = device_prepare(fpc1145, !!arg);
 		break;
 	case FPC_IOCWDEVWAKE:
-		dev_dbg(fpc1145_drvdata->dev, "Setting devwake %lu\n", arg);
-		dev_dbg(fpc1145_drvdata->dev, "WDEVWAKE Not implemented.\n");
+		dev_dbg(fpc1145->dev, "Setting devwake %lu\n", arg);
+		dev_dbg(fpc1145->dev, "WDEVWAKE Not implemented.\n");
 		break;
 	case FPC_IOCWRESET:
-		dev_dbg(fpc1145_drvdata->dev, "Resetting device\n");
-		rc = hw_reset(fpc1145_drvdata);
+		dev_dbg(fpc1145->dev, "Resetting device\n");
+		rc = hw_reset(fpc1145);
 		break;
 	case FPC_IOCWAWAKE:
 		rc = copy_from_user(&awake_args,
@@ -348,66 +357,67 @@ static long fpc1145_device_ioctl(struct file *fp, unsigned int cmd,
 		timeout = min(awake_args.timeout,
 			      (unsigned int)FPC_MAX_HAL_PROCESSING_TIME);
 		if (awake_args.awake) {
-			dev_dbg(fpc1145_drvdata->dev,
-				"Extending wakelock for %dms\n", timeout);
-			pm_wakeup_event(fpc1145_drvdata->dev, timeout);
+			dev_dbg(fpc1145->dev, "Extending wakelock for %dms\n",
+				timeout);
+			pm_wakeup_event(fpc1145->dev, timeout);
 		} else {
-			dev_dbg(fpc1145_drvdata->dev, "Relaxing wakelock\n");
-			pm_relax(fpc1145_drvdata->dev);
+			dev_dbg(fpc1145->dev, "Relaxing wakelock\n");
+			pm_relax(fpc1145->dev);
 		}
 		break;
 	case FPC_IOCRPREPARE:
-		rc = put_user((int8_t)fpc1145_drvdata->prepared, (int *)usr);
+		rc = put_user((int8_t)fpc1145->prepared, (int *)usr);
 		break;
 	case FPC_IOCRDEVWAKE:
-		dev_dbg(fpc1145_drvdata->dev, "RDEVWAKE Not implemented.\n");
+		dev_dbg(fpc1145->dev, "RDEVWAKE Not implemented.\n");
 		break;
 	case FPC_IOCRIRQ:
-		val = gpio_get_value(fpc1145_drvdata->irq_gpio);
+		val = gpio_get_value(fpc1145->irq_gpio);
 		rc = put_user(val, (int *)usr);
 		break;
 	case FPC_IOCRIRQPOLL:
-		val = gpio_get_value(fpc1145_drvdata->irq_gpio);
+		val = gpio_get_value(fpc1145->irq_gpio);
 		if (val) {
 			/* We don't need to wait: IRQ has already fired */
 			rc = put_user(val, (int *)usr);
 			return rc;
 		}
 
-		if (fpc1145_drvdata->irq_fired) {
-			fpc1145_drvdata->irq_fired = false;
-			enable_irq(fpc1145_drvdata->irq);
+		if (fpc1145->irq_fired) {
+			fpc1145->irq_fired = false;
+			enable_irq(fpc1145->irq);
 		}
 
 		rc = wait_event_interruptible_timeout(
-			fpc1145_drvdata->irq_evt, fpc1145_drvdata->irq_fired,
+			fpc1145->irq_evt, fpc1145->irq_fired,
 			msecs_to_jiffies(FPC_IRQPOLL_TIMEOUT_MS));
 		if (rc == -ERESTARTSYS)
 			return rc;
 
-		val = gpio_get_value(fpc1145_drvdata->irq_gpio);
+		val = gpio_get_value(fpc1145->irq_gpio);
 		if (val)
-			pm_wakeup_event(fpc1145_drvdata->dev,
+			pm_wakeup_event(fpc1145->dev,
 					FPC_MAX_HAL_PROCESSING_TIME);
 
 		rc = put_user(val, (int *)usr);
 		break;
 	default:
 		rc = -ENOIOCTLCMD;
-		dev_err(fpc1145_drvdata->dev, "Unknown IOCTL 0x%x.\n", cmd);
+		dev_err(fpc1145->dev, "Unknown IOCTL 0x%x.\n", cmd);
 		break;
 	}
 
 	return rc;
 }
 
-static unsigned int fpc1145_poll_interrupt(struct file *file,
+static unsigned int fpc1145_poll_interrupt(struct file *fp,
 					   struct poll_table_struct *wait)
 {
 	int val = 0;
-	struct device *dev = fpc1145_drvdata->dev;
+	struct fpc1145_data *fpc1145 = to_fpc1145_data(fp);
+	struct device *dev = fpc1145->dev;
 
-	val = gpio_get_value(fpc1145_drvdata->irq_gpio);
+	val = gpio_get_value(fpc1145->irq_gpio);
 	if (val) {
 		/* Early out */
 		dev_dbg(dev, "gpio already triggered\n");
@@ -416,15 +426,15 @@ static unsigned int fpc1145_poll_interrupt(struct file *file,
 	}
 
 	/* Add current file to the waiting list  */
-	poll_wait(file, &fpc1145_drvdata->irq_evt, wait);
+	poll_wait(fp, &fpc1145->irq_evt, wait);
 
 	/* Enable the irq */
-	if (fpc1145_drvdata->irq_fired) {
-		fpc1145_drvdata->irq_fired = false;
-		enable_irq(fpc1145_drvdata->irq);
+	if (fpc1145->irq_fired) {
+		fpc1145->irq_fired = false;
+		enable_irq(fpc1145->irq);
 	}
 
-	val = gpio_get_value(fpc1145_drvdata->irq_gpio);
+	val = gpio_get_value(fpc1145->irq_gpio);
 	if (val) {
 		dev_dbg(dev, "gpio triggered after poll_wait\n");
 		pm_wakeup_event(dev, FPC_MAX_HAL_PROCESSING_TIME);
@@ -473,12 +483,6 @@ static const struct file_operations fpc1145_device_fops = {
 	.unlocked_ioctl = fpc1145_device_ioctl,
 	.compat_ioctl = fpc1145_device_ioctl,
 	.poll = fpc1145_poll_interrupt,
-};
-
-static struct miscdevice fpc1145_misc = {
-	.minor = MISC_DYNAMIC_MINOR,
-	.name = "fingerprint",
-	.fops = &fpc1145_device_fops,
 };
 
 static irqreturn_t fpc1145_irq_handler(int irq, void *handle)
@@ -558,10 +562,15 @@ static int fpc1145_probe(struct platform_device *pdev)
 		goto exit;
 	}
 
+	fpc1145->misc = (struct miscdevice){
+		.minor = MISC_DYNAMIC_MINOR,
+		.name = "fingerprint",
+		.fops = &fpc1145_device_fops,
+	};
+
 	fpc1145->dev = dev;
 	platform_set_drvdata(pdev, fpc1145);
 	dev_set_drvdata(fpc1145->dev, fpc1145);
-	fpc1145_drvdata = fpc1145;
 
 	if (!np) {
 		dev_err(dev, "no of node found\n");
@@ -645,7 +654,7 @@ static int fpc1145_probe(struct platform_device *pdev)
 		(void)device_prepare(fpc1145, true);
 	}
 
-	rc = misc_register(&fpc1145_misc);
+	rc = misc_register(&fpc1145->misc);
 	if (!rc)
 		goto exit;
 
