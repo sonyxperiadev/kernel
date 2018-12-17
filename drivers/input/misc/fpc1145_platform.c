@@ -35,6 +35,8 @@
  * as published by the Free Software Foundation.
  */
 
+#include "cei_fp_detect.h"
+
 #include <linux/delay.h>
 #include <linux/fs.h>
 #include <linux/gpio.h>
@@ -72,6 +74,7 @@
 #define FPC_IOCRDEVWAKE _IOR(FPC_IOC_MAGIC, 0x82, int)
 #define FPC_IOCRIRQ _IOR(FPC_IOC_MAGIC, 0x83, int)
 #define FPC_IOCRIRQPOLL _IOR(FPC_IOC_MAGIC, 0x84, int)
+#define FPC_IOCRHWTYPE _IOR(FPC_IOC_MAGIC, 0x85, int)
 
 static const char *const pctl_names[] = {
 	"fpc1145_reset_reset", "fpc1145_reset_active", "fpc1145_irq_active",
@@ -401,6 +404,11 @@ static long fpc1145_device_ioctl(struct file *fp, unsigned int cmd,
 
 		rc = put_user(val, (int *)usr);
 		break;
+#ifdef CONFIG_ARCH_SONY_NILE
+	case FPC_IOCRHWTYPE:
+		rc = put_user((int)FP_HW_TYPE_FPC, (int *)usr);
+		break;
+#endif
 	default:
 		rc = -ENOIOCTLCMD;
 		dev_err(fpc1145->dev, "Unknown IOCTL 0x%x.\n", cmd);
@@ -553,6 +561,7 @@ static int fpc1145_probe(struct platform_device *pdev)
 	int rc = 0;
 	size_t i;
 	int irqf;
+	int hw_type;
 	struct device_node *np = dev->of_node;
 
 	struct fpc1145_data *fpc1145 =
@@ -581,6 +590,22 @@ static int fpc1145_probe(struct platform_device *pdev)
 	rc = fpc1145_get_regulators(fpc1145);
 	if (rc)
 		goto exit;
+
+#ifdef CONFIG_ARCH_SONY_NILE
+	rc = vreg_setup(fpc1145, VDD_ANA, true);
+	if (rc)
+		goto exit;
+
+	hw_type = cei_fp_module_detect();
+	dev_info(dev, "Detected hw type %d\n", hw_type);
+
+	(void)vreg_setup(fpc1145, VDD_ANA, false);
+
+	if (hw_type != FP_HW_TYPE_FPC) {
+		rc = -ENODEV;
+		goto exit;
+	}
+#endif
 
 	rc = fpc1145_request_named_gpio(fpc1145, "fpc,gpio_irq",
 					&fpc1145->irq_gpio);
@@ -659,6 +684,7 @@ static int fpc1145_probe(struct platform_device *pdev)
 		goto exit;
 
 	dev_info(dev, "%s: ok\n", __func__);
+
 exit:
 	return rc;
 }
