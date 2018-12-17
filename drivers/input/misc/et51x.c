@@ -33,6 +33,8 @@
  * as published by the Free Software Foundation.
  */
 
+#include "cei_fp_detect.h"
+
 #include <linux/delay.h>
 #include <linux/fs.h>
 #include <linux/gpio.h>
@@ -70,6 +72,7 @@
 #define ET51X_IOCRDEVWAKE _IOR(ET51X_IOC_MAGIC, ET51X_IOC_R_BASE + 0x02, int)
 #define ET51X_IOCRIRQ _IOR(ET51X_IOC_MAGIC, ET51X_IOC_R_BASE + 0x03, int)
 #define ET51X_IOCRIRQPOLL _IOR(ET51X_IOC_MAGIC, ET51X_IOC_R_BASE + 0x04, int)
+#define ET51X_IOCRHWTYPE _IOR(ET51X_IOC_MAGIC, ET51X_IOC_R_BASE + 0x05, int)
 
 #define ET51X_REGULATOR_VDD_ANA "vdd_ana"
 
@@ -341,6 +344,11 @@ static long et51x_device_ioctl(struct file *fp, unsigned int cmd,
 
 		rc = put_user(val, (int *)usr);
 		break;
+#ifdef CONFIG_ARCH_SONY_NILE
+	case ET51X_IOCRHWTYPE:
+		rc = put_user((int)FP_HW_TYPE_EGISTEC, (int *)usr);
+		break;
+#endif
 	default:
 		rc = -ENOIOCTLCMD;
 		dev_err(et51x->dev, "Unknown IOCTL 0x%x.\n", cmd);
@@ -469,6 +477,7 @@ static int et51x_probe(struct platform_device *pdev)
 	int rc = 0;
 	size_t i;
 	int irqf;
+	int hw_type;
 	struct device_node *np = dev->of_node;
 
 	struct et51x_data *et51x =
@@ -502,6 +511,22 @@ static int et51x_probe(struct platform_device *pdev)
 		rc = -EINVAL;
 		goto exit;
 	}
+
+#ifdef CONFIG_ARCH_SONY_NILE
+	rc = vreg_setup(et51x, true);
+	if (rc)
+		goto exit;
+
+	hw_type = cei_fp_module_detect();
+	dev_info(dev, "Detected hw type %d\n", hw_type);
+
+	(void)vreg_setup(et51x, false);
+
+	if (hw_type != FP_HW_TYPE_EGISTEC) {
+		rc = -ENODEV;
+		goto exit;
+	}
+#endif
 
 	rc = et51x_request_named_gpio(et51x, "et51x,gpio_irq",
 				      &et51x->irq_gpio);
