@@ -555,6 +555,14 @@ static int fpc1145_get_regulators(struct fpc1145_data *fpc1145)
 	return 0;
 }
 
+static void fpc1145_put_regulators(struct fpc1145_data *fpc1145)
+{
+	unsigned short i = 0;
+
+	for (i = 0; i < FPC_VREG_MAX; i++)
+		devm_regulator_put(fpc1145->vreg[i]);
+}
+
 static int fpc1145_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -602,6 +610,9 @@ static int fpc1145_probe(struct platform_device *pdev)
 	(void)vreg_setup(fpc1145, VDD_ANA, false);
 
 	if (hw_type != FP_HW_TYPE_FPC) {
+		// TODO: When and where are devm resources released??
+		fpc1145_put_regulators(fpc1145);
+		devm_kfree(dev, fpc1145);
 		rc = -ENODEV;
 		goto exit;
 	}
