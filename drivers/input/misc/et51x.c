@@ -523,6 +523,8 @@ static int et51x_probe(struct platform_device *pdev)
 	(void)vreg_setup(et51x, false);
 
 	if (hw_type != FP_HW_TYPE_EGISTEC) {
+		devm_regulator_put(et51x->vdd_ana);
+		devm_kfree(dev, et51x);
 		rc = -ENODEV;
 		goto exit;
 	}
