@@ -2502,6 +2502,7 @@ int mdss_fb_alloc_fb_ion_memory(struct msm_fb_data_type *mfd, size_t fb_size)
 				&mfd->pdev->dev, domain);
 		if (IS_ERR(mfd->fb_attachment)) {
 			rc = PTR_ERR(mfd->fb_attachment);
+			pr_err("fb attachment failure\n");
 			goto err_put;
 		}
 
@@ -2509,6 +2510,7 @@ int mdss_fb_alloc_fb_ion_memory(struct msm_fb_data_type *mfd, size_t fb_size)
 				DMA_BIDIRECTIONAL);
 		if (IS_ERR(mfd->fb_table)) {
 			rc = PTR_ERR(mfd->fb_table);
+			pr_err("fb table failure\n");
 			goto err_detach;
 		}
 	} else {

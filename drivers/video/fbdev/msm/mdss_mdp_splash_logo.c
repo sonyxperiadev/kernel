@@ -157,13 +157,13 @@ static int mdss_mdp_splash_iommu_attach(struct msm_fb_data_type *mfd)
 	 * with early flag attribute
 	 */
 	mdata->handoff_pending = false;
-
+/*
 	ret = mdss_smmu_set_attribute(MDSS_IOMMU_DOMAIN_UNSECURE, EARLY_MAP, 1);
 	if (ret) {
 		pr_err("mdss set attribute failed for early map\n");
 		goto end;
 	}
-
+*/
 	ret = mdss_iommu_ctrl(1);
 	if (IS_ERR_VALUE((unsigned long)ret)) {
 		pr_err("mdss iommu attach failed\n");
@@ -181,11 +181,11 @@ static int mdss_mdp_splash_iommu_attach(struct msm_fb_data_type *mfd)
 		pr_debug("iommu map passed for PA=VA\n");
 		mfd->splash_info.iommu_dynamic_attached = true;
 	}
-
+/*
 	ret = mdss_smmu_set_attribute(MDSS_IOMMU_DOMAIN_UNSECURE, EARLY_MAP, 0);
 	if (ret)
 		pr_err("mdss reset attribute failed for early map\n");
-
+*/
 end:
 	mdata->handoff_pending = true;
 
