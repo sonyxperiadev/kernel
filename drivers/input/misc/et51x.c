@@ -201,17 +201,20 @@ static int hw_reset(struct et51x_data *et51x)
 	int rc = select_pin_ctl(et51x, "et51x_reset_active");
 	if (rc)
 		goto exit;
-	usleep_range(ET51X_RESET_HIGH1_US, ET51X_RESET_HIGH1_US + 100);
+	//usleep_range(ET51X_RESET_HIGH1_US, ET51X_RESET_HIGH1_US + 100);
+	msleep(30);
 
 	rc = select_pin_ctl(et51x, "et51x_reset_reset");
 	if (rc)
 		goto exit;
-	usleep_range(ET51X_RESET_LOW_US, ET51X_RESET_LOW_US + 100);
+	//usleep_range(ET51X_RESET_LOW_US, ET51X_RESET_LOW_US + 100);
+	msleep(20);
 
 	rc = select_pin_ctl(et51x, "et51x_reset_active");
 	if (rc)
 		goto exit;
-	usleep_range(ET51X_RESET_HIGH1_US, ET51X_RESET_HIGH1_US + 100);
+	// usleep_range(ET51X_RESET_HIGH1_US, ET51X_RESET_HIGH1_US + 100);
+	msleep(30);
 
 	irq_gpio = et51x_get_gpio_triggered(et51x);
 	dev_info(dev, "IRQ after reset %d\n", irq_gpio);
@@ -226,23 +229,24 @@ static int device_prepare(struct et51x_data *et51x, bool enable)
 	mutex_lock(&et51x->lock);
 	if (enable && !et51x->prepared) {
 		et51x->prepared = true;
-		select_pin_ctl(et51x, "et51x_reset_reset");
+		// select_pin_ctl(et51x, "et51x_reset_reset");
 
 		rc = vreg_setup(et51x, true);
 		if (rc)
 			goto exit;
 
-		usleep_range(PWR_ON_STEP_SLEEP,
-			     PWR_ON_STEP_SLEEP + PWR_ON_STEP_RANGE2);
+		hw_reset(et51x);
+		// usleep_range(PWR_ON_STEP_SLEEP,
+		// 	     PWR_ON_STEP_SLEEP + PWR_ON_STEP_RANGE2);
 
-		(void)select_pin_ctl(et51x, "et51x_reset_active");
-		usleep_range(PWR_ON_STEP_SLEEP,
-			     PWR_ON_STEP_SLEEP + PWR_ON_STEP_RANGE1);
+		// (void)select_pin_ctl(et51x, "et51x_reset_active");
+		// usleep_range(PWR_ON_STEP_SLEEP,
+		// 	     PWR_ON_STEP_SLEEP + PWR_ON_STEP_RANGE1);
 
 	} else if (!enable && et51x->prepared) {
-		(void)select_pin_ctl(et51x, "et51x_reset_reset");
-		usleep_range(PWR_ON_STEP_SLEEP,
-			     PWR_ON_STEP_SLEEP + PWR_ON_STEP_RANGE2);
+		// (void)select_pin_ctl(et51x, "et51x_reset_reset");
+		// usleep_range(PWR_ON_STEP_SLEEP,
+		// 	     PWR_ON_STEP_SLEEP + PWR_ON_STEP_RANGE2);
 
 		(void)vreg_setup(et51x, false);
 	exit:
