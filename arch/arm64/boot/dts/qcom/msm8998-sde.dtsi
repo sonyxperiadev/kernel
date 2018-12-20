@@ -41,8 +41,8 @@
 			"mmss_smmu_axi_clk",
 			"vsync_clk";
 
-		clock-rate = <0 0 0 412500000 412500000 0 0 0 0 0>;
-		clock-max-rate = <0 0 0 550000000 550000000 0 0 0 0 0>;
+		clock-rate = <0 0 0 412500000 412500000 0 0 0 0 19200000>;
+		clock-max-rate = <0 0 0 550000000 550000000 0 0 0 0 19200000>;
 
 		/* interrupt config */
 		interrupt-parent = <&intc>;
@@ -99,6 +99,8 @@
 		qcom,sde-dither-version = <0x00010000>;
 
 		qcom,sde-te2-off = <0x2000 0x2000 0x0 0x0 0x0>;
+
+		qcom,sde-te-source = <15 15 15 15 15>;
 
 		qcom,sde-cdm-off = <0x7a200>;
 		qcom,sde-cdm-size = <0x224>;
