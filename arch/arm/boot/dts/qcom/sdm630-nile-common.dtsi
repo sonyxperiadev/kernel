@@ -133,7 +133,6 @@
 		fpc,gpio_rst    = <&tlmm 20 0x0>;
 		fpc,gpio_irq    = <&tlmm 72 0x0>;
 		vdd_ana-supply = <&pm660l_l6>;
-		fpc,enable-on-boot;
 		fpc,enable-wakeup;
 
 		pinctrl-names = "fpc1145_reset_reset",
