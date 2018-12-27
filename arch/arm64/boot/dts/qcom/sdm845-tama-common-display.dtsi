@@ -33,6 +33,21 @@
 		};
 	};
 
+	dsi_panel_oled_akatsuki_pwr_supply: dsi_panel_oled_akatsuki_pwr_supply {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		qcom,panel-supply-entry@0 {
+			reg = <0>;
+			qcom,supply-name = "vddio";
+			qcom,supply-min-voltage = <1840000>;
+			qcom,supply-max-voltage = <1840000>;
+			qcom,supply-enable-load = <62000>;
+			qcom,supply-disable-load = <80>;
+			qcom,supply-post-on-sleep = <1>;
+		};
+	};
+
 	dsi_panel_vspvsn_pwr_supply: dsi_panel_vspvsn_pwr_supply {
 		#address-cells = <1>;
 		#size-cells = <0>;

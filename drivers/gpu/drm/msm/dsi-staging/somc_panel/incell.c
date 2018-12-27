@@ -226,6 +226,42 @@ int incell_get_panel_name(void)
 }
 EXPORT_SYMBOL(incell_get_panel_name);
 
+int incell_get_display_pre_sod(void)
+{
+	return somc_panel_get_display_pre_sod_mode();
+}
+EXPORT_SYMBOL(incell_get_display_pre_sod);
+
+int incell_get_display_sod(void)
+{
+	return get_display_sod_mode();
+}
+EXPORT_SYMBOL(incell_get_display_sod);
+
+int incell_get_display_aod(void)
+{
+	return somc_panel_get_display_aod_mode();
+}
+EXPORT_SYMBOL(incell_get_display_aod);
+
+bool incell_get_system_status(void)
+{
+	struct incell_ctrl *incell = incell_get_info();
+	bool ret = false;
+
+	if (!incell) {
+		pr_err("%s: Invalid incell data\n", __func__);
+		return true;
+	}
+
+	pr_debug("%s: ---> status:0x%x\n", __func__, (incell->state));
+	if (incell->state & INCELL_SYSTEM_STATE_ON)
+		ret = true;
+
+	return ret;
+}
+EXPORT_SYMBOL(incell_get_system_status);
+
 void incell_driver_init(struct msm_drm_private *priv)
 {
 	struct dsi_display *display = dsi_display_get_main_display();

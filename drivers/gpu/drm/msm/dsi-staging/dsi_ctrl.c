@@ -1665,6 +1665,9 @@ static int dsi_ctrl_dts_parse(struct dsi_ctrl *dsi_ctrl,
 	dsi_ctrl->hw.cont_splash_enabled = of_property_read_bool(of_node,
 					"qcom,cont-splash-enabled");
 
+	dsi_ctrl->hw.link_hsclk_fullrec = of_property_read_bool(of_node,
+				"qcom,link-hs-clk-always-full-reconfigure");
+
 	return 0;
 }
 

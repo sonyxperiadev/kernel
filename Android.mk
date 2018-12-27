@@ -75,6 +75,14 @@ TARGET_PREBUILT_INT_KERNEL := $(KERNEL_OUT)/arch/$(KERNEL_ARCH)/boot/$(TARGET_PR
 KERNEL_DTB := $(KERNEL_OUT)/arch/$(KERNEL_ARCH)/boot/dts/qcom
 KERNEL_DTB_OUT := $(PRODUCT_OUT)/dtbs
 
+ifneq ($(BOARD_DTBO_IMAGE_NAME),)
+  TARGET_PREBUILT_INT_DTBO_NAME := $(BOARD_DTBO_IMAGE_NAME)
+else
+  TARGET_PREBUILT_INT_DTBO_NAME := dtbo-$(KERNEL_ARCH).img
+endif
+
+KERNEL_DTBO_OUT := $(PRODUCT_OUT)/$(TARGET_PREBUILT_INT_DTBO_NAME)
+
 # Clear this first to prevent accidental poisoning from env
 MAKE_FLAGS :=
 
@@ -154,6 +162,7 @@ $(KERNEL_OUT_STAMP):
 	$(hide) mkdir -p $(KERNEL_MODULES_OUT)
 	$(hide) rm -rf $(KERNEL_DTB_OUT)
 	$(hide) mkdir -p $(KERNEL_DTB_OUT)
+	$(hide) rm -rf $(KERNEL_DTBO_OUT)
 	$(hide) touch $@
 
 $(KERNEL_CONFIG): $(KERNEL_OUT_STAMP) $(KERNEL_DEFCONFIG_SRC)
@@ -221,10 +230,28 @@ kernelconfig: $(KERNEL_OUT_STAMP)
 		 $(MAKE) -C $(KERNEL_SRC) O=$(KERNEL_OUT) ARCH=$(KERNEL_ARCH) $(KERNEL_CROSS_COMPILE) savedefconfig
 	cp $(KERNEL_OUT)/defconfig $(KERNEL_DEFCONFIG_SRC)
 
+ifeq ($(TARGET_NEEDS_DTBOIMAGE),true)
+TARGET_PREBUILT_DTBO := $(KERNEL_DTBO_OUT)
+$(TARGET_PREBUILT_DTBO): TARGET_KERNEL_BINARIES $(AVBTOOL)
+	echo -e ${CL_GRN}"Building DTBO.img"${CL_RST}
+	$(KERNEL_SRC)/scripts/mkdtboimg.py create $(KERNEL_DTBO_OUT) --page_size=${BOARD_KERNEL_PAGESIZE} `find $(KERNEL_DTB) -name "*.dtbo"`
+	$(AVBTOOL) add_hash_footer \
+		--image $@ \
+		--partition_size $(BOARD_DTBOIMG_PARTITION_SIZE) \
+		--partition_name dtbo $(INTERNAL_AVB_DTBO_SIGNING_ARGS) \
+		$(BOARD_AVB_DTBO_ADD_HASH_FOOTER_ARGS)
+endif # TARGET_NEEDS_DTBOIMAGE
+
 ## Install it
 .PHONY: $(PRODUCT_OUT)/kernel
 $(PRODUCT_OUT)/kernel: $(KERNEL_BIN)
 	cp $(KERNEL_BIN) $(PRODUCT_OUT)/kernel
+
+ifeq ($(TARGET_NEEDS_DTBOIMAGE),true)
+.PHONY: $(PRODUCT_OUT)/dtbo.img
+$(PRODUCT_OUT)/dtbo.img: $(KERNEL_DTBO_OUT)
+	cp $(KERNEL_DTBO_OUT) $(PRODUCT_OUT)/dtbo.img
+endif # TARGET_NEEDS_DTBOIMAGE
 
 endif # Sony Kernel version
 endif # Sony AOSP devices

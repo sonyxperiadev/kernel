@@ -461,6 +461,7 @@
 		redistributor-stride = <0x0 0x20000>;
 		interrupts = <1 9 4>;
 		interrupt-parent = <&intc>;
+		arm,gicv3-plat-qcom-legacy;
 	};
 
 	wakegic: qcom,mpm@7781b8 {
@@ -1063,6 +1064,8 @@
 	clock_gpu: qcom,gpucc@5065000 {
 		compatible = "qcom,gpu-sdm660";
 		reg = <0x5065000 0x10000>;
+		clocks = <&clock_gcc GPLL0>;
+		clock-names = "gpll0";
 		#clock-cells = <1>;
 		#reset-cells = <1>;
 	};
@@ -2307,6 +2310,8 @@
 		status = "okay";
 		compatible = "gpio-keys";
 		input-name = "gpio-keys";
+		label = "gpio-keys";
+
 		pinctrl-names = "tlmm_gpio_key_active","tlmm_gpio_key_suspend";
 		pinctrl-0 = <&key_vol_up_default &gpio_key_active>;
 		pinctrl-1 = <&key_vol_up_default &gpio_key_suspend>;

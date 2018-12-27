@@ -1213,7 +1213,7 @@ static struct clk_rcg2 esc0_clk_src = {
 		.parent_names = disp_cc_parent_names_0,
 		.num_parents = ARRAY_SIZE(disp_cc_parent_names_0),
 		.ops = &clk_esc_ops,
-		VDD_DIG_FMAX_MAP2(LOWER, 19200000, NOMINAL, 19200000),
+		VDD_DIG_FMAX_MAP1(LOWER, 19200000),
 	},
 };
 
@@ -1226,7 +1226,7 @@ static struct clk_rcg2 esc1_clk_src = {
 		.parent_names = disp_cc_parent_names_0,
 		.num_parents = ARRAY_SIZE(disp_cc_parent_names_0),
 		.ops = &clk_esc_ops,
-		VDD_DIG_FMAX_MAP2(LOWER, 19200000, NOMINAL, 19200000),
+		VDD_DIG_FMAX_MAP1(LOWER, 19200000),
 	},
 };
 
@@ -2717,7 +2717,7 @@ static struct clk_branch mmss_mdss_mdp_clk = {
 		.hw.init = &(struct clk_init_data) {
 			.name = "mmss_mdss_mdp_clk",
 			.parent_names = (const char*[]) {
-				"mdp_clk_src",
+				"mmss_mdss_mdp_lut_clk",
 			},
 			.num_parents = 1,
 			.flags = CLK_SET_RATE_PARENT | CLK_ENABLE_HAND_OFF,
@@ -2738,6 +2738,7 @@ static struct clk_branch mmss_mdss_mdp_lut_clk = {
 				"mdp_clk_src",
 			},
 			.num_parents = 1,
+			.flags = CLK_SET_RATE_PARENT,
 			.ops = &clk_branch2_ops,
 		},
 	},

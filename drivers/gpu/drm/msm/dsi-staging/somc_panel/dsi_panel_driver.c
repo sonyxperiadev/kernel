@@ -38,6 +38,9 @@
 static BLOCKING_NOTIFIER_HEAD(drm_notifier_list);
 
 static u32 down_period;
+static short display_sod_mode = 0;
+static short display_pre_sod_mode = 0;
+static short display_aod_mode = 0;
 
 struct device virtdev;
 
@@ -228,6 +231,9 @@ int dsi_panel_driver_touch_reset(struct dsi_panel *panel)
 	}
 	spec_pdata = panel->spec_pdata;
 
+	if (!gpio_is_valid(spec_pdata->reset_touch_gpio))
+		return 0;
+
 	if (spec_pdata->count_touch) {
 		rc = gpio_direction_output(spec_pdata->reset_touch_gpio,
 			spec_pdata->sequence_touch[0].level);
@@ -260,6 +266,9 @@ int dsi_panel_driver_touch_reset_ctrl(struct dsi_panel *panel, bool en)
 		return -EINVAL;
 	}
 	spec_pdata = panel->spec_pdata;
+
+	if (!gpio_is_valid(spec_pdata->reset_touch_gpio))
+		return 0;
 
 	gpio_set_value(spec_pdata->reset_touch_gpio, 0);
 	usleep_range(spec_pdata->touch_reset_off * 1000,
@@ -367,6 +376,34 @@ int dsi_panel_driver_touch_power(struct dsi_panel *panel, bool enable)
 		return dsi_panel_driver_touch_power_on(panel);
 	else
 		return dsi_panel_driver_touch_power_off(panel);
+}
+
+int somc_panel_cont_splash_touch_enable(struct dsi_panel *panel)
+{
+	struct panel_specific_pdata *spec_pdata = NULL;
+	int rc;
+
+	if (!panel) {
+		pr_err("%s: Invalid input panel\n", __func__);
+		return -EINVAL;
+	}
+
+	spec_pdata = panel->spec_pdata;
+
+	rc = somc_panel_vreg_ctrl(&spec_pdata->touch_power_info,
+						"touch-avdd", true);
+	if (rc)
+		pr_warn("%s: failed to enable touch-avdd, rc=%d\n",
+				__func__, rc);
+
+	rc = dsi_panel_driver_touch_power(panel, true);
+	if (rc)
+		pr_warn("%s: failed to enable touch vddio, rc=%d\n",
+				__func__, rc);
+
+	dsi_panel_driver_touch_reset(panel);
+
+	return 0;
 }
 
 static void dsi_panel_driver_power_off_ctrl(void)
@@ -569,6 +606,10 @@ int dsi_panel_driver_pre_power_on(struct dsi_panel *panel)
 			usleep_range(down_time * 1000, down_time * 1000 + 100);
 		}
 	}
+
+	spec_pdata->sod_mode = SOD_POWER_ON;
+	spec_pdata->pre_sod_mode = SOD_POWER_ON;
+	spec_pdata->aod_mode = SDE_MODE_DPMS_ON;
 
 	drm_notifier_call_chain(DRM_EXT_EVENT_BEFORE_BLANK, &event);
 
@@ -1107,13 +1148,14 @@ int dsi_panel_driver_parse_gpios(struct dsi_panel *panel,
 					      0);
 	if (!gpio_is_valid(spec_pdata->reset_touch_gpio)) {
 		pr_err("%s: failed get reset touch gpio\n", __func__);
-	}
-
-	rc = dsi_panel_driver_parse_reset_touch_sequence(panel, of_node);
-	if (rc && rc != -EINVAL) {
-		pr_err("%s: failed to parse reset touch sequence, rc=%d\n",
-		       __func__, rc);
-		goto error;
+	} else {
+		rc = dsi_panel_driver_parse_reset_touch_sequence(panel,
+								 of_node);
+		if (rc) {
+			pr_err("%s: failed to parse reset touch sequence\n",
+			       __func__);
+			goto error;
+		}
 	}
 
 	spec_pdata->disp_vddio_gpio = of_get_named_gpio(of_node,
@@ -1191,6 +1233,45 @@ int dsi_panel_mplus_mode_set(struct dsi_panel *panel, int m_mode)
 	return rc;
 }
 
+int dsi_panel_driver_toggle_light_off(struct dsi_panel *panel, bool bl_on)
+{
+	int rc = 0;
+	struct panel_specific_pdata *spec_pdata;
+
+	spec_pdata = panel->spec_pdata;
+
+	if (spec_pdata->light_state != bl_on) {
+		if (!bl_on) {
+			rc = dsi_panel_tx_cmd_set(panel,
+				DSI_CMD_SET_DISPLAY_OFF);
+			if (rc) {
+				pr_err("failed to set display off.\
+					keep current bl_on=%d\n",
+					spec_pdata->light_state);
+				return -EINVAL;
+			} else {
+				spec_pdata->light_state = bl_on;
+				pr_debug("success. bl_on=%d\n",
+					spec_pdata->light_state);
+			}
+		} else {
+			rc = dsi_panel_tx_cmd_set(panel,
+				DSI_CMD_SET_DISPLAY_ON);
+			if (rc) {
+				pr_err("failed to set display on.\
+					keep current bl_on=%d\n",
+					spec_pdata->light_state);
+				return -EINVAL;
+			} else {
+				spec_pdata->light_state = bl_on;
+				pr_debug("success. bl_on=%d\n",
+					spec_pdata->light_state);
+			}
+		}
+	}
+	return rc;
+}
+
 static void dsi_panel_driver_notify_resume(struct dsi_panel *panel)
 {
 	struct drm_ext_event event;
@@ -1236,6 +1317,9 @@ void dsi_panel_driver_post_enable(struct dsi_panel *panel)
 	somc_panel_colormgr_apply_calibrations();
 	somc_panel_fps_cmd_send(panel);
 	dsi_panel_driver_notify_resume(panel);
+
+	/* Set it after resume so that the mXT640u can cancel SOD */
+	display_sod_mode = SOD_POWER_ON;
 }
 
 void dsi_panel_driver_pre_disable(struct dsi_panel  *panel)
@@ -1259,8 +1343,101 @@ static ssize_t dsi_panel_driver_id_show(struct device *dev,
 	return scnprintf(buf, PAGE_SIZE, "%s\n", id);
 }
 
+int somc_panel_set_doze_mode(struct drm_connector *connector,
+		int power_mode, void *disp)
+{
+	struct dsi_display *display = disp;
+	struct dsi_panel *panel = display->panel;
+	struct panel_specific_pdata *spec_pdata;
+	int rc = 0;
 
+	if (!display || !display->panel) {
+		pr_err("invalid display/panel\n");
+		return -EINVAL;
+	}
+	spec_pdata = panel->spec_pdata;
 
+	/* AOD/SOD supported only on OLED display */
+	if (!spec_pdata->oled_disp)
+		return 0;
+
+	pr_debug("somc_panel: set doze mode %d\n", power_mode);
+
+	mutex_lock(&display->display_lock);
+
+	switch (power_mode) {
+		case SDE_MODE_DPMS_ON:
+			pr_debug("Requested DPMS ON state.\n");
+			rc = dsi_panel_set_aod_off(panel);
+			spec_pdata->aod_mode = power_mode;
+			display_aod_mode = 0;
+			dsi_panel_driver_notify_resume(panel);
+			break;
+		case SDE_MODE_DPMS_LP1:
+			pr_info("Entering LP1 state from %d\n",
+					spec_pdata->aod_mode);
+
+			spec_pdata->sod_mode = SOD_POWER_ON;
+			spec_pdata->pre_sod_mode = SOD_POWER_OFF_SKIP;
+			display_sod_mode = spec_pdata->sod_mode;
+			display_pre_sod_mode = spec_pdata->pre_sod_mode;
+
+			if (spec_pdata->aod_mode != SDE_MODE_DPMS_ON)
+				break;
+
+			spec_pdata->aod_mode = power_mode;
+			display_aod_mode = power_mode;
+
+			rc = dsi_panel_set_aod_on(panel);
+			dsi_panel_driver_notify_suspend(panel);
+			break;
+		case SDE_MODE_DPMS_LP2:
+			pr_info("Entering LP2 state from %d\n",
+					spec_pdata->aod_mode);
+
+			/* If we're coming from ON state, pass through LP1 */
+			if (spec_pdata->aod_mode == SDE_MODE_DPMS_ON) {
+				mutex_unlock(&display->display_lock);
+				somc_panel_set_doze_mode(connector,
+							 SDE_MODE_DPMS_LP1,
+							 disp);
+				mutex_lock(&display->display_lock);
+			}
+
+			spec_pdata->sod_mode = SOD_POWER_ON;
+			spec_pdata->pre_sod_mode = SOD_POWER_OFF_SKIP;
+			display_sod_mode = spec_pdata->sod_mode;
+			display_pre_sod_mode = spec_pdata->pre_sod_mode;
+
+			spec_pdata->aod_mode = power_mode;
+			display_aod_mode = power_mode;
+			dsi_panel_driver_notify_suspend(panel);
+			break;
+		case SDE_MODE_DPMS_OFF:
+			pr_info("Entering OFF state from %d\n",
+					spec_pdata->aod_mode);
+
+			spec_pdata->sod_mode = SOD_POWER_OFF;
+			spec_pdata->pre_sod_mode = SOD_POWER_OFF;
+			display_sod_mode = spec_pdata->sod_mode;
+			display_pre_sod_mode = spec_pdata->pre_sod_mode;
+
+			spec_pdata->aod_mode = power_mode;
+			display_aod_mode = power_mode;
+			dsi_panel_driver_notify_suspend(panel);
+			rc = dsi_panel_set_aod_off(panel);
+			break;
+		default:
+			pr_err("Requested unexpected state %d. "
+			       "Disabling AOD.\n", power_mode);
+			rc = dsi_panel_set_aod_off(panel);
+			break;
+	}
+
+	mutex_unlock(&display->display_lock);
+
+	return rc;
+}
 
 
 static ssize_t dsi_panel_aod_mode_store(struct device *dev,
@@ -1305,6 +1482,115 @@ static ssize_t dsi_panel_aod_mode_show(struct device *dev,
 
 	return scnprintf(buf, PAGE_SIZE, "aod_mode = %u\n",
 				spec_pdata->aod_mode);
+}
+
+static ssize_t dsi_panel_pre_sod_mode_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	int mode;
+	struct panel_specific_pdata *spec_pdata = NULL;
+	struct dsi_display *display = dev_get_drvdata(dev);
+
+	spec_pdata = display->panel->spec_pdata;
+
+	if (sscanf(buf, "%d", &mode) < 0) {
+		pr_err("sscanf failed to set mode. keep current mode=%d\n",
+			spec_pdata->pre_sod_mode);
+		return -EINVAL;
+	}
+
+	spec_pdata->pre_sod_mode = mode;
+	pr_info("%s: sod mode setting %d\n", __func__, spec_pdata->pre_sod_mode);
+
+	return count;
+
+}
+
+static ssize_t dsi_panel_pre_sod_mode_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct panel_specific_pdata *spec_pdata = NULL;
+	struct dsi_display *display = dev_get_drvdata(dev);
+
+	spec_pdata = display->panel->spec_pdata;
+
+	return scnprintf(buf, PAGE_SIZE, "pre_sod_mode = %u\n",
+				spec_pdata->pre_sod_mode);
+}
+
+static ssize_t dsi_panel_sod_mode_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	int mode;
+	struct panel_specific_pdata *spec_pdata = NULL;
+	struct dsi_display *display = dev_get_drvdata(dev);
+	struct dsi_panel *panel = display->panel;
+
+	spec_pdata = display->panel->spec_pdata;
+
+	if (sscanf(buf, "%d", &mode) < 0) {
+		pr_err("sscanf failed to set mode. keep current mode=%d\n",
+			spec_pdata->sod_mode);
+		return -EINVAL;
+	}
+	mutex_lock(&display->display_lock);
+
+	if (spec_pdata->sod_mode != mode) {
+		pr_info("%s: current %d request %d\n", __func__,
+			spec_pdata->sod_mode, mode);
+		if (mode == SOD_POWER_ON && spec_pdata->display_onoff_state) {
+			spec_pdata->sod_mode = mode;
+			display_sod_mode = spec_pdata->sod_mode;
+			dsi_panel_driver_notify_resume(panel);
+		} else if (mode == SOD_POWER_ON) {
+			spec_pdata->sod_mode = mode;
+			display_sod_mode = spec_pdata->sod_mode;
+		} else if (mode == SOD_POWER_OFF &&
+			   spec_pdata->display_onoff_state &&
+			   spec_pdata->aod_mode) {
+			pr_info("%s: power off\n", __func__);
+			spec_pdata->sod_mode = mode;
+			display_sod_mode = spec_pdata->sod_mode;
+			dsi_panel_driver_notify_suspend(panel);
+		} else if (mode == SOD_POWER_OFF &&
+			   !spec_pdata->display_onoff_state) {
+			pr_info("%s: power off\n", __func__);
+			spec_pdata->sod_mode = mode;
+			display_sod_mode = spec_pdata->sod_mode;
+			dsi_panel_driver_notify_suspend(panel);
+		}
+	}
+	mutex_unlock(&display->display_lock);
+	return count;
+}
+
+static ssize_t dsi_panel_sod_mode_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct panel_specific_pdata *spec_pdata = NULL;
+	struct dsi_display *display = dev_get_drvdata(dev);
+
+	spec_pdata = display->panel->spec_pdata;
+
+	return scnprintf(buf, PAGE_SIZE, "sod_mode = %u\n", spec_pdata->sod_mode);
+}
+
+int somc_panel_get_display_pre_sod_mode(void)
+{
+	pr_debug("%s: pre_sod mode setting %d\n", __func__, display_sod_mode);
+	return display_pre_sod_mode;
+}
+
+int get_display_sod_mode(void)
+{
+	pr_debug("%s: sod mode setting %d\n", __func__, display_sod_mode);
+	return display_sod_mode;
+}
+
+int somc_panel_get_display_aod_mode(void)
+{
+	pr_debug("%s: sod mode setting %d\n", __func__, display_sod_mode);
+	return display_aod_mode;
 }
 
 static ssize_t dsi_panel_mplus_mode_store(struct device *dev,
@@ -1731,6 +2017,12 @@ static struct device_attribute panel_attributes[] = {
 	__ATTR(aod_mode,  S_IRUSR|S_IRGRP|S_IWUSR|S_IWGRP,
 		dsi_panel_aod_mode_show,
 		dsi_panel_aod_mode_store),
+	__ATTR(pre_sod_mode,  S_IRUSR|S_IRGRP|S_IWUSR|S_IWGRP,
+		dsi_panel_pre_sod_mode_show,
+		dsi_panel_pre_sod_mode_store),
+	__ATTR(sod_mode,  S_IRUSR|S_IRGRP|S_IWUSR|S_IWGRP,
+		dsi_panel_sod_mode_show,
+		dsi_panel_sod_mode_store),
 	__ATTR(mplus_mode,  S_IRUSR|S_IRGRP|S_IWUSR|S_IWGRP,
 		dsi_panel_mplus_mode_show,
 		dsi_panel_mplus_mode_store),

@@ -355,6 +355,32 @@ u64 zpool_get_total_size(struct zpool *zpool)
 	return zpool->driver->total_size(zpool->pool);
 }
 
+/**
+ * zpool_compact() - trigger backend-specific pool compaction
+ * @pool	The zpool to compact
+ *
+ * This returns the total size in bytes of the pool.
+ *
+ * Returns: Number of pages compacted
+ */
+unsigned long zpool_compact(struct zpool *zpool)
+{
+	return zpool->driver->compact ?
+		zpool->driver->compact(zpool->pool) : 0;
+}
+
+/**
+ * zpool_get_num_compacted() - get the number of migrated/compacted pages
+ * @stats       stats to fill in
+ *
+ * Returns: the total number of migrated pages for the pool
+ */
+unsigned long zpool_get_num_compacted(struct zpool *zpool)
+{
+	return zpool->driver->get_num_compacted ?
+		zpool->driver->get_num_compacted(zpool->pool) : 0;
+}
+
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Dan Streetman <ddstreet@ieee.org>");
 MODULE_DESCRIPTION("Common API for compressed memory storage");

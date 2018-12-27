@@ -161,6 +161,12 @@ typedef enum M_PLUS_MODE {
 
 #define M_PLUS_MODE_INIT M_PLUS_MODE_3
 
+enum {
+	SOD_POWER_ON = 0,
+	SOD_POWER_OFF_SKIP,
+	SOD_POWER_OFF,
+};
+
 struct dsi_reset_cfg {
 	struct dsi_reset_seq *seq;
 	u32 count;
@@ -275,6 +281,15 @@ struct dsi_panel_labibb_data {
 	bool ibb_pd_full;
 };
 
+struct somc_panel_adaptive_color {
+	struct drm_msm_pa_hsic picadj_data_br_max;
+	struct drm_msm_pa_hsic picadj_data_default;
+	unsigned int picadj_br_min;
+	unsigned int picadj_br_max;
+	unsigned int pa_invert;
+	bool enable;
+};
+
 struct somc_panel_color_mgr {
 	struct dsi_panel_cmds pre_uv_read_cmds;
 	struct dsi_panel_cmds uv_read_cmds;
@@ -284,10 +299,12 @@ struct somc_panel_color_mgr {
 	struct dsi_pcc_data vivid_pcc_data;
 	struct dsi_pcc_data hdr_pcc_data;
 	struct drm_msm_pa_hsic picadj_data;
+	struct somc_panel_adaptive_color adaptive_color;
 
 	u32 u_data;
 	u32 v_data;
 	int color_mode;
+	unsigned int   cal_bl_point;
 	unsigned short pcc_profile;
 	bool standard_pcc_enable;
 	bool srgb_pcc_enable;
@@ -332,7 +349,10 @@ struct panel_specific_pdata {
 	struct dsi_fps_mode fps_mode;
 
 	int aod_mode;
+	int sod_mode;
+	int pre_sod_mode;
 	int vr_mode;
+	bool light_state;
 
 	struct dsi_m_plus m_plus;
 
@@ -364,9 +384,16 @@ int somc_panel_pcc_setup(struct dsi_display *display);
 int somc_panel_parse_dt_colormgr_config(struct dsi_panel *panel,
 			struct device_node *np);
 int somc_panel_colormgr_register_attr(struct device *dev);
+int somc_panel_send_pa(struct dsi_display *display);
 int somc_panel_colormgr_apply_calibrations(void);
 int somc_panel_color_manager_init(struct dsi_display *display);
 
+/* ColorManager: Adaptive Color */
+int somc_panel_parse_dt_adaptivecolor_config(struct dsi_panel *panel,
+			struct device_node *np);
+void somc_panel_colormgr_update_backlight(struct dsi_panel *panel, u32 bl_lvl);
+
+/* Main */
 void somc_panel_fps_cmd_send(struct dsi_panel *panel);
 int somc_panel_fps_check_state(struct dsi_display *display, int mode_type);
 int somc_panel_parse_dt_chgfps_config(struct dsi_panel *panel,
@@ -374,11 +401,15 @@ int somc_panel_parse_dt_chgfps_config(struct dsi_panel *panel,
 int somc_panel_fps_register_attr(struct device *dev);
 int somc_panel_fps_manager_init(struct dsi_display *display);
 
+int somc_panel_get_display_pre_sod_mode(void);
+int somc_panel_get_display_aod_mode(void);
+int somc_panel_set_doze_mode(struct drm_connector *connector,
+		int power_mode, void *disp);
 int somc_panel_allocate(struct device *dev, struct dsi_panel *panel);
 int somc_panel_init(struct dsi_display *display);
 
 
-
+int somc_panel_cont_splash_touch_enable(struct dsi_panel *panel);
 int dsi_panel_driver_pinctrl_init(struct dsi_panel *panel);
 int dsi_panel_driver_gpio_request(struct dsi_panel *panel);
 int dsi_panel_driver_gpio_release(struct dsi_panel *panel);
@@ -415,6 +446,7 @@ void dsi_panel_driver_oled_short_det_enable(
 			struct panel_specific_pdata *spec_pdata, bool inWork);
 void dsi_panel_driver_oled_short_det_disable(
 			struct panel_specific_pdata *spec_pdata);
+int dsi_panel_driver_toggle_light_off(struct dsi_panel *panel, bool state);
 
 /* For incell driver */
 struct incell_ctrl *incell_get_info(void);
@@ -422,6 +454,7 @@ int dsi_panel_driver_touch_reset_ctrl(struct dsi_panel *panel, bool en);
 bool dsi_panel_driver_is_power_on(unsigned char state);
 bool dsi_panel_driver_is_power_lock(unsigned char state);
 void incell_driver_init(struct msm_drm_private *priv);
+int get_display_sod_mode(void);
 
 /* Qualcomm Original function */
 int dsi_panel_reset(struct dsi_panel *panel);

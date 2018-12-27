@@ -72,6 +72,12 @@ static struct dsi_display *secondary_display;
 static void dsi_display_mask_ctrl_error_interrupts(struct dsi_display *display,
 			u32 mask, bool enable)
 {
+	return primary_display;
+}
+
+static void dsi_display_mask_ctrl_error_interrupts(struct dsi_display *display,
+			u32 mask, bool enable)
+{
 	int i;
 	struct dsi_display_ctrl *ctrl;
 
@@ -990,6 +996,33 @@ static bool dsi_display_get_cont_splash_status(struct dsi_display *display)
 	return true;
 }
 
+/**
+ * dsi_display_get_clk_always_full_reconf - Get HS clks full reconf setting
+ * @dsi_display:         DSI display handle.
+ *
+ * Return: boolean to signify whether full reconfiguration of
+ *	   DSI HS clocks is set to "always enabled".
+ */
+static bool dsi_display_get_clk_always_full_reconf(struct dsi_display *display)
+{
+	u32 val = 0;
+	int i;
+	struct dsi_display_ctrl *ctrl;
+	struct dsi_ctrl_hw *hw;
+
+	for (i = 0; i < display->ctrl_count ; i++) {
+		ctrl = &(display->ctrl[i]);
+		if (!ctrl || !ctrl->ctrl)
+			continue;
+
+		hw = &(ctrl->ctrl->hw);
+		val = hw->link_hsclk_fullrec;
+		if (val)
+			return true;
+	}
+	return false;
+}
+
 int dsi_display_set_power(struct drm_connector *connector,
 		int power_mode, void *disp)
 {
@@ -1152,7 +1185,7 @@ static ssize_t debugfs_misr_read(struct file *file,
 		return 0;
 
 	buf = kzalloc(max_len, GFP_KERNEL);
-	if (!buf)
+	if (ZERO_OR_NULL_PTR(buf))
 		return -ENOMEM;
 
 	mutex_lock(&display->display_lock);
@@ -1183,7 +1216,7 @@ static ssize_t debugfs_misr_read(struct file *file,
 		goto error;
 	}
 
-	if (copy_to_user(user_buf, buf, len)) {
+	if (copy_to_user(user_buf, buf, max_len)) {
 		rc = -EFAULT;
 		goto error;
 	}
@@ -1270,7 +1303,7 @@ static ssize_t debugfs_alter_esd_check_mode(struct file *file,
 		return 0;
 
 	buf = kzalloc(len, GFP_KERNEL);
-	if (!buf)
+	if (ZERO_OR_NULL_PTR(buf))
 		return -ENOMEM;
 
 	if (copy_from_user(buf, user_buf, user_len)) {
@@ -1342,7 +1375,7 @@ static ssize_t debugfs_read_esd_check_mode(struct file *file,
 	}
 
 	buf = kzalloc(len, GFP_KERNEL);
-	if (!buf)
+	if (ZERO_OR_NULL_PTR(buf))
 		return -ENOMEM;
 
 	esd_config = &display->panel->esd_config;
@@ -4152,6 +4185,10 @@ int dsi_display_cont_splash_config(void *dsi_display)
 		return -EINVAL;
 	}
 
+	/* Check for always fully reconfigure HS clocks setting */
+	dsi_display_clk_mngr_set_clk_full_reconf(display->clk_mngr,
+			dsi_display_get_clk_always_full_reconf(display));
+
 	/*
 	 * Verify whether continuous splash is enabled or not.
 	 */
@@ -4887,6 +4924,12 @@ int dsi_display_dev_probe(struct platform_device *pdev)
 			primary_active_node = pdev->dev.of_node;
 		else
 			secondary_active_node = pdev->dev.of_node;
+
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+		if (display->panel->spec_pdata->oled_disp) {
+			dsi_panel_driver_oled_short_det_init_works(display);
+		}
+#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 	}
 	return rc;
 }
@@ -6134,7 +6177,8 @@ int dsi_display_prepare(struct dsi_display *display)
 	}
 
 	if (display->is_cont_splash_enabled)
-		dsi_panel_driver_touch_reset(display->panel);
+		somc_panel_cont_splash_touch_enable(display->panel);
+
 #endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 	goto error;
 

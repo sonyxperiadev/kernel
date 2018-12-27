@@ -2979,8 +2979,11 @@ out_wake_log_root:
 	mutex_unlock(&log_root_tree->log_mutex);
 
 	/*
-	 * The barrier before waitqueue_active is implied by mutex_unlock
+	 * The barrier before waitqueue_active is needed so all the updates
+	 * above are seen by the woken threads. It might not be necessary, but
+	 * proving that seems to be hard.
 	 */
+	smp_mb();
 	if (waitqueue_active(&log_root_tree->log_commit_wait[index2]))
 		wake_up(&log_root_tree->log_commit_wait[index2]);
 out:
@@ -2991,8 +2994,11 @@ out:
 	mutex_unlock(&root->log_mutex);
 
 	/*
-	 * The barrier before waitqueue_active is implied by mutex_unlock
+	 * The barrier before waitqueue_active is needed so all the updates
+	 * above are seen by the woken threads. It might not be necessary, but
+	 * proving that seems to be hard.
 	 */
+	smp_mb();
 	if (waitqueue_active(&root->log_commit_wait[index1]))
 		wake_up(&root->log_commit_wait[index1]);
 	return ret;
@@ -3010,9 +3016,12 @@ static void free_log_tree(struct btrfs_trans_handle *trans,
 	};
 
 	ret = walk_log_tree(trans, log, &wc);
-	/* I don't think this can happen but just in case */
-	if (ret)
-		btrfs_abort_transaction(trans, ret);
+	if (ret) {
+		if (trans)
+			btrfs_abort_transaction(trans, ret);
+		else
+			btrfs_handle_fs_error(log->fs_info, ret, NULL);
+	}
 
 	while (1) {
 		ret = find_first_extent_bit(&log->dirty_log_pages,
@@ -5364,9 +5373,33 @@ static int btrfs_log_all_parents(struct btrfs_trans_handle *trans,
 
 			dir_inode = btrfs_iget(root->fs_info->sb, &inode_key,
 					       root, NULL);
-			/* If parent inode was deleted, skip it. */
-			if (IS_ERR(dir_inode))
-				continue;
+			/*
+			 * If the parent inode was deleted, return an error to
+			 * fallback to a transaction commit. This is to prevent
+			 * getting an inode that was moved from one parent A to
+			 * a parent B, got its former parent A deleted and then
+			 * it got fsync'ed, from existing at both parents after
+			 * a log replay (and the old parent still existing).
+			 * Example:
+			 *
+			 * mkdir /mnt/A
+			 * mkdir /mnt/B
+			 * touch /mnt/B/bar
+			 * sync
+			 * mv /mnt/B/bar /mnt/A/bar
+			 * mv -T /mnt/A /mnt/B
+			 * fsync /mnt/B/bar
+			 * <power fail>
+			 *
+			 * If we ignore the old parent B which got deleted,
+			 * after a log replay we would have file bar linked
+			 * at both parents and the old parent B would still
+			 * exist.
+			 */
+			if (IS_ERR(dir_inode)) {
+				ret = PTR_ERR(dir_inode);
+				goto out;
+			}
 
 			if (ctx)
 				ctx->log_new_dentries = false;

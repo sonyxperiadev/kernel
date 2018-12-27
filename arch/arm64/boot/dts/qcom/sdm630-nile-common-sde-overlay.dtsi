@@ -11,7 +11,7 @@ msm_drm.dsi_display0=dsi_panel_cmd_display:config0";
 };
 
 &soc {
-	dsi_panel_pwr_supply: dsi_panel_pwr_supply {
+	dsi_panel_pwr_supply_truly: dsi_panel_pwr_supply_truly {
 		#address-cells = <1>;
 		#size-cells = <0>;
 
@@ -26,7 +26,37 @@ msm_drm.dsi_display0=dsi_panel_cmd_display:config0";
 		};
 	};
 
-	dsi_panel_vspvsn_pwr_supply: dsi_panel_vspvsn_pwr_supply {
+	dsi_panel_pwr_supply_innolux: dsi_panel_pwr_supply_innolux {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		qcom,panel-supply-entry@0 {
+			reg = <0>;
+			qcom,supply-name = "vddio";
+			qcom,supply-min-voltage = <1650000>;
+			qcom,supply-max-voltage = <1950000>;
+			qcom,supply-enable-load = <9000>;
+			qcom,supply-disable-load = <80>;
+			qcom,supply-post-on-sleep = <10>;
+		};
+	};
+
+	dsi_panel_pwr_supply_csot: dsi_panel_pwr_supply_csot {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		qcom,panel-supply-entry@0 {
+			reg = <0>;
+			qcom,supply-name = "vddio";
+			qcom,supply-min-voltage = <1650000>;
+			qcom,supply-max-voltage = <1950000>;
+			qcom,supply-enable-load = <22000>;
+			qcom,supply-disable-load = <80>;
+			qcom,supply-post-on-sleep = <10>;
+		};
+	};
+
+	dsi_panel_vspvsn_pwr_supply_truly: dsi_panel_vspvsn_pwr_supply_truly {
 		#address-cells = <1>;
 		#size-cells = <0>;
 
@@ -52,6 +82,61 @@ msm_drm.dsi_display0=dsi_panel_cmd_display:config0";
 			qcom,supply-post-off-sleep = <10>;
 		};
 	};
+
+	dsi_panel_vspvsn_pwr_supply_innolux: dsi_panel_vspvsn_pwr_supply_innolux {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		qcom,panel-supply-entry@0 {
+			reg = <0>;
+			qcom,supply-name = "lab";
+			qcom,supply-min-voltage = <5900000>;
+			qcom,supply-max-voltage = <6100000>;
+			qcom,supply-enable-load = <7500>;
+			qcom,supply-disable-load = <100>;
+			qcom,supply-post-on-sleep = <10>;
+			qcom,supply-post-off-sleep = <10>;
+		};
+
+		qcom,panel-supply-entry@1 {
+			reg = <1>;
+			qcom,supply-name = "ibb";
+			qcom,supply-min-voltage = <5900000>;
+			qcom,supply-max-voltage = <6100000>;
+			qcom,supply-enable-load = <5800>;
+			qcom,supply-disable-load = <100>;
+			qcom,supply-post-on-sleep = <10>;
+			qcom,supply-post-off-sleep = <10>;
+		};
+	};
+
+	dsi_panel_vspvsn_pwr_supply_csot: dsi_panel_vspvsn_pwr_supply_csot {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		qcom,panel-supply-entry@0 {
+			reg = <0>;
+			qcom,supply-name = "lab";
+			qcom,supply-min-voltage = <5300000>;
+			qcom,supply-max-voltage = <5700000>;
+			qcom,supply-enable-load = <16000>;
+			qcom,supply-disable-load = <100>;
+			qcom,supply-post-on-sleep = <10>;
+			qcom,supply-post-off-sleep = <10>;
+		};
+
+		qcom,panel-supply-entry@1 {
+			reg = <1>;
+			qcom,supply-name = "ibb";
+			qcom,supply-min-voltage = <5300000>;
+			qcom,supply-max-voltage = <5700000>;
+			qcom,supply-enable-load = <7000>;
+			qcom,supply-disable-load = <100>;
+			qcom,supply-post-on-sleep = <10>;
+			qcom,supply-post-off-sleep = <10>;
+		};
+	};
+
 
 	/* SDE */
 	dsi_panel_cmd_display: qcom,dsi-display@12 {

@@ -598,7 +598,14 @@ static int wcd_mbhc_get_plug_from_adc(struct wcd_mbhc *mbhc, int adc_result)
 	hph_thr = wcd_mbhc_adc_get_hph_thres(mbhc);
 
 	if (adc_result < hph_thr)
+#ifdef CONFIG_ARCH_SONY_TAMA
+		if (mbhc->force_linein)
+			plug_type = MBHC_PLUG_TYPE_HIGH_HPH;
+		else
+			plug_type = MBHC_PLUG_TYPE_HEADPHONE;
+#else
 		plug_type = MBHC_PLUG_TYPE_HEADPHONE;
+#endif
 	else if (adc_result > hs_thr)
 		plug_type = MBHC_PLUG_TYPE_HIGH_HPH;
 	else
@@ -629,6 +636,12 @@ static void wcd_correct_swch_plug(struct work_struct *work)
 
 	mbhc = container_of(work, struct wcd_mbhc, correct_plug_swch);
 	codec = mbhc->codec;
+
+#ifdef CONFIG_ARCH_SONY_TAMA
+	/* Wait for debounce time 200ms for extension cable */
+	if (mbhc->extn_cable_inserted)
+		msleep(200);
+#endif
 
 	micbias_mv = wcd_mbhc_get_micbias(mbhc);
 	hs_threshold = wcd_mbhc_adc_get_hs_thres(mbhc);
@@ -836,7 +849,13 @@ correct_plug_type:
 			goto enable_supply;
 		}
 	}
+
+#ifdef CONFIG_ARCH_SONY_TAMA
+	if (plug_type == MBHC_PLUG_TYPE_HIGH_HPH &&
+	    !mbhc->force_linein) {
+#else
 	if (plug_type == MBHC_PLUG_TYPE_HIGH_HPH) {
+#endif
 		if (wcd_is_special_headset(mbhc)) {
 			pr_debug("%s: Special headset found %d\n",
 					__func__, plug_type);
@@ -1090,6 +1109,9 @@ static irqreturn_t wcd_mbhc_adc_hs_ins_irq(int irq, void *data)
 	WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_ELECT_SCHMT_ISRC, 0);
 	WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_ELECT_ISRC_EN, 0);
 	mbhc->is_extn_cable = true;
+#ifdef CONFIG_ARCH_SONY_TAMA
+	mbhc->extn_cable_inserted = true;
+#endif
 	mbhc->btn_press_intr = false;
 	wcd_mbhc_adc_detect_plug_type(mbhc);
 	WCD_MBHC_RSC_UNLOCK(mbhc);

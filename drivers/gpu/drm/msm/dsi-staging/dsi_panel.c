@@ -119,7 +119,11 @@ int dsi_dsc_create_pps_buf_cmd(struct msm_display_dsc_info *dsc, char *buf,
 	*bp++ = 1;
 	*bp++ = 0;
 	*bp++ = 0;
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+	*bp++ = 28;
+#else
 	*bp++ = 10;
+#endif
 	*bp++ = 0;
 	*bp++ = 128;
 
@@ -755,6 +759,28 @@ static int dsi_panel_update_backlight(struct dsi_panel *panel,
 	return rc;
 }
 
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+static int dsi_panel_set_aod_change(struct dsi_panel *panel, u32 bl_lvl)
+{
+	int rc = 0;
+
+	if (!panel) {
+		pr_err("invalid params\n");
+		return -EINVAL;
+	}
+
+	if (bl_lvl < AOD_MODE_THRESHOLD)
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_AOD_LOW);
+	else
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_AOD_HIGH);
+
+	if (rc)
+		pr_err("[%s] failed to send DSI_CMD_SET_AOD_LOW or HIGH cmd, rc=%d\n",
+		       panel->name, rc);
+	return rc;
+}
+#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
+
 int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 {
 	int rc = 0;
@@ -766,6 +792,8 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 	pr_debug("backlight type:%d lvl:%d\n", bl->type, bl_lvl);
 #ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
 	if (panel->spec_pdata->aod_mode)
+		return dsi_panel_set_aod_change(panel, bl_lvl);
+	if (panel->spec_pdata->vr_mode)
 		return rc;
 #endif
 	switch (bl->type) {
@@ -773,7 +801,28 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 		led_trigger_event(bl->wled, bl_lvl);
 		break;
 	case DSI_BACKLIGHT_DCS:
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+		if (!bl_lvl) {
+			pr_debug("Backlight is %d! set backlight OFF \n",
+				bl_lvl);
+			dsi_panel_driver_toggle_light_off(panel,
+				DISPLAY_BL_OFF);
+		} else {
+			if (bl_lvl < DISPLAY_BL_MIN) {
+				bl_lvl = DISPLAY_BL_MIN;
+				pr_debug("Set Backlight to %d! \n", bl_lvl);
+			}
+			dsi_panel_driver_toggle_light_off(panel,
+				DISPLAY_BL_ON);
+			rc = dsi_panel_update_backlight(panel, bl_lvl);
+			if (rc == 0)
+				somc_panel_colormgr_update_backlight(panel,
+								     bl_lvl);
+		}
+		break;
+#else
 		rc = dsi_panel_update_backlight(panel, bl_lvl);
+#endif
 		break;
 	default:
 		pr_err("Backlight type(%d) not supported\n", bl->type);
@@ -1594,9 +1643,13 @@ const char *cmd_set_prop_map[DSI_CMD_SET_MAX] = {
 	"somc,fps-mode-on-rr-off",
 	"somc,fps-mode-on-rr-on",
 	"somc,mdss-dsi-aod-on-command",
+	"somc,mdss-dsi-aod-low-command",
+	"somc,mdss-dsi-aod-high-command",
 	"somc,mdss-dsi-aod-off-command",
 	"somc,mdss-dsi-vr-on-command",
 	"somc,mdss-dsi-vr-off-command",
+	"somc,mdss-dsi-display-off-command",
+	"somc,mdss-dsi-display-on-command",
 #endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 };
 
@@ -1632,9 +1685,13 @@ const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
 	"somc,fps-mode-on-rr-off-state",
 	"somc,fps-mode-on-rr-on-state",
 	"somc,mdss-dsi-aod-on-command-state",
+	"somc,mdss-dsi-aod-low-command-state",
+	"somc,mdss-dsi-aod-high-command-state",
 	"somc,mdss-dsi-aod-off-command-state",
 	"somc,mdss-dsi-vr-on-command-state",
 	"somc,mdss-dsi-vr-off-command-state",
+	"somc,mdss-dsi-display-off-command-state",
+	"somc,mdss-dsi-display-on-command-state",
 #endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 };
 
@@ -1700,14 +1757,14 @@ static int dsi_panel_create_cmd_packets(const char *data,
 	return rc;
 error_free_payloads:
 	for (i = i - 1; i >= 0; i--) {
-		cmd--;
-		kfree(cmd->msg.tx_buf);
+		kfree(cmd[i].msg.tx_buf);
+		cmd[i].msg.tx_buf = NULL;
 	}
 
 	return rc;
 }
 
-void dsi_panel_destroy_cmd_packets(struct dsi_panel_cmd_set *set)
+static void dsi_panel_destroy_cmds_packets_buf(struct dsi_panel_cmd_set *set)
 {
 	u32 i = 0;
 	struct dsi_cmd_desc *cmd;
@@ -1715,9 +1772,15 @@ void dsi_panel_destroy_cmd_packets(struct dsi_panel_cmd_set *set)
 	for (i = 0; i < set->count; i++) {
 		cmd = &set->cmds[i];
 		kfree(cmd->msg.tx_buf);
+		cmd->msg.tx_buf = NULL;
 	}
+}
 
+static void dsi_panel_destroy_cmd_packets(struct dsi_panel_cmd_set *set)
+{
+	dsi_panel_destroy_cmds_packets_buf(set);
 	kfree(set->cmds);
+	set->count = 0;
 }
 
 static int dsi_panel_alloc_cmd_packets(struct dsi_panel_cmd_set *cmd,
@@ -3359,10 +3422,13 @@ void dsi_panel_put_mode(struct dsi_display_mode *mode)
 	if (!mode->priv_info)
 		return;
 
+	kfree(mode->priv_info->phy_timing_val);
+
 	for (i = 0; i < DSI_CMD_SET_MAX; i++)
 		dsi_panel_destroy_cmd_packets(&mode->priv_info->cmd_sets[i]);
 
 	kfree(mode->priv_info);
+	mode->priv_info = NULL;
 }
 
 int dsi_panel_get_mode(struct dsi_panel *panel,
@@ -3570,9 +3636,9 @@ int dsi_panel_update_pps(struct dsi_panel *panel)
 	if (rc) {
 		pr_err("[%s] failed to send DSI_CMD_SET_PPS cmds, rc=%d\n",
 			panel->name, rc);
-		goto error;
 	}
 
+	dsi_panel_destroy_cmds_packets_buf(set);
 error:
 	mutex_unlock(&panel->panel_lock);
 	return rc;

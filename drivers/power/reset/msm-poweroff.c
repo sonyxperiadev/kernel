@@ -56,7 +56,7 @@
 #if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_NILE) || \
     defined(CONFIG_ARCH_SONY_TAMA)
  #define TARGET_SOMC_XBOOT
-#if defined(CONFIG_ARCH_SONY_NILE)
+#if defined(CONFIG_ARCH_SONY_NILE) || defined(CONFIG_ARCH_SONY_TAMA)
  #define TARGET_SOMC_XBOOT_FEATURE_AB
 #endif
 #endif
@@ -776,6 +776,9 @@ skip_sysfs_create:
 #ifdef TARGET_SOMC_XBOOT
 	__raw_writel(0xC0DEDEAD, restart_reason);
 	qpnp_pon_set_restart_reason(PON_RESTART_REASON_KERNEL_PANIC);
+#elif defined(TARGET_SOMC_S1BOOT)
+	__raw_writel(0x77665501, restart_reason);
+	qpnp_pon_set_restart_reason(PON_RESTART_REASON_UNKNOWN);
 #endif
 
 	return 0;

@@ -10,6 +10,11 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
+/*
+ * NOTE: This file has been modified by Sony Mobile Communications Inc.
+ * Modifications are Copyright (c) 2018 Sony Mobile Communications Inc,
+ * and licensed under the license of the file.
+ */
 
 #include <linux/bitmap.h>
 #include <linux/bitops.h>
@@ -1833,6 +1838,9 @@ static void msm_geni_serial_set_termios(struct uart_port *uport,
 	struct msm_geni_serial_port *port = GET_DEV_PORT(uport);
 	unsigned long clk_rate;
 	unsigned long flags;
+
+	if (!termios->c_cflag)
+		return;
 
 	if (!uart_console(uport)) {
 		int ret = msm_geni_serial_power_on(uport);

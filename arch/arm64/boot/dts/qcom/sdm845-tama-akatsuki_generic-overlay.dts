@@ -1,4 +1,4 @@
-/* arch/arm64/boot/dts/somc/somc-tama-nfc_pn553.dtsi
+/* Copyright (c) 2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -17,24 +17,23 @@
  * published by the Free Software Foundation.
  */
 
-&qupv3_se10_i2c {
-	nfc@28 {
-		compatible = "nxp,pn553";
-		reg = <0x28>;
-		interrupt-parent = <&tlmm>;
-		interrupts = <63 0x1>;
-		nxp,irq_gpio = <&tlmm 63 0x00>;
-		nxp,dwld_en = <&tlmm 62 0x00>;
-		nxp,ven = <&tlmm 12 0x01>;
-		qcom,clk-src = "BBCLK3";
-		qcom,clk-gpio = <&pm8998_gpios 21 0x00>;
-		clock-names = "nfc_clk";
-		clocks = <&clock_rpmh RPMH_LN_BB_CLK3>;
-	};
-};
+/dts-v1/;
+/plugin/;
 
-&soc {
-	nfc,pm-ops {
-		compatible = "sony,pn553-pm-ops";
-	};
+#include <dt-bindings/clock/qcom,gcc-sdm845.h>
+#include <dt-bindings/clock/qcom,camcc-sdm845.h>
+#include <dt-bindings/clock/qcom,dispcc-sdm845.h>
+#include <dt-bindings/clock/qcom,rpmh.h>
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+
+#include "../qcom/sdm845-sde-display.dtsi"
+#include "../qcom/sdm845-mtp.dtsi"
+#include "../qcom/sdm845-audio-overlay.dtsi"
+#include "sdm845-tama-akatsuki_generic.dtsi"
+
+/ {
+	model = "Sony Mobile Communications. Akatsuki(SDM845 v1)";
+	compatible = "somc,akatsuki-row", "qcom,sdm845", "qcom,mtp";
+	qcom,msm-id = <321 0x10000>;
+	qcom,board-id = <8 0>;
 };

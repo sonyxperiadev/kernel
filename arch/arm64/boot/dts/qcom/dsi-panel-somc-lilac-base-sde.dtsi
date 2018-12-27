@@ -95,8 +95,6 @@
 		qcom,mdss-dsi-panel-peak-brightness = <7000000>;
 		qcom,mdss-dsi-panel-blackness-level = <4646>;
 
-		qcom,mdss-dsi-panel-clockrate = <899000000>;
-
 		somc,lcd-id = <0>;
 		somc,lcd-id-adc = <801000 917000>;
 		somc,mdss-dsi-master;
@@ -184,8 +182,6 @@
 								05 01 00 00 64 00 01 10];
 				qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
 				qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
-
-				qcom,mdss-dsi-panel-clockrate = <899000000>;
 
 				qcom,mdss-tear-check-sync-init-val = <1280>;
 				qcom,mdss-tear-check-start-pos = <1280>;
@@ -277,8 +273,6 @@
 		qcom,mdss-dsi-panel-hdr-color-primaries = <14940 15790 33800 15700 10950 33800 7450 2300>;
 		qcom,mdss-dsi-panel-peak-brightness = <7000000>;
 		qcom,mdss-dsi-panel-blackness-level = <4646>;
-
-		qcom,mdss-dsi-panel-clockrate = <449500000>;
 
 		somc,lcd-id = <0>;
 		somc,lcd-id-adc = <215000 256000>;
@@ -378,8 +372,6 @@
 				qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
 				qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
 
-				qcom,mdss-dsi-panel-clockrate = <899000000>;
-
 				qcom,mdss-tear-check-sync-init-val = <1280>;
 				qcom,mdss-tear-check-start-pos = <1280>;
 				qcom,mdss-tear-check-rd-ptr-trigger-intr = <1281>;
@@ -470,8 +462,6 @@
 		qcom,mdss-dsi-panel-hdr-color-primaries = <14940 15790 33800 15700 10950 33800 7450 2300>;
 		qcom,mdss-dsi-panel-peak-brightness = <7000000>;
 		qcom,mdss-dsi-panel-blackness-level = <4646>;
-
-		qcom,mdss-dsi-panel-clockrate = <899000000>;
 
 		somc,lcd-id = <0>;
 		somc,lcd-id-adc = <0 0x7fffffff>;

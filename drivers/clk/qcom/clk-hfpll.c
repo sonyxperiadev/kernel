@@ -543,6 +543,12 @@ static void clk_hfpll_init(struct clk_hw *hw)
 	}
 }
 
+static void clk_hf2_pll_init(struct clk_hw *hw)
+{
+	struct clk_hfpll *h = to_clk_hfpll(hw);
+	spin_lock_init(&h->lock);
+}
+
 static int hfpll_is_enabled(struct clk_hw *hw)
 {
 	struct clk_hfpll *h = to_clk_hfpll(hw);
@@ -574,5 +580,6 @@ const struct clk_ops clk_ops_hf2_pll = {
 	.set_rate = clk_hf2_pll_set_rate,
 	.recalc_rate = clk_hfpll_recalc_rate,
 	.list_registers = clk_hf2_pll_list_registers,
+	.init = clk_hf2_pll_init,
 };
 EXPORT_SYMBOL_GPL(clk_ops_hf2_pll);

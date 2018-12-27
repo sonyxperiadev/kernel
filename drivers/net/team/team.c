@@ -1004,7 +1004,8 @@ static void team_port_disable(struct team *team,
 static void ___team_compute_features(struct team *team)
 {
 	struct team_port *port;
-	u32 vlan_features = TEAM_VLAN_FEATURES & NETIF_F_ALL_FOR_ALL;
+	netdev_features_t vlan_features = TEAM_VLAN_FEATURES &
+					  NETIF_F_ALL_FOR_ALL;
 	netdev_features_t enc_features  = TEAM_ENC_FEATURES;
 	unsigned short max_hard_header_len = ETH_HLEN;
 	unsigned int dst_release_flag = IFF_XMIT_DST_RELEASE |
@@ -1168,6 +1169,11 @@ static int team_port_add(struct team *team, struct net_device *port_dev)
 		netdev_err(dev, "Device %s is already a port "
 				"of a team device\n", portname);
 		return -EBUSY;
+	}
+
+	if (dev == port_dev) {
+		netdev_err(dev, "Cannot enslave team device to itself\n");
+		return -EINVAL;
 	}
 
 	if (port_dev->features & NETIF_F_VLAN_CHALLENGED &&
