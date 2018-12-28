@@ -2125,11 +2125,11 @@ int nf_conntrack_init_start(void)
 		 * >= 4GB machines have 65536 buckets.
 		 */
 		nf_conntrack_htable_size
-			= (((totalram_pages << PAGE_SHIFT) / 16384)
+			= (((totalram_pages() << PAGE_SHIFT) / 16384)
 			   / sizeof(struct hlist_head));
-		if (totalram_pages > (4 * (1024 * 1024 * 1024 / PAGE_SIZE)))
+		if (totalram_pages() > (4 * (1024 * 1024 * 1024 / PAGE_SIZE)))
 			nf_conntrack_htable_size = 65536;
-		else if (totalram_pages > (1024 * 1024 * 1024 / PAGE_SIZE))
+		else if (totalram_pages() > (1024 * 1024 * 1024 / PAGE_SIZE))
 			nf_conntrack_htable_size = 16384;
 		if (nf_conntrack_htable_size < 32)
 			nf_conntrack_htable_size = 32;

@@ -708,7 +708,7 @@ static void __init set_non_bootmem_pages_init(void)
 
 #ifdef CONFIG_HIGHMEM
 		if (idx == ZONE_HIGHMEM)
-			totalhigh_pages += z->spanned_pages;
+			totalhigh_pages_add(z->spanned_pages);
 #endif
 		if (kdata_huge) {
 			unsigned long percpu_pfn = node_percpu_pfn[nid];
