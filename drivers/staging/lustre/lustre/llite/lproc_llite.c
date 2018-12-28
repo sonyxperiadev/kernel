@@ -244,9 +244,9 @@ static ssize_t max_read_ahead_mb_store(struct kobject *kobj,
 
 	pages_number *= 1 << (20 - PAGE_SHIFT); /* MB -> pages */
 
-	if (pages_number > totalram_pages / 2) {
+	if (pages_number > totalram_pages() / 2) {
 		CERROR("can't set file readahead more than %lu MB\n",
-		       totalram_pages >> (20 - PAGE_SHIFT + 1)); /*1/2 of RAM*/
+		       totalram_pages() >> (20 - PAGE_SHIFT + 1)); /*1/2 of RAM*/
 		return -ERANGE;
 	}
 
@@ -411,10 +411,10 @@ static ssize_t ll_max_cached_mb_seq_write(struct file *file,
 		return -ERANGE;
 	pages_number = (long)val;
 
-	if (pages_number < 0 || pages_number > totalram_pages) {
+	if (pages_number < 0 || pages_number > totalram_pages()) {
 		CERROR("%s: can't set max cache more than %lu MB\n",
 		       ll_get_fsname(sb, NULL, 0),
-		       totalram_pages >> (20 - PAGE_SHIFT));
+		       totalram_pages() >> (20 - PAGE_SHIFT));
 		return -ERANGE;
 	}
 

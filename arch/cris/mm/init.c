@@ -43,7 +43,7 @@ void free_init_pages(const char *what, unsigned long begin, unsigned long end)
 		ClearPageReserved(virt_to_page(addr));
 		init_page_count(virt_to_page(addr));
 		free_page(addr);
-		totalram_pages++;
+		totalram_pages_inc();
 	}
 
 	printk(KERN_INFO "Freeing %s: %ldk freed\n", what, (end - begin) >> 10);

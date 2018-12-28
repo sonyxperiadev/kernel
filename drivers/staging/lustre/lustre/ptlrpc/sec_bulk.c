@@ -140,7 +140,7 @@ int sptlrpc_proc_enc_pool_seq_show(struct seq_file *m, void *v)
 		   "low free mark:	   %lu\n"
 		   "max waitqueue depth:     %u\n"
 		   "max wait time:	   %ld/%lu\n",
-		   totalram_pages,
+		   totalram_pages(),
 		   PAGES_PER_POOL,
 		   page_pools.epp_max_pages,
 		   page_pools.epp_max_pools,
@@ -378,7 +378,7 @@ int sptlrpc_enc_pool_init(void)
 	 * maximum capacity is 1/8 of total physical memory.
 	 * is the 1/8 a good number?
 	 */
-	page_pools.epp_max_pages = totalram_pages / 8;
+	page_pools.epp_max_pages = totalram_pages() / 8;
 	page_pools.epp_max_pools = npages_to_npools(page_pools.epp_max_pages);
 
 	init_waitqueue_head(&page_pools.epp_waitq);
