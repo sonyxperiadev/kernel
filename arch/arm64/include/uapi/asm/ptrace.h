@@ -22,7 +22,7 @@
 #include <linux/types.h>
 
 #include <asm/hwcap.h>
-#include <asm/sigcontext.h>
+#include <asm/sve_context.h>
 
 
 /*
@@ -177,39 +177,36 @@ struct user_sve_header {
  * Additional data might be appended in the future.
  */
 
-#define SVE_PT_SVE_ZREG_SIZE(vq)	SVE_SIG_ZREG_SIZE(vq)
-#define SVE_PT_SVE_PREG_SIZE(vq)	SVE_SIG_PREG_SIZE(vq)
-#define SVE_PT_SVE_FFR_SIZE(vq)		SVE_SIG_FFR_SIZE(vq)
+#define SVE_PT_SVE_ZREG_SIZE(vq)	__SVE_ZREG_SIZE(vq)
+#define SVE_PT_SVE_PREG_SIZE(vq)	__SVE_PREG_SIZE(vq)
+#define SVE_PT_SVE_FFR_SIZE(vq)		__SVE_FFR_SIZE(vq)
 #define SVE_PT_SVE_FPSR_SIZE		sizeof(__u32)
 #define SVE_PT_SVE_FPCR_SIZE		sizeof(__u32)
-
-#define __SVE_SIG_TO_PT(offset) \
-	((offset) - SVE_SIG_REGS_OFFSET + SVE_PT_REGS_OFFSET)
 
 #define SVE_PT_SVE_OFFSET		SVE_PT_REGS_OFFSET
 
 #define SVE_PT_SVE_ZREGS_OFFSET \
-	__SVE_SIG_TO_PT(SVE_SIG_ZREGS_OFFSET)
+	(SVE_PT_REGS_OFFSET + __SVE_ZREGS_OFFSET)
 #define SVE_PT_SVE_ZREG_OFFSET(vq, n) \
-	__SVE_SIG_TO_PT(SVE_SIG_ZREG_OFFSET(vq, n))
+	(SVE_PT_REGS_OFFSET + __SVE_ZREG_OFFSET(vq, n))
 #define SVE_PT_SVE_ZREGS_SIZE(vq) \
-	(SVE_PT_SVE_ZREG_OFFSET(vq, SVE_NUM_ZREGS) - SVE_PT_SVE_ZREGS_OFFSET)
+	(SVE_PT_SVE_ZREG_OFFSET(vq, __SVE_NUM_ZREGS) - SVE_PT_SVE_ZREGS_OFFSET)
 
 #define SVE_PT_SVE_PREGS_OFFSET(vq) \
-	__SVE_SIG_TO_PT(SVE_SIG_PREGS_OFFSET(vq))
+	(SVE_PT_REGS_OFFSET + __SVE_PREGS_OFFSET(vq))
 #define SVE_PT_SVE_PREG_OFFSET(vq, n) \
-	__SVE_SIG_TO_PT(SVE_SIG_PREG_OFFSET(vq, n))
+	(SVE_PT_REGS_OFFSET + __SVE_PREG_OFFSET(vq, n))
 #define SVE_PT_SVE_PREGS_SIZE(vq) \
-	(SVE_PT_SVE_PREG_OFFSET(vq, SVE_NUM_PREGS) - \
+	(SVE_PT_SVE_PREG_OFFSET(vq, __SVE_NUM_PREGS) - \
 		SVE_PT_SVE_PREGS_OFFSET(vq))
 
 #define SVE_PT_SVE_FFR_OFFSET(vq) \
-	__SVE_SIG_TO_PT(SVE_SIG_FFR_OFFSET(vq))
+	(SVE_PT_REGS_OFFSET + __SVE_FFR_OFFSET(vq))
 
 #define SVE_PT_SVE_FPSR_OFFSET(vq)				\
 	((SVE_PT_SVE_FFR_OFFSET(vq) + SVE_PT_SVE_FFR_SIZE(vq) +	\
-			(SVE_VQ_BYTES - 1))			\
-		/ SVE_VQ_BYTES * SVE_VQ_BYTES)
+			(__SVE_VQ_BYTES - 1))			\
+		/ __SVE_VQ_BYTES * __SVE_VQ_BYTES)
 #define SVE_PT_SVE_FPCR_OFFSET(vq) \
 	(SVE_PT_SVE_FPSR_OFFSET(vq) + SVE_PT_SVE_FPSR_SIZE)
 
@@ -220,8 +217,8 @@ struct user_sve_header {
 
 #define SVE_PT_SVE_SIZE(vq, flags)					\
 	((SVE_PT_SVE_FPCR_OFFSET(vq) + SVE_PT_SVE_FPCR_SIZE		\
-			- SVE_PT_SVE_OFFSET + (SVE_VQ_BYTES - 1))	\
-		/ SVE_VQ_BYTES * SVE_VQ_BYTES)
+			- SVE_PT_SVE_OFFSET + (__SVE_VQ_BYTES - 1))	\
+		/ __SVE_VQ_BYTES * __SVE_VQ_BYTES)
 
 #define SVE_PT_SIZE(vq, flags)						\
 	 (((flags) & SVE_PT_REGS_MASK) == SVE_PT_REGS_SVE ?		\
