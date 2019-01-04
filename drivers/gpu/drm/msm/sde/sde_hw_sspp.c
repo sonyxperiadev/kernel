@@ -366,7 +366,12 @@ static void sde_hw_sspp_setup_format(struct sde_hw_pipe *ctx,
 		SDE_REG_WRITE(c, SSPP_FETCH_CONFIG,
 			SDE_FETCH_CONFIG_RESET_VALUE |
 			ctx->mdp->highest_bank_bit << 18);
-		if (IS_UBWC_20_SUPPORTED(ctx->catalog->ubwc_version)) {
+		if (IS_UBWC_10_SUPPORTED(ctx->catalog->ubwc_version)) {
+			alpha_en_mask = const_alpha_en ? BIT(31) : 0;
+			SDE_REG_WRITE(c, SSPP_UBWC_STATIC_CTRL,
+				alpha_en_mask | (ctx->mdp->ubwc_swizzle & 0x1) |
+				BIT(8) | (ctx->mdp->highest_bank_bit << 4));
+		} else if (IS_UBWC_20_SUPPORTED(ctx->catalog->ubwc_version)) {
 			alpha_en_mask = const_alpha_en ? BIT(31) : 0;
 			SDE_REG_WRITE(c, SSPP_UBWC_STATIC_CTRL,
 				alpha_en_mask | (ctx->mdp->ubwc_swizzle) |
