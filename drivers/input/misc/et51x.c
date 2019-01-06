@@ -498,38 +498,36 @@ static int et51x_probe(struct platform_device *pdev)
 		goto exit;
 	}
 
-#ifdef CONFIG_ARCH_SONY_NILE
 	rc = vreg_setup(et51x, true);
 	if (rc)
 		goto exit;
 
+#ifdef CONFIG_ARCH_SONY_NILE
 	hw_type = cei_fp_module_detect();
 	dev_info(dev, "Detected hw type %d\n", hw_type);
 
-	(void)vreg_setup(et51x, false);
-
 	if (hw_type != FP_HW_TYPE_EGISTEC) {
 		rc = -ENODEV;
-		goto exit;
+		goto exit_powerdown;
 	}
 #endif
 
 	rc = et51x_request_named_gpio(et51x, "et51x,gpio_irq",
 				      &et51x->irq_gpio);
 	if (rc)
-		goto exit;
+		goto exit_powerdown;
 
 	et51x->fingerprint_pinctrl = devm_pinctrl_get(dev);
 	if (IS_ERR(et51x->fingerprint_pinctrl)) {
 		if (PTR_ERR(et51x->fingerprint_pinctrl) == -EPROBE_DEFER) {
 			dev_info(dev, "pinctrl not ready\n");
 			rc = -EPROBE_DEFER;
-			goto exit;
+			goto exit_powerdown;
 		}
 		dev_err(dev, "Target does not use pinctrl\n");
 		et51x->fingerprint_pinctrl = NULL;
 		rc = -EINVAL;
-		goto exit;
+		goto exit_powerdown;
 	}
 
 	for (i = 0; i < ARRAY_SIZE(et51x->pinctrl_state); i++) {
@@ -539,7 +537,7 @@ static int et51x_probe(struct platform_device *pdev)
 		if (IS_ERR(state)) {
 			dev_err(dev, "cannot find '%s'\n", n);
 			rc = -EINVAL;
-			goto exit;
+			goto exit_powerdown;
 		}
 		dev_info(dev, "found pin control %s\n", n);
 		et51x->pinctrl_state[i] = state;
@@ -564,21 +562,27 @@ static int et51x_probe(struct platform_device *pdev)
 				       irqf, dev_name(dev), et51x);
 	if (rc) {
 		dev_err(dev, "could not request irq %d\n", et51x->irq);
-		goto exit;
+		goto exit_powerdown;
 	}
 	dev_dbg(dev, "requested irq %d\n", et51x->irq);
 	enable_irq_wake(et51x->irq);
 
-	if (of_property_read_bool(dev->of_node, "et51x,enable-on-boot")) {
-		dev_info(dev, "Enabling hardware\n");
-		(void)device_prepare(et51x, true);
-	}
+	// Reset the device once:
+	hw_reset(et51x);
 
 	rc = misc_register(&et51x->misc);
 	if (rc)
-		goto exit;
+		goto exit_powerdown;
 
 	dev_info(dev, "%s: ok\n", __func__);
+
+	if (of_property_read_bool(dev->of_node, "et51x,enable-on-boot")) {
+		dev_info(dev, "Leaving power enabled\n");
+		goto exit;
+	}
+
+exit_powerdown:
+	(void)vreg_setup(et51x, false);
 exit:
 	return rc;
 }
