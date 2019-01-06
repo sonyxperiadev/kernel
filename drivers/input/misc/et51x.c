@@ -90,7 +90,6 @@ struct et51x_data {
 	struct regulator *vdd_ana;
 
 	int irq_gpio;
-	int rst_gpio;
 
 	int irq;
 	bool irq_fired;
@@ -121,7 +120,8 @@ static int vreg_setup(struct et51x_data *et51x, bool enable)
 	if (!vreg)
 		return -EINVAL;
 
-	dev_info(dev, "%d'ing regulator %s\n", enable, ET51X_REGULATOR_VDD_ANA);
+	dev_dbg(dev, "%s regulator %s\n", enable ? "enabling" : "disabling",
+		ET51X_REGULATOR_VDD_ANA);
 
 	if (enable) {
 		if (regulator_count_voltages(vreg) > 0) {
@@ -214,7 +214,7 @@ static int hw_reset(struct et51x_data *et51x)
 	usleep_range(ET51X_RESET_HIGH1_US, ET51X_RESET_HIGH1_US + 100);
 
 	irq_gpio = et51x_get_gpio_triggered(et51x);
-	dev_info(dev, "IRQ after reset %d\n", irq_gpio);
+	dev_dbg(dev, "IRQ after reset %d\n", irq_gpio);
 exit:
 	return rc;
 }
@@ -226,24 +226,11 @@ static int device_prepare(struct et51x_data *et51x, bool enable)
 	mutex_lock(&et51x->lock);
 	if (enable && !et51x->prepared) {
 		et51x->prepared = true;
-		select_pin_ctl(et51x, "et51x_reset_reset");
 
 		rc = vreg_setup(et51x, true);
 		if (rc)
 			goto exit;
-
-		usleep_range(PWR_ON_STEP_SLEEP,
-			     PWR_ON_STEP_SLEEP + PWR_ON_STEP_RANGE2);
-
-		(void)select_pin_ctl(et51x, "et51x_reset_active");
-		usleep_range(PWR_ON_STEP_SLEEP,
-			     PWR_ON_STEP_SLEEP + PWR_ON_STEP_RANGE1);
-
 	} else if (!enable && et51x->prepared) {
-		(void)select_pin_ctl(et51x, "et51x_reset_reset");
-		usleep_range(PWR_ON_STEP_SLEEP,
-			     PWR_ON_STEP_SLEEP + PWR_ON_STEP_RANGE2);
-
 		(void)vreg_setup(et51x, false);
 	exit:
 		et51x->prepared = false;
@@ -368,7 +355,7 @@ static unsigned int et51x_poll_interrupt(struct file *fp,
 	val = et51x_get_gpio_triggered(et51x);
 	if (val) {
 		/* Early out */
-		dev_info(dev, "gpio already triggered\n");
+		dev_dbg(dev, "gpio already triggered\n");
 		pm_wakeup_event(dev, ET51X_MAX_HAL_PROCESSING_TIME);
 		return POLLIN | POLLRDNORM;
 	}
@@ -384,7 +371,7 @@ static unsigned int et51x_poll_interrupt(struct file *fp,
 
 	val = et51x_get_gpio_triggered(et51x);
 	if (val) {
-		dev_info(dev, "gpio triggered after poll_wait\n");
+		dev_dbg(dev, "gpio triggered after poll_wait\n");
 		pm_wakeup_event(dev, ET51X_MAX_HAL_PROCESSING_TIME);
 		return POLLIN | POLLRDNORM;
 	}
@@ -512,42 +499,36 @@ static int et51x_probe(struct platform_device *pdev)
 		goto exit;
 	}
 
-#ifdef CONFIG_ARCH_SONY_NILE
 	rc = vreg_setup(et51x, true);
 	if (rc)
 		goto exit;
 
+#ifdef CONFIG_ARCH_SONY_NILE
 	hw_type = cei_fp_module_detect();
 	dev_info(dev, "Detected hw type %d\n", hw_type);
 
-	(void)vreg_setup(et51x, false);
-
 	if (hw_type != FP_HW_TYPE_EGISTEC) {
 		rc = -ENODEV;
-		goto exit;
+		goto exit_powerdown;
 	}
 #endif
 
 	rc = et51x_request_named_gpio(et51x, "et51x,gpio_irq",
 				      &et51x->irq_gpio);
 	if (rc)
-		goto exit;
-	rc = et51x_request_named_gpio(et51x, "et51x,gpio_rst",
-				      &et51x->rst_gpio);
-	if (rc)
-		goto exit;
+		goto exit_powerdown;
 
 	et51x->fingerprint_pinctrl = devm_pinctrl_get(dev);
 	if (IS_ERR(et51x->fingerprint_pinctrl)) {
 		if (PTR_ERR(et51x->fingerprint_pinctrl) == -EPROBE_DEFER) {
 			dev_info(dev, "pinctrl not ready\n");
 			rc = -EPROBE_DEFER;
-			goto exit;
+			goto exit_powerdown;
 		}
 		dev_err(dev, "Target does not use pinctrl\n");
 		et51x->fingerprint_pinctrl = NULL;
 		rc = -EINVAL;
-		goto exit;
+		goto exit_powerdown;
 	}
 
 	for (i = 0; i < ARRAY_SIZE(et51x->pinctrl_state); i++) {
@@ -557,7 +538,7 @@ static int et51x_probe(struct platform_device *pdev)
 		if (IS_ERR(state)) {
 			dev_err(dev, "cannot find '%s'\n", n);
 			rc = -EINVAL;
-			goto exit;
+			goto exit_powerdown;
 		}
 		dev_info(dev, "found pin control %s\n", n);
 		et51x->pinctrl_state[i] = state;
@@ -582,21 +563,27 @@ static int et51x_probe(struct platform_device *pdev)
 				       irqf, dev_name(dev), et51x);
 	if (rc) {
 		dev_err(dev, "could not request irq %d\n", et51x->irq);
-		goto exit;
+		goto exit_powerdown;
 	}
 	dev_dbg(dev, "requested irq %d\n", et51x->irq);
 	enable_irq_wake(et51x->irq);
 
-	if (of_property_read_bool(dev->of_node, "et51x,enable-on-boot")) {
-		dev_info(dev, "Enabling hardware\n");
-		(void)device_prepare(et51x, true);
-	}
+	// Reset the device once:
+	hw_reset(et51x);
 
 	rc = misc_register(&et51x->misc);
 	if (rc)
-		goto exit;
+		goto exit_powerdown;
 
 	dev_info(dev, "%s: ok\n", __func__);
+
+	if (of_property_read_bool(dev->of_node, "et51x,enable-on-boot")) {
+		dev_info(dev, "Leaving power enabled\n");
+		goto exit;
+	}
+
+exit_powerdown:
+	(void)vreg_setup(et51x, false);
 exit:
 	return rc;
 }
