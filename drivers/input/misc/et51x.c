@@ -225,24 +225,11 @@ static int device_prepare(struct et51x_data *et51x, bool enable)
 	mutex_lock(&et51x->lock);
 	if (enable && !et51x->prepared) {
 		et51x->prepared = true;
-		select_pin_ctl(et51x, "et51x_reset_reset");
 
 		rc = vreg_setup(et51x, true);
 		if (rc)
 			goto exit;
-
-		usleep_range(PWR_ON_STEP_SLEEP,
-			     PWR_ON_STEP_SLEEP + PWR_ON_STEP_RANGE2);
-
-		(void)select_pin_ctl(et51x, "et51x_reset_active");
-		usleep_range(PWR_ON_STEP_SLEEP,
-			     PWR_ON_STEP_SLEEP + PWR_ON_STEP_RANGE1);
-
 	} else if (!enable && et51x->prepared) {
-		(void)select_pin_ctl(et51x, "et51x_reset_reset");
-		usleep_range(PWR_ON_STEP_SLEEP,
-			     PWR_ON_STEP_SLEEP + PWR_ON_STEP_RANGE2);
-
 		(void)vreg_setup(et51x, false);
 	exit:
 		et51x->prepared = false;
