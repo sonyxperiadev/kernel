@@ -120,7 +120,8 @@ static int vreg_setup(struct et51x_data *et51x, bool enable)
 	if (!vreg)
 		return -EINVAL;
 
-	dev_info(dev, "%d'ing regulator %s\n", enable, ET51X_REGULATOR_VDD_ANA);
+	dev_dbg(dev, "%s regulator %s\n", enable ? "enabling" : "disabling",
+		ET51X_REGULATOR_VDD_ANA);
 
 	if (enable) {
 		if (regulator_count_voltages(vreg) > 0) {
@@ -213,7 +214,7 @@ static int hw_reset(struct et51x_data *et51x)
 	usleep_range(ET51X_RESET_HIGH1_US, ET51X_RESET_HIGH1_US + 100);
 
 	irq_gpio = et51x_get_gpio_triggered(et51x);
-	dev_info(dev, "IRQ after reset %d\n", irq_gpio);
+	dev_dbg(dev, "IRQ after reset %d\n", irq_gpio);
 exit:
 	return rc;
 }
@@ -354,7 +355,7 @@ static unsigned int et51x_poll_interrupt(struct file *fp,
 	val = et51x_get_gpio_triggered(et51x);
 	if (val) {
 		/* Early out */
-		dev_info(dev, "gpio already triggered\n");
+		dev_dbg(dev, "gpio already triggered\n");
 		pm_wakeup_event(dev, ET51X_MAX_HAL_PROCESSING_TIME);
 		return POLLIN | POLLRDNORM;
 	}
@@ -370,7 +371,7 @@ static unsigned int et51x_poll_interrupt(struct file *fp,
 
 	val = et51x_get_gpio_triggered(et51x);
 	if (val) {
-		dev_info(dev, "gpio triggered after poll_wait\n");
+		dev_dbg(dev, "gpio triggered after poll_wait\n");
 		pm_wakeup_event(dev, ET51X_MAX_HAL_PROCESSING_TIME);
 		return POLLIN | POLLRDNORM;
 	}
