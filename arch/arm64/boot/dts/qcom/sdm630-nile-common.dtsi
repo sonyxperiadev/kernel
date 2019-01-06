@@ -117,7 +117,6 @@
 		et51x,gpio_rst    = <&tlmm 20 0>;
 		et51x,gpio_irq    = <&tlmm 72 0>;
 		vdd_ana-supply = <&pm660l_l6>;
-		et51x,enable-wakeup;
 
 		// TODO: This is most likely just a hack
 		// because the HAL doesn't enable on the right scope?
@@ -139,7 +138,6 @@
 		fpc,gpio_rst    = <&tlmm 20 0x0>;
 		fpc,gpio_irq    = <&tlmm 72 0x0>;
 		vdd_ana-supply = <&pm660l_l6>;
-		fpc,enable-wakeup;
 
 		pinctrl-names = "fpc1145_reset_reset",
 			"fpc1145_reset_active",
