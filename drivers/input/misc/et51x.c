@@ -90,7 +90,6 @@ struct et51x_data {
 	struct regulator *vdd_ana;
 
 	int irq_gpio;
-	int rst_gpio;
 
 	int irq;
 	bool irq_fired;
@@ -530,10 +529,6 @@ static int et51x_probe(struct platform_device *pdev)
 
 	rc = et51x_request_named_gpio(et51x, "et51x,gpio_irq",
 				      &et51x->irq_gpio);
-	if (rc)
-		goto exit;
-	rc = et51x_request_named_gpio(et51x, "et51x,gpio_rst",
-				      &et51x->rst_gpio);
 	if (rc)
 		goto exit;
 
