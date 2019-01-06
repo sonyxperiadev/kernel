@@ -134,10 +134,6 @@ static int vreg_setup(struct et51x_data *et51x, bool enable)
 			dev_warn(dev, "No voltages available");
 		}
 
-		// TODO: Look up load in product sheet:
-		// rc = regulator_set_load(vreg, 6000);
-		// if (rc < 0)
-		// 	dev_err(dev, "Unable to set current: %d\n", rc);
 		rc = regulator_enable(vreg);
 		if (rc)
 			dev_err(dev, "Unable to enable: %d\n", rc);
@@ -568,7 +564,7 @@ static int et51x_probe(struct platform_device *pdev)
 	dev_dbg(dev, "requested irq %d\n", et51x->irq);
 	enable_irq_wake(et51x->irq);
 
-	// Reset the device once:
+	/* Reset the device once: */
 	hw_reset(et51x);
 
 	rc = misc_register(&et51x->misc);
@@ -600,12 +596,12 @@ static int et51x_remove(struct platform_device *pdev)
 	return 0;
 }
 
-// clang-format off
+/* clang-format off */
 static struct of_device_id et51x_of_match[] = {
 	{ .compatible = "etspi,et510", },
 	{}
 };
-// clang-format on
+/* clang-format on */
 MODULE_DEVICE_TABLE(of, et51x_of_match);
 
 static SIMPLE_DEV_PM_OPS(et51x_pm_ops, et51x_device_suspend,
