@@ -252,14 +252,7 @@ static struct msm_vidc_common_data sm6150_common_data[] = {
 	},
 	{
 		.key = "qcom,max-secure-instances",
-		.value = 2,             /*
-					 * As per design driver allows 3rd
-					 * instance as well since the secure
-					 * flags were updated later for the
-					 * current instance. Hence total
-					 * secure sessions would be
-					 * max-secure-instances + 1.
-					 */
+		.value = 3,
 	},
 	{
 		.key = "qcom,max-hw-load",
@@ -318,7 +311,7 @@ static struct msm_vidc_common_data trinket_common_data[] = {
 	},
 	{
 		.key = "qcom,max-secure-instances",
-		.value = 5,
+		.value = 6,
 	},
 	{
 		.key = "qcom,max-hw-load",
@@ -377,14 +370,7 @@ static struct msm_vidc_common_data sm8150_common_data[] = {
 	},
 	{
 		.key = "qcom,max-secure-instances",
-		.value = 2,             /*
-					 * As per design driver allows 3rd
-					 * instance as well since the secure
-					 * flags were updated later for the
-					 * current instance. Hence total
-					 * secure sessions would be
-					 * max-secure-instances + 1.
-					 */
+		.value = 3,
 	},
 	{
 		.key = "qcom,max-hw-load",
@@ -460,14 +446,7 @@ static struct msm_vidc_common_data sdmmagpie_common_data_v0[] = {
 	},
 	{
 		.key = "qcom,max-secure-instances",
-		.value = 2,             /*
-					 * As per design driver allows 3rd
-					 * instance as well since the secure
-					 * flags were updated later for the
-					 * current instance. Hence total
-					 * secure sessions would be
-					 * max-secure-instances + 1.
-					 */
+		.value = 3,
 	},
 	{
 		.key = "qcom,max-hw-load",
@@ -538,14 +517,7 @@ static struct msm_vidc_common_data sdmmagpie_common_data_v1[] = {
 	},
 	{
 		.key = "qcom,max-secure-instances",
-		.value = 2,             /*
-					 * As per design driver allows 3rd
-					 * instance as well since the secure
-					 * flags were updated later for the
-					 * current instance. Hence total
-					 * secure sessions would be
-					 * max-secure-instances + 1.
-					 */
+		.value = 3,
 	},
 	{
 		.key = "qcom,max-hw-load",
@@ -620,7 +592,7 @@ static struct msm_vidc_common_data sdm845_common_data[] = {
 	},
 	{
 		.key = "qcom,max-secure-instances",
-		.value = 2,
+		.value = 3,
 	},
 	{
 		.key = "qcom,max-hw-load",
@@ -687,7 +659,7 @@ static struct msm_vidc_common_data sdm670_common_data_v0[] = {
 	},
 	{
 		.key = "qcom,max-secure-instances",
-		.value = 5,
+		.value = 6,
 	},
 	{
 		.key = "qcom,max-hw-load",
@@ -738,7 +710,7 @@ static struct msm_vidc_common_data sdm670_common_data_v1[] = {
 	},
 	{
 		.key = "qcom,max-secure-instances",
-		.value = 5,
+		.value = 6,
 	},
 	{
 		.key = "qcom,max-hw-load",
