@@ -56,7 +56,7 @@ int cam_context_shutdown(struct cam_context *ctx)
 	}
 
 	if (!rc)
-		cam_destroy_device_hdl(ctx_hdl);
+		rc = cam_destroy_device_hdl(ctx_hdl);
 	return rc;
 }
 
@@ -161,7 +161,6 @@ int cam_context_handle_crm_apply_req(struct cam_context *ctx,
 		return -EINVAL;
 	}
 
-	mutex_lock(&ctx->ctx_mutex);
 	if (ctx->state_machine[ctx->state].crm_ops.apply_req) {
 		rc = ctx->state_machine[ctx->state].crm_ops.apply_req(ctx,
 			apply);
@@ -170,7 +169,6 @@ int cam_context_handle_crm_apply_req(struct cam_context *ctx,
 			ctx->dev_hdl, ctx->state);
 		rc = -EPROTO;
 	}
-	mutex_unlock(&ctx->ctx_mutex);
 
 	return rc;
 }

@@ -1,4 +1,4 @@
-/* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -127,7 +127,7 @@ int cam_packet_util_process_patches(struct cam_packet *packet,
 	int32_t iommu_hdl, int32_t sec_mmu_hdl)
 {
 	struct cam_patch_desc *patch_desc = NULL;
-	uint64_t   iova_addr;
+	dma_addr_t iova_addr;
 	uint64_t   cpu_addr;
 	uint32_t   temp;
 	uint32_t  *dst_cpu_addr;
@@ -170,6 +170,24 @@ int cam_packet_util_process_patches(struct cam_packet *packet,
 		CAM_DBG(CAM_UTIL, "i = %d patch info = %x %x %x %x", i,
 			patch_desc[i].dst_buf_hdl, patch_desc[i].dst_offset,
 			patch_desc[i].src_buf_hdl, patch_desc[i].src_offset);
+
+		if (patch_desc[i].src_offset >= src_buf_size) {
+			CAM_ERR_RATE_LIMIT(CAM_UTIL,
+				"Inval src offset:0x%x src len:0x%x reqid:%lld",
+				patch_desc[i].src_offset,
+				(unsigned int)src_buf_size,
+				packet->header.request_id);
+			return -EINVAL;
+		}
+
+		if (patch_desc[i].dst_offset >= dst_buf_len) {
+			CAM_ERR_RATE_LIMIT(CAM_UTIL,
+				"Inval dst offset:0x%x dst len:0x%x reqid:%lld",
+				patch_desc[i].dst_offset,
+				(unsigned int)dst_buf_len,
+				packet->header.request_id);
+			return -EINVAL;
+		}
 
 		dst_cpu_addr = (uint32_t *)((uint8_t *)dst_cpu_addr +
 			patch_desc[i].dst_offset);

@@ -65,6 +65,8 @@ int32_t cam_actuator_construct_default_power_setting(
 
 free_power_settings:
 	kfree(power_info->power_setting);
+	power_info->power_setting = NULL;
+	power_info->power_setting_size = 0;
 	return rc;
 }
 
@@ -678,6 +680,8 @@ void cam_actuator_shutdown(struct cam_actuator_ctrl_t *a_ctrl)
 	kfree(power_info->power_down_setting);
 	power_info->power_setting = NULL;
 	power_info->power_down_setting = NULL;
+	power_info->power_setting_size = 0;
+	power_info->power_down_setting_size = 0;
 
 	a_ctrl->cam_act_state = CAM_ACTUATOR_INIT;
 }
@@ -687,11 +691,18 @@ int32_t cam_actuator_driver_cmd(struct cam_actuator_ctrl_t *a_ctrl,
 {
 	int rc = 0;
 	struct cam_control *cmd = (struct cam_control *)arg;
+	struct cam_actuator_soc_private *soc_private = NULL;
+	struct cam_sensor_power_ctrl_t  *power_info = NULL;
 
 	if (!a_ctrl || !cmd) {
-		CAM_ERR(CAM_ACTUATOR, " Invalid Args");
+		CAM_ERR(CAM_ACTUATOR, "Invalid Args");
 		return -EINVAL;
 	}
+
+	soc_private =
+		(struct cam_actuator_soc_private *)a_ctrl->soc_info.soc_private;
+
+	power_info = &soc_private->power_info;
 
 	if (cmd->handle_type != CAM_HANDLE_USER_POINTER) {
 		CAM_ERR(CAM_ACTUATOR, "Invalid handle type: %d",
@@ -775,6 +786,12 @@ int32_t cam_actuator_driver_cmd(struct cam_actuator_ctrl_t *a_ctrl,
 		a_ctrl->bridge_intf.link_hdl = -1;
 		a_ctrl->bridge_intf.session_hdl = -1;
 		a_ctrl->cam_act_state = CAM_ACTUATOR_INIT;
+		kfree(power_info->power_setting);
+		kfree(power_info->power_down_setting);
+		power_info->power_setting = NULL;
+		power_info->power_down_setting = NULL;
+		power_info->power_down_setting_size = 0;
+		power_info->power_setting_size = 0;
 	}
 		break;
 	case CAM_QUERY_CAP: {
@@ -878,6 +895,11 @@ int32_t cam_actuator_flush_request(struct cam_req_mgr_flush_request *flush_req)
 		cam_get_device_priv(flush_req->dev_hdl);
 	if (!a_ctrl) {
 		CAM_ERR(CAM_ACTUATOR, "Device data is NULL");
+		return -EINVAL;
+	}
+
+	if (a_ctrl->i2c_data.per_frame == NULL) {
+		CAM_ERR(CAM_ACTUATOR, "i2c frame data is NULL");
 		return -EINVAL;
 	}
 

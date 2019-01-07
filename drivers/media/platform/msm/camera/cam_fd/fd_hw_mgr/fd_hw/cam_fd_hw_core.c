@@ -427,6 +427,7 @@ static int cam_fd_hw_util_processcmd_frame_done(struct cam_hw_info *fd_hw,
 	unsigned long flags;
 	int i;
 
+	mutex_lock(&fd_hw->hw_mutex);
 	spin_lock_irqsave(&fd_core->spin_lock, flags);
 	if ((fd_core->core_state != CAM_FD_CORE_STATE_IDLE) ||
 		(fd_core->results_valid == false) ||
@@ -436,6 +437,7 @@ static int cam_fd_hw_util_processcmd_frame_done(struct cam_hw_info *fd_hw,
 			fd_core->core_state, fd_core->results_valid,
 			fd_core->hw_req_private);
 		spin_unlock_irqrestore(&fd_core->spin_lock, flags);
+		mutex_unlock(&fd_hw->hw_mutex);
 		return -EINVAL;
 	}
 	fd_core->core_state = CAM_FD_CORE_STATE_READING_RESULTS;
@@ -516,6 +518,7 @@ static int cam_fd_hw_util_processcmd_frame_done(struct cam_hw_info *fd_hw,
 	fd_core->hw_req_private = NULL;
 	fd_core->core_state = CAM_FD_CORE_STATE_IDLE;
 	spin_unlock_irqrestore(&fd_core->spin_lock, flags);
+	mutex_unlock(&fd_hw->hw_mutex);
 
 	return 0;
 }
@@ -532,7 +535,7 @@ irqreturn_t cam_fd_hw_irq(int irq_num, void *data)
 
 	if (!fd_hw) {
 		CAM_ERR(CAM_FD, "Invalid data in IRQ callback");
-		return -EINVAL;
+		return IRQ_NONE;
 	}
 
 	fd_core = (struct cam_fd_core *) fd_hw->core_info;
@@ -570,7 +573,7 @@ irqreturn_t cam_fd_hw_irq(int irq_num, void *data)
 		CAM_ERR(CAM_FD,
 			"Invalid number of IRQs, value=0x%x, num_irqs=%d",
 			reg_value, num_irqs);
-		return -EINVAL;
+		return IRQ_NONE;
 	}
 
 	trace_cam_irq_activated("FD", irq_type);

@@ -1,4 +1,4 @@
-/* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -422,7 +422,7 @@ int cam_hw_cdm_submit_bl(struct cam_hw_info *cdm_hw,
 	}
 
 	for (i = 0; i < req->data->cmd_arrary_count ; i++) {
-		uint64_t hw_vaddr_ptr = 0;
+		dma_addr_t hw_vaddr_ptr = 0;
 		size_t len = 0;
 
 		if ((!cdm_cmd->cmd[i].len) &&
@@ -470,7 +470,7 @@ int cam_hw_cdm_submit_bl(struct cam_hw_info *cdm_hw,
 			}
 			rc = 0;
 			hw_vaddr_ptr =
-				(uint64_t)cdm_cmd->cmd[i].bl_addr.hw_iova;
+				(dma_addr_t) cdm_cmd->cmd[i].bl_addr.hw_iova;
 			len = cdm_cmd->cmd[i].len + cdm_cmd->cmd[i].offset;
 		} else {
 			CAM_ERR(CAM_CDM,
@@ -1125,6 +1125,7 @@ static struct platform_driver cam_hw_cdm_driver = {
 		.name = "msm_cam_cdm",
 		.owner = THIS_MODULE,
 		.of_match_table = msm_cam_hw_cdm_dt_match,
+		.suppress_bind_attrs = true,
 	},
 };
 
