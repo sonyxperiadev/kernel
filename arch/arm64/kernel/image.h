@@ -73,8 +73,6 @@
 
 #ifdef CONFIG_EFI
 
-__efistub_stext_offset = stext - _text;
-
 /*
  * The EFI stub has its own symbol namespace prefixed by __efistub_, to
  * isolate it from the kernel proper. The following symbols are legally
@@ -101,9 +99,6 @@ __efistub___memmove		= __pi_memmove;
 __efistub___memset		= __pi_memset;
 #endif
 
-__efistub__text			= _text;
-__efistub__end			= _end;
-__efistub__edata		= _edata;
 __efistub_screen_info		= screen_info;
 
 #endif
