@@ -114,27 +114,37 @@
 		ecc-size = <16>;
 	};
 
-	egistec {
+	et510 {
 		compatible = "etspi,et510";
-		spi-max-frequency = <1000000>;
-		et516_vcc-supply = <&pm660l_l6>;
-		input-device-name = "et510";
 		interrupt-parent = <&tlmm>;
 		interrupts = <72 0x0>;
-		egis,reset-gpio    = <&tlmm 20 0>;
-		egis,irq-gpio      = <&tlmm 72 0>;
+		et51x,gpio_rst    = <&tlmm 20 0>;
+		et51x,gpio_irq    = <&tlmm 72 0>;
+		vdd_ana-supply = <&pm660l_l6>;
+
+		/*
+		 * The device has to stay enabled until the HAL initializes,
+		 * otherwise it'll not send out any IRQ signals even though the
+		 * rest of the initialization runs without errors.
+		 */
+		et51x,enable-on-boot;
+
+		pinctrl-names = "et51x_reset_reset",
+			"et51x_reset_active",
+			"et51x_irq_active";
+
+		pinctrl-0 = <&msm_gpio_20>;
+		pinctrl-1 = <&msm_gpio_20_output_high>;
+		pinctrl-2 = <&msm_gpio_72>;
 	};
 
 	fpc1020 {
-		status = "ok";
 		compatible = "fpc,fpc1020";
 		interrupt-parent = <&tlmm>;
 		interrupts = <72 0x0>;
 		fpc,gpio_rst    = <&tlmm 20 0x0>;
 		fpc,gpio_irq    = <&tlmm 72 0x0>;
 		vdd_ana-supply = <&pm660l_l6>;
-		fpc,enable-on-boot;
-		fpc,enable-wakeup;
 
 		pinctrl-names = "fpc1145_reset_reset",
 			"fpc1145_reset_active",
