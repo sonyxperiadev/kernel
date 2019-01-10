@@ -2914,6 +2914,8 @@ static int fastrpc_file_free(struct fastrpc_file *fl)
 	} while (fperf);
 	fastrpc_remote_buf_list_free(fl);
 	mutex_unlock(&fl->perf_mutex);
+
+bail:
 	mutex_destroy(&fl->perf_mutex);
 	mutex_destroy(&fl->fl_map_mutex);
 	mutex_destroy(&fl->map_mutex);
