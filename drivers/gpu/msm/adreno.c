@@ -1187,6 +1187,8 @@ static int adreno_of_get_power(struct adreno_device *adreno_dev,
 		timeout = 80;
 
 	device->pwrctrl.interval_timeout = msecs_to_jiffies(timeout);
+	device->pwrctrl.default_interval_timeout =
+		device->pwrctrl.interval_timeout;
 
 	device->pwrctrl.bus_control = of_property_read_bool(node,
 		"qcom,bus-control");
@@ -2769,6 +2771,38 @@ static int adreno_setproperty(struct kgsl_device_private *dev_priv,
 			status = adreno_set_constraint(device, context,
 							&constraint);
 			kgsl_context_put(context);
+		}
+		break;
+	case KGSL_PROP_GPU_FORCE_ON: {
+			unsigned long timeout;
+
+			if (sizebytes != sizeof(timeout))
+				break;
+
+			if (copy_from_user(&timeout, value,
+				sizeof(timeout))) {
+				status = -EFAULT;
+				break;
+			}
+
+			mutex_lock(&device->mutex);
+			if (timeout) {
+				device->pwrctrl.interval_timeout =
+					msecs_to_jiffies(timeout);
+
+				if (device->state == KGSL_STATE_NAP ||
+					device->state == KGSL_STATE_SLUMBER)
+					kgsl_pwrctrl_change_state(device,
+						KGSL_STATE_ACTIVE);
+
+				mod_timer(&device->idle_timer, jiffies +
+					device->pwrctrl.interval_timeout);
+			} else
+				device->pwrctrl.interval_timeout =
+				device->pwrctrl.default_interval_timeout;
+
+			mutex_unlock(&device->mutex);
+			status = 0;
 		}
 		break;
 	default:
