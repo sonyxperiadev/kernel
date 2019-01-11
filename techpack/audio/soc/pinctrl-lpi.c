@@ -140,6 +140,42 @@ static const u32 lpi_offset[] = {
 	0x0001F000,
 };
 
+static const u32 lpi_offset_660[] = {
+	0x00000000,
+	0x00001000,
+	0x00002000,
+	0x00002010,
+	0x00003000,
+	0x00003010,
+	0x00004000,
+	0x00004010,
+	0x00005000,
+	0x00005010,
+	0x00005020,
+	0x00005030,
+	0x00006000,
+	0x00006010,
+	0x00007000,
+	0x00007010,
+	0x00005040,
+	0x00005050,
+	0x00008000,
+	0x00008010,
+	0x00008020,
+	0x00008030,
+	0x00008040,
+	0x00008050,
+	0x00008060,
+	0x00008070,
+	0x00009000,
+	0x00009010,
+	0x0000A000,
+	0x0000A010,
+	0x0000B000,
+	0x0000B010,
+};
+
+
 static const char *const lpi_gpio_functions[] = {
 	[LPI_GPIO_FUNC_INDEX_GPIO]	= LPI_GPIO_FUNC_GPIO,
 	[LPI_GPIO_FUNC_INDEX_FUNC1]	= LPI_GPIO_FUNC_FUNC1,
@@ -517,7 +553,8 @@ static int lpi_pinctrl_probe(struct platform_device *pdev)
 	struct lpi_gpio_state *state;
 	int ret, npins, i;
 	char __iomem *lpi_base;
-	u32 reg;
+	u32 lpi_sz, reg;
+	const u32 *pad_offsets = NULL;
 
 	ret = of_property_read_u32(dev->of_node, "reg", &reg);
 	if (ret < 0) {
@@ -559,7 +596,16 @@ static int lpi_pinctrl_probe(struct platform_device *pdev)
 	pctrldesc->pins = pindesc;
 	pctrldesc->npins = npins;
 
-	lpi_base = devm_ioremap(dev, reg, LPI_ADDRESS_SIZE);
+	if (of_machine_is_compatible("qcom,sdm630") ||
+	    of_machine_is_compatible("qcom,sdm660")) {
+		lpi_sz = 0xC000; /* Address size on SDM630/660 */
+		pad_offsets = lpi_offset_660;
+	} else {
+		lpi_sz = LPI_ADDRESS_SIZE;
+		pad_offsets = lpi_offset;
+	}
+
+	lpi_base = devm_ioremap(dev, reg, lpi_sz);
 	if (lpi_base == NULL) {
 		dev_err(dev, "%s devm_ioremap failed\n", __func__);
 		return -ENOMEM;
@@ -574,7 +620,7 @@ static int lpi_pinctrl_probe(struct platform_device *pdev)
 		pindesc->name = lpi_gpio_groups[i];
 
 		pad->base = lpi_base;
-		pad->offset = lpi_offset[i];
+		pad->offset = pad_offsets[i];
 	}
 
 	state->chip = lpi_gpio_template;
