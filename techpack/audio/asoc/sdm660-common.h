@@ -118,6 +118,10 @@ struct msm_asoc_mach_data {
 	struct mutex cdc_int_mclk0_mutex;
 	struct delayed_work disable_int_mclk0_work;
 	struct afe_clk_set digital_cdc_core_clk;
+	int gpio_linein_det;
+	int gpio_lineout_det;
+	int linein_det_swh;
+	int lineout_det_swh;
 };
 
 int msm_common_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,

@@ -143,6 +143,8 @@ static int voice_send_get_sound_focus_cmd(struct voice_data *v,
 static int voice_send_get_source_tracking_cmd(struct voice_data *v,
 			struct source_tracking_param *sourceTrackingData);
 
+static void voice_vote_powerstate_to_bms(struct voice_data *v, bool state);
+
 static void voice_itr_init(struct voice_session_itr *itr,
 			   u32 session_id)
 {
@@ -1916,6 +1918,47 @@ void voc_set_destroy_cvd_flag(bool is_destroy_cvd)
 	common.is_destroy_cvd = is_destroy_cvd;
 }
 
+/**
+ * voc_set_vote_bms_flag -
+ *      set flag for BMS voting
+ *
+ * @is_destroy_cvd: bool value used to indicate
+ *                  to vote for BMS or not in voice call.
+ *
+ */
+void voc_set_vote_bms_flag(bool is_vote_bms)
+{
+	pr_debug("%s: flag value: %d\n", __func__, is_vote_bms);
+	common.is_vote_bms = is_vote_bms;
+}
+EXPORT_SYMBOL(voc_set_vote_bms_flag);
+
+static void voice_vote_powerstate_to_bms(struct voice_data *v, bool state)
+{
+	union power_supply_propval psp_val;
+
+	if (!v->psy)
+		v->psy = power_supply_get_by_name("bms");
+
+	psp_val.intval = VMBMS_VOICE_CALL_BIT;
+	if (v->psy && !(is_voip_session(v->session_id) ||
+			is_vowlan_session(v->session_id))) {
+		if (state) {
+			pr_debug("%s : Vote High power to BMS\n",
+				__func__);
+			power_supply_set_property(v->psy,
+					POWER_SUPPLY_PROP_HI_POWER, &psp_val);
+		} else {
+			pr_debug("%s: Vote low power to BMS\n",
+				__func__);
+			power_supply_set_property(v->psy,
+					POWER_SUPPLY_PROP_LOW_POWER, &psp_val);
+		}
+	} else {
+		pr_debug("%s: No OP", __func__);
+	}
+}
+
 int voc_alloc_cal_shared_memory(void)
 {
 	int rc = 0;
@@ -2365,6 +2408,10 @@ static int voice_send_start_voice_cmd(struct voice_data *v)
 		ret = adsp_err_get_lnx_err_code(
 				v->async_err);
 		goto fail;
+	}
+	if (common.is_vote_bms) {
+		/* vote high power to BMS during call start */
+		voice_vote_powerstate_to_bms(v, true);
 	}
 	return 0;
 fail:
@@ -6678,6 +6725,10 @@ int voc_end_voice_call(uint32_t session_id)
 
 		voice_destroy_mvm_cvs_session(v);
 		v->voc_state = VOC_RELEASE;
+		if (common.is_vote_bms) {
+			/* vote low power to BMS during call stop */
+			voice_vote_powerstate_to_bms(v, false);
+		}
 	} else {
 		pr_err("%s: Error: End voice called in state %d\n",
 			__func__, v->voc_state);

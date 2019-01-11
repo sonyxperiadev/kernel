@@ -1480,6 +1480,12 @@ int q6asm_audio_client_buf_alloc_contiguous(unsigned int dir,
 		pr_err("%s: buffer already allocated\n", __func__);
 		return 0;
 	}
+
+	if (bufcnt == 0) {
+		pr_err("%s: invalid buffer count\n", __func__);
+		return -EINVAL;
+	}
+
 	mutex_lock(&ac->cmd_lock);
 	buf = kzalloc(((sizeof(struct audio_buffer))*bufcnt),
 			GFP_KERNEL);
@@ -9122,11 +9128,11 @@ static int __q6asm_cmd(struct audio_client *ac, int cmd, uint32_t stream_id)
 	int cnt = 0;
 
 	if (!ac) {
-		pr_err("%s: APR handle NULL\n", __func__);
+		pr_err_ratelimited("%s: APR handle NULL\n", __func__);
 		return -EINVAL;
 	}
 	if (ac->apr == NULL) {
-		pr_err("%s: AC APR handle NULL\n", __func__);
+		pr_err_ratelimited("%s: AC APR handle NULL\n", __func__);
 		return -EINVAL;
 	}
 	q6asm_stream_add_hdr(ac, &hdr, sizeof(hdr), TRUE, stream_id);
@@ -9252,11 +9258,11 @@ static int __q6asm_cmd_nowait(struct audio_client *ac, int cmd,
 	int rc;
 
 	if (!ac) {
-		pr_err("%s: APR handle NULL\n", __func__);
+		pr_err_ratelimited("%s: APR handle NULL\n", __func__);
 		return -EINVAL;
 	}
 	if (ac->apr == NULL) {
-		pr_err("%s: AC APR handle NULL\n", __func__);
+		pr_err_ratelimited("%s: AC APR handle NULL\n", __func__);
 		return -EINVAL;
 	}
 	q6asm_stream_add_hdr_async(ac, &hdr, sizeof(hdr), TRUE, stream_id);
@@ -9328,11 +9334,11 @@ int __q6asm_send_meta_data(struct audio_client *ac, uint32_t stream_id,
 	int rc = 0;
 
 	if (!ac) {
-		pr_err("%s: APR handle NULL\n", __func__);
+		pr_err_ratelimited("%s: APR handle NULL\n", __func__);
 		return -EINVAL;
 	}
 	if (ac->apr == NULL) {
-		pr_err("%s: AC APR handle NULL\n", __func__);
+		pr_err_ratelimited("%s: AC APR handle NULL\n", __func__);
 		return -EINVAL;
 	}
 	pr_debug("%s: session[%d]\n", __func__, ac->session);

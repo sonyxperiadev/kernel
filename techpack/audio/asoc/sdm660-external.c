@@ -23,6 +23,7 @@
 #include "msm-audio-pinctrl.h"
 #include "sdm660-common.h"
 #include "sdm660-external.h"
+#include "codecs/msm-cdc-pinctrl.h"
 #include "codecs/wcd9335.h"
 #include "codecs/wcd934x/wcd934x.h"
 #include "codecs/wcd934x/wcd934x-mbhc.h"
@@ -38,6 +39,8 @@
 #define WSA8810_NAME_1 "wsa881x.20170211"
 #define WSA8810_NAME_2 "wsa881x.20170212"
 
+#define MSM_HIFI_ON 1
+
 static int msm_ext_spk_control = 1;
 static struct wcd_mbhc_config *wcd_mbhc_cfg_ptr;
 
@@ -49,6 +52,7 @@ struct msm_asoc_wcd93xx_codec {
 
 static struct msm_asoc_wcd93xx_codec msm_codec_fn;
 static struct platform_device *spdev;
+static int msm_hifi_control;
 
 static bool is_initial_boot;
 
@@ -109,8 +113,40 @@ static struct dev_config slim_tx_cfg[] = {
 	[SLIM_TX_8] = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 2},
 };
 
+static struct snd_soc_jack linein_jack;
+
+static struct snd_soc_jack_pin linein_jack_pins[] = {
+	{
+		.pin = "Linein",
+		.mask = SND_JACK_LINEIN,
+	},
+};
+
+static struct snd_soc_jack_gpio linein_jack_gpio = {
+	.name = "Linein detection",
+	.report = SND_JACK_LINEIN,
+	.debounce_time = 800,
+};
+
+static struct snd_soc_jack lineout_jack;
+
+static struct snd_soc_jack_pin lineout_jack_pins[] = {
+	{
+		.pin = "Lineout",
+		.mask = SND_JACK_LINEOUT,
+	},
+};
+
+static struct snd_soc_jack_gpio lineout_jack_gpio = {
+	.name = "Lineout detection",
+	.report = SND_JACK_LINEOUT,
+	.debounce_time = 800,
+};
+
 static int msm_vi_feed_tx_ch = 2;
-static const char *const slim_rx_ch_text[] = {"One", "Two"};
+static const char *const slim_rx_ch_text[] = {"One", "Two", "Three", "Four",
+						"Five", "Six", "Seven",
+						"Eight"};
 static const char *const slim_tx_ch_text[] = {"One", "Two", "Three", "Four",
 						"Five", "Six", "Seven",
 						"Eight"};
@@ -123,6 +159,13 @@ static char const *slim_sample_rate_text[] = {"KHZ_8", "KHZ_16",
 					"KHZ_192", "KHZ_352P8", "KHZ_384"};
 static const char *const spk_function_text[] = {"Off", "On"};
 static char const *bt_sample_rate_text[] = {"KHZ_8", "KHZ_16", "KHZ_48"};
+static char const *bt_sample_rate_rx_text[] = {"KHZ_8", "KHZ_16",
+					"KHZ_44P1", "KHZ_48",
+					"KHZ_88P2", "KHZ_96"};
+static char const *bt_sample_rate_tx_text[] = {"KHZ_8", "KHZ_16",
+					"KHZ_44P1", "KHZ_48",
+					"KHZ_88P2", "KHZ_96"};
+static const char *const hifi_text[] = {"Off", "On"};
 
 static SOC_ENUM_SINGLE_EXT_DECL(spk_func_en, spk_function_text);
 static SOC_ENUM_SINGLE_EXT_DECL(slim_0_rx_chs, slim_rx_ch_text);
@@ -142,6 +185,9 @@ static SOC_ENUM_SINGLE_EXT_DECL(slim_0_tx_sample_rate, slim_sample_rate_text);
 static SOC_ENUM_SINGLE_EXT_DECL(slim_5_rx_sample_rate, slim_sample_rate_text);
 static SOC_ENUM_SINGLE_EXT_DECL(slim_6_rx_sample_rate, slim_sample_rate_text);
 static SOC_ENUM_SINGLE_EXT_DECL(bt_sample_rate, bt_sample_rate_text);
+static SOC_ENUM_SINGLE_EXT_DECL(bt_sample_rate_rx, bt_sample_rate_rx_text);
+static SOC_ENUM_SINGLE_EXT_DECL(bt_sample_rate_tx, bt_sample_rate_tx_text);
+static SOC_ENUM_SINGLE_EXT_DECL(hifi_function, hifi_text);
 
 static int slim_get_sample_rate_val(int sample_rate)
 {
@@ -351,6 +397,130 @@ static int msm_bt_sample_rate_put(struct snd_kcontrol *kcontrol,
 	pr_debug("%s: sample rates: slim7_rx = %d, slim7_tx = %d, value = %d\n",
 		 __func__,
 		 slim_rx_cfg[SLIM_RX_7].sample_rate,
+		 slim_tx_cfg[SLIM_TX_7].sample_rate,
+		 ucontrol->value.enumerated.item[0]);
+
+	return 0;
+}
+
+static int msm_bt_sample_rate_rx_get(struct snd_kcontrol *kcontrol,
+				     struct snd_ctl_elem_value *ucontrol)
+{
+	switch (slim_rx_cfg[SLIM_RX_7].sample_rate) {
+	case SAMPLING_RATE_96KHZ:
+		ucontrol->value.integer.value[0] = 5;
+		break;
+	case SAMPLING_RATE_88P2KHZ:
+		ucontrol->value.integer.value[0] = 4;
+		break;
+	case SAMPLING_RATE_48KHZ:
+		ucontrol->value.integer.value[0] = 3;
+		break;
+	case SAMPLING_RATE_44P1KHZ:
+		ucontrol->value.integer.value[0] = 2;
+		break;
+	case SAMPLING_RATE_16KHZ:
+		ucontrol->value.integer.value[0] = 1;
+		break;
+	case SAMPLING_RATE_8KHZ:
+	default:
+		ucontrol->value.integer.value[0] = 0;
+		break;
+	}
+	pr_debug("%s: sample rate = %d", __func__,
+		 slim_rx_cfg[SLIM_RX_7].sample_rate);
+
+	return 0;
+}
+
+static int msm_bt_sample_rate_rx_put(struct snd_kcontrol *kcontrol,
+				     struct snd_ctl_elem_value *ucontrol)
+{
+	switch (ucontrol->value.integer.value[0]) {
+	case 1:
+		slim_rx_cfg[SLIM_RX_7].sample_rate = SAMPLING_RATE_16KHZ;
+		break;
+	case 2:
+		slim_rx_cfg[SLIM_RX_7].sample_rate = SAMPLING_RATE_44P1KHZ;
+		break;
+	case 3:
+		slim_rx_cfg[SLIM_RX_7].sample_rate = SAMPLING_RATE_48KHZ;
+		break;
+	case 4:
+		slim_rx_cfg[SLIM_RX_7].sample_rate = SAMPLING_RATE_88P2KHZ;
+		break;
+	case 5:
+		slim_rx_cfg[SLIM_RX_7].sample_rate = SAMPLING_RATE_96KHZ;
+		break;
+	case 0:
+	default:
+		slim_rx_cfg[SLIM_RX_7].sample_rate = SAMPLING_RATE_8KHZ;
+		break;
+	}
+	pr_debug("%s: sample rates: slim7_rx = %d, value = %d\n",
+		 __func__,
+		 slim_rx_cfg[SLIM_RX_7].sample_rate,
+		 ucontrol->value.enumerated.item[0]);
+
+	return 0;
+}
+
+static int msm_bt_sample_rate_tx_get(struct snd_kcontrol *kcontrol,
+				     struct snd_ctl_elem_value *ucontrol)
+{
+	switch (slim_tx_cfg[SLIM_TX_7].sample_rate) {
+	case SAMPLING_RATE_96KHZ:
+		ucontrol->value.integer.value[0] = 5;
+		break;
+	case SAMPLING_RATE_88P2KHZ:
+		ucontrol->value.integer.value[0] = 4;
+		break;
+	case SAMPLING_RATE_48KHZ:
+		ucontrol->value.integer.value[0] = 3;
+		break;
+	case SAMPLING_RATE_44P1KHZ:
+		ucontrol->value.integer.value[0] = 2;
+		break;
+	case SAMPLING_RATE_16KHZ:
+		ucontrol->value.integer.value[0] = 1;
+		break;
+	case SAMPLING_RATE_8KHZ:
+	default:
+		ucontrol->value.integer.value[0] = 0;
+		break;
+	}
+	pr_debug("%s: sample rate = %d", __func__,
+		 slim_tx_cfg[SLIM_TX_7].sample_rate);
+
+	return 0;
+}
+
+static int msm_bt_sample_rate_tx_put(struct snd_kcontrol *kcontrol,
+				     struct snd_ctl_elem_value *ucontrol)
+{
+	switch (ucontrol->value.integer.value[0]) {
+	case 1:
+		slim_tx_cfg[SLIM_TX_7].sample_rate = SAMPLING_RATE_16KHZ;
+		break;
+	case 2:
+		slim_tx_cfg[SLIM_TX_7].sample_rate = SAMPLING_RATE_44P1KHZ;
+		break;
+	case 3:
+		slim_tx_cfg[SLIM_TX_7].sample_rate = SAMPLING_RATE_48KHZ;
+		break;
+	case 4:
+		slim_tx_cfg[SLIM_TX_7].sample_rate = SAMPLING_RATE_88P2KHZ;
+		break;
+	case 5:
+		slim_tx_cfg[SLIM_TX_7].sample_rate = SAMPLING_RATE_96KHZ;
+		break;
+	case 0:
+	default:
+		slim_tx_cfg[SLIM_TX_7].sample_rate = SAMPLING_RATE_8KHZ;
+		break;
+	}
+	pr_debug("%s: sample rates: slim7_tx = %d, value = %d\n",
+		 __func__,
 		 slim_tx_cfg[SLIM_TX_7].sample_rate,
 		 ucontrol->value.enumerated.item[0]);
 
@@ -585,6 +755,56 @@ static int msm_vi_feed_tx_ch_put(struct snd_kcontrol *kcontrol,
 	return 1;
 }
 
+static int msm_hifi_ctrl(struct snd_soc_codec *codec)
+{
+	struct snd_soc_dapm_context *dapm = snd_soc_codec_get_dapm(codec);
+	struct snd_soc_card *card = codec->component.card;
+	struct msm_asoc_mach_data *pdata =
+				snd_soc_card_get_drvdata(card);
+
+	pr_debug("%s: msm_hifi_control = %d\n", __func__,
+		 msm_hifi_control);
+
+	if (!pdata || !pdata->hph_en1_gpio_p) {
+		pr_err("%s: hph_en1_gpio is invalid\n", __func__);
+		return -EINVAL;
+	}
+	if (msm_hifi_control == MSM_HIFI_ON) {
+		msm_cdc_pinctrl_select_active_state(pdata->hph_en1_gpio_p);
+		/* 5msec delay needed as per HW requirement */
+		usleep_range(5000, 5010);
+	} else {
+		msm_cdc_pinctrl_select_sleep_state(pdata->hph_en1_gpio_p);
+	}
+	snd_soc_dapm_sync(dapm);
+
+	return 0;
+}
+
+static int msm_hifi_get(struct snd_kcontrol *kcontrol,
+			struct snd_ctl_elem_value *ucontrol)
+{
+	pr_debug("%s: msm_hifi_control = %d\n",
+		 __func__, msm_hifi_control);
+	ucontrol->value.integer.value[0] = msm_hifi_control;
+
+	return 0;
+}
+
+static int msm_hifi_put(struct snd_kcontrol *kcontrol,
+			struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+
+	pr_debug("%s() ucontrol->value.integer.value[0] = %ld\n",
+		 __func__, ucontrol->value.integer.value[0]);
+
+	msm_hifi_control = ucontrol->value.integer.value[0];
+	msm_hifi_ctrl(codec);
+
+	return 0;
+}
+
 static void *def_ext_mbhc_cal(void)
 {
 	void *wcd_mbhc_cal;
@@ -728,6 +948,14 @@ static const struct snd_kcontrol_new msm_snd_controls[] = {
 	SOC_ENUM_EXT("BT SampleRate", bt_sample_rate,
 			msm_bt_sample_rate_get,
 			msm_bt_sample_rate_put),
+	SOC_ENUM_EXT("BT SampleRate RX", bt_sample_rate_rx,
+			msm_bt_sample_rate_rx_get,
+			msm_bt_sample_rate_rx_put),
+	SOC_ENUM_EXT("BT SampleRate TX", bt_sample_rate_tx,
+			msm_bt_sample_rate_tx_get,
+			msm_bt_sample_rate_tx_put),
+	SOC_ENUM_EXT("HiFi Function", hifi_function, msm_hifi_get,
+			msm_hifi_put),
 };
 
 static int msm_slim_get_ch_from_beid(int32_t id)
@@ -1377,6 +1605,39 @@ static int msm_ext_mclk_event(struct snd_soc_dapm_widget *w,
 	return 0;
 }
 
+static int msm_hifi_ctrl_event(struct snd_soc_dapm_widget *w,
+				struct snd_kcontrol *k, int event)
+{
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
+	struct snd_soc_card *card = codec->component.card;
+	struct msm_asoc_mach_data *pdata =
+				snd_soc_card_get_drvdata(card);
+
+	pr_debug("%s: msm_hifi_control = %d\n", __func__, msm_hifi_control);
+
+	if (!pdata || !pdata->hph_en0_gpio_p) {
+		pr_err("%s: hph_en0_gpio is invalid\n", __func__);
+		return -EINVAL;
+	}
+
+	if (msm_hifi_control != MSM_HIFI_ON) {
+		pr_debug("%s: HiFi mixer control is not set\n",
+			 __func__);
+		return 0;
+	}
+
+	switch (event) {
+	case SND_SOC_DAPM_POST_PMU:
+		msm_cdc_pinctrl_select_active_state(pdata->hph_en0_gpio_p);
+		break;
+	case SND_SOC_DAPM_PRE_PMD:
+		msm_cdc_pinctrl_select_sleep_state(pdata->hph_en0_gpio_p);
+		break;
+	}
+
+	return 0;
+}
+
 static int msm_ext_prepare_hifi(struct msm_asoc_mach_data *pdata)
 {
 	int ret = 0;
@@ -1416,6 +1677,7 @@ static const struct snd_soc_dapm_widget msm_dapm_widgets[] = {
 	SND_SOC_DAPM_SPK("Lineout_3 amp", NULL),
 	SND_SOC_DAPM_SPK("Lineout_2 amp", NULL),
 	SND_SOC_DAPM_SPK("Lineout_4 amp", NULL),
+	SND_SOC_DAPM_SPK("hifi amp", msm_hifi_ctrl_event),
 	SND_SOC_DAPM_MIC("Handset Mic", NULL),
 	SND_SOC_DAPM_MIC("Headset Mic", NULL),
 	SND_SOC_DAPM_MIC("Secondary Mic", NULL),
@@ -1433,6 +1695,8 @@ static const struct snd_soc_dapm_widget msm_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("Digital Mic4", NULL),
 	SND_SOC_DAPM_MIC("Digital Mic5", NULL),
 	SND_SOC_DAPM_MIC("Digital Mic6", NULL),
+	SND_SOC_DAPM_HP("Lineout", NULL),
+	SND_SOC_DAPM_MIC("Linein", NULL),
 };
 
 static struct snd_soc_dapm_route wcd_audio_paths_tasha[] = {
@@ -1770,6 +2034,26 @@ int msm_audrx_init(struct snd_soc_pcm_runtime *rtd)
 		tasha_codec_info_create_codec_entry(pdata->codec_root, codec);
 		tasha_mbhc_zdet_gpio_ctrl(msm_config_hph_en0_gpio, rtd->codec);
 	}
+
+	if (gpio_is_valid(pdata->gpio_linein_det)) {
+		snd_soc_card_jack_new(rtd->card, "Linein", SND_JACK_LINEIN,
+				      &linein_jack, linein_jack_pins,
+				      ARRAY_SIZE(linein_jack_pins));
+
+		linein_jack_gpio.invert = pdata->linein_det_swh;
+		linein_jack_gpio.gpio = pdata->gpio_linein_det;
+		snd_soc_jack_add_gpios(&linein_jack, 1, &linein_jack_gpio);
+	}
+
+	if (gpio_is_valid(pdata->gpio_lineout_det)) {
+		snd_soc_card_jack_new(rtd->card, "Lineout", SND_JACK_LINEOUT,
+				      &lineout_jack, lineout_jack_pins,
+				      ARRAY_SIZE(lineout_jack_pins));
+
+		lineout_jack_gpio.invert = pdata->lineout_det_swh;
+		lineout_jack_gpio.gpio = pdata->gpio_lineout_det;
+		snd_soc_jack_add_gpios(&lineout_jack, 1, &lineout_jack_gpio);
+	}
 done:
 	msm_set_codec_reg_done(true);
 	return 0;
@@ -1846,6 +2130,34 @@ int msm_ext_cdc_init(struct platform_device *pdev,
 	if (!gpio_is_valid(pdata->hph_en0_gpio) && (!pdata->hph_en0_gpio_p)) {
 		dev_dbg(&pdev->dev, "property %s not detected in node %s",
 			"qcom,hph-en0-gpio", pdev->dev.of_node->full_name);
+	}
+
+	ret = of_property_read_u32(pdev->dev.of_node, "qcom,linein-det-swh",
+				   &pdata->linein_det_swh);
+	if (ret) {
+		dev_dbg(&pdev->dev, "%s: missing %s in dt node\n",
+			 __func__, "qcom,linein-det-swh");
+	}
+
+	ret = of_property_read_u32(pdev->dev.of_node, "qcom,lineout-det-swh",
+				   &pdata->lineout_det_swh);
+	if (ret) {
+		dev_dbg(&pdev->dev, "%s: missing %s in dt node\n",
+			 __func__, "qcom,lineout-det-swh");
+	}
+
+	pdata->gpio_linein_det = of_get_named_gpio(pdev->dev.of_node,
+						   "qcom,linein-det-gpio", 0);
+	if (pdata->gpio_linein_det < 0) {
+		dev_dbg(&pdev->dev, "property %s not detected in node %s\n",
+			"qcom,linein-det-gpio", pdev->dev.of_node->full_name);
+	}
+
+	pdata->gpio_lineout_det = of_get_named_gpio(pdev->dev.of_node,
+						  "qcom,lineout-det-gpio", 0);
+	if (pdata->gpio_lineout_det < 0) {
+		dev_dbg(&pdev->dev, "property %s not detected in node %s\n",
+			"qcom,lineout-det-gpio", pdev->dev.of_node->full_name);
 	}
 
 	ret = msm_ext_prepare_hifi(pdata);
