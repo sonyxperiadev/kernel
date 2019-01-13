@@ -313,6 +313,8 @@ struct somc_panel_color_mgr {
 	bool pcc_profile_avail;
 	bool dsi_pcc_applied;
 	bool mdss_force_pcc;
+
+	const struct drm_crtc_funcs *original_crtc_funcs;
 };
 
 struct panel_specific_pdata {

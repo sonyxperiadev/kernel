@@ -554,6 +554,99 @@ static int somc_panel_colormgr_pcc_select(struct dsi_display *display,
 	return ret;
 }
 
+static int somc_panel_sde_crtc_set_property_override(struct drm_crtc *crtc,
+		struct drm_property *property,
+		uint64_t value)
+{
+	struct dsi_display *display = dsi_display_get_main_display();
+	struct somc_panel_color_mgr *color_mgr = NULL;
+
+	pr_debug("Running override %s\n", __func__);
+
+	if (!display)
+		return -EINVAL;
+
+	if (!display->panel)
+		return -EINVAL;
+
+	color_mgr = display->panel->spec_pdata->color_mgr;
+
+	if (!color_mgr)
+		return -EINVAL;
+
+	if (!color_mgr->original_crtc_funcs) {
+		pr_err("%s (%d): original_crtc_funcs is NULL!!\n",
+				__func__, __LINE__);
+		return -EINVAL;
+	}
+
+	return color_mgr->original_crtc_funcs->set_property(
+			crtc, property, value);
+}
+
+static int somc_panel_inject_crtc_overrides(struct dsi_display *display)
+{
+	struct dsi_panel *panel = display->panel;
+	struct somc_panel_color_mgr *color_mgr = NULL;
+	struct drm_crtc *crtc = NULL;
+	struct drm_crtc_funcs *new_funcs= NULL;
+
+	if (!display)
+		return -EINVAL;
+
+	color_mgr = panel->spec_pdata->color_mgr;
+
+	if (!color_mgr)
+		return -EINVAL;
+
+	/* Set up injection, if possible */
+	if (!display->drm_conn || !display->drm_conn->state ||
+			!display->drm_conn->state->crtc) {
+		pr_warn("%s (%d): Cannot get display crtc\n",
+				__func__, __LINE__);
+		return -EINVAL;
+	}
+
+	crtc = display->drm_conn->state->crtc;
+
+	if (!crtc->funcs) {
+		pr_err("No funcs on CRTC!!\n");
+		return -EINVAL;
+	}
+
+	if (color_mgr->original_crtc_funcs) {
+		pr_warn("%s (%d): Override: Already have original"
+				" funcs! Is setup called twice??\n",
+				__func__, __LINE__);
+		return -EINVAL;
+	}
+
+	/* First, create a copy of the original function: */
+	color_mgr->original_crtc_funcs = crtc->funcs;
+
+	/* Create a secondary buffer containing
+	 * the exact same function pointers: */
+	new_funcs = devm_kmalloc(&display->pdev->dev,
+			sizeof(struct drm_crtc_funcs),
+			GFP_KERNEL);
+	if (!new_funcs) {
+		pr_warn("%s (%d): Cannot allocate memory for override fns\n",
+				__func__, __LINE__);
+	}
+	memcpy(new_funcs, crtc->funcs, sizeof(struct drm_crtc_funcs));
+
+	/* Then, override the function: */
+	new_funcs->set_property = somc_panel_sde_crtc_set_property_override;
+
+	/* Finally, update the funcs buffer with the overridden function: */
+	crtc->funcs = new_funcs;
+
+	pr_notice("%s (%d): set_property injection planted\n",
+			__func__, __LINE__);
+
+	return 0;
+}
+
 int somc_panel_pcc_setup(struct dsi_display *display)
 {
 	int ret;
@@ -579,6 +672,8 @@ int somc_panel_pcc_setup(struct dsi_display *display)
 		if (ret)
 			pr_err("failed to allocate cmd tx buffer memory\n");
 	}
+
+	(void)somc_panel_inject_crtc_overrides(display);
 
 	if (color_mgr->uv_read_cmds.cmds.send_cmd) {
 		get_uv_data(display, &color_mgr->u_data, &color_mgr->v_data);
@@ -1044,7 +1139,7 @@ int somc_panel_send_pa(struct dsi_display *display)
 		goto end;
 	}
 
-	pr_debug("%s (%d):sat=%d hue=%d val=%d cont=%d",
+	pr_debug("%s (%d): sat=%d hue=%d val=%d cont=%d",
 		__func__, __LINE__, hsic_blk.saturation,
 		hsic_blk.hue, hsic_blk.value,
 		hsic_blk.contrast);
