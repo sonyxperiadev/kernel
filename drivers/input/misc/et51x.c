@@ -460,8 +460,10 @@ static int et51x_probe(struct platform_device *pdev)
 	int rc = 0;
 	size_t i;
 	int irqf;
-	int hw_type;
 	struct device_node *np = dev->of_node;
+#ifdef CONFIG_ARCH_SONY_NILE
+	int hw_type;
+#endif
 
 	struct et51x_data *et51x =
 		devm_kzalloc(dev, sizeof(*et51x), GFP_KERNEL);
@@ -501,11 +503,13 @@ static int et51x_probe(struct platform_device *pdev)
 
 #ifdef CONFIG_ARCH_SONY_NILE
 	hw_type = cei_fp_module_detect();
-	dev_info(dev, "Detected hw type %d\n", hw_type);
 
 	if (hw_type != FP_HW_TYPE_EGISTEC) {
+		dev_info(dev, "Egistec sensor not found, bailing out\n");
 		rc = -ENODEV;
 		goto exit_powerdown;
+	} else {
+		dev_info(dev, "Detected Egistec sensor\n");
 	}
 #endif
 
