@@ -560,10 +560,10 @@ static int fpc1145_probe(struct platform_device *pdev)
 	int rc = 0;
 	size_t i;
 	int irqf;
+	struct device_node *np = dev->of_node;
 #ifdef CONFIG_ARCH_SONY_NILE
 	int hw_type;
 #endif
-	struct device_node *np = dev->of_node;
 
 	struct fpc1145_data *fpc1145 =
 		devm_kzalloc(dev, sizeof(*fpc1145), GFP_KERNEL);
@@ -598,14 +598,16 @@ static int fpc1145_probe(struct platform_device *pdev)
 		goto exit;
 
 	hw_type = cei_fp_module_detect();
-	dev_info(dev, "Detected hw type %d\n", hw_type);
 
 	(void)vreg_setup(fpc1145, VDD_ANA, false);
 
 	if (hw_type != FP_HW_TYPE_FPC) {
+		dev_info(dev, "FPC sensor not found, bailing out\n");
 		rc = -ENODEV;
 		goto exit;
 	}
+
+	dev_info(dev, "Detected FPC sensor\n");
 #endif
 
 	rc = fpc1145_request_named_gpio(fpc1145, "fpc,gpio_irq",
