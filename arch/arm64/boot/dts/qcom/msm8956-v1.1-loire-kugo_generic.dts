@@ -28,6 +28,6 @@
 
 / {
 	model = "SoMC Kugo-ROW";
-	compatible = "somc,kugo-row", "qcom,msm8956";
+	compatible = "somc,kugo-row", "somc,loire", "qcom,msm8956";
 	qcom,board-id= <8 0>;
 };

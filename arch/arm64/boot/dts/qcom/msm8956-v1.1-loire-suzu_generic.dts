@@ -28,6 +28,6 @@
 
 / {
 	model = "SoMC Suzu-ROW";
-	compatible = "somc,suzu-row", "qcom,msm8956";
+	compatible = "somc,suzu-row", "somc,loire", "qcom,msm8956";
 	qcom,board-id= <8 0>;
 };

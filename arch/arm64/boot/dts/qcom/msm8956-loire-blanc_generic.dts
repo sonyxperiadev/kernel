@@ -28,6 +28,6 @@
 
 / {
 	model = "SoMC Blanc-ROW";
-	compatible = "somc,blanc-row", "qcom,msm8956";
+	compatible = "somc,blanc-row", "somc,loire", "qcom,msm8956";
 	qcom,board-id = <8 0>;
 };

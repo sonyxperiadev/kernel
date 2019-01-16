@@ -28,7 +28,7 @@
 
 / {
 	model = "SoMC Blanc-ROW";
-	compatible = "somc,blanc-row", "qcom,apq8056";
+	compatible = "somc,blanc-row", "somc,loire", "qcom,apq8056";
 	qcom,board-id = <8 0>;
 	qcom,msm-id = <274 0x10001>; /* APQ variant */
 };
