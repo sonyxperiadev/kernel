@@ -229,3 +229,70 @@
 	};
 
 };
+
+&dsi_td4328_tianma_fhdplus_cmd {
+	qcom,platform-te-gpio = <&tlmm 59 0>;
+	qcom,platform-reset-gpio = <&tlmm 53 0>;
+	qcom,mdss-dsi-reset-sequence = <0 30>, <1 150>;
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_tianma>;
+	qcom,panel-vspvsn-supply-entries = <&dsi_panel_vspvsn_pwr_supply_tianma>;
+	somc,pw-on-rst-seq = "after_power_on";
+
+	qcom,mdss-dsi-display-timings {
+		1080p60 {
+			qcom,mdss-dsi-panel-framerate = <60>;
+			qcom,mdss-dsi-panel-width = <1080>;
+			qcom,mdss-dsi-panel-height = <2160>;
+			qcom,mdss-dsi-h-front-porch = <76>;
+			qcom,mdss-dsi-h-back-porch = <20>;
+			qcom,mdss-dsi-h-pulse-width = <4>;
+			qcom,mdss-dsi-h-sync-skew = <0>;
+			qcom,mdss-dsi-v-back-porch = <30>;
+			qcom,mdss-dsi-v-front-porch = <5>;
+			qcom,mdss-dsi-v-pulse-width = <1>;
+			qcom,mdss-dsi-h-left-border = <0>;
+			qcom,mdss-dsi-h-right-border = <0>;
+			qcom,mdss-dsi-v-top-border = <0>;
+			qcom,mdss-dsi-v-bottom-border = <0>;
+			qcom,mdss-dsi-h-sync-pulse = <0>;
+			qcom,mdss-dsi-t-clk-post = <0x0D>;
+			qcom,mdss-dsi-t-clk-pre = <0x2F>;
+
+			qcom,mdss-dsi-panel-clockrate = <1998000000>;
+
+			qcom,mdss-dsi-on-command = [
+				29 01 00 00 00 00 02 B0 04
+				29 01 00 00 00 00 04 B3 00 00 06
+				29 01 00 00 00 00 02 D6 01
+				05 01 00 00 78 00 02 11 00
+				05 01 00 00 46 00 02 29 00];
+			qcom,mdss-dsi-off-command = [
+				05 01 00 00 32 00 02 28 00
+				05 01 00 00 64 00 02 10 00];
+
+			qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
+			qcom,mdss-dsi-off-command-state = "dsi_lp_mode";
+
+			qcom,display-topology = <1 0 1>;
+			qcom,default-topology-index = <0>;
+
+			qcom,mdss-dsi-timing-default;
+
+			qcom,mdss-dsi-panel-timings = [e6 38 26 00 68 6e 2a
+						       3c 44 03 04 00];
+
+			qcom,mdss-dsi-panel-timings-phy-v2 = [23 1F 07 09 05 03 04 A0
+							      23 1F 07 09 05 03 04 A0
+							      23 1F 07 09 05 03 04 A0
+							      23 1F 07 09 05 03 04 A0
+							      23 19 08 08 05 03 04 A0];
+
+			qcom,mdss-dsi-panel-phy-timings = [23 1F 07 09 05 03 04 A0
+							   23 1F 07 09 05 03 04 A0
+							   23 1F 07 09 05 03 04 A0
+							   23 1F 07 09 05 03 04 A0
+							   23 19 08 08 05 03 04 A0];
+		};
+	};
+
+};
