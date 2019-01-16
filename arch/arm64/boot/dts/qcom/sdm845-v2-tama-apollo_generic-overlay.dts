@@ -33,7 +33,7 @@
 
 / {
 	model = "Sony Mobile Communications. Apollo(SDM845 v2)";
-	compatible = "somc,apollo-row", "qcom,sdm845", "qcom,mtp";
+	compatible = "somc,apollo-row", "somc,tama", "qcom,sdm845", "qcom,mtp";
 	qcom,msm-id = <321 0x20000>;
 	qcom,board-id = <8 0>;
 };

@@ -27,7 +27,7 @@
 
 / {
 	model = "Sony Mobile Communications. Akari(SDM845 v1)";
-	compatible = "somc,akari-row", "qcom,sdm845", "qcom,mtp";
+	compatible = "somc,akari-row", "somc,tama", "qcom,sdm845", "qcom,mtp";
 	qcom,board-id = <8 0>;
 };
 
