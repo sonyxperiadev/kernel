@@ -109,6 +109,7 @@ struct bwmon {
 	u32 sample_size_ms;
 	u32 intr_status;
 	u8 count_shift;
+	u8 mb_shift;
 	u32 thres_lim;
 	u32 byte_mask;
 	u32 byte_match;
@@ -424,16 +425,15 @@ static u32 calc_zone_counts(struct bw_hwmon *hw)
 	return zone_counts;
 }
 
-#define MB_SHIFT	20
-
-static u32 mbps_to_count(unsigned long mbps, unsigned int ms, u8 shift)
+static u32 mbps_to_count(unsigned long mbps, unsigned int ms, u8 shift,
+			 u8 mb_shift)
 {
 	mbps *= ms;
 
-	if (shift > MB_SHIFT)
-		mbps >>= shift - MB_SHIFT;
+	if (shift > mb_shift)
+		mbps >>= shift - mb_shift;
 	else
-		mbps <<= MB_SHIFT - shift;
+		mbps <<= mb_shift - shift;
 
 	return DIV_ROUND_UP(mbps, MSEC_PER_SEC);
 }
@@ -455,8 +455,10 @@ void set_zone_thres(struct bwmon *m, unsigned int sample_ms,
 	u32 hi, med, lo;
 	u32 zone_cnt_thres = calc_zone_counts(hw);
 
-	hi = mbps_to_count(hw->up_wake_mbps, sample_ms, m->count_shift);
-	med = mbps_to_count(hw->down_wake_mbps, sample_ms, m->count_shift);
+	hi = mbps_to_count(hw->up_wake_mbps, sample_ms,
+				m->count_shift, m->mb_shift);
+	med = mbps_to_count(hw->down_wake_mbps, sample_ms,
+				m->count_shift, m->mb_shift);
 	lo = 0;
 
 	if (unlikely((hi > m->thres_lim) || (med > hi) || (lo > med))) {
@@ -1074,6 +1076,9 @@ static int bimc_bwmon_driver_probe(struct platform_device *pdev)
 
 	if (of_property_read_u32(dev->of_node, "qcom,count-unit", &count_unit))
 		count_unit = SZ_1M;
+	if (of_property_read_u8(dev->of_node, "qcom,mb-shift", &m->mb_shift))
+		m->mb_shift = 20;
+
 	m->count_shift = order_base_2(count_unit);
 	m->thres_lim = THRES_LIM(m->count_shift);
 
