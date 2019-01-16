@@ -14,6 +14,7 @@
 #define QPNP_PON_H
 
 #include <linux/errno.h>
+#include <linux/of.h>
 
 /**
  * enum pon_trigger_source: List of PON trigger sources
@@ -50,27 +51,7 @@ enum pon_power_off_type {
 	PON_POWER_OFF_MAX_TYPE		= 0x10,
 };
 
-#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_NILE) || \
-    defined(CONFIG_ARCH_SONY_TAMA)
-enum pon_restart_reason {
-	PON_RESTART_REASON_NONE			= 0x00,
-	PON_RESTART_REASON_UNKNOWN		= 0x01,
-	PON_RESTART_REASON_RECOVERY		= 0x02,
-	PON_RESTART_REASON_BOOTLOADER		= 0x03,
-	PON_RESTART_REASON_RTC			= 0x04,
-	PON_RESTART_REASON_DMVERITY_CORRUPTED	= 0x05,
-	PON_RESTART_REASON_DMVERITY_ENFORCE	= 0x06,
-	PON_RESTART_REASON_KEYS_CLEAR		= 0x07,
-	PON_RESTART_REASON_KERNEL_PANIC		= 0x40,
-	PON_RESTART_REASON_UNHANDLED_RESET	= 0x41,
-	PON_RESTART_REASON_FOTA_CRASH		= 0x42,
-	PON_RESTART_REASON_OEM_MIN		= 0x50,
-	PON_RESTART_REASON_OEM_F		= 0x50,
-	PON_RESTART_REASON_OEM_P		= 0x51,
-	PON_RESTART_REASON_OEM_MAX		= 0x5f,
-	PON_RESTART_REASON_XFL			= 0x60,
-};
-#else
+/* NOTE: These are NOT the real restart reason values. */
 enum pon_restart_reason {
 	/* 0 ~ 31 for common defined features */
 	PON_RESTART_REASON_UNKNOWN		= 0x00,
@@ -82,11 +63,45 @@ enum pon_restart_reason {
 	PON_RESTART_REASON_KEYS_CLEAR		= 0x06,
 	PON_RESTART_REASON_REBOOT		= 0x10,
 
-	/* 32 ~ 63 for OEMs/ODMs secific features */
-	PON_RESTART_REASON_OEM_MIN		= 0x20,
-	PON_RESTART_REASON_OEM_MAX		= 0x3f,
+	/* QCOM: 32 ~ 63 for OEMs/ODMs secific features */
+	//PON_RESTART_REASON_OEM_MIN		= 0x20,
+	//PON_RESTART_REASON_OEM_MAX		= 0x3f,
+
+	/* SoMC specific */
+	PON_RESTART_REASON_KERNEL_PANIC		= 0x40,
+	PON_RESTART_REASON_UNHANDLED_RESET	= 0x41,
+	PON_RESTART_REASON_FOTA_CRASH		= 0x42,
+	PON_RESTART_REASON_OEM_MIN		= 0x50,
+	PON_RESTART_REASON_OEM_F		= 0x50,
+	PON_RESTART_REASON_OEM_P		= 0x51,
+	PON_RESTART_REASON_OEM_MAX		= 0x5f,
+	PON_RESTART_REASON_XFL			= 0x60,
+
+	PON_RESTART_REASON_NONE			= 0x80,
+	PON_RESTART_REASON_MAX,
 };
-#endif /* CONFIG_ARCH_SONY_YOSHINO */
+
+enum loader_target {
+	LOADER_TARGET_UNKNOWN = 0,
+	LOADER_TARGET_QCOM,
+	LOADER_TARGET_SOMC_S1BOOT = 10,
+	LOADER_TARGET_SOMC_XBOOT,
+	LOADER_TARGET_SOMC_XBOOT_AB,
+	LOADER_TARGET_SOMC_MAX,
+	LOADER_TARGET_MAX
+};
+
+#define IS_ANY_LOADER_TARGET_SOMC(x) \
+	((x >= LOADER_TARGET_SOMC_S1BOOT) && (x < LOADER_TARGET_SOMC_MAX))
+
+#ifdef CONFIG_POWER_RESET_QCOM
+int msm_restart_get_bootloader_target(void);
+#else
+static inline int msm_restart_get_bootloader_target(void)
+{
+	return LOADER_TARGET_QCOM;
+}
+#endif
 
 #ifdef CONFIG_INPUT_QPNP_POWER_ON
 int qpnp_pon_system_pwr_off(enum pon_power_off_type type);

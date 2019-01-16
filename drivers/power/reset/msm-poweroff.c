@@ -50,16 +50,7 @@
 #define SCM_DLOAD_MINIDUMP		0X20
 #define SCM_DLOAD_BOTHDUMPS	(SCM_DLOAD_MINIDUMP | SCM_DLOAD_FULLDUMP)
 
-#if defined(CONFIG_ARCH_SONY_LOIRE) || defined(CONFIG_ARCH_SONY_TONE)
- #define TARGET_SOMC_S1BOOT
-#endif
-#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_NILE) || \
-    defined(CONFIG_ARCH_SONY_TAMA)
- #define TARGET_SOMC_XBOOT
-#if defined(CONFIG_ARCH_SONY_NILE) || defined(CONFIG_ARCH_SONY_TAMA)
- #define TARGET_SOMC_XBOOT_FEATURE_AB
-#endif
-#endif
+static enum loader_target loader_tgt = LOADER_TARGET_UNKNOWN;
 
 static int restart_mode;
 static void __iomem *restart_reason;
@@ -286,29 +277,31 @@ static void msm_restart_prepare(const char *cmd)
 				(cmd != NULL && cmd[0] != '\0'));
 	}
 
-#if defined(TARGET_SOMC_XBOOT)
-	/* Force warm reset and allow device to
-	 * preserve memory on restart for kernel
-	 * panic or for bootloader and recovery
-	 * commands */
-	if (cmd != NULL) {
-		if ((!strncmp(cmd, "bootloader", 10)) ||
-		    (!strncmp(cmd, "recovery", 8)) || in_panic)
-			need_warm_reset = true;
-		else
-			need_warm_reset = false;
+	if (loader_tgt == LOADER_TARGET_SOMC_XBOOT ||
+	    loader_tgt == LOADER_TARGET_SOMC_XBOOT_AB) {
+		/* Force warm reset and allow device to
+		 * preserve memory on restart for kernel
+		 * panic or for bootloader and recovery
+		 * commands */
+		if (cmd != NULL) {
+			if ((!strncmp(cmd, "bootloader", 10)) ||
+			    (!strncmp(cmd, "recovery", 8)) || in_panic)
+				need_warm_reset = true;
+			else
+				need_warm_reset = false;
+		}
+	} else if (loader_tgt == LOADER_TARGET_SOMC_S1BOOT) {
+		need_warm_reset = true;
 	}
-#elif defined(TARGET_SOMC_S1BOOT)
-	need_warm_reset = true;
-#endif
 
 	if (need_warm_reset)
 		qpnp_pon_system_pwr_off(PON_POWER_OFF_WARM_RESET);
 	else
 		qpnp_pon_system_pwr_off(PON_POWER_OFF_HARD_RESET);
 
-#if defined(TARGET_SOMC_XBOOT)
-	if (in_panic) {
+	if (in_panic &&
+	    (loader_tgt == LOADER_TARGET_SOMC_XBOOT ||
+	     loader_tgt == LOADER_TARGET_SOMC_XBOOT_AB)) {
 		qpnp_pon_system_pwr_off(PON_POWER_OFF_WARM_RESET);
 		__raw_writel(0xC0DEDEAD, restart_reason);
 		qpnp_pon_set_restart_reason(PON_RESTART_REASON_KERNEL_PANIC);
@@ -316,7 +309,6 @@ static void msm_restart_prepare(const char *cmd)
 
 		return;
 	}
-#endif
 
 	if (cmd != NULL) {
 		if (!strncmp(cmd, "bootloader", 10)) {
@@ -324,19 +316,19 @@ static void msm_restart_prepare(const char *cmd)
 				PON_RESTART_REASON_BOOTLOADER);
 			__raw_writel(0x77665500, restart_reason);
 		} else if (!strncmp(cmd, "recovery", 8)) {
-#if defined(TARGET_SOMC_XBOOT) && !defined(TARGET_SOMC_XBOOT_FEATURE_AB)
-			qpnp_pon_set_restart_reason(
-				PON_RESTART_REASON_OEM_F);
-			__raw_writel(0x6f656d46, restart_reason); //oem-F
-#elif defined(TARGET_SOMC_S1BOOT)
-			qpnp_pon_set_restart_reason(
-				PON_RESTART_REASON_RECOVERY);
-			__raw_writel(0x6f656d46, restart_reason); //oem-46
-#else
-			qpnp_pon_set_restart_reason(
-				PON_RESTART_REASON_RECOVERY);
-			__raw_writel(0x77665502, restart_reason);
-#endif
+			if (loader_tgt == LOADER_TARGET_SOMC_XBOOT) {
+				qpnp_pon_set_restart_reason(
+					PON_RESTART_REASON_OEM_F);
+				__raw_writel(0x6f656d46, restart_reason); //F
+			} else if (loader_tgt == LOADER_TARGET_SOMC_S1BOOT) {
+				qpnp_pon_set_restart_reason(
+					PON_RESTART_REASON_RECOVERY);
+				__raw_writel(0x6f656d46, restart_reason); //46
+			} else {
+				qpnp_pon_set_restart_reason(
+					PON_RESTART_REASON_RECOVERY);
+				__raw_writel(0x77665502, restart_reason);
+			}
 		} else if (!strcmp(cmd, "rtc")) {
 			qpnp_pon_set_restart_reason(
 				PON_RESTART_REASON_RTC);
@@ -384,22 +376,24 @@ static void msm_restart_prepare(const char *cmd)
 			enable_emergency_dload_mode();
 		} else {
 			pr_notice("%s : cmd is %s, set to reboot mode\n", __func__, cmd);
-#if defined(TARGET_SOMC_XBOOT) || defined(TARGET_SOMC_S1BOOT)
-			qpnp_pon_set_restart_reason(PON_RESTART_REASON_UNKNOWN);
-#else
-			qpnp_pon_set_restart_reason(PON_RESTART_REASON_REBOOT);
-#endif
+			if (IS_ANY_LOADER_TARGET_SOMC(loader_tgt)) {
+				qpnp_pon_set_restart_reason(PON_RESTART_REASON_UNKNOWN);
+			} else {
+				qpnp_pon_set_restart_reason(PON_RESTART_REASON_REBOOT);
+			}
 			__raw_writel(0x77665501, restart_reason);
 		}
 	} else {
 		pr_notice("%s : cmd is NULL, set to reboot mode\n", __func__);
-#if defined(TARGET_SOMC_XBOOT) || defined(TARGET_SOMC_S1BOOT)
-		qpnp_pon_set_restart_reason(PON_RESTART_REASON_UNKNOWN);
-		__raw_writel(0x77665501, restart_reason);
-#else
-		qpnp_pon_set_restart_reason(PON_RESTART_REASON_REBOOT);
-		__raw_writel(0x776655AA, restart_reason);
-#endif
+
+		if (IS_ANY_LOADER_TARGET_SOMC(loader_tgt)) {
+			/* Any SoMC target */
+			qpnp_pon_set_restart_reason(PON_RESTART_REASON_UNKNOWN);
+			__raw_writel(0x77665501, restart_reason);
+		} else {
+			qpnp_pon_set_restart_reason(PON_RESTART_REASON_REBOOT);
+			__raw_writel(0x776655AA, restart_reason);
+		}
 	}
 
 	flush_cache_all();
@@ -488,9 +482,13 @@ static void do_msm_poweroff(void)
 	set_dload_mode(0);
 #endif
 	qpnp_pon_system_pwr_off(PON_POWER_OFF_SHUTDOWN);
-#ifdef TARGET_SOMC_XBOOT
-	qpnp_pon_set_restart_reason(PON_RESTART_REASON_NONE);
-#endif
+
+	if (loader_tgt == LOADER_TARGET_SOMC_XBOOT ||
+	    loader_tgt == LOADER_TARGET_SOMC_XBOOT_AB) {
+				/* this is  PON_RESTART_REASON_NONE */
+		qpnp_pon_set_restart_reason(PON_RESTART_REASON_UNKNOWN);
+	}
+
 	/* Needed to bypass debug image on some chips */
 	if (!is_scm_armv8())
 		ret = scm_call_atomic2(SCM_SVC_BOOT,
@@ -654,6 +652,24 @@ static struct notifier_block msm_reboot_notifier = {
 	.notifier_call = msm_reboot_call,
 };
 
+int msm_restart_get_bootloader_target(void)
+{
+	if (loader_tgt > LOADER_TARGET_UNKNOWN)
+		return loader_tgt;
+
+	if (of_machine_is_compatible("somc,nile") ||
+	    of_machine_is_compatible("somc,tama")) {
+		return LOADER_TARGET_SOMC_XBOOT_AB;
+	} else if (of_machine_is_compatible("somc,yoshino")) {
+		return LOADER_TARGET_SOMC_XBOOT;
+	} else if (of_machine_is_compatible("somc,loire") ||
+		   of_machine_is_compatible("somc,tone")) {
+		return LOADER_TARGET_SOMC_S1BOOT;
+	}
+
+	return LOADER_TARGET_QCOM;
+}
+
 static int msm_restart_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -769,17 +785,20 @@ skip_sysfs_create:
 	if (scm_is_call_available(SCM_SVC_PWR, SCM_IO_DEASSERT_PS_HOLD) > 0)
 		scm_deassert_ps_hold_supported = true;
 
+	loader_tgt = msm_restart_get_bootloader_target();
+
 	set_dload_mode(download_mode);
 
 	qpnp_pon_system_pwr_off(PON_POWER_OFF_WARM_RESET);
 
-#ifdef TARGET_SOMC_XBOOT
-	__raw_writel(0xC0DEDEAD, restart_reason);
-	qpnp_pon_set_restart_reason(PON_RESTART_REASON_KERNEL_PANIC);
-#elif defined(TARGET_SOMC_S1BOOT)
-	__raw_writel(0x77665501, restart_reason);
-	qpnp_pon_set_restart_reason(PON_RESTART_REASON_UNKNOWN);
-#endif
+	if (loader_tgt == LOADER_TARGET_SOMC_XBOOT ||
+	    loader_tgt == LOADER_TARGET_SOMC_XBOOT_AB) {
+		__raw_writel(0xC0DEDEAD, restart_reason);
+		qpnp_pon_set_restart_reason(PON_RESTART_REASON_KERNEL_PANIC);
+	} else if (loader_tgt == LOADER_TARGET_SOMC_S1BOOT) {
+		__raw_writel(0x77665501, restart_reason);
+		qpnp_pon_set_restart_reason(PON_RESTART_REASON_UNKNOWN);
+	}
 
 	return 0;
 
