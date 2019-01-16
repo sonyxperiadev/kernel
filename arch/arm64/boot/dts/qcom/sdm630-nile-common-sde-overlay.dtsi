@@ -201,7 +201,6 @@ msm_drm.dsi_display0=dsi_panel_cmd_display:config0";
 
 		qcom,platform-te-gpio = <&tlmm 59 0>;
 		qcom,platform-reset-gpio = <&tlmm 53 0>;
-		qcom,dsi-panel = <&dsi_td4322_truly_fhd_cmd>;
 		vddio-supply = <&pm660_l11>;
 		lab-supply = <&lcdb_ldo_vreg>;
 		ibb-supply = <&lcdb_ncp_vreg>;

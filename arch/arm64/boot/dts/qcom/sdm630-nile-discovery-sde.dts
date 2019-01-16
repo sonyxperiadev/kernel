@@ -22,3 +22,7 @@
 &tavil_snd {
 	qcom,msm-mbhc-moist-cfg = <0>, <0>, <3>;
 };
+
+&dsi_panel_cmd_display{
+	qcom,dsi-panel = <&dsi_td4322_innolux_fhd_cmd>;
+};
