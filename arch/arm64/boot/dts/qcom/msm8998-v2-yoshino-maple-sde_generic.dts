@@ -30,7 +30,7 @@
 
 / {
 	model = "SoMC Maple-ROW(MSM8998 v2)";
-	compatible = "somc,maple-row", "qcom,msm8998";
+	compatible = "somc,maple-row", "somc,yoshino", "qcom,msm8998";
 	qcom,board-id = <8 0>;
 };
 

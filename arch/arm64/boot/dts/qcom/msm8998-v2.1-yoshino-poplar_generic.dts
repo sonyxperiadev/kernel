@@ -27,6 +27,6 @@
 
 / {
 	model = "SoMC Poplar-ROW(MSM8998 v2.1)";
-	compatible = "somc,poplar-row", "qcom,msm8998";
+	compatible = "somc,poplar-row", "somc,yoshino", "qcom,msm8998";
 	qcom,board-id = <8 0>;
 };

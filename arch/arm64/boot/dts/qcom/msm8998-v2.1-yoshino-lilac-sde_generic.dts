@@ -32,7 +32,7 @@
 
 / {
 	model = "SoMC Lilac-ROW(MSM8998 v2.1)";
-	compatible = "somc,lilac-row", "qcom,msm8998";
+	compatible = "somc,lilac-row", "somc,yoshino", "qcom,msm8998";
 	qcom,board-id = <8 0>;
 };
 
