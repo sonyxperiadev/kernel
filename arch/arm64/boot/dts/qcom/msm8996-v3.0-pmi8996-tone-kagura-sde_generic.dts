@@ -34,6 +34,6 @@
 
 / {
 	model = "SoMC Kagura-ROW";
-	compatible = "somc,kagura-row", "qcom,msm8996";
+	compatible = "somc,kagura-row", "somc,tone", "qcom,msm8996";
 	qcom,board-id = <8 0>;
 };

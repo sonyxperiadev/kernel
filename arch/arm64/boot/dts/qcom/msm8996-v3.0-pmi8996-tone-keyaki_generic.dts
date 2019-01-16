@@ -31,6 +31,6 @@
 
 / {
 	model = "SoMC Keyaki-ROW";
-	compatible = "somc,keyaki-row", "qcom,msm8996";
+	compatible = "somc,keyaki-row", "somc,tone", "qcom,msm8996";
 	qcom,board-id = <8 0>;
 };

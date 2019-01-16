@@ -34,6 +34,6 @@
 
 / {
 	model = "SoMC Dora-ROW";
-	compatible = "somc,dora-row", "qcom,msm8996";
+	compatible = "somc,dora-row", "somc,tone", "qcom,msm8996";
 	qcom,board-id = <8 0>;
 };
