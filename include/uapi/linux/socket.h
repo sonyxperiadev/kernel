@@ -26,4 +26,8 @@ struct __kernel_sockaddr_storage {
 	};
 };
 
+#ifndef __KERNEL__
+ #define sockaddr_storage __kernel_sockaddr_storage
+#endif
+
 #endif /* _UAPI_LINUX_SOCKET_H */
