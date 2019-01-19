@@ -24,7 +24,7 @@
 	model = "Qualcomm Technologies, Inc. SDM630";
 	compatible = "qcom,sdm630";
 	qcom,msm-id = <318 0x0>;
-	interrupt-parent = <&wakegic>;
+	interrupt-parent = <&intc>;
 
 	aliases {
 		serial0 = &uartblsp1dm1;
@@ -479,7 +479,7 @@
 	wakegpio: wake-gpio {
 		compatible = "qcom,mpm-gpio-sdm630", "qcom,mpm-gpio";
 		interrupt-controller;
-		interrupt-parent = <&intc>;
+		interrupt-parent = <&tlmm>;
 		#interrupt-cells = <2>;
 	};
 

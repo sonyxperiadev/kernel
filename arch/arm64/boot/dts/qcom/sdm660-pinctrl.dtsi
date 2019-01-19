@@ -19,7 +19,7 @@
 		gpio-controller;
 		#gpio-cells = <2>;
 		interrupt-controller;
-		interrupt-parent = <&wakegpio>;
+		//interrupt-parent = <&wakegpio>;
 		#interrupt-cells = <2>;
 
 		uart_console_active: uart_console_active {
