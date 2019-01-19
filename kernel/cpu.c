@@ -663,13 +663,14 @@ static void cpuhp_thread_fun(unsigned int cpu)
 	struct cpuhp_cpu_state *st = this_cpu_ptr(&cpuhp_state);
 	int ret = 0;
 
+	if (!st->should_run)
+		return;
+
 	/*
 	 * Paired with the mb() in cpuhp_kick_ap_work and
 	 * cpuhp_invoke_ap_callback, so the work set is consistent visible.
 	 */
 	smp_mb();
-	if (!st->should_run)
-		return;
 
 	st->should_run = false;
 
