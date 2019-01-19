@@ -36,6 +36,10 @@
 	};
 };
 
+&somc_pinctrl {
+	pinctrl-1 = <&msm_gpio_47 &msm_gpio_48>;
+};
+
 &qpnp_fg {
 	qcom,battery-data = <&tone_dora_batterydata>;
 	qcom,fg-iterm-ma = <150>;
