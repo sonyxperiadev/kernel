@@ -547,7 +547,7 @@ static int somc_panel_colormgr_pcc_select(struct dsi_display *display,
 
 	color_mgr->pcc_profile = profile_number;
 	somc_panel_colormgr_reset(display->panel);
-	somc_panel_pcc_setup(display);
+	(void)somc_panel_colormgr_apply_calibrations();
 
 	return ret;
 }
