@@ -249,12 +249,25 @@ static int msm_mpm_gic_chip_set_type(struct irq_data *d, unsigned int type)
 	return irq_chip_set_type_parent(d, type);
 }
 
+static void msm_mpm_gic_chip_enable(struct irq_data *d)
+{
+	msm_mpm_enable_irq(d, true);
+	irq_chip_enable_parent(d);
+}
+
+static void msm_mpm_gic_chip_disable(struct irq_data *d)
+{
+	msm_mpm_enable_irq(d, false);
+	irq_chip_disable_parent(d);
+}
+
 static struct irq_chip msm_mpm_gic_chip = {
 	.name		= "mpm-gic",
 	.irq_eoi	= irq_chip_eoi_parent,
 	.irq_mask	= msm_mpm_gic_chip_mask,
-	.irq_disable	= msm_mpm_gic_chip_mask,
+	.irq_disable	= msm_mpm_gic_chip_disable,
 	.irq_unmask	= msm_mpm_gic_chip_unmask,
+	.irq_enable	= msm_mpm_gic_chip_disable,
 	.irq_retrigger	= irq_chip_retrigger_hierarchy,
 	.irq_set_type	= msm_mpm_gic_chip_set_type,
 	.flags		= IRQCHIP_MASK_ON_SUSPEND | IRQCHIP_SKIP_SET_WAKE,
