@@ -186,6 +186,7 @@ struct sde_crtc_fps_info {
  * @output_fence  : output release fence context
  * @stage_cfg     : H/w mixer stage configuration
  * @debugfs_root  : Parent of debugfs node
+ * @priv_handle   : Pointer to external private handle, if present
  * @vblank_cb_count : count of vblank callback since last reset
  * @play_count    : frame count between crtc enable and disable
  * @vblank_cb_time  : ktime at vblank count reset
@@ -249,6 +250,7 @@ struct sde_crtc {
 
 	struct sde_hw_stage_cfg stage_cfg;
 	struct dentry *debugfs_root;
+	void *priv_handle;
 
 	u32 vblank_cb_count;
 	u64 play_count;
