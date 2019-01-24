@@ -38,13 +38,6 @@
 
 #define WSA881X_NUM_RETRY	5
 
-#undef WSA_TARGET_SOMC
-#if defined(CONFIG_ARCH_SONY_LOIRE) || defined(CONFIG_ARCH_SONY_TONE)    || \
-    defined(CONFIG_ARCH_SONY_NILE)  || defined(CONFIG_ARCH_SONY_YOSHINO) || \
-    defined(CONFIG_ARCH_SONY_TAMA)
- #define WSA_TARGET_SOMC
-#endif
-
 enum {
 	G_18DB = 0,
 	G_16P5DB,
@@ -83,9 +76,7 @@ struct swr_port {
 enum {
 	WSA881X_DEV_DOWN,
 	WSA881X_DEV_UP,
-#ifdef WSA_TARGET_SOMC
 	WSA881X_DEV_READY,
-#endif
 };
 
 /*
@@ -109,9 +100,7 @@ struct wsa881x_priv {
 	int version;
 	struct mutex bg_lock;
 	struct mutex res_lock;
-#ifdef WSA_TARGET_SOMC
 	struct mutex temp_lock;
-#endif
 	struct snd_info_entry *entry;
 	struct snd_info_entry *version_entry;
 	int state;
@@ -144,6 +133,7 @@ static struct dentry *debugfs_poke;
 static struct dentry *debugfs_reg_dump;
 static unsigned int read_data;
 static unsigned int devnum;
+static bool wsa_target_somc = false;
 
 static int32_t wsa881x_resource_acquire(struct snd_soc_codec *codec,
 						bool enable);
@@ -504,7 +494,7 @@ static const struct file_operations codec_debug_ops = {
 	.read = codec_debug_read,
 };
 
-#ifdef WSA_TARGET_SOMC
+/* wsa_target_somc */
 static void wsa881x_regcache_sync(struct wsa881x_priv *wsa881x)
 {
 	mutex_lock(&wsa881x->res_lock);
@@ -515,7 +505,7 @@ static void wsa881x_regcache_sync(struct wsa881x_priv *wsa881x)
 	}
 	mutex_unlock(&wsa881x->res_lock);
 }
-#endif
+/* END */
 
 static const struct reg_sequence wsa881x_pre_pmu_pa[] = {
 	{WSA881X_SPKR_DRV_GAIN, 0x41, 0},
@@ -876,13 +866,13 @@ static int wsa881x_rdac_event(struct snd_soc_dapm_widget *w,
 
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
-#ifdef WSA_TARGET_SOMC
-		mutex_lock(&wsa881x->temp_lock);
-		wsa881x_resource_acquire(codec, ENABLE);
-		mutex_unlock(&wsa881x->temp_lock);
-#else
-		wsa881x_resource_acquire(codec, ENABLE);
-#endif
+		if (wsa_target_somc) {
+			mutex_lock(&wsa881x->temp_lock);
+			wsa881x_resource_acquire(codec, ENABLE);
+			mutex_unlock(&wsa881x->temp_lock);
+		} else {
+			wsa881x_resource_acquire(codec, ENABLE);
+		}
 		wsa881x_boost_ctrl(codec, ENABLE);
 		break;
 	case SND_SOC_DAPM_POST_PMD:
@@ -1058,6 +1048,7 @@ EXPORT_SYMBOL(wsa881x_set_channel_map);
 static void wsa881x_init(struct snd_soc_codec *codec)
 {
 	struct wsa881x_priv *wsa881x = snd_soc_codec_get_drvdata(codec);
+	u8 wsa_out1_p1 = 0xF0, wsa_out1_p2 = 0x70;
 
 	wsa881x->version = snd_soc_read(codec, WSA881X_CHIP_ID1);
 	wsa881x_regmap_defaults(wsa881x->regmap, wsa881x->version);
@@ -1084,15 +1075,21 @@ static void wsa881x_init(struct snd_soc_codec *codec)
 			    0x0C, 0x04);
 	snd_soc_update_bits(codec, WSA881X_BOOST_SLOPE_COMP_ISENSE_FB,
 			    0x03, 0x00);
-	if (snd_soc_read(codec, WSA881X_OTP_REG_0))
+	if (snd_soc_read(codec, WSA881X_OTP_REG_0)) {
+		if (wsa_target_somc) {
+			wsa_out1_p1 = 0xF0;
+
+			if (of_machine_is_compatible("somc,loire") ||
+			    of_machine_is_compatible("somc,tone")) {
+				wsa_out1_p2 = 0x30;
+			} else if (of_machine_is_compatible("somc,tama")) {
+				wsa_out1_p2 = 0x7F;
+			}
+		}
+
 		snd_soc_update_bits(codec, WSA881X_BOOST_PRESET_OUT1,
-#if defined(CONFIG_ARCH_SONY_LOIRE) || defined(CONFIG_ARCH_SONY_TONE)
-				    0xF0, 0x30);
-#elif defined(CONFIG_ARCH_SONY_TAMA)
-				    0xF0, 0x7F);
-#else
-				    0xF0, 0x70);
-#endif
+				    wsa_out1_p1, wsa_out1_p2);
+	}
 	snd_soc_update_bits(codec, WSA881X_BOOST_PRESET_OUT2,
 			    0xF0, 0x30);
 	snd_soc_update_bits(codec, WSA881X_SPKR_DRV_EN, 0x08, 0x08);
@@ -1141,17 +1138,19 @@ static int32_t wsa881x_temp_reg_read(struct snd_soc_codec *codec,
 			return -EINVAL;
 		}
 	}
-#ifdef WSA_TARGET_SOMC
-	wsa881x_regcache_sync(wsa881x);
-	mutex_lock(&wsa881x->temp_lock);
-#else
-	mutex_lock(&wsa881x->res_lock);
-	if (!wsa881x->clk_cnt) {
-		regcache_mark_dirty(wsa881x->regmap);
-		regcache_sync(wsa881x->regmap);
+
+	if (wsa_target_somc) {
+		wsa881x_regcache_sync(wsa881x);
+		mutex_lock(&wsa881x->temp_lock);
+	} else {
+		mutex_lock(&wsa881x->res_lock);
+		if (!wsa881x->clk_cnt) {
+			regcache_mark_dirty(wsa881x->regmap);
+			regcache_sync(wsa881x->regmap);
+		}
+		mutex_unlock(&wsa881x->res_lock);
 	}
-	mutex_unlock(&wsa881x->res_lock);
-#endif
+
 	wsa881x_resource_acquire(codec, ENABLE);
 
 	snd_soc_update_bits(codec, WSA881X_TADC_VALUE_CTL, 0x01, 0x00);
@@ -1165,9 +1164,9 @@ static int32_t wsa881x_temp_reg_read(struct snd_soc_codec *codec,
 
 	wsa881x_resource_acquire(codec, DISABLE);
 
-#ifdef WSA_TARGET_SOMC
-	mutex_unlock(&wsa881x->temp_lock);
-#endif
+	if (wsa_target_somc)
+		mutex_unlock(&wsa881x->temp_lock);
+
 	return 0;
 }
 
@@ -1182,9 +1181,10 @@ static int wsa881x_probe(struct snd_soc_codec *codec)
 	dev = wsa881x->swr_slave;
 	wsa881x->codec = codec;
 	mutex_init(&wsa881x->bg_lock);
-#ifndef WSA_TARGET_SOMC
-	mutex_init(&wsa881x->res_lock);
-#endif
+
+	if (!wsa_target_somc)
+		mutex_init(&wsa881x->res_lock);
+
 	wsa881x_init(codec);
 	snprintf(wsa881x->tz_pdata.name, sizeof(wsa881x->tz_pdata.name),
 		"%s.%x", "wsatz", (u8)dev->addr);
@@ -1206,9 +1206,9 @@ static int wsa881x_remove(struct snd_soc_codec *codec)
 	if (wsa881x->tz_pdata.tz_dev)
 		wsa881x_deinit_thermal(wsa881x->tz_pdata.tz_dev);
 	mutex_destroy(&wsa881x->bg_lock);
-#ifndef WSA_TARGET_SOMC
-	mutex_destroy(&wsa881x->res_lock);
-#endif
+
+	if (!wsa_target_somc)
+		mutex_destroy(&wsa881x->res_lock);
 
 	return 0;
 }
@@ -1325,6 +1325,9 @@ static int wsa881x_swr_probe(struct swr_device *pdev)
 
 	wsa881x->swr_slave = pdev;
 
+	if (of_machine_is_compatible("somc,somc-platform"))
+		wsa_target_somc = true;
+
 	if (!wsa881x->wsa_rst_np) {
 		ret = wsa881x_gpio_init(pdev);
 		if (ret)
@@ -1392,10 +1395,10 @@ static int wsa881x_swr_probe(struct swr_device *pdev)
 		goto dev_err;
 	}
 
-#ifdef WSA_TARGET_SOMC
-	mutex_init(&wsa881x->res_lock);
-	mutex_init(&wsa881x->temp_lock);
-#endif
+	if (wsa_target_somc) {
+		mutex_init(&wsa881x->res_lock);
+		mutex_init(&wsa881x->temp_lock);
+	}
 
 	return 0;
 
@@ -1418,10 +1421,12 @@ static int wsa881x_swr_remove(struct swr_device *pdev)
 	}
 	debugfs_remove_recursive(debugfs_wsa881x_dent);
 	debugfs_wsa881x_dent = NULL;
-#ifdef WSA_TARGET_SOMC
-	mutex_destroy(&wsa881x->res_lock);
-	mutex_destroy(&wsa881x->temp_lock);
-#endif
+
+	if (wsa_target_somc) {
+		mutex_destroy(&wsa881x->res_lock);
+		mutex_destroy(&wsa881x->temp_lock);
+	}
+
 	snd_soc_unregister_codec(&pdev->dev);
 	if (wsa881x->pd_gpio)
 		gpio_free(wsa881x->pd_gpio);
@@ -1480,12 +1485,12 @@ static int wsa881x_swr_reset(struct swr_device *pdev)
 		dev_err(&pdev->dev, "%s: wsa881x is NULL\n", __func__);
 		return -EINVAL;
 	}
-#ifdef WSA_TARGET_SOMC
-	if (wsa881x->state == WSA881X_DEV_READY) {
+
+	if (wsa_target_somc && wsa881x->state == WSA881X_DEV_READY) {
 		dev_dbg(&pdev->dev, "%s: device already active\n", __func__);
 		return 0;
 	}
-#endif
+
 	wsa881x->bg_cnt = 0;
 	wsa881x->clk_cnt = 0;
 	while (swr_get_logical_dev_num(pdev, pdev->addr, &devnum) && retry--) {
@@ -1493,12 +1498,13 @@ static int wsa881x_swr_reset(struct swr_device *pdev)
 		usleep_range(1000, 1100);
 	}
 	pdev->dev_num = devnum;
-#ifdef WSA_TARGET_SOMC
-	wsa881x_regcache_sync(wsa881x);
-#else
-	regcache_mark_dirty(wsa881x->regmap);
-	regcache_sync(wsa881x->regmap);
-#endif
+
+	if (wsa_target_somc) {
+		wsa881x_regcache_sync(wsa881x);
+	} else {
+		regcache_mark_dirty(wsa881x->regmap);
+		regcache_sync(wsa881x->regmap);
+	}
 
 	return 0;
 }
