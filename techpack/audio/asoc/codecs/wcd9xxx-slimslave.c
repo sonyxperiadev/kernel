@@ -14,16 +14,8 @@
 #include <linux/mfd/wcd9xxx/wcd9xxx_registers.h>
 #include "wcd9xxx-slimslave.h"
 
-#undef SLIMSLAVE_TARGET_SOMC
-#if defined(CONFIG_ARCH_SONY_LOIRE) || defined(CONFIG_ARCH_SONY_TONE)    || \
-    defined(CONFIG_ARCH_SONY_NILE)  || defined(CONFIG_ARCH_SONY_YOSHINO) || \
-    defined(CONFIG_ARCH_SONY_TAMA)
- #define SLIMSLAVE_TARGET_SOMC
-#endif
-
-#ifdef SLIMSLAVE_TARGET_SOMC
-  #define SB_PGD_PORT_TX_OR_UR_CFG(port)  (0x1F0 + port)
-#endif
+#define SB_PGD_PORT_TX_OR_UR_CFG(port)  (0x1F0 + port)
+static bool somc_platform = false;
 
 struct wcd9xxx_slim_sch {
 	u16 rx_port_ch_reg_base;
@@ -76,6 +68,13 @@ int wcd9xxx_init_slimslave(struct wcd9xxx *wcd9xxx, u8 wcd9xxx_pgd_la,
 {
 	int ret = 0;
 	int i;
+
+	if (of_machine_is_compatible("somc,loire") ||
+	    of_machine_is_compatible("somc,tone") ||
+	    of_machine_is_compatible("somc,nile") ||
+	    of_machine_is_compatible("somc,yoshino") ||
+	    of_machine_is_compatible("somc,tama"))
+		somc_platform = true;
 
 	ret = wcd9xxx_configure_ports(wcd9xxx);
 	if (ret) {
@@ -335,7 +334,7 @@ err:
 }
 EXPORT_SYMBOL(wcd9xxx_cfg_slim_sch_rx);
 
-#ifdef SLIMSLAVE_TARGET_SOMC
+/* TARGET_SOMC ARCH_SONY */
 static void wcd9xxx_slim_tx_auto_recovery_cfg(struct wcd9xxx *wcd9xxx,
 					   u16 codec_port)
 {
@@ -356,7 +355,7 @@ static void wcd9xxx_slim_tx_auto_recovery_cfg(struct wcd9xxx *wcd9xxx,
 			wcd9xxx_interface_reg_read(wcd9xxx,
 					SB_PGD_PORT_TX_OR_UR_CFG(codec_port)));
 }
-#endif
+/*  */
 
 /* Enable slimbus slave device for RX path */
 int wcd9xxx_cfg_slim_sch_tx(struct wcd9xxx *wcd9xxx,
@@ -409,9 +408,10 @@ int wcd9xxx_cfg_slim_sch_tx(struct wcd9xxx *wcd9xxx,
 		codec_port = tx->port;
 		pr_debug("%s: codec_port %d tx 0x%p, payload 0x%x\n",
 			 __func__, codec_port, tx, payload);
-#ifdef SLIMSLAVE_TARGET_SOMC
-		wcd9xxx_slim_tx_auto_recovery_cfg(wcd9xxx, codec_port);
-#endif
+
+		if (somc_platform)
+			wcd9xxx_slim_tx_auto_recovery_cfg(wcd9xxx, codec_port);
+
 		/* write to interface device */
 		ret = wcd9xxx_interface_reg_write(wcd9xxx,
 				SB_PGD_TX_PORT_MULTI_CHANNEL_0(codec_port),
