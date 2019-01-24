@@ -95,14 +95,14 @@ enum {
 	INTERP_MAX,
 };
 
-#ifdef CONFIG_ARCH_SONY_TAMA
+/* ARCH_SONY ARCH_SONY_TAMA*/
 /* WCD934X slimbus slave port error status */
 enum {
 	SB_PORT_ERR_OF, /* SB port overflow */
 	SB_PORT_ERR_UF, /* SB port underflow */
 	SB_PORT_ERR_MAX,
 };
-#endif
+/*  */
 
 /*
  * Selects compander and smart boost settings
@@ -116,13 +116,20 @@ enum {
 /*
  * Rx path gain offsets
  */
+#if 0
 enum {
 	WCD934X_RX_GAIN_OFFSET_M1P5_DB,
-#ifdef CONFIG_ARCH_SONY_TAMA
-	WCD934X_RX_GAIN_OFFSET_M0P5_DB,
-#endif
 	WCD934X_RX_GAIN_OFFSET_0_DB,
 };
+#else
+/* 
+ * QCOM: M1P5_DB=0; 0_DB=1
+ * TAMA: M1P5_DB=0; M0P5_DB=1; 0_DB=2 (vars defined in wcd934x.c)
+ */
+extern int WCD934X_RX_GAIN_OFFSET_M1P5_DB;
+extern int WCD934X_RX_GAIN_OFFSET_M0P5_DB; /* ARCH_SONY ARCH_SONY_TAMA */
+extern int WCD934X_RX_GAIN_OFFSET_0_DB;
+#endif
 
 /*
  * Dai data structure holds the
