@@ -24,7 +24,7 @@
 / {
 	model = "Qualcomm Technologies, Inc. SDM 630 PM660 + PM660L MTP";
 	compatible = "qcom,sdm630-mtp", "qcom,sdm630", "qcom,mtp",
-			"somc,nile", "somc,pioneer";
+			"somc,nile", "somc,somc-platform", "somc,pioneer";
 	qcom,board-id = <8 0>;
 	qcom,pmic-id = <0x0001001b 0x0101011a 0x0 0x0>,
 			<0x0001001b 0x0201011a 0x0 0x0>;
