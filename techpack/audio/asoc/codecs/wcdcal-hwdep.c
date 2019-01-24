@@ -21,17 +21,21 @@
 #include <sound/soc.h>
 #include "wcdcal-hwdep.h"
 
-const int cal_size_info[WCD9XXX_MAX_CAL] = {
-#if defined(CONFIG_ARCH_SONY_LOIRE) || defined(CONFIG_ARCH_SONY_TONE) \
-    || defined(CONFIG_ARCH_SONY_YOSHINO)
-	[WCD9XXX_ANC_CAL] = 36864,
-#else
+const int qcom_cal_size_info[WCD9XXX_MAX_CAL] = {
 	[WCD9XXX_ANC_CAL] = 16384,
-#endif
 	[WCD9XXX_MBHC_CAL] = 4096,
 	[WCD9XXX_MAD_CAL] = 4096,
 	[WCD9XXX_VBAT_CAL] = 72,
 };
+
+const int somc_cal_size_info[WCD9XXX_MAX_CAL] = {
+	[WCD9XXX_ANC_CAL] = 36864,
+	[WCD9XXX_MBHC_CAL] = 4096,
+	[WCD9XXX_MAD_CAL] = 4096,
+	[WCD9XXX_VBAT_CAL] = 72,
+};
+
+const int *cal_size_info;
 
 const char *cal_name_info[WCD9XXX_MAX_CAL] = {
 	[WCD9XXX_ANC_CAL] = "anc",
@@ -165,6 +169,16 @@ static int wcdcal_hwdep_release(struct snd_hwdep *hw, struct file *file)
 	return 0;
 }
 
+static void wcd_cal_param_fixup(void)
+{
+	if (of_machine_is_compatible("somc,loire") ||
+	    of_machine_is_compatible("somc,tone") ||
+	    of_machine_is_compatible("somc,yoshino"))
+		cal_size_info = somc_cal_size_info;
+	else
+		cal_size_info = qcom_cal_size_info;
+}
+
 int wcd_cal_create_hwdep(void *data, int node, struct snd_soc_codec *codec)
 {
 	char hwname[40];
@@ -177,6 +191,8 @@ int wcd_cal_create_hwdep(void *data, int node, struct snd_soc_codec *codec)
 		pr_err("%s: wrong arguments passed\n", __func__);
 		return -EINVAL;
 	}
+
+	wcd_cal_param_fixup();
 
 	fw = fw_data->fw;
 	snprintf(hwname, strlen("Codec %s"), "Codec %s",
