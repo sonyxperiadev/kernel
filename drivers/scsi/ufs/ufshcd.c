@@ -10748,6 +10748,14 @@ int ufshcd_init(struct ufs_hba *hba, void __iomem *mmio_base, unsigned int irq)
 	struct Scsi_Host *host = hba->host;
 	struct device *dev = hba->dev;
 
+#if !defined(CONFIG_ARCH_SONY_YOSHINO) && !defined(CONFIG_ARCH_SONY_TAMA)
+	if (of_machine_is_compatible("somc,yoshino") ||
+	    of_machine_is_compatible("somc,tama")) {
+		panic("Crashing the kernel to prevent erasing your bootloader."
+		    "Build your kernel with ARCH_SONY_YOSHINO/TAMA support!!");
+	}
+#endif
+
 	if (!mmio_base) {
 		dev_err(hba->dev,
 		"Invalid memory reference for mmio_base is NULL\n");
