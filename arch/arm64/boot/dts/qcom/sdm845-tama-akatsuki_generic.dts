@@ -27,7 +27,8 @@
 
 / {
 	model = "Sony Mobile Communications. Akatsuki(SDM845 v1)";
-	compatible = "somc,akatsuki-row", "somc,tama", "qcom,sdm845", "qcom,mtp";
+	compatible = "somc,akatsuki-row", "somc,tama", "qcom,sdm845",
+			"somc,somc-platform", "qcom,mtp";
 	qcom,board-id = <8 0>;
 };
 
