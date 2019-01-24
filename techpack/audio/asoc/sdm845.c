@@ -4033,22 +4033,23 @@ static void *def_tavil_mbhc_cal(void)
 	void *tavil_wcd_cal;
 	struct wcd_mbhc_btn_detect_cfg *btn_cfg;
 	u16 *btn_high;
+	unsigned int plat_v_hs_max, plat_btn_h1;
 
 	tavil_wcd_cal = kzalloc(WCD_MBHC_CAL_SIZE(WCD_MBHC_DEF_BUTTONS,
 				WCD9XXX_MBHC_DEF_RLOADS), GFP_KERNEL);
 	if (!tavil_wcd_cal)
 		return NULL;
 
-#ifdef CONFIG_ARCH_SONY_TAMA
- #define VHSMAX 1700
- #define BTN_H1 137
-#else
- #define VHSMAX 1600
- #define BTN_H1 150
-#endif
+	if (of_machine_is_compatible("somc,tama")) {
+		plat_v_hs_max = 1700;
+		plat_btn_h1 = 137;
+	} else {
+		plat_v_hs_max = 1600;
+		plat_btn_h1 = 150;
+	}
 
 #define S(X, Y) ((WCD_MBHC_CAL_PLUG_TYPE_PTR(tavil_wcd_cal)->X) = (Y))
-	S(v_hs_max, VHSMAX);
+	S(v_hs_max, plat_v_hs_max);
 #undef S
 #define S(X, Y) ((WCD_MBHC_CAL_BTN_DET_PTR(tavil_wcd_cal)->X) = (Y))
 	S(num_btn, WCD_MBHC_DEF_BUTTONS);
@@ -4059,7 +4060,7 @@ static void *def_tavil_mbhc_cal(void)
 		(sizeof(btn_cfg->_v_btn_low[0]) * btn_cfg->num_btn);
 
 	btn_high[0] = 75;
-	btn_high[1] = BTN_H1;
+	btn_high[1] = plat_btn_h1;
 	btn_high[2] = 237;
 	btn_high[3] = 500;
 	btn_high[4] = 500;
