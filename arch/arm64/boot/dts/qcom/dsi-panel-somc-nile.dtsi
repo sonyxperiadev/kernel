@@ -253,3 +253,123 @@
 	qcom,mdss-dsi-bl-max-level = <4095>;
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_tianma>;
 };
+
+&dsi_td4322_innolux_fhd_cmd {
+	somc,mdss-dsi-use-picadj;
+	somc,mdss-dsi-picadj-sat = <3>;
+	somc,mdss-dsi-picadj-hue = <0>;
+	somc,mdss-dsi-picadj-val = <0>;
+	somc,mdss-dsi-picadj-cont = <0>;
+
+	somc,panel-adaptivecolor-enable;
+	somc,panel-adacolor-sat-max = <50>;
+	somc,panel-adacolor-hue-max = <0>;
+	somc,panel-adacolor-val-max = <5>;
+	somc,panel-adacolor-cont-max = <5>;
+
+	somc,panel-adacolor-br-min = <7>;
+	somc,panel-adacolor-br-max = <20>;
+	somc,panel-adacolor-pa-invert;
+
+	somc,panel-colormgr-pcc-prof-avail;
+
+	somc,mdss-dsi-pcc-force-cal;
+
+	somc,mdss-dsi-pcc-enable;
+	somc,mdss-dsi-pcc-table-size = <4>;
+	somc,mdss-dsi-pcc-table = <
+		0x00 0x00 0x00 0xFF 0x00 0xFF 0x7300 0x7260 0x8000
+		0x00 0x01 0x00 0xFF 0x00 0xFF 0x8000 0x7AA0 0x6AD0
+		0x00 0x02 0x00 0xFF 0x00 0xFF 0x8000 0x7F00 0x7F00
+		0x00 0x03 0x00 0xFF 0x00 0xFF 0x6FF0 0x6E00 0x8000>;
+};
+
+&dsi_td4322_truly_fhd_cmd {
+	somc,mdss-dsi-use-picadj;
+	somc,mdss-dsi-picadj-sat = <3>;
+	somc,mdss-dsi-picadj-hue = <0>;
+	somc,mdss-dsi-picadj-val = <0>;
+	somc,mdss-dsi-picadj-cont = <0>;
+
+	somc,panel-adaptivecolor-enable;
+	somc,panel-adacolor-sat-max = <50>;
+	somc,panel-adacolor-hue-max = <0>;
+	somc,panel-adacolor-val-max = <5>;
+	somc,panel-adacolor-cont-max = <5>;
+
+	somc,panel-adacolor-br-min = <7>;
+	somc,panel-adacolor-br-max = <20>;
+	somc,panel-adacolor-pa-invert;
+
+	somc,panel-colormgr-pcc-prof-avail;
+
+	somc,mdss-dsi-pcc-force-cal;
+
+	somc,mdss-dsi-pcc-enable;
+	somc,mdss-dsi-pcc-table-size = <4>;
+	somc,mdss-dsi-pcc-table = <
+		0x00 0x00 0x00 0xFF 0x00 0xFF 0x7300 0x7260 0x8000
+		0x00 0x01 0x00 0xFF 0x00 0xFF 0x8000 0x7AA0 0x6AD0
+		0x00 0x02 0x00 0xFF 0x00 0xFF 0x8000 0x7F00 0x7F00
+		0x00 0x03 0x00 0xFF 0x00 0xFF 0x6FF0 0x6E00 0x8000>;
+};
+
+&dsi_td4322_csot_fhd_cmd {
+	somc,mdss-dsi-use-picadj;
+	somc,mdss-dsi-picadj-sat = <3>;
+	somc,mdss-dsi-picadj-hue = <0>;
+	somc,mdss-dsi-picadj-val = <0>;
+	somc,mdss-dsi-picadj-cont = <0>;
+
+	somc,panel-adaptivecolor-enable;
+	somc,panel-adacolor-sat-max = <50>;
+	somc,panel-adacolor-hue-max = <0>;
+	somc,panel-adacolor-val-max = <5>;
+	somc,panel-adacolor-cont-max = <5>;
+
+	somc,panel-adacolor-br-min = <7>;
+	somc,panel-adacolor-br-max = <20>;
+	somc,panel-adacolor-pa-invert;
+
+	somc,panel-colormgr-pcc-prof-avail;
+
+	somc,mdss-dsi-pcc-force-cal;
+
+	somc,mdss-dsi-pcc-enable;
+	somc,mdss-dsi-pcc-table-size = <4>;
+	somc,mdss-dsi-pcc-table = <
+		0x00 0x00 0x00 0xFF 0x00 0xFF 0x7300 0x7260 0x8000
+		0x00 0x01 0x00 0xFF 0x00 0xFF 0x8000 0x7AA0 0x6AD0
+		0x00 0x02 0x00 0xFF 0x00 0xFF 0x8000 0x7F00 0x7F00
+		0x00 0x03 0x00 0xFF 0x00 0xFF 0x6FF0 0x6E00 0x8000>;
+};
+
+&dsi_td4328_tianma_fhdplus_cmd {
+	somc,mdss-dsi-use-picadj;
+	somc,mdss-dsi-picadj-sat = <3>;
+	somc,mdss-dsi-picadj-hue = <0>;
+	somc,mdss-dsi-picadj-val = <0>;
+	somc,mdss-dsi-picadj-cont = <0>;
+
+	somc,panel-adaptivecolor-enable;
+	somc,panel-adacolor-sat-max = <50>;
+	somc,panel-adacolor-hue-max = <0>;
+	somc,panel-adacolor-val-max = <5>;
+	somc,panel-adacolor-cont-max = <5>;
+
+	somc,panel-adacolor-br-min = <7>;
+	somc,panel-adacolor-br-max = <20>;
+	somc,panel-adacolor-pa-invert;
+
+	somc,panel-colormgr-pcc-prof-avail;
+
+	somc,mdss-dsi-pcc-force-cal;
+
+	somc,mdss-dsi-pcc-enable;
+	somc,mdss-dsi-pcc-table-size = <4>;
+	somc,mdss-dsi-pcc-table = <
+		0x00 0x00 0x00 0xFF 0x00 0xFF 0x7300 0x7260 0x8000
+		0x00 0x01 0x00 0xFF 0x00 0xFF 0x8000 0x7AA0 0x6AD0
+		0x00 0x02 0x00 0xFF 0x00 0xFF 0x8000 0x7F00 0x7F00
+		0x00 0x03 0x00 0xFF 0x00 0xFF 0x6FF0 0x6E00 0x8000>;
+};
