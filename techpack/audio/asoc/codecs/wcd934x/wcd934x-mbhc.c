@@ -51,6 +51,8 @@
 #define TAVIL_MBHC_ZDET_CONST         (86 * 16384)
 #define TAVIL_MBHC_MOISTURE_RREF      R_24_KOHM
 
+static unsigned int WCD_MBHC_THR_HS_MICB_MV_VAR = 2700;
+
 static struct wcd_mbhc_register
 	wcd_mbhc_registers[WCD_MBHC_REG_FUNC_MAX] = {
 	WCD_MBHC_REGISTER("WCD_MBHC_L_DET_EN",
@@ -453,10 +455,10 @@ static int tavil_mbhc_micb_ctrl_threshold_mic(struct snd_soc_codec *codec,
 	 * voltage needed to detect threshold microphone, then do
 	 * not change the micbias, just return.
 	 */
-	if (pdata->micbias.micb2_mv >= WCD_MBHC_THR_HS_MICB_MV)
+	if (pdata->micbias.micb2_mv >= WCD_MBHC_THR_HS_MICB_MV_VAR)
 		return 0;
 
-	micb_mv = req_en ? WCD_MBHC_THR_HS_MICB_MV : pdata->micbias.micb2_mv;
+	micb_mv = req_en ? WCD_MBHC_THR_HS_MICB_MV_VAR : pdata->micbias.micb2_mv;
 
 	rc = tavil_mbhc_micb_adjust_voltage(codec, micb_mv, MIC_BIAS_2);
 
@@ -475,6 +477,7 @@ static inline void tavil_mbhc_get_result_params(struct wcd9xxx *wcd9xxx,
 	int minCode_param[] = {
 			3277, 1639, 820, 410, 205, 103, 52, 26
 	};
+	bool idect_err = false;
 
 	regmap_update_bits(wcd9xxx->regmap, WCD934X_ANA_MBHC_ZDET, 0x20, 0x20);
 	for (i = 0; i < TAVIL_ZDET_NUM_MEASUREMENTS; i++) {
@@ -492,11 +495,16 @@ static inline void tavil_mbhc_get_result_params(struct wcd9xxx *wcd9xxx,
 	if ((c1 < 2) && x1)
 		usleep_range(5000, 5050);
 
-#ifdef CONFIG_ARCH_SONY_TAMA
-	if (!c1) {
-#else
-	if (!c1 || !x1) {
-#endif
+	if (of_machine_is_compatible("somc,tama")) {
+		if (!c1)
+			idect_err = true;
+			
+	} else {
+		if (!c1 || !x1)
+			idect_err = true;
+	}
+
+	if (idect_err) {
 		dev_dbg(wcd9xxx->dev,
 			"%s: Impedance detect ramp error, c1=%d, x1=0x%x\n",
 			__func__, c1, x1);
@@ -1110,6 +1118,9 @@ int tavil_mbhc_init(struct wcd934x_mbhc **mbhc, struct snd_soc_codec *codec,
 		goto err;
 	}
 	wcd_mbhc->micb_mv = pdata->micbias.micb2_mv;
+
+	if (of_machine_is_compatible("somc,tama"))
+		WCD_MBHC_THR_HS_MICB_MV_VAR = 2750;
 
 	ret = wcd_mbhc_init(wcd_mbhc, codec, &mbhc_cb,
 				&intr_ids, wcd_mbhc_registers,

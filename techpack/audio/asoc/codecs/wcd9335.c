@@ -49,6 +49,8 @@
 #include "wcdcal-hwdep.h"
 #include "wcd-mbhc-v2-api.h"
 
+static unsigned int WCD_MBHC_THR_HS_MICB_MV_VAR = 2700;
+
 #define TASHA_RX_PORT_START_NUMBER  16
 
 #define WCD9335_RATES_MASK (SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_16000 |\
@@ -1641,10 +1643,10 @@ static int tasha_mbhc_micb_ctrl_threshold_mic(struct snd_soc_codec *codec,
 	 * voltage needed to detect threshold microphone, then do
 	 * not change the micbias, just return.
 	 */
-	if (pdata->micbias.micb2_mv >= WCD_MBHC_THR_HS_MICB_MV)
+	if (pdata->micbias.micb2_mv >= WCD_MBHC_THR_HS_MICB_MV_VAR)
 		return 0;
 
-	micb_mv = req_en ? WCD_MBHC_THR_HS_MICB_MV : pdata->micbias.micb2_mv;
+	micb_mv = req_en ? WCD_MBHC_THR_HS_MICB_MV_VAR : pdata->micbias.micb2_mv;
 
 	mutex_lock(&tasha->micb_lock);
 	rc = tasha_mbhc_micb_adjust_voltage(codec, micb_mv, MIC_BIAS_2);
@@ -13618,6 +13620,10 @@ static int tasha_codec_probe(struct snd_soc_codec *codec)
 		control->post_reset = tasha_post_reset_cb;
 		control->ssr_priv = (void *)codec;
 	}
+
+	if (of_machine_is_compatible("somc,loire") ||
+	    of_machine_is_compatible("somc,tone"))
+		WCD_MBHC_THR_HS_MICB_MV_VAR = 2450;
 
 	/* Resource Manager post Init */
 	ret = wcd_resmgr_post_init(tasha->resmgr, &tasha_resmgr_cb, codec);

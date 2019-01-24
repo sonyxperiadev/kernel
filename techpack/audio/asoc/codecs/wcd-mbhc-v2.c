@@ -557,11 +557,8 @@ void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 	struct snd_soc_codec *codec = mbhc->codec;
 	bool is_pa_on = false;
 	u8 fsm_en = 0;
-
-#if defined(CONFIG_ARCH_SONY_LOIRE) || defined(CONFIG_ARCH_SONY_TONE) || \
-    defined(CONFIG_ARCH_SONY_TAMA)
-	bool skip_report = false;
-#endif
+	bool skip_report = false; /* ARCH_SONY - SOMC_PLATFORM */
+	bool setup_lineout = false;
 
 	WCD_MBHC_RSC_ASSERT_LOCKED(mbhc);
 
@@ -602,9 +599,10 @@ void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 		}
 
 		mbhc->hph_type = WCD_MBHC_HPH_NONE;
-#ifdef CONFIG_ARCH_SONY_TAMA
-		mbhc->extn_cable_inserted = false;
-#endif
+
+		if (mbhc->somc_platform == WCD_SOMC_PLATFORM_TAMA)
+			mbhc->extn_cable_inserted = false;
+
 		mbhc->zl = mbhc->zr = 0;
 		pr_debug("%s: Reporting removal %d(%x)\n", __func__,
 			 jack_type, mbhc->hph_status);
@@ -684,10 +682,10 @@ void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 			mbhc->jiffies_atreport = jiffies;
 		} else if (jack_type == SND_JACK_LINEOUT) {
 			mbhc->current_plug = MBHC_PLUG_TYPE_HIGH_HPH;
-#if defined(CONFIG_ARCH_SONY_LOIRE) || defined (CONFIG_ARCH_SONY_TONE) || \
-    defined(CONFIG_ARCH_SONY_TAMA)
-			skip_report = true;
-#endif
+			if (mbhc->somc_platform == WCD_SOMC_PLATFORM_LOIRE ||
+			    mbhc->somc_platform == WCD_SOMC_PLATFORM_TONE  ||
+			    mbhc->somc_platform == WCD_SOMC_PLATFORM_TAMA)
+				skip_report = true;
 		} else if (jack_type == SND_JACK_ANC_HEADPHONE)
 			mbhc->current_plug = MBHC_PLUG_TYPE_ANC_HEADPHONE;
 
@@ -708,30 +706,37 @@ void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 					&mbhc->zl, &mbhc->zr);
 			WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_FSM_EN,
 						 fsm_en);
-#if defined(CONFIG_ARCH_SONY_LOIRE) || defined(CONFIG_ARCH_SONY_TONE) || \
-    defined(CONFIG_ARCH_SONY_TAMA)
 
- #ifndef CONFIG_ARCH_SONY_TAMA
-			if (mbhc->zl > mbhc->mbhc_cfg->linein_th &&
-			    jack_type == SND_JACK_ANC_HEADPHONE) {
-				jack_type = SND_JACK_STEREO_MICROPHONE;
-				mbhc->current_plug =
-					MBHC_PLUG_TYPE_STEREO_MICROPHONE;
-				mbhc->hph_status &= ~SND_JACK_HEADPHONE;
-				pr_debug("%s: Stereo microphone detected\n",
-					 __func__);
-			} else
- #endif
-			if (mbhc->zl > mbhc->mbhc_cfg->linein_th &&
-				mbhc->zr > mbhc->mbhc_cfg->linein_th &&
-				jack_type == SND_JACK_HEADPHONE) {
-#else
-			if ((mbhc->zl > mbhc->mbhc_cfg->linein_th &&
+			if (mbhc->somc_platform == WCD_SOMC_PLATFORM_LOIRE ||
+			    mbhc->somc_platform == WCD_SOMC_PLATFORM_TONE) {
+				if (mbhc->zl > mbhc->mbhc_cfg->linein_th &&
+			    		jack_type == SND_JACK_ANC_HEADPHONE) {
+					jack_type = SND_JACK_STEREO_MICROPHONE;
+					mbhc->current_plug =
+					      MBHC_PLUG_TYPE_STEREO_MICROPHONE;
+					mbhc->hph_status &=
+					      ~SND_JACK_HEADPHONE;
+					pr_debug("%s: Stereo mic detected\n",
+						 __func__);
+				}
+			}
+
+			if (mbhc->somc_platform == WCD_SOMC_PLATFORM_LOIRE ||
+			    mbhc->somc_platform == WCD_SOMC_PLATFORM_TONE  ||
+			    mbhc->somc_platform == WCD_SOMC_PLATFORM_TAMA) {
+				if (mbhc->zl > mbhc->mbhc_cfg->linein_th &&
+					mbhc->zr > mbhc->mbhc_cfg->linein_th &&
+					jack_type == SND_JACK_HEADPHONE)
+						setup_lineout = true;
+			} else if ((mbhc->zl > mbhc->mbhc_cfg->linein_th &&
 				mbhc->zl < MAX_IMPED) &&
 				(mbhc->zr > mbhc->mbhc_cfg->linein_th &&
 				 mbhc->zr < MAX_IMPED) &&
 				(jack_type == SND_JACK_HEADPHONE)) {
-#endif
+						setup_lineout = true;
+			}
+
+			if (setup_lineout) {
 				jack_type = SND_JACK_LINEOUT;
 				mbhc->force_linein = true;
 				mbhc->current_plug = MBHC_PLUG_TYPE_HIGH_HPH;
@@ -753,13 +758,15 @@ void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 
 		pr_debug("%s: Reporting insertion %d(%x)\n", __func__,
 			 jack_type, mbhc->hph_status);
-#if defined(CONFIG_ARCH_SONY_LOIRE) || defined (CONFIG_ARCH_SONY_TONE) || \
-    defined(CONFIG_ARCH_SONY_TAMA)
+
+		if (!mbhc->somc_platform)
+			skip_report = false;
+
 		if (!skip_report)
-#endif
-		wcd_mbhc_jack_report(mbhc, &mbhc->headset_jack,
+			wcd_mbhc_jack_report(mbhc, &mbhc->headset_jack,
 				    (mbhc->hph_status | SND_JACK_MECHANICAL),
 				    WCD_MBHC_JACK_MASK);
+
 		wcd_mbhc_clr_and_turnon_hph_padac(mbhc);
 	}
 	pr_debug("%s: leave hph_status %x\n", __func__, mbhc->hph_status);
@@ -983,11 +990,13 @@ static void wcd_mbhc_swch_irq_handler(struct wcd_mbhc *mbhc)
 		case MBHC_PLUG_TYPE_ANC_HEADPHONE:
 			jack_type = SND_JACK_ANC_HEADPHONE;
 			break;
-#if defined(CONFIG_ARCH_SONY_LOIRE) || defined (CONFIG_ARCH_SONY_TONE)
 		case MBHC_PLUG_TYPE_STEREO_MICROPHONE:
-			jack_type = SND_JACK_STEREO_MICROPHONE;
+			if (mbhc->somc_platform != WCD_SOMC_PLATFORM_LOIRE &&
+			    mbhc->somc_platform != WCD_SOMC_PLATFORM_TONE)
+				jack_type = SND_JACK_UNSUPPORTED;
+			else
+				jack_type = SND_JACK_STEREO_MICROPHONE;
 			break;
-#endif
 		default:
 			pr_info("%s: Invalid current plug: %d\n",
 				__func__, mbhc->current_plug);
@@ -1871,6 +1880,22 @@ void wcd_mbhc_stop(struct wcd_mbhc *mbhc)
 }
 EXPORT_SYMBOL(wcd_mbhc_stop);
 
+static void wcd_mbhc_somc_platform_detect(struct wcd_mbhc *mbhc)
+{
+	if (of_machine_is_compatible("somc,loire"))
+		mbhc->somc_platform = WCD_SOMC_PLATFORM_LOIRE;
+	else if (of_machine_is_compatible("somc,tone"))
+		mbhc->somc_platform = WCD_SOMC_PLATFORM_TONE;
+	else if (of_machine_is_compatible("somc,nile"))
+		mbhc->somc_platform = WCD_SOMC_PLATFORM_NILE;
+	else if (of_machine_is_compatible("somc,yoshino"))
+		mbhc->somc_platform = WCD_SOMC_PLATFORM_YOSHINO;
+	else if (of_machine_is_compatible("somc,tama"))
+		mbhc->somc_platform = WCD_SOMC_PLATFORM_TAMA;
+	else if (of_machine_is_compatible("somc,somc-platform"))
+		mbhc->somc_platform = WCD_SOMC_PLATFORM_UNKNOWN;
+}
+
 /*
  * wcd_mbhc_init : initialize MBHC internal structures.
  *
@@ -1935,6 +1960,8 @@ int wcd_mbhc_init(struct wcd_mbhc *mbhc, struct snd_soc_codec *codec,
 		mbhc->moist_rref = hph_moist_config[2];
 	}
 
+	wcd_mbhc_somc_platform_detect(mbhc);
+
 	mbhc->in_swch_irq_handler = false;
 	mbhc->current_plug = MBHC_PLUG_TYPE_NONE;
 	mbhc->is_btn_press = false;
@@ -1949,12 +1976,14 @@ int wcd_mbhc_init(struct wcd_mbhc *mbhc, struct snd_soc_codec *codec,
 	mbhc->is_hs_recording = false;
 	mbhc->is_extn_cable = false;
 	mbhc->extn_cable_hph_rem = false;
-#ifdef CONFIG_ARCH_SONY_TAMA
-	mbhc->extn_cable_inserted = false;
-#endif
 	mbhc->hph_type = WCD_MBHC_HPH_NONE;
 	mbhc->wcd_mbhc_regs = wcd_mbhc_regs;
 	mbhc->swap_thr = GND_MIC_SWAP_THRESHOLD;
+
+	if (mbhc->somc_platform == WCD_SOMC_PLATFORM_TAMA) {
+		mbhc->swap_thr = 2;
+		mbhc->extn_cable_inserted = false;
+	}
 
 	if (mbhc->intr_ids == NULL) {
 		pr_err("%s: Interrupt mapping not provided\n", __func__);

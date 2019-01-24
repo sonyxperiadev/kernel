@@ -23,13 +23,8 @@
 #define WCD_MBHC_DEF_BUTTONS 8
 #define WCD_MBHC_KEYCODE_NUM 8
 #define WCD_MBHC_USLEEP_RANGE_MARGIN_US 100
-#if defined(CONFIG_ARCH_SONY_LOIRE) || defined(CONFIG_ARCH_SONY_TONE)
- #define WCD_MBHC_THR_HS_MICB_MV	2450
-#elif defined(CONFIG_ARCH_SONY_TAMA)
- #define WCD_MBHC_THR_HS_MICB_MV	2750
-#else
- #define WCD_MBHC_THR_HS_MICB_MV  2700
-#endif
+#define WCD_MBHC_THR_HS_MICB_MV  2700
+
 /* z value defined in Ohms */
 #define WCD_MONO_HS_MIN_THR	2
 #define WCD_MBHC_STRINGIFY(s)  __stringify(s)
@@ -249,9 +244,7 @@ enum wcd_mbhc_plug_type {
 	MBHC_PLUG_TYPE_HIGH_HPH,
 	MBHC_PLUG_TYPE_GND_MIC_SWAP,
 	MBHC_PLUG_TYPE_ANC_HEADPHONE,
-#if defined(CONFIG_ARCH_SONY_LOIRE) || defined(CONFIG_ARCH_SONY_TONE)
 	MBHC_PLUG_TYPE_STEREO_MICROPHONE,
-#endif
 };
 
 enum pa_dac_ack_flags {
@@ -526,12 +519,26 @@ struct wcd_mbhc_fn {
 					  struct work_struct *work);
 };
 
+enum wcd_somc_platform {
+	WCD_SOMC_PLATFORM_UNKNOWN = 1,
+	WCD_SOMC_PLATFORM_LOIRE,
+	WCD_SOMC_PLATFORM_TONE,
+	WCD_SOMC_PLATFORM_NILE,
+	WCD_SOMC_PLATFORM_YOSHINO,
+	WCD_SOMC_PLATFORM_TAMA,
+	WCD_SOMC_PLATFORM_MAX
+};
+
 struct wcd_mbhc {
 	/* Delayed work to report long button press */
 	struct delayed_work mbhc_btn_dwork;
 	int buttons_pressed;
 	struct wcd_mbhc_config *mbhc_cfg;
 	const struct wcd_mbhc_cb *mbhc_cb;
+
+	/* ARCH_SONY */
+	int somc_platform;
+	/* */
 
 	u32 hph_status; /* track headhpone status */
 	u8 hphlocp_cnt; /* headphone left ocp retry */
@@ -557,9 +564,9 @@ struct wcd_mbhc {
 	bool btn_press_intr;
 	bool is_hs_recording;
 	bool is_extn_cable;
-#ifdef CONFIG_ARCH_SONY_TAMA
+	/* ARCH_SONY_TAMA */
 	bool extn_cable_inserted;
-#endif
+	/* */
 	bool skip_imped_detection;
 	bool is_btn_already_regd;
 	bool extn_cable_hph_rem;

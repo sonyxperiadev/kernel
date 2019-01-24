@@ -598,14 +598,11 @@ static int wcd_mbhc_get_plug_from_adc(struct wcd_mbhc *mbhc, int adc_result)
 	hph_thr = wcd_mbhc_adc_get_hph_thres(mbhc);
 
 	if (adc_result < hph_thr)
-#ifdef CONFIG_ARCH_SONY_TAMA
-		if (mbhc->force_linein)
-			plug_type = MBHC_PLUG_TYPE_HIGH_HPH;
+		if (mbhc->somc_platform == WCD_SOMC_PLATFORM_TAMA &&
+		    mbhc->force_linein)
+				plug_type = MBHC_PLUG_TYPE_HIGH_HPH;
 		else
 			plug_type = MBHC_PLUG_TYPE_HEADPHONE;
-#else
-		plug_type = MBHC_PLUG_TYPE_HEADPHONE;
-#endif
 	else if (adc_result > hs_thr)
 		plug_type = MBHC_PLUG_TYPE_HIGH_HPH;
 	else
@@ -637,11 +634,10 @@ static void wcd_correct_swch_plug(struct work_struct *work)
 	mbhc = container_of(work, struct wcd_mbhc, correct_plug_swch);
 	codec = mbhc->codec;
 
-#ifdef CONFIG_ARCH_SONY_TAMA
-	/* Wait for debounce time 200ms for extension cable */
-	if (mbhc->extn_cable_inserted)
+	/* SoMC Tama: Wait for debounce time 200ms for extension cable */
+	if (mbhc->somc_platform == WCD_SOMC_PLATFORM_TAMA &&
+	    mbhc->extn_cable_inserted)
 		msleep(200);
-#endif
 
 	micbias_mv = wcd_mbhc_get_micbias(mbhc);
 	hs_threshold = wcd_mbhc_adc_get_hs_thres(mbhc);
@@ -850,12 +846,8 @@ correct_plug_type:
 		}
 	}
 
-#ifdef CONFIG_ARCH_SONY_TAMA
 	if (plug_type == MBHC_PLUG_TYPE_HIGH_HPH &&
 	    !mbhc->force_linein) {
-#else
-	if (plug_type == MBHC_PLUG_TYPE_HIGH_HPH) {
-#endif
 		if (wcd_is_special_headset(mbhc)) {
 			pr_debug("%s: Special headset found %d\n",
 					__func__, plug_type);
@@ -958,12 +950,22 @@ static irqreturn_t wcd_mbhc_adc_hs_rem_irq(int irq, void *data)
 	int adc_threshold, output_mv, retry = 0;
 	bool hphpa_on = false;
 	u8  moisture_status = 0;
+	unsigned int fake_removal_min_period_ms;
+	unsigned int fake_rem_retry_attempts;
+
+	if (mbhc->somc_platform == WCD_SOMC_PLATFORM_TAMA) {
+		fake_removal_min_period_ms = 150;
+		fake_rem_retry_attempts = 10;
+	} else {
+		fake_removal_min_period_ms = WCD_FAKE_REMOVAL_MIN_PERIOD_MS;
+		fake_rem_retry_attempts = FAKE_REM_RETRY_ATTEMPTS;
+	}
 
 	pr_debug("%s: enter\n", __func__);
 	WCD_MBHC_RSC_LOCK(mbhc);
 
 	timeout = jiffies +
-		  msecs_to_jiffies(WCD_FAKE_REMOVAL_MIN_PERIOD_MS);
+		  msecs_to_jiffies(fake_removal_min_period_ms);
 	adc_threshold = wcd_mbhc_adc_get_hs_thres(mbhc);
 
 	do {
@@ -978,7 +980,7 @@ static irqreturn_t wcd_mbhc_adc_hs_rem_irq(int irq, void *data)
 		pr_debug("%s: Check for fake removal: output_mv %d\n",
 			 __func__, output_mv);
 		if ((output_mv <= adc_threshold) &&
-		    retry > FAKE_REM_RETRY_ATTEMPTS) {
+		    retry > fake_rem_retry_attempts) {
 			pr_debug("%s: headset is NOT actually removed\n",
 				 __func__);
 			goto exit;
@@ -1109,10 +1111,12 @@ static irqreturn_t wcd_mbhc_adc_hs_ins_irq(int irq, void *data)
 	WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_ELECT_SCHMT_ISRC, 0);
 	WCD_MBHC_REG_UPDATE_BITS(WCD_MBHC_ELECT_ISRC_EN, 0);
 	mbhc->is_extn_cable = true;
-#ifdef CONFIG_ARCH_SONY_TAMA
-	mbhc->extn_cable_inserted = true;
-#endif
 	mbhc->btn_press_intr = false;
+
+	if (mbhc->somc_platform == WCD_SOMC_PLATFORM_TAMA)
+		mbhc->extn_cable_inserted = true;
+
+
 	wcd_mbhc_adc_detect_plug_type(mbhc);
 	WCD_MBHC_RSC_UNLOCK(mbhc);
 	pr_debug("%s: leave\n", __func__);
