@@ -344,6 +344,8 @@ int somc_panel_parse_dt_colormgr_config(struct dsi_panel *panel,
 	color_mgr->dsi_pcc_applied = false;
 	color_mgr->standard_pcc_enable =
 		of_property_read_bool(np, "somc,mdss-dsi-pcc-enable");
+	color_mgr->mdss_force_pcc = of_property_read_bool(np,
+			"somc,mdss-dsi-pcc-force-cal");
 
 	if (color_mgr->standard_pcc_enable) {
 		dsi_parse_dcs_cmds(np, &color_mgr->uv_read_cmds,
@@ -584,9 +586,11 @@ int somc_panel_pcc_setup(struct dsi_display *display)
 
 	if (color_mgr->u_data == 0 && color_mgr->v_data == 0) {
 		pr_err("%s (%d): u,v is flashed 0.\n", __func__, __LINE__);
-		return -EINVAL;
+		if (!color_mgr->mdss_force_pcc)
+			return -EINVAL;
 	}
-	pr_notice("%s (%d) udata = %x vdata = %x \n", __func__, __LINE__,
+
+	pr_notice("%s (%d): udata = %x vdata = %x \n", __func__, __LINE__,
 		color_mgr->u_data, color_mgr->v_data);
 
 	if (color_mgr->standard_pcc_enable) {
