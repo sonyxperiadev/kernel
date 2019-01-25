@@ -1,3 +1,5 @@
+#include "dsi-panel-somc-nile-sde_pcc.dtsi"
+
 &dsi_td4322_innolux_fhd_cmd {
 	qcom,platform-te-gpio = <&tlmm 59 0>;
 	qcom,platform-reset-gpio = <&tlmm 53 0>;
