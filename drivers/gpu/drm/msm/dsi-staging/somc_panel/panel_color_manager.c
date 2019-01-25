@@ -320,6 +320,45 @@ exit:
 	return ret;
 }
 
+static int somc_panel_parse_dt_pcc_table(const struct device_node *np,
+		const char *propname, struct dsi_pcc_data *pcc_data)
+{
+	int rc = -EINVAL;
+	struct property *prop;
+
+	if (!pcc_data)
+		return -EINVAL;
+
+	prop = of_find_property(np, propname, NULL);
+
+	if (!prop)
+		return -EINVAL;
+
+	pcc_data->color_tbl = kzalloc(prop->length, GFP_KERNEL);
+	if (!pcc_data->color_tbl) {
+		pr_err("no mem assigned: kzalloc fail\n");
+		return -ENOMEM;
+	}
+
+	rc = of_property_read_u32_array(np, propname,
+			(u32 *)pcc_data->color_tbl, prop->length / sizeof(u32));
+	if (rc) {
+		pr_err("%s (%d): Failed to read %s as u32_array!\n",
+				__func__, __LINE__, propname);
+		kfree(pcc_data->color_tbl);
+		pcc_data->color_tbl = NULL;
+		pcc_data->tbl_size = 0;
+		return rc;
+	}
+
+	pcc_data->tbl_size = prop->length / sizeof(struct dsi_pcc_color_tbl);
+
+	pr_info("%s: Parsed %s with %u table entries\n",
+			__func__, propname, pcc_data->tbl_size);
+
+	return 0;
+}
+
 int somc_panel_parse_dt_colormgr_config(struct dsi_panel *panel,
 			struct device_node *np)
 {
@@ -353,33 +392,12 @@ int somc_panel_parse_dt_colormgr_config(struct dsi_panel *panel,
 		color_mgr->standard_pcc_data.param_type =
 			(!rc ? tmp : CLR_DATA_UV_PARAM_TYPE_NONE);
 
-		rc = of_property_read_u32(np,
-			"somc,mdss-dsi-pcc-table-size", &tmp);
-		color_mgr->standard_pcc_data.tbl_size =
-			(!rc ? tmp : 0);
-
-		color_mgr->standard_pcc_data.color_tbl =
-			kzalloc(color_mgr->standard_pcc_data.tbl_size *
-				sizeof(struct dsi_pcc_color_tbl),
-				GFP_KERNEL);
-		if (!color_mgr->standard_pcc_data.color_tbl) {
-			pr_err("no mem assigned: kzalloc fail\n");
-			return -ENOMEM;
-		}
-		rc = of_property_read_u32_array(np,
-			"somc,mdss-dsi-pcc-table",
-			(u32 *)color_mgr->standard_pcc_data.color_tbl,
-			color_mgr->standard_pcc_data.tbl_size *
-			sizeof(struct dsi_pcc_color_tbl) /
-			sizeof(u32));
-		if (rc) {
-			color_mgr->standard_pcc_data.tbl_size = 0;
-			kzfree(color_mgr->standard_pcc_data.color_tbl);
-			color_mgr->standard_pcc_data.color_tbl = NULL;
-			pr_err("%s:%d, Unable to read pcc table",
-				__func__, __LINE__);
-		}
-		//color_mgr->standard_pcc_data.pcc_sts |= PCC_STS_UD;
+		rc = somc_panel_parse_dt_pcc_table(np,
+				"somc,mdss-dsi-pcc-table",
+				&color_mgr->standard_pcc_data);
+		if (rc)
+			pr_err("%s (%d): Failed to read standard pcc table\n",
+					__func__, __LINE__);
 	} else {
 		pr_err("%s:%d, Unable to read pcc table\n",
 			__func__, __LINE__);
@@ -388,32 +406,12 @@ int somc_panel_parse_dt_colormgr_config(struct dsi_panel *panel,
 	color_mgr->srgb_pcc_enable = of_property_read_bool(np,
 			"somc,mdss-dsi-srgb-pcc-enable");
 	if (color_mgr->srgb_pcc_enable) {
-		rc = of_property_read_u32(np,
-			"somc,mdss-dsi-srgb-pcc-table-size", &tmp);
-		color_mgr->srgb_pcc_data.tbl_size =
-			(!rc ? tmp : 0);
-
-		color_mgr->srgb_pcc_data.color_tbl =
-			kzalloc(color_mgr->srgb_pcc_data.tbl_size *
-				sizeof(struct dsi_pcc_color_tbl),
-				GFP_KERNEL);
-		if (!color_mgr->srgb_pcc_data.color_tbl) {
-			pr_err("no mem assigned: kzalloc fail\n");
-			return -ENOMEM;
-		}
-		rc = of_property_read_u32_array(np,
-			"somc,mdss-dsi-srgb-pcc-table",
-			(u32 *)color_mgr->srgb_pcc_data.color_tbl,
-			color_mgr->srgb_pcc_data.tbl_size *
-			sizeof(struct dsi_pcc_color_tbl) /
-			sizeof(u32));
-		if (rc) {
-			color_mgr->srgb_pcc_data.tbl_size = 0;
-			kzfree(color_mgr->srgb_pcc_data.color_tbl);
-			color_mgr->srgb_pcc_data.color_tbl = NULL;
-			pr_err("%s:%d, Unable to read sRGB pcc table",
-				__func__, __LINE__);
-		}
+		rc = somc_panel_parse_dt_pcc_table(np,
+				"somc,mdss-dsi-srgb-pcc-table",
+				&color_mgr->srgb_pcc_data);
+		if (rc)
+			pr_err("%s (%d): Failed to read sRGB pcc table\n",
+					__func__, __LINE__);
 	} else {
 		pr_err("%s:%d, Unable to read srgb_pcc table",
 			__func__, __LINE__);
@@ -422,32 +420,12 @@ int somc_panel_parse_dt_colormgr_config(struct dsi_panel *panel,
 	color_mgr->vivid_pcc_enable = of_property_read_bool(np,
 			"somc,mdss-dsi-vivid-pcc-enable");
 	if (color_mgr->vivid_pcc_enable) {
-		rc = of_property_read_u32(np,
-			"somc,mdss-dsi-vivid-pcc-table-size", &tmp);
-		color_mgr->vivid_pcc_data.tbl_size =
-			(!rc ? tmp : 0);
-
-		color_mgr->vivid_pcc_data.color_tbl =
-			kzalloc(color_mgr->vivid_pcc_data.tbl_size *
-				sizeof(struct dsi_pcc_color_tbl),
-				GFP_KERNEL);
-		if (!color_mgr->vivid_pcc_data.color_tbl) {
-			pr_err("no mem assigned: kzalloc fail\n");
-			return -ENOMEM;
-		}
-		rc = of_property_read_u32_array(np,
-			"somc,mdss-dsi-vivid-pcc-table",
-			(u32 *)color_mgr->vivid_pcc_data.color_tbl,
-			color_mgr->vivid_pcc_data.tbl_size *
-			sizeof(struct dsi_pcc_color_tbl) /
-			sizeof(u32));
-		if (rc) {
-			color_mgr->vivid_pcc_data.tbl_size = 0;
-			kzfree(color_mgr->vivid_pcc_data.color_tbl);
-			color_mgr->vivid_pcc_data.color_tbl = NULL;
-			pr_err("%s:%d, Unable to read Vivid pcc table",
-				__func__, __LINE__);
-		}
+		rc = somc_panel_parse_dt_pcc_table(np,
+				"somc,mdss-dsi-vivid-pcc-table",
+				&color_mgr->vivid_pcc_data);
+		if (rc)
+			pr_err("%s (%d): Failed to read vivid pcc table\n",
+					__func__, __LINE__);
 	} else {
 		pr_err("%s:%d, Unable to read vivid_pcc table",
 			__func__, __LINE__);
@@ -455,32 +433,12 @@ int somc_panel_parse_dt_colormgr_config(struct dsi_panel *panel,
 	color_mgr->hdr_pcc_enable = of_property_read_bool(np,
 			"somc,mdss-dsi-hdr-pcc-enable");
 	if (color_mgr->hdr_pcc_enable) {
-		rc = of_property_read_u32(np,
-			"somc,mdss-dsi-hdr-pcc-table-size", &tmp);
-		color_mgr->hdr_pcc_data.tbl_size =
-			(!rc ? tmp : 0);
-
-		color_mgr->hdr_pcc_data.color_tbl =
-			kzalloc(color_mgr->hdr_pcc_data.tbl_size *
-				sizeof(struct dsi_pcc_color_tbl),
-				GFP_KERNEL);
-		if (!color_mgr->hdr_pcc_data.color_tbl) {
-			pr_err("no mem assigned: kzalloc fail\n");
-			return -ENOMEM;
-		}
-		rc = of_property_read_u32_array(np,
-			"somc,mdss-dsi-hdr-pcc-table",
-			(u32 *)color_mgr->hdr_pcc_data.color_tbl,
-			color_mgr->hdr_pcc_data.tbl_size *
-			sizeof(struct dsi_pcc_color_tbl) /
-			sizeof(u32));
-		if (rc) {
-			color_mgr->hdr_pcc_data.tbl_size = 0;
-			kzfree(color_mgr->hdr_pcc_data.color_tbl);
-			color_mgr->hdr_pcc_data.color_tbl = NULL;
-			pr_err("%s:%d, Unable to read HDR pcc table",
-				__func__, __LINE__);
-		}
+		rc = somc_panel_parse_dt_pcc_table(np,
+				"somc,mdss-dsi-hdr-pcc-table",
+				&color_mgr->hdr_pcc_data);
+		if (rc)
+			pr_err("%s (%d): Failed to read HDR pcc table\n",
+					__func__, __LINE__);
 	} else {
 		pr_err("%s:%d, Unable to read hdr_pcc table",
 			__func__, __LINE__);
