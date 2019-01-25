@@ -667,7 +667,7 @@ DEFINE_CLK_SMD_RPM(msm8998, snoc_clk, snoc_a_clk, QCOM_SMD_RPM_BUS_CLK, 1);
 DEFINE_CLK_SMD_RPM(msm8998, cnoc_clk, cnoc_a_clk, QCOM_SMD_RPM_BUS_CLK, 2);
 DEFINE_CLK_SMD_RPM(msm8998, ipa_clk, ipa_a_clk, QCOM_SMD_RPM_IPA_CLK, 0);
 DEFINE_CLK_SMD_RPM(msm8998, ce1_clk, ce1_a_clk, QCOM_SMD_RPM_CE_CLK, 0);
-DEFINE_CLK_SMD_RPM(msm8998, mmssnoc_axi_rpm_clk, mmssnoc_axi_rpm_a_clk,
+DEFINE_CLK_SMD_RPM(msm8998, mmssnoc_axi_clk, mmssnoc_axi_a_clk,
 		   QCOM_SMD_RPM_MMAXI_CLK, 0);
 DEFINE_CLK_SMD_RPM(msm8998, aggre1_noc_clk, aggre1_noc_a_clk,
 			  QCOM_SMD_RPM_AGGR_CLK, 1);
@@ -738,8 +738,8 @@ static struct clk_hw *msm8998_clks[] = {
 	[RPM_CNOC_A_CLK]	= &msm8998_cnoc_a_clk.hw,
 	[RPM_CNOC_PERIPH_CLK]	= &msm8998_cnoc_periph_clk.hw,
 	[RPM_CNOC_PERIPH_A_CLK]	= &msm8998_cnoc_periph_a_clk.hw,
-	[MMSSNOC_AXI_CLK]	= &msm8998_mmssnoc_axi_rpm_clk.hw,
-	[MMSSNOC_AXI_A_CLK]	= &msm8998_mmssnoc_axi_rpm_a_clk.hw,
+	[MMSSNOC_AXI_CLK]	= &msm8998_mmssnoc_axi_clk.hw,
+	[MMSSNOC_AXI_A_CLK]	= &msm8998_mmssnoc_axi_a_clk.hw,
 	[RPM_IPA_CLK]		= &msm8998_ipa_clk.hw,
 	[RPM_IPA_A_CLK]		= &msm8998_ipa_a_clk.hw,
 	[RPM_CE1_CLK]		= &msm8998_ce1_clk.hw,
