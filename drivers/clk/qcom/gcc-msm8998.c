@@ -3350,9 +3350,13 @@ static int gcc_msm8998_probe(struct platform_device *pdev)
 
 	//clk_set_rate(gpll0_early_div.clkr.hw.clk, 300000000);
 
-	/* Disable the GPLL0 active input to MMSS and GPU via MISC registers */
-	regmap_update_bits(regmap, 0x0902C, 0x3, 0x3); /* MMSS*/
-	regmap_update_bits(regmap, 0x71028, 0x3, 0x3); /* GPU */
+	/* 
+	 * GCC_MMSS_MISC - GCC_GPU_MISC:
+	 * 1. Disable the GPLL0 active input to MMSS and GPU
+	 * 2. Select clk division 1 (CLK/2)
+	 */
+	regmap_write(regmap, 0x0902C, 0x10003); /* MMSS*/
+	regmap_write(regmap, 0x71028, 0x10003); /* GPU */
 
 	/* This clock is used for all MMSSCC register access */
 	clk_prepare_enable(gcc_mmss_noc_cfg_ahb_clk.clkr.hw.clk);
