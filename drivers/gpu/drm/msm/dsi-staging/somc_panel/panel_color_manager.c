@@ -763,13 +763,49 @@ static int somc_panel_inject_crtc_overrides(struct dsi_display *display)
 	return 0;
 }
 
+static int somc_panel_pcc_setup_data(struct somc_panel_color_mgr *color_mgr,
+		struct dsi_pcc_data *pcc_data,
+		const char *table_name)
+{
+	int ret;
+	struct dsi_pcc_color_tbl *tbl_row;
+
+	if (!color_mgr)
+		return -EINVAL;
+
+	if (!pcc_data)
+		return -EINVAL;
+
+	if (!pcc_data->color_tbl) {
+		pr_err("%s (%d): %s color_tbl not found.\n",
+				__func__, __LINE__, table_name);
+		return -EINVAL;
+	}
+
+	ret = find_color_area(pcc_data, &color_mgr->u_data, &color_mgr->v_data);
+	if (ret) {
+		pr_err("%s (%d): %s: Failed to find standard color area.\n",
+				__func__, __LINE__, table_name);
+		return -EINVAL;
+	}
+
+	tbl_row = pcc_data->color_tbl + pcc_data->tbl_idx;
+	pr_notice("%s (%d): %s: ct=%d area=%d r=0x%08X g=0x%08X b=0x%08X\n",
+			__func__, __LINE__, table_name,
+			tbl_row->color_type,
+			tbl_row->area_num,
+			tbl_row->r_data,
+			tbl_row->g_data,
+			tbl_row->b_data);
+
+	return 0;
+}
+
 int somc_panel_pcc_setup(struct dsi_display *display)
 {
 	int ret;
 	struct dsi_panel *panel = display->panel;
 	struct somc_panel_color_mgr *color_mgr = NULL;
-	struct dsi_pcc_data *pcc_data = NULL;
-	u8 idx = 0;
 
 	if (panel == NULL) {
 		pr_err("%s: Invalid input data\n", __func__);
@@ -805,116 +841,39 @@ int somc_panel_pcc_setup(struct dsi_display *display)
 		color_mgr->u_data, color_mgr->v_data);
 
 	if (color_mgr->standard_pcc_enable) {
-		pcc_data = &color_mgr->standard_pcc_data;
-		if (!pcc_data->color_tbl) {
-			pr_err("%s (%d): standard_color_tbl isn't found.\n",
-				__func__, __LINE__);
-			goto exit;
-		}
-
-		ret = find_color_area(pcc_data,
-			&color_mgr->u_data, &color_mgr->v_data);
-		if (ret) {
-			pr_err("%s (%d)failed to find standard color area.\n",
-				__func__, __LINE__);
-			goto exit;
-		}
-		idx = pcc_data->tbl_idx;
-		pr_notice("Standard : %s (%d): ct=%d area=%d r=0x%08X g=0x%08X b=0x%08X\n",
-			__func__, __LINE__,
-			pcc_data->color_tbl[idx].color_type,
-			pcc_data->color_tbl[idx].area_num,
-			pcc_data->color_tbl[idx].r_data,
-			pcc_data->color_tbl[idx].g_data,
-			pcc_data->color_tbl[idx].b_data);
+		(void)somc_panel_pcc_setup_data(color_mgr,
+				&color_mgr->standard_pcc_data,
+				"Standard");
 	} else {
 		pr_notice("%s (%d): standard_pcc isn't enabled.\n",
-			__func__, __LINE__);
-		goto exit;
+				__func__, __LINE__);
 	}
 
 	if (color_mgr->srgb_pcc_enable) {
-		pcc_data = &color_mgr->srgb_pcc_data;
-		if (!pcc_data->color_tbl) {
-			pr_err("%s (%d): srgb_color_tbl isn't found.\n",
-				__func__, __LINE__);
-			goto exit;
-		}
-		ret = find_color_area(pcc_data,
-			&color_mgr->u_data, &color_mgr->v_data);
-		if (ret) {
-			pr_err("%s (%d)failed to find srgb color area.\n",
-				__func__, __LINE__);
-			goto exit;
-		}
-		idx = pcc_data->tbl_idx;
-		pr_notice("SRGB : %s (%d): ct=%d area=%d r=0x%08X g=0x%08X b=0x%08X\n",
-			__func__, __LINE__,
-			pcc_data->color_tbl[idx].color_type,
-			pcc_data->color_tbl[idx].area_num,
-			pcc_data->color_tbl[idx].r_data,
-			pcc_data->color_tbl[idx].g_data,
-			pcc_data->color_tbl[idx].b_data);
+		(void)somc_panel_pcc_setup_data(color_mgr,
+				&color_mgr->srgb_pcc_data,
+				"sRGB");
 	} else {
 		pr_notice("%s (%d): srgb_pcc isn't enabled.\n",
-			__func__, __LINE__);
-		goto exit;
+				__func__, __LINE__);
 	}
 
 	if (color_mgr->vivid_pcc_enable) {
-		pcc_data = &color_mgr->vivid_pcc_data;
-		if (!pcc_data->color_tbl) {
-			pr_err("%s (%d): vivid_color_tbl isn't found.\n",
-				__func__, __LINE__);
-			goto exit;
-		}
-		ret = find_color_area(pcc_data,
-			&color_mgr->u_data, &color_mgr->v_data);
-		if (ret) {
-			pr_err("%s (%d)failed to find vivid color area.\n",
-				__func__, __LINE__);
-			goto exit;
-		}
-		idx = pcc_data->tbl_idx;
-		pr_notice("Vivid : %s (%d): ct=%d area=%d r=0x%08X g=0x%08X b=0x%08X\n",
-			__func__, __LINE__,
-			pcc_data->color_tbl[idx].color_type,
-			pcc_data->color_tbl[idx].area_num,
-			pcc_data->color_tbl[idx].r_data,
-			pcc_data->color_tbl[idx].g_data,
-			pcc_data->color_tbl[idx].b_data);
+		(void)somc_panel_pcc_setup_data(color_mgr,
+				&color_mgr->vivid_pcc_data,
+				"Vivid");
 	} else {
 		pr_notice("%s (%d): vivid_pcc isn't enabled.\n",
-			__func__, __LINE__);
-		goto exit;
+				__func__, __LINE__);
 	}
 
 	if (color_mgr->hdr_pcc_enable) {
-		pcc_data = &color_mgr->hdr_pcc_data;
-		if (!pcc_data->color_tbl) {
-			pr_err("%s (%d): hdr_color_tbl isn't found.\n",
-				__func__, __LINE__);
-			goto exit;
-		}
-		ret = find_color_area(pcc_data,
-			&color_mgr->u_data, &color_mgr->v_data);
-		if (ret) {
-			pr_err("%s (%d)failed to find hdr color area.\n",
-				__func__, __LINE__);
-			goto exit;
-		}
-		idx = pcc_data->tbl_idx;
-		pr_notice("HDR : %s (%d): ct=%d area=%d r=0x%08X g=0x%08X b=0x%08X\n",
-			__func__, __LINE__,
-			pcc_data->color_tbl[idx].color_type,
-			pcc_data->color_tbl[idx].area_num,
-			pcc_data->color_tbl[idx].r_data,
-			pcc_data->color_tbl[idx].g_data,
-			pcc_data->color_tbl[idx].b_data);
+		(void)somc_panel_pcc_setup_data(color_mgr,
+				&color_mgr->hdr_pcc_data,
+				"HDR");
 	} else {
 		pr_notice("%s (%d): hdr_pcc isn't enabled.\n",
-			__func__, __LINE__);
-		goto exit;
+				__func__, __LINE__);
 	}
 	color_mgr->dsi_pcc_applied = true;
 
