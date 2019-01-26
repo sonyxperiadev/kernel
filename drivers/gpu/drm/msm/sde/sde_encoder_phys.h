@@ -201,6 +201,7 @@ struct sde_encoder_phys_ops {
  * @INTR_IDX_UNDERRUN: Underrun unterrupt for video and cmd mode panel
  * @INTR_IDX_RDPTR:    Readpointer done unterrupt for cmd mode panel
  * @INTR_IDX_WB_DONE:  Writeback done interrupt for WB
+ * @INTR_IDX_PP1_OVFL: Pingpong overflow interrupt on PP1 for Concurrent WB
  * @INTR_IDX_PP2_OVFL: Pingpong overflow interrupt on PP2 for Concurrent WB
  * @INTR_IDX_PP3_OVFL: Pingpong overflow interrupt on PP3 for Concurrent WB
  * @INTR_IDX_PP4_OVFL: Pingpong overflow interrupt on PP4 for Concurrent WB
@@ -216,6 +217,7 @@ enum sde_intr_idx {
 	INTR_IDX_RDPTR,
 	INTR_IDX_AUTOREFRESH_DONE,
 	INTR_IDX_WB_DONE,
+	INTR_IDX_PP1_OVFL,
 	INTR_IDX_PP2_OVFL,
 	INTR_IDX_PP3_OVFL,
 	INTR_IDX_PP4_OVFL,
