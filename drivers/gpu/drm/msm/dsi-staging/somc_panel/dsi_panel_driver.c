@@ -1314,7 +1314,8 @@ void dsi_panel_driver_post_enable(struct dsi_panel *panel)
 	panel->spec_pdata->display_onoff_state = true;
 
 	dsi_panel_driver_oled_short_det_setup(panel, true);
-	somc_panel_colormgr_apply_calibrations();
+	somc_panel_colormgr_apply_calibrations(
+			panel->spec_pdata->color_mgr->pcc_profile);
 	somc_panel_fps_cmd_send(panel);
 	dsi_panel_driver_notify_resume(panel);
 

@@ -313,6 +313,11 @@ struct somc_panel_color_mgr {
 	bool pcc_profile_avail;
 	bool dsi_pcc_applied;
 	bool mdss_force_pcc;
+
+	const struct drm_crtc_funcs *original_crtc_funcs;
+	struct drm_msm_pcc system_calibration_pcc;
+	struct drm_msm_pcc cached_pcc;
+	bool system_calibration_valid;
 };
 
 struct panel_specific_pdata {
@@ -385,7 +390,7 @@ int somc_panel_parse_dt_colormgr_config(struct dsi_panel *panel,
 			struct device_node *np);
 int somc_panel_colormgr_register_attr(struct device *dev);
 int somc_panel_send_pa(struct dsi_display *display);
-int somc_panel_colormgr_apply_calibrations(void);
+int somc_panel_colormgr_apply_calibrations(int selected_pcc_profile);
 int somc_panel_color_manager_init(struct dsi_display *display);
 
 /* ColorManager: Adaptive Color */

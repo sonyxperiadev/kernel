@@ -312,15 +312,51 @@ static int find_color_area(struct dsi_pcc_data *pcc_data, int *u_data, int *v_da
 	}
 	pcc_data->tbl_idx = i;
 
-	pr_debug("%s:%d, pcc_color_index = %d \n",
-			__func__, __LINE__,i);
-
 	if (i >= pcc_data->tbl_size) {
 		ret = -EINVAL;
 		goto exit;
 	}
 exit:
 	return ret;
+}
+
+static int somc_panel_parse_dt_pcc_table(const struct device_node *np,
+		const char *propname, struct dsi_pcc_data *pcc_data)
+{
+	int rc = -EINVAL;
+	struct property *prop;
+
+	if (!pcc_data)
+		return -EINVAL;
+
+	prop = of_find_property(np, propname, NULL);
+
+	if (!prop)
+		return -EINVAL;
+
+	pcc_data->color_tbl = kzalloc(prop->length, GFP_KERNEL);
+	if (!pcc_data->color_tbl) {
+		pr_err("no mem assigned: kzalloc fail\n");
+		return -ENOMEM;
+	}
+
+	rc = of_property_read_u32_array(np, propname,
+			(u32 *)pcc_data->color_tbl, prop->length / sizeof(u32));
+	if (rc) {
+		pr_err("%s (%d): Failed to read %s as u32_array!\n",
+				__func__, __LINE__, propname);
+		kfree(pcc_data->color_tbl);
+		pcc_data->color_tbl = NULL;
+		pcc_data->tbl_size = 0;
+		return rc;
+	}
+
+	pcc_data->tbl_size = prop->length / sizeof(struct dsi_pcc_color_tbl);
+
+	pr_info("%s: Parsed %s with %u table entries\n",
+			__func__, propname, pcc_data->tbl_size);
+
+	return 0;
 }
 
 int somc_panel_parse_dt_colormgr_config(struct dsi_panel *panel,
@@ -344,6 +380,8 @@ int somc_panel_parse_dt_colormgr_config(struct dsi_panel *panel,
 	color_mgr->dsi_pcc_applied = false;
 	color_mgr->standard_pcc_enable =
 		of_property_read_bool(np, "somc,mdss-dsi-pcc-enable");
+	color_mgr->mdss_force_pcc = of_property_read_bool(np,
+			"somc,mdss-dsi-pcc-force-cal");
 
 	if (color_mgr->standard_pcc_enable) {
 		dsi_parse_dcs_cmds(np, &color_mgr->uv_read_cmds,
@@ -354,33 +392,12 @@ int somc_panel_parse_dt_colormgr_config(struct dsi_panel *panel,
 		color_mgr->standard_pcc_data.param_type =
 			(!rc ? tmp : CLR_DATA_UV_PARAM_TYPE_NONE);
 
-		rc = of_property_read_u32(np,
-			"somc,mdss-dsi-pcc-table-size", &tmp);
-		color_mgr->standard_pcc_data.tbl_size =
-			(!rc ? tmp : 0);
-
-		color_mgr->standard_pcc_data.color_tbl =
-			kzalloc(color_mgr->standard_pcc_data.tbl_size *
-				sizeof(struct dsi_pcc_color_tbl),
-				GFP_KERNEL);
-		if (!color_mgr->standard_pcc_data.color_tbl) {
-			pr_err("no mem assigned: kzalloc fail\n");
-			return -ENOMEM;
-		}
-		rc = of_property_read_u32_array(np,
-			"somc,mdss-dsi-pcc-table",
-			(u32 *)color_mgr->standard_pcc_data.color_tbl,
-			color_mgr->standard_pcc_data.tbl_size *
-			sizeof(struct dsi_pcc_color_tbl) /
-			sizeof(u32));
-		if (rc) {
-			color_mgr->standard_pcc_data.tbl_size = 0;
-			kzfree(color_mgr->standard_pcc_data.color_tbl);
-			color_mgr->standard_pcc_data.color_tbl = NULL;
-			pr_err("%s:%d, Unable to read pcc table",
-				__func__, __LINE__);
-		}
-		//color_mgr->standard_pcc_data.pcc_sts |= PCC_STS_UD;
+		rc = somc_panel_parse_dt_pcc_table(np,
+				"somc,mdss-dsi-pcc-table",
+				&color_mgr->standard_pcc_data);
+		if (rc)
+			pr_err("%s (%d): Failed to read standard pcc table\n",
+					__func__, __LINE__);
 	} else {
 		pr_err("%s:%d, Unable to read pcc table\n",
 			__func__, __LINE__);
@@ -389,32 +406,12 @@ int somc_panel_parse_dt_colormgr_config(struct dsi_panel *panel,
 	color_mgr->srgb_pcc_enable = of_property_read_bool(np,
 			"somc,mdss-dsi-srgb-pcc-enable");
 	if (color_mgr->srgb_pcc_enable) {
-		rc = of_property_read_u32(np,
-			"somc,mdss-dsi-srgb-pcc-table-size", &tmp);
-		color_mgr->srgb_pcc_data.tbl_size =
-			(!rc ? tmp : 0);
-
-		color_mgr->srgb_pcc_data.color_tbl =
-			kzalloc(color_mgr->srgb_pcc_data.tbl_size *
-				sizeof(struct dsi_pcc_color_tbl),
-				GFP_KERNEL);
-		if (!color_mgr->srgb_pcc_data.color_tbl) {
-			pr_err("no mem assigned: kzalloc fail\n");
-			return -ENOMEM;
-		}
-		rc = of_property_read_u32_array(np,
-			"somc,mdss-dsi-srgb-pcc-table",
-			(u32 *)color_mgr->srgb_pcc_data.color_tbl,
-			color_mgr->srgb_pcc_data.tbl_size *
-			sizeof(struct dsi_pcc_color_tbl) /
-			sizeof(u32));
-		if (rc) {
-			color_mgr->srgb_pcc_data.tbl_size = 0;
-			kzfree(color_mgr->srgb_pcc_data.color_tbl);
-			color_mgr->srgb_pcc_data.color_tbl = NULL;
-			pr_err("%s:%d, Unable to read sRGB pcc table",
-				__func__, __LINE__);
-		}
+		rc = somc_panel_parse_dt_pcc_table(np,
+				"somc,mdss-dsi-srgb-pcc-table",
+				&color_mgr->srgb_pcc_data);
+		if (rc)
+			pr_err("%s (%d): Failed to read sRGB pcc table\n",
+					__func__, __LINE__);
 	} else {
 		pr_err("%s:%d, Unable to read srgb_pcc table",
 			__func__, __LINE__);
@@ -423,32 +420,12 @@ int somc_panel_parse_dt_colormgr_config(struct dsi_panel *panel,
 	color_mgr->vivid_pcc_enable = of_property_read_bool(np,
 			"somc,mdss-dsi-vivid-pcc-enable");
 	if (color_mgr->vivid_pcc_enable) {
-		rc = of_property_read_u32(np,
-			"somc,mdss-dsi-vivid-pcc-table-size", &tmp);
-		color_mgr->vivid_pcc_data.tbl_size =
-			(!rc ? tmp : 0);
-
-		color_mgr->vivid_pcc_data.color_tbl =
-			kzalloc(color_mgr->vivid_pcc_data.tbl_size *
-				sizeof(struct dsi_pcc_color_tbl),
-				GFP_KERNEL);
-		if (!color_mgr->vivid_pcc_data.color_tbl) {
-			pr_err("no mem assigned: kzalloc fail\n");
-			return -ENOMEM;
-		}
-		rc = of_property_read_u32_array(np,
-			"somc,mdss-dsi-vivid-pcc-table",
-			(u32 *)color_mgr->vivid_pcc_data.color_tbl,
-			color_mgr->vivid_pcc_data.tbl_size *
-			sizeof(struct dsi_pcc_color_tbl) /
-			sizeof(u32));
-		if (rc) {
-			color_mgr->vivid_pcc_data.tbl_size = 0;
-			kzfree(color_mgr->vivid_pcc_data.color_tbl);
-			color_mgr->vivid_pcc_data.color_tbl = NULL;
-			pr_err("%s:%d, Unable to read Vivid pcc table",
-				__func__, __LINE__);
-		}
+		rc = somc_panel_parse_dt_pcc_table(np,
+				"somc,mdss-dsi-vivid-pcc-table",
+				&color_mgr->vivid_pcc_data);
+		if (rc)
+			pr_err("%s (%d): Failed to read vivid pcc table\n",
+					__func__, __LINE__);
 	} else {
 		pr_err("%s:%d, Unable to read vivid_pcc table",
 			__func__, __LINE__);
@@ -456,32 +433,12 @@ int somc_panel_parse_dt_colormgr_config(struct dsi_panel *panel,
 	color_mgr->hdr_pcc_enable = of_property_read_bool(np,
 			"somc,mdss-dsi-hdr-pcc-enable");
 	if (color_mgr->hdr_pcc_enable) {
-		rc = of_property_read_u32(np,
-			"somc,mdss-dsi-hdr-pcc-table-size", &tmp);
-		color_mgr->hdr_pcc_data.tbl_size =
-			(!rc ? tmp : 0);
-
-		color_mgr->hdr_pcc_data.color_tbl =
-			kzalloc(color_mgr->hdr_pcc_data.tbl_size *
-				sizeof(struct dsi_pcc_color_tbl),
-				GFP_KERNEL);
-		if (!color_mgr->hdr_pcc_data.color_tbl) {
-			pr_err("no mem assigned: kzalloc fail\n");
-			return -ENOMEM;
-		}
-		rc = of_property_read_u32_array(np,
-			"somc,mdss-dsi-hdr-pcc-table",
-			(u32 *)color_mgr->hdr_pcc_data.color_tbl,
-			color_mgr->hdr_pcc_data.tbl_size *
-			sizeof(struct dsi_pcc_color_tbl) /
-			sizeof(u32));
-		if (rc) {
-			color_mgr->hdr_pcc_data.tbl_size = 0;
-			kzfree(color_mgr->hdr_pcc_data.color_tbl);
-			color_mgr->hdr_pcc_data.color_tbl = NULL;
-			pr_err("%s:%d, Unable to read HDR pcc table",
-				__func__, __LINE__);
-		}
+		rc = somc_panel_parse_dt_pcc_table(np,
+				"somc,mdss-dsi-hdr-pcc-table",
+				&color_mgr->hdr_pcc_data);
+		if (rc)
+			pr_err("%s (%d): Failed to read HDR pcc table\n",
+					__func__, __LINE__);
 	} else {
 		pr_err("%s:%d, Unable to read hdr_pcc table",
 			__func__, __LINE__);
@@ -545,11 +502,303 @@ static int somc_panel_colormgr_pcc_select(struct dsi_display *display,
 		return -EINVAL;
 	}
 
-	color_mgr->pcc_profile = profile_number;
 	somc_panel_colormgr_reset(display->panel);
-	somc_panel_pcc_setup(display);
+	(void)somc_panel_colormgr_apply_calibrations(profile_number);
 
 	return ret;
+}
+
+static int somc_panel_update_merged_pcc_cache(
+		struct somc_panel_color_mgr *color_mgr)
+{
+	struct drm_msm_pcc *sys_cal = &color_mgr->system_calibration_pcc;
+	struct drm_msm_pcc *target = &color_mgr->cached_pcc;
+	struct drm_msm_pcc panel_cal;
+	struct dsi_pcc_data *pcc_data = NULL;
+	int table_idx;
+
+	pcc_data = &color_mgr->standard_pcc_data;
+	table_idx = pcc_data->tbl_idx + color_mgr->pcc_profile;
+
+	pr_debug("%s (%d): Selecting table %d with offset %d\n",
+			__func__, __LINE__,
+			pcc_data->tbl_idx, color_mgr->pcc_profile);
+
+	/* First, construct panel calibration matrix */
+	memset(&panel_cal, 0, sizeof(panel_cal));
+	panel_cal.r.r = pcc_data->color_tbl[table_idx].r_data;
+	panel_cal.g.g = pcc_data->color_tbl[table_idx].g_data;
+	panel_cal.b.b = pcc_data->color_tbl[table_idx].b_data;
+
+	if (!color_mgr->system_calibration_valid) {
+		pr_debug("%s (%d): System calibration unset; "
+				"using kernel calibration only\n",
+				__func__, __LINE__);
+		memcpy(target, &panel_cal, sizeof(panel_cal));
+		return 0;
+	}
+
+	pr_debug("%s (%d): Merging calibrations\n",
+			__func__, __LINE__);
+
+	memset(target, 0, sizeof(struct drm_msm_pcc));
+
+	/*
+	 * Matrix multiplication of
+	 * panel_cal * system_calibration_pcc.
+	 * By combining the pcc's this way both calibrations are applied to the
+	 * final color.
+	 *
+	 * In the end, the calibration is applied to an rgb color like:
+	 *
+	 * [r.r, r.g, r.b, r.c]   / r \
+	 * [g.r, g.g, g.b, g.c] * | g |
+	 * [b.r, b.g, b.b, b.c]   | b |
+	 * [0,   0,   0,   1  ]   \ 1 /
+	 *
+	 * Any second-order adjustments are ignored.
+	 */
+	target->r.r = panel_cal.r.r * sys_cal->r.r
+			+ panel_cal.r.g * sys_cal->g.r
+			+ panel_cal.r.b * sys_cal->b.r;
+	target->r.g = panel_cal.r.r * sys_cal->r.g
+			+ panel_cal.r.g * sys_cal->g.g
+			+ panel_cal.r.b * sys_cal->b.g;
+	target->r.b = panel_cal.r.r * sys_cal->r.b
+			+ panel_cal.r.g * sys_cal->g.b
+			+ panel_cal.r.b * sys_cal->b.b;
+	target->r.c = panel_cal.r.r * sys_cal->r.c
+			+ panel_cal.r.g * sys_cal->g.c
+			+ panel_cal.r.b * sys_cal->b.c
+			+ panel_cal.r.c;
+
+	target->g.r = panel_cal.g.r * sys_cal->r.r
+			+ panel_cal.g.g * sys_cal->g.r
+			+ panel_cal.g.b * sys_cal->b.r;
+	target->g.g = panel_cal.g.r * sys_cal->r.g
+			+ panel_cal.g.g * sys_cal->g.g
+			+ panel_cal.g.b * sys_cal->b.g;
+	target->g.b = panel_cal.g.r * sys_cal->r.b
+			+ panel_cal.g.g * sys_cal->g.b
+			+ panel_cal.g.b * sys_cal->b.b;
+	target->g.c = panel_cal.g.r * sys_cal->r.c
+			+ panel_cal.g.g * sys_cal->g.c
+			+ panel_cal.g.b * sys_cal->b.c
+			+ panel_cal.g.c;
+
+	target->b.r = panel_cal.b.r * sys_cal->r.r
+			+ panel_cal.b.g * sys_cal->g.r
+			+ panel_cal.b.b * sys_cal->b.r;
+	target->b.g = panel_cal.b.r * sys_cal->r.g
+			+ panel_cal.b.g * sys_cal->g.g
+			+ panel_cal.b.b * sys_cal->b.g;
+	target->b.b = panel_cal.b.r * sys_cal->r.b
+			+ panel_cal.b.g * sys_cal->g.b
+			+ panel_cal.b.b * sys_cal->b.b;
+	target->b.c = panel_cal.b.r * sys_cal->r.c
+			+ panel_cal.b.g * sys_cal->g.c
+			+ panel_cal.b.b * sys_cal->b.c
+			+ panel_cal.b.c;
+
+	/* Divide by 0x8000 to scale values back in range: */
+	target->r.r >>= 15;
+	target->r.g >>= 15;
+	target->r.b >>= 15;
+	target->r.c >>= 15;
+
+	target->g.r >>= 15;
+	target->g.g >>= 15;
+	target->g.b >>= 15;
+	target->g.c >>= 15;
+
+	target->b.r >>= 15;
+	target->b.g >>= 15;
+	target->b.b >>= 15;
+	target->b.c >>= 15;
+
+	return 0;
+}
+
+static int somc_panel_sde_crtc_set_property_override(struct drm_crtc *crtc,
+		struct drm_property *property,
+		uint64_t value)
+{
+	int ret = -EINVAL;
+	struct dsi_display *display = dsi_display_get_main_display();
+	struct somc_panel_color_mgr *color_mgr = NULL;
+	struct drm_property_blob *blob = NULL;
+	struct msm_drm_private *priv;
+	struct drm_property *prop;
+
+	if (!display)
+		return -EINVAL;
+
+	if (!display->panel)
+		return -EINVAL;
+
+	color_mgr = display->panel->spec_pdata->color_mgr;
+
+	if (!color_mgr)
+		return -EINVAL;
+
+	if (!color_mgr->original_crtc_funcs) {
+		pr_err("%s (%d): original_crtc_funcs is NULL!!\n",
+				__func__, __LINE__);
+		return -EINVAL;
+	}
+
+	if (!crtc || !property) {
+		pr_err("%s (%d): invalid crtc %pK property %pK\n",
+				__func__, __LINE__, crtc, property);
+		goto default_fn;
+	}
+
+	// The property that is overridden is of blob type:
+	if (~property->flags & DRM_MODE_PROP_BLOB)
+		goto default_fn;
+
+	priv = crtc->dev->dev_private;
+	prop = priv->cp_property[1]; /* SDE_CP_CRTC_DSPP_PCC == 1 !! */
+	/* Override only SDE_CP_CRTC_DSPP_PCC: */
+	if (prop->base.id != property->base.id) {
+		goto default_fn;
+	}
+
+	pr_debug("Running override %s\n", __func__);
+
+	blob = drm_property_lookup_blob(crtc->dev, value);
+	if (!blob) {
+		pr_err("Blob is NULL!!\n");
+		goto default_fn;
+	}
+
+	if (blob->length != sizeof(color_mgr->system_calibration_pcc)) {
+		pr_err("%s: Blob size does not match sizeof(drm_msm_pcc)\n",
+				__func__);
+		goto default_fn;
+	}
+
+	// If the calibration changed, recompute merged cache:
+	if (!color_mgr->system_calibration_valid ||
+			memcmp(&color_mgr->system_calibration_pcc, blob->data,
+				blob->length) != 0) {
+		pr_debug("Merging system calibration\n");
+		memcpy(&color_mgr->system_calibration_pcc, blob->data,
+				blob->length);
+		color_mgr->system_calibration_valid = true;
+
+		ret = somc_panel_update_merged_pcc_cache(color_mgr);
+		if (ret)
+			return ret;
+	}
+
+	// Copy (updated) cache to blob:
+	memcpy(blob->data, &color_mgr->cached_pcc, blob->length);
+
+default_fn:
+	return color_mgr->original_crtc_funcs->set_property(
+			crtc, property, value);
+}
+
+static int somc_panel_inject_crtc_overrides(struct dsi_display *display)
+{
+	struct dsi_panel *panel = display->panel;
+	struct somc_panel_color_mgr *color_mgr = NULL;
+	struct drm_crtc *crtc = NULL;
+	struct drm_crtc_funcs *new_funcs= NULL;
+
+	if (!display)
+		return -EINVAL;
+
+	color_mgr = panel->spec_pdata->color_mgr;
+
+	if (!color_mgr)
+		return -EINVAL;
+
+	/* Set up injection, if possible */
+	if (!display->drm_conn || !display->drm_conn->state ||
+			!display->drm_conn->state->crtc) {
+		pr_warn("%s (%d): Cannot get display crtc\n",
+				__func__, __LINE__);
+		return -EINVAL;
+	}
+
+	crtc = display->drm_conn->state->crtc;
+
+	if (!crtc->funcs) {
+		pr_err("No funcs on CRTC!!\n");
+		return -EINVAL;
+	}
+
+	if (color_mgr->original_crtc_funcs) {
+		pr_warn("%s (%d): Override: Already have original"
+				" funcs! Is setup called twice??\n",
+				__func__, __LINE__);
+		return -EINVAL;
+	}
+
+	/* First, create a copy of the original function: */
+	color_mgr->original_crtc_funcs = crtc->funcs;
+
+	/* Create a secondary buffer containing
+	 * the exact same function pointers: */
+	new_funcs = devm_kmalloc(&display->pdev->dev,
+			sizeof(struct drm_crtc_funcs),
+			GFP_KERNEL);
+	if (!new_funcs) {
+		pr_warn("%s (%d): Cannot allocate memory for override fns\n",
+				__func__, __LINE__);
+	}
+	memcpy(new_funcs, crtc->funcs, sizeof(struct drm_crtc_funcs));
+
+	/* Then, override the function: */
+	new_funcs->set_property = somc_panel_sde_crtc_set_property_override;
+
+	/* Finally, update the funcs buffer with the overridden function: */
+	crtc->funcs = new_funcs;
+
+	pr_notice("%s (%d): set_property injection planted\n",
+			__func__, __LINE__);
+
+	return 0;
+}
+
+static int somc_panel_pcc_setup_data(struct somc_panel_color_mgr *color_mgr,
+		struct dsi_pcc_data *pcc_data,
+		const char *table_name)
+{
+	int ret;
+	struct dsi_pcc_color_tbl *tbl_row;
+
+	if (!color_mgr)
+		return -EINVAL;
+
+	if (!pcc_data)
+		return -EINVAL;
+
+	if (!pcc_data->color_tbl) {
+		pr_err("%s (%d): %s color_tbl not found.\n",
+				__func__, __LINE__, table_name);
+		return -EINVAL;
+	}
+
+	ret = find_color_area(pcc_data, &color_mgr->u_data, &color_mgr->v_data);
+	if (ret) {
+		pr_err("%s (%d): %s: Failed to find standard color area.\n",
+				__func__, __LINE__, table_name);
+		return -EINVAL;
+	}
+
+	tbl_row = pcc_data->color_tbl + pcc_data->tbl_idx;
+	pr_notice("%s (%d): %s: ct=%d area=%d r=0x%08X g=0x%08X b=0x%08X\n",
+			__func__, __LINE__, table_name,
+			tbl_row->color_type,
+			tbl_row->area_num,
+			tbl_row->r_data,
+			tbl_row->g_data,
+			tbl_row->b_data);
+
+	return 0;
 }
 
 int somc_panel_pcc_setup(struct dsi_display *display)
@@ -557,8 +806,6 @@ int somc_panel_pcc_setup(struct dsi_display *display)
 	int ret;
 	struct dsi_panel *panel = display->panel;
 	struct somc_panel_color_mgr *color_mgr = NULL;
-	struct dsi_pcc_data *pcc_data = NULL;
-	u8 idx = 0;
 
 	if (panel == NULL) {
 		pr_err("%s: Invalid input data\n", __func__);
@@ -578,128 +825,55 @@ int somc_panel_pcc_setup(struct dsi_display *display)
 			pr_err("failed to allocate cmd tx buffer memory\n");
 	}
 
+	(void)somc_panel_inject_crtc_overrides(display);
+
 	if (color_mgr->uv_read_cmds.cmds.send_cmd) {
 		get_uv_data(display, &color_mgr->u_data, &color_mgr->v_data);
 	}
 
 	if (color_mgr->u_data == 0 && color_mgr->v_data == 0) {
 		pr_err("%s (%d): u,v is flashed 0.\n", __func__, __LINE__);
-		return -EINVAL;
+		if (!color_mgr->mdss_force_pcc)
+			return -EINVAL;
 	}
-	pr_notice("%s (%d) udata = %x vdata = %x \n", __func__, __LINE__,
+
+	pr_notice("%s (%d): udata = %x vdata = %x \n", __func__, __LINE__,
 		color_mgr->u_data, color_mgr->v_data);
 
 	if (color_mgr->standard_pcc_enable) {
-		pcc_data = &color_mgr->standard_pcc_data;
-		if (!pcc_data->color_tbl) {
-			pr_err("%s (%d): standard_color_tbl isn't found.\n",
-				__func__, __LINE__);
-			goto exit;
-		}
-
-		ret = find_color_area(pcc_data,
-			&color_mgr->u_data, &color_mgr->v_data);
-		if (ret) {
-			pr_err("%s (%d)failed to find standard color area.\n",
-				__func__, __LINE__);
-			goto exit;
-		}
-		idx = pcc_data->tbl_idx;
-		pr_notice("Standard : %s (%d): ct=%d area=%d r=0x%08X g=0x%08X b=0x%08X\n",
-			__func__, __LINE__,
-			pcc_data->color_tbl[idx].color_type,
-			pcc_data->color_tbl[idx].area_num,
-			pcc_data->color_tbl[idx].r_data,
-			pcc_data->color_tbl[idx].g_data,
-			pcc_data->color_tbl[idx].b_data);
+		(void)somc_panel_pcc_setup_data(color_mgr,
+				&color_mgr->standard_pcc_data,
+				"Standard");
 	} else {
 		pr_notice("%s (%d): standard_pcc isn't enabled.\n",
-			__func__, __LINE__);
-		goto exit;
+				__func__, __LINE__);
 	}
 
 	if (color_mgr->srgb_pcc_enable) {
-		pcc_data = &color_mgr->srgb_pcc_data;
-		if (!pcc_data->color_tbl) {
-			pr_err("%s (%d): srgb_color_tbl isn't found.\n",
-				__func__, __LINE__);
-			goto exit;
-		}
-		ret = find_color_area(pcc_data,
-			&color_mgr->u_data, &color_mgr->v_data);
-		if (ret) {
-			pr_err("%s (%d)failed to find srgb color area.\n",
-				__func__, __LINE__);
-			goto exit;
-		}
-		idx = pcc_data->tbl_idx;
-		pr_notice("SRGB : %s (%d): ct=%d area=%d r=0x%08X g=0x%08X b=0x%08X\n",
-			__func__, __LINE__,
-			pcc_data->color_tbl[idx].color_type,
-			pcc_data->color_tbl[idx].area_num,
-			pcc_data->color_tbl[idx].r_data,
-			pcc_data->color_tbl[idx].g_data,
-			pcc_data->color_tbl[idx].b_data);
+		(void)somc_panel_pcc_setup_data(color_mgr,
+				&color_mgr->srgb_pcc_data,
+				"sRGB");
 	} else {
 		pr_notice("%s (%d): srgb_pcc isn't enabled.\n",
-			__func__, __LINE__);
-		goto exit;
+				__func__, __LINE__);
 	}
 
 	if (color_mgr->vivid_pcc_enable) {
-		pcc_data = &color_mgr->vivid_pcc_data;
-		if (!pcc_data->color_tbl) {
-			pr_err("%s (%d): vivid_color_tbl isn't found.\n",
-				__func__, __LINE__);
-			goto exit;
-		}
-		ret = find_color_area(pcc_data,
-			&color_mgr->u_data, &color_mgr->v_data);
-		if (ret) {
-			pr_err("%s (%d)failed to find vivid color area.\n",
-				__func__, __LINE__);
-			goto exit;
-		}
-		idx = pcc_data->tbl_idx;
-		pr_notice("Vivid : %s (%d): ct=%d area=%d r=0x%08X g=0x%08X b=0x%08X\n",
-			__func__, __LINE__,
-			pcc_data->color_tbl[idx].color_type,
-			pcc_data->color_tbl[idx].area_num,
-			pcc_data->color_tbl[idx].r_data,
-			pcc_data->color_tbl[idx].g_data,
-			pcc_data->color_tbl[idx].b_data);
+		(void)somc_panel_pcc_setup_data(color_mgr,
+				&color_mgr->vivid_pcc_data,
+				"Vivid");
 	} else {
 		pr_notice("%s (%d): vivid_pcc isn't enabled.\n",
-			__func__, __LINE__);
-		goto exit;
+				__func__, __LINE__);
 	}
 
 	if (color_mgr->hdr_pcc_enable) {
-		pcc_data = &color_mgr->hdr_pcc_data;
-		if (!pcc_data->color_tbl) {
-			pr_err("%s (%d): hdr_color_tbl isn't found.\n",
-				__func__, __LINE__);
-			goto exit;
-		}
-		ret = find_color_area(pcc_data,
-			&color_mgr->u_data, &color_mgr->v_data);
-		if (ret) {
-			pr_err("%s (%d)failed to find hdr color area.\n",
-				__func__, __LINE__);
-			goto exit;
-		}
-		idx = pcc_data->tbl_idx;
-		pr_notice("HDR : %s (%d): ct=%d area=%d r=0x%08X g=0x%08X b=0x%08X\n",
-			__func__, __LINE__,
-			pcc_data->color_tbl[idx].color_type,
-			pcc_data->color_tbl[idx].area_num,
-			pcc_data->color_tbl[idx].r_data,
-			pcc_data->color_tbl[idx].g_data,
-			pcc_data->color_tbl[idx].b_data);
+		(void)somc_panel_pcc_setup_data(color_mgr,
+				&color_mgr->hdr_pcc_data,
+				"HDR");
 	} else {
 		pr_notice("%s (%d): hdr_pcc isn't enabled.\n",
-			__func__, __LINE__);
-		goto exit;
+				__func__, __LINE__);
 	}
 	color_mgr->dsi_pcc_applied = true;
 
@@ -1040,7 +1214,7 @@ int somc_panel_send_pa(struct dsi_display *display)
 		goto end;
 	}
 
-	pr_debug("%s (%d):sat=%d hue=%d val=%d cont=%d",
+	pr_debug("%s (%d): sat=%d hue=%d val=%d cont=%d",
 		__func__, __LINE__, hsic_blk.saturation,
 		hsic_blk.hue, hsic_blk.value,
 		hsic_blk.contrast);
@@ -1048,16 +1222,26 @@ end:
 	return rc;
 }
 
-static int somc_panel_crtc_send_pcc(struct dsi_display *display,
-			       u32 r_data, u32 g_data, u32 b_data)
+static int somc_panel_crtc_send_cached_pcc(struct dsi_display *display)
 {
-	struct drm_msm_pcc pcc_blk;
+	struct somc_panel_color_mgr *color_mgr = NULL;
 	struct msm_drm_private *priv;
 	struct drm_property *prop;
 	struct drm_property_blob *pblob;
 	struct drm_crtc *crtc = NULL;
 	int rc;
 	uint64_t val;
+
+	if (!display)
+		return -EINVAL;
+
+	if (!display->panel)
+		return -EINVAL;
+
+	color_mgr = display->panel->spec_pdata->color_mgr;
+
+	if (!color_mgr)
+		return -EINVAL;
 
 	if (!display->drm_conn) {
 		pr_err("The display is not connected!!\n");
@@ -1082,15 +1266,10 @@ static int somc_panel_crtc_send_pcc(struct dsi_display *display,
 	rc = sde_cp_crtc_get_property(crtc, prop, &val);
 	if (rc) {
 		pr_err("Cannot get CRTC property. Things may go wrong.\n");
-	};
-
-	memset(&pcc_blk, 0, sizeof(struct drm_msm_pcc));
-	pcc_blk.r.r = r_data;
-	pcc_blk.g.g = g_data;
-	pcc_blk.b.b = b_data;
+	}
 
 	pblob = drm_property_create_blob(crtc->dev,
-			sizeof(struct drm_msm_pcc), &pcc_blk);
+			sizeof(struct drm_msm_pcc), &color_mgr->cached_pcc);
 	if (IS_ERR_OR_NULL(pblob)) {
 		pr_err("Failed to create blob. Bailing out.\n");
 		return -EINVAL;
@@ -1109,23 +1288,26 @@ static int somc_panel_crtc_send_pcc(struct dsi_display *display,
 static int somc_panel_send_pcc(struct dsi_display *display,
 			       int color_table_offset)
 {
-	struct dsi_pcc_data *pcc_data = NULL;
 	struct somc_panel_color_mgr *color_mgr =
 			display->panel->spec_pdata->color_mgr;
-	int table_idx;
-	u32 r_data, g_data, b_data;
 
-	pcc_data = &color_mgr->standard_pcc_data;
-	table_idx = pcc_data->tbl_idx + color_table_offset;
+	/* Only recompute cache when outdated: */
+	// TODO: Initialize cache to invalid value!!!
+	if (color_table_offset == color_mgr->pcc_profile)
+		goto apply_cached_pcc;
 
-	r_data = pcc_data->color_tbl[table_idx].r_data;
-	g_data = pcc_data->color_tbl[table_idx].g_data;
-	b_data = pcc_data->color_tbl[table_idx].b_data;
+	pr_info("%s Changed from pcc profile %d to %d\n", __func__,
+			color_mgr->pcc_profile, color_table_offset);
 
-	return somc_panel_crtc_send_pcc(display, r_data, g_data, b_data);
+	color_mgr->pcc_profile = color_table_offset;
+
+	somc_panel_update_merged_pcc_cache(color_mgr);
+
+apply_cached_pcc:
+	return somc_panel_crtc_send_cached_pcc(display);
 }
 
-int somc_panel_colormgr_apply_calibrations(void)
+int somc_panel_colormgr_apply_calibrations(int selected_pcc_profile)
 {
 	struct dsi_display *display = dsi_display_get_main_display();
 	struct somc_panel_color_mgr *color_mgr = NULL;
@@ -1146,7 +1328,7 @@ int somc_panel_colormgr_apply_calibrations(void)
 	if (rc) {
 		pr_err("%s: Couldn't apply PCC calibration\n", __func__);
 	} else {
-		rc = somc_panel_send_pcc(display, color_mgr->pcc_profile);
+		rc = somc_panel_send_pcc(display, selected_pcc_profile);
 		if (rc) {
 			pr_err("%s: Cannot send PCC calibration\n", __func__);
 		}
@@ -1172,6 +1354,7 @@ int somc_panel_color_manager_init(struct dsi_display *display)
 
 	/* Be sure of initialization to default profile */
 	color_mgr->pcc_profile = 0;
+	(void)somc_panel_update_merged_pcc_cache(color_mgr);
 
 	return 0;
 }

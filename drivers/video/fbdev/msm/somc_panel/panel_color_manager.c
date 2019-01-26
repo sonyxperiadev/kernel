@@ -38,6 +38,7 @@ int somc_panel_parse_dt_colormgr_config(struct device_node *np,
 {
 	struct somc_panel_color_mgr *color_mgr = ctrl->spec_pdata->color_mgr;
 	struct mdss_panel_info *pinfo;
+	struct property *prop;
 	u32 tmp, res[2];
 	int rc = 0;
 
@@ -46,35 +47,30 @@ int somc_panel_parse_dt_colormgr_config(struct device_node *np,
 	if (pinfo->dsi_master != pinfo->pdest)
 		goto end;
 
-	if (!of_find_property(np, "somc,mdss-dsi-pcc-table", NULL))
+	prop = of_find_property(np, "somc,mdss-dsi-pcc-table", NULL);
+	if (!prop)
 		goto picadj_params;
 
-	rc = of_property_read_u32(np,
-		"somc,mdss-dsi-pcc-table-size", &tmp);
 	color_mgr->pcc_data.tbl_size =
-		(!rc ? tmp : 0);
+		prop->length / sizeof(struct mdss_pcc_color_tbl);
 
 	if (unlikely(color_mgr->pcc_data.tbl_size <= 0))
 		goto picadj_params;
 
 	/* PCC Parameters */
-	color_mgr->pcc_data.color_tbl =
-		kzalloc(color_mgr->pcc_data.tbl_size *
-			sizeof(struct mdss_pcc_color_tbl),
-			GFP_KERNEL);
+	color_mgr->pcc_data.color_tbl = kzalloc(prop->length, GFP_KERNEL);
 	if (!color_mgr->pcc_data.color_tbl) {
 		pr_err("no mem assigned: kzalloc fail\n");
+		color_mgr->pcc_data.tbl_size = 0;
 		return -ENOMEM;
 	}
 	rc = of_property_read_u32_array(np,
 		"somc,mdss-dsi-pcc-table",
 		(u32 *)color_mgr->pcc_data.color_tbl,
-		color_mgr->pcc_data.tbl_size *
-		sizeof(struct mdss_pcc_color_tbl) /
-		sizeof(u32));
+		prop->length / sizeof(u32));
 	if (rc) {
 		color_mgr->pcc_data.tbl_size = 0;
-		kzfree(color_mgr->pcc_data.color_tbl);
+		kfree(color_mgr->pcc_data.color_tbl);
 		color_mgr->pcc_data.color_tbl = NULL;
 		pr_err("%s:%d, Unable to read pcc table",
 			__func__, __LINE__);
