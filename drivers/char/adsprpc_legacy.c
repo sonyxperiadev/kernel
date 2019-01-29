@@ -2485,6 +2485,7 @@ static int fastrpc_device_release(struct inode *inode, struct file *file)
 	if (fl) {
 		if (fl->debugfs_file != NULL)
 			debugfs_remove(fl->debugfs_file);
+		mutex_destroy(&fl->fl_map_mutex);
 		mutex_destroy(&fl->map_mutex);
 		fastrpc_file_free(fl);
 		file->private_data = NULL;
@@ -2819,6 +2820,7 @@ static int fastrpc_device_open(struct inode *inode, struct file *filp)
 	memset(&fl->perf, 0, sizeof(fl->perf));
 	filp->private_data = fl;
 	mutex_init(&fl->map_mutex);
+	mutex_init(&fl->fl_map_mutex);
 	spin_lock(&me->hlock);
 	hlist_add_head(&fl->hn, &me->drivers);
 	spin_unlock(&me->hlock);
