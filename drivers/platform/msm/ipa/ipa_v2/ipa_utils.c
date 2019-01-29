@@ -820,13 +820,18 @@ int ipa_cfg_filter(u32 disable)
 int ipa_init_hw(void)
 {
 	u32 ipa_version = 0;
+	u32 ena_bit = 1;
 
 	/* do soft reset of IPA */
 	ipa_write_reg(ipa_ctx->mmio, IPA_COMP_SW_RESET_OFST, 1);
 	ipa_write_reg(ipa_ctx->mmio, IPA_COMP_SW_RESET_OFST, 0);
 
 	/* enable IPA Bit:0, enable 2x fast clock Bit:4 */
-	ipa_write_reg(ipa_ctx->mmio, IPA_COMP_CFG_OFST, 0x11);
+	if (of_machine_is_compatible("qcom,sdm630") ||
+	    of_machine_is_compatible("qcom,sdm660"))
+		ena_bit = 0x11;
+
+	ipa_write_reg(ipa_ctx->mmio, IPA_COMP_CFG_OFST, ena_bit);
 
 	/* Read IPA version and make sure we have access to the registers */
 	ipa_version = ipa_read_reg(ipa_ctx->mmio, IPA_VERSION_OFST);
