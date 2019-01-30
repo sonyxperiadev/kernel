@@ -49,9 +49,8 @@
 			ams,rgbcir-gpio-vdd = <0>;
 			ams,rgbcir-vio-supply = <1>;
 		};
-		tof_sensor@52 {
+		tof_sensor@29 {
 			tof_avdd-supply = <&pm8998_l22>;
-			sony,tof-avdd-supply = <1>;
 		};
 	};
 
