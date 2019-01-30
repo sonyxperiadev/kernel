@@ -1386,6 +1386,68 @@ static DEVICE_ATTR(set_use_case, 0660/*S_IWUGO | S_IRUGO*/,
 				   stmvl53l0_show_use_case,
 					stmvl53l0_store_set_use_case);
 
+/* Reference SPADs */
+static ssize_t stmvl53l0_show_ref_spads(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	struct stmvl53l0_data *data = dev_get_drvdata(dev);
+	VL53L0_DEV vl53l0_dev = data;
+	int ret;
+	uint32_t spads_count;
+	uint8_t is_aperture;
+
+	ret = papi_func_tbl->GetReferenceSpads(vl53l0_dev,
+				(uint32_t *)&spads_count,
+				(uint8_t *)&is_aperture);
+
+	if (data->enableDebug)
+		vl53l0_dbgmsg("Get RefSpad : Count:%u, Type:%u\n",
+					spads_count, is_aperture);
+
+	return snprintf(buf, 10, "%d\n", spads_count);
+}
+
+static ssize_t stmvl53l0_store_ref_spads(struct device *dev,
+					struct device_attribute *attr,
+					const char *buf, size_t count)
+{
+	struct stmvl53l0_data *data = dev_get_drvdata(dev);
+	VL53L0_DEV vl53l0_dev = data;
+	unsigned long spads_count = 0;
+	int ret = kstrtoul(buf, 10, &spads_count);
+
+	if (ret != 0)
+		return ret;
+
+	mutex_lock(&data->work_mutex);
+
+	if (data->enableDebug)
+		vl53l0_dbgmsg("Set RefSpad : Count:%lu, Type:0\n",
+				spads_count);
+
+	data->refSpadCount = spads_count;
+	data->isApertureSpads = 0;
+
+	/* If the sensor is powered up, set the SPADs right now */
+	if (data->enable_ps_sensor == 1) {
+		ret = papi_func_tbl->SetReferenceSpads(vl53l0_dev,
+						(uint32_t)spads_count, 0);
+		if (ret) {
+			mutex_unlock(&data->work_mutex);
+			pr_err("Cannot set reference SPADs\n");
+			count = -EINVAL;
+			return count;
+		}
+	}
+
+	mutex_unlock(&data->work_mutex);
+
+	return count;
+}
+
+static DEVICE_ATTR(set_ref_spads, 0660,
+			stmvl53l0_show_ref_spads,
+			stmvl53l0_store_ref_spads);
 
 /* Get Current configuration info */
 static ssize_t stmvl53l0_show_current_configuration(struct device *dev,
@@ -1646,6 +1708,7 @@ static struct attribute *stmvl53l0_attributes[] = {
 	&dev_attr_set_delay_ms.attr,
 	&dev_attr_set_timing_budget.attr,
 	&dev_attr_set_use_case.attr,
+	&dev_attr_set_ref_spads.attr,
 	&dev_attr_do_flush.attr,
 	&dev_attr_show_current_configuration.attr,
 	NULL
