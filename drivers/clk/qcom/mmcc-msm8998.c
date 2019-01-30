@@ -79,7 +79,7 @@ static const struct parent_map mmcc_parent_map_gcc_0[] = {
 };
 
 static const char * const mmcc_parent_names_gcc_0[] = {
-	"xo",
+	"cxo",
 	"gcc_mmss_gpll0_clk",
 };
 
@@ -90,7 +90,7 @@ static const struct parent_map mmcc_parent_map_gcc_1[] = {
 };
 
 static const char * const mmcc_parent_names_gcc_1[] = {
-	"xo",
+	"cxo",
 	"gcc_mmss_gpll0_clk",
 	"gcc_mmss_gpll0_div_clk",
 };
@@ -102,7 +102,7 @@ static const struct parent_map mmcc_parent_map_1[] = {
 };
 
 static const char * const mmcc_parent_names_1[] = {
-	"xo",
+	"cxo",
 	"gcc_mmss_gpll0_clk",
 	"mmpll0",
 };
@@ -116,7 +116,7 @@ static const struct parent_map mmcc_parent_map_2[] = {
 };
 
 static const char * const mmcc_parent_names_2[] = {
-	"xo",
+	"cxo",
 	"gcc_mmss_gpll0_clk",
 	"mmpll4",
 	"mmpll7",
@@ -133,7 +133,7 @@ static const struct parent_map mmcc_parent_map_2a[] = {
 };
 
 static const char * const mmcc_parent_names_2a[] = {
-	"xo",
+	"cxo",
 	"gcc_mmss_gpll0_clk",
 	"mmpll0",
 	"mmpll4",
@@ -150,7 +150,7 @@ static const struct parent_map mmcc_parent_map_3[] = {
 };
 
 static const char * const mmcc_parent_names_3[] = {
-	"xo",
+	"cxo",
 	"gcc_mmss_gpll0_clk",
 	"gcc_mmss_gpll0_div_clk",
 	"mmpll5",
@@ -165,7 +165,7 @@ static const struct parent_map mmcc_parent_map_4[] = {
 };
 
 static const char * const mmcc_parent_names_4[] = {
-	"xo",
+	"cxo",
 	"gcc_mmss_gpll0_clk",
 	"gcc_mmss_gpll0_div_clk",
 	"mmpll0",
@@ -179,7 +179,7 @@ static const struct parent_map mmcc_parent_map_5[] = {
 };
 
 static const char * const mmcc_parent_names_5[] = {
-	"xo",
+	"cxo",
 	"gcc_mmss_gpll0_clk",
 	"mmpll5",
 };
@@ -191,7 +191,7 @@ static const struct parent_map mmcc_parent_map_6[] = {
 };
 
 static const char * const mmcc_parent_names_6[] = {
-	"xo",
+	"cxo",
 	"gcc_mmss_gpll0_clk",
 	"mmpll7",
 };
@@ -204,7 +204,7 @@ static const struct parent_map mmcc_parent_map_7[] = {
 };
 
 static const char * const mmcc_parent_names_7[] = {
-	"xo",
+	"cxo",
 	"gcc_mmss_gpll0_clk",
 	"mmpll3",
 	"mmpll6",
@@ -219,7 +219,7 @@ static const struct parent_map mmcc_parent_map_7a[] = {
 };
 
 static const char * const mmcc_parent_names_7a[] = {
-	"xo",
+	"cxo",
 	"gcc_mmss_gpll0_clk",
 	"mmpll0",
 	"mmpll3",
@@ -236,7 +236,7 @@ static const struct parent_map mmcc_parent_map_8[] = {
 };
 
 static const char * const mmcc_parent_names_8[] = {
-	"xo",
+	"cxo",
 	"gcc_mmss_gpll0_clk",
 	"mmpll0",
 	"mmpll7",
@@ -251,7 +251,7 @@ static const struct parent_map disp_cc_parent_map_0[] = {
 };
 
 static const char * const disp_cc_parent_names_0[] = {
-	"xo",
+	"cxo",
 	"dsi0_phy_pll_out_byteclk",
 	"dsi1_phy_pll_out_byteclk",
 };
@@ -263,7 +263,7 @@ static const struct parent_map disp_cc_parent_map_1[] = {
 };
 
 static const char * const disp_cc_parent_names_1[] = {
-	"xo",
+	"cxo",
 	"dp_link_clk_divsel_ten",
 	"dp_vco_divided_clk_src_mux",
 };
@@ -275,7 +275,7 @@ static const struct parent_map disp_cc_parent_map_2[] = {
 };
 
 static const char * const disp_cc_parent_names_2[] = {
-	"xo",
+	"cxo",
 	"gcc_mmss_gpll0_clk",
 	"gcc_mmss_gpll0_div_clk",
 };
@@ -287,7 +287,7 @@ static const struct parent_map disp_cc_parent_map_3[] = {
 };
 
 static const char * const disp_cc_parent_names_3[] = {
-	"xo",
+	"cxo",
 	"mmpll5",
 	"gcc_mmss_gpll0_clk",
 	"gcc_mmss_gpll0_div_clk",
@@ -300,7 +300,7 @@ static const struct parent_map disp_cc_parent_map_4[] = {
 };
 
 static const char * const disp_cc_parent_names_4[] = {
-	"xo",
+	"cxo",
 	"dsi0_phy_pll_out_dsiclk",
 	"dsi1_phy_pll_out_dsiclk",
 };
@@ -311,7 +311,7 @@ static const struct parent_map disp_cc_parent_map_5[] = {
 };
 
 static const char * const disp_cc_parent_names_5[] = {
-	"xo",
+	"cxo",
 	"hdmipll",
 };
 
@@ -330,7 +330,7 @@ static struct clk_alpha_pll mmpll0 = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data){
 			.name = "mmpll0",
-			.parent_names = (const char *[]){ "xo" },
+			.parent_names = (const char *[]){ "cxo" },
 			.num_parents = 1,
 			.ops = &clk_alpha_pll_fabia_fixed_ops,
 			VDD_MM_PLL_FMAX_MAP2(LOWER, 404000000, NOMINAL, 808000195),
@@ -354,7 +354,7 @@ static struct clk_alpha_pll mmpll1 = {
 		.enable_mask = BIT(1),
 		.hw.init = &(struct clk_init_data){
 			.name = "mmpll1",
-			.parent_names = (const char *[]){ "xo" },
+			.parent_names = (const char *[]){ "cxo" },
 			.num_parents = 1,
 			.ops = &clk_alpha_pll_fabia_fixed_ops,
 			VDD_MM_PLL_FMAX_MAP2(LOWER, 406000000, NOMINAL, 812000097),
@@ -374,7 +374,7 @@ static struct clk_alpha_pll mmpll3 = {
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "mmpll3",
-		.parent_names = (const char *[]){ "xo" },
+		.parent_names = (const char *[]){ "cxo" },
 		.num_parents = 1,
 		.ops = &clk_alpha_pll_fabia_fixed_ops,
 		VDD_MM_PLL_FMAX_MAP2(LOWER, 465000000, LOW, 930000000),
@@ -392,7 +392,7 @@ static struct clk_alpha_pll mmpll4 = {
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "mmpll4",
-		.parent_names = (const char *[]){ "xo" },
+		.parent_names = (const char *[]){ "cxo" },
 		.num_parents = 1,
 		.ops = &clk_alpha_pll_fabia_fixed_ops,
 		VDD_MM_PLL_FMAX_MAP2(LOWER, 384000000, LOW, 768000000),
@@ -411,7 +411,7 @@ static struct clk_alpha_pll mmpll5 = {
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "mmpll5",
-		.parent_names = (const char *[]){ "xo" },
+		.parent_names = (const char *[]){ "cxo" },
 		.num_parents = 1,
 		.ops = &clk_alpha_pll_fabia_fixed_ops,
 		VDD_MM_PLL_FMAX_MAP2(LOWER, 412500000, LOW, 825000000),
@@ -430,7 +430,7 @@ static struct clk_alpha_pll mmpll6 = {
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "mmpll6",
-		.parent_names = (const char *[]){ "xo" },
+		.parent_names = (const char *[]){ "cxo" },
 		.num_parents = 1,
 		.ops = &clk_alpha_pll_fabia_fixed_ops,
 		VDD_MM_PLL_FMAX_MAP2(LOWER, 412500000, LOW, 825000000),
@@ -448,7 +448,7 @@ static struct clk_alpha_pll mmpll7 = {
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "mmpll7",
-		.parent_names = (const char *[]){ "xo" },
+		.parent_names = (const char *[]){ "cxo" },
 		.num_parents = 1,
 		.ops = &clk_alpha_pll_fabia_fixed_ops,
 		VDD_MM_PLL_FMAX_MAP1(LOW, 960000000),
@@ -466,7 +466,7 @@ static struct clk_alpha_pll mmpll10 = {
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "mmpll10",
-		.parent_names = (const char *[]){ "xo" },
+		.parent_names = (const char *[]){ "cxo" },
 		.num_parents = 1,
 		.ops = &clk_alpha_pll_fabia_fixed_ops,
 		VDD_MM_PLL_FMAX_MAP2(LOWER, 288000000, NOMINAL, 576000000),
@@ -733,7 +733,7 @@ static struct clk_rcg2 rot_clk_src = {
 	.hid_width = 5,
 	.parent_map = mmcc_parent_map_3,
 	.freq_tbl = ftbl_rot_clk_src,
-	//.enable_safe_config = true,
+	.enable_safe_config = true,
 	.clkr.hw.init = &(struct clk_init_data) {
 		.name = "rot_clk_src",
 		.parent_names = mmcc_parent_names_3,
