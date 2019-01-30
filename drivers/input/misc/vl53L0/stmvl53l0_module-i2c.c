@@ -66,14 +66,16 @@ static int stmvl53l0_parse_vdd(struct device *dev, struct i2c_data *data)
 	if (dev->of_node) {
 		data->vana = regulator_get(dev, "vdd");
 		if (IS_ERR(data->vana)) {
-			vl53l0_errmsg("vdd supply is not provided\n");
-			ret = -1;
+			vl53l0_errmsg("Cannot get vdd supply: %ld\n",
+						PTR_ERR(data->vana));
+			return PTR_ERR(data->vana);
 		}
 
+		/* Not mandatory */
 		data->avdd = regulator_get(dev, "tof_avdd");
 		if (IS_ERR(data->avdd)) {
 			vl53l0_errmsg("tof_avdd supply not provided\n");
-			ret = -1;
+			ret = 0;
 		}
 	}
 	vl53l0_dbgmsg("End\n");
@@ -153,10 +155,14 @@ static int stmvl53l0_probe(struct i2c_client *client,
 	vl53l0_data->bus_type = I2C_BUS;
 
 	/* setup regulator */
-	stmvl53l0_parse_vdd(&i2c_object->client->dev, i2c_object);
+	rc = stmvl53l0_parse_vdd(&i2c_object->client->dev, i2c_object);
+	if (rc)
+		goto end;
 
 	/* setup pinctrl and gpios */
-	stmvl53l0_parse_pins(&i2c_object->client->dev, i2c_object);
+	rc = stmvl53l0_parse_pins(&i2c_object->client->dev, i2c_object);
+	if (rc)
+		goto end;
 
 	/* setup device name */
 	vl53l0_data->dev_name = dev_name(&client->dev);
@@ -174,6 +180,12 @@ static int stmvl53l0_probe(struct i2c_client *client,
 	i2c_object->power_up = 0;
 
 	vl53l0_dbgmsg("End\n");
+end:
+	if (rc < 0) {
+		kfree(i2c_object);
+		kfree(vl53l0_data);
+	}
+
 	return rc;
 }
 
