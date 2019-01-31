@@ -1449,6 +1449,68 @@ static DEVICE_ATTR(set_ref_spads, 0660,
 			stmvl53l0_show_ref_spads,
 			stmvl53l0_store_ref_spads);
 
+/* Offset calibration data */
+static ssize_t stmvl53l0_show_offset_caldata(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	struct stmvl53l0_data *data = dev_get_drvdata(dev);
+	VL53L0_DEV vl53l0_dev = data;
+	int ret;
+	uint32_t offset_caldata;
+
+	ret = papi_func_tbl->GetOffsetCalibrationDataMicroMeter(
+				vl53l0_dev, (uint32_t *)&offset_caldata);
+
+	if (data->enableDebug)
+		vl53l0_dbgmsg("Get Offset Calibration: %u micrometers\n",
+							offset_caldata);
+
+	return snprintf(buf, 10, "%d\n", offset_caldata);
+}
+
+static ssize_t stmvl53l0_store_offset_caldata(struct device *dev,
+					struct device_attribute *attr,
+					const char *buf, size_t count)
+{
+	struct stmvl53l0_data *data = dev_get_drvdata(dev);
+	VL53L0_DEV vl53l0_dev = data;
+	unsigned long offset_caldata = 0;
+	int ret = kstrtoul(buf, 10, &offset_caldata);
+
+	if (ret != 0)
+		return ret;
+
+	mutex_lock(&data->work_mutex);
+
+	if (data->enableDebug)
+		vl53l0_dbgmsg("Set Offset Calibration: %lu micrometers\n",
+							offset_caldata);
+
+	data->OffsetMicroMeter = offset_caldata;
+	data->setCalibratedValue |= SET_OFFSET_CALIB_DATA_MICROMETER_MASK;
+
+	/* If the sensor is powered up, set the offset calibration right now */
+	if (data->enable_ps_sensor == 1) {
+		ret = papi_func_tbl->SetOffsetCalibrationDataMicroMeter(
+					vl53l0_dev, (uint32_t)offset_caldata);
+		if (ret) {
+			mutex_unlock(&data->work_mutex);
+			pr_err("Cannot set offset calibration\n");
+			count = -EINVAL;
+			return count;
+		}
+	}
+
+	mutex_unlock(&data->work_mutex);
+
+	return count;
+}
+
+static DEVICE_ATTR(set_um_offset, 0660,
+			stmvl53l0_show_offset_caldata,
+			stmvl53l0_store_offset_caldata);
+
+
 /* Get Current configuration info */
 static ssize_t stmvl53l0_show_current_configuration(struct device *dev,
 				struct device_attribute *attr, char *buf)
@@ -1709,6 +1771,7 @@ static struct attribute *stmvl53l0_attributes[] = {
 	&dev_attr_set_timing_budget.attr,
 	&dev_attr_set_use_case.attr,
 	&dev_attr_set_ref_spads.attr,
+	&dev_attr_set_um_offset.attr,
 	&dev_attr_do_flush.attr,
 	&dev_attr_show_current_configuration.attr,
 	NULL
