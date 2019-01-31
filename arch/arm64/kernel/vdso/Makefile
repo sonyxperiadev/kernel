@@ -73,7 +73,8 @@ $(obj-vdso-c): %.o: %.c FORCE
 
 # Actual build commands
 quiet_cmd_vdsold = VDSOL   $@
-      cmd_vdsold = $(CC) $(c_flags) -Wl,-n -Wl,-T $^ -o $@
+      cmd_vdsold = $(CC) $(c_flags) $(call cc-ldoption, -Wl$(comma)-n) \
+						-Wl$(comma)-T $^ -o $@
 quiet_cmd_vdsocc = VDSOC   $@
       cmd_vdsocc = ${CC} $(c_flags) -c -o $@ $<
 quiet_cmd_vdsoas = VDSOA   $@
