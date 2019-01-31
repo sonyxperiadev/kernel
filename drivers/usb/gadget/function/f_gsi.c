@@ -1468,6 +1468,7 @@ static long gsi_ctrl_dev_ioctl(struct file *fp, unsigned int cmd,
 		atomic_set(&c_port->ctrl_online, 1);
 		break;
 	case QTI_CTRL_GET_LINE_STATE:
+	case GSI_MBIM_GPS_USB_STATUS:
 		val = atomic_read(&gsi->connected);
 		if (gsi->prot_id == USB_PROT_RMNET_IPA ||
 				gsi->prot_id == USB_PROT_RMNET_ETHER)
@@ -2522,7 +2523,9 @@ static int gsi_set_alt(struct usb_function *f, unsigned int intf,
 
 	/* send 0 len pkt to qti to notify state change */
 	if (gsi->prot_id == USB_PROT_DIAG_IPA ||
-				gsi->prot_id == USB_PROT_DPL_ETHER)
+				gsi->prot_id == USB_PROT_DPL_ETHER ||
+				gsi->prot_id == USB_PROT_GPS_CTRL ||
+				gsi->prot_id == USB_PROT_MBIM_IPA)
 		gsi_ctrl_send_cpkt_tomodem(gsi, NULL, 0);
 
 	return 0;
@@ -2558,7 +2561,7 @@ static void gsi_disable(struct usb_function *f)
 	}
 
 	gsi_ctrl_clear_cpkt_queues(gsi, false);
-	/* send 0 len pkt to qti/qbi to notify state change */
+	/* send 0 len pkt to qti/qbi/gps to notify state change */
 	gsi_ctrl_send_cpkt_tomodem(gsi, NULL, 0);
 	gsi->c_port.notify_req_queued = false;
 	/* Disable Data Path  - only if it was initialized already (alt=1) */
