@@ -279,6 +279,36 @@ static int __init sony_param_warmboot(char *p)
 }
 early_param("warmboot", sony_param_warmboot);
 
+#define MSM_PINCONF_2MA_NO_PULL		0x8
+#define MSM_PINCONF_2MA_PULL_DN		0x9
+#define MSM_TLMM_PIN_UART_RX		0x5000
+#define MSM_TLMM_PIN_UART_TX		0x4000
+static int __init sony_param_restore_uart(char *p)
+{
+	void __iomem *tlmm = NULL;
+	unsigned long address;
+	uint32_t pin_config = 0;
+
+	/* We want the TLMM BASE address here */
+	if (kstrtoul(p, 16, &address))
+		return 1;
+
+	tlmm = early_ioremap(address, 0x7000);
+	if (!tlmm)
+		return 1;
+
+	pin_config = MSM_PINCONF_2MA_NO_PULL;
+	writel_relaxed(pin_config, tlmm + MSM_TLMM_PIN_UART_TX);
+
+	pin_config = MSM_PINCONF_2MA_PULL_DN;
+	writel_relaxed(pin_config, tlmm + MSM_TLMM_PIN_UART_RX);
+
+	pr_devel("Restored pins for MSM UART\n");
+
+	return 0;
+}
+early_param("restore_msm_uart", sony_param_restore_uart);
+
 void __init setup_arch(char **cmdline_p)
 {
 	pr_info("Boot CPU: AArch64 Processor [%08x]\n", read_cpuid_id());
