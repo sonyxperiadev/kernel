@@ -97,17 +97,17 @@
 
 #define VDD_GPU_MX_FMAX_MAP1(l1, f1)  \
 	.vdd_class = &vdd_gpucc_mx,		\
-	.rate_max = (unsigned long[VDD_DIG_NUM]) {	\
-		[VDD_DIG_##l1] = (f1),		\
+	.rate_max = (unsigned long[VDD_MX_NUM]) {	\
+		[VDD_MX_##l1] = (f1),		\
 	},					\
 	.num_rate_max = VDD_MX_NUM
 
 #define VDD_GPU_MX_FMAX_MAP3(l1, f1, l2, f2, l3, f3)  \
 	.vdd_class = &vdd_gpucc_mx,			\
-	.rate_max = (unsigned long[VDD_DIG_NUM]) {		\
-		[VDD_DIG_##l1] = (f1),			\
-		[VDD_DIG_##l2] = (f2),			\
-		[VDD_DIG_##l3] = (f3),			\
+	.rate_max = (unsigned long[VDD_MX_NUM]) {		\
+		[VDD_MX_##l1] = (f1),			\
+		[VDD_MX_##l2] = (f2),			\
+		[VDD_MX_##l3] = (f3),			\
 	},						\
 	.num_rate_max = VDD_MX_NUM
 

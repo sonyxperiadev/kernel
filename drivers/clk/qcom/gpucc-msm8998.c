@@ -66,8 +66,8 @@ static int vdd_gpucc_corner[] = {
 };
 
 static DEFINE_VDD_REGULATORS(vdd_dig, VDD_DIG_NUM, 1, vdd_corner);
-static DEFINE_VDD_REGULATORS(vdd_gpucc, VDD_DIG_NUM, 1, vdd_gpucc_corner);
-static DEFINE_VDD_REGULATORS(vdd_gpucc_mx, VDD_DIG_NUM, 1, vdd_corner);
+static DEFINE_VDD_REGULATORS(vdd_gpucc, VDD_GFX_MAX, 1, vdd_gpucc_corner);
+static DEFINE_VDD_REGULATORS(vdd_gpucc_mx, VDD_MX_NUM, 1, vdd_corner);
 
 enum {
 	P_GPU_XO,
