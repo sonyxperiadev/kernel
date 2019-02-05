@@ -560,7 +560,9 @@ static int fpc1145_probe(struct platform_device *pdev)
 	int rc = 0;
 	size_t i;
 	int irqf;
+#ifdef CONFIG_ARCH_SONY_NILE
 	int hw_type;
+#endif
 	struct device_node *np = dev->of_node;
 
 	struct fpc1145_data *fpc1145 =
