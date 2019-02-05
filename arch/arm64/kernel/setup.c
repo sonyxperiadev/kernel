@@ -279,6 +279,52 @@ static int __init sony_param_warmboot(char *p)
 }
 early_param("warmboot", sony_param_warmboot);
 
+/*
+ * sony_param_restore_uart: Restore pin configuration for UART pins
+ *                          UART_TX: Drive Strength 2mA, Pull-Down
+ *                          UART_RX: Drive Strength 2mA, No-Pull
+ *
+ * early_param:
+ * restore_msm_uart=0x<TLMM+PIN_UART_TX_OFFSET>
+ *
+ * NOTE: On MSM, GPIOs are at a 0x1000 "distance" from each other
+ * Example: TLMM start     = 0x1010000
+ *          UART TX        = GPIO4
+ *          UART TX OFFSET = 0x4000
+ * param:   restore_msm_uart=0x1014000
+ */
+#define MSM_PINCONF_2MA_NO_PULL		0x8
+#define MSM_PINCONF_2MA_PULL_DN		0x9
+#define MSM_TLMM_PIN_UART_RX_OFFSET	0x1000
+#define MSM_TLMM_PIN_UART_TX_OFFSET	0x0
+static int __init sony_param_restore_uart(char *p)
+{
+	void __iomem *tlmm = NULL;
+	unsigned long address;
+	uint32_t pin_config = 0;
+
+	/* We want the TLMM BASE address here */
+	if (kstrtoul(p, 16, &address))
+		return 1;
+
+	tlmm = early_ioremap(address, 0x2000);
+	if (!tlmm)
+		return 1;
+
+	pin_config = MSM_PINCONF_2MA_NO_PULL;
+	writel_relaxed(pin_config, tlmm + MSM_TLMM_PIN_UART_TX_OFFSET);
+
+	pin_config = MSM_PINCONF_2MA_PULL_DN;
+	writel_relaxed(pin_config, tlmm + MSM_TLMM_PIN_UART_RX_OFFSET);
+
+	early_iounmap(tlmm, 0x2000);
+
+	pr_devel("Restored pins for MSM UART\n");
+
+	return 0;
+}
+early_param("restore_msm_uart", sony_param_restore_uart);
+
 void __init setup_arch(char **cmdline_p)
 {
 	pr_info("Boot CPU: AArch64 Processor [%08x]\n", read_cpuid_id());
