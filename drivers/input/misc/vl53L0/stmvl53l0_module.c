@@ -437,6 +437,7 @@ struct stmvl53l0_api_fn_t *papi_func_tbl;
 #ifdef CALIBRATION_FILE
 FixPoint1616_t offset_calib;
 FixPoint1616_t xtalk_calib;
+uint32_t spads_calib = 0;
 #endif
 
 
@@ -455,71 +456,34 @@ static int stmvl53l0_config_use_case(struct stmvl53l0_data *data);
 static void stmvl53l0_read_calibration_file(struct stmvl53l0_data *data)
 {
 	VL53L0_DEV vl53l0_dev = data;
-	struct file *f;
-	char buf[UINT_MAX_LEN] = {0};
-	mm_segment_t fs;
 
-	offset_calib = 7000;
-	vl53l0_errmsg("offset_calib as %d\n", offset_calib);
+	if (offset_calib < 1000)
+		offset_calib = 7000;
+
+	if (data->enableDebug)
+		pr_err("VL53L0: offset_calib: %u\n", offset_calib);
+
 	papi_func_tbl->SetOffsetCalibrationDataMicroMeter(
 			vl53l0_dev, offset_calib);
+
+	data->OffsetMicroMeter = offset_calib;
+
+	if (spads_calib > 1) {
+		if (data->enableDebug)
+			pr_err("VL53L0: refSpadCount: %u\n",
+					data->refSpadCount);
+
+		papi_func_tbl->SetReferenceSpads(vl53l0_dev, spads_calib, 0);
+		data->refSpadCount = spads_calib;
+		data->isApertureSpads = 0;
+	}
 
 	xtalk_calib = 0;
 	papi_func_tbl->SetXTalkCompensationRateMegaCps(
 			vl53l0_dev, (FixPoint1616_t)xtalk_calib);
 	papi_func_tbl->SetXTalkCompensationEnable(vl53l0_dev, true);
 
-	/*
-	 * HACK! For development purposes, using fixed calibration data.
-	 * This will get removed once development phase is ended.
-	 */
 	return;
-
-	vl53l0_dbgmsg("stmvl53l0_read_calibration_file\n");
-	f = filp_open("/data/calibration/offset", O_RDONLY, 0);
-	if (f != NULL && !IS_ERR(f) && f->f_path.dentry != NULL) {
-		fs = get_fs();
-		set_fs(get_ds());
-		memset(buf, 0x00, sizeof(buf));
-		f->f_op->read(f, buf, UINT_MAX_LEN, &f->f_pos);
-		set_fs(fs);
-		vl53l0_dbgmsg("offset as:%s, buf[0]:%c\n", buf, buf[0]);
-		if (kstrtouint(buf, 10, &offset_calib)) {
-			vl53l0_errmsg("fail offset_calib\n");
-			offset_calib = 0;
-		} else {
-			vl53l0_errmsg("offset_calib as %d\n", offset_calib);
-			papi_func_tbl->SetOffsetCalibrationDataMicroMeter(
-				vl53l0_dev, offset_calib);
-		}
-		filp_close(f, NULL);
-	} else {
-		vl53l0_errmsg("no offset calibration file exist!\n");
-	}
-
-	f = filp_open("/data/calibration/xtalk", O_RDONLY, 0);
-	if (f != NULL && !IS_ERR(f) && f->f_path.dentry != NULL) {
-		fs = get_fs();
-		set_fs(get_ds());
-		memset(buf, 0x00, sizeof(buf));
-		f->f_op->read(f, buf, UINT_MAX_LEN, &f->f_pos);
-		set_fs(fs);
-		vl53l0_dbgmsg("xtalk as:%s, buf[0]:%c\n", buf, buf[0]);
-		if (kstrtouint(buf, 10, &xtalk_calib)) {
-			vl53l0_errmsg("fail xtalk_calib\n");
-			xtalk_calib = 0;
-		} else {
-			vl53l0_errmsg("xtalk_calib as %d\n", xtalk_calib);
-			papi_func_tbl->SetXTalkCompensationRateMegaCps(
-				vl53l0_dev, (FixPoint1616_t)xtalk_calib);
-			papi_func_tbl->SetXTalkCompensationEnable(
-				vl53l0_dev, true);
-		}
-		filp_close(f, NULL);
-	} else {
-		vl53l0_errmsg("no xtalk calibration file exist!\n");
-	}
-
 }
 
 static void stmvl53l0_write_offset_calibration_file(struct stmvl53l0_data *data)
@@ -1386,6 +1350,136 @@ static DEVICE_ATTR(set_use_case, 0660/*S_IWUGO | S_IRUGO*/,
 				   stmvl53l0_show_use_case,
 					stmvl53l0_store_set_use_case);
 
+/* Reference SPADs */
+static ssize_t stmvl53l0_show_ref_spads(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	struct stmvl53l0_data *data = dev_get_drvdata(dev);
+	VL53L0_DEV vl53l0_dev = data;
+	int ret;
+	uint32_t spads_count;
+	uint8_t is_aperture;
+
+	ret = papi_func_tbl->GetReferenceSpads(vl53l0_dev,
+				(uint32_t *)&spads_count,
+				(uint8_t *)&is_aperture);
+
+	if (data->enableDebug)
+		vl53l0_dbgmsg("Get RefSpad : Count:%u, Type:%u\n",
+					spads_count, is_aperture);
+
+	return snprintf(buf, 10, "%d\n", spads_count);
+}
+
+static ssize_t stmvl53l0_store_ref_spads(struct device *dev,
+					struct device_attribute *attr,
+					const char *buf, size_t count)
+{
+	struct stmvl53l0_data *data = dev_get_drvdata(dev);
+	VL53L0_DEV vl53l0_dev = data;
+	unsigned long spads_count = 0;
+	int ret = kstrtoul(buf, 10, &spads_count);
+
+	if (ret != 0)
+		return ret;
+
+	mutex_lock(&data->work_mutex);
+
+	if (data->enableDebug)
+		vl53l0_dbgmsg("Set RefSpad : Count:%lu, Type:0\n",
+				spads_count);
+
+	data->refSpadCount = spads_count;
+	data->isApertureSpads = 0;
+#ifdef CALIBRATION_FILE
+	spads_calib = (uint32_t)spads_count;
+#endif
+
+	/* If the sensor is powered up, set the SPADs right now */
+	if (data->enable_ps_sensor == 1) {
+		ret = papi_func_tbl->SetReferenceSpads(vl53l0_dev,
+						(uint32_t)spads_count, 0);
+		if (ret) {
+			mutex_unlock(&data->work_mutex);
+			pr_err("Cannot set reference SPADs\n");
+			count = -EINVAL;
+			return count;
+		}
+	}
+
+	mutex_unlock(&data->work_mutex);
+
+	return count;
+}
+
+static DEVICE_ATTR(set_ref_spads, 0660,
+			stmvl53l0_show_ref_spads,
+			stmvl53l0_store_ref_spads);
+
+/* Offset calibration data */
+static ssize_t stmvl53l0_show_offset_caldata(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	struct stmvl53l0_data *data = dev_get_drvdata(dev);
+	VL53L0_DEV vl53l0_dev = data;
+	int ret;
+	uint32_t offset_caldata;
+
+	ret = papi_func_tbl->GetOffsetCalibrationDataMicroMeter(
+				vl53l0_dev, (uint32_t *)&offset_caldata);
+
+	if (data->enableDebug)
+		vl53l0_dbgmsg("Get Offset Calibration: %u micrometers\n",
+							offset_caldata);
+
+	return snprintf(buf, 10, "%d\n", offset_caldata);
+}
+
+static ssize_t stmvl53l0_store_offset_caldata(struct device *dev,
+					struct device_attribute *attr,
+					const char *buf, size_t count)
+{
+	struct stmvl53l0_data *data = dev_get_drvdata(dev);
+	VL53L0_DEV vl53l0_dev = data;
+	unsigned long offset_caldata = 0;
+	int ret = kstrtoul(buf, 10, &offset_caldata);
+
+	if (ret != 0)
+		return ret;
+
+	mutex_lock(&data->work_mutex);
+
+	if (data->enableDebug)
+		vl53l0_dbgmsg("Set Offset Calibration: %lu micrometers\n",
+							offset_caldata);
+
+	data->OffsetMicroMeter = offset_caldata;
+	data->setCalibratedValue |= SET_OFFSET_CALIB_DATA_MICROMETER_MASK;
+#ifdef CALIBRATION_FILE
+	offset_calib = offset_caldata;
+#endif
+
+	/* If the sensor is powered up, set the offset calibration right now */
+	if (data->enable_ps_sensor == 1) {
+		ret = papi_func_tbl->SetOffsetCalibrationDataMicroMeter(
+					vl53l0_dev, (uint32_t)offset_caldata);
+		if (ret) {
+			mutex_unlock(&data->work_mutex);
+			pr_err("Cannot set offset calibration\n");
+			count = -EINVAL;
+			return count;
+		}
+	}
+
+	mutex_unlock(&data->work_mutex);
+
+	return count;
+}
+
+static DEVICE_ATTR(set_um_offset, 0660,
+			stmvl53l0_show_offset_caldata,
+			stmvl53l0_store_offset_caldata);
+
 
 /* Get Current configuration info */
 static ssize_t stmvl53l0_show_current_configuration(struct device *dev,
@@ -1646,6 +1740,8 @@ static struct attribute *stmvl53l0_attributes[] = {
 	&dev_attr_set_delay_ms.attr,
 	&dev_attr_set_timing_budget.attr,
 	&dev_attr_set_use_case.attr,
+	&dev_attr_set_ref_spads.attr,
+	&dev_attr_set_um_offset.attr,
 	&dev_attr_do_flush.attr,
 	&dev_attr_show_current_configuration.attr,
 	NULL
