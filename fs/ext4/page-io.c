@@ -469,9 +469,10 @@ int ext4_bio_write_page(struct ext4_io_submit *io,
 	    nr_to_submit) {
 		gfp_t gfp_flags = GFP_NOFS;
 
-	retry_encrypt:
-	if (!fscrypt_using_hardware_encryption(inode))
-		data_page = fscrypt_encrypt_page(inode, page, PAGE_SIZE, 0,
+retry_encrypt:
+		if (!fscrypt_using_hardware_encryption(inode))
+			data_page = fscrypt_encrypt_page(inode, page,
+						PAGE_SIZE, 0,
 						page->index, gfp_flags);
 		if (IS_ERR(data_page)) {
 			ret = PTR_ERR(data_page);
