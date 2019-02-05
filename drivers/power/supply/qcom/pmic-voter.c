@@ -716,7 +716,7 @@ ssize_t somc_output_voter_param(struct votable *votable,
 				print_format = "%s";
 			else
 				print_format = "; %s";
-				stored_size += scnprintf(buf + stored_size,
+			stored_size += scnprintf(buf + stored_size,
 						size - stored_size, print_format,
 						votable->client_strs[i]);
 			if (stored_size >= size)
