@@ -26,7 +26,7 @@
 #include "msm8998-mtp.dtsi"
 #include "msm8998-yoshino-common.dtsi"
 #include "msm8998-yoshino-common-sde-overlay.dtsi"
-#include "msm8998-yoshino-maple_generic.dtsi"
+#include "msm8998-yoshino-maple_common.dtsi"
 #include "dsi-panel-somc-maple-sde.dtsi"
 
 / {
