@@ -146,6 +146,7 @@
 		pinctrl-0 = </* PM8998 */
 			     &flash_therm_default &pm8998_gp14_default
 			     &pm8998_gp17_default &pm8998_gp18_default &pm8998_gp19_default
+			     &nfc_clk_default
 			     /* PMI8998 */
 			     &rear_cam_vddio_en_default &pmi8998_gp2_default &pmi8998_gp3_default
 			     &pmi8998_gp5_default &pmi8998_gp6_default &pmi8998_gp9_default
