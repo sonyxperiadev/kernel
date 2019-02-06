@@ -15,6 +15,9 @@
  * and licensed under the license of the file.
  */
 
+/* Disable SMP2P Remote Debug for production */
+#include "msm-rdbg-disable.dtsi"
+
 &reserved_mem {
 	debug_region: debug_region@ffb00000 {
 		compatible = "removed-dma-pool", "qcom,debug_memory";
