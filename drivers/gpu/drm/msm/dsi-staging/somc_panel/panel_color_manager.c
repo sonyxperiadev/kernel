@@ -801,7 +801,7 @@ static int somc_panel_pcc_setup_data(struct somc_panel_color_mgr *color_mgr,
 	return 0;
 }
 
-int somc_panel_pcc_setup(struct dsi_display *display)
+static int somc_panel_pcc_setup(struct dsi_display *display)
 {
 	int ret;
 	struct dsi_panel *panel = display->panel;
@@ -818,6 +818,11 @@ int somc_panel_pcc_setup(struct dsi_display *display)
 		pr_notice("%s (%d): PCC already applied\n", __func__, __LINE__);
 		goto exit;
 	}
+
+	/* Ensure the cached pcc is updated by invalidating
+	 * the current profile
+	 */
+	color_mgr->pcc_profile = -1;
 
 	if (display->tx_cmd_buf == NULL) {
 		ret = dsi_host_alloc_cmd_tx_buffer(display);
@@ -1351,10 +1356,6 @@ int somc_panel_color_manager_init(struct dsi_display *display)
 		pr_err("%s: Color Manager is NULL!!!\n", __func__);
 		return -EINVAL;
 	}
-
-	/* Be sure of initialization to default profile */
-	color_mgr->pcc_profile = 0;
-	(void)somc_panel_update_merged_pcc_cache(color_mgr);
 
 	return 0;
 }

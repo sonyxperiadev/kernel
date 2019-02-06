@@ -385,7 +385,6 @@ int somc_panel_vregs_parse_dt(struct dsi_panel *panel,
 #define somc_panel_vregs_parse_dt(x, y) 0
 #endif
 
-int somc_panel_pcc_setup(struct dsi_display *display);
 int somc_panel_parse_dt_colormgr_config(struct dsi_panel *panel,
 			struct device_node *np);
 int somc_panel_colormgr_register_attr(struct device *dev);
