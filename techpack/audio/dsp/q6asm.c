@@ -9729,8 +9729,11 @@ int q6asm_send_cal(struct audio_client *ac)
 	cal_block = cal_utils_get_only_cal_block(cal_data[ASM_AUDSTRM_CAL]);
 	if (cal_block == NULL || cal_utils_is_cal_stale(cal_block)) {
 		rc = 0; /* not error case */
-		pr_err("%s: cal_block is NULL or stale\n",
-			__func__);
+		if (cal_block == NULL)
+			pr_err("%s: cal_block is NULL\n", __func__);
+		else
+			pr_err("%s: cal_block is stale!\n", __func__);
+
 		goto unlock;
 	}
 
