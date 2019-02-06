@@ -19,6 +19,9 @@
 
 #include "msm8998-yoshino-common-thermal.dtsi"
 
+/* Disable SMP2P Remote Debug for production */
+#include "msm-rdbg-disable.dtsi"
+
 / {
 	aliases {
 		i2c8 = &i2c_8;
