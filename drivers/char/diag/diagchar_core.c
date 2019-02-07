@@ -43,6 +43,7 @@
 #include "diag_ipc_logging.h"
 #include "diagfwd_peripheral.h"
 #include "diagfwd_mhi.h"
+#include "diagfwd_hsic.h"
 
 #include <linux/coresight-stm.h>
 #include <linux/kernel.h>
@@ -4466,9 +4467,11 @@ static int __init diagchar_init(void)
 	INIT_LIST_HEAD(&driver->diag_id_list);
 	diag_add_diag_id_to_list(DIAG_ID_APPS, "APPS", APPS_DATA, APPS_DATA);
 	pr_debug("diagchar initialized now");
-	#ifdef CONFIG_DIAGFWD_BRIDGE_CODE
+#if defined(CONFIG_USB_QCOM_DIAG_BRIDGE)
+	diag_register_with_hsic();
+#elif defined(CONFIG_MHI_BUS)
 	diag_register_with_mhi();
-	#endif
+#endif
 	return 0;
 
 fail:
@@ -4498,6 +4501,11 @@ static void diagchar_exit(void)
 	diag_dci_exit();
 	diag_masks_exit();
 	diag_md_session_exit();
+#if defined(CONFIG_USB_QCOM_DIAG_BRIDGE)
+	diag_unregister_hsic();
+#elif defined(CONFIG_MHI_BUS)
+ 	diag_unregister_mhi();
+#endif
 	diag_remote_exit();
 	diag_debugfs_cleanup();
 	diagchar_cleanup();
