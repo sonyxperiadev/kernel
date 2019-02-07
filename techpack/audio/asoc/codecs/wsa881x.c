@@ -890,7 +890,9 @@ static int wsa881x_rdac_event(struct snd_soc_dapm_widget *w,
 					    wsa881x->swr_slave->dev_num,
 					    false);
 		wsa881x_boost_ctrl(codec, DISABLE);
+		mutex_lock(&wsa881x->temp_lock);
 		wsa881x_resource_acquire(codec, DISABLE);
+		mutex_unlock(&wsa881x->temp_lock);
 		break;
 	}
 	return 0;
