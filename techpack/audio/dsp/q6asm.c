@@ -4518,6 +4518,10 @@ int q6asm_enc_cfg_blk_pcm_format_support_v3(struct audio_client *ac,
 					    uint16_t bits_per_sample,
 					    uint16_t sample_word_size)
 {
+	if (of_machine_is_compatible("qcom,msm8956") ||
+	    of_machine_is_compatible("qcom,apq8056"))
+		return __q6asm_enc_cfg_blk_pcm(ac, rate, channels, bits_per_sample);
+
 	return __q6asm_enc_cfg_blk_pcm_v3(ac, rate, channels,
 					  bits_per_sample, sample_word_size);
 }
