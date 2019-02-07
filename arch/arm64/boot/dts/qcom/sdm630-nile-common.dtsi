@@ -13,6 +13,9 @@
 #include "sdm630-nile_pinctrl.dtsi"
 #include "sdm630-nile-common-thermal.dtsi"
 
+/* Disable SMP2P Remote Debug for production */
+#include "msm-rdbg-disable.dtsi"
+
 / {
 	reserved-memory {
 		ramoops {

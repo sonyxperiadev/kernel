@@ -18,6 +18,9 @@
 
 #include "msm8996-tone-common-thermal.dtsi"
 
+/* Disable SMP2P Remote Debug for production */
+#include "msm-rdbg-disable.dtsi"
+
 / {
 	aliases {
 		i2c3 = &i2c_3;

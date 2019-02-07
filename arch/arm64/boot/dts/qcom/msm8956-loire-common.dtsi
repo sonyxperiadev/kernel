@@ -22,6 +22,9 @@
 #include "msm8956-loire_pinctrl.dtsi"
 #include "msm8956-loire-common-thermal.dtsi"
 
+/* Disable SMP2P Remote Debug for production */
+#include "msm-rdbg-disable.dtsi"
+
 #define PM8004_MPP_MSMIO	0
 #define PMI8950_MPP_MSMIO	0
 #define PM8950_MPP_VPH		0

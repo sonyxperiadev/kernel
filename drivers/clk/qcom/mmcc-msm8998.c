@@ -2962,6 +2962,9 @@ static struct clk_branch mmss_misc_cxo_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data) {
 			.name = "mmss_misc_cxo_clk",
+			.parent_names = (const char *[]){ "cxo" },
+			.num_parents = 1,
+			.flags = CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,
 		},
 	},

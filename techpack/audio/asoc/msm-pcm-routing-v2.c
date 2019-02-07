@@ -1006,9 +1006,6 @@ static struct cal_block_data *msm_routing_find_topology_by_path(int path,
 		cal_block = list_entry(ptr,
 			struct cal_block_data, list);
 
-		if (cal_utils_is_cal_stale(cal_block))
-			continue;
-
 		if (((struct audio_cal_info_adm_top *)cal_block
 			->cal_info)->path == path) {
 			return cal_block;
@@ -1035,9 +1032,6 @@ static struct cal_block_data *msm_routing_find_topology(int path,
 
 		cal_block = list_entry(ptr,
 			struct cal_block_data, list);
-
-		if (cal_utils_is_cal_stale(cal_block))
-			continue;
 
 		cal_info = (struct audio_cal_info_adm_top *)
 			cal_block->cal_info;
@@ -1579,7 +1573,7 @@ int msm_pcm_routing_reg_phy_stream(int fedai_id, int perf_mode,
 			if ((copp_idx < 0) ||
 				(copp_idx >= MAX_COPPS_PER_PORT)) {
 				pr_err("%s: adm open failed copp_idx:%d\n",
-				       __func__, copp_idx);
+					__func__, copp_idx);
 				mutex_unlock(&routing_lock);
 				return -EINVAL;
 			}

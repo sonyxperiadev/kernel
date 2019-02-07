@@ -231,6 +231,12 @@ static int msm_mpm_gpio_chip_set_type(struct irq_data *d, unsigned int type)
 	return 0;
 }
 
+static int msm_mpm_gpio_chip_set_wake(struct irq_data *d, unsigned int on)
+{
+	msm_mpm_enable_irq(d, on);
+	return 0;
+}
+
 static void msm_mpm_gic_chip_mask(struct irq_data *d)
 {
 	msm_mpm_enable_irq(d, false);
@@ -302,8 +308,9 @@ static struct irq_chip msm_mpm_gpio_chip = {
 	.irq_mask	= msm_mpm_gpio_chip_mask,
 	.irq_disable	= msm_mpm_gpio_chip_mask,
 	.irq_unmask	= msm_mpm_gpio_chip_unmask,
+	.irq_enable	= msm_mpm_gpio_chip_unmask,
 	.irq_set_type	= msm_mpm_gpio_chip_set_type,
-	.flags		= IRQCHIP_SKIP_SET_WAKE,
+	.irq_set_wake	= msm_mpm_gpio_chip_set_wake,
 	.irq_retrigger          = irq_chip_retrigger_hierarchy,
 };
 

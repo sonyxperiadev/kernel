@@ -23,7 +23,7 @@
 #include "msm8998-v2.dtsi"
 #include "msm8998-mtp.dtsi"
 #include "msm8998-yoshino-common.dtsi"
-#include "msm8998-yoshino-poplar_generic.dtsi"
+#include "msm8998-yoshino-poplar_common.dtsi"
 
 / {
 	model = "SoMC Poplar-ROW(MSM8998 v2)";

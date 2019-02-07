@@ -23,7 +23,7 @@
 #include "msm8998-v2.1.dtsi"
 #include "msm8998-mtp.dtsi"
 #include "msm8998-yoshino-common.dtsi"
-#include "msm8998-yoshino-lilac_generic.dtsi"
+#include "msm8998-yoshino-lilac_common.dtsi"
 
 / {
 	model = "SoMC Lilac-ROW(MSM8998 v2.1)";

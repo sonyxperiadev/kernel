@@ -19,6 +19,9 @@
 
 #include "msm8998-yoshino-common-thermal.dtsi"
 
+/* Disable SMP2P Remote Debug for production */
+#include "msm-rdbg-disable.dtsi"
+
 / {
 	aliases {
 		i2c8 = &i2c_8;
@@ -146,6 +149,7 @@
 		pinctrl-0 = </* PM8998 */
 			     &flash_therm_default &pm8998_gp14_default
 			     &pm8998_gp17_default &pm8998_gp18_default &pm8998_gp19_default
+			     &nfc_clk_default
 			     /* PMI8998 */
 			     &rear_cam_vddio_en_default &pmi8998_gp2_default &pmi8998_gp3_default
 			     &pmi8998_gp5_default &pmi8998_gp6_default &pmi8998_gp9_default
@@ -273,6 +277,23 @@
 		pinctrl-1 = <&msm_gpio_55 &msm_gpio_56>;
 		qcom,clk-freq-out = <355000>;
 		status = "okay";
+
+		nfc@28 {
+			compatible = "nxp,pn547";
+			reg = <0x28>;
+			interrupt-parent = <&tlmm>;
+			interrupts = <92 0x1>;
+			nxp,irq_gpio = <&tlmm 92 0x00>;
+			nxp,dwld_en = <&tlmm 93 0x00>;
+			nxp,ven = <&tlmm 12 0x01>;
+			qcom,clk-src = "BBCLK3";
+			qcom,clk-gpio = <&pm8998_gpios 21 0x00>;
+			clocks = <&clock_rpmcc RPM_LN_BB_CLK3_PIN>;
+			clock-names = "nfc_clk";
+			pinctrl-names = "pn547-active", "pn547-inactive";
+			pinctrl-0 = <&msm_gpio_92 &msm_gpio_93>;
+			pinctrl-1 = <&msm_gpio_92 &msm_gpio_93>;
+		};
 	};
 
 	/* UART: BLSP8 */
