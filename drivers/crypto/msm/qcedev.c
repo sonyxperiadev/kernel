@@ -1,7 +1,7 @@
 /*
  * QTI CE device driver.
  *
- * Copyright (c) 2010-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2010-2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1677,12 +1677,15 @@ static inline long qcedev_ioctl(struct file *file,
 	if (podev == NULL || podev->magic != QCEDEV_MAGIC) {
 		pr_err("%s: invalid handle %pK\n",
 			__func__, podev);
-		return -ENOENT;
+		err = -ENOENT;
+		goto exit_free_qcedev_areq;
 	}
 
 	/* Verify user arguments. */
-	if (_IOC_TYPE(cmd) != QCEDEV_IOC_MAGIC)
-		return -ENOTTY;
+	if (_IOC_TYPE(cmd) != QCEDEV_IOC_MAGIC) {
+		err = -ENOTTY;
+		goto exit_free_qcedev_areq;
+	}
 
 	init_completion(&qcedev_areq.complete);
 	pstat = &_qcedev_stat;
@@ -1692,21 +1695,27 @@ static inline long qcedev_ioctl(struct file *file,
 	case QCEDEV_IOCTL_DEC_REQ:
 		if (copy_from_user(&qcedev_areq.cipher_op_req,
 				(void __user *)arg,
-				sizeof(struct qcedev_cipher_op_req)))
-			return -EFAULT;
+				sizeof(struct qcedev_cipher_op_req))) {
+			err = -EFAULT;
+			goto exit_free_qcedev_areq;
+		}
 		qcedev_areq.op_type = QCEDEV_CRYPTO_OPER_CIPHER;
 
 		if (qcedev_check_cipher_params(&qcedev_areq.cipher_op_req,
-				podev))
-			return -EINVAL;
+				podev)) {
+			err = -EINVAL;
+			goto exit_free_qcedev_areq;
+		}
 
 		err = qcedev_vbuf_ablk_cipher(&qcedev_areq, handle);
 		if (err)
-			return err;
+			goto exit_free_qcedev_areq;
 		if (copy_to_user((void __user *)arg,
 					&qcedev_areq.cipher_op_req,
-					sizeof(struct qcedev_cipher_op_req)))
-			return -EFAULT;
+					sizeof(struct qcedev_cipher_op_req))) {
+			err = -EFAULT;
+			goto exit_free_qcedev_areq;
+		}
 		break;
 
 	case QCEDEV_IOCTL_SHA_INIT_REQ:
@@ -1715,41 +1724,51 @@ static inline long qcedev_ioctl(struct file *file,
 
 		if (copy_from_user(&qcedev_areq.sha_op_req,
 					(void __user *)arg,
-					sizeof(struct qcedev_sha_op_req)))
-			return -EFAULT;
+					sizeof(struct qcedev_sha_op_req))) {
+			err = -EFAULT;
+			goto exit_free_qcedev_areq;
+		}
 		mutex_lock(&hash_access_lock);
 		if (qcedev_check_sha_params(&qcedev_areq.sha_op_req, podev)) {
 			mutex_unlock(&hash_access_lock);
-			return -EINVAL;
+			err = -EINVAL;
+			goto exit_free_qcedev_areq;
 		}
 		qcedev_areq.op_type = QCEDEV_CRYPTO_OPER_SHA;
 		err = qcedev_hash_init(&qcedev_areq, handle, &sg_src);
 		if (err) {
 			mutex_unlock(&hash_access_lock);
-			return err;
+			goto exit_free_qcedev_areq;
 		}
 		mutex_unlock(&hash_access_lock);
 		if (copy_to_user((void __user *)arg, &qcedev_areq.sha_op_req,
-					sizeof(struct qcedev_sha_op_req)))
-			return -EFAULT;
+					sizeof(struct qcedev_sha_op_req))) {
+			err = -EFAULT;
+			goto exit_free_qcedev_areq;
 		}
 		handle->sha_ctxt.init_done = true;
+		}
 		break;
 	case QCEDEV_IOCTL_GET_CMAC_REQ:
-		if (!podev->ce_support.cmac)
-			return -ENOTTY;
+		if (!podev->ce_support.cmac) {
+			err = -ENOTTY;
+			goto exit_free_qcedev_areq;
+		}
 	case QCEDEV_IOCTL_SHA_UPDATE_REQ:
 		{
 		struct scatterlist sg_src;
 
 		if (copy_from_user(&qcedev_areq.sha_op_req,
 					(void __user *)arg,
-					sizeof(struct qcedev_sha_op_req)))
-			return -EFAULT;
+					sizeof(struct qcedev_sha_op_req))) {
+			err = -EFAULT;
+			goto exit_free_qcedev_areq;
+		}
 		mutex_lock(&hash_access_lock);
 		if (qcedev_check_sha_params(&qcedev_areq.sha_op_req, podev)) {
 			mutex_unlock(&hash_access_lock);
-			return -EINVAL;
+			err = -EINVAL;
+			goto exit_free_qcedev_areq;
 		}
 		qcedev_areq.op_type = QCEDEV_CRYPTO_OPER_SHA;
 
@@ -1776,7 +1795,8 @@ static inline long qcedev_ioctl(struct file *file,
 			pr_err("Invalid sha_ctxt.diglen %d\n",
 					handle->sha_ctxt.diglen);
 			mutex_unlock(&hash_access_lock);
-			return -EINVAL;
+			err = -EINVAL;
+			goto exit_free_qcedev_areq;
 		}
 		memcpy(&qcedev_areq.sha_op_req.digest[0],
 				&handle->sha_ctxt.digest[0],
@@ -1784,7 +1804,8 @@ static inline long qcedev_ioctl(struct file *file,
 		mutex_unlock(&hash_access_lock);
 		if (copy_to_user((void __user *)arg, &qcedev_areq.sha_op_req,
 					sizeof(struct qcedev_sha_op_req)))
-			return -EFAULT;
+			err = -EFAULT;
+			goto exit_free_qcedev_areq;
 		}
 		break;
 
@@ -1864,7 +1885,8 @@ static inline long qcedev_ioctl(struct file *file,
 		mutex_unlock(&hash_access_lock);
 		if (copy_to_user((void __user *)arg, &qcedev_areq.sha_op_req,
 					sizeof(struct qcedev_sha_op_req)))
-			return -EFAULT;
+			err = -EFAULT;
+			goto exit_free_qcedev_areq;
 		}
 		break;
 
@@ -1875,8 +1897,10 @@ static inline long qcedev_ioctl(struct file *file,
 			int i = 0;
 
 			if (copy_from_user(&map_buf,
-					(void __user *)arg, sizeof(map_buf)))
-				return -EFAULT;
+					(void __user *)arg, sizeof(map_buf))) {
+				err = -EFAULT;
+				goto exit_free_qcedev_areq;
+			}
 
 			for (i = 0; i < map_buf.num_fds; i++) {
 				err = qcedev_check_and_map_buffer(handle,
@@ -1888,7 +1912,7 @@ static inline long qcedev_ioctl(struct file *file,
 					pr_err(
 						"%s: err: failed to map fd(%d) - %d\n",
 						__func__, map_buf.fd[i], err);
-					return err;
+					goto exit_free_qcedev_areq;
 				}
 				map_buf.buf_vaddr[i] = vaddr;
 				pr_info("%s: info: vaddr = %llx\n",
@@ -1896,8 +1920,10 @@ static inline long qcedev_ioctl(struct file *file,
 			}
 
 			if (copy_to_user((void __user *)arg, &map_buf,
-					sizeof(map_buf)))
-				return -EFAULT;
+					sizeof(map_buf))) {
+				err = -EFAULT;
+				goto exit_free_qcedev_areq;
+			}
 			break;
 		}
 
@@ -1907,8 +1933,10 @@ static inline long qcedev_ioctl(struct file *file,
 			int i = 0;
 
 			if (copy_from_user(&unmap_buf,
-					(void __user *)arg, sizeof(unmap_buf)))
-				return -EFAULT;
+				(void __user *)arg, sizeof(unmap_buf))) {
+				err = -EFAULT;
+				goto exit_free_qcedev_areq;
+			}
 
 			for (i = 0; i < unmap_buf.num_fds; i++) {
 				err = qcedev_check_and_unmap_buffer(handle,
@@ -1918,16 +1946,19 @@ static inline long qcedev_ioctl(struct file *file,
 						"%s: err: failed to unmap fd(%d) - %d\n",
 						 __func__,
 						unmap_buf.fd[i], err);
-					return err;
+					goto exit_free_qcedev_areq;
 				}
 			}
 			break;
 		}
 
 	default:
-		return -ENOTTY;
+		err = -ENOTTY;
+		goto exit_free_qcedev_areq;
 	}
 
+exit_free_qcedev_areq:
+	kfree(qcedev_areq);
 	return err;
 }
 
