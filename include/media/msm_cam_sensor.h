@@ -57,6 +57,7 @@ struct msm_camera_csid_params32 {
 	uint32_t csi_clk;
 	struct msm_camera_csid_lut_params32 lut_params;
 	uint8_t csi_3p_sel;
+	uint8_t is_secure;
 };
 
 struct msm_camera_csi2_params32 {
