@@ -939,17 +939,8 @@ int msm_ion_heap_alloc_pages_mem(struct pages_mem *pages_mem)
 	pages_mem->free_fn = kfree;
 	page_tbl_size = sizeof(struct page *) * (pages_mem->size >> PAGE_SHIFT);
 	if (page_tbl_size > SZ_8K) {
-		/*
-		 * Do fallback to ensure we have a balance between
-		 * performance and availability.
-		 */
-		pages = kmalloc(page_tbl_size,
-				__GFP_COMP | __GFP_NORETRY |
-				__GFP_NOWARN);
-		if (!pages) {
-			pages = vmalloc(page_tbl_size);
-			pages_mem->free_fn = vfree;
-		}
+		pages = vmalloc(page_tbl_size);
+		pages_mem->free_fn = vfree;
 	} else {
 		pages = kmalloc(page_tbl_size, GFP_KERNEL);
 	}
