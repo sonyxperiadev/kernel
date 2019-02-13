@@ -54,8 +54,13 @@ struct cpuquiet_governor *cpuquiet_find_governor(const char *str)
 int cpuquiet_switch_governor(struct cpuquiet_governor *gov)
 {
 	int err = 0;
+	int i;
 
 	if (cpuquiet_curr_governor) {
+		/* If CPUs are isolated or plugged out, restore them */
+		for_each_possible_cpu(i)
+			cpuquiet_wake_cpu(i, true);
+
 		if (cpuquiet_curr_governor->stop)
 			cpuquiet_curr_governor->stop();
 		module_put(cpuquiet_curr_governor->owner);
@@ -66,6 +71,9 @@ int cpuquiet_switch_governor(struct cpuquiet_governor *gov)
 	if (gov) {
 		if (!try_module_get(cpuquiet_curr_governor->owner))
 			return -EINVAL;
+
+		cpuquiet_switch_funcs(gov->use_isolation);
+
 		if (gov->start)
 			err = gov->start();
 		if (!err)
