@@ -24,6 +24,7 @@
 #include <linux/cpuquiet.h>
 #include <linux/pm_qos.h>
 #include <linux/sched.h>
+#include <linux/slab.h>
 
 #include "cpuquiet.h"
 
@@ -50,6 +51,14 @@ static struct cpumask cr_online_requests;
 static struct cpumask cr_offline_requests;
 
 static struct platform_device *cpuquiet_pdev;
+
+struct cpuquiet_cpu_functions {
+	int (*set_online)(unsigned int cpu);
+	int (*set_offline)(unsigned int cpu);
+	int (*cpu_in_wanted_state)(unsigned int cpunumber, bool up);
+};
+
+static struct cpuquiet_cpu_functions *cpu_funcs;
 
 static void cpuquiet_work_func(struct work_struct *work);
 
@@ -83,12 +92,20 @@ static int update_core_config(unsigned int cpunumber, bool up)
 	return 0;
 }
 
-static int cpu_in_wanted_state(unsigned int cpunumber, bool up)
+static int hotplug_cpu_in_wanted_state(unsigned int cpunumber, bool up)
 {
 	if (up)
 		return cpu_online(cpunumber);
 	else
 		return !cpu_online(cpunumber);
+}
+
+static int isolation_cpu_in_wanted_state(unsigned int cpunumber, bool up)
+{
+	if (up)
+		return cpu_isolated(cpunumber);
+	else
+		return !cpu_isolated(cpunumber);
 }
 
 /**
@@ -110,8 +127,8 @@ static int cpuquiet_cpu_up_down(unsigned int cpunumber, bool sync, bool up)
 		return err;
 
 	err = wait_event_interruptible_timeout(wait_cpu,
-					cpu_in_wanted_state(cpunumber, up),
-					timeout);
+			cpu_funcs->cpu_in_wanted_state(cpunumber, up),
+			timeout);
 
 	if (err < 0)
 		return err;
@@ -140,6 +157,26 @@ int cpuquiet_wake_quiesce_cpu(unsigned int cpunumber, bool sync, bool up)
 		cpuquiet_stats_update(cpunumber, up, delta);
 
 	return err;
+}
+
+static int cpuquiet_cpu_set_online(unsigned int cpu)
+{
+	return device_online(get_cpu_device(cpu));
+}
+
+static int cpuquiet_cpu_set_offline(unsigned int cpu)
+{
+	return device_offline(get_cpu_device(cpu));
+}
+
+static int cpuquiet_cpu_isolate(unsigned int cpu)
+{
+	return sched_isolate_cpu(cpu);
+}
+
+static int cpuquiet_cpu_unisolate(unsigned int cpu)
+{
+	return sched_unisolate_cpu(cpu);
 }
 
 /**
@@ -204,11 +241,11 @@ static void cpuquiet_work_func(struct work_struct *work)
 
 	cpumask_andnot(&online, &online, &cpu_online);
 	for_each_cpu(cpu, &online)
-		device_online(get_cpu_device(cpu));
+		cpu_funcs->set_online(cpu);
 
 	cpumask_and(&offline, &offline, &cpu_online);
 	for_each_cpu(cpu, &offline)
-		device_offline(get_cpu_device(cpu));
+		cpu_funcs->set_offline(cpu);
 
 	wake_up_interruptible(&wait_cpu);
 }
@@ -259,6 +296,7 @@ bool cpuquiet_cpu_devices_initialized(void)
 
 static int cpuquiet_register_devices(void)
 {
+	struct cpuquiet_governor *first_governor = NULL;
 	int err = 0;
 	unsigned int cpu;
 	struct device *dev;
@@ -283,7 +321,19 @@ static int cpuquiet_register_devices(void)
 	}
 	cpuquiet_devices_initialized = true;
 
-	cpuquiet_switch_governor(cpuquiet_get_first_governor());
+	first_governor = cpuquiet_get_first_governor();
+	cpuquiet_switch_governor(first_governor);
+
+	if (first_governor->use_isolation) {
+		cpu_funcs->set_online = cpuquiet_cpu_isolate;
+		cpu_funcs->set_offline = cpuquiet_cpu_unisolate;
+		cpu_funcs->cpu_in_wanted_state = isolation_cpu_in_wanted_state;
+	} else {
+		cpu_funcs->set_online = cpuquiet_cpu_set_online;
+		cpu_funcs->set_offline = cpuquiet_cpu_set_offline;
+		cpu_funcs->cpu_in_wanted_state = hotplug_cpu_in_wanted_state;
+	}
+
 	mutex_unlock(&cpuquiet_lock);
 
 	return 0;
@@ -319,6 +369,10 @@ static int __init cpuquiet_probe(struct platform_device *pdev)
 
 	init_waitqueue_head(&wait_cpu);
 
+	cpu_funcs = kzalloc(sizeof(struct cpuquiet_cpu_functions), GFP_KERNEL);
+	if (cpu_funcs == NULL)
+		return -ENOMEM;
+
 	/*
 	 * Not bound to the issuer CPU (=> high-priority), has rescue worker
 	 * task, single-threaded, freezable.
@@ -326,8 +380,10 @@ static int __init cpuquiet_probe(struct platform_device *pdev)
 	cpuquiet_wq = alloc_workqueue(
 		"cpuquiet", WQ_FREEZABLE, 1);
 
-	if (!cpuquiet_wq)
-		return -ENOMEM;
+	if (!cpuquiet_wq) {
+		err = -ENOMEM;
+		goto free_funcs;
+	}
 
 	INIT_WORK(&cpuquiet_work, cpuquiet_work_func);
 
@@ -364,6 +420,8 @@ remove_min:
 	pm_qos_remove_notifier(PM_QOS_MIN_ONLINE_CPUS, &minmax_cpus_notifier);
 destroy_wq:
 	destroy_workqueue(cpuquiet_wq);
+free_funcs:
+	kfree(cpu_funcs);
 
 	return err;
 }

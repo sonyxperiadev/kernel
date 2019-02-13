@@ -23,7 +23,12 @@
 #include "cpuquiet.h"
 
 LIST_HEAD(cpuquiet_governors);
-struct cpuquiet_governor *cpuquiet_curr_governor;
+static struct cpuquiet_governor *cpuquiet_curr_governor;
+
+struct cpuquiet_governor *cpuquiet_get_curr_governor(void)
+{
+	return cpuquiet_curr_governor;
+}
 
 struct cpuquiet_governor *cpuquiet_get_first_governor(void)
 {
