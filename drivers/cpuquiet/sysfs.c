@@ -247,7 +247,17 @@ static ssize_t store_using_isolation(struct cpuquiet_attribute *cattr,
 	if (ret != 1)
 		return -EINVAL;
 
-	curr_gov->use_isolation = use_isolation;
+	/*
+	 * If switching from isolation to hotplugging or vice-versa,
+	 * call switch_governor to restart the current governor for it
+	 * to have a chance to set itself up in case it needs special
+	 * handling for the isolation vs hotplug usecases.
+	 */
+	if (curr_gov->use_isolation != use_isolation) {
+		curr_gov->use_isolation = use_isolation;
+		cpuquiet_switch_governor(curr_gov);
+	}
+
 	return ret;
 }
 
