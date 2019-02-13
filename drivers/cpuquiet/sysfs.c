@@ -243,6 +243,9 @@ static ssize_t store_using_isolation(struct cpuquiet_attribute *cattr,
 	if (!curr_gov)
 		return -EINVAL;
 
+	if (!curr_gov->isol_switch_supported)
+		return -EINVAL;
+
 	ret = sscanf(buf, "%u", &use_isolation);
 	if (ret != 1)
 		return -EINVAL;
