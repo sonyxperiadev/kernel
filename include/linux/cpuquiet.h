@@ -32,6 +32,7 @@ struct cpuquiet_governor {
 	void (*stop)		(void);
 	int (*store_active)	(unsigned int cpu, bool active);
 	bool			use_isolation;
+	bool			isol_switch_supported;
 	struct module		*owner;
 };
 
