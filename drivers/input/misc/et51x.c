@@ -508,9 +508,9 @@ static int et51x_probe(struct platform_device *pdev)
 		dev_info(dev, "Egistec sensor not found, bailing out\n");
 		rc = -ENODEV;
 		goto exit_powerdown;
-	} else {
-		dev_info(dev, "Detected Egistec sensor\n");
 	}
+
+	dev_info(dev, "Detected Egistec sensor\n");
 #endif
 
 	rc = et51x_request_named_gpio(et51x, "et51x,gpio_irq",
