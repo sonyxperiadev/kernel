@@ -33,6 +33,7 @@ extern struct cpuquiet_governor *cpuquiet_get_first_governor(void);
 extern struct cpuquiet_driver *cpuquiet_get_driver(void);
 extern unsigned int cpuquiet_get_avg_hotplug_latency(void);
 extern bool cpuquiet_cpu_devices_initialized(void);
+void cpuquiet_switch_funcs(bool use_isolation);
 extern void cpuquiet_queue_work(void);
 
 extern int cpuquiet_sysfs_init(void);

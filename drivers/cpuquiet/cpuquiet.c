@@ -294,6 +294,24 @@ bool cpuquiet_cpu_devices_initialized(void)
 	return cpuquiet_devices_initialized;
 }
 
+/**
+ * cpuquiet_switch_funcs - Switches from isolation to hotplug and vice-versa
+ *
+ * Assumes that it's called while holding the cpuquiet_lock
+ */
+void cpuquiet_switch_funcs(bool use_isolation)
+{
+	if (use_isolation) {
+		cpu_funcs->set_online = cpuquiet_cpu_isolate;
+		cpu_funcs->set_offline = cpuquiet_cpu_unisolate;
+		cpu_funcs->cpu_in_wanted_state = isolation_cpu_in_wanted_state;
+	} else {
+		cpu_funcs->set_online = cpuquiet_cpu_set_online;
+		cpu_funcs->set_offline = cpuquiet_cpu_set_offline;
+		cpu_funcs->cpu_in_wanted_state = hotplug_cpu_in_wanted_state;
+	}
+}
+
 static int cpuquiet_register_devices(void)
 {
 	struct cpuquiet_governor *first_governor = NULL;
@@ -323,16 +341,6 @@ static int cpuquiet_register_devices(void)
 
 	first_governor = cpuquiet_get_first_governor();
 	cpuquiet_switch_governor(first_governor);
-
-	if (first_governor->use_isolation) {
-		cpu_funcs->set_online = cpuquiet_cpu_isolate;
-		cpu_funcs->set_offline = cpuquiet_cpu_unisolate;
-		cpu_funcs->cpu_in_wanted_state = isolation_cpu_in_wanted_state;
-	} else {
-		cpu_funcs->set_online = cpuquiet_cpu_set_online;
-		cpu_funcs->set_offline = cpuquiet_cpu_set_offline;
-		cpu_funcs->cpu_in_wanted_state = hotplug_cpu_in_wanted_state;
-	}
 
 	mutex_unlock(&cpuquiet_lock);
 
