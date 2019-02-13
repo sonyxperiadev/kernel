@@ -2328,6 +2328,9 @@ EXPORT_SYMBOL(__cpu_active_mask);
 struct cpumask __cpu_isolated_mask __read_mostly;
 EXPORT_SYMBOL(__cpu_isolated_mask);
 
+struct cpumask __cpu_unisolated_mask __read_mostly;
+EXPORT_SYMBOL(__cpu_unisolated_mask);
+
 void init_cpu_present(const struct cpumask *src)
 {
 	cpumask_copy(&__cpu_present_mask, src);
@@ -2346,6 +2349,11 @@ void init_cpu_online(const struct cpumask *src)
 void init_cpu_isolated(const struct cpumask *src)
 {
 	cpumask_copy(&__cpu_isolated_mask, src);
+}
+
+void init_cpu_unisolated(const struct cpumask *src)
+{
+	cpumask_copy(&__cpu_unisolated_mask, src);
 }
 
 /*
