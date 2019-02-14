@@ -1043,7 +1043,7 @@ static void rqbalance_stop(void)
 	cpufreq_unregister_notifier(&frequency_limits_nb,
 		CPUFREQ_POLICY_NOTIFIER);
 
-	cpuhp_remove_state_nocalls(rqb_hp_online);
+	cpuhp_remove_state_nocalls(CPUHP_AP_ONLINE);
 
 	unregister_pm_notifier(&pm_notifier_block);
 
