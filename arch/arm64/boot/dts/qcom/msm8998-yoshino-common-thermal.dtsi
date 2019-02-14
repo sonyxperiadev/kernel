@@ -667,26 +667,26 @@
 							(THERMAL_MAX_LIMIT-24)>;
 			};
 
-			/* Throttle C1 only from FMAX to 2361.6MHz */
+			/* Throttle C1 only from FMAX to 2342.4MHz */
 			skin6_cpu4 {
 				trip = <&cpu_ct_trip6>;
 				cooling-device = <&CPU4 THERMAL_NO_LIMIT
-							(THERMAL_MAX_LIMIT-31)>;
+							(THERMAL_MAX_LIMIT-30)>;
 			};
 			skin6_cpu5 {
 				trip = <&cpu_ct_trip6>;
 				cooling-device = <&CPU5 THERMAL_NO_LIMIT
-							(THERMAL_MAX_LIMIT-31)>;
+							(THERMAL_MAX_LIMIT-30)>;
 			};
 			skin6_cpu6 {
 				trip = <&cpu_ct_trip6>;
 				cooling-device = <&CPU6 THERMAL_NO_LIMIT
-							(THERMAL_MAX_LIMIT-31)>;
+							(THERMAL_MAX_LIMIT-30)>;
 			};
 			skin6_cpu7 {
 				trip = <&cpu_ct_trip6>;
 				cooling-device = <&CPU7 THERMAL_NO_LIMIT
-							(THERMAL_MAX_LIMIT-31)>;
+							(THERMAL_MAX_LIMIT-30)>;
 			};
 
 			/* Throttle from FMAX to 257MHz */
