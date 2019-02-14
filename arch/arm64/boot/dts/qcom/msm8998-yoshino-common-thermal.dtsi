@@ -388,11 +388,6 @@
 				hysteresis = <1200>;
 				type = "passive";
 			};
-			cpu_ct_trip7: cpu-ct-trip7 {
-				temperature = <47700>;
-				hysteresis = <2700>;
-				type = "passive";
-			};
 
 			charger_trip0: cpu-ct-trip8 {
 				temperature = <45000>;
@@ -694,28 +689,6 @@
 							(THERMAL_MAX_LIMIT-31)>;
 			};
 
-			/* Throttle C1 only from FMAX to 2476.8MHz */
-			skin7_cpu4 {
-				trip = <&cpu_ct_trip7>;
-				cooling-device = <&CPU4 THERMAL_NO_LIMIT
-							(THERMAL_MAX_LIMIT-34)>;
-			};
-			skin7_cpu5 {
-				trip = <&cpu_ct_trip7>;
-				cooling-device = <&CPU5 THERMAL_NO_LIMIT
-							(THERMAL_MAX_LIMIT-34)>;
-			};
-			skin7_cpu6 {
-				trip = <&cpu_ct_trip7>;
-				cooling-device = <&CPU6 THERMAL_NO_LIMIT
-							(THERMAL_MAX_LIMIT-34)>;
-			};
-			skin7_cpu7 {
-				trip = <&cpu_ct_trip7>;
-				cooling-device = <&CPU7 THERMAL_NO_LIMIT
-							(THERMAL_MAX_LIMIT-34)>;
-			};
-
 			/* Throttle from FMAX to 257MHz */
 			skin0_gpu {
 				trip = <&cpu_ct_trip1>;
@@ -751,10 +724,6 @@
 			charger_lvl7 {
 				trip = <&cpu_ct_trip6>;
 				cooling-device = <&pmi8998_charger 5 5>;
-			};
-			charger_lvl8 {
-				trip = <&cpu_ct_trip7>;
-				cooling-device = <&pmi8998_charger 2 2>;
 			};
 
 			/* Modem PA power limit */
