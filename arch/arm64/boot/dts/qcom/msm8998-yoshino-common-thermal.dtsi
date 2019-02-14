@@ -34,8 +34,8 @@
 	};
 	avg-cpu-big {
 		virt-zone-name = "avg-cpu-c1";
-		thermal-sensors = "cpu4-gold-usr", "cpu5-gold-usr",
-				  "cpu6-gold-usr", "cpu7-gold-usr",
+		thermal-sensors = "cpu0-gold-usr", "cpu1-gold-usr",
+				  "cpu2-gold-usr", "cpu3-gold-usr",
 				  "kryo-l3-1-usr";
 		aggregation-logic = <0>; /* WEIGHTED_AVG */
 	};
