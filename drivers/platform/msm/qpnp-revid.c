@@ -76,6 +76,9 @@ struct revid_chip {
 static LIST_HEAD(revid_chips);
 static DEFINE_MUTEX(revid_chips_lock);
 
+#define DRIVER_READY 1
+static int driver_status;
+
 static const struct of_device_id qpnp_revid_match_table[] = {
 	{ .compatible = QPNP_REVID_DEV_NAME },
 	{}
@@ -107,6 +110,9 @@ static u8 qpnp_read_byte(struct regmap *regmap, u16 addr)
 struct pmic_revid_data *get_revid_data(struct device_node *dev_node)
 {
 	struct revid_chip *revid_chip;
+
+	if (driver_status == 0)
+		return ERR_PTR(-EPROBE_DEFER);
 
 	if (!dev_node)
 		return ERR_PTR(-EINVAL);
@@ -250,6 +256,9 @@ static int qpnp_revid_probe(struct platform_device *pdev)
 	build_pmic_string(pmic_string, PMIC_STRING_MAXLENGTH,
 			  to_spmi_device(pdev->dev.parent)->usid,
 			pmic_subtype, rev1, rev2, rev3, rev4);
+
+	driver_status = DRIVER_READY;
+
 	pr_info("%s options: %d, %d, %d, %d\n",
 			pmic_string, option1, option2, option3, option4);
 	return 0;
