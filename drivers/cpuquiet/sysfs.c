@@ -257,8 +257,10 @@ static ssize_t store_using_isolation(struct cpuquiet_attribute *cattr,
 	 * handling for the isolation vs hotplug usecases.
 	 */
 	if (curr_gov->use_isolation != use_isolation) {
+		mutex_lock(&cpuquiet_lock);
 		curr_gov->use_isolation = use_isolation;
 		cpuquiet_switch_governor(curr_gov);
+		mutex_unlock(&cpuquiet_lock);
 	}
 
 	return ret;
