@@ -50,6 +50,9 @@ static unsigned long hotplug_timeout;
 static struct cpumask cr_online_requests;
 static struct cpumask cr_offline_requests;
 
+/* Either online or unisolated CPUs */
+static const struct cpumask *curr_avail_cpus_mask;
+
 static struct platform_device *cpuquiet_pdev;
 
 struct cpuquiet_cpu_functions {
@@ -214,7 +217,7 @@ static void cpuquiet_work_func(struct work_struct *work)
 
 	/* always keep CPU0 online */
 	cpumask_set_cpu(0, &online);
-	cpu_online = *cpu_online_mask;
+	cpu_online = *curr_avail_cpus_mask;
 
 	if (max_cpus < min_cpus)
 		max_cpus = min_cpus;
@@ -301,15 +304,37 @@ bool cpuquiet_cpu_devices_initialized(void)
  */
 void cpuquiet_switch_funcs(bool use_isolation)
 {
+	unsigned int cpu = 0;
+
+	mutex_lock(&cpuquiet_cpu_lock);
+
+	if (cpu_funcs->set_online) {
+		/* Cancel any work: the data is deprecated at this point */
+		cancel_work_sync(&cpuquiet_work);
+
+		/* Clean up previous hotplug/isolation queued requests */
+		cpumask_clear(&cr_online_requests);
+		cpumask_clear(&cr_offline_requests);
+
+		for_each_possible_cpu(cpu)
+			cpu_funcs->set_online(cpu);
+	}
+
 	if (use_isolation) {
-		cpu_funcs->set_online = cpuquiet_cpu_isolate;
-		cpu_funcs->set_offline = cpuquiet_cpu_unisolate;
+		cpu_funcs->set_online = cpuquiet_cpu_unisolate;
+		cpu_funcs->set_offline = cpuquiet_cpu_isolate;
 		cpu_funcs->cpu_in_wanted_state = isolation_cpu_in_wanted_state;
+
+		curr_avail_cpus_mask = cpu_unisolated_mask;
 	} else {
 		cpu_funcs->set_online = cpuquiet_cpu_set_online;
 		cpu_funcs->set_offline = cpuquiet_cpu_set_offline;
 		cpu_funcs->cpu_in_wanted_state = hotplug_cpu_in_wanted_state;
+
+		curr_avail_cpus_mask = cpu_online_mask;
 	}
+
+	mutex_unlock(&cpuquiet_cpu_lock);
 }
 
 static int cpuquiet_register_devices(void)
@@ -393,6 +418,7 @@ static int __init cpuquiet_probe(struct platform_device *pdev)
 		goto free_funcs;
 	}
 
+	curr_avail_cpus_mask = cpu_online_mask; /* default to hotplug */
 	INIT_WORK(&cpuquiet_work, cpuquiet_work_func);
 
 	hotplug_timeout = DEFAULT_HOTPLUG_TIMEOUT_MS;
