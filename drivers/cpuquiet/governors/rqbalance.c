@@ -578,7 +578,7 @@ static void rqbalance_work_func(struct work_struct *work)
 		switch (balance) {
 		/* cpu speed is up and balanced - one more on-line */
 		case CPU_UPCORE:
-			cpu = cpumask_next_zero(0, cpu_online_mask);
+			cpu = cpumask_next_zero(0, avail_cpus_mask);
 			if (cpu < nr_cpu_ids)
 				up = true;
 			break;
