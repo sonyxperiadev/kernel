@@ -112,7 +112,8 @@ static bool soc_is_hmp;
 static unsigned int available_clusters = 0;
 
 /* configurable parameters */
-static unsigned int  balance_level = 60;
+static signed int    balance_penalty = 0; /* Range: -99, +inf */
+static unsigned int  balance_level = 60;  /* Range:   1, +inf */
 static unsigned int  idle_bottom_freq[MAX_CLUSTERS];
 static unsigned int  idle_top_freq[MAX_CLUSTERS];
 static unsigned int  num_of_cores[MAX_CLUSTERS];
@@ -439,7 +440,8 @@ static void stop_rq_work(void)
 static CPU_SPEED_BALANCE balanced_speed_balance(void)
 {
 	unsigned long highest_speed = cpu_highest_speed();
-	unsigned long balanced_speed = highest_speed * balance_level / 100;
+	unsigned long balanced_speed = 
+		highest_speed * balance_level / (100 + balance_penalty);
 	unsigned long skewed_speed = balanced_speed / 2;
 	unsigned int nr_cpus = num_online_cpus();
 	unsigned int max_cpus = pm_qos_request(PM_QOS_MAX_ONLINE_CPUS) ? : CONFIG_NR_CPUS;
@@ -887,6 +889,7 @@ static ssize_t get_cluster_votes(struct cpuquiet_attribute *cattr,
 }
 
 CPQ_SIMPLE_ATTRIBUTE(balance_level, 0644, uint);
+CPQ_SIMPLE_ATTRIBUTE(balance_penalty, 0644, int);
 CPQ_SIMPLE_ATTRIBUTE(load_sample_rate, 0644, uint);
 CPQ_CUSTOM_ATTRIBUTE(up_delay, 0644,
 			show_ulong_delay, store_ulong_delay);
@@ -907,6 +910,7 @@ RQB_ATTRIBUTE(cluster_freq_vote_min, 0644,
 
 static struct attribute *rqbalance_attrs[] = {
 	&balance_level_attr.attr,
+	&balance_penalty_attr.attr,
 	&load_sample_rate_attr.attr,
 	&up_delay_attr.attr,
 	&down_delay_attr.attr,
