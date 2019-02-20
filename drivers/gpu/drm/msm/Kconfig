@@ -149,5 +149,18 @@ config DRM_SDE_RSC
           avoids the display core power collapse. A client can also register
           for display core power collapse events on rsc.
 
+config DRM_MSM_EMU_HEADLESS
+	bool "Enable headless display simulation"
+	depends on DRM_MSM
+	help
+	  Enable simulating a display connected on the DSI while using a
+	  display-less system.
+	  This configuration option is useful when using Android userspace
+	  on a system that has no physically connected display and no
+	  possible or not connected external display.
+	  This way, the Android system will initialize the display system
+	  just fine and it will be possible to interact with the UI by
+	  using screen mirroring via the Android Debug Bridge (ADB).
+
 source "drivers/gpu/drm/msm/dsi-staging/somc_panel/Kconfig"
 
