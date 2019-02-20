@@ -3978,6 +3978,7 @@ int dsi_panel_post_unprepare(struct dsi_panel *panel)
 		return -EINVAL;
 	}
 
+#ifndef CONFIG_DRM_MSM_EMU_HEADLESS
 	mutex_lock(&panel->panel_lock);
 
 	rc = dsi_panel_power_off(panel);
@@ -3988,5 +3989,6 @@ int dsi_panel_post_unprepare(struct dsi_panel *panel)
 	}
 error:
 	mutex_unlock(&panel->panel_lock);
+#endif /* CONFIG_DRM_MSM_EMU_HEADLESS */
 	return rc;
 }
