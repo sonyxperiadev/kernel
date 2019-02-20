@@ -517,7 +517,22 @@ static int somc_panel_update_merged_pcc_cache(
 	struct dsi_pcc_data *pcc_data = NULL;
 	int table_idx;
 
+	if (unlikely(!sys_cal || !target)) {
+		pr_debug("Calibrations not (yet?) initialized.\n");
+		return -EINVAL;
+	}
+
 	pcc_data = &color_mgr->standard_pcc_data;
+	if (unlikely(!pcc_data)) {
+		pr_debug("No PCC data (yet?)\n");
+		return -EINVAL;
+	}
+
+	if (unlikely(!pcc_data->color_tbl)) {
+		pr_debug("There is no color table.\n");
+		return -EINVAL;
+	}
+
 	table_idx = pcc_data->tbl_idx + color_mgr->pcc_profile;
 
 	pr_debug("%s (%d): Selecting table %d with offset %d\n",
