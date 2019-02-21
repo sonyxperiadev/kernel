@@ -4085,6 +4085,7 @@ int dsi_panel_disable(struct dsi_panel *panel)
 	if (panel->type == EXT_BRIDGE)
 		return 0;
 
+#ifndef CONFIG_DRM_MSM_EMU_HEADLESS
 	mutex_lock(&panel->panel_lock);
 
 	/* Avoid sending panel off commands when ESD recovery is underway */
@@ -4104,6 +4105,7 @@ int dsi_panel_disable(struct dsi_panel *panel)
 
 error:
 	mutex_unlock(&panel->panel_lock);
+#endif /* CONFIG_DRM_MSM_EMU_HEADLESS */
 	return rc;
 }
 
