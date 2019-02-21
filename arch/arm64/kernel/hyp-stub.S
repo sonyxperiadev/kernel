@@ -28,7 +28,9 @@
 #include <asm/virt.h>
 
 	.text
+#ifndef CONFIG_ARCH_SONY_TONE
 	.pushsection	.hyp.text, "ax"
+#endif
 
 	.align 11
 
