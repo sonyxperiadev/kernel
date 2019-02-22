@@ -164,6 +164,72 @@ static int32_t cam_actuator_power_down(struct cam_actuator_ctrl_t *a_ctrl)
 	return rc;
 }
 
+static int32_t bu64747_set_dac(struct camera_io_master *io_master_info,
+				struct i2c_settings_list *i2c_list)
+{
+	struct cam_sensor_i2c_reg_array *reg_setting = NULL;
+	uint16_t bu64747_dac = 0;
+	uint16_t new_max, new_min, new_range;
+	uint16_t old_max, old_min, old_range, req_val;
+	bool bad_range = false;
+	int32_t rc = 0;
+
+	reg_setting = i2c_list->i2c_settings.reg_setting;
+	req_val = reg_setting[0].reg_data;
+
+	/* Framework-passed (old) and real (new) min-max values */
+	old_max = 699;
+	old_min = 414;
+	new_max = 800;
+	new_min = 250;
+
+	/* Are we parking the lens? */
+	if (req_val < 40) {
+		bu64747_dac = req_val;
+		goto send_data;
+	}
+
+	/* Shortcuts */
+	if (req_val <= old_min) {
+		bu64747_dac = new_min;
+		goto send_data;
+	}
+	if (req_val >= old_max) {
+		bu64747_dac = new_max;
+		goto send_data;
+	}
+
+	/* Normalize the values for the correct range */
+	old_range = old_max - old_min;
+	new_range = new_max - new_min;
+
+	bu64747_dac = req_val - old_min;
+
+	bu64747_dac = DIV_ROUND_CLOSEST((bu64747_dac * new_range), old_range);
+	bu64747_dac += new_min;
+
+	/* Very unlikely: Check ranges. Allowed: 401-800 */
+	if (unlikely(bu64747_dac > new_max || bu64747_dac < new_min)) {
+		bad_range = true;
+		CAM_WARN(CAM_ACTUATOR, "bu64747: Bad DAC value received. "
+					"Bailing out to protect the HW.");
+		return -EINVAL;
+	}
+
+send_data:
+	CAM_DBG(CAM_ACTUATOR, "bu64747: set new dac value %d.", bu64747_dac);
+	bu64747_set_dac_array[1].reg_data = bu64747_dac & 0x00FF;
+	bu64747_set_dac_array[2].reg_data = (bu64747_dac & 0x0300) >> 8;
+	i2c_list->i2c_settings.data_type = 1;
+	i2c_list->i2c_settings.size = 9;
+	i2c_list->i2c_settings.reg_setting = bu64747_set_dac_array;
+	rc = camera_io_dev_write_continuous(
+			io_master_info, &(i2c_list->i2c_settings), 0);
+	i2c_list->i2c_settings.reg_setting = reg_setting;
+
+	return rc;
+}
+
 static int32_t cam_actuator_i2c_modes_util(
 	struct camera_io_master *io_master_info,
 	struct i2c_settings_list *i2c_list)
@@ -178,18 +244,7 @@ static int32_t cam_actuator_i2c_modes_util(
 		    i2c_list->i2c_settings.addr_type == 1 &&
 		    i2c_list->i2c_settings.data_type == 2 &&
 		    i2c_list->i2c_settings.size == 1) {
-			struct cam_sensor_i2c_reg_array *orig = i2c_list->i2c_settings.reg_setting;
-			uint16_t bu64747_dac = i2c_list->i2c_settings.reg_setting[0].reg_data;
-
-			CAM_DBG(CAM_ACTUATOR, "bu64747: set new dac value %d.", bu64747_dac);
-			bu64747_set_dac_array[1].reg_data = bu64747_dac & 0x00FF;
-			bu64747_set_dac_array[2].reg_data = (bu64747_dac & 0x0300) >> 8;
-			i2c_list->i2c_settings.data_type = 1;
-			i2c_list->i2c_settings.size = 9;
-			i2c_list->i2c_settings.reg_setting = bu64747_set_dac_array;
-			rc = camera_io_dev_write_continuous(io_master_info, &(i2c_list->i2c_settings), 0);
-			i2c_list->i2c_settings.reg_setting = orig;
-			return rc;
+			return bu64747_set_dac(io_master_info, i2c_list);
 		}
 
 		/* bu64253: override i2c commands for set_dac */
