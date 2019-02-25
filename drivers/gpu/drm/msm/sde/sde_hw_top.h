@@ -202,6 +202,13 @@ struct sde_hw_mdp_ops {
 	void (*intf_audio_select)(struct sde_hw_mdp *mdp);
 
 	/**
+	 * set_mdp_hw_events - enable qdss hardware events for mdp
+	 * @mdp: mdp top context driver
+	 * @enable: enable/disable hw events
+	 */
+	void (*set_mdp_hw_events)(struct sde_hw_mdp *mdp, bool enable);
+
+	/**
 	 * set_cwb_ppb_cntl - select the data point for CWB
 	 * @mdp: mdp top context driver
 	 * @dual: indicates if dual pipe line needs to be programmed
