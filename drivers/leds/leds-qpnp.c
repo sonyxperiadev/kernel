@@ -28,6 +28,9 @@
 #include <linux/regulator/consumer.h>
 #include <linux/delay.h>
 
+#define DUTY_PCTS_SCALING_MIN		3
+#define DUTY_PCTS_SCALING_MAX		100
+
 #define WLED_MOD_EN_REG(base, n)	(base + 0x60 + n*0x10)
 #define WLED_IDAC_DLY_REG(base, n)	(WLED_MOD_EN_REG(base, n) + 0x01)
 #define WLED_FULL_SCALE_REG(base, n)	(WLED_IDAC_DLY_REG(base, n) + 0x01)
@@ -362,6 +365,8 @@ struct pwm_config_data {
 	u32			pwm_period_us;
 	struct pwm_duty_cycles	*duty_cycles;
 	int	*old_duty_pcts;
+	int	*scaled_duty_pcts;
+	int	duty_pcts_scaling;
 	u8	mode;
 	u8	default_mode;
 	bool	pwm_enabled;
@@ -624,6 +629,30 @@ static int qpnp_wled_sync(struct qpnp_led_data *led)
 				"WLED reset sync reg failed(%d)\n", rc);
 		return rc;
 	}
+	return 0;
+}
+
+static int qpnp_led_get_pwm_cfg(struct qpnp_led_data *led,
+				struct pwm_config_data **pwm_cfg)
+{
+	switch (led->id) {
+	case QPNP_ID_LED_MPP:
+		*pwm_cfg = led->mpp_cfg->pwm_cfg;
+		break;
+	case QPNP_ID_RGB_RED:
+	case QPNP_ID_RGB_GREEN:
+	case QPNP_ID_RGB_BLUE:
+		*pwm_cfg = led->rgb_cfg->pwm_cfg;
+		break;
+	case QPNP_ID_KPDBL:
+		*pwm_cfg = led->kpdbl_cfg->pwm_cfg;
+		break;
+	default:
+		dev_err(&led->pdev->dev,
+			"Invalid LED id type for duty pcts\n");
+		return -EINVAL;
+	}
+
 	return 0;
 }
 
@@ -1724,7 +1753,17 @@ static int qpnp_rgb_set(struct qpnp_led_data *led)
 	int rc;
 	int duty_us, duty_ns, period_us;
 
-	if (led->cdev.brightness) {
+	int level = led->cdev.brightness;
+	struct pwm_config_data *pwm_cfg;
+
+	if (qpnp_led_get_pwm_cfg(led, &pwm_cfg) == 0) {
+		if ((pwm_cfg->duty_pcts_scaling >= DUTY_PCTS_SCALING_MIN) &&
+		    (pwm_cfg->duty_pcts_scaling <= DUTY_PCTS_SCALING_MAX))
+			level = DIV_ROUND_CLOSEST(
+				(level * pwm_cfg->duty_pcts_scaling), 100);
+	}
+
+	if (level) {
 		if (!led->rgb_cfg->pwm_cfg->blinking)
 			led->rgb_cfg->pwm_cfg->mode =
 				led->rgb_cfg->pwm_cfg->default_mode;
@@ -1740,7 +1779,7 @@ static int qpnp_rgb_set(struct qpnp_led_data *led)
 		}
 		period_us = led->rgb_cfg->pwm_cfg->pwm_period_us;
 		if (period_us > INT_MAX / NSEC_PER_USEC) {
-			duty_us = (period_us * led->cdev.brightness) /
+			duty_us = (period_us * level) /
 				LED_FULL;
 			rc = pwm_config_us(
 				led->rgb_cfg->pwm_cfg->pwm_dev,
@@ -1748,7 +1787,7 @@ static int qpnp_rgb_set(struct qpnp_led_data *led)
 				period_us);
 		} else {
 			duty_ns = ((period_us * NSEC_PER_USEC) /
-				LED_FULL) * led->cdev.brightness;
+				LED_FULL) * level;
 			rc = pwm_config(
 				led->rgb_cfg->pwm_cfg->pwm_dev,
 				duty_ns,
@@ -2140,6 +2179,7 @@ static int qpnp_pwm_init(struct pwm_config_data *pwm_cfg,
 					const char *name)
 {
 	int rc, start_idx, idx_len, lut_max_size;
+	int *apply_pcts;
 
 	if (pwm_cfg->pwm_dev) {
 		if (pwm_cfg->mode == LPG_MODE) {
@@ -2147,6 +2187,8 @@ static int qpnp_pwm_init(struct pwm_config_data *pwm_cfg,
 			pwm_cfg->duty_cycles->start_idx;
 			idx_len =
 			pwm_cfg->duty_cycles->num_duty_pcts;
+
+			apply_pcts = pwm_cfg->duty_cycles->duty_pcts;
 
 			if (strnstr(name, "kpdbl", sizeof("kpdbl")))
 				lut_max_size = PWM_GPLED_LUT_MAX_SIZE;
@@ -2163,9 +2205,17 @@ static int qpnp_pwm_init(struct pwm_config_data *pwm_cfg,
 				dev_err(&pdev->dev, "Exceed LUT limit\n");
 				return -EINVAL;
 			}
+
+			if ((pwm_cfg->duty_pcts_scaling >=
+					DUTY_PCTS_SCALING_MIN) &&
+			    (pwm_cfg->duty_pcts_scaling <=
+					DUTY_PCTS_SCALING_MAX))
+				apply_pcts =
+					pwm_cfg->scaled_duty_pcts;
+
 			rc = pwm_lut_config(pwm_cfg->pwm_dev,
 				pwm_cfg->pwm_period_us,
-				pwm_cfg->duty_cycles->duty_pcts,
+				apply_pcts,
 				pwm_cfg->lut_params);
 			if (rc < 0) {
 				dev_err(&pdev->dev, "Failed to configure pwm LUT\n");
@@ -2552,6 +2602,63 @@ static ssize_t lut_flags_store(struct device *dev,
 	return count;
 }
 
+static int duty_pcts_scaling_update(struct qpnp_led_data *led, int value)
+{
+	struct pwm_config_data *pwm_cfg;
+	u32 num_duty_pcts;
+	int *cur_pcts;
+	ssize_t ret;
+	int i = 0;
+
+	ret = qpnp_led_get_pwm_cfg(led, &pwm_cfg);
+	if (ret)
+		return ret;
+
+	if (pwm_cfg->mode == LPG_MODE)
+		pwm_cfg->blinking = true;
+
+	num_duty_pcts = pwm_cfg->duty_cycles->num_duty_pcts;
+	cur_pcts = pwm_cfg->duty_cycles->duty_pcts;
+
+	if (value < 0 || value > DUTY_PCTS_SCALING_MAX) {
+		dev_err(&led->pdev->dev,
+			"Invalid duty pcts scaling\n");
+		return -EINVAL;
+	}
+	pwm_cfg->duty_pcts_scaling = value;
+
+	for (i = 0; i < pwm_cfg->duty_cycles->num_duty_pcts; i++)
+		pwm_cfg->scaled_duty_pcts[i] =
+			DIV_ROUND_CLOSEST((cur_pcts[i] * value), 100);
+
+	if (pwm_cfg->pwm_enabled) {
+		pwm_disable(pwm_cfg->pwm_dev);
+		pwm_cfg->pwm_enabled = 0;
+	}
+
+	ret = qpnp_pwm_init(pwm_cfg, led->pdev, led->cdev.name);
+	if (ret)
+		goto restore;
+
+	qpnp_led_set(&led->cdev, led->cdev.brightness);
+	return 0;
+
+restore:
+	dev_err(&led->pdev->dev,
+		"Failed to initialize pwm with scaled duty pcts value\n");
+	pwm_cfg->duty_cycles->num_duty_pcts = num_duty_pcts;
+	pwm_cfg->old_duty_pcts = pwm_cfg->duty_cycles->duty_pcts;
+	pwm_cfg->duty_cycles->duty_pcts = cur_pcts;
+	pwm_cfg->lut_params.idx_len = pwm_cfg->duty_cycles->num_duty_pcts;
+	if (pwm_cfg->pwm_enabled) {
+		pwm_disable(pwm_cfg->pwm_dev);
+		pwm_cfg->pwm_enabled = 0;
+	}
+	qpnp_pwm_init(pwm_cfg, led->pdev, led->cdev.name);
+	qpnp_led_set(&led->cdev, led->cdev.brightness);
+	return ret;
+}
+
 static ssize_t duty_pcts_store(struct device *dev,
 	struct device_attribute *attr,
 	const char *buf, size_t count)
@@ -2600,6 +2707,7 @@ static ssize_t duty_pcts_store(struct device *dev,
 		if (buffer == NULL)
 			break;
 		ret = sscanf((const char *)buffer, "%u,%s", &value, buffer);
+
 		pwm_cfg->old_duty_pcts[i] = value;
 		num_duty_pcts++;
 		if (ret <= 1)
@@ -2631,6 +2739,11 @@ static ssize_t duty_pcts_store(struct device *dev,
 		goto restore;
 
 	qpnp_led_set(&led->cdev, led->cdev.brightness);
+
+	if ((pwm_cfg->duty_pcts_scaling >= DUTY_PCTS_SCALING_MIN) &&
+	    (pwm_cfg->duty_pcts_scaling <= DUTY_PCTS_SCALING_MAX))
+		duty_pcts_scaling_update(led, pwm_cfg->duty_pcts_scaling);
+
 	return count;
 
 restore:
@@ -2647,6 +2760,28 @@ restore:
 	qpnp_pwm_init(pwm_cfg, led->pdev, led->cdev.name);
 	qpnp_led_set(&led->cdev, led->cdev.brightness);
 	return ret;
+}
+
+static ssize_t duty_pcts_scaling_store(struct device *dev,
+	struct device_attribute *attr,
+	const char *buf, size_t count)
+{
+	struct led_classdev *led_cdev = dev_get_drvdata(dev);
+	struct qpnp_led_data *led;
+	unsigned long value;
+	ssize_t ret;
+
+	ret = kstrtoul(buf, 10, &value);
+	if (ret)
+		return ret;
+
+	led = container_of(led_cdev, struct qpnp_led_data, cdev);
+
+	ret = duty_pcts_scaling_update(led, (int)value);
+	if (ret)
+		return ret;
+
+	return count;
 }
 
 static void led_blink(struct qpnp_led_data *led,
@@ -2866,6 +3001,7 @@ static DEVICE_ATTR(start_idx, 0664, NULL, start_idx_store);
 static DEVICE_ATTR(ramp_step_ms, 0664, NULL, ramp_step_ms_store);
 static DEVICE_ATTR(lut_flags, 0664, NULL, lut_flags_store);
 static DEVICE_ATTR(duty_pcts, 0664, NULL, duty_pcts_store);
+static DEVICE_ATTR(duty_pcts_scaling, 0664, NULL, duty_pcts_scaling_store);
 static DEVICE_ATTR(blink, 0664, NULL, blink_store);
 static DEVICE_ATTR(rgb_blink, 0664, NULL, rgb_blink_store);
 static struct attribute *led_attrs[] = {
@@ -2895,6 +3031,7 @@ static struct attribute *lpg_attrs[] = {
 	&dev_attr_ramp_step_ms.attr,
 	&dev_attr_lut_flags.attr,
 	&dev_attr_duty_pcts.attr,
+	&dev_attr_duty_pcts_scaling.attr,
 	NULL
 };
 
@@ -3646,6 +3783,16 @@ static int qpnp_get_config_pwm(struct pwm_config_data *pwm_cfg,
 			sizeof(int) * lut_max_size,
 			GFP_KERNEL);
 		if (!pwm_cfg->old_duty_pcts) {
+			dev_err(&pdev->dev, "Unable to allocate memory\n");
+			rc = -ENOMEM;
+			goto bad_lpg_params;
+		}
+
+		pwm_cfg->scaled_duty_pcts =
+			devm_kzalloc(&pdev->dev,
+			sizeof(int) * lut_max_size,
+			GFP_KERNEL);
+		if (!pwm_cfg->scaled_duty_pcts) {
 			dev_err(&pdev->dev, "Unable to allocate memory\n");
 			rc = -ENOMEM;
 			goto bad_lpg_params;
