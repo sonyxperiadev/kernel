@@ -891,6 +891,12 @@ config QCOM_AOP_DDR_MESSAGING
 	  the device is rebooting, to ensure that the device is powered off
 	  cleanly.
 
+config QCOM_AOP_DDRSS_COMMANDS
+	bool "Send commands to AOP to affect the behavior of the DDRSS"
+	help
+	  This driver allows messages to be sent to the AOP to affect the DDRSS
+	  behavior.
+
 config MSM_BAM_DMUX
 	bool "BAM Data Mux Driver"
 	depends on SPS
