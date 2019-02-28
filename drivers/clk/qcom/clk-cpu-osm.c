@@ -23,6 +23,7 @@
 #include <linux/clk.h>
 #include <linux/clk-provider.h>
 #include <linux/cpu.h>
+#include <linux/cpu_cooling.h>
 #include <linux/platform_device.h>
 #include <linux/of_platform.h>
 #include <linux/pm_opp.h>
@@ -99,6 +100,7 @@ struct clk_osm {
 	u32 mx_turbo_freq;
 };
 
+static struct thermal_cooling_device **osm_cdev;
 static bool is_sdm845v1;
 
 static inline struct clk_osm *to_clk_osm(struct clk_hw *_hw)
@@ -730,6 +732,46 @@ static unsigned int osm_cpufreq_get(unsigned int cpu)
 	return policy->freq_table[index].frequency;
 }
 
+static void osm_cpufreq_ready(struct cpufreq_policy *policy)
+{
+	struct device_node *polcpunode, *cpunode;
+	unsigned int cpu = 0;
+
+	/* If the cooling device is initialized, there's nothing to do */
+	if (osm_cdev[policy->cpu])
+		return;
+
+	polcpunode = of_cpu_device_node_get(policy->cpu);
+	if (WARN_ON(!polcpunode))
+		return;
+
+	/* Load the cooling device */
+	if (of_find_property(polcpunode, "#cooling-cells", NULL)) {
+		/* For each cpu in this cluster */
+		for_each_cpu(cpu, policy->related_cpus) {
+			cpumask_t mask = CPU_MASK_NONE;
+
+			cpunode = of_cpu_device_node_get(cpu);
+			if (WARN_ON(!cpunode))
+				return;
+
+			cpumask_set_cpu(cpu, &mask);
+			osm_cdev[cpu] = of_cpufreq_cooling_register(
+							cpunode, &mask);
+			if (IS_ERR(osm_cdev[cpu])) {
+				pr_warn("%s: Cannot register cooling device "
+					"for CPU%d: %ld\n", __func__,
+					cpu, PTR_ERR(osm_cdev[cpu]));
+				osm_cdev[cpu] = NULL;
+			} else {
+				pr_debug("OSM: Registered cdev, CPU%d\n", cpu);
+			}
+			of_node_put(cpunode);
+		}
+	}
+	of_node_put(polcpunode);
+}
+
 static int osm_cpufreq_cpu_init(struct cpufreq_policy *policy)
 {
 	struct cpufreq_frequency_table *table;
@@ -839,6 +881,7 @@ static struct cpufreq_driver qcom_osm_cpufreq_driver = {
 	.exit		= osm_cpufreq_cpu_exit,
 	.name		= "osm-cpufreq",
 	.attr		= osm_cpufreq_attr,
+	.ready		= osm_cpufreq_ready,
 	.boost_enabled	= true,
 };
 
@@ -1231,7 +1274,7 @@ static int clk_cpu_osm_request_mx_supply(struct device *dev)
 
 static int clk_cpu_osm_driver_probe(struct platform_device *pdev)
 {
-	int rc = 0, i, cpu;
+	int rc = 0, i, cpu, num_cpus;
 	u32 val;
 	int num_clks = ARRAY_SIZE(osm_qcom_clk_hws);
 	struct clk *ext_xo_clk, *clk;
@@ -1338,6 +1381,14 @@ static int clk_cpu_osm_driver_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Unable to register CPU clocks\n");
 			goto provider_err;
 	}
+
+	/* Allocate the cooling device array */
+	num_cpus = pwrcl_clk.max_core_count + perfcl_clk.max_core_count;
+	osm_cdev = devm_kzalloc(&pdev->dev,
+			num_cpus * sizeof(struct clk_onecell_data),
+			GFP_KERNEL);
+	if (!osm_cdev)
+		goto provider_err;
 
 	get_online_cpus();
 

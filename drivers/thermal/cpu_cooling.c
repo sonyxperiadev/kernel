@@ -339,7 +339,7 @@ static int cpufreq_thermal_notifier(struct notifier_block *nb,
 	unsigned long clipped_freq = ULONG_MAX, floor_freq = 0;
 	struct cpufreq_cooling_device *cpufreq_dev;
 
-	if (event != CPUFREQ_ADJUST)
+	if (event != CPUFREQ_INCOMPATIBLE)
 		return NOTIFY_DONE;
 
 	mutex_lock(&cooling_list_lock);
@@ -752,7 +752,8 @@ static int cpufreq_set_cur_state(struct thermal_cooling_device *cdev,
 			if (ret)
 				pr_err("CPU:%d online error:%d\n", cpu, ret);
 			goto update_frequency;
-		} else if (cpumask_test_and_clear_cpu(cpu,
+		}
+		if (cpumask_test_and_clear_cpu(cpu,
 			&cpus_isolated_by_thermal)) {
 			sched_unisolate_cpu(cpu);
 		}

@@ -187,9 +187,15 @@
 
 			c1_trip2: c1-trip2 {
 				temperature = <76300>;
-				hysteresis = <4000>;
+				hysteresis = <3000>;
 				type = "passive";
 				
+			};
+
+			c1_trip3: c1-trip3 {
+				temperature = <70000>;
+				hysteresis = <3000>;
+				type = "passive";
 			};
 		};
 
@@ -296,6 +302,28 @@
 				cooling-device =
 					<&CPU7 THERMAL_NO_LIMIT
 						(THERMAL_MAX_LIMIT-23)>;
+			};
+
+			/* Disallow TURBO frequency */
+			cpu4_cdev7 {
+				trip = <&c1_trip3>;
+				cooling-device =
+					<&CPU4 THERMAL_NO_LIMIT 1>;
+			};
+			cpu5_cdev7 {
+				trip = <&c1_trip3>;
+				cooling-device =
+					<&CPU5 THERMAL_NO_LIMIT 1>;
+			};
+			cpu6_cdev7 {
+				trip = <&c1_trip3>;
+				cooling-device =
+					<&CPU6 THERMAL_NO_LIMIT 1>;
+			};
+			cpu7_cdev7 {
+				trip = <&c1_trip3>;
+				cooling-device =
+					<&CPU7 THERMAL_NO_LIMIT 1>;
 			};
 		};
 	};
