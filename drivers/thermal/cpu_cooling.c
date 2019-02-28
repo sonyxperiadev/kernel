@@ -707,7 +707,8 @@ static int cpufreq_set_cur_state(struct thermal_cooling_device *cdev,
 			if (ret)
 				pr_err("CPU:%d online error:%d\n", cpu, ret);
 			goto update_frequency;
-		} else if (cpumask_test_and_clear_cpu(cpu,
+		}
+		if (cpumask_test_and_clear_cpu(cpu,
 			&cpus_isolated_by_thermal)) {
 			sched_unisolate_cpu(cpu);
 		}
