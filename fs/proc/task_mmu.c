@@ -1537,7 +1537,58 @@ enum reclaim_type {
 	RECLAIM_ALL,
 };
 
-static int reclaim_pmd_range(pmd_t *pmd, unsigned long addr,
+static int deactivate_pte_range(pmd_t *pmd, unsigned long addr,
+				unsigned long end, struct mm_walk *walk)
+{
+	pte_t *orig_pte, *pte, ptent;
+	spinlock_t *ptl;
+	struct page *page;
+	struct vm_area_struct *vma = walk->vma;
+
+	orig_pte = pte_offset_map_lock(vma->vm_mm, pmd, addr, &ptl);
+	for (pte = orig_pte; addr < end; pte++, addr += PAGE_SIZE) {
+		ptent = *pte;
+
+		if (pte_none(ptent))
+			continue;
+
+		if (!pte_present(ptent))
+			continue;
+
+		page = vm_normal_page(vma, addr, ptent);
+		if (!page)
+			continue;
+		/*
+		 * XXX: we don't handle compound page at this moment but
+		 * it should revisit for THP page before upstream.
+		 */
+		if (PageCompound(page)) {
+			unsigned int order = compound_order(page);
+			unsigned int nr_pages = (1 << order) - 1;
+
+			addr += (nr_pages * PAGE_SIZE);
+			pte += nr_pages;
+			continue;
+		}
+
+		if (page_mapcount(page) > 1)
+			continue;
+
+		ptep_test_and_clear_young(vma, addr, pte);
+		test_and_clear_page_young(page);
+		if (PageReferenced(page))
+			ClearPageReferenced(page);
+		if (PageActive(page))
+			deactivate_page(page);
+	}
+
+	pte_unmap_unlock(orig_pte, ptl);
+	cond_resched();
+	return 0;
+}
+
+
+static int reclaim_pte_range(pmd_t *pmd, unsigned long addr,
 				unsigned long end, struct mm_walk *walk)
 {
 	pte_t *orig_pte, *pte, ptent;
@@ -1633,7 +1684,7 @@ static ssize_t reclaim_write(struct file *file, const char __user *buf,
 	mm = get_task_mm(task);
 	if (mm) {
 		struct mm_walk reclaim_walk = {
-			.pmd_entry = reclaim_pmd_range,
+			.pmd_entry = reclaim_pte_range,
 			.mm = mm,
 		};
 
@@ -1649,6 +1700,11 @@ static ssize_t reclaim_write(struct file *file, const char __user *buf,
 				continue;
 			if (type == RECLAIM_FILE && vma_is_anonymous(vma))
 				continue;
+
+			if (vma_is_anonymous(vma))
+				reclaim_walk.pmd_entry = reclaim_pte_range;
+			else
+				reclaim_walk.pmd_entry = deactivate_pte_range;
 
 			walk_page_range(vma->vm_start, vma->vm_end,
 					&reclaim_walk);
