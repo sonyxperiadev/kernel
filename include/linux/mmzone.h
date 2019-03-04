@@ -189,6 +189,7 @@ enum node_stat_item {
 	NR_INDIRECTLY_RECLAIMABLE_BYTES, /* measured in bytes */
 	NR_ION_HEAP,
 	NR_ION_HEAP_POOL,
+	NR_UNRECLAIMABLE_PAGES,
 	NR_VM_NODE_STAT_ITEMS
 };
 
