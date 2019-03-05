@@ -800,7 +800,8 @@ static int sde_mdp_put_img(struct sde_mdp_img_data *data, bool rotator,
 		}
 		if (!data->skip_detach) {
 			dma_buf_unmap_attachment(data->srcp_attachment,
-				data->srcp_table, dir);
+				data->srcp_table,
+				sde_smmu_dma_direction(dir));
 			dma_buf_detach(data->srcp_dma_buf,
 					data->srcp_attachment);
 			if (!(data->flags & SDE_ROT_EXT_DMA_BUF)) {
@@ -867,7 +868,8 @@ static int sde_mdp_get_img(struct sde_fb_data *img,
 
 		SDEROT_DBG("%d attach=%p\n", __LINE__, data->srcp_attachment);
 		data->srcp_table =
-			dma_buf_map_attachment(data->srcp_attachment, dir);
+			dma_buf_map_attachment(data->srcp_attachment,
+			sde_smmu_dma_direction(dir));
 		if (IS_ERR(data->srcp_table)) {
 			SDEROT_ERR("%d Failed to map attachment\n", __LINE__);
 			ret = PTR_ERR(data->srcp_table);
@@ -1000,7 +1002,8 @@ static int sde_mdp_map_buffer(struct sde_mdp_img_data *data, bool rotator,
 	return ret;
 
 err_unmap:
-	dma_buf_unmap_attachment(data->srcp_attachment, data->srcp_table, dir);
+	dma_buf_unmap_attachment(data->srcp_attachment, data->srcp_table,
+		sde_smmu_dma_direction(dir));
 	dma_buf_detach(data->srcp_dma_buf, data->srcp_attachment);
 	if (!(data->flags & SDE_ROT_EXT_DMA_BUF)) {
 		dma_buf_put(data->srcp_dma_buf);

@@ -254,7 +254,9 @@ struct sde_rot_data_type {
 
 	int iommu_attached;
 	int iommu_ref_cnt;
-
+	int (*iommu_ctrl)(int enable);
+	int (*secure_session_ctrl)(int enable);
+	int (*wait_for_transition)(int state, int request);
 	struct sde_rot_vbif_debug_bus *nrt_vbif_dbg_bus;
 	u32 nrt_vbif_dbg_bus_size;
 	struct sde_rot_debug_bus *rot_dbg_bus;
@@ -270,7 +272,7 @@ struct sde_rot_data_type {
 
 	struct sde_rot_lut_cfg lut_cfg[SDE_ROT_OP_MAX];
 	struct sde_rot_lut_cfg inline_lut_cfg[SDE_ROT_OP_MAX];
-
+	bool callback_request;
 	struct ion_client *iclient;
 
 	bool clk_always_on;

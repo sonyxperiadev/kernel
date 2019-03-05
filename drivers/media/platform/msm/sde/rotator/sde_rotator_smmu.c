@@ -25,6 +25,7 @@
 #include <linux/of_platform.h>
 #include <linux/msm_dma_iommu_mapping.h>
 #include <asm/dma-iommu.h>
+#include <linux/mdss_smmu_ext.h>
 
 #include "soc/qcom/secure_buffer.h"
 #include "sde_rotator_base.h"
@@ -380,7 +381,40 @@ void sde_smmu_unmap_dma_buf(struct sg_table *table, int domain,
 
 static DEFINE_MUTEX(sde_smmu_ref_cnt_lock);
 
+static void sde_smmu_callback(struct mdss_smmu_intf *smmu)
+{
+	struct sde_rot_data_type *mdata = sde_rot_get_mdata();
+
+	if (!smmu)
+		return;
+
+	/* Copy mmu device info into sde private structure */
+	mdata->iommu_ctrl = smmu->iommu_ctrl;
+	mdata->wait_for_transition = smmu->wait_for_transition;
+	mdata->secure_session_ctrl = smmu->secure_session_ctrl;
+	if (smmu->is_secure) {
+		mdata->sde_smmu[SDE_IOMMU_DOMAIN_ROT_SECURE].dev = smmu->dev;
+		mdata->sde_smmu[SDE_IOMMU_DOMAIN_ROT_SECURE].domain =
+			SDE_IOMMU_DOMAIN_ROT_SECURE;
+	} else {
+		mdata->sde_smmu[SDE_IOMMU_DOMAIN_ROT_UNSECURE].dev = smmu->dev;
+		mdata->sde_smmu[SDE_IOMMU_DOMAIN_ROT_UNSECURE].domain =
+			SDE_IOMMU_DOMAIN_ROT_UNSECURE;
+	}
+
+	SDEROT_INFO("sde_smmu_callback registered domain: %d\n",
+		    smmu->is_secure);
+}
+
 int sde_smmu_ctrl(int enable)
+{
+	struct sde_rot_data_type *mdata = sde_rot_get_mdata();
+
+	return ((mdata->iommu_ctrl) ?
+		mdata->iommu_ctrl(enable) : -EINVAL);
+}
+
+static int _sde_smmu_ctrl(int enable)
 {
 	struct sde_rot_data_type *mdata = sde_rot_get_mdata();
 	int rc = 0;
@@ -459,13 +493,24 @@ int sde_smmu_secure_ctrl(int enable)
 void sde_smmu_device_create(struct device *dev)
 {
 	struct device_node *parent, *child;
+	struct sde_rot_data_type *mdata = sde_rot_get_mdata();
+	bool child_rot_sec = false;
+	bool child_rot_nsec = false;
 
 	parent = dev->of_node;
 	for_each_child_of_node(parent, child) {
-		if (of_device_is_compatible(child, SMMU_SDE_ROT_SEC))
+		if (of_device_is_compatible(child, SMMU_SDE_ROT_SEC)) {
 			of_platform_device_create(child, NULL, dev);
-		else if (of_device_is_compatible(child, SMMU_SDE_ROT_UNSEC))
+			child_rot_sec = true;
+		} else if (of_device_is_compatible(child, SMMU_SDE_ROT_UNSEC)) {
 			of_platform_device_create(child, NULL, dev);
+			child_rot_nsec = true;
+		}
+	}
+
+	if (!child_rot_sec || !child_rot_nsec) {
+		mdss_smmu_request_mappings(sde_smmu_callback);
+		mdata->callback_request = true;
 	}
 }
 
@@ -656,6 +701,8 @@ int sde_smmu_probe(struct platform_device *pdev)
 	sde_smmu_enable_power(sde_smmu, false);
 
 	sde_smmu->dev = dev;
+	mdata->iommu_ctrl = _sde_smmu_ctrl;
+
 	SDEROT_INFO(
 		"iommu v2 domain[%d] mapping and clk register successful!\n",
 			smmu_domain.domain);
