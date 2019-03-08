@@ -1345,15 +1345,15 @@ static void add_acct_request(struct request_queue *q, struct request *rq,
 	__elv_add_request(q, rq, where);
 }
 
-static void part_round_stats_single(int cpu, struct hd_struct *part,
-				    unsigned long now)
+static void part_round_stats_single(struct request_queue *q, int cpu,
+				    struct hd_struct *part, unsigned long now)
 {
 	int inflight;
 
 	if (now == part->stamp)
 		return;
 
-	inflight = part_in_flight(part);
+	inflight = part_in_flight(q, part);
 	if (inflight) {
 		__part_stat_add(cpu, part, time_in_queue,
 				inflight * (now - part->stamp));
@@ -1364,6 +1364,7 @@ static void part_round_stats_single(int cpu, struct hd_struct *part,
 
 /**
  * part_round_stats() - Round off the performance stats on a struct disk_stats.
+ * @q: target block queue
  * @cpu: cpu number for stats access
  * @part: target partition
  *
@@ -1378,13 +1379,14 @@ static void part_round_stats_single(int cpu, struct hd_struct *part,
  * /proc/diskstats.  This accounts immediately for all queue usage up to
  * the current jiffies and restarts the counters again.
  */
-void part_round_stats(int cpu, struct hd_struct *part)
+void part_round_stats(struct request_queue *q, int cpu, struct hd_struct *part)
 {
 	unsigned long now = jiffies;
 
 	if (part->partno)
-		part_round_stats_single(cpu, &part_to_disk(part)->part0, now);
-	part_round_stats_single(cpu, part, now);
+		part_round_stats_single(q, cpu, &part_to_disk(part)->part0,
+						now);
+	part_round_stats_single(q, cpu, part, now);
 }
 EXPORT_SYMBOL_GPL(part_round_stats);
 
@@ -1754,7 +1756,9 @@ get_rq:
 		if (!request_count)
 			trace_block_plug(q);
 		else {
-			if (request_count >= BLK_MAX_REQUEST_COUNT) {
+			struct request *last = list_entry_rq(plug->list.prev);
+			if (request_count >= BLK_MAX_REQUEST_COUNT ||
+			    blk_rq_bytes(last) >= BLK_PLUG_FLUSH_SIZE) {
 				blk_flush_plug_list(plug, false);
 				trace_block_plug(q);
 			}
@@ -1931,6 +1935,10 @@ generic_make_request_checks(struct bio *bio)
 		break;
 	case REQ_OP_WRITE_SAME:
 		if (!bdev_write_same(bio->bi_bdev))
+			goto not_supported;
+		break;
+	case REQ_OP_WRITE_ZEROES:
+		if (!bdev_write_zeroes_sectors(bio->bi_bdev))
 			goto not_supported;
 		break;
 	default:
@@ -2278,8 +2286,8 @@ void blk_account_io_done(struct request *req)
 
 		part_stat_inc(cpu, part, ios[rw]);
 		part_stat_add(cpu, part, ticks[rw], duration);
-		part_round_stats(cpu, part);
-		part_dec_in_flight(part, rw);
+		part_round_stats(req->q, cpu, part);
+		part_dec_in_flight(req->q, part, rw);
 
 		hd_struct_put(part);
 		part_stat_unlock();
@@ -2336,8 +2344,8 @@ void blk_account_io_start(struct request *rq, bool new_io)
 			part = &rq->rq_disk->part0;
 			hd_struct_get(part);
 		}
-		part_round_stats(cpu, part);
-		part_inc_in_flight(part, rw);
+		part_round_stats(rq->q, cpu, part);
+		part_inc_in_flight(rq->q, part, rw);
 		rq->part = part;
 	}
 
@@ -2737,9 +2745,9 @@ void blk_finish_request(struct request *req, int error)
 
 	blk_account_io_done(req);
 
-	if (req->end_io)
+	if (req->end_io) {
 		req->end_io(req, error);
-	else {
+	} else {
 		if (blk_bidi_rq(req))
 			__blk_put_request(req->next_rq->q, req->next_rq);
 

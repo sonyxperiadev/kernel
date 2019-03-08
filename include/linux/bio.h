@@ -73,7 +73,8 @@ static inline bool bio_has_data(struct bio *bio)
 	if (bio &&
 	    bio->bi_iter.bi_size &&
 	    bio_op(bio) != REQ_OP_DISCARD &&
-	    bio_op(bio) != REQ_OP_SECURE_ERASE)
+	    bio_op(bio) != REQ_OP_SECURE_ERASE &&
+	    bio_op(bio) != REQ_OP_WRITE_ZEROES)
 		return true;
 
 	return false;
@@ -83,7 +84,8 @@ static inline bool bio_no_advance_iter(struct bio *bio)
 {
 	return bio_op(bio) == REQ_OP_DISCARD ||
 	       bio_op(bio) == REQ_OP_SECURE_ERASE ||
-	       bio_op(bio) == REQ_OP_WRITE_SAME;
+	       bio_op(bio) == REQ_OP_WRITE_SAME ||
+	       bio_op(bio) == REQ_OP_WRITE_ZEROES;
 }
 
 static inline bool bio_is_rw(struct bio *bio)
@@ -201,18 +203,19 @@ static inline unsigned bio_segments(struct bio *bio)
 	struct bvec_iter iter;
 
 	/*
-	 * We special case discard/write same, because they interpret bi_size
-	 * differently:
+	 * We special case discard/write same/write zeroes, because they
+	 * interpret bi_size differently:
 	 */
 
-	if (bio_op(bio) == REQ_OP_DISCARD)
+	switch (bio_op(bio)) {
+	case REQ_OP_DISCARD:
+	case REQ_OP_SECURE_ERASE:
+	case REQ_OP_WRITE_SAME:
+	case REQ_OP_WRITE_ZEROES:
 		return 1;
-
-	if (bio_op(bio) == REQ_OP_SECURE_ERASE)
-		return 1;
-
-	if (bio_op(bio) == REQ_OP_WRITE_SAME)
-		return 1;
+	default:
+		break;
+	}
 
 	bio_for_each_segment(bv, bio, iter)
 		segs++;
@@ -449,10 +452,11 @@ extern struct bio *bio_copy_kern(struct request_queue *, void *, unsigned int,
 extern void bio_set_pages_dirty(struct bio *bio);
 extern void bio_check_pages_dirty(struct bio *bio);
 
-void generic_start_io_acct(int rw, unsigned long sectors,
-			   struct hd_struct *part);
-void generic_end_io_acct(int rw, struct hd_struct *part,
-			 unsigned long start_time);
+void generic_start_io_acct(struct request_queue *q, int rw,
+				unsigned long sectors, struct hd_struct *part);
+void generic_end_io_acct(struct request_queue *q, int rw,
+				struct hd_struct *part,
+				unsigned long start_time);
 
 #ifndef ARCH_IMPLEMENTS_FLUSH_DCACHE_PAGE
 # error	"You should define ARCH_IMPLEMENTS_FLUSH_DCACHE_PAGE for your platform"

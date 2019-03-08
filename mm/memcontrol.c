@@ -564,23 +564,6 @@ mem_cgroup_largest_soft_limit_node(struct mem_cgroup_tree_per_node *mctz)
  * common workload, threshold and synchronization as vmstat[] should be
  * implemented.
  */
-static unsigned long
-mem_cgroup_read_stat(struct mem_cgroup *memcg, enum mem_cgroup_stat_index idx)
-{
-	long val = 0;
-	int cpu;
-
-	/* Per-cpu values can be negative, use a signed accumulator */
-	for_each_possible_cpu(cpu)
-		val += per_cpu(memcg->stat->count[idx], cpu);
-	/*
-	 * Summing races with updates, so val may be negative.  Avoid exposing
-	 * transient negative values.
-	 */
-	if (val < 0)
-		val = 0;
-	return val;
-}
 
 static unsigned long mem_cgroup_read_events(struct mem_cgroup *memcg,
 					    enum mem_cgroup_events_index idx)
@@ -962,7 +945,7 @@ int mem_cgroup_scan_tasks(struct mem_cgroup *memcg,
 /**
  * mem_cgroup_page_lruvec - return lruvec for isolating/putting an LRU page
  * @page: the page
- * @zone: zone of the page
+ * @pgdat: pgdat of the page
  *
  * This function is only safe when following the LRU page isolation
  * and putback protocol: the LRU lock must be held, and the page must
@@ -5278,6 +5261,13 @@ static int memory_stat_show(struct seq_file *m, void *v)
 	seq_printf(m, "pgmajfault %lu\n",
 		   events[MEM_CGROUP_EVENTS_PGMAJFAULT]);
 
+	seq_printf(m, "workingset_refault %lu\n",
+		   stat[MEMCG_WORKINGSET_REFAULT]);
+	seq_printf(m, "workingset_activate %lu\n",
+		   stat[MEMCG_WORKINGSET_ACTIVATE]);
+	seq_printf(m, "workingset_nodereclaim %lu\n",
+		   stat[MEMCG_WORKINGSET_NODERECLAIM]);
+
 	return 0;
 }
 
@@ -5783,8 +5773,8 @@ bool mem_cgroup_charge_skmem(struct mem_cgroup *memcg, unsigned int nr_pages)
 
 /**
  * mem_cgroup_uncharge_skmem - uncharge socket memory
- * @memcg - memcg to uncharge
- * @nr_pages - number of pages to uncharge
+ * @memcg: memcg to uncharge
+ * @nr_pages: number of pages to uncharge
  */
 void mem_cgroup_uncharge_skmem(struct mem_cgroup *memcg, unsigned int nr_pages)
 {

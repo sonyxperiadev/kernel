@@ -267,7 +267,6 @@ bool workingset_refault(void *shadow)
 	lruvec = mem_cgroup_lruvec(pgdat, memcg);
 	refault = atomic_long_read(&lruvec->inactive_age);
 	active_file = lruvec_lru_size(lruvec, LRU_ACTIVE_FILE, MAX_NR_ZONES);
-	rcu_read_unlock();
 
 	/*
 	 * The unsigned subtraction here gives an accurate distance
@@ -288,11 +287,15 @@ bool workingset_refault(void *shadow)
 	refault_distance = (refault - eviction) & EVICTION_MASK;
 
 	inc_node_state(pgdat, WORKINGSET_REFAULT);
+	mem_cgroup_inc_stat(memcg, MEMCG_WORKINGSET_REFAULT);
 
 	if (refault_distance <= active_file) {
 		inc_node_state(pgdat, WORKINGSET_ACTIVATE);
+		mem_cgroup_inc_stat(memcg, MEMCG_WORKINGSET_ACTIVATE);
+		rcu_read_unlock();
 		return true;
 	}
+	rcu_read_unlock();
 	return false;
 }
 
@@ -432,6 +435,8 @@ static enum lru_status shadow_lru_isolate(struct list_head *item,
 	}
 	BUG_ON(workingset_node_shadows(node));
 	inc_node_state(page_pgdat(virt_to_page(node)), WORKINGSET_NODERECLAIM);
+	mem_cgroup_inc_page_stat(virt_to_page(node),
+				 MEMCG_WORKINGSET_NODERECLAIM);
 	if (!__radix_tree_delete_node(&mapping->page_tree, node))
 		BUG();
 

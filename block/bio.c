@@ -689,6 +689,7 @@ struct bio *bio_clone_bioset(struct bio *bio_src, gfp_t gfp_mask,
 	switch (bio_op(bio)) {
 	case REQ_OP_DISCARD:
 	case REQ_OP_SECURE_ERASE:
+	case REQ_OP_WRITE_ZEROES:
 		break;
 	case REQ_OP_WRITE_SAME:
 		bio->bi_io_vec[bio->bi_vcnt++] = bio_src->bi_io_vec[0];
@@ -1704,29 +1705,29 @@ void bio_check_pages_dirty(struct bio *bio)
 	}
 }
 
-void generic_start_io_acct(int rw, unsigned long sectors,
-			   struct hd_struct *part)
+void generic_start_io_acct(struct request_queue *q, int rw,
+			   unsigned long sectors, struct hd_struct *part)
 {
 	int cpu = part_stat_lock();
 
-	part_round_stats(cpu, part);
+	part_round_stats(q, cpu, part);
 	part_stat_inc(cpu, part, ios[rw]);
 	part_stat_add(cpu, part, sectors[rw], sectors);
-	part_inc_in_flight(part, rw);
+	part_inc_in_flight(q, part, rw);
 
 	part_stat_unlock();
 }
 EXPORT_SYMBOL(generic_start_io_acct);
 
-void generic_end_io_acct(int rw, struct hd_struct *part,
-			 unsigned long start_time)
+void generic_end_io_acct(struct request_queue *q, int rw,
+			 struct hd_struct *part, unsigned long start_time)
 {
 	unsigned long duration = jiffies - start_time;
 	int cpu = part_stat_lock();
 
 	part_stat_add(cpu, part, ticks[rw], duration);
-	part_round_stats(cpu, part);
-	part_dec_in_flight(part, rw);
+	part_round_stats(q, cpu, part);
+	part_dec_in_flight(q, part, rw);
 
 	part_stat_unlock();
 }
