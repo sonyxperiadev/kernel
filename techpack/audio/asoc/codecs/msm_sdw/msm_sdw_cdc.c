@@ -2014,7 +2014,7 @@ static int msm_sdw_probe(struct platform_device *pdev)
 		goto err_sdw_cdc;
 	}
 
-#ifdef CONFIG_ARCH_SONY_NILE
+#if defined(CONFIG_ARCH_SONY_NILE) || defined(CONFIG_ARCH_SONY_GANGES)
 	regcache_cache_bypass(msm_sdw->regmap, true);
 #endif
 

@@ -1,0 +1,58 @@
+/* Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+&pm660_charger {
+	qcom,usb-icl-ua = <1500000>;
+	qcom,otg-cl-ua = <1000000>;
+	io-channels = <&pm660_rradc 2>,
+                      <&pm660_rradc 3>,
+                      <&pm660_rradc 4>,
+                      <&pm660_rradc 8>,
+                      <&pm660_rradc 10>;
+	io-channel-names = "skin_temp",
+                           "usbin_i",
+                           "usbin_v",
+                           "charger_temp",
+                           "charger_temp_max";
+};
+
+&pm660_rradc {
+	somc,reg-cfg =
+	/* addr mask value */
+		<0x83 0x07 0x04>, /* FG_ADC_RR_AUX_THERM_CFG */
+		<0x88 0xFF 0xAF>, /* FG_ADC_RR_AUX_THERM_C1 */
+		<0x89 0xFF 0x34>, /* FG_ADC_RR_AUX_THERM_C2 */
+		<0x8A 0xFF 0xDf>, /* FG_ADC_RR_AUX_THERM_C3 */
+		<0x8B 0xFF 0xA0>; /* FG_ADC_RR_AUX_THERM_HALF_RANGE */
+};
+
+&pm660_fg {
+	qcom,fg-delta-soc-thr = <1>;
+	qcom,fg-recharge-soc-thr = <95>;
+	qcom,fg-empty-voltage = <3100>;
+	qcom,fg-rsense-sel = <0>;
+	qcom,fg-jeita-thresholds = <5 10 45 55>;
+	qcom,fg-esr-pulse-thresh-ma = <110>;
+	qcom,slope-limit-temp-threshold = <100>;
+	qcom,slope-limit-coeffs = <1 1 1 1>;
+	qcom,fg-esr-tight-lt-filter-micro-pct = <30000>;
+	qcom,fg-esr-broad-lt-filter-micro-pct = <30000>;
+	qcom,cycle-counter-en;
+	qcom,cl-start-capacity = <15>;
+	qcom,cl-min-temp = <150>;
+	qcom,cl-max-temp = <450>;
+	qcom,fg-jeita-hyst-temp = <2>;
+	qcom,hold-soc-while-full;
+	qcom,cl-max-increment = <0>;
+	qcom,cl-max-decrement = <20>;
+	qcom,battery-thermal-coefficients = [c7 50 ff];
+};

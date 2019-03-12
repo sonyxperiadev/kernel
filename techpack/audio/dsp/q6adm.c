@@ -2465,7 +2465,7 @@ int adm_open(int port_id, int path, int rate, int channel_mode, int topology,
 	    (topology == VPM_TX_DM_RFECNS_COPP_TOPOLOGY))
 		rate = 16000;
 
-#ifdef CONFIG_ARCH_SONY_NILE
+#if defined(CONFIG_ARCH_SONY_NILE) || defined (CONFIG_ARCH_SONY_GANGES)
 	if (path == ADM_PATH_PLAYBACK)
 		bit_width = 24;
 #endif

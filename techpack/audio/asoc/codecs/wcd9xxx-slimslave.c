@@ -17,7 +17,7 @@
 #undef SLIMSLAVE_TARGET_SOMC
 #if defined(CONFIG_ARCH_SONY_LOIRE) || defined(CONFIG_ARCH_SONY_TONE)    || \
     defined(CONFIG_ARCH_SONY_NILE)  || defined(CONFIG_ARCH_SONY_YOSHINO) || \
-    defined(CONFIG_ARCH_SONY_TAMA)
+    defined(CONFIG_ARCH_SONY_TAMA) || defined(CONFIG_ARCH_SONY_GANGES)
  #define SLIMSLAVE_TARGET_SOMC
 #endif
 

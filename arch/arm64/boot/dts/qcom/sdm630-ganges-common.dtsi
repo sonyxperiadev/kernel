@@ -1,0 +1,334 @@
+/* arch/arm64/boot/dts/somc/sdm630-ganges-common.dtsi
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+*/
+
+#include "charger-ganges-common.dtsi"
+#include <dt-bindings/gpio/gpio.h>
+
+/ {
+         firmware: firmware {
+                android {
+                        compatible = "android,firmware";
+                        fstab {
+                                compatible = "android,fstab";
+
+                                vendor {
+                                        compatible = "android,vendor";
+                                        dev = "/dev/block/platform/soc/c0c4000.sdhci/by-name/vendor";
+                                        type = "ext4";
+                                        mnt_flags = "ro,barrier=1";
+                                        fsmgr_flags = "wait,verify,slotselect";
+                                        status = "ok";
+                                };
+
+                                odm {
+                                        compatible = "android,odm";
+                                        dev = "/dev/block/platform/soc/c0c4000.sdhci/by-name/oem";
+                                        type = "ext4";
+                                        mnt_flags = "ro,barrier=1";
+                                        fsmgr_flags = "wait,slotselect";
+                                        status = "ok";
+                                };
+                        };
+                };
+        };
+};
+
+&soc {
+	somc_pinctrl: somc_pinctrl {
+		compatible = "somc-pinctrl";
+		pinctrl-names = "platform_common_default",
+				"product_common_default",
+				"variant_default";
+		pinctrl-0 = <&sdm_gpio_90>;
+
+		/* If product common default setting is needed,
+		fill pinctrl-1 value in <product>_common.dtsi */
+		pinctrl-1 = <>;
+
+		/* If variant specific default setting is needed,
+		fill pinctrl-2 value in <variant>.dtsi */
+		pinctrl-2 = <>;
+	};
+
+	mdss_dsi: qcom,mdss_dsi@0 {
+		mdss_dsi0: qcom,mdss_dsi_ctrl0@c994000 {
+			vddio-supply = <&pm660_l11>;
+		};
+	};
+
+	dsi_panel_pwr_supply_full_incell: dsi_panel_pwr_supply_full_incell {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		qcom,panel-supply-entry@0 {
+			reg = <0>;
+			qcom,supply-name = "vddio";
+			qcom,supply-min-voltage = <1650000>;
+			qcom,supply-max-voltage = <1950000>;
+			qcom,supply-enable-load = <32000>;
+			qcom,supply-disable-load = <80>;
+			qcom,supply-post-on-sleep = <10>;
+		};
+
+		qcom,panel-supply-entry@1 {
+			reg = <1>;
+			qcom,supply-name = "lab";
+			qcom,supply-min-voltage = <5000000>;
+			qcom,supply-max-voltage = <6000000>;
+			qcom,supply-enable-load = <11000>;
+			qcom,supply-disable-load = <100>;
+			qcom,supply-post-on-sleep = <10>;
+			qcom,supply-post-off-sleep = <10>;
+		};
+
+		qcom,panel-supply-entry@2 {
+			reg = <2>;
+			qcom,supply-name = "ibb";
+			qcom,supply-min-voltage = <5000000>;
+			qcom,supply-max-voltage = <6000000>;
+			qcom,supply-enable-load = <6000>;
+			qcom,supply-disable-load = <100>;
+			qcom,supply-post-on-sleep = <10>;
+			qcom,supply-post-off-sleep = <10>;
+		};
+
+	};
+
+	int_codec: sound {
+		qcom,msm-micbias1-ext-cap;
+		qcom,msm-micbias2-ext-cap = "false";
+		qcom,msm-hs-micbias-type = "internal";
+		qcom,audio-routing =
+			"RX_BIAS", "INT_MCLK0",
+			"SPK_RX_BIAS", "INT_MCLK0",
+			"INT_LDO_H", "INT_MCLK0",
+			"RX_I2S_CLK", "INT_MCLK0",
+			"TX_I2S_CLK", "INT_MCLK0",
+			"MIC BIAS External", "Handset Mic",
+			"MIC BIAS Internal2", "Headset Mic",
+			"MIC BIAS External", "Secondary Mic",
+			"AMIC1", "MIC BIAS External",
+			"AMIC2", "MIC BIAS Internal2",
+			"AMIC3", "MIC BIAS External",
+			"DMIC1", "MIC BIAS External",
+			"MIC BIAS External", "Digital Mic1",
+			"DMIC2", "MIC BIAS External",
+			"MIC BIAS External", "Digital Mic2",
+			"DMIC3", "MIC BIAS External",
+			"MIC BIAS External", "Digital Mic3",
+			"DMIC4", "MIC BIAS External",
+			"MIC BIAS External", "Digital Mic4",
+			"SpkrLeft IN", "SPK1 OUT",
+			"SpkrRight IN", "SPK2 OUT",
+			"PDM_IN_RX1", "PDM_OUT_RX1",
+			"PDM_IN_RX2", "PDM_OUT_RX2",
+			"PDM_IN_RX3", "PDM_OUT_RX3",
+			"ADC1_IN", "ADC1_OUT",
+			"ADC2_IN", "ADC2_OUT",
+			"ADC3_IN", "ADC3_OUT";
+
+		qcom,wsa-max-devs = <1>;
+		qcom,wsa-aux-dev-prefix = "SpkrLeft", "SpkrLeft",
+					  "SpkrLeft", "SpkrLeft";
+	};
+
+	qcom,wdt@17980000 {
+		qcom,bark-time = <12000>;
+	};
+
+	gpio_keys {
+		/delete-node/vol_up;
+		vol_down {
+			label = "volume_down";
+			gpios = <&pm660l_gpios 7 0x1>;
+			linux,input-type = <1>;
+			linux,code = <114>;
+			gpio-key,wakeup;
+			debounce-interval = <15>;
+		};
+	};
+
+	sim_detect {
+		compatible = "sim-detect";
+
+		sim1_det {
+			label = "sim-detection";
+			gpios = <&tlmm 90 GPIO_ACTIVE_LOW>;
+			debounce-interval = <10>;
+		};
+                sim2_det {
+                        label = "sim2-detection";
+                        gpios = <&tlmm 86 GPIO_ACTIVE_LOW>;
+                        debounce-interval = <10>;
+                };
+	};
+
+	qusb_phy0: qusb@c012000 {
+		qcom,tune2-efuse-correction = <4>;
+		qcom,qusb-phy-init-seq = <0xf8 0x80
+			0xd3 0x84
+			0x83 0x88
+			0xc7 0x8c
+			0x03 0x90
+			0x30 0x08
+			0x79 0x0c
+			0x21 0x10
+			0x14 0x9c
+			0x9f 0x1c
+			0x00 0x18>;
+	};
+};
+
+&pm660l_wled {
+	qcom,fs-curr-ua = <20000>;
+	qcom,led-strings-list = [00 01];
+	somc,init-br-ua = <10000>;
+	somc-s1,br-power-save-ua = <800>;
+	somc,bl-scale-enabled;
+	somc,area_count_table_size = <21>;
+	somc,area_count_table = <0 137 273 410 546 683 819 956
+				1092 1229 1365 1638 1911 2184 2457
+				2730 3003 3276 3549 3822 4095>;
+};
+
+&mdss_mdp {
+	qcom,mdss-pref-prim-intf = "dsi";
+};
+
+&mdss_dsi {
+	hw-config = "single_dsi";
+};
+
+
+
+&pmx_mdss{
+	mdss_dsi_active: mdss_dsi_active {
+		mux {
+			pins = "gpio53";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio53";
+			drive-strength = <8>; /* 8 mA */
+			bias-disable = <0>; /* no pull */
+			};
+		};
+	mdss_dsi_suspend: mdss_dsi_suspend {
+		mux {
+			pins = "gpio53";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio53";
+			drive-strength = <2>; /* 2 mA */
+			bias-pull-down; /* pull down */
+		};
+	};
+};
+
+
+&spmi_bus {
+	qcom,pm660@0 {
+		qcom,power-on@800 {
+			qcom,pon_2 {
+			linux,code = <115>;
+			};
+		};
+	};
+
+	pm660l_3: qcom,pm660l@3 {
+		qcom,leds@d000 {
+			qcom,rgb_sync = <1>;
+		};
+	};
+};
+
+&red_led {
+	somc,pwm-channel = <2>;
+	linux,name = "red";
+	linux,default-trigger = "none";
+	somc,color_variation_max_num = <4>;
+	somc,max_current = <
+		45 511 511
+		46 511 511
+		47 511 511
+		48 511 511>;
+};
+
+&green_led {
+	somc,pwm-channel = <1>;
+	linux,name = "green";
+	linux,default-trigger = "none";
+	somc,color_variation_max_num = <4>;
+	somc,max_current = <
+		45 511 511
+		46 511 511
+		47 511 511
+		48 511 511>;
+};
+
+&blue_led {
+	somc,pwm-channel = <0>;
+	linux,name = "blue";
+	linux,default-trigger = "none";
+	somc,color_variation_max_num = <4>;
+	somc,max_current = <
+		45 511 511
+		46 511 511
+		47 511 511
+		48 511 511>;
+};
+
+&mdss_dsi0 {
+	qcom,dsi-pref-prim-pan = <&dsi_default_panel>;
+	pinctrl-names = "mdss_default", "mdss_sleep";
+	pinctrl-0 = <&mdss_dsi_active &mdss_te_active>;
+	pinctrl-1 = <&mdss_dsi_suspend &mdss_te_suspend>;
+	qcom,platform-te-gpio = <&tlmm 59 0>;
+	qcom,platform-reset-gpio = <&tlmm 53 0>;
+};
+
+&mdss_dp_ctrl {
+	status = "disabled";
+};
+
+&tlmm {
+	/* GPIO_90: UIM1_PRESENT */
+	sdm_gpio_90: sdm_gpio_90 {
+		mux {
+			pins = "gpio90";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio90";
+			drive-strength = <2>;
+			bias-disable;
+			input-enable;
+		};
+	};
+};
+
+&i2c_6 {
+    /delete-node/nq@28;
+        nfc@28 {
+                compatible = "nxp,pn547";
+                reg = <0x28>;
+                interrupt-parent = <&tlmm>;
+                interrupts = <28 0>;
+                nxp,irq_gpio = <&tlmm 28 0x00>;
+                nxp,dwld_en = <&tlmm 30 0x00>;
+                nxp,ven = <&tlmm 29 0x00>;
+        };
+};

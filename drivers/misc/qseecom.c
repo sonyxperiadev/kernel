@@ -2554,7 +2554,7 @@ static int qseecom_unload_app(struct qseecom_dev_handle *data,
 		goto unload_exit;
 	}
 
-#ifdef CONFIG_ARCH_SONY_NILE
+#if defined(CONFIG_ARCH_SONY_NILE) || defined(CONFIG_ARCH_SONY_GANGES)
 	if (!memcmp(data->client.app_name, "tzxflattest", strlen("tzxflattest"))) {
 		pr_debug("Do not unload tzxflattest app from tz\n");
 		goto unload_exit;

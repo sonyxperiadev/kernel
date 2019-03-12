@@ -1,0 +1,181 @@
+/* arch/arm64/boot/dts/somc/sdm630-ganges-kirin.dtsi
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+*/
+
+#include "sdm630-ganges-common.dtsi"
+#include "dsi-panel-somc-kirin.dtsi"
+#include "sdm630-ganges-kirin-touch.dtsi"
+#include "sdm630-ganges-kirin-camera-sensor.dtsi"
+#include "charger-ganges-kirin.dtsi"
+
+&soc {
+	pinctrl@03000000 {
+		disabled-pins = <8 9 10 11>;
+	};
+
+	somc_pinctrl: somc_pinctrl {
+		/* If variant specific default setting is needed,
+		fill pinctrl-2 value in <variant>.dtsi */
+		pinctrl-2 = <>;
+	};
+
+	s5712 {
+		compatible = "s5712-switch";
+		interrupt-parent = <&tlmm>;
+		interrupts = <75 0x3>;
+		//vddio-supply = <&pm660l_l14>;
+		linux,gpio-int = <&tlmm 75 0x1>;
+		linux,wakeup;
+		linux,min-uv = <1700000>;
+		linux,max-uv = <1900000>;
+	};
+
+	int_codec: sound {
+		qcom,msm-micbias1-ext-cap;
+		qcom,msm-micbias2-ext-cap;
+		qcom,msm-hs-micbias-type = "external";
+		qcom,audio-routing =
+			"RX_BIAS", "INT_MCLK0",
+			"SPK_RX_BIAS", "INT_MCLK0",
+			"INT_LDO_H", "INT_MCLK0",
+			"RX_I2S_CLK", "INT_MCLK0",
+			"TX_I2S_CLK", "INT_MCLK0",
+			"MIC BIAS External", "Handset Mic",
+			"MIC BIAS External2", "Headset Mic",
+			"MIC BIAS External", "Secondary Mic",
+			"AMIC1", "MIC BIAS External",
+			"AMIC2", "MIC BIAS External2",
+			"AMIC3", "MIC BIAS External",
+			"DMIC1", "MIC BIAS External",
+			"MIC BIAS External", "Digital Mic1",
+			"DMIC2", "MIC BIAS External",
+			"MIC BIAS External", "Digital Mic2",
+			"DMIC3", "MIC BIAS External",
+			"MIC BIAS External", "Digital Mic3",
+			"DMIC4", "MIC BIAS External",
+			"MIC BIAS External", "Digital Mic4",
+			"SpkrLeft IN", "SPK1 OUT",
+			"SpkrRight IN", "SPK2 OUT",
+			"PDM_IN_RX1", "PDM_OUT_RX1",
+			"PDM_IN_RX2", "PDM_OUT_RX2",
+			"PDM_IN_RX3", "PDM_OUT_RX3",
+			"ADC1_IN", "ADC1_OUT",
+			"ADC2_IN", "ADC2_OUT",
+			"ADC3_IN", "ADC3_OUT";
+
+		qcom,wsa-max-devs = <1>;
+		qcom,wsa-aux-dev-prefix = "SpkrLeft", "SpkrLeft",
+					  "SpkrLeft", "SpkrLeft";
+	};
+
+	qcom,sensor-information {
+		sensor_information13: qcom,sensor-information-13 { /* msm_therm */
+			qcom,scaling-factor = <1000>;
+		};
+		sensor_information14: qcom,sensor-information-14 { /* xo_therm */
+			qcom,scaling-factor = <1000>;
+		};
+		sensor_information15: qcom,sensor-information-15 { /* pa_therm0 */
+			qcom,scaling-factor = <1000>;
+		};
+		sensor_information16: qcom,sensor-information-16 { /* pa_therm1 */
+			qcom,scaling-factor = <1000>;
+		};
+		sensor_information17: qcom,sensor-information-17 { /* quiet_therm */
+			qcom,alias-name = "bl_therm";
+			qcom,scaling-factor = <1000>;
+		};
+		sensor_information100: qcom,sensor-information-100 { /* emmc_therm */
+			qcom,sensor-type = "adc";
+			qcom,sensor-name = "emmc_therm";
+			qcom,scaling-factor = <1000>;
+		};
+		sensor_information102: qcom,sensor-information-101 { /* bms */
+			qcom,sensor-type = "adc";
+			qcom,sensor-name = "bms";
+			qcom,alias-name = "batt_therm";
+			qcom,scaling-factor = <1000>;
+		};
+	};
+
+	qusb_phy0: qusb@c012000 {
+		qcom,tune2-efuse-num-bits = <0>;
+		qcom,tune2-efuse-correction = <0>;
+		qcom,qusb-phy-init-seq = <0xa7 0x80
+			0x22 0x84
+			0x83 0x88
+			0xc7 0x8c
+			0x30 0x08
+			0x79 0x0c
+			0x21 0x10
+			0x14 0x9c
+			0x9f 0x1c
+			0x00 0x18>;
+	};
+};
+
+&usb3 {
+	dwc3@a800000 {
+		maximum-speed = "high-speed";
+	};
+};
+
+&usb3 {
+	dwc3@a800000 {
+		maximum-speed = "high-speed";
+	};
+};
+
+&tlmm {
+};
+
+&spmi_bus {
+	qcom,pm660@1 {
+		pm660_haptics: qcom,haptic@c000 {
+			qcom,actuator-type = "erm";
+			qcom,vmax-mv = <3000>;
+		};
+	};
+};
+
+&pm660_vadc {
+	chan@50 {
+		label = "pa_therm1";
+		reg = <0x50>;
+		qcom,decimation = <2>;
+		qcom,pre-div-channel-scaling = <0>;
+		qcom,calibration-type = "ratiometric";
+		qcom,scale-function = <17>;
+		qcom,hw-settle-time = <2>;
+		qcom,fast-avg-setup = <0>;
+		qcom,vadc-thermal-node;
+	};
+
+	chan@51 { /* quiet_therm */
+		qcom,scale-function = <17>;
+	};
+
+	chan@4e { /* emmc_therm */
+		qcom,scale-function = <17>;
+	};
+
+	chan@4f { /* pa_therm0 */
+		qcom,scale-function = <17>;
+	};
+
+	chan@4d { /* msm_therm */
+		qcom,scale-function = <17>;
+	};
+
+	chan@4c { /* xo_therm */
+		qcom,scale-function = <18>;
+	};
+};

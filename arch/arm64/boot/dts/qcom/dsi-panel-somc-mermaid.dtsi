@@ -1,0 +1,136 @@
+/* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+&mdss_mdp {
+	dsi_default_panel: qcom,mdss_dsi_nt36672a_tianma_fhdplus_video {
+		qcom,mdss-dsi-panel-name = "3";
+		qcom,mdss-dsi-panel-type = "dsi_video_mode";
+		qcom,mdss-dsi-panel-width = <1080>;
+		qcom,mdss-dsi-panel-height = <2520>;
+		qcom,mdss-dsi-bpp = <24>;
+		qcom,mdss-dsi-h-back-porch = <40>;
+		qcom,mdss-dsi-h-pulse-width = <20>;
+		qcom,mdss-dsi-h-front-porch = <102>;
+		qcom,mdss-dsi-v-back-porch = <8>;
+		qcom,mdss-dsi-v-pulse-width = <2>;
+		qcom,mdss-dsi-v-front-porch = <10>;
+		qcom,mdss-pan-physical-width-dimension = <65>;
+		qcom,mdss-pan-physical-height-dimension = <151>;
+		qcom,mdss-dsi-panel-framerate = <60>;
+		qcom,mdss-dsi-virtual-channel-id = <0>;
+		qcom,mdss-dsi-stream = <0>;
+		qcom,mdss-dsi-h-sync-skew = <0>;
+		qcom,mdss-dsi-h-left-border = <0>;
+		qcom,mdss-dsi-h-right-border = <0>;
+		qcom,mdss-dsi-v-top-border = <0>;
+		qcom,mdss-dsi-v-bottom-border = <0>;
+		qcom,mdss-dsi-underflow-color = <0xff>;
+		qcom,mdss-dsi-border-color = <0>;
+		qcom,mdss-dsi-h-sync-pulse = <0>;
+		qcom,mdss-dsi-traffic-mode = "burst_mode";
+		qcom,mdss-dsi-bllp-eof-power-mode;
+		qcom,mdss-dsi-bllp-power-mode;
+		qcom,mdss-dsi-dma-trigger = "trigger_sw";
+		qcom,mdss-dsi-mdp-trigger = "none";
+		qcom,mdss-dsi-tx-eot-append;
+		qcom,mdss-dsi-on-command = [15 01 00 00 00 00 02 FF 25
+			15 01 00 00 00 00 02 FB 01
+			15 01 00 00 00 00 02 05 04
+			15 01 00 00 00 00 02 FF 10
+			15 01 00 00 00 00 02 FB 01
+			15 01 00 00 00 00 02 FF 10
+			15 01 00 00 00 00 02 36 03
+			15 01 00 00 00 00 02 51 FF
+			15 01 00 00 00 00 02 53 24
+			15 01 00 00 00 00 02 55 00
+			05 01 00 00 79 00 02 11 00
+			05 01 00 00 00 00 02 29 00];
+		qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
+		qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
+/*
+		qcom,mdss-dsi-wr-mem-start = <0x2c>;
+		qcom,mdss-dsi-wr-mem-continue = <0x3c>;
+*/
+		qcom,mdss-dsi-lane-0-state;
+		qcom,mdss-dsi-lane-1-state;
+		qcom,mdss-dsi-lane-2-state;
+		qcom,mdss-dsi-lane-3-state;
+		qcom,mdss-dsi-panel-timings-phy-v2 = [27 21 0A 0B 07 03 04 a0
+		27 21 0A 0B 07 03 04 a0
+		27 21 0A 0B 07 03 04 a0
+		27 21 0A 0B 07 03 04 a0
+		27 21 0A 0B 07 03 04 a0];
+		qcom,mdss-dsi-t-clk-post = <0x0D>;
+		qcom,mdss-dsi-t-clk-pre = <0x2F>;
+
+		qcom,esd-check-enabled;
+		qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+		qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0a];
+		qcom,mdss-dsi-panel-status-command-state = "dsi_hs_mode";
+		qcom,mdss-dsi-panel-status-value = <0x9c>;
+		qcom,mdss-dsi-panel-on-check-value = <0x9c>;
+		qcom,mdss-dsi-panel-status-read-length = <1>;
+		qcom,mdss-dsi-panel-max-error-count = <3>;
+		qcom,panel-supply-entries = <&dsi_panel_pwr_supply_full_incell>;
+		qcom,mdss-dsi-lp11-init;
+		qcom,mdss-dsi-bl-min-level = <1>;
+		qcom,mdss-dsi-bl-max-level = <4095>;
+		qcom,mdss-brightness-max-level = <4095>;
+		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
+/*  CEI additional  */
+		qcom,mdss-dsi-off-command = [05 01 00 00 32 00 02 28 00
+				 05 01 00 00 64 00 02 10 00];
+		qcom,mdss-dsi-reset-sequence = <1 10>;
+		qcom,mdss-dsi-post-init-delay = <1>;
+/* SOMC additional*/
+		qcom,mdss-dsi-panel-hdr-enabled;
+		qcom,mdss-dsi-panel-hdr-color-primaries = <14940 15790 33800 15700 10950 33800 7450 2300>;
+		qcom,mdss-dsi-panel-peak-brightness = <7000000>;
+		qcom,mdss-dsi-panel-blackness-level = <4646>;
+		somc,lcd-id-adc = <801000 917000>;
+		somc,mdss-dsi-master;
+		somc,pw-on-rst-seq = <1 10>, <0 10>, <1 10>;
+		somc,pw-off-rst-b-seq = <0 1>;
+		somc,pw-wait-after-on-vdd = <0>;
+		somc,pw-wait-after-on-vddio = <1>;
+		somc,pw-wait-after-on-vsp = <0>;
+		somc,pw-wait-after-on-vsn = <0>;
+		somc,pw-wait-after-off-vdd = <0>;
+		somc,pw-wait-after-off-vddio = <1>;
+		somc,pw-wait-after-off-vsp = <0>;
+		somc,pw-wait-after-off-vsn = <0>;
+		somc,pw-wait-after-on-touch-vddio = <0>;
+		somc,pw-wait-after-on-touch-reset = <0>;
+		somc,pw-wait-after-on-touch-int-n = <0>;
+		somc,pw-wait-after-off-touch-vddio = <0>;
+		somc,pw-wait-after-off-touch-reset = <0>;
+		somc,pw-wait-after-off-touch-int-n = <0>;
+		somc,pw-down-period = <300>;
+
+		somc,lab-output-voltage = <5500000>;
+		somc,ibb-output-voltage = <5500000>;
+		somc,qpnp-lab-limit-maximum-current = <200>;
+		somc,qpnp-ibb-limit-maximum-current = <800>;
+		somc,qpnp-lab-max-precharge-time = <500>;
+		somc,qpnp-lab-soft-start = <800>;
+		somc,qpnp-ibb-discharge-resistor = <300>;
+		somc,qpnp-lab-pull-down-enable;
+		somc,qpnp-lab-full-pull-down;
+		somc,qpnp-ibb-pull-down-enable;
+		somc,qpnp-ibb-full-pull-down;
+
+		somc,mdss-dsi-disp-on-in-hs = <0>;
+		somc,mdss-dsi-wait-time-before-post-on-cmd = <0>;
+	};
+
+
+};

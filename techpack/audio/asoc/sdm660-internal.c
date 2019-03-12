@@ -1198,7 +1198,7 @@ static void *def_msm_int_wcd_mbhc_cal(void)
 	if (!msm_int_wcd_cal)
 		return NULL;
 
-#ifdef CONFIG_ARCH_SONY_NILE
+#if defined(CONFIG_ARCH_SONY_NILE) || defined (CONFIG_ARCH_SONY_GANGES)
 #define S(X, Y) ((WCD_MBHC_CAL_PLUG_TYPE_PTR(msm_int_wcd_cal)->X) = (Y))
 	S(v_hs_max, 1600);
 #else
@@ -1238,7 +1238,7 @@ static void *def_msm_int_wcd_mbhc_cal(void)
 	btn_low[4] = 500;
 	btn_high[4] = 500;
 
-#ifdef CONFIG_ARCH_SONY_NILE
+#if defined(CONFIG_ARCH_SONY_NILE) || defined (CONFIG_ARCH_SONY_GANGES)
 	btn_low[1] = 110;
 	btn_high[1] = 110;
 #endif

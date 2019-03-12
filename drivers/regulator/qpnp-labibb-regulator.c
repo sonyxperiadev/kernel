@@ -47,7 +47,8 @@
  #undef SOMC_LABIBB_LEGACY_TARGET
 
  #if defined(CONFIG_ARCH_SONY_LOIRE) || defined(CONFIG_ARCH_SONY_TONE) || \
-     defined(CONFIG_ARCH_SONY_NILE)  || defined(CONFIG_ARCH_SONY_YOSHINO)
+     defined(CONFIG_ARCH_SONY_NILE)  || defined(CONFIG_ARCH_SONY_YOSHINO) || \
+    defined(CONFIG_ARCH_SONY_GANGES)
 	#define SOMC_LABIBB_LEGACY_TARGET 1
  #endif
 #endif
