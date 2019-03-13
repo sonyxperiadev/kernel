@@ -1701,10 +1701,18 @@ static ssize_t reclaim_write(struct file *file, const char __user *buf,
 			if (type == RECLAIM_FILE && vma_is_anonymous(vma))
 				continue;
 
-			if (vma_is_anonymous(vma))
+			if (vma_is_anonymous(vma)) {
+				if (get_nr_swap_pages() <= 0 ||
+					get_mm_counter(mm, MM_ANONPAGES) == 0) {
+					if (type == RECLAIM_ALL)
+						continue;
+					else
+						break;
+				}
 				reclaim_walk.pmd_entry = reclaim_pte_range;
-			else
+			} else {
 				reclaim_walk.pmd_entry = deactivate_pte_range;
+			}
 
 			walk_page_range(vma->vm_start, vma->vm_end,
 					&reclaim_walk);
