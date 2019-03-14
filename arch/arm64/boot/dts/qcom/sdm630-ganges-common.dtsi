@@ -14,32 +14,30 @@
 #include <dt-bindings/gpio/gpio.h>
 
 / {
-         firmware: firmware {
-                android {
-                        compatible = "android,firmware";
-                        fstab {
-                                compatible = "android,fstab";
-
-                                vendor {
-                                        compatible = "android,vendor";
-                                        dev = "/dev/block/platform/soc/c0c4000.sdhci/by-name/vendor";
-                                        type = "ext4";
-                                        mnt_flags = "ro,barrier=1";
-                                        fsmgr_flags = "wait,verify,slotselect";
-                                        status = "ok";
-                                };
-
-                                odm {
-                                        compatible = "android,odm";
-                                        dev = "/dev/block/platform/soc/c0c4000.sdhci/by-name/oem";
-                                        type = "ext4";
-                                        mnt_flags = "ro,barrier=1";
-                                        fsmgr_flags = "wait,slotselect";
-                                        status = "ok";
-                                };
-                        };
-                };
-        };
+	firmware: firmware {
+		android {
+			compatible = "android,firmware";
+			fstab {
+				compatible = "android,fstab";
+				vendor {
+					compatible = "android,vendor";
+					dev = "/dev/block/platform/soc/c0c4000.sdhci/by-name/vendor";
+					type = "ext4";
+					mnt_flags = "ro,barrier=1";
+					fsmgr_flags = "wait,verify,slotselect";
+					status = "ok";
+				};
+				odm {
+					compatible = "android,odm";
+					dev = "/dev/block/platform/soc/c0c4000.sdhci/by-name/oem";
+					type = "ext4";
+					mnt_flags = "ro,barrier=1";
+					fsmgr_flags = "wait,slotselect";
+					status = "ok";
+				};
+			};
+		};
+	};
 };
 
 &soc {
@@ -165,11 +163,11 @@
 			gpios = <&tlmm 90 GPIO_ACTIVE_LOW>;
 			debounce-interval = <10>;
 		};
-                sim2_det {
-                        label = "sim2-detection";
-                        gpios = <&tlmm 86 GPIO_ACTIVE_LOW>;
-                        debounce-interval = <10>;
-                };
+		sim2_det {
+			label = "sim2-detection";
+			gpios = <&tlmm 86 GPIO_ACTIVE_LOW>;
+			debounce-interval = <10>;
+		};
 	};
 
 	qusb_phy0: qusb@c012000 {
@@ -320,14 +318,14 @@
 };
 
 &i2c_6 {
-    /delete-node/nq@28;
-        nfc@28 {
-                compatible = "nxp,pn547";
-                reg = <0x28>;
-                interrupt-parent = <&tlmm>;
-                interrupts = <28 0>;
-                nxp,irq_gpio = <&tlmm 28 0x00>;
-                nxp,dwld_en = <&tlmm 30 0x00>;
-                nxp,ven = <&tlmm 29 0x00>;
-        };
+	/delete-node/nq@28;
+	nfc@28 {
+		compatible = "nxp,pn547";
+		reg = <0x28>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <28 0>;
+		nxp,irq_gpio = <&tlmm 28 0x00>;
+		nxp,dwld_en = <&tlmm 30 0x00>;
+		nxp,ven = <&tlmm 29 0x00>;
+	};
 };
