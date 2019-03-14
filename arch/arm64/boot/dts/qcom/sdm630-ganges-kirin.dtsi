@@ -179,3 +179,7 @@
 		qcom,scale-function = <18>;
 	};
 };
+
+&mdss_dsi0 {
+	qcom,dsi-pref-prim-pan = <&dsi_nt36672a_truly_fhdplus_video>;
+};
