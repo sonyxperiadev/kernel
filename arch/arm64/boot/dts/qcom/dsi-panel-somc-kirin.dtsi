@@ -13,48 +13,45 @@
 #include "dsi-panel-somc-nt36672a_truly_fhdplus_video.dtsi"
 
 &dsi_nt36672a_truly_fhdplus_video {
-/*  CEI additional  */
-		qcom,mdss-dsi-off-command = [05 01 00 00 00 00 02 28 00
-				 05 01 00 00 50 00 02 10 00];
-		qcom,mdss-dsi-reset-sequence = <1 10>;
-		qcom,mdss-dsi-post-init-delay = <1>;
-/* SOMC additional*/
-		qcom,mdss-dsi-panel-hdr-enabled;
-		qcom,mdss-dsi-panel-hdr-color-primaries = <14940 15790 33800 15700 10950 33800 7450 2300>;
-		qcom,mdss-dsi-panel-peak-brightness = <7000000>;
-		qcom,mdss-dsi-panel-blackness-level = <4646>;
-		somc,lcd-id-adc = <801000 917000>;
-		somc,mdss-dsi-master;
-		somc,pw-on-rst-seq = <1 10>, <0 10>, <1 10>;
-		somc,pw-off-rst-b-seq = <0 1>;
-		somc,pw-wait-after-on-vdd = <0>;
-		somc,pw-wait-after-on-vddio = <1>;
-		somc,pw-wait-after-on-vsp = <0>;
-		somc,pw-wait-after-on-vsn = <0>;
-		somc,pw-wait-after-off-vdd = <0>;
-		somc,pw-wait-after-off-vddio = <1>;
-		somc,pw-wait-after-off-vsp = <0>;
-		somc,pw-wait-after-off-vsn = <0>;
-		somc,pw-wait-after-on-touch-vddio = <0>;
-		somc,pw-wait-after-on-touch-reset = <0>;
-		somc,pw-wait-after-on-touch-int-n = <0>;
-		somc,pw-wait-after-off-touch-vddio = <0>;
-		somc,pw-wait-after-off-touch-reset = <0>;
-		somc,pw-wait-after-off-touch-int-n = <0>;
-		somc,pw-down-period = <300>;
+	qcom,mdss-dsi-off-command = [05 01 00 00 00 00 02 28 00
+			 05 01 00 00 50 00 02 10 00];
+	qcom,mdss-dsi-reset-sequence = <1 10>;
+	qcom,mdss-dsi-post-init-delay = <1>;
+	qcom,mdss-dsi-panel-hdr-enabled;
+	qcom,mdss-dsi-panel-hdr-color-primaries = <14940 15790 33800 15700 10950 33800 7450 2300>;
+	qcom,mdss-dsi-panel-peak-brightness = <7000000>;
+	qcom,mdss-dsi-panel-blackness-level = <4646>;
+	somc,lcd-id-adc = <801000 917000>;
+	somc,mdss-dsi-master;
+	somc,pw-on-rst-seq = <1 10>, <0 10>, <1 10>;
+	somc,pw-off-rst-b-seq = <0 1>;
+	somc,pw-wait-after-on-vdd = <0>;
+	somc,pw-wait-after-on-vddio = <1>;
+	somc,pw-wait-after-on-vsp = <0>;
+	somc,pw-wait-after-on-vsn = <0>;
+	somc,pw-wait-after-off-vdd = <0>;
+	somc,pw-wait-after-off-vddio = <1>;
+	somc,pw-wait-after-off-vsp = <0>;
+	somc,pw-wait-after-off-vsn = <0>;
+	somc,pw-wait-after-on-touch-vddio = <0>;
+	somc,pw-wait-after-on-touch-reset = <0>;
+	somc,pw-wait-after-on-touch-int-n = <0>;
+	somc,pw-wait-after-off-touch-vddio = <0>;
+	somc,pw-wait-after-off-touch-reset = <0>;
+	somc,pw-wait-after-off-touch-int-n = <0>;
+	somc,pw-down-period = <300>;
 
-		somc,lab-output-voltage = <5500000>;
-		somc,ibb-output-voltage = <5500000>;
-		somc,qpnp-lab-limit-maximum-current = <200>;
-		somc,qpnp-ibb-limit-maximum-current = <800>;
-		somc,qpnp-lab-max-precharge-time = <500>;
-		somc,qpnp-lab-soft-start = <800>;
-		somc,qpnp-ibb-discharge-resistor = <300>;
-		somc,qpnp-lab-pull-down-enable;
-		somc,qpnp-lab-full-pull-down;
-		somc,qpnp-ibb-pull-down-enable;
-		somc,qpnp-ibb-full-pull-down;
-
-		somc,mdss-dsi-disp-on-in-hs = <0>;
-		somc,mdss-dsi-wait-time-before-post-on-cmd = <0>;
+	somc,lab-output-voltage = <5500000>;
+	somc,ibb-output-voltage = <5500000>;
+	somc,qpnp-lab-limit-maximum-current = <200>;
+	somc,qpnp-ibb-limit-maximum-current = <800>;
+	somc,qpnp-lab-max-precharge-time = <500>;
+	somc,qpnp-lab-soft-start = <800>;
+	somc,qpnp-ibb-discharge-resistor = <300>;
+	somc,qpnp-lab-pull-down-enable;
+	somc,qpnp-lab-full-pull-down;
+	somc,qpnp-ibb-pull-down-enable;
+	somc,qpnp-ibb-full-pull-down;
+	somc,mdss-dsi-disp-on-in-hs = <0>;
+	somc,mdss-dsi-wait-time-before-post-on-cmd = <0>;
 };
