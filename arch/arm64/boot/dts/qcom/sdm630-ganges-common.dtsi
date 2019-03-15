@@ -171,6 +171,17 @@
 		};
 	};
 
+	egistec {
+		compatible = "etspi,et510";
+		spi-max-frequency = <1000000>;
+		et512_vcc-supply = <&pm660l_l6>;
+		input-device-name = "et510";
+		interrupt-parent = <&tlmm>;
+		interrupts = <72 0x0>;
+		egis,reset-gpio    = <&tlmm 20 0>;
+		egis,irq-gpio      = <&tlmm 72 0>;
+	};
+
 	qusb_phy0: qusb@c012000 {
 		qcom,tune2-efuse-correction = <4>;
 		qcom,qusb-phy-init-seq = <0xf8 0x80
