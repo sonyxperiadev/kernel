@@ -12,6 +12,7 @@
 
 #include "charger-ganges-common.dtsi"
 #include <dt-bindings/gpio/gpio.h>
+#include "sdm630-ganges_pinctrl.dtsi"
 
 / {
 	firmware: firmware {
@@ -205,8 +206,6 @@
 &mdss_dsi {
 	hw-config = "single_dsi";
 };
-
-
 
 &pmx_mdss{
 	mdss_dsi_active: mdss_dsi_active {
