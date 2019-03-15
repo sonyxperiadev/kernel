@@ -1,0 +1,11 @@
+#
+# Novatek NT36672 Touchscreen driver configuration
+#
+
+config TOUCHSCREEN_NT36672
+	tristate "NT36672 i2c touchscreen driver"
+	depends on I2C
+	default n
+	help
+	  Say Y here if you have Novatek touch panel.
+	  If unsure, say N.
