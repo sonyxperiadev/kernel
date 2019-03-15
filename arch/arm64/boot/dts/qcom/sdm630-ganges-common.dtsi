@@ -339,3 +339,20 @@
 		nxp,ven = <&tlmm 29 0x00>;
 	};
 };
+
+&rpm_bus {
+	rpm-regulator-ldob6 {
+		status = "okay";
+		pm660l_l6: regulator-l6 {
+			qcom,regulator-type = <0>;  /* LDO */
+			qcom,init-enable = <0>;
+			qcom,init-ldo-mode = <1>;
+			qcom,init-pin-ctrl-enable = <0>;
+			qcom,init-pin-ctrl-mode = <0>;
+			regulator-min-microvolt = <1700000>;
+			regulator-max-microvolt = <3300000>;
+			qcom,init-voltage = <3300000>;
+			status = "okay";
+		};
+	};
+};
