@@ -17,6 +17,8 @@
 #include "charger-ganges-mermaid.dtsi"
 
 &soc {
+	/delete-node/ qcom,qbt1000;
+
 	pinctrl@03000000 {
 		disabled-pins = <8 9 10 11>;
 
@@ -29,11 +31,11 @@
 		};
 	};
 
-       somc_pinctrl: somc_pinctrl {
-               /* If product common default setting is needed,
-               fill pinctrl-1 value in <product>_common.dtsi */
-               pinctrl-1 = <>;
-       };
+	somc_pinctrl: somc_pinctrl {
+		/* If product common default setting is needed,
+		fill pinctrl-1 value in <product>_common.dtsi */
+		pinctrl-1 = <>;
+	};
 
 	s5712 {
 		compatible = "s5712-switch";
