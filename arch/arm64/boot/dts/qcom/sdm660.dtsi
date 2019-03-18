@@ -903,9 +903,11 @@
 		};
 	};
 
-	qcom,lmh {
+	lmh_lite: qcom,lmh {
 		compatible = "qcom,lmh_v1";
 		interrupts = <GIC_SPI 134 IRQ_TYPE_LEVEL_HIGH>;
+		#thermal-sensor-cells = <1>;
+		status="disabled";
 	};
 
 	qcom,msm-core@780000 {
