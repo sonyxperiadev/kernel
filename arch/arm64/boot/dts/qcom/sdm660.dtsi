@@ -669,6 +669,9 @@
 		};
 	};
 
+
+	thermal_zones: thermal-zones {};
+
 	tsens: tsens@10ad000 {
 		compatible = "qcom,sdm660-tsens";
 		reg = <0x10ad000 0x2000>,
@@ -2547,6 +2550,7 @@
 #include "msm-gdsc-660.dtsi"
 #include "sdm660-gpu.dtsi"
 #include "sdm660-pm.dtsi"
+#include "sdm630-thermal.dtsi"
 
 &gdsc_usb30 {
 	status = "ok";
