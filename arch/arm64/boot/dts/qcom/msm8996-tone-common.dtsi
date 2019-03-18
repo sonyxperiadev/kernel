@@ -761,14 +761,8 @@
 
 /* GPIO_13: EAR_EN */
 &pm8994_gpio_13 {
-	/* Inherited from MTP */
-/*
+	/* Overwrite MTP */
 	output-low;
-	drive-push-pull;
-	bias-disable;
-	qcom,drive-strength = <PMIC_GPIO_STRENGTH_LOW>;
-	power-source = <PM8994_VPP_1P8>;
-*/
 };
 
 /* GPIO_14: NC */
