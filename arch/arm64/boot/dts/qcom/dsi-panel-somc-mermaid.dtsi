@@ -13,6 +13,9 @@
 #include "dsi-panel-somc-nt36672a_tianma_fhdplus_video.dtsi"
 
 &dsi_nt36672a_tianma_fhdplus_video {
+	qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
+	qcom,esd-check-enabled;
+
 	qcom,mdss-dsi-off-command = [05 01 00 00 32 00 02 28 00
 			 05 01 00 00 64 00 02 10 00];
 	qcom,mdss-dsi-reset-sequence = <1 10>;
@@ -52,4 +55,5 @@
 
 	somc,mdss-dsi-disp-on-in-hs = <0>;
 	somc,mdss-dsi-wait-time-before-post-on-cmd = <0>;
+	somc,bootloader-panel-detect;
 };
