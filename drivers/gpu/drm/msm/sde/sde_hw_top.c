@@ -302,6 +302,7 @@ static void sde_hw_setup_vsync_source(struct sde_hw_mdp *mdp,
 			    of_machine_is_compatible("qcom,msm8996") ||
 			    of_machine_is_compatible("qcom,msm8998") ||
 			    of_machine_is_compatible("qcom,sdm630")  ||
+			    of_machine_is_compatible("qcom,sdm636")  ||
 			    of_machine_is_compatible("qcom,sdm660"))
 				SDE_REG_WRITE(c, wd_load_value,
 						CALCULATE_WD_LOAD_VALUE_LEGACY(
