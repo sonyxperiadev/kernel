@@ -597,6 +597,7 @@ static int lpi_pinctrl_probe(struct platform_device *pdev)
 	pctrldesc->npins = npins;
 
 	if (of_machine_is_compatible("qcom,sdm630") ||
+	    of_machine_is_compatible("qcom,sdm636") ||
 	    of_machine_is_compatible("qcom,sdm660")) {
 		lpi_sz = 0xC000; /* Address size on SDM630/660 */
 		pad_offsets = lpi_offset_660;
