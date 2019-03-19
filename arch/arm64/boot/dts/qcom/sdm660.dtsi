@@ -55,6 +55,7 @@
 			qcom,lmh-dcvs = <&lmh_dcvs0>;
 			qcom,ea = <&ea0>;
 			efficiency = <1024>;
+			#cooling-cells = <2>;
 			next-level-cache = <&L2_0>;
 			L2_0: l2-cache {
 				compatible = "arm,arch-cache";
@@ -84,6 +85,7 @@
 			qcom,lmh-dcvs = <&lmh_dcvs0>;
 			qcom,ea = <&ea1>;
 			efficiency = <1024>;
+			#cooling-cells = <2>;
 			next-level-cache = <&L2_0>;
 			L1_I_1: l1-icache {
 				compatible = "arm,arch-cache";
@@ -107,6 +109,7 @@
 			qcom,lmh-dcvs = <&lmh_dcvs0>;
 			qcom,ea = <&ea2>;
 			efficiency = <1024>;
+			#cooling-cells = <2>;
 			next-level-cache = <&L2_0>;
 			L1_I_2: l1-icache {
 				compatible = "arm,arch-cache";
@@ -130,6 +133,7 @@
 			qcom,lmh-dcvs = <&lmh_dcvs0>;
 			qcom,ea = <&ea3>;
 			efficiency = <1024>;
+			#cooling-cells = <2>;
 			next-level-cache = <&L2_0>;
 			L1_I_3: l1-icache {
 				compatible = "arm,arch-cache";
@@ -153,6 +157,7 @@
 			qcom,lmh-dcvs = <&lmh_dcvs1>;
 			qcom,ea = <&ea4>;
 			efficiency = <1638>;
+			#cooling-cells = <2>;
 			next-level-cache = <&L2_1>;
 			L2_1: l2-cache {
 				compatible = "arm,arch-cache";
@@ -180,6 +185,7 @@
 			qcom,lmh-dcvs = <&lmh_dcvs1>;
 			qcom,ea = <&ea5>;
 			efficiency = <1638>;
+			#cooling-cells = <2>;
 			next-level-cache = <&L2_1>;
 			L1_I_101: l1-icache {
 				compatible = "arm,arch-cache";
@@ -203,6 +209,7 @@
 			qcom,lmh-dcvs = <&lmh_dcvs1>;
 			qcom,ea = <&ea6>;
 			efficiency = <1638>;
+			#cooling-cells = <2>;
 			next-level-cache = <&L2_1>;
 			L1_I_102: l1-icache {
 				compatible = "arm,arch-cache";
@@ -226,6 +233,7 @@
 			qcom,lmh-dcvs = <&lmh_dcvs1>;
 			qcom,ea = <&ea7>;
 			efficiency = <1638>;
+			#cooling-cells = <2>;
 			next-level-cache = <&L2_1>;
 			L1_I_103: l1-icache {
 				compatible = "arm,arch-cache";
@@ -403,7 +411,7 @@
 			linux,cma-default;
 		};
 
-		cont_splash_mem: splash_region@9d400000 {
+		cont_splash_mem: cont_splash_region@9d400000 {
 			reg = <0x0 0x9d400000 0x0 0x02400000>;
 			label = "cont_splash_mem";
 		};
@@ -675,10 +683,14 @@
 	tsens: tsens@10ad000 {
 		compatible = "qcom,sdm660-tsens";
 		reg = <0x10ad000 0x2000>,
+			<0x10ae000 0x1000>,
 			<0x784240 0x1000>;
-		reg-names = "tsens_physical", "tsens_eeprom_physical";
+		reg-names = "tsens_srot_physical",
+			    "tsens_tm_physical",
+			    "tsens_eeprom_physical";
 		interrupts = <0 184 0>, <0 430 0>;
 		interrupt-names = "tsens-upper-lower", "tsens-critical";
+		#thermal-sensor-cells = <1>;
 		qcom,client-id = <0 1 2 3 4 5 6 7 8 9 10 11 12 13>;
 		qcom,sensor-id = <0 10 11 4 5 6 7 8 13 2 3 12 9 1>;
 		qcom,sensors = <14>;
@@ -1638,12 +1650,15 @@
 	qcom,msm-adsprpc-mem {
 		compatible = "qcom,msm-adsprpc-mem-region";
 		memory-region = <&adsp_mem>;
+		qcom,vmid-ssc-q6 = <38>;
+		restrict-access;
 	};
 
 	qcom,msm_fastrpc {
 		compatible = "qcom,msm-fastrpc-adsp";
 		qcom,fastrpc-glink;
 		qcom,fastrpc-vmid-heap-shared;
+		qcom,adsp-remoteheap-vmid = <33>;
 
 		qcom,msm_fastrpc_compute_cb1 {
 			compatible = "qcom,msm-fastrpc-compute-cb";
@@ -1961,6 +1976,7 @@
 
 		vdd-supply = <&gdsc_venus>;
 		qcom,proxy-reg-names = "vdd";
+		qcom,mas-crypto = <&mas_crypto_c0>;
 
 		clocks = <&clock_mmss MMSS_VIDEO_CORE_CLK>,
 			<&clock_mmss MMSS_MNOC_AHB_CLK>,
@@ -2029,6 +2045,7 @@
 		vdd_cx-supply = <&pm660l_l9_level>;
 		qcom,proxy-reg-names = "vdd_cx";
 		qcom,vdd_cx-uV-uA = <RPM_SMD_REGULATOR_LEVEL_TURBO 100000>;
+		qcom,mas-crypto = <&mas_crypto_c0>;
 
 		clocks = <&clock_rpmcc CXO_PIL_LPASS_CLK>;
 		clock-names = "xo";
@@ -2061,6 +2078,7 @@
 		vdd_cx-supply = <&pm660l_s3_level>;
 		qcom,proxy-reg-names = "vdd_cx";
 		qcom,vdd_cx-uV-uA = <RPM_SMD_REGULATOR_LEVEL_TURBO 100000>;
+		qcom,mas-crypto = <&mas_crypto_c0>;
 
 		clocks = <&clock_rpmcc CXO_PIL_CDSP_CLK>;
 		clock-names = "xo";
@@ -2653,13 +2671,14 @@
 
 &pm660l_gpios {
 	/* GPIO 7 for VOL_UP */
-	gpio@c600 {
-		status = "okay";
-		qcom,mode = <0>;
-		qcom,pull = <0>;
-		qcom,vin-sel = <0>;
-		qcom,src-sel = <0>;
-		qcom,out-strength = <1>;
+	key_vol_up {
+		key_vol_up_default: key_vol_up_default {
+			pins = "gpio7";
+			function = "normal";
+			input-enable;
+			bias-pull-up;
+			power-source = <0>;
+		};
 	};
 };
 
@@ -2673,9 +2692,10 @@
 		status = "okay";
 		compatible = "gpio-keys";
 		input-name = "gpio-keys";
+		label = "gpio-keys";
 		pinctrl-names = "tlmm_gpio_key_active","tlmm_gpio_key_suspend";
-		pinctrl-0 = <&gpio_key_active>;
-		pinctrl-1 = <&gpio_key_suspend>;
+		pinctrl-0 = <&key_vol_up_default &gpio_key_active>;
+		pinctrl-1 = <&key_vol_up_default &gpio_key_suspend>;
 
 		camera_focus {
 			label = "camera_focus";

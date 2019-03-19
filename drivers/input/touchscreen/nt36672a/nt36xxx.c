@@ -15,6 +15,10 @@
  * more details.
  *
  */
+
+#define pr_fmt(fmt) "nt36xxx: " fmt
+
+#include <linux/errno.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/delay.h>
@@ -76,8 +80,6 @@ uint32_t last_input_y = -1;
  *******************************************************/
 char *smx3_tp_source_to_text(void)
 {
-	TP_LOGD("+++");
-
 	if (ts->tp_source == TP_SOURCE_TR_M08)
 		return "TR M 0.8mm";
 	else if (ts->tp_source == TP_SOURCE_TR_M10)
@@ -86,8 +88,6 @@ char *smx3_tp_source_to_text(void)
 		return "TR S 0.8mm";
 	else if (ts->tp_source == TP_SOURCE_TM)
 		return "TM M 0.8mm";
-
-	TP_LOGD("---");
 
 	return "Unknown   ";
 }
@@ -103,8 +103,6 @@ char *smx3_tp_source_to_text(void)
 uint8_t smx3_check_project_info(void)
 {
 	uint8_t ret = 0xFF;
-
-	TP_LOGD("+++");
 
 	if (ts->project_info[0] == TP_MODULE_PID_SM13) {
 		if (ts->project_info[1] == TP_MODULE_VE_TR) {
@@ -127,8 +125,6 @@ uint8_t smx3_check_project_info(void)
 		}
 	}
 
-	TP_LOGD("---");
-
 	return ret;
 }
 
@@ -144,8 +140,6 @@ int32_t nvt_read_project_info(void)
 	uint8_t buf[3 + PROJECT_INFO_LEN] = {0};
 	int32_t ret = 0;
 	unsigned char i;
-
-	TP_LOGD("+++");
 
 	/*---Stop CRC check to prevent IC auto reboot--- */
 	nvt_stop_crc_reboot();
@@ -165,7 +159,7 @@ int32_t nvt_read_project_info(void)
 	buf[1] = 0x35;
 	ret = CTP_I2C_WRITE(ts->client, I2C_HW_Address, buf, 2);
 	if (ret < 0) {
-		TP_LOGE("write unlock error!!(%d)", ret);
+		pr_err("write unlock error!!(%d)\n", ret);
 		return ret;
 	}
 
@@ -181,7 +175,7 @@ int32_t nvt_read_project_info(void)
 	buf[6] = PROJECT_INFO_LEN & 0xFF; /* Len_L */
 	ret = CTP_I2C_WRITE(ts->client, I2C_HW_Address, buf, 7);
 	if (ret < 0) {
-		TP_LOGE("write Read Command error!!(%d)", ret);
+		pr_err("write Read Command error!!(%d)\n", ret);
 		return ret;
 	}
 
@@ -192,11 +186,11 @@ int32_t nvt_read_project_info(void)
 	buf[1] = 0x00;
 	ret = CTP_I2C_READ(ts->client, I2C_HW_Address, buf, 2);
 	if (ret < 0) {
-		TP_LOGE("Check 0xAA (Read Command) error!!(%d)", ret);
+		pr_err("Check 0xAA (Read Command) error!!(%d)\n", ret);
 		return ret;
 	}
 	if (buf[1] != 0xAA) {
-		TP_LOGE("Check 0xAA (Read Command) error!! status=0x%02X",
+		pr_err("Check 0xAA (Read Command) error!! status=0x%02X\n",
 			buf[1]);
 		return -EPERM;
 	}
@@ -209,7 +203,7 @@ int32_t nvt_read_project_info(void)
 	buf[2] = (ts->mmap->READ_FLASH_CHECKSUM_ADDR >> 8) & 0xFF;
 	ret = CTP_I2C_WRITE(ts->client, I2C_BLDR_Address, buf, 3);
 	if (ret < 0) {
-		TP_LOGE("change index error!! (%d)", ret);
+		pr_err("change index error!! (%d)\n", ret);
 		return ret;
 	}
 
@@ -220,11 +214,11 @@ int32_t nvt_read_project_info(void)
 	ret = CTP_I2C_READ(ts->client, I2C_BLDR_Address, buf,
 		3 + PROJECT_INFO_LEN);
 	if (ret < 0) {
-		TP_LOGE("Read Back error!! (%d)", ret);
+		pr_err("Read Back error!! (%d)\n", ret);
 		return ret;
 	}
 
-	/* TP_LOGI("Project info = 0x%02X%02X%02X%02X%02X%02X%02X%02X",
+	/* pr_debug("Project info = 0x%02X%02X%02X%02X%02X%02X%02X%02X\n",
 	 * buf[3], buf[4], buf[5], buf[6], buf[7], buf[8], buf[9], buf[10]);
 	 */
 
@@ -235,8 +229,6 @@ int32_t nvt_read_project_info(void)
 	nvt_bootloader_reset();
 	nvt_check_fw_reset_state(RESET_STATE_INIT);
 
-	TP_LOGD("---");
-
 	return 0;
 }
 #endif /* NVT_PROJECT_INFO_READ */
@@ -246,7 +238,7 @@ static int smx3_get_irq_depth(void)
 	struct irq_desc *desc = irq_to_desc(ts->client->irq);
 
 	if (!desc) {
-		TP_LOGI("irq depth is null");
+		pr_debug("irq depth is null\n");
 		return 0;
 	}
 
@@ -257,8 +249,6 @@ static int smx3_get_irq_depth(void)
 int32_t nvt_enter_doze_mode(void)
 {
 	uint8_t buf[3] = {0};
-
-	TP_LOGI("+++");
 
 	mutex_lock(&ts->lock);
 
@@ -271,15 +261,11 @@ int32_t nvt_enter_doze_mode(void)
 
 	mutex_unlock(&ts->lock);
 
-	TP_LOGI("---");
-
 	return 0;
 }
 
 int32_t nvt_enter_normal_mode(void)
 {
-	TP_LOGI("+++");
-
 	mutex_lock(&ts->lock);
 
 	nvt_bootloader_reset();
@@ -287,8 +273,6 @@ int32_t nvt_enter_normal_mode(void)
 	enable_irq(ts->client->irq);
 
 	mutex_unlock(&ts->lock);
-
-	TP_LOGI("---");
 
 	return 0;
 }
@@ -300,49 +284,45 @@ static int smx3_enable_irq(bool enable, bool no_sync)
 {
 	int ret;
 
-	TP_LOGD("+++");
-
 	mutex_lock(&ts->irq_lock);
 
 	if (ts->irq_gpio < 0) {
-		TP_LOGE("Invalid IRQ GPIO");
+		pr_err("Invalid IRQ GPIO\n");
 		ret = -EINVAL;
 		goto exit;
 	}
 
 	if (enable) {
 		if (smx3_get_irq_depth() == 0) {
-			TP_LOGD("Interrupt already enabled");
+			pr_debug("Interrupt already enabled\n");
 			ret = 0;
 			goto exit;
 		}
 
 		enable_irq(ts->client->irq);
-		TP_LOGD("Interrupt enabled");
+		pr_debug("Interrupt enabled\n");
 
 		ret = 0;
 		msleep(ENABLE_IRQ_DELAY_MS);
 	} else {
 		if (smx3_get_irq_depth() > 0) {
-			TP_LOGD("Interrupt already disabled");
+			pr_debug("Interrupt already disabled\n");
 			ret = 0;
 			goto exit;
 		}
 
 		if (no_sync) {
 			disable_irq_nosync(ts->client->irq);
-			TP_LOGD("Interrupt disabled and no_sync");
+			pr_debug("Interrupt disabled and no_sync\n");
 		} else {
 			disable_irq(ts->client->irq);
-			TP_LOGD("Interrupt disabled");
+			pr_debug("Interrupt disabled\n");
 		}
 		ret = 0;
 	}
 
 exit:
 	mutex_unlock(&ts->irq_lock);
-
-	TP_LOGD("---");
 
 	return ret;
 }
@@ -351,36 +331,6 @@ exit:
 /* sysfs device node start */
 char tp_probe_log[1024];
 int tp_probe_log_index = -1;
-
-#ifdef TP_DYNAMIC_LOG
-int tp_smx3_dynamic_log_level = TP_LOG_LEVEL_INFO;
-
-static ssize_t smx3_tp_dynamic_log_show(struct device *dev,
-	struct device_attribute *attr, char *buf)
-{
-	return snprintf(buf, PAGE_SIZE, "%d\n", tp_smx3_dynamic_log_level);
-}
-
-static ssize_t smx3_tp_dynamic_log_store(struct device *dev,
-	struct device_attribute *attr, const char *buf, size_t count)
-{
-	u8 i;
-	ssize_t ret;
-
-	if (kstrtou8(buf, 0, &i) == 0 && i <= TP_LOG_LEVEL_MAX) {
-		TP_LOGI("dynamic log level (%u) changed to (%u)",
-				tp_smx3_dynamic_log_level, i);
-		tp_smx3_dynamic_log_level = i;
-
-		ret = count;
-	} else {
-		TP_LOGE("input the error dynamic log level");
-		ret = -EINVAL;
-	}
-
-	return ret;
-}
-#endif /*def TP_DYNAMIC_LOG */
 
 static ssize_t smx3_tp_probe_log_show(struct device *dev,
 	struct device_attribute *attr, char *buf)
@@ -396,13 +346,9 @@ static ssize_t smx3_tp_project_info_show(struct device *dev,
 {
 	mutex_lock(&ts->lock);
 
-	TP_LOGD("+++");
-
 	/* Get external flash id (project info) */
 	nvt_read_project_info();
 	mutex_unlock(&ts->lock);
-
-	TP_LOGD("---");
 
 	return snprintf(buf, 15, "0x%02X%02X%02X%02X%02X\n",
 		ts->project_info[0], ts->project_info[1], ts->project_info[2],
@@ -430,29 +376,25 @@ static ssize_t smx3_Doze_mode_store(struct device *dev,
 	u8 i;
 	int ret, ret_func;
 
-	TP_LOGD("+++");
-
 	if (kstrtou8(buf, 0, &i) == 0 && i == 0) {
 		ret_func = nvt_enter_doze_mode();
 
 		if (ret_func < 0)
-			TP_LOGE("Fail, enter Doze mode");
+			pr_err("Fail, enter Doze mode\n");
 		else
-			TP_LOGI("Success, enter Doze mode");
+			pr_debug("Success, enter Doze mode\n");
 	} else if (i == 1) {
 		ret_func = nvt_enter_normal_mode();
 
 		if (ret_func < 0)
-			TP_LOGE("Fail, enter Normal mode");
+			pr_err("Fail, enter Normal mode\n");
 		else
-			TP_LOGI("Success, enter Normal mode");
+			pr_debug("Success, enter Normal mode\n");
 	} else {
-		TP_LOGI("input wrong command");
+		pr_debug("input wrong command\n");
 	}
 
 	ret = count;
-
-	TP_LOGD("---");
 
 	return ret;
 }
@@ -471,33 +413,29 @@ static ssize_t smx3_enable_irq_store(struct device *dev,
 	u8 i;
 	int ret;
 
-	TP_LOGD("+++");
-
 	mutex_lock(&ts->lock);
 
 	if (kstrtou8(buf, 0, &i) == 0 && i == 0) {
 		ret = smx3_enable_irq(false, false);
 
 		if (ret < 0)
-			TP_LOGE("Fail disable irq");
+			pr_err("Fail disable irq\n");
 		else
-			TP_LOGI("Success disable irq");
+			pr_debug("Success disable irq\n");
 	} else if (i == 1) {
 		ret = smx3_enable_irq(true, false);
 
 		if (ret < 0)
-			TP_LOGE("Fail enable irq");
+			pr_err("Fail enable irq\n");
 		else
-			TP_LOGI("Success enable irq");
+			pr_debug("Success enable irq\n");
 	} else {
-		TP_LOGI("input wrong command");
+		pr_debug("input wrong command\n");
 	}
 
 	mutex_unlock(&ts->lock);
 
 	ret = count;
-
-	TP_LOGD("---");
 
 	return ret;
 }
@@ -509,8 +447,6 @@ static ssize_t smx3_fw_version_show(struct device *dev,
 {
 	int buf_offset = 0;
 	int ret = 0;
-
-	TP_LOGD("+++");
 
 	if (mutex_lock_interruptible(&ts->lock))
 		goto exit;
@@ -530,8 +466,6 @@ static ssize_t smx3_fw_version_show(struct device *dev,
 exit:
 	mutex_unlock(&ts->lock);
 
-	TP_LOGD("---");
-
 	return ret;
 }
 
@@ -548,8 +482,6 @@ static ssize_t smx3_module_pid_show(struct device *dev,
 	int buf_offset = 0;
 	int ret = 0;
 
-	TP_LOGD("+++");
-
 	ret = snprintf(buf + buf_offset, 16, "0x%04x",
 		ts->nvt_pid);
 	if (ret < 0)
@@ -559,8 +491,6 @@ static ssize_t smx3_module_pid_show(struct device *dev,
 	ret = buf_offset;
 
 exit:
-	TP_LOGD("---");
-
 	return ret;
 }
 #endif
@@ -574,11 +504,6 @@ static inline ssize_t smx3_tpnode_store_error(struct device *dev,
 }
 
 static struct device_attribute attrs[] = {
-#ifdef TP_DYNAMIC_LOG
-	__ATTR(smx3_dynamic_log, (S_IRUGO | S_IWUSR | S_IWGRP),
-			smx3_tp_dynamic_log_show,
-			smx3_tp_dynamic_log_store),
-#endif /*def TP_DYNAMIC_LOG */
 	__ATTR(smx3_probe_log, S_IRUGO,
 			smx3_tp_probe_log_show,
 			smx3_tpnode_store_error),
@@ -645,7 +570,7 @@ int32_t CTP_I2C_READ(struct i2c_client *client, uint16_t address, uint8_t *buf, 
 	}
 
 	if (unlikely(retries == 5)) {
-		TP_LOGE("error at retry %d times, ret=%d", retries - 1, ret);
+		pr_err("error at retry %d times, ret=%d\n", retries - 1, ret);
 		ret = -EIO;
 	}
 
@@ -677,7 +602,7 @@ int32_t CTP_I2C_WRITE(struct i2c_client *client, uint16_t address, uint8_t *buf,
 	}
 
 	if (unlikely(retries == 5)) {
-		TP_LOGE("error at retry %d times, ret=%d", retries - 1, ret);
+		pr_err("error at retry %d times, ret=%d\n", retries - 1, ret);
 		ret = -EIO;
 	}
 
@@ -697,14 +622,12 @@ void nvt_sw_reset_idle(void)
 {
 	uint8_t buf[4]={0};
 
-	TP_LOGD("+++");
 	//---write i2c cmds to reset idle---
 	buf[0]=0x00;
 	buf[1]=0xA5;
 	CTP_I2C_WRITE(ts->client, I2C_HW_Address, buf, 2);
 
 	msleep(15);
-	TP_LOGD("---");
 }
 
 /*******************************************************
@@ -718,7 +641,6 @@ void nvt_bootloader_reset(void)
 {
 	uint8_t buf[8] = {0};
 
-	TP_LOGD("+++");
 	//---write i2c cmds to reset---
 	buf[0] = 0x00;
 	buf[1] = 0x69;
@@ -726,7 +648,6 @@ void nvt_bootloader_reset(void)
 
 	// need 35ms delay after bootloader reset
 	msleep(35);
-	TP_LOGD("---");
 }
 
 /*******************************************************
@@ -741,8 +662,6 @@ int32_t nvt_clear_fw_status(void)
 	uint8_t buf[8] = {0};
 	int32_t i = 0;
 	const int32_t retry = 20;
-
-	TP_LOGD("+++");
 
 	for (i = 0; i < retry; i++) {
 		//---set xdata index to EVENT BUF ADDR---
@@ -768,13 +687,12 @@ int32_t nvt_clear_fw_status(void)
 	}
 
 	if (i >= retry) {
-		TP_LOGE("failed, i=%d, buf[1]=0x%02X", i, buf[1]);
+		pr_err("failed, i=%d, buf[1]=0x%02X\n", i, buf[1]);
 		return -1;
 	} else {
 		return 0;
 	}
 
-	TP_LOGD("---");
 }
 
 /*******************************************************
@@ -789,8 +707,6 @@ int32_t nvt_check_fw_status(void)
 	uint8_t buf[8] = {0};
 	int32_t i = 0;
 	const int32_t retry = 50;
-
-	TP_LOGD("+++");
 
 	for (i = 0; i < retry; i++) {
 		//---set xdata index to EVENT BUF ADDR---
@@ -811,12 +727,10 @@ int32_t nvt_check_fw_status(void)
 	}
 
 	if (i >= retry) {
-		TP_LOGE("failed, i=%d, buf[1]=0x%02X", i, buf[1]);
-		TP_LOGD("---");
-		return -1;
+		pr_err("failed, i=%d, buf[1]=0x%02X\n", i, buf[1]);
+			return -1;
 	} else {
-		TP_LOGD("---");
-		return 0;
+			return 0;
 	}
 }
 
@@ -833,8 +747,6 @@ int32_t nvt_check_fw_reset_state(RST_COMPLETE_STATE check_reset_state)
 	int32_t ret = 0;
 	int32_t retry = 0;
 
-	TP_LOGD("+++");
-
 	while (1) {
 		msleep(10);
 
@@ -850,14 +762,12 @@ int32_t nvt_check_fw_reset_state(RST_COMPLETE_STATE check_reset_state)
 
 		retry++;
 		if(unlikely(retry > 100)) {
-			TP_LOGE("error, 0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X",
+			pr_err("error, 0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X\n",
 				buf[1], buf[2], buf[3], buf[4], buf[5]);
 			ret = -1;
 			break;
 		}
 	}
-
-	TP_LOGD("---");
 
 	return ret;
 }
@@ -889,7 +799,7 @@ int32_t nvt_read_pid(void)
 
 	ts->nvt_pid = (buf[2] << 8) + buf[1];
 
-	TP_LOGD("PID=%04X", ts->nvt_pid);
+	pr_debug("PID=%04X\n", ts->nvt_pid);
 
 	return ret;
 }
@@ -907,8 +817,6 @@ int32_t nvt_get_fw_info(void)
 	uint8_t buf[64] = {0};
 	uint32_t retry_count = 0;
 	int32_t ret = 0;
-
-	TP_LOGI("+++");
 
 info_retry:
 	//---set xdata index to EVENT BUF ADDR---
@@ -929,7 +837,7 @@ info_retry:
 
 	//---clear x_num, y_num if fw info is broken---
 	if ((buf[1] + buf[2]) != 0xFF) {
-		TP_LOGE("FW info is broken! fw_ver=0x%02X, ~fw_ver=0x%02X",
+		pr_err("FW info is broken! fw_ver=0x%02X, ~fw_ver=0x%02X\n",
 			buf[1], buf[2]);
 		ts->fw_ver = 0;
 		ts->x_num = 16;
@@ -940,10 +848,10 @@ info_retry:
 
 		if(retry_count < 3) {
 			retry_count++;
-			TP_LOGE("retry_count=%d", retry_count);
+			pr_err("retry_count=%d\n", retry_count);
 			goto info_retry;
 		} else {
-			TP_LOGE("fw_ver=%d, x=%d, y=%d, x_m=%d, y_m=%d, btn=%d",
+			pr_err("fw_ver=%d, x=%d, y=%d, x_m=%d, y_m=%d, btn=%d\n",
 				ts->fw_ver, ts->x_num, ts->y_num, ts->abs_x_max,
 				ts->abs_y_max, ts->max_button_num);
 			ret = -1;
@@ -954,8 +862,6 @@ info_retry:
 
 	//---Get Novatek PID---
 	nvt_read_pid();
-
-	TP_LOGI("---");
 
 	return ret;
 }
@@ -981,15 +887,13 @@ static ssize_t nvt_flash_read(struct file *file, char __user *buff, size_t count
 	int32_t retries = 0;
 	int8_t i2c_wr = 0;
 
-	TP_LOGD("+++");
-
 	if (count > sizeof(str)) {
-		TP_LOGE("error count=%zu", count);
+		pr_err("error count=%zu\n", count);
 		return -EFAULT;
 	}
 
 	if (copy_from_user(str, buff, count)) {
-		TP_LOGE("copy from user error");
+		pr_err("copy from user error\n");
 		return -EFAULT;
 	}
 
@@ -1001,14 +905,14 @@ static ssize_t nvt_flash_read(struct file *file, char __user *buff, size_t count
 			if (ret == 1)
 				break;
 			else
-				TP_LOGE("error, retries=%d, ret=%d",
+				pr_err("error, retries=%d, ret=%d\n",
 					retries, ret);
 
 			retries++;
 		}
 
 		if (unlikely(retries == 20)) {
-			TP_LOGE("error, ret = %d", ret);
+			pr_err("error, ret = %d\n", ret);
 			return -EIO;
 		}
 
@@ -1019,7 +923,7 @@ static ssize_t nvt_flash_read(struct file *file, char __user *buff, size_t count
 			if (ret == 2)
 				break;
 			else
-				TP_LOGE("error, retries=%d, ret=%d",
+				pr_err("error, retries=%d, ret=%d\n",
 					retries, ret);
 
 			retries++;
@@ -1032,17 +936,14 @@ static ssize_t nvt_flash_read(struct file *file, char __user *buff, size_t count
 		}
 
 		if (unlikely(retries == 20)) {
-			TP_LOGE("error, ret = %d", ret);
+			pr_err("error, ret = %d\n", ret);
 			return -EIO;
 		}
 
-		TP_LOGD("---");
-
-		return ret;
+			return ret;
 	} else {
-		TP_LOGE("Call error, str[0]=%d", str[0]);
-		TP_LOGD("---");
-		return -EFAULT;
+		pr_err("Call error, str[0]=%d\n", str[0]);
+			return -EFAULT;
 	}
 }
 
@@ -1059,7 +960,7 @@ static int32_t nvt_flash_open(struct inode *inode, struct file *file)
 
 	dev = kmalloc(sizeof(struct nvt_flash_data), GFP_KERNEL);
 	if (dev == NULL) {
-		TP_LOGE("Failed to allocate memory for nvt flash data");
+		pr_err("Failed to allocate memory for nvt flash data\n");
 		return -ENOMEM;
 	}
 
@@ -1104,10 +1005,10 @@ static int32_t nvt_flash_proc_init(void)
 {
 	NVT_proc_entry = proc_create(DEVICE_NAME, 0444, NULL,&nvt_flash_fops);
 	if (NVT_proc_entry == NULL) {
-		TP_LOGE("Failed!");
+		pr_err("Failed!\n");
 		return -ENOMEM;
 	} else {
-		TP_LOGI("Succeeded Create /proc/NVTflash");
+		pr_debug("Succeeded Create /proc/NVTflash\n");
 	}
 
 	return 0;
@@ -1127,7 +1028,7 @@ static void nvt_parse_dt(struct device *dev)
 	struct device_node *np = dev->of_node;
 
 	ts->irq_gpio = of_get_named_gpio_flags(np, "novatek,irq-gpio", 0, &ts->irq_flags);
-	TP_LOGI("novatek,irq-gpio=%d", ts->irq_gpio);
+	pr_debug("novatek,irq-gpio=%d\n", ts->irq_gpio);
 
 }
 #else
@@ -1152,7 +1053,7 @@ static int nvt_gpio_config(struct nvt_ts_data *ts)
 	if (gpio_is_valid(ts->irq_gpio)) {
 		ret = gpio_request_one(ts->irq_gpio, GPIOF_IN, "NVT-int");
 		if (ret) {
-			TP_LOGE("Failed to request NVT-int GPIO");
+			pr_err("Failed to request NVT-int GPIO\n");
 			goto err_request_irq_gpio;
 		}
 	}
@@ -1191,7 +1092,7 @@ static void nvt_ts_work_func(struct work_struct *work)
 
 	ret = CTP_I2C_READ(ts->client, I2C_FW_Address, point_data, POINT_DATA_LEN + 1);
 	if (ret < 0) {
-		TP_LOGE("CTP_I2C_READ failed.(%d)", ret);
+		pr_err("CTP_I2C_READ failed.(%d)\n", ret);
 		goto XFER_ERROR;
 	}
 
@@ -1243,7 +1144,7 @@ static void nvt_ts_work_func(struct work_struct *work)
 #else /* MT_PROTOCOL_B */
 			input_mt_sync(ts->input_dev);
 #endif /* MT_PROTOCOL_B */
-			TP_LOGT("Finger %d: x = %d, y = %d, wx = %d, p = %d",
+			pr_debug("Finger %d: x = %d, y = %d, wx = %d, p = %d\n",
 					i, input_x, input_y, input_w, input_p);
 
 			last_input_x = input_x;
@@ -1268,10 +1169,10 @@ static void nvt_ts_work_func(struct work_struct *work)
 #endif
 
 	if (finger_cnt == 0) {
-		TP_LOGI("Number of fingers to process = %d (%d, %d)",
+		pr_debug("Number of fingers to process = %d (%d, %d)\n",
 			finger_cnt, last_input_x, last_input_y);
 	} else {
-		TP_LOGT("Number of fingers to process = %d", finger_cnt);
+		pr_debug("Number of fingers to process = %d\n", finger_cnt);
 	}
 #else /* MT_PROTOCOL_B */
 	if (finger_cnt == 0) {
@@ -1318,7 +1219,6 @@ void nvt_stop_crc_reboot(void)
 	uint8_t buf[8] = {0};
 	int32_t retry = 0;
 
-	TP_LOGD("+++");
 	//read dummy buffer to check CRC fail reboot is happening or not
 
 	//---change I2C index to prevent geting 0xFF, but not 0xFC---
@@ -1372,11 +1272,9 @@ void nvt_stop_crc_reboot(void)
 				break;
 		}
 		if (retry == 0)
-			TP_LOGE("CRC auto reboot can't stopped! buf[1]=0x%02X",
+			pr_err("CRC auto reboot can't stopped! buf[1]=0x%02X\n",
 				buf[1]);
 	}
-
-	TP_LOGD("---");
 
 	return;
 }
@@ -1421,7 +1319,7 @@ static int8_t nvt_ts_check_chip_ver_trim(void)
 		buf[5] = 0x00;
 		buf[6] = 0x00;
 		CTP_I2C_READ(ts->client, I2C_BLDR_Address, buf, 7);
-		TP_LOGD("buf = (0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X",
+		pr_debug("buf = (0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X, 0x%02X\n",
 			buf[1], buf[2], buf[3], buf[4], buf[5], buf[6]);
 
 		/* ---Stop CRC check to prevent IC auto reboot--- */
@@ -1448,7 +1346,7 @@ static int8_t nvt_ts_check_chip_ver_trim(void)
 			}
 
 			if (found_nvt_chip) {
-				TP_LOGD("This is NVT touch IC");
+				pr_debug("This is NVT touch IC\n");
 				ts->mmap = trim_id_table[list].mmap;
 				ts->carrier_system = trim_id_table[list].carrier_system;
 				ret = 0;
@@ -1480,14 +1378,14 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 
 	tp_probe_log_index = 0;
 
-	TP_LOGI("probe start");
+	pr_debug("probe start\n");
 
 	ts = kmalloc(sizeof(struct nvt_ts_data), GFP_KERNEL);
 	if (ts == NULL) {
-		TP_LOGE("failed to allocated memory for nvt ts data");
+		pr_err("failed to allocated memory for nvt ts data\n");
 		return -ENOMEM;
 	} else {
-		TP_LOGD("allocated nvt_ts_data ok");
+		pr_debug("allocated nvt_ts_data ok\n");
 	}
 
 	ts->client = client;
@@ -1499,19 +1397,19 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 	//---request and config GPIOs---
 	ret = nvt_gpio_config(ts);
 	if (ret) {
-		TP_LOGE("gpio config error!");
+		pr_err("gpio config error!\n");
 		goto err_gpio_config_failed;
 	} else {
-		TP_LOGD("gpio config ok");
+		pr_debug("gpio config ok\n");
 	}
 
 	//---check i2c func.---
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
-		TP_LOGE("i2c_check_functionality failed. (no I2C_FUNC_I2C)");
+		pr_err("i2c_check_functionality failed. (no I2C_FUNC_I2C)\n");
 		ret = -ENODEV;
 		goto err_check_functionality_failed;
 	} else {
-		TP_LOGD("i2c check func ok");
+		pr_debug("i2c check func ok\n");
 	}
 
 	// need 10ms delay after POR(power on reset)
@@ -1520,11 +1418,11 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 	//---check chip version trim---
 	ret = nvt_ts_check_chip_ver_trim();
 	if (ret) {
-		TP_LOGE("chip couldn't identified");
+		pr_err("chip couldn't identified\n");
 		ret = -EINVAL;
 		goto err_chipvertrim_failed;
 	} else {
-		TP_LOGD("This is NVT chip");
+		pr_debug("This is NVT chip\n");
 	}
 
 	mutex_init(&ts->lock);
@@ -1538,7 +1436,7 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 	mutex_unlock(&ts->lock);
 
 	/*---For SMx3 use start---*/
-	TP_LOGI("ts->nvt_pid = 0x%04X", ts->nvt_pid);
+	pr_debug("ts->nvt_pid = 0x%04X\n", ts->nvt_pid);
 
 	/* Get GPIO LCD ID */
 	ts->lcd_id = gpio_get_value(TP_READ_LCDID_PIN);
@@ -1556,29 +1454,29 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 	ts->tp_source = smx3_check_project_info();
 #endif /* NVT_PROJECT_INFO_READ */
 
-	TP_LOGI("lcd_id = %d, source = %s (0x%02X)",
+	pr_debug("lcd_id = %d, source = %s (0x%02X)\n",
 		ts->lcd_id, smx3_tp_source_to_text(), ts->tp_source);
 	/*---For SMx3 use end---*/
 
 	//---create workqueue---
 	nvt_wq = create_workqueue("nvt_wq");
 	if (!nvt_wq) {
-		TP_LOGE("nvt_wq create workqueue failed");
+		pr_err("nvt_wq create workqueue failed\n");
 		ret = -ENOMEM;
 		goto err_create_nvt_wq_failed;
 	} else {
-		TP_LOGD("create nvt touch wq ok");
+		pr_debug("create nvt touch wq ok\n");
 	}
 	INIT_WORK(&ts->nvt_work, nvt_ts_work_func);
 
 	//---allocate input device---
 	ts->input_dev = input_allocate_device();
 	if (ts->input_dev == NULL) {
-		TP_LOGE("allocate input device failed");
+		pr_err("allocate input device failed\n");
 		ret = -ENOMEM;
 		goto err_input_dev_alloc_failed;
 	} else {
-		TP_LOGD("allocate input_dev ok");
+		pr_debug("allocate input_dev ok\n");
 	}
 
 	ts->max_touch_num = TOUCH_MAX_FINGER_NUM;
@@ -1618,25 +1516,25 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 	//---register input device---
 	ret = input_register_device(ts->input_dev);
 	if (ret) {
-		TP_LOGE("register input device (%s) failed. ret=%d",
+		pr_err("register input device (%s) failed. ret=%d\n",
 			ts->input_dev->name, ret);
 		goto err_input_register_device_failed;
 	} else {
-		TP_LOGD("register input_dev ok");
+		pr_debug("register input_dev ok\n");
 	}
 
 	//---set int-pin & request irq---
 	client->irq = gpio_to_irq(ts->irq_gpio);
 	if (client->irq) {
-		TP_LOGD("int_trigger_type=%d", ts->int_trigger_type);
+		pr_debug("int_trigger_type=%d\n", ts->int_trigger_type);
 
 		ret = request_irq(client->irq, nvt_ts_irq_handler, ts->int_trigger_type, client->name, ts);
 		if (ret != 0) {
-			TP_LOGE("request irq failed. ret=%d", ret);
+			pr_err("request irq failed. ret=%d\n", ret);
 			goto err_int_request_failed;
 		} else {
 			disable_irq(client->irq);
-			TP_LOGI("request irq %d succeed", client->irq);
+			pr_debug("request irq %d succeed\n", client->irq);
 		}
 	}
 
@@ -1644,11 +1542,11 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 	ts->sw_fw_ver = 0xFF;
 	nvt_fwu_wq = create_singlethread_workqueue("nvt_fwu_wq");
 	if (!nvt_fwu_wq) {
-		TP_LOGE("nvt_fwu_wq create workqueue failed");
+		pr_err("nvt_fwu_wq create workqueue failed\n");
 		ret = -ENOMEM;
 		goto err_create_nvt_fwu_wq_failed;
 	} else {
-		TP_LOGD("create nvt FW upgrade upgrade wq ok");
+		pr_debug("create nvt FW upgrade upgrade wq ok\n");
 	}
 	INIT_WORK(&ts->nvt_fwu_work, Boot_Update_Firmware);
 	// please make sure boot update start after display reset(RESX) sequence
@@ -1659,30 +1557,30 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 #if NVT_TOUCH_PROC
 	ret = nvt_flash_proc_init();
 	if (ret != 0) {
-		TP_LOGE("nvt flash proc init failed. ret=%d", ret);
+		pr_err("nvt flash proc init failed. ret=%d\n", ret);
 		goto err_init_NVT_ts;
 	} else {
-		TP_LOGD("create nvt flash proc node ok");
+		pr_debug("create nvt flash proc node ok\n");
 	}
 #endif
 
 #if NVT_TOUCH_EXT_PROC
 	ret = nvt_extra_proc_init();
 	if (ret != 0) {
-		TP_LOGE("nvt extra proc init failed. ret=%d", ret);
+		pr_err("nvt extra proc init failed. ret=%d\n", ret);
 		goto err_init_NVT_ts;
 	} else {
-		TP_LOGD("create nvt extra proc node ok");
+		pr_debug("create nvt extra proc node ok\n");
 	}
 #endif
 
 #if NVT_TOUCH_MP
 	ret = nvt_mp_proc_init();
 	if (ret != 0) {
-		TP_LOGE("nvt mp proc init failed. ret=%d", ret);
+		pr_err("nvt mp proc init failed. ret=%d\n", ret);
 		goto err_init_NVT_ts;
 	} else {
-		TP_LOGD("create nvt mp proc node ok");
+		pr_debug("create nvt mp proc node ok\n");
 	}
 #endif
 
@@ -1690,10 +1588,10 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 	ts->fb_notif.notifier_call = fb_notifier_callback;
 	ret = fb_register_client(&ts->fb_notif);
 	if(ret) {
-		TP_LOGE("register fb_notifier failed. ret=%d", ret);
+		pr_err("register fb_notifier failed. ret=%d\n", ret);
 		goto err_register_fb_notif_failed;
 	} else {
-		TP_LOGD("register fb_notifier ok");
+		pr_debug("register fb_notifier ok\n");
 	}
 #elif defined(CONFIG_HAS_EARLYSUSPEND)
 	ts->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
@@ -1701,7 +1599,7 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 	ts->early_suspend.resume = nvt_ts_late_resume;
 	ret = register_early_suspend(&ts->early_suspend);
 	if(ret) {
-		TP_LOGE("register early suspend failed. ret=%d", ret);
+		pr_err("register early suspend failed. ret=%d\n", ret);
 		goto err_register_early_suspend_failed;
 	}
 #endif
@@ -1713,13 +1611,13 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 		ret = sysfs_create_file(&ts->input_dev->dev.kobj,
 				&attrs[attr_count].attr);
 		if (ret < 0) {
-			TP_LOGE("Failed to create sysfs attributes");
+			pr_err("Failed to create sysfs attributes\n");
 			attr_num = attr_count;
 			goto err_sysfs;
 		}
 	}
 
-	TP_LOGD("create sysfs attributes ok");
+	pr_debug("create sysfs attributes ok\n");
 
 	/* create sysfs link to input dev */
 	ts->touchscreen_link = kobject_create_and_add("touchscreen", NULL);
@@ -1728,15 +1626,15 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 				&ts->input_dev->dev.kobj,
 				"link_input_dev");
 		if (ret < 0) {
-			TP_LOGE("Failed to create sysfs link for input_dev");
+			pr_err("Failed to create sysfs link for input_dev\n");
 		} else {
-			TP_LOGD("create sysfs link for input_dev ok");
+			pr_debug("create sysfs link for input_dev ok\n");
 		}
 	}
 	/*---For SMx3 use end---*/
 
 	bTouchIsAwake = 1;
-	TP_LOGI("probe end : success");
+	pr_debug("probe end : success\n");
 
 	enable_irq(client->irq);
 
@@ -1772,7 +1670,7 @@ err_gpio_config_failed:
 	i2c_set_clientdata(client, NULL);
 	kfree(ts);
 
-	TP_LOGI("probe end : failed");
+	pr_debug("probe end : failed\n");
 
 	smx3_probe_log_proc_init();
 
@@ -1792,14 +1690,14 @@ static int32_t nvt_ts_remove(struct i2c_client *client)
 
 #if defined(CONFIG_FB)
 	if (fb_unregister_client(&ts->fb_notif))
-		TP_LOGE("Error occurred while unregistering fb_notifier.");
+		pr_err("Error occurred while unregistering fb_notifier.\n");
 #elif defined(CONFIG_HAS_EARLYSUSPEND)
 	unregister_early_suspend(&ts->early_suspend);
 #endif
 
 	mutex_destroy(&ts->lock);
 
-	TP_LOGI("Removing driver...");
+	pr_debug("Removing driver...\n");
 
 	free_irq(client->irq, ts);
 	input_unregister_device(ts->input_dev);
@@ -1824,13 +1722,11 @@ static int32_t nvt_ts_suspend(struct device *dev)
 #endif
 
 	if (!bTouchIsAwake) {
-		TP_LOGW("Touch is already suspend");
+		pr_info("Touch is already suspend\n");
 		return 0;
 	}
 
 	mutex_lock(&ts->lock);
-
-	TP_LOGI("+++");
 
 	bTouchIsAwake = 0;
 
@@ -1862,8 +1758,6 @@ static int32_t nvt_ts_suspend(struct device *dev)
 
 	mutex_unlock(&ts->lock);
 
-	TP_LOGI("---");
-
 	return 0;
 }
 
@@ -1877,7 +1771,7 @@ return:
 static int32_t nvt_ts_resume(struct device *dev)
 {
 	if (bTouchIsAwake) {
-		TP_LOGW("Touch is already resume");
+		pr_info("Touch is already resume\n");
 		return 0;
 	}
 
@@ -1893,7 +1787,7 @@ static int32_t nvt_ts_resume(struct device *dev)
 
 	mutex_unlock(&ts->lock);
 
-	TP_LOGI("irq depth : %d", smx3_get_irq_depth());
+	pr_debug("irq depth : %d\n", smx3_get_irq_depth());
 
 	return 0;
 }
@@ -1984,15 +1878,12 @@ static int32_t __init nvt_driver_init(void)
 {
 	int32_t ret = 0;
 
-	TP_LOGI("+++");
 	//---add i2c driver---
 	ret = i2c_add_driver(&nvt_i2c_driver);
 	if (ret) {
-		TP_LOGE("failed to add i2c driver");
+		pr_err("failed to add i2c driver\n");
 		goto err_driver;
 	}
-
-	TP_LOGI("---");
 
 err_driver:
 	return ret;
