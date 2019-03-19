@@ -14,6 +14,9 @@
 #include <dt-bindings/gpio/gpio.h>
 #include "sdm630-ganges_pinctrl.dtsi"
 
+/* Disable SMP2P Remote Debug for production */
+#include "msm-rdbg-disable.dtsi"
+
 / {
 	reserved-memory {
 		ramoops {
