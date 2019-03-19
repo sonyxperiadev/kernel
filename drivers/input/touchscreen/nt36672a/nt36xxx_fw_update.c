@@ -16,6 +16,8 @@
  *
  */
 
+#define pr_fmt(fmt) "nt36xxx-fwupd: " fmt
+
 #include <linux/delay.h>
 #include <linux/firmware.h>
 
@@ -52,24 +54,24 @@ int32_t update_firmware_request(char *filename)
 		return -1;
 	}
 
-	TP_LOGI("filename is %s", filename);
+	pr_debug("filename is %s\n", filename);
 
 	ret = request_firmware(&fw_entry, filename, &ts->client->dev);
 	if (ret) {
-		TP_LOGE("firmware load failed, ret=%d", ret);
+		pr_err("firmware load failed, ret=%d\n", ret);
 		return ret;
 	}
 
 	// check bin file size (116kb)
 	if (fw_entry->size != FW_BIN_SIZE) {
-		TP_LOGE("bin file size not match. (%zu)", fw_entry->size);
+		pr_err("bin file size not match. (%zu)\n", fw_entry->size);
 		return -EINVAL;
 	}
 
 	// check if FW version add FW version bar equals 0xFF
 	if (*(fw_entry->data + FW_BIN_VER_OFFSET) + *(fw_entry->data + FW_BIN_VER_BAR_OFFSET) != 0xFF) {
-		TP_LOGE("bin file FW_VER + FW_VER_BAR should be 0xFF!");
-		TP_LOGE("FW_VER=0x%02X, FW_VER_BAR=0x%02X",
+		pr_err("bin file FW_VER + FW_VER_BAR should be 0xFF!\n");
+		pr_err("FW_VER=0x%02X, FW_VER_BAR=0x%02X\n",
 			*(fw_entry->data+FW_BIN_VER_OFFSET),
 			*(fw_entry->data+FW_BIN_VER_BAR_OFFSET));
 		return -EINVAL;
@@ -114,7 +116,7 @@ int32_t Check_FW_Ver(void)
 	buf[2] = (ts->mmap->EVENT_BUF_ADDR >> 8) & 0xFF;
 	ret = CTP_I2C_WRITE(ts->client, I2C_BLDR_Address, buf, 3);
 	if (ret < 0) {
-		TP_LOGE("i2c write error!(%d)", ret);
+		pr_err("i2c write error!(%d)\n", ret);
 		return ret;
 	}
 
@@ -124,18 +126,18 @@ int32_t Check_FW_Ver(void)
 	buf[2] = 0x00;
 	ret = CTP_I2C_READ(ts->client, I2C_BLDR_Address, buf, 3);
 	if (ret < 0) {
-		TP_LOGE("i2c read error!(%d)", ret);
+		pr_err("i2c read error!(%d)\n", ret);
 		return ret;
 	}
 
-	TP_LOGI("IC FW Ver = 0x%02X, FW Ver Bar = 0x%02X", buf[1], buf[2]);
-	TP_LOGI("Bin FW Ver = 0x%02X, FW ver Bar = 0x%02X",
+	pr_debug("IC FW Ver = 0x%02X, FW Ver Bar = 0x%02X\n", buf[1], buf[2]);
+	pr_debug("Bin FW Ver = 0x%02X, FW ver Bar = 0x%02X\n",
 			fw_entry->data[FW_BIN_VER_OFFSET],
 			fw_entry->data[FW_BIN_VER_BAR_OFFSET]);
 
 	// check IC FW_VER + FW_VER_BAR equals 0xFF or not, need to update if not
 	if ((buf[1] + buf[2]) != 0xFF) {
-		TP_LOGE("IC FW_VER + FW_VER_BAR not equals to 0xFF!");
+		pr_err("IC FW_VER + FW_VER_BAR not equals to 0xFF!\n");
 		return 0;
 	}
 
@@ -170,7 +172,7 @@ int32_t Resume_PD(void)
 	buf[1] = 0xAB;
 	ret = CTP_I2C_WRITE(ts->client, I2C_HW_Address, buf, 2);
 	if (ret < 0) {
-		TP_LOGE("Write Enable error!!(%d)", ret);
+		pr_err("Write Enable error!!(%d)\n", ret);
 		return ret;
 	}
 
@@ -182,7 +184,7 @@ int32_t Resume_PD(void)
 		buf[1] = 0x00;
 		ret = CTP_I2C_READ(ts->client, I2C_HW_Address, buf, 2);
 		if (ret < 0) {
-			TP_LOGE("%s(Resume) error!!(%d)", AA_tag, ret);
+			pr_err("%s(Resume) error!!(%d)\n", AA_tag, ret);
 			return ret;
 		}
 		if (buf[1] == 0xAA) {
@@ -190,14 +192,14 @@ int32_t Resume_PD(void)
 		}
 		retry++;
 		if (unlikely(retry > 20)) {
-			TP_LOGE("%s(Resume) error!! status=0x%02X",
+			pr_err("%s(Resume) error!! status=0x%02X\n",
 				AA_tag, buf[1]);
 			return -1;
 		}
 	}
 	msleep(10);
 
-	TP_LOGD("Resume PD OK");
+	pr_debug("Resume PD OK\n");
 	return 0;
 }
 
@@ -224,7 +226,7 @@ int32_t Check_CheckSum(void)
 	int32_t retry = 0;
 
 	if (Resume_PD()) {
-		TP_LOGE("Resume PD error!!");
+		pr_err("Resume PD error!!\n");
 		return -1;
 	}
 
@@ -250,7 +252,7 @@ int32_t Check_CheckSum(void)
 			buf[6] = (len_in_blk - 1) & 0xFF;
 			ret = CTP_I2C_WRITE(ts->client, I2C_HW_Address, buf, 7);
 			if (ret < 0) {
-				TP_LOGE("Fast Read error!!(%d)", ret);
+				pr_err("Fast Read error!!(%d)\n", ret);
 				return ret;
 			}
 			// Check 0xAA (Fast Read Command)
@@ -261,7 +263,7 @@ int32_t Check_CheckSum(void)
 				buf[1] = 0x00;
 				ret = CTP_I2C_READ(ts->client, I2C_HW_Address, buf, 2);
 				if (ret < 0) {
-					TP_LOGE("%s (Fast Read) error!!(%d)",
+					pr_err("%s (Fast Read) error!!(%d)\n",
 						AA_tag, ret);
 					return ret;
 				}
@@ -270,7 +272,7 @@ int32_t Check_CheckSum(void)
 				}
 				retry++;
 				if (unlikely(retry > 5)) {
-					TP_LOGE("%s (Fast Read) failed(0x%02X)",
+					pr_err("%s (Fast Read) failed(0x%02X)\n",
 						AA_tag, buf[1]);
 					return -1;
 				}
@@ -281,7 +283,7 @@ int32_t Check_CheckSum(void)
 			buf[2] = (XDATA_Addr >> 8) & 0xFF;
 			ret = CTP_I2C_WRITE(ts->client, I2C_BLDR_Address, buf, 3);
 			if (ret < 0) {
-				TP_LOGE("Read Checksum (write) error!!(%d)",
+				pr_err("Read Checksum (write) error!!(%d)\n",
 					ret);
 				return ret;
 			}
@@ -291,23 +293,23 @@ int32_t Check_CheckSum(void)
 			buf[2] = 0x00;
 			ret = CTP_I2C_READ(ts->client, I2C_BLDR_Address, buf, 3);
 			if (ret < 0) {
-				TP_LOGE("Read Checksum error!!(%d)", ret);
+				pr_err("Read Checksum error!!(%d)\n", ret);
 				return ret;
 			}
 
 			RD_Filechksum[i] = (uint16_t)((buf[2] << 8) | buf[1]);
 			if (WR_Filechksum[i] != RD_Filechksum[i]) {
-				TP_LOGE("RD_Filechksum[%d]=0x%04X",
+				pr_err("RD_Filechksum[%d]=0x%04X\n",
 					i, RD_Filechksum[i]);
-				TP_LOGE("WR_Filechksum[%d]=0x%04X",
+				pr_err("WR_Filechksum[%d]=0x%04X\n",
 					i, WR_Filechksum[i]);
-				TP_LOGE("firmware checksum not match!!");
+				pr_err("firmware checksum not match!!\n");
 				return 0;
 			}
 		}
 	}
 
-	TP_LOGI("firmware checksum match");
+	pr_debug("firmware checksum match\n");
 	return 1;
 }
 #endif
@@ -340,7 +342,7 @@ int32_t Init_BootLoader(void)
 	buf[2] = I2C_FW_Address;
 	ret = CTP_I2C_WRITE(ts->client, I2C_HW_Address, buf, 3);
 	if (ret < 0) {
-		TP_LOGE("Initial Flash Block error!!(%d)", ret);
+		pr_err("Initial Flash Block error!!(%d)\n", ret);
 		return ret;
 	}
 
@@ -352,7 +354,7 @@ int32_t Init_BootLoader(void)
 		buf[1] = 0x00;
 		ret = CTP_I2C_READ(ts->client, I2C_HW_Address, buf, 2);
 		if (ret < 0) {
-			TP_LOGE("%s(Initial Flash Block) error!!(%d)",
+			pr_err("%s(Initial Flash Block) error!!(%d)\n",
 				AA_tag, ret);
 			return ret;
 		}
@@ -361,13 +363,13 @@ int32_t Init_BootLoader(void)
 		}
 		retry++;
 		if (unlikely(retry > 20)) {
-			TP_LOGE("%s(Initial Flash Block) error=0x%02X",
+			pr_err("%s(Initial Flash Block) error=0x%02X\n",
 				AA_tag, buf[1]);
 			return -1;
 		}
 	}
 
-	TP_LOGD("Init OK ");
+	pr_debug("Init OK \n");
 	msleep(20);
 
 	return 0;
@@ -395,7 +397,7 @@ int32_t Erase_Flash(void)
 	buf[1] = 0x06;
 	ret = CTP_I2C_WRITE(ts->client, I2C_HW_Address, buf, 2);
 	if (ret < 0) {
-		TP_LOGE("Write Enable (for Write Status Register) error!!(%d)",
+		pr_err("Write Enable (for Write Status Register) error!!(%d)\n",
 			ret);
 		return ret;
 	}
@@ -407,7 +409,7 @@ int32_t Erase_Flash(void)
 		buf[1] = 0x00;
 		ret = CTP_I2C_READ(ts->client, I2C_HW_Address, buf, 2);
 		if (ret < 0) {
-			TP_LOGE("%s(Write Enable) error!!(%d)",
+			pr_err("%s(Write Enable) error!!(%d)\n",
 				AA_tag, ret);
 			return ret;
 		}
@@ -416,7 +418,7 @@ int32_t Erase_Flash(void)
 		}
 		retry++;
 		if (unlikely(retry > 20)) {
-			TP_LOGE("%s(Write Enable) error=0x%02X",
+			pr_err("%s(Write Enable) error=0x%02X\n",
 				AA_tag, buf[1]);
 			return -1;
 		}
@@ -428,7 +430,7 @@ int32_t Erase_Flash(void)
 	buf[2] = 0x00;
 	ret = CTP_I2C_WRITE(ts->client, I2C_HW_Address, buf, 3);
 	if (ret < 0) {
-		TP_LOGE("Write Status Register error!!(%d)", ret);
+		pr_err("Write Status Register error!!(%d)\n", ret);
 		return ret;
 	}
 	// Check 0xAA (Write Status Register)
@@ -439,7 +441,7 @@ int32_t Erase_Flash(void)
 		buf[1] = 0x00;
 		ret = CTP_I2C_READ(ts->client, I2C_HW_Address, buf, 2);
 		if (ret < 0) {
-			TP_LOGE("%s(Write Status) error!!(%d)", AA_tag, ret);
+			pr_err("%s(Write Status) error!!(%d)\n", AA_tag, ret);
 			return ret;
 		}
 		if (buf[1] == 0xAA) {
@@ -447,7 +449,7 @@ int32_t Erase_Flash(void)
 		}
 		retry++;
 		if (unlikely(retry > 20)) {
-			TP_LOGE("%s(Write Status) error=0x%02X",
+			pr_err("%s(Write Status) error=0x%02X\n",
 				AA_tag, buf[1]);
 			return -1;
 		}
@@ -461,7 +463,7 @@ int32_t Erase_Flash(void)
 		buf[1] = 0x05;
 		ret = CTP_I2C_WRITE(ts->client, I2C_HW_Address, buf, 2);
 		if (ret < 0) {
-			TP_LOGE("Read Status (for Write Status) error!!(%d)",
+			pr_err("Read Status (for Write Status) error!!(%d)\n",
 				ret);
 			return ret;
 		}
@@ -472,7 +474,7 @@ int32_t Erase_Flash(void)
 		buf[2] = 0x00;
 		ret = CTP_I2C_READ(ts->client, I2C_HW_Address, buf, 3);
 		if (ret < 0) {
-			TP_LOGE("%s(Read Status) error!!(%d)", AA_tag, ret);
+			pr_err("%s(Read Status) error!!(%d)\n", AA_tag, ret);
 			return ret;
 		}
 		if ((buf[1] == 0xAA) && (buf[2] == 0x00)) {
@@ -480,7 +482,7 @@ int32_t Erase_Flash(void)
 		}
 		retry++;
 		if (unlikely(retry > 100)) {
-			TP_LOGE("%s(Read Status) failed(0x%02X,0x%02X)",
+			pr_err("%s(Read Status) failed(0x%02X,0x%02X)\n",
 				AA_tag, buf[1], buf[2]);
 			return -1;
 		}
@@ -497,7 +499,7 @@ int32_t Erase_Flash(void)
 		buf[1] = 0x06;
 		ret = CTP_I2C_WRITE(ts->client, I2C_HW_Address, buf, 2);
 		if (ret < 0) {
-			TP_LOGE("Write Enable error!!(%d,%d)", ret, i);
+			pr_err("Write Enable error!!(%d,%d)\n", ret, i);
 			return ret;
 		}
 		// Check 0xAA (Write Enable)
@@ -508,7 +510,7 @@ int32_t Erase_Flash(void)
 			buf[1] = 0x00;
 			ret = CTP_I2C_READ(ts->client, I2C_HW_Address, buf, 2);
 			if (ret < 0) {
-				TP_LOGE("%s(Write Enable) error!!(%d,%d)",
+				pr_err("%s(Write Enable) error!!(%d,%d)\n",
 					AA_tag, ret, i);
 				return ret;
 			}
@@ -517,7 +519,7 @@ int32_t Erase_Flash(void)
 			}
 			retry++;
 			if (unlikely(retry > 20)) {
-				TP_LOGE("%s(Write Enable) error=0x%02X",
+				pr_err("%s(Write Enable) error=0x%02X\n",
 					AA_tag, buf[1]);
 				return -1;
 			}
@@ -533,7 +535,7 @@ int32_t Erase_Flash(void)
 		buf[4] = (Flash_Address & 0xFF);
 		ret = CTP_I2C_WRITE(ts->client, I2C_HW_Address, buf, 5);
 		if (ret < 0) {
-			TP_LOGE("Sector Erase error!!(%d,%d)", ret, i);
+			pr_err("Sector Erase error!!(%d,%d)\n", ret, i);
 			return ret;
 		}
 		// Check 0xAA (Sector Erase)
@@ -544,7 +546,7 @@ int32_t Erase_Flash(void)
 			buf[1] = 0x00;
 			ret = CTP_I2C_READ(ts->client, I2C_HW_Address, buf, 2);
 			if (ret < 0) {
-				TP_LOGE("%s(Sector Erase) error!!(%d,%d)",
+				pr_err("%s(Sector Erase) error!!(%d,%d)\n",
 					AA_tag, ret, i);
 				return ret;
 			}
@@ -553,7 +555,7 @@ int32_t Erase_Flash(void)
 			}
 			retry++;
 			if (unlikely(retry > 20)) {
-				TP_LOGE("%s(Sector Erase) failed(0x%02X)",
+				pr_err("%s(Sector Erase) failed(0x%02X)\n",
 					AA_tag, buf[1]);
 				return -1;
 			}
@@ -567,7 +569,7 @@ int32_t Erase_Flash(void)
 			buf[1] = 0x05;
 			ret = CTP_I2C_WRITE(ts->client, I2C_HW_Address, buf, 2);
 			if (ret < 0) {
-				TP_LOGE("Read Status error!!(%d,%d)", ret, i);
+				pr_err("Read Status error!!(%d,%d)\n", ret, i);
 				return ret;
 			}
 
@@ -577,7 +579,7 @@ int32_t Erase_Flash(void)
 			buf[2] = 0x00;
 			ret = CTP_I2C_READ(ts->client, I2C_HW_Address, buf, 3);
 			if (ret < 0) {
-				TP_LOGE("%s(Read Status) error!!(%d,%d)",
+				pr_err("%s(Read Status) error!!(%d,%d)\n",
 					AA_tag, ret, i);
 				return ret;
 			}
@@ -586,14 +588,14 @@ int32_t Erase_Flash(void)
 			}
 			retry++;
 			if (unlikely(retry > 100)) {
-				TP_LOGE("%s(Read Status) failed(0x%02X,0x%02X)",
+				pr_err("%s(Read Status) failed(0x%02X,0x%02X)\n",
 					AA_tag, buf[1], buf[2]);
 				return -1;
 			}
 		}
 	}
 
-	TP_LOGD("Erase OK ");
+	pr_debug("Erase OK \n");
 	return 0;
 }
 
@@ -621,7 +623,7 @@ int32_t Write_Flash(void)
 	buf[2] = (XDATA_Addr >> 8) & 0xFF;
 	ret = CTP_I2C_WRITE(ts->client, I2C_BLDR_Address, buf, 3);
 	if (ret < 0) {
-		TP_LOGE("change I2C buffer index error!!(%d)", ret);
+		pr_err("change I2C buffer index error!!(%d)\n", ret);
 		return ret;
 	}
 
@@ -638,7 +640,7 @@ int32_t Write_Flash(void)
 		buf[1] = 0x06;
 		ret = CTP_I2C_WRITE(ts->client, I2C_HW_Address, buf, 2);
 		if (ret < 0) {
-			TP_LOGE("Write Enable error!!(%d)", ret);
+			pr_err("Write Enable error!!(%d)\n", ret);
 			return ret;
 		}
 		// Check 0xAA (Write Enable)
@@ -649,7 +651,7 @@ int32_t Write_Flash(void)
 			buf[1] = 0x00;
 			ret = CTP_I2C_READ(ts->client, I2C_HW_Address, buf, 2);
 			if (ret < 0) {
-				TP_LOGE("%s(Write Enable) error!!(%d,%d)",
+				pr_err("%s(Write Enable) error!!(%d,%d)\n",
 					AA_tag, ret, i);
 				return ret;
 			}
@@ -658,7 +660,7 @@ int32_t Write_Flash(void)
 			}
 			retry++;
 			if (unlikely(retry > 20)) {
-				TP_LOGE("%s(Write Enable) error=0x%02X",
+				pr_err("%s(Write Enable) error=0x%02X\n",
 					AA_tag, buf[1]);
 				return -1;
 			}
@@ -672,7 +674,7 @@ int32_t Write_Flash(void)
 			}
 			ret = CTP_I2C_WRITE(ts->client, I2C_BLDR_Address, buf, 33);
 			if (ret < 0) {
-				TP_LOGE("Write Page error!!(%d), j=%d", ret, j);
+				pr_err("Write Page error!!(%d), j=%d\n", ret, j);
 				return ret;
 			}
 		}
@@ -697,7 +699,7 @@ int32_t Write_Flash(void)
 		buf[7] = tmpvalue;
 		ret = CTP_I2C_WRITE(ts->client, I2C_HW_Address, buf, 8);
 		if (ret < 0) {
-			TP_LOGE("Page Program error!!(%d), i=%d", ret, i);
+			pr_err("Page Program error!!(%d), i=%d\n", ret, i);
 			return ret;
 		}
 		// Check 0xAA (Page Program)
@@ -708,7 +710,7 @@ int32_t Write_Flash(void)
 			buf[1] = 0x00;
 			ret = CTP_I2C_READ(ts->client, I2C_HW_Address, buf, 2);
 			if (ret < 0) {
-				TP_LOGE("Page Program error!!(%d)", ret);
+				pr_err("Page Program error!!(%d)\n", ret);
 				return ret;
 			}
 			if (buf[1] == 0xAA || buf[1] == 0xEA) {
@@ -716,13 +718,13 @@ int32_t Write_Flash(void)
 			}
 			retry++;
 			if (unlikely(retry > 20)) {
-				TP_LOGE("%s(Page Program) failed(0x%02X)",
+				pr_err("%s(Page Program) failed(0x%02X)\n",
 					AA_tag, buf[1]);
 				return -1;
 			}
 		}
 		if (buf[1] == 0xEA) {
-			TP_LOGE("Page Program error!! i=%d", i);
+			pr_err("Page Program error!! i=%d\n", i);
 			return -3;
 		}
 
@@ -734,7 +736,7 @@ int32_t Write_Flash(void)
 			buf[1] = 0x05;
 			ret = CTP_I2C_WRITE(ts->client, I2C_HW_Address, buf, 2);
 			if (ret < 0) {
-				TP_LOGE("Read Status error!!(%d)", ret);
+				pr_err("Read Status error!!(%d)\n", ret);
 				return ret;
 			}
 
@@ -744,7 +746,7 @@ int32_t Write_Flash(void)
 			buf[2] = 0x00;
 			ret = CTP_I2C_READ(ts->client, I2C_HW_Address, buf, 3);
 			if (ret < 0) {
-				TP_LOGE("%s(Read Status) error!!(%d)",
+				pr_err("%s(Read Status) error!!(%d)\n",
 					AA_tag, ret);
 				return ret;
 			}
@@ -753,21 +755,21 @@ int32_t Write_Flash(void)
 			}
 			retry++;
 			if (unlikely(retry > 100)) {
-				TP_LOGE("%s(Read Status) failed(0x%02X,0x%02X)",
+				pr_err("%s(Read Status) failed(0x%02X,0x%02X)\n",
 					AA_tag, buf[1], buf[2]);
 				return -1;
 			}
 		}
 		if (buf[1] == 0xEA) {
-			TP_LOGE("Page Program error!! i=%d", i);
+			pr_err("Page Program error!! i=%d\n", i);
 			return -4;
 		}
 
-		TP_LOGD("Programming...%2d%%", ((i * 100) / count));
+		pr_debug("Programming...%2d%%\n", ((i * 100) / count));
 	}
 
-	TP_LOGD("Programming...%2d%%", 100);
-	TP_LOGD("Program OK");
+	pr_debug("Programming...%2d%%\n", 100);
+	pr_debug("Program OK\n");
 	return 0;
 }
 
@@ -814,7 +816,7 @@ int32_t Verify_Flash(void)
 			buf[6] = (len_in_blk - 1) & 0xFF;
 			ret = CTP_I2C_WRITE(ts->client, I2C_HW_Address, buf, 7);
 			if (ret < 0) {
-				TP_LOGE("Fast Read Command error!!(%d)", ret);
+				pr_err("Fast Read Command error!!(%d)\n", ret);
 				return ret;
 			}
 			// Check 0xAA (Fast Read Command)
@@ -825,7 +827,7 @@ int32_t Verify_Flash(void)
 				buf[1] = 0x00;
 				ret = CTP_I2C_READ(ts->client, I2C_HW_Address, buf, 2);
 				if (ret < 0) {
-					TP_LOGE("%s(Fast Read) error!!(%d)",
+					pr_err("%s(Fast Read) error!!(%d)\n",
 						AA_tag, ret);
 					return ret;
 				}
@@ -834,7 +836,7 @@ int32_t Verify_Flash(void)
 				}
 				retry++;
 				if (unlikely(retry > 5)) {
-					TP_LOGE("%s(Fast Read) failed(0x%02X)",
+					pr_err("%s(Fast Read) failed(0x%02X)\n",
 						AA_tag, buf[1]);
 					return -1;
 				}
@@ -845,7 +847,7 @@ int32_t Verify_Flash(void)
 			buf[2] = (XDATA_Addr >> 8) & 0xFF;
 			ret = CTP_I2C_WRITE(ts->client, I2C_BLDR_Address, buf, 3);
 			if (ret < 0) {
-				TP_LOGE("Read Checksum (write) error!!(%d)",
+				pr_err("Read Checksum (write) error!!(%d)\n",
 					ret);
 				return ret;
 			}
@@ -855,23 +857,23 @@ int32_t Verify_Flash(void)
 			buf[2] = 0x00;
 			ret = CTP_I2C_READ(ts->client, I2C_BLDR_Address, buf, 3);
 			if (ret < 0) {
-				TP_LOGE("Read Checksum error!!(%d)", ret);
+				pr_err("Read Checksum error!!(%d)\n", ret);
 				return ret;
 			}
 
 			RD_Filechksum[i] = (uint16_t)((buf[2] << 8) | buf[1]);
 			if (WR_Filechksum[i] != RD_Filechksum[i]) {
-				TP_LOGE("Verify Fail%d!!", i);
-				TP_LOGE("RD_Filechksum[%d]=0x%04X",
+				pr_err("Verify Fail%d!!\n", i);
+				pr_err("RD_Filechksum[%d]=0x%04X\n",
 					i, RD_Filechksum[i]);
-				TP_LOGE("WR_Filechksum[%d]=0x%04X",
+				pr_err("WR_Filechksum[%d]=0x%04X\n",
 					i, WR_Filechksum[i]);
 				return -1;
 			}
 		}
 	}
 
-	TP_LOGD("Verify OK ");
+	pr_debug("Verify OK \n");
 	return 0;
 }
 
@@ -886,7 +888,7 @@ int32_t Update_Firmware(void)
 {
 	int32_t ret = 0;
 
-	TP_LOGI("Need upgrade TP FW");
+	pr_debug("Need upgrade TP FW\n");
 	//---Stop CRC check to prevent IC auto reboot---
 	nvt_stop_crc_reboot();
 
@@ -959,7 +961,7 @@ int32_t nvt_check_flash_end_flag(void)
 	buf[1] = 0x35;
 	ret = CTP_I2C_WRITE(ts->client, I2C_HW_Address, buf, 2);
 	if (ret < 0) {
-		TP_LOGE("write unlock error!!(%d)", ret);
+		pr_err("write unlock error!!(%d)\n", ret);
 		return ret;
 	}
 	msleep(10);
@@ -974,7 +976,7 @@ int32_t nvt_check_flash_end_flag(void)
 	buf[6] = NVT_FLASH_END_FLAG_LEN & 0xFF; //Len_L
 	ret = CTP_I2C_WRITE(ts->client, I2C_HW_Address, buf, 7);
 	if (ret < 0) {
-		TP_LOGE("write Read Command error!!(%d)", ret);
+		pr_err("write Read Command error!!(%d)\n", ret);
 		return ret;
 	}
 	msleep(10);
@@ -984,11 +986,11 @@ int32_t nvt_check_flash_end_flag(void)
 	buf[1] = 0x00;
 	ret = CTP_I2C_READ(ts->client, I2C_HW_Address, buf, 2);
 	if (ret < 0) {
-		TP_LOGE("%s(Read ) error!!(%d)", AA_tag, ret);
+		pr_err("%s(Read ) error!!(%d)\n", AA_tag, ret);
 		return ret;
 	}
 	if (buf[1] != 0xAA) {
-		TP_LOGE("%s(Read ) error!! status=0x%02X",
+		pr_err("%s(Read ) error!! status=0x%02X\n",
 			AA_tag, buf[1]);
 		return -1;
 	}
@@ -1001,7 +1003,7 @@ int32_t nvt_check_flash_end_flag(void)
 	buf[2] = (ts->mmap->READ_FLASH_CHECKSUM_ADDR >> 8) & 0xFF;
 	ret = CTP_I2C_WRITE(ts->client, I2C_BLDR_Address, buf, 3);
 	if (ret < 0) {
-		TP_LOGE("change index error!! (%d)", ret);
+		pr_err("change index error!! (%d)\n", ret);
 		return ret;
 	}
 	msleep(10);
@@ -1010,20 +1012,20 @@ int32_t nvt_check_flash_end_flag(void)
 	buf[0] = ts->mmap->READ_FLASH_CHECKSUM_ADDR & 0xFF;
 	ret = CTP_I2C_READ(ts->client, I2C_BLDR_Address, buf, 6);
 	if (ret < 0) {
-		TP_LOGE("Read Back error!! (%d)", ret);
+		pr_err("Read Back error!! (%d)\n", ret);
 		return ret;
 	}
 
 	//buf[3:5] => NVT End Flag
 	strncpy(nvt_end_flag, &buf[3], NVT_FLASH_END_FLAG_LEN);
-	TP_LOGI("nvt_end_flag = %s (%02X %02X %02X)",
+	pr_debug("nvt_end_flag = %s (%02X %02X %02X)\n",
 		nvt_end_flag, buf[3], buf[4], buf[5]);
 
 	if (strncmp(nvt_end_flag, "NVT", 3) == 0) {
-		TP_LOGI("\"NVT\" end flag found!");
+		pr_debug("\"NVT\" end flag found!\n");
 		return 0;
 	} else {
-		TP_LOGE("\"NVT\" end flag not found!");
+		pr_err("\"NVT\" end flag not found!\n");
 		return 1;
 	}
 }
@@ -1042,7 +1044,6 @@ void Boot_Update_Firmware(struct work_struct *work)
 
 	char firmware_name[50] = "";
 
-	TP_LOGI("+++");
 	if (ts->tp_source == TP_SOURCE_TR_M08)
 		snprintf(firmware_name, 50, BOOT_UPDATE_FIRMWARE_NAME_TR_M08);
 	else if (ts->tp_source == TP_SOURCE_TR_M10)
@@ -1057,9 +1058,8 @@ void Boot_Update_Firmware(struct work_struct *work)
 	// request bin file in "/etc/firmware"
 	ret = update_firmware_request(firmware_name);
 	if (ret) {
-		TP_LOGE("update_firmware_request failed. (%d)", ret);
-		TP_LOGI("---");
-		return;
+		pr_err("update_firmware_request failed. (%d)\n", ret);
+			return;
 	}
 
 	mutex_lock(&ts->lock);
@@ -1069,23 +1069,23 @@ void Boot_Update_Firmware(struct work_struct *work)
 	ret = Check_CheckSum();
 
 	if (ret < 0) {	// read firmware checksum failed
-		TP_LOGE("read firmware checksum failed");
+		pr_err("read firmware checksum failed\n");
 		ret = Update_Firmware();
 	} else if ((ret == 0) && (Check_FW_Ver() == 0)) {	// (fw checksum not match) && (bin fw version >= ic fw version)
-		TP_LOGI("firmware version not match");
+		pr_debug("firmware version not match\n");
 		ret = Update_Firmware();
 	} else if (nvt_check_flash_end_flag()) {
-		TP_LOGI("check flash end flag failed");
+		pr_debug("check flash end flag failed\n");
 		ret = Update_Firmware();
 	} else {
 		// Bootloader Reset
 		nvt_bootloader_reset();
 		ret = nvt_check_fw_reset_state(RESET_STATE_INIT);
 		if (ret) {
-			TP_LOGI("check fw reset state failed");
+			pr_debug("check fw reset state failed\n");
 			ret = Update_Firmware();
 		} else {
-			TP_LOGI("No need upgrade TP FW");
+			pr_debug("No need upgrade TP FW\n");
 			goto no_need_check_flag;
 		}
 	}
@@ -1095,20 +1095,18 @@ void Boot_Update_Firmware(struct work_struct *work)
 	nvt_check_fw_reset_state(RESET_STATE_INIT);
 
 	if (ret < 0)
-		TP_LOGE("TP FW upgrade fail");
+		pr_err("TP FW upgrade fail\n");
 	else
-		TP_LOGI("TP FW upgrade finish");
+		pr_debug("TP FW upgrade finish\n");
 
 no_need_check_flag:
 	mutex_unlock(&ts->lock);
 
 	update_firmware_release();
 
-	TP_LOGI("---");
 	return;
 
 no_need_upgrade:
-	TP_LOGI("Current module no need upgrade TP FW");
-	TP_LOGI("---");
+	pr_debug("Current module no need upgrade TP FW\n");
 }
 #endif /* BOOT_UPDATE_FIRMWARE */

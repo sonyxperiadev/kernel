@@ -16,6 +16,7 @@
  *
  */
 
+#define pr_fmt(fmt) "nt36xxx-extra: " fmt
 
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
@@ -81,8 +82,6 @@ void nvt_change_mode(uint8_t mode)
 {
 	uint8_t buf[8] = {0};
 
-	TP_LOGD("+++");
-
 	//---set xdata index to EVENT BUF ADDR---
 	buf[0] = 0xFF;
 	buf[1] = (ts->mmap->EVENT_BUF_ADDR >> 16) & 0xFF;
@@ -101,7 +100,6 @@ void nvt_change_mode(uint8_t mode)
 		msleep(20);
 	}
 
-	TP_LOGD("---");
 
 }
 
@@ -116,8 +114,6 @@ uint8_t nvt_get_fw_pipe(void)
 {
 	uint8_t buf[8]= {0};
 
-	TP_LOGD("+++");
-
 	//---set xdata index to EVENT BUF ADDR---
 	buf[0] = 0xFF;
 	buf[1] = (ts->mmap->EVENT_BUF_ADDR >> 16) & 0xFF;
@@ -129,9 +125,8 @@ uint8_t nvt_get_fw_pipe(void)
 	buf[1] = 0x00;
 	CTP_I2C_READ(ts->client, I2C_FW_Address, buf, 2);
 
-	/* TP_LOGD("FW pipe=%d, buf[1]=0x%02X", (buf[1]&0x01), buf[1]); */
+	/* pr_debug("FW pipe=%d, buf[1]=0x%02X\n", (buf[1]&0x01), buf[1]); */
 
-	TP_LOGD("---");
 
 	return (buf[1] & 0x01);
 }
@@ -153,8 +148,6 @@ void nvt_read_mdata(uint32_t xdata_addr, uint32_t xdata_btn_addr)
 	int32_t dummy_len = 0;
 	int32_t data_len = 0;
 	int32_t residual_len = 0;
-
-	TP_LOGD("+++");
 
 	//---set xdata sector address & length---
 	head_addr = xdata_addr - (xdata_addr % XDATA_SECTOR_SIZE);
@@ -221,7 +214,6 @@ void nvt_read_mdata(uint32_t xdata_addr, uint32_t xdata_btn_addr)
 	buf[2] = (ts->mmap->EVENT_BUF_ADDR >> 8) & 0xFF;
 	CTP_I2C_WRITE(ts->client, I2C_FW_Address, buf, 3);
 
-	TP_LOGD("---");
 }
 
 /*******************************************************
@@ -364,23 +356,18 @@ return:
 *******************************************************/
 static int32_t nvt_fw_version_open(struct inode *inode, struct file *file)
 {
-	TP_LOGI("+++");
 
 	if (mutex_lock_interruptible(&ts->lock)) {
-		TP_LOGE("mutex lock fail");
-		TP_LOGI("---");
+		pr_err("mutex lock fail\n");
 		return -ERESTARTSYS;
 	}
 
 	if (nvt_get_fw_info()) {
 		mutex_unlock(&ts->lock);
-		TP_LOGI("---");
 		return -EAGAIN;
 	}
 
 	mutex_unlock(&ts->lock);
-
-	TP_LOGI("---");
 
 	return seq_open(file, &nvt_fw_version_seq_ops);
 }
@@ -402,17 +389,14 @@ return:
 *******************************************************/
 static int32_t nvt_baseline_open(struct inode *inode, struct file *file)
 {
-	TP_LOGI("+++");
 
 	if (mutex_lock_interruptible(&ts->lock)) {
-		TP_LOGE("mutex lock fail");
-		TP_LOGI("---");
+		pr_err("mutex lock fail\n");
 		return -ERESTARTSYS;
 	}
 
 	if (nvt_clear_fw_status()) {
 		mutex_unlock(&ts->lock);
-		TP_LOGI("---");
 		return -EAGAIN;
 	}
 
@@ -420,13 +404,11 @@ static int32_t nvt_baseline_open(struct inode *inode, struct file *file)
 
 	if (nvt_check_fw_status()) {
 		mutex_unlock(&ts->lock);
-		TP_LOGI("---");
 		return -EAGAIN;
 	}
 
 	if (nvt_get_fw_info()) {
 		mutex_unlock(&ts->lock);
-		TP_LOGI("---");
 		return -EAGAIN;
 	}
 
@@ -440,8 +422,6 @@ static int32_t nvt_baseline_open(struct inode *inode, struct file *file)
 	nvt_change_mode(NORMAL_MODE);
 
 	mutex_unlock(&ts->lock);
-
-	TP_LOGI("---");
 
 	return seq_open(file, &nvt_seq_ops);
 }
@@ -463,17 +443,14 @@ return:
 *******************************************************/
 static int32_t nvt_raw_open(struct inode *inode, struct file *file)
 {
-	TP_LOGI("+++");
 
 	if (mutex_lock_interruptible(&ts->lock)) {
-		TP_LOGE("mutex lock fail");
-		TP_LOGI("---");
+		pr_err("mutex lock fail\n");
 		return -ERESTARTSYS;
 	}
 
 	if (nvt_clear_fw_status()) {
 		mutex_unlock(&ts->lock);
-		TP_LOGI("---");
 		return -EAGAIN;
 	}
 
@@ -481,13 +458,11 @@ static int32_t nvt_raw_open(struct inode *inode, struct file *file)
 
 	if (nvt_check_fw_status()) {
 		mutex_unlock(&ts->lock);
-		TP_LOGI("---");
 		return -EAGAIN;
 	}
 
 	if (nvt_get_fw_info()) {
 		mutex_unlock(&ts->lock);
-		TP_LOGI("---");
 		return -EAGAIN;
 	}
 
@@ -509,8 +484,6 @@ static int32_t nvt_raw_open(struct inode *inode, struct file *file)
 
 	mutex_unlock(&ts->lock);
 
-	TP_LOGI("---");
-
 	return seq_open(file, &nvt_seq_ops);
 }
 
@@ -531,17 +504,14 @@ return:
 *******************************************************/
 static int32_t nvt_diff_open(struct inode *inode, struct file *file)
 {
-	TP_LOGI("+++");
 
 	if (mutex_lock_interruptible(&ts->lock)) {
-		TP_LOGE("mutex lock fail");
-		TP_LOGI("---");
+		pr_err("mutex lock fail\n");
 		return -ERESTARTSYS;
 	}
 
 	if (nvt_clear_fw_status()) {
 		mutex_unlock(&ts->lock);
-		TP_LOGI("---");
 		return -EAGAIN;
 	}
 
@@ -549,13 +519,11 @@ static int32_t nvt_diff_open(struct inode *inode, struct file *file)
 
 	if (nvt_check_fw_status()) {
 		mutex_unlock(&ts->lock);
-		TP_LOGI("---");
 		return -EAGAIN;
 	}
 
 	if (nvt_get_fw_info()) {
 		mutex_unlock(&ts->lock);
-		TP_LOGI("---");
 		return -EAGAIN;
 	}
 
@@ -577,8 +545,6 @@ static int32_t nvt_diff_open(struct inode *inode, struct file *file)
 
 	mutex_unlock(&ts->lock);
 
-	TP_LOGI("---");
-
 	return seq_open(file, &nvt_seq_ops);
 }
 
@@ -593,17 +559,14 @@ static const struct file_operations nvt_diff_fops = {
 /*---For SMx3 use start---*/
 static int32_t nvt_before_diff_open(struct inode *inode, struct file *file)
 {
-	TP_LOGI("+++");
 
 	if (mutex_lock_interruptible(&ts->lock)) {
-		TP_LOGE("mutex lock fail");
-		TP_LOGI("---");
+		pr_err("mutex lock fail\n");
 		return -ERESTARTSYS;
 	}
 
 	if (nvt_clear_fw_status()) {
 		mutex_unlock(&ts->lock);
-		TP_LOGI("---");
 		return -EAGAIN;
 	}
 
@@ -611,13 +574,11 @@ static int32_t nvt_before_diff_open(struct inode *inode, struct file *file)
 
 	if (nvt_check_fw_status()) {
 		mutex_unlock(&ts->lock);
-		TP_LOGI("---");
 		return -EAGAIN;
 	}
 
 	if (nvt_get_fw_info()) {
 		mutex_unlock(&ts->lock);
-		TP_LOGI("---");
 		return -EAGAIN;
 	}
 
@@ -644,8 +605,6 @@ static int32_t nvt_before_diff_open(struct inode *inode, struct file *file)
 	nvt_change_mode(NORMAL_MODE);
 
 	mutex_unlock(&ts->lock);
-
-	TP_LOGI("---");
 
 	return seq_open(file, &nvt_seq_ops);
 }
@@ -695,15 +654,12 @@ const struct seq_operations nvt_projectinfo_seq_ops = {
 
 static int32_t nvt_projectinfo_open(struct inode *inode, struct file *file)
 {
-	TP_LOGI("+++");
 
 	mutex_lock(&ts->lock);
 
 	/* Get external flash id (project info) */
 	nvt_read_project_info();
 	mutex_unlock(&ts->lock);
-
-	TP_LOGI("---");
 
 	return seq_open(file, &nvt_projectinfo_seq_ops);
 }
@@ -733,19 +689,15 @@ const struct seq_operations smx3_fw_ver_check_seq_ops = {
 
 static int32_t smx3_fw_ver_check_open(struct inode *inode, struct file *file)
 {
-	TP_LOGI("+++");
 
 	if (mutex_lock_interruptible(&ts->lock)) {
-		TP_LOGE("mutex lock fail");
-		TP_LOGI("---");
+		pr_err("mutex lock fail\n");
 		return -ERESTARTSYS;
 	}
 
 	nvt_get_fw_info();
 
 	mutex_unlock(&ts->lock);
-
-	TP_LOGI("---");
 
 	return seq_open(file, &smx3_fw_ver_check_seq_ops);
 }
@@ -777,19 +729,15 @@ const struct seq_operations smx3_fw_ver_verify_seq_ops = {
 
 static int32_t smx3_fw_ver_verify_open(struct inode *inode, struct file *file)
 {
-	TP_LOGI("+++");
 
 	if (mutex_lock_interruptible(&ts->lock)) {
-		TP_LOGE("mutex lock fail");
-		TP_LOGI("---");
+		pr_err("mutex lock fail\n");
 		return -ERESTARTSYS;
 	}
 
 	nvt_get_fw_info();
 
 	mutex_unlock(&ts->lock);
-
-	TP_LOGI("---");
 
 	return seq_open(file, &smx3_fw_ver_verify_seq_ops);
 }
@@ -817,34 +765,34 @@ int32_t nvt_extra_proc_init(void)
 	NVT_proc_fw_version_entry = proc_create(NVT_FW_VERSION, 0444, NULL,
 		&nvt_fw_version_fops);
 	if (NVT_proc_fw_version_entry != NULL) {
-		TP_LOGD("create proc/nvt_fw_version Succeeded!");
+		pr_debug("create proc/nvt_fw_version Succeeded!\n");
 	} else {
-		TP_LOGE("create proc/nvt_fw_version Failed!");
+		pr_err("create proc/nvt_fw_version Failed!\n");
 		goto add_proc_fail;
 	}
 
 	NVT_proc_baseline_entry = proc_create(NVT_BASELINE, 0444, NULL,
 		&nvt_baseline_fops);
 	if (NVT_proc_baseline_entry != NULL) {
-		TP_LOGD("create proc/nvt_baseline Succeeded!");
+		pr_debug("create proc/nvt_baseline Succeeded!\n");
 	} else {
-		TP_LOGE("create proc/nvt_baseline Failed!");
+		pr_err("create proc/nvt_baseline Failed!\n");
 		goto add_proc_fail;
 	}
 
 	NVT_proc_raw_entry = proc_create(NVT_RAW, 0444, NULL, &nvt_raw_fops);
 	if (NVT_proc_raw_entry != NULL) {
-		TP_LOGD("create proc/nvt_raw Succeeded!");
+		pr_debug("create proc/nvt_raw Succeeded!\n");
 	} else {
-		TP_LOGE("create proc/nvt_raw Failed!");
+		pr_err("create proc/nvt_raw Failed!\n");
 		goto add_proc_fail;
 	}
 
 	NVT_proc_diff_entry = proc_create(NVT_DIFF, 0444, NULL, &nvt_diff_fops);
 	if (NVT_proc_diff_entry != NULL) {
-		TP_LOGD("create proc/nvt_diff Succeeded!");
+		pr_debug("create proc/nvt_diff Succeeded!\n");
 	} else {
-		TP_LOGE("create proc/nvt_diff Failed!");
+		pr_err("create proc/nvt_diff Failed!\n");
 		goto add_proc_fail;
 	}
 
@@ -852,18 +800,18 @@ int32_t nvt_extra_proc_init(void)
 	NVT_proc_before_diff_entry = proc_create(NVT_BEFORE_DIFF, 0444, NULL,
 		&nvt_before_diff_fops);
 	if (NVT_proc_before_diff_entry != NULL) {
-		TP_LOGD("create proc/nvt_before_diff Succeeded!");
+		pr_debug("create proc/nvt_before_diff Succeeded!\n");
 	} else {
-		TP_LOGE("create proc/nvt_before_diff Failed!");
+		pr_err("create proc/nvt_before_diff Failed!\n");
 		goto add_proc_fail;
 	}
 #if NVT_PROJECT_INFO_READ
 	NVT_proc_projectinfo_entry = proc_create(NVT_PROJECT_INFO, 0444, NULL,
 		&nvt_projectinfo_fops);
 	if (NVT_proc_projectinfo_entry != NULL) {
-		TP_LOGD("create proc/nvt_projectinfo Succeeded!");
+		pr_debug("create proc/nvt_projectinfo Succeeded!\n");
 	} else {
-		TP_LOGE("create proc/nvt_projectinfo Failed!");
+		pr_err("create proc/nvt_projectinfo Failed!\n");
 		goto add_proc_fail;
 	}
 #endif
@@ -871,9 +819,9 @@ int32_t nvt_extra_proc_init(void)
 	SMx3_proc_fw_ver_check_entry = proc_create(NVT_FW_VER_CHECK, 0444, NULL,
 		&smx3_fw_ver_check_fops);
 	if (SMx3_proc_fw_ver_check_entry != NULL) {
-		TP_LOGD("create proc/smx3_fw_ver_check Succeeded!");
+		pr_debug("create proc/smx3_fw_ver_check Succeeded!\n");
 	} else {
-		TP_LOGE("create proc/smx3_fw_ver_check Failed!");
+		pr_err("create proc/smx3_fw_ver_check Failed!\n");
 		goto add_proc_fail;
 	}
 
@@ -881,14 +829,14 @@ int32_t nvt_extra_proc_init(void)
 	SMx3_proc_fw_ver_verify_entry = proc_create(NVT_FW_VER_VERIFY, 0444,
 		NULL, &smx3_fw_ver_verify_fops);
 	if (SMx3_proc_fw_ver_verify_entry != NULL) {
-		TP_LOGD("create proc/smx3_fw_ver_verify Succeeded!");
+		pr_debug("create proc/smx3_fw_ver_verify Succeeded!\n");
 	} else {
-		TP_LOGE("create proc/smx3_fw_ver_verify Failed!");
+		pr_err("create proc/smx3_fw_ver_verify Failed!\n");
 		goto add_proc_fail;
 	}
 #endif
 
-	TP_LOGI("create extra proc node Succeeded!");
+	pr_debug("create extra proc node Succeeded!\n");
 	/*---For SMx3 use end---*/
 
 	return 0;
@@ -940,10 +888,10 @@ int32_t smx3_probe_log_proc_init(void)
 	SMx3_proc_probe_log_entry =
 		proc_create(NVT_PROBE_LOG, 0444, NULL, &smx3_probe_log_fops);
 	if (SMx3_proc_probe_log_entry == NULL) {
-		TP_LOGE("create proc/smx3_probe_log Failed!");
+		pr_err("create proc/smx3_probe_log Failed!\n");
 		ret = -ENOMEM;
 	} else {
-		TP_LOGI("create proc/smx3_probe_log Succeeded!");
+		pr_debug("create proc/smx3_probe_log Succeeded!\n");
 	}
 
 	return ret;
