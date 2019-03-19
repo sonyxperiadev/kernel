@@ -2671,13 +2671,14 @@
 
 &pm660l_gpios {
 	/* GPIO 7 for VOL_UP */
-	gpio@c600 {
-		status = "okay";
-		qcom,mode = <0>;
-		qcom,pull = <0>;
-		qcom,vin-sel = <0>;
-		qcom,src-sel = <0>;
-		qcom,out-strength = <1>;
+	key_vol_up {
+		key_vol_up_default: key_vol_up_default {
+			pins = "gpio7";
+			function = "normal";
+			input-enable;
+			bias-pull-up;
+			power-source = <0>;
+		};
 	};
 };
 
@@ -2691,9 +2692,10 @@
 		status = "okay";
 		compatible = "gpio-keys";
 		input-name = "gpio-keys";
+		label = "gpio-keys";
 		pinctrl-names = "tlmm_gpio_key_active","tlmm_gpio_key_suspend";
-		pinctrl-0 = <&gpio_key_active>;
-		pinctrl-1 = <&gpio_key_suspend>;
+		pinctrl-0 = <&key_vol_up_default &gpio_key_active>;
+		pinctrl-1 = <&key_vol_up_default &gpio_key_suspend>;
 
 		camera_focus {
 			label = "camera_focus";
