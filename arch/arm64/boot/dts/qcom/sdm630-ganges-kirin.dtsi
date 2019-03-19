@@ -27,55 +27,6 @@
 		pinctrl-2 = <>;
 	};
 
-	s5712 {
-		compatible = "s5712-switch";
-		interrupt-parent = <&tlmm>;
-		interrupts = <75 0x3>;
-		//vddio-supply = <&pm660l_l14>;
-		linux,gpio-int = <&tlmm 75 0x1>;
-		linux,wakeup;
-		linux,min-uv = <1700000>;
-		linux,max-uv = <1900000>;
-	};
-
-	int_codec: sound {
-		qcom,msm-micbias1-ext-cap;
-		qcom,msm-micbias2-ext-cap;
-		qcom,msm-hs-micbias-type = "external";
-		qcom,audio-routing =
-			"RX_BIAS", "INT_MCLK0",
-			"SPK_RX_BIAS", "INT_MCLK0",
-			"INT_LDO_H", "INT_MCLK0",
-			"RX_I2S_CLK", "INT_MCLK0",
-			"TX_I2S_CLK", "INT_MCLK0",
-			"MIC BIAS External", "Handset Mic",
-			"MIC BIAS External2", "Headset Mic",
-			"MIC BIAS External", "Secondary Mic",
-			"AMIC1", "MIC BIAS External",
-			"AMIC2", "MIC BIAS External2",
-			"AMIC3", "MIC BIAS External",
-			"DMIC1", "MIC BIAS External",
-			"MIC BIAS External", "Digital Mic1",
-			"DMIC2", "MIC BIAS External",
-			"MIC BIAS External", "Digital Mic2",
-			"DMIC3", "MIC BIAS External",
-			"MIC BIAS External", "Digital Mic3",
-			"DMIC4", "MIC BIAS External",
-			"MIC BIAS External", "Digital Mic4",
-			"SpkrLeft IN", "SPK1 OUT",
-			"SpkrRight IN", "SPK2 OUT",
-			"PDM_IN_RX1", "PDM_OUT_RX1",
-			"PDM_IN_RX2", "PDM_OUT_RX2",
-			"PDM_IN_RX3", "PDM_OUT_RX3",
-			"ADC1_IN", "ADC1_OUT",
-			"ADC2_IN", "ADC2_OUT",
-			"ADC3_IN", "ADC3_OUT";
-
-		qcom,wsa-max-devs = <1>;
-		qcom,wsa-aux-dev-prefix = "SpkrLeft", "SpkrLeft",
-					  "SpkrLeft", "SpkrLeft";
-	};
-
 	qcom,sensor-information {
 		sensor_information13: qcom,sensor-information-13 { /* msm_therm */
 			qcom,scaling-factor = <1000>;
@@ -106,32 +57,6 @@
 		};
 	};
 
-	qusb_phy0: qusb@c012000 {
-		qcom,tune2-efuse-num-bits = <0>;
-		qcom,tune2-efuse-correction = <0>;
-		qcom,qusb-phy-init-seq = <0xa7 0x80
-			0x22 0x84
-			0x83 0x88
-			0xc7 0x8c
-			0x30 0x08
-			0x79 0x0c
-			0x21 0x10
-			0x14 0x9c
-			0x9f 0x1c
-			0x00 0x18>;
-	};
-};
-
-&usb3 {
-	dwc3@a800000 {
-		maximum-speed = "high-speed";
-	};
-};
-
-&usb3 {
-	dwc3@a800000 {
-		maximum-speed = "high-speed";
-	};
 };
 
 &tlmm {
