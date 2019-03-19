@@ -137,15 +137,6 @@
 &tlmm {
 };
 
-&spmi_bus {
-	qcom,pm660@1 {
-		pm660_haptics: qcom,haptic@c000 {
-			qcom,actuator-type = "erm";
-			qcom,vmax-mv = <3000>;
-		};
-	};
-};
-
 &pm660_vadc {
 	chan@50 {
 		label = "pa_therm1";

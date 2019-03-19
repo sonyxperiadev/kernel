@@ -141,15 +141,6 @@
 &tlmm {
 };
 
-&spmi_bus {
-	qcom,pm660@1 {
-		pm660_haptics: qcom,haptic@c000 {
-			qcom,actuator-type = "erm";
-			qcom,vmax-mv = <3000>;
-		};
-	};
-};
-
 &sdhc_2 {
 	cd-gpios = <&tlmm 54 0x0>;
 };
