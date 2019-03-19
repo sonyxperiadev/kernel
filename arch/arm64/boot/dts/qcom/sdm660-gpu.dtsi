@@ -64,6 +64,7 @@
 		reg-names = "kgsl_3d0_reg_memory", "qfprom_memory";
 		interrupts = <0 300 0>;
 		interrupt-names = "kgsl_3d0_irq";
+		#cooling-cells = <2>;
 		qcom,id = <0>;
 
 		qcom,chipid = <0x05010200>;
@@ -81,12 +82,12 @@
 		clocks = <&clock_gfx GPUCC_GFX3D_CLK>,
 			<&clock_gcc GCC_GPU_CFG_AHB_CLK>,
 			<&clock_gfx GPUCC_RBBMTIMER_CLK>,
-			<&clock_gcc GCC_GPU_BIMC_GFX_CLK>,
 			<&clock_gcc GCC_BIMC_GFX_CLK>,
+			<&clock_gcc GCC_GPU_BIMC_GFX_CLK>,
 			<&clock_gpu GPUCC_RBCPR_CLK>;
 
 		clock-names = "core_clk", "iface_clk", "rbbmtimer_clk",
-			"mem_clk", "alt_mem_iface_clk", "rbcpr_clk";
+			"mem_clk", "mem_iface_clk", "rbcpr_clk";
 
 		/* Bus Scale Settings */
 		qcom,gpubw-dev = <&gpubw>;
@@ -625,6 +626,7 @@
 		qcom,secure_align_mask = <0xfff>;
 		qcom,retention;
 		qcom,hyp_secure_alloc;
+		qcom,secure_pt_early_alloc;
 
 		gfx3d_user: gfx3d_user {
 			compatible = "qcom,smmu-kgsl-cb";

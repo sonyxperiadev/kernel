@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -83,10 +83,11 @@ struct cprh_kbss_fuses {
  * Fuse combos 8 - 15 map to CPR fusing revision 0 - 7 with speed bin fuse = 1.
  * Fuse combos 16 - 23 map to CPR fusing revision 0 - 7 with speed bin fuse = 2.
  * Fuse combos 24 - 31 map to CPR fusing revision 0 - 7 with speed bin fuse = 3.
+ * Fuse combos 32 - 39 map to CPR fusing revision 0 - 7 with speed bin fuse = 4.
  */
 #define CPRH_MSM8998_KBSS_FUSE_COMBO_COUNT	32
-#define CPRH_SDM660_KBSS_FUSE_COMBO_COUNT	16
-#define CPRH_SDM630_KBSS_FUSE_COMBO_COUNT	24
+#define CPRH_SDM660_KBSS_FUSE_COMBO_COUNT	40
+#define CPRH_SDM630_KBSS_FUSE_COMBO_COUNT	32
 #define CPRH_SDM845_KBSS_FUSE_COMBO_COUNT	24
 
 /*
@@ -1623,6 +1624,12 @@ static int cprh_kbss_calculate_open_loop_voltages(struct cpr3_regulator *vreg)
 			fuse->init_voltage[i],
 			CPRH_KBSS_VOLTAGE_FUSE_SIZE);
 
+		/* SDM660 speed bin #3 does not support TURBO_L1/L2 */
+		if (soc_revision == SDM660_SOC_ID && vreg->speed_bin_fuse == 3
+		    && (id == CPRH_KBSS_PERFORMANCE_CLUSTER_ID)
+		    && (i == CPRH_SDM660_PERF_KBSS_FUSE_CORNER_TURBO_L2))
+			continue;
+
 		/* Log fused open-loop voltage values for debugging purposes. */
 		cpr3_info(vreg, "fused %8s: open-loop=%7d uV\n", corner_name[i],
 			  fuse_volt[i]);
@@ -2180,6 +2187,11 @@ static int cprh_kbss_calculate_target_quotients(struct cpr3_regulator *vreg)
 				CPRH_SDM660_PERF_KBSS_FUSE_CORNER_SVS;
 			highest_fuse_corner =
 				CPRH_SDM660_PERF_KBSS_FUSE_CORNER_TURBO_L2;
+
+			/* speed-bin 3 does not have Turbo_L2 fuse */
+			if (vreg->speed_bin_fuse == 3)
+				highest_fuse_corner =
+					CPRH_SDM660_PERF_KBSS_FUSE_CORNER_TURBO;
 		}
 		break;
 	case SDM630_SOC_ID:
