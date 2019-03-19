@@ -286,7 +286,12 @@
 	};
 };
 
+
+
+/* PM660L */
 &red_led {
+	linux,name = "led:rgb_red";
+
 	somc,pwm-channel = <2>;
 	linux,name = "red";
 	linux,default-trigger = "none";
@@ -296,9 +301,20 @@
 		46 511 511
 		47 511 511
 		48 511 511>;
+
+	qcom,start-idx = <0>;
+	qcom,lut-flags = <31>;
+	qcom,pause-lo = <500>;
+	qcom,pause-hi = <500>;
+	qcom,ramp-step-ms = <50>;
+	qcom,duty-pcts =
+		[00 0E 1C 2A 38 46 54 64];
+	qcom,use-blink;
 };
 
 &green_led {
+	linux,name = "led:rgb_green";
+
 	somc,pwm-channel = <1>;
 	linux,name = "green";
 	linux,default-trigger = "none";
@@ -308,9 +324,20 @@
 		46 511 511
 		47 511 511
 		48 511 511>;
+
+	qcom,start-idx = <0>;
+	qcom,lut-flags = <31>;
+	qcom,pause-lo = <500>;
+	qcom,pause-hi = <500>;
+	qcom,ramp-step-ms = <50>;
+	qcom,duty-pcts =
+		[00 0E 1C 2A 38 46 54 64];
+	qcom,use-blink;
 };
 
 &blue_led {
+	linux,name = "led:rgb_blue";
+
 	somc,pwm-channel = <0>;
 	linux,name = "blue";
 	linux,default-trigger = "none";
@@ -320,6 +347,15 @@
 		46 511 511
 		47 511 511
 		48 511 511>;
+
+	qcom,start-idx = <0>;
+	qcom,lut-flags = <31>;
+	qcom,pause-lo = <500>;
+	qcom,pause-hi = <500>;
+	qcom,ramp-step-ms = <50>;
+	qcom,duty-pcts =
+		[00 0E 1C 2A 38 46 54 64];
+	qcom,use-blink;
 };
 
 &mdss_dsi0 {
