@@ -15,6 +15,20 @@
 #include "sdm630-ganges_pinctrl.dtsi"
 
 / {
+	reserved-memory {
+		ramoops {
+			compatible = "removed-dma-pool", "ramoops";
+			no-map;
+			reg = <0 0xffc00000 0 0x00100000>;
+			record-size = <0x10000>;
+			console-size = <0x60000>;
+			ftrace-size = <0x10000>;
+			pmsg-size = <0x20000>;
+			ecc-size = <16>;
+		};
+	};
+
+
 	firmware: firmware {
 		android {
 			compatible = "android,firmware";
