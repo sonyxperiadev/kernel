@@ -828,6 +828,7 @@ int ipa_init_hw(void)
 
 	/* enable IPA Bit:0, enable 2x fast clock Bit:4 */
 	if (of_machine_is_compatible("qcom,sdm630") ||
+	    of_machine_is_compatible("qcom,sdm636") ||
 	    of_machine_is_compatible("qcom,sdm660"))
 		ena_bit = 0x11;
 
