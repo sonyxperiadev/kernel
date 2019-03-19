@@ -15,6 +15,7 @@
 		compatible = "qcom,pil-tz-generic";
 		qcom,pas-id = <13>;
 		qcom,firmware-name = "a512_zap";
+		qcom,mas-crypto = <&mas_crypto_c0>;
 	};
 
 	msm_bus: qcom,kgsl-busmon{

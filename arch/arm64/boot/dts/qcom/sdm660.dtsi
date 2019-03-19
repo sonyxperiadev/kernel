@@ -1965,6 +1965,7 @@
 
 		vdd-supply = <&gdsc_venus>;
 		qcom,proxy-reg-names = "vdd";
+		qcom,mas-crypto = <&mas_crypto_c0>;
 
 		clocks = <&clock_mmss MMSS_VIDEO_CORE_CLK>,
 			<&clock_mmss MMSS_MNOC_AHB_CLK>,
@@ -2033,6 +2034,7 @@
 		vdd_cx-supply = <&pm660l_l9_level>;
 		qcom,proxy-reg-names = "vdd_cx";
 		qcom,vdd_cx-uV-uA = <RPM_SMD_REGULATOR_LEVEL_TURBO 100000>;
+		qcom,mas-crypto = <&mas_crypto_c0>;
 
 		clocks = <&clock_rpmcc CXO_PIL_LPASS_CLK>;
 		clock-names = "xo";
@@ -2065,6 +2067,7 @@
 		vdd_cx-supply = <&pm660l_s3_level>;
 		qcom,proxy-reg-names = "vdd_cx";
 		qcom,vdd_cx-uV-uA = <RPM_SMD_REGULATOR_LEVEL_TURBO 100000>;
+		qcom,mas-crypto = <&mas_crypto_c0>;
 
 		clocks = <&clock_rpmcc CXO_PIL_CDSP_CLK>;
 		clock-names = "xo";
