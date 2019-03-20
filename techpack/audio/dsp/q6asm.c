@@ -2910,7 +2910,7 @@ static int __q6asm_open_write(struct audio_client *ac, uint32_t format,
 	open.sink_endpointype = ASM_END_POINT_DEVICE_MATRIX;
 	open.bits_per_sample = bits_per_sample;
 
-#ifdef CONFIG_ARCH_SONY_NILE
+#if defined(CONFIG_ARCH_SONY_NILE) || defined(CONFIG_ARCH_SONY_GANGES)
 	if (ac->perf_mode == LOW_LATENCY_PCM_MODE ||
 	    ac->perf_mode == ULTRA_LOW_LATENCY_PCM_MODE ||
 	    ac->perf_mode == ULL_POST_PROCESSING_PCM_MODE)
