@@ -350,6 +350,18 @@
 	qcom,use-blink;
 };
 
+&pm660l_torch0 {
+	qcom,current-ma = <100>;
+};
+
+&pm660l_torch1 {
+	qcom,current-ma = <100>;
+};
+
+&pm660l_torch2 {
+	qcom,current-ma = <100>;
+};
+
 &mdss_dsi0 {
 	pinctrl-names = "mdss_default", "mdss_sleep";
 	pinctrl-0 = <&mdss_dsi_active &mdss_te_active>;
