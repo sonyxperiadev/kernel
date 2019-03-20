@@ -2362,8 +2362,12 @@ static int csiphy_probe(struct platform_device *pdev)
 		"qcom,csiphy-v3.5")) {
 		if (of_machine_is_compatible("qcom,sdm630") ||
 		    of_machine_is_compatible("qcom,sdm636") ||
-		    of_machine_is_compatible("qcom,sdm660"))
+		    of_machine_is_compatible("qcom,sdm660")) {
+			csiphy_v3_5_3ph.mipi_csiphy_3ph_lnn_ctrl23.data = 0x23;
+			csiphy_v3_5_3ph.mipi_csiphy_3ph_lnn_ctrl25.data = 0x50;
 			csiphy_v3_5_3ph.mipi_csiphy_3ph_lnn_ctrl26.data = 0x70;
+		}
+
 		new_csiphy_dev->ctrl_reg->csiphy_3ph_reg = csiphy_v3_5_3ph;
 		new_csiphy_dev->ctrl_reg->csiphy_reg = csiphy_v3_5;
 		new_csiphy_dev->hw_dts_version = CSIPHY_VERSION_V35;
