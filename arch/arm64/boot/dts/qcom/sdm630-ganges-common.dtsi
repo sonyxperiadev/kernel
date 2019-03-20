@@ -313,21 +313,9 @@
 };
 
 
-
 /* PM660L */
 &red_led {
 	linux,name = "led:rgb_red";
-
-	somc,pwm-channel = <2>;
-	linux,name = "red";
-	linux,default-trigger = "none";
-	somc,color_variation_max_num = <4>;
-	somc,max_current = <
-		45 511 511
-		46 511 511
-		47 511 511
-		48 511 511>;
-
 	qcom,start-idx = <0>;
 	qcom,lut-flags = <31>;
 	qcom,pause-lo = <500>;
@@ -340,17 +328,6 @@
 
 &green_led {
 	linux,name = "led:rgb_green";
-
-	somc,pwm-channel = <1>;
-	linux,name = "green";
-	linux,default-trigger = "none";
-	somc,color_variation_max_num = <4>;
-	somc,max_current = <
-		45 511 511
-		46 511 511
-		47 511 511
-		48 511 511>;
-
 	qcom,start-idx = <0>;
 	qcom,lut-flags = <31>;
 	qcom,pause-lo = <500>;
@@ -363,17 +340,6 @@
 
 &blue_led {
 	linux,name = "led:rgb_blue";
-
-	somc,pwm-channel = <0>;
-	linux,name = "blue";
-	linux,default-trigger = "none";
-	somc,color_variation_max_num = <4>;
-	somc,max_current = <
-		45 511 511
-		46 511 511
-		47 511 511
-		48 511 511>;
-
 	qcom,start-idx = <0>;
 	qcom,lut-flags = <31>;
 	qcom,pause-lo = <500>;
