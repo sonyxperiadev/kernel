@@ -2861,6 +2861,11 @@ static int sde_hw_rotator_config(struct sde_rot_hw_resource *hw,
 		SDE_ROTREG_WRITE(rot->mdss_base, ROT_SSPP_CREQ_LUT, qos_lut);
 	}
 
+	if (!test_bit(SDE_QOS_CDP, mdata->sde_qos_map)) {
+		SDE_ROTREG_WRITE(rot->mdss_base, ROT_SSPP_CDP_CNTL, 0x0);
+		SDE_ROTREG_WRITE(rot->mdss_base, ROT_WB_CDP_CNTL, 0x0);
+	}
+
 	/* VBIF QoS and other settings */
 	if (!ctx->sbuf_mode)
 		sde_hw_rotator_vbif_setting(rot);

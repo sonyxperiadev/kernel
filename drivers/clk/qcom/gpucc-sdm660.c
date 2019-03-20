@@ -169,6 +169,7 @@ static struct clk_init_data gpu_clks_init[] = {
  *  | 266000000 | 532000000    |    1        |    2    |
  *  | 370000000 | 740000000    |    1        |    2    |
  *  | 465000000 | 930000000    |    1        |    2    |
+ *  | 585000000 | 1170000000   |    1        |    2    |
  *  | 588000000 | 1176000000   |    1        |    2    |
  *  | 647000000 | 1294000000   |    1        |    2    |
  *  | 700000000 | 1400000000   |    1        |    2    |
@@ -182,6 +183,7 @@ static const struct freq_tbl ftbl_gfx3d_clk_src[] = {
 	F(370000000, P_GPU_PLL0_PLL_OUT_MAIN,  2, 0, 0),
 	F(430000000, P_GPU_PLL0_PLL_OUT_MAIN,  2, 0, 0),
 	F(465000000, P_GPU_PLL0_PLL_OUT_MAIN,  2, 0, 0),
+	F(585000000, P_GPU_PLL0_PLL_OUT_MAIN,  2, 0, 0),
 	F(588000000, P_GPU_PLL0_PLL_OUT_MAIN,  2, 0, 0),
 	F(647000000, P_GPU_PLL0_PLL_OUT_MAIN,  2, 0, 0),
 	F(700000000, P_GPU_PLL0_PLL_OUT_MAIN,  2, 0, 0),

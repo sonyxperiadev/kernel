@@ -2879,6 +2879,7 @@ static void msm_fe_dais_fixup_legacy(void)
 	    !of_machine_is_compatible("qcom,msm8996") &&
 	    !of_machine_is_compatible("qcom,msm8998") &&
 	    !of_machine_is_compatible("qcom,sdm630")  &&
+	    !of_machine_is_compatible("qcom,sdm636")  &&
 	    !of_machine_is_compatible("qcom,sdm660"))
 		return;
 

@@ -4305,6 +4305,7 @@ static int voice_get_avcs_version_per_service(uint32_t service_id)
 	    of_machine_is_compatible("qcom,msm8996") ||
 	    of_machine_is_compatible("qcom,msm8998") ||
 	    of_machine_is_compatible("qcom,sdm630")  ||
+	    of_machine_is_compatible("qcom,sdm636")  ||
 	    of_machine_is_compatible("qcom,sdm660"))
 		return CVP_VERSION_1;
 
