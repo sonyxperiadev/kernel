@@ -1652,23 +1652,67 @@ static const struct file_operations ion_fops = {
 	.compat_ioctl   = compat_ion_ioctl,
 };
 
+static long _page_size(int order)
+{
+	return (1 << (PAGE_SHIFT + order));
+}
+
+static dma_addr_t _page_mask(int order)
+{
+	return  (dma_addr_t)(_page_size(order) - 1);
+}
+
 static void ion_debug_update_orders(struct ion_buffer *buffer,
 				    size_t *orders)
 {
 	struct scatterlist *sg;
 	struct sg_table *table = buffer->sg_table;
 	int i;
+	long length = 0;
+	dma_addr_t start = sg_phys(table->sgl);
 
 	if (!table)
 		return;
 
 	for_each_sg(table->sgl, sg, table->nents, i) {
-		int order = get_order(sg->length);
+		int order;
 
-		if (order > ION_DEBUG_MAX_ORDER)
-			orders[ION_DEBUG_MAX_ORDER + 1] += sg->length;
-		else
+		length += sg->length;
+		/* Account physically contiguous entries as one big region */
+		if ((i + 1) < table->nents  &&
+		    (sg_phys(sg) + sg->length) == sg_phys(sg_next(sg))) {
+			continue;
+		}
+		do {
+			order = get_order(length);
+			/*
+			 * A contiguous memory region may be made out of
+			 * multiple entries, and it may appear to be of a higher
+			 * order. However, if the region starts at an address
+			 * that is not aligned to the page order, it must be
+			 * split. Reduce the order until the start address is
+			 * aligned with it.
+			 */
+			while (order && (_page_mask(order) & start))
+				order--;
+			if (order > ION_DEBUG_MAX_ORDER) {
+				orders[ION_DEBUG_MAX_ORDER + 1] += length;
+				break;
+			}
 			orders[order]++;
+			/*
+			 * We have accounted a chunk of memory that may have
+			 * been misaligned. Update our counters and continue
+			 * until we account for all memory in the contiguous
+			 * region
+			 */
+			length -= _page_size(order);
+			start += _page_size(order);
+		} while (length > 0);
+		/*  Reached the end of the contiguous memory region */
+		length = 0;
+		if ((i + 1) < table->nents)
+			start = sg_phys(sg_next(sg));
 	}
 }
 
