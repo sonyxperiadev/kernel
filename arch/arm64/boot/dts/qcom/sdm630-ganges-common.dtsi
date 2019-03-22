@@ -354,6 +354,10 @@
 	qcom,current-ma = <100>;
 };
 
+&pm660l_switch0 {
+       qcom,led-mask = <1>;
+};
+
 &mdss_fb0 {
        /delete-node/ qcom,cont-splash-memory;
 };
