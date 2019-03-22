@@ -366,8 +366,10 @@
 	pinctrl-names = "mdss_default", "mdss_sleep";
 	pinctrl-0 = <&mdss_dsi_active &mdss_te_active>;
 	pinctrl-1 = <&mdss_dsi_suspend &mdss_te_suspend>;
-	qcom,platform-te-gpio = <&tlmm 59 0>;
+	qcom,display-id = "primary";
+	qcom,mdss-fb-map-prim = <&mdss_fb0>;
 	qcom,platform-reset-gpio = <&tlmm 53 0>;
+	qcom,platform-te-gpio = <&tlmm 59 0>;
 };
 
 &mdss_dp_ctrl {
