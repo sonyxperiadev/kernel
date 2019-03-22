@@ -213,7 +213,7 @@
 			0x9f 0x1c
 			0x00 0x18>;
 	};
-    
+
 	s5712 {
 		compatible = "s5712-switch";
 		interrupt-parent = <&tlmm>;
@@ -251,14 +251,6 @@
 	somc,area_count_table = <0 137 273 410 546 683 819 956
 				1092 1229 1365 1638 1911 2184 2457
 				2730 3003 3276 3549 3822 4095>;
-};
-
-&mdss_mdp {
-	qcom,mdss-pref-prim-intf = "dsi";
-};
-
-&mdss_dsi {
-	hw-config = "single_dsi";
 };
 
 &pmx_mdss{
@@ -360,6 +352,18 @@
 
 &pm660l_torch2 {
 	qcom,current-ma = <100>;
+};
+
+&mdss_fb0 {
+       /delete-node/ qcom,cont-splash-memory;
+};
+
+&mdss_mdp {
+	qcom,mdss-pref-prim-intf = "dsi";
+};
+
+&mdss_dsi {
+	hw-config = "single_dsi";
 };
 
 &mdss_dsi0 {
