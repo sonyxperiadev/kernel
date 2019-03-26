@@ -98,6 +98,7 @@
 #define VBIF_XIN_HALT_TIMEOUT		0x4000
 
 #define DEFAULT_PIXEL_RAM_SIZE		(50 * 1024)
+#define SDM630_PIXEL_RAM_SIZE		(40 * 1024)
 
 /* access property value based on prop_type and hardware index */
 #define PROP_VALUE_ACCESS(p, i, j)		((p + i)->value[j])
@@ -1279,7 +1280,7 @@ static int sde_dgm_parse_dt(struct device_node *np, u32 index,
 }
 
 static int sde_sspp_parse_dt(struct device_node *np,
-	struct sde_mdss_cfg *sde_cfg)
+	struct sde_mdss_cfg *sde_cfg, uint32_t hw_rev)
 {
 	int rc, prop_count[SSPP_PROP_MAX], off_count, i, j;
 	int vig_prop_count[VIG_PROP_MAX], rgb_prop_count[RGB_PROP_MAX];
@@ -1441,7 +1442,12 @@ static int sde_sspp_parse_dt(struct device_node *np,
 		sblk->maxvdeciexp = MAX_VERT_DECIMATION;
 
 		sspp->xin_id = PROP_VALUE_ACCESS(prop_value, SSPP_XIN, i);
-		sblk->pixel_ram_size = DEFAULT_PIXEL_RAM_SIZE;
+
+		if (IS_SDM630_TARGET(hw_rev)) {
+			sblk->pixel_ram_size = SDM630_PIXEL_RAM_SIZE;
+		} else {
+			sblk->pixel_ram_size = DEFAULT_PIXEL_RAM_SIZE;
+		}
 		sblk->src_blk.len = PROP_VALUE_ACCESS(prop_value, SSPP_SIZE, 0);
 
 		if (PROP_VALUE_ACCESS(prop_value, SSPP_EXCL_RECT, i) == 1)
@@ -3789,7 +3795,7 @@ struct sde_mdss_cfg *sde_hw_catalog_init(struct drm_device *dev, u32 hw_rev)
 	if (rc)
 		goto end;
 
-	rc = sde_sspp_parse_dt(np, sde_cfg);
+	rc = sde_sspp_parse_dt(np, sde_cfg, hw_rev);
 	if (rc)
 		goto end;
 
