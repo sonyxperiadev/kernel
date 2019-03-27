@@ -1131,7 +1131,7 @@ static int disp_cc_sdm845_probe(struct platform_device *pdev)
 	clk_fabia_pll_configure(&disp_cc_pll0, regmap, &disp_cc_pll0_config);
 
 	/* Enable clock gating for DSI and MDP clocks */
-	regmap_update_bits(regmap, DISP_CC_MISC_CMD, 0x7f0, 0x7f0);
+	regmap_update_bits(regmap, DISP_CC_MISC_CMD, 0x10, 0x10);
 
 	ret = disp_cc_sdm845_fixup(pdev, regmap);
 	if (ret)
