@@ -21,6 +21,11 @@
 	qcom,mdss-dsi-reset-sequence = <1 10>;
 	qcom,mdss-dsi-post-init-delay = <1>;
 
+	qcom,mdss-dsi-panel-hdr-enabled;
+	qcom,mdss-dsi-panel-hdr-color-primaries = <14940 15790 33800 15700 10950 33800 7450 2300>;
+	qcom,mdss-dsi-panel-peak-brightness = <7000000>;
+	qcom,mdss-dsi-panel-blackness-level = <4646>;
+
 	somc,lcd-id-adc = <801000 917000>;
 	somc,mdss-dsi-master;
 	somc,pw-on-rst-seq = <1 10>, <0 10>, <1 10>;
