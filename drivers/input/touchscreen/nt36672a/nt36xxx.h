@@ -21,11 +21,6 @@
 #include <linux/i2c.h>
 #include <linux/input.h>
 #include "smx3_touch_log.h"
-
-#ifdef CONFIG_HAS_EARLYSUSPEND
-#include <linux/earlysuspend.h>
-#endif
-
 #include "nt36xxx_mem_map.h"
 
 #define NVT_DEBUG 0
@@ -122,8 +117,6 @@ struct nvt_ts_data {
 	int8_t phys[32];
 #if defined(CONFIG_FB)
 	struct notifier_block fb_notif;
-#elif defined(CONFIG_HAS_EARLYSUSPEND)
-	struct early_suspend early_suspend;
 #endif
 	uint8_t fw_ver;
 	uint8_t x_num;
