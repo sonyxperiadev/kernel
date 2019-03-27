@@ -95,6 +95,7 @@
 #define VBIF_XIN_HALT_TIMEOUT		0x4000
 
 #define DEFAULT_PIXEL_RAM_SIZE		(50 * 1024)
+#define SDM630_PIXEL_RAM_SIZE		(40 * 1024)
 
 /* access property value based on prop_type and hardware index */
 #define PROP_VALUE_ACCESS(p, i, j)		((p + i)->value[j])
@@ -1123,7 +1124,7 @@ static void _sde_sspp_setup_dma(struct sde_mdss_cfg *sde_cfg,
 }
 
 static int sde_sspp_parse_dt(struct device_node *np,
-	struct sde_mdss_cfg *sde_cfg)
+	struct sde_mdss_cfg *sde_cfg, uint32_t hw_rev)
 {
 	int rc, prop_count[SSPP_PROP_MAX], off_count, i, j;
 	int vig_prop_count[VIG_PROP_MAX], rgb_prop_count[RGB_PROP_MAX];
@@ -1263,7 +1264,12 @@ static int sde_sspp_parse_dt(struct device_node *np,
 		sblk->maxvdeciexp = MAX_VERT_DECIMATION;
 
 		sspp->xin_id = PROP_VALUE_ACCESS(prop_value, SSPP_XIN, i);
-		sblk->pixel_ram_size = DEFAULT_PIXEL_RAM_SIZE;
+
+		if (IS_SDM630_TARGET(hw_rev)) {
+			sblk->pixel_ram_size = SDM630_PIXEL_RAM_SIZE;
+		} else {
+			sblk->pixel_ram_size = DEFAULT_PIXEL_RAM_SIZE;
+		}
 		sblk->src_blk.len = PROP_VALUE_ACCESS(prop_value, SSPP_SIZE, 0);
 
 		if (PROP_VALUE_ACCESS(prop_value, SSPP_EXCL_RECT, i) == 1)
@@ -3147,7 +3153,7 @@ static int sde_hardware_format_caps(struct sde_mdss_cfg *sde_cfg,
 	uint32_t index = 0;
 
 	if (IS_MSM8996_TARGET(hw_rev) || IS_MSM8998_TARGET(hw_rev) ||
-	    IS_SDM630_TARGET(hw_rev)) {
+	    IS_SDM630_TARGET(hw_rev) || IS_SDM660_TARGET(hw_rev)) {
 		cursor_list_size = ARRAY_SIZE(cursor_formats);
 		sde_cfg->cursor_formats = kcalloc(cursor_list_size,
 			sizeof(struct sde_format_extended), GFP_KERNEL);
@@ -3252,13 +3258,14 @@ static int _sde_hardware_pre_caps(struct sde_mdss_cfg *sde_cfg, uint32_t hw_rev)
 		/* update msm8996 target here */
 		sde_cfg->has_wb_ubwc = true;
 		sde_cfg->perf.min_prefill_lines = 21;
-	} else if (IS_MSM8998_TARGET(hw_rev) || IS_SDM630_TARGET(hw_rev)) {
+	} else if (IS_MSM8998_TARGET(hw_rev) || IS_SDM630_TARGET(hw_rev) ||
+		   IS_SDM660_TARGET(hw_rev)) {
 		/* update msm8998/sdm630 target here */
 		sde_cfg->has_wb_ubwc = true;
 		sde_cfg->has_cwb_support = true;
 		sde_cfg->perf.min_prefill_lines = 25;
 		sde_cfg->vbif_qos_nlvl = 4;
-		if (IS_SDM630_TARGET(hw_rev))
+		if (IS_SDM630_TARGET(hw_rev) || IS_SDM660_TARGET(hw_rev))
 			sde_cfg->ts_prefill_rev = 1;
 		else
 			sde_cfg->ts_prefill_rev = 2;
@@ -3414,7 +3421,7 @@ struct sde_mdss_cfg *sde_hw_catalog_init(struct drm_device *dev, u32 hw_rev)
 	if (rc)
 		goto end;
 
-	rc = sde_sspp_parse_dt(np, sde_cfg);
+	rc = sde_sspp_parse_dt(np, sde_cfg, hw_rev);
 	if (rc)
 		goto end;
 
