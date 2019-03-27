@@ -290,20 +290,20 @@ static bool pll_is_pll_locked_14nm(struct mdss_pll_resources *pll)
 
 	/* poll for PLL ready status */
 	if (readl_poll_timeout_atomic((pll->pll_base +
-		DSIPHY_PLL_RESET_SM_READY_STATUS),
-		status,
-		((status & BIT(5)) > 0),
-		DSI_PLL_POLL_MAX_READS,
-		DSI_PLL_POLL_TIMEOUT_US)) {
+			DSIPHY_PLL_RESET_SM_READY_STATUS),
+			status,
+			((status & BIT(5)) > 0),
+			DSI_PLL_POLL_MAX_READS,
+			DSI_PLL_POLL_TIMEOUT_US)) {
 		pr_err("DSI PLL ndx=%d status=%x failed to Lock\n",
 				pll->index, status);
 		pll_locked = false;
 	} else if (readl_poll_timeout_atomic((pll->pll_base +
-		DSIPHY_PLL_RESET_SM_READY_STATUS),
-		status,
-		((status & BIT(0)) > 0),
-		DSI_PLL_POLL_MAX_READS,
-		DSI_PLL_POLL_TIMEOUT_US)) {
+				DSIPHY_PLL_RESET_SM_READY_STATUS),
+				status,
+				((status & BIT(0)) > 0),
+				DSI_PLL_POLL_MAX_READS,
+				DSI_PLL_POLL_TIMEOUT_US)) {
 		pr_err("DSI PLL ndx=%d status=%x PLl not ready\n",
 				pll->index, status);
 		pll_locked = false;
@@ -316,7 +316,7 @@ static bool pll_is_pll_locked_14nm(struct mdss_pll_resources *pll)
 
 static void dsi_pll_start_14nm(void __iomem *pll_base)
 {
-	pr_debug("start PLL at base=%p\n", pll_base);
+	pr_debug("start PLL at base=%pK\n", pll_base);
 
 	MDSS_PLL_REG_W(pll_base, DSIPHY_PLL_VREF_CFG1, 0x10);
 	MDSS_PLL_REG_W(pll_base, DSIPHY_CMN_PLL_CNTRL, 1);
@@ -324,7 +324,7 @@ static void dsi_pll_start_14nm(void __iomem *pll_base)
 
 static void dsi_pll_stop_14nm(void __iomem *pll_base)
 {
-	pr_debug("stop PLL at base=%p\n", pll_base);
+	pr_debug("stop PLL at base=%pK\n", pll_base);
 
 	MDSS_PLL_REG_W(pll_base, DSIPHY_CMN_PLL_CNTRL, 0);
 }
@@ -491,8 +491,8 @@ static void pll_14nm_dec_frac_calc(struct mdss_pll_resources *pll,
 {
 	struct dsi_pll_input *pin = &pdb->in;
 	struct dsi_pll_output *pout = &pdb->out;
-	s64 multiplier = BIT(20);
-	s64 dec_start_multiple, dec_start, pll_comp_val;
+	u64 multiplier = BIT(20);
+	u64 dec_start_multiple, dec_start, pll_comp_val;
 	s32 duration, div_frac_start;
 	s64 vco_clk_rate = pll->vco_current_rate;
 	s64 fref = pll->vco_ref_clk_rate;
@@ -518,7 +518,7 @@ static void pll_14nm_dec_frac_calc(struct mdss_pll_resources *pll,
 		duration = 32;
 
 	pll_comp_val =  duration * dec_start_multiple;
-	pll_comp_val =  div_s64(pll_comp_val, multiplier);
+	pll_comp_val =  div_u64(pll_comp_val, multiplier);
 	do_div(pll_comp_val, 10);
 
 	pout->plllock_cmp = (u32)pll_comp_val;
@@ -549,7 +549,7 @@ static void pll_14nm_calc_vco_count(struct dsi_pll_db *pdb,
 {
 	struct dsi_pll_input *pin = &pdb->in;
 	struct dsi_pll_output *pout = &pdb->out;
-	s64 data;
+	u64 data;
 	u32 cnt;
 
 	data = fref * pin->vco_measure_time;
@@ -571,7 +571,7 @@ static void pll_14nm_calc_vco_count(struct dsi_pll_db *pdb,
 
 	cnt = pll_14nm_kvco_slop(vco_clk_rate);
 	cnt *= 2;
-	do_div(cnt, 100);
+	cnt /= 100;
 	cnt *= pin->kvco_measure_time;
 	pout->pll_kvco_count = cnt;
 
@@ -920,7 +920,7 @@ int pll_vco_set_rate_14nm(struct clk_hw *hw, unsigned long rate,
 
 	pll_source_setup(pll);
 
-	pr_debug("%s: ndx=%d base=%p rate=%lu slave=%p\n", __func__,
+	pr_debug("%s: ndx=%d base=%pK rate=%lu slave=%pK\n", __func__,
 				pll->index, pll->pll_base, rate, pll->slave);
 
 	pll->vco_current_rate = rate;
@@ -1041,7 +1041,7 @@ int shadow_pll_vco_set_rate_14nm(struct clk_hw *hw, unsigned long rate,
 		return rc;
 	}
 
-	pr_debug("%s: ndx=%d base=%p rate=%lu\n", __func__,
+	pr_debug("%s: ndx=%d base=%pK rate=%lu\n", __func__,
 			pll->index, pll->pll_base, rate);
 
 	pll->vco_current_rate = rate;
