@@ -17,6 +17,7 @@
 #include "sdm636-mtp.dtsi"
 #include "sdm660-internal-codec.dtsi"
 #include "sdm636-ganges-mermaid.dtsi"
+#include "sdm660-sde-overlay.dtsi"
 #include "sdm636-ganges-common-sde-overlay.dtsi"
 #include "dsi-panel-somc-mermaid.dtsi"
 #include "dsi-panel-somc-mermaid-sde.dtsi"

@@ -10,8 +10,6 @@
  * GNU General Public License for more details.
  */
 
-#include "sdm660-sde-overlay.dtsi"
-
 / {
 	/* Bad indentation is required. Sorry. */
 	chosen {
