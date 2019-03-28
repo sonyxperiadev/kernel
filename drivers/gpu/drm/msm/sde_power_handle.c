@@ -1083,15 +1083,15 @@ int sde_cx_ipeak_vote(struct sde_power_handle *phandle, struct dss_clk *clock,
 	int ret = 0;
 	u64 curr_core_clk_rate, max_core_clk_rate, prev_core_clk_rate;
 
-	if (phandle->dss_cx_ipeak) {
+	if (!phandle->dss_cx_ipeak) {
 		pr_debug("%pS->%s: Invalid input\n",
 				__builtin_return_address(0), __func__);
-		return -EINVAL;
+		return -EOPNOTSUPP;
 	}
 
 	if (strcmp("core_clk", clock->clk_name)) {
 		pr_debug("Not a core clk , cx_ipeak vote not needed\n");
-		return -EINVAL;
+		return -EOPNOTSUPP;
 	}
 
 	curr_core_clk_rate = clock->rate;
@@ -1136,7 +1136,7 @@ int sde_power_clk_set_rate(struct sde_power_handle *phandle, char *clock_name,
 			sde_cx_ipeak_vote(phandle, &mp->clk_config[i],
 				requested_clk_rate, prev_clk_rate, true);
 			mp->clk_config[i].rate = rate;
-			rc = msm_dss_clk_set_rate(mp->clk_config, mp->num_clk);
+			rc = msm_dss_single_clk_set_rate(&mp->clk_config[i]);
 			if (!rc)
 				sde_cx_ipeak_vote(phandle, &mp->clk_config[i],
 				   requested_clk_rate, prev_clk_rate, false);
@@ -1213,6 +1213,30 @@ struct clk *sde_power_clk_get_clk(struct sde_power_handle *phandle,
 	}
 
 	return clk;
+}
+
+int sde_power_clk_set_flags(struct sde_power_handle *phandle,
+		char *clock_name, unsigned long flags)
+{
+	struct clk *clk;
+
+	if (!phandle) {
+		pr_err("invalid input power handle\n");
+		return -EINVAL;
+	}
+
+	if (!clock_name) {
+		pr_err("invalid input clock name\n");
+		return -EINVAL;
+	}
+
+	clk = sde_power_clk_get_clk(phandle, clock_name);
+	if (!clk) {
+		pr_err("get_clk failed for clk: %s\n", clock_name);
+		return -EINVAL;
+	}
+
+	return clk_set_flags(clk, flags);
 }
 
 struct sde_power_event *sde_power_handle_register_event(

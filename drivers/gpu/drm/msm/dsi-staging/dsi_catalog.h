@@ -86,6 +86,7 @@ void dsi_phy_hw_v2_0_idle_on(struct dsi_phy_hw *phy, struct dsi_phy_cfg *cfg);
 void dsi_phy_hw_v2_0_idle_off(struct dsi_phy_hw *phy);
 int dsi_phy_hw_timing_val_v2_0(struct dsi_phy_per_lane_cfgs *timing_cfg,
 		u32 *timing_val, u32 size);
+void dsi_phy_hw_v2_0_clamp_ctrl(struct dsi_phy_hw *phy, bool enable);
 
 /* Definitions for 10nm PHY hardware driver */
 void dsi_phy_hw_v3_0_regulator_enable(struct dsi_phy_hw *phy,
@@ -196,9 +197,9 @@ bool dsi_ctrl_hw_14_get_cont_splash_status(struct dsi_ctrl_hw *ctrl);
 int dsi_ctrl_hw_14_wait_for_lane_idle(struct dsi_ctrl_hw *ctrl, u32 lanes);
 void dsi_ctrl_hw_14_setup_lane_map(struct dsi_ctrl_hw *ctrl,
 		       struct dsi_lane_map *lane_map);
-void dsi_ctrl_hw_14_ulps_request(struct dsi_ctrl_hw *ctrl, u32 lanes);
-void dsi_ctrl_hw_14_ulps_exit(struct dsi_ctrl_hw *ctrl, u32 lanes);
-u32 dsi_ctrl_hw_14_get_lanes_in_ulps(struct dsi_ctrl_hw *ctrl);
+void dsi_ctrl_hw_cmn_ulps_request(struct dsi_ctrl_hw *ctrl, u32 lanes);
+void dsi_ctrl_hw_cmn_ulps_exit(struct dsi_ctrl_hw *ctrl, u32 lanes);
+u32 dsi_ctrl_hw_cmn_get_lanes_in_ulps(struct dsi_ctrl_hw *ctrl);
 
 void dsi_ctrl_hw_14_clamp_enable(struct dsi_ctrl_hw *ctrl,
 				 u32 lanes,
@@ -224,6 +225,8 @@ void dsi_ctrl_hw_kickoff_non_embedded_mode(struct dsi_ctrl_hw *ctrl,
 
 /* Definitions specific to 2.2 DSI controller hardware */
 bool dsi_ctrl_hw_22_get_cont_splash_status(struct dsi_ctrl_hw *ctrl);
+void dsi_ctrl_hw_22_config_clk_gating(struct dsi_ctrl_hw *ctrl, bool enable,
+		enum dsi_clk_gate_type clk_selection);
 
 void dsi_ctrl_hw_cmn_set_continuous_clk(struct dsi_ctrl_hw *ctrl, bool enable);
 

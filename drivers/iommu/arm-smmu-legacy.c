@@ -2541,6 +2541,10 @@ static void arm_smmu_power_off(struct arm_smmu_device *smmu)
 		return;
 	writel_relaxed(sCR0_CLIENTPD,
 		ARM_SMMU_GR0_NS(smmu) + ARM_SMMU_GR0_sCR0);
+
+	/* Wait for writes to complete before off */
+	wmb();
+
 	arm_smmu_disable_clocks(smmu);
 	if (!(smmu->options & ARM_SMMU_OPT_REGISTER_SAVE))
 		arm_smmu_disable_regulators(smmu);

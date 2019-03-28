@@ -25,6 +25,7 @@
 #include <drm/drm_crtc.h>
 #include <drm/drm_crtc_helper.h>
 #include <drm/drm_flip_work.h>
+#include <linux/clk/qcom.h>
 
 #include "sde_kms.h"
 #include "sde_hw_lm.h"
@@ -2280,7 +2281,7 @@ void sde_crtc_prepare_commit(struct drm_crtc *crtc,
 }
 
 /**
- *  _sde_crtc_complete_flip - signal pending page_flip events
+ *  sde_crtc_complete_flip - signal pending page_flip events
  * Any pending vblank events are added to the vblank_event_list
  * so that the next vblank interrupt shall signal them.
  * However PAGE_FLIP events are not handled through the vblank_event_list.
@@ -2290,7 +2291,7 @@ void sde_crtc_prepare_commit(struct drm_crtc *crtc,
  * @crtc: Pointer to drm crtc structure
  * @file: Pointer to drm file
  */
-static void _sde_crtc_complete_flip(struct drm_crtc *crtc,
+void sde_crtc_complete_flip(struct drm_crtc *crtc,
 		struct drm_file *file)
 {
 	struct sde_crtc *sde_crtc = to_sde_crtc(crtc);
@@ -2300,19 +2301,23 @@ static void _sde_crtc_complete_flip(struct drm_crtc *crtc,
 
 	spin_lock_irqsave(&dev->event_lock, flags);
 	event = sde_crtc->event;
-	if (event) {
-		/* if regular vblank case (!file) or if cancel-flip from
-		 * preclose on file that requested flip, then send the
-		 * event:
-		 */
-		if (!file || (event->base.file_priv == file)) {
-			sde_crtc->event = NULL;
-			DRM_DEBUG_VBL("%s: send event: %pK\n",
-						sde_crtc->name, event);
-			SDE_EVT32_VERBOSE(DRMID(crtc));
-			drm_crtc_send_vblank_event(crtc, event);
-		}
+	if (!event)
+		goto end;
+
+	/*
+	 * if regular vblank case (!file) or if cancel-flip from
+	 * preclose on file that requested flip, then send the
+	 * event:
+	 */
+	if (!file || (event->base.file_priv == file)) {
+		sde_crtc->event = NULL;
+		DRM_DEBUG_VBL("%s: send event: %pK\n",
+					sde_crtc->name, event);
+		SDE_EVT32_VERBOSE(DRMID(crtc));
+		drm_crtc_send_vblank_event(crtc, event);
 	}
+
+end:
 	spin_unlock_irqrestore(&dev->event_lock, flags);
 }
 
@@ -2353,7 +2358,6 @@ static void sde_crtc_vblank_cb(void *data)
 	sde_crtc->vblank_last_cb_time = ktime_get();
 	sysfs_notify_dirent(sde_crtc->vsync_event_sf);
 
-	_sde_crtc_complete_flip(crtc, NULL);
 	drm_crtc_handle_vblank(crtc);
 	DRM_DEBUG_VBL("crtc%d\n", crtc->base.id);
 	SDE_EVT32_VERBOSE(DRMID(crtc));
@@ -3101,7 +3105,6 @@ static void sde_crtc_atomic_begin(struct drm_crtc *crtc,
 	struct sde_crtc *sde_crtc;
 	struct drm_encoder *encoder;
 	struct drm_device *dev;
-	unsigned long flags;
 	struct sde_kms *sde_kms;
 
 	if (!crtc) {
@@ -3133,14 +3136,6 @@ static void sde_crtc_atomic_begin(struct drm_crtc *crtc,
 		_sde_crtc_setup_mixers(crtc);
 		_sde_crtc_setup_is_ppsplit(crtc->state);
 		_sde_crtc_setup_lm_bounds(crtc, crtc->state);
-	}
-
-	if (sde_crtc->event) {
-		WARN_ON(sde_crtc->event);
-	} else {
-		spin_lock_irqsave(&dev->event_lock, flags);
-		sde_crtc->event = crtc->state->event;
-		spin_unlock_irqrestore(&dev->event_lock, flags);
 	}
 
 	list_for_each_entry(encoder, &dev->mode_config.encoder_list, head) {
@@ -3195,7 +3190,6 @@ static void sde_crtc_atomic_flush(struct drm_crtc *crtc,
 	struct drm_plane *plane;
 	struct msm_drm_private *priv;
 	struct msm_drm_thread *event_thread;
-	unsigned long flags;
 	struct sde_crtc_state *cstate;
 	struct sde_kms *sde_kms;
 	int idle_time = 0;
@@ -3236,14 +3230,6 @@ static void sde_crtc_atomic_flush(struct drm_crtc *crtc,
 
 	event_thread = &priv->event_thread[crtc->index];
 	idle_time = sde_crtc_get_property(cstate, CRTC_PROP_IDLE_TIMEOUT);
-
-	if (sde_crtc->event) {
-		SDE_DEBUG("already received sde_crtc->event\n");
-	} else {
-		spin_lock_irqsave(&dev->event_lock, flags);
-		sde_crtc->event = crtc->state->event;
-		spin_unlock_irqrestore(&dev->event_lock, flags);
-	}
 
 	/*
 	 * If no mixers has been allocated in sde_crtc_atomic_check(),
@@ -3690,6 +3676,7 @@ void sde_crtc_commit_kickoff(struct drm_crtc *crtc,
 	struct sde_crtc_state *cstate;
 	bool is_error, reset_req;
 	enum sde_crtc_idle_pc_state idle_pc_state;
+	unsigned long flags;
 
 	if (!crtc) {
 		SDE_ERROR("invalid argument\n");
@@ -3794,6 +3781,15 @@ void sde_crtc_commit_kickoff(struct drm_crtc *crtc,
 			continue;
 
 		sde_encoder_kickoff(encoder, false);
+	}
+
+	/* store the event after frame trigger */
+	if (sde_crtc->event) {
+		WARN_ON(sde_crtc->event);
+	} else {
+		spin_lock_irqsave(&dev->event_lock, flags);
+		sde_crtc->event = crtc->state->event;
+		spin_unlock_irqrestore(&dev->event_lock, flags);
 	}
 
 	SDE_ATRACE_END("crtc_commit");
@@ -4192,6 +4188,12 @@ static void sde_crtc_disable(struct drm_crtc *crtc)
 	msm_mode_object_event_notify(&crtc->base, crtc->dev, &event,
 			(u8 *)&power_on);
 
+	/* disable mdp LUT memory retention */
+	ret = sde_power_clk_set_flags(&priv->phandle, "lut_clk",
+				CLKFLAG_NORETAIN_MEM);
+	if (ret)
+		SDE_ERROR("failed to disable LUT memory retention %d\n", ret);
+
 	/* destination scaler if enabled should be reconfigured on resume */
 	if (cstate->num_ds_enabled)
 		sde_crtc->ds_reconfig = true;
@@ -4344,6 +4346,12 @@ static void sde_crtc_enable(struct drm_crtc *crtc)
 	power_on = 1;
 	msm_mode_object_event_notify(&crtc->base, crtc->dev, &event,
 			(u8 *)&power_on);
+
+	/* enable mdp LUT memory retention */
+	ret = sde_power_clk_set_flags(&priv->phandle, "lut_clk",
+					CLKFLAG_RETAIN_MEM);
+	if (ret)
+		SDE_ERROR("failed to enable LUT memory retention %d\n", ret);
 
 	mutex_unlock(&sde_crtc->crtc_lock);
 
@@ -4906,14 +4914,6 @@ int sde_crtc_vblank(struct drm_crtc *crtc, bool en)
 	mutex_unlock(&sde_crtc->crtc_lock);
 
 	return 0;
-}
-
-void sde_crtc_cancel_pending_flip(struct drm_crtc *crtc, struct drm_file *file)
-{
-	struct sde_crtc *sde_crtc = to_sde_crtc(crtc);
-
-	SDE_DEBUG("%s: cancel: %pK\n", sde_crtc->name, file);
-	_sde_crtc_complete_flip(crtc, file);
 }
 
 int sde_crtc_helper_reset_custom_properties(struct drm_crtc *crtc,
@@ -6360,13 +6360,32 @@ static int sde_crtc_idle_interrupt_handler(struct drm_crtc *crtc_drm,
 }
 
 /**
- * sde_crtc_update_cont_splash_mixer_settings - update mixer settings
- *	during device bootup for cont_splash use case
+ * sde_crtc_update_cont_splash_settings - update mixer settings
+ *	and initial clk during device bootup for cont_splash use case
  * @crtc: Pointer to drm crtc structure
  */
-void sde_crtc_update_cont_splash_mixer_settings(
-		struct drm_crtc *crtc)
+void sde_crtc_update_cont_splash_settings(struct drm_crtc *crtc)
 {
+	struct sde_kms *kms = NULL;
+	struct msm_drm_private *priv;
+	struct sde_crtc *sde_crtc;
+
+	if (!crtc || !crtc->state || !crtc->dev || !crtc->dev->dev_private) {
+		SDE_ERROR("invalid crtc\n");
+		return;
+	}
+
+	priv = crtc->dev->dev_private;
+	kms = to_sde_kms(priv->kms);
+	if (!kms || !kms->catalog) {
+		SDE_ERROR("invalid parameters\n");
+		return;
+	}
+
 	_sde_crtc_setup_mixers(crtc);
 	crtc->enabled = true;
+
+	/* update core clk value for initial state with cont-splash */
+	sde_crtc = to_sde_crtc(crtc);
+	sde_crtc->cur_perf.core_clk_rate = kms->perf.max_core_clk_rate;
 }

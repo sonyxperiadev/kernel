@@ -2450,7 +2450,7 @@ static int dsi_panel_parse_phy_timing(struct dsi_display_mode *mode,
 		priv_info->phy_timing_len = len;
 	};
 
-	mode->pixel_clk_khz = (mode->timing.h_active *
+	mode->pixel_clk_khz = (DSI_H_TOTAL_DSC(&mode->timing) *
 			DSI_V_TOTAL(&mode->timing) *
 			mode->timing.refresh_rate) / 1000;
 	return rc;
@@ -2567,6 +2567,9 @@ static int dsi_panel_parse_dsc_params(struct dsi_display_mode *mode,
 
 	dsi_dsc_populate_static_param(&priv_info->dsc);
 	dsi_dsc_pclk_param_calc(&priv_info->dsc, intf_width);
+
+	mode->timing.dsc_enabled = true;
+	mode->timing.dsc = &priv_info->dsc;
 
 error:
 	return rc;
@@ -4092,9 +4095,15 @@ int dsi_panel_disable(struct dsi_panel *panel)
 	if (!atomic_read(&panel->esd_recovery_pending)) {
 		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_OFF);
 		if (rc) {
-			pr_err("[%s] failed to send DSI_CMD_SET_OFF cmds, rc=%d\n",
+			/*
+			 * Sending panel off commands may fail when  DSI
+			 * controller is in a bad state. These failures can be
+			 * ignored since controller will go for full reset on
+			 * subsequent display enable anyway.
+			 */
+			pr_warn_ratelimited("[%s] failed to send DSI_CMD_SET_OFF cmds, rc=%d\n",
 					panel->name, rc);
-			goto error;
+			rc = 0;
 		}
 	}
 	panel->panel_initialized = false;
@@ -4103,7 +4112,6 @@ int dsi_panel_disable(struct dsi_panel *panel)
 	dsi_panel_driver_disable(panel);
 #endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 
-error:
 	mutex_unlock(&panel->panel_lock);
 #endif /* CONFIG_DRM_MSM_EMU_HEADLESS */
 	return rc;

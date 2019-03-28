@@ -92,6 +92,52 @@ static void dsi_display_mask_ctrl_error_interrupts(struct dsi_display *display,
 	}
 }
 
+static int dsi_display_config_clk_gating(struct dsi_display *display,
+					bool enable)
+{
+	int rc = 0, i = 0;
+	struct dsi_display_ctrl *mctrl, *ctrl;
+
+	if (!display) {
+		pr_err("Invalid params\n");
+		return -EINVAL;
+	}
+
+	mctrl = &display->ctrl[display->clk_master_idx];
+	if (!mctrl) {
+		pr_err("Invalid controller\n");
+		return -EINVAL;
+	}
+
+	rc = dsi_ctrl_config_clk_gating(mctrl->ctrl, enable, PIXEL_CLK |
+							DSI_PHY);
+	if (rc) {
+		pr_err("[%s] failed to %s clk gating, rc=%d\n",
+				display->name, enable ? "enable" : "disable",
+				rc);
+		return rc;
+	}
+
+	for (i = 0; i < display->ctrl_count; i++) {
+		ctrl = &display->ctrl[i];
+		if (!ctrl->ctrl || (ctrl == mctrl))
+			continue;
+		/**
+		 * In Split DSI usecase we should not enable clock gating on
+		 * DSI PHY1 to ensure no display atrifacts are seen.
+		 */
+		rc = dsi_ctrl_config_clk_gating(ctrl->ctrl, enable, PIXEL_CLK);
+		if (rc) {
+			pr_err("[%s] failed to %s pixel clk gating, rc=%d\n",
+				display->name, enable ? "enable" : "disable",
+				rc);
+			return rc;
+		}
+	}
+
+	return 0;
+}
+
 static void dsi_display_set_ctrl_esd_check_flag(struct dsi_display *display,
 			bool enable)
 {
@@ -370,6 +416,7 @@ static irqreturn_t dsi_display_panel_te_irq_handler(int irq, void *data)
 	if (!display)
 		return IRQ_HANDLED;
 
+	SDE_EVT32(SDE_EVTLOG_FUNC_CASE1);
 	complete_all(&display->esd_te_gate);
 	return IRQ_HANDLED;
 }
@@ -397,6 +444,7 @@ static void dsi_display_register_te_irq(struct dsi_display *display)
 	int rc = 0;
 	struct platform_device *pdev;
 	struct device *dev;
+	unsigned int te_irq;
 
 	pdev = display->pdev;
 	if (!pdev) {
@@ -416,16 +464,21 @@ static void dsi_display_register_te_irq(struct dsi_display *display)
 	}
 
 	init_completion(&display->esd_te_gate);
+	te_irq = gpio_to_irq(display->disp_te_gpio);
 
-	rc = devm_request_irq(dev, gpio_to_irq(display->disp_te_gpio),
-			dsi_display_panel_te_irq_handler, IRQF_TRIGGER_FALLING,
-			"TE_GPIO", display);
+	/* Avoid deferred spurious irqs with disable_irq() */
+	irq_set_status_flags(te_irq, IRQ_DISABLE_UNLAZY);
+
+	rc = devm_request_irq(dev, te_irq, dsi_display_panel_te_irq_handler,
+			      IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
+			      "TE_GPIO", display);
 	if (rc) {
 		pr_err("TE request_irq failed for ESD rc:%d\n", rc);
+		irq_clear_status_flags(te_irq, IRQ_DISABLE_UNLAZY);
 		goto error;
 	}
 
-	disable_irq(gpio_to_irq(display->disp_te_gpio));
+	disable_irq(te_irq);
 	display->is_te_irq_enabled = false;
 
 	return;
@@ -888,6 +941,17 @@ int dsi_display_cmd_transfer(void *display, const char *cmd_buf,
 
 	mutex_lock(&dsi_display->display_lock);
 	rc = dsi_display_ctrl_get_host_init_state(dsi_display, &state);
+
+	/**
+	 * Handle scenario where a command transfer is initiated through
+	 * sysfs interface when device is in suepnd state.
+	 */
+	if (!rc && !state) {
+		pr_warn_ratelimited("Command xfer attempted while device is in suspend state\n"
+				);
+		rc = -EPERM;
+		goto end;
+	}
 	if (rc || !state) {
 		pr_err("[DSI] Invalid host state %d rc %d\n",
 				state, rc);
@@ -1247,6 +1311,13 @@ static ssize_t debugfs_esd_trigger_check(struct file *file,
 	if (user_len > sizeof(u32))
 		return -EINVAL;
 
+	if (!user_len || !user_buf)
+		return -EINVAL;
+
+	if (!display->panel ||
+		atomic_read(&display->panel->esd_recovery_pending))
+		return user_len;
+
 	buf = kzalloc(user_len, GFP_KERNEL);
 	if (!buf)
 		return -ENOMEM;
@@ -1305,7 +1376,7 @@ static ssize_t debugfs_alter_esd_check_mode(struct file *file,
 	if (ZERO_OR_NULL_PTR(buf))
 		return -ENOMEM;
 
-	if (copy_from_user(buf, user_buf, user_len)) {
+	if (copy_from_user(buf, user_buf, len)) {
 		rc = -EINVAL;
 		goto error;
 	}
@@ -1574,9 +1645,13 @@ static int dsi_display_is_ulps_req_valid(struct dsi_display *display,
 		bool enable)
 {
 	/* TODO: make checks based on cont. splash */
-	int splash_enabled = false;
 
 	pr_debug("checking ulps req validity\n");
+
+	if (atomic_read(&display->panel->esd_recovery_pending)) {
+		pr_debug("%s: ESD recovery sequence underway\n", __func__);
+		return false;
+	}
 
 	if (!dsi_panel_ulps_feature_enabled(display->panel) &&
 			!display->panel->ulps_suspend_enabled) {
@@ -1603,7 +1678,7 @@ static int dsi_display_is_ulps_req_valid(struct dsi_display *display,
 	 * boot animation since it is expected that the clocks would be turned
 	 * right back on.
 	 */
-	if (enable && splash_enabled)
+	if (enable && display->is_cont_splash_enabled)
 		return false;
 
 	return true;
@@ -1639,39 +1714,56 @@ static int dsi_display_set_ulps(struct dsi_display *display, bool enable)
 
 	m_ctrl = &display->ctrl[display->cmd_master_idx];
 
-	rc = dsi_ctrl_set_ulps(m_ctrl->ctrl, enable);
-	if (rc) {
-		pr_err("Ulps controller state change(%d) failed\n", enable);
-		return rc;
-	}
+	/*
+	 * ULPS entry-exit can be either through the DSI controller or
+	 * the DSI PHY depending on hardware variation. For some chipsets,
+	 * both controller version and phy version ulps entry-exit ops can
+	 * be present. To handle such cases, send ulps request through PHY,
+	 * if ulps request is handled in PHY, then no need to send request
+	 * through controller.
+	 */
 
 	rc = dsi_phy_set_ulps(m_ctrl->phy, &display->config, enable,
 				display->clamp_enabled);
-	if (rc) {
+
+	if (rc == DSI_PHY_ULPS_ERROR) {
 		pr_err("Ulps PHY state change(%d) failed\n", enable);
-		return rc;
-	}
+		return -EINVAL;
+	} else if (rc == DSI_PHY_ULPS_HANDLED) {
+		for (i = 0; i < display->ctrl_count; i++) {
+			ctrl = &display->ctrl[i];
+			if (!ctrl->ctrl || (ctrl == m_ctrl))
+				continue;
 
-	for (i = 0; i < display->ctrl_count; i++) {
-		ctrl = &display->ctrl[i];
-		if (!ctrl->ctrl || (ctrl == m_ctrl))
-			continue;
-
-		rc = dsi_ctrl_set_ulps(ctrl->ctrl, enable);
+			rc = dsi_phy_set_ulps(ctrl->phy, &display->config,
+					enable, display->clamp_enabled);
+			if (rc == DSI_PHY_ULPS_ERROR) {
+				pr_err("Ulps PHY state change(%d) failed\n",
+						enable);
+				return -EINVAL;
+			}
+		}
+	} else if (rc == DSI_PHY_ULPS_NOT_HANDLED) {
+		rc = dsi_ctrl_set_ulps(m_ctrl->ctrl, enable);
 		if (rc) {
 			pr_err("Ulps controller state change(%d) failed\n",
-				enable);
+					enable);
 			return rc;
 		}
+		for (i = 0; i < display->ctrl_count; i++) {
+			ctrl = &display->ctrl[i];
+			if (!ctrl->ctrl || (ctrl == m_ctrl))
+				continue;
 
-		rc = dsi_phy_set_ulps(ctrl->phy, &display->config, enable,
-					display->clamp_enabled);
-		if (rc) {
-			pr_err("Ulps PHY state change(%d) failed\n", enable);
-			return rc;
+			rc = dsi_ctrl_set_ulps(ctrl->ctrl, enable);
+			if (rc) {
+				pr_err("Ulps controller state change(%d) failed\n",
+						enable);
+				return rc;
+			}
 		}
-
 	}
+
 	display->ulps_enabled = enable;
 	return 0;
 }
@@ -3157,7 +3249,7 @@ int dsi_pre_clkoff_cb(void *priv,
 	struct dsi_display *display = priv;
 
 	if ((clk & DSI_LINK_CLK) && (new_state == DSI_CLK_OFF) &&
-		(l_type && DSI_LINK_LP_CLK)) {
+		(l_type & DSI_LINK_LP_CLK)) {
 		/*
 		 * If continuous clock is enabled then disable it
 		 * before entering into ULPS Mode.
@@ -3178,6 +3270,20 @@ int dsi_pre_clkoff_cb(void *priv,
 		if (rc)
 			pr_err("%s: failed enable ulps, rc = %d\n",
 			       __func__, rc);
+	}
+
+	if ((clk & DSI_LINK_CLK) && (new_state == DSI_CLK_OFF) &&
+		(l_type & DSI_LINK_HS_CLK)) {
+		/*
+		 * PHY clock gating should be disabled before the PLL and the
+		 * branch clocks are turned off. Otherwise, it is possible that
+		 * the clock RCGs may not be turned off correctly resulting
+		 * in clock warnings.
+		 */
+		rc = dsi_display_config_clk_gating(display, false);
+		if (rc)
+			pr_err("[%s] failed to disable clk gating, rc=%d\n",
+					display->name, rc);
 	}
 
 	if ((clk & DSI_CORE_CLK) && (new_state == DSI_CLK_OFF)) {
@@ -3298,6 +3404,13 @@ int dsi_post_clkon_cb(void *priv,
 
 		if (display->panel->host_config.force_hs_clk_lane)
 			_dsi_display_continuous_clk_ctrl(display, true);
+
+		rc = dsi_display_config_clk_gating(display, true);
+		if (rc) {
+			pr_err("[%s] failed to enable clk gating %d\n",
+					display->name, rc);
+			goto error;
+		}
 	}
 
 	/* enable dsi to serve irqs */
@@ -3965,7 +4078,7 @@ static int dsi_display_get_dfps_timing(struct dsi_display *display,
 		rc = dsi_display_dfps_calc_front_porch(
 				curr_refresh_rate,
 				timing->refresh_rate,
-				DSI_H_TOTAL(timing),
+				DSI_H_TOTAL_DSC(timing),
 				DSI_V_TOTAL(timing),
 				timing->v_front_porch,
 				&adj_mode->timing.v_front_porch);
@@ -3976,7 +4089,7 @@ static int dsi_display_get_dfps_timing(struct dsi_display *display,
 				curr_refresh_rate,
 				timing->refresh_rate,
 				DSI_V_TOTAL(timing),
-				DSI_H_TOTAL(timing),
+				DSI_H_TOTAL_DSC(timing),
 				timing->h_front_porch,
 				&adj_mode->timing.h_front_porch);
 		if (!rc)
@@ -5386,7 +5499,7 @@ int dsi_display_get_modes(struct dsi_display *display,
 					sub_mode, curr_refresh_rate);
 
 				sub_mode->pixel_clk_khz =
-					(DSI_H_TOTAL(&sub_mode->timing) *
+					(DSI_H_TOTAL_DSC(&sub_mode->timing) *
 					DSI_V_TOTAL(&sub_mode->timing) *
 					sub_mode->timing.refresh_rate) / 1000;
 			}
@@ -5562,8 +5675,8 @@ int dsi_display_validate_mode_vrr(struct dsi_display *display,
 			break;
 
 		case DSI_DFPS_IMMEDIATE_HFP:
-			if (abs(DSI_H_TOTAL(&cur_mode.timing) -
-				DSI_H_TOTAL(&adj_mode.timing)) > 5)
+			if (abs(DSI_H_TOTAL_DSC(&cur_mode.timing) -
+				DSI_H_TOTAL_DSC(&adj_mode.timing)) > 5)
 				pr_err("Mismatch hfp fps:%d new:%d given:%d\n",
 				adj_mode.timing.refresh_rate,
 				cur_mode.timing.h_front_porch,
@@ -6052,6 +6165,9 @@ int dsi_display_prepare(struct dsi_display *display)
 
 	dsi_display_set_ctrl_esd_check_flag(display, false);
 
+	/* Set up ctrl isr before enabling core clk */
+	dsi_display_ctrl_isr_configure(display, true);
+
 	if (mode->dsi_mode_flags & DSI_MODE_FLAG_DMS) {
 		if (display->is_cont_splash_enabled) {
 			pr_err("DMS is not supposed to be set on first frame\n");
@@ -6078,9 +6194,6 @@ int dsi_display_prepare(struct dsi_display *display)
 			goto error;
 		}
 	}
-
-	/* Set up ctrl isr before enabling core clk */
-	dsi_display_ctrl_isr_configure(display, true);
 
 	rc = dsi_display_clk_ctrl(display->dsi_clk_handle,
 			DSI_CORE_CLK, DSI_CLK_ON);
