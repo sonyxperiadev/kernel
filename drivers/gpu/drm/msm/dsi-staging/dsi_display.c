@@ -1719,7 +1719,6 @@ static int dsi_display_set_ulps(struct dsi_display *display, bool enable)
 
 	rc = dsi_phy_set_ulps(m_ctrl->phy, &display->config, enable,
 				display->clamp_enabled);
-			display->clamp_enabled);
 
 	if (rc == DSI_PHY_ULPS_ERROR) {
 		pr_err("Ulps PHY state change(%d) failed\n", enable);
