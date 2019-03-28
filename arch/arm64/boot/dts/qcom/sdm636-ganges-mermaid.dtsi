@@ -14,7 +14,7 @@
 #include "dsi-panel-somc-mermaid.dtsi"
 #include "sdm636-ganges-mermaid-camera-sensor.dtsi"
 #include "sdm636-ganges-mermaid-touch.dtsi"
-#include "charger-ganges-mermaid.dtsi"
+#include "sdm636-ganges-mermaid-common.dtsi"
 
 &soc {
 	/delete-node/ qcom,qbt1000;

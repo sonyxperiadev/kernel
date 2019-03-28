@@ -14,7 +14,7 @@
 #include "dsi-panel-somc-kirin.dtsi"
 #include "sdm630-ganges-kirin-touch.dtsi"
 #include "sdm630-ganges-kirin-camera-sensor.dtsi"
-#include "charger-ganges-kirin.dtsi"
+#include "sdm630-ganges-kirin-common.dtsi"
 
 &soc {
 	pinctrl@03000000 {
