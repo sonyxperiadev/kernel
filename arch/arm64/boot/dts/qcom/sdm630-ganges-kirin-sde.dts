@@ -18,7 +18,7 @@
 #include "sdm660-internal-codec.dtsi"
 #include "sdm630-ganges-kirin.dtsi"
 #include "sdm630-sde-overlay.dtsi"
-#include "sdm636-ganges-common-sde-overlay.dtsi"
+#include "sdm630-ganges-common-sde-overlay.dtsi"
 #include "dsi-panel-somc-kirin.dtsi"
 #include "dsi-panel-somc-kirin-sde.dtsi"
 / {
