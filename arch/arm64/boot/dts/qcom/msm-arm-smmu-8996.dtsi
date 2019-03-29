@@ -27,6 +27,7 @@
 		<GIC_SPI 359 IRQ_TYPE_LEVEL_HIGH>,
 		<GIC_SPI 360 IRQ_TYPE_LEVEL_HIGH>,
 		<GIC_SPI 468 IRQ_TYPE_LEVEL_HIGH>;
+	qcom,regulator-names = "vdd";
 	vdd-supply = <&gdsc_aggre0_noc>;
 	clocks = <&clock_gcc GCC_SMMU_AGGRE0_AXI_CLK>,
 		<&clock_gcc GCC_SMMU_AGGRE0_AHB_CLK>;
@@ -89,6 +90,7 @@
 		<GIC_SPI 401 IRQ_TYPE_LEVEL_HIGH>,
 		<GIC_SPI 402 IRQ_TYPE_LEVEL_HIGH>,
 		<GIC_SPI 403 IRQ_TYPE_LEVEL_HIGH>;
+	qcom,regulator-names = "vdd";
 	vdd-supply = <&gdsc_hlos1_vote_lpass_adsp>;
 	clocks = <&clock_gcc GCC_HLOS1_VOTE_LPASS_ADSP_SMMU_CLK>;
 	clock-names = "lpass_q6_smmu_clocks";
@@ -105,6 +107,7 @@
 		<GIC_SPI 69 IRQ_TYPE_LEVEL_HIGH>,
 		<GIC_SPI 70 IRQ_TYPE_LEVEL_HIGH>,
 		<GIC_SPI 71 IRQ_TYPE_LEVEL_HIGH>;
+	qcom,regulator-names = "vdd";
 	vdd-supply = <&gdsc_mmagic_camss>;
 	clocks = <&clock_mmss MMSS_MMAGIC_AHB_CLK>,
 		<&clock_mmss MMSS_MMAGIC_CFG_AHB_CLK>,
@@ -132,6 +135,7 @@
 	interrupts = <GIC_SPI 76 IRQ_TYPE_LEVEL_HIGH>,
 		<GIC_SPI 343 IRQ_TYPE_LEVEL_HIGH>,
 		<GIC_SPI 344 IRQ_TYPE_LEVEL_HIGH>;
+	qcom,regulator-names = "vdd";
 	vdd-supply = <&gdsc_mmagic_camss>;
 	clocks = <&clock_mmss MMSS_MMAGIC_AHB_CLK>,
 		<&clock_mmss MMSS_MMAGIC_CFG_AHB_CLK>,
@@ -160,6 +164,7 @@
 		<GIC_SPI 263 IRQ_TYPE_LEVEL_HIGH>,
 		<GIC_SPI 266 IRQ_TYPE_LEVEL_HIGH>,
 		<GIC_SPI 267 IRQ_TYPE_LEVEL_HIGH>;
+	qcom,regulator-names = "vdd";
 	vdd-supply = <&gdsc_mmagic_camss>;
 	clocks = <&clock_mmss MMSS_MMAGIC_AHB_CLK>,
 		<&clock_mmss MMSS_MMAGIC_CFG_AHB_CLK>,
@@ -191,6 +196,7 @@
 		<GIC_SPI 339 IRQ_TYPE_LEVEL_HIGH>,
 		<GIC_SPI 340 IRQ_TYPE_LEVEL_HIGH>,
 		<GIC_SPI 341 IRQ_TYPE_LEVEL_HIGH>;
+	qcom,regulator-names = "vdd";
 	vdd-supply = <&gdsc_mmagic_video>;
 	clocks = <&clock_mmss MMSS_MMAGIC_AHB_CLK>,
 		<&clock_mmss MMSS_MMAGIC_CFG_AHB_CLK>,
@@ -218,6 +224,7 @@
 	interrupts = <GIC_SPI 73 IRQ_TYPE_LEVEL_HIGH>,
 		<GIC_SPI 320 IRQ_TYPE_LEVEL_HIGH>,
 		<GIC_SPI 321 IRQ_TYPE_LEVEL_HIGH>;
+	qcom,regulator-names = "vdd";
 	vdd-supply = <&gdsc_mmagic_mdss>;
 	clocks = <&clock_mmss MMSS_MMAGIC_AHB_CLK>,
 		<&clock_mmss MMSS_MMAGIC_CFG_AHB_CLK>,
@@ -244,6 +251,7 @@
 	interrupts = <GIC_SPI 353 IRQ_TYPE_LEVEL_HIGH>,
 		<GIC_SPI 348 IRQ_TYPE_LEVEL_HIGH>,
 		<GIC_SPI 349 IRQ_TYPE_LEVEL_HIGH>;
+	qcom,regulator-names = "vdd";
 	vdd-supply = <&gdsc_mmagic_mdss>;
 	clocks = <&clock_mmss MMSS_MMAGIC_AHB_CLK>,
 		<&clock_mmss MMSS_MMAGIC_CFG_AHB_CLK>,
@@ -271,6 +279,7 @@
 	interrupts = <GIC_SPI 334 IRQ_TYPE_LEVEL_HIGH>,
 		<GIC_SPI 329 IRQ_TYPE_LEVEL_HIGH>,
 		<GIC_SPI 330 IRQ_TYPE_LEVEL_HIGH>;
+	qcom,regulator-names = "vdd";
 	vdd-supply = <&gdsc_gpu>;
 	clocks = <&clock_mmss MMSS_MMAGIC_AHB_CLK>,
 		<&clock_mmss MMSS_MMAGIC_CFG_AHB_CLK>,
