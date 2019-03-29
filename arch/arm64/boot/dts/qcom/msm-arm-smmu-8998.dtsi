@@ -19,6 +19,7 @@
 		compatible = "qcom,smmu-v2";
 		reg = <0x1680000 0x10000>;
 		#iommu-cells = <0>;
+		qcom,use-3-lvl-tables;
 		qcom,register-save;
 		qcom,skip-init;
 		#global-interrupts = <0>;
@@ -46,6 +47,7 @@
 		compatible = "qcom,smmu-v2";
 		reg = <0x16c0000 0x40000>;
 		#iommu-cells = <1>;
+		qcom,use-3-lvl-tables;
 		qcom,register-save;
 		qcom,skip-init;
 		#global-interrupts = <0>;
@@ -78,6 +80,7 @@
 		reg = <0x5100000 0x40000>;
 		#iommu-cells = <1>;
 		qcom,tz-device-id = "LPASS";
+		qcom,use-3-lvl-tables;
 		qcom,register-save;
 		qcom,skip-init;
 		#global-interrupts = <0>;
@@ -106,6 +109,7 @@
 		compatible = "qcom,smmu-v2";
 		reg = <0xcd00000 0x40000>;
 		#iommu-cells = <1>;
+		qcom,use-3-lvl-tables;
 		qcom,register-save;
 		qcom,no-smr-check;
 		qcom,skip-init;
@@ -158,6 +162,7 @@
 		#iommu-cells = <1>;
 		qcom-tz-device-id = "GPU";
 		qcom,dynamic;
+		qcom,use-3-lvl-tables;
 		qcom,register-save;
 		qcom,skip-init;
 		#global-interrupts = <0>;
