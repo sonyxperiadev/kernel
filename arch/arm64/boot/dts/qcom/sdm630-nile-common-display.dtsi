@@ -9,10 +9,10 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
-#include "dsi-panel-somc-td4322-innolux-fhd-cmd.dtsi"
-#include "dsi-panel-somc-td4322-truly-fhd-cmd.dtsi"
-#include "dsi-panel-somc-td4322-csot-fhd-cmd.dtsi"
-#include "dsi-panel-somc-td4328-tianma-fhdplus-cmd.dtsi"
+#include "dsi-panel-td4322-innolux-fhd-cmd.dtsi"
+#include "dsi-panel-td4322-truly-fhd-cmd.dtsi"
+#include "dsi-panel-td4322-csot-fhd-cmd.dtsi"
+#include "dsi-panel-td4328-tianma-fhdplus-cmd.dtsi"
 
 &soc {
 	dsi_panel_pwr_supply_csot: dsi_panel_pwr_supply_csot {
@@ -174,7 +174,6 @@
 	qcom,mdss-dsi-t-clk-post = <0x0D>;
 	qcom,mdss-dsi-t-clk-pre = <0x2F>;
 	qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
-	somc,bootloader-panel-detect;
 	qcom,esd-check-enabled;
 	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
 	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0A];
@@ -185,6 +184,9 @@
 	qcom,mdss-dsi-bl-min-level = <1>;
 	qcom,mdss-dsi-bl-max-level = <4095>;
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_innolux>;
+	somc,bootloader-panel-detect;
+	somc,pw-on-rst-seq = <0 30>, <1 150>;
+	somc,pw-off-rst-seq = <0 0>;
 };
 
 &dsi_td4322_truly_fhd_cmd {
@@ -196,7 +198,6 @@
 	qcom,mdss-dsi-t-clk-post = <0x0D>;
 	qcom,mdss-dsi-t-clk-pre = <0x2F>;
 	qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
-	somc,bootloader-panel-detect;
 	qcom,esd-check-enabled;
 	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
 	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0A];
@@ -207,6 +208,9 @@
 	qcom,mdss-dsi-bl-min-level = <1>;
 	qcom,mdss-dsi-bl-max-level = <4095>;
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_truly>;
+	somc,bootloader-panel-detect;
+	somc,pw-on-rst-seq = <0 30>, <1 150>;
+	somc,pw-off-rst-seq = <0 0>;
 };
 
 &dsi_td4322_csot_fhd_cmd {
@@ -218,7 +222,6 @@
 	qcom,mdss-dsi-t-clk-post = <0x0D>;
 	qcom,mdss-dsi-t-clk-pre = <0x2E>;
 	qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
-	somc,bootloader-panel-detect;
 	qcom,esd-check-enabled;
 	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
 	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0A];
@@ -229,6 +232,9 @@
 	qcom,mdss-dsi-bl-min-level = <1>;
 	qcom,mdss-dsi-bl-max-level = <4095>;
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_csot>;
+	somc,bootloader-panel-detect;
+	somc,pw-on-rst-seq = <0 30>, <1 150>;
+	somc,pw-off-rst-seq = <0 0>;
 };
 
 &dsi_td4328_tianma_fhdplus_cmd {

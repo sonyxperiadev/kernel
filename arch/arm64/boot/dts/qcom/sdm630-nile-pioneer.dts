@@ -16,7 +16,7 @@
 #include "sdm630.dtsi"
 #include "sdm630-mtp.dtsi"
 #include "sdm660-internal-codec.dtsi"
-#include "dsi-panel-somc-nile.dtsi"
+#include "sdm630-nile-common-display.dtsi"
 #include "sdm630-nile-common.dtsi"
 #include "sdm630-nile-pioneer-common.dtsi"
 #include "sdm630-nile-pioneer_camera.dtsi"
