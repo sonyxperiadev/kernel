@@ -567,6 +567,9 @@ dtb-$(CONFIG_MACH_SONY_POPLAR)		+= msm8998-v2.1-yoshino-poplar-sde_generic.dtb
 dtb-$(CONFIG_MACH_SONY_PIONEER)		+= sdm630-nile-pioneer-sde.dtb
 dtb-$(CONFIG_MACH_SONY_DISCOVERY)	+= sdm630-nile-discovery-sde.dtb
 dtb-$(CONFIG_MACH_SONY_VOYAGER)		+= sdm630-nile-voyager-sde.dtb
+
+dtb-$(CONFIG_MACH_SONY_KIRIN)		+= sdm630-ganges-kirin-sde.dtb
+dtb-$(CONFIG_MACH_SONY_MERMAID)		+= sdm636-ganges-mermaid-sde.dtb
 else
 # MSM8998
 dtb-$(CONFIG_MACH_SONY_LILAC)		+= msm8998-v2-yoshino-lilac_generic.dtb

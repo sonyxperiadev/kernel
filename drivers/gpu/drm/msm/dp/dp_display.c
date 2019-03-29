@@ -447,6 +447,11 @@ static void dp_display_post_open(struct dp_display *dp_display)
 		return;
 	}
 
+	if (!dp->usbpd) {
+		pr_err("USB PD not ready\n");
+		return;
+	}
+
 	connector = dp->dp_display.connector;
 
 	if (!connector) {

@@ -1,0 +1,98 @@
+/* Copyright (c) 2018, AngeloGioacchino Del Regno <kholk11@gmail.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+&dsi_nt36672a_tianma_fhdplus_video {
+	qcom,platform-te-gpio = <&tlmm 59 0>;
+	qcom,platform-reset-gpio = <&tlmm 53 0>;
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_nt36672a>;
+	qcom,panel-vspvsn-supply-entries = <&dsi_panel_vspvsn_pwr_supply_nt36672a>;
+	qcom,mdss-dsi-reset-sequence =  <1 10>, <0 10>, <1 10>;
+	somc,pw-on-rst-seq = "after_power_on";
+//	qcom,panel-mode-gpio = <&tlmm 55 0>;
+//	qcom,mdss-dsi-mode-sel-gpio-state = "single_port";
+
+	qcom,mdss-dsi-display-timings {
+		1080p60 {
+			qcom,mdss-dsi-panel-framerate = <60>;
+			qcom,mdss-dsi-panel-width = <1080>;
+			qcom,mdss-dsi-panel-height = <2520>;
+			qcom,mdss-dsi-h-back-porch = <40>;
+			qcom,mdss-dsi-h-pulse-width = <20>;
+			qcom,mdss-dsi-h-front-porch = <102>;
+			qcom,mdss-dsi-v-back-porch = <8>;
+			qcom,mdss-dsi-v-pulse-width = <2>;
+			qcom,mdss-dsi-v-front-porch = <10>;
+			qcom,mdss-dsi-h-left-border = <0>;
+			qcom,mdss-dsi-h-right-border = <0>;
+			qcom,mdss-dsi-v-top-border = <0>;
+			qcom,mdss-dsi-v-bottom-border = <0>;
+			qcom,mdss-dsi-h-sync-pulse = <0>;
+			qcom,mdss-dsi-h-sync-skew = <0>;
+			qcom,mdss-dsi-t-clk-post = <0x0D>;
+			qcom,mdss-dsi-t-clk-pre = <0x2F>;
+
+			/* Calc real: htotal * vtotal * bpp * framerate
+			 *            / number_of_lanes
+			 *
+			 *	      3154680 * 24bpp * 60hz / 4 =
+			 *                    1135684800
+			 */					    
+			qcom,mdss-dsi-panel-clockrate = <1140000000>;
+
+			qcom,mdss-dsi-off-command = [05 01 00 00 32 00 02 28 00
+						     05 01 00 00 64 00 02 10 00];
+
+			qcom,mdss-dsi-on-command = [
+						15 01 00 00 00 00 02 FF 25
+						15 01 00 00 00 00 02 FB 01
+						15 01 00 00 00 00 02 05 04
+						15 01 00 00 00 00 02 FF 10
+						15 01 00 00 00 00 02 FB 01
+						15 01 00 00 00 00 02 FF 10
+						15 01 00 00 00 00 02 36 03
+						15 01 00 00 00 00 02 51 FF
+						15 01 00 00 00 00 02 53 24
+						15 01 00 00 00 00 02 55 00
+						05 01 00 00 79 00 02 11 00
+						05 01 00 00 00 00 02 29 00];
+
+			qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
+			qcom,mdss-dsi-off-command-state = "dsi_hs_mode";
+
+			qcom,display-topology = <1 0 1>;
+			qcom,default-topology-index = <0>;
+
+			qcom,mdss-dsi-timing-default;
+
+			qcom,mdss-dsi-panel-timings-phy-v2 = [27 21 0A 0B 07 03 04 A0
+							      27 21 0A 0B 07 03 04 A0
+							      27 21 0A 0B 07 03 04 A0
+							      27 21 0A 0B 07 03 04 A0
+							      27 21 0A 0B 07 03 04 A0];
+
+			qcom,mdss-dsi-panel-phy-timings = [27 21 0A 0B 07 03 04 A0
+							   27 21 0A 0B 07 03 04 A0
+							   27 21 0A 0B 07 03 04 A0
+							   27 21 0A 0B 07 03 04 A0
+							   27 21 0A 0B 07 03 04 A0];
+
+			qcom,esd-check-enabled;
+			qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+			qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0a];
+			qcom,mdss-dsi-panel-status-command-state = "dsi_hs_mode";
+			qcom,mdss-dsi-panel-status-value = <0x9c>;
+			qcom,mdss-dsi-panel-on-check-value = <0x9c>;
+			qcom,mdss-dsi-panel-status-read-length = <1>;
+			qcom,mdss-dsi-panel-max-error-count = <3>;
+		};
+	};
+};
