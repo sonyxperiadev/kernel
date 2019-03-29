@@ -15,7 +15,6 @@
 	qcom,platform-reset-gpio = <&tlmm 53 0>;
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_nt36672a>;
 	qcom,panel-vspvsn-supply-entries = <&dsi_panel_vspvsn_pwr_supply_nt36672a>;
-	qcom,mdss-dsi-reset-sequence =  <1 10>, <0 10>, <1 10>;
 	somc,pw-on-rst-seq = "after_power_on";
 //	qcom,panel-mode-gpio = <&tlmm 55 0>;
 //	qcom,mdss-dsi-mode-sel-gpio-state = "single_port";
