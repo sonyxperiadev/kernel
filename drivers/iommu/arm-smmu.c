@@ -258,6 +258,7 @@ struct arm_smmu_device {
 #define ARM_SMMU_OPT_STATIC_CB		(1 << 6)
 #define ARM_SMMU_OPT_DISABLE_ATOS	(1 << 7)
 #define ARM_SMMU_OPT_MIN_IOVA_ALIGN	(1 << 8)
+#define ARM_SMMU_OPT_NO_SMR_CHECK	(1 << 9)
 	u32				options;
 	enum arm_smmu_arch_version	version;
 	enum arm_smmu_implementation	model;
@@ -398,6 +399,7 @@ static struct arm_smmu_option_prop arm_smmu_options[] = {
 	{ ARM_SMMU_OPT_STATIC_CB, "qcom,enable-static-cb"},
 	{ ARM_SMMU_OPT_DISABLE_ATOS, "qcom,disable-atos" },
 	{ ARM_SMMU_OPT_MIN_IOVA_ALIGN, "qcom,min-iova-align" },
+	{ ARM_SMMU_OPT_NO_SMR_CHECK, "qcom,no-smr-check" },
 	{ 0, NULL},
 };
 
@@ -2301,13 +2303,17 @@ static void arm_smmu_test_smr_masks(struct arm_smmu_device *smmu)
 	int idx;
 
 	/* Check if Stream Match Register support is included */
-	if (!smmu->smrs)
+	if (!smmu->smrs && !(smmu->options & ARM_SMMU_OPT_NO_SMR_CHECK))
 		return;
 
-	/* For slave side secure targets, as we can't write to the
+	/*
+	 * For slave side secure targets, or when we cannot
+	 * do the SMR check because of the SoC firmware
+	 * disallowing it, as we can't write to the
 	 * global space, set the sme mask values to default.
 	 */
-	if (arm_smmu_is_static_cb(smmu)) {
+	if (arm_smmu_is_static_cb(smmu) ||
+	    (smmu->options & ARM_SMMU_OPT_NO_SMR_CHECK)) {
 		smmu->streamid_mask = SID_MASK;
 		smmu->smr_mask_mask = SMR_MASK_MASK;
 		return;
