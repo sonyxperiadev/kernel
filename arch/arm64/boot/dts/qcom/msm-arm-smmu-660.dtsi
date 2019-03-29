@@ -21,6 +21,7 @@
 		compatible = "qcom,smmu-v2";
 		reg = <0x16c0000 0x40000>;
 		#iommu-cells = <1>;
+		qcom,use-3-lvl-tables;
 		qcom,register-save;
 		qcom,skip-init;
 		#global-interrupts = <2>;
@@ -64,6 +65,7 @@
 		compatible = "qcom,smmu-v2";
 		reg = <0x5100000 0x40000>;
 		#iommu-cells = <1>;
+		qcom,use-3-lvl-tables;
 		qcom,register-save;
 		qcom,skip-init;
 		#global-interrupts = <2>;
@@ -97,6 +99,7 @@
 		compatible = "qcom,smmu-v2";
 		reg = <0xcd00000 0x40000>;
 		#iommu-cells = <1>;
+		qcom,use-3-lvl-tables;
 		qcom,register-save;
 		qcom,no-smr-check;
 		qcom,skip-init;
@@ -146,6 +149,7 @@
 		reg = <0x5040000 0x10000>;
 		#iommu-cells = <1>;
 		qcom,dynamic;
+		qcom,use-3-lvl-tables;
 		qcom,register-save;
 		qcom,skip-init;
 		#global-interrupts = <2>;
@@ -175,6 +179,7 @@
 		compatible = "qcom,smmu-v2";
 		reg = <0x5180000 0x40000>;
 		#iommu-cells = <1>;
+		qcom,use-3-lvl-tables;
 		qcom,register-save;
 		qcom,skip-init;
 		#global-interrupts = <2>;
