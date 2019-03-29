@@ -10,12 +10,6 @@
  * GNU General Public License for more details.
 */
 
-#include "sdm630-ganges-common.dtsi"
-#include "sdm630-ganges-common-display.dtsi"
-#include "sdm630-ganges-kirin-touch.dtsi"
-#include "sdm630-ganges-kirin-camera-sensor.dtsi"
-#include "sdm630-ganges-kirin-common.dtsi"
-
 &soc {
 	pinctrl@03000000 {
 		disabled-pins = <8 9 10 11>;
@@ -60,8 +54,4 @@
 };
 
 &tlmm {
-};
-
-&mdss_dsi0 {
-	qcom,dsi-pref-prim-pan = <&dsi_nt36672a_truly_fhdplus_video>;
 };
