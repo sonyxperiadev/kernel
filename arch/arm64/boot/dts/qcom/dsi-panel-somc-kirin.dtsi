@@ -10,19 +10,37 @@
  * GNU General Public License for more details.
  */
 
-#include "dsi-panel-somc-nt36672a_truly_fhdplus_video.dtsi"
+#include "dsi-panel-nt36672a_truly_fhdplus_video.dtsi"
 
 &dsi_nt36672a_truly_fhdplus_video {
+	qcom,mdss-dsi-panel-timings-phy-v2 = [27 21 0A 0B 07 03 04 a0
+	27 21 0A 0B 07 03 04 a0
+	27 21 0A 0B 07 03 04 a0
+	27 21 0A 0B 07 03 04 a0
+	27 21 0A 0B 07 03 04 a0];
+	qcom,mdss-dsi-t-clk-post = <0x0D>;
+	qcom,mdss-dsi-t-clk-pre = <0x2F>;
+	qcom,esd-check-enabled;
+
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0a];
+	qcom,mdss-dsi-panel-status-command-state = "dsi_hs_mode";
+	qcom,mdss-dsi-panel-status-value = <0x9c>;
+	qcom,mdss-dsi-panel-on-check-value = <0x9c>;
+	qcom,mdss-dsi-panel-status-read-length = <1>;
+	qcom,mdss-dsi-panel-max-error-count = <3>;
+	qcom,mdss-dsi-lp11-init;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,mdss-brightness-max-level = <4095>;
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_full_incell>;
+
 	qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
 	qcom,esd-check-enabled;
 	qcom,mdss-dsi-off-command = [05 01 00 00 00 00 02 28 00
 			 05 01 00 00 50 00 02 10 00];
-	qcom,mdss-dsi-reset-sequence = <1 10>;
 	qcom,mdss-dsi-post-init-delay = <1>;
-	qcom,mdss-dsi-panel-hdr-enabled;
-	qcom,mdss-dsi-panel-hdr-color-primaries = <14940 15790 33800 15700 10950 33800 7450 2300>;
-	qcom,mdss-dsi-panel-peak-brightness = <7000000>;
-	qcom,mdss-dsi-panel-blackness-level = <4646>;
 
 	somc,lcd-id-adc = <801000 917000>;
 	somc,mdss-dsi-master;
