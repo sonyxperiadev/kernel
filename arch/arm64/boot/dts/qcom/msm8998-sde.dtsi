@@ -266,7 +266,7 @@
 		};
 
 		smmu_kms_unsec: qcom,smmu_kms_unsec_cb {
-			compatible = "qcom,smmu_sde_unsec";
+			compatible = "qcom,smmu_sde_unsec_legacy";
 			iommus = <&mmss_smmu 0>;
 			gdsc-mdss-supply = <&gdsc_bimc_smmu>;
 			clocks = <&clock_rpmcc MMSSNOC_AXI_CLK>,
@@ -280,7 +280,7 @@
 		};
 
 		smmu_kms_sec: qcom,smmu_kms_sec_cb {
-			compatible = "qcom,smmu_sde_sec";
+			compatible = "qcom,smmu_sde_sec_legacy";
 			iommus = <&mmss_smmu 1>;
 			gdsc-mdss-supply = <&gdsc_bimc_smmu>;
 			clocks = <&clock_rpmcc MMSSNOC_AXI_CLK>,
@@ -669,7 +669,7 @@
 		};
 
 		smmu_rot_unsec: qcom,smmu_rot_unsec_cb {
-			compatible = "qcom,smmu_sde_rot_unsec";
+			compatible = "qcom,smmu_sde_rot_unsec_legacy";
 			iommus = <&mmss_smmu 0xe00>;
 			gdsc-mdss-supply = <&gdsc_bimc_smmu>;
 			clocks = <&clock_rpmcc MMSSNOC_AXI_CLK>,
@@ -683,7 +683,7 @@
 		};
 
 		smmu_rot_sec: qcom,smmu_rot_sec_cb {
-			compatible = "qcom,smmu_sde_rot_sec";
+			compatible = "qcom,smmu_sde_rot_sec_legacy";
 			iommus = <&mmss_smmu 0xe01>;
 			gdsc-mdss-supply = <&gdsc_bimc_smmu>;
 			clocks = <&clock_rpmcc MMSSNOC_AXI_CLK>,
