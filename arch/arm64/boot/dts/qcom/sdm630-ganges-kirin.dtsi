@@ -11,7 +11,7 @@
 */
 
 #include "sdm630-ganges-common.dtsi"
-#include "dsi-panel-somc-kirin.dtsi"
+#include "sdm630-ganges-common-display.dtsi"
 #include "sdm630-ganges-kirin-touch.dtsi"
 #include "sdm630-ganges-kirin-camera-sensor.dtsi"
 #include "sdm630-ganges-kirin-common.dtsi"
