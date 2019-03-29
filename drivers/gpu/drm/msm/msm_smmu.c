@@ -18,6 +18,7 @@
 
 #include <linux/module.h>
 #include <linux/of_platform.h>
+#include <linux/of_iommu.h>
 #include <linux/pm_runtime.h>
 #include <linux/msm_dma_iommu_mapping.h>
 
@@ -337,6 +338,33 @@ static struct msm_smmu_domain msm_smmu_domains[MSM_SMMU_DOMAIN_MAX] = {
 	},
 };
 
+static struct msm_smmu_domain msm_smmu_domains_legacy[MSM_SMMU_DOMAIN_MAX] = {
+	[MSM_SMMU_DOMAIN_UNSECURE] = {
+		.label = "mdp_ns",
+		.va_start = SZ_128K,
+		.va_size = SZ_4G - SZ_128M,
+		.secure = false,
+	},
+	[MSM_SMMU_DOMAIN_SECURE] = {
+		.label = "mdp_s",
+		.va_start = SZ_128K,
+		.va_size = SZ_4G - SZ_128M,
+		.secure = true,
+	},
+	[MSM_SMMU_DOMAIN_NRT_UNSECURE] = {
+		.label = "rot_ns",
+		.va_start = SZ_128K,
+		.va_size = SZ_4G - SZ_128M,
+		.secure = false,
+	},
+	[MSM_SMMU_DOMAIN_NRT_SECURE] = {
+		.label = "rot_s",
+		.va_start = SZ_128K,
+		.va_size = SZ_4G - SZ_128M,
+		.secure = true,
+	},
+};
+
 static const struct of_device_id msm_smmu_dt_match[] = {
 	{ .compatible = "qcom,smmu_sde_unsec",
 		.data = &msm_smmu_domains[MSM_SMMU_DOMAIN_UNSECURE] },
@@ -346,6 +374,16 @@ static const struct of_device_id msm_smmu_dt_match[] = {
 		.data = &msm_smmu_domains[MSM_SMMU_DOMAIN_NRT_UNSECURE] },
 	{ .compatible = "qcom,smmu_sde_nrt_sec",
 		.data = &msm_smmu_domains[MSM_SMMU_DOMAIN_NRT_SECURE] },
+
+	{ .compatible = "qcom,smmu_sde_unsec_legacy",
+		.data = &msm_smmu_domains_legacy[MSM_SMMU_DOMAIN_UNSECURE] },
+	{ .compatible = "qcom,smmu_sde_sec_legacy",
+		.data = &msm_smmu_domains_legacy[MSM_SMMU_DOMAIN_SECURE] },
+	{ .compatible = "qcom,smmu_sde_nrt_unsec_legacy",
+		.data =
+		    &msm_smmu_domains_legacy[MSM_SMMU_DOMAIN_NRT_UNSECURE] },
+	{ .compatible = "qcom,smmu_sde_nrt_sec_legacy",
+		.data = &msm_smmu_domains_legacy[MSM_SMMU_DOMAIN_NRT_SECURE] },
 	{}
 };
 MODULE_DEVICE_TABLE(of, msm_smmu_dt_match);
@@ -360,9 +398,15 @@ static struct device *msm_smmu_device_create(struct device *dev,
 	const char *compat = NULL;
 
 	for (i = 0; i < ARRAY_SIZE(msm_smmu_dt_match); i++) {
-		if (msm_smmu_dt_match[i].data == &msm_smmu_domains[domain]) {
+		if ((msm_smmu_dt_match[i].data == &msm_smmu_domains[domain]) ||
+		    (msm_smmu_dt_match[i].data ==
+					&msm_smmu_domains_legacy[domain])) {
 			compat = msm_smmu_dt_match[i].compatible;
-			break;
+			child = of_find_compatible_node(dev->of_node,
+							NULL, compat);
+			if (child)
+				break;
+			compat = NULL;
 		}
 	}
 
@@ -370,7 +414,14 @@ static struct device *msm_smmu_device_create(struct device *dev,
 		DRM_DEBUG("unable to find matching domain for %d\n", domain);
 		return ERR_PTR(-ENOENT);
 	}
-	DRM_DEBUG("found domain %d compat: %s\n", domain, compat);
+
+	child = of_find_compatible_node(dev->of_node, NULL, compat);
+	if (!child) {
+		DRM_INFO("unable to find compatible node for %s\n", compat);
+		return ERR_PTR(-ENODEV);
+	}
+
+	DRM_INFO("found domain %d compat: %s\n", domain, compat);
 
 	if (domain == MSM_SMMU_DOMAIN_UNSECURE) {
 		int rc;
@@ -393,12 +444,6 @@ static struct device *msm_smmu_device_create(struct device *dev,
 		return NULL;
 	}
 
-	child = of_find_compatible_node(dev->of_node, NULL, compat);
-	if (!child) {
-		DRM_DEBUG("unable to find compatible node for %s\n", compat);
-		return ERR_PTR(-ENODEV);
-	}
-
 	pdev = of_platform_device_create(child, NULL, dev);
 	if (!pdev) {
 		DRM_ERROR("unable to create smmu platform dev for domain %d\n",
@@ -407,6 +452,9 @@ static struct device *msm_smmu_device_create(struct device *dev,
 	}
 
 	smmu->client = platform_get_drvdata(pdev);
+
+        if (!pdev->dev.iommu_fwspec)
+                of_iommu_configure(&pdev->dev, pdev->dev.of_node);
 
 	return &pdev->dev;
 }
@@ -561,6 +609,9 @@ static int msm_smmu_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	client->dev = &pdev->dev;
+
+	/* Give a chance to DMA APIs to register an IOMMU master */
+	of_dma_configure(&pdev->dev, pdev->dev.of_node);
 
 	rc = _msm_smmu_create_mapping(client, domain);
 	platform_set_drvdata(pdev, client);
