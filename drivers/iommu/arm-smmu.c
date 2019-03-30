@@ -4382,6 +4382,11 @@ static int arm_smmu_init_bus_scaling(struct arm_smmu_power_resources *pwr)
 {
 	struct device *dev = pwr->dev;
 
+	if (!msm_bus_scale_driver_ready()) {
+		dev_info(dev, "Bus client not ready. Deferring probe\n");
+		return -EPROBE_DEFER;
+	}
+
 	/* We don't want the bus APIs to print an error message */
 	if (!of_find_property(dev->of_node, "qcom,msm-bus,name", NULL)) {
 		dev_dbg(dev, "No bus scaling info\n");
