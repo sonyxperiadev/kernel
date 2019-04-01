@@ -458,6 +458,8 @@ struct smb_charger {
 	struct votable		*icl_irq_disable_votable;
 	struct votable		*limited_irq_disable_votable;
 	struct votable		*hdc_irq_disable_votable;
+	struct votable		*temp_change_irq_disable_votable;
+
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
 	struct votable		*fake_chg_enable_votable_indirect;
 	struct votable		*fake_chg_disable_votable;

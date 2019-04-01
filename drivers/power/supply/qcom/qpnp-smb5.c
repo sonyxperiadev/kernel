@@ -3116,6 +3116,7 @@ static int smb5_post_init(struct smb5 *chip)
 		return rc;
 	}
 
+	rerun_election(chg->temp_change_irq_disable_votable);
 
 	return 0;
 }
