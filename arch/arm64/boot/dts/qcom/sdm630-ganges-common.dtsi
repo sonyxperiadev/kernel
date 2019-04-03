@@ -73,6 +73,24 @@
 		pinctrl-2 = <>;
 	};
 
+	et510 {
+		compatible = "etspi,et510";
+		interrupt-parent = <&tlmm>;
+		interrupts = <72 0x0>;
+		et51x,gpio_rst = <&tlmm 20 0>;
+		et51x,gpio_irq = <&tlmm 72 0>;
+		vdd_ana-supply = <&pm660l_l6>;
+
+		spi-max-frequency = <1000000>;
+
+		pinctrl-names = "et51x_reset_reset",
+			"et51x_reset_active",
+			"et51x_irq_active";
+		pinctrl-0 = <&msm_gpio_20>;
+		pinctrl-1 = <&msm_gpio_20_output_high>;
+		pinctrl-2 = <&msm_gpio_72>;
+	};
+
 	mdss_dsi: qcom,mdss_dsi@0 {
 		mdss_dsi0: qcom,mdss_dsi_ctrl0@c994000 {
 			vddio-supply = <&pm660_l11>;
@@ -146,17 +164,6 @@
 			gpios = <&tlmm 86 GPIO_ACTIVE_LOW>;
 			debounce-interval = <10>;
 		};
-	};
-
-	egistec {
-		compatible = "etspi,et510";
-		spi-max-frequency = <1000000>;
-		et512_vcc-supply = <&pm660l_l6>;
-		input-device-name = "et510";
-		interrupt-parent = <&tlmm>;
-		interrupts = <72 0x0>;
-		egis,reset-gpio    = <&tlmm 20 0>;
-		egis,irq-gpio      = <&tlmm 72 0>;
 	};
 
 	qusb_phy0: qusb@c012000 {
