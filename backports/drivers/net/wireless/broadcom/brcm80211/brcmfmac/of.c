@@ -23,17 +23,40 @@
 #include "common.h"
 #include "of.h"
 
+static const struct of_device_id fmac_devid[] = {
+	{ .compatible = "brcm,bcm4329-fmac", },
+	{ .compatible = "brcm,bcm4359-fmac", },
+	{ }
+};
+
 void brcmf_of_probe(struct device *dev, enum brcmf_bus_type bus_type,
 		    struct brcmf_mp_device *settings)
 {
 	struct brcmfmac_sdio_pd *sdio = &settings->bus.sdio;
-	struct device_node *np = dev->of_node;
+	struct device_node *soc_np, *np = NULL;
 	int irq;
 	u32 irqf;
 	u32 val;
 
-	if (!np || bus_type != BRCMF_BUSTYPE_SDIO ||
-	    !of_device_is_compatible(np, "brcm,bcm4329-fmac"))
+	if (bus_type == BRCMF_BUSTYPE_USB)
+		return;
+
+	if (dev->of_node)
+		np = dev->of_node;
+
+	/* The PCI-E device has DT mostly only in embedded uses */
+	if (!np && bus_type == BRCMF_BUSTYPE_PCIE) {
+		soc_np = of_find_node_by_path("/soc");
+		if (!soc_np)
+			return;
+
+		np = of_find_matching_node(soc_np, fmac_devid);
+	}
+
+	if (!np || !of_match_node(fmac_devid, np))
+		return;
+
+	if (!of_device_is_available(np))
 		return;
 
 	if (of_property_read_u32(np, "brcm,drive-strength", &val) == 0)

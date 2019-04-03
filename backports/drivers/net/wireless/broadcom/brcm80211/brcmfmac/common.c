@@ -449,7 +449,7 @@ struct brcmf_mp_device *brcmf_get_module_param(struct device *dev,
 			}
 		}
 	}
-	if (!found) {
+	if (!found || device_pd->bus_type == BRCMF_BUSTYPE_PCIE) {
 		/* No platform data for this device, try OF (Open Firwmare) */
 		brcmf_of_probe(dev, bus_type, settings);
 	}
