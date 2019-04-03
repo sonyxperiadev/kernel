@@ -99,18 +99,6 @@
 		 <&clock_gpu GFX3D_CLK_SRC>;
 };
 
-&pcie0 {
-	qcom,pcie-phy-ver = <3>;
-};
-
-&pcie1 {
-	qcom,pcie-phy-ver = <3>;
-};
-
-&pcie2 {
-	qcom,pcie-phy-ver = <3>;
-};
-
 /* GPU overrides */
 &msm_gpu {
 	/* Updated chip ID */
