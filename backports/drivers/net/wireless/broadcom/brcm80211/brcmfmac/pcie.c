@@ -2077,6 +2077,14 @@ static int brcmf_pcie_pm_enter_D3(struct device *dev)
 
 	devinfo->state = BRCMFMAC_PCIE_STATE_DOWN;
 
+	pci_save_state(pcid);
+	devinfo->pci_state = pci_store_saved_state(pcid);
+	pci_enable_wake(pcid, PCI_D0, 1);
+ 
+	ret = pci_set_power_state(pcid, PCI_D3hot);
+	if (ret)
+		brcmf_err("Cannot set D3Hot state, error %d\n", ret);
+
 	mutex_unlock(&devinfo->dev_pm_lock);
 	return 0;
 }
@@ -2102,6 +2110,19 @@ static int brcmf_pcie_pm_leave_D3(struct device *dev)
 		brcmf_dbg(PCIE, "The card is already alive. Nothing to do!\n");
 		mutex_unlock(&devinfo->dev_pm_lock);
 		return 0;
+	}
+
+	pci_load_and_free_saved_state(pcid, &devinfo->pci_state);
+	pci_restore_state(pcid);
+	err = pci_enable_device(pcid);
+	if (err) {
+		brcmf_err("Cannot enable PCI-E device: %d\n", err);
+	}
+
+	pci_set_master(pcid);
+	err = pci_set_power_state(pcid, PCI_D0);
+	if (err) {
+		brcmf_err("Cannot set PCI-E to D0: %d\n", err);
 	}
 
 	/* Check if device is still up and running, if so we are ready */
