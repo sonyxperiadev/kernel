@@ -335,24 +335,6 @@
 		};
 	};
 
-	bcmdhd_wlan {
-		compatible = "android,bcmdhd_wlan";
-		gpios = <&tlmm 84 0x00>, /* WL_REG_ON */
-			<&tlmm 79 0x00>; /* WL_HOST_WAKE */
-		pinctrl-names = "default", "sleep";
-		pinctrl-0 = <&msm_gpio_84 &msm_gpio_79>;
-		pinctrl-1 = <&msm_gpio_84 &msm_gpio_79>;
-		wlan-pci-number = <0>;
-
-		qcom,msm-bus,name = "msm-bcmdhd";
-		qcom,msm-bus,num-cases = <3>;
-		qcom,msm-bus,num-paths = <1>;
-		qcom,msm-bus,vectors-KBps =
-			<45 512 0 0>, /* None vote */
-			<45 512 500 800>, /* Low vote */
-			<45 512 500 5448000>; /* High Vote */
-	};
-
 	somc_pinctrl: somc_pinctrl@0 {
 		compatible = "somc-pinctrl";
 		pinctrl-names = "platform_common_default",
@@ -375,7 +357,7 @@
 				&msm_gpio_63 &msm_gpio_69 &msm_gpio_73 &msm_gpio_74
 				&msm_gpio_75 &msm_gpio_76 &msm_gpio_77 &msm_gpio_78
 				&msm_gpio_79 &msm_gpio_81 &msm_gpio_82_suspend &msm_gpio_83
-				&msm_gpio_84 &msm_gpio_85 &msm_gpio_86 &msm_gpio_87
+				&msm_gpio_84 &msm_gpio_85 &msm_gpio_87
 				&msm_gpio_88 &msm_gpio_89 &msm_gpio_90 &msm_gpio_91
 				&msm_gpio_92 &msm_gpio_93 &msm_gpio_94 &msm_gpio_95
 				&msm_gpio_96 &msm_gpio_108 &msm_gpio_112 &msm_gpio_116
@@ -670,6 +652,30 @@
 			qcom,soc-low-threshold = <5>;
                         qcom,vph-low-threshold-uv = <3200000>;
 		};
+	};
+
+
+	bcmwlan_en: bcmwlan-en-1-8v {
+		pinctrl-names = "default";
+		pinctrl-0 = <&msm_gpio_84>;
+		compatible = "regulator-fixed";
+		regulator-name = "bcmwlan-en-regulator";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+
+		gpio = <&tlmm 84 0>;
+
+		/* WLAN card specific delay */
+		startup-delay-us = <70000>;
+		enable-active-high;
+	};
+
+	brcmf: brcmf@1 {
+		reg = <1>;
+		compatible = "brcm,bcm4329-fmac";
+		interrupt-parent = <&tlmm>;
+		interrupts = <79 8>; /* WL_HOST_WAKE */
+		interrupt-names = "oob-irq";
 	};
 };
 
@@ -3260,7 +3266,7 @@
 };
 
 &pcie0 {
-	qcom,clk-power-manage-en;
+	vddpe-3v3-supply = <&bcmwlan_en>;
 };
 
 &wil6210 {
