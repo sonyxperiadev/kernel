@@ -97,44 +97,6 @@
 		};
 	};
 
-	int_codec: sound {
-		qcom,msm-micbias1-ext-cap;
-		qcom,msm-micbias2-ext-cap;
-		qcom,msm-hs-micbias-type = "external";
-		qcom,audio-routing =
-			"RX_BIAS", "INT_MCLK0",
-			"SPK_RX_BIAS", "INT_MCLK0",
-			"INT_LDO_H", "INT_MCLK0",
-			"RX_I2S_CLK", "INT_MCLK0",
-			"TX_I2S_CLK", "INT_MCLK0",
-			"MIC BIAS External", "Handset Mic",
-			"MIC BIAS External2", "Headset Mic",
-			"MIC BIAS External", "Secondary Mic",
-			"AMIC1", "MIC BIAS External",
-			"AMIC2", "MIC BIAS External2",
-			"AMIC3", "MIC BIAS External",
-			"DMIC1", "MIC BIAS External",
-			"MIC BIAS External", "Digital Mic1",
-			"DMIC2", "MIC BIAS External",
-			"MIC BIAS External", "Digital Mic2",
-			"DMIC3", "MIC BIAS External",
-			"MIC BIAS External", "Digital Mic3",
-			"DMIC4", "MIC BIAS External",
-			"MIC BIAS External", "Digital Mic4",
-			"SpkrLeft IN", "SPK1 OUT",
-			"SpkrRight IN", "SPK2 OUT",
-			"PDM_IN_RX1", "PDM_OUT_RX1",
-			"PDM_IN_RX2", "PDM_OUT_RX2",
-			"PDM_IN_RX3", "PDM_OUT_RX3",
-			"ADC1_IN", "ADC1_OUT",
-			"ADC2_IN", "ADC2_OUT",
-			"ADC3_IN", "ADC3_OUT";
-
-		qcom,wsa-max-devs = <1>;
-		qcom,wsa-aux-dev-prefix = "SpkrLeft", "SpkrLeft",
-					  "SpkrLeft", "SpkrLeft";
-	};
-
 	qcom,wdt@17980000 {
 		qcom,bark-time = <12000>;
 	};
@@ -307,11 +269,11 @@
 };
 
 &pm660l_switch0 {
-       qcom,led-mask = <1>;
+	qcom,led-mask = <1>;
 };
 
 &mdss_fb0 {
-       /delete-node/ qcom,cont-splash-memory;
+	/delete-node/ qcom,cont-splash-memory;
 };
 
 &mdss_mdp {
@@ -364,6 +326,46 @@
 		nxp,dwld_en = <&tlmm 30 0x00>;
 		nxp,ven = <&tlmm 29 0x00>;
 	};
+};
+
+&int_codec {
+	status = "ok";
+	qcom,msm-micbias1-ext-cap;
+	qcom,msm-micbias2-ext-cap;
+	qcom,msm-hs-micbias-type = "external";
+
+	qcom,wsa-max-devs = <1>;
+	qcom,wsa-aux-dev-prefix = "SpkrLeft", "SpkrLeft",
+				  "SpkrLeft", "SpkrLeft";
+
+	qcom,audio-routing =
+		"RX_BIAS", "INT_MCLK0",
+		"SPK_RX_BIAS", "INT_MCLK0",
+		"INT_LDO_H", "INT_MCLK0",
+		"RX_I2S_CLK", "INT_MCLK0",
+		"TX_I2S_CLK", "INT_MCLK0",
+		"MIC BIAS External", "Handset Mic",
+		"MIC BIAS External2", "Headset Mic",
+		"MIC BIAS External", "Secondary Mic",
+		"AMIC1", "MIC BIAS External",
+		"AMIC2", "MIC BIAS External2",
+		"AMIC3", "MIC BIAS External",
+		"DMIC1", "MIC BIAS External",
+		"MIC BIAS External", "Digital Mic1",
+		"DMIC2", "MIC BIAS External",
+		"MIC BIAS External", "Digital Mic2",
+		"DMIC3", "MIC BIAS External",
+		"MIC BIAS External", "Digital Mic3",
+		"DMIC4", "MIC BIAS External",
+		"MIC BIAS External", "Digital Mic4",
+		"SpkrLeft IN", "SPK1 OUT",
+		"SpkrRight IN", "SPK2 OUT",
+		"PDM_IN_RX1", "PDM_OUT_RX1",
+		"PDM_IN_RX2", "PDM_OUT_RX2",
+		"PDM_IN_RX3", "PDM_OUT_RX3",
+		"ADC1_IN", "ADC1_OUT",
+		"ADC2_IN", "ADC2_OUT",
+		"ADC3_IN", "ADC3_OUT";
 };
 
 &rpm_bus {
@@ -482,8 +484,6 @@
 };
 
 &pm660_charger {
-	qcom,usb-icl-ua = <1500000>;
-	qcom,otg-cl-ua = <1000000>;
 	io-channels = <&pm660_rradc 2>,
 			<&pm660_rradc 3>,
 			<&pm660_rradc 4>,
@@ -494,16 +494,41 @@
 			   "usbin_v",
 			   "charger_temp",
 			   "charger_temp_max";
+	qcom,usb-icl-ua = <1500000>;
+	qcom,fcc-max-ua = <400000>;
+	qcom,fv-max-uv = <4000000>;
+	qcom,hvdcp-disable;
+	qcom,prechg-safety-time = <1>;
+	qcom,fastchg-safety-time = <2>;
+	qcom,otg-cl-ua = <500000>;
+	somc,thermal-lo-volt-icl-ua =  <2000000 1500000 1500000
+					1500000 1300000 1100000
+					1100000 1000000  900000
+					 900000  500000  200000
+					 100000       0       0>;
+	somc,thermal-hi-volt-icl-ua =  <1700000 1700000 1700000
+					1700000 1500000 1500000
+					1000000 1000000 1000000
+					 600000  500000  200000
+					 100000        0      0>;
+	somc,fake-charging-temp-level = <13>;
+	somc,product-icl-ua = <2000000>;
+	somc,high-voltage-icl-ua = <1700000>;
+};
+
+&pm660_pdphy {
+	qcom,default-sink-caps = <5000 2000>, /* 5V @ 2A */
+				 <9000 1700>; /* 9V @ 1.7A */
 };
 
 &pm660_rradc {
 	somc,reg-cfg =
 	/* addr mask value */
-		<0x83 0x07 0x04>, /* FG_ADC_RR_AUX_THERM_CFG */
-		<0x88 0xFF 0xAF>, /* FG_ADC_RR_AUX_THERM_C1 */
-		<0x89 0xFF 0x34>, /* FG_ADC_RR_AUX_THERM_C2 */
-		<0x8A 0xFF 0xDf>, /* FG_ADC_RR_AUX_THERM_C3 */
-		<0x8B 0xFF 0xA0>; /* FG_ADC_RR_AUX_THERM_HALF_RANGE */
+	<0x83 0x07 0x04>, /* FG_ADC_RR_AUX_THERM_CFG */
+	<0x88 0xFF 0xB6>, /* FG_ADC_RR_AUX_THERM_C1 */
+	<0x89 0xFF 0x2D>, /* FG_ADC_RR_AUX_THERM_C2 */
+	<0x8A 0xFF 0xE5>, /* FG_ADC_RR_AUX_THERM_C3 */
+	<0x8B 0xFF 0xA0>; /* FG_ADC_RR_AUX_THERM_HALF_RANGE */
 };
 
 &pm660_fg {
@@ -526,6 +551,10 @@
 	qcom,cl-max-increment = <0>;
 	qcom,cl-max-decrement = <20>;
 	qcom,battery-thermal-coefficients = [c7 50 ff];
+	qcom,fg-sys-term-current = <(-175)>;
+	qcom,fg-chg-term-current = <150>;
+	somc,jeita-step-use-real-temp;
+	somc,jeita-batt-temp-correction = <0>;
 };
 
 &usb3 {
