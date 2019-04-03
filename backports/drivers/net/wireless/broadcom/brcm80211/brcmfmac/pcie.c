@@ -16,6 +16,7 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/firmware.h>
+#include <linux/pm_runtime.h>
 #include <linux/pci.h>
 #include <linux/vmalloc.h>
 #include <linux/delay.h>
@@ -262,6 +263,7 @@ struct brcmf_pciedev_info {
 	enum brcmf_pcie_state state;
 	bool in_irq;
 	struct pci_dev *pdev;
+	struct pci_saved_state *pci_state;
 	char fw_name[BRCMF_FW_NAME_LEN];
 	char nvram_name[BRCMF_FW_NAME_LEN];
 	void __iomem *regs;
@@ -271,6 +273,7 @@ struct brcmf_pciedev_info {
 	struct brcmf_chip *ci;
 	u32 coreid;
 	struct brcmf_pcie_shared_info shared;
+	struct mutex dev_pm_lock;
 	wait_queue_head_t mbdata_resp_wait;
 	bool mbdata_completed;
 	bool irq_allocated;
@@ -1952,6 +1955,8 @@ brcmf_pcie_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	bus->wowl_supported = pci_pme_capable(pdev, PCI_D3hot);
 	dev_set_drvdata(&pdev->dev, bus);
 
+	mutex_init(&devinfo->dev_pm_lock);
+
 	fwreq = brcmf_pcie_prepare_fw_request(devinfo);
 	if (!fwreq) {
 		ret = -ENOMEM;
@@ -1963,6 +1968,14 @@ brcmf_pcie_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 		kfree(fwreq);
 		goto fail_bus;
 	}
+
+	pm_runtime_set_active(&pdev->dev);
+
+	pm_runtime_set_autosuspend_delay(&pdev->dev, 1000);
+	pm_runtime_use_autosuspend(&pdev->dev);
+
+	pm_runtime_allow(&pdev->dev);
+
 	return 0;
 
 fail_bus:
@@ -1999,6 +2012,8 @@ brcmf_pcie_remove(struct pci_dev *pdev)
 	if (devinfo->ci)
 		brcmf_pcie_intr_disable(devinfo);
 
+	pm_runtime_forbid(&pdev->dev);
+
 	brcmf_detach(&pdev->dev);
 
 	kfree(bus->bus_priv.pcie);
@@ -2029,11 +2044,16 @@ static int brcmf_pcie_pm_enter_D3(struct device *dev)
 {
 	struct brcmf_pciedev_info *devinfo;
 	struct brcmf_bus *bus;
+	struct pci_dev *pcid;
+	int ret;
 
 	brcmf_dbg(PCIE, "Enter\n");
 
 	bus = dev_get_drvdata(dev);
 	devinfo = bus->bus_priv.pcie->devinfo;
+	pcid = devinfo->pdev;
+
+	mutex_lock(&devinfo->dev_pm_lock);
 
 	brcmf_pcie_pme_active(devinfo, true);
 
@@ -2047,11 +2067,13 @@ static int brcmf_pcie_pm_enter_D3(struct device *dev)
 	if (!devinfo->mbdata_completed) {
 		brcmf_err("Timeout on response for entering D3 substate\n");
 		brcmf_bus_change_state(bus, BRCMF_BUS_UP);
+		mutex_unlock(&devinfo->dev_pm_lock);
 		return -EIO;
 	}
 
 	devinfo->state = BRCMFMAC_PCIE_STATE_DOWN;
 
+	mutex_unlock(&devinfo->dev_pm_lock);
 	return 0;
 }
 
@@ -2060,14 +2082,23 @@ static int brcmf_pcie_pm_leave_D3(struct device *dev)
 {
 	struct brcmf_pciedev_info *devinfo;
 	struct brcmf_bus *bus;
-	struct pci_dev *pdev;
+	struct pci_dev *pcid;
 	int err;
 
 	brcmf_dbg(PCIE, "Enter\n");
 
 	bus = dev_get_drvdata(dev);
 	devinfo = bus->bus_priv.pcie->devinfo;
-	brcmf_dbg(PCIE, "Enter, dev=%p, bus=%p\n", dev, bus);
+	pcid = devinfo->pdev;
+	brcmf_dbg(PCIE, "Enter, dev=%p, bus=%p\n", pcid, bus);
+
+	mutex_lock(&devinfo->dev_pm_lock);
+
+	if (devinfo->state != BRCMFMAC_PCIE_STATE_DOWN) {
+		brcmf_dbg(PCIE, "The card is already alive. Nothing to do!\n");
+		mutex_unlock(&devinfo->dev_pm_lock);
+		return 0;
+	}
 
 	/* Check if device is still up and running, if so we are ready */
 	if (brcmf_pcie_read_reg32(devinfo, BRCMF_PCIE_PCIE2REG_INTMASK) != 0) {
@@ -2081,26 +2112,61 @@ static int brcmf_pcie_pm_leave_D3(struct device *dev)
 		brcmf_pcie_intr_enable(devinfo);
 		brcmf_pcie_hostready(devinfo);
 		brcmf_pcie_pme_active(devinfo, false);
+		mutex_unlock(&devinfo->dev_pm_lock);
 		return 0;
 	}
 
 cleanup:
+	mutex_unlock(&devinfo->dev_pm_lock);
 	brcmf_chip_detach(devinfo->ci);
 	devinfo->ci = NULL;
-	pdev = devinfo->pdev;
-	brcmf_pcie_remove(pdev);
+	brcmf_pcie_remove(pcid);
 
-	err = brcmf_pcie_probe(pdev, NULL);
+	err = brcmf_pcie_probe(pcid, NULL);
 	if (err)
 		brcmf_err("probe after resume failed, err=%d\n", err);
 
 	return err;
 }
 
+static int brcmf_system_prepare(struct device *dev)
+{
+	dev_info(dev, "Preparing for system suspend");
+
+	/* Wakeup to give a chance to MAC80211 to set WoWLAN */
+	pm_runtime_resume(dev);
+	pm_runtime_forbid(dev);
+
+	return 0;
+}
+
+static void brcmf_system_complete(struct device *dev)
+{
+	/* Nothing to do.... */
+	dev_info(dev, "System suspend complete");
+	pm_runtime_allow(dev);
+	return;
+}
+
+static int brcmf_pcie_suspend(struct device *dev)
+{
+	/* Do not do anything, we cannot detect WoWLAN here. */
+	return brcmf_pcie_pm_enter_D3(dev);
+}
+
+static int brcmf_pcie_resume(struct device *dev)
+{
+	return brcmf_pcie_pm_leave_D3(dev);
+}
+
 
 static const struct dev_pm_ops brcmf_pciedrvr_pm = {
-	.suspend = brcmf_pcie_pm_enter_D3,
-	.resume = brcmf_pcie_pm_leave_D3,
+	.suspend = brcmf_pcie_suspend,
+	.resume = brcmf_pcie_resume,
+	.runtime_suspend = brcmf_pcie_pm_enter_D3,
+	.runtime_resume = brcmf_pcie_pm_leave_D3,
+	.prepare = brcmf_system_prepare,
+	.complete = brcmf_system_complete,
 	.freeze = brcmf_pcie_pm_enter_D3,
 	.restore = brcmf_pcie_pm_leave_D3,
 };
