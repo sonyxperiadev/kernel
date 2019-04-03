@@ -9,7 +9,6 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
-
 #include "dsi-panel-nt36672a_tianma_fhdplus_video.dtsi"
 #include "dsi-panel-nt36672a_truly_fhdplus_video.dtsi"
 
@@ -60,8 +59,8 @@
 	27 21 0A 0B 07 03 04 a0];
 	qcom,mdss-dsi-t-clk-post = <0x0D>;
 	qcom,mdss-dsi-t-clk-pre = <0x2F>;
+	qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
 	qcom,esd-check-enabled;
-
 	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
 	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0a];
 	qcom,mdss-dsi-panel-status-command-state = "dsi_hs_mode";
@@ -76,11 +75,7 @@
 	qcom,mdss-brightness-max-level = <4095>;
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_full_incell>;
 
-	qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
 	qcom,esd-check-enabled;
-	qcom,mdss-dsi-off-command = [05 01 00 00 00 00 02 28 00
-			 05 01 00 00 50 00 02 10 00];
-	qcom,mdss-dsi-post-init-delay = <1>;
 
 	somc,lcd-id-adc = <801000 917000>;
 	somc,mdss-dsi-master;
@@ -128,7 +123,6 @@
 	qcom,mdss-dsi-t-clk-pre = <0x2F>;
 	qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
 	qcom,esd-check-enabled;
-
 	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
 	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0a];
 	qcom,mdss-dsi-panel-status-command-state = "dsi_hs_mode";
@@ -142,10 +136,6 @@
 	qcom,mdss-dsi-bl-max-level = <4095>;
 	qcom,mdss-brightness-max-level = <4095>;
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_full_incell>;
-
-	qcom,mdss-dsi-off-command = [05 01 00 00 32 00 02 28 00
-				    05 01 00 00 64 00 02 10 00];
-	qcom,mdss-dsi-post-init-delay = <1>;
 
 	somc,lcd-id-adc = <801000 917000>;
 	somc,mdss-dsi-master;
