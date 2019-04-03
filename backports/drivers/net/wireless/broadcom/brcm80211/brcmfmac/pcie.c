@@ -1860,7 +1860,6 @@ static irqreturn_t brcmf_pcie_oob_isr(int irq, void *arg)
 static int brcmf_pcie_register_oob_irq(struct brcmf_bus *bus)
 {
 	struct brcmf_pciedev_info *devinfo = bus->bus_priv.pcie->devinfo;
-	unsigned long flags;
 	int ret;
 
 	if (!devinfo->oob_irq_supported)
@@ -2175,7 +2174,6 @@ brcmf_pcie_remove(struct pci_dev *pdev)
 static int brcmf_pcie_pm_enter_D3(struct brcmf_bus *bus)
 {
 	struct brcmf_pciedev_info *devinfo;
-	struct brcmf_bus *bus;
 	struct pci_dev *pcid;
 	int ret;
 
