@@ -239,9 +239,9 @@
 			compatible = "qcom,msm-vidc,context-bank";
 			label = "venus_sec_pixel";
 			iommus = <&mmss_bimc_smmu 0x504>,
-				<&mmss_bimc_smmu 0x50c>,
-				<&mmss_bimc_smmu 0x510>,
-				<&mmss_bimc_smmu 0x52c>;
+				<&mmss_bimc_smmu 0x50c>;
+//				<&mmss_bimc_smmu 0x510>,
+//				<&mmss_bimc_smmu 0x52c>;
 			buffer-types = <0x106>;
 			virtual-addr-pool = <0x29000000 0x28000000>;
 			qcom,secure-context-bank;
