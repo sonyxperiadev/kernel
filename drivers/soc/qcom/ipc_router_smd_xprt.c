@@ -617,7 +617,6 @@ static int msm_ipc_router_smd_driver_register(
 		if (!strcmp(smd_xprtp->ch_name, item->ch_name))
 			already_registered = 1;
 	}
-	list_add(&smd_xprtp->list, &smd_remote_xprt_list);
 	mutex_unlock(&smd_remote_xprt_list_lock_lha1);
 
 	if (!already_registered) {
@@ -628,14 +627,18 @@ static int msm_ipc_router_smd_driver_register(
 		ret = platform_driver_register(&smd_xprtp->driver);
 		if (ret) {
 			IPC_RTR_ERR(
-			"%s: Failed to register platform driver [%s]\n",
-						__func__, smd_xprtp->ch_name);
+			"%s: Failed to register platform driver [%s]: %d\n",
+					__func__, smd_xprtp->ch_name, ret);
 			return ret;
 		}
 	} else {
 		IPC_RTR_ERR("%s Already driver registered %s\n",
 					__func__, smd_xprtp->ch_name);
 	}
+
+	mutex_lock(&smd_remote_xprt_list_lock_lha1);
+	list_add(&smd_xprtp->list, &smd_remote_xprt_list);
+	mutex_unlock(&smd_remote_xprt_list_lock_lha1);
 	return 0;
 }
 
