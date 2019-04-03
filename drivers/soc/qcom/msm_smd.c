@@ -680,7 +680,8 @@ static void smd_channel_probe_now(struct remote_proc_info *r_info)
 							r_info->remote_pid, 0);
 
 	if (!shared) {
-		pr_err("%s: allocation table not initialized\n", __func__);
+		pr_err("%s: allocation table not initialized: %ld\n",
+			__func__, PTR_ERR(shared));
 		return;
 	}
 
@@ -3254,7 +3255,7 @@ int __init msm_smd_init(void)
 	return 0;
 }
 
-arch_initcall(msm_smd_init);
+subsys_initcall(msm_smd_init);
 
 MODULE_DESCRIPTION("MSM Shared Memory Core");
 MODULE_AUTHOR("Brian Swetland <swetland@google.com>");
