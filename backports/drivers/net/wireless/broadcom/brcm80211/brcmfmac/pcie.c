@@ -24,10 +24,6 @@
 #include <linux/sched.h>
 #include <asm/unaligned.h>
 
-#ifdef CONFIG_PCI_MSM
-#include <linux/msm_pcie.h>
-#endif
-
 #include <soc.h>
 #include <chipcommon.h>
 #include <brcmu_utils.h>
@@ -1967,10 +1963,6 @@ brcmf_pcie_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 		kfree(fwreq);
 		goto fail_bus;
 	}
-#ifdef CONFIG_PCI_MSM
-	/* disable async suspend */
-	device_disable_async_suspend(&pdev->dev);
-#endif
 	return 0;
 
 fail_bus:
@@ -2060,15 +2052,6 @@ static int brcmf_pcie_pm_enter_D3(struct device *dev)
 
 	devinfo->state = BRCMFMAC_PCIE_STATE_DOWN;
 
-#ifdef CONFIG_PCI_MSM
-	return msm_pcie_pm_control(MSM_PCIE_SUSPEND,
-				devinfo->pdev->bus->number,
-				devinfo->pdev,
-				NULL,
-				(MSM_PCIE_CONFIG_NO_CFG_RESTORE |
-				 MSM_PCIE_CONFIG_LINKDOWN));
-#endif
-
 	return 0;
 }
 
@@ -2085,20 +2068,6 @@ static int brcmf_pcie_pm_leave_D3(struct device *dev)
 	bus = dev_get_drvdata(dev);
 	devinfo = bus->bus_priv.pcie->devinfo;
 	brcmf_dbg(PCIE, "Enter, dev=%p, bus=%p\n", dev, bus);
-
-#ifdef CONFIG_PCI_MSM
-	err = msm_pcie_pm_control(MSM_PCIE_RESUME,
-				devinfo->pdev->bus->number,
-				devinfo->pdev,
-				NULL,
-				0);
-	if (err) {
-		brcmf_err("Cannot resume PCI-E Host Controller: %d\n", err);
-		goto cleanup;
-	}
-
-	msm_pcie_recover_config(devinfo->pdev);
-#endif
 
 	/* Check if device is still up and running, if so we are ready */
 	if (brcmf_pcie_read_reg32(devinfo, BRCMF_PCIE_PCIE2REG_INTMASK) != 0) {
