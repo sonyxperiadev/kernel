@@ -2057,10 +2057,14 @@ static int brcmf_pcie_pm_enter_D3(struct device *dev)
 
 	brcmf_pcie_pme_active(devinfo, true);
 
-	brcmf_bus_change_state(bus, BRCMF_BUS_DOWN);
-
 	devinfo->mbdata_completed = false;
-	brcmf_pcie_send_mb_data(devinfo, BRCMF_H2D_HOST_D3_INFORM);
+	brcmf_pcie_intr_enable(devinfo);
+
+	ret = brcmf_pcie_send_mb_data(devinfo, BRCMF_H2D_HOST_D3_INFORM);
+	if (ret)
+		brcmf_dbg(PCIE, "MB data send failure: %d\n", ret);
+
+	brcmf_bus_change_state(bus, BRCMF_BUS_DOWN);
 
 	wait_event_timeout(devinfo->mbdata_resp_wait, devinfo->mbdata_completed,
 			   BRCMF_PCIE_MBDATA_TIMEOUT);
