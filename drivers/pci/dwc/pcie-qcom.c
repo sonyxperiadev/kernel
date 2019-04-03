@@ -102,7 +102,7 @@ struct qcom_pcie_resources_1_0_0 {
 	struct regulator *vdda;
 };
 
-#define QCOM_PCIE_2_3_2_MAX_SUPPLY	5
+#define QCOM_PCIE_2_3_2_MAX_SUPPLY	6
 struct qcom_pcie_resources_2_3_2 {
 	struct clk *aux_clk;
 	struct clk *master_clk;
@@ -498,11 +498,12 @@ static int qcom_pcie_get_resources_2_3_2(struct qcom_pcie *pcie)
 	struct device *dev = pci->dev;
 	int ret;
 
-	res->supplies[0].supply = "vdda";
-	res->supplies[1].supply = "vdda-1p8";
-	res->supplies[2].supply = "vreg-cx";
-	res->supplies[3].supply = "gdsc-smmu";
-	res->supplies[4].supply = "gdsc-vdd";
+	res->supplies[0].supply = "gdsc-smmu";
+	res->supplies[1].supply = "gdsc-vdd";
+	res->supplies[2].supply = "vdda-1p8";
+	res->supplies[3].supply = "vdda";
+	res->supplies[4].supply = "vreg-cx";
+	res->supplies[5].supply = "vddpe-3v3";
 	ret = devm_regulator_bulk_get(dev, ARRAY_SIZE(res->supplies),
 				      res->supplies);
 	if (ret)
@@ -1288,7 +1289,7 @@ static int qcom_pcie_probe(struct platform_device *pdev)
 	if (ret) {
 		dev_err(dev, "cannot initialize host\n");
 		pm_runtime_disable(&pdev->dev);
-		return ret;
+		return -EPROBE_DEFER;
 	}
 
 	return 0;
