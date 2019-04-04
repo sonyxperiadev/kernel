@@ -802,8 +802,8 @@ brcmf_pcie_send_mb_data(struct brcmf_pciedev_info *devinfo, u32 htod_mb_data)
 	}
 
 	brcmf_pcie_write_tcm32(devinfo, addr, htod_mb_data);
-	pci_write_config_dword(devinfo->pdev, BRCMF_PCIE_REG_SBMBX, 1);
-	pci_write_config_dword(devinfo->pdev, BRCMF_PCIE_REG_SBMBX, 1);
+	brcmf_pcie_select_core(devinfo, BCMA_CORE_PCIE2);
+	brcmf_pcie_write_reg32(devinfo, BRCMF_PCIE_PCIE2REG_H2D_MAILBOX_1, 1);
 
 	return 0;
 }
