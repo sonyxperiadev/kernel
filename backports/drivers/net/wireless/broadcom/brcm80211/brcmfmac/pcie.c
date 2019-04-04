@@ -1876,7 +1876,6 @@ static int brcmf_pcie_register_oob_irq(struct brcmf_bus *bus)
 	spin_lock_init(&devinfo->oob_irq_lock);
 
 	/* Disable it, we don't want it to fire while loading firmware */
-	disable_irq(devinfo->oob_irq_nr);
 	devinfo->oob_irq_en = false;
 
 	pr_debug("Registering out of band interrupt\n");
@@ -1888,6 +1887,7 @@ static int brcmf_pcie_register_oob_irq(struct brcmf_bus *bus)
 		brcmf_err("Failed to request IRQ %d\n", devinfo->oob_irq_nr);
 		return -EIO;
 	}
+	disable_irq(devinfo->oob_irq_nr);
 
 	devinfo->oob_irq_allocated = true;
 
