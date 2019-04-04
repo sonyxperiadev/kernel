@@ -282,6 +282,7 @@ struct brcmf_pciedev_info {
 	bool irq_allocated;
 	bool oob_irq_supported;
 	bool oob_irq_en;
+	bool oob_irq_allocated;
 	bool wowl_enabled;
 	u8 dma_idx_sz;
 	void *idxbuf;
@@ -1865,6 +1866,14 @@ static int brcmf_pcie_register_oob_irq(struct brcmf_bus *bus)
 	if (!devinfo->oob_irq_supported)
 		return -EINVAL;
 
+	/*
+	 * On re-setup, this function will get called again, but the
+	 * interrupt has already been allocated with its ISR, so avoid
+	 * reallocating it to prevent obvious issues.
+	 */
+	if (devinfo->oob_irq_allocated)
+		return 0;
+
 	spin_lock_init(&devinfo->oob_irq_lock);
 
 	/* Disable it, we don't want it to fire while loading firmware */
@@ -1880,6 +1889,8 @@ static int brcmf_pcie_register_oob_irq(struct brcmf_bus *bus)
 		brcmf_err("Failed to request IRQ %d\n", devinfo->oob_irq_nr);
 		ret = -EIO;
 	}
+
+	devinfo->oob_irq_allocated = true;
 
 	return ret;
 }
@@ -2079,6 +2090,7 @@ brcmf_pcie_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 		devinfo->settings->bus.sdio.oob_irq_flags;
 	devinfo->oob_irq_supported =
 		devinfo->settings->bus.sdio.oob_irq_supported;
+	devinfo->oob_irq_allocated = false;
 	dev_set_drvdata(&pdev->dev, bus);
 
 	mutex_init(&devinfo->dev_pm_lock);
