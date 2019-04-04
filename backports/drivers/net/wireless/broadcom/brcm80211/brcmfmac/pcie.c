@@ -583,21 +583,21 @@ brcmf_pcie_find_pci_capability(struct brcmf_pciedev_info *devinfo,
 	/* check for Header type 0 */
 	byte_val = read_pci_cfg_byte(devinfo, PCI_CFG_HDR);
 	if ((byte_val & 0x7f) != 0) {
-		brcmf_err("PCI config header not normal.\n");
+		brcmf_err(NULL, "PCI config header not normal.\n");
 		goto end;
 	}
 
 	/* check if the capability pointer field exists */
 	byte_val = read_pci_cfg_byte(devinfo, PCI_CFG_STAT);
 	if (!(byte_val & PCI_CAPPTR_PRESENT)) {
-		brcmf_err("PCI CAP pointer not present.\n");
+		brcmf_err(NULL, "PCI CAP pointer not present.\n");
 		goto end;
 	}
 
 	cap_ptr = read_pci_cfg_byte(devinfo, PCI_CFG_CAPPTR);
 	/* check if the capability pointer is 0x00 */
 	if (cap_ptr == 0x00) {
-		brcmf_err(" PCI CAP pointer is 0x00.\n");
+		brcmf_err(NULL, " PCI CAP pointer is 0x00.\n");
 		goto end;
 	}
 
@@ -625,7 +625,7 @@ static int brcmf_pcie_pme_active(struct brcmf_pciedev_info *devinfo, bool enb)
 	cap_ptr = brcmf_pcie_find_pci_capability(devinfo,
 					BRCMF_PCIE_CFGREG_POWERMGMT_CAP);
 	if (!cap_ptr) {
-		brcmf_err("Power Management capability not present\n");
+		brcmf_err(NULL, "Power Management capability not present\n");
 		return -ENOTSUPP;
 	}
 
@@ -1843,10 +1843,10 @@ static irqreturn_t brcmf_pcie_oob_isr_thread(int irq, void *arg)
 {
 	struct brcmf_bus *bus = (struct brcmf_bus *)arg;
 	int rc;
-	brcmf_err("OOB interrupt thread\n");
+	brcmf_err(bus, "OOB interrupt thread\n");
 	rc = brcmf_pcie_pm_leave_D3(bus);
 	if (rc) {
-		brcmf_err("An error occurred while leaving D3\n");
+		brcmf_err(bus, "An error occurred while leaving D3\n");
 	}
 
 	return IRQ_HANDLED;
@@ -1902,7 +1902,8 @@ static int brcmf_pcie_register_oob_irq(struct brcmf_bus *bus)
 				 brcmf_pcie_oob_isr_thread,
 				 devinfo->oob_irq_flags,
 				 "brcmf_pcie_oob_intr", bus)) {
-		brcmf_err("Failed to request IRQ %d\n", devinfo->oob_irq_nr);
+		brcmf_err(bus, "Failed to request IRQ %d\n",
+						devinfo->oob_irq_nr);
 		return -EIO;
 	}
 	disable_irq(devinfo->oob_irq_nr);
@@ -1970,7 +1971,7 @@ static void brcmf_pcie_setup(struct device *dev, int ret,
 	if (devinfo->oob_irq_supported) {
 		ret = brcmf_pcie_register_oob_irq(bus);
 		if (ret) {
-			brcmf_err("Failed to register OOB interrupt!!!\n");
+			brcmf_err(bus, "Failed to register OOB interrupt!!!\n");
 			devinfo->oob_irq_supported = false;
 		}
 	}
@@ -2132,7 +2133,7 @@ brcmf_pcie_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 
 	pm_runtime_allow(&pdev->dev);
 
-	brcmf_info("Initialized with%s WoWLAN support %s",
+	brcmf_info(NULL, "Initialized with%s WoWLAN support %s",
 		   bus->wowl_supported ? "" : "out",
 		   devinfo->oob_irq_supported ? "and with Out-Of-Band IRQ" :
 						"and without Out-Of-Band IRQ");
@@ -2246,7 +2247,7 @@ static int brcmf_pcie_pm_enter_D3(struct brcmf_bus *bus)
  
 	ret = pci_set_power_state(pcid, PCI_D3hot);
 	if (ret)
-		brcmf_err("Cannot set D3Hot state, error %d\n", ret);
+		brcmf_err(bus, "Cannot set D3Hot state, error %d\n", ret);
 
 	mutex_unlock(&devinfo->dev_pm_lock);
 	return 0;
@@ -2277,13 +2278,13 @@ static int brcmf_pcie_pm_leave_D3(struct brcmf_bus *bus)
 	pci_restore_state(pcid);
 	err = pci_enable_device(pcid);
 	if (err) {
-		brcmf_err("Cannot enable PCI-E device: %d\n", err);
+		brcmf_err(bus, "Cannot enable PCI-E device: %d\n", err);
 	}
 
 	pci_set_master(pcid);
 	err = pci_set_power_state(pcid, PCI_D0);
 	if (err) {
-		brcmf_err("Cannot set PCI-E to D0: %d\n", err);
+		brcmf_err(bus, "Cannot set PCI-E to D0: %d\n", err);
 	}
 
 	/* Check if device is still up and running, if so we are ready */
