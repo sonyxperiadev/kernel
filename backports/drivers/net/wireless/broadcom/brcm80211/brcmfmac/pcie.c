@@ -2319,20 +2319,24 @@ cleanup:
 
 static int brcmf_system_prepare(struct device *dev)
 {
+	struct brcmf_bus *bus = dev_get_drvdata(dev);
+
 	dev_info(dev, "Preparing for system suspend");
 
 	/* Wakeup to give a chance to MAC80211 to set WoWLAN */
-	pm_runtime_resume(dev);
-	pm_runtime_forbid(dev);
+	pm_runtime_resume(bus->dev);
+	pm_runtime_forbid(bus->dev);
 
 	return 0;
 }
 
 static void brcmf_system_complete(struct device *dev)
 {
+	struct brcmf_bus *bus = dev_get_drvdata(dev);
+
 	/* Nothing to do.... */
 	dev_info(dev, "System suspend complete");
-	pm_runtime_allow(dev);
+	pm_runtime_allow(bus->dev);
 	return;
 }
 
