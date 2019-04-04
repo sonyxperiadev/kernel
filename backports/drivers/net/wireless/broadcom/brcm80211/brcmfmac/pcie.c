@@ -1861,7 +1861,6 @@ static irqreturn_t brcmf_pcie_oob_isr(int irq, void *arg)
 static int brcmf_pcie_register_oob_irq(struct brcmf_bus *bus)
 {
 	struct brcmf_pciedev_info *devinfo = bus->bus_priv.pcie->devinfo;
-	int ret;
 
 	if (!devinfo->oob_irq_supported)
 		return -EINVAL;
@@ -1887,12 +1886,12 @@ static int brcmf_pcie_register_oob_irq(struct brcmf_bus *bus)
 				 devinfo->oob_irq_flags,
 				 "brcmf_pcie_oob_intr", bus)) {
 		brcmf_err("Failed to request IRQ %d\n", devinfo->oob_irq_nr);
-		ret = -EIO;
+		return -EIO;
 	}
 
 	devinfo->oob_irq_allocated = true;
 
-	return ret;
+	return 0;
 }
 
 
