@@ -33,7 +33,8 @@ void brcmf_of_probe(struct device *dev, enum brcmf_bus_type bus_type,
 		    struct brcmf_mp_device *settings)
 {
 	struct brcmfmac_sdio_pd *sdio = &settings->bus.sdio;
-	struct device_node *soc_np, *np = NULL;
+	struct device_node *root, *soc_np, *np = NULL;
+	struct property *prop;
 	int irq;
 	u32 irqf;
 	u32 val;
@@ -51,6 +52,14 @@ void brcmf_of_probe(struct device *dev, enum brcmf_bus_type bus_type,
 			return;
 
 		np = of_find_matching_node(soc_np, fmac_devid);
+	}
+
+	/* Set board-type to the first string of the machine compatible prop */
+	root = of_find_node_by_path("/");
+	if (root) {
+		prop = of_find_property(root, "compatible", NULL);
+		settings->board_type = of_prop_next_string(prop, NULL);
+		of_node_put(root);
 	}
 
 	if (!np || !of_match_node(fmac_devid, np))
