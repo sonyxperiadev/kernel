@@ -2203,6 +2203,8 @@ static int brcmf_pcie_pm_enter_D3(struct brcmf_bus *bus)
 
 	brcmf_pcie_oob_enable(devinfo, true);
 
+	brcmf_bus_change_state(bus, BRCMF_BUS_UP);
+
 	ret = brcmf_pcie_send_mb_data(devinfo, BRCMF_H2D_HOST_D3_INFORM);
 	if (ret)
 		brcmf_dbg(PCIE, "MB data send failure: %d\n", ret);
