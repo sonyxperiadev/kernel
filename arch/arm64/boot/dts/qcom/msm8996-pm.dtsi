@@ -34,6 +34,7 @@
 		qcom,use-psci;
 		#address-cells = <1>;
 		#size-cells = <0>;
+
 		qcom,pm-cluster@0 {
 			reg = <0>;
 			#address-cells = <1>;
@@ -43,6 +44,7 @@
 			qcom,default-level = <0>;
 			qcom,psci-mode-shift = <8>;
 			qcom,psci-mode-mask = <0xff>;
+			qcom,disable-prediction;
 
 			qcom,pm-cluster-level@0{
 				reg = <0>;
@@ -133,6 +135,7 @@
 					#size-cells = <0>;
 					qcom,psci-mode-shift = <0>;
 					qcom,psci-mode-mask = <0xf>;
+					qcom,use-prediction;
 					qcom,cpu = <&CPU0 &CPU1>;
 
 					qcom,pm-cpu-level@0 { /* C1 */
@@ -149,7 +152,7 @@
 					qcom,pm-cpu-level@1 {  /* C4 */
 						reg = <1>;
 						label = "ret";
-						qcom,psci-cpu-mode = <2>;
+						qcom,psci-cpu-mode = <4>;
 						qcom,spm-cpu-mode = "ret";
 						qcom,latency-us = <40>;
 						qcom,ss-power = <198>;
@@ -184,6 +187,7 @@
 				qcom,cpu = <&CPU2 &CPU3>;
 				qcom,psci-mode-shift = <4>;
 				qcom,psci-mode-mask = <0xf>;
+				qcom,disable-prediction;
 
 				qcom,pm-cluster-level@0{  /* D1 */
 					reg = <0>;
@@ -243,7 +247,7 @@
 					qcom,pm-cpu-level@1 {  /* C4 */
 						reg = <1>;
 						label = "ret";
-						qcom,psci-cpu-mode = <2>;
+						qcom,psci-cpu-mode = <4>;
 						qcom,spm-cpu-mode = "ret";
 						qcom,latency-us = <40>;
 						qcom,ss-power = <198>;
