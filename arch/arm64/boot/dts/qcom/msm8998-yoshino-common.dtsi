@@ -3165,15 +3165,69 @@
 };
 
 &labibb {
-	qcom,lab@de00 {
-		interrupts = <0x3 0xde 0x0 IRQ_TYPE_LEVEL_LOW>,
-				<0x3 0xde 0x1 IRQ_TYPE_EDGE_RISING>;
-		interrupt-names = "lab_vreg_not_ok_interrupt", "lab-vreg-ok";
-	};
-	qcom,ibb@dc00 {
-		interrupts = <0x3 0xdc 0x0 IRQ_TYPE_LEVEL_HIGH>;
-		interrupt-names = "ibb_vreg_not_ok_interrupt";
-	};
+	status = "ok";
+	qcom,qpnp-labibb-mode = "lcd";
+};
+
+&lab_regulator {
+	interrupts = <0x3 0xde 0x0 IRQ_TYPE_LEVEL_LOW>,
+			<0x3 0xde 0x1 IRQ_TYPE_EDGE_RISING>;
+	interrupt-names = "lab_vreg_not_ok_interrupt", "lab-vreg-ok";
+
+	/* Set LAB max uV to 5.6V as a safety measure */
+	regulator-max-microvolt = <5600000>;
+
+	/* When kernel boots with LAB OFF, set 5.5V */
+	qcom,qpnp-lab-init-voltage = <5500000>;
+
+	/* For OLED mode, set 4.6V */
+	qcom,qpnp-lab-init-amoled-voltage = <4600000>;
+
+	/* For LCD mode, set 5.5V */
+	qcom,qpnp-lab-init-lcd-voltage = <5500000>;
+
+	/* LAB maximum current limit: 200mA */
+	qcom,qpnp-lab-limit-maximum-current = <200>;
+	qcom,qpnp-lab-limit-max-current-enable;
+
+	/* 800uS soft start for LAB regulator to prevent inrush current */
+	qcom,qpnp-lab-soft-start = <800>;
+
+	/* Enable pull down at full strength */
+	qcom,qpnp-lab-full-pull-down;
+	qcom,qpnp-lab-pull-down-enable;
+
+	/* Precharge time for LAB regulator: 500uS */
+	qcom,qpnp-lab-max-precharge-time = <500>;
+};
+
+&ibb_regulator {
+	interrupts = <0x3 0xdc 0x0 IRQ_TYPE_LEVEL_HIGH>;
+	interrupt-names = "ibb_vreg_not_ok_interrupt";
+
+	/* Set IBB max uV to 5.6V as a safety measure */
+	regulator-max-microvolt = <5600000>;
+
+	/* When kernel boots with LAB OFF, set 5.5V */
+	qcom,qpnp-ibb-init-voltage = <5500000>;
+
+	/* For OLED mode, set 4.6V */
+	qcom,qpnp-ibb-init-amoled-voltage = <4600000>;
+
+	/* For LCD mode, set 5.5V */
+	qcom,qpnp-ibb-init-lcd-voltage = <5500000>;
+
+	/* IBB maximum current limit: 800mA */
+	qcom,qpnp-ibb-limit-maximum-current = <800>;
+	qcom,qpnp-ibb-limit-max-current-enable;
+
+	/* Enable IBB discharge with 300KOhms resistor for soft start */
+	qcom,qpnp-ibb-discharge-resistor = <300>;
+	qcom,qpnp-ibb-en-discharge;
+
+	/* Enable pull down at full strength */
+	qcom,qpnp-ibb-full-pull-down;
+	qcom,qpnp-ibb-pull-down-enable;
 };
 
 &mdss_dp_ctrl {

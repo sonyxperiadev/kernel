@@ -283,6 +283,15 @@
 	};
 };
 
+&lab_regulator {
+	regulator-max-microvolt = <5800000>;
+	
+};
+
+&ibb_regulator {
+	regulator-max-microvolt = <5600000>;
+};
+
 &red_led {
 	somc,color_variation_max_num = <4>;
 	somc,max_current = <
