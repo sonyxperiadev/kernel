@@ -1195,6 +1195,10 @@ void dsi_panel_driver_en_dcdc(struct dsi_panel *panel, int en)
 
 	if (gpio_is_valid(spec_pdata->disp_dcdc_en_gpio)) {
 		gpio_direction_output(spec_pdata->disp_dcdc_en_gpio, en);
+
+		/* SoMC Yoshino Maple: If powering on, 2x sleep */
+		if (en)
+			usleep_range(6000, 7000);
 		usleep_range(5000, 5000 + 100);
 	}
 }
