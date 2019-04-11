@@ -197,7 +197,7 @@ static inline int msm_pcie_debug_info(struct pci_dev *dev, u32 option, u32 base,
 	return -ENODEV;
 }
 
-int msm_pcie_configure_sid_legacy(struct device *dev, u32 *sid, int *domain)
+static inline int msm_pcie_configure_sid_legacy(struct device *dev, u32 *sid, int *domain)
 {
 	return -ENODEV;
 }

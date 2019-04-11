@@ -19,6 +19,7 @@
 #include <linux/of_device.h>
 #include <linux/of_gpio.h>
 #include <linux/pci.h>
+#include <linux/pm_runtime.h>
 #include <linux/platform_device.h>
 #include <linux/phy/phy.h>
 #include <linux/regulator/consumer.h>
@@ -101,7 +102,7 @@ struct qcom_pcie_resources_1_0_0 {
 	struct regulator *vdda;
 };
 
-#define QCOM_PCIE_2_3_2_MAX_SUPPLY	5
+#define QCOM_PCIE_2_3_2_MAX_SUPPLY	6
 struct qcom_pcie_resources_2_3_2 {
 	struct clk *aux_clk;
 	struct clk *master_clk;
@@ -497,11 +498,12 @@ static int qcom_pcie_get_resources_2_3_2(struct qcom_pcie *pcie)
 	struct device *dev = pci->dev;
 	int ret;
 
-	res->supplies[0].supply = "vdda";
-	res->supplies[1].supply = "vdda-1p8";
-	res->supplies[2].supply = "vreg-cx";
-	res->supplies[3].supply = "gdsc-smmu";
-	res->supplies[4].supply = "gdsc-vdd";
+	res->supplies[0].supply = "gdsc-smmu";
+	res->supplies[1].supply = "gdsc-vdd";
+	res->supplies[2].supply = "vdda-1p8";
+	res->supplies[3].supply = "vdda";
+	res->supplies[4].supply = "vreg-cx";
+	res->supplies[5].supply = "vddpe-3v3";
 	ret = devm_regulator_bulk_get(dev, ARRAY_SIZE(res->supplies),
 				      res->supplies);
 	if (ret)
@@ -1104,6 +1106,7 @@ static int qcom_pcie_host_init(struct pcie_port *pp)
 	struct qcom_pcie *pcie = to_qcom_pcie(pci);
 	int ret;
 
+	pm_runtime_get_sync(pci->dev);
 	qcom_ep_reset_assert(pcie);
 
 	ret = pcie->ops->init(pcie);
@@ -1140,6 +1143,7 @@ err_disable_phy:
 	phy_power_off(pcie->phy);
 err_deinit:
 	pcie->ops->deinit(pcie);
+	pm_runtime_put(pci->dev);
 
 	return ret;
 }
@@ -1228,6 +1232,7 @@ static int qcom_pcie_probe(struct platform_device *pdev)
 	if (!pci)
 		return -ENOMEM;
 
+	pm_runtime_enable(dev);
 	pci->dev = dev;
 	pci->ops = &dw_pcie_ops;
 	pp = &pci->pp;
@@ -1273,15 +1278,18 @@ static int qcom_pcie_probe(struct platform_device *pdev)
 	}
 
 	ret = phy_init(pcie->phy);
-	if (ret)
+	if (ret) {
+		pm_runtime_disable(&pdev->dev);
 		return ret;
+	}
 
 	platform_set_drvdata(pdev, pcie);
 
 	ret = dw_pcie_host_init(pp);
 	if (ret) {
 		dev_err(dev, "cannot initialize host\n");
-		return ret;
+		pm_runtime_disable(&pdev->dev);
+		return -EPROBE_DEFER;
 	}
 
 	return 0;

@@ -29,7 +29,8 @@
 			 <&clock_mmss MMSS_MNOC_AHB_CLK>,
 			 <&clock_mmss MMSS_BIMC_SMMU_AHB_CLK>,
 			 <&clock_mmss MMSS_BIMC_SMMU_AXI_CLK>,
-			 <&clock_mmss MMSS_MDSS_VSYNC_CLK>;
+			 <&clock_mmss MMSS_MDSS_VSYNC_CLK>,
+			 <&clock_mmss MMSS_MDSS_MDP_LUT_CLK>;
 		clock-names = "mnoc_clk",
 			"iface_clk",
 			"bus_clk",
@@ -39,10 +40,11 @@
 			"mmss_noc_ahb_clk",
 			"mmss_smmu_ahb_clk",
 			"mmss_smmu_axi_clk",
-			"vsync_clk";
+			"vsync_clk",
+			"lut_clk";
 
-		clock-rate = <0 0 0 412500000 412500000 0 0 0 0 19200000>;
-		clock-max-rate = <0 0 0 550000000 550000000 0 0 0 0 19200000>;
+		clock-rate = <0 0 0 412500000 412500000 0 0 0 0 19200000 0>;
+		clock-max-rate = <0 0 0 550000000 550000000 0 0 0 0 19200000 0>;
 
 		/* interrupt config */
 		interrupt-parent = <&intc>;
@@ -50,6 +52,11 @@
 		interrupt-controller;
 		#interrupt-cells = <1>;
 		iommus = <&mmss_smmu 0>;
+
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		#power-domain-cells = <0>;
 
 		/* hw blocks */
 		qcom,sde-off = <0x1000>;
@@ -62,13 +69,14 @@
 					    "none", "none";
 
 		qcom,sde-mixer-off = <0x45000 0x46000 0x47000
-				      0x48000 0x49000 0x4a000>;
+				      0 0 0x4a000>;
 		qcom,sde-mixer-size = <0x2bc>;
 		qcom,sde-mixer-display-pref = "primary", "primary", "none",
 					      "none", "none", "none";
 		qcom,sde-mixer-pair-mask = <2 1 6 0 0 3>;
 		qcom,sde-mixer-blend-op-off = <0x20 0x50 0x80 0xb0
 					       0x230 0x260 0x290>;
+
 
 		qcom,sde-dspp-top-off = <0x1300>;
 		qcom,sde-dspp-top-size = <0xc>;
@@ -100,12 +108,10 @@
 
 		qcom,sde-te2-off = <0x2000 0x2000 0x0 0x0 0x0>;
 
-		qcom,sde-te-source = <15 15 15 15 15>;
-
 		qcom,sde-cdm-off = <0x7a200>;
 		qcom,sde-cdm-size = <0x224>;
 
-		qcom,sde-dsc-off = <0x81000 0x81400>;
+		qcom,sde-dsc-off = <0x81000 0x81400 0x0 0x0>;
 		qcom,sde-dsc-size = <0x140>;
 
 		qcom,sde-intf-max-prefetch-lines = <0x15 0x15 0x15 0x15>;
@@ -266,7 +272,7 @@
 		};
 
 		smmu_kms_unsec: qcom,smmu_kms_unsec_cb {
-			compatible = "qcom,smmu_sde_unsec";
+			compatible = "qcom,smmu_sde_unsec_legacy";
 			iommus = <&mmss_smmu 0>;
 			gdsc-mdss-supply = <&gdsc_bimc_smmu>;
 			clocks = <&clock_rpmcc MMSSNOC_AXI_CLK>,
@@ -280,7 +286,7 @@
 		};
 
 		smmu_kms_sec: qcom,smmu_kms_sec_cb {
-			compatible = "qcom,smmu_sde_sec";
+			compatible = "qcom,smmu_sde_sec_legacy";
 			iommus = <&mmss_smmu 1>;
 			gdsc-mdss-supply = <&gdsc_bimc_smmu>;
 			clocks = <&clock_rpmcc MMSSNOC_AXI_CLK>,
@@ -317,7 +323,7 @@
 		};
 	};
 
-	sde_dsi0: qcom,mdss_dsi_ctrl0@c994000 {
+	sde_dsi0: qcom,sde_dsi_ctrl0@c994000 {
 		compatible = "qcom,dsi-ctrl-hw-v2.0";
 		label = "dsi-ctrl-0";
 		cell-index = <0>;
@@ -388,7 +394,7 @@
 		};
 	};
 
-	sde_dsi1: qcom,mdss_dsi_ctrl1@c996000 {
+	sde_dsi1: qcom,sde_dsi_ctrl1@c996000 {
 		compatible = "qcom,dsi-ctrl-hw-v2.0";
 		label = "dsi-ctrl-1";
 		cell-index = <1>;
@@ -397,6 +403,8 @@
 		reg-names = "dsi_ctrl", "mmss_misc";
 		interrupt-parent = <&sde_kms>;
 		interrupts = <5 0>;
+
+		gdsc-supply = <&gdsc_mdss>;
 		vdda-1p2-supply = <&pm8998_l2>;
 
 		clocks = <&clock_mmss MMSS_MDSS_MDP_CLK>,
@@ -669,7 +677,7 @@
 		};
 
 		smmu_rot_unsec: qcom,smmu_rot_unsec_cb {
-			compatible = "qcom,smmu_sde_rot_unsec";
+			compatible = "qcom,smmu_sde_rot_unsec_legacy";
 			iommus = <&mmss_smmu 0xe00>;
 			gdsc-mdss-supply = <&gdsc_bimc_smmu>;
 			clocks = <&clock_rpmcc MMSSNOC_AXI_CLK>,
@@ -683,7 +691,7 @@
 		};
 
 		smmu_rot_sec: qcom,smmu_rot_sec_cb {
-			compatible = "qcom,smmu_sde_rot_sec";
+			compatible = "qcom,smmu_sde_rot_sec_legacy";
 			iommus = <&mmss_smmu 0xe01>;
 			gdsc-mdss-supply = <&gdsc_bimc_smmu>;
 			clocks = <&clock_rpmcc MMSSNOC_AXI_CLK>,

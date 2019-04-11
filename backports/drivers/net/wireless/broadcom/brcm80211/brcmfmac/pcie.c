@@ -16,6 +16,7 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/firmware.h>
+#include <linux/pm_runtime.h>
 #include <linux/pci.h>
 #include <linux/vmalloc.h>
 #include <linux/delay.h>
@@ -24,15 +25,20 @@
 #include <linux/sched.h>
 #include <asm/unaligned.h>
 
-#ifdef CONFIG_PCI_MSM
-#include <linux/msm_pcie.h>
-#endif
-
 #include <soc.h>
 #include <chipcommon.h>
 #include <brcmu_utils.h>
 #include <brcmu_wifi.h>
 #include <brcm_hw_ids.h>
+
+/* Custom brcmf_err() that takes bus arg and passes it further */
+#define brcmf_err(bus, fmt, ...)					\
+	do {								\
+		if (IS_ENABLED(CONFIG_BRCMDBG) ||			\
+		    IS_ENABLED(CONFIG_BRCM_TRACING) ||			\
+		    net_ratelimit())					\
+			__brcmf_err(bus, __func__, fmt, ##__VA_ARGS__);	\
+	} while (0)
 
 #include "debug.h"
 #include "bus.h"
@@ -266,6 +272,7 @@ struct brcmf_pciedev_info {
 	enum brcmf_pcie_state state;
 	bool in_irq;
 	struct pci_dev *pdev;
+	struct pci_saved_state *pci_state;
 	char fw_name[BRCMF_FW_NAME_LEN];
 	char nvram_name[BRCMF_FW_NAME_LEN];
 	void __iomem *regs;
@@ -275,9 +282,16 @@ struct brcmf_pciedev_info {
 	struct brcmf_chip *ci;
 	u32 coreid;
 	struct brcmf_pcie_shared_info shared;
+	struct mutex dev_pm_lock;
+	spinlock_t oob_irq_lock;
 	wait_queue_head_t mbdata_resp_wait;
+	unsigned int oob_irq_nr;
+	unsigned long oob_irq_flags;
 	bool mbdata_completed;
 	bool irq_allocated;
+	bool oob_irq_supported;
+	bool oob_irq_en;
+	bool oob_irq_allocated;
 	bool wowl_enabled;
 	u8 dma_idx_sz;
 	void *idxbuf;
@@ -353,6 +367,9 @@ static const u32 brcmf_ring_itemsize[BRCMF_NROF_COMMON_MSGRINGS] = {
 	BRCMF_D2H_MSGRING_RX_COMPLETE_ITEMSIZE
 };
 
+
+static int brcmf_pcie_pm_enter_D3(struct brcmf_bus *bus);
+static int brcmf_pcie_pm_leave_D3(struct brcmf_bus *bus);
 
 static u32
 brcmf_pcie_read_reg32(struct brcmf_pciedev_info *devinfo, u32 reg_offset)
@@ -566,21 +583,21 @@ brcmf_pcie_find_pci_capability(struct brcmf_pciedev_info *devinfo,
 	/* check for Header type 0 */
 	byte_val = read_pci_cfg_byte(devinfo, PCI_CFG_HDR);
 	if ((byte_val & 0x7f) != 0) {
-		brcmf_err("PCI config header not normal.\n");
+		brcmf_err(NULL, "PCI config header not normal.\n");
 		goto end;
 	}
 
 	/* check if the capability pointer field exists */
 	byte_val = read_pci_cfg_byte(devinfo, PCI_CFG_STAT);
 	if (!(byte_val & PCI_CAPPTR_PRESENT)) {
-		brcmf_err("PCI CAP pointer not present.\n");
+		brcmf_err(NULL, "PCI CAP pointer not present.\n");
 		goto end;
 	}
 
 	cap_ptr = read_pci_cfg_byte(devinfo, PCI_CFG_CAPPTR);
 	/* check if the capability pointer is 0x00 */
 	if (cap_ptr == 0x00) {
-		brcmf_err(" PCI CAP pointer is 0x00.\n");
+		brcmf_err(NULL, " PCI CAP pointer is 0x00.\n");
 		goto end;
 	}
 
@@ -608,7 +625,7 @@ static int brcmf_pcie_pme_active(struct brcmf_pciedev_info *devinfo, bool enb)
 	cap_ptr = brcmf_pcie_find_pci_capability(devinfo,
 					BRCMF_PCIE_CFGREG_POWERMGMT_CAP);
 	if (!cap_ptr) {
-		brcmf_err("Power Management capability not present\n");
+		brcmf_err(NULL, "Power Management capability not present\n");
 		return -ENOTSUPP;
 	}
 
@@ -632,6 +649,7 @@ static void
 brcmf_pcie_select_core(struct brcmf_pciedev_info *devinfo, u16 coreid)
 {
 	const struct pci_dev *pdev = devinfo->pdev;
+	struct brcmf_bus *bus = dev_get_drvdata(&pdev->dev);
 	struct brcmf_core *core;
 	u32 bar0_win;
 
@@ -649,7 +667,7 @@ brcmf_pcie_select_core(struct brcmf_pciedev_info *devinfo, u16 coreid)
 			}
 		}
 	} else {
-		brcmf_err("Unsupported core selected %x\n", coreid);
+		brcmf_err(bus, "Unsupported core selected %x\n", coreid);
 	}
 }
 
@@ -784,8 +802,8 @@ brcmf_pcie_send_mb_data(struct brcmf_pciedev_info *devinfo, u32 htod_mb_data)
 	}
 
 	brcmf_pcie_write_tcm32(devinfo, addr, htod_mb_data);
-	pci_write_config_dword(devinfo->pdev, BRCMF_PCIE_REG_SBMBX, 1);
-	pci_write_config_dword(devinfo->pdev, BRCMF_PCIE_REG_SBMBX, 1);
+	brcmf_pcie_select_core(devinfo, BCMA_CORE_PCIE2);
+	brcmf_pcie_write_reg32(devinfo, BRCMF_PCIE_PCIE2REG_H2D_MAILBOX_1, 1);
 
 	return 0;
 }
@@ -949,9 +967,8 @@ static irqreturn_t brcmf_pcie_isr_thread(int irq, void *arg)
 
 static int brcmf_pcie_request_irq(struct brcmf_pciedev_info *devinfo)
 {
-	struct pci_dev *pdev;
-
-	pdev = devinfo->pdev;
+	struct pci_dev *pdev = devinfo->pdev;
+	struct brcmf_bus *bus = dev_get_drvdata(&pdev->dev);
 
 	brcmf_pcie_intr_disable(devinfo);
 
@@ -962,7 +979,7 @@ static int brcmf_pcie_request_irq(struct brcmf_pciedev_info *devinfo)
 				 brcmf_pcie_isr_thread, IRQF_SHARED,
 				 "brcmf_pcie_intr", devinfo)) {
 		pci_disable_msi(pdev);
-		brcmf_err("Failed to request IRQ %d\n", pdev->irq);
+		brcmf_err(bus, "Failed to request IRQ %d\n", pdev->irq);
 		return -EIO;
 	}
 	devinfo->irq_allocated = true;
@@ -972,14 +989,13 @@ static int brcmf_pcie_request_irq(struct brcmf_pciedev_info *devinfo)
 
 static void brcmf_pcie_release_irq(struct brcmf_pciedev_info *devinfo)
 {
-	struct pci_dev *pdev;
+	struct pci_dev *pdev = devinfo->pdev;
+	struct brcmf_bus *bus = dev_get_drvdata(&pdev->dev);
 	u32 status;
 	u32 count;
 
 	if (!devinfo->irq_allocated)
 		return;
-
-	pdev = devinfo->pdev;
 
 	brcmf_pcie_intr_disable(devinfo);
 	free_irq(pdev->irq, devinfo);
@@ -992,7 +1008,7 @@ static void brcmf_pcie_release_irq(struct brcmf_pciedev_info *devinfo)
 		count++;
 	}
 	if (devinfo->in_irq)
-		brcmf_err("Still in IRQ (processing) !!!\n");
+		brcmf_err(bus, "Still in IRQ (processing) !!!\n");
 
 	status = brcmf_pcie_read_reg32(devinfo, BRCMF_PCIE_PCIE2REG_MAILBOXINT);
 	brcmf_pcie_write_reg32(devinfo, BRCMF_PCIE_PCIE2REG_MAILBOXINT, status);
@@ -1203,6 +1219,7 @@ static void brcmf_pcie_release_ringbuffers(struct brcmf_pciedev_info *devinfo)
 
 static int brcmf_pcie_init_ringbuffers(struct brcmf_pciedev_info *devinfo)
 {
+	struct brcmf_bus *bus = dev_get_drvdata(&devinfo->pdev->dev);
 	struct brcmf_pcie_ringbuf *ring;
 	struct brcmf_pcie_ringbuf *rings;
 	u32 d2h_w_idx_ptr;
@@ -1355,7 +1372,7 @@ static int brcmf_pcie_init_ringbuffers(struct brcmf_pciedev_info *devinfo)
 	return 0;
 
 fail:
-	brcmf_err("Allocating ring buffers failed\n");
+	brcmf_err(bus, "Allocating ring buffers failed\n");
 	brcmf_pcie_release_ringbuffers(devinfo);
 	return -ENOMEM;
 }
@@ -1378,6 +1395,7 @@ brcmf_pcie_release_scratchbuffers(struct brcmf_pciedev_info *devinfo)
 
 static int brcmf_pcie_init_scratchbuffers(struct brcmf_pciedev_info *devinfo)
 {
+	struct brcmf_bus *bus = dev_get_drvdata(&devinfo->pdev->dev);
 	u64 address;
 	u32 addr;
 
@@ -1417,7 +1435,7 @@ static int brcmf_pcie_init_scratchbuffers(struct brcmf_pciedev_info *devinfo)
 	return 0;
 
 fail:
-	brcmf_err("Allocating scratch buffers failed\n");
+	brcmf_err(bus, "Allocating scratch buffers failed\n");
 	brcmf_pcie_release_scratchbuffers(devinfo);
 	return -ENOMEM;
 }
@@ -1538,6 +1556,7 @@ static int
 brcmf_pcie_init_share_ram_info(struct brcmf_pciedev_info *devinfo,
 			       u32 sharedram_addr)
 {
+	struct brcmf_bus *bus = dev_get_drvdata(&devinfo->pdev->dev);
 	struct brcmf_pcie_shared_info *shared;
 	u32 addr;
 
@@ -1549,7 +1568,8 @@ brcmf_pcie_init_share_ram_info(struct brcmf_pciedev_info *devinfo,
 	brcmf_dbg(PCIE, "PCIe protocol version %d\n", shared->version);
 	if ((shared->version > BRCMF_PCIE_MAX_SHARED_VERSION) ||
 	    (shared->version < BRCMF_PCIE_MIN_SHARED_VERSION)) {
-		brcmf_err("Unsupported PCIE version %d\n", shared->version);
+		brcmf_err(bus, "Unsupported PCIE version %d\n",
+			  shared->version);
 		return -EINVAL;
 	}
 
@@ -1591,6 +1611,7 @@ static int brcmf_pcie_download_fw_nvram(struct brcmf_pciedev_info *devinfo,
 					const struct firmware *fw, void *nvram,
 					u32 nvram_len)
 {
+	struct brcmf_bus *bus = dev_get_drvdata(&devinfo->pdev->dev);
 	u32 sharedram_addr;
 	u32 sharedram_addr_written;
 	u32 loop_counter;
@@ -1645,7 +1666,13 @@ static int brcmf_pcie_download_fw_nvram(struct brcmf_pciedev_info *devinfo,
 		loop_counter--;
 	}
 	if (sharedram_addr == sharedram_addr_written) {
-		brcmf_err("FW failed to initialize\n");
+		brcmf_err(bus, "FW failed to initialize\n");
+		return -ENODEV;
+	}
+	if (sharedram_addr < devinfo->ci->rambase ||
+	    sharedram_addr >= devinfo->ci->rambase + devinfo->ci->ramsize) {
+		brcmf_err(bus, "Invalid shared RAM address 0x%08x\n",
+			  sharedram_addr);
 		return -ENODEV;
 	}
 	brcmf_dbg(PCIE, "Shared RAM addr: 0x%08x\n", sharedram_addr);
@@ -1656,16 +1683,15 @@ static int brcmf_pcie_download_fw_nvram(struct brcmf_pciedev_info *devinfo,
 
 static int brcmf_pcie_get_resource(struct brcmf_pciedev_info *devinfo)
 {
-	struct pci_dev *pdev;
+	struct pci_dev *pdev = devinfo->pdev;
+	struct brcmf_bus *bus = dev_get_drvdata(&pdev->dev);
 	int err;
 	phys_addr_t  bar0_addr, bar1_addr;
 	ulong bar1_size;
 
-	pdev = devinfo->pdev;
-
 	err = pci_enable_device(pdev);
 	if (err) {
-		brcmf_err("pci_enable_device failed err=%d\n", err);
+		brcmf_err(bus, "pci_enable_device failed err=%d\n", err);
 		return err;
 	}
 
@@ -1678,7 +1704,7 @@ static int brcmf_pcie_get_resource(struct brcmf_pciedev_info *devinfo)
 	/* read Bar-1 mapped memory range */
 	bar1_size = pci_resource_len(pdev, 2);
 	if ((bar1_size == 0) || (bar1_addr == 0)) {
-		brcmf_err("BAR1 Not enabled, device size=%ld, addr=%#016llx\n",
+		brcmf_err(bus, "BAR1 Not enabled, device size=%ld, addr=%#016llx\n",
 			  bar1_size, (unsigned long long)bar1_addr);
 		return -EINVAL;
 	}
@@ -1687,7 +1713,7 @@ static int brcmf_pcie_get_resource(struct brcmf_pciedev_info *devinfo)
 	devinfo->tcm = ioremap_nocache(bar1_addr, bar1_size);
 
 	if (!devinfo->regs || !devinfo->tcm) {
-		brcmf_err("ioremap() failed (%p,%p)\n", devinfo->regs,
+		brcmf_err(bus, "ioremap() failed (%p,%p)\n", devinfo->regs,
 			  devinfo->tcm);
 		return -EINVAL;
 	}
@@ -1782,6 +1808,112 @@ static const struct brcmf_buscore_ops brcmf_pcie_buscore_ops = {
 	.write32 = brcmf_pcie_buscore_write32,
 };
 
+/* Call me with locking */
+static inline void brcmf_pcie_oob_reset(struct brcmf_pciedev_info *devinfo)
+{
+	/* Nothing to do */
+	if (devinfo->oob_irq_en)
+		return;
+
+	enable_irq(devinfo->oob_irq_nr);
+	devinfo->oob_irq_en = true;
+}
+
+static int brcmf_pcie_oob_enable(struct brcmf_pciedev_info *devinfo,
+				 bool enable)
+{
+	unsigned long flags;
+
+	if (!devinfo->oob_irq_supported)
+		return 0;
+
+	if (enable) {
+		spin_lock_irqsave(&devinfo->oob_irq_lock, flags);
+		if (!devinfo->oob_irq_en)
+			brcmf_pcie_oob_reset(devinfo);
+		spin_unlock_irqrestore(&devinfo->oob_irq_lock, flags);
+
+		return enable_irq_wake(devinfo->oob_irq_nr);
+	}
+
+	return disable_irq_wake(devinfo->oob_irq_nr);
+}
+
+static irqreturn_t brcmf_pcie_oob_isr_thread(int irq, void *arg)
+{
+	struct brcmf_bus *bus = (struct brcmf_bus *)arg;
+	int rc;
+	brcmf_err(bus, "OOB interrupt thread\n");
+	rc = brcmf_pcie_pm_leave_D3(bus);
+	if (rc) {
+		brcmf_err(bus, "An error occurred while leaving D3\n");
+	}
+
+	return IRQ_HANDLED;
+}
+
+static irqreturn_t brcmf_pcie_oob_isr(int irq, void *arg)
+{
+	struct brcmf_bus *bus = (struct brcmf_bus *)arg;
+	struct brcmf_pciedev_info *devinfo = bus->bus_priv.pcie->devinfo;
+
+	brcmf_dbg(INTR, "OOB interrupt triggered\n");
+
+	if (devinfo->oob_irq_en) {
+		disable_irq_nosync(devinfo->oob_irq_nr);
+		devinfo->oob_irq_en = false;
+	} else {
+		return IRQ_NONE;
+	}
+
+	/* Check if the card is already in working state */
+	if (devinfo->state != BRCMFMAC_PCIE_STATE_DOWN) {
+		brcmf_dbg(TRACE, "Nothing to do, the card is already up\n");
+		return IRQ_NONE;
+	}
+
+	/* Schedule card resume to process the net queue ASAP */
+	return IRQ_WAKE_THREAD;
+}
+
+static int brcmf_pcie_register_oob_irq(struct brcmf_bus *bus)
+{
+	struct brcmf_pciedev_info *devinfo = bus->bus_priv.pcie->devinfo;
+
+	if (!devinfo->oob_irq_supported)
+		return -EINVAL;
+
+	/*
+	 * On re-setup, this function will get called again, but the
+	 * interrupt has already been allocated with its ISR, so avoid
+	 * reallocating it to prevent obvious issues.
+	 */
+	if (devinfo->oob_irq_allocated)
+		return 0;
+
+	spin_lock_init(&devinfo->oob_irq_lock);
+
+	/* Disable it, we don't want it to fire while loading firmware */
+	devinfo->oob_irq_en = false;
+
+	pr_debug("Registering out of band interrupt\n");
+
+	if (request_threaded_irq(devinfo->oob_irq_nr, brcmf_pcie_oob_isr,
+				 brcmf_pcie_oob_isr_thread,
+				 devinfo->oob_irq_flags,
+				 "brcmf_pcie_oob_intr", bus)) {
+		brcmf_err(bus, "Failed to request IRQ %d\n",
+						devinfo->oob_irq_nr);
+		return -EIO;
+	}
+	disable_irq(devinfo->oob_irq_nr);
+
+	devinfo->oob_irq_allocated = true;
+
+	return 0;
+}
+
+
 #define BRCMF_PCIE_FW_CODE	0
 #define BRCMF_PCIE_FW_NVRAM	1
 
@@ -1836,6 +1968,22 @@ static void brcmf_pcie_setup(struct device *dev, int ret,
 	if (ret)
 		goto fail;
 
+	if (devinfo->oob_irq_supported) {
+		ret = brcmf_pcie_register_oob_irq(bus);
+		if (ret) {
+			brcmf_err(bus, "Failed to register OOB interrupt!!!\n");
+			devinfo->oob_irq_supported = false;
+		}
+	}
+
+	/*
+	 * If we don't support D3Hot, but we have a out of band interrupt,
+	 * then we still support WoWLAN, as we can disconnect the link and
+	 * resume it when the Out-Of-Band (AKA Host Wake) interrupt fires.
+	 */
+	if (!bus->wowl_supported && devinfo->oob_irq_supported)
+		bus->wowl_supported = true;
+
 	/* hook the commonrings in the bus structure. */
 	for (i = 0; i < BRCMF_NROF_COMMON_MSGRINGS; i++)
 		bus->msgbuf->commonrings[i] =
@@ -1886,6 +2034,7 @@ brcmf_pcie_prepare_fw_request(struct brcmf_pciedev_info *devinfo)
 	fwreq->items[BRCMF_PCIE_FW_CODE].type = BRCMF_FW_TYPE_BINARY;
 	fwreq->items[BRCMF_PCIE_FW_NVRAM].type = BRCMF_FW_TYPE_NVRAM;
 	fwreq->items[BRCMF_PCIE_FW_NVRAM].flags = BRCMF_FW_REQF_OPTIONAL;
+	fwreq->board_type = devinfo->settings->board_type;
 	/* NVRAM reserves PCI domain 0 for Broadcom's SDK faked bus */
 	fwreq->domain_nr = pci_domain_nr(devinfo->pdev->bus) + 1;
 	fwreq->bus_nr = devinfo->pdev->bus->number;
@@ -1954,7 +2103,16 @@ brcmf_pcie_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	bus->proto_type = BRCMF_PROTO_MSGBUF;
 	bus->chip = devinfo->coreid;
 	bus->wowl_supported = pci_pme_capable(pdev, PCI_D3hot);
+	devinfo->oob_irq_nr =
+		devinfo->settings->bus.sdio.oob_irq_nr; /* Yes, I know. */
+	devinfo->oob_irq_flags =
+		devinfo->settings->bus.sdio.oob_irq_flags;
+	devinfo->oob_irq_supported =
+		devinfo->settings->bus.sdio.oob_irq_supported;
+	devinfo->oob_irq_allocated = false;
 	dev_set_drvdata(&pdev->dev, bus);
+
+	mutex_init(&devinfo->dev_pm_lock);
 
 	fwreq = brcmf_pcie_prepare_fw_request(devinfo);
 	if (!fwreq) {
@@ -1967,17 +2125,26 @@ brcmf_pcie_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 		kfree(fwreq);
 		goto fail_bus;
 	}
-#ifdef CONFIG_PCI_MSM
-	/* disable async suspend */
-	device_disable_async_suspend(&pdev->dev);
-#endif
+
+	pm_runtime_set_active(&pdev->dev);
+
+	pm_runtime_set_autosuspend_delay(&pdev->dev, 1000);
+	pm_runtime_use_autosuspend(&pdev->dev);
+
+	pm_runtime_allow(&pdev->dev);
+
+	brcmf_info(NULL, "Initialized with%s WoWLAN support %s",
+		   bus->wowl_supported ? "" : "out",
+		   devinfo->oob_irq_supported ? "and with Out-Of-Band IRQ" :
+						"and without Out-Of-Band IRQ");
+
 	return 0;
 
 fail_bus:
 	kfree(bus->msgbuf);
 	kfree(bus);
 fail:
-	brcmf_err("failed %x:%x\n", pdev->vendor, pdev->device);
+	brcmf_err(NULL, "failed %x:%x\n", pdev->vendor, pdev->device);
 	brcmf_pcie_release_resource(devinfo);
 	if (devinfo->ci)
 		brcmf_chip_detach(devinfo->ci);
@@ -2007,6 +2174,8 @@ brcmf_pcie_remove(struct pci_dev *pdev)
 	if (devinfo->ci)
 		brcmf_pcie_intr_disable(devinfo);
 
+	pm_runtime_forbid(&pdev->dev);
+
 	brcmf_detach(&pdev->dev);
 
 	kfree(bus->bus_priv.pcie);
@@ -2033,72 +2202,90 @@ brcmf_pcie_remove(struct pci_dev *pdev)
 #ifdef CONFIG_PM
 
 
-static int brcmf_pcie_pm_enter_D3(struct device *dev)
+static int brcmf_pcie_pm_enter_D3(struct brcmf_bus *bus)
 {
 	struct brcmf_pciedev_info *devinfo;
-	struct brcmf_bus *bus;
+	struct pci_dev *pcid;
+	int ret;
 
 	brcmf_dbg(PCIE, "Enter\n");
 
-	bus = dev_get_drvdata(dev);
 	devinfo = bus->bus_priv.pcie->devinfo;
+	pcid = devinfo->pdev;
+
+	mutex_lock(&devinfo->dev_pm_lock);
 
 	brcmf_pcie_pme_active(devinfo, true);
 
-	brcmf_bus_change_state(bus, BRCMF_BUS_DOWN);
-
 	devinfo->mbdata_completed = false;
-	brcmf_pcie_send_mb_data(devinfo, BRCMF_H2D_HOST_D3_INFORM);
+	brcmf_pcie_intr_enable(devinfo);
+
+	brcmf_pcie_oob_enable(devinfo, true);
+
+	brcmf_bus_change_state(bus, BRCMF_BUS_UP);
+
+	ret = brcmf_pcie_send_mb_data(devinfo, BRCMF_H2D_HOST_D3_INFORM);
+	if (ret)
+		brcmf_dbg(PCIE, "MB data send failure: %d\n", ret);
+
+	brcmf_bus_change_state(bus, BRCMF_BUS_DOWN);
 
 	wait_event_timeout(devinfo->mbdata_resp_wait, devinfo->mbdata_completed,
 			   BRCMF_PCIE_MBDATA_TIMEOUT);
 	if (!devinfo->mbdata_completed) {
-		brcmf_err("Timeout on response for entering D3 substate\n");
+		brcmf_err(bus, "Timeout on response for entering D3 substate\n");
 		brcmf_bus_change_state(bus, BRCMF_BUS_UP);
+		mutex_unlock(&devinfo->dev_pm_lock);
 		return -EIO;
 	}
 
 	devinfo->state = BRCMFMAC_PCIE_STATE_DOWN;
 
-#ifdef CONFIG_PCI_MSM
-	return msm_pcie_pm_control(MSM_PCIE_SUSPEND,
-				devinfo->pdev->bus->number,
-				devinfo->pdev,
-				NULL,
-				(MSM_PCIE_CONFIG_NO_CFG_RESTORE |
-				 MSM_PCIE_CONFIG_LINKDOWN));
-#endif
+	pci_save_state(pcid);
+	devinfo->pci_state = pci_store_saved_state(pcid);
+	pci_enable_wake(pcid, PCI_D0, 1);
+ 
+	ret = pci_set_power_state(pcid, PCI_D3hot);
+	if (ret)
+		brcmf_err(bus, "Cannot set D3Hot state, error %d\n", ret);
 
+	mutex_unlock(&devinfo->dev_pm_lock);
 	return 0;
 }
 
 
-static int brcmf_pcie_pm_leave_D3(struct device *dev)
+static int brcmf_pcie_pm_leave_D3(struct brcmf_bus *bus)
 {
 	struct brcmf_pciedev_info *devinfo;
-	struct brcmf_bus *bus;
-	struct pci_dev *pdev;
+	struct pci_dev *pcid;
 	int err;
 
 	brcmf_dbg(PCIE, "Enter\n");
 
-	bus = dev_get_drvdata(dev);
 	devinfo = bus->bus_priv.pcie->devinfo;
-	brcmf_dbg(PCIE, "Enter, dev=%p, bus=%p\n", dev, bus);
+	pcid = devinfo->pdev;
+	brcmf_dbg(PCIE, "Enter, dev=%p, bus=%p\n", pcid, bus);
 
-#ifdef CONFIG_PCI_MSM
-	err = msm_pcie_pm_control(MSM_PCIE_RESUME,
-				devinfo->pdev->bus->number,
-				devinfo->pdev,
-				NULL,
-				0);
-	if (err) {
-		brcmf_err("Cannot resume PCI-E Host Controller: %d\n", err);
-		goto cleanup;
+	mutex_lock(&devinfo->dev_pm_lock);
+
+	if (devinfo->state != BRCMFMAC_PCIE_STATE_DOWN) {
+		brcmf_dbg(PCIE, "The card is already alive. Nothing to do!\n");
+		mutex_unlock(&devinfo->dev_pm_lock);
+		return 0;
 	}
 
-	msm_pcie_recover_config(devinfo->pdev);
-#endif
+	pci_load_and_free_saved_state(pcid, &devinfo->pci_state);
+	pci_restore_state(pcid);
+	err = pci_enable_device(pcid);
+	if (err) {
+		brcmf_err(bus, "Cannot enable PCI-E device: %d\n", err);
+	}
+
+	pci_set_master(pcid);
+	err = pci_set_power_state(pcid, PCI_D0);
+	if (err) {
+		brcmf_err(bus, "Cannot set PCI-E to D0: %d\n", err);
+	}
 
 	/* Check if device is still up and running, if so we are ready */
 	if (brcmf_pcie_read_reg32(devinfo, BRCMF_PCIE_PCIE2REG_INTMASK) != 0) {
@@ -2112,28 +2299,78 @@ static int brcmf_pcie_pm_leave_D3(struct device *dev)
 		brcmf_pcie_intr_enable(devinfo);
 		brcmf_pcie_hostready(devinfo);
 		brcmf_pcie_pme_active(devinfo, false);
+		brcmf_pcie_oob_enable(devinfo, false);
+		mutex_unlock(&devinfo->dev_pm_lock);
 		return 0;
 	}
 
 cleanup:
+	mutex_unlock(&devinfo->dev_pm_lock);
 	brcmf_chip_detach(devinfo->ci);
 	devinfo->ci = NULL;
-	pdev = devinfo->pdev;
-	brcmf_pcie_remove(pdev);
+	brcmf_pcie_remove(pcid);
 
-	err = brcmf_pcie_probe(pdev, NULL);
+	err = brcmf_pcie_probe(pcid, NULL);
 	if (err)
-		brcmf_err("probe after resume failed, err=%d\n", err);
+		brcmf_err(bus, "probe after resume failed, err=%d\n", err);
 
 	return err;
 }
 
+static int brcmf_system_prepare(struct device *dev)
+{
+	struct brcmf_bus *bus = dev_get_drvdata(dev);
+
+	dev_info(dev, "Preparing for system suspend");
+
+	/* Wakeup to give a chance to MAC80211 to set WoWLAN */
+	pm_runtime_resume(bus->dev);
+	pm_runtime_forbid(bus->dev);
+
+	return 0;
+}
+
+static void brcmf_system_complete(struct device *dev)
+{
+	struct brcmf_bus *bus = dev_get_drvdata(dev);
+
+	/* Nothing to do.... */
+	dev_info(dev, "System suspend complete");
+	pm_runtime_allow(bus->dev);
+	return;
+}
+
+static int brcmf_pcie_suspend(struct device *dev)
+{
+	struct brcmf_bus *bus = dev_get_drvdata(dev);
+
+	/* Do not do anything, we cannot detect WoWLAN here. */
+	return brcmf_pcie_pm_enter_D3(bus);
+}
+
+static int brcmf_pcie_runtime_suspend(struct device *dev)
+{
+	/* Can eventually detect WoWLAN here */
+	return brcmf_pcie_suspend(dev);
+}
+
+static int brcmf_pcie_resume(struct device *dev)
+{
+	struct brcmf_bus *bus = dev_get_drvdata(dev);
+
+	return brcmf_pcie_pm_leave_D3(bus);
+}
+
 
 static const struct dev_pm_ops brcmf_pciedrvr_pm = {
-	.suspend = brcmf_pcie_pm_enter_D3,
-	.resume = brcmf_pcie_pm_leave_D3,
-	.freeze = brcmf_pcie_pm_enter_D3,
-	.restore = brcmf_pcie_pm_leave_D3,
+	.suspend = brcmf_pcie_suspend,
+	.resume = brcmf_pcie_resume,
+	.runtime_suspend = brcmf_pcie_runtime_suspend,
+	.runtime_resume = brcmf_pcie_resume,
+	.prepare = brcmf_system_prepare,
+	.complete = brcmf_system_complete,
+	.freeze = brcmf_pcie_suspend,
+	.restore = brcmf_pcie_resume,
 };
 
 
@@ -2195,7 +2432,8 @@ void brcmf_pcie_register(void)
 	brcmf_dbg(PCIE, "Enter\n");
 	err = pci_register_driver(&brcmf_pciedrvr);
 	if (err)
-		brcmf_err("PCIE driver registration failed, err=%d\n", err);
+		brcmf_err(NULL, "PCIE driver registration failed, err=%d\n",
+			  err);
 }
 
 

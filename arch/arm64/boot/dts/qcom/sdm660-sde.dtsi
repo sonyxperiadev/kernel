@@ -263,12 +263,12 @@
 		};
 
 		smmu_sde_unsec: qcom,smmu_sde_unsec_cb {
-			compatible = "qcom,smmu_sde_unsec";
+			compatible = "qcom,smmu_sde_unsec_legacy";
 			iommus = <&mmss_bimc_smmu 0>;
 		};
 
 		smmu_sde_sec: qcom,smmu_sde_sec_cb {
-			compatible = "qcom,smmu_sde_sec";
+			compatible = "qcom,smmu_sde_sec_legacy";
 			iommus = <&mmss_bimc_smmu 1>;
 		};
 

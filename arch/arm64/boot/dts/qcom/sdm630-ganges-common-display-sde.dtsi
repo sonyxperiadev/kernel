@@ -447,3 +447,11 @@
 &mdss_dsi0 {
 	qcom,cont-splash-enabled;
 };
+
+&mdss_mdp {
+	connectors = <&sde_wb>;
+};
+
+&sde_dp {
+	status = "disabled";
+};

@@ -244,17 +244,17 @@
 		};
 
 		smmu_sde_unsec: qcom,smmu_sde_unsec_cb {
-			compatible = "qcom,smmu_sde_unsec";
+			compatible = "qcom,smmu_sde_unsec_legacy";
 			iommus = <&mdp_smmu 0>;
 		};
 
 		smmu_sde_sec: qcom,smmu_sde_sec_cb {
-			compatible = "qcom,smmu_sde_sec";
+			compatible = "qcom,smmu_sde_sec_legacy";
 			iommus = <&mdp_smmu 1>;
 		};
 
 		smmu_sde_nrt_unsec: qcom,smmu_rot_unsec_cb {
-			compatible = "qcom,smmu_sde_nrt_unsec";
+			compatible = "qcom,smmu_sde_nrt_unsec_legacy";
 			iommus = <&rot_smmu 0>;
 			gdsc-mdss-supply = <&gdsc_mmagic_mdss>;
 			clocks = <&clock_mmss SMMU_ROT_AHB_CLK>,
@@ -265,7 +265,7 @@
 		};
 
 		smmu_sde_nrt_sec: qcom,smmu_rot_sec_cb {
-			compatible = "qcom,smmu_sde_nrt_sec";
+			compatible = "qcom,smmu_sde_nrt_sec_legacy";
 			iommus = <&rot_smmu 1>;
 			gdsc-mdss-supply = <&gdsc_mmagic_mdss>;
 			clocks = <&clock_mmss SMMU_ROT_AHB_CLK>,
@@ -655,7 +655,7 @@
 		qcom,mdss-default-ot-wr-limit = <16>;
 
 		smmu_rot_unsecure: qcom,smmu_rot_unsec_cb {
-			compatible = "qcom,smmu_sde_rot_unsec";
+			compatible = "qcom,smmu_sde_rot_unsec_legacy";
 			iommus = <&rot_smmu 0>;
 			gdsc-mdss-supply = <&gdsc_mmagic_mdss>;
 			clocks = <&clock_mmss SMMU_ROT_AHB_CLK>,
@@ -666,7 +666,7 @@
 		};
 
 		smmu_rot_secure: qcom,smmu_rot_sec_cb {
-			compatible = "qcom,smmu_sde_rot_sec";
+			compatible = "qcom,smmu_sde_rot_sec_legacy";
 			iommus = <&rot_smmu 1>;
 			gdsc-mdss-supply = <&gdsc_mmagic_mdss>;
 			clocks = <&clock_mmss SMMU_ROT_AHB_CLK>,

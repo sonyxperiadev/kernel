@@ -78,7 +78,7 @@ config BACKPORT_BRCMFMAC_PCIE
 config BACKPORT_BRCM_TRACING
 	bool "Broadcom device tracing"
 	depends on !BRCM_TRACING
-	depends on BACKPORT_BRCMSMAC || BRCMFMAC
+	depends on BACKPORT_BRCMSMAC || BACKPORT_BRCMFMAC
 	---help---
 	  If you say Y here, the Broadcom wireless drivers will register
 	  with ftrace to dump event information into the trace ringbuffer.
@@ -90,7 +90,7 @@ config BACKPORT_BRCM_TRACING
 config BACKPORT_BRCMDBG
 	bool "Broadcom driver debug functions"
 	depends on !BRCMDBG
-	depends on BACKPORT_BRCMSMAC || BRCMFMAC
-	depends on WANT_DEV_COREDUMP
+	depends on BACKPORT_BRCMSMAC || BACKPORT_BRCMFMAC
+#	depends on WANT_DEV_COREDUMP
 	---help---
 	  Selecting this enables additional code for debug purposes.

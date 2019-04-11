@@ -383,15 +383,13 @@
 				 <9000 1700>; /* 9V @ 1.7A */
 };
 
-&spmi_bus {
-	qcom,pmi8998@3 {
-		labibb: qpnp-labibb-regulator {
-			ibb_regulator: qcom,ibb@dc00 {
-				qcom,qpnp-ibb-slew-rate = <12000>;
-			};
-			lab_regulator: qcom,lab@de00 {
-				qcom,qpnp-lab-slew-rate = <5000>;
-			};
-		};
-	};
+&lab_regulator {
+	regulator-max-microvolt = <5600000>;
+	qcom,qpnp-lab-slew-rate = <5000>;
 };
+
+&ibb_regulator {
+	regulator-max-microvolt = <5600000>;
+	qcom,qpnp-ibb-slew-rate = <12000>;
+};
+

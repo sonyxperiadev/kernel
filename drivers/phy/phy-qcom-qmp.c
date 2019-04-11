@@ -20,6 +20,9 @@
 #include <linux/reset.h>
 #include <linux/slab.h>
 
+#include <linux/msm-bus.h>
+#include <linux/msm-bus-board.h>
+
 #include <dt-bindings/phy/phy.h>
 
 #include "phy-qcom-qmp.h"
@@ -537,6 +540,10 @@ struct qmp_phy_cfg {
 
 	/* true, if PHY has a separate DP_COM control block */
 	bool has_phy_dp_com_ctrl;
+
+	struct msm_bus_scale_pdata   *bus_scale_table;
+	uint32_t			   bus_client;
+
 	/* Register offset of secondary tx/rx lanes for USB DP combo PHY */
 	unsigned int tx_b_lane_offset;
 	unsigned int rx_b_lane_offset;
@@ -594,7 +601,7 @@ struct qcom_qmp {
 	struct reset_control **resets;
 	struct regulator_bulk_data *vregs;
 
-	const struct qmp_phy_cfg *cfg;
+	struct qmp_phy_cfg *cfg;
 	struct qmp_phy **phys;
 
 	struct mutex phy_mutex;
@@ -629,7 +636,7 @@ static inline void qphy_clrbits(void __iomem *base, u32 offset, u32 val)
 
 /* list of clocks required by phy */
 static const char * const msm8996_phy_clk_l[] = {
-	"aux", "cfg_ahb", "ref",
+	"ref_src", "aux", "cfg_ahb", "ref",
 };
 
 static const char * const qmp_v3_phy_clk_l[] = {
@@ -647,7 +654,7 @@ static const char * const msm8996_usb3phy_reset_l[] = {
 
 /* list of regulators */
 static const char * const msm8996_phy_vreg_l[] = {
-	"vdda-phy", "vdda-pll",
+	"gdsc-aggre", "gdsc-pcie", "vdda-phy", "vdda-pll", "vreg-cx"
 };
 
 static const struct qmp_phy_cfg msm8996_pciephy_cfg = {
@@ -793,19 +800,6 @@ static void qcom_qmp_phy_configure(void __iomem *base,
 	}
 }
 
-static int qcom_qmp_phy_poweron(struct phy *phy)
-{
-	struct qmp_phy *qphy = phy_get_drvdata(phy);
-	struct qcom_qmp *qmp = qphy->qmp;
-	int ret;
-
-	ret = clk_prepare_enable(qphy->pipe_clk);
-	if (ret)
-		dev_err(qmp->dev, "pipe_clk enable failed, err=%d\n", ret);
-
-	return ret;
-}
-
 static int qcom_qmp_phy_com_init(struct qcom_qmp *qmp)
 {
 	const struct qmp_phy_cfg *cfg = qmp->cfg;
@@ -824,6 +818,19 @@ static int qcom_qmp_phy_com_init(struct qcom_qmp *qmp)
 	if (ret) {
 		dev_err(qmp->dev, "failed to enable regulators, err=%d\n", ret);
 		goto err_reg_enable;
+	}
+
+	if (cfg->bus_client) {
+		ret = msm_bus_scale_client_update_request(cfg->bus_client, 1);
+		if (ret) {
+			dev_err(qmp->dev,
+				"PCIe: fail to set bus bandwidth for RC:%d.\n",
+				ret);
+			return ret;
+		} else {
+			dev_err(qmp->dev,
+				"PCIe: set bus bandwidth for RC.\n");
+		}
 	}
 
 	for (i = 0; i < cfg->num_resets; i++) {
@@ -853,10 +860,6 @@ static int qcom_qmp_phy_com_init(struct qcom_qmp *qmp)
 		}
 	}
 
-	if (cfg->has_phy_com_ctrl)
-		qphy_setbits(serdes, cfg->regs[QPHY_COM_POWER_DOWN_CONTROL],
-			     SW_PWRDN);
-
 	if (cfg->has_phy_dp_com_ctrl) {
 		qphy_setbits(dp_com, QPHY_V3_DP_COM_POWER_DOWN_CTRL,
 			     SW_PWRDN);
@@ -873,6 +876,10 @@ static int qcom_qmp_phy_com_init(struct qcom_qmp *qmp)
 			     SW_DPPHY_RESET_MUX | SW_DPPHY_RESET |
 			     SW_USB3PHY_RESET_MUX | SW_USB3PHY_RESET);
 	}
+
+	if (cfg->has_phy_com_ctrl)
+		qphy_setbits(serdes, cfg->regs[QPHY_COM_POWER_DOWN_CONTROL],
+			     SW_PWRDN);
 
 	/* Serdes configuration */
 	qcom_qmp_phy_configure(serdes, cfg->regs, cfg->serdes_tbl,
@@ -980,6 +987,12 @@ static int qcom_qmp_phy_init(struct phy *phy)
 		}
 	}
 
+	ret = clk_prepare_enable(qphy->pipe_clk);
+	if (ret) {
+		dev_err(qmp->dev, "pipe_clk enable failed err=%d\n", ret);
+		goto err_clk_enable;
+	}
+
 	/* Tx, Rx, and PCS configurations */
 	qcom_qmp_phy_configure(tx, cfg->regs, cfg->tx_tbl, cfg->tx_tbl_num);
 	/* Configuration for other LANE for USB-DP combo PHY */
@@ -1025,6 +1038,8 @@ static int qcom_qmp_phy_init(struct phy *phy)
 	return ret;
 
 err_pcs_ready:
+	clk_disable_unprepare(qphy->pipe_clk);
+err_clk_enable:
 	if (cfg->has_lane_rst)
 		reset_control_assert(qphy->lane_rst);
 err_lane_rst:
@@ -1310,7 +1325,6 @@ static int phy_pipe_clk_register(struct qcom_qmp *qmp, struct device_node *np)
 static const struct phy_ops qcom_qmp_phy_gen_ops = {
 	.init		= qcom_qmp_phy_init,
 	.exit		= qcom_qmp_phy_exit,
-	.power_on	= qcom_qmp_phy_poweron,
 	.set_mode	= qcom_qmp_phy_set_mode,
 	.owner		= THIS_MODULE,
 };
@@ -1460,6 +1474,30 @@ static int qcom_qmp_phy_probe(struct platform_device *pdev)
 			return PTR_ERR(base);
 
 		qmp->dp_com = base;
+	}
+
+
+
+	if (!msm_bus_scale_driver_ready()) {
+		dev_err(dev, "Bus client not ready. Deferring probe\n");
+		return -EPROBE_DEFER;
+	}
+
+	qmp->cfg->bus_scale_table = msm_bus_cl_get_pdata(pdev);
+	if (!qmp->cfg->bus_scale_table) {
+		dev_err(dev, "PCIe: No bus scale table for RC (%s)\n",
+			pdev->name);
+		qmp->cfg->bus_client = 0;
+	} else {
+		qmp->cfg->bus_client =
+			msm_bus_scale_register_client(qmp->cfg->bus_scale_table);
+		if (!qmp->cfg->bus_client) {
+			dev_err(dev,
+				"PCIe: Failed to register bus client for RC (%s)\n",
+				pdev->name);
+			msm_bus_cl_clear_pdata(qmp->cfg->bus_scale_table);
+			return -ENODEV;
+		}
 	}
 
 	mutex_init(&qmp->phy_mutex);

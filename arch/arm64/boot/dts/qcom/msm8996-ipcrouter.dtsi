@@ -48,6 +48,7 @@
 
 	qcom,ipc_router_external_modem_xprt2 {
 		compatible = "qcom,ipc_router_mhi_xprt";
+		status = "disabled";
 		qcom,ch-name = "IPCRTR";
 		qcom,out-chan-id = <34>;
 		qcom,in-chan-id = <35>;

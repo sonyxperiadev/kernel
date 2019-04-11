@@ -19,6 +19,7 @@
 		compatible = "qcom,smmu-v2";
 		reg = <0x1680000 0x10000>;
 		#iommu-cells = <0>;
+		qcom,use-3-lvl-tables;
 		qcom,register-save;
 		qcom,skip-init;
 		#global-interrupts = <0>;
@@ -46,6 +47,7 @@
 		compatible = "qcom,smmu-v2";
 		reg = <0x16c0000 0x40000>;
 		#iommu-cells = <1>;
+		qcom,use-3-lvl-tables;
 		qcom,register-save;
 		qcom,skip-init;
 		#global-interrupts = <0>;
@@ -78,6 +80,7 @@
 		reg = <0x5100000 0x40000>;
 		#iommu-cells = <1>;
 		qcom,tz-device-id = "LPASS";
+		qcom,use-3-lvl-tables;
 		qcom,register-save;
 		qcom,skip-init;
 		#global-interrupts = <0>;
@@ -94,6 +97,7 @@
 			   <GIC_SPI 402 IRQ_TYPE_LEVEL_HIGH>,
 			   <GIC_SPI 403 IRQ_TYPE_LEVEL_HIGH>,
 			   <GIC_SPI 137 IRQ_TYPE_LEVEL_HIGH>;
+		qcom,regulator-names = "vdd";
 		vdd-supply = <&gdsc_hlos1_vote_lpass_adsp>;
 		clocks = <&clock_gcc HLOS1_VOTE_LPASS_ADSP_SMMU_CLK>;
 		clock-names = "lpass_q6_smmu_clk";
@@ -105,6 +109,7 @@
 		compatible = "qcom,smmu-v2";
 		reg = <0xcd00000 0x40000>;
 		#iommu-cells = <1>;
+		qcom,use-3-lvl-tables;
 		qcom,register-save;
 		qcom,no-smr-check;
 		qcom,skip-init;
@@ -129,6 +134,7 @@
 			   <GIC_SPI 261 IRQ_TYPE_LEVEL_HIGH>,
 			   <GIC_SPI 262 IRQ_TYPE_LEVEL_HIGH>,
 			   <GIC_SPI 272 IRQ_TYPE_LEVEL_HIGH>;
+		qcom,regulator-names = "vdd";
 		vdd-supply = <&gdsc_bimc_smmu>;
 		clocks = <&clock_mmss MMSS_MNOC_AHB_CLK>,
 			 <&clock_rpmcc MMSSNOC_AXI_CLK>,
@@ -156,6 +162,7 @@
 		#iommu-cells = <1>;
 		qcom-tz-device-id = "GPU";
 		qcom,dynamic;
+		qcom,use-3-lvl-tables;
 		qcom,register-save;
 		qcom,skip-init;
 		#global-interrupts = <0>;
@@ -163,6 +170,7 @@
 			   <GIC_SPI 330 IRQ_TYPE_LEVEL_HIGH>,
 			   <GIC_SPI 331 IRQ_TYPE_EDGE_RISING>;
 		qcom,deferred-regulator-disable-delay = <80>;
+		qcom,regulator-names = "vdd";
 		vdd-supply = <&gdsc_gpu_cx>;
 		clocks = <&clock_gcc GCC_GPU_CFG_AHB_CLK>,
 			<&clock_gcc GCC_BIMC_GFX_CLK>,

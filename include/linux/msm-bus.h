@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -239,6 +239,7 @@ static inline int msm_bus_noc_priority_wa(bool enable)
 struct msm_bus_scale_pdata *msm_bus_pdata_from_node(
 		struct platform_device *pdev, struct device_node *of_node);
 struct msm_bus_scale_pdata *msm_bus_cl_get_pdata(struct platform_device *pdev);
+struct msm_bus_scale_pdata *msm_bus_cl_get_pdata_from_dev(struct device *dev);
 void msm_bus_cl_clear_pdata(struct msm_bus_scale_pdata *pdata);
 #else
 static inline struct msm_bus_scale_pdata

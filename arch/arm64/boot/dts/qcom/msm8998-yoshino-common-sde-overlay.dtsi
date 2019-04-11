@@ -10,6 +10,13 @@
  * GNU General Public License for more details.
  */
 
+/*
+ * Do not remove FBDEV MDSS nodes. The Yoshino bootloader needs
+ * them to enable continuous splash.
+ *
+ * Removing them is possible, along with losing cont-splash, but
+ * this will initialize the panel only when we enter the OS.
+ */
 //#include "msm8998-sde-overlay.dtsi"
 
 / {

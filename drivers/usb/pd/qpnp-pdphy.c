@@ -106,6 +106,8 @@ struct usb_pdphy {
 	int msg_tx_failed_irq;
 	int msg_tx_discarded_irq;
 	int msg_rx_discarded_irq;
+	bool sig_rx_wake_enabled;
+	bool msg_rx_wake_enabled;
 
 	void (*signal_cb)(struct usbpd *pd, enum pd_sig_type sig);
 	void (*msg_rx_cb)(struct usbpd *pd, enum pd_sop_type sop,
@@ -256,11 +258,13 @@ void pdphy_enable_irq(struct usb_pdphy *pdphy, bool enable)
 	if (enable) {
 		enable_irq(pdphy->sig_tx_irq);
 		enable_irq(pdphy->sig_rx_irq);
-		enable_irq_wake(pdphy->sig_rx_irq);
+		pdphy->sig_rx_wake_enabled =
+			!enable_irq_wake(pdphy->sig_rx_irq);
 		enable_irq(pdphy->msg_tx_irq);
 		if (!pdphy->in_test_data_mode) {
 			enable_irq(pdphy->msg_rx_irq);
-			enable_irq_wake(pdphy->msg_rx_irq);
+			pdphy->msg_rx_wake_enabled =
+				!enable_irq_wake(pdphy->msg_rx_irq);
 		}
 		enable_irq(pdphy->msg_tx_failed_irq);
 		enable_irq(pdphy->msg_tx_discarded_irq);
@@ -270,11 +274,16 @@ void pdphy_enable_irq(struct usb_pdphy *pdphy, bool enable)
 
 	disable_irq(pdphy->sig_tx_irq);
 	disable_irq(pdphy->sig_rx_irq);
-	disable_irq_wake(pdphy->sig_rx_irq);
+	if (pdphy->sig_rx_wake_enabled) {
+		disable_irq_wake(pdphy->sig_rx_irq);
+		pdphy->sig_rx_wake_enabled = false;
+	}
 	disable_irq(pdphy->msg_tx_irq);
-	if (!pdphy->in_test_data_mode) {
+	if (!pdphy->in_test_data_mode)
 		disable_irq(pdphy->msg_rx_irq);
+	if (pdphy->msg_rx_wake_enabled) {
 		disable_irq_wake(pdphy->msg_rx_irq);
+		pdphy->msg_rx_wake_enabled = false;
 	}
 	disable_irq(pdphy->msg_tx_failed_irq);
 	disable_irq(pdphy->msg_tx_discarded_irq);
@@ -444,12 +453,12 @@ int pd_phy_signal(enum pd_sig_type sig)
 	if (ret)
 		return ret;
 
-	ret = wait_event_interruptible_timeout(pdphy->tx_waitq,
+	ret = wait_event_interruptible_hrtimeout(pdphy->tx_waitq,
 		pdphy->tx_status != -EINPROGRESS,
-		msecs_to_jiffies(HARD_RESET_COMPLETE_TIME));
-	if (ret <= 0) {
+		ms_to_ktime(HARD_RESET_COMPLETE_TIME));
+	if (ret) {
 		dev_err(pdphy->dev, "%s: failed ret %d", __func__, ret);
-		return ret ? ret : -ETIMEDOUT;
+		return ret;
 	}
 
 	ret = pdphy_reg_write(pdphy, USB_PDPHY_TX_CONTROL, 0);
@@ -533,12 +542,12 @@ int pd_phy_write(u16 hdr, const u8 *data, size_t data_len, enum pd_sop_type sop)
 	if (ret)
 		return ret;
 
-	ret = wait_event_interruptible_timeout(pdphy->tx_waitq,
+	ret = wait_event_interruptible_hrtimeout(pdphy->tx_waitq,
 		pdphy->tx_status != -EINPROGRESS,
-		msecs_to_jiffies(RECEIVER_RESPONSE_TIME));
-	if (ret <= 0) {
+		ms_to_ktime(RECEIVER_RESPONSE_TIME));
+	if (ret) {
 		dev_err(pdphy->dev, "%s: failed ret %d", __func__, ret);
-		return ret ? ret : -ETIMEDOUT;
+		return ret;
 	}
 
 	if (hdr && !pdphy->tx_status)
@@ -718,7 +727,7 @@ static irqreturn_t pdphy_msg_rx_irq(int irq, void *data)
 	/* ack to change ownership of rx buffer back to PDPHY RX HW */
 	pdphy_reg_write(pdphy, USB_PDPHY_RX_ACKNOWLEDGE, 0);
 
-	if (((buf[0] & 0xf) == PD_MSG_BIST) && size >= 5) { /* BIST */
+	if (((buf[0] & 0xf) == PD_MSG_BIST) && !(buf[1] & 0x80) && size >= 5) {
 		u8 mode = buf[5] >> 4; /* [31:28] of 1st data object */
 
 		pd_phy_bist_mode(mode);

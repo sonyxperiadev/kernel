@@ -364,8 +364,8 @@ static void *__smem_get_entry_secure(unsigned int id,
 					unsigned int *size,
 					unsigned int to_proc,
 					unsigned int flags,
-					bool skip_init_check,
-					bool use_rspinlock)
+					bool skip_init_check, /* false */
+					bool use_rspinlock)   /* true */
 {
 	struct smem_partition_header *hdr;
 	unsigned long lflags = 0;
@@ -820,6 +820,12 @@ void *smem_get_entry(unsigned int id, unsigned int *size, unsigned int to_proc,
 {
 	SMEM_DBG("%s(%u, %u, %u)\n", __func__, id, to_proc, flags);
 
+	if (!is_probe_done()) {
+		pr_err("smem PROBE NOT DONE\n");
+
+		return ERR_PTR(-EPROBE_DEFER);
+	}
+
 	/*
 	 * Handle the circular dependecy between SMEM and software implemented
 	 * remote spinlocks.  SMEM must initialize the remote spinlocks in
@@ -1011,7 +1017,14 @@ bool smem_initialized_check(void)
 	 */
 	ver = smem->version[MODEM_SBL_VERSION_INDEX];
 	if (ver == SMEM_COMM_PART_VERSION << 16) {
-		use_comm_partition = true;
+		if (of_machine_is_compatible("qcom,msm8956") ||
+		    of_machine_is_compatible("qcom,msm8976") ||
+		    of_machine_is_compatible("qcom,apq8056") ||
+		    of_machine_is_compatible("qcom,apq8076") ||
+		    of_machine_is_compatible("qcom,msm8996"))
+			use_comm_partition = false;
+		else
+			use_comm_partition = true;
 	} else if (ver != SMEM_VERSION << 16) {
 		pr_err("%s: SBL version not correct 0x%x\n",
 				__func__, smem->version[7]);
