@@ -29,7 +29,8 @@
 			 <&clock_mmss MMSS_MNOC_AHB_CLK>,
 			 <&clock_mmss MMSS_BIMC_SMMU_AHB_CLK>,
 			 <&clock_mmss MMSS_BIMC_SMMU_AXI_CLK>,
-			 <&clock_mmss MMSS_MDSS_VSYNC_CLK>;
+			 <&clock_mmss MMSS_MDSS_VSYNC_CLK>,
+			 <&clock_mmss MMSS_MDSS_MDP_LUT_CLK>;
 		clock-names = "mnoc_clk",
 			"iface_clk",
 			"bus_clk",
@@ -39,10 +40,11 @@
 			"mmss_noc_ahb_clk",
 			"mmss_smmu_ahb_clk",
 			"mmss_smmu_axi_clk",
-			"vsync_clk";
+			"vsync_clk",
+			"lut_clk";
 
-		clock-rate = <0 0 0 412500000 412500000 0 0 0 0 19200000>;
-		clock-max-rate = <0 0 0 550000000 550000000 0 0 0 0 19200000>;
+		clock-rate = <0 0 0 412500000 412500000 0 0 0 0 19200000 0>;
+		clock-max-rate = <0 0 0 550000000 550000000 0 0 0 0 19200000 0>;
 
 		/* interrupt config */
 		interrupt-parent = <&intc>;
