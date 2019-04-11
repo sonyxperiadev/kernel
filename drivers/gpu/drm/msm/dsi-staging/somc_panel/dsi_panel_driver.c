@@ -1199,7 +1199,7 @@ void dsi_panel_driver_en_dcdc(struct dsi_panel *panel, int en)
 		/* SoMC Yoshino Maple: If powering on, 2x sleep */
 		if (en)
 			usleep_range(6000, 7000);
-		usleep_range(5000, 5000 + 100);
+		usleep_range(7000, 7500);
 	}
 }
 
