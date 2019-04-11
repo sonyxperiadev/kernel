@@ -21,7 +21,8 @@
 /dts-v1/;
 
 #include "msm8998-v2.dtsi"
-#include "msm8998-sde-overlay.dtsi"
+#include "msm8998-sde.dtsi"
+#include "msm8998-sde-display.dtsi"
 #include "msm8998-mtp.dtsi"
 #include "msm8998-yoshino-common.dtsi"
 #include "msm8998-yoshino-common-sde-overlay.dtsi"
@@ -34,6 +35,15 @@
 	qcom,board-id = <8 0>;
 };
 
+/* Disable MDSS rotator node to use SDE rotator. */
+&mdss_rotator {
+	status = "disabled";
+};
+
+&sde_rotator {
+	status = "ok";
+};
+
 &dsi_panel_pwr_supply {
 	qcom,panel-supply-entry@0 {
 		qcom,supply-min-voltage = <1850000>;
@@ -42,7 +52,7 @@
 };
 
 &dsi_panel_cmd_display {
-	qcom,dsi-ctrl = <&mdss_dsi0 &mdss_dsi1>;
+	qcom,dsi-ctrl = <&sde_dsi0 &sde_dsi1>;
 	qcom,dsi-phy = <&mdss_dsi_phy0 &mdss_dsi_phy1>;
-	qcom,dsi-panel = <&dsi_dual0_default_panel>;
+	qcom,dsi-panel = <&sde_dsi_dual0_6_panel>;
 };
