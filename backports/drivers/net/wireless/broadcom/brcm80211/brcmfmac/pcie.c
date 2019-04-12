@@ -2133,7 +2133,7 @@ brcmf_pcie_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 
 	pm_runtime_allow(&pdev->dev);
 
-	brcmf_info(NULL, "Initialized with%s WoWLAN support %s",
+	brcmf_info("Initialized with%s WoWLAN support %s",
 		   bus->wowl_supported ? "" : "out",
 		   devinfo->oob_irq_supported ? "and with Out-Of-Band IRQ" :
 						"and without Out-Of-Band IRQ");
