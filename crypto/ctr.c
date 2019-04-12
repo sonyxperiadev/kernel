@@ -465,7 +465,7 @@ static void __exit crypto_ctr_module_exit(void)
 	crypto_unregister_template(&crypto_ctr_tmpl);
 }
 
-module_init(crypto_ctr_module_init);
+subsys_initcall(crypto_ctr_module_init);
 module_exit(crypto_ctr_module_exit);
 
 MODULE_LICENSE("GPL");

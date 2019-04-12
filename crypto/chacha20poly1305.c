@@ -736,7 +736,7 @@ static void __exit chacha20poly1305_module_exit(void)
 	crypto_unregister_template(&rfc7539_tmpl);
 }
 
-module_init(chacha20poly1305_module_init);
+subsys_initcall(chacha20poly1305_module_init);
 module_exit(chacha20poly1305_module_exit);
 
 MODULE_LICENSE("GPL");

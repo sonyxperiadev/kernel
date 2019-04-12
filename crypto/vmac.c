@@ -666,7 +666,7 @@ static void __exit vmac_module_exit(void)
 	crypto_unregister_template(&vmac_tmpl);
 }
 
-module_init(vmac_module_init);
+subsys_initcall(vmac_module_init);
 module_exit(vmac_module_exit);
 
 MODULE_LICENSE("GPL");
