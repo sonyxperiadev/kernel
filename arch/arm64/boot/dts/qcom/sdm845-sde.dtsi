@@ -250,6 +250,12 @@
 			};
 		};
 
+		smmu_sde_unsec: qcom,smmu_sde_unsec_cb {
+			compatible = "qcom,smmu_sde_unsec";
+			iommus = <&apps_smmu 0x880 0x8>,
+				<&apps_smmu 0xc80 0x8>;
+		};
+
 		smmu_sde_sec: qcom,smmu_sde_sec_cb {
 			compatible = "qcom,smmu_sde_sec";
 			iommus = <&apps_smmu 0x881 0x8>,
