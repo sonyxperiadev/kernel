@@ -119,14 +119,12 @@ static const char * const gcc_parent_names_2[] = {
 };
 
 static const struct parent_map gcc_parent_map_3[] = {
-	{ P_XO, 0},
 	{ P_GPLL0_OUT_MAIN, 1 },
 	{ P_GPLL2_AUX, 3 },
 	{ P_GPLL6_AUX, 2 },
 };
 
 static const char * const gcc_parent_names_3[] = {
-	"xo",
 	"gpll0_out_main",
 	"gpll2_out_main",
 	"gpll6_out_main",
@@ -1807,12 +1805,12 @@ static struct clk_rcg2 usb_hs_system_clk_src = {
 };
 
 static const struct freq_tbl ftbl_vcodec0_clk_src[] = {
-	F(  72727200,P_GPLL0_OUT_MAIN,   11,    0,     0),
+	F(  72727272,P_GPLL0_OUT_MAIN,   11,    0,     0),
 	F(  80000000,P_GPLL0_OUT_MAIN,   10,    0,     0),
 	F( 100000000,P_GPLL0_OUT_MAIN,    8,    0,     0),
 	F( 133333333,P_GPLL0_OUT_MAIN,    6,    0,     0),
-	F( 228570000,P_GPLL0_OUT_MAIN,  3.5,    0,     0),
-	F( 310667000,     P_GPLL2_AUX,    3,    0,     0),
+	F( 228571428,P_GPLL0_OUT_MAIN,  3.5,    0,     0),
+	F( 310666666,     P_GPLL2_AUX,    3,    0,     0),
 	F( 360000000,     P_GPLL6_AUX,    3,    0,     0),
 	F( 400000000,P_GPLL0_OUT_MAIN,    2,    0,     0),
 	F( 466000000,     P_GPLL2_AUX,    2,    0,     0),
@@ -1830,7 +1828,7 @@ static struct clk_rcg2 vcodec0_clk_src = {
 		.parent_names = gcc_parent_names_3,
 		.num_parents = ARRAY_SIZE(gcc_parent_names_3),
 		.ops = &clk_rcg2_ops,
-		VDD_DIG_FMAX_MAP5(LOWER, 228570000, LOW, 310667000,
+		VDD_DIG_FMAX_MAP5(LOWER, 228571428, LOW, 310666666,
 		NOMINAL, 360000000, NOM_PLUS, 400000000,
 		HIGH, 466000000),
 	},
