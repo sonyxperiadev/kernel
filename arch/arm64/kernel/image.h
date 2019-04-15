@@ -86,6 +86,16 @@ __efistub_stext_offset = stext - _text;
 #define KALLSYMS_HIDE(sym)	ABSOLUTE(sym)
 
 /*
+ * Prevent the symbol aliases below from being emitted into the kallsyms
+ * table, by forcing them to be absolute symbols (which are conveniently
+ * ignored by scripts/kallsyms) rather than section relative symbols.
+ * The distinction is only relevant for partial linking, and only for symbols
+ * that are defined within a section declaration (which is not the case for
+ * the definitions below) so the resulting values will be identical.
+ */
+#define KALLSYMS_HIDE(sym)	ABSOLUTE(sym)
+
+/*
  * The EFI stub has its own symbol namespace prefixed by __efistub_, to
  * isolate it from the kernel proper. The following symbols are legally
  * accessed by the stub, so provide some aliases to make them accessible.
