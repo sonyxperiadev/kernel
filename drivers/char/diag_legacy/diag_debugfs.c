@@ -12,7 +12,6 @@
 
 #ifdef CONFIG_DEBUG_FS
 
-#include <linux/device.h>
 #include <linux/slab.h>
 #include <linux/debugfs.h>
 #include <linux/atomic.h>
