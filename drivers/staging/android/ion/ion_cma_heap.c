@@ -107,7 +107,7 @@ static int ion_cma_allocate(struct ion_heap *heap, struct ion_buffer *buffer,
 
 	info->table = kmalloc(sizeof(struct sg_table), GFP_KERNEL);
 	if (!info->table)
-		goto err;
+		goto free_mem;
 
 	info->is_cached = ION_IS_CACHED(flags);
 
@@ -123,6 +123,12 @@ static int ion_cma_allocate(struct ion_heap *heap, struct ion_buffer *buffer,
 	buffer->priv_virt = info;
 	return 0;
 
+free_mem:
+	if (!ION_IS_CACHED(flags))
+		dma_free_writecombine(dev, len, info->cpu_addr, info->handle);
+	else
+		dma_free_attrs(dev, len, info->cpu_addr, info->handle,
+			       DMA_ATTR_FORCE_COHERENT);
 err:
 	kfree(info);
 	return ION_CMA_ALLOCATE_FAILED;
