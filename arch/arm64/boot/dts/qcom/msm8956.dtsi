@@ -1306,10 +1306,10 @@
 	};
 
 	rpm_bus: qcom,rpm-smd {
-		compatible = "qcom,rpm-smd";
-		rpm-channel-name = "rpm_requests";
-		rpm-channel-type = <15>; /* SMD_APPS_RPM */
-	};
+		 compatible = "qcom,rpm-glink";
+		 qcom,glink-edge = "rpm";
+		 rpm-channel-name = "rpm_requests";
+	 };
 
 	qcom,rmtfs_sharedmem@0 {
 		compatible = "qcom,sharedmem-uio";
@@ -1963,6 +1963,38 @@
 		};
 	};
 
+	glink_mpss: qcom,glink-ssr-modem {
+		compatible = "qcom,glink_ssr";
+		label = "modem";
+		qcom,edge = "mpss";
+		qcom,notify-edges = <&glink_lpass>, <&glink_dsps>, <&glink_rpm>;
+		qcom,xprt = "smem";
+	};
+
+	glink_lpass: qcom,glink-ssr-adsp {
+		compatible = "qcom,glink_ssr";
+		label = "adsp";
+		qcom,edge = "lpass";
+		qcom,notify-edges = <&glink_mpss>, <&glink_dsps>, <&glink_rpm>;
+		qcom,xprt = "smem";
+	};
+
+	glink_dsps: qcom,glink-ssr-dsps {
+		compatible = "qcom,glink_ssr";
+		label = "slpi";
+		qcom,edge = "dsps";
+		qcom,notify-edges = <&glink_mpss>, <&glink_lpass>, <&glink_rpm>;
+		qcom,xprt = "smem";
+	};
+
+	glink_rpm: qcom,glink-ssr-rpm {
+		compatible = "qcom,glink_ssr";
+		label = "rpm";
+		qcom,edge = "rpm";
+		qcom,notify-edges = <&glink_lpass>, <&glink_mpss>, <&glink_dsps>;
+		qcom,xprt = "smem";
+	};
+
 	qcom,wdt@b017000 {
 		compatible = "qcom,msm-watchdog";
 		reg = <0xb017000 0x1000>;
@@ -1976,19 +2008,6 @@
 	qcom,msm-rtb {
 		compatible = "qcom,msm-rtb";
 		qcom,rtb-size = <0x100000>; /* 1M EBI1 buffer */
-	};
-
-	qcom,msm-imem@8600000 {
-		compatible = "qcom,msm-imem";
-		reg = <0x08600000 0x1000>; /* Address and size of IMEM */
-		ranges = <0x0 0x08600000 0x1000>;
-		#address-cells = <1>;
-		#size-cells = <1>;
-
-		mem_dump_table@10 {
-			compatible = "qcom,msm-imem-mem_dump_table";
-			reg = <0x10 8>;
-		};
 	};
 
 	qcom_rng: qrng@22000 {
@@ -2102,28 +2121,30 @@
 	};
 
 	qcom,ipc_router_modem_xprt {
-		compatible = "qcom,ipc_router_smd_xprt";
+		compatible = "qcom,ipc_router_glink_xprt";
 		qcom,ch-name = "IPCRTR";
-		qcom,xprt-remote = "modem";
+		qcom,xprt-remote = "mpss";
+		qcom,glink-xprt = "smd_trans";
 		qcom,xprt-linkid = <1>;
 		qcom,xprt-version = <1>;
 		qcom,fragmented-data;
-		qcom,disable-pil-loading;
 	};
 
 	qcom,ipc_router_q6_xprt {
-		compatible = "qcom,ipc_router_smd_xprt";
+		compatible = "qcom,ipc_router_glink_xprt";
 		qcom,ch-name = "IPCRTR";
-		qcom,xprt-remote = "adsp";
+		qcom,xprt-remote = "lpass";
+		qcom,glink-xprt = "smd_trans";
 		qcom,xprt-linkid = <1>;
 		qcom,xprt-version = <1>;
 		qcom,fragmented-data;
 	};
 
-	qcom,ipc_router_wcnss_xprt {
-		compatible = "qcom,ipc_router_smd_xprt";
+	qcom,ipc_router_dsps_xprt {
+		compatible = "qcom,ipc_router_glink_xprt";
 		qcom,ch-name = "IPCRTR";
-		qcom,xprt-remote = "wcnss";
+		qcom,xprt-remote = "dsps";
+		qcom,glink-xprt = "smd_trans";
 		qcom,xprt-linkid = <1>;
 		qcom,xprt-version = <1>;
 		qcom,fragmented-data;
@@ -2222,6 +2243,31 @@
 			qcom,smdpkt-dev-name = "smd_pkt_loopback";
 		};
 	};
+
+         qcom,glink_pkt {
+                 compatible = "qcom,glinkpkt";
+
+                 qcom,glinkpkt-at-mdm0 {
+                         qcom,glinkpkt-transport = "smd_trans";
+                         qcom,glinkpkt-edge = "mpss";
+                         qcom,glinkpkt-ch-name = "DS";
+                         qcom,glinkpkt-dev-name = "at_mdm0";
+                 };
+
+                 qcom,glinkpkt-loopback_cntl {
+                         qcom,glinkpkt-transport = "lloop";
+                         qcom,glinkpkt-edge = "local";
+                         qcom,glinkpkt-ch-name = "LOCAL_LOOPBACK_CLNT";
+                         qcom,glinkpkt-dev-name = "glink_pkt_loopback_ctrl";
+                 };
+
+                 qcom,glinkpkt-loopback_data {
+                         qcom,glinkpkt-transport = "lloop";
+                         qcom,glinkpkt-edge = "local";
+                         qcom,glinkpkt-ch-name = "glink_pkt_lloop_CLNT";
+                         qcom,glinkpkt-dev-name = "glink_pkt_loopback";
+                 };
+         };
 
 	qcom,iris-fm {
 		compatible = "qcom,iris_fm";
@@ -2968,6 +3014,7 @@
 		compatible = "qcom,msm-adsprpc-mem-region";
 		memory-region = <&adsp_mem>;
 		qcom,vmid-ssc-q6 = <38>;
+		restrict-access;
 	};
 
 	qcom,msm-adsp-loader {
@@ -2981,18 +3028,8 @@
 	};
 
 	qcom,msm_fastrpc {
-		compatible = "qcom,msm-fastrpc-adsp";
-		qcom,fastrpc-smd;
-
-		qcom,msm_fastrpc_compute_cb1 {
-			compatible = "qcom,msm-fastrpc-fixedsids-compute-cb";
-			label = "adsprpc-smd";
-			iommus = <&apps_smmu 16>;
-
-			qcom,virtual-addr-pool = <0x80000000 0x7FFFFFFF>;
-			qcom,adsp-shared-sids =
-					<0x8 0x9 0xa 0xb 0xc 0xd 0xe 0xf>;
-		};
+		compatible = "qcom,msm-fastrpc-legacy-compute";
+		qcom,fastrpc-legacy-remote-heap;
 	};
 
 	qcom,avtimer@c0a300c {

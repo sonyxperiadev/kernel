@@ -395,9 +395,8 @@
 				"product_common_default",
 				"variant_default";
 		pinctrl-0 = </* PM8950 */
-			     &pm8950_gpio_1 &pm8950_gpio_5
+			     &pm8950_gpio_1 &pm8950_gpio_2 &pm8950_gpio_5
 			     &pm8950_gpio_6 &pm8950_gpio_7 &pm8950_gpio_8
-			     &pm8950_mpp2_def &pm8950_mpp4_def
 			     /* PMI8950 */
 			     &pmi8950_gpio_1 &pmi8950_gpio_2
 			     &pmi_mpp1_def &pmi_mpp3_def &pmi_mpp4_def
@@ -768,9 +767,8 @@
 };
 
 &pm8950_gpios {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pm8950_gpio_2 &pm8950_gpio_5
-		     &pm8950_gpio_6 &pm8950_gpio_8>;
+	/* Using somc-pinctrl-pmic */
+	pinctrl-0 = <>;
 
 	/* GPIO_1: CDC_PM_MCLK */
 	/* Follow QCT */
@@ -783,8 +781,7 @@
 			output-high;
 			bias-disable;
 			drive-push-pull;
-			/* Note: QCOM uses 1 (LOW) -- Mainline LOW is 3!?! */
-			qcom,drive-strength = <PMIC_GPIO_STRENGTH_HIGH>;
+			qcom,drive-strength = <1>;
 			power-source = <PM8950_MPP_VPH>;
 		};
 	};
@@ -803,8 +800,7 @@
 			input-enable;
 			bias-pull-down;
 			drive-push-pull;
-			/* Note: QCOM uses 1 (LOW) -- Mainline LOW is 3!?! */
-			qcom,drive-strength = <PMIC_GPIO_STRENGTH_HIGH>;
+			qcom,drive-strength = <1>;
 			power-source = <PM8950_MPP_L5>;
 		};
 	};
@@ -829,16 +825,15 @@
 			function = "normal";
 			bias-pull-down;
 			drive-push-pull;
-			/* Note: QCOM uses 1 (LOW) -- Mainline LOW is 3!?! */
-			qcom,drive-strength = <PMIC_GPIO_STRENGTH_HIGH>;
+			qcom,drive-strength = <1>;
 			power-source = <PM8950_MPP_VPH>;
 		};
 	};
 };
 
 &pmi8950_gpios {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pmi8950_gpio_1 &pmi8950_gpio_2>;
+	/* Using somc-pinctrl-pmic */
+	pinctrl-0 = <>;
 
 	/* GPIO_1: USB_SWITCH_SEL - GPIO CMOS output - drive strength low*/
 	usb_switch_sel {
@@ -847,8 +842,7 @@
 			function = "normal";
 			output-low;
 			drive-push-pull;
-			/* Note: QCOM uses 1 (LOW) -- Mainline LOW is 3!?! */
-			qcom,drive-strength = <PMIC_GPIO_STRENGTH_HIGH>;
+			qcom,drive-strength = <1>;
 			power-source = <PMI8950_MPP_MSMIO>;
 		};
 	};
@@ -860,51 +854,15 @@
 			function = "normal";
 			output-low;
 			drive-push-pull;
-			/* Note: QCOM uses 1 (LOW) -- Mainline LOW is 3!?! */
-			qcom,drive-strength = <PMIC_GPIO_STRENGTH_HIGH>;
+			qcom,drive-strength = <1>;
 			power-source = <PMI8950_MPP_MSMIO>;
 		};
 	};
 };
-#if 0
-&pm8950_mpps {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pm8950_mpp2_def &pm8950_mpp4_def>;
 
-	/* MPP_1: VDD_PX_BIAS */
-	/* Follow QTI */
-
-	/* MPP_2: PA_THERM1 */
-	/* Follow QTI */
-	pm8950_mpp2_def: pa_therm {
-		gpio {
-			pins = "mpp2";
-			function = "analog";
-			input-enable;
-			qcom,amux-route = <PMIC_MPP_AMUX_ROUTE_CH6>;
-			/* Function constant, Enable MPP */
-		};
-	};
-
-	/* MPP_3: VREF_TXDAC_0_1 */
-	/* Follow QTI */
-
-	/* MPP_4: QUIET_THERM */
-	pm8950_mpp4_def: case_therm {
-		gpio {
-			pins = "mpp4";
-			function = "analog";
-			input-enable;
-			qcom,amux-route = <PMIC_MPP_AMUX_ROUTE_CH8>;
-			/* Function constant, Enable MPP */
-		};
-	};
-	/* Follow QTI */
-};
-#endif
 &pmi8950_mpps {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pmi_mpp1_def &pmi_mpp3_def &pmi_mpp4_def>;
+	/* Using somc-pinctrl-pmic */
+	pinctrl-0 = <>;
 
 	/* MPP_1: PMI8952_ADC_IN */ /* AMUX 5 Ch#16 */
 	pmi8952_adc_in {
@@ -944,9 +902,8 @@
 };
 
 &pm8004_mpps {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pm8004_mpp3_def &pm8004_mpp4_def>;
-
+	/* Using somc-pinctrl-pmic */
+	pinctrl-0 = <>;
 
 	/* MPP_1: pull-down to GND (PM8004_PON_SYNC) */
 	/* Follow QTI */
