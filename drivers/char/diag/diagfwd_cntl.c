@@ -846,7 +846,7 @@ int diag_add_diag_id_to_list(uint8_t diag_id, char *process_name,
 	new_item->diag_id = diag_id;
 	new_item->pd_val = pd_val;
 	new_item->peripheral = peripheral;
-	strlcpy(new_item->process_name, process_name, strlen(process_name) + 1);
+	strscpy(new_item->process_name, process_name, sizeof(new_item->process_name));
 	INIT_LIST_HEAD(&new_item->link);
 	mutex_lock(&driver->diag_id_mutex);
 	list_add_tail(&new_item->link, &driver->diag_id_list);
@@ -947,8 +947,8 @@ static void process_diagid(uint8_t *buf, uint32_t len,
 
 	ctrl_pkt.pkt_id = DIAG_CTRL_MSG_DIAGID;
 	ctrl_pkt.version = 1;
-	strlcpy((char *)&ctrl_pkt.process_name, process_name,
-		strlen(process_name) + 1);
+	strscpy((char *)&ctrl_pkt.process_name, process_name,
+		sizeof((char *)&ctrl_pkt.process_name));
 	ctrl_pkt.len = sizeof(ctrl_pkt.diag_id) + sizeof(ctrl_pkt.version) +
 			strlen(process_name) + 1;
 	err = diagfwd_write(peripheral, TYPE_CNTL, &ctrl_pkt, ctrl_pkt.len +
