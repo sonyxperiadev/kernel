@@ -1929,7 +1929,7 @@ static int crypt_map(struct dm_target *ti, struct bio *bio)
 	if (unlikely(bio->bi_opf & REQ_PREFLUSH) ||
 	    (unlikely(bio->bi_opf & REQ_NOENCRYPT) &&
 	     test_bit(DM_CRYPT_ENCRYPT_OVERRIDE, &cc->flags)) ||
-	    bio_op(bio) == REQ_OP_DISCARD)) {
+	    bio_op(bio) == REQ_OP_DISCARD) {
 		bio->bi_bdev = cc->dev->bdev;
 		if (bio_sectors(bio))
 			bio->bi_iter.bi_sector = cc->start +
