@@ -3835,7 +3835,7 @@ static int __ext4_block_zero_page_range(handle_t *handle,
 		/* Uhhuh. Read error. Complain and punt. */
 		if (!buffer_uptodate(bh))
 			goto unlock;
-		if (decrypt) &&
+		if ((decrypt) &&
 		    ext4_encrypted_inode(inode) &&
 		    !fscrypt_using_hardware_encryption(inode)) {
 			/* We expect the key to be set. */
