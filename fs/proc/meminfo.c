@@ -126,6 +126,10 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
 		    global_node_page_state(NR_UNSTABLE_NFS));
 	show_val_kb(m, "Bounce:         ",
 		    global_zone_page_state(NR_BOUNCE));
+	show_val_kb(m, "ION_heap:       ",
+		    global_node_page_state(NR_ION_HEAP));
+	show_val_kb(m, "ION_heap_pool:  ",
+		    global_node_page_state(NR_ION_HEAP_POOL));
 	show_val_kb(m, "WritebackTmp:   ",
 		    global_node_page_state(NR_WRITEBACK_TEMP));
 	show_val_kb(m, "CommitLimit:    ", vm_commit_limit());
