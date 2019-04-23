@@ -3828,14 +3828,14 @@ static int __ext4_block_zero_page_range(handle_t *handle,
 	if (!buffer_uptodate(bh)) {
 		err = -EIO;
 		decrypt = S_ISREG(inode->i_mode) &&
-			ext4_encrypted_inode(inode);
+			ext4_encrypted_inode(inode) &&
+			!fscrypt_using_hardware_encryption(inode);
 		ll_rw_block(REQ_OP_READ, (decrypt ? REQ_NOENCRYPT : 0), 1, &bh);
 		wait_on_buffer(bh);
 		/* Uhhuh. Read error. Complain and punt. */
 		if (!buffer_uptodate(bh))
 			goto unlock;
-		if ((decrypt) &&
-		    !fscrypt_using_hardware_encryption(inode)) {
+		if (decrypt) {
 			/* We expect the key to be set. */
 			BUG_ON(!fscrypt_has_encryption_key(inode));
 			BUG_ON(blocksize != PAGE_SIZE);
