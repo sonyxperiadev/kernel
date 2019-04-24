@@ -415,10 +415,12 @@ static void gic_handle_cascade_irq(struct irq_desc *desc)
 	chained_irq_exit(chip, desc);
 }
 
+#ifdef CONFIG_QTI_MPM
 static int msm_qgic2_set_wake(struct irq_data *d, unsigned int on)
 {
 	return 0;
 }
+#endif
 
 static const struct irq_chip gic_chip = {
 	.irq_mask		= gic_mask_irq,
