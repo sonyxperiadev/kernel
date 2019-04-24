@@ -194,12 +194,9 @@ static int somc_panel_calc_gpio_sleep(
 	int wait = 0;
 
 	if (incell_panel_is_seq_for_ewu() &&
-		(gpio == spec_pdata->touch_reset_gpio) &&
-		!enable) {
-		if (&spec_pdata->ewu_seq)
-			pw_seq = &spec_pdata->ewu_seq;
-		else
-			pw_seq = &spec_pdata->on_seq;
+	    gpio == spec_pdata->touch_reset_gpio &&
+	    !enable) {
+		pw_seq = &spec_pdata->ewu_seq;
 	} else {
 		if (enable)
 			pw_seq = &spec_pdata->on_seq;

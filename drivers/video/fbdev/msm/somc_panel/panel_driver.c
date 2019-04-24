@@ -362,9 +362,7 @@ static int mdss_dsi_panel_reset_seq(struct mdss_panel_data *pdata, int enable)
 
 #ifdef CONFIG_FBDEV_SOMC_PANEL_INCELL
 	if (incell_panel_is_seq_for_ewu() && enable)
-		pw_seq = &ctrl_pdata->spec_pdata->ewu_seq ?
-				&ctrl_pdata->spec_pdata->ewu_seq :
-				&ctrl_pdata->spec_pdata->on_seq;
+		pw_seq = &ctrl_pdata->spec_pdata->ewu_seq;
 #endif
 
 	if (pw_seq->rst_b_seq)
