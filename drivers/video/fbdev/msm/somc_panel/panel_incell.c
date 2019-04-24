@@ -997,7 +997,7 @@ static int incell_dsi_panel_power_on_ex(struct mdss_panel_data *pdata)
 	struct mdss_panel_specific_pdata *spec_pdata = NULL;
 	struct mdss_panel_power_seq *pw_seq = NULL;
 	struct incell_ctrl *incell = incell_get_info();
-	incell_state state = INCELL_STATE_NONE;
+	incell_state state = INCELL_STATE_SLE000_P0;
 	int ret = 0;
 	int wait;
 
