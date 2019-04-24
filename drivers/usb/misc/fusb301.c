@@ -2245,6 +2245,7 @@ static int fusb301_probe(struct i2c_client *client,
 	struct power_supply_config type_c_psy_cfg = {};
 	struct dual_role_phy_desc *desc;
 	struct dual_role_phy_instance *dual_role;
+	struct fusb301_data *data;
 	int ret = 0;
 
 #ifndef FUSB301_NOT_USE_USB_PSY
@@ -2279,25 +2280,19 @@ static int fusb301_probe(struct i2c_client *client,
 		goto err1;
 	}
 
-	if (&client->dev.of_node) {
-		struct fusb301_data *data = devm_kzalloc(cdev,
-				sizeof(struct fusb301_data), GFP_KERNEL);
+	data = devm_kzalloc(cdev, sizeof(struct fusb301_data), GFP_KERNEL);
+	if (!data) {
+		dev_err(cdev, "can't alloc fusb301_data\n");
+		ret = -ENOMEM;
+		goto err1;
+	}
 
-		if (!data) {
-			dev_err(cdev, "can't alloc fusb301_data\n");
-			ret = -ENOMEM;
-			goto err1;
-		}
+	chip->pdata = data;
 
-		chip->pdata = data;
-
-		ret = fusb301_parse_dt(chip);
-		if (ret) {
-			dev_err(cdev, "can't parse dt\n");
-			goto err2;
-		}
-	} else {
-		chip->pdata = client->dev.platform_data;
+	ret = fusb301_parse_dt(chip);
+	if (ret) {
+		dev_err(cdev, "can't parse dt\n");
+		goto err2;
 	}
 
 	ret = fusb301_init_gpio(chip);
@@ -2466,8 +2461,7 @@ err3:
 	wakeup_source_trash(&chip->wlock);
 	fusb301_free_gpio(chip);
 err2:
-	if (&client->dev.of_node)
-		devm_kfree(cdev, chip->pdata);
+	devm_kfree(cdev, chip->pdata);
 err1:
 	i2c_set_clientdata(client, NULL);
 	devm_kfree(cdev, chip);
@@ -2506,8 +2500,7 @@ static int fusb301_remove(struct i2c_client *client)
 	wakeup_source_trash(&chip->wlock);
 	fusb301_free_gpio(chip);
 
-	if (&client->dev.of_node)
-		devm_kfree(cdev, chip->pdata);
+	devm_kfree(cdev, chip->pdata);
 
 	i2c_set_clientdata(client, NULL);
 	devm_kfree(cdev, chip);
