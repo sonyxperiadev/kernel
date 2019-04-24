@@ -151,7 +151,7 @@ static uint32_t num_pmic_data;
 static void msm_spm_drv_flush_shadow(struct msm_spm_driver_data *dev,
 		unsigned int reg_index)
 {
-	if (!dev || !dev->reg_shadow)
+	if (!dev)
 		return;
 
 	__raw_writel(dev->reg_shadow[reg_index],
