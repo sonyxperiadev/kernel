@@ -18,11 +18,12 @@
 #include "sde_hw_util.h"
 #include "sde_hw_mdss.h"
 
-#define BUILD_FOR_AD4_TARGET \
-	!defined(CONFIG_ARCH_MSM8916) && !defined(CONFIG_ARCH_MSM8953) && \
-	!defined(CONFIG_ARCH_MSM8937) && !defined(CONFIG_ARCH_MSM8917) && \
-	!defined(CONFIG_ARCH_MSM8996) && !defined(CONFIG_ARCH_MSM8998) && \
-	!defined(CONFIG_ARCH_SDM630) && !defined(CONFIG_ARCH_SDM660)
+#if !defined(CONFIG_ARCH_MSM8916) && !defined(CONFIG_ARCH_MSM8953) && \
+    !defined(CONFIG_ARCH_MSM8937) && !defined(CONFIG_ARCH_MSM8917) && \
+    !defined(CONFIG_ARCH_MSM8996) && !defined(CONFIG_ARCH_MSM8998) && \
+    !!defined(CONFIG_ARCH_SDM630) && !defined(CONFIG_ARCH_SDM660)
+#define BUILD_FOR_AD4_TARGET
+#endif
 
 /**
  * Register offsets in MDSS register file for the interrupt registers
@@ -252,7 +253,7 @@ static const struct sde_intr_reg sde_intr_set[] = {
 		MDP_INTF_4_OFF+INTF_INTR_EN,
 		MDP_INTF_4_OFF+INTF_INTR_STATUS
 	},
-#if BUILD_FOR_AD4_TARGET
+#ifdef BUILD_FOR_AD4_TARGET
 	{
 		MDP_AD4_0_OFF + MDP_AD4_INTR_CLEAR_OFF,
 		MDP_AD4_0_OFF + MDP_AD4_INTR_EN_OFF,

@@ -261,7 +261,7 @@ struct gsi_data_port {
 
 struct f_gsi {
 	struct usb_function function;
-	enum usb_prot_id prot_id;
+	int prot_id;
 	int ctrl_id;
 	int data_id;
 	u32 vendorID;

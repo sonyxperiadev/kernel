@@ -123,8 +123,9 @@ int msm_gpioset_initialize(enum pinctrl_client client,
 			ret = -ENOMEM;
 			goto err;
 		}
-		strlcpy(gpioset_info[client].gpiosets[i],
-				gpioset_names_str, strlen(gpioset_names_str)+1);
+		strscpy(gpioset_info[client].gpiosets[i],
+				gpioset_names_str,
+				sizeof(gpioset_info[client].gpiosets[i]));
 		gpioset_names_str = NULL;
 	}
 	num_strings = 0;
@@ -167,9 +168,9 @@ int msm_gpioset_initialize(enum pinctrl_client client,
 			goto err;
 		}
 
-		strlcpy(gpioset_info[client].gpiosets_comb_names[i],
-					gpioset_comb_str,
-					strlen(gpioset_comb_str)+1);
+		strscpy(gpioset_info[client].gpiosets_comb_names[i],
+			gpioset_comb_str,
+			sizeof(gpioset_info[client].gpiosets_comb_names[i]));
 		pr_debug("%s: GPIO configuration %s\n",
 				__func__,
 				gpioset_info[client].gpiosets_comb_names[i]);

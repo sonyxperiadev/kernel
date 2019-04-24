@@ -194,12 +194,9 @@ static int somc_panel_calc_gpio_sleep(
 	int wait = 0;
 
 	if (incell_panel_is_seq_for_ewu() &&
-		(gpio == spec_pdata->touch_reset_gpio) &&
-		!enable) {
-		if (&spec_pdata->ewu_seq)
-			pw_seq = &spec_pdata->ewu_seq;
-		else
-			pw_seq = &spec_pdata->on_seq;
+	    gpio == spec_pdata->touch_reset_gpio &&
+	    !enable) {
+		pw_seq = &spec_pdata->ewu_seq;
 	} else {
 		if (enable)
 			pw_seq = &spec_pdata->on_seq;
@@ -1000,7 +997,7 @@ static int incell_dsi_panel_power_on_ex(struct mdss_panel_data *pdata)
 	struct mdss_panel_specific_pdata *spec_pdata = NULL;
 	struct mdss_panel_power_seq *pw_seq = NULL;
 	struct incell_ctrl *incell = incell_get_info();
-	incell_state state = INCELL_STATE_NONE;
+	incell_state state = INCELL_STATE_SLE000_P0;
 	int ret = 0;
 	int wait;
 
@@ -1756,7 +1753,7 @@ void incell_ewu_mode_ctrl(incell_ewu_mode ewu)
 
 	pr_debug("%s: status:%d --->\n", __func__, ((int)(incell->state)));
 
-	if ((ewu == INCELL_DISPLAY_EWU_ENABLE))
+	if (ewu == INCELL_DISPLAY_EWU_ENABLE)
 		incell_ewu_mode_state_on(&(incell->state));
 	else
 		incell_ewu_mode_state_off(&(incell->state));
