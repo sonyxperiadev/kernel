@@ -3434,7 +3434,7 @@ static ssize_t store_proxy_time(struct device *dev,
 	} else if (ret == -ERANGE) {
 		dev_err(adux1050->dev, "[ADUX1050]: Values not in RANGE\n");
 		goto error;
-	} else if ((ret == -EINVAL)) {
+	} else if (ret == -EINVAL) {
 		dev_err(adux1050->dev, "[ADUX1050]: Invalid COMD/ARG\n");
 		goto error;
 	} else {
