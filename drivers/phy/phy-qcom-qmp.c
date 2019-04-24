@@ -1453,7 +1453,7 @@ static int qcom_qmp_phy_probe(struct platform_device *pdev)
 	dev_set_drvdata(dev, qmp);
 
 	/* Get the specific init parameters of QMP phy */
-	qmp->cfg = of_device_get_match_data(dev);
+	qmp->cfg = (struct qmp_phy_cfg *)of_device_get_match_data(dev);
 	if (!qmp->cfg)
 		return -EINVAL;
 
