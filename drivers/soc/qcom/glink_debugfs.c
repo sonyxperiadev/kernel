@@ -567,10 +567,10 @@ void glink_dfs_update_list(struct dentry *curr_dent, struct dentry *parent,
 			spin_lock_init(&dbgfs_dent_s->file_list_lock_lhb0);
 			dbgfs_dent_s->parent = parent;
 			dbgfs_dent_s->self = curr_dent;
-			strlcpy(dbgfs_dent_s->self_name,
-				curr, strlen(curr) + 1);
-			strlcpy(dbgfs_dent_s->par_name, par_dir,
-					strlen(par_dir) + 1);
+			strscpy(dbgfs_dent_s->self_name,
+				curr, sizeof(dbgfs_dent_s->self_name));
+			strscpy(dbgfs_dent_s->par_name, par_dir,
+					sizeof(dbgfs_dent_s->par_name));
 			INIT_WORK(&dbgfs_dent_s->rm_work,
 				  glink_dfs_dent_rm_worker);
 			mutex_lock(&dent_list_lock_lha0);
