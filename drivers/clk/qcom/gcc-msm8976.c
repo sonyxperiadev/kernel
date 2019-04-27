@@ -781,7 +781,7 @@ static struct clk_rcg2 blsp1_uart2_apps_clk_src = {
 		.parent_names = gcc_parent_names_8,
 		.num_parents = ARRAY_SIZE(gcc_parent_names_8),
 		.ops = &clk_rcg2_ops,
-		VDD_DIG_FMAX_MAP2(LOWER, 32000000, NOMINAL, 64000000),
+		VDD_DIG_FMAX_MAP1(TURBO, 64000000),
 	},
 };
 
