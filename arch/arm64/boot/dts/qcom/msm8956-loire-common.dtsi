@@ -982,6 +982,7 @@
 	qcom,charging-timeout-mins = <768>;
 	qcom,bmd-pin-src = "bpd_none";
 	qcom,force-aicl-rerun;
+	dpdm-supply = <&usb_otg>;
 	id_poll_enable;
 	id_poll_up_interval = <2000>;
 	id_poll_up_period = <50000>;
