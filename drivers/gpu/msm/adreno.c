@@ -51,7 +51,7 @@ static bool nopreempt;
 module_param(nopreempt, bool, 0444);
 MODULE_PARM_DESC(nopreempt, "Disable GPU preemption");
 
-static bool swfdetect;
+static bool swfdetect = true;
 module_param(swfdetect, bool, 0444);
 MODULE_PARM_DESC(swfdetect, "Enable soft fault detection");
 

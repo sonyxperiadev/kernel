@@ -30,7 +30,7 @@
 #undef MODULE_PARAM_PREFIX
 #define MODULE_PARAM_PREFIX "kgsl_gmu."
 
-static bool nogmu;
+static bool nogmu = true;
 module_param(nogmu, bool, 0444);
 MODULE_PARM_DESC(nogmu, "Disable the GMU");
 
