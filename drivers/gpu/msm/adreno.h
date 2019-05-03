@@ -124,6 +124,9 @@
 /* The core supports IO-coherent memory */
 #define ADRENO_IOCOHERENT BIT(16)
 
+/* The MMU carveout size is limited to 8MB */
+#define ADRENO_MMU_GLOBAL_MEMSZ_8M BIT(30)
+
 /*
  * Adreno GPU quirks - control bits for various workarounds
  */
