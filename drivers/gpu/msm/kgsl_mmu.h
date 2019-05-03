@@ -145,6 +145,9 @@ struct kgsl_mmu_pt_ops {
 /* The device requires VA mappings padded up to a given size */
 #define KGSL_MMU_PAD_VA BIT(11)
 
+/* The MMU carveout size is limited to 8MB */
+#define KGSL_MMU_GLOBAL_MEMSZ_8M BIT(20)
+
 /**
  * struct kgsl_mmu - Master definition for KGSL MMU devices
  * @flags: MMU device flags

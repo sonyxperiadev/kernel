@@ -131,6 +131,9 @@
  */
 #define ADRENO_ACD BIT(17)
 
+/* The MMU carveout size is limited to 8MB */
+#define ADRENO_MMU_GLOBAL_MEMSZ_8M BIT(30)
+
 /*
  * Adreno GPU quirks - control bits for various workarounds
  */
