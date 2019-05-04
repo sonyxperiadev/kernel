@@ -1900,8 +1900,9 @@ static inline unsigned int counter_delta(struct kgsl_device *device,
 	/* Read the value */
 	kgsl_regread(device, reg, &val);
 
-	if (adreno_is_a5xx(adreno_dev) && reg == adreno_getreg
-		(adreno_dev, ADRENO_REG_RBBM_PERFCTR_RBBM_0_LO))
+	if ((adreno_is_a530(adreno_dev) || adreno_is_a540(adreno_dev)) &&
+	    reg == adreno_getreg(adreno_dev,
+					ADRENO_REG_RBBM_PERFCTR_RBBM_0_LO))
 		overflow = is_power_counter_overflow(adreno_dev, reg,
 				*counter, &perfctr_pwr_hi);
 
