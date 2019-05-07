@@ -142,7 +142,7 @@ static struct clk_init_data gpu_clks_init[] = {
 	[0] = {
 		.name = "gfx3d_clk_src",
 		.parent_names = gpucc_parent_names_1,
-		.num_parents = 3,
+		.num_parents = 4,
 		.ops = &clk_gfx3d_src_ops,
 		.flags = CLK_SET_RATE_PARENT,
 	},
