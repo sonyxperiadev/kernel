@@ -272,7 +272,7 @@ static struct clk_branch gpucc_cxo_clk = {
 
 static struct clk_branch gpucc_gfx3d_clk = {
 	.halt_reg = 0x1098,
-	.halt_check = BRANCH_HALT,
+	.halt_check = BRANCH_HALT_DELAY,
 	.clkr = {
 		.enable_reg = 0x1098,
 		.enable_mask = BIT(0),
