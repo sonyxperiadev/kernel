@@ -2458,6 +2458,8 @@ static struct clk_branch gcc_gp3_clk = {
 
 static struct clk_branch gcc_pcie_0_slv_axi_clk = {
 	.halt_reg = 0x6b008,
+	.hwcg_reg = 0x6b008,
+	.hwcg_bit = 1,
 	.clkr = {
 		.enable_reg = 0x6b008,
 		.enable_mask = BIT(0),
@@ -2525,6 +2527,8 @@ static struct clk_gate2 gcc_pcie_0_pipe_clk = {
 
 static struct clk_branch gcc_pcie_1_slv_axi_clk = {
 	.halt_reg = 0x6d008,
+	.hwcg_reg = 0x6d008,
+	.hwcg_bit = 1,
 	.clkr = {
 		.enable_reg = 0x6d008,
 		.enable_mask = BIT(0),
@@ -2591,6 +2595,8 @@ static struct clk_gate2 gcc_pcie_1_pipe_clk = {
 
 static struct clk_branch gcc_pcie_2_slv_axi_clk = {
 	.halt_reg = 0x6e008,
+	.hwcg_reg = 0x6e008,
+	.hwcg_bit = 1,
 	.clkr = {
 		.enable_reg = 0x6e008,
 		.enable_mask = BIT(0),
@@ -2875,6 +2881,8 @@ static struct clk_gate2 gcc_ufs_tx_symbol_clk_core_clk = {
 
 static struct clk_branch gcc_aggre0_snoc_axi_clk = {
 	.halt_reg = 0x81008,
+	.hwcg_reg = 0x81008,
+	.hwcg_bit = 1,
 	.clkr = {
 		.enable_reg = 0x81008,
 		.enable_mask = BIT(0),
@@ -2888,6 +2896,8 @@ static struct clk_branch gcc_aggre0_snoc_axi_clk = {
 
 static struct clk_branch gcc_aggre0_cnoc_ahb_clk = {
 	.halt_reg = 0x8100c,
+	.hwcg_reg = 0x8100c,
+	.hwcg_bit = 1,
 	.clkr = {
 		.enable_reg = 0x8100c,
 		.enable_mask = BIT(0),
@@ -2929,6 +2939,8 @@ static struct clk_gate2 gcc_aggre0_noc_qosgen_extref_clk = {
 static struct clk_branch gcc_smmu_aggre0_ahb_clk = {
 	.halt_reg = 0x81018,
 	.halt_check = BRANCH_VOTED,
+	.hwcg_reg = 0x81018,
+	.hwcg_bit = 1,
 	.clkr = {
 		.enable_reg = 0x81018,
 		.enable_mask = BIT(0),
@@ -3158,6 +3170,8 @@ static struct clk_branch gcc_mss_snoc_axi_clk = {
 
 static struct clk_branch gcc_mss_mnoc_bimc_axi_clk = {
 	.halt_reg = 0x8a004,
+	.hwcg_reg = 0x8a004,
+	.hwcg_bit = 1,
 	.clkr = {
 		.enable_reg = 0x8a004,
 		.enable_mask = BIT(0),
