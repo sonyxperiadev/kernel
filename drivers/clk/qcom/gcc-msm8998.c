@@ -2784,6 +2784,9 @@ static struct clk_branch gcc_mss_q6_bimc_axi_clk = {
 
 static struct clk_branch gcc_mss_mnoc_bimc_axi_clk = {
 	.halt_reg = 0x8A004,
+	.halt_check = BRANCH_HALT,
+	.hwcg_reg = 0x8A004,
+	.hwcg_bit = 1,
 	.clkr = {
 		.enable_reg = 0x8A004,
 		.enable_mask = BIT(0),
