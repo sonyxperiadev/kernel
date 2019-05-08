@@ -83,10 +83,6 @@ static int clk_branch_wait(const struct clk_branch *br, bool enabling,
 	bool voted = br->halt_check & BRANCH_VOTED;
 	const char *name = clk_hw_get_name(&br->clkr.hw);
 
-	/* Skip checking halt bit if the clock is in hardware gated mode */
-	if (clk_branch_in_hwcg_mode(br))
-		return 0;
-
 	/*
 	 * Some of the BRANCH_VOTED clocks could be controlled by other
 	 * masters via voting registers, and would require to add delay
@@ -95,6 +91,10 @@ static int clk_branch_wait(const struct clk_branch *br, bool enabling,
 	 */
 	if (enabling && voted)
 		udelay(5);
+
+	/* Skip checking halt bit if the clock is in hardware gated mode */
+	if (clk_branch_in_hwcg_mode(br))
+		return 0;
 
 	if (br->halt_check == BRANCH_HALT_DELAY || (!enabling && voted)) {
 		udelay(10);
