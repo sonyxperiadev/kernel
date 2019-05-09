@@ -81,6 +81,7 @@ static int clk_branch_wait(const struct clk_branch *br, bool enabling,
 		bool (check_halt)(const struct clk_branch *, bool))
 {
 	bool voted = br->halt_check & BRANCH_VOTED;
+	bool halt_warnonly = br->halt_check & BRANCH_WARNONLY;
 	const char *name = clk_hw_get_name(&br->clkr.hw);
 
 	/*
@@ -103,6 +104,7 @@ static int clk_branch_wait(const struct clk_branch *br, bool enabling,
 		udelay(10);
 	} else if (br->halt_check == BRANCH_HALT_ENABLE ||
 		   br->halt_check == BRANCH_HALT ||
+		   br->halt_check == BRANCH_HALT_WARNONLY ||
 		   (enabling && voted)) {
 		int count = 500;
 
@@ -113,6 +115,10 @@ static int clk_branch_wait(const struct clk_branch *br, bool enabling,
 		}
 		WARN(1, "clk: %s status stuck at 'o%s'", name,
 				enabling ? "ff" : "n");
+
+		if (halt_warnonly)
+			return 0;
+
 		return -EBUSY;
 	}
 	return 0;
