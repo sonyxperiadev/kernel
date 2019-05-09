@@ -505,7 +505,7 @@ config PSI
 
 config PSI_DEFAULT_DISABLED
 	bool "Require boot parameter to enable pressure stall information tracking"
-	default n
+	default y
 	depends on PSI
 	help
 	  If set, pressure stall information tracking will be disabled
