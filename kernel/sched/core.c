@@ -5866,7 +5866,7 @@ static void migrate_tasks(struct rq *dead_rq, bool migrate_pinned_tasks)
 			!cpumask_intersects(&avail_cpus, &next->cpus_allowed)) {
 			detach_one_task(next, rq, &tasks);
 			num_pinned_kthreads += 1;
-			lockdep_unpin_lock(&rq->lock, cookie);
+			rq_unpin_lock(rq, &rf);
 			continue;
 		}
 
