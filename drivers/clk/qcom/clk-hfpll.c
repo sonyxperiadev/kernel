@@ -323,9 +323,6 @@ begin:
 	}
 out:
 	if (!lock) {
-		pr_err("WARNING: HFPLL DID NOT LOCK!!!!\n");
-		pr_err("CLK NAME: %s\n", clk_hw_get_name(hw));
-
 		if (!retried) {
 			retried = true;
 
@@ -336,6 +333,9 @@ out:
 			/* Then retry and hope for the best... */
 			goto begin;
 		}
+
+		pr_err("WARNING: HFPLL %s DID NOT LOCK!!!!\n",
+			clk_hw_get_name(hw));
 	}
 
 	/* Enable PLL output. */
