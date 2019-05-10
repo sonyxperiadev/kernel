@@ -361,6 +361,26 @@ static int clk_hf2_pll_enable(struct clk_hw *hw)
 	return 0;
 }
 
+static void clk_hf2_pll_disable(struct clk_hw *hw)
+{
+	struct clk_hfpll *h = to_clk_hfpll(hw);
+	struct hfpll_data const *hd = h->d;
+	struct regmap *regmap = h->clkr.regmap;
+	unsigned long flags;
+
+	spin_lock_irqsave(&h->lock, flags);
+	__clk_hfpll_disable(h);
+
+	/* Park the PLL at a safe frequency to avoid undervolting on enable */
+	if (hd->safe_parking_enabled) {
+		regmap_update_bits(regmap, hd->l_reg, 0x3ff, hd->l_park_val);
+		regmap_update_bits(regmap, hd->m_reg, 0x7ffff, 0);
+		regmap_update_bits(regmap, hd->n_reg, 0x7ffff, 1);
+	}
+
+	spin_unlock_irqrestore(&h->lock, flags);
+}
+
 static long clk_hfpll_round_rate(struct clk_hw *hw, unsigned long rate,
 				 unsigned long *parent_rate)
 {
@@ -587,7 +607,7 @@ EXPORT_SYMBOL_GPL(clk_ops_hfpll);
 
 const struct clk_ops clk_ops_hf2_pll = {
 	.enable = clk_hf2_pll_enable,
-	.disable = clk_hfpll_disable,
+	.disable = clk_hf2_pll_disable,
 	.is_enabled = hfpll_is_enabled,
 	.round_rate = clk_hf2_pll_round_rate,
 	.set_rate = clk_hf2_pll_set_rate,

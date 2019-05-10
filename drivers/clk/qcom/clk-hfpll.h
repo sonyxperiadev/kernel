@@ -54,6 +54,9 @@ struct hfpll_data {
 
 	unsigned long min_rate;
 	unsigned long max_rate;
+
+	u32 l_park_val;
+	bool safe_parking_enabled;
 };
 
 struct clk_hfpll {
