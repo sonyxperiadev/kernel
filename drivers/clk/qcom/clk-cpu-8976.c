@@ -170,7 +170,10 @@ static const char * const cpuss_parent_names_cci[] = {
 	"gpll0_ao_out_main",
 };
 
-/* Early output of PLL: 1.7GHz default */
+/*
+ * Early output of PLL: 1.7GHz default
+ * Safely park at 1017.6MHz
+ */
 static struct hfpll_data a72ss_hf_pll_data = {
 	.mode_reg = 0x0,
 	.l_reg = 0x4,
@@ -194,6 +197,8 @@ static struct hfpll_data a72ss_hf_pll_data = {
 	.max_rate = 2016000000UL,
 	.min_rate = 940800000UL,
 	.l_val = 0x5B,
+	.l_park_val = 0x35,
+	.safe_parking_enabled = true,
 };
 
 static struct clk_hfpll a72ss_hf_pll = {
@@ -246,6 +251,7 @@ static struct hfpll_data a53ss_sr_pll_data = {
 	.max_rate = 1478400000UL,
 	.low_vco_max_rate = 902400000UL,
 	.l_val = 0x49,
+	.safe_parking_enabled = false,
 };
 
 static struct clk_hfpll a53ss_sr_pll = {
@@ -295,6 +301,7 @@ static struct hfpll_data cci_sr_pll_data = {
 	.min_rate = 307200000UL,
 	.max_rate = 902400000UL,
 	.l_val = 0x20,
+	.safe_parking_enabled = false,
 };
 
 static struct clk_hfpll cci_sr_pll = {
