@@ -300,7 +300,9 @@ begin:
 	if (hd->status_reg) {	
 		for (count = 500; count > 0; count--) {
 			ret = regmap_read(regmap, hd->status_reg, &val);
-			if (ret || (val & BIT(hd->lock_bit))) {
+			if (ret)
+				return ret;
+			if (val & BIT(hd->lock_bit)) {
 				if (lock)
 					goto out;
 				lock = true;
