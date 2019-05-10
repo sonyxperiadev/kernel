@@ -306,6 +306,15 @@ begin:
 				if (lock)
 					goto out;
 				lock = true;
+			} else {
+				/*
+				 * Extremely paranoid branch:
+				 * If it was a phantom lock reset the lock
+				 * status so that we recheck twice, just to
+				 * be extremely sure that we will not lock
+				 * up the processors.
+				 */
+				lock = false;
 			}
 			udelay(1);
 		}
