@@ -481,7 +481,9 @@ static int clk_hf2_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 		regmap_write(regmap, hd->user_reg, val);
 	}
 
-	regmap_write(regmap, hd->l_reg, l_val);
+	regmap_update_bits(regmap, hd->l_reg, 0x3ff, l_val);
+	regmap_update_bits(regmap, hd->m_reg, 0x7ffff, 0);
+	regmap_update_bits(regmap, hd->n_reg, 0x7ffff, 1);
 
 	if (enabled)
 		__clk_hf2_pll_enable(hw);
