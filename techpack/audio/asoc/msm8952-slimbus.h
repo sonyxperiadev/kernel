@@ -10,6 +10,8 @@
  * GNU General Public License for more details.
  */
 
+#include "msm8952.h"
+
 #ifndef __MSM8952_SLIMBUS_AUDIO
 #define __MSM8952_SLIMBUS_AUDIO
 
@@ -24,6 +26,31 @@ struct ext_intf_cfg {
 	atomic_t quin_mi2s_clk_ref;
 	atomic_t auxpcm_mi2s_clk_ref;
 	atomic_t sec_auxpcm_mi2s_clk_ref;
+};
+
+struct msm8952_codec {
+	void* (*get_afe_config_fn)(struct snd_soc_codec *codec,
+				   enum afe_config_type config_type);
+	void  (*mbhc_hs_detect_exit)(struct snd_soc_codec *codec);
+};
+
+struct msm8952_asoc_mach_data {
+	int ext_pa;
+	int us_euro_gpio;
+	int ear_en_gpio;
+	int spk_amp_en_gpio;
+	struct snd_soc_codec *codec;
+	struct msm8952_codec msm8952_codec_fn;
+	struct ext_intf_cfg clk_ref;
+	struct snd_info_entry *codec_root;
+	void __iomem *vaddr_gpio_mux_spkr_ctl;
+	void __iomem *vaddr_gpio_mux_mic_ctl;
+	void __iomem *vaddr_gpio_mux_pcm_ctl;
+	void __iomem *vaddr_gpio_mux_sec_pcm_ctl;
+	void __iomem *vaddr_gpio_mux_quin_ext_ctl;
+	void __iomem *vaddr_gpio_mux_quin_ctl;
+	struct device_node *us_euro_gpio_p;
+	struct device_node *mi2s_gpio_p[MI2S_MAX];
 };
 
 int msm_slim_0_rx_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,

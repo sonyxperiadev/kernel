@@ -27,30 +27,12 @@
 #include <dsp/q6afe-v2.h>
 #include <soc/qcom/socinfo.h>
 #include "msm-pcm-routing-v2.h"
-#include "msm-audio-pinctrl.h"
 #include "codecs/wcd-mbhc-v2.h"
+#include "codecs/msm-cdc-pinctrl.h"
 #include <linux/regulator/consumer.h>
+#include "msm8952.h"
 
 #define DRV_NAME "msm8952-asoc-wcd"
-
-#define BTSCO_RATE_8KHZ 8000
-#define BTSCO_RATE_16KHZ 16000
-
-#define SAMPLING_RATE_48KHZ     48000
-#define SAMPLING_RATE_96KHZ     96000
-#define SAMPLING_RATE_192KHZ    192000
-
-#define PRI_MI2S_ID	(1 << 0)
-#define SEC_MI2S_ID	(1 << 1)
-#define TER_MI2S_ID	(1 << 2)
-#define QUAT_MI2S_ID	(1 << 3)
-#define QUIN_MI2S_ID	(1 << 4)
-
-#define DEFAULT_MCLK_RATE 9600000
-
-#define WCD_MBHC_DEF_RLOADS 5
-#define MAX_WSA_CODEC_NAME_LENGTH 80
-#define MSM_DT_MAX_PROP_SIZE 80
 
 #define MICBIAS_EXT_BYP_CAP 0x00
 #define MICBIAS_NO_EXT_BYP_CAP 0x01
@@ -80,35 +62,6 @@ static int msm8952_enable_dig_cdc_clk(struct snd_soc_codec *codec, int enable,
 static bool msm8952_swap_gnd_mic(struct snd_soc_codec *codec, bool active);
 static int msm8952_mclk_event(struct snd_soc_dapm_widget *w,
 			      struct snd_kcontrol *kcontrol, int event);
-
-struct on_demand_supply {
-        struct regulator *supply;
-        atomic_t ref;
-};
-
-struct msm_asoc_mach_data {
-        int codec_type;
-        int ext_pa;
-        int us_euro_gpio;
-        int spk_ext_pa_gpio;
-        int mclk_freq;
-        int lb_mode;
-        int afe_clk_ver;
-        u8 micbias1_cap_mode;
-        u8 micbias2_cap_mode;
-        atomic_t mclk_rsc_ref;
-        atomic_t mclk_enabled;
-        atomic_t wsa_mclk_rsc_ref;
-        struct mutex cdc_mclk_mutex;
-        struct mutex wsa_mclk_mutex;
-        struct delayed_work disable_mclk_work;
-        struct afe_digital_clk_cfg digital_cdc_clk;
-        struct afe_clk_set digital_cdc_core_clk;
-        void __iomem *vaddr_gpio_mux_spkr_ctl;
-        void __iomem *vaddr_gpio_mux_mic_ctl;
-        void __iomem *vaddr_gpio_mux_quin_ctl;
-        void __iomem *vaddr_gpio_mux_pcm_ctl;
-};
 
 /*
  * Android L spec
@@ -267,15 +220,11 @@ int is_ext_spk_gpio_support(struct platform_device *pdev,
 int is_us_eu_switch_gpio_support(struct platform_device *pdev,
 		struct msm_asoc_mach_data *pdata)
 {
-	int ret;
-
-	pr_debug("%s\n", __func__);
-
 	/* check if US-EU GPIO is supported */
 	pdata->us_euro_gpio = of_get_named_gpio(pdev->dev.of_node,
 					"qcom,cdc-us-euro-gpios", 0);
 	if (pdata->us_euro_gpio < 0) {
-		dev_dbg(&pdev->dev,
+		dev_err(&pdev->dev,
 			"property %s in node %s not found %d\n",
 			"qcom,cdc-us-euro-gpios", pdev->dev.of_node->full_name,
 			pdata->us_euro_gpio);
@@ -285,17 +234,13 @@ int is_us_eu_switch_gpio_support(struct platform_device *pdev,
 					pdata->us_euro_gpio);
 			return -EINVAL;
 		}
-		ret = msm_get_gpioset_index(CLIENT_WCD,
-						"us_eu_gpio");
-		if (ret < 0) {
-			pr_err("%s: gpio set name does not exist: %s",
-						__func__, "us_eu_gpio");
-			return ret;
-		}
+		pdata->us_euro_gpio_p = of_parse_phandle(pdev->dev.of_node,
+						"qcom,cdc-us-eu-gpios", 0);
 		mbhc_cfg.swap_gnd_mic = msm8952_swap_gnd_mic;
 	}
 	return 0;
 }
+
 
 static int msm_proxy_rx_ch_get(struct snd_kcontrol *kcontrol,
 				struct snd_ctl_elem_value *ucontrol)
@@ -618,13 +563,13 @@ static int msm8952_enable_dig_cdc_clk(struct snd_soc_codec *codec,
 	pdata = snd_soc_card_get_drvdata(codec->component.card);
 	pr_debug("%s: enable %d mclk ref counter %d\n",
 		   __func__, enable,
-		   atomic_read(&pdata->mclk_rsc_ref));
+		   atomic_read(&pdata->int_mclk0_rsc_ref));
 	if (enable) {
-		if (!atomic_read(&pdata->mclk_rsc_ref)) {
+		if (!atomic_read(&pdata->int_mclk0_rsc_ref)) {
 			cancel_delayed_work_sync(
-					&pdata->disable_mclk_work);
-			mutex_lock(&pdata->cdc_mclk_mutex);
-			if (atomic_read(&pdata->mclk_enabled) == false) {
+					&pdata->disable_int_mclk0_work);
+			mutex_lock(&pdata->cdc_int_mclk0_mutex);
+			if (atomic_read(&pdata->int_mclk0_enabled) == false) {
 				if (pdata->afe_clk_ver == AFE_CLK_VERSION_V1) {
 					pdata->digital_cdc_clk.clk_val =
 							pdata->mclk_freq;
@@ -640,19 +585,19 @@ static int msm8952_enable_dig_cdc_clk(struct snd_soc_codec *codec,
 				if (ret < 0) {
 					pr_err("%s: failed to enable CCLK\n",
 							__func__);
-					mutex_unlock(&pdata->cdc_mclk_mutex);
+					mutex_unlock(&pdata->cdc_int_mclk0_mutex);
 					return ret;
 				}
 				pr_debug("enabled digital codec core clk\n");
-				atomic_set(&pdata->mclk_enabled, true);
+				atomic_set(&pdata->int_mclk0_enabled, true);
 			}
-			mutex_unlock(&pdata->cdc_mclk_mutex);
+			mutex_unlock(&pdata->cdc_int_mclk0_mutex);
 		}
-		atomic_inc(&pdata->mclk_rsc_ref);
+		atomic_inc(&pdata->int_mclk0_rsc_ref);
 	} else {
-		cancel_delayed_work_sync(&pdata->disable_mclk_work);
-		mutex_lock(&pdata->cdc_mclk_mutex);
-		if (atomic_read(&pdata->mclk_enabled) == true) {
+		cancel_delayed_work_sync(&pdata->disable_int_mclk0_work);
+		mutex_lock(&pdata->cdc_int_mclk0_mutex);
+		if (atomic_read(&pdata->int_mclk0_enabled) == true) {
 			if (pdata->afe_clk_ver == AFE_CLK_VERSION_V1) {
 				pdata->digital_cdc_clk.clk_val = 0;
 				ret = afe_set_digital_codec_core_clock(
@@ -667,9 +612,9 @@ static int msm8952_enable_dig_cdc_clk(struct snd_soc_codec *codec,
 			if (ret < 0)
 				pr_err("%s: failed to disable CCLK\n",
 						__func__);
-			atomic_set(&pdata->mclk_enabled, false);
+			atomic_set(&pdata->int_mclk0_enabled, false);
 		}
-		mutex_unlock(&pdata->cdc_mclk_mutex);
+		mutex_unlock(&pdata->cdc_int_mclk0_mutex);
 	}
 	return ret;
 }
@@ -763,20 +708,23 @@ static int loopback_mclk_put(struct snd_kcontrol *kcontrol,
 	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 
 	pdata = snd_soc_card_get_drvdata(codec->component.card);
-	pr_debug("%s: mclk_rsc_ref %d enable %ld\n",
-			__func__, atomic_read(&pdata->mclk_rsc_ref),
+	pr_debug("%s: int_mclk0_rsc_ref %d enable %ld\n",
+			__func__, atomic_read(&pdata->int_mclk0_rsc_ref),
 			ucontrol->value.integer.value[0]);
 	switch (ucontrol->value.integer.value[0]) {
 	case 1:
-		ret = msm_gpioset_activate(CLIENT_WCD, "pri_i2s");
-		if (ret) {
-			pr_err("%s: failed to enable the pri gpios: %d\n",
+		if (pdata->mi2s_gpio_p[PRIM_MI2S]) {
+			ret = msm_cdc_pinctrl_select_active_state(
+					pdata->mi2s_gpio_p[PRIM_MI2S]);
+			if (ret) {
+				pr_err("%s: failed to enable pri gpios: %d\n",
 					__func__, ret);
-			break;
+				break;
+			}
 		}
-		mutex_lock(&pdata->cdc_mclk_mutex);
-		if ((!atomic_read(&pdata->mclk_rsc_ref)) &&
-				(!atomic_read(&pdata->mclk_enabled))) {
+		mutex_lock(&pdata->cdc_int_mclk0_mutex);
+		if ((!atomic_read(&pdata->int_mclk0_rsc_ref)) &&
+				(!atomic_read(&pdata->int_mclk0_enabled))) {
 			if (pdata->afe_clk_ver == AFE_CLK_VERSION_V1) {
 				pdata->digital_cdc_clk.clk_val =
 						pdata->mclk_freq;
@@ -792,25 +740,28 @@ static int loopback_mclk_put(struct snd_kcontrol *kcontrol,
 			if (ret < 0) {
 				pr_err("%s: failed to enable the MCLK: %d\n",
 						__func__, ret);
-				mutex_unlock(&pdata->cdc_mclk_mutex);
-				ret = msm_gpioset_suspend(CLIENT_WCD,
-								"pri_i2s");
-				if (ret)
-					pr_err("%s: failed to disable the pri gpios: %d\n",
-							__func__, ret);
+				mutex_unlock(&pdata->cdc_int_mclk0_mutex);
+				if (pdata->mi2s_gpio_p[PRIM_MI2S]) {
+					ret =
+					msm_cdc_pinctrl_select_sleep_state(
+						pdata->mi2s_gpio_p[PRIM_MI2S]);
+					if (ret)
+						pr_err("%s disable gpio fail\n",
+							__func__);
+				}
 				break;
 			}
-			atomic_set(&pdata->mclk_enabled, true);
+			atomic_set(&pdata->int_mclk0_enabled, true);
 		}
-		mutex_unlock(&pdata->cdc_mclk_mutex);
-		atomic_inc(&pdata->mclk_rsc_ref);
+		mutex_unlock(&pdata->cdc_int_mclk0_mutex);
+		atomic_inc(&pdata->int_mclk0_rsc_ref);
 		break;
 	case 0:
-		if (atomic_read(&pdata->mclk_rsc_ref) <= 0)
+		if (atomic_read(&pdata->int_mclk0_rsc_ref) <= 0)
 			break;
-		mutex_lock(&pdata->cdc_mclk_mutex);
-		if ((!atomic_dec_return(&pdata->mclk_rsc_ref)) &&
-				(atomic_read(&pdata->mclk_enabled))) {
+		mutex_lock(&pdata->cdc_int_mclk0_mutex);
+		if ((!atomic_dec_return(&pdata->int_mclk0_rsc_ref)) &&
+				(atomic_read(&pdata->int_mclk0_enabled))) {
 			if (pdata->afe_clk_ver == AFE_CLK_VERSION_V1) {
 				pdata->digital_cdc_clk.clk_val = 0;
 				ret = afe_set_digital_codec_core_clock(
@@ -825,16 +776,19 @@ static int loopback_mclk_put(struct snd_kcontrol *kcontrol,
 			if (ret < 0) {
 				pr_err("%s: failed to disable the CCLK: %d\n",
 						__func__, ret);
-				mutex_unlock(&pdata->cdc_mclk_mutex);
+				mutex_unlock(&pdata->cdc_int_mclk0_mutex);
 				break;
 			}
-			atomic_set(&pdata->mclk_enabled, false);
+			atomic_set(&pdata->int_mclk0_enabled, false);
 		}
-		mutex_unlock(&pdata->cdc_mclk_mutex);
-		ret = msm_gpioset_suspend(CLIENT_WCD, "pri_i2s");
-		if (ret)
-			pr_err("%s: failed to disable the pri gpios: %d\n",
+		mutex_unlock(&pdata->cdc_int_mclk0_mutex);
+		if (pdata->mi2s_gpio_p[PRIM_MI2S]) {
+			ret = msm_cdc_pinctrl_select_sleep_state(
+						pdata->mi2s_gpio_p[PRIM_MI2S]);
+			if (ret)
+				pr_err("%s: failed to disable pri gpios: %d\n",
 					__func__, ret);
+		}
 		break;
 	default:
 		pr_err("%s: Unexpected input value\n", __func__);
@@ -989,16 +943,31 @@ static int msm8952_mclk_event(struct snd_soc_dapm_widget *w,
 	pdata = snd_soc_card_get_drvdata(codec->component.card);
 	pr_debug("%s: event = %d\n", __func__, event);
 	switch (event) {
+	case SND_SOC_DAPM_PRE_PMU:
+		if (pdata->mi2s_gpio_p[PRIM_MI2S]) {
+			ret = msm_cdc_pinctrl_select_active_state(
+					pdata->mi2s_gpio_p[PRIM_MI2S]);
+			if (ret) {
+				pr_err("%s: failed to enable pri gpios: %d\n",
+					__func__, ret);
+				break;
+			}
+		}
+		msm8952_enable_dig_cdc_clk(codec, 1, true);
+		break;
 	case SND_SOC_DAPM_POST_PMD:
 		pr_debug("%s: mclk_res_ref = %d\n",
-			__func__, atomic_read(&pdata->mclk_rsc_ref));
-		ret = msm_gpioset_suspend(CLIENT_WCD, "pri_i2s");
-		if (ret < 0) {
-			pr_err("%s: gpio set cannot be de-activated %sd",
-					__func__, "pri_i2s");
-			return ret;
+			__func__, atomic_read(&pdata->int_mclk0_rsc_ref));
+		if (pdata->mi2s_gpio_p[PRIM_MI2S]) {
+			ret =  msm_cdc_pinctrl_select_sleep_state(
+						pdata->mi2s_gpio_p[PRIM_MI2S]);
+			if (ret < 0) {
+				pr_err("%s: gpio set cannot be de-activated %s",
+						__func__, "pri_i2s");
+				return ret;
+			}
 		}
-		if (atomic_read(&pdata->mclk_rsc_ref) == 0) {
+		if (atomic_read(&pdata->int_mclk0_rsc_ref) == 0) {
 			pr_debug("%s: disabling MCLK\n", __func__);
 			/* disable the codec mclk config*/
 			msm8952_enable_dig_cdc_clk(codec, 0, true);
@@ -1018,7 +987,7 @@ static int msm8952_enable_wsa_mclk(struct snd_soc_card *card, bool enable)
 
 	mutex_lock(&pdata->wsa_mclk_mutex);
 	if (enable) {
-		if (!atomic_read(&pdata->wsa_mclk_rsc_ref)) {
+		if (!atomic_read(&pdata->wsa_int_mclk0_rsc_ref)) {
 			if (pdata->afe_clk_ver == AFE_CLK_VERSION_V1) {
 				wsa_ana_clk_v1.clk_val1 =
 						Q6AFE_LPASS_OSR_CLK_9_P600_MHZ;
@@ -1037,11 +1006,11 @@ static int msm8952_enable_wsa_mclk(struct snd_soc_card *card, bool enable)
 				goto done;
 			}
 		}
-		atomic_inc(&pdata->wsa_mclk_rsc_ref);
+		atomic_inc(&pdata->wsa_int_mclk0_rsc_ref);
 	} else {
-		if (!atomic_read(&pdata->wsa_mclk_rsc_ref))
+		if (!atomic_read(&pdata->wsa_int_mclk0_rsc_ref))
 			goto done;
-		if (!atomic_dec_return(&pdata->wsa_mclk_rsc_ref)) {
+		if (!atomic_dec_return(&pdata->wsa_int_mclk0_rsc_ref)) {
 			if (pdata->afe_clk_ver == AFE_CLK_VERSION_V1) {
 				wsa_ana_clk_v1.clk_val1 =
 						Q6AFE_LPASS_OSR_CLK_DISABLE;
@@ -1115,19 +1084,23 @@ static int msm_mi2s_snd_startup(struct snd_pcm_substream *substream)
 		pr_err("failed to enable mclk\n");
 		return ret;
 	}
-	/* Enable the codec mclk config */
-	ret = msm_gpioset_activate(CLIENT_WCD, "pri_i2s");
-	if (ret < 0) {
-		pr_err("%s: gpio set cannot be activated %sd",
-				__func__, "pri_i2s");
-		return ret;
+
+	if (pdata->mi2s_gpio_p[PRIM_MI2S]) {
+		ret =  msm_cdc_pinctrl_select_active_state(
+				pdata->mi2s_gpio_p[PRIM_MI2S]);
+		if (ret < 0) {
+			pr_err("%s: gpio set cannot be activated %s",
+			__func__, "prim_i2s");
+		}
 	}
+		
 	ret = snd_soc_dai_set_fmt(cpu_dai, SND_SOC_DAIFMT_CBS_CFS);
 	if (ret < 0)
 		pr_err("%s: set fmt cpu dai failed; ret=%d\n", __func__, ret);
 
 	return ret;
 }
+
 static void msm_mi2s_snd_shutdown(struct snd_pcm_substream *substream)
 {
 	int ret;
@@ -1150,10 +1123,10 @@ static void msm_mi2s_snd_shutdown(struct snd_pcm_substream *substream)
 				__func__, ret);
 		}
 	}
-	if (atomic_read(&pdata->mclk_rsc_ref) > 0) {
-		atomic_dec(&pdata->mclk_rsc_ref);
+	if (atomic_read(&pdata->int_mclk0_rsc_ref) > 0) {
+		atomic_dec(&pdata->int_mclk0_rsc_ref);
 		pr_debug("%s: decrementing mclk_res_ref %d\n",
-				__func__, atomic_read(&pdata->mclk_rsc_ref));
+				__func__, atomic_read(&pdata->int_mclk0_rsc_ref));
 	}
 }
 
@@ -1183,10 +1156,13 @@ static int msm_prim_auxpcm_startup(struct snd_pcm_substream *substream)
 	atomic_inc(&auxpcm_mi2s_clk_ref);
 
 	/* enable the gpio's used for the external AUXPCM interface */
-	ret = msm_gpioset_activate(CLIENT_WCD, "quat_i2s");
-	if (ret < 0)
-		pr_err("%s(): configure gpios failed = %s\n",
+	if (pdata->mi2s_gpio_p[QUAT_MI2S]) {
+		ret =  msm_cdc_pinctrl_select_active_state(
+			pdata->mi2s_gpio_p[QUAT_MI2S]);
+		if (ret < 0)
+			pr_err("%s(): configure gpios failed = %s\n",
 				__func__, "quat_i2s");
+	}
 	return ret;
 }
 
@@ -1200,21 +1176,24 @@ static void msm_prim_auxpcm_shutdown(struct snd_pcm_substream *substream)
 
 	pr_debug("%s(): substream = %s\n",
 			__func__, substream->name);
-	if (atomic_read(&pdata->mclk_rsc_ref) > 0) {
-		atomic_dec(&pdata->mclk_rsc_ref);
+	if (atomic_read(&pdata->int_mclk0_rsc_ref) > 0) {
+		atomic_dec(&pdata->int_mclk0_rsc_ref);
 		pr_debug("%s: decrementing mclk_res_ref %d\n",
-			__func__, atomic_read(&pdata->mclk_rsc_ref));
+			__func__, atomic_read(&pdata->int_mclk0_rsc_ref));
 	}
 	if (atomic_read(&auxpcm_mi2s_clk_ref) > 0)
 		atomic_dec(&auxpcm_mi2s_clk_ref);
 	if ((atomic_read(&auxpcm_mi2s_clk_ref) == 0) &&
-		(atomic_read(&pdata->mclk_rsc_ref) == 0)) {
+		(atomic_read(&pdata->int_mclk0_rsc_ref) == 0)) {
 		msm8952_enable_dig_cdc_clk(codec, 0, true);
 	}
-	ret = msm_gpioset_suspend(CLIENT_WCD, "quat_i2s");
-	if (ret < 0)
-		pr_err("%s(): configure gpios failed = %s\n",
+	if (pdata->mi2s_gpio_p[QUAT_MI2S]) {
+		ret =  msm_cdc_pinctrl_select_sleep_state(
+			pdata->mi2s_gpio_p[QUAT_MI2S]);
+		if (ret < 0)
+			pr_err("%s(): configure gpios failed = %s\n",
 				__func__, "quat_i2s");
+	}
 }
 
 static int msm_sec_mi2s_snd_startup(struct snd_pcm_substream *substream)
@@ -1247,11 +1226,14 @@ static int msm_sec_mi2s_snd_startup(struct snd_pcm_substream *substream)
 		}
 		pr_debug("%s(): SEC I2S gpios turned on  = %s\n", __func__,
 				"sec_i2s");
-		ret = msm_gpioset_activate(CLIENT_WCD, "sec_i2s");
-		if (ret < 0) {
-			pr_err("%s: gpio set cannot be activated %sd",
-						__func__, "sec_i2s");
-			goto err;
+		if (pdata->mi2s_gpio_p[SEC_MI2S]) {
+			ret =  msm_cdc_pinctrl_select_active_state(
+				pdata->mi2s_gpio_p[SEC_MI2S]);
+			if (ret < 0) {
+				pr_err("%s: gpio set cannot be activated %s",
+				__func__, "sec_i2s");
+				goto err;
+			}
 		}
 	} else {
 			pr_err("%s: error codec type\n", __func__);
@@ -1259,11 +1241,14 @@ static int msm_sec_mi2s_snd_startup(struct snd_pcm_substream *substream)
 	ret = snd_soc_dai_set_fmt(cpu_dai, SND_SOC_DAIFMT_CBS_CFS);
 	if (ret < 0) {
 		pr_err("%s: set fmt cpu dai failed\n", __func__);
-		ret = msm_gpioset_suspend(CLIENT_WCD, "sec_i2s");
-		if (ret < 0) {
-			pr_err("%s: gpio set cannot be de-activated %sd",
-						__func__, "sec_i2s");
-			goto err;
+		if (pdata->mi2s_gpio_p[SEC_MI2S]) {
+			ret =  msm_cdc_pinctrl_select_sleep_state(
+				pdata->mi2s_gpio_p[SEC_MI2S]);
+			if (ret < 0) {
+				pr_err("%s: gpio de-activate error %s",
+					__func__, "sec_i2s");
+				goto err;
+			}
 		}
 	}
 	return ret;
@@ -1284,11 +1269,14 @@ static void msm_sec_mi2s_snd_shutdown(struct snd_pcm_substream *substream)
 	pr_debug("%s(): substream = %s  stream = %d\n", __func__,
 				substream->name, substream->stream);
 	if ((pdata->ext_pa & SEC_MI2S_ID) == SEC_MI2S_ID) {
-		ret = msm_gpioset_suspend(CLIENT_WCD, "sec_i2s");
-		if (ret < 0) {
-			pr_err("%s: gpio set cannot be de-activated: %sd",
+		if (pdata->mi2s_gpio_p[SEC_MI2S]) {
+			ret =  msm_cdc_pinctrl_select_sleep_state(
+				pdata->mi2s_gpio_p[SEC_MI2S]);
+			if (ret < 0) {
+				pr_err("%s: gpio set cannot be de-activated: %s",
 					__func__, "sec_i2s");
-			return;
+				return;
+			}
 		}
 		ret = msm_mi2s_sclk_ctl(substream, false);
 		if (ret < 0)
@@ -1317,10 +1305,13 @@ static int msm_quat_mi2s_snd_startup(struct snd_pcm_substream *substream)
 		pr_err("failed to enable sclk\n");
 		return ret;
 	}
-	ret = msm_gpioset_activate(CLIENT_WCD, "quat_i2s");
-	if (ret < 0) {
-		pr_err("failed to enable codec gpios\n");
-		goto err;
+	if (pdata->mi2s_gpio_p[QUAT_MI2S]) {
+		ret =  msm_cdc_pinctrl_select_active_state(
+			pdata->mi2s_gpio_p[QUAT_MI2S]);
+		if (ret < 0) {
+			pr_err("failed to enable codec gpios\n");
+			goto err;
+		}
 	}
 	if (atomic_inc_return(&quat_mi2s_clk_ref) == 1) {
 		ret = snd_soc_dai_set_fmt(cpu_dai, SND_SOC_DAIFMT_CBS_CFS);
@@ -1337,7 +1328,10 @@ err:
 
 static void msm_quat_mi2s_snd_shutdown(struct snd_pcm_substream *substream)
 {
-	int ret;
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_card *card = rtd->card;
+	struct msm_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
+	int ret = 0;
 
 	pr_debug("%s(): substream = %s  stream = %d\n", __func__,
 				substream->name, substream->stream);
@@ -1346,11 +1340,14 @@ static void msm_quat_mi2s_snd_shutdown(struct snd_pcm_substream *substream)
 		pr_err("%s:clock disable failed\n", __func__);
 	if (atomic_read(&quat_mi2s_clk_ref) > 0)
 		atomic_dec(&quat_mi2s_clk_ref);
-	ret = msm_gpioset_suspend(CLIENT_WCD, "quat_i2s");
-	if (ret < 0) {
-		pr_err("%s: gpio set cannot be de-activated %sd",
+	if (pdata->mi2s_gpio_p[QUAT_MI2S]) {
+		ret =  msm_cdc_pinctrl_select_sleep_state(
+			pdata->mi2s_gpio_p[QUAT_MI2S]);
+		if (ret < 0) {
+			pr_err("%s: gpio set cannot be de-activated %s",
 					__func__, "quat_i2s");
-		return;
+			return;
+		}
 	}
 }
 
@@ -1377,10 +1374,13 @@ static int msm_quin_mi2s_snd_startup(struct snd_pcm_substream *substream)
 		pr_err("failed to enable sclk\n");
 		return ret;
 	}
-	ret = msm_gpioset_activate(CLIENT_WCD, "quin_i2s");
-	if (ret < 0) {
-		pr_err("failed to enable codec gpios\n");
-		goto err;
+	if (pdata->mi2s_gpio_p[QUIN_MI2S]) {
+		ret =  msm_cdc_pinctrl_select_active_state(
+			pdata->mi2s_gpio_p[QUIN_MI2S]);
+		if (ret < 0) {
+			pr_err("failed to enable codec gpios\n");
+			goto err;
+		}
 	}
 	if (atomic_inc_return(&quin_mi2s_clk_ref) == 1) {
 		ret = snd_soc_dai_set_fmt(cpu_dai, SND_SOC_DAIFMT_CBS_CFS);
@@ -1397,7 +1397,10 @@ err:
 
 static void msm_quin_mi2s_snd_shutdown(struct snd_pcm_substream *substream)
 {
-	int ret;
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_card *card = rtd->card;
+	struct msm_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
+	int ret = 0;
 
 	pr_debug("%s(): substream = %s  stream = %d\n", __func__,
 				substream->name, substream->stream);
@@ -1406,11 +1409,14 @@ static void msm_quin_mi2s_snd_shutdown(struct snd_pcm_substream *substream)
 		pr_err("%s:clock disable failed\n", __func__);
 	if (atomic_read(&quin_mi2s_clk_ref) > 0)
 		atomic_dec(&quin_mi2s_clk_ref);
-	ret = msm_gpioset_suspend(CLIENT_WCD, "quin_i2s");
-	if (ret < 0) {
-		pr_err("%s: gpio set cannot be de-activated %sd",
+	if (pdata->mi2s_gpio_p[QUIN_MI2S]) {
+		ret =  msm_cdc_pinctrl_select_sleep_state(
+			pdata->mi2s_gpio_p[QUIN_MI2S]);
+		if (ret < 0) {
+			pr_err("%s: gpio set cannot be de-activated %s",
 					__func__, "quin_i2s");
-		return;
+			return;
+		}
 	}
 }
 
@@ -2402,14 +2408,14 @@ void msm8952_disable_mclk(struct work_struct *work)
 
 	dwork = to_delayed_work(work);
 	pdata = container_of(dwork, struct msm_asoc_mach_data,
-			disable_mclk_work);
-	mutex_lock(&pdata->cdc_mclk_mutex);
-	pr_debug("%s: mclk_enabled %d mclk_rsc_ref %d\n", __func__,
-			atomic_read(&pdata->mclk_enabled),
-			atomic_read(&pdata->mclk_rsc_ref));
+			disable_int_mclk0_work);
+	mutex_lock(&pdata->cdc_int_mclk0_mutex);
+	pr_debug("%s: int_mclk0_enabled %d int_mclk0_rsc_ref %d\n", __func__,
+			atomic_read(&pdata->int_mclk0_enabled),
+			atomic_read(&pdata->int_mclk0_rsc_ref));
 
-	if (atomic_read(&pdata->mclk_enabled) == true
-			&& atomic_read(&pdata->mclk_rsc_ref) == 0) {
+	if (atomic_read(&pdata->int_mclk0_enabled) == true
+			&& atomic_read(&pdata->int_mclk0_rsc_ref) == 0) {
 		pr_debug("Disable the mclk\n");
 		if (pdata->afe_clk_ver == AFE_CLK_VERSION_V1) {
 			pdata->digital_cdc_clk.clk_val = 0;
@@ -2425,9 +2431,9 @@ void msm8952_disable_mclk(struct work_struct *work)
 		}
 		if (ret < 0)
 			pr_err("%s failed to disable the CCLK\n", __func__);
-		atomic_set(&pdata->mclk_enabled, false);
+		atomic_set(&pdata->int_mclk0_enabled, false);
 	}
-	mutex_unlock(&pdata->cdc_mclk_mutex);
+	mutex_unlock(&pdata->cdc_int_mclk0_mutex);
 }
 
 static bool msm8952_swap_gnd_mic(struct snd_soc_codec *codec, bool active)
@@ -2443,20 +2449,27 @@ static bool msm8952_swap_gnd_mic(struct snd_soc_codec *codec, bool active)
 		return false;
 	}
 	value = gpio_get_value_cansleep(pdata->us_euro_gpio);
-	ret = msm_gpioset_activate(CLIENT_WCD, "us_eu_gpio");
-	if (ret < 0) {
-		pr_err("%s: gpio set cannot be activated %sd",
+	if (pdata->us_euro_gpio_p) {
+		ret = msm_cdc_pinctrl_select_active_state(
+						pdata->us_euro_gpio_p);
+		if (ret < 0) {
+			pr_err("%s: gpio set cannot be activated %s",
 				__func__, "us_eu_gpio");
-		return false;
+			return false;
+		}
 	}
+
 	gpio_set_value_cansleep(pdata->us_euro_gpio, !value);
 	pr_debug("%s: swap select switch %d to %d\n", __func__, value, !value);
 
-	ret = msm_gpioset_suspend(CLIENT_WCD, "us_eu_gpio");
-	if (ret < 0) {
-		pr_err("%s: gpio set cannot be de-activated %sd",
+	if (pdata->us_euro_gpio_p) {
+		ret = msm_cdc_pinctrl_select_sleep_state(
+						pdata->us_euro_gpio_p);
+		if (ret < 0) {
+			pr_err("%s: gpio set cannot be de-activated %s",
 				__func__, "us_eu_gpio");
-		return false;
+			return false;
+		}
 	}
 
 	return true;
@@ -2607,6 +2620,7 @@ static int msm8952_asoc_machine_probe(struct platform_device *pdev)
 	struct msm_asoc_mach_data *pdata = NULL;
 	const char *hs_micbias_type = "qcom,msm-hs-micbias-type";
 	const char *ext_pa = "qcom,msm-ext-pa";
+	const char *spk_ext_pa = "qcom,msm-spk-ext-pa";
 	const char *mclk = "qcom,msm-mclk-freq";
 	const char *wsa = "asoc-wsa-codec-names";
 	const char *wsa_prefix = "asoc-wsa-codec-prefixes";
@@ -2695,14 +2709,6 @@ parse_mclk_freq:
 	}
 	pdata->mclk_freq = id;
 
-	/*reading the gpio configurations from dtsi file*/
-	ret = msm_gpioset_initialize(CLIENT_WCD, &pdev->dev);
-	if (ret < 0) {
-		dev_err(&pdev->dev,
-			"%s: error reading dtsi files%d\n", __func__, ret);
-		goto err;
-	}
-
 	num_strings = of_property_count_strings(pdev->dev.of_node,
 			wsa);
 	if (num_strings > 0) {
@@ -2786,6 +2792,15 @@ parse_mclk_freq:
 			pdata->ext_pa = (pdata->ext_pa | QUIN_MI2S_ID);
 	}
 	pr_debug("%s: ext_pa = %d\n", __func__, pdata->ext_pa);
+	pdata->spk_ext_pa_gpio = of_get_named_gpio(pdev->dev.of_node,
+							spk_ext_pa, 0);
+	if (pdata->spk_ext_pa_gpio < 0) {
+		dev_err(&pdev->dev, "%s: missing %s in dt node\n",
+			__func__, spk_ext_pa);
+	}
+
+	pdata->spk_ext_pa_gpio_p = of_parse_phandle(pdev->dev.of_node,
+							spk_ext_pa, 0);
 
 	ret = is_us_eu_switch_gpio_support(pdev, pdata);
 	if (ret < 0) {
@@ -2798,6 +2813,20 @@ parse_mclk_freq:
 	if (ret < 0)
 		pr_err("%s:  doesn't support external speaker pa\n",
 				__func__);
+
+	pdata->comp_gpio_p = of_parse_phandle(pdev->dev.of_node,
+					"qcom,cdc-comp-gpios", 0);
+
+	pdata->mi2s_gpio_p[PRIM_MI2S] = of_parse_phandle(pdev->dev.of_node,
+					"qcom,pri-mi2s-gpios", 0);
+	pdata->mi2s_gpio_p[SEC_MI2S] = of_parse_phandle(pdev->dev.of_node,
+					"qcom,sec-mi2s-gpios", 0);
+	pdata->mi2s_gpio_p[TERT_MI2S] = of_parse_phandle(pdev->dev.of_node,
+					"qcom,tert-mi2s-gpios", 0);
+	pdata->mi2s_gpio_p[QUAT_MI2S] = of_parse_phandle(pdev->dev.of_node,
+					"qcom,quat-mi2s-gpios", 0);
+	pdata->mi2s_gpio_p[QUIN_MI2S] = of_parse_phandle(pdev->dev.of_node,
+					"qcom,quin-mi2s-gpios", 0);
 
 	ret = of_property_read_string(pdev->dev.of_node,
 		hs_micbias_type, &type);
@@ -2851,14 +2880,14 @@ parse_mclk_freq:
 	if (ret)
 		goto err;
 	/* initialize timer */
-	INIT_DELAYED_WORK(&pdata->disable_mclk_work, msm8952_disable_mclk);
-	mutex_init(&pdata->cdc_mclk_mutex);
-	atomic_set(&pdata->mclk_rsc_ref, 0);
+	INIT_DELAYED_WORK(&pdata->disable_int_mclk0_work, msm8952_disable_mclk);
+	mutex_init(&pdata->cdc_int_mclk0_mutex);
+	atomic_set(&pdata->int_mclk0_rsc_ref, 0);
 	if (card->aux_dev) {
 		mutex_init(&pdata->wsa_mclk_mutex);
-		atomic_set(&pdata->wsa_mclk_rsc_ref, 0);
+		atomic_set(&pdata->wsa_int_mclk0_rsc_ref, 0);
 	}
-	atomic_set(&pdata->mclk_enabled, false);
+	atomic_set(&pdata->int_mclk0_enabled, false);
 	atomic_set(&quat_mi2s_clk_ref, 0);
 	atomic_set(&quin_mi2s_clk_ref, 0);
 	atomic_set(&auxpcm_mi2s_clk_ref, 0);
@@ -2925,7 +2954,7 @@ static int msm8952_asoc_machine_remove(struct platform_device *pdev)
 		mutex_destroy(&pdata->wsa_mclk_mutex);
 	}
 	snd_soc_unregister_card(card);
-	mutex_destroy(&pdata->cdc_mclk_mutex);
+	mutex_destroy(&pdata->cdc_int_mclk0_mutex);
 	return 0;
 }
 
