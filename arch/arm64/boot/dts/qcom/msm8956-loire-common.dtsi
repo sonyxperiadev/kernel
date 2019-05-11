@@ -395,7 +395,7 @@
 				"product_common_default",
 				"variant_default";
 		pinctrl-0 = </* PM8950 */
-			     &pm8950_gpio_1 &pm8950_gpio_2 &pm8950_gpio_5
+			     &pm8950_gpio_2 &pm8950_gpio_5
 			     &pm8950_gpio_6 &pm8950_gpio_7 &pm8950_gpio_8
 			     /* PMI8950 */
 			     &pmi8950_gpio_1 &pmi8950_gpio_2
