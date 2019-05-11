@@ -135,6 +135,13 @@
 		pinctrl-names = "default", "sleep";
 		pinctrl-0 = <&msm_gpio_17_act &msm_gpio_18_def>;
 		pinctrl-1 = <&msm_gpio_17_sus &msm_gpio_18_def>;
+
+		qcom,msm-bus,name = "bt_bimc_ebi0";
+		qcom,msm-bus,num-cases = <2>;
+		qcom,msm-bus,num-paths = <1>;
+		qcom,msm-bus,vectors-KBps =
+			<10027  512    0      0 >,    /* No vote */
+			<10027  512 3200000 3200000>; /* Max. bandwidth */
 	};
 
 	bcm43xx {
