@@ -2714,9 +2714,9 @@
 
 	clock_audio: audio_ext_clk {
 		compatible = "qcom,audio-ref-clk";
-//		pinctrl-names = "active", "sleep";
-//		pinctrl-0 = <&pm8950_gpio_1>;
-//		pinctrl-1 = <&pm8950_gpio_1>;
+		pinctrl-names = "active", "sleep";
+		pinctrl-0 = <&pm8950_gpio_1>;
+		pinctrl-1 = <&pm8950_gpio_1>;
 		qcom,audio-ref-clk-gpio = <&pm8950_gpios 1 0>;
 		clock-names = "osr_clk";
 		clocks = <&clock_rpmcc RPM_DIV_CLK2>;
@@ -3171,11 +3171,10 @@
 		cdc_pm {
 			pins = "gpio1";
 			function = "func1"; /* SF1 */
-			output-high;
+			output-low;
 			bias-disable;
-			drive-push-pull;
 			qcom,drive-strength = <2>;
-			power-source = <0>; /* VPH_PWR */
+			power-source = <2>; /* VIN 2 */
 		};
 	};
 
@@ -3183,9 +3182,8 @@
 		wcd_eldo {
 			pins = "gpio7";
 			function = "gpio";
-			output-high;
+			output-low;
 			bias-disable;
-			drive-push-pull;
 			power-source = <0>; /* VPH_PWR */
 		};
 	};
