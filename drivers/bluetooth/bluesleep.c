@@ -59,6 +59,8 @@
 #include <linux/serial_core.h>
 #include <linux/platform_data/msm_serial_hs.h>
 
+#include <linux/msm-bus.h>
+
 #include <net/bluetooth/bluesleep.h>
 #include <net/bluetooth/bluetooth.h>
 #include <net/bluetooth/hci_core.h> /* event notifications */
@@ -104,6 +106,8 @@ struct bluesleep_info {
 	unsigned host_wake_irq;
 	struct uart_port *uport;
 	struct wakeup_source wake_lock;
+	struct msm_bus_scale_pdata *msm_bus_tbl;
+	u32 msm_bus_perf;
 	int irq_polarity;
 	int has_ext_wake;
 	atomic_t wakeup_irq_disabled;
@@ -166,6 +170,8 @@ static spinlock_t rw_lock;
 /** State variable: whether uart clock is turned on by bluesleep. */
 static atomic_t uart_is_on = ATOMIC_INIT(0);
 
+static atomic_t bus_vote_up = ATOMIC_INIT(0);
+
 struct proc_dir_entry *bluetooth_dir, *sleep_dir;
 
 /*
@@ -218,6 +224,30 @@ static void enable_wakeup_irq(int enable)
 	}
 }
 
+static int bluesleep_vote_bus(bool enable)
+{
+	int ret = 0;
+
+	if (!bsi->msm_bus_perf)
+		return -ENODEV;
+
+	if (enable) {
+		/* Already voted ? */
+		if (atomic_read(&bus_vote_up))
+			return 0;
+		atomic_set(&bus_vote_up, 1);
+	} else {
+		atomic_set(&bus_vote_up, 0);
+	}
+
+	ret = msm_bus_scale_client_update_request(
+				bsi->msm_bus_perf, (int)enable);
+	if (ret)
+		pr_err("bus scale request failure: %d\n", ret);
+
+	return ret;
+}
+
 /**
  * @return 1 if the Host can go to sleep, 0 otherwise.
  */
@@ -253,6 +283,7 @@ static void bluesleep_sleep_work(struct work_struct *work)
 			 * wakelock after 500 ms.
 			 */
 			__pm_wakeup_event(&bsi->wake_lock, 500);
+			bluesleep_vote_bus(false);
 		} else {
 			pr_err("This should never happen.\n");
 			return;
@@ -271,6 +302,8 @@ static void bluesleep_sleep_work(struct work_struct *work)
 				gpio_set_value(bsi->ext_wake, 1);
 			clear_bit(BT_EXT_WAKE, &flags);
 		}
+
+		bluesleep_vote_bus(true);
 
 		enable_wakeup_irq(0);
 		hsuart_power(HS_UART_ON);
@@ -334,6 +367,8 @@ void bluesleep_outgoing_data(void)
 	}
 
 	spin_unlock_irqrestore(&rw_lock, irq_flags);
+
+	bluesleep_vote_bus(true);
 
 	enable_wakeup_irq(0);
 
@@ -617,6 +652,17 @@ static int bluesleep_probe(struct platform_device *pdev)
 		if (ret < 0) {
 			pr_err("couldn't populate info");
 			return ret;
+		}
+	}
+
+	bsi->msm_bus_tbl = msm_bus_cl_get_pdata(pdev);
+	if (bsi->msm_bus_tbl) {
+		bsi->msm_bus_perf = msm_bus_scale_register_client(
+							bsi->msm_bus_tbl);
+		if (IS_ERR(&bsi->msm_bus_perf)) {
+			pr_err("Error configuring MSM bus client. Bus voting "
+				"will be unavailable.\n");
+			bsi->msm_bus_tbl = NULL;
 		}
 	}
 
