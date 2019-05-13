@@ -300,10 +300,21 @@ begin:
 	if (hd->status_reg) {	
 		for (count = 500; count > 0; count--) {
 			ret = regmap_read(regmap, hd->status_reg, &val);
-			if (ret || (val & BIT(hd->lock_bit))) {
+			if (ret)
+				return ret;
+			if (val & BIT(hd->lock_bit)) {
 				if (lock)
 					goto out;
 				lock = true;
+			} else {
+				/*
+				 * Extremely paranoid branch:
+				 * If it was a phantom lock reset the lock
+				 * status so that we recheck twice, just to
+				 * be extremely sure that we will not lock
+				 * up the processors.
+				 */
+				lock = false;
 			}
 			udelay(1);
 		}
@@ -312,9 +323,6 @@ begin:
 	}
 out:
 	if (!lock) {
-		pr_err("WARNING: HFPLL DID NOT LOCK!!!!\n");
-		pr_err("CLK NAME: %s\n", clk_hw_get_name(hw));
-
 		if (!retried) {
 			retried = true;
 
@@ -325,6 +333,9 @@ out:
 			/* Then retry and hope for the best... */
 			goto begin;
 		}
+
+		pr_err("WARNING: HFPLL %s DID NOT LOCK!!!!\n",
+			clk_hw_get_name(hw));
 	}
 
 	/* Enable PLL output. */
@@ -348,6 +359,26 @@ static int clk_hf2_pll_enable(struct clk_hw *hw)
 	spin_unlock_irqrestore(&h->lock, flags);
 
 	return 0;
+}
+
+static void clk_hf2_pll_disable(struct clk_hw *hw)
+{
+	struct clk_hfpll *h = to_clk_hfpll(hw);
+	struct hfpll_data const *hd = h->d;
+	struct regmap *regmap = h->clkr.regmap;
+	unsigned long flags;
+
+	spin_lock_irqsave(&h->lock, flags);
+	__clk_hfpll_disable(h);
+
+	/* Park the PLL at a safe frequency to avoid undervolting on enable */
+	if (hd->safe_parking_enabled) {
+		regmap_update_bits(regmap, hd->l_reg, 0x3ff, hd->l_park_val);
+		regmap_update_bits(regmap, hd->m_reg, 0x7ffff, 0);
+		regmap_update_bits(regmap, hd->n_reg, 0x7ffff, 1);
+	}
+
+	spin_unlock_irqrestore(&h->lock, flags);
 }
 
 static long clk_hfpll_round_rate(struct clk_hw *hw, unsigned long rate,
@@ -470,7 +501,9 @@ static int clk_hf2_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 		regmap_write(regmap, hd->user_reg, val);
 	}
 
-	regmap_write(regmap, hd->l_reg, l_val);
+	regmap_update_bits(regmap, hd->l_reg, 0x3ff, l_val);
+	regmap_update_bits(regmap, hd->m_reg, 0x7ffff, 0);
+	regmap_update_bits(regmap, hd->n_reg, 0x7ffff, 1);
 
 	if (enabled)
 		__clk_hf2_pll_enable(hw);
@@ -574,7 +607,7 @@ EXPORT_SYMBOL_GPL(clk_ops_hfpll);
 
 const struct clk_ops clk_ops_hf2_pll = {
 	.enable = clk_hf2_pll_enable,
-	.disable = clk_hfpll_disable,
+	.disable = clk_hf2_pll_disable,
 	.is_enabled = hfpll_is_enabled,
 	.round_rate = clk_hf2_pll_round_rate,
 	.set_rate = clk_hf2_pll_set_rate,
