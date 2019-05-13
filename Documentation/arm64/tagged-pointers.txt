@@ -17,13 +17,21 @@ this byte for application use.
 Passing tagged addresses to the kernel
 --------------------------------------
 
-All interpretation of userspace memory addresses by the kernel assumes
-an address tag of 0x00.
+Some initial work for supporting non-zero address tags passed to the
+kernel has been done. As of now, the kernel supports tags in:
 
-This includes, but is not limited to, addresses found in:
+  - user fault addresses
 
- - pointer arguments to system calls, including pointers in structures
-   passed to system calls,
+  - pointer arguments (including pointers in structures), which don't
+    describe virtual memory ranges, passed to system calls
+
+All other interpretations of userspace memory addresses by the kernel
+assume an address tag of 0x00. This includes, but is not limited to,
+addresses found in:
+
+ - pointer arguments (including pointers in structures), which describe
+   virtual memory ranges, passed to memory system calls (mmap, mprotect,
+   etc.)
 
  - the stack pointer (sp), e.g. when interpreting it to deliver a
    signal,
@@ -33,11 +41,7 @@ This includes, but is not limited to, addresses found in:
 
 Using non-zero address tags in any of these locations may result in an
 error code being returned, a (fatal) signal being raised, or other modes
-of failure.
-
-For these reasons, passing non-zero address tags to the kernel via
-system calls is forbidden, and using a non-zero address tag for sp is
-strongly discouraged.
+of failure. Using a non-zero address tag for sp is strongly discouraged.
 
 Programs maintaining a frame pointer and frame records that use non-zero
 address tags may suffer impaired or inaccurate debug and profiling

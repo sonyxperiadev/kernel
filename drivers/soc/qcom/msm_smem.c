@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -26,6 +26,7 @@
 #include <soc/qcom/subsystem_notif.h>
 #include <soc/qcom/subsystem_restart.h>
 #include <soc/qcom/ramdump.h>
+#include <soc/qcom/scm.h>
 
 #include <soc/qcom/smem.h>
 
@@ -154,7 +155,7 @@ struct smem_targ_info_type {
 	/* Identifier is a constant, set to SMEM_TARG_INFO_IDENTIFIER. */
 	uint32_t identifier;
 	uint32_t size;
-	phys_addr_t phys_base_addr;
+	uint64_t phys_base_addr;
 	uint32_t  max_items;
 };
 
@@ -1098,12 +1099,15 @@ static __init int modem_restart_late_init(void)
 	void *handle;
 	struct restart_notifier_block *nb;
 
-	if (smem_dev)
-		smem_ramdump_dev = create_ramdump_device("smem", smem_dev);
-	if (IS_ERR_OR_NULL(smem_ramdump_dev)) {
-		LOG_ERR("%s: Unable to create smem ramdump device.\n",
-			__func__);
-		smem_ramdump_dev = NULL;
+	if (scm_is_secure_device()) {
+		if (smem_dev)
+			smem_ramdump_dev = create_ramdump_device("smem",
+								 smem_dev);
+		if (IS_ERR_OR_NULL(smem_ramdump_dev)) {
+			LOG_ERR("%s: Unable to create smem ramdump device.\n",
+				__func__);
+			smem_ramdump_dev = NULL;
+		}
 	}
 
 	for (i = 0; i < ARRAY_SIZE(restart_notifiers); i++) {
@@ -1326,7 +1330,7 @@ static int smem_init_target_info(phys_addr_t info_addr, resource_size_t size)
 		LOG_ERR("%s failed: invalid TARGET INFO magic\n", __func__);
 		return -ENODEV;
 	}
-	smem_ram_phys = smem_targ_info->phys_base_addr;
+	smem_ram_phys = (phys_addr_t)smem_targ_info->phys_base_addr;
 	smem_ram_size = smem_targ_info->size;
 	if (smem_targ_info->max_items)
 		smem_max_items = smem_targ_info->max_items;
