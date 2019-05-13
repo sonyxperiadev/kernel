@@ -395,7 +395,7 @@
 				"product_common_default",
 				"variant_default";
 		pinctrl-0 = </* PM8950 */
-			     &pm8950_gpio_1 &pm8950_gpio_2 &pm8950_gpio_5
+			     &pm8950_gpio_2 &pm8950_gpio_5
 			     &pm8950_gpio_6 &pm8950_gpio_7 &pm8950_gpio_8
 			     /* PMI8950 */
 			     &pmi8950_gpio_1 &pmi8950_gpio_2
@@ -536,6 +536,7 @@
 	sound-9335 {
 		qcom,msm-mbhc-hphl-swh = <1>;
 		/delete-property/ qcom,cdc-us-euro-gpios;
+		/delete-property/ qcom,cdc-us-eu-gpios;
 		qcom,ear-en-gpios = <&msm_gpio 143 0>;
 		qcom,audio-routing =
 			"AIF4 VI", "MCLK",
@@ -557,23 +558,10 @@
 			"SpkrLeft IN", "SPK1 OUT",
 			"SpkrRight IN", "SPK2 OUT";
 		qcom,msm-ext-pa = "quaternary", "quinary";
-		qcom,msm-gpios =
-			"quin_i2s",
-			"quat_i2s";
-		qcom,pinctrl-names =
-			"all_off",
-			"quin_act",
-			"quat_act",
-			"quin_quat_act";
-		pinctrl-names =
-			"all_off",
-			"quin_act",
-			"quat_act",
-			"quin_quat_act";
-		pinctrl-0 = <&pri_tlmm_lines_sus &sec_tlmm_lines_sus &sec_tlmm_2_lines_sus>;
-		pinctrl-1 = <&pri_tlmm_lines_act &sec_tlmm_lines_sus &sec_tlmm_2_lines_sus>;
-		pinctrl-2 = <&pri_tlmm_lines_sus &sec_tlmm_lines_act &sec_tlmm_2_lines_act>;
-		pinctrl-3 = <&pri_tlmm_lines_act &sec_tlmm_lines_act &sec_tlmm_2_lines_act>;
+
+		qcom,pri-mi2s-gpios = <&cdc_pri_mi2s_gpios>;
+		qcom,quat-mi2s-gpios = <&cdc_quat_mi2s_gpios>;
+		qcom,quin-mi2s-gpios = <&cdc_quin_mi2s_gpios>;
 
 		asoc-platform = <&pcm0>, <&pcm1>, <&pcm2>, <&pcm3>, <&voip>, <&voice>,
 				<&loopback>, <&compress>, <&hostless>,
@@ -583,6 +571,13 @@
 				"msm-compress-dsp", "msm-pcm-hostless", "msm-pcm-afe",
 				"msm-lsm-client", "msm-pcm-routing", "msm-cpe-lsm",
 				"msm-pcm-lpa";
+	};
+
+	cdc_quat_mi2s_gpios: msm_cdc_pinctrl_quat {
+		compatible = "qcom,msm-cdc-pinctrl";
+		pinctrl-names = "aud_active", "aud_sleep";
+		pinctrl-0 = <&sec_tlmm_lines_act &sec_tlmm_2_lines_act>;
+		pinctrl-1 = <&sec_tlmm_lines_sus &sec_tlmm_2_lines_sus>;
 	};
 
 	ldo_vibrator {

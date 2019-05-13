@@ -2615,17 +2615,10 @@
 			"SpkrLeft IN", "SPK1 OUT",
 			"SpkrRight IN", "SPK2 OUT";
 
-		qcom,msm-gpios =
-			"us_eu_gpio";
-		qcom,pinctrl-names =
-			"all_off",
-			"us_eu_gpio_act";
-		pinctrl-names =
-			"all_off",
-			"us_eu_gpio_act";
-		pinctrl-0 = <&cross_conn_det_sus>;// &pm8950_gpio_7>;
-		pinctrl-1 = <&cross_conn_det_act>;// &pm8950_gpio_7>;
 		qcom,cdc-us-euro-gpios = <&msm_gpio 144 0>;
+		qcom,cdc-us-eu-gpios = <&cdc_us_euro_sw>;
+		qcom,pri-mi2s-gpios = <&cdc_pri_mi2s_gpios>;
+		qcom,quin-mi2s-gpios = <&cdc_quin_mi2s_gpios>;
 
 		qcom,msm-mbhc-hphl-swh = <0>;
 		qcom,msm-mbhc-gnd-swh = <0>;
@@ -2698,11 +2691,32 @@
 		pinctrl-1 = <&cdc_reset_line_sus>;
 	};
 
+	cdc_us_euro_sw: msm_cdc_pinctrl_us_euro_sw {
+		compatible = "qcom,msm-cdc-pinctrl";
+		pinctrl-names = "aud_active", "aud_sleep";
+		pinctrl-0 = <&cross_conn_det_act>;
+		pinctrl-1 = <&cross_conn_det_sus>;
+	};
+
+	cdc_pri_mi2s_gpios: msm_cdc_pinctrl_pri {
+		compatible = "qcom,msm-cdc-pinctrl";
+		pinctrl-names = "aud_active", "aud_sleep";
+		pinctrl-0 = <&cdc_pdm_lines_act &cdc_pdm_lines_2_act>;
+		pinctrl-1 = <&cdc_pdm_lines_sus &cdc_pdm_lines_2_sus>;
+	};
+
+	cdc_quin_mi2s_gpios: msm_cdc_pinctrl_quin {
+		compatible = "qcom,msm-cdc-pinctrl";
+		pinctrl-names = "aud_active", "aud_sleep";
+		pinctrl-0 = <&pri_tlmm_lines_act>;
+		pinctrl-1 = <&pri_tlmm_lines_sus>;
+	};
+
 	clock_audio: audio_ext_clk {
 		compatible = "qcom,audio-ref-clk";
-//		pinctrl-names = "active", "sleep";
-//		pinctrl-0 = <&pm8950_gpio_1>;
-//		pinctrl-1 = <&pm8950_gpio_1>;
+		pinctrl-names = "active", "sleep";
+		pinctrl-0 = <&pm8950_gpio_1>;
+		pinctrl-1 = <&pm8950_gpio_1>;
 		qcom,audio-ref-clk-gpio = <&pm8950_gpios 1 0>;
 		clock-names = "osr_clk";
 		clocks = <&clock_rpmcc RPM_DIV_CLK2>;
@@ -3157,11 +3171,10 @@
 		cdc_pm {
 			pins = "gpio1";
 			function = "func1"; /* SF1 */
-			output-high;
+			output-low;
 			bias-disable;
-			drive-push-pull;
 			qcom,drive-strength = <2>;
-			power-source = <0>; /* VPH_PWR */
+			power-source = <2>; /* VIN 2 */
 		};
 	};
 
@@ -3169,9 +3182,8 @@
 		wcd_eldo {
 			pins = "gpio7";
 			function = "gpio";
-			output-high;
+			output-low;
 			bias-disable;
-			drive-push-pull;
 			power-source = <0>; /* VPH_PWR */
 		};
 	};

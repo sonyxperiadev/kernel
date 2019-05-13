@@ -34,7 +34,7 @@
 #include <linux/regmap.h>
 #include "wsa881x-analog.h"
 #include "wsa881x-temp-sensor.h"
-#include "../msm/msm-audio-pinctrl.h"
+#include "msm-cdc-pinctrl.h"
 
 #define SPK_GAIN_12DB 4
 #define WIDGET_NAME_MAX_SIZE 80
@@ -91,7 +91,6 @@ struct wsa881x_pdata wsa_pdata[MAX_WSA881X_DEVICE];
 
 static bool pinctrl_init;
 
-static int wsa881x_populate_dt_pdata(struct device *dev);
 static int wsa881x_reset(struct wsa881x_pdata *pdata, bool enable);
 static int wsa881x_startup(struct wsa881x_pdata *pdata);
 static int wsa881x_shutdown(struct wsa881x_pdata *pdata);
@@ -611,8 +610,8 @@ static int wsa881x_spkr_pa_ctrl(struct snd_soc_codec *codec, bool enable)
 		snd_soc_update_bits(codec, WSA881X_SPKR_DRV_GAIN, 0xF0,
 						(wsa881x->spk_pa_gain << 4));
 		if (wsa881x->visense_enable) {
-			ret = msm_gpioset_activate(CLIENT_WSA_BONGO_1,
-							"wsa_vi");
+			ret = msm_cdc_pinctrl_select_active_state(
+						wsa881x->wsa_vi_gpio_p);
 			if (ret) {
 				pr_err("%s: gpio set cannot be activated %s\n",
 					__func__, "wsa_vi");
@@ -764,8 +763,8 @@ static int wsa881x_rdac_event(struct snd_soc_dapm_widget *w,
 			wsa881x_visense_adc_ctrl(codec, false);
 			wsa881x_visense_txfe_ctrl(codec, false,
 						0x00, 0x01, 0x00);
-			ret = msm_gpioset_suspend(CLIENT_WSA_BONGO_1,
-							"wsa_vi");
+			ret = msm_cdc_pinctrl_select_sleep_state(
+						wsa881x->wsa_vi_gpio_p);
 			if (ret) {
 				pr_err("%s: gpio set cannot be suspended %s\n",
 					__func__, "wsa_vi");
@@ -889,7 +888,7 @@ static int wsa881x_startup(struct wsa881x_pdata *pdata)
 
 	if (pdata->enable_cnt++ > 0)
 		return 0;
-	ret = msm_gpioset_activate(CLIENT_WSA_BONGO_1, "wsa_clk");
+	ret = msm_cdc_pinctrl_select_active_state(pdata->wsa_clk_gpio_p);
 	if (ret) {
 		pr_err("%s: gpio set cannot be activated %s\n",
 			__func__, "wsa_clk");
@@ -934,7 +933,7 @@ static int wsa881x_shutdown(struct wsa881x_pdata *pdata)
 		}
 	}
 
-	ret = msm_gpioset_suspend(CLIENT_WSA_BONGO_1, "wsa_clk");
+	ret = msm_cdc_pinctrl_select_sleep_state(pdata->wsa_clk_gpio_p);
 	if (ret) {
 		pr_err("%s: gpio set cannot be suspended %s\n",
 			__func__, "wsa_clk");
@@ -1118,19 +1117,22 @@ static int wsa881x_reset(struct wsa881x_pdata *pdata, bool enable)
 	if (enable) {
 		if (pdata->wsa_active)
 			return 0;
-		ret = msm_gpioset_activate(CLIENT_WSA_BONGO_1, "wsa_reset");
+		ret = msm_cdc_pinctrl_select_active_state(
+					pdata->wsa_reset_gpio_p);
 		if (ret) {
 			pr_err("%s: gpio set cannot be activated %s\n",
 				__func__, "wsa_reset");
 			return ret;
 		}
-		ret = msm_gpioset_suspend(CLIENT_WSA_BONGO_1, "wsa_reset");
+		ret = msm_cdc_pinctrl_select_sleep_state(
+					pdata->wsa_reset_gpio_p);
 		if (ret) {
 			pr_err("%s: gpio set cannot be suspended(powerup) %s\n",
 				__func__, "wsa_reset");
 			return ret;
 		}
-		ret = msm_gpioset_activate(CLIENT_WSA_BONGO_1, "wsa_reset");
+		ret = msm_cdc_pinctrl_select_active_state(
+					pdata->wsa_reset_gpio_p);
 		if (ret) {
 			pr_err("%s: gpio set cannot be activated %s\n",
 				__func__, "wsa_reset");
@@ -1140,7 +1142,8 @@ static int wsa881x_reset(struct wsa881x_pdata *pdata, bool enable)
 	} else {
 		if (!pdata->wsa_active)
 			return 0;
-		ret = msm_gpioset_suspend(CLIENT_WSA_BONGO_1, "wsa_reset");
+		ret = msm_cdc_pinctrl_select_sleep_state(
+					pdata->wsa_reset_gpio_p);
 		if (ret) {
 			pr_err("%s: gpio set cannot be suspended %s\n",
 				__func__, "wsa_reset");
@@ -1219,21 +1222,18 @@ static int check_wsa881x_presence(struct i2c_client *client)
 	return ret;
 }
 
-static int wsa881x_populate_dt_pdata(struct device *dev)
+static int wsa881x_populate_dt_pdata(struct device *dev, int wsa881x_index)
 {
 	int ret = 0;
-
+	struct wsa881x_pdata *pdata = &wsa_pdata[wsa881x_index];
 	/* reading the gpio configurations from dtsi file */
-	if (!pinctrl_init) {
-		ret = msm_gpioset_initialize(CLIENT_WSA_BONGO_1, dev);
-		if (ret < 0) {
-			dev_err(dev,
-			"%s: error reading dtsi files%d\n", __func__, ret);
-			goto err;
-		}
-		pinctrl_init = true;
-	}
-err:
+	pdata->wsa_vi_gpio_p = of_parse_phandle(dev->of_node,
+				"qcom,wsa-analog-vi-gpio", 0);
+	pdata->wsa_clk_gpio_p = of_parse_phandle(dev->of_node,
+				"qcom,wsa-analog-clk-gpio", 0);
+	pdata->wsa_reset_gpio_p = of_parse_phandle(dev->of_node,
+				"qcom,wsa-analog-reset-gpio", 0);
+	pinctrl_init = true;
 	return ret;
 }
 
@@ -1291,7 +1291,8 @@ static int wsa881x_i2c_probe(struct i2c_client *client,
 		if (client->dev.of_node) {
 			dev_dbg(&client->dev, "%s:Platform data\n"
 				"from device tree\n", __func__);
-			ret = wsa881x_populate_dt_pdata(&client->dev);
+			ret = wsa881x_populate_dt_pdata(
+					&client->dev, wsa881x_index);
 			if (ret < 0) {
 				dev_err(&client->dev,
 				"%s: Fail to obtain pdata from device tree\n",
