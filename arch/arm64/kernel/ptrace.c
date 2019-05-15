@@ -643,6 +643,33 @@ static int fpr_get(struct task_struct *target, const struct user_regset *regset,
 	return __fpr_get(target, regset, pos, count, kbuf, ubuf, 0);
 }
 
+static int __fpr_set(struct task_struct *target,
+		     const struct user_regset *regset,
+		     unsigned int pos, unsigned int count,
+		     const void *kbuf, const void __user *ubuf,
+		     unsigned int start_pos)
+{
+	int ret;
+	struct user_fpsimd_state newstate;
+
+	/*
+	 * Ensure target->thread.fpsimd_state is up to date, so that a
+	 * short copyin can't resurrect stale data.
+	 */
+	sve_sync_to_fpsimd(target);
+
+	newstate = target->thread.fpsimd_state.user_fpsimd;
+
+	ret = user_regset_copyin(&pos, &count, &kbuf, &ubuf, &newstate,
+				 start_pos, start_pos + sizeof(newstate));
+	if (ret)
+		return ret;
+
+	target->thread.fpsimd_state.user_fpsimd = newstate;
+
+	return ret;
+}
+
 static int fpr_set(struct task_struct *target, const struct user_regset *regset,
 		   unsigned int pos, unsigned int count,
 		   const void *kbuf, const void __user *ubuf)
