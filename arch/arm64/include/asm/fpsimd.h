@@ -144,7 +144,7 @@ static inline void sve_update_vq_map(void) { }
 static inline int sve_verify_vq_map(void) { return 0; }
 static inline void sve_setup(void) { }
 
-#endif /* ! CONFIG_ARM64_SVE *
+#endif /* ! CONFIG_ARM64_SVE */
 
 #ifdef CONFIG_ENABLE_FP_SIMD_SETTINGS
 extern void fpsimd_disable_trap(void);
