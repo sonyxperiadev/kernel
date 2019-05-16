@@ -121,6 +121,14 @@ struct esr_context {
 	__u64 esr;
 };
 
+#define SVE_MAGIC	0x53564501
+
+struct sve_context {
+	struct _aarch64_ctx head;
+	__u16 vl;
+	__u16 __reserved[3];
+};
+
 #endif /* !__ASSEMBLY__ */
 
 #include <asm/sve_context.h>
