@@ -233,7 +233,7 @@ ENTRY(__inval_dcache_area)
  *	- start   - virtual start address of region
  *	- size    - size in question
  */
-__dma_inv_area:
+ENTRY(__dma_inv_area)
 	add	x1, x1, x0
 	dcache_line_size x2, x3
 	sub	x3, x2, #1
