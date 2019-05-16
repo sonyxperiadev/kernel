@@ -32,7 +32,6 @@
 #include <linux/ptrace.h>
 #include <linux/sched.h>
 #include <linux/signal.h>
-#include <linux/sched/task_stack.h>
 #include <linux/slab.h>
 #include <linux/hardirq.h>
 #include <linux/sysctl.h>
