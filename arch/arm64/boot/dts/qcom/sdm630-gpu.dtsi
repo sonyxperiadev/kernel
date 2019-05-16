@@ -71,6 +71,7 @@
 
 		/* <HZ/12> */
 		qcom,idle-timeout = <80>;
+		qcom,no-nap;
 
 		qcom,highest-bank-bit = <14>;
 
@@ -133,9 +134,6 @@
 		qcom,ca-target-pwrlevel = <4>;
 
 		qcom,gpu-speed-bin = <0x41a0 0x1fe00000 21>;
-
-		/* Enable midframe sampling */
-		qcom,enable-midframe-timer;
 
 		/* GPU Mempools */
 		qcom,gpu-mempools {
