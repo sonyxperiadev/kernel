@@ -78,6 +78,41 @@ struct fpsimd_context {
 	__uint128_t vregs[32];
 };
 
+/*
+ * extra_context: describes extra space in the signal frame for
+ * additional structures that don't fit in sigcontext.__reserved[].
+ *
+ * Note:
+ *
+ * 1) fpsimd_context, esr_context and extra_context must be placed in
+ * sigcontext.__reserved[] if present.  They cannot be placed in the
+ * extra space.  Any other record can be placed either in the extra
+ * space or in sigcontext.__reserved[], unless otherwise specified in
+ * this file.
+ *
+ * 2) There must not be more than one extra_context.
+ *
+ * 3) If extra_context is present, it must be followed immediately in
+ * sigcontext.__reserved[] by the terminating null _aarch64_ctx.
+ *
+ * 4) The extra space to which datap points must start at the first
+ * 16-byte aligned address immediately after the terminating null
+ * _aarch64_ctx that follows the extra_context structure in
+ * __reserved[].  The extra space may overrun the end of __reserved[],
+ * as indicated by a sufficiently large value for the size field.
+ *
+ * 5) The extra space must itself be terminated with a null
+ * _aarch64_ctx.
+ */
+#define EXTRA_MAGIC	0x45585401
+
+struct extra_context {
+	struct _aarch64_ctx head;
+	__u64 datap; /* 16-byte aligned pointer to extra space cast to __u64 */
+	__u32 size; /* size in bytes of the extra space */
+	__u32 __reserved[3];
+};
+
 /* ESR_EL1 context */
 #define ESR_MAGIC	0x45535201
 
@@ -192,41 +227,6 @@ struct esr_context {
 
 #define SVE_SIG_CONTEXT_SIZE(vq) \
 		(SVE_SIG_REGS_OFFSET + SVE_SIG_REGS_SIZE(vq))
-
-/*
- * extra_context: describes extra space in the signal frame for
- * additional structures that don't fit in sigcontext.__reserved[].
- *
- * Note:
- *
- * 1) fpsimd_context, esr_context and extra_context must be placed in
- * sigcontext.__reserved[] if present.  They cannot be placed in the
- * extra space.  Any other record can be placed either in the extra
- * space or in sigcontext.__reserved[], unless otherwise specified in
- * this file.
- *
- * 2) There must not be more than one extra_context.
- *
- * 3) If extra_context is present, it must be followed immediately in
- * sigcontext.__reserved[] by the terminating null _aarch64_ctx.
- *
- * 4) The extra space to which datap points must start at the first
- * 16-byte aligned address immediately after the terminating null
- * _aarch64_ctx that follows the extra_context structure in
- * __reserved[].  The extra space may overrun the end of __reserved[],
- * as indicated by a sufficiently large value for the size field.
- *
- * 5) The extra space must itself be terminated with a null
- * _aarch64_ctx.
- */
-#define EXTRA_MAGIC	0x45585401
-
-struct extra_context {
-	struct _aarch64_ctx head;
-	__u64 datap; /* 16-byte aligned pointer to extra space cast to __u64 */
-	__u32 size; /* size in bytes of the extra space */
-	__u32 __reserved[3];
-};
 
 #else /* CONFIG_64BIT */
 
