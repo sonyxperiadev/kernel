@@ -1082,6 +1082,7 @@ endmenu
 
 config ARM64_SVE
 	bool "ARM Scalable Vector Extension support"
+	depends on !ARCH_MSM8996
 	help
 	  The Scalable Vector Extension (SVE) is an extension to the AArch64
 	  execution state which complements and extends the SIMD functionality
