@@ -73,6 +73,7 @@
 
 		/* <HZ/12> */
 		qcom,idle-timeout = <80>;
+		qcom,no-nap;
 
 		qcom,highest-bank-bit = <14>;
 
