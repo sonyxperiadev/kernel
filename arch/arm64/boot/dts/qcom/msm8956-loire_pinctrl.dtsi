@@ -1559,26 +1559,52 @@
 
 	/delete-node/ pri-tlmm-lines;
 
-	wsa_spkr_sd_act: spkr_lines_on {
+	wsa_spkr_sd1_act: spkr1_lines_on {
 		mux {
-			pins = "gpio132", "gpio101";
+			pins = "gpio132";
 			function = "gpio";
 		};
 		config {
-			pins = "gpio132", "gpio101";
+			pins = "gpio132";
 			drive-strength = <2>;
 			output-high;
 			bias-pull-down;
 		};
 	};
 
-	wsa_spkr_sd_sus: spkr_lines_off {
+	wsa_spkr_sd1_sus: spkr1_lines_off {
 		mux {
-			pins = "gpio132", "gpio101";
+			pins = "gpio132";
 			function = "gpio";
 		};
 		config {
-			pins = "gpio132", "gpio101";
+			pins = "gpio132";
+			drive-strength = <2>;
+			output-low;
+			bias-disable;
+		};
+	};
+
+	wsa_spkr_sd2_act: spkr2_lines_on {
+		mux {
+			pins = "gpio101";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio101";
+			drive-strength = <2>;
+			output-high;
+			bias-pull-down;
+		};
+	};
+
+	wsa_spkr_sd2_sus: spkr2_lines_off {
+		mux {
+			pins = "gpio101";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio101";
 			drive-strength = <2>;
 			output-low;
 			bias-disable;
