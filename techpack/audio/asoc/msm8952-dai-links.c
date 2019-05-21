@@ -1588,23 +1588,7 @@ struct snd_soc_card *populate_snd_card_dailinks(struct device *dev)
 		return NULL;
 	}
 
-	if (!strcmp(card->name, "msm8952-tomtom-snd-card")) {
-		len1 = ARRAY_SIZE(msm8952_common_fe_dai);
-		len2 = len1 + ARRAY_SIZE(msm8952_tomtom_fe_dai);
-		len3 = len2 + ARRAY_SIZE(msm8952_common_be_dai);
-		snd_soc_card_msm[TOMTOM_CODEC].name = card->name;
-		card = &snd_soc_card_msm[TOMTOM_CODEC];
-		num_links = ARRAY_SIZE(msm8952_tomtom_dai_links);
-		memcpy(msm8952_tomtom_dai_links, msm8952_common_fe_dai,
-				sizeof(msm8952_common_fe_dai));
-		memcpy(msm8952_tomtom_dai_links + len1,
-			msm8952_tomtom_fe_dai, sizeof(msm8952_tomtom_fe_dai));
-		memcpy(msm8952_tomtom_dai_links + len2,
-			msm8952_common_be_dai, sizeof(msm8952_common_be_dai));
-		memcpy(msm8952_tomtom_dai_links + len3,
-			msm8952_tomtom_be_dai, sizeof(msm8952_tomtom_be_dai));
-		msm8952_dai_links = msm8952_tomtom_dai_links;
-	} else if (strnstr(card->name, "tasha", strlen(card->name))) {
+	if (strnstr(card->name, "tasha", strlen(card->name))) {
 		codec_ver = tasha_codec_ver();
 		if (codec_ver == WCD9326) {
 			if (!strcmp(card->name, "msm8952-tasha-snd-card"))
