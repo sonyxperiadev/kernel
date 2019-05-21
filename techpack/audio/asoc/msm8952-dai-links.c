@@ -336,164 +336,6 @@ static struct snd_soc_dai_link msm8952_tasha_be_dai[] = {
 #endif
 };
 
-static struct snd_soc_dai_link msm8952_tomtom_fe_dai[] = {
-	{ /* hw:x,28 */
-		.name = LPASS_BE_SLIMBUS_4_TX,
-		.stream_name = "Slimbus4 Capture",
-		.cpu_dai_name = "msm-dai-q6-dev.16393",
-		.platform_name = "msm-pcm-hostless",
-		.codec_name = "tomtom_codec",
-		.codec_dai_name = "tomtom_vifeedback",
-		.dpcm_capture = 1,
-		.id = MSM_BACKEND_DAI_SLIMBUS_4_TX,
-		.be_hw_params_fixup = msm_slim_4_tx_be_hw_params_fixup,
-		.ops = &msm8952_slimbus_be_ops,
-		.no_host_mode = SND_SOC_DAI_LINK_NO_HOST,
-		.ignore_suspend = 1,
-	},
-	/* CPE LSM FE */
-	{ /* hw:x,29 */
-		.name = "CPE Listen service",
-		.stream_name = "CPE Listen Audio Service",
-		.cpu_dai_name = "msm-dai-slim",
-		.platform_name = "msm-cpe-lsm",
-		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
-			    SND_SOC_DPCM_TRIGGER_POST },
-		.no_host_mode = SND_SOC_DAI_LINK_NO_HOST,
-		.dpcm_capture = 1,
-		.ignore_suspend = 1,
-		.ignore_pmdown_time = 1,
-		.codec_dai_name = "tomtom_mad1",
-		.codec_name = "tomtom_codec",
-		.ops = &msm8952_cpe_ops,
-	},
-};
-
-static struct snd_soc_dai_link msm8952_tomtom_be_dai[] = {
-	/* Backend DAI Links */
-	{
-		.name = LPASS_BE_SLIMBUS_0_RX,
-		.stream_name = "Slimbus Playback",
-		.cpu_dai_name = "msm-dai-q6-dev.16384",
-		.platform_name = "msm-pcm-routing",
-		.codec_name = "tomtom_codec",
-		.codec_dai_name	= "tomtom_rx1",
-		.no_pcm = 1,
-		.dpcm_playback = 1,
-		.id = MSM_BACKEND_DAI_SLIMBUS_0_RX,
-		.init = &msm_audrx_init,
-		.be_hw_params_fixup = msm_slim_0_rx_be_hw_params_fixup,
-		.ignore_pmdown_time = 1, /* dai link has playback support */
-		.ignore_suspend = 1,
-		.ops = &msm8952_slimbus_be_ops,
-	},
-	{
-		.name = LPASS_BE_SLIMBUS_0_TX,
-		.stream_name = "Slimbus Capture",
-		.cpu_dai_name = "msm-dai-q6-dev.16385",
-		.platform_name = "msm-pcm-routing",
-		.codec_name = "tomtom_codec",
-		.codec_dai_name = "tomtom_tx1",
-		.no_pcm = 1,
-		.dpcm_capture = 1,
-		.id = MSM_BACKEND_DAI_SLIMBUS_0_TX,
-		.be_hw_params_fixup = msm_slim_0_tx_be_hw_params_fixup,
-		.ignore_suspend = 1,
-		.ops = &msm8952_slimbus_be_ops,
-	},
-	{
-		.name = LPASS_BE_SLIMBUS_1_RX,
-		.stream_name = "Slimbus1 Playback",
-		.cpu_dai_name = "msm-dai-q6-dev.16386",
-		.platform_name = "msm-pcm-routing",
-		.codec_name = "tomtom_codec",
-		.codec_dai_name	= "tomtom_rx1",
-		.no_pcm = 1,
-		.dpcm_playback = 1,
-		.id = MSM_BACKEND_DAI_SLIMBUS_1_RX,
-		.be_hw_params_fixup = msm_slim_0_rx_be_hw_params_fixup,
-		.ops = &msm8952_slimbus_be_ops,
-		/* dai link has playback support */
-		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
-	},
-	{
-		.name = LPASS_BE_SLIMBUS_1_TX,
-		.stream_name = "Slimbus1 Capture",
-		.cpu_dai_name = "msm-dai-q6-dev.16387",
-		.platform_name = "msm-pcm-routing",
-		.codec_name = "tomtom_codec",
-		.codec_dai_name	= "tomtom_tx1",
-		.no_pcm = 1,
-		.dpcm_capture = 1,
-		.id = MSM_BACKEND_DAI_SLIMBUS_1_TX,
-		.be_hw_params_fixup = msm_slim_0_tx_be_hw_params_fixup,
-		.ops = &msm8952_slimbus_be_ops,
-		.ignore_suspend = 1,
-	},
-	{
-		.name = LPASS_BE_SLIMBUS_3_RX,
-		.stream_name = "Slimbus3 Playback",
-		.cpu_dai_name = "msm-dai-q6-dev.16390",
-		.platform_name = "msm-pcm-routing",
-		.codec_name = "tomtom_codec",
-		.codec_dai_name	= "tomtom_rx1",
-		.no_pcm = 1,
-		.dpcm_playback = 1,
-		.id = MSM_BACKEND_DAI_SLIMBUS_3_RX,
-		.be_hw_params_fixup = msm_slim_0_rx_be_hw_params_fixup,
-		.ops = &msm8952_slimbus_be_ops,
-		/* dai link has playback support */
-		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
-	},
-	{
-		.name = LPASS_BE_SLIMBUS_3_TX,
-		.stream_name = "Slimbus3 Capture",
-		.cpu_dai_name = "msm-dai-q6-dev.16391",
-		.platform_name = "msm-pcm-routing",
-		.codec_name = "tomtom_codec",
-		.codec_dai_name	= "tomtom_tx1",
-		.no_pcm = 1,
-		.dpcm_capture = 1,
-		.id = MSM_BACKEND_DAI_SLIMBUS_3_TX,
-		.be_hw_params_fixup = msm_slim_0_tx_be_hw_params_fixup,
-		.ops = &msm8952_slimbus_be_ops,
-		.ignore_suspend = 1,
-	},
-	{
-		.name = LPASS_BE_SLIMBUS_4_RX,
-		.stream_name = "Slimbus4 Playback",
-		.cpu_dai_name = "msm-dai-q6-dev.16392",
-		.platform_name = "msm-pcm-routing",
-		.codec_name = "tomtom_codec",
-		.codec_dai_name	= "tomtom_rx1",
-		.no_pcm = 1,
-		.dpcm_playback = 1,
-		.id = MSM_BACKEND_DAI_SLIMBUS_4_RX,
-		.be_hw_params_fixup = msm_slim_0_rx_be_hw_params_fixup,
-		.ops = &msm8952_slimbus_be_ops,
-		/* dai link has playback support */
-		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
-	},
-	/* MAD BE */
-	{
-		.name = LPASS_BE_SLIMBUS_5_TX,
-		.stream_name = "Slimbus5 Capture",
-		.cpu_dai_name = "msm-dai-q6-dev.16395",
-		.platform_name = "msm-pcm-routing",
-		.codec_name = "tomtom_codec",
-		.codec_dai_name = "tomtom_mad1",
-		.no_pcm = 1,
-		.dpcm_capture = 1,
-		.async_ops = ASYNC_DPCM_SND_SOC_PREPARE,
-		.id = MSM_BACKEND_DAI_SLIMBUS_5_TX,
-		.be_hw_params_fixup = msm_slim_5_tx_be_hw_params_fixup,
-		.ignore_suspend = 1,
-	},
-};
-
 static struct snd_soc_dai_link msm8952_common_fe_dai[] = {
 	/* FrontEnd DAI Links */
 	{/* hw:x,0 */
@@ -1391,13 +1233,6 @@ struct msm895x_wsa881x_dev_info {
 static struct snd_soc_aux_dev *msm895x_aux_dev;
 static struct snd_soc_codec_conf *msm895x_codec_conf;
 
-static struct snd_soc_dai_link msm8952_tomtom_dai_links[
-ARRAY_SIZE(msm8952_common_fe_dai) +
-ARRAY_SIZE(msm8952_tomtom_fe_dai) +
-ARRAY_SIZE(msm8952_common_be_dai) +
-ARRAY_SIZE(msm8952_tomtom_be_dai) +
-ARRAY_SIZE(msm8952_quin_dai_link)];
-
 static struct snd_soc_dai_link msm8952_tasha_dai_links[
 ARRAY_SIZE(msm8952_common_fe_dai) +
 ARRAY_SIZE(msm8952_tasha_fe_dai) +
@@ -1588,23 +1423,7 @@ struct snd_soc_card *populate_snd_card_dailinks(struct device *dev)
 		return NULL;
 	}
 
-	if (!strcmp(card->name, "msm8952-tomtom-snd-card")) {
-		len1 = ARRAY_SIZE(msm8952_common_fe_dai);
-		len2 = len1 + ARRAY_SIZE(msm8952_tomtom_fe_dai);
-		len3 = len2 + ARRAY_SIZE(msm8952_common_be_dai);
-		snd_soc_card_msm[TOMTOM_CODEC].name = card->name;
-		card = &snd_soc_card_msm[TOMTOM_CODEC];
-		num_links = ARRAY_SIZE(msm8952_tomtom_dai_links);
-		memcpy(msm8952_tomtom_dai_links, msm8952_common_fe_dai,
-				sizeof(msm8952_common_fe_dai));
-		memcpy(msm8952_tomtom_dai_links + len1,
-			msm8952_tomtom_fe_dai, sizeof(msm8952_tomtom_fe_dai));
-		memcpy(msm8952_tomtom_dai_links + len2,
-			msm8952_common_be_dai, sizeof(msm8952_common_be_dai));
-		memcpy(msm8952_tomtom_dai_links + len3,
-			msm8952_tomtom_be_dai, sizeof(msm8952_tomtom_be_dai));
-		msm8952_dai_links = msm8952_tomtom_dai_links;
-	} else if (strnstr(card->name, "tasha", strlen(card->name))) {
+	if (strnstr(card->name, "tasha", strlen(card->name))) {
 		codec_ver = tasha_codec_ver();
 		if (codec_ver == WCD9326) {
 			if (!strcmp(card->name, "msm8952-tasha-snd-card"))

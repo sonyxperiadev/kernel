@@ -2622,7 +2622,7 @@
 
 		qcom,msm-mbhc-hphl-swh = <0>;
 		qcom,msm-mbhc-gnd-swh = <0>;
-		qcom,tasha-mclk-clk-freq = <9600000>;
+		qcom,msm-mclk-freq = <9600000>;
 		asoc-platform = <&pcm0>, <&pcm1>, <&pcm2>, <&voip>, <&voice>,
 				<&loopback>, <&compress>, <&hostless>,
 				<&afe>, <&lsm>, <&routing>, <&cpe>, <&lpa>;
@@ -2681,6 +2681,8 @@
 		#interrupt-cells = <1>;
 		interrupt-parent = <&msm_gpio>;
 		qcom,gpio-connect = <&msm_gpio 120 0>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&wcd_intr_default>;
 	};
 
 	wcd_rst_gpio: wcd_gpio_ctrl {
@@ -2700,6 +2702,7 @@
 
 	cdc_pri_mi2s_gpios: msm_cdc_pinctrl_pri {
 		compatible = "qcom,msm-cdc-pinctrl";
+		status = "disabled";
 		pinctrl-names = "aud_active", "aud_sleep";
 		pinctrl-0 = <&cdc_pdm_lines_act &cdc_pdm_lines_2_act>;
 		pinctrl-1 = <&cdc_pdm_lines_sus &cdc_pdm_lines_2_sus>;

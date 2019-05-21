@@ -49,6 +49,22 @@
 			};
 		};
 
+		wcd9xxx_intr {
+			wcd_intr_default: wcd_intr_default{
+				mux {
+					pins = "gpio120";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio120";
+					drive-strength = <2>;
+					bias-pull-down;
+					input-enable;
+				};
+			};
+		};
+
 		cdc-pdm-lines {
 			cdc_pdm_lines_act: pdm_lines_on {
 				mux {

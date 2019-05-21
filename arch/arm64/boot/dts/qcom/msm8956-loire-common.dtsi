@@ -525,21 +525,6 @@
 		/delete-node/ qcom,panel-supply-entry@4;
 	};
 
-	slim_msm: slim@c140000 {
-		tasha_codec {
-			qcom,cdc-micbias1-mv = <1800>;
-			qcom,cdc-micbias2-mv = <2450>;
-			qcom,cdc-micbias3-mv = <2450>;
-			qcom,cdc-micbias4-mv = <1800>;
-			qcom,cdc-dmic-sample-rate = <2400000>;
-			swr_master {
-				wsa881x_212: wsa881x@20170212 {
-					qcom,spkr-sd-n-gpio = <&msm_gpio 101 0>;
-				};
-			};
-		};
-	};
-
 	sound-9335 {
 		qcom,msm-mbhc-hphl-swh = <1>;
 		/delete-property/ qcom,cdc-us-euro-gpios;
@@ -566,7 +551,8 @@
 			"SpkrRight IN", "SPK2 OUT";
 		qcom,msm-ext-pa = "quaternary", "quinary";
 
-		qcom,pri-mi2s-gpios = <&cdc_pri_mi2s_gpios>;
+		//qcom,pri-mi2s-gpios = <&cdc_pri_mi2s_gpios>;
+		/delete-property/ qcom,pri-mi2s-gpios;
 		qcom,quat-mi2s-gpios = <&cdc_quat_mi2s_gpios>;
 		qcom,quin-mi2s-gpios = <&cdc_quin_mi2s_gpios>;
 
@@ -585,6 +571,20 @@
 		pinctrl-names = "aud_active", "aud_sleep";
 		pinctrl-0 = <&sec_tlmm_lines_act &sec_tlmm_2_lines_act>;
 		pinctrl-1 = <&sec_tlmm_lines_sus &sec_tlmm_2_lines_sus>;
+	};
+
+	wsa_spkr_sd1: msm_cdc_pinctrl_spkr_left {
+	      compatible = "qcom,msm-cdc-pinctrl";
+	      pinctrl-names = "aud_active", "aud_sleep";
+	      pinctrl-0 = <&wsa_spkr_sd1_act>;
+	      pinctrl-1 = <&wsa_spkr_sd1_sus>;
+	};
+
+	wsa_spkr_sd2: msm_cdc_pinctrl_spkr_right {
+	      compatible = "qcom,msm-cdc-pinctrl";
+	      pinctrl-names = "aud_active", "aud_sleep";
+	      pinctrl-0 = <&wsa_spkr_sd2_act>;
+	      pinctrl-1 = <&wsa_spkr_sd2_sus>;
 	};
 
 	ldo_vibrator {
@@ -766,6 +766,35 @@
 	/delete-node/ qcom,pronto@a21b000;
 	/delete-node/ qcom,wcnss-wlan@0a000000;
 
+};
+
+&slim_msm {
+	tasha_codec {
+		qcom,cdc-micbias1-mv = <1800>;
+		qcom,cdc-micbias2-mv = <2450>;
+		qcom,cdc-micbias3-mv = <2450>;
+		qcom,cdc-micbias4-mv = <1800>;
+		qcom,cdc-dmic-sample-rate = <2400000>;
+	};
+};
+
+/* Loire: WSA881x dual speaker on GPIOs 132, 101 */
+&wsa881x_211 {
+	/delete-property/ qcom,spkr-sd-n-gpio;
+	qcom,spkr-sd-n-node = <&wsa_spkr_sd1>;
+};
+
+&wsa881x_212 {
+	/delete-property/ qcom,spkr-sd-n-gpio;
+	qcom,spkr-sd-n-node = <&wsa_spkr_sd2>;
+};
+
+&wsa881x_213 {
+	status = "disabled";
+};
+
+&wsa881x_214 {
+	status = "disabled";
 };
 
 &pm8950_gpios {
@@ -1341,4 +1370,8 @@
 
 &qseecom_mem {
 	size = <0 0x1400000>;
+};
+
+&cdc_us_euro_sw {
+	status = "disabled";
 };
