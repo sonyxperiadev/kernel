@@ -1067,7 +1067,29 @@ config ARM64_UAO
 	  regular load/store instructions if the cpu does not implement the
 	  feature.
 
+config ARM64_PMEM
+	bool "Enable support for persistent memory"
+	select ARCH_HAS_PMEM_API
+	help
+	  Say Y to enable support for the persistent memory API based on the
+	  ARMv8.2 DCPoP feature.
+
+	  The feature is detected at runtime, and the kernel will use DC CVAC
+	  operations if DC CVAP is not supported (following the behaviour of
+	  DC CVAP itself if the system does not define a point of persistence).
+
 endmenu
+
+config ARM64_SVE
+	bool "ARM Scalable Vector Extension support"
+	depends on !ARCH_MSM8996
+	help
+	  The Scalable Vector Extension (SVE) is an extension to the AArch64
+	  execution state which complements and extends the SIMD functionality
+	  of the base architecture to support much larger vectors and to enable
+	  additional vectorisation opportunities.
+
+	  To enable use of this extension on CPUs that implement it, say Y.
 
 config ARM64_MODULE_CMODEL_LARGE
 	bool
@@ -1257,6 +1279,17 @@ config BUILD_ARM64_UNCOMPRESSED_KERNEL
 	  compression and with
 	  concatenated dtb.
 endchoice
+
+config KRYO_PMU_WORKAROUND
+	bool "Workaround for PMU IRQ burst"
+	default n
+	depends on ARM_PMU
+	help
+	  Disable Performance Monitor overflow interrupts
+	  when handling an monitor IRQ, to avoid simultaneous
+	  overflow interrupts from multiple monitors.
+
+	  Enable this flag for effect SoCs.
 
 config BUILD_ARM64_DT_OVERLAY
 	bool "enable DT overlay compilation support"

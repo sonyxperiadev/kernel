@@ -601,6 +601,8 @@ el0_sync:
 	b.eq	el0_ia
 	cmp	x24, #ESR_ELx_EC_FP_ASIMD	// FP/ASIMD access
 	b.eq	el0_fpsimd_acc
+	cmp	x24, #ESR_ELx_EC_SVE		// SVE access
+	b.eq	el0_sve_acc
 	cmp	x24, #ESR_ELx_EC_FP_EXC64	// FP/ASIMD exception
 	b.eq	el0_fpsimd_exc
 	cmp	x24, #ESR_ELx_EC_SYS64		// configurable trap
@@ -652,6 +654,7 @@ el0_svc_compat:
 	/*
 	 * AArch32 syscall handling
 	 */
+	ldr	x16, [tsk, #TSK_TI_FLAGS]	// load thread flags
 	adrp	stbl, compat_sys_call_table	// load compat syscall table pointer
 	uxtw	scno, w7			// syscall number in w7 (r7)
 	mov     sc_nr, #__NR_compat_syscalls
@@ -733,9 +736,19 @@ el0_fpsimd_acc_compat:
 	mov	x1, sp
 	bl	do_fpsimd_acc_compat
 	b	ret_to_user
+el0_sve_acc:
+	/*
+	 * Scalable Vector Extension access
+	 */
+	enable_daif
+	ct_user_exit
+	mov	x0, x25
+	mov	x1, sp
+	bl	do_sve_acc
+	b	ret_to_user
 el0_fpsimd_exc:
 	/*
-	 * Floating Point or Advanced SIMD exception
+	 * Floating Point, Advanced SIMD or SVE exception
 	 */
 	enable_dbg
 	ct_user_exit
@@ -941,16 +954,37 @@ ENDPROC(ret_from_fork)
  */
 	.align	6
 el0_svc:
+	ldr	x16, [tsk, #TSK_TI_FLAGS]	// load thread flags
 	adrp	stbl, sys_call_table		// load syscall table pointer
 	uxtw	scno, w8			// syscall number in w8
 	mov	sc_nr, #__NR_syscalls
+
+#ifdef CONFIG_ARM64_SVE
+alternative_if_not ARM64_SVE
+	b	el0_svc_naked
+alternative_else_nop_endif
+	tbz	x16, #TIF_SVE, el0_svc_naked	// Skip unless TIF_SVE set:
+	bic	x16, x16, #_TIF_SVE		// discard SVE state
+	str	x16, [tsk, #TSK_TI_FLAGS]
+
+	/*
+	 * task_fpsimd_load() won't be called to update CPACR_EL1 in
+	 * ret_to_user unless TIF_FOREIGN_FPSTATE is still set, which only
+	 * happens if a context switch or kernel_neon_begin() or context
+	 * modification (sigreturn, ptrace) intervenes.
+	 * So, ensure that CPACR_EL1 is already correct for the fast-path case:
+	 */
+	mrs	x9, cpacr_el1
+	bic	x9, x9, #CPACR_EL1_ZEN_EL0EN	// disable SVE for el0
+	msr	cpacr_el1, x9			// synchronised by eret to el0
+#endif
+
 el0_svc_naked:					// compat entry point
 	stp	x0, scno, [sp, #S_ORIG_X0]	// save the original x0 and syscall number
 	enable_dbg_and_irq
 	ct_user_exit 1
 
-	ldr	x16, [tsk, #TSK_TI_FLAGS]	// check for syscall hooks
-	tst	x16, #_TIF_SYSCALL_WORK
+	tst	x16, #_TIF_SYSCALL_WORK		// check for syscall hooks
 	b.ne	__sys_trace
 	cmp     scno, sc_nr                     // check upper syscall limit
 	b.hs	ni_sys

@@ -28,8 +28,6 @@
 #define CTR_CACHE_MINLINE_MASK	\
 	((0xf << CTR_DMINLINE_SHIFT) | (0xf << CTR_IMINLINE_SHIFT))
 
-#define ICACHE_POLICY_RESERVED	0
-#define ICACHE_POLICY_AIVIVT	1
 #define ICACHE_POLICY_VIPT	2
 #define ICACHE_POLICY_PIPT	3
 
@@ -40,7 +38,6 @@
 #define CTR_L1IP(ctr)	(((ctr) >> CTR_L1IP_SHIFT) & CTR_L1IP_MASK)
 
 #define ICACHEF_ALIASING	0
-#define ICACHEF_AIVIVT		1
 
 extern unsigned long __icache_flags;
 
@@ -68,19 +65,6 @@ extern unsigned long __icache_flags;
 #define CACHE_NUMSETS(x)	(CCSIDR_EL1_NUMSETS(x) + 1)
 #define CACHE_ASSOCIATIVITY(x)	(CCSIDR_EL1_ASSOCIATIVITY(x) + 1)
 
-extern u64 __attribute_const__ cache_get_ccsidr(u64 csselr);
-
-/* Helpers for Level 1 Instruction cache csselr = 1L */
-static inline int icache_get_linesize(void)
-{
-	return CACHE_LINESIZE(cache_get_ccsidr(1L));
-}
-
-static inline int icache_get_numsets(void)
-{
-	return CACHE_NUMSETS(cache_get_ccsidr(1L));
-}
-
 /*
  * Whilst the D-side always behaves as PIPT on AArch64, aliasing is
  * permitted in the I-cache.
@@ -88,11 +72,6 @@ static inline int icache_get_numsets(void)
 static inline int icache_is_aliasing(void)
 {
 	return test_bit(ICACHEF_ALIASING, &__icache_flags);
-}
-
-static inline int icache_is_aivivt(void)
-{
-	return test_bit(ICACHEF_AIVIVT, &__icache_flags);
 }
 
 static inline u32 cache_type_cwg(void)

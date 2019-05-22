@@ -153,8 +153,6 @@ static int seqiv_aead_create(struct crypto_template *tmpl, struct rtattr **tb)
 	if (IS_ERR(inst))
 		return PTR_ERR(inst);
 
-	inst->alg.base.cra_alignmask |= __alignof__(u32) - 1;
-
 	spawn = aead_instance_ctx(inst);
 	alg = crypto_spawn_aead_alg(spawn);
 
@@ -219,7 +217,7 @@ static void __exit seqiv_module_exit(void)
 	crypto_unregister_template(&seqiv_tmpl);
 }
 
-module_init(seqiv_module_init);
+subsys_initcall(seqiv_module_init);
 module_exit(seqiv_module_exit);
 
 MODULE_LICENSE("GPL");

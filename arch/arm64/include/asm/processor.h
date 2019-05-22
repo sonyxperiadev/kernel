@@ -109,6 +109,9 @@ struct thread_struct {
 	unsigned long		tp2_value;
 #endif
 	struct fpsimd_state	fpsimd_state;
+	void			*sve_state;	/* SVE registers, if any */
+	unsigned int		sve_vl;		/* SVE vector length */
+	unsigned int		sve_vl_onexec;	/* SVE vl after next exec */
 	unsigned long		fault_address;	/* fault info */
 	unsigned long		fault_code;	/* ESR_EL1 value */
 	struct debug_info	debug;		/* debugging */
@@ -217,6 +220,10 @@ static inline void spin_lock_prefetch(const void *ptr)
 int cpu_enable_pan(void *__unused);
 int cpu_enable_uao(void *__unused);
 int cpu_enable_cache_maint_trap(void *__unused);
+
+/* Userspace interface for PR_SVE_{SET,GET}_VL prctl()s: */
+#define SVE_SET_VL(arg)	sve_set_current_vl(arg)
+#define SVE_GET_VL()	sve_get_current_vl()
 
 #endif /* __ASSEMBLY__ */
 #endif /* __ASM_PROCESSOR_H */

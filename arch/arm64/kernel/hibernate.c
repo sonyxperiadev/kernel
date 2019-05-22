@@ -27,6 +27,7 @@
 #include <asm/barrier.h>
 #include <asm/cacheflush.h>
 #include <asm/cputype.h>
+#include <asm/daifflags.h>
 #include <asm/irqflags.h>
 #include <asm/memory.h>
 #include <asm/mmu_context.h>
@@ -283,7 +284,7 @@ int swsusp_arch_suspend(void)
 		return -EBUSY;
 	}
 
-	local_dbg_save(flags);
+	flags = local_daif_save();
 
 	if (__cpu_suspend_enter(&state)) {
 		sleep_cpu = smp_processor_id();
@@ -320,7 +321,7 @@ int swsusp_arch_suspend(void)
 		}
 	}
 
-	local_dbg_restore(flags);
+	local_daif_restore(flags);
 
 	return ret;
 }

@@ -10,7 +10,9 @@
 #define __ASM_CPUFEATURE_H
 
 #include <asm/cpucaps.h>
+#include <asm/fpsimd.h>
 #include <asm/hwcap.h>
+#include <asm/sigcontext.h>
 #include <asm/sysreg.h>
 
 /*
@@ -44,8 +46,15 @@ enum ftr_type {
 #define FTR_SIGNED	true	/* Value should be treated as signed */
 #define FTR_UNSIGNED	false	/* Value should be treated as unsigned */
 
+#define FTR_VISIBLE	true	/* Feature visible to the user space */
+#define FTR_HIDDEN	false	/* Feature is hidden from the user */
+
+#define FTR_VISIBLE_IF_IS_ENABLED(config)		\
+	(IS_ENABLED(config) ? FTR_VISIBLE : FTR_HIDDEN)
+
 struct arm64_ftr_bits {
 	bool		sign;	/* Value is signed ? */
+	bool		visible;
 	bool		strict;	/* CPU Sanity check: strict matching required ? */
 	enum ftr_type	type;
 	u8		shift;
@@ -61,7 +70,9 @@ struct arm64_ftr_bits {
 struct arm64_ftr_reg {
 	const char			*name;
 	u64				strict_mask;
+	u64				user_mask;
 	u64				sys_val;
+	u64				user_val;
 	const struct arm64_ftr_bits	*ftr_bits;
 };
 
@@ -169,6 +180,11 @@ static inline u64 arm64_ftr_mask(const struct arm64_ftr_bits *ftrp)
 	return (u64)GENMASK(ftrp->shift + ftrp->width - 1, ftrp->shift);
 }
 
+static inline u64 arm64_ftr_reg_user_value(const struct arm64_ftr_reg *reg)
+{
+	return (reg->user_val | (reg->sys_val & reg->user_mask));
+}
+
 static inline int __attribute_const__
 cpuid_feature_extract_field(u64 features, int field, bool sign)
 {
@@ -195,6 +211,13 @@ static inline bool id_aa64pfr0_32bit_el0(u64 pfr0)
 	return val == ID_AA64PFR0_EL0_32BIT_64BIT;
 }
 
+static inline bool id_aa64pfr0_sve(u64 pfr0)
+{
+	u32 val = cpuid_feature_extract_unsigned_field(pfr0, ID_AA64PFR0_SVE_SHIFT);
+
+	return val > 0;
+}
+
 void __init setup_cpu_features(void);
 
 void update_cpu_capabilities(const struct arm64_cpu_capabilities *caps,
@@ -206,7 +229,7 @@ void update_cpu_errata_workarounds(void);
 void __init enable_errata_workarounds(void);
 void verify_local_cpu_errata_workarounds(void);
 
-u64 read_system_reg(u32 id);
+u64 read_sanitised_ftr_reg(u32 id);
 
 static inline bool cpu_supports_mixed_endian_el0(void)
 {
@@ -220,7 +243,7 @@ static inline bool system_supports_32bit_el0(void)
 
 static inline bool system_supports_mixed_endian_el0(void)
 {
-	return id_aa64mmfr0_mixed_endian_el0(read_system_reg(SYS_ID_AA64MMFR0_EL1));
+	return id_aa64mmfr0_mixed_endian_el0(read_sanitised_ftr_reg(SYS_ID_AA64MMFR0_EL1));
 }
 
 static inline bool system_uses_ttbr0_pan(void)
@@ -250,6 +273,39 @@ void arm64_set_ssbd_mitigation(bool state);
 #else
 static inline void arm64_set_ssbd_mitigation(bool state) {}
 #endif
+
+static inline bool system_supports_sve(void)
+{
+	return IS_ENABLED(CONFIG_ARM64_SVE) &&
+		cpus_have_const_cap(ARM64_SVE);
+}
+
+/*
+ * Read the pseudo-ZCR used by cpufeatures to identify the supported SVE
+ * vector length.
+ *
+ * Use only if SVE is present.
+ * This function clobbers the SVE vector length.
+ */
+static inline u64 read_zcr_features(void)
+{
+	u64 zcr;
+	unsigned int vq_max;
+
+	/*
+	 * Set the maximum possible VL, and write zeroes to all other
+	 * bits to see if they stick.
+	 */
+	sve_kernel_enable(NULL);
+	write_sysreg_s(ZCR_ELx_LEN_MASK, SYS_ZCR_EL1);
+
+	zcr = read_sysreg_s(SYS_ZCR_EL1);
+	zcr &= ~(u64)ZCR_ELx_LEN_MASK; /* find sticky 1s outside LEN field */
+	vq_max = sve_vq_from_vl(sve_get_vl());
+	zcr |= vq_max - 1; /* set LEN field to maximum effective value */
+
+	return zcr;
+}
 
 #endif /* __ASSEMBLY__ */
 

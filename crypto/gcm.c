@@ -1304,7 +1304,7 @@ static void __exit crypto_gcm_module_exit(void)
 	crypto_unregister_template(&crypto_gcm_base_tmpl);
 }
 
-module_init(crypto_gcm_module_init);
+subsys_initcall(crypto_gcm_module_init);
 module_exit(crypto_gcm_module_exit);
 
 MODULE_LICENSE("GPL");
