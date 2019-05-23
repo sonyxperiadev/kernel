@@ -2274,6 +2274,11 @@ reinit:
 	if (!oldcard)
 		host->card = card;
 
+	if (card->cid.manfid == CID_MANFID_HYNIX &&
+	    (card->ext_csd.fw_version == 0xA2 || card->ext_csd.fw_version == 0xA4)) {
+		card->host->caps2 &= ~MMC_CAP2_CMD_QUEUE;
+	}
+
 	/*
 	 * Start auto bkops, if supported.
 	 *
@@ -2604,7 +2609,7 @@ static int _mmc_suspend(struct mmc_host *host, bool is_suspend)
 			goto out_err;
 	}
 
-	err = mmc_flush_cache(host->card);
+	err = mmc_cache_ctrl(host, 0);
 	if (err)
 		goto out_err;
 
@@ -2719,6 +2724,24 @@ static int mmc_partial_init(struct mmc_host *host)
 	pr_debug("%s: %s: reading and comparing ext_csd successful\n",
 		mmc_hostname(host), __func__);
 
+	err = mmc_cache_ctrl(host, 1);
+	if (err) {
+		pr_err("%s: %s faild (%d) cache_ctrl\n",
+		    mmc_hostname(host), __func__, err);
+		goto out;
+	}
+
+#if defined(CONFIG_ARCH_SONY_LOIRE) || defined(CONFIG_ARCH_SONY_TONE)
+	if (host->card->cmdq_init) {
+		mmc_host_clk_hold(host);
+		host->cmdq_ops->enable(host);
+		mmc_host_clk_release(host);
+		err = mmc_cmdq_halt(host, false);
+		if (err) {
+			pr_err("%s: un-halt: failed: %d\n", __func__, err);
+		}
+	}
+#else
 	if (card->ext_csd.cmdq_support && (card->host->caps2 &
 					   MMC_CAP2_CMD_QUEUE)) {
 		err = mmc_select_cmdq(card);
@@ -2728,6 +2751,7 @@ static int mmc_partial_init(struct mmc_host *host)
 					__func__, err);
 		}
 	}
+#endif
 out:
 	mmc_host_clk_release(host);
 

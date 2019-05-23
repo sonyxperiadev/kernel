@@ -1055,6 +1055,13 @@ skip_cqterri:
 		 */
 		if (ret) {
 			cmdq_disable_nosync(mmc, true);
+
+			/* Temporary fix to avoid Null Pointer access */
+			if (!mrq || !mrq->cmdq_req) {
+				pr_err("%s: mrq is not initialized\n", __func__);
+				goto out;
+			}
+
 			/*
 			 * Enable legacy interrupts as CQE halt has failed.
 			 * This is needed to send legacy commands like status

@@ -2,6 +2,7 @@
  * Generic GPIO card-detect helper header
  *
  * Copyright (C) 2011, Guennadi Liakhovetski <g.liakhovetski@gmx.de>
+ * Copyright (C) 2014 Sony Mobile Communications Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -35,5 +36,9 @@ void mmc_gpiod_request_cd_irq(struct mmc_host *host);
 bool mmc_can_gpio_cd(struct mmc_host *host);
 void mmc_register_extcon(struct mmc_host *host);
 void mmc_unregister_extcon(struct mmc_host *host);
+
+void mmc_gpio_init_uim2(struct mmc_host *host, unsigned int gpio);
+void mmc_gpio_set_uim2_en(struct mmc_host *host, int value);
+void mmc_gpio_tray_close_set_uim2(struct mmc_host *host, int value);
 
 #endif
