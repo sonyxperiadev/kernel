@@ -24,6 +24,7 @@ obj-$(CONFIG_APQ_GCC_8084) += gcc-apq8084.o
 obj-$(CONFIG_APQ_MMCC_8084) += mmcc-apq8084.o
 obj-$(CONFIG_CLOCK_CPU_OSM) += clk-cpu-osm.o
 obj-$(CONFIG_CLOCK_CPU_8976) += clk-cpu-8976.o
+obj-$(CONFIG_MSM_APCC_8996) += clk-cpu-8996.o
 obj-$(CONFIG_CLOCK_CPU_QCS405) += clk-cpu-qcs405.o
 obj-$(CONFIG_DEBUGCC_SDXPRAIRIE) += debugcc-sdxprairie.o
 obj-$(CONFIG_GCC_SDXPRAIRIE) += gcc-sdxprairie.o
