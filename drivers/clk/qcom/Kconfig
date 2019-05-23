@@ -373,6 +373,20 @@ config CLOCK_CPU_OSM
 	 existence of multiple OSM domains.
 	 Say Y if you want to support OSM clocks.
 
+config CLOCK_CPU_OSM_LEGACY
+	tristate "OSM CPU Clock Controller (LEGACY)"
+	depends on COMMON_CLK_QCOM
+	depends on !CLOCK_CPU_OSM
+	help
+	 Support for the OSM clock controller.
+	 Operating State Manager (OSM) is a hardware engine used by some
+	 Qualcomm Technologies, Inc. (QTI) SoCs to manage frequency and
+	 voltage scaling in hardware. OSM is capable of controlling
+	 frequency and voltage requests for multiple clusters via the
+	 existence of multiple OSM domains.
+	 This driver supports legacy SoC, such as SDM630/660 and MSM8998.
+	 Say Y if you want to support OSM clocks.
+
 config MSM_DISPCC_SM8150
 	tristate "SM8150 Display Clock Controller"
 	depends on COMMON_CLK_QCOM
