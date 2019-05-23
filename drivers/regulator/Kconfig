@@ -1107,6 +1107,16 @@ config REGULATOR_CPRH_KBSS
 	  independent voltage supplies. This driver reads both initial voltage
 	  and CPR target quotient values out of hardware fuses.
 
+config REGULATOR_KRYO
+	bool "Kryo regulator driver"
+	depends on OF
+	help
+	  Some MSM designs have CPUs that can be directly powered from a common
+	  voltage rail via a Block Head Switch (BHS) or an LDO whose output
+	  voltage can be configured for use when certain power constraints are
+	  met.  Say yes to support management of LDO and BHS modes for the
+	  clusters in the CPU subsystem.
+
 config REGULATOR_MEM_ACC
 	tristate "QTI Memory accelerator regulator driver"
 	help

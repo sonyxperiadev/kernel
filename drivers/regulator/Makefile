@@ -136,6 +136,7 @@ obj-$(CONFIG_REGULATOR_CPR3_MMSS) += cpr3-mmss-regulator.o
 obj-$(CONFIG_REGULATOR_CPR4_APSS) += cpr4-apss-regulator.o
 obj-$(CONFIG_REGULATOR_CPR4_MMSS_LDO) += cpr4-mmss-ldo-regulator.o
 obj-$(CONFIG_REGULATOR_CPRH_KBSS) += cprh-kbss-regulator.o
+obj-$(CONFIG_REGULATOR_KRYO) += kryo-regulator.o
 obj-$(CONFIG_REGULATOR_MEM_ACC) += mem-acc-regulator.o
 obj-$(CONFIG_REGULATOR_REFGEN) += refgen.o
 obj-$(CONFIG_REGULATOR_RPM_SMD) += rpm-smd-regulator.o
