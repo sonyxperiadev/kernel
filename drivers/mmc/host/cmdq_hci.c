@@ -478,8 +478,10 @@ static int cmdq_enable(struct mmc_host *mmc)
 	if (cq_host->ops->clear_set_dumpregs)
 		cq_host->ops->clear_set_dumpregs(mmc, 1);
 
+#ifndef CONFIG_ARCH_SONY_LOIRE
 	if (cq_host->ops->enhanced_strobe_mask)
 		cq_host->ops->enhanced_strobe_mask(mmc, true);
+#endif
 
 pm_ref_count:
 	cmdq_runtime_pm_put(cq_host);
@@ -497,9 +499,10 @@ static void cmdq_disable_nosync(struct mmc_host *mmc, bool soft)
 				    cq_host, CQCFG) & ~(CQ_ENABLE),
 			    CQCFG);
 	}
+#ifndef CONFIG_ARCH_SONY_LOIRE
 	if (cq_host->ops->enhanced_strobe_mask)
 		cq_host->ops->enhanced_strobe_mask(mmc, false);
-
+#endif
 	cq_host->enabled = false;
 	mmc_host_set_cq_disable(mmc);
 	MMC_TRACE(mmc, "%s: CQ disabled\n", __func__);

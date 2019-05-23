@@ -4608,6 +4608,10 @@ static void sdhci_set_default_hw_caps(struct sdhci_msm_host *msm_host,
 		msm_host->enhanced_strobe = true;
 	}
 
+#ifdef CONFIG_ARCH_SONY_LOIRE
+	msm_host->enhanced_strobe = false;
+#endif
+
 	/*
 	 * SDCC 5 controller with major version 1 and minor version 0x42,
 	 * 0x46 and 0x49 currently uses 14lpp tech DLL whose internal
