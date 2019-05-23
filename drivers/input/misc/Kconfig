@@ -193,6 +193,32 @@ config INPUT_QTI_HAPTICS
 	  is capable of driving both LRA and ERM vibrators.  This module provides
 	  haptic feedback for user actions such as a long press on the touch screen.
 
+config QPNP_POWER_ON_PANIC_ON_KPDPWR_RESIN
+	bool "Provoke kernel panic on KPDPWR+RESIN keypress"
+	depends on INPUT_QPNP_POWER_ON
+	default n
+	help
+	  This option enables code that provokes a kernel panic whenever
+	  KPDPWR and RESIN get pressed: this combination normally triggers
+	  a PMIC-driven emergency reboot after a predefined time, but some
+	  devices powered by an EFI bootloader will delete the pstore logs
+	  in RAM for security purposes if certain bits signaling kernel
+	  panic are not set before rebooting.
+
+	  This is an option used for early kernel porting or some kind of
+	  debugging that would be impossible otherwise.
+
+	  If unsure, DEFINITELY say N.
+	  This option shall be used ONLY temporarily and ONLY FOR DEBUGGING.
+
+config PON_SOMC_ORG
+	bool "SoMC specific power on interface"
+	depends on INPUT_QPNP_POWER_ON
+	help
+	  This option enables SoMC specific power on interface.
+	  The implementation in this kernel is feature-reduced to support only
+	  the dvdd shutdown function.
+
 config INPUT_SPARCSPKR
 	tristate "SPARC Speaker support"
 	depends on PCI && SPARC64
