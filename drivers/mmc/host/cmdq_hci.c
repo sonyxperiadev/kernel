@@ -1059,7 +1059,7 @@ skip_cqterri:
 			/* Temporary fix to avoid Null Pointer access */
 			if (!mrq || !mrq->cmdq_req) {
 				pr_err("%s: mrq is not initialized\n", __func__);
-				goto out;
+				return IRQ_NONE;
 			}
 
 			/*
