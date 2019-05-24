@@ -4745,11 +4745,11 @@ static int msm_clock_debug_probe(struct platform_device *pdev)
 	}
 
 	if (of_get_property(pdev->dev.of_node, "qcom,cpu", NULL)) {
-		gcc_debug_mux.regmap[CPU] =
+		gcc_debug_mux.regmap[CPU_CC] =
 			syscon_regmap_lookup_by_phandle(pdev->dev.of_node,
 					"qcom,cpu");
-		if (IS_ERR(gcc_debug_mux.regmap[CPU]))
-			return PTR_ERR(gcc_debug_mux.regmap[CPU]);
+		if (IS_ERR(gcc_debug_mux.regmap[CPU_CC]))
+			return PTR_ERR(gcc_debug_mux.regmap[CPU_CC]);
 	}
 
 	if (of_get_property(pdev->dev.of_node, "qcom,gpu", NULL)) {
