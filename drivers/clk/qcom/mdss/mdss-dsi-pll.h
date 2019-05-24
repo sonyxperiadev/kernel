@@ -17,6 +17,12 @@
 #include "mdss-pll.h"
 #define MAX_DSI_PLL_EN_SEQS	10
 
+/* Register offsets for 28hpm PHY PLL */
+#define DSI_PHY_PLL_UNIPHY_PLL_GLB_CFG		(0x0020)
+#define DSI_PHY_PLL_UNIPHY_PLL_LKDET_CFG2	(0x0064)
+#define DSI_PHY_PLL_UNIPHY_PLL_TEST_CFG		(0x0068)
+#define DSI_PHY_PLL_UNIPHY_PLL_CAL_CFG1		(0x0070)
+
 /* Register offsets for 20nm PHY PLL */
 #define MMSS_DSI_PHY_PLL_PLL_CNTRL		(0x0014)
 #define MMSS_DSI_PHY_PLL_PLL_BKG_KVCO_CAL_EN	(0x002C)
