@@ -24,3 +24,15 @@ config QCOM_ADRENO_DEFAULT_GOVERNOR
 config QCOM_KGSL_IOMMU
 	bool
 	default y if QCOM_KGSL && (MSM_IOMMU || ARM_SMMU)
+
+config QCOM_KGSL_OLD_BINARIES_COMPAT
+	bool "Build KGSL for pre-4.14 userspace binaries"
+	depends on QCOM_KGSL
+	---help---
+	  The old userspace binaries may get/set some KGSL property
+	  which definition is different from the new binaries.
+	  For example, KGSL_PROP_SPEED_BIN (from 4.14) is 0x25, but
+	  KGSL_PROP_GPU_FORCE_ON (unsupported in 4.14) corresponds
+	  to the same number on k4.9 adreno userspace binaries.
+	  Say Y here if you want to run old adreno binaries, for a
+	  reason or another.
