@@ -15,11 +15,10 @@
 #include <linux/of.h>
 #include <linux/of_gpio.h>
 #include <linux/gpio.h>
-#include <linux/qpnp/pin.h>
 #include <linux/delay.h>
 #include <linux/slab.h>
 #include <linux/leds.h>
-#include <linux/qpnp/pwm.h>
+#include <linux/pwm.h>
 #include <linux/err.h>
 #include <linux/string.h>
 
@@ -77,10 +76,10 @@ static void mdss_dsi_panel_bklt_pwm(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 
 	if (level == 0) {
 		if (ctrl->pwm_enabled) {
-			ret = pwm_config_us(ctrl->pwm_bl, level,
-					ctrl->pwm_period);
+			ret = pwm_config(ctrl->pwm_bl, 0,
+					ctrl->pwm_period * NSEC_PER_USEC);
 			if (ret)
-				pr_err("%s: pwm_config_us() failed err=%d.\n",
+				pr_err("%s: pwm_config() failed err=%d.\n",
 						__func__, ret);
 			pwm_disable(ctrl->pwm_bl);
 		}
@@ -99,9 +98,10 @@ static void mdss_dsi_panel_bklt_pwm(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 					ctrl->ndx, level, duty);
 
 	if (ctrl->pwm_period >= USEC_PER_SEC) {
-		ret = pwm_config_us(ctrl->pwm_bl, duty, ctrl->pwm_period);
+
+		ret = pwm_config(ctrl->pwm_bl, duty, ctrl->pwm_period);
 		if (ret) {
-			pr_err("%s: pwm_config_us() failed err=%d.\n",
+			pr_err("%s: pwm_config() failed err=%d.\n",
 					__func__, ret);
 			return;
 		}

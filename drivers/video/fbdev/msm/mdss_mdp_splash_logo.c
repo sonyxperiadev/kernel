@@ -39,7 +39,6 @@ static int mdss_mdp_splash_alloc_memory(struct msm_fb_data_type *mfd,
 	struct msm_fb_splash_info *sinfo;
 	unsigned long buf_size = size;
 	struct mdss_data_type *mdata;
-	struct ion_handle *handle;
 
 	if (!mfd || !size)
 		return -EINVAL;
@@ -47,22 +46,14 @@ static int mdss_mdp_splash_alloc_memory(struct msm_fb_data_type *mfd,
 	mdata = mfd_to_mdata(mfd);
 	sinfo = &mfd->splash_info;
 
-	if (!mdata || !mdata->iclient || sinfo->splash_buffer)
+	if (!mdata || sinfo->splash_buffer)
 		return -EINVAL;
 
-	handle = ion_alloc(mdata->iclient, size, SZ_4K,
-				ION_HEAP(ION_SYSTEM_HEAP_ID), 0);
-	if (IS_ERR_OR_NULL(handle)) {
+	sinfo->dma_buf = ion_alloc(size, ION_HEAP(ION_SYSTEM_HEAP_ID), 0);
+	if (IS_ERR_OR_NULL(sinfo->dma_buf)) {
 		pr_err("ion memory allocation failed\n");
-		rc = PTR_RET(handle);
+		rc = PTR_RET(sinfo->dma_buf);
 		goto end;
-	}
-
-	sinfo->size = size;
-	sinfo->dma_buf = ion_share_dma_buf(mdata->iclient, handle);
-	if (IS_ERR(sinfo->dma_buf)) {
-		rc = PTR_ERR(sinfo->dma_buf);
-		goto imap_err;
 	}
 
 	sinfo->attachment = mdss_smmu_dma_buf_attach(sinfo->dma_buf,
@@ -96,10 +87,7 @@ static int mdss_mdp_splash_alloc_memory(struct msm_fb_data_type *mfd,
 		goto kmap_err;
 	}
 
-	/**
-	 * dma_buf has the reference
-	 */
-	ion_free(mdata->iclient, handle);
+	dma_buf_put(sinfo->dma_buf);
 
 	return rc;
 kmap_err:
@@ -112,8 +100,6 @@ err_detach:
 	dma_buf_detach(sinfo->dma_buf, sinfo->attachment);
 err_put:
 	dma_buf_put(sinfo->dma_buf);
-imap_err:
-	ion_free(mdata->iclient, handle);
 end:
 	return rc;
 }
@@ -129,7 +115,7 @@ static void mdss_mdp_splash_free_memory(struct msm_fb_data_type *mfd)
 	sinfo = &mfd->splash_info;
 	mdata = mfd_to_mdata(mfd);
 
-	if (!mdata || !mdata->iclient || !sinfo->dma_buf)
+	if (!mdata || !sinfo->dma_buf)
 		return;
 
 	dma_buf_end_cpu_access(sinfo->dma_buf, DMA_BIDIRECTIONAL);

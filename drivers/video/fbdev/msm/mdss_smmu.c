@@ -58,7 +58,7 @@ static inline struct bus_type *mdss_mmu_get_bus(struct device *dev)
 }
 static inline struct device *mdss_mmu_get_ctx(const char *name)
 {
-	return ERR_PTR(-ENODEV);
+	return NULL;
 }
 #endif
 
@@ -379,8 +379,10 @@ static int mdss_smmu_attach_v2(struct mdss_data_type *mdata)
 				pr_debug("iommu v2 domain[%i] attached\n", i);
 			}
 		} else {
-			pr_err("iommu device not attached for domain[%d]\n", i);
-			return -ENODEV;
+			/* Possible that target does not support secure cb */
+			pr_debug("iommu device not present for domain[%d]\n",
+							 i);
+			return 0;
 		}
 	}
 
@@ -478,22 +480,27 @@ static int mdss_smmu_map_dma_buf_v2(struct dma_buf *dma_buf,
 		struct sg_table *table, int domain, dma_addr_t *iova,
 		unsigned long *size, int dir)
 {
-	int rc;
 	struct mdss_smmu_client *mdss_smmu = mdss_smmu_get_cb(domain);
+	struct scatterlist *sg;
+	unsigned int i;
+
 	if (!mdss_smmu) {
 		pr_err("not able to get smmu context\n");
 		return -EINVAL;
 	}
-	ATRACE_BEGIN("map_buffer");
-	rc = msm_dma_map_sg_lazy(mdss_smmu->base.dev, table->sgl, table->nents,
-				 dir, dma_buf);
-	if (rc != table->nents) {
-		pr_err("dma map sg failed\n");
-		return -ENOMEM;
+
+	if (!table || !table->sgl) {
+		pr_err("Invalid table and scattergather list for dma buf\n");
+		return -EINVAL;
 	}
-	ATRACE_END("map_buffer");
+
+	ATRACE_BEGIN("map_buffer");
 	*iova = table->sgl->dma_address;
-	*size = table->sgl->dma_length;
+
+	*size = 0;
+	for_each_sg(table->sgl, sg, table->nents, i)
+		*size += sg->length;
+	ATRACE_END("map_buffer");
 	return 0;
 }
 
@@ -501,14 +508,15 @@ static void mdss_smmu_unmap_dma_buf_v2(struct sg_table *table, int domain,
 		int dir, struct dma_buf *dma_buf)
 {
 	struct mdss_smmu_client *mdss_smmu = mdss_smmu_get_cb(domain);
+	unsigned long attrs = 0;
 	if (!mdss_smmu) {
 		pr_err("not able to get smmu context\n");
 		return;
 	}
 
 	ATRACE_BEGIN("unmap_buffer");
-	msm_dma_unmap_sg(mdss_smmu->base.dev, table->sgl, table->nents, dir,
-		 dma_buf);
+	msm_dma_unmap_sg_attrs(mdss_smmu->base.dev, table->sgl, table->nents, dir,
+		 dma_buf, attrs);
 	ATRACE_END("unmap_buffer");
 }
 
@@ -898,7 +906,7 @@ int mdss_smmu_probe(struct platform_device *pdev)
 
 	iommu_set_fault_handler(mdss_smmu->mmu_mapping->domain,
 			mdss_smmu_fault_handler, mdss_smmu);
-	address = of_get_address_by_name(pdev->dev.of_node, "mmu_cb", 0, 0);
+	address = of_get_address(pdev->dev.of_node, 0, 0, 0);
 	if (address) {
 		size = address + 1;
 		mdss_smmu->mmu_base = ioremap(be32_to_cpu(*address),

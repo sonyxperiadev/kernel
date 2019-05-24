@@ -27,6 +27,7 @@
 #include <linux/msm-bus.h>
 #include <linux/file.h>
 #include <linux/dma-direction.h>
+#include <linux/dma-buf.h>
 #include <soc/qcom/cx_ipeak.h>
 
 #include "mdss_panel.h"
@@ -497,7 +498,6 @@ struct mdss_data_type {
 
 	struct mdss_intr hist_intr;
 
-	struct ion_client *iclient;
 	int iommu_attached;
 
 	u32 dbg_bus_flags;

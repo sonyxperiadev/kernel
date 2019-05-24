@@ -203,7 +203,7 @@ int mhl_i2c_reg_read(struct i2c_client *client,
 	int rc = -1;
 	uint8_t buffer = 0;
 
-	rc = mdss_i2c_byte_read(client, slave_addrs[slave_addr_index],
+	rc = dss_i2c_byte_read(client, slave_addrs[slave_addr_index],
 				reg_offset, &buffer);
 	if (rc) {
 		pr_err("%s: slave=%x, off=%x\n",
@@ -218,7 +218,7 @@ int mhl_i2c_reg_write(struct i2c_client *client,
 			     uint8_t slave_addr_index, uint8_t reg_offset,
 			     uint8_t value)
 {
-	return mdss_i2c_byte_write(client, slave_addrs[slave_addr_index],
+	return dss_i2c_byte_write(client, slave_addrs[slave_addr_index],
 				 reg_offset, &value);
 }
 
