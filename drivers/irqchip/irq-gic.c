@@ -422,7 +422,7 @@ static int msm_qgic2_set_wake(struct irq_data *d, unsigned int on)
 }
 #endif
 
-static const struct irq_chip gic_chip = {
+static struct irq_chip gic_chip = {
 	.irq_mask		= gic_mask_irq,
 	.irq_unmask		= gic_unmask_irq,
 	.irq_eoi		= gic_eoi_irq,
