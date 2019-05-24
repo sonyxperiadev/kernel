@@ -1428,11 +1428,13 @@ static int clk_gfx3d_src_set_rate_and_parent(struct clk_hw *hw,
 {
 	struct clk_rcg2 *rcg = to_clk_rcg2(hw);
 	const struct freq_tbl *f;
-	u32 cfg;
+	u32 cfg, old_cfg;
 	int ret;
 
-	cfg = rcg->parent_map[index].cfg << CFG_SRC_SEL_SHIFT;
+	/* Read back the old configuration */
+	regmap_read(rcg->clkr.regmap, rcg->cmd_rcgr + CFG_REG, &old_cfg);
 
+	cfg = rcg->parent_map[index].cfg << CFG_SRC_SEL_SHIFT;
 	f = qcom_find_freq(rcg->freq_tbl, rate);
 	if (!f)
 		return -EINVAL;
@@ -1444,7 +1446,7 @@ static int clk_gfx3d_src_set_rate_and_parent(struct clk_hw *hw,
 	if (ret)
 		return ret;
 
-	return update_config(rcg);
+	return update_config(rcg, old_cfg);
 }
 
 const struct clk_ops clk_gfx3d_src_ops = {
