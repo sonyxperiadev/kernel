@@ -415,6 +415,11 @@ static void gic_handle_cascade_irq(struct irq_desc *desc)
 	chained_irq_exit(chip, desc);
 }
 
+static int msm_qgic2_set_wake(struct irq_data *d, unsigned int on)
+{
+	return 0;
+}
+
 static const struct irq_chip gic_chip = {
 	.irq_mask		= gic_mask_irq,
 	.irq_unmask		= gic_unmask_irq,
