@@ -482,6 +482,8 @@ static struct device *dev;
 static int wdog_init_done;
 
 #ifndef CONFIG_HARDLOCKUP_DETECTOR
+extern void touch_softlockup_watchdog(void);
+
 void touch_nmi_watchdog(void)
 {
 	unsigned long long ns;
