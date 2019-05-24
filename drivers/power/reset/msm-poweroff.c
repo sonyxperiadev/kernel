@@ -77,6 +77,7 @@ static void scm_disable_sdi(void);
  * So the SDI cannot be re-enabled when it already by-passed.
  */
 static int download_mode;
+static bool force_warm_reboot;
 
 static int in_panic;
 static int panic_prep_restart(struct notifier_block *this,
@@ -124,8 +125,6 @@ static void *emergency_dload_mode_addr;
 static void *kaslr_imem_addr;
 #endif
 static bool scm_dload_supported;
-
-static bool force_warm_reboot;
 
 static int dload_set(const char *val, const struct kernel_param *kp);
 
