@@ -322,7 +322,7 @@ static int power_on_l2_msm8976(struct device_node *l2ccc_node, u32 pon_mask,
 	if (!vctl_node)
 		return -ENODEV;
 
-	l2_base = of_iomap_by_name(l2ccc_node, "l2-base");
+	l2_base = of_iomap(l2ccc_node, 0);
 	if (!l2_base)
 		return -ENOMEM;
 
