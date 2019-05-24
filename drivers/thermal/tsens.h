@@ -221,7 +221,7 @@ extern const struct tsens_data data_tsens2xxx, data_tsens23xx, data_tsens24xx;
 extern const struct tsens_data data_tsens14xx, data_tsens14xx_8976, data_tsens14xx_405;
 extern struct list_head tsens_device_list;
 
-static int calibrate_8976(struct tsens_device *tmdev);
+extern int calibrate_8976(struct tsens_device *tmdev);
 extern int calibrate_8937(struct tsens_device *tmdev);
 extern int calibrate_405(struct tsens_device *tmdev);
 

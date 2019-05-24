@@ -249,7 +249,7 @@ static void compute_intercept_slope_8976(struct tsens_device *tmdev, u32 *p1,
 	}
 }
 
-static int calibrate_8976(struct tsens_device *tmdev)
+int calibrate_8976(struct tsens_device *tmdev)
 {
 	int base0 = 0, base1 = 0, i;
 	u32 p1[TSENS_NUM_SENSORS_8937], p2[TSENS_NUM_SENSORS_8937];
