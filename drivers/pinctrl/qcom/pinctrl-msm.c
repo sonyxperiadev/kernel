@@ -697,7 +697,7 @@ static void msm_gpio_irq_mask(struct irq_data *d)
 		irq_chip_mask_parent(d);
 }
 
-static void msm_gpio_irq_unmask(struct irq_data *d)
+static void msm_gpio_irq_enable(struct irq_data *d)
 {
 	struct gpio_chip *gc = irq_data_get_irq_chip_data(d);
 	struct msm_pinctrl *pctrl = gpiochip_get_data(gc);
@@ -925,6 +925,7 @@ static void msm_gpiochip_irq_relres(struct irq_data *d)
 
 static struct irq_chip msm_gpio_irq_chip = {
 	.name           = "msmgpio",
+	.irq_enable     = msm_gpio_irq_enable,
 	.irq_mask       = msm_gpio_irq_mask,
 	.irq_unmask     = msm_gpio_irq_unmask,
 	.irq_ack        = msm_gpio_irq_ack,
@@ -932,6 +933,8 @@ static struct irq_chip msm_gpio_irq_chip = {
 	.irq_set_wake   = msm_gpio_irq_set_wake,
 	.irq_request_resources    = msm_gpiochip_irq_reqres,
 	.irq_release_resources	  = msm_gpiochip_irq_relres,
+	.flags                    = IRQCHIP_MASK_ON_SUSPEND |
+					IRQCHIP_SKIP_SET_WAKE,
 };
 
 static void msm_gpio_domain_set_info(struct irq_domain *d, unsigned int irq,
