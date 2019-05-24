@@ -745,7 +745,7 @@ EXPORT_SYMBOL_GPL(mmc_abort_tuning);
 int mmc_switch_ignore_timeout(struct mmc_card *card, u8 set, u8 index, u8 value,
 		unsigned int timeout_ms)
 {
-	return __mmc_switch(card, set, index, value, timeout_ms, true, true,
+	return __mmc_switch(card, set, index, value, timeout_ms, 0, true, true,
 				true);
 }
 EXPORT_SYMBOL(mmc_switch_ignore_timeout);
