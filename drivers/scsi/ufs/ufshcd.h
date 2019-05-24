@@ -257,6 +257,9 @@ struct ufs_desc_size {
 	int interc_desc;
 	int unit_desc;
 	int conf_desc;
+#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA)
+	int dev_health_desc;
+#endif
 };
 
 /**
@@ -559,6 +562,11 @@ struct debugfs_files {
 	struct dentry *dbg_print_en;
 	struct dentry *req_stats;
 	struct dentry *query_stats;
+#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA)
+	struct dentry *fw_revision;
+	struct dentry *dump_dev_health_desc;
+	struct dentry *serial;
+#endif
 	u32 dme_local_attr_id;
 	u32 dme_peer_attr_id;
 	struct dentry *reset_controller;
@@ -1256,6 +1264,10 @@ out:
 }
 
 int ufshcd_read_device_desc(struct ufs_hba *hba, u8 *buf, u32 size);
+
+#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA)
+int ufshcd_read_device_health_desc(struct ufs_hba *hba, u8 *buf, u32 size);
+#endif
 
 static inline bool ufshcd_is_hs_mode(struct ufs_pa_layer_attr *pwr_info)
 {

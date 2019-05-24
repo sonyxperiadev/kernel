@@ -158,6 +158,12 @@
 #define PA_PEERRXHSADAPTINITIAL	0x15D3
 #define PA_TXHSADAPTTYPE	0x15D4
 
+#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA)
+#define PA_TxHsG1SyncLength	0x1552
+#define PA_TxHsG2SyncLength	0x1554
+#define PA_TxHsG3SyncLength	0x1556
+#endif
+
 /*
  * Default value of PA_PEERRXHSADAPTINITIAL.
  * TODO: This may need to be tuned if required.
