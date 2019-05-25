@@ -1,0 +1,61 @@
+/* 
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+&soc {
+	/* Disable SMP2P Remote Debug for production */
+	qcom,smp2pgpio-rdbg-2-in {
+		status = "disabled";
+	};
+
+	qcom,smp2pgpio_client_rdbg_2_in {
+		status = "disabled";
+	};
+
+	qcom,smp2pgpio-rdbg-2-out {
+		status = "disabled";
+	};
+
+	qcom,smp2pgpio_client_rdbg_2_out {
+		status = "disabled";
+	};
+
+	qcom,smp2pgpio-rdbg-1-in {
+		status = "disabled";
+	};
+
+	qcom,smp2pgpio_client_rdbg_1_in {
+		status = "disabled";
+	};
+
+	qcom,smp2pgpio-rdbg-1-out {
+		status = "disabled";
+	};
+
+	qcom,smp2pgpio_client_rdbg_1_out {
+		status = "disabled";
+	};
+
+	qcom,smp2pgpio-rdbg-5-in {
+		status = "disabled";
+	};
+
+	qcom,smp2pgpio_client_rdbg_5_in {
+		status = "disabled";
+	};
+
+	qcom,smp2pgpio-rdbg-5-out {
+		status = "disabled";
+	};
+
+	qcom,smp2pgpio_client_rdbg_5_out {
+		status = "disabled";
+	};
+};

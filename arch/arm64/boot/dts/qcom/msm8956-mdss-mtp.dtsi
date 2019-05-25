@@ -1,0 +1,91 @@
+/*
+ * Copyright (c) 2015, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+&mdss_mdp {
+	qcom,mdss-pref-prim-intf = "dsi";
+};
+
+&mdss_dsi_active {
+	mux {
+		pins = "gpio25" , "gpio66", "gpio107";
+		function = "gpio";
+	};
+	config {
+		pins = "gpio25" , "gpio66", "gpio107";
+		drive-strength = <2>; /* 2 mA */
+		bias-disable = <0>; /* no pull */
+		output-high;
+	};
+};
+
+&mdss_dsi_suspend {
+	mux {
+		pins = "gpio25" , "gpio66", "gpio107";
+		function = "gpio";
+	};
+	config {
+		pins = "gpio25" , "gpio66", "gpio107";
+		drive-strength = <2>; /* 2 mA */
+		/delete-property/ bias-pull-down;
+		bias-disable = <0>; /* no pull */
+		output-low;
+	};
+};
+
+&mdss_te_active{
+	mux {
+		pins = "gpio24";
+	};
+	config {
+		pins = "gpio24";
+	};
+};
+
+&mdss_te_suspend{
+	mux {
+		pins = "gpio24";
+	};
+	config {
+		pins = "gpio24";
+	};
+};
+
+&mdss_dsi0 {
+	pinctrl-names = "mdss_default", "mdss_sleep";
+	pinctrl-0 = <&mdss_dsi_active &mdss_te_active>;
+	pinctrl-1 = <&mdss_dsi_suspend &mdss_te_suspend>;
+
+	qcom,platform-reset-gpio = <&msm_gpio 25 0>;
+	qcom,platform-bklight-en-gpio = <&msm_gpio 66 0>;
+	qcom,panel-mode-gpio = <&msm_gpio 107 0>;
+	qcom,platform-te-gpio = <&msm_gpio 24 0>;
+};
+
+&mdss_dsi1 {
+	pinctrl-names = "mdss_default", "mdss_sleep";
+	pinctrl-0 = <&mdss_dsi_active &mdss_te_active>;
+	pinctrl-1 = <&mdss_dsi_suspend &mdss_te_suspend>;
+
+	qcom,platform-reset-gpio = <&msm_gpio 25 0>;
+	qcom,platform-bklight-en-gpio = <&msm_gpio 66 0>;
+	qcom,panel-mode-gpio = <&msm_gpio 107 0>;
+};
+
+&labibb {
+	status = "ok";
+	qpnp,qpnp-labibb-mode = "lcd";
+};
+
+&ibb_regulator {
+	qcom,qpnp-ibb-discharge-resistor = <32>;
+};

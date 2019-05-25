@@ -141,6 +141,15 @@ config ARCH_QCOM
 	help
 	  This enables support for the ARMv8 based Qualcomm chipsets.
 
+config ARCH_MSM8916
+	bool "Enable Support for Qualcomm MSM8916 SoC class"
+	depends on ARCH_QCOM
+	select HAVE_FUTEX_CMPXCHG
+	select COMMON_CLK_QCOM
+	help
+	  This enables support for the MSM8916/17/36/39/37/56/76
+	  chipset. If you don't know what to do here, say N.
+
 config ARCH_SM8150
 	bool "Enable Support for Qualcomm Technologies, Inc. SM8150"
 	depends on ARCH_QCOM
@@ -322,5 +331,44 @@ config ARCH_ZYNQMP
 	bool "Xilinx ZynqMP Family"
 	help
 	  This enables support for Xilinx ZynqMP Family
+
+#
+# Sony Mobile platforms
+#
+config ARCH_SONY_LOIRE
+    bool "Sony Mobile Loire platform"
+    depends on ARCH_MSM8916
+    help
+      Support for the SONY Mobile Loire platform
+      which is based on QCOM MSM8956 chipset.
+      If you enable this config,
+      please use SONY Mobile device tree.
+
+config MACH_SONY_SUZU
+    bool "Sony Mobile SUZU"
+    depends on ARCH_SONY_LOIRE
+    help
+      Support for the SONY Mobile Suzu device
+      which is based on SONY Loire platform.
+      If you enable this config,
+      please use SONY Mobile device tree.
+
+config MACH_SONY_KUGO
+    bool "Sony Mobile KUGO"
+    depends on ARCH_SONY_LOIRE
+    help
+      Support for the SONY Mobile Kugo device
+      which is based on SONY Loire platform.
+      If you enable this config,
+      please use SONY Mobile device tree.
+
+config MACH_SONY_BLANC
+    bool "Sony Mobile BLANC"
+    depends on ARCH_SONY_LOIRE
+    help
+      Support for the SONY Mobile Blanc device
+      which is based on SONY Loire platform.
+      If you enable this config,
+      please use SONY Mobile device tree.
 
 endmenu
