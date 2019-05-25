@@ -31,7 +31,7 @@
 			reg = <0x800 0x100>;
 			qcom,secondary-pon-reset;
 			qcom,hard-reset-poweroff-type =
-				<PON_POWER_OFF_SHUTDOWN>;
+				<PON_POWER_OFF_TYPE_SHUTDOWN>;
 
 			pon_perph_reg: qcom,pon_perph_reg {
 				regulator-name = "pon_spare_reg";

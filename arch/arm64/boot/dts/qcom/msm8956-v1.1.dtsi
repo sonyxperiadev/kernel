@@ -94,7 +94,7 @@
 		vdd_a72-supply = <&apc1_vreg_corner>;
 		vdd_a53-supply = <&apc0_vreg_corner>;
 		vdd_cci-supply = <&apc0_vreg_corner>;
-		clocks = <&clock_rpmcc RPM_XO_A_CLK_SRC>,
+		clocks = <&clock_rpmcc RPM_SMD_XO_A_CLK_SRC>,
 			 <&clock_gcc GPLL4_CLK_SRC>,
 			 <&clock_gcc GPLL0_AO_CLK_SRC>;
 		clock-names = "cxo_a", "aux_clk_2", "aux_clk_3";

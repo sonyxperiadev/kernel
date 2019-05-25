@@ -625,7 +625,7 @@
 		vdd_a72-supply = <&apc1_vreg_corner>;
 		vdd_a53-supply = <&apc0_vreg_corner>;
 		vdd_cci-supply = <&apc0_vreg_corner>;
-		clocks = <&clock_rpmcc RPM_XO_A_CLK_SRC>,
+		clocks = <&clock_rpmcc RPM_SMD_XO_A_CLK_SRC>,
 			 <&clock_gcc GPLL4_CLK_SRC>,
 			 <&clock_gcc GPLL0_AO_CLK_SRC>;
 		clock-names = "cxo_a", "aux_clk_2", "aux_clk_3";
@@ -1707,7 +1707,7 @@
 			 <&clock_rpmcc SNOC_USB_CLK>,
 			 <&clock_rpmcc PNOC_USB_CLK>,
 			 <&clock_gcc GCC_USB_HS_PHY_CFG_AHB_CLK>,
-			 <&clock_rpmcc CXO_OTG_CLK>;
+			 <&clock_rpmcc CXO_SMD_OTG_CLK>;
 		clock-names = "iface_clk", "core_clk", "sleep_clk",
 				"bimc_clk", "snoc_clk", "pcnoc_clk",
 				"phy_csr_clk", "xo";
@@ -1866,7 +1866,7 @@
 		qcom,wan-rx-ring-size = <192>; /* IPA WAN-rx-ring-size*/
 		qcom,lan-rx-ring-size = <192>; /* IPA LAN-rx-ring-size*/
 		clock-names = "core_clk";
-		clocks = <&clock_rpmcc RPM_IPA_CLK>;
+		clocks = <&clock_rpmcc RPM_SMD_IPA_CLK>;
 		qcom,ee = <0>;
 		qcom,msm-bus,name = "ipa";
 		qcom,msm-bus,num-cases = <3>;
@@ -2340,8 +2340,8 @@
 		gpios = <&msm_gpio 40 0>, <&msm_gpio 41 0>, <&msm_gpio 42 0>,
 			<&msm_gpio 43 0>, <&msm_gpio 44 0>;
 
-		clocks = <&clock_rpmcc CXO_WLAN_CLK>,
-			 <&clock_rpmcc RPM_RF_CLK2>,
+		clocks = <&clock_rpmcc CXO_SMD_WLAN_CLK>,
+			 <&clock_rpmcc RPM_SMD_RF_CLK2>,
 			 //<&clock_debug clk_gcc_debug_mux>,
 			 <&clock_gcc GCC_WCNSS_M_CLK>;
 
@@ -2402,7 +2402,7 @@
 		//qcom,vdd_cx-uV-uA = <7 100000>;
 		qcom,vdd_cx-uV-uA = <RPM_SMD_REGULATOR_LEVEL_TURBO 100000>;
 
-		clocks = <&clock_rpmcc CXO_PIL_LPASS_CLK>,
+		clocks = <&clock_rpmcc CXO_SMD_PIL_LPASS_CLK>,
 			 <&clock_gcc GCC_CRYPTO_CLK>,
 			 <&clock_gcc GCC_CRYPTO_AHB_CLK>,
 			 <&clock_gcc GCC_CRYPTO_AXI_CLK>,
@@ -2469,7 +2469,7 @@
 		vdd_pronto_pll-supply = <&pm8950_l7>;
 		proxy-reg-names = "vdd_pronto_pll";
 		vdd_pronto_pll-uV-uA = <1800000 18000>;
-		clocks = <&clock_rpmcc CXO_PIL_PRONTO_CLK>,
+		clocks = <&clock_rpmcc CXO_SMD_PIL_PRONTO_CLK>,
 			 <&clock_gcc GCC_CRYPTO_CLK>,
 			 <&clock_gcc GCC_CRYPTO_AHB_CLK>,
 			 <&clock_gcc GCC_CRYPTO_AXI_CLK>,
@@ -2532,11 +2532,11 @@
 		qcom,vdd_pll = <1800000>;
 		vdd_mss-uV = <RPM_SMD_REGULATOR_LEVEL_TURBO>;
 
-		clocks = <&clock_rpmcc RPM_XO_CLK_SRC>,
+		clocks = <&clock_rpmcc RPM_SMD_XO_CLK_SRC>,
 			 <&clock_gcc GCC_MSS_CFG_AHB_CLK>,
 			 <&clock_gcc GCC_MSS_Q6_BIMC_AXI_CLK>,
 			 <&clock_gcc GCC_BOOT_ROM_AHB_CLK>,
-			 <&clock_rpmcc RPM_QDSS_CLK>;
+			 <&clock_rpmcc RPM_SMD_QDSS_CLK>;
 		clock-names = "xo", "iface_clk", "bus_clk", "mem_clk",
 				"qdss_clk";
 		qcom,proxy-clock-names = "xo", "qdss_clk";
@@ -2722,7 +2722,7 @@
 		pinctrl-1 = <&pm8950_gpio_1>;
 		qcom,audio-ref-clk-gpio = <&pm8950_gpios 1 0>;
 		clock-names = "osr_clk";
-		clocks = <&clock_rpmcc RPM_DIV_CLK2>;
+		clocks = <&clock_rpmcc RPM_SMD_DIV_CLK2>;
 		qcom,node_has_rpm_clock;
 		#clock-cells = <1>;
 	};
