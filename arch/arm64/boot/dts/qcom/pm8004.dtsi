@@ -1,20 +1,47 @@
-// SPDX-License-Identifier: GPL-2.0
 #include <dt-bindings/interrupt-controller/irq.h>
 #include <dt-bindings/spmi/spmi.h>
 
 &spmi_bus {
 
-	pmic@4 {
+	pm8004@4 {
 		compatible = "qcom,pm8004", "qcom,spmi-pmic";
 		reg = <0x4 SPMI_USID>;
-		#address-cells = <1>;
+		#address-cells = <2>;
 		#size-cells = <0>;
+
+		pm8004_revid: qcom,revid@100 {
+			compatible = "qcom,qpnp-revid";
+			reg = <0x100 0x100>;
+		};
+
+		pm8004_tz: qcom,temp-alarm@2400 {
+			compatible = "qcom,qpnp-temp-alarm";
+			reg = <0x2400 0x100>;
+			interrupts = <0x4 0x24 0x0 IRQ_TYPE_NONE>;
+			label = "pm8004_tz";
+			#thermal-sensor-cells = <0>;
+		};
+
+		pm8004_mpps: mpps {
+			compatible = "qcom,spmi-mpp";
+			reg = <0xa000 0x400>;
+
+			interrupts = <0x2 0xa0 0 IRQ_TYPE_NONE>,
+				<0x2 0xa1 0 IRQ_TYPE_NONE>,
+				<0x2 0xa2 0 IRQ_TYPE_NONE>,
+				<0x2 0xa3 0 IRQ_TYPE_NONE>;
+			interrupt-names = "pm8004_mpp1", "pm8004_mpp2",
+					  "pm8004_mpp3", "pm8004_mpp4";
+
+			gpio-controller;
+			#gpio-cells = <2>;
+		};
 	};
 
-	pmic@5 {
+	pm8004@5 {
 		compatible = "qcom,pm8004", "qcom,spmi-pmic";
 		reg = <0x5 SPMI_USID>;
-		#address-cells = <1>;
+		#address-cells = <2>;
 		#size-cells = <0>;
 	};
 };
