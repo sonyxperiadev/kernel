@@ -110,6 +110,9 @@ enum fg_debug_flag {
 	FG_BUS_READ		= BIT(6), /* Show REGMAP reads */
 	FG_CAP_LEARN		= BIT(7), /* Show capacity learning */
 	FG_TTF			= BIT(8), /* Show time to full */
+#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+	FG_SOMC			= BIT(15),
+#endif
 };
 
 /* SRAM access */
@@ -221,6 +224,12 @@ enum fg_sram_param_id {
 	FG_SRAM_ESR_CAL_TEMP_MIN,
 	FG_SRAM_ESR_CAL_TEMP_MAX,
 	FG_SRAM_DELTA_ESR_THR,
+#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+	FG_SRAM_SOC_SYSTEM,
+	FG_SRAM_SOC_MONOTONIC,
+	FG_SRAM_SOC_CUTOFF,
+	FG_SRAM_SOC_FULL,
+#endif
 	FG_SRAM_MAX,
 };
 
@@ -306,6 +315,9 @@ struct fg_batt_props {
 	int		float_volt_uv;
 	int		vbatt_full_mv;
 	int		fastchg_curr_ma;
+#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+	int		initial_capacity;
+#endif
 	int		*therm_coeffs;
 	int		therm_ctr_offset;
 	int		therm_pull_up_kohms;
@@ -329,6 +341,18 @@ struct fg_cap_learning {
 	int64_t		init_cc_uah;
 	int64_t		final_cc_uah;
 	int64_t		learned_cc_uah;
+#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+	int64_t		charge_full_raw;
+	int		learning_counter;
+	int		batt_soc_drop;
+	int		cc_soc_drop;
+	int		max_bsoc_during_active;
+	int		max_ccsoc_during_active;
+	s64		max_bsoc_time_ms;
+	s64		start_time_ms;
+	s64		hold_time;
+	s64		total_time;
+#endif
 	struct mutex	lock;
 };
 
@@ -400,6 +424,14 @@ struct fg_memif {
 	u16			address_max;
 	u8			num_bytes_per_word;
 };
+
+#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+#define ORG_BATT_TYPE_SIZE	9
+#define BATT_TYPE_SIZE		(ORG_BATT_TYPE_SIZE + 2)
+#define BATT_TYPE_FIRST_HYPHEN	4
+#define BATT_TYPE_SECOND_HYPHEN	9
+#define BATT_TYPE_AGING_LEVEL	10
+#endif
 
 struct fg_dev {
 	struct thermal_zone_device	*tz_dev;
@@ -565,4 +597,9 @@ extern int fg_circ_buf_avg(struct fg_circ_buf *buf, int *avg);
 extern int fg_circ_buf_median(struct fg_circ_buf *buf, int *median);
 extern int fg_lerp(const struct fg_pt *pts, size_t tablesize, s32 input,
 			s32 *output);
+
+#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+int fg_get_vbatt_predict(struct fg_chip *chip, int *val)
+#endif
+
 #endif

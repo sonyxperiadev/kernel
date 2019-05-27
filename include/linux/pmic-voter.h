@@ -15,6 +15,10 @@
 
 #include <linux/mutex.h>
 
+#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+#define NUM_MAX_CLIENTS 20
+#endif
+
 struct votable;
 
 enum votable_type {
