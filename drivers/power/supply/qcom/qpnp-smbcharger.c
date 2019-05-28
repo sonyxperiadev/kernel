@@ -43,6 +43,7 @@
 #include <linux/ktime.h>
 #include <linux/extcon.h>
 #include <linux/pmic-voter.h>
+#include <linux/iio/consumer.h>
 
 #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
 #define WAIT_TO_READ_DPDM_AT_PROBE_MS	50
@@ -163,17 +164,6 @@ struct smbchg_chip {
 	struct delayed_work		parallel_en_work;
 	struct dentry			*debug_root;
 	struct smbchg_version_tables	tables;
-
-	/* wipower params */
-	struct ilim_map			wipower_default;
-	struct ilim_map			wipower_pt;
-	struct ilim_map			wipower_div2;
-	struct qpnp_vadc_chip		*vadc_dev;
-	bool				wipower_dyn_icl_avail;
-	struct ilim_entry		current_ilim;
-	struct mutex			wipower_config;
-	bool				wipower_configured;
-	struct qpnp_adc_tm_btm_param	param;
 
 	/* flash current prediction */
 	int				rpara_uohm;
@@ -521,25 +511,6 @@ static int smbchg_default_dcp_icl_ma = 1800;
 #endif
 module_param_named(
 	default_dcp_icl_ma, smbchg_default_dcp_icl_ma,
-	int, 00600
-);
-
-static int wipower_dyn_icl_en;
-module_param_named(
-	dynamic_icl_wipower_en, wipower_dyn_icl_en,
-	int, 00600
-);
-
-static int wipower_dcin_interval = ADC_MEAS1_INTERVAL_2P0MS;
-module_param_named(
-	wipower_dcin_interval, wipower_dcin_interval,
-	int, 00600
-);
-
-#define WIPOWER_DEFAULT_HYSTERISIS_UV	250000
-static int wipower_dcin_hyst_uv = WIPOWER_DEFAULT_HYSTERISIS_UV;
-module_param_named(
-	wipower_dcin_hyst_uv, wipower_dcin_hyst_uv,
 	int, 00600
 );
 
@@ -2827,253 +2798,6 @@ static int smbchg_set_fastchg_current_user(struct smbchg_chip *chip,
 	return rc;
 }
 
-static struct ilim_entry *smbchg_wipower_find_entry(struct smbchg_chip *chip,
-				struct ilim_map *map, int uv)
-{
-	int i;
-	struct ilim_entry *ret = &(chip->wipower_default.entries[0]);
-
-	for (i = 0; i < map->num; i++) {
-		if (is_between(map->entries[i].vmin_uv, map->entries[i].vmax_uv,
-			uv))
-			ret = &map->entries[i];
-	}
-	return ret;
-}
-
-#define ZIN_ICL_PT	0xFC
-#define ZIN_ICL_LV	0xFD
-#define ZIN_ICL_HV	0xFE
-#define ZIN_ICL_MASK	SMB_MASK(4, 0)
-static int smbchg_dcin_ilim_config(struct smbchg_chip *chip, int offset, int ma)
-{
-	int i, rc;
-
-	i = find_smaller_in_array(chip->tables.dc_ilim_ma_table,
-			ma, chip->tables.dc_ilim_ma_len);
-
-	if (i < 0)
-		i = 0;
-
-	rc = smbchg_sec_masked_write(chip, chip->bat_if_base + offset,
-			ZIN_ICL_MASK, i);
-	if (rc)
-		dev_err(chip->dev, "Couldn't write bat if offset %d value = %d rc = %d\n",
-				offset, i, rc);
-	return rc;
-}
-
-static int smbchg_wipower_ilim_config(struct smbchg_chip *chip,
-						struct ilim_entry *ilim)
-{
-	int rc = 0;
-
-	if (chip->current_ilim.icl_pt_ma != ilim->icl_pt_ma) {
-		rc = smbchg_dcin_ilim_config(chip, ZIN_ICL_PT, ilim->icl_pt_ma);
-		if (rc)
-			dev_err(chip->dev, "failed to write batif offset %d %dma rc = %d\n",
-					ZIN_ICL_PT, ilim->icl_pt_ma, rc);
-		else
-			chip->current_ilim.icl_pt_ma =  ilim->icl_pt_ma;
-	}
-
-	if (chip->current_ilim.icl_lv_ma !=  ilim->icl_lv_ma) {
-		rc = smbchg_dcin_ilim_config(chip, ZIN_ICL_LV, ilim->icl_lv_ma);
-		if (rc)
-			dev_err(chip->dev, "failed to write batif offset %d %dma rc = %d\n",
-					ZIN_ICL_LV, ilim->icl_lv_ma, rc);
-		else
-			chip->current_ilim.icl_lv_ma =  ilim->icl_lv_ma;
-	}
-
-	if (chip->current_ilim.icl_hv_ma !=  ilim->icl_hv_ma) {
-		rc = smbchg_dcin_ilim_config(chip, ZIN_ICL_HV, ilim->icl_hv_ma);
-		if (rc)
-			dev_err(chip->dev, "failed to write batif offset %d %dma rc = %d\n",
-					ZIN_ICL_HV, ilim->icl_hv_ma, rc);
-		else
-			chip->current_ilim.icl_hv_ma =  ilim->icl_hv_ma;
-	}
-	return rc;
-}
-
-static void btm_notify_dcin(enum qpnp_tm_state state, void *ctx);
-static int smbchg_wipower_dcin_btm_configure(struct smbchg_chip *chip,
-		struct ilim_entry *ilim)
-{
-	int rc;
-
-	if (ilim->vmin_uv == chip->current_ilim.vmin_uv
-			&& ilim->vmax_uv == chip->current_ilim.vmax_uv)
-		return 0;
-
-	chip->param.channel = DCIN;
-	chip->param.btm_ctx = chip;
-	if (wipower_dcin_interval < ADC_MEAS1_INTERVAL_0MS)
-		wipower_dcin_interval = ADC_MEAS1_INTERVAL_0MS;
-
-	if (wipower_dcin_interval > ADC_MEAS1_INTERVAL_16S)
-		wipower_dcin_interval = ADC_MEAS1_INTERVAL_16S;
-
-	chip->param.timer_interval = wipower_dcin_interval;
-	chip->param.threshold_notification = &btm_notify_dcin;
-	chip->param.high_thr = ilim->vmax_uv + wipower_dcin_hyst_uv;
-	chip->param.low_thr = ilim->vmin_uv - wipower_dcin_hyst_uv;
-	chip->param.state_request = ADC_TM_HIGH_LOW_THR_ENABLE;
-	rc = qpnp_vadc_channel_monitor(chip->vadc_dev, &chip->param);
-	if (rc) {
-		dev_err(chip->dev, "Couldn't configure btm for dcin rc = %d\n",
-				rc);
-	} else {
-		chip->current_ilim.vmin_uv = ilim->vmin_uv;
-		chip->current_ilim.vmax_uv = ilim->vmax_uv;
-		pr_smb(PR_STATUS, "btm ilim = (%duV %duV %dmA %dmA %dmA)\n",
-			ilim->vmin_uv, ilim->vmax_uv,
-			ilim->icl_pt_ma, ilim->icl_lv_ma, ilim->icl_hv_ma);
-	}
-	return rc;
-}
-
-static int smbchg_wipower_icl_configure(struct smbchg_chip *chip,
-						int dcin_uv, bool div2)
-{
-	int rc = 0;
-	struct ilim_map *map = div2 ? &chip->wipower_div2 : &chip->wipower_pt;
-	struct ilim_entry *ilim = smbchg_wipower_find_entry(chip, map, dcin_uv);
-
-	rc = smbchg_wipower_ilim_config(chip, ilim);
-	if (rc) {
-		dev_err(chip->dev, "failed to config ilim rc = %d, dcin_uv = %d , div2 = %d, ilim = (%duV %duV %dmA %dmA %dmA)\n",
-			rc, dcin_uv, div2,
-			ilim->vmin_uv, ilim->vmax_uv,
-			ilim->icl_pt_ma, ilim->icl_lv_ma, ilim->icl_hv_ma);
-		return rc;
-	}
-
-	rc = smbchg_wipower_dcin_btm_configure(chip, ilim);
-	if (rc) {
-		dev_err(chip->dev, "failed to config btm rc = %d, dcin_uv = %d , div2 = %d, ilim = (%duV %duV %dmA %dmA %dmA)\n",
-			rc, dcin_uv, div2,
-			ilim->vmin_uv, ilim->vmax_uv,
-			ilim->icl_pt_ma, ilim->icl_lv_ma, ilim->icl_hv_ma);
-		return rc;
-	}
-	chip->wipower_configured = true;
-	return 0;
-}
-
-static void smbchg_wipower_icl_deconfigure(struct smbchg_chip *chip)
-{
-	int rc;
-	struct ilim_entry *ilim = &(chip->wipower_default.entries[0]);
-
-	if (!chip->wipower_configured)
-		return;
-
-	rc = smbchg_wipower_ilim_config(chip, ilim);
-	if (rc)
-		dev_err(chip->dev, "Couldn't config default ilim rc = %d\n",
-				rc);
-
-	rc = qpnp_vadc_end_channel_monitor(chip->vadc_dev);
-	if (rc)
-		dev_err(chip->dev, "Couldn't de configure btm for dcin rc = %d\n",
-				rc);
-
-	chip->wipower_configured = false;
-	chip->current_ilim.vmin_uv = 0;
-	chip->current_ilim.vmax_uv = 0;
-	chip->current_ilim.icl_pt_ma = ilim->icl_pt_ma;
-	chip->current_ilim.icl_lv_ma = ilim->icl_lv_ma;
-	chip->current_ilim.icl_hv_ma = ilim->icl_hv_ma;
-	pr_smb(PR_WIPOWER, "De config btm\n");
-}
-
-#define FV_STS		0x0C
-#define DIV2_ACTIVE	BIT(7)
-static void __smbchg_wipower_check(struct smbchg_chip *chip)
-{
-	int chg_type;
-	bool usb_present, dc_present;
-	int rc;
-	int dcin_uv;
-	bool div2;
-	struct qpnp_vadc_result adc_result;
-	u8 reg;
-
-	if (!wipower_dyn_icl_en) {
-		smbchg_wipower_icl_deconfigure(chip);
-		return;
-	}
-
-	chg_type = get_prop_charge_type(chip);
-	usb_present = is_usb_present(chip);
-	dc_present = is_dc_present(chip);
-	if (chg_type != POWER_SUPPLY_CHARGE_TYPE_NONE
-			 && !usb_present
-			&& dc_present
-			&& chip->dc_psy_type == POWER_SUPPLY_TYPE_WIPOWER) {
-		rc = qpnp_vadc_read(chip->vadc_dev, DCIN, &adc_result);
-		if (rc) {
-			pr_smb(PR_STATUS, "error DCIN read rc = %d\n", rc);
-			return;
-		}
-		dcin_uv = adc_result.physical;
-
-		/* check div_by_2 */
-		rc = smbchg_read(chip, &reg, chip->chgr_base + FV_STS, 1);
-		if (rc) {
-			pr_smb(PR_STATUS, "error DCIN read rc = %d\n", rc);
-			return;
-		}
-		div2 = !!(reg & DIV2_ACTIVE);
-
-		pr_smb(PR_WIPOWER,
-			"config ICL chg_type = %d usb = %d dc = %d dcin_uv(adc_code) = %d (0x%x) div2 = %d\n",
-			chg_type, usb_present, dc_present, dcin_uv,
-			adc_result.adc_code, div2);
-		smbchg_wipower_icl_configure(chip, dcin_uv, div2);
-	} else {
-		pr_smb(PR_WIPOWER,
-			"deconfig ICL chg_type = %d usb = %d dc = %d\n",
-			chg_type, usb_present, dc_present);
-		smbchg_wipower_icl_deconfigure(chip);
-	}
-}
-
-static void smbchg_wipower_check(struct smbchg_chip *chip)
-{
-	if (!chip->wipower_dyn_icl_avail)
-		return;
-
-	mutex_lock(&chip->wipower_config);
-	__smbchg_wipower_check(chip);
-	mutex_unlock(&chip->wipower_config);
-}
-
-static void btm_notify_dcin(enum qpnp_tm_state state, void *ctx)
-{
-	struct smbchg_chip *chip = ctx;
-
-	mutex_lock(&chip->wipower_config);
-	pr_smb(PR_WIPOWER, "%s state\n",
-			state  == ADC_TM_LOW_STATE ? "low" : "high");
-	chip->current_ilim.vmin_uv = 0;
-	chip->current_ilim.vmax_uv = 0;
-	__smbchg_wipower_check(chip);
-	mutex_unlock(&chip->wipower_config);
-}
-
-static int force_dcin_icl_write(void *data, u64 val)
-{
-	struct smbchg_chip *chip = data;
-
-	smbchg_wipower_check(chip);
-	return 0;
-}
-DEFINE_SIMPLE_ATTRIBUTE(force_dcin_icl_ops, NULL,
-		force_dcin_icl_write, "0x%02llx\n");
-
 /*
  * set the dc charge path's maximum allowed current draw
  * that may be limited by the system's thermal level
@@ -3848,10 +3572,7 @@ static void smbchg_aicl_deglitch_wa_check(struct smbchg_chip *chip)
 		if (is_hvdcp_present(chip))
 			low_volt_chgr = false;
 	} else if (is_dc_present(chip)) {
-		if (chip->dc_psy_type == POWER_SUPPLY_TYPE_WIPOWER)
-			low_volt_chgr = false;
-		else
-			low_volt_chgr = chip->low_volt_dcin;
+		low_volt_chgr = chip->low_volt_dcin;
 	}
 
 	if (!low_volt_chgr) {
@@ -6995,7 +6716,6 @@ static irqreturn_t batt_hot_handler(int irq, void *_chip)
 	if (chip->batt_psy)
 		power_supply_changed(chip->batt_psy);
 	smbchg_charging_status_change(chip);
-	smbchg_wipower_check(chip);
 	set_property_on_fg(chip, POWER_SUPPLY_PROP_HEALTH,
 			get_prop_batt_health(chip));
 #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
@@ -7016,7 +6736,6 @@ static irqreturn_t batt_cold_handler(int irq, void *_chip)
 	if (chip->batt_psy)
 		power_supply_changed(chip->batt_psy);
 	smbchg_charging_status_change(chip);
-	smbchg_wipower_check(chip);
 	set_property_on_fg(chip, POWER_SUPPLY_PROP_HEALTH,
 			get_prop_batt_health(chip));
 #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
@@ -7109,7 +6828,6 @@ static irqreturn_t chg_error_handler(int irq, void *_chip)
 	if (chip->batt_psy)
 		power_supply_changed(chip->batt_psy);
 	smbchg_charging_status_change(chip);
-	smbchg_wipower_check(chip);
 	return IRQ_HANDLED;
 }
 
@@ -7125,14 +6843,12 @@ static irqreturn_t fastchg_handler(int irq, void *_chip)
 	if (chip->batt_psy)
 		power_supply_changed(chip->batt_psy);
 	smbchg_charging_status_change(chip);
-	smbchg_wipower_check(chip);
 	return IRQ_HANDLED;
 }
 
 static irqreturn_t chg_hot_handler(int irq, void *_chip)
 {
 	pr_warn_ratelimited("chg hot\n");
-	smbchg_wipower_check(_chip);
 	return IRQ_HANDLED;
 }
 
@@ -7170,7 +6886,6 @@ static irqreturn_t taper_handler(int irq, void *_chip)
 	if (chip->batt_psy)
 		power_supply_changed(chip->batt_psy);
 	smbchg_charging_status_change(chip);
-	smbchg_wipower_check(chip);
 	return IRQ_HANDLED;
 }
 
@@ -7248,7 +6963,6 @@ static irqreturn_t dcin_uv_handler(int irq, void *_chip)
 		chip->vbat_above_headroom = false;
 	}
 
-	smbchg_wipower_check(chip);
 	return IRQ_HANDLED;
 }
 
@@ -7394,7 +7108,6 @@ static irqreturn_t usbin_uv_handler(int irq, void *_chip)
 		schedule_work(&chip->usb_set_online_work);
 	}
 
-	smbchg_wipower_check(chip);
 out:
 	return IRQ_HANDLED;
 }
@@ -8163,15 +7876,6 @@ static int smbchg_hw_init(struct smbchg_chip *chip)
 	if (rc < 0)
 		dev_err(chip->dev, "Couldn't read usb allowance rc=%d\n", rc);
 
-	if (chip->wipower_dyn_icl_avail) {
-		rc = smbchg_wipower_ilim_config(chip,
-				&(chip->wipower_default.entries[0]));
-		if (rc < 0) {
-			dev_err(chip->dev, "Couldn't set default wipower ilim = %d\n",
-				rc);
-			return rc;
-		}
-	}
 	/* unsuspend dc path, it could be suspended by the bootloader */
 	rc = smbchg_dc_suspend(chip, 0);
 	if (rc < 0) {
@@ -8263,100 +7967,6 @@ do {									\
 		dev_err(chip->dev, "Error reading " #dt_property	\
 				" property rc = %d\n", rc);		\
 } while (0)
-
-#define ILIM_ENTRIES		3
-#define VOLTAGE_RANGE_ENTRIES	2
-#define RANGE_ENTRY		(ILIM_ENTRIES + VOLTAGE_RANGE_ENTRIES)
-static int smb_parse_wipower_map_dt(struct smbchg_chip *chip,
-		struct ilim_map *map, char *property)
-{
-	struct device_node *node = chip->dev->of_node;
-	int total_elements, size;
-	struct property *prop;
-	const __be32 *data;
-	int num, i;
-
-	prop = of_find_property(node, property, &size);
-	if (!prop) {
-		dev_err(chip->dev, "%s missing\n", property);
-		return -EINVAL;
-	}
-
-	total_elements = size / sizeof(int);
-	if (total_elements % RANGE_ENTRY) {
-		dev_err(chip->dev, "%s table not in multiple of %d, total elements = %d\n",
-				property, RANGE_ENTRY, total_elements);
-		return -EINVAL;
-	}
-
-	data = prop->value;
-	num = total_elements / RANGE_ENTRY;
-	map->entries = devm_kzalloc(chip->dev,
-			num * sizeof(struct ilim_entry), GFP_KERNEL);
-	if (!map->entries)
-		return -ENOMEM;
-
-	for (i = 0; i < num; i++) {
-		map->entries[i].vmin_uv =  be32_to_cpup(data++);
-		map->entries[i].vmax_uv =  be32_to_cpup(data++);
-		map->entries[i].icl_pt_ma =  be32_to_cpup(data++);
-		map->entries[i].icl_lv_ma =  be32_to_cpup(data++);
-		map->entries[i].icl_hv_ma =  be32_to_cpup(data++);
-	}
-	map->num = num;
-	return 0;
-}
-
-static int smb_parse_wipower_dt(struct smbchg_chip *chip)
-{
-	int rc = 0;
-
-	chip->wipower_dyn_icl_avail = false;
-
-	if (!chip->vadc_dev)
-		goto err;
-
-	rc = smb_parse_wipower_map_dt(chip, &chip->wipower_default,
-					"qcom,wipower-default-ilim-map");
-	if (rc) {
-		dev_err(chip->dev, "failed to parse wipower-pt-ilim-map rc = %d\n",
-				rc);
-		goto err;
-	}
-
-	rc = smb_parse_wipower_map_dt(chip, &chip->wipower_pt,
-					"qcom,wipower-pt-ilim-map");
-	if (rc) {
-		dev_err(chip->dev, "failed to parse wipower-pt-ilim-map rc = %d\n",
-				rc);
-		goto err;
-	}
-
-	rc = smb_parse_wipower_map_dt(chip, &chip->wipower_div2,
-					"qcom,wipower-div2-ilim-map");
-	if (rc) {
-		dev_err(chip->dev, "failed to parse wipower-div2-ilim-map rc = %d\n",
-				rc);
-		goto err;
-	}
-	chip->wipower_dyn_icl_avail = true;
-	return 0;
-err:
-	chip->wipower_default.num = 0;
-	chip->wipower_pt.num = 0;
-	chip->wipower_default.num = 0;
-	if (chip->wipower_default.entries)
-		devm_kfree(chip->dev, chip->wipower_default.entries);
-	if (chip->wipower_pt.entries)
-		devm_kfree(chip->dev, chip->wipower_pt.entries);
-	if (chip->wipower_div2.entries)
-		devm_kfree(chip->dev, chip->wipower_div2.entries);
-	chip->wipower_default.entries = NULL;
-	chip->wipower_pt.entries = NULL;
-	chip->wipower_div2.entries = NULL;
-	chip->vadc_dev = NULL;
-	return rc;
-}
 
 #define DEFAULT_VLED_MAX_UV		3500000
 #define DEFAULT_FCC_MA			2000
@@ -8491,8 +8101,6 @@ static int smb_parse_dt(struct smbchg_chip *chip)
 			chip->dc_psy_type = POWER_SUPPLY_TYPE_MAINS;
 		else if (strcmp(dc_psy_type, "Wireless") == 0)
 			chip->dc_psy_type = POWER_SUPPLY_TYPE_WIRELESS;
-		else if (strcmp(dc_psy_type, "Wipower") == 0)
-			chip->dc_psy_type = POWER_SUPPLY_TYPE_WIPOWER;
 	}
 	if (chip->dc_psy_type != -EINVAL) {
 		OF_PROP_READ(chip, chip->dc_target_current_ma,
@@ -8506,9 +8114,6 @@ static int smb_parse_dt(struct smbchg_chip *chip)
 			return -EINVAL;
 		}
 	}
-
-	if (chip->dc_psy_type == POWER_SUPPLY_TYPE_WIPOWER)
-		smb_parse_wipower_dt(chip);
 
 	/* read the bms power supply name */
 	rc = of_property_read_string(node, "qcom,bms-psy-name",
@@ -8927,27 +8532,6 @@ static void dump_regs(struct smbchg_chip *chip)
 		dump_reg(chip, chip->misc_base + addr, "MISC CFG");
 }
 
-static int create_debugfs_entries(struct smbchg_chip *chip)
-{
-	struct dentry *ent;
-
-	chip->debug_root = debugfs_create_dir("qpnp-smbcharger", NULL);
-	if (!chip->debug_root) {
-		dev_err(chip->dev, "Couldn't create debug dir\n");
-		return -EINVAL;
-	}
-
-	ent = debugfs_create_file("force_dcin_icl_check",
-				  00100644, chip->debug_root, chip,
-				  &force_dcin_icl_ops);
-	if (!ent) {
-		dev_err(chip->dev,
-			"Couldn't create force dcin icl check file\n");
-		return -EINVAL;
-	}
-	return 0;
-}
-
 static int smbchg_check_chg_version(struct smbchg_chip *chip)
 {
 	struct pmic_revid_data *pmic_rev_id;
@@ -9138,19 +8722,6 @@ static int smbchg_probe(struct platform_device *pdev)
 #endif
 	}
 
-	vadc_dev = NULL;
-	if (of_find_property(pdev->dev.of_node, "qcom,dcin-vadc", NULL)) {
-		vadc_dev = qpnp_get_vadc(&pdev->dev, "dcin");
-		if (IS_ERR(vadc_dev)) {
-			rc = PTR_ERR(vadc_dev);
-			if (rc != -EPROBE_DEFER)
-				dev_err(&pdev->dev,
-					"Couldn't get vadc rc=%d\n",
-						rc);
-			return rc;
-		}
-	}
-
 	vchg_vadc_dev = NULL;
 	if (of_find_property(pdev->dev.of_node, "qcom,vchg_sns-vadc", NULL)) {
 		vchg_vadc_dev = qpnp_get_vadc(&pdev->dev, "vchg_sns");
@@ -9266,7 +8837,6 @@ static int smbchg_probe(struct platform_device *pdev)
 	init_completion(&chip->src_det_raised);
 	init_completion(&chip->usbin_uv_lowered);
 	init_completion(&chip->usbin_uv_raised);
-	chip->vadc_dev = vadc_dev;
 	chip->vchg_vadc_dev = vchg_vadc_dev;
 	chip->pdev = pdev;
 	chip->dev = &pdev->dev;
@@ -9282,7 +8852,6 @@ static int smbchg_probe(struct platform_device *pdev)
 	mutex_init(&chip->parallel.lock);
 	mutex_init(&chip->taper_irq_lock);
 	mutex_init(&chip->pm_lock);
-	mutex_init(&chip->wipower_config);
 	mutex_init(&chip->usb_status_lock);
 	device_init_wakeup(chip->dev, true);
 #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
@@ -9457,7 +9026,6 @@ static int smbchg_probe(struct platform_device *pdev)
 
 	update_usb_status(chip, is_usb_present(chip), false);
 	dump_regs(chip);
-	create_debugfs_entries(chip);
 	dev_info(chip->dev,
 		"SMBCHG successfully probe Charger version=%s Revision DIG:%d.%d ANA:%d.%d batt=%d dc=%d usb=%d\n",
 			version_str[chip->schg_version],
