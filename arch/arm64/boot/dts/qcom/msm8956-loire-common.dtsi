@@ -1022,23 +1022,39 @@
 };
 
 &pm8950_vadc {
-	chan@13 { /* case_therm */
-		qcom,scale-function = <26>; /* 100K_PULLUP_DECI */
+	case_therm {
+		/* SET SCALE FUNCTION HERE TO 100K_PULLUP_DECI */
 	};
+
+//	chan@13 { /* case_therm */
+//		qcom,scale-function = <26>; /* 100K_PULLUP_DECI */
+//	};
 };
 
 &pmi8950_vadc {
+	bl_therm {
+		label = "bl_therm";
+		reg = <VADC_P_MUX1_1_1>;
+		qcom,pre-scaling = <1 1>;
+		qcom,ratiometric;
+		qcom,hw-settle-time = <200>;
+		/* SET SCALE FUNCTION HERE TO 100K_PULLUP_DECI */
+	};
+
+	/* 100K_PULLUP_DECI */
+/*
 	chan@10 {
 		label = "bl_therm";
 		reg = <0x10>;
 		qcom,decimation = <0>;
 		qcom,pre-div-channel-scaling = <0>;
 		qcom,calibration-type = "ratiometric";
-		qcom,scale-function = <26>; /* 100K_PULLUP_DECI */
+		qcom,scale-function = <26>;
 		qcom,hw-settle-time = <2>;
 		qcom,fast-avg-setup = <0>;
 		qcom,vadc-thermal-node;
 	};
+*/
 };
 
 /* Regulator config */

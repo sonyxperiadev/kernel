@@ -398,9 +398,17 @@
 };
 
 &pmi8950_vadc {
-	chan@10 {
+	/delete-node/ bl_therm;
+	flash_therm {
 		label = "flash_therm";
+		reg = <VADC_P_MUX1_1_1>;
+		qcom,pre-scaling = <1 1>;
+		qcom,ratiometric;
+		qcom,hw-settle-time = <200>;
 	};
+//	chan@10 {
+//		label = "flash_therm";
+//	};
 };
 
 &spmi_bus {
