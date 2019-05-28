@@ -684,28 +684,25 @@ static void somc_chg_therm_set_hvdcp_en(struct smbchg_chip *chip)
 static int somc_chg_get_usbin_voltage(struct smbchg_chip *chip)
 {
 	struct somc_hvdcp3 *params = &chip->somc_params.hvdcp3;
-	int rc = 0;
-	struct qpnp_vadc_result adc_result;
+	int usbin_now = -EINVAL, rc = 0;
 
-	if (IS_ERR_OR_NULL(params->usbin_vadc_dev)) {
-		params->usbin_vadc_dev = qpnp_get_vadc(chip->dev, "usbin");
-		if (IS_ERR(params->usbin_vadc_dev)) {
-			rc = PTR_ERR(params->usbin_vadc_dev);
+	if (IS_ERR_OR_NULL(params->adc_usbin_chan)) {
+		params->adc_usbin_chan = iio_channel_get(chip->dev, "usbin");
+		if (IS_ERR(params->adc_usbin_chan)) {
+			rc = PTR_ERR(params->adc_usbin_chan);
 			if (rc != -EPROBE_DEFER)
 				dev_err(chip->dev,
-					"Couldn't get vadc(USBIN) rc=%d\n",
+					"Couldn't get USBIN adc rc=%d\n",
 					rc);
-			goto err;
+			return ERR_USBIN_VOLTAGE;
 		}
 	}
-	rc = qpnp_vadc_read(params->usbin_vadc_dev, USBIN, &adc_result);
-	if (rc) {
-		dev_err(chip->dev, "Couldn't vadc_read(USBIN) rc=%d\n", rc);
-		goto err;
+	rc = iio_channel_read_processed(params->adc_usbin_chan, &usbin_now);
+	if (rc < 0) {
+		dev_err(chip->dev, "Couldn't read USBIN adc rc=%d\n", rc);
+		return ERR_USBIN_VOLTAGE;
 	}
-	return (int)adc_result.physical;
-err:
-	return ERR_USBIN_VOLTAGE;
+	return usbin_now;
 }
 
 #define HVDCP3_THERM_USBIN_HYS_5V 5500000

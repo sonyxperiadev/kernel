@@ -243,44 +243,40 @@ static int get_usb_type(struct smbchg_chip *chip)
 
 static int get_prop_usb_dp_voltage_now(struct smbchg_chip *chip)
 {
-	int rc = 0;
-	struct qpnp_vadc_result results;
+	int dp_now = -EINVAL, rc = 0;
 
-	if (IS_ERR_OR_NULL(chip->usb_params.vadc_usb_dp)) {
-		chip->usb_params.vadc_usb_dp =
-					qpnp_get_vadc(chip->dev, "usb_dp");
-		if (IS_ERR(chip->usb_params.vadc_usb_dp))
-			return PTR_ERR(chip->usb_params.vadc_usb_dp);
+	if (IS_ERR_OR_NULL(chip->usb_params.adc_usbdp_chan)) {
+		chip->usb_params.adc_usbdp_chan =
+				iio_channel_get(chip->dev, "usb_dp");
+		if (IS_ERR(chip->usb_params.adc_usbdp_chan))
+			return PTR_ERR(chip->usb_params.adc_usbdp_chan);
 	}
 
-	rc = qpnp_vadc_read(chip->usb_params.vadc_usb_dp, USB_DP, &results);
-	if (rc) {
-		pr_err("Unable to read usb_dp rc=%d\n", rc);
-		return 0;
-	} else {
-		return results.physical;
-	}
+	rc = iio_read_channel_processed(
+			chip->usb_params.adc_usbdp_chan, &dp_now);
+	if (ret < 0)
+		return ret;
+
+	return dp_now;
 }
 
 static int get_prop_usb_dm_voltage_now(struct smbchg_chip *chip)
 {
-	int rc = 0;
-	struct qpnp_vadc_result results;
+	int dm_now = -EINVAL, rc = 0;
 
-	if (IS_ERR_OR_NULL(chip->usb_params.vadc_usb_dm)) {
-		chip->usb_params.vadc_usb_dm =
-					qpnp_get_vadc(chip->dev, "usb_dm");
-		if (IS_ERR(chip->usb_params.vadc_usb_dm))
-			return PTR_ERR(chip->usb_params.vadc_usb_dm);
+	if (IS_ERR_OR_NULL(chip->usb_params.adc_usbdm_chan)) {
+		chip->usb_params.adc_usbdm_chan =
+				iio_channel_get(chip->dev, "usb_dm");
+		if (IS_ERR(chip->usb_params.adc_usbdm_chan))
+			return PTR_ERR(chip->usb_params.adc_usbdm_chan);
 	}
 
-	rc = qpnp_vadc_read(chip->usb_params.vadc_usb_dm, USB_DM, &results);
-	if (rc) {
-		pr_err("Unable to read usb_dm rc=%d\n", rc);
-		return 0;
-	} else {
-		return results.physical;
-	}
+	rc = iio_read_channel_processed(
+			chip->usb_params.adc_usbdm_chan, &dm_now);
+	if (ret < 0)
+		return ret;
+
+	return dm_now;
 }
 
 static int get_prop_proprietary_charger(struct smbchg_chip *chip)

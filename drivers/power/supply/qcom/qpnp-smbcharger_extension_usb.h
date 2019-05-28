@@ -31,8 +31,8 @@ struct somc_typec_mode_ctrl {
 };
 
 struct usb_somc_params {
-	struct qpnp_vadc_chip		*vadc_usb_dp;
-	struct qpnp_vadc_chip		*vadc_usb_dm;
+	struct iio_channel		*adc_usbdp_chan;
+	struct iio_channel		*adc_usbdm_chan;
 	struct somc_usb_ocp		ocp;
 	struct somc_typec_mode_ctrl	typecctrl;
 };

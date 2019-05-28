@@ -108,7 +108,7 @@ struct somc_chg_det {
 struct somc_hvdcp3 {
 	int			usbin_mv;
 	bool			hvdcp3_detected;
-	struct qpnp_vadc_chip	*usbin_vadc_dev;
+	struct iio_channel	*adc_usbin_chan;
 	struct delayed_work	thermal_hvdcp3_adjust_work;
 	int			thermal_pulse_cnt;
 	bool			preparing;
