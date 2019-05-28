@@ -876,7 +876,6 @@ static void print_opp_table(int a53_cpu, int a72_cpu)
 	unsigned long apc0_fmin = a53ssmux.clkr.hw.init->rate_max[1];
 	unsigned long apc1_fmin = a72ssmux.clkr.hw.init->rate_max[1];
 
-	rcu_read_lock();
 
 	oppfmax = dev_pm_opp_find_freq_exact(get_cpu_device(a53_cpu), apc0_fmax,
 					     true);
@@ -899,8 +898,6 @@ static void print_opp_table(int a53_cpu, int a72_cpu)
 		dev_pm_opp_get_voltage(oppfmin));
 	pr_info("clock_cpu: a72: OPP voltage for %lu: %lu\n", apc1_fmax,
 		dev_pm_opp_get_voltage(oppfmax));
-
-	rcu_read_unlock();
 }
 
 static void populate_opp_table(struct platform_device *pdev)
