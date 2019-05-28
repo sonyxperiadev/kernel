@@ -71,20 +71,18 @@
 				reg = <0>;
 				label = "system-cci-active";
 				qcom,psci-mode = <0>;
-				qcom,latency-us = <301>;
-				qcom,ss-power = <463>;
-				qcom,energy-overhead = <348515>;
-				qcom,time-overhead = <505>;
+				qcom,entry-latency-us = <204>;
+				qcom,exit-latency-us = <301>;
+				qcom,min-residency-us = <505>;
 			};
 
 			qcom,pm-cluster-level@1{
 				reg = <1>;
 				label = "system-cci-retention";
 				qcom,psci-mode = <1>;
-				qcom,latency-us = <361>;
-				qcom,ss-power = <431>;
-				qcom,energy-overhead = <501447>;
-				qcom,time-overhead = <633>;
+				qcom,entry-latency-us = <272>;
+				qcom,exit-latency-us = <361>;
+				qcom,min-residency-us = <3561>;
 				qcom,min-child-idx = <2>;
 			};
 
@@ -92,10 +90,9 @@
 				reg = <2>;
 				label = "system-cci-pc";
 				qcom,psci-mode = <2>;
-				qcom,latency-us = <10740>;
-				qcom,ss-power = <388>;
-				qcom,energy-overhead = <1013303>;
-				qcom,time-overhead = <1158>;
+				qcom,entry-latency-us = <9582>;
+				qcom,exit-latency-us = <10740>;
+				qcom,min-residency-us = <7800>;
 				qcom,min-child-idx = <3>;
 				qcom,notify-rpm;
 				qcom,is-reset;
@@ -116,20 +113,18 @@
 					reg = <0>;
 					label = "a53-l2-wfi";
 					qcom,psci-mode = <1>;
-					qcom,latency-us = <149>;
-					qcom,ss-power = <489>;
-					qcom,energy-overhead = <199236>;
-					qcom,time-overhead = <330>;
+					qcom,entry-latency-us = <181>;
+					qcom,exit-latency-us = <149>;
+					qcom,min-residency-us = <330>;
 				};
 
 				qcom,pm-cluster-level@1{
 					reg = <1>;
 					label = "a53-l2-retention";
 					qcom,psci-mode = <2>;
-					qcom,latency-us = <272>;
-					qcom,ss-power = <468>;
-					qcom,energy-overhead = <277180>;
-					qcom,time-overhead = <467>;
+					qcom,entry-latency-us = <195>;
+					qcom,exit-latency-us = <272>;
+					qcom,min-residency-us = <989>;
 					qcom,min-child-idx = <1>;
 				};
 
@@ -137,10 +132,9 @@
 					reg = <2>;
 					label = "a53-l2-gdhs";
 					qcom,psci-mode = <3>;
-					qcom,latency-us = <331>;
-					qcom,ss-power = <442>;
-					qcom,energy-overhead = <335344>;
-					qcom,time-overhead = <541>;
+					qcom,entry-latency-us = <210>;
+					qcom,exit-latency-us = <331>;
+					qcom,min-residency-us = <1447>;
 					qcom,min-child-idx = <1>;
 				};
 
@@ -148,10 +142,9 @@
 					reg = <3>;
 					label = "a53-l2-pc";
 					qcom,psci-mode = <4>;
-					qcom,latency-us = <419>;
-					qcom,ss-power = <423>;
-					qcom,energy-overhead = <479220>;
-					qcom,time-overhead = <779>;
+					qcom,entry-latency-us = <360>;
+					qcom,exit-latency-us = <419>;
+					qcom,min-residency-us = <2815>;
 					qcom,min-child-idx = <1>;
 					qcom,is-reset;
 				};
@@ -168,10 +161,9 @@
 						label = "wfi";
 						qcom,psci-cpu-mode = <1>;
 						qcom,spm-cpu-mode = "wfi";
-						qcom,latency-us = <58>;
-						qcom,ss-power = <547>;
-						qcom,energy-overhead = <61640>;
-						qcom,time-overhead = <118>;
+						qcom,entry-latency-us = <60>;
+						qcom,exit-latency-us = <58>;
+						qcom,min-residency-us = <118>;
 					};
 
 					qcom,pm-cpu-level@1 {
@@ -179,10 +171,9 @@
 						label = "pc";
 						qcom,psci-cpu-mode = <3>;
 						qcom,spm-cpu-mode = "pc";
-						qcom,latency-us = <149>;
-						qcom,ss-power = <489>;
-						qcom,energy-overhead = <199236>;
-						qcom,time-overhead = <330>;
+						qcom,entry-latency-us = <181>;
+						qcom,exit-latency-us = <149>;
+						qcom,min-residency-us = <703>;
 						qcom,use-broadcast-timer;
 						qcom,is-reset;
 					};
@@ -204,20 +195,18 @@
 					reg = <0>;
 					label = "a72-l2-wfi";
 					qcom,psci-mode = <1>;
-					qcom,latency-us = <144>;
-					qcom,ss-power = <520>;
-					qcom,energy-overhead = <194277>;
-					qcom,time-overhead = <302>;
+					qcom,entry-latency-us = <158>;
+					qcom,exit-latency-us = <144>;
+					qcom,min-residency-us = <302>;
 				};
 
 				qcom,pm-cluster-level@1{
 					reg = <1>;
 					label = "a72-l2-retention";
 					qcom,psci-mode = <2>;
-					qcom,latency-us = <244>;
-					qcom,ss-power = <490>;
-					qcom,energy-overhead = <277821>;
-					qcom,time-overhead = <425>;
+					qcom,entry-latency-us = <181>;
+					qcom,exit-latency-us = <244>;
+					qcom,min-residency-us = <1078>;
 					qcom,min-child-idx = <1>;
 				};
 
@@ -225,10 +214,9 @@
 					reg = <2>;
 					label = "a72-l2-gdhs";
 					qcom,psci-mode = <3>;
-					qcom,latency-us = <301>;
-					qcom,ss-power = <463>;
-					qcom,energy-overhead = <348515>;
-					qcom,time-overhead = <505>;
+					qcom,entry-latency-us = <204>;
+					qcom,exit-latency-us = <301>;
+					qcom,min-residency-us = <1672>;
 					qcom,min-child-idx = <2>;
 				};
 
@@ -236,10 +224,9 @@
 					reg = <3>;
 					label = "a72-l2-pc";
 					qcom,psci-mode = <4>;
-					qcom,latency-us = <899>;
-					qcom,ss-power = <430>;
-					qcom,energy-overhead = <777359>;
-					qcom,time-overhead = <1256>;
+					qcom,entry-latency-us = <357>;
+					qcom,exit-latency-us = <899>;
+					qcom,min-residency-us = <3715>;
 					qcom,min-child-idx = <2>;
 					qcom,is-reset;
 				};
@@ -256,10 +243,9 @@
 						label = "wfi";
 						qcom,psci-cpu-mode = <1>;
 						qcom,spm-cpu-mode = "wfi";
-						qcom,latency-us = <31>;
-						qcom,ss-power = <552>;
-						qcom,energy-overhead = <64172>;
-						qcom,time-overhead = <81>;
+						qcom,entry-latency-us = <50>;
+						qcom,exit-latency-us = <31>;
+						qcom,min-residency-us = <81>;
 					};
 
 					qcom,pm-cpu-level@1 {
@@ -267,10 +253,9 @@
 						label = "retention";
 						qcom,psci-cpu-mode = <2>;
 						qcom,spm-cpu-mode = "retention";
-						qcom,latency-us = <99>;
-						qcom,ss-power = <540>;
-						qcom,energy-overhead = <150122>;
-						qcom,time-overhead = <241>;
+						qcom,entry-latency-us = <142>;
+						qcom,exit-latency-us = <99>;
+						qcom,min-residency-us = <242>;
 						qcom,use-broadcast-timer;
 					};
 
@@ -279,10 +264,9 @@
 						label = "pc";
 						qcom,psci-cpu-mode = <3>;
 						qcom,spm-cpu-mode = "pc";
-						qcom,latency-us = <144>;
-						qcom,ss-power = <520>;
-						qcom,energy-overhead = <194277>;
-						qcom,time-overhead = <302>;
+						qcom,entry-latency-us = <158>;
+						qcom,exit-latency-us = <144>;
+						qcom,min-residency-us = <863>;
 						qcom,use-broadcast-timer;
 						qcom,is-reset;
 					};
