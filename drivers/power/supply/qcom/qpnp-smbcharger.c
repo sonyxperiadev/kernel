@@ -275,8 +275,7 @@ struct smbchg_chip {
 	int				pulse_cnt;
 	struct led_classdev		led_cdev;
 	bool				skip_usb_notification;
-	u32				vchg_adc_channel;
-	struct qpnp_vadc_chip		*vchg_vadc_dev;
+	struct iio_channel		*vchg_vadc_chan;
 
 	/* voters */
 	struct votable			*fcc_votable;
@@ -6146,24 +6145,21 @@ static enum power_supply_property smbchg_usb_properties[] = {
 #define CHARGE_OUTPUT_VTG_RATIO		840
 static int smbchg_get_iusb(struct smbchg_chip *chip)
 {
-	int rc, iusb_ua = -EINVAL;
-	struct qpnp_vadc_result adc_result;
+	int rc = -EINVAL, iusb_ua = -EINVAL;
 
 	if (!is_usb_present(chip) && !is_dc_present(chip))
 		return 0;
 
-	if (chip->vchg_vadc_dev && chip->vchg_adc_channel != -EINVAL) {
-		rc = qpnp_vadc_read(chip->vchg_vadc_dev,
-				chip->vchg_adc_channel, &adc_result);
-		if (rc) {
-			pr_smb(PR_STATUS,
-				"error in VCHG (channel-%d) read rc = %d\n",
-						chip->vchg_adc_channel, rc);
-			return 0;
-		}
-		iusb_ua = div_s64(adc_result.physical * 1000,
-						CHARGE_OUTPUT_VTG_RATIO);
+	if (!chip->vchg_vadc_chan)
+		return -EINVAL;
+
+	rc = iio_read_channel_processed(chip->vchg_vadc_chan, &iusb_ua);
+	if (rc < 0) {
+		pr_smb(PR_STATUS, "Cannot read VCHG SENSE, rc = %d\n", rc);
+		return rc;
 	}
+
+	iusb_ua = div_s64(iusb_ua * 1000, CHARGE_OUTPUT_VTG_RATIO);
 
 	return iusb_ua;
 }
@@ -7779,7 +7775,7 @@ static int smbchg_hw_init(struct smbchg_chip *chip)
 		return rc;
 	}
 
-	if (chip->vchg_adc_channel != -EINVAL) {
+	if (!IS_ERR_OR_NULL(chip->vchg_vadc_chan)) {
 		/* configure and enable VCHG */
 		rc = smbchg_sec_masked_write(chip, chip->chgr_base + CHGR_CFG,
 				VCHG_INPUT_CURRENT_BIT | VCHG_EN_BIT,
@@ -8048,8 +8044,6 @@ static int smb_parse_dt(struct smbchg_chip *chip)
 			"jeita-temp-hard-limit", rc, 1);
 	OF_PROP_READ(chip, chip->aicl_rerun_period_s,
 			"aicl-rerun-period-s", rc, 1);
-	OF_PROP_READ(chip, chip->vchg_adc_channel,
-			"vchg-adc-channel-id", rc, 1);
 
 	/* read boolean configuration properties */
 	chip->use_vfloat_adjustments = of_property_read_bool(node,
@@ -8679,7 +8673,6 @@ static int smbchg_probe(struct platform_device *pdev)
 	int rc;
 	struct smbchg_chip *chip;
 	struct power_supply *typec_psy = NULL;
-	struct qpnp_vadc_chip *vadc_dev = NULL, *vchg_vadc_dev = NULL;
 	const char *typec_psy_name;
 	struct power_supply_config usb_psy_cfg = {};
 	struct power_supply_config batt_psy_cfg = {};
@@ -8722,19 +8715,6 @@ static int smbchg_probe(struct platform_device *pdev)
 #endif
 	}
 
-	vchg_vadc_dev = NULL;
-	if (of_find_property(pdev->dev.of_node, "qcom,vchg_sns-vadc", NULL)) {
-		vchg_vadc_dev = qpnp_get_vadc(&pdev->dev, "vchg_sns");
-		if (IS_ERR(vchg_vadc_dev)) {
-			rc = PTR_ERR(vchg_vadc_dev);
-			if (rc != -EPROBE_DEFER)
-				dev_err(&pdev->dev, "Couldn't get vadc 'vchg' rc=%d\n",
-						rc);
-			return rc;
-		}
-	}
-
-
 	chip = devm_kzalloc(&pdev->dev, sizeof(*chip), GFP_KERNEL);
 	if (!chip)
 		return -ENOMEM;
@@ -8743,6 +8723,15 @@ static int smbchg_probe(struct platform_device *pdev)
 	if (!chip->regmap) {
 		dev_err(&pdev->dev, "Couldn't get parent's regmap\n");
 		return -EINVAL;
+	}
+
+
+	chip->vchg_vadc_chan = iio_channel_get(&pdev->dev, "vchg_sns");
+	if (IS_ERR(chip->vchg_vadc_chan)) {
+		if (PTR_ERR(chip->vchg_vadc_chan) == -EPROBE_DEFER)
+			return -EPROBE_DEFER;
+		dev_err(&pdev->dev, "vchg_sns channel is not available\n");
+		chip->vchg_vadc_chan = NULL;
 	}
 
 	chip->fcc_votable = create_votable("BATT_FCC",
@@ -8837,7 +8826,6 @@ static int smbchg_probe(struct platform_device *pdev)
 	init_completion(&chip->src_det_raised);
 	init_completion(&chip->usbin_uv_lowered);
 	init_completion(&chip->usbin_uv_raised);
-	chip->vchg_vadc_dev = vchg_vadc_dev;
 	chip->pdev = pdev;
 	chip->dev = &pdev->dev;
 
