@@ -44,6 +44,7 @@
 #include <linux/extcon.h>
 #include <linux/pmic-voter.h>
 #include <linux/iio/consumer.h>
+#include <linux/qpnp/qpnp-revid.h>
 
 #ifdef CONFIG_QPNP_SMBCHARGER_EXTENSION
 #define WAIT_TO_READ_DPDM_AT_PROBE_MS	50
