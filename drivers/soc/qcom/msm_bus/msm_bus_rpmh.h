@@ -250,8 +250,8 @@ int msm_bus_query_gen(struct list_head *qlist,
 void *msm_bus_realloc_devmem(struct device *dev, void *p, size_t old_size,
 					size_t new_size, gfp_t flags);
 
-extern struct msm_bus_device_node_registration
-	*msm_bus_of_to_pdata(struct platform_device *pdev);
+int msm_bus_of_to_pdata(struct platform_device *pdev,
+			struct msm_bus_device_node_registration *rdata);
 extern void msm_bus_arb_setops_adhoc(struct msm_bus_arb_ops *arb_ops);
 extern int msm_bus_bimc_set_ops(struct msm_bus_node_device_type *bus_dev);
 extern int msm_bus_noc_set_ops(struct msm_bus_node_device_type *bus_dev);

@@ -720,8 +720,8 @@ static int get_bus_node_device_data(
 	return 0;
 }
 
-struct msm_bus_device_node_registration
-	*msm_bus_of_to_pdata(struct platform_device *pdev)
+int msm_bus_of_to_pdata(struct platform_device *pdev,
+			struct msm_bus_device_node_registration **rdata)
 {
 	struct device_node *of_node, *child_node;
 	struct msm_bus_device_node_registration *pdata;
@@ -730,7 +730,7 @@ struct msm_bus_device_node_registration
 
 	if (!pdev) {
 		pr_err("Error: Null platform device\n");
-		return NULL;
+		return -EINVAL;
 	}
 
 	of_node = pdev->dev.of_node;
@@ -741,7 +741,7 @@ struct msm_bus_device_node_registration
 	if (!pdata) {
 		dev_err(&pdev->dev,
 				"Error: Memory allocation for pdata failed\n");
-		return NULL;
+		return -ENOMEM;
 	}
 
 	pdata->num_devices = of_get_child_count(of_node);
@@ -762,7 +762,10 @@ struct msm_bus_device_node_registration
 				&pdata->info[i]);
 		if (ret) {
 			dev_err(&pdev->dev, "Error: unable to initialize bus nodes\n");
-			goto node_reg_err_1;
+			devm_kfree(&pdev->dev, pdata->info);
+			devm_kfree(&pdev->dev, pdata);
+			pdata = NULL;
+			return ret;
 		}
 		pdata->info[i].of_node = child_node;
 		i++;
@@ -792,10 +795,10 @@ struct msm_bus_device_node_registration
 				(size_t)pdata->info[i].fabdev->pqos_base,
 					pdata->info[i].fabdev->bus_type);
 	}
-	return pdata;
+	*rdata = pdata;
 
-node_reg_err_1:
-	devm_kfree(&pdev->dev, pdata->info);
+	return 0;
+
 node_reg_err:
 	devm_kfree(&pdev->dev, pdata);
 	pdata = NULL;
