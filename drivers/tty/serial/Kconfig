@@ -1098,6 +1098,20 @@ config SERIAL_MSM_CONSOLE
 	select SERIAL_CORE_CONSOLE
 	select SERIAL_EARLYCON
 
+config SERIAL_MSM_RESTORE_TX_PIN_TLMM_ADDR
+	hex "MSM: Address of the TX pin in the TLMM register space"
+	depends on SERIAL_MSM_CONSOLE
+	help
+	  Enter here the TLMM address for the TX PIN of your
+	  UART port to restore the TLMM configuration and
+	  get early output.
+	  The code will set the pin as no pull, strength 2mA.
+
+	  This is only for early kernel porting purposes.
+
+	  If you mean to debug the kernel, please use the bootparam
+	  "restore_msm_uart" instead of this configuration option.
+
 config SERIAL_RX_CONSOLE_ONLY
 	bool "MSM serial rx only console support"
 	depends on SERIAL_MSM=y
