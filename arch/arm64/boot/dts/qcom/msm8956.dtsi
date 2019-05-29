@@ -2596,7 +2596,7 @@
 				"qcom,stop-ack";
 
 		/* GPIO output to wcnss */
-		qcom,smem-states = <&wcnss_smp2p_in 0>;
+		qcom,smem-states = <&wcnss_smp2p_out 0>;
 		qcom,smem-state-names = "qcom,force-stop";
 
 		memory-region = <&reloc_mem>;
