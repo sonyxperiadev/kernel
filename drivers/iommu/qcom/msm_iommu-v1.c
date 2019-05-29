@@ -1130,16 +1130,31 @@ static int msm_iommu_add_device(struct device *dev)
 
 	master = dev->archdata.iommu;
 
+	iommu_device_link(&master->iommu_drvdata->iommu, dev);
+
 	group = iommu_group_get_for_dev(dev);
 	if (IS_ERR(group))
 		return PTR_ERR(group);
+
+	iommu_group_put(group);
 
 	return 0;
 }
 
 static void msm_iommu_remove_device(struct device *dev)
 {
+	struct msm_iommu_master *master = dev->archdata.iommu;
+
 	iommu_group_remove_device(dev);
+
+	if (master)
+		iommu_device_unlink(&master->iommu_drvdata->iommu, dev);
+}
+
+static void msm_iommu_release_group_iommudata(void *data)
+{
+	/* As of now, we don't need to do anything here. */
+	return;
 }
 
 static struct iommu_group *msm_iommu_device_group(struct device *dev)
@@ -1157,7 +1172,8 @@ static struct iommu_group *msm_iommu_device_group(struct device *dev)
 		return ERR_CAST(master);
 	}
 
-	iommu_group_set_iommudata(group, &master->ctx_drvdata, NULL);
+	iommu_group_set_iommudata(group, &master->ctx_drvdata,
+					msm_iommu_release_group_iommudata);
 
 	return group;
 }
@@ -1698,15 +1714,23 @@ static struct iommu_ops msm_iommu_ops = {
 	.disable_config_clocks	= msm_iommu_disable_clocks,
 };
 
-int msm_iommu_init(struct device *dev)
+int msm_iommu_init(struct msm_iommu_drvdata *drvdata)
 {
+	struct device *dev = drvdata->dev;
 	static bool done = false;
 	int ret;
 
-	of_iommu_set_ops(dev->of_node, &msm_iommu_ops);
-
 	if (done)
 		return 0;
+
+	iommu_device_set_ops(&drvdata->iommu, &msm_iommu_ops);
+	iommu_device_set_fwnode(&drvdata->iommu, &dev->of_node->fwnode);
+
+	ret = iommu_device_register(&drvdata->iommu);
+	if (ret) {
+		dev_err(dev, "Cannot register MSM IOMMU device\n");
+		return ret;
+	};
 
 	ret = bus_set_iommu(&platform_bus_type, &msm_iommu_ops);
 	if (ret)

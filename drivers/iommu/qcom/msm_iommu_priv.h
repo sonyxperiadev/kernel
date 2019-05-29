@@ -188,6 +188,7 @@ struct msm_iommu_drvdata {
 	unsigned int ctx_attach_count;
 	unsigned int bus_client;
 	unsigned int model;
+	struct iommu_device iommu;
 	struct idr asid_idr;
 	struct list_head masters;
 };
@@ -252,7 +253,7 @@ void __disable_clocks(struct msm_iommu_drvdata *drvdata);
 void iommu_halt(const struct msm_iommu_drvdata *iommu_drvdata);
 void iommu_resume(const struct msm_iommu_drvdata *iommu_drvdata);
 
-int msm_iommu_init(struct device *dev);
+int msm_iommu_init(struct msm_iommu_drvdata *drvdata);
 
 void print_ctx_regs(struct msm_iommu_context_reg regs[]);
 

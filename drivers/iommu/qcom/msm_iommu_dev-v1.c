@@ -638,6 +638,7 @@ static int msm_iommu_probe(struct platform_device *pdev)
 	struct device_node *np = pdev->dev.of_node;
 	struct msm_iommu_drvdata *drvdata;
 	struct resource *res;
+	resource_size_t ioaddr;
 	int ret;
 	int global_cfg_irq, global_client_irq;
 	u32 temp;
@@ -655,7 +656,7 @@ static int msm_iommu_probe(struct platform_device *pdev)
 		return PTR_ERR(drvdata->base);
 
 	drvdata->glb_base = drvdata->base;
-	drvdata->phys_base = res->start;
+	drvdata->phys_base = ioaddr = res->start;
 
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
 					   "smmu_local_base");
@@ -762,7 +763,14 @@ static int msm_iommu_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	return msm_iommu_init(&pdev->dev);
+	ret = iommu_device_sysfs_add(&drvdata->iommu, dev, NULL,
+				     "msm-iommu.%pa", &ioaddr);
+	if (ret) {
+		dev_err(dev, "Cannot add msm-iommu.%pa to sysfs\n", &ioaddr);
+		return ret;
+	}
+
+	return msm_iommu_init(drvdata);
 }
 
 static int msm_iommu_remove(struct platform_device *pdev)
