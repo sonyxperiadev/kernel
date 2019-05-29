@@ -413,7 +413,7 @@ free_mem:
 static int msm_iommu_dump_fault_regs(int smmu_id, int cb_num,
 				struct msm_scm_fault_regs_dump *regs)
 {
-	int ret, resp;
+	int ret;
 	struct scm_desc desc = {0};
 
 	struct msm_scm_fault_regs_dump_req {
@@ -433,12 +433,10 @@ static int msm_iommu_dump_fault_regs(int smmu_id, int cb_num,
 
 	//__dma_flush_area(regs, sizeof(*regs));
 	dmac_clean_range(regs, regs + 1);
-	if (!is_scm_armv8())
-		ret = scm_call(SCM_SVC_UTIL, IOMMU_DUMP_SMMU_FAULT_REGS,
-			&req_info, sizeof(req_info), &resp, 1);
-	else
-		ret = scm_call2(SCM_SIP_FNID(SCM_SVC_UTIL,
+
+	ret = scm_call2(SCM_SIP_FNID(SCM_SVC_UTIL,
 			IOMMU_DUMP_SMMU_FAULT_REGS), &desc);
+
 	dmac_inv_range(regs, regs + 1);
 	//__dma_flush_area(regs, sizeof(*regs));
 
