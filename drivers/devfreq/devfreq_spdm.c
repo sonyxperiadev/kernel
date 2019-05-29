@@ -276,31 +276,25 @@ int __spdm_hyp_call(struct spdm_args *args, int num_args)
 int __spdm_scm_call(struct spdm_args *args, int num_args)
 {
 	int status = 0;
-
+		struct scm_desc desc = {0};
 	SPDM_IPC_LOG("%s:svc_id:%d,cmd_id:%d,cmd:%llu,num_args:%d\n",
 		__func__, SPDM_SCM_SVC_ID, SPDM_SCM_CMD_ID,
 		args->arg[0], num_args);
 
-	if (!is_scm_armv8()) {
-		status = scm_call(SPDM_SCM_SVC_ID, SPDM_SCM_CMD_ID, args->arg,
-				sizeof(args->arg), args->ret,
-				sizeof(args->ret));
-	} else {
-		struct scm_desc desc = {0};
-		/*
-		 * Need to hard code this, this is a requirement from TZ syscall
-		 * interface.
-		 */
-		desc.arginfo = SCM_ARGS(6);
-		memcpy(desc.args, args->arg,
-			COPY_SIZE(sizeof(desc.args), sizeof(args->arg)));
+	/*
+	 * Need to hard code this, this is a requirement from TZ syscall
+	 * interface.
+	 */
+	desc.arginfo = SCM_ARGS(6);
+	memcpy(desc.args, args->arg,
+		COPY_SIZE(sizeof(desc.args), sizeof(args->arg)));
 
-		status = scm_call2(SCM_SIP_FNID(SPDM_SCM_SVC_ID,
-				SPDM_SCM_CMD_ID), &desc);
+	status = scm_call2(SCM_SIP_FNID(SPDM_SCM_SVC_ID,
+			SPDM_SCM_CMD_ID), &desc);
 
-		memcpy(args->ret, desc.ret,
-			COPY_SIZE(sizeof(args->ret), sizeof(desc.ret)));
-	}
+	memcpy(args->ret, desc.ret,
+		COPY_SIZE(sizeof(args->ret), sizeof(desc.ret)));
+
 	SPDM_IPC_LOG("%s:svc_id:%d,cmd_id:%d,cmd:%llu,Ret[0]:%llu,Ret[1]:%llu\n"
 		, __func__, SPDM_SCM_SVC_ID, SPDM_SCM_CMD_ID, args->arg[0],
 		args->ret[0], args->ret[1]);
