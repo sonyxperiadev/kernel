@@ -1198,11 +1198,12 @@ static void qcom_channel_state_worker(struct work_struct *work)
 		if (channel->state != SMD_CHANNEL_CLOSED)
 			continue;
 
+#if 0
 		remote_state = GET_RX_CHANNEL_INFO(channel, state);
 		if (remote_state != SMD_CHANNEL_OPENING &&
 		    remote_state != SMD_CHANNEL_OPENED)
 			continue;
-
+#endif
 		if (channel->registered)
 			continue;
 
