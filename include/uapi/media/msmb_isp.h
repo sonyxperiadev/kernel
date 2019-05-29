@@ -657,6 +657,7 @@ enum msm_isp_event_mask_index {
 	ISP_EVENT_MASK_INDEX_REG_UPDATE_MISSING		= 10,
 	ISP_EVENT_MASK_INDEX_PING_PONG_MISMATCH		= 11,
 	ISP_EVENT_MASK_INDEX_BUF_FATAL_ERROR		= 12,
+	ISP_EVENT_MASK_INDEX_SOF_UPDATE_NANOSEC		= 13,
 };
 
 
@@ -701,6 +702,9 @@ enum msm_isp_event_mask_index {
 #define ISP_EVENT_SUBS_MASK_BUF_FATAL_ERROR \
 			(1 << ISP_EVENT_MASK_INDEX_BUF_FATAL_ERROR)
 
+#define ISP_EVENT_SUBS_MASK_SOF_UPDATE_NANOSEC \
+			(1 << ISP_EVENT_MASK_INDEX_SOF_UPDATE_NANOSEC)
+
 enum msm_isp_event_idx {
 	ISP_REG_UPDATE        = 0,
 	ISP_EPOCH_0           = 1,
@@ -738,6 +742,7 @@ enum msm_isp_event_idx {
 #define ISP_EVENT_ERROR           (ISP_EVENT_BASE + ISP_ERROR)
 #define ISP_EVENT_SOF             (ISP_CAMIF_EVENT_BASE)
 #define ISP_EVENT_EOF             (ISP_CAMIF_EVENT_BASE + 1)
+#define ISP_EVENT_SOF_UPDATE_NANOSEC (ISP_CAMIF_EVENT_BASE + 512)
 #define ISP_EVENT_BUF_DONE        (ISP_EVENT_BASE + ISP_BUF_DONE)
 #define ISP_EVENT_BUF_DIVERT      (ISP_BUF_EVENT_BASE)
 #define ISP_EVENT_STATS_NOTIFY    (ISP_STATS_EVENT_BASE)
@@ -872,6 +877,12 @@ struct msm_isp_event_data {
 	} u; /* union can have max 52 bytes */
 };
 
+struct msm_isp_event_data_nanosec {
+	/* nano second timestamp */
+	uint64_t nano_timestamp;
+	uint32_t frame_id;
+};
+
 struct msm_isp32_event_data {
 	/*Wall clock except for buffer divert events
 	 *which use monotonic clock
@@ -918,6 +929,11 @@ struct msm_vfe_dual_lpm_mode {
 	uint32_t num_src;
 	uint32_t lpm_mode;
 };
+
+struct msm_vfe_nano_sec_timestamp {
+	uint32_t enable;
+};
+
 #define V4L2_PIX_FMT_QBGGR8  v4l2_fourcc('Q', 'B', 'G', '8')
 #define V4L2_PIX_FMT_QGBRG8  v4l2_fourcc('Q', 'G', 'B', '8')
 #define V4L2_PIX_FMT_QGRBG8  v4l2_fourcc('Q', 'G', 'R', '8')
@@ -985,6 +1001,8 @@ enum msm_isp_ioctl_cmd_code {
 	MSM_ISP_DUAL_HW_LPM_MODE,
 	MSM_ISP32_REQUEST_STREAM,
 	MSM_ISP_DUAL_SYNC_CFG,
+	MSM_ISP_DUAL_SYNC_CFG_VER2,
+	MSM_ISP_NANOSEC_TIMESTAMP
 };
 
 #define VIDIOC_MSM_VFE_REG_CFG \
@@ -1118,5 +1136,9 @@ enum msm_isp_ioctl_cmd_code {
 #define VIDIOC_MSM_ISP_DUAL_SYNC_CFG \
 	_IOWR('V', MSM_ISP_DUAL_SYNC_CFG, \
 	uint32_t *)
+
+#define VIDIOC_MSM_ISP_NANOSEC_TIMESTAMP \
+	_IOW('V', MSM_ISP_NANOSEC_TIMESTAMP, \
+	struct msm_vfe_nano_sec_timestamp)
 
 #endif /* __MSMB_ISP__ */
