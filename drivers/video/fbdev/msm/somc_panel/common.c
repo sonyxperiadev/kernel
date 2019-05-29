@@ -25,11 +25,9 @@
 #include <linux/of_gpio.h>
 #include <linux/of_platform.h>
 #include <linux/gpio.h>
-#include <linux/qpnp/pin.h>
 #include <linux/delay.h>
 #include <linux/slab.h>
 #include <linux/leds.h>
-#include <linux/qpnp/pwm.h>
 #include <linux/err.h>
 #include <linux/regulator/consumer.h>
 
