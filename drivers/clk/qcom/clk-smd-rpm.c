@@ -1323,7 +1323,7 @@ static int __init rpm_smd_clk_init(void)
 {
 	return platform_driver_register(&rpm_smd_clk_driver);
 }
-core_initcall(rpm_smd_clk_init);
+arch_initcall(rpm_smd_clk_init);
 
 static void __exit rpm_smd_clk_exit(void)
 {
