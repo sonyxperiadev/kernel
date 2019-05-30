@@ -77,6 +77,8 @@ static const struct rpmsg_endpoint_ops qcom_smd_endpoint_ops;
 #define SMD_ALLOC_TBL_COUNT	2
 #define SMD_ALLOC_TBL_SIZE	64
 
+#define QCOM_SMD_MAX_BLOCKREAD_TIMEOUT	(3 * HZ)
+
 /*
  * This lists the various smem heap items relevant for the allocation table and
  * smd channel entries.
@@ -736,9 +738,7 @@ static int __qcom_smd_send(struct qcom_smd_channel *channel, const void *data,
 	if (tlen >= channel->fifo_size)
 		return -EINVAL;
 
-	ret = mutex_lock_interruptible(&channel->tx_lock);
-	if (ret)
-		return ret;
+	mutex_lock(&channel->tx_lock);
 
 	while (qcom_smd_get_tx_avail(channel) < tlen) {
 		if (!wait) {
@@ -753,11 +753,15 @@ static int __qcom_smd_send(struct qcom_smd_channel *channel, const void *data,
 
 		SET_TX_CHANNEL_FLAG(channel, fBLOCKREADINTR, 0);
 
-		ret = wait_event_interruptible(channel->fblockread_event,
+		ret = wait_event_timeout(channel->fblockread_event,
 				       qcom_smd_get_tx_avail(channel) >= tlen ||
-				       channel->state != SMD_CHANNEL_OPENED);
-		if (ret)
+				       channel->state != SMD_CHANNEL_OPENED,
+				       QCOM_SMD_MAX_BLOCKREAD_TIMEOUT);
+		if (ret) {
+			dev_err(&channel->edge->dev,
+				"SMD TX availability wait timed out\n");
 			goto out;
+		}
 
 		SET_TX_CHANNEL_FLAG(channel, fBLOCKREADINTR, 1);
 	}
