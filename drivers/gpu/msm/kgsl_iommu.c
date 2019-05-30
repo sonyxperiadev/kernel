@@ -1125,6 +1125,7 @@ _alloc_pt(struct device *dev, struct kgsl_mmu *mmu, struct kgsl_pagetable *pt)
 {
 	struct kgsl_iommu_pt *iommu_pt;
 	struct bus_type *bus = kgsl_mmu_get_bus(dev);
+	struct iommu_group *grp = NULL;
 
 	if (bus == NULL)
 		return ERR_PTR(-ENODEV);
@@ -1143,6 +1144,12 @@ _alloc_pt(struct device *dev, struct kgsl_mmu *mmu, struct kgsl_pagetable *pt)
 	pt->priv = iommu_pt;
 	pt->fault_addr = ~0ULL;
 	iommu_pt->rbtree = RB_ROOT;
+
+	if (!dev->iommu_group) {
+		grp = iommu_group_get_for_dev(dev);
+		if (IS_ERR_OR_NULL(grp))
+			return ERR_PTR(PTR_ERR(grp));
+	}
 
 	if (MMU_FEATURE(mmu, KGSL_MMU_64BIT))
 		setup_64bit_pagetable(mmu, pt, iommu_pt);
