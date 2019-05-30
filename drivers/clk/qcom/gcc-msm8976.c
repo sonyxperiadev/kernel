@@ -4370,7 +4370,7 @@ static int __init gcc_8976_init(void)
 {
 	return platform_driver_register(&gcc_8976_driver);
 }
-core_initcall_sync(gcc_8976_init);
+arch_initcall(gcc_8976_init);
 
 static void __exit gcc_8976_exit(void)
 {
