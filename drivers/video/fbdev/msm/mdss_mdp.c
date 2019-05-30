@@ -3040,7 +3040,7 @@ static int mdss_mdp_probe(struct platform_device *pdev)
 	rc = mdss_mdp_res_init(mdata);
 	if (rc) {
 		pr_err("unable to initialize mdss mdp resources\n");
-		goto probe_done;
+		goto res_init_fail;
 	}
 
 	rc = mdss_mdp_retention_init(mdata);
@@ -3211,10 +3211,11 @@ static int mdss_mdp_probe(struct platform_device *pdev)
 		num_of_display_on, intf_sel);
 
 probe_done:
-	if (IS_ERR_VALUE((unsigned long)rc)) {
-		if (!num_of_display_on)
-			mdss_mdp_footswitch_ctrl_splash(false);
+	if (IS_ERR_VALUE((unsigned long)rc) && !num_of_display_on)
+		mdss_mdp_footswitch_ctrl_splash(false);
 
+res_init_fail:
+	if (IS_ERR_VALUE((unsigned long)rc)) {
 		if (mdata->regulator_notif_register)
 			regulator_unregister_notifier(mdata->fs,
 						&(mdata->gdsc_cb));
