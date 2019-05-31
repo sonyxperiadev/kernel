@@ -175,6 +175,7 @@ config USB_MSM_OTG_DOWNSTREAM
 	depends on (USB || USB_GADGET) && (ARCH_QCOM || COMPILE_TEST)
 	depends on USB_GADGET || !USB_GADGET # if USB_GADGET=m, this can't be 'y'
 	depends on RESET_CONTROLLER
+	depends on USB_MSM_OTG
 	select USB_PHY
 	help
 	  Enable this to support the USB OTG transceiver on Qualcomm chips. It
