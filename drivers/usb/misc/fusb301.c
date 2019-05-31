@@ -2157,7 +2157,7 @@ static void fusb301_change_ext_typec_ctrl_work(struct work_struct *work)
 	mutex_lock(&chip->mlock);
 	dev_dbg(cdev, "%s: ext_typec_ctrl=%d\n", __func__,
 							chip->ext_typec_ctrl);
-	if (chip->ext_typec_ctrl == POWER_SUPPLY_TYPE_TYPEC)
+	if (chip->ext_typec_ctrl == POWER_SUPPLY_TYPE_USB_TYPE_C)
 		fusb301_set_mode(chip, FUSB301_DRP);
 	else if (chip->state == FUSB_STATE_ERROR_RECOVERY && !chip->is_bs)
 		fusb301_set_mode(chip, FUSB301_SNK);
@@ -2199,7 +2199,7 @@ static int fusb301_set_property(struct power_supply *psy,
 		cancel_work_sync(&chip->ework);
 		chip->ext_typec_ctrl = (val->intval == POWER_SUPPLY_TYPE_UFP ?
 						POWER_SUPPLY_TYPE_UFP :
-						POWER_SUPPLY_TYPE_TYPEC);
+						POWER_SUPPLY_TYPE_USB_TYPE_C);
 		if (chip->pdata->ext_typec_ctrl_enabled) {
 			__pm_wakeup_event(&chip->wlock,
 				FUSB301_WAKE_LOCK_TIMEOUT);
