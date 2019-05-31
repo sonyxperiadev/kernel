@@ -12,7 +12,6 @@
 
 #ifndef _USB_BAM_H_
 #define _USB_BAM_H_
-
 #include <linux/msm-sps.h>
 #include <linux/device.h>
 #include <linux/errno.h>
@@ -22,8 +21,15 @@
 
 /* Supported USB controllers*/
 enum usb_ctrl {
-	USB_CTRL_UNUSED = 0,
+	DWC3_CTRL = 0,  /* DWC3 controller */
+	CI_CTRL,        /* ChipIdea controller */
+	HSIC_CTRL,      /* HSIC controller */
 	NUM_CTRL,
+};
+
+enum usb_bam_mode {
+	USB_BAM_DEVICE = 0,
+	USB_BAM_HOST,
 };
 
 enum peer_bam {
@@ -165,7 +171,7 @@ int get_qdss_bam_connection_info(
  * @return 0 on success, negative value on error
  */
 int usb_bam_get_connection_idx(enum usb_ctrl bam_type, enum peer_bam client,
-	enum usb_bam_pipe_dir dir, u32 num);
+	enum usb_bam_pipe_dir dir, enum usb_bam_mode bam_mode, u32 num);
 
 /*
  * return the usb controller bam type used for the supplied connection index
@@ -174,7 +180,7 @@ int usb_bam_get_connection_idx(enum usb_ctrl bam_type, enum peer_bam client,
  *
  * @return usb control bam type
  */
-enum usb_ctrl usb_bam_get_bam_type(const char *core_name);
+int usb_bam_get_bam_type(const char *core_name);
 
 /*
  * Indicates the type of connection the USB side of the connection is.
@@ -197,6 +203,7 @@ int usb_bam_alloc_fifos(enum usb_ctrl cur_bam, u8 idx);
 int usb_bam_free_fifos(enum usb_ctrl cur_bam, u8 idx);
 int get_qdss_bam_info(enum usb_ctrl cur_bam, u8 idx,
 			phys_addr_t *p_addr, u32 *bam_size);
+bool msm_usb_bam_enable(enum usb_ctrl ctrl, bool bam_enable);
 #else
 static inline int usb_bam_connect(enum usb_ctrl bam, u8 idx, u32 *bam_pipe_idx,
 							unsigned long iova)
@@ -239,12 +246,13 @@ static inline int get_qdss_bam_connection_info(
 }
 
 static inline int usb_bam_get_connection_idx(enum usb_ctrl bam_type,
-		enum peer_bam client, enum usb_bam_pipe_dir dir, u32 num)
+		enum peer_bam client, enum usb_bam_pipe_dir dir,
+		enum usb_bam_mode bam_mode, u32 num)
 {
 	return -ENODEV;
 }
 
-static inline enum usb_ctrl usb_bam_get_bam_type(const char *core_nam)
+static inline int usb_bam_get_bam_type(const char *core_nam)
 {
 	return -ENODEV;
 }
@@ -270,6 +278,21 @@ static inline int get_qdss_bam_info(enum usb_ctrl cur_bam, u8 idx,
 {
 	return false;
 }
+
+static inline bool msm_usb_bam_enable(enum usb_ctrl ctrl, bool bam_enable)
+{ return true; }
+
+#endif
+
+#ifdef CONFIG_USB_CI13XXX_MSM
+void msm_hw_bam_disable(bool bam_disable);
+void msm_usb_irq_disable(bool disable);
+#else
+static inline void msm_hw_bam_disable(bool bam_disable)
+{ }
+
+static inline void msm_usb_irq_disable(bool disable)
+{ }
 #endif
 
 /* CONFIG_PM */
