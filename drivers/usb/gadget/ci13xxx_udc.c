@@ -1874,15 +1874,10 @@ static int _hardware_enqueue(struct ci13xxx_ep *mEp, struct ci13xxx_req *mReq)
 		return -EALREADY;
 
 	mReq->req.status = -EALREADY;
-	if (length && mReq->req.dma == DMA_ERROR_CODE) {
-		mReq->req.dma = dma_map_single(mEp->device, mReq->req.buf,
-					length, mEp->dir ? DMA_TO_DEVICE :
-					DMA_FROM_DEVICE);
-		if (mReq->req.dma == 0)
-			return -ENOMEM;
 
-		mReq->map = 1;
-	}
+	ret = usb_gadget_map_request(&udc->gadget, &mReq->req, mEp->dir);
+	if (ret)
+		return ret;
 
 	if (mReq->req.zero && length && (length % mEp->ep.maxpacket == 0)) {
 		mReq->zptr = dma_pool_alloc(mEp->td_pool, GFP_ATOMIC,
@@ -2089,6 +2084,8 @@ done:
  */
 static int _hardware_dequeue(struct ci13xxx_ep *mEp, struct ci13xxx_req *mReq)
 {
+	struct ci13xxx *udc = _udc;
+
 	trace("%pK, %pK", mEp, mReq);
 
 	if (mReq->req.status != -EALREADY)
@@ -2124,12 +2121,7 @@ static int _hardware_dequeue(struct ci13xxx_ep *mEp, struct ci13xxx_req *mReq)
 
 	mReq->req.status = 0;
 
-	if (mReq->map) {
-		dma_unmap_single(mEp->device, mReq->req.dma, mReq->req.length,
-				 mEp->dir ? DMA_TO_DEVICE : DMA_FROM_DEVICE);
-		mReq->req.dma = DMA_ERROR_CODE;
-		mReq->map     = 0;
-	}
+	usb_gadget_unmap_request(&udc->gadget, &mReq->req, mEp->dir);
 
 	mReq->req.status = mReq->ptr->token & TD_STATUS;
 	if ((TD_STATUS_HALTED & mReq->req.status) != 0)
@@ -3260,12 +3252,9 @@ static int ep_dequeue(struct usb_ep *ep, struct usb_request *req)
 
 	/* pop request */
 	list_del_init(&mReq->queue);
-	if (mReq->map) {
-		dma_unmap_single(mEp->device, mReq->req.dma, mReq->req.length,
-				 mEp->dir ? DMA_TO_DEVICE : DMA_FROM_DEVICE);
-		mReq->req.dma = DMA_ERROR_CODE;
-		mReq->map     = 0;
-	}
+
+	usb_gadget_unmap_request(&udc->gadget, &mReq->req, mEp->dir);
+
 	req->status = -ECONNRESET;
 
 	if (mEp->last_zptr) {
