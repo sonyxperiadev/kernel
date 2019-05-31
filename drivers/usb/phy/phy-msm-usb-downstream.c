@@ -3735,11 +3735,11 @@ err:
 
 static void msm_otg_handle_initial_extcon(struct msm_otg *motg)
 {
-	if (motg->extcon_vbus && extcon_get_cable_state_(motg->extcon_vbus,
+	if (motg->extcon_vbus && extcon_get_state(motg->extcon_vbus,
 							EXTCON_USB))
 		msm_otg_vbus_notifier(&motg->vbus_nb, true, motg->extcon_vbus);
 
-	if (motg->extcon_id && extcon_get_cable_state_(motg->extcon_id,
+	if (motg->extcon_id && extcon_get_state(motg->extcon_id,
 							EXTCON_USB_HOST))
 		msm_otg_id_notifier(&motg->id_nb, true, motg->extcon_id);
 }
