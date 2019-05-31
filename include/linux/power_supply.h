@@ -106,6 +106,7 @@ enum {
 	POWER_SUPPLY_DP_DM_FORCE_5V = 13,
 	POWER_SUPPLY_DP_DM_FORCE_9V = 14,
 	POWER_SUPPLY_DP_DM_FORCE_12V = 15,
+	POWER_SUPPLY_DP_DM_DP3P3_DM3P3 = 16,
 };
 
 enum {
@@ -396,6 +397,19 @@ enum power_supply_property {
 #endif
 };
 
+#if defined(CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION) || \
+    defined(CONFIG_QPNP_SMBCHARGER_EXTENSION)   || \
+    defined(CONFIG_QPNP_FG_EXTENSION)
+enum power_supply_sub_type {
+	POWER_SUPPLY_SUB_TYPE_UNKNOWN = 0,
+	POWER_SUPPLY_SUB_TYPE_PROPRIETARY,
+	POWER_SUPPLY_SUB_TYPE_PROPRIETARY_1000MA,
+	POWER_SUPPLY_SUB_TYPE_PROPRIETARY_500MA,
+	POWER_SUPPLY_SUB_TYPE_FLOATED,
+	POWER_SUPPLY_SUB_TYPE_INVALID,
+};
+#endif
+
 enum power_supply_type {
 	POWER_SUPPLY_TYPE_UNKNOWN = 0,
 	POWER_SUPPLY_TYPE_BATTERY,
@@ -420,6 +434,7 @@ enum power_supply_type {
 	POWER_SUPPLY_TYPE_UFP,			/* Type-C UFP */
 	POWER_SUPPLY_TYPE_DFP,			/* Type-C DFP */
 	POWER_SUPPLY_TYPE_CHARGE_PUMP,		/* Charge Pump */
+	POWER_SUPPLY_TYPE_RETRY_DET,		/* Retry charger detection */
 };
 
 /* Indicates USB Type-C CC connection status */

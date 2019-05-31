@@ -18,6 +18,7 @@
 
 #include <linux/device.h>
 #include <linux/input.h>
+#include <linux/iio/iio.h>
 
 enum {
 	ATTR_FV_STS = 0,
@@ -697,7 +698,7 @@ static int somc_chg_get_usbin_voltage(struct smbchg_chip *chip)
 			return ERR_USBIN_VOLTAGE;
 		}
 	}
-	rc = iio_channel_read_processed(params->adc_usbin_chan, &usbin_now);
+	rc = iio_read_channel_processed(params->adc_usbin_chan, &usbin_now);
 	if (rc < 0) {
 		dev_err(chip->dev, "Couldn't read USBIN adc rc=%d\n", rc);
 		return ERR_USBIN_VOLTAGE;

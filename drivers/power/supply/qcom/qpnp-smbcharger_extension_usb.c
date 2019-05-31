@@ -254,8 +254,8 @@ static int get_prop_usb_dp_voltage_now(struct smbchg_chip *chip)
 
 	rc = iio_read_channel_processed(
 			chip->usb_params.adc_usbdp_chan, &dp_now);
-	if (ret < 0)
-		return ret;
+	if (rc < 0)
+		return rc;
 
 	return dp_now;
 }
@@ -273,8 +273,8 @@ static int get_prop_usb_dm_voltage_now(struct smbchg_chip *chip)
 
 	rc = iio_read_channel_processed(
 			chip->usb_params.adc_usbdm_chan, &dm_now);
-	if (ret < 0)
-		return ret;
+	if (rc < 0)
+		return rc;
 
 	return dm_now;
 }
