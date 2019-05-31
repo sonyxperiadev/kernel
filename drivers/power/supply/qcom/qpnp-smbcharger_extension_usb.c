@@ -133,7 +133,7 @@ static void somc_chg_usbid_start_polling_delay_work(struct work_struct *work)
 	if (chip->typec_psy) {
 		union power_supply_propval val = {0, };
 
-		val.intval = POWER_SUPPLY_TYPE_TYPEC;
+		val.intval = POWER_SUPPLY_TYPE_USB_TYPE_C;
 		power_supply_set_property(chip->typec_psy,
 				POWER_SUPPLY_PROP_TYPEC_MODE, &val);
 	}
