@@ -8,7 +8,7 @@
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
-#include <linux/usb/msm_hsusb_hw.h>
+#include <linux/usb/msm_hsusb_hw_downstream.h>
 #include <linux/usb/ulpi.h>
 #include <linux/gpio.h>
 #include <linux/pinctrl/consumer.h>
@@ -152,7 +152,7 @@ static void ci13xxx_msm_reset(void)
 	temp &= ~GENCONFIG_ULPI_SERIAL_EN;
 	writel_relaxed(temp, USB_GENCONFIG);
 
-	if (udc->gadget.l1_supported)
+	if (udc->gadget.lpm_capable)
 		ci13xxx_msm_set_l1(udc);
 
 	if (phy && (phy->flags & ENABLE_SECONDARY_PHY)) {
@@ -395,7 +395,7 @@ static int ci13xxx_msm_probe(struct platform_device *pdev)
 		goto iounmap;
 	}
 
-	_udc->gadget.l1_supported = is_l1_supported;
+	_udc->gadget.lpm_capable = is_l1_supported;
 
 	_udc_ctxt.irq = platform_get_irq(pdev, 0);
 	if (_udc_ctxt.irq < 0) {

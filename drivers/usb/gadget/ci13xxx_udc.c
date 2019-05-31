@@ -68,6 +68,8 @@
 #include <linux/usb/otg.h>
 #include <linux/usb/msm_hsusb.h>
 
+#include <linux/sched/clock.h>
+
 #include "ci13xxx_udc.h"
 
 /* Feature */
