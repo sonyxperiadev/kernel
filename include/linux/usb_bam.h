@@ -204,6 +204,7 @@ int usb_bam_free_fifos(enum usb_ctrl cur_bam, u8 idx);
 int get_qdss_bam_info(enum usb_ctrl cur_bam, u8 idx,
 			phys_addr_t *p_addr, u32 *bam_size);
 bool msm_usb_bam_enable(enum usb_ctrl ctrl, bool bam_enable);
+int msm_do_bam_disable_enable(enum usb_ctrl bam);
 #else
 static inline int usb_bam_connect(enum usb_ctrl bam, u8 idx, u32 *bam_pipe_idx,
 							unsigned long iova)
@@ -282,6 +283,7 @@ static inline int get_qdss_bam_info(enum usb_ctrl cur_bam, u8 idx,
 static inline bool msm_usb_bam_enable(enum usb_ctrl ctrl, bool bam_enable)
 { return true; }
 
+static inline int msm_do_bam_disable_enable(enum usb_ctrl bam) { return 0; }
 #endif
 
 #ifdef CONFIG_USB_CI13XXX_MSM
