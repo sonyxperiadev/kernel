@@ -689,7 +689,7 @@ int __secure_computing(const struct seccomp_data *sd)
 
 	if (config_enabled(CONFIG_CHECKPOINT_RESTORE) &&
 	    unlikely(current->ptrace & PT_SUSPEND_SECCOMP))
-		return SECCOMP_PHASE1_OK;
+		return 0;
 
 	switch (mode) {
 	case SECCOMP_MODE_STRICT:
