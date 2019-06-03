@@ -33,6 +33,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/pm_wakeup.h>
+#include <linux/pwm.h>
 #include <linux/reset.h>
 #include <linux/extcon.h>
 #include <linux/power_supply.h>
@@ -48,7 +49,7 @@
 #include <linux/regulator/consumer.h>
 #include <linux/regulator/driver.h>
 #include <linux/regulator/machine.h>
-#include <linux/qpnp/qpnp-adc.h>
+#include <linux/sched/clock.h>
 
 #include <linux/msm-bus.h>
 
@@ -265,7 +266,7 @@ MODULE_PARM_DESC(floated_charger_enable,
 	"Whether to enable floated charger");
 
 /* by default debugging is enabled */
-static unsigned int enable_dbg_log = 1;
+static unsigned int enable_dbg_log = 0;
 module_param(enable_dbg_log, uint, 0644);
 MODULE_PARM_DESC(enable_dbg_log, "Debug buffer events");
 
@@ -307,7 +308,7 @@ msm_otg_dbg_log_event(struct usb_phy *phy, char *event, int d1, int d2)
 	unsigned long long t;
 	unsigned long nanosec;
 
-	if (!enable_dbg_log)
+	if (likely(!enable_dbg_log))
 		return;
 
 	write_lock_irqsave(&motg->dbg_lock, flags);
@@ -3479,38 +3480,6 @@ set_msm_otg_perf_mode(struct device *dev, struct device_attribute *attr,
 
 static DEVICE_ATTR(perf_mode, 0200, NULL, set_msm_otg_perf_mode);
 
-#define MSM_OTG_CMD_ID		0x09
-#define MSM_OTG_DEVICE_ID	0x04
-#define MSM_OTG_VMID_IDX	0xFF
-#define MSM_OTG_MEM_TYPE	0x02
-struct msm_otg_scm_cmd_buf {
-	unsigned int device_id;
-	unsigned int vmid_idx;
-	unsigned int mem_type;
-} __attribute__ ((__packed__));
-
-static void msm_otg_pnoc_errata_fix(struct msm_otg *motg)
-{
-	int ret;
-	struct msm_otg_platform_data *pdata = motg->pdata;
-	struct msm_otg_scm_cmd_buf cmd_buf;
-
-	if (!pdata->pnoc_errata_fix)
-		return;
-
-	dev_dbg(motg->phy.dev, "applying fix for pnoc h/w issue\n");
-
-	cmd_buf.device_id = MSM_OTG_DEVICE_ID;
-	cmd_buf.vmid_idx = MSM_OTG_VMID_IDX;
-	cmd_buf.mem_type = MSM_OTG_MEM_TYPE;
-
-	ret = scm_call(SCM_SVC_MP, MSM_OTG_CMD_ID, &cmd_buf,
-				sizeof(cmd_buf), NULL, 0);
-
-	if (ret)
-		dev_err(motg->phy.dev, "scm command failed to update VMIDMT\n");
-}
-
 static u64 msm_otg_dma_mask = DMA_BIT_MASK(32);
 static struct platform_device *msm_otg_add_pdev(
 		struct platform_device *ofdev, const char *name)
@@ -3806,8 +3775,6 @@ struct msm_otg_platform_data *msm_otg_dt_to_pdata(struct platform_device *pdev)
 				&pdata->phy_type);
 	pdata->disable_reset_on_disconnect = of_property_read_bool(node,
 				"qcom,hsusb-otg-disable-reset");
-	pdata->pnoc_errata_fix = of_property_read_bool(node,
-				"qcom,hsusb-otg-pnoc-errata-fix");
 	pdata->enable_lpm_on_dev_suspend = of_property_read_bool(node,
 				"qcom,hsusb-otg-lpm-on-dev-suspend");
 	pdata->core_clk_always_on_workaround = of_property_read_bool(node,
@@ -4294,9 +4261,6 @@ static int msm_otg_probe(struct platform_device *pdev)
 	}
 	clk_prepare_enable(motg->core_clk);
 
-	/* Check if USB mem_type change is needed to workaround PNOC hw issue */
-	msm_otg_pnoc_errata_fix(motg);
-
 	writel_relaxed(0, USB_USBINTR);
 	writel_relaxed(0, USB_OTGSC);
 	/* Ensure that above STOREs are completed before enabling interrupts */
@@ -4363,7 +4327,6 @@ static int msm_otg_probe(struct platform_device *pdev)
 	phy->init = msm_otg_reset;
 	phy->set_power = msm_otg_set_power;
 	phy->set_suspend = msm_otg_set_suspend;
-	phy->dbg_event = msm_otg_dbg_log_event;
 
 	phy->io_ops = &msm_otg_io_ops;
 
