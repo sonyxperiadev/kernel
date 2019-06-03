@@ -294,10 +294,6 @@ struct msm_otg {
 	bool phy_irq_pending;
 	enum usb_id_state id_state;
 	bool rm_pulldown;
-	struct extcon_dev       *extcon_vbus;
-	struct extcon_dev       *extcon_id;
-	struct notifier_block   vbus_nb;
-	struct notifier_block   id_nb;
 	bool			extcon_registered;
 	struct regulator_desc	dpdm_rdesc;
 	struct regulator_dev	*dpdm_rdev;
