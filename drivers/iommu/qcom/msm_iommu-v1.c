@@ -1717,11 +1717,7 @@ static struct iommu_ops msm_iommu_ops = {
 int msm_iommu_init(struct msm_iommu_drvdata *drvdata)
 {
 	struct device *dev = drvdata->dev;
-	static bool done = false;
 	int ret;
-
-	if (done)
-		return 0;
 
 	iommu_device_set_ops(&drvdata->iommu, &msm_iommu_ops);
 	iommu_device_set_fwnode(&drvdata->iommu, &dev->of_node->fwnode);
@@ -1732,9 +1728,8 @@ int msm_iommu_init(struct msm_iommu_drvdata *drvdata)
 		return ret;
 	};
 
-	ret = bus_set_iommu(&platform_bus_type, &msm_iommu_ops);
-	if (ret)
-		return ret;
+	if (!iommu_present(&platform_bus_type))
+		bus_set_iommu(&platform_bus_type, &msm_iommu_ops);
 
 #ifdef CONFIG_ARM_AMBA
 	if (!iommu_present(&amba_bustype))
@@ -1747,8 +1742,6 @@ int msm_iommu_init(struct msm_iommu_drvdata *drvdata)
 #endif
 
 	msm_iommu_build_dump_regs_table();
-
-	done = true;
 
 	return 0;
 }
