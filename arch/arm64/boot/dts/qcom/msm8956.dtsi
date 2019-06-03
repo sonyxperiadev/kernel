@@ -495,8 +495,8 @@
                 qcom,channel = <0>;
                 qcom,ee = <0>;
 
-                #address-cells = <2>;
-                #size-cells = <0>;
+                #address-cells = <1>;
+                #size-cells = <1>;
                 interrupt-controller;
 		#interrupt-cells = <4>;
                 cell-index = <0>;
