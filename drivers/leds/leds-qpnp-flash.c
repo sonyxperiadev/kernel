@@ -26,8 +26,8 @@
 #include <linux/regulator/consumer.h>
 #include <linux/workqueue.h>
 #include <linux/power_supply.h>
+#include <linux/pwm.h>
 #include <linux/leds-qpnp-flash.h>
-#include <linux/qpnp/qpnp-adc.h>
 #include <linux/qpnp/qpnp-revid.h>
 #include <linux/debugfs.h>
 #include <linux/uaccess.h>
@@ -219,10 +219,8 @@ struct flash_led_platform_data {
 	bool				vph_pwr_droop_en;
 	bool				hdrm_sns_ch0_en;
 	bool				hdrm_sns_ch1_en;
-	bool				power_detect_en;
 	bool				mask3_en;
 	bool				follow_rb_disable;
-	bool				die_current_derate_en;
 };
 
 struct qpnp_flash_led_buffer {
@@ -249,7 +247,6 @@ struct qpnp_flash_led {
 	struct flash_node_data		*flash_node;
 	struct power_supply		*battery_psy;
 	struct workqueue_struct		*ordered_workq;
-	struct qpnp_vadc_chip		*vadc_dev;
 	struct mutex			flash_led_lock;
 	struct dentry			*dbgfs_root;
 	int				num_leds;
@@ -593,41 +590,6 @@ qpnp_led_masked_write(struct qpnp_flash_led *led, u16 addr, u8 mask, u8 val)
 	return rc;
 }
 
-static int qpnp_flash_led_get_allowed_die_temp_curr(struct qpnp_flash_led *led,
-							int64_t die_temp_degc)
-{
-	int die_temp_curr_ma;
-
-	if (die_temp_degc >= led->pdata->die_temp_threshold_degc[0])
-		die_temp_curr_ma =  0;
-	else if (die_temp_degc >= led->pdata->die_temp_threshold_degc[1])
-		die_temp_curr_ma = led->pdata->die_temp_derate_curr_ma[0];
-	else if (die_temp_degc >= led->pdata->die_temp_threshold_degc[2])
-		die_temp_curr_ma = led->pdata->die_temp_derate_curr_ma[1];
-	else if (die_temp_degc >= led->pdata->die_temp_threshold_degc[3])
-		die_temp_curr_ma = led->pdata->die_temp_derate_curr_ma[2];
-	else if (die_temp_degc >= led->pdata->die_temp_threshold_degc[4])
-		die_temp_curr_ma = led->pdata->die_temp_derate_curr_ma[3];
-	else
-		die_temp_curr_ma = led->pdata->die_temp_derate_curr_ma[4];
-
-	return die_temp_curr_ma;
-}
-
-static int64_t qpnp_flash_led_get_die_temp(struct qpnp_flash_led *led)
-{
-	struct qpnp_vadc_result die_temp_result;
-	int rc;
-
-	rc = qpnp_vadc_read(led->vadc_dev, SPARE2, &die_temp_result);
-	if (rc) {
-		pr_err("failed to read the die temp\n");
-		return -EINVAL;
-	}
-
-	return die_temp_result.physical;
-}
-
 static int qpnp_get_pmic_revid(struct qpnp_flash_led *led)
 {
 	struct device_node *revid_dev_node;
@@ -654,95 +616,7 @@ static int
 qpnp_flash_led_get_max_avail_current(struct flash_node_data *flash_node,
 					struct qpnp_flash_led *led)
 {
-	union power_supply_propval prop;
-	int64_t chg_temp_milidegc, die_temp_degc;
-	int max_curr_avail_ma = 2000;
-	int allowed_die_temp_curr_ma = 2000;
-	int rc;
-
-	if (led->pdata->power_detect_en) {
-		if (!led->battery_psy) {
-			dev_err(&led->pdev->dev,
-				"Failed to query power supply\n");
-			return -EINVAL;
-		}
-
-		/*
-		 * When charging is enabled, enforce this new enablement
-		 * sequence to reduce fuel gauge reading resolution.
-		 */
-		if (led->charging_enabled) {
-			rc = qpnp_led_masked_write(led,
-				FLASH_MODULE_ENABLE_CTRL(led->base),
-				FLASH_MODULE_ENABLE, FLASH_MODULE_ENABLE);
-			if (rc) {
-				dev_err(&led->pdev->dev,
-				"Module enable reg write failed\n");
-				return -EINVAL;
-			}
-
-			usleep_range(FLASH_LED_CURRENT_READING_DELAY_MIN,
-				FLASH_LED_CURRENT_READING_DELAY_MAX);
-		}
-
-		power_supply_get_property(led->battery_psy,
-				POWER_SUPPLY_PROP_FLASH_CURRENT_MAX, &prop);
-		if (!prop.intval) {
-			dev_err(&led->pdev->dev,
-				"battery too low for flash\n");
-			return -EINVAL;
-		}
-
-		max_curr_avail_ma = (prop.intval / FLASH_LED_UA_PER_MA);
-	}
-
-	/*
-	 * When thermal mitigation is available, this logic will execute to
-	 * derate current based upon the PMIC die temperature.
-	 */
-	if (led->pdata->die_current_derate_en) {
-		chg_temp_milidegc = qpnp_flash_led_get_die_temp(led);
-		if (chg_temp_milidegc < 0)
-			return -EINVAL;
-
-		die_temp_degc = div_s64(chg_temp_milidegc, 1000);
-		allowed_die_temp_curr_ma =
-			qpnp_flash_led_get_allowed_die_temp_curr(led,
-								die_temp_degc);
-		if (allowed_die_temp_curr_ma < 0)
-			return -EINVAL;
-	}
-
-	max_curr_avail_ma = (max_curr_avail_ma >= allowed_die_temp_curr_ma)
-				? allowed_die_temp_curr_ma : max_curr_avail_ma;
-
-	return max_curr_avail_ma;
-}
-
-static ssize_t qpnp_flash_led_die_temp_store(struct device *dev,
-					struct device_attribute *attr,
-					const char *buf, size_t count)
-{
-	struct qpnp_flash_led *led;
-	struct flash_node_data *flash_node;
-	unsigned long val;
-	struct led_classdev *led_cdev = dev_get_drvdata(dev);
-	ssize_t ret;
-
-	ret = kstrtoul(buf, 10, &val);
-	if (ret)
-		return ret;
-
-	flash_node = container_of(led_cdev, struct flash_node_data, cdev);
-	led = dev_get_drvdata(&flash_node->pdev->dev);
-
-	/*'0' for disable die_temp feature; non-zero to enable feature*/
-	if (val == 0)
-		led->pdata->die_current_derate_en = false;
-	else
-		led->pdata->die_current_derate_en = true;
-
-	return count;
+	return 2000;
 }
 
 static ssize_t qpnp_led_strobe_type_store(struct device *dev,
@@ -801,32 +675,6 @@ static ssize_t qpnp_flash_led_dump_regs_show(struct device *dev,
 	return count;
 }
 
-static ssize_t qpnp_flash_led_current_derate_store(struct device *dev,
-				struct device_attribute *attr,
-				const char *buf, size_t count)
-{
-	struct qpnp_flash_led *led;
-	struct flash_node_data *flash_node;
-	unsigned long val;
-	struct led_classdev *led_cdev = dev_get_drvdata(dev);
-	ssize_t ret;
-
-	ret = kstrtoul(buf, 10, &val);
-	if (ret)
-		return ret;
-
-	flash_node = container_of(led_cdev, struct flash_node_data, cdev);
-	led = dev_get_drvdata(&flash_node->pdev->dev);
-
-	/*'0' for disable derate feature; non-zero to enable derate feature */
-	if (val == 0)
-		led->pdata->power_detect_en = false;
-	else
-		led->pdata->power_detect_en = true;
-
-	return count;
-}
-
 static ssize_t qpnp_flash_led_max_current_show(struct device *dev,
 			struct device_attribute *attr, char *buf)
 {
@@ -843,27 +691,14 @@ static ssize_t qpnp_flash_led_max_current_show(struct device *dev,
 	if (led->flash_node[1].flash_on)
 		max_curr_avail_ma += led->flash_node[1].max_current;
 
-	if (led->pdata->power_detect_en ||
-			led->pdata->die_current_derate_en) {
-		max_curr_avail_ma =
-			qpnp_flash_led_get_max_avail_current(flash_node, led);
-
-		if (max_curr_avail_ma < 0)
-			return -EINVAL;
-	}
-
 	return snprintf(buf, PAGE_SIZE, "%u\n", max_curr_avail_ma);
 }
 
 static struct device_attribute qpnp_flash_led_attrs[] = {
 	__ATTR(strobe, 0664, NULL, qpnp_led_strobe_type_store),
 	__ATTR(reg_dump, 0664, qpnp_flash_led_dump_regs_show, NULL),
-	__ATTR(enable_current_derate, 0664, NULL,
-		qpnp_flash_led_current_derate_store),
 	__ATTR(max_allowed_current, 0664, qpnp_flash_led_max_current_show,
 		NULL),
-	__ATTR(enable_die_temp_current_derate, 0664, NULL,
-		qpnp_flash_led_die_temp_store),
 };
 
 static int qpnp_flash_led_get_thermal_derate_rate(const char *rate)
@@ -1510,37 +1345,6 @@ static void qpnp_flash_led_work(struct work_struct *work)
 			dev_err(&led->pdev->dev,
 				"Failed to setup OTG pulse skip enable\n");
 			goto exit_flash_led_work;
-		}
-
-		if (led->pdata->power_detect_en ||
-					led->pdata->die_current_derate_en) {
-			if (led->battery_psy) {
-				power_supply_get_property(led->battery_psy,
-					POWER_SUPPLY_PROP_STATUS,
-					&psy_prop);
-				if (psy_prop.intval < 0) {
-					dev_err(&led->pdev->dev,
-						"Invalid battery status\n");
-					goto exit_flash_led_work;
-				}
-
-				if (psy_prop.intval ==
-						POWER_SUPPLY_STATUS_CHARGING)
-					led->charging_enabled = true;
-				else if (psy_prop.intval ==
-					POWER_SUPPLY_STATUS_DISCHARGING
-					|| psy_prop.intval ==
-					POWER_SUPPLY_STATUS_NOT_CHARGING)
-					led->charging_enabled = false;
-			}
-			max_curr_avail_ma =
-				qpnp_flash_led_get_max_avail_current
-							(flash_node, led);
-			if (max_curr_avail_ma < 0) {
-				dev_err(&led->pdev->dev,
-					"Failed to get max avail curr\n");
-				goto exit_flash_led_work;
-			}
 		}
 
 		if (flash_node->id == FLASH_LED_SWITCH) {
@@ -2317,89 +2121,11 @@ static int qpnp_flash_led_parse_common_dt(
 	led->pdata->hdrm_sns_ch1_en = of_property_read_bool(node,
 						"qcom,headroom-sense-ch1-enabled");
 
-	led->pdata->power_detect_en = of_property_read_bool(node,
-						"qcom,power-detect-enabled");
-
 	led->pdata->mask3_en = of_property_read_bool(node,
 						"qcom,otst2-module-enabled");
 
 	led->pdata->follow_rb_disable = of_property_read_bool(node,
 						"qcom,follow-otst2-rb-disabled");
-
-	led->pdata->die_current_derate_en = of_property_read_bool(node,
-					"qcom,die-current-derate-enabled");
-
-	if (led->pdata->die_current_derate_en) {
-		led->vadc_dev = qpnp_get_vadc(&led->pdev->dev, "die-temp");
-		if (IS_ERR(led->vadc_dev)) {
-			pr_err("VADC channel property Missing\n");
-			return -EINVAL;
-		}
-
-		if (of_find_property(node, "qcom,die-temp-threshold",
-				&led->pdata->temp_threshold_num)) {
-			if (led->pdata->temp_threshold_num > 0) {
-				led->pdata->die_temp_threshold_degc =
-				devm_kzalloc(&led->pdev->dev,
-						led->pdata->temp_threshold_num,
-						GFP_KERNEL);
-
-				if (led->pdata->die_temp_threshold_degc
-								== NULL) {
-					dev_err(&led->pdev->dev,
-					"failed to allocate die temp array\n");
-					return -ENOMEM;
-				}
-				led->pdata->temp_threshold_num /=
-							sizeof(unsigned int);
-
-				rc = of_property_read_u32_array(node,
-						"qcom,die-temp-threshold",
-				led->pdata->die_temp_threshold_degc,
-						led->pdata->temp_threshold_num);
-				if (rc) {
-					dev_err(&led->pdev->dev,
-					"couldn't read temp threshold rc=%d\n",
-								rc);
-					return rc;
-				}
-			}
-		}
-
-		if (of_find_property(node, "qcom,die-temp-derate-current",
-					&led->pdata->temp_derate_curr_num)) {
-			if (led->pdata->temp_derate_curr_num > 0) {
-				led->pdata->die_temp_derate_curr_ma =
-					devm_kzalloc(&led->pdev->dev,
-					led->pdata->temp_derate_curr_num,
-					GFP_KERNEL);
-				if (led->pdata->die_temp_derate_curr_ma
-								== NULL) {
-					dev_err(&led->pdev->dev,
-						"failed to allocate die derate current array\n");
-					return -ENOMEM;
-				}
-				led->pdata->temp_derate_curr_num /=
-						sizeof(unsigned int);
-
-				rc = of_property_read_u32_array(node,
-						"qcom,die-temp-derate-current",
-				led->pdata->die_temp_derate_curr_ma,
-				led->pdata->temp_derate_curr_num);
-				if (rc) {
-					dev_err(&led->pdev->dev,
-					"couldn't read temp limits rc =%d\n",
-								rc);
-					return rc;
-				}
-			}
-		}
-		if (led->pdata->temp_threshold_num !=
-					led->pdata->temp_derate_curr_num) {
-			pr_err("Both array size are not same\n");
-			return -EINVAL;
-		}
-	}
 
 	led->pinctrl = devm_pinctrl_get(&led->pdev->dev);
 	if (IS_ERR_OR_NULL(led->pinctrl)) {
