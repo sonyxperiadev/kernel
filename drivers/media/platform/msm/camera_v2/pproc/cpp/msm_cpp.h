@@ -259,7 +259,6 @@ struct cpp_device {
 	uint32_t min_clk_rate;
 
 	int iommu_hdl;
-	struct ion_client *ion_client;
 	enum smmu_attach_mode security_mode;
 	/* Reusing proven tasklet from msm isp */
 	atomic_t irq_cnt;

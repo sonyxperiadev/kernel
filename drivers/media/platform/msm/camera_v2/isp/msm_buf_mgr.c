@@ -215,7 +215,6 @@ static int msm_isp_prepare_v4l2_buf(struct msm_isp_buf_mgr *buf_mgr,
 			ret = cam_smmu_get_stage2_phy_addr(buf_mgr->iommu_hdl,
 					mapped_info->buf_fd,
 					CAM_SMMU_MAP_RW,
-					buf_mgr->client,
 					&(mapped_info->paddr),
 					&(mapped_info->len));
 		else
@@ -304,7 +303,6 @@ static int msm_isp_map_buf(struct msm_isp_buf_mgr *buf_mgr,
 		ret = cam_smmu_get_stage2_phy_addr(buf_mgr->iommu_hdl,
 				fd,
 				CAM_SMMU_MAP_RW,
-				buf_mgr->client,
 				&(mapped_info->paddr),
 				&(mapped_info->len));
 	else
@@ -1105,7 +1103,7 @@ static int msm_isp_buf_put_scratch(struct msm_isp_buf_mgr *buf_mgr)
 
 	if (buf_mgr->secure_enable == SECURE_MODE) {
 		rc = cam_smmu_free_stage2_scratch_mem(buf_mgr->iommu_hdl,
-				buf_mgr->client, buf_mgr->sc_handle);
+				buf_mgr->dmabuf);
 		if (buf_mgr->scratch_buf_stats_addr)
 			rc = cam_smmu_put_phy_addr_scratch(buf_mgr->iommu_hdl,
 				buf_mgr->scratch_buf_stats_addr);
@@ -1147,8 +1145,7 @@ static int msm_isp_buf_get_scratch(struct msm_isp_buf_mgr *buf_mgr)
 	if (buf_mgr->secure_enable == SECURE_MODE) {
 		rc = cam_smmu_alloc_get_stage2_scratch_mem(buf_mgr->iommu_hdl,
 				CAM_SMMU_MAP_RW,
-				buf_mgr->client,
-				&buf_mgr->sc_handle,
+				&buf_mgr->dmabuf,
 				&buf_mgr->scratch_buf_addr,
 				&range);
 		if (rc)
@@ -1261,8 +1258,6 @@ static int msm_isp_init_isp_buf_mgr(struct msm_isp_buf_mgr *buf_mgr,
 
 	buf_mgr->pagefault_debug_disable = 0;
 	buf_mgr->frameId_mismatch_recovery = 0;
-	/* create ION client */
-	buf_mgr->client = msm_ion_client_create("vfe");
 get_handle_error:
 	mutex_unlock(&buf_mgr->lock);
 	return 0;
@@ -1295,10 +1290,6 @@ static int msm_isp_deinit_isp_buf_mgr(
 	buf_mgr->attach_ref_cnt = 0;
 	buf_mgr->secure_enable = 0;
 	buf_mgr->attach_ref_cnt = 0;
-	if (buf_mgr->client) {
-		ion_client_destroy(buf_mgr->client);
-		buf_mgr->client = NULL;
-	}
 	mutex_unlock(&buf_mgr->lock);
 	return 0;
 }
@@ -1396,8 +1387,8 @@ static int msm_isp_buf_mgr_debug(struct msm_isp_buf_mgr *buf_mgr,
 				continue;
 
 			for (k = 0; k < bufs->num_planes; k++) {
-				start_addr = bufs->
-						mapped_info[k].paddr;
+				start_addr =
+					bufs->mapped_info[k].paddr;
 				end_addr = bufs->mapped_info[k].paddr +
 					bufs->mapped_info[k].len - 1;
 				temp_delta = fault_addr - start_addr;
@@ -1433,10 +1424,8 @@ static int msm_isp_buf_mgr_debug(struct msm_isp_buf_mgr *buf_mgr,
 
 	if (BUF_DEBUG_FULL) {
 		print_buf = kzalloc(print_buf_size, GFP_ATOMIC);
-		if (!print_buf) {
-			pr_err("%s failed: No memory", __func__);
+		if (!print_buf)
 			return -ENOMEM;
-		}
 		snprintf(print_buf, print_buf_size, "%s\n", __func__);
 		for (i = 0; i < BUF_MGR_NUM_BUF_Q; i++) {
 			if (i % 2 == 0 && i > 0) {
@@ -1452,21 +1441,30 @@ static int msm_isp_buf_mgr_debug(struct msm_isp_buf_mgr *buf_mgr,
 				strlcat(print_buf, temp_buf, print_buf_size);
 				for (j = 0; j < buf_mgr->bufq[i].num_bufs;
 					j++) {
-					bufs = &buf_mgr->bufq[i].bufs[j];
+					bufs =
+						&buf_mgr->bufq[i].bufs[j];
 					if (!bufs)
 						break;
 
 					for (k = 0; k < bufs->num_planes; k++) {
-						start_addr = bufs->
-							mapped_info[k].paddr;
-						end_addr = bufs->mapped_info[k].
-							paddr + bufs->
-							mapped_info[k].len;
+						start_addr =
+							bufs->mapped_info[
+							k].paddr;
+						end_addr =
+							bufs->mapped_info[
+							k].paddr +
+							bufs->mapped_info[
+							k].len;
 						snprintf(temp_buf,
 							sizeof(temp_buf),
-							" buf %d plane %d start_addr %pK end_addr %pK\n",
-							j, k,
-							(void *)start_addr,
+							"buf%d plane%d", j, k);
+						snprintf(temp_buf,
+							sizeof(temp_buf),
+							"start_addr %pK",
+							(void *)start_addr);
+						snprintf(temp_buf,
+							sizeof(temp_buf),
+							"end_addr %pK\n",
 							(void *)end_addr);
 						strlcat(print_buf, temp_buf,
 							print_buf_size);

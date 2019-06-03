@@ -190,7 +190,6 @@ struct msm_isp_buf_mgr {
 	uint16_t num_buf_q;
 	struct msm_isp_bufq bufq[BUF_MGR_NUM_BUF_Q];
 
-	struct ion_client *client;
 	struct msm_isp_buf_ops *ops;
 
 	struct msm_sd_req_vb2_q *vb2_ops;
@@ -208,7 +207,7 @@ struct msm_isp_buf_mgr {
 	dma_addr_t scratch_buf_stats_addr;
 	uint32_t scratch_buf_range;
 	int iommu_hdl;
-	struct ion_handle *sc_handle;
+	struct dma_buf *dmabuf;
 };
 
 int msm_isp_create_isp_buf_mgr(struct msm_isp_buf_mgr *buf_mgr,

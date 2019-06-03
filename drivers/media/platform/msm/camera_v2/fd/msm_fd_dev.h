@@ -116,7 +116,7 @@ struct msm_fd_buf_handle {
 	int fd;
 	struct msm_fd_mem_pool *pool;
 	size_t size;
-	ion_phys_addr_t addr;
+	dma_addr_t addr;
 };
 
 /*
@@ -135,7 +135,7 @@ struct msm_fd_buffer {
 	struct completion completion;
 	struct msm_fd_format format;
 	struct msm_fd_setings settings;
-	ion_phys_addr_t work_addr;
+	dma_addr_t work_addr;
 	struct list_head list;
 };
 

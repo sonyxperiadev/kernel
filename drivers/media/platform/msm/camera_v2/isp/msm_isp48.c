@@ -12,7 +12,9 @@
 
 #include <linux/module.h>
 #include <linux/ratelimit.h>
+#include <linux/clk.h>
 #include <linux/clk/qcom.h>
+#include <linux/sched/clock.h>
 
 #include "msm_isp_util.h"
 #include "msm_isp_axi_util.h"
