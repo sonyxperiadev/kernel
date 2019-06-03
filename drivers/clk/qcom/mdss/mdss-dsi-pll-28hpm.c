@@ -27,7 +27,7 @@
 #include "mdss-pll.h"
 #include "mdss-dsi-pll.h"
 #include "mdss-dsi-pll-28hpm.h"
-
+int dsi_pll_lock_status(struct mdss_pll_resources *dsi_pll_res);
 
 #define DSI_PLL_POLL_DELAY_US			50
 #define DSI_PLL_POLL_TIMEOUT_US			500
@@ -455,26 +455,6 @@ void vco_unprepare(struct clk_hw *hw)
 
 	dsi_pll_res->vco_cached_rate = clk_hw_get_rate(hw);
 	dsi_pll_disable(hw);
-}
-
-int dsi_pll_lock_status(struct mdss_pll_resources *dsi_pll_res)
-{
-	u32 status;
-	int pll_locked;
-
-	/* poll for PLL ready status */
-	if (readl_poll_timeout_atomic((dsi_pll_res->pll_base +
-			DSI_PHY_PLL_UNIPHY_PLL_STATUS),
-			status,
-			((status & BIT(0)) == 1),
-			DSI_PLL_POLL_DELAY_US,
-			DSI_PLL_POLL_TIMEOUT_US)) {
-		pll_locked = 0;
-	} else {
-		pll_locked = 1;
-	}
-
-	return pll_locked;
 }
 
 static int dsi_pll_enable_seq(struct mdss_pll_resources *dsi_pll_res)
