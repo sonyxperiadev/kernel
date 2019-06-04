@@ -316,7 +316,7 @@
 			<GIC_SPI 378 IRQ_TYPE_LEVEL_HIGH>,
 			<GIC_SPI 462 IRQ_TYPE_LEVEL_HIGH>,
 			<GIC_SPI 463 IRQ_TYPE_LEVEL_HIGH>;
-		clocks = <&clock_rpmcc RPM_AGGR2_NOC_CLK>;
+		clocks = <&clock_rpmcc RPM_SMD_AGGR2_NOC_CLK>;
 		clock-names = "smmu_aggre2_noc_clk";
 		#clock-cells = <1>;
 	};
@@ -339,7 +339,7 @@
 			<GIC_SPI 378 IRQ_TYPE_LEVEL_HIGH>,
 			<GIC_SPI 462 IRQ_TYPE_LEVEL_HIGH>,
 			<GIC_SPI 463 IRQ_TYPE_LEVEL_HIGH>;
-		clocks = <&clock_rpmcc RPM_AGGR2_NOC_CLK>;
+		clocks = <&clock_rpmcc RPM_SMD_AGGR2_NOC_CLK>;
 		clock-names = "smmu_aggre2_noc_clk";
 		#clock-cells = <1>;
 	};

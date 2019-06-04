@@ -217,7 +217,7 @@
 			nxp,ven = <&pm8994_gpios 7 0x01>;
 			qcom,clk-src = "BBCLK2";
 			qcom,clk-gpio = <&pm8994_gpios 10 0x00>;
-			clocks = <&clock_rpmcc RPM_BB_CLK2_PIN>;
+			clocks = <&clock_rpmcc RPM_SMD_BB_CLK2_PIN>;
 			clock-names = "nfc_clk";
 			pinctrl-names = "pn547-active", "pn547-inactive";
 			pinctrl-0 = <&msm_gpio_9 &msm_gpio_12>;

@@ -345,8 +345,8 @@
 		reg = <0x3840000 0x1000>;
 		reg-names = "etm-base";
 
-		clocks = <&clock_rpmcc RPM_QDSS_CLK>,
-			 <&clock_rpmcc RPM_QDSS_A_CLK>;
+		clocks = <&clock_rpmcc RPM_SMD_QDSS_CLK>,
+			 <&clock_rpmcc RPM_SMD_QDSS_A_CLK>;
 		clock-names = "core_clk", "core_a_clk";
 
 		qcom,coresight-jtagmm-cpu = <&CPU0>;
@@ -357,8 +357,8 @@
 		reg = <0x3940000 0x1000>;
 		reg-names = "etm-base";
 
-		clocks = <&clock_rpmcc RPM_QDSS_CLK>,
-			 <&clock_rpmcc RPM_QDSS_A_CLK>;
+		clocks = <&clock_rpmcc RPM_SMD_QDSS_CLK>,
+			 <&clock_rpmcc RPM_SMD_QDSS_A_CLK>;
 		clock-names = "core_clk", "core_a_clk";
 
 		qcom,coresight-jtagmm-cpu = <&CPU1>;
@@ -369,8 +369,8 @@
 		reg = <0x3a40000 0x1000>;
 		reg-names = "etm-base";
 
-		clocks = <&clock_rpmcc RPM_QDSS_CLK>,
-			 <&clock_rpmcc RPM_QDSS_A_CLK>;
+		clocks = <&clock_rpmcc RPM_SMD_QDSS_CLK>,
+			 <&clock_rpmcc RPM_SMD_QDSS_A_CLK>;
 		clock-names = "core_clk", "core_a_clk";
 
 		qcom,coresight-jtagmm-cpu = <&CPU2>;
@@ -381,8 +381,8 @@
 		reg = <0x3b40000 0x1000>;
 		reg-names = "etm-base";
 
-		clocks = <&clock_rpmcc RPM_QDSS_CLK>,
-			 <&clock_rpmcc RPM_QDSS_A_CLK>;
+		clocks = <&clock_rpmcc RPM_SMD_QDSS_CLK>,
+			 <&clock_rpmcc RPM_SMD_QDSS_A_CLK>;
 		clock-names = "core_clk", "core_a_clk";
 
 		qcom,coresight-jtagmm-cpu = <&CPU3>;
@@ -442,7 +442,7 @@
 		qcom,use-ipa-tethering-bridge;
 		qcom,ipa-bam-remote-mode;
 		qcom,modem-cfg-emb-pipe-flt;
-		clocks = <&clock_rpmcc RPM_IPA_CLK>;
+		clocks = <&clock_rpmcc RPM_SMD_IPA_CLK>;
 		clock-names = "core_clk";
 		qcom,use-dma-zone;
 		qcom,msm-bus,name = "ipa";

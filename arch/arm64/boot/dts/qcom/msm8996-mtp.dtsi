@@ -1018,7 +1018,7 @@
 		pinctrl-names = "nfc_active", "nfc_suspend";
 		pinctrl-0 = <&nfc_int_active &nfc_disable_active>;
 		pinctrl-1 = <&nfc_int_suspend &nfc_disable_suspend>;
-		clocks = <&clock_rpmcc RPM_BB_CLK2_PIN>;
+		clocks = <&clock_rpmcc RPM_SMD_BB_CLK2_PIN>;
 		clock-names = "ref_clk";
 	};
 };

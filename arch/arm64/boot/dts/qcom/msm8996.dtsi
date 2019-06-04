@@ -878,7 +878,7 @@
 			< 1497600000 17 >,
 			< 1593600000 18 >;
 		clock-names = "xo_ao", "aux_clk";
-		clocks = <&clock_rpmcc RPM_XO_A_CLK_SRC>,
+		clocks = <&clock_rpmcc RPM_SMD_XO_A_CLK_SRC>,
 			 <&clock_gcc GPLL0_AO>;
 		#clock-cells = <1>;
 	};
@@ -901,7 +901,7 @@
 			<  960000000  9 >,
 			< 1036800000 10 >;
 		clock-names = "xo_ao", "aux_clk";
-		clocks = <&clock_rpmcc RPM_XO_A_CLK_SRC>,
+		clocks = <&clock_rpmcc RPM_SMD_XO_A_CLK_SRC>,
 			 <&clock_gcc GPLL0_AO>;
 		#clock-cells = <1>;
 	};
@@ -931,7 +931,7 @@
 				"pclk0_src", "pclk1_src",
 				"byte0_src", "byte1_src";
 				//"extpclk_src";
-		clocks = <&clock_rpmcc RPM_XO_CLK_SRC>,
+		clocks = <&clock_rpmcc RPM_SMD_XO_CLK_SRC>,
 			 <&clock_gcc GPLL0>,
 			 <&clock_gcc GCC_MMSS_GPLL0_DIV_CLK>,
 			 <&mdss_dsi0_pll PIX0_MUX_CLK>,
@@ -1011,7 +1011,7 @@
 		compatible = "qcom,audio-ref-clk";
 		qcom,audio-ref-clk-gpio = <&pm8994_gpios 15 0>;
 		clock-names = "osr_clk";
-		clocks = <&clock_rpmcc RPM_DIV_CLK1>;
+		clocks = <&clock_rpmcc RPM_SMD_DIV_CLK1>;
 		qcom,node_has_rpm_clock;
 		#clock-cells = <1>;
 		pinctrl-names = "sleep", "active";
@@ -1307,7 +1307,7 @@
 		vddp-ref-clk-always-on;
 		clock-names = "ref_clk_src",
 			"ref_clk";
-		clocks = <&clock_rpmcc RPM_LN_BB_CLK>,
+		clocks = <&clock_rpmcc RPM_SMD_LN_BB_CLK>,
 			<&clock_gcc GCC_UFS_CLKREF_CLK>;
 		status = "disabled";
 	};
@@ -1349,7 +1349,7 @@
 			<&clock_gcc UFS_ICE_CORE_CLK_SRC>,
 			<&clock_gcc GCC_UFS_UNIPRO_CORE_CLK>,
 			<&clock_gcc GCC_UFS_ICE_CORE_CLK>,
-			<&clock_rpmcc RPM_LN_BB_CLK>,
+			<&clock_rpmcc RPM_SMD_LN_BB_CLK>,
 			<&clock_gcc GCC_UFS_TX_SYMBOL_0_CLK>,
 			<&clock_gcc GCC_UFS_RX_SYMBOL_0_CLK>;
 		freq-table-hz =
@@ -1408,7 +1408,7 @@
 		#size-cells = <1>;
 		ranges;
 
-		clocks = <&clock_rpmcc RPM_LN_BB_CLK>,
+		clocks = <&clock_rpmcc RPM_SMD_LN_BB_CLK>,
 			<&clock_gcc GCC_PCIE_PHY_AUX_CLK>,
 			<&clock_gcc GCC_PCIE_PHY_CFG_AHB_CLK>,
 			<&clock_gcc GCC_PCIE_CLKREF_CLK>;
@@ -1754,7 +1754,7 @@
 			<&clock_gcc GCC_AGGRE2_USB3_AXI_CLK>,
 			<&clock_gcc GCC_USB30_MOCK_UTMI_CLK>,
 			<&clock_gcc GCC_USB30_SLEEP_CLK>,
-			<&clock_rpmcc CXO_DWC3_CLK>,
+			<&clock_rpmcc CXO_SMD_DWC3_CLK>,
 			<&clock_gcc GCC_USB_PHY_CFG_AHB2PHY_CLK>;
 
 		clock-names = "core_clk", "iface_clk", "bus_aggr_clk", "utmi_clk",
@@ -1866,7 +1866,7 @@
 			 <&clock_gcc GCC_PERIPH_NOC_USB20_AHB_CLK>,
 			 <&clock_gcc GCC_USB20_MOCK_UTMI_CLK>,
 			 <&clock_gcc GCC_USB20_SLEEP_CLK>,
-			 <&clock_rpmcc CXO_DWC3_CLK>,
+			 <&clock_rpmcc CXO_SMD_DWC3_CLK>,
 			 <&clock_gcc GCC_USB_PHY_CFG_AHB2PHY_CLK>;
 		clock-names = "core_clk", "iface_clk", "utmi_clk", "sleep_clk",
 				"xo", "cfg_ahb_clk";
@@ -1922,7 +1922,7 @@
 		qcom,major-rev = <1>;
 
 		clocks = <&clock_gcc GCC_USB_PHY_CFG_AHB2PHY_CLK>,
-			 <&clock_rpmcc RPM_LN_BB_CLK>;
+			 <&clock_rpmcc RPM_SMD_LN_BB_CLK>;
 		clock-names = "cfg_ahb_clk", "ref_clk_src";
 
 		resets = <&clock_gcc GCC_QUSB2PHY_PRIM_BCR>;
@@ -1959,7 +1959,7 @@
 		qcom,hold-reset;
 
 		clocks = <&clock_gcc GCC_USB_PHY_CFG_AHB2PHY_CLK>,
-			<&clock_rpmcc RPM_LN_BB_CLK>;
+			<&clock_rpmcc RPM_SMD_LN_BB_CLK>;
 		clock-names = "cfg_ahb_clk", "ref_clk_src";
 
 		resets = <&clock_gcc GCC_QUSB2PHY_SEC_BCR>;
@@ -2045,7 +2045,7 @@
 		clocks = <&clock_gcc GCC_USB3_PHY_AUX_CLK>,
 			 <&clock_gcc GCC_USB3_PHY_PIPE_CLK>,
 			 <&clock_gcc GCC_USB_PHY_CFG_AHB2PHY_CLK>,
-			 <&clock_rpmcc RPM_LN_BB_CLK>,
+			 <&clock_rpmcc RPM_SMD_LN_BB_CLK>,
 			 <&clock_gcc GCC_USB3_CLKREF_CLK>;
 
 		clock-names = "aux_clk", "pipe_clk", "cfg_ahb_clk",
@@ -2076,7 +2076,7 @@
 		qcom,vdd_cx-uV-uA = <7 100000>;
 		qcom,mas-crypto = <&mas_crypto_c0>;
 
-		clocks = <&clock_rpmcc CXO_PIL_LPASS_CLK>;
+		clocks = <&clock_rpmcc CXO_SMD_PIL_LPASS_CLK>;
 		clock-names = "xo";
 		qcom,proxy-clock-names = "xo";
 
@@ -2185,8 +2185,8 @@
 		qcom,keep-proxy-regs-on;
 		qcom,mas-crypto = <&mas_crypto_c0>;
 
-		clocks = <&clock_rpmcc CXO_PIL_SSC_CLK>,
-			 <&clock_rpmcc RPM_AGGR2_NOC_CLK>;
+		clocks = <&clock_rpmcc CXO_SMD_PIL_SSC_CLK>,
+			 <&clock_rpmcc RPM_SMD_AGGR2_NOC_CLK>;
 		clock-names = "xo", "aggre2";
 		qcom,proxy-clock-names = "xo", "aggre2";
 
@@ -2220,15 +2220,15 @@
 		reg-names = "qdsp6_base", "halt_q6", "halt_modem",
 			"halt_nc", "rmb_base", "restart_reg";
 
-		clocks = <&clock_rpmcc RPM_XO_CLK_SRC>,
+		clocks = <&clock_rpmcc RPM_SMD_XO_CLK_SRC>,
 			 <&clock_gcc GCC_MSS_CFG_AHB_CLK>,
-			 <&clock_rpmcc RPM_PCNOC_CLK>,
+			 <&clock_rpmcc RPM_SMD_PNOC_CLK>,
 			 <&clock_gcc GCC_MSS_Q6_BIMC_AXI_CLK>,
 			 <&clock_gcc GCC_BOOT_ROM_AHB_CLK>,
 			 <&clock_gcc GPLL0_OUT_MSSCC_CLK>,
 			 <&clock_gcc GCC_MSS_SNOC_AXI_CLK>,
 			 <&clock_gcc GCC_MSS_MNOC_BIMC_AXI_CLK>,
-			 <&clock_rpmcc RPM_QDSS_CLK>;
+			 <&clock_rpmcc RPM_SMD_QDSS_CLK>;
 		clock-names = "xo", "iface_clk", "pnoc_clk", "bus_clk",
 			      "mem_clk", "gpll0_mss_clk", "snoc_axi_clk",
 			      "mnoc_axi_clk", "qdss_clk";
@@ -2414,7 +2414,7 @@
 				<55 512 393600 3936000>;
 		clock-names = "core_clk_src", "core_clk",
 				"iface_clk", "bus_clk";
-		clocks = <&clock_rpmcc RPM_CE1_CLK>,
+		clocks = <&clock_rpmcc RPM_SMD_CE1_CLK>,
 			 <&clock_rpmcc QSEECOM_CE1_CLK>,
 			 <&clock_rpmcc QSEECOM_CE1_CLK>,
 			 <&clock_rpmcc QSEECOM_CE1_CLK>;
@@ -3722,7 +3722,7 @@
 		interrupt-names = "mcd_irq";
 		clock-names = "core_clk_src", "core_clk",
 			"iface_clk", "bus_clk";
-		clocks = <&clock_rpmcc RPM_CE1_CLK>,
+		clocks = <&clock_rpmcc RPM_SMD_CE1_CLK>,
 			<&clock_rpmcc QSEECOM_CE1_CLK>,
 			<&clock_rpmcc QSEECOM_CE1_CLK>,
 			<&clock_rpmcc QSEECOM_CE1_CLK>;

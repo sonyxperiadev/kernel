@@ -99,7 +99,7 @@
 
 		clocks = <&clock_mmss MDSS_AHB_CLK>,
 			 <&clock_gcc GCC_HDMI_CLKREF_CLK>,
-			 <&clock_rpmcc RPM_LN_BB_CLK>;
+			 <&clock_rpmcc RPM_SMD_LN_BB_CLK>;
 		clock-names = "iface_clk", "ref_clk", "ref_clk_src";
 		clock-rate = <0>;
 
