@@ -799,7 +799,7 @@
 
 &pm8950_gpios {
 	/* Using somc-pinctrl-pmic */
-	pinctrl-0 = <>;
+	/delete-property/ pinctrl-0;
 
 	/* GPIO_1: CDC_PM_MCLK */
 	/* Follow QCT */
@@ -864,7 +864,7 @@
 
 &pmi8950_gpios {
 	/* Using somc-pinctrl-pmic */
-	pinctrl-0 = <>;
+	/delete-property/ pinctrl-0;
 
 	/* GPIO_1: USB_SWITCH_SEL - GPIO CMOS output - drive strength low*/
 	usb_switch_sel {
@@ -893,7 +893,7 @@
 
 &pmi8950_mpps {
 	/* Using somc-pinctrl-pmic */
-	pinctrl-0 = <>;
+	/delete-property/ pinctrl-0;
 
 	/* MPP_1: PMI8952_ADC_IN */ /* AMUX 5 Ch#16 */
 	pmi8952_adc_in {
@@ -934,7 +934,7 @@
 
 &pm8004_mpps {
 	/* Using somc-pinctrl-pmic */
-	pinctrl-0 = <>;
+	/delete-property/ pinctrl-0;
 
 	/* MPP_1: pull-down to GND (PM8004_PON_SYNC) */
 	/* Follow QTI */
