@@ -45,6 +45,12 @@
 	.purpose = p	\
 }
 
+#define CMNDATA_ENTRY(k, v)	\
+{				\
+	.key = k,		\
+	.value = v,		\
+}
+
 #define GCC_VIDEO_AXI_REG_START_ADDR	0x10B024
 #define GCC_VIDEO_AXI_REG_SIZE		0xC
 
@@ -115,6 +121,18 @@ static struct msm_vidc_codec_data sdm670_codec_data[] =  {
 	CODEC_ENTRY(V4L2_PIX_FMT_VP9, MSM_VIDC_DECODER, 50, 200, 200),
 };
 
+static struct msm_vidc_codec_data generic_legacy_codec_data[] =  {
+	CODEC_ENTRY(V4L2_PIX_FMT_H264, MSM_VIDC_ENCODER, 10, 675, 320),
+	CODEC_ENTRY(V4L2_PIX_FMT_HEVC, MSM_VIDC_ENCODER, 10, 675, 320),
+	CODEC_ENTRY(V4L2_PIX_FMT_VP8, MSM_VIDC_ENCODER, 10, 675, 320),
+	CODEC_ENTRY(V4L2_PIX_FMT_TME, MSM_VIDC_ENCODER, 0, 540, 540),
+	CODEC_ENTRY(V4L2_PIX_FMT_MPEG2, MSM_VIDC_DECODER, 10, 200, 200),
+	CODEC_ENTRY(V4L2_PIX_FMT_H264, MSM_VIDC_DECODER, 10, 200, 200),
+	CODEC_ENTRY(V4L2_PIX_FMT_HEVC, MSM_VIDC_DECODER, 10, 200, 200),
+	CODEC_ENTRY(V4L2_PIX_FMT_VP8, MSM_VIDC_DECODER, 10, 200, 200),
+	CODEC_ENTRY(V4L2_PIX_FMT_VP9, MSM_VIDC_DECODER, 10, 200, 200),
+};
+
 /*
  * Custom conversion coefficients for resolution: 176x144 negative
  * coeffs are converted to s4.9 format
@@ -140,6 +158,23 @@ static struct msm_vidc_common_data default_common_data[] = {
 		.key = "qcom,never-unload-fw",
 		.value = 1,
 	},
+};
+
+static struct msm_vidc_common_data msm8956_common_data[] = {
+	CMNDATA_ENTRY("qcom,sw-power-collapse", 1),
+	CMNDATA_ENTRY("qcom,max-secure-instances", 2),
+	CMNDATA_ENTRY("qcom,regulator-scaling", 1),
+	CMNDATA_ENTRY("qcom,sw-power-collapse", 1),
+
+	/* 3840 x 2176 @ 30 fps + 3840 x 2176 @ 1 fps */
+	CMNDATA_ENTRY("qcom,max-hw-load", 1011840),
+
+	CMNDATA_ENTRY("qcom,max-hq-mbs-per-frame", 8160),
+	CMNDATA_ENTRY("qcom,max-hq-frames-per-sec", 60),
+	CMNDATA_ENTRY("qcom,max-b-frame-size", 8160),
+	CMNDATA_ENTRY("qcom,max-b-frames-per-sec", 60),
+	CMNDATA_ENTRY("qcom,power-collapse-delay", 1500),
+	CMNDATA_ENTRY("qcom,hw-resp-timeout", 1000),
 };
 
 static struct msm_vidc_common_data sm6150_common_data[] = {
@@ -616,6 +651,10 @@ static struct msm_vidc_efuse_data sdmmagpie_efuse_data[] = {
 	EFUSE_ENTRY(0x00786018, 4, 0x00000400, 0x0a, SKU_VERSION),
 };
 
+static struct msm_vidc_efuse_data msm8956_efuse_data[] = {
+	EFUSE_ENTRY(0x000A4120, 4, 0x60000000, 0x1d, SKU_VERSION),
+};
+
 static struct msm_vidc_platform_data default_data = {
 	.codec_data = default_codec_data,
 	.codec_data_length =  ARRAY_SIZE(default_codec_data),
@@ -712,6 +751,22 @@ static struct msm_vidc_platform_data sdm670_data = {
 	.vpu_ver = VPU_VERSION_4,
 };
 
+static struct msm_vidc_platform_data msm8956_data = {
+	.codec_data = generic_legacy_codec_data,
+	.codec_data_length =  ARRAY_SIZE(generic_legacy_codec_data),
+	.common_data = msm8956_common_data,
+	.common_data_length =  ARRAY_SIZE(msm8956_common_data),
+	.csc_data.vpe_csc_custom_bias_coeff = vpe_csc_custom_bias_coeff,
+	.csc_data.vpe_csc_custom_matrix_coeff = vpe_csc_custom_matrix_coeff,
+	.csc_data.vpe_csc_custom_limit_coeff = vpe_csc_custom_limit_coeff,
+	.efuse_data = msm8956_efuse_data,
+	.efuse_data_length = ARRAY_SIZE(msm8956_efuse_data),
+	.sku_version = 0,
+	.gcc_register_base = 0,
+	.gcc_register_size = 0,
+	.vpu_ver = VPU_VERSION_4,
+};
+
 static const struct of_device_id msm_vidc_dt_match[] = {
 	{
 		.compatible = "qcom,sm6150-vidc",
@@ -732,6 +787,10 @@ static const struct of_device_id msm_vidc_dt_match[] = {
 	{
 		.compatible = "qcom,sdm670-vidc",
 		.data = &sdm670_data,
+	},
+	{
+		.compatible = "qcom,msm8956-vidc",
+		.data = &msm8956_data,
 	},
 	{},
 };
