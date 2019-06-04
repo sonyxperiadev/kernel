@@ -110,6 +110,7 @@ static int __power_collapse(struct venus_hfi_device *device, bool force);
 static int venus_hfi_noc_error_info(void *dev);
 
 static void interrupt_init_vpu4(struct venus_hfi_device *device);
+static void clock_config_on_enable_vpu4(struct venus_hfi_device *device);
 static void interrupt_init_vpu5(struct venus_hfi_device *device);
 static void setup_dsp_uc_memmap_vpu5(struct venus_hfi_device *device);
 static void clock_config_on_enable_vpu5(struct venus_hfi_device *device);
@@ -117,7 +118,7 @@ static void clock_config_on_enable_vpu5(struct venus_hfi_device *device);
 struct venus_hfi_vpu_ops vpu4_ops = {
 	.interrupt_init = interrupt_init_vpu4,
 	.setup_dsp_uc_memmap = NULL,
-	.clock_config_on_enable = NULL,
+	.clock_config_on_enable = clock_config_on_enable_vpu4,
 };
 
 struct venus_hfi_vpu_ops vpu5_ops = {
@@ -4671,6 +4672,12 @@ static void interrupt_init_vpu4(struct venus_hfi_device *device)
 {
 	__write_register(device, VIDC_WRAPPER_INTR_MASK,
 			VIDC_WRAPPER_INTR_MASK_A2HVCODEC_BMSK);
+}
+
+static void clock_config_on_enable_vpu4(struct venus_hfi_device *device)
+{
+	__write_register(device, VIDC_WRAPPER_CLOCK_CONFIG, 0);
+	__write_register(device, VIDC_WRAPPER_CPU_CLOCK_CONFIG, 0);
 }
 
 static void setup_dsp_uc_memmap_vpu5(struct venus_hfi_device *device)
