@@ -1,0 +1,62 @@
+/* Copyright (c) 2015, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+/*
+ * Copyright (C) 2016 Sony Mobile Communications Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2, as
+ * published by the Free Software Foundation.
+ */
+
+qcom,tone-kagura-send {
+	qcom,max-voltage-uv = <4350000>;
+	qcom,batt-id-kohm = <330>;
+	qcom,battery-type = "1302-1082";
+	qcom,chg-rslow-comp-c1 = <2571230>;
+	qcom,chg-rslow-comp-c2 = <3043024>;
+	qcom,chg-rs-to-rslow = <986563>;
+	qcom,chg-rslow-comp-thr = <0x99>;
+	qcom,fg-profile-data = [
+		 DC 83 5B 7C
+		 73 80 0C 76
+		 46 83 B2 5A
+		 B7 80 07 8C
+		 0D 82 2D 99
+		 FA B6 6F C2
+		 58 10 DA 83
+		 8C 77 DC 7B
+		 F3 74 3A 83
+		 94 72 D4 6C
+		 03 7D 1E 82
+		 15 9A 60 BD
+		 D7 CA 59 0E
+		 A4 0B A4 5A
+		 CE 6E 4A FC
+		 25 1A C3 47
+		 DE 43 00 00
+		 2A 44 1C 40
+		 CE 3C 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 AE 70 E4 6B
+		 01 7C 90 7B
+		 CE 77 0B 6B
+		 FD 75 76 7A
+		 86 77 A2 6A
+		 8E 70 9F BA
+		 0F BD 5A E7
+		 4E A0 71 0C
+		 28 00 FF 36
+		 F0 11 30 03
+		 00 00 00 0C
+	];
+};
