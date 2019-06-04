@@ -5152,7 +5152,10 @@ static int __initialize_packetization(struct venus_hfi_device *device)
 		return -EINVAL;
 	}
 
-	device->packetization_type = HFI_PACKETIZATION_4XX;
+	if (device->res->hfi_version == 3)
+		device->packetization_type = HFI_PACKETIZATION_3XX;
+	else
+		device->packetization_type = HFI_PACKETIZATION_4XX;
 
 	device->pkt_ops = hfi_get_pkt_ops_handle(device->packetization_type);
 	if (!device->pkt_ops) {
