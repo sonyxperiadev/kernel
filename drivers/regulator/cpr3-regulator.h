@@ -19,8 +19,8 @@
 #include <linux/of.h>
 #include <linux/platform_device.h>
 #include <linux/types.h>
-#include <linux/power/qcom/apm.h>
 #include <linux/regulator/driver.h>
+#include <soc/qcom/apm.h>
 
 struct cpr3_controller;
 struct cpr3_thread;
