@@ -357,6 +357,11 @@ static DEFINE_MUTEX(cpr3_controller_list_mutex);
 static LIST_HEAD(cpr3_controller_list);
 static struct dentry *cpr3_debugfs_base;
 
+/* UGLY UGLY UGLY HACK for fast bringup */
+#define CPR3_MAX_INSTANCES		15
+struct cpr3_controller *cpr3_ctrls[CPR3_MAX_INSTANCES];
+static int num_cpr3_instances = 0;
+
 /**
  * cpr3_read() - read four bytes from the memory address specified
  * @ctrl:		Pointer to the CPR3 controller
@@ -6345,29 +6350,21 @@ int cpr3_regulator_resume(struct cpr3_controller *ctrl)
 	return 0;
 }
 
-/**
- * cpr3_regulator_cpu_hotplug_callback() - reset CPR IRQ affinity when a CPU is
- *		brought online via hotplug
- * @nb:			Pointer to the notifier block
- * @action:		hotplug action
- * @hcpu:		long value corresponding to the CPU number
- *
- * Return: NOTIFY_OK
- */
-static int cpr3_regulator_cpu_hotplug_callback(struct notifier_block *nb,
-					    unsigned long action, void *hcpu)
+static int cpr3_regulator_starting_cpu(unsigned int cpu)
 {
-	struct cpr3_controller *ctrl = container_of(nb, struct cpr3_controller,
-					cpu_hotplug_notifier);
-	int cpu = (long)hcpu;
+	struct cpr3_controller *ctrl = NULL;
+	int i;
 
-	action &= ~CPU_TASKS_FROZEN;
+	for (i = 0; i <= num_cpr3_instances; i++) {
+		ctrl = cpr3_ctrls[num_cpr3_instances];
+		if (unlikely(ctrl == NULL))
+			continue;
 
-	if (action == CPU_ONLINE
-	    && cpumask_test_cpu(cpu, &ctrl->irq_affinity_mask))
-		irq_set_affinity(ctrl->irq, &ctrl->irq_affinity_mask);
+		if (cpumask_test_cpu(cpu, &ctrl->irq_affinity_mask))
+			irq_set_affinity(ctrl->irq, &ctrl->irq_affinity_mask);
+	}
 
-	return NOTIFY_OK;
+	return 0;
 }
 
 /**
@@ -6618,12 +6615,21 @@ int cpr3_regulator_register(struct platform_device *pdev,
 		}
 	}
 
+	num_cpr3_instances++;
+	cpr3_ctrls[num_cpr3_instances] = ctrl;
+
 	if (ctrl->irq && !cpumask_empty(&ctrl->irq_affinity_mask)) {
 		irq_set_affinity(ctrl->irq, &ctrl->irq_affinity_mask);
 
-		ctrl->cpu_hotplug_notifier.notifier_call
-			= cpr3_regulator_cpu_hotplug_callback;
-		register_hotcpu_notifier(&ctrl->cpu_hotplug_notifier);
+		rc = cpuhp_setup_state(CPUHP_AP_QCOM_CPR3_ONLINE,
+					"regulator/cpr3:online",
+					cpr3_regulator_starting_cpu, NULL);
+		if (rc) {
+			cpr3_ctrls[num_cpr3_instances] = NULL;
+			num_cpr3_instances--;
+			pr_err("Cannot register CPUHP for CPR3.\n");
+			goto free_regulators;
+		}
 	}
 
 	mutex_lock(&cpr3_controller_list_mutex);
@@ -6665,8 +6671,7 @@ int cpr3_regulator_unregister(struct cpr3_controller *ctrl)
 	cpr3_regulator_debugfs_ctrl_remove(ctrl);
 	mutex_unlock(&cpr3_controller_list_mutex);
 
-	if (ctrl->irq && !cpumask_empty(&ctrl->irq_affinity_mask))
-		unregister_hotcpu_notifier(&ctrl->cpu_hotplug_notifier);
+	cpuhp_remove_state_nocalls(CPUHP_AP_QCOM_CPR3_ONLINE);
 
 	if (ctrl->ctrl_type == CPR_CTRL_TYPE_CPR4) {
 		rc = cpr3_ctrl_clear_cpr4_config(ctrl);
