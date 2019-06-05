@@ -874,7 +874,7 @@ clk_alpha_pll_postdiv_recalc_rate(struct clk_hw *hw, unsigned long parent_rate)
 	return parent_rate >> fls(ctl);
 }
 
-static const struct clk_div_table clk_alpha_div_table[] = {
+const struct clk_div_table clk_alpha_div_table[] = {
 	{ 0x0, 1 },
 	{ 0x1, 2 },
 	{ 0x3, 4 },
@@ -883,7 +883,15 @@ static const struct clk_div_table clk_alpha_div_table[] = {
 	{ }
 };
 
-static const struct clk_div_table clk_alpha_2bit_div_table[] = {
+const struct clk_div_table clk_alpha_odd_div_table[] = {
+	{ 0x0, 1 },
+	{ 0x3, 3 },
+	{ 0x5, 5 },
+	{ 0x7, 7 },
+	{ }
+};
+
+const struct clk_div_table clk_alpha_2bit_div_table[] = {
 	{ 0x0, 1 },
 	{ 0x1, 2 },
 	{ 0x3, 4 },
@@ -1202,7 +1210,7 @@ static long clk_alpha_pll_postdiv_fabia_round_rate(struct clk_hw *hw,
 	}
 
 	return divider_round_rate(hw, rate, prate, pll->post_div_table,
-				pll->width, CLK_DIVIDER_ROUND_CLOSEST);
+				pll->width, CLK_DIVIDER_ROUND_KHZ);
 }
 
 static int clk_alpha_pll_postdiv_fabia_set_rate(struct clk_hw *hw,
