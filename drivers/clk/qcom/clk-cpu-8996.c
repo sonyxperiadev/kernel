@@ -1541,7 +1541,8 @@ int __init qcom_cpu_clk_msm8996_early_init(void)
 	 * We definitely don't want to parse DT here - this is too early and in
 	 * the critical path for boot timing. Just ioremap the bases.
 	 */
-	early_bases[APC0_EARLY_BASE] = ioremap(APC0_BASE_PHY, SZ_4K);
+	early_bases[APC0_EARLY_BASE] = ioremap(APC0_BASE_PHY,
+						PERFCL_REG_OFFSET + SZ_4K);
 	if (!early_bases[APC0_EARLY_BASE]) {
 		WARN(1, "Unable to ioremap power mux base. Can't configure CPU clocks\n");
 		ret = -ENOMEM;
