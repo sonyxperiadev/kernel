@@ -104,107 +104,94 @@
 };
 
 &pm8994_vadc {
-	chan@5 {
+
+	vcoin {
 		label = "vcoin";
-		reg = <5>;
-		qcom,decimation = <0>;
-		qcom,pre-div-channel-scaling = <1>;
-		qcom,calibration-type = "absolute";
-		qcom,scale-function = <0>;
-		qcom,hw-settle-time = <0>;
-		qcom,fast-avg-setup = <0>;
+		reg = <VADC_VCOIN>;
+		qcom,pre-scaling = <1 1>;
 	};
 
-	chan@7 {
+	vph_pwr {
 		label = "vph_pwr";
-		reg = <7>;
-		qcom,decimation = <0>;
-		qcom,pre-div-channel-scaling = <1>;
-		qcom,calibration-type = "absolute";
-		qcom,scale-function = <0>;
-		qcom,hw-settle-time = <0>;
-		qcom,fast-avg-setup = <0>;
+		reg = <VADC_VSYS>;
+		qcom,pre-scaling = <1 1>;
 	};
 
-	chan@73 {
+	msm_therm {
 		label = "msm_therm";
-		reg = <0x73>;
-		qcom,decimation = <0>;
-		qcom,pre-div-channel-scaling = <0>;
-		qcom,calibration-type = "ratiometric";
+		reg = <VADC_LR_MUX4_PU1_AMUX_THM1>;
+		qcom,pre-scaling = <1 1>;
+		qcom,ratiometric;
+		qcom,hw-settle-time = <200>;
+
+/*	To be fixed in qcom-spmi-vadc.c to select the right scale function
 		qcom,scale-function = <2>;
-		qcom,hw-settle-time = <2>;
-		qcom,fast-avg-setup = <0>;
+*/
 	};
 
-	chan@74 {
+	emmc_therm {
 		label = "emmc_therm";
-		reg = <0x74>;
-		qcom,decimation = <0>;
-		qcom,pre-div-channel-scaling = <0>;
-		qcom,calibration-type = "ratiometric";
+		reg = <VADC_LR_MUX5_PU1_AMUX_THM2>;
+		qcom,pre-scaling = <1 1>;
+		qcom,ratiometric;
+		qcom,hw-settle-time = <200>;
+
+/*	To be fixed in qcom-spmi-vadc.c to select the right scale function
 		qcom,scale-function = <2>;
-		qcom,hw-settle-time = <2>;
-		qcom,fast-avg-setup = <0>;
+*/
 	};
 
-	chan@75 {
+	pa_therm0 {
 		label = "pa_therm0";
-		reg = <0x75>;
-		qcom,decimation = <0>;
-		qcom,pre-div-channel-scaling = <0>;
-		qcom,calibration-type = "ratiometric";
+		reg = <VADC_LR_MUX6_PU1_AMUX_THM3>;
+		qcom,pre-scaling = <1 1>;
+		qcom,ratiometric;
+		qcom,hw-settle-time = <200>;
+
+/*	To be fixed in qcom-spmi-vadc.c to select the right scale function
 		qcom,scale-function = <2>;
-		qcom,hw-settle-time = <2>;
-		qcom,fast-avg-setup = <0>;
+*/
 	};
 
-	chan@77 {
+	pa_therm1 {
 		label = "pa_therm1";
-		reg = <0x77>;
-		qcom,decimation = <0>;
-		qcom,pre-div-channel-scaling = <0>;
-		qcom,calibration-type = "ratiometric";
+		reg = <VADC_LR_MUX8_PU1_AMUX_THM4>;
+		qcom,pre-scaling = <1 1>;
+		qcom,ratiometric;
+		qcom,hw-settle-time = <200>;
+
+/*	To be fixed in qcom-spmi-vadc.c to select the right scale function
 		qcom,scale-function = <2>;
-		qcom,hw-settle-time = <2>;
-		qcom,fast-avg-setup = <0>;
+*/
 	};
 
-	chan@78 {
+	quiet_therm {
 		label = "quiet_therm";
-		reg = <0x78>;
-		qcom,decimation = <0>;
-		qcom,pre-div-channel-scaling = <0>;
-		qcom,calibration-type = "ratiometric";
+		reg = <VADC_LR_MUX9_PU1_AMUX_THM5>;
+		qcom,pre-scaling = <1 1>;
+		qcom,ratiometric;
+		qcom,hw-settle-time = <200>;
+
+/*	To be fixed in qcom-spmi-vadc.c to select the right scale function
 		qcom,scale-function = <2>;
-		qcom,hw-settle-time = <2>;
-		qcom,fast-avg-setup = <0>;
+*/
 	};
 
-	chan@7c {
+	xo_therm_buf {
 		label = "xo_therm_buf";
-		reg = <0x7c>;
-		qcom,decimation = <0>;
-		qcom,pre-div-channel-scaling = <0>;
-		qcom,calibration-type = "ratiometric";
-		qcom,scale-function = <4>;
-		qcom,hw-settle-time = <2>;
-		qcom,fast-avg-setup = <0>;
-	};
+		reg = <VADC_LR_MUX3_BUF_PU1_XO_THERM>;
+		qcom,pre-scaling = <1 1>;
+		qcom,ratiometric;
+		qcom,hw-settle-time = <200>;
 
-	chan@7c {
-		label = "xo_therm_buf";
-		reg = <0x7c>;
-		qcom,decimation = <0>;
-		qcom,pre-div-channel-scaling = <0>;
-		qcom,calibration-type = "ratiometric";
+/*	To be fixed in qcom-spmi-vadc.c to select the right scale function
 		qcom,scale-function = <4>;
-		qcom,hw-settle-time = <2>;
-		qcom,fast-avg-setup = <0>;
+*/
 	};
 };
 
 &pm8994_adc_tm {
+	/* TODO: Not implemented yet */
 	chan@73 {
 		label = "msm_therm";
 		reg = <0x73>;
@@ -299,49 +286,32 @@
 						&mdss_hdmi_cec_suspend>;
 };
 
+#define VADC_USB_DP	0x43
+#define VADC_USB_DM	0x44
+
 &pmi8994_vadc {
-	chan@0 {
+	usbin {
 		label = "usbin";
-		reg = <0>;
-		qcom,decimation = <0>;
-		qcom,pre-div-channel-scaling = <4>;
-		qcom,calibration-type = "absolute";
-		qcom,scale-function = <0>;
-		qcom,hw-settle-time = <0>;
-		qcom,fast-avg-setup = <0>;
+		reg = <VADC_USBIN>;
+		qcom,pre-scaling = <1 4>;
 	};
 
-	chan@1 {
+	dcin {
 		label = "dcin";
-		reg = <1>;
-		qcom,decimation = <0>;
-		qcom,pre-div-channel-scaling = <4>;
-		qcom,calibration-type = "absolute";
-		qcom,scale-function = <0>;
-		qcom,hw-settle-time = <0>;
-		qcom,fast-avg-setup = <0>;
+		reg = <VADC_DCIN>;
+		qcom,pre-scaling = <1 4>;
 	};
 
-	chan@43 {
+	usb_dp {
 		label = "usb_dp";
-		reg = <0x43>;
-		qcom,decimation = <0>;
-		qcom,pre-div-channel-scaling = <1>;
-		qcom,calibration-type = "absolute";
-		qcom,scale-function = <0>;
-		qcom,hw-settle-time = <0>;
-		qcom,fast-avg-setup = <0>;
+		reg = <VADC_USB_DP>;
+		qcom,pre-scaling = <1 1>;
 	};
 
-	chan@44 {
+	usb_dm {
 		label = "usb_dm";
-		reg = <0x44>;
-		qcom,decimation = <0>;
-		qcom,pre-div-channel-scaling = <1>;
-		qcom,calibration-type = "absolute";
-		qcom,scale-function = <0>;
-		qcom,hw-settle-time = <0>;
-		qcom,fast-avg-setup = <0>;
+		reg = <VADC_USB_DM>;
+		qcom,pre-scaling = <1 1>;
 	};
 };
 

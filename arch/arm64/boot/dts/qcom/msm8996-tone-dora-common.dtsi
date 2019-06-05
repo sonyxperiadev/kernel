@@ -122,6 +122,7 @@
 };
 
 &usb3 {
+	io-channels = <&pm8994_vadc VADC_LR_MUX10_USB_ID>;
 	id_polling_use;
 	id_polling_up_interval = <2000>;
 	id_polling_up_period = <500>;
@@ -136,14 +137,10 @@
 };
 
 &pm8994_vadc {
-	chan@39 {
+	usb_detect {
 		label = "usb_detect";
-		reg = <0x39>;
-		qcom,decimation = <0>;
-		qcom,pre-div-channel-scaling = <0>;
-		qcom,calibration-type = "absolute";
-		qcom,scale-function = <0>;
-		qcom,hw-settle-time = <5>;
-		qcom,fast-avg-setup = <0>;
+		reg = <VADC_LR_MUX10_USB_ID>;
+		qcom,pre-scaling = <1 1>;
+		qcom,hw-settle-time = <500>;
 	};
 };
