@@ -122,6 +122,8 @@ static struct clk_alpha_pll_postdiv cam_cc_pll0_out_even = {
 	.offset = 0x0,
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.width = 4,
+	.post_div_table = clk_alpha_div_table,
+	.post_div_shift = ALPHA_POST_DIV_EVEN_SHIFT,
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "cam_cc_pll0_out_even",
 		.parent_names = (const char *[]){ "cam_cc_pll0" },
@@ -159,6 +161,8 @@ static struct clk_alpha_pll_postdiv cam_cc_pll1_out_even = {
 	.offset = 0x1000,
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.width = 4,
+	.post_div_table = clk_alpha_div_table,
+	.post_div_shift = ALPHA_POST_DIV_EVEN_SHIFT,
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "cam_cc_pll1_out_even",
 		.parent_names = (const char *[]){ "cam_cc_pll1" },
@@ -196,6 +200,8 @@ static struct clk_alpha_pll_postdiv cam_cc_pll2_out_even = {
 	.offset = 0x2000,
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.width = 4,
+	.post_div_table = clk_alpha_div_table,
+	.post_div_shift = ALPHA_POST_DIV_EVEN_SHIFT,
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "cam_cc_pll2_out_even",
 		.parent_names = (const char *[]){ "cam_cc_pll2" },
@@ -204,18 +210,12 @@ static struct clk_alpha_pll_postdiv cam_cc_pll2_out_even = {
 	},
 };
 
-static const struct clk_div_table post_div_table_fabia_odd[] = {
-	{ 0x0, 1 },
-	{ 0x3, 3 },
-	{ 0x5, 5 },
-	{ 0x7, 7 },
-	{ }
-};
-
 static struct clk_alpha_pll_postdiv cam_cc_pll2_out_odd = {
 	.offset = 0x2000,
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.width = 4,
+	.post_div_table = clk_alpha_odd_div_table,
+	.post_div_shift = ALPHA_POST_DIV_ODD_SHIFT,
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "cam_cc_pll2_out_odd",
 		.parent_names = (const char *[]){ "cam_cc_pll2" },
@@ -253,6 +253,8 @@ static struct clk_alpha_pll_postdiv cam_cc_pll3_out_even = {
 	.offset = 0x3000,
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.width = 4,
+	.post_div_table = clk_alpha_div_table,
+	.post_div_shift = ALPHA_POST_DIV_EVEN_SHIFT,
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "cam_cc_pll3_out_even",
 		.parent_names = (const char *[]){ "cam_cc_pll3" },
