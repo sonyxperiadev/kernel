@@ -32,6 +32,7 @@ enum {
 	PLL_OFF_CONFIG_CTL_U1,
 	PLL_OFF_TEST_CTL,
 	PLL_OFF_TEST_CTL_U,
+	PLL_OFF_TEST_CTL_U1,
 	PLL_OFF_STATUS,
 	PLL_OFF_OPMODE,
 	PLL_OFF_FRAC,
@@ -129,8 +130,12 @@ struct alpha_pll_config {
 	u32 pre_div_mask;
 	u32 post_div_val;
 	u32 post_div_mask;
+	u32 user_ctl_hi1_val;
 	u32 vco_val;
 	u32 vco_mask;
+	u32 test_ctl_val;
+	u32 test_ctl_hi_val;
+	u32 test_ctl_hi1_val;
 };
 
 extern const struct clk_ops clk_alpha_pll_ops;
@@ -143,6 +148,10 @@ extern const struct clk_ops clk_alpha_pll_postdiv_ro_ops;
 extern const struct clk_ops clk_alpha_pll_fabia_ops;
 extern const struct clk_ops clk_alpha_pll_fixed_fabia_ops;
 extern const struct clk_ops clk_alpha_pll_postdiv_fabia_ops;
+
+extern const struct clk_ops clk_alpha_pll_trion_ops;
+extern const struct clk_ops clk_alpha_pll_trion_fixed_ops;
+extern const struct clk_ops clk_trion_pll_postdiv_ops;
 
 extern const struct clk_div_table clk_alpha_div_table[];
 extern const struct clk_div_table clk_alpha_odd_div_table[];
