@@ -301,6 +301,7 @@ config CLOCK_CPU_8976
 config MSM_APCC_8996
 	tristate "MSM8996 CPU Clock Controller"
 	depends on COMMON_CLK_QCOM
+	select QCOM_KRYO_L2_ACCESSORS
 	help
 	  Support for the CPU clock controller on msm8996 devices.
 	  Say Y if you want to support CPU clock scaling using CPUfreq

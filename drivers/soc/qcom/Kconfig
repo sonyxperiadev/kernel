@@ -2,6 +2,13 @@
 # QCOM Soc drivers
 #
 menu "Qualcomm SoC drivers"
+config QCOM_KRYO_L2_ACCESSORS
+	bool "Qualcomm Kryo L2 accessor helper driver"
+	help
+	  Add support for accessing the Kryo L2 indirect registers that are
+	  present on various Qualcomm SoCs.
+	  If unsure, say N
+
 config QCOM_MEM_OFFLINE
 	bool "Dynamic Memory Region Offline driver"
 	help
