@@ -45,6 +45,7 @@
 # define PLL_VCO_SHIFT		20
 # define PLL_VCO_MASK		0x3
 # define PLL_OUT_MASK		0x7
+# define PLL_REGERA_OUT_MASK	0x9
 
 #define PLL_USER_CTL_U(p)	((p)->offset + (p)->regs[PLL_OFF_USER_CTL_U])
 # define PLL_ALPHA_STATE_READ_EN BIT(4)
@@ -134,6 +135,18 @@ const u8 clk_alpha_pll_regs[][PLL_OFF_MAX_REGS] = {
 		[PLL_OFF_OPMODE] = 0x38,
 		[PLL_OFF_ALPHA_VAL] = 0x40,
 		[PLL_OFF_CAL_L_VAL] = 0x44,
+	},
+	[CLK_ALPHA_PLL_TYPE_REGERA] =  {
+		[PLL_OFF_L_VAL] = 0x04,
+		[PLL_OFF_ALPHA_VAL] = 0x08,
+		[PLL_OFF_USER_CTL] = 0xc,
+		[PLL_OFF_CONFIG_CTL] = 0x10,
+		[PLL_OFF_CONFIG_CTL_U] = 0x14,
+		[PLL_OFF_CONFIG_CTL_U1] = 0x18,
+		[PLL_OFF_TEST_CTL] = 0x1c,
+		[PLL_OFF_TEST_CTL_U] = 0x20,
+		[PLL_OFF_TEST_CTL_U1] = 0x24,
+		[PLL_OFF_OPMODE] = 0x28,
 	},
 };
 EXPORT_SYMBOL_GPL(clk_alpha_pll_regs);
@@ -314,10 +327,9 @@ static void clk_alpha_pll_hwfsm_disable(struct clk_hw *hw)
 	wait_for_pll_disable(pll);
 }
 
-static int pll_is_enabled(struct clk_hw *hw, u32 mask)
+static int pll_is_enabled(struct clk_alpha_pll *pll, u32 mask)
 {
 	int ret;
-	struct clk_alpha_pll *pll = to_clk_alpha_pll(hw);
 	u32 val;
 
 	ret = regmap_read(pll->clkr.regmap, PLL_MODE(pll), &val);
@@ -329,12 +341,12 @@ static int pll_is_enabled(struct clk_hw *hw, u32 mask)
 
 static int clk_alpha_pll_hwfsm_is_enabled(struct clk_hw *hw)
 {
-	return pll_is_enabled(hw, PLL_ACTIVE_FLAG);
+	return pll_is_enabled(to_clk_alpha_pll(hw), PLL_ACTIVE_FLAG);
 }
 
 static int clk_alpha_pll_is_enabled(struct clk_hw *hw)
 {
-	return pll_is_enabled(hw, PLL_LOCK_DET);
+	return pll_is_enabled(to_clk_alpha_pll(hw), PLL_LOCK_DET);
 }
 
 static int clk_alpha_pll_enable(struct clk_hw *hw)
@@ -1780,3 +1792,234 @@ const struct clk_ops clk_trion_pll_postdiv_ops = {
 };
 EXPORT_SYMBOL_GPL(clk_trion_pll_postdiv_ops);
 
+
+int clk_alpha_pll_regera_configure(struct clk_alpha_pll *pll, struct regmap *regmap,
+				const struct alpha_pll_config *config)
+{
+	int ret = 0;
+
+	if (!config) {
+		pr_err("PLL configuration missing.\n");
+		return -EINVAL;
+	}
+
+	if (pll->inited)
+		return ret;
+
+	if (pll_is_enabled(pll, PLL_LOCK_DET)) {
+		pr_warn("PLL is already enabled. Skipping configuration.\n");
+		pll->inited = true;
+		return 0;
+	}
+
+	if (config->alpha)
+		regmap_write(regmap, PLL_ALPHA_VAL(pll),
+						config->alpha);
+
+	if (config->l)
+		regmap_write(regmap, PLL_L_VAL(pll), config->l);
+
+	if (config->config_ctl_val)
+		regmap_write(regmap, PLL_CONFIG_CTL(pll),
+				config->config_ctl_val);
+
+	if (config->config_ctl_hi_val)
+		regmap_write(regmap, PLL_CONFIG_CTL_U(pll),
+				config->config_ctl_hi_val);
+
+	if (config->config_ctl_hi1_val)
+		regmap_write(regmap, PLL_CONFIG_CTL_U1(pll),
+				config->config_ctl_hi1_val);
+
+	if (config->user_ctl_val)
+		regmap_write(regmap, PLL_USER_CTL(pll),
+				config->user_ctl_val);
+
+	if (config->test_ctl_val)
+		regmap_write(regmap, PLL_TEST_CTL(pll),
+				config->test_ctl_val);
+
+	if (config->test_ctl_hi_val)
+		regmap_write(regmap, PLL_TEST_CTL_U(pll),
+				config->test_ctl_hi_val);
+
+	if (config->test_ctl_hi1_val)
+		regmap_write(regmap, PLL_TEST_CTL_U1(pll),
+				config->test_ctl_hi1_val);
+
+	/* Set operation mode to OFF */
+	regmap_write(regmap, PLL_OPMODE(pll), PLL_STANDBY);
+
+	/* PLL should be in OFF mode before continuing */
+	wmb();
+
+	pll->inited = true;
+	return 0;
+}
+
+static int clk_alpha_pll_regera_enable(struct clk_hw *hw)
+{
+	int ret;
+	struct clk_alpha_pll *pll = to_clk_alpha_pll(hw);
+	u32 val, l_val;
+
+	ret = regmap_read(pll->clkr.regmap, PLL_MODE(pll), &val);
+	if (ret)
+		return ret;
+
+	/* If in FSM mode, just vote for it */
+	if (val & PLL_VOTE_FSM_ENA) {
+		ret = clk_enable_regmap(hw);
+		if (ret)
+			return ret;
+		return wait_for_pll_enable_active(pll);
+	}
+
+	ret = regmap_read(pll->clkr.regmap, PLL_L_VAL(pll), &l_val);
+	if (ret)
+		return ret;
+
+	/* PLL has lost it's L value, needs reconfiguration */
+	if (!l_val)
+		pll->inited = false;
+
+	if (unlikely(!pll->inited)) {
+		ret = clk_alpha_pll_regera_configure(pll, pll->clkr.regmap,
+						pll->config);
+		if (ret) {
+			pr_err("Failed to configure %s\n", clk_hw_get_name(hw));
+			return ret;
+		}
+		pr_warn("PLL configuration lost, reconfiguration of PLL done.\n");
+	}
+
+	/* Get the PLL out of bypass mode */
+	ret = regmap_update_bits(pll->clkr.regmap, PLL_MODE(pll),
+						PLL_BYPASSNL, PLL_BYPASSNL);
+	if (ret)
+		return ret;
+
+	/*
+	 * H/W requires a 1us delay between disabling the bypass and
+	 * de-asserting the reset.
+	 */
+	mb();
+	udelay(1);
+
+	ret = regmap_update_bits(pll->clkr.regmap, PLL_MODE(pll),
+					PLL_RESET_N, PLL_RESET_N);
+	if (ret)
+		return ret;
+
+	/* Set operation mode to RUN */
+	regmap_write(pll->clkr.regmap, PLL_OPMODE(pll), PLL_RUN);
+
+	ret = wait_for_pll_enable_lock(pll);
+	if (ret)
+		return ret;
+
+	/* Enable the PLL outputs */
+	ret = regmap_update_bits(pll->clkr.regmap, PLL_USER_CTL(pll),
+				PLL_REGERA_OUT_MASK, PLL_REGERA_OUT_MASK);
+	if (ret)
+		return ret;
+
+	/* Enable the global PLL outputs */
+	ret = regmap_update_bits(pll->clkr.regmap, PLL_MODE(pll),
+				 PLL_OUTCTRL, PLL_OUTCTRL);
+	if (ret)
+		return ret;
+
+	/* Ensure that the write above goes through before returning. */
+	mb();
+	return ret;
+}
+
+static void clk_alpha_pll_regera_disable(struct clk_hw *hw)
+{
+	int ret;
+	struct clk_alpha_pll *pll = to_clk_alpha_pll(hw);
+	u32 val, mask;
+
+	ret = regmap_read(pll->clkr.regmap, PLL_MODE(pll), &val);
+	if (ret)
+		return;
+
+	/* If in FSM mode, just unvote it */
+	if (val & PLL_VOTE_FSM_ENA) {
+		clk_disable_regmap(hw);
+		return;
+	}
+
+	/* Disable the global PLL output */
+	ret = regmap_update_bits(pll->clkr.regmap, PLL_MODE(pll),
+							PLL_OUTCTRL, 0);
+	if (ret)
+		return;
+
+	/* Disable the PLL outputs */
+	ret = regmap_update_bits(pll->clkr.regmap, PLL_USER_CTL(pll),
+					PLL_REGERA_OUT_MASK, 0);
+
+	/* Put the PLL in bypass and reset */
+	mask = PLL_RESET_N | PLL_BYPASSNL;
+	ret = regmap_update_bits(pll->clkr.regmap, PLL_MODE(pll), mask, 0);
+	if (ret)
+		return;
+
+	/* Place the PLL mode in OFF state */
+	regmap_write(pll->clkr.regmap, PLL_OPMODE(pll), PLL_STANDBY);
+}
+
+static int clk_alpha_pll_regera_set_rate(struct clk_hw *hw, unsigned long rate,
+				  unsigned long prate)
+{
+	struct clk_alpha_pll *pll = to_clk_alpha_pll(hw);
+	unsigned long rrate;
+	u32 l, regval;
+	u64 a;
+	int ret;
+
+	rrate = alpha_pll_round_rate(rate, prate, &l, &a,
+						ALPHA_REG_16BIT_WIDTH);
+	/*
+	 * Due to a limited number of bits for fractional rate programming, the
+	 * rounded up rate could be marginally higher than the requested rate.
+	 */
+	if (rrate > (rate + ALPHA_16_BIT_PLL_RATE_MARGIN) || rrate < rate) {
+		pr_err("Requested rate (%lu) not matching the PLL's "
+			"supported frequency (%lu)\n", rate, rrate);
+		return -EINVAL;
+	}
+
+	regmap_write(pll->clkr.regmap, PLL_ALPHA_VAL(pll), a);
+	regmap_write(pll->clkr.regmap, PLL_L_VAL(pll), l);
+
+	/* Return early if the PLL is disabled */
+	ret = regmap_read(pll->clkr.regmap, PLL_OPMODE(pll), &regval);
+	if (ret)
+		return ret;
+	else if (regval == PLL_STANDBY)
+		return 0;
+
+	/* Wait before polling for the frequency latch */
+	udelay(5);
+
+	ret = wait_for_pll_enable_lock(pll);
+	if (ret)
+		return ret;
+
+	/* Wait for PLL output to stabilize */
+	udelay(100);
+	return 0;
+}
+
+const struct clk_ops clk_alpha_pll_regera_ops = {
+	.enable = clk_alpha_pll_regera_enable,
+	.disable = clk_alpha_pll_regera_disable,
+	.is_enabled = clk_alpha_pll_is_enabled,
+	.recalc_rate = alpha_trion_pll_recalc_rate,
+	.round_rate = clk_alpha_pll_round_rate,
+	.set_rate = clk_alpha_pll_regera_set_rate,
+};
+EXPORT_SYMBOL_GPL(clk_alpha_pll_regera_ops);

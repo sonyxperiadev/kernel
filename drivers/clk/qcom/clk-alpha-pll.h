@@ -17,6 +17,7 @@ enum {
 	CLK_ALPHA_PLL_TYPE_BRAMMO,
 	CLK_ALPHA_PLL_TYPE_FABIA,
 	CLK_ALPHA_PLL_TYPE_TRION,
+	CLK_ALPHA_PLL_TYPE_REGERA,
 	CLK_ALPHA_PLL_TYPE_MAX,
 };
 
@@ -130,6 +131,7 @@ struct alpha_pll_config {
 	u32 pre_div_mask;
 	u32 post_div_val;
 	u32 post_div_mask;
+	u32 user_ctl_val;
 	u32 user_ctl_hi1_val;
 	u32 vco_val;
 	u32 vco_mask;
@@ -153,6 +155,8 @@ extern const struct clk_ops clk_alpha_pll_postdiv_fabia_ops;
 extern const struct clk_ops clk_alpha_pll_trion_ops;
 extern const struct clk_ops clk_alpha_pll_trion_fixed_ops;
 extern const struct clk_ops clk_trion_pll_postdiv_ops;
+
+extern const struct clk_ops clk_alpha_pll_regera_ops;
 
 extern const struct clk_div_table clk_alpha_div_table[];
 extern const struct clk_div_table clk_alpha_odd_div_table[];
