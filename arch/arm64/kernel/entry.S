@@ -703,7 +703,11 @@ el0_sync_compat:
 	cmp	x24, #ESR_ELx_EC_IABT_LOW	// instruction abort in EL0
 	b.eq	el0_ia
 	cmp	x24, #ESR_ELx_EC_FP_ASIMD	// FP/ASIMD access
+#ifdef ENABLE_FP_SIMD_SETTINGS
+	b.eq	el0_fpsimd_acc_compat
+#else
 	b.eq	el0_fpsimd_acc
+#endif
 	cmp	x24, #ESR_ELx_EC_FP_EXC32	// FP/ASIMD exception
 	b.eq	el0_fpsimd_exc
 	cmp	x24, #ESR_ELx_EC_PC_ALIGN	// pc alignment exception
@@ -776,6 +780,18 @@ el0_fpsimd_acc:
 	mov	x1, sp
 	bl	do_fpsimd_acc
 	b	ret_to_user
+#ifdef CONFIG_ENABLE_FP_SIMD_SETTINGS
+el0_fpsimd_acc_compat:
+	/*
+	 * Floating Point or Advanced SIMD access
+	 */
+	enable_dbg
+	ct_user_exit
+	mov	x0, x25
+	mov	x1, sp
+	bl	do_fpsimd_acc_compat
+	b	ret_to_user
+#endif
 el0_fpsimd_exc:
 	/*
 	 * Floating Point or Advanced SIMD exception

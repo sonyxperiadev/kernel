@@ -515,6 +515,9 @@ struct mm_struct {
 #ifdef CONFIG_HUGETLB_PAGE
 	atomic_long_t hugetlb_usage;
 #endif
+#ifdef CONFIG_MSM_APP_SETTINGS
+	int app_setting;
+#endif
 	struct work_struct async_put_work;
 
 #if IS_ENABLED(CONFIG_HMM)

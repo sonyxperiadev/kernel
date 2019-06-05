@@ -71,6 +71,18 @@ extern void fpsimd_flush_task_state(struct task_struct *target);
 extern void __efi_fpsimd_begin(void);
 extern void __efi_fpsimd_end(void);
 
+#ifdef CONFIG_ENABLE_FP_SIMD_SETTINGS
+extern void fpsimd_disable_trap(void);
+extern void fpsimd_enable_trap(void);
+extern void fpsimd_settings_disable(void);
+extern void fpsimd_settings_enable(void);
+#else
+static inline void fpsimd_disable_trap(void) {}
+static inline void fpsimd_enable_trap(void) {}
+static inline void fpsimd_settings_disable(void) {}
+static inline void fpsimd_settings_enable(void) {}
+#endif
+
 #endif
 
 #endif
