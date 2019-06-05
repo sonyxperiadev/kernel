@@ -18,6 +18,7 @@ enum {
 	CLK_ALPHA_PLL_TYPE_FABIA,
 	CLK_ALPHA_PLL_TYPE_TRION,
 	CLK_ALPHA_PLL_TYPE_REGERA,
+	CLK_ALPHA_PLL_TYPE_AGERA,
 	CLK_ALPHA_PLL_TYPE_MAX,
 };
 
@@ -157,6 +158,7 @@ extern const struct clk_ops clk_alpha_pll_trion_fixed_ops;
 extern const struct clk_ops clk_trion_pll_postdiv_ops;
 
 extern const struct clk_ops clk_alpha_pll_regera_ops;
+extern const struct clk_ops clk_alpha_pll_agera_ops;
 
 extern const struct clk_div_table clk_alpha_div_table[];
 extern const struct clk_div_table clk_alpha_odd_div_table[];
