@@ -1064,7 +1064,6 @@ static int qusb_phy_dpdm_regulator_disable(struct regulator_dev *rdev)
 
 	return ret;
 }
-#endif
 
 static int qusb_phy_dpdm_regulator_is_enabled(struct regulator_dev *rdev)
 {
