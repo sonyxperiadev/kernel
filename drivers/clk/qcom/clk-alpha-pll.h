@@ -44,6 +44,11 @@ struct pll_vco {
 	u32 val;
 };
 
+struct pll_vco_data {
+	unsigned long freq;
+	u8 post_div_val;
+};
+
 /**
  * struct clk_alpha_pll - phase locked loop (PLL)
  * @offset: base address of registers
@@ -67,6 +72,10 @@ struct clk_alpha_pll {
 
 	const struct pll_vco *vco_table;
 	size_t num_vco;
+
+	const struct pll_vco_data *vco_data;
+	size_t num_vco_data;
+
 #define SUPPORTS_OFFLINE_REQ	BIT(0)
 #define SUPPORTS_FSM_MODE	BIT(2)
 #define SUPPORTS_DYNAMIC_UPDATE	BIT(3)
