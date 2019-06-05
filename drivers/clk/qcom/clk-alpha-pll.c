@@ -247,6 +247,10 @@ void clk_alpha_pll_configure(struct clk_alpha_pll *pll, struct regmap *regmap,
 
 	regmap_update_bits(regmap, PLL_USER_CTL(pll), mask, val);
 
+	if (pll->flags & SUPPORTS_DYNAMIC_UPDATE)
+		regmap_update_bits(regmap, PLL_MODE(pll),
+					PLL_UPDATE_BYPASS, PLL_UPDATE_BYPASS);
+
 	if (pll->flags & SUPPORTS_FSM_MODE)
 		qcom_pll_set_fsm_mode(regmap, PLL_MODE(pll), 6, 0);
 }
@@ -539,16 +543,6 @@ static int __clk_alpha_pll_update_latch(struct clk_alpha_pll *pll)
 	return 0;
 }
 
-static int clk_alpha_pll_update_latch(struct clk_alpha_pll *pll,
-				      int (*is_enabled)(struct clk_hw *))
-{
-	if (!is_enabled(&pll->clkr.hw) ||
-	    !(pll->flags & SUPPORTS_DYNAMIC_UPDATE))
-		return 0;
-
-	return __clk_alpha_pll_update_latch(pll);
-}
-
 static int __clk_alpha_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 				    unsigned long prate,
 				    int (*is_enabled)(struct clk_hw *))
@@ -557,6 +551,8 @@ static int __clk_alpha_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	const struct pll_vco *vco;
 	u32 l, alpha_width = pll_alpha_width(pll);
 	u64 a;
+	bool pll_enabled = false;
+	int rc = 0;
 
 	rate = alpha_pll_round_rate(rate, prate, &l, &a, alpha_width);
 	vco = alpha_pll_find_vco(pll, rate);
@@ -564,6 +560,17 @@ static int __clk_alpha_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 		pr_err("alpha pll not in a valid vco range\n");
 		return -EINVAL;
 	}
+
+	pll_enabled = is_enabled(&pll->clkr.hw);
+
+	/*
+	 * For PLLs that do not support dynamic programming (dynamic_update
+	 * is not set), ensure PLL is off before changing rate. For
+	 * optimization reasons, assume no downstream clock is actively
+	 * using it.
+	 */
+	if (pll_enabled && !(pll->flags & SUPPORTS_DYNAMIC_UPDATE))
+		hw->init->ops->disable(hw);
 
 	regmap_write(pll->clkr.regmap, PLL_L_VAL(pll), l);
 
@@ -584,7 +591,14 @@ static int __clk_alpha_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	regmap_update_bits(pll->clkr.regmap, PLL_USER_CTL(pll),
 			   PLL_ALPHA_EN, PLL_ALPHA_EN);
 
-	return clk_alpha_pll_update_latch(pll, is_enabled);
+	if (is_enabled) {
+		if (!(pll->flags & SUPPORTS_DYNAMIC_UPDATE))
+			rc = hw->init->ops->enable(hw);
+		else
+			rc = __clk_alpha_pll_update_latch(pll);
+	}
+
+	return rc;
 }
 
 static int clk_alpha_pll_set_rate(struct clk_hw *hw, unsigned long rate,
