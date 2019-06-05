@@ -141,9 +141,11 @@ static struct clk_alpha_pll gpu_pll0_pll = {
 };
 
 static struct clk_alpha_pll_postdiv gpu_pll0_out_even = {
-	.offset = 0x0, /*0xC?*/
+	.offset = 0x0,
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.width = 4,
+	.post_div_table = clk_alpha_div_table,
+	.post_div_shift = ALPHA_POST_DIV_EVEN_SHIFT,
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "gpucc_pll0_out_even",
 		.parent_names = (const char *[]){ "gpu_cc_pll0" },
@@ -154,9 +156,11 @@ static struct clk_alpha_pll_postdiv gpu_pll0_out_even = {
 };
 
 static struct clk_alpha_pll_postdiv gpu_pll0_out_odd = {
-	.offset = 0x0, /*0xC?*/
+	.offset = 0x0,
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.width = 4,
+	.post_div_table = clk_alpha_odd_div_table,
+	.post_div_shift = ALPHA_POST_DIV_ODD_SHIFT,
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "gpucc_pll0_out_odd",
 		.parent_names = (const char *[]){ "gpu_cc_pll0" },
