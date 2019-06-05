@@ -441,27 +441,11 @@ int cbf_clk_notifier_cb(struct notifier_block *nb, unsigned long event,
 	return notifier_from_errno(ret);
 };
 
-int cpu_clk_hotplug_notifier_cb(struct notifier_block *nb, unsigned long event,
-			void *data)
+static int cpu_clk_8996_starting_cpu(unsigned int cpu)
 {
-	switch (event & ~CPU_TASKS_FROZEN) {
-
-	case CPU_STARTING:
-		/* This is needed for the first time that CPUs come up */
-		qcom_cpu_clk_msm8996_acd_init();
-		break;
-
-	default:
-		break;
-	}
-
-	return NOTIFY_OK;
+	qcom_cpu_clk_msm8996_acd_init();
+	return 0;
 }
-
-static struct notifier_block clk_cpu_8996_hotplug_notifier = {
-	.notifier_call = cpu_clk_hotplug_notifier_cb,
-};
-
 
 static void cpu_clk_8996_disable(struct clk_hw *hw)
 {
@@ -1342,7 +1326,10 @@ static int qcom_cpu_clk_msm8996_driver_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	BUG_ON(register_hotcpu_notifier(&clk_cpu_8996_hotplug_notifier));
+	/* Without the ACD initialization the CPU would die */
+	BUG_ON(cpuhp_setup_state_nocalls(CPUHP_AP_QCOM_SLEEP_STARTING,
+				"clk-cpu-8996:online", 
+				cpu_clk_8996_starting_cpu, NULL));
 
 	/* Once per core.... */
 	clk_prepare_enable(pwrcl_pmux.clkr.hw.clk);
