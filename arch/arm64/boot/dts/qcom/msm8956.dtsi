@@ -430,6 +430,13 @@
 			size = <0 0x1000000>;
 		};
 
+		qseecom_ta_mem: qseecom_ta_region {
+			compatible = "shared-dma-pool";
+			reusable;
+			alignment = <0 0x400000>;
+			size = <0 0x400000>;
+		};
+
 		audio_mem: audio_region {
 			compatible = "shared-dma-pool";
 			reusable;
@@ -1634,9 +1641,9 @@
 		qcom,noise-rjct-scl = <0>;
 		qcom,noise-rjct-sda = <0>;
 		qcom,master-id = <86>;
-		dmas = <&dma_blsp1 6 64 0x20000020 0x20>,
-		   <&dma_blsp1 7 32 0x20000020 0x20>;
-		dma-names = "tx", "rx";
+//		dmas = <&dma_blsp1 6 64 0x20000020 0x20>,
+//		   <&dma_blsp1 7 32 0x20000020 0x20>;
+//		dma-names = "tx", "rx";
 };
 
 	i2c_4: i2c@78b8000 { /* BLSP1 QUP4 */
@@ -1658,9 +1665,9 @@
 		qcom,noise-rjct-scl = <0>;
 		qcom,noise-rjct-sda = <0>;
 		qcom,master-id = <86>;
-		dmas = <&dma_blsp1 10 64 0x20000020 0x20>,
-			<&dma_blsp1 11 32 0x20000020 0x20>;
-		dma-names = "tx", "rx";
+//		dmas = <&dma_blsp1 10 64 0x20000020 0x20>,
+//			<&dma_blsp1 11 32 0x20000020 0x20>;
+//		dma-names = "tx", "rx";
 	};
 
 	i2c_6: i2c@7af6000 { /* BLSP2 QUP2 */
@@ -1682,9 +1689,9 @@
 		qcom,noise-rjct-scl = <0>;
 		qcom,noise-rjct-sda = <0>;
 		qcom,master-id = <84>;
-		dmas = <&dma_blsp2 6 64 0x20000020 0x20>,
-			<&dma_blsp2 7 32 0x20000020 0x20>;
-		dma-names = "tx", "rx";
+//		dmas = <&dma_blsp2 6 64 0x20000020 0x20>,
+//			<&dma_blsp2 7 32 0x20000020 0x20>;
+//		dma-names = "tx", "rx";
 	};
 
 	i2c_8: i2c@7af8000 { /* BLSP2 QUP4 */
@@ -1706,9 +1713,9 @@
                 qcom,noise-rjct-scl = <0>;
                 qcom,noise-rjct-sda = <0>;
                 qcom,master-id = <84>;
-                dmas = <&dma_blsp2 10 64 0x20000020 0x20>,
-                        <&dma_blsp2 11 32 0x20000020 0x20>;
-                dma-names = "tx", "rx";
+//                dmas = <&dma_blsp2 10 64 0x20000020 0x20>,
+  ////                      <&dma_blsp2 11 32 0x20000020 0x20>;
+      //          dma-names = "tx", "rx";
         };
 
 

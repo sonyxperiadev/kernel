@@ -274,12 +274,6 @@
 		};
 	};
 
-	rpm_msg_ram: memory@0x200000 {
-		compatible = "qcom,rpm-msg-ram";
-		reg = <0x200000 0x1000>,
-			<0x290000 0x1000>;
-	};
-
 	rpm_code_ram: rpm-memory@0x68000 {
 		compatible = "qcom,rpm-code-ram";
 		reg = <0x68000 0x5000>;
