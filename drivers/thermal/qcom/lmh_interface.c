@@ -323,6 +323,11 @@ static struct lmh_mon_sensor_data *lmh_match_sensor_name(char *sensor_name)
 	return NULL;
 }
 
+enum thermal_trip_activation_mode {
+       THERMAL_TRIP_ACTIVATION_DISABLED = 0,
+       THERMAL_TRIP_ACTIVATION_ENABLED,
+};
+
 static int lmh_activate_trip(struct lmh_mon_sensor_data *lmh_sensor,
 		int trip, enum thermal_trip_activation_mode mode);
 
