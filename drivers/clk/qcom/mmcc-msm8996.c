@@ -334,6 +334,10 @@ static struct pll_vco mmpll_t_vco[] = {
 	{ 500000000, 1500000000, 0 },
 };
 
+static struct pll_vco mmpll9_t_vco[] = {
+	{ 1248000000, 1500000000, 0 },
+};
+
 /* Initial configuration for 800MHz rate */
 static const struct alpha_pll_config mmpll0_config = {
 	.l = 0x29,
@@ -632,10 +636,9 @@ static const struct alpha_pll_config mmpll9_config = {
 static struct clk_alpha_pll mmpll9_early = {
 	.offset = 0x4200,
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
-	.vco_table = mmpll_t_vco,
-	.num_vco = ARRAY_SIZE(mmpll_t_vco),
+	.vco_table = mmpll9_t_vco,
+	.num_vco = ARRAY_SIZE(mmpll9_t_vco),
 	.flags = SUPPORTS_DYNAMIC_UPDATE,
-	.min_supported_freq = 1248000000,
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "mmpll9_early",
 		.parent_names = (const char *[]){ "xo" },
