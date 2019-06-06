@@ -307,7 +307,7 @@
 		qcom,clk-src = "BBCLK3";
 		qcom,clk-gpio = <&pm660_gpios 4 0x00>;
 		clock-names = "nfc_clk";
-		clocks = <&clock_rpmcc RPM_LN_BB_CLK3_PIN>;
+		clocks = <&clock_rpmcc RPM_SMD_LN_BB_CLK3_PIN>;
 		pinctrl-names = "pn547-active", "pn547-inactive";
 		pinctrl-0 = <&nfc_int_active &nfc_enable_active>;
 		pinctrl-1 = <&nfc_int_suspend &nfc_enable_suspend>;

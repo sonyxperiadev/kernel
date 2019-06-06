@@ -48,7 +48,7 @@
 				"clk-aggre2-usb3-axi-cfg-no-rate",
 				"clk-cfg-noc-usb2-axi-no-rate";
 				clocks =
-				<&clock_rpmcc RPM_IPA_CLK>,
+				<&clock_rpmcc RPM_SMD_IPA_CLK>,
 				<&clock_gcc GCC_UFS_AXI_CLK>,
 				<&clock_gcc GCC_AGGRE2_UFS_AXI_CLK>,
 				<&clock_gcc GCC_AGGRE2_USB3_AXI_CLK>,

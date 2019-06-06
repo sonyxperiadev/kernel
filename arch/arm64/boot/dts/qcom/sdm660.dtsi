@@ -423,7 +423,7 @@
 		qca,bt-vdd-pa-supply = <&pm660_l6>;
 		qca,bt-vdd-ldo-supply = <&pm660_l19>;
 		qca,bt-chip-pwd-supply = <&pm660l_bob_pin1>;
-		clocks = <&clock_rpmcc RPM_RF_CLK1_PIN>;
+		clocks = <&clock_rpmcc RPM_SMD_RF_CLK1_PIN>;
 		clock-names = "rf_clk1";
 
 		qca,bt-vdd-core-voltage-level = <1800000 1900000>;
@@ -1155,7 +1155,7 @@
 		compatible = "qcom,gcc-debug-sdm660";
 		reg = <0x62000 0x4>;
 		reg-names = "dbg_offset";
-		clocks = <&clock_rpmcc  RPM_XO_CLK_SRC>;
+		clocks = <&clock_rpmcc  RPM_SMD_XO_CLK_SRC>;
 		clock-names = "xo_clk_src";
 		qcom,cc-count = <4>;
 		qcom,gcc = <&clock_gcc>;
@@ -1411,7 +1411,7 @@
 
 		clock-names = "aux_clk", "xo_a";
 		clocks = <&clock_gcc HMSS_GPLL0_CLK_SRC>,
-			<&clock_rpmcc RPM_XO_A_CLK_SRC>;
+			<&clock_rpmcc RPM_SMD_XO_A_CLK_SRC>;
 
 		#clock-cells = <1>;
 	};
@@ -1561,7 +1561,7 @@
 		qcom,ipa-hw-mode = <0>; /* IPA hw type = Normal */
 		qcom,wan-rx-ring-size = <192>; /* IPA WAN-rx-ring-size*/
 		qcom,lan-rx-ring-size = <192>; /* IPA LAN-rx-ring-size*/
-		clocks = <&clock_rpmcc RPM_IPA_CLK>,
+		clocks = <&clock_rpmcc RPM_SMD_IPA_CLK>,
 			<&clock_rpmcc AGGR2_NOC_SMMU_CLK>;
 		clock-names = "core_clk", "smmu_clk";
 		qcom,arm-smmu;
@@ -2011,7 +2011,7 @@
 		reg-names = "membase", "smmu_iova_base", "smmu_iova_ipa";
 		iommus = <&anoc2_smmu 0x1a00>,
 			 <&anoc2_smmu 0x1a01>;
-		clocks = <&clock_rpmcc RPM_RF_CLK1_PIN>;
+		clocks = <&clock_rpmcc RPM_SMD_RF_CLK1_PIN>;
 		clock-names = "cxo_ref_clk_pin";
 		interrupts = <0 413 0>,   /* CE0 */
 			     <0 414 0>,   /* CE1 */
@@ -2048,7 +2048,7 @@
 		qcom,vdd_cx-uV-uA = <RPM_SMD_REGULATOR_LEVEL_TURBO 100000>;
 		qcom,mas-crypto = <&mas_crypto_c0>;
 
-		clocks = <&clock_rpmcc CXO_PIL_LPASS_CLK>;
+		clocks = <&clock_rpmcc CXO_SMD_PIL_LPASS_CLK>;
 		clock-names = "xo";
 		qcom,proxy-clock-names = "xo";
 
@@ -2081,7 +2081,7 @@
 		qcom,vdd_cx-uV-uA = <RPM_SMD_REGULATOR_LEVEL_TURBO 100000>;
 		qcom,mas-crypto = <&mas_crypto_c0>;
 
-		clocks = <&clock_rpmcc CXO_PIL_CDSP_CLK>;
+		clocks = <&clock_rpmcc CXO_SMD_PIL_CDSP_CLK>;
 		clock-names = "xo";
 		qcom,proxy-clock-names = "xo";
 
@@ -2117,14 +2117,14 @@
 			    "halt_nc", "rmb_base", "restart_reg",
 			    "cxip_lm_vote_clear";
 
-		clocks = <&clock_rpmcc RPM_XO_CLK_SRC>,
+		clocks = <&clock_rpmcc RPM_SMD_XO_CLK_SRC>,
 			 <&clock_gcc GCC_MSS_CFG_AHB_CLK>,
 			 <&clock_gcc GCC_BIMC_MSS_Q6_AXI_CLK>,
 			 <&clock_gcc GCC_BOOT_ROM_AHB_CLK>,
 			 <&clock_gcc GPLL0_OUT_MSSCC>,
 			 <&clock_gcc GCC_MSS_SNOC_AXI_CLK>,
 			 <&clock_gcc GCC_MSS_MNOC_BIMC_AXI_CLK>,
-			 <&clock_rpmcc RPM_QDSS_CLK>;
+			 <&clock_rpmcc RPM_SMD_QDSS_CLK>;
 		clock-names = "xo", "iface_clk", "bus_clk",
 			      "mem_clk", "gpll0_mss_clk", "snoc_axi_clk",
 			      "mnoc_axi_clk", "qdss_clk";
@@ -2237,7 +2237,7 @@
 		reg-names = "gladiator_base";
 		interrupts = <0 22 0>;
 		clock-names = "atb_clk";
-		clocks = <&clock_rpmcc RPM_QDSS_CLK>;
+		clocks = <&clock_rpmcc RPM_SMD_QDSS_CLK>;
 	};
 
 	cpu_pmu: cpu-pmu {
@@ -2383,7 +2383,7 @@
 		clock-names = "ref_clk_src",
 			"ref_clk",
 			"ref_aux_clk";
-		clocks = <&clock_rpmcc RPM_LN_BB_CLK1>,
+		clocks = <&clock_rpmcc RPM_SMD_LN_BB_CLK1>,
 			<&clock_gcc GCC_UFS_CLKREF_CLK>,
 			<&clock_gcc GCC_UFS_PHY_AUX_CLK>;
 		status = "disabled";
@@ -2412,7 +2412,7 @@
 			<&clock_gcc GCC_UFS_AHB_CLK>,
 			<&clock_gcc GCC_UFS_UNIPRO_CORE_CLK>,
 			<&clock_gcc GCC_UFS_ICE_CORE_CLK>,
-			<&clock_rpmcc RPM_LN_BB_CLK1>,
+			<&clock_rpmcc RPM_SMD_LN_BB_CLK1>,
 			<&clock_gcc GCC_UFS_TX_SYMBOL_0_CLK>,
 			<&clock_gcc GCC_UFS_RX_SYMBOL_0_CLK>;
 		freq-table-hz =
@@ -2468,8 +2468,8 @@
 		reg = <0x7840000 0x1000>;
 		reg-names = "etm-base";
 
-		clocks = <&clock_rpmcc RPM_QDSS_CLK>,
-			 <&clock_rpmcc RPM_QDSS_A_CLK>;
+		clocks = <&clock_rpmcc RPM_SMD_QDSS_CLK>,
+			 <&clock_rpmcc RPM_SMD_QDSS_A_CLK>;
 		clock-names = "core_clk", "core_a_clk";
 
 		qcom,coresight-jtagmm-cpu = <&CPU0>;
@@ -2480,8 +2480,8 @@
 		reg = <0x7940000 0x1000>;
 		reg-names = "etm-base";
 
-		clocks = <&clock_rpmcc RPM_QDSS_CLK>,
-			 <&clock_rpmcc RPM_QDSS_A_CLK>;
+		clocks = <&clock_rpmcc RPM_SMD_QDSS_CLK>,
+			 <&clock_rpmcc RPM_SMD_QDSS_A_CLK>;
 		clock-names = "core_clk", "core_a_clk";
 
 		qcom,coresight-jtagmm-cpu = <&CPU1>;
@@ -2492,8 +2492,8 @@
 		reg = <0x7a40000 0x1000>;
 		reg-names = "etm-base";
 
-		clocks = <&clock_rpmcc RPM_QDSS_CLK>,
-			 <&clock_rpmcc RPM_QDSS_A_CLK>;
+		clocks = <&clock_rpmcc RPM_SMD_QDSS_CLK>,
+			 <&clock_rpmcc RPM_SMD_QDSS_A_CLK>;
 		clock-names = "core_clk", "core_a_clk";
 
 		qcom,coresight-jtagmm-cpu = <&CPU2>;
@@ -2504,8 +2504,8 @@
 		reg = <0x7b40000 0x1000>;
 		reg-names = "etm-base";
 
-		clocks = <&clock_rpmcc RPM_QDSS_CLK>,
-			 <&clock_rpmcc RPM_QDSS_A_CLK>;
+		clocks = <&clock_rpmcc RPM_SMD_QDSS_CLK>,
+			 <&clock_rpmcc RPM_SMD_QDSS_A_CLK>;
 		clock-names = "core_clk", "core_a_clk";
 
 		qcom,coresight-jtagmm-cpu = <&CPU3>;
@@ -2516,8 +2516,8 @@
 		reg = <0x7c40000 0x1000>;
 		reg-names = "etm-base";
 
-		clocks = <&clock_rpmcc RPM_QDSS_CLK>,
-			 <&clock_rpmcc RPM_QDSS_A_CLK>;
+		clocks = <&clock_rpmcc RPM_SMD_QDSS_CLK>,
+			 <&clock_rpmcc RPM_SMD_QDSS_A_CLK>;
 		clock-names = "core_clk", "core_a_clk";
 
 		qcom,coresight-jtagmm-cpu = <&CPU4>;
@@ -2528,8 +2528,8 @@
 		reg = <0x7d40000 0x1000>;
 		reg-names = "etm-base";
 
-		clocks = <&clock_rpmcc RPM_QDSS_CLK>,
-			 <&clock_rpmcc RPM_QDSS_A_CLK>;
+		clocks = <&clock_rpmcc RPM_SMD_QDSS_CLK>,
+			 <&clock_rpmcc RPM_SMD_QDSS_A_CLK>;
 		clock-names = "core_clk", "core_a_clk";
 
 		qcom,coresight-jtagmm-cpu = <&CPU5>;
@@ -2540,8 +2540,8 @@
 		reg = <0x7e40000 0x1000>;
 		reg-names = "etm-base";
 
-		clocks = <&clock_rpmcc RPM_QDSS_CLK>,
-			 <&clock_rpmcc RPM_QDSS_A_CLK>;
+		clocks = <&clock_rpmcc RPM_SMD_QDSS_CLK>,
+			 <&clock_rpmcc RPM_SMD_QDSS_A_CLK>;
 		clock-names = "core_clk", "core_a_clk";
 
 		qcom,coresight-jtagmm-cpu = <&CPU6>;
@@ -2552,8 +2552,8 @@
 		reg = <0x7f40000 0x1000>;
 		reg-names = "etm-base";
 
-		clocks = <&clock_rpmcc RPM_QDSS_CLK>,
-			 <&clock_rpmcc RPM_QDSS_A_CLK>;
+		clocks = <&clock_rpmcc RPM_SMD_QDSS_CLK>,
+			 <&clock_rpmcc RPM_SMD_QDSS_A_CLK>;
 		clock-names = "core_clk", "core_a_clk";
 
 		qcom,coresight-jtagmm-cpu = <&CPU7>;

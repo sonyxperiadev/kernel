@@ -19,7 +19,7 @@
 		clock-names = "ref_clk_src",
 			"ref_clk",
 			"ref_aux_clk";
-		clocks = <&clock_rpmcc RPM_LN_BB_CLK1>,
+		clocks = <&clock_rpmcc RPM_SMD_LN_BB_CLK1>,
 			<&clock_gcc GCC_UFS_CLKREF_CLK>,
 			<&clock_gcc GCC_UFS_PHY_AUX_CLK>;
 		status = "disabled";
@@ -93,7 +93,7 @@
 			<&clock_gcc GCC_UFS_AHB_CLK>,
 			<&clock_gcc GCC_UFS_UNIPRO_CORE_CLK>,
 			<&clock_gcc GCC_UFS_ICE_CORE_CLK>,
-			<&clock_rpmcc RPM_LN_BB_CLK1>,
+			<&clock_rpmcc RPM_SMD_LN_BB_CLK1>,
 			<&clock_gcc GCC_UFS_TX_SYMBOL_0_CLK>,
 			<&clock_gcc GCC_UFS_RX_SYMBOL_0_CLK>;
 		freq-table-hz =
@@ -175,7 +175,7 @@
 			<&clock_gcc GCC_USB30_MOCK_UTMI_CLK>,
 			<&clock_gcc GCC_USB30_SLEEP_CLK>,
 			<&clock_gcc GCC_USB_PHY_CFG_AHB2PHY_CLK>,
-			<&clock_rpmcc CXO_DWC3_CLK>;
+			<&clock_rpmcc CXO_SMD_DWC3_CLK>;
 
 		clock-names = "core_clk", "iface_clk", "bus_aggr_clk",
 				"noc_aggr_clk", "utmi_clk", "sleep_clk",
@@ -295,7 +295,7 @@
 		qcom,phy-clk-scheme = "cml";
 		qcom,major-rev = <1>;
 
-		clocks = <&clock_rpmcc RPM_LN_BB_CLK1>,
+		clocks = <&clock_rpmcc RPM_SMD_LN_BB_CLK1>,
 			<&clock_gcc GCC_RX0_USB2_CLKREF_CLK>,
 			<&clock_gcc GCC_USB_PHY_CFG_AHB2PHY_CLK>;
 
@@ -437,7 +437,7 @@
 		clocks = <&clock_gcc GCC_USB3_PHY_AUX_CLK>,
 			<&clock_gcc GCC_USB3_PHY_PIPE_CLK>,
 			<&clock_gcc GCC_USB_PHY_CFG_AHB2PHY_CLK>,
-			<&clock_rpmcc RPM_LN_BB_CLK1>,
+			<&clock_rpmcc RPM_SMD_LN_BB_CLK1>,
 			<&clock_gcc GCC_USB3_CLKREF_CLK>;
 
 		clock-names = "aux_clk", "pipe_clk", "cfg_ahb_clk",
@@ -486,7 +486,7 @@
 			<&clock_gcc GCC_CFG_NOC_USB2_AXI_CLK>,
 			<&clock_gcc GCC_USB20_MOCK_UTMI_CLK>,
 			<&clock_gcc GCC_USB20_SLEEP_CLK>,
-			<&clock_rpmcc CXO_DWC3_CLK>,
+			<&clock_rpmcc CXO_SMD_DWC3_CLK>,
 			<&clock_gcc GCC_USB_PHY_CFG_AHB2PHY_CLK>;
 		clock-names = "core_clk", "iface_clk", "utmi_clk", "sleep_clk",
 				"xo", "cfg_ahb_clk";
@@ -536,7 +536,7 @@
 
 		clocks = <&clock_gcc GCC_USB_PHY_CFG_AHB2PHY_CLK>,
 			<&clock_gcc GCC_RX1_USB2_CLKREF_CLK>,
-			<&clock_rpmcc RPM_LN_BB_CLK1>;
+			<&clock_rpmcc RPM_SMD_LN_BB_CLK1>;
 		clock-names = "cfg_ahb_clk", "ref_clk", "ref_clk_src";
 
 		resets = <&clock_gcc GCC_QUSB2PHY_SEC_BCR>;
