@@ -1,0 +1,89 @@
+/* Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+/ {
+	mermaid_batterydata: qcom,battery-data {
+		qcom,batt-id-range-pct = <17>;
+		#include "fg-gen3-batterydata-mermaid-byd-4245mv.dtsi"
+		#include "fg-gen3-batterydata-mermaid-byd-4297mv.dtsi"
+		#include "fg-gen3-batterydata-mermaid-byd-4335mv.dtsi"
+		#include "fg-gen3-batterydata-mermaid-byd-4380mv.dtsi"
+	};
+};
+
+&soc {
+	/delete-node/ qcom,qbt1000;
+
+	pinctrl@03000000 {
+		disabled-pins = <8 9 10 11>;
+
+		sdc2_clk_on: sdc2_clk_on {
+			config {
+				pins = "sdc2_clk";
+				drive-strength = <14>; /* default 16 MA */
+				bias-disable; /* NO pull */
+			};
+		};
+	};
+
+	somc_pinctrl: somc_pinctrl {
+		/* If product common default setting is needed,
+		fill pinctrl-1 value in <product>_common.dtsi */
+		pinctrl-1 = <>;
+	};
+
+	qcom,sensor-information {
+		sensor_information15: qcom,sensor-information-15 { /* msm_therm */
+			qcom,scaling-factor = <1000>;
+		};
+		sensor_information16: qcom,sensor-information-16 { /* xo_therm */
+			qcom,scaling-factor = <1000>;
+		};
+		sensor_information17: qcom,sensor-information-17 { /* pa_therm0 */
+			qcom,scaling-factor = <1000>;
+		};
+		sensor_information18: qcom,sensor-information-18 { /* pa_therm1 */
+			qcom,scaling-factor = <1000>;
+		};
+		sensor_information19: qcom,sensor-information-19 { /* quiet_therm */
+			qcom,alias-name = "bl_therm";
+			qcom,scaling-factor = <1000>;
+		};
+		sensor_information100: qcom,sensor-information-100 { /* emmc_therm */
+			qcom,sensor-type = "adc";
+			qcom,sensor-name = "emmc_therm";
+			qcom,scaling-factor = <1000>;
+		};
+		sensor_information102: qcom,sensor-information-101 { /* bms */
+			qcom,sensor-type = "adc";
+			qcom,sensor-name = "bms";
+			qcom,alias-name = "batt_therm";
+			qcom,scaling-factor = <1000>;
+		};
+	};
+};
+
+&pm660_charger {
+	somc,thermal-fcc-ua =  <2930000 2930000 2930000
+				2930000 2930000 2930000
+				2930000 2930000 2930000
+				2930000 2500000 2930000
+				2930000       0       0>;
+};
+
+&pm660_fg {
+	qcom,battery-data = <&mermaid_batterydata>;
+};
+
+&sdhc_2 {
+	cd-gpios = <&tlmm 54 0x0>;
+};

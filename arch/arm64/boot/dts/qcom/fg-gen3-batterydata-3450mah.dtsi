@@ -1,0 +1,112 @@
+/* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+/*
+ * - 11/03/2018 - AngeloGioacchino Del Regno <kholk11@gmail.com>
+ * IMPORTANT:
+ * CEI has heavily hacked the SMB2/FG3 driver to prevent battery
+ * swelling when Nile batteries get aging.
+ * Implementing these really bad hacks in the driver is not really
+ * feasible, then it's better to just use the aging values in any
+ * battery condition for safety purposes.
+ * The standard values are commented out and left there ONLY for
+ * documentation purposes.
+ *
+ * This makes us lose around 2% of battery charge: an acceptable
+ * compromise.
+ */
+
+qcom,sm22_somc_3450mah {
+	qcom, = <24>;
+	//qcom,max-voltage-uv = <4350000>;
+	qcom,nom-batt-capacity-mah = <3430>;
+	//qcom,fg-cc-cv-threshold-mv = <4340>;
+	qcom,fastchg-current-ma = <2400>;
+	qcom,batt-id-kohm = <330>;
+	qcom,battery-beta = <4050>;
+	qcom,battery-type = "1308-3580";
+	qcom,checksum = <0xE09D>;
+	qcom,gui-version = "PM660GUI - 0.0.0.44";
+
+	qcom,fg-jeita-hyst-temp = <2>;
+	qcom,bp-jeita-fvc-en;
+	qcom,bp-jeita-ccc-en;
+	qcom,bp-jeita-hot-sl-fvc;
+	qcom,bp-jeita-cold-sl-fvc;
+	qcom,bp-jeita-fvc-cfg = <150>;
+	qcom,bp-jeita-ccc-cfg = <1575>;
+	//qcom,bp-recharge-voltage = <4250>;
+
+	/* Safe values */
+	qcom,max-voltage-uv = <4300000>;
+	qcom,fg-cc-cv-threshold-mv = <4287>;
+	qcom,bp-recharge-voltage = <4200>;
+
+	qcom,fg-profile-data = [
+		 67 1F D9 05
+		 37 0A 03 FD
+		 F2 1C D1 F2
+		 8E 02 6F 0D
+		 22 18 B5 22
+		 33 3C AE 4B
+		 58 00 00 00
+		 0F 00 00 00
+		 00 00 5B B2
+		 A9 CC 07 00
+		 23 00 08 00
+		 92 E5 97 D5
+		 A9 05 67 FA
+		 A2 06 C0 0A
+		 BB EB EA 32
+		 1C 06 09 20
+		 27 00 14 00
+		 5B 1F 61 FC
+		 CE 03 D4 06
+		 2C 1D 29 EB
+		 F9 0A D2 14
+		 96 18 D6 22
+		 A1 45 DA 52
+		 56 00 00 00
+		 0E 00 00 00
+		 00 00 47 CD
+		 A4 C2 64 BD
+		 1D 00 00 00
+		 A4 E3 97 D5
+		 C6 05 25 FA
+		 43 FD D8 03
+		 F6 06 0E 1A
+		 A2 33 CC FF
+		 07 10 00 00
+		 FA 0D 99 45
+		 1D 00 40 00
+		 89 01 0A FA
+		 FF 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+	];
+};

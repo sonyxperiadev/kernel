@@ -1,0 +1,175 @@
+/* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+#include "dsi-panel-nt36672a_tianma_fhdplus_video.dtsi"
+#include "dsi-panel-nt36672a_truly_fhdplus_video.dtsi"
+
+&soc {
+	dsi_panel_pwr_supply_full_incell: dsi_panel_pwr_supply_full_incell {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		qcom,panel-supply-entry@0 {
+			reg = <0>;
+			qcom,supply-name = "vddio";
+			qcom,supply-min-voltage = <1650000>;
+			qcom,supply-max-voltage = <1950000>;
+			qcom,supply-enable-load = <32000>;
+			qcom,supply-disable-load = <80>;
+			qcom,supply-post-on-sleep = <10>;
+		};
+
+		qcom,panel-supply-entry@1 {
+			reg = <1>;
+			qcom,supply-name = "lab";
+			qcom,supply-min-voltage = <5000000>;
+			qcom,supply-max-voltage = <6000000>;
+			qcom,supply-enable-load = <11000>;
+			qcom,supply-disable-load = <100>;
+			qcom,supply-post-on-sleep = <10>;
+			qcom,supply-post-off-sleep = <10>;
+		};
+
+		qcom,panel-supply-entry@2 {
+			reg = <2>;
+			qcom,supply-name = "ibb";
+			qcom,supply-min-voltage = <5000000>;
+			qcom,supply-max-voltage = <6000000>;
+			qcom,supply-enable-load = <6000>;
+			qcom,supply-disable-load = <100>;
+			qcom,supply-post-on-sleep = <10>;
+			qcom,supply-post-off-sleep = <10>;
+		};
+	};
+};
+
+&dsi_nt36672a_truly_fhdplus_video {
+	qcom,mdss-dsi-panel-timings-phy-v2 = [27 21 0A 0B 07 03 04 a0
+	27 21 0A 0B 07 03 04 a0
+	27 21 0A 0B 07 03 04 a0
+	27 21 0A 0B 07 03 04 a0
+	27 21 0A 0B 07 03 04 a0];
+	qcom,mdss-dsi-t-clk-post = <0x0D>;
+	qcom,mdss-dsi-t-clk-pre = <0x2F>;
+	qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0a];
+	qcom,mdss-dsi-panel-status-command-state = "dsi_hs_mode";
+	qcom,mdss-dsi-panel-status-value = <0x9c>;
+	qcom,mdss-dsi-panel-on-check-value = <0x9c>;
+	qcom,mdss-dsi-panel-status-read-length = <1>;
+	qcom,mdss-dsi-panel-max-error-count = <3>;
+	qcom,mdss-dsi-lp11-init;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,mdss-brightness-max-level = <4095>;
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_full_incell>;
+
+	qcom,esd-check-enabled;
+
+	somc,lcd-id-adc = <801000 917000>;
+	somc,mdss-dsi-master;
+	somc,pw-on-rst-seq = <1 10>, <0 10>, <1 10>;
+	somc,pw-off-rst-b-seq = <0 1>;
+	somc,pw-wait-after-on-vdd = <0>;
+	somc,pw-wait-after-on-vddio = <1>;
+	somc,pw-wait-after-on-vsp = <0>;
+	somc,pw-wait-after-on-vsn = <0>;
+	somc,pw-wait-after-off-vdd = <0>;
+	somc,pw-wait-after-off-vddio = <1>;
+	somc,pw-wait-after-off-vsp = <0>;
+	somc,pw-wait-after-off-vsn = <0>;
+	somc,pw-wait-after-on-touch-vddio = <0>;
+	somc,pw-wait-after-on-touch-reset = <0>;
+	somc,pw-wait-after-on-touch-int-n = <0>;
+	somc,pw-wait-after-off-touch-vddio = <0>;
+	somc,pw-wait-after-off-touch-reset = <0>;
+	somc,pw-wait-after-off-touch-int-n = <0>;
+	somc,pw-down-period = <300>;
+
+	somc,lab-output-voltage = <5500000>;
+	somc,ibb-output-voltage = <5500000>;
+	somc,qpnp-lab-limit-maximum-current = <200>;
+	somc,qpnp-ibb-limit-maximum-current = <800>;
+	somc,qpnp-lab-max-precharge-time = <500>;
+	somc,qpnp-lab-soft-start = <800>;
+	somc,qpnp-ibb-discharge-resistor = <300>;
+	somc,qpnp-lab-pull-down-enable;
+	somc,qpnp-lab-full-pull-down;
+	somc,qpnp-ibb-pull-down-enable;
+	somc,qpnp-ibb-full-pull-down;
+	somc,mdss-dsi-disp-on-in-hs = <0>;
+	somc,mdss-dsi-wait-time-before-post-on-cmd = <0>;
+	somc,bootloader-panel-detect;
+};
+
+&dsi_nt36672a_tianma_fhdplus_video {
+	qcom,mdss-dsi-panel-timings-phy-v2 = [27 21 0A 0B 07 03 04 a0
+	27 21 0A 0B 07 03 04 a0
+	27 21 0A 0B 07 03 04 a0
+	27 21 0A 0B 07 03 04 a0
+	27 21 0A 0B 07 03 04 a0];
+	qcom,mdss-dsi-t-clk-post = <0x0D>;
+	qcom,mdss-dsi-t-clk-pre = <0x2F>;
+	qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0a];
+	qcom,mdss-dsi-panel-status-command-state = "dsi_hs_mode";
+	qcom,mdss-dsi-panel-status-value = <0x9c>;
+	qcom,mdss-dsi-panel-on-check-value = <0x9c>;
+	qcom,mdss-dsi-panel-status-read-length = <1>;
+	qcom,mdss-dsi-panel-max-error-count = <3>;
+	qcom,mdss-dsi-lp11-init;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,mdss-brightness-max-level = <4095>;
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_full_incell>;
+
+	somc,lcd-id-adc = <801000 917000>;
+	somc,mdss-dsi-master;
+	somc,pw-on-rst-seq = <1 10>, <0 10>, <1 10>;
+	somc,pw-off-rst-b-seq = <0 1>;
+	somc,pw-wait-after-on-vdd = <0>;
+	somc,pw-wait-after-on-vddio = <1>;
+	somc,pw-wait-after-on-vsp = <0>;
+	somc,pw-wait-after-on-vsn = <0>;
+	somc,pw-wait-after-off-vdd = <0>;
+	somc,pw-wait-after-off-vddio = <1>;
+	somc,pw-wait-after-off-vsp = <0>;
+	somc,pw-wait-after-off-vsn = <0>;
+	somc,pw-wait-after-on-touch-vddio = <0>;
+	somc,pw-wait-after-on-touch-reset = <0>;
+	somc,pw-wait-after-on-touch-int-n = <0>;
+	somc,pw-wait-after-off-touch-vddio = <0>;
+	somc,pw-wait-after-off-touch-reset = <0>;
+	somc,pw-wait-after-off-touch-int-n = <0>;
+	somc,pw-down-period = <300>;
+
+	somc,lab-output-voltage = <5500000>;
+	somc,ibb-output-voltage = <5500000>;
+	somc,qpnp-lab-limit-maximum-current = <200>;
+	somc,qpnp-ibb-limit-maximum-current = <800>;
+	somc,qpnp-lab-max-precharge-time = <500>;
+	somc,qpnp-lab-soft-start = <800>;
+	somc,qpnp-ibb-discharge-resistor = <300>;
+	somc,qpnp-lab-pull-down-enable;
+	somc,qpnp-lab-full-pull-down;
+	somc,qpnp-ibb-pull-down-enable;
+	somc,qpnp-ibb-full-pull-down;
+
+	somc,mdss-dsi-disp-on-in-hs = <0>;
+	somc,mdss-dsi-wait-time-before-post-on-cmd = <0>;
+	somc,bootloader-panel-detect;
+};

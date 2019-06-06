@@ -1,0 +1,15 @@
+/* Remove all FBDEV related configuration */
+/delete-node/ &mdss_mdp;
+/delete-node/ &mdss_dsi0;
+/delete-node/ &msm_ext_disp;
+/delete-node/ &mdss_rotator;
+
+&soc {
+	/delete-node/ qcom,mdss_wb_panel;
+
+	mdss_fb2: mdss_fb2 {
+	};
+};
+
+#include "sdm630-sde.dtsi"
+#include "sdm630-sde-display.dtsi"

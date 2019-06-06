@@ -159,6 +159,27 @@ config ARCH_MSM8996
 	  This enables support for the MSM8996 chipset. If you do not
 	  wish to build a kernel that runs on this chipset, say 'N' here.
 
+config ARCH_SDM630
+	bool "Enable Support for Qualcomm Technologies Inc SDM630"
+	depends on ARCH_QCOM
+	select COMMON_CLK
+	select COMMON_CLK_QCOM
+	select QCOM_GDSC
+	help
+	  This enables support for the SDM630 chipset.
+	  If you do not wish to build a kernel that runs
+	  on this chipset,say 'N' here.
+
+config ARCH_SDM660
+	bool "Enable Support for Qualcomm Technologies Inc SDM660"
+	depends on ARCH_QCOM
+	select COMMON_CLK
+	select COMMON_CLK_QCOM
+	select QCOM_GDSC
+	help
+	  This enables support for the SDM660 chipset.
+	  If you do not wish to build a kernel that runs
+	  on this chipset,say 'N' here.
 
 config ARCH_SM8150
 	bool "Enable Support for Qualcomm Technologies, Inc. SM8150"
@@ -421,6 +442,77 @@ config MACH_SONY_KEYAKI
 	help
 	  Support for the SONY Mobile Keyaki device
 	  which is based on SONY Tone platform.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
+#
+# SoMC Nile platform
+#
+
+config ARCH_SONY_NILE
+	bool "Sony Mobile Nile platform"
+	depends on ARCH_SDM630
+	help
+	  Support for the SONY Mobile Nile platform
+	  which is based on QCOM SDM630 chipset.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
+config MACH_SONY_PIONEER
+	bool "Sony Mobile Pioneer"
+	depends on ARCH_SONY_NILE
+	help
+	  Support for the SONY Mobile Pioneer device
+	  which is based on SONY Nile platform.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
+config MACH_SONY_DISCOVERY
+	bool "Sony Mobile Discovery"
+	depends on ARCH_SONY_NILE
+	help
+	  Support for the SONY Mobile Discovery device
+	  which is based on SONY Nile platform.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
+config MACH_SONY_VOYAGER
+	bool "Sony Mobile Discovery"
+	depends on ARCH_SONY_NILE
+	help
+	  Support for the SONY Mobile Discovery device
+	  which is based on SONY Nile platform.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
+#
+# SoMC Ganges platform
+#
+
+config ARCH_SONY_GANGES
+	bool "Sony Mobile Ganges platform"
+	depends on ARCH_SDM630 || ARCH_SDM660
+	help
+	  Support for the SONY Mobile Ganges platform
+	  which is based on QCOM SDM630 chipset.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
+config MACH_SONY_KIRIN
+	bool "Sony Mobile Kirin"
+	depends on ARCH_SONY_GANGES && ARCH_SDM630
+	help
+	  Support for the SONY Mobile Kirin device
+	  which is based on SONY Ganges platform.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
+config MACH_SONY_MERMAID
+	bool "Sony Mobile Mermaid"
+	depends on ARCH_SONY_GANGES && ARCH_SDM660
+	help
+	  Support for the SONY Mobile Mermaid device
+	  which is based on SONY Ganges platform.
 	  If you enable this config,
 	  please use SONY Mobile device tree.
 

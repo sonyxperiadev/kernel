@@ -20,6 +20,14 @@ dtb-$(CONFIG_ARCH_QCS405) += qcs403-iot-sku1.dtb \
 endif
 
 ifeq ($(CONFIG_DRM),y)
+# SDM660 - SDE
+dtb-$(CONFIG_MACH_SONY_PIONEER)		+= sdm630-nile-pioneer-sde.dtb
+dtb-$(CONFIG_MACH_SONY_DISCOVERY)	+= sdm630-nile-discovery-sde.dtb
+dtb-$(CONFIG_MACH_SONY_VOYAGER)		+= sdm630-nile-voyager-sde.dtb
+
+dtb-$(CONFIG_MACH_SONY_KIRIN)		+= sdm630-ganges-kirin-sde.dtb
+dtb-$(CONFIG_MACH_SONY_MERMAID)		+= sdm636-ganges-mermaid-sde.dtb
+
 # MSM8996 - SDE
 dtb-$(CONFIG_MACH_SONY_DORA)		+= msm8996-v3.0-pmi8996-tone-dora-sde_generic.dtb
 dtb-$(CONFIG_MACH_SONY_DORA)		+= msm8996-v3-pmi8996-tone-dora-sde_generic.dtb
@@ -29,6 +37,14 @@ dtb-$(CONFIG_MACH_SONY_KEYAKI)		+= msm8996-v3.0-pmi8996-tone-keyaki-sde_generic.
 dtb-$(CONFIG_MACH_SONY_KEYAKI)		+= msm8996-v3-pmi8996-tone-keyaki-sde_generic.dtb
 
 else
+# SDM630 - FBDEV
+dtb-$(CONFIG_MACH_SONY_PIONEER)		+= sdm630-nile-pioneer.dtb
+dtb-$(CONFIG_MACH_SONY_DISCOVERY)	+= sdm630-nile-discovery.dtb
+dtb-$(CONFIG_MACH_SONY_VOYAGER)		+= sdm630-nile-voyager.dtb
+
+dtb-$(CONFIG_MACH_SONY_KIRIN)		+= sdm630-ganges-kirin.dtb
+dtb-$(CONFIG_MACH_SONY_MERMAID)		+= sdm636-ganges-mermaid.dtb
+
 # MSM8996 - FBDEV
 dtb-$(CONFIG_MACH_SONY_DORA)		+= msm8996-v3.0-pmi8996-tone-dora_generic.dtb
 dtb-$(CONFIG_MACH_SONY_DORA)		+= msm8996-v3-pmi8996-tone-dora_generic.dtb

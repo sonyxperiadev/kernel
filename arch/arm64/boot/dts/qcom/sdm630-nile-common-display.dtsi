@@ -1,0 +1,261 @@
+/* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+#include "dsi-panel-td4322-innolux-fhd-cmd.dtsi"
+#include "dsi-panel-td4322-truly-fhd-cmd.dtsi"
+#include "dsi-panel-td4322-csot-fhd-cmd.dtsi"
+#include "dsi-panel-td4328-tianma-fhdplus-cmd.dtsi"
+
+&soc {
+	dsi_panel_pwr_supply_csot: dsi_panel_pwr_supply_csot {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		qcom,panel-supply-entry@0 {
+			reg = <0>;
+			qcom,supply-name = "wqhd-vddio";
+			qcom,supply-min-voltage = <1650000>;
+			qcom,supply-max-voltage = <1950000>;
+			qcom,supply-enable-load = <22000>;
+			qcom,supply-disable-load = <80>;
+			qcom,supply-post-on-sleep = <10>;
+		};
+
+		qcom,panel-supply-entry@1 {
+			reg = <1>;
+			qcom,supply-name = "lab";
+			qcom,supply-min-voltage = <5300000>;
+			qcom,supply-max-voltage = <5700000>;
+			qcom,supply-enable-load = <16000>;
+			qcom,supply-disable-load = <100>;
+			qcom,supply-post-on-sleep = <10>;
+			qcom,supply-post-off-sleep = <10>;
+		};
+
+		qcom,panel-supply-entry@2 {
+			reg = <2>;
+			qcom,supply-name = "ibb";
+			qcom,supply-min-voltage = <5300000>;
+			qcom,supply-max-voltage = <5700000>;
+			qcom,supply-enable-load = <7000>;
+			qcom,supply-disable-load = <100>;
+			qcom,supply-post-on-sleep = <10>;
+			qcom,supply-post-off-sleep = <10>;
+		};
+	};
+
+	dsi_panel_pwr_supply_innolux: dsi_panel_pwr_supply_innolux {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		qcom,panel-supply-entry@0 {
+			reg = <0>;
+			qcom,supply-name = "wqhd-vddio";
+			qcom,supply-min-voltage = <1650000>;
+			qcom,supply-max-voltage = <1950000>;
+			qcom,supply-enable-load = <9000>;
+			qcom,supply-disable-load = <80>;
+			qcom,supply-post-on-sleep = <10>;
+		};
+
+		qcom,panel-supply-entry@1 {
+			reg = <1>;
+			qcom,supply-name = "lab";
+			qcom,supply-min-voltage = <5900000>;
+			qcom,supply-max-voltage = <6100000>;
+			qcom,supply-enable-load = <7500>;
+			qcom,supply-disable-load = <100>;
+			qcom,supply-post-on-sleep = <10>;
+			qcom,supply-post-off-sleep = <10>;
+		};
+
+		qcom,panel-supply-entry@2 {
+			reg = <2>;
+			qcom,supply-name = "ibb";
+			qcom,supply-min-voltage = <5900000>;
+			qcom,supply-max-voltage = <6100000>;
+			qcom,supply-enable-load = <5800>;
+			qcom,supply-disable-load = <100>;
+			qcom,supply-post-on-sleep = <10>;
+			qcom,supply-post-off-sleep = <10>;
+		};
+	};
+
+	dsi_panel_pwr_supply_truly: dsi_panel_pwr_supply_truly {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		qcom,panel-supply-entry@0 {
+			reg = <0>;
+			qcom,supply-name = "wqhd-vddio";
+			qcom,supply-min-voltage = <1700000>;
+			qcom,supply-max-voltage = <1900000>;
+			qcom,supply-enable-load = <7500>;
+			qcom,supply-disable-load = <80>;
+			qcom,supply-post-on-sleep = <10>;
+		};
+
+		qcom,panel-supply-entry@1 {
+			reg = <1>;
+			qcom,supply-name = "lab";
+			qcom,supply-min-voltage = <5400000>;
+			qcom,supply-max-voltage = <5800000>;
+			qcom,supply-enable-load = <9700>;
+			qcom,supply-disable-load = <100>;
+			qcom,supply-post-on-sleep = <10>;
+			qcom,supply-post-off-sleep = <10>;
+		};
+
+		qcom,panel-supply-entry@2 {
+			reg = <2>;
+			qcom,supply-name = "ibb";
+			qcom,supply-min-voltage = <5400000>;
+			qcom,supply-max-voltage = <5800000>;
+			qcom,supply-enable-load = <5800>;
+			qcom,supply-disable-load = <100>;
+			qcom,supply-post-on-sleep = <10>;
+			qcom,supply-post-off-sleep = <10>;
+		};
+	};
+
+	dsi_panel_pwr_supply_tianma: dsi_panel_pwr_supply_tianma {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		qcom,panel-supply-entry@0 {
+			reg = <0>;
+			qcom,supply-name = "wqhd-vddio";
+			qcom,supply-min-voltage = <1650000>;
+			qcom,supply-max-voltage = <1950000>;
+			qcom,supply-enable-load = <32000>;
+			qcom,supply-disable-load = <80>;
+			qcom,supply-post-on-sleep = <10>;
+		};
+
+		qcom,panel-supply-entry@1 {
+			reg = <1>;
+			qcom,supply-name = "lab";
+			qcom,supply-min-voltage = <5000000>;
+			qcom,supply-max-voltage = <6000000>;
+			qcom,supply-enable-load = <11000>;
+			qcom,supply-disable-load = <100>;
+			qcom,supply-post-on-sleep = <10>;
+			qcom,supply-post-off-sleep = <10>;
+		};
+
+		qcom,panel-supply-entry@2 {
+			reg = <2>;
+			qcom,supply-name = "ibb";
+			qcom,supply-min-voltage = <5000000>;
+			qcom,supply-max-voltage = <6000000>;
+			qcom,supply-enable-load = <6000>;
+			qcom,supply-disable-load = <100>;
+			qcom,supply-post-on-sleep = <10>;
+			qcom,supply-post-off-sleep = <10>;
+		};
+	};
+
+};
+
+&dsi_td4322_innolux_fhd_cmd {
+	qcom,mdss-dsi-panel-timings-phy-v2 = [23 1F 07 09 05 03 04 A0
+					      23 1F 07 09 05 03 04 A0
+					      23 1F 07 09 05 03 04 A0
+					      23 1F 07 09 05 03 04 A0
+					      23 1A 08 09 05 03 04 A0];
+	qcom,mdss-dsi-t-clk-post = <0x0D>;
+	qcom,mdss-dsi-t-clk-pre = <0x2F>;
+	qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0A];
+	qcom,mdss-dsi-panel-status-command-state = "dsi_hs_mode";
+	qcom,mdss-dsi-panel-status-value = <0x1C>;
+	qcom,mdss-dsi-panel-status-read-length = <1>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_innolux>;
+	somc,bootloader-panel-detect;
+	somc,pw-on-rst-seq = <0 30>, <1 150>;
+	somc,pw-off-rst-seq = <0 0>;
+};
+
+&dsi_td4322_truly_fhd_cmd {
+	qcom,mdss-dsi-panel-timings-phy-v2 = [23 1E 08 09 05 03 04 A0
+					      23 1E 08 09 05 03 04 A0
+					      23 1E 08 09 05 03 04 A0
+					      23 1E 08 09 05 03 04 A0
+					      23 1A 08 09 05 03 04 A0];
+	qcom,mdss-dsi-t-clk-post = <0x0D>;
+	qcom,mdss-dsi-t-clk-pre = <0x2F>;
+	qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0A];
+	qcom,mdss-dsi-panel-status-command-state = "dsi_hs_mode";
+	qcom,mdss-dsi-panel-status-value = <0x1C>;
+	qcom,mdss-dsi-panel-status-read-length = <1>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_truly>;
+	somc,bootloader-panel-detect;
+	somc,pw-on-rst-seq = <0 30>, <1 150>;
+	somc,pw-off-rst-seq = <0 0>;
+};
+
+&dsi_td4322_csot_fhd_cmd {
+	qcom,mdss-dsi-panel-timings-phy-v2 = [23 1F 07 09 05 03 04 A0
+					      23 1F 07 09 05 03 04 A0
+					      23 1F 07 09 05 03 04 A0
+					      23 1F 07 09 05 03 04 A0
+					      23 19 08 08 05 03 04 A0];
+	qcom,mdss-dsi-t-clk-post = <0x0D>;
+	qcom,mdss-dsi-t-clk-pre = <0x2E>;
+	qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0A];
+	qcom,mdss-dsi-panel-status-command-state = "dsi_hs_mode";
+	qcom,mdss-dsi-panel-status-value = <0x1C>;
+	qcom,mdss-dsi-panel-status-read-length = <1>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_csot>;
+	somc,bootloader-panel-detect;
+	somc,pw-on-rst-seq = <0 30>, <1 150>;
+	somc,pw-off-rst-seq = <0 0>;
+};
+
+&dsi_td4328_tianma_fhdplus_cmd {
+	qcom,mdss-dsi-panel-timings-phy-v2 = [
+	     24 1F 08 09 05 03 04 A0
+	     24 1F 08 09 05 03 04 A0
+	     24 1F 08 09 05 03 04 A0
+	     24 1F 08 09 05 03 04 A0
+	     24 1C 08 09 05 03 04 A0];
+	qcom,mdss-dsi-t-clk-post = <0x0E>;
+	qcom,mdss-dsi-t-clk-pre = <0x31>;
+	qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
+	somc,bootloader-panel-detect;
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,mdss-dsi-panel-status-command = [06 01 00 01 00 00 01 0A];
+	qcom,mdss-dsi-panel-status-command-state = "dsi_hs_mode";
+	qcom,mdss-dsi-panel-status-value = <0x1C>;
+	qcom,mdss-dsi-panel-status-read-length = <1>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_tianma>;
+};
