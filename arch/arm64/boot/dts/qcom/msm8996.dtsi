@@ -1611,8 +1611,7 @@
 
 	rpm_msg_ram: memory@0x200000 {
 		compatible = "qcom,rpm-msg-ram";
-		reg = <0x200000 0x1000>,
-			<0x290000 0x1000>;
+		reg = <0x68000 0x6000>;
 	};
 
 	tcsr_mutex_block: syscon@740000 {
