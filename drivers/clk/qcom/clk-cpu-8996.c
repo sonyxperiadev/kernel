@@ -1310,6 +1310,26 @@ static int qcom_cpu_clk_msm8996_driver_probe(struct platform_device *pdev)
 
 	ret = platform_driver_register(&qcom_cbf_clk_msm8996_driver);
 
+	/*
+	 * Register this handler so that it gets called for each
+	 * processor before we setup the PLLs: this will take
+	 * care of initializing the ACD on all clusters before
+	 * trying to switch to that leg by kickstarting the PLL
+	 * for the first time.
+	 * NOTE: If this doesn't get called on at least one CPU
+	 * per cluster (actually, per-L2!) trying to setup the
+	 * ACD PLL will lockup the CPU and crash the system.
+	 *
+	 * Also, let's make this a BUG, because this driver is
+	 * engineered to require the ACD to be up so, in this case..
+	 *
+	 *                 !!!WARNING!!!
+	 * Without the ACD initialization the CPU would die!
+	 */
+	BUG_ON(cpuhp_setup_state(CPUHP_AP_QCOM_SLEEP_STARTING,
+				"clk-cpu-8996:online",
+				cpu_clk_8996_starting_cpu, NULL));
+
 	ret = qcom_cpu_clk_msm8996_register_clks(dev, hws, regmap_cpu);
 	if (ret)
 		return ret;
@@ -1325,11 +1345,6 @@ static int qcom_cpu_clk_msm8996_driver_probe(struct platform_device *pdev)
 		dev_err(dev, "CRITICAL: Cannot add clock provider!\n");
 		return ret;
 	}
-
-	/* Without the ACD initialization the CPU would die */
-	BUG_ON(cpuhp_setup_state_nocalls(CPUHP_AP_QCOM_SLEEP_STARTING,
-				"clk-cpu-8996:online", 
-				cpu_clk_8996_starting_cpu, NULL));
 
 	/* Once per core.... */
 	clk_prepare_enable(pwrcl_pmux.clkr.hw.clk);
