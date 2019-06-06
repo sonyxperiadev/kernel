@@ -67,7 +67,7 @@
 
 #ifdef CONFIG_DEBUG_FS
 #define IPADMA_MAX_MSG_LEN 1024
-static char dbg_buff[IPADMA_MAX_MSG_LEN];
+static char *dbg_buff;
 static void ipa3_dma_debugfs_init(void);
 static void ipa3_dma_debugfs_destroy(void);
 #else
@@ -1198,10 +1198,10 @@ static ssize_t ipa3_dma_debugfs_reset_statistics(struct file *file,
 	unsigned long missing;
 	s8 in_num = 0;
 
-	if (sizeof(dbg_buff) < count + 1)
+	if (IPADMA_MAX_MSG_LEN < count + 1)
 		return -EFAULT;
 
-	missing = copy_from_user(dbg_buff, ubuf, count);
+	missing = ipa_safe_copy_from_user(dbg_buff, ubuf, count);
 	if (missing)
 		return -EFAULT;
 
@@ -1238,6 +1238,10 @@ static void ipa3_dma_debugfs_init(void)
 		return;
 	}
 
+	dbg_buff = kmalloc(IPADMA_MAX_MSG_LEN * sizeof(char), GFP_KERNEL);
+	if (!dbg_buff)
+		return;
+
 	dfile_info =
 		debugfs_create_file("info", read_write_mode, dent,
 				 0, &ipa3_ipadma_stats_ops);
@@ -1247,12 +1251,14 @@ static void ipa3_dma_debugfs_init(void)
 	}
 	return;
 fail:
+	kfree(dbg_buff);
 	debugfs_remove_recursive(dent);
 }
 
 static void ipa3_dma_debugfs_destroy(void)
 {
 	debugfs_remove_recursive(dent);
+	kfree(dbg_buff);
 }
 
 #endif /* !CONFIG_DEBUG_FS */
