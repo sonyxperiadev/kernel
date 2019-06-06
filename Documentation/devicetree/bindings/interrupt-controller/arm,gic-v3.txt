@@ -62,6 +62,10 @@ Optional
 - arm,spi-ranges : Tuples of GIC SPI interrupt ranges (base, size) indicating
   SPIs available for use as MSIs.
 
+- ignored-save-restore-irqs: Array of u32 elements, specifying the interrupts
+  which are ignored while doing gicd save/restore. Maximum of 10 elements
+  is supported at present.
+
 Sub-nodes:
 
 PPI affinity can be expressed as a single "ppi-partitions" node,
