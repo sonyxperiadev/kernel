@@ -97,8 +97,10 @@ const char *ipa3_hdr_proc_type_name[] = {
 	__stringify(IPA_HDR_PROC_ETHII_TO_ETHII_EX),
 };
 
+#define MAX_DBG_BUFF_SZ		4096
+
 static struct dentry *dent;
-static char dbg_buff[IPA_MAX_MSG_LEN + 1];
+static char *dbg_buff;
 static char *active_clients_buf;
 
 static s8 ep_reg_idx;
@@ -149,10 +151,10 @@ static ssize_t ipa3_write_ep_holb(struct file *file,
 	unsigned long missing;
 	char *sptr, *token;
 
-	if (count >= sizeof(dbg_buff))
+	if (count >= MAX_DBG_BUFF_SZ)
 		return -EFAULT;
 
-	missing = copy_from_user(dbg_buff, buf, count);
+	missing = ipa_safe_copy_from_user(dbg_buff, buf, count);
 	if (missing)
 		return -EFAULT;
 
@@ -2851,6 +2853,10 @@ void ipa3_debugfs_init(void)
 		return;
 	}
 
+	dbg_buff = kmalloc(MAX_DBG_BUFF_SZ * sizeof(char), GFP_KERNEL);
+	if (!dbg_buff)
+		return;
+
 	file = debugfs_create_u32("hw_type", IPA_READ_ONLY_MODE,
 		dent, &ipa3_ctx->ipa_hw_type);
 	if (!file) {
@@ -2921,6 +2927,7 @@ void ipa3_debugfs_init(void)
 	return;
 
 fail:
+	kfree(dbg_buff);
 	debugfs_remove_recursive(dent);
 }
 
@@ -2935,6 +2942,9 @@ void ipa3_debugfs_remove(void)
 		active_clients_buf = NULL;
 	}
 	debugfs_remove_recursive(dent);
+	kfree(dbg_buff);
+
+	ipa_debugfs_remove_stats();
 }
 
 struct dentry *ipa_debugfs_get_root(void)

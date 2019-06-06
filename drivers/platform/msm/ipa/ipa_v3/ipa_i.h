@@ -3026,6 +3026,7 @@ int ipa_hw_stats_init(void);
 int ipa_init_flt_rt_stats(void);
 
 int ipa_debugfs_init_stats(struct dentry *parent);
+void ipa_debugfs_remove_stats(void);
 
 int ipa_init_quota_stats(u32 pipe_bitmask);
 

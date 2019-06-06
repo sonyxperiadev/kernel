@@ -150,7 +150,7 @@ static struct odu_bridge_ctx *odu_bridge_ctx;
 
 #ifdef CONFIG_DEBUG_FS
 #define ODU_MAX_MSG_LEN 512
-static char dbg_buff[ODU_MAX_MSG_LEN];
+static char *dbg_buff;
 #endif
 
 static void odu_bridge_emb_cons_cb(void *priv, enum ipa_dp_evt_type evt,
@@ -659,10 +659,10 @@ static ssize_t odu_debugfs_hw_bridge_mode_write(struct file *file,
 	unsigned long missing;
 	enum odu_bridge_mode mode;
 
-	if (count >= sizeof(dbg_buff))
+	if (count >= ODU_MAX_MSG_LEN)
 		return -EFAULT;
 
-	missing = copy_from_user(dbg_buff, ubuf, count);
+	missing = ipa_safe_copy_from_user(dbg_buff, ubuf, count);
 	if (missing)
 		return -EFAULT;
 
@@ -732,6 +732,10 @@ static void odu_debugfs_init(void)
 		return;
 	}
 
+	dbg_buff = kmalloc(ODU_MAX_MSG_LEN * sizeof(char), GFP_KERNEL);
+	if (!dbg_buff)
+		return;
+
 	dfile_stats =
 		debugfs_create_file("stats", read_only_mode, dent,
 				    0, &odu_stats_ops);
@@ -751,12 +755,14 @@ static void odu_debugfs_init(void)
 
 	return;
 fail:
+	kfree(dbg_buff);
 	debugfs_remove_recursive(dent);
 }
 
 static void odu_debugfs_destroy(void)
 {
 	debugfs_remove_recursive(dent);
+	kfree(dbg_buff);
 }
 
 #else
