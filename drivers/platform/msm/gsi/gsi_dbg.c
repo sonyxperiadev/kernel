@@ -331,7 +331,7 @@ static ssize_t gsi_dump_stats(struct file *file,
 	char *sptr;
 
 	if (count < 1)
-		return -EINVAL;
+		goto print_help;
 
 	sptr = kmalloc((count+1) * sizeof(char), GFP_KERNEL);
 	if (!sptr)
@@ -361,6 +361,7 @@ static ssize_t gsi_dump_stats(struct file *file,
 	return count;
 error:
 	kfree(sptr);
+print_help:
 	TERR("Usage: echo ch_id > stats. Use -1 for all\n");
 	return -EINVAL;
 }
@@ -395,7 +396,7 @@ static ssize_t gsi_enable_dp_stats(struct file *file,
 	char *sptr;
 
 	if (count < 2)
-		return -EINVAL;
+		goto print_help;
 
 	sptr = kmalloc((count+1) * sizeof(char), GFP_KERNEL);
 	if (!sptr)
@@ -447,6 +448,7 @@ static ssize_t gsi_enable_dp_stats(struct file *file,
 	return count;
 error:
 	kfree(sptr);
+print_help:
 	TERR("Usage: echo [+-]ch_id > enable_dp_stats\n");
 	return -EINVAL;
 }
@@ -460,7 +462,7 @@ static ssize_t gsi_set_max_elem_dp_stats(struct file *file,
 	char *sptr, *token;
 
 	if (count < 1)
-		return -EINVAL;
+		goto print_help;
 
 	sptr = kmalloc((count+1) * sizeof(char), GFP_KERNEL);
 	if (!sptr)
@@ -513,6 +515,7 @@ end:
 
 error:
 	kfree(sptr);
+print_help:
 	TERR("Usage: (set) echo <ch_id> <max_elem> > max_elem_dp_stats\n");
 	TERR("Usage: (get) echo <ch_id> > max_elem_dp_stats\n");
 	return -EINVAL;
@@ -587,7 +590,7 @@ static ssize_t gsi_rst_stats(struct file *file,
 	char *sptr;
 
 	if (count < 1)
-		return -EINVAL;
+		goto print_help;
 
 	sptr = kmalloc((count+1) * sizeof(char), GFP_KERNEL);
 	if (!sptr)
@@ -618,6 +621,7 @@ static ssize_t gsi_rst_stats(struct file *file,
 	return count;
 error:
 	kfree(sptr);
+print_help:
 	TERR("Usage: echo ch_id > rst_stats. Use -1 for all\n");
 	return -EINVAL;
 }
@@ -631,7 +635,7 @@ static ssize_t gsi_print_dp_stats(struct file *file,
 	char *sptr;
 
 	if (count < 2)
-		return -EINVAL;
+		goto print_help;
 
 	sptr = kmalloc((count+1) * sizeof(char), GFP_KERNEL);
 	if (!sptr)
@@ -682,6 +686,7 @@ static ssize_t gsi_print_dp_stats(struct file *file,
 	return count;
 error:
 	kfree(sptr);
+print_help:
 	TERR("Usage: echo [+-]ch_id > print_dp_stats\n");
 	return -EINVAL;
 }
@@ -695,7 +700,7 @@ static ssize_t gsi_enable_ipc_low(struct file *file,
 	int ret = 0;
 
 	if (count < 1)
-		return ret;
+		return -EINVAL;
 
 	sptr = kmalloc((count+1) * sizeof(char), GFP_KERNEL);
 	if (!sptr)
