@@ -60,7 +60,9 @@
 				qcom,spm-cbf-mode = "fpc";
 				qcom,spm-l3-mode = "fpc";
 				qcom,psci-mode = <0x23>;
-				qcom,entry-latency-us = <200>;
+				/* TODO: WARNING: time_overhead - last_exit_latency <= 0
+				 * Using safe value time_overhead; please recalculate */
+				qcom,entry-latency-us = <150>;
 				qcom,exit-latency-us = <350>;
 				qcom,min-residency-us = <252>;
 				qcom,min-child-idx = <1>;
@@ -72,7 +74,9 @@
 				qcom,spm-cbf-mode = "fpc";
 				qcom,spm-l3-mode = "fpc";
 				qcom,psci-mode = <0x34>;
-				qcom,entry-latency-us = <9800>;
+				/* TODO: WARNING: time_overhead - last_exit_latency <= 0
+				 * Using safe value time_overhead; please recalculate */
+				qcom,entry-latency-us = <1200>;
 				qcom,exit-latency-us = <11000>;
 				qcom,min-residency-us = <252>;
 				qcom,min-child-idx = <2>;
