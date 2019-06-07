@@ -56,7 +56,7 @@ static int ipa2_irq_mapping[IPA_IRQ_MAX] = {
 	[IPA_PROC_ERR_IRQ]			= 15,
 	[IPA_TX_SUSPEND_IRQ]			= 16,
 	[IPA_TX_HOLB_DROP_IRQ]			= 17,
-	[IPA_BAM_IDLE_IRQ]			= 18,
+	[IPA_BAM_GSI_IDLE_IRQ]			= 18,
 };
 
 static void deferred_interrupt_work(struct work_struct *work)
