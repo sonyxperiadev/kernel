@@ -90,7 +90,9 @@
 				reg = <2>;
 				label = "system-cci-pc";
 				qcom,psci-mode = <2>;
-				qcom,entry-latency-us = <9582>;
+				/* TODO: WARNING: time_overhead - last_exit_latency <= 0
+				 * Using safe value time_overhead; please recalculate */
+				qcom,entry-latency-us = <1158>;
 				qcom,exit-latency-us = <10740>;
 				qcom,min-residency-us = <7800>;
 				qcom,min-child-idx = <3>;
