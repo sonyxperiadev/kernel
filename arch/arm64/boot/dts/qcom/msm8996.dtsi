@@ -1893,10 +1893,14 @@
 			interrupts = <0 131 0>;
 			usb-phy = <&qusb_phy0>, <&ssphy>;
 			tx-fifo-resize;
+			linux,sysdev_is_parent;
 			snps,usb3-u1u2-disable;
 			snps,nominal-elastic-buffer;
 			snps,is-utmi-l1-suspend;
 			snps,hird-threshold = /bits/ 8 <0x0>;
+			usb-core-id = <0>;
+			maximum-speed = "super-speed";
+			dr_mode = "otg";
 		};
 
 		qcom,usbbam@6b04000 {
