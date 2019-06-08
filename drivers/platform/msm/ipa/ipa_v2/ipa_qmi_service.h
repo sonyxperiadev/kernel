@@ -79,15 +79,17 @@ extern struct ipa_qmi_context *ipa_qmi_ctx;
 extern struct mutex ipa_qmi_lock;
 
 struct ipa_qmi_context {
-struct ipa_ioc_ext_intf_prop q6_ul_filter_rule[MAX_NUM_Q6_RULE];
-u32 q6_ul_filter_rule_hdl[MAX_NUM_Q6_RULE];
-int num_ipa_install_fltr_rule_req_msg;
-struct ipa_install_fltr_rule_req_msg_v01
+	struct ipa_ioc_ext_intf_prop q6_ul_filter_rule[MAX_NUM_Q6_RULE];
+	u32 q6_ul_filter_rule_hdl[MAX_NUM_Q6_RULE];
+	int num_ipa_install_fltr_rule_req_msg;
+	struct ipa_install_fltr_rule_req_msg_v01
 		ipa_install_fltr_rule_req_msg_cache[MAX_NUM_QMI_RULE_CACHE];
-int num_ipa_fltr_installed_notif_req_msg;
-struct ipa_fltr_installed_notif_req_msg_v01
+	int num_ipa_fltr_installed_notif_req_msg;
+	struct ipa_fltr_installed_notif_req_msg_v01
 		ipa_fltr_installed_notif_req_msg_cache[MAX_NUM_QMI_RULE_CACHE];
-bool modem_cfg_emb_pipe_flt;
+	bool modem_cfg_emb_pipe_flt;
+	struct sockaddr_qrtr server_sq;
+	struct sockaddr_qrtr client_sq;
 };
 
 struct rmnet_mux_val {
