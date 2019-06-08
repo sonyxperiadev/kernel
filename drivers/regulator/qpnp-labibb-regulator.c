@@ -5318,7 +5318,7 @@ static int __init qpnp_labibb_regulator_init(void)
 {
 	return platform_driver_register(&qpnp_labibb_regulator_driver);
 }
-arch_initcall(qpnp_labibb_regulator_init);
+subsys_initcall(qpnp_labibb_regulator_init);
 
 static void __exit qpnp_labibb_regulator_exit(void)
 {
