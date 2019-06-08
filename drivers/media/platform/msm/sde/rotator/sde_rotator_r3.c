@@ -2576,7 +2576,7 @@ static void sde_hw_rotator_swts_destroy(struct sde_hw_rotator *rot)
 	data = &rot->swts_buf;
 
 	if (data->mapped)
-		sde_hw_rotator_swtc_unmap(rot);
+		sde_hw_rotator_swts_unmap(rot);
 
 	dma_buf_unmap_attachment(data->srcp_attachment, data->srcp_table,
 			DMA_FROM_DEVICE);
