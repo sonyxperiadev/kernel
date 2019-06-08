@@ -1326,7 +1326,7 @@ static int qcom_cpu_clk_msm8996_driver_probe(struct platform_device *pdev)
 	 *                 !!!WARNING!!!
 	 * Without the ACD initialization the CPU would die!
 	 */
-	BUG_ON(cpuhp_setup_state(CPUHP_AP_QCOM_SLEEP_STARTING,
+	BUG_ON(cpuhp_setup_state(CPUHP_AP_QCOM_ACD_STARTING,
 				"clk-cpu-8996:online",
 				cpu_clk_8996_starting_cpu, NULL));
 
