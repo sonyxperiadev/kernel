@@ -3179,13 +3179,15 @@ const char *get_aggr_type_str(enum ipa_aggr_type aggr_type)
 	case (IPA_MBIM_16):
 			return "MBIM_16";
 	case (IPA_HDLC):
-		return "HDLC";
+			return "HDLC";
 	case (IPA_TLP):
 			return "TLP";
 	case (IPA_RNDIS):
 			return "RNDIS";
 	case (IPA_GENERIC):
 			return "GENERIC";
+	case (IPA_COALESCE):
+			return "COALESCE";
 	case (IPA_QCMAP):
 			return "QCMAP";
 	}
