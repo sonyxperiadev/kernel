@@ -22,6 +22,9 @@
 #include <dt-bindings/spmi/spmi.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 
+#define MHZ_TO_MBPS(khz, w) ((khz * 1000 * w) / (1024 * 1024))
+#define BW_OPP_ENTRY(khz, w) opp-khz {opp-hz = /bits/ 64 <MHZ_TO_MBPS(khz, w)>;}
+
 / {
 	model = "Qualcomm Technologies, Inc. MSM 8956";
 	compatible = "qcom,msm8956";
@@ -766,21 +769,27 @@
 			<  614400 >;
 	};
 
+	/* This macro uses khz instead of the usual mhz */
+	ddr_bw_opp_table: ddr-bw-opp-table {
+		compatible = "operating-points-v2";
+		BW_OPP_ENTRY( 52800,  16);	/* 805 MB/s  */
+		BW_OPP_ENTRY( 81600,  16);	/* 1244 MB/s */
+		BW_OPP_ENTRY( 105600, 16);	/* 1611 MB/s */
+		BW_OPP_ENTRY( 192000, 16);	/* 2929 MB/s (SVS)   */
+		BW_OPP_ENTRY( 268800, 16);	/* 4101 MB/s (SVS+)  */
+		BW_OPP_ENTRY( 336000, 16);	/* 5126 MB/s (NOM)   */
+		BW_OPP_ENTRY( 374400, 16);	/* 5712 MB/s (NOM)   */
+		BW_OPP_ENTRY( 403200, 16);	/* 6152 MB/s (TURBO) */
+		BW_OPP_ENTRY( 465600, 16);	/* 7104 MB/s (STURBO)*/
+	};
+
+
 	cpubw: qcom,cpubw {
 		compatible = "qcom,devbw";
 		governor = "performance";
 		qcom,src-dst-ports = <1 512>;
 		qcom,active-only;
-		qcom,bw-tbl =
-			<   805 /*   52.8 MHz */ >,
-			<  1244 /*   81.6 MHz */ >,
-			<  1611 /*  105.6 MHz */ >,
-			<  2929 /*  192   MHz */ >,	/* SVS	 */
-			<  4101 /*  268.8 MHz */ >,     /* SVS+ */
-			<  5126 /*  336.0 MHz */ >,	/* NOM  */
-			<  5712 /*  374.4 MHz */ >,
-			<  6152 /*  403.2 MHz */ >,	/* TURBO */
-			<  7104 /*  465.6 MHz */ >;	/* STURBO */
+		operating-points-v2 = <&ddr_bw_opp_table>;
 	};
 
 	mincpubw: qcom,mincpubw {
@@ -788,16 +797,7 @@
 		governor = "powersave";
 		qcom,src-dst-ports = <1 512>;
 		qcom,active-only;
-		qcom,bw-tbl =
-			<   805 /*   52.8 MHz */ >,
-			<  1244 /*   81.6 MHz */ >,
-			<  1611 /*  105.6 MHz */ >,
-			<  2929 /*  192   MHz */ >,	/* SVS	 */
-			<  4101 /*  268.8 MHz */ >,     /* SVS+ */
-			<  5126 /*  336.0 MHz */ >,	/* NOM  */
-			<  5712 /*  374.4 MHz */ >,
-			<  6152 /*  403.2 MHz */ >,	/* TURBO */
-			<  7104 /*  465.6 MHz */ >;	/* STURBO */
+		operating-points-v2 = <&ddr_bw_opp_table>;
 	};
 
 	qcom,cpu-bwmon@408000 {
@@ -815,16 +815,7 @@
 		qcom,src-dst-ports = <1 512>;
 		qcom,active-only;
 		status="ok";
-		qcom,bw-tbl =
-			<   805 /*   52.8 MHz */ >,
-			<  1244 /*   81.6 MHz */ >,
-			<  1611 /*  105.6 MHz */ >,
-			<  2929 /*  192   MHz */ >,	/* SVS	 */
-			<  4101 /*  268.8 MHz */ >, /* SVS+ */
-			<  5126 /*  336.0 MHz */ >,	/* NOM  */
-			<  5712 /*  374.4 MHz */ >,
-			<  6152 /*  403.2 MHz */ >,	/* TURBO */
-			<  7104 /*  465.6 MHz */ >;	/* STURBO */
+		operating-points-v2 = <&ddr_bw_opp_table>;
 	};
 
 	memlat_cpu4: qcom,memlat-cpu4 {
@@ -833,16 +824,7 @@
 		qcom,src-dst-ports = <1 512>;
 		qcom,active-only;
 		status="ok";
-		qcom,bw-tbl =
-			<   805 /*   52.8 MHz */ >,
-			<  1244 /*   81.6 MHz */ >,
-			<  1611 /*  105.6 MHz */ >,
-			<  2929 /*  192   MHz */ >,	/* SVS	 */
-			<  4101 /*  268.8 MHz */ >, /* SVS+ */
-			<  5126 /*  336.0 MHz */ >,	/* NOM  */
-			<  5712 /*  374.4 MHz */ >,
-			<  6152 /*  403.2 MHz */ >,	/* TURBO */
-			<  7104 /*  465.6 MHz */ >;	/* STURBO */
+		operating-points-v2 = <&ddr_bw_opp_table>;
 	};
 
 	qcom,arm-memlat-mon-0 {

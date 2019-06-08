@@ -23,18 +23,7 @@
 		qcom,src-dst-ports = <26 512>;
 
 		qcom,active-only;
-		qcom,bw-tbl =
-			< 0 >,    /* off                            */
-			< 805  >, /* DDR: 105.6 MHz BIMC:  52.8 MHz */
-			< 1245 >, /* DDR: 163.2 MHz BIMC:  81.6 MHz */
-			< 1611 >, /* DDR: 211.2 MHz BIMC: 105.6 MHz */
-			< 2124 >, /* DDR: 278.4 MHz BIMC: 139.2 MHz */
-			< 2929 >, /* DDR: 384.0 MHz BIMC: 192.0 MHz */
-			< 4101 >, /* DDR: 537.6 MHz BIMC: 268.8 MHz */
-			< 5126 >, /* DDR: 672.0 MHz BIMC: 336.0 MHz */
-			< 5712 >, /* DDR: 748.8 MHz BIMC: 374.4 MHz */
-			< 6152 >, /* DDR: 806.4 MHz BIMC: 403.2 MHz */
-			< 7104 >; /* DDR: 931.2 MHz BIMC: 465.6 MHz */
+		operating-points-v2 = <&ddr_bw_opp_table>;
 	};
 
 	msm_gpu: qcom,kgsl-3d0@01c00000 {
