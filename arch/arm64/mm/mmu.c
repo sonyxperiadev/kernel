@@ -562,11 +562,15 @@ static void __init map_kernel_segment(pgd_t *pgd, void *va_start, void *va_end,
 	vm_area_add_early(vma);
 }
 
+#if defined(CONFIG_STRICT_KERNEL_RWX) || defined(CONFIG_STRICT_MODULE_RWX)
 static int __init parse_rodata(char *arg)
 {
 	return strtobool(arg, &rodata_enabled);
 }
 early_param("rodata", parse_rodata);
+#else
+static bool rodata_enabled = false;
+#endif
 
 #ifdef CONFIG_UNMAP_KERNEL_AT_EL0
 static int __init map_entry_trampoline(void)
