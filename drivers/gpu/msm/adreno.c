@@ -1346,8 +1346,13 @@ static int adreno_probe(struct platform_device *pdev)
 	 */
 	status = gmu_core_probe(device);
 	if (status) {
-		device->pdev = NULL;
-		return status;
+		if (adreno_is_a5xx(adreno_dev) && status == -ENXIO) {
+			/* Adreno 5xx has GPMU without GMU, it's fine! */
+			status = 0;
+		} else {
+			device->pdev = NULL;
+			return status;
+		}
 	}
 
 	/*
