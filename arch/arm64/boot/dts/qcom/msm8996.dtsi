@@ -1839,9 +1839,15 @@
 		};
 	};
 
+	dbm_1p5: dbm@6af8000 {
+		compatible = "qcom,usb-dbm-1p5";
+		reg = <0x06af8000 0x300>;
+
+	};
+
 	usb3: ssusb@6a00000{
 		compatible = "qcom,dwc-usb3-msm";
-		reg = <0x06a00000 0xfc000>,
+		reg = <0x06a00000 0xF8300>,
 			<0x7416000 0x400>;
 		reg-names = "core_base",
 			"ahb2phy_base";
@@ -1854,7 +1860,7 @@
 
 		USB3_GDSC-supply = <&gdsc_usb30>;
 		vbus_dwc3-supply = <&smbcharger_charger_otg>;
-		qcom,usb-dbm = <&dbm_1p5>;
+		qcom,reset-ep-after-lpm-resume;
 		qcom,msm-bus,name = "usb3";
 		qcom,msm-bus,num-cases = <2>;
 		qcom,msm-bus,num-paths = <1>;
@@ -2173,12 +2179,6 @@
 
 	usb_nop_phy: usb_nop_phy {
 		compatible = "usb-nop-xceiv";
-	};
-
-	dbm_1p5: dbm@6af8000 {
-		compatible = "qcom,usb-dbm-1p5";
-		reg = <0x06af8000 0x300>;
-		qcom,reset-ep-after-lpm-resume;
 	};
 
 	qcom,lpass@9300000 {
