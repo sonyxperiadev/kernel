@@ -464,15 +464,12 @@
 };
 
 &pm8994_vadc {
-	chan@79 {
+	usb_id_lv {
 		label = "usb_id_lv";
-		reg = <0x79>;
-		qcom,decimation = <0>;
-		qcom,pre-div-channel-scaling = <0>;
-		qcom,calibration-type = "absolute";
-		qcom,scale-function = <0>;
-		qcom,hw-settle-time = <5>;
-		qcom,fast-avg-setup = <0>;
+		reg = <VADC_LR_MUX10_PU1_AMUX_USB_ID>;
+		qcom,pre-scaling = <1 1>;
+		qcom,ratiometric;
+		qcom,hw-settle-time = <500>;
 	};
 };
 
