@@ -89,6 +89,19 @@
 				qcom,pre-scaling = <1 1>;
 			};
 
+			ref_625mv {
+				label = "ref_625mv";
+				reg = <VADC_REF_625MV>;
+				qcom,pre-scaling = <1 1>;
+			};
+
+			ref_1250v {
+				label = "ref_1250v";
+				reg = <VADC_REF_1250MV>;
+				qcom,pre-scaling = <1 1>;
+			};
+
+
 			ref_gnd {
 				reg = <VADC_GND_REF>;
 			};
