@@ -5121,8 +5121,8 @@ static ssize_t ipa3_write(struct file *file, const char __user *buf,
 	char *dbg_buff = NULL;
 	int ret = 0;
 
-	if (count < 2)
-		return -EFAULT;
+	if (count < 1)
+		return -EINVAL;
 
 	dbg_buff = kmalloc((count + 1) * sizeof(char), GFP_KERNEL);
 	if (!dbg_buff)
@@ -5180,7 +5180,7 @@ static ssize_t ipa3_write(struct file *file, const char __user *buf,
 		} else if (strcmp(dbg_buff, "1")) {
 			IPAERR("got invalid string %s not loading FW\n",
 				dbg_buff);
-			goto end_msg;
+			goto end;
 		}
 		pr_info("IPA is loading with %sMHI configuration\n",
 			ipa3_ctx->ipa_config_is_mhi ? "" : "non ");
