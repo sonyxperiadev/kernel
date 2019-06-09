@@ -206,3 +206,4 @@ msm_drm-$(CONFIG_DRM_MSM) += \
 	msm_debugfs.o
 
 obj-$(CONFIG_DRM_MSM)	+= msm_drm.o
+obj-$(CONFIG_DRM_MSM_DSI_SOMC_PANEL) += dsi-staging/somc_panel/

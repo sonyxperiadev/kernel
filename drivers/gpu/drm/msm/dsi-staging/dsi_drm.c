@@ -728,6 +728,11 @@ int dsi_connector_get_modes(struct drm_connector *connector,
 		if (i == 0)
 			m->type |= DRM_MODE_TYPE_PREFERRED;
 		drm_mode_probed_add(connector, m);
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+		if (modes[i].isDefault)
+			drm_set_preferred_mode(
+				connector, m->hdisplay, m->vdisplay);
+#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 	}
 end:
 	pr_debug("MODE COUNT =%d\n\n", count);

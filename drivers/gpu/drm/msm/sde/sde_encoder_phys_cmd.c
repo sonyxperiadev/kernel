@@ -32,7 +32,11 @@
 #define to_sde_encoder_phys_cmd(x) \
 	container_of(x, struct sde_encoder_phys_cmd, base)
 
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+#define PP_TIMEOUT_MAX_TRIALS	2
+#else
 #define PP_TIMEOUT_MAX_TRIALS	4
+#endif
 
 /*
  * Tearcheck sync start and continue thresholds are empirically found

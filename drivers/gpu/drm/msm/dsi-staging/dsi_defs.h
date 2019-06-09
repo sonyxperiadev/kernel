@@ -249,6 +249,16 @@ enum dsi_dfps_type {
  * @DSI_CMD_SET_POST_TIMING_SWITCH:        Post timing switch
  * @DSI_CMD_SET_QSYNC_ON                   Enable qsync mode
  * @DSI_CMD_SET_QSYNC_OFF                  Disable qsync mode
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+ * @DSI_CMD_SET_M_PLUS_PEAK1000:           M+ mode 1
+ * @DSI_CMD_SET_M_PLUS_PEAK700:            M+ mode 2
+ * @DSI_CMD_SET_M_PLUS_PEAK600:            M+ mode 3
+ * @DSI_CMD_SET_M_PLUS_OFF:                M+ mode 4
+ * @DSI_CMD_SET_FPS_MODE_OFF_RR_OFF:       fps mode off / report rate off
+ * @DSI_CMD_SET_FPS_MODE_OFF_RR_ON:        fps mode off / report rate on
+ * @DSI_CMD_SET_FPS_MODE_ON_RR_OFF:        fps mode on / report rate off
+ * @DSI_CMD_SET_FPS_MODE_ON_RR_ON:         fps mode on / report rate on
+#endif / CONFIG_DRM_SDE_SPECIFIC_PANEL /
  * @DSI_CMD_SET_MAX
  */
 enum dsi_cmd_set_type {
@@ -275,6 +285,24 @@ enum dsi_cmd_set_type {
 	DSI_CMD_SET_POST_TIMING_SWITCH,
 	DSI_CMD_SET_QSYNC_ON,
 	DSI_CMD_SET_QSYNC_OFF,
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+	DSI_CMD_SET_M_PLUS_PEAK1000,
+	DSI_CMD_SET_M_PLUS_PEAK700,
+	DSI_CMD_SET_M_PLUS_PEAK600,
+	DSI_CMD_SET_M_PLUS_OFF,
+	DSI_CMD_SET_FPS_MODE_OFF_RR_OFF,
+	DSI_CMD_SET_FPS_MODE_OFF_RR_ON,
+	DSI_CMD_SET_FPS_MODE_ON_RR_OFF,
+	DSI_CMD_SET_FPS_MODE_ON_RR_ON,
+	DSI_CMD_SET_AOD_ON,
+	DSI_CMD_SET_AOD_LOW,
+	DSI_CMD_SET_AOD_HIGH,
+	DSI_CMD_SET_AOD_OFF,
+	DSI_CMD_SET_VR_ON,
+	DSI_CMD_SET_VR_OFF,
+	DSI_CMD_SET_DISPLAY_OFF,
+	DSI_CMD_SET_DISPLAY_ON,
+#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 	DSI_CMD_SET_MAX
 };
 
@@ -585,6 +613,9 @@ struct dsi_display_mode {
 	u32 pixel_clk_khz;
 	u32 dsi_mode_flags;
 	struct dsi_display_mode_priv_info *priv_info;
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+	bool isDefault;
+#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 };
 
 /**

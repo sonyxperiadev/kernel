@@ -1,0 +1,32 @@
+config DRM_SDE_SPECIFIC_PANEL
+	bool
+
+config DRM_MSM_DSI_SOMC_PANEL
+	depends on DRM_MSM
+	select DRM_SDE_SPECIFIC_PANEL
+	bool
+	prompt "Sony Xperia Unified Panel Driver"
+	default n
+	---help---
+	Restructured Unified display Panel Driver for Xperia Open Devices.
+	Provides support for panels found in various Sony Xperia devices.
+
+config SOMC_PANEL_LABIBB
+	depends on DRM_MSM_DSI_SOMC_PANEL && REGULATOR_QPNP_LABIBB_SOMC
+	bool
+	default y
+	---help---
+	LAB/IBB regulators handling for MSM8994 and later generation boards.
+
+
+choice
+	bool "SoMC Panel variant support"
+
+config SOMC_PANEL_INCELL
+	depends on DRM_MSM_DSI_SOMC_PANEL
+	bool
+	prompt "SoMC Panel for In-Cell"
+	---help---
+	Handles incell panels and touchscreens.
+	You probably want to also enable SOMC_PANEL_LABIBB.
+endchoice
