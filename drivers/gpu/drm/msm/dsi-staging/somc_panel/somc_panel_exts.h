@@ -426,9 +426,7 @@ int dsi_panel_driver_power_off(struct dsi_panel *panel);
 int dsi_panel_driver_post_power_off(struct dsi_panel *panel);
 int dsi_panel_driver_parse_dt(struct dsi_panel *panel,
 				      struct device_node *of_node);
-int dsi_panel_driver_parse_power_cfg(struct device *parent,
-				     struct dsi_panel *panel,
-				     struct device_node *of_node);
+int dsi_panel_driver_parse_power_cfg(struct dsi_panel *panel);
 int dsi_panel_driver_parse_gpios(struct dsi_panel *panel,
 				 struct device_node *of_node);
 int dsi_panel_driver_reset_panel(struct dsi_panel *panel, bool en);

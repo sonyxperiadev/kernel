@@ -57,17 +57,21 @@ static int adc_panel_detect(struct platform_device *pdev,
 {
 	u32 res[ADC_PNUM];
 	int rc = 0;
-	struct device_node *parent;
+	struct device_node *this = *node;
 	struct device_node *next;
+	int i, count;
 	u32 dsi_index = 0;
 	u32 adc_uv = 0;
-
-	parent = of_get_parent(*node);
 
 	adc_uv = lcdid_adc;
 	pr_info("%s: Found panel ADC: %d\n", __func__, adc_uv);
 
-	for_each_child_of_node(parent, next) {
+	count = of_count_phandle_with_args(this, "somc,dsi-panel-list",  NULL);
+	pr_debug("Found %d panels in DT!\n", count);
+
+	for (i = 0; i < count; i++) {
+		next = of_parse_phandle(this, "somc,dsi-panel-list", i);
+
 		rc = of_property_read_u32(next, "somc,dsi-index", &dsi_index);
 		if (rc)
 			dsi_index = 0;

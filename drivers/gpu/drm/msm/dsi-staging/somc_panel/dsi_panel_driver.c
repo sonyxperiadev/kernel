@@ -1089,9 +1089,7 @@ int dsi_panel_driver_parse_dt(struct dsi_panel *panel,
 	return 0;
 }
 
-int dsi_panel_driver_parse_power_cfg(struct device *parent,
-					struct dsi_panel *panel,
-					struct device_node *of_node)
+int dsi_panel_driver_parse_power_cfg(struct dsi_panel *panel)
 {
 	int rc = 0;
 	struct panel_specific_pdata *spec_pdata = NULL;
@@ -1102,13 +1100,13 @@ int dsi_panel_driver_parse_power_cfg(struct device *parent,
 	}
 	spec_pdata = panel->spec_pdata;
 
-	rc = dsi_pwr_of_get_vreg_data(of_node,
+	rc = dsi_pwr_of_get_vreg_data(&panel->utils,
 					  &spec_pdata->touch_power_info,
 					  "qcom,panel-touch-supply-entries");
 	if (rc)
 		pr_notice("%s: Not configured touch vregs\n", __func__);
 
-	rc = dsi_pwr_of_get_vreg_data(of_node,
+	rc = dsi_pwr_of_get_vreg_data(&panel->utils,
 					  &spec_pdata->vspvsn_power_info,
 					  "qcom,panel-vspvsn-supply-entries");
 	if (rc)

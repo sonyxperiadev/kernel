@@ -2153,7 +2153,7 @@ static int dsi_panel_parse_power_cfg(struct dsi_panel *panel)
 	}
 
 #ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
-	rc = dsi_panel_driver_parse_power_cfg(parent, panel, of_node);
+	rc = dsi_panel_driver_parse_power_cfg(panel);
 #endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 
 error:
@@ -2235,7 +2235,7 @@ static int dsi_panel_parse_gpios(struct dsi_panel *panel)
 	}
 
 #ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
-	rc = dsi_panel_driver_parse_gpios(panel, of_node);
+	rc = dsi_panel_driver_parse_gpios(panel, panel->panel_of_node);
 	if (rc) {
 		pr_err("%s: failed to parse specific parameters, rc=%d\n",
 		       __func__, rc);

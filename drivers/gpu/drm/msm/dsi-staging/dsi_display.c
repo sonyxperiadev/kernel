@@ -63,9 +63,18 @@ static struct dsi_display_boot_param boot_displays[MAX_DSI_ACTIVE_DISPLAY] = {
 };
 
 static const struct of_device_id dsi_display_dt_match[] = {
+	{.compatible = "somc,dsi-display"},
 	{.compatible = "qcom,dsi-display"},
 	{}
 };
+
+static struct dsi_display *primary_display;
+static struct dsi_display *secondary_display;
+
+struct dsi_display *dsi_display_get_main_display(void)
+{
+	return primary_display;
+}
 
 static void dsi_display_mask_ctrl_error_interrupts(struct dsi_display *display,
 			u32 mask, bool enable)
@@ -4284,10 +4293,6 @@ static int dsi_display_dfps_calc_front_porch(
 		return -EINVAL;
 	}
 
-	/* Check for always fully reconfigure HS clocks setting */
-	dsi_display_clk_mngr_set_clk_full_reconf(display->clk_mngr,
-			dsi_display_get_clk_always_full_reconf(display));
-
 	/*
 	 * Keep clock, other porches constant, use new fps, calc front porch
 	 * new_vtotal = old_vtotal * (old_fps / new_fps )
@@ -4542,20 +4547,20 @@ static int _dsi_display_dev_init(struct dsi_display *display)
 				display->parser, display->fw->data,
 				display->fw->size);
 
+	rc = dsi_display_parse_dt(display);
+	if (rc) {
+		pr_err("[%s] failed to parse dt, rc=%d\n", display->name, rc);
+		goto error;
+	}
+
 #ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
-	rc = somc_panel_detect(display->pdev, &(display->panel_of), 0);
+	rc = somc_panel_detect(display->pdev, &(display->disp_node), 0);
 	if (rc) {
 		pr_err("[%s] Panel detection failed, rc=%d\n",
 			display->name, rc);
 		goto error;
 	}
 #endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
-
-	rc = dsi_display_parse_dt(display);
-	if (rc) {
-		pr_err("[%s] failed to parse dt, rc=%d\n", display->name, rc);
-		goto error;
-	}
 
 	rc = dsi_display_res_init(display);
 	if (rc) {
@@ -4624,6 +4629,10 @@ int dsi_display_cont_splash_config(void *dsi_display)
 		mutex_unlock(&display->display_lock);
 		return -EINVAL;
 	}
+
+	/* Check for always fully reconfigure HS clocks setting */
+	dsi_display_clk_mngr_set_clk_full_reconf(display->clk_mngr,
+			dsi_display_get_clk_always_full_reconf(display));
 
 	/* Verify whether continuous splash is enabled or not */
 	display->is_cont_splash_enabled =
@@ -5235,11 +5244,11 @@ static int dsi_display_init(struct dsi_display *display)
 	}
 
 #ifdef CONFIG_DRM_MSM_DSI_SOMC_PANEL
-		rc = somc_panel_init(display);
-		if (rc) {
-			pr_err("somc_panel init failed, rc=%d\n", rc);
-			return rc;
-		}
+	rc = somc_panel_init(display);
+	if (rc) {
+		pr_err("somc_panel init failed, rc=%d\n", rc);
+		return rc;
+	}
 #endif
 
 	rc = component_add(&pdev->dev, &dsi_display_comp_ops);
@@ -5252,7 +5261,7 @@ static int dsi_display_init(struct dsi_display *display)
 	if (display->panel->spec_pdata->oled_disp) {
 		dsi_panel_driver_oled_short_det_init_works(display);
 	}
-#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL *
+#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 
 end:
 	return rc;
@@ -5375,6 +5384,11 @@ int dsi_display_dev_probe(struct platform_device *pdev)
 		if (rc)
 			goto end;
 	}
+
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+	primary_display = display;
+	pr_notice("%s: Panel Name = %s\n", __func__, display->name);
+#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 
 	return 0;
 end:
@@ -5590,10 +5604,11 @@ static int dsi_display_ext_get_info(struct drm_connector *connector,
 
 	info->is_connected = connector->status != connector_status_disconnected;
 
-	if (!strcmp(display->display_type, "primary"))
+	if (!strcmp(display->display_type, "primary")) {
 		info->is_primary = true;
-	else
+	} else {
 		info->is_primary = false;
+	}
 
 	info->capabilities |= (MSM_DISPLAY_CAP_VID_MODE |
 		MSM_DISPLAY_CAP_EDID | MSM_DISPLAY_CAP_HOT_PLUG);

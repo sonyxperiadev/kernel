@@ -1364,8 +1364,14 @@ int somc_panel_colormgr_apply_calibrations(int selected_pcc_profile)
 
 int somc_panel_color_manager_init(struct dsi_display *display)
 {
-	struct somc_panel_color_mgr *color_mgr =
-		display->panel->spec_pdata->color_mgr;
+	struct somc_panel_color_mgr *color_mgr = NULL;
+
+	if (display == NULL)
+		return -EINVAL;
+	if (display->panel == NULL)
+		return -EINVAL;
+
+	color_mgr = display->panel->spec_pdata->color_mgr;
 
 	if (!color_mgr) {
 		pr_err("%s: Color Manager is NULL!!!\n", __func__);
