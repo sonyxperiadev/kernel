@@ -35,8 +35,7 @@ enum nat_table_type {
 #define NAT_TABLE_ENTRY_SIZE_BYTE 32
 #define NAT_INTEX_TABLE_ENTRY_SIZE_BYTE 4
 
-static int ipa_nat_vma_fault_remap(
-	 struct vm_area_struct *vma, struct vm_fault *vmf)
+static int ipa_nat_vma_fault_remap(struct vm_fault *vmf)
 {
 	IPADBG("\n");
 	vmf->page = NULL;

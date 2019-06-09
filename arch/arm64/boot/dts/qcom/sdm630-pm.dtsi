@@ -153,7 +153,7 @@
 						qcom,spm-cpu-mode = "ret";
 						qcom,entry-latency-us = <163>;
 						qcom,exit-latency-us = <90>;
-						qcom,min-residency-us = <984>;
+						qcom,min-residency-us = <610>;
 					};
 
 					qcom,pm-cpu-level@2 {  /* C3 */
@@ -163,7 +163,7 @@
 						qcom,psci-cpu-mode = <0x3>;
 						qcom,entry-latency-us = <262>;
 						qcom,exit-latency-us = <343>;
-						qcom,min-residency-us = <1092>;
+						qcom,min-residency-us = <1849>;
 						qcom,is-reset;
 						qcom,use-broadcast-timer;
 					};
@@ -186,7 +186,7 @@
 					qcom,psci-mode = <0x1>;
 					qcom,entry-latency-us = <38>;
 					qcom,exit-latency-us = <51>;
-					qcom,min-residency-us = <91>;
+					qcom,min-residency-us = <89>;
 				};
 
 				qcom,pm-cluster-level@1{ /* D2D */
@@ -195,7 +195,7 @@
 					qcom,psci-mode = <2>;
 					qcom,entry-latency-us = <272>;
 					qcom,exit-latency-us = <329>;
-					qcom,min-residency-us = <984>;
+					qcom,min-residency-us = <602>;
 					qcom,min-child-idx = <1>;
 				};
 
@@ -205,7 +205,7 @@
 					qcom,psci-mode = <3>;
 					qcom,entry-latency-us = <332>;
 					qcom,exit-latency-us = <368>;
-					qcom,min-residency-us = <1092>;
+					qcom,min-residency-us = <1463>;
 					qcom,min-child-idx = <2>;
 				};
 
@@ -215,7 +215,7 @@
 					qcom,psci-mode = <0x4>;
 					qcom,entry-latency-us = <545>;
 					qcom,exit-latency-us = <1609>;
-					qcom,min-residency-us = <6426>;
+					qcom,min-residency-us = <6145>;
 					qcom,min-child-idx = <2>;
 					qcom,is-reset;
 				};
@@ -234,7 +234,7 @@
 						qcom,psci-cpu-mode = <0x1>;
 						qcom,entry-latency-us = <44>;
 						qcom,exit-latency-us = <39>;
-						qcom,min-residency-us = <91>;
+						qcom,min-residency-us = <83>;
 					};
 
 					qcom,pm-cpu-level@1 { /* C2D */
@@ -244,7 +244,7 @@
 						qcom,spm-cpu-mode = "ret";
 						qcom,entry-latency-us = <154>;
 						qcom,exit-latency-us = <87>;
-						qcom,min-residency-us = <984>;
+						qcom,min-residency-us = <498>;
 					};
 
 					qcom,pm-cpu-level@2 { /* C3 */
@@ -254,7 +254,7 @@
 						qcom,psci-cpu-mode = <0x3>;
 						qcom,entry-latency-us = <262>;
 						qcom,exit-latency-us = <301>;
-						qcom,min-residency-us = <1092>;
+						qcom,min-residency-us = <2022>;
 						qcom,is-reset;
 						qcom,use-broadcast-timer;
 					};

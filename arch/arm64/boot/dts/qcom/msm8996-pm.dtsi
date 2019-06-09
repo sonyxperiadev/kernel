@@ -69,7 +69,7 @@
 				qcom,reset-level = <LPM_RESET_LVL_RET>;
 			};
 			qcom,pm-cluster-level@2{ /* E4-M3 */
-				reg = <1>;
+				reg = <2>;
 				label = "system-fpc";
 				qcom,spm-cbf-mode = "fpc";
 				qcom,spm-l3-mode = "fpc";

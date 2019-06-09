@@ -848,18 +848,28 @@ static ssize_t ipa_dma_debugfs_reset_statistics(struct file *file,
 					loff_t *ppos)
 {
 	unsigned long missing;
+	char *sptr;
 	s8 in_num = 0;
+	int ret = 0;
 
-	if (sizeof(dbg_buff) < count + 1)
+	if (count < 1)
 		return -EFAULT;
 
-	missing = copy_from_user(dbg_buff, ubuf, count);
-	if (missing)
-		return -EFAULT;
+	sptr = kmalloc((count+1) * sizeof(char), GFP_KERNEL);
+	if (!sptr)
+		return -ENOMEM;
 
-	dbg_buff[count] = '\0';
-	if (kstrtos8(dbg_buff, 0, &in_num))
-		return -EFAULT;
+	missing = copy_from_user(sptr, ubuf, count);
+	if (missing) {
+		ret = -EFAULT;
+		goto error;
+	}
+
+	sptr[count] = '\0';
+	if (kstrtos8(sptr, 0, &in_num)) {
+		ret = -EFAULT;
+		goto error;
+	}
 	switch (in_num) {
 	case 0:
 		if (ipa_dma_work_pending())
@@ -872,7 +882,10 @@ static ssize_t ipa_dma_debugfs_reset_statistics(struct file *file,
 		IPADMA_ERR("invalid argument: To reset statistics echo 0\n");
 		break;
 	}
-	return count;
+
+error:
+	kfree(sptr);
+	return ret < 0 ? ret : count;
 }
 
 const struct file_operations ipadma_stats_ops = {

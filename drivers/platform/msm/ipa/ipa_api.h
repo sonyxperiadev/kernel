@@ -19,6 +19,11 @@
 #define _IPA_API_H_
 
 struct ipa_api_controller {
+	int (*ipa_connect)(const struct ipa_connect_params *in,
+		struct ipa_sps_params *sps, u32 *clnt_hdl);
+
+	int (*ipa_disconnect)(u32 clnt_hdl);
+
 	int (*ipa_reset_endpoint)(u32 clnt_hdl);
 
 	int (*ipa_clear_endpoint_delay)(u32 clnt_hdl);

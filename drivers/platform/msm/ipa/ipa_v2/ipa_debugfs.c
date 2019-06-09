@@ -132,7 +132,9 @@ static struct dentry *dfile_active_clients;
 static struct dentry *dfile_ipa_rx_poll_timeout;
 static struct dentry *dfile_ipa_poll_iteration;
 
-static char dbg_buff[IPA_MAX_MSG_LEN];
+#define MAX_DBG_BUFF_SZ		4096
+static char *dbg_buff;
+
 static char *active_clients_buf;
 static s8 ep_reg_idx;
 static void *ipa_ipc_low_buff;
@@ -198,10 +200,10 @@ static ssize_t ipa_write_ep_holb(struct file *file,
 	unsigned long missing;
 	char *sptr, *token;
 
-	if (sizeof(dbg_buff) < count + 1)
+	if (MAX_DBG_BUFF_SZ < count + 1)
 		return -EFAULT;
 
-	missing = copy_from_user(dbg_buff, buf, count);
+	missing = ipa_safe_copy_from_user(dbg_buff, buf, count);
 	if (missing)
 		return -EFAULT;
 
@@ -241,10 +243,10 @@ static ssize_t ipa_write_ep_reg(struct file *file, const char __user *buf,
 	unsigned long missing;
 	s8 option = 0;
 
-	if (sizeof(dbg_buff) < count + 1)
+	if (MAX_DBG_BUFF_SZ < count + 1)
 		return -EFAULT;
 
-	missing = copy_from_user(dbg_buff, buf, count);
+	missing = ipa_safe_copy_from_user(dbg_buff, buf, count);
 	if (missing)
 		return -EFAULT;
 
@@ -381,10 +383,10 @@ static ssize_t ipa_write_keep_awake(struct file *file, const char __user *buf,
 	unsigned long missing;
 	s8 option = 0;
 
-	if (sizeof(dbg_buff) < count + 1)
+	if (MAX_DBG_BUFF_SZ < count + 1)
 		return -EFAULT;
 
-	missing = copy_from_user(dbg_buff, buf, count);
+	missing = ipa_safe_copy_from_user(dbg_buff, buf, count);
 	if (missing)
 		return -EFAULT;
 
@@ -1401,10 +1403,10 @@ static ssize_t ipa_write_dbg_cnt(struct file *file, const char __user *buf,
 	unsigned long missing;
 	u32 option = 0;
 
-	if (sizeof(dbg_buff) < count + 1)
+	if (MAX_DBG_BUFF_SZ < count + 1)
 		return -EFAULT;
 
-	missing = copy_from_user(dbg_buff, buf, count);
+	missing = ipa_safe_copy_from_user(dbg_buff, buf, count);
 	if (missing)
 		return -EFAULT;
 
@@ -1773,7 +1775,7 @@ static ssize_t ipa2_clear_active_clients_log(struct file *file,
 	unsigned long missing;
 	s8 option = 0;
 
-	if (sizeof(dbg_buff) < count + 1)
+	if (MAX_DBG_BUFF_SZ < count + 1)
 		return -EFAULT;
 
 	missing = copy_from_user(dbg_buff, ubuf, count);
@@ -1819,7 +1821,7 @@ static ssize_t ipa_write_rx_polling_timeout(struct file *file,
 {
 	s8 polltime = 0;
 
-	if (sizeof(dbg_buff) < count + 1)
+	if (MAX_DBG_BUFF_SZ < count + 1)
 		return -EFAULT;
 
 	if (copy_from_user(dbg_buff, ubuf, count))
@@ -1860,7 +1862,7 @@ static ssize_t ipa_write_polling_iteration(struct file *file,
 {
 	s8 iteration_cnt = 0;
 
-	if (sizeof(dbg_buff) < count + 1)
+	if (MAX_DBG_BUFF_SZ < count + 1)
 		return -EFAULT;
 
 	if (copy_from_user(dbg_buff, ubuf, count))
@@ -1886,7 +1888,7 @@ static ssize_t ipa_enable_ipc_low(struct file *file,
 	unsigned long missing;
 	s8 option = 0;
 
-	if (sizeof(dbg_buff) < count + 1)
+	if (MAX_DBG_BUFF_SZ < count + 1)
 		return -EFAULT;
 
 	missing = copy_from_user(dbg_buff, ubuf, count);
@@ -2020,6 +2022,10 @@ void ipa_debugfs_init(void)
 		IPAERR("fail to create folder in debug_fs.\n");
 		return;
 	}
+
+	dbg_buff = kmalloc(MAX_DBG_BUFF_SZ * sizeof(char), GFP_KERNEL);
+	if (!dbg_buff)
+		return;
 
 	file = debugfs_create_u32("hw_type", read_only_mode,
 			dent, &ipa_ctx->ipa_hw_type);
@@ -2222,6 +2228,7 @@ void ipa_debugfs_init(void)
 	return;
 
 fail:
+	kfree(dbg_buff);
 	debugfs_remove_recursive(dent);
 }
 
@@ -2236,6 +2243,7 @@ void ipa_debugfs_remove(void)
 		active_clients_buf = NULL;
 	}
 	debugfs_remove_recursive(dent);
+	kfree(dbg_buff);
 }
 
 #else /* !CONFIG_DEBUG_FS */

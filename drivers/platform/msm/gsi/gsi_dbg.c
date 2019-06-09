@@ -46,7 +46,7 @@ static ssize_t gsi_dump_evt(struct file *file,
 	uint16_t i;
 	int ret = 0;
 
-	if (count < 2)
+	if (count < 3)
 		return -EINVAL;
 
 	sptr = kmalloc((count+1) * sizeof(char), GFP_KERNEL);
@@ -175,7 +175,7 @@ static ssize_t gsi_dump_ch(struct file *file,
 	uint16_t i;
 	int ret = 0;
 
-	if (count < 2)
+	if (count < 3)
 		return -EINVAL;
 
 	sptr = kmalloc((count+1) * sizeof(char), GFP_KERNEL);
@@ -330,12 +330,12 @@ static ssize_t gsi_dump_stats(struct file *file,
 	int min, max;
 	char *sptr;
 
-	if (count < 2)
-		return -EINVAL;
+	if (count < 1)
+		goto print_help;
 
 	sptr = kmalloc((count+1) * sizeof(char), GFP_KERNEL);
 	if (!sptr)
-		return -EINVAL;
+		return -ENOMEM;
 
 	if(copy_from_user(sptr, buf, count))
 		goto error;
@@ -361,6 +361,7 @@ static ssize_t gsi_dump_stats(struct file *file,
 	return count;
 error:
 	kfree(sptr);
+print_help:
 	TERR("Usage: echo ch_id > stats. Use -1 for all\n");
 	return -EINVAL;
 }
@@ -395,7 +396,7 @@ static ssize_t gsi_enable_dp_stats(struct file *file,
 	char *sptr;
 
 	if (count < 2)
-		return -EINVAL;
+		goto print_help;
 
 	sptr = kmalloc((count+1) * sizeof(char), GFP_KERNEL);
 	if (!sptr)
@@ -447,6 +448,7 @@ static ssize_t gsi_enable_dp_stats(struct file *file,
 	return count;
 error:
 	kfree(sptr);
+print_help:
 	TERR("Usage: echo [+-]ch_id > enable_dp_stats\n");
 	return -EINVAL;
 }
@@ -459,8 +461,8 @@ static ssize_t gsi_set_max_elem_dp_stats(struct file *file,
 	unsigned long missing;
 	char *sptr, *token;
 
-	if (count < 2)
-		return -EINVAL;
+	if (count < 1)
+		goto print_help;
 
 	sptr = kmalloc((count+1) * sizeof(char), GFP_KERNEL);
 	if (!sptr)
@@ -513,6 +515,7 @@ end:
 
 error:
 	kfree(sptr);
+print_help:
 	TERR("Usage: (set) echo <ch_id> <max_elem> > max_elem_dp_stats\n");
 	TERR("Usage: (get) echo <ch_id> > max_elem_dp_stats\n");
 	return -EINVAL;
@@ -586,8 +589,8 @@ static ssize_t gsi_rst_stats(struct file *file,
 	int min, max;
 	char *sptr;
 
-	if (count < 2)
-		return -EINVAL;
+	if (count < 1)
+		goto print_help;
 
 	sptr = kmalloc((count+1) * sizeof(char), GFP_KERNEL);
 	if (!sptr)
@@ -618,6 +621,7 @@ static ssize_t gsi_rst_stats(struct file *file,
 	return count;
 error:
 	kfree(sptr);
+print_help:
 	TERR("Usage: echo ch_id > rst_stats. Use -1 for all\n");
 	return -EINVAL;
 }
@@ -631,7 +635,7 @@ static ssize_t gsi_print_dp_stats(struct file *file,
 	char *sptr;
 
 	if (count < 2)
-		return -EINVAL;
+		goto print_help;
 
 	sptr = kmalloc((count+1) * sizeof(char), GFP_KERNEL);
 	if (!sptr)
@@ -682,6 +686,7 @@ static ssize_t gsi_print_dp_stats(struct file *file,
 	return count;
 error:
 	kfree(sptr);
+print_help:
 	TERR("Usage: echo [+-]ch_id > print_dp_stats\n");
 	return -EINVAL;
 }
@@ -694,12 +699,12 @@ static ssize_t gsi_enable_ipc_low(struct file *file,
 	char *sptr;
 	int ret = 0;
 
-	if (count < 2)
-		return ret;
+	if (count < 1)
+		return -EINVAL;
 
 	sptr = kmalloc((count+1) * sizeof(char), GFP_KERNEL);
 	if (!sptr)
-		return ret;
+		return -ENOMEM;
 
 	missing = copy_from_user(sptr, ubuf, count);
 	if (missing) {
