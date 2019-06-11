@@ -52,11 +52,11 @@ static int __init lcdid_adc_setup(char *str)
 }
 __setup("lcdid_adc=", lcdid_adc_setup);
 
-static int adc_panel_detect(struct platform_device *pdev,
+static int adc_panel_detect(struct dsi_display *display,
 			    struct device_node **node, u32 dev_index)
 {
 	u32 res[ADC_PNUM];
-	int rc = 0;
+	int rc = -ENOENT;
 	struct device_node *this = *node;
 	struct device_node *next;
 	int i, count;
@@ -84,7 +84,7 @@ static int adc_panel_detect(struct platform_device *pdev,
 					res[ADC_RNG_MAX] < adc_uv)
 			continue;
 
-		*node = next;
+		display->panel_of = next;
 
 		/* If we have just detected the default panel, go on */
 		if (res[ADC_RNG_MIN] == 0 && res[ADC_RNG_MAX] == 0x7fffffff)
@@ -95,7 +95,7 @@ static int adc_panel_detect(struct platform_device *pdev,
 	return rc;
 }
 
-int somc_panel_detect(struct platform_device *pdev,
+int somc_panel_detect(struct dsi_display *display,
 		      struct device_node **node, u32 cell_idx)
 {
 	bool use_cmd_detect =
@@ -119,7 +119,7 @@ int somc_panel_detect(struct platform_device *pdev,
 	}
 
 	pr_info("%s: Starting ADC Panel Detection...\n", __func__);
-	rc = adc_panel_detect(pdev, node, cell_idx);
+	rc = adc_panel_detect(display, node, cell_idx);
 	if (rc < 0) {
 		pr_err("%s: ADC Detection failed!!!\n", __func__);
 		goto end;

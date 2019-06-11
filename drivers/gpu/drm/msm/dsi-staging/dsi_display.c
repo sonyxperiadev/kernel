@@ -4554,7 +4554,7 @@ static int _dsi_display_dev_init(struct dsi_display *display)
 	}
 
 #ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
-	rc = somc_panel_detect(display->pdev, &(display->disp_node), 0);
+	rc = somc_panel_detect(display, &(display->disp_node), 0);
 	if (rc) {
 		pr_err("[%s] Panel detection failed, rc=%d\n",
 			display->name, rc);

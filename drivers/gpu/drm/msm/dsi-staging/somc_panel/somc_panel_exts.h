@@ -368,7 +368,7 @@ struct panel_specific_pdata {
 };
 
 
-int somc_panel_detect(struct platform_device *pdev,
+int somc_panel_detect(struct dsi_display *display,
 		      struct device_node **node, u32 cell_idx);
 
 int somc_panel_regulators_get(struct dsi_panel *panel);
