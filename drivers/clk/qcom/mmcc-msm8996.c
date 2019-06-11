@@ -128,8 +128,8 @@ static const struct parent_map mmss_xo_dsi0pll_dsi1pll_map[] = {
 
 static const char * const mmss_xo_dsi0pll_dsi1pll[] = {
 	"xo",
-	"dsi0pll_pixel_clk_mux",
-	"dsi1pll_pixel_clk_mux"
+	"dsi0_phy_pll_out_dsiclk",
+	"dsi1_phy_pll_out_dsiclk"
 };
 
 static const struct parent_map mmss_xo_gpll0_gpll0_div_map[] = {
@@ -152,8 +152,8 @@ static const struct parent_map mmss_xo_dsibyte_map[] = {
 
 static const char * const mmss_xo_dsibyte[] = {
 	"xo",
-	"dsi0pll_byte_clk_mux",
-	"dsi1pll_byte_clk_mux"
+	"dsi0_phy_pll_out_byteclk",
+	"dsi1_phy_pll_out_byteclk"
 };
 
 static const struct parent_map mmss_xo_mmpll0_gpll0_gpll0_div_map[] = {
