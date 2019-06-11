@@ -20,7 +20,7 @@
 "fpsimd.fpsimd_settings=1 app_setting.use_app_setting=1 \
 app_setting.use_32bit_app_setting=1 sched_enable_hmp=1 \
 rcupdate.rcu_expedited=1 \
-msm_drm.dsi_display0=dsi_panel_cmd_display:config0";
+msm_drm.dsi_display0=dsi_panel_somc_tone_cmd:config0";
 
 	};
 };
@@ -83,17 +83,40 @@ msm_drm.dsi_display0=dsi_panel_cmd_display:config0";
 		};
 	};
 
+	sde_dsi_tone_panels: qcom,dsi-display@8 {
+		label = "dsi_panel_somc_tone_cmd";
+		qcom,display-type = "primary";
+
+		qcom,dsi-ctrl-num = <0>;
+		qcom,dsi-phy-num = <0>;
+		qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+
+		qcom,dsi-panel = <&dsi_lgd_synaptics_cmd_8>;
+
+		somc,dsi-panel-list = <
+				&dsi_auo_synaptics_cmd_4
+				&dsi_jdi_synaptics_cmd_6
+				&dsi_lgd_synaptics_cmd_8
+				&dsi_sharp_synaptics_cmd_3
+				&dsi_sharp_synaptics_cmd_9>;
+	};
+
 	/* SDE */
 	dsi_panel_cmd_display: qcom,dsi-display@12 {
 		compatible = "somc,dsi-display";
-		label = "dsi_panel_cmd_display";
-		qcom,display-type = "primary";
+		label = "primary";
 
 		qcom,dsi-ctrl = <&mdss_dsi0>;
 		qcom,dsi-phy = <&mdss_dsi_phy0>;
 		clocks = <&mdss_dsi0_pll BYTE0_MUX_CLK>,
-			<&mdss_dsi0_pll PIX0_MUX_CLK>;
-		clock-names = "src_byte_clk", "src_pixel_clk";
+			 <&mdss_dsi0_pll PIX0_MUX_CLK>,
+			 <&mdss_dsi0_pll BYTE0_SRC_CLK>,
+			 <&mdss_dsi0_pll PIX0_SRC_CLK>,
+			 <&mdss_dsi0_pll SHADOW_BYTE0_SRC_CLK>,
+			 <&mdss_dsi0_pll SHADOW_PIX0_SRC_CLK>;
+		clock-names = "mux_byte_clk0", "mux_pixel_clk0",
+			"src_byte_clk0", "src_pixel_clk0",
+			"shadow_byte_clk0", "shadow_pixel_clk0";
 
 		pinctrl-names = "panel_active", "panel_suspend",
 				"sde_touch_active", "sde_touch_suspend";
@@ -105,6 +128,8 @@ msm_drm.dsi_display0=dsi_panel_cmd_display:config0";
 		qcom,dsi-display-active;
 
 		qcom,platform-te-gpio = <&tlmm 10 0>;
+		qcom,panel-te-source = <0>;
+
 		qcom,platform-reset-gpio = <&tlmm 8 0>;
 		qcom,platform-vddio-gpio = <&tlmm 51 0>;
 		qcom,platform-touch-vddio-en-gpio = <&tlmm 50 0>;
@@ -114,7 +139,13 @@ msm_drm.dsi_display0=dsi_panel_cmd_display:config0";
 		touch-avdd-supply = <&pm8994_l22>;
 		lab-supply = <&lab_regulator>;
 		ibb-supply = <&ibb_regulator>;
+
+		qcom,dsi-display-list = <&sde_dsi_tone_panels>;
 	};	
+};
+
+&mdss_mdp {
+	connectors = <&sde_wb &dsi_panel_cmd_display>; // &sde_hdmi_tx &sde_hdmi>;
 };
 
 &mdss_dsi0 {
