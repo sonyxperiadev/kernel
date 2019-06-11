@@ -3237,6 +3237,32 @@
 	};
 };
 
+&pmi8994_lpg {
+	qcom,sync-channel-ids = <1 2 3>;
+};
+
+&pmi8994_rgb_led {
+	/* Bootloader properties only */
+	qcom,fs-curr-ua = <20000>;
+	qcom,led-strings-list = [00 01 02];
+	somc,init-br-ua = <10000>;
+	somc-s1,br-power-save-ua = <800>;
+	qcom,ilim-ma = <660>;
+	somc,bl-scale-enabled;
+
+	/*
+	 * Kernel driver
+	 * Tone has a different mapping for the PWM LEDs:
+	 * the red and blue have got swapped LPG channels.
+	 */
+	red {
+		pwms = <&pmi8994_lpg 2 1000000>;
+	};
+	blue {
+		pwms = <&pmi8994_lpg 0 1000000>;
+	};
+};
+
 &usb3 {
 	dwc3@6a00000 {
 		maximum-speed = "high-speed";

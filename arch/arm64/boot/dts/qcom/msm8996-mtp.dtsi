@@ -548,13 +548,6 @@
 	};
 };
 
-&pmi8994_pwm_4 {
-	qcom,channel-owner = "lcd_bl";
-	qcom,dtest-line = <4>;
-	qcom,dtest-output = <1>;
-	status = "okay";
-};
-
 &pmi8994_mpps {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pmi_mpp1_def &pmi_mpp4_def>;

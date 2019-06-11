@@ -59,68 +59,6 @@
 	somc,limit-usb-5v-level = <8>;
 };
 
-&spmi_bus {
-	pmi8994@3 {
-		qcom,leds@d000 {
-			status = "okay";
-			qcom,rgb_sync = <1>;
-
-			qcom,rgb_0 {
-				somc,pwm-channel = <2>;
-				linux,name = "led:rgb_red";
-				/delete-property/ linux,default-trigger;
-				somc,color_variation_max_num = <1>;
-				somc,max_current = <0 320 320>;
-				qcom,start-idx = <0>;
-				qcom,idx-len = <8>;
-				qcom,lut-flags = <31>;
-				qcom,pause-lo = <500>;
-				qcom,pause-hi = <500>;
-				qcom,ramp-step-ms = <200>;
-				qcom,duty-pcts = [00 0E 1C 2A 38 46 54 64];
-				qcom,use-blink;
-			};
-			qcom,rgb_1 {
-				somc,pwm-channel = <1>;
-				linux,name = "led:rgb_green";
-				/delete-property/ linux,default-trigger;
-				somc,color_variation_max_num = <1>;
-				somc,max_current = <0 511 511>;
-				qcom,start-idx = <0>;
-				qcom,idx-len = <8>;
-				qcom,lut-flags = <31>;
-				qcom,pause-lo = <500>;
-				qcom,pause-hi = <500>;
-				qcom,ramp-step-ms = <200>;
-				qcom,duty-pcts = [00 0E 1C 2A 38 46 54 64];
-				qcom,use-blink;
-			};
-			qcom,rgb_2 {
-				somc,pwm-channel = <0>;
-				linux,name = "led:rgb_blue";
-				/delete-property/ linux,default-trigger;
-				somc,color_variation_max_num = <1>;
-				somc,max_current = <0 511 224>;
-				qcom,start-idx = <0>;
-				qcom,idx-len = <8>;
-				qcom,lut-flags = <31>;
-				qcom,pause-lo = <500>;
-				qcom,pause-hi = <500>;
-				qcom,ramp-step-ms = <200>;
-				qcom,duty-pcts = [00 0E 1C 2A 38 46 54 64];
-				qcom,use-blink;
-			};
-		};
-		qcom,leds@d800 {
-			qcom,fs-curr-ua = <20000>;
-			qcom,led-strings-list = [00 01 02];
-			somc,init-br-ua = <10000>;
-			somc-s1,br-power-save-ua = <800>;
-			qcom,ilim-ma = <660>;
-		};
-	};
-};
-
 &usb3 {
 	io-channels = <&pm8994_vadc VADC_LR_MUX10_USB_ID>;
 	id_polling_use;
