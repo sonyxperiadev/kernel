@@ -185,6 +185,7 @@ enum wled_version {
 	WLED_PMI8998 = 4,
 	WLED_PM660L,
 	WLED_PM8150L,
+	WLED_PMI8994,
 };
 
 enum wled_flash_mode {
@@ -197,6 +198,7 @@ static const int version_table[] = {
 	[0] = WLED_PMI8998,
 	[1] = WLED_PM660L,
 	[2] = WLED_PM8150L,
+	[3] = WLED_PMI8994,
 };
 
 struct wled_config {
@@ -282,7 +284,8 @@ static int wled_flash_setup(struct wled *wled);
 
 static inline bool is_wled4(struct wled *wled)
 {
-	if (*wled->version == WLED_PMI8998 || *wled->version == WLED_PM660L)
+	if (*wled->version == WLED_PMI8998 || *wled->version == WLED_PM660L ||
+	    *wled->version == WLED_PMI8994)
 		return true;
 
 	return false;
@@ -1366,6 +1369,15 @@ struct wled_var_cfg {
 	int size;
 };
 
+static const u32 wled4_pmi8994_boost_i_limit_values[] = {
+	105, 385, 660, 980, 1150, 1420, 1700, 1980,
+};
+
+static const struct wled_var_cfg wled4_pmi8994_boost_i_limit_cfg = {
+	.values = wled4_pmi8994_boost_i_limit_values,
+	.size = ARRAY_SIZE(wled4_pmi8994_boost_i_limit_values),
+};
+
 static const u32 wled4_boost_i_limit_values[] = {
 	105, 280, 450, 620, 970, 1150, 1300, 1500,
 };
@@ -1393,6 +1405,15 @@ static const u32 wled_fs_current_values[] = {
 static const struct wled_var_cfg wled_fs_current_cfg = {
 	.values = wled_fs_current_values,
 	.size = ARRAY_SIZE(wled_fs_current_values),
+};
+
+static const u32 wled4_pmi8994_ovp_values[] = {
+	31000, 29500, 19400, 17800,
+};
+
+static const struct wled_var_cfg wled4_pmi8994_ovp_cfg = {
+	.values = wled4_pmi8994_ovp_values,
+	.size = ARRAY_SIZE(wled4_pmi8994_ovp_values),
 };
 
 static const u32 wled4_ovp_values[] = {
@@ -2095,6 +2116,33 @@ static int wled_configure(struct wled *wled, struct device *dev)
 	};
 
 	const struct wled_u32_opts *u32_opts;
+	const struct wled_u32_opts wled4_pmi8994_opts[] = {
+		{
+			.name = "qcom,boost-current-limit",
+			.val_ptr = &cfg->boost_i_limit,
+			.cfg = &wled4_pmi8994_boost_i_limit_cfg,
+		},
+		{
+			.name = "qcom,fs-current-limit",
+			.val_ptr = &cfg->fs_current,
+			.cfg = &wled_fs_current_cfg,
+		},
+		{
+			.name = "qcom,ovp",
+			.val_ptr = &cfg->ovp,
+			.cfg = &wled4_pmi8994_ovp_cfg,
+		},
+		{
+			.name = "qcom,switching-freq",
+			.val_ptr = &cfg->switch_freq,
+			.cfg = &wled_switch_freq_cfg,
+		},
+		{
+			.name = "qcom,string-cfg",
+			.val_ptr = &cfg->string_cfg,
+			.cfg = &wled_string_cfg,
+		},
+	};
 	const struct wled_u32_opts wled4_opts[] = {
 		{
 			.name = "qcom,boost-current-limit",
@@ -2211,8 +2259,13 @@ static int wled_configure(struct wled *wled, struct device *dev)
 		*cfg = wled5_config_defaults;
 		wled->cabc_config = wled5_cabc_config;
 	} else if (is_wled4(wled)) {
-		u32_opts = wled4_opts;
-		size = ARRAY_SIZE(wled4_opts);
+		if (*wled->version == WLED_PMI8994) {
+			u32_opts = wled4_pmi8994_opts;
+			size = ARRAY_SIZE(wled4_pmi8994_opts);
+		} else {
+			u32_opts = wled4_opts;
+			size = ARRAY_SIZE(wled4_opts);
+		}
 		*cfg = wled4_config_defaults;
 		wled->cabc_config = wled4_cabc_config;
 	} else {
@@ -2378,6 +2431,7 @@ static const struct of_device_id wled_match_table[] = {
 	{ .compatible = "qcom,pmi8998-spmi-wled", .data = &version_table[0] },
 	{ .compatible = "qcom,pm8150l-spmi-wled", .data = &version_table[2] },
 	{ .compatible = "qcom,pm6150l-spmi-wled", .data = &version_table[2] },
+	{ .compatible = "qcom,pmi8994-spmi-wled", .data = &version_table[3] },
 	{ },
 };
 
