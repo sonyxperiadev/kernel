@@ -505,33 +505,23 @@
 		};
 
 		pmi8994_wled: qcom,leds@d800 {
-			compatible = "qcom,qpnp-wled";
-			reg = <0xd800 0x100>,
-				<0xd900 0x100>,
-				<0xdc00 0x100>,
-				<0xde00 0x100>;
-			reg-names = "qpnp-wled-ctrl-base",
-					"qpnp-wled-sink-base",
-					"qpnp-wled-ibb-base",
-					"qpnp-wled-lab-base";
-			interrupts = <0x3 0xd8 0x2 IRQ_TYPE_NONE>;
+			compatible = "qcom,pmi8994-spmi-wled";
+			reg = <0xd800 0x100>, <0xd900 0x100>;
+			reg-names = "wled-ctrl-base", "wled-sink-base";
+			interrupts = <0x3 0xd8 0x2 IRQ_TYPE_EDGE_RISING>;
 			interrupt-names = "sc-irq";
+			label = "backlight";
+
 			status = "okay";
+			qcom,ovp = <29500>;
+			qcom,fs-current-limit = <25000>;
+			qcom,boost-current-limit = <980>;
+			qcom,switching-freq = <800>; /* 800KHz */
+			qcom,string-cfg = <15>; /* 00 01 02 03 */
+
 			linux,name = "wled";
 			linux,default-trigger = "bkl-trigger";
-			qcom,fdbk-output = "auto";
-			qcom,vref-uv = <350000>;
-			qcom,switch-freq-khz = <800>;
-			qcom,ovp-mv = <29500>;
-			qcom,ilim-ma = <980>;
-			qcom,boost-duty-ns = <26>;
-			qcom,mod-freq-khz = <9600>;
-			qcom,dim-mode = "hybrid";
-			qcom,hyb-thres = <625>;
-			qcom,sync-dly-us = <800>;
-			qcom,fs-curr-ua = <25000>;
-			qcom,cons-sync-write-delay-us = <1000>;
-			qcom,led-strings-list = [00 01 02 03];
+
 			qcom,en-ext-pfet-sc-pro;
 			qcom,pmic-revid = <&pmi8994_revid>;
 		};
