@@ -265,9 +265,9 @@
 		       label = "dfps_data_mem";
 		};
 
-		cont_splash_mem: cont_splash_mem@83401000 {
+		cont_splash_region: cont_splash_region@83401000 {
 			reg = <0 0x83401000 0 0x23FF000>;
-			label = "cont_splash_mem";
+			label = "cont_splash_region";
 		};
 
 		cont_splash_mem_hdmi: cont_splash_mem_hdmi@b1c00000 {

@@ -20,8 +20,6 @@
 			"vbif_phys",
 			"vbif_nrt_phys";
 
-		contiguous-region = <&cont_splash_mem &cont_splash_mem_hdmi>;
-
 		/* clock and supply entries */
 		clocks = <&clock_mmss MDSS_AHB_CLK>,
 			 <&clock_mmss MDSS_AXI_CLK>,
