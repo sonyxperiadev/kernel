@@ -670,8 +670,10 @@ static inline u32 sde_hw_ctl_get_intf(struct sde_hw_ctl *ctx)
 	c = &ctx->hw;
 	ctl_top = SDE_REG_READ(c, CTL_TOP);
 
-	intf_active = (ctl_top > 0) ?
-		BIT(ctl_top - 1) : 0;
+	if (ctl_top == 0)
+		return 0;
+
+	intf_active = (ctl_top >> 4) & 0xf;
 
 	return intf_active;
 }
