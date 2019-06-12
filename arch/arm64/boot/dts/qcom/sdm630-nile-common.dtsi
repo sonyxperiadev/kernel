@@ -576,45 +576,9 @@
 };
 
 /* PM660L */
-&red_led {
-	linux,name = "led:rgb_red";
-	qcom,start-idx = <0>;
-	qcom,lut-flags = <31>;
-	qcom,pause-lo = <500>;
-	qcom,pause-hi = <500>;
-	qcom,ramp-step-ms = <50>;
-	qcom,duty-pcts =
-		[00 0E 1C 2A 38 46 54 64];
-	qcom,use-blink;
-};
-
-&green_led {
-	linux,name = "led:rgb_green";
-	qcom,start-idx = <0>;
-	qcom,lut-flags = <31>;
-	qcom,pause-lo = <500>;
-	qcom,pause-hi = <500>;
-	qcom,ramp-step-ms = <50>;
-	qcom,duty-pcts =
-		[00 0E 1C 2A 38 46 54 64];
-	qcom,use-blink;
-};
-
-&blue_led {
-	linux,name = "led:rgb_blue";
-	qcom,start-idx = <0>;
-	qcom,lut-flags = <31>;
-	qcom,pause-lo = <500>;
-	qcom,pause-hi = <500>;
-	qcom,ramp-step-ms = <50>;
-	qcom,duty-pcts =
-		[00 0E 1C 2A 38 46 54 64];
-	qcom,use-blink;
-};
-
 &pm660l_wled {
-	qcom,fs-curr-ua = <17500>;
-	qcom,led-strings-list = [00 01];
+	qcom,fs-current-limit = <17500>;
+	qcom,string-cfg = <5>; /* 00 01 */
 };
 
 &pm660l_torch0 {
