@@ -73,112 +73,81 @@
 		#address-cells = <2>;
 		#size-cells = <0>;
 
-		pm660l_pwm_1: pwm@b100 {
-			compatible = "qcom,qpnp-pwm";
-			reg = <0xb100 0x100>,
-			      <0xb042 0x7e>;
-			reg-names = "qpnp-lpg-channel-base",
-					"qpnp-lpg-lut-base";
-			qcom,channel-id = <1>;
-			qcom,lpg-lut-size = <0x7e>;
-			qcom,supported-sizes = <6>, <9>;
-			qcom,ramp-index = <0>;
+		pm660l_lpg: qcom,pwms@b100 {
+			compatible = "qcom,pwm-lpg";
+			reg = <0xb100 0x200>, <0xb042 0x7e>;
+			reg-names = "lpg-base", "lut-base";
 			#pwm-cells = <2>;
-		};
+			qcom,pbs-client = <&pm660l_pbs>;
+			qcom,num-lpg-channels = <4>;
+			qcom,lut-patterns = <0 10 20 30 40 50 60 70 80 90 100
+						90 80 70 60 50 40 30 20 10 0>;
 
-		pm660l_pwm_2: pwm@b200 {
-			compatible = "qcom,qpnp-pwm";
-			reg = <0xb200 0x100>,
-			      <0xb042 0x7e>;
-			reg-names = "qpnp-lpg-channel-base",
-					 "qpnp-lpg-lut-base";
-			qcom,channel-id = <2>;
-			qcom,lpg-lut-size = <0x7e>;
-			qcom,supported-sizes = <6>, <9>;
-			qcom,ramp-index = <1>;
-			#pwm-cells = <2>;
-		};
-
-		pm660l_pwm_3: pwm@b300 {
-			compatible = "qcom,qpnp-pwm";
-			reg = <0xb300 0x100>,
-			      <0xb042 0x7e>;
-			reg-names = "qpnp-lpg-channel-base",
-					 "qpnp-lpg-lut-base";
-			qcom,channel-id = <3>;
-			qcom,lpg-lut-size = <0x7e>;
-			qcom,supported-sizes = <6>, <9>;
-			qcom,ramp-index = <2>;
-			#pwm-cells = <2>;
-			qcom,period = <6000000>;
-
-			qcom,lpg {
-				label = "lpg";
-				cell-index = <0>;
-				qcom,duty-percents =
-					<0x01 0x0a 0x14 0x1e 0x28 0x32 0x3c
-					0x46 0x50 0x5a 0x64
-					0x64 0x5a 0x50 0x46 0x3c 0x32 0x28 0x1e
-					0x14 0x0a 0x01>;
+			lpg1 {
+				qcom,lpg-chan-id = <1>;
+				qcom,ramp-step-ms = <100>;
+				qcom,ramp-pause-hi-count = <2>;
+				qcom,ramp-pause-lo-count = <2>;
+				qcom,ramp-low-index = <0>;
+				qcom,ramp-high-index = <20>;
+				qcom,ramp-from-low-to-high;
+				qcom,ramp-pattern-repeat;
 			};
-		};
 
-		pm660l_pwm_4: pwm@b400 {
-			compatible = "qcom,qpnp-pwm";
-			reg = <0xb400 0x100>,
-			      <0xb042 0x7e>;
-			reg-names = "qpnp-lpg-channel-base",
-					 "qpnp-lpg-lut-base";
-			qcom,channel-id = <4>;
-			qcom,lpg-lut-size = <0x7e>;
-			qcom,supported-sizes = <6>, <9>;
-			qcom,ramp-index = <3>;
-			#pwm-cells = <2>;
-			status = "disabled";
+			lpg2 {
+				qcom,lpg-chan-id = <2>;
+				qcom,ramp-step-ms = <100>;
+				qcom,ramp-pause-hi-count = <2>;
+				qcom,ramp-pause-lo-count = <2>;
+				qcom,ramp-low-index = <0>;
+				qcom,ramp-high-index = <20>;
+				qcom,ramp-from-low-to-high;
+				qcom,ramp-pattern-repeat;
+			};
+
+			lpg3 {
+				qcom,lpg-chan-id = <3>;
+				qcom,ramp-step-ms = <100>;
+				qcom,ramp-pause-hi-count = <2>;
+				qcom,ramp-pause-lo-count = <2>;
+				qcom,ramp-low-index = <0>;
+				qcom,ramp-high-index = <20>;
+				qcom,ramp-from-low-to-high;
+				qcom,ramp-pattern-repeat;
+			};
+
+			lpg4 {
+				qcom,lpg-chan-id = <4>;
+				qcom,ramp-step-ms = <100>;
+				qcom,ramp-pause-hi-count = <2>;
+				qcom,ramp-pause-lo-count = <2>;
+				qcom,ramp-low-index = <0>;
+				qcom,ramp-high-index = <20>;
+			};
 		};
 
 		qcom,leds@d000 {
-			compatible = "qcom,leds-qpnp";
+			compatible = "qcom,tri-led";
 			reg = <0xd000 0x100>;
 			label = "rgb";
 
-			red_led: qcom,rgb_0 {
-				label = "rgb";
-				qcom,id = <3>;
-				qcom,mode = "pwm";
-				pwms = <&pm660l_pwm_3 0 0>;
-				qcom,pwm-us = <1000>;
-				qcom,max-current = <12>;
-				qcom,default-state = "off";
-				linux,name = "red";
-				qcom,start-idx = <0>;
-				qcom,idx-len = <22>;
-				qcom,duty-pcts =
-					[01 0a 14 1e 28 32 3c 46 50 5a 64
-					64 5a 50 46 3c 32 28 1e 14 0a 01];
-				qcom,use-blink;
+			red {
+				label = "red";
+				pwms = <&pmi8994_lpg 2 1000000>;
+				led-sources = <0>;
+				linux,default-trigger = "timer";
 			};
-
-			green_led: qcom,rgb_1 {
-				label = "rgb";
-				qcom,id = <4>;
-				qcom,mode = "pwm";
-				pwms = <&pm660l_pwm_2 0 0>;
-				qcom,pwm-us = <1000>;
-				qcom,max-current = <12>;
-				qcom,default-state = "off";
-				linux,name = "green";
+			green {
+				label = "green";
+				pwms = <&pmi8994_lpg 1 1000000>;
+				led-sources = <1>;
+				linux,default-trigger = "timer";
 			};
-
-			blue_led: qcom,rgb_2 {
-				label = "rgb";
-				qcom,id = <5>;
-				qcom,mode = "pwm";
-				pwms = <&pm660l_pwm_1 0 0>;
-				qcom,pwm-us = <1000>;
-				qcom,max-current = <12>;
-				qcom,default-state = "off";
-				linux,name = "blue";
+			blue {
+				label = "blue";
+				pwms = <&pmi8994_lpg 0 1000000>;
+				led-sources = <2>;
+				linux,default-trigger = "timer";
 			};
 		};
 
