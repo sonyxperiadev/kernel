@@ -84,6 +84,8 @@ enum print_reason {
 #define HDC_IRQ_VOTER			"HDC_IRQ_VOTER"
 #define VOUT_VOTER			"VOUT_VOTER"
 #define DETACH_DETECT_VOTER		"DETACH_DETECT_VOTER"
+#define MAIN_FCC_VOTER			"MAIN_FCC_VOTER"
+
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
 #define BATTCHG_SMART_EN_VOTER		"BATTCHG_SMART_EN_VOTER"
 #define BATTCHG_LRC_EN_VOTER		"BATTCHG_LRC_EN_VOTER"
@@ -447,6 +449,7 @@ struct smb_charger {
 	/* votables */
 	struct votable		*dc_suspend_votable;
 	struct votable		*fcc_votable;
+	struct votable		*fcc_main_votable;
 	struct votable		*fv_votable;
 	struct votable		*usb_icl_votable;
 	struct votable		*awake_votable;
