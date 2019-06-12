@@ -62,14 +62,6 @@
 	status = "disabled";
 };
 
-&glink_fifo_wdsp {
-	status = "disabled";
-};
-
-&glink_qos_wdsp {
-	status = "disabled";
-};
-
 &int_codec {
 	status = "okay";
 };
