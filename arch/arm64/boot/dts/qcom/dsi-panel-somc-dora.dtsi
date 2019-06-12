@@ -61,23 +61,6 @@
 						24 1f 08 09 05 03 04 a0
 						24 1b 08 09 05 03 04 a0];
 			};
-
-			1080p120 {
-				qcom,display-topology = <1 0 1>;
-				qcom,default-topology-index = <0>;
-				qcom,mdss-dsi-panel-timings-phy-v2 = [
-						24 1f 08 09 05 03 04 a0
-						24 1f 08 09 05 03 04 a0
-						24 1f 08 09 05 03 04 a0
-						24 1f 08 09 05 03 04 a0
-						24 1b 08 09 05 03 04 a0];
-				qcom,mdss-dsi-panel-phy-timings = [
-						24 1f 08 09 05 03 04 a0
-						24 1f 08 09 05 03 04 a0
-						24 1f 08 09 05 03 04 a0
-						24 1f 08 09 05 03 04 a0
-						24 1b 08 09 05 03 04 a0];
-			};
 		};
 	};
 
@@ -119,23 +102,7 @@
 						24 1f 08 09 05 03 04 a0
 						24 1b 08 09 05 03 04 a0];
 			};
-
-			1080p120 {
-				qcom,display-topology = <1 0 1>;
-				qcom,default-topology-index = <0>;
-				qcom,mdss-dsi-panel-timings-phy-v2 = [
-						24 1f 08 09 05 03 04 a0
-						24 1f 08 09 05 03 04 a0
-						24 1f 08 09 05 03 04 a0
-						24 1f 08 09 05 03 04 a0
-						24 1b 08 09 05 03 04 a0];
-				qcom,mdss-dsi-panel-phy-timings = [
-						24 1f 08 09 05 03 04 a0
-						24 1f 08 09 05 03 04 a0
-						24 1f 08 09 05 03 04 a0
-						24 1f 08 09 05 03 04 a0
-						24 1b 08 09 05 03 04 a0];
-			};
+			/delete-node/ 1080p120;
 		};
 	};
 
@@ -177,23 +144,7 @@
 						24 1f 08 09 05 03 04 a0
 						24 1b 08 09 05 03 04 a0];
 			};
-
-			1080p120 {
-				qcom,display-topology = <1 0 1>;
-				qcom,default-topology-index = <0>;
-				qcom,mdss-dsi-panel-timings-phy-v2 = [
-						24 1f 08 09 05 03 04 a0
-						24 1f 08 09 05 03 04 a0
-						24 1f 08 09 05 03 04 a0
-						24 1f 08 09 05 03 04 a0
-						24 1b 08 09 05 03 04 a0];
-				qcom,mdss-dsi-panel-phy-timings = [
-						24 1f 08 09 05 03 04 a0
-						24 1f 08 09 05 03 04 a0
-						24 1f 08 09 05 03 04 a0
-						24 1f 08 09 05 03 04 a0
-						24 1b 08 09 05 03 04 a0];
-			};
+			/delete-node/ 1080p120;
 		};
 	};
 
@@ -235,23 +186,7 @@
 						24 1f 08 09 05 03 04 a0
 						24 1b 08 09 05 03 04 a0];
 			};
-
-			1080p120 {
-				qcom,display-topology = <1 0 1>;
-				qcom,default-topology-index = <0>;
-				qcom,mdss-dsi-panel-timings-phy-v2 = [
-						24 1f 08 09 05 03 04 a0
-						24 1f 08 09 05 03 04 a0
-						24 1f 08 09 05 03 04 a0
-						24 1f 08 09 05 03 04 a0
-						24 1b 08 09 05 03 04 a0];
-				qcom,mdss-dsi-panel-phy-timings = [
-						24 1f 08 09 05 03 04 a0
-						24 1f 08 09 05 03 04 a0
-						24 1f 08 09 05 03 04 a0
-						24 1f 08 09 05 03 04 a0
-						24 1b 08 09 05 03 04 a0];
-			};
+			/delete-node/ 1080p120;
 		};
 	};
 
@@ -293,23 +228,7 @@
 						24 1f 08 09 05 03 04 a0
 						24 1b 08 09 05 03 04 a0];
 			};
-
-			1080p120 {
-				qcom,display-topology = <1 0 1>;
-				qcom,default-topology-index = <0>;
-				qcom,mdss-dsi-panel-timings-phy-v2 = [
-						24 1f 08 09 05 03 04 a0
-						24 1f 08 09 05 03 04 a0
-						24 1f 08 09 05 03 04 a0
-						24 1f 08 09 05 03 04 a0
-						24 1b 08 09 05 03 04 a0];
-				qcom,mdss-dsi-panel-phy-timings = [
-						24 1f 08 09 05 03 04 a0
-						24 1f 08 09 05 03 04 a0
-						24 1f 08 09 05 03 04 a0
-						24 1f 08 09 05 03 04 a0
-						24 1b 08 09 05 03 04 a0];
-			};
+			/delete-node/ 1080p120;
 		};
 	};
 
@@ -427,8 +346,7 @@
 						39 01 00 00 00 00 02 3A 77
 						39 01 00 00 00 00 05 2A 00 00 04 37
 						39 01 00 00 00 00 05 2B 00 00 07 7F
-						39 01 00 00 78 00 01 11];
-				qcom,mdss-dsi-post-panel-on-command = [
+						39 01 00 00 78 00 01 11
 						39 01 00 00 00 00 01 29];
 				qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
 			};
