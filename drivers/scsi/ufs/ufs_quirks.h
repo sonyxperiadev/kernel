@@ -15,6 +15,12 @@
 #ifndef _UFS_QUIRKS_H_
 #define _UFS_QUIRKS_H_
 
+#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA)
+ #ifndef UFS_TARGET_SONY_PLATFORM
+  #define UFS_TARGET_SONY_PLATFORM
+ #endif
+#endif
+
 /* return true if s1 is a prefix of s2 */
 #define STR_PRFX_EQUAL(s1, s2) !strncmp(s1, s2, strlen(s1))
 
@@ -25,7 +31,7 @@
 #define UFS_VENDOR_SAMSUNG     0x1CE
 #define UFS_VENDOR_SKHYNIX     0x1AD
 
-#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA)
+#ifdef UFS_TARGET_SONY_PLATFORM
 #define UFS_ANY_VER		"ANY_VER"
 
 /* UFS SAMSUNG MODELS */
@@ -38,7 +44,7 @@
 #define UFS_REVISION_HYNIX	"D001"
 
 #define UFS_PURGE_SPEC_VER	0x210
-#endif
+#endif /* UFS_TARGET_SONY_PLATFORM */
 
 /**
  * ufs_dev_fix - ufs device quirk info
@@ -48,7 +54,7 @@
 struct ufs_dev_fix {
 	u16 w_manufacturer_id;
 	char *model;
-#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA)
+#ifdef UFS_TARGET_SONY_PLATFORM
 	char *revision;
 #endif
 	unsigned int quirk;
@@ -56,7 +62,7 @@ struct ufs_dev_fix {
 
 #define END_FIX { 0 }
 
-#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA)
+#ifdef UFS_TARGET_SONY_PLATFORM
 /* add specific device quirk */
 #define UFS_FIX(_vendor, _model, _quirk) \
 		{						  \
@@ -184,7 +190,7 @@ struct ufs_dev_fix {
  */
 #define UFS_DEVICE_QUIRK_WAIT_AFTER_REF_CLK_UNGATE	(1 << 10)
 
-#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA)
+#ifdef UFS_TARGET_SONY_PLATFORM
 #define UFS_DEVICE_QUIRK_EXTEND_SYNC_LENGTH	(1 << 23)
 
 #define UFS_DEVICE_QUIRK_NO_PURGE		(1 << 24)

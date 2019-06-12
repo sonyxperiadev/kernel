@@ -12,6 +12,12 @@
 #ifndef _UNIPRO_H_
 #define _UNIPRO_H_
 
+#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA)
+ #ifndef UFS_TARGET_SONY_PLATFORM
+  #define UFS_TARGET_SONY_PLATFORM
+ #endif
+#endif
+
 /*
  * M-TX Configuration Attributes
  */
@@ -158,7 +164,7 @@
 #define PA_PEERRXHSADAPTINITIAL	0x15D3
 #define PA_TXHSADAPTTYPE	0x15D4
 
-#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA)
+#ifdef UFS_TARGET_SONY_PLATFORM
 #define PA_TxHsG1SyncLength	0x1552
 #define PA_TxHsG2SyncLength	0x1554
 #define PA_TxHsG3SyncLength	0x1556
