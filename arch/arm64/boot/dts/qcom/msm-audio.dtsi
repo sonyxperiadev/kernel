@@ -999,7 +999,7 @@
 		compatible = "qcom,audio-ref-clk";
 		qcom,audio-ref-clk-gpio = <&pm660_gpios 3 0>;
 		clock-names = "osr_clk";
-		clocks = <&clock_rpmcc RPM_DIV_CLK1>;
+		clocks = <&clock_rpmcc RPM_SMD_DIV_CLK1>;
 		qcom,node_has_rpm_clock;
 		#clock-cells = <1>;
 		qcom,codec-mclk-clk-freq = <11289600>;
@@ -1012,7 +1012,7 @@
 	clock_audio_lnbb: audio_ext_clk_lnbb {
 		compatible = "qcom,audio-ref-clk";
 		clock-names = "osr_clk";
-		clocks = <&clock_rpmcc RPM_LN_BB_CLK2>;
+		clocks = <&clock_rpmcc RPM_SMD_LN_BB_CLK2>;
 		qcom,node_has_rpm_clock;
 		#clock-cells = <1>;
 	};
