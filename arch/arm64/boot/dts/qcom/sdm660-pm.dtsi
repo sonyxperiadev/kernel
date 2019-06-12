@@ -301,6 +301,7 @@
 		qcom,master-offset = <4096>;
 	};
 
+/* TODO: How can we do this? We cannot declare it as rpm-msg-ram...
 	rpm_msg_ram: memory@0x200000 {
 		compatible = "qcom,rpm-msg-ram";
 		reg = <0x200000 0x1000>,
@@ -318,4 +319,5 @@
 		qcom,rpm-code-ram = <&rpm_code_ram>;
 		qcom,masters = "APSS", "MPSS", "ADSP", "CDSP", "TZ";
 	};
+*/
 };
