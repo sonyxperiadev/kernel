@@ -166,7 +166,26 @@ int adc_tm_is_valid(struct adc_tm_chip *chip)
 	return -EINVAL;
 }
 
+static void notify_adc_tm_fn(struct work_struct *work)
+{
+	struct adc_tm_sensor *adc_tm = container_of(work,
+		struct adc_tm_sensor, work);
+
+	if (likely(adc_tm->chip->ops->notify_adc))
+		adc_tm->chip->ops->notify_adc(work);
+	else
+		pr_err("BUG! Cannot notify ADC TM. Function unavailable!\n");
+}
+
 static const struct of_device_id adc_tm_match_table[] = {
+	{
+		.compatible = "qcom,adc-tm3",
+		.data = &data_adc_tm3,
+	},
+	{
+		.compatible = "qcom,adc-tm4",
+		.data = &data_adc_tm3,
+	},
 	{
 		.compatible = "qcom,adc-tm5",
 		.data = &data_adc_tm5,
@@ -315,6 +334,7 @@ static int adc_tm_probe(struct platform_device *pdev)
 	struct regmap *regmap;
 	struct iio_channel *channels;
 	int ret = 0, dt_chan_num = 0, indio_chan_count = 0, i = 0;
+	int tm4_cal_found = 0;
 	u32 reg;
 
 	if (!node)
@@ -334,6 +354,42 @@ static int adc_tm_probe(struct platform_device *pdev)
 
 	while (channels[indio_chan_count].indio_dev)
 		indio_chan_count++;
+
+	if (of_device_is_compatible(node, "qcom,adc-tm3") ||
+	    of_device_is_compatible(node, "qcom,adc-tm4")) {
+		for (i = 0; i <= indio_chan_count; i++) {
+			const struct iio_chan_spec *ch_spec =
+						channels[i].channel;
+
+			/* REF_625MV, REF_1250MV, GND_VREF, VDD_VADC, SPARE1 */
+			if (strstr(ch_spec->datasheet_name, "REF_") ||
+			    strstr(ch_spec->datasheet_name, "GND_REF") ||
+			    strstr(ch_spec->datasheet_name, "VDD_VADC") ||
+			    strstr(ch_spec->datasheet_name, "SPARE1"))
+				tm4_cal_found++;
+
+			if (i < dt_chan_num) {
+				dev_err(dev, "Wrong IIO channel configuration."
+					" The calibration channels shall be "
+					"declared at the end of the array!!!");
+				return -EINVAL;
+			}
+		}
+
+		if (tm4_cal_found < 4) {
+			dev_err(dev, "Calibration IIO channel(s) missing."
+				     " Found: %d expected 4 to 5 chans\n",
+				     tm4_cal_found);
+				return -EINVAL;
+		}
+
+		/*
+		 * Okay! The extra channels are at the end of the array!
+		 * Don't count the calibration channels to satisfy the
+		 * correspondance between the TM channels and IIO channels
+		 */
+		indio_chan_count -= tm4_cal_found;
+	}
 
 	if (indio_chan_count != dt_chan_num) {
 		dev_err(dev, "VADC IIO channel missing in main node\n");
