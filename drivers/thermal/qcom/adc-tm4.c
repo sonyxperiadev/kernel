@@ -790,9 +790,11 @@ static int adc_tm4_set_trip_temp(struct adc_tm_sensor *sensor,
 	pr_debug("requested a low temp- %d and high temp- %d\n",
 			tm_config.low_thr_temp, tm_config.high_thr_temp);
 
+	btm_chan = sensor->btm_ch;
+
 #ifdef CONFIG_ARCH_SONY_YOSHINO
-	if (adc_tm->btm_ch == ADC_TM_M1_ADC_CH_SEL_CTL ||
-	    adc_tm->btm_ch == ADC_TM_M2_ADC_CH_SEL_CTL) {
+	if (btm_chan == ADC_TM_Mn_ADC_CH_SEL_CTL(1) ||
+	    btm_chan == ADC_TM_Mn_ADC_CH_SEL_CTL(2)) {
 		/* Coming in DeciDegC, so let's scale it up */
 		/* TODO: Is that correct? This is to avoid creating one more
 		 *       table and one more function, which seems useless */
@@ -814,7 +816,6 @@ static int adc_tm4_set_trip_temp(struct adc_tm_sensor *sensor,
 	pr_debug("high_thr:0x%llx, low_thr:0x%llx\n",
 		tm_config.high_thr_voltage, tm_config.low_thr_voltage);
 
-	btm_chan = sensor->btm_ch;
 	ret = adc_tm3_get_btm_idx(chip, adc_tm_ch_data,
 				  btm_chan, &btm_chan_idx);
 	if (ret < 0) {
