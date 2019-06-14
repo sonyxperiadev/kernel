@@ -42,20 +42,7 @@
 		 * subsystem is inactiv3
 		 */
 		qcom,active-only;
-		qcom,bw-tbl =
-			<     0 /*  off     */ >,
-			<   762 /*  100 MHz */ >,
-			<  1144 /*  150 MHz */ >,
-			<  1525 /*  200 MHz */ >,
-			<  2288 /*  300 MHz */ >,
-			<  3143 /*  412 MHz */ >,
-			<  4173 /*  547 MHz */ >,
-			<  5195 /*  681 MHz */ >,
-			<  5859 /*  768 MHz */ >,
-			<  7759 /*  1017 MHz */ >,
-			<  9887 /*  1296 MHz */ >,
-			<  11863 /*  1555 MHz */ >,
-			<  13763 /*  1804 MHz */ >;
+		operating-points-v2 = <&ddr_bw_opp_table>;
 	};
 
 	msm_gpu: qcom,kgsl-3d0@5000000 {
