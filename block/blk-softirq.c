@@ -107,8 +107,13 @@ void __blk_complete_request(struct request *req)
 
 	/*
 	 * Select completion CPU
+	 *
+	 * Refrain from waking up an idle CPU if possible since the exit
+	 * latency of taking req->cpu out of an idle cstate will likely
+	 * exceed the rq->deadline constraint compared to executing the
+	 * request locally instead.
 	 */
-	if (req->cpu != -1) {
+	if (req->cpu != -1 && !idle_cpu(req->cpu)) {
 		ccpu = req->cpu;
 		if (!test_bit(QUEUE_FLAG_SAME_FORCE, &q->queue_flags))
 			shared = cpus_share_cache(cpu, ccpu);
