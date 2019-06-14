@@ -15,16 +15,13 @@
 
 &soc {
 	msm_vidc: qcom,vidc@cc00000 {
-		compatible = "qcom,msm-vidc";
+		compatible = "qcom,msm-vidc", "qcom,msm8998-vidc";
 		status = "ok";
 		reg = <0xcc00000 0x100000>;
 		interrupts = <GIC_SPI 287 IRQ_TYPE_LEVEL_HIGH>;
 		qcom,hfi = "venus";
 		qcom,hfi-version = "3xx";
 		qcom,firmware-name = "venus";
-		qcom,never-unload-fw;
-		qcom,sw-power-collapse;
-		qcom,max-secure-instances = <5>;
 		qcom,reg-presets =
 			<0x80124 0x00000003>,
 			<0x80550 0x01111111>,
@@ -36,7 +33,6 @@
 			<0xe2010 0x00000000>;
 
 		qcom,imem-size = <524288>; /* 512 kB */
-		qcom,max-hw-load = <2563200>; /* Full 4k @ 60 + 1080p @ 60 */
 		qcom,power-conf = <8294400>; /* WxH - 3840*2160 */
 		qcom,load-freq-tbl =
 			/* Encoders */
