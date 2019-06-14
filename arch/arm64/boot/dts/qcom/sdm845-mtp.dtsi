@@ -89,48 +89,6 @@
 	qcom,qpnp-labibb-mode = "lcd";
 };
 
-&dsi_dual_nt35597_truly_video {
-	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
-	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
-	qcom,mdss-dsi-bl-min-level = <1>;
-	qcom,mdss-dsi-bl-max-level = <4095>;
-	qcom,mdss-dsi-mode-sel-gpio-state = "dual_port";
-	qcom,panel-mode-gpio = <&tlmm 52 0>;
-	qcom,platform-reset-gpio = <&tlmm 6 0>;
-};
-
-&dsi_dual_nt35597_truly_cmd {
-	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
-	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
-	qcom,mdss-dsi-bl-min-level = <1>;
-	qcom,mdss-dsi-bl-max-level = <4095>;
-	qcom,mdss-dsi-mode-sel-gpio-state = "dual_port";
-	qcom,panel-mode-gpio = <&tlmm 52 0>;
-	qcom,platform-reset-gpio = <&tlmm 6 0>;
-	qcom,platform-te-gpio = <&tlmm 10 0>;
-};
-
-&dsi_nt35597_truly_dsc_video {
-	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
-	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
-	qcom,mdss-dsi-bl-min-level = <1>;
-	qcom,mdss-dsi-bl-max-level = <4095>;
-	qcom,mdss-dsi-mode-sel-gpio-state = "single_port";
-	qcom,panel-mode-gpio = <&tlmm 52 0>;
-	qcom,platform-reset-gpio = <&tlmm 6 0>;
-};
-
-&dsi_nt35597_truly_dsc_cmd {
-	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
-	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
-	qcom,mdss-dsi-bl-min-level = <1>;
-	qcom,mdss-dsi-bl-max-level = <4095>;
-	qcom,mdss-dsi-mode-sel-gpio-state = "single_port";
-	qcom,panel-mode-gpio = <&tlmm 52 0>;
-	qcom,platform-reset-gpio = <&tlmm 6 0>;
-	qcom,platform-te-gpio = <&tlmm 10 0>;
-};
-
 &dsi_sim_vid {
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
 	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
@@ -165,31 +123,6 @@
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
 	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
 	qcom,platform-reset-gpio = <&tlmm 6 0>;
-};
-
-&dsi_dual_nt35597_video {
-	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
-	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
-	qcom,mdss-dsi-bl-min-level = <1>;
-	qcom,mdss-dsi-bl-max-level = <4095>;
-	qcom,mdss-dsi-mode-sel-gpio-state = "dual_port";
-	qcom,panel-mode-gpio = <&tlmm 52 0>;
-	qcom,platform-reset-gpio = <&tlmm 6 0>;
-};
-
-&dsi_dual_nt35597_cmd {
-	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
-	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
-	qcom,mdss-dsi-bl-min-level = <1>;
-	qcom,mdss-dsi-bl-max-level = <4095>;
-	qcom,mdss-dsi-mode-sel-gpio-state = "dual_port";
-	qcom,panel-mode-gpio = <&tlmm 52 0>;
-	qcom,platform-reset-gpio = <&tlmm 6 0>;
-	qcom,platform-te-gpio = <&tlmm 10 0>;
-};
-
-&dsi_nt35597_truly_dsc_cmd_display {
-	qcom,dsi-display-active;
 };
 
 &pmi8998_wled {
@@ -275,9 +208,6 @@
 &vendor {
 	mtp_batterydata: qcom,battery-data {
 		qcom,batt-id-range-pct = <15>;
-		#include "fg-gen3-batterydata-itech-3000mah.dtsi"
-		#include "fg-gen3-batterydata-ascent-3450mah.dtsi"
-		#include "fg-gen3-batterydata-demo-6000mah.dtsi"
 	};
 
 	extcon_usb1: extcon_usb1 {

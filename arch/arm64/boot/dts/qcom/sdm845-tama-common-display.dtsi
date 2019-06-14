@@ -173,26 +173,6 @@
 	status = "disabled";
 };
 
-&dsi_dual_nt35597_truly_video_display {
-	/delete-property/ qcom,dsi-display-active;
-	status = "disabled";
-};
-
-&dsi_dual_nt35597_truly_cmd_display {
-	/delete-property/ qcom,dsi-display-active;
-	status = "disabled";
-};
-
-&dsi_nt35597_truly_dsc_cmd_display {
-	/delete-property/ qcom,dsi-display-active;
-	status = "disabled";
-};
-
-&dsi_nt35597_truly_dsc_video_display {
-	/delete-property/ qcom,dsi-display-active;
-	status = "disabled";
-};
-
 &dsi_sim_vid_display {
 	/delete-property/ qcom,dsi-display-active;
 	status = "disabled";
