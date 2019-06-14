@@ -21,6 +21,7 @@
 #include <dt-bindings/spmi/spmi.h>
 #include <dt-bindings/regulator/qcom,rpm-smd-regulator.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/iio/qcom,spmi-vadc.h>
 
 #define MHZ_TO_MBPS(mhz, w) ((mhz * 1000000 * w) / (1024 * 1024))
 #define BW_OPP_ENTRY(mhz, w) opp-mhz {opp-hz = /bits/ 64 <MHZ_TO_MBPS(mhz, w)>;}
@@ -3487,11 +3488,11 @@
 	qcom,vbat-polling-delay-ms = <100>;
 	qcom,ibat-polling-delay-ms = <100>;
 };
-
+/*
 &pm8998_vadc {
 	qcom,adc-bit-resolution = <15>;
 };
-
+*/
 &pm8998_adc_tm {
 	qcom,adc-bit-resolution = <15>;
 };
