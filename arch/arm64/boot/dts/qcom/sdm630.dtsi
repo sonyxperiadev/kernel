@@ -1492,7 +1492,7 @@
 
 	tcsr_mutex: hwlock {
 		compatible = "qcom,tcsr-mutex";
-		syscon = <&tcsr_mutex_block 0 0x8000>;
+		syscon = <&tcsr_mutex_block 0 0x1000>;
 		#hwlock-cells = <1>;
 	};
 
