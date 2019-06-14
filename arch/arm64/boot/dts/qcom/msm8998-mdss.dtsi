@@ -496,7 +496,7 @@
 			 <&clock_mmss MMSS_MDSS_MDP_CLK>,
 			 <&clock_mmss MMSS_MDSS_HDMI_DP_AHB_CLK>,
 			 <&clock_mmss MMSS_MDSS_DP_AUX_CLK>,
-			 <&clock_rpmcc RPM_LN_BB_CLK1>,
+			 <&clock_rpmcc RPM_SMD_LN_BB_CLK1>,
 			 <&clock_gcc GCC_USB3_CLKREF_CLK>,
 			 <&clock_mmss MMSS_MDSS_DP_LINK_CLK>,
 			 <&clock_mmss MMSS_MDSS_DP_LINK_INTF_CLK>,

@@ -29,7 +29,7 @@
 			   <GIC_SPI 367 IRQ_TYPE_EDGE_RISING>,
 			   <GIC_SPI 368 IRQ_TYPE_EDGE_RISING>,
 			   <GIC_SPI 369 IRQ_TYPE_EDGE_RISING>;
-		clocks = <&clock_rpmcc RPM_AGGR1_NOC_CLK>;
+		clocks = <&clock_rpmcc RPM_SMD_AGGR1_NOC_CLK>;
 		clock-names = "smmu_aggr2_noc_clk";
 		#clock-cells = <1>;
 		qcom,msm-bus,name = "smmu-bus-client-anoc1";
@@ -61,7 +61,7 @@
 			   <GIC_SPI 463 IRQ_TYPE_EDGE_RISING>,
 			   <GIC_SPI 464 IRQ_TYPE_EDGE_RISING>,
 			   <GIC_SPI 465 IRQ_TYPE_EDGE_RISING>;
-		clocks = <&clock_rpmcc RPM_AGGR2_NOC_CLK>;
+		clocks = <&clock_rpmcc RPM_SMD_AGGR2_NOC_CLK>;
 		clock-names = "smmu_aggr2_noc_clk";
 		#clock-cells = <1>;
 		qcom,msm-bus,name = "smmu-bus-client-anoc2";

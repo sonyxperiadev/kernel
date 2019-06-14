@@ -1037,7 +1037,7 @@
 			compatible = "arm,coresight-tpiu", "arm,primecell";
 			reg = <0x820000 0x1000>;
 
-			clocks = <&rpmcc RPM_QDSS_CLK>, <&rpmcc RPM_QDSS_A_CLK>;
+			clocks = <&rpmcc RPM_SMD_QDSS_CLK>, <&rpmcc RPM_SMD_QDSS_A_CLK>;
 			clock-names = "apb_pclk", "atclk";
 
 			port {
@@ -1052,7 +1052,7 @@
 			compatible = "arm,coresight-funnel", "arm,primecell";
 			reg = <0x821000 0x1000>;
 
-			clocks = <&rpmcc RPM_QDSS_CLK>, <&rpmcc RPM_QDSS_A_CLK>;
+			clocks = <&rpmcc RPM_SMD_QDSS_CLK>, <&rpmcc RPM_SMD_QDSS_A_CLK>;
 			clock-names = "apb_pclk", "atclk";
 
 			ports {
@@ -1090,7 +1090,7 @@
 			compatible = "arm,coresight-dynamic-replicator", "arm,primecell";
 			reg = <0x824000 0x1000>;
 
-			clocks = <&rpmcc RPM_QDSS_CLK>, <&rpmcc RPM_QDSS_A_CLK>;
+			clocks = <&rpmcc RPM_SMD_QDSS_CLK>, <&rpmcc RPM_SMD_QDSS_A_CLK>;
 			clock-names = "apb_pclk", "atclk";
 
 			ports {
@@ -1123,7 +1123,7 @@
 			compatible = "arm,coresight-tmc", "arm,primecell";
 			reg = <0x825000 0x1000>;
 
-			clocks = <&rpmcc RPM_QDSS_CLK>, <&rpmcc RPM_QDSS_A_CLK>;
+			clocks = <&rpmcc RPM_SMD_QDSS_CLK>, <&rpmcc RPM_SMD_QDSS_A_CLK>;
 			clock-names = "apb_pclk", "atclk";
 
 			ports {
@@ -1150,7 +1150,7 @@
 			compatible = "arm,coresight-tmc", "arm,primecell";
 			reg = <0x826000 0x1000>;
 
-			clocks = <&rpmcc RPM_QDSS_CLK>, <&rpmcc RPM_QDSS_A_CLK>;
+			clocks = <&rpmcc RPM_SMD_QDSS_CLK>, <&rpmcc RPM_SMD_QDSS_A_CLK>;
 			clock-names = "apb_pclk", "atclk";
 
 			port {
@@ -1165,7 +1165,7 @@
 			compatible = "arm,coresight-funnel", "arm,primecell";
 			reg = <0x841000 0x1000>;
 
-			clocks = <&rpmcc RPM_QDSS_CLK>, <&rpmcc RPM_QDSS_A_CLK>;
+			clocks = <&rpmcc RPM_SMD_QDSS_CLK>, <&rpmcc RPM_SMD_QDSS_A_CLK>;
 			clock-names = "apb_pclk", "atclk";
 
 			ports {
@@ -1212,7 +1212,7 @@
 		debug@850000 {
 			compatible = "arm,coresight-cpu-debug","arm,primecell";
 			reg = <0x850000 0x1000>;
-			clocks = <&rpmcc RPM_QDSS_CLK>;
+			clocks = <&rpmcc RPM_SMD_QDSS_CLK>;
 			clock-names = "apb_pclk";
 			cpu = <&CPU0>;
 		};
@@ -1220,7 +1220,7 @@
 		debug@852000 {
 			compatible = "arm,coresight-cpu-debug","arm,primecell";
 			reg = <0x852000 0x1000>;
-			clocks = <&rpmcc RPM_QDSS_CLK>;
+			clocks = <&rpmcc RPM_SMD_QDSS_CLK>;
 			clock-names = "apb_pclk";
 			cpu = <&CPU1>;
 		};
@@ -1228,7 +1228,7 @@
 		debug@854000 {
 			compatible = "arm,coresight-cpu-debug","arm,primecell";
 			reg = <0x854000 0x1000>;
-			clocks = <&rpmcc RPM_QDSS_CLK>;
+			clocks = <&rpmcc RPM_SMD_QDSS_CLK>;
 			clock-names = "apb_pclk";
 			cpu = <&CPU2>;
 		};
@@ -1236,7 +1236,7 @@
 		debug@856000 {
 			compatible = "arm,coresight-cpu-debug","arm,primecell";
 			reg = <0x856000 0x1000>;
-			clocks = <&rpmcc RPM_QDSS_CLK>;
+			clocks = <&rpmcc RPM_SMD_QDSS_CLK>;
 			clock-names = "apb_pclk";
 			cpu = <&CPU3>;
 		};
@@ -1245,7 +1245,7 @@
 			compatible = "arm,coresight-etm4x", "arm,primecell";
 			reg = <0x85c000 0x1000>;
 
-			clocks = <&rpmcc RPM_QDSS_CLK>, <&rpmcc RPM_QDSS_A_CLK>;
+			clocks = <&rpmcc RPM_SMD_QDSS_CLK>, <&rpmcc RPM_SMD_QDSS_A_CLK>;
 			clock-names = "apb_pclk", "atclk";
 
 			cpu = <&CPU0>;
@@ -1261,7 +1261,7 @@
 			compatible = "arm,coresight-etm4x", "arm,primecell";
 			reg = <0x85d000 0x1000>;
 
-			clocks = <&rpmcc RPM_QDSS_CLK>, <&rpmcc RPM_QDSS_A_CLK>;
+			clocks = <&rpmcc RPM_SMD_QDSS_CLK>, <&rpmcc RPM_SMD_QDSS_A_CLK>;
 			clock-names = "apb_pclk", "atclk";
 
 			cpu = <&CPU1>;
@@ -1277,7 +1277,7 @@
 			compatible = "arm,coresight-etm4x", "arm,primecell";
 			reg = <0x85e000 0x1000>;
 
-			clocks = <&rpmcc RPM_QDSS_CLK>, <&rpmcc RPM_QDSS_A_CLK>;
+			clocks = <&rpmcc RPM_SMD_QDSS_CLK>, <&rpmcc RPM_SMD_QDSS_A_CLK>;
 			clock-names = "apb_pclk", "atclk";
 
 			cpu = <&CPU2>;
@@ -1293,7 +1293,7 @@
 			compatible = "arm,coresight-etm4x", "arm,primecell";
 			reg = <0x85f000 0x1000>;
 
-			clocks = <&rpmcc RPM_QDSS_CLK>, <&rpmcc RPM_QDSS_A_CLK>;
+			clocks = <&rpmcc RPM_SMD_QDSS_CLK>, <&rpmcc RPM_SMD_QDSS_A_CLK>;
 			clock-names = "apb_pclk", "atclk";
 
 			cpu = <&CPU3>;

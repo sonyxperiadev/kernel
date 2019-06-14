@@ -39,8 +39,8 @@
 			qcom,qos-off = <4096>;
 			qcom,base-offset = <36864>;
 			clock-names = "bus_clk", "bus_a_clk";
-			clocks = <&clock_rpmcc RPM_AGGR1_NOC_CLK>,
-				<&clock_rpmcc RPM_AGGR1_NOC_A_CLK>;
+			clocks = <&clock_rpmcc RPM_SMD_AGGR1_NOC_CLK>,
+				<&clock_rpmcc RPM_SMD_AGGR1_NOC_A_CLK>;
 			qcom,node-qos-clks {
 				clock-names =
 				"clk-ufs-axi-clk",
@@ -64,8 +64,8 @@
 			qcom,qos-off = <4096>;
 			qcom,base-offset = <20480>;
 			clock-names = "bus_clk", "bus_a_clk";
-			clocks = <&clock_rpmcc RPM_AGGR2_NOC_CLK>,
-				<&clock_rpmcc RPM_AGGR2_NOC_A_CLK>;
+			clocks = <&clock_rpmcc RPM_SMD_AGGR2_NOC_CLK>,
+				<&clock_rpmcc RPM_SMD_AGGR2_NOC_A_CLK>;
 			qcom,node-qos-clks {
 				clock-names =
 				"clk-ipa-clk",
@@ -73,7 +73,7 @@
 				"clk-sdcc4-ahb-no-rate",
 				"clk-blsp1-ahb-no-rate";
 				clocks =
-				<&clock_rpmcc RPM_IPA_CLK>,
+				<&clock_rpmcc RPM_SMD_IPA_CLK>,
 				<&clock_gcc GCC_SDCC2_AHB_CLK>,
 				<&clock_gcc GCC_SDCC4_AHB_CLK>,
 				<&clock_gcc GCC_BLSP1_AHB_CLK>;
@@ -99,8 +99,8 @@
 			qcom,base-name = "cnoc-base";
 			qcom,bus-type = <1>;
 			clock-names = "bus_clk", "bus_a_clk";
-			clocks = <&clock_rpmcc RPM_CNOC_CLK>,
-				<&clock_rpmcc RPM_CNOC_A_CLK>;
+			clocks = <&clock_rpmcc RPM_SMD_CNOC_CLK>,
+				<&clock_rpmcc RPM_SMD_CNOC_A_CLK>;
 		};
 
 		fab_cr_virt: fab-cr_virt {
@@ -165,8 +165,8 @@
 			qcom,qos-off = <4096>;
 			qcom,base-offset = <20480>;
 			clock-names = "bus_clk", "bus_a_clk";
-			clocks = <&clock_rpmcc RPM_SNOC_CLK>,
-				<&clock_rpmcc RPM_SNOC_A_CLK>;
+			clocks = <&clock_rpmcc RPM_SMD_SNOC_CLK>,
+				<&clock_rpmcc RPM_SMD_SNOC_A_CLK>;
 		};
 
 		fab_mnoc_ahb: fab-mnoc-ahb {

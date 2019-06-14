@@ -97,7 +97,7 @@
 		gdsc-supply = <&gdsc_mdss>;
 
 		clocks = <&clock_mmss MMSS_MDSS_AHB_CLK>,
-			 <&clock_rpmcc RPM_LN_BB_CLK1>,
+			 <&clock_rpmcc RPM_SMD_LN_BB_CLK1>,
 			 <&clock_gcc GCC_USB3_CLKREF_CLK>;
 		clock-names = "iface_clk", "ref_clk_src", "ref_clk";
 		clock-rate = <0>;
@@ -135,7 +135,7 @@
 
 		clocks = <&clock_mmss MMSS_MDSS_AHB_CLK>,
 			 <&clock_gcc GCC_HDMI_CLKREF_CLK>,
-			 <&clock_rpmcc RPM_LN_BB_CLK1>;
+			 <&clock_rpmcc RPM_SMD_LN_BB_CLK1>;
 		clock-names = "iface_clk", "ref_clk", "ref_clk_src";
 		clock-rate = <0>;
 

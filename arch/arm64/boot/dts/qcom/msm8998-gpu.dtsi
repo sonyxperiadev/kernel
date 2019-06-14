@@ -21,10 +21,10 @@
 				"xo", "aggre2";
 		qcom,proxy-clock-names = "scm_core_clk", "scm_iface_clk",
 				"xo", "aggre2";
-		clocks = <&clock_rpmcc RPM_CE1_CLK>,
+		clocks = <&clock_rpmcc RPM_SMD_CE1_CLK>,
 			 <&clock_rpmcc QSEECOM_CE1_CLK>,
-			 <&clock_rpmcc CXO_PIL_SSC_CLK>,
-			 <&clock_rpmcc RPM_AGGR2_NOC_CLK>;
+			 <&clock_rpmcc CXO_SMD_PIL_SSC_CLK>,
+			 <&clock_rpmcc RPM_SMD_AGGR2_NOC_CLK>;
 	};
 
 	msm_bus: qcom,kgsl-busmon{

@@ -1271,7 +1271,7 @@
 		<&clock_gcc GCC_UFS_AHB_CLK>,
 		<&clock_gcc GCC_UFS_UNIPRO_CORE_HW_CTL_CLK>,
 		<&clock_gcc GCC_UFS_ICE_CORE_HW_CTL_CLK>,
-		<&clock_rpmcc RPM_LN_BB_CLK1>,
+		<&clock_rpmcc RPM_SMD_LN_BB_CLK1>,
 		<&clock_gcc GCC_UFS_TX_SYMBOL_0_CLK>,
 		<&clock_gcc GCC_UFS_RX_SYMBOL_0_CLK>,
 		<&clock_gcc GCC_UFS_RX_SYMBOL_1_CLK>;

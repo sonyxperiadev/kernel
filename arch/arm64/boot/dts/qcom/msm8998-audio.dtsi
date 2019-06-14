@@ -341,7 +341,7 @@
 		compatible = "qcom,audio-ref-clk";
 		qcom,audio-ref-clk-gpio = <&pm8998_gpios 13 0>;
 		clock-names = "osr_clk";
-		clocks = <&clock_rpmcc RPM_DIV_CLK1>;
+		clocks = <&clock_rpmcc RPM_SMD_DIV_CLK1>;
 		qcom,node_has_rpm_clock;
 		#clock-cells = <1>;
 		pinctrl-names = "sleep", "active";
@@ -353,7 +353,7 @@
 		status = "ok";
 		compatible = "qcom,audio-ref-clk";
 		clock-names = "osr_clk";
-		clocks = <&clock_rpmcc RPM_LN_BB_CLK2>;
+		clocks = <&clock_rpmcc RPM_SMD_LN_BB_CLK2>;
 		qcom,node_has_rpm_clock;
 		#clock-cells = <1>;
 	};

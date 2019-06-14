@@ -25,7 +25,7 @@
 		qca,bt-vdd-pa-supply = <&pm8998_l17>;
 		qca,bt-vdd-ldo-supply = <&pm8998_l25>;
 		qca,bt-chip-pwd-supply = <&pmi8998_bob_pin1>;
-		clocks = <&clock_rpmcc RPM_RF_CLK2_PIN>;
+		clocks = <&clock_rpmcc RPM_SMD_RF_CLK2_PIN>;
 		clock-names = "rf_clk2";
 
 		qca,bt-vdd-io-voltage-level = <1352000 1352000>;
@@ -251,7 +251,7 @@
 		pinctrl-names = "nfc_active", "nfc_suspend";
 		pinctrl-0 = <&nfc_int_active &nfc_enable_active>;
 		pinctrl-1 = <&nfc_int_suspend &nfc_enable_suspend>;
-		clocks = <&clock_rpmcc RPM_LN_BB_CLK3_PIN>;
+		clocks = <&clock_rpmcc RPM_SMD_LN_BB_CLK3_PIN>;
 		clock-names = "ref_clk";
 	};
 };

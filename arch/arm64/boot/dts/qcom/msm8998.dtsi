@@ -860,7 +860,7 @@
 		vdd_dig-supply = <&pm8998_s1_level>;
 		vdd_mmsscc_mx-supply = <&pm8998_s9_level>;
 		clock-names = "xo", "gpll0", "gpll0_div";
-		clocks = <&clock_rpmcc RPM_XO_CLK_SRC>,
+		clocks = <&clock_rpmcc RPM_SMD_XO_CLK_SRC>,
 			 <&clock_gcc GCC_MMSS_GPLL0_CLK>,
 			 <&clock_gcc GCC_MMSS_GPLL0_DIV_CLK>;
 		#clock-cells = <1>;
@@ -879,7 +879,7 @@
 		reg = <0x5065000 0x9000>;
 		vdd_dig-supply = <&pm8998_s1_level>;
 		clock-names = "xo_ao", "gpll0";
-		clocks = <&clock_rpmcc RPM_XO_A_CLK_SRC>,
+		clocks = <&clock_rpmcc RPM_SMD_XO_A_CLK_SRC>,
 			<&clock_gcc GCC_GPU_GPLL0_CLK>;
 		#clock-cells = <1>;
 	};
@@ -893,7 +893,7 @@
 		vdd_gpu_mx-supply = <&pm8998_s9_level>;
 		qcom,gfx3d_clk_src-opp-handle = <&msm_gpu>;
 		clock-names = "xo_ao", "gpll0";
-		clocks = <&clock_rpmcc RPM_XO_A_CLK_SRC>,
+		clocks = <&clock_rpmcc RPM_SMD_XO_A_CLK_SRC>,
 			<&clock_gcc GCC_GPU_GPLL0_CLK>;
 		#clock-cells = <1>;
 	};
@@ -1031,7 +1031,7 @@
 
 		clock-names = "aux_clk", "xo_a";
 		clocks = <&clock_gcc HMSS_GPLL0_CLK_SRC>,
-			<&clock_rpmcc RPM_XO_A_CLK_SRC>;
+			<&clock_rpmcc RPM_SMD_XO_A_CLK_SRC>;
 		#clock-cells = <1>;
 	};
 /* TODO: Re-enable when driver will be done
@@ -1087,7 +1087,7 @@
 		qcom,do-not-use-ch-gsi-20;
 		qcom,ipa-wdi2;
 		qcom,use-64-bit-dma-mask;
-		clocks = <&clock_rpmcc RPM_IPA_CLK>;
+		clocks = <&clock_rpmcc RPM_SMD_IPA_CLK>;
 		clock-names = "core_clk";
 		qcom,arm-smmu;
 		qcom,smmu-disable-htw;
@@ -1272,7 +1272,7 @@
 		reg-names = "gladiator_base";
 		interrupts = <0 22 0>;
 		clock-names = "atb_clk";
-		clocks = <&clock_rpmcc RPM_QDSS_CLK>;
+		clocks = <&clock_rpmcc RPM_SMD_QDSS_CLK>;
 	};
 
 	qcom,smem@86000000 {
@@ -1655,7 +1655,7 @@
 		clock-names = "ref_clk_src",
 			"ref_clk",
 			"ref_aux_clk";
-		clocks = <&clock_rpmcc RPM_LN_BB_CLK1>,
+		clocks = <&clock_rpmcc RPM_SMD_LN_BB_CLK1>,
 			<&clock_gcc GCC_UFS_CLKREF_CLK>,
 			<&clock_gcc GCC_UFS_PHY_AUX_HW_CTL_CLK>;
 		status = "disabled";
@@ -1713,7 +1713,7 @@
 			<&clock_gcc GCC_UFS_AHB_CLK>,
 			<&clock_gcc GCC_UFS_UNIPRO_CORE_HW_CTL_CLK>,
 			<&clock_gcc GCC_UFS_ICE_CORE_HW_CTL_CLK>,
-			<&clock_rpmcc RPM_LN_BB_CLK1>,
+			<&clock_rpmcc RPM_SMD_LN_BB_CLK1>,
 			<&clock_gcc GCC_UFS_TX_SYMBOL_0_CLK>,
 			<&clock_gcc GCC_UFS_RX_SYMBOL_0_CLK>;
 		freq-table-hz =
@@ -1820,7 +1820,7 @@
 			<&clock_gcc GCC_USB30_MOCK_UTMI_CLK>,
 			<&clock_gcc GCC_USB30_SLEEP_CLK>,
 			<&clock_gcc GCC_USB_PHY_CFG_AHB2PHY_CLK>,
-			<&clock_rpmcc CXO_DWC3_CLK>;
+			<&clock_rpmcc CXO_SMD_DWC3_CLK>;
 
 		clock-names = "core_clk", "iface_clk", "bus_aggr_clk",
 				"utmi_clk", "sleep_clk", "cfg_ahb_clk", "xo";
@@ -1905,7 +1905,7 @@
 		qcom,phy-clk-scheme = "cml";
 		qcom,major-rev = <2>;
 
-		clocks = <&clock_rpmcc RPM_LN_BB_CLK1>,
+		clocks = <&clock_rpmcc RPM_SMD_LN_BB_CLK1>,
 			<&clock_gcc GCC_RX1_USB2_CLKREF_CLK>,
 			<&clock_gcc GCC_USB_PHY_CFG_AHB2PHY_CLK>;
 
@@ -2061,7 +2061,7 @@
 		clocks = <&clock_gcc GCC_USB3_PHY_AUX_CLK>,
 			 <&clock_gcc GCC_USB3_PHY_PIPE_CLK>,
 			 <&clock_gcc GCC_USB_PHY_CFG_AHB2PHY_CLK>,
-			 <&clock_rpmcc RPM_LN_BB_CLK1>,
+			 <&clock_rpmcc RPM_SMD_LN_BB_CLK1>,
 			 <&clock_gcc GCC_USB3_CLKREF_CLK>;
 
 		clock-names = "aux_clk", "pipe_clk", "cfg_ahb_clk",
@@ -2099,7 +2099,7 @@
 		qcom,vdd_cx-uV-uA = <RPM_SMD_REGULATOR_LEVEL_TURBO 100000>;
 		qcom,mas-crypto = <&mas_crypto_c0>;
 
-		clocks = <&clock_rpmcc CXO_PIL_LPASS_CLK>;
+		clocks = <&clock_rpmcc CXO_SMD_PIL_LPASS_CLK>;
 		clock-names = "xo";
 		qcom,proxy-clock-names = "xo";
 
@@ -2159,14 +2159,14 @@
 		reg-names = "qdsp6_base", "halt_q6", "halt_modem",
 			    "halt_nc", "rmb_base", "restart_reg";
 
-		clocks = <&clock_rpmcc RPM_XO_CLK_SRC>,
+		clocks = <&clock_rpmcc RPM_SMD_XO_CLK_SRC>,
 			 <&clock_gcc GCC_MSS_CFG_AHB_CLK>,
 			 <&clock_gcc GCC_BIMC_MSS_Q6_AXI_CLK>,
 			 <&clock_gcc GCC_BOOT_ROM_AHB_CLK>,
 			 <&clock_gcc GPLL0_OUT_MSSCC>,
 			 <&clock_gcc GCC_MSS_SNOC_AXI_CLK>,
 			 <&clock_gcc GCC_MSS_MNOC_BIMC_AXI_CLK>,
-			 <&clock_rpmcc RPM_QDSS_CLK>;
+			 <&clock_rpmcc RPM_SMD_QDSS_CLK>;
 		clock-names = "xo", "iface_clk", "bus_clk",
 			      "mem_clk", "gpll0_mss_clk", "snoc_axi_clk",
 			      "mnoc_axi_clk", "qdss_clk";
@@ -2404,7 +2404,7 @@
 				<55 512 393600 3936000>;
 		clock-names = "core_clk_src", "core_clk",
 				"iface_clk", "bus_clk";
-		clocks = <&clock_rpmcc RPM_CE1_CLK>,
+		clocks = <&clock_rpmcc RPM_SMD_CE1_CLK>,
 			 <&clock_rpmcc QSEECOM_CE1_CLK>,
 			 <&clock_rpmcc QSEECOM_CE1_CLK>,
 			 <&clock_rpmcc QSEECOM_CE1_CLK>;
@@ -2790,7 +2790,7 @@
 				<45 512 500 800>;
 
 		clocks = <&clock_gcc GCC_PCIE_0_PIPE_CLK>,
-			<&clock_rpmcc RPM_LN_BB_CLK1>,
+			<&clock_rpmcc RPM_SMD_LN_BB_CLK1>,
 			<&clock_gcc GCC_PCIE_0_AUX_CLK>,
 			<&clock_gcc GCC_PCIE_0_CFG_AHB_CLK>,
 			<&clock_gcc GCC_PCIE_0_MSTR_AXI_CLK>,
@@ -2846,8 +2846,8 @@
 		qcom,keep-proxy-regs-on;
 		qcom,mas-crypto = <&mas_crypto_c0>;
 
-		clocks = <&clock_rpmcc CXO_PIL_SSC_CLK>,
-			 <&clock_rpmcc RPM_AGGR2_NOC_CLK>;
+		clocks = <&clock_rpmcc CXO_SMD_PIL_SSC_CLK>,
+			 <&clock_rpmcc RPM_SMD_AGGR2_NOC_CLK>;
 		clock-names = "xo", "aggre2";
 		qcom,proxy-clock-names = "xo", "aggre2";
 
@@ -2930,7 +2930,7 @@
 		qcom,vdd_cx-uV-uA = <RPM_SMD_REGULATOR_LEVEL_TURBO 100000>;
 		qcom,mas-crypto = <&mas_crypto_c0>;
 
-		clocks = <&clock_rpmcc CXO_PIL_SPSS_CLK>;
+		clocks = <&clock_rpmcc CXO_SMD_PIL_SPSS_CLK>;
 		clock-names = "xo";
 		qcom,proxy-clock-names = "xo";
 		qcom,pil-generic-irq-handler;
@@ -3164,7 +3164,7 @@
 		compatible = "qcom,wcn3990-wifi";
 		reg = <0x18800000 0x800000>;
 		reg-names = "membase";
-		clocks = <&clock_rpmcc RPM_RF_CLK2_PIN>;
+		clocks = <&clock_rpmcc RPM_SMD_RF_CLK2_PIN>;
 		clock-names = "cxo_ref_clk_pin";
 		interrupts =
 			<0 413 0 /* CE0 */ >,
@@ -3193,7 +3193,7 @@
 		      <0xa0000000 0x10000000>,
 		      <0xb0000000 0x10000>;
 		reg-names = "membase", "smmu_iova_base", "smmu_iova_ipa";
-		clocks = <&clock_rpmcc RPM_RF_CLK2_PIN>;
+		clocks = <&clock_rpmcc RPM_SMD_RF_CLK2_PIN>;
 		clock-names = "cxo_ref_clk_pin";
 		iommus = <&anoc2_smmu 0x1900>,
 			 <&anoc2_smmu 0x1901>;
@@ -3286,8 +3286,8 @@
 		vdd-supply= <&pm8998_s7>;
 		vddio-supply= <&pm8998_s5>;
 		qcom,use-ext-clocks;
-		clocks = <&clock_rpmcc RPM_RF_CLK3>,
-			 <&clock_rpmcc RPM_RF_CLK3_PIN>;
+		clocks = <&clock_rpmcc RPM_SMD_RF_CLK3>,
+			 <&clock_rpmcc RPM_SMD_RF_CLK3_PIN>;
 		clock-names = "rf_clk3_clk", "rf_clk3_pin_clk";
 		qcom,smmu-support;
 		qcom,smmu-s1-en;

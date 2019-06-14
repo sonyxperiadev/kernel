@@ -969,7 +969,7 @@
 			<0x05065204 0x4>;
 		reg-names = "cpr_ctrl", "fuse_base", "aging_allowed";
 		clocks = <&clock_early_gpu GPUCC_RBCPR_CLK>,
-			 <&clock_rpmcc RPM_CNOC_CLK>;
+			 <&clock_rpmcc RPM_SMD_CNOC_CLK>;
 		clock-names = "core_clk", "bus_clk";
 		interrupts = <GIC_SPI 285 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "cpr";
