@@ -122,13 +122,6 @@
 		vdd_ana-supply = <&pm660l_l6>;
 		et51x,check-sensor-type;
 
-		/*
-		 * The device has to stay enabled until the HAL initializes,
-		 * otherwise it'll not send out any IRQ signals even though the
-		 * rest of the initialization runs without errors.
-		 */
-		et51x,enable-on-boot;
-
 		pinctrl-names = "et51x_reset_reset",
 			"et51x_reset_active",
 			"et51x_irq_active";
