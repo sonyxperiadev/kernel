@@ -1,0 +1,512 @@
+/* arch/arm64/boot/dts/somc/sdm845-tama-akatsuki_common.dtsi
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+/*
+ * Copyright (C) 2017 Sony Mobile Communications Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2, as
+ * published by the Free Software Foundation.
+ */
+
+#include "sdm845-tama-common.dtsi"
+#include "sdm845-tama-common-display.dtsi"
+#include "sdm845-tama-akatsuki-camera.dtsi"
+#include "dsi-panel-somc-akatsuki.dtsi"
+
+
+&vendor {
+	tama_batterydata: qcom,battery-data {
+		qcom,batt-id-range-pct = <17>;
+		#include "fg-gen3-batterydata-akatsuki-tmm-4380mv.dtsi"
+		#include "fg-gen3-batterydata-akatsuki-tmm-4340mv.dtsi"
+		#include "fg-gen3-batterydata-akatsuki-tmm-4300mv.dtsi"
+		#include "fg-gen3-batterydata-akatsuki-tmm-4250mv.dtsi"
+	};
+};
+
+&soc {
+	/* I2C: QUP10 - WLC */
+	i2c@a88000 {
+		idtp9221@61 {
+			compatible = "idtp,idtp9221";
+			reg = <0x61>;
+			status = "ok";
+			somc,wlc-en-gpio = <&pmi8998_gpios 8 0>;
+			somc,wlc-irq-gpio = <&tlmm 31 0>;
+			somc,ilim-bpp = <1100>;
+			somc,ilim-epp = <1100>;
+			somc,ilim-epp-boost = <1100>;
+			somc,vout-bpp = <5000>;
+			somc,vout-epp = <9000>;
+			somc,vout-limit-batt-therm = <340>;
+			somc,vout-limit-charge-full;
+		};
+	};
+
+	/* I2C: QUP14 */
+	i2c@a98000 {
+		tcs3490@72 {
+			rgbcir_vdd-supply = <&cam_vio_vreg>;
+			/delete-property/ rgbcir_vio-supply;
+			ams,rgbcir-vio-supply = <0>;
+		};
+		tof_sensor@52 {
+			tof_avdd-supply = <&cam_vio_vreg>;
+			/delete-property/ tof_vio-supply;
+			sony,tof-vio-supply = <0>;
+		};
+	};
+};
+
+&somc_pinctrl {
+	/* If product common default setting is needed,
+	fill pinctrl-1 value in <product>_common.dtsi */
+	pinctrl-1 = <&sdm_gpio_7 &sdm_gpio_16 &sdm_gpio_31 &sdm_gpio_44
+		     &sdm_gpio_52 &sdm_gpio_58 &sdm_gpio_59 &sdm_gpio_60
+		     &sdm_gpio_78 &sdm_gpio_116 &sdm_gpio_125
+		     /*&sdm_gpio_133*/>;
+};
+
+&somc_pinctrl_pmic {
+	/* If product common PMIC default setting is needed,
+	fill pinctrl-1 value in <product>_common.dtsi */
+	pinctrl-1 = <&pmi8998_gpio_8>;
+};
+
+/* GPIO_7 : SAMD_RSTEN_N */
+&sdm_gpio_7 {
+	mux {
+		pins = "gpio7";
+		function = "gpio";
+	};
+
+	config {
+		pins = "gpio7";
+		drive-strength = <2>;
+		/delete-property/ bias-pull-down;
+		bias-disable;
+		/delete-property/ input-enable;
+		output-low;
+	};
+};
+
+/* GPIO_16 : MASTER_RST_N */
+&sdm_gpio_16 {
+	mux {
+		pins = "gpio16";
+		function = "gpio";
+	};
+
+	config {
+		pins = "gpio16";
+		drive-strength = <2>;
+		/delete-property/ bias-pull-down;
+		bias-pull-up;
+		input-enable;
+	};
+};
+
+/* GPIO_31 : WLC_INT_N */
+&sdm_gpio_31 {
+	mux {
+		pins = "gpio31";
+		function = "gpio";
+	};
+
+	config {
+		pins = "gpio31";
+		drive-strength = <2>;
+		/delete-property/ bias-pull-down;
+		bias-pull-up;
+		input-enable;
+	};
+};
+
+/* GPIO_44 : DISP_ERR_FG */
+&sdm_gpio_44 {
+	mux {
+		pins = "gpio44";
+		function = "gpio";
+	};
+
+	config {
+		pins = "gpio44";
+		drive-strength = <2>;
+		bias-pull-down;
+		input-enable;
+	};
+};
+
+/* GPIO_52 : SAMD_BOOTL_PIN */
+&sdm_gpio_52 {
+	mux {
+		pins = "gpio52";
+		function = "gpio";
+	};
+
+	config {
+		pins = "gpio52";
+		drive-strength = <2>;
+		/delete-property/ bias-pull-down;
+		bias-disable;
+		/delete-property/ input-enable;
+		output-low;
+	};
+};
+
+/* GPIO_58 : SDM_SWD_CLK */
+&sdm_gpio_58 {
+	mux {
+		pins = "gpio58";
+		function = "gpio";
+	};
+
+	config {
+		pins = "gpio58";
+		drive-strength = <2>;
+		/delete-property/ bias-pull-down;
+		bias-disable;
+		/delete-property/ input-enable;
+		output-high;
+	};
+};
+
+/* GPIO_59 : SDM_SWD_DAT */
+&sdm_gpio_59 {
+	mux {
+		pins = "gpio59";
+		function = "gpio";
+	};
+
+	config {
+		pins = "gpio59";
+		drive-strength = <2>;
+		/delete-property/ bias-pull-down;
+		bias-disable;
+		/delete-property/ input-enable;
+		output-high;
+	};
+};
+
+/* GPIO_60 : SAMD_RST */
+&sdm_gpio_60 {
+	mux {
+		pins = "gpio60";
+		function = "gpio";
+	};
+
+	config {
+		pins = "gpio60";
+		drive-strength = <2>;
+		/delete-property/ bias-pull-down;
+		bias-disable;
+		/delete-property/ input-enable;
+		output-low;
+	};
+};
+
+/* GPIO_78 : MODE_SEL2 */
+&sdm_gpio_78 {
+	mux {
+		pins = "gpio78";
+		function = "gpio";
+	};
+
+	config {
+		pins = "gpio78";
+		drive-strength = <2>;
+		/delete-property/ bias-pull-down;
+		bias-disable;
+		/delete-property/ input-enable;
+		output-low;
+	};
+};
+
+/* GPIO_116 : NFC_ESE_PWR_REQ */
+&sdm_gpio_116 {
+	mux {
+		pins = "gpio116";
+		function = "gpio";
+	};
+
+	config {
+		pins = "gpio116";
+		drive-strength = <2>;
+		bias-pull-down;
+		input-enable;
+	};
+};
+
+&sde_touch_suspend {
+	mux {
+		pins = "gpio125";
+		function = "gpio";
+	};
+	config {
+		pins = "gpio125";
+		drive-strength = <2>;
+		/delete-property/ bias-pull-down;
+		bias-disable;
+	};
+};
+
+/* GPIO_125: TS_INT_N */
+&sdm_gpio_125 {
+	mux {
+		pins = "gpio125";
+		function = "gpio";
+	};
+
+	config {
+		pins = "gpio125";
+		drive-strength = <2>;
+		/delete-property/ bias-pull-down;
+		bias-pull-up;
+		input-enable;
+	};
+};
+
+/* GPIO_133 : TS_VDDIO_EN */
+&sdm_gpio_133 {
+	mux {
+		pins = "gpio133";
+		function = "gpio";
+	};
+
+	config {
+		pins = "gpio133";
+		drive-strength = <2>;
+		/delete-property/ bias-pull-down;
+		bias-disable;
+		/delete-property/ input-enable;
+		output-high;
+	};
+};
+
+/* GPIO_8: WLC_EN_N */
+&pmi8998_gpio_8 {
+	pins = "gpio8";
+	function = "normal";
+	/delete-property/ bias-high-impedance;
+	output-low;
+	drive-push-pull;
+	qcom,drive-strength = <3>;
+	power-source = <0>;
+};
+
+/* Regulator config */
+&pm8998_l14 {
+	qcom,regulator-type = <0>;      /* LDO */
+	qcom,init-enable = <1>;
+	qcom,init-ldo-mode = <1>;
+	qcom,init-pin-ctrl-enable = <0>;
+	qcom,init-pin-ctrl-mode = <0>;
+	regulator-min-microvolt = <1840000>;
+	regulator-max-microvolt = <1840000>;
+	qcom,init-voltage = <1840000>;
+	status = "okay";
+};
+
+&pm8998_l22 {
+	qcom,regulator-type = <0>;	/* LDO */
+	qcom,init-enable = <0>;
+	qcom,init-ldo-mode = <1>;
+	qcom,init-pin-ctrl-enable = <0>;
+	qcom,init-pin-ctrl-mode = <0>;
+	regulator-min-microvolt = <2700000>;
+	regulator-max-microvolt = <2700000>;
+	qcom,init-voltage = <2700000>;
+	status = "okay";
+};
+
+&pm8998_l28 {
+	qcom,regulator-type = <0>;	/* LDO */
+	qcom,init-enable = <0>;
+	qcom,init-ldo-mode = <1>;
+	qcom,init-pin-ctrl-enable = <0>;
+	qcom,init-pin-ctrl-mode = <0>;
+	regulator-min-microvolt = <3000000>;
+	regulator-max-microvolt = <3000000>;
+	qcom,init-voltage = <3000000>;
+	status = "okay";
+};
+
+&pmi8998_wled {
+	linux,name = "wled";
+	qcom,led-strings-list = [00 01 02];
+};
+
+&red_led {
+	somc,color_variation_max_num = <4>;
+	somc,max_current = <
+		64 60 42
+		65 60 42
+		66 60 42
+		67 60 42>;
+};
+
+&green_led {
+	somc,color_variation_max_num = <4>;
+	somc,max_current = <
+		64 36 64
+		65 36 64
+		66 36 64
+		67 36 64>;
+};
+
+&blue_led {
+	somc,color_variation_max_num = <4>;
+	somc,max_current = <
+		64 140 28
+		65 140 28
+		66 140 28
+		67 140 28>;
+};
+
+&synaptics_clearpad {
+	status = "disabled";
+};
+
+&synaptics_tcm {
+	status = "disabled";
+};
+
+&qupv3_se5_i2c {
+	atmel_mxt640u: atmel_mxt640u@4a {
+		compatible = "atmel,mxt640u";
+		reg = <0x4a>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <125 0x2008>;
+		avdd-supply = <&pm8998_l28>;
+		atmel,fw_name = "touch_module_id_0x01.img";
+		atmel,reset-gpio = <&tlmm 99 0x00>;
+		atmel,irq-gpio = <&tlmm 125 0x2008>;
+		atmel,vddio-gpio = <&tlmm 133 0x00>;
+		atmel,numtouch = <10>;
+		atmel,knock_on_type = <1>;
+		atmel,lcd_x = <1440>;
+		atmel,lcd_y = <2880>;
+		atmel,global_access_pixel = <0>;
+		atmel,use_mfts = <1>;
+		atmel,butt_check_enable = <0>;
+		atmel,use_debug_reason = <1>;
+		atmel,use_lpwg_test = <1>;
+
+		/* feature */
+		atmel,watchdog_supported = <1>;
+		atmel,watchdog_delay_ms = <10000>;
+		atmel,side_key_supported = <1>;
+		atmel,glove_mode_supported = <1>;
+		atmel,cover_mode_supported = <1>;
+		atmel,aod_mode_supported = <1>;
+		atmel,stamina_mode_supported = <1>;
+		atmel,sod_mode_supported = <1>;
+	};
+};
+
+&qusb_phy0 {
+	qcom,efuse-offset = <0x00000000>;
+	qcom,qusb-phy-init-seq =
+		/* <value reg_offset> */
+		   <0x23 0x210 /* PWR_CTRL1 */
+		    0x03 0x04  /* PLL_ANALOG_CONTROLS_TWO */
+		    0x7c 0x18c /* PLL_CLOCK_INVERTERS */
+		    0x80 0x2c  /* PLL_CMODE */
+		    0x0a 0x184 /* PLL_LOCK_DELAY */
+		    0x19 0xb4  /* PLL_DIGITAL_TIMERS_TWO */
+		    0x40 0x194 /* PLL_BIAS_CONTROL_1 */
+		    0x19 0x198 /* PLL_BIAS_CONTROL_2 */
+		    0x21 0x214 /* PWR_CTRL2 */
+		    0x08 0x220 /* IMP_CTRL1 */
+		    0x58 0x224 /* IMP_CTRL2 */
+		    0x17 0x240 /* TUNE1 */
+		    0x2B 0x244 /* TUNE2 */
+		    0xca 0x248 /* TUNE3 */
+		    0x04 0x24c /* TUNE4 */
+		    0x01 0x250 /* TUNE5 */
+		    0x00 0x23c /* CHG_CTRL2 */
+		    0x22 0x210>; /* PWR_CTRL1 */
+	somc,qusb-phy-init-bias_ctrl2_sp = <0x25>;
+};
+
+&pmi8998_charger {
+	qcom,fv-max-uv = <4380000>;
+	somc,thermal-fcc-ua = <2400000 2200000 2000000
+				1800000 1500000 1400000
+				1300000 1000000 800000
+				700000 500000 200000
+				100000 0 0>;
+	somc,thermal-lo-volt-icl-ua = <2000000 1500000 1500000
+					1500000 1300000 1100000
+					1100000 1000000 900000
+					900000 500000 200000
+					100000 0 0>;
+	somc,thermal-hi-volt-icl-ua = <1700000 1700000 1700000
+					1700000 1500000 1500000
+					1000000 1000000 1000000
+					600000 500000 200000
+					100000 0 0>;
+	somc,thermal-dcin-icl-ua = <1000000 950000 900000
+					850000 800000 750000
+					700000 600000 500000
+					400000 300000 200000
+					100000 0 0>;
+	somc,thermal-wireless-v-limit = <9000 9000 9000
+					9000 9000 9000
+					9000 9000 9000
+					9000 5000 5000
+					5000 5000 5000>;
+	somc,fake-charging-temp-level = <13>;
+	somc,wireless-support;
+	somc,jeita-use-aux-therm;
+	somc,jeita-use-wlc-therm;
+	somc,jeita-aux-thresh-hot = <900>;
+	somc,jeita-aux-thresh-warm = <700>;
+	somc,jeita-wlc-thresh-hot = <568>;
+	somc,jeita-wlc-thresh-warm = <468>;
+	somc,jeita-warm-fcc-ua = <950000>;
+	somc,jeita-cool-fcc-ua = <950000>;
+	somc,jeita-warm-fv-uv = <4200000>;
+	somc,product-icl-ua = <2000000>;
+	somc,high-voltage-icl-ua = <1700000>;
+	qcom,dc-icl-ua = <1000000>;
+	somc,dc-h-volt-boost-icl-ua = <1000000>;
+	somc,dc-h-volt-icl-ua = <1000000>;
+	somc,dc-l-volt-icl-ua = <1000000>;
+	somc,batt-temp-correction = <0>;
+	somc,wlc-temp-correction = <(-18)>;
+	qcom,hvdcp-disable;
+};
+
+&pmi8998_fg {
+	qcom,battery-data = <&tama_batterydata>;
+	qcom,fg-sys-term-current = <(-185)>;
+	qcom,fg-chg-term-current = <160>;
+};
+
+&pmi8998_pdphy {
+	qcom,default-sink-caps = <5000 2000>, /* 5V @ 2A */
+				 <9000 1700>; /* 9V @ 1.7A */
+};
+
+/* SoMC Akatsuki uses fixed DCDC instead of LAB/IBB for OLED panel */
+&labibb {
+	status = "disabled";
+};
+
+&lab_regulator {
+	status = "disabled";
+};
+
+&ibb_regulator {
+	status = "disabled";
+};

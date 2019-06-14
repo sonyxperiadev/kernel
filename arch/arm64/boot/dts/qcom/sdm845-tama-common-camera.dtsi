@@ -1,0 +1,228 @@
+/* arch/arm64/boot/dts/somc/sdm845-tama-common.dtsi
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+/*
+ * NOTE: This file has been modified by Sony Mobile Communications Inc.
+ * Modifications are Copyright (c) 2017 Sony Mobile Communications Inc,
+ * and licensed under the license of the file.
+ */
+
+&soc {
+	sony_camera_module_0: sony,camera_modules@0 {
+		cell-index = <0>;
+		reg = <0x00>;
+		interrupt-parent = <&tlmm>;
+		status = "ok";
+		compatible = "sony_camera_0";
+		module_names = "SOI20BS2";
+		default_module_name = "SOI20BS2";
+		cam_vaf-supply = <&pm8998_l19>;
+		cam_vio-supply = <&cam_vio_vreg>;
+		cam_vana-supply = <&cam_vana_rear_verg>;
+		cam_clk-supply = <&titan_top_gdsc>;
+		cam-vreg-name = "cam_vaf", "cam_vio", "cam_vana", "cam_clk";
+		cam-vreg-type = <0 0 0 0 0>;
+		cam-vreg-min-voltage = <2700000 0 0 0>;
+		cam-vreg-max-voltage = <2700000 0 0 0>;
+		cam-vreg-op-mode = <300000 0 0 0>;
+		gpio-no-mux = <0>;
+		pinctrl-names = "cam_default", "cam_suspend";
+		pinctrl-0 = <&cam_sensor_mclk0_active &sdm_gpio_21 &sdm_gpio_80>;
+		pinctrl-1 = <&cam_sensor_mclk0_suspend &sdm_gpio_21 &sdm_gpio_80>;
+		gpios = <&tlmm 13 0>, <&tlmm 21 0>, <&tlmm 80 0>;
+		gpio-req-tbl-num = <0 1 2>;
+		gpio-req-tbl-flags = <1 1 0>;
+		gpio-req-tbl-label = "CAMIF_MCLK0", "SONY_CAMERA_SOF", "SONY_CAMERA_RESET";
+		cci-master = <0>;
+		clocks = <&clock_camcc CAM_CC_MCLK0_CLK>;
+		clock-names = "cam_clk";
+		clock-rates = <8000000>;
+		use_spi = <0>;
+		eeprom_addr = <0xA2>;
+		eeprom_type = <2>;
+		eeprom_max_len = <2048>;
+
+		SOI20BS2 {
+			i2c_freq_mode = <3>;
+			power_off {
+				commands =
+					"gpio_reset",
+					"cam_clk",
+					"cam_vaf",
+					"cam_vana",
+					"cam_vio",
+					"exit";
+				gpio_reset = <5 0x0 0 5>;
+				cam_clk = <4 0xffffffff 0 0>;
+				cam_vaf = <3 0xffffffff 0 0>;
+				cam_vana = <2 0xffffffff 0 5>;
+				cam_vio = <1 0xffffffff 0 1>;
+				exit = <14 0x0 0 0>;
+			};
+			power_on {
+				commands =
+					"cam_vana",
+					"cam_vio",
+					"cam_vaf",
+					"cam_clk",
+					"gpio_reset",
+					"exit";
+				cam_vana = <2 0 0 1>;
+				cam_vio = <1 0 0 1>;
+				cam_vaf = <3 2700 106500 3>;
+				cam_clk = <4 0 0 1>;
+				gpio_reset = <5 1 0 1>;
+				exit = <14 0x0 0 0>;
+			};
+		};
+	};
+
+	sony_camera_module_1: sony,camera_modules@1 {
+		cell-index = <1>;
+		reg = <0x01>;
+		interrupt-parent = <&tlmm>;
+		status = "ok";
+		compatible = "sony_camera_1";
+		module_names = "LGI05BN1", "CHI05BN1";
+		default_module_name = "CHI05BN1";
+		cam_vdig-supply = <&pm8998_s3>;
+		cam_vaf-supply = <&pm8998_l19>;
+		cam_vio-supply = <&cam_vio_vreg>;
+		cam_vana-supply = <&cam_vana_front_verg>;
+		cam_clk-supply = <&titan_top_gdsc>;
+		cam-vreg-name = "cam_vdig", "cam_vana", "cam_vio", "cam_clk";
+		cam-vreg-type = <0 0 0 0>;
+		cam-vreg-min-voltage = <1352000 2700000 0 0>;
+		cam-vreg-max-voltage = <1352000 2700000 0 0>;
+		cam-vreg-op-mode = <105000 150000 0 0>;
+		gpio-no-mux = <0>;
+		pinctrl-names = "cam_default", "cam_suspend";
+		pinctrl-0 = <&cam_sensor_mclk1_active &sdm_gpio_9>;
+		pinctrl-1 = <&cam_sensor_mclk1_suspend &sdm_gpio_9>;
+		gpios = <&tlmm 14 0>, <&tlmm 9 0>;
+		gpio-req-tbl-num = <0 1>;
+		gpio-req-tbl-flags = <1 0>;
+		gpio-req-tbl-label = "CAMIF_MCLK2", "SONY_CAMERA_RESET";
+		cci-master = <1>;
+		clocks = <&clock_camcc CAM_CC_MCLK1_CLK>;
+		clock-names = "cam_clk";
+		clock-rates = <8000000>;
+		use_spi = <0>;
+		eeprom_addr = <0xA0>;
+		eeprom_type = <2>;
+		eeprom_max_len = <2048>;
+
+		LGI05BN1 {
+			i2c_freq_mode = <1>;
+			power_off {
+				commands =
+					"gpio_reset",
+					"cam_clk",
+					"cam_vana",
+					"cam_vio",
+					"cam_vdig",
+					"exit";
+				cam_vdig = <0 0xffffffff 0 98>;
+				cam_vio = <1 0xffffffff 0 1>;
+				cam_vana = <2 0xffffffff 0 1>;
+				gpio_reset = <5 0x0 0 1>;
+				cam_clk = <4 0xffffffff 0 1>;
+				exit = <14 0x0 0 0>;
+			};
+			power_on {
+				commands =
+					"cam_vdig",
+					"cam_vio",
+					"cam_vana",
+					"cam_clk",
+					"gpio_reset",
+					"exit";
+				cam_vdig = <0 1352 105000 1>;
+				cam_vio = <1 0 0 1>;
+				cam_vana = <2 0 0 1>;
+				gpio_reset = <5 1 0 1>;
+				cam_clk = <4 0 0 1>;
+				exit = <14 0x0 0 0>;
+			};
+		};
+
+		CHI05BN1 {
+			i2c_freq_mode = <1>;
+			power_off {
+				commands =
+					"gpio_reset",
+					"cam_clk",
+					"cam_vana",
+					"cam_vio",
+					"cam_vdig",
+					"exit";
+				cam_vdig = <0 0xffffffff 0 98>;
+				cam_vio = <1 0xffffffff 0 1>;
+				cam_vana = <2 0xffffffff 0 1>;
+				gpio_reset = <5 0x0 0 1>;
+				cam_clk = <4 0xffffffff 0 1>;
+				exit = <14 0x0 0 0>;
+			};
+			power_on {
+				commands =
+					"cam_vdig",
+					"cam_vio",
+					"cam_vana",
+					"cam_clk",
+					"gpio_reset",
+					"exit";
+				cam_vdig = <0 1352 105000 1>;
+				cam_vio = <1 0 0 1>;
+				cam_vana = <2 0 0 1>;
+				gpio_reset = <5 1 0 1>;
+				cam_clk = <4 0 0 1>;
+				exit = <14 0x0 0 0>;
+			};
+		};
+	};
+};
+
+&led_flash_rear {
+	status = "disabled";
+};
+&led_flash_rear_aux {
+	status = "disabled";
+};
+&led_flash_front {
+	status = "disabled";
+};
+&actuator_regulator {
+	status = "disabled";
+};
+&camera_rear_ldo {
+	status = "disabled";
+};
+&camera_ldo {
+	status = "disabled";
+};
+
+
+/* DISABLE Q Camera GPIO9 */
+&camera_dvdd_en_default {
+	/delete-property/ pins;
+	/delete-property/ function;
+	/delete-property/ power-source;
+	/delete-property/ output-low;
+};
+
+/* DISABLE Q Camera GPIO12 */
+&camera_rear_dvdd_en_default {
+	/delete-property/ pins;
+	/delete-property/ function;
+	/delete-property/ power-source;
+	/delete-property/ output-low;
+};
+
