@@ -97,6 +97,8 @@ struct et51x_data {
 
 	struct mutex lock;
 	bool prepared;
+	bool check_sensor_type;
+	bool low_voltage_probe;
 };
 
 struct et51x_awake_args {
@@ -111,9 +113,36 @@ struct et51x_data *to_et51x_data(struct file *fp)
 	return container_of(md, struct et51x_data, misc);
 }
 
+static int et51x_vreg_set_voltage(struct device *dev, struct regulator *vreg, int voltage)
+{
+	int rc = 0;
+
+	if (!dev || !vreg)
+		return -EINVAL;
+
+	dev_dbg(dev, "Setting regulator %s to %d volts\n",
+			ET51X_REGULATOR_VDD_ANA,
+			voltage);
+
+	if (regulator_count_voltages(vreg) > 0) {
+		rc = regulator_set_voltage(vreg, voltage, voltage);
+		if (rc)
+			dev_err(dev, "Unable to set voltage to %d: %d\n",
+					voltage, rc);
+	} else {
+		dev_warn(dev, "No voltages available");
+	}
+
+	rc = regulator_enable(vreg);
+	if (rc)
+		dev_err(dev, "Unable to enable: %d\n", rc);
+
+	return rc;
+}
+
 static int vreg_setup(struct et51x_data *et51x, bool enable)
 {
-	int rc;
+	int rc = 0;
 	struct regulator *vreg = et51x->vdd_ana;
 	struct device *dev = et51x->dev;
 
@@ -121,28 +150,15 @@ static int vreg_setup(struct et51x_data *et51x, bool enable)
 		return -EINVAL;
 
 	dev_dbg(dev, "%s regulator %s\n", enable ? "enabling" : "disabling",
-		ET51X_REGULATOR_VDD_ANA);
+			ET51X_REGULATOR_VDD_ANA);
 
 	if (enable) {
-		if (regulator_count_voltages(vreg) > 0) {
-			rc = regulator_set_voltage(vreg, 1800000UL, 1800000UL);
-			if (rc) {
-				dev_err(dev, "Unable to set voltage: %d\n", rc);
-				return rc;
-			}
-		} else {
-			dev_warn(dev, "No voltages available");
-		}
-
-		rc = regulator_enable(vreg);
-		if (rc)
-			dev_err(dev, "Unable to enable: %d\n", rc);
+		rc = et51x_vreg_set_voltage(dev, vreg, 3300000);
 	} else {
 		if (regulator_is_enabled(vreg)) {
 			regulator_disable(vreg);
 			dev_dbg(dev, "disabled %s\n", ET51X_REGULATOR_VDD_ANA);
 		}
-		rc = 0;
 	}
 
 	return rc;
@@ -327,11 +343,12 @@ static long et51x_device_ioctl(struct file *fp, unsigned int cmd,
 
 		rc = put_user(val, (int *)usr);
 		break;
-#ifdef CONFIG_ARCH_SONY_NILE
 	case ET51X_IOCRHWTYPE:
-		rc = put_user((int)FP_HW_TYPE_EGISTEC, (int *)usr);
+		if (et51x->check_sensor_type)
+			rc = put_user((int)FP_HW_TYPE_EGISTEC, (int *)usr);
+		else
+			rc = -ENOSYS;
 		break;
-#endif
 	default:
 		rc = -ENOIOCTLCMD;
 		dev_err(et51x->dev, "Unknown IOCTL 0x%x.\n", cmd);
@@ -461,9 +478,7 @@ static int et51x_probe(struct platform_device *pdev)
 	size_t i;
 	int irqf;
 	struct device_node *np = dev->of_node;
-#ifdef CONFIG_ARCH_SONY_NILE
-	int hw_type;
-#endif
+	int hw_type = 0;
 
 	struct et51x_data *et51x =
 		devm_kzalloc(dev, sizeof(*et51x), GFP_KERNEL);
@@ -497,21 +512,44 @@ static int et51x_probe(struct platform_device *pdev)
 		goto exit;
 	}
 
-	rc = vreg_setup(et51x, true);
+	et51x->check_sensor_type = of_property_read_bool(dev->of_node,
+			"et51x,check-sensor-type");
+	/* Use low-voltage probe by default to prevent HW damage */
+	et51x->low_voltage_probe = !of_property_read_bool(dev->of_node,
+			"et51x,no-low-voltage-probe");
+
+	dev_dbg(dev, "check_sensor_type: %d, low_voltage_probe: %d\n",
+			et51x->check_sensor_type, et51x->low_voltage_probe);
+
+	if (et51x->low_voltage_probe)
+		/* Start at 1.8v which is the voltage used for FPC,
+		 * to err on the side of caution:
+		 */
+		rc = et51x_vreg_set_voltage(et51x->dev, et51x->vdd_ana,
+				1800000);
+	else
+		rc = vreg_setup(et51x, true);
+
 	if (rc)
-		goto exit;
-
-#ifdef CONFIG_ARCH_SONY_NILE
-	hw_type = cei_fp_module_detect();
-
-	if (hw_type != FP_HW_TYPE_EGISTEC) {
-		dev_info(dev, "Egistec sensor not found, bailing out\n");
-		rc = -ENODEV;
 		goto exit_powerdown;
-	}
 
-	dev_info(dev, "Detected Egistec sensor\n");
-#endif
+	if (et51x->check_sensor_type) {
+		hw_type = cei_fp_module_detect();
+
+		if (hw_type != FP_HW_TYPE_EGISTEC) {
+			dev_info(dev,
+				"Egistec sensor not found, bailing out\n");
+			rc = -ENODEV;
+			goto exit_powerdown;
+		}
+
+		dev_info(dev, "Detected Egistec sensor\n");
+
+		/* Scale up to 3.3v */
+		rc = vreg_setup(et51x, true);
+		if (rc)
+			goto exit_powerdown;
+	}
 
 	rc = et51x_request_named_gpio(et51x, "et51x,gpio_irq",
 				      &et51x->irq_gpio);
