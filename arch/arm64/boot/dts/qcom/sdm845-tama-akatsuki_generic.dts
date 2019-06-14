@@ -20,9 +20,9 @@
 
 /dts-v1/;
 
-#include "../qcom/sdm845.dtsi"
-#include "../qcom/sdm845-sde-display.dtsi"
-#include "../qcom/sdm845-mtp.dtsi"
+#include "sdm845.dtsi"
+#include "sdm845-sde-display.dtsi"
+#include "sdm845-mtp.dtsi"
 #include "sdm845-tama-akatsuki_generic.dtsi"
 
 / {
