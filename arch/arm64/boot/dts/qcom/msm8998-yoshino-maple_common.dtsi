@@ -1,0 +1,329 @@
+/* arch/arm64/boot/dts/qcom/msm8998-maple_common.dtsi
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+/*
+ * Copyright (C) 2016 Sony Mobile Communications Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2, as
+ * published by the Free Software Foundation.
+ */
+
+#include "msm8998-yoshino-maple-camera.dtsi"
+#include "dsi-panel-somc-maple.dtsi"
+
+/ {
+	firmware: firmware {
+		android {
+			fstab {
+				vendor {
+					status = "disabled";
+				};
+			};
+		};
+	};
+};
+
+&soc {
+	/* I2C: BLSP5 */
+	i2c@c179000 { /* BLSP1 QUP5 */
+		synaptics_clearpad@2c {
+			chip_id = <0x38>;
+
+			/* F01_RMI_CTRL05: Doze Holdoff */
+			doze_default_time = <35>;
+			doze_glove_mode_time = <35>;
+			doze_cover_mode_time = <35>;
+		};
+	};
+
+	mdss_dsi0_pll: qcom,mdss_dsi_pll@c994400 {
+		qcom,dsi-pll-ssc-en;
+		qcom,dsi-pll-ssc-mode = "down-spread";
+		qcom,ssc-frequency-hz = <31500>;
+		qcom,ssc-ppm = <5000>;
+	};
+
+	mdss_dsi1_pll: qcom,mdss_dsi_pll@c996400 {
+		qcom,dsi-pll-ssc-en;
+		qcom,dsi-pll-ssc-mode = "down-spread";
+		qcom,ssc-frequency-hz = <31500>;
+		qcom,ssc-ppm = <5000>;
+	};
+
+};
+
+&somc_pinctrl {
+	/* If product common default setting is needed,
+	   fill pinctrl-1 value in <product>_common.dtsi */
+	pinctrl-1 = <&msm_gpio_102 &msm_gpio_103 &msm_gpio_115
+		     &msm_gpio_127 &msm_gpio_132 &msm_gpio_133 &msm_gpio_136>;
+};
+
+&qusb_phy0 {
+	qcom,efuse-offset = <0x00000005>;
+	qcom,qusb-phy-init-seq =
+		/* <value reg_offset> */
+			<0x13 0x04 /* analog_controls_two */
+			0x7c 0x18c /* pll_clock_inverter */
+			0x80 0x2c /* pll_cmode */
+			0x0a 0x184 /* pll_lock_delay */
+			0x05 0x23c /* tune1 */
+			0x0F 0x240 /* tune2 */
+			0xD4 0x244 /* tune3 */
+			0x04 0x248 /* tune4 */
+			0x19 0xb4>; /* digital_timers_two */
+
+	qcom,qusb-phy-host-init-seq =
+		/* <value reg_offset> */
+			<0x63 0x210 /* pwr_ctrl1 */
+			0x13 0x04  /* analog_controls_two */
+			0x7c 0x18c /* pll_clock_inverter */
+			0x80 0x2c  /* pll_cmode */
+			0x0a 0x184 /* pll_lock_delay */
+			0x8c 0x21c /* imp_ctrl1　*/
+			0x05 0x23c /* tune1 */
+			0x0F 0x240 /* tune2 */
+			0xff 0x218 /* rescode_contrpl */
+			0x62 0x210>; /* pwr_ctrl1 */
+};
+
+/* GPIO_10: 4K_DISP_DCDC_EN */
+&disp_dcdc_en_default {
+	/delete-property/ output-low;
+	output-high;
+};
+
+&tlmm {
+	/* GPIO_102 : NC */
+	msm_gpio_102: msm_gpio_102{
+		mux {
+			pins = "gpio102";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio102";
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	/* GPIO_103 : NC */
+	msm_gpio_103: msm_gpio_103{
+		mux {
+			pins = "gpio103";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio103";
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	/* GPIO_115 : NC */
+	msm_gpio_115: msm_gpio_115{
+		mux {
+			pins = "gpio115";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio115";
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	/* GPIO_127: NC */
+	msm_gpio_127: msm_gpio_127{
+		mux {
+			pins = "gpio127";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio127";
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	/* GPIO_132: NC */
+	msm_gpio_132: msm_gpio_132{
+		mux {
+			pins = "gpio132";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio132";
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	/* GPIO_133: TS_VDDIO_EN*/
+	msm_gpio_133: msm_gpio_133{
+		mux {
+			pins = "gpio133";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio133";
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	/* GPIO_136: NC */
+	msm_gpio_136: msm_gpio_136{
+		mux {
+			pins = "gpio136";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio136";
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+};
+
+&vendor {
+	yoshino_maple_batterydata: qcom,battery-data {
+		qcom,batt-id-range-pct = <17>;
+		#include "fg-gen3-batterydata-maple-send-4350mv-3230mah.dtsi"
+		#include "fg-gen3-batterydata-maple-send-4300mv-3167mah.dtsi"
+	};
+};
+
+&pm8998_l14 {
+	qcom,regulator-type = <0>;        /* LDO */
+	qcom,init-enable = <0>;
+	qcom,init-ldo-mode = <1>;
+	qcom,init-pin-ctrl-enable = <0>;
+	qcom,init-pin-ctrl-mode = <0>;
+	regulator-min-microvolt = <1850000>;
+	regulator-max-microvolt = <1850000>;
+	qcom,init-voltage = <1850000>;
+	status = "okay";
+};
+
+&pmi8998_fg {
+	qcom,battery-data = <&yoshino_maple_batterydata>;
+	qcom,fg-sys-term-current = <(-186)>;
+	qcom,fg-chg-term-current = <161>;
+	somc,rated-capacity-uah = <3230000>;
+	somc,initial-capacity-uah = <3424000>;
+};
+
+&pmi8998_charger {
+	qcom,fv-max-uv = <4350000>;
+	somc,product-icl-ua = <1700000>;
+	somc,high-voltage-icl-ua = <1700000>;
+	somc,thermal-fcc-ua = <2400000 2200000 1950000
+				1800000 1500000 1300000
+				1300000 1000000 800000
+				700000 700000 500000
+				300000 100000 0>;
+	somc,thermal-lo-volt-icl-ua = <1500000 1500000 1500000
+					1500000 1300000 1100000
+					1100000 1000000 900000
+					900000 900000 500000
+					200000 100000 0>;
+	somc,thermal-hi-volt-icl-ua = <1700000 1700000 1700000
+					1700000 1500000 1500000
+					1000000 1000000 1000000
+					1000000 600000 500000
+					200000 100000 0>;
+	somc,jeita-use-aux-therm;
+	somc,jeita-aux-thresh-hot = <900>;
+	somc,jeita-aux-thresh-warm = <700>;
+	somc,jeita-warm-fcc-ua = <800000>;
+	somc,jeita-cool-fcc-ua = <800000>;
+};
+
+&mdss_dsi {
+	hw-config = "split_dsi";
+};
+
+&mdss_dsi0 {
+	qcom,dsi-pref-prim-pan = <&dsi_dual0_default_panel>;
+};
+
+&mdss_dsi1 {
+	status = "ok";
+	qcom,dsi-pref-prim-pan = <&dsi_dual1_default_panel>;
+};
+
+&dsi_panel_pwr_supply_hybrid_incell {
+	qcom,panel-supply-entry@0 {
+		qcom,supply-min-voltage = <1850000>;
+		qcom,supply-max-voltage = <1850000>;
+	};
+};
+
+&lab_regulator {
+	regulator-max-microvolt = <5800000>;
+	
+};
+
+&ibb_regulator {
+	regulator-max-microvolt = <5600000>;
+};
+
+&red_led {
+	somc,color_variation_max_num = <4>;
+	somc,max_current = <
+		26 126 90
+		27 82 72
+		28 82 72
+		29 110 72>;
+};
+
+&green_led {
+	somc,color_variation_max_num = <4>;
+	somc,max_current = <
+		26 86 136
+		27 80 160
+		28 82 160
+		29 78 160>;
+};
+
+&blue_led {
+	somc,color_variation_max_num = <4>;
+	somc,max_current = <
+		26 307 100
+		27 305 118
+		28 285 118
+		29 277 118>;
+};
+
+&pmi8998_wled {
+	somc,calc-curr;
+	somc,area_count_table_size = <24>;
+	somc,area_count_table = <0 117 234 351 468 585 702 819
+				936 1053 1170 1404 1638 1872 2106
+				2340 2574 2808 3042 3276 3510 3744
+				3978 4095>;
+};

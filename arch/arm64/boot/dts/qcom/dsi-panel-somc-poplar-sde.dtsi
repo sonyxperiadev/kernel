@@ -1,0 +1,68 @@
+/* Copyright (c) 2018, AngeloGioacchino Del Regno <kholk11@gmail.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+&sde_dsi_6 {
+	qcom,platform-te-gpio = <&tlmm 10 0>;
+	qcom,platform-reset-gpio = <&tlmm 94 0>;
+	qcom,platform-touch-vddio-en-gpio = <&tlmm 133 0>;
+	qcom,platform-touch-reset-gpio = <&tlmm 89 0>;
+	somc,disp-dcdc-en-gpio = <&pmi8998_gpios 10 0>;
+	qcom,mdss-dsi-reset-sequence = <0 15>, <1 16>, <0 15>, <1 20>;
+	qcom,mdss-dsi-touch-reset-sequence = <1 5>;
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
+	qcom,panel-vspvsn-supply-entries = <&dsi_panel_vspvsn_pwr_supply>;
+	somc,pw-on-rst-seq = "after_power_on";
+	qcom,mdss-dsi-display-timings {
+		1080p60 {
+			qcom,display-topology = <1 0 1>;
+			qcom,default-topology-index = <0>;
+		};
+	};
+};
+
+&sde_dsi_9 {
+	qcom,platform-te-gpio = <&tlmm 10 0>;
+	qcom,platform-reset-gpio = <&tlmm 94 0>;
+	qcom,platform-touch-vddio-en-gpio = <&tlmm 133 0>;
+	qcom,platform-touch-reset-gpio = <&tlmm 89 0>;
+	qcom,mdss-dsi-reset-sequence = <0 15>, <1 20>;
+	qcom,mdss-dsi-touch-reset-sequence = <1 5>;
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
+	qcom,panel-vspvsn-supply-entries = <&dsi_panel_vspvsn_pwr_supply>;
+	qcom,panel-touch-supply-entries = <&dsi_panel_touch_pwr_supply>;
+	somc,pw-on-rst-seq = "after_power_on";
+	qcom,mdss-dsi-display-timings {
+		1080p60 {
+			qcom,display-topology = <1 0 1>;
+			qcom,default-topology-index = <0>;
+		};
+	};
+};
+
+&sde_dsi_default_panel {
+	qcom,platform-te-gpio = <&tlmm 10 0>;
+	qcom,platform-reset-gpio = <&tlmm 94 0>;
+	qcom,platform-touch-vddio-en-gpio = <&tlmm 133 0>;
+	qcom,platform-touch-reset-gpio = <&tlmm 89 0>;
+	qcom,mdss-dsi-reset-sequence = <0 10>, <1 16>, <0 7>, <1 16>;
+	qcom,mdss-dsi-touch-reset-sequence = <1 5>;
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
+	qcom,panel-vspvsn-supply-entries = <&dsi_panel_vspvsn_pwr_supply>;
+	qcom,panel-touch-supply-entries = <&dsi_panel_touch_pwr_supply>;
+	somc,pw-on-rst-seq = "after_power_on";
+	qcom,mdss-dsi-display-timings {
+		1080p60 {
+			qcom,display-topology = <1 0 1>;
+			qcom,default-topology-index = <0>;
+		};
+	};
+};
+

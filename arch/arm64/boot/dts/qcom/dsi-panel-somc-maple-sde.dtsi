@@ -1,0 +1,72 @@
+/* Copyright (c) 2018, AngeloGioacchino Del Regno <kholk11@gmail.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+#include "dsi-panel-somc-synaptics-sharp-4k-sde-cmd-ID6.dtsi"
+
+&sde_dsi_dual0_6_panel {
+	qcom,platform-te-gpio = <&tlmm 10 0>;
+	qcom,platform-reset-gpio = <&tlmm 94 0>;
+	qcom,platform-touch-vddio-en-gpio = <&tlmm 133 0>;
+	qcom,platform-touch-reset-gpio = <&tlmm 89 0>;
+	somc,disp-dcdc-en-gpio = <&pmi8998_gpios 10 0>;
+	qcom,mdss-dsi-reset-sequence = <0 15>, <1 10>, <0 15>, <1 20>;
+	qcom,mdss-dsi-touch-reset-sequence = <1 0>;
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
+	qcom,panel-vspvsn-supply-entries = <&dsi_panel_vspvsn_pwr_supply>;
+	qcom,panel-touch-supply-entries = <&dsi_panel_touch_pwr_supply>;
+	somc,pw-on-rst-seq = "after_power_on";
+
+	/* Only one panel is possible on Maple: speed up the boot process */
+	somc,bootloader-panel-detect;
+
+	qcom,mdss-dsi-display-timings {
+		1080p60 {
+			qcom,esd-check-enabled;
+			qcom,mdss-dsi-panel-status-command = [06 01 00 01 05 00 01 0A];
+			qcom,mdss-dsi-panel-status-command-state = "dsi_lp_mode";
+			qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+			qcom,mdss-dsi-panel-status-read-length = <1>;
+			qcom,mdss-dsi-panel-max-error-count = <3>;
+			qcom,mdss-dsi-panel-status-value = <0x9c>;
+
+			qcom,display-topology = <2 0 2>;
+			qcom,default-topology-index = <0>;
+			qcom,mdss-dsi-panel-jitter = <0x2 0x1>;
+		};
+		4k60 {
+			qcom,esd-check-enabled;
+			qcom,mdss-dsi-panel-status-command = [06 01 00 01 05 00 01 0A];
+			qcom,mdss-dsi-panel-status-command-state = "dsi_lp_mode";
+			qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+			qcom,mdss-dsi-panel-status-read-length = <1>;
+			qcom,mdss-dsi-panel-max-error-count = <3>;
+			qcom,mdss-dsi-panel-status-value = <0x9c>;
+
+			qcom,mdss-dsc-encoders = <1>;
+			qcom,mdss-dsc-slice-height = <32>;
+			qcom,mdss-dsc-slice-width = <1080>;
+			qcom,mdss-dsc-slice-per-pkt = <1>;
+			qcom,mdss-dsc-bit-per-component = <8>;
+			qcom,mdss-dsc-bit-per-pixel = <8>;
+			qcom,mdss-dsc-block-prediction-enable;
+
+			qcom,display-topology = <2 2 2>;
+			qcom,default-topology-index = <0>;
+		};
+
+	};
+};
+
+/* Enable continuous splash on the slave DSI ctrl, too */
+&sde_dsi1 {
+	qcom,cont-splash-enabled;
+};

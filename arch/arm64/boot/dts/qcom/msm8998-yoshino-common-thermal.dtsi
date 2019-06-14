@@ -1,0 +1,1042 @@
+/* arch/arm64/boot/dts/qcom/msm8998-yoshino-common-thermal.dtsi
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+/*
+ * Copyright (C) 2018 AngeloGioacchino Del Regno <kholk11@gmail.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2, as
+ * published by the Free Software Foundation.
+ */
+
+&soc {
+	virtual_thermal: virtual_therm@0 {
+		compatible = "linux,virtual-thermal";
+		status = "ok";
+	};
+};
+
+&virtual_thermal {
+	avg-cpu-little {
+		virt-zone-name = "avg-cpu-c0";
+		thermal-sensors = "cpu0-silver-usr", "cpu1-silver-usr",
+				  "cpu2-silver-usr", "cpu3-silver-usr",
+				  "kryo-l3-0-usr";
+		aggregation-logic = <0>; /* WEIGHTED_AVG */
+	};
+	avg-cpu-big {
+		virt-zone-name = "avg-cpu-c1";
+		thermal-sensors = "cpu0-gold-usr", "cpu1-gold-usr",
+				  "cpu2-gold-usr", "cpu3-gold-usr",
+				  "kryo-l3-1-usr";
+		aggregation-logic = <0>; /* WEIGHTED_AVG */
+	};
+};
+
+&thermal_zones {
+	/delete-node/ quad-silv-max-step;
+	/delete-node/ quad-gold-max-step;
+
+	avg-cpu-c0 {
+		polling-delay-passive = <500>;
+		polling-delay = <750>;
+		thermal-governor = "step_wise";
+		trips {
+			c0_crit: c0-crit {
+				temperature = <90000>;
+				hysteresis = <4000>;
+				type = "critical";
+			};
+
+			c0_hot: c0-hot {
+				temperature = <83000>;
+				hysteresis = <4000>;
+				type = "hot";
+			};
+
+			c0_trip1: c0-trip1 {
+				temperature = <78000>;
+				hysteresis = <3000>;
+				type = "passive";
+				
+			};
+
+			c0_trip2: c0-trip2 {
+				temperature = <75000>;
+				hysteresis = <4000>;
+				type = "passive";
+				
+			};
+		};
+
+		cooling-maps {
+			/* Throttle from FMAX to 1094.4MHz */
+			cpu0_cdev1 {
+				trip = <&c0_trip1>;
+				cooling-device =
+					<&CPU0 THERMAL_NO_LIMIT
+						(THERMAL_MAX_LIMIT-3)>;
+			};
+			cpu1_cdev1 {
+				trip = <&c0_trip1>;
+				cooling-device =
+					<&CPU1 THERMAL_NO_LIMIT
+						(THERMAL_MAX_LIMIT-3)>;
+			};
+			cpu2_cdev1 {
+				trip = <&c0_trip1>;
+				cooling-device =
+					<&CPU2 THERMAL_NO_LIMIT
+						(THERMAL_MAX_LIMIT-3)>;
+			};
+			cpu3_cdev1 {
+				trip = <&c0_trip1>;
+				cooling-device =
+					<&CPU3 THERMAL_NO_LIMIT
+						(THERMAL_MAX_LIMIT-3)>;
+			};
+
+
+			/* Throttle from FMAX to 1536MHz */
+			cpu0_cdev2 {
+				trip = <&c0_trip2>;
+				cooling-device =
+					<&CPU0 THERMAL_NO_LIMIT
+						(THERMAL_MAX_LIMIT-5)>;
+			};
+			cpu1_cdev2 {
+				trip = <&c0_trip2>;
+				cooling-device =
+					<&CPU1 THERMAL_NO_LIMIT
+						(THERMAL_MAX_LIMIT-5)>;
+			};
+			cpu2_cdev2 {
+				trip = <&c0_trip2>;
+				cooling-device =
+					<&CPU2 THERMAL_NO_LIMIT
+						(THERMAL_MAX_LIMIT-5)>;
+			};
+			cpu3_cdev2 {
+				trip = <&c0_trip2>;
+				cooling-device =
+					<&CPU3 THERMAL_NO_LIMIT
+						(THERMAL_MAX_LIMIT-5)>;
+			};
+		};
+	};
+
+	avg-cpu-c1 {
+		polling-delay-passive = <300>;
+		polling-delay = <500>;
+		thermal-governor = "step_wise";
+		trips {
+			c1_hot: c1-hot {
+				temperature = <90000>;
+				hysteresis = <4000>;
+				type = "hot";
+			};
+
+			c1_trip1: c1-trip1 {
+				temperature = <78000>;
+				hysteresis = <3000>;
+				type = "passive";
+				
+			};
+
+			c1_trip2: c1-trip2 {
+				temperature = <75000>;
+				hysteresis = <4000>;
+				type = "passive";
+				
+			};
+		};
+
+		cooling-maps {
+			/* Temperature is critical: Shut down c1 */
+			cpu4_crit_cdev {
+				trip = <&c1_hot>;
+				cooling-device =
+					<&CPU4 THERMAL_MAX_LIMIT
+						THERMAL_MAX_LIMIT>;
+			};
+			cpu5_crit_cdev {
+				trip = <&c1_hot>;
+				cooling-device =
+					<&CPU5 THERMAL_MAX_LIMIT
+						THERMAL_MAX_LIMIT>;
+			};
+			cpu6_crit_cdev {
+				trip = <&c1_hot>;
+				cooling-device =
+					<&CPU6 THERMAL_MAX_LIMIT
+						THERMAL_MAX_LIMIT>;
+			};
+			cpu7_crit_cdev {
+				trip = <&c1_hot>;
+				cooling-device =
+					<&CPU7 THERMAL_MAX_LIMIT
+						THERMAL_MAX_LIMIT>;
+			};
+			/* Throttle from FMAX to 787.2MHz */
+			cpu4_hot {
+				trip = <&c1_hot>;
+				cooling-device =
+					<&CPU4 THERMAL_NO_LIMIT
+						(THERMAL_MAX_LIMIT-1)>;
+			};
+			cpu5_hot {
+				trip = <&c1_hot>;
+				cooling-device =
+					<&CPU5 THERMAL_NO_LIMIT
+						(THERMAL_MAX_LIMIT-1)>;
+			};
+			cpu6_hot {
+				trip = <&c1_hot>;
+				cooling-device =
+					<&CPU6 THERMAL_NO_LIMIT
+						(THERMAL_MAX_LIMIT-1)>;
+			};
+			cpu7_hot {
+				trip = <&c1_hot>;
+				cooling-device =
+					<&CPU7 THERMAL_NO_LIMIT
+						(THERMAL_MAX_LIMIT-1)>;
+			};
+
+			/* Throttle from FMAX to 1516.8MHz */
+			cpu4_cdev5 {
+				trip = <&c1_trip1>;
+				cooling-device =
+					<&CPU4 THERMAL_NO_LIMIT
+						(THERMAL_MAX_LIMIT-4)>;
+			};
+			cpu5_cdev5 {
+				trip = <&c1_trip1>;
+				cooling-device =
+					<&CPU5 THERMAL_NO_LIMIT
+						(THERMAL_MAX_LIMIT-4)>;
+			};
+			cpu6_cdev5 {
+				trip = <&c1_trip1>;
+				cooling-device =
+					<&CPU6 THERMAL_NO_LIMIT
+						(THERMAL_MAX_LIMIT-4)>;
+			};
+			cpu7_cdev5 {
+				trip = <&c1_trip1>;
+				cooling-device =
+					<&CPU7 THERMAL_NO_LIMIT
+						(THERMAL_MAX_LIMIT-4)>;
+			};
+
+			/* Throttle from FMAX to 1881.6MHz */
+			cpu4_cdev6 {
+				trip = <&c1_trip2>;
+				cooling-device =
+					<&CPU4 THERMAL_NO_LIMIT
+						(THERMAL_MAX_LIMIT-6)>;
+			};
+			cpu5_cdev6 {
+				trip = <&c1_trip2>;
+				cooling-device =
+					<&CPU5 THERMAL_NO_LIMIT
+						(THERMAL_MAX_LIMIT-6)>;
+			};
+			cpu6_cdev6 {
+				trip = <&c1_trip2>;
+				cooling-device =
+					<&CPU6 THERMAL_NO_LIMIT
+						(THERMAL_MAX_LIMIT-6)>;
+			};
+			cpu7_cdev6 {
+				trip = <&c1_trip2>;
+				cooling-device =
+					<&CPU7 THERMAL_NO_LIMIT
+						(THERMAL_MAX_LIMIT-6)>;
+			};
+		};
+	};
+
+	soc {
+		polling-delay-passive = <1000>;
+		polling-delay = <0>;
+		thermal-governor = "low_limits_cap";
+		thermal-sensors = <&bcl_sensor 2>;
+		tracks-low;
+
+		trips {
+			crit_low_soc: crit-low-soc {
+				temperature = <7>;
+				hysteresis = <0>;
+				type = "passive";
+			};
+			low_soc: low-soc {
+				temperature = <10>;
+				hysteresis = <0>;
+				type = "passive";
+			};
+		};
+
+		cooling-maps {
+			/* Throttle C1 from FMAX to 1382.4MHz */
+			crit_soc_cpu0 {
+				trip = <&crit_low_soc>;
+				cooling-device =
+					<&CPU0 THERMAL_NO_LIMIT
+						(THERMAL_MAX_LIMIT-4)>;
+			};
+			crit_soc_cpu1 {
+				trip = <&crit_low_soc>;
+				cooling-device =
+					<&CPU1 THERMAL_NO_LIMIT
+						(THERMAL_MAX_LIMIT-4)>;
+			};
+			crit_soc_cpu2 {
+				trip = <&crit_low_soc>;
+				cooling-device =
+					<&CPU2 THERMAL_NO_LIMIT
+						(THERMAL_MAX_LIMIT-4)>;
+			};
+			crit_soc_cpu3 {
+				trip = <&crit_low_soc>;
+				cooling-device =
+					<&CPU3 THERMAL_NO_LIMIT
+						(THERMAL_MAX_LIMIT-4)>;
+			};
+
+			/* Shut down C1 */
+			soc_cpu4 {
+				trip = <&low_soc>;
+				cooling-device =
+					<&CPU4 THERMAL_MAX_LIMIT
+						THERMAL_MAX_LIMIT>;
+			};
+			soc_cpu5 {
+				trip = <&low_soc>;
+				cooling-device =
+					<&CPU5 THERMAL_MAX_LIMIT
+						THERMAL_MAX_LIMIT>;
+			};
+			soc_cpu6 {
+				trip = <&low_soc>;
+				cooling-device =
+					<&CPU6 THERMAL_MAX_LIMIT
+						THERMAL_MAX_LIMIT>;
+			};
+			soc_cpu7 {
+				trip = <&low_soc>;
+				cooling-device =
+					<&CPU7 THERMAL_MAX_LIMIT
+						THERMAL_MAX_LIMIT>;
+			};
+		};
+	};
+
+	case-therm-step {
+		polling-delay-passive = <2000>;
+		polling-delay = <0>;
+		thermal-sensors = <&pm8998_adc_tm 0x4d>;
+		thermal-governor = "step_wise";
+
+		trips {
+			skin_critical: skin-crit {
+				temperature = <74000>;
+				hysteresis = <2000>;
+				type = "critical";
+			};
+
+			cpu_ct_trip0: cpu-ct-trip0 {
+				temperature = <63000>;
+				hysteresis = <3000>;
+				type = "passive";
+			};
+			cpu_ct_trip1: cpu-ct-trip1 {
+				temperature = <55700>;
+				hysteresis = <1000>;
+				type = "passive";
+			};
+			cpu_ct_trip2: cpu-ct-trip2 {
+				temperature = <54700>;
+				hysteresis = <1200>;
+				type = "passive";
+			};
+			cpu_ct_trip3: cpu-ct-trip3 {
+				temperature = <52500>;
+				hysteresis = <1100>;
+				type = "passive";
+			};
+			cpu_ct_trip4: cpu-ct-trip4 {
+				temperature = <51400>;
+				hysteresis = <1200>;
+				type = "passive";
+			};
+			cpu_ct_trip5: cpu-ct-trip5 {
+				temperature = <50200>;
+				hysteresis = <300>;
+				type = "passive";
+			};
+			cpu_ct_trip6: cpu-ct-trip6 {
+				temperature = <48900>;
+				hysteresis = <1200>;
+				type = "passive";
+			};
+
+			charger_trip0: cpu-ct-trip8 {
+				temperature = <45000>;
+				hysteresis = <3000>;
+				type = "passive";
+			};
+
+			modem_case_trip0: modem-trip0 {
+				temperature = <47000>;
+				hysteresis = <2000>;
+				type = "passive";
+			};
+			modem_case_trip1: modem-trip1 {
+				temperature = <51000>;
+				hysteresis = <3000>;
+				type = "passive";
+			};
+			modem_case_trip2: modem-trip2 {
+				temperature = <55000>;
+				hysteresis = <4000>;
+				type = "passive";
+			};
+		};
+
+		cooling-maps {
+			/* Throttle from FMAX to 518.4MHz */
+			skin0_cpu0 {
+				trip = <&cpu_ct_trip0>;
+				cooling-device = <&CPU0 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-4)>;
+			};
+			skin0_cpu1 {
+				trip = <&cpu_ct_trip0>;
+				cooling-device = <&CPU1 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-4)>;
+			};
+			skin0_cpu2 {
+				trip = <&cpu_ct_trip0>;
+				cooling-device = <&CPU2 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-4)>;
+			};
+			skin0_cpu3 {
+				trip = <&cpu_ct_trip0>;
+				cooling-device = <&CPU3 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-4)>;
+			};
+			/* Reaching critical: shutdown C1 */
+			skin0_cpu4 {
+				trip = <&cpu_ct_trip0>;
+				cooling-device = <&CPU4 THERMAL_NO_LIMIT
+							THERMAL_MAX_LIMIT>;
+			};
+			skin0_cpu5 {
+				trip = <&cpu_ct_trip0>;
+				cooling-device = <&CPU5 THERMAL_NO_LIMIT
+							THERMAL_MAX_LIMIT>;
+			};
+			skin0_cpu6 {
+				trip = <&cpu_ct_trip0>;
+				cooling-device = <&CPU6 THERMAL_NO_LIMIT
+							THERMAL_MAX_LIMIT>;
+			};
+			skin0_cpu7 {
+				trip = <&cpu_ct_trip0>;
+				cooling-device = <&CPU7 THERMAL_NO_LIMIT
+							THERMAL_MAX_LIMIT>;
+			};
+
+			/* Throttle from FMAX to 825.6-902.4MHz */
+			skin1_cpu0 {
+				trip = <&cpu_ct_trip1>;
+				cooling-device = <&CPU0 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-8)>;
+			};
+			skin1_cpu1 {
+				trip = <&cpu_ct_trip1>;
+				cooling-device = <&CPU1 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-8)>;
+			};
+			skin1_cpu2 {
+				trip = <&cpu_ct_trip1>;
+				cooling-device = <&CPU2 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-8)>;
+			};
+			skin1_cpu3 {
+				trip = <&cpu_ct_trip1>;
+				cooling-device = <&CPU3 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-8)>;
+			};
+			skin1_cpu4 {
+				trip = <&cpu_ct_trip1>;
+				cooling-device = <&CPU4 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-9)>;
+			};
+			skin1_cpu5 {
+				trip = <&cpu_ct_trip1>;
+				cooling-device = <&CPU5 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-9)>;
+			};
+			skin1_cpu6 {
+				trip = <&cpu_ct_trip1>;
+				cooling-device = <&CPU6 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-9)>;
+			};
+			skin1_cpu7 {
+				trip = <&cpu_ct_trip1>;
+				cooling-device = <&CPU7 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-9)>;
+			};
+
+			/* Throttle from FMAX to 1478.4-979.2MHz */
+			skin2_cpu0 {
+				trip = <&cpu_ct_trip2>;
+				cooling-device = <&CPU0 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-17)>;
+			};
+			skin2_cpu1 {
+				trip = <&cpu_ct_trip2>;
+				cooling-device = <&CPU1 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-17)>;
+			};
+			skin2_cpu2 {
+				trip = <&cpu_ct_trip2>;
+				cooling-device = <&CPU2 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-17)>;
+			};
+			skin2_cpu3 {
+				trip = <&cpu_ct_trip2>;
+				cooling-device = <&CPU3 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-17)>;
+			};
+			skin2_cpu4 {
+				trip = <&cpu_ct_trip2>;
+				cooling-device = <&CPU4 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-10)>;
+			};
+			skin2_cpu5 {
+				trip = <&cpu_ct_trip2>;
+				cooling-device = <&CPU5 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-10)>;
+			};
+			skin2_cpu6 {
+				trip = <&cpu_ct_trip2>;
+				cooling-device = <&CPU6 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-10)>;
+			};
+			skin2_cpu7 {
+				trip = <&cpu_ct_trip2>;
+				cooling-device = <&CPU7 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-10)>;
+			};
+
+			/* Throttle from FMAX to 1824-1420.8MHz */
+			skin3_cpu0 {
+				trip = <&cpu_ct_trip3>;
+				cooling-device = <&CPU0 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-21)>;
+			};
+			skin3_cpu1 {
+				trip = <&cpu_ct_trip3>;
+				cooling-device = <&CPU1 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-21)>;
+			};
+			skin3_cpu2 {
+				trip = <&cpu_ct_trip3>;
+				cooling-device = <&CPU2 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-21)>;
+			};
+			skin3_cpu3 {
+				trip = <&cpu_ct_trip3>;
+				cooling-device = <&CPU3 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-21)>;
+			};
+			skin3_cpu4 {
+				trip = <&cpu_ct_trip3>;
+				cooling-device = <&CPU4 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-16)>;
+			};
+			skin3_cpu5 {
+				trip = <&cpu_ct_trip3>;
+				cooling-device = <&CPU5 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-16)>;
+			};
+			skin3_cpu6 {
+				trip = <&cpu_ct_trip3>;
+				cooling-device = <&CPU6 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-16)>;
+			};
+			skin3_cpu7 {
+				trip = <&cpu_ct_trip3>;
+				cooling-device = <&CPU7 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-16)>;
+			};
+
+
+			/* Throttle from FMAX to 1824-1574.4MHz */
+			skin4_cpu0 {
+				trip = <&cpu_ct_trip4>;
+				cooling-device = <&CPU0 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-21)>;
+			};
+			skin4_cpu1 {
+				trip = <&cpu_ct_trip4>;
+				cooling-device = <&CPU1 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-21)>;
+			};
+			skin4_cpu2 {
+				trip = <&cpu_ct_trip4>;
+				cooling-device = <&CPU2 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-21)>;
+			};
+			skin4_cpu3 {
+				trip = <&cpu_ct_trip4>;
+				cooling-device = <&CPU3 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-21)>;
+			};
+			skin4_cpu4 {
+				trip = <&cpu_ct_trip4>;
+				cooling-device = <&CPU4 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-18)>;
+			};
+			skin4_cpu5 {
+				trip = <&cpu_ct_trip4>;
+				cooling-device = <&CPU5 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-18)>;
+			};
+			skin4_cpu6 {
+				trip = <&cpu_ct_trip4>;
+				cooling-device = <&CPU6 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-18)>;
+			};
+			skin4_cpu7 {
+				trip = <&cpu_ct_trip4>;
+				cooling-device = <&CPU7 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-18)>;
+			};
+
+			/* Throttle from FMAX to 1900-2035.2MHz */
+			skin5_cpu0 {
+				trip = <&cpu_ct_trip5>;
+				cooling-device = <&CPU0 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-21)>;
+			};
+			skin5_cpu1 {
+				trip = <&cpu_ct_trip5>;
+				cooling-device = <&CPU1 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-21)>;
+			};
+			skin5_cpu2 {
+				trip = <&cpu_ct_trip5>;
+				cooling-device = <&CPU2 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-21)>;
+			};
+			skin5_cpu3 {
+				trip = <&cpu_ct_trip5>;
+				cooling-device = <&CPU3 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-21)>;
+			};
+			skin5_cpu4 {
+				trip = <&cpu_ct_trip5>;
+				cooling-device = <&CPU4 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-24)>;
+			};
+			skin5_cpu5 {
+				trip = <&cpu_ct_trip5>;
+				cooling-device = <&CPU5 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-24)>;
+			};
+			skin5_cpu6 {
+				trip = <&cpu_ct_trip5>;
+				cooling-device = <&CPU6 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-24)>;
+			};
+			skin5_cpu7 {
+				trip = <&cpu_ct_trip5>;
+				cooling-device = <&CPU7 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-24)>;
+			};
+
+			/* Throttle C1 only from FMAX to 2342.4MHz */
+			skin6_cpu4 {
+				trip = <&cpu_ct_trip6>;
+				cooling-device = <&CPU4 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-30)>;
+			};
+			skin6_cpu5 {
+				trip = <&cpu_ct_trip6>;
+				cooling-device = <&CPU5 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-30)>;
+			};
+			skin6_cpu6 {
+				trip = <&cpu_ct_trip6>;
+				cooling-device = <&CPU6 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-30)>;
+			};
+			skin6_cpu7 {
+				trip = <&cpu_ct_trip6>;
+				cooling-device = <&CPU7 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-30)>;
+			};
+
+			/* Throttle from FMAX to 257MHz */
+			skin0_gpu {
+				trip = <&cpu_ct_trip1>;
+				cooling-device = <&msm_gpu THERMAL_NO_LIMIT
+							   (THERMAL_MAX_LIMIT-1)>;
+			};
+
+			/* Battery charging current limit */
+			charger_lvl1 {
+				trip = <&cpu_ct_trip0>;
+				cooling-device = <&pmi8998_charger 13 13>;
+			};
+			charger_lvl2 {
+				trip = <&cpu_ct_trip1>;
+				cooling-device = <&pmi8998_charger 12 12>;
+			};
+			charger_lvl3 {
+				trip = <&cpu_ct_trip2>;
+				cooling-device = <&pmi8998_charger 11 11>;
+			};
+			charger_lvl4 {
+				trip = <&cpu_ct_trip3>;
+				cooling-device = <&pmi8998_charger 10 10>;
+			};
+			charger_lvl5 {
+				trip = <&cpu_ct_trip4>;
+				cooling-device = <&pmi8998_charger 9 9>;
+			};
+			charger_lvl6 {
+				trip = <&cpu_ct_trip5>;
+				cooling-device = <&pmi8998_charger 8 8>;
+			};
+			charger_lvl7 {
+				trip = <&cpu_ct_trip6>;
+				cooling-device = <&pmi8998_charger 5 5>;
+			};
+
+			/* Modem PA power limit */
+			modem_lvl1 {
+				trip = <&modem_case_trip1>;
+				cooling-device = <&modem_pa 1 1>;
+			};
+			modem_lvl2 {
+				trip = <&modem_case_trip2>;
+				cooling-device = <&modem_pa 2 2>;
+			};
+
+			/* Modem proc limit */
+			modem_proc_lvl1 {
+				trip = <&modem_case_trip0>;
+				cooling-device = <&modem_proc 1 1>;
+			};
+			modem_proc_lvl2 {
+				trip = <&modem_case_trip2>;
+				cooling-device = <&modem_proc 3 3>;
+			};
+		};
+	};
+
+	ufs-therm-step {
+		polling-delay-passive = <2000>;
+		polling-delay = <0>;
+		thermal-sensors = <&pm8998_adc_tm 0x4e>;
+		thermal-governor = "step_wise";
+
+		trips {
+			ufs_trip0: ufs-trip0 {
+				temperature = <63000>;
+				hysteresis = <3000>;
+				type = "passive";
+			};
+			ufs_trip1: ufs-trip1 {
+				temperature = <55700>;
+				hysteresis = <1000>;
+				type = "passive";
+			};
+			ufs_trip2: ufs-trip2 {
+				temperature = <54700>;
+				hysteresis = <1200>;
+				type = "passive";
+			};
+			ufs_trip3: ufs-trip3 {
+				temperature = <52500>;
+				hysteresis = <1100>;
+				type = "passive";
+			};
+			ufs_trip4: ufs-trip4 {
+				temperature = <51400>;
+				hysteresis = <1200>;
+				type = "passive";
+			};
+		};
+
+		cooling-maps {
+			/* Throttle from FMAX to 518.4MHz */
+			ufs_mit_0_cpu0 {
+				trip = <&ufs_trip0>;
+				cooling-device = <&CPU0 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-4)>;
+			};
+			ufs_mit_0_cpu1 {
+				trip = <&ufs_trip0>;
+				cooling-device = <&CPU1 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-4)>;
+			};
+			ufs_mit_0_cpu2 {
+				trip = <&ufs_trip0>;
+				cooling-device = <&CPU2 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-4)>;
+			};
+			ufs_mit_0_cpu3 {
+				trip = <&ufs_trip0>;
+				cooling-device = <&CPU3 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-4)>;
+			};
+			/* Reaching critical: shutdown C1 */
+			ufs_mit_0_cpu4 {
+				trip = <&ufs_trip0>;
+				cooling-device = <&CPU4 THERMAL_NO_LIMIT
+							THERMAL_MAX_LIMIT>;
+			};
+			ufs_mit_0_cpu5 {
+				trip = <&ufs_trip0>;
+				cooling-device = <&CPU5 THERMAL_NO_LIMIT
+							THERMAL_MAX_LIMIT>;
+			};
+			ufs_mit_0_cpu6 {
+				trip = <&ufs_trip0>;
+				cooling-device = <&CPU6 THERMAL_NO_LIMIT
+							THERMAL_MAX_LIMIT>;
+			};
+			ufs_mit_0_cpu7 {
+				trip = <&ufs_trip0>;
+				cooling-device = <&CPU7 THERMAL_NO_LIMIT
+							THERMAL_MAX_LIMIT>;
+			};
+
+			/* Throttle from FMAX to 825.6-902.4MHz */
+			ufs_mit_1_cpu0 {
+				trip = <&ufs_trip1>;
+				cooling-device = <&CPU0 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-8)>;
+			};
+			ufs_mit_1_cpu1 {
+				trip = <&ufs_trip1>;
+				cooling-device = <&CPU1 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-8)>;
+			};
+			ufs_mit_1_cpu2 {
+				trip = <&ufs_trip1>;
+				cooling-device = <&CPU2 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-8)>;
+			};
+			ufs_mit_1_cpu3 {
+				trip = <&ufs_trip1>;
+				cooling-device = <&CPU3 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-8)>;
+			};
+			ufs_mit_1_cpu4 {
+				trip = <&ufs_trip1>;
+				cooling-device = <&CPU4 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-9)>;
+			};
+			ufs_mit_1_cpu5 {
+				trip = <&ufs_trip1>;
+				cooling-device = <&CPU5 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-9)>;
+			};
+			ufs_mit_1_cpu6 {
+				trip = <&ufs_trip1>;
+				cooling-device = <&CPU6 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-9)>;
+			};
+			ufs_mit_1_cpu7 {
+				trip = <&ufs_trip1>;
+				cooling-device = <&CPU7 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-9)>;
+			};
+
+			/* Throttle from FMAX to 1478.4-979.2MHz */
+			ufs_mit_2_cpu0 {
+				trip = <&ufs_trip2>;
+				cooling-device = <&CPU0 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-17)>;
+			};
+			ufs_mit_2_cpu1 {
+				trip = <&ufs_trip2>;
+				cooling-device = <&CPU1 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-17)>;
+			};
+			ufs_mit_2_cpu2 {
+				trip = <&ufs_trip2>;
+				cooling-device = <&CPU2 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-17)>;
+			};
+			ufs_mit_2_cpu3 {
+				trip = <&ufs_trip2>;
+				cooling-device = <&CPU3 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-17)>;
+			};
+			ufs_mit_2_cpu4 {
+				trip = <&ufs_trip2>;
+				cooling-device = <&CPU4 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-10)>;
+			};
+			ufs_mit_2_cpu5 {
+				trip = <&ufs_trip2>;
+				cooling-device = <&CPU5 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-10)>;
+			};
+			ufs_mit_2_cpu6 {
+				trip = <&ufs_trip2>;
+				cooling-device = <&CPU6 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-10)>;
+			};
+			ufs_mit_2_cpu7 {
+				trip = <&ufs_trip2>;
+				cooling-device = <&CPU7 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-10)>;
+			};
+
+			/* Throttle from FMAX to 1824-1420.8MHz */
+			ufs_mit_3_cpu0 {
+				trip = <&ufs_trip3>;
+				cooling-device = <&CPU0 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-21)>;
+			};
+			ufs_mit_3_cpu1 {
+				trip = <&ufs_trip3>;
+				cooling-device = <&CPU1 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-21)>;
+			};
+			ufs_mit_3_cpu2 {
+				trip = <&ufs_trip3>;
+				cooling-device = <&CPU2 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-21)>;
+			};
+			ufs_mit_3_cpu3 {
+				trip = <&ufs_trip3>;
+				cooling-device = <&CPU3 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-21)>;
+			};
+			ufs_mit_3_cpu4 {
+				trip = <&ufs_trip3>;
+				cooling-device = <&CPU4 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-16)>;
+			};
+			ufs_mit_3_cpu5 {
+				trip = <&ufs_trip3>;
+				cooling-device = <&CPU5 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-16)>;
+			};
+			ufs_mit_3_cpu6 {
+				trip = <&ufs_trip3>;
+				cooling-device = <&CPU6 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-16)>;
+			};
+			ufs_mit_3_cpu7 {
+				trip = <&ufs_trip3>;
+				cooling-device = <&CPU7 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-16)>;
+			};
+
+
+			/* Throttle from FMAX to 1824-1574.4MHz */
+			ufs_mit_4_cpu0 {
+				trip = <&ufs_trip4>;
+				cooling-device = <&CPU0 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-21)>;
+			};
+			ufs_mit_4_cpu1 {
+				trip = <&ufs_trip4>;
+				cooling-device = <&CPU1 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-21)>;
+			};
+			ufs_mit_4_cpu2 {
+				trip = <&ufs_trip4>;
+				cooling-device = <&CPU2 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-21)>;
+			};
+			ufs_mit_4_cpu3 {
+				trip = <&ufs_trip4>;
+				cooling-device = <&CPU3 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-21)>;
+			};
+			ufs_mit_4_cpu4 {
+				trip = <&ufs_trip4>;
+				cooling-device = <&CPU4 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-18)>;
+			};
+			ufs_mit_4_cpu5 {
+				trip = <&ufs_trip4>;
+				cooling-device = <&CPU5 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-18)>;
+			};
+			ufs_mit_4_cpu6 {
+				trip = <&ufs_trip4>;
+				cooling-device = <&CPU6 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-18)>;
+			};
+			ufs_mit_4_cpu7 {
+				trip = <&ufs_trip4>;
+				cooling-device = <&CPU7 THERMAL_NO_LIMIT
+							(THERMAL_MAX_LIMIT-18)>;
+			};
+
+			/* Battery charging current limit */
+			charger_ufs_lvl1 {
+				trip = <&ufs_trip0>;
+				cooling-device = <&pmi8998_charger 13 13>;
+			};
+			charger_ufs_lvl2 {
+				trip = <&ufs_trip1>;
+				cooling-device = <&pmi8998_charger 12 12>;
+			};
+			charger_ufs_lvl3 {
+				trip = <&ufs_trip2>;
+				cooling-device = <&pmi8998_charger 11 11>;
+			};
+			charger_ufs_lvl4 {
+				trip = <&ufs_trip3>;
+				cooling-device = <&pmi8998_charger 10 10>;
+			};
+			charger_ufs_lvl5 {
+				trip = <&ufs_trip4>;
+				cooling-device = <&pmi8998_charger 9 9>;
+			};
+		};
+	};
+
+	pa-therm1-adc {
+		polling-delay-passive = <0>;
+		polling-delay = <0>;
+		thermal-sensors = <&pm8998_vadc 0x4f>;
+		thermal-governor = "user_space";
+	};
+
+	pa-therm2-adc {
+		polling-delay-passive = <0>;
+		polling-delay = <0>;
+		thermal-sensors = <&pm8998_vadc 0x50>;
+		thermal-governor = "user_space";
+	};
+
+	flash-therm-adc {
+		polling-delay-passive = <0>;
+		polling-delay = <0>;
+		thermal-sensors = <&pm8998_vadc 0x53>;
+		thermal-governor = "user_space";
+	};
+};

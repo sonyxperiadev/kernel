@@ -1,0 +1,130 @@
+/* Copyright (c) 2018, AngeloGioacchino Del Regno <kholk11@gmail.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+/*
+ * Do not remove FBDEV MDSS nodes. The Yoshino bootloader needs
+ * them to enable continuous splash.
+ *
+ * Removing them is possible, along with losing cont-splash, but
+ * this will initialize the panel only when we enter the OS.
+ */
+//#include "msm8998-sde-overlay.dtsi"
+
+/ {
+	/* Bad indentation is required. Sorry. */
+	chosen {
+
+		bootargs = \
+"rcupdate.rcu_expedited=1 \
+msm_drm.dsi_display0=dsi_panel_cmd_display:config0";
+
+	};
+};
+
+/delete-node/ &dsi_panel_pwr_supply_hybrid_incell;
+/delete-node/ &dsi_panel_pwr_supply_full_incell;
+
+&soc {
+	dsi_panel_pwr_supply: dsi_panel_pwr_supply {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		qcom,panel-supply-entry@0 {
+			reg = <0>;
+			qcom,supply-name = "vddio";
+			qcom,supply-min-voltage = <1800000>;
+			qcom,supply-max-voltage = <1800000>;
+			qcom,supply-enable-load = <62000>;
+			qcom,supply-disable-load = <80>;
+		};
+	};
+
+	dsi_panel_pwr_supply_hybrid_incell: dummy-supply-hybrid {
+	};
+
+	dsi_panel_pwr_supply_full_incell: dummy-supply-full {
+	};
+
+	dsi_panel_vspvsn_pwr_supply: dsi_panel_vspvsn_pwr_supply {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		qcom,panel-supply-entry@0 {
+			reg = <0>;
+			qcom,supply-name = "lab";
+			qcom,supply-min-voltage = <4600000>;
+			qcom,supply-max-voltage = <6000000>;
+			qcom,supply-enable-load = <100000>;
+			qcom,supply-disable-load = <100>;
+		};
+
+		qcom,panel-supply-entry@1 {
+			reg = <1>;
+			qcom,supply-name = "ibb";
+			qcom,supply-min-voltage = <4600000>;
+			qcom,supply-max-voltage = <6000000>;
+			qcom,supply-enable-load = <100000>;
+			qcom,supply-disable-load = <100>;
+		};
+	};
+
+	dsi_panel_touch_pwr_supply: dsi_panel_touch_pwr_supply {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		qcom,panel-supply-entry@0 {
+			reg = <0>;
+			qcom,supply-name = "touch-avdd";
+			qcom,supply-min-voltage = <3000000>;
+			qcom,supply-max-voltage = <3000000>;
+			qcom,supply-enable-load = <100000>;
+			qcom,supply-disable-load = <100>;
+		};
+	};
+
+	/* SDE */
+	dsi_panel_cmd_display: qcom,dsi-display@12 {
+		compatible = "somc,dsi-display";
+		label = "dsi_panel_cmd_display";
+		qcom,display-type = "primary";
+
+		qcom,dsi-ctrl = <&sde_dsi0>;
+		qcom,dsi-phy = <&mdss_dsi_phy0>;
+		clocks = <&mdss_dsi0_pll BYTECLK_MUX_0_CLK>,
+			<&mdss_dsi0_pll PCLK_MUX_0_CLK>;
+		clock-names = "src_byte_clk", "src_pixel_clk";
+
+		pinctrl-names = "panel_active", "panel_suspend",
+				"sde_touch_active", "sde_touch_suspend";
+		pinctrl-0 = <&mdss_dsi_active &mdss_te_active>;
+		pinctrl-1 = <&mdss_dsi_suspend &mdss_te_suspend>;
+		pinctrl-2 = <&mdss_touch_active>;
+		pinctrl-3 = <&mdss_touch_suspend>;
+
+		qcom,dsi-display-active;
+
+		qcom,platform-te-gpio = <&tlmm 10 0>;
+		qcom,platform-reset-gpio = <&tlmm 94 0>;
+		qcom,platform-touch-vddio-en-gpio = <&tlmm 133 0>;
+		qcom,platform-touch-reset-gpio = <&tlmm 89 0>;
+		somc,disp-dcdc-en-gpio = <&pmi8998_gpios 10 0>;
+		qcom,dsi-panel = <&sde_dsi_8>;
+		vddio-supply = <&pm8998_l14>;
+		touch-avdd-supply = <&pm8998_l28>;
+		lab-supply = <&lab_regulator>;
+		ibb-supply = <&ibb_regulator>;
+	};
+};
+
+&sde_dsi0 {
+	qcom,cont-splash-enabled;
+};

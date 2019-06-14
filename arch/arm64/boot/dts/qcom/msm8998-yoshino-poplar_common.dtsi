@@ -1,0 +1,344 @@
+/* arch/arm64/boot/dts/qcom/msm8998-poplar_common.dtsi
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+/*
+ * Copyright (C) 2016 Sony Mobile Communications Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2, as
+ * published by the Free Software Foundation.
+ */
+
+#include "msm8998-yoshino-poplar_camera.dtsi"
+#include "dsi-panel-somc-poplar.dtsi"
+
+&soc {
+	/* I2C: BLSP5 */
+	i2c@c179000 { /* BLSP1 QUP5 */
+		synaptics_clearpad@2c {
+			preset_x_max = <1079>;
+			preset_y_max = <1919>;
+
+			/* F01_RMI_CTRL05: Doze Holdoff */
+			doze_default_time = <35>;
+			doze_glove_mode_time = <35>;
+			doze_cover_mode_time = <35>;
+		};
+	};
+
+	mdss_dsi0_pll: qcom,mdss_dsi_pll@c994400 {
+		qcom,dsi-pll-ssc-en;
+		qcom,dsi-pll-ssc-mode = "down-spread";
+		qcom,ssc-frequency-hz = <31500>;
+		qcom,ssc-ppm = <5000>;
+	};
+};
+
+&somc_pinctrl {
+	pinctrl-1 = <&msm_gpio_89 &msm_gpio_102 &msm_gpio_103
+		     &msm_gpio_115 &msm_gpio_132 &msm_gpio_133>;
+};
+
+&pmi8998_gpios {
+	/* GPIO_1: MAIN_CAM_PWR_IO_EN */
+	gpio@c000 {
+		qcom,src-sel = <0>;		/* GPIO */
+		qcom,mode = <1>;		/* Out */
+		qcom,output-type = <0>;		/* CMOS */
+		qcom,vin-sel = <1>;		/* 1.8V */
+		qcom,out-strength = <1>;	/* Low */
+		qcom,invert = <0>;		/* Low */
+		qcom,master-en = <1>;		/* Enable */
+		status = "okay";
+	};
+};
+
+&pmi8998_gpios {
+	/* GPIO_1: MAIN_CAM_PWR_IO_EN */
+	gpio@c000 {
+		qcom,src-sel = <0>;		/* GPIO */
+		qcom,mode = <1>;		/* Out */
+		qcom,output-type = <0>;		/* CMOS */
+		qcom,vin-sel = <1>;		/* 1.8V */
+		qcom,out-strength = <1>;	/* Low */
+		qcom,invert = <0>;		/* Low */
+		qcom,master-en = <1>;		/* Enable */
+		status = "okay";
+	};
+};
+
+&mdss_dsi {
+	hw-config = "single_dsi";
+};
+
+&mdss_dsi0 {
+	qcom,dsi-pref-prim-pan = <&dsi_default_panel>;
+};
+
+&mdss_dsi1 {
+	status = "disabled";
+	/delete-property/ qcom,dsi-pref-prim-pan;
+};
+
+&vendor {
+	yoshino_poplar_batterydata: qcom,battery-data {
+		qcom,batt-id-range-pct = <17>;
+		#include "fg-gen3-batterydata-poplar-send-4380mv-2650mah.dtsi"
+		#include "fg-gen3-batterydata-poplar-tdk-4380mv-2650mah.dtsi"
+		#include "fg-gen3-batterydata-poplar-send-4357mv-2688mah.dtsi"
+		#include "fg-gen3-batterydata-poplar-send-4335mv-2647mah.dtsi"
+	};
+};
+
+&pmi8998_fg {
+	qcom,battery-data = <&yoshino_poplar_batterydata>;
+	qcom,fg-sys-term-current = <(-160)>;
+	qcom,fg-chg-term-current = <135>;
+	somc,rated-capacity-uah = <2650000>;
+	somc,initial-capacity-uah = <2792000>;
+};
+
+&pmi8998_charger {
+	qcom,fv-max-uv = <4380000>;
+	somc,product-icl-ua = <2000000>;
+	somc,high-voltage-icl-ua = <1700000>;
+	somc,thermal-fcc-ua = <2025000 2000000 1950000
+				1800000 1500000 1300000
+				1300000 1000000 800000
+				700000 700000 500000
+				300000 100000 0>;
+	somc,thermal-lo-volt-icl-ua = <2000000 1500000 1500000
+					1500000 1300000 1100000
+					1100000 1000000 900000
+					900000 900000 500000
+					200000 100000 0>;
+	somc,thermal-hi-volt-icl-ua = <1700000 1700000 1700000
+					1700000 1500000 1500000
+					1000000 1000000 1000000
+					1000000 600000 500000
+					200000 100000 0>;
+	somc,jeita-use-aux-therm;
+	somc,jeita-aux-thresh-hot = <900>;
+	somc,jeita-aux-thresh-warm = <700>;
+	somc,jeita-warm-fcc-ua = <800000>;
+	somc,jeita-cool-fcc-ua = <800000>;
+};
+
+&pmi8998_pdphy {
+	qcom,default-sink-caps = <5000 2000>, /* 5V @ 2A */
+				 <9000 1700>; /* 9V @ 1.7A */
+};
+
+&pm8998_gpios {
+	/* GPIO_20: DTV_PWR_EN */
+	dtv_pwr_en {
+		dtv_pwr_en_default: dtv_pwr_en_default {
+			pins = "gpio20";
+			function = "normal";
+			output-low;
+			drive-push-pull;
+			bias-disable;
+			qcom,drive-strength = <1>;
+			power-source = <1>; /* 1.8V */
+		};
+	};
+};
+
+&pmi8998_gpios {
+	/* GPIO_8: NC */
+	pmi8998_gp8 {
+		pmi8998_gp8_default: pmi8998_gp8_default {
+			pins = "gpio8";
+			function = "normal";
+			input-enable;
+			bias-high-impedance;
+		};
+	};
+};
+
+/* GPIO_10: 4K_DISP_DCDC_EN (NC) */
+&disp_dcdc_en_default {
+	/delete-property/ output-low;
+	/delete-property/ drive-push-pull;
+	/delete-property/ bias-disable;
+	/delete-property/ power-source;
+	input-enable;
+	bias-high-impedance;
+};
+
+/* PM8005 GPIO_1: NC */
+&ear_en_default {
+	/delete-property/ output-low;
+	/delete-property/ drive-push-pull;
+	/delete-property/ bias-disable;
+	/delete-property/ power-source;
+	input-enable;
+	bias-high-impedance;
+};
+
+/* Regulator config */
+&pm8998_l18 {
+	qcom,regulator-type = <0>;        /* LDO */
+	qcom,init-enable = <1>;
+	qcom,init-ldo-mode = <1>;
+	qcom,init-pin-ctrl-enable = <0>;
+	qcom,init-pin-ctrl-mode = <0>;
+	regulator-min-microvolt = <2850000>;
+	regulator-max-microvolt = <2850000>;
+	qcom,init-voltage = <2850000>;
+	regulator-always-on;
+	status = "okay";
+};
+
+&pm8998_l22 {
+	qcom,regulator-type = <0>;        /* LDO */
+	qcom,init-enable = <0>;
+	qcom,init-ldo-mode = <1>;
+	qcom,init-pin-ctrl-enable = <0>;
+	qcom,init-pin-ctrl-mode = <0>;
+	regulator-min-microvolt = <2700000>;
+	regulator-max-microvolt = <2700000>;
+	qcom,init-voltage = <2700000>;
+	status = "okay";
+};
+
+&tlmm {
+	/* GPIO_89 : TS_RESET_N */
+	msm_gpio_89: msm_gpio_89 {
+		mux {
+			pins = "gpio89";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio89";
+			drive-strength = <2>;
+			bias-disable;
+		};
+	};
+
+	/* GPIO_102 : NC */
+	msm_gpio_102: msm_gpio_102{
+		mux {
+			pins = "gpio102";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio102";
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	/* GPIO_103 : NC */
+	msm_gpio_103: msm_gpio_103{
+		mux {
+			pins = "gpio103";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio103";
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	/* GPIO_115 : NC */
+	msm_gpio_115: msm_gpio_115{
+		mux {
+			pins = "gpio115";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio115";
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	/* GPIO_132: NC */
+	msm_gpio_132: msm_gpio_132{
+		mux {
+			pins = "gpio132";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio132";
+			drive-strength = <2>;
+			bias-disable;
+			output-low;
+		};
+	};
+
+	/* GPIO_133: TS_VDDIO_EN*/
+	msm_gpio_133: msm_gpio_133{
+		mux {
+			pins = "gpio133";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio133";
+			drive-strength = <2>;
+			bias-disable;
+		};
+	};
+};
+
+&pmi8998_wled {
+	qcom,ilim-ma = <620>;
+	qcom,fs-curr-ua = <20000>;
+};
+
+&red_led {
+	somc,color_variation_max_num = <4>;
+	somc,max_current = <
+		30 50 28
+		31 30 22
+		32 30 22
+		33 30 22>;
+};
+
+&green_led {
+	somc,color_variation_max_num = <4>;
+	somc,max_current = <
+		30 18 28
+		31 16 30
+		32 16 30
+		33 16 30>;
+};
+
+&blue_led {
+	somc,color_variation_max_num = <4>;
+	somc,max_current = <
+		30 56 12
+		31 44 12
+		32 52 12
+		33 44 12>;
+};
+
+&lab_regulator {
+	regulator-max-microvolt = <5600000>;
+	qcom,qpnp-lab-slew-rate = <5000>;
+};
+
+&ibb_regulator {
+	regulator-max-microvolt = <5600000>;
+	qcom,qpnp-ibb-slew-rate = <12000>;
+};
+

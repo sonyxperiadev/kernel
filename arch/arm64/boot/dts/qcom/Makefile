@@ -28,6 +28,14 @@ dtb-$(CONFIG_MACH_SONY_VOYAGER)		+= sdm630-nile-voyager-sde.dtb
 dtb-$(CONFIG_MACH_SONY_KIRIN)		+= sdm630-ganges-kirin-sde.dtb
 dtb-$(CONFIG_MACH_SONY_MERMAID)		+= sdm636-ganges-mermaid-sde.dtb
 
+# MSM8998 - SDE
+dtb-$(CONFIG_MACH_SONY_LILAC)		+= msm8998-v2-yoshino-lilac-sde_generic.dtb
+dtb-$(CONFIG_MACH_SONY_LILAC)		+= msm8998-v2.1-yoshino-lilac-sde_generic.dtb
+dtb-$(CONFIG_MACH_SONY_MAPLE)		+= msm8998-v2-yoshino-maple-sde_generic.dtb
+dtb-$(CONFIG_MACH_SONY_MAPLE)		+= msm8998-v2.1-yoshino-maple-sde_generic.dtb
+dtb-$(CONFIG_MACH_SONY_POPLAR)		+= msm8998-v2-yoshino-poplar-sde_generic.dtb
+dtb-$(CONFIG_MACH_SONY_POPLAR)		+= msm8998-v2.1-yoshino-poplar-sde_generic.dtb
+
 # MSM8996 - SDE
 dtb-$(CONFIG_MACH_SONY_DORA)		+= msm8996-v3.0-pmi8996-tone-dora-sde_generic.dtb
 dtb-$(CONFIG_MACH_SONY_DORA)		+= msm8996-v3-pmi8996-tone-dora-sde_generic.dtb
@@ -44,6 +52,14 @@ dtb-$(CONFIG_MACH_SONY_VOYAGER)		+= sdm630-nile-voyager.dtb
 
 dtb-$(CONFIG_MACH_SONY_KIRIN)		+= sdm630-ganges-kirin.dtb
 dtb-$(CONFIG_MACH_SONY_MERMAID)		+= sdm636-ganges-mermaid.dtb
+
+# MSM8998 - FBDEV
+dtb-$(CONFIG_MACH_SONY_LILAC)		+= msm8998-v2-yoshino-lilac_generic.dtb
+dtb-$(CONFIG_MACH_SONY_LILAC)		+= msm8998-v2.1-yoshino-lilac_generic.dtb
+dtb-$(CONFIG_MACH_SONY_MAPLE)		+= msm8998-v2-yoshino-maple_generic.dtb
+dtb-$(CONFIG_MACH_SONY_MAPLE)		+= msm8998-v2.1-yoshino-maple_generic.dtb
+dtb-$(CONFIG_MACH_SONY_POPLAR)		+= msm8998-v2-yoshino-poplar_generic.dtb
+dtb-$(CONFIG_MACH_SONY_POPLAR)		+= msm8998-v2.1-yoshino-poplar_generic.dtb
 
 # MSM8996 - FBDEV
 dtb-$(CONFIG_MACH_SONY_DORA)		+= msm8996-v3.0-pmi8996-tone-dora_generic.dtb
