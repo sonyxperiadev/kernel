@@ -408,7 +408,6 @@ struct synaptics_rmi4_data {
 	unsigned int firmware_id;
 	unsigned int config_id;
 	unsigned int tp_source;
-	unsigned int project_id;
 	int lcd_id;
 	int irq;
 	int sensor_max_x;
