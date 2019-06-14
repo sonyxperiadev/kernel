@@ -344,6 +344,7 @@
 		clocks = <&clock_rpmcc RPM_SMD_DIV_CLK1>;
 		qcom,node_has_rpm_clock;
 		#clock-cells = <1>;
+		qcom,use-pinctrl = <1>;
 		pinctrl-names = "sleep", "active";
 		pinctrl-0 = <&spkr_i2s_clk_sleep &pm8998_gpio_13>;
 		pinctrl-1 = <&spkr_i2s_clk_active &pm8998_gpio_13>;
@@ -387,10 +388,14 @@
 			      30>;
 
 		qcom,wcd-rst-gpio-node = <&wcd_rst_gpio>;
-
+/*
 		clock-names = "wcd_clk", "wcd_native_clk";
 		clocks = <&clock_audio AUDIO_PMI_CLK>,
 			 <&clock_audio AUDIO_AP_CLK2>;
+*/
+
+		clock-names = "wcd_clk";
+		clocks = <&clock_audio AUDIO_PMI_CLK>;
 
 		cdc-vdd-buck-supply = <&pm8998_s4>;
 		qcom,cdc-vdd-buck-voltage = <1800000 1800000>;
@@ -442,8 +447,9 @@
 
 		qcom,wcd-rst-gpio-node = <&wcd_rst_gpio>;
 
-		clock-names = "wcd_clk";
-		clocks = <&clock_audio_lnbb clk_audio_pmi_lnbb_clk>;
+		/* Don't care: this codec is not used on MSM8998 */
+		//clock-names = "wcd_clk";
+		//clocks = <&clock_audio_lnbb clk_audio_pmi_lnbb_clk>;
 
 		cdc-vdd-buck-supply = <&pm8998_s4>;
 		qcom,cdc-vdd-buck-voltage = <1800000 1800000>;
