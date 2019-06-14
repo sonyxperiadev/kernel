@@ -120,6 +120,7 @@
 		et51x,gpio_rst    = <&tlmm 20 0>;
 		et51x,gpio_irq    = <&tlmm 72 0>;
 		vdd_ana-supply = <&pm660l_l6>;
+		et51x,check-sensor-type;
 
 		/*
 		 * The device has to stay enabled until the HAL initializes,
