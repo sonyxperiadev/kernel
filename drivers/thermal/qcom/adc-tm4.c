@@ -25,72 +25,64 @@
 #include <linux/spinlock.h>
 #include <linux/iio/consumer.h>
 #include "adc-tm.h"
-#include "adc-tm3-defs.h"
+#include "adc-tm3-common.h"
 #include "../thermal_core.h"
 
-/* ADC TM (v3) definitions */
-#define ADC_TM_REVISION3		0x02
-#define ADC_TM_PERPH_SUBTYPE		0x5
-#define ADC_TM_PERPH_SUBTYPE_TWO_CHAN_SUPPORT 0x22
-#define ADC_TM_PERPH_TYPE2		0x2
-#define ADC_TM_REV_EIGHT_CHAN_SUPPORT	2
+/* ADC TM (HC) definitions */
+#define ADC_TM_ADC_DIG_PARAM		0x42
+#define ADC_TM_FAST_AVG_CTL		0x43
 
-#define ADC_TM_ADC_DIG_PARAM		0x50
-#define ADC_TM_ADC_DIG_DECRATIOSEL_SHFT	3
-#define ADC_TM_FAST_AVG_CTL		0x5a
-#define ADC_TM_FAST_AVG_EN_CTL		0x5b
-#define ADC_TM_FAST_AVG_EN_BIT		BIT(7)
+#define ADC_TM_BTM_CONV_REQ		0x47
+#define ADC_TM_BTM_CONV_REQ_EN		BIT(7)
 
-#define ADC_TM_HW_SETTLE_DELAY		0x51
-
-#define ADC_TM_MEAS_INTERVAL_CTL	0x57
+#define ADC_TM_MEAS_INTERVAL_CTL	0x50
 #define ADC_TM_MEAS_INTERVAL_TIME_SHIFT	0x3
-#define ADC_TM_MEAS_INTERVAL_CTL2	0x58
+#define ADC_TM_MEAS_INTERVAL_CTL2	0x51
 #define ADC_TM_MEAS_INTERVAL_CTL2_SHIFT	0x4
 #define ADC_TM_MEAS_INTERVAL_CTL2_MASK	0xf0
 #define ADC_TM_MEAS_INTERVAL_CTL3_MASK	0xf
-#define ADC_TM_MEAS_INTERVAL_OP_CTL	0x59
-#define ADC_TM_MEAS_INTERVAL_OP		BIT(7)
 
-#define ADC_TM_Mn_ADC_CH_SEL_CTL(n)	(adc_tm_ch_data[n].btm_amux_ch)
-#define ADC_TM_Mn_LOW_THR0(n)		(adc_tm_ch_data[n].low_thr_lsb_addr)
-#define ADC_TM_Mn_LOW_THR1(n)		(adc_tm_ch_data[n].low_thr_msb_addr)
-#define ADC_TM_Mn_HIGH_THR0(n)		(adc_tm_ch_data[n].high_thr_lsb_addr)
-#define ADC_TM_Mn_HIGH_THR1(n)		(adc_tm_ch_data[n].high_thr_msb_addr)
-#define ADC_TM_Mn_MEAS_EN_CTL(n)	0x41
-#define ADC_TM_Mn_MEAS_EN(n)		(adc_tm_ch_data[n].multi_meas_en) /* Just BIT(n) */
-#define ADC_TM_Mn_LOW_THR_INT_EN_CTL(n)	0x42
-#define ADC_TM_Mn_LOW_THR_INT_EN(n)	(adc_tm_ch_data[n].low_thr_int_chan_en) /* Just BIT(n) */
-#define ADC_TM_Mn_HIGH_THR_INT_EN_CTL(n) 0x43
-#define ADC_TM_Mn_HIGH_THR_INT_EN(n)	(adc_tm_ch_data[n].high_thr_int_chan_en) /* Just BIT(n) */
-#define ADC_TM_Mn_MEAS_INTERVAL_CTL(n)	(adc_tm_ch_data[n].meas_interval_ctl)
+#define ADC_TM_Mn_ADC_CH_SEL_CTL(n)	((n * 8) + 0x60)
+#define ADC_TM_Mn_LOW_THR0(n)		((n * 8) + 0x61)
+#define ADC_TM_Mn_LOW_THR1(n)		((n * 8) + 0x62)
+#define ADC_TM_Mn_HIGH_THR0(n)		((n * 8) + 0x63)
+#define ADC_TM_Mn_HIGH_THR1(n)		((n * 8) + 0x64)
+#define ADC_TM_Mn_MEAS_INTERVAL_CTL(n)	((n * 8) + 0x65)
+#define ADC_TM_Mn_CTL(n)		((n * 8) + 0x66)
+#define ADC_TM_Mn_EN(n)			((n * 8) + 0x67)
+#define ADC_TM_CTL_HW_SETTLE_DELAY_MASK	0xf
+#define ADC_TM_CTL_CAL_SEL		0x30
+#define ADC_TM_CTL_CAL_SEL_MASK_SHIFT	4
 
-#define ADC_TM_VREF_XO_THM_FORCE		BIT(2)
-#define ADC_TM_AMUX_TRIM_EN			BIT(1)
-#define ADC_TM_VADC_TRIM_EN			BIT(0)
-#define ADC_TM_CONV_REQ				0x52
-#define ADC_TM_CONV_REQ_SET			BIT(7)
-
-#define ADC_TM_Mn_DATA0(n)			((n * 2) + 0xa0)
-#define ADC_TM_Mn_DATA1(n)			((n * 2) + 0xa1)
-#define ADC_TM_DATA_SHIFT			8
+#define ADC_TM_Mn_DATA0(n)		((n * 2) + 0xa0)
+#define ADC_TM_Mn_DATA1(n)		((n * 2) + 0xa1)
+#define ADC_TM_DATA_SHIFT		8
+/*
+ * On HC, this control register is present per-channel so, to enable
+ * features, we set the feature bit on the channel specific EN register.
+ */
+#define ADC_TM_Mn_MEAS_EN_CTL(n)	ADC_TM_Mn_EN(n)
+#define ADC_TM_Mn_LOW_THR_INT_EN_CTL(n)	ADC_TM_Mn_EN(n)
+#define ADC_TM_Mn_HIGH_THR_INT_EN_CTL(n) ADC_TM_Mn_EN(n)
+#define ADC_TM_Mn_LOW_THR_INT_EN(n)	BIT(0)
+#define ADC_TM_Mn_HIGH_THR_INT_EN(n)	BIT(1)
+#define ADC_TM_Mn_MEAS_EN(n)		BIT(7)
 
 static struct adc_tm_linear_graph cal_graph[ADC_ABS_CAL + 1];
 static struct adc_tm_reverse_scale_fn *adc_tm_rscale_fn;
 
 static struct adc_tm_trip_reg_type adc_tm_ch_data[] = {
-	[ADC_TM_CHAN0] = {ADC_TM_M0_V4_ADC_CH_SEL_CTL},
-	[ADC_TM_CHAN1] = {ADC_TM_M1_ADC_CH_SEL_CTL},
-	[ADC_TM_CHAN2] = {ADC_TM_M2_ADC_CH_SEL_CTL},
-	[ADC_TM_CHAN3] = {ADC_TM_M3_ADC_CH_SEL_CTL},
-	[ADC_TM_CHAN4] = {ADC_TM_M4_ADC_CH_SEL_CTL},
-	[ADC_TM_CHAN5] = {ADC_TM_M5_ADC_CH_SEL_CTL},
-	[ADC_TM_CHAN6] = {ADC_TM_M6_ADC_CH_SEL_CTL},
-	[ADC_TM_CHAN7] = {ADC_TM_M7_ADC_CH_SEL_CTL},
+	[ADC_TM_CHAN0] = {ADC_TM_Mn_ADC_CH_SEL_CTL(0)},
+	[ADC_TM_CHAN1] = {ADC_TM_Mn_ADC_CH_SEL_CTL(1)},
+	[ADC_TM_CHAN2] = {ADC_TM_Mn_ADC_CH_SEL_CTL(2)},
+	[ADC_TM_CHAN3] = {ADC_TM_Mn_ADC_CH_SEL_CTL(3)},
+	[ADC_TM_CHAN4] = {ADC_TM_Mn_ADC_CH_SEL_CTL(4)},
+	[ADC_TM_CHAN5] = {ADC_TM_Mn_ADC_CH_SEL_CTL(5)},
+	[ADC_TM_CHAN6] = {ADC_TM_Mn_ADC_CH_SEL_CTL(6)},
+	[ADC_TM_CHAN7] = {ADC_TM_Mn_ADC_CH_SEL_CTL(7)},
 };
 
-
-static int32_t adc_tm3_absolute_rthr(const struct adc_tm_data *data,
+static int32_t adc_tm4_absolute_rthr(const struct adc_tm_data *data,
 			struct adc_tm_config *tm_config)
 {
 	int64_t low_thr = 0, high_thr = 0;
@@ -136,87 +128,75 @@ static int32_t adc_tm3_absolute_rthr(const struct adc_tm_data *data,
 	return 0;
 }
 
-static int32_t adc_tm3_disable(struct adc_tm_chip *chip)
+static int32_t adc_tm4_enable(struct adc_tm_chip *chip)
 {
 	int rc = 0;
 	u8 data = 0;
 
-	rc = adc_tm3_write_reg(chip, ADC_TM_EN_CTL1, &data, 1);
+	rc = adc_tm3_enable(chip);
+	if (rc < 0)
+		return rc;
+
+	/* Extra enable sequence for HC: enable channel conversion */
+	data = ADC_TM_BTM_CONV_REQ_EN;
+	rc = adc_tm3_write_reg(chip, ADC_TM_BTM_CONV_REQ, &data, 1);
 	if (rc < 0) {
-		pr_err("adc-tm enable failed\n");
+		pr_err("adc-tm request conversion failed\n");
 		return rc;
 	}
 
 	return rc;
 }
 
-static int adc_tm3_configure(struct adc_tm_sensor *sensor,
+static int adc_tm4_configure(struct adc_tm_sensor *sensor,
 					uint32_t btm_chan_idx)
 {
 	struct adc_tm_chip *chip = sensor->chip;
-	u8 buf, op_ctl;
+	u8 buf[8], tmp = 0, cal_sel = 0;
 	int ret = 0;
 
-	buf = ADC_TM_OP_NORMAL_MODE << ADC_TM_OP_MODE_SHIFT;
-	buf |= ADC_TM_VADC_TRIM_EN;
-	buf |= ADC_TM_AMUX_TRIM_EN;
-	ret = adc_tm3_write_reg(chip, ADC_TM_MODE_CTL, &buf, 1);
+	/* Read current fast average parameters */
+	ret = adc_tm3_read_reg(chip, ADC_TM_FAST_AVG_CTL, &tmp, 1);
 	if (ret < 0) {
-		pr_err("adc-tm amux sel write failed with %d\n", ret);
+		pr_err("adc-tm fast average read failed with %d\n", ret);
 		return ret;
 	}
 
-	/* Disable this bank to configure it (HC disables automatically) */
-	ret = adc_tm3_disable(chip);
+	/* Setup fast average delay and enable */
+	tmp |= sensor->hw_settle_time;
+	ret = adc_tm3_write_reg(chip, ADC_TM_FAST_AVG_CTL, &tmp, 1);
+	if (ret < 0) {
+		pr_err("adc-tm fast average enable failed with %d\n", ret);
+		return ret;
+	}
+
+	/* Read current amux selection registers for this channel */
+	ret = adc_tm3_read_reg(chip,
+			ADC_TM_Mn_ADC_CH_SEL_CTL(btm_chan_idx), buf, 8);
 	if (ret < 0) {
 		pr_err("adc-tm block read failed with %d\n", ret);
 		return ret;
 	}
 
 	/* Update ADC channel select for the corresponding BTM channel */
-	buf = sensor->adc_ch;
+	tmp = sensor->adc_ch;
 	ret = adc_tm3_write_reg(chip,
-			ADC_TM_Mn_ADC_CH_SEL_CTL(btm_chan_idx), &buf, 1);
+			ADC_TM_Mn_ADC_CH_SEL_CTL(btm_chan_idx), &tmp, 1);
 	if (ret < 0) {
 		pr_err("adc-tm amux sel write failed with %d\n", ret);
 		return ret;
 	}
 
-	buf = sensor->hw_settle_time;
-	ret = adc_tm3_write_reg(chip, ADC_TM_HW_SETTLE_DELAY, &buf, 1);
-	if (ret < 0) {
-		pr_err("adc-tm settle time write failed with %d\n", ret);
-		return ret;
-	}
+	/* Set calibration select, hw_settle delay */
+	cal_sel = (u8) (sensor->cal_sel << ADC_TM_CTL_CAL_SEL_MASK_SHIFT);
+	buf[6] &= (u8) ~ADC_TM_CTL_HW_SETTLE_DELAY_MASK;
+	buf[6] |= (u8) sensor->hw_settle_time;
+	buf[6] &= (u8) ~ADC_TM_CTL_CAL_SEL;
+	buf[6] |= (u8) cal_sel;
 
-	/* Enable fast average */
-	buf = ADC_TM_FAST_AVG_EN_BIT;
-	ret = adc_tm3_write_reg(chip, ADC_TM_FAST_AVG_EN_CTL, &buf, 1);
+	ret = adc_tm3_write_reg(chip, ADC_TM_Mn_CTL(btm_chan_idx), &buf[6], 1);
 	if (ret < 0) {
-		pr_err("adc-tm fast_avg_en write failed with %d\n", ret);
-		return ret;
-	}
-
-	/* Select number of samples in fast average mode */
-	buf = chip->prop.fast_avg_samples;
-	ret = adc_tm3_write_reg(chip, ADC_TM_FAST_AVG_CTL, &buf, 1);
-	if (ret < 0) {
-		pr_err("adc-tm fast_avg samples write failed with %d\n", ret);
-		return ret;
-	}
-
-	/* Recurring interval measurement enable */
-	ret = adc_tm3_read_reg(chip,
-			ADC_TM_MEAS_INTERVAL_OP_CTL, &op_ctl, 1);
-	if (ret < 0) {
-		pr_err("adc-tm meas. interval read failed with %d\n", ret);
-		return ret;
-	}
-	op_ctl |= ADC_TM_MEAS_INTERVAL_OP;
-	ret = adc_tm3_reg_update(chip, ADC_TM_MEAS_INTERVAL_OP_CTL,
-				 op_ctl, true);
-	if (ret < 0) {
-		pr_err("adc-tm meas. interval enable failed with %d\n", ret);
+		pr_err("adc-tm hw-settle, calib sel write failed: %d\n", ret);
 		return ret;
 	}
 
@@ -261,7 +241,7 @@ static int32_t adc_tm_add_to_list(struct adc_tm_chip *chip,
 	return 0;
 }
 
-static int32_t adc_tm3_thr_update(struct adc_tm_sensor *sensor,
+static int32_t adc_tm4_thr_update(struct adc_tm_sensor *sensor,
 			int32_t high_thr, int32_t low_thr)
 {
 	int ret = 0;
@@ -342,7 +322,7 @@ fail:
 	return ret;
 }
 
-static int32_t adc_tm3_manage_thresholds(struct adc_tm_sensor *sensor)
+static int32_t adc_tm4_manage_thresholds(struct adc_tm_sensor *sensor)
 {
 	int ret = 0, high_thr = INT_MAX, low_thr = INT_MIN;
 	struct adc_tm_client_info *client_info = NULL;
@@ -351,7 +331,7 @@ static int32_t adc_tm3_manage_thresholds(struct adc_tm_sensor *sensor)
 	struct adc_tm_chip *chip = sensor->chip;
 
 	ret = adc_tm3_get_btm_idx(chip, adc_tm_ch_data,
-				sensor->btm_ch, &btm_chan_idx);
+				  sensor->btm_ch, &btm_chan_idx);
 	if (ret < 0) {
 		pr_err("Invalid btm channel idx with %d\n", ret);
 		return ret;
@@ -409,7 +389,7 @@ static int32_t adc_tm3_manage_thresholds(struct adc_tm_sensor *sensor)
 				client_info->low_thr_set = true;
 	}
 
-	ret = adc_tm3_thr_update(sensor, high_thr, low_thr);
+	ret = adc_tm4_thr_update(sensor, high_thr, low_thr);
 	if (ret < 0)
 		pr_err("setting chan:%d threshold failed\n", btm_chan_idx);
 
@@ -419,7 +399,7 @@ static int32_t adc_tm3_manage_thresholds(struct adc_tm_sensor *sensor)
 	return 0;
 }
 
-static void notify_adc_tm3_fn(struct work_struct *work)
+static void notify_adc_tm4_fn(struct work_struct *work)
 {
 	struct adc_tm_client_info *client_info = NULL;
 	struct adc_tm_chip *chip;
@@ -434,7 +414,7 @@ static void notify_adc_tm3_fn(struct work_struct *work)
 
 	btm_chan_num = adc_tm->btm_ch;
 	ret = adc_tm3_get_btm_idx(chip, adc_tm_ch_data,
-				btm_chan_num, &btm_chan_idx);
+				  btm_chan_num, &btm_chan_idx);
 	if (ret < 0) {
 		pr_err("Invalid btm channel idx\n");
 		return;
@@ -459,7 +439,7 @@ static void notify_adc_tm3_fn(struct work_struct *work)
 							ADC_TM_LOW_THR_DISABLE;
 			}
 		}
-		adc_tm3_manage_thresholds(adc_tm);
+		adc_tm4_manage_thresholds(adc_tm);
 
 		adc_tm->low_thr_triggered = false;
 	}
@@ -481,7 +461,7 @@ static void notify_adc_tm3_fn(struct work_struct *work)
 							ADC_TM_HIGH_THR_DISABLE;
 			}
 		}
-		adc_tm3_manage_thresholds(adc_tm);
+		adc_tm4_manage_thresholds(adc_tm);
 
 		adc_tm->high_thr_triggered = false;
 	}
@@ -512,7 +492,7 @@ static void notify_adc_tm3_fn(struct work_struct *work)
 	}
 }
 
-int32_t adc_tm3_channel_measure(struct adc_tm_chip *chip,
+int32_t adc_tm4_channel_measure(struct adc_tm_chip *chip,
 					struct adc_tm_param *param)
 
 {
@@ -560,7 +540,7 @@ int32_t adc_tm3_channel_measure(struct adc_tm_chip *chip,
 	adc_tm_add_to_list(chip, dt_index, param);
 
 	/* set right thresholds for the sensor */
-	adc_tm3_manage_thresholds(&chip->sensor[dt_index]);
+	adc_tm4_manage_thresholds(&chip->sensor[dt_index]);
 
 	/* enable low/high irqs */
 	list_for_each_entry(client_info,
@@ -600,13 +580,13 @@ int32_t adc_tm3_channel_measure(struct adc_tm_chip *chip,
 	}
 
 	/* configure channel */
-	ret = adc_tm3_configure(&chip->sensor[dt_index], btm_chan_idx);
+	ret = adc_tm4_configure(&chip->sensor[dt_index], btm_chan_idx);
 	if (ret < 0) {
 		pr_err("Error during adc-tm configure:%d\n", ret);
 		goto fail_unlock;
 	}
 
-	ret = adc_tm3_enable(chip);
+	ret = adc_tm4_enable(chip);
 	if (ret < 0)
 		pr_err("Error enabling adc-tm with %d\n", ret);
 
@@ -618,9 +598,9 @@ fail_unlock:
 	mutex_unlock(&chip->adc_mutex_lock);
 	return ret;
 }
-EXPORT_SYMBOL(adc_tm3_channel_measure);
+EXPORT_SYMBOL(adc_tm4_channel_measure);
 
-int32_t adc_tm3_disable_chan_meas(struct adc_tm_chip *chip,
+int32_t adc_tm4_disable_chan_meas(struct adc_tm_chip *chip,
 					struct adc_tm_param *param)
 {
 	int ret = 0, i = 0;
@@ -680,9 +660,9 @@ fail:
 	spin_unlock_irqrestore(&chip->adc_tm_lock, flags);
 	return ret;
 }
-EXPORT_SYMBOL(adc_tm3_disable_chan_meas);
+EXPORT_SYMBOL(adc_tm4_disable_chan_meas);
 
-static int adc_tm3_set_mode(struct adc_tm_sensor *sensor,
+static int adc_tm4_set_mode(struct adc_tm_sensor *sensor,
 			      enum thermal_device_mode mode)
 {
 	struct adc_tm_chip *chip = sensor->chip;
@@ -690,23 +670,24 @@ static int adc_tm3_set_mode(struct adc_tm_sensor *sensor,
 	uint32_t btm_chan_idx = 0;
 
 	ret = adc_tm3_get_btm_idx(chip, adc_tm_ch_data,
-				sensor->btm_ch, &btm_chan_idx);
+				  sensor->btm_ch, &btm_chan_idx);
 	if (ret < 0) {
 		pr_err("Invalid btm channel idx with %d\n", ret);
 		return ret;
 	}
 
 	if (mode == THERMAL_DEVICE_ENABLED) {
-		ret = adc_tm3_configure(sensor, btm_chan_idx);
+		ret = adc_tm4_configure(sensor, btm_chan_idx);
 		if (ret < 0) {
 			pr_err("Error during adc-tm configure:%d\n", ret);
 			return ret;
 		}
 
-		ret = adc_tm3_enable(chip);
+		ret = adc_tm4_enable(chip); {
 		if (ret < 0)
 			pr_err("Error enabling adc-tm with %d\n", ret);
-
+			return ret;
+		}
 
 		ret = adc_tm3_request_conversion(chip);
 		if (ret < 0)
@@ -716,14 +697,16 @@ static int adc_tm3_set_mode(struct adc_tm_sensor *sensor,
 		ret = adc_tm3_reg_update(chip,
 				ADC_TM_Mn_MEAS_EN_CTL(btm_chan_idx),
 				ADC_TM_Mn_MEAS_EN(btm_chan_idx), false);
-		if (ret < 0)
+		if (ret < 0) {
 			pr_err("Disable failed for ch:%d\n", btm_chan_idx);
+			return ret;
+		}
 	}
 
 	return ret;
 }
 
-static int adc_tm3_activate_trip_type(struct adc_tm_sensor *adc_tm,
+static int adc_tm4_activate_trip_type(struct adc_tm_sensor *adc_tm,
 			int trip, enum thermal_device_mode mode)
 {
 	struct adc_tm_chip *chip = adc_tm->chip;
@@ -736,7 +719,7 @@ static int adc_tm3_activate_trip_type(struct adc_tm_sensor *adc_tm,
 
 	btm_chan = adc_tm->btm_ch;
 	ret = adc_tm3_get_btm_idx(chip, adc_tm_ch_data,
-				btm_chan, &btm_chan_idx);
+				  btm_chan, &btm_chan_idx);
 	if (ret < 0) {
 		pr_err("Invalid btm channel idx\n");
 		return ret;
@@ -768,7 +751,7 @@ static int adc_tm3_activate_trip_type(struct adc_tm_sensor *adc_tm,
 	return ret;
 }
 
-static int adc_tm3_set_trip_temp(struct adc_tm_sensor *sensor,
+static int adc_tm4_set_trip_temp(struct adc_tm_sensor *sensor,
 					int low_temp, int high_temp)
 {
 	struct adc_tm_chip *chip;
@@ -817,8 +800,7 @@ static int adc_tm3_set_trip_temp(struct adc_tm_sensor *sensor,
 		tm_config.low_thr_temp *= 100;
 	}
 #endif
-	adc_tm3_scale_therm_voltage_100k(&tm_config, &cal_graph[ADC_RATIO_CAL],
-					 ADC_RATIO_CAL, chip->data);
+	adc_tm_scale_therm_voltage_100k(&tm_config, chip->data);
 
 	/* Cool temperature corresponds to high voltage threshold */
 	mask = lower_32_bits(tm_config.high_thr_voltage);
@@ -834,7 +816,7 @@ static int adc_tm3_set_trip_temp(struct adc_tm_sensor *sensor,
 
 	btm_chan = sensor->btm_ch;
 	ret = adc_tm3_get_btm_idx(chip, adc_tm_ch_data,
-				btm_chan, &btm_chan_idx);
+				  btm_chan, &btm_chan_idx);
 	if (ret < 0) {
 		pr_err("Invalid btm channel idx\n");
 		return ret;
@@ -862,7 +844,7 @@ static int adc_tm3_set_trip_temp(struct adc_tm_sensor *sensor,
 			goto fail;
 		}
 
-		ret = adc_tm3_activate_trip_type(sensor,
+		ret = adc_tm4_activate_trip_type(sensor,
 				THERMAL_TRIP_CONFIGURABLE_HI,
 				THERMAL_DEVICE_ENABLED);
 		if (ret) {
@@ -870,7 +852,7 @@ static int adc_tm3_set_trip_temp(struct adc_tm_sensor *sensor,
 			goto fail;
 		}
 	} else {
-		ret = adc_tm3_activate_trip_type(sensor,
+		ret = adc_tm4_activate_trip_type(sensor,
 				THERMAL_TRIP_CONFIGURABLE_HI,
 				THERMAL_DEVICE_DISABLED);
 		if (ret) {
@@ -894,7 +876,7 @@ static int adc_tm3_set_trip_temp(struct adc_tm_sensor *sensor,
 			goto fail;
 		}
 
-		ret = adc_tm3_activate_trip_type(sensor,
+		ret = adc_tm4_activate_trip_type(sensor,
 				THERMAL_TRIP_CONFIGURABLE_LOW,
 				THERMAL_DEVICE_ENABLED);
 		if (ret) {
@@ -902,7 +884,7 @@ static int adc_tm3_set_trip_temp(struct adc_tm_sensor *sensor,
 			goto fail;
 		}
 	} else {
-		ret = adc_tm3_activate_trip_type(sensor,
+		ret = adc_tm4_activate_trip_type(sensor,
 				THERMAL_TRIP_CONFIGURABLE_LOW,
 				THERMAL_DEVICE_DISABLED);
 		if (ret) {
@@ -912,11 +894,11 @@ static int adc_tm3_set_trip_temp(struct adc_tm_sensor *sensor,
 	}
 
 	if ((high_temp != INT_MAX) || (low_temp != INT_MIN)) {
-		ret = adc_tm3_set_mode(sensor, THERMAL_DEVICE_ENABLED);
+		ret = adc_tm4_set_mode(sensor, THERMAL_DEVICE_ENABLED);
 		if (ret)
 			pr_err("sensor enabled failed\n");
 	} else {
-		ret = adc_tm3_set_mode(sensor, THERMAL_DEVICE_DISABLED);
+		ret = adc_tm4_set_mode(sensor, THERMAL_DEVICE_DISABLED);
 		if (ret)
 			pr_err("sensor disable failed\n");
 	}
@@ -927,7 +909,7 @@ fail:
 	return ret;
 }
 
-static irqreturn_t adc_tm3_handler(int irq, void *data)
+static irqreturn_t adc_tm4_handler(int irq, void *data)
 {
 	struct adc_tm_chip *chip = data;
 	u8 status_low, status_high, ctl;
@@ -1074,7 +1056,7 @@ static int adc3_tm_read_raw_iio(struct adc_tm_chip *chip,
 	return rc;
 }
 
-static int adc_tm3_get_calibration_params(struct adc_tm_chip *chip)
+static int adc_tm4_get_calibration_params(struct adc_tm_chip *chip)
 {
 	int vref_calib = 0, gnd_calib = 0;
 	struct adc_tm_linear_graph *graph;
@@ -1085,7 +1067,7 @@ static int adc_tm3_get_calibration_params(struct adc_tm_chip *chip)
 
 	/* ABSOLUTE (HC: ADC_1P25VREF ) */
 	graph = &cal_graph[ADC_ABS_CAL];
-	rc = adc3_tm_read_raw_iio(chip, "ref_1250mv", &vref_calib);
+	rc = adc3_tm_read_raw_iio(chip, "ref_1p25", &vref_calib);
 	if (rc < 0)
 		return rc;
 
@@ -1101,12 +1083,12 @@ static int adc_tm3_get_calibration_params(struct adc_tm_chip *chip)
 
 	/* RATIOMETRIC (HC: ADC_VREF_VADC) */
 	graph = &cal_graph[ADC_RATIO_CAL];
-	rc = adc3_tm_read_raw_iio(chip, "vdd_vadc", &vref_calib);
+	rc = adc3_tm_read_raw_iio(chip, "vref_vadc", &vref_calib);
 	if (rc < 0)
 		return rc;
 
 	/* HC: always ADC_REF_GND (both ABS and RATIO) */
-	rc = adc3_tm_read_raw_iio(chip, "ref_625mv", &gnd_calib);
+	rc = adc3_tm_read_raw_iio(chip, "ref_gnd", &gnd_calib);
 	if (rc < 0) {
 		rc = adc3_tm_read_raw_iio(chip, "ch_spare1", &gnd_calib);
 		if (rc < 0)
@@ -1129,7 +1111,7 @@ static int adc_tm3_get_calibration_params(struct adc_tm_chip *chip)
 	return rc;
 }
 
-static int adc_tm3_register_intr(struct adc_tm_chip *chip, const char* name)
+static int adc_tm4_register_intr(struct adc_tm_chip *chip, const char* name)
 {
 	struct platform_device *pdev;
 	int ret, irq;
@@ -1142,7 +1124,7 @@ static int adc_tm3_register_intr(struct adc_tm_chip *chip, const char* name)
 	}
 
 	ret = devm_request_threaded_irq(&pdev->dev, irq, NULL,
-			adc_tm3_handler,
+			adc_tm4_handler,
 			IRQF_TRIGGER_RISING | IRQF_ONESHOT,
 			name, chip);
 	if (ret) {
@@ -1155,20 +1137,16 @@ static int adc_tm3_register_intr(struct adc_tm_chip *chip, const char* name)
 	return ret;
 }
 
-static int adc_tm3_register_interrupts(struct adc_tm_chip *chip)
+static int adc_tm4_register_interrupts(struct adc_tm_chip *chip)
 {
 	int ret;
 
-	ret = adc_tm3_register_intr(chip, "high-thr-en-set");
-	if (ret)
-		return ret;
-
-	ret = adc_tm3_register_intr(chip, "low-thr-en-set");
+	ret = adc_tm4_register_intr(chip, "eoc-int-en-set");
 
 	return ret;
 }
 
-static int adc_tm3_init(struct adc_tm_chip *chip, uint32_t dt_chans)
+static int adc_tm4_init(struct adc_tm_chip *chip, uint32_t dt_chans)
 {
 	u8 buf, channels_available, meas_int_timer_2_3 = 0;
 	int ret, sz;
@@ -1189,20 +1167,25 @@ static int adc_tm3_init(struct adc_tm_chip *chip, uint32_t dt_chans)
 	}
 
 	/* Select decimation */
-	buf = chip->prop.decimation << ADC_TM_ADC_DIG_DECRATIOSEL_SHFT;
-
+	buf = chip->prop.decimation;
 	ret = adc_tm3_write_reg(chip,
 			ADC_TM_ADC_DIG_PARAM, &buf, 1);
 
-	/* Enable fast average */
-	buf = ADC_TM_FAST_AVG_EN_BIT;
-	ret = adc_tm3_write_reg(chip,
-			ADC_TM_FAST_AVG_EN_CTL, &buf, 1);
 
-	/* Select number of samples in fast average mode */
-	buf = chip->prop.fast_avg_samples;
-	ret = adc_tm3_write_reg(chip,
-			ADC_TM_FAST_AVG_CTL, &buf, 1);
+	/* Read current fast average parameters */
+	ret = adc_tm3_read_reg(chip, ADC_TM_FAST_AVG_CTL, &buf, 1);
+	if (ret < 0) {
+		pr_err("adc-tm fast average read failed with %d\n", ret);
+		return ret;
+	}
+
+	/* Setup fast average delay and enable */
+	buf |= chip->prop.fast_avg_samples;
+	ret = adc_tm3_write_reg(chip, ADC_TM_FAST_AVG_CTL, &buf, 1);
+	if (ret < 0) {
+		pr_err("adc-tm fast average enable failed with %d\n", ret);
+		return ret;
+	}
 
 	/* Select timer1 */
 	buf = chip->prop.timer1;
@@ -1222,26 +1205,6 @@ static int adc_tm3_init(struct adc_tm_chip *chip, uint32_t dt_chans)
 	spin_lock_init(&chip->adc_tm_lock);
 	mutex_init(&chip->adc_mutex_lock);
 
-	/* Forcefully fill in the ADC channel data for all possible channels */
-	for (i = ADC_TM_CHAN0; i <= ADC_TM_CHAN7; i++) {
-		adc_tm_ch_data[i].low_thr_lsb_addr =
-					ADC_TM_Mn_LOW_THR_LSB_DEF(i);
-		adc_tm_ch_data[i].low_thr_msb_addr =
-					ADC_TM_Mn_LOW_THR_MSB_DEF(i);
-		adc_tm_ch_data[i].high_thr_lsb_addr =
-					ADC_TM_Mn_HIGH_THR_LSB_DEF(i);
-		adc_tm_ch_data[i].high_thr_msb_addr =
-					ADC_TM_Mn_HIGH_THR_MSB_DEF(i);
-		adc_tm_ch_data[i].multi_meas_en =
-					ADC_TM_Mn_MULTI_MEAS_EN_DEF(i);
-		adc_tm_ch_data[i].low_thr_int_chan_en =
-					ADC_TM_Mn_LOW_THR_INT_EN_DEF(i);
-		adc_tm_ch_data[i].high_thr_int_chan_en =
-					ADC_TM_Mn_HIGH_THR_INT_EN_DEF(i);
-		adc_tm_ch_data[i].meas_interval_ctl =
-					ADC_TM_Mn_MEAS_INTERVAL_CTL_DEF(i);
-	}
-
 	for (i = 0; i < dt_chans; i++)
 		chip->sensor[i].btm_ch = adc_tm_ch_data[i].btm_amux_ch;
 
@@ -1251,26 +1214,26 @@ static int adc_tm3_init(struct adc_tm_chip *chip, uint32_t dt_chans)
 	if (!adc_tm_rscale_fn)
 		return -ENOMEM;
 
-	adc_tm_rscale_fn[SCALE_R_ABSOLUTE].chan = adc_tm3_absolute_rthr;
+	adc_tm_rscale_fn[SCALE_R_ABSOLUTE].chan = adc_tm4_absolute_rthr;
 
-	ret = adc_tm3_get_calibration_params(chip);
+	ret = adc_tm4_get_calibration_params(chip);
 	if (ret)
 		dev_err(chip->dev, "Cannot get calibration parameters!!\n");
 
 	return ret;
 }
 
-static const struct adc_tm_ops ops_adc_tm3 = {
-	.init		= adc_tm3_init,
-	.set_trips	= adc_tm3_set_trip_temp,
-	.interrupts_reg = adc_tm3_register_interrupts,
+static const struct adc_tm_ops ops_adc_tm4 = {
+	.init		= adc_tm4_init,
+	.set_trips	= adc_tm4_set_trip_temp,
+	.interrupts_reg = adc_tm4_register_interrupts,
 	.get_temp	= adc_tm3_get_temp,
-	.notify_adc	= notify_adc_tm3_fn,
+	.notify_adc	= notify_adc_tm4_fn,
 };
 
-const struct adc_tm_data data_adc_tm3 = {
-	.ops			= &ops_adc_tm3,
-	.full_scale_code_volt	= 1,
+const struct adc_tm_data data_adc_tm4 = {
+	.ops			= &ops_adc_tm4,
+	.full_scale_code_volt	= 0x4000,
 	.decimation = (unsigned int []) {250, 420, 840},
 	.hw_settle = (unsigned int []) {15, 100, 200, 300, 400, 500, 600, 700,
 					1, 2, 4, 8, 16, 32, 64, 128},

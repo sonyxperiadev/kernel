@@ -141,6 +141,95 @@ static void adc_tm_map_temp_voltage(const struct adc_tm_map_pt *pts,
 	}
 }
 
+int therm_tm3_fwd_scale(int64_t code, uint32_t adc_hc_vdd_ref_mv,
+				enum adc_cal_method cal_method,
+				const struct adc_tm_data *data)
+{
+	int64_t volt = 0;
+	int result = 0;
+
+	volt = (s64) code * adc_hc_vdd_ref_mv;
+	volt = div64_s64(volt, (data->full_scale_code_volt));
+
+	if (cal_method == ADC_ABS_CAL)
+		volt += adc_hc_vdd_ref_mv;
+
+	adc_tm_map_voltage_temp(adcmap_100k_104ef_104fb_1875_vref,
+				 ARRAY_SIZE(adcmap_100k_104ef_104fb_1875_vref),
+				 (int) volt, &result);
+
+	return result;
+}
+
+void adc_tm3_scale_therm_voltage_100k(struct adc_tm_config *param,
+				struct adc_tm_linear_graph *graph,
+				enum adc_cal_method cal_method,
+				const struct adc_tm_data *data)
+{
+	/* High temperature maps to lower threshold voltage */
+	adc_tm_map_temp_voltage(
+		adcmap_100k_104ef_104fb_1875_vref,
+		ARRAY_SIZE(adcmap_100k_104ef_104fb_1875_vref),
+		param->high_thr_temp, &param->low_thr_voltage);
+
+	param->low_thr_voltage *= graph->dy;
+	param->low_thr_voltage = div64_s64(param->low_thr_voltage,
+						graph->vref);
+	param->low_thr_voltage += graph->gnd;
+
+	/* Low temperature maps to higher threshold voltage */
+	adc_tm_map_temp_voltage(
+		adcmap_100k_104ef_104fb_1875_vref,
+		ARRAY_SIZE(adcmap_100k_104ef_104fb_1875_vref),
+		param->low_thr_temp, &param->high_thr_voltage);
+
+	param->high_thr_voltage *= graph->dy;
+	param->high_thr_voltage = div64_s64(param->high_thr_voltage,
+						graph->vref);
+	param->high_thr_voltage += graph->gnd;
+}
+
+void adc_tm3_scale_therm_voltage_alt_100k(struct adc_tm_config *param,
+				struct adc_tm_linear_graph *graph,
+				enum adc_cal_method cal_method,
+				const struct adc_tm_data *data)
+{
+	int temp;
+
+	/* High temperature maps to lower threshold voltage */
+	adc_tm_map_temp_voltage(
+		adcmap_100k_104ef_104fb_1875_vref,
+		ARRAY_SIZE(adcmap_100k_104ef_104fb_1875_vref),
+		param->high_thr_temp, &param->low_thr_voltage);
+
+	param->low_thr_voltage *= data->full_scale_code_volt;
+	param->low_thr_voltage = div64_s64(param->low_thr_voltage,
+						ADC_HC_VDD_REF);
+
+	temp = therm_tm3_fwd_scale((param->low_thr_voltage - graph->gnd),
+				graph->dx, cal_method, data);
+
+	if (temp < param->high_thr_temp)
+		param->low_thr_voltage--;
+
+	/* Low temperature maps to higher threshold voltage */
+	adc_tm_map_temp_voltage(
+		adcmap_100k_104ef_104fb_1875_vref,
+		ARRAY_SIZE(adcmap_100k_104ef_104fb_1875_vref),
+		param->low_thr_temp, &param->high_thr_voltage);
+
+	param->high_thr_voltage *= data->full_scale_code_volt;
+	param->high_thr_voltage = div64_s64(param->high_thr_voltage,
+						ADC_HC_VDD_REF);
+
+	temp = therm_tm3_fwd_scale((param->high_thr_voltage - graph->gnd),
+				graph->dx, cal_method, data);
+
+	if (temp > param->low_thr_temp)
+		param->high_thr_voltage++;
+
+}
+
 int therm_fwd_scale(int64_t code, uint32_t adc_hc_vdd_ref_mv,
 			const struct adc_tm_data *data)
 {

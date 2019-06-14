@@ -203,6 +203,7 @@ struct adc_tm_data {
 };
 
 extern const struct adc_tm_data data_adc_tm3;
+extern const struct adc_tm_data data_adc_tm4;
 extern const struct adc_tm_data data_adc_tm5;
 /**
  * Channel index for the corresponding index to adc_tm_channel_select
@@ -326,6 +327,18 @@ struct adc_tm_linear_graph {
 	s32 gnd;
 	s32 vref;
 };
+
+int therm_tm3_fwd_scale(int64_t code, uint32_t adc_hc_vdd_ref_mv,
+				enum adc_cal_method cal_method,
+				const struct adc_tm_data *data);
+void adc_tm3_scale_therm_voltage_100k(struct adc_tm_config *param,
+				struct adc_tm_linear_graph *graph,
+				enum adc_cal_method cal_method,
+				const struct adc_tm_data *data);
+void adc_tm3_scale_therm_voltage_alt_100k(struct adc_tm_config *param,
+				struct adc_tm_linear_graph *graph,
+				enum adc_cal_method cal_method,
+				const struct adc_tm_data *data);
 
 int therm_fwd_scale(int64_t code, uint32_t adc_hc_vdd_ref_mv,
 				const struct adc_tm_data *data);

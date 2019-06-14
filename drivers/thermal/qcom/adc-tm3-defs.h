@@ -13,12 +13,11 @@
  *
  */
 
-/* Misc definitions */
-#define ADC_TM3_625_UV				625000
-#define ADC_TM3_RATIOMETRIC_RANGE		1800
-#define ADC_TM3_RATIOMETRIC_RANGE_8998		1875
+#include "adc-tm3-common.h"
 
 /* Addresses */
+#define ADC_TM_MODE_CTL				0x40
+
 #define ADC_TM_M0_LOW_THR_LSB			0x5c
 #define ADC_TM_M0_LOW_THR_MSB			0x5d
 #define ADC_TM_M0_HIGH_THR_LSB			0x5e
@@ -68,6 +67,9 @@
 #define ADC_TM_M6_MEAS_INTERVAL_CTL		0x95
 #define ADC_TM_M7_MEAS_INTERVAL_CTL		0x9d
 
+/* Misc */
+#define ADC_TM_OP_MODE_SHIFT			3
+
 /* Commodity ugly macro */
 #define DEFINE_FUNC_RETRIEVE_PARAM(__retrieve_param) 			\
 	static inline int ADC_TM_Mn_##__retrieve_param##_DEF(int _n)	\
@@ -105,9 +107,10 @@ DEFINE_FUNC_RETRIEVE_PARAM(MEAS_INTERVAL_CTL);
 #define ADC_TM_Mn_LOW_THR_INT_EN_DEF(_n)	BIT(_n)
 #define ADC_TM_Mn_HIGH_THR_INT_EN_DEF(_n)	BIT(_n)
 
-enum tm4_vadc_mode_sel {
+enum tm3_vadc_mode_sel {
 	ADC_TM_OP_NORMAL_MODE = 0,
 	ADC_TM_OP_CONVERSION_SEQUENCER,
 	ADC_TM_OP_MEASUREMENT_INTERVAL,
 	ADC_TM_OP_MODE_NONE,
 };
+

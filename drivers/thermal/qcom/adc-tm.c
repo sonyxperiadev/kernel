@@ -184,7 +184,7 @@ static const struct of_device_id adc_tm_match_table[] = {
 	},
 	{
 		.compatible = "qcom,adc-tm4",
-		.data = &data_adc_tm3,
+		.data = &data_adc_tm4,
 	},
 	{
 		.compatible = "qcom,adc-tm5",
