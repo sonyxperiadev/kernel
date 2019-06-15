@@ -419,7 +419,7 @@ static irqreturn_t et51x_irq_handler(int irq, void *handle)
 {
 	struct et51x_data *et51x = handle;
 
-	mutex_lock(et51x->intrpoll_lock);
+	mutex_lock(&et51x->intrpoll_lock);
 
 	dev_dbg(et51x->dev, "%s: gpio=%d\n", __func__,
 			et51x_get_gpio_triggered(et51x));
@@ -430,7 +430,7 @@ static irqreturn_t et51x_irq_handler(int irq, void *handle)
 	pm_wakeup_event(et51x->dev, ET51X_MAX_HAL_PROCESSING_TIME);
 	wake_up_interruptible(&et51x->irq_evt);
 
-	mutex_unlock(et51x->intrpoll_lock);
+	mutex_unlock(&et51x->intrpoll_lock);
 
 	return IRQ_HANDLED;
 }
