@@ -365,28 +365,20 @@ static unsigned int et51x_poll_interrupt(struct file *fp,
 	struct et51x_data *et51x = to_et51x_data(fp);
 	struct device *dev = et51x->dev;
 
+	/* Add current file to the waiting list */
+	poll_wait(fp, &et51x->irq_evt, wait);
+
 	val = et51x_get_gpio_triggered(et51x);
 	if (val) {
-		/* Early out */
-		dev_dbg(dev, "gpio already triggered\n");
+		dev_dbg(dev, "gpio triggered\n");
 		pm_wakeup_event(dev, ET51X_MAX_HAL_PROCESSING_TIME);
 		return POLLIN | POLLRDNORM;
 	}
-
-	/* Add current file to the waiting list  */
-	poll_wait(fp, &et51x->irq_evt, wait);
 
 	/* Enable the irq */
 	if (et51x->irq_fired) {
 		et51x->irq_fired = false;
 		enable_irq(et51x->irq);
-	}
-
-	val = et51x_get_gpio_triggered(et51x);
-	if (val) {
-		dev_dbg(dev, "gpio triggered after poll_wait\n");
-		pm_wakeup_event(dev, ET51X_MAX_HAL_PROCESSING_TIME);
-		return POLLIN | POLLRDNORM;
 	}
 
 	/*
