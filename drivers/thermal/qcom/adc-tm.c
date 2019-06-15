@@ -357,18 +357,24 @@ static int adc_tm_probe(struct platform_device *pdev)
 
 	if (of_device_is_compatible(node, "qcom,adc-tm3") ||
 	    of_device_is_compatible(node, "qcom,adc-tm4")) {
-		for (i = 0; i <= indio_chan_count; i++) {
+		for (i = 0; i < indio_chan_count; i++) {
 			const struct iio_chan_spec *ch_spec =
 						channels[i].channel;
+			bool check_chan;
+
+			/* For human readability purposes only... */
+			check_chan = false;
 
 			/* REF_625MV, REF_1250MV, GND_VREF, VDD_VADC, SPARE1 */
 			if (strstr(ch_spec->datasheet_name, "REF_") ||
 			    strstr(ch_spec->datasheet_name, "GND_REF") ||
 			    strstr(ch_spec->datasheet_name, "VDD_VADC") ||
-			    strstr(ch_spec->datasheet_name, "SPARE1"))
+			    strstr(ch_spec->datasheet_name, "SPARE1")) {
 				tm4_cal_found++;
+				check_chan = true;
+			}
 
-			if (i < dt_chan_num) {
+			if (check_chan && (i < dt_chan_num)) {
 				dev_err(dev, "Wrong IIO channel configuration."
 					" The calibration channels shall be "
 					"declared at the end of the array!!!");
