@@ -1064,6 +1064,7 @@ static int ufsdbg_dump_device_desc_open(struct inode *inode, struct file *file)
 static const struct file_operations ufsdbg_dump_device_desc = {
 	.open		= ufsdbg_dump_device_desc_open,
 	.read		= seq_read,
+};
 
 #if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA)
 static int ufsdbg_dump_fw_revision_show(struct seq_file *file, void *data)
@@ -1199,7 +1200,6 @@ static const struct file_operations ufsdbg_dump_serial = {
 	.read		= seq_read,
 };
 #endif
-};
 
 static int ufsdbg_power_mode_show(struct seq_file *file, void *data)
 {
