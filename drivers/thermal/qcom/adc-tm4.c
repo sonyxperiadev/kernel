@@ -1218,8 +1218,10 @@ static int adc_tm4_init(struct adc_tm_chip *chip, uint32_t dt_chans)
 	adc_tm_rscale_fn[SCALE_R_ABSOLUTE].chan = adc_tm4_absolute_rthr;
 
 	ret = adc_tm4_get_calibration_params(chip);
-	if (ret)
+	if (ret < 0)
 		dev_err(chip->dev, "Cannot get calibration parameters!!\n");
+	else
+		ret = 0;
 
 	return ret;
 }

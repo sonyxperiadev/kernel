@@ -1050,8 +1050,10 @@ static int adc3_tm_read_raw_iio(struct adc_tm_chip *chip,
 	int value = -1, rc = -EACCES;
 
 	vadc_chan = iio_channel_get(chip->dev, channel_name);
-	if (IS_ERR_OR_NULL(vadc_chan))
+	if (IS_ERR_OR_NULL(vadc_chan)) {
+		pr_err("Cannot get %s\n", channel_name);
 		return -EACCES;
+	}
 
 	rc = iio_read_channel_raw(vadc_chan, &value);
 	if (rc < 0)
@@ -1164,12 +1166,11 @@ static int adc_tm3_init(struct adc_tm_chip *chip, uint32_t dt_chans)
 	int ret, sz;
 	unsigned int i;
 
-	/* If this fails, then the number of channels for TM4 and HC is 8 */
-	ret = adc_tm3_read_reg(chip, ADC_TM_NUM_BTM, &channels_available, 1);
-	if (ret < 0) {
-		pr_err("read failed for BTM channels\n");
-		channels_available = 8;
-	}
+	/*
+	 * On TM3 we cannot read the available channels from any register,
+	 * so we firmly believe that we've got 8 working channels.
+	 */
+	channels_available = 8;
 	pr_info("ADC TM: %u channels available\n", channels_available);
 
 	if (dt_chans > channels_available) {
@@ -1244,8 +1245,10 @@ static int adc_tm3_init(struct adc_tm_chip *chip, uint32_t dt_chans)
 	adc_tm_rscale_fn[SCALE_R_ABSOLUTE].chan = adc_tm3_absolute_rthr;
 
 	ret = adc_tm3_get_calibration_params(chip);
-	if (ret)
+	if (ret < 0)
 		dev_err(chip->dev, "Cannot get calibration parameters!!\n");
+	else
+		ret = 0;
 
 	return ret;
 }
