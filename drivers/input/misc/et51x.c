@@ -46,11 +46,12 @@
 #include <linux/mutex.h>
 #include <linux/of.h>
 #include <linux/of_gpio.h>
-#include <linux/uaccess.h>
-#include <linux/pm_wakeup.h>
-#include <linux/regulator/consumer.h>
 #include <linux/platform_device.h>
+#include <linux/pm_wakeup.h>
 #include <linux/poll.h>
+#include <linux/regulator/consumer.h>
+#include <linux/uaccess.h>
+
 
 #define PWR_ON_STEP_SLEEP 100
 #define PWR_ON_STEP_RANGE1 100
@@ -95,6 +96,7 @@ struct et51x_data {
 	bool irq_fired;
 	wait_queue_head_t irq_evt;
 
+	struct mutex intrpoll_lock;
 	struct mutex lock;
 	bool prepared;
 	bool check_sensor_type;
@@ -113,7 +115,8 @@ struct et51x_data *to_et51x_data(struct file *fp)
 	return container_of(md, struct et51x_data, misc);
 }
 
-static int et51x_vreg_set_voltage(struct device *dev, struct regulator *vreg, int voltage)
+static int et51x_vreg_set_voltage(struct device *dev, struct regulator *vreg,
+		int voltage)
 {
 	int rc = 0;
 
@@ -267,6 +270,20 @@ static int et51x_device_release(struct inode *inode, struct file *fp)
 	return 0;
 }
 
+static inline void et51x_enable_irq_if_disabled(struct et51x_data *et51x)
+{
+	mutex_lock(&et51x->intrpoll_lock);
+
+	/* Enable the irq if not enabled: */
+	if (et51x->irq_fired) {
+		et51x->irq_fired = false;
+		dev_dbg(et51x->dev, "%s: enabling irq\n", __func__);
+		enable_irq(et51x->irq);
+	}
+
+	mutex_unlock(&et51x->intrpoll_lock);
+}
+
 static long et51x_device_ioctl(struct file *fp, unsigned int cmd,
 			       unsigned long arg)
 {
@@ -325,10 +342,7 @@ static long et51x_device_ioctl(struct file *fp, unsigned int cmd,
 			return rc;
 		}
 
-		if (et51x->irq_fired) {
-			et51x->irq_fired = false;
-			enable_irq(et51x->irq);
-		}
+		et51x_enable_irq_if_disabled(et51x);
 
 		rc = wait_event_interruptible_timeout(
 			et51x->irq_evt, et51x->irq_fired,
@@ -375,18 +389,12 @@ static unsigned int et51x_poll_interrupt(struct file *fp,
 		return POLLIN | POLLRDNORM;
 	}
 
-	/* Enable the irq */
-	if (et51x->irq_fired) {
-		et51x->irq_fired = false;
-		enable_irq(et51x->irq);
-	}
-
 	/*
 	 * Nothing happened yet; make the poll wait for irq_evt.
 	 * The wakelock can be relaxed preemptively, as no processing has to
 	 * be done until the next wake-enabled IRQ fires.
 	 */
-
+	et51x_enable_irq_if_disabled(et51x);
 	pm_relax(dev);
 
 	return 0;
@@ -429,15 +437,18 @@ static irqreturn_t et51x_irq_handler(int irq, void *handle)
 {
 	struct et51x_data *et51x = handle;
 
-	int val = et51x_get_gpio_triggered(et51x);
+	mutex_lock(&et51x->intrpoll_lock);
 
-	dev_dbg(et51x->dev, "%s: gpio=%d\n", __func__, val);
+	dev_dbg(et51x->dev, "%s: gpio=%d\n", __func__,
+			et51x_get_gpio_triggered(et51x));
 
 	et51x->irq_fired = true;
 
+	disable_irq_nosync(et51x->irq);
 	pm_wakeup_event(et51x->dev, ET51X_MAX_HAL_PROCESSING_TIME);
 	wake_up_interruptible(&et51x->irq_evt);
-	disable_irq_nosync(et51x->irq);
+
+	mutex_unlock(&et51x->intrpoll_lock);
 
 	return IRQ_HANDLED;
 }
@@ -583,6 +594,7 @@ static int et51x_probe(struct platform_device *pdev)
 
 	irqf = IRQF_TRIGGER_LOW | IRQF_ONESHOT;
 	mutex_init(&et51x->lock);
+	mutex_init(&et51x->intrpoll_lock);
 
 	device_init_wakeup(dev, true);
 	init_waitqueue_head(&et51x->irq_evt);
