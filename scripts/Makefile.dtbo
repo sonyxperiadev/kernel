@@ -21,7 +21,8 @@ cmd_dtbo_verify = true
 endif
 
 DTC_FLAGS += -Wno-avoid_default_addr_size -Wno-reg_format \
-	     -Wno-interrupts_property -Wno-gpios_property
+	     -Wno-interrupts_property -Wno-gpios_property \
+	     -Wno-i2c_bus_bridge
 
 $(obj)/%.dtbo: $(src)/%.dts FORCE
 	$(call if_changed_dep,dtc)
