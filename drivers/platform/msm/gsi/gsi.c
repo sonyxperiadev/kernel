@@ -2324,7 +2324,8 @@ int gsi_alloc_channel(struct gsi_chan_props *props, unsigned long dev_hdl,
 		GSI_NO_EVT_ERINDEX;
 	if (erindex != GSI_NO_EVT_ERINDEX) {
 		ctx->evtr = &gsi_ctx->evtr[erindex];
-		atomic_inc(&ctx->evtr->chan_ref_cnt);
+		if (props->prot != GSI_CHAN_PROT_GCI)
+			atomic_inc(&ctx->evtr->chan_ref_cnt);
 		if (props->prot != GSI_CHAN_PROT_GCI &&
 		    ctx->evtr->props.exclusive)
 			ctx->evtr->chan = ctx;
