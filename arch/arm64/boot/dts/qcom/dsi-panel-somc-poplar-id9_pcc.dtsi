@@ -18,8 +18,8 @@
  */
 
 /* pcc-table for Poplar Sharp */
-&mdss_mdp {
-	dsi_9: somc,9_panel {
+&sde_kms {
+	sde_dsi_9: somc,9_panel {
 		somc,mdss-dsi-pcc-enable;
 		somc,panel-colormgr-pcc-prof-avail;
 		somc,mdss-dsi-uv-command = [
