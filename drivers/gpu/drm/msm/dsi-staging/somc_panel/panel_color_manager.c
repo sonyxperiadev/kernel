@@ -120,7 +120,7 @@ static int dsi_parse_dcs_cmds(struct device_node *np,
 
 	data = of_get_property(np, cmd_key, &length);
 	if (!data) {
-		pr_debug("%s :failed to get , key=%s\n", __func__, cmd_key);
+		pr_warn("%s: failed to get property %s\n", __func__, cmd_key);
 		rc = -ENOTSUPP;
 		goto error;
 	}
@@ -384,8 +384,11 @@ int somc_panel_parse_dt_colormgr_config(struct dsi_panel *panel,
 			"somc,mdss-dsi-pcc-force-cal");
 
 	if (color_mgr->standard_pcc_enable) {
-		dsi_parse_dcs_cmds(np, &color_mgr->uv_read_cmds,
+		rc = dsi_parse_dcs_cmds(np, &color_mgr->uv_read_cmds,
 			"somc,mdss-dsi-uv-command", NULL);
+		if (rc)
+			pr_err("%s (%d): Failed to parse dsi-uv-command: %d\n",
+					__func__, __LINE__, rc);
 
 		rc = of_property_read_u32(np,
 			"somc,mdss-dsi-uv-param-type", &tmp);
@@ -849,6 +852,9 @@ static int somc_panel_pcc_setup(struct dsi_display *display)
 
 	if (color_mgr->uv_read_cmds.cmds.send_cmd) {
 		get_uv_data(display, &color_mgr->u_data, &color_mgr->v_data);
+	} else {
+		pr_warn("%s (%d): Cannot read uv data: missing command\n",
+				__func__, __LINE__);
 	}
 
 	if (color_mgr->u_data == 0 && color_mgr->v_data == 0) {
