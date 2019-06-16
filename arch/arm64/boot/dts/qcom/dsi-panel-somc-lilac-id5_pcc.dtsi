@@ -18,8 +18,8 @@
  */
 
 /* pcc-table for Lilac LGD */
-&mdss_mdp {
-	dsi_5: somc,5_panel {
+&sde_kms {
+	sde_dsi_5: somc,5_panel {
 		somc,mdss-dsi-pcc-enable;
 		somc,mdss-dsi-uv-command = [
 			06 01 00 00 00 00 01 DA
