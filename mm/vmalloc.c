@@ -3413,9 +3413,6 @@ static int s_show(struct seq_file *m, void *p)
 
 	v = va->vm;
 
-	if (v->flags & VM_LOWMEM)
-		return 0;
-
 	seq_printf(m, "0x%pK-0x%pK %7ld",
 		v->addr, v->addr + v->size, v->size);
 
