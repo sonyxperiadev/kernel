@@ -703,7 +703,7 @@ el0_sync_compat:
 	cmp	x24, #ESR_ELx_EC_IABT_LOW	// instruction abort in EL0
 	b.eq	el0_ia
 	cmp	x24, #ESR_ELx_EC_FP_ASIMD	// FP/ASIMD access
-#ifdef ENABLE_FP_SIMD_SETTINGS
+#ifdef CONFIG_ENABLE_FP_SIMD_SETTINGS
 	b.eq	el0_fpsimd_acc_compat
 #else
 	b.eq	el0_fpsimd_acc
