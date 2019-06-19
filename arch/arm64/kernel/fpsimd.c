@@ -101,13 +101,14 @@
  *   returned from the 2nd syscall yet, TIF_FOREIGN_FPSTATE is still set so
  *   whatever is in the FPSIMD registers is not saved to memory, but discarded.
  */
+
 static DEFINE_PER_CPU(struct fpsimd_state *, fpsimd_last_state);
+#ifdef CONFIG_ENABLE_FP_SIMD_SETTINGS
 static DEFINE_PER_CPU(int, fpsimd_stg_enable);
 
 static int fpsimd_settings = 0x1; /* default = 0x1 */
 module_param(fpsimd_settings, int, 0644);
 
-#ifdef CONFIG_ENABLE_FP_SIMD_SETTINGS
 void fpsimd_settings_enable(void)
 {
 	set_app_setting_bit(FP_SIMD_BIT);
