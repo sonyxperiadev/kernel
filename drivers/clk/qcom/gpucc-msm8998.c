@@ -151,7 +151,7 @@ static struct clk_alpha_pll_postdiv gpu_pll0_out_even = {
 		.parent_names = (const char *[]){ "gpu_cc_pll0" },
 		.num_parents = 1,
 		.flags = CLK_SET_RATE_PARENT | CLK_GET_RATE_NOCACHE,
-		.ops = &clk_alpha_fabia_pll_postdiv_ops,
+		.ops = &clk_alpha_pll_postdiv_fabia_ops,
 	},
 };
 
@@ -166,7 +166,7 @@ static struct clk_alpha_pll_postdiv gpu_pll0_out_odd = {
 		.parent_names = (const char *[]){ "gpu_cc_pll0" },
 		.num_parents = 1,
 		.flags = CLK_SET_RATE_PARENT | CLK_GET_RATE_NOCACHE,
-		.ops = &clk_alpha_fabia_pll_postdiv_odd_ops,
+		.ops = &clk_alpha_pll_postdiv_fabia_ops,
 	},
 };
 

@@ -332,7 +332,7 @@ static struct clk_alpha_pll mmpll0 = {
 			.name = "mmpll0",
 			.parent_names = (const char *[]){ "cxo" },
 			.num_parents = 1,
-			.ops = &clk_alpha_pll_fabia_fixed_ops,
+			.ops = &clk_alpha_pll_fixed_fabia_ops,
 			VDD_MM_PLL_FMAX_MAP2(LOWER, 404000000, NOMINAL, 808000195),
 		},
 	},
@@ -356,7 +356,7 @@ static struct clk_alpha_pll mmpll1 = {
 			.name = "mmpll1",
 			.parent_names = (const char *[]){ "cxo" },
 			.num_parents = 1,
-			.ops = &clk_alpha_pll_fabia_fixed_ops,
+			.ops = &clk_alpha_pll_fixed_fabia_ops,
 			VDD_MM_PLL_FMAX_MAP2(LOWER, 406000000, NOMINAL, 812000097),
 		},
 	},
@@ -376,7 +376,7 @@ static struct clk_alpha_pll mmpll3 = {
 		.name = "mmpll3",
 		.parent_names = (const char *[]){ "cxo" },
 		.num_parents = 1,
-		.ops = &clk_alpha_pll_fabia_fixed_ops,
+		.ops = &clk_alpha_pll_fixed_fabia_ops,
 		VDD_MM_PLL_FMAX_MAP2(LOWER, 465000000, LOW, 930000000),
 	},
 };
@@ -394,7 +394,7 @@ static struct clk_alpha_pll mmpll4 = {
 		.name = "mmpll4",
 		.parent_names = (const char *[]){ "cxo" },
 		.num_parents = 1,
-		.ops = &clk_alpha_pll_fabia_fixed_ops,
+		.ops = &clk_alpha_pll_fixed_fabia_ops,
 		VDD_MM_PLL_FMAX_MAP2(LOWER, 384000000, LOW, 768000000),
 	},
 };
@@ -413,7 +413,7 @@ static struct clk_alpha_pll mmpll5 = {
 		.name = "mmpll5",
 		.parent_names = (const char *[]){ "cxo" },
 		.num_parents = 1,
-		.ops = &clk_alpha_pll_fabia_fixed_ops,
+		.ops = &clk_alpha_pll_fixed_fabia_ops,
 		VDD_MM_PLL_FMAX_MAP2(LOWER, 412500000, LOW, 825000000),
 	},
 };
@@ -432,7 +432,7 @@ static struct clk_alpha_pll mmpll6 = {
 		.name = "mmpll6",
 		.parent_names = (const char *[]){ "cxo" },
 		.num_parents = 1,
-		.ops = &clk_alpha_pll_fabia_fixed_ops,
+		.ops = &clk_alpha_pll_fixed_fabia_ops,
 		VDD_MM_PLL_FMAX_MAP2(LOWER, 412500000, LOW, 825000000),
 	},
 };
@@ -450,7 +450,7 @@ static struct clk_alpha_pll mmpll7 = {
 		.name = "mmpll7",
 		.parent_names = (const char *[]){ "cxo" },
 		.num_parents = 1,
-		.ops = &clk_alpha_pll_fabia_fixed_ops,
+		.ops = &clk_alpha_pll_fixed_fabia_ops,
 		VDD_MM_PLL_FMAX_MAP1(LOW, 960000000),
 	},
 };
@@ -468,7 +468,7 @@ static struct clk_alpha_pll mmpll10 = {
 		.name = "mmpll10",
 		.parent_names = (const char *[]){ "cxo" },
 		.num_parents = 1,
-		.ops = &clk_alpha_pll_fabia_fixed_ops,
+		.ops = &clk_alpha_pll_fixed_fabia_ops,
 		VDD_MM_PLL_FMAX_MAP2(LOWER, 288000000, NOMINAL, 576000000),
 	},
 };

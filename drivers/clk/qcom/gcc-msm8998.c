@@ -195,7 +195,7 @@ static struct clk_alpha_pll gpll0 = {
 			.name = "gpll0",
 			.parent_names = (const char *[]){ "xo" },
 			.num_parents = 1,
-			.ops = &clk_alpha_pll_fabia_fixed_ops,
+			.ops = &clk_alpha_pll_fixed_fabia_ops,
 		}
 	},
 };
@@ -224,7 +224,7 @@ static struct clk_alpha_pll gpll0_ao = {
 			.name = "gpll0_ao",
 			.parent_names = (const char *[]){ "cxo_a" },
 			.num_parents = 1,
-			.ops = &clk_alpha_pll_fabia_fixed_ops,
+			.ops = &clk_alpha_pll_fixed_fabia_ops,
 		},
 	},
 };
@@ -238,7 +238,7 @@ static struct clk_alpha_pll_postdiv gpll0_out_main = {
 		.name = "gpll0_out_main",
 		.parent_names = (const char *[]){ "gpll0" },
 		.num_parents = 1,
-		.ops = &clk_alpha_fabia_pll_postdiv_ops,
+		.ops = &clk_alpha_pll_postdiv_fabia_ops,
 	},
 };
 
@@ -254,7 +254,7 @@ static struct clk_alpha_pll gpll1 = {
 			.name = "gpll1",
 			.parent_names = (const char *[]){ "xo" },
 			.num_parents = 1,
-			.ops = &clk_alpha_pll_fabia_fixed_ops,
+			.ops = &clk_alpha_pll_fixed_fabia_ops,
 		}
 	},
 };
@@ -268,7 +268,7 @@ static struct clk_alpha_pll_postdiv gpll1_out_main = {
 		.name = "gpll1_out_main",
 		.parent_names = (const char *[]){ "gpll1" },
 		.num_parents = 1,
-		.ops = &clk_alpha_fabia_pll_postdiv_ops,
+		.ops = &clk_alpha_pll_postdiv_fabia_ops,
 	},
 };
 
@@ -284,7 +284,7 @@ static struct clk_alpha_pll gpll2 = {
 			.name = "gpll2",
 			.parent_names = (const char *[]){ "xo" },
 			.num_parents = 1,
-			.ops = &clk_alpha_pll_fabia_fixed_ops,
+			.ops = &clk_alpha_pll_fixed_fabia_ops,
 		}
 	},
 };
@@ -298,7 +298,7 @@ static struct clk_alpha_pll_postdiv gpll2_out_main = {
 		.name = "gpll2_out_main",
 		.parent_names = (const char *[]){ "gpll2" },
 		.num_parents = 1,
-		.ops = &clk_alpha_fabia_pll_postdiv_ops,
+		.ops = &clk_alpha_pll_postdiv_fabia_ops,
 	},
 };
 
@@ -314,7 +314,7 @@ static struct clk_alpha_pll gpll3 = {
 			.name = "gpll3",
 			.parent_names = (const char *[]){ "xo" },
 			.num_parents = 1,
-			.ops = &clk_alpha_pll_fabia_fixed_ops,
+			.ops = &clk_alpha_pll_fixed_fabia_ops,
 		}
 	},
 };
@@ -328,7 +328,7 @@ static struct clk_alpha_pll_postdiv gpll3_out_main = {
 		.name = "gpll3_out_main",
 		.parent_names = (const char *[]){ "gpll3" },
 		.num_parents = 1,
-		.ops = &clk_alpha_fabia_pll_postdiv_ops,
+		.ops = &clk_alpha_pll_postdiv_fabia_ops,
 	},
 };
 
@@ -344,7 +344,7 @@ static struct clk_alpha_pll gpll4 = {
 			.name = "gpll4",
 			.parent_names = (const char *[]){ "xo" },
 			.num_parents = 1,
-			.ops = &clk_alpha_pll_fabia_fixed_ops,
+			.ops = &clk_alpha_pll_fixed_fabia_ops,
 			VDD_DIG_FMAX_MAP3(LOWER, 400000000, LOW, 800000000,
 					NOMINAL, 1600000000),
 		}
@@ -360,7 +360,7 @@ static struct clk_alpha_pll_postdiv gpll4_out_main = {
 		.name = "gpll4_out_main",
 		.parent_names = (const char *[]){ "gpll4" },
 		.num_parents = 1,
-		.ops = &clk_alpha_fabia_pll_postdiv_ops,
+		.ops = &clk_alpha_pll_postdiv_fabia_ops,
 	},
 };
 
@@ -3511,12 +3511,12 @@ static int msm_clock_debug_8998_probe(struct platform_device *pdev)
 	}
 
 	if (of_get_property(pdev->dev.of_node, "qcom,cpucc", NULL)) {
-		gcc_debug_mux.regmap[CPU] =
+		gcc_debug_mux.regmap[CPU_CC] =
 			syscon_regmap_lookup_by_phandle(pdev->dev.of_node,
 					"qcom,cpucc");
-		if (IS_ERR(gcc_debug_mux.regmap[CPU])) {
+		if (IS_ERR(gcc_debug_mux.regmap[CPU_CC])) {
 			pr_err("Failed to map qcom,cpucc\n");
-			return PTR_ERR(gcc_debug_mux.regmap[CPU]);
+			return PTR_ERR(gcc_debug_mux.regmap[CPU_CC]);
 		}
 	}
 
