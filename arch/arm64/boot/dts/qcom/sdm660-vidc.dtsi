@@ -256,9 +256,9 @@
 				<&mmss_bimc_smmu 0x50d>,
 				<&mmss_bimc_smmu 0x50f>,
 				<&mmss_bimc_smmu 0x525>,
-				<&mmss_bimc_smmu 0x528>,
-				<&mmss_bimc_smmu 0x52d>,
-				<&mmss_bimc_smmu 0x540>;
+				<&mmss_bimc_smmu 0x528>;
+/*				<&mmss_bimc_smmu 0x52d>,
+				<&mmss_bimc_smmu 0x540>;*/
 			buffer-types = <0x480>;
 			virtual-addr-pool = <0x1000000 0x28000000>;
 			qcom,secure-context-bank;
