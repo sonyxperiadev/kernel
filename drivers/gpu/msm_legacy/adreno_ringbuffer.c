@@ -792,16 +792,23 @@ static void adreno_ringbuffer_set_constraint(struct kgsl_device *device,
 
 		switch (context->l3_pwr_constraint.type) {
 
+		/*
+		 * WARNING: Naming collision between k4.9 and 4.14:
+		 *       4.14 version               4.9 version
+		 * KGSL_CONSTRAINT_PWR_MIN == KGSL_CONSTRAINT_L3_PWR_MED
+		 * KGSL_CONSTRAINT_PWR_MAX == KGSL_CONSTRAINT_L3_PWR_MAX
+		 */
 		case KGSL_CONSTRAINT_L3_PWRLEVEL: {
 			unsigned int sub_type;
 
 			sub_type = context->l3_pwr_constraint.sub_type;
 
-			if (sub_type == KGSL_CONSTRAINT_L3_PWR_MED)
+
+			if (sub_type == KGSL_CONSTRAINT_PWR_MIN)
 				clk_set_rate(device->l3_clk,
 						device->l3_freq[1]);
 
-			if (sub_type == KGSL_CONSTRAINT_L3_PWR_MAX)
+			if (sub_type == KGSL_CONSTRAINT_PWR_MAX)
 				clk_set_rate(device->l3_clk,
 						device->l3_freq[2]);
 			}
