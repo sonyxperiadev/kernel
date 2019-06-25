@@ -19,15 +19,16 @@ config QCOM_ADRENO_DEFAULT_GOVERNOR
 	string "devfreq governor for the adreno core"
 	default "msm-adreno-tz" if DEVFREQ_GOV_QCOM_ADRENO_TZ
 	default "simple_ondemand"
-	depends on QCOM_KGSL
+	depends on QCOM_KGSL && !QCOM_KGSL_LEGACY
 
 config QCOM_KGSL_IOMMU
 	bool
+	depends on !QCOM_KGSL_LEGACY
 	default y if QCOM_KGSL && (MSM_IOMMU || ARM_SMMU)
 
 config QCOM_KGSL_OLD_BINARIES_COMPAT
 	bool "Build KGSL for pre-4.14 userspace binaries"
-	depends on QCOM_KGSL
+	depends on QCOM_KGSL && !QCOM_KGSL_LEGACY
 	---help---
 	  The old userspace binaries may get/set some KGSL property
 	  which definition is different from the new binaries.
@@ -36,3 +37,5 @@ config QCOM_KGSL_OLD_BINARIES_COMPAT
 	  to the same number on k4.9 adreno userspace binaries.
 	  Say Y here if you want to run old adreno binaries, for a
 	  reason or another.
+
+source "drivers/gpu/msm_legacy/Kconfig"
