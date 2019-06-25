@@ -12,6 +12,7 @@
  */
 #include <linux/slab.h>
 #include <linux/sched.h>
+#include <linux/sched/clock.h>
 #include <linux/log2.h>
 #include <linux/time.h>
 #include <linux/delay.h>

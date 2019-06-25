@@ -18,6 +18,7 @@
 #include <linux/uaccess.h>
 #include <linux/vmalloc.h>
 #include <linux/debugfs.h>
+#include <linux/sched/signal.h>
 
 #include "adreno.h"
 #include "adreno_profile.h"

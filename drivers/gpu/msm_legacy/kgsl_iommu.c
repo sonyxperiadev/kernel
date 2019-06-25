@@ -943,7 +943,7 @@ static void kgsl_iommu_clk_prepare_enable(struct clk *clk)
 
 	/* Failure is fatal so BUG() to facilitate debug */
 	KGSL_CORE_ERR("IOMMU clock enable failed\n");
-	BUG();
+	WARN(1, "IOMMU clock enable failed\n");
 }
 
 /*
@@ -967,7 +967,8 @@ static u64 kgsl_iommu_get_ttbr0(struct kgsl_pagetable *pt)
 {
 	struct kgsl_iommu_pt *iommu_pt = pt ? pt->priv : NULL;
 
-	BUG_ON(iommu_pt == NULL);
+	if (WARN_ON(!iommu_pt))
+		return 0;
 
 	return iommu_pt->ttbr0;
 }
@@ -992,7 +993,8 @@ static u32 kgsl_iommu_get_contextidr(struct kgsl_pagetable *pt)
 {
 	struct kgsl_iommu_pt *iommu_pt = pt ? pt->priv : NULL;
 
-	BUG_ON(iommu_pt == NULL);
+	if (WARN_ON(!iommu_pt))
+		return 0;
 
 	return iommu_pt->contextidr;
 }

@@ -348,7 +348,7 @@ struct kgsl_device {
 	.halt_gate = COMPLETION_INITIALIZER((_dev).halt_gate),\
 	.idle_check_ws = __WORK_INITIALIZER((_dev).idle_check_ws,\
 			kgsl_idle_check),\
-	.context_idr = IDR_INIT((_dev).context_idr),\
+	.context_idr = IDR_INIT,\
 	.wait_queue = __WAIT_QUEUE_HEAD_INITIALIZER((_dev).wait_queue),\
 	.active_cnt_wq = __WAIT_QUEUE_HEAD_INITIALIZER((_dev).active_cnt_wq),\
 	.mutex = __MUTEX_INITIALIZER((_dev).mutex),\

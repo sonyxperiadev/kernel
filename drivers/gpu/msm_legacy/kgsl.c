@@ -32,6 +32,7 @@
 #include <linux/ctype.h>
 #include <linux/mm.h>
 #include <asm/cacheflush.h>
+#include <uapi/linux/sched/types.h>
 
 #include "kgsl.h"
 #include "kgsl_debugfs.h"
@@ -1062,8 +1063,8 @@ static int kgsl_close_device(struct kgsl_device *device)
 		/* Wait for the active count to go to 0 */
 		kgsl_active_count_wait(device, 0);
 
-		/* Fail if the wait times out */
-		BUG_ON(atomic_read(&device->active_cnt) > 0);
+		while (kgsl_active_count_wait(device, 0))
+			WARN(1, "Waiting for active context count to become 0\n");
 
 		result = kgsl_pwrctrl_change_state(device, KGSL_STATE_INIT);
 	}
@@ -1177,7 +1178,10 @@ static int kgsl_open(struct inode *inodep, struct file *filep)
 	unsigned int minor = iminor(inodep);
 
 	device = kgsl_get_minor(minor);
-	BUG_ON(device == NULL);
+	if (device == NULL) {
+		pr_err("No device found\n");
+		return -ENODEV;
+	}
 
 	result = pm_runtime_get_sync(&device->pdev->dev);
 	if (result < 0) {
@@ -1919,7 +1923,7 @@ static long gpuobj_free_on_timestamp(struct kgsl_device_private *dev_priv,
 
 	memset(&event, 0, sizeof(event));
 
-	ret = _copy_from_user(&event, to_user_ptr(param->priv),
+	ret = kgsl_copy_from_user(&event, to_user_ptr(param->priv),
 		sizeof(event), param->len);
 	if (ret)
 		return ret;
@@ -1966,7 +1970,7 @@ static long gpuobj_free_on_fence(struct kgsl_device_private *dev_priv,
 
 	memset(&event, 0, sizeof(event));
 
-	ret = _copy_from_user(&event, to_user_ptr(param->priv),
+	ret = kgsl_copy_from_user(&event, to_user_ptr(param->priv),
 		sizeof(event), param->len);
 	if (ret) {
 		kgsl_mem_entry_unset_pend(entry);
@@ -2312,7 +2316,7 @@ static long _gpuobj_map_useraddr(struct kgsl_device *device,
 	if (param->flags & KGSL_MEMFLAGS_SECURE)
 		return -ENOTSUPP;
 
-	ret = _copy_from_user(&useraddr,
+	ret = kgsl_copy_from_user(&useraddr,
 		to_user_ptr(param->priv), sizeof(useraddr),
 		param->priv_len);
 	if (ret)
@@ -2351,7 +2355,7 @@ static long _gpuobj_map_dma_buf(struct kgsl_device *device,
 		entry->memdesc.priv |= KGSL_MEMDESC_SECURE;
 	}
 
-	ret = _copy_from_user(&buf, to_user_ptr(param->priv),
+	ret = kgsl_copy_from_user(&buf, to_user_ptr(param->priv),
 			sizeof(buf), param->priv_len);
 	if (ret)
 		return ret;
@@ -3000,7 +3004,7 @@ long kgsl_ioctl_gpuobj_sync(struct kgsl_device_private *dev_priv,
 	ptr = to_user_ptr(param->objs);
 
 	for (i = 0; i < param->count; i++) {
-		ret = _copy_from_user(&objs[i], ptr, sizeof(*objs),
+		ret = kgsl_copy_from_user(&objs[i], ptr, sizeof(*objs),
 			param->obj_len);
 		if (ret)
 			goto out;
@@ -3831,7 +3835,7 @@ long kgsl_ioctl_sparse_bind(struct kgsl_device_private *dev_priv,
 
 	for (i = 0; i < param->count; i++) {
 		memset(&obj, 0, sizeof(obj));
-		ret = _copy_from_user(&obj, ptr, sizeof(obj), param->size);
+		ret = kgsl_copy_from_user(&obj, ptr, sizeof(obj), param->size);
 		if (ret)
 			break;
 
@@ -3970,12 +3974,13 @@ void kgsl_sparse_bind(struct kgsl_process_private *private,
 		}
 
 		if (ret)
-			KGSL_CORE_ERR("kgsl: Unable to '%s' ret %ld virt_id %d, phys_id %d, virt_offset %16.16llX, phys_offset %16.16llX, size %16.16llX, flags %16.16llX\n",
-				name, ret, sparse_node->virt_id,
-				sparse_node->obj.id,
-				sparse_node->obj.virtoffset,
-				sparse_node->obj.physoffset,
-				sparse_node->obj.size, sparse_node->obj.flags);
+			KGSL_CORE_ERR("kgsl: Unable to '%s' ret %ld virt_id %d,phys_id %d, virt_offset %16.16llX,phys_offset %16.16llX, size %16.16llX,flags %16.16llX\n",
+					name, ret, sparse_node->virt_id,
+					sparse_node->obj.id,
+					sparse_node->obj.virtoffset,
+					sparse_node->obj.physoffset,
+					sparse_node->obj.size,
+					sparse_node->obj.flags);
 	}
 
 	kgsl_mem_entry_put(virt_entry);
@@ -4109,9 +4114,9 @@ static void kgsl_gpumem_vm_open(struct vm_area_struct *vma)
 }
 
 static int
-kgsl_gpumem_vm_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
+kgsl_gpumem_vm_fault(struct vm_fault *vmf)
 {
-	struct kgsl_mem_entry *entry = vma->vm_private_data;
+	struct kgsl_mem_entry *entry = vmf->vma->vm_private_data;
 	int ret;
 
 	if (!entry)
@@ -4119,7 +4124,7 @@ kgsl_gpumem_vm_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 	if (!entry->memdesc.ops || !entry->memdesc.ops->vmfault)
 		return VM_FAULT_SIGBUS;
 
-	ret = entry->memdesc.ops->vmfault(&entry->memdesc, vma, vmf);
+	ret = entry->memdesc.ops->vmfault(&entry->memdesc, vmf->vma, vmf);
 	if ((ret == 0) || (ret == VM_FAULT_NOPAGE))
 		entry->priv->gpumem_mapped += PAGE_SIZE;
 
@@ -4234,7 +4239,8 @@ static unsigned long _gpu_find_svm(struct kgsl_process_private *private,
 	uint64_t addr = kgsl_mmu_find_svm_region(private->pagetable,
 		(uint64_t) start, (uint64_t)end, (uint64_t) len, align);
 
-	BUG_ON(!IS_ERR_VALUE((unsigned long)addr) && (addr > ULONG_MAX));
+	if (!IS_ERR_VALUE((unsigned long)addr) && (addr > ULONG_MAX))
+		WARN(1, "Couldn't find range\n");
 
 	return (unsigned long) addr;
 }
@@ -4739,14 +4745,14 @@ int kgsl_device_platform_probe(struct kgsl_device *device)
 				PM_QOS_DEFAULT_VALUE);
 
 	if (device->pwrctrl.l2pc_cpus_mask) {
+		struct pm_qos_request *qos = &device->pwrctrl.l2pc_cpus_qos;
 
-		device->pwrctrl.l2pc_cpus_qos.type =
-				PM_QOS_REQ_AFFINE_CORES;
-		cpumask_empty(&device->pwrctrl.l2pc_cpus_qos.cpus_affine);
+		qos->type = PM_QOS_REQ_AFFINE_CORES;
+
+		cpumask_empty(&qos->cpus_affine);
 		for_each_possible_cpu(cpu) {
 			if ((1 << cpu) & device->pwrctrl.l2pc_cpus_mask)
-				cpumask_set_cpu(cpu, &device->pwrctrl.
-						l2pc_cpus_qos.cpus_affine);
+				cpumask_set_cpu(cpu, &qos->cpus_affine);
 		}
 
 		pm_qos_add_request(&device->pwrctrl.l2pc_cpus_qos,
@@ -4852,8 +4858,8 @@ static int __init kgsl_core_init(void)
 		       KGSL_DEVICE_MAX);
 
 	if (result) {
-		KGSL_CORE_ERR("kgsl: cdev_add() failed, dev_num= %d, result= %d\n",
-			kgsl_driver.major, result);
+		KGSL_CORE_ERR("kgsl: cdev_add() failed, dev_num= %d,result= %d\n",
+				kgsl_driver.major, result);
 		goto err;
 	}
 
@@ -4932,4 +4938,4 @@ module_init(kgsl_core_init);
 module_exit(kgsl_core_exit);
 
 MODULE_DESCRIPTION("MSM GPU driver");
-MODULE_LICENSE("GPL");
+MODULE_LICENSE("GPL v2");

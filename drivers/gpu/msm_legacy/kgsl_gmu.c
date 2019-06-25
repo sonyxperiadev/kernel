@@ -14,6 +14,7 @@
 #include <linux/types.h>
 #include <linux/device.h>
 #include <linux/iommu.h>
+#include <linux/io.h>
 #include <linux/of_platform.h>
 #include <linux/msm-bus.h>
 #include <linux/msm-bus-board.h>
@@ -1376,7 +1377,8 @@ void gmu_snapshot(struct kgsl_device *device)
 }
 
 static void gmu_change_gpu_pwrlevel(struct kgsl_device *device,
-	unsigned int new_level) {
+	unsigned int new_level)
+{
 
 	struct kgsl_pwrctrl *pwr = &device->pwrctrl;
 	unsigned int old_level = pwr->active_pwrlevel;
@@ -1645,7 +1647,7 @@ void gmu_remove(struct kgsl_device *device)
  * @val: The value to be written to the register
  * @fence_mask: The value to poll the fence status register
  *
- * Check the WRITEDROPPED0/1 bit in the FENCE_STATUS regsiter to check if
+ * Check the WRITEDROPPED0/1 bit in the FENCE_STATUS register to check if
  * the write to the fenced register went through. If it didn't then we retry
  * the write until it goes through or we time out.
  */

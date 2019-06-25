@@ -396,7 +396,8 @@ static int kgsl_cma_alloc_secure(struct kgsl_device *device,
 
 static int kgsl_allocate_secure(struct kgsl_device *device,
 				struct kgsl_memdesc *memdesc,
-				uint64_t size) {
+				uint64_t size)
+{
 	int ret;
 
 	if (MMU_FEATURE(&device->mmu, KGSL_MMU_HYP_SECURE_ALLOC))
@@ -432,7 +433,7 @@ static int kgsl_page_alloc_vmfault(struct kgsl_memdesc *memdesc,
 	int pgoff;
 	unsigned int offset;
 
-	offset = ((unsigned long) vmf->virtual_address - vma->vm_start);
+	offset = vmf->address - vma->vm_start;
 
 	if (offset >= memdesc->size)
 		return VM_FAULT_SIGBUS;
@@ -497,7 +498,6 @@ static void kgsl_page_alloc_free(struct kgsl_memdesc *memdesc)
 		if (ret) {
 			pr_err("Secure buf unlock failed: gpuaddr: %llx size: %llx ret: %d\n",
 					memdesc->gpuaddr, memdesc->size, ret);
-			BUG();
 		}
 
 		atomic_long_sub(memdesc->size, &kgsl_driver.stats.secure);
@@ -566,11 +566,11 @@ static int kgsl_contiguous_vmfault(struct kgsl_memdesc *memdesc,
 	unsigned long offset, pfn;
 	int ret;
 
-	offset = ((unsigned long) vmf->virtual_address - vma->vm_start) >>
+	offset = ((unsigned long) vmf->address - vma->vm_start) >>
 		PAGE_SHIFT;
 
 	pfn = (memdesc->physaddr >> PAGE_SHIFT) + offset;
-	ret = vm_insert_pfn(vma, (unsigned long) vmf->virtual_address, pfn);
+	ret = vm_insert_pfn(vma, (unsigned long) vmf->address, pfn);
 
 	if (ret == -ENOMEM || ret == -EAGAIN)
 		return VM_FAULT_OOM;
@@ -1265,14 +1265,13 @@ static int scm_lock_chunk(struct kgsl_memdesc *memdesc, int lock)
 				SCM_VAL);
 	kmap_flush_unused();
 	kmap_atomic_flush_unused();
-	if (!is_scm_armv8()) {
-		result = scm_call(SCM_SVC_MP, MEM_PROTECT_LOCK_ID2,
-				&request, sizeof(request), &resp, sizeof(resp));
-	} else {
+	/*
+	 * scm_call2 now supports both 32 and 64 bit calls
+	 * so we dont need scm_call separately.
+	 */
 		result = scm_call2(SCM_SIP_FNID(SCM_SVC_MP,
 				   MEM_PROTECT_LOCK_ID2_FLAT), &desc);
 		resp = desc.ret[0];
-	}
 
 	kfree(chunk_list);
 	return result;

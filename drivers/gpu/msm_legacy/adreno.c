@@ -1823,7 +1823,7 @@ static int _adreno_start(struct adreno_device *adreno_dev)
 	unsigned int pmqos_active_vote = device->pwrctrl.pm_qos_active_latency;
 
 	/* make sure ADRENO_DEVICE_STARTED is not set here */
-	BUG_ON(test_bit(ADRENO_DEVICE_STARTED, &adreno_dev->priv));
+	WARN_ON(test_bit(ADRENO_DEVICE_STARTED, &adreno_dev->priv));
 
 	/* disallow l2pc during wake up to improve GPU wake up time */
 	kgsl_pwrctrl_update_l2pc(&adreno_dev->dev,

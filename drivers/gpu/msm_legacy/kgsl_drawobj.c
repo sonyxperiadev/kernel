@@ -962,7 +962,7 @@ int kgsl_drawobj_sparse_add_sparselist(struct kgsl_device *device,
 	for (i = 0; i < count; i++) {
 		memset(&obj, 0, sizeof(obj));
 
-		ret = _copy_from_user(&obj, ptr, sizeof(obj), size);
+		ret = kgsl_copy_from_user(&obj, ptr, sizeof(obj), size);
 		if (ret)
 			return ret;
 
@@ -1009,7 +1009,7 @@ int kgsl_drawobj_cmd_add_cmdlist(struct kgsl_device *device,
 	for (i = 0; i < count; i++) {
 		memset(&obj, 0, sizeof(obj));
 
-		ret = _copy_from_user(&obj, ptr, sizeof(obj), size);
+		ret = kgsl_copy_from_user(&obj, ptr, sizeof(obj), size);
 		if (ret)
 			return ret;
 
@@ -1051,7 +1051,7 @@ int kgsl_drawobj_cmd_add_memlist(struct kgsl_device *device,
 	for (i = 0; i < count; i++) {
 		memset(&obj, 0, sizeof(obj));
 
-		ret = _copy_from_user(&obj, ptr, sizeof(obj), size);
+		ret = kgsl_copy_from_user(&obj, ptr, sizeof(obj), size);
 		if (ret)
 			return ret;
 
@@ -1101,7 +1101,8 @@ int kgsl_drawobj_sync_add_synclist(struct kgsl_device *device,
 	for (i = 0; i < count; i++) {
 		memset(&syncpoint, 0, sizeof(syncpoint));
 
-		ret = _copy_from_user(&syncpoint, ptr, sizeof(syncpoint), size);
+		ret = kgsl_copy_from_user(&syncpoint, ptr,
+					sizeof(syncpoint), size);
 		if (ret)
 			return ret;
 

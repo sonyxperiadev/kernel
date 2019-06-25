@@ -101,7 +101,8 @@ static void _bimc_clk_prepare_enable(struct kgsl_device *device,
  * index, record the start of the new event, and the relevant data.
  */
 static void _record_pwrevent(struct kgsl_device *device,
-			ktime_t t, int event) {
+			ktime_t t, int event)
+{
 	struct kgsl_pwrscale *psc = &device->pwrscale;
 	struct kgsl_pwr_history *history = &psc->history[event];
 	int i = history->index;
@@ -2266,6 +2267,17 @@ static void kgsl_pwrctrl_disable_unused_opp(struct kgsl_device *device)
 	}
 }
 
+static bool pwrlevel_uses_ib(struct msm_bus_scale_pdata *bus_scale_table,
+				struct msm_bus_vectors *vector,
+				struct kgsl_pwrctrl *pwr, int m)
+{
+	if (bus_scale_table->usecase[pwr->pwrlevels[m].bus_freq].vectors[0].ib
+		 == vector->ib)
+		return true;
+	else
+		return false;
+}
+
 int kgsl_pwrctrl_init(struct kgsl_device *device)
 {
 	int i, k, m, n = 0, result, freq;
@@ -2439,10 +2451,8 @@ int kgsl_pwrctrl_init(struct kgsl_device *device)
 				n++;
 				/* find which pwrlevels use this ib */
 				for (m = 0; m < pwr->num_pwrlevels - 1; m++) {
-					if (bus_scale_table->
-						usecase[pwr->pwrlevels[m].
-						bus_freq].vectors[0].ib
-						== vector->ib)
+					if (pwrlevel_uses_ib(bus_scale_table,
+						vector, pwr, m))
 						pwr->bus_index[m] = k;
 				}
 			}

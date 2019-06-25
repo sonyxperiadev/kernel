@@ -55,7 +55,7 @@ struct kgsl_sync_timeline {
  * @timestamp: Context timestamp that this fence is associated with
  */
 struct kgsl_sync_fence {
-	struct fence fence;
+	struct dma_fence fence;
 	struct sync_file *sync_file;
 	struct kgsl_sync_timeline *parent;
 	struct list_head child_list;
@@ -72,8 +72,8 @@ struct kgsl_sync_fence {
  * false if the sync callback is marked for cancellation in a separate thread.
  */
 struct kgsl_sync_fence_cb {
-	struct fence_cb fence_cb;
-	struct fence *fence;
+	struct dma_fence_cb fence_cb;
+	struct dma_fence *fence;
 	void *priv;
 	bool (*func)(void *priv);
 };

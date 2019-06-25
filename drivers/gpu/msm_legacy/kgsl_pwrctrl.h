@@ -166,7 +166,7 @@ struct kgsl_regulator {
  * @thermal_timer - Timer for thermal cycling
  * @thermal_timeout - Cycling timeout for switching between frequencies
  * @thermal_cycle - Is thermal cycling enabled
- * @thermal_highlow - flag for swithcing between high and low frequency
+ * @thermal_highlow - flag for switching between high and low frequency
  * @limits - list head for limits
  * @limits_lock - spin lock to protect limits list
  * @sysfs_pwr_limit - pointer to the sysfs limits node

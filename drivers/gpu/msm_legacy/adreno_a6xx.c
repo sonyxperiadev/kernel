@@ -1791,6 +1791,7 @@ static int a6xx_rpmh_power_off_gpu(struct kgsl_device *device)
 		kgsl_gmu_regwrite(device, A6XX_RSCC_TIMESTAMP_UNIT1_EN_DRV0, 1);
 
 	kgsl_gmu_regwrite(device, A6XX_GMU_RSCC_CONTROL_REQ, 1);
+	/* Make sure the request completes before continuing */
 	wmb();
 
 	if (adreno_is_a630v1(adreno_dev))
@@ -1860,16 +1861,17 @@ static int a6xx_gmu_fw_start(struct kgsl_device *device,
 
 		if (gmu->load_mode == TCM_BOOT) {
 			/* Load GMU image via AHB bus */
-			for (i = 0; i < MAX_GMUFW_SIZE; i++)
-				kgsl_gmu_regwrite(device,
-						A6XX_GMU_CM3_ITCM_START + i,
-						*((uint32_t *) gmu->fw_image.
-						hostptr + i));
+			for (i = 0; i < MAX_GMUFW_SIZE; i++) {
+				uint32_t *data = gmu->fw_image.hostptr;
 
+				kgsl_gmu_regwrite(device,
+					A6XX_GMU_CM3_ITCM_START + i,
+					data[i]);
+		}
 			/* Prevent leaving reset before the FW is written */
 			wmb();
 		} else {
-			dev_err(&gmu->pdev->dev, "Incorrect GMU load mode %d\n",
+			dev_err(&gmu->pdev->dev, "Unsupported GMU load mode %d\n",
 					gmu->load_mode);
 			return -EINVAL;
 		}

@@ -336,7 +336,7 @@ EXPORT_SYMBOL(kgsl_process_event_groups);
 void kgsl_del_event_group(struct kgsl_event_group *group)
 {
 	/* Make sure that all the events have been deleted from the list */
-	BUG_ON(!list_empty(&group->events));
+	WARN_ON(!list_empty(&group->events));
 
 	write_lock(&group_lock);
 	list_del(&group->group);
@@ -357,7 +357,7 @@ void kgsl_add_event_group(struct kgsl_event_group *group,
 		struct kgsl_context *context, const char *name,
 		readtimestamp_func readtimestamp, void *priv)
 {
-	BUG_ON(readtimestamp == NULL);
+	WARN_ON(readtimestamp == NULL);
 
 	spin_lock_init(&group->lock);
 	INIT_LIST_HEAD(&group->events);

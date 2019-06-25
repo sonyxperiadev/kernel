@@ -598,7 +598,7 @@ static inline void kgsl_free(void *ptr)
 	kfree(ptr);
 }
 
-static inline int _copy_from_user(void *dest, void __user *src,
+static inline int kgsl_copy_from_user(void *dest, void __user *src,
 		unsigned int ksize, unsigned int usize)
 {
 	unsigned int copy = ksize < usize ? ksize : usize;

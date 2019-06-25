@@ -828,7 +828,7 @@ static int _set_pagetable_gpu(struct adreno_ringbuffer *rb,
 		 * Temp buffer not large enough for pagetable switch commands.
 		 * Increase the size allocated above.
 		 */
-		BUG();
+		WARN(1, "Temp command buffer overflow\n");
 	}
 	/*
 	 * This returns the per context timestamp but we need to

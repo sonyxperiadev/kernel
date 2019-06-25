@@ -424,18 +424,16 @@ static int hfi_send_bwtbl(struct gmu_device *gmu)
 	for (i = 0; i < bwtbl.bw_level_num; i++)
 		for (j = 0; j < bwtbl.ddr_cmds_num; j++)
 			bwtbl.ddr_cmd_data[i][j] =
-					gmu->rpmh_votes.
-					ddr_votes.cmd_data[i][j];
+				gmu->rpmh_votes.ddr_votes.cmd_data[i][j];
 
 	for (i = 0; i < bwtbl.cnoc_cmds_num; i++)
 		bwtbl.cnoc_cmd_addrs[i] =
-				gmu->rpmh_votes.cnoc_votes.cmd_addrs[i];
+			gmu->rpmh_votes.cnoc_votes.cmd_addrs[i];
 
 	for (i = 0; i < MAX_CNOC_LEVELS; i++)
 		for (j = 0; j < bwtbl.cnoc_cmds_num; j++)
 			bwtbl.cnoc_cmd_data[i][j] =
-					gmu->rpmh_votes.cnoc_votes.
-					cmd_data[i][j];
+				gmu->rpmh_votes.cnoc_votes.cmd_data[i][j];
 
 	rc = hfi_send_msg(gmu, &bwtbl.hdr, msg_size_dwords, &msg);
 	if (rc)

@@ -393,6 +393,7 @@ static bool popp_stable(struct kgsl_device *device)
 bool kgsl_popp_check(struct kgsl_device *device)
 {
 	int i;
+	unsigned int index;
 	struct kgsl_pwrscale *psc = &device->pwrscale;
 	struct kgsl_pwr_event *e;
 
@@ -404,9 +405,9 @@ bool kgsl_popp_check(struct kgsl_device *device)
 		clear_bit(POPP_PUSH, &psc->popp_state);
 		return false;
 	}
+	index = psc->history[KGSL_PWREVENT_STATE].index;
 
-	e = &psc->history[KGSL_PWREVENT_STATE].
-			events[psc->history[KGSL_PWREVENT_STATE].index];
+	e = &psc->history[KGSL_PWREVENT_STATE].events[index];
 	if (e->data == KGSL_STATE_SLUMBER)
 		e->duration = ktime_us_delta(ktime_get(), e->start);
 
@@ -1117,8 +1118,8 @@ int kgsl_pwrscale_init(struct device *dev, const char *governor)
 
 	/* history tracking */
 	for (i = 0; i < KGSL_PWREVENT_MAX; i++) {
-		pwrscale->history[i].events = kzalloc(
-				pwrscale->history[i].size *
+		pwrscale->history[i].events = kcalloc(
+				pwrscale->history[i].size,
 				sizeof(struct kgsl_pwr_event), GFP_KERNEL);
 		pwrscale->history[i].type = i;
 	}

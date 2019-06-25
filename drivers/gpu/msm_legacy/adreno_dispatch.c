@@ -2663,7 +2663,7 @@ void adreno_dispatcher_stop_fault_timer(struct kgsl_device *device)
  * adreno_dispatcher_close() - close the dispatcher
  * @adreno_dev: pointer to the adreno device structure
  *
- * Close the dispatcher and free all the oustanding commands and memory
+ * Close the dispatcher and free all the outstanding commands and memory
  */
 void adreno_dispatcher_close(struct adreno_device *adreno_dev)
 {
@@ -2894,7 +2894,7 @@ int adreno_dispatcher_idle(struct adreno_device *adreno_dev)
 	 * mutex is held and device is started
 	 */
 	if (mutex_is_locked(&dispatcher->mutex) &&
-		dispatcher->mutex.owner == current)
+		(__mutex_owner(&dispatcher->mutex) == current))
 		return -EDEADLK;
 
 	adreno_get_gpu_halt(adreno_dev);

@@ -720,6 +720,7 @@ static int ib_parse_set_draw_state(struct kgsl_device *device,
 	int grp_id;
 	int ret = 0;
 	int flags;
+	struct set_draw_state *group;
 
 	/*
 	 * size is the size of the packet that does not include the DWORD
@@ -736,15 +737,16 @@ static int ib_parse_set_draw_state(struct kgsl_device *device,
 		if (flags & 0x4) {
 			int j;
 
-			for (j = 0; j < NUM_SET_DRAW_GROUPS; j++)
-				ib_parse_vars->set_draw_groups[j].
-					cmd_stream_dwords = 0;
+			for (j = 0; j < NUM_SET_DRAW_GROUPS; j++) {
+				group = &(ib_parse_vars->set_draw_groups[j]);
+				group->cmd_stream_dwords = 0;
+			}
 			continue;
 		}
 		/* disable flag */
 		if (flags & 0x2) {
-			ib_parse_vars->set_draw_groups[grp_id].
-						cmd_stream_dwords = 0;
+			group = &(ib_parse_vars->set_draw_groups[grp_id]);
+			group->cmd_stream_dwords = 0;
 			continue;
 		}
 		/*
@@ -753,10 +755,9 @@ static int ib_parse_set_draw_state(struct kgsl_device *device,
 		 * or initialized for the first time in the IB
 		 */
 		if (flags & 0x1 || !flags) {
-			ib_parse_vars->set_draw_groups[grp_id].
-				cmd_stream_dwords = ptr[i] & 0x0000FFFF;
-			ib_parse_vars->set_draw_groups[grp_id].
-				cmd_stream_addr = ptr[i + 1];
+			group = &(ib_parse_vars->set_draw_groups[grp_id]);
+			group->cmd_stream_dwords = ptr[i] & 0x0000FFFF;
+			group->cmd_stream_addr =  ptr[i + 1];
 			continue;
 		}
 		/* load immediate */
