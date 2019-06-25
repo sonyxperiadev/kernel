@@ -923,56 +923,6 @@ static int opp_notify(struct notifier_block *nb,
 }
 
 /*
- * kgsl_opp_add_notifier - add a fine grained notifier.
- * @dev: The device
- * @nb: Notifier block that will receive updates.
- *
- * Add a notifier to receive GPU OPP_EVENT_* events
- * from the OPP framework.
- */
-static int kgsl_opp_add_notifier(struct device *dev,
-		struct notifier_block *nb)
-{
-	struct srcu_notifier_head *nh;
-	int ret = 0;
-
-	rcu_read_lock();
-	nh = dev_pm_opp_get_notifier(dev);
-	if (IS_ERR(nh))
-		ret = PTR_ERR(nh);
-	rcu_read_unlock();
-	if (!ret)
-		ret = srcu_notifier_chain_register(nh, nb);
-
-	return ret;
-}
-
-/*
- * kgsl_opp_remove_notifier - remove registered opp event notifier.
- * @dev: The device
- * @nb: Notifier block that will receive updates.
- *
- * Remove gpu notifier that receives GPU OPP_EVENT_* events
- * from the OPP framework.
- */
-static int kgsl_opp_remove_notifier(struct device *dev,
-		struct notifier_block *nb)
-{
-	struct srcu_notifier_head *nh;
-	int ret = 0;
-
-	rcu_read_lock();
-	nh = dev_pm_opp_get_notifier(dev);
-	if (IS_ERR(nh))
-		ret = PTR_ERR(nh);
-	rcu_read_unlock();
-	if (!ret)
-		ret = srcu_notifier_chain_unregister(nh, nb);
-
-	return ret;
-}
-
-/*
  * kgsl_pwrscale_init - Initialize pwrscale.
  * @dev: The device
  * @governor: The initial governor to use.
@@ -1003,7 +953,7 @@ int kgsl_pwrscale_init(struct device *dev, const char *governor)
 
 	pwr->nb.notifier_call = opp_notify;
 
-	kgsl_opp_add_notifier(dev, &pwr->nb);
+	dev_pm_opp_register_notifier(dev, &pwr->nb);
 
 	srcu_init_notifier_head(&pwrscale->nh);
 
@@ -1163,7 +1113,7 @@ void kgsl_pwrscale_close(struct kgsl_device *device)
 	kgsl_midframe = NULL;
 	device->pwrscale.devfreqptr = NULL;
 	srcu_cleanup_notifier_head(&device->pwrscale.nh);
-	kgsl_opp_remove_notifier(&device->pdev->dev, &pwr->nb);
+	dev_pm_opp_unregister_notifier(&device->pdev->dev, &pwr->nb);
 	for (i = 0; i < KGSL_PWREVENT_MAX; i++)
 		kfree(pwrscale->history[i].events);
 }
