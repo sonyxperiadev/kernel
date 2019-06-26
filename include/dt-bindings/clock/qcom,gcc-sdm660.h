@@ -16,10 +16,11 @@
 
 /* Hardware/Dummy/Voter clocks */
 #define GCC_XO					0
-#define GCC_GPLL0_EARLY_DIV			1
-#define GCC_GPLL1_EARLY_DIV			2
-#define GCC_CE1_AHB_M_CLK			3
-#define GCC_CE1_AXI_M_CLK			4
+#define GCC_FAKE_BI_TCXO			1
+#define GCC_GPLL0_EARLY_DIV			2
+#define GCC_GPLL1_EARLY_DIV			3
+#define GCC_CE1_AHB_M_CLK			4
+#define GCC_CE1_AXI_M_CLK			5
 
 /* RCGs and Branches */
 #define BLSP1_QUP1_I2C_APPS_CLK_SRC		10

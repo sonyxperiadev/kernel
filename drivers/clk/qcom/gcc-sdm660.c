@@ -197,6 +197,18 @@ static struct clk_fixed_factor xo = {
 	},
 };
 
+static struct clk_fixed_factor bi_tcxo = {
+	.mult = 1,
+	.div = 1,
+	.hw.init = &(struct clk_init_data){
+		.name = "bi_tcxo",
+		.parent_names = (const char *[]){ "xo" },
+		.num_parents = 1,
+		.flags = CLK_SET_RATE_PARENT,
+		.ops = &clk_fixed_factor_ops,
+	},
+};
+
 static unsigned int soft_vote_gpll0;
 
 static struct clk_alpha_pll gpll0_out_main = {
@@ -2556,6 +2568,7 @@ static struct clk_fixed_factor gcc_ce1_axi_m_clk = {
 
 struct clk_hw *gcc_sdm660_hws[] = {
 	[GCC_XO] =      &xo.hw,
+	[GCC_FAKE_BI_TCXO] = &bi_tcxo.hw,
 	[GCC_GPLL0_EARLY_DIV] = &gpll0_out_early_div.hw,
 	[GCC_GPLL1_EARLY_DIV] = &gpll1_out_early_div.hw,
 	[GCC_CE1_AHB_M_CLK] = &gcc_ce1_ahb_m_clk.hw,
