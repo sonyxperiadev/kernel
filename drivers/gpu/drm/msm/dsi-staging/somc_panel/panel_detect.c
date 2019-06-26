@@ -95,6 +95,23 @@ static int adc_panel_detect(struct dsi_display *display,
 	return rc;
 }
 
+static inline int single_panel_setup(struct dsi_display *display,
+			    struct device_node **node)
+{
+	struct device_node *this = *node;
+	struct device_node *pan =
+		of_parse_phandle(this, "qcom,dsi-panel", 0);
+
+	if (pan == NULL) {
+		pr_err("%s: Cannot find phandle to DSI panel!!!\n", __func__);
+		return -ENOENT;
+	}
+
+	display->panel_of = pan;
+
+	return 0;
+}
+
 int somc_panel_detect(struct dsi_display *display,
 		      struct device_node **node, u32 cell_idx)
 {
@@ -108,7 +125,7 @@ int somc_panel_detect(struct dsi_display *display,
 
 	if (of_property_read_bool(*node, "somc,bootloader-panel-detect")) {
 		pr_err("Bootloader gives us the panel name. Nice job!\n");
-		return 0;
+		return single_panel_setup(display, node);
 	};
 
 	if (use_cmd_detect || use_dric_only) {
