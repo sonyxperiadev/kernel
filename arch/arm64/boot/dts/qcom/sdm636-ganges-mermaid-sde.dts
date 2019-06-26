@@ -36,6 +36,6 @@
 	qcom,model = "sdm660-snd-card-mtp";
 };
 
-&dsi_panel_cmd_display {
+&sde_dsi_nile_panels {
         qcom,dsi-panel = <&dsi_nt36672a_tianma_fhdplus_video>;
 };

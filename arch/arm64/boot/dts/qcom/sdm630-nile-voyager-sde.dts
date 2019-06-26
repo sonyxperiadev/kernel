@@ -23,6 +23,6 @@
 	qcom,msm-mbhc-moist-cfg = <0>, <0>, <3>;
 };
 
-&dsi_panel_cmd_display{
+&sde_dsi_nile_panels{
 	qcom,dsi-panel = <&dsi_td4328_tianma_fhdplus_cmd>;
 };

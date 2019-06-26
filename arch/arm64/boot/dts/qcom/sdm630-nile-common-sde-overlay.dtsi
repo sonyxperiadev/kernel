@@ -4,7 +4,7 @@
 	/* Bad indentation is required. Sorry. */
 	chosen {
 		bootargs = \
-"msm_drm.dsi_display0=dsi_panel_cmd_display:config0";
+"msm_drm.dsi_display0=dsi_panel_somc_nile_cmd:config0";
 
 	};
 };
@@ -178,18 +178,28 @@
 		};
 	};
 
+	sde_dsi_nile_panels: qcom,dsi-display@8 {
+		label = "dsi_panel_somc_nile_cmd";
+		qcom,display-type = "primary";
+
+		qcom,dsi-ctrl-num = <0>;
+		qcom,dsi-phy-num = <0>;
+
+		qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+
+		somc,bootloader-panel-detect;
+	};
 
 	/* SDE */
 	dsi_panel_cmd_display: qcom,dsi-display@12 {
 		compatible = "somc,dsi-display";
-		label = "dsi_panel_cmd_display";
-		qcom,display-type = "primary";
+		label = "primary";
 
 		qcom,dsi-ctrl = <&mdss_dsi0>;
 		qcom,dsi-phy = <&mdss_dsi_phy0>;
 		clocks = <&mdss_dsi0_pll BYTE0_MUX_CLK>,
-			<&mdss_dsi0_pll PIX0_MUX_CLK>;
-		clock-names = "src_byte_clk", "src_pixel_clk";
+			 <&mdss_dsi0_pll PIX0_MUX_CLK>;
+		clock-names = "mux_byte_clk0", "mux_pixel_clk0";
 
 		pinctrl-names = "panel_active", "panel_suspend",
 				"sde_touch_active", "sde_touch_suspend";
@@ -203,7 +213,13 @@
 		vddio-supply = <&pm660_l11>;
 		lab-supply = <&lcdb_ldo_vreg>;
 		ibb-supply = <&lcdb_ncp_vreg>;
+
+		qcom,dsi-display-list = <&sde_dsi_nile_panels>;
 	};
+};
+
+&mdss_mdp {
+	connectors = <&sde_wb &dsi_panel_cmd_display>;
 };
 
 &mdss_dsi0 {
