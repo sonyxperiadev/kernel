@@ -24,6 +24,8 @@
 		qcom,use-3-lvl-tables;
 		qcom,register-save;
 		qcom,skip-init;
+		qcom,no-smr-check;
+		qcom,no-actlr-read;
 		#global-interrupts = <2>;
 		interrupts = <GIC_SPI 229 IRQ_TYPE_LEVEL_HIGH>,
 			     <GIC_SPI 231 IRQ_TYPE_LEVEL_HIGH>,
@@ -152,6 +154,7 @@
 		qcom,use-3-lvl-tables;
 		qcom,register-save;
 		qcom,skip-init;
+		qcom,no-actlr-read;
 		#global-interrupts = <0>;
 		interrupts = <GIC_SPI 329 IRQ_TYPE_LEVEL_HIGH>,
 			     <GIC_SPI 330 IRQ_TYPE_LEVEL_HIGH>,
