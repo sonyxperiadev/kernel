@@ -3617,6 +3617,8 @@ static int _sde_hardware_pre_caps(struct sde_mdss_cfg *sde_cfg, uint32_t hw_rev)
 		/* update msm8996 target here */
 		sde_cfg->has_wb_ubwc = true;
 		sde_cfg->perf.min_prefill_lines = 21;
+		sde_cfg->ts_prefill_rev = 1;
+		sde_cfg->vbif_qos_nlvl = 4;
 	} else if (IS_MSM8998_TARGET(hw_rev) || IS_SDM630_TARGET(hw_rev) ||
 		   IS_SDM660_TARGET(hw_rev)) {
 		/* update msm8998/sdm630 target here */
