@@ -323,10 +323,10 @@ void __init files_init(void)
 void __init files_maxfiles_init(void)
 {
 	unsigned long n;
-	unsigned long memreserve = (totalram_pages - nr_free_pages()) * 3/2;
+	unsigned long memreserve = (totalram_pages() - nr_free_pages()) * 3/2;
 
-	memreserve = min(memreserve, totalram_pages - 1);
-	n = ((totalram_pages - memreserve) * (PAGE_SIZE / 1024)) / 10;
+	memreserve = min(memreserve, totalram_pages() - 1);
+	n = ((totalram_pages() - memreserve) * (PAGE_SIZE / 1024)) / 10;
 
 	files_stat.max_files = max_t(unsigned long, n, NR_FILE);
 } 

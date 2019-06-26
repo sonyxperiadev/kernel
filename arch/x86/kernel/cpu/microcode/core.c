@@ -325,8 +325,8 @@ static ssize_t microcode_write(struct file *file, const char __user *buf,
 {
 	ssize_t ret = -EINVAL;
 
-	if ((len >> PAGE_SHIFT) > totalram_pages) {
-		pr_err("too much data (max %ld pages)\n", totalram_pages);
+	if ((len >> PAGE_SHIFT) > totalram_pages()) {
+		pr_err("too much data (max %ld pages)\n", totalram_pages());
 		return ret;
 	}
 

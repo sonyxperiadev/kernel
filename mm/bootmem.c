@@ -162,7 +162,7 @@ void free_bootmem_late(unsigned long physaddr, unsigned long size)
 
 	for (; cursor < end; cursor++) {
 		__free_pages_bootmem(pfn_to_page(cursor), cursor, 0);
-		totalram_pages++;
+		totalram_pages_inc();
 	}
 }
 
@@ -278,7 +278,7 @@ unsigned long __init free_all_bootmem(void)
 	list_for_each_entry(bdata, &bdata_list, list)
 		total_pages += free_all_bootmem_core(bdata);
 
-	totalram_pages += total_pages;
+	totalram_pages_add(total_pages);
 
 	return total_pages;
 }

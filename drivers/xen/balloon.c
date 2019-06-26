@@ -725,7 +725,7 @@ static void __init balloon_add_region(unsigned long start_pfn,
 
 	for (pfn = start_pfn; pfn < extra_pfn_end; pfn++) {
 		page = pfn_to_page(pfn);
-		/* totalram_pages and totalhigh_pages do not
+		/* totalram_pages() and totalhigh_pages() do not
 		   include the boot-time balloon extension, so
 		   don't subtract from it. */
 		__balloon_append(page);
