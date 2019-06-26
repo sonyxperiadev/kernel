@@ -35,6 +35,7 @@
 #include "reset.h"
 #include "vdd-level-660.h"
 
+#define BM(msb, lsb)	(((((uint32_t)-1) << (31-msb)) >> (31-msb+lsb)) << lsb)
 #define F(f, s, h, m, n) { (f), (s), (2 * (h) - 1), (m), (n) }
 
 static DEFINE_VDD_REGULATORS(vdd_dig, VDD_DIG_NUM, 1, vdd_corner);
@@ -3267,8 +3268,8 @@ static struct clk_debug_mux gcc_debug_mux = {
 					0x005, 0, 0, 0, BM(18, 17) },
 		{ "gpucc_rbcpr_clk",		0x13d,	GPU_CC,
 					0x003, 0, 0, 0, BM(18, 17) },
-		{ "pwrcl_clk",	0x0c0,	CPU,	0x000,	0x3, 8,	0x0FF },
-		{ "perfcl_clk",	0x0c0,	CPU,	0x100,	0x3, 8,	0x0FF },
+		{ "pwrcl_clk",	0x0c0,	CPU_CC,	0x000,	0x3, 8,	0x0FF },
+		{ "perfcl_clk",	0x0c0,	CPU_CC,	0x100,	0x3, 8,	0x0FF },
 	),
 	.hw.init = &(struct clk_init_data){
 		.name = "gcc_debug_mux",
@@ -3334,11 +3335,11 @@ static int clk_debug_660_probe(struct platform_device *pdev)
 	}
 
 	if (of_get_property(pdev->dev.of_node, "qcom,cpu", NULL)) {
-		gcc_debug_mux.regmap[CPU] =
+		gcc_debug_mux.regmap[CPU_CC] =
 			syscon_regmap_lookup_by_phandle(pdev->dev.of_node,
 					"qcom,cpu");
-		if (IS_ERR(gcc_debug_mux.regmap[CPU]))
-			return PTR_ERR(gcc_debug_mux.regmap[CPU]);
+		if (IS_ERR(gcc_debug_mux.regmap[CPU_CC]))
+			return PTR_ERR(gcc_debug_mux.regmap[CPU_CC]);
 	}
 
 	if (of_get_property(pdev->dev.of_node, "qcom,mmss", NULL)) {
