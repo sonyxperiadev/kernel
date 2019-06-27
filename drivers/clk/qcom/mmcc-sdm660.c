@@ -537,6 +537,7 @@ static struct clk_rcg2 ahb_clk_src = {
 	.hid_width = 5,
 	.parent_map = mmcc_parent_map_10,
 	.freq_tbl = ftbl_ahb_clk_src,
+	.current_freq = 40000000,
 	.enable_safe_config = true,
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "ahb_clk_src",
