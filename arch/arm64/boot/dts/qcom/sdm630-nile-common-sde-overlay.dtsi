@@ -209,6 +209,8 @@
 		qcom,dsi-display-active;
 
 		qcom,platform-te-gpio = <&tlmm 59 0>;
+		qcom,panel-te-source = <0>;
+
 		qcom,platform-reset-gpio = <&tlmm 53 0>;
 		vddio-supply = <&pm660_l11>;
 		lab-supply = <&lcdb_ldo_vreg>;
