@@ -111,7 +111,8 @@ int virt_therm_probe(struct platform_device *pdev)
 		}
 		strlcpy(vsens->virt_zone_name, stringprop, THERMAL_NAME_LENGTH);
 
-		nelems = of_property_count_strings(child, "thermal-sensors");
+		nelems = of_property_count_strings(child,
+						"thermal-sensor-names");
 		if (nelems < 0) {
 			dev_err(&pdev->dev,
 				"No thermal sensors specified for %s.\n",
@@ -120,11 +121,12 @@ int virt_therm_probe(struct platform_device *pdev)
 			continue;
 		}
 
-		rc = of_property_read_string_array(child, "thermal-sensors",
+		rc = of_property_read_string_array(child,
+						"thermal-sensor-names",
 						vsens->sensor_names, nelems);
 		if (rc != nelems) {
 			dev_err(&pdev->dev,
-				"Cannot read thermal-sensors for %s.\n",
+				"Cannot read thermal-sensor-names for %s.\n",
 				vsens->virt_zone_name);
 			rc = -EINVAL;
 			continue;
