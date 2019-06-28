@@ -157,7 +157,6 @@
 		USB3_GDSC-supply = <&gdsc_usb30>;
 		qcom,reset-ep-after-lpm-resume;
 
-		qcom,usb-dbm = <&dbm_1p5>;
 		qcom,msm-bus,name = "usb3";
 		qcom,msm-bus,num-cases = <2>;
 		qcom,msm-bus,num-paths = <1>;
