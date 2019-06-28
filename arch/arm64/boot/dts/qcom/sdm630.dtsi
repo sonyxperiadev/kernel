@@ -918,6 +918,29 @@
 		qcom,scandump-size = <0x40000>;
 	};
 
+	rpm_msg_ram: memory@778000 {
+		compatible = "qcom,rpm-msg-ram";
+		reg = <0x778000 0x7000>;
+	};
+
+	tcsr_mutex_block: syscon@1f40000 {
+		compatible = "syscon";
+		reg = <0x1f40000 0x20000>;
+	};
+
+	tcsr_mutex: hwlock {
+		compatible = "qcom,tcsr-mutex";
+		syscon = <&tcsr_mutex_block 0 0x1000>;
+		#hwlock-cells = <1>;
+	};
+
+	apcs_glb: mailbox@17911000 {
+		compatible = "qcom,msm8998-apcs-hmss-global";
+		reg = <0x17911000 0x1000>;
+
+		#mbox-cells = <1>;
+	};
+
 	uartblsp1dm1: serial@0c170000 {
 		compatible = "qcom,msm-uartdm-v1.4", "qcom,msm-uartdm";
 		reg = <0xc170000 0x1000>;
@@ -1453,29 +1476,6 @@
 		compatible = "qcom,smem";
 		memory-region = <&smem_region>;
 		hwlocks = <&tcsr_mutex 3>;
-	};
-
-	rpm_msg_ram: memory@778000 {
-		compatible = "qcom,rpm-msg-ram";
-		reg = <0x778000 0x7000>;
-	};
-
-	tcsr_mutex_block: syscon@1f40000 {
-		compatible = "syscon";
-		reg = <0x1f40000 0x20000>;
-	};
-
-	tcsr_mutex: hwlock {
-		compatible = "qcom,tcsr-mutex";
-		syscon = <&tcsr_mutex_block 0 0x1000>;
-		#hwlock-cells = <1>;
-	};
-
-	apcs_glb: mailbox@17911000 {
-		compatible = "qcom,msm8998-apcs-hmss-global";
-		reg = <0x17911000 0x1000>;
-
-		#mbox-cells = <1>;
 	};
 
 	qcom,smp2p_sleepstate {
