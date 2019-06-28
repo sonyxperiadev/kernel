@@ -345,12 +345,13 @@
 			reg = <0x0 0x85800000 0x0 0x200000>;
 		};
 
-		smem_region: smem@85800000 {
+		smem_region: smem@86000000 {
+			compatible = "removed-dma-pool";
 			no-map;
 			reg = <0 0x86000000 0 0x200000>;
 		};
 
-		removed_region2: removed_region2@85800000 {
+		removed_region2: removed_region2@86200000 {
 			compatible = "removed-dma-pool";
 			no-map;
 			reg = <0x0 0x86200000 0x0 0x3300000>;
