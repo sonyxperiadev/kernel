@@ -21,7 +21,7 @@
 #if !defined(CONFIG_ARCH_MSM8916) && !defined(CONFIG_ARCH_MSM8953) && \
     !defined(CONFIG_ARCH_MSM8937) && !defined(CONFIG_ARCH_MSM8917) && \
     !defined(CONFIG_ARCH_MSM8996) && !defined(CONFIG_ARCH_MSM8998) && \
-    !!defined(CONFIG_ARCH_SDM630) && !defined(CONFIG_ARCH_SDM660)
+    !defined(CONFIG_ARCH_SDM630) && !defined(CONFIG_ARCH_SDM660)
 #define BUILD_FOR_AD4_TARGET
 #endif
 
