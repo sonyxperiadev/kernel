@@ -20,6 +20,9 @@
 #include <dt-bindings/regulator/qcom,rpm-smd-regulator.h>
 #include <dt-bindings/clock/qcom,cpu-osm.h>
 
+#define MHZ_TO_MBPS(mhz, w) ((mhz * 1000000 * w) / (1024 * 1024))
+#define BW_OPP_ENTRY(mhz, w) opp-mhz {opp-hz = /bits/ 64 <MHZ_TO_MBPS(mhz, w)>;}
+
 / {
 	model = "Qualcomm Technologies, Inc. SDM630";
 	compatible = "qcom,sdm630";
@@ -1133,23 +1136,27 @@
 		status = "disabled";
 	};
 
+	ddr_bw_opp_table: ddr-bw-opp-table {
+		compatible = "operating-points-v2";
+		BW_OPP_ENTRY( 100,  4);	/* 381 MB/s */
+		BW_OPP_ENTRY( 150,  4);	/* 572 MB/s */
+		BW_OPP_ENTRY( 200,  4);	/* 762 MB/s */
+		BW_OPP_ENTRY( 300,  4);	/* 1144 MB/s */
+		BW_OPP_ENTRY( 412,  4);	/* 1571 MB/s */
+		BW_OPP_ENTRY( 547,  4);	/* 2086 MB/s */
+		BW_OPP_ENTRY( 681,  4);	/* 2597 MB/s */
+		BW_OPP_ENTRY( 768,  4);	/* 2929 MB/s */
+		BW_OPP_ENTRY( 1017, 4);	/* 3879 MB/s */
+		BW_OPP_ENTRY( 1296, 4);	/* 4943 MB/s */
+		BW_OPP_ENTRY( 1353, 4);	/* 5163 MB/s */
+	};
+
 	cpubw: qcom,cpubw {
 		compatible = "qcom,devbw";
 		governor = "performance";
 		qcom,src-dst-ports = <1 512>;
 		qcom,active-only;
-		qcom,bw-tbl =
-			<  381  /*  100 MHz */ >,
-			<  572  /*  150 MHz */ >,
-			<  762  /*  200 MHz */ >,
-			<  1144 /*  300 MHz */ >,
-			<  1571 /*  412 MHz */ >,
-			<  2086 /*  547 MHz */ >,
-			<  2597 /*  681 MHz */ >,
-			<  2929 /*  768 MHz */ >,
-			<  3879 /* 1017 MHz */ >,
-			<  4943 /* 1296 MHz */ >,
-			<  5163 /* 1353 MHz */ >;
+		operating-points-v2 = <&ddr_bw_opp_table>;
 	};
 
 	bwmon: qcom,cpu-bwmon {
@@ -1169,18 +1176,7 @@
 		governor = "powersave";
 		qcom,src-dst-ports = <1 512>;
 		qcom,active-only;
-		qcom,bw-tbl =
-			<  381  /*  100 MHz */ >,
-			<  572  /*  150 MHz */ >,
-			<  762  /*  200 MHz */ >,
-			<  1144 /*  300 MHz */ >,
-			<  1571 /*  412 MHz */ >,
-			<  2086 /*  547 MHz */ >,
-			<  2597 /*  681 MHz */ >,
-			<  2929 /*  768 MHz */ >,
-			<  3879 /* 1017 MHz */ >,
-			<  4943 /* 1296 MHz */ >,
-			<  5163 /* 1353 MHz */ >;
+		operating-points-v2 = <&ddr_bw_opp_table>;
 	};
 
 	memlat_cpu0: qcom,memlat-cpu0 {
@@ -1188,18 +1184,7 @@
 		governor = "powersave";
 		qcom,src-dst-ports = <1 512>;
 		qcom,active-only;
-		qcom,bw-tbl =
-			<  381  /*  100 MHz */ >,
-			<  572  /*  150 MHz */ >,
-			<  762  /*  200 MHz */ >,
-			<  1144 /*  300 MHz */ >,
-			<  1571 /*  412 MHz */ >,
-			<  2086 /*  547 MHz */ >,
-			<  2597 /*  681 MHz */ >,
-			<  2929 /*  768 MHz */ >,
-			<  3879 /* 1017 MHz */ >,
-			<  4943 /* 1296 MHz */ >,
-			<  5163 /* 1353 MHz */ >;
+		operating-points-v2 = <&ddr_bw_opp_table>;
 	};
 
 	memlat_cpu4: qcom,memlat-cpu4 {
@@ -1207,18 +1192,7 @@
 		governor = "powersave";
 		qcom,src-dst-ports = <1 512>;
 		qcom,active-only;
-		qcom,bw-tbl =
-			<  381  /*  100 MHz */ >,
-			<  572  /*  150 MHz */ >,
-			<  762  /*  200 MHz */ >,
-			<  1144 /*  300 MHz */ >,
-			<  1571 /*  412 MHz */ >,
-			<  2086 /*  547 MHz */ >,
-			<  2597 /*  681 MHz */ >,
-			<  2929 /*  768 MHz */ >,
-			<  3879 /* 1017 MHz */ >,
-			<  4943 /* 1296 MHz */ >,
-			<  5163 /* 1353 MHz */ >;
+		operating-points-v2 = <&ddr_bw_opp_table>;
 	};
 
 	devfreq_memlat_0: qcom,arm-memlat-mon-0 {
