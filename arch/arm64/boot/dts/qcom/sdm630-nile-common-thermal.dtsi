@@ -27,13 +27,13 @@
 &virtual_thermal {
 	avg-cpu-big {
 		virt-zone-name = "avg-cpu-c0";
-		thermal-sensors = "cpu0-gold-usr", "cpu1-gold-usr",
+		thermal-sensor-names = "cpu0-gold-usr", "cpu1-gold-usr",
 				  "cpu2-gold-usr", "cpu3-gold-usr";
 		aggregation-logic = <0>; /* WEIGHTED_AVG */
 	};
 	avg-cpu-little {
 		virt-zone-name = "avg-cpu-c1";
-		thermal-sensors = "cpu4-silver-usr", "cpu5-silver-usr",
+		thermal-sensor-names = "cpu4-silver-usr", "cpu5-silver-usr",
 				  "cpu6-silver-usr", "cpu7-silver-usr";
 		aggregation-logic = <0>; /* WEIGHTED_AVG */
 	};
