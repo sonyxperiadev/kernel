@@ -1547,7 +1547,7 @@ out:
 static void fg_cap_learning_update(struct fg_dev *fg)
 {
 	struct fg_gen3_chip *chip = container_of(fg, struct fg_gen3_chip, fg);
-	int rc
+	int rc;
 	unsigned int batt_soc, batt_soc_msb, cc_soc_sw;
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
 	int msoc;
@@ -1996,7 +1996,7 @@ static int fg_charge_full_update(struct fg_dev *fg)
 				goto out;
 			}
 			if (msoc >= 99 &&
-			    chip->health == POWER_SUPPLY_HEALTH_GOOD) {
+			    fg->health == POWER_SUPPLY_HEALTH_GOOD) {
 				fg_dbg(chip, FG_SOMC, "Detected FULL\n");
 				chip->charge_full = true;
 				chip->full_counter++;
@@ -2282,7 +2282,7 @@ static int fg_adjust_recharge_soc(struct fg_dev *fg)
 				fg->recharge_soc_adjusted = true;
 			} else {
 				/* adjusted already, do nothing */
-				if (chip->health != POWER_SUPPLY_HEALTH_GOOD)
+				if (fg->health != POWER_SUPPLY_HEALTH_GOOD)
 					return 0;
 
 				/*
@@ -2290,7 +2290,7 @@ static int fg_adjust_recharge_soc(struct fg_dev *fg)
 				 * default value
 				 */
 				new_recharge_soc = recharge_soc;
-				chip->recharge_soc_adjusted = false;
+				fg->recharge_soc_adjusted = false;
 			}
 		} else {
 			if (!fg->recharge_soc_adjusted)
