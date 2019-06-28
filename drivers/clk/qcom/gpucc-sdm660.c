@@ -507,7 +507,7 @@ static int __init gpucc_660_init(void)
 {
 	return platform_driver_register(&gpucc_660_driver);
 }
-arch_initcall(gpucc_660_init);
+core_initcall_sync(gpucc_660_init);
 
 static void __exit gpucc_660_exit(void)
 {
