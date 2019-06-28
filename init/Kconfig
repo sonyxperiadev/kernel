@@ -2026,7 +2026,7 @@ config INIT_ALL_POSSIBLE
 	  and have several arch maintainers pursuing me down dark alleys.
 
 config DEBUG_RENAME_SKIP_INITRAMFS_BOOTPARAM
-	bool
+	bool "Rename skip_initramfs boot parameter to do_skip_initramfs"
 	help
 	  Some bootloaders will set this boot parameter whenever a direct
 	  boot from a newly uploaded-to-RAM boot image is requested.
