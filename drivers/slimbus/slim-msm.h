@@ -321,6 +321,7 @@ struct msm_slim_ctrl {
 	int			default_ipc_log_mask;
 	int			ipc_log_mask;
 	bool			sysfs_created;
+	bool			legacy_pwr_msg;
 	void			*ipc_slimbus_log;
 	void (*rx_slim)(struct msm_slim_ctrl *dev, u8 *buf);
 	u32			current_rx_buf[10];

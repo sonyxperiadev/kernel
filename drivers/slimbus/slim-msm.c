@@ -1333,6 +1333,7 @@ void msm_slim_sps_exit(struct msm_slim_ctrl *dev, bool dereg)
 #define SLIMBUS_QMI_DEFERRED_STATUS_RESP 0x0023
 
 #define SLIMBUS_QMI_POWER_REQ_MAX_MSG_LEN 14
+#define SLIMBUS_QMI_POWER_REQ_MAX_MSG_LEN_V0 7
 #define SLIMBUS_QMI_POWER_RESP_MAX_MSG_LEN 7
 #define SLIMBUS_QMI_SELECT_INSTANCE_REQ_MAX_MSG_LEN 14
 #define SLIMBUS_QMI_SELECT_INSTANCE_RESP_MAX_MSG_LEN 7
@@ -1461,6 +1462,27 @@ static struct elem_info slimbus_select_inst_resp_msg_v01_ei[] = {
 		.offset    = offsetof(struct slimbus_select_inst_resp_msg_v01,
 				      resp),
 		.ei_array  = get_qmi_response_type_v01_ei(),
+	},
+	{
+		.data_type = QMI_EOTI,
+		.elem_len  = 0,
+		.elem_size = 0,
+		.is_array  = NO_ARRAY,
+		.tlv_type  = 0x00,
+		.offset    = 0,
+		.ei_array  = NULL,
+	},
+};
+
+static struct elem_info slimbus_power_req_msg_v00_legacy[] = {
+	{
+		.data_type = QMI_UNSIGNED_4_BYTE,
+		.elem_len  = 1,
+		.elem_size = sizeof(enum slimbus_pm_enum_type_v01),
+		.is_array  = NO_ARRAY,
+		.tlv_type  = 0x01,
+		.offset    = offsetof(struct slimbus_power_req_msg_v01, pm_req),
+		.ei_array  = NULL,
 	},
 	{
 		.data_type = QMI_EOTI,
@@ -1672,8 +1694,14 @@ static int msm_slim_qmi_send_power_request(struct msm_slim_ctrl *dev,
 	int rc;
 
 	req_desc.msg_id = SLIMBUS_QMI_POWER_REQ_V01;
-	req_desc.max_msg_len = SLIMBUS_QMI_POWER_REQ_MAX_MSG_LEN;
-	req_desc.ei_array = slimbus_power_req_msg_v01_ei;
+
+	if (dev->legacy_pwr_msg) {
+		req_desc.max_msg_len = SLIMBUS_QMI_POWER_REQ_MAX_MSG_LEN_V0;
+		req_desc.ei_array = slimbus_power_req_msg_v00_legacy;
+	} else {
+		req_desc.max_msg_len = SLIMBUS_QMI_POWER_REQ_MAX_MSG_LEN;
+		req_desc.ei_array = slimbus_power_req_msg_v01_ei;
+	}
 
 	resp_desc->msg_id = SLIMBUS_QMI_POWER_RESP_V01;
 	resp_desc->max_msg_len = SLIMBUS_QMI_POWER_RESP_MAX_MSG_LEN;
