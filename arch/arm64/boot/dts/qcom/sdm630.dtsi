@@ -351,7 +351,7 @@
 		};
 
 		smem_region: smem@86000000 {
-			compatible = "removed-dma-pool";
+			//compatible = "removed-dma-pool";
 			no-map;
 			reg = <0 0x86000000 0 0x200000>;
 		};
@@ -495,7 +495,7 @@
 		compatible = "qcom,mpm-gpio-sdm630", "qcom,mpm-gpio";
 		interrupt-controller;
 		interrupt-parent = <&intc>;
-		#interrupt-cells = <2>;
+		#interrupt-cells = <3>;
 	};
 
 	timer {

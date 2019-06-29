@@ -14,6 +14,7 @@
 	tasha_codec {
 		wsa_spkr_sd1: msm_cdc_pinctrll {
 		      compatible = "qcom,msm-cdc-pinctrl";
+		      #gpio-cells = <0>;
 		      pinctrl-names = "aud_active", "aud_sleep";
 		      pinctrl-0 = <&spkr_1_sd_n_active>;
 		      pinctrl-1 = <&spkr_1_sd_n_sleep>;
@@ -21,6 +22,7 @@
 
 		wsa_spkr_sd2: msm_cdc_pinctrlr {
 		      compatible = "qcom,msm-cdc-pinctrl";
+		      #gpio-cells = <0>;
 		      pinctrl-names = "aud_active", "aud_sleep";
 		      pinctrl-0 = <&spkr_2_sd_n_active>;
 		      pinctrl-1 = <&spkr_2_sd_n_sleep>;
@@ -28,6 +30,7 @@
 
 		tasha_hph_en0: msm_cdc_pinctrl_hph_en0 {
 		      compatible = "qcom,msm-cdc-pinctrl";
+		      #gpio-cells = <0>;
 		      pinctrl-names = "aud_active", "aud_sleep";
 		      pinctrl-0 = <&hph_en0_active>;
 		      pinctrl-1 = <&hph_en0_sleep>;
@@ -35,6 +38,7 @@
 
 		tasha_hph_en1: msm_cdc_pinctrl_hph_en1 {
 		      compatible = "qcom,msm-cdc-pinctrl";
+		      #gpio-cells = <0>;
 		      pinctrl-names = "aud_active", "aud_sleep";
 		      pinctrl-0 = <&hph_en1_active>;
 		      pinctrl-1 = <&hph_en1_sleep>;
@@ -161,6 +165,7 @@
 
 		wsa_spkr_wcd_sd1: msm_cdc_pinctrll {
 		      compatible = "qcom,msm-cdc-pinctrl";
+		      #gpio-cells = <0>;
 		      pinctrl-names = "aud_active", "aud_sleep";
 		      pinctrl-0 = <&spkr_1_wcd_en_active>;
 		      pinctrl-1 = <&spkr_1_wcd_en_sleep>;
@@ -168,6 +173,7 @@
 
 		wsa_spkr_wcd_sd2: msm_cdc_pinctrlr {
 		      compatible = "qcom,msm-cdc-pinctrl";
+		      #gpio-cells = <0>;
 		      pinctrl-names = "aud_active", "aud_sleep";
 		      pinctrl-0 = <&spkr_2_wcd_en_active>;
 		      pinctrl-1 = <&spkr_2_wcd_en_sleep>;
@@ -175,6 +181,7 @@
 
 		tavil_us_euro_sw: msm_cdc_pinctrl_us_euro_sw {
 		      compatible = "qcom,msm-cdc-pinctrl";
+		      #gpio-cells = <0>;
 		      pinctrl-names = "aud_active", "aud_sleep";
 		      pinctrl-0 = <&us_euro_sw_wcd_active>;
 		      pinctrl-1 = <&us_euro_sw_wcd_sleep>;
@@ -182,6 +189,7 @@
 
 		tavil_hph_en0: msm_cdc_pinctrl_hph_en0 {
 		      compatible = "qcom,msm-cdc-pinctrl";
+		      #gpio-cells = <0>;
 		      pinctrl-names = "aud_active", "aud_sleep";
 		      pinctrl-0 = <&hph_en0_wcd_active>;
 		      pinctrl-1 = <&hph_en0_wcd_sleep>;
@@ -189,6 +197,7 @@
 
 		tavil_hph_en1: msm_cdc_pinctrl_hph_en1 {
 		      compatible = "qcom,msm-cdc-pinctrl";
+		      #gpio-cells = <0>;
 		      pinctrl-names = "aud_active", "aud_sleep";
 		      pinctrl-0 = <&hph_en1_wcd_active>;
 		      pinctrl-1 = <&hph_en1_wcd_sleep>;

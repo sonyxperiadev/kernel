@@ -445,11 +445,30 @@
 		qcom,msm-cpudai-afe-clk-ver = <2>;
 	};
 
-	qcom,msm-audio-ion {
-		compatible = "qcom,msm-audio-ion";
-		qcom,smmu-version = <2>;
-		qcom,smmu-enabled;
-		iommus = <&lpass_q6_smmu 1>;
+	wcd9xxx_intc: wcd9xxx-irq {
+		compatible = "qcom,wcd9xxx-irq";
+		interrupt-controller;
+		#interrupt-cells = <1>;
+		interrupts = <0 177 0>;
+		interrupt-names = "wcd_irq";
+	};
+
+	audio_apr: qcom,msm-audio-apr {
+		compatible = "qcom,msm-audio-apr";
+		qcom,subsys-name = "apr_adsp";
+
+		q6core: q6core {
+			#address-cells = <1>;
+			#size-cells = <1>;
+			compatible = "qcom,q6core-audio";
+		};
+
+		msm_audio_ion: qcom,msm-audio-ion {
+			compatible = "qcom,msm-audio-ion";
+			qcom,smmu-version = <2>;
+			qcom,smmu-enabled;
+			iommus = <&lpass_q6_smmu 1>;
+		};
 	};
 
 	qcom,msm-adsp-loader {
@@ -653,6 +672,60 @@
 			<0x150f7010 0x4>;
 		reg-names = "avtimer_lsb_addr", "avtimer_msb_addr";
 		qcom,clk-div = <27>;
+	};
+};
+
+&q6core {
+	us_euro_gpio: msm_cdc_pinctrl@75 {
+		compatible = "qcom,msm-cdc-pinctrl";
+		#gpio-cells = <0>;
+		pinctrl-names = "aud_active", "aud_sleep";
+		pinctrl-0 = <&wcd_gnd_mic_swap_active>;
+		pinctrl-1 = <&wcd_gnd_mic_swap_idle>;
+	};
+
+	clock_audio: audio_ext_clk {
+		compatible = "qcom,audio-ref-clk";
+
+		/* AUDIO_EXT_CLK_LPASS */
+		qcom,codec-ext-clk-src = <2>;
+
+		/* Q6AFE_LPASS_IBIT_CLK_11_P2896_MHZ */
+		qcom,codec-lpass-ext-clk-freq = <11289600>;
+
+		/* Q6AFE_LPASS_CLK_ID_MCLK_3 */
+		qcom,codec-lpass-clk-id = <0x302>;
+		qcom,mclk-clk-reg = <0x15020018 0x0>;
+
+		clock-names = "osr_clk";
+		clocks = <&clock_rpmcc RPM_SMD_DIV_CLK1>;
+
+		pinctrl-names = "sleep", "active";
+		pinctrl-0 = <&lpi_mclk0_sleep>;
+		pinctrl-1 = <&lpi_mclk0_active>;
+		qcom,use-pinctrl = <1>;
+
+		/* TODO: Not implemented yet. */
+		qcom,audio-ref-clk-gpio = <&pm660_gpios 3 0>;
+
+		#clock-cells = <1>;
+	};
+
+	clock_audio_lnbb: audio_ext_clk_lnbb {
+		compatible = "qcom,audio-ref-clk";
+		clock-names = "osr_clk";
+		clocks = <&clock_rpmcc RPM_SMD_LN_BB_CLK2>;
+		qcom,node_has_rpm_clock;
+		#clock-cells = <1>;
+	};
+
+	wcd_rst_gpio: msm_cdc_pinctrl@64 {
+		compatible = "qcom,msm-cdc-pinctrl";
+		#gpio-cells = <0>;
+		pinctrl-names = "aud_active", "aud_sleep";
+		pinctrl-0 = <&lpi_cdc_reset_active>;
+		pinctrl-1 = <&lpi_cdc_reset_sleep>;
+		qcom,lpi-gpios;
 	};
 
 	tasha_snd: sound-9335 {
@@ -978,63 +1051,5 @@
 				<&wsa881x_213_en>, <&wsa881x_214_en>;
 		qcom,wsa-aux-dev-prefix = "SpkrLeft", "SpkrRight",
 					  "SpkrLeft", "SpkrRight";
-	};
-
-	us_euro_gpio: msm_cdc_pinctrl@75 {
-		compatible = "qcom,msm-cdc-pinctrl";
-		pinctrl-names = "aud_active", "aud_sleep";
-		pinctrl-0 = <&wcd_gnd_mic_swap_active>;
-		pinctrl-1 = <&wcd_gnd_mic_swap_idle>;
-	};
-
-	wcd9xxx_intc: wcd9xxx-irq {
-		compatible = "qcom,wcd9xxx-irq";
-		interrupt-controller;
-		#interrupt-cells = <1>;
-		interrupts = <0 177 0>;
-		interrupt-names = "wcd_irq";
-	};
-
-	clock_audio: audio_ext_clk {
-		compatible = "qcom,audio-ref-clk";
-
-		/* AUDIO_EXT_CLK_LPASS */
-		qcom,codec-ext-clk-src = <2>;
-
-		/* Q6AFE_LPASS_IBIT_CLK_11_P2896_MHZ */
-		qcom,codec-lpass-ext-clk-freq = <11289600>;
-
-		/* Q6AFE_LPASS_CLK_ID_MCLK_3 */
-		qcom,codec-lpass-clk-id = <0x302>;
-		qcom,mclk-clk-reg = <0x15020018 0x0>;
-
-		clock-names = "osr_clk";
-		clocks = <&clock_rpmcc RPM_SMD_DIV_CLK1>;
-
-		pinctrl-names = "sleep", "active";
-		pinctrl-0 = <&lpi_mclk0_sleep>;
-		pinctrl-1 = <&lpi_mclk0_active>;
-		qcom,use-pinctrl = <1>;
-
-		/* TODO: Not implemented yet. */
-		qcom,audio-ref-clk-gpio = <&pm660_gpios 3 0>;
-
-		#clock-cells = <1>;
-	};
-
-	clock_audio_lnbb: audio_ext_clk_lnbb {
-		compatible = "qcom,audio-ref-clk";
-		clock-names = "osr_clk";
-		clocks = <&clock_rpmcc RPM_SMD_LN_BB_CLK2>;
-		qcom,node_has_rpm_clock;
-		#clock-cells = <1>;
-	};
-
-	wcd_rst_gpio: msm_cdc_pinctrl@64 {
-		compatible = "qcom,msm-cdc-pinctrl";
-		pinctrl-names = "aud_active", "aud_sleep";
-		pinctrl-0 = <&lpi_cdc_reset_active>;
-		pinctrl-1 = <&lpi_cdc_reset_sleep>;
-		qcom,lpi-gpios;
 	};
 };
