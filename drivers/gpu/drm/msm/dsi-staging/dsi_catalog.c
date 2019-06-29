@@ -99,11 +99,12 @@ static void dsi_catalog_cmn_init(struct dsi_ctrl_hw *ctrl,
 			dsi_ctrl_hw_20_wait_for_lane_idle;
 		ctrl->ops.reg_dump_to_buffer =
 			dsi_ctrl_hw_20_reg_dump_to_buffer;
-		ctrl->ops.ulps_ops.ulps_request = NULL;
-		ctrl->ops.ulps_ops.ulps_exit = NULL;
-		ctrl->ops.ulps_ops.get_lanes_in_ulps = NULL;
-		ctrl->ops.clamp_enable = NULL;
-		ctrl->ops.clamp_disable = NULL;
+		ctrl->ops.ulps_ops.ulps_request = dsi_ctrl_hw_cmn_ulps_request;
+		ctrl->ops.ulps_ops.ulps_exit = dsi_ctrl_hw_cmn_ulps_exit;
+		ctrl->ops.ulps_ops.get_lanes_in_ulps =
+			dsi_ctrl_hw_cmn_get_lanes_in_ulps;
+		ctrl->ops.clamp_enable = dsi_ctrl_hw_14_clamp_enable;
+		ctrl->ops.clamp_disable = dsi_ctrl_hw_14_clamp_disable;
 		ctrl->ops.schedule_dma_cmd = NULL;
 		ctrl->ops.get_cont_splash_status = dsi_ctrl_hw_14_get_cont_splash_status;
 		ctrl->ops.kickoff_command_non_embedded_mode = NULL;
