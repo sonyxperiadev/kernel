@@ -1355,9 +1355,6 @@ static int synaptics_rmi4_f12_abs_report(struct synaptics_rmi4_data *rmi4_data,
 			fingers_to_process--;
 		} while (fingers_to_process);
 
-		if(fingers_to_process==0)
-		TP_LOGI("Number of fingers to process = %d\n", fingers_to_process);
-		else
 		TP_LOGD("Number of fingers to process = %d\n", fingers_to_process);
 	}
 
