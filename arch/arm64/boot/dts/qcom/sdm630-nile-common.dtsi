@@ -438,36 +438,22 @@
 &pm660_vadc {
 	#thermal-sensor-cells = <1>;
 
-	chan@4e {
-		label = "ufs_therm";
+	pa_therm1 {
+		label = "pa_therm1";
+		reg = <ADC_AMUX_THM4_PU2>;
+		qcom,ratiometric;
+		qcom,hw-settle-time = <200>;
+		qcom,decimation = <1024>;
+		qcom,pre-scaling = <1 1>;
 	};
 
-	chan@4d {
-		qcom,scale-function = <26>;
-	};
-
-	chan@50 {
-		label = "pa_therm2";
-		reg = <0x50>;
-		qcom,decimation = <2>;
-		qcom,pre-div-channel-scaling = <0>;
-		qcom,calibration-type = "ratiometric";
-		qcom,scale-function = <2>;
-		qcom,hw-settle-time = <2>;
-		qcom,fast-avg-setup = <0>;
-		qcom,vadc-thermal-node;
-	};
-
-	chan@53 {
+	flash_therm {
 		label = "flash_therm";
-		reg = <0x53>;
-		qcom,decimation = <2>;
-		qcom,pre-div-channel-scaling = <0>;
-		qcom,calibration-type = "ratiometric";
-		qcom,scale-function = <26>;
-		qcom,hw-settle-time = <2>;
-		qcom,fast-avg-setup = <0>;
-		qcom,vadc-thermal-node;
+		reg = <ADC_GPIO2_PU2>;
+		qcom,ratiometric;
+		qcom,hw-settle-time = <200>;
+		qcom,decimation = <1024>;
+		qcom,pre-scaling = <1 1>;
 	};
 };
 
