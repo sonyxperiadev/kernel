@@ -4191,8 +4191,10 @@ static void sde_crtc_disable(struct drm_crtc *crtc)
 	/* disable mdp LUT memory retention */
 	ret = sde_power_clk_set_flags(&priv->phandle, "lut_clk",
 				CLKFLAG_NORETAIN_MEM);
-	if (ret)
-		SDE_ERROR("failed to disable LUT memory retention %d\n", ret);
+	if (ret == -ENOENT)
+		pr_err_once("disable LUT memory retention err %d\n", ret);
+	else if (ret)
+		pr_err("disable LUT memory retention err %d\n", ret);
 
 	/* destination scaler if enabled should be reconfigured on resume */
 	if (cstate->num_ds_enabled)
@@ -4350,8 +4352,10 @@ static void sde_crtc_enable(struct drm_crtc *crtc)
 	/* enable mdp LUT memory retention */
 	ret = sde_power_clk_set_flags(&priv->phandle, "lut_clk",
 					CLKFLAG_RETAIN_MEM);
-	if (ret)
-		SDE_ERROR("failed to enable LUT memory retention %d\n", ret);
+	if (ret == -ENOENT)
+		pr_err_once("enable LUT memory retention err %d\n", ret);
+	else if (ret)
+		pr_err("enable LUT memory retention err %d\n", ret);
 
 	mutex_unlock(&sde_crtc->crtc_lock);
 

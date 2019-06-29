@@ -1232,6 +1232,10 @@ int sde_power_clk_set_flags(struct sde_power_handle *phandle,
 
 	clk = sde_power_clk_get_clk(phandle, clock_name);
 	if (!clk) {
+		if (!strcmp("lut_clk", clock_name)) {
+			pr_err_once("lut_clk not found\n");
+			return -ENOENT;
+		}
 		pr_err("get_clk failed for clk: %s\n", clock_name);
 		return -EINVAL;
 	}
