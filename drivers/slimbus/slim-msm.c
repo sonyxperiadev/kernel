@@ -1583,12 +1583,22 @@ static const char *get_qmi_error(struct qmi_response_type_v01 *r)
 {
 	if (r->result == QMI_RESULT_SUCCESS_V01 || r->error == QMI_ERR_NONE_V01)
 		return "No Error";
+	else if (r->error == QMI_ERR_MALFORMED_MSG_V01)
+		return "Malformed message";
 	else if (r->error == QMI_ERR_NO_MEMORY_V01)
 		return "Out of Memory";
 	else if (r->error == QMI_ERR_INTERNAL_V01)
 		return "Unexpected error occurred";
+	else if (r->error == QMI_ERR_CLIENT_IDS_EXHAUSTED_V01)
+		return "Client IDs exhausted";
+	else if (r->error == QMI_ERR_ENCODING_V01)
+		return "Bad encoding";
+	else if (r->error == QMI_ERR_DISABLED_V01)
+		return "Client is disabled";
 	else if (r->error == QMI_ERR_INCOMPATIBLE_STATE_V01)
 		return "Slimbus s/w already configured to a different mode";
+	else if (r->error == QMI_ERR_NOT_SUPPORTED_V01)
+		return "Not supported";
 	else if (r->error == QMI_ERR_INVALID_ID_V01)
 		return "Slimbus hardware instance is not valid";
 	else
