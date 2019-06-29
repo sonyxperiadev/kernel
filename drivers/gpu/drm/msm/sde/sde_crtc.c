@@ -4632,8 +4632,10 @@ static void sde_crtc_handle_power_event(u32 event_type, void *arg)
 		/* disable mdp LUT memory retention */
 		ret = sde_power_clk_set_flags(&priv->phandle, "lut_clk",
 					CLKFLAG_NORETAIN_MEM);
-		if (ret)
-			SDE_ERROR("disable LUT memory retention err %d\n", ret);
+		if (ret == -ENOENT)
+			pr_err_once("disable LUT memory retention err %d\n", ret);
+		else if (ret)
+			pr_err("disable LUT memory retention err %d\n", ret);
 
 		/* restore encoder; crtc will be programmed during commit */
 		drm_for_each_encoder(encoder, crtc->dev) {
@@ -4670,8 +4672,10 @@ static void sde_crtc_handle_power_event(u32 event_type, void *arg)
 		/* enable mdp LUT memory retention */
 		ret = sde_power_clk_set_flags(&priv->phandle, "lut_clk",
 					CLKFLAG_RETAIN_MEM);
-		if (ret)
-			SDE_ERROR("enable LUT memory retention err %d\n", ret);
+		if (ret == -ENOENT)
+			pr_err_once("enable LUT memory retention err %d\n", ret);
+		else if (ret)
+			pr_err("enable LUT memory retention err %d\n", ret);
 
 		drm_for_each_encoder(encoder, crtc->dev) {
 			if (encoder->crtc != crtc)
