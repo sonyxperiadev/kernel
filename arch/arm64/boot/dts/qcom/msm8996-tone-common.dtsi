@@ -178,8 +178,6 @@
 		clocks = <&clock_gcc GCC_BLSP1_AHB_CLK>,
 			<&clock_gcc GCC_BLSP1_QUP3_I2C_APPS_CLK>;
 		pinctrl-names = "i2c_active", "i2c_sleep";
-		pinctrl-0 = <&msm_gpio_47 &msm_gpio_48>;
-		pinctrl-1 = <&msm_gpio_47 &msm_gpio_48>;
 		status = "disabled";
 	};
 
@@ -350,21 +348,20 @@
 				&msm_gpio_30 &msm_gpio_31 &msm_gpio_32 &msm_gpio_33
 				&msm_gpio_34 &msm_gpio_38 &msm_gpio_39 &msm_gpio_40
 				&msm_gpio_41 &msm_gpio_42 &msm_gpio_43 &msm_gpio_44_suspend
-				&msm_gpio_45 &msm_gpio_46 &msm_gpio_47 &msm_gpio_48
-				&msm_gpio_49 &msm_gpio_50 &msm_gpio_51 &msm_gpio_52
-				&msm_gpio_55 &msm_gpio_56 &msm_gpio_57 &msm_gpio_58
-				&msm_gpio_59 &msm_gpio_60 &msm_gpio_61 &msm_gpio_62
-				&msm_gpio_63 &msm_gpio_69 &msm_gpio_73 &msm_gpio_74
-				&msm_gpio_75 &msm_gpio_76 &msm_gpio_77 &msm_gpio_78
-				&msm_gpio_79 &msm_gpio_81 &msm_gpio_82_suspend &msm_gpio_83
-				&msm_gpio_84 &msm_gpio_85 &msm_gpio_87
-				&msm_gpio_88 &msm_gpio_89 &msm_gpio_90 &msm_gpio_91
-				&msm_gpio_92 &msm_gpio_93 &msm_gpio_94 &msm_gpio_95
-				&msm_gpio_96 &msm_gpio_108 &msm_gpio_112 &msm_gpio_116
-				&msm_gpio_120 &msm_gpio_121 &msm_gpio_122 &msm_gpio_123
-				&msm_gpio_124 &msm_gpio_125 &msm_gpio_126 &msm_gpio_130
-				&msm_gpio_131 &msm_gpio_132 &msm_gpio_141 &msm_gpio_142
-				&msm_gpio_143>;
+				&msm_gpio_45 &msm_gpio_46 &msm_gpio_49 &msm_gpio_50
+				&msm_gpio_51 &msm_gpio_52 &msm_gpio_55 &msm_gpio_56
+				&msm_gpio_57 &msm_gpio_58 &msm_gpio_59 &msm_gpio_60
+				&msm_gpio_61 &msm_gpio_62 &msm_gpio_63 &msm_gpio_69
+				&msm_gpio_73 &msm_gpio_74 &msm_gpio_75 &msm_gpio_76
+				&msm_gpio_77 &msm_gpio_78 &msm_gpio_79 &msm_gpio_81
+				&msm_gpio_82_suspend &msm_gpio_83 &msm_gpio_84
+				&msm_gpio_85 &msm_gpio_87 &msm_gpio_88 &msm_gpio_89
+				&msm_gpio_90 &msm_gpio_91 &msm_gpio_92 &msm_gpio_93
+				&msm_gpio_94 &msm_gpio_95 &msm_gpio_96 &msm_gpio_108
+				&msm_gpio_112 &msm_gpio_116 &msm_gpio_120 &msm_gpio_121
+				&msm_gpio_122 &msm_gpio_123 &msm_gpio_124 &msm_gpio_125
+				&msm_gpio_126 &msm_gpio_130 &msm_gpio_131 &msm_gpio_132
+				&msm_gpio_141 &msm_gpio_142 &msm_gpio_143>;
 
 		/* If product common default setting is needed,
 		   fill pinctrl-1 value in <product>_common.dtsi */
@@ -3005,6 +3002,34 @@
 
 	/* GPIO_149 : RFFE1_CLK */
 	/* Follow QTI */
+
+	i2c_3 { /* BLSP1 QUP3 */
+		i2c_3_active: i2c_3_active {
+			mux {
+				pins = "gpio47", "gpio48";
+				function = "blsp_i2c3";
+			};
+
+			config {
+				pins = "gpio47", "gpio48";
+				drive-strength = <2>;
+				bias-disable;
+			};
+		};
+
+		i2c_3_sleep: i2c_3_sleep {
+			mux {
+				pins = "gpio47", "gpio48";
+				function = "blsp_i2c3";
+			};
+			config {
+				pins = "gpio47", "gpio48";
+				drive-strength = <2>;
+				bias-pull-down;
+				input-enable;
+			};
+		};
+	};
 
 	mdss_touch_active: mdss_touch_active {
 		mux {

@@ -20,8 +20,9 @@
 &soc {
 	/* I2C : BLSP3 */
 	i2c_3: i2c@7577000 { /* BLSP1 QUP2 */
-		pinctrl-1 = <&msm_gpio_47_suspend &msm_gpio_48_suspend>;
 		status = "okay";
+		pinctrl-0 = <&i2c_3_active>;
+		pinctrl-1 = <&i2c_3_sleep>;
 		tcs3490@72 {
 			compatible = "ams,tcs3490";
 			reg = <0x72>;
@@ -66,12 +67,11 @@
 &somc_pinctrl {
 	/* If variant specific default setting is needed,
 	   fill pinctrl-1 value in <variant>.dtsi */
-	pinctrl-1 = <&msm_gpio_25 &msm_gpio_47 &msm_gpio_47_suspend
-		&msm_gpio_48 &msm_gpio_48_suspend
-		&msm_gpio_59 &msm_gpio_60 &msm_gpio_61 &msm_gpio_78
-		&msm_gpio_85_suspend &msm_gpio_86_suspend &msm_gpio_104
-		&msm_gpio_127 &msm_gpio_131>;
-};
+	pinctrl-1 = <&msm_gpio_25 &msm_gpio_59 &msm_gpio_60
+		&msm_gpio_61 &msm_gpio_69 &msm_gpio_78
+		&msm_gpio_85_suspend &msm_gpio_86_suspend
+		&msm_gpio_104 &msm_gpio_127 &msm_gpio_131>;
+	};
 
 
 /{
@@ -126,64 +126,6 @@
 			drive-strength = <2>;
 			bias-disable;
 			output-low;
-		};
-	};
-
-	/* GPIO_47 : RGBC-IR & ToF I2C SDA */
-	msm_gpio_47: msm_gpio_47 {
-		mux {
-			pins = "gpio47";
-			function = "blsp_i2c3";
-		};
-
-		config {
-			pins = "gpio47";
-			drive-strength = <2>;
-			bias-disable;
-			/delete-property/ output-low;
-		};
-	};
-
-	msm_gpio_47_suspend: msm_gpio_47_suspend {
-		mux {
-			pins = "gpio47";
-			function = "blsp_i2c3";
-		};
-
-		config {
-			pins = "gpio47";
-			drive-strength = <2>;
-			bias-pull-down;
-			input-enable;
-		};
-	};
-
-	/* GPIO_48 : RGBC-IR & ToF I2C SCL */
-	msm_gpio_48: msm_gpio_48 {
-		mux {
-			pins = "gpio48";
-			function = "blsp_i2c3";
-		};
-
-		config {
-			pins = "gpio48";
-			drive-strength = <2>;
-			bias-disable;
-			/delete-property/ output-low;
-		};
-	};
-
-	msm_gpio_48_suspend: msm_gpio_48_suspend {
-		mux {
-			pins = "gpio48";
-			function = "blsp_i2c3";
-		};
-
-		config {
-			pins = "gpio48";
-			drive-strength = <2>;
-			bias-pull-down;
-			input-enable;
 		};
 	};
 
