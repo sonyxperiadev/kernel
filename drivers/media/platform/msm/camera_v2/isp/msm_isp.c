@@ -454,16 +454,16 @@ static void isp_vma_close(struct vm_area_struct *vma)
 	pr_debug("%s: close called\n", __func__);
 }
 
-static int isp_vma_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
+static int isp_vma_fault(struct vm_fault *vmf)
 {
 	struct page *page;
-	struct vfe_device *vfe_dev = vma->vm_private_data;
+	struct vfe_device *vfe_dev = vmf->vma->vm_private_data;
 	struct isp_proc *isp_page = NULL;
 
 	isp_page = vfe_dev->isp_page;
 
 	pr_debug("%s: vfeid:%d u_virt_addr:0x%lx k_virt_addr:%pK\n",
-		__func__, vfe_dev->pdev->id, vma->vm_start,
+		__func__, vfe_dev->pdev->id, vmf->vma->vm_start,
 		(void *)isp_page);
 	if (isp_page != NULL) {
 		page = virt_to_page(isp_page);
