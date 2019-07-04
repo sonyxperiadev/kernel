@@ -3446,6 +3446,8 @@ static int sde_parse_merge_3d_dt(struct device_node *np,
 	bool prop_exists[HW_PROP_MAX];
 	struct sde_merge_3d_cfg *merge_3d;
 
+	sde_cfg->merge_3d_count = 0;
+
 	prop_value = kcalloc(HW_PROP_MAX, sizeof(struct sde_prop_value),
 			GFP_KERNEL);
 	if (!prop_value) {
