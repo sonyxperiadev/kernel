@@ -26,11 +26,11 @@
 #include <linux/regulator/consumer.h>
 #include <linux/interrupt.h>
 #include <linux/dma-mapping.h>
-#include <linux/of_gpio.h>
 #include <soc/qcom/subsystem_restart.h>
 #include <soc/qcom/ramdump.h>
 
 #include <linux/soc/qcom/smem.h>
+#include <linux/soc/qcom/smem_state.h>
 
 #include "peripheral-loader.h"
 #include "pil-q6v5.h"
@@ -51,7 +51,7 @@ static void log_modem_sfr(void)
 
 	smem_reason = qcom_smem_get(QCOM_SMEM_HOST_ANY,
 					SMEM_SSR_REASON_MSS0, &size);
-	if (!smem_reason || !size) {
+	if (IS_ERR(smem_reason) || !size) {
 		pr_err("modem subsystem failure reason: "
 			"(unknown, smem_get_entry_no_rlock failed).\n");
 		return;
@@ -105,20 +105,15 @@ static int modem_shutdown(const struct subsys_desc *subsys, bool force_stop)
 		return 0;
 
 	if (!subsys_get_crash_status(drv->subsys) && force_stop &&
-	    subsys->force_stop_gpio) {
-		gpio_set_value(subsys->force_stop_gpio, 1);
+						subsys->state) {
+		qcom_smem_state_update_bits(subsys->state,
+				subsys->force_stop_bit, 1);
 		ret = wait_for_completion_timeout(&drv->stop_ack,
 				msecs_to_jiffies(STOP_ACK_TIMEOUT_MS));
 		if (!ret)
 			pr_warn("Timed out on stop ack from modem.\n");
-		gpio_set_value(subsys->force_stop_gpio, 0);
-	}
-
-	if (drv->subsys_desc.ramdump_disable_gpio) {
-		drv->subsys_desc.ramdump_disable = gpio_get_value(
-					drv->subsys_desc.ramdump_disable_gpio);
-		 pr_warn("Ramdump disable gpio value is %d\n",
-			drv->subsys_desc.ramdump_disable);
+		qcom_smem_state_update_bits(subsys->state,
+				subsys->force_stop_bit, 0);
 	}
 
 	pil_shutdown(&drv->q6->desc);
@@ -149,9 +144,10 @@ static void modem_crash_shutdown(const struct subsys_desc *subsys)
 	struct modem_data *drv = subsys_to_drv(subsys);
 
 	drv->crash_shutdown = true;
-	if (!subsys_get_crash_status(drv->subsys) &&
-		subsys->force_stop_gpio) {
-		gpio_set_value(subsys->force_stop_gpio, 1);
+	if (subsys->state && !subsys_get_crash_status(drv->subsys)) {
+		qcom_smem_state_update_bits(subsys->state,
+			BIT(subsys->force_stop_bit),
+			BIT(subsys->force_stop_bit));
 		mdelay(STOP_ACK_TIMEOUT_MS);
 	}
 }
@@ -202,12 +198,32 @@ static irqreturn_t modem_wdog_bite_intr_handler(int irq, void *dev_id)
 		return IRQ_HANDLED;
 
 	pr_err("Watchdog bite received from modem software!\n");
-	if (drv->subsys_desc.system_debug &&
-			!gpio_get_value(drv->subsys_desc.err_fatal_gpio))
+
+	if (d->subsys_desc.system_debug)
 		panic("%s: System ramdump requested. Triggering device restart!\n",
 							__func__);
 	subsys_set_crash_status(drv->subsys, CRASH_STATUS_WDOG_BITE);
 	restart_modem(drv);
+	return IRQ_HANDLED;
+}
+
+static irqreturn_t modem_shutdown_ack_intr_handler(int irq, void *dev_id)
+{
+	struct modem_data *d = subsys_to_drv(dev_id);
+
+	pr_info("Received stop shutdown interrupt from %s\n",
+			d->subsys_desc.name);
+	complete_shutdown_ack(d->subsys);
+	return IRQ_HANDLED;
+}
+
+static irqreturn_t modem_ramdump_disable_intr_handler(int irq, void *dev_id)
+{
+	struct modem_data *d = subsys_to_drv(dev_id);
+
+	pr_info("Received ramdump disable interrupt from %s\n",
+			d->subsys_desc.name);
+	d->subsys_desc.ramdump_disable = 1;
 	return IRQ_HANDLED;
 }
 
@@ -225,6 +241,10 @@ static int pil_subsys_init(struct modem_data *drv,
 	drv->subsys_desc.crash_shutdown = modem_crash_shutdown;
 	drv->subsys_desc.err_fatal_handler = modem_err_fatal_intr_handler;
 	drv->subsys_desc.stop_ack_handler = modem_stop_ack_intr_handler;
+	drv->subsys_desc.shutdown_ack_handler =
+			modem_shutdown_ack_intr_handler;
+	drv->subsys_desc.ramdump_disable_handler =
+			modem_ramdump_disable_intr_handler;
 	drv->subsys_desc.wdog_bite_handler = modem_wdog_bite_intr_handler;
 
 	if (IS_ERR_OR_NULL(drv->q6)) {
