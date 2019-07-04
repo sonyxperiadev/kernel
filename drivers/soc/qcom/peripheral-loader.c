@@ -1082,6 +1082,9 @@ static int pil_parse_devicetree(struct pil_desc *desc)
 		pr_debug("Unable to read the addr-protect-id for %s\n",
 					desc->name);
 
+	desc->serial_loading = of_property_read_bool(ofnode,
+				"qcom,serial-loading");
+
 	if (desc->ops->proxy_unvote &&
 			of_property_match_string(ofnode, "interrupt-names",
 				"qcom,proxy-unvote") >= 0) {
@@ -1327,7 +1330,7 @@ int pil_boot(struct pil_desc *desc)
 	 * Fallback to serial loading of blobs if the
 	 * workqueue creatation failed during module init.
 	 */
-	if (pil_wq) {
+	if (pil_wq && !desc->serial_loading) {
 		ret = pil_load_segs(desc);
 		if (ret)
 			goto err_deinit_image;
