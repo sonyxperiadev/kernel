@@ -29,7 +29,8 @@
 #include <linux/of_gpio.h>
 #include <soc/qcom/subsystem_restart.h>
 #include <soc/qcom/ramdump.h>
-#include <soc/qcom/smem.h>
+
+#include <linux/soc/qcom/smem.h>
 
 #include "peripheral-loader.h"
 #include "pil-q6v5.h"
@@ -39,25 +40,29 @@
 #define MAX_SSR_REASON_LEN	256U
 #define STOP_ACK_TIMEOUT_MS	1000
 
+#define SMEM_SSR_REASON_MSS0	421
+
 #define subsys_to_drv(d) container_of(d, struct modem_data, subsys_desc)
 
 static void log_modem_sfr(void)
 {
-	u32 size;
+	size_t size;
 	char *smem_reason, reason[MAX_SSR_REASON_LEN];
 
-	smem_reason = smem_get_entry_no_rlock(SMEM_SSR_REASON_MSS0, &size, 0,
-							SMEM_ANY_HOST_FLAG);
+	smem_reason = qcom_smem_get(QCOM_SMEM_HOST_ANY,
+					SMEM_SSR_REASON_MSS0, &size);
 	if (!smem_reason || !size) {
-		pr_err("modem subsystem failure reason: (unknown, smem_get_entry_no_rlock failed).\n");
+		pr_err("modem subsystem failure reason: "
+			"(unknown, smem_get_entry_no_rlock failed).\n");
 		return;
 	}
 	if (!smem_reason[0]) {
-		pr_err("modem subsystem failure reason: (unknown, empty string found).\n");
+		pr_err("modem subsystem failure reason: "
+			"(unknown, empty string found).\n");
 		return;
 	}
 
-	strlcpy(reason, smem_reason, min(size, MAX_SSR_REASON_LEN));
+	strlcpy(reason, smem_reason, min(size, (size_t)MAX_SSR_REASON_LEN));
 	pr_err("modem subsystem failure reason: %s.\n", reason);
 }
 
