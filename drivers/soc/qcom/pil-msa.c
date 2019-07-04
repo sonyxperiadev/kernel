@@ -686,7 +686,7 @@ int pil_mss_reset_load_mba(struct pil_desc *pil)
 
 	md->attrs_dma = 0;
 	md->attrs_dma |= DMA_ATTR_SKIP_ZEROING;
-	md->attrs_dma |= DMA_ATTR_STRONGLY_ORDERED;
+	md->attrs_dma |= DMA_ATTR_PRIVILEGED;
 
 	ret = request_firmware(&dp_fw, dp_name, pil->dev);
 	if (ret) {
@@ -862,7 +862,7 @@ static int pil_msa_auth_modem_mdt(struct pil_desc *pil, const u8 *metadata,
 	trace_pil_func(__func__);
 	dma_dev->coherent_dma_mask = DMA_BIT_MASK(sizeof(dma_addr_t) * 8);
 	attrs |= DMA_ATTR_SKIP_ZEROING;
-	attrs |= DMA_ATTR_STRONGLY_ORDERED;
+	attrs |= DMA_ATTR_PRIVILEGED;
 	/* Make metadata physically contiguous and 4K aligned. */
 	mdata_virt = dma_alloc_attrs(dma_dev, size, &mdata_phys,
 					GFP_KERNEL, attrs);
