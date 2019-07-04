@@ -17,10 +17,6 @@ config PRIMA_WLAN_OKC
 	bool "Enable the Prima WLAN Opportunistic Key Caching feature"
 	default n
 
-config PRIMA_WLAN_11AC_HIGH_TP
-	bool "Enable the Prima WLAN 802.11ac High Throughput option (depends upon kernel support)"
-	default n
-
 config WLAN_FEATURE_11W
 	bool "Enable the WLAN 802.11w Protected Management Frames feature"
 	default n
@@ -71,10 +67,6 @@ config WLAN_OFFLOAD_PACKETS
 	bool "Enable offload packets feature"
 	default n
 
-config WLAN_FEATURE_MEMDUMP
-	bool "Enable MEMDUMP feature"
-	default n
-
 config FEATURE_TSO
 	bool "Enable TCP Segmentation Offload"
 	depends on HELIUMPLUS
@@ -105,7 +97,7 @@ config WLAN_TX_FLOW_CONTROL_V2
 config WLAN_LRO
 	bool "Enable Large Receive Offload"
 	depends on HELIUMPLUS
-	depends on CONFIG_INET_LRO
+	depends on INET_LRO
 	default n
 
 config WLAN_SYNC_TSF
@@ -124,12 +116,44 @@ config QCACLD_WLAN_LFR2
 	bool "Enable the WLAN Legacy Fast Roaming feature Version 2"
 	default n
 
-config FEATURE_DP_TRACE
-	bool "Enable data path trace feature"
-	default n
-
 config WLAN_FEATURE_DISA
 	bool "Enable DISA certification feature"
+	default n
+
+config WLAN_FEATURE_FIPS
+	bool "Enable FIPS certification feature"
+	default n
+
+config WLAN_FEATURE_11AX
+	bool "Enable 11AX(High Efficiency) feature"
+	default n
+
+config ICMP_DISABLE_PS
+	bool "Enable ICMP packet disable powersave feature"
+	default n
+
+config BUILD_TIMESTAMP
+	bool "Embed timestamp in wlan version"
+	default n
+
+config WLAN_FEATURE_FILS
+	bool "Enable FILS feature"
+	default n
+
+config NAN_CONVERGENCE
+	bool "Enable NAN_CONVERGENCE feature"
+	default n
+
+config WLAN_OBJMGR_DEBUG
+	bool "Enable WLAN Obj Mgr Debug services"
+	default n
+
+config WLAN_FEATURE_DFS_OFFLOAD
+	bool "Enable dfs offload feature"
+	default n
+
+config WLAN_FEATURE_SARV1_TO_SARV2
+	bool "Enable conversion of SAR v1 to v2 feature"
 	default n
 
 endif # QCA_CLD_WLAN
