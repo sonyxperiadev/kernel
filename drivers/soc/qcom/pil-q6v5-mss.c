@@ -199,7 +199,7 @@ static irqreturn_t modem_wdog_bite_intr_handler(int irq, void *dev_id)
 
 	pr_err("Watchdog bite received from modem software!\n");
 
-	if (d->subsys_desc.system_debug)
+	if (drv->subsys_desc.system_debug)
 		panic("%s: System ramdump requested. Triggering device restart!\n",
 							__func__);
 	subsys_set_crash_status(drv->subsys, CRASH_STATUS_WDOG_BITE);
