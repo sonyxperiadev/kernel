@@ -60,6 +60,8 @@
 
 		qcom,sde-mixer-off = <0x45000 0x47000>;
 		qcom,sde-mixer-size = <0x2bc>;
+		qcom,sde-mixer-display-pref = "primary", "none";
+		qcom,sde-mixer-cwb-pref = "none", "cwb";
 
 		qcom,sde-dspp-top-off = <0x1300>;
 		qcom,sde-dspp-top-size = <0xc>;
@@ -105,6 +107,7 @@
 		qcom,sde-sspp-src-size = <0x184>;
 
 		qcom,sde-sspp-xin-id = <0 1 5 9 2>;
+		qcom,sde-sspp-excl-rect = <1 1 1 1 1>;
 
 		qcom,sde-has-dest-scaler;
 		qcom,sde-max-dest-scaler-input-linewidth = <2048>;
@@ -118,6 +121,10 @@
 		qcom,sde-mixer-blend-op-off = <0x20 0x50 0x80 0xb0
 					       0x230 0x260 0x290>;
 
+		qcom,sde-max-per-pipe-bw-kbps = <3200000
+						 3200000 3200000
+						 3200000 3200000>;
+
 		/* offsets are relative to "mdp_phys + qcom,sde-off */
 		qcom,sde-sspp-clk-ctrl = <0x2ac 0>, <0x2ac 8>, <0x2b4 8>,
 					 <0x2c4 8>, <0x3a8 16>;
@@ -125,10 +132,14 @@
 		qcom,sde-sspp-csc-off = <0x1a00>;
 		qcom,sde-csc-type = "csc-10bit";
 		qcom,sde-qseed-type = "qseedv3";
+		qcom,sde-sspp-qseed-off = <0xa00>;
 		qcom,sde-mixer-linewidth = <2048>;
 		qcom,sde-sspp-linewidth = <2048>;
+		qcom,sde-wb-linewidth = <2048>;
 		qcom,sde-mixer-blendstages = <0x7>;
 		qcom,sde-highest-bank-bit = <0x1>;
+		qcom,sde-ubwc-version = <0x100>;
+
 		qcom,sde-panic-per-pipe;
 		qcom,sde-has-cdp;
 		qcom,sde-has-src-split;
@@ -141,9 +152,6 @@
 		qcom,sde-min-dram-ib-kbps = <800000>;
 		qcom,sde-dram-channels = <2>;
 		qcom,sde-num-nrt-paths = <1>;
-
-		qcom,sde-vbif-qos-rt-remap = <1 2 2 2>;
-		qcom,sde-vbif-qos-nrt-remap = <1 1 1 1>;
 
 		qcom,sde-danger-lut = <0x0000000f 0x0000ffff 0x00000000
 			0x00000000>;
@@ -182,9 +190,18 @@
 		qcom,sde-qos-lut-cwb =
 			<0 0x00000000 0x00000000>;
 
+		qcom,sde-reg-dma-off = <0>;
+		qcom,sde-reg-dma-version = <0x00010001>;
+		qcom,sde-reg-dma-trigger-off = <0x119c>;
+
 		qcom,sde-vbif-off = <0>;
 		qcom,sde-vbif-size = <0x1040>;
 		qcom,sde-vbif-id = <0>;
+		qcom,sde-vbif-memtype-0 = <3 3 3 3>;
+		qcom,sde-vbif-memtype-1 = <3 3 3 3>;
+		qcom,sde-vbif-qos-rt-remap = <1 2 2 2>;
+		qcom,sde-vbif-qos-nrt-remap = <1 1 1 1>;
+
 		qcom,sde-vbif-default-ot-rd-limit = <32>;
 		qcom,sde-vbif-default-ot-wr-limit = <32>;
 /*		qcom,sde-vbif-dynamic-ot-rd-limit = <62208000 2>,
