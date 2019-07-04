@@ -1894,6 +1894,8 @@
 		qcom,qdsp6v62-1-5;
 		memory-region = <&modem_fw_mem>;
 		qcom,mem-protect-id = <0xF>;
+		qcom,mas-crypto = <&mas_crypto_c0>;
+		qcom,serial-loading;
 
 		/* GPIO inputs from mss */
 		interrupts-extended = <&intc 0 448 1>,
