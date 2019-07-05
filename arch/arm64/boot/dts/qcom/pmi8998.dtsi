@@ -348,124 +348,100 @@
 		#address-cells = <2>;
 		#size-cells = <0>;
 
-		pmi8998_pwm_1: pwm@b100 {
-			compatible = "qcom,qpnp-pwm";
-			reg = <0xb100 0x100>,
-			      <0xb042 0x7e>;
-			reg-names = "qpnp-lpg-channel-base",
-				    "qpnp-lpg-lut-base";
-			qcom,lpg-lut-size = <0x7e>;
-			qcom,channel-id = <1>;
-			qcom,supported-sizes = <6>, <9>;
-			qcom,ramp-index = <0>;
+		pmi8998_pwms: qcom,pwms@b100 {
+			compatible = "qcom,pwm-lpg";
+			reg = <0xb100 0x700>, <0xb042 0x7e>;
+			reg-names = "lpg-base", "lut-base";
 			#pwm-cells = <2>;
-			status = "disabled";
+			qcom,num-lpg-channels = <6>;
+			qcom,lut-patterns = <0 10 20 30 40 50 60 70 80 90 100
+						90 80 70 60 50 40 30 20 10 0>;
+
+			lpg1 {
+				qcom,lpg-chan-id = <1>;
+				qcom,ramp-step-ms = <100>;
+				qcom,ramp-pause-hi-count = <2>;
+				qcom,ramp-pause-lo-count = <2>;
+				qcom,ramp-low-index = <0>;
+				qcom,ramp-high-index = <20>;
+				qcom,ramp-from-low-to-high;
+				qcom,ramp-pattern-repeat;
+			};
+
+			lpg2 {
+				qcom,lpg-chan-id = <2>;
+				qcom,ramp-step-ms = <100>;
+				qcom,ramp-pause-hi-count = <2>;
+				qcom,ramp-pause-lo-count = <2>;
+				qcom,ramp-low-index = <0>;
+				qcom,ramp-high-index = <20>;
+				qcom,ramp-from-low-to-high;
+				qcom,ramp-pattern-repeat;
+			};
+
+			lpg3 {
+				qcom,lpg-chan-id = <3>;
+				qcom,ramp-step-ms = <100>;
+				qcom,ramp-pause-hi-count = <2>;
+				qcom,ramp-pause-lo-count = <2>;
+				qcom,ramp-low-index = <0>;
+				qcom,ramp-high-index = <20>;
+				qcom,ramp-from-low-to-high;
+				qcom,ramp-pattern-repeat;
+			};
+
+			lpg4 {
+				qcom,lpg-chan-id = <4>;
+				qcom,ramp-step-ms = <100>;
+				qcom,ramp-pause-hi-count = <2>;
+				qcom,ramp-pause-lo-count = <2>;
+				qcom,ramp-low-index = <0>;
+				qcom,ramp-high-index = <20>;
+			};
+
+			lpg5 {
+				qcom,lpg-chan-id = <5>;
+				qcom,ramp-step-ms = <100>;
+				qcom,ramp-pause-hi-count = <2>;
+				qcom,ramp-pause-lo-count = <2>;
+				qcom,ramp-low-index = <0>;
+				qcom,ramp-high-index = <20>;
+			};
+
+			lpg6 {
+				qcom,lpg-chan-id = <6>;
+				qcom,ramp-step-ms = <100>;
+				qcom,ramp-pause-hi-count = <2>;
+				qcom,ramp-pause-lo-count = <2>;
+				qcom,ramp-low-index = <0>;
+				qcom,ramp-high-index = <20>;
+			};
 		};
 
-		pmi8998_pwm_2: pwm@b200 {
-			compatible = "qcom,qpnp-pwm";
-			reg = <0xb200 0x100>,
-			      <0xb042 0x7e>;
-			reg-names = "qpnp-lpg-channel-base",
-				    "qpnp-lpg-lut-base";
-			qcom,lpg-lut-size = <0x7e>;
-			qcom,channel-id = <2>;
-			qcom,supported-sizes = <6>, <9>;
-			qcom,ramp-index = <1>;
-			#pwm-cells = <2>;
-			status = "disabled";
-		};
-
-		pmi8998_pwm_3: pwm@b300 {
-			compatible = "qcom,qpnp-pwm";
-			reg = <0xb300 0x100>,
-			      <0xb042 0x7e>;
-			reg-names = "qpnp-lpg-channel-base",
-				    "qpnp-lpg-lut-base";
-			qcom,lpg-lut-size = <0x7e>;
-			qcom,channel-id = <3>;
-			qcom,supported-sizes = <6>, <9>;
-			qcom,ramp-index = <2>;
-			#pwm-cells = <2>;
-		};
-
-		pmi8998_pwm_4: pwm@b400 {
-			compatible = "qcom,qpnp-pwm";
-			reg = <0xb400 0x100>,
-			      <0xb042 0x7e>;
-			reg-names = "qpnp-lpg-channel-base",
-				    "qpnp-lpg-lut-base";
-			qcom,lpg-lut-size = <0x7e>;
-			qcom,channel-id = <4>;
-			qcom,supported-sizes = <6>, <9>;
-			qcom,ramp-index = <3>;
-			#pwm-cells = <2>;
-		};
-
-		pmi8998_pwm_5: pwm@b500 {
-			compatible = "qcom,qpnp-pwm";
-			reg = <0xb500 0x100>,
-			      <0xb042 0x7e>;
-			reg-names = "qpnp-lpg-channel-base",
-				    "qpnp-lpg-lut-base";
-			qcom,lpg-lut-size = <0x7e>;
-			qcom,channel-id = <5>;
-			qcom,supported-sizes = <6>, <9>;
-			qcom,ramp-index = <4>;
-			#pwm-cells = <2>;
-		};
-
-		pmi8998_pwm_6: pwm@b600 {
-			compatible = "qcom,qpnp-pwm";
-			reg = <0xb600 0x100>,
-			      <0xb042 0x7e>;
-			reg-names = "qpnp-lpg-channel-base",
-				    "qpnp-lpg-lut-base";
-			qcom,lpg-lut-size = <0x7e>;
-			qcom,channel-id = <6>;
-			qcom,supported-sizes = <6>, <9>;
-			qcom,ramp-index = <5>;
-			#pwm-cells = <2>;
-			status = "disabled";
-		};
 
 		qcom,leds@d000 {
-			compatible = "qcom,leds-qpnp";
+			compatible = "qcom,tri-led";
 			reg = <0xd000 0x100>;
 			label = "rgb";
 			status = "okay";
 
-			red_led: qcom,rgb_0 {
-				label = "rgb";
-				qcom,id = <3>;
-				qcom,mode = "pwm";
-				pwms = <&pmi8998_pwm_5 0 0>;
-				qcom,pwm-us = <1000>;
-				qcom,max-current = <12>;
-				qcom,default-state = "off";
-				linux,name = "red";
+			red {
+				label = "red";
+				pwms = <&pmi8998_pwms 2 1000000>;
+				led-sources = <0>;
+				linux,default-trigger = "timer";
 			};
-
-			green_led: qcom,rgb_1 {
-				label = "rgb";
-				qcom,id = <4>;
-				qcom,mode = "pwm";
-				pwms = <&pmi8998_pwm_4 0 0>;
-				qcom,pwm-us = <1000>;
-				qcom,max-current = <12>;
-				qcom,default-state = "off";
-				linux,name = "green";
+			green {
+				label = "green";
+				pwms = <&pmi8998_pwms 1 1000000>;
+				led-sources = <1>;
+				linux,default-trigger = "timer";
 			};
-
-			blue_led: qcom,rgb_2 {
-				label = "rgb";
-				qcom,id = <5>;
-				qcom,mode = "pwm";
-				pwms = <&pmi8998_pwm_3 0 0>;
-				qcom,pwm-us = <1000>;
-				qcom,max-current = <12>;
-				qcom,default-state = "off";
-				linux,name = "blue";
+			blue {
+				label = "blue";
+				pwms = <&pmi8998_pwms 0 1000000>;
+				led-sources = <2>;
+				linux,default-trigger = "timer";
 			};
 		};
 
@@ -551,33 +527,23 @@
 		};
 
 		pmi8998_wled: qcom,leds@d800 {
-			compatible = "qcom,qpnp-wled";
-			reg = <0xd800 0x100>,
-			      <0xd900 0x100>;
-			reg-names = "qpnp-wled-ctrl-base",
-				    "qpnp-wled-sink-base";
+			compatible = "qcom,pmi8998-spmi-wled";
+			reg = <0xd800 0x100>, <0xd900 0x100>;
+			reg-names = "wled-ctrl-base", "wled-sink-base";
 			interrupts = <0x3 0xd8 0x1 IRQ_TYPE_EDGE_RISING>,
 				     <0x3 0xd8 0x2 IRQ_TYPE_EDGE_RISING>;
 			interrupt-names = "ovp-irq", "sc-irq";
+			label = "backlight";
+
 			linux,name = "wled";
 			linux,default-trigger = "bkl-trigger";
-			qcom,fdbk-output = "auto";
-			qcom,vref-uv = <127500>;
-			qcom,switch-freq-khz = <800>;
-			qcom,ovp-mv = <29600>;
-			qcom,ilim-ma = <970>;
-			qcom,boost-duty-ns = <26>;
-			qcom,mod-freq-khz = <9600>;
-			qcom,dim-mode = "hybrid";
-			qcom,hyb-thres = <625>;
-			qcom,sync-dly-us = <800>;
-			qcom,fs-curr-ua = <25000>;
-			qcom,cons-sync-write-delay-us = <1000>;
-			qcom,led-strings-list = [00 01 02 03];
-			qcom,en-ext-pfet-sc-pro;
-			qcom,pmic-revid = <&pmi8998_revid>;
-			qcom,loop-auto-gm-en;
-			qcom,auto-calibration-enable;
+
+			qcom,ovp = <29600>;
+			qcom,fs-current-limit = <25000>;
+			qcom,boost-current-limit = <970>;
+			qcom,switching-freq = <800>; /* 800KHz */
+			qcom,string-cfg = <9>; /* 00 01 02 */
+
 			status = "disabled";
 		};
 
