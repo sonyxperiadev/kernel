@@ -51,8 +51,18 @@
 	};
 };
 
+&sde_dsi_yoshino_panels {
+	/* Only one possible panel on PROD SoMC Maple */
+	somc,bootloader-panel-detect;
+
+	/* Dual DSI single panel, clocked from MUX 0 */
+	qcom,dsi-ctrl-num = <0 1>;
+	qcom,dsi-phy-num = <0 1>;
+
+	qcom,dsi-panel = <&sde_dsi_dual0_6_panel>;
+};
+
 &dsi_panel_cmd_display {
 	qcom,dsi-ctrl = <&sde_dsi0 &sde_dsi1>;
 	qcom,dsi-phy = <&mdss_dsi_phy0 &mdss_dsi_phy1>;
-	qcom,dsi-panel = <&sde_dsi_dual0_6_panel>;
 };
