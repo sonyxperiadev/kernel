@@ -135,6 +135,14 @@ msm_drm.dsi_display0=dsi_panel_somc_yoshino_cmd:config0";
 	};
 };
 
+&mdss_dp_pll {
+	status = "disabled";
+};
+
 &sde_dsi0 {
 	qcom,cont-splash-enabled;
+};
+
+&sde_kms {
+	connectors = <&sde_wb &dsi_panel_cmd_display>;
 };
