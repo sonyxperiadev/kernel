@@ -28,6 +28,7 @@
 #include <dt-bindings/soc/qcom,dcc_v2.h>
 
 #define MHZ_TO_MBPS(mhz, w) ((mhz * 1000000 * w) / (1024 * 1024))
+#define BW_OPP_ENTRY(mhz, w) opp-mhz {opp-hz = /bits/ 64 <MHZ_TO_MBPS(mhz, w)>;}
 
 / {
 	model = "Qualcomm Technologies, Inc. SDM845";
@@ -964,19 +965,37 @@
 		};
 	};
 
+	ddr_bw_opp_table: ddr-bw-opp-table {
+		compatible = "operating-points-v2";
+		BW_OPP_ENTRY( 200, 4), /* 762 MB/s */
+		BW_OPP_ENTRY( 300, 4), /* 1144 MB/s */
+		BW_OPP_ENTRY( 451, 4), /* 1720 MB/s */
+		BW_OPP_ENTRY( 547, 4), /* 2086 MB/s */
+		BW_OPP_ENTRY( 681, 4), /* 2597 MB/s */
+		BW_OPP_ENTRY( 768, 4), /* 2929 MB/s */
+		BW_OPP_ENTRY(1017, 4), /* 3879 MB/s */
+		BW_OPP_ENTRY(1296, 4), /* 4943 MB/s */
+		BW_OPP_ENTRY(1555, 4), /* 5931 MB/s */
+		BW_OPP_ENTRY(1804, 4); /* 6881 MB/s */
+	};
+
+	llcc_bw_opp_table: llcc-bw-opp-table {
+		compatible = "operating-points-v2";
+		BW_OPP_ENTRY(150, 16), /*  2288 MB/s */
+		BW_OPP_ENTRY(300, 16), /*  4577 MB/s */
+		BW_OPP_ENTRY(426, 16), /*  6500 MB/s */
+		BW_OPP_ENTRY(533, 16), /*  8132 MB/s */
+		BW_OPP_ENTRY(600, 16), /*  9155 MB/s */
+		BW_OPP_ENTRY(700, 16); /* 10681 MB/s */
+	};
+
 	cpubw: qcom,cpubw {
 		compatible = "qcom,devbw";
 		governor = "performance";
 		qcom,src-dst-ports =
 			<MSM_BUS_MASTER_AMPSS_M0 MSM_BUS_SLAVE_LLCC>;
 		qcom,active-only;
-		qcom,bw-tbl =
-			< MHZ_TO_MBPS(150, 16) >, /*  2288 MB/s */
-			< MHZ_TO_MBPS(300, 16) >, /*  4577 MB/s */
-			< MHZ_TO_MBPS(426, 16) >, /*  6500 MB/s */
-			< MHZ_TO_MBPS(533, 16) >, /*  8132 MB/s */
-			< MHZ_TO_MBPS(600, 16) >, /*  9155 MB/s */
-			< MHZ_TO_MBPS(700, 16) >; /* 10681 MB/s */
+		operating-points-v2 = <&llcc_bw_opp_table>;
 	};
 
 	bwmon: qcom,cpu-bwmon {
@@ -995,17 +1014,7 @@
 		qcom,src-dst-ports =
 			<MSM_BUS_MASTER_LLCC MSM_BUS_SLAVE_EBI_CH0>;
 		qcom,active-only;
-		qcom,bw-tbl =
-			< MHZ_TO_MBPS( 200, 4) >, /* 762 MB/s */
-			< MHZ_TO_MBPS( 300, 4) >, /* 1144 MB/s */
-			< MHZ_TO_MBPS( 451, 4) >, /* 1720 MB/s */
-			< MHZ_TO_MBPS( 547, 4) >, /* 2086 MB/s */
-			< MHZ_TO_MBPS( 681, 4) >, /* 2597 MB/s */
-			< MHZ_TO_MBPS( 768, 4) >, /* 2929 MB/s */
-			< MHZ_TO_MBPS(1017, 4) >, /* 3879 MB/s */
-			< MHZ_TO_MBPS(1296, 4) >, /* 4943 MB/s */
-			< MHZ_TO_MBPS(1555, 4) >, /* 5931 MB/s */
-			< MHZ_TO_MBPS(1804, 4) >; /* 6881 MB/s */
+		operating-points-v2 = <&ddr_bw_opp_table>;
 	};
 
 	llcc_bwmon: qcom,llcc-bwmon {
@@ -1025,17 +1034,7 @@
 		governor = "powersave";
 		qcom,src-dst-ports = <1 512>;
 		qcom,active-only;
-		qcom,bw-tbl =
-			< MHZ_TO_MBPS( 200, 4) >, /* 762 MB/s */
-			< MHZ_TO_MBPS( 300, 4) >, /* 1144 MB/s */
-			< MHZ_TO_MBPS( 451, 4) >, /* 1720 MB/s */
-			< MHZ_TO_MBPS( 547, 4) >, /* 2086 MB/s */
-			< MHZ_TO_MBPS( 681, 4) >, /* 2597 MB/s */
-			< MHZ_TO_MBPS( 768, 4) >, /* 2929 MB/s */
-			< MHZ_TO_MBPS(1017, 4) >, /* 3879 MB/s */
-			< MHZ_TO_MBPS(1296, 4) >, /* 4943 MB/s */
-			< MHZ_TO_MBPS(1555, 4) >, /* 5931 MB/s */
-			< MHZ_TO_MBPS(1804, 4) >; /* 6881 MB/s */
+		operating-points-v2 = <&ddr_bw_opp_table>;
 	};
 
 	memlat_cpu4: qcom,memlat-cpu4 {
@@ -1044,17 +1043,7 @@
 		qcom,src-dst-ports = <1 512>;
 		qcom,active-only;
 		status = "ok";
-		qcom,bw-tbl =
-			< MHZ_TO_MBPS( 200, 4) >, /* 762 MB/s */
-			< MHZ_TO_MBPS( 300, 4) >, /* 1144 MB/s */
-			< MHZ_TO_MBPS( 451, 4) >, /* 1720 MB/s */
-			< MHZ_TO_MBPS( 547, 4) >, /* 2086 MB/s */
-			< MHZ_TO_MBPS( 681, 4) >, /* 2597 MB/s */
-			< MHZ_TO_MBPS( 768, 4) >, /* 2929 MB/s */
-			< MHZ_TO_MBPS(1017, 4) >, /* 3879 MB/s */
-			< MHZ_TO_MBPS(1296, 4) >, /* 4943 MB/s */
-			< MHZ_TO_MBPS(1555, 4) >, /* 5931 MB/s */
-			< MHZ_TO_MBPS(1804, 4) >; /* 6881 MB/s */
+		operating-points-v2 = <&ddr_bw_opp_table>;
 	};
 
 	snoc_cnoc_keepalive: qcom,snoc_cnoc_keepalive {
@@ -1157,17 +1146,7 @@
 		governor = "powersave";
 		qcom,src-dst-ports = <1 512>;
 		qcom,active-only;
-		qcom,bw-tbl =
-			< MHZ_TO_MBPS( 200, 4) >, /* 762 MB/s */
-			< MHZ_TO_MBPS( 300, 4) >, /* 1144 MB/s */
-			< MHZ_TO_MBPS( 451, 4) >, /* 1720 MB/s */
-			< MHZ_TO_MBPS( 547, 4) >, /* 2086 MB/s */
-			< MHZ_TO_MBPS( 681, 4) >, /* 2597 MB/s */
-			< MHZ_TO_MBPS( 768, 4) >, /* 2929 MB/s */
-			< MHZ_TO_MBPS(1017, 4) >, /* 3879 MB/s */
-			< MHZ_TO_MBPS(1296, 4) >, /* 4943 MB/s */
-			< MHZ_TO_MBPS(1555, 4) >, /* 5931 MB/s */
-			< MHZ_TO_MBPS(1804, 4) >; /* 6881 MB/s */
+		operating-points-v2 = <&ddr_bw_opp_table>;
 	};
 
 	devfreq_cpufreq: devfreq-cpufreq {
