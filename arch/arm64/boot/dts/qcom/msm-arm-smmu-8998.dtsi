@@ -83,6 +83,7 @@
 		qcom,use-3-lvl-tables;
 		qcom,register-save;
 		qcom,skip-init;
+		qcom,no-actlr-read;
 		#global-interrupts = <0>;
 		interrupts = <GIC_SPI 226 IRQ_TYPE_LEVEL_HIGH>,
 			   <GIC_SPI 393 IRQ_TYPE_LEVEL_HIGH>,
