@@ -61,7 +61,6 @@ static int vdd_gpucc_corner[] = {
 	VDD_GFX_SVS_PLUS,	/* LOW:  SVS+		*/
 	VDD_GFX_NOMINAL,	/*       NOMINAL	*/
 	VDD_GFX_TURBO,		/* HIGH: TURBO		*/
-	VDD_GFX_TURBO_L1,	/* HIGH: TURBO_L1	*/
 	VDD_GFX_SUPER_TURBO,	/* HIGH: SUPER_TURBO	*/
 };
 
