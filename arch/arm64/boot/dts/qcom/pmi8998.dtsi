@@ -544,6 +544,7 @@
 			qcom,switching-freq = <800>; /* 800KHz */
 			qcom,string-cfg = <9>; /* 00 01 02 */
 
+			qcom,pmic-revid = <&pmi8998_revid>;
 			status = "disabled";
 		};
 
