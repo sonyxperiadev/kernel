@@ -292,33 +292,6 @@
 	regulator-max-microvolt = <5600000>;
 };
 
-&red_led {
-	somc,color_variation_max_num = <4>;
-	somc,max_current = <
-		26 126 90
-		27 82 72
-		28 82 72
-		29 110 72>;
-};
-
-&green_led {
-	somc,color_variation_max_num = <4>;
-	somc,max_current = <
-		26 86 136
-		27 80 160
-		28 82 160
-		29 78 160>;
-};
-
-&blue_led {
-	somc,color_variation_max_num = <4>;
-	somc,max_current = <
-		26 307 100
-		27 305 118
-		28 285 118
-		29 277 118>;
-};
-
 &pmi8998_wled {
 	somc,calc-curr;
 	somc,area_count_table_size = <24>;

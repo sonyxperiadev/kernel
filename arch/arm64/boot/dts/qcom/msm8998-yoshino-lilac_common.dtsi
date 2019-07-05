@@ -135,40 +135,13 @@
 };
 
 &pmi8998_wled {
-	qcom,led-strings-list = [00 01];
-	qcom,fs-curr-ua = <17500>;
+	qcom,string-cfg = <5>;
+	qcom,fs-current-limit = <17500>;
 	somc,area_count_table_size = <21>;
 	somc,area_count_table = <0 137 273 410 546 683 819 956
 				1092 1229 1365 1638 1911 2184 2457
 				2730 3003 3276 3549 3822 4095>;
 	somc,init-br-ua = <8500>;
-};
-
-&red_led {
-	somc,color_variation_max_num = <4>;
-	somc,max_current = <
-		34 510 419
-		35 498 348
-		36 498 348
-		37 498 348>;
-};
-
-&green_led {
-	somc,color_variation_max_num = <4>;
-	somc,max_current = <
-		34 400 500
-		35 360 500
-		36 360 500
-		37 360 500>;
-};
-
-&blue_led {
-	somc,color_variation_max_num = <4>;
-	somc,max_current = <
-		34 510 290
-		35 500 228
-		36 500 228
-		37 500 228>;
 };
 
 &tlmm {

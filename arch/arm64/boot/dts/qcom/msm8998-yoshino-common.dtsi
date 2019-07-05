@@ -3250,65 +3250,41 @@
 		status = "okay";
 		qcom,rgb_sync = <1>;
 	};
-};
 
-&red_led {
-	somc,pwm-channel = <4>;
-	linux,name = "led:rgb_red";
-	linux,default-trigger = "none";
-	qcom,start-idx = <0>;
-	qcom,idx-len = <8>;
-	qcom,lut-flags = <31>;
-	qcom,pause-lo = <500>;
-	qcom,pause-hi = <500>;
-	qcom,ramp-step-ms = <50>;
-	qcom,duty-pcts = [00 0E 1C 2A 38 46 54 64];
-	qcom,use-blink;
-	somc,color_variation_max_num = <4>;
-	somc,max_current = <
-		18 511 511
-		19 511 511
-		20 511 511
-		21 511 511>;
-};
-&green_led {
-	somc,pwm-channel = <3>;
-	linux,name = "led:rgb_green";
-	linux,default-trigger = "none";
-	qcom,start-idx = <0>;
-	qcom,idx-len = <8>;
-	qcom,lut-flags = <31>;
-	qcom,pause-lo = <500>;
-	qcom,pause-hi = <500>;
-	qcom,ramp-step-ms = <50>;
-	qcom,duty-pcts = [00 0E 1C 2A 38 46 54 64];
-	qcom,use-blink;
-	somc,color_variation_max_num = <4>;
-	somc,max_current = <
-		18 511 511
-		19 511 511
-		20 511 511
-		21 511 511>;
-};
-
-&blue_led {
-	somc,pwm-channel = <2>;
-	linux,name = "led:rgb_blue";
-	linux,default-trigger = "none";
-	qcom,start-idx = <0>;
-	qcom,idx-len = <8>;
-	qcom,lut-flags = <31>;
-	qcom,pause-lo = <500>;
-	qcom,pause-hi = <500>;
-	qcom,ramp-step-ms = <50>;
-	qcom,duty-pcts = [00 0E 1C 2A 38 46 54 64];
-	qcom,use-blink;
-	somc,color_variation_max_num = <4>;
-	somc,max_current = <
-		18 511 511
-		19 511 511
-		20 511 511
-		21 511 511>;
+	qcom,leds-xboot@d800 {
+		compatible = "qcom,qpnp-wled";
+		reg = <0xd800 0x100>,
+		      <0xd900 0x100>;
+		reg-names = "qpnp-wled-ctrl-base",
+			    "qpnp-wled-sink-base";
+		interrupts = <0x3 0xd8 0x1 IRQ_TYPE_EDGE_RISING>,
+			     <0x3 0xd8 0x2 IRQ_TYPE_EDGE_RISING>;
+		interrupt-names = "ovp-irq", "sc-irq";
+		linux,name = "wled";
+		linux,default-trigger = "bkl-trigger";
+		qcom,fdbk-output = "auto";
+		qcom,vref-uv = <127500>;
+		qcom,switch-freq-khz = <800>;
+		qcom,ovp-mv = <29600>;
+		qcom,ilim-ma = <970>;
+		qcom,boost-duty-ns = <26>;
+		qcom,mod-freq-khz = <9600>;
+		qcom,dim-mode = "hybrid";
+		qcom,hyb-thres = <625>;
+		qcom,sync-dly-us = <800>;
+		qcom,fs-curr-ua = <25000>;
+		qcom,cons-sync-write-delay-us = <1000>;
+		qcom,led-strings-list = [00 01 02 03];
+		qcom,en-ext-pfet-sc-pro;
+		qcom,pmic-revid = <&pmi8998_revid>;
+		qcom,loop-auto-gm-en;
+		qcom,auto-calibration-enable;
+		somc,init-br-ua = <10000>;
+		somc-s1,br-power-save-ua = <800>;
+		somc,bl-scale-enabled;
+		somc,area_count_table_size = <0>;
+		status = "okay";
+	};
 };
 
 &spmi_bus {
@@ -3326,11 +3302,11 @@
 &pmi8998_wled {
 	linux,name = "wled";
 	qcom,fs-curr-ua = <24000>;
-	qcom,led-strings-list = [00 01 02];
 	somc,init-br-ua = <10000>;
 	somc-s1,br-power-save-ua = <800>;
 	somc,bl-scale-enabled;
 	somc,area_count_table_size = <0>;
+	qcom,string-cfg = <7>;
 };
 
 &flash_led {

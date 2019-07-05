@@ -301,35 +301,8 @@
 };
 
 &pmi8998_wled {
-	qcom,ilim-ma = <620>;
-	qcom,fs-curr-ua = <20000>;
-};
-
-&red_led {
-	somc,color_variation_max_num = <4>;
-	somc,max_current = <
-		30 50 28
-		31 30 22
-		32 30 22
-		33 30 22>;
-};
-
-&green_led {
-	somc,color_variation_max_num = <4>;
-	somc,max_current = <
-		30 18 28
-		31 16 30
-		32 16 30
-		33 16 30>;
-};
-
-&blue_led {
-	somc,color_variation_max_num = <4>;
-	somc,max_current = <
-		30 56 12
-		31 44 12
-		32 52 12
-		33 44 12>;
+	qcom,boost-current-limit = <620>;
+	qcom,fs-current-limit = <20000>;
 };
 
 &lab_regulator {
