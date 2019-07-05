@@ -1464,7 +1464,7 @@ static int __init socinfo_init_sysfs(void)
 	struct soc_device *soc_dev;
 	struct soc_device_attribute *soc_dev_attr;
 
-	if (!socinfo) {
+	if (IS_ERR_OR_NULL(socinfo)) {
 		pr_err("No socinfo found!\n");
 		return -ENODEV;
 	}
@@ -1707,8 +1707,8 @@ int __init socinfo_init(void)
 
 	socinfo = qcom_smem_get(QCOM_SMEM_HOST_ANY, SMEM_HW_SW_BUILD_ID, &size);
 	if (IS_ERR_OR_NULL(socinfo)) {
-		if (socinfo == -EPROBE_DEFER)
-			return socinfo;
+		if (PTR_ERR(socinfo) == -EPROBE_DEFER)
+			return PTR_ERR(socinfo);
 
 		pr_warn("Can't find SMEM_HW_SW_BUILD_ID; falling back on dummy values.\n");
 		socinfo = setup_dummy_socinfo();
