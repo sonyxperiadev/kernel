@@ -25,7 +25,7 @@
 
 		bootargs = \
 "rcupdate.rcu_expedited=1 \
-msm_drm.dsi_display0=dsi_panel_cmd_display:config0";
+msm_drm.dsi_display0=dsi_panel_somc_yoshino_cmd:config0";
 
 	};
 };
@@ -91,17 +91,26 @@ msm_drm.dsi_display0=dsi_panel_cmd_display:config0";
 		};
 	};
 
+	sde_dsi_yoshino_panels: qcom,dsi-display@8 {
+		label = "dsi_panel_somc_yoshino_cmd";
+		qcom,display-type = "primary";
+
+		qcom,dsi-ctrl-num = <0>;
+		qcom,dsi-phy-num = <0>;
+
+		qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+	};
+
 	/* SDE */
 	dsi_panel_cmd_display: qcom,dsi-display@12 {
 		compatible = "somc,dsi-display";
-		label = "dsi_panel_cmd_display";
-		qcom,display-type = "primary";
+		label = "primary";
 
 		qcom,dsi-ctrl = <&sde_dsi0>;
 		qcom,dsi-phy = <&mdss_dsi_phy0>;
 		clocks = <&mdss_dsi0_pll BYTECLK_MUX_0_CLK>,
 			<&mdss_dsi0_pll PCLK_MUX_0_CLK>;
-		clock-names = "src_byte_clk", "src_pixel_clk";
+		clock-names = "mux_byte_clk0", "mux_pixel_clk0";
 
 		pinctrl-names = "panel_active", "panel_suspend",
 				"sde_touch_active", "sde_touch_suspend";
@@ -117,11 +126,12 @@ msm_drm.dsi_display0=dsi_panel_cmd_display:config0";
 		qcom,platform-touch-vddio-en-gpio = <&tlmm 133 0>;
 		qcom,platform-touch-reset-gpio = <&tlmm 89 0>;
 		somc,disp-dcdc-en-gpio = <&pmi8998_gpios 10 0>;
-		qcom,dsi-panel = <&sde_dsi_8>;
 		vddio-supply = <&pm8998_l14>;
 		touch-avdd-supply = <&pm8998_l28>;
 		lab-supply = <&lab_regulator>;
 		ibb-supply = <&ibb_regulator>;
+
+		qcom,dsi-display-list = <&sde_dsi_yoshino_panels>;
 	};
 };
 
