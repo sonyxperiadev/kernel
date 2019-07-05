@@ -1723,7 +1723,7 @@ msm_serial_early_write_dm(struct console *con, const char *s, unsigned n)
 	__msm_console_write(&dev->port, s, n, true);
 }
 
-#ifdef CONFIG_SERIAL_MSM_RESTORE_TX_PIN_TLMM_ADDR
+#ifdef CONFIG_SERIAL_MSM_RESTORE_TX_PIN_TLMM
  #define MSM_PINCONF_2MA_NO_PULL		0x8
 static void __init somc_restore_pins_earliest(void)
 {
@@ -1752,7 +1752,7 @@ static int __init
 msm_serial_early_console_setup_dm(struct earlycon_device *device,
 				  const char *opt)
 {
-#ifdef CONFIG_SERIAL_MSM_RESTORE_TX_PIN_TLMM_ADDR
+#ifdef CONFIG_SERIAL_MSM_RESTORE_TX_PIN_TLMM
 	struct earlycon_device *dev = NULL;
 
 	if (!device->port.membase)

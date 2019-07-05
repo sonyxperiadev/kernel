@@ -1098,9 +1098,26 @@ config SERIAL_MSM_CONSOLE
 	select SERIAL_CORE_CONSOLE
 	select SERIAL_EARLYCON
 
+config SERIAL_MSM_RESTORE_TX_PIN_TLMM
+	bool "MSM: Early restore UART TX pin"
+	depends on SERIAL_MSM
+	help
+	  Some bootloaders are putting both the TX and RX UART
+	  pins in high-impedance state as a protection against
+	  water/humidity before booting Linux.
+	  Sometimes, though, we may want to get an early console
+	  to debug early boot issues: in this case, it is needed
+	  to restore the TX pin to working state as early as
+	  possible.
+
+	  This is only for early kernel porting purposes.
+
+	  If you mean to debug the kernel, please use the bootparam
+	  "restore_msm_uart" instead of this configuration option.
+
 config SERIAL_MSM_RESTORE_TX_PIN_TLMM_ADDR
 	hex "MSM: Address of the TX pin in the TLMM register space"
-	depends on SERIAL_MSM_CONSOLE
+	depends on SERIAL_MSM_RESTORE_TX_PIN_TLMM
 	help
 	  Enter here the TLMM address for the TX PIN of your
 	  UART port to restore the TLMM configuration and
