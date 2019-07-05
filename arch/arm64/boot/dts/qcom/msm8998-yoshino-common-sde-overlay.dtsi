@@ -122,6 +122,8 @@ msm_drm.dsi_display0=dsi_panel_somc_yoshino_cmd:config0";
 		qcom,dsi-display-active;
 
 		qcom,platform-te-gpio = <&tlmm 10 0>;
+		qcom,panel-te-source = <0>;
+
 		qcom,platform-reset-gpio = <&tlmm 94 0>;
 		qcom,platform-touch-vddio-en-gpio = <&tlmm 133 0>;
 		qcom,platform-touch-reset-gpio = <&tlmm 89 0>;
