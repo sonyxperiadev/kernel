@@ -3,6 +3,7 @@
  *
  * Copyright 2007, 2008 Wolfson Microelectronics PLC.
  * Copyright 2008 SlimLogic Ltd.
+ * Copyright (C) 2013 Sony Mobile Communications AB.
  *
  * Author: Liam Girdwood <lrg@slimlogic.co.uk>
  *
@@ -3234,6 +3235,7 @@ EXPORT_SYMBOL_GPL(regulator_sync_voltage);
 static int _regulator_get_voltage(struct regulator_dev *rdev)
 {
 	int sel, ret;
+#ifndef CONFIG_ARCH_MSM8996
 	bool bypassed;
 
 	if (rdev->desc->ops->get_bypass) {
@@ -3251,7 +3253,7 @@ static int _regulator_get_voltage(struct regulator_dev *rdev)
 			return _regulator_get_voltage(rdev->supply->rdev);
 		}
 	}
-
+#endif
 	if (rdev->desc->ops->get_voltage_sel) {
 		sel = rdev->desc->ops->get_voltage_sel(rdev);
 		if (sel < 0)
@@ -3574,6 +3576,33 @@ int regulator_allow_bypass(struct regulator *regulator, bool enable)
 	return ret;
 }
 EXPORT_SYMBOL_GPL(regulator_allow_bypass);
+
+/**
+ * regulator_register_ocp_notification - register ocp notification
+ * @regulator: regulator source
+ * @notification: pointer of client ocp_notification
+ *
+ */
+int regulator_register_ocp_notification(struct regulator *regulator,
+			struct regulator_ocp_notification *notification)
+{
+	struct regulator_dev *rdev = regulator->rdev;
+	int ret;
+
+	mutex_lock(&rdev->mutex);
+
+	/* sanity check */
+	if (!rdev->desc->ops->register_ocp_notification) {
+		ret = -EINVAL;
+		goto out;
+	}
+
+	ret = rdev->desc->ops->register_ocp_notification(rdev, notification);
+out:
+	mutex_unlock(&rdev->mutex);
+	return ret;
+}
+EXPORT_SYMBOL_GPL(regulator_register_ocp_notification);
 
 /**
  * regulator_register_notifier - register regulator event notifier

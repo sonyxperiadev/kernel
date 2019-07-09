@@ -1,4 +1,4 @@
-/* Copyright (c) 2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -14,6 +14,7 @@
 #ifndef __MDSS_SPI_PANEL_H__
 #define __MDSS_SPI_PANEL_H__
 
+#if defined(CONFIG_FB_MSM_MDSS_SPI_PANEL) && defined(CONFIG_SPI_QUP)
 #include <linux/list.h>
 #include <linux/mdss_io_util.h>
 #include <linux/irqreturn.h>
@@ -21,7 +22,7 @@
 #include <linux/gpio.h>
 
 #include "mdss_panel.h"
-#include "mdss_fb.h"
+#include "mdp3_dma.h"
 
 #define MDSS_MAX_BL_BRIGHTNESS 255
 
@@ -31,14 +32,18 @@
 
 #define CTRL_STATE_UNKNOWN		0x00
 #define CTRL_STATE_PANEL_INIT		BIT(0)
-#define CTRL_STATE_PANEL_ACTIVE		BIT(1)
+#define CTRL_STATE_MDP_ACTIVE		BIT(1)
 
 #define MDSS_PINCTRL_STATE_DEFAULT "mdss_default"
 #define MDSS_PINCTRL_STATE_SLEEP  "mdss_sleep"
 #define SPI_PANEL_TE_TIMEOUT	400
 
-#define KOFF_TIMEOUT_MS 84
-#define KOFF_TIMEOUT msecs_to_jiffies(KOFF_TIMEOUT_MS)
+enum spi_panel_data_type {
+	panel_cmd,
+	panel_parameter,
+	panel_pixel,
+	UNKNOWN_FORMAT,
+};
 
 enum spi_panel_bl_ctrl {
 	SPI_BL_PWM,
@@ -52,6 +57,7 @@ struct spi_pinctrl_res {
 	struct pinctrl_state *gpio_state_active;
 	struct pinctrl_state *gpio_state_suspend;
 };
+#define SPI_PANEL_DST_FORMAT_RGB565		0
 
 struct spi_ctrl_hdr {
 	char wait;	/* ms */
@@ -77,41 +83,28 @@ enum spi_panel_status_mode {
 	SPI_ESD_MAX,
 };
 
-struct spi_display_notification {
-	void (*handler)(void *arg);
-	void *arg;
-};
-
-struct mdss_spi_img_data {
-	void *addr;
-	unsigned long len;
-	struct dma_buf *srcp_dma_buf;
-	struct dma_buf_attachment *srcp_attachment;
-	struct sg_table *srcp_table;
-
-	bool mapped;
-};
-
-struct mdss_spi_fb_data {
-	void *tx_buf_addr;
-	atomic_t used;
-};
 
 struct spi_panel_data {
 	struct mdss_panel_data panel_data;
 	struct mdss_util_intf *mdss_util;
+	struct spi_pinctrl_res pin_res;
+	struct mdss_module_power panel_power_data;
+	struct completion spi_panel_te;
+	struct mdp3_notification vsync_client;
+	unsigned int vsync_status;
+	int byte_pre_frame;
+	char *tx_buf;
 	u8 ctrl_state;
-
 	int disp_te_gpio;
 	int rst_gpio;
 	int disp_dc_gpio;	/* command or data */
-	struct spi_pinctrl_res pin_res;
-
 	struct spi_panel_cmds on_cmds;
 	struct spi_panel_cmds off_cmds;
+	bool (*check_status)(struct spi_panel_data *pdata);
+	int (*on)(struct mdss_panel_data *pdata);
+	int (*off)(struct mdss_panel_data *pdata);
+	struct mutex spi_tx_mutex;
 	struct pwm_device *pwm_bl;
-	struct dss_module_power panel_power_data;
-
 	int bklt_ctrl;	/* backlight ctrl */
 	bool pwm_pmi;
 	int pwm_period;
@@ -119,46 +112,37 @@ struct spi_panel_data {
 	int pwm_lpg_chan;
 	int pwm_enabled;
 	int bklt_max;
-
 	int status_mode;
 	u32 status_cmds_rlen;
 	u8 panel_status_reg;
 	u8 *exp_status_value;
 	u8 *act_status_value;
-	bool (*check_status)(struct spi_panel_data *pdata);
-
-	atomic_t koff_cnt;
-	int byte_per_frame;
-	char *front_buf;
-	char *back_buf;
-	struct mutex spi_tx_mutex;
-	struct mutex te_mutex;
-	struct mdss_spi_img_data image_data;
-	struct completion spi_panel_te;
 	unsigned char *return_buf;
-	struct ion_client *iclient;
-	wait_queue_head_t tx_done_waitq;
-
-	bool vsync_enable;
-	ktime_t vsync_time;
-	unsigned int vsync_status;
-	int vsync_per_te;
-	struct kernfs_node *vsync_event_sd;
-
-	struct blocking_notifier_head notifier_head;
 };
 
-int mdss_spi_panel_kickoff(struct msm_fb_data_type *mfd,
-				struct mdp_display_commit *data);
-void mdss_spi_vsync_enable(struct mdss_panel_data *pdata, int enable);
-void enable_spi_panel_te_irq(struct spi_panel_data *ctrl_pdata, bool enable);
-void mdss_spi_tx_fb_complete(void *ctx);
-int mdss_spi_panel_power_ctrl(struct mdss_panel_data *pdata, int power_state);
-int mdss_spi_panel_pinctrl_set_state(struct spi_panel_data *ctrl_pdata,
-				bool active);
-int mdss_spi_wait_tx_done(struct spi_panel_data *ctrl_pdata);
-int mdss_spi_panel_reset(struct mdss_panel_data *pdata, int enable);
-int mdss_spi_panel_on(struct mdss_panel_data *pdata);
-int mdss_spi_panel_off(struct mdss_panel_data *pdata);
+int mdss_spi_panel_kickoff(struct mdss_panel_data *pdata,
+				char *buf, int len, int stride);
+int is_spi_panel_continuous_splash_on(struct mdss_panel_data *pdata);
+void mdp3_spi_vsync_enable(struct mdss_panel_data *pdata,
+				struct mdp3_notification *vsync_client);
+void mdp3_check_spi_panel_status(struct work_struct *work,
+				uint32_t interval);
+
+#else
+static inline int mdss_spi_panel_kickoff(struct mdss_panel_data *pdata,
+				char *buf, int len, int stride){
+	return 0;
+}
+static inline int is_spi_panel_continuous_splash_on(
+				struct mdss_panel_data *pdata)
+{
+	return 0;
+}
+static inline int mdp3_spi_vsync_enable(struct mdss_panel_data *pdata,
+			struct mdp3_notification *vsync_client){
+	return 0;
+}
+
+#endif/* End of CONFIG_FB_MSM_MDSS_SPI_PANEL && ONFIG_SPI_QUP */
 
 #endif /* End of __MDSS_SPI_PANEL_H__ */

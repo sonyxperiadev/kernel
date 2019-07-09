@@ -5930,6 +5930,9 @@ struct energy_env {
 static unsigned long cpu_util_wake(int cpu, struct task_struct *p)
 {
 	unsigned int util;
+#ifndef CONFIG_SCHED_WALT
+	struct cfs_rq *cfs_rq;
+#endif
 
 #ifdef CONFIG_SCHED_WALT
 	/*
@@ -5950,8 +5953,6 @@ static unsigned long cpu_util_wake(int cpu, struct task_struct *p)
 #ifdef CONFIG_SCHED_WALT
 	util = max_t(long, cpu_util(cpu) - task_util(p), 0);
 #else
-	struct cfs_rq *cfs_rq;
-
 	cfs_rq = &cpu_rq(cpu)->cfs;
 	util = READ_ONCE(cfs_rq->avg.util_avg);
 
@@ -9266,9 +9267,11 @@ redo:
 
 		continue;
 next:
+#ifdef CONFIG_SCHED_WALT
 		trace_sched_load_balance_skip_tasks(env->src_cpu, env->dst_cpu,
 				env->src_grp_type, p->pid, load, task_util(p),
 				cpumask_bits(&p->cpus_allowed)[0]);
+#endif
 		list_move_tail(&p->se.group_node, tasks);
 	}
 

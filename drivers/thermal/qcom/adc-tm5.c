@@ -406,7 +406,7 @@ static int32_t adc_tm5_manage_thresholds(struct adc_tm_sensor *sensor)
 	return 0;
 }
 
-void notify_adc_tm_fn(struct work_struct *work)
+static void notify_adc_tm5_fn(struct work_struct *work)
 {
 	struct adc_tm_client_info *client_info = NULL;
 	struct adc_tm_chip *chip;
@@ -1082,7 +1082,7 @@ static int adc_tm5_init(struct adc_tm_chip *chip, uint32_t dt_chans)
 
 	for (i = 0; i < dt_chans; i++) {
 		if ((i + offset_btm_idx) > ADC_TM_CHAN7) {
-			pr_err("Invalid BTM index\n", (i + offset_btm_idx));
+			pr_err("Invalid BTM index %d\n", (i + offset_btm_idx));
 			return -EINVAL;
 		}
 
@@ -1098,6 +1098,7 @@ static const struct adc_tm_ops ops_adc_tm5 = {
 	.set_trips	= adc_tm5_set_trip_temp,
 	.interrupts_reg = adc_tm5_register_interrupts,
 	.get_temp	= adc_tm5_get_temp,
+	.notify_adc	= notify_adc_tm5_fn,
 };
 
 const struct adc_tm_data data_adc_tm5 = {

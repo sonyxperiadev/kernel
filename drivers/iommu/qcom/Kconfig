@@ -1,0 +1,42 @@
+# Qualcomm IOMMU support
+
+# QCOM IOMMUv1 support
+config QCOM_IOMMU_V1
+	bool "Qualcomm IOMMUv1 Support"
+	depends on ARCH_QCOM
+	select IOMMU_API
+	select ARM_DMA_USE_IOMMU if ARM
+	help
+	  Support for the IOMMUs (v1) found on certain Qualcomm SOCs.
+	  These IOMMUs allow virtualization of the address space used by most
+	  cores within the multimedia subsystem.
+
+	  If unsure, say N here.
+
+config MMU500_ACTIVE_PREFETCH_BUG_WITH_SECTION_MAPPING
+	bool "Don't align virtual address at 1MB boundary"
+	depends on QCOM_IOMMU_V1
+	help
+	  Say Y here if the MMU500 revision has a bug in active prefetch
+	  which can cause TLB corruptions due to 1MB alignment of a buffer.
+	  Here is the sequence which will surface this BUG.
+	  1) Create a 2-level mapping in v7S format for 1MB buffer. Start of
+	     the buffer should be at even MB boundary.
+	  2) Create a section mapping for 1MB buffer adjacent to previous
+	     mapping in step 1.
+	  3) Access last page from 2 level mapping followed by an access into
+	     section mapped area.
+	  4) Step 3 will result into TLB corruption and this corruption can
+	     lead to any misbehavior (like Permission fault) for sub-sequent
+	     transactions.
+
+	  If unsure, say Y here if IOMMU mapping will not exhaust the VA space.
+
+config IOMMU_PGTABLES_L2
+	bool "Allow SMMU page tables in the L2 cache (Experimental)"
+	depends on QCOM_IOMMU_V1 && MMU && SMP && CPU_DCACHE_DISABLE=n
+	help
+	  Improves TLB miss latency at the expense of potential L2 pollution.
+	  However, with large multimedia buffers, the TLB should mostly contain
+	  section mappings and TLB misses should be quite infrequent.
+	  Most people can probably say Y here.

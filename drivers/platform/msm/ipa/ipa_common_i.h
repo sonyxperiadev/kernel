@@ -352,6 +352,9 @@ extern const char *ipa_clients_strings[];
 				## args); \
 	} while (0)
 
+unsigned long
+ipa_safe_copy_from_user(char *dst, const char __user *buf, size_t count);
+
 void ipa_inc_client_enable_clks(struct ipa_active_client_logging_info *id);
 void ipa_dec_client_disable_clks(struct ipa_active_client_logging_info *id);
 int ipa_inc_client_enable_clks_no_block(

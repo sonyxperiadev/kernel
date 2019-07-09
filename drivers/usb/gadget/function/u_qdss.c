@@ -31,9 +31,17 @@ static int alloc_sps_req(struct usb_ep *data_ep)
 		return -ENOMEM;
 	}
 
-	req->length = 32*1024;
-	sps_params = MSM_SPS_MODE | MSM_DISABLE_WB |
-			qdss->bam_info.usb_bam_pipe_idx;
+	if (!gadget->is_chipidea) {
+		req->length = 32*1024;
+		sps_params = MSM_SPS_MODE | MSM_DISABLE_WB |
+				qdss->bam_info.usb_bam_pipe_idx;
+	} else {
+		/* non DWC3 BAM requires req->length to be 0 */
+		req->length = 0;
+		sps_params = (MSM_SPS_MODE | qdss->bam_info.usb_bam_pipe_idx |
+				MSM_VENDOR_ID) & ~MSM_IS_FINITE_TRANSFER;
+	}
+
 	req->udc_priv = sps_params;
 	qdss->endless_req = req;
 
@@ -65,7 +73,7 @@ int set_qdss_data_connection(struct f_qdss *qdss, int enable)
 	bam_info = qdss->bam_info;
 	/* There is only one qdss pipe, so the pipe number can be set to 0 */
 	idx = usb_bam_get_connection_idx(usb_bam_type, QDSS_P_BAM,
-		PEER_PERIPHERAL_TO_USB, 0);
+		PEER_PERIPHERAL_TO_USB, USB_BAM_DEVICE, 0);
 	if (idx < 0) {
 		pr_err("%s: usb_bam_get_connection_idx failed\n", __func__);
 		return idx;
@@ -107,10 +115,12 @@ int set_qdss_data_connection(struct f_qdss *qdss, int enable)
 				NULL, bam_info.data_fifo, NULL);
 
 		alloc_sps_req(qdss->port.data);
-		msm_data_fifo_config(qdss->port.data,
-			bam_info.data_fifo->iova,
-			bam_info.data_fifo->size,
-			bam_info.usb_bam_pipe_idx);
+		if (!gadget->is_chipidea)
+			msm_data_fifo_config(qdss->port.data,
+				bam_info.data_fifo->iova,
+				bam_info.data_fifo->size,
+				bam_info.usb_bam_pipe_idx);
+
 		init_data(qdss->port.data);
 
 		res = usb_bam_connect(usb_bam_type, idx,
@@ -134,6 +144,10 @@ static int init_data(struct usb_ep *ep)
 	struct f_qdss *qdss = ep->driver_data;
 	int res = 0;
 
+	/* No EP init required for CI controller: already done in its driver */
+	if (gadget->is_chipidea)
+		return res;
+
 	pr_debug("%s\n", __func__);
 
 	res = msm_ep_config(ep, qdss->endless_req);
@@ -146,6 +160,9 @@ static int init_data(struct usb_ep *ep)
 int uninit_data(struct usb_ep *ep)
 {
 	int res = 0;
+
+	if (gadget->is_chipidea)
+		return res;
 
 	pr_debug("%s\n", __func__);
 

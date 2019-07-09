@@ -182,6 +182,7 @@ struct arm_smmu_cb {
 	u32				mair[2];
 	struct arm_smmu_cfg		*cfg;
 	u32				actlr;
+	bool				has_actlr;
 };
 
 struct arm_smmu_master_cfg {
@@ -258,6 +259,8 @@ struct arm_smmu_device {
 #define ARM_SMMU_OPT_STATIC_CB		(1 << 6)
 #define ARM_SMMU_OPT_DISABLE_ATOS	(1 << 7)
 #define ARM_SMMU_OPT_MIN_IOVA_ALIGN	(1 << 8)
+#define ARM_SMMU_OPT_NO_SMR_CHECK	(1 << 9)
+#define ARM_SMMU_OPT_NO_ACTLR_READ	(1 << 10)
 	u32				options;
 	enum arm_smmu_arch_version	version;
 	enum arm_smmu_implementation	model;
@@ -398,6 +401,8 @@ static struct arm_smmu_option_prop arm_smmu_options[] = {
 	{ ARM_SMMU_OPT_STATIC_CB, "qcom,enable-static-cb"},
 	{ ARM_SMMU_OPT_DISABLE_ATOS, "qcom,disable-atos" },
 	{ ARM_SMMU_OPT_MIN_IOVA_ALIGN, "qcom,min-iova-align" },
+	{ ARM_SMMU_OPT_NO_SMR_CHECK, "qcom,no-smr-check" },
+	{ ARM_SMMU_OPT_NO_ACTLR_READ, "qcom,no-actlr-read" },
 	{ 0, NULL},
 };
 
@@ -1807,7 +1812,8 @@ static void arm_smmu_write_context_bank(struct arm_smmu_device *smmu, int idx,
 	}
 
 	/* ACTLR (implementation defined) */
-	writel_relaxed(cb->actlr, cb_base + ARM_SMMU_CB_ACTLR);
+	if (cb->has_actlr)
+		writel_relaxed(cb->actlr, cb_base + ARM_SMMU_CB_ACTLR);
 
 	/* SCTLR */
 	reg = SCTLR_CFCFG | SCTLR_CFIE | SCTLR_CFRE | SCTLR_AFE | SCTLR_TRE;
@@ -2122,7 +2128,7 @@ static int arm_smmu_init_domain_context(struct iommu_domain *domain,
 			dev_err(smmu->dev, "failed to request context IRQ %d (%u)\n",
 				cfg->irptndx, irq);
 			cfg->irptndx = INVALID_IRPTNDX;
-			goto out_clear_smmu;
+			// goto out_clear_smmu; /* FIXME */
 		}
 	} else {
 		cfg->irptndx = INVALID_IRPTNDX;
@@ -2301,13 +2307,17 @@ static void arm_smmu_test_smr_masks(struct arm_smmu_device *smmu)
 	int idx;
 
 	/* Check if Stream Match Register support is included */
-	if (!smmu->smrs)
+	if (!smmu->smrs && !(smmu->options & ARM_SMMU_OPT_NO_SMR_CHECK))
 		return;
 
-	/* For slave side secure targets, as we can't write to the
+	/*
+	 * For slave side secure targets, or when we cannot
+	 * do the SMR check because of the SoC firmware
+	 * disallowing it, as we can't write to the
 	 * global space, set the sme mask values to default.
 	 */
-	if (arm_smmu_is_static_cb(smmu)) {
+	if (arm_smmu_is_static_cb(smmu) ||
+	    (smmu->options & ARM_SMMU_OPT_NO_SMR_CHECK)) {
 		smmu->streamid_mask = SID_MASK;
 		smmu->smr_mask_mask = SMR_MASK_MASK;
 		return;
@@ -3810,6 +3820,23 @@ static void arm_smmu_disable_config_clocks(struct iommu_domain *domain)
 	arm_smmu_power_off(smmu_domain->smmu->pwr);
 }
 
+static unsigned long arm_smmu_get_pgsize_bitmap(struct iommu_domain *domain)
+{
+	struct arm_smmu_domain *smmu_domain = to_smmu_domain(domain);
+
+	/*
+	 * if someone is calling map before attach just return the
+	 * supported page sizes for the hardware itself.
+	 */
+	if (!smmu_domain->pgtbl_cfg.pgsize_bitmap)
+		return arm_smmu_ops.pgsize_bitmap;
+	/*
+	 * otherwise return the page sizes supported by this specific page
+	 * table configuration
+	 */
+	return smmu_domain->pgtbl_cfg.pgsize_bitmap;
+}
+
 static struct iommu_ops arm_smmu_ops = {
 	.capable		= arm_smmu_capable,
 	.domain_alloc		= arm_smmu_domain_alloc,
@@ -3830,6 +3857,7 @@ static struct iommu_ops arm_smmu_ops = {
 	.get_resv_regions	= arm_smmu_get_resv_regions,
 	.put_resv_regions	= arm_smmu_put_resv_regions,
 	.pgsize_bitmap		= -1UL, /* Restricted during device attach */
+	.get_pgsize_bitmap	= arm_smmu_get_pgsize_bitmap,
 	.trigger_fault		= arm_smmu_trigger_fault,
 	.reg_read		= arm_smmu_reg_read,
 	.reg_write		= arm_smmu_reg_write,
@@ -3941,6 +3969,7 @@ static void qsmmuv2_device_reset(struct arm_smmu_device *smmu)
 		ACTLR_QCOM_OSH << ACTLR_QCOM_OSH_SHIFT |
 		ACTLR_QCOM_NSH << ACTLR_QCOM_NSH_SHIFT;
 		cb->actlr = val;
+		cb->has_actlr = true;
 	}
 
 	/* Program implementation defined registers */
@@ -4358,6 +4387,11 @@ static int arm_smmu_init_bus_scaling(struct arm_smmu_power_resources *pwr)
 {
 	struct device *dev = pwr->dev;
 
+	if (!msm_bus_scale_driver_ready()) {
+		dev_info(dev, "Bus client not ready. Deferring probe\n");
+		return -EPROBE_DEFER;
+	}
+
 	/* We don't want the bus APIs to print an error message */
 	if (!of_find_property(dev->of_node, "qcom,msm-bus,name", NULL)) {
 		dev_dbg(dev, "No bus scaling info\n");
@@ -4567,11 +4601,20 @@ static int arm_smmu_device_cfg_probe(struct arm_smmu_device *smmu)
 				 sizeof(*smmu->cbs), GFP_KERNEL);
 	if (!smmu->cbs)
 		return -ENOMEM;
-	for (i = 0; i < smmu->num_context_banks; i++) {
-		void __iomem *cb_base;
 
-		cb_base = ARM_SMMU_CB(smmu, i);
-		smmu->cbs[i].actlr = readl_relaxed(cb_base + ARM_SMMU_CB_ACTLR);
+	/*
+	 * On some IOMMU implementations the hypervisor disallows
+	 * reading the implementation defined ACTLR registers and
+	 * trips a security fault which freezes the entire AP.
+	 */
+	if (!(smmu->options & ARM_SMMU_OPT_NO_ACTLR_READ)) {
+		for (i = 0; i < smmu->num_context_banks; i++) {
+			void __iomem *cb_base;
+
+			cb_base = ARM_SMMU_CB(smmu, i);
+			smmu->cbs[i].actlr = readl_relaxed(
+						cb_base + ARM_SMMU_CB_ACTLR);
+		}
 	}
 
 	/* ID2 */
@@ -5543,6 +5586,7 @@ static void qsmmuv500_init_cb(struct arm_smmu_domain *smmu_domain,
 		return;
 
 	cb->actlr = iommudata->actlr;
+	cb->has_actlr = true;
 	/*
 	 * Prefetch only works properly if the start and end of all
 	 * buffers in the page table are aligned to ARM_SMMU_MIN_IOVA_ALIGN.

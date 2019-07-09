@@ -2850,6 +2850,12 @@ static int qseecom_unload_app(struct qseecom_dev_handle *data,
 		goto unload_exit;
 	}
 
+#ifdef CONFIG_ARCH_SONY_NILE
+	if (!memcmp(data->client.app_name, "tzxflattest", strlen("tzxflattest"))) {
+		pr_debug("Do not unload tzxflattest app from tz\n");
+		goto unload_exit;
+	}
+#endif
 	__qseecom_cleanup_app(data);
 	__qseecom_reentrancy_check_if_no_app_blocked(TZ_OS_APP_SHUTDOWN_ID);
 
@@ -8878,7 +8884,7 @@ static int qseecom_probe(struct platform_device *pdev)
 
 	rc = dma_set_mask(qseecom.dev, DMA_BIT_MASK(64));
 	if (rc) {
-		pr_err("qseecom failed to set dma mask\n", rc);
+		pr_err("qseecom failed to set dma mask: %d\n", rc);
 		goto exit_del_cdev;
 	}
 

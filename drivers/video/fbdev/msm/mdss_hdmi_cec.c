@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -56,7 +56,7 @@ static int hdmi_cec_msg_send(void *data, struct cec_msg *msg)
 	struct hdmi_cec_ctrl *cec_ctrl = (struct hdmi_cec_ctrl *)data;
 
 	if (!cec_ctrl || !cec_ctrl->init_data.io || !msg) {
-		DEV_ERR("%s: invalid cec ctrl\n", __func__);
+		DEV_ERR("%s: Invalid input\n", __func__);
 		return -EINVAL;
 	}
 
@@ -106,11 +106,28 @@ static int hdmi_cec_msg_send(void *data, struct cec_msg *msg)
 		((msg->frame_size & 0x1F) << 4) | BIT(9));
 
 	if (!wait_for_completion_timeout(
-		&cec_ctrl->cec_msg_wr_done, HZ)) {
+		&cec_ctrl->cec_msg_wr_done, msecs_to_jiffies(1000))) {
 		DEV_ERR("%s: timedout", __func__);
 		return -ETIMEDOUT;
 	}
 
+	/* This is workaround for fixing Google CTS fail:
+	 * "android.permission.cts.FileSystemPermissionTest-
+	 * testReadingSysFilesDoesntFail"
+	 * This test program will read enable_compliance file.
+	 * This will cause this register is accessed.
+	 * Phone crash when access this register during clock
+	 * is disable.
+	 * If hdmi panel power is off, then hdmi clock is disable.
+	 * So if hdmi panel power is off, return error.
+	 */
+#if 0 /* kholk 13/04/16 WORKAROUND: DISABLE IT UNTIL CORRECT PORTING DONE */
+	ret = hdmi_tx_is_HDMI_panel_power_on(dev);
+	if (ret <= 0) {
+		DEV_ERR("%s: HDMI clock is not enable\n", __func__);
+		return -EPERM;
+	}
+#endif
 	spin_lock_irqsave(&cec_ctrl->lock, flags);
 	if (cec_ctrl->cec_msg_wr_status == CEC_STATUS_WR_ERROR) {
 		rc = -ENXIO;
@@ -129,7 +146,7 @@ static void hdmi_cec_init_input_event(struct hdmi_cec_ctrl *cec_ctrl)
 	int rc = 0;
 
 	if (!cec_ctrl) {
-		DEV_ERR("%s: invalid cec ctrl\n", __func__);
+		DEV_ERR("%s: Invalid input\n", __func__);
 		return;
 	}
 
@@ -175,7 +192,7 @@ static void hdmi_cec_msg_recv(struct work_struct *work)
 
 	cec_ctrl = container_of(work, struct hdmi_cec_ctrl, cec_read_work);
 	if (!cec_ctrl || !cec_ctrl->init_data.io) {
-		DEV_ERR("%s: invalid cec ctrl\n", __func__);
+		DEV_ERR("%s: invalid input\n", __func__);
 		return;
 	}
 
@@ -266,7 +283,7 @@ int hdmi_cec_isr(void *input)
 	struct hdmi_cec_ctrl *cec_ctrl = (struct hdmi_cec_ctrl *)input;
 
 	if (!cec_ctrl || !cec_ctrl->init_data.io) {
-		DEV_ERR("%s: invalid cec ctrl\n", __func__);
+		DEV_ERR("%s: Invalid input\n", __func__);
 		return -EPERM;
 	}
 
@@ -344,7 +361,7 @@ static void hdmi_cec_wakeup_en(void *input, bool enable)
 	struct hdmi_cec_ctrl *cec_ctrl = (struct hdmi_cec_ctrl *)input;
 
 	if (!cec_ctrl) {
-		DEV_ERR("%s: invalid cec ctrl\n", __func__);
+		DEV_ERR("%s: Invalid input\n", __func__);
 		return;
 	}
 
@@ -356,7 +373,7 @@ static void hdmi_cec_write_logical_addr(void *input, u8 addr)
 	struct hdmi_cec_ctrl *cec_ctrl = (struct hdmi_cec_ctrl *)input;
 
 	if (!cec_ctrl || !cec_ctrl->init_data.io) {
-		DEV_ERR("%s: invalid cec ctrl\n", __func__);
+		DEV_ERR("%s: Invalid input\n", __func__);
 		return;
 	}
 
@@ -373,7 +390,7 @@ static int hdmi_cec_enable(void *input, bool enable)
 	struct mdss_panel_info *pinfo;
 
 	if (!cec_ctrl || !cec_ctrl->init_data.io) {
-		DEV_ERR("%s: invalid cec ctrl\n", __func__);
+		DEV_ERR("%s: Invalid input\n", __func__);
 		ret = -EPERM;
 		goto end;
 	}
@@ -382,7 +399,7 @@ static int hdmi_cec_enable(void *input, bool enable)
 	pinfo = cec_ctrl->init_data.pinfo;
 
 	if (!pinfo) {
-		DEV_ERR("%s: invalid panel info\n", __func__);
+		DEV_ERR("%s: invalid pinfo\n", __func__);
 		goto end;
 	}
 
@@ -445,7 +462,7 @@ void *hdmi_cec_init(struct hdmi_cec_init_data *init_data)
 	int ret = 0;
 
 	if (!init_data) {
-		DEV_ERR("%s: invalid cec ctrl\n", __func__);
+		DEV_ERR("%s: Invalid input\n", __func__);
 		ret = -EINVAL;
 		goto error;
 	}

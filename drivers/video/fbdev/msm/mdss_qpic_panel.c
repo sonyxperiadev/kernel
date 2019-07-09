@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2015, 2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -172,7 +172,7 @@ int mdss_qpic_panel_io_init(struct platform_device *pdev,
 	bl_gpio = of_get_named_gpio(np, "qcom,bl-gpio", 0);
 
 	if (!gpio_is_valid(rst_gpio))
-		pr_warn("%s: reset gpio not specified\n", __func__);
+		pr_warn("%s: reset gpio not specified\n" , __func__);
 	else
 		qpic_panel_io->rst_gpio = rst_gpio;
 

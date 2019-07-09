@@ -26,7 +26,7 @@
 
 #define KGSL_PWR_ON	0xFFFF
 
-#define KGSL_MAX_CLKS 16
+#define KGSL_MAX_CLKS 17
 #define KGSL_MAX_REGULATORS 2
 
 #define KGSL_MAX_PWRLEVELS 10
@@ -137,6 +137,8 @@ struct kgsl_regulator {
  * @num_pwrlevels - number of available power levels
  * @throttle_mask - LM throttle mask
  * @interval_timeout - timeout in jiffies to be idle before a power event
+ * @default_interval_timeout - default timeout in jiffies to be idle before
+ * a power event
  * @clock_times - Each GPU frequency's accumulated active time in us
  * @regulators - array of pointers to kgsl_regulator structs
  * @pcl - bus scale identifier
@@ -197,6 +199,7 @@ struct kgsl_pwrctrl {
 	unsigned int num_pwrlevels;
 	unsigned int throttle_mask;
 	unsigned long interval_timeout;
+	unsigned long default_interval_timeout;
 	u64 clock_times[KGSL_MAX_PWRLEVELS];
 	struct kgsl_regulator regulators[KGSL_MAX_REGULATORS];
 	uint32_t pcl;

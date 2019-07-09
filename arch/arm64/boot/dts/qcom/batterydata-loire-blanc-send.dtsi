@@ -1,0 +1,61 @@
+/* Copyright (c) 2015, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+/*
+ * Copyright (C) 2016 Sony Mobile Communications Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2, as
+ * published by the Free Software Foundation.
+ */
+
+qcom,loire-blanc-send {
+	qcom,batt-id-kohm = <330>;
+	qcom,battery-type = "1299-8167";
+	qcom,chg-rslow-comp-c1 = <2571531>;
+	qcom,chg-rslow-comp-c2 = <3403187>;
+	qcom,chg-rs-to-rslow = <915427>;
+	qcom,chg-rslow-comp-thr = <0xA0>;
+	qcom,fg-profile-data = [
+		EC 83 D3 7C
+		A9 80 93 76
+		45 83 B4 60
+		4D 7B BE 85
+		20 82 68 98
+		66 B5 6D C0
+		5A 12 E0 83
+		7D 77 7F 7B
+		C0 74 47 83
+		15 6A DB 7A
+		CD 87 5C 82
+		01 93 16 B4
+		7C BA 58 17
+		FF 09 08 5B
+		88 6D CD FC
+		18 40 F1 47
+		77 39 00 00
+		A9 4C EB 3A
+		97 40 00 00
+		00 00 00 00
+		00 00 00 00
+		E9 70 33 70
+		41 7D 40 81
+		E2 7C 2F 71
+		29 76 2A 80
+		7F 7C 68 70
+		7E 46 CC 9B
+		29 91 5A FC
+		3F A0 71 0C
+		28 00 FF 36
+		F0 11 30 03
+		00 00 00 0C
+	];
+};

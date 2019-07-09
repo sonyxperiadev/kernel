@@ -480,8 +480,8 @@ int ipa_uc_ntn_conn_pipes(struct ipa_ntn_conn_in_params *inp,
 
 		result = ipa_rm_request_resource(IPA_RM_RESOURCE_ETHERNET_PROD);
 		if (result == -EINPROGRESS) {
-			if (wait_for_completion_timeout(&ntn_ctx->ntn_completion
-				, 10*HZ) == 0) {
+			if (wait_for_completion_timeout(&ntn_ctx->ntn_completion,
+				msecs_to_jiffies(10000)) == 0) {
 				IPA_UC_OFFLOAD_ERR("ETH_PROD req timeout\n");
 				result = -EFAULT;
 				goto fail;
@@ -652,9 +652,10 @@ static int ipa_uc_ntn_disconn_pipes(struct ipa_uc_offload_ctx *ntn_ctx)
 						 ret);
 		return -EFAULT;
 	}
-	if (ntn_ctx->conn.dl.smmu_enabled)
+	if (ntn_ctx->conn.dl.smmu_enabled) {
 		ipa_uc_ntn_free_conn_smmu_info(&ntn_ctx->conn.dl);
 		ipa_uc_ntn_free_conn_smmu_info(&ntn_ctx->conn.ul);
+	}
 
 	return ret;
 }

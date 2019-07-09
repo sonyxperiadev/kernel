@@ -26,6 +26,9 @@
 enum field_width {
 	BYTE	= 1,
 	WORD	= 2,
+#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA)
+	DWORD	= 4,
+#endif
 };
 
 struct desc_field_offset {
@@ -904,7 +907,17 @@ static int ufsdbg_dump_device_desc_show(struct seq_file *file, void *data)
 		{"bUD0BaseOffset",	0x1A, BYTE},
 		{"bUDConfigPLength",	0x1B, BYTE},
 		{"bDeviceRTTCap",	0x1C, BYTE},
-		{"wPeriodicRTCUpdate",	0x1D, WORD}
+		{"wPeriodicRTCUpdate",	0x1D, WORD},
+#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA)
+		{"bUFSFeaturesSupport",	0x1F, BYTE},
+		{"bFFUTimeout",		0x20, BYTE},
+		{"bQueueDepth",		0x21, BYTE},
+		{"wDeviceVersion",	0x22, WORD},
+		{"bNumSecureWPArea",	0x24, BYTE},
+		{"dPSAMaxDataSize",	0x25, DWORD},
+		{"bPSAStateTimeout",	0x29, BYTE},
+		{"iProductRevisionLevel",0x2A,BYTE},
+#endif
 	};
 
 	pm_runtime_get_sync(hba->dev);
@@ -930,6 +943,14 @@ static int ufsdbg_dump_device_desc_show(struct seq_file *file, void *data)
 					   tmp->offset,
 					   tmp->name,
 					   *(u16 *)&desc_buf[tmp->offset]);
+#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA)
+			} else if (tmp->width_byte == DWORD) {
+				seq_printf(file,
+					   "Device Descriptor[Byte offset 0x%x]: %s = 0x%x\n",
+					   tmp->offset,
+					   tmp->name,
+					   *(u32 *)&desc_buf[tmp->offset]);
+#endif
 			} else {
 				seq_printf(file,
 				"Device Descriptor[offset 0x%x]: %s. Wrong Width = %d",
@@ -1044,6 +1065,141 @@ static const struct file_operations ufsdbg_dump_device_desc = {
 	.open		= ufsdbg_dump_device_desc_open,
 	.read		= seq_read,
 };
+
+#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA)
+static int ufsdbg_dump_fw_revision_show(struct seq_file *file, void *data)
+{
+	int err = 0;
+	u8 index;
+	u8 desc_buf[QUERY_DESC_DEVICE_DEF_SIZE];
+	u8 str_desc_buf[QUERY_DESC_MAX_SIZE + 1];
+	struct ufs_hba *hba = (struct ufs_hba *)file->private;
+
+	pm_runtime_get_sync(hba->dev);
+	err = ufshcd_read_device_desc(hba, desc_buf,
+				QUERY_DESC_DEVICE_DEF_SIZE);
+	if (err) {
+		seq_printf(file, "Reading Device Descriptor failed. err = %d\n",
+			err);
+		goto out;
+	}
+
+	index = desc_buf[DEVICE_DESC_PARAM_PRODUCT_REVISION];
+	memset(str_desc_buf, 0, QUERY_DESC_MAX_SIZE + 1);
+	err = ufshcd_read_string_desc(hba, index, str_desc_buf,
+				QUERY_DESC_MAX_SIZE, ASCII_STD);
+
+	if (err) {
+		seq_printf(file, "Reading String Descriptor failed. err = %d\n",
+			err);
+	} else {
+		seq_printf(file, "FW revision = %s\n", &str_desc_buf[QUERY_DESC_HDR_SIZE]);
+	}
+
+out:
+	pm_runtime_put_sync(hba->dev);
+	return err;
+}
+
+static int ufsdbg_dump_fw_revision_open(struct inode *inode, struct file *file)
+{
+	return single_open(file,
+			   ufsdbg_dump_fw_revision_show, inode->i_private);
+}
+
+static const struct file_operations ufsdbg_dump_fw_revision = {
+	.open		= ufsdbg_dump_fw_revision_open,
+	.read		= seq_read,
+};
+
+static int ufsdbg_dump_device_health_desc_show(struct seq_file *file, void *data)
+{
+	int err = 0;
+	int buff_len = QUERY_DESC_DEVICE_HEALTH_DEF_SIZE;
+	u8 desc_buf[QUERY_DESC_DEVICE_HEALTH_DEF_SIZE];
+	struct ufs_hba *hba = (struct ufs_hba *)file->private;
+
+	pm_runtime_get_sync(hba->dev);
+	err = ufshcd_read_device_health_desc(hba, desc_buf, buff_len);
+	pm_runtime_put_sync(hba->dev);
+
+	if (!err) {
+		int i;
+		for (i = 0; i < QUERY_DESC_DEVICE_HEALTH_DEF_SIZE; ++i) {
+			seq_printf(file, "%02x", desc_buf[i]);
+		}
+	} else {
+		seq_printf(file, "Reading Device Health Descriptor failed. err = %d\n",
+			   err);
+	}
+
+	return err;
+}
+
+static int ufsdbg_dump_device_health_desc_open(struct inode *inode, struct file *file)
+{
+	return single_open(file,
+			   ufsdbg_dump_device_health_desc_show, inode->i_private);
+}
+
+static const struct file_operations ufsdbg_dump_device_health_desc = {
+	.open		= ufsdbg_dump_device_health_desc_open,
+	.read		= seq_read,
+};
+
+static int ufsdbg_dump_serial_show(struct seq_file *file, void *data)
+{
+	int err = 0;
+	int i, len = 0;
+	u8 index;
+	u8 desc_buf[QUERY_DESC_DEVICE_DEF_SIZE];
+	u8 str_desc_buf[QUERY_DESC_MAX_SIZE];
+	struct ufs_hba *hba = (struct ufs_hba *)file->private;
+
+	pm_runtime_get_sync(hba->dev);
+	err = ufshcd_read_device_desc(hba, desc_buf,
+				      QUERY_DESC_DEVICE_DEF_SIZE);
+	if (err) {
+		seq_printf(file, "Reading Device Descriptor failed. err = %d\n",
+			   err);
+		goto out;
+	}
+
+	index = desc_buf[DEVICE_DESC_PARAM_SN];
+	memset(str_desc_buf, 0, QUERY_DESC_MAX_SIZE);
+
+	err = ufshcd_read_string_desc(hba, index, str_desc_buf,
+				      QUERY_DESC_MAX_SIZE, UTF16_STD);
+	if (err) {
+		seq_printf(file, "Reading String Descriptor failed. err = %d\n",
+			   err);
+		goto out;
+	}
+
+	len = (int)str_desc_buf[QUERY_DESC_LENGTH_OFFSET];
+	if (len > QUERY_DESC_MAX_SIZE)
+		len = QUERY_DESC_MAX_SIZE;
+
+	seq_puts(file, "Serial = ");
+	for (i = QUERY_DESC_HDR_SIZE; i < len; i++)
+		seq_printf(file, "%02X", str_desc_buf[i]);
+	seq_puts(file, "\n");
+out:
+	pm_runtime_put_sync(hba->dev);
+	return err;
+}
+
+static int ufsdbg_dump_serial_open(struct inode *inode, struct file *file)
+{
+	return single_open(file,
+			   ufsdbg_dump_serial_show, inode->i_private);
+}
+
+static const struct file_operations ufsdbg_dump_serial = {
+	.open		= ufsdbg_dump_serial_open,
+	.read		= seq_read,
+};
+#endif
 
 static int ufsdbg_power_mode_show(struct seq_file *file, void *data)
 {
@@ -1772,6 +1928,37 @@ void ufsdbg_add_debugfs(struct ufs_hba *hba)
 		&hba->crash_on_err))
 		goto err;
 
+#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA)
+	hba->debugfs_files.fw_revision =
+		debugfs_create_file("fw_revision", S_IRUSR,
+				    hba->debugfs_files.debugfs_root, hba,
+				    &ufsdbg_dump_fw_revision);
+	if (!hba->debugfs_files.fw_revision) {
+		dev_err(hba->dev,
+			"%s:  NULL fw_revision file, exiting", __func__);
+		goto err;
+	}
+
+	hba->debugfs_files.dump_dev_health_desc =
+		debugfs_create_file("dump_device_health_desc", S_IRUSR,
+				    hba->debugfs_files.debugfs_root, hba,
+				    &ufsdbg_dump_device_health_desc);
+	if (!hba->debugfs_files.dump_dev_health_desc) {
+		dev_err(hba->dev,
+			"%s:  NULL dump_device_health_desc file, exiting", __func__);
+		goto err;
+	}
+
+	hba->debugfs_files.serial =
+		debugfs_create_file("serial", S_IRUSR,
+				    hba->debugfs_files.debugfs_root, hba,
+				    &ufsdbg_dump_serial);
+	if (!hba->debugfs_files.serial) {
+		dev_err(hba->dev,
+			"%s:  NULL serial file, exiting", __func__);
+		goto err;
+	}
+#endif
 
 	ufsdbg_setup_fault_injection(hba);
 

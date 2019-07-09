@@ -1,0 +1,250 @@
+/* arch/arm64/boot/dsdm845-tama-apollo-camera.dtsi
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+/*
+ * Copyright (C) 2018 Sony Mobile Communications Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2, as
+ * published by the Free Software Foundation.
+ */
+
+&soc {
+	qcom,camera-flash@0 {
+		status = "disabled";
+	};
+
+	qcom,camera-flash@1 {
+		status = "disabled";
+	};
+
+	qcom,camera-flash@2 {
+		status = "disabled";
+	};
+
+	qcom,camera-flash@3 {
+		status = "disabled";
+	};
+
+	qcom,gpio-regulator@0 {
+		status = "disabled";
+	};
+
+	qcom,gpio-regulator@1 {
+		status = "disabled";
+	};
+
+	qcom,gpio-regulator@2 {
+		status = "disabled";
+	};
+
+	qcom,gpio-regulator@4 {
+		status = "disabled";
+	};
+
+	led_flash0: camera-flash@0 {
+		cell-index = <0>;
+		reg = <0x00 0x00>;
+		compatible = "qcom,camera-flash";
+		flash-source = <&pmi8998_flash0 &pmi8998_flash1>;
+		torch-source = <&pmi8998_torch0 &pmi8998_torch1>;
+		switch-source = <&pmi8998_switch0>;
+		status = "ok";
+	};
+
+	cam_vdig_rear_verg: cam_vdig_rear_verg {
+		compatible = "regulator-fixed";
+		regulator-name = "cam_vdig_rear_verg";
+	};
+};
+
+&cam_cci {
+	qcom,actuator@0 {
+		status = "disabled";
+	};
+
+	qcom,actuator@1 {
+		status = "disabled";
+	};
+
+	qcom,actuator@2 {
+		status = "disabled";
+	};
+
+	qcom,ois@0 {
+		status = "disabled";
+	};
+
+	qcom,eeprom@0 {
+		status = "disabled";
+	};
+
+	qcom,eeprom@1 {
+		status = "disabled";
+	};
+
+	qcom,eeprom@2 {
+		status = "disabled";
+	};
+
+	qcom,cam-sensor@0 {
+		status = "disabled";
+	};
+
+	qcom,cam-sensor@1 {
+		status = "disabled";
+	};
+
+	qcom,cam-sensor@2 {
+		status = "disabled";
+	};
+
+	qcom,cam-sensor@3 {
+		status = "disabled";
+	};
+
+	actuator0: actuator@0 {
+		cell-index = <0>;
+		compatible = "qcom,actuator";
+		reg = <0x0>;
+		cci-master = <0>;
+		cam_vaf-supply = <&pm8998_l19>;
+		regulator-names = "cam_vaf";
+	};
+
+	eeprom0: eeprom@0 {
+		cell-index = <0>;
+		compatible = "qcom,eeprom";
+		reg = <0x0>;
+		cci-master = <0>;
+		cam_vio-supply = <&cam_vio_vreg>;
+		regulator-names = "cam_vio";
+		pinctrl-names = "cam_default", "cam_suspend";
+		pinctrl-0 = <&cam_sensor_mclk0_active &sdm_gpio_80>;
+		pinctrl-1 = <&cam_sensor_mclk0_suspend &sdm_gpio_80>;
+		gpios = <&tlmm 13 0>, <&tlmm 80 0>;
+		gpio-reset = <1>;
+		gpio-req-tbl-num = <0 1>;
+		gpio-req-tbl-flags = <1 0>;
+		gpio-req-tbl-label = "CAMIF_MCLK0", "CAMIF_RESET0";
+		status = "ok";
+	};
+
+	cam-sensor@0 {
+		cell-index = <0>;
+		compatible = "qcom,cam-sensor";
+		reg = <0x0>;
+		cci-master = <0>;
+		csiphy-sd-index = <0>;
+		sensor-position-roll = <90>;
+		sensor-position-pitch = <0>;
+		sensor-position-yaw = <180>;
+		actuator-src = <&actuator0>;
+		eeprom-src = <&eeprom0>;
+		led-flash-src = <&led_flash0>;
+		cam_vio-supply = <&cam_vio_vreg>;
+		cam_vana-supply = <&cam_vana_rear_verg>;
+		cam_vdig-supply = <&cam_vdig_rear_verg>;
+		cam_clk-supply = <&titan_top_gdsc>;
+		regulator-names = "cam_vio", "cam_vana", "cam_vdig", "cam_clk";
+		pinctrl-names = "cam_default", "cam_suspend";
+		pinctrl-0 = <&cam_sensor_mclk0_active &sdm_gpio_80>;
+		pinctrl-1 = <&cam_sensor_mclk0_suspend &sdm_gpio_80>;
+		gpios = <&tlmm 13 0>, <&tlmm 80 0>;
+		gpio-reset = <1>;
+		gpio-req-tbl-num = <0 1>;
+		gpio-req-tbl-flags = <1 0>;
+		gpio-req-tbl-label = "CAMIF_MCLK0", "CAMIF_RESET0";
+		clocks = <&clock_camcc CAM_CC_MCLK0_CLK>;
+		clock-names = "cam_clk";
+		clock-cntl-level = "turbo";
+		clock-rates = <8000000>;
+		status = "ok";
+	};
+
+	eeprom1: eeprom@1 {
+		cell-index = <1>;
+		compatible = "qcom,eeprom";
+		reg = <0x1>;
+		cci-master = <1>;
+		cam_vio-supply = <&cam_vio_vreg>;
+		regulator-names = "cam_vio";
+		pinctrl-names = "cam_default", "cam_suspend";
+		pinctrl-0 = <&cam_sensor_mclk1_active &sdm_gpio_9>;
+		pinctrl-1 = <&cam_sensor_mclk1_suspend &sdm_gpio_9>;
+		gpios = <&tlmm 14 0>, <&tlmm 9 0>;
+		gpio-reset = <1>;
+		gpio-req-tbl-num = <0 1>;
+		gpio-req-tbl-flags = <1 0>;
+		gpio-req-tbl-label = "CAMIF_MCLK1", "CAMIF_RESET1";
+		status = "ok";
+	};
+
+	cam-sensor@1 {
+		cell-index = <1>;
+		compatible = "qcom,cam-sensor";
+		reg = <0x1>;
+		cci-master = <1>;
+		csiphy-sd-index = <2>;
+		sensor-position-roll = <90>;
+		sensor-position-pitch = <0>;
+		sensor-position-yaw = <0>;
+		eeprom-src = <&eeprom1>;
+		cam_vio-supply = <&cam_vio_vreg>;
+		cam_vana-supply = <&cam_vana_front_verg>;
+		cam_vdig-supply = <&pm8998_s3>;
+		cam_clk-supply = <&titan_top_gdsc>;
+		regulator-names = "cam_vio", "cam_vana", "cam_vdig", "cam_clk";
+		pinctrl-names = "cam_default", "cam_suspend";
+		pinctrl-0 = <&cam_sensor_mclk1_active &sdm_gpio_9>;
+		pinctrl-1 = <&cam_sensor_mclk1_suspend &sdm_gpio_9>;
+		gpios = <&tlmm 14 0>, <&tlmm 9 0>;
+		gpio-reset = <1>;
+		gpio-req-tbl-num = <0 1>;
+		gpio-req-tbl-flags = <1 0>;
+		gpio-req-tbl-label = "CAMIF_MCLK1", "CAMIF_RESET1";
+		clocks = <&clock_camcc CAM_CC_MCLK1_CLK>;
+		clock-names = "cam_clk";
+		clock-cntl-level = "turbo";
+		clock-rates = <8000000>;
+		status = "ok";
+	};
+};
+
+&i2c_freq_400Khz {
+	hw-thigh = <43>;
+	hw-tlow = <64>;
+	hw-tsu-sto = <41>;
+	hw-tsu-sta = <41>;
+	hw-thd-dat = <25>;
+	hw-thd-sta = <35>;
+	hw-tbuf = <64>;
+	hw-scl-stretch-en = <0>;
+	hw-trdhld = <6>;
+	hw-tsp = <3>;
+	cci-clk-src = <37500000>;
+	status = "ok";
+};
+
+&i2c_freq_1Mhz {
+	hw-thigh = <16>;
+	hw-tlow = <22>;
+	hw-tsu-sto = <17>;
+	hw-tsu-sta = <18>;
+	hw-thd-dat = <16>;
+	hw-thd-sta = <15>;
+	hw-tbuf = <19>;
+	hw-scl-stretch-en = <1>;
+	hw-trdhld = <3>;
+	hw-tsp = <3>;
+	cci-clk-src = <37500000>;
+	status = "ok";
+};

@@ -670,8 +670,10 @@ static inline u32 sde_hw_ctl_get_intf(struct sde_hw_ctl *ctx)
 	c = &ctx->hw;
 	ctl_top = SDE_REG_READ(c, CTL_TOP);
 
-	intf_active = (ctl_top > 0) ?
-		BIT(ctl_top - 1) : 0;
+	if (ctl_top == 0)
+		return 0;
+
+	intf_active = (ctl_top >> 4) & 0xf;
 
 	return intf_active;
 }
@@ -804,8 +806,6 @@ static void sde_hw_ctl_setup_blendstage(struct sde_hw_ctl *ctx,
 	else
 		pipes_per_stage = 1;
 
-	mixercfg = CTL_MIXER_BORDER_OUT; /* always set BORDER_OUT */
-
 	if (!stage_cfg)
 		goto exit;
 
@@ -912,6 +912,10 @@ static void sde_hw_ctl_setup_blendstage(struct sde_hw_ctl *ctx,
 	}
 
 exit:
+	if ((!mixercfg && !mixercfg_ext && !mixercfg_ext2 && !mixercfg_ext3) ||
+			(stage_cfg && !stage_cfg->stage[0][0]))
+		mixercfg |= CTL_MIXER_BORDER_OUT;
+
 	SDE_REG_WRITE(c, CTL_LAYER(lm), mixercfg);
 	SDE_REG_WRITE(c, CTL_LAYER_EXT(lm), mixercfg_ext);
 	SDE_REG_WRITE(c, CTL_LAYER_EXT2(lm), mixercfg_ext2);

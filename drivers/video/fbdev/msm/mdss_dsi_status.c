@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -24,7 +24,6 @@
 #include <linux/kobject.h>
 #include <linux/string.h>
 #include <linux/sysfs.h>
-#include <linux/interrupt.h>
 
 #include "mdss_fb.h"
 #include "mdss_dsi.h"
@@ -39,6 +38,35 @@
 static uint32_t interval = STATUS_CHECK_INTERVAL_MS;
 static int32_t dsi_status_disable = DSI_STATUS_CHECK_INIT;
 struct dsi_status_data *pstatus_data;
+
+int mdss_dsi_check_panel_status(struct mdss_dsi_ctrl_pdata *ctrl, void *arg)
+{
+	struct mdss_mdp_ctl *ctl = NULL;
+	struct msm_fb_data_type *mfd = arg;
+	int ret = 0;
+
+	if (!mfd)
+		return -EINVAL;
+
+	ctl = mfd_to_ctl(mfd);
+
+	if (!ctl || !ctrl)
+		return -EINVAL;
+
+	mutex_lock(&ctl->offlock);
+	/*
+	 * if check_status method is not defined
+	 * then no need to fail this function,
+	 * instead return a positive value.
+	 */
+	if (ctrl->check_status)
+		ret = ctrl->check_status(ctrl);
+	else
+		ret = 1;
+	mutex_unlock(&ctl->offlock);
+
+	return ret;
+}
 
 /*
  * check_dsi_ctrl_status() - Reads MFD structure and
@@ -95,10 +123,8 @@ irqreturn_t hw_vsync_handler(int irq, void *data)
 	else
 		pr_err("Pstatus data is NULL\n");
 
-	if (!atomic_read(&ctrl_pdata->te_irq_ready)) {
-		complete_all(&ctrl_pdata->te_irq_comp);
+	if (!atomic_read(&ctrl_pdata->te_irq_ready))
 		atomic_inc(&ctrl_pdata->te_irq_ready);
-	}
 
 	return IRQ_HANDLED;
 }
@@ -109,7 +135,7 @@ irqreturn_t hw_vsync_handler(int irq, void *data)
 void disable_esd_thread(void)
 {
 	if (pstatus_data &&
-		cancel_delayed_work_sync(&pstatus_data->check_status))
+	    cancel_delayed_work(&pstatus_data->check_status))
 		pr_debug("esd thread killed\n");
 }
 
@@ -140,7 +166,7 @@ static int fb_event_callback(struct notifier_block *self,
 	}
 
 	/* handle only mdss fb device */
-	if (strcmp("mdssfb", evdata->info->fix.id))
+	if (strncmp("mdssfb", evdata->info->fix.id, 6))
 		return NOTIFY_DONE;
 
 	mfd = evdata->info->par;
@@ -173,12 +199,10 @@ static int fb_event_callback(struct notifier_block *self,
 			schedule_delayed_work(&pdata->check_status,
 				msecs_to_jiffies(interval));
 			break;
-		case FB_BLANK_VSYNC_SUSPEND:
-		case FB_BLANK_NORMAL:
-			pr_debug("%s : ESD thread running\n", __func__);
-			break;
 		case FB_BLANK_POWERDOWN:
 		case FB_BLANK_HSYNC_SUSPEND:
+		case FB_BLANK_VSYNC_SUSPEND:
+		case FB_BLANK_NORMAL:
 			cancel_delayed_work(&pdata->check_status);
 			break;
 		default:
@@ -189,8 +213,7 @@ static int fb_event_callback(struct notifier_block *self,
 	return 0;
 }
 
-static int param_dsi_status_disable(const char *val,
-		const struct kernel_param *kp)
+static int param_dsi_status_disable(const char *val, const struct kernel_param *kp)
 {
 	int ret = 0;
 	int int_val;
@@ -230,8 +253,10 @@ int __init mdss_dsi_status_init(void)
 	int rc = 0;
 
 	pstatus_data = kzalloc(sizeof(struct dsi_status_data), GFP_KERNEL);
-	if (!pstatus_data)
+	if (!pstatus_data) {
+		pr_err("%s: can't allocate memory\n", __func__);
 		return -ENOMEM;
+	}
 
 	pstatus_data->fb_notifier.notifier_call = fb_event_callback;
 
@@ -263,7 +288,8 @@ void __exit mdss_dsi_status_exit(void)
 module_param_call(interval, param_set_interval, param_get_uint,
 						&interval, 0644);
 MODULE_PARM_DESC(interval,
-	"Duration in milliseconds to send BTA command for DSI status check");
+		"Duration in milliseconds to send BTA command for checking"
+		"DSI status periodically");
 
 module_param_call(dsi_status_disable, param_dsi_status_disable, param_get_uint,
 						&dsi_status_disable, 0644);

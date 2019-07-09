@@ -2816,7 +2816,7 @@ static int sde_rotator_get_dt_vreg_data(struct device *dev,
 	struct device_node *of_node = NULL;
 	int dt_vreg_total = 0;
 	int i;
-	int rc;
+	int rc = 0;
 
 	if (!dev || !mp) {
 		SDEROT_ERR("%s: invalid input\n", __func__);
@@ -3019,7 +3019,7 @@ static void sde_rotator_unregister_clk(struct sde_rot_mgr *mgr)
 static int sde_rotator_res_init(struct platform_device *pdev,
 	struct sde_rot_mgr *mgr)
 {
-	int ret;
+	int ret = 0;
 
 	if (!sde_rot_mgr_pd_enabled(mgr)) {
 		ret = sde_rotator_get_dt_vreg_data(
@@ -3123,10 +3123,16 @@ int sde_rotator_core_init(struct sde_rot_mgr **pmgr,
 	SDEROT_DBG("mdss revision %x\n", mdata->mdss_version);
 
 	if (IS_SDE_MAJOR_MINOR_SAME(mdata->mdss_version,
-			SDE_MDP_HW_REV_107)) {
+			SDE_MDP_HW_REV_107) ||
+	    IS_SDE_MAJOR_MINOR_SAME(mdata->mdss_version,
+			SDE_MDP_HW_REV_172)) {
 		mgr->ops_hw_init = sde_rotator_r1_init;
 	} else if (IS_SDE_MAJOR_MINOR_SAME(mdata->mdss_version,
 			SDE_MDP_HW_REV_300) ||
+		IS_SDE_MAJOR_MINOR_SAME(mdata->mdss_version,
+			SDE_MDP_HW_REV_320) ||
+		IS_SDE_MAJOR_MINOR_SAME(mdata->mdss_version,
+			SDE_MDP_HW_REV_330) ||
 		IS_SDE_MAJOR_MINOR_SAME(mdata->mdss_version,
 			SDE_MDP_HW_REV_400) ||
 		IS_SDE_MAJOR_MINOR_SAME(mdata->mdss_version,

@@ -20,6 +20,7 @@
 #include <linux/platform_device.h>
 #include <linux/ipa_uc_offload.h>
 #include <linux/pci.h>
+#include <linux/msm-bus.h>
 #include "ipa_api.h"
 
 /*
@@ -110,6 +111,32 @@ static bool running_emulation;
 
 static enum ipa_hw_type ipa_api_hw_type;
 static struct ipa_api_controller *ipa_api_ctrl;
+
+#define MAX_CPY_BUFF_SZ		4096
+unsigned long
+ipa_safe_copy_from_user(char *dst, const char __user *buf, size_t count)
+{
+	unsigned long missing = 0;
+	char *from_user = NULL;
+	int sz;
+
+	if (MAX_CPY_BUFF_SZ < count + 1)
+		return ULONG_MAX;
+
+	sz = count * sizeof(char);
+	from_user = kmalloc(sz + 1, GFP_KERNEL);
+	if (!from_user)
+		return ULONG_MAX;
+
+	missing = copy_from_user(from_user, buf, count);
+	if (missing)
+		goto end;
+
+	memcpy(dst, from_user, sz);
+end:
+	kfree(from_user);
+	return missing;
+}
 
 const char *ipa_clients_strings[IPA_CLIENT_MAX] = {
 	__stringify(IPA_CLIENT_HSIC1_PROD),
@@ -2980,6 +3007,11 @@ static int ipa_generic_plat_drv_probe(struct platform_device *pdev_p)
 	pr_debug("ipa: IPA driver probing started for %s\n",
 		pdev_p->dev.of_node->name);
 
+#ifndef CONFIG_QCOM_BUS_CONFIG_RPMH
+	if (!msm_bus_scale_driver_ready())
+		return -EPROBE_DEFER;
+#endif
+
 	if (!ipa_api_ctrl) {
 		ipa_api_ctrl = kzalloc(sizeof(*ipa_api_ctrl), GFP_KERNEL);
 		if (!ipa_api_ctrl)
@@ -2999,6 +3031,13 @@ static int ipa_generic_plat_drv_probe(struct platform_device *pdev_p)
 
 	/* call probe based on IPA HW version */
 	switch (ipa_api_hw_type) {
+	case IPA_HW_v2_0:
+	case IPA_HW_v2_1:
+	case IPA_HW_v2_5:
+	case IPA_HW_v2_6L:
+		result = ipa_plat_drv_probe(pdev_p, ipa_api_ctrl,
+			ipa_plat_drv_match);
+		break;
 	case IPA_HW_v3_0:
 	case IPA_HW_v3_1:
 	case IPA_HW_v3_5:
@@ -3430,6 +3469,11 @@ static int ipa_pci_probe(
 		return -EOPNOTSUPP;
 	}
 
+#ifndef CONFIG_QCOM_BUS_CONFIG_RPMH
+	if (!msm_bus_scale_driver_ready())
+		return -EPROBE_DEFER;
+#endif
+
 	if (!ipa_api_ctrl) {
 		ipa_api_ctrl = kzalloc(sizeof(*ipa_api_ctrl), GFP_KERNEL);
 		if (ipa_api_ctrl == NULL)
@@ -3496,7 +3540,11 @@ static int __init ipa_module_init(void)
 	/* Register as a platform device driver */
 	return platform_driver_register(&ipa_plat_drv);
 }
+#ifdef CONFIG_QCOM_BUS_CONFIG_RPMH
 subsys_initcall(ipa_module_init);
+#else
+fs_initcall(ipa_module_init);
+#endif
 
 MODULE_LICENSE("GPL v2");
 MODULE_DESCRIPTION("IPA HW device driver");

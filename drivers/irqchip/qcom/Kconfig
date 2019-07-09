@@ -41,6 +41,13 @@ config QTI_PDC_SDXPRAIRIE
 	  the wakeup interrupts. Enable it when
 	  ARCH_SDXPRAIRIE is selected.
 
+config QTI_PDC_SDM845
+        bool "QTI PDC SDM845"
+        select QTI_PDC
+        default y if ARCH_SDM845
+        help
+          QTI Power Domain Controller for SDM845
+
 config QTI_MPM
 	bool "QTI MPM"
 	depends on ARCH_QCOM

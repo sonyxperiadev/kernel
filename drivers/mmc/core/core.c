@@ -2,6 +2,7 @@
  *  linux/drivers/mmc/core/core.c
  *
  *  Copyright (C) 2003-2004 Russell King, All Rights Reserved.
+ *  Copyright (c) 2015 Sony Mobile Communications Inc.
  *  SD support Copyright (C) 2004 Ian Molton, All Rights Reserved.
  *  Copyright (C) 2005-2008 Pierre Ossman, All Rights Reserved.
  *  MMCv4 support Copyright (C) 2006 Philip Langdale, All Rights Reserved.
@@ -56,6 +57,9 @@
 
 /* If the device is not responding */
 #define MMC_CORE_TIMEOUT_MS	(10 * 60 * 1000) /* 10 minute timeout */
+
+/* Flushing a large amount of cached data may take a long time. */
+#define MMC_FLUSH_REQ_TIMEOUT_MS 180000 /* msec */
 
 /* The max erase timeout, used when host->max_busy_timeout isn't specified */
 #define MMC_ERASE_TIMEOUT_MS	(60 * 1000) /* 60 s */
@@ -372,7 +376,8 @@ int mmc_cmdq_halt_on_empty_queue(struct mmc_host *host)
 			msecs_to_jiffies(MMC_CMDQ_WAIT_EVENT_TIMEOUT_MS));
 
 	if (WARN_ON(!err && host->cmdq_ctx.active_reqs)) {
-		pr_err("%s: %s: timeout case? host-claimed(%d), claim-cnt(%d), claim-comm(%s), active-reqs(0x%x)\n",
+		pr_err("%s: %s: timeout case? host-claimed(%d), claim-cnt(%d),"
+		       " claim-comm(%s), active-reqs(0x%lx)\n",
 			mmc_hostname(host), __func__, host->claimed,
 			host->claim_cnt, host->claimer->comm,
 			host->cmdq_ctx.active_reqs);
@@ -708,6 +713,7 @@ out:
 int mmc_init_clk_scaling(struct mmc_host *host)
 {
 	int err;
+	struct devfreq *devfreq;
 
 	if (!host || !host->card) {
 		pr_err("%s: unexpected host/card parameters\n",
@@ -763,17 +769,20 @@ int mmc_init_clk_scaling(struct mmc_host *host)
 		host->clk_scaling.ondemand_gov_data.upthreshold,
 		host->clk_scaling.ondemand_gov_data.downdifferential,
 		host->clk_scaling.devfreq_profile.polling_ms);
-	host->clk_scaling.devfreq = devfreq_add_device(
+
+	devfreq = devfreq_add_device(
 		mmc_classdev(host),
 		&host->clk_scaling.devfreq_profile,
 		"simple_ondemand",
 		&host->clk_scaling.ondemand_gov_data);
-	if (!host->clk_scaling.devfreq) {
+
+	if (IS_ERR(devfreq)) {
 		pr_err("%s: unable to register with devfreq\n",
 			mmc_hostname(host));
-		return -EPERM;
+		return PTR_ERR(devfreq);
 	}
 
+	host->clk_scaling.devfreq = devfreq;
 	pr_debug("%s: clk scaling is enabled for device %s (%p) with devfreq %p (clock = %uHz)\n",
 		mmc_hostname(host),
 		dev_name(mmc_classdev(host)),
@@ -3020,7 +3029,14 @@ int mmc_set_uhs_voltage(struct mmc_host *host, u32 ocr)
 
 	host->card_clock_off = false;
 	/* Wait for at least 1 ms according to spec */
-	mmc_delay(1);
+#ifndef CONFIG_MMC_SUPPORT_SVS_INTERVAL
+		mmc_delay(1);
+#else
+	if (host->caps & MMC_CAP_NONREMOVABLE)
+		mmc_delay(1);
+	else
+		mmc_delay(40);
+#endif
 
 	/*
 	 * Failure to switch is indicated by the card holding
@@ -3122,7 +3138,11 @@ void mmc_power_up(struct mmc_host *host, u32 ocr)
 
 	mmc_pwrseq_pre_power_on(host);
 
-	host->ios.vdd = fls(ocr) - 1;
+	if (host->caps2 & MMC_CAP2_NONSTANDARD_OCR)
+		host->ios.vdd = ffs(ocr) - 1;
+	else
+		host->ios.vdd = fls(ocr) - 1;
+
 	host->ios.power_mode = MMC_POWER_UP;
 	/* Set initial state and call mmc_set_ios */
 	mmc_set_initial_state(host);
@@ -4224,9 +4244,12 @@ static int mmc_rescan_try_freq(struct mmc_host *host, unsigned freq)
 		if (!mmc_attach_sdio(host))
 			return 0;
 
-	if (!(host->caps2 & MMC_CAP2_NO_SD))
+	if (!(host->caps2 & MMC_CAP2_NO_SD)) {
 		if (!mmc_attach_sd(host))
 			return 0;
+		else
+			mmc_gpio_tray_close_set_uim2(host, 1);
+	}
 
 	if (!(host->caps2 & MMC_CAP2_NO_MMC))
 		if (!mmc_attach_mmc(host))
@@ -4422,6 +4445,8 @@ void mmc_stop_host(struct mmc_host *host)
 	host->rescan_disable = 1;
 	cancel_delayed_work_sync(&host->detect);
 
+	mmc_gpio_set_uim2_en(host, 0);
+
 	/* clear pm flags now and let card drivers set them as needed */
 	host->pm_flags = 0;
 
@@ -4494,6 +4519,59 @@ int mmc_power_restore_host(struct mmc_host *host)
 	return ret;
 }
 EXPORT_SYMBOL(mmc_power_restore_host);
+
+/*
+ * Turn the cache ON/OFF.
+ * Turning the cache OFF shall trigger flushing of the data
+ * to the non-volatile storage.
+ * This function should be called with host claimed
+ */
+int mmc_cache_ctrl(struct mmc_host *host, u8 enable)
+{
+	struct mmc_card *card = host->card;
+	unsigned int timeout;
+	int err = 0, rc;
+
+	BUG_ON(!card);
+	timeout = card->ext_csd.generic_cmd6_time;
+
+	if (mmc_card_is_removable(host) ||
+			(card->quirks & MMC_QUIRK_CACHE_DISABLE))
+		return err;
+
+	if (card && mmc_card_mmc(card) &&
+			(card->ext_csd.cache_size > 0)) {
+		enable = !!enable;
+
+		if (card->ext_csd.cache_ctrl ^ enable) {
+			if (!enable)
+				timeout = MMC_FLUSH_REQ_TIMEOUT_MS;
+
+			err = mmc_switch_ignore_timeout(card,
+					EXT_CSD_CMD_SET_NORMAL,
+					EXT_CSD_CACHE_CTRL, enable, timeout);
+
+			if (err == -ETIMEDOUT && !enable) {
+				pr_err("%s:cache disable operation timeout\n",
+						mmc_hostname(card->host));
+				rc = mmc_interrupt_hpi(card);
+				if (rc)
+					pr_err("%s: mmc_interrupt_hpi() failed (%d)\n",
+							mmc_hostname(host), rc);
+			} else if (err) {
+				pr_err("%s: cache %s error %d\n",
+						mmc_hostname(card->host),
+						enable ? "on" : "off",
+						err);
+			} else {
+				card->ext_csd.cache_ctrl = enable;
+			}
+		}
+	}
+
+	return err;
+}
+EXPORT_SYMBOL(mmc_cache_ctrl);
 
 #ifdef CONFIG_PM_SLEEP
 /* Do the card removal on suspend if card is assumed removeable

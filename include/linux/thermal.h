@@ -33,7 +33,7 @@
 #include <uapi/linux/thermal.h>
 
 #define THERMAL_TRIPS_NONE	-1
-#define THERMAL_MAX_TRIPS	12
+#define THERMAL_MAX_TRIPS	16
 
 /* invalid cooling state */
 #define THERMAL_CSTATE_INVALID -1UL
@@ -442,7 +442,7 @@ enum aggregation_logic {
 struct virtual_sensor_data {
 	int                    num_sensors;
 	char                   virt_zone_name[THERMAL_NAME_LENGTH];
-	char                   *sensor_names[THERMAL_MAX_VIRT_SENSORS];
+	const char             *sensor_names[THERMAL_MAX_VIRT_SENSORS];
 	enum aggregation_logic logic;
 	int                    coefficients[THERMAL_MAX_VIRT_SENSORS];
 	int                    coefficient_ct;

@@ -131,6 +131,9 @@
  */
 #define ADRENO_ACD BIT(17)
 
+/* The MMU carveout size is limited to 8MB */
+#define ADRENO_MMU_GLOBAL_MEMSZ_8M BIT(30)
+
 /*
  * Adreno GPU quirks - control bits for various workarounds
  */
@@ -215,6 +218,7 @@ enum adreno_gpurev {
 	ADRENO_REV_A505 = 505,
 	ADRENO_REV_A506 = 506,
 	ADRENO_REV_A508 = 508,
+	ADRENO_REV_A509 = 509,
 	ADRENO_REV_A510 = 510,
 	ADRENO_REV_A512 = 512,
 	ADRENO_REV_A530 = 530,
@@ -1253,6 +1257,7 @@ static inline int adreno_is_a5xx(struct adreno_device *adreno_dev)
 ADRENO_TARGET(a505, ADRENO_REV_A505)
 ADRENO_TARGET(a506, ADRENO_REV_A506)
 ADRENO_TARGET(a508, ADRENO_REV_A508)
+ADRENO_TARGET(a509, ADRENO_REV_A509)
 ADRENO_TARGET(a510, ADRENO_REV_A510)
 ADRENO_TARGET(a512, ADRENO_REV_A512)
 ADRENO_TARGET(a530, ADRENO_REV_A530)
@@ -1895,8 +1900,9 @@ static inline unsigned int counter_delta(struct kgsl_device *device,
 	/* Read the value */
 	kgsl_regread(device, reg, &val);
 
-	if (adreno_is_a5xx(adreno_dev) && reg == adreno_getreg
-		(adreno_dev, ADRENO_REG_RBBM_PERFCTR_RBBM_0_LO))
+	if ((adreno_is_a530(adreno_dev) || adreno_is_a540(adreno_dev)) &&
+	    reg == adreno_getreg(adreno_dev,
+					ADRENO_REG_RBBM_PERFCTR_RBBM_0_LO))
 		overflow = is_power_counter_overflow(adreno_dev, reg,
 				*counter, &perfctr_pwr_hi);
 

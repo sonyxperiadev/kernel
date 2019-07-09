@@ -434,9 +434,15 @@ static int mmc_decode_ext_csd(struct mmc_card *card, u8 *ext_csd)
 			card->ext_csd.part_time = MMC_MIN_PART_SWITCH_TIME;
 
 		/* Sleep / awake timeout in 100ns units */
-		if (sa_shift > 0 && sa_shift <= 0x17)
+		if (sa_shift > 0 && sa_shift <= 0x17) {
+#if defined(CONFIG_ARCH_SONY_NILE) || defined(CONFIG_ARCH_SONY_GANGES)
+			/* HACK: Set sa_timeout for bad CSD on SoMC Nile */
+			card->ext_csd.sa_timeout = 1 << 0x17;
+#else
 			card->ext_csd.sa_timeout =
 					1 << ext_csd[EXT_CSD_S_A_TIMEOUT];
+#endif
+		}
 		card->ext_csd.erase_group_def =
 			ext_csd[EXT_CSD_ERASE_GROUP_DEF];
 		card->ext_csd.hc_erase_timeout = 300 *
@@ -646,6 +652,11 @@ static int mmc_decode_ext_csd(struct mmc_card *card, u8 *ext_csd)
 		} else {
 			card->ext_csd.data_tag_unit_size = 0;
 		}
+
+#if defined(CONFIG_ARCH_SONY_LOIRE) || defined(CONFIG_ARCH_SONY_TONE)
+		if (card->cid.manfid == CID_MANFID_HYNIX)
+			card->ext_csd.generic_cmd6_time = 100;
+#endif
 	} else {
 		card->ext_csd.data_sector_size = 512;
 	}
@@ -655,7 +666,11 @@ static int mmc_decode_ext_csd(struct mmc_card *card, u8 *ext_csd)
 		 * 8 but some eMMC devices can support it with rev 7. So handle
 		 * Enhance Strobe here.
 		 */
+#ifdef CONFIG_ARCH_SONY_LOIRE
+		card->ext_csd.strobe_support = false;
+#else
 		card->ext_csd.strobe_support = ext_csd[EXT_CSD_STROBE_SUPPORT];
+#endif
 		card->ext_csd.cmdq_support = ext_csd[EXT_CSD_CMDQ_SUPPORT];
 		card->ext_csd.fw_version = ext_csd[EXT_CSD_FIRMWARE_VERSION];
 		pr_info("%s: eMMC FW version: 0x%02x\n",
@@ -2115,6 +2130,10 @@ reinit:
 	/*
 	 * Enable power_off_notification byte in the ext_csd register
 	 */
+#if defined(CONFIG_ARCH_SONY_LOIRE) || \
+    defined(CONFIG_ARCH_SONY_TONE)
+	if (host->caps2 & MMC_CAP2_FULL_PWR_CYCLE)
+#endif
 	if (card->ext_csd.rev >= 6) {
 		err = mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
 				 EXT_CSD_POWER_OFF_NOTIFICATION,
@@ -2254,6 +2273,11 @@ reinit:
 
 	if (!oldcard)
 		host->card = card;
+
+	if (card->cid.manfid == CID_MANFID_HYNIX &&
+	    (card->ext_csd.fw_version == 0xA2 || card->ext_csd.fw_version == 0xA4)) {
+		card->host->caps2 &= ~MMC_CAP2_CMD_QUEUE;
+	}
 
 	/*
 	 * Start auto bkops, if supported.
@@ -2585,7 +2609,7 @@ static int _mmc_suspend(struct mmc_host *host, bool is_suspend)
 			goto out_err;
 	}
 
-	err = mmc_flush_cache(host->card);
+	err = mmc_cache_ctrl(host, 0);
 	if (err)
 		goto out_err;
 
@@ -2656,11 +2680,21 @@ static int mmc_partial_init(struct mmc_host *host)
 	mmc_host_clk_hold(host);
 
 	if (mmc_card_hs400(card)) {
+#ifdef CONFIG_ARCH_SONY_LOIRE
+		if (host->ops->execute_tuning) {
+			err = host->ops->execute_tuning(host,
+				MMC_SEND_TUNING_BLOCK_HS400);
+			if (err)
+				pr_warn("%s: %s: tuning execution failed (%d)\n",
+					mmc_hostname(host), __func__, err);
+		}
+#else
 		if (card->ext_csd.strobe_support && host->ops->enhanced_strobe)
 			err = host->ops->enhanced_strobe(host);
 		else if (host->ops->execute_tuning)
 			err = host->ops->execute_tuning(host,
 				MMC_SEND_TUNING_BLOCK_HS200);
+#endif
 	} else if (mmc_card_hs200(card) && host->ops->execute_tuning) {
 		err = host->ops->execute_tuning(host,
 			MMC_SEND_TUNING_BLOCK_HS200);
@@ -2690,6 +2724,24 @@ static int mmc_partial_init(struct mmc_host *host)
 	pr_debug("%s: %s: reading and comparing ext_csd successful\n",
 		mmc_hostname(host), __func__);
 
+	err = mmc_cache_ctrl(host, 1);
+	if (err) {
+		pr_err("%s: %s faild (%d) cache_ctrl\n",
+		    mmc_hostname(host), __func__, err);
+		goto out;
+	}
+
+#if defined(CONFIG_ARCH_SONY_LOIRE) || defined(CONFIG_ARCH_SONY_TONE)
+	if (host->card->cmdq_init) {
+		mmc_host_clk_hold(host);
+		host->cmdq_ops->enable(host);
+		mmc_host_clk_release(host);
+		err = mmc_cmdq_halt(host, false);
+		if (err) {
+			pr_err("%s: un-halt: failed: %d\n", __func__, err);
+		}
+	}
+#else
 	if (card->ext_csd.cmdq_support && (card->host->caps2 &
 					   MMC_CAP2_CMD_QUEUE)) {
 		err = mmc_select_cmdq(card);
@@ -2699,6 +2751,7 @@ static int mmc_partial_init(struct mmc_host *host)
 					__func__, err);
 		}
 	}
+#endif
 out:
 	mmc_host_clk_release(host);
 

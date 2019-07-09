@@ -1,6 +1,8 @@
 /*
  *  linux/include/linux/mmc/core.h
  *
+ * Copyright (c) 2015 Sony Mobile Communications Inc.
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
@@ -26,6 +28,7 @@ enum mmc_blk_status {
 	MMC_BLK_ECC_ERR,
 	MMC_BLK_NOMEDIUM,
 	MMC_BLK_NEW_REQUEST,
+	MMC_BLK_RETRY_SINGLE,
 };
 
 struct mmc_command {
@@ -215,6 +218,8 @@ extern void mmc_cmdq_clk_scaling_stop_busy(struct mmc_host *host,
 	bool lock_needed, bool is_cmdq_dcmd);
 extern void mmc_cmdq_up_rwsem(struct mmc_host *host);
 extern int mmc_cmdq_down_rwsem(struct mmc_host *host, struct request *rq);
+extern int mmc_switch_ignore_timeout(struct mmc_card *, u8, u8, u8,
+				     unsigned int);
 extern int __mmc_switch_cmdq_mode(struct mmc_command *cmd, u8 set, u8 index,
 				  u8 value, unsigned int timeout_ms,
 				  bool use_busy_signal, bool ignore_timeout);

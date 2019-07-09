@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
  * Copyright (C) 2013 Red Hat
  * Author: Rob Clark <robdclark@gmail.com>
  *
@@ -18,6 +18,7 @@
 
 #include <linux/module.h>
 #include <linux/of_platform.h>
+#include <linux/of_iommu.h>
 #include <linux/pm_runtime.h>
 #include <linux/msm_dma_iommu_mapping.h>
 
@@ -59,6 +60,7 @@ struct msm_smmu_domain {
 
 #define to_msm_smmu(x) container_of(x, struct msm_smmu, base)
 #define msm_smmu_to_client(smmu) (smmu->client)
+#define NON_FATAL_FAULTS 1
 
 static int _msm_smmu_create_mapping(struct msm_smmu_client *client,
 	const struct msm_smmu_domain *domain);
@@ -68,6 +70,7 @@ static int msm_smmu_attach(struct msm_mmu *mmu, const char * const *names,
 {
 	struct msm_smmu *smmu = to_msm_smmu(mmu);
 	struct msm_smmu_client *client = msm_smmu_to_client(smmu);
+	struct iommu_group *grp = NULL;
 	int rc = 0;
 
 	if (!client) {
@@ -78,6 +81,12 @@ static int msm_smmu_attach(struct msm_mmu *mmu, const char * const *names,
 	/* domain attach only once */
 	if (client->domain_attached)
 		return 0;
+
+	if (!client->dev->iommu_group) {
+		 grp = iommu_group_get_for_dev(client->dev);
+		 if (IS_ERR_OR_NULL(grp))
+			  return PTR_ERR(grp);
+	}
 
 	rc = arm_iommu_attach_device(client->dev,
 			client->mmu_mapping);
@@ -207,7 +216,9 @@ static void msm_smmu_destroy(struct msm_mmu *mmu)
 
 	if (smmu->client_dev)
 		platform_device_unregister(pdev);
-	kfree(smmu);
+
+	if (smmu)
+		kfree(smmu);
 }
 
 struct device *msm_smmu_get_dev(struct msm_mmu *mmu)
@@ -328,6 +339,33 @@ static struct msm_smmu_domain msm_smmu_domains[MSM_SMMU_DOMAIN_MAX] = {
 	},
 };
 
+static struct msm_smmu_domain msm_smmu_domains_legacy[MSM_SMMU_DOMAIN_MAX] = {
+	[MSM_SMMU_DOMAIN_UNSECURE] = {
+		.label = "mdp_ns",
+		.va_start = SZ_128K,
+		.va_size = SZ_4G - SZ_128M,
+		.secure = false,
+	},
+	[MSM_SMMU_DOMAIN_SECURE] = {
+		.label = "mdp_s",
+		.va_start = SZ_128K,
+		.va_size = SZ_4G - SZ_128M,
+		.secure = true,
+	},
+	[MSM_SMMU_DOMAIN_NRT_UNSECURE] = {
+		.label = "rot_ns",
+		.va_start = SZ_128K,
+		.va_size = SZ_4G - SZ_128M,
+		.secure = false,
+	},
+	[MSM_SMMU_DOMAIN_NRT_SECURE] = {
+		.label = "rot_s",
+		.va_start = SZ_128K,
+		.va_size = SZ_4G - SZ_128M,
+		.secure = true,
+	},
+};
+
 static const struct of_device_id msm_smmu_dt_match[] = {
 	{ .compatible = "qcom,smmu_sde_unsec",
 		.data = &msm_smmu_domains[MSM_SMMU_DOMAIN_UNSECURE] },
@@ -337,6 +375,16 @@ static const struct of_device_id msm_smmu_dt_match[] = {
 		.data = &msm_smmu_domains[MSM_SMMU_DOMAIN_NRT_UNSECURE] },
 	{ .compatible = "qcom,smmu_sde_nrt_sec",
 		.data = &msm_smmu_domains[MSM_SMMU_DOMAIN_NRT_SECURE] },
+
+	{ .compatible = "qcom,smmu_sde_unsec_legacy",
+		.data = &msm_smmu_domains_legacy[MSM_SMMU_DOMAIN_UNSECURE] },
+	{ .compatible = "qcom,smmu_sde_sec_legacy",
+		.data = &msm_smmu_domains_legacy[MSM_SMMU_DOMAIN_SECURE] },
+	{ .compatible = "qcom,smmu_sde_nrt_unsec_legacy",
+		.data =
+		    &msm_smmu_domains_legacy[MSM_SMMU_DOMAIN_NRT_UNSECURE] },
+	{ .compatible = "qcom,smmu_sde_nrt_sec_legacy",
+		.data = &msm_smmu_domains_legacy[MSM_SMMU_DOMAIN_NRT_SECURE] },
 	{}
 };
 MODULE_DEVICE_TABLE(of, msm_smmu_dt_match);
@@ -351,9 +399,15 @@ static struct device *msm_smmu_device_create(struct device *dev,
 	const char *compat = NULL;
 
 	for (i = 0; i < ARRAY_SIZE(msm_smmu_dt_match); i++) {
-		if (msm_smmu_dt_match[i].data == &msm_smmu_domains[domain]) {
+		if ((msm_smmu_dt_match[i].data == &msm_smmu_domains[domain]) ||
+		    (msm_smmu_dt_match[i].data ==
+					&msm_smmu_domains_legacy[domain])) {
 			compat = msm_smmu_dt_match[i].compatible;
-			break;
+			child = of_find_compatible_node(dev->of_node,
+							NULL, compat);
+			if (child)
+				break;
+			compat = NULL;
 		}
 	}
 
@@ -361,7 +415,14 @@ static struct device *msm_smmu_device_create(struct device *dev,
 		DRM_DEBUG("unable to find matching domain for %d\n", domain);
 		return ERR_PTR(-ENOENT);
 	}
-	DRM_DEBUG("found domain %d compat: %s\n", domain, compat);
+
+	child = of_find_compatible_node(dev->of_node, NULL, compat);
+	if (!child) {
+		DRM_INFO("unable to find compatible node for %s\n", compat);
+		return ERR_PTR(-ENODEV);
+	}
+
+	DRM_INFO("found domain %d compat: %s\n", domain, compat);
 
 	if (domain == MSM_SMMU_DOMAIN_UNSECURE) {
 		int rc;
@@ -384,12 +445,6 @@ static struct device *msm_smmu_device_create(struct device *dev,
 		return NULL;
 	}
 
-	child = of_find_compatible_node(dev->of_node, NULL, compat);
-	if (!child) {
-		DRM_DEBUG("unable to find compatible node for %s\n", compat);
-		return ERR_PTR(-ENODEV);
-	}
-
 	pdev = of_platform_device_create(child, NULL, dev);
 	if (!pdev) {
 		DRM_ERROR("unable to create smmu platform dev for domain %d\n",
@@ -398,6 +453,9 @@ static struct device *msm_smmu_device_create(struct device *dev,
 	}
 
 	smmu->client = platform_get_drvdata(pdev);
+
+        if (!pdev->dev.iommu_fwspec)
+                of_iommu_configure(&pdev->dev, pdev->dev.of_node);
 
 	return &pdev->dev;
 }
@@ -466,6 +524,7 @@ static int _msm_smmu_create_mapping(struct msm_smmu_client *client,
 {
 	int rc;
 	int mdphtw_llc_enable = 1;
+	int data = NON_FATAL_FAULTS;
 
 	client->mmu_mapping = arm_iommu_create_mapping(&platform_bus_type,
 			domain->va_start, domain->va_size);
@@ -510,6 +569,19 @@ static int _msm_smmu_create_mapping(struct msm_smmu_client *client,
 			domain->label, domain->va_start, domain->va_size,
 			domain->secure);
 
+	/**
+	 * Stage 1 smmu faults can be treated non-fatal.
+	 * So, register smmu client with non-fatal-faults
+	 * attribute to the iommu domain.
+	 */
+	rc = iommu_domain_set_attr(client->mmu_mapping->domain,
+			DOMAIN_ATTR_NON_FATAL_FAULTS, &data);
+	if (rc) {
+		dev_err(client->dev, "couldn't set attr:non_fatal_faults: %d\n",
+				rc);
+		goto error;
+	}
+
 	return 0;
 
 error:
@@ -552,6 +624,9 @@ static int msm_smmu_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	client->dev = &pdev->dev;
+
+	/* Give a chance to DMA APIs to register an IOMMU master */
+	of_dma_configure(&pdev->dev, pdev->dev.of_node);
 
 	rc = _msm_smmu_create_mapping(client, domain);
 	platform_set_drvdata(pdev, client);

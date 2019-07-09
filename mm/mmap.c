@@ -51,6 +51,10 @@
 #include <asm/tlb.h>
 #include <asm/mmu_context.h>
 
+#ifdef CONFIG_MSM_APP_SETTINGS
+#include <asm/app_api.h>
+#endif
+
 #include "internal.h"
 
 #ifndef arch_mmap_check
@@ -1445,6 +1449,11 @@ unsigned long do_mmap(struct file *file, unsigned long addr,
 
 	if (!len)
 		return -EINVAL;
+
+#ifdef CONFIG_MSM_APP_SETTINGS
+	if (use_app_setting)
+		apply_app_setting_bit(file);
+#endif
 
 	/*
 	 * Does the application expect PROT_READ to imply PROT_EXEC?

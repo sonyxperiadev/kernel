@@ -26,6 +26,7 @@
 #include <linux/slab.h>
 #include <linux/spinlock.h>
 #include <linux/irqchip/arm-gic.h>
+#include <linux/irqchip/arm-gic-common.h>
 
 /*
 * MSI_TYPER:
@@ -94,7 +95,7 @@ static struct irq_chip gicv2m_msi_irq_chip = {
 
 static struct msi_domain_info gicv2m_msi_domain_info = {
 	.flags	= (MSI_FLAG_USE_DEF_DOM_OPS | MSI_FLAG_USE_DEF_CHIP_OPS |
-		   MSI_FLAG_PCI_MSIX),
+		   MSI_FLAG_PCI_MSIX | MSI_FLAG_MULTI_PCI_MSI),
 	.chip	= &gicv2m_msi_irq_chip,
 };
 
@@ -155,18 +156,12 @@ static int gicv2m_irq_gic_domain_alloc(struct irq_domain *domain,
 	return 0;
 }
 
-static void gicv2m_unalloc_msi(struct v2m_data *v2m, unsigned int hwirq)
+static void gicv2m_unalloc_msi(struct v2m_data *v2m, unsigned int hwirq,
+			       int nr_irqs)
 {
-	int pos;
-
-	pos = hwirq - v2m->spi_start;
-	if (pos < 0 || pos >= v2m->nr_spis) {
-		pr_err("Failed to teardown msi. Invalid hwirq %d\n", hwirq);
-		return;
-	}
-
 	spin_lock(&v2m_lock);
-	__clear_bit(pos, v2m->bm);
+	bitmap_release_region(v2m->bm, hwirq - v2m->spi_start,
+			      get_count_order(nr_irqs));
 	spin_unlock(&v2m_lock);
 }
 
@@ -174,13 +169,13 @@ static int gicv2m_irq_domain_alloc(struct irq_domain *domain, unsigned int virq,
 				   unsigned int nr_irqs, void *args)
 {
 	struct v2m_data *v2m = NULL, *tmp;
-	int hwirq, offset, err = 0;
+	int hwirq, offset, i, err = 0;
 
 	spin_lock(&v2m_lock);
 	list_for_each_entry(tmp, &v2m_nodes, entry) {
-		offset = find_first_zero_bit(tmp->bm, tmp->nr_spis);
-		if (offset < tmp->nr_spis) {
-			__set_bit(offset, tmp->bm);
+		offset = bitmap_find_free_region(tmp->bm, tmp->nr_spis,
+						 get_count_order(nr_irqs));
+		if (offset >= 0) {
 			v2m = tmp;
 			break;
 		}
@@ -192,16 +187,21 @@ static int gicv2m_irq_domain_alloc(struct irq_domain *domain, unsigned int virq,
 
 	hwirq = v2m->spi_start + offset;
 
-	err = gicv2m_irq_gic_domain_alloc(domain, virq, hwirq);
-	if (err) {
-		gicv2m_unalloc_msi(v2m, hwirq);
-		return err;
+	for (i = 0; i < nr_irqs; i++) {
+		err = gicv2m_irq_gic_domain_alloc(domain, virq + i, hwirq + i);
+		if (err)
+			goto fail;
+
+		irq_domain_set_hwirq_and_chip(domain, virq + i, hwirq + i,
+					      &gicv2m_irq_chip, v2m);
 	}
 
-	irq_domain_set_hwirq_and_chip(domain, virq, hwirq,
-				      &gicv2m_irq_chip, v2m);
-
 	return 0;
+
+fail:
+	irq_domain_free_irqs_parent(domain, virq, nr_irqs);
+	gicv2m_unalloc_msi(v2m, hwirq, get_count_order(nr_irqs));
+	return err;
 }
 
 static void gicv2m_irq_domain_free(struct irq_domain *domain,
@@ -210,8 +210,7 @@ static void gicv2m_irq_domain_free(struct irq_domain *domain,
 	struct irq_data *d = irq_domain_get_irq_data(domain, virq);
 	struct v2m_data *v2m = irq_data_get_irq_chip_data(d);
 
-	BUG_ON(nr_irqs != 1);
-	gicv2m_unalloc_msi(v2m, d->hwirq);
+	gicv2m_unalloc_msi(v2m, d->hwirq, nr_irqs);
 	irq_domain_free_irqs_parent(domain, virq, nr_irqs);
 }
 
@@ -383,13 +382,57 @@ err_free_v2m:
 	return ret;
 }
 
-static struct of_device_id gicv2m_device_id[] = {
-	{	.compatible	= "arm,gic-v2m-frame",	},
-	{},
+static const struct of_device_id gicv2m_device_id[] = {
+	{ .compatible = "arm,gic-v2m-frame", },
+	{ .compatible = "qcom,gic-msi-aliases", },
+	{}
 };
 
-static int __init gicv2m_of_init(struct fwnode_handle *parent_handle,
-				 struct irq_domain *parent)
+static int __init gicv2m_of_init_one(struct device_node *child)
+{
+	u32 spi_start = 0, nr_spis = 0;
+	struct resource res;
+	int ret, i, cnt;
+	struct fwnode_handle *fwnode = &child->fwnode;
+
+	if (!of_find_property(child, "msi-controller", NULL))
+		return 0;
+
+	ret = of_address_to_resource(child, 0, &res);
+	if (ret) {
+		pr_err("Failed to allocate v2m resource\n");
+		return ret;
+	}
+
+	if (!of_property_read_u32(child, "arm,msi-base-spi",
+				  &spi_start) &&
+	    !of_property_read_u32(child, "arm,msi-num-spis", &nr_spis))
+		pr_info("DT overriding V2M MSI_TYPER (base:%u, num:%u)\n",
+			spi_start, nr_spis);
+
+	cnt = of_property_count_u32_elems(child, "arm,spi-ranges");
+	if (cnt < 0)
+		cnt = 0;
+	cnt /= 2;
+
+	if (!cnt)
+		return gicv2m_init_one(fwnode, spi_start, nr_spis, &res);
+
+	/* Populate v2m for each SPI range */
+	for (i = 0; i < cnt; i++) {
+		of_property_read_u32_index(child, "arm,spi-ranges",
+					   i * 2, &spi_start);
+		of_property_read_u32_index(child, "arm,spi-ranges",
+					   i * 2 + 1, &nr_spis);
+		ret = gicv2m_init_one(fwnode, spi_start, nr_spis, &res);
+		if (ret)
+			return ret;
+	}
+
+	return 0;
+}
+
+static int __init gicv2m_of_init_children(struct fwnode_handle *parent_handle)
 {
 	int ret = 0;
 	struct device_node *node = to_of_node(parent_handle);
@@ -397,35 +440,27 @@ static int __init gicv2m_of_init(struct fwnode_handle *parent_handle,
 
 	for (child = of_find_matching_node(node, gicv2m_device_id); child;
 	     child = of_find_matching_node(child, gicv2m_device_id)) {
-		u32 spi_start = 0, nr_spis = 0;
-		struct resource res;
-
-		if (!of_find_property(child, "msi-controller", NULL))
-			continue;
-
-		ret = of_address_to_resource(child, 0, &res);
-		if (ret) {
-			pr_err("Failed to allocate v2m resource.\n");
-			break;
-		}
-
-		if (!of_property_read_u32(child, "arm,msi-base-spi",
-					  &spi_start) &&
-		    !of_property_read_u32(child, "arm,msi-num-spis", &nr_spis))
-			pr_info("DT overriding V2M MSI_TYPER (base:%u, num:%u)\n",
-				spi_start, nr_spis);
-
-		ret = gicv2m_init_one(&child->fwnode, spi_start, nr_spis, &res);
+		ret = gicv2m_of_init_one(child);
 		if (ret) {
 			of_node_put(child);
 			break;
 		}
 	}
 
+	return ret;
+}
+
+static int __init gicv2m_of_init(struct fwnode_handle *parent_handle,
+				 struct irq_domain *parent)
+{
+	int ret;
+
+	ret = gicv2m_of_init_children(parent_handle);
 	if (!ret)
 		ret = gicv2m_allocate_domains(parent);
 	if (ret)
 		gicv2m_teardown();
+
 	return ret;
 }
 
@@ -517,6 +552,23 @@ static int __init gicv2m_acpi_init(struct irq_domain *parent)
 	return -EINVAL;
 }
 #endif /* CONFIG_ACPI */
+
+int __init gicv2m_init_gicv3(struct fwnode_handle *handle,
+			     struct irq_domain *parent)
+{
+	int ret;
+	struct device_node *node = to_of_node(handle);
+
+	ret = gicv2m_of_init_children(handle);
+	if (!ret)
+		ret = gicv2m_of_init_one(node);
+	if (!ret)
+		ret = gicv2m_allocate_domains(parent);
+	if (ret)
+		gicv2m_teardown();
+
+	return ret;
+}
 
 int __init gicv2m_init(struct fwnode_handle *parent_handle,
 		       struct irq_domain *parent)

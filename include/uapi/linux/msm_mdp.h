@@ -112,13 +112,15 @@
 #define MDSS_MDP_HW_REV_109	MDSS_MDP_REV(1, 9, 0) /* 8994 v2.0 */
 #define MDSS_MDP_HW_REV_110	MDSS_MDP_REV(1, 10, 0) /* 8992 v1.0 */
 #define MDSS_MDP_HW_REV_200	MDSS_MDP_REV(2, 0, 0) /* 8092 v1.0 */
+#define MDSS_MDP_HW_REV_111	MDSS_MDP_REV(1, 11, 0) /* 8956/76 v1.0 */
 #define MDSS_MDP_HW_REV_112	MDSS_MDP_REV(1, 12, 0) /* 8952 v1.0 */
 #define MDSS_MDP_HW_REV_114	MDSS_MDP_REV(1, 14, 0) /* 8937 v1.0 */
 #define MDSS_MDP_HW_REV_115	MDSS_MDP_REV(1, 15, 0) /* msmgold */
 #define MDSS_MDP_HW_REV_116	MDSS_MDP_REV(1, 16, 0) /* msmtitanium */
-#define MDSS_MDP_HW_REV_117	MDSS_MDP_REV(1, 17, 0) /* qcs405 */
-#define MDSS_MDP_HW_REV_300	MDSS_MDP_REV(3, 0, 0)  /* msmcobalt */
-#define MDSS_MDP_HW_REV_301	MDSS_MDP_REV(3, 0, 1)  /* msmcobalt v1.0 */
+#define MDSS_MDP_HW_REV_300	MDSS_MDP_REV(3, 0, 0)  /* msm8998 */
+#define MDSS_MDP_HW_REV_301	MDSS_MDP_REV(3, 0, 1)  /* msm8998 v1.0 */
+#define MDSS_MDP_HW_REV_320	MDSS_MDP_REV(3, 2, 0)  /* sdm660 */
+#define MDSS_MDP_HW_REV_330	MDSS_MDP_REV(3, 3, 0)  /* sdm630 */
 
 enum {
 	NOTIFY_UPDATE_INIT,
@@ -327,8 +329,8 @@ struct mult_factor {
  * {3x3} + {3} ccs matrix
  */
 
-#define MDP_CCS_RGB2YUV	0
-#define MDP_CCS_YUV2RGB	1
+#define MDP_CCS_RGB2YUV 	0
+#define MDP_CCS_YUV2RGB 	1
 
 #define MDP_CCS_SIZE	9
 #define MDP_BV_SIZE	3
@@ -507,6 +509,12 @@ struct mdp_pa_mem_col_cfg {
 	uint32_t hue_region;
 	uint32_t sat_region;
 	uint32_t val_region;
+
+	/* New Control Params in PA V1_7 */
+	uint32_t color_adjust_p2;
+	uint32_t blend_gain;
+	uint8_t sat_hold;
+	uint8_t val_hold;
 };
 
 #define MDP_SIX_ZONE_LUT_SIZE		384
@@ -900,15 +908,17 @@ struct mdp_misr {
 };
 
 /*
- * mdp_block_type defines the identifiers for pipes in MDP 4.3 and up
- *
- * MDP_BLOCK_RESERVED is provided for backward compatibility and is
- * deprecated. It corresponds to DMA_P. So MDP_BLOCK_DMA_P should be used
- * instead.
- *
- * MDP_LOGICAL_BLOCK_DISP_0 identifies the display pipe which fb0 uses,
- * same for others.
- */
+
+	mdp_block_type defines the identifiers for pipes in MDP 4.3 and up
+
+	MDP_BLOCK_RESERVED is provided for backward compatibility and is
+	deprecated. It corresponds to DMA_P. So MDP_BLOCK_DMA_P should be used
+	instead.
+
+	MDP_LOGICAL_BLOCK_DISP_0 identifies the display pipe which fb0 uses,
+	same for others.
+
+*/
 
 enum {
 	MDP_BLOCK_RESERVED = 0,
@@ -1398,6 +1408,11 @@ enum {
 	MDP_IOMMU_DOMAIN_NS,
 };
 
+/*
+ * These definitions are a continuation of the mdp_color_space enum above
+ */
+#define MDP_CSC_ITU_R_2020	(MDP_CSC_ITU_R_709 + 1)
+#define MDP_CSC_ITU_R_2020_FR	(MDP_CSC_ITU_R_2020 + 1)
 enum {
 	MDP_WRITEBACK_MIRROR_OFF,
 	MDP_WRITEBACK_MIRROR_ON,
@@ -1405,6 +1420,9 @@ enum {
 	MDP_WRITEBACK_MIRROR_RESUME,
 };
 
+/*
+ * The enum values are continued below as preprocessor macro definitions
+ */
 enum mdp_color_space {
 	MDP_CSC_ITU_R_601,
 	MDP_CSC_ITU_R_601_FR,
@@ -1416,6 +1434,7 @@ enum mdp_color_space {
  */
 #define MDP_CSC_ITU_R_2020	(MDP_CSC_ITU_R_709 + 1)
 #define MDP_CSC_ITU_R_2020_FR	(MDP_CSC_ITU_R_2020 + 1)
+
 enum {
 	mdp_igc_v1_7 = 1,
 	mdp_igc_vmax,

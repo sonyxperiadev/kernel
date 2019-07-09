@@ -124,7 +124,7 @@ static void mem_abort_decode(unsigned int esr)
 	pr_alert("  EA = %lu, S1PTW = %lu\n",
 		 (esr & ESR_ELx_EA) >> ESR_ELx_EA_SHIFT,
 		 (esr & ESR_ELx_S1PTW) >> ESR_ELx_S1PTW_SHIFT);
-	pr_alert("  FSC = %lu\n", (esr & ESR_ELx_FSC));
+	pr_alert("  FSC = %u\n", (esr & ESR_ELx_FSC));
 
 	if (esr_is_data_abort(esr))
 		data_abort_decode(esr);
@@ -584,6 +584,17 @@ no_context:
 	return 0;
 }
 
+#ifdef CONFIG_QCOM_TLB_EL2_HANDLER
+/*
+ * TLB conflict is already handled in EL2. This routine should return zero
+ * so that, do_mem_abort would not crash kernel thinking TLB conflict not
+ * handled.
+*/
+static int do_tlb_conf_fault(unsigned long addr,
+				unsigned int esr,
+				struct pt_regs *regs)
+{ return 0; }
+#else
 static int do_tlb_conf_fault(unsigned long addr,
 				unsigned int esr,
 				struct pt_regs *regs)
@@ -600,7 +611,7 @@ static int do_tlb_conf_fault(unsigned long addr,
 
 	return 0;
 }
-
+#endif
 /*
  * First Level Translation Fault Handler
  *

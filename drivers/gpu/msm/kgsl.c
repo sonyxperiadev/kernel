@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2008-2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -397,7 +397,7 @@ kgsl_mem_entry_destroy(struct kref *kref)
 			    entry->memdesc.sgt->nents, i) {
 			page = sg_page(sg);
 			for (j = 0; j < (sg->length >> PAGE_SHIFT); j++)
-				set_page_dirty(nth_page(page, j));
+				set_page_dirty_lock(nth_page(page, j));
 		}
 	}
 
@@ -559,7 +559,7 @@ void kgsl_context_dump(struct kgsl_context *context)
 	device = context->device;
 
 	if (kgsl_context_detached(context)) {
-		dev_err(device->dev, "  context[%d]: context detached\n",
+		dev_err(device->dev, "  context[%u]: context detached\n",
 			context->id);
 	} else if (device->ftbl->drawctxt_dump != NULL)
 		device->ftbl->drawctxt_dump(device, context);
@@ -2656,6 +2656,12 @@ static int kgsl_setup_dma_buf(struct kgsl_device *device,
 		return -ENOMEM;
 
 	attach = dma_buf_attach(dmabuf, device->dev);
+
+	if (IS_ERR(attach)) {
+		ret = PTR_ERR(attach);
+		goto out;
+	}
+
 	/*
 	 * If dma buffer is marked IO coherent, skip sync at attach,
 	 * which involves flushing the buffer on CPU.
@@ -2663,11 +2669,6 @@ static int kgsl_setup_dma_buf(struct kgsl_device *device,
 	 */
 	if (entry->memdesc.flags & KGSL_MEMFLAGS_IOCOHERENT)
 		attach->dma_map_attrs |= DMA_ATTR_SKIP_CPU_SYNC;
-
-	if (IS_ERR_OR_NULL(attach)) {
-		ret = attach ? PTR_ERR(attach) : -EINVAL;
-		goto out;
-	}
 
 	meta->dmabuf = dmabuf;
 	meta->attach = attach;

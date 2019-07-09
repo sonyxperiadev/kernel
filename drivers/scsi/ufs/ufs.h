@@ -40,6 +40,12 @@
 #include <linux/types.h>
 #include <scsi/ufs/ufs.h>
 
+#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA)
+ #ifndef UFS_TARGET_SONY_PLATFORM
+  #define UFS_TARGET_SONY_PLATFORM
+ #endif
+#endif
+
 #define MAX_CDB_SIZE	16
 #define GENERAL_UPIU_REQUEST_SIZE 32
 #define QUERY_DESC_MAX_SIZE       255
@@ -153,6 +159,9 @@ enum ufs_desc_def_size {
 	QUERY_DESC_INTERCONNECT_DEF_SIZE	= 0x06,
 	QUERY_DESC_GEOMETRY_DEF_SIZE		= 0x44,
 	QUERY_DESC_POWER_DEF_SIZE		= 0x62,
+#ifdef UFS_TARGET_SONY_PLATFORM
+	QUERY_DESC_DEVICE_HEALTH_DEF_SIZE	= 0x25,
+#endif
 };
 
 /* Unit descriptor parameters offsets in bytes*/
@@ -204,6 +213,16 @@ enum device_desc_param {
 	DEVICE_DESC_PARAM_UD_LEN		= 0x1B,
 	DEVICE_DESC_PARAM_RTT_CAP		= 0x1C,
 	DEVICE_DESC_PARAM_FRQ_RTC		= 0x1D,
+#ifdef UFS_TARGET_SONY_PLATFORM
+	DEVICE_DESC_PARAM_FFU_SUPPORT		= 0x1F,
+	DEVICE_DESC_PARAM_FFU_TIMEOUT		= 0x20,
+	DEVICE_DESC_PARAM_QUEUE_DEPTH		= 0x21,
+	DEVICE_DESC_PARAM_DEVICE_VER		= 0x22,
+	DEVICE_DESC_PARAM_NUM_SEC_WP_AREA	= 0x24,
+	DEVICE_DESC_PARAM_PSM_MAX_DATA_SIZE	= 0x25,
+	DEVICE_DESC_PARAM_PSA_STATE_TIMEOUT	= 0x29,
+	DEVICE_DESC_PARAM_PRODUCT_REVISION	= 0x2A,
+#endif
 };
 
 /*
@@ -507,6 +526,9 @@ struct ufs_dev_info {
 	u16	w_manufacturer_id;
 	u8	i_product_name;
 	u16	w_spec_version;
+#ifdef UFS_TARGET_SONY_PLATFORM
+	u8	revision;
+#endif
 
 	/* query flags */
 	bool f_power_on_wp_en;
@@ -521,6 +543,10 @@ struct ufs_dev_info {
 };
 
 #define MAX_MODEL_LEN 16
+
+#ifdef UFS_TARGET_SONY_PLATFORM
+#define MAX_REVISION_LEN	8
+#endif
 /**
  * ufs_dev_desc - ufs device details from the device descriptor
  *
@@ -530,6 +556,9 @@ struct ufs_dev_info {
 struct ufs_dev_desc {
 	u16 wmanufacturerid;
 	char model[MAX_MODEL_LEN + 1];
+#ifdef UFS_TARGET_SONY_PLATFORM
+	char fw_revision[MAX_REVISION_LEN + 1];
+#endif
 	u16 wspecversion;
 };
 

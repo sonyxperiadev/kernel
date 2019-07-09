@@ -89,7 +89,7 @@ static void dsi_catalog_cmn_init(struct dsi_ctrl_hw *ctrl,
 		ctrl->ops.reg_dump_to_buffer =
 			dsi_ctrl_hw_14_reg_dump_to_buffer;
 		ctrl->ops.schedule_dma_cmd = NULL;
-		ctrl->ops.get_cont_splash_status = NULL;
+		ctrl->ops.get_cont_splash_status = dsi_ctrl_hw_14_get_cont_splash_status;
 		ctrl->ops.kickoff_command_non_embedded_mode = NULL;
 		ctrl->ops.config_clk_gating = NULL;
 		break;
@@ -99,13 +99,14 @@ static void dsi_catalog_cmn_init(struct dsi_ctrl_hw *ctrl,
 			dsi_ctrl_hw_20_wait_for_lane_idle;
 		ctrl->ops.reg_dump_to_buffer =
 			dsi_ctrl_hw_20_reg_dump_to_buffer;
-		ctrl->ops.ulps_ops.ulps_request = NULL;
-		ctrl->ops.ulps_ops.ulps_exit = NULL;
-		ctrl->ops.ulps_ops.get_lanes_in_ulps = NULL;
-		ctrl->ops.clamp_enable = NULL;
-		ctrl->ops.clamp_disable = NULL;
+		ctrl->ops.ulps_ops.ulps_request = dsi_ctrl_hw_cmn_ulps_request;
+		ctrl->ops.ulps_ops.ulps_exit = dsi_ctrl_hw_cmn_ulps_exit;
+		ctrl->ops.ulps_ops.get_lanes_in_ulps =
+			dsi_ctrl_hw_cmn_get_lanes_in_ulps;
+		ctrl->ops.clamp_enable = dsi_ctrl_hw_14_clamp_enable;
+		ctrl->ops.clamp_disable = dsi_ctrl_hw_14_clamp_disable;
 		ctrl->ops.schedule_dma_cmd = NULL;
-		ctrl->ops.get_cont_splash_status = NULL;
+		ctrl->ops.get_cont_splash_status = dsi_ctrl_hw_14_get_cont_splash_status;
 		ctrl->ops.kickoff_command_non_embedded_mode = NULL;
 		ctrl->ops.config_clk_gating = NULL;
 		break;
@@ -234,9 +235,7 @@ static void dsi_catalog_phy_3_0_init(struct dsi_phy_hw *phy)
 	phy->ops.ulps_ops.is_lanes_in_ulps =
 		dsi_phy_hw_v3_0_is_lanes_in_ulps;
 	phy->ops.phy_timing_val = dsi_phy_hw_timing_val_v3_0;
-	phy->ops.clamp_ctrl = dsi_phy_hw_v3_0_clamp_ctrl;
 	phy->ops.phy_lane_reset = dsi_phy_hw_v3_0_lane_reset;
-	phy->ops.toggle_resync_fifo = dsi_phy_hw_v3_0_toggle_resync_fifo;
 	phy->ops.dyn_refresh_ops.dyn_refresh_config =
 		dsi_phy_hw_v3_0_dyn_refresh_config;
 	phy->ops.dyn_refresh_ops.dyn_refresh_pipe_delay =
@@ -245,6 +244,12 @@ static void dsi_catalog_phy_3_0_init(struct dsi_phy_hw *phy)
 		dsi_phy_hw_v3_0_dyn_refresh_helper;
 	phy->ops.dyn_refresh_ops.cache_phy_timings =
 		dsi_phy_hw_v3_0_cache_phy_timings;
+
+	if (!of_machine_is_compatible("qcom,msm8998")) {
+		phy->ops.clamp_ctrl = dsi_phy_hw_v3_0_clamp_ctrl;
+		phy->ops.toggle_resync_fifo =
+			dsi_phy_hw_v3_0_toggle_resync_fifo;
+	}
 }
 
 /**

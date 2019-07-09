@@ -438,6 +438,21 @@ config MMC_SDHCI_MSM
 
 	  If unsure, say N.
 
+config MMC_SDHCI_MSM_LEGACY
+	tristate "Qualcomm Technologies, Inc. SDHCI Controller (legacy)"
+	depends on ARCH_QCOM
+	help
+	  This is a legacy and temporary driver for legacy QTI SoCs.
+	  Early bringup only.
+
+config MMC_ENABLE_CLK_SCALE
+	bool "Clock Scaling of SDHCI support"
+	depends on MMC_SDHCI_MSM
+	default n
+	help
+	  This selects support for the SD/MMC Host Controller on
+	  Clock Scaling.
+
 config MMC_SDHCI_MSM_ICE
 	bool "Qualcomm Technologies, Inc Inline Crypto Engine for SDHCI core"
 	depends on MMC_SDHCI_MSM && CRYPTO_DEV_QCOM_ICE

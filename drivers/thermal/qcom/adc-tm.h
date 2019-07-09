@@ -177,6 +177,7 @@ struct adc_tm_ops {
 	int (*set_trips)(struct adc_tm_sensor *, int, int);
 	int (*interrupts_reg)(struct adc_tm_chip *);
 	int (*shutdown)(struct adc_tm_chip *);
+	void (*notify_adc)(struct work_struct *);
 };
 
 struct adc_tm_chip {
@@ -201,6 +202,8 @@ struct adc_tm_data {
 	unsigned int	*hw_settle;
 };
 
+extern const struct adc_tm_data data_adc_tm3;
+extern const struct adc_tm_data data_adc_tm4;
 extern const struct adc_tm_data data_adc_tm5;
 /**
  * Channel index for the corresponding index to adc_tm_channel_select
@@ -222,6 +225,7 @@ enum adc_tm_channel_num {
  * Channels allotment is set at device config for a channel.
  */
 enum adc_tm_channel_sel	{
+	ADC_TM_M0_V4_ADC_CH_SEL_CTL = 0x48,
 	ADC_TM_M0_ADC_CH_SEL_CTL = 0x60,
 	ADC_TM_M1_ADC_CH_SEL_CTL = 0x68,
 	ADC_TM_M2_ADC_CH_SEL_CTL = 0x70,
@@ -321,7 +325,20 @@ struct adc_tm_linear_graph {
 	s32 dy;
 	s32 dx;
 	s32 gnd;
+	s32 vref;
 };
+
+int therm_tm3_fwd_scale(int64_t code, uint32_t adc_hc_vdd_ref_mv,
+				enum adc_cal_method cal_method,
+				const struct adc_tm_data *data);
+void adc_tm3_scale_therm_voltage_100k(struct adc_tm_config *param,
+				struct adc_tm_linear_graph *graph,
+				enum adc_cal_method cal_method,
+				const struct adc_tm_data *data);
+void adc_tm3_scale_therm_voltage_alt_100k(struct adc_tm_config *param,
+				struct adc_tm_linear_graph *graph,
+				enum adc_cal_method cal_method,
+				const struct adc_tm_data *data);
 
 int therm_fwd_scale(int64_t code, uint32_t adc_hc_vdd_ref_mv,
 				const struct adc_tm_data *data);
@@ -331,8 +348,6 @@ void adc_tm_scale_therm_voltage_100k(struct adc_tm_config *param,
 
 int32_t adc_tm_absolute_rthr(const struct adc_tm_data *data,
 			struct adc_tm_config *tm_config);
-
-void notify_adc_tm_fn(struct work_struct *work);
 
 struct adc_tm_chip *get_adc_tm(struct device *dev, const char *name);
 int32_t adc_tm5_channel_measure(struct adc_tm_chip *chip,

@@ -47,6 +47,8 @@
 #define SDE_HW_VER_172	SDE_HW_VER(1, 7, 2) /* 8996 v3.0 */
 #define SDE_HW_VER_300	SDE_HW_VER(3, 0, 0) /* 8998 v1.0 */
 #define SDE_HW_VER_301	SDE_HW_VER(3, 0, 1) /* 8998 v1.1 */
+#define SDE_HW_VER_320  SDE_HW_VER(3, 2, 0) /* sdm660 v1.0 */
+#define SDE_HW_VER_330	SDE_HW_VER(3, 3, 0) /* sdm630 v1.0 */
 #define SDE_HW_VER_400	SDE_HW_VER(4, 0, 0) /* sdm845 v1.0 */
 #define SDE_HW_VER_401	SDE_HW_VER(4, 0, 1) /* sdm845 v2.0 */
 #define SDE_HW_VER_410	SDE_HW_VER(4, 1, 0) /* sdm670 v1.0 */
@@ -56,8 +58,13 @@
 #define SDE_HW_VER_520	SDE_HW_VER(5, 2, 0) /* sdmmagpie v1.0 */
 #define SDE_HW_VER_530	SDE_HW_VER(5, 3, 0) /* sm6150 v1.0 */
 
-#define IS_MSM8996_TARGET(rev) IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_VER_170)
-#define IS_MSM8998_TARGET(rev) IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_VER_300)
+#define IS_MSM8996_TARGET(rev) IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_VER_170) || \
+			       IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_VER_171) || \
+			       IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_VER_172)
+#define IS_MSM8998_TARGET(rev) IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_VER_300) || \
+			       IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_VER_301)
+#define IS_SDM630_TARGET(rev) IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_VER_330)
+#define IS_SDM660_TARGET(rev) IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_VER_320)
 #define IS_SDM845_TARGET(rev) IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_VER_400)
 #define IS_SDM670_TARGET(rev) IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_VER_410)
 #define IS_SM8150_TARGET(rev) IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_VER_500)
@@ -162,6 +169,7 @@ enum {
  * @SDE_SSPP_BLOCK_SEC_UI    Blocks secure-ui layers
  * @SDE_SSPP_QOS_FL_NOCALC   Avoid fill level calculation for QoS/danger/safe
  * @SDE_SSPP_SCALER_QSEED3LITE Qseed3lite algorithm support
+ * @SDE_SSPP_LINE_INSERTION  Line insertion support
  * @SDE_SSPP_MAX             maximum value
  */
 enum {
@@ -196,6 +204,7 @@ enum {
 	SDE_SSPP_BLOCK_SEC_UI,
 	SDE_SSPP_QOS_FL_NOCALC,
 	SDE_SSPP_SCALER_QSEED3LITE,
+	SDE_SSPP_LINE_INSERTION,
 	SDE_SSPP_MAX
 };
 
@@ -989,6 +998,8 @@ struct sde_perf_cdp_cfg {
  * @cdp_cfg            cdp use case configurations
  * @cpu_mask:          pm_qos cpu mask value
  * @cpu_dma_latency:   pm_qos cpu dma latency value
+ * @axi_bus_width:     axi bus width value in bytes
+ * @num_mnoc_ports:    number of mnoc ports
  */
 struct sde_perf_cfg {
 	u32 max_bw_low;
@@ -1015,6 +1026,8 @@ struct sde_perf_cfg {
 	struct sde_perf_cdp_cfg cdp_cfg[SDE_PERF_CDP_USAGE_MAX];
 	u32 cpu_mask;
 	u32 cpu_dma_latency;
+	u32 axi_bus_width;
+	u32 num_mnoc_ports;
 };
 
 /**
@@ -1106,6 +1119,8 @@ struct sde_mdss_cfg {
 	bool delay_prg_fetch_start;
 	bool has_qsync;
 	bool has_3d_merge_reset;
+	bool has_line_insertion;
+	bool has_base_layer;
 
 	bool sui_misr_supported;
 	u32 sui_block_xin_mask;
@@ -1229,7 +1244,7 @@ static inline bool sde_hw_sspp_multirect_enabled(const struct sde_sspp_cfg *cfg)
 			 test_bit(SDE_SSPP_SMART_DMA_V2p5, &cfg->features);
 }
 
-static inline sde_hw_intf_te_supported(const struct sde_mdss_cfg *sde_cfg)
+static inline bool sde_hw_intf_te_supported(const struct sde_mdss_cfg *sde_cfg)
 {
 	return test_bit(SDE_INTF_TE, &(sde_cfg->intf[0].features));
 }

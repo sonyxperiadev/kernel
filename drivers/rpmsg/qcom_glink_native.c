@@ -736,7 +736,7 @@ static int qcom_glink_advertise_intent(struct qcom_glink *glink,
 	cmd.size = cpu_to_le32(intent->size);
 	cmd.liid = cpu_to_le32(intent->id);
 
-	CH_INFO(channel, "count:%d size:%d liid:%d\n", 1,
+	CH_INFO(channel, "count:%d size:%zu liid:%d\n", 1,
 		intent->size, intent->id);
 
 	qcom_glink_tx(glink, &cmd, sizeof(cmd), NULL, 0, true);
@@ -842,7 +842,7 @@ static void qcom_glink_handle_intent_req(struct qcom_glink *glink,
 	spin_unlock_irqrestore(&glink->idr_lock, flags);
 
 	if (!channel) {
-		pr_err("%s channel not found for cid %d\n", __func__, cid);
+		pr_err("%s channel not found for cid %u\n", __func__, cid);
 		return;
 	}
 
@@ -1058,7 +1058,8 @@ static void qcom_glink_handle_intent(struct qcom_glink *glink,
 		intent->id = le32_to_cpu(msg->intents[i].iid);
 		intent->size = le32_to_cpu(msg->intents[i].size);
 
-		CH_INFO(channel, "riid:%d size:%d\n", intent->id, intent->size);
+		CH_INFO(channel, "riid:%d size:%zu\n",
+				intent->id, intent->size);
 
 		spin_lock_irqsave(&channel->intent_lock, flags);
 		ret = idr_alloc(&channel->riids, intent,
@@ -1417,7 +1418,7 @@ static int qcom_glink_request_intent(struct qcom_glink *glink,
 	cmd.cid = channel->lcid;
 	cmd.size = size;
 
-	CH_INFO(channel, "size:%d\n", size);
+	CH_INFO(channel, "size:%zu\n", size);
 
 	ret = qcom_glink_tx(glink, &cmd, sizeof(cmd), NULL, 0, true);
 	if (ret)
@@ -1957,7 +1958,7 @@ struct qcom_glink *qcom_glink_native_probe(struct device *dev,
 	glink->task = kthread_run(kthread_worker_fn, &glink->kworker,
 				  "glink_%s", glink->name);
 	if (IS_ERR(glink->task)) {
-		dev_err(dev, "failed to spawn intent kthread %d\n",
+		dev_err(dev, "failed to spawn intent kthread %ld\n",
 			PTR_ERR(glink->task));
 		return ERR_CAST(glink->task);
 	}

@@ -33,4 +33,7 @@ struct gic_kvm_info {
 
 const struct gic_kvm_info *gic_get_kvm_info(void);
 
+int gicv2m_init_gicv3(struct fwnode_handle *parent_handle,
+		      struct irq_domain *parent);
+
 #endif /* __LINUX_IRQCHIP_ARM_GIC_COMMON_H */

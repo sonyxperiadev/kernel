@@ -49,6 +49,10 @@
 #include <soc/qcom/scm.h>
 #include "soc/qcom/secure_buffer.h"
 
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+#include "../dsi-staging/somc_panel/somc_panel_exts.h"
+#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
+
 #define CREATE_TRACE_POINTS
 #include "sde_trace.h"
 
@@ -1345,6 +1349,42 @@ static void _sde_kms_release_displays(struct sde_kms *sde_kms)
 	sde_kms->dsi_display_count = 0;
 }
 
+#ifdef CONFIG_DRM_MSM_EMU_HEADLESS
+int kms_emu_headless_disp_check_status(void *display, bool te_check_override)
+{
+	struct dsi_display *dsi_display = display;
+	struct dsi_panel *panel;
+	struct dsi_display_ctrl *ctrl;
+	int i, rc = 0x1;
+	u32 mask;
+
+	if (!dsi_display || !dsi_display->panel)
+		return -EINVAL;
+
+	panel = dsi_display->panel;
+
+	dsi_panel_acquire_panel_lock(panel);
+
+	if (!panel->panel_initialized) {
+		pr_debug("Panel not initialized\n");
+		dsi_panel_release_panel_lock(panel);
+		return rc;
+	}
+
+	/* Prevent another ESD check,when ESD recovery is underway */
+	if (atomic_read(&panel->esd_recovery_pending)) {
+		dsi_panel_release_panel_lock(panel);
+		return rc;
+	}
+
+	panel->esd_config.esd_enabled = false;
+
+	dsi_panel_release_panel_lock(panel);
+
+	return rc;
+}
+#endif
+
 /**
  * _sde_kms_setup_displays - create encoders, bridges and connectors
  *                           for underlying displays
@@ -1368,11 +1408,19 @@ static int _sde_kms_setup_displays(struct drm_device *dev,
 		.soft_reset   = dsi_display_soft_reset,
 		.pre_kickoff  = dsi_conn_pre_kickoff,
 		.clk_ctrl = dsi_display_clk_ctrl,
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+		.set_power = somc_panel_set_doze_mode,
+#else
 		.set_power = dsi_display_set_power,
+#endif
 		.get_mode_info = dsi_conn_get_mode_info,
 		.get_dst_format = dsi_display_get_dst_format,
 		.post_kickoff = dsi_conn_post_kickoff,
+#ifdef CONFIG_DRM_MSM_EMU_HEADLESS
+		.check_status = kms_emu_headless_disp_check_status,
+#else
 		.check_status = dsi_display_check_status,
+#endif
 		.enable_event = dsi_conn_enable_event,
 		.cmd_transfer = dsi_display_cmd_transfer,
 		.cont_splash_config = dsi_display_cont_splash_config,

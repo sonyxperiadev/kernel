@@ -125,6 +125,7 @@ static int dsi_phy_regmap_init(struct platform_device *pdev,
 
 	switch (phy->ver_info->version) {
 	case DSI_PHY_VERSION_2_0:
+	case DSI_PHY_VERSION_3_0:
 		ptr = msm_ioremap(pdev, "phy_clamp_base", phy->name);
 		if (IS_ERR(ptr))
 			phy->hw.phy_clamp_base = NULL;

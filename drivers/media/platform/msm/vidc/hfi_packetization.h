@@ -23,6 +23,7 @@
 	((q)->pkt_ops->op(__VA_ARGS__)) : 0)
 
 enum hfi_packetization_type {
+	HFI_PACKETIZATION_3XX,
 	HFI_PACKETIZATION_4XX,
 };
 

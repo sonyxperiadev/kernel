@@ -1,0 +1,155 @@
+/* Copyright (c) 2018, AngeloGioacchino Del Regno <kholk11@gmail.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+#include "msm8996-sde-overlay.dtsi"
+
+/ {
+	/* Bad indentation is required. Sorry. */
+	chosen {
+
+		bootargs = \
+"fpsimd.fpsimd_settings=1 app_setting.use_app_setting=1 \
+app_setting.use_32bit_app_setting=1 sched_enable_hmp=1 \
+rcupdate.rcu_expedited=1 \
+msm_drm.dsi_display0=dsi_panel_somc_tone_cmd:config0";
+
+	};
+};
+
+/delete-node/ &dsi_panel_pwr_supply_hybrid_incell;
+/delete-node/ &dsi_panel_pwr_supply_full_incell;
+
+&soc {
+	dsi_panel_pwr_supply: dsi_panel_pwr_supply {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		qcom,panel-supply-entry@0 {
+			reg = <0>;
+			qcom,supply-name = "vddio";
+			qcom,supply-min-voltage = <1800000>;
+			qcom,supply-max-voltage = <1800000>;
+			qcom,supply-enable-load = <62000>;
+			qcom,supply-disable-load = <80>;
+		};
+	};
+
+	dsi_panel_vspvsn_pwr_supply: dsi_panel_vspvsn_pwr_supply {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		qcom,panel-supply-entry@0 {
+			reg = <0>;
+			qcom,supply-name = "lab";
+			qcom,supply-min-voltage = <5500000>;
+			qcom,supply-max-voltage = <5700000>;
+			qcom,supply-enable-load = <100000>;
+			qcom,supply-disable-load = <100>;
+			qcom,supply-post-on-sleep = <1>;
+		};
+
+		qcom,panel-supply-entry@1 {
+			reg = <1>;
+			qcom,supply-name = "ibb";
+			qcom,supply-min-voltage = <5500000>;
+			qcom,supply-max-voltage = <5700000>;
+			qcom,supply-enable-load = <100000>;
+			qcom,supply-disable-load = <100>;
+			qcom,supply-post-on-sleep = <10>;
+		};
+	};
+
+	dsi_panel_touch_pwr_supply: dsi_panel_touch_pwr_supply {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		qcom,panel-supply-entry@0 {
+			reg = <0>;
+			qcom,supply-name = "touch-avdd";
+			qcom,supply-min-voltage = <3000000>;
+			qcom,supply-max-voltage = <3000000>;
+			qcom,supply-enable-load = <100000>;
+			qcom,supply-disable-load = <100>;
+			qcom,supply-post-on-sleep = <1>;
+		};
+	};
+
+	sde_dsi_tone_panels: qcom,dsi-display@8 {
+		label = "dsi_panel_somc_tone_cmd";
+		qcom,display-type = "primary";
+
+		qcom,dsi-ctrl-num = <0>;
+		qcom,dsi-phy-num = <0>;
+		qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+
+		qcom,dsi-panel = <&dsi_lgd_synaptics_cmd_8>;
+
+		somc,dsi-panel-list = <
+				&dsi_auo_synaptics_cmd_4
+				&dsi_jdi_synaptics_cmd_6
+				&dsi_lgd_synaptics_cmd_8
+				&dsi_sharp_synaptics_cmd_3
+				&dsi_sharp_synaptics_cmd_9>;
+	};
+
+	/* SDE */
+	dsi_panel_cmd_display: qcom,dsi-display@12 {
+		compatible = "somc,dsi-display";
+		label = "primary";
+
+		qcom,dsi-ctrl = <&mdss_dsi0>;
+		qcom,dsi-phy = <&mdss_dsi_phy0>;
+		clocks = <&mdss_dsi0_pll BYTE0_MUX_CLK>,
+			 <&mdss_dsi0_pll PIX0_MUX_CLK>;
+		clock-names = "mux_byte_clk0", "mux_pixel_clk0";
+		pinctrl-names = "panel_active", "panel_suspend",
+				"sde_touch_active", "sde_touch_suspend";
+		pinctrl-0 = <&mdss_dsi_active &mdss_te_active>;
+		pinctrl-1 = <&mdss_dsi_suspend &mdss_te_suspend>;
+		pinctrl-2 = <&mdss_touch_active>;
+		pinctrl-3 = <&mdss_touch_suspend>;
+
+		qcom,dsi-display-active;
+
+		qcom,platform-te-gpio = <&tlmm 10 0>;
+		qcom,panel-te-source = <0>;
+
+		qcom,platform-reset-gpio = <&tlmm 8 0>;
+		qcom,platform-vddio-gpio = <&tlmm 51 0>;
+		qcom,platform-touch-vddio-en-gpio = <&tlmm 50 0>;
+		qcom,platform-touch-reset-gpio = <&tlmm 89 0>;
+		qcom,dsi-panel = <&dsi_default_panel>;
+		vddio-supply = <&pm8994_s4>;
+		touch-avdd-supply = <&pm8994_l22>;
+		lab-supply = <&lab_regulator>;
+		ibb-supply = <&ibb_regulator>;
+
+		qcom,dsi-display-list = <&sde_dsi_tone_panels>;
+	};	
+};
+
+&mdss_mdp {
+	connectors = <&sde_wb &dsi_panel_cmd_display>; // &sde_hdmi_tx &sde_hdmi>;
+};
+
+&mdss_dsi0 {
+	qcom,cont-splash-enabled;
+};
+
+&cont_splash_region {
+	reg = <0 0x83400000 0 0x23FF000>;
+};
+
+&dfps_data_mem {
+	reg = <0 0x857FF000 0 0x1000>;
+};
+

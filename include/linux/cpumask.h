@@ -92,11 +92,13 @@ extern struct cpumask __cpu_online_mask;
 extern struct cpumask __cpu_present_mask;
 extern struct cpumask __cpu_active_mask;
 extern struct cpumask __cpu_isolated_mask;
+extern struct cpumask __cpu_unisolated_mask;
 #define cpu_possible_mask ((const struct cpumask *)&__cpu_possible_mask)
 #define cpu_online_mask   ((const struct cpumask *)&__cpu_online_mask)
 #define cpu_present_mask  ((const struct cpumask *)&__cpu_present_mask)
 #define cpu_active_mask   ((const struct cpumask *)&__cpu_active_mask)
 #define cpu_isolated_mask ((const struct cpumask *)&__cpu_isolated_mask)
+#define cpu_unisolated_mask ((const struct cpumask *)&__cpu_unisolated_mask)
 
 #if NR_CPUS > 1
 #define num_online_cpus()	cpumask_weight(cpu_online_mask)
@@ -104,13 +106,7 @@ extern struct cpumask __cpu_isolated_mask;
 #define num_present_cpus()	cpumask_weight(cpu_present_mask)
 #define num_active_cpus()	cpumask_weight(cpu_active_mask)
 #define num_isolated_cpus()	cpumask_weight(cpu_isolated_mask)
-#define num_online_uniso_cpus()						\
-({									\
-	cpumask_t mask;							\
-									\
-	cpumask_andnot(&mask, cpu_online_mask, cpu_isolated_mask);	\
-	cpumask_weight(&mask);						\
-})
+#define num_online_uniso_cpus()	cpumask_weight(cpu_unisolated_mask)
 #define cpu_online(cpu)		cpumask_test_cpu((cpu), cpu_online_mask)
 #define cpu_possible(cpu)	cpumask_test_cpu((cpu), cpu_possible_mask)
 #define cpu_present(cpu)	cpumask_test_cpu((cpu), cpu_present_mask)
@@ -815,10 +811,13 @@ set_cpu_active(unsigned int cpu, bool active)
 static inline void
 set_cpu_isolated(unsigned int cpu, bool isolated)
 {
-	if (isolated)
+	if (isolated) {
 		cpumask_set_cpu(cpu, &__cpu_isolated_mask);
-	else
+		cpumask_clear_cpu(cpu, &__cpu_unisolated_mask);
+	} else {
 		cpumask_clear_cpu(cpu, &__cpu_isolated_mask);
+		cpumask_set_cpu(cpu, &__cpu_unisolated_mask);
+	}
 }
 
 

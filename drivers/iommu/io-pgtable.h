@@ -108,12 +108,16 @@ struct io_pgtable_cfg {
 	#define IO_PGTABLE_QUIRK_QSMMUV500_NON_SHAREABLE BIT(5)
 	#define IO_PGTABLE_QUIRK_QCOM_USE_UPSTREAM_HINT	BIT(6)
 	#define IO_PGTABLE_QUIRK_QCOM_USE_LLC_NWA	BIT(7)
+	#define IO_PGTABLE_QUIRK_ARM_TTBR1	BIT(8)	/* Allocate TTBR1 PT */
 	unsigned long			quirks;
 	unsigned long			pgsize_bitmap;
 	unsigned int			ias;
 	unsigned int			oas;
+	int				sep;
 	const struct iommu_gather_ops	*tlb;
 	struct device			*iommu_dev;
+	dma_addr_t			iova_base;
+	dma_addr_t			iova_end;
 
 	/* Low-level data specific to the table format */
 	union {

@@ -508,8 +508,13 @@ void dsi_ctrl_hw_cmn_video_engine_setup(struct dsi_ctrl_hw *ctrl,
 	reg |= (common_cfg->bit_swap_green ? BIT(4) : 0);
 	reg |= (common_cfg->bit_swap_blue ? BIT(8) : 0);
 	DSI_W32(ctrl, DSI_VIDEO_MODE_DATA_CTRL, reg);
-	/* Disable Timing double buffering */
-	DSI_W32(ctrl, DSI_DSI_TIMING_DB_MODE, 0x0);
+	if (of_machine_is_compatible("qcom,msm8998")) {
+		/* Enable Timing double buffering */
+		DSI_W32(ctrl, DSI_DSI_TIMING_DB_MODE, 0x1);
+	} else {
+		/* Disable Timing double buffering */
+		DSI_W32(ctrl, DSI_DSI_TIMING_DB_MODE, 0x0);
+	}
 
 	pr_debug("[DSI_%d] Video engine setup done\n", ctrl->index);
 }
@@ -675,8 +680,14 @@ void dsi_ctrl_hw_cmn_kickoff_command(struct dsi_ctrl_hw *ctrl,
 	DSI_W32(ctrl, DSI_COMMAND_MODE_DMA_CTRL, reg);
 
 	reg = DSI_R32(ctrl, DSI_DMA_FIFO_CTRL);
-	reg |= BIT(20);/* Disable write watermark*/
-	reg |= BIT(16);/* Disable read watermark */
+
+	if (of_machine_is_compatible("qcom,msm8998")) {
+		reg &= ~BIT(20);/* Enable write watermark*/
+		reg &= ~BIT(16);/* Enable read watermark */
+	} else {
+		reg |= BIT(20);/* Disable write watermark*/
+		reg |= BIT(16);/* Disable read watermark */
+	}
 
 	DSI_W32(ctrl, DSI_DMA_FIFO_CTRL, reg);
 	DSI_W32(ctrl, DSI_DMA_CMD_OFFSET, cmd->offset);

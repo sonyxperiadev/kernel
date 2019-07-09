@@ -633,7 +633,7 @@ static irqreturn_t adreno_irq_handler(struct kgsl_device *device)
 	 * This is usually harmless because the GMU will abort power collapse
 	 * and change the fence back to ALLOW. Poll so that this can happen.
 	 */
-	if (gmu_core_isenabled(device)) {
+	if (gmu_core_gpmu_isenabled(device)) {
 		adreno_readreg(adreno_dev,
 				ADRENO_REG_GMU_AO_AHB_FENCE_CTRL,
 				&fence);
@@ -1154,6 +1154,8 @@ static int adreno_of_get_power(struct adreno_device *adreno_dev,
 		timeout = 80;
 
 	device->pwrctrl.interval_timeout = msecs_to_jiffies(timeout);
+	device->pwrctrl.default_interval_timeout =
+		device->pwrctrl.interval_timeout;
 
 	device->pwrctrl.bus_control = of_property_read_bool(node,
 		"qcom,bus-control");
@@ -1344,8 +1346,13 @@ static int adreno_probe(struct platform_device *pdev)
 	 */
 	status = gmu_core_probe(device);
 	if (status) {
-		device->pdev = NULL;
-		return status;
+		if (adreno_is_a5xx(adreno_dev) && status == -ENXIO) {
+			/* Adreno 5xx has GPMU without GMU, it's fine! */
+			status = 0;
+		} else {
+			device->pdev = NULL;
+			return status;
+		}
 	}
 
 	/*
@@ -1393,6 +1400,9 @@ static int adreno_probe(struct platform_device *pdev)
 
 	if (ADRENO_FEATURE(adreno_dev, ADRENO_IOCOHERENT))
 		device->mmu.features |= KGSL_MMU_IO_COHERENT;
+
+	if (ADRENO_FEATURE(adreno_dev, ADRENO_MMU_GLOBAL_MEMSZ_8M))
+		device->mmu.features |= KGSL_MMU_GLOBAL_MEMSZ_8M;
 
 	status = adreno_ringbuffer_probe(adreno_dev, nopreempt);
 	if (status)
@@ -2047,7 +2057,8 @@ static int _adreno_start(struct adreno_device *adreno_dev)
 		}
 	}
 
-	if (gmu_core_isenabled(device) && adreno_dev->perfctr_ifpc_lo == 0) {
+	if (gmu_core_gpmu_isenabled(device) &&
+			adreno_dev->perfctr_ifpc_lo == 0) {
 		ret = adreno_perfcounter_get(adreno_dev,
 				KGSL_PERFCOUNTER_GROUP_GPMU_PWR, 4,
 				&adreno_dev->perfctr_ifpc_lo, NULL,
@@ -2842,6 +2853,38 @@ static int adreno_setproperty(struct kgsl_device_private *dev_priv,
 			kgsl_context_put(context);
 		}
 		break;
+	case KGSL_PROP_GPU_FORCE_ON: {
+			unsigned long timeout;
+
+			if (sizebytes != sizeof(timeout))
+				break;
+
+			if (copy_from_user(&timeout, value,
+				sizeof(timeout))) {
+				status = -EFAULT;
+				break;
+			}
+
+			mutex_lock(&device->mutex);
+			if (timeout) {
+				device->pwrctrl.interval_timeout =
+					msecs_to_jiffies(timeout);
+
+				if (device->state == KGSL_STATE_NAP ||
+					device->state == KGSL_STATE_SLUMBER)
+					kgsl_pwrctrl_change_state(device,
+						KGSL_STATE_ACTIVE);
+
+				mod_timer(&device->idle_timer, jiffies +
+					device->pwrctrl.interval_timeout);
+			} else
+				device->pwrctrl.interval_timeout =
+				device->pwrctrl.default_interval_timeout;
+
+			mutex_unlock(&device->mutex);
+			status = 0;
+		}
+		break;
 	default:
 		break;
 	}
@@ -3329,7 +3372,7 @@ int adreno_gmu_fenced_write(struct adreno_device *adreno_dev,
 
 	adreno_writereg(adreno_dev, offset, val);
 
-	if (!gmu_core_isenabled(KGSL_DEVICE(adreno_dev)))
+	if (!gmu_core_gpmu_isenabled(KGSL_DEVICE(adreno_dev)))
 		return 0;
 
 	for (i = 0; i < GMU_CORE_LONG_WAKEUP_RETRY_LIMIT; i++) {
@@ -3991,6 +4034,7 @@ static struct platform_driver adreno_platform_driver = {
 		.name = DEVICE_3D_NAME,
 		.pm = &kgsl_pm_ops,
 		.of_match_table = adreno_match_table,
+		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
 	}
 };
 

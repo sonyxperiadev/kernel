@@ -170,7 +170,7 @@ static int __init qcom_hwspinlock_init(void)
 	return platform_driver_register(&qcom_hwspinlock_driver);
 }
 /* board init code might need to reserve hwspinlocks for predefined purposes */
-postcore_initcall(qcom_hwspinlock_init);
+core_initcall(qcom_hwspinlock_init);
 
 static void __exit qcom_hwspinlock_exit(void)
 {

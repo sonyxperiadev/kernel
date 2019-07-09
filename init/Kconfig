@@ -1470,6 +1470,21 @@ config AIO
 	  by some high performance threaded applications. Disabling
 	  this option saves about 7k.
 
+config AIO_SSD_ONLY
+	bool "Tune AIO performance for SSDs" if EXPERT
+	default n
+	depends on AIO
+	help
+	  Solid state storage have no head to move and no location
+	  to "physically reach", as the block is being retrieved
+	  in the exact moment we request it.
+	  Optimize Asynchronous IO for those conditions.
+
+	  Enabling this option on systems with rotational drives
+	  WILL be resulting in bad storage performance.
+
+	  If you've got ONLY SSDs, say Y. If unsure, say N.
+
 config ADVISE_SYSCALLS
 	bool "Enable madvise/fadvise syscalls" if EXPERT
 	default y
@@ -2009,6 +2024,18 @@ config INIT_ALL_POSSIBLE
 	  with all 1s, and others with all 0s.  When they were centralised,
 	  it was better to provide this option than to break all the archs
 	  and have several arch maintainers pursuing me down dark alleys.
+
+config DEBUG_RENAME_SKIP_INITRAMFS_BOOTPARAM
+	bool "Rename skip_initramfs boot parameter to do_skip_initramfs"
+	help
+	  Some bootloaders will set this boot parameter whenever a direct
+	  boot from a newly uploaded-to-RAM boot image is requested.
+	  Sometimes though we want it to load the initramfs anyway, even
+	  if it's a direct boot.
+	  This configuration option will rename the "skip_initramfs" to
+	  "do_skip_initramfs".
+
+	  This is a kernel hack. Definitely say N.
 
 source "block/Kconfig"
 

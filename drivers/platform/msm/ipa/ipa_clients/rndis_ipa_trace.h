@@ -12,7 +12,7 @@
 
 #undef TRACE_SYSTEM
 #define TRACE_SYSTEM rndis_ipa
-#define TRACE_INCLUDE_FILE rndis_ipa_trace
+#define TRACE_INCLUDE_FILE ../../drivers/platform/msm/ipa/ipa_clients/rndis_ipa_trace
 
 #if !defined(_RNDIS_IPA_TRACE_H) || defined(TRACE_HEADER_MULTI_READ)
 #define _RNDIS_IPA_TRACE_H

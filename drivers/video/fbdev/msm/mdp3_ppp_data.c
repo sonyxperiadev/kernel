@@ -1,4 +1,4 @@
-/* Copyright (c) 2007, 2012-2013, 2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2007, 2012-2013 The Linux Foundation. All rights reserved.
  * Copyright (C) 2007 Google Incorporated
  *
  * This software is licensed under the terms of the GNU General Public
@@ -1512,7 +1512,6 @@ static const struct ppp_table *downscale_y_table[PPP_DOWNSCALE_MAX] = {
 void ppp_load_table(const struct ppp_table *table, int len)
 {
 	int i;
-
 	for (i = 0; i < len; i++)
 		PPP_WRITEL(table[i].val, table[i].reg);
 }

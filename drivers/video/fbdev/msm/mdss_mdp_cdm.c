@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -164,7 +164,6 @@ static int mdss_mdp_cdm_cdwn_setup(struct mdss_mdp_cdm *cdm,
 	int rc = 0;
 	u32 opmode = 0;
 	u32 out_size = 0;
-
 	if (data->mdp_csc_bit_depth == MDP_CDM_CSC_10BIT)
 		opmode &= ~BIT(7);
 	else

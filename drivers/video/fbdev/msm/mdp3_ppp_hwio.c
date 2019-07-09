@@ -1,4 +1,4 @@
-/* Copyright (c) 2007, 2012-2013, 2016-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2007, 2012-2013, 2016, The Linux Foundation. All rights reserved.
  * Copyright (C) 2007 Google Incorporated
  *
  * This software is licensed under the terms of the GNU General Public
@@ -23,7 +23,6 @@
 #include "mdss_fb.h"
 #include "mdp3_ppp.h"
 #include "mdp3_hwio.h"
-#include "mdss_debug.h"
 
 /* SHIM Q Factor */
 #define PHI_Q_FACTOR          29
@@ -41,7 +40,7 @@ enum {
 	LAYER_MAX,
 };
 
-static long long mdp_do_div(uint64_t num, uint64_t den)
+static long long mdp_do_div(long long num, long long den)
 {
 	do_div(num, den);
 	return num;
@@ -155,8 +154,7 @@ static int mdp_calc_scale_params(uint32_t org, uint32_t dim_in,
 				Osprime = (k1 * (Odprime >> PQF_PLUS_4)) + k2;
 
 				/* then floor & decrement to calc the required
-				 * starting coordinate
-				 */
+				   starting coordinate */
 				Oreq = (Osprime & int_mask) - one;
 
 				/* calculate initial phase */
@@ -324,7 +322,7 @@ static uint32_t conv_rgb2yuv(uint32_t input_pixel,
 	comp_C1 = temp2 + 0x100;
 	comp_C2 = temp3 + 0x100;
 
-	/* take integer part */
+	/* take interger part */
 	comp_C0 >>= 9;
 	comp_C1 >>= 9;
 	comp_C2 >>= 9;
@@ -361,7 +359,6 @@ inline void x_w_even_num(struct ppp_img_desc *img)
 bool check_if_rgb(int color)
 {
 	bool rgb = false;
-
 	switch (color) {
 	case MDP_RGB_565:
 	case MDP_BGR_565:
@@ -450,8 +447,8 @@ void mdp_adjust_start_addr(struct ppp_blit_op *blit_op,
 			((y == 0) ? 0 : ((y + 1) / v_slice - 1) * width)) * bpp;
 
 		if (layer != LAYER_FG)
-			img->p1 = mdp_adjust_rot_addr(blit_op,
-					img->p1, bpp, 0, layer);
+			img->p0 = mdp_adjust_rot_addr(blit_op,
+					img->p0, bpp, 0, layer);
 	}
 }
 
@@ -1121,8 +1118,8 @@ int config_ppp_blend(struct ppp_blit_op *blit_op,
 			bg_alpha |= smart_blit_bg_alpha << 24;
 			PPP_WRITEL(bg_alpha, MDP3_PPP_BLEND_BG_ALPHA_SEL);
 		} else {
-			PPP_WRITEL(0, MDP3_PPP_BLEND_BG_ALPHA_SEL);
-		}
+		PPP_WRITEL(0, MDP3_PPP_BLEND_BG_ALPHA_SEL);
+	}
 	}
 
 	if (*pppop_reg_ptr & PPP_OP_BLEND_ON) {
@@ -1144,9 +1141,9 @@ int config_ppp_blend(struct ppp_blit_op *blit_op,
 	if (is_yuv_smart_blit) {
 		PPP_WRITEL(0, MDP3_PPP_BLEND_PARAM);
 	} else {
-		val = (alpha << MDP_BLEND_CONST_ALPHA);
-		val |= (trans_color & MDP_BLEND_TRASP_COL_MASK);
-		PP_WRITEL(val, MDP3_PPP_BLEND_PARAM);
+	val = (alpha << MDP_BLEND_CONST_ALPHA);
+	val |= (trans_color & MDP_BLEND_TRASP_COL_MASK);
+	PPP_WRITEL(val, MDP3_PPP_BLEND_PARAM);
 	}
 	return 0;
 }
@@ -1195,7 +1192,6 @@ int config_ppp_op_mode(struct ppp_blit_op *blit_op)
 		y_h_even_num(&blit_op->dst);
 		y_h_even_num(&blit_op->src);
 		dv_slice = 2;
-		/* fall-through */
 	case MDP_Y_CBCR_H2V1:
 	case MDP_Y_CRCB_H2V1:
 	case MDP_YCRYCB_H2V1:
@@ -1218,7 +1214,6 @@ int config_ppp_op_mode(struct ppp_blit_op *blit_op)
 	case MDP_YCRYCB_H2V1:
 		x_w_even_num(&blit_op->dst);
 		x_w_even_num(&blit_op->src);
-		/* fall-through */
 	case MDP_Y_CBCR_H2V1:
 	case MDP_Y_CRCB_H2V1:
 		sh_slice = 2;
@@ -1275,7 +1270,7 @@ int config_ppp_op_mode(struct ppp_blit_op *blit_op)
 		}
 		memset(&bg_img_param, 0, sizeof(bg_img_param));
 	} else {
-		blit_op->bg = blit_op->dst;
+	blit_op->bg = blit_op->dst;
 	}
 	/* Cache smart blit BG layer info */
 	if (blit_op->mdp_op & MDPOP_SMART_BLIT)
@@ -1325,7 +1320,7 @@ int config_ppp_op_mode(struct ppp_blit_op *blit_op)
 		pr_debug("ROI(x %d,y %d, w  %d, h %d) ",
 			blit_op->bg.roi.x, blit_op->bg.roi.y,
 			blit_op->bg.roi.width, blit_op->bg.roi.height);
-		pr_debug("Addr %pK, Stride S0 %d Addr_P1 %pK, Stride S1 %d\n",
+		pr_debug("Addr %pK, Stride S0 %d	Addr_P1 %pK, Stride S1 %d\n",
 			blit_op->bg.p0,	blit_op->bg.stride0,
 			blit_op->bg.p1,	blit_op->bg.stride1);
 	}
@@ -1336,23 +1331,19 @@ int config_ppp_op_mode(struct ppp_blit_op *blit_op)
 	pr_debug("ROI(x %d,y %d, w %d, h %d) ",
 		blit_op->dst.roi.x, blit_op->dst.roi.y,
 		blit_op->dst.roi.width, blit_op->dst.roi.height);
-	pr_debug("Addr %p, Stride S0 %d Addr_P1 %p, Stride S1 %d\n",
-		blit_op->dst.p0, blit_op->dst.stride0,
+	pr_debug("Addr %pK, Stride S0 %d Addr_P1 %pK, Stride S1 %d\n",
+		blit_op->dst.p0, blit_op->src.stride0,
 		blit_op->dst.p1, blit_op->dst.stride1);
 
 	PPP_WRITEL(ppp_operation_reg, MDP3_PPP_OP_MODE);
-	mb(); /* make sure everything is written before enable */
-	MDSS_XLOG(ppp_operation_reg, blit_op->src.roi.x, blit_op->src.roi.y,
-		blit_op->src.roi.width, blit_op->src.roi.height);
-	MDSS_XLOG(blit_op->dst.roi.x, blit_op->dst.roi.y,
-		blit_op->dst.roi.width, blit_op->dst.roi.height);
+	mb();
 	return 0;
 }
 
 void ppp_enable(void)
 {
 	PPP_WRITEL(0x1000, 0x30);
-	mb(); /* make sure everything is written before enable */
+	mb();
 }
 
 int mdp3_ppp_init(void)

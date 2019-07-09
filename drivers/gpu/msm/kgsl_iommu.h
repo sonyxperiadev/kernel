@@ -13,7 +13,7 @@
 #ifndef __KGSL_IOMMU_H
 #define __KGSL_IOMMU_H
 
-#ifdef CONFIG_QCOM_IOMMU
+#ifdef CONFIG_QCOM_IOMMU_V1
 #include <linux/qcom_iommu.h>
 #endif
 #include <linux/of.h>
@@ -23,9 +23,15 @@
  * These defines control the address range for allocations that
  * are mapped into all pagetables.
  */
-#define KGSL_IOMMU_GLOBAL_MEM_SIZE	(20 * SZ_1M)
+#define KGSL_IOMMU_GLOBAL_MEM_SIZE_NG	(20 * SZ_1M)
+#define KGSL_IOMMU_GLOBAL_MEM_SIZE_A5XX	(8 * SZ_1M)
 #define KGSL_IOMMU_GLOBAL_MEM_BASE32	0xf8000000
 #define KGSL_IOMMU_GLOBAL_MEM_BASE64	0xfc000000
+
+#define KGSL_IOMMU_GLOBAL_MEM_SIZE(__mmu)	\
+	(MMU_FEATURE(__mmu, KGSL_MMU_GLOBAL_MEMSZ_8M) ?	\
+		KGSL_IOMMU_GLOBAL_MEM_SIZE_A5XX : \
+		KGSL_IOMMU_GLOBAL_MEM_SIZE_NG)
 
 #define KGSL_IOMMU_GLOBAL_MEM_BASE(__mmu)	\
 	(MMU_FEATURE(__mmu, KGSL_MMU_64BIT) ? \
@@ -79,7 +85,7 @@ enum kgsl_iommu_reg_map {
 };
 
 /* Max number of iommu clks per IOMMU unit */
-#define KGSL_IOMMU_MAX_CLKS 5
+#define KGSL_IOMMU_MAX_CLKS 7
 
 enum kgsl_iommu_context_id {
 	KGSL_IOMMU_CONTEXT_USER = 0,

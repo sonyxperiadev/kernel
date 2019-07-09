@@ -535,14 +535,12 @@ static int qrtr_node_enqueue(struct qrtr_node *node, struct sk_buff *skb,
 	hdr->type = cpu_to_le32(type);
 	hdr->src_node_id = cpu_to_le32(from->sq_node);
 	hdr->src_port_id = cpu_to_le32(from->sq_port);
-	if (to->sq_port == QRTR_PORT_CTRL) {
+	if (to->sq_node == QRTR_NODE_BCAST)
 		hdr->dst_node_id = cpu_to_le32(node->nid);
-		hdr->dst_port_id = cpu_to_le32(QRTR_NODE_BCAST);
-	} else {
+	else
 		hdr->dst_node_id = cpu_to_le32(to->sq_node);
-		hdr->dst_port_id = cpu_to_le32(to->sq_port);
-	}
 
+	hdr->dst_port_id = cpu_to_le32(to->sq_port);
 	hdr->size = cpu_to_le32(len);
 	hdr->confirm_rx = !!confirm_rx;
 
@@ -687,6 +685,8 @@ int qrtr_endpoint_post(struct qrtr_endpoint *ep, const void *data, size_t len)
 	struct sk_buff *skb;
 	struct qrtr_cb *cb;
 	unsigned int size;
+	int err = -ENOMEM;
+	int frag = false;
 	unsigned int ver;
 	size_t hdrlen;
 
@@ -694,8 +694,14 @@ int qrtr_endpoint_post(struct qrtr_endpoint *ep, const void *data, size_t len)
 		return -EINVAL;
 
 	skb = netdev_alloc_skb(NULL, len);
-	if (!skb)
-		return -ENOMEM;
+	if (!skb) {
+		skb = alloc_skb_with_frags(0, len, 0, &err, GFP_ATOMIC);
+		if (!skb) {
+			pr_err("%s memory allocation failed\n", __func__);
+			return -ENOMEM;
+		}
+		frag = true;
+	}
 
 	cb = (struct qrtr_cb *)skb->cb;
 
@@ -751,7 +757,13 @@ int qrtr_endpoint_post(struct qrtr_endpoint *ep, const void *data, size_t len)
 
 	__pm_wakeup_event(node->ws, 0);
 
-	skb_put_data(skb, data + hdrlen, size);
+	if (frag) {
+		skb->data_len = size;
+		skb->len = size;
+		skb_store_bits(skb, 0, data + hdrlen, size);
+	} else {
+		skb_put_data(skb, data + hdrlen, size);
+	}
 	qrtr_log_rx_msg(node, skb);
 
 	skb_queue_tail(&node->rx_queue, skb);
@@ -906,8 +918,11 @@ static void qrtr_node_rx_work(struct kthread_work *work)
 			if (!ipc) {
 				kfree_skb(skb);
 			} else {
-				if (sock_queue_rcv_skb(&ipc->sk, skb))
+				if (sock_queue_rcv_skb(&ipc->sk, skb)) {
+					pr_err("%s qrtr pkt dropped flow[%d]\n",
+					       __func__, cb->confirm_rx);
 					kfree_skb(skb);
+				}
 
 				qrtr_port_put(ipc);
 			}

@@ -193,6 +193,32 @@ config INPUT_QTI_HAPTICS
 	  is capable of driving both LRA and ERM vibrators.  This module provides
 	  haptic feedback for user actions such as a long press on the touch screen.
 
+config QPNP_POWER_ON_PANIC_ON_KPDPWR_RESIN
+	bool "Provoke kernel panic on KPDPWR+RESIN keypress"
+	depends on INPUT_QPNP_POWER_ON
+	default n
+	help
+	  This option enables code that provokes a kernel panic whenever
+	  KPDPWR and RESIN get pressed: this combination normally triggers
+	  a PMIC-driven emergency reboot after a predefined time, but some
+	  devices powered by an EFI bootloader will delete the pstore logs
+	  in RAM for security purposes if certain bits signaling kernel
+	  panic are not set before rebooting.
+
+	  This is an option used for early kernel porting or some kind of
+	  debugging that would be impossible otherwise.
+
+	  If unsure, DEFINITELY say N.
+	  This option shall be used ONLY temporarily and ONLY FOR DEBUGGING.
+
+config PON_SOMC_ORG
+	bool "SoMC specific power on interface"
+	depends on INPUT_QPNP_POWER_ON
+	help
+	  This option enables SoMC specific power on interface.
+	  The implementation in this kernel is feature-reduced to support only
+	  the dvdd shutdown function.
+
 config INPUT_SPARCSPKR
 	tristate "SPARC Speaker support"
 	depends on PCI && SPARC64
@@ -580,6 +606,15 @@ config INPUT_GPIO
 	help
 	  Say Y here if you want to support gpio based keys, wheels etc...
 
+config INPUT_BU520X1NVX
+	tristate "BU520X1NVX driver support"
+	default n
+	help
+	  Say Y here
+	  if you want to
+	  support BU520X1NVX
+	  as bipolar detection device.
+
 config HP_SDC_RTC
 	tristate "HP SDC Real Time Clock"
 	depends on (GSC || HP300) && SERIO
@@ -900,4 +935,212 @@ config INPUT_HISI_POWERKEY
 	  To compile this driver as a module, choose M here: the
 	  module will be called hisi_powerkey.
 
+config INPUT_STMVL53L0
+	tristate "STM VL53L0 Proximity support"
+	depends on INPUT && I2C
+	help
+	 Say Y here if you want to use STMicroelectronics's proximity sensor
+	 through I2C interface.
+
+	 To compile this driver as a module, choose M here: the
+	 module will be called stmvl53l0.
+
+config INPUT_STMVL53L0_SOMC_PARAMS
+	bool "STM VL53L0 extensions and parameters from SoMC"
+	default y
+	depends on INPUT_STMVL53L0
+	help
+	  Say Y here if you want to enable extensional code and
+	  parameters from SoMC for the STM VL53L0.
+
+config SENSORS_STMVL53L0_USE_CCI
+	tristate "STM VL53L0 on MSM Camera CCI"
+	depends on INPUT_STMVL53L0
+	help
+	  Say Y here to enable the camera cci use in the vl53L0 driver.
+
+	  If unsure, say N.
+
+config INPUT_ADUX1050
+	tristate "ADUX1050 sensor support"
+	depends on I2C
+	help
+	  Say Y here if you have ADUX1050 hooked to an I2C bus.
+	  To compile this driver as a module, choose M here:
+	  The module will be called adux1050.ko
+
+config ADUX1050_DEBUG
+	bool "Debug :To enable the Basic debug support for the driver"
+	depends on INPUT_ADUX1050
+	default n
+	help
+	  To add the basic debug support of the driver in the build.
+	  Used in printing the debug information on the console.
+
+config EVAL
+	bool "Eval : To enable the driver in evaluation mode for test "
+	depends on INPUT_ADUX1050
+	default y
+	help
+	  To use the generic sysfs path and modifications for the control attributes.
+
+config USE_FILP
+	bool "USE_FILP : To make use of the file access from the kernel driver "
+	depends on INPUT_ADUX1050
+	default y
+	help
+	  To enable the file access from the kernel for the purpose of
+	  storing and retrieving the calibration results in/from a file
+	  and further is been enhanced for extraction of configuration
+	  during runtime.
+
+config ADUX1050_POLL
+	bool "POLL : To make use of the Polling method instead of ISR "
+	depends on INPUT_ADUX1050
+	default n
+	help
+	  To enable the polling and to set the sleep time through the sysfs
+
+config INPUT_S210ST0X
+	tristate "S210ST0X Pyroelectric IR Sensor driver"
+	default n
+	help
+	  Say Y here if you want to enable the S210ST0X pyroelectric
+	  infrared sensor device driver.
+
+ config FPC1145_PLATFORM
+       tristate "Platform FPC1145 finger print driver"
+       default n
+       help
+         Select this module to enable FPC1145 tee finger print driver
+
+config SENSORS_AKM09911
+	tristate "AKM09911 3-axis electronic compass sensor driver"
+	depends on I2C
+	help
+	  Say Y here if you want to enable the akm09911 ecompass sensor
+	  driver.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called akm09911.
+
+config SENSORS_AKM8963
+	tristate "AKM8963 3-axis electronic compass sensor driver"
+	depends on I2C
+	default n
+	help
+	  Say Y here if you want to enable the akm8963 ecompass sensor
+	  driver.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called akm8963.
+
+config SENSORS_BMA2X2
+	tristate "BMA2x2 acceleration sensor support"
+	depends on I2C
+	help
+	  If you say yes here, you get support for Bosch Sensortec's
+	  acceleration sensors BMA255/BMA254/BMA355/BMA250E/BMA222E/BMA280.
+
+config SENSORS_BMA2X2_ENABLE_INT1
+	tristate "BMA2X2 acceleration sensor interrupt INT1 support"
+	depends on SENSORS_BMA2X2
+	help
+	 If you say yes here, you get INT1 support for Bosch Sensortec
+	 acceleration sensors BMA255/BMA254/BMA355/BMA250E/BMA222E/BMA280.
+	 Select it will disable interrupt INT2 support
+
+config SENSORS_BMA2X2_ENABLE_INT2
+	tristate "BMA2X2 acceleration sensor interrupt INT2 support"
+	depends on SENSORS_BMA2X2 && !SENSORS_BMA2X2_ENABLE_INT1
+	help
+	 If you say yes here, you get INT2 support for Bosch Sensortec
+	 acceleration sensors BMA255/BMA254/BMA355/BMA250E/BMA222E/BMA280.
+	 Can only open if you do NOT open interrupt INT1 support
+
+config SIG_MOTION
+	tristate "support significant motion sensor function"
+	depends on SENSORS_BMA2X2  && ( SENSORS_BMA2X2_ENABLE_INT1 || SENSORS_BMA2X2_ENABLE_INT2)
+	help
+	 If you say yes here, if you want to support Bosch significant motion sensor function
+
+config DOUBLE_TAP
+	tristate "support double tap sensor function"
+	depends on SENSORS_BMA2X2  && ( SENSORS_BMA2X2_ENABLE_INT1 || SENSORS_BMA2X2_ENABLE_INT2)
+	help
+	 If you say yes here, you get support Bosch double tap sensor function
+
+config SENSORS_BMI058
+	tristate "BMI058 Sensor Support"
+	depends on (SENSORS_BMG || SENSORS_BMA2X2)
+	help
+	 If you say yes here, you get support for Bosch Sensortec's
+	 sensor driver of BMI058.
+
+config SENSORS_CAPELLA_CM36283
+	tristate "CM36283 proximity and light sensor"
+	depends on I2C
+	default n
+	help
+	  Say Y here to enable the CM36283 Proximity
+	  Sensor with Ambient Light Sensor.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called CM36283.
+
+config SENSORS_ISL29044A
+	tristate "INTERSIL P/L sensor"
+	depends on I2C
+	help
+	 This option enables support for the INTERSIL ISL29044A P/L sensor.
+
+config SENSORS_LIS3DH
+	tristate "ST LIS3DH 3-axis digital acceleromater"
+	depends on I2C
+	help
+	  Say Y here if you want to support STMicroelectronics LIS3DH
+	  accelerometer connected via an I2C bus.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called lis3dh_acc.
+
+config SENSORS_MC3430
+	tristate "MC3430 acceleration sensor support"
+	depends on I2C
+	help
+	 Say Y here if you want to enable the MC3430 acceleration sensor
+	 driver.
+
+config SENSORS_MMC3416X
+	tristate "MMC3416xPJ 3-axis magnetic sensor driver"
+	depends on I2C
+	help
+	  Say Y here if you want to enable the MMC3416xPJ magnetic sensor
+	  driver.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called mmc3416x.
+
+config SENSORS_MPU6050
+	tristate "MPU6050 6-axix gyroscope + acceleromater combo"
+	depends on I2C
+	help
+	  Say Y here if you want to support InvenSense MPU6050
+	  connected via an I2C bus.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called mpu6050.
+
+config SENSORS_ET51X
+	tristate "ET51X fingerprint sensor support"
+	default n
+	help
+	  If you say yes here you get support for Egistec's
+	  fingerprint sensor ET51X.
+
+config SENSORS_QCOM_HALL
+	bool "QCom Hall Sensor support"
+	default y
+	help
+	  Say Y here if you want qcom hall sensor support.
 endif

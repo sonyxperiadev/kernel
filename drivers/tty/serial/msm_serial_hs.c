@@ -65,6 +65,11 @@
 #include <linux/msm-sps.h>
 #include <linux/platform_data/msm_serial_hs.h>
 #include <linux/msm-bus.h>
+#include <linux/delay.h>
+
+#ifdef CONFIG_BT_MSM_SLEEP
+#include <net/bluetooth/bluesleep.h>
+#endif
 
 #include "msm_serial_hs_hwreg.h"
 #define UART_SPS_CONS_PERIPHERAL 0
@@ -75,6 +80,9 @@
 #define IPC_MSM_HS_LOG_DATA_PAGES 3
 #define UART_DMA_DESC_NR 8
 #define BUF_DUMP_SIZE 32
+
+#define UART_BLSP1_UART1 "78af000.hsuart"
+#define UART_BLSP1_UART1_SIZE 14
 
 /* If the debug_mask gets set to FATAL_LEV,
  * a fatal error has happened and further IPC logging
@@ -259,6 +267,8 @@ struct msm_hs_port {
 	void *ipc_msm_hs_log_ctxt;
 	void *ipc_msm_hs_pwr_ctxt;
 	int ipc_debug_mask;
+	bool no_autosuspend;
+	bool is_bt_port;
 };
 
 static const struct of_device_id msm_hs_match_table[] = {
@@ -307,10 +317,18 @@ static int msm_hs_ioctl(struct uart_port *uport, unsigned int cmd,
 	switch (cmd) {
 	case MSM_ENABLE_UART_CLOCK: {
 		ret = msm_hs_request_clock_on(&msm_uport->uport);
+#ifdef CONFIG_BT_MSM_SLEEP
+		if (msm_uport->is_bt_port)
+			bluesleep_outgoing_data();
+#endif
 		break;
 	}
 	case MSM_DISABLE_UART_CLOCK: {
 		ret = msm_hs_request_clock_off(&msm_uport->uport);
+#ifdef CONFIG_BT_MSM_SLEEP
+		if (msm_uport->is_bt_port)
+			bluesleep_tx_allow_sleep();
+#endif
 		break;
 	}
 	case MSM_GET_UART_CLOCK_STATUS: {
@@ -400,8 +418,19 @@ static void msm_hs_resource_unvote(struct msm_hs_port *msm_uport)
 		return;
 	}
 	atomic_dec(&msm_uport->resource_count);
+#ifdef CONFIG_MACH_SONY_BLANC
+	rc = atomic_read(&msm_uport->resource_count);
+	if (rc <= 0) {
+		pm_runtime_mark_last_busy(uport->dev);
+		pm_runtime_put_autosuspend(uport->dev);
+	} else {
+		MSM_HS_DBG("%s(): already suspended. clk_count=%d",
+				__func__, rc);
+	}
+#else
 	pm_runtime_mark_last_busy(uport->dev);
 	pm_runtime_put_autosuspend(uport->dev);
+#endif
 }
 
  /* Vote for resources before accessing them */
@@ -410,7 +439,20 @@ static void msm_hs_resource_vote(struct msm_hs_port *msm_uport)
 	int ret;
 	struct uart_port *uport = &(msm_uport->uport);
 
+#ifdef CONFIG_MACH_SONY_BLANC
+	ret = atomic_read(&msm_uport->resource_count);
+
+	if (ret <= 0)
+		ret = pm_runtime_get_sync(uport->dev);
+	else {
+		MSM_HS_DBG("%s(): Skip pm_runtime_get_sync(), clk_count=%d",
+				__func__, ret);
+		ret = 0;
+	}
+#else
 	ret = pm_runtime_get_sync(uport->dev);
+#endif
+
 	if (ret < 0 || msm_uport->pm_state != MSM_HS_PM_ACTIVE) {
 		MSM_HS_WARN("%s():%s runtime PM CB not invoked ret:%d st:%d\n",
 			__func__, dev_name(uport->dev), ret,
@@ -1449,6 +1491,12 @@ static void msm_hs_submit_tx_locked(struct uart_port *uport)
 	ret = sps_transfer_one(sps_pipe_handle, src_addr, tx_count,
 				msm_uport, flags);
 
+#if defined(CONFIG_BT_MSM_SLEEP) && !defined(CONFIG_LINE_DISCIPLINE_DRIVER)
+	/* Notify the bluesleep driver of outgoing data, if available. */
+	if (msm_uport->is_bt_port)
+		bluesleep_outgoing_data();
+#endif
+
 	MSM_HS_DBG("%s():Enqueue Tx Cmd, ret %d\n", __func__, ret);
 }
 
@@ -2204,13 +2252,16 @@ struct uart_port *msm_hs_get_uart_port(int port_index)
 {
 	struct uart_state *state = msm_hs_driver.state + port_index;
 
+	if (!state || !state->uart_port)
+		goto err;
+
 	/* The uart_driver structure stores the states in an array.
 	 * Thus the corresponding offset from the drv->state returns
 	 * the state for the uart_port that is requested
 	 */
 	if (port_index == state->uart_port->line)
 		return state->uart_port;
-
+err:
 	return NULL;
 }
 EXPORT_SYMBOL(msm_hs_get_uart_port);
@@ -2288,8 +2339,10 @@ void msm_hs_resource_off(struct msm_hs_port *msm_uport)
 		msm_hs_write(uport, UART_DM_DMEN, data);
 		sps_tx_disconnect(msm_uport);
 	}
+#if !defined(CONFIG_BT_MSM_SLEEP) && !defined(CONFIG_MACH_SONY_BLANC)
 	if (!atomic_read(&msm_uport->client_req_state))
 		msm_hs_enable_flow_control(uport, false);
+#endif
 }
 
 void msm_hs_resource_on(struct msm_hs_port *msm_uport)
@@ -2727,8 +2780,16 @@ static int msm_hs_startup(struct uart_port *uport)
 
 
 	spin_lock_irqsave(&uport->lock, flags);
+
+#ifdef CONFIG_BT_MSM_SLEEP
+	if (!msm_uport->is_bt_port) {
+		atomic_set(&msm_uport->client_count, 0);
+		atomic_set(&msm_uport->client_req_state, 0);
+	}
+#else
 	atomic_set(&msm_uport->client_count, 0);
 	atomic_set(&msm_uport->client_req_state, 0);
+#endif
 	LOG_USR_MSG(msm_uport->ipc_msm_hs_pwr_ctxt,
 			"%s(): Client_Count 0\n", __func__);
 	msm_hs_start_rx_locked(uport);
@@ -3292,6 +3353,10 @@ static int msm_hs_pm_sys_resume_noirq(struct device *dev)
 static void  msm_serial_hs_rt_init(struct uart_port *uport)
 {
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
+	int delay = 100;
+
+	if (msm_uport->no_autosuspend)
+		delay = -1;
 
 	MSM_HS_DBG("%s(): Enabling runtime pm\n", __func__);
 	pm_runtime_set_suspended(uport->dev);
@@ -3331,6 +3396,7 @@ static int msm_hs_probe(struct platform_device *pdev)
 	struct msm_serial_hs_platform_data *pdata = pdev->dev.platform_data;
 	unsigned long data;
 	char name[30];
+	int ext_rst_gpio;
 
 	if (pdev->dev.of_node) {
 		dev_dbg(&pdev->dev, "device tree enabled\n");
@@ -3356,6 +3422,20 @@ static int msm_hs_probe(struct platform_device *pdev)
 		pdev->dev.platform_data = pdata;
 	}
 
+	ext_rst_gpio = of_get_named_gpio_flags(pdev->dev.of_node,
+				"qcom,ext-reset-gpio", 0, NULL);
+	dev_dbg(&pdev->dev, "uart gpio = %d\n", ext_rst_gpio);
+	if (ext_rst_gpio >= 0) {
+		usleep_range(100000, 101000);
+
+		if (gpio_is_valid(ext_rst_gpio)) {
+			ret = gpio_request(ext_rst_gpio,
+						"UART_EXT_RESET_GPIO");
+			if (likely(ret >= 0))
+				gpio_set_value(ext_rst_gpio, 1);
+		}
+	}
+
 	if (pdev->id < 0 || pdev->id >= UARTDM_NR) {
 		dev_err(&pdev->dev, "Invalid plaform device ID = %d\n",
 								pdev->id);
@@ -3373,6 +3453,12 @@ static int msm_hs_probe(struct platform_device *pdev)
 
 	if (pdev->dev.of_node)
 		msm_uport->uart_type = BLSP_HSUART;
+
+	msm_uport->no_autosuspend = of_property_read_bool(pdev->dev.of_node,
+			"qcom,disallow-autosuspend");
+
+	msm_uport->is_bt_port = of_property_read_bool(pdev->dev.of_node,
+			"qcom,bluetooth-serial-port");
 
 	msm_hs_get_pinctrl_configs(uport);
 	/* Get required resources for BAM HSUART */
@@ -3545,6 +3631,10 @@ static int msm_hs_probe(struct platform_device *pdev)
 	msm_uport->bam_irq = bam_irqres;
 
 	clk_set_rate(msm_uport->clk, msm_uport->uport.uartclk);
+
+	if (msm_uport->uport.uartclk > BLSP_UART_CLK_FMAX)
+		clk_set_rate(msm_uport->clk, BLSP_UART_CLK_FMAX);
+
 	msm_hs_clk_bus_vote(msm_uport);
 	ret = uartdm_init_port(uport);
 	if (unlikely(ret))

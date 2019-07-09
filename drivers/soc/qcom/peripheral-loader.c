@@ -56,7 +56,7 @@
 #define pil_memset_io(d, c, count) memset_io(d, c, count)
 #endif
 
-#define PIL_NUM_DESC		10
+#define PIL_NUM_DESC		16
 #define MAX_LEN 96
 #define NUM_OF_ENCRYPTED_KEY	3
 
@@ -1082,6 +1082,9 @@ static int pil_parse_devicetree(struct pil_desc *desc)
 		pr_debug("Unable to read the addr-protect-id for %s\n",
 					desc->name);
 
+	desc->serial_loading = of_property_read_bool(ofnode,
+				"qcom,serial-loading");
+
 	if (desc->ops->proxy_unvote &&
 			of_property_match_string(ofnode, "interrupt-names",
 				"qcom,proxy-unvote") >= 0) {
@@ -1327,7 +1330,7 @@ int pil_boot(struct pil_desc *desc)
 	 * Fallback to serial loading of blobs if the
 	 * workqueue creatation failed during module init.
 	 */
-	if (pil_wq) {
+	if (pil_wq && !desc->serial_loading) {
 		ret = pil_load_segs(desc);
 		if (ret)
 			goto err_deinit_image;
@@ -1668,6 +1671,7 @@ static int __init msm_pil_init(void)
 		writel_relaxed(0, pil_info_base + (i * sizeof(u32)));
 
 	/* Get Global minidump ToC*/
+#ifndef CONFIG_ARCH_MSM8916
 	g_md_toc = qcom_smem_get(QCOM_SMEM_HOST_ANY, SBL_MINIDUMP_SMEM_ID,
 				 &size);
 	pr_debug("Minidump: g_md_toc is %pa\n", &g_md_toc);
@@ -1675,7 +1679,7 @@ static int __init msm_pil_init(void)
 		pr_err("SMEM is not initialized.\n");
 		return -EPROBE_DEFER;
 	}
-
+#endif
 	pil_wq = alloc_workqueue("pil_workqueue", WQ_HIGHPRI | WQ_UNBOUND, 0);
 	if (!pil_wq)
 		pr_warn("pil: Defaulting to sequential firmware loading.\n");

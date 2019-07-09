@@ -16,6 +16,11 @@
 #include "sde_dbg.h"
 #include "sde_kms.h"
 
+#if defined(CONFIG_ARCH_MSM8916) || defined(CONFIG_ARCH_MSM8996) || \
+    defined(CONFIG_ARCH_MSM8998) || defined(CONFIG_ARCH_SDM660)
+ #define RUN_ON_LEGACY_PLATFORM
+#endif
+
 #define SSPP_SPARE                        0x28
 #define UBWC_DEC_HW_VERSION               0x058
 #define UBWC_STATIC                       0x144
@@ -52,12 +57,16 @@
 #define MDP_WD_TIMER_4_CTL2               0x444
 #define MDP_WD_TIMER_4_LOAD_VALUE         0x448
 
+#define MDP_TICK_COUNT_LEGACY             64
 #define MDP_TICK_COUNT                    16
 #define XO_CLK_RATE                       19200
 #define MS_TICKS_IN_SEC                   1000
 
 #define CALCULATE_WD_LOAD_VALUE(fps) \
 	((uint32_t)((MS_TICKS_IN_SEC * XO_CLK_RATE)/(MDP_TICK_COUNT * fps)))
+
+#define CALCULATE_WD_LOAD_VALUE_LEGACY(fps) \
+	((uint32_t)((MS_TICKS_IN_SEC * XO_CLK_RATE)/(MDP_TICK_COUNT_LEGACY * fps)))
 
 #define DCE_SEL                           0x450
 
@@ -282,8 +291,20 @@ static void _update_vsync_source(struct sde_hw_mdp *mdp,
 		if (cfg->is_dummy) {
 			SDE_REG_WRITE(c, wd_ctl2, 0x0);
 		} else {
-			SDE_REG_WRITE(c, wd_load_value,
-				CALCULATE_WD_LOAD_VALUE(cfg->frame_rate));
+			if (of_machine_is_compatible("qcom,msm8956") ||
+			    of_machine_is_compatible("qcom,apq8056") ||
+			    of_machine_is_compatible("qcom,msm8996") ||
+			    of_machine_is_compatible("qcom,msm8998") ||
+			    of_machine_is_compatible("qcom,sdm630")  ||
+			    of_machine_is_compatible("qcom,sdm636")  ||
+			    of_machine_is_compatible("qcom,sdm660"))
+				SDE_REG_WRITE(c, wd_load_value,
+						CALCULATE_WD_LOAD_VALUE_LEGACY(
+						cfg->frame_rate));
+			else
+				SDE_REG_WRITE(c, wd_load_value,
+						CALCULATE_WD_LOAD_VALUE(
+						cfg->frame_rate));
 
 			SDE_REG_WRITE(c, wd_ctl, BIT(0)); /* clear timer */
 			reg = SDE_REG_READ(c, wd_ctl2);

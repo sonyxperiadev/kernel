@@ -1,0 +1,28 @@
+/* Remove all FBDEV related configuration */
+/delete-node/ &mdss_mdp;
+/delete-node/ &mdss_dsi0;
+/delete-node/ &mdss_dsi1;
+/delete-node/ &msm_ext_disp;
+/delete-node/ &mdss_rotator;
+/delete-node/ &mdss_dp_ctrl;
+
+&soc {
+	/delete-node/ qcom,mdss_wb_panel;
+
+	mdss_fb2: mdss_fb2 {
+	};
+
+	sde_wb: qcom,wb-display@0 {
+		compatible = "qcom,wb-display";
+		cell-index = <0>;
+		label = "wb_display";
+	};
+};
+
+/* Note: Do NOT reorder includes and nodes after this line */
+#include "sdm660-sde.dtsi"
+
+&mdss_mdp {
+	connectors = <&sde_wb &sde_dp>;
+};
+

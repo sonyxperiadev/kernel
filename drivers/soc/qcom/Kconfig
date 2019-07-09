@@ -2,6 +2,13 @@
 # QCOM Soc drivers
 #
 menu "Qualcomm SoC drivers"
+config QCOM_KRYO_L2_ACCESSORS
+	bool "Qualcomm Kryo L2 accessor helper driver"
+	help
+	  Add support for accessing the Kryo L2 indirect registers that are
+	  present on various Qualcomm SoCs.
+	  If unsure, say N
+
 config QCOM_MEM_OFFLINE
 	bool "Dynamic Memory Region Offline driver"
 	help
@@ -376,6 +383,16 @@ config MSM_PIL_SSR_GENERIC
          or a fatal error. Subsystems include LPASS, Venus, VPU, WCNSS and
          BCSS.
 
+config MSM_PIL_MSS_QDSP6V5
+       tristate "MSS QDSP6v5 (Hexagon) Boot Support"
+       depends on MSM_PIL && MSM_SUBSYSTEM_RESTART
+       help
+         Support for booting and shutting down QDSP6v5 (Hexagon) processors
+         in modem subsystems. If you would like to make or receive phone
+         calls then say Y here.
+
+         If unsure, say N.
+
 config SETUP_SSR_NOTIF_TIMEOUTS
 	bool "Set timeouts on SSR sysmon notifications and notifier callbacks"
 	help
@@ -677,6 +694,29 @@ config QTI_RPM_STATS_LOG
 	  memory location. These messages provide statistical information about
 	  the low power modes that RPM enters. The drivers outputs the message
 	  via a debugfs node.
+
+config MSM_CPU_PWR_CTL
+	bool "CPU subsystem power control"
+	depends on SMP && (ARM || ARM64)
+	default y
+	help
+	Provides routines to power on cpu rails and l2 cache
+	controller during coldboot.
+
+config MSM_APM
+	bool "Qualcomm Technologies, Inc. platform specific APM driver"
+	help
+	  Platform specific driver to manage the power source of
+	  memory arrays. Interfaces with regulator drivers to ensure
+	  SRAM Vmin requirements are met across different performance
+	  levels.
+
+config MSM_PACMAN
+	tristate "Enable the Peripheral Access Control Manager (PACMan)"
+	help
+	  Add support for the Peripheral Access Control Manager (PACMan). This
+	  driver allows reconfiguration of the Bus Access Manager Low Speed
+	  peripheral (BLSP) ownership.
 
 config MSM_CDSP_LOADER
 	tristate "CDSP loader support"

@@ -199,6 +199,7 @@ int msm_comm_vote_bus(struct msm_vidc_core *core)
 	struct hfi_device *hdev;
 	struct msm_vidc_inst *inst = NULL;
 	struct vidc_bus_vote_data *vote_data = NULL;
+	struct clock_info *vc;
 	bool is_turbo = false;
 
 	if (!core || !core->device) {
@@ -220,6 +221,7 @@ int msm_comm_vote_bus(struct msm_vidc_core *core)
 			return -EINVAL;
 		}
 	}
+
 
 	mutex_lock(&core->lock);
 	list_for_each_entry(inst, &core->instances, list) {
@@ -341,6 +343,12 @@ int msm_comm_vote_bus(struct msm_vidc_core *core)
 			vote_data[i].ddr_bw = inst->clk_data.ddr_bw;
 			vote_data[i].sys_cache_bw =
 				inst->clk_data.sys_cache_bw;
+		}
+
+		if (i == 0) {
+			vote_data[i].imem_ab_tbl = core->resources.imem_ab_tbl;
+			vote_data[i].imem_ab_tbl_size =
+				core->resources.imem_ab_tbl_size;
 		}
 
 		i++;

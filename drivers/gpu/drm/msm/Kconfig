@@ -168,6 +168,19 @@ config DRM_SDE_EVTLOG_DEBUG
 	  driver during fatal errors and enable some display-driver logging
 	  into an internal buffer (this avoids logging overhead).
 
+config DRM_MSM_EMU_HEADLESS
+	bool "Enable display simulation on headless system"
+	depends on DRM_MSM
+	help
+	  Enable simulating a display connected on the DSI while using a
+	  display-less system.
+	  This configuration option is useful when using Android userspace
+	  on a system that has no physically connected display and no
+	  possible or not connected external display.
+	  This way, the Android system will initialize the display system
+	  just fine and it will be possible to interact with the UI by
+	  using screen mirroring via the Android Debug Bridge (ADB).
+
 config DRM_SDE_RSC
 	bool "Enable sde resource state coordinator(rsc) driver"
 	depends on DRM_MSM
@@ -178,3 +191,4 @@ config DRM_SDE_RSC
 	  avoids the display core power collapse. A client can also register
 	  for display core power collapse events on rsc.
 
+source "drivers/gpu/drm/msm/dsi-staging/somc_panel/Kconfig"

@@ -391,6 +391,14 @@ static phys_addr_t pgd_pgtable_alloc(void)
 	return __pa(ptr);
 }
 
+void create_pgtable_mapping(phys_addr_t start, phys_addr_t end)
+{
+	unsigned long virt = (unsigned long)phys_to_virt(start);
+
+	__create_pgd_mapping(init_mm.pgd, start, virt, end - start,
+				PAGE_KERNEL, NULL, 0);
+}
+
 /*
  * This function can only be used to modify existing table entries,
  * without allocating new levels of table. Note that this permits the
@@ -562,11 +570,15 @@ static void __init map_kernel_segment(pgd_t *pgd, void *va_start, void *va_end,
 	vm_area_add_early(vma);
 }
 
+#if defined(CONFIG_STRICT_KERNEL_RWX) || defined(CONFIG_STRICT_MODULE_RWX)
 static int __init parse_rodata(char *arg)
 {
 	return strtobool(arg, &rodata_enabled);
 }
 early_param("rodata", parse_rodata);
+#else
+static bool rodata_enabled = false;
+#endif
 
 #ifdef CONFIG_UNMAP_KERNEL_AT_EL0
 static int __init map_entry_trampoline(void)

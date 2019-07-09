@@ -175,6 +175,7 @@ struct clk_rcg2 {
 	struct clk_regmap	clkr;
 	u8			cfg_off;
 	u8			flags;
+	struct notifier_block	clk_nb;
 #define FORCE_ENABLE_RCG	BIT(0)
 #define DFS_ENABLE_RCG		BIT(1)
 #define HW_CLK_CTRL_MODE	BIT(2)
@@ -190,6 +191,8 @@ extern const struct clk_ops clk_byte_ops;
 extern const struct clk_ops clk_byte2_ops;
 extern const struct clk_ops clk_pixel_ops;
 extern const struct clk_ops clk_gfx3d_ops;
+extern const struct clk_ops clk_esc_ops;
+extern const struct clk_ops clk_gfx3d_src_ops;
 extern const struct clk_ops clk_dp_ops;
 
 extern int clk_rcg2_get_dfs_clock_rate(struct clk_rcg2 *clk,

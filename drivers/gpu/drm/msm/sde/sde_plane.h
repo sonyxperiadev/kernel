@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
  * Copyright (C) 2013 Red Hat
  * Author: Rob Clark <robdclark@gmail.com>
  *
@@ -142,6 +142,7 @@ enum sde_plane_sclcheck_state {
  * @pixel_ext: configuration data for pixel extensions
  * @scaler_check_state: indicates status of user provided pixel extension data
  * @cdp_cfg:	CDP configuration
+ * @line_insertion_cfg: line insertion configuration
  */
 struct sde_plane_state {
 	struct drm_plane_state base;
@@ -169,6 +170,7 @@ struct sde_plane_state {
 	struct sde_plane_rot_state rot;
 
 	struct sde_hw_pipe_cdp_cfg cdp_cfg;
+	struct sde_hw_pipe_line_insertion_cfg line_insertion_cfg;
 };
 
 /**
@@ -276,6 +278,20 @@ int sde_plane_kickoff_rot(struct drm_plane *plane);
  * @plane: pointer to drm_plane structure
  */
 void sde_plane_set_error(struct drm_plane *plane, bool error);
+
+#ifdef CONFIG_DRM_MSM_DSI_SOMC_PANEL
+/**
+ * sde_plane_set_property: Set property on SDE planes
+ * @plane: Pointer to DRM plane object
+ * @state: Pointer to DRM plane state object
+ * @property: Pointer to DRM property to set
+ * @val: Value to set to the DRM property
+ * Returns: Zero on success
+ */
+int sde_plane_set_property(struct drm_plane *plane,
+		struct drm_plane_state *state, struct drm_property *property,
+		uint64_t val);
+#endif
 
 /**
  * sde_plane_init - create new sde plane for the given pipe

@@ -1066,6 +1066,48 @@ static enum vidc_status hfi_parse_init_done_properties(
 			num_properties--;
 			break;
 		}
+		case HFI_PROPERTY_PARAM_INTERLACE_FORMAT_SUPPORTED:
+		{
+			next_offset +=
+				sizeof(struct hfi_interlace_format_supported);
+			num_properties--;
+			break;
+		}
+		case HFI_PROPERTY_PARAM_MAX_SEQUENCE_HEADER_SIZE:
+		{
+			next_offset += sizeof(u32);
+			num_properties--;
+			break;
+		}
+		case HFI_PROPERTY_PARAM_BUFFER_ALLOC_MODE_SUPPORTED:
+		{
+			struct hfi_buffer_alloc_mode_supported *prop =
+				(struct hfi_buffer_alloc_mode_supported *)
+				(data_ptr + next_offset);
+
+			if (prop->num_entries >= 32) {
+				dprintk(VIDC_ERR,
+					"%s - num_entries: %d from f/w seems suspect\n",
+					__func__, prop->num_entries);
+				break;
+			}
+			next_offset +=
+				sizeof(struct hfi_buffer_alloc_mode_supported) -
+				sizeof(u32) + prop->num_entries * sizeof(u32);
+
+			pr_warn("WARNING: This HFI property is currently NOT "
+				"supported on the kernel 4.14 porting of this "
+				"driver.\n");
+			pr_warn("IF YOU SEE THIS MESSAGE, PLEASE FIXME!!!!\n");
+
+//			copy_alloc_mode_to_sessions(prop,
+//					capabilities, num_sessions,
+//					codecs, domain);
+
+			num_properties--;
+			break;
+		}
+
 		default:
 			dprintk(VIDC_DBG,
 				"%s: default case - data_ptr %pK, prop_id 0x%x\n",
@@ -1074,6 +1116,43 @@ static enum vidc_status hfi_parse_init_done_properties(
 		}
 		rem_bytes -= next_offset;
 		data_ptr += next_offset;
+	}
+
+	return status;
+}
+
+enum vidc_status hfi_process_session_init_done_prop_read(
+		struct hfi_msg_sys_session_init_done_packet *pkt,
+		struct vidc_hal_session_init_done *session_init_done)
+{
+	enum vidc_status status = VIDC_ERR_NONE;
+	struct msm_vidc_capability *capability = NULL;
+	u32 rem_bytes, num_properties;
+	u8 *data_ptr;
+
+	rem_bytes = pkt->size - sizeof(struct
+			hfi_msg_sys_session_init_done_packet) + sizeof(u32);
+	if (!rem_bytes) {
+		dprintk(VIDC_ERR, "%s: invalid property info\n", __func__);
+		return VIDC_ERR_FAIL;
+	}
+
+	status = hfi_map_err_status(pkt->error_type);
+	if (status) {
+		dprintk(VIDC_ERR, "%s: error status 0x%x\n", __func__, status);
+		return status;
+	}
+
+	data_ptr = (u8 *)&pkt->rg_property_data[0];
+	num_properties = pkt->num_properties;
+
+	capability = &session_init_done->capability;
+
+	status = hfi_parse_init_done_properties(
+			capability, 1, data_ptr, num_properties, rem_bytes);
+	if (status) {
+		dprintk(VIDC_ERR, "%s: parse status 0x%x\n", __func__, status);
+		return status;
 	}
 
 	return status;
@@ -1315,6 +1394,11 @@ static int hfi_process_session_init_done(u32 device_id,
 	cmd_done.device_id = device_id;
 	cmd_done.session_id = (void *)(uintptr_t)pkt->session_id;
 	cmd_done.status = hfi_map_err_status(pkt->error_type);
+	if (!cmd_done.status) {
+		cmd_done.status = hfi_process_session_init_done_prop_read(
+			pkt, &session_init_done);
+	}
+
 	cmd_done.data.session_init_done = session_init_done;
 	cmd_done.size = sizeof(struct vidc_hal_session_init_done);
 
@@ -1870,7 +1954,7 @@ static int hfi_process_sys_property_info(u32 device_id,
 	default:
 		dprintk(VIDC_DBG,
 				"%s: unknown_prop_id: %x\n",
-				pkt->rg_property_data[0], __func__);
+				__func__, pkt->rg_property_data[0]);
 		return -ENOTSUPP;
 	}
 

@@ -469,7 +469,7 @@ static int spcom_get_next_request_size(struct spcom_channel *ch)
 	ret = wait_for_completion_interruptible(&ch->rx_done);
 	if (ret < 0) {
 		pr_debug("ch [%s]:interrupted wait ret=%d\n",
-			 ret, ch->name);
+			 ch->name, ret);
 		goto exit_error;
 	}
 
@@ -903,7 +903,7 @@ static int spcom_handle_lock_ion_buf_command(struct spcom_channel *ch,
 	}
 
 	if (cmd->arg > (unsigned int)INT_MAX) {
-		pr_err("int overflow [%ld]\n", cmd->arg);
+		pr_err("int overflow [%u]\n", cmd->arg);
 		return -EINVAL;
 	}
 	fd = cmd->arg;
@@ -972,7 +972,7 @@ static int spcom_handle_unlock_ion_buf_command(struct spcom_channel *ch,
 		return -EINVAL;
 	}
 	if (cmd->arg > (unsigned int)INT_MAX) {
-		pr_err("int overflow [%ld]\n", cmd->arg);
+		pr_err("int overflow [%u]\n", cmd->arg);
 		return -EINVAL;
 	}
 	fd = cmd->arg;
@@ -1744,7 +1744,7 @@ exit_free_cdev:
 exit_unregister_drv:
 	ret = spcom_unregister_rpmsg_drv(ch);
 	if (ret != 0)
-		pr_err("can't unregister rpmsg drv\n", ret);
+		pr_err("can't unregister rpmsg drv %d\n", ret);
 exit_destroy_channel:
 	// empty channel leaves free slot for next time
 	mutex_lock(&ch->lock);
@@ -1894,14 +1894,14 @@ static void spcom_signal_rx_done(struct work_struct *ignored)
 		if (ch->rpmsg_abort) {
 			if (ch->rpmsg_rx_buf) {
 				pr_debug("ch [%s] rx aborted free %d bytes\n",
-					ch->actual_rx_size);
+					ch->name, ch->actual_rx_size);
 				kfree(ch->rpmsg_rx_buf);
 				ch->actual_rx_size = 0;
 			}
 			goto rx_aborted;
 		}
 		if (ch->rpmsg_rx_buf) {
-			pr_err("ch [%s] previous buffer not consumed %d bytes\n",
+			pr_err("ch [%s] previous buffer not consumed %lu bytes\n",
 			       ch->name, ch->actual_rx_size);
 			kfree(ch->rpmsg_rx_buf);
 			ch->rpmsg_rx_buf = NULL;
@@ -1945,7 +1945,7 @@ static int spcom_rpdev_cb(struct rpmsg_device *rpdev,
 	pr_debug("incoming msg from %s\n", rpdev->id.name);
 	ch = dev_get_drvdata(&rpdev->dev);
 	if (!ch) {
-		pr_err("%s: invalid ch\n");
+		pr_err("%s: invalid ch\n", __func__);
 		return -EINVAL;
 	}
 	if (len > SPCOM_RX_BUF_SIZE || len <= 0) {

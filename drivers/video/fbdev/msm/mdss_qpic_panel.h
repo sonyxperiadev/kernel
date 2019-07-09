@@ -1,4 +1,4 @@
-/* Copyright (c) 2014, 2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -22,8 +22,8 @@
 #define LCDC_INTERNAL_BUFFER_SIZE   30
 
 /**
- * Macros for coding MIPI commands
- */
+   Macros for coding MIPI commands
+*/
 #define INV_SIZE             0xFFFF
 /* Size of argument to MIPI command is variable */
 #define OP_SIZE_PAIR(op, size)    ((op<<16) | size)

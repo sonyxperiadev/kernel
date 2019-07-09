@@ -55,6 +55,7 @@ static const struct adreno_vbif_platform a5xx_vbif_platforms[] = {
 	{ adreno_is_a530, a530_vbif },
 	{ adreno_is_a512, a540_vbif },
 	{ adreno_is_a510, a530_vbif },
+	{ adreno_is_a509, a540_vbif },
 	{ adreno_is_a508, a530_vbif },
 	{ adreno_is_a505, a530_vbif },
 	{ adreno_is_a506, a530_vbif },
@@ -129,6 +130,7 @@ static const struct {
 	{ adreno_is_a530, a530_efuse_speed_bin },
 	{ adreno_is_a505, a530_efuse_speed_bin },
 	{ adreno_is_a512, a530_efuse_speed_bin },
+	{ adreno_is_a509, a530_efuse_speed_bin },
 	{ adreno_is_a508, a530_efuse_speed_bin },
 };
 
@@ -169,7 +171,8 @@ static void a5xx_platform_setup(struct adreno_device *adreno_dev)
 		gpudev->vbif_xin_halt_ctrl0_mask =
 				A510_VBIF_XIN_HALT_CTRL0_MASK;
 	} else if (adreno_is_a540(adreno_dev) ||
-		adreno_is_a512(adreno_dev)) {
+		adreno_is_a512(adreno_dev) ||
+		adreno_is_a509(adreno_dev)) {
 		gpudev->snapshot_data->sect_sizes->cp_merciu = 1024;
 	}
 
@@ -517,12 +520,14 @@ static void a5xx_regulator_disable(struct adreno_device *adreno_dev)
 	unsigned int reg;
 	struct kgsl_device *device = KGSL_DEVICE(adreno_dev);
 
-	if (adreno_is_a512(adreno_dev) || adreno_is_a508(adreno_dev))
+	if (adreno_is_a512(adreno_dev) || adreno_is_a509(adreno_dev) ||
+		adreno_is_a508(adreno_dev))
 		return;
 
 	/* If feature is not supported or not enabled */
-	if (!ADRENO_FEATURE(adreno_dev, ADRENO_SPTP_PC) ||
-		!test_bit(ADRENO_SPTP_PC_CTRL, &adreno_dev->pwrctrl_flag)) {
+	if (!adreno_is_a510(adreno_dev) &&
+		(!ADRENO_FEATURE(adreno_dev, ADRENO_SPTP_PC) ||
+		!test_bit(ADRENO_SPTP_PC_CTRL, &adreno_dev->pwrctrl_flag))) {
 		/* Set the default register values; set SW_COLLAPSE to 1 */
 		kgsl_regwrite(device, A5XX_GPMU_SP_POWER_CNTL, 0x778001);
 		/*
@@ -556,7 +561,7 @@ static void a5xx_regulator_disable(struct adreno_device *adreno_dev)
 			KGSL_PWR_WARN(device, "GMEM is forced on\n");
 	}
 
-	if (adreno_is_a530(adreno_dev)) {
+	if (adreno_is_a530(adreno_dev) || adreno_is_a510(adreno_dev)) {
 		/* Reset VBIF before PC to avoid popping bogus FIFO entries */
 		kgsl_regwrite(device, A5XX_RBBM_BLOCK_SW_RESET_CMD,
 			0x003C0000);
@@ -1177,6 +1182,7 @@ static const struct {
 	{ adreno_is_a540, a540_hwcg_regs, ARRAY_SIZE(a540_hwcg_regs) },
 	{ adreno_is_a530, a530_hwcg_regs, ARRAY_SIZE(a530_hwcg_regs) },
 	{ adreno_is_a512, a512_hwcg_regs, ARRAY_SIZE(a512_hwcg_regs) },
+	{ adreno_is_a509, a512_hwcg_regs, ARRAY_SIZE(a512_hwcg_regs) },
 	{ adreno_is_a510, a510_hwcg_regs, ARRAY_SIZE(a510_hwcg_regs) },
 	{ adreno_is_a505, a50x_hwcg_regs, ARRAY_SIZE(a50x_hwcg_regs) },
 	{ adreno_is_a506, a50x_hwcg_regs, ARRAY_SIZE(a50x_hwcg_regs) },
@@ -1630,7 +1636,7 @@ static void a5xx_clk_set_options(struct adreno_device *adreno_dev,
 {
 
 	if (!adreno_is_a540(adreno_dev) && !adreno_is_a512(adreno_dev) &&
-		!adreno_is_a508(adreno_dev))
+		!adreno_is_a508(adreno_dev) && !adreno_is_a509(adreno_dev))
 		return;
 
 	/* Handle clock settings for GFX PSCBCs */
@@ -1937,7 +1943,8 @@ static void a5xx_start(struct adreno_device *adreno_dev)
 		kgsl_regwrite(device, A5XX_CP_MERCIU_SIZE, 0x20);
 		kgsl_regwrite(device, A5XX_CP_ROQ_THRESHOLDS_2, 0x40000030);
 		kgsl_regwrite(device, A5XX_CP_ROQ_THRESHOLDS_1, 0x20100D0A);
-	} else if (adreno_is_a540(adreno_dev) || adreno_is_a512(adreno_dev)) {
+	} else if (adreno_is_a540(adreno_dev) || adreno_is_a512(adreno_dev) ||
+			adreno_is_a509(adreno_dev)) {
 		kgsl_regwrite(device, A5XX_CP_MEQ_THRESHOLDS, 0x40);
 		kgsl_regwrite(device, A5XX_CP_MERCIU_SIZE, 0x400);
 		kgsl_regwrite(device, A5XX_CP_ROQ_THRESHOLDS_2, 0x80000060);
@@ -1956,7 +1963,8 @@ static void a5xx_start(struct adreno_device *adreno_dev)
 	if (adreno_is_a505_or_a506(adreno_dev) || adreno_is_a508(adreno_dev))
 		kgsl_regwrite(device, A5XX_PC_DBG_ECO_CNTL,
 						(0x100 << 11 | 0x100 << 22));
-	else if (adreno_is_a510(adreno_dev) || adreno_is_a512(adreno_dev))
+	else if (adreno_is_a510(adreno_dev) || adreno_is_a512(adreno_dev) ||
+			adreno_is_a509(adreno_dev))
 		kgsl_regwrite(device, A5XX_PC_DBG_ECO_CNTL,
 						(0x200 << 11 | 0x200 << 22));
 	else
@@ -1999,6 +2007,22 @@ static void a5xx_start(struct adreno_device *adreno_dev)
 	kgsl_regwrite(device, A5XX_UCHE_MODE_CNTL, BIT(29));
 	/* Set the USE_RETENTION_FLOPS chicken bit */
 	kgsl_regwrite(device, A5XX_CP_CHICKEN_DBG, 0x02000000);
+
+	/*
+	 *  In A5x, CCU can send context_done event of a particular context to
+	 *  UCHE which ultimately reaches CP even when there is valid
+	 *  transaction of that context inside CCU. This can let CP to program
+	 *  config registers, which will make the "valid transaction" inside
+	 *  CCU to be interpreted differently. This can cause gpu fault. This
+	 *  bug is fixed in latest A510 revision. To enable this bug fix -
+	 *  bit[11] of RB_DBG_ECO_CNTL need to be set to 0, default is 1
+	 *  (disable). For older A510 version this bit is unused.
+	 */
+	if (adreno_is_a510(adreno_dev)) {
+		kgsl_regread(device, A5XX_RB_DBG_ECO_CNT, &bit);
+		bit = (bit & (~(1 << 11)));
+		kgsl_regwrite(device, A5XX_RB_DBG_ECO_CNT, bit);
+	}
 
 	/* Enable ISDB mode if requested */
 	if (test_bit(ADRENO_DEVICE_ISDB_ENABLED, &adreno_dev->priv)) {
@@ -2049,7 +2073,8 @@ static void a5xx_start(struct adreno_device *adreno_dev)
 			kgsl_regwrite(device, A5XX_TPL1_MODE_CNTL, bit << 7);
 			kgsl_regwrite(device, A5XX_RB_MODE_CNTL, bit << 1);
 			if (adreno_is_a540(adreno_dev) ||
-				adreno_is_a512(adreno_dev))
+				adreno_is_a512(adreno_dev) ||
+				adreno_is_a509(adreno_dev))
 				kgsl_regwrite(device, A5XX_UCHE_DBG_ECO_CNTL_2,
 					bit);
 		}
@@ -2225,7 +2250,7 @@ static int a5xx_microcode_load(struct adreno_device *adreno_dev)
 		desc.args[1] = 13;
 		desc.arginfo = SCM_ARGS(2);
 
-		ret = scm_call2(SCM_SIP_FNID(SCM_SVC_BOOT, 0xA), &desc);
+		ret = scm_call2_atomic(SCM_SIP_FNID(SCM_SVC_BOOT, 0xA), &desc);
 		if (ret) {
 			pr_err("SCM resume call failed with error %d\n", ret);
 			return ret;
@@ -2516,7 +2541,8 @@ static int a5xx_microcode_read(struct adreno_device *adreno_dev)
 	if (ret)
 		return ret;
 
-	_load_regfile(adreno_dev);
+	if (!adreno_is_a510(adreno_dev))
+		_load_regfile(adreno_dev);
 
 	return ret;
 }

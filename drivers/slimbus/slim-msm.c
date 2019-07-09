@@ -1327,6 +1327,7 @@ void msm_slim_sps_exit(struct msm_slim_ctrl *dev, bool dereg)
 #define SLIMBUS_QMI_DEFERRED_STATUS_RESP 0x0023
 
 #define SLIMBUS_QMI_POWER_REQ_MAX_MSG_LEN 14
+#define SLIMBUS_QMI_POWER_REQ_MAX_MSG_LEN_V0 7
 #define SLIMBUS_QMI_POWER_RESP_MAX_MSG_LEN 7
 #define SLIMBUS_QMI_SELECT_INSTANCE_REQ_MAX_MSG_LEN 14
 #define SLIMBUS_QMI_SELECT_INSTANCE_RESP_MAX_MSG_LEN 7
@@ -1467,6 +1468,27 @@ static struct qmi_elem_info slimbus_select_inst_resp_msg_v01_ei[] = {
 	},
 };
 
+static struct qmi_elem_info slimbus_power_req_msg_v00_legacy[] = {
+	{
+		.data_type = QMI_UNSIGNED_4_BYTE,
+		.elem_len  = 1,
+		.elem_size = sizeof(enum slimbus_pm_enum_type_v01),
+		.is_array  = NO_ARRAY,
+		.tlv_type  = 0x01,
+		.offset    = offsetof(struct slimbus_power_req_msg_v01, pm_req),
+		.ei_array  = NULL,
+	},
+	{
+		.data_type = QMI_EOTI,
+		.elem_len  = 0,
+		.elem_size = 0,
+		.is_array  = NO_ARRAY,
+		.tlv_type  = 0x00,
+		.offset    = 0,
+		.ei_array  = NULL,
+	},
+};
+
 static struct qmi_elem_info slimbus_power_req_msg_v01_ei[] = {
 	{
 		.data_type = QMI_UNSIGNED_4_BYTE,
@@ -1583,12 +1605,22 @@ static const char *get_qmi_error(struct qmi_response_type_v01 *r)
 {
 	if (r->result == QMI_RESULT_SUCCESS_V01 || r->error == QMI_ERR_NONE_V01)
 		return "No Error";
+	else if (r->error == QMI_ERR_MALFORMED_MSG_V01)
+		return "Malformed message";
 	else if (r->error == QMI_ERR_NO_MEMORY_V01)
 		return "Out of Memory";
 	else if (r->error == QMI_ERR_INTERNAL_V01)
 		return "Unexpected error occurred";
+	else if (r->error == QMI_ERR_CLIENT_IDS_EXHAUSTED_V01)
+		return "Client IDs exhausted";
+	else if (r->error == QMI_ERR_ENCODING_V01)
+		return "Bad encoding";
+	else if (r->error == QMI_ERR_DISABLED_V01)
+		return "Client is disabled";
 	else if (r->error == QMI_ERR_INCOMPATIBLE_STATE_V01)
 		return "Slimbus s/w already configured to a different mode";
+	else if (r->error == QMI_ERR_NOT_SUPPORTED_V01)
+		return "Not supported";
 	else if (r->error == QMI_ERR_INVALID_ID_V01)
 		return "Slimbus hardware instance is not valid";
 	else
@@ -1675,10 +1707,17 @@ static int msm_slim_qmi_send_power_request(struct msm_slim_ctrl *dev,
 		temp = &txn;
 	}
 
-	rc = qmi_send_request(dev->qmi.handle, NULL, temp,
+	if (dev->legacy_pwr_msg) {
+		rc = qmi_send_request(dev->qmi.handle, NULL, temp,
+				SLIMBUS_QMI_POWER_REQ_V01,
+				SLIMBUS_QMI_POWER_REQ_MAX_MSG_LEN_V0,
+				slimbus_power_req_msg_v00_legacy, req);
+	} else {
+		rc = qmi_send_request(dev->qmi.handle, NULL, temp,
 				SLIMBUS_QMI_POWER_REQ_V01,
 				SLIMBUS_QMI_POWER_REQ_MAX_MSG_LEN,
 				slimbus_power_req_msg_v01_ei, req);
+	}
 	if (rc < 0) {
 		SLIM_ERR(dev, "%s: QMI send req failed %d\n", __func__, rc);
 		qmi_txn_cancel(temp);

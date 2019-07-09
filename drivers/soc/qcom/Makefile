@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: GPL-2.0
 KASAN_SANITIZE_scm.o := n
+obj-$(CONFIG_QCOM_KRYO_L2_ACCESSORS) += kryo-l2-accessors.o
 obj-$(CONFIG_QCOM_CPUSS_DUMP) += cpuss_dump.o
 obj-$(CONFIG_QCOM_GLINK_SSR) +=	glink_ssr.o
 obj-$(CONFIG_QCOM_GSBI)	+=	qcom_gsbi.o
@@ -50,12 +51,16 @@ obj-$(CONFIG_MSM_SYSMON_QMI_COMM) += sysmon-qmi.o
 obj-$(CONFIG_MEM_SHARE_QMI_SERVICE)		+= memshare/
 obj-$(CONFIG_MSM_PIL)   +=      peripheral-loader.o
 obj-$(CONFIG_MSM_PIL_SSR_GENERIC) += subsys-pil-tz.o
+obj-$(CONFIG_MSM_PIL_MSS_QDSP6V5) += pil-q6v5.o pil-msa.o pil-q6v5-mss.o
 obj-$(CONFIG_QCOM_RUN_QUEUE_STATS) += rq_stats.o
 obj-$(CONFIG_MSM_SPCOM) += spcom.o
 obj-$(CONFIG_QCOM_BUS_SCALING) += msm_bus/
 obj-$(CONFIG_QCOM_COMMAND_DB) += cmd-db.o
 obj-$(CONFIG_QTI_RPMH_API) += rpmh.o
 obj-$(CONFIG_QTI_SYSTEM_PM) += system_pm.o
+obj-$(CONFIG_MSM_CPU_PWR_CTL) += cpu_pwr_ctl.o
+obj-$(CONFIG_MSM_APM) += apm.o
+obj-$(CONFIG_MSM_PACMAN) += msm_pacman.o
 obj-$(MSM_REMOTEQDSS) += remoteqdss.o
 obj-$(CONFIG_MSM_JTAGV8) += jtagv8.o jtagv8-etm.o
 obj-$(CONFIG_MSM_CDSP_LOADER) += qdsp6v2/
@@ -82,7 +87,7 @@ ifdef CONFIG_QTI_RPMH_API
 	obj-$(CONFIG_QTI_RPM_STATS_LOG) += rpmh_master_stat.o
 endif
 ifdef CONFIG_MSM_RPM_SMD
-	obj-$(CONFIG_QTI_RPM_STATS_LOG) += rpm_master_stat.o
+	obj-$(CONFIG_QTI_RPM_STATS_LOG) += rpm_master_stat.o system_stats.o
 endif
 obj-$(CONFIG_QMP_DEBUGFS_CLIENT) += qmp-debugfs-client.o
 obj-$(CONFIG_MSM_PERFORMANCE) += msm_performance.o

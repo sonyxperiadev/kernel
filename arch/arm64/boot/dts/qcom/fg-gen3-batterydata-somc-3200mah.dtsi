@@ -1,0 +1,112 @@
+/* Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+/*
+ * - 11/03/2018 - AngeloGioacchino Del Regno <kholk11@gmail.com>
+ * IMPORTANT:
+ * CEI has heavily hacked the SMB2/FG3 driver to prevent battery
+ * swelling when Nile batteries get aging.
+ * Implementing these really bad hacks in the driver is not really
+ * feasible, then it's better to just use the aging values in any
+ * battery condition for safety purposes.
+ * The standard values are commented out and left there ONLY for
+ * documentation purposes.
+ *
+ * This makes us lose around 2% of battery charge: an acceptable
+ * compromise.
+ */
+
+
+qcom,sm12_somc_3200mah {
+	qcom, = <24>;
+	//qcom,max-voltage-uv = <4380000>;
+	qcom,nom-batt-capacity-mah = <3200>;
+	//qcom,fg-cc-cv-threshold-mv = <4370>;
+	qcom,fastchg-current-ma = <2400>;
+	qcom,batt-id-kohm = <330>;
+	qcom,battery-beta = <4050>;
+	qcom,battery-type = "1309-2675";
+	qcom,checksum = <0xD96F>;
+	qcom,gui-version = "PM660GUI - 0.0.0.44";
+
+	qcom,bp-jeita-hyst-temp = <2>;
+	qcom,bp-jeita-ccc-en;
+	qcom,bp-jeita-hot-sl-fvc;
+	qcom,bp-jeita-cold-sl-fvc;
+	qcom,bp-jeita-fvc-cfg = <200>;
+	qcom,bp-jeita-ccc-cfg = <1440>;
+	//qcom,bp-recharge-voltage = <4280>;
+
+	/* Safe values */
+	qcom,max-voltage-uv = <4340000>;
+	qcom,fg-cc-cv-threshold-mv = <4325>;
+	qcom,bp-recharge-voltage = <4240>;
+
+	qcom,fg-profile-data = [
+		 86 1F 99 05
+		 70 0A 5F 06
+		 A8 1C 61 FB
+		 67 FD 6F F5
+		 7B 18 DD 22
+		 9F 45 C7 52
+		 58 00 00 00
+		 0D 00 00 00
+		 00 00 6F C2
+		 AA D5 BA CA
+		 25 00 08 00
+		 D5 DC B5 DD
+		 EB 05 37 FA
+		 F5 05 1C 0A
+		 71 E3 60 33
+		 1F 06 09 20
+		 27 00 14 00
+		 97 1F CD 05
+		 3C 0A 98 06
+		 96 1C CB 02
+		 3F 0D DD 03
+		 AB 18 C8 22
+		 BC 45 91 52
+		 5B 00 00 00
+		 0C 00 00 00
+		 00 00 33 CC
+		 4E BA C8 CA
+		 20 00 00 00
+		 E2 E3 B5 DD
+		 25 FC 01 FA
+		 5C 06 22 03
+		 C6 D3 C8 13
+		 AA 33 CC FF
+		 07 10 00 00
+		 34 0D 66 46
+		 20 00 40 00
+		 AE 01 0A FA
+		 FF 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+	];
+};

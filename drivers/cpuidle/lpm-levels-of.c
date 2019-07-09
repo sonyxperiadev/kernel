@@ -477,6 +477,9 @@ static int parse_cpu_mode(struct device_node *n, struct lpm_cpu_level *l)
 	if (ret)
 		goto fail;
 
+	key = "qcom,hyp-psci";
+	l->hyp_psci = of_property_read_bool(n, key);
+
 	return ret;
 fail:
 	pr_err("Failed to read key: %s level: %s\n", key, l->name);

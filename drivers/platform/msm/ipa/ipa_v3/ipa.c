@@ -4333,6 +4333,21 @@ void ipa3_suspend_handler(enum ipa_irq_type interrupt,
 	}
 }
 
+static int ipa3_clkon_cfg_wa(void)
+{
+	struct ipahal_reg_clkon_cfg clkon_cfg = { 0 };
+	int ret = 0;
+
+	clkon_cfg.open_misc = 1;
+
+	if (ipa3_cfg_clkon_cfg(&clkon_cfg)) {
+		IPAERR("fail to set cgc_open_misc = 1\n");
+		ret = -EPERM;
+	}
+
+	return ret;
+}
+
 /**
  * ipa3_restore_suspend_handler() - restores the original suspend IRQ handler
  * as it was registered in the IPA init sequence.
@@ -4482,7 +4497,7 @@ static void ipa3_freeze_clock_vote_and_notify_modem(void)
 		return;
 
 	if (IS_ERR(ipa3_ctx->smp2p_info.smem_state)) {
-		IPAERR("fail to get smp2p clk resp bit %d\n",
+		IPAERR("fail to get smp2p clk resp bit %ld\n",
 			PTR_ERR(ipa3_ctx->smp2p_info.smem_state));
 		return;
 	}
@@ -4949,6 +4964,13 @@ static int ipa3_post_init(const struct ipa3_plat_drv_res *resource_p,
 
 	ipa3_trigger_ipa_ready_cbs();
 	complete_all(&ipa3_ctx->init_completion_obj);
+
+	/* WA to disable MISC clock gating for IPA_HW_v3_1 */
+	if (ipa3_ctx->ipa_hw_type == IPA_HW_v3_1) {
+		pr_info(" WA to set cgc_open_misc = 1\n");
+		ipa3_clkon_cfg_wa();
+	}
+
 	pr_info("IPA driver initialization was successful.\n");
 
 	return 0;
@@ -5096,17 +5118,22 @@ static ssize_t ipa3_write(struct file *file, const char __user *buf,
 			  size_t count, loff_t *ppos)
 {
 	unsigned long missing;
+	char *dbg_buff = NULL;
+	int ret = 0;
 
-	char dbg_buff[32] = { 0 };
+	if (count < 1)
+		return -EINVAL;
 
-	if (sizeof(dbg_buff) < count + 1)
-		return -EFAULT;
+	dbg_buff = kmalloc((count + 1) * sizeof(char), GFP_KERNEL);
+	if (!dbg_buff)
+		return -ENOMEM;
 
 	missing = copy_from_user(dbg_buff, buf, count);
 
 	if (missing) {
 		IPAERR("Unable to copy data from user\n");
-		return -EFAULT;
+		ret = -EFAULT;
+		goto end;
 	}
 
 	if (count > 0)
@@ -5116,7 +5143,7 @@ static ssize_t ipa3_write(struct file *file, const char __user *buf,
 
 	/* Prevent consequent calls from trying to load the FW again. */
 	if (ipa3_is_ready())
-		return count;
+		goto end_msg;
 
 	/* Check MHI configuration on MDM devices */
 	if (!ipa3_is_msm_device()) {
@@ -5136,7 +5163,7 @@ static ssize_t ipa3_write(struct file *file, const char __user *buf,
 			 * when vlan mode is passed to our dev we expect
 			 * another write
 			 */
-			return count;
+			goto end_msg;
 		}
 
 		/* trim ending newline character if any */
@@ -5153,7 +5180,7 @@ static ssize_t ipa3_write(struct file *file, const char __user *buf,
 		} else if (strcmp(dbg_buff, "1")) {
 			IPAERR("got invalid string %s not loading FW\n",
 				dbg_buff);
-			return count;
+			goto end;
 		}
 		pr_info("IPA is loading with %sMHI configuration\n",
 			ipa3_ctx->ipa_config_is_mhi ? "" : "non ");
@@ -5162,8 +5189,11 @@ static ssize_t ipa3_write(struct file *file, const char __user *buf,
 	queue_work(ipa3_ctx->transport_power_mgmt_wq,
 		&ipa3_fw_loading_work);
 
+end_msg:
 	IPADBG("Scheduled a work to load IPA FW\n");
-	return count;
+end:
+	kfree(dbg_buff);
+	return ret < 0 ? ret : count;
 }
 
 /**
@@ -5186,7 +5216,12 @@ int ipa3_tz_unlock_reg(struct ipa_tz_unlock_reg_info *reg_info, u16 num_regs)
 	struct tz_smmu_ipa_protect_region_s cmd_buf;
 	struct scm_desc desc = {0};
 
-	if (reg_info ==  NULL || num_regs == 0) {
+	if (num_regs == 0) {
+		pr_info("No registers to unlock through TZ\n");
+		return 0;
+	}
+
+	if (reg_info ==  NULL) {
 		IPAERR("Bad parameters\n");
 		return -EFAULT;
 	}

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -309,15 +309,15 @@ static ssize_t dump_info_wta_attr(struct device *dev,
 	return count;
 }
 
-static DEVICE_ATTR(device_name, 0444, device_name_rda_attr, NULL);
-static DEVICE_ATTR(client_list, 0444, client_list_rda_attr, NULL);
-static DEVICE_ATTR(power_status, 0444, power_status_rda_attr, NULL);
-static DEVICE_ATTR(video_status, 0444, video_status_rda_attr, NULL);
-static DEVICE_ATTR(audio_status, 0444, audio_status_rda_attr, NULL);
-static DEVICE_ATTR(write_reg, 0200, NULL, write_reg_wta_attr);
-static DEVICE_ATTR(read_reg, 0644, read_reg_rda_attr,
+static DEVICE_ATTR(device_name, S_IRUGO, device_name_rda_attr, NULL);
+static DEVICE_ATTR(client_list, S_IRUGO, client_list_rda_attr, NULL);
+static DEVICE_ATTR(power_status, S_IRUGO, power_status_rda_attr, NULL);
+static DEVICE_ATTR(video_status, S_IRUGO, video_status_rda_attr, NULL);
+static DEVICE_ATTR(audio_status, S_IRUGO, audio_status_rda_attr, NULL);
+static DEVICE_ATTR(write_reg, S_IWUSR, NULL, write_reg_wta_attr);
+static DEVICE_ATTR(read_reg, S_IRUGO | S_IWUSR, read_reg_rda_attr,
 		   read_reg_wta_attr);
-static DEVICE_ATTR(dump_info, 0200, NULL, dump_info_wta_attr);
+static DEVICE_ATTR(dump_info, S_IWUSR, NULL, dump_info_wta_attr);
 
 static struct attribute *msm_dba_sysfs_attrs[] = {
 	&dev_attr_device_name.attr,

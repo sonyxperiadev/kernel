@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2018 The Linux Foundation. All rights reserved.
+ * Copyright (C) 2014-2019 The Linux Foundation. All rights reserved.
  * Copyright (C) 2013 Red Hat
  * Author: Rob Clark <robdclark@gmail.com>
  *
@@ -107,7 +107,7 @@ struct sde_plane {
 	struct mutex lock;
 
 	enum sde_sspp pipe;
-	uint32_t features;      /* capabilities from catalog */
+	unsigned long features;      /* capabilities from catalog */
 	uint32_t nformats;
 	uint32_t formats[64];
 
@@ -1699,6 +1699,36 @@ static int _sde_plane_color_fill(struct sde_plane *psde,
 	}
 
 	return 0;
+}
+
+static void _sde_plane_setup_panel_stacking(struct sde_plane *psde,
+		struct sde_plane_state *pstate)
+{
+	struct sde_hw_pipe_line_insertion_cfg *cfg;
+	struct sde_crtc_state *cstate;
+	uint32_t h_start, h_total, y_start;
+
+	if (!test_bit(SDE_SSPP_LINE_INSERTION, &psde->features))
+		return;
+
+	cfg = &pstate->line_insertion_cfg;
+	memset(cfg, 0, sizeof(*cfg));
+
+	cstate = to_sde_crtc_state(psde->base.state->crtc->state);
+	if (!cstate->padding_height)
+		return;
+
+	sde_crtc_calc_vpadding_param(psde->base.state->crtc->state,
+		pstate->base.crtc_y, pstate->base.crtc_h,
+		&y_start, &h_start, &h_total);
+
+	cfg->enable = true;
+	cfg->dummy_lines = cstate->padding_dummy;
+	cfg->active_lines = cstate->padding_active;
+	cfg->first_active_lines = h_start;
+	cfg->dst_h = h_total;
+
+	psde->pipe_cfg.dst_rect.y += y_start - pstate->base.crtc_y;
 }
 
 u32 sde_plane_rot_get_prefill(struct drm_plane *plane)
@@ -4021,6 +4051,8 @@ static int sde_plane_sspp_atomic_update(struct drm_plane *plane,
 
 		_sde_plane_setup_scaler(psde, pstate, fmt, false);
 
+		_sde_plane_setup_panel_stacking(psde, pstate);
+
 		/* check for color fill */
 		psde->color_fill = (uint32_t)sde_plane_get_property(pstate,
 				PLANE_PROP_COLOR_FILL);
@@ -4062,6 +4094,13 @@ static int sde_plane_sspp_atomic_update(struct drm_plane *plane,
 					psde->pipe_hw,
 					pstate->multirect_index,
 					pstate->multirect_mode);
+
+		/* update line insertion */
+		if (psde->pipe_hw->ops.setup_line_insertion)
+			psde->pipe_hw->ops.setup_line_insertion(
+					psde->pipe_hw,
+					pstate->multirect_index,
+					&pstate->line_insertion_cfg);
 	}
 
 	if ((pstate->dirty & SDE_PLANE_DIRTY_FORMAT ||
@@ -4321,7 +4360,11 @@ static void _sde_plane_install_properties(struct drm_plane *plane,
 		if (catalog->mixer_count &&
 				catalog->mixer[0].sblk->maxblendstages) {
 			zpos_max = catalog->mixer[0].sblk->maxblendstages - 1;
-			if (zpos_max > SDE_STAGE_MAX - SDE_STAGE_0 - 1)
+
+			if (catalog->has_base_layer &&
+					(zpos_max > SDE_STAGE_MAX - 1))
+				zpos_max = SDE_STAGE_MAX - 1;
+			else if (zpos_max > SDE_STAGE_MAX - SDE_STAGE_0 - 1)
 				zpos_max = SDE_STAGE_MAX - SDE_STAGE_0 - 1;
 		}
 	} else if (plane->type != DRM_PLANE_TYPE_PRIMARY) {
@@ -4760,6 +4803,44 @@ static void _sde_plane_set_excl_rect_v1(struct sde_plane *psde,
 			pstate->excl_rect.x, pstate->excl_rect.y,
 			pstate->excl_rect.w, pstate->excl_rect.h);
 }
+
+#ifdef CONFIG_DRM_MSM_DSI_SOMC_PANEL
+int sde_plane_set_property(struct drm_plane *plane,
+		struct drm_plane_state *state, struct drm_property *property,
+		uint64_t val)
+{
+	struct sde_plane *psde = plane ? to_sde_plane(plane) : NULL;
+	struct sde_plane_state *pstate;
+	int idx, ret = -EINVAL;
+
+	SDE_DEBUG_PLANE(psde, "\n");
+
+	if (!plane) {
+		SDE_ERROR("invalid plane\n");
+	} else if (!state) {
+		SDE_ERROR_PLANE(psde, "invalid state\n");
+	} else {	
+		pstate = to_sde_plane_state(state);
+		idx = msm_property_index(&psde->property_info,
+				property);
+		switch (idx) {
+		case PLANE_PROP_HUE_ADJUST:
+		case PLANE_PROP_SATURATION_ADJUST:
+		case PLANE_PROP_VALUE_ADJUST:
+		case PLANE_PROP_CONTRAST_ADJUST:
+			ret = msm_property_set_property(&psde->property_info,
+				&pstate->property_state, idx, val);
+			break;
+
+		default:
+			/* nothing to do */
+			break;
+		}
+	}
+
+	return ret;
+}
+#endif
 
 static int sde_plane_atomic_set_property(struct drm_plane *plane,
 		struct drm_plane_state *state, struct drm_property *property,
@@ -5202,7 +5283,7 @@ static int _sde_plane_init_debugfs(struct drm_plane *plane)
 		return -ENOMEM;
 
 	/* don't error check these */
-	debugfs_create_x32("features", 0600,
+	debugfs_create_ulong("features", 0600,
 			psde->debugfs_root, &psde->features);
 
 	/* add register dump support */

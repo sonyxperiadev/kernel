@@ -1,0 +1,42 @@
+/* Copyright (c) 2018, AngeloGioacchino Del Regno <kholk11@gmail.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+/* Remove all FBDEV related configuration */
+/delete-node/ &mdss_mdp;
+
+/delete-node/ &mdss_dsi0;
+/delete-node/ &mdss_dsi1;
+/delete-node/ &mdss_dsi;
+
+/delete-node/ &msm_ext_disp;
+/delete-node/ &mdss_dp_ctrl;
+/delete-node/ &mdss_hdmi_tx;
+
+/delete-node/ &mdss_rotator;
+
+&soc {
+	/delete-node/ qcom,mdss_wb_panel;
+
+	mdss_dp_ctrl: dummy-fb-mdss_dp {
+	};
+
+	mdss_fb0: mdss_fb0 {
+	};
+
+	mdss_fb2: mdss_fb2 {
+	};
+};
+
+#include "msm8998-sde.dtsi"
+#include "msm8998-sde-display.dtsi"
+
+

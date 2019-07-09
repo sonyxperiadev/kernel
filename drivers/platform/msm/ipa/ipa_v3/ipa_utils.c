@@ -60,7 +60,7 @@
 
 #define IPA_TAG_SLEEP_MIN_USEC (1000)
 #define IPA_TAG_SLEEP_MAX_USEC (2000)
-#define IPA_FORCE_CLOSE_TAG_PROCESS_TIMEOUT (10 * HZ)
+#define IPA_FORCE_CLOSE_TAG_PROCESS_TIMEOUT IPA_TIMEOUT(10)
 #define IPA_BCR_REG_VAL_v3_0 (0x00000001)
 #define IPA_BCR_REG_VAL_v3_5 (0x0000003B)
 #define IPA_BCR_REG_VAL_v4_0 (0x00000039)
@@ -3124,6 +3124,28 @@ void _ipa_sram_settings_read_v3_0(void)
 	ipa3_ctx->ip4_flt_tbl_nhash_lcl = 0;
 	ipa3_ctx->ip6_flt_tbl_hash_lcl = 0;
 	ipa3_ctx->ip6_flt_tbl_nhash_lcl = 0;
+}
+
+/**
+ * ipa3_cfg_clkon_cfg() - configure IPA clkon_cfg
+ * @clkon_cfg: IPA clkon_cfg
+ *
+ * Return codes:
+ * 0: success
+ */
+int ipa3_cfg_clkon_cfg(struct ipahal_reg_clkon_cfg *clkon_cfg)
+{
+
+	IPA_ACTIVE_CLIENTS_INC_SIMPLE();
+
+	IPADBG("cgc_open_misc = %d\n",
+		clkon_cfg->open_misc);
+
+	ipahal_write_reg_fields(IPA_CLKON_CFG, clkon_cfg);
+
+	IPA_ACTIVE_CLIENTS_DEC_SIMPLE();
+
+	return 0;
 }
 
 /**
@@ -7399,7 +7421,7 @@ int emulator_load_fws(
 	 */
 	if (phdr->p_memsz > gsi_ram_size) {
 		IPAERR(
-		    "Invalid GSI FW img size memsz=%d gsi_ram_size=%u\n",
+		    "Invalid GSI FW img size memsz=%d gsi_ram_size=%lu\n",
 		    phdr->p_memsz, gsi_ram_size);
 		return -EINVAL;
 	}

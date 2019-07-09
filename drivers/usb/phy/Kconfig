@@ -170,6 +170,22 @@ config USB_MSM_OTG
 	  This driver is not supported on boards like trout which
 	  has an external PHY.
 
+config USB_MSM_OTG_DOWNSTREAM
+	tristate "Qualcomm on-chip USB OTG controller support (downstream driver)"
+	depends on (USB || USB_GADGET) && (ARCH_QCOM || COMPILE_TEST)
+	depends on USB_GADGET || !USB_GADGET # if USB_GADGET=m, this can't be 'y'
+	depends on RESET_CONTROLLER
+	depends on USB_MSM_OTG
+	select USB_PHY
+	help
+	  Enable this to support the USB OTG transceiver on Qualcomm chips. It
+	  handles PHY initialization, clock management, and workarounds
+	  required after resetting the hardware and power management.
+	  This driver is required even for peripheral only or host only
+	  mode configurations.
+	  This driver is not supported on boards like trout which
+	  has an external PHY.
+
 config USB_MSM_SSPHY
         tristate "MSM SSUSB PHY Driver"
 	depends on ARCH_QCOM
@@ -235,6 +251,14 @@ config MSM_HSUSB_PHY
 	  the high-speed PHY which is usually paired with either the ChipIdea or
 	  Synopsys DWC3 USB IPs on MSM SOCs. This driver expects to configure the
 	  PHY with a dedicated register I/O memory region.
+
+config MSM_USB_PHY_SOMC_EXT
+	bool "MSM SSUSB and QUSB2 PHY advanced SoMC configuration"
+	depends on MSM_QUSB_PHY && USB_MSM_SSPHY_QMP
+	help
+	  This is extensional code from SoMC needed to configure
+	  the USB PHY on SoMC boards that require additional
+	  non-standard configuration.
 
 config USB_MV_OTG
 	tristate "Marvell USB OTG support"

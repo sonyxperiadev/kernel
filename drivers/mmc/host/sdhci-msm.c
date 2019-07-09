@@ -709,7 +709,7 @@ static inline void msm_cm_dll_set_freq(struct sdhci_host *host)
 		mclk_freq = 5;
 	else if (host->clock <= 187000000)
 		mclk_freq = 6;
-	else if (host->clock <= 208000000)
+	else if (host->clock <= 200000000)
 		mclk_freq = 7;
 
 	writel_relaxed(((readl_relaxed(host->ioaddr +
@@ -1999,6 +1999,12 @@ struct sdhci_msm_pltfm_data *sdhci_msm_populate_pdata(struct device *dev,
 	pdata->status_gpio = of_get_named_gpio_flags(np, "cd-gpios", 0, &flags);
 	if (gpio_is_valid(pdata->status_gpio) && !(flags & OF_GPIO_ACTIVE_LOW))
 		pdata->caps2 |= MMC_CAP2_CD_ACTIVE_HIGH;
+
+	pdata->uim2_gpio = of_get_named_gpio(np, "uim2-gpios", 0);
+	if (!gpio_is_valid(pdata->uim2_gpio)) {
+		pr_err("## %s: gpio_is_valid(pdata->uim2_gpio)=%d: failure\n",
+			mmc_hostname(msm_host->mmc), pdata->uim2_gpio);
+	}
 
 	of_property_read_u32(np, "qcom,bus-width", &bus_width);
 	if (bus_width == 8)
@@ -4580,6 +4586,10 @@ static void sdhci_set_default_hw_caps(struct sdhci_msm_host *msm_host,
 			caps |= CORE_8_BIT_SUPPORT;
 	}
 
+#ifdef CONFIG_ARCH_SONY_LOIRE
+	msm_host->enhanced_strobe = false;
+#endif
+
 	/*
 	 * Enable one MID mode for SDCC5 (major 1) on 8916/8939 (minor 0x2e) and
 	 * on 8992 (minor 0x3e) as a workaround to reset for data stuck issue.
@@ -4607,6 +4617,10 @@ static void sdhci_set_default_hw_caps(struct sdhci_msm_host *msm_host,
 		msm_host->use_updated_dll_reset = true;
 		msm_host->enhanced_strobe = true;
 	}
+
+#ifdef CONFIG_ARCH_SONY_LOIRE
+	msm_host->enhanced_strobe = false;
+#endif
 
 	/*
 	 * SDCC 5 controller with major version 1 and minor version 0x42,
@@ -5092,7 +5106,9 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 	msm_host->mmc->caps2 |= msm_host->pdata->caps2;
 	msm_host->mmc->caps2 |= MMC_CAP2_BOOTPART_NOACC;
 	msm_host->mmc->caps2 |= MMC_CAP2_HS400_POST_TUNING;
+#ifdef CONFIG_MMC_ENABLE_CLK_SCALE
 	msm_host->mmc->caps2 |= MMC_CAP2_CLK_SCALE;
+#endif
 	msm_host->mmc->caps2 |= MMC_CAP2_SANITIZE;
 	msm_host->mmc->caps2 |= MMC_CAP2_MAX_DISCARD_SIZE;
 	msm_host->mmc->caps2 |= MMC_CAP2_SLEEP_AWAKE;
@@ -5146,6 +5162,13 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 		}
 	}
 
+	if (gpio_is_valid(msm_host->pdata->uim2_gpio)) {
+		mmc_gpio_init_uim2(msm_host->mmc, msm_host->pdata->uim2_gpio);
+	} else {
+		pr_err("## %s: can't set uim2_gpio: %d\n", mmc_hostname(host->mmc),
+			msm_host->pdata->uim2_gpio);
+	}
+
 	if ((sdhci_readl(host, SDHCI_CAPABILITIES) & SDHCI_CAN_64BIT) &&
 		(dma_supported(mmc_dev(host->mmc), DMA_BIT_MASK(64)))) {
 		host->dma_mask = DMA_BIT_MASK(64);
@@ -5162,12 +5185,18 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 	msm_host->pdata->sdiowakeup_irq = platform_get_irq_byname(pdev,
 							  "sdiowakeup_irq");
 	if (sdhci_is_valid_gpio_wakeup_int(msm_host)) {
+		unsigned long sdio_irq_flags = IRQF_SHARED;
+#ifdef CONFIG_BCMDHD_SDIO
+		sdio_irq_flags |= IRQF_TRIGGER_LOW;
+#else
+		sdio_irq_flags |= IRQF_TRIGGER_HIGH;
+#endif
 		dev_info(&pdev->dev, "%s: sdiowakeup_irq = %d\n", __func__,
 				msm_host->pdata->sdiowakeup_irq);
 		msm_host->is_sdiowakeup_enabled = true;
 		ret = request_irq(msm_host->pdata->sdiowakeup_irq,
 				  sdhci_msm_sdiowakeup_irq,
-				  IRQF_SHARED | IRQF_TRIGGER_HIGH,
+				  sdio_irq_flags,
 				  "sdhci-msm sdiowakeup", host);
 		if (ret) {
 			dev_err(&pdev->dev, "%s: request sdiowakeup IRQ %d: failed: %d\n",
@@ -5539,6 +5568,10 @@ static int sdhci_msm_suspend_noirq(struct device *dev)
 	if (atomic_read(&msm_host->clks_on)) {
 		pr_warn("%s: %s: clock ON after suspend, aborting suspend\n",
 			mmc_hostname(host->mmc), __func__);
+		ret = sdhci_msm_enable_controller_clock(host);
+		if (ret)
+			pr_warn("%s: %s: failed to enable clock to avoid unclocked access!",
+				mmc_hostname(host->mmc), __func__);
 		ret = -EAGAIN;
 	}
 

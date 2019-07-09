@@ -1858,7 +1858,7 @@ static int rerun_apsd(struct smb1351_charger *chip)
 static void smb1351_hvdcp_det_work(struct work_struct *work)
 {
 	int rc;
-	u8 reg;
+	u8 reg=0;
 	union power_supply_propval pval = {0, };
 	struct smb1351_charger *chip = container_of(work,
 						struct smb1351_charger,

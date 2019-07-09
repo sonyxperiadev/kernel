@@ -19,6 +19,11 @@
 #define _IPA_API_H_
 
 struct ipa_api_controller {
+	int (*ipa_connect)(const struct ipa_connect_params *in,
+		struct ipa_sps_params *sps, u32 *clnt_hdl);
+
+	int (*ipa_disconnect)(u32 clnt_hdl);
+
 	int (*ipa_reset_endpoint)(u32 clnt_hdl);
 
 	int (*ipa_clear_endpoint_delay)(u32 clnt_hdl);
@@ -429,6 +434,20 @@ struct ipa_api_controller {
 
 	bool (*ipa_pm_is_used)(void);
 };
+
+#ifdef CONFIG_IPA
+int ipa_plat_drv_probe(struct platform_device *pdev_p,
+	struct ipa_api_controller *api_ctrl,
+	const struct of_device_id *pdrv_match);
+#else
+static inline int ipa_plat_drv_probe(struct platform_device *pdev_p,
+	struct ipa_api_controller *api_ctrl,
+	const struct of_device_id *pdrv_match)
+{
+	return -ENODEV;
+}
+#endif /* (CONFIG_IPA) */
+
 
 #ifdef CONFIG_IPA3
 int ipa3_plat_drv_probe(struct platform_device *pdev_p,

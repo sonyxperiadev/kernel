@@ -908,12 +908,15 @@ enum hal_iframesize_type {
 enum vidc_resource_id {
 	VIDC_RESOURCE_NONE,
 	VIDC_RESOURCE_SYSCACHE,
+	VIDC_RESOURCE_OCMEM,
+	VIDC_RESOURCE_VMEM,
 	VIDC_UNUSED_RESOURCE = 0x10000000,
 };
 
 struct vidc_resource_hdr {
 	enum vidc_resource_id resource_id;
 	void *resource_handle;
+	u32 size;
 };
 
 struct vidc_register_buffer {
@@ -1410,6 +1413,9 @@ struct vidc_bus_vote_data {
 	bool use_dpb_read;
 	unsigned int lcu_size;
 	enum msm_vidc_power_mode power_mode;
+	struct imem_ab_table *imem_ab_tbl;
+	u32 imem_ab_tbl_size;
+	/* unsigned long core_freq; For VMEM+ ONLY */
 	enum hal_work_mode work_mode;
 	bool use_sys_cache;
 	bool b_frames_enabled;

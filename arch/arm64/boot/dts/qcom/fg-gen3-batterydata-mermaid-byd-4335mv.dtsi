@@ -1,0 +1,94 @@
+/* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+qcom,mermaid_byd_4335mv {
+	qcom, = <24>;
+	/* #3649764_Compal_AY36_2850mAh_averaged_MasterSlave_Oct16th2018*/
+	somc,initial-capacity-uah = <3000000>;
+	qcom,max-voltage-uv = <4335000>;
+        qcom,fastchg-current-ma = <2197>;
+	qcom,fg-cc-cv-threshold-mv = <4325>;
+	qcom,nom-batt-capacity-mah = <2850>;
+	qcom,batt-id-kohm = <33>;
+	qcom,battery-beta = <4050>;
+	qcom,battery-type = "1315-0347-1";
+	qcom,checksum = <0xF432>;
+	qcom,gui-version = "PM660GUI - 0.0.0.45";
+	qcom,fg-profile-data = [
+		 F5 24 34 0C
+		 D0 12 DE 0D
+		 FF 1C AF FA
+		 DD 05 69 02
+		 84 18 13 23
+		 56 45 27 53
+		 AB 00 00 00
+		 12 00 00 00
+		 00 00 27 B2
+		 5A CD B3 BD
+		 1B 00 08 00
+		 A4 DA 7C E4
+		 03 FC 34 01
+		 EA F3 A1 13
+		 0F F4 C5 32
+		 25 06 09 20
+		 27 00 14 00
+		 5F 20 F1 04
+		 CA 0A 04 06
+		 CD 1C A8 02
+		 B2 0C 58 0B
+		 AA 18 45 23
+		 E0 44 13 5A
+		 78 00 00 00
+		 10 00 00 00
+		 00 00 45 D5
+		 68 C3 93 CA
+		 15 00 00 00
+		 DC EA 7C E4
+		 73 FD A2 00
+		 29 07 AC 02
+		 40 05 2A 1A
+		 9E 33 CC FF
+		 07 10 00 00
+		 3A 0B 5C 45
+		 15 00 40 00
+		 B3 01 0A FA
+		 FF 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+	];
+
+	somc,step-cfg = <
+		(-2550) 50    0 4500    0 4150 1
+		   50  100    0 4500  879 4150 2
+		  100  450    0 4250 2197 4335 3
+		  100  450 4250 4500 1465 4335 3
+		  450  550    0 4500  879 4150 4
+		  550 2550    0 4500    0 4150 5
+	>;
+	somc,step-cell-impedance-mohm = <25>;
+};

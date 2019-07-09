@@ -231,8 +231,12 @@ struct hfi_buffer_info {
 	(HFI_PROPERTY_PARAM_COMMON_START + 0x00B)
 #define HFI_PROPERTY_PARAM_MULTI_VIEW_FORMAT				\
 	(HFI_PROPERTY_PARAM_COMMON_START + 0x00C)
+#define  HFI_PROPERTY_PARAM_MAX_SEQUENCE_HEADER_SIZE        \
+	(HFI_PROPERTY_PARAM_COMMON_START + 0x00D)
 #define  HFI_PROPERTY_PARAM_CODEC_MASK_SUPPORTED            \
 	(HFI_PROPERTY_PARAM_COMMON_START + 0x00E)
+#define HFI_PROPERTY_PARAM_MVC_BUFFER_LAYOUT \
+	(HFI_PROPERTY_PARAM_COMMON_START + 0x00F)
 #define  HFI_PROPERTY_PARAM_MAX_SESSIONS_SUPPORTED	    \
 	(HFI_PROPERTY_PARAM_COMMON_START + 0x010)
 #define  HFI_PROPERTY_PARAM_SECURE_SESSION		\
@@ -772,6 +776,7 @@ struct hfi_vpe_color_space_conversion {
 #define HFI_FLIP_HORIZONTAL				(HFI_COMMON_BASE + 0x2)
 #define HFI_FLIP_VERTICAL				(HFI_COMMON_BASE + 0x4)
 
+#define HFI_RESOURCE_OCMEM 0x00000001
 #define HFI_RESOURCE_SYSCACHE 0x00000002
 
 struct hfi_resource_subcache_type {
@@ -784,10 +789,28 @@ struct hfi_resource_syscache_info_type {
 	struct hfi_resource_subcache_type rg_subcache_entries[1];
 };
 
+struct hfi_resource_ocmem {
+	u32 size;
+	u32 mem;
+};
+
+struct hfi_resource_ocmem_requirement {
+	u32 session_domain;
+	u32 width;
+	u32 height;
+	u32 size;
+};
+
+struct hfi_resource_ocmem_requirement_info {
+	u32 num_entries;
+	struct hfi_resource_ocmem_requirement rg_requirements[1];
+};
+
 struct hfi_property_sys_image_version_info_type {
 	u32 string_size;
 	u8  str_image_version[1];
 };
+
 
 struct hfi_venc_config_advanced {
 	u8 pipe2d;

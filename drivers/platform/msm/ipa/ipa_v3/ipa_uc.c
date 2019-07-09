@@ -801,7 +801,7 @@ int ipa3_uc_is_gsi_channel_empty(enum ipa_client_type ipa_client)
 	       gsi_ep_info->ipa_gsi_chan_num);
 
 	ret = ipa3_uc_send_cmd(cmd.raw32b, IPA_CPU_2_HW_CMD_GSI_CH_EMPTY, 0,
-			      false, 10*HZ);
+			      false, IPA_TIMEOUT(10));
 
 	return ret;
 }
@@ -856,7 +856,7 @@ int ipa3_uc_update_hw_flags(u32 flags)
 	memset(&cmd, 0, sizeof(cmd));
 	cmd.params.newFlags = flags;
 	return ipa3_uc_send_cmd(cmd.raw32b, IPA_CPU_2_HW_CMD_UPDATE_FLAGS, 0,
-		false, HZ);
+		false, IPA_TIMEOUT(10));
 }
 
 /**
@@ -888,7 +888,7 @@ int ipa3_uc_memcpy(phys_addr_t dest, phys_addr_t src, int len)
 	cmd->source_addr = src;
 	cmd->source_buffer_size = len;
 	res = ipa3_uc_send_cmd((u32)mem.phys_base, IPA_CPU_2_HW_CMD_MEMCPY, 0,
-		true, 10 * HZ);
+		true, IPA_TIMEOUT(10));
 	if (res) {
 		IPAERR("ipa3_uc_send_cmd failed %d\n", res);
 		goto free_coherent;

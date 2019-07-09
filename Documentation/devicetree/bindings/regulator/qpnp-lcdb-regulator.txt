@@ -39,6 +39,13 @@ First Level Node - LCDB module
 		     to be enabled only on platforms where voltage needs to
 		     be ramped up with multiple steps.
 
+- qcom,force-module-reenable
+	Usage:      required if using SW mode for module enable
+	Value type:  <bool>
+	Definition: This enables the workaround to force enable
+		    the vph_pwr_2p5_ok signal required for
+		    turning on the LCDB module.
+
 Touch-to-wake (TTW) properties:
 
 TTW supports 2 modes of operation - HW and SW. In the HW mode the enable/disable

@@ -1,0 +1,87 @@
+/* Copyright (c) 2016, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+/*
+ * Copyright (C) 2017 Sony Mobile Communications Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2, as
+ * published by the Free Software Foundation.
+ */
+
+qcom,tdk_2650mah {
+	qcom,max-voltage-uv = <4000000>;
+	qcom,fg-cc-cv-threshold-mv = <3990>;
+	qcom,fastchg-current-ma = <525>;
+	qcom,batt-id-kohm = <15>;
+	qcom,battery-beta = <4050>;
+	qcom,battery-type = "TDK(Restricted)";
+	qcom,checksum = <0x2596>;
+	qcom,gui-version = "PMI8998GUI - 2.0.0.54";
+	qcom,fg-profile-data = [
+		 92 1F 9E 05
+		 6C 0A 52 06
+		 4C 1D 93 E2
+		 28 0A 2A 0C
+		 85 18 3C 23
+		 1B 45 8A 53
+		 5B 00 00 00
+		 0E 00 00 00
+		 00 00 EE C5
+		 D7 CD 9D C3
+		 23 00 08 00
+		 CD DB 4A E4
+		 97 06 D9 EB
+		 07 F3 35 12
+		 13 07 6C 2B
+		 19 06 09 20
+		 27 00 14 00
+		 A6 20 8D 04
+		 2B 0B A8 05
+		 26 1D 0B FB
+		 A9 06 55 F5
+		 AE 19 55 22
+		 53 3C D7 4B
+		 60 00 00 00
+		 0D 00 00 00
+		 00 00 74 CD
+		 4E BA BD BB
+		 1D 00 00 00
+		 C4 EA 4A E4
+		 DA 06 8B EA
+		 D2 E3 66 0A
+		 F6 EC 71 1A
+		 99 33 CC FF
+		 07 10 00 00
+		 DA 0A 14 46
+		 1D 00 40 00
+		 CC 01 0A FA
+		 FF 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+		 00 00 00 00
+	];
+};

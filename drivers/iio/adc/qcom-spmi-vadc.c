@@ -361,9 +361,17 @@ static int vadc_measure_ref_points(struct vadc_priv *vadc)
 {
 	struct vadc_channel_prop *prop;
 	u16 read_1, read_2;
+	int ratiometric_range = VADC_RATIOMETRIC_RANGE;
 	int ret;
 
-	vadc->graph[VADC_CALIB_RATIOMETRIC].dx = VADC_RATIOMETRIC_RANGE;
+	if (of_machine_is_compatible("qcom,msm8998") ||
+	    of_machine_is_compatible("qcom,sdm630") ||
+	    of_machine_is_compatible("qcom,sdm636") ||
+	    of_machine_is_compatible("qcom,sdm660") ||
+	    of_machine_is_compatible("qcom,sdm845"))
+		ratiometric_range = VADC_RATIOMETRIC_RANGE_8998;
+
+	vadc->graph[VADC_CALIB_RATIOMETRIC].dx = ratiometric_range;
 	vadc->graph[VADC_CALIB_ABSOLUTE].dx = VADC_ABSOLUTE_RANGE_UV;
 
 	prop = vadc_get_channel(vadc, VADC_REF_1250MV);

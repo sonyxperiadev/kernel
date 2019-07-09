@@ -491,10 +491,40 @@ static const unsigned int usbpd_extcon_cable[] = {
 	EXTCON_USB,
 	EXTCON_USB_HOST,
 	EXTCON_DISP_DP,
+#ifdef CONFIG_EXTCON_SOMC_EXTENSION
+	EXTCON_VBUS_DROP,
+#endif
 	EXTCON_NONE,
 };
 
 static void handle_vdm_tx(struct usbpd *pd, enum pd_sop_type sop_type);
+
+#ifdef CONFIG_EXTCON_SOMC_EXTENSION
+/**
+ * usbpd_ocp_notification - ocp notification callback from regulator.
+ * @ctxt: Pointer to the dwc3_msm context
+ *
+ * NOTE: This can be called in interrupt context.
+ */
+static void usbpd_ocp_notification(void *ctxt)
+{
+	struct usbpd *pd = (struct usbpd *)ctxt;
+
+	extcon_set_cable_state_(pd->extcon, EXTCON_VBUS_DROP, 1);
+	extcon_set_cable_state_(pd->extcon, EXTCON_VBUS_DROP, 0);
+	pr_info("%s: receive ocp notification\n", __func__);
+}
+
+static int usbpd_register_ocp(struct usbpd *pd)
+{
+	struct regulator_ocp_notification ocp_ntf;
+
+	ocp_ntf.notify = usbpd_ocp_notification;
+	ocp_ntf.ctxt = pd;
+
+	return regulator_register_ocp_notification(pd->vbus, &ocp_ntf);
+}
+#endif
 
 enum plug_orientation usbpd_get_plug_orientation(struct usbpd *pd)
 {
@@ -1171,6 +1201,31 @@ static void phy_msg_received(struct usbpd *pd, enum pd_sop_type sop,
 		usbpd_dbg(&pd->dev, "usbpd_sm already running\n");
 }
 
+#ifdef CONFIG_EXTCON_SOMC_EXTENSION
+static void phy_wait_vbus_settled_down(struct usbpd *pd, int mv,
+							int itvl, int tmout)
+{
+	int rc;
+	int cnt = 0;
+	int usbin = mv;
+
+	do {
+		union power_supply_propval pval;
+
+		msleep(itvl);
+		rc = power_supply_get_property(pd->usb_psy,
+				POWER_SUPPLY_PROP_VOLTAGE_NOW, &pval);
+		if (IS_ERR_VALUE(rc))
+			goto waitremain;
+		usbin = pval.intval / 1000;
+		cnt++;
+	} while (usbin >= mv && tmout > (cnt * itvl));
+waitremain:
+	if (usbin >= mv && tmout > (cnt * itvl))
+		msleep(tmout - (cnt * itvl));
+}
+#endif /* CONFIG_EXTCON_SOMC_EXTENSION */
+
 static void phy_shutdown(struct usbpd *pd)
 {
 	usbpd_dbg(&pd->dev, "shutdown");
@@ -1183,6 +1238,12 @@ static void phy_shutdown(struct usbpd *pd)
 	if (pd->vbus_enabled) {
 		regulator_disable(pd->vbus);
 		pd->vbus_enabled = false;
+
+#ifdef CONFIG_EXTCON_SOMC_EXTENSION
+		phy_wait_vbus_settled_down(pd,
+				USB_VBUS_WAIT_VOLT, USB_VBUS_WAIT_ITVL,
+				USB_VBUS_WAIT_TMOUT);
+#endif
 	}
 }
 
@@ -2340,7 +2401,9 @@ static void dr_swap(struct usbpd *pd)
 				SVDM_CMD_TYPE_INITIATOR, 0, NULL, 0);
 	}
 
+#ifndef CONFIG_EXTCON_SOMC_EXTENSION
 	dual_role_instance_changed(pd->dual_role);
+#endif
 }
 
 
@@ -2421,6 +2484,11 @@ enable_reg:
 			usbpd_err(&pd->dev, "Unable to get vbus\n");
 			return -EAGAIN;
 		}
+#ifdef CONFIG_EXTCON_SOMC_EXTENSION
+		ret = usbpd_register_ocp(pd);
+		if (ret)
+			usbpd_err(&pd->dev, "Cannot register OCP!!\n");
+#endif
 	}
 	ret = regulator_enable(pd->vbus);
 	if (ret)
@@ -3469,6 +3537,12 @@ static int psy_changed(struct notifier_block *nb, unsigned long evt, void *ptr)
 
 	pd->vbus_present = val.intval;
 
+#ifdef CONFIG_USB_PD_WATER_DETECTION
+	if (typec_mode == POWER_SUPPLY_TYPEC_SINK_AUDIO_ADAPTER) {
+		wdet_polling_reset(pd->wdet);
+	}
+#endif
+
 	/*
 	 * For sink hard reset, state machine needs to know when VBUS changes
 	 *   - when in PE_SNK_TRANSITION_TO_DEFAULT, notify when VBUS falls
@@ -3491,6 +3565,23 @@ static int psy_changed(struct notifier_block *nb, unsigned long evt, void *ptr)
 
 	if (pd->typec_mode == typec_mode)
 		return 0;
+
+#if defined(CONFIG_EXTCON_SOMC_EXTENSION) && \
+    (defined(CONFIG_ARCH_MSM8998) || defined(CONFIG_ARCH_SDM630))
+	switch (typec_mode) {
+	/* Sink states */
+	case POWER_SUPPLY_TYPEC_SOURCE_DEFAULT:
+	case POWER_SUPPLY_TYPEC_SOURCE_MEDIUM:
+	case POWER_SUPPLY_TYPEC_SOURCE_HIGH:
+		if (pd->psy_type == POWER_SUPPLY_TYPE_UNKNOWN) {
+			usbpd_dbg(&pd->dev, "SNK states but APSD is not done yet.\n");
+			return 0;
+		}
+		break;
+	default:
+		break;
+	}
+#endif /* CONFIG_EXTCON_SOMC_EXTENSION */
 
 	pd->typec_mode = typec_mode;
 
@@ -3797,17 +3888,23 @@ static int usbpd_dr_set_property(struct dual_role_phy_instance *dual_role,
 static int usbpd_dr_prop_writeable(struct dual_role_phy_instance *dual_role,
 		enum dual_role_property prop)
 {
+#ifndef CONFIG_EXTCON_SOMC_EXTENSION
 	struct usbpd *pd = dual_role_get_drvdata(dual_role);
+#endif
 
 	switch (prop) {
 	case DUAL_ROLE_PROP_MODE:
 		return 1;
 	case DUAL_ROLE_PROP_DR:
 	case DUAL_ROLE_PROP_PR:
+#ifdef CONFIG_EXTCON_SOMC_EXTENSION
+		return 0;
+#else
 		if (pd)
 			return pd->current_state == PE_SNK_READY ||
 				pd->current_state == PE_SRC_READY;
 		break;
+#endif
 	default:
 		break;
 	}
@@ -4650,6 +4747,12 @@ struct usbpd *usbpd_create(struct device *parent)
 	/* force read initial power_supply values */
 	psy_changed(&pd->psy_nb, PSY_EVENT_PROP_CHANGED, pd->usb_psy);
 
+#ifdef CONFIG_USB_PD_WATER_DETECTION
+	pd->wdet = wdet_create(parent);
+	if (IS_ERR_OR_NULL(pd->wdet))
+		goto del_inst;
+#endif
+
 	return pd;
 
 del_inst:
@@ -4675,6 +4778,10 @@ void usbpd_destroy(struct usbpd *pd)
 {
 	if (!pd)
 		return;
+
+#ifdef CONFIG_USB_PD_WATER_DETECTION
+	wdet_destroy(pd->wdet);
+#endif
 
 	list_del(&pd->instance);
 	power_supply_unreg_notifier(&pd->psy_nb);

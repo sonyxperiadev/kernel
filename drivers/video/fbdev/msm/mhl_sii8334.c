@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2014, 2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -179,14 +179,14 @@ u16 support_rcp_key_code_tbl[] = {
 
 
 uint8_t slave_addrs[MAX_PAGES] = {
-	DEV_PAGE_TPI_0,
-	DEV_PAGE_TX_L0_0,
-	DEV_PAGE_TX_L1_0,
-	DEV_PAGE_TX_2_0,
-	DEV_PAGE_TX_3_0,
-	DEV_PAGE_CBUS,
-	DEV_PAGE_DDC_EDID,
-	DEV_PAGE_DDC_SEGM,
+	DEV_PAGE_TPI_0    ,
+	DEV_PAGE_TX_L0_0  ,
+	DEV_PAGE_TX_L1_0  ,
+	DEV_PAGE_TX_2_0   ,
+	DEV_PAGE_TX_3_0   ,
+	DEV_PAGE_CBUS     ,
+	DEV_PAGE_DDC_EDID ,
+	DEV_PAGE_DDC_SEGM ,
 };
 
 static irqreturn_t mhl_tx_isr(int irq, void *dev_id);
@@ -244,7 +244,6 @@ static int mhl_tx_get_dt_data(struct device *dev,
 	struct platform_device *hdmi_pdev = NULL;
 	struct device_node *hdmi_tx_node = NULL;
 	int dt_gpio;
-
 	i = 0;
 
 	if (!dev || !pdata) {
@@ -375,7 +374,7 @@ static int mhl_sii_wait_for_rgnd(struct mhl_tx_ctrl *mhl_ctrl)
 	 * tx can take a while to generate intr
 	 */
 	timeout = wait_for_completion_timeout
-		(&mhl_ctrl->rgnd_done, HZ * 3);
+		(&mhl_ctrl->rgnd_done, msecs_to_jiffies(3000));
 	if (!timeout) {
 		/*
 		 * most likely nothing plugged in USB
@@ -422,8 +421,9 @@ static int mhl_sii_config(struct mhl_tx_ctrl *mhl_ctrl, bool on)
 			pr_err("%s: request_threaded_irq failed, status: %d\n",
 			       __func__, rc);
 			return -ENODEV;
+		} else {
+			mhl_ctrl->irq_req_done = true;
 		}
-		mhl_ctrl->irq_req_done = true;
 	} else if (!on && mhl_ctrl->irq_req_done) {
 		free_irq(mhl_ctrl->i2c_handle->irq, mhl_ctrl);
 		mhl_gpio_config(mhl_ctrl, 0);
@@ -910,7 +910,7 @@ void mhl_drive_hpd(struct mhl_tx_ctrl *mhl_ctrl, uint8_t to_state)
 		 * Drive HPD to UP state
 		 * Set HPD_OUT_OVR_EN = HPD State
 		 * EDID read and Un-force HPD (from low)
-		 * propagate to src let HPD float by clearing
+		 * propogate to src let HPD float by clearing
 		 * HPD OUT OVRRD EN
 		 */
 		spin_lock_irqsave(&mhl_ctrl->lock, flags);
@@ -992,7 +992,7 @@ static int mhl_msm_read_rgnd_int(struct mhl_tx_ctrl *mhl_ctrl)
 		    (BIT1 | BIT0));
 	pr_debug("imp range read=%02X\n", (int)rgnd_imp);
 
-	if (rgnd_impi == 0x02) {
+	if (0x02 == rgnd_imp) {
 		pr_debug("%s: mhl sink\n", __func__);
 		if (hdmi_mhl_ops) {
 			rc = hdmi_mhl_ops->set_upstream_hpd(
@@ -1070,13 +1070,13 @@ static int dev_detect_isr(struct mhl_tx_ctrl *mhl_ctrl)
 	status = MHL_SII_REG_NAME_RD(REG_INTR4);
 	pr_debug("%s: reg int4 st=%02X\n", __func__, status);
 
-	if ((status == 0x00) &&
+	if ((0x00 == status) &&\
 	    (mhl_ctrl->cur_state == POWER_STATE_D3)) {
 		pr_warn("%s: invalid intr\n", __func__);
 		return 0;
 	}
 
-	if (status == 0xFF) {
+	if (0xFF == status) {
 		pr_warn("%s: invalid intr 0xff\n", __func__);
 		MHL_SII_REG_NAME_WR(REG_INTR4, status);
 		return 0;
@@ -1120,7 +1120,7 @@ static int dev_detect_isr(struct mhl_tx_ctrl *mhl_ctrl)
 		return 0;
 	}
 
-	if ((mhl_ctrl->cur_state != POWER_STATE_D0_NO_MHL) &&
+	if ((mhl_ctrl->cur_state != POWER_STATE_D0_NO_MHL) &&\
 	    (status & BIT6)) {
 		/* rgnd rdy Intr */
 		pr_debug("%s: rgnd ready intr\n", __func__);
@@ -1129,7 +1129,7 @@ static int dev_detect_isr(struct mhl_tx_ctrl *mhl_ctrl)
 	}
 
 	/* Can't succeed at these in D3 */
-	if ((mhl_ctrl->cur_state != POWER_STATE_D3) &&
+	if ((mhl_ctrl->cur_state != POWER_STATE_D3) &&\
 	     (status & BIT4)) {
 		/* cbus lockout interrupt?
 		 * Hardware detection mechanism figures that
@@ -1221,7 +1221,6 @@ static void mhl_hpd_stat_isr(struct mhl_tx_ctrl *mhl_ctrl)
 
 		if (BIT6 & (cbus_stat ^ t)) {
 			u8 status = cbus_stat & BIT6;
-
 			mhl_drive_hpd(mhl_ctrl, status ? HPD_UP : HPD_DOWN);
 			if (!status && mhl_ctrl->mhl_det_discon) {
 				pr_debug("%s:%u: power_down\n",
@@ -1425,7 +1424,6 @@ static void mhl_cbus_isr(struct mhl_tx_ctrl *mhl_ctrl)
 	/* received SET_INT */
 	if (regval & BIT2) {
 		uint8_t intr;
-
 		intr = MHL_SII_REG_NAME_RD(REG_CBUS_SET_INT_0);
 		MHL_SII_REG_NAME_WR(REG_CBUS_SET_INT_0, intr);
 		mhl_msc_recv_set_int(mhl_ctrl, 0, intr);
@@ -1451,7 +1449,6 @@ static void mhl_cbus_isr(struct mhl_tx_ctrl *mhl_ctrl)
 	/* received WRITE_STAT */
 	if (regval & BIT3) {
 		uint8_t stat;
-
 		stat = MHL_SII_REG_NAME_RD(REG_CBUS_WRITE_STAT_0);
 		mhl_msc_recv_write_stat(mhl_ctrl, 0, stat);
 
@@ -1777,6 +1774,7 @@ static int mhl_i2c_probe(struct i2c_client *client,
 
 	mhl_ctrl = devm_kzalloc(&client->dev, sizeof(*mhl_ctrl), GFP_KERNEL);
 	if (!mhl_ctrl) {
+		pr_err("%s: FAILED: cannot alloc hdmi tx ctrl\n", __func__);
 		rc = -ENOMEM;
 		goto failed_no_mem;
 	}
@@ -1785,6 +1783,7 @@ static int mhl_i2c_probe(struct i2c_client *client,
 		pdata = devm_kzalloc(&client->dev,
 			     sizeof(struct mhl_tx_platform_data), GFP_KERNEL);
 		if (!pdata) {
+			dev_err(&client->dev, "Failed to allocate memory\n");
 			rc = -ENOMEM;
 			goto failed_no_mem;
 		}
@@ -1823,8 +1822,11 @@ static int mhl_i2c_probe(struct i2c_client *client,
 
 		mhl_ctrl->rcp_key_code_tbl = vmalloc(
 			sizeof(support_rcp_key_code_tbl));
-		if (!mhl_ctrl->rcp_key_code_tbl)
+		if (!mhl_ctrl->rcp_key_code_tbl) {
+			pr_err("%s: no alloc mem for rcp keycode tbl\n",
+			       __func__);
 			return -ENOMEM;
+		}
 
 		mhl_ctrl->rcp_key_code_tbl_len = sizeof(
 			support_rcp_key_code_tbl);
@@ -1920,6 +1922,7 @@ static int mhl_i2c_probe(struct i2c_client *client,
 
 	mhl_info = devm_kzalloc(&client->dev, sizeof(*mhl_info), GFP_KERNEL);
 	if (!mhl_info) {
+		pr_err("%s: alloc mhl info failed\n", __func__);
 		rc = -ENOMEM;
 		goto failed_probe_pwr;
 	}
@@ -2068,7 +2071,7 @@ static const struct dev_pm_ops mhl_i2c_pm_ops = {
 };
 #endif /* CONFIG_PM_SLEEP */
 
-const struct of_device_id mhl_match_table[] = {
+static struct of_device_id mhl_match_table[] = {
 	{.compatible = COMPATIBLE_NAME,},
 	{ },
 };

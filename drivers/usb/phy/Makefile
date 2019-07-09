@@ -21,7 +21,11 @@ obj-$(CONFIG_TWL6030_USB)		+= phy-twl6030-usb.o
 obj-$(CONFIG_USB_EHCI_TEGRA)		+= phy-tegra-usb.o
 obj-$(CONFIG_USB_GPIO_VBUS)		+= phy-gpio-vbus-usb.o
 obj-$(CONFIG_USB_ISP1301)		+= phy-isp1301.o
+ifeq ($(CONFIG_USB_MSM_OTG_DOWNSTREAM), y)
+obj-$(CONFIG_USB_MSM_OTG)		+= phy-msm-usb-downstream.o
+else
 obj-$(CONFIG_USB_MSM_OTG)		+= phy-msm-usb.o
+endif
 obj-$(CONFIG_USB_MSM_SSPHY)             += phy-msm-ssusb.o
 obj-$(CONFIG_USB_QCOM_8X16_PHY)	+= phy-qcom-8x16-usb.o
 obj-$(CONFIG_USB_QCOM_EMU_PHY)		+= phy-qcom-emu.o

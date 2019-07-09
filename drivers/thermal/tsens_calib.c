@@ -14,6 +14,63 @@
 #include <linux/platform_device.h>
 #include "tsens.h"
 
+/* eeprom layout data for 8976 */
+#define BASE0_MASK_8976		0x000000ff
+#define BASE1_MASK_8976		0x000000ff
+#define BASE1_SHIFT_8976	8
+
+#define S0_P1_MASK_8976		0x00003f00
+#define S1_P1_MASK_8976		0x03f00000
+#define S2_P1_MASK_8976		0x0000003f
+#define S3_P1_MASK_8976		0x0003f000
+#define S4_P1_MASK_8976		0x00003f00
+#define S5_P1_MASK_8976		0x03f00000
+#define S6_P1_MASK_8976		0x0000003f
+#define S7_P1_MASK_8976		0x0003f000
+#define S8_P1_MASK_8976		0x000001f8
+#define S9_P1_MASK_8976		0x001f8000
+#define S10_P1_MASK_8976	0xf8000000
+#define S10_P1_MASK_8976_1	0x00000001
+
+#define S0_P2_MASK_8976		0x000fc000
+#define S1_P2_MASK_8976		0xfc000000
+#define S2_P2_MASK_8976		0x00000fc0
+#define S3_P2_MASK_8976		0x00fc0000
+#define S4_P2_MASK_8976		0x000fc000
+#define S5_P2_MASK_8976		0xfc000000
+#define S6_P2_MASK_8976		0x00000fc0
+#define S7_P2_MASK_8976		0x00fc0000
+#define S8_P2_MASK_8976		0x00007e00
+#define S9_P2_MASK_8976		0x07e00000
+#define S10_P2_MASK_8976	0x0000007e
+
+#define S0_P1_SHIFT_8976	0x8
+#define S1_P1_SHIFT_8976	0x14
+#define S2_P1_SHIFT_8976	0x0
+#define S3_P1_SHIFT_8976	0xc
+#define S4_P1_SHIFT_8976	0x8
+#define S5_P1_SHIFT_8976	0x14
+#define S6_P1_SHIFT_8976	0x0
+#define S7_P1_SHIFT_8976	0xc
+#define S8_P1_SHIFT_8976	0x3
+#define S9_P1_SHIFT_8976	0xf
+#define S10_P1_SHIFT_8976	0x1b
+#define S10_P1_SHIFT_8976_1	0
+
+#define S0_P2_SHIFT_8976	0xe
+#define S1_P2_SHIFT_8976	0x1a
+#define S2_P2_SHIFT_8976	0x6
+#define S3_P2_SHIFT_8976	0x12
+#define S4_P2_SHIFT_8976	0xe
+#define S5_P2_SHIFT_8976	0x1a
+#define S6_P2_SHIFT_8976	0x6
+#define S7_P2_SHIFT_8976	0x12
+#define S8_P2_SHIFT_8976	0x9
+#define S9_P2_SHIFT_8976	0x15
+#define S10_P2_SHIFT_8976	0x1
+
+#define CAL_SEL_MASK_8976	0x3
+
 /* eeprom layout data for 8937 */
 #define BASE0_MASK_8937				0x000000ff
 #define BASE1_MASK_8937				0xff000000
@@ -162,6 +219,101 @@ static void compute_intercept_slope(struct tsens_device *tmdev, u32 *p1,
 			tmdev->sensor[i].slope);
 		pr_debug("offset:%d\n", tmdev->sensor[i].offset);
 	}
+}
+
+static void compute_intercept_slope_8976(struct tsens_device *tmdev, u32 *p1,
+			     u32 *p2, u32 mode)
+{
+	int i;
+
+	tmdev->sensor[0].slope = 3313;
+	tmdev->sensor[1].slope = 3275;
+	tmdev->sensor[2].slope = 3320;
+	tmdev->sensor[3].slope = 3246;
+	tmdev->sensor[4].slope = 3279;
+	tmdev->sensor[5].slope = 3257;
+	tmdev->sensor[6].slope = 3234;
+	tmdev->sensor[7].slope = 3269;
+	tmdev->sensor[8].slope = 3255;
+	tmdev->sensor[9].slope = 3239;
+	tmdev->sensor[10].slope = 3286;
+
+	for (i = 0; i < TSENS_NUM_SENSORS_8937; i++) {
+		pr_debug("sensor%d - data_point1:%#x data_point2:%#x\n",
+			i, p1[i], p2[i]);
+
+		tmdev->sensor[i].offset = (p1[i] * SLOPE_FACTOR) -
+				(CAL_DEGC_PT1 *
+				tmdev->sensor[i].slope);
+		pr_debug("offset:%d\n", tmdev->sensor[i].offset);
+	}
+}
+
+int calibrate_8976(struct tsens_device *tmdev)
+{
+	int base0 = 0, base1 = 0, i;
+	u32 p1[TSENS_NUM_SENSORS_8937], p2[TSENS_NUM_SENSORS_8937];
+	int mode = 0, tmp = 0;
+	u32 qfprom_cdata[6] = {0, 0, 0, 0, 0, 0};
+
+	qfprom_cdata[0] = readl_relaxed(tmdev->tsens_calib_addr + 0x218);
+	qfprom_cdata[1] = readl_relaxed(tmdev->tsens_calib_addr + 0x21c);
+	qfprom_cdata[2] = readl_relaxed(tmdev->tsens_calib_addr + 0x220);
+	qfprom_cdata[3] = readl_relaxed(tmdev->tsens_calib_addr + 0x224);
+	qfprom_cdata[4] = readl_relaxed(tmdev->tsens_calib_addr + 0x228);
+	qfprom_cdata[5] = readl_relaxed(tmdev->tsens_calib_addr + 0x22c);
+
+	mode = (qfprom_cdata[4] & CAL_SEL_MASK_8976);
+	pr_debug("calibration mode is %d\n", mode);
+
+	switch (mode) {
+	case TWO_PT_CALIB:
+		base1 = (qfprom_cdata[2] & BASE1_MASK_8976) >> BASE1_SHIFT_8976;
+		p2[0] = (qfprom_cdata[0] & S0_P2_MASK_8976) >> S0_P2_SHIFT_8976;
+		p2[1] = (qfprom_cdata[0] & S1_P2_MASK_8976) >> S1_P2_SHIFT_8976;
+		p2[2] = (qfprom_cdata[1] & S2_P2_MASK_8976) >> S2_P2_SHIFT_8976;
+		p2[3] = (qfprom_cdata[1] & S3_P2_MASK_8976) >> S3_P2_SHIFT_8976;
+		p2[4] = (qfprom_cdata[2] & S4_P2_MASK_8976) >> S4_P2_SHIFT_8976;
+		p2[5] = (qfprom_cdata[2] & S5_P2_MASK_8976) >> S5_P2_SHIFT_8976;
+		p2[6] = (qfprom_cdata[3] & S6_P2_MASK_8976) >> S6_P2_SHIFT_8976;
+		p2[7] = (qfprom_cdata[3] & S7_P2_MASK_8976) >> S7_P2_SHIFT_8976;
+		p2[8] = (qfprom_cdata[4] & S8_P2_MASK_8976) >> S8_P2_SHIFT_8976;
+		p2[9] = (qfprom_cdata[4] & S9_P2_MASK_8976) >> S9_P2_SHIFT_8976;
+		p2[10] = (qfprom_cdata[5] & S10_P2_MASK_8976) >> S10_P2_SHIFT_8976;
+
+		for (i = 0; i < TSENS_NUM_SENSORS_8937; i++)
+			p2[i] = ((base1 + p2[i]) << 2);
+		/* Fall through */
+	case ONE_PT_CALIB2:
+		base0 = (qfprom_cdata[0] & BASE0_MASK_8976);
+		p1[0] = (qfprom_cdata[0] & S0_P1_MASK_8976) >> S0_P1_SHIFT_8976;
+		p1[1] = (qfprom_cdata[0] & S1_P1_MASK_8976) >> S1_P1_SHIFT_8976;
+		p1[2] = (qfprom_cdata[1] & S2_P1_MASK_8976) >> S2_P1_SHIFT_8976;
+		p1[3] = (qfprom_cdata[1] & S3_P1_MASK_8976) >> S3_P1_SHIFT_8976;
+		p1[4] = (qfprom_cdata[2] & S4_P1_MASK_8976) >> S4_P1_SHIFT_8976;
+		p1[5] = (qfprom_cdata[2] & S5_P1_MASK_8976) >> S5_P1_SHIFT_8976;
+		p1[6] = (qfprom_cdata[3] & S6_P1_MASK_8976) >> S6_P1_SHIFT_8976;
+		p1[7] = (qfprom_cdata[3] & S7_P1_MASK_8976) >> S7_P1_SHIFT_8976;
+		p1[8] = (qfprom_cdata[4] & S8_P1_MASK_8976) >> S8_P1_SHIFT_8976;
+		p1[9] = (qfprom_cdata[4] & S9_P1_MASK_8976) >> S9_P1_SHIFT_8976;
+		p1[10] = (qfprom_cdata[4] & S10_P1_MASK_8976) >> S10_P1_SHIFT_8976;
+		tmp = (qfprom_cdata[5] & S10_P1_MASK_8976_1) << S10_P1_SHIFT_8976_1;
+		p1[10] |= tmp;
+
+		for (i = 0; i < TSENS_NUM_SENSORS_8937; i++)
+			p1[i] = (((base0) + p1[i]) << 2);
+		break;
+	default:
+		for (i = 0; i < TSENS_NUM_SENSORS_8937; i++) {
+			p1[i] = 500;
+			p2[i] = 780;
+		}
+		break;
+	}
+
+	compute_intercept_slope_8976(tmdev, p1, p2, mode);
+
+	return 0;
 }
 
 int calibrate_8937(struct tsens_device *tmdev)

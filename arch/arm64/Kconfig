@@ -661,6 +661,37 @@ config ARM64_64K_PAGES
 
 endchoice
 
+config MSM_APP_API
+	bool "API support to enable / disable app settings for MSM8996"
+	depends on ARCH_MSM8996 && (ENABLE_FP_SIMD_SETTINGS || MSM_APP_SETTINGS)
+	help
+	  Add API support to enable / disable the app settings to be used
+	  at runtime. These APIs are used to enable / disable app setting
+	  when specific aarch32 or aarch64 processes are running.
+
+	  If you are not sure what to do, select 'N' here.
+
+config ENABLE_FP_SIMD_SETTINGS
+	bool "Enable FP(Floating Point) Settings for Qualcomm MSM8996"
+	depends on ARCH_MSM8996
+	select MSM_APP_API
+	help
+	  Enable FP(Floating Point) and SIMD settings for the MSM8996 during
+	  the execution of the aarch32 processes and disable these settings
+	  when you switch to the aarch64 processes.
+
+	  If you are not sure what to do, select 'N' here.
+
+config MSM_APP_SETTINGS
+	bool "Support to enable / disable app settings for MSM8996"
+	depends on ARCH_MSM8996
+	select MSM_APP_API
+	help
+	  Expose an interface used by the userspace at runtime to
+	  enable / disable the app specific settings.
+
+	  If you are not sure what to do, select 'N' here.
+
 choice
 	prompt "Virtual address space size"
 	default ARM64_VA_BITS_39 if ARM64_4K_PAGES
@@ -751,6 +782,12 @@ config ARCH_NR_GPIO
 
 	  If unsure, leave the default value.
 
+config QCOM_TLB_EL2_HANDLER
+	bool "Raise TLB conflict exception to EL2"
+	help
+	  This option enables TLB conflict to be handled
+	  by EL2
+
 # Common NUMA Features
 config NUMA
 	bool "Numa Memory Allocation and Scheduler Support"
@@ -812,6 +849,13 @@ config HAVE_ARCH_PFN_VALID
 config HW_PERF_EVENTS
 	def_bool y
 	depends on ARM_PMU
+
+config ARM64_REG_REBALANCE_ON_CTX_SW
+	bool "Rebalance registers during context switches."
+	def_bool ARCH_MSM8996
+	help
+	 Forcefully re-balance register rename pools on context switches for
+	 improved performance on some devices.
 
 config SYS_SUPPORTS_HUGETLBFS
 	def_bool y
@@ -1069,6 +1113,7 @@ endif
 
 config ARM64_SW_TTBR0_PAN
 	bool "Emulate Privileged Access Never using TTBR0_EL1 switching"
+	select ARM64_PAN
 	help
 	  Enabling this option prevents the kernel from accessing
 	  user-space memory directly by pointing TTBR0_EL1 to a reserved
@@ -1455,3 +1500,7 @@ source "arch/arm64/crypto/Kconfig"
 endif
 
 source "lib/Kconfig"
+
+if ARCH_QCOM
+source "techpack/Kconfig"
+endif

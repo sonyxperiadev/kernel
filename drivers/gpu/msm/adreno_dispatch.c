@@ -57,7 +57,11 @@ static unsigned int _dispatcher_q_inflight_hi = 15;
 static unsigned int _dispatcher_q_inflight_lo = 4;
 
 /* Command batch timeout (in milliseconds) */
+#if defined (CONFIG_ARCH_MSM8916) || defined (CONFIG_ARCH_SDM630) || defined (CONFIG_ARCH_SDM660)
+unsigned int adreno_drawobj_timeout = 4000;
+#else
 unsigned int adreno_drawobj_timeout = 2000;
+#endif
 
 /* Interval for reading and comparing fault detection registers */
 static unsigned int _fault_timer_interval = 200;
@@ -94,7 +98,7 @@ static void _add_context(struct adreno_device *adreno_dev,
 
 static int __count_context(struct adreno_context *drawctxt, void *data)
 {
-	unsigned long expires = drawctxt->active_time + msecs_to_jiffies(100);
+	unsigned long expires = drawctxt->active_time + msecs_to_jiffies(500);
 
 	return time_after(jiffies, expires) ? 0 : 1;
 }
@@ -102,7 +106,7 @@ static int __count_context(struct adreno_context *drawctxt, void *data)
 static int __count_drawqueue_context(struct adreno_context *drawctxt,
 				void *data)
 {
-	unsigned long expires = drawctxt->active_time + msecs_to_jiffies(100);
+	unsigned long expires = drawctxt->active_time + msecs_to_jiffies(500);
 
 	if (time_after(jiffies, expires))
 		return 0;
@@ -2110,7 +2114,7 @@ static int dispatcher_do_fault(struct adreno_device *adreno_dev)
 	}
 
 	/* Mask all GMU interrupts */
-	if (gmu_core_isenabled(device)) {
+	if (gmu_core_gpmu_isenabled(device)) {
 		adreno_write_gmureg(adreno_dev,
 			ADRENO_REG_GMU_AO_HOST_INTERRUPT_MASK,
 			0xFFFFFFFF);

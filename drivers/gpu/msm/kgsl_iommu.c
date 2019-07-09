@@ -39,7 +39,7 @@
 #define ADDR_IN_GLOBAL(_mmu, _a) \
 	(((_a) >= KGSL_IOMMU_GLOBAL_MEM_BASE(_mmu)) && \
 	 ((_a) < (KGSL_IOMMU_GLOBAL_MEM_BASE(_mmu) + \
-	 KGSL_IOMMU_GLOBAL_MEM_SIZE)))
+	 KGSL_IOMMU_GLOBAL_MEM_SIZE(_mmu))))
 
 /*
  * Flag to set SMMU memory attributes required to
@@ -226,7 +226,7 @@ static void kgsl_iommu_add_global(struct kgsl_mmu *mmu,
 	/*Check that we can fit the global allocations */
 	if (WARN_ON(global_pt_count >= GLOBAL_PT_ENTRIES) ||
 		WARN_ON((global_pt_alloc + memdesc->size) >=
-			KGSL_IOMMU_GLOBAL_MEM_SIZE))
+			KGSL_IOMMU_GLOBAL_MEM_SIZE(mmu)))
 		return;
 
 	memdesc->gpuaddr = KGSL_IOMMU_GLOBAL_MEM_BASE(mmu) + global_pt_alloc;
@@ -1125,6 +1125,7 @@ _alloc_pt(struct device *dev, struct kgsl_mmu *mmu, struct kgsl_pagetable *pt)
 {
 	struct kgsl_iommu_pt *iommu_pt;
 	struct bus_type *bus = kgsl_mmu_get_bus(dev);
+	struct iommu_group *grp = NULL;
 
 	if (bus == NULL)
 		return ERR_PTR(-ENODEV);
@@ -1143,6 +1144,12 @@ _alloc_pt(struct device *dev, struct kgsl_mmu *mmu, struct kgsl_pagetable *pt)
 	pt->priv = iommu_pt;
 	pt->fault_addr = ~0ULL;
 	iommu_pt->rbtree = RB_ROOT;
+
+	if (!dev->iommu_group) {
+		grp = iommu_group_get_for_dev(dev);
+		if (IS_ERR_OR_NULL(grp))
+			return ERR_PTR(PTR_ERR(grp));
+	}
 
 	if (MMU_FEATURE(mmu, KGSL_MMU_64BIT))
 		setup_64bit_pagetable(mmu, pt, iommu_pt);
@@ -1252,6 +1259,10 @@ static int _init_global_pt(struct kgsl_mmu *mmu, struct kgsl_pagetable *pt)
 	}
 	context_bank_number = cb_num;
 	if (!MMU_FEATURE(mmu, KGSL_MMU_GLOBAL_PAGETABLE) &&
+		(!of_machine_is_compatible("qcom,msm8998") &&
+		 !of_machine_is_compatible("qcom,sdm660") &&
+		 !of_machine_is_compatible("qcom,sdm636") &&
+		 !of_machine_is_compatible("qcom,sdm630")) &&
 		scm_is_call_available(SCM_SVC_MP, CP_SMMU_APERTURE_ID)) {
 		ret = kgsl_program_smmu_aperture();
 		if (ret) {
@@ -1583,7 +1594,7 @@ static int kgsl_iommu_init(struct kgsl_mmu *mmu)
 	kgsl_setup_qdss_desc(device);
 	kgsl_setup_qtimer_desc(device);
 
-	if (!mmu->secured)
+	if (!mmu->secured || MMU_FEATURE(mmu, KGSL_MMU_PT_EARLY_ALLOC))
 		goto done;
 
 	mmu->securepagetable = kgsl_mmu_getpagetable(mmu,
@@ -1675,6 +1686,15 @@ static int _setup_secure_context(struct kgsl_mmu *mmu)
 
 	if (ctx->dev == NULL || !mmu->secured)
 		return 0;
+
+	if (MMU_FEATURE(mmu, KGSL_MMU_PT_EARLY_ALLOC)) {
+		mmu->securepagetable = kgsl_mmu_getpagetable(mmu,
+					KGSL_MMU_SECURE_PT);
+		if (IS_ERR(mmu->securepagetable)) {
+			ret = PTR_ERR(mmu->securepagetable);
+			mmu->securepagetable = NULL;
+		}
+	}
 
 	if (mmu->securepagetable == NULL)
 		return -ENOMEM;
@@ -2653,6 +2673,7 @@ static const struct {
 	{ "qcom,retention", KGSL_MMU_RETENTION },
 	{ "qcom,global_pt", KGSL_MMU_GLOBAL_PAGETABLE },
 	{ "qcom,hyp_secure_alloc", KGSL_MMU_HYP_SECURE_ALLOC },
+	{ "qcom,secure_pt_early_alloc", KGSL_MMU_PT_EARLY_ALLOC },
 	{ "qcom,force-32bit", KGSL_MMU_FORCE_32BIT },
 };
 

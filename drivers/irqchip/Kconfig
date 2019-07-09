@@ -52,6 +52,18 @@ config ARM_GIC_V3_ACL
 	  If you wish to enforce the Acces control then set this
 	  option to Y, if you are unsure please say N.
 
+config ARM_GIC_V3_REDISTRIBUTOR_HACK
+	bool "GICv3 Redistributor en/disable hack"
+	depends on ARM_GIC_V3
+	help
+	  Access to GIC Redistributor has to never be disabled
+	  or re-enabled because of ACLs set from secure world.
+	  This hack may be needed only on some QCOM SoCs.
+	  If you need this hack, it means that your device does
+	  freeze at GIC initialization in early kernel init.
+	  If you wish to use this hack, set this option to Y,
+	  if you are unsure, please say N.
+
 config ARM_NVIC
 	bool
 	select IRQ_DOMAIN

@@ -19,6 +19,7 @@
 #include <linux/platform_device.h>
 #include <linux/pm_qos.h>
 #include <linux/spinlock.h>
+#include "vmem/vmem.h"
 #include "vidc_hfi_api.h"
 #include "vidc_hfi_helper.h"
 #include "vidc_hfi_api.h"
@@ -220,8 +221,16 @@ struct hal_data {
 	u32 gcc_reg_size;
 };
 
+struct imem {
+	enum imem_type type;
+	union {
+		phys_addr_t vmem;
+	};
+};
+
 struct venus_resources {
 	struct msm_vidc_fw fw;
+	struct imem imem;
 };
 
 enum dsp_flag {

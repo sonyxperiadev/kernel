@@ -1853,6 +1853,8 @@ static int ngd_slim_probe(struct platform_device *pdev)
 		}
 		rxreg_access = of_property_read_bool(pdev->dev.of_node,
 					"qcom,rxreg-access");
+		dev->legacy_pwr_msg = of_property_read_bool(pdev->dev.of_node,
+					"qcom,legacy-pwr-msg");
 		of_property_read_u32(pdev->dev.of_node, "qcom,apps-ch-pipes",
 					&dev->pdata.apps_pipes);
 		of_property_read_u32(pdev->dev.of_node, "qcom,ea-pc",
@@ -2065,7 +2067,7 @@ static int ngd_slim_runtime_idle(struct device *device)
 /*
  * If PM_RUNTIME is not defined, these 2 functions become helper
  * functions to be called from system suspend/resume. So they are not
- * inside ifdef CONFIG_PM_RUNTIME
+ * inside ifdef CONFIG_PM
  */
 static int ngd_slim_runtime_resume(struct device *device)
 {

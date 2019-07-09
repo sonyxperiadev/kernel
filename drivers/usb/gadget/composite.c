@@ -20,6 +20,7 @@
 
 #include <linux/usb/composite.h>
 #include <linux/usb/otg.h>
+#include <linux/usb/msm_hsusb.h>
 #include <asm/unaligned.h>
 
 #include "u_os_desc.h"
@@ -533,8 +534,14 @@ int usb_func_ep_queue(struct usb_function *func, struct usb_ep *ep,
 		} else if (ret < 0 && ret != -ENOTSUPP) {
 			pr_err("Failed to wake function %s from suspend state. ret=%d.\n",
 				func->name ? func->name : "", ret);
+		} else {
+			/*
+			 * Return -EAGAIN to queue the request from
+			 * function driver wakeup function.
+			 */
+			ret = -EAGAIN;
+			goto done;
 		}
-		goto done;
 	}
 
 	if (!func->func_is_suspended)
@@ -1130,8 +1137,14 @@ void usb_remove_config(struct usb_composite_dev *cdev,
 
 	spin_lock_irqsave(&cdev->lock, flags);
 
-	if (cdev->config == config)
+	if (cdev->config == config) {
+		if (cdev->gadget->is_chipidea && !cdev->suspended) {
+			spin_unlock_irqrestore(&cdev->lock, flags);
+			msm_do_bam_disable_enable(CI_CTRL);
+			spin_lock_irqsave(&cdev->lock, flags);
+		}
 		reset_config(cdev);
+	}
 
 	spin_unlock_irqrestore(&cdev->lock, flags);
 
@@ -2133,8 +2146,14 @@ void composite_disconnect(struct usb_gadget *gadget)
 	 * disconnect callbacks?
 	 */
 	spin_lock_irqsave(&cdev->lock, flags);
-	if (cdev->config)
+	if (cdev->config) {
+		if (gadget->is_chipidea && !cdev->suspended) {
+			spin_unlock_irqrestore(&cdev->lock, flags);
+			msm_do_bam_disable_enable(CI_CTRL);
+			spin_lock_irqsave(&cdev->lock, flags);
+		}
 		reset_config(cdev);
+	}
 	if (cdev->driver->disconnect)
 		cdev->driver->disconnect(cdev);
 	spin_unlock_irqrestore(&cdev->lock, flags);

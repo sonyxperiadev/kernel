@@ -1,5 +1,20 @@
 menu "Qualcomm Technologies, Inc. Charger and Fuel Gauge support"
 
+config QPNP_FG
+	tristate "QPNP fuel gauge driver"
+	depends on MFD_SPMI_PMIC
+	help
+	  Say Y here to enable the Fuel Gauge driver. This adds support for
+	  battery fuel gauging and state of charge of battery connected to the
+	  fuel gauge. The state of charge is reported through a BMS power
+	  supply property and also sends uevents when the capacity is updated.
+
+config QPNP_FG_EXTENSION
+	tristate "Fuel gauge driver extension"
+	depends on QPNP_FG
+	help
+	  Say Y here to enable SoMC extensional fuel gauge functions.
+
 config QPNP_FG_GEN3
 	tristate "QPNP GEN3 fuel gauge driver"
 	depends on MFD_SPMI_PMIC
@@ -48,6 +63,21 @@ config SMB1355_SLAVE_CHARGER
 	  The driver reports the charger status via the power supply framework.
 	  A charger status change triggers an IRQ via the device STAT pin.
 
+config QPNP_SMBCHARGER
+	tristate "QPNP SMB Charger driver"
+	depends on MFD_SPMI_PMIC
+	help
+	  Say Y here to enable the dual path switch mode battery charger which
+	  supports USB detection and battery charging up to 3A.
+	  The driver also offers relevant information to userspace via the
+	  power supply framework.
+
+config QPNP_SMBCHARGER_EXTENSION
+	tristate "Charger driver extension"
+	depends on QPNP_SMBCHARGER
+	help
+	  Say Y here to enable SoMC extensional SMB charger functions.
+
 config QPNP_SMB2
 	tristate "SMB2 Battery Charger"
 	depends on MFD_SPMI_PMIC
@@ -60,6 +90,13 @@ config QPNP_SMB2
 	  as fuel gauge, USB, and USB-PD.
 	  VBUS and VCONN regulators are registered for supporting OTG,
 	  and powered Type-C cables respectively.
+
+config QPNP_SMBFG_NEWGEN_EXTENSION
+	bool "SoMC Charger Extension for QC SMB2 and FG-GEN3"
+	depends on QPNP_SMB2 && QPNP_FG_GEN3
+	help
+	  Say Y here to enable extensional code from SoMC for the
+	  Qualcomm SMBcharger 2 and Fuel Gauge Gen3
 
 config QPNP_SMB5
 	tristate "SMB5 Battery Charger"

@@ -21,6 +21,7 @@ obj-$(CONFIG_INPUT_ATLAS_BTNS)		+= atlas_btns.o
 obj-$(CONFIG_INPUT_ATMEL_CAPTOUCH)	+= atmel_captouch.o
 obj-$(CONFIG_INPUT_BFIN_ROTARY)		+= bfin_rotary.o
 obj-$(CONFIG_INPUT_BMA150)		+= bma150.o
+obj-$(CONFIG_INPUT_BU520X1NVX)		+= bu520x1nvx.o
 obj-$(CONFIG_INPUT_CM109)		+= cm109.o
 obj-$(CONFIG_INPUT_CMA3000)		+= cma3000_d0x.o
 obj-$(CONFIG_INPUT_CMA3000_I2C)		+= cma3000_d0x_i2c.o
@@ -86,3 +87,29 @@ obj-$(CONFIG_INPUT_WM831X_ON)		+= wm831x-on.o
 obj-$(CONFIG_INPUT_XEN_KBDDEV_FRONTEND)	+= xen-kbdfront.o
 obj-$(CONFIG_INPUT_YEALINK)		+= yealink.o
 obj-$(CONFIG_INPUT_IDEAPAD_SLIDEBAR)	+= ideapad_slidebar.o
+obj-$(CONFIG_INPUT_STMVL53L0)		+= vl53L0/
+obj-$(CONFIG_INPUT_ADUX1050)		+= adux1050.o
+obj-$(CONFIG_INPUT_S210ST0X)		+= s210st0x.o
+obj-$(CONFIG_FPC1145_PLATFORM)          += fpc1145_platform.o
+obj-$(CONFIG_SENSORS_AKM8963)		+= akm8963.o
+obj-$(CONFIG_SENSORS_AKM09911)		+= akm09911.o
+obj-$(CONFIG_SENSORS_BMA2X2)	+= bstclass.o
+obj-$(CONFIG_SENSORS_BMA2X2)	+= bma2x2.o
+
+ifeq ($(CONFIG_SENSORS_BMA2X2_ENABLE_INT1),y)
+	EXTRA_CFLAGS += -DBMA2X2_ENABLE_INT1
+endif
+
+ifeq ($(CONFIG_BOSCH_BMA2X2_ENABLE_INT2),y)
+	EXTRA_CFLAGS += -DBMA2X2_ENABLE_INT2
+endif
+
+
+obj-$(CONFIG_SENSORS_CAPELLA_CM36283)	+= cm36283.o
+obj-$(CONFIG_SENSORS_ISL29044A)	+= isl29044a.o
+obj-$(CONFIG_SENSORS_LIS3DH)		+= lis3dh_acc.o
+obj-$(CONFIG_SENSORS_MC3430)	+= mc3xxx.o
+obj-$(CONFIG_SENSORS_MMC3416X)		+= mmc3416x.o
+obj-$(CONFIG_SENSORS_MPU6050)		+= mpu6050.o
+obj-$(CONFIG_SENSORS_ET51X)			+= et51x.o
+obj-$(CONFIG_SENSORS_QCOM_HALL)		+= hall_sensor.o

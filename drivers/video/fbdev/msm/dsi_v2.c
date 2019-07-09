@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2015, 2017-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2015, 2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -41,7 +41,7 @@ static int dsi_on(struct mdss_panel_data *pdata)
 {
 	int rc = 0;
 
-	pr_debug("%s DSI controller on\n", __func__);
+	pr_debug("dsi_on DSI controller on\n");
 	if (dsi_intf.on)
 		rc = dsi_intf.on(pdata);
 
@@ -58,7 +58,6 @@ static int dsi_update_pconfig(struct mdss_panel_data *pdata,
 	int ret = 0;
 	struct mdss_panel_info *pinfo = &pdata->panel_info;
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
-
 	if (!pdata)
 		return -ENODEV;
 	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
@@ -89,7 +88,7 @@ static int dsi_panel_handler(struct mdss_panel_data *pdata, int enable)
 	int rc = 0;
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
 
-	pr_debug("%s enable=%d\n", __func__, enable);
+	pr_debug("dsi_panel_handler enable=%d\n", enable);
 	if (!pdata)
 		return -ENODEV;
 	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
@@ -101,7 +100,8 @@ static int dsi_panel_handler(struct mdss_panel_data *pdata, int enable)
 			mdss_dsi_panel_reset(pdata, 1);
 			rc = ctrl_pdata->on(pdata);
 			if (rc)
-				pr_err("%s panel on failed %d\n", __func__, rc);
+				pr_err("dsi_panel_handler panel on failed %d\n",
+									rc);
 		}
 		pdata->panel_info.panel_power_state = MDSS_PANEL_POWER_ON;
 		if (pdata->panel_info.type == MIPI_CMD_PANEL)
@@ -232,6 +232,10 @@ static int dsi_parse_gpio(struct platform_device *pdev,
 		pr_err("%s:%d, bklt_en gpio not specified\n",
 						__func__, __LINE__);
 
+	ctrl_pdata->bklt_en_gpio_invert =
+			of_property_read_bool(ctrl_pdev->dev.of_node,
+				"qcom,platform-bklight-en-gpio-invert");
+
 	return 0;
 }
 
@@ -289,6 +293,7 @@ static int mdss_dsi_get_dt_vreg_data(struct device *dev,
 	mp->vreg_config = devm_kzalloc(dev, sizeof(struct dss_vreg) *
 		mp->num_vreg, GFP_KERNEL);
 	if (!mp->vreg_config) {
+		pr_err("%s: can't alloc vreg mem\n", __func__);
 		rc = -ENOMEM;
 		goto error;
 	}
@@ -333,7 +338,7 @@ static int mdss_dsi_get_dt_vreg_data(struct device *dev,
 				__func__, rc);
 			goto error;
 		}
-		mp->vreg_config[i].load[DSS_REG_MODE_ENABLE] = tmp;
+		mp->vreg_config[i].enable_load = tmp;
 
 		/* disable-load */
 		rc = of_property_read_u32(supply_node,
@@ -343,17 +348,7 @@ static int mdss_dsi_get_dt_vreg_data(struct device *dev,
 				__func__, rc);
 			goto error;
 		}
-		mp->vreg_config[i].load[DSS_REG_MODE_DISABLE] = tmp;
-
-		/* ulp-load */
-		rc = of_property_read_u32(supply_node,
-			"qcom,supply-ulp-load", &tmp);
-		if (rc)
-			pr_warn("%s: error reading ulp load. rc=%d\n",
-				__func__, rc);
-
-		mp->vreg_config[i].load[DSS_REG_MODE_ULP] = (!rc ? tmp :
-			mp->vreg_config[i].load[DSS_REG_MODE_ENABLE]);
+		mp->vreg_config[i].disable_load = tmp;
 
 		/* pre-sleep */
 		rc = of_property_read_u32(supply_node,
@@ -397,14 +392,13 @@ static int mdss_dsi_get_dt_vreg_data(struct device *dev,
 			mp->vreg_config[i].post_off_sleep = tmp;
 		}
 
-		pr_debug("%s: %s min=%d, max=%d, enable=%d, disable=%d, ulp=%d, preonsleep=%d, postonsleep=%d, preoffsleep=%d, postoffsleep=%d\n",
+		pr_debug("%s: %s min=%d, max=%d, enable=%d, disable=%d, preonsleep=%d, postonsleep=%d, preoffsleep=%d, postoffsleep=%d\n",
 			__func__,
 			mp->vreg_config[i].vreg_name,
 			mp->vreg_config[i].min_voltage,
 			mp->vreg_config[i].max_voltage,
-			mp->vreg_config[i].load[DSS_REG_MODE_ENABLE]
-			mp->vreg_config[i].load[DSS_REG_MODE_DISABLE]
-			mp->vreg_config[i].load[DSS_REG_MODE_ULP]
+			mp->vreg_config[i].enable_load,
+			mp->vreg_config[i].disable_load,
 			mp->vreg_config[i].pre_on_sleep,
 			mp->vreg_config[i].post_on_sleep,
 			mp->vreg_config[i].pre_off_sleep,
@@ -598,8 +592,10 @@ void dsi_register_interface(struct dsi_interface *intf)
 int dsi_buf_alloc(struct dsi_buf *dp, int size)
 {
 	dp->start = kzalloc(size, GFP_KERNEL);
-	if (!dp->start)
+	if (dp->start == NULL) {
+		pr_err("%s:%u\n", __func__, __LINE__);
 		return -ENOMEM;
+	}
 
 	dp->end = dp->start + size;
 	dp->size = size;

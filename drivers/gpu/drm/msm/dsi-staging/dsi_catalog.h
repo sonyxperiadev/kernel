@@ -222,6 +222,7 @@ u32 dsi_ctrl_hw_cmn_get_hw_version(struct dsi_ctrl_hw *ctrl);
 int dsi_ctrl_hw_cmn_wait_for_cmd_mode_mdp_idle(struct dsi_ctrl_hw *ctrl);
 
 /* Definitions specific to 1.4 DSI controller hardware */
+bool dsi_ctrl_hw_14_get_cont_splash_status(struct dsi_ctrl_hw *ctrl);
 int dsi_ctrl_hw_14_wait_for_lane_idle(struct dsi_ctrl_hw *ctrl, u32 lanes);
 void dsi_ctrl_hw_14_setup_lane_map(struct dsi_ctrl_hw *ctrl,
 		       struct dsi_lane_map *lane_map);

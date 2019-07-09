@@ -1077,7 +1077,7 @@ static int __init qcom_smem_init(void)
 {
 	return platform_driver_register(&qcom_smem_driver);
 }
-arch_initcall(qcom_smem_init);
+core_initcall(qcom_smem_init);
 
 static void __exit qcom_smem_exit(void)
 {

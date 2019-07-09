@@ -357,6 +357,21 @@ int create_pkt_cmd_sys_set_resource(
 		}
 		break;
 	}
+	case VIDC_RESOURCE_OCMEM:
+	case VIDC_RESOURCE_VMEM:
+	{
+		struct hfi_resource_ocmem *hfioc_mem =
+			(struct hfi_resource_ocmem *)
+			&pkt->rg_resource_data[0];
+
+		phys_addr_t imem_addr = (phys_addr_t)res_value;
+
+		pkt->resource_type = HFI_RESOURCE_OCMEM;
+		pkt->size += sizeof(struct hfi_resource_ocmem) - sizeof(u32);
+		hfioc_mem->size = (u32)res_hdr->size;
+		hfioc_mem->mem = imem_addr;
+		break;
+	}
 	default:
 		dprintk(VIDC_ERR,
 			"Invalid resource_id %d\n", res_hdr->resource_id);
@@ -386,6 +401,10 @@ int create_pkt_cmd_sys_release_resource(
 	switch (res_hdr->resource_id) {
 	case VIDC_RESOURCE_SYSCACHE:
 		pkt->resource_type = HFI_RESOURCE_SYSCACHE;
+		break;
+	case VIDC_RESOURCE_OCMEM:
+	case VIDC_RESOURCE_VMEM:
+		pkt->resource_type = HFI_RESOURCE_OCMEM;
 		break;
 	default:
 		dprintk(VIDC_ERR,
@@ -2118,6 +2137,101 @@ int create_pkt_cmd_session_sync_process(
 	return 0;
 }
 
+int create_3x_pkt_cmd_session_cmd(struct vidc_hal_session_cmd_pkt *pkt,
+			int pkt_type, struct hal_session *session)
+{
+	int rc = 0;
+	if (!pkt)
+		return -EINVAL;
+
+	pkt->size = sizeof(struct vidc_hal_session_cmd_pkt);
+	pkt->packet_type = pkt_type;
+	pkt->session_id = hash32_ptr(session);
+
+	return rc;
+}
+
+int create_3x_pkt_cmd_session_get_property(
+		struct hfi_cmd_session_get_property_packet *pkt,
+		struct hal_session *session, enum hal_property ptype)
+{
+	int rc = 0;
+
+	if (!pkt || !session) {
+		dprintk(VIDC_ERR, "%s Invalid parameters\n", __func__);
+		return -EINVAL;
+	}
+	pkt->size = sizeof(struct hfi_cmd_session_get_property_packet);
+	pkt->packet_type = HFI_CMD_SESSION_GET_PROPERTY;
+	pkt->session_id = hash32_ptr(session);
+	pkt->num_properties = 1;
+	switch (ptype) {
+	case HAL_PARAM_PROFILE_LEVEL_CURRENT:
+		pkt->rg_property_data[0] =
+			HFI_PROPERTY_PARAM_PROFILE_LEVEL_CURRENT;
+		break;
+	case HAL_CONFIG_VDEC_ENTROPY:
+		pkt->rg_property_data[0] = HFI_PROPERTY_CONFIG_VDEC_ENTROPY;
+		break;
+	default:
+		rc = create_pkt_cmd_session_get_property(pkt,
+				session, ptype);
+	}
+	return rc;
+}
+
+static int create_3x_pkt_cmd_session_set_property(
+		struct hfi_cmd_session_set_property_packet *pkt,
+		struct hal_session *session,
+		enum hal_property ptype, void *pdata)
+{
+	int rc = 0;
+
+	if (!pkt || !session || !pdata)
+		return -EINVAL;
+
+	pkt->size = sizeof(struct hfi_cmd_session_set_property_packet);
+	pkt->packet_type = HFI_CMD_SESSION_SET_PROPERTY;
+	pkt->session_id = hash32_ptr(session);
+	pkt->num_properties = 1;
+
+	/*
+	 * Any session set property which is different in 3XX packetization
+	 * should be added as a new case below. All unchanged session set
+	 * properties will be handled in the default case.
+	 */
+	switch (ptype) {
+#ifdef ENABLE_EXTRA_HFI3_PROPERTIES
+	case HAL_PARAM_VENC_VQZIP_SEI:
+	{
+		create_pkt_enable(pkt->rg_property_data,
+				HFI_PROPERTY_PARAM_VENC_VQZIP_SEI_TYPE,
+				((struct hal_enable *)pdata)->enable);
+		pkt->size += sizeof(u32) + sizeof(struct hfi_enable);
+		break;
+	}
+	case HAL_PARAM_VENC_H264_PIC_ORDER_CNT:
+	{
+		pkt->rg_property_data[0] =
+			HFI_PROPERTY_PARAM_VENC_H264_PICORDER_CNT_TYPE;
+		pkt->rg_property_data[1] = *(u32 *)pdata;
+		pkt->size += sizeof(u32) * 2;
+		break;
+	}
+#endif
+	/* Deprecated param on Venus 3xx */
+	case HAL_PARAM_VDEC_CONTINUE_DATA_TRANSFER:
+	{
+		rc = -ENOTSUPP;
+		break;
+	}
+	default:
+		rc = create_pkt_cmd_session_set_property(pkt,
+				session, ptype, pdata);
+	}
+	return rc;
+}
+
 static struct hfi_packetization_ops hfi_default = {
 	.sys_init = create_pkt_cmd_sys_init,
 	.sys_pc_prep = create_pkt_cmd_sys_pc_prep,
@@ -2144,14 +2258,44 @@ static struct hfi_packetization_ops hfi_default = {
 	.session_set_property = create_pkt_cmd_session_set_property,
 };
 
+static struct hfi_packetization_ops hfi_3xx = {
+	.sys_init = create_pkt_cmd_sys_init,
+	.sys_pc_prep = create_pkt_cmd_sys_pc_prep,
+	.sys_power_control = create_pkt_cmd_sys_power_control,
+	.sys_set_resource = create_pkt_cmd_sys_set_resource,
+	.sys_debug_config = create_pkt_cmd_sys_debug_config,
+	.sys_coverage_config = create_pkt_cmd_sys_coverage_config,
+	.sys_release_resource = create_pkt_cmd_sys_release_resource,
+	.sys_ping = create_pkt_cmd_sys_ping,
+	.sys_image_version = create_pkt_cmd_sys_image_version,
+	.ssr_cmd = create_pkt_ssr_cmd,
+	.session_init = create_pkt_cmd_sys_session_init,
+	.session_cmd = create_3x_pkt_cmd_session_cmd,
+	.session_set_buffers = create_pkt_cmd_session_set_buffers,
+	.session_release_buffers = create_pkt_cmd_session_release_buffers,
+	.session_register_buffer = create_pkt_cmd_session_register_buffer,
+	.session_unregister_buffer = create_pkt_cmd_session_unregister_buffer,
+	.session_etb_decoder = create_pkt_cmd_session_etb_decoder,
+	.session_etb_encoder = create_pkt_cmd_session_etb_encoder,
+	.session_ftb = create_pkt_cmd_session_ftb,
+	.session_get_buf_req = create_pkt_cmd_session_get_buf_req,
+	.session_flush = create_pkt_cmd_session_flush,
+	.session_get_property = create_3x_pkt_cmd_session_get_property,
+	.session_set_property = create_3x_pkt_cmd_session_set_property,
+	.session_sync_process = create_pkt_cmd_session_sync_process
+};
+
 struct hfi_packetization_ops *hfi_get_pkt_ops_handle(
 			enum hfi_packetization_type type)
 {
 	dprintk(VIDC_DBG, "%s selected\n",
-		type == HFI_PACKETIZATION_4XX ?
-		"4xx packetization" : "Unknown hfi");
+		type == HFI_PACKETIZATION_3XX ? "3xx packetization" :
+		type == HFI_PACKETIZATION_4XX ? "4xx packetization" :
+		"Unknown hfi");
 
 	switch (type) {
+	case HFI_PACKETIZATION_3XX:
+		return &hfi_3xx;
 	case HFI_PACKETIZATION_4XX:
 		return &hfi_default;
 	}
