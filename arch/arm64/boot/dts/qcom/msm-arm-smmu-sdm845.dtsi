@@ -63,6 +63,7 @@
 		qcom,use-3-lvl-tables;
 		qcom,no-asid-retention;
 		qcom,disable-atos;
+		qcom,min-iova-align;
 		#global-interrupts = <1>;
 		#size-cells = <1>;
 		#address-cells = <1>;
