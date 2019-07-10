@@ -3448,6 +3448,16 @@ static int sde_kms_hw_init(struct msm_kms *kms)
 		goto hw_intr_init_err;
 	}
 
+	sde_kms->hw_mdp = sde_rm_get_mdp(&sde_kms->rm);
+	if (IS_ERR_OR_NULL(sde_kms->hw_mdp)) {
+		rc = PTR_ERR(sde_kms->hw_mdp);
+		if (!sde_kms->hw_mdp)
+			rc = -EINVAL;
+		SDE_ERROR("failed to get hw_mdp: %d\n", rc);
+		sde_kms->hw_mdp = NULL;
+		goto power_error;
+	}
+
 	/*
 	 * Attempt continuous splash handoff only if reserved
 	 * splash memory is found & release resources on any error
@@ -3461,16 +3471,6 @@ static int sde_kms_hw_init(struct msm_kms *kms)
 		_sde_kms_unmap_all_splash_regions(sde_kms);
 		memset(&sde_kms->splash_data, 0x0,
 				sizeof(struct sde_splash_data));
-	}
-
-	sde_kms->hw_mdp = sde_rm_get_mdp(&sde_kms->rm);
-	if (IS_ERR_OR_NULL(sde_kms->hw_mdp)) {
-		rc = PTR_ERR(sde_kms->hw_mdp);
-		if (!sde_kms->hw_mdp)
-			rc = -EINVAL;
-		SDE_ERROR("failed to get hw_mdp: %d\n", rc);
-		sde_kms->hw_mdp = NULL;
-		goto power_error;
 	}
 
 	for (i = 0; i < sde_kms->catalog->vbif_count; i++) {
