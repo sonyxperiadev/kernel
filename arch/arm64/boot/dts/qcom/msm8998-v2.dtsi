@@ -981,7 +981,7 @@
 
 &gfx_vreg {
 	regulator-min-microvolt = <1>;
-	regulator-max-microvolt = <8>;
+	regulator-max-microvolt = <9>;
 
 	qcom,cpr-fuse-corners = <4>;
 	qcom,cpr-fuse-combos = <8>;
