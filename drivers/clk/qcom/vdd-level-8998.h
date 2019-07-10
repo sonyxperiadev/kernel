@@ -158,7 +158,6 @@ enum vdd_gpucc_levels {
 	VDD_GFX_NOMINAL,	/*       NOMINAL	*/
 	VDD_GFX_TURBO,		/* HIGH: TURBO		*/
 	VDD_GFX_TURBO_L1,	/* HIGH: TURBO_L1	*/
-	VDD_GFX_SUPER_TURBO,	/* HIGH: SUPER_TURBO	*/
 	VDD_GFX_MAX,		/*    FURNACE MODE!	*/
 };
 
