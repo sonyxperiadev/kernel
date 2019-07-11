@@ -642,7 +642,7 @@
 	qcom,wave-play-rate-us = <8621>;
 };
 
-
+/*
 &red_led {
 	somc,pwm-channel = <4>;
 	linux,name = "led:rgb_red";
@@ -702,6 +702,7 @@
 		[00 0E 1C 2A 38 46 54 64];
 	qcom,use-blink;
 };
+*/
 
 &flash_led {
 	qcom,hw-strobe-option = <1>;
