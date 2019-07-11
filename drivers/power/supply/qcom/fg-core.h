@@ -599,7 +599,7 @@ extern int fg_lerp(const struct fg_pt *pts, size_t tablesize, s32 input,
 			s32 *output);
 
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
-int fg_get_vbatt_predict(struct fg_chip *chip, int *val)
+int fg_get_vbatt_predict(struct fg_chip *chip, int *val);
 #endif
 
 #endif
