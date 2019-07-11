@@ -492,7 +492,7 @@
 		compatible = "qcom,mpm-gpio-sdm660", "qcom,mpm-gpio";
 		interrupt-controller;
 		interrupt-parent = <&intc>;
-		#interrupt-cells = <2>;
+		#interrupt-cells = <3>;
 	};
 
 	timer {
