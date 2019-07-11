@@ -539,7 +539,7 @@
 
 		removed_region1: removed_region1@85fc0000 {
 			no-map;
-			reg = <0 0x85fc0000 0 0x400000>;
+			reg = <0 0x85fc0000 0 0x40000>;
 		};
 
 		smem_region: smem@86000000 {
