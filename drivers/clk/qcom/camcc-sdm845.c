@@ -128,7 +128,7 @@ static struct clk_alpha_pll_postdiv cam_cc_pll0_out_even = {
 		.name = "cam_cc_pll0_out_even",
 		.parent_names = (const char *[]){ "cam_cc_pll0" },
 		.num_parents = 1,
-		.ops = &clk_alpha_fabia_pll_postdiv_ops,
+		.ops = &clk_alpha_pll_postdiv_fabia_ops,
 	},
 };
 
@@ -167,7 +167,7 @@ static struct clk_alpha_pll_postdiv cam_cc_pll1_out_even = {
 		.name = "cam_cc_pll1_out_even",
 		.parent_names = (const char *[]){ "cam_cc_pll1" },
 		.num_parents = 1,
-		.ops = &clk_alpha_fabia_pll_postdiv_ops,
+		.ops = &clk_alpha_pll_postdiv_fabia_ops,
 	},
 };
 
@@ -206,7 +206,7 @@ static struct clk_alpha_pll_postdiv cam_cc_pll2_out_even = {
 		.name = "cam_cc_pll2_out_even",
 		.parent_names = (const char *[]){ "cam_cc_pll2" },
 		.num_parents = 1,
-		.ops = &clk_alpha_fabia_pll_postdiv_ops,
+		.ops = &clk_alpha_pll_postdiv_fabia_ops,
 	},
 };
 
@@ -220,7 +220,7 @@ static struct clk_alpha_pll_postdiv cam_cc_pll2_out_odd = {
 		.name = "cam_cc_pll2_out_odd",
 		.parent_names = (const char *[]){ "cam_cc_pll2" },
 		.num_parents = 1,
-		.ops = &clk_alpha_fabia_pll_postdiv_ops,
+		.ops = &clk_alpha_pll_postdiv_fabia_ops,
 	},
 };
 
@@ -259,7 +259,7 @@ static struct clk_alpha_pll_postdiv cam_cc_pll3_out_even = {
 		.name = "cam_cc_pll3_out_even",
 		.parent_names = (const char *[]){ "cam_cc_pll3" },
 		.num_parents = 1,
-		.ops = &clk_alpha_fabia_pll_postdiv_ops,
+		.ops = &clk_alpha_pll_postdiv_fabia_ops,
 	},
 };
 
