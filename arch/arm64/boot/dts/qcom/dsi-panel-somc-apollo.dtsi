@@ -178,3 +178,12 @@
 		};
 	};
 };
+
+&sde_dsi_tama_panels {
+	/* Default panel */
+	qcom,dsi-panel = <&dsi_4>;
+
+	/* Possible panels */
+	somc,dsi-panel-list = <&dsi_4 &dsi_8>;
+};
+
