@@ -66,3 +66,11 @@
 	};
 };
 
+&sde_dsi_yoshino_panels {
+	/* Default panel */
+	qcom,dsi-panel = <&sde_dsi_6>;
+
+	/* Possible panels */
+	somc,dsi-panel-list = <&sde_dsi_6 &sde_dsi_9>;
+};
+

@@ -64,3 +64,10 @@
 	qcom,default-topology-index = <0>;
 };
 
+&sde_dsi_yoshino_panels {
+	/* Default panel */
+	qcom,dsi-panel = <&sde_dsi_5>;
+
+	/* Possible panels */
+	somc,dsi-panel-list = <&sde_dsi_5 &sde_dsi_8>;
+};
