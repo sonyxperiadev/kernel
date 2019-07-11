@@ -3256,6 +3256,74 @@ static int _sde_kms_get_splash_data(struct sde_splash_data *data)
 	return ret;
 }
 
+#ifdef CONFIG_DRM_MSM_DSI_SOMC_PANEL
+/*
+ * sde_kms_dualdsi_workaround - Set the split-flush bit to the SSPP_SPARE
+ *                              register manually in case of continuous
+ *				splash on legacy devices with dual-dsi.
+ *
+ * New bootloader designs will set this bit in the SSPP spare register
+ * if we are booting with continuous splash enabled on a device featuring
+ * single display on dual-dsi but legacy SoCs usually feature older
+ * and non-upgradable (because signed) bootloaders which don't.
+ */
+static void sde_kms_dualdsi_workaround(struct sde_kms *sde_kms)
+{
+	struct sde_hw_blk_reg_map *sde_hw_blk = &sde_kms->hw_mdp->hw;
+	struct dsi_display *dsi_display = NULL;
+	void **dsi_displays = NULL;
+	const u32 sspp_spare_offset = 0x28;
+	bool set_split_flush = false;
+	int display_count, i;
+
+	display_count = dsi_display_get_num_of_displays();
+	dsi_displays = kcalloc(display_count, sizeof(void *), GFP_KERNEL);
+	if (!dsi_displays) {
+		SDE_ERROR("Memory exhausted. Goodbye.\n");
+		return;
+	}
+
+	display_count = dsi_display_get_active_displays(
+					dsi_displays, display_count);
+
+	/* No display, no workaround to apply for sure */
+	if (display_count < 1)
+		goto free;
+
+	for (i = 0; i < display_count; i++) {
+		dsi_display = dsi_displays[i];
+
+		if (unlikely(!dsi_display) ||
+		    unlikely(!dsi_display->disp_node))
+			continue;
+
+		/* Makes no sense if not using more than one CTRL and PHY */
+		if (dsi_display->ctrl_count < 2)
+			continue;
+
+		set_split_flush = of_property_read_bool(dsi_display->disp_node,
+						"qcom,set-split-flush-reg-wa");
+
+		/*
+		 * We currently enable the split flush bit on the SSPP SPARE
+		 * register (which has no hardware use, as it's a spare reg)
+		 * only once if any display here needs split flush, so we go
+		 * on if we can find the DT property to enable it in *any*
+		 * of the display nodes, as the register is not per-display.
+		 */
+		if (set_split_flush) {
+			pr_info("Workaround for continuous splash split-flush"
+				" bit: applying for display %d.\n", i);
+			SDE_REG_WRITE(sde_hw_blk, sspp_spare_offset, 0x1);
+			goto free;
+		}
+	}
+
+free:
+	kfree(dsi_displays);
+}
+#endif
+
 static int sde_kms_hw_init(struct msm_kms *kms)
 {
 	struct sde_kms *sde_kms;
@@ -3448,6 +3516,20 @@ static int sde_kms_hw_init(struct msm_kms *kms)
 		goto hw_intr_init_err;
 	}
 
+	sde_kms->hw_mdp = sde_rm_get_mdp(&sde_kms->rm);
+	if (IS_ERR_OR_NULL(sde_kms->hw_mdp)) {
+		rc = PTR_ERR(sde_kms->hw_mdp);
+		if (!sde_kms->hw_mdp)
+			rc = -EINVAL;
+		SDE_ERROR("failed to get hw_mdp: %d\n", rc);
+		sde_kms->hw_mdp = NULL;
+		goto power_error;
+	}
+
+#ifdef CONFIG_DRM_MSM_DSI_SOMC_PANEL
+	sde_kms_dualdsi_workaround(sde_kms);
+#endif
+
 	/*
 	 * Attempt continuous splash handoff only if reserved
 	 * splash memory is found & release resources on any error
@@ -3461,16 +3543,6 @@ static int sde_kms_hw_init(struct msm_kms *kms)
 		_sde_kms_unmap_all_splash_regions(sde_kms);
 		memset(&sde_kms->splash_data, 0x0,
 				sizeof(struct sde_splash_data));
-	}
-
-	sde_kms->hw_mdp = sde_rm_get_mdp(&sde_kms->rm);
-	if (IS_ERR_OR_NULL(sde_kms->hw_mdp)) {
-		rc = PTR_ERR(sde_kms->hw_mdp);
-		if (!sde_kms->hw_mdp)
-			rc = -EINVAL;
-		SDE_ERROR("failed to get hw_mdp: %d\n", rc);
-		sde_kms->hw_mdp = NULL;
-		goto power_error;
 	}
 
 	for (i = 0; i < sde_kms->catalog->vbif_count; i++) {

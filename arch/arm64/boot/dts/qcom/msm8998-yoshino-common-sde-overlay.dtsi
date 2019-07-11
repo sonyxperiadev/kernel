@@ -109,8 +109,11 @@ msm_drm.dsi_display0=dsi_panel_somc_yoshino_cmd:config0";
 		qcom,dsi-ctrl = <&sde_dsi0>;
 		qcom,dsi-phy = <&mdss_dsi_phy0>;
 		clocks = <&mdss_dsi0_pll BYTECLK_MUX_0_CLK>,
-			<&mdss_dsi0_pll PCLK_MUX_0_CLK>;
-		clock-names = "mux_byte_clk0", "mux_pixel_clk0";
+			<&mdss_dsi0_pll PCLK_MUX_0_CLK>,
+			<&mdss_dsi1_pll BYTECLK_MUX_1_CLK>,
+			<&mdss_dsi1_pll PCLK_MUX_1_CLK>;
+		clock-names = "mux_byte_clk0", "mux_pixel_clk0",
+			      "mux_byte_clk1", "mux_pixel_clk1";
 
 		pinctrl-names = "panel_active", "panel_suspend",
 				"sde_touch_active", "sde_touch_suspend";
