@@ -26,6 +26,7 @@
 #include <dt-bindings/thermal/thermal.h>
 #include <dt-bindings/msm/msm-bus-ids.h>
 #include <dt-bindings/soc/qcom,dcc_v2.h>
+#include <dt-bindings/iio/qcom,spmi-vadc.h>
 
 #define MHZ_TO_MBPS(mhz, w) ((mhz * 1000000 * w) / (1024 * 1024))
 #define BW_OPP_ENTRY(mhz, w) opp-mhz {opp-hz = /bits/ 64 <MHZ_TO_MBPS(mhz, w)>;}
