@@ -698,9 +698,10 @@ enum elv_merge blk_try_req_merge(struct request *req, struct request *next)
 	return ELEVATOR_NO_MERGE;
 }
 
-static bool crypto_not_mergeable(const struct bio *bio, const struct bio *nxt)
+static bool crypto_not_mergeable(const struct bio *bio, const struct bio *nxt,
+						unsigned int sectors)
 {
-	return (!pfk_allow_merge_bio(bio, nxt));
+	return (!pfk_allow_merge_bio(bio, nxt, sectors));
 }
 
 /*
@@ -735,7 +736,7 @@ static struct request *attempt_merge(struct request_queue *q,
 	if (req->write_hint != next->write_hint)
 		return NULL;
 
-	if (crypto_not_mergeable(req->bio, next->bio))
+	if (crypto_not_mergeable(req->bio, next->bio, blk_rq_sectors(req)))
 		return 0;
 
 	/*
@@ -886,12 +887,12 @@ enum elv_merge blk_try_merge(struct request *rq, struct bio *bio)
 		return ELEVATOR_DISCARD_MERGE;
 	} else if (blk_rq_pos(rq) + blk_rq_sectors(rq) ==
 						bio->bi_iter.bi_sector) {
-		if (crypto_not_mergeable(rq->bio, bio))
+		if (crypto_not_mergeable(rq->bio, bio, blk_rq_sectors(rq)))
 			return ELEVATOR_NO_MERGE;
 		return ELEVATOR_BACK_MERGE;
 	} else if (blk_rq_pos(rq) - bio_sectors(bio) ==
 						bio->bi_iter.bi_sector) {
-		if (crypto_not_mergeable(bio, rq->bio))
+		if (crypto_not_mergeable(bio, rq->bio, bio_sectors(bio)))
 			return ELEVATOR_NO_MERGE;
 		return ELEVATOR_FRONT_MERGE;
 	}
