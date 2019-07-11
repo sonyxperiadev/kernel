@@ -60,7 +60,7 @@
 			qcom,limits-info = <&mitigation_profile0>;
 			qcom,lmh-dcvs = <&lmh_dcvs0>;
 			enable-method = "psci";
-			efficiency = <1024>;
+			capacity-dmips-mhz = <1024>;
 			#cooling-cells = <2>;
 			next-level-cache = <&L2_0>;
 			qcom,ea = <&ea0>;
@@ -89,7 +89,7 @@
 			qcom,limits-info = <&mitigation_profile1>;
 			qcom,lmh-dcvs = <&lmh_dcvs0>;
 			enable-method = "psci";
-			efficiency = <1024>;
+			capacity-dmips-mhz = <1024>;
 			#cooling-cells = <2>;
 			next-level-cache = <&L2_0>;
 			qcom,ea = <&ea1>;
@@ -113,7 +113,7 @@
 			qcom,limits-info = <&mitigation_profile2>;
 			qcom,lmh-dcvs = <&lmh_dcvs0>;
 			enable-method = "psci";
-			efficiency = <1024>;
+			capacity-dmips-mhz = <1024>;
 			#cooling-cells = <2>;
 			next-level-cache = <&L2_0>;
 			qcom,ea = <&ea2>;
@@ -137,7 +137,7 @@
 			qcom,limits-info = <&mitigation_profile3>;
 			qcom,lmh-dcvs = <&lmh_dcvs0>;
 			enable-method = "psci";
-			efficiency = <1024>;
+			capacity-dmips-mhz = <1024>;
 			#cooling-cells = <2>;
 			next-level-cache = <&L2_0>;
 			qcom,ea = <&ea3>;
@@ -161,7 +161,7 @@
 			qcom,limits-info = <&mitigation_profile4>;
 			qcom,lmh-dcvs = <&lmh_dcvs1>;
 			enable-method = "psci";
-			efficiency = <1536>;
+			capacity-dmips-mhz = <1536>;
 			#cooling-cells = <2>;
 			next-level-cache = <&L2_1>;
 			qcom,ea = <&ea4>;
@@ -189,7 +189,7 @@
 			qcom,limits-info = <&mitigation_profile5>;
 			qcom,lmh-dcvs = <&lmh_dcvs1>;
 			enable-method = "psci";
-			efficiency = <1536>;
+			capacity-dmips-mhz = <1536>;
 			#cooling-cells = <2>;
 			next-level-cache = <&L2_1>;
 			qcom,ea = <&ea5>;
@@ -213,7 +213,7 @@
 			qcom,limits-info = <&mitigation_profile6>;
 			qcom,lmh-dcvs = <&lmh_dcvs1>;
 			enable-method = "psci";
-			efficiency = <1536>;
+			capacity-dmips-mhz = <1536>;
 			#cooling-cells = <2>;
 			next-level-cache = <&L2_1>;
 			qcom,ea = <&ea6>;
@@ -237,7 +237,7 @@
 			qcom,limits-info = <&mitigation_profile7>;
 			qcom,lmh-dcvs = <&lmh_dcvs1>;
 			enable-method = "psci";
-			efficiency = <1536>;
+			capacity-dmips-mhz = <1536>;
 			#cooling-cells = <2>;
 			next-level-cache = <&L2_1>;
 			qcom,ea = <&ea7>;
