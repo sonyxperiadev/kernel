@@ -16,6 +16,17 @@
  * it under the terms of the GNU General Public License version 2, as
  * published by the Free Software Foundation.
  */
+ 
+ / {
+	/* Bad indentation is required. Sorry. */
+	chosen {
+
+		bootargs = \
+"rcupdate.rcu_expedited=1 \
+msm_drm.dsi_display0=dsi_panel_cmd_display:config0";
+
+	};
+};
 
 &soc {
 	dsi_panel_lcd_pwr_supply: dsi_panel_lcd_pwr_supply {
