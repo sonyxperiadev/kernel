@@ -27,8 +27,8 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 
 #include "sdm845-sde-display.dtsi"
-#include "qcom/sdm845-mtp.dtsi"
-#include "qcom/sdm845-audio-overlay.dtsi"
+#include "sdm845-mtp.dtsi"
+#include "sdm845-audio-overlay.dtsi"
 #include "sdm845-tama-apollo_generic.dtsi"
 
 / {
