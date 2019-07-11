@@ -84,6 +84,7 @@ struct clk_osm {
 
 static bool is_sdmshrike;
 static bool is_sm6150;
+static bool is_sdm845;
 static bool is_sdmmagpie;
 
 static inline struct clk_osm *to_clk_osm(struct clk_hw *_hw)
@@ -1014,7 +1015,7 @@ static int clk_osm_resources_init(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-	if (is_sdmshrike || is_sm6150 || is_sdmmagpie)
+	if (is_sdmshrike || is_sm6150 || is_sdm845 || is_sdmmagpie)
 		return 0;
 
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
@@ -1035,6 +1036,47 @@ static int clk_osm_resources_init(struct platform_device *pdev)
 	}
 
 	return 0;
+}
+
+static void clk_cpu_osm_driver_sdm845_fixup(void)
+{
+	/*
+	 * Fixup for SDM845: At the cost of doing some useless assignments
+	 * just configure the entire thing, so that we're more likely to
+	 * stay covered in case of some future updates of this driver.
+	 */
+
+	/* Power efficient cluster configuration */
+	osm_qcom_clk_hws[CPU0_PWRCL_CLK] = &cpu0_pwrcl_clk.hw;
+	osm_qcom_clk_hws[CPU1_PWRCL_CLK] = &cpu1_pwrcl_clk.hw;
+	osm_qcom_clk_hws[CPU2_PWRCL_CLK] = &cpu2_pwrcl_clk.hw;
+	osm_qcom_clk_hws[CPU3_PWRCL_CLK] = &cpu3_pwrcl_clk.hw;
+
+	/* Performance cluster configuration */
+	osm_qcom_clk_hws[CPU4_PERFCL_CLK] = &cpu4_perfcl_clk.hw;
+	osm_qcom_clk_hws[CPU5_PERFCL_CLK] = &cpu5_perfcl_clk.hw;
+	osm_qcom_clk_hws[CPU6_PERFCL_CLK] = &cpu6_perfcl_clk.hw;
+	osm_qcom_clk_hws[CPU7_PERFCL_CLK] = &cpu7_perfcl_clk.hw;
+
+	/* Remove unexistant clocks */
+	osm_qcom_clk_hws[CPU4_PWRCL_CLK] = NULL;
+	osm_qcom_clk_hws[CPU5_PWRCL_CLK] = NULL;
+	osm_qcom_clk_hws[CPU7_PERFPCL_CLK] = NULL;
+	osm_qcom_clk_hws[PERFPCL_CLK] = NULL;
+	osm_qcom_clk_hws[L3_CLUSTER2_VOTE_CLK] = NULL;
+
+	/* Configure CPU numbers (per-cluster) */
+	cpu0_pwrcl_clk.core_num  = 0;
+	cpu1_pwrcl_clk.core_num  = 1;
+	cpu2_pwrcl_clk.core_num  = 2;
+	cpu3_pwrcl_clk.core_num  = 3;
+	cpu4_perfcl_clk.core_num = 0;
+	cpu5_perfcl_clk.core_num = 1;
+	cpu6_perfcl_clk.core_num = 2;
+	cpu7_perfcl_clk.core_num = 3;
+
+	/* Use the right CPU7 clock: no perf-plus cluster here */
+	clk_cpu_map[7] = &cpu7_perfcl_clk;
 }
 
 static void clk_cpu_osm_driver_sm6150_fixup(void)
@@ -1083,12 +1125,17 @@ static int clk_cpu_osm_driver_probe(struct platform_device *pdev)
 	is_sm6150 = of_device_is_compatible(pdev->dev.of_node,
 				"qcom,clk-cpu-osm-sm6150");
 
+	is_sdm845 = of_device_is_compatible(pdev->dev.of_node,
+				"qcom,clk-cpu-osm-sdm845");
+
 	is_sdmshrike = of_device_is_compatible(pdev->dev.of_node,
 				"qcom,clk-cpu-osm-sdmshrike");
 	if (is_sdmshrike)
 		clk_cpu_osm_driver_sdmshrike_fixup();
 	else if (is_sm6150 || is_sdmmagpie)
 		clk_cpu_osm_driver_sm6150_fixup();
+	else if (is_sdm845)
+		clk_cpu_osm_driver_sdm845_fixup();
 
 	clk_data = devm_kzalloc(&pdev->dev, sizeof(struct clk_onecell_data),
 								GFP_KERNEL);
@@ -1140,7 +1187,7 @@ static int clk_cpu_osm_driver_probe(struct platform_device *pdev)
 		return rc;
 	}
 
-	if (!is_sdmshrike && !is_sm6150 && !is_sdmmagpie) {
+	if (!is_sdmshrike && !is_sm6150 && !is_sdm845 && !is_sdmmagpie) {
 		rc = clk_osm_read_lut(pdev, &perfpcl_clk);
 		if (rc) {
 			dev_err(&pdev->dev, "Unable to read OSM LUT for perf plus cluster, rc=%d\n",
@@ -1181,8 +1228,11 @@ static int clk_cpu_osm_driver_probe(struct platform_device *pdev)
 			"clk: Failed to enable cluster0 clock for L3\n");
 	WARN(clk_prepare_enable(l3_cluster1_vote_clk.hw.clk),
 			"clk: Failed to enable cluster1 clock for L3\n");
-	WARN(clk_prepare_enable(l3_cluster2_vote_clk.hw.clk),
-			"clk: Failed to enable cluster2 clock for L3\n");
+
+	if (!is_sdm845)
+		WARN(clk_prepare_enable(l3_cluster2_vote_clk.hw.clk),
+				"clk: Failed to enable cluster2 clock for L3\n");
+
 	WARN(clk_prepare_enable(l3_misc_vote_clk.hw.clk),
 			"clk: Failed to enable misc clock for L3\n");
 	WARN(clk_prepare_enable(l3_gpu_vote_clk.hw.clk),
@@ -1214,6 +1264,7 @@ exit:
 
 static const struct of_device_id match_table[] = {
 	{ .compatible = "qcom,clk-cpu-osm" },
+	{ .compatible = "qcom,clk-cpu-osm-sdm845" },
 	{ .compatible = "qcom,clk-cpu-osm-sm6150" },
 	{ .compatible = "qcom,clk-cpu-osm-sdmmagpie" },
 	{ .compatible = "qcom,clk-cpu-osm-sdmshrike" },
