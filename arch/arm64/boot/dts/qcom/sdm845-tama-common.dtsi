@@ -623,15 +623,46 @@
 	linux,name = "wled";
 	qcom,string-cfg = <7>;
 	qcom,fs-current-limit = <20000>;
-	somc,init-br-ua = <10000>;
-	somc-s1,br-power-save-ua = <800>;
-	somc,bl-scale-enabled;
-	somc,area_count_table_size = <0>;
 };
 
 &pmi8998_lsid1 {
 	qcom,leds@d000 {
 		qcom,rgb_sync = <1>;
+	};
+
+	qcom,leds-xboot@d800 {
+		compatible = "qcom,qpnp-wled";
+		reg = <0xd800 0x100>,
+		      <0xd900 0x100>;
+		reg-names = "qpnp-wled-ctrl-base",
+			    "qpnp-wled-sink-base";
+		interrupts = <0x3 0xd8 0x1 IRQ_TYPE_EDGE_RISING>,
+			     <0x3 0xd8 0x2 IRQ_TYPE_EDGE_RISING>;
+		interrupt-names = "ovp-irq", "sc-irq";
+		linux,name = "wled";
+		linux,default-trigger = "bkl-trigger";
+		qcom,fdbk-output = "auto";
+		qcom,vref-uv = <127500>;
+		qcom,switch-freq-khz = <800>;
+		qcom,ovp-mv = <29600>;
+		qcom,ilim-ma = <970>;
+		qcom,boost-duty-ns = <26>;
+		qcom,mod-freq-khz = <9600>;
+		qcom,dim-mode = "hybrid";
+		qcom,hyb-thres = <625>;
+		qcom,sync-dly-us = <800>;
+		qcom,fs-curr-ua = <20000>;
+		qcom,cons-sync-write-delay-us = <1000>;
+		qcom,led-strings-list = [00 01 02 03];
+		qcom,en-ext-pfet-sc-pro;
+		qcom,pmic-revid = <&pmi8998_revid>;
+		qcom,loop-auto-gm-en;
+		qcom,auto-calibration-enable;
+		somc,init-br-ua = <10000>;
+		somc-s1,br-power-save-ua = <800>;
+		somc,bl-scale-enabled;
+		somc,area_count_table_size = <0>;
+		status = "okay";
 	};
 };
 
