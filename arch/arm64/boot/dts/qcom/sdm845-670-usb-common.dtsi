@@ -30,6 +30,13 @@
 		qcom,reset-ep-after-lpm-resume;
 		qcom,dwc-usb3-msm-tx-fifo-size = <21288>;
 		qcom,num-gsi-evt-buffs = <0x3>;
+		qcom,gsi-reg-offset =
+			<0x0fc /* GSI_GENERAL_CFG */
+			 0x110 /* GSI_DBL_ADDR_L */
+			 0x120 /* GSI_DBL_ADDR_H */
+			 0x130 /* GSI_RING_BASE_ADDR_L */
+			 0x144 /* GSI_RING_BASE_ADDR_H */
+			 0x1a4>; /* GSI_IF_STS */
 		qcom,use-pdc-interrupts;
 		qcom,pm-qos-latency = <44>;
 		extcon = <0>, <0>, <&eud>, <0>, <0>;
@@ -360,6 +367,13 @@
 
 		USB3_GDSC-supply = <&usb30_sec_gdsc>;
 		qcom,dwc-usb3-msm-tx-fifo-size = <21288>;
+		qcom,gsi-reg-offset =
+			<0x0fc /* GSI_GENERAL_CFG */
+			 0x110 /* GSI_DBL_ADDR_L */
+			 0x120 /* GSI_DBL_ADDR_H */
+			 0x130 /* GSI_RING_BASE_ADDR_L */
+			 0x144 /* GSI_RING_BASE_ADDR_H */
+			 0x1a4>; /* GSI_IF_STS */
 		qcom,use-pdc-interrupts;
 
 		clocks = <&clock_gcc GCC_USB30_SEC_MASTER_CLK>,
