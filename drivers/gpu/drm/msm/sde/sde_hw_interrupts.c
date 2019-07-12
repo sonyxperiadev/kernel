@@ -25,6 +25,10 @@
 #define BUILD_FOR_AD4_TARGET
 #endif
 
+#if defined(CONFIG_ARCH_SDM845)
+#define TARGET_HAS_TEAR_IRQS_IN_MDP
+#endif
+
 /**
  * Register offsets in MDSS register file for the interrupt registers
  * w.r.t. to the MDSS base
@@ -285,6 +289,7 @@ static const struct sde_intr_reg sde_intr_set[] = {
 		MDP_AD4_1_OFF + MDP_AD4_INTR_EN_OFF,
 		MDP_AD4_1_OFF + MDP_AD4_INTR_STATUS_OFF,
 	},
+#ifndef TARGET_HAS_TEAR_IRQS_IN_MDP
 	{
 		MDP_INTF_TEAR_INTF_1_IRQ_OFF + MDP_INTF_TEAR_INTR_CLEAR_OFF,
 		MDP_INTF_TEAR_INTF_1_IRQ_OFF + MDP_INTF_TEAR_INTR_EN_OFF,
@@ -295,6 +300,7 @@ static const struct sde_intr_reg sde_intr_set[] = {
 		MDP_INTF_TEAR_INTF_2_IRQ_OFF + MDP_INTF_TEAR_INTR_EN_OFF,
 		MDP_INTF_TEAR_INTF_2_IRQ_OFF + MDP_INTF_TEAR_INTR_STATUS_OFF,
 	}
+#endif
 #endif
 };
 
