@@ -139,6 +139,7 @@
 		vdda18-supply = <&pm8998_l12>;
 		vdda33-supply = <&pm8998_l24>;
 		qcom,vdd-voltage-level = <0 880000 880000>;
+		qcom,override-bias-ctrl2;
 		qcom,qusb-phy-reg-offset =
 			<0x240 /* QUSB2PHY_PORT_TUNE1 */
 			 0x1a0 /* QUSB2PHY_PLL_COMMON_STATUS_ONE */
@@ -423,6 +424,7 @@
 		vdda18-supply = <&pm8998_l12>;
 		vdda33-supply = <&pm8998_l24>;
 		qcom,vdd-voltage-level = <0 880000 880000>;
+		qcom,override-bias-ctrl2;
 		qcom,qusb-phy-reg-offset =
 			<0x240 /* QUSB2PHY_PORT_TUNE1 */
 			 0x1a0 /* QUSB2PHY_PLL_COMMON_STATUS_ONE */
