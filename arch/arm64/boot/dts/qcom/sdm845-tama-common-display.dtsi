@@ -197,6 +197,10 @@ msm_drm.dsi_display0=dsi_panel_somc_tama_cmd:config0";
 	status = "disabled";
 };
 
+&dsi_dual_nt36850_truly_cmd_display {
+	status = "disabled";
+};
+
 &dsi_sim_vid_display {
 	/delete-property/ qcom,dsi-display-active;
 	status = "disabled";
@@ -214,6 +218,10 @@ msm_drm.dsi_display0=dsi_panel_somc_tama_cmd:config0";
 
 &dsi_dual_sim_cmd_display {
 	/delete-property/ qcom,dsi-display-active;
+	status = "disabled";
+};
+
+&dsi_dual_sim_dsc_375_cmd_display {
 	status = "disabled";
 };
 
