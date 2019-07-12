@@ -51,4 +51,10 @@ void destroy_votable(struct votable *votable);
 void lock_votable(struct votable *votable);
 void unlock_votable(struct votable *votable);
 
+#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+ssize_t somc_output_voter_param(struct votable *votable,
+						char *buf, size_t size);
+int somc_get_vote_clients(struct votable *votable, char *clients[]);
+#endif /* QPNP_SMBFG_NEWGEN_EXTENSION */
+
 #endif /* __PMIC_VOTER_H */

@@ -487,6 +487,20 @@ struct fg_dev {
 	bool			use_ima_single_mode;
 	bool			use_dma;
 	bool			qnovo_enable;
+
+#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+	/* Soft Charge */
+	int			batt_aging_level;
+	int			saved_batt_aging_level;
+	char			org_batt_type_str[ORG_BATT_TYPE_SIZE + 1];
+
+	/* FULL/Recharge */
+	bool			recharge_starting;
+	int			recharge_voltage_mv;
+	int			recharge_counter;
+	int			full_counter;
+#endif
+
 	enum fg_version		version;
 	struct completion	soc_update;
 	struct completion	soc_ready;
@@ -599,7 +613,7 @@ extern int fg_lerp(const struct fg_pt *pts, size_t tablesize, s32 input,
 			s32 *output);
 
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
-int fg_get_vbatt_predict(struct fg_chip *chip, int *val);
+int fg_get_vbatt_predict(struct fg_dev *fg, int *val);
 #endif
 
 #endif

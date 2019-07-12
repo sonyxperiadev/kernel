@@ -4605,7 +4605,7 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 		} else if (test_bit(A_VBUS_DROP_DET, &mdwc->inputs)) {
 			dev_dbg(mdwc->dev, "vbus_drop_det\n");
 			dwc3_otg_start_host(mdwc, 0);
-			mdwc->otg_state = OTG_STATE_A_IDLE;
+			mdwc->drd_state = DRD_STATE_HOST_IDLE;
 			mdwc->vbus_retry_count = 0;
 #endif
 		} else {

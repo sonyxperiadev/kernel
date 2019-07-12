@@ -353,13 +353,30 @@ static void *usbpd_ipc_log;
 #define ID_HDR_PRODUCT_AMA	5
 #define ID_HDR_PRODUCT_VPD	6
 
+#ifdef CONFIG_EXTCON_SOMC_EXTENSION
+#define USB_VBUS_WAIT_VOLT	900	/* mV */
+#define USB_VBUS_WAIT_ITVL	5	/* mS */
+#define USB_VBUS_WAIT_TMOUT	200     /* mS */
+#undef ID_HDR_VID
+#undef PROD_VDO_PID
+#define ID_HDR_VID		0x0FCE /* Sony Mobile Communications */
+#define PROD_VDO_PID		0x01F9
+#define ACCEPTABLE_SRC_VOLTAGE_9V 9000
+#endif
+
 static bool check_vsafe0v = true;
 module_param(check_vsafe0v, bool, 0600);
 
 static int min_sink_current = 900;
 module_param(min_sink_current, int, 0600);
 
+#ifdef CONFIG_EXTCON_SOMC_EXTENSION
+static const u32 somc_default_src_caps[] = { 0x3601905A }; /* 5V @ 0.9A */
+static const u32 somc_minimum_src_caps[] = { 0x3601900A }; /* 5V @ 0.1A */
+static u32 default_src_caps[] = { 0x3601905A };	/* VSafe5V @ 0.9A */
+#else
 static const u32 default_src_caps[] = { 0x36019096 };	/* VSafe5V @ 1.5A */
+#endif
 static const u32 default_snk_caps[] = { 0x2601912C };	/* VSafe5V @ 3A */
 
 struct vdm_tx {
@@ -401,6 +418,9 @@ struct usbpd {
 
 	u32			received_pdos[PD_MAX_DATA_OBJ];
 	u16			src_cap_id;
+#ifdef CONFIG_USBPD_SMBFG_NEWGEN_EXTENSION
+	u32			org_received_pdos[7];
+#endif
 	u8			selected_pdo;
 	u8			requested_pdo;
 	u32			rdo;	/* can be either source or sink */
@@ -510,8 +530,8 @@ static void usbpd_ocp_notification(void *ctxt)
 {
 	struct usbpd *pd = (struct usbpd *)ctxt;
 
-	extcon_set_cable_state_(pd->extcon, EXTCON_VBUS_DROP, 1);
-	extcon_set_cable_state_(pd->extcon, EXTCON_VBUS_DROP, 0);
+	extcon_set_state_sync(pd->extcon, EXTCON_VBUS_DROP, 1);
+	extcon_set_state_sync(pd->extcon, EXTCON_VBUS_DROP, 0);
 	pr_info("%s: receive ocp notification\n", __func__);
 }
 
@@ -877,6 +897,28 @@ static int pd_eval_src_caps(struct usbpd *pd)
 	union power_supply_propval val;
 	bool pps_found = false;
 	u32 first_pdo = pd->received_pdos[0];
+#ifdef CONFIG_USBPD_SMBFG_NEWGEN_EXTENSION
+	u32 *pdo = pd->received_pdos;
+	u32 *org_pdo = pd->org_received_pdos;
+
+	for (i = 0; i < ARRAY_SIZE(pd->received_pdos); i++)
+		org_pdo[i] = pdo[i];
+
+	for (i = 1; i < ARRAY_SIZE(pd->received_pdos); i++) {
+		if (PD_SRC_PDO_TYPE(pdo[i]) == PD_SRC_PDO_TYPE_FIXED &&
+				PD_SRC_PDO_FIXED_VOLTAGE(pdo[i]) * 50 <=
+						ACCEPTABLE_SRC_VOLTAGE_9V)
+			/* This PDO is acceptable */
+			;
+		else
+			break;
+	}
+
+	usbpd_dbg(&pd->dev, "Clear PDOs from %d to %d\n",
+				i + 1, (int)ARRAY_SIZE(pd->received_pdos));
+	for (; i < ARRAY_SIZE(pd->received_pdos); i++)
+		pdo[i] = 0;
+#endif
 
 	if (PD_SRC_PDO_TYPE(first_pdo) != PD_SRC_PDO_TYPE_FIXED) {
 		usbpd_err(&pd->dev, "First src_cap invalid! %08x\n", first_pdo);
@@ -1238,13 +1280,17 @@ static void phy_shutdown(struct usbpd *pd)
 	if (pd->vbus_enabled) {
 		regulator_disable(pd->vbus);
 		pd->vbus_enabled = false;
+	}
 
 #ifdef CONFIG_EXTCON_SOMC_EXTENSION
+	if (regulator_is_enabled(pd->vbus)) {
+		usbpd_info(&pd->dev, "turn off VBUS");
+		regulator_disable(pd->vbus);
 		phy_wait_vbus_settled_down(pd,
 				USB_VBUS_WAIT_VOLT, USB_VBUS_WAIT_ITVL,
 				USB_VBUS_WAIT_TMOUT);
-#endif
 	}
+#endif
 }
 
 static enum hrtimer_restart pd_timeout(struct hrtimer *timer)
@@ -1420,6 +1466,10 @@ static void usbpd_set_state(struct usbpd *pd, enum usbpd_state next_state)
 		dual_role_instance_changed(pd->dual_role);
 
 		val.intval = 1; /* Rp-1.5A; SinkTxNG for PD 3.0 */
+#ifdef CONFIG_EXTCON_SOMC_EXTENSION
+		if (!pd->in_explicit_contract)
+			val.intval = 0; /* Rp-Default; */
+#endif
 		power_supply_set_property(pd->usb_psy,
 				POWER_SUPPLY_PROP_TYPEC_SRC_RP, &val);
 
@@ -2244,6 +2294,34 @@ static void handle_vdm_tx(struct usbpd *pd, enum pd_sop_type sop_type)
 	pd->vdm_tx = NULL;
 }
 
+#ifdef CONFIG_EXTCON_SOMC_EXTENSION
+/*
+ * Set minimum src capability.
+ */
+void usbpd_set_min_src_caps(struct usbpd *pd, const bool set)
+{
+	bool change = false;
+
+	if (set && memcmp(default_src_caps, somc_minimum_src_caps,
+			sizeof(default_src_caps))) {
+		memcpy(default_src_caps, somc_minimum_src_caps,
+			sizeof(default_src_caps));
+		change = true;
+	} else if (!set && memcmp(default_src_caps, somc_default_src_caps,
+			sizeof(default_src_caps))) {
+		memcpy(default_src_caps, somc_default_src_caps,
+			sizeof(default_src_caps));
+		change = true;
+	}
+
+	if (change && pd && pd->current_pr == PR_SRC) {
+		usbpd_dbg(&pd->dev, "set ERROR_RECOVERY\n");
+		usbpd_set_state(pd, PE_ERROR_RECOVERY);
+	}
+}
+EXPORT_SYMBOL(usbpd_set_min_src_caps);
+#endif
+
 static void handle_get_src_cap_extended(struct usbpd *pd)
 {
 	int ret;
@@ -2575,6 +2653,10 @@ static void usbpd_sm(struct work_struct *w)
 		pd->selected_pdo = pd->requested_pdo = 0;
 		pd->peer_usb_comm = pd->peer_pr_swap = pd->peer_dr_swap = false;
 		memset(&pd->received_pdos, 0, sizeof(pd->received_pdos));
+#ifdef CONFIG_USBPD_SMBFG_NEWGEN_EXTENSION
+		memset(&pd->org_received_pdos, 0,
+					sizeof(pd->org_received_pdos));
+#endif
 		rx_msg_cleanup(pd);
 
 		power_supply_set_property(pd->usb_psy,
@@ -3652,6 +3734,9 @@ static int psy_changed(struct notifier_block *nb, unsigned long evt, void *ptr)
 		break;
 	case POWER_SUPPLY_TYPEC_SINK_AUDIO_ADAPTER:
 		usbpd_info(&pd->dev, "Type-C Analog Audio Adapter connected\n");
+#ifdef CONFIG_EXTCON_SOMC_EXTENSION
+		kobject_uevent(&pd->dev.kobj, KOBJ_CHANGE);
+#endif
 		break;
 	default:
 		usbpd_warn(&pd->dev, "Unsupported typec mode:%d\n",
@@ -3888,23 +3973,17 @@ static int usbpd_dr_set_property(struct dual_role_phy_instance *dual_role,
 static int usbpd_dr_prop_writeable(struct dual_role_phy_instance *dual_role,
 		enum dual_role_property prop)
 {
-#ifndef CONFIG_EXTCON_SOMC_EXTENSION
 	struct usbpd *pd = dual_role_get_drvdata(dual_role);
-#endif
 
 	switch (prop) {
 	case DUAL_ROLE_PROP_MODE:
 		return 1;
 	case DUAL_ROLE_PROP_DR:
 	case DUAL_ROLE_PROP_PR:
-#ifdef CONFIG_EXTCON_SOMC_EXTENSION
-		return 0;
-#else
 		if (pd)
 			return pd->current_state == PE_SNK_READY ||
 				pd->current_state == PE_SRC_READY;
 		break;
-#endif
 	default:
 		break;
 	}
@@ -3937,6 +4016,10 @@ static int usbpd_uevent(struct device *dev, struct kobj_uevent_env *env)
 					default_src_caps[i]);
 	}
 
+#ifdef CONFIG_EXTCON_SOMC_EXTENSION
+	if (pd->typec_mode == POWER_SUPPLY_TYPEC_SINK_AUDIO_ADAPTER)
+		add_uevent_var(env, "TYPEC_MODE=AAA");
+#endif
 	add_uevent_var(env, "RDO=%08x", pd->rdo);
 	add_uevent_var(env, "CONTRACT=%s", pd->in_explicit_contract ?
 				"explicit" : "implicit");

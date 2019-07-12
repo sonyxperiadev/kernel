@@ -4673,7 +4673,7 @@ void smblib_usb_plugin_hard_reset_locked(struct smb_charger *chg)
 #define PL_DELAY_MS			30000
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
 #define REMOVAL_DELAY_MS			2000
-#define REMOVAL_WAKE_PERIOD		(3 * HZ)
+#define REMOVAL_WAKE_PERIOD			3000
 #endif
 void smblib_usb_plugin_locked(struct smb_charger *chg)
 {
@@ -5952,7 +5952,7 @@ irqreturn_t smblib_handle_dc_plugin(int irq, void *data)
 	usb_present = (bool)(stat & USBIN_PLUGIN_RT_STS_BIT);
 
 	if (!dc_present && !usb_present) {
-		wake_lock_timeout(&chg->charger_removal_wakelock.lock,
+		__pm_wakeup_event(&chg->charger_removal_wakelock.lock,
 							REMOVAL_WAKE_PERIOD);
 		schedule_delayed_work(&chg->charger_removal_work,
 					msecs_to_jiffies(REMOVAL_DELAY_MS));
@@ -7218,8 +7218,8 @@ int smblib_init(struct smb_charger *chg)
 	mutex_init(&chg->smart_charge_lock);
 	mutex_init(&chg->thermal_lock);
 	mutex_init(&chg->legacy_detection_lock);
-	wake_lock_init(&chg->charger_removal_wakelock.lock,
-					WAKE_LOCK_SUSPEND, "unplug_wakelock");
+	wakeup_source_init(
+		&chg->charger_removal_wakelock.lock, "unplug_wakelock");
 	chg->charger_removal_wakelock.enabled = true;
 #endif
 	INIT_WORK(&chg->bms_update_work, bms_update_work);
@@ -7363,7 +7363,7 @@ int smblib_deinit(struct smb_charger *chg)
 		chg->charger_removal_input = NULL;
 	}
 	if (chg->charger_removal_wakelock.enabled) {
-		wake_lock_destroy(&chg->charger_removal_wakelock.lock);
+		wakeup_source_trash(&chg->charger_removal_wakelock.lock);
 		chg->charger_removal_wakelock.enabled = false;
 	}
 #endif
