@@ -206,7 +206,19 @@ static long clk_core_round_rate(struct clk_hw *hw, unsigned long rate,
 	return rate;
 }
 
-static const struct clk_ops clk_ops_core = {
+static struct clk_ops clk_ops_pwrcl_core = {
+	.set_rate = clk_core_set_rate,
+	.round_rate = clk_core_round_rate,
+	.recalc_rate = clk_core_recalc_rate,
+};
+
+static struct clk_ops clk_ops_perfcl_core = {
+	.set_rate = clk_core_set_rate,
+	.round_rate = clk_core_round_rate,
+	.recalc_rate = clk_core_recalc_rate,
+};
+
+static struct clk_ops clk_ops_perfpcl_core = {
 	.set_rate = clk_core_set_rate,
 	.round_rate = clk_core_round_rate,
 	.recalc_rate = clk_core_recalc_rate,
@@ -324,7 +336,7 @@ static struct clk_osm cpu0_pwrcl_clk = {
 		.name = "cpu0_pwrcl_clk",
 		.parent_names = (const char *[]){ "pwrcl_clk" },
 		.num_parents = 1,
-		.ops = &clk_ops_core,
+		.ops = &clk_ops_pwrcl_core,
 	},
 };
 
@@ -336,7 +348,7 @@ static struct clk_osm cpu1_pwrcl_clk = {
 		.name = "cpu1_pwrcl_clk",
 		.parent_names = (const char *[]){ "pwrcl_clk" },
 		.num_parents = 1,
-		.ops = &clk_ops_core,
+		.ops = &clk_ops_pwrcl_core,
 	},
 };
 
@@ -348,7 +360,7 @@ static struct clk_osm cpu2_pwrcl_clk = {
 		.name = "cpu2_pwrcl_clk",
 		.parent_names = (const char *[]){ "pwrcl_clk" },
 		.num_parents = 1,
-		.ops = &clk_ops_core,
+		.ops = &clk_ops_pwrcl_core,
 	},
 };
 
@@ -360,7 +372,7 @@ static struct clk_osm cpu3_pwrcl_clk = {
 		.name = "cpu3_pwrcl_clk",
 		.parent_names = (const char *[]){ "pwrcl_clk" },
 		.num_parents = 1,
-		.ops = &clk_ops_core,
+		.ops = &clk_ops_pwrcl_core,
 	},
 };
 
@@ -372,7 +384,7 @@ static struct clk_osm cpu4_pwrcl_clk = {
 		.name = "cpu4_pwrcl_clk",
 		.parent_names = (const char *[]){ "pwrcl_clk" },
 		.num_parents = 1,
-		.ops = &clk_ops_core,
+		.ops = &clk_ops_pwrcl_core,
 	},
 };
 
@@ -384,7 +396,7 @@ static struct clk_osm cpu5_pwrcl_clk = {
 		.name = "cpu5_pwrcl_clk",
 		.parent_names = (const char *[]){ "pwrcl_clk" },
 		.num_parents = 1,
-		.ops = &clk_ops_core,
+		.ops = &clk_ops_pwrcl_core,
 	},
 };
 
@@ -401,7 +413,7 @@ static struct clk_osm cpu4_perfcl_clk = {
 		.name = "cpu4_perfcl_clk",
 		.parent_names = (const char *[]){ "perfcl_clk" },
 		.num_parents = 1,
-		.ops = &clk_ops_core,
+		.ops = &clk_ops_perfcl_core,
 	},
 };
 
@@ -413,7 +425,7 @@ static struct clk_osm cpu5_perfcl_clk = {
 		.name = "cpu5_perfcl_clk",
 		.parent_names = (const char *[]){ "perfcl_clk" },
 		.num_parents = 1,
-		.ops = &clk_ops_core,
+		.ops = &clk_ops_perfcl_core,
 	},
 };
 
@@ -425,7 +437,7 @@ static struct clk_osm cpu6_perfcl_clk = {
 		.name = "cpu6_perfcl_clk",
 		.parent_names = (const char *[]){ "perfcl_clk" },
 		.num_parents = 1,
-		.ops = &clk_ops_core,
+		.ops = &clk_ops_perfcl_core,
 	},
 };
 
@@ -437,7 +449,7 @@ static struct clk_osm cpu7_perfcl_clk = {
 		.name = "cpu7_perfcl_clk",
 		.parent_names = (const char *[]){ "perfcl_clk" },
 		.num_parents = 1,
-		.ops = &clk_ops_core,
+		.ops = &clk_ops_perfcl_core,
 	},
 };
 
@@ -454,7 +466,7 @@ static struct clk_osm cpu7_perfpcl_clk = {
 		.name = "cpu7_perfpcl_clk",
 		.parent_names = (const char *[]){ "perfpcl_clk" },
 		.num_parents = 1,
-		.ops = &clk_ops_core,
+		.ops = &clk_ops_perfpcl_core,
 	},
 };
 
