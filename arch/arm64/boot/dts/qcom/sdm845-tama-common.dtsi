@@ -267,6 +267,13 @@
 		};
 	};
 
+	somc_water_detection {
+		compatible = "somc,water-detection";
+		dvdt_enable_gpio = <&tlmm 28 0>;
+		dvdt_wrt_det_and = <&tlmm 29 0>;
+		dvdt_wrt_det_or  = <&tlmm 30 0>;
+	};
+
 	/* I2C: QUP5 */
 	i2c@894000 {
 		pinctrl-0 = <&sdm_gpio_85 &sdm_gpio_86>;
@@ -555,10 +562,6 @@
 
 &pmi8998_pdphy {
 	vbus-supply = <&smb2_vbus>;
-
-	dvdt_enable_gpio = <&tlmm 28 0>;
-	dvdt_wrt_det_and = <&tlmm 29 0>;
-	dvdt_wrt_det_or = <&tlmm 30 0>;
 };
 
 &pmi8998_rradc {
