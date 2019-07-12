@@ -2310,8 +2310,14 @@ status_passed:
 
 int somc_panel_init(struct dsi_display *display)
 {
-	somc_panel_color_manager_init(display);
-	somc_panel_fps_manager_init(display);
+	int rc = 0;
 
-	return 0;
+	rc = somc_panel_color_manager_init(display);
+	if (rc)
+		goto end;
+
+	rc = somc_panel_fps_manager_init(display);
+
+end:
+	return rc;
 }
