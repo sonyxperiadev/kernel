@@ -841,6 +841,10 @@ static int icnss_driver_event_server_arrive(void *data)
 
 	ret = wlfw_ind_register_send_sync_msg(penv);
 	if (ret < 0) {
+		if (ret == -EALREADY) {
+			ret = 0;
+			goto qmi_registered;
+		}
 		ignore_assert = true;
 		goto err_power_on;
 	}
@@ -897,6 +901,7 @@ clear_server:
 	icnss_clear_server(penv);
 fail:
 	ICNSS_ASSERT(ignore_assert);
+qmi_registered:
 	return ret;
 }
 
@@ -2634,6 +2639,15 @@ static void icnss_allow_recursive_recovery(struct device *dev)
 	icnss_pr_info("Recursive recovery allowed for WLAN\n");
 }
 
+static void icnss_disallow_recursive_recovery(struct device *dev)
+{
+	struct icnss_priv *priv = dev_get_drvdata(dev);
+
+	priv->allow_recursive_recovery = false;
+
+	icnss_pr_info("Recursive recovery disallowed for WLAN\n");
+}
+
 static ssize_t icnss_fw_debug_write(struct file *fp,
 				    const char __user *user_buf,
 				    size_t count, loff_t *off)
@@ -2684,6 +2698,9 @@ static ssize_t icnss_fw_debug_write(struct file *fp,
 			break;
 		case 4:
 			icnss_allow_recursive_recovery(&priv->pdev->dev);
+			break;
+		case 5:
+			icnss_disallow_recursive_recovery(&priv->pdev->dev);
 			break;
 		default:
 			return -EINVAL;
@@ -3296,6 +3313,8 @@ static int icnss_probe(struct platform_device *pdev)
 	priv->pdev = pdev;
 
 	priv->vreg_info = icnss_vreg_info;
+
+	icnss_allow_recursive_recovery(dev);
 
 	for (i = 0; i < ICNSS_VREG_INFO_SIZE; i++) {
 		ret = icnss_get_vreg_info(dev, &priv->vreg_info[i]);
