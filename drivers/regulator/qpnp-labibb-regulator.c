@@ -4865,6 +4865,15 @@ static int qpnp_lab_register_irq(struct device_node *child,
 	else
 		labibb->lab_vreg.lab_sc_irq = rc;
 
+#ifdef CONFIG_SOMC_LCD_OCP_ENABLED
+	labibb->lab_vreg_irq =
+			of_irq_get_byname(child, "lab_vreg_not_ok_interrupt");
+	if (!labibb->lab_vreg_irq) {
+		pr_err("Invalid lab_vreg_not_ok_interrupt irq\n");
+		return -EINVAL;
+	}
+#endif /* CONFIG_SOMC_LCD_OCP_ENABLED */
+
 	return 0;
 }
 
@@ -4879,6 +4888,15 @@ static int qpnp_ibb_register_irq(struct device_node *child,
 		pr_debug("Unable to get ibb-sc-err, rc = %d\n", rc);
 	else
 		labibb->ibb_vreg.ibb_sc_irq = rc;
+
+#ifdef CONFIG_SOMC_LCD_OCP_ENABLED
+       labibb->ibb_vreg_irq =
+                       of_irq_get_byname(child, "ibb_vreg_not_ok_interrupt");
+       if (!labibb->ibb_vreg_irq) {
+               pr_err("Invalid ibb_vreg_not_ok_interrupt irq\n");
+               return -EINVAL;
+       }
+#endif /* CONFIG_SOMC_LCD_OCP_ENABLED */
 
 	return 0;
 }
