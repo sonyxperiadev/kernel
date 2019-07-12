@@ -223,7 +223,7 @@ static int clk_cpu_set_rate(struct clk_hw *hw, unsigned long rate,
 	struct clk_osm *c = to_clk_osm(hw);
 	struct clk_hw *p_hw = clk_hw_get_parent(hw);
 	struct clk_osm *parent = to_clk_osm(p_hw);
-	int rc, core_num, index = 0;
+	int core_num, index = 0;
 
 	if (!c || !parent)
 		return -EINVAL;
@@ -1302,6 +1302,8 @@ static int clk_cpu_osm_request_mx_supply(struct device *dev)
 
 static void clk_cpu_osm_driver_sdm845_fixup(void)
 {
+	int i;
+
 	/*
 	 * Fixup for SDM845: At the cost of doing some useless assignments
 	 * just configure the entire thing, so that we're more likely to
@@ -1359,6 +1361,13 @@ static void clk_cpu_osm_driver_sdm845_fixup(void)
 	osm_clks_init[0].flags = CLK_CHILD_NO_RATE_PROP;
 	osm_clks_init[0].vdd_class = &vdd_l3_mx_ao;	/* L3 */
 	osm_clks_init[1].vdd_class = &vdd_pwrcl_mx_ao;	/* PWRCL */
+
+	/* Propagate the cpu clocks rate to the parent */
+	for (i = 0; i < ARRAY_SIZE(osm_pwrcl_cpuclks_init); i++)
+		osm_pwrcl_cpuclks_init[i].flags = CLK_SET_RATE_PARENT;
+
+	for (i = 0; i < ARRAY_SIZE(osm_perfcl_cpuclks_init); i++)
+		osm_perfcl_cpuclks_init[i].flags = CLK_SET_RATE_PARENT;
 }
 
 static void clk_cpu_osm_driver_sm6150_fixup(void)
