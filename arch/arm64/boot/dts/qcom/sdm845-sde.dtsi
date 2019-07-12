@@ -59,6 +59,8 @@
 		qcom,sde-mixer-size = <0x320>;
 		qcom,sde-mixer-display-pref = "primary", "primary", "none",
 					      "none", "none", "none";
+		qcom,sde-mixer-cwb-pref = "none", "none", "cwb",
+					      "none", "none", "cwb";
 
 		qcom,sde-dspp-top-off = <0x1300>;
 		qcom,sde-dspp-top-size = <0xc>;
@@ -113,6 +115,10 @@
 		qcom,sde-smart-dma-rev = "smart_dma_v2";
 
 		qcom,sde-mixer-pair-mask = <2 1 6 0 0 3>;
+		qcom,sde-max-per-pipe-bw-kbps = <4500000 4500000
+						 4500000 4500000
+						 4500000 4500000
+						 4500000 4500000>;
 
 		qcom,sde-mixer-blend-op-off = <0x20 0x38 0x50 0x68 0x80 0x98
 						0xb0 0xc8 0xe0 0xf8 0x110>;
