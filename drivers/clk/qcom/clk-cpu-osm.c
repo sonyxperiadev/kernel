@@ -235,11 +235,6 @@ static int clk_cpu_set_rate(struct clk_hw *hw, unsigned long rate,
 		return -EINVAL;
 	}
 
-	/* Manually propagate the rate to the parent */
-	rc = clk_set_rate(p_hw->clk, rate);
-	if (rc)
-		return rc;
-
 	core_num = parent->per_core_dcvs ? c->core_num : 0;
 	clk_osm_write_reg(parent, index,
 				DCVS_PERF_STATE_DESIRED_REG(core_num));
@@ -467,71 +462,38 @@ static struct clk_osm pwrcl_clk = {
 	.hw.init = &osm_clks_init[1],
 };
 
-static struct clk_osm cpu0_pwrcl_clk = {
-	.core_num = 0,
-	.total_cycle_counter = 0,
-	.prev_cycle_counter = 0,
-	.hw.init = &(struct clk_init_data){
+static struct clk_init_data osm_pwrcl_cpuclks_init[] = {
+	[0] = {
 		.name = "cpu0_pwrcl_clk",
 		.parent_names = (const char *[]){ "pwrcl_clk" },
 		.num_parents = 1,
 		.ops = &clk_ops_pwrcl_core,
 	},
-};
-
-static struct clk_osm cpu1_pwrcl_clk = {
-	.core_num = 1,
-	.total_cycle_counter = 0,
-	.prev_cycle_counter = 0,
-	.hw.init = &(struct clk_init_data){
+	[1] = {
 		.name = "cpu1_pwrcl_clk",
 		.parent_names = (const char *[]){ "pwrcl_clk" },
 		.num_parents = 1,
 		.ops = &clk_ops_pwrcl_core,
 	},
-};
-
-static struct clk_osm cpu2_pwrcl_clk = {
-	.core_num = 2,
-	.total_cycle_counter = 0,
-	.prev_cycle_counter = 0,
-	.hw.init = &(struct clk_init_data){
+	[2] = {
 		.name = "cpu2_pwrcl_clk",
 		.parent_names = (const char *[]){ "pwrcl_clk" },
 		.num_parents = 1,
 		.ops = &clk_ops_pwrcl_core,
 	},
-};
-
-static struct clk_osm cpu3_pwrcl_clk = {
-	.core_num = 3,
-	.total_cycle_counter = 0,
-	.prev_cycle_counter = 0,
-	.hw.init = &(struct clk_init_data){
+	[3] = {
 		.name = "cpu3_pwrcl_clk",
 		.parent_names = (const char *[]){ "pwrcl_clk" },
 		.num_parents = 1,
 		.ops = &clk_ops_pwrcl_core,
 	},
-};
-
-static struct clk_osm cpu4_pwrcl_clk = {
-	.core_num = 4,
-	.total_cycle_counter = 0,
-	.prev_cycle_counter = 0,
-	.hw.init = &(struct clk_init_data){
+	[4] = {
 		.name = "cpu4_pwrcl_clk",
 		.parent_names = (const char *[]){ "pwrcl_clk" },
 		.num_parents = 1,
 		.ops = &clk_ops_pwrcl_core,
 	},
-};
-
-static struct clk_osm cpu5_pwrcl_clk = {
-	.core_num = 5,
-	.total_cycle_counter = 0,
-	.prev_cycle_counter = 0,
-	.hw.init = &(struct clk_init_data){
+	[5] = {
 		.name = "cpu5_pwrcl_clk",
 		.parent_names = (const char *[]){ "pwrcl_clk" },
 		.num_parents = 1,
@@ -539,57 +501,106 @@ static struct clk_osm cpu5_pwrcl_clk = {
 	},
 };
 
+static struct clk_osm cpu0_pwrcl_clk = {
+	.core_num = 0,
+	.total_cycle_counter = 0,
+	.prev_cycle_counter = 0,
+	.hw.init = &osm_pwrcl_cpuclks_init[0],
+};
+
+static struct clk_osm cpu1_pwrcl_clk = {
+	.core_num = 1,
+	.total_cycle_counter = 0,
+	.prev_cycle_counter = 0,
+	.hw.init = &osm_pwrcl_cpuclks_init[1],
+};
+
+static struct clk_osm cpu2_pwrcl_clk = {
+	.core_num = 2,
+	.total_cycle_counter = 0,
+	.prev_cycle_counter = 0,
+	.hw.init = &osm_pwrcl_cpuclks_init[2],
+};
+
+static struct clk_osm cpu3_pwrcl_clk = {
+	.core_num = 3,
+	.total_cycle_counter = 0,
+	.prev_cycle_counter = 0,
+	.hw.init = &osm_pwrcl_cpuclks_init[3],
+};
+
+static struct clk_osm cpu4_pwrcl_clk = {
+	.core_num = 4,
+	.total_cycle_counter = 0,
+	.prev_cycle_counter = 0,
+	.hw.init = &osm_pwrcl_cpuclks_init[4],
+};
+
+static struct clk_osm cpu5_pwrcl_clk = {
+	.core_num = 5,
+	.total_cycle_counter = 0,
+	.prev_cycle_counter = 0,
+	.hw.init = &osm_pwrcl_cpuclks_init[5],
+};
+
 static struct clk_osm perfcl_clk = {
 	.cluster_num = 2,
 	.hw.init = &osm_clks_init[2],
+};
+
+static struct clk_init_data osm_perfcl_cpuclks_init[] = {
+	[0] = {
+		.name = "cpu4_perfcl_clk",
+		.parent_names = (const char *[]){ "perfcl_clk" },
+		.num_parents = 1,
+		.ops = &clk_ops_perfcl_core,
+	},
+	[1] = {
+		.name = "cpu5_perfcl_clk",
+		.parent_names = (const char *[]){ "perfcl_clk" },
+		.num_parents = 1,
+		.ops = &clk_ops_perfcl_core,
+	},
+	[2] = {
+		.name = "cpu6_perfcl_clk",
+		.parent_names = (const char *[]){ "perfcl_clk" },
+		.num_parents = 1,
+		.ops = &clk_ops_perfcl_core,
+	},
+	[3] = {
+		.name = "cpu7_perfcl_clk",
+		.parent_names = (const char *[]){ "perfcl_clk" },
+		.num_parents = 1,
+		.ops = &clk_ops_perfcl_core,
+	},
 };
 
 static struct clk_osm cpu4_perfcl_clk = {
 	.core_num = 0,
 	.total_cycle_counter = 0,
 	.prev_cycle_counter = 0,
-	.hw.init = &(struct clk_init_data){
-		.name = "cpu4_perfcl_clk",
-		.parent_names = (const char *[]){ "perfcl_clk" },
-		.num_parents = 1,
-		.ops = &clk_ops_perfcl_core,
-	},
+	.hw.init = &osm_perfcl_cpuclks_init[0],
 };
 
 static struct clk_osm cpu5_perfcl_clk = {
 	.core_num = 1,
 	.total_cycle_counter = 0,
 	.prev_cycle_counter = 0,
-	.hw.init = &(struct clk_init_data){
-		.name = "cpu5_perfcl_clk",
-		.parent_names = (const char *[]){ "perfcl_clk" },
-		.num_parents = 1,
-		.ops = &clk_ops_perfcl_core,
-	},
+	.hw.init = &osm_perfcl_cpuclks_init[1],
 };
 
 static struct clk_osm cpu6_perfcl_clk = {
 	.core_num = 2,
 	.total_cycle_counter = 0,
 	.prev_cycle_counter = 0,
-	.hw.init = &(struct clk_init_data){
-		.name = "cpu6_perfcl_clk",
-		.parent_names = (const char *[]){ "perfcl_clk" },
-		.num_parents = 1,
-		.ops = &clk_ops_perfcl_core,
-	},
+	.hw.init = &osm_perfcl_cpuclks_init[2],
 };
 
 static struct clk_osm cpu7_perfcl_clk = {
 	.core_num = 3,
 	.total_cycle_counter = 0,
 	.prev_cycle_counter = 0,
-	.hw.init = &(struct clk_init_data){
-		.name = "cpu7_perfcl_clk",
-		.parent_names = (const char *[]){ "perfcl_clk" },
-		.num_parents = 1,
-		.ops = &clk_ops_perfcl_core,
-	},
+	.hw.init = &osm_perfcl_cpuclks_init[3],
 };
 
 static struct clk_osm perfpcl_clk = {
