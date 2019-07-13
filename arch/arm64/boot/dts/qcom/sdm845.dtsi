@@ -1078,14 +1078,19 @@
 		operating-points-v2 = <&ddr_bw_opp_table>;
 	};
 
+
+	keepalive_opp_table: keepalive-opp-table {
+		compatible = "operating-points-v2";
+		opp-1 { opp-hz = /bits/ 64 < 1 >; };
+	};
+
 	snoc_cnoc_keepalive: qcom,snoc_cnoc_keepalive {
 		compatible = "qcom,devbw";
 		governor = "powersave";
 		qcom,src-dst-ports = <139 627>;
 		qcom,active-only;
 		status = "ok";
-		qcom,bw-tbl =
-			< 1 >;
+		operating-points-v2 = <&keepalive_opp_table>;
 	};
 
 	devfreq_memlat_0: qcom,cpu0-memlat-mon {
