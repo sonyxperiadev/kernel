@@ -43,5 +43,13 @@
 };
 
 &usb0 {
-	extcon = <&pmi8998_pdphy>, <&pmi8998_pdphy>, <&eud>;
+	extcon = <&pmi8998_pdphy>, <&pmi8998_charger>, <&eud>;
+};
+
+&usb_qmp_dp_phy {
+	extcon = <&pmi8998_pdphy>;
+};
+
+&sde_dp {
+	extcon = <&pmi8998_pdphy>;
 };
