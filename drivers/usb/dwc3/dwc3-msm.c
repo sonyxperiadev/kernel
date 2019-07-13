@@ -226,6 +226,9 @@ struct extcon_nb {
 	struct notifier_block	vbus_nb;
 	struct notifier_block	id_nb;
 	struct notifier_block	blocking_sync_nb;
+#ifdef CONFIG_EXTCON_SOMC_EXTENSION
+	struct notifier_block	vbus_drop_nb;
+#endif
 };
 
 /* Input bits to state machine (mdwc->inputs) */
@@ -307,14 +310,8 @@ struct dwc3_msm {
 	bool			hc_died;
 
 	struct extcon_nb	*extcon;
-#ifdef CONFIG_EXTCON_SOMC_EXTENSION
-	struct extcon_dev	*extcon_vbus_drop;
-#endif
 	int			ext_idx;
 	struct notifier_block	host_nb;
-#ifdef CONFIG_EXTCON_SOMC_EXTENSION
-	struct notifier_block	vbus_drop_nb;
-#endif
 
 	atomic_t                in_p3;
 	unsigned int		lpm_to_suspend_delay;
@@ -3114,18 +3111,19 @@ static void check_for_sdp_connection(struct work_struct *w)
 static int dwc3_msm_vbus_drop_notifier(struct notifier_block *nb,
 	unsigned long event, void *ptr)
 {
-	struct dwc3_msm *mdwc = container_of(nb, struct dwc3_msm, vbus_drop_nb);
 	struct extcon_dev *edev = ptr;
+	struct extcon_nb *enb = container_of(nb, struct extcon_nb, vbus_nb);
+	struct dwc3_msm *mdwc = enb->mdwc;
 
 	if (!edev) {
-		dev_err(mdwc->dev, "%s: edev null\n", __func__);
-		goto done;
+		dev_err(mdwc->dev, "edev null for USB-DropT\n");
+		return NOTIFY_DONE;
 	}
 
 	set_bit(A_VBUS_DROP_DET, &mdwc->inputs);
-	pr_info("%s: receive ocp notification\n", __func__);
+	dev_info(mdwc->dev, "received USB-DropT ocp notification\n");
 	schedule_delayed_work(&mdwc->sm_work, 0);
-done:
+
 	return NOTIFY_DONE;
 }
 #endif
@@ -3165,6 +3163,9 @@ static int dwc3_msm_extcon_register(struct dwc3_msm *mdwc)
 	struct extcon_dev *edev;
 	int idx, extcon_cnt, ret = 0;
 	bool check_vbus_state, check_id_state, phandle_found = false;
+#ifdef CONFIG_EXTCON_SOMC_EXTENSION
+	bool dropt_registered = false;
+#endif /* CONFIG_EXTCON_SOMC_EXTENSION */
 
 	extcon_cnt = of_count_phandle_with_args(node, "extcon", NULL);
 	if (extcon_cnt < 0) {
@@ -3218,6 +3219,23 @@ static int dwc3_msm_extcon_register(struct dwc3_msm *mdwc)
 				extcon_get_state(edev, EXTCON_USB_HOST))
 			dwc3_msm_id_notifier(&mdwc->extcon[idx].id_nb,
 						true, edev);
+
+#ifdef CONFIG_EXTCON_SOMC_EXTENSION
+		/*
+		 * This can be only registered with the PDPHY and there is
+		 * no way to actually get the name of the current extcon_dev
+		 * since the struct definition is private and not exposed,
+		 * so, try to register DropT at every iteration.
+		 * It will succeed only once.
+		 */
+		if (!dropt_registered) {
+			mdwc->extcon[idx].vbus_drop_nb.notifier_call =
+						dwc3_msm_vbus_drop_notifier;
+			ret = extcon_register_notifier(edev, EXTCON_VBUS_DROP,
+					&mdwc->extcon[idx].vbus_drop_nb);
+			dropt_registered = true;
+		}
+#endif /* CONFIG_EXTCON_SOMC_EXTENSION */
 	}
 
 	if (!phandle_found) {
@@ -3226,14 +3244,17 @@ static int dwc3_msm_extcon_register(struct dwc3_msm *mdwc)
 	}
 
 #ifdef CONFIG_EXTCON_SOMC_EXTENSION
-		mdwc->extcon_vbus_drop = edev;
-		mdwc->vbus_drop_nb.notifier_call = dwc3_msm_vbus_drop_notifier;
-		ret = extcon_register_notifier(edev, EXTCON_VBUS_DROP,
-				&mdwc->vbus_drop_nb);
-		if (ret < 0) {
-			dev_err(mdwc->dev, "failed to register notifier for USB-DropT\n");
-			return -EINVAL;
-		}
+	/*
+	 * If we couldn't register it then fail USB probing: we don't want
+	 * to run our device without overcurrent protection in place.
+	 * This may panic the kernel later... a way to force anyone to
+	 * fix this, in case anything goes wrong.
+	 */
+	if (!dropt_registered) {
+		dev_err(mdwc->dev, "failed to register notifier "
+				   "for USB-DropT\n");
+		return -EINVAL;
+	}
 #endif /* CONFIG_EXTCON_SOMC_EXTENSION */
 
 	return 0;
