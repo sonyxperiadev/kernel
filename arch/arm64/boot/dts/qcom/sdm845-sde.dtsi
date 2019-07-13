@@ -27,8 +27,6 @@
 		clock-rate = <0 0 0 0 300000000 19200000 0>;
 		clock-max-rate = <0 0 0 0 412500000 19200000 0>;
 
-		sde-vdd-supply = <&mdss_core_gdsc>;
-
 		/* interrupt config */
 		interrupts = <GIC_SPI 83 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-controller;
@@ -227,20 +225,6 @@
 			qcom,sde-dspp-gc = <0x17c0 0x00010008>;
 			qcom,sde-dspp-hist = <0x800 0x00010007>;
 			qcom,sde-dspp-dither = <0x82c 0x00010007>;
-		};
-
-		qcom,platform-supply-entries {
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			qcom,platform-supply-entry@0 {
-				reg = <0>;
-				qcom,supply-name = "sde-vdd";
-				qcom,supply-min-voltage = <0>;
-				qcom,supply-max-voltage = <0>;
-				qcom,supply-enable-load = <0>;
-				qcom,supply-disable-load = <0>;
-			};
 		};
 
 		smmu_sde_sec: qcom,smmu_sde_sec_cb {
@@ -488,7 +472,7 @@
 		cell-index = <0>;
 		reg = <0xae94400 0x7c0>;
 		reg-names = "dsi_phy";
-		gdsc-supply = <&mdss_core_gdsc>;
+
 		vdda-0p9-supply = <&pm8998_l1>;
 		qcom,platform-strength-ctrl = [55 03
 						55 03
@@ -521,7 +505,7 @@
 		cell-index = <1>;
 		reg = <0xae96400 0x7c0>;
 		reg-names = "dsi_phy";
-		gdsc-supply = <&mdss_core_gdsc>;
+
 		vdda-0p9-supply = <&pm8998_l1>;
 		qcom,platform-strength-ctrl = [55 03
 						55 03
@@ -552,7 +536,6 @@
 		cell-index = <0>;
 		compatible = "qcom,dp-display";
 
-		gdsc-supply = <&mdss_core_gdsc>;
 		vdda-1p2-supply = <&pm8998_l26>;
 		vdda-0p9-supply = <&pm8998_l1>;
 
