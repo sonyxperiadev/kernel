@@ -177,6 +177,11 @@
 			<11 0xfc00>,
 			<12 0xf800>,
 			<0 0xf000>;
+		qcom,sde-safe-lut-macrotile-qseed =
+			<10 0xfe00>,
+			<11 0xfc00>,
+			<12 0xf800>,
+			<0 0xf000>;
 		qcom,sde-safe-lut-nrt =
 			<0 0xffff>;
 		qcom,sde-safe-lut-cwb =
@@ -201,6 +206,13 @@
 			<13 0x00002233 0x44556677>,
 			<14 0x00012233 0x44556677>,
 			<0 0x00112233 0x44556677>;
+		qcom,sde-qos-lut-macrotile-qseed =
+			<10 0x00000003 0x66777777>,
+			<11 0x00000033 0x66777777>,
+			<12 0x00000233 0x66777777>,
+			<13 0x00002233 0x66777777>,
+			<14 0x00012233 0x66777777>,
+			<0 0x00112233 0x66777777>;
 		qcom,sde-qos-lut-nrt =
 			<0 0x00000000 0x00000000>;
 		qcom,sde-qos-lut-cwb =
