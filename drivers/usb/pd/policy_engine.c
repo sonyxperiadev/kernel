@@ -1257,7 +1257,7 @@ static void phy_wait_vbus_settled_down(struct usbpd *pd, int mv,
 		msleep(itvl);
 		rc = power_supply_get_property(pd->usb_psy,
 				POWER_SUPPLY_PROP_VOLTAGE_NOW, &pval);
-		if (IS_ERR_VALUE(rc))
+		if (IS_ERR_VALUE((long)rc))
 			goto waitremain;
 		usbin = pval.intval / 1000;
 		cnt++;
