@@ -205,7 +205,7 @@
 			watchdog_delay_ms = <3000>;
 			charger_supported = <0>;
 			pen_supported = <0>;
-			glove_supported = <1>;
+			glove_supported = <0>;
 			cover_supported = <1>;
 			touch_pressure_enabled = <1>;
 			touch_size_enabled = <0>;
