@@ -838,6 +838,7 @@ int32_t cam_csiphy_core_cfg(void *phy_dev,
 		break;
 	case CAM_RELEASE_DEV: {
 		struct cam_release_dev_cmd release;
+		int32_t offset;
 
 		if (!csiphy_dev->acquire_count) {
 			CAM_ERR(CAM_CSIPHY, "No valid devices to release");
@@ -878,6 +879,15 @@ int32_t cam_csiphy_core_cfg(void *phy_dev,
 			csiphy_dev->csiphy_info.lane_mask = 0;
 			csiphy_dev->csiphy_info.lane_cnt = 0;
 			csiphy_dev->csiphy_info.combo_mode = 0;
+		}
+
+		/* reset secure mode */
+		offset = cam_csiphy_get_instance_offset(csiphy_dev,
+		release.dev_handle);
+		if (csiphy_dev->csiphy_info.secure_mode[offset] ==
+			CAM_SECURE_MODE_SECURE) {
+			csiphy_dev->csiphy_info.secure_mode[offset] =
+				CAM_SECURE_MODE_NON_SECURE;
 		}
 	}
 		break;
