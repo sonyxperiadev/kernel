@@ -2765,18 +2765,18 @@ static int init_free_nid_cache(struct f2fs_sb_info *sbi)
 		return -ENOMEM;
 
 	for (i = 0; i < nm_i->nat_blocks; i++) {
-		nm_i->free_nid_bitmap[i] = kvzalloc(sbi,
+		nm_i->free_nid_bitmap[i] = f2fs_kvzalloc(sbi,
 				NAT_ENTRY_BITMAP_SIZE_ALIGNED, GFP_KERNEL);
 		if (!nm_i->free_nid_bitmap)
 			return -ENOMEM;
 	}
 
-	nm_i->nat_block_bitmap = kvzalloc(sbi, nm_i->nat_blocks / 8,
+	nm_i->nat_block_bitmap = f2fs_kvzalloc(sbi, nm_i->nat_blocks / 8,
 								GFP_KERNEL);
 	if (!nm_i->nat_block_bitmap)
 		return -ENOMEM;
 
-	nm_i->free_nid_count = kvzalloc(sbi, nm_i->nat_blocks *
+	nm_i->free_nid_count = f2fs_kvzalloc(sbi, nm_i->nat_blocks *
 					sizeof(unsigned short), GFP_KERNEL);
 	if (!nm_i->free_nid_count)
 		return -ENOMEM;
