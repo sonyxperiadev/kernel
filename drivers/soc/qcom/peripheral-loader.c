@@ -782,9 +782,9 @@ static int pil_alloc_region(struct pil_priv *priv, phys_addr_t min_addr,
 		return 0;
 	}
 
-	if (align >= SZ_4M)
+	if (align > SZ_4M)
 		aligned_size = ALIGN(size, SZ_4M);
-	else if (align >= SZ_1M)
+	else if (align > SZ_1M)
 		aligned_size = ALIGN(size, SZ_1M);
 	else
 		aligned_size = ALIGN(size, SZ_4K);

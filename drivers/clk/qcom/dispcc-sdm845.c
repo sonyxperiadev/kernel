@@ -1105,6 +1105,9 @@ static int disp_cc_sdm845_fixup(struct platform_device *pdev,
 		disp_cc_sdm845_fixup_sdm845v2(regmap);
 	else if (!strcmp(compat, "qcom,dispcc-sdm670"))
 		disp_cc_sdm845_fixup_sdm670(regmap);
+	else
+		clk_fabia_pll_configure(&disp_cc_pll0, regmap,
+					&disp_cc_pll0_config);
 
 	return 0;
 }
@@ -1128,14 +1131,12 @@ static int disp_cc_sdm845_probe(struct platform_device *pdev)
 		return PTR_ERR(vdd_cx.regulator[0]);
 	}
 
-	clk_fabia_pll_configure(&disp_cc_pll0, regmap, &disp_cc_pll0_config);
-
-	/* Enable clock gating for DSI and MDP clocks */
-	regmap_update_bits(regmap, DISP_CC_MISC_CMD, 0x10, 0x10);
-
 	ret = disp_cc_sdm845_fixup(pdev, regmap);
 	if (ret)
 		return ret;
+
+	/* Enable clock gating for DSI and MDP clocks */
+	regmap_update_bits(regmap, DISP_CC_MISC_CMD, 0x10, 0x10);
 
 	ret = qcom_cc_really_probe(pdev, &disp_cc_sdm845_desc, regmap);
 	if (ret) {

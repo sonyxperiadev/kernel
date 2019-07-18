@@ -777,11 +777,11 @@ static struct clk_debug_mux gcc_debug_mux = {
 			0x4, 0x3F, 0, 0x7, 0, 1, 0xA4C, 0xA50, 0xA58 },
 		{ "video_cc_venus_ctl_core_clk", 0x48, 4, VIDEO_CC,
 			0x1, 0x3F, 0, 0x7, 0, 1, 0xA4C, 0xA50, 0xA58 },
-		{ "l3_clk", 0xD6, 4, CPU,
+		{ "l3_clk", 0xD6, 4, CPU_CC,
 			0x46, 0x7F, 4, 0xf, 11, 1, 0x0, 0x0, U32_MAX, 16 },
-		{ "pwrcl_clk", 0xD6, 4, CPU,
+		{ "pwrcl_clk", 0xD6, 4, CPU_CC,
 			0x44, 0x7F, 4, 0xf, 11, 1, 0x0, 0x0, U32_MAX, 16 },
-		{ "perfcl_clk", 0xD6, 4, CPU,
+		{ "perfcl_clk", 0xD6, 4, CPU_CC,
 			0x45, 0x7F, 4, 0xf, 11, 1, 0x0, 0x0, U32_MAX, 16 },
 	),
 	.hw.init = &(struct clk_init_data){
@@ -880,12 +880,12 @@ static int clk_debug_845_probe(struct platform_device *pdev)
 	}
 
 	if (of_get_property(pdev->dev.of_node, "qcom,cpucc", NULL)) {
-		gcc_debug_mux.regmap[CPU] =
+		gcc_debug_mux.regmap[CPU_CC] =
 			syscon_regmap_lookup_by_phandle(pdev->dev.of_node,
 					"qcom,cpucc");
-		if (IS_ERR(gcc_debug_mux.regmap[CPU])) {
+		if (IS_ERR(gcc_debug_mux.regmap[CPU_CC])) {
 			pr_err("Failed to map qcom,cpucc\n");
-			return PTR_ERR(gcc_debug_mux.regmap[CPU]);
+			return PTR_ERR(gcc_debug_mux.regmap[CPU_CC]);
 		}
 	}
 

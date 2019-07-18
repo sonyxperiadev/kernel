@@ -67,7 +67,7 @@ static int adc_panel_detect(struct dsi_display *display,
 	pr_info("%s: Found panel ADC: %d\n", __func__, adc_uv);
 
 	count = of_count_phandle_with_args(this, "somc,dsi-panel-list",  NULL);
-	pr_debug("Found %d panels in DT!\n", count);
+	pr_info("Found %d panels in DT!\n", count);
 
 	for (i = 0; i < count; i++) {
 		next = of_parse_phandle(this, "somc,dsi-panel-list", i);

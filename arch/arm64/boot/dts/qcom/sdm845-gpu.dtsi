@@ -26,17 +26,17 @@
 
 	gpu_bw_opp_table: gpu-bw-opp-table {
 		compatible = "operating-points-v2";
-		BW_OPP_ENTRY( 100, 4), /* 381 MB/s */
-		BW_OPP_ENTRY( 150, 4), /* 572 MB/s */
-		BW_OPP_ENTRY( 200, 4), /* 762 MB/s */
-		BW_OPP_ENTRY( 300, 4), /* 1144 MB/s */
-		BW_OPP_ENTRY( 451, 4), /* 1720 MB/s */
-		BW_OPP_ENTRY( 547, 4), /* 2086 MB/s */
-		BW_OPP_ENTRY( 681, 4), /* 2597 MB/s */
-		BW_OPP_ENTRY( 768, 4), /* 2929 MB/s */
-		BW_OPP_ENTRY(1017, 4), /* 3879 MB/s */
-		BW_OPP_ENTRY(1296, 4), /* 4943 MB/s */
-		BW_OPP_ENTRY(1555, 4), /* 5931 MB/s */
+		BW_OPP_ENTRY( 100, 4); /* 381 MB/s */
+		BW_OPP_ENTRY( 150, 4); /* 572 MB/s */
+		BW_OPP_ENTRY( 200, 4); /* 762 MB/s */
+		BW_OPP_ENTRY( 300, 4); /* 1144 MB/s */
+		BW_OPP_ENTRY( 451, 4); /* 1720 MB/s */
+		BW_OPP_ENTRY( 547, 4); /* 2086 MB/s */
+		BW_OPP_ENTRY( 681, 4); /* 2597 MB/s */
+		BW_OPP_ENTRY( 768, 4); /* 2929 MB/s */
+		BW_OPP_ENTRY(1017, 4); /* 3879 MB/s */
+		BW_OPP_ENTRY(1296, 4); /* 4943 MB/s */
+		BW_OPP_ENTRY(1555, 4); /* 5931 MB/s */
 		BW_OPP_ENTRY(1804, 4); /* 6881 MB/s */
 	};
 
@@ -52,7 +52,7 @@
 		compatible = "qcom,kgsl-3d0", "qcom,kgsl-3d";
 		status = "ok";
 		reg = <0x5000000 0x40000>, <0x5061000 0x800>;
-		reg-names = "kgsl_3d0_reg_memory", "kgsl_3d0_cx_dbgc_memory";
+		reg-names = "kgsl_3d0_reg_memory", "cx_dbgc";
 		interrupts = <0 300 0>;
 		interrupt-names = "kgsl_3d0_irq";
 		qcom,id = <0>;

@@ -15,6 +15,11 @@
 #include "msm-wsa881x.dtsi"
 #include <dt-bindings/clock/qcom,audio-ext-clk.h>
 
+/delete-node/ &wsa881x_0211;
+/delete-node/ &wsa881x_0212;
+/delete-node/ &wsa881x_0213;
+/delete-node/ &wsa881x_0214;
+
 &snd_934x {
 	qcom,audio-routing =
 		"AIF4 VI", "MCLK",
@@ -64,8 +69,8 @@
 	pinctrl-1 = <&wcd_usbc_analog_en2_idle>;
 
 	qcom,wsa-max-devs = <2>;
-	qcom,wsa-devs = <&wsa881x_0211>, <&wsa881x_0212>,
-			<&wsa881x_0213>, <&wsa881x_0214>;
+	qcom,wsa-devs = <&wsa881x_70211>, <&wsa881x_70212>,
+			<&wsa881x_70213>, <&wsa881x_70214>;
 	qcom,wsa-aux-dev-prefix = "SpkrLeft", "SpkrRight",
 				  "SpkrLeft", "SpkrRight";
 };
@@ -120,6 +125,8 @@
 };
 
 &slim_aud {
+	/delete-node/ pahu_codec;
+
 	wcd934x_cdc: tavil_codec {
 		compatible = "qcom,tavil-slim-pgd";
 		elemental-addr = [00 01 50 02 17 02];

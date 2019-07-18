@@ -26,6 +26,7 @@
 #include <dt-bindings/thermal/thermal.h>
 #include <dt-bindings/msm/msm-bus-ids.h>
 #include <dt-bindings/soc/qcom,dcc_v2.h>
+#include <dt-bindings/iio/qcom,spmi-vadc.h>
 
 #define MHZ_TO_MBPS(mhz, w) ((mhz * 1000000 * w) / (1024 * 1024))
 #define BW_OPP_ENTRY(mhz, w) opp-mhz {opp-hz = /bits/ 64 <MHZ_TO_MBPS(mhz, w)>;}
@@ -538,7 +539,7 @@
 
 		removed_region1: removed_region1@85fc0000 {
 			no-map;
-			reg = <0 0x85fc0000 0 0x400000>;
+			reg = <0 0x85fc0000 0 0x40000>;
 		};
 
 		smem_region: smem@86000000 {
@@ -880,6 +881,37 @@
 		reg-names = "pshold-base", "tcsr-boot-misc-detect";
 	};
 
+	tcsr_mutex_block: syscon@1f40000 {
+		compatible = "syscon";
+		reg = <0x1f40000 0x20000>;
+	};
+
+	tcsr_mutex: hwlock@1f40000 {
+		compatible = "qcom,tcsr-mutex";
+		syscon = <&tcsr_mutex_block 0 0x1000>;
+		#hwlock-cells = <1>;
+	};
+
+	sp_scsr_block: syscon@1880000 {
+		compatible = "syscon";
+		reg = <0x1880000 0x10000>;
+	};
+
+	qmp_aop: qcom,qmp-aop@c300000 {
+		compatible = "qcom,qmp-mbox";
+		label = "aop";
+		reg = <0xc300000 0x100000>,
+			<0x1799000c 0x4>;
+		reg-names = "msgram", "irq-reg-base";
+		qcom,irq-mask = <0x1>;
+		interrupts = <0 389 1>;
+
+		qcom,early-boot;
+		priority = <0>;
+		mbox-desc-offset = <0x0>;
+		#mbox-cells = <1>;
+	};
+
 	aop-msg-client {
 		compatible = "qcom,debugfs-qmp-client";
 		mboxes = <&qmp_aop 0>;
@@ -967,25 +999,25 @@
 
 	ddr_bw_opp_table: ddr-bw-opp-table {
 		compatible = "operating-points-v2";
-		BW_OPP_ENTRY( 200, 4), /* 762 MB/s */
-		BW_OPP_ENTRY( 300, 4), /* 1144 MB/s */
-		BW_OPP_ENTRY( 451, 4), /* 1720 MB/s */
-		BW_OPP_ENTRY( 547, 4), /* 2086 MB/s */
-		BW_OPP_ENTRY( 681, 4), /* 2597 MB/s */
-		BW_OPP_ENTRY( 768, 4), /* 2929 MB/s */
-		BW_OPP_ENTRY(1017, 4), /* 3879 MB/s */
-		BW_OPP_ENTRY(1296, 4), /* 4943 MB/s */
-		BW_OPP_ENTRY(1555, 4), /* 5931 MB/s */
+		BW_OPP_ENTRY( 200, 4); /* 762 MB/s */
+		BW_OPP_ENTRY( 300, 4); /* 1144 MB/s */
+		BW_OPP_ENTRY( 451, 4); /* 1720 MB/s */
+		BW_OPP_ENTRY( 547, 4); /* 2086 MB/s */
+		BW_OPP_ENTRY( 681, 4); /* 2597 MB/s */
+		BW_OPP_ENTRY( 768, 4); /* 2929 MB/s */
+		BW_OPP_ENTRY(1017, 4); /* 3879 MB/s */
+		BW_OPP_ENTRY(1296, 4); /* 4943 MB/s */
+		BW_OPP_ENTRY(1555, 4); /* 5931 MB/s */
 		BW_OPP_ENTRY(1804, 4); /* 6881 MB/s */
 	};
 
 	llcc_bw_opp_table: llcc-bw-opp-table {
 		compatible = "operating-points-v2";
-		BW_OPP_ENTRY(150, 16), /*  2288 MB/s */
-		BW_OPP_ENTRY(300, 16), /*  4577 MB/s */
-		BW_OPP_ENTRY(426, 16), /*  6500 MB/s */
-		BW_OPP_ENTRY(533, 16), /*  8132 MB/s */
-		BW_OPP_ENTRY(600, 16), /*  9155 MB/s */
+		BW_OPP_ENTRY(150, 16); /*  2288 MB/s */
+		BW_OPP_ENTRY(300, 16); /*  4577 MB/s */
+		BW_OPP_ENTRY(426, 16); /*  6500 MB/s */
+		BW_OPP_ENTRY(533, 16); /*  8132 MB/s */
+		BW_OPP_ENTRY(600, 16); /*  9155 MB/s */
 		BW_OPP_ENTRY(700, 16); /* 10681 MB/s */
 	};
 
@@ -1046,14 +1078,19 @@
 		operating-points-v2 = <&ddr_bw_opp_table>;
 	};
 
+
+	keepalive_opp_table: keepalive-opp-table {
+		compatible = "operating-points-v2";
+		opp-1 { opp-hz = /bits/ 64 < 1 >; };
+	};
+
 	snoc_cnoc_keepalive: qcom,snoc_cnoc_keepalive {
 		compatible = "qcom,devbw";
 		governor = "powersave";
 		qcom,src-dst-ports = <139 627>;
 		qcom,active-only;
 		status = "ok";
-		qcom,bw-tbl =
-			< 1 >;
+		operating-points-v2 = <&keepalive_opp_table>;
 	};
 
 	devfreq_memlat_0: qcom,cpu0-memlat-mon {
@@ -2132,6 +2169,8 @@
 
 		qcom,llcc-perfmon {
 			compatible = "qcom,llcc-perfmon";
+			clocks = <&clock_aop QDSS_CLK>;
+			clock-names = "qdss_clk";
 		};
 
 		qcom,llcc-erp {
@@ -2161,9 +2200,14 @@
 		};
 	};
 
+	apss: syscon@1799000c {
+		compatible = "syscon";
+		reg = <0x1799000c 0x4>;
+	};
+
 	apss_shared: mailbox@17990000 {
 		compatible = "qcom,sdm845-apss-shared";
-		reg = <0 0x17990000 0 0x1000>;
+		reg = <0x17990000 0x1000>;
 		#mbox-cells = <1>;
 	};
 
@@ -2174,26 +2218,10 @@
 		#mbox-cells = <1>;
 	};
 
-	tcsr_mutex_block: syscon@1f40000 {
-		compatible = "syscon";
-		reg = <0x1f40000 0x20000>;
-	};
-
-	tcsr_mutex: hwlock@1f40000 {
-		compatible = "qcom,tcsr-mutex";
-		syscon = <&tcsr_mutex_block 0 0x1000>;
-		#hwlock-cells = <1>;
-	};
-
 	smem: qcom,smem@8600000 {
 		compatible = "qcom,smem";
 		memory-region = <&smem_region>;
 		hwlocks = <&tcsr_mutex 3>;
-	};
-
-	sp_scsr_block: syscon@1880000 {
-		compatible = "syscon";
-		reg = <0x1880000 0x10000>;
 	};
 
 	intsp: qcom,qsee_irq {
@@ -2219,19 +2247,6 @@
 			interrupt-parent = <&intsp>;
 			interrupts = <1 0 IRQ_TYPE_LEVEL_HIGH>;
 		};
-	};
-
-	qmp_aop: qcom,qmp-aop@c300000 {
-		compatible = "qcom,qmp-mbox";
-		label = "aop";
-		reg = <0xc300000 0x100000>,
-			<0x1799000c 0x4>;
-		reg-names = "msgram", "irq-reg-base";
-		qcom,irq-mask = <0x1>;
-		interrupts = <0 389 1>;
-		priority = <0>;
-		mbox-desc-offset = <0x0>;
-		#mbox-cells = <1>;
 	};
 
 	apps_rsc: mailbox@179e0000 {
@@ -2592,7 +2607,7 @@
 	};
 
 	qcom,sps {
-		compatible = "qcom,msm_sps_4k";
+		compatible = "qcom,msm-sps-4k";
 		qcom,pipe-attr-ee;
 	};
 

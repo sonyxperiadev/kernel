@@ -3912,11 +3912,83 @@ int smblib_set_prop_usb_voltage_max_limit(struct smb_charger *chg,
 	return 0;
 }
 
+#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+int smblib_set_prop_typec_power_role_for_wdet(struct smb_charger *chg,
+				     const union power_supply_propval *val)
+{
+	int rc = 0;
+	u8 power_role;
+	int typec_mode;
+
+	if (chg->connector_type == POWER_SUPPLY_CONNECTOR_MICRO_USB)
+		return 0;
+
+	if (chg->cc_reconnection_running) {
+		smblib_dbg(chg, PR_SOMC,
+			"CC reconnection is running, ignore PR setting for wdet\n");
+		return 0;
+	}
+
+	switch (val->intval) {
+	case POWER_SUPPLY_TYPEC_PR_NONE:
+		power_role = TYPEC_DISABLE_CMD_BIT;
+		break;
+	case POWER_SUPPLY_TYPEC_PR_DUAL:
+		power_role = chg->typec_try_mode;
+		break;
+	case POWER_SUPPLY_TYPEC_PR_SINK:
+		power_role = EN_SNK_ONLY_BIT;
+		break;
+	case POWER_SUPPLY_TYPEC_PR_SOURCE:
+		power_role = EN_SRC_ONLY_BIT;
+		break;
+	default:
+		smblib_err(chg, "power role %d not supported\n", val->intval);
+		return -EINVAL;
+	}
+
+	typec_mode = smblib_get_prop_typec_mode(chg);
+	switch (typec_mode) {
+	case POWER_SUPPLY_TYPEC_SINK_AUDIO_ADAPTER:
+	case POWER_SUPPLY_TYPEC_SINK_POWERED_CABLE:
+	case POWER_SUPPLY_TYPEC_SINK:
+	case POWER_SUPPLY_TYPEC_SOURCE_DEFAULT:
+	case POWER_SUPPLY_TYPEC_SOURCE_MEDIUM:
+	case POWER_SUPPLY_TYPEC_SOURCE_HIGH:
+	case POWER_SUPPLY_TYPEC_NON_COMPLIANT:
+		smblib_dbg(chg, PR_SOMC,
+			"Typec mode is %d, Skip power role setting.\n",
+			typec_mode);
+		break;
+	default:
+		rc = smblib_masked_write(chg, TYPE_C_MODE_CFG_REG,
+				TYPEC_POWER_ROLE_CMD_MASK | TYPEC_TRY_MODE_MASK,
+				power_role);
+		if (rc < 0) {
+			smblib_err(chg,
+				"Couldn't write 0x%02x to TYPE_C_INTRPT_ENB_SOFTWARE_CTRL rc=%d\n",
+				power_role, rc);
+			return rc;
+		}
+		break;
+	}
+	return rc;
+}
+#endif
+
 int smblib_set_prop_typec_power_role(struct smb_charger *chg,
 				     const union power_supply_propval *val)
 {
 	int rc = 0;
 	u8 power_role;
+
+#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+	if (chg->cc_reconnection_running) {
+		smblib_dbg(chg, PR_SOMC,
+			"CC reconnection is running, ignore PR setting\n");
+		return 0;
+	}
+#endif
 
 	if (chg->connector_type == POWER_SUPPLY_CONNECTOR_MICRO_USB)
 		return 0;

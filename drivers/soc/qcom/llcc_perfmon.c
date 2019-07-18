@@ -1170,8 +1170,9 @@ static int llcc_perfmon_probe(struct platform_device *pdev)
 
 	llcc_priv->clock = devm_clk_get(&pdev->dev, "qdss_clk");
 	if (IS_ERR(llcc_priv->clock)) {
-		pr_err("failed to get clock node\n");
-		return PTR_ERR(llcc_priv->clock);
+		result = PTR_ERR(llcc_priv->clock);
+		pr_err("failed to get clock node: %d\n", result);
+		return result;
 	}
 
 	result = sysfs_create_group(&pdev->dev.kobj, &llcc_perfmon_group);

@@ -840,11 +840,11 @@ out:
 
 /* All fg_get_* , fg_set_* functions here */
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
-int fg_get_vbatt_predict(struct fg_chip *chip, int *val)
+int fg_get_vbatt_predict(struct fg_dev *fg, int *val)
 {
 	int rc;
 
-	rc = fg_get_sram_prop(chip, FG_SRAM_VOLTAGE_PRED, val);
+	rc = fg_get_sram_prop(fg, FG_SRAM_VOLTAGE_PRED, val);
 	if (rc < 0) {
 		pr_err("Error in getting VOLTAGE_PRED, rc=%d\n", rc);
 		return rc;
@@ -924,11 +924,11 @@ const char *fg_get_battery_type(struct fg_dev *fg)
 	case PROFILE_LOADED:
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
 		if (fg->bp.batt_type_str) {
-			if (strlen(chip->org_batt_type_str) ==
+			if (strlen(fg->org_batt_type_str) ==
 							ORG_BATT_TYPE_SIZE)
-				return chip->org_batt_type_str;
+				return fg->org_batt_type_str;
 			else
-				return chip->bp.batt_type_str;
+				return fg->bp.batt_type_str;
 		}
 #else
 		if (fg->bp.batt_type_str)

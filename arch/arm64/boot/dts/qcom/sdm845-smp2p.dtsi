@@ -17,7 +17,7 @@
 		compatible = "qcom,smp2p";
 		qcom,smem = <435>, <428>;
 		interrupts = <GIC_SPI 451 IRQ_TYPE_EDGE_RISING>;
-		qcom,ipc = <&apss_shared 14>;
+		qcom,ipc = <&apss 0 14>;
 		qcom,local-pid = <0>;
 		qcom,remote-pid = <1>;
 
@@ -56,7 +56,7 @@
 		compatible = "qcom,smp2p";
 		qcom,smem = <443>, <429>;
 		interrupts = <GIC_SPI 158 IRQ_TYPE_EDGE_RISING>;
-		qcom,ipc = <&apss_shared 10>;
+		qcom,ipc = <&apss 0 10>;
 		qcom,local-pid = <0>;
 		qcom,remote-pid = <2>;
 
@@ -87,7 +87,7 @@
 		compatible = "qcom,smp2p";
 		qcom,smem = <481>, <430>;
 		interrupts = <GIC_SPI 172 IRQ_TYPE_EDGE_RISING>;
-		qcom,ipc = <&apss_shared 26>;
+		qcom,ipc = <&apss 0 26>;
 		qcom,local-pid = <0>;
 		qcom,remote-pid = <3>;
 
@@ -118,7 +118,7 @@
 		compatible = "qcom,smp2p";
 		qcom,smem = <94>, <432>;
 		interrupts = <GIC_SPI 576 IRQ_TYPE_EDGE_RISING>;
-		qcom,ipc = <&apss_shared 6>;
+		qcom,ipc = <&apss 0 6>;
 		qcom,local-pid = <0>;
 		qcom,remote-pid = <5>;
 

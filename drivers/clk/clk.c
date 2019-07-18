@@ -1960,6 +1960,8 @@ static int clk_change_rate(struct clk_core *core)
 	if (core->flags & CLK_RECALC_NEW_RATES)
 		(void)clk_calc_new_rates(core, core->new_rate);
 
+	if (core->flags & CLK_CHILD_NO_RATE_PROP)
+		return rc;
 	/*
 	 * Use safe iteration, as change_rate can actually swap parents
 	 * for certain clock types.

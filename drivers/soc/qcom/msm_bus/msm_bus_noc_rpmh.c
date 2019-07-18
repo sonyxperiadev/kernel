@@ -17,6 +17,7 @@
 #include <linux/delay.h>
 #include <linux/slab.h>
 #include <linux/io.h>
+#include <linux/of.h>
 #include <linux/msm-bus-board.h>
 #include "msm_bus_core.h"
 #include "msm_bus_noc.h"
@@ -36,6 +37,19 @@
 #define READ_DELAY_US	10
 
 #define NOC_QOS_REG_BASE(b, o)		((b) + (o))
+
+#define QM_BASE	0x010B8000
+#define QM_CLn_TH_LVL_MUX_ADDR(b, o, n, d)	\
+	(NOC_QOS_REG_BASE(b, o) + 0x8C0 + (d) * (n))
+enum qm_cl_id_th_lvl_mux_cfg {
+	QM_CLn_TH_LVL_SW_OVERRD_BMSK	= 0x80000000,
+	QM_CLn_TH_LVL_SW_OVERRD_SHFT	= 0x1F,
+	QM_CLn_TH_LVL_SW_BMSK		= 0x00000007,
+	QM_CLn_TH_LVL_SW_SHFT		= 0x0,
+};
+
+static DEFINE_SPINLOCK(qm_lock);
+static void __iomem *qm_base;
 
 /*Sideband Manager Disable Macros*/
 #define DISABLE_SBM_FLAGOUTCLR0_LOW_OFF		0x80
@@ -351,6 +365,16 @@ static int msm_bus_noc_qos_init(struct msm_bus_node_device_type *info,
 		goto err_qos_init;
 	}
 
+	if (of_machine_is_compatible("qcom,sdm845") && !qm_base) {
+		qm_base = ioremap_nocache(QM_BASE, 0x4000);
+		if (!qm_base) {
+			MSM_BUS_ERR("%s: Error remapping address 0x%zx",
+				__func__, (size_t)QM_BASE);
+			ret = -ENOMEM;
+			goto err_qos_init;
+		}
+	}
+
 	for (i = 0; i < info->node_info->num_qports; i++) {
 		noc_set_qos_dflt_prio(qos_base, qos_off,
 					info->node_info->qport[i],
@@ -451,6 +475,42 @@ sbm_timeout:
 	return -ETIME;
 
 }
+
+static inline void noc_set_qm_th_lvl_cfg(void __iomem *base, uint32_t off,
+		uint32_t n, uint32_t delta,
+		uint32_t override_val, uint32_t override)
+{
+	writel_relaxed(((override << QM_CLn_TH_LVL_SW_OVERRD_SHFT) |
+		(override_val & QM_CLn_TH_LVL_SW_BMSK)),
+		QM_CLn_TH_LVL_MUX_ADDR(base, off, n, delta));
+
+	/* Ensure QM CFG is set before exiting */
+	wmb();
+}
+
+int msm_bus_noc_throttle_wa(bool enable)
+{
+	unsigned long flags;
+
+	if (unlikely(!qm_base)) {
+		MSM_BUS_ERR("QM CFG base address not found!");
+		return -ENXIO;
+	}
+
+	spin_lock_irqsave(&qm_lock, flags);
+
+	if (enable) {
+		noc_set_qm_th_lvl_cfg(qm_base, 0x1000, 8, 0x4, 0x3, 0x1);
+		noc_set_qm_th_lvl_cfg(qm_base, 0x1000, 9, 0x4, 0x3, 0x1);
+	} else {
+		noc_set_qm_th_lvl_cfg(qm_base, 0x1000, 8, 0x4, 0, 0);
+		noc_set_qm_th_lvl_cfg(qm_base, 0x1000, 9, 0x4, 0, 0);
+	}
+
+	spin_unlock_irqrestore(&qm_lock, flags);
+	return 0;
+}
+EXPORT_SYMBOL(msm_bus_noc_throttle_wa);
 
 int msm_bus_noc_set_ops(struct msm_bus_node_device_type *bus_dev)
 {

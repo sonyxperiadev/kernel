@@ -230,3 +230,9 @@
 	};
 };
 
+&sde_dsi_tama_panels {
+	/* Only one possible panel on PROD SoMC Akatsuki */
+	somc,bootloader-panel-detect;
+
+	qcom,dsi-panel = <&dsi_5>;
+};

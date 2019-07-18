@@ -53,9 +53,6 @@
 		#interrupt-cells = <1>;
 		iommus = <&mmss_smmu 0>;
 
-		#address-cells = <1>;
-		#size-cells = <0>;
-
 		#power-domain-cells = <0>;
 
 		/* hw blocks */

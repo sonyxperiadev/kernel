@@ -261,7 +261,7 @@ static struct clk_alpha_pll gpll0 = {
 			.name = "gpll0",
 			.parent_names = (const char *[]){ "bi_tcxo" },
 			.num_parents = 1,
-			.ops = &clk_alpha_pll_fabia_fixed_ops,
+			.ops = &clk_alpha_pll_fixed_fabia_ops,
 			VDD_CX_FMAX_MAP4(
 				MIN, 615000000,
 				LOW, 1066000000,
@@ -283,7 +283,7 @@ static struct clk_alpha_pll gpll4 = {
 			.name = "gpll4",
 			.parent_names = (const char *[]){ "bi_tcxo" },
 			.num_parents = 1,
-			.ops = &clk_alpha_pll_fabia_fixed_ops,
+			.ops = &clk_alpha_pll_fixed_fabia_ops,
 			VDD_CX_FMAX_MAP4(
 				MIN, 615000000,
 				LOW, 1066000000,
@@ -303,7 +303,7 @@ static struct clk_alpha_pll_postdiv gpll0_out_even = {
 		.name = "gpll0_out_even",
 		.parent_names = (const char *[]){ "gpll0" },
 		.num_parents = 1,
-		.ops = &clk_alpha_fabia_pll_postdiv_ops,
+		.ops = &clk_alpha_pll_postdiv_fabia_ops,
 	},
 };
 
@@ -319,7 +319,7 @@ static struct clk_alpha_pll gpll6 = {
 			.name = "gpll6",
 			.parent_names = (const char *[]){ "bi_tcxo" },
 			.num_parents = 1,
-			.ops = &clk_alpha_pll_fabia_fixed_ops,
+			.ops = &clk_alpha_pll_fixed_fabia_ops,
 			VDD_CX_FMAX_MAP4(
 				MIN, 615000000,
 				LOW, 1066000000,

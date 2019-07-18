@@ -236,6 +236,11 @@ int somc_panel_fps_manager_init(struct dsi_display *display)
 {
 	struct panel_specific_pdata *spec_pdata;
 
+	if (display == NULL)
+		return -EINVAL;
+	if (display->panel == NULL)
+		return -EINVAL;
+
 	spec_pdata = display->panel->spec_pdata;
 	if (!spec_pdata) {
 		pr_err("%s: Invalid input data\n", __func__);
