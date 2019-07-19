@@ -1585,6 +1585,7 @@
 		qcom,mem-protect-id = <0xF>;
 		qcom,pas-id = <4>;
 		qcom,smem-id = <421>;
+		qcom,serial-loading;
 
 		/* Inputs from mss */
 		interrupts-extended = <&pdc 0 266 1>,
@@ -1634,6 +1635,7 @@
 		qcom,firmware-name = "adsp";
 		qcom,signal-aop;
 		memory-region = <&pil_adsp_mem>;
+		qcom,serial-loading;
 
 		/* Inputs from lpass */
 		interrupts-extended = <&pdc 0 162 1>,
@@ -1680,6 +1682,7 @@
 		qcom,firmware-name = "slpi";
 		status = "ok";
 		memory-region = <&pil_slpi_mem>;
+		qcom,serial-loading;
 
 		/* Inputs from ssc */
 		interrupts-extended = <&pdc 0 494 1>,
@@ -1789,6 +1792,7 @@
 		qcom,firmware-name = "spss";
 		memory-region = <&pil_spss_mem>;
 		qcom,spss-scsr-bits = <24 25>;
+		qcom,serial-loading;
 
 		mboxes = <&qmp_aop 0>;
 		mbox-names = "spss-pil";
@@ -1825,6 +1829,7 @@
 		qcom,firmware-name = "cdsp";
 		qcom,signal-aop;
 		memory-region = <&pil_cdsp_mem>;
+		qcom,serial-loading;
 
 		/* Inputs from turing */
 		interrupts-extended = <&pdc 0 578 1>,
@@ -2015,6 +2020,8 @@
 			<63 512 0 304000>;
 		qcom,proxy-timeout-ms = <100>;
 		qcom,firmware-name = "venus";
+		qcom,serial-loading;
+
 		memory-region = <&pil_video_mem>;
 		status = "ok";
 	};
@@ -2779,7 +2786,7 @@
 	qcom,rmnet-ipa {
 		compatible = "qcom,rmnet-ipa3";
 		qcom,rmnet-ipa-ssr;
-		qcom,ipa-loaduC;
+		qcom,ipa-platform-type-msm;
 		qcom,ipa-advertise-sg-support;
 		qcom,ipa-napi-enable;
 	};
@@ -2953,6 +2960,7 @@
 		qcom,pas-id = <0xf>;
 		qcom,firmware-name = "ipa_fws";
 		qcom,pil-force-shutdown;
+		qcom,serial-loading;
 		memory-region = <&pil_ipa_fw_mem>;
 	};
 
