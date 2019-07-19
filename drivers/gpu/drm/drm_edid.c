@@ -3891,6 +3891,12 @@ u32 block_length, enum luminance_value value)
 	return block_length > NO_LUMINANCE_DATA && value <= block_length;
 }
 
+#ifdef CONFIG_DRM_MSM_DP_SOMC_PANEL
+static bool edid_hdr_hlg_support;
+module_param_named(edid_hdr_hlg_support, edid_hdr_hlg_support, bool, 0644);
+MODULE_PARM_DESC(edid_hdr_hlg_support, "true to support HDR HLG of EDID");
+#endif /* CONFIG_DRM_MSM_DP_SOMC_PANEL */
+
 /*
  * drm_extract_hdr_db - Parse the HDMI HDR extended block
  * @connector: connector corresponding to the HDMI sink
@@ -3910,6 +3916,11 @@ drm_extract_hdr_db(struct drm_connector *connector, const u8 *db)
 	len = db[0] & 0x1f;
 	/* Byte 3: Electro-Optical Transfer Functions */
 	connector->hdr_eotf = db[2] & 0x3F;
+
+#ifdef CONFIG_DRM_MSM_DP_SOMC_PANEL
+	if (!edid_hdr_hlg_support)
+		connector->hdr_eotf &= ~(BIT(3));
+#endif /* CONFIG_DRM_MSM_DP_SOMC_PANEL */
 
 	/* Byte 4: Static Metadata Descriptor Type 1 */
 	connector->hdr_metadata_type_one = (db[3] & BIT(0));
