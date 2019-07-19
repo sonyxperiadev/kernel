@@ -114,7 +114,7 @@ dtb-$(CONFIG_MACH_SONY_BLANC)		+= apq8056-v1.1-loire-blanc_windy.dtb
 dtb-$(CONFIG_MACH_SONY_BLANC)           += msm8956-loire-blanc_generic.dtb
 dtb-$(CONFIG_MACH_SONY_BLANC)		+= apq8056-loire-blanc_windy.dtb
 
-
+ifeq ($(CONFIG_BUILD_QCOM_REFERENCE_PLATFORMS),y)
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
 	dtbo-$(CONFIG_ARCH_SM8150) += \
 		sm8150-cdp-overlay.dtbo \
@@ -282,6 +282,8 @@ endif
 dtb-$(CONFIG_ARCH_SDXPRAIRIE) += sdxprairie-rumi.dtb \
 	sdxprairie-cdp.dtb \
 	sdxprairie-mtp.dtb
+
+endif # CONFIG_BUILD_QCOM_REFERENCE_PLATFORMS
 
 ifeq ($(CONFIG_ARM64),y)
 always		:= $(dtb-y)
