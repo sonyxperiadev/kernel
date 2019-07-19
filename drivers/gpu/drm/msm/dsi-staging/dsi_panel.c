@@ -741,7 +741,8 @@ static int dsi_panel_update_backlight(struct dsi_panel *panel,
 }
 
 #ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
-static int dsi_panel_set_aod_change(struct dsi_panel *panel, u32 bl_lvl)
+static int dsi_panel_set_aod_change(struct dsi_panel *panel, u32 bl_lvl,
+					unsigned int aod_mode_threshold)
 {
 	int rc = 0;
 
@@ -750,7 +751,7 @@ static int dsi_panel_set_aod_change(struct dsi_panel *panel, u32 bl_lvl)
 		return -EINVAL;
 	}
 
-	if (bl_lvl < AOD_MODE_THRESHOLD)
+	if (bl_lvl < aod_mode_threshold)
 		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_AOD_LOW);
 	else
 		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_AOD_HIGH);
@@ -773,7 +774,9 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 	pr_debug("backlight type:%d lvl:%d\n", bl->type, bl_lvl);
 #ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
 	if (panel->spec_pdata->aod_mode)
-		return dsi_panel_set_aod_change(panel, bl_lvl);
+		return dsi_panel_set_aod_change(panel, bl_lvl,
+					panel->spec_pdata->aod_threshold);
+
 	if (panel->spec_pdata->vr_mode)
 		return rc;
 #endif

@@ -35,6 +35,8 @@
 #include "dsi_display.h"
 #include "dsi_panel.h"
 
+#define AOD_MODE_THRESHOLD 8
+
 static BLOCKING_NOTIFIER_HEAD(drm_notifier_list);
 
 static u32 down_period;
@@ -1073,6 +1075,10 @@ int dsi_panel_driver_parse_dt(struct dsi_panel *panel,
 	rc = of_property_read_u32(np,
 			"somc,pw-wait-after-off-touch-int-n", &tmp);
 	spec_pdata->touch_intn_off = !rc ? tmp : 0;
+
+	rc = of_property_read_u32(np,
+			"somc,aod-threshold", &tmp);
+	spec_pdata->aod_threshold = !rc ? tmp : AOD_MODE_THRESHOLD;
 
 	panel->lp11_init = of_property_read_bool(np,
 			"qcom,mdss-dsi-lp11-init");

@@ -43,7 +43,6 @@
 #define DISPLAY_BL_MIN 4
 #define DISPLAY_BL_OFF 0
 #define DISPLAY_BL_ON 1
-#define AOD_MODE_THRESHOLD 8
 #endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 
 enum dsi_panel_rotation {
