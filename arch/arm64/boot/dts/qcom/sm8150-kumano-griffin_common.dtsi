@@ -1,0 +1,276 @@
+/* arch/arm64/boot/dts/somc/sm8150-kumano-griffin_common.dtsi
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+/*
+ * Copyright (C) 2018 Sony Mobile Communications Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2, as
+ * published by the Free Software Foundation.
+ */
+
+#include "sm8150-kumano-common.dtsi"
+
+&somc_pinctrl {
+	/* If product common default setting is needed,
+	fill pinctrl-1 value in <product>_common.dtsi */
+	pinctrl-1 = <&sm_gpio_0 &sm_gpio_3 &sm_gpio_16 &sm_gpio_23
+		     &sm_gpio_33 &sm_gpio_34 /*&sm_gpio_122*/>;
+};
+
+&somc_pinctrl_pmic {
+	/* If product common PMIC default setting is needed,
+	fill pinctrl-1 value in <product>_common.dtsi */
+	pinctrl-1 = <&pm8150_gpio_7 &pm8150b_gpio_7 &pm8150l_gpio_1>;
+};
+
+&soc {
+	gpio_keys {
+		pinctrl-0 = <&key_vol_dn_default
+			     &key_cam_focus_default
+			     &key_cam_snapshot_default>;
+
+		cam_snapshot {
+			label = "cam_snapshot";
+			gpios = <&pm8150b_gpios 1 GPIO_ACTIVE_LOW>;
+			linux,input-type = <1>;
+			linux,code = <766>;
+			gpio-key,wakeup;
+			debounce-interval = <15>;
+			linux,can-disable;
+		};
+
+		cam_focus {
+			label = "cam_focus";
+			gpios = <&pm8150b_gpios 2 GPIO_ACTIVE_LOW>;
+			linux,input-type = <1>;
+			linux,code = <KEY_CAMERA_FOCUS>;
+			gpio-key,wakeup;
+			debounce-interval = <15>;
+			linux,can-disable;
+		};
+	};
+};
+
+/* Regulator config */
+&pm8150_l13 {
+	status = "disabled";
+};
+
+/* GPIO_7: SUPWC_PWR_EN */
+&pm8150_gpio_7 {
+	pins = "gpio7";
+	function = "normal";
+	/delete-property/ bias-high-impedance;
+	output-low;
+	drive-push-pull;
+	qcom,drive-strength = <1>; /* Low */
+	power-source = <1>;
+};
+
+/* GPIO_1: TS_VDDIO_EN(do not initialize output value) */
+&pm8150l_gpio_1 {
+	pins = "gpio1";
+	function = "normal";
+	/delete-property/ output-high;
+	drive-push-pull;
+	bias-disable;
+	qcom,drive-strength = <1>; /* Low */
+	power-source = <0>;
+};
+
+/* GPIO_7: TS_VDDH_EN(do not initialize output value) */
+&pm8150b_gpio_7 {
+	pins = "gpio7";
+	function = "normal";
+	/delete-property/ output-low;
+	drive-push-pull;
+	bias-disable;
+	qcom,drive-strength = <1>; /* Low */
+	power-source = <1>;
+};
+
+/* GPIO_0 : NFC_ESE_SPI_MISO */
+&sm_gpio_0 {
+	mux {
+		pins = "gpio0";
+		function = "qup0";
+	};
+
+	config {
+		pins = "gpio0";
+		drive-strength = <2>;
+		/delete-property/bias-disable;
+		bias-pull-down;
+	};
+};
+
+/* GPIO_3 : NFC_ESE_SPI_CS_N */
+&sm_gpio_3 {
+	mux {
+		pins = "gpio3";
+		function = "qup0";
+	};
+
+	config {
+		pins = "gpio3";
+		drive-strength = <2>;
+		/delete-property/bias-disable;
+		bias-pull-down;
+		/delete-property/output-low;
+	};
+};
+
+/* GPIO_16 : CAM_MCLK3 */
+&sm_gpio_16 {
+	mux {
+		pins = "gpio16";
+		function = "cam_mclk";
+	};
+
+	config {
+		pins = "gpio16";
+		drive-strength = <2>;
+		/delete-property/ bias-pull-down;
+		bias-disable;
+		/delete-property/ input-enable;
+	};
+};
+
+/* GPIO_23 : CAM3_RST_N */
+&sm_gpio_23 {
+	mux {
+		pins = "gpio23";
+		function = "gpio";
+	};
+
+	config {
+		pins = "gpio23";
+		drive-strength = <2>;
+		/delete-property/ bias-pull-down;
+		bias-disable;
+		/delete-property/ input-enable;
+		output-low;
+	};
+};
+
+/* GPIO_33 : CCI_I2C_SDA3 */
+&sm_gpio_33 {
+	mux {
+		pins = "gpio33";
+		function = "cci_i2c";
+	};
+
+	config {
+		pins = "gpio33";
+		drive-strength = <2>;
+		/delete-property/ bias-pull-down;
+		bias-disable;
+		/delete-property/ input-enable;
+	};
+};
+
+/* GPIO_34 : CCI_I2C_SCL3 */
+&sm_gpio_34 {
+	mux {
+		pins = "gpio34";
+		function = "cci_i2c";
+	};
+
+	config {
+		pins = "gpio34";
+		drive-strength = <2>;
+		/delete-property/ bias-pull-down;
+		bias-disable;
+		/delete-property/ input-enable;
+	};
+};
+
+/* GPIO_122 : TS_INT_N */
+&sm_gpio_122 {
+	mux {
+		pins = "gpio122";
+		function = "gpio";
+	};
+
+	config {
+		pins = "gpio122";
+		drive-strength = <2>;
+		bias-disable;
+		input-enable;
+	};
+};
+
+&pm8150l_rgb_led {
+	somc,rgb_sync = <1>;
+	red {
+		linux,default-trigger = "none";
+		somc,color_variation_max_num = <2>;
+		somc,max_current = <
+			88 212 140
+			89 212 140>;
+	};
+	green {
+		linux,default-trigger = "none";
+		somc,color_variation_max_num = <2>;
+		somc,max_current = <
+			88 68 132
+			89 68 132>;
+	};
+	blue {
+		linux,default-trigger = "none";
+		somc,color_variation_max_num = <2>;
+		somc,max_current = <
+			88 217 35
+			89 217 35>;
+	};
+};
+
+/* Primary USB port related QMP USB DP Combo PHY */
+&usb_qmp_dp_phy {
+	rxb-equ-tuning-manual;
+};
+
+&qupv3_se10_i2c {
+	status = "ok";
+	touchscreen@48 {
+		compatible = "sec,sec_ts";
+		reg = <0x48>;
+		sec,irq_gpio = <&tlmm 122 0x2008>;
+		sec,irq_type = <8200>;
+		sec,mis_cal_check = <1>;
+		sec,regulator_dvdd = "tsp_io";
+		sec,regulator_avdd = "tsp_avdd";
+		sec,regulator_boot_on;
+		sec,i2c-burstmax = <32>;
+		sec,project_name = "PJT", "MODEL";
+		sec,max_coords = <1644 3840>;   /* x y */
+		sec,always_lpmode = <0>;
+		sec,bringup = <3>;
+		sec,firmware_name = "touch_module_id_0x61.img";
+
+		/* feature */
+		sec,watchdog_supported = <1>;
+		sec,watchdog_delay_ms = <10000>;
+		sec,side_touch_supported = <1>;
+		sec,glove_mode_supported = <0>;
+		sec,cover_mode_supported = <1>;
+		sec,aod_mode_supported = <1>;
+		sec,sod_mode_supported = <1>;
+		sec,stamina_mode_supported = <1>;
+	};
+};
+
+#include "sm8150-kumano-common-display.dtsi"
+#include "sm8150-kumano-griffin-display.dtsi"
+#include "charger-kumano-common.dtsi"
+#include "charger-kumano-griffin.dtsi"
+

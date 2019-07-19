@@ -1,0 +1,67 @@
+/* Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+/*
+ * Copyright (C) 2018 Sony Mobile Communications Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2, as
+ * published by the Free Software Foundation.
+ */
+#include "dsi-panel-somc-sec-3840p3288-cmd.dtsi"
+#include "sm8150-kumano-griffin-display-pcc.dtsi"
+
+&sde_dsi_kumano_panels {
+	/* Only one possible panel on PROD SoMC Griffin */
+	somc,bootloader-panel-detect;
+
+	qcom,dsi-panel = <&dsi_2>;
+};
+
+&dsi_2 {
+	qcom,panel-supply-entries = <&dsi_panel_oled_pwr_supply>;
+	/delete-property/ qcom,panel-vspvsn-supply-entries;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,mdss-brightness-max-level = <4095>;
+	qcom,mdss-dsi-panel-peak-brightness = <4200000>;
+	qcom,mdss-dsi-panel-blackness-level = <3230>;
+	qcom,mdss-dsi-mode-sel-gpio-state = "single_port";
+	qcom,platform-te-gpio = <&tlmm 8 0>;
+	qcom,platform-reset-gpio = <&tlmm 6 0>;
+	qcom,platform-touch-reset-gpio = <&tlmm 54 0>;
+	somc,ts_vddio = <&pm8150l_gpios 1 0>;
+	somc,ts_vddh = <&pm8150b_gpios 7 0>;
+	somc,disp-err-flag-gpio = <&tlmm 101 0>;
+
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,display-topology = <2 2 1>;
+			qcom,default-topology-index = <0>;
+			qcom,mdss-dsi-panel-phy-timings = [00 21 08 08 25 22 09 08 06 02 04 00 1B 18];
+		};
+		timing@1 {
+			qcom,display-topology = <2 2 1>;
+			qcom,default-topology-index = <0>;
+			qcom,mdss-dsi-panel-phy-timings = [00 21 08 08 25 22 09 08 06 02 04 00 1B 18];
+		};
+	};
+};
+
+&pm8150_l14 {
+	qcom,init-enable = <1>;
+};
+
+&pm8150_l17 {
+	qcom,init-enable = <1>;
+};
+

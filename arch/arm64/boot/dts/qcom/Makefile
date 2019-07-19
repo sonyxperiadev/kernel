@@ -20,6 +20,14 @@ dtb-$(CONFIG_ARCH_QCS405) += qcs403-iot-sku1.dtb \
 endif
 
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
+# SM8150 - SoMC Kumano
+dtbo-$(CONFIG_MACH_SONY_GRIFFIN) += \
+		sm8150-kumano-griffin_generic-overlay.dtbo
+
+sm8150-kumano-griffin_generic-overlay.dtbo-base := sm8150.dtb sm8150-v2.dtb
+
+
+# SDM845 - SoMC Tama
 dtbo-$(CONFIG_MACH_SONY_AKARI) += \
 		sdm845-tama-akari_generic-overlay.dtbo \
 		sdm845-v2-tama-akari_generic-overlay.dtbo \

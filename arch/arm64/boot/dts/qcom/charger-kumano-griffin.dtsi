@@ -1,0 +1,73 @@
+/* Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+/*
+ * Copyright (C) 2018 Sony Mobile Communications Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2, as
+ * published by the Free Software Foundation.
+ */
+
+&pm8150b_charger {
+	qcom,fv-max-uv = <4380000>;
+	qcom,chg-term-src = <1>;
+	qcom,chg-term-current-ma = <(-160)>;
+	somc,product-max-icl-ua = <2600000>;
+	somc,griffin_ap_5v_wa;
+	somc,gpio-hw-id-0 = <&tlmm 59 0>;
+	somc,gpio-hw-id-1 = <&tlmm 139 0>;
+	pinctrl-names = "hw_id_sleep", "hw_id_active";
+	pinctrl-0 = <&hw_id_sleep>;
+	pinctrl-1 = <&hw_id_active>;
+};
+
+&pm8150b_pdphy {
+};
+
+&vendor {
+	kumano_batterydata: qcom,battery-data {
+		qcom,batt-id-range-pct = <17>;
+		#include "fg-gen4-batterydata-kumano-reference.dtsi"
+	};
+	kumano_batterydata_al0: somc,battery-data-al0 {
+		qcom,batt-id-range-pct = <17>;
+		#include "fg-gen4-batterydata-griffin-tmm-4380mv.dtsi"
+	};
+	kumano_batterydata_al1: somc,battery-data-al1 {
+		qcom,batt-id-range-pct = <17>;
+		#include "fg-gen4-batterydata-griffin-tmm-4340mv.dtsi"
+	};
+	kumano_batterydata_al2: somc,battery-data-al2 {
+		qcom,batt-id-range-pct = <17>;
+		#include "fg-gen4-batterydata-griffin-tmm-4300mv.dtsi"
+	};
+	kumano_batterydata_al3: somc,battery-data-al3 {
+		qcom,batt-id-range-pct = <17>;
+		#include "fg-gen4-batterydata-griffin-tmm-4250mv.dtsi"
+	};
+	kumano_batterydata_al4: somc,battery-data-al4 {
+		qcom,batt-id-range-pct = <17>;
+		#include "fg-gen4-batterydata-griffin-tmm-4150mv.dtsi"
+	};
+};
+
+&pm8150b_fg {
+	qcom,battery-data = <&kumano_batterydata>;
+	somc,battery-data-al0 = <&kumano_batterydata_al0>;
+	somc,battery-data-al1 = <&kumano_batterydata_al1>;
+	somc,battery-data-al2 = <&kumano_batterydata_al2>;
+	somc,battery-data-al3 = <&kumano_batterydata_al3>;
+	somc,battery-data-al4 = <&kumano_batterydata_al4>;
+	somc,jeita-step-use-real-temp;
+	somc,jeita-batt-temp-correction = <0>;
+	qcom,fg-sys-term-current = <(-210)>;
+};
