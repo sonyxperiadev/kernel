@@ -288,7 +288,8 @@ DTC ?= $(objtree)/scripts/dtc/dtc
 ifeq ($(KBUILD_ENABLE_EXTRA_GCC_CHECKS),)
 DTC_FLAGS += -Wno-unit_address_vs_reg \
 	-Wno-unique_unit_address \
-	-Wno-graph_port
+	-Wno-graph_port \
+	-Wno-alias_paths
 endif
 ifeq ($(DTC_EXT),)
 DTC_FLAGS += -Wno-simple_bus_reg \
