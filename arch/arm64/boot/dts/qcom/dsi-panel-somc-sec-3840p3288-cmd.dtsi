@@ -50,6 +50,7 @@
 		qcom,mdss-dsi-lp11-init;
 
 		somc,dsi-panel-type = "oled";
+		somc,aod-threshold = <35>;
 
 		somc,pw-wait-after-on-vddio = <0>;
 		somc,pw-wait-after-on-touch-int-n = <10>;
