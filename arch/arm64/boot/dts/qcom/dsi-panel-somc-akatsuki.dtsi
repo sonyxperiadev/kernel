@@ -37,6 +37,8 @@
 	somc,disp-err-flag-gpio = <&tlmm 44 0>;
 	qcom,mdss-dsi-t-clk-post = <0x0E>;
 	qcom,mdss-dsi-t-clk-pre = <0x33>;
+	somc,aod-threshold = <8>;
+
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
 			qcom,display-topology = <1 1 1>;
