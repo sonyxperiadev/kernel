@@ -46,10 +46,8 @@
 		#interrupt-cells = <1>;
 		iommus = <&apps_smmu 0x800 0x420>;
 
-		#address-cells = <1>;
-		#size-cells = <0>;
-
 		#power-domain-cells = <0>;
+		#cooling-cells = <2>;
 
 		/* hw blocks */
 		qcom,sde-off = <0x1000>;

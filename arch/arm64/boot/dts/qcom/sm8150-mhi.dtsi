@@ -24,10 +24,10 @@
 		mhi,max-channels = <106>;
 		mhi,timeout = <2000>;
 
-		#address-cells = <1>;
-		#size-cells = <0>;
-
 		mhi_channels {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
 			mhi_chan@0 {
 				reg = <0>;
 				label = "LOOPBACK";
@@ -356,7 +356,7 @@
 		};
 
 		mhi_events {
-				mhi_event@0 {
+			mhi_event@0 {
 				mhi,num-elements = <32>;
 				mhi,intmod = <1>;
 				mhi,msi = <1>;
@@ -412,6 +412,9 @@
 		};
 
 		mhi_devices {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
 			mhi_netdev_0: mhi_rmnet@0 {
 				reg = <0x0>;
 				mhi,chan = "IP_HW0";
@@ -448,10 +451,10 @@
 		mhi,max-channels = <106>;
 		mhi,timeout = <2000>;
 
-		#address-cells = <1>;
-		#size-cells = <0>;
-
 		mhi_channels {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
 			mhi_chan@0 {
 				reg = <0>;
 				label = "LOOPBACK";
@@ -780,7 +783,7 @@
 		};
 
 		mhi_events {
-				mhi_event@0 {
+			mhi_event@0 {
 				mhi,num-elements = <32>;
 				mhi,intmod = <1>;
 				mhi,msi = <1>;
@@ -836,6 +839,9 @@
 		};
 
 		mhi_devices {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
 			mhi_netdev_2: mhi_rmnet@0 {
 				reg = <0x0>;
 				mhi,chan = "IP_HW0";
