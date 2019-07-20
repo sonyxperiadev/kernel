@@ -91,13 +91,13 @@ static struct clk_alpha_pll gpu_cc_pll1 = {
 	.vco_table = trion_vco,
 	.num_vco = ARRAY_SIZE(trion_vco),
 	.config = &gpu_cc_pll1_config,
-	.type = TRION_PLL,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_TRION],
 	.clkr = {
 		.hw.init = &(struct clk_init_data){
 			.name = "gpu_cc_pll1",
 			.parent_names = (const char *[]){ "bi_tcxo" },
 			.num_parents = 1,
-			.ops = &clk_trion_pll_ops,
+			.ops = &clk_alpha_pll_trion_ops,
 			.vdd_class = &vdd_mx,
 			.num_rate_max = VDD_NUM,
 			.rate_max = (unsigned long[VDD_NUM]) {
@@ -493,7 +493,7 @@ static int gpu_cc_sm8150_probe(struct platform_device *pdev)
 			return PTR_ERR(clk);
 	}
 
-	clk_trion_pll_configure(&gpu_cc_pll1, regmap, gpu_cc_pll1.config);
+	clk_alpha_pll_trion_configure(&gpu_cc_pll1, regmap, gpu_cc_pll1.config);
 
 	ret = qcom_cc_really_probe(pdev, &gpu_cc_sm8150_desc, regmap);
 	if (ret) {
