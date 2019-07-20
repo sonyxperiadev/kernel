@@ -49,17 +49,11 @@
 #define SEC_TS_I2C_NAME		"sec_ts"
 #define SEC_TS_DEVICE_NAME	"SEC_TS"
 
-#define SEC_TS_SIDE_TOUCH_SUPPORTED 1
-#if SEC_TS_SIDE_TOUCH_SUPPORTED
-#define SEC_TS_SIDE_TOUCH_DEVICE_NAME	"sec_touchscreen_side"
-#endif
-
 #define USE_OPEN_CLOSE
 #undef USE_RESET_DURING_POWER_ON
 #undef USE_RESET_EXIT_LPM
 #define USE_POR_AFTER_I2C_RETRY
 #undef USER_OPEN_DWORK
-#define USE_PRESSURE_SENSOR
 #define PAT_CONTROL
 
 #define CONFIG_GS8	/*add for griffin pjt*/
@@ -80,9 +74,6 @@
 #define MASK_6_BITS			0x003F
 #define MASK_7_BITS			0x007F
 #define MASK_8_BITS			0x00FF
-
-/* support feature */
-//#define SEC_TS_SUPPORT_CUSTOMLIB	/* support user defined library */
 
 #define TYPE_STATUS_EVENT_CMD_DRIVEN	0
 #define TYPE_STATUS_EVENT_ERR		1
@@ -186,12 +177,6 @@
 #define SEC_TS_CMD_STATEMANAGE_ON		0x8E
 #define SEC_TS_CMD_CALIBRATION_OFFSET_SDC	0x8F
 
-/* SEC_TS CUSTOMLIB OPCODE COMMAND */
-#define SEC_TS_CMD_CUSTOMLIB_GET_INFO			0x90
-#define SEC_TS_CMD_CUSTOMLIB_WRITE_PARAM			0x91
-#define SEC_TS_CMD_CUSTOMLIB_READ_PARAM			0x92
-#define SEC_TS_CMD_CUSTOMLIB_NOTIFY_PACKET			0x93
-
 #define SEC_TS_CMD_STATUS_EVENT_TYPE	0xA0
 #define SEC_TS_READ_FW_INFO		0xA2
 #define SEC_TS_READ_FW_VERSION		0xA3
@@ -289,9 +274,6 @@
 #define SEC_TS_VENDOR_ACK_NOISE_STATUS_NOTI		0x64
 /* SEC_TS_STATUS_EVENT_USER_INPUT */
 #define SEC_TS_EVENT_FORCE_KEY	0x1
-
-/* SEC_TS_STATUS_EVENT_CUSTOMLIB_INFO */
-#define SEC_TS_EVENT_CUSTOMLIB_FORCE_KEY	0x00
 
 /* SEC_TS_ERROR : Error event */
 #define SEC_TS_ERR_EVNET_CORE_ERR	0x0
@@ -501,33 +483,10 @@ enum {
 	TYPE_INVALID_DATA		= 0xFF,	/* Invalid data type for release factory mode */
 };
 
-typedef enum {
-	CUSTOMLIB_EVENT_TYPE_SPAY			= 0x04,
-	CUSTOMLIB_EVENT_TYPE_PRESSURE_TOUCHED = 0x05,
-	CUSTOMLIB_EVENT_TYPE_PRESSURE_RELEASED	= 0x06,
-	CUSTOMLIB_EVENT_TYPE_AOD			= 0x08,
-	CUSTOMLIB_EVENT_TYPE_AOD_PRESS		= 0x09,
-	CUSTOMLIB_EVENT_TYPE_AOD_LONGPRESS		= 0x0A,
-	CUSTOMLIB_EVENT_TYPE_AOD_DOUBLETAB		= 0x0B,
-	CUSTOMLIB_EVENT_TYPE_AOD_HOMEKEY_PRESS	= 0x0C,
-	CUSTOMLIB_EVENT_TYPE_AOD_HOMEKEY_RELEASE	= 0x0D,
-	CUSTOMLIB_EVENT_TYPE_AOD_HOMEKEY_RELEASE_NO_HAPTIC	= 0x0E
-} CUSTOMLIB_EVENT_TYPE;
-
 #define CMD_RESULT_WORD_LEN		10
 
 #define SEC_TS_I2C_RETRY_CNT		10
 #define SEC_TS_WAIT_RETRY_CNT		100
-
-#define SEC_TS_MODE_CUSTOMLIB_SPAY			(1 << 1)
-#define SEC_TS_MODE_CUSTOMLIB_AOD			(1 << 2)
-#define SEC_TS_MODE_CUSTOMLIB_FORCE_KEY	(1 << 6)
-
-#define SEC_TS_MODE_LOWPOWER_FLAG			(SEC_TS_MODE_CUSTOMLIB_SPAY | SEC_TS_MODE_CUSTOMLIB_AOD \
-											| SEC_TS_MODE_CUSTOMLIB_FORCE_KEY)
-
-#define SEC_TS_CUSTOMLIB_EVENT_PRESSURE_TOUCHED		(1 << 6)
-#define SEC_TS_CUSTOMLIB_EVENT_PRESSURE_RELEASED		(1 << 7)
 
 enum sec_fw_update_status {
 	SEC_NOT_UPDATE = 0,
@@ -723,9 +682,7 @@ struct sec_ts_data {
 	struct input_dev *input_dev;
 	struct input_dev *input_dev_pad;
 	struct input_dev *input_dev_touch;
-#if SEC_TS_SIDE_TOUCH_SUPPORTED
 	struct input_dev *input_dev_side;
-#endif
 	struct sec_ts_plat_data *plat_data;
 	struct sec_ts_coordinate coord[MAX_SUPPORT_TOUCH_COUNT + MAX_SUPPORT_HOVER_COUNT];
 
@@ -790,7 +747,6 @@ struct sec_ts_data {
 	int tspid_val;
 	int tspicid_val;
 
-	bool use_customlib;
 	unsigned int scrub_id;
 	unsigned int scrub_x;
 	unsigned int scrub_y;
@@ -805,11 +761,6 @@ struct sec_ts_data {
 	u8 grip_landscape_mode;
 	int grip_landscape_edge;
 	u16 grip_landscape_deadzone;
-
-#ifdef CONFIG_TOUCHSCREEN_DUMP_MODE
-	struct delayed_work ghost_check;
-	u8 tsp_dump_lock;
-#endif
 
 	int nv;
 	int cal_count;
@@ -847,12 +798,11 @@ struct sec_ts_data {
 	short cm_raw_set_p2p_max;			//CM_RAW_SET_P2P
 	short cm_raw_set_p2p_diff;		//CM_RAW_SET_P2P_DIFF
 
-#ifdef USE_PRESSURE_SENSOR
 	short pressure_left;
 	short pressure_center;
 	short pressure_right;
 	u8 pressure_user_level;
-#endif
+
 	int debug_flag;
 
 	struct after_init_work_t after_work;
@@ -867,7 +817,6 @@ struct sec_ts_data {
 	int (*sec_ts_i2c_read)(struct sec_ts_data *ts, u8 reg, u8 *data, int len);
 	int (*sec_ts_i2c_write_burst)(struct sec_ts_data *ts, u8 *data, int len);
 	int (*sec_ts_i2c_read_bulk)(struct sec_ts_data *ts, u8 *data, int len);
-	int (*sec_ts_read_customlib)(struct sec_ts_data *ts, u8 *data, int len);
 };
 
 struct sec_ts_plat_data {
@@ -906,7 +855,6 @@ struct sec_ts_plat_data {
 	bool regulator_boot_on;
 	bool support_mt_pressure;
 	bool support_dex;
-	bool support_sidegesture;
 
 	struct sec_ts_watchdog watchdog;
 	struct sec_ts_side_touch side_touch;
@@ -962,10 +910,6 @@ int sec_ts_release_tmode(struct sec_ts_data *ts);
 int get_tsp_nvm_data(struct sec_ts_data *ts, u8 offset);
 int get_tsp_nvm_data_by_size(struct sec_ts_data *ts, u8 offset, int length, u8 *data);
 void set_tsp_nvm_data_clear(struct sec_ts_data *ts, u8 offset);
-#ifdef SEC_TS_SUPPORT_CUSTOMLIB
-int sec_ts_set_custom_library(struct sec_ts_data *ts);
-int sec_ts_check_custom_library(struct sec_ts_data *ts);
-#endif
 void sec_ts_unlocked_release_all_finger(struct sec_ts_data *ts);
 void sec_ts_locked_release_all_finger(struct sec_ts_data *ts);
 void sec_ts_fn_remove(struct sec_ts_data *ts);

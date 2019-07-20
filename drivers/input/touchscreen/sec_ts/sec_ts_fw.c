@@ -1025,12 +1025,6 @@ int sec_ts_firmware_update_on_hidden_menu(struct sec_ts_data *ts, int update_typ
 		break;
 	}
 
-#ifdef SEC_TS_SUPPORT_CUSTOMLIB
-	sec_ts_check_custom_library(ts);
-	if (ts->use_customlib)
-		sec_ts_set_custom_library(ts);
-#endif
-
 	return ret;
 }
 EXPORT_SYMBOL(sec_ts_firmware_update_on_hidden_menu);
