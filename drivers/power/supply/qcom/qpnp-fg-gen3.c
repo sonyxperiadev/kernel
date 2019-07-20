@@ -5985,6 +5985,7 @@ static int fg_gen3_probe(struct platform_device *pdev)
 	device_init_wakeup(fg->dev, true);
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
 	fg_somc_restore_batt_aging_level(fg);
+	fg->is_fg_gen4 = false;
 #endif
 	schedule_delayed_work(&fg->profile_load_work, 0);
 

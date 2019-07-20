@@ -16,7 +16,7 @@
 #include <linux/mutex.h>
 
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
-#define NUM_MAX_CLIENTS 20
+#define NUM_MAX_CLIENTS 32
 #endif
 
 struct votable;

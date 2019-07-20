@@ -231,6 +231,10 @@ EXPORT_SYMBOL(read_range_data_from_node);
 
 static int get_step_chg_jeita_setting_from_profile(struct step_chg_info *chip)
 {
+#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+	chip->sw_jeita_cfg_valid = false;
+	return -ENODATA;
+#else
 	struct device_node *batt_node, *profile_node;
 	u32 max_fv_uv, max_fcc_ma;
 	const char *batt_type_str;
@@ -361,6 +365,7 @@ static int get_step_chg_jeita_setting_from_profile(struct step_chg_info *chip)
 	}
 
 	return rc;
+#endif
 }
 
 static void get_config_work(struct work_struct *work)

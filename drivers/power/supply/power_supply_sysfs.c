@@ -426,7 +426,6 @@ static struct device_attribute power_supply_attrs[] = {
     defined(CONFIG_QPNP_FG_EXTENSION)
 	POWER_SUPPLY_ATTR(usbin_det),
 	POWER_SUPPLY_ATTR(sub_type),
-	POWER_SUPPLY_ATTR(enable_shutdown_at_low_battery),
 	POWER_SUPPLY_ATTR(fv_cfg),
 	POWER_SUPPLY_ATTR(fv_cmp_cfg),
 	POWER_SUPPLY_ATTR(batt_aging),
@@ -436,6 +435,7 @@ static struct device_attribute power_supply_attrs[] = {
 #if defined(CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION) || \
     defined(CONFIG_QPNP_SMBCHARGER_EXTENSION)   || \
     defined(CONFIG_QPNP_FG_EXTENSION)
+	POWER_SUPPLY_ATTR(enable_shutdown_at_low_battery),
 	POWER_SUPPLY_ATTR(lrc_enable),
 	POWER_SUPPLY_ATTR(lrc_socmax),
 	POWER_SUPPLY_ATTR(lrc_socmin),
@@ -449,6 +449,7 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(smart_charging_status),
 	POWER_SUPPLY_ATTR(charge_full_raw),
 	POWER_SUPPLY_ATTR(learning_counter),
+	POWER_SUPPLY_ATTR(learning_trial_counter),
 	POWER_SUPPLY_ATTR(recharge_counter),
 	POWER_SUPPLY_ATTR(full_counter),
 	POWER_SUPPLY_ATTR(real_temp),
@@ -459,6 +460,20 @@ static struct device_attribute power_supply_attrs[] = {
 #endif /* CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION ||
 	* CONFIG_QPNP_SMBCHARGER_EXTENSION   ||
 	* CONFIG_QPNP_FG_EXTENSION */
+#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+	POWER_SUPPLY_ATTR(bootup_shutdown_phase),
+	POWER_SUPPLY_ATTR(batt_aging_level),
+	POWER_SUPPLY_ATTR(aux_temp),
+	POWER_SUPPLY_ATTR(jeita_step_fcc),
+	POWER_SUPPLY_ATTR(jeita_step_fv),
+	POWER_SUPPLY_ATTR(jeita_condition),
+	POWER_SUPPLY_ATTR(chg_pwr_fcc),
+	POWER_SUPPLY_ATTR(chg_pwr_icl),
+	POWER_SUPPLY_ATTR(chg_pwr_indication_control),
+	POWER_SUPPLY_ATTR(cc_reconnection_running),
+	POWER_SUPPLY_ATTR(pd_5v_limit_wa),
+#endif /* CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION */
+
 	/* Local extensions of type int64_t */
 	POWER_SUPPLY_ATTR(charge_counter_ext),
 	/* Properties of type `const char *' */
