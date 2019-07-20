@@ -380,6 +380,14 @@ int dsi_panel_driver_touch_power(struct dsi_panel *panel, bool enable)
 		return dsi_panel_driver_touch_power_off(panel);
 }
 
+int somc_panel_external_control_touch_power(bool enable)
+{
+	struct dsi_display *display = dsi_display_get_main_display();
+
+	return dsi_panel_driver_touch_power(display->panel, enable);
+}
+EXPORT_SYMBOL(somc_panel_external_control_touch_power);
+
 int somc_panel_cont_splash_touch_enable(struct dsi_panel *panel)
 {
 	struct panel_specific_pdata *spec_pdata = NULL;
