@@ -1510,9 +1510,13 @@ int clk_alpha_pll_trion_configure(struct clk_alpha_pll *pll, struct regmap *regm
 		regmap_write(regmap, PLL_CONFIG_CTL_U1(pll),
 				config->config_ctl_hi1_val);
 
-	if (config->post_div_mask)
-		regmap_update_bits(regmap, PLL_USER_CTL(pll),
-				config->post_div_mask, config->post_div_val);
+	if (config->user_ctl_val)
+		regmap_write(regmap, PLL_USER_CTL(pll),
+				config->user_ctl_val);
+
+	if (config->user_ctl_hi_val)
+		regmap_write(regmap, PLL_USER_CTL_U(pll),
+				config->user_ctl_hi_val);
 
 	if (config->user_ctl_hi1_val)
 		regmap_write(regmap, PLL_USER_CTL_U1(pll),
@@ -1533,10 +1537,6 @@ int clk_alpha_pll_trion_configure(struct clk_alpha_pll *pll, struct regmap *regm
 	regmap_update_bits(regmap, PLL_MODE(pll),
 				 PLL_UPDATE_BYPASS,
 				 PLL_UPDATE_BYPASS);
-
-	/* Set calibration control to Automatic */
-	regmap_update_bits(regmap, PLL_USER_CTL_U(pll),
-			PLL_ALPHA_CAL_MASK, PLL_ALPHA_CAL_CTRL);
 
 	/* Disable PLL output */
 	ret = regmap_update_bits(regmap, PLL_MODE(pll), PLL_OUTCTRL, 0);

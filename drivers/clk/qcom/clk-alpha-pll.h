@@ -133,6 +133,7 @@ struct alpha_pll_config {
 	u32 post_div_val;
 	u32 post_div_mask;
 	u32 user_ctl_val;
+	u32 user_ctl_hi_val;
 	u32 user_ctl_hi1_val;
 	u32 vco_val;
 	u32 vco_mask;
