@@ -1602,6 +1602,43 @@ int somc_panel_get_display_aod_mode(void)
 	return display_aod_mode;
 }
 
+static ssize_t dsi_panel_hbm_mode_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct dsi_display *display = dev_get_drvdata(dev);
+	struct dsi_panel *panel = display->panel;
+	int mode;
+
+	mutex_lock(&display->display_lock);
+	if (!panel->spec_pdata->display_onoff_state) {
+		pr_err("%s: Display is off, can't set HBM status\n", __func__);
+		goto hbm_error;
+	}
+
+	if (sscanf(buf, "%d", &mode) < 0) {
+		pr_err("sscanf failed to set mode. keep current mode=%d\n",
+			panel->spec_pdata->hbm_mode);
+		goto hbm_error;
+	}
+
+	dsi_panel_set_hbm_mode(panel, mode);
+
+	mutex_unlock(&display->display_lock);
+	return count;
+
+hbm_error:
+	mutex_unlock(&display->display_lock);
+	return -EINVAL;
+}
+
+static ssize_t dsi_panel_hbm_mode_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct dsi_display *display = dev_get_drvdata(dev);
+
+	return scnprintf(buf, PAGE_SIZE, "%u", display->panel->spec_pdata->hbm_mode);
+}
+
 static ssize_t dsi_panel_mplus_mode_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
 {
@@ -2032,6 +2069,9 @@ static struct device_attribute panel_attributes[] = {
 	__ATTR(sod_mode,  S_IRUSR|S_IRGRP|S_IWUSR|S_IWGRP,
 		dsi_panel_sod_mode_show,
 		dsi_panel_sod_mode_store),
+	__ATTR(hbm_mode, (S_IRUSR|S_IRGRP|S_IWUSR|S_IWGRP),
+		dsi_panel_hbm_mode_show,
+		dsi_panel_hbm_mode_store),
 	__ATTR(mplus_mode,  S_IRUSR|S_IRGRP|S_IWUSR|S_IWGRP,
 		dsi_panel_mplus_mode_show,
 		dsi_panel_mplus_mode_store),

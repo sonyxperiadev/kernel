@@ -293,6 +293,8 @@ int dsi_panel_set_aod_off(struct dsi_panel *panel);
 int dsi_panel_set_vr_on(struct dsi_panel *panel);
 
 int dsi_panel_set_vr_off(struct dsi_panel *panel);
+
+int dsi_panel_set_hbm_mode(struct dsi_panel *panel, int mode);
 #endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 
 int dsi_panel_prepare(struct dsi_panel *panel);
