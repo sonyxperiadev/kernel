@@ -35,6 +35,8 @@
 #include "dsi_display.h"
 #include "dsi_panel.h"
 
+#define AOD_MODE_THRESHOLD 8
+
 static BLOCKING_NOTIFIER_HEAD(drm_notifier_list);
 
 static u32 down_period;
@@ -377,6 +379,14 @@ int dsi_panel_driver_touch_power(struct dsi_panel *panel, bool enable)
 	else
 		return dsi_panel_driver_touch_power_off(panel);
 }
+
+int somc_panel_external_control_touch_power(bool enable)
+{
+	struct dsi_display *display = dsi_display_get_main_display();
+
+	return dsi_panel_driver_touch_power(display->panel, enable);
+}
+EXPORT_SYMBOL(somc_panel_external_control_touch_power);
 
 int somc_panel_cont_splash_touch_enable(struct dsi_panel *panel)
 {
@@ -1074,6 +1084,10 @@ int dsi_panel_driver_parse_dt(struct dsi_panel *panel,
 			"somc,pw-wait-after-off-touch-int-n", &tmp);
 	spec_pdata->touch_intn_off = !rc ? tmp : 0;
 
+	rc = of_property_read_u32(np,
+			"somc,aod-threshold", &tmp);
+	spec_pdata->aod_threshold = !rc ? tmp : AOD_MODE_THRESHOLD;
+
 	panel->lp11_init = of_property_read_bool(np,
 			"qcom,mdss-dsi-lp11-init");
 
@@ -1596,6 +1610,43 @@ int somc_panel_get_display_aod_mode(void)
 	return display_aod_mode;
 }
 
+static ssize_t dsi_panel_hbm_mode_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct dsi_display *display = dev_get_drvdata(dev);
+	struct dsi_panel *panel = display->panel;
+	int mode;
+
+	mutex_lock(&display->display_lock);
+	if (!panel->spec_pdata->display_onoff_state) {
+		pr_err("%s: Display is off, can't set HBM status\n", __func__);
+		goto hbm_error;
+	}
+
+	if (sscanf(buf, "%d", &mode) < 0) {
+		pr_err("sscanf failed to set mode. keep current mode=%d\n",
+			panel->spec_pdata->hbm_mode);
+		goto hbm_error;
+	}
+
+	dsi_panel_set_hbm_mode(panel, mode);
+
+	mutex_unlock(&display->display_lock);
+	return count;
+
+hbm_error:
+	mutex_unlock(&display->display_lock);
+	return -EINVAL;
+}
+
+static ssize_t dsi_panel_hbm_mode_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct dsi_display *display = dev_get_drvdata(dev);
+
+	return scnprintf(buf, PAGE_SIZE, "%u", display->panel->spec_pdata->hbm_mode);
+}
+
 static ssize_t dsi_panel_mplus_mode_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
 {
@@ -2026,6 +2077,9 @@ static struct device_attribute panel_attributes[] = {
 	__ATTR(sod_mode,  S_IRUSR|S_IRGRP|S_IWUSR|S_IWGRP,
 		dsi_panel_sod_mode_show,
 		dsi_panel_sod_mode_store),
+	__ATTR(hbm_mode, (S_IRUSR|S_IRGRP|S_IWUSR|S_IWGRP),
+		dsi_panel_hbm_mode_show,
+		dsi_panel_hbm_mode_store),
 	__ATTR(mplus_mode,  S_IRUSR|S_IRGRP|S_IWUSR|S_IWGRP,
 		dsi_panel_mplus_mode_show,
 		dsi_panel_mplus_mode_store),

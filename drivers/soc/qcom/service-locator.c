@@ -279,19 +279,27 @@ static int init_service_locator(void)
 			SERVREG_LOC_SERVICE_VERS_V01,
 			SERVREG_LOC_SERVICE_INSTANCE_ID);
 
+#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+	rc = wait_for_completion_interruptible(
+					&service_locator.service_available);
+#else
 	rc = wait_for_completion_interruptible_timeout(
 				&service_locator.service_available,
 				msecs_to_jiffies(LOCATOR_SERVICE_TIMEOUT));
+#endif
 	if (rc < 0) {
 		pr_err("Wait for locator service interrupted by signal\n");
 		goto inited;
 	}
+
+#ifndef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
 	if (!rc) {
 		pr_err("%s: wait for locator service timed out\n", __func__);
 		service_timedout = true;
 		rc = -ETIME;
 		goto inited;
 	}
+#endif
 
 	service_inited = true;
 	mutex_unlock(&service_init_mutex);

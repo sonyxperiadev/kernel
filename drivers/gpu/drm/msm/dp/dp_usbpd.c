@@ -586,3 +586,21 @@ void dp_usbpd_put(struct dp_hpd *dp_hpd)
 
 	devm_kfree(usbpd->dev, usbpd);
 }
+
+#ifdef CONFIG_DRM_MSM_DP_SOMC_PANEL
+void dp_usbpd_set_min_src_caps(struct dp_hpd *dp_hpd, const bool set)
+{
+	struct dp_usbpd *dp_usbpd;
+	struct dp_usbpd_private *usbpd;
+
+	dp_usbpd = container_of(dp_hpd, struct dp_usbpd, base);
+	if (!dp_usbpd)
+		return;
+
+	usbpd = container_of(dp_usbpd, struct dp_usbpd_private, dp_usbpd);
+	if (!usbpd)
+		return;
+
+	usbpd_set_min_src_caps(usbpd->pd, set);
+}
+#endif /* CONFIG_DRM_MSM_DP_SOMC_PANEL */

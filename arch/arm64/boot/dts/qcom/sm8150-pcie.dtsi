@@ -238,6 +238,8 @@
 				"pcie_0_phy_reset";
 
 		pcie_rc0: pcie_rc0 {
+			#address-cells = <3>;
+			#size-cells = <2>;
 			reg = <0 0 0 0 0>;
 		};
 	};
@@ -555,6 +557,8 @@
 				"pcie_1_phy_reset";
 
 		pcie_rc1: pcie_rc1 {
+			#address-cells = <3>;
+			#size-cells = <2>;
 			reg = <0 0 0 0 0>;
 		};
 	};

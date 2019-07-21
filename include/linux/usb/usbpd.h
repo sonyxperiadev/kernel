@@ -106,6 +106,10 @@ int usbpd_send_svdm(struct usbpd *pd, u16 svid, u8 cmd,
  */
 enum plug_orientation usbpd_get_plug_orientation(struct usbpd *pd);
 
+#ifdef CONFIG_EXTCON_SOMC_EXTENSION
+void usbpd_set_min_src_caps(struct usbpd *pd, const bool set);
+#endif
+
 void usbpd_vdm_in_suspend(struct usbpd *pd, bool in_suspend);
 #else
 static inline struct usbpd *devm_usbpd_get_by_phandle(struct device *dev,
@@ -142,6 +146,10 @@ static inline enum plug_orientation usbpd_get_plug_orientation(struct usbpd *pd)
 {
 	return ORIENTATION_NONE;
 }
+
+#ifdef CONFIG_EXTCON_SOMC_EXTENSION
+static inline void usbpd_set_min_src_caps(struct usbpd *pd, const bool set) { }
+#endif
 
 static inline void usbpd_vdm_in_suspend(struct usbpd *pd, bool in_suspend) { }
 #endif /* IS_ENABLED(CONFIG_USB_PD_POLICY) */

@@ -357,6 +357,8 @@ struct panel_specific_pdata {
 	int sod_mode;
 	int pre_sod_mode;
 	int vr_mode;
+	int hbm_mode;
+	unsigned int aod_threshold;
 	bool light_state;
 
 	struct dsi_m_plus m_plus;

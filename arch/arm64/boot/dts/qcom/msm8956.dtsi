@@ -1926,7 +1926,7 @@
 	qcom,rmnet-ipa {
 		compatible = "qcom,rmnet-ipa";
 		qcom,rmnet-ipa-ssr;
-		qcom,ipa-loaduC;
+		qcom,ipa-platform-type-msm;
 	};
 
 	tcsr_mutex_block: syscon@1905000 {

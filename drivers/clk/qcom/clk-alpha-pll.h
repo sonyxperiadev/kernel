@@ -133,6 +133,7 @@ struct alpha_pll_config {
 	u32 post_div_val;
 	u32 post_div_mask;
 	u32 user_ctl_val;
+	u32 user_ctl_hi_val;
 	u32 user_ctl_hi1_val;
 	u32 vco_val;
 	u32 vco_mask;
@@ -167,6 +168,12 @@ extern const struct clk_div_table clk_alpha_2bit_div_table[];
 void clk_alpha_pll_configure(struct clk_alpha_pll *pll, struct regmap *regmap,
 			     const struct alpha_pll_config *config);
 void clk_fabia_pll_configure(struct clk_alpha_pll *pll, struct regmap *regmap,
+				const struct alpha_pll_config *config);
+int clk_alpha_pll_trion_configure(struct clk_alpha_pll *pll, struct regmap *regmap,
+				const struct alpha_pll_config *config);
+int clk_alpha_pll_regera_configure(struct clk_alpha_pll *pll, struct regmap *regmap,
+				const struct alpha_pll_config *config);
+void clk_alpha_pll_agera_configure(struct clk_alpha_pll *pll, struct regmap *regmap,
 				const struct alpha_pll_config *config);
 
 #endif

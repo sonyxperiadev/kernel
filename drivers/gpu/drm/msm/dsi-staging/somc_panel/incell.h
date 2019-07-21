@@ -135,5 +135,12 @@ extern int incell_get_display_pre_sod(void);
 static inline int incell_get_display_pre_sod(void) {return 0; }
 #endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+int somc_panel_external_control_touch_power(bool enable);
+#else
+static inline int somc_panel_external_control_touch_power(bool enable)
+{ return 0; }
+#endif
+
 #endif /* __INCELL_H__ */
 

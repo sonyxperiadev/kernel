@@ -20,6 +20,14 @@ dtb-$(CONFIG_ARCH_QCS405) += qcs403-iot-sku1.dtb \
 endif
 
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
+# SM8150 - SoMC Kumano
+dtbo-$(CONFIG_MACH_SONY_GRIFFIN) += \
+		sm8150-kumano-griffin_generic-overlay.dtbo
+
+sm8150-kumano-griffin_generic-overlay.dtbo-base := sm8150.dtb sm8150-v2.dtb
+
+
+# SDM845 - SoMC Tama
 dtbo-$(CONFIG_MACH_SONY_AKARI) += \
 		sdm845-tama-akari_generic-overlay.dtbo \
 		sdm845-v2-tama-akari_generic-overlay.dtbo \
@@ -106,7 +114,7 @@ dtb-$(CONFIG_MACH_SONY_BLANC)		+= apq8056-v1.1-loire-blanc_windy.dtb
 dtb-$(CONFIG_MACH_SONY_BLANC)           += msm8956-loire-blanc_generic.dtb
 dtb-$(CONFIG_MACH_SONY_BLANC)		+= apq8056-loire-blanc_windy.dtb
 
-
+ifeq ($(CONFIG_BUILD_QCOM_REFERENCE_PLATFORMS),y)
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
 	dtbo-$(CONFIG_ARCH_SM8150) += \
 		sm8150-cdp-overlay.dtbo \
@@ -274,6 +282,8 @@ endif
 dtb-$(CONFIG_ARCH_SDXPRAIRIE) += sdxprairie-rumi.dtb \
 	sdxprairie-cdp.dtb \
 	sdxprairie-mtp.dtb
+
+endif # CONFIG_BUILD_QCOM_REFERENCE_PLATFORMS
 
 ifeq ($(CONFIG_ARM64),y)
 always		:= $(dtb-y)

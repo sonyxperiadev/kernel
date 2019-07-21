@@ -57,9 +57,6 @@
 		mhi_netdev1 = &mhi_netdev_1;
 		mhi_netdev2 = &mhi_netdev_2;
 		mhi_netdev3 = &mhi_netdev_3;
-	};
-
-	aliases {
 		serial0 = &qupv3_se12_2uart;
 		hsuart0 = &qupv3_se13_4uart;
 		spi0 = &qupv3_se3_spi;
@@ -3688,6 +3685,9 @@
 		reg = <0xa0000000 0x10000000>,
 		      <0xb0000000 0x10000>;
 		reg-names = "smmu_iova_base", "smmu_iova_ipa";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
 		wlan-en-gpio = <&tlmm 169 0>;
 		pinctrl-names = "wlan_en_active", "wlan_en_sleep";
 		pinctrl-0 = <&cnss_wlan_en_active>;

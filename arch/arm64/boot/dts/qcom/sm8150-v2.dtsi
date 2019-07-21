@@ -621,10 +621,8 @@
 
 	/delete-node/qcom,gpu-pwrlevels;
 	qcom,gpu-pwrlevel-bins {
-		#address-cells = <1>;
-		#size-cells = <0>;
-
 		compatible="qcom,gpu-pwrlevel-bins";
+
 		qcom,gpu-pwrlevels-0 {
 			#address-cells = <1>;
 			#size-cells = <0>;

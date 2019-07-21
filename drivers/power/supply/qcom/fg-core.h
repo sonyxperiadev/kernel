@@ -92,6 +92,12 @@
 #define ESR_SOH_SOC			50
 #define EMPTY_SOC			0
 
+#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+#undef BATT_MISS_SOC
+#define BATT_MISS_SOC			20
+#define	UNKNOWN_BATT_SOC		20
+#endif
+
 enum prof_load_status {
 	PROFILE_MISSING,
 	PROFILE_LOADED,
@@ -111,6 +117,7 @@ enum fg_debug_flag {
 	FG_CAP_LEARN		= BIT(7), /* Show capacity learning */
 	FG_TTF			= BIT(8), /* Show time to full */
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+	FG_STEP			= BIT(14),
 	FG_SOMC			= BIT(15),
 #endif
 };
@@ -389,6 +396,31 @@ struct fg_ttf {
 	s64			last_ms;
 };
 
+#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+#define STEP_DATA_MAX_CFG_NUM	30
+#define STEP_DATA_RAW		7
+#define STEP_DATA_DT_MAX_NUM	(STEP_DATA_MAX_CFG_NUM * STEP_DATA_RAW)
+struct fg_dt_step_data {
+	int	data_num;
+	int	temp_low[STEP_DATA_MAX_CFG_NUM];
+	int	temp_high[STEP_DATA_MAX_CFG_NUM];
+	int	voltage_low[STEP_DATA_MAX_CFG_NUM];
+	int	voltage_high[STEP_DATA_MAX_CFG_NUM];
+	int	target_current[STEP_DATA_MAX_CFG_NUM];
+	int	target_voltage[STEP_DATA_MAX_CFG_NUM];
+	int	condition[STEP_DATA_MAX_CFG_NUM];
+};
+
+#define STEP_INPUT_BUF_NUM 3
+struct fg_step_input {
+	int	temp;
+	int	current_now;
+	int	voltage_now;
+	s64	stored_ktime_ms;
+};
+
+#endif
+
 static const struct fg_pt fg_ln_table[] = {
 	{ 1000,		0 },
 	{ 2000,		693 },
@@ -431,6 +463,10 @@ struct fg_memif {
 #define BATT_TYPE_FIRST_HYPHEN	4
 #define BATT_TYPE_SECOND_HYPHEN	9
 #define BATT_TYPE_AGING_LEVEL	10
+
+#define NO_REQUESTED_LEVEL      -1
+#define BATT_AGING_LEVEL_NONE   -1
+#define MAX_BATT_NODE_NAME_SIZE 32
 #endif
 
 struct fg_dev {
@@ -489,16 +525,44 @@ struct fg_dev {
 	bool			qnovo_enable;
 
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+	bool			is_fg_gen4;
+
+	/* JEITA/Step charge */
+	struct delayed_work	somc_jeita_step_charge_work;
+	struct wakeup_source	step_ws;
+	struct mutex		step_lock;
+	bool			step_lock_en;
+	bool			step_en;
+	struct fg_dt_step_data	step_data;
+	int			cell_impedance_mohm;
+	int			vcell_max_mv;
+	struct fg_step_input	step_input_data[STEP_INPUT_BUF_NUM];
+	int			target_idx;
+	bool			use_real_temp;
+	bool			real_temp_use_aux;
+	int			batt_temp_correctton;
+	int			aux_temp_correctton;
+	int			real_temp_debug;
+
 	/* Soft Charge */
 	int			batt_aging_level;
+	int			max_batt_aging_level;
 	int			saved_batt_aging_level;
+	int			requested_batt_aging_level;
 	char			org_batt_type_str[ORG_BATT_TYPE_SIZE + 1];
 
 	/* FULL/Recharge */
+	bool			charge_full_releasing;
+	struct delayed_work	somc_charge_full_releasing_work;
 	bool			recharge_starting;
 	int			recharge_voltage_mv;
 	int			recharge_counter;
 	int			full_counter;
+
+	/* Soc Correction */
+	int			msoc_tune_a;
+	int			msoc_tune_b;
+	int			soc_restart_counter;
 #endif
 
 	enum fg_version		version;

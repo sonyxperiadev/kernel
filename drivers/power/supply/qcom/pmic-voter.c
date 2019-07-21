@@ -168,6 +168,15 @@ static int get_client_id(struct votable *votable, const char *client_str)
 			return i;
 		}
 	}
+
+#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+	pr_err("==========================================================\n");
+	pr_err("[PMIC-VOTER] %s: Couldn't register new client (%s): "
+		"clients full!! \n", votable->name, client_str);
+	for (i = 0; i < votable->num_clients; i++)
+		pr_err("client[%d]=%s\n", i, votable->client_strs[i]);
+	pr_err("==========================================================\n");
+#endif
 	return -EINVAL;
 }
 
