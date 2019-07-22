@@ -648,7 +648,7 @@ struct ipa_mhi_clk_vote_resp_msg_v01
 	 * executed from mhi context.
 	 */
 	if (vote) {
-		ret = mhi_device_get_sync(imp_ctx->md.mhi_dev);
+		ret = mhi_device_get_sync(imp_ctx->md.mhi_dev, 0);
 		if (ret) {
 			IMP_ERR("mhi_sync_get failed %d\n", ret);
 			resp->resp.result = IPA_QMI_RESULT_FAILURE_V01;
@@ -658,7 +658,7 @@ struct ipa_mhi_clk_vote_resp_msg_v01
 			return resp;
 		}
 	} else {
-		mhi_device_put(imp_ctx->md.mhi_dev);
+		mhi_device_put(imp_ctx->md.mhi_dev, 0);
 	}
 
 	mutex_lock(&imp_ctx->mutex);
@@ -695,7 +695,8 @@ static void imp_mhi_shutdown(void)
 
 	IMP_FUNC_ENTRY();
 
-	if (imp_ctx->state == IMP_STARTED) {
+	if (imp_ctx->state == IMP_STARTED ||
+		imp_ctx->state == IMP_READY) {
 		req.cleanup_valid = true;
 		req.cleanup = true;
 		ipa3_qmi_send_mhi_cleanup_request(&req);
@@ -718,7 +719,7 @@ static void imp_mhi_shutdown(void)
 				false);
 		}
 		if (imp_ctx->lpm_disabled) {
-			mhi_device_put(imp_ctx->md.mhi_dev);
+			mhi_device_put(imp_ctx->md.mhi_dev, 0);
 			imp_ctx->lpm_disabled = false;
 		}
 
