@@ -742,19 +742,6 @@ config FORCE_ALLOC_FROM_DMA_ZONE
 
 	  If unsure, say "n".
 
-config PROCESS_RECLAIM
-	bool "Enable process reclaim"
-	depends on PROC_FS
-	default n
-	help
-	 It allows to reclaim pages of the process by /proc/pid/reclaim.
-
-	 (echo file > /proc/PID/reclaim) reclaims file-backed pages only.
-	 (echo anon > /proc/PID/reclaim) reclaims anonymous pages only.
-	 (echo all > /proc/PID/reclaim) reclaims all pages.
-
-	 Any other vaule is ignored.
-
 config ARCH_SUPPORTS_SPECULATIVE_PAGE_FAULT
        def_bool n
 
@@ -776,3 +763,4 @@ config SPECULATIVE_PAGE_FAULT
 	 detected or because underlying PMD or PTE tables are not yet
 	 allocating, it is failing its processing and a classic page fault
 	 is then tried.
+
