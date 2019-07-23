@@ -86,17 +86,14 @@ static int test_task_flag(struct task_struct *p, int flag)
 {
 	struct task_struct *t = p;
 
-	rcu_read_lock();
-	for_each_thread(p, t) {
+	do {
 		task_lock(t);
 		if (test_tsk_thread_flag(t, flag)) {
 			task_unlock(t);
-			rcu_read_unlock();
 			return 1;
 		}
 		task_unlock(t);
-	}
-	rcu_read_unlock();
+	} while_each_thread(p, t);
 
 	return 0;
 }
@@ -124,6 +121,10 @@ static void swap_fn(struct work_struct *work)
 		short oom_score_adj;
 
 		if (tsk->flags & PF_KTHREAD)
+			continue;
+
+		/* if task no longer has any memory ignore it */
+		if (test_task_flag(tsk, TIF_MM_RELEASED))
 			continue;
 
 		if (test_task_flag(tsk, TIF_MEMDIE))
@@ -162,19 +163,19 @@ static void swap_fn(struct work_struct *work)
 		}
 	}
 
-	for (i = 0; i < si; i++)
+	for (i = 0; i < si; i++) {
+		get_task_struct(selected[i].p);
 		total_sz += selected[i].tasksize;
+	}
+
+	rcu_read_unlock();
 
 	/* Skip reclaim if total size is too less */
 	if (total_sz < SWAP_CLUSTER_MAX) {
-		rcu_read_unlock();
+		for (i = 0; i < si; i++)
+			put_task_struct(selected[i].p);
 		return;
 	}
-
-	for (i = 0; i < si; i++)
-		get_task_struct(selected[i].p);
-
-	rcu_read_unlock();
 
 	while (si--) {
 		nr_to_reclaim =
@@ -182,6 +183,12 @@ static void swap_fn(struct work_struct *work)
 		/* scan atleast a page */
 		if (!nr_to_reclaim)
 			nr_to_reclaim = 1;
+
+		if ((test_task_flag(selected[si].p, TIF_MM_RELEASED))
+			|| (test_task_flag(selected[si].p, TIF_MEMDIE))) {
+			put_task_struct(selected[si].p);
+			continue;
+		}
 
 		rp = reclaim_task_anon(selected[si].p, nr_to_reclaim);
 
