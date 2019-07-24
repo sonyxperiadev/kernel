@@ -86,6 +86,13 @@ static int lowmem_minfree[6] = {
 static int lowmem_minfree_size = 4;
 static int lmk_fast_run = 1;
 
+/*
+ * Override to force lowmem_minfree, ignoring userspace changes
+ * used only if values are set (checks for first val > 0)
+ */
+static int forced_lowmem_minfree[6] = { 0, 0, 0, 0, 0, 0 };
+static int forced_lowmem_minfree_size = 4;
+
 static unsigned long lowmem_deathpending_timeout;
 
 #define lowmem_print(level, x...)			\
@@ -159,9 +166,16 @@ static int lmk_vmpressure_notifier(struct notifier_block *nb,
 	int other_free, other_file;
 	unsigned long pressure = action;
 	int array_size = ARRAY_SIZE(lowmem_adj);
+	int *minfree_array = lowmem_minfree;
+	int minfree_size = lowmem_minfree_size;
 
 	if (!enable_adaptive_lmk)
 		return 0;
+
+	if (forced_lowmem_minfree[0] > 0) {
+		minfree_array = forced_lowmem_minfree;
+		minfree_size = forced_lowmem_minfree_size;
+	}
 
 	if (pressure >= 95) {
 		other_file = global_node_page_state(NR_FILE_PAGES) -
@@ -174,8 +188,9 @@ static int lmk_vmpressure_notifier(struct notifier_block *nb,
 	} else if (pressure >= 90) {
 		if (lowmem_adj_size < array_size)
 			array_size = lowmem_adj_size;
-		if (lowmem_minfree_size < array_size)
-			array_size = lowmem_minfree_size;
+
+		if (minfree_size < array_size)
+			array_size = minfree_size;
 
 		other_file = global_node_page_state(NR_FILE_PAGES) -
 			global_node_page_state(NR_SHMEM) -
@@ -183,7 +198,7 @@ static int lmk_vmpressure_notifier(struct notifier_block *nb,
 
 		other_free = global_page_state(NR_FREE_PAGES);
 
-		if ((other_free < lowmem_minfree[array_size - 1]) &&
+		if ((other_free < minfree_array[array_size - 1]) &&
 		    (other_file < vmpressure_file_min)) {
 			atomic_set(&shift_adj, 1);
 			trace_almk_vmpressure(pressure, other_free, other_file);
@@ -458,9 +473,16 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 	int array_size = ARRAY_SIZE(lowmem_adj);
 	int other_free;
 	int other_file;
+	int *minfree_array = lowmem_minfree;
+	int minfree_size = lowmem_minfree_size;
 
 	if (!mutex_trylock(&scan_mutex))
 		return 0;
+
+	if (forced_lowmem_minfree[0] > 0) {
+		minfree_array = forced_lowmem_minfree;
+		minfree_size = forced_lowmem_minfree_size;
+	}
 
 	other_free = global_page_state(NR_FREE_PAGES) - totalreserve_pages;
 
@@ -478,10 +500,10 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 
 	if (lowmem_adj_size < array_size)
 		array_size = lowmem_adj_size;
-	if (lowmem_minfree_size < array_size)
-		array_size = lowmem_minfree_size;
+	if (minfree_size < array_size)
+		array_size = minfree_size;
 	for (i = 0; i < array_size; i++) {
-		minfree = lowmem_minfree[i];
+		minfree = minfree_array[i];
 		if (other_free < minfree && other_file < minfree) {
 			min_score_adj = lowmem_adj[i];
 			break;
@@ -752,6 +774,8 @@ module_param_array_named(adj, lowmem_adj, short, &lowmem_adj_size, 0644);
 #endif
 module_param_array_named(minfree, lowmem_minfree, uint, &lowmem_minfree_size,
 			 S_IRUGO | S_IWUSR);
+module_param_array_named(forced_minfree, forced_lowmem_minfree, uint,
+			 &forced_lowmem_minfree_size, S_IRUGO | S_IWUSR);
 module_param_named(debug_level, lowmem_debug_level, uint, S_IRUGO | S_IWUSR);
 module_param_named(lmk_fast_run, lmk_fast_run, int, S_IRUGO | S_IWUSR);
 
