@@ -459,6 +459,10 @@ static __always_inline void __write_once_size(volatile void *p, void *res, int s
 #define __nocfi
 #endif
 
+#ifndef __noscs
+#define __noscs
+#endif
+
 /*
  * Assume alignment of return value.
  */

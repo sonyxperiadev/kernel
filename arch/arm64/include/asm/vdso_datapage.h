@@ -35,6 +35,10 @@ typedef __u64 vdso_xtime_clock_sec_t;
 typedef __u64 vdso_raw_time_sec_t;
 #endif
 
+#define USE_SYSCALL    0x1
+#define USE_SYSCALL_32 0x2
+#define USE_SYSCALL_64 0x4
+
 struct vdso_data {
 	__u64 cs_cycle_last;	/* Timebase at clocksource init */
 	vdso_raw_time_sec_t raw_time_sec;	/* Raw time */
@@ -45,7 +49,8 @@ struct vdso_data {
 	__u64 xtime_coarse_nsec;
 	__u64 wtm_clock_sec;	/* Wall to monotonic time */
 	vdso_wtm_clock_nsec_t wtm_clock_nsec;
-	__u64 btm_nsec;		/* monotonic to boot time */
+	__u32 btm_sec;		/* monotonic to boot time */
+	__u32 btm_nsec;
 	__u32 tb_seq_count;	/* Timebase sequence counter */
 	/* cs_* members must be adjacent and in this order (ldp accesses) */
 	__u32 cs_mono_mult;	/* NTP-adjusted clocksource multiplier */

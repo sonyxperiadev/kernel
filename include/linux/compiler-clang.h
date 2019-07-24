@@ -47,6 +47,8 @@
 #define __nocfi		__attribute__((no_sanitize("cfi")))
 #endif
 
+#define __noscs		__attribute__((no_sanitize("shadow-call-stack")))
+
 /* all clang versions usable with the kernel support KASAN ABI version 5 */
 #define KASAN_ABI_VERSION 5
 
