@@ -1047,7 +1047,7 @@ config ARM64_SSBD
 
 config RODATA_FULL_DEFAULT_ENABLED
 	bool "Apply r/o permissions of VM areas also to their linear aliases"
-	default y
+	default n
 	help
 	  Apply read-only attributes of VM areas to the linear alias of
 	  the backing pages as well. This prevents code or read-only data
