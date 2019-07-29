@@ -1165,9 +1165,9 @@
 	qcom,init-ldo-mode = <1>;
 	qcom,init-pin-ctrl-enable = <0>;
 	qcom,init-pin-ctrl-mode = <0>;
-	regulator-min-microvolt = <2200000>;
+	regulator-min-microvolt = <2500000>;
 	regulator-max-microvolt = <2500000>;
-	qcom,init-voltage = <2200000>;
+	qcom,init-voltage = <2500000>;
 	status = "okay";
 };
 
@@ -1245,9 +1245,9 @@
 	qcom,init-ldo-mode = <1>;
 	qcom,init-pin-ctrl-enable = <0>;
 	qcom,init-pin-ctrl-mode = <0>;
-	regulator-min-microvolt = <1000000>;
+	regulator-min-microvolt = <1200000>;
 	regulator-max-microvolt = <1200000>;
-	qcom,init-voltage = <1000000>;
+	qcom,init-voltage = <1200000>;
 	status = "okay";
 };
 
