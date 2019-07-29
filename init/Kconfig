@@ -2342,6 +2342,18 @@ config INIT_ALL_POSSIBLE
 	  it was better to provide this option than to break all the archs
 	  and have several arch maintainers pursuing me down dark alleys.
 
+config DEBUG_RENAME_SKIP_INITRAMFS_BOOTPARAM
+	bool "Rename skip_initramfs boot parameter to do_skip_initramfs"
+	help
+	  Some bootloaders will set this boot parameter whenever a direct
+	  boot from a newly uploaded-to-RAM boot image is requested.
+	  Sometimes though we want it to load the initramfs anyway, even
+	  if it's a direct boot.
+	  This configuration option will rename the "skip_initramfs" to
+	  "do_skip_initramfs".
+
+	  This is a kernel hack. Definitely say N.
+
 source "block/Kconfig"
 
 config PREEMPT_NOTIFIERS
