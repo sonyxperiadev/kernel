@@ -633,12 +633,7 @@ static struct iommu_domain *msm_iommu_domain_alloc(unsigned type)
 	struct msm_iommu_priv *priv;
 	int ret;
 
-	/*
-	 * Note: for secure mapping, the IOMMU_DOMAIN_DMA is not allowed,
-	 * hence only UNMANAGED is allowed. TODO: Find a way to differentiate
-	 * between secure mapping ONLY and insecure pagetable allocation.
-	 */
-	if (type != IOMMU_DOMAIN_UNMANAGED)
+	if (type != IOMMU_DOMAIN_UNMANAGED | type != IOMMU_DOMAIN_DMA)
 		return NULL;
 
 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
@@ -705,7 +700,7 @@ static int msm_iommu_dynamic_attach(struct iommu_domain *domain, struct device *
 		.ias		= MMU_IAS,
 		.oas		= MMU_OAS,
 		.tlb		= &msm_iommu_gather_ops,
-		.iommu_dev	= dev,
+		.iommu_dev	= &ctx_drvdata->pdev->dev,
 		.iova_base	= domain->geometry.aperture_start,
 		.iova_end	= domain->geometry.aperture_end,
 	};
@@ -844,7 +839,7 @@ static int msm_iommu_attach_dev(struct iommu_domain *domain, struct device *dev)
 			.sec_id = iommu_drvdata->sec_id,
 			.cbndx  = ctx_drvdata->num,
 		},
-		.iommu_dev	= iommu_drvdata->dev,
+		.iommu_dev	= &ctx_drvdata->pdev->dev,
 		.iova_base	= domain->geometry.aperture_start,
 		.iova_end	= domain->geometry.aperture_end,
 	};
