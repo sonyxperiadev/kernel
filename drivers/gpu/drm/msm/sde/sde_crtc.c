@@ -2016,7 +2016,8 @@ static void _sde_crtc_blend_setup_mixer(struct drm_crtc *crtc,
 		cnt++;
 	}
 
-	sort(pstates, cnt, sizeof(pstates[0]), pstate_cmp, NULL);
+	if (cnt)
+		sort(pstates, cnt, sizeof(pstates[0]), pstate_cmp, NULL);
 	_sde_crtc_set_src_split_order(crtc, pstates, cnt);
 
 	if (lm && lm->ops.setup_dim_layer) {
@@ -5278,7 +5279,8 @@ static int sde_crtc_atomic_check(struct drm_crtc *crtc,
 	}
 
 	/* assign mixer stages based on sorted zpos property */
-	sort(pstates, cnt, sizeof(pstates[0]), pstate_cmp, NULL);
+	if (cnt)
+		sort(pstates, cnt, sizeof(pstates[0]), pstate_cmp, NULL);
 
 	rc = _sde_crtc_excl_dim_layer_check(state, pstates, cnt);
 	if (rc)
