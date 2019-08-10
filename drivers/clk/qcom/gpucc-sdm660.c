@@ -211,6 +211,7 @@ static struct clk_rcg2 gfx3d_clk_src = {
 	.mnd_width = 0,
 	.hid_width = 5,
 	.freq_tbl = ftbl_gfx3d_clk_src,
+	.enable_safe_config = true,
 	.parent_map = gpucc_parent_map_1,
 	.flags = FORCE_ENABLE_RCG,
 	.clkr.hw.init = &gpu_clks_init[0],
