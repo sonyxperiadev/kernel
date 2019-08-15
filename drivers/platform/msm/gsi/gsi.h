@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -90,6 +90,7 @@ enum gsi_chan_state {
 	GSI_CHAN_STATE_STARTED = 0x2,
 	GSI_CHAN_STATE_STOPPED = 0x3,
 	GSI_CHAN_STATE_STOP_IN_PROC = 0x4,
+	GSI_CHAN_STATE_FLOW_CONTROL = 0x5,
 	GSI_CHAN_STATE_ERROR = 0xf
 };
 

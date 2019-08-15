@@ -1391,14 +1391,24 @@ static u32 _sde_crtc_get_displays_affected(struct drm_crtc *crtc,
 {
 	struct sde_crtc *sde_crtc;
 	struct sde_crtc_state *crtc_state;
+	struct drm_encoder *encoder;
 	u32 disp_bitmask = 0;
 	int i;
+	bool is_ppsplit = false;
 
 	sde_crtc = to_sde_crtc(crtc);
 	crtc_state = to_sde_crtc_state(state);
 
+	list_for_each_entry(encoder,
+			&crtc->dev->mode_config.encoder_list, head) {
+		if (encoder->crtc != state->crtc)
+			continue;
+
+		is_ppsplit |= sde_encoder_is_topology_ppsplit(encoder);
+	}
+
 	/* pingpong split: one ROI, one LM, two physical displays */
-	if (crtc_state->is_ppsplit) {
+	if (is_ppsplit) {
 		u32 lm_split_width = crtc_state->lm_bounds[0].w / 2;
 		struct sde_rect *roi = &crtc_state->lm_roi[0];
 
@@ -2016,7 +2026,8 @@ static void _sde_crtc_blend_setup_mixer(struct drm_crtc *crtc,
 		cnt++;
 	}
 
-	sort(pstates, cnt, sizeof(pstates[0]), pstate_cmp, NULL);
+	if (cnt)
+		sort(pstates, cnt, sizeof(pstates[0]), pstate_cmp, NULL);
 	_sde_crtc_set_src_split_order(crtc, pstates, cnt);
 
 	if (lm && lm->ops.setup_dim_layer) {
@@ -5278,7 +5289,8 @@ static int sde_crtc_atomic_check(struct drm_crtc *crtc,
 	}
 
 	/* assign mixer stages based on sorted zpos property */
-	sort(pstates, cnt, sizeof(pstates[0]), pstate_cmp, NULL);
+	if (cnt)
+		sort(pstates, cnt, sizeof(pstates[0]), pstate_cmp, NULL);
 
 	rc = _sde_crtc_excl_dim_layer_check(state, pstates, cnt);
 	if (rc)
