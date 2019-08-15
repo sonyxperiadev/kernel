@@ -219,7 +219,7 @@ static struct clk_rcg2 gfx3d_clk_src = {
 
 static struct clk_branch gpucc_gfx3d_clk = {
 	.halt_reg = 0x1098,
-	.halt_check = BRANCH_HALT_WARNONLY,
+	.halt_check = BRANCH_HALT,
 	.hwcg_reg = 0x1098,
 	.hwcg_bit = 1,
 	.clkr = {

@@ -40,15 +40,12 @@ struct clk_branch {
 	u8	halt_check;
 	bool	aggr_sibling_rates;
 	unsigned long rate;
-#define BRANCH_WARNONLY			BIT(6) /* No error on halt check fail*/
 #define BRANCH_VOTED			BIT(7) /* Delay on disable */
 #define BRANCH_HALT			0 /* pol: 1 = halt */
 #define BRANCH_HALT_VOTED		(BRANCH_HALT | BRANCH_VOTED)
-#define BRANCH_HALT_WARNONLY		(BRANCH_HALT | BRANCH_WARNONLY)
 #define BRANCH_HALT_ENABLE		1 /* pol: 0 = halt */
 #define BRANCH_HALT_ENABLE_VOTED	(BRANCH_HALT_ENABLE | BRANCH_VOTED)
 #define BRANCH_HALT_DELAY		2 /* No bit to check; just delay */
-#define BRANCH_HALT_SKIP		3 /* Don't check halt bit */
 
 	struct clk_regmap clkr;
 };
