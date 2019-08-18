@@ -909,6 +909,7 @@ static int dsi_panel_parse_timing(struct dsi_mode_info *mode,
 {
 	int rc = 0;
 	u64 tmp64 = 0;
+	u32 val = 0;
 	struct dsi_display_mode *display_mode;
 	struct dsi_display_mode_priv_info *priv_info;
 
@@ -935,6 +936,10 @@ static int dsi_panel_parse_timing(struct dsi_mode_info *mode,
 	}
 	display_mode->priv_info->mdp_transfer_time_us =
 					mode->mdp_transfer_time_us;
+
+	rc = utils->read_u32(utils->data, "qcom,mdss-dsi-overlap-pixels",
+				  &val);
+	priv_info->overlap_pixels = rc ? 0 : val;
 
 	rc = utils->read_u32(utils->data,
 				"qcom,mdss-dsi-panel-framerate",
@@ -3715,10 +3720,19 @@ int dsi_panel_get_mode(struct dsi_panel *panel,
 		rc = dsi_panel_parse_partial_update_caps(mode, utils);
 		if (rc)
 			pr_err("failed to partial update caps, rc=%d\n", rc);
+
 #ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
 		mode->isDefault = of_property_read_bool(child_np,
 				"qcom,mdss-dsi-timing-default");
 #endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
+
+
+		/*
+		 * TODO: support pixel overlap for DSC enabled and Partial
+		 * update enabled case also.
+		 */
+		if (prv_info->dsc_enabled || prv_info->roi_caps.enabled)
+			prv_info->overlap_pixels = 0;
 	}
 	goto done;
 
@@ -3763,6 +3777,7 @@ int dsi_panel_get_host_cfg_for_mode(struct dsi_panel *panel,
 			mode->priv_info->mdp_transfer_time_us;
 	config->video_timing.dsc_enabled = mode->priv_info->dsc_enabled;
 	config->video_timing.dsc = &mode->priv_info->dsc;
+	config->video_timing.overlap_pixels = mode->priv_info->overlap_pixels;
 
 	if (dyn_clk_caps->dyn_clk_support)
 		config->bit_clk_rate_hz_override = mode->timing.clk_rate_hz;

@@ -164,7 +164,7 @@ struct rmnet_ipa3_context {
 	struct ipa_tether_device_info
 		tether_device
 		[IPACM_MAX_CLIENT_DEVICE_TYPES];
-	atomic_t suspend_pend;
+	atomic_t ap_suspend;
 };
 
 static struct rmnet_ipa3_context *rmnet_ipa3_ctx;
@@ -1118,19 +1118,25 @@ static int ipa3_wwan_xmit(struct sk_buff *skb, struct net_device *dev)
 
 	qmap_check = RMNET_MAP_GET_CD_BIT(skb);
 	spin_lock_irqsave(&wwan_ptr->lock, flags);
+	/* There can be a race between enabling the wake queue and
+	 * suspend in progress. Check if suspend is pending and
+	 * return from here itself.
+	 */
+	if (atomic_read(&rmnet_ipa3_ctx->ap_suspend)) {
+		netif_stop_queue(dev);
+		spin_unlock_irqrestore(&wwan_ptr->lock, flags);
+		return NETDEV_TX_BUSY;
+	}
 	if (netif_queue_stopped(dev)) {
-		/*
-		 * Checking rmnet suspend in progress or not, because in suspend
-		 * clock will be disabled, without clock transferring data
-		 * not possible.
-		 */
-		if (!atomic_read(&rmnet_ipa3_ctx->suspend_pend) && qmap_check &&
+		if (qmap_check &&
 			atomic_read(&wwan_ptr->outstanding_pkts) <
 					outstanding_high_ctl) {
-			pr_err("[%s]Queue stop, send ctrl pkts\n", dev->name);
+			IPAWANERR("[%s]Queue stop, send ctrl pkts\n",
+							dev->name);
 			goto send;
 		} else {
-			pr_err("[%s]fatal: %s stopped\n", dev->name, __func__);
+			IPAWANERR("[%s]fatal: %s stopped\n", dev->name,
+							__func__);
 			spin_unlock_irqrestore(&wwan_ptr->lock, flags);
 			return NETDEV_TX_BUSY;
 		}
@@ -1167,12 +1173,12 @@ send:
 		return NETDEV_TX_BUSY;
 	}
 	if (ret) {
-		pr_err("[%s] fatal: ipa rm timer request resource failed %d\n",
+		IPAWANERR("[%s] fatal: ipa rm timer req resource failed %d\n",
 		       dev->name, ret);
 		dev_kfree_skb_any(skb);
 		dev->stats.tx_dropped++;
 		spin_unlock_irqrestore(&wwan_ptr->lock, flags);
-		return -EFAULT;
+		return NETDEV_TX_OK;
 	}
 	/* IPA_RM checking end */
 
@@ -1182,6 +1188,14 @@ send:
 	 */
 	ret = ipa3_tx_dp(IPA_CLIENT_APPS_WAN_PROD, skb, NULL);
 	if (ret) {
+		if (ret == -EPIPE) {
+			IPAWANERR_RL("[%s] fatal: pipe is not valid\n",
+				dev->name);
+			dev_kfree_skb_any(skb);
+			dev->stats.tx_dropped++;
+			spin_unlock_irqrestore(&wwan_ptr->lock, flags);
+			return NETDEV_TX_OK;
+		}
 		ret = NETDEV_TX_BUSY;
 		goto out;
 	}
@@ -2173,6 +2187,7 @@ static void ipa3_wake_tx_queue(struct work_struct *work)
 {
 	if (IPA_NETDEV()) {
 		__netif_tx_lock_bh(netdev_get_tx_queue(IPA_NETDEV(), 0));
+		IPAWANDBG("Waking up the workqueue.\n");
 		netif_wake_queue(IPA_NETDEV());
 		__netif_tx_unlock_bh(netdev_get_tx_queue(IPA_NETDEV(), 0));
 	}
@@ -2584,7 +2599,7 @@ static int ipa3_wwan_probe(struct platform_device *pdev)
 		ipa3_proxy_clk_unvote();
 	}
 	atomic_set(&rmnet_ipa3_ctx->is_ssr, 0);
-	atomic_set(&rmnet_ipa3_ctx->suspend_pend, 0);
+	atomic_set(&rmnet_ipa3_ctx->ap_suspend, 0);
 	ipa3_update_ssr_state(false);
 
 	IPAWANERR("rmnet_ipa completed initialization\n");
@@ -2642,6 +2657,7 @@ static int ipa3_wwan_remove(struct platform_device *pdev)
 	if (ipa3_rmnet_res.ipa_napi_enable)
 		netif_napi_del(&(rmnet_ipa3_ctx->wwan_priv->napi));
 	mutex_unlock(&rmnet_ipa3_ctx->pipe_handle_guard);
+	IPAWANINFO("rmnet_ipa unregister_netdev\n");
 	unregister_netdev(IPA_NETDEV());
 	if (ipa3_ctx->use_ipa_pm)
 		ipa3_wwan_deregister_netdev_pm_client();
@@ -2711,12 +2727,13 @@ static int rmnet_ipa_ap_suspend(struct device *dev)
 	 * scenarios observing the data was processed when IPA clock are off.
 	 * Added changes to synchronize rmnet supend and xmit.
 	 */
-	atomic_set(&rmnet_ipa3_ctx->suspend_pend, 1);
+	atomic_set(&rmnet_ipa3_ctx->ap_suspend, 1);
 	spin_lock_irqsave(&wwan_ptr->lock, flags);
 	/* Do not allow A7 to suspend in case there are outstanding packets */
 	if (atomic_read(&wwan_ptr->outstanding_pkts) != 0) {
 		IPAWANDBG("Outstanding packets, postponing AP suspend.\n");
 		ret = -EAGAIN;
+		atomic_set(&rmnet_ipa3_ctx->ap_suspend, 0);
 		spin_unlock_irqrestore(&wwan_ptr->lock, flags);
 		goto bail;
 	}
@@ -2728,11 +2745,11 @@ static int rmnet_ipa_ap_suspend(struct device *dev)
 		dev_put(netdev);
 	spin_unlock_irqrestore(&wwan_ptr->lock, flags);
 
+	IPAWANDBG("De-activating the PM/RM resource.\n");
 	if (ipa3_ctx->use_ipa_pm)
 		ipa_pm_deactivate_sync(rmnet_ipa3_ctx->pm_hdl);
 	else
 		ipa_rm_release_resource(IPA_RM_RESOURCE_WWAN_0_PROD);
-	atomic_set(&rmnet_ipa3_ctx->suspend_pend, 0);
 	ret = 0;
 bail:
 	IPAWANDBG("Exit with %d\n", ret);
@@ -2754,6 +2771,8 @@ static int rmnet_ipa_ap_resume(struct device *dev)
 	struct net_device *netdev = IPA_NETDEV();
 
 	IPAWANDBG("Enter...\n");
+	/* Clear the suspend in progress flag. */
+	atomic_set(&rmnet_ipa3_ctx->ap_suspend, 0);
 	if (netdev) {
 		netif_wake_queue(netdev);
 		/* Starting Watch dog timer, pipe was changes to resume state */

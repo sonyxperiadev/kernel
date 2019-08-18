@@ -176,6 +176,12 @@ static int dp_parser_misc(struct dp_parser *parser)
 	if (rc)
 		parser->max_lclk_khz = DP_MAX_LINK_CLK_KHZ;
 
+	rc = of_property_read_u32(of_node,
+		"qcom,max-hdisplay", &parser->max_hdisplay);
+
+	rc = of_property_read_u32(of_node,
+		"qcom,max-vdisplay", &parser->max_vdisplay);
+
 	return 0;
 }
 
@@ -225,7 +231,8 @@ static int dp_parser_pinctrl(struct dp_parser *parser)
 				pinctrl->pin, "mdss_dp_hpd_ctrl");
 		}
 
-		if (!pinctrl->state_hpd_tlmm || !pinctrl->state_hpd_ctrl) {
+		if (IS_ERR_OR_NULL(pinctrl->state_hpd_tlmm) ||
+				IS_ERR_OR_NULL(pinctrl->state_hpd_ctrl)) {
 			pinctrl->state_hpd_tlmm = NULL;
 			pinctrl->state_hpd_ctrl = NULL;
 			pr_debug("tlmm or ctrl pinctrl state does not exist\n");

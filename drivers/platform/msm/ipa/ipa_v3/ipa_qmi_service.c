@@ -49,6 +49,7 @@ struct ipa3_qmi_context *ipa3_qmi_ctx;
 static bool workqueues_stopped;
 static bool ipa3_modem_init_cmplt;
 static bool first_time_handshake;
+static bool send_qmi_init_q6;
 struct mutex ipa3_qmi_lock;
 struct ipa_msg_desc {
 	uint16_t msg_id;
@@ -322,7 +323,7 @@ static void ipa3_handle_mhi_vote_req(struct qmi_handle *qmi_handle,
 		vote_req->mhi_vote);
 	resp = imp_handle_vote_req(vote_req->mhi_vote);
 	if (!resp) {
-		IPAWANERR("imp handle allocate channel req fails");
+		IPAWANERR("imp handle vote req fails\n");
 		return;
 	}
 	IPAWANDBG("start sending QMI_IPA_MHI_CLK_VOTE_RESP_V01\n");
@@ -848,10 +849,11 @@ int ipa3_qmi_ul_filter_request_send(
 		if (req->firewall_rules_list[i].ip_type !=
 				QMI_IPA_IP_TYPE_V4_V01 &&
 			req->firewall_rules_list[i].ip_type !=
-				QMI_IPA_IP_TYPE_V6_V01)
+				QMI_IPA_IP_TYPE_V6_V01) {
 			IPAWANERR("Invalid IP type %d\n",
 					req->firewall_rules_list[i].ip_type);
-		return -EINVAL;
+			return -EINVAL;
+		}
 	}
 
 	req_desc.max_msg_len =
@@ -1153,6 +1155,9 @@ static void ipa3_q6_clnt_svc_arrive(struct work_struct *work)
 		return;
 	}
 
+	if (!send_qmi_init_q6)
+		return;
+
 	IPAWANDBG("Q6 QMI service available now\n");
 	/* Initialize modem IPA-driver */
 	IPAWANDBG("send ipa3_qmi_init_modem_send_sync_msg to modem\n");
@@ -1208,6 +1213,9 @@ static void ipa3_q6_clnt_svc_arrive(struct work_struct *work)
 		IPAWANERR("not send indication (%d)\n",
 		ipa3_qmi_indication_fin);
 	}
+
+	send_qmi_init_q6 = false;
+
 }
 
 static void ipa3_q6_clnt_svc_exit(struct work_struct *work)
@@ -1463,6 +1471,7 @@ int ipa3_qmi_service_init(uint32_t wan_platform_type)
 	ipa3_qmi_modem_init_fin = false;
 	ipa3_qmi_indication_fin = false;
 	ipa3_modem_init_cmplt = false;
+	send_qmi_init_q6 = true;
 	workqueues_stopped = false;
 
 	if (!ipa3_svc_handle) {
@@ -1509,6 +1518,7 @@ void ipa3_qmi_service_exit(void)
 	ipa3_qmi_modem_init_fin = false;
 	ipa3_qmi_indication_fin = false;
 	ipa3_modem_init_cmplt = false;
+	send_qmi_init_q6 = true;
 }
 
 void ipa3_qmi_stop_workqueues(void)

@@ -2107,6 +2107,14 @@ static int _adreno_start(struct adreno_device *adreno_dev)
 	if (status)
 		goto error_oob_clear;
 
+	/*
+	 * At this point it is safe to assume that we recovered. Setting
+	 * this field allows us to take a new snapshot for the next failure
+	 * if we are prioritizing the first unrecoverable snapshot.
+	 */
+	if (device->snapshot)
+		device->snapshot->recovered = true;
+
 	/* Start the dispatcher */
 	adreno_dispatcher_start(device);
 
@@ -3376,6 +3384,12 @@ int adreno_gmu_fenced_write(struct adreno_device *adreno_dev,
 		return 0;
 
 	for (i = 0; i < GMU_CORE_LONG_WAKEUP_RETRY_LIMIT; i++) {
+		/*
+		 * Make sure the previous register write is posted before
+		 * checking the fence status
+		 */
+		mb();
+
 		adreno_read_gmureg(adreno_dev, ADRENO_REG_GMU_AHB_FENCE_STATUS,
 			&status);
 

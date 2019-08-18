@@ -971,6 +971,11 @@ static int fg_gen4_get_prop_capacity(struct fg_dev *fg, int *val)
 	return 0;
 }
 
+static int fg_gen4_get_prop_real_capacity(struct fg_dev *fg, int *val)
+{
+	return fg_get_msoc(fg, val);
+}
+
 static int fg_gen4_get_prop_capacity_raw(struct fg_gen4_chip *chip, int *val)
 {
 	struct fg_dev *fg = &chip->fg;
@@ -3987,14 +3992,19 @@ static void sram_dump_work(struct work_struct *work)
 {
 	struct fg_dev *fg = container_of(work, struct fg_dev,
 				    sram_dump_work.work);
-	u8 buf[FG_SRAM_LEN];
+	u8 *buf;
 	int rc;
 	s64 timestamp_ms, quotient;
 	s32 remainder;
 
+	buf = kcalloc(FG_SRAM_LEN, sizeof(u8), GFP_KERNEL);
+	if (!buf)
+		goto resched;
+
 	rc = fg_sram_read(fg, 0, 0, buf, FG_SRAM_LEN, FG_IMA_DEFAULT);
 	if (rc < 0) {
 		pr_err("Error in reading FG SRAM, rc:%d\n", rc);
+		kfree(buf);
 		goto resched;
 	}
 
@@ -4003,6 +4013,7 @@ static void sram_dump_work(struct work_struct *work)
 	fg_dbg(fg, FG_STATUS, "SRAM Dump Started at %lld.%d\n",
 		quotient, remainder);
 	dump_sram(fg, buf, 0, FG_SRAM_LEN);
+	kfree(buf);
 	timestamp_ms = ktime_to_ms(ktime_get_boottime());
 	quotient = div_s64_rem(timestamp_ms, 1000, &remainder);
 	fg_dbg(fg, FG_STATUS, "SRAM Dump done at %lld.%d\n",
@@ -4163,6 +4174,9 @@ static int fg_psy_get_property(struct power_supply *psy,
 	switch (psp) {
 	case POWER_SUPPLY_PROP_CAPACITY:
 		rc = fg_gen4_get_prop_capacity(fg, &pval->intval);
+		break;
+	case POWER_SUPPLY_PROP_REAL_CAPACITY:
+		rc = fg_gen4_get_prop_real_capacity(fg, &pval->intval);
 		break;
 	case POWER_SUPPLY_PROP_CAPACITY_RAW:
 		rc = fg_gen4_get_prop_capacity_raw(chip, &pval->intval);
@@ -4468,6 +4482,7 @@ static int fg_property_is_writeable(struct power_supply *psy,
 
 static enum power_supply_property fg_psy_props[] = {
 	POWER_SUPPLY_PROP_CAPACITY,
+	POWER_SUPPLY_PROP_REAL_CAPACITY,
 	POWER_SUPPLY_PROP_CAPACITY_RAW,
 	POWER_SUPPLY_PROP_CC_SOC,
 	POWER_SUPPLY_PROP_TEMP,

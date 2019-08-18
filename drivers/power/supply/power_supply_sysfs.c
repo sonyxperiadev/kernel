@@ -404,6 +404,7 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(therm_icl_limit),
 	POWER_SUPPLY_ATTR(voltage_max_limit),
 	POWER_SUPPLY_ATTR(dc_reset),
+	POWER_SUPPLY_ATTR(real_capacity),
 	/* Charge pump properties */
 	POWER_SUPPLY_ATTR(cp_status1),
 	POWER_SUPPLY_ATTR(cp_status2),
@@ -414,6 +415,8 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(cp_toggle_switcher),
 	POWER_SUPPLY_ATTR(cp_irq_status),
 	POWER_SUPPLY_ATTR(cp_ilim),
+        POWER_SUPPLY_ATTR(irq_status),
+        POWER_SUPPLY_ATTR(parallel_output_mode),
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
 	POWER_SUPPLY_ATTR(skin_temp),
 	POWER_SUPPLY_ATTR(dcin_valid),

@@ -1183,9 +1183,6 @@ static void smblib_uusb_removal(struct smb_charger *chg)
 
 	cancel_delayed_work_sync(&chg->pl_enable_work);
 
-	if (chg->wa_flags & CHG_TERMINATION_WA)
-		alarm_cancel(&chg->chg_termination_alarm);
-
 	if (chg->wa_flags & BOOST_BACK_WA) {
 		data = chg->irq_info[SWITCHER_POWER_OK_IRQ].irq_data;
 		if (data) {
@@ -1569,6 +1566,29 @@ static bool smblib_is_5v_wa_enabled(struct smb_charger *chg)
 		return false;
 }
 #endif
+
+int smblib_get_irq_status(struct smb_charger *chg,
+				union power_supply_propval *val)
+{
+	int rc;
+	u8 reg;
+
+	mutex_lock(&chg->irq_status_lock);
+	/* Report and clear cached status */
+	val->intval = chg->irq_status;
+	chg->irq_status = 0;
+
+	/* get real time status of pulse skip irq */
+	rc = smblib_read(chg, MISC_PBS_RT_STS_REG, &reg);
+	if (rc < 0)
+		smblib_err(chg, "Couldn't read MISC_PBS_RT_STS_REG rc=%d\n",
+				rc);
+	else
+		val->intval |= (reg & PULSE_SKIP_IRQ_BIT);
+	mutex_unlock(&chg->irq_status_lock);
+
+	return rc;
+}
 
 /****************************
  * uUSB Moisture Protection *
@@ -4069,12 +4089,16 @@ int smblib_get_prop_pd_5v_limit_wa(struct smb_charger *chg,
 int smblib_set_prop_pd_current_max(struct smb_charger *chg,
 				    const union power_supply_propval *val)
 {
-	int rc;
+	int rc, icl;
 
-	if (chg->pd_active)
+	if (chg->pd_active) {
+		icl = get_client_vote(chg->usb_icl_votable, PD_VOTER);
 		rc = vote(chg->usb_icl_votable, PD_VOTER, true, val->intval);
-	else
+		if (val->intval != icl)
+			power_supply_changed(chg->usb_psy);
+	} else {
 		rc = -EPERM;
+	}
 
 	return rc;
 }
@@ -4838,6 +4862,21 @@ irqreturn_t default_irq_handler(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
+irqreturn_t sdam_sts_change_irq_handler(int irq, void *data)
+{
+	struct smb_irq_data *irq_data = data;
+	struct smb_charger *chg = irq_data->parent_data;
+
+	smblib_dbg(chg, PR_INTERRUPT, "IRQ: %s\n", irq_data->name);
+
+	mutex_lock(&chg->irq_status_lock);
+	chg->irq_status |= PULSE_SKIP_IRQ_BIT;
+	mutex_unlock(&chg->irq_status_lock);
+
+	power_supply_changed(chg->usb_main_psy);
+	return IRQ_HANDLED;
+}
+
 #define CHG_TERM_WA_ENTRY_DELAY_MS		300000		/* 5 min */
 #define CHG_TERM_WA_EXIT_DELAY_MS		60000		/* 1 min */
 static void smblib_eval_chg_termination(struct smb_charger *chg, u8 batt_status)
@@ -4845,7 +4884,8 @@ static void smblib_eval_chg_termination(struct smb_charger *chg, u8 batt_status)
 	union power_supply_propval pval = {0, };
 	int rc = 0;
 
-	rc = smblib_get_prop_from_bms(chg, POWER_SUPPLY_PROP_CAPACITY, &pval);
+	rc = smblib_get_prop_from_bms(chg,
+				POWER_SUPPLY_PROP_REAL_CAPACITY, &pval);
 	if (rc < 0) {
 		smblib_err(chg, "Couldn't read SOC value, rc=%d\n", rc);
 		return;
@@ -4859,6 +4899,8 @@ static void smblib_eval_chg_termination(struct smb_charger *chg, u8 batt_status)
 	 * to prevent overcharing.
 	 */
 	if ((batt_status == TERMINATE_CHARGE) && (pval.intval == 100)) {
+		chg->cc_soc_ref = 0;
+		chg->last_cc_soc = 0;
 		alarm_start_relative(&chg->chg_termination_alarm,
 				ms_to_ktime(CHG_TERM_WA_ENTRY_DELAY_MS));
 	} else if (pval.intval < 100) {
@@ -4867,6 +4909,7 @@ static void smblib_eval_chg_termination(struct smb_charger *chg, u8 batt_status)
 		 * we exit the TERMINATE_CHARGE state and soc drops below 100%
 		 */
 		chg->cc_soc_ref = 0;
+		chg->last_cc_soc = 0;
 	}
 }
 
@@ -5639,6 +5682,8 @@ enum alarmtimer_restart smblib_lpd_recheck_timer(struct alarm *alarm,
 				pval.intval, rc);
 			return ALARMTIMER_NORESTART;
 		}
+		chg->moisture_present = false;
+		power_supply_changed(chg->usb_psy);
 	} else {
 		rc = smblib_masked_write(chg, TYPE_C_INTERRUPT_EN_CFG_2_REG,
 					TYPEC_WATER_DETECTION_INT_EN_BIT,
@@ -5697,8 +5742,10 @@ static bool smblib_src_lpd(struct smb_charger *chg)
 			smblib_err(chg, "Couldn't write 0x%02x to TYPE_C_INTRPT_ENB_SOFTWARE_CTRL rc=%d\n",
 				pval.intval, rc);
 		chg->lpd_reason = LPD_MOISTURE_DETECTED;
+		chg->moisture_present =  true;
 		alarm_start_relative(&chg->lpd_recheck_timer,
 						ms_to_ktime(60000));
+		power_supply_changed(chg->usb_psy);
 	} else {
 		chg->lpd_reason = LPD_NONE;
 		chg->typec_mode = smblib_get_prop_typec_mode(chg);
@@ -5851,9 +5898,6 @@ static void typec_src_removal(struct smb_charger *chg)
 	}
 
 	cancel_delayed_work_sync(&chg->pl_enable_work);
-
-	if (chg->wa_flags & CHG_TERMINATION_WA)
-		alarm_cancel(&chg->chg_termination_alarm);
 
 	/* reset input current limit voters */
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
@@ -6233,16 +6277,19 @@ irqreturn_t dc_plugin_irq_handler(int irq, void *data)
 				dev_err(chg->dev, "Couldn't enable secondary chargers  rc=%d\n",
 					rc);
 		}
-	} else if (chg->cp_reason == POWER_SUPPLY_CP_WIRELESS) {
-		sec_charger = chg->sec_pl_present ?
+	} else {
+		if (chg->cp_reason == POWER_SUPPLY_CP_WIRELESS) {
+			sec_charger = chg->sec_pl_present ?
 					POWER_SUPPLY_CHARGER_SEC_PL :
 					POWER_SUPPLY_CHARGER_SEC_NONE;
-		rc = smblib_select_sec_charger(chg, sec_charger,
+			rc = smblib_select_sec_charger(chg, sec_charger,
 					POWER_SUPPLY_CP_NONE, false);
-		if (rc < 0)
-			dev_err(chg->dev,
-				"Couldn't disable secondary charger rc=%d\n",
-						rc);
+			if (rc < 0)
+				dev_err(chg->dev, "Couldn't disable secondary charger rc=%d\n",
+					rc);
+		}
+
+		vote(chg->dc_suspend_votable, CHG_TERMINATION_VOTER, false, 0);
 	}
 
 	power_supply_changed(chg->dc_psy);
@@ -6977,9 +7024,11 @@ static void smblib_chg_termination_work(struct work_struct *work)
 	if ((rc < 0) || !input_present)
 		goto out;
 
-	rc = smblib_get_prop_from_bms(chg, POWER_SUPPLY_PROP_CAPACITY, &pval);
+	rc = smblib_get_prop_from_bms(chg,
+				POWER_SUPPLY_PROP_REAL_CAPACITY, &pval);
 	if ((rc < 0) || (pval.intval < 100)) {
 		vote(chg->usb_icl_votable, CHG_TERMINATION_VOTER, false, 0);
+                vote(chg->dc_suspend_votable, CHG_TERMINATION_VOTER, false, 0);
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
 		vote(chg->dc_suspend_votable, CHG_TERMINATION_VOTER, false, 0);
 		smblib_dbg(chg, PR_SOMC, "Stop Termination WA due to msoc < 100\n");
@@ -7014,6 +7063,18 @@ static void smblib_chg_termination_work(struct work_struct *work)
 	}
 
 	/*
+	 * In BSM a sudden jump in CC_SOC is not expected. If seen, its a
+	 * good_ocv or updated capacity, reject it.
+	 */
+	if (chg->last_cc_soc && pval.intval > (chg->last_cc_soc + 100)) {
+		/* CC_SOC has increased by 1% from last time */
+		chg->cc_soc_ref = pval.intval;
+		smblib_dbg(chg, PR_MISC, "cc_soc jumped(%d->%d), reset cc_soc_ref\n",
+				chg->last_cc_soc, pval.intval);
+	}
+	chg->last_cc_soc = pval.intval;
+
+	/*
 	 * Suspend/Unsuspend USB input to keep cc_soc within the 0.5% to 0.75%
 	 * overshoot range of the cc_soc value at termination, to prevent
 	 * overcharging.
@@ -7042,8 +7103,12 @@ static void smblib_chg_termination_work(struct work_struct *work)
 		delay = CHG_TERM_WA_ENTRY_DELAY_MS;
 	} else if (pval.intval > DIV_ROUND_CLOSEST(chg->cc_soc_ref * 10075,
 								10000)) {
-		vote(chg->usb_icl_votable, CHG_TERMINATION_VOTER, true, 0);
-		vote(chg->dc_suspend_votable, CHG_TERMINATION_VOTER, true, 0);
+		if (input_present & INPUT_PRESENT_USB)
+			vote(chg->usb_icl_votable, CHG_TERMINATION_VOTER,
+					true, 0);
+		if (input_present & INPUT_PRESENT_DC)
+			vote(chg->dc_suspend_votable, CHG_TERMINATION_VOTER,
+					true, 0);
 		delay = CHG_TERM_WA_EXIT_DELAY_MS;
 	}
 #endif
@@ -7267,6 +7332,7 @@ static void smblib_lpd_ra_open_work(struct work_struct *work)
 		}
 
 		chg->lpd_reason = LPD_MOISTURE_DETECTED;
+		chg->moisture_present =  true;
 
 	} else {
 		/* Floating cable, disable water detection irq temporarily */
@@ -7493,6 +7559,7 @@ int smblib_init(struct smb_charger *chg)
 	int rc = 0;
 
 	mutex_init(&chg->smb_lock);
+        mutex_init(&chg->irq_status_lock);
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
 	mutex_init(&chg->smart_charge_lock);
 	wakeup_source_init(&chg->unplug_wakelock, "unplug_wakelock");
