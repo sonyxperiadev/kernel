@@ -458,6 +458,7 @@ int f2fs_submit_page_bio(struct f2fs_io_info *fio)
 		bio_put(bio);
 		return -EFAULT;
 	}
+	fio->op_flags |= fio->encrypted_page ? REQ_NOENCRYPT : 0;
 	bio_set_op_attrs(bio, fio->op, fio->op_flags);
 
 	__submit_bio(fio->sbi, bio, fio->type);
@@ -500,6 +501,7 @@ next:
 	verify_block_addr(fio, fio->new_blkaddr);
 
 	bio_page = fio->encrypted_page ? fio->encrypted_page : fio->page;
+	fio->op_flags |= fio->encrypted_page ? REQ_NOENCRYPT : 0;
 	inode = fio->page->mapping->host;
 	dun = PG_DUN(inode, fio->page);
 	bi_crypt_skip = fio->encrypted_page ? 1 : 0;
@@ -586,6 +588,7 @@ static struct bio *f2fs_grab_read_bio(struct inode *inode, block_t blkaddr,
 		ctx->bio = bio;
 		ctx->enabled_steps = post_read_steps;
 		bio->bi_private = ctx;
+		bio_set_op_attrs(bio, REQ_OP_READ, 0);
 
 		/* wait the page to be moved by cleaning */
 		f2fs_wait_on_block_writeback(sbi, blkaddr);
