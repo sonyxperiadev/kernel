@@ -1152,6 +1152,9 @@ static void mmc_sd_remove(struct mmc_host *host)
  */
 static int mmc_sd_alive(struct mmc_host *host)
 {
+	if (host->ops->get_cd && !host->ops->get_cd(host))
+		return -ENOMEDIUM;
+
 	return mmc_send_status(host->card, NULL);
 }
 
@@ -1177,6 +1180,16 @@ static void mmc_sd_detect(struct mmc_host *host)
 		return;
 	}
 
+	if (mmc_bus_needs_resume(host))
+		mmc_resume_bus(host);
+
+	if (host->ops->get_cd && !host->ops->get_cd(host)) {
+		err = -ENOMEDIUM;
+		mmc_card_set_removed(host->card);
+		mmc_card_clr_suspended(host->card);
+		goto out;
+	}
+
 	/*
 	 * Just check if our card has been removed.
 	 */
@@ -1199,6 +1212,7 @@ static void mmc_sd_detect(struct mmc_host *host)
 	err = _mmc_detect_card_removed(host);
 #endif
 
+out:
 	mmc_put_card(host->card);
 
 	if (err) {
@@ -1277,6 +1291,11 @@ static int _mmc_sd_resume(struct mmc_host *host)
 	if (!mmc_card_suspended(host->card))
 		goto out;
 
+	if (host->ops->get_cd && !host->ops->get_cd(host)) {
+		mmc_card_clr_suspended(host->card);
+		goto out;
+	}
+
 	mmc_power_up(host, host->card->ocr);
 #ifdef CONFIG_MMC_PARANOID_SD_INIT
 	retries = 5;
@@ -1303,8 +1322,6 @@ static int _mmc_sd_resume(struct mmc_host *host)
 			mmc_hostname(host), __func__, err);
 		mmc_card_set_removed(host->card);
 		mmc_detect_change(host, msecs_to_jiffies(200));
-	} else if (err) {
-		goto out;
 	}
 	mmc_card_clr_suspended(host->card);
 
@@ -1329,11 +1346,21 @@ static int mmc_sd_resume(struct mmc_host *host)
 
 	MMC_TRACE(host, "%s: Enter\n", __func__);
 	err = _mmc_sd_resume(host);
-	pm_runtime_set_active(&host->card->dev);
-	pm_runtime_mark_last_busy(&host->card->dev);
-	pm_runtime_enable(&host->card->dev);
-	MMC_TRACE(host, "%s: Exit err: %d\n", __func__, err);
+	if (err) {
+		pr_err("%s: sd resume err: %d\n", mmc_hostname(host), err);
+		if (host->ops->get_cd && !host->ops->get_cd(host)) {
+			err = -ENOMEDIUM;
+			mmc_card_set_removed(host->card);
+		}
+	}
 
+	if (err != -ENOMEDIUM) {
+		pm_runtime_set_active(&host->card->dev);
+		pm_runtime_mark_last_busy(&host->card->dev);
+		pm_runtime_enable(&host->card->dev);
+	}
+
+	MMC_TRACE(host, "%s: Exit err: %d\n", __func__, err);
 	return err;
 }
 
@@ -1372,6 +1399,9 @@ static int mmc_sd_runtime_resume(struct mmc_host *host)
 
 static int mmc_sd_reset(struct mmc_host *host)
 {
+	if (host->ops->get_cd && !host->ops->get_cd(host))
+		return -ENOMEDIUM;
+
 	mmc_power_cycle(host, host->card->ocr);
 	return mmc_sd_init_card(host, host->card->ocr, host->card);
 }
