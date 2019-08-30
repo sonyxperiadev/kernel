@@ -290,7 +290,7 @@ struct ipa_api_controller {
 			enum ipa_client_type client,
 			bool LPTransitionRejected,
 			bool brstmode_enabled,
-			union __packed gsi_channel_scratch ch_scratch,
+			union gsi_channel_scratch ch_scratch,
 			u8 index);
 
 	int  (*ipa_mhi_destroy_channel)(enum ipa_client_type client);

@@ -129,7 +129,7 @@ struct ipa_mhi_channel_ctx {
 	u64 event_context_addr;
 	struct ipa_mhi_ev_ctx ev_ctx_host;
 	bool brstmode_enabled;
-	union __packed gsi_channel_scratch ch_scratch;
+	union gsi_channel_scratch ch_scratch;
 	unsigned long cached_gsi_evt_ring_hdl;
 };
 
