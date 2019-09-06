@@ -3532,6 +3532,10 @@ static int syna_tcm_probe(struct platform_device *pdev)
 	INIT_DELAYED_WORK(&tcm_hcd->polling_work, syna_tcm_polling_work);
 
 #ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+	retval = incell_control_mode(INCELL_CONT_SPLASH_TOUCH_ENABLE, false);
+	if (retval)
+		LOGE(tcm_hcd->pdev->dev.parent, "%s failed to INCELL_CONT_SPLASH_TOUCH_ENABLE retval=%d\n", __func__, retval);
+
 	for (retry = 0; retry < SYN_LOCK_POWER_RETRY_NUM; retry++) {
 		if (touchctrl_is_touch_powered(tcm_hcd)) {
 

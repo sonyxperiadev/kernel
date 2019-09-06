@@ -43,6 +43,7 @@ typedef struct {
 
 typedef enum {
 	INCELL_TOUCH_RESET,
+	INCELL_CONT_SPLASH_TOUCH_ENABLE,
 } incell_intf_mode;
 
 typedef enum {
