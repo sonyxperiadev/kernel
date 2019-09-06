@@ -88,6 +88,11 @@ int incell_control_mode(incell_intf_mode mode, bool force)
 	case INCELL_TOUCH_RESET:
 		ret = dsi_panel_driver_touch_reset_ctrl(panel, force);
 		break;
+
+	case INCELL_CONT_SPLASH_TOUCH_ENABLE:
+		ret = somc_panel_cont_splash_touch_enable(panel);
+		break;
+
 	default:
 		pr_err("%s: Invalid mode for touch interface %d\n",
 			__func__, (int)(mode));
