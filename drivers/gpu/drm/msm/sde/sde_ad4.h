@@ -52,7 +52,6 @@ enum ad_property {
 	AD_IPC_SUSPEND,
 	AD_IPC_RESUME,
 	AD_IPC_RESET,
-	AD_VSYNC_UPDATE,
 	AD_PROPMAX,
 };
 
