@@ -288,3 +288,14 @@ void incell_driver_init(struct msm_drm_private *priv)
 	else
 		incell->state = INCELL_S000;
 }
+
+bool incell_touch_is_compatible(incell_touch_type type) {
+	struct dsi_display *display = dsi_display_get_main_display();
+	struct dsi_panel *panel = display->panel;
+
+	if (panel->touch_type == INCELL_TOUCH_TYPE_DEFAULT)
+		/* Default/unset. Any driver is allowed to probe: */
+		return true;
+
+	return type == panel->touch_type;
+}

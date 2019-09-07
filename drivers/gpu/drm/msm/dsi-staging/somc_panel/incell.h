@@ -51,6 +51,12 @@ typedef enum {
 	INCELL_DISPLAY_POWER_LOCK,
 } incell_pw_lock;
 
+typedef enum {
+	INCELL_TOUCH_TYPE_DEFAULT = 0,
+	INCELL_TOUCH_TYPE_CLEARPAD = 1,
+	INCELL_TOUCH_TYPE_TCM = 2,
+} incell_touch_type;
+
 /* Compatibility with older incell */
 #define INCELL_DISPLAY_HW_RESET		INCELL_TOUCH_RESET
 
@@ -142,6 +148,14 @@ int somc_panel_external_control_touch_power(bool enable);
 static inline int somc_panel_external_control_touch_power(bool enable)
 { return 0; }
 #endif
+
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+bool incell_touch_is_compatible(incell_touch_type type);
+#else
+static inline bool incell_touch_is_compatible(incell_touch_type) {
+	return true;
+}
+#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 
 #endif /* __INCELL_H__ */
 

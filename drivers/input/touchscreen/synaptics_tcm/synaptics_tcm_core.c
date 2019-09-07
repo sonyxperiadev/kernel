@@ -3329,6 +3329,14 @@ static int syna_tcm_probe(struct platform_device *pdev)
 #ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
 	int retry;
 	incell_pw_status status = { false, false };
+
+	if (!incell_touch_is_compatible(INCELL_TOUCH_TYPE_TCM)) {
+		dev_notice(&pdev->dev,
+			"%s: Detected panel is not TCM,"
+			" returning ENODEV\n",
+			__func__);
+		return -ENODEV;
+	}
 #endif
 
 	hw_if = pdev->dev.platform_data;
