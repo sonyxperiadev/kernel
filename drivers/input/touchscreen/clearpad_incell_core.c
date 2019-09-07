@@ -8703,6 +8703,18 @@ static int clearpad_probe(struct platform_device *pdev)
 #ifdef CONFIG_TOUCHSCREEN_CLEARPAD_RMI_DEV
 	struct platform_device *rmi_dev;
 #endif
+
+#if INCELL_TAMA_MULTIPLE_TOUCH_DRIVERS
+	incell_touch_type type = incell_get_touch_type();
+	if (type != INCELL_TOUCH_TYPE_CLEARPAD) {
+		dev_notice(&pdev->dev,
+			"%s: Detected panel is not CLEARPAD,"
+			" returning successful probe\n",
+			__func__);
+		return 0;
+	}
+#endif
+
 	this = devm_kzalloc(&pdev->dev, sizeof(struct clearpad_t), GFP_KERNEL);
 	if (!this) {
 		rc = -ENOMEM;
