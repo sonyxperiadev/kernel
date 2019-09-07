@@ -8977,6 +8977,16 @@ static void clearpad_post_probe_work(struct work_struct *work)
 	}
 	UNLOCK(&this->lock);
 
+#ifdef CONFIG_DRM_MSM_DSI_SOMC_PANEL
+	// Instead of crashing this probe a couple times, just power up
+	// and reset the incell touch.
+	rc = incell_control_mode(INCELL_CONT_SPLASH_TOUCH_ENABLE, false);
+	if (rc)
+		HWLOGE(this,
+			"%s failed to INCELL_CONT_SPLASH_TOUCH_ENABLE rc=%d\n",
+			__func__, rc);
+#endif
+
 	get_monotonic_boottime(&ts);
 	HWLOGI(this, "start post probe @ %ld.%06ld\n", ts.tv_sec, ts.tv_nsec);
 
