@@ -660,29 +660,6 @@
 		qcom,scandump-size = <0x40000>;
 	};
 
-	rpm_msg_ram: memory@778000 {
-		compatible = "qcom,rpm-msg-ram";
-		reg = <0x778000 0x7000>;
-	};
-
-	tcsr_mutex_block: syscon@1f40000 {
-		compatible = "syscon";
-		reg = <0x1f40000 0x20000>;
-	};
-
-	tcsr_mutex: hwlock {
-		compatible = "qcom,tcsr-mutex";
-		syscon = <&tcsr_mutex_block 0 0x1000>;
-		#hwlock-cells = <1>;
-	};
-
-	apcs_glb: mailbox@17911000 {
-		compatible = "qcom,msm8998-apcs-hmss-global";
-		reg = <0x17911000 0x1000>;
-
-		#mbox-cells = <1>;
-	};
-
 	qcom,sps {
 		compatible = "qcom,msm-sps-4k";
 		qcom,pipe-attr-ee;
@@ -715,6 +692,42 @@
 		};
 	};
 
+	rpm_msg_ram: memory@778000 {
+		compatible = "qcom,rpm-msg-ram";
+		reg = <0x778000 0x7000>;
+	};
+
+	tcsr_mutex_block: syscon@1f40000 {
+		compatible = "syscon";
+		reg = <0x1f40000 0x20000>;
+	};
+
+	tcsr_mutex: hwlock {
+		compatible = "qcom,tcsr-mutex";
+		syscon = <&tcsr_mutex_block 0 0x1000>;
+		#hwlock-cells = <1>;
+	};
+
+	apcs_glb: mailbox@17911000 {
+		compatible = "qcom,msm8998-apcs-hmss-global";
+		reg = <0x17911000 0x1000>;
+
+		#mbox-cells = <1>;
+	};
+
+	smem: qcom,smem {
+		compatible = "qcom,smem";
+		memory-region = <&smem_region>;
+		hwlocks = <&tcsr_mutex 3>;
+	};
+
+	rpm_bus: qcom,rpm-smd {
+		compatible = "qcom,rpm-glink";
+		qcom,glink-edge = "rpm";
+		rpm-channel-name = "rpm_requests";
+		interrupts = <GIC_SPI 168 IRQ_TYPE_EDGE_RISING>;
+		rpm-channel-type = <15>; /* SMD_APPS_RPM */
+	};
 
 	thermal_zones: thermal-zones {};
 
@@ -1628,12 +1641,6 @@
 		qcom,ipa-advertise-sg-support;
 	};
 
-	smem: qcom,smem {
-		compatible = "qcom,smem";
-		memory-region = <&smem_region>;
-		hwlocks = <&tcsr_mutex 3>;
-	};
-
 	qcom,msm-cdsp-loader {
 		compatible = "qcom,cdsp-loader";
 		qcom,proc-img-to-load = "cdsp";
@@ -1954,12 +1961,6 @@
 			qcom,glinkpkt-ch-name = "DATA11";
 			qcom,glinkpkt-dev-name = "smd11";
 		};
-	};
-
-	rpm_bus: qcom,rpm-smd {
-		compatible = "qcom,rpm-glink";
-		qcom,glink-edge = "rpm";
-		rpm-channel-name = "rpm_requests";
 	};
 
 	qcom,ipc_router {
