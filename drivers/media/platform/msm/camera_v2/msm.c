@@ -1301,6 +1301,9 @@ static int msm_probe(struct platform_device *pdev)
 	static struct dentry *cam_debugfs_root;
 	int rc = 0;
 
+	if (!msm_bus_scale_driver_ready())
+		return -EPROBE_DEFER;
+
 	msm_v4l2_dev = kzalloc(sizeof(*msm_v4l2_dev),
 		GFP_KERNEL);
 	if (WARN_ON(!msm_v4l2_dev)) {
