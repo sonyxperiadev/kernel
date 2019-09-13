@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -578,6 +578,7 @@ static int msm_hsphy_dpdm_regulator_enable(struct regulator_dev *rdev)
 					UTMI_PHY_DATAPATH_CTRL_OVERRIDE_EN,
 					UTMI_PHY_DATAPATH_CTRL_OVERRIDE_EN);
 
+		msm_hsphy_enable_clocks(phy, false);
 		phy->dpdm_enable = true;
 	}
 	mutex_unlock(&phy->phy_lock);
@@ -596,7 +597,6 @@ static int msm_hsphy_dpdm_regulator_disable(struct regulator_dev *rdev)
 	mutex_lock(&phy->phy_lock);
 	if (phy->dpdm_enable) {
 		if (!phy->cable_connected) {
-			msm_hsphy_enable_clocks(phy, false);
 			ret = msm_hsphy_enable_power(phy, false);
 			if (ret < 0) {
 				mutex_unlock(&phy->phy_lock);
