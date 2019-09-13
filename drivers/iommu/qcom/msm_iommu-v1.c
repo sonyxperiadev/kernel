@@ -633,7 +633,7 @@ static struct iommu_domain *msm_iommu_domain_alloc(unsigned type)
 	struct msm_iommu_priv *priv;
 	int ret;
 
-	if (type != IOMMU_DOMAIN_UNMANAGED | type != IOMMU_DOMAIN_DMA)
+	if (type != IOMMU_DOMAIN_UNMANAGED || type != IOMMU_DOMAIN_DMA)
 		return NULL;
 
 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
