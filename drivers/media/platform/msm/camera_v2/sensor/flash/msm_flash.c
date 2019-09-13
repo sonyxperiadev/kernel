@@ -1506,7 +1506,14 @@ error_register:
 	media_entity_pads_init(&flash_ctrl->msm_sd.sd.entity, 0, NULL);
 	flash_ctrl->msm_sd.sd.entity.function = MSM_CAMERA_SUBDEV_FLASH;
 	flash_ctrl->msm_sd.close_seq = MSM_SD_CLOSE_2ND_CATEGORY | 0x1;
-	msm_sd_register(&flash_ctrl->msm_sd);
+
+	rc = msm_sd_register(&flash_ctrl->msm_sd);
+	if (rc) {
+		led_classdev_unregister(&flash_ctrl->torch_cdev);
+		led_classdev_unregister(&flash_ctrl->flash_cdev);
+		kfree(flash_ctrl);
+		return rc;
+	}
 
 	CDBG("%s:%d flash sd name = %s", __func__, __LINE__,
 		flash_ctrl->msm_sd.sd.entity.name);

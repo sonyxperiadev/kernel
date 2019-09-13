@@ -55,6 +55,8 @@ static spinlock_t msm_pid_lock;
 
 static uint32_t gpu_limit;
 
+bool registered = false;
+
 /*
  * It takes 20 bytes + NULL character to write the
  * largest decimal value of an uint64_t
@@ -396,6 +398,9 @@ static void msm_add_sd_in_position(struct msm_sd_subdev *msm_subdev,
 
 int msm_sd_register(struct msm_sd_subdev *msm_subdev)
 {
+	if (!registered)
+		return -EPROBE_DEFER;
+
 	if (WARN_ON(!msm_subdev))
 		return -EINVAL;
 
@@ -1408,6 +1413,7 @@ static int msm_probe(struct platform_device *pdev)
 	of_property_read_u32(pdev->dev.of_node,
 		"qcom,gpu-limit", &gpu_limit);
 
+	registered = true;
 	goto probe_end;
 
 v4l2_fail:
