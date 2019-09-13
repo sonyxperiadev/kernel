@@ -25,6 +25,7 @@
 #include <linux/iommu.h>
 #include <linux/platform_device.h>
 #include <linux/debugfs.h>
+#include <linux/msm-bus.h>
 #include <media/v4l2-fh.h>
 #include "msm.h"
 #include "msm_vb2.h"
