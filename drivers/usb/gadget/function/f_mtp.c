@@ -43,7 +43,6 @@
 #include "../configfs.h"
 
 #define MTP_RX_BUFFER_INIT_SIZE    1048576
-#define MTP_TX_BUFFER_INIT_SIZE    1048576
 #define MTP_BULK_BUFFER_SIZE       16384
 #define INTR_BUFFER_SIZE           28
 #define MAX_INST_NAME_LEN          40
@@ -83,7 +82,7 @@
 unsigned int mtp_rx_req_len = MTP_RX_BUFFER_INIT_SIZE;
 module_param(mtp_rx_req_len, uint, 0644);
 
-unsigned int mtp_tx_req_len = MTP_TX_BUFFER_INIT_SIZE;
+unsigned int mtp_tx_req_len = MTP_BULK_BUFFER_SIZE;
 module_param(mtp_tx_req_len, uint, 0644);
 
 unsigned int mtp_tx_reqs = MTP_TX_REQ_MAX;
@@ -530,6 +529,9 @@ static int mtp_create_bulk_endpoints(struct mtp_dev *dev,
 	dev->ep_intr = ep;
 
 retry_tx_alloc:
+	if (mtp_tx_req_len > MTP_BULK_BUFFER_SIZE)
+		mtp_tx_reqs = 4;
+
 	/* now allocate requests for our endpoints */
 	for (i = 0; i < mtp_tx_reqs; i++) {
 		req = mtp_request_new(dev->ep_in,
@@ -760,8 +762,8 @@ static ssize_t mtp_write(struct file *fp, const char __user *buf,
 			break;
 		}
 
-		if (count > mtp_tx_req_len)
-			xfer = mtp_tx_req_len;
+		if (count > MTP_BULK_BUFFER_SIZE)
+			xfer = MTP_BULK_BUFFER_SIZE;
 		else
 			xfer = count;
 		if (xfer && copy_from_user(req->buf, buf, xfer)) {
@@ -857,8 +859,8 @@ static void send_file_work(struct work_struct *data)
 			break;
 		}
 
-		if (count > mtp_tx_req_len)
-			xfer = mtp_tx_req_len;
+		if (count > MTP_BULK_BUFFER_SIZE)
+			xfer = MTP_BULK_BUFFER_SIZE;
 		else
 			xfer = count;
 
