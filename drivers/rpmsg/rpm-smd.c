@@ -1612,6 +1612,7 @@ static int qcom_smd_rpm_probe(struct rpmsg_device *rpdev)
 	init_completion(&rpm->ack);
 	spin_lock_init(&msm_rpm_data.smd_lock_write);
 	spin_lock_init(&msm_rpm_data.smd_lock_read);
+	probe_status = 0;
 
 skip_init:
 	probe_status = of_platform_populate(p, NULL, NULL, &rpdev->dev);
