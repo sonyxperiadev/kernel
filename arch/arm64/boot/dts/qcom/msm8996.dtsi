@@ -458,6 +458,12 @@
 		rpm-channel-name = "rpm_requests";
 		interrupts = <GIC_SPI 168 IRQ_TYPE_EDGE_RISING>;
 		rpm-channel-type = <15>; /* SMD_APPS_RPM */
+
+		clock_rpmcc: qcom,rpmcc {
+			compatible = "qcom,rpmcc-msm8996", "qcom,rpmcc";
+			#clock-cells = <1>;
+			status = "ok";
+		};
 	};
 
 	rpm-glink {
@@ -852,12 +858,6 @@
 			< 1420800 >,
 			< 1497600 >,
 			< 1593600 >;
-	};
-
-	clock_rpmcc: qcom,rpmcc {
-		compatible = "qcom,rpmcc-msm8996", "qcom,rpmcc";
-		#clock-cells = <1>;
-		status = "ok";
 	};
 
 	clock_cpu: qcom,msm8996-apcc@6400000 {
