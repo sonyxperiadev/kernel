@@ -25,6 +25,7 @@
 #define _UAPI__SOUND_ASOUND_H
 
 #if defined(__KERNEL__) || defined(__linux__)
+#include <linux/time.h>
 #include <linux/types.h>
 #else
 #include <sys/ioctl.h>

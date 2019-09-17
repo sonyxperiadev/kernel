@@ -112,7 +112,7 @@ static ssize_t max_dirty_mb_store(struct kobject *kobj, struct attribute *attr,
 
 	val *= 1 << (20 - PAGE_SHIFT); /* convert to pages */
 
-	if (val > ((totalram_pages / 10) * 9)) {
+	if (val > ((totalram_pages() / 10) * 9)) {
 		/* Somebody wants to assign too much memory to dirty pages */
 		return -EINVAL;
 	}

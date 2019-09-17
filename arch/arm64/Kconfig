@@ -16,6 +16,7 @@ config ARM64
 	select ARCH_HAS_GCOV_PROFILE_ALL
 	select ARCH_HAS_GIGANTIC_PAGE if (MEMORY_ISOLATION && COMPACTION) || CMA
 	select ARCH_HAS_KCOV
+	select ARCH_HAS_SET_DIRECT_MAP
 	select ARCH_HAS_SET_MEMORY
 	select ARCH_HAS_SG_CHAIN
 	select ARCH_HAS_STRICT_KERNEL_RWX
@@ -1043,6 +1044,20 @@ config ARM64_SSBD
 	  by speculative loads.
 
 	  If unsure, say Y.
+
+config RODATA_FULL_DEFAULT_ENABLED
+	bool "Apply r/o permissions of VM areas also to their linear aliases"
+	default n
+	help
+	  Apply read-only attributes of VM areas to the linear alias of
+	  the backing pages as well. This prevents code or read-only data
+	  from being modified (inadvertently or intentionally) via another
+	  mapping of the same memory page. This additional enhancement can
+	  be turned off at runtime by passing rodata=[off|on] (and turned on
+	  with rodata=full if this option is set to 'n')
+
+	  This requires the linear region to be mapped down to pages,
+	  which may adversely affect performance in some cases.
 
 menuconfig ARMV8_DEPRECATED
 	bool "Emulate deprecated/obsolete ARMv8 instructions"

@@ -65,6 +65,18 @@
 		};
 	};
 
+	sde_dsi_nile_panels: qcom,dsi-display@8 {
+		label = "dsi_panel_somc_nile_cmd";
+		qcom,display-type = "primary";
+
+		qcom,dsi-ctrl-num = <0>;
+		qcom,dsi-phy-num = <0>;
+
+		qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+
+		somc,bootloader-panel-detect;
+	};
+
 	/* SDE */
 	dsi_panel_cmd_display: qcom,dsi-display@12 {
 		compatible = "somc,dsi-display";

@@ -36,6 +36,8 @@
 #include <asm/tlbflush.h>
 #include <linux/msm_rtb.h>
 
+extern bool rodata_full;
+
 static inline void contextidr_thread_switch(struct task_struct *next)
 {
 	pid_t pid = task_pid_nr(next);

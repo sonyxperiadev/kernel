@@ -415,6 +415,65 @@
 		qcom,pipe-attr-ee;
 	};
 
+	rpm_msg_ram: memory@0x200000 {
+		compatible = "qcom,rpm-msg-ram";
+		reg = <0x68000 0x6000>;
+	};
+
+	tcsr_mutex_block: syscon@740000 {
+		compatible = "syscon";
+		reg = <0x740000 0x20000>;
+	};
+
+	tcsr_mutex: hwlock {
+		compatible = "qcom,tcsr-mutex";
+		syscon = <&tcsr_mutex_block 0 0x8000>;
+		#hwlock-cells = <1>;
+	};
+
+	apcs_glb: mailbox@9820000 {
+		compatible = "qcom,msm8996-apcs-hmss-global";
+		reg = <0x9820000 0x1000>;
+
+		#mbox-cells = <1>;
+	};
+
+	smem: qcom,smem {
+		compatible = "qcom,smem";
+		memory-region = <&smem_region>;
+		hwlocks = <&tcsr_mutex 3>;
+	};
+
+	qcom,smp2p_sleepstate {
+		compatible = "qcom,smp2p-sleepstate";
+		qcom,smem-states = <&sleepstate_smp2p_out 0>;
+		interrupt-parent = <&sleepstate_smp2p_in>;
+		interrupts = <0 0>;
+		interrupt-names = "smp2p-sleepstate-in";
+	};
+
+	rpm_bus: qcom,rpm-smd {
+		compatible = "qcom,rpm-smd";
+		qcom,glink-edge = "rpm";
+		rpm-channel-name = "rpm_requests";
+		interrupts = <GIC_SPI 168 IRQ_TYPE_EDGE_RISING>;
+		rpm-channel-type = <15>; /* SMD_APPS_RPM */
+	};
+
+	rpm-glink {
+		compatible = "qcom,glink-rpm";
+		interrupts = <GIC_SPI 168 IRQ_TYPE_EDGE_RISING>;
+		qcom,rpm-msg-ram = <&rpm_msg_ram>;
+		mboxes = <&apcs_glb 0>;
+
+		qcom,rpm_glink_ssr {
+			qcom,glink-channels = "glink_ssr";
+			qcom,notify-edges = <&glink_modem>,
+					    <&glink_adsp>,
+					    <&glink_slpi>;
+		};
+	};
+
 	uartblsp2dm1: serial@075b0000 {
 		compatible = "qcom,msm-uartdm-v1.4", "qcom,msm-uartdm";
 		reg = <0x75b0000 0x1000>;
@@ -1583,65 +1642,6 @@
 		compatible = "qcom,jtag-fuse-v3";
 		reg = <0x7602c 0xc>;
 		reg-names = "fuse-base";
-	};
-
-	rpm_msg_ram: memory@0x200000 {
-		compatible = "qcom,rpm-msg-ram";
-		reg = <0x68000 0x6000>;
-	};
-
-	tcsr_mutex_block: syscon@740000 {
-		compatible = "syscon";
-		reg = <0x740000 0x20000>;
-	};
-
-	tcsr_mutex: hwlock {
-		compatible = "qcom,tcsr-mutex";
-		syscon = <&tcsr_mutex_block 0 0x8000>;
-		#hwlock-cells = <1>;
-	};
-
-	apcs_glb: mailbox@9820000 {
-		compatible = "qcom,msm8996-apcs-hmss-global";
-		reg = <0x9820000 0x1000>;
-
-		#mbox-cells = <1>;
-	};
-
-	smem: qcom,smem {
-		compatible = "qcom,smem";
-		memory-region = <&smem_region>;
-		hwlocks = <&tcsr_mutex 3>;
-	};
-
-	qcom,smp2p_sleepstate {
-		compatible = "qcom,smp2p-sleepstate";
-		qcom,smem-states = <&sleepstate_smp2p_out 0>;
-		interrupt-parent = <&sleepstate_smp2p_in>;
-		interrupts = <0 0>;
-		interrupt-names = "smp2p-sleepstate-in";
-	};
-
-	rpm_bus: qcom,rpm-smd {
-		compatible = "qcom,rpm-smd";
-		qcom,glink-edge = "rpm";
-		rpm-channel-name = "rpm_requests";
-		interrupts = <GIC_SPI 168 IRQ_TYPE_EDGE_RISING>;
-		rpm-channel-type = <15>; /* SMD_APPS_RPM */
-	};
-
-	rpm-glink {
-		compatible = "qcom,glink-rpm";
-		interrupts = <GIC_SPI 168 IRQ_TYPE_EDGE_RISING>;
-		qcom,rpm-msg-ram = <&rpm_msg_ram>;
-		mboxes = <&apcs_glb 0>;
-
-		qcom,rpm_glink_ssr {
-			qcom,glink-channels = "glink_ssr";
-			qcom,notify-edges = <&glink_modem>,
-					    <&glink_adsp>,
-					    <&glink_slpi>;
-		};
 	};
 
 	qcom,glink {

@@ -31,7 +31,7 @@
 /*
  * Assuming:
  *
- * threads = div64_u64((u64) totalram_pages * (u64) PAGE_SIZE,
+ * threads = div64_u64((u64) totalram_pages() * (u64) PAGE_SIZE,
  *		       (u64) THREAD_SIZE * 8UL);
  *
  * If you need less than 50 threads would mean we're dealing with systems
