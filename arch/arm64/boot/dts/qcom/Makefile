@@ -88,14 +88,6 @@ dtb-$(CONFIG_MACH_SONY_MAPLE)		+= msm8998-v2.1-yoshino-maple_generic.dtb
 dtb-$(CONFIG_MACH_SONY_POPLAR)		+= msm8998-v2-yoshino-poplar_generic.dtb
 dtb-$(CONFIG_MACH_SONY_POPLAR)		+= msm8998-v2.1-yoshino-poplar_generic.dtb
 
-# MSM8996 - FBDEV
-dtb-$(CONFIG_MACH_SONY_DORA)		+= msm8996-v3.0-pmi8996-tone-dora_generic.dtb
-dtb-$(CONFIG_MACH_SONY_DORA)		+= msm8996-v3-pmi8996-tone-dora_generic.dtb
-dtb-$(CONFIG_MACH_SONY_KAGURA)		+= msm8996-v3.0-pmi8996-tone-kagura_generic.dtb
-dtb-$(CONFIG_MACH_SONY_KAGURA)		+= msm8996-v3-pmi8996-tone-kagura_generic.dtb
-dtb-$(CONFIG_MACH_SONY_KEYAKI)		+= msm8996-v3.0-pmi8996-tone-keyaki_generic.dtb
-dtb-$(CONFIG_MACH_SONY_KEYAKI)		+= msm8996-v3-pmi8996-tone-keyaki_generic.dtb
-
 endif
 
 # MSM8956
