@@ -19,7 +19,7 @@
 #include "sdm630-ganges-kirin-common.dtsi"
 #include "sdm630-ganges-kirin-touch.dtsi"
 #include "sdm630-ganges-kirin-camera.dtsi"
-#include "sdm630-sde-overlay.dtsi"
+#include "sdm630-ganges-common-sde-overlay.dtsi"
 #include "sdm630-ganges-common-display.dtsi"
 #include "sdm630-ganges-common-display-sde.dtsi"
 

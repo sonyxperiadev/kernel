@@ -1,0 +1,106 @@
+#include "sdm630-sde-overlay.dtsi"
+
+/ {
+	/* Bad indentation is required. Sorry. */
+	chosen {
+		bootargs = \
+"msm_drm.dsi_display0=dsi_panel_somc_nile_cmd:config0";
+
+	};
+};
+
+&soc {
+	dsi_panel_pwr_supply_nt36672a: dsi_panel_pwr_supply_nt36672a {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		qcom,panel-supply-entry@0 {
+			reg = <0>;
+			qcom,supply-name = "vddio";
+			qcom,supply-min-voltage = <1650000>;
+			qcom,supply-max-voltage = <1950000>;
+			qcom,supply-enable-load = <32000>;
+			qcom,supply-disable-load = <80>;
+			qcom,supply-post-on-sleep = <10>;
+		};
+	};
+
+	dsi_panel_vspvsn_pwr_supply_nt36672a: dsi_panel_vspvsn_pwr_supply_nt36672a {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		qcom,panel-supply-entry@0 {
+			reg = <0>;
+			qcom,supply-name = "lab";
+			qcom,supply-min-voltage = <5000000>;
+			qcom,supply-max-voltage = <6000000>;
+			qcom,supply-enable-load = <11000>;
+			qcom,supply-disable-load = <100>;
+			qcom,supply-post-on-sleep = <10>;
+			qcom,supply-post-off-sleep = <10>;
+		};
+
+		qcom,panel-supply-entry@1 {
+			reg = <1>;
+			qcom,supply-name = "ibb";
+			qcom,supply-min-voltage = <5000000>;
+			qcom,supply-max-voltage = <6000000>;
+			qcom,supply-enable-load = <6000>;
+			qcom,supply-disable-load = <100>;
+			qcom,supply-post-on-sleep = <10>;
+			qcom,supply-post-off-sleep = <10>;
+		};
+	};
+
+	sde_dsi_nile_panels: qcom,dsi-display@8 {
+		label = "dsi_panel_somc_nile_cmd";
+		qcom,display-type = "primary";
+
+		qcom,dsi-ctrl-num = <0>;
+		qcom,dsi-phy-num = <0>;
+
+		qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+
+		somc,bootloader-panel-detect;
+	};
+
+	/* SDE */
+	dsi_panel_cmd_display: qcom,dsi-display@12 {
+		compatible = "somc,dsi-display";
+		label = "primary";
+
+		qcom,dsi-ctrl = <&mdss_dsi0>;
+		qcom,dsi-phy = <&mdss_dsi_phy0>;
+		clocks = <&mdss_dsi0_pll BYTE0_MUX_CLK>,
+			 <&mdss_dsi0_pll PIX0_MUX_CLK>;
+		clock-names = "mux_byte_clk0", "mux_pixel_clk0";
+
+		pinctrl-names = "panel_active", "panel_suspend";
+		pinctrl-0 = <&mdss_dsi_active &mdss_te_active>;
+		pinctrl-1 = <&mdss_dsi_suspend &mdss_te_suspend>;
+
+		qcom,dsi-display-active;
+
+		qcom,platform-te-gpio = <&tlmm 59 0>;
+		qcom,panel-te-source = <0>;
+
+		qcom,platform-reset-gpio = <&tlmm 53 0>;
+		vddio-supply = <&pm660_l11>;
+		lab-supply = <&lcdb_ldo_vreg>;
+		ibb-supply = <&lcdb_ncp_vreg>;
+
+		qcom,dsi-display-list = <&sde_dsi_nile_panels>;
+	};
+};
+
+&mdss_mdp {
+	connectors = <&sde_wb &dsi_panel_cmd_display>;
+};
+
+&mdss_dp_pll {
+	status = "disabled";
+};
+
+&mdss_dsi0 {
+	qcom,cont-splash-enabled;
+};
