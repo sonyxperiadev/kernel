@@ -18,7 +18,7 @@
 #include "sdm630-ganges-common.dtsi"
 #include "sdm636-ganges-mermaid-common.dtsi"
 #include "sdm636-ganges-mermaid-touch.dtsi"
-#include "sdm636-ganges-mermaid-camera-sensor.dtsi"
+#include "sdm636-ganges-mermaid-camera.dtsi"
 #include "sdm660-sde-overlay.dtsi"
 #include "sdm630-ganges-common-display.dtsi"
 #include "sdm630-ganges-common-display-sde.dtsi"
