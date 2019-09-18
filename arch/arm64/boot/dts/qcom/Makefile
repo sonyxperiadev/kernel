@@ -1,24 +1,3 @@
-# SPDX-License-Identifier: GPL-2.0
-ifeq ($(CONFIG_ARM64),y)
-dtb-$(CONFIG_ARCH_QCS405) += qcs405-rumi.dtb \
-		qcs405-iot-sku1.dtb \
-		qcs405-iot-sku2.dtb \
-		qcs405-iot-sku3.dtb \
-		qcs405-iot-sku4.dtb \
-		qcs405-iot-sku5.dtb \
-		qcs405-iot-sku6.dtb \
-		qcs405-iot-sku7.dtb \
-		qcs405-iot-sku8.dtb \
-		qcs405-iot-sku9.dtb \
-		qcs405-iot-sku10.dtb \
-		qcs405-iot-sku12.dtb
-else
-dtb-$(CONFIG_ARCH_QCS405) += qcs403-iot-sku1.dtb \
-			qcs403-iot-sku2.dtb \
-			qcs403-iot-sku3.dtb \
-			qcs403-iot-sku4.dtb
-endif
-
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
 # SM8150 - SoMC Kumano
 dtbo-$(CONFIG_MACH_SONY_GRIFFIN) += \
@@ -87,6 +66,27 @@ dtb-$(CONFIG_MACH_SONY_BLANC)           += msm8956-loire-blanc_generic.dtb
 dtb-$(CONFIG_MACH_SONY_BLANC)		+= apq8056-loire-blanc_windy.dtb
 
 ifeq ($(CONFIG_BUILD_QCOM_REFERENCE_PLATFORMS),y)
+# SPDX-License-Identifier: GPL-2.0
+ifeq ($(CONFIG_ARM64),y)
+dtb-$(CONFIG_ARCH_QCS405) += qcs405-rumi.dtb \
+		qcs405-iot-sku1.dtb \
+		qcs405-iot-sku2.dtb \
+		qcs405-iot-sku3.dtb \
+		qcs405-iot-sku4.dtb \
+		qcs405-iot-sku5.dtb \
+		qcs405-iot-sku6.dtb \
+		qcs405-iot-sku7.dtb \
+		qcs405-iot-sku8.dtb \
+		qcs405-iot-sku9.dtb \
+		qcs405-iot-sku10.dtb \
+		qcs405-iot-sku12.dtb
+else
+dtb-$(CONFIG_ARCH_QCS405) += qcs403-iot-sku1.dtb \
+			qcs403-iot-sku2.dtb \
+			qcs403-iot-sku3.dtb \
+			qcs403-iot-sku4.dtb
+endif
+
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
 	dtbo-$(CONFIG_ARCH_SM8150) += \
 		sm8150-cdp-overlay.dtbo \
