@@ -3655,7 +3655,15 @@ static int psy_changed(struct notifier_block *nb, unsigned long evt, void *ptr)
 	case POWER_SUPPLY_TYPEC_SOURCE_DEFAULT:
 	case POWER_SUPPLY_TYPEC_SOURCE_MEDIUM:
 	case POWER_SUPPLY_TYPEC_SOURCE_HIGH:
-		if (pd->psy_type == POWER_SUPPLY_TYPE_UNKNOWN) {
+		ret = power_supply_get_property(pd->usb_psy,
+				POWER_SUPPLY_PROP_REAL_TYPE, &val);
+		if (ret) {
+			usbpd_err(&pd->dev, "Unable to read USB TYPE: %d\n",
+					ret);
+			return ret;
+		}
+
+		if (val.intval == POWER_SUPPLY_TYPE_UNKNOWN) {
 			usbpd_dbg(&pd->dev, "SNK states but APSD is not done yet.\n");
 			return 0;
 		}
