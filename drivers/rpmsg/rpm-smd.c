@@ -1557,11 +1557,15 @@ static int qcom_smd_rpm_probe(struct rpmsg_device *rpdev)
 	int irq;
 	void __iomem *reg_base;
 	uint32_t version = V0_PROTOCOL_VERSION; /* set to default v0 format */
+	unsigned long flags;
+
+	spin_lock_irqsave(&msm_rpm_list_lock, flags);
 
 	p = of_find_compatible_node(NULL, NULL, "qcom,rpm-smd");
 	if (!p) {
 		pr_err("Unable to find rpm-smd\n");
 		probe_status = -ENODEV;
+		spin_unlock_irqrestore(&msm_rpm_list_lock, flags);
 		goto fail;
 	}
 
@@ -1587,12 +1591,14 @@ static int qcom_smd_rpm_probe(struct rpmsg_device *rpdev)
 	if (!irq) {
 		pr_err("Unable to get rpm-smd interrupt number\n");
 		probe_status = -ENODEV;
+		spin_unlock_irqrestore(&msm_rpm_list_lock, flags);
 		goto fail;
 	}
 
 	rpm = devm_kzalloc(&rpdev->dev, sizeof(*rpm), GFP_KERNEL);
 	if (!rpm) {
 		probe_status = -ENOMEM;
+		spin_unlock_irqrestore(&msm_rpm_list_lock, flags);
 		goto fail;
 	}
 
@@ -1606,12 +1612,16 @@ static int qcom_smd_rpm_probe(struct rpmsg_device *rpdev)
 	init_completion(&rpm->ack);
 	spin_lock_init(&msm_rpm_data.smd_lock_write);
 	spin_lock_init(&msm_rpm_data.smd_lock_read);
+	probe_status = 0;
 
 skip_init:
+	spin_unlock_irqrestore(&msm_rpm_list_lock, flags);
+
 	probe_status = of_platform_populate(p, NULL, NULL, &rpdev->dev);
 
 	if (standalone)
 		pr_info("RPM running in standalone mode\n");
+
 fail:
 	return probe_status;
 }
