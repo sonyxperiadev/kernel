@@ -21,6 +21,12 @@
 			qcom,ion-heap-type = "DMA";
 		};
 
+		qcom,ion-heap@19 { /* QSEECOM TA HEAP */
+			reg = <19>;
+			memory-region = <&qseecom_ta_mem>;
+			qcom,ion-heap-type = "DMA";
+		};
+
 		qcom,ion-heap@10 { /* SECURE DISPLAY HEAP */
 			reg = <10>;
 			memory-region = <&secure_display_memory>;
