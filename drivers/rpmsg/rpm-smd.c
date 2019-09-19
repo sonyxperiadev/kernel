@@ -1615,12 +1615,13 @@ static int qcom_smd_rpm_probe(struct rpmsg_device *rpdev)
 	probe_status = 0;
 
 skip_init:
+	spin_unlock_irqrestore(&msm_rpm_list_lock, flags);
+
 	probe_status = of_platform_populate(p, NULL, NULL, &rpdev->dev);
 
 	if (standalone)
 		pr_info("RPM running in standalone mode\n");
 
-	spin_unlock_irqrestore(&msm_rpm_list_lock, flags);
 fail:
 	return probe_status;
 }
