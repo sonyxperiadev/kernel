@@ -19,7 +19,7 @@
 
 		qcom,panel-supply-entry@0 {
 			reg = <0>;
-			qcom,supply-name = "vddio";
+			qcom,supply-name = "wqhd-vddio";
 			qcom,supply-min-voltage = <1650000>;
 			qcom,supply-max-voltage = <1950000>;
 			qcom,supply-enable-load = <32000>;
