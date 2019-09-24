@@ -90,15 +90,6 @@ msm_drm.dsi_display0=dsi_panel_somc_tone_cmd:config0";
 		qcom,dsi-ctrl-num = <0>;
 		qcom,dsi-phy-num = <0>;
 		qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
-
-		qcom,dsi-panel = <&dsi_lgd_synaptics_cmd_8>;
-
-		somc,dsi-panel-list = <
-				&dsi_auo_synaptics_cmd_4
-				&dsi_jdi_synaptics_cmd_6
-				&dsi_lgd_synaptics_cmd_8
-				&dsi_sharp_synaptics_cmd_3
-				&dsi_sharp_synaptics_cmd_9>;
 	};
 
 	/* SDE */

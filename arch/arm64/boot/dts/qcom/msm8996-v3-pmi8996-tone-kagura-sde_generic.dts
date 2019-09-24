@@ -37,3 +37,10 @@
 	compatible = "somc,kagura-row", "qcom,msm8996";
 	qcom,board-id = <8 0>;
 };
+
+&dsi_panel_cmd_display {
+	qcom,dsi-panel = <&dsi_jdi_synaptics_cmd_6>;
+
+	somc,dsi-panel-list =  <&dsi_jdi_synaptics_cmd_6
+				&dsi_sharp_synaptics_cmd_9>;
+};
