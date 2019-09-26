@@ -57,7 +57,7 @@
 		reg = <0xc996400 0x588>,
 		      <0xc8c2300 0x8>,
 		      <0xc996200 0x98>;
-		reg-names = "pll_base", "gdsc_base";
+		reg-names = "pll_base", "gdsc_base", "dynamic_pll_base";
 
 		gdsc-supply = <&gdsc_mdss>;
 

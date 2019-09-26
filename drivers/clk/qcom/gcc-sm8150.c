@@ -265,6 +265,7 @@ static const struct clk_div_table post_div_table_trion_even[] = {
 
 static struct clk_alpha_pll_postdiv gpll0_out_even = {
 	.offset = 0x0,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_TRION],
 	.post_div_shift = ALPHA_POST_DIV_EVEN_SHIFT,
 	.post_div_table = post_div_table_trion_even,
 	.num_post_div = ARRAY_SIZE(post_div_table_trion_even),

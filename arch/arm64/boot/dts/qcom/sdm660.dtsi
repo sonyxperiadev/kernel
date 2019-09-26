@@ -349,7 +349,6 @@
 		};
 
 		smem_region: smem@86000000 {
-			compatible = "removed-dma-pool";
 			no-map;
 			reg = <0 0x86000000 0 0x200000>;
 		};
@@ -727,6 +726,14 @@
 		compatible = "qcom,smem";
 		memory-region = <&smem_region>;
 		hwlocks = <&tcsr_mutex 3>;
+	};
+
+	qcom,smp2p_sleepstate {
+		compatible = "qcom,smp2p-sleepstate";
+		qcom,smem-states = <&sleepstate_smp2p_out 0>;
+		interrupt-parent = <&sleepstate_smp2p_in>;
+		interrupts = <0 0>;
+		interrupt-names = "smp2p-sleepstate-in";
 	};
 
 	rpm_bus: qcom,rpm-smd {
