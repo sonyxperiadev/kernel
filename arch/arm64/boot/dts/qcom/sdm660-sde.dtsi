@@ -63,11 +63,17 @@
 
 		qcom,sde-mixer-display-pref = "primary", "primary", "none",
 					      "none";
+		qcom,sde-mixer-cwb-pref = "none", "none", "cwb",
+					  "cwb";
+
 		qcom,sde-mixer-off = <0x45000 0x46000 0x47000 0x4a000>;
 		qcom,sde-mixer-size = <0x2bc>;
 		qcom,sde-mixer-pair-mask = <2 1 6 3>;
 		qcom,sde-mixer-blend-op-off = <0x20 0x50 0x80 0xb0
 					       0x230 0x260 0x290>;
+		qcom,sde-max-per-pipe-bw-kbps = <3200000
+						 3200000 3200000
+						 3200000 3200000>;
 
 		qcom,sde-dspp-top-off = <0x1300>;
 		qcom,sde-dspp-top-size = <0x80>;
@@ -135,8 +141,10 @@
 		qcom,sde-sspp-qseed-off = <0xa00>;
 		qcom,sde-mixer-linewidth = <2560>;
 		qcom,sde-sspp-linewidth = <2560>;
+		qcom,sde-wb-linewidth = <2048>;
 		qcom,sde-mixer-blendstages = <0x7>;
 		qcom,sde-highest-bank-bit = <0x1>;
+		qcom,sde-ubwc-version = <0x100>;
 		qcom,sde-panic-per-pipe;
 		qcom,sde-has-cdp;
 		qcom,sde-has-src-split;
