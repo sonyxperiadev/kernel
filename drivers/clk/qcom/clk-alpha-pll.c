@@ -121,7 +121,8 @@ const u8 clk_alpha_pll_regs[][PLL_OFF_MAX_REGS] = {
 		[PLL_OFF_FRAC] = 0x38,
 	},
 	[CLK_ALPHA_PLL_TYPE_TRION] =  {
-		[PLL_OFF_L_VAL] = 0x08,
+		[PLL_OFF_L_VAL] = 0x04,
+		[PLL_OFF_CAL_L_VAL] = 0x08,
 		[PLL_OFF_USER_CTL] = 0xc,
 		[PLL_OFF_USER_CTL_U] = 0x10,
 		[PLL_OFF_USER_CTL_U1] = 0x14,
@@ -134,7 +135,6 @@ const u8 clk_alpha_pll_regs[][PLL_OFF_MAX_REGS] = {
 		[PLL_OFF_STATUS] = 0x30,
 		[PLL_OFF_OPMODE] = 0x38,
 		[PLL_OFF_ALPHA_VAL] = 0x40,
-		[PLL_OFF_CAL_L_VAL] = 0x44,
 	},
 	[CLK_ALPHA_PLL_TYPE_REGERA] =  {
 		[PLL_OFF_L_VAL] = 0x04,
