@@ -1100,7 +1100,7 @@ config SERIAL_MSM_CONSOLE
 
 config SERIAL_MSM_RESTORE_TX_PIN_TLMM
 	bool "MSM: Early restore UART TX pin"
-	depends on SERIAL_MSM
+	depends on SERIAL_MSM || SERIAL_MSM_GENI
 	help
 	  Some bootloaders are putting both the TX and RX UART
 	  pins in high-impedance state as a protection against
