@@ -1808,6 +1808,7 @@ EXPORT_SYMBOL_GPL(clk_trion_pll_postdiv_ops);
 int clk_alpha_pll_regera_configure(struct clk_alpha_pll *pll, struct regmap *regmap,
 				const struct alpha_pll_config *config)
 {
+	u32 mode_regval;
 	int ret = 0;
 
 	if (!config) {
@@ -1818,7 +1819,11 @@ int clk_alpha_pll_regera_configure(struct clk_alpha_pll *pll, struct regmap *reg
 	if (pll->inited)
 		return ret;
 
-	if (pll_is_enabled(pll, PLL_LOCK_DET)) {
+	ret = regmap_read(regmap, PLL_MODE(pll), &mode_regval);
+	if (ret)
+		return ret;
+
+	if (mode_regval & PLL_LOCK_DET) {
 		pr_warn("PLL is already enabled. Skipping configuration.\n");
 		pll->inited = true;
 		return 0;
