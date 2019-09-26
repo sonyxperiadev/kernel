@@ -349,7 +349,6 @@
 		};
 
 		smem_region: smem@86000000 {
-			compatible = "removed-dma-pool";
 			no-map;
 			reg = <0 0x86000000 0 0x200000>;
 		};
