@@ -1191,7 +1191,7 @@ int dsi_panel_driver_parse_power_cfg(struct dsi_panel *panel)
 	if (rc)
 		pr_err("%s: Not configured vsp/vsn vregs\n", __func__);
 
-	return rc;
+	return 0;
 }
 
 int dsi_panel_driver_parse_gpios(struct dsi_panel *panel,
