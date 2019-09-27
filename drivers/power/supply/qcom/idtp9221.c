@@ -23,7 +23,6 @@
 #include <linux/platform_device.h>
 #include <linux/of_platform.h>
 #include <linux/interrupt.h>
-#include <linux/switch.h>
 
 /* IDT P9221 Registers */
 #define IDTP9221_REG_CHIP_ID_L			0x00
@@ -207,9 +206,6 @@ struct idtp9221 {
 	struct power_supply	*batt_psy;
 	int			usbin_valid;
 	int			wireless_suspend;
-
-	/* switch */
-	struct switch_dev	swdev;
 
 	/* gpio/irq */
 	int			wlc_en;
@@ -1821,14 +1817,6 @@ reg_done:
 	if (chip->halt_retry)
 		idtp9221_handle_halt_proc(chip);
 
-	/* status notofication switch */
-	if ((chip->status == IDTP9221_STATUS_PWR_ON_NEGOTIATION) &&
-		(chip->old_status != IDTP9221_STATUS_PWR_ON_NEGOTIATION))
-		switch_set_state(&chip->swdev, 1);
-	else if ((chip->status != IDTP9221_STATUS_PWR_ON_NEGOTIATION) &&
-		(chip->old_status == IDTP9221_STATUS_PWR_ON_NEGOTIATION))
-		switch_set_state(&chip->swdev, 0);
-
 	if (!chip->batt_psy) {
 		idtp9221_dbg(chip, PR_PSY,
 				"re-call power_supply_get_by_name()\n");
@@ -2193,12 +2181,6 @@ static int idtp9221_probe(struct i2c_client *client,
 		goto err_psy;
 	}
 
-	/* switch device registration*/
-	chip->swdev.name = "wireless_chg_negotiation";
-	rc = switch_dev_register(&chip->swdev);
-	if (rc < 0)
-		pr_err("register swdev_wireless_charge failed rc = %d\n", rc);
-
 	/* GPIO initialize */
 	if (gpio_is_valid(chip->wlc_en))
 		gpio_request_one(chip->wlc_en, GPIOF_OUT_INIT_LOW, "wlc_en");
@@ -2289,7 +2271,6 @@ static int idtp9221_remove(struct i2c_client *client)
 
 	cancel_delayed_work_sync(&chip->detect_work);
 	power_supply_unregister(chip->wireless_psy);
-	switch_dev_unregister(&chip->swdev);
 	idtp9221_wake_lock(chip, false);
 	device_init_wakeup(chip->dev, 0);
 
