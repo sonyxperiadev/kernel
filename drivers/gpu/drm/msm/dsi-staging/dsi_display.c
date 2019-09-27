@@ -2261,6 +2261,7 @@ static int dsi_display_parse_boot_display_selection(void)
 		boot_displays[i].name[j] = '\0';
 
 		boot_displays[i].boot_disp_en = true;
+		pr_err("Selected %s as boot display %d\n", disp_buf, i);
 	}
 
 	return 0;

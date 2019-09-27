@@ -93,7 +93,7 @@
 		qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
 	};
 
-	dsi_panel_cmd_display: qcom,dsi-display-primary@12 {
+	dsi_panel_cmd_display: qcom,dsi-display@12 {
 		compatible = "somc,dsi-display";
 		label = "primary";
 
