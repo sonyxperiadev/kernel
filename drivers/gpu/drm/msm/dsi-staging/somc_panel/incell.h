@@ -43,12 +43,23 @@ typedef struct {
 
 typedef enum {
 	INCELL_TOUCH_RESET,
+	INCELL_CONT_SPLASH_TOUCH_ENABLE,
 } incell_intf_mode;
 
 typedef enum {
 	INCELL_DISPLAY_POWER_UNLOCK,
 	INCELL_DISPLAY_POWER_LOCK,
 } incell_pw_lock;
+
+#define INCELL_TAMA_MULTIPLE_TOUCH_DRIVERS \
+	(defined(CONFIG_MACH_SONY_AKARI) || defined(CONFIG_MACH_SONY_APOLLO))
+
+#if INCELL_TAMA_MULTIPLE_TOUCH_DRIVERS
+typedef enum {
+	INCELL_TOUCH_TYPE_CLEARPAD,
+	INCELL_TOUCH_TYPE_TCM,
+} incell_touch_type;
+#endif
 
 /* Compatibility with older incell */
 #define INCELL_DISPLAY_HW_RESET		INCELL_TOUCH_RESET
@@ -134,6 +145,16 @@ extern int incell_get_display_pre_sod(void);
 #else
 static inline int incell_get_display_pre_sod(void) {return 0; }
 #endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
+
+#if INCELL_TAMA_MULTIPLE_TOUCH_DRIVERS
+
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+extern incell_touch_type incell_get_touch_type(void);
+#else
+static inline incell_touch_type incell_get_touch_type(void) {return 0; }
+#endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
+
+#endif /* INCELL_TAMA_MULTIPLE_TOUCH_DRIVERS */
 
 #endif /* __INCELL_H__ */
 

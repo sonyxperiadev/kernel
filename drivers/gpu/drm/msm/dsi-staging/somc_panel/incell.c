@@ -88,6 +88,11 @@ int incell_control_mode(incell_intf_mode mode, bool force)
 	case INCELL_TOUCH_RESET:
 		ret = dsi_panel_driver_touch_reset_ctrl(panel, force);
 		break;
+
+	case INCELL_CONT_SPLASH_TOUCH_ENABLE:
+		ret = somc_panel_cont_splash_touch_enable(panel);
+		break;
+
 	default:
 		pr_err("%s: Invalid mode for touch interface %d\n",
 			__func__, (int)(mode));
@@ -283,3 +288,25 @@ void incell_driver_init(struct msm_drm_private *priv)
 	else
 		incell->state = INCELL_S000;
 }
+
+#if INCELL_TAMA_MULTIPLE_TOUCH_DRIVERS
+incell_touch_type incell_get_touch_type() {
+	struct dsi_display *display = dsi_display_get_main_display();
+	struct dsi_panel *panel = display->panel;
+	incell_touch_type type = INCELL_TOUCH_TYPE_CLEARPAD;
+
+#if defined(CONFIG_MACH_SONY_AKARI)
+	if (!strcmp(panel->name, "7"))
+#elif defined(CONFIG_MACH_SONY_APOLLO)
+	if (!strcmp(panel->name, "8"))
+#else
+#error "INCELL_TAMA_MULTIPLE_TOUCH_DRIVERS without AKARI or APOLLO!"
+#endif
+		type = INCELL_TOUCH_TYPE_TCM;
+
+	pr_info("%s: Panel %s is %s\n", __func__, panel->name,
+		type == INCELL_TOUCH_TYPE_TCM ? "TCM" : "CLEARPAD");
+
+	return type;
+}
+#endif

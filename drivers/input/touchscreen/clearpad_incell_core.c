@@ -8703,6 +8703,18 @@ static int clearpad_probe(struct platform_device *pdev)
 #ifdef CONFIG_TOUCHSCREEN_CLEARPAD_RMI_DEV
 	struct platform_device *rmi_dev;
 #endif
+
+#if INCELL_TAMA_MULTIPLE_TOUCH_DRIVERS
+	incell_touch_type type = incell_get_touch_type();
+	if (type != INCELL_TOUCH_TYPE_CLEARPAD) {
+		dev_notice(&pdev->dev,
+			"%s: Detected panel is not CLEARPAD,"
+			" returning successful probe\n",
+			__func__);
+		return 0;
+	}
+#endif
+
 	this = devm_kzalloc(&pdev->dev, sizeof(struct clearpad_t), GFP_KERNEL);
 	if (!this) {
 		rc = -ENOMEM;
@@ -8976,6 +8988,16 @@ static void clearpad_post_probe_work(struct work_struct *work)
 		goto post_probe_done;
 	}
 	UNLOCK(&this->lock);
+
+#ifdef CONFIG_DRM_MSM_DSI_SOMC_PANEL
+	// Instead of crashing this probe a couple times, just power up
+	// and reset the incell touch.
+	rc = incell_control_mode(INCELL_CONT_SPLASH_TOUCH_ENABLE, false);
+	if (rc)
+		HWLOGE(this,
+			"%s failed to INCELL_CONT_SPLASH_TOUCH_ENABLE rc=%d\n",
+			__func__, rc);
+#endif
 
 	get_monotonic_boottime(&ts);
 	HWLOGI(this, "start post probe @ %ld.%06ld\n", ts.tv_sec, ts.tv_nsec);
