@@ -274,3 +274,6 @@
 #include "charger-kumano-common.dtsi"
 #include "charger-kumano-griffin.dtsi"
 
+&usb1 {
+	status = "disabled";
+};
