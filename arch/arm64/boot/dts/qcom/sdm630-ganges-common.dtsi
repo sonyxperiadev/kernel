@@ -169,6 +169,19 @@
 				2730 3003 3276 3549 3822 4095>;
 };
 
+/* PM660L */
+&rgb_leds {
+       red {
+               label = "led:rgb_red";
+       };
+       green {
+               label = "led:rgb_green";
+       };
+       blue {
+               label = "led:rgb_blue";
+       };
+};
+
 &pmx_mdss{
 	mdss_dsi_active: mdss_dsi_active {
 		mux {

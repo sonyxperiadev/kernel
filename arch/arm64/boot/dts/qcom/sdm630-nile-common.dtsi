@@ -567,6 +567,19 @@
 	qcom,string-cfg = <5>; /* 00 01 */
 };
 
+/* PM660L */
+&rgb_leds {
+	red {
+		label = "led:rgb_red";
+	};
+	green {
+		label = "led:rgb_green";
+	};
+	blue {
+		label = "led:rgb_blue";
+	};
+};
+
 &pm660l_torch0 {
 	qcom,current-ma = <100>;
 };
