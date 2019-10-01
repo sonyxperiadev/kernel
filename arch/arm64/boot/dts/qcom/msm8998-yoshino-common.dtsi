@@ -3299,6 +3299,19 @@
 	};
 };
 
+/* PMI8998 */
+&rgb_leds {
+	red {
+		label = "led:rgb_red";
+	};
+	green {
+		label = "led:rgb_green";
+	};
+	blue {
+		label = "led:rgb_blue";
+	};
+};
+
 &pmi8998_wled {
 	linux,name = "wled";
 	qcom,fs-curr-ua = <24000>;
