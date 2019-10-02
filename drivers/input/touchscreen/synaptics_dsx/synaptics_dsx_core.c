@@ -3991,7 +3991,7 @@ static int synaptics_rmi4_get_reg(struct synaptics_rmi4_data *rmi4_data,
 	const struct synaptics_dsx_board_data *bdata =
 			rmi4_data->hw_if->board_data;
 
-	if (!get) {
+	if (!get || bdata->pwr_reg_name == NULL || bdata->bus_reg_name == NULL) {
 		retval = 0;
 		goto regulator_put;
 	}
