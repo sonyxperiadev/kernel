@@ -37,3 +37,13 @@
 	compatible = "somc,dora-row", "qcom,msm8996";
 	qcom,board-id = <8 0>;
 };
+
+&dsi_panel_cmd_display {
+	qcom,dsi-panel = <&dsi_lgd_synaptics_cmd_8>;
+
+	somc,dsi-panel-list = <&dsi_auo_synaptics_cmd_4
+				&dsi_jdi_synaptics_cmd_6
+				&dsi_lgd_synaptics_cmd_8
+				&dsi_sharp_synaptics_cmd_3
+				&dsi_sharp_synaptics_cmd_9>;
+};

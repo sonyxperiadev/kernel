@@ -83,7 +83,7 @@
 		};
 	};
 
-	sde_dsi_kumano_panels: qcom,dsi-display@8 {
+	sde_dsi_kumano_panels: qcom,dsi-display@1008 {
 		label = "dsi_panel_somc_kumano_cmd";
 		qcom,display-type = "primary";
 
@@ -93,7 +93,7 @@
 		qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
 	};
 
-	dsi_panel_cmd_display: qcom,dsi-display-primary@12 {
+	dsi_panel_cmd_display: qcom,dsi-display@1012 {
 		compatible = "somc,dsi-display";
 		label = "primary";
 

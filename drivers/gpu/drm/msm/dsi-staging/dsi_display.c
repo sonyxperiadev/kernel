@@ -56,6 +56,7 @@
 DEFINE_MUTEX(dsi_display_clk_mutex);
 
 static char dsi_display_primary[MAX_CMDLINE_PARAM_LEN];
+static char dsi_display_primary_hack[MAX_CMDLINE_PARAM_LEN];
 static char dsi_display_secondary[MAX_CMDLINE_PARAM_LEN];
 static struct dsi_display_boot_param boot_displays[MAX_DSI_ACTIVE_DISPLAY] = {
 	{.boot_param = dsi_display_primary},
@@ -2201,6 +2202,10 @@ static void dsi_display_parse_cmdline_topology(struct dsi_display *display,
 	else
 		boot_str = dsi_display_secondary;
 
+	if (strlen(dsi_display_primary_hack) > 0 &&
+	    display_type == DSI_PRIMARY)
+		boot_str = dsi_display_primary_hack;
+
 	sw_te = strnstr(boot_str, ":swte", strlen(boot_str));
 	if (sw_te)
 		display->sw_te_using_wd = true;
@@ -2261,6 +2266,7 @@ static int dsi_display_parse_boot_display_selection(void)
 		boot_displays[i].name[j] = '\0';
 
 		boot_displays[i].boot_disp_en = true;
+		pr_err("Selected %s as boot display %d\n", disp_buf, i);
 	}
 
 	return 0;
@@ -7663,6 +7669,10 @@ static int __init dsi_display_register(void)
 	dsi_phy_drv_register();
 	dsi_ctrl_drv_register();
 
+	if (strlen(dsi_display_primary_hack) > 0)
+		strlcpy(dsi_display_primary, dsi_display_primary_hack,
+			MAX_CMDLINE_PARAM_LEN);
+
 	dsi_display_parse_boot_display_selection();
 
 	return platform_driver_register(&dsi_display_driver);
@@ -7678,6 +7688,12 @@ module_param_string(dsi_display0, dsi_display_primary, MAX_CMDLINE_PARAM_LEN,
 								0600);
 MODULE_PARM_DESC(dsi_display0,
 	"msm_drm.dsi_display0=<display node>:<configX> where <display node> is 'primary dsi display node name' and <configX> where x represents index in the topology list");
+
+module_param_string(blhack_dsi_display0, dsi_display_primary_hack, MAX_CMDLINE_PARAM_LEN,
+								0600);
+MODULE_PARM_DESC(blhack_dsi_display0,
+	"msm_drm.blhack_dsi_display0=<display node>:<configX> where <display node> is 'primary dsi display node name' and <configX> where x represents index in the topology list");
+
 module_param_string(dsi_display1, dsi_display_secondary, MAX_CMDLINE_PARAM_LEN,
 								0600);
 MODULE_PARM_DESC(dsi_display1,

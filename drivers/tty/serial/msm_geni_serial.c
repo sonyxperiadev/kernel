@@ -2074,6 +2074,32 @@ msm_geni_serial_early_console_write(struct console *con, const char *s,
 	__msm_geni_serial_console_write(&dev->port, s, n);
 }
 
+#ifdef CONFIG_SERIAL_MSM_RESTORE_TX_PIN_TLMM
+ #define MSM_PINCONF_2MA_NO_PULL		0x8
+static void __init somc_geni_restore_pins_earliest(void)
+{
+	void __iomem *tlmm = NULL;
+	uint32_t pin_config = 0;
+	unsigned long address =
+		CONFIG_SERIAL_MSM_RESTORE_TX_PIN_TLMM_ADDR;
+
+	if (address < 0x1000000)
+		return;
+
+	tlmm = early_ioremap(address, 0x1000);
+	if (!tlmm)
+		return;
+
+	pin_config = MSM_PINCONF_2MA_NO_PULL;
+	writel_relaxed(pin_config, tlmm);
+
+	early_iounmap(tlmm, 0x1000);
+
+	wmb();
+}
+#endif
+
+
 static int __init
 msm_geni_serial_earlycon_setup(struct earlycon_device *dev,
 		const char *opt)
@@ -2092,6 +2118,10 @@ msm_geni_serial_earlycon_setup(struct earlycon_device *dev,
 	u32 clk_div;
 	unsigned long clk_rate;
 	unsigned long cfg0, cfg1;
+
+#ifdef CONFIG_SERIAL_MSM_RESTORE_TX_PIN_TLMM
+	somc_geni_restore_pins_earliest();
+#endif
 
 	if (!uport->membase) {
 		ret = -ENOMEM;

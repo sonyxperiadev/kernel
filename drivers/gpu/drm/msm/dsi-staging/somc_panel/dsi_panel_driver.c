@@ -155,6 +155,15 @@ int dsi_panel_driver_gpio_request(struct dsi_panel *panel)
 			goto error_release_touch_vddio_en;
 		}
 	}
+	if (gpio_is_valid(spec_pdata->touch_vddh_en_gpio)) {
+		rc = gpio_request(spec_pdata->touch_vddh_en_gpio,
+							"touch_vddh_en");
+		if (rc) {
+			pr_err("request for touch_vddio_en failed, rc=%d\n",
+									rc);
+			goto error_release_touch_vddh_en;
+		}
+	}
 	if (gpio_is_valid(spec_pdata->reset_touch_gpio)) {
 		rc = gpio_request(spec_pdata->reset_touch_gpio,
 							"reset_touch_gpio");
@@ -192,6 +201,9 @@ error_release_disp_dcdc_en:
 error_release_touch_reset:
 	if (gpio_is_valid(spec_pdata->reset_touch_gpio))
 		gpio_free(spec_pdata->reset_touch_gpio);
+error_release_touch_vddh_en:
+	if (gpio_is_valid(spec_pdata->touch_vddh_en_gpio))
+		gpio_free(spec_pdata->touch_vddh_en_gpio);
 error_release_touch_vddio_en:
 	if (gpio_is_valid(spec_pdata->touch_vddio_en_gpio))
 		gpio_free(spec_pdata->touch_vddio_en_gpio);
@@ -215,6 +227,9 @@ int dsi_panel_driver_gpio_release(struct dsi_panel *panel)
 
 	if (gpio_is_valid(spec_pdata->touch_vddio_en_gpio))
 		gpio_free(spec_pdata->touch_vddio_en_gpio);
+
+	if (gpio_is_valid(spec_pdata->touch_vddh_en_gpio))
+		gpio_free(spec_pdata->touch_vddh_en_gpio);
 
 	if (gpio_is_valid(spec_pdata->disp_dcdc_en_gpio))
 		gpio_free(spec_pdata->disp_dcdc_en_gpio);
@@ -338,15 +353,31 @@ exit:
 static int dsi_panel_driver_touch_power_on(struct dsi_panel *panel)
 {
 	struct panel_specific_pdata *spec_pdata = panel->spec_pdata;
+	bool vddio_present = gpio_is_valid(spec_pdata->touch_vddio_en_gpio);
 	int rc = 0;
 
-	if (gpio_is_valid(spec_pdata->touch_vddio_en_gpio)) {
+	if (vddio_present) {
 		rc = gpio_direction_output(spec_pdata->touch_vddio_en_gpio, 0);
 		if (rc) {
 			pr_err("unable to set dir for touch_vddio_en gpio rc=%d\n", rc);
 			goto exit;
 		}
 	}
+
+	if (gpio_is_valid(spec_pdata->touch_vddh_en_gpio)) {
+		rc = gpio_direction_output(spec_pdata->touch_vddh_en_gpio, 1);
+		if (rc) {
+			pr_err("unable to set dir for touch_vddh_en "
+			       "gpio rc=%d\n", rc);
+
+			/* Revert the VDDIO enablement */
+			if (vddio_present)
+				gpio_direction_output(
+					spec_pdata->touch_vddio_en_gpio, 1);
+			goto exit;
+		}
+	}
+
 exit:
 	return rc;
 }
@@ -355,6 +386,14 @@ static int dsi_panel_driver_touch_power_off(struct dsi_panel *panel)
 {
 	struct panel_specific_pdata *spec_pdata = panel->spec_pdata;
 	int rc = 0;
+
+	if (gpio_is_valid(spec_pdata->touch_vddh_en_gpio)) {
+		rc = gpio_direction_output(spec_pdata->touch_vddh_en_gpio, 0);
+		if (rc) {
+			pr_err("unable to set dir for touch_vddh_en gpio rc=%d\n", rc);
+			goto exit;
+		}
+	}
 
 	if (gpio_is_valid(spec_pdata->touch_vddio_en_gpio)) {
 		rc = gpio_direction_output(spec_pdata->touch_vddio_en_gpio, 1);
@@ -548,15 +587,35 @@ int dsi_panel_driver_post_power_off(struct dsi_panel *panel)
 			pr_warn("%s: Panel reset failed. rc=%d\n", __func__, rc);
 	}
 
-	dsi_panel_driver_touch_pinctrl_set_state(panel, false);
+	if (!spec_pdata->pre_sod_mode)
+		dsi_panel_driver_touch_pinctrl_set_state(panel, false);
 
-	rc = dsi_panel_driver_touch_power(panel, false);
-	if (rc)
-		pr_err("%s: failed to disable touch vddion en, rc=%d\n", __func__, rc);
+	/* Power off touch on OLED panels only if not in pre_sod.
+	 * On LCD panels, always power off touch
+	 */
+	if (!spec_pdata->oled_disp ||
+	    (spec_pdata->oled_disp && !spec_pdata->pre_sod_mode)) {
+		rc = dsi_panel_driver_touch_power(panel, false);
+		if (rc)
+			pr_err("%s: touch GPIO poweroff failed, rc=%d\n",
+			       __func__, rc);
+	}
 
-	rc = somc_panel_vreg_ctrl(&spec_pdata->touch_power_info, "touch-avdd", false);
+	if (spec_pdata->oled_disp) {
+		/* The Vci is present only on some OLED displays and must be
+		 * disabled only after disabling the VDDh through GPIO
+		 */
+		rc = somc_panel_vreg_ctrl(&panel->power_info, "vci", false);
+		if (rc)
+			pr_err("%s: failed to disable vci, rc=%d\n",
+			       __func__, rc);
+	}
+
+	rc = somc_panel_vreg_ctrl(&spec_pdata->touch_power_info,
+				  "touch-avdd", false);
 	if (rc)
-		pr_err("%s: failed to disable touch-avdd, rc=%d\n", __func__, rc);
+		pr_err("%s: failed to disable touch-avdd, rc=%d\n",
+		       __func__, rc);
 
 	rc = somc_panel_vreg_ctrl(&panel->power_info, "vddio", false);
 	if (rc)
@@ -646,6 +705,12 @@ int dsi_panel_driver_pre_power_on(struct dsi_panel *panel)
 	rc = dsi_panel_driver_touch_power(panel, true);
 	if (rc) {
 		pr_err("%s: failed to enable touch vddio, rc=%d\n", __func__, rc);
+		goto exit;
+	}
+
+	rc = somc_panel_vreg_ctrl(&panel->power_info, "vci", true);
+	if (rc) {
+		pr_err("%s: failed to enable vci, rc=%d\n", __func__, rc);
 		goto exit;
 	}
 
@@ -1126,7 +1191,7 @@ int dsi_panel_driver_parse_power_cfg(struct dsi_panel *panel)
 	if (rc)
 		pr_err("%s: Not configured vsp/vsn vregs\n", __func__);
 
-	return rc;
+	return 0;
 }
 
 int dsi_panel_driver_parse_gpios(struct dsi_panel *panel,
@@ -1146,6 +1211,13 @@ int dsi_panel_driver_parse_gpios(struct dsi_panel *panel,
 					      0);
 	if (!gpio_is_valid(spec_pdata->touch_vddio_en_gpio)) {
 		pr_err("%s: failed get touch-vddio-en gpio\n", __func__);
+	}
+
+	spec_pdata->touch_vddh_en_gpio = of_get_named_gpio(of_node,
+					      "qcom,platform-touch-vddh-en-gpio",
+					      0);
+	if (!gpio_is_valid(spec_pdata->touch_vddh_en_gpio)) {
+		pr_err("%s: touch-vddh-en gpio not present\n", __func__);
 	}
 
 	spec_pdata->touch_int_gpio = of_get_named_gpio(of_node,

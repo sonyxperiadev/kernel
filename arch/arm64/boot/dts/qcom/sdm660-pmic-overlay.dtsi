@@ -297,6 +297,13 @@
 			regulator-min-microvolt = <4000000>;
 			regulator-max-microvolt = <6000000>;
 		};
+
+		lcdb_bst_vreg: bst {
+			label = "bst";
+			regulator-name = "lcdb_bst";
+			regulator-min-microvolt = <4700000>;
+			regulator-max-microvolt = <6275000>;
+		};
 	};
 
 	pm660a_oledb: qpnp-oledb@e000 {

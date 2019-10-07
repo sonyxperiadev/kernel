@@ -5,7 +5,7 @@
 #include "sdm660-internal-codec.dtsi"
 #include "sdm630-nile-common.dtsi"
 #include "sdm630-nile-pioneer-common.dtsi"
-#include "sdm630-nile-pioneer_camera.dtsi"
+#include "sdm630-nile-pioneer-camera.dtsi"
 #include "sdm630-nile-common-sde-overlay.dtsi"
 #include "sdm630-nile-common-display.dtsi"
 #include "sdm630-nile-common-display-sde.dtsi"

@@ -351,7 +351,6 @@
 		};
 
 		smem_region: smem@86000000 {
-			//compatible = "removed-dma-pool";
 			no-map;
 			reg = <0 0x86000000 0 0x200000>;
 		};
@@ -400,6 +399,14 @@
 			reusable;
 			alignment = <0x0 0x400000>;
 			size = <0x0 0x800000>;
+		};
+
+		qseecom_ta_mem: qseecom_ta_region {
+			compatible = "shared-dma-pool";
+			alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
+			reusable;
+			alignment = <0 0x400000>;
+			size = <0 0x1000000>;
 		};
 
 		qseecom_mem: qseecom_region {

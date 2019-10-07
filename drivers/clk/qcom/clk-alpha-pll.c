@@ -121,7 +121,8 @@ const u8 clk_alpha_pll_regs[][PLL_OFF_MAX_REGS] = {
 		[PLL_OFF_FRAC] = 0x38,
 	},
 	[CLK_ALPHA_PLL_TYPE_TRION] =  {
-		[PLL_OFF_L_VAL] = 0x08,
+		[PLL_OFF_L_VAL] = 0x04,
+		[PLL_OFF_CAL_L_VAL] = 0x08,
 		[PLL_OFF_USER_CTL] = 0xc,
 		[PLL_OFF_USER_CTL_U] = 0x10,
 		[PLL_OFF_USER_CTL_U1] = 0x14,
@@ -134,7 +135,6 @@ const u8 clk_alpha_pll_regs[][PLL_OFF_MAX_REGS] = {
 		[PLL_OFF_STATUS] = 0x30,
 		[PLL_OFF_OPMODE] = 0x38,
 		[PLL_OFF_ALPHA_VAL] = 0x40,
-		[PLL_OFF_CAL_L_VAL] = 0x44,
 	},
 	[CLK_ALPHA_PLL_TYPE_REGERA] =  {
 		[PLL_OFF_L_VAL] = 0x04,
@@ -1808,6 +1808,7 @@ EXPORT_SYMBOL_GPL(clk_trion_pll_postdiv_ops);
 int clk_alpha_pll_regera_configure(struct clk_alpha_pll *pll, struct regmap *regmap,
 				const struct alpha_pll_config *config)
 {
+	u32 mode_regval;
 	int ret = 0;
 
 	if (!config) {
@@ -1818,7 +1819,11 @@ int clk_alpha_pll_regera_configure(struct clk_alpha_pll *pll, struct regmap *reg
 	if (pll->inited)
 		return ret;
 
-	if (pll_is_enabled(pll, PLL_LOCK_DET)) {
+	ret = regmap_read(regmap, PLL_MODE(pll), &mode_regval);
+	if (ret)
+		return ret;
+
+	if (mode_regval & PLL_LOCK_DET) {
 		pr_warn("PLL is already enabled. Skipping configuration.\n");
 		pll->inited = true;
 		return 0;

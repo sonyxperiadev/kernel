@@ -134,7 +134,7 @@ static int update_config(struct clk_rcg2 *rcg, u32 cfg)
 		udelay(1);
 	}
 
-	pr_err("CFG_RCGR old frequency configuration 0x%x !\n", cfg);
+	pr_err("%s: CFG_RCGR old frequency configuration 0x%x !\n", name, cfg);
 
 	WARN_CLK(hw->core, name, count == 0,
 			"rcg didn't update its configuration.");
