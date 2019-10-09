@@ -289,24 +289,13 @@ void incell_driver_init(struct msm_drm_private *priv)
 		incell->state = INCELL_S000;
 }
 
-#if INCELL_TAMA_MULTIPLE_TOUCH_DRIVERS
-incell_touch_type incell_get_touch_type() {
+bool incell_touch_is_compatible(incell_touch_type type) {
 	struct dsi_display *display = dsi_display_get_main_display();
 	struct dsi_panel *panel = display->panel;
-	incell_touch_type type = INCELL_TOUCH_TYPE_CLEARPAD;
 
-#if defined(CONFIG_MACH_SONY_AKARI)
-	if (!strcmp(panel->name, "7"))
-#elif defined(CONFIG_MACH_SONY_APOLLO)
-	if (!strcmp(panel->name, "8"))
-#else
-#error "INCELL_TAMA_MULTIPLE_TOUCH_DRIVERS without AKARI or APOLLO!"
-#endif
-		type = INCELL_TOUCH_TYPE_TCM;
+	if (panel->touch_type == INCELL_TOUCH_TYPE_DEFAULT)
+		/* Default/unset. Any driver is allowed to probe: */
+		return true;
 
-	pr_info("%s: Panel %s is %s\n", __func__, panel->name,
-		type == INCELL_TOUCH_TYPE_TCM ? "TCM" : "CLEARPAD");
-
-	return type;
+	return type == panel->touch_type;
 }
-#endif

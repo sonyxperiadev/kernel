@@ -928,6 +928,11 @@ int dsi_panel_driver_parse_dt(struct dsi_panel *panel,
 
 	spec_pdata = panel->spec_pdata;
 
+	if (of_property_read_u32(np, "somc,incell-touch-type",
+			&panel->touch_type))
+		panel->touch_type = INCELL_TOUCH_TYPE_DEFAULT;
+	pr_debug("%s: In-Cell touch IC is %d\n", __func__, panel->touch_type);
+
 	rc = somc_panel_parse_dt_colormgr_config(panel, np);
 
 	if (of_find_property(np, "somc,pw-off-rst-b-seq", NULL)) {

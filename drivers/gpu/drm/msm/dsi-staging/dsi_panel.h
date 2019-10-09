@@ -205,6 +205,7 @@ struct dsi_panel {
 
 #ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
 	struct panel_specific_pdata *spec_pdata;
+	int touch_type;
 #endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 };
 
