@@ -3335,9 +3335,9 @@ static int syna_tcm_probe(struct platform_device *pdev)
 	if (type != INCELL_TOUCH_TYPE_TCM) {
 		dev_notice(&pdev->dev,
 			"%s: Detected panel is not TCM,"
-			" returning successful probe\n",
+			" returning ENODEV\n",
 			__func__);
-		return 0;
+		return -ENODEV;
 	}
 #endif
 
