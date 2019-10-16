@@ -1039,6 +1039,7 @@
 	/delete-property/ qcom,parallel-usb-min-current-ma;
 	/delete-property/ qcom,parallel-usb-9v-min-current-ma;
 	/delete-property/ qcom,charging-disabled;
+	#cooling-cells = <2>;
 	qcom,charge-unknown-battery;
 	qcom,usb_dp-vadc = <&pmi8994_vadc>;
 	qcom,usb_dm-vadc = <&pmi8994_vadc>;
@@ -3200,7 +3201,7 @@
 		qcom,qpnp-lab-max-precharge-time = <300>;
 		qcom,qpnp-lab-pull-down-enable;
 		qcom,qpnp-lab-full-pull-down-enable;
-		interrupts = <0x3 0xde 0x0>;
+		interrupts = <0x3 0xde 0x0 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "lab_vreg_not_ok_interrupt";
 	};
 	qcom,ibb@dc00 {
@@ -3208,7 +3209,7 @@
 		qcom,qpnp-ibb-init-lcd-voltage = <5700000>;
 		qcom,qpnp-ibb-pull-down-enable;
 		qcom,qpnp-ibb-full-pull-down-enable;
-		interrupts = <0x3 0xdc 0x0>;
+		interrupts = <0x3 0xdc 0x0 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "ibb_vreg_not_ok_interrupt";
 	};
 };

@@ -16,10 +16,10 @@
 	/* Bad indentation is required. Sorry. */
 	chosen {
 
-		bootargs = \
-"fpsimd.fpsimd_settings=1 app_setting.use_app_setting=1 \
-app_setting.use_32bit_app_setting=1 sched_enable_hmp=1 \
-rcupdate.rcu_expedited=1 \
+		bootargs = "\
+rcu_nocbs=0-3 rcupdate.rcu_expedited=1 \
+fpsimd.fpsimd_settings=1 app_setting.use_app_setting=1 \
+app_setting.use_32bit_app_setting=1 \
 msm_drm.dsi_display0=dsi_panel_somc_tone_cmd:config0";
 
 	};
@@ -118,7 +118,6 @@ msm_drm.dsi_display0=dsi_panel_somc_tone_cmd:config0";
 		qcom,platform-vddio-gpio = <&tlmm 51 0>;
 		qcom,platform-touch-vddio-en-gpio = <&tlmm 50 0>;
 		qcom,platform-touch-reset-gpio = <&tlmm 89 0>;
-		qcom,dsi-panel = <&dsi_default_panel>;
 		vddio-supply = <&pm8994_s4>;
 		touch-avdd-supply = <&pm8994_l22>;
 		lab-supply = <&lab_regulator>;
