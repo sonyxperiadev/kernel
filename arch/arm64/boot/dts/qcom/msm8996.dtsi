@@ -2260,8 +2260,15 @@
 	};
 
        pil_modem: qcom,mss@2080000 {
-                compatible = "qcom,pil-tz-generic";
-                reg = <0x2080000 0x100>;
+                compatible = "qcom,pil-q6v55-mss";
+                reg = <0x2080000 0x100>,
+		      <0x0763000 0x008>,
+		      <0x0765000 0x008>,
+		      <0x0764000 0x008>,
+		      <0x2180000 0x020>,
+		      <0x038f008 0x004>;
+		reg-names = "qdsp6_base", "halt_q6", "halt_modem",
+			"halt_nc", "rmb_base", "restart_reg";
 
 		clocks = <&clock_rpmcc RPM_SMD_XO_CLK_SRC>,
 			 <&clock_gcc GCC_MSS_CFG_AHB_CLK>,
@@ -2281,13 +2288,11 @@
 					  "mnoc_axi_clk";
 
 		vdd_cx-supply = <&pm8994_s1_corner>;
+		vdd_cx-voltage = <7>;
 		vdd_mx-supply = <&pm8994_s2_corner>;
+		vdd_mx-uV = <6>;
 		vdd_pll-supply = <&pm8994_l12>;
-		qcom,vdd_cx-uV-uA = <7 100000>;
-		qcom,vdd_mx-uV-uA = <6 100000>;
-		qcom,vdd_pll-uV-uA = <1800000 10000>;
-		qcom,proxy-reg-names = "vdd_cx", "vdd_mx", "vdd_pll";
-
+		qcom,vdd_pll = <1800000>;
 		qcom,firmware-name = "modem";
 		qcom,pil-self-auth;
 		qcom,sysmon-id = <0>;
@@ -2299,8 +2304,6 @@
 		qcom,mx-spike-wa;
 		memory-region = <&modem_mem>;
 		qcom,mem-protect-id = <0xF>;
-		qcom,pas-id = <0>;
-		qcom,smem-id = <421>;
 
 		/* GPIO inputs from mss */
 		interrupts-extended = <&intc 0 448 1>,
