@@ -711,7 +711,7 @@ static struct clk_rcg2 maxi_clk_src = {
 	},
 };
 
-static const struct freq_tbl ftbl_gfx3d_clk_src[] = {
+static const struct freq_tbl ftbl_gfx3d_pro_clk_src[] = {
 	F( 19200000, P_XO,      1, 0, 0),
 	F(133000000, P_MMPLL0,  6, 0, 0),
 //	F(214000000, P_MMPLL8,  1, 0, 0),
@@ -721,6 +721,18 @@ static const struct freq_tbl ftbl_gfx3d_clk_src[] = {
 	F(560000000, P_MMPLL2,  1, 0, 0),
 	F(624000000, P_MMPLL9,  1, 0, 0),
 	F(652800000, P_MMPLL9,  1, 0, 0),
+	{ }
+};
+
+static const struct freq_tbl ftbl_gfx3d_clk_src[] = {
+	F( 19200000, P_XO,      1, 0, 0),
+	F(133000000, P_MMPLL0,  6, 0, 0),
+	F(214000000, P_MMPLL8,  1, 0, 0),
+	F(315000000, P_MMPLL8,  1, 0, 0),
+	F(401800000, P_MMPLL2,  1, 0, 0),
+	F(510000000, P_MMPLL2,  1, 0, 0),
+	F(560000000, P_MMPLL2,  1, 0, 0),
+	F(624000000, P_MMPLL9,  1, 0, 0),
 	{ }
 };
 
@@ -3621,6 +3633,7 @@ static int gpucc_msm8996_set_vdd_class(int gpuver)
 		clk_data->rate_max[VDD_GFX_TURBO_L1] = 624000000;
 		clk_data->rate_max[VDD_GFX_SUPER_TURBO] = 652800000;
 		vdd_gpu_mx.num_levels = VDD_MX_TURBO + 1;
+		gfx3d_clk_src.freq_tbl = ftbl_gfx3d_pro_clk_src;
 		gfx3d_clk_src.clk_nb.notifier_call = gpu_clk_notifier_cb;
 		break;
 	case GPUCC_MSM8996_V3:
