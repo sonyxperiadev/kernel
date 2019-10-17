@@ -125,7 +125,7 @@
 
 			qcom,gpu-pwrlevel@0 {
 				reg = <0>;
-				qcom,gpu-freq = <652800000>;
+				qcom,gpu-freq = <624000000>;
 				qcom,bus-freq = <12>;
 				qcom,bus-min = <12>;
 				qcom,bus-max = <12>;
@@ -133,62 +133,54 @@
 
 			qcom,gpu-pwrlevel@1 {
 				reg = <1>;
-				qcom,gpu-freq = <624000000>;
-				qcom,bus-freq = <12>;
-				qcom,bus-min = <11>;
-				qcom,bus-max = <12>;
-			};
-
-			qcom,gpu-pwrlevel@2 {
-				reg = <2>;
 				qcom,gpu-freq = <560000000>;
 				qcom,bus-freq = <11>;
 				qcom,bus-min = <9>;
 				qcom,bus-max = <12>;
 			};
 
-			qcom,gpu-pwrlevel@3 {
-				reg = <3>;
+			qcom,gpu-pwrlevel@2 {
+				reg = <2>;
 				qcom,gpu-freq = <510000000>;
 				qcom,bus-freq = <9>;
 				qcom,bus-min = <8>;
 				qcom,bus-max = <11>;
 			};
 
-			qcom,gpu-pwrlevel@4 {
-				reg = <4>;
+			qcom,gpu-pwrlevel@3 {
+				reg = <3>;
 				qcom,gpu-freq = <401800000>;
 				qcom,bus-freq = <8>;
 				qcom,bus-min = <7>;
 				qcom,bus-max = <9>;
 			};
 
-			qcom,gpu-pwrlevel@5 {
-				reg = <5>;
+			qcom,gpu-pwrlevel@4 {
+				reg = <4>;
 				qcom,gpu-freq = <315000000>;
 				qcom,bus-freq = <6>;
 				qcom,bus-min = <5>;
 				qcom,bus-max = <7>;
 			};
 
-			qcom,gpu-pwrlevel@6 {
-				reg = <6>;
+			qcom,gpu-pwrlevel@5 {
+				reg = <5>;
 				qcom,gpu-freq = <214000000>;
 				qcom,bus-freq = <4>;
 				qcom,bus-min = <3>;
 				qcom,bus-max = <5>;
 			};
 
-			qcom,gpu-pwrlevel@7 {
-				reg = <7>;
+			qcom,gpu-pwrlevel@6 {
+				reg = <6>;
 				qcom,gpu-freq = <133000000>;
 				qcom,bus-freq = <3>;
 				qcom,bus-min = <2>;
 				qcom,bus-max = <4>;
 			};
 
-			qcom,gpu-pwrlevel@8 {
-				reg = <8>;
+			qcom,gpu-pwrlevel@7 {
+				reg = <7>;
 				qcom,gpu-freq = <27000000>;
 				qcom,bus-freq = <0>;
 				qcom,bus-min = <0>;
@@ -1011,59 +1003,3 @@
 	qcom,allow-aging-open-loop-voltage-adjustment = <1>;
 };
 
-&clock_gpu {
-	compatible = "qcom,gpucc-msm8996-pro";
-	qcom,gfxfreq-speedbin0 =
-		<	   0  0  0 >,
-		<  133000000  2  4 >,
-		<  214000000  3  4 >,
-		<  315000000  4  4 >,
-		<  401800000  5  5 >,
-		<  510000000  6  5 >,
-		<  560000000  7  7 >,
-		<  624000000  8  7 >,
-		<  652800000  9  7 >;
-	qcom,gfxfreq-mx-speedbin0 =
-		<	   0  0 >,
-		<  133000000  4 >,
-		<  214000000  4 >,
-		<  315000000  4 >,
-		<  401800000  5 >,
-		<  510000000  5 >,
-		<  560000000  7 >,
-		<  624000000  7 >,
-		<  652800000  7 >;
-
-	qcom,gfxfreq-speedbin1 =
-		<	   0  0  0 >,
-		<  133000000  2  4 >,
-		<  214000000  3  4 >,
-		<  315000000  4  4 >,
-		<  401800000  5  5 >,
-		<  510000000  6  5 >,
-		<  560000000  7  7 >,
-		<  624000000  8  7 >;
-	qcom,gfxfreq-mx-speedbin1 =
-		<	   0  0 >,
-		<  133000000  4 >,
-		<  214000000  4 >,
-		<  315000000  4 >,
-		<  401800000  5 >,
-		<  510000000  5 >,
-		<  560000000  7 >,
-		<  624000000  7 >;
-	qcom,gfxfreq-speedbin2 =
-		<          0  0  0 >,
-		<  133000000  2  4 >,
-		<  214000000  3  4 >,
-		<  315000000  4  4 >,
-		<  401800000  5  5 >,
-		<  510000000  6  5 >;
-	qcom,gfxfreq-mx-speedbin2 =
-		<          0  0 >,
-		<  133000000  4 >,
-		<  214000000  4 >,
-		<  315000000  4 >,
-		<  401800000  5 >,
-		<  510000000  5 >;
-};
