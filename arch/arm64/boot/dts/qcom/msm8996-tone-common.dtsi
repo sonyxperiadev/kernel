@@ -388,7 +388,7 @@
 			     &pm8994_gpio_1 &pm8994_gpio_2 &pm8994_gpio_3
 			     &pm8994_gpio_4 &pm8994_gpio_5 &pm8994_gpio_6
 			     &pm8994_gpio_7 &pm8994_gpio_8 &pm8994_gpio_9
-			     &pm8994_gpio_10 &pm8994_gpio_11 &pm8994_gpio_11
+			     &pm8994_gpio_10 &pm8994_gpio_11 &pm8994_gpio_12
 			     &pm8994_gpio_13 &pm8994_gpio_14 &pm8994_gpio_15
 			     &pm8994_gpio_16 &pm8994_gpio_17 &pm8994_gpio_18
 			     &pm8994_gpio_19
@@ -404,50 +404,6 @@
 		pinctrl-1 = <>;
 		pinctrl-2 = <>;
 		pinctrl-3 = <>;
-	};
-
-	sound-9335 {
-		qcom,msm-mbhc-hphl-swh = <1>;
-		/delete-property/ qcom,hph-en1-gpio;
-		/delete-property/ qcom,hph-en0-gpio;
-		/delete-property/ qcom,us-euro-gpios;
-		qcom,ear-en-gpios = <&pm8994_gpios 13 0>;
-		qcom,audio-routing =
-			"AIF4 VI", "MCLK",
-			"RX_BIAS", "MCLK",
-			"MADINPUT", "MCLK",
-			"AMIC2", "MIC BIAS2",
-			"MIC BIAS2", "Headset Mic",
-			"MIC BIAS2", "ANCRight Headset Mic",
-			"AMIC3", "MIC BIAS3",
-			"MIC BIAS3", "ANCLeft Headset Mic",
-			"DMIC0", "MIC BIAS1",
-			"MIC BIAS1", "Digital Mic0",
-			"DMIC3", "MIC BIAS4",
-			"MIC BIAS4", "Digital Mic3",
-			"SpkrLeft IN", "SPK1 OUT",
-			"SpkrRight IN", "SPK2 OUT";
-		/delete-property/ qcom,hdmi-audio-rx;
-		asoc-codec = <&stub_codec>;
-		asoc-codec-names = "msm-stub-codec.1";
-	};
-
-	qcom,msm-dai-mi2s {
-		dai_mi2s: qcom,msm-dai-q6-mi2s-tert {
-			/delete-property/ pinctrl-names;
-			/delete-property/ pinctrl-0;
-			/delete-property/ pinctrl-1;
-			};
-	};
-
-	slim_msm: slim@91c0000 {
-		tasha_codec {
-			qcom,cdc-micbias1-mv = <1800>;
-			qcom,cdc-micbias2-mv = <1800>;
-			qcom,cdc-micbias3-mv = <1800>;
-			qcom,cdc-micbias4-mv = <1800>;
-			qcom,cdc-dmic-sample-rate = <2400000>;
-		};
 	};
 
 	qcom,wdt@9830000 {
@@ -677,6 +633,48 @@
 		interrupts = <79 8>; /* WL_HOST_WAKE */
 		interrupt-names = "oob-irq";
 	};
+};
+
+&snd_card_9335 {
+	qcom,msm-mbhc-hphl-swh = <1>;
+	/delete-property/ qcom,hph-en1-gpio;
+	/delete-property/ qcom,hph-en0-gpio;
+	/delete-property/ qcom,us-euro-gpios;
+	qcom,ear-en-gpios = <&pm8994_gpios 13 0>;
+	qcom,audio-routing =
+		"AIF4 VI", "MCLK",
+		"RX_BIAS", "MCLK",
+		"MADINPUT", "MCLK",
+		"AMIC2", "MIC BIAS2",
+		"MIC BIAS2", "Headset Mic",
+		"MIC BIAS2", "ANCRight Headset Mic",
+		"AMIC3", "MIC BIAS3",
+		"MIC BIAS3", "ANCLeft Headset Mic",
+		"DMIC0", "MIC BIAS1",
+		"MIC BIAS1", "Digital Mic0",
+		"DMIC3", "MIC BIAS4",
+		"MIC BIAS4", "Digital Mic3",
+		"SpkrLeft IN", "SPK1 OUT",
+		"SpkrRight IN", "SPK2 OUT";
+	/delete-property/ qcom,hdmi-audio-rx;
+	asoc-codec = <&stub_codec>;
+	asoc-codec-names = "msm-stub-codec.1";
+};
+
+&slim_msm {
+	tasha_codec {
+		qcom,cdc-micbias1-mv = <1800>;
+		qcom,cdc-micbias2-mv = <1800>;
+		qcom,cdc-micbias3-mv = <1800>;
+		qcom,cdc-micbias4-mv = <1800>;
+		qcom,cdc-dmic-sample-rate = <2400000>;
+	};
+};
+
+&dai_mi2s {
+	/delete-property/ pinctrl-names;
+	/delete-property/ pinctrl-0;
+	/delete-property/ pinctrl-1;
 };
 
 /* GPIO_1: NC(P_SENSE_CNTL) */
@@ -1039,6 +1037,7 @@
 	/delete-property/ qcom,parallel-usb-min-current-ma;
 	/delete-property/ qcom,parallel-usb-9v-min-current-ma;
 	/delete-property/ qcom,charging-disabled;
+	#cooling-cells = <2>;
 	qcom,charge-unknown-battery;
 	qcom,usb_dp-vadc = <&pmi8994_vadc>;
 	qcom,usb_dm-vadc = <&pmi8994_vadc>;
@@ -3009,7 +3008,7 @@
 	mdss_touch_active: mdss_touch_active {
 		mux {
 			pins = "gpio125";
-			function = "touch_int_n";
+			function = "gpio";
 		};
 		config {
 			pins = "gpio125";
@@ -3022,7 +3021,7 @@
 	mdss_touch_suspend: mdss_touch_suspend {
 		mux {
 			pins = "gpio125";
-			function = "touch_int_n";
+			function = "gpio";
 		};
 		config {
 			pins = "gpio125";
@@ -3200,7 +3199,7 @@
 		qcom,qpnp-lab-max-precharge-time = <300>;
 		qcom,qpnp-lab-pull-down-enable;
 		qcom,qpnp-lab-full-pull-down-enable;
-		interrupts = <0x3 0xde 0x0>;
+		interrupts = <0x3 0xde 0x0 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "lab_vreg_not_ok_interrupt";
 	};
 	qcom,ibb@dc00 {
@@ -3208,7 +3207,7 @@
 		qcom,qpnp-ibb-init-lcd-voltage = <5700000>;
 		qcom,qpnp-ibb-pull-down-enable;
 		qcom,qpnp-ibb-full-pull-down-enable;
-		interrupts = <0x3 0xdc 0x0>;
+		interrupts = <0x3 0xdc 0x0 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "ibb_vreg_not_ok_interrupt";
 	};
 };

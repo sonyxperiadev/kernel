@@ -38,7 +38,7 @@
 	qcom,board-id = <8 0>;
 };
 
-&dsi_panel_cmd_display {
+&sde_dsi_tone_panels {
 	qcom,dsi-panel = <&dsi_jdi_synaptics_cmd_6>;
 
 	somc,dsi-panel-list =  <&dsi_jdi_synaptics_cmd_6
