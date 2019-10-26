@@ -17,7 +17,7 @@
 
 ifeq ($(BUILD_KERNEL),true)
 ifeq ($(PRODUCT_PLATFORM_SOD),true)
-ifeq ($(SOMC_KERNEL_VERSION),4.9)
+ifeq ($(SOMC_KERNEL_VERSION),4.14)
 
 KERNEL_SRC := $(call my-dir)
 
