@@ -99,6 +99,8 @@
 		somc,fps-mode-enable;
 		somc,fps-mode-panel-mode = "dynamic_mode";
 
+		somc,incell-touch-type = <2>;
+
 		qcom,mdss-dsi-display-timings {
 			timing@0 {
 				qcom,mdss-dsi-panel-width = <1080>;
