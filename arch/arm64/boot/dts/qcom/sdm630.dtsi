@@ -778,7 +778,7 @@
 		glink_modem: modem {
 			qcom,remote-pid = <1>;
 			transport = "smem";
-			mboxes = <&apcs_glb 12>;
+			mboxes = <&apcs_glb 15>;
 			mbox-names = "mpss_smem";
 			interrupts = <GIC_SPI 452 IRQ_TYPE_EDGE_RISING>;
 
@@ -812,7 +812,7 @@
 		glink_adsp: adsp {
 			qcom,remote-pid = <2>;
 			transport = "smem";
-			mboxes = <&apcs_glb 8>;
+			mboxes = <&apcs_glb 9>;
 			mbox-names = "adsp_smem";
 			interrupts = <GIC_SPI 157 IRQ_TYPE_EDGE_RISING>;
 
