@@ -276,6 +276,18 @@
 };
 
 &pm660_gpios {
+	/* GPIO 3 (AUDIO_REF_CLK) */
+	aud_ref_clk {
+		aud_ref_clk_default: aud_ref_clk_default {
+			pins = "gpio3";
+			function = "func1";
+			qcom,drive-strength = <2>;
+			power-source = <0>;
+			bias-pull-down;
+			output-high;
+		};
+	};
+
 	pm660_gp13 {
 		pm660_gpio_13: gp13 {
 			pins = "gpio3";
