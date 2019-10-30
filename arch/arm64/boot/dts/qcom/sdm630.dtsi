@@ -54,9 +54,7 @@
 			compatible = "arm,armv8";
 			reg = <0x0 0x100>;
 			enable-method = "psci";
-			qcom,limits-info = <&mitigation_profile0>;
 			qcom,lmh-dcvs = <&lmh_dcvs1>;
-			qcom,ea = <&ea0>;
 			capacity-dmips-mhz = <1126>;
 			#cooling-cells = <2>;
 			next-level-cache = <&L2_1>;
@@ -84,9 +82,7 @@
 			compatible = "arm,armv8";
 			reg = <0x0 0x101>;
 			enable-method = "psci";
-			qcom,limits-info = <&mitigation_profile1>;
 			qcom,lmh-dcvs = <&lmh_dcvs1>;
-			qcom,ea = <&ea1>;
 			capacity-dmips-mhz = <1126>;
 			#cooling-cells = <2>;
 			next-level-cache = <&L2_1>;
@@ -108,9 +104,7 @@
 			compatible = "arm,armv8";
 			reg = <0x0 0x102>;
 			enable-method = "psci";
-			qcom,limits-info = <&mitigation_profile2>;
 			qcom,lmh-dcvs = <&lmh_dcvs1>;
-			qcom,ea = <&ea2>;
 			capacity-dmips-mhz = <1126>;
 			#cooling-cells = <2>;
 			next-level-cache = <&L2_1>;
@@ -132,9 +126,7 @@
 			compatible = "arm,armv8";
 			reg = <0x0 0x103>;
 			enable-method = "psci";
-			qcom,limits-info = <&mitigation_profile3>;
 			qcom,lmh-dcvs = <&lmh_dcvs1>;
-			qcom,ea = <&ea3>;
 			capacity-dmips-mhz = <1126>;
 			#cooling-cells = <2>;
 			next-level-cache = <&L2_1>;
@@ -156,9 +148,7 @@
 			compatible = "arm,armv8";
 			reg = <0x0 0x0>;
 			enable-method = "psci";
-			qcom,limits-info = <&mitigation_profile4>;
 			qcom,lmh-dcvs = <&lmh_dcvs0>;
-			qcom,ea = <&ea4>;
 			capacity-dmips-mhz = <1024>;
 			#cooling-cells = <2>;
 			next-level-cache = <&L2_0>;
@@ -186,9 +176,8 @@
 			compatible = "arm,armv8";
 			reg = <0x0 0x1>;
 			enable-method = "psci";
-			qcom,limits-info = <&mitigation_profile4>;
 			qcom,lmh-dcvs = <&lmh_dcvs0>;
-			qcom,ea = <&ea5>;
+
 			capacity-dmips-mhz = <1024>;
 			#cooling-cells = <2>;
 			next-level-cache = <&L2_0>;
@@ -210,9 +199,7 @@
 			compatible = "arm,armv8";
 			reg = <0x0 0x2>;
 			enable-method = "psci";
-			qcom,limits-info = <&mitigation_profile4>;
 			qcom,lmh-dcvs = <&lmh_dcvs0>;
-			qcom,ea = <&ea6>;
 			capacity-dmips-mhz = <1024>;
 			#cooling-cells = <2>;
 			next-level-cache = <&L2_0>;
@@ -234,9 +221,7 @@
 			compatible = "arm,armv8";
 			reg = <0x0 0x3>;
 			enable-method = "psci";
-			qcom,limits-info = <&mitigation_profile4>;
 			qcom,lmh-dcvs = <&lmh_dcvs0>;
-			qcom,ea = <&ea7>;
 			capacity-dmips-mhz = <1024>;
 			#cooling-cells = <2>;
 			next-level-cache = <&L2_0>;
@@ -756,45 +741,6 @@
 			qcom,vph-high-threshold-uv = <3500000>;
 			qcom,vph-low-threshold-uv = <3300000>;
 			qcom,soc-low-threshold = <10>;
-		};
-	};
-
-	qcom,msm-core@780000 {
-		compatible = "qcom,apss-core-ea";
-		reg = <0x780000 0x1000>;
-		qcom,low-hyst-temp = <100>;
-		qcom,high-hyst-temp = <100>;
-
-		ea0: ea0 {
-			sensor = <&sensor_information3>;
-		};
-
-		ea1: ea1 {
-			sensor = <&sensor_information4>;
-		};
-
-		ea2: ea2 {
-			sensor = <&sensor_information5>;
-		};
-
-		ea3: ea3 {
-			sensor = <&sensor_information6>;
-		};
-
-		ea4: ea4 {
-			sensor = <&sensor_information7>;
-		};
-
-		ea5: ea5 {
-			sensor = <&sensor_information7>;
-		};
-
-		ea6: ea6 {
-			sensor = <&sensor_information7>;
-		};
-
-		ea7: ea7 {
-			sensor = <&sensor_information7>;
 		};
 	};
 
