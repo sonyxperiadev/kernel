@@ -701,12 +701,9 @@
 		clocks = <&clock_rpmcc RPM_SMD_DIV_CLK1>;
 
 		pinctrl-names = "sleep", "active";
-		pinctrl-0 = <&lpi_mclk0_sleep>;
-		pinctrl-1 = <&lpi_mclk0_active>;
+		pinctrl-0 = <&aud_ref_clk_default &lpi_mclk0_sleep>;
+		pinctrl-1 = <&aud_ref_clk_default &lpi_mclk0_active>;
 		qcom,use-pinctrl = <1>;
-
-		/* TODO: Not implemented yet. */
-		qcom,audio-ref-clk-gpio = <&pm660_gpios 3 0>;
 
 		#clock-cells = <1>;
 	};
