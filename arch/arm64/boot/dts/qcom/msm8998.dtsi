@@ -57,13 +57,11 @@
 			device_type = "cpu";
 			compatible = "arm,armv8";
 			reg = <0x0 0x0>;
-			qcom,limits-info = <&mitigation_profile0>;
 			qcom,lmh-dcvs = <&lmh_dcvs0>;
 			enable-method = "psci";
 			capacity-dmips-mhz = <1024>;
 			#cooling-cells = <2>;
 			next-level-cache = <&L2_0>;
-			qcom,ea = <&ea0>;
 			L2_0: l2-cache {
 			      compatible = "arm,arch-cache";
 			      cache-level = <2>;
@@ -86,13 +84,11 @@
 			device_type = "cpu";
 			compatible = "arm,armv8";
 			reg = <0x0 0x1>;
-			qcom,limits-info = <&mitigation_profile1>;
 			qcom,lmh-dcvs = <&lmh_dcvs0>;
 			enable-method = "psci";
 			capacity-dmips-mhz = <1024>;
 			#cooling-cells = <2>;
 			next-level-cache = <&L2_0>;
-			qcom,ea = <&ea1>;
 			L1_I_1: l1-icache {
 				compatible = "arm,arch-cache";
 				qcom,dump-size = <0x9040>;
@@ -110,13 +106,11 @@
 			device_type = "cpu";
 			compatible = "arm,armv8";
 			reg = <0x0 0x2>;
-			qcom,limits-info = <&mitigation_profile2>;
 			qcom,lmh-dcvs = <&lmh_dcvs0>;
 			enable-method = "psci";
 			capacity-dmips-mhz = <1024>;
 			#cooling-cells = <2>;
 			next-level-cache = <&L2_0>;
-			qcom,ea = <&ea2>;
 			L1_I_2: l1-icache {
 				compatible = "arm,arch-cache";
 				qcom,dump-size = <0x9040>;
@@ -134,13 +128,11 @@
 			device_type = "cpu";
 			compatible = "arm,armv8";
 			reg = <0x0 0x3>;
-			qcom,limits-info = <&mitigation_profile3>;
 			qcom,lmh-dcvs = <&lmh_dcvs0>;
 			enable-method = "psci";
 			capacity-dmips-mhz = <1024>;
 			#cooling-cells = <2>;
 			next-level-cache = <&L2_0>;
-			qcom,ea = <&ea3>;
 			L1_I_3: l1-icache {
 				compatible = "arm,arch-cache";
 				qcom,dump-size = <0x9040>;
@@ -158,13 +150,11 @@
 			device_type = "cpu";
 			compatible = "arm,armv8";
 			reg = <0x0 0x100>;
-			qcom,limits-info = <&mitigation_profile4>;
 			qcom,lmh-dcvs = <&lmh_dcvs1>;
 			enable-method = "psci";
 			capacity-dmips-mhz = <1536>;
 			#cooling-cells = <2>;
 			next-level-cache = <&L2_1>;
-			qcom,ea = <&ea4>;
 			L2_1: l2-cache {
 				compatible = "arm,arch-cache";
 				cache-level = <2>;
@@ -186,13 +176,11 @@
 			device_type = "cpu";
 			compatible = "arm,armv8";
 			reg = <0x0 0x101>;
-			qcom,limits-info = <&mitigation_profile5>;
 			qcom,lmh-dcvs = <&lmh_dcvs1>;
 			enable-method = "psci";
 			capacity-dmips-mhz = <1536>;
 			#cooling-cells = <2>;
 			next-level-cache = <&L2_1>;
-			qcom,ea = <&ea5>;
 			L1_I_101: l1-icache {
 				compatible = "arm,arch-cache";
 				qcom,dump-size = <0x12000>;
@@ -210,13 +198,11 @@
 			device_type = "cpu";
 			compatible = "arm,armv8";
 			reg = <0x0 0x102>;
-			qcom,limits-info = <&mitigation_profile6>;
 			qcom,lmh-dcvs = <&lmh_dcvs1>;
 			enable-method = "psci";
 			capacity-dmips-mhz = <1536>;
 			#cooling-cells = <2>;
 			next-level-cache = <&L2_1>;
-			qcom,ea = <&ea6>;
 			L1_I_102: l1-icache {
 				compatible = "arm,arch-cache";
 				qcom,dump-size = <0x12000>;
@@ -234,13 +220,11 @@
 			device_type = "cpu";
 			compatible = "arm,armv8";
 			reg = <0x0 0x103>;
-			qcom,limits-info = <&mitigation_profile7>;
 			qcom,lmh-dcvs = <&lmh_dcvs1>;
 			enable-method = "psci";
 			capacity-dmips-mhz = <1536>;
 			#cooling-cells = <2>;
 			next-level-cache = <&L2_1>;
-			qcom,ea = <&ea7>;
 			L1_I_103: l1-icache {
 				compatible = "arm,arch-cache";
 				qcom,dump-size = <0x12000>;
@@ -2538,96 +2522,11 @@
 		clock-names = "iface_clk";
 	};
 
-	mitigation_profile0: qcom,limit_info-0 {
-		qcom,temperature-sensor = <&sensor_information1>;
-		qcom,hotplug-mitigation-enable;
-	};
-
-	mitigation_profile1: qcom,limit_info-1 {
-		qcom,temperature-sensor = <&sensor_information2>;
-		qcom,hotplug-mitigation-enable;
-	};
-
-	mitigation_profile2: qcom,limit_info-2 {
-		qcom,temperature-sensor = <&sensor_information3>;
-		qcom,hotplug-mitigation-enable;
-	};
-
-	mitigation_profile3: qcom,limit_info-3 {
-		qcom,temperature-sensor = <&sensor_information4>;
-		qcom,hotplug-mitigation-enable;
-	};
-
-	mitigation_profile4: qcom,limit_info-4 {
-		qcom,temperature-sensor = <&sensor_information7>;
-		qcom,hotplug-mitigation-enable;
-	};
-
-	mitigation_profile5: qcom,limit_info-5 {
-		qcom,temperature-sensor = <&sensor_information8>;
-		qcom,hotplug-mitigation-enable;
-	};
-
-	mitigation_profile6: qcom,limit_info-6 {
-		qcom,temperature-sensor = <&sensor_information9>;
-		qcom,hotplug-mitigation-enable;
-	};
-
-	mitigation_profile7: qcom,limit_info-7 {
-		qcom,temperature-sensor = <&sensor_information10>;
-		qcom,hotplug-mitigation-enable;
-	};
-
 	lmh_lite: qcom,lmh {
 		compatible = "qcom,lmh_v1";
 		interrupts = <GIC_SPI 134 IRQ_TYPE_LEVEL_HIGH>;
 		#thermal-sensor-cells = <1>;
 		status="disabled";
-	};
-
-	qcom,msm-thermal {
-		compatible = "qcom,msm-thermal";
-		qcom,sensor-id = <1>;
-		qcom,poll-ms = <100>;
-		qcom,therm-reset-temp = <115>;
-		qcom,core-limit-temp = <70>;
-		qcom,core-temp-hysteresis = <10>;
-		qcom,hotplug-temp = <105>;
-		qcom,hotplug-temp-hysteresis = <20>;
-		qcom,online-hotplug-core;
-		qcom,synchronous-cluster-id = <0 1>;
-		qcom,synchronous-cluster-map = <0 4 &CPU0 &CPU1 &CPU2 &CPU3>,
-						<1 4 &CPU4 &CPU5 &CPU6 &CPU7>;
-		clock-names = "osm";
-		clocks = <&clock_cpu PWRCL_CLK>;
-
-		qcom,vdd-restriction-temp = <5>;
-		qcom,vdd-restriction-temp-hysteresis = <10>;
-
-		vdd-dig-supply = <&pm8998_s1_floor_level>;
-		vdd-gfx-supply = <&gfx_vreg>;
-
-		qcom,vdd-dig-rstr{
-			qcom,vdd-rstr-reg = "vdd-dig";
-			qcom,levels = <RPM_SMD_REGULATOR_LEVEL_NOM
-					RPM_SMD_REGULATOR_LEVEL_TURBO
-					RPM_SMD_REGULATOR_LEVEL_TURBO>;
-				/* Nominal, Super Turbo, Super Turbo */
-			qcom,min-level = <RPM_SMD_REGULATOR_LEVEL_NONE>;
-				/* No Request */
-		};
-
-		qcom,vdd-gfx-rstr{
-			qcom,vdd-rstr-reg = "vdd-gfx";
-			qcom,levels = <5 6 6>; /* Nominal, Turbo, Turbo */
-			qcom,min-level = <1>; /* No Request */
-		};
-
-		msm_thermal_freq: qcom,vdd-apps-rstr{
-			qcom,vdd-rstr-reg = "vdd-apps";
-			qcom,levels = <1248000>;
-			qcom,freq-req;
-		};
 	};
 
 	pcie0: qcom,pcie@01c00000 {
@@ -2870,7 +2769,6 @@
 			qcom,vph-high-threshold-uv = <3500000>;
 			qcom,vph-low-threshold-uv = <3300000>;
 			qcom,soc-low-threshold = <10>;
-			qcom,thermal-handle = <&msm_thermal_freq>;
 		};
 	};
 
@@ -3162,47 +3060,6 @@
 
 		clocks = <&clock_gcc GCC_DCC_AHB_CLK>;
 		clock-names = "dcc_clk";
-	};
-
-	qcom,msm-core@780000 {
-		compatible = "qcom,apss-core-ea";
-		reg = <0x780000 0x1000>;
-		qcom,low-hyst-temp = <100>;
-		qcom,high-hyst-temp = <100>;
-		qcom,polling-interval = <50>;
-
-		ea0: ea0 {
-			sensor = <&sensor_information1>;
-		};
-
-		ea1: ea1 {
-			sensor = <&sensor_information2>;
-		};
-
-		ea2: ea2 {
-			sensor = <&sensor_information3>;
-		};
-
-		ea3: ea3 {
-			sensor = <&sensor_information4>;
-		};
-
-		ea4: ea4 {
-			sensor = <&sensor_information7>;
-		};
-
-		ea5: ea5 {
-			sensor = <&sensor_information8>;
-		};
-
-		ea6: ea6 {
-			sensor = <&sensor_information9>;
-		};
-
-		ea7: ea7 {
-			sensor = <&sensor_information10>;
-		};
-
 	};
 
 	msm_ath10k_wlan: qcom,msm_ath10k_wlan {

@@ -54,9 +54,7 @@
 			compatible = "arm,armv8";
 			reg = <0x0 0x100>;
 			enable-method = "psci";
-			qcom,limits-info = <&mitigation_profile0>;
 			qcom,lmh-dcvs = <&lmh_dcvs1>;
-			qcom,ea = <&ea0>;
 			capacity-dmips-mhz = <1126>;
 			#cooling-cells = <2>;
 			next-level-cache = <&L2_1>;
@@ -84,9 +82,7 @@
 			compatible = "arm,armv8";
 			reg = <0x0 0x101>;
 			enable-method = "psci";
-			qcom,limits-info = <&mitigation_profile1>;
 			qcom,lmh-dcvs = <&lmh_dcvs1>;
-			qcom,ea = <&ea1>;
 			capacity-dmips-mhz = <1126>;
 			#cooling-cells = <2>;
 			next-level-cache = <&L2_1>;
@@ -108,9 +104,7 @@
 			compatible = "arm,armv8";
 			reg = <0x0 0x102>;
 			enable-method = "psci";
-			qcom,limits-info = <&mitigation_profile2>;
 			qcom,lmh-dcvs = <&lmh_dcvs1>;
-			qcom,ea = <&ea2>;
 			capacity-dmips-mhz = <1126>;
 			#cooling-cells = <2>;
 			next-level-cache = <&L2_1>;
@@ -132,9 +126,7 @@
 			compatible = "arm,armv8";
 			reg = <0x0 0x103>;
 			enable-method = "psci";
-			qcom,limits-info = <&mitigation_profile3>;
 			qcom,lmh-dcvs = <&lmh_dcvs1>;
-			qcom,ea = <&ea3>;
 			capacity-dmips-mhz = <1126>;
 			#cooling-cells = <2>;
 			next-level-cache = <&L2_1>;
@@ -156,9 +148,7 @@
 			compatible = "arm,armv8";
 			reg = <0x0 0x0>;
 			enable-method = "psci";
-			qcom,limits-info = <&mitigation_profile4>;
 			qcom,lmh-dcvs = <&lmh_dcvs0>;
-			qcom,ea = <&ea4>;
 			capacity-dmips-mhz = <1024>;
 			#cooling-cells = <2>;
 			next-level-cache = <&L2_0>;
@@ -186,9 +176,8 @@
 			compatible = "arm,armv8";
 			reg = <0x0 0x1>;
 			enable-method = "psci";
-			qcom,limits-info = <&mitigation_profile4>;
 			qcom,lmh-dcvs = <&lmh_dcvs0>;
-			qcom,ea = <&ea5>;
+
 			capacity-dmips-mhz = <1024>;
 			#cooling-cells = <2>;
 			next-level-cache = <&L2_0>;
@@ -210,9 +199,7 @@
 			compatible = "arm,armv8";
 			reg = <0x0 0x2>;
 			enable-method = "psci";
-			qcom,limits-info = <&mitigation_profile4>;
 			qcom,lmh-dcvs = <&lmh_dcvs0>;
-			qcom,ea = <&ea6>;
 			capacity-dmips-mhz = <1024>;
 			#cooling-cells = <2>;
 			next-level-cache = <&L2_0>;
@@ -234,9 +221,7 @@
 			compatible = "arm,armv8";
 			reg = <0x0 0x3>;
 			enable-method = "psci";
-			qcom,limits-info = <&mitigation_profile4>;
 			qcom,lmh-dcvs = <&lmh_dcvs0>;
-			qcom,ea = <&ea7>;
 			capacity-dmips-mhz = <1024>;
 			#cooling-cells = <2>;
 			next-level-cache = <&L2_0>;
@@ -737,172 +722,6 @@
 		qcom,sensors = <12>;
 	};
 
-	qcom,sensor-information {
-		compatible = "qcom,sensor-information";
-		sensor_information0: qcom,sensor-information-0 {
-			qcom,sensor-type = "tsens";
-			qcom,sensor-name = "tsens_tz_sensor0";
-			qcom,scaling-factor = <10>;
-		};
-		sensor_information1: qcom,sensor-information-1 {
-			qcom,sensor-type =  "tsens";
-			qcom,sensor-name = "tsens_tz_sensor1";
-			qcom,scaling-factor = <10>;
-		};
-		sensor_information2: qcom,sensor-information-2 {
-			qcom,sensor-type =  "tsens";
-			qcom,sensor-name = "tsens_tz_sensor2";
-			qcom,scaling-factor = <10>;
-		};
-		sensor_information3: qcom,sensor-information-3 {
-			qcom,sensor-type =  "tsens";
-			qcom,sensor-name = "tsens_tz_sensor3";
-			qcom,scaling-factor = <10>;
-		};
-		sensor_information4: qcom,sensor-information-4 {
-			qcom,sensor-type = "tsens";
-			qcom,sensor-name = "tsens_tz_sensor4";
-			qcom,scaling-factor = <10>;
-		};
-		sensor_information5: qcom,sensor-information-5 {
-			qcom,sensor-type = "tsens";
-			qcom,sensor-name = "tsens_tz_sensor5";
-			qcom,scaling-factor = <10>;
-		};
-		sensor_information6: qcom,sensor-information-6 {
-			qcom,sensor-type = "tsens";
-			qcom,sensor-name = "tsens_tz_sensor6";
-			qcom,scaling-factor = <10>;
-		};
-		sensor_information7: qcom,sensor-information-7 {
-			qcom,sensor-type = "tsens";
-			qcom,sensor-name = "tsens_tz_sensor7";
-			qcom,scaling-factor = <10>;
-		};
-		sensor_information8: qcom,sensor-information-8 {
-			qcom,sensor-type = "tsens";
-			qcom,sensor-name = "tsens_tz_sensor8";
-			qcom,scaling-factor = <10>;
-			qcom,alias-name = "gpu";
-		};
-		sensor_information9: qcom,sensor-information-9 {
-			qcom,sensor-type = "tsens";
-			qcom,sensor-name = "tsens_tz_sensor9";
-			qcom,scaling-factor = <10>;
-		};
-		sensor_information10: qcom,sensor-information-10 {
-			qcom,sensor-type = "tsens";
-			qcom,sensor-name = "tsens_tz_sensor10";
-			qcom,scaling-factor = <10>;
-		};
-		sensor_information11: qcom,sensor-information-11 {
-			qcom,sensor-type = "tsens";
-			qcom,sensor-name = "tsens_tz_sensor11";
-			qcom,scaling-factor = <10>;
-		};
-		sensor_information12: qcom,sensor-information-12 {
-			qcom,sensor-type =  "alarm";
-			qcom,sensor-name = "pm660_tz";
-			qcom,scaling-factor = <1000>;
-		};
-		sensor_information13: qcom,sensor-information-13 {
-			qcom,sensor-type =  "adc";
-			qcom,sensor-name = "msm_therm";
-		};
-		sensor_information14: qcom,sensor-information-14 {
-			qcom,sensor-type =  "adc";
-			qcom,sensor-name = "xo_therm";
-		};
-		sensor_information15: qcom,sensor-information-15 {
-			qcom,sensor-type =  "adc";
-			qcom,sensor-name = "pa_therm0";
-		};
-		sensor_information16: qcom,sensor-information-16 {
-			qcom,sensor-type =  "adc";
-			qcom,sensor-name = "pa_therm1";
-		};
-		sensor_information17: qcom,sensor-information-17 {
-			qcom,sensor-type =  "adc";
-			qcom,sensor-name = "quiet_therm";
-		};
-		sensor_information18: qcom,sensor-information-18 {
-			qcom,sensor-type = "llm";
-			qcom,sensor-name = "limits_sensor-00";
-		};
-		sensor_information19: qcom,sensor-information-19 {
-			qcom,sensor-type = "llm";
-			qcom,sensor-name = "limits_sensor-01";
-		};
-	};
-
-	mitigation_profile0: qcom,limit_info-0 {
-		qcom,temperature-sensor = <&sensor_information3>;
-		qcom,hotplug-mitigation-enable;
-	};
-
-	mitigation_profile1: qcom,limit_info-1 {
-		qcom,temperature-sensor = <&sensor_information4>;
-		qcom,hotplug-mitigation-enable;
-	};
-
-	mitigation_profile2: qcom,limit_info-2 {
-		qcom,temperature-sensor = <&sensor_information5>;
-		qcom,hotplug-mitigation-enable;
-	};
-
-	mitigation_profile3: qcom,limit_info-3 {
-		qcom,temperature-sensor = <&sensor_information6>;
-		qcom,hotplug-mitigation-enable;
-	};
-
-	mitigation_profile4: qcom,limit_info-4 {
-		qcom,temperature-sensor = <&sensor_information7>;
-		qcom,hotplug-mitigation-enable;
-	};
-
-	qcom,msm-thermal {
-		compatible = "qcom,msm-thermal";
-		qcom,sensor-id = <3>;
-		qcom,poll-ms = <100>;
-		qcom,therm-reset-temp = <115>;
-		qcom,core-limit-temp = <70>;
-		qcom,core-temp-hysteresis = <10>;
-		qcom,hotplug-temp = <105>;
-		qcom,hotplug-temp-hysteresis = <20>;
-		qcom,online-hotplug-core;
-		qcom,synchronous-cluster-id = <0 1>;
-		qcom,synchronous-cluster-map = <0 4 &CPU4 &CPU5 &CPU6 &CPU7>,
-						<1 4 &CPU0 &CPU1 &CPU2 &CPU3>;
-
-		clock-names = "osm";
-		clocks = <&clock_cpu PERFCL_CLK>;
-		qcom,vdd-restriction-temp = <5>;
-		qcom,vdd-restriction-temp-hysteresis = <10>;
-
-		vdd-dig-supply = <&pm660l_s3_floor_level>;
-		vdd-gfx-supply = <&gfx_vreg_corner>;
-
-		qcom,vdd-dig-rstr{
-			qcom,vdd-rstr-reg = "vdd-dig";
-			qcom,levels = <RPM_SMD_REGULATOR_LEVEL_NOM
-					RPM_SMD_REGULATOR_LEVEL_TURBO
-					RPM_SMD_REGULATOR_LEVEL_TURBO>;
-			qcom,min-level = <RPM_SMD_REGULATOR_LEVEL_NONE>;
-		};
-
-		qcom,vdd-gfx-rstr{
-			qcom,vdd-rstr-reg = "vdd-gfx";
-			qcom,levels = <5 6 6>; /* Nominal, Turbo, Turbo */
-			qcom,min-level = <1>; /* No Request */
-		};
-
-		msm_thermal_freq: qcom,vdd-apps-rstr{
-			qcom,vdd-rstr-reg = "vdd-apps";
-			qcom,levels = <1248000>;
-			qcom,freq-req;
-		};
-	};
-
 	lmh_lite: qcom,lmh {
 		compatible = "qcom,lmh_v1";
 		interrupts = <GIC_SPI 134 IRQ_TYPE_LEVEL_HIGH>;
@@ -922,45 +741,6 @@
 			qcom,vph-high-threshold-uv = <3500000>;
 			qcom,vph-low-threshold-uv = <3300000>;
 			qcom,soc-low-threshold = <10>;
-		};
-	};
-
-	qcom,msm-core@780000 {
-		compatible = "qcom,apss-core-ea";
-		reg = <0x780000 0x1000>;
-		qcom,low-hyst-temp = <100>;
-		qcom,high-hyst-temp = <100>;
-
-		ea0: ea0 {
-			sensor = <&sensor_information3>;
-		};
-
-		ea1: ea1 {
-			sensor = <&sensor_information4>;
-		};
-
-		ea2: ea2 {
-			sensor = <&sensor_information5>;
-		};
-
-		ea3: ea3 {
-			sensor = <&sensor_information6>;
-		};
-
-		ea4: ea4 {
-			sensor = <&sensor_information7>;
-		};
-
-		ea5: ea5 {
-			sensor = <&sensor_information7>;
-		};
-
-		ea6: ea6 {
-			sensor = <&sensor_information7>;
-		};
-
-		ea7: ea7 {
-			sensor = <&sensor_information7>;
 		};
 	};
 
@@ -998,7 +778,7 @@
 		glink_modem: modem {
 			qcom,remote-pid = <1>;
 			transport = "smem";
-			mboxes = <&apcs_glb 12>;
+			mboxes = <&apcs_glb 15>;
 			mbox-names = "mpss_smem";
 			interrupts = <GIC_SPI 452 IRQ_TYPE_EDGE_RISING>;
 
@@ -1032,7 +812,7 @@
 		glink_adsp: adsp {
 			qcom,remote-pid = <2>;
 			transport = "smem";
-			mboxes = <&apcs_glb 8>;
+			mboxes = <&apcs_glb 9>;
 			mbox-names = "adsp_smem";
 			interrupts = <GIC_SPI 157 IRQ_TYPE_EDGE_RISING>;
 
