@@ -30,7 +30,7 @@
 	tavil_codec {
 		wcd: wcd_pinctrl@5 {
 			compatible = "qcom,wcd-pinctrl";
-			qcom,num-gpios = <5>;
+			qcom,num-pins = <5>;
 			gpio-controller;
 			#gpio-cells = <2>;
 
