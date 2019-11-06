@@ -326,7 +326,7 @@
 		removed_region1: removed_region1@85800000 {
 			compatible = "removed-dma-pool";
 			no-map;
-			reg = <0x0 0x85800000 0x0 0x200000>;
+			reg = <0x0 0x85800000 0x0 0x800000>;
 		};
 
 		smem_region: smem@85800000 {
