@@ -168,7 +168,7 @@
 		qcom,cdc-static-supplies = "cdc-vdda-cp",
 					   "cdc-vdd-pa";
 
-		qcom,cdc-on-demand-supplies = "cdc-vdd-mic-bias";
+		//qcom,cdc-on-demand-supplies = "cdc-vdd-mic-bias";
 
 		/*
 		 * Not marking address @ as driver searches this child
