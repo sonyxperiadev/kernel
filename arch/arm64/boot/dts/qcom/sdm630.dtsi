@@ -336,6 +336,7 @@
 		};
 
 		smem_region: smem@86000000 {
+			compatible = "removed-dma-pool";
 			no-map;
 			reg = <0 0x86000000 0 0x200000>;
 		};
@@ -1956,6 +1957,12 @@
 			<&clock_rpmcc QSEECOM_CE1_CLK>;
 		qcom,ce-opp-freq = <171430000>;
 		qcom,qsee-reentrancy-support = <2>;
+	};
+
+	qcom_smcinvoke: smcinvoke@86d00000 {
+		compatible = "qcom,smcinvoke";
+		reg = <0x86d00000 0x2200000>;
+		reg-names = "secapp-region";
 	};
 
 	qcom_cedev: qcedev@1de0000{

@@ -2113,6 +2113,12 @@
 		qcom,qsee-reentrancy-support = <2>;
 	};
 
+	qcom_smcinvoke: smcinvoke@86d00000 {
+		compatible = "qcom,smcinvoke";
+		reg = <0x86d00000 0x2200000>;
+		reg-names = "secapp-region";
+	};
+
 	qcom_cedev: qcedev@1de0000{
 		compatible = "qcom,qcedev";
 		reg = <0x1de0000 0x20000>,
