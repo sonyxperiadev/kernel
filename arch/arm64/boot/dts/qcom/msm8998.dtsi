@@ -3215,6 +3215,8 @@
 };
 
 &clock_cpu {
+	#address-cells = <1>;
+	#size-cells = <1>;
 	lmh_dcvs0: qcom,limits-dcvs@0 {
 		compatible = "qcom,msm-hw-limits";
 		interrupts = <GIC_SPI 37 IRQ_TYPE_LEVEL_HIGH>;
