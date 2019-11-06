@@ -712,7 +712,7 @@
 		compatible = "qcom,audio-ref-clk";
 		clock-names = "osr_clk";
 		clocks = <&clock_rpmcc RPM_SMD_LN_BB_CLK2>;
-		qcom,node_has_rpm_clock;
+		qcom,codec-ext-clk-src = <1>;
 		#clock-cells = <1>;
 	};
 
