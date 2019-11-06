@@ -329,10 +329,10 @@
 			reg = <0x0 0x85700000 0x0 0x100000>;
 		};
 
-		removed_region1: removed_region1@85800000 {
+		removed_region1: qhee_code@85800000 {
 			compatible = "removed-dma-pool";
 			no-map;
-			reg = <0x0 0x85800000 0x0 0x200000>;
+			reg = <0x0 0x85800000 0x0 0x800000>;
 		};
 
 		smem_region: smem@86000000 {
@@ -444,6 +444,14 @@
 		qca,bt-vdd-core-current-level = <1>; /* LPM/PFM */
 		qca,bt-vdd-pa-current-level = <1>; /* LPM/PFM */
 		qca,bt-vdd-ldo-current-level = <1>; /* LPM/PFM */
+	};
+
+	qcom,system-stats {
+		compatible = "qcom,system-stats";
+		qcom,rpm-data-ram = <&rpm_data_ram>;
+		qcom,rpm-msg-ram = <&rpm_msg_ram>;
+		qcom,masters = "APSS", "MPSS", "ADSP", "CDSP", "TZ";
+		status = "disabled";
 	};
 };
 
@@ -655,9 +663,16 @@
 		};
 	};
 
+	/* This region is 0x8000 long, but the hypervisor freezes the device
+	 * for some reason if we declare the entire length... */
 	rpm_msg_ram: memory@778000 {
 		compatible = "qcom,rpm-msg-ram";
 		reg = <0x778000 0x7000>;
+	};
+
+	rpm_data_ram: memory@290000 {
+		compatible = "qcom,rpm-data-ram";
+		reg = <0x290000 0x1000>;
 	};
 
 	tcsr_mutex_block: syscon@1f40000 {
