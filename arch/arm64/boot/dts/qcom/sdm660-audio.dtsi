@@ -68,7 +68,7 @@
 		qcom,wcd-rst-gpio-node = <&wcd_rst_gpio>;
 
 		clock-names = "wcd_clk";
-		clocks = <&clock_audio_lnbb AUDIO_PMIC_LNBB_CLK>;
+		clocks = <&clock_audio_lnbb 0>;
 
 		cdc-vdd-mic-bias-supply = <&pm660l_bob>;
 		qcom,cdc-vdd-mic-bias-voltage = <3300000 3300000>;
