@@ -19,7 +19,7 @@
 
 &soc {
 	msm_vidc: qcom,vidc@cc00000 {
-		compatible = "qcom,msm-vidc", "sdm660-vidc";
+		compatible = "qcom,msm-vidc", "qcom,sdm660-vidc";
 		status = "ok";
 		reg = <0xcc00000 0x100000>;
 		interrupts = <GIC_SPI 287 IRQ_TYPE_LEVEL_HIGH>;
