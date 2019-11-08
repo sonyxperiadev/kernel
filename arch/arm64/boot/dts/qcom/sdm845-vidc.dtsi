@@ -63,7 +63,7 @@
 			label = "venus-ddr";
 			qcom,bus-master = <MSM_BUS_MASTER_VIDEO_P0>;
 			qcom,bus-slave = <MSM_BUS_SLAVE_EBI_CH0>;
-			qcom,bus-governor = "msm-ar50-ddr";
+			qcom,bus-governor = "vidc-ar50-ddr";
 			qcom,bus-range-kbps = <1000 3388000>;
 		};
 		arm9_bus_ddr {
@@ -79,7 +79,7 @@
 			label = "venus-llcc";
 			qcom,bus-master = <MSM_BUS_MASTER_VIDEO_P0>;
 			qcom,bus-slave = <MSM_BUS_SLAVE_LLCC>;
-			qcom,bus-governor = "msm-ar50-llcc";
+			qcom,bus-governor = "vidc-ar50-llcc";
 			qcom,bus-range-kbps = <17000 125700>;
 		};
 
