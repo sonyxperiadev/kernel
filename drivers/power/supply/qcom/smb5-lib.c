@@ -1567,6 +1567,29 @@ static bool smblib_is_5v_wa_enabled(struct smb_charger *chg)
 }
 #endif
 
+int smblib_get_irq_status(struct smb_charger *chg,
+				union power_supply_propval *val)
+{
+	int rc;
+	u8 reg;
+
+	mutex_lock(&chg->irq_status_lock);
+	/* Report and clear cached status */
+	val->intval = chg->irq_status;
+	chg->irq_status = 0;
+
+	/* get real time status of pulse skip irq */
+	rc = smblib_read(chg, MISC_PBS_RT_STS_REG, &reg);
+	if (rc < 0)
+		smblib_err(chg, "Couldn't read MISC_PBS_RT_STS_REG rc=%d\n",
+				rc);
+	else
+		val->intval |= (reg & PULSE_SKIP_IRQ_BIT);
+	mutex_unlock(&chg->irq_status_lock);
+
+	return rc;
+}
+
 /****************************
  * uUSB Moisture Protection *
  ****************************/
@@ -4066,12 +4089,16 @@ int smblib_get_prop_pd_5v_limit_wa(struct smb_charger *chg,
 int smblib_set_prop_pd_current_max(struct smb_charger *chg,
 				    const union power_supply_propval *val)
 {
-	int rc;
+	int rc, icl;
 
-	if (chg->pd_active)
+	if (chg->pd_active) {
+		icl = get_client_vote(chg->usb_icl_votable, PD_VOTER);
 		rc = vote(chg->usb_icl_votable, PD_VOTER, true, val->intval);
-	else
+		if (val->intval != icl)
+			power_supply_changed(chg->usb_psy);
+	} else {
 		rc = -EPERM;
+	}
 
 	return rc;
 }
@@ -4832,6 +4859,21 @@ irqreturn_t default_irq_handler(int irq, void *data)
 	struct smb_charger *chg = irq_data->parent_data;
 
 	smblib_dbg(chg, PR_INTERRUPT, "IRQ: %s\n", irq_data->name);
+	return IRQ_HANDLED;
+}
+
+irqreturn_t sdam_sts_change_irq_handler(int irq, void *data)
+{
+	struct smb_irq_data *irq_data = data;
+	struct smb_charger *chg = irq_data->parent_data;
+
+	smblib_dbg(chg, PR_INTERRUPT, "IRQ: %s\n", irq_data->name);
+
+	mutex_lock(&chg->irq_status_lock);
+	chg->irq_status |= PULSE_SKIP_IRQ_BIT;
+	mutex_unlock(&chg->irq_status_lock);
+
+	power_supply_changed(chg->usb_main_psy);
 	return IRQ_HANDLED;
 }
 
@@ -7528,6 +7570,7 @@ int smblib_init(struct smb_charger *chg)
 					smblib_somc_cc_reconnection_work);
 	init_completion(&chg->cc_reconnected);
 #endif
+	mutex_init(&chg->irq_status_lock);
 	INIT_WORK(&chg->bms_update_work, bms_update_work);
 	INIT_WORK(&chg->pl_update_work, pl_update_work);
 	INIT_WORK(&chg->jeita_update_work, jeita_update_work);

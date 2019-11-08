@@ -474,6 +474,7 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(cc_reconnection_running),
 	POWER_SUPPLY_ATTR(pd_5v_limit_wa),
 #endif /* CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION */
+	POWER_SUPPLY_ATTR(parallel_output_mode),
 	/* Local extensions of type int64_t */
 	POWER_SUPPLY_ATTR(charge_counter_ext),
 	/* Properties of type `const char *' */
