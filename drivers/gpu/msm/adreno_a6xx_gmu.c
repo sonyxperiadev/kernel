@@ -1098,36 +1098,31 @@ static int a6xx_gmu_load_firmware(struct kgsl_device *device)
 	return ret;
 }
 
-#define A6XX_STATE_OF_CHILD             (BIT(4) | BIT(5))
-#define A6XX_IDLE_FULL_LLM              BIT(0)
-#define A6XX_WAKEUP_ACK                 BIT(1)
-#define A6XX_IDLE_FULL_ACK              BIT(0)
 #define A6XX_VBIF_XIN_HALT_CTRL1_ACKS   (BIT(0) | BIT(1) | BIT(2) | BIT(3))
 
-static int a6xx_llm_glm_handshake(struct kgsl_device *device)
+static void a6xx_llm_glm_handshake(struct kgsl_device *device)
 {
 	unsigned int val;
-	const struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
+	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
 	struct gmu_device *gmu = KGSL_GMU_DEVICE(device);
 
 	if (!ADRENO_FEATURE(adreno_dev, ADRENO_LM) ||
 			!test_bit(ADRENO_LM_CTRL, &adreno_dev->pwrctrl_flag))
-		return 0;
+		return;
+
+	if (adreno_is_a640(adreno_dev))
+		return;
 
 	gmu_core_regread(device, A6XX_GMU_LLM_GLM_SLEEP_CTRL, &val);
-	if (!(val & A6XX_STATE_OF_CHILD)) {
-		gmu_core_regrmw(device, A6XX_GMU_LLM_GLM_SLEEP_CTRL, 0, BIT(4));
-		gmu_core_regrmw(device, A6XX_GMU_LLM_GLM_SLEEP_CTRL, 0,
-				A6XX_IDLE_FULL_LLM);
-		if (timed_poll_check(device, A6XX_GMU_LLM_GLM_SLEEP_STATUS,
-				A6XX_IDLE_FULL_ACK, GPU_RESET_TIMEOUT,
-				A6XX_IDLE_FULL_ACK)) {
-			dev_err(&gmu->pdev->dev, "LLM-GLM handshake failed\n");
-			return -EINVAL;
-		}
-	}
+	if (val & (BIT(4) | BIT(5)))
+		return;
 
-	return 0;
+	gmu_core_regrmw(device, A6XX_GMU_LLM_GLM_SLEEP_CTRL, 0, BIT(4));
+	gmu_core_regrmw(device, A6XX_GMU_LLM_GLM_SLEEP_CTRL, 0, BIT(0));
+
+	if (timed_poll_check(device, A6XX_GMU_LLM_GLM_SLEEP_STATUS,
+		BIT(0), GPU_RESET_TIMEOUT, BIT(0)))
+		dev_err(&gmu->pdev->dev, "LLM-GLM handshake failed\n");
 }
 
 static void a6xx_isense_disable(struct kgsl_device *device)
@@ -1313,7 +1308,7 @@ static uint32_t lm_limit(struct adreno_device *adreno_dev)
 }
 
 static int a640_throttling_counters[ADRENO_GPMU_THROTTLE_COUNTERS] = {
-	0x11, 0x15, 0x19
+	0x11, 0x15, 0x19,
 };
 
 static void _setup_throttling_counters(struct adreno_device *adreno_dev)
@@ -1321,6 +1316,10 @@ static void _setup_throttling_counters(struct adreno_device *adreno_dev)
 	struct kgsl_device *device = KGSL_DEVICE(adreno_dev);
 	struct gmu_device *gmu = KGSL_GMU_DEVICE(device);
 	int i, ret;
+
+	/* Select counter for 5% throttling instead of 15% */
+	if (GMU_VER_STEP(gmu->ver) > 0x104)
+		a640_throttling_counters[0] = 0x10;
 
 	for (i = 0; i < ARRAY_SIZE(a640_throttling_counters); i++) {
 		adreno_dev->busy_data.throttle_cycles[i] = 0;
