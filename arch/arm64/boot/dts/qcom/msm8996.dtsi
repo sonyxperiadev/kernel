@@ -2527,30 +2527,6 @@
 		};
 	};
 
-	qcom,msm-core@70000 {
-		compatible = "qcom,apss-core-ea";
-		reg = <0x70000 0x1000>;
-		qcom,low-hyst-temp = <100>;
-		qcom,high-hyst-temp = <100>;
-		qcom,polling-interval = <50>;
-
-		ea0: ea0 {
-			sensor = <&sensor_information4>;
-		};
-
-		ea1: ea1 {
-			sensor = <&sensor_information6>;
-		};
-
-		ea2: ea2 {
-			sensor = <&sensor_information9>;
-		};
-
-		ea3: ea3 {
-			sensor = <&sensor_information11>;
-		};
-	};
-
 	cpuss_dump {
 		compatible = "qcom,cpuss-dump";
 		qcom,l2_dump0 {
