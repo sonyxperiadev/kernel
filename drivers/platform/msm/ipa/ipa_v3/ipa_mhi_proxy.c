@@ -619,13 +619,13 @@ struct ipa_mhi_clk_vote_resp_msg_v01
 	mutex_lock(&imp_ctx->mutex);
 
 	/*
-	 * returning success for clock unvote request - since it could
-	 * be 5G modem SSR scenario where clocks are already OFF.
+	 * return ERR_INCOMPATIABLE for clock unvote request - since it could
+	 * be modem SSR scenario where clocks are already OFF.
 	 */
 	if (!vote && imp_ctx->state == IMP_INVALID) {
 		IMP_DBG("Unvote in Invalid state, no op for clock unvote\n");
 		mutex_unlock(&imp_ctx->mutex);
-		return 0;
+		return resp;
 	}
 
 	if (imp_ctx->state != IMP_STARTED) {
