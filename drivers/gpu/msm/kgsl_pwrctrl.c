@@ -69,6 +69,7 @@ static const char * const clocks[] = {
 	"gmu_clk",
 	"ahb_clk",
 	"gtbu1_clk"
+	"smmu_vote",
 };
 
 static unsigned long ib_votes[KGSL_MAX_BUSLEVELS];
