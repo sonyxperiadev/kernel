@@ -302,11 +302,11 @@ static int msm_rpmstats_probe(struct platform_device *pdev)
 	if (!pdev)
 		return -EINVAL;
 
-	node = of_parse_phandle(pdev->dev.of_node, "qcom,rpm-msg-ram", 0);
+	node = of_parse_phandle(pdev->dev.of_node, "qcom,rpm-data-ram", 0);
 	if (!node)
 		return -EINVAL;
 
-	ret = of_address_to_resource(node, 1, &res);
+	ret = of_address_to_resource(node, 0, &res);
 	if (ret)
 		return ret;
 
@@ -329,7 +329,7 @@ static int msm_rpmstats_probe(struct platform_device *pdev)
 	if (!ss.rpm_stats_addr)
 		return -ENOMEM;
 
-	node = of_parse_phandle(pdev->dev.of_node, "qcom,rpm-code-ram", 0);
+	node = of_parse_phandle(pdev->dev.of_node, "qcom,rpm-msg-ram", 0);
 	if (!node)
 		return -EINVAL;
 

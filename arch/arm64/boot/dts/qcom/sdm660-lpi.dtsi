@@ -14,7 +14,7 @@
 	lpi_tlmm: lpi_pinctrl@15070000 {
 		compatible = "qcom,lpi-pinctrl";
 		reg = <0x15070000 0x0>;
-		qcom,num-gpios = <32>;
+		qcom,num-pins = <32>;
 		gpio-controller;
 		#gpio-cells = <2>;
 

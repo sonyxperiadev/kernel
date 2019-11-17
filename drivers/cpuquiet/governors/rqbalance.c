@@ -37,6 +37,7 @@
 #include <linux/cpu.h>
 #include <linux/sched.h>
 #include <linux/slab.h>
+#include <linux/sched/stat.h>
 
 #include "../cpuquiet.h"
 

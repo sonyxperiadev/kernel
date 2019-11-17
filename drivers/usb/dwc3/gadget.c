@@ -863,6 +863,21 @@ static void dwc3_remove_requests(struct dwc3 *dwc, struct dwc3_ep *dep)
 
 		dwc3_gadget_giveback(dep, req, -ESHUTDOWN);
 	}
+
+	if (dep->number == 1 && dwc->ep0state != EP0_SETUP_PHASE) {
+		unsigned int dir;
+
+		dbg_log_string("CTRLPEND", dwc->ep0state);
+		dir = !!dwc->ep0_expect_in;
+		if (dwc->ep0state == EP0_DATA_PHASE)
+			dwc3_ep0_end_control_data(dwc, dwc->eps[dir]);
+		else
+			dwc3_ep0_end_control_data(dwc, dwc->eps[!dir]);
+
+		dwc->eps[0]->trb_enqueue = 0;
+		dwc->eps[1]->trb_enqueue = 0;
+	}
+
 	dbg_log_string("DONE for %s(%d)", dep->name, dep->number);
 }
 
@@ -2269,7 +2284,15 @@ static int dwc3_gadget_pullup(struct usb_gadget *g, int is_on)
 		}
 	}
 
+	disable_irq(dwc->irq);
+
+	/* prevent pending bh to run later */
+	flush_work(&dwc->bh_work);
+
 	spin_lock_irqsave(&dwc->lock, flags);
+	if (dwc->ep0state != EP0_SETUP_PHASE)
+		dbg_event(0xFF, "EP0 is not in SETUP phase\n", 0);
+
 	/*
 	 * If we are here after bus suspend notify otg state machine to
 	 * increment pm usage count of dwc to prevent pm_runtime_suspend
@@ -2280,6 +2303,7 @@ static int dwc3_gadget_pullup(struct usb_gadget *g, int is_on)
 
 	ret = dwc3_gadget_run_stop(dwc, is_on, false);
 	spin_unlock_irqrestore(&dwc->lock, flags);
+	enable_irq(dwc->irq);
 
 	pm_runtime_mark_last_busy(dwc->dev);
 	pm_runtime_put_autosuspend(dwc->dev);

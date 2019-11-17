@@ -2,8 +2,11 @@ ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
 # SM8150 - SoMC Kumano
 dtbo-$(CONFIG_MACH_SONY_GRIFFIN) += \
 		sm8150-kumano-griffin_generic-overlay.dtbo
+dtbo-$(CONFIG_MACH_SONY_BAHAMUT) += \
+		sm8150-kumano-bahamut_generic-overlay.dtbo
 
 sm8150-kumano-griffin_generic-overlay.dtbo-base := sm8150.dtb sm8150-v2.dtb
+sm8150-kumano-bahamut_generic-overlay.dtbo-base := sm8150.dtb sm8150-v2.dtb
 
 
 # SDM845 - SoMC Tama

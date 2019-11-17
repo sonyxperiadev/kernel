@@ -17,9 +17,11 @@
 		cell-index = <0>;
 		#clock-cells = <1>;
 		reg = <0xae94a00 0x1e0>,
+		      <0xae94200 0x100>,
 		      <0xae94400 0x800>,
 		      <0xaf03000 0x8>;
-		reg-names = "pll_base", "phy_base", "gdsc_base";
+		reg-names = "pll_base", "dynamic_pll_base",
+			    "phy_base", "gdsc_base";
 		clocks = <&clock_dispcc DISP_CC_MDSS_AHB_CLK>;
 		clock-names = "iface_clk";
 		clock-rate = <0>;
@@ -46,9 +48,11 @@
 		cell-index = <1>;
 		#clock-cells = <1>;
 		reg = <0xae96a00 0x1e0>,
+		      <0xae96200 0x100>,
 		      <0xae96400 0x800>,
 		      <0xaf03000 0x8>;
-		reg-names = "pll_base", "phy_base", "gdsc_base";
+		reg-names = "pll_base", "dynamic_pll_base",
+			    "phy_base", "gdsc_base";
 		clocks = <&clock_dispcc DISP_CC_MDSS_AHB_CLK>;
 		clock-names = "iface_clk";
 		clock-rate = <0>;

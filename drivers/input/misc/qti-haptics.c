@@ -292,9 +292,9 @@ static int qti_haptics_write(struct qti_hap_chip *chip,
 			rc = regmap_write(chip->regmap,
 					chip->reg_base + addr, *val);
 
-			if (rc < 0)
-				dev_err(chip->dev, "write addr 0x%x failed, rc=%d\n",
-						addr, rc);
+		if (rc < 0)
+			dev_err(chip->dev, "write addr 0x%x failed, rc=%d\n",
+					addr, rc);
 	}
 
 	for (i = 0; i < len; i++)
@@ -748,6 +748,9 @@ static irqreturn_t qti_haptics_play_irq_handler(int irq, void *data)
 			chip->play_irq_en = false;
 		}
 
+		/* Clear PLAY after all pattern bytes are queued */
+		qti_haptics_play(chip, false);
+
 		goto handled;
 	}
 
@@ -959,10 +962,6 @@ static int qti_haptics_playback(struct input_dev *dev, int effect_id, int val)
 				enable_irq(chip->play_irq);
 				chip->play_irq_en = true;
 			}
-			/* Toggle PLAY when playing pattern */
-			rc = qti_haptics_play(chip, false);
-			if (rc < 0)
-				return rc;
 		} else {
 			if (chip->play_irq_en) {
 				disable_irq_nosync(chip->play_irq);

@@ -1,0 +1,58 @@
+/* arch/arm64/boot/dts/somc/sm8150-kumano-bahamut_generic.dtsi
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+/*
+ * Copyright (C) 2018 Sony Mobile Communications Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2, as
+ * published by the Free Software Foundation.
+ */
+
+#include "sm8150-kumano-bahamut_common.dtsi"
+
+&soc {
+};
+
+&somc_pinctrl {
+	pinctrl-2 = <&sm_gpio_0 &sm_gpio_3>;
+};
+
+/* GPIO_0 : NFC_ESE_SPI_MISO */
+&sm_gpio_0 {
+	mux {
+		pins = "gpio0";
+		function = "qup0";
+	};
+
+	config {
+		pins = "gpio0";
+		drive-strength = <2>;
+		/delete-property/bias-disable;
+		bias-pull-down;
+	};
+};
+
+/* GPIO_3 : NFC_ESE_SPI_CS_N */
+&sm_gpio_3 {
+	mux {
+		pins = "gpio3";
+		function = "qup0";
+	};
+
+	config {
+		pins = "gpio3";
+		drive-strength = <2>;
+		/delete-property/bias-disable;
+		bias-pull-down;
+		/delete-property/output-low;
+	};
+};

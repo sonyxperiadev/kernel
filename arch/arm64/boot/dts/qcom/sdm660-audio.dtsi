@@ -68,7 +68,7 @@
 		qcom,wcd-rst-gpio-node = <&wcd_rst_gpio>;
 
 		clock-names = "wcd_clk";
-		clocks = <&clock_audio_lnbb AUDIO_PMIC_LNBB_CLK>;
+		clocks = <&clock_audio_lnbb 0>;
 
 		cdc-vdd-mic-bias-supply = <&pm660l_bob>;
 		qcom,cdc-vdd-mic-bias-voltage = <3300000 3300000>;
@@ -276,6 +276,18 @@
 };
 
 &pm660_gpios {
+	/* GPIO 3 (AUDIO_REF_CLK) */
+	aud_ref_clk {
+		aud_ref_clk_default: aud_ref_clk_default {
+			pins = "gpio3";
+			function = "func1";
+			qcom,drive-strength = <2>;
+			power-source = <0>;
+			bias-pull-down;
+			output-high;
+		};
+	};
+
 	pm660_gp13 {
 		pm660_gpio_13: gp13 {
 			pins = "gpio3";

@@ -414,6 +414,7 @@ static struct ufs_dev_fix ufs_fixups[] = {
 		UFS_DEVICE_NO_FASTAUTO),
 	UFS_FIX(UFS_VENDOR_SAMSUNG, UFS_ANY_MODEL,
 		UFS_DEVICE_QUIRK_HOST_PA_TACTIVATE),
+	UFS_FIX(UFS_VENDOR_SAMSUNG, UFS_ANY_MODEL, UFS_DEVICE_NO_VCCQ),
 	UFS_FIX(UFS_VENDOR_TOSHIBA, UFS_ANY_MODEL,
 		UFS_DEVICE_QUIRK_DELAY_BEFORE_LPM),
 	UFS_FIX(UFS_VENDOR_TOSHIBA, UFS_ANY_MODEL,
@@ -493,7 +494,6 @@ static int ufshcd_config_vreg(struct device *dev,
 		struct ufs_vreg *vreg, bool on);
 static int ufshcd_enable_vreg(struct device *dev, struct ufs_vreg *vreg);
 static int ufshcd_disable_vreg(struct device *dev, struct ufs_vreg *vreg);
-static bool ufshcd_is_g4_supported(struct ufs_hba *hba);
 
 #if IS_ENABLED(CONFIG_DEVFREQ_GOV_SIMPLE_ONDEMAND)
 static struct devfreq_simple_ondemand_data ufshcd_ondemand_data = {
@@ -1764,8 +1764,8 @@ static int ufshcd_clock_scaling_prepare(struct ufs_hba *hba)
 	 * make sure that there are no outstanding requests when
 	 * clock scaling is in progress
 	 */
-	ufshcd_scsi_block_requests(hba);
 	down_write(&hba->lock);
+	ufshcd_scsi_block_requests(hba);
 	if (ufshcd_wait_for_doorbell_clr(hba, DOORBELL_CLR_TOUT_US)) {
 		ret = -EBUSY;
 		up_write(&hba->lock);
@@ -2784,8 +2784,8 @@ static void __ufshcd_set_auto_hibern8_timer(struct ufs_hba *hba,
 {
 	pm_runtime_get_sync(hba->dev);
 	ufshcd_hold_all(hba);
-	ufshcd_scsi_block_requests(hba);
 	down_write(&hba->lock);
+	ufshcd_scsi_block_requests(hba);
 	/* wait for all the outstanding requests to finish */
 	ufshcd_wait_for_doorbell_clr(hba, U64_MAX);
 	ufshcd_set_auto_hibern8_timer(hba, delay_ms);
@@ -7214,8 +7214,10 @@ static void ufshcd_rls_handler(struct work_struct *work)
 
 	hba = container_of(work, struct ufs_hba, rls_work);
 	pm_runtime_get_sync(hba->dev);
-	ufshcd_scsi_block_requests(hba);
 	down_write(&hba->lock);
+	ufshcd_scsi_block_requests(hba);
+	if (ufshcd_is_shutdown_ongoing(hba))
+		goto out;
 	ret = ufshcd_wait_for_doorbell_clr(hba, U64_MAX);
 	if (ret) {
 		dev_err(hba->dev,
@@ -8200,7 +8202,7 @@ static int ufshcd_set_low_vcc_level(struct ufs_hba *hba,
 	struct ufs_vreg *vreg = hba->vreg_info.vcc;
 
 	/* Check if device supports the low voltage VCC feature */
-	if (dev_desc->wspecversion < 0x300 && !ufshcd_is_g4_supported(hba))
+	if (dev_desc->wspecversion < 0x300)
 		return 0;
 
 	/*
@@ -8801,34 +8803,6 @@ out:
 }
 
 /**
- * ufshcd_is_g4_supported - check if device supports HS-G4
- * @hba: per-adapter instance
- *
- * Returns True if device supports HS-G4, False otherwise.
- */
-static bool ufshcd_is_g4_supported(struct ufs_hba *hba)
-{
-	int ret;
-	u32 tx_hsgear = 0;
-
-	/* check device capability */
-	ret = ufshcd_dme_peer_get(hba,
-			UIC_ARG_MIB_SEL(TX_HSGEAR_CAPABILITY,
-			UIC_ARG_MPHY_TX_GEN_SEL_INDEX(0)),
-			&tx_hsgear);
-	if (ret) {
-		dev_err(hba->dev, "%s: Failed getting peer TX_HSGEAR_CAPABILITY. err = %d\n",
-			__func__, ret);
-		return false;
-	}
-
-	if (tx_hsgear == UFS_HS_G4)
-		return true;
-	else
-		return false;
-}
-
-/**
  * ufshcd_probe_hba - probe hba to detect device and initialize
  * @hba: per-adapter instance
  *
@@ -8880,13 +8854,7 @@ reinit:
 		goto out;
 	}
 
-	/*
-	 * Note: Some UFS 3.0 devices may still advertise UFS specification
-	 * version as 2.1. So let's also read the TX_HSGEAR_CAPABILITY from
-	 * device to know if device support HS-G4 or not.
-	 */
-	if ((card.wspecversion >= 0x300 || ufshcd_is_g4_supported(hba)) &&
-	    !hba->reinit_g4_rate_A) {
+	if (card.wspecversion >= 0x300 && !hba->reinit_g4_rate_A) {
 		unsigned long flags;
 		int err;
 
@@ -8918,10 +8886,13 @@ reinit:
 	ufshcd_tune_unipro_params(hba);
 
 	ufshcd_apply_pm_quirks(hba);
-	ret = ufshcd_set_vccq_rail_unused(hba,
-		(hba->dev_info.quirks & UFS_DEVICE_NO_VCCQ) ? true : false);
-	if (ret)
-		goto out;
+	if (card.wspecversion < 0x300) {
+		ret = ufshcd_set_vccq_rail_unused(hba,
+			(hba->dev_info.quirks & UFS_DEVICE_NO_VCCQ) ?
+			true : false);
+		if (ret)
+			goto out;
+	}
 
 	/* UFS device is also active now */
 	ufshcd_set_ufs_dev_active(hba);

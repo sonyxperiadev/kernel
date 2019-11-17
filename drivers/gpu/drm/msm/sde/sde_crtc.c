@@ -1678,28 +1678,28 @@ static int _sde_crtc_check_panel_stacking(struct drm_crtc *crtc,
 		return -EINVAL;
 	}
 
-	if (!mode_info.vpadding)
+	if (!mode_info.overlap_pixels)
 		goto done;
 
-	if (mode_info.vpadding < state->mode.vdisplay) {
+	if (mode_info.overlap_pixels < state->mode.vdisplay) {
 		SDE_ERROR("padding height %d is less than vdisplay %d\n",
-			mode_info.vpadding, state->mode.vdisplay);
+			mode_info.overlap_pixels, state->mode.vdisplay);
 		return -EINVAL;
 	}
 
 	/* skip calculation if already cached */
-	if (mode_info.vpadding == sde_crtc_state->padding_height)
+	if (mode_info.overlap_pixels == sde_crtc_state->padding_height)
 		return 0;
 
-	gcd = _sde_crtc_calc_gcd(mode_info.vpadding, state->mode.vdisplay);
+	gcd = _sde_crtc_calc_gcd(mode_info.overlap_pixels, state->mode.vdisplay);
 	if (!gcd) {
 		SDE_ERROR("zero gcd found for padding height %d %d\n",
-			mode_info.vpadding, state->mode.vdisplay);
+			mode_info.overlap_pixels, state->mode.vdisplay);
 		return -EINVAL;
 	}
 
 	m = state->mode.vdisplay / gcd;
-	n = mode_info.vpadding / gcd - m;
+	n = mode_info.overlap_pixels / gcd - m;
 
 	if (m > MAX_VPADDING_RATIO || n > MAX_VPADDING_RATIO) {
 		SDE_ERROR("unsupported panel stacking pattern %d:%d", m, n);
@@ -1710,7 +1710,7 @@ static int _sde_crtc_check_panel_stacking(struct drm_crtc *crtc,
 	sde_crtc_state->padding_dummy = n;
 
 done:
-	sde_crtc_state->padding_height = mode_info.vpadding;
+	sde_crtc_state->padding_height = mode_info.overlap_pixels;
 	return 0;
 }
 
