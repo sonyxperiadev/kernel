@@ -890,6 +890,16 @@ config QCOM_AOP_DDR_MESSAGING
 	  This driver sends messages to the AOP to adjust the DDR frequency when
 	  the device is rebooting, to ensure that the device is powered off
 	  cleanly.
+
+config MSM_BAM_DMUX
+	bool "BAM Data Mux Driver"
+	depends on SPS
+	help
+	  Support Muxed Data Channels over BAM interface.
+	  BAM has a limited number of pipes.  This driver
+	  provides a means to support more logical channels
+	  via muxing than BAM could without muxing.
+
 endmenu
 
 config QCOM_HYP_CORE_CTL
