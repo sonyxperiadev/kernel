@@ -1072,30 +1072,6 @@ clk_alpha_pll_postdiv_recalc_rate(struct clk_hw *hw, unsigned long parent_rate)
 	return parent_rate >> fls(ctl);
 }
 
-const struct clk_div_table clk_alpha_div_table[] = {
-	{ 0x0, 1 },
-	{ 0x1, 2 },
-	{ 0x3, 4 },
-	{ 0x7, 8 },
-	{ 0xf, 16 },
-	{ }
-};
-
-const struct clk_div_table clk_alpha_odd_div_table[] = {
-	{ 0x0, 1 },
-	{ 0x3, 3 },
-	{ 0x5, 5 },
-	{ 0x7, 7 },
-	{ }
-};
-
-const struct clk_div_table clk_alpha_2bit_div_table[] = {
-	{ 0x0, 1 },
-	{ 0x1, 2 },
-	{ 0x3, 4 },
-	{ }
-};
-
 static long
 clk_alpha_pll_postdiv_round_rate(struct clk_hw *hw, unsigned long rate,
 				 unsigned long *prate)
@@ -1379,6 +1355,9 @@ static unsigned long clk_alpha_pll_postdiv_fabia_recalc_rate(struct clk_hw *hw,
 		pr_err("Missing the post_div_table for the PLL\n");
 		return -EINVAL;
 	}
+
+	if (pll->num_post_div == 0)
+		pr_err("NUM POST DIV IS ZERO!!!!\n");
 
 	ret = regmap_read(pll->clkr.regmap, PLL_USER_CTL(pll), &val);
 	if (ret)
