@@ -173,6 +173,7 @@ static struct clk_alpha_pll_postdiv gpu_cc_pll0_out_even = {
 	.width = 4,
 	.post_div_table = clk_alpha_div_table,
 	.post_div_shift = ALPHA_POST_DIV_EVEN_SHIFT,
+	.num_post_div = ARRAY_SIZE(clk_alpha_div_table),
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "gpu_cc_pll0_out_even",
 		.parent_names = (const char *[]){ "gpu_cc_pll0" },

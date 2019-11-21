@@ -156,8 +156,6 @@ static int clk_cbcr_set_flags(struct regmap *regmap, unsigned int reg,
 	int delay_us = 1;
 	int ret;
 
-	regmap_read(regmap, reg, &cbcr_val);
-
 	switch (flags) {
 	case CLKFLAG_PERIPH_OFF_SET:
 		cbcr_val = cbcr_mask = BIT(12);

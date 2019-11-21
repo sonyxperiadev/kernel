@@ -140,7 +140,7 @@ int wlfw_msa_mem_info_send_sync_msg(struct icnss_priv *priv)
 	for (i = 0; i < resp->mem_region_info_len; i++) {
 
 		if (resp->mem_region_info[i].size > priv->msa_mem_size ||
-		    resp->mem_region_info[i].region_addr > max_mapped_addr ||
+		    resp->mem_region_info[i].region_addr >= max_mapped_addr ||
 		    resp->mem_region_info[i].region_addr < priv->msa_pa ||
 		    resp->mem_region_info[i].size +
 		    resp->mem_region_info[i].region_addr > max_mapped_addr) {
@@ -314,14 +314,23 @@ int wlfw_ind_register_send_sync_msg(struct icnss_priv *priv)
 
 	priv->stats.ind_register_resp++;
 
+	if (resp->fw_status_valid &&
+	   (resp->fw_status & QMI_WLFW_ALREADY_REGISTERED_V01)) {
+		ret = -EALREADY;
+		icnss_pr_dbg("WLFW already registered\n");
+		goto qmi_registered;
+	}
+
 	kfree(resp);
 	kfree(req);
+
 	return 0;
 
 out:
+	priv->stats.ind_register_err++;
+qmi_registered:
 	kfree(resp);
 	kfree(req);
-	priv->stats.ind_register_err++;
 	return ret;
 }
 

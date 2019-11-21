@@ -161,9 +161,29 @@ extern const struct clk_ops clk_trion_pll_postdiv_ops;
 extern const struct clk_ops clk_alpha_pll_regera_ops;
 extern const struct clk_ops clk_alpha_pll_agera_ops;
 
-extern const struct clk_div_table clk_alpha_div_table[];
-extern const struct clk_div_table clk_alpha_odd_div_table[];
-extern const struct clk_div_table clk_alpha_2bit_div_table[];
+static const struct clk_div_table clk_alpha_div_table[] = {
+	{ 0x0, 1 },
+	{ 0x1, 2 },
+	{ 0x3, 4 },
+	{ 0x7, 8 },
+	{ 0xf, 16 },
+	{ }
+};
+
+static const struct clk_div_table clk_alpha_odd_div_table[] = {
+	{ 0x0, 1 },
+	{ 0x3, 3 },
+	{ 0x5, 5 },
+	{ 0x7, 7 },
+	{ }
+};
+
+static const struct clk_div_table clk_alpha_2bit_div_table[] = {
+	{ 0x0, 1 },
+	{ 0x1, 2 },
+	{ 0x3, 4 },
+	{ }
+};
 
 void clk_alpha_pll_configure(struct clk_alpha_pll *pll, struct regmap *regmap,
 			     const struct alpha_pll_config *config);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -39,9 +39,17 @@
 #define GENI_SE_DMA_PTR_H(ptr) 0
 #endif
 
+/* Convert BCM threshold to actual frequency x 4 */
+#define CONV_TO_BW(x) (x*20000*4)
 #define NUM_LOG_PAGES 2
 #define MAX_CLK_PERF_LEVEL 32
-static unsigned long default_bus_bw_set[] = {0, 19200000, 50000000, 100000000};
+static unsigned long default_bus_bw_set[] = {0, 19200000, 50000000,
+				100000000, 150000000, 200000000, 236000000};
+
+struct bus_vectors {
+	int src;
+	int dst;
+};
 
 /**
  * @struct geni_se_device - Data structure to represent the QUPv3 Core
@@ -52,18 +60,35 @@ static unsigned long default_bus_bw_set[] = {0, 19200000, 50000000, 100000000};
  * @iommu_s1_bypass:	Bypass IOMMU stage 1 translation.
  * @base:		Base address of this instance of QUPv3 core.
  * @bus_bw:		Client handle to the bus bandwidth request.
+ * @bus_bw_noc:		Client handle to the QUP clock and DDR path bus
+			bandwidth request.
  * @bus_mas_id:		Master Endpoint ID for bus BW request.
  * @bus_slv_id:		Slave Endpoint ID for bus BW request.
  * @geni_dev_lock:		Lock to protect the bus ab & ib values, list.
  * @ab_list_head:	Sorted resource list based on average bus BW.
  * @ib_list_head:	Sorted resource list based on instantaneous bus BW.
+ * @ab_list_head_noc:	Sorted resource list based on average DDR path bus BW.
+ * @ib_list_head_noc:	Sorted resource list based on instantaneous DDR path
+			bus BW.
  * @cur_ab:		Current Bus Average BW request value.
  * @cur_ib:		Current Bus Instantaneous BW request value.
+ * @cur_ab_noc:		Current DDR Bus Average BW request value.
+ * @cur_ib_noc:		Current DDR Bus Instantaneous BW request value.
  * @bus_bw_set:		Clock plan for the bus driver.
+ * @bus_bw_set_noc:	Clock plan for DDR path.
  * @cur_bus_bw_idx:	Current index within the bus clock plan.
+ * @cur_bus_bw_idx_noc:	Current index within the DDR path clock plan.
  * @num_clk_levels:	Number of valid clock levels in clk_perf_tbl.
  * @clk_perf_tbl:	Table of clock frequency input to Serial Engine clock.
- * @log_ctx:		Logging context to hold the debug information
+ * @log_ctx:		Logging context to hold the debug information.
+ * @vectors:		Structure to store Master End and Slave End IDs for
+			QUPv3 clock and DDR path bus BW request.
+ * @num_paths:		Two paths. QUPv3 clock and DDR paths.
+ * @num_usecases:	One usecase to vote for both QUPv3 clock and DDR paths.
+ * @pdata:		To register our client handle with the ICB driver.
+ * @update:		Usecase index for icb voting.
+ * @vote_for_bw:	To check if we have to vote for BW or BCM threashold
+			in ab/ib ICB voting.
  */
 struct geni_se_device {
 	struct device *dev;
@@ -73,23 +98,34 @@ struct geni_se_device {
 	bool iommu_s1_bypass;
 	void __iomem *base;
 	struct msm_bus_client_handle *bus_bw;
+	uint32_t bus_bw_noc;
 	u32 bus_mas_id;
 	u32 bus_slv_id;
 	struct mutex geni_dev_lock;
 	struct list_head ab_list_head;
 	struct list_head ib_list_head;
+	struct list_head ab_list_head_noc;
+	struct list_head ib_list_head_noc;
 	unsigned long cur_ab;
 	unsigned long cur_ib;
+	unsigned long cur_ab_noc;
+	unsigned long cur_ib_noc;
 	int bus_bw_set_size;
+	int bus_bw_set_size_noc;
 	unsigned long *bus_bw_set;
+	unsigned long *bus_bw_set_noc;
 	int cur_bus_bw_idx;
+	int cur_bus_bw_idx_noc;
 	unsigned int num_clk_levels;
 	unsigned long *clk_perf_tbl;
 	void *log_ctx;
+	struct bus_vectors *vectors;
+	int num_paths;
+	int num_usecases;
+	struct msm_bus_scale_pdata *pdata;
+	int update;
+	bool vote_for_bw;
 };
-
-/* Offset of QUPV3 Hardware Version Register */
-#define QUPV3_HW_VER (0x4)
 
 #define HW_VER_MAJOR_MASK GENMASK(31, 28)
 #define HW_VER_MAJOR_SHFT 28
@@ -630,8 +666,11 @@ static bool geni_se_check_bus_bw(struct geni_se_device *geni_se_dev)
 	int new_bus_bw_idx = geni_se_dev->bus_bw_set_size - 1;
 	unsigned long new_bus_bw;
 	bool bus_bw_update = false;
+	/* Convert agg ab into bytes per second */
+	unsigned long new_ab_in_hz = DEFAULT_BUS_WIDTH *
+					((2*geni_se_dev->cur_ab)*10000);
 
-	new_bus_bw = max(geni_se_dev->cur_ib, geni_se_dev->cur_ab) /
+	new_bus_bw = max(geni_se_dev->cur_ib, new_ab_in_hz) /
 							DEFAULT_BUS_WIDTH;
 	for (i = 0; i < geni_se_dev->bus_bw_set_size; i++) {
 		if (geni_se_dev->bus_bw_set[i] >= new_bus_bw) {
@@ -647,17 +686,46 @@ static bool geni_se_check_bus_bw(struct geni_se_device *geni_se_dev)
 	return bus_bw_update;
 }
 
+static bool geni_se_check_bus_bw_noc(struct geni_se_device *geni_se_dev)
+{
+	int i;
+	int new_bus_bw_idx = geni_se_dev->bus_bw_set_size_noc - 1;
+	unsigned long new_bus_bw;
+	bool bus_bw_update = false;
+
+	new_bus_bw = max(geni_se_dev->cur_ib_noc, geni_se_dev->cur_ab_noc) /
+							DEFAULT_BUS_WIDTH;
+
+	for (i = 0; i < geni_se_dev->bus_bw_set_size_noc; i++) {
+		if (geni_se_dev->bus_bw_set_noc[i] >= new_bus_bw) {
+			new_bus_bw_idx = i;
+			break;
+		}
+	}
+
+	if (geni_se_dev->cur_bus_bw_idx_noc != new_bus_bw_idx) {
+		geni_se_dev->cur_bus_bw_idx_noc = new_bus_bw_idx;
+		bus_bw_update = true;
+	}
+
+	return bus_bw_update;
+}
+
 static int geni_se_rmv_ab_ib(struct geni_se_device *geni_se_dev,
 			     struct se_geni_rsc *rsc)
 {
 	struct se_geni_rsc *tmp;
 	bool bus_bw_update = false;
+	bool bus_bw_update_noc = false;
 	int ret = 0;
+	int new_update;
 
 	if (unlikely(list_empty(&rsc->ab_list) || list_empty(&rsc->ib_list)))
 		return -EINVAL;
 
 	mutex_lock(&geni_se_dev->geni_dev_lock);
+
+	new_update = geni_se_dev->update ? 0 : 1;
 	list_del_init(&rsc->ab_list);
 	geni_se_dev->cur_ab -= rsc->ab;
 
@@ -670,14 +738,60 @@ static int geni_se_rmv_ab_ib(struct geni_se_device *geni_se_dev,
 		geni_se_dev->cur_ib = 0;
 
 	bus_bw_update = geni_se_check_bus_bw(geni_se_dev);
-	if (bus_bw_update)
+
+	if (geni_se_dev->num_paths == 2) {
+		geni_se_dev->pdata->usecase[new_update].vectors[0].ab  =
+			geni_se_dev->vote_for_bw ?
+			CONV_TO_BW(geni_se_dev->cur_ab) : geni_se_dev->cur_ab;
+		geni_se_dev->pdata->usecase[new_update].vectors[0].ib  =
+			geni_se_dev->vote_for_bw ?
+			CONV_TO_BW(geni_se_dev->cur_ib) : geni_se_dev->cur_ib;
+	}
+
+	if (bus_bw_update && geni_se_dev->num_paths != 2)
 		ret = msm_bus_scale_update_bw(geni_se_dev->bus_bw,
 						geni_se_dev->cur_ab,
 						geni_se_dev->cur_ib);
 	GENI_SE_DBG(geni_se_dev->log_ctx, false, NULL,
-			"%s: %s: cur_ab_ib(%lu:%lu) req_ab_ib(%lu:%lu) %d\n",
-			__func__, dev_name(rsc->ctrl_dev), geni_se_dev->cur_ab,
-			geni_se_dev->cur_ib, rsc->ab, rsc->ib, bus_bw_update);
+		"%s: %s: cur_ab_ib(%lu:%lu) req_ab_ib(%lu:%lu) %d\n",
+		__func__, dev_name(rsc->ctrl_dev), geni_se_dev->cur_ab,
+		geni_se_dev->cur_ib, rsc->ab, rsc->ib, bus_bw_update);
+
+
+	if (geni_se_dev->num_paths == 2) {
+		if (unlikely(list_empty(&rsc->ab_list_noc) ||
+					list_empty(&rsc->ib_list_noc)))
+			return -EINVAL;
+
+		list_del_init(&rsc->ab_list_noc);
+		geni_se_dev->cur_ab_noc -= rsc->ab_noc;
+
+		list_del_init(&rsc->ib_list_noc);
+		tmp = list_first_entry_or_null(&geni_se_dev->ib_list_head_noc,
+					struct se_geni_rsc, ib_list_noc);
+		if (tmp && tmp->ib_noc != geni_se_dev->cur_ib_noc)
+			geni_se_dev->cur_ib_noc = tmp->ib_noc;
+		else if (!tmp && geni_se_dev->cur_ib_noc)
+			geni_se_dev->cur_ib_noc = 0;
+
+		bus_bw_update_noc = geni_se_check_bus_bw_noc(geni_se_dev);
+
+		geni_se_dev->pdata->usecase[new_update].vectors[1].ab  =
+				geni_se_dev->cur_ab_noc;
+		geni_se_dev->pdata->usecase[new_update].vectors[1].ib  =
+				geni_se_dev->cur_ib_noc;
+
+		if (bus_bw_update_noc || bus_bw_update) {
+			geni_se_dev->update = new_update;
+			ret = msm_bus_scale_client_update_request
+					(geni_se_dev->bus_bw_noc, new_update);
+		}
+		GENI_SE_DBG(geni_se_dev->log_ctx, false, NULL,
+			"%s: %s: cur_ab_ib_noc(%lu:%lu) req_ab_ib_noc(%lu:%lu) %d\n",
+			__func__, dev_name(rsc->ctrl_dev),
+			geni_se_dev->cur_ab_noc, geni_se_dev->cur_ib_noc,
+			rsc->ab_noc, rsc->ib_noc, bus_bw_update_noc);
+	}
 	mutex_unlock(&geni_se_dev->geni_dev_lock);
 	return ret;
 }
@@ -698,7 +812,8 @@ int se_geni_clks_off(struct se_geni_rsc *rsc)
 		return -EINVAL;
 
 	geni_se_dev = dev_get_drvdata(rsc->wrapper_dev);
-	if (unlikely(!geni_se_dev || !geni_se_dev->bus_bw))
+	if (unlikely(!geni_se_dev || !(geni_se_dev->bus_bw ||
+					geni_se_dev->bus_bw_noc)))
 		return -ENODEV;
 
 	clk_disable_unprepare(rsc->se_clk);
@@ -709,6 +824,7 @@ int se_geni_clks_off(struct se_geni_rsc *rsc)
 	if (ret)
 		GENI_SE_ERR(geni_se_dev->log_ctx, false, NULL,
 			"%s: Error %d during bus_bw_update\n", __func__, ret);
+
 	return ret;
 }
 EXPORT_SYMBOL(se_geni_clks_off);
@@ -729,7 +845,9 @@ int se_geni_resources_off(struct se_geni_rsc *rsc)
 		return -EINVAL;
 
 	geni_se_dev = dev_get_drvdata(rsc->wrapper_dev);
-	if (unlikely(!geni_se_dev || !geni_se_dev->bus_bw))
+	if (unlikely(!geni_se_dev ||
+			!(geni_se_dev->bus_bw ||
+					geni_se_dev->bus_bw_noc)))
 		return -ENODEV;
 
 	ret = se_geni_clks_off(rsc);
@@ -749,10 +867,15 @@ static int geni_se_add_ab_ib(struct geni_se_device *geni_se_dev,
 {
 	struct se_geni_rsc *tmp = NULL;
 	struct list_head *ins_list_head;
+	struct list_head *ins_list_head_noc;
 	bool bus_bw_update = false;
+	bool bus_bw_update_noc = false;
 	int ret = 0;
+	int new_update;
 
 	mutex_lock(&geni_se_dev->geni_dev_lock);
+
+	new_update = geni_se_dev->update ? 0 : 1;
 	list_add(&rsc->ab_list, &geni_se_dev->ab_list_head);
 	geni_se_dev->cur_ab += rsc->ab;
 
@@ -768,14 +891,61 @@ static int geni_se_add_ab_ib(struct geni_se_device *geni_se_dev,
 		geni_se_dev->cur_ib = rsc->ib;
 
 	bus_bw_update = geni_se_check_bus_bw(geni_se_dev);
-	if (bus_bw_update)
+
+	if (geni_se_dev->num_paths == 2) {
+		geni_se_dev->pdata->usecase[new_update].vectors[0].ab  =
+			geni_se_dev->vote_for_bw ?
+			CONV_TO_BW(geni_se_dev->cur_ab) : geni_se_dev->cur_ab;
+		geni_se_dev->pdata->usecase[new_update].vectors[0].ib  =
+			geni_se_dev->vote_for_bw ?
+			CONV_TO_BW(geni_se_dev->cur_ib) : geni_se_dev->cur_ib;
+	}
+
+	if (bus_bw_update && geni_se_dev->num_paths != 2)
 		ret = msm_bus_scale_update_bw(geni_se_dev->bus_bw,
 						geni_se_dev->cur_ab,
 						geni_se_dev->cur_ib);
 	GENI_SE_DBG(geni_se_dev->log_ctx, false, NULL,
-			"%s: %s: cur_ab_ib(%lu:%lu) req_ab_ib(%lu:%lu) %d\n",
-			__func__, dev_name(rsc->ctrl_dev), geni_se_dev->cur_ab,
-			geni_se_dev->cur_ib, rsc->ab, rsc->ib, bus_bw_update);
+		"%s: %s: cur_ab_ib(%lu:%lu) req_ab_ib(%lu:%lu) %d\n",
+		__func__, dev_name(rsc->ctrl_dev),
+		geni_se_dev->cur_ab, geni_se_dev->cur_ib,
+		rsc->ab, rsc->ib, bus_bw_update);
+
+
+	if (geni_se_dev->num_paths == 2) {
+
+		list_add(&rsc->ab_list_noc, &geni_se_dev->ab_list_head_noc);
+		geni_se_dev->cur_ab_noc += rsc->ab_noc;
+		ins_list_head_noc = &geni_se_dev->ib_list_head_noc;
+
+		list_for_each_entry(tmp, &geni_se_dev->ib_list_head_noc,
+					ib_list_noc) {
+			if (tmp->ib < rsc->ib)
+				break;
+			ins_list_head_noc = &tmp->ib_list_noc;
+		}
+		list_add(&rsc->ib_list_noc, ins_list_head_noc);
+
+		if (ins_list_head_noc == &geni_se_dev->ib_list_head_noc)
+			geni_se_dev->cur_ib_noc = rsc->ib_noc;
+
+		bus_bw_update_noc = geni_se_check_bus_bw_noc(geni_se_dev);
+
+		geni_se_dev->pdata->usecase[new_update].vectors[1].ab  =
+				geni_se_dev->cur_ab_noc;
+		geni_se_dev->pdata->usecase[new_update].vectors[1].ib  =
+				geni_se_dev->cur_ib_noc;
+		if (bus_bw_update_noc || bus_bw_update) {
+			geni_se_dev->update = new_update;
+			ret = msm_bus_scale_client_update_request
+					(geni_se_dev->bus_bw_noc, new_update);
+		}
+		GENI_SE_DBG(geni_se_dev->log_ctx, false, NULL,
+			"%s: %s: cur_ab_ib_noc(%lu:%lu) req_ab_ib_noc(%lu:%lu) %d\n",
+			__func__, dev_name(rsc->ctrl_dev),
+			geni_se_dev->cur_ab_noc, geni_se_dev->cur_ib_noc,
+			rsc->ab_noc, rsc->ib_noc, bus_bw_update_noc);
+	}
 	mutex_unlock(&geni_se_dev->geni_dev_lock);
 	return ret;
 }
@@ -877,6 +1047,7 @@ EXPORT_SYMBOL(se_geni_resources_on);
 int geni_se_resources_init(struct se_geni_rsc *rsc,
 			   unsigned long ab, unsigned long ib)
 {
+	int ret = 0;
 	struct geni_se_device *geni_se_dev;
 
 	if (unlikely(!rsc || !rsc->wrapper_dev))
@@ -886,25 +1057,50 @@ int geni_se_resources_init(struct se_geni_rsc *rsc,
 	if (unlikely(!geni_se_dev))
 		return -EPROBE_DEFER;
 
-	if (unlikely(IS_ERR_OR_NULL(geni_se_dev->bus_bw))) {
-		geni_se_dev->bus_bw = msm_bus_scale_register(
-					geni_se_dev->bus_mas_id,
-					geni_se_dev->bus_slv_id,
-					(char *)dev_name(geni_se_dev->dev),
-					false);
-		if (IS_ERR_OR_NULL(geni_se_dev->bus_bw)) {
-			GENI_SE_ERR(geni_se_dev->log_ctx, false, NULL,
-				"%s: Error creating bus client\n", __func__);
-			return (int)PTR_ERR(geni_se_dev->bus_bw);
+	if (geni_se_dev->num_paths == 2) {
+		if (unlikely(!(geni_se_dev->bus_bw_noc))) {
+			geni_se_dev->bus_bw_noc =
+			msm_bus_scale_register_client(geni_se_dev->pdata);
+			if (!(geni_se_dev->bus_bw_noc)) {
+				GENI_SE_ERR(geni_se_dev->log_ctx,
+					false, NULL,
+				"%s: Error creating bus client\n",  __func__);
+				return -EFAULT;
+			}
 		}
+
+		/* To reduce the higher ab values from individual drivers */
+		rsc->ab = ab/2;
+		rsc->ib = ab;
+		rsc->ab_noc = 0;
+		rsc->ib_noc = ib;
+		INIT_LIST_HEAD(&rsc->ab_list_noc);
+		INIT_LIST_HEAD(&rsc->ib_list_noc);
+	} else {
+		if (unlikely(IS_ERR_OR_NULL(geni_se_dev->bus_bw))) {
+			geni_se_dev->bus_bw = msm_bus_scale_register(
+						geni_se_dev->bus_mas_id,
+						geni_se_dev->bus_slv_id,
+					(char *)dev_name(geni_se_dev->dev),
+						false);
+			if (IS_ERR_OR_NULL(geni_se_dev->bus_bw)) {
+				GENI_SE_ERR(geni_se_dev->log_ctx,
+					false, NULL,
+				"%s: Error creating bus client\n", __func__);
+				return (int)PTR_ERR(geni_se_dev->bus_bw);
+			}
+		}
+		rsc->ab = ab;
+		rsc->ib = ib;
 	}
 
-	rsc->ab = ab;
-	rsc->ib = ib;
 	INIT_LIST_HEAD(&rsc->ab_list);
 	INIT_LIST_HEAD(&rsc->ib_list);
-	geni_se_iommu_map_and_attach(geni_se_dev);
-	return 0;
+	ret = geni_se_iommu_map_and_attach(geni_se_dev);
+	if (ret)
+		GENI_SE_ERR(geni_se_dev->log_ctx, false, NULL,
+			"%s: Error %d iommu_map_and_attach\n", __func__, ret);
+	return ret;
 }
 EXPORT_SYMBOL(geni_se_resources_init);
 
@@ -1372,6 +1568,8 @@ void geni_se_dump_dbg_regs(struct se_geni_rsc *rsc, void __iomem *base,
 {
 	u32 m_cmd0 = 0;
 	u32 m_irq_status = 0;
+	u32 s_cmd0 = 0;
+	u32 s_irq_status = 0;
 	u32 geni_status = 0;
 	u32 geni_ios = 0;
 	u32 dma_rx_irq = 0;
@@ -1398,10 +1596,12 @@ void geni_se_dump_dbg_regs(struct se_geni_rsc *rsc, void __iomem *base,
 	}
 	m_cmd0 = geni_read_reg(base, SE_GENI_M_CMD0);
 	m_irq_status = geni_read_reg(base, SE_GENI_M_IRQ_STATUS);
+	s_cmd0 = geni_read_reg(base, SE_GENI_S_CMD0);
+	s_irq_status = geni_read_reg(base, SE_GENI_S_IRQ_STATUS);
 	geni_status = geni_read_reg(base, SE_GENI_STATUS);
 	geni_ios = geni_read_reg(base, SE_GENI_IOS);
-	dma_rx_irq = geni_read_reg(base, SE_DMA_TX_IRQ_STAT);
-	dma_tx_irq = geni_read_reg(base, SE_DMA_RX_IRQ_STAT);
+	dma_tx_irq = geni_read_reg(base, SE_DMA_TX_IRQ_STAT);
+	dma_rx_irq = geni_read_reg(base, SE_DMA_RX_IRQ_STAT);
 	rx_fifo_status = geni_read_reg(base, SE_GENI_RX_FIFO_STATUS);
 	tx_fifo_status = geni_read_reg(base, SE_GENI_TX_FIFO_STATUS);
 	se_dma_dbg = geni_read_reg(base, SE_DMA_DEBUG_REG0);
@@ -1430,6 +1630,87 @@ static const struct of_device_id geni_se_dt_match[] = {
 	{ .compatible = "qcom,qupv3-geni-se-cb", },
 	{}
 };
+
+static struct msm_bus_scale_pdata *ab_ib_register(struct platform_device *pdev,
+				struct geni_se_device *host)
+{
+	int rc = 0;
+	struct device *dev = &pdev->dev;
+	int i = 0, j, len;
+	bool mem_err = false;
+	const uint32_t *vec_arr = NULL;
+	struct msm_bus_scale_pdata *pdata = NULL;
+	struct msm_bus_paths *usecase = NULL;
+
+	vec_arr = of_get_property(dev->of_node,
+			"qcom,msm-bus,vectors-bus-ids", &len);
+	if (vec_arr == NULL) {
+		pr_err("Error: Vector array not found\n");
+		rc = 1;
+		goto out;
+	}
+
+	if (len != host->num_paths * sizeof(uint32_t) * 2) {
+		pr_err("Error: Length-error on getting vectors\n");
+		rc = 1;
+		goto out;
+	}
+
+
+	pdata = devm_kzalloc(dev, sizeof(struct msm_bus_scale_pdata),
+							GFP_KERNEL);
+	if (!pdata) {
+		mem_err = true;
+		goto out;
+	}
+
+	pdata->name = (char *)dev_name(host->dev);
+
+	pdata->num_usecases = 2;
+
+	pdata->active_only = 0;
+
+	usecase = devm_kzalloc(dev, (sizeof(struct msm_bus_paths) *
+		pdata->num_usecases), GFP_KERNEL);
+	if (!usecase) {
+		mem_err = true;
+		goto out;
+	}
+
+	for (i = 0; i < pdata->num_usecases; i++) {
+		usecase[i].num_paths = host->num_paths;
+		usecase[i].vectors = devm_kzalloc(dev, host->num_paths *
+			sizeof(struct msm_bus_vectors), GFP_KERNEL);
+		if (!usecase[i].vectors) {
+			mem_err = true;
+			pr_err("Error: Mem alloc failure in vectors\n");
+			goto out;
+		}
+
+		for (j = 0; j < host->num_paths; j++) {
+			int index = (j * 2);
+
+			usecase[i].vectors[j].src =
+					be32_to_cpu(vec_arr[index]);
+			usecase[i].vectors[j].dst =
+					be32_to_cpu(vec_arr[index + 1]);
+			usecase[i].vectors[j].ab = 0;
+			usecase[i].vectors[j].ib = 0;
+		}
+	}
+
+	pdata->usecase = usecase;
+
+	return pdata;
+out:
+	if (mem_err) {
+		for ( ; i > 0; i--)
+			kfree(usecase[i-1].vectors);
+		kfree(usecase);
+		kfree(pdata);
+	}
+	return NULL;
+}
 
 static int geni_se_iommu_probe(struct device *dev)
 {
@@ -1491,28 +1772,60 @@ static int geni_se_probe(struct platform_device *pdev)
 	}
 
 	geni_se_dev->dev = dev;
-	ret = of_property_read_u32(dev->of_node, "qcom,bus-mas-id",
-				   &geni_se_dev->bus_mas_id);
-	if (ret) {
-		dev_err(dev, "%s: Error missing bus master id\n", __func__);
-		devm_iounmap(dev, geni_se_dev->base);
-		devm_kfree(dev, geni_se_dev);
-	}
-	ret = of_property_read_u32(dev->of_node, "qcom,bus-slv-id",
-				   &geni_se_dev->bus_slv_id);
-	if (ret) {
-		dev_err(dev, "%s: Error missing bus slave id\n", __func__);
-		devm_iounmap(dev, geni_se_dev->base);
-		devm_kfree(dev, geni_se_dev);
+
+	ret = of_property_read_u32(dev->of_node, "qcom,msm-bus,num-paths",
+					&geni_se_dev->num_paths);
+	if (!ret) {
+		geni_se_dev->update = 0;
+		geni_se_dev->pdata = ab_ib_register(pdev, geni_se_dev);
+		if (geni_se_dev->pdata == NULL) {
+			dev_err(dev,
+			"%s: Error missing bus master and slave id\n",
+								__func__);
+			devm_iounmap(dev, geni_se_dev->base);
+			devm_kfree(dev, geni_se_dev);
+		}
 	}
 
+	else {
+		geni_se_dev->num_paths = 1;
+		ret = of_property_read_u32(dev->of_node, "qcom,bus-mas-id",
+				   &geni_se_dev->bus_mas_id);
+		if (ret) {
+			dev_err(dev, "%s: Error missing bus master id\n",
+								__func__);
+			devm_iounmap(dev, geni_se_dev->base);
+			devm_kfree(dev, geni_se_dev);
+		}
+		ret = of_property_read_u32(dev->of_node, "qcom,bus-slv-id",
+				   &geni_se_dev->bus_slv_id);
+		if (ret) {
+			dev_err(dev, "%s: Error missing bus slave id\n",
+								 __func__);
+			devm_iounmap(dev, geni_se_dev->base);
+			devm_kfree(dev, geni_se_dev);
+		}
+	}
+
+	geni_se_dev->vote_for_bw = of_property_read_bool(dev->of_node,
+							"qcom,vote-for-bw");
 	geni_se_dev->iommu_s1_bypass = of_property_read_bool(dev->of_node,
 							"qcom,iommu-s1-bypass");
 	geni_se_dev->bus_bw_set = default_bus_bw_set;
-	geni_se_dev->bus_bw_set_size = ARRAY_SIZE(default_bus_bw_set);
+	geni_se_dev->bus_bw_set_size =
+				ARRAY_SIZE(default_bus_bw_set);
+	if (geni_se_dev->num_paths == 2) {
+		geni_se_dev->bus_bw_set_noc = default_bus_bw_set;
+		geni_se_dev->bus_bw_set_size_noc =
+				ARRAY_SIZE(default_bus_bw_set);
+	}
 	mutex_init(&geni_se_dev->iommu_lock);
 	INIT_LIST_HEAD(&geni_se_dev->ab_list_head);
 	INIT_LIST_HEAD(&geni_se_dev->ib_list_head);
+	if (geni_se_dev->num_paths == 2) {
+		INIT_LIST_HEAD(&geni_se_dev->ab_list_head_noc);
+		INIT_LIST_HEAD(&geni_se_dev->ib_list_head_noc);
+	}
 	mutex_init(&geni_se_dev->geni_dev_lock);
 	geni_se_dev->log_ctx = ipc_log_context_create(NUM_LOG_PAGES,
 						dev_name(geni_se_dev->dev), 0);
