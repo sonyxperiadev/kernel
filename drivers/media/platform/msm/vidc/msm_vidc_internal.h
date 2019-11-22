@@ -14,6 +14,8 @@
 #ifndef _MSM_VIDC_INTERNAL_H_
 #define _MSM_VIDC_INTERNAL_H_
 
+#include "msm_vidc_platform_ifdefs.h"
+
 #include <linux/atomic.h>
 #include <linux/list.h>
 #include <linux/time.h>
