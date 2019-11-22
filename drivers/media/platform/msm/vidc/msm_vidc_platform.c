@@ -720,9 +720,11 @@ static struct msm_vidc_efuse_data msm8956_efuse_data[] = {
 	EFUSE_ENTRY(0x000A4120, 4, 0x60000000, 0x1d, SKU_VERSION),
 };
 
+/*
 static struct msm_vidc_ubwc_config trinket_ubwc_data[] = {
 	UBWC_CONFIG(0, 1, 0, 0, 0, 64, 0, 0),
 };
+*/
 
 static struct msm_vidc_platform_data default_data = {
 	.codec_data = default_codec_data,
@@ -837,6 +839,8 @@ static struct msm_vidc_platform_data msm8956_data = {
 	.codec_data_length =  ARRAY_SIZE(generic_legacy_codec_data),
 	.common_data = msm8956_common_data,
 	.common_data_length =  ARRAY_SIZE(msm8956_common_data),
+	.ubwc_config = 0,
+	.ubwc_config_length = 0,
 	.csc_data.vpe_csc_custom_bias_coeff = vpe_csc_custom_bias_coeff,
 	.csc_data.vpe_csc_custom_matrix_coeff = vpe_csc_custom_matrix_coeff,
 	.csc_data.vpe_csc_custom_limit_coeff = vpe_csc_custom_limit_coeff,
@@ -853,6 +857,8 @@ static struct msm_vidc_platform_data msm8996_data = {
 	.codec_data_length =  ARRAY_SIZE(generic_legacy_codec_data),
 	.common_data = msm8996_common_data,
 	.common_data_length =  ARRAY_SIZE(msm8996_common_data),
+	.ubwc_config = 0,
+	.ubwc_config_length = 0,
 	.csc_data.vpe_csc_custom_bias_coeff = vpe_csc_custom_bias_coeff,
 	.csc_data.vpe_csc_custom_matrix_coeff = vpe_csc_custom_matrix_coeff,
 	.csc_data.vpe_csc_custom_limit_coeff = vpe_csc_custom_limit_coeff,
@@ -869,6 +875,8 @@ static struct msm_vidc_platform_data msm8998_data = {
 	.codec_data_length =  ARRAY_SIZE(sdm845_codec_data),
 	.common_data = msm8998_common_data,
 	.common_data_length =  ARRAY_SIZE(msm8998_common_data),
+	.ubwc_config = 0,
+	.ubwc_config_length = 0,
 	.csc_data.vpe_csc_custom_bias_coeff = vpe_csc_custom_bias_coeff,
 	.csc_data.vpe_csc_custom_matrix_coeff = vpe_csc_custom_matrix_coeff,
 	.csc_data.vpe_csc_custom_limit_coeff = vpe_csc_custom_limit_coeff,
@@ -885,6 +893,8 @@ static struct msm_vidc_platform_data sdm660_data = {
 	.codec_data_length =  ARRAY_SIZE(generic_legacy_codec_data),
 	.common_data = sdm660_common_data,
 	.common_data_length =  ARRAY_SIZE(sdm660_common_data),
+	.ubwc_config = 0,
+	.ubwc_config_length = 0,
 	.csc_data.vpe_csc_custom_bias_coeff = vpe_csc_custom_bias_coeff,
 	.csc_data.vpe_csc_custom_matrix_coeff = vpe_csc_custom_matrix_coeff,
 	.csc_data.vpe_csc_custom_limit_coeff = vpe_csc_custom_limit_coeff,
