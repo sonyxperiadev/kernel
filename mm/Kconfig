@@ -314,6 +314,15 @@ config MMU_NOTIFIER
 	bool
 	select SRCU
 
+config OOM_SCORE_NOTIFIER
+	bool "OOM score notifier"
+	default n
+	help
+	  This creates a notifier for process oom_score_adj status.
+	  It create events for new, updated or freed tasks and
+	  are used to build a mirrored task list in
+	  lowmemorykiller.
+
 config KSM
 	bool "Enable KSM for page merging"
 	depends on MMU
