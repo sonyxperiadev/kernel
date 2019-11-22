@@ -56,6 +56,7 @@
 #include <trace/events/sched.h>
 #include <linux/hw_breakpoint.h>
 #include <linux/oom.h>
+#include <linux/oom_score_notifier.h>
 #include <linux/writeback.h>
 #include <linux/shm.h>
 #include <linux/kcov.h>
@@ -113,6 +114,9 @@ static void __exit_signal(struct task_struct *tsk)
 		if (unlikely(has_group_leader_pid(tsk)))
 			posix_cpu_timers_exit_group(tsk);
 	}
+#endif
+#ifdef CONFIG_OOM_SCORE_NOTIFIER
+	oom_score_notify_free(tsk);
 #endif
 
 	if (group_dead) {
