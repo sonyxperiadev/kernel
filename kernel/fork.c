@@ -92,6 +92,8 @@
 #include <linux/thread_info.h>
 #include <linux/cpufreq_times.h>
 
+#include <linux/oom_score_notifier.h>
+
 #include <asm/pgtable.h>
 #include <asm/pgalloc.h>
 #include <linux/uaccess.h>
@@ -1900,6 +1902,11 @@ static __latent_entropy struct task_struct *copy_process(
 
 		init_task_pid(p, PIDTYPE_PID, pid);
 		if (thread_group_leader(p)) {
+#ifdef CONFIG_OOM_SCORE_NOTIFIER
+			retval = oom_score_notify_new(p);
+			if (retval)
+				goto bad_fork_cancel_cgroup;
+#endif
 			init_task_pid(p, PIDTYPE_PGID, task_pgrp(current));
 			init_task_pid(p, PIDTYPE_SID, task_session(current));
 
