@@ -846,6 +846,8 @@ int read_platform_resources_from_drv_data(
 			"qcom,decode-batching");
 	res->dcvs = find_key_value(platform_data,
 			"qcom,dcvs");
+	res->no_sys_idle_indicator = find_key_value(platform_data,
+			"qcom,no-idle-indicator");
 	res->fw_cycles = find_key_value(platform_data,
 			"qcom,fw-cycles");
 	res->fw_vpp_cycles = find_key_value(platform_data,

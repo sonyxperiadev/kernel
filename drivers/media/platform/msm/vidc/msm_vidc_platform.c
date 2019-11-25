@@ -605,6 +605,10 @@ static struct msm_vidc_common_data sdm845_common_data[] = {
 		.value = 1,
 	},
 	{
+		.key = "qcom,no-idle-indicator",
+		.value = 1,
+	},
+	{
 		.key = "qcom,fw-cycles",
 		.value = 760000,
 	},
