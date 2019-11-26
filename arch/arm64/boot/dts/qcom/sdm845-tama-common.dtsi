@@ -209,7 +209,7 @@
 			    &sdm_gpio_105 &sdm_gpio_106 &sdm_gpio_107 &sdm_gpio_108 &sdm_gpio_109
 			    &sdm_gpio_110 &sdm_gpio_111 &sdm_gpio_112 &sdm_gpio_113 &sdm_gpio_114
 			    &sdm_gpio_115 &sdm_gpio_116 &sdm_gpio_120 &sdm_gpio_121 &sdm_gpio_122
-			    &sdm_gpio_123 &sdm_gpio_124 &sdm_gpio_125 &sdm_gpio_126 &sdm_gpio_128
+			    &sdm_gpio_123 &sdm_gpio_124 &sdm_gpio_125 &sdm_gpio_128
 			    &sdm_gpio_129 &sdm_gpio_133>;
 
 		/* If product common default setting is needed,
@@ -3119,8 +3119,8 @@
 };
 
 &sdhc_2 {
-	pinctrl-0 = <&sdc2_clk_on  &sdc2_cmd_on &sdc2_data_on &sdc2_cd_on &storage_cd>;
-	pinctrl-1 = <&sdc2_clk_off &sdc2_cmd_off &sdc2_data_off &sdc2_cd_off &storage_cd>;
+	pinctrl-0 = <&sdc2_clk_on  &sdc2_cmd_on &sdc2_data_on &sdc2_cd_on>;
+	pinctrl-1 = <&sdc2_clk_off &sdc2_cmd_off &sdc2_data_off &sdc2_cd_off>;
 	cd-gpios = <&tlmm 126 0x0>;
 	uim2-gpios = <&tlmm 129 0x0>;
 };
