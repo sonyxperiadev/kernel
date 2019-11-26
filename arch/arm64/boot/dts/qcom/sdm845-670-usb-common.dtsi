@@ -84,7 +84,7 @@
 			snps,usb3_lpm_capable;
 			usb-core-id = <0>;
 			dr_mode = "drd";
-			maximum-speed = "super-speed-plus";
+			maximum-speed = "super-speed";
 		};
 
 		qcom,usbbam@a704000 {
