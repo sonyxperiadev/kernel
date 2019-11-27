@@ -3579,7 +3579,8 @@ static int __power_collapse(struct venus_hfi_device *device, bool force)
 				wfi_status);
 			goto skip_power_off;
 		}
-		if (!(idle_status & BIT(30))) {
+		if (!device->res->no_sys_idle_indicator &&
+			!(idle_status & BIT(30))) {
 			dprintk(VIDC_WARN,
 				"Skipping PC as idle_status (%#x) bit not set\n",
 				idle_status);
