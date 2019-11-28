@@ -42,6 +42,7 @@
 #include <linux/blkdev.h>
 #include <linux/posix_acl_xattr.h>
 #include <linux/uio.h>
+#include <linux/iversion.h>
 #include <asm/unaligned.h>
 #include "ctree.h"
 #include "disk-io.h"

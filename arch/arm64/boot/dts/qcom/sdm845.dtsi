@@ -2737,7 +2737,7 @@
 			       <&apps_smmu 0x71c 0>,
 			       <&apps_smmu 0x71d 0>,
 			       <&apps_smmu 0x71e 0>;
-			virtual-addr = <0x60200000>;
+			virtual-addr = <0xa0000000>;
 			virtual-size = <0x40000000>;
 			qcom,secure-context-bank;
 		};
