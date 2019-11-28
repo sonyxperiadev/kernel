@@ -27,6 +27,7 @@
 #include <linux/vmalloc.h>
 #include <linux/pagemap.h>
 #include <linux/dcache.h>
+#include <linux/iversion.h>
 #include <linux/namei.h>
 #include <linux/mount.h>
 #include <linux/fs_stack.h>
