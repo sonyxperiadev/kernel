@@ -3515,7 +3515,7 @@ static void run_trx_short_test_all(void *device_data)
 	}
 
 	memset(rBuff, 0x00, size);
-	memset(data, 0x00, 32);
+	memset(data, 0x00, 24);
 
 	input_info(true, &ts->client->dev, "%s: Read self test result\n", __func__);
 
