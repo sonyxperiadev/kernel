@@ -93,7 +93,7 @@ config QPNP_SMB2
 
 config QPNP_SMBFG_NEWGEN_EXTENSION
 	bool "SoMC Charger Extension for QC SMB2 and FG-GEN3"
-	depends on QPNP_SMB2 && QPNP_FG_GEN3
+	depends on (QPNP_SMB2 && QPNP_FG_GEN3) || (QPNP_SMB5 && QPNP_FG_GEN4)
 	help
 	  Say Y here to enable extensional code from SoMC for the
 	  Qualcomm SMBcharger 2 and Fuel Gauge Gen3
