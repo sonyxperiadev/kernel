@@ -49,6 +49,7 @@
 		qcom,mdss-dsi-t-clk-pre = <0x1B>;
 		qcom,mdss-dsi-lp11-init;
 
+		somc,pw-on-rst-seq = "before_power_on";
 		somc,dsi-panel-type = "oled";
 		somc,aod-threshold = <35>;
 
