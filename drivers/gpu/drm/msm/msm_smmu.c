@@ -560,7 +560,7 @@ static int _msm_smmu_create_mapping(struct msm_smmu_client *client,
 				sizeof(*client->dev->dma_parms), GFP_KERNEL);
 
 	dma_set_max_seg_size(client->dev, DMA_BIT_MASK(32));
-	dma_set_seg_boundary(client->dev, DMA_BIT_MASK(64));
+	dma_set_seg_boundary(client->dev, (unsigned long)DMA_BIT_MASK(64));
 
 	iommu_set_fault_handler(client->mmu_mapping->domain,
 			msm_smmu_fault_handler, (void *)client);
