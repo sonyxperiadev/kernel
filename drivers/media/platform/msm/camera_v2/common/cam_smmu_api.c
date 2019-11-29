@@ -10,7 +10,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
-#define pr_fmt(fmt) "CAM-SMMU %s:%d\n" fmt, __func__, __LINE__
+#define pr_fmt(fmt) "CAM-SMMU %s:%d: " fmt, __func__, __LINE__
 
 #include <linux/module.h>
 #include <linux/dma-buf.h>
@@ -2126,7 +2126,7 @@ static int cam_smmu_populate_sids(struct device *dev,
 		if (rc < 0)
 			pr_err("misconfiguration, can't fetch SID\n");
 
-		pr_err("__debug cnt = %d, cb->name: :%s sid [%d] = %d\n",
+		pr_err("__debug cnt = %d, cb->name: %s sid [%d] = %d\n",
 			cnt, cb->name, j, cb->sids[j]);
 	}
 	return rc;
