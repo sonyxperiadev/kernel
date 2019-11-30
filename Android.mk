@@ -152,10 +152,6 @@ else
 endif
 endif
 
-ifeq ($(TARGET_KERNEL_MODULES),)
-    TARGET_KERNEL_MODULES := no-external-modules
-endif
-
 $(KERNEL_OUT_STAMP):
 	$(hide) mkdir -p $(KERNEL_OUT)
 	$(hide) rm -rf $(KERNEL_MODULES_OUT)
