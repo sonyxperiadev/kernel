@@ -1898,6 +1898,9 @@ static int sec_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 	input_info(true, &ts->client->dev, "%s: done\n", __func__);
 	input_log_fix();
 
+	ts->after_work.err = true;
+//	schedule_delayed_work(&ts->after_work.start, 0);
+
 	return 0;
 
 err_input_side_register_device:
