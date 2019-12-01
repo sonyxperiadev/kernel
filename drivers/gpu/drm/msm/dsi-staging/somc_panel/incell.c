@@ -88,6 +88,11 @@ int incell_control_mode(incell_intf_mode mode, bool force)
 	case INCELL_TOUCH_RESET:
 		ret = dsi_panel_driver_touch_reset_ctrl(panel, force);
 		break;
+
+	case INCELL_CONT_SPLASH_TOUCH_ENABLE:
+		ret = somc_panel_cont_splash_touch_enable(panel);
+		break;
+
 	default:
 		pr_err("%s: Invalid mode for touch interface %d\n",
 			__func__, (int)(mode));
@@ -282,4 +287,15 @@ void incell_driver_init(struct msm_drm_private *priv)
 		incell->state = INCELL_S101;
 	else
 		incell->state = INCELL_S000;
+}
+
+bool incell_touch_is_compatible(incell_touch_type type) {
+	struct dsi_display *display = dsi_display_get_main_display();
+	struct dsi_panel *panel = display->panel;
+
+	if (panel->touch_type == INCELL_TOUCH_TYPE_DEFAULT)
+		/* Default/unset. Any driver is allowed to probe: */
+		return true;
+
+	return type == panel->touch_type;
 }
