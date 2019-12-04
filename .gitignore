@@ -172,3 +172,6 @@ sphinx_*/
 
 # Qualcomm CNSS WLAN Host Driver
 drivers/staging/wlan-qc/
+
+# Sony defconfig
+arch/arm64/configs/sony
