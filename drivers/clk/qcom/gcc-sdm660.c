@@ -41,6 +41,7 @@ static DEFINE_VDD_REGULATORS(vdd_dig, VDD_DIG_NUM, 1, vdd_corner);
 static DEFINE_VDD_REGULATORS(vdd_dig_ao, VDD_DIG_NUM, 1, vdd_corner);
 
 enum {
+	P_XO,
 	P_CORE_BI_PLL_TEST_SE,
 	P_GPLL0_OUT_MAIN,
 	P_GPLL1_OUT_MAIN,
@@ -48,7 +49,6 @@ enum {
 	P_PLL0_EARLY_DIV_CLK_SRC,
 	P_PLL1_EARLY_DIV_CLK_SRC,
 	P_SLEEP_CLK,
-	P_XO,
 };
 
 static const struct parent_map gcc_parent_map_0[] = {
