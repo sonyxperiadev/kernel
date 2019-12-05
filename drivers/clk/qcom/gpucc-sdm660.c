@@ -40,12 +40,12 @@ static DEFINE_VDD_REGULATORS(vdd_mx, VDD_DIG_NUM, 1, vdd_corner);
 static DEFINE_VDD_REGULATORS(vdd_gfx, VDD_DIG_NUM, 1, vdd_corner);
 
 enum {
+	P_GPU_XO,
 	P_CORE_BI_PLL_TEST_SE,
 	P_GPLL0_OUT_MAIN,
 	P_GPLL0_OUT_MAIN_DIV,
 	P_GPU_PLL0_PLL_OUT_MAIN,
 	P_GPU_PLL1_PLL_OUT_MAIN,
-	P_GPU_XO,
 };
 
 static const struct parent_map gpucc_parent_map_0[] = {
