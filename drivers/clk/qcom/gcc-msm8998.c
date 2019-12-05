@@ -45,13 +45,13 @@ static DEFINE_VDD_REGULATORS(vdd_dig, VDD_DIG_NUM, 1, vdd_corner);
 static DEFINE_VDD_REGULATORS(vdd_dig_ao, VDD_DIG_NUM, 1, vdd_corner);
 
 enum {
+	P_XO,
 	P_CORE_BI_PLL_TEST_SE,
 	P_GPLL0,
 	P_GPLL0_EARLY_DIV,
 	P_GPLL4,
 	P_SLEEP_CLK,
 	P_AUD_REF_CLK,
-	P_XO,
 };
 
 
