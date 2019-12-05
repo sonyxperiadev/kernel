@@ -48,6 +48,8 @@ static DEFINE_VDD_REGULATORS(vdd_gfx, VDD_GFX_MAX, 1, vdd_gfx_corner);
 #define F(f, s, h, m, n) { (f), (s), (2 * (h) - 1), (m), (n) }
 
 enum {
+	P_XO,
+	P_XO_A,
 	P_GPLL0_OUT_MAIN,
 	P_GPLL0_AUX,
 	P_GPLL0_AUX_ESC,
@@ -74,8 +76,6 @@ enum {
 	P_DSI1PLL_BYTE_MUX,
 	P_BIMC,
 	P_SLEEP_CLK,
-	P_XO_A,
-	P_XO,
 };
 
 
