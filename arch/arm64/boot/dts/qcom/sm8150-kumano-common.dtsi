@@ -3992,3 +3992,7 @@
 &pm8150l_lpg {
 	qcom,sync-channel-ids = <1 2 3>;
 };
+
+&usb1 {
+	status = "disabled";
+};

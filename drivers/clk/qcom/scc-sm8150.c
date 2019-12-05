@@ -39,6 +39,7 @@
 static DEFINE_VDD_REGULATORS(vdd_scc_cx, VDD_NUM, 1, vdd_corner);
 
 enum {
+	P_SSC_BI_TCXO,
 	P_AON_SLEEP_CLK,
 	P_AOSS_CC_RO_CLK,
 	P_QDSP6SS_PLL_OUT_ODD,
@@ -46,7 +47,6 @@ enum {
 	P_SCC_PLL_OUT_MAIN,
 	P_SCC_PLL_OUT_ODD,
 	P_SSC_BI_PLL_TEST_SE,
-	P_SSC_BI_TCXO,
 };
 
 static const struct parent_map scc_parent_map_0[] = {
