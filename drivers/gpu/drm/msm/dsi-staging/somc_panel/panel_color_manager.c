@@ -634,9 +634,7 @@ static int somc_panel_update_merged_pcc_cache(
 	return 0;
 }
 
-static int somc_panel_sde_crtc_atomic_set_property_override(
-		struct drm_crtc *crtc,
-		struct drm_crtc_state *state,
+static int somc_panel_sde_crtc_set_property_override(struct drm_crtc *crtc,
 		struct drm_property *property,
 		uint64_t value)
 {
@@ -713,8 +711,8 @@ static int somc_panel_sde_crtc_atomic_set_property_override(
 	memcpy(blob->data, &color_mgr->cached_pcc, blob->length);
 
 default_fn:
-	return color_mgr->original_crtc_funcs->atomic_set_property(
-			crtc, state, property, value);
+	return color_mgr->original_crtc_funcs->set_property(
+			crtc, property, value);
 }
 
 static int somc_panel_inject_crtc_overrides(struct dsi_display *display)
@@ -769,7 +767,7 @@ static int somc_panel_inject_crtc_overrides(struct dsi_display *display)
 	memcpy(new_funcs, crtc->funcs, sizeof(struct drm_crtc_funcs));
 
 	/* Then, override the function: */
-	new_funcs->atomic_set_property = somc_panel_sde_crtc_atomic_set_property_override;
+	new_funcs->set_property = somc_panel_sde_crtc_set_property_override;
 
 	/* Finally, update the funcs buffer with the overridden function: */
 	crtc->funcs = new_funcs;
