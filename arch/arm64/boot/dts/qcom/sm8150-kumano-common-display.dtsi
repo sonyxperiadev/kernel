@@ -141,6 +141,24 @@
 	status = "disabled";
 };
 
+&sde_dp {
+	vdda-0p9-supply = <&pm8150_l18>;
+
+	qcom,phy-supply-entries {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		qcom,phy-supply-entry@0 {
+			reg = <0>;
+			qcom,supply-name = "vdda-0p9";
+			qcom,supply-min-voltage = <880000>;
+			qcom,supply-max-voltage = <912000>;
+			qcom,supply-enable-load = <36000>;
+			qcom,supply-disable-load = <0>;
+		};
+	};
+};
+
 &mdss_mdp {
 	connectors = <&sde_rscc &sde_wb &sde_dp &dsi_panel_cmd_display>;
 };
