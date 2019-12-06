@@ -998,6 +998,10 @@
 	status = "okay";
 };
 
+&display_panel_avdd_eldo {
+	status = "disabled";
+};
+
 &pm8150_gpios {
 	qcom,gpios-disallowed = <2 5 8>;
 
