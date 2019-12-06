@@ -2935,6 +2935,19 @@
 	pinctrl-1 = <&wcd_usbc_analog_en2_idle>;
 };
 
+&wcd9360_cdc {
+	qcom,cdc-vdd-mic-bias-voltage = <3350000 3350000>;
+	qcom,cdc-vdd-pa-voltage = <3350000 3350000>;
+};
+
+&wcd934x_cdc {
+	qcom,cdc-vdd-3v3-voltage = <3350000 3350000>;
+};
+
+&aqt1000_cdc {
+	qcom,cdc-vdd-vbat-voltage = <3350000 3350000>;
+};
+
 &tlmm {
 	/* USB C analog configuration */
 	wcd_usbc_analog_en1 {
