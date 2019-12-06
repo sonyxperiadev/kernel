@@ -4011,3 +4011,11 @@
 &usb1 {
 	status = "disabled";
 };
+
+&usb2_phy1 {
+	status = "disabled";
+};
+
+&usb_qmp_phy {
+	status = "disabled";
+};
