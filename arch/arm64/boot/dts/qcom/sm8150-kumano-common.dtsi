@@ -932,6 +932,21 @@
 	status = "disabled";
 };
 
+
+/* BOB is at 3.35Vmin on Kumano boards */
+&wcd9360_cdc {
+	cdc-vdd-mic-bias-supply = <&pm8150l_bob>;
+	qcom,cdc-vdd-mic-bias-voltage = <3350000 3350000>;
+
+	cdc-vdd-pa-supply = <&pm8150l_bob>;
+	qcom,cdc-vdd-pa-voltage = <3350000 3350000>;
+};
+
+&wcd934x_cdc {
+	cdc-vdd-3v3-supply = <&pm8150l_bob>;
+	qcom,cdc-vdd-3v3-voltage = <3350000 3350000>;
+};
+
 &usb0 {
 	dwc3@a600000 {
 		maximum-speed = "super-speed";
