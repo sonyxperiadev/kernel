@@ -1660,7 +1660,7 @@ static int clk_trion_pll_prepare(struct clk_hw *hw)
 	if (regval & PLL_PCAL_DONE)
 		return ret;
 
-	ret = clk_vote_rate_vdd(hw->core, PLL_CAL_L_VAL(pll) * XO_RATE);
+	ret = clk_vote_rate_vdd(hw->core, PLL_CAL * XO_RATE);
 	if (ret)
 		return ret;
 
@@ -1670,7 +1670,7 @@ static int clk_trion_pll_prepare(struct clk_hw *hw)
 
 	alpha_trion_pll_disable(hw);
 ret_path:
-	clk_unvote_rate_vdd(hw->core, PLL_CAL_L_VAL(pll) * XO_RATE);
+	clk_unvote_rate_vdd(hw->core, PLL_CAL * XO_RATE);
 	return ret;
 }
 
