@@ -2341,15 +2341,15 @@ void dsi_panel_driver_oled_short_det_disable(
 	return;
 }
 
-void dsi_panel_driver_oled_short_det_init_works(struct dsi_display *display)
+int dsi_panel_driver_oled_short_det_init_works(struct dsi_display *display)
 {
-	struct short_detection_ctrl *short_det =
-			&display->panel->spec_pdata->short_det;
+	struct panel_specific_pdata *spec_pdata = display->panel->spec_pdata;
+	struct short_detection_ctrl *short_det = &spec_pdata->short_det;
 	int rc = 0;
 
 	if (display == NULL || short_det == NULL) {
 		pr_err("%s: Invalid input data\n", __func__);
-		return;
+		return -EINVAL;
 	}
 
 	INIT_DELAYED_WORK(&short_det->check_work,
@@ -2359,20 +2359,27 @@ void dsi_panel_driver_oled_short_det_init_works(struct dsi_display *display)
 	short_det->short_check_working = false;
 	short_det->target_chatter_check_interval =
 				SHORT_DEFAULT_TARGET_CHATTER_INTERVAL;
-	short_det->irq_num = gpio_to_irq(SHORT_FLAG);
+
+	if (!gpio_is_valid(spec_pdata->disp_err_fg_gpio)) {
+		pr_err("%s: disp error flag gpio is invalid\n", __func__);
+		return -EINVAL;
+	}
+	short_det->irq_num = gpio_to_irq(spec_pdata->disp_err_fg_gpio);
 
 	rc = request_irq(short_det->irq_num,
 			dsi_panel_driver_oled_short_det_handler,
 			SHORT_IRQF_FLAGS, "disp_err_fg_gpio", display);
 	if (rc) {
 		pr_err("Failed to irq request rc=%d\n",	rc);
-		return;
-		}
+		return rc;
+	}
 
 	dsi_panel_driver_oled_short_det_disable(display->panel->spec_pdata);
 	if (display->is_cont_splash_enabled)
 		dsi_panel_driver_oled_short_det_enable(
 			display->panel->spec_pdata, SHORT_WORKER_PASSIVE);
+
+	return 0;
 }
 
 void dsi_panel_driver_oled_short_check_worker(struct work_struct *work)

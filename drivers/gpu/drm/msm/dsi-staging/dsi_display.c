@@ -5278,7 +5278,7 @@ static int dsi_display_init(struct dsi_display *display)
 
 #ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
 	if (display->panel->spec_pdata->oled_disp) {
-		dsi_panel_driver_oled_short_det_init_works(display);
+		rc = dsi_panel_driver_oled_short_det_init_works(display);
 	}
 #endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 
