@@ -2533,17 +2533,7 @@ int sec_ts_stop_device(struct sec_ts_data *ts)
 int sec_ts_start_device(struct sec_ts_data *ts)
 {
 	int ret, lock_ret = 0;
-
 	input_info(true, &ts->client->dev, "%s: start\n", __func__);
-
-	if (ts->after_work.err) {
-		input_err(true, &ts->client->dev, "%s: failed after_init_work. Call after_init\n", __func__);
-		ret = sec_ts_after_init(ts);
-		if (ret) {
-			input_err(true, &ts->client->dev, "%s: failed after_init\n");
-			return ret;
-		}
-	}
 
 	if (ts->plat_data->sod_mode.status && ts->power_status == SEC_TS_STATE_LPM) {
 		sec_ts_set_lowpowermode(ts, TO_TOUCH_MODE);
@@ -2557,6 +2547,18 @@ int sec_ts_start_device(struct sec_ts_data *ts)
 	}
 
 	mutex_lock(&ts->device_mutex);
+
+	if (unlikely(ts->after_work.err)) {
+		input_err(true, &ts->client->dev,
+			  "%s: failed after_init_work. Call after_init\n",
+			  __func__);
+
+		ret = sec_ts_after_init(ts);
+		if (ret) {
+			input_err(true, &ts->client->dev, "%s: failed after_init\n");
+			goto init_err;
+		}
+	}
 
 	sec_ts_locked_release_all_finger(ts);
 
@@ -2623,9 +2625,9 @@ int sec_ts_start_device(struct sec_ts_data *ts)
 	}
 
 err:
-
 	sec_ts_set_irq(ts, true);
 
+init_err:
 	lock_ret = sec_ts_pw_lock(ts, INCELL_DISPLAY_POWER_UNLOCK);
 	if (lock_ret) {
 		input_err(true, &ts->client->dev, "failed unlock power\n");
