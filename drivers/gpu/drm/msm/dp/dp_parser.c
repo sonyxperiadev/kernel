@@ -333,7 +333,9 @@ static int dp_parser_get_vreg(struct dp_parser *parser,
 	pm_supply_name = dp_parser_supply_node_name(module);
 	supply_root_node = of_get_child_by_name(of_node, pm_supply_name);
 	if (!supply_root_node) {
-		pr_err("no supply entry present: %s\n", pm_supply_name);
+		if (strncmp("???", pm_supply_name, 3) != 0)
+			pr_err("no supply entry present: %s\n",
+				pm_supply_name);
 		goto novreg;
 	}
 
