@@ -2558,6 +2558,8 @@ int sec_ts_start_device(struct sec_ts_data *ts)
 			input_err(true, &ts->client->dev, "%s: failed after_init\n");
 			goto init_err;
 		}
+
+		sec_ts_set_lowpowermode(ts, TO_TOUCH_MODE);
 	}
 
 	sec_ts_locked_release_all_finger(ts);
