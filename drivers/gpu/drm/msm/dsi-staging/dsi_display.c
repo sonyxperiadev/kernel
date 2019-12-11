@@ -7438,11 +7438,7 @@ int dsi_display_enable(struct dsi_display *display)
 	}
 
 	if (mode->priv_info->dsc_enabled) {
-#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
-		mode->priv_info->dsc.pic_width = mode->timing.h_active * display->ctrl_count;
-#else
 		mode->priv_info->dsc.pic_width *= display->ctrl_count;
-#endif
 		rc = dsi_panel_update_pps(display->panel);
 		if (rc) {
 			pr_err("[%s] panel pps cmd update failed, rc=%d\n",
