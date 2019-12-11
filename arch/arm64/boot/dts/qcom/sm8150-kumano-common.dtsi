@@ -3494,6 +3494,18 @@
 
 };
 
+&pahu_wdsp {
+	status = "disabled";
+};
+
+&wcd9360_cdc {
+	status = "disabled";
+};
+
+&snd_9360 {
+	status = "disabled";
+};
+
 &tlmm {
 	/* USB C analog configuration */
 	wcd_usbc_analog_en1 {
