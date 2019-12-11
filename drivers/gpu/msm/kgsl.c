@@ -369,6 +369,10 @@ kgsl_mem_entry_destroy(struct kref *kref)
 	/* pull out the memtype before the flags get cleared */
 	memtype = kgsl_memdesc_usermem_type(&entry->memdesc);
 
+	if (!(entry->memdesc.flags & KGSL_MEMFLAGS_SPARSE_VIRT))
+		kgsl_process_sub_stats(entry->priv, memtype,
+			entry->memdesc.size);
+
 	/* Detach from process list */
 	kgsl_mem_entry_detach_process(entry);
 
@@ -527,7 +531,6 @@ static void kgsl_mem_entry_detach_process(struct kgsl_mem_entry *entry)
 	entry->id = 0;
 
 	type = kgsl_memdesc_usermem_type(&entry->memdesc);
-	entry->priv->stats[type].cur -= entry->memdesc.size;
 
 	if (type != KGSL_MEM_ENTRY_ION)
 		entry->priv->gpumem_mapped -= entry->memdesc.mapsize;
@@ -834,23 +837,30 @@ static int kgsl_suspend_device(struct kgsl_device *device, pm_message_t state)
 
 	mutex_lock(&device->mutex);
 	status = kgsl_pwrctrl_change_state(device, KGSL_STATE_SUSPEND);
-	if (status == 0 && device->state == KGSL_STATE_SUSPEND)
-		device->ftbl->dispatcher_halt(device);
+	if (!status)
+		status = device->ftbl->suspend_device(device, state);
 	mutex_unlock(&device->mutex);
 
 	KGSL_PWR_WARN(device, "suspend end\n");
 	return status;
 }
 
-static int kgsl_resume_device(struct kgsl_device *device)
+static int kgsl_resume_device(struct kgsl_device *device, pm_message_t state)
 {
+	int ret;
+
 	if (!device)
 		return -EINVAL;
 
 	KGSL_PWR_WARN(device, "resume start\n");
 	mutex_lock(&device->mutex);
+	ret = device->ftbl->resume_device(device, state);
+	if (ret) {
+		mutex_unlock(&device->mutex);
+		return ret;
+	}
+
 	if (device->state == KGSL_STATE_SUSPEND) {
-		device->ftbl->dispatcher_unhalt(device);
 		kgsl_pwrctrl_change_state(device, KGSL_STATE_SLUMBER);
 	} else if (device->state != KGSL_STATE_INIT) {
 		/*
@@ -873,18 +883,44 @@ static int kgsl_resume_device(struct kgsl_device *device)
 
 static int kgsl_suspend(struct device *dev)
 {
-
-	pm_message_t arg = {0};
 	struct kgsl_device *device = dev_get_drvdata(dev);
 
-	return kgsl_suspend_device(device, arg);
+	return kgsl_suspend_device(device, PMSG_SUSPEND);
+}
+
+static int kgsl_freeze(struct device *dev)
+{
+	struct kgsl_device *device = dev_get_drvdata(dev);
+
+	return kgsl_suspend_device(device, PMSG_FREEZE);
+}
+
+static int kgsl_poweroff(struct device *dev)
+{
+	struct kgsl_device *device = dev_get_drvdata(dev);
+
+	return kgsl_suspend_device(device, PMSG_HIBERNATE);
 }
 
 static int kgsl_resume(struct device *dev)
 {
 	struct kgsl_device *device = dev_get_drvdata(dev);
 
-	return kgsl_resume_device(device);
+	return kgsl_resume_device(device, PMSG_RESUME);
+}
+
+static int kgsl_thaw(struct device *dev)
+{
+	struct kgsl_device *device = dev_get_drvdata(dev);
+
+	return kgsl_resume_device(device, PMSG_THAW);
+}
+
+static int kgsl_restore(struct device *dev)
+{
+	struct kgsl_device *device = dev_get_drvdata(dev);
+
+	return kgsl_resume_device(device, PMSG_RESTORE);
 }
 
 static int kgsl_runtime_suspend(struct device *dev)
@@ -900,6 +936,10 @@ static int kgsl_runtime_resume(struct device *dev)
 const struct dev_pm_ops kgsl_pm_ops = {
 	.suspend = kgsl_suspend,
 	.resume = kgsl_resume,
+	.freeze = kgsl_freeze,
+	.thaw = kgsl_thaw,
+	.poweroff = kgsl_poweroff,
+	.restore = kgsl_restore,
 	.runtime_suspend = kgsl_runtime_suspend,
 	.runtime_resume = kgsl_runtime_resume,
 };
@@ -918,7 +958,7 @@ int kgsl_resume_driver(struct platform_device *pdev)
 {
 	struct kgsl_device *device = dev_get_drvdata(&pdev->dev);
 
-	return kgsl_resume_device(device);
+	return kgsl_resume_device(device, PMSG_RESUME);
 }
 EXPORT_SYMBOL(kgsl_resume_driver);
 
@@ -1407,6 +1447,81 @@ static inline bool kgsl_mem_entry_set_pend(struct kgsl_mem_entry *entry)
 	return ret;
 }
 
+static inline int kgsl_get_ctxt_fault_stats(struct kgsl_context *context,
+		struct kgsl_context_property *ctxt_property)
+{
+	struct kgsl_context_property_fault fault_stats;
+	size_t copy;
+
+	/* Return the size of the subtype struct */
+	if (ctxt_property->size == 0) {
+		ctxt_property->size = sizeof(fault_stats);
+		return 0;
+	}
+
+	memset(&fault_stats, 0, sizeof(fault_stats));
+
+	copy = min_t(size_t, ctxt_property->size, sizeof(fault_stats));
+
+	fault_stats.faults = context->total_fault_count;
+	fault_stats.timestamp = context->last_faulted_cmd_ts;
+
+	/*
+	 * Copy the context fault stats to data which also serves as
+	 * the out parameter.
+	 */
+	if (copy_to_user(u64_to_user_ptr(ctxt_property->data),
+				&fault_stats, copy))
+		return -EFAULT;
+
+	return 0;
+}
+
+static inline int kgsl_get_ctxt_properties(struct kgsl_device_private *dev_priv,
+		struct kgsl_device_getproperty *param)
+{
+	/* Return fault stats of given context */
+	struct kgsl_context_property ctxt_property;
+	struct kgsl_context *context;
+	size_t copy;
+	int ret = 0;
+
+	/*
+	 * If sizebytes is zero, tell the user how big the
+	 * ctxt_property struct should be.
+	 */
+	if (param->sizebytes == 0) {
+		param->sizebytes = sizeof(ctxt_property);
+		return 0;
+	}
+
+	memset(&ctxt_property, 0, sizeof(ctxt_property));
+
+	copy = min_t(size_t, param->sizebytes, sizeof(ctxt_property));
+
+	/* We expect the value passed in to contain the context id */
+	if (copy_from_user(&ctxt_property, param->value, copy))
+		return -EFAULT;
+
+	/* ctxt type zero is not valid, as we consider it as uninitialized. */
+	if (ctxt_property.type == 0)
+		return -EINVAL;
+
+	context = kgsl_context_get_owner(dev_priv,
+			ctxt_property.contextid);
+	if (!context)
+		return -EINVAL;
+
+	if (ctxt_property.type == KGSL_CONTEXT_PROP_FAULTS)
+		ret = kgsl_get_ctxt_fault_stats(context, &ctxt_property);
+	else
+		ret = -EOPNOTSUPP;
+
+	kgsl_context_put(context);
+
+	return ret;
+}
+
 /*call all ioctl sub functions with driver locked*/
 long kgsl_ioctl_device_getproperty(struct kgsl_device_private *dev_priv,
 					  unsigned int cmd, void *data)
@@ -1509,6 +1624,9 @@ long kgsl_ioctl_device_getproperty(struct kgsl_device_private *dev_priv,
 
 		break;
 	}
+	case KGSL_PROP_CONTEXT_PROPERTY:
+		result = kgsl_get_ctxt_properties(dev_priv, param);
+		break;
 	default:
 		if (is_compat_task())
 			result = dev_priv->device->ftbl->getproperty_compat(
@@ -3423,11 +3541,15 @@ long kgsl_ioctl_sparse_phys_alloc(struct kgsl_device_private *dev_priv,
 	unsigned int cmd, void *data)
 {
 	struct kgsl_process_private *process = dev_priv->process_priv;
+	struct kgsl_device *device = dev_priv->device;
 	struct kgsl_sparse_phys_alloc *param = data;
 	struct kgsl_mem_entry *entry;
 	uint64_t flags;
 	int ret;
 	int id;
+
+	if (!(device->flags & KGSL_FLAG_SPARSE))
+		return -ENOTSUPP;
 
 	ret = _sparse_alloc_param_sanity_check(param->size, param->pagesize);
 	if (ret)
@@ -3482,6 +3604,10 @@ long kgsl_ioctl_sparse_phys_alloc(struct kgsl_device_private *dev_priv,
 	param->id = entry->id;
 	param->flags = entry->memdesc.flags;
 
+	kgsl_process_add_stats(process,
+			kgsl_memdesc_usermem_type(&entry->memdesc),
+			entry->memdesc.size);
+
 	trace_sparse_phys_alloc(entry->id, param->size, param->pagesize);
 	kgsl_mem_entry_commit_process(entry);
 
@@ -3508,8 +3634,12 @@ long kgsl_ioctl_sparse_phys_free(struct kgsl_device_private *dev_priv,
 	unsigned int cmd, void *data)
 {
 	struct kgsl_process_private *process = dev_priv->process_priv;
+	struct kgsl_device *device = dev_priv->device;
 	struct kgsl_sparse_phys_free *param = data;
 	struct kgsl_mem_entry *entry;
+
+	if (!(device->flags & KGSL_FLAG_SPARSE))
+		return -ENOTSUPP;
 
 	entry = kgsl_sharedmem_find_id_flags(process, param->id,
 			KGSL_MEMFLAGS_SPARSE_PHYS);
@@ -3540,9 +3670,13 @@ long kgsl_ioctl_sparse_virt_alloc(struct kgsl_device_private *dev_priv,
 	unsigned int cmd, void *data)
 {
 	struct kgsl_process_private *private = dev_priv->process_priv;
+	struct kgsl_device *device = dev_priv->device;
 	struct kgsl_sparse_virt_alloc *param = data;
 	struct kgsl_mem_entry *entry;
 	int ret;
+
+	if (!(device->flags & KGSL_FLAG_SPARSE))
+		return -ENOTSUPP;
 
 	ret = _sparse_alloc_param_sanity_check(param->size, param->pagesize);
 	if (ret)
@@ -3584,8 +3718,12 @@ long kgsl_ioctl_sparse_virt_free(struct kgsl_device_private *dev_priv,
 	unsigned int cmd, void *data)
 {
 	struct kgsl_process_private *process = dev_priv->process_priv;
+	struct kgsl_device *device = dev_priv->device;
 	struct kgsl_sparse_virt_free *param = data;
 	struct kgsl_mem_entry *entry = NULL;
+
+	if (!(device->flags & KGSL_FLAG_SPARSE))
+		return -ENOTSUPP;
 
 	entry = kgsl_sharedmem_find_id_flags(process, param->id,
 			KGSL_MEMFLAGS_SPARSE_VIRT);
@@ -3933,6 +4071,7 @@ long kgsl_ioctl_sparse_bind(struct kgsl_device_private *dev_priv,
 		unsigned int cmd, void *data)
 {
 	struct kgsl_process_private *private = dev_priv->process_priv;
+	struct kgsl_device *device = dev_priv->device;
 	struct kgsl_sparse_bind *param = data;
 	struct kgsl_sparse_binding_object obj;
 	struct kgsl_mem_entry *virt_entry;
@@ -3940,6 +4079,9 @@ long kgsl_ioctl_sparse_bind(struct kgsl_device_private *dev_priv,
 	void __user *ptr;
 	int ret = 0;
 	int i = 0;
+
+	if (!(device->flags & KGSL_FLAG_SPARSE))
+		return -ENOTSUPP;
 
 	ptr = (void __user *) (uintptr_t) param->list;
 
@@ -3995,6 +4137,9 @@ long kgsl_ioctl_gpu_sparse_command(struct kgsl_device_private *dev_priv,
 	struct kgsl_drawobj_sparse *sparseobj;
 	long result;
 	unsigned int i = 0;
+
+	if (!(device->flags & KGSL_FLAG_SPARSE))
+		return -ENOTSUPP;
 
 	/* Make sure sparse and syncpoint count isn't too big */
 	if (param->numsparse > KGSL_MAX_SPARSE ||
@@ -4764,6 +4909,9 @@ int kgsl_device_platform_probe(struct kgsl_device *device)
 
 	/* Initialize logging first, so that failures below actually print. */
 	kgsl_device_debugfs_init(device);
+
+	/* Disable the sparse ioctl invocation as they are not used */
+	device->flags &= ~KGSL_FLAG_SPARSE;
 
 	status = kgsl_pwrctrl_init(device);
 	if (status)
