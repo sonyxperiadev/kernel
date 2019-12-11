@@ -2533,6 +2533,9 @@ int sec_ts_stop_device(struct sec_ts_data *ts)
 int sec_ts_start_device(struct sec_ts_data *ts)
 {
 	int ret, lock_ret = 0;
+	u8 cmd_ena = 0x01;
+	u8 cmd_dis = 0;
+
 	input_info(true, &ts->client->dev, "%s: start\n", __func__);
 
 	if (ts->plat_data->sod_mode.status && ts->power_status == SEC_TS_STATE_LPM) {
@@ -2560,6 +2563,11 @@ int sec_ts_start_device(struct sec_ts_data *ts)
 		}
 
 		sec_ts_set_lowpowermode(ts, TO_TOUCH_MODE);
+
+		ts->sec_ts_i2c_write(ts, SEC_TS_CMD_GRIP_REJECTION,
+				     &cmd_ena, 1);
+		ts->sec_ts_i2c_write(ts, SEC_TS_CMD_ENABLE_SIDETOUCH,
+				     &cmd_dis, 1);
 	}
 
 	sec_ts_locked_release_all_finger(ts);
