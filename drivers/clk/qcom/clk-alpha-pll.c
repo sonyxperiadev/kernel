@@ -1725,7 +1725,7 @@ static int alpha_trion_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 
 	/* Return latch input to 0 */
 	ret = regmap_update_bits(pll->clkr.regmap, PLL_MODE(pll),
-		PLL_UPDATE, (u32)~PLL_UPDATE);
+		PLL_UPDATE, 0);
 	if (ret)
 		return ret;
 
