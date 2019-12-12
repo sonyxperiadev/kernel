@@ -3149,9 +3149,11 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 			pr_err("failed to parse panel gpios, rc=%d\n", rc);
 
 		rc = dsi_panel_parse_bl_config(panel, of_node);
-		if (rc)
+		if (rc) {
 			pr_err("failed to parse backlight config, rc=%d\n", rc);
-
+			if (rc == -EPROBE_DEFER)
+				goto error;
+		}
 
 		rc = dsi_panel_parse_misc_features(panel, of_node);
 		if (rc)
