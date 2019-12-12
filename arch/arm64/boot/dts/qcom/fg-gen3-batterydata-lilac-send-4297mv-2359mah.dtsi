@@ -1,0 +1,25 @@
+/*
+ * Copyright (c) 2017, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+qcom,send_2539mah {
+	qcom, = <24>;
+	qcom,max-voltage-uv = <4297000>;
+	qcom,fg-cc-cv-threshold-mv = <4287>;
+	qcom,fastchg-current-ma = <2025>;
+	qcom,batt-id-kohm = <330>;
+	qcom,battery-beta = <4050>;
+	qcom,battery-type = "1308-1851-3";
+	qcom,checksum = <0x1d5a>;
+	qcom,gui-version = "PMI8998GUI - 2.0.0.58";
+	qcom,fg-profile-data = <0xec1f6c05 0x4a0a23fd 0x6d1c6a02 0x8a0d4d0a 0x1018a622 0x2a3cdf4b 0x86000000 0x15000000 0x2db3 0x33cc8ccb 0x30000800 0xa8e52dcc 0xc40551fa 0xd6053a03 0xddfda732 0x22060920 0x27001400 0xba20bb04 0xcc0a1dfc 0x8c1cd502 0xdb0ce20a 0x8518cb22 0xb8459d52 0x83000000 0x12000000 0x47cc 0xc4c30200 0x28000000 0x4ee32dcc 0x17fca3f3 0xf2065f03 0xa406a212 0x9c33ccff 0x7100000 0x310ac044 0x28004000 0x93010afa 0xff000000 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00>;
+};
