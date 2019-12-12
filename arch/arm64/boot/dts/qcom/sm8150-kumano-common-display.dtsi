@@ -108,7 +108,7 @@
 			      "mux_byte_clk1", "mux_pixel_clk1";
 
 		pinctrl-names = "panel_active", "panel_suspend",
-				"ts_int_active", "ts_suspend";
+				"sde_touch_active", "sde_touch_suspend";
 		pinctrl-0 = <&sm_gpio_6 &te_active>;
 		pinctrl-1 = <&sm_gpio_6 &te_suspend>;
 		pinctrl-2 = <&ts_int_active>;

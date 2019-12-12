@@ -3492,6 +3492,28 @@
 	pinctrl-0 = <&wcd_usbc_analog_en2_active>;
 	pinctrl-1 = <&wcd_usbc_analog_en2_idle>;
 
+	qcom,wsa-devs = <&wsa881x_70213>, <&wsa881x_70214>;
+	qcom,wsa-aux-dev-prefix = "SpkrLeft", "SpkrRight";
+};
+
+&wsa881x_70211 {
+	status = "disabled";
+};
+
+&wsa881x_70212 {
+	status = "disabled";
+};
+
+&pahu_wdsp {
+	status = "disabled";
+};
+
+&wcd9360_cdc {
+	status = "disabled";
+};
+
+&snd_9360 {
+	status = "disabled";
 };
 
 &tlmm {
