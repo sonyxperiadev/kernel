@@ -19,6 +19,18 @@
 #include "cam_common_util.h"
 #include "cam_packet_util.h"
 
+static struct cam_sensor_i2c_reg_array bu64747_set_dac_array[9] = {
+	{ 0x8A, 0x00, 0, 0 },
+	{ 0x8A, 0x00, 0, 0 },
+	{ 0x8A, 0x00, 0, 0 },
+	{ 0x8A, 0x55, 0, 0 },
+	{ 0x8A, 0xA8, 0, 0 },
+	{ 0x8A, 0x00, 0, 0 },
+	{ 0x8A, 0x00, 0, 0 },
+	{ 0x8A, 0x00, 0, 0 },
+	{ 0x8A, 0x00, 0, 0 },
+};
+
 int32_t cam_actuator_construct_default_power_setting(
 	struct cam_sensor_power_ctrl_t *power_info)
 {
@@ -162,6 +174,40 @@ static int32_t cam_actuator_i2c_modes_util(
 	uint32_t i, size;
 
 	if (i2c_list->op_code == CAM_SENSOR_I2C_WRITE_RANDOM) {
+		/* bu64747: override i2c commands for set_dac */
+		if (io_master_info->cci_client->sid == (0xEC >> 1) &&
+		    i2c_list->i2c_settings.reg_setting[0].reg_addr == 0x8A &&
+		    i2c_list->i2c_settings.addr_type == 1 &&
+		    i2c_list->i2c_settings.data_type == 2 &&
+		    i2c_list->i2c_settings.size == 1) {
+			struct cam_sensor_i2c_reg_array *orig = i2c_list->i2c_settings.reg_setting;
+			uint16_t bu64747_dac = i2c_list->i2c_settings.reg_setting[0].reg_data;
+
+			CAM_DBG(CAM_ACTUATOR, "bu64747: set new dac value %d.", bu64747_dac);
+			bu64747_set_dac_array[1].reg_data = bu64747_dac & 0x00FF;
+			bu64747_set_dac_array[2].reg_data = (bu64747_dac & 0x0300) >> 8;
+			i2c_list->i2c_settings.data_type = 1;
+			i2c_list->i2c_settings.size = 9;
+			i2c_list->i2c_settings.reg_setting = bu64747_set_dac_array;
+			rc = camera_io_dev_write_continuous(io_master_info, &(i2c_list->i2c_settings), 0);
+			i2c_list->i2c_settings.reg_setting = orig;
+			return rc;
+		}
+
+		/* bu64253: override i2c commands for set_dac */
+		if (io_master_info->cci_client->sid == (0x18 >> 1) &&
+		    i2c_list->i2c_settings.reg_setting[0].reg_addr == 0xC0 &&
+		    i2c_list->i2c_settings.addr_type == 1 &&
+		    i2c_list->i2c_settings.data_type == 2 &&
+		    i2c_list->i2c_settings.size == 1) {
+			uint16_t bu64253_dac = i2c_list->i2c_settings.reg_setting[0].reg_data;
+
+			CAM_DBG(CAM_ACTUATOR, "bu64253: set new dac value %d.", bu64253_dac);
+			i2c_list->i2c_settings.data_type = 1;
+			i2c_list->i2c_settings.reg_setting[0].reg_addr = 0xC0 | ((bu64253_dac & 0x0300) >> 8);
+			i2c_list->i2c_settings.reg_setting[0].reg_data = bu64253_dac & 0x00FF;
+		}
+
 		rc = camera_io_dev_write(io_master_info,
 			&(i2c_list->i2c_settings));
 		if (rc < 0) {

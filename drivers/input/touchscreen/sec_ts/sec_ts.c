@@ -1898,6 +1898,9 @@ static int sec_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 	input_info(true, &ts->client->dev, "%s: done\n", __func__);
 	input_log_fix();
 
+	ts->after_work.err = true;
+//	schedule_delayed_work(&ts->after_work.start, 0);
+
 	return 0;
 
 err_input_side_register_device:
@@ -2530,17 +2533,10 @@ int sec_ts_stop_device(struct sec_ts_data *ts)
 int sec_ts_start_device(struct sec_ts_data *ts)
 {
 	int ret, lock_ret = 0;
+	u8 cmd_ena = 0x01;
+	u8 cmd_dis = 0;
 
 	input_info(true, &ts->client->dev, "%s: start\n", __func__);
-
-	if (ts->after_work.err) {
-		input_err(true, &ts->client->dev, "%s: failed after_init_work. Call after_init\n", __func__);
-		ret = sec_ts_after_init(ts);
-		if (ret) {
-			input_err(true, &ts->client->dev, "%s: failed after_init\n");
-			return ret;
-		}
-	}
 
 	if (ts->plat_data->sod_mode.status && ts->power_status == SEC_TS_STATE_LPM) {
 		sec_ts_set_lowpowermode(ts, TO_TOUCH_MODE);
@@ -2554,6 +2550,25 @@ int sec_ts_start_device(struct sec_ts_data *ts)
 	}
 
 	mutex_lock(&ts->device_mutex);
+
+	if (unlikely(ts->after_work.err)) {
+		input_err(true, &ts->client->dev,
+			  "%s: failed after_init_work. Call after_init\n",
+			  __func__);
+
+		ret = sec_ts_after_init(ts);
+		if (ret) {
+			input_err(true, &ts->client->dev, "%s: failed after_init\n");
+			goto init_err;
+		}
+
+		sec_ts_set_lowpowermode(ts, TO_TOUCH_MODE);
+
+		ts->sec_ts_i2c_write(ts, SEC_TS_CMD_GRIP_REJECTION,
+				     &cmd_ena, 1);
+		ts->sec_ts_i2c_write(ts, SEC_TS_CMD_ENABLE_SIDETOUCH,
+				     &cmd_dis, 1);
+	}
 
 	sec_ts_locked_release_all_finger(ts);
 
@@ -2620,9 +2635,9 @@ int sec_ts_start_device(struct sec_ts_data *ts)
 	}
 
 err:
-
 	sec_ts_set_irq(ts, true);
 
+init_err:
 	lock_ret = sec_ts_pw_lock(ts, INCELL_DISPLAY_POWER_UNLOCK);
 	if (lock_ret) {
 		input_err(true, &ts->client->dev, "failed unlock power\n");

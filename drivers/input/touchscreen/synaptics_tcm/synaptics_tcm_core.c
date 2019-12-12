@@ -43,6 +43,7 @@
 #include <linux/kthread.h>
 #include <linux/interrupt.h>
 #include <linux/regulator/consumer.h>
+#include <uapi/linux/sched/types.h>
 
 /* SOMC_TOUCH_BRINGUP start */
 #include <linux/platform_device.h>
@@ -3329,6 +3330,14 @@ static int syna_tcm_probe(struct platform_device *pdev)
 #ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
 	int retry;
 	incell_pw_status status = { false, false };
+
+	if (!incell_touch_is_compatible(INCELL_TOUCH_TYPE_TCM)) {
+		dev_notice(&pdev->dev,
+			"%s: Detected panel is not TCM,"
+			" returning ENODEV\n",
+			__func__);
+		return -ENODEV;
+	}
 #endif
 
 	hw_if = pdev->dev.platform_data;
@@ -3532,6 +3541,10 @@ static int syna_tcm_probe(struct platform_device *pdev)
 	INIT_DELAYED_WORK(&tcm_hcd->polling_work, syna_tcm_polling_work);
 
 #ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+	retval = incell_control_mode(INCELL_CONT_SPLASH_TOUCH_ENABLE, false);
+	if (retval)
+		LOGE(tcm_hcd->pdev->dev.parent, "%s failed to INCELL_CONT_SPLASH_TOUCH_ENABLE retval=%d\n", __func__, retval);
+
 	for (retry = 0; retry < SYN_LOCK_POWER_RETRY_NUM; retry++) {
 		if (touchctrl_is_touch_powered(tcm_hcd)) {
 

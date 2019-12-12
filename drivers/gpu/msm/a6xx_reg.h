@@ -410,6 +410,8 @@
 
 #define A6XX_RBBM_VBIF_CLIENT_QOS_CNTL   0x00010
 #define A6XX_RBBM_GBIF_CLIENT_QOS_CNTL   0x00011
+#define A6XX_RBBM_GBIF_HALT              0x00016
+#define A6XX_RBBM_GBIF_HALT_ACK          0x00017
 #define A6XX_RBBM_GPR0_CNTL              0x00018
 #define A6XX_RBBM_INTERFACE_HANG_INT_CNTL 0x0001f
 #define A6XX_RBBM_INT_CLEAR_CMD          0x00037
@@ -531,6 +533,30 @@
 #define A6XX_RBBM_CLOCK_MODE_HLSQ	 0x0011b
 #define A6XX_RBBM_CLOCK_DELAY_HLSQ       0x0011c
 #define A6XX_RBBM_CLOCK_HYST_HLSQ        0x0011d
+
+/* ISDB SP0 and SP1 registers */
+#define A6XX_SP0_ISDB_ISDB_EN                           0xf40001
+#define A6XX_SP0_ISDB_ISDB_BRKPT_CFG                    0xf40005
+#define A6XX_SP0_ISDB_ISDB_SHADER_ID_CFG                0xf40006
+#define A6XX_SP0_ISDB_ISDB_WAVE_ID_CFG                  0xf40007
+#define A6XX_SP0_ISDB_ISDB_SAC_CFG                      0xf40024
+#define A6XX_SP0_ISDB_ISDB_SAC_ADDR_0                   0xf40020
+#define A6XX_SP0_ISDB_ISDB_SAC_ADDR_1                   0xf40021
+#define A6XX_SP0_ISDB_ISDB_SAC_MASK_0                   0xf40022
+#define A6XX_SP0_ISDB_ISDB_SAC_MASK_1                   0xf40023
+#define A6XX_HLSQ_ISDB_ISDB_HLSQ_ISDB_CL_WGID_CTRL      0xf44000
+#define A6XX_HLSQ_ISDB_ISDB_HLSQ_ISDB_CL_WGID_X         0xf44001
+#define A6XX_HLSQ_ISDB_ISDB_HLSQ_ISDB_CL_WGID_Y         0xf44002
+#define A6XX_HLSQ_ISDB_ISDB_HLSQ_ISDB_CL_WGID_Z         0xf44003
+#define A6XX_SP1_ISDB_ISDB_EN                           0xf40401
+#define A6XX_SP1_ISDB_ISDB_SAC_CFG                      0xf40424
+#define A6XX_SP1_ISDB_ISDB_SAC_ADDR_0                   0xf40420
+#define A6XX_SP1_ISDB_ISDB_SAC_ADDR_1                   0xf40421
+#define A6XX_SP1_ISDB_ISDB_SAC_MASK_0                   0xf40422
+#define A6XX_SP1_ISDB_ISDB_SAC_MASK_1                   0xf40423
+#define A6XX_SP1_ISDB_ISDB_SHADER_ID_CFG                0xf40406
+#define A6XX_SP1_ISDB_ISDB_WAVE_ID_CFG                  0xf40407
+#define A6XX_SP1_ISDB_ISDB_BRKPT_CFG                    0xf40405
 
 /* DBGC_CFG registers */
 #define A6XX_DBGC_CFG_DBGBUS_SEL_A                  0x600
@@ -829,6 +855,7 @@
 
 #define A6XX_GBIF_CLIENT_HALT_MASK        BIT(0)
 #define A6XX_GBIF_ARB_HALT_MASK           BIT(1)
+#define A6XX_GBIF_GX_HALT_MASK            BIT(0)
 
 #define A6XX_GBIF_PERF_PWR_CNT_EN         0x3cc0
 #define A6XX_GBIF_PERF_CNT_SEL            0x3cc2

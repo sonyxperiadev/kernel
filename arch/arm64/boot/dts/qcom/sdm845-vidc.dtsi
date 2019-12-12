@@ -125,5 +125,11 @@
 			virtual-addr-pool = <0x1000000 0x24800000>;
 			qcom,secure-context-bank;
 		};
+
+		/* Memory Heaps */
+		qcom,msm-vidc,mem_cdsp {
+			compatible = "qcom,msm-vidc,mem-cdsp";
+			memory-region = <&cdsp_mem>;
+		};
 	};
 };

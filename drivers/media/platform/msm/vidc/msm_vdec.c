@@ -81,8 +81,10 @@ static const char *const vp9_level[] = {
 	"4.1",
 	"5.0",
 	"5.1",
+#ifdef VDEC_VP9_LEVEL61_AVAILABLE
 	"6.0",
 	"6.1",
+#endif
 };
 
 static const char *const mpeg2_profile[] = {
@@ -250,8 +252,8 @@ static struct msm_vidc_ctrl msm_vdec_ctrls[] = {
 		.name = "VP9 Level",
 		.type = V4L2_CTRL_TYPE_MENU,
 		.minimum = V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_UNUSED,
-		.maximum = V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_61,
-		.default_value = V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_61,
+		.maximum = VDEC_VP9_PLATFORM_MAX_LEVEL,
+		.default_value = VDEC_VP9_PLATFORM_MAX_LEVEL,
 		.menu_skip_mask = 0,
 		.qmenu = vp9_level,
 		.flags = V4L2_CTRL_FLAG_VOLATILE | V4L2_CTRL_FLAG_READ_ONLY,
@@ -582,7 +584,9 @@ static bool msm_vidc_check_for_vp9d_overload(struct msm_vidc_core *core)
 int msm_vdec_s_fmt(struct msm_vidc_inst *inst, struct v4l2_format *f)
 {
 	struct msm_vidc_format *fmt = NULL;
+#ifdef VDEC_FORMAT_CONSTRAINTS_SUPPORTED
 	struct msm_vidc_format_constraint *fmt_constraint = NULL;
+#endif
 	struct hal_frame_size frame_sz;
 	unsigned int extra_idx = 0;
 	int rc = 0;
@@ -630,6 +634,7 @@ int msm_vdec_s_fmt(struct msm_vidc_inst *inst, struct v4l2_format *f)
 				msm_comm_get_hal_output_buffer(inst),
 				f->fmt.pix_mp.pixelformat);
 
+#ifdef VDEC_FORMAT_CONSTRAINTS_SUPPORTED
 		fmt_constraint =
 		msm_comm_get_pixel_fmt_constraints(dec_pix_format_constraints,
 			ARRAY_SIZE(dec_pix_format_constraints),
@@ -651,6 +656,7 @@ int msm_vdec_s_fmt(struct msm_vidc_inst *inst, struct v4l2_format *f)
 				goto err_invalid_fmt;
 			}
 		}
+#endif
 
 		inst->clk_data.opb_fourcc = f->fmt.pix_mp.pixelformat;
 		if (msm_comm_get_stream_output_mode(inst) ==

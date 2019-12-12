@@ -101,12 +101,14 @@
 		qcom,dsi-phy = <&mdss_dsi_phy0 &mdss_dsi_phy1>;
 
 		clocks = <&mdss_dsi0_pll BYTECLK_MUX_0_CLK>,
-			 <&mdss_dsi0_pll PCLK_MUX_0_CLK>;
+			 <&mdss_dsi0_pll PCLK_MUX_0_CLK>,
+			 <&mdss_dsi1_pll BYTECLK_MUX_1_CLK>,
+			 <&mdss_dsi1_pll PCLK_MUX_1_CLK>;
 		clock-names = "mux_byte_clk0", "mux_pixel_clk0",
 			      "mux_byte_clk1", "mux_pixel_clk1";
 
 		pinctrl-names = "panel_active", "panel_suspend",
-				"ts_int_active", "ts_suspend";
+				"sde_touch_active", "sde_touch_suspend";
 		pinctrl-0 = <&sm_gpio_6 &te_active>;
 		pinctrl-1 = <&sm_gpio_6 &te_suspend>;
 		pinctrl-2 = <&ts_int_active>;
@@ -137,6 +139,24 @@
 &sde_dsi1 {
 	/delete-property/ vdd-supply;
 	status = "disabled";
+};
+
+&sde_dp {
+	vdda-0p9-supply = <&pm8150_l18>;
+
+	qcom,phy-supply-entries {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		qcom,phy-supply-entry@0 {
+			reg = <0>;
+			qcom,supply-name = "vdda-0p9";
+			qcom,supply-min-voltage = <880000>;
+			qcom,supply-max-voltage = <912000>;
+			qcom,supply-enable-load = <36000>;
+			qcom,supply-disable-load = <0>;
+		};
+	};
 };
 
 &mdss_mdp {

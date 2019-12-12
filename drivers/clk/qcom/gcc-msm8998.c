@@ -45,13 +45,13 @@ static DEFINE_VDD_REGULATORS(vdd_dig, VDD_DIG_NUM, 1, vdd_corner);
 static DEFINE_VDD_REGULATORS(vdd_dig_ao, VDD_DIG_NUM, 1, vdd_corner);
 
 enum {
+	P_XO,
 	P_CORE_BI_PLL_TEST_SE,
 	P_GPLL0,
 	P_GPLL0_EARLY_DIV,
 	P_GPLL4,
 	P_SLEEP_CLK,
 	P_AUD_REF_CLK,
-	P_XO,
 };
 
 
@@ -234,6 +234,7 @@ static struct clk_alpha_pll_postdiv gpll0_out_main = {
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.post_div_table = clk_alpha_div_table,
 	.post_div_shift = ALPHA_POST_DIV_EVEN_SHIFT,
+	.num_post_div = ARRAY_SIZE(clk_alpha_div_table),
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "gpll0_out_main",
 		.parent_names = (const char *[]){ "gpll0" },
@@ -264,6 +265,7 @@ static struct clk_alpha_pll_postdiv gpll1_out_main = {
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.post_div_table = clk_alpha_div_table,
 	.post_div_shift = ALPHA_POST_DIV_EVEN_SHIFT,
+	.num_post_div = ARRAY_SIZE(clk_alpha_div_table),
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "gpll1_out_main",
 		.parent_names = (const char *[]){ "gpll1" },
@@ -294,6 +296,7 @@ static struct clk_alpha_pll_postdiv gpll2_out_main = {
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.post_div_table = clk_alpha_div_table,
 	.post_div_shift = ALPHA_POST_DIV_EVEN_SHIFT,
+	.num_post_div = ARRAY_SIZE(clk_alpha_div_table),
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "gpll2_out_main",
 		.parent_names = (const char *[]){ "gpll2" },
@@ -324,6 +327,7 @@ static struct clk_alpha_pll_postdiv gpll3_out_main = {
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.post_div_table = clk_alpha_div_table,
 	.post_div_shift = ALPHA_POST_DIV_EVEN_SHIFT,
+	.num_post_div = ARRAY_SIZE(clk_alpha_div_table),
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "gpll3_out_main",
 		.parent_names = (const char *[]){ "gpll3" },
@@ -356,6 +360,7 @@ static struct clk_alpha_pll_postdiv gpll4_out_main = {
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.post_div_table = clk_alpha_div_table,
 	.post_div_shift = ALPHA_POST_DIV_EVEN_SHIFT,
+	.num_post_div = ARRAY_SIZE(clk_alpha_div_table),
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "gpll4_out_main",
 		.parent_names = (const char *[]){ "gpll4" },

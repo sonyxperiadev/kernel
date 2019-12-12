@@ -19,6 +19,7 @@
 	qcom,mdss-dsi-touch-reset-sequence = <1 5>;
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
 	qcom,panel-vspvsn-supply-entries = <&dsi_panel_vspvsn_pwr_supply>;
+	qcom,panel-touch-supply-entries = <&dsi_panel_touch_pwr_supply>;
 	somc,pw-on-rst-seq = "after_power_on";
 	qcom,mdss-dsi-display-timings {
 		1080p60 {
@@ -37,7 +38,6 @@
 	qcom,mdss-dsi-touch-reset-sequence = <1 5>;
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
 	qcom,panel-vspvsn-supply-entries = <&dsi_panel_vspvsn_pwr_supply>;
-	qcom,panel-touch-supply-entries = <&dsi_panel_touch_pwr_supply>;
 	somc,pw-on-rst-seq = "after_power_on";
 	qcom,mdss-dsi-display-timings {
 		1080p60 {

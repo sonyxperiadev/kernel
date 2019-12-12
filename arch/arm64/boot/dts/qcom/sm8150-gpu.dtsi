@@ -15,6 +15,7 @@
 		compatible = "qcom,pil-tz-generic";
 		qcom,pas-id = <13>;
 		qcom,firmware-name = "a640_zap";
+		memory-region = <&pil_gpu_mem>;
 	};
 
 	msm_bus: qcom,kgsl-busmon{

@@ -65,13 +65,13 @@ static dev_t qcedev_device_no;
 static struct class *driver_class;
 static struct device *class_dev;
 
-MODULE_DEVICE_TABLE(of, qcedev_match);
-
 static const struct of_device_id qcedev_match[] = {
 	{	.compatible = "qcom,qcedev"},
 	{	.compatible = "qcom,qcedev,context-bank"},
 	{}
 };
+
+MODULE_DEVICE_TABLE(of, qcedev_match);
 
 static int qcedev_control_clocks(struct qcedev_control *podev, bool enable)
 {
@@ -2071,7 +2071,7 @@ static int qcedev_probe_device(struct platform_device *pdev)
 	podev->mem_client = qcedev_mem_new_client(MEM_ION);
 	if (!podev->mem_client) {
 		pr_err("%s: err: qcedev_mem_new_client failed\n", __func__);
-		goto exit_qce_close;
+		goto exit_qce_req_bw;
 	}
 
 	rc = of_platform_populate(pdev->dev.of_node, qcedev_match,
@@ -2088,12 +2088,15 @@ exit_mem_new_client:
 	if (podev->mem_client)
 		qcedev_mem_delete_client(podev->mem_client);
 	podev->mem_client = NULL;
-
+exit_qce_req_bw:
+	if (msm_bus_scale_client_update_request(podev->bus_scale_handle, 1))
+		pr_err("%s Unable to set high bandwidth\n", __func__);
 exit_qce_close:
 	if (handle)
 		qce_close(handle);
 exit_scale_busbandwidth:
-	msm_bus_scale_client_update_request(podev->bus_scale_handle, 0);
+	if (msm_bus_scale_client_update_request(podev->bus_scale_handle, 0))
+		pr_err("%s Unable to set low bandwidth\n", __func__);
 exit_unregister_bus_scale:
 	if (podev->platform_support.bus_scale_table != NULL)
 		msm_bus_scale_unregister_client(podev->bus_scale_handle);
@@ -2132,8 +2135,14 @@ static int qcedev_remove(struct platform_device *pdev)
 	podev = platform_get_drvdata(pdev);
 	if (!podev)
 		return 0;
+	if (msm_bus_scale_client_update_request(podev->bus_scale_handle, 1))
+		pr_err("%s Unable to set high bandwidth\n", __func__);
+
 	if (podev->qce)
 		qce_close(podev->qce);
+
+	if (msm_bus_scale_client_update_request(podev->bus_scale_handle, 0))
+		pr_err("%s Unable to set low bandwidth\n", __func__);
 
 	if (podev->platform_support.bus_scale_table != NULL)
 		msm_bus_scale_unregister_client(podev->bus_scale_handle);

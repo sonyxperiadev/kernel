@@ -1359,7 +1359,7 @@ static ssize_t debugfs_esd_trigger_check(struct file *file,
 		atomic_read(&display->panel->esd_recovery_pending))
 		return user_len;
 
-	buf = kzalloc(user_len, GFP_KERNEL);
+	buf = kzalloc(user_len + 1, GFP_KERNEL);
 	if (!buf)
 		return -ENOMEM;
 
@@ -1414,7 +1414,7 @@ static ssize_t debugfs_alter_esd_check_mode(struct file *file,
 	if (*ppos)
 		return 0;
 
-	buf = kzalloc(len, GFP_KERNEL);
+	buf = kzalloc(len + 1, GFP_KERNEL);
 	if (ZERO_OR_NULL_PTR(buf))
 		return -ENOMEM;
 
@@ -2262,6 +2262,9 @@ static int dsi_display_parse_boot_display_selection(void)
 			pr_debug("display name[%s]is not valid\n", disp_buf);
 			continue;
 		}
+
+		if (strlen(disp_buf) < 2)
+			continue;
 
 		for (j = 0; (disp_buf + j) < pos; j++)
 			boot_displays[i].name[j] = *(disp_buf + j);
@@ -5275,7 +5278,7 @@ static int dsi_display_init(struct dsi_display *display)
 
 #ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
 	if (display->panel->spec_pdata->oled_disp) {
-		dsi_panel_driver_oled_short_det_init_works(display);
+		rc = dsi_panel_driver_oled_short_det_init_works(display);
 	}
 #endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 
@@ -7435,11 +7438,7 @@ int dsi_display_enable(struct dsi_display *display)
 	}
 
 	if (mode->priv_info->dsc_enabled) {
-#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
-		mode->priv_info->dsc.pic_width = mode->timing.h_active * display->ctrl_count;
-#else
 		mode->priv_info->dsc.pic_width *= display->ctrl_count;
-#endif
 		rc = dsi_panel_update_pps(display->panel);
 		if (rc) {
 			pr_err("[%s] panel pps cmd update failed, rc=%d\n",

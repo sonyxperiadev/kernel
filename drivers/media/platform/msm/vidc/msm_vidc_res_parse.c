@@ -846,6 +846,8 @@ int read_platform_resources_from_drv_data(
 			"qcom,decode-batching");
 	res->dcvs = find_key_value(platform_data,
 			"qcom,dcvs");
+	res->no_sys_idle_indicator = find_key_value(platform_data,
+			"qcom,no-idle-indicator");
 	res->fw_cycles = find_key_value(platform_data,
 			"qcom,fw-cycles");
 	res->fw_vpp_cycles = find_key_value(platform_data,
@@ -857,6 +859,10 @@ int read_platform_resources_from_drv_data(
 	res->gcc_register_size = platform_data->gcc_register_size;
 
 	res->vpu_ver = platform_data->vpu_ver;
+
+	res->ubwc_config = platform_data->ubwc_config;
+	res->ubwc_config_length = platform_data->ubwc_config_length;
+
 	return rc;
 
 }

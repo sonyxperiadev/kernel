@@ -36,6 +36,19 @@
 	.low_power_cycles = lp	\
 }
 
+#define UBWC_CONFIG(mco, mlo, hbbo, rs1, mc, ml, hbb, rs2) \
+{	\
+	.sOverrideBitInfo.bMaxChannelsOverride = mc,	\
+	.sOverrideBitInfo.bMalLengthOverride = mlo,	\
+	.sOverrideBitInfo.bHBBOverride = hbbo,	\
+	.sOverrideBitInfo.reserved1 = rs1,	\
+	.nMaxChannels = mc,	\
+	.nMalLength = ml,	\
+	.nHighestBankBit = hbb,	\
+	.reserved2 = {rs2}	\
+}
+
+
 #define EFUSE_ENTRY(sa, s, m, sh, p) \
 {	\
 	.start_address = sa,		\
@@ -553,7 +566,7 @@ static struct msm_vidc_common_data sdm845_common_data[] = {
 	},
 	{
 		.key = "qcom,max-secure-instances",
-		.value = 5,
+		.value = 2,
 	},
 	{
 		.key = "qcom,max-hw-load",
@@ -577,11 +590,11 @@ static struct msm_vidc_common_data sdm845_common_data[] = {
 	},
 	{
 		.key = "qcom,power-collapse-delay",
-		.value = 500,
+		.value = 1500,
 	},
 	{
 		.key = "qcom,hw-resp-timeout",
-		.value = 250,
+		.value = 1000,
 	},
 	{
 		.key = "qcom,debug-timeout",
@@ -590,6 +603,18 @@ static struct msm_vidc_common_data sdm845_common_data[] = {
 	{
 		.key = "qcom,dcvs",
 		.value = 1,
+	},
+	{
+		.key = "qcom,no-idle-indicator",
+		.value = 1,
+	},
+	{
+		.key = "qcom,fw-cycles",
+		.value = 760000,
+	},
+	{
+		.key = "qcom,fw-vpp-cycles",
+		.value = 166667,
 	},
 };
 
@@ -707,11 +732,19 @@ static struct msm_vidc_efuse_data msm8956_efuse_data[] = {
 	EFUSE_ENTRY(0x000A4120, 4, 0x60000000, 0x1d, SKU_VERSION),
 };
 
+/*
+static struct msm_vidc_ubwc_config trinket_ubwc_data[] = {
+	UBWC_CONFIG(0, 1, 0, 0, 0, 64, 0, 0),
+};
+*/
+
 static struct msm_vidc_platform_data default_data = {
 	.codec_data = default_codec_data,
 	.codec_data_length =  ARRAY_SIZE(default_codec_data),
 	.common_data = default_common_data,
 	.common_data_length =  ARRAY_SIZE(default_common_data),
+	.ubwc_config = 0,
+	.ubwc_config_length = 0,
 	.csc_data.vpe_csc_custom_bias_coeff = vpe_csc_custom_bias_coeff,
 	.csc_data.vpe_csc_custom_matrix_coeff = vpe_csc_custom_matrix_coeff,
 	.csc_data.vpe_csc_custom_limit_coeff = vpe_csc_custom_limit_coeff,
@@ -728,6 +761,8 @@ static struct msm_vidc_platform_data sm6150_data = {
 	.codec_data_length =  ARRAY_SIZE(sm6150_codec_data),
 	.common_data = sm6150_common_data,
 	.common_data_length =  ARRAY_SIZE(sm6150_common_data),
+	.ubwc_config = 0,
+	.ubwc_config_length = 0,
 	.csc_data.vpe_csc_custom_bias_coeff = vpe_csc_custom_bias_coeff,
 	.csc_data.vpe_csc_custom_matrix_coeff = vpe_csc_custom_matrix_coeff,
 	.csc_data.vpe_csc_custom_limit_coeff = vpe_csc_custom_limit_coeff,
@@ -744,6 +779,8 @@ static struct msm_vidc_platform_data sm8150_data = {
 	.codec_data_length =  ARRAY_SIZE(sm8150_codec_data),
 	.common_data = sm8150_common_data,
 	.common_data_length =  ARRAY_SIZE(sm8150_common_data),
+	.ubwc_config = 0,
+	.ubwc_config_length = 0,
 	.csc_data.vpe_csc_custom_bias_coeff = vpe_csc_custom_bias_coeff,
 	.csc_data.vpe_csc_custom_matrix_coeff = vpe_csc_custom_matrix_coeff,
 	.csc_data.vpe_csc_custom_limit_coeff = vpe_csc_custom_limit_coeff,
@@ -760,6 +797,8 @@ static struct msm_vidc_platform_data sdmmagpie_data = {
 	.codec_data_length =  ARRAY_SIZE(sdmmagpie_codec_data),
 	.common_data = sdmmagpie_common_data_v0,
 	.common_data_length =  ARRAY_SIZE(sdmmagpie_common_data_v0),
+	.ubwc_config = 0,
+	.ubwc_config_length = 0,
 	.csc_data.vpe_csc_custom_bias_coeff = vpe_csc_custom_bias_coeff,
 	.csc_data.vpe_csc_custom_matrix_coeff = vpe_csc_custom_matrix_coeff,
 	.csc_data.vpe_csc_custom_limit_coeff = vpe_csc_custom_limit_coeff,
@@ -776,6 +815,8 @@ static struct msm_vidc_platform_data sdm845_data = {
 	.codec_data_length =  ARRAY_SIZE(sdm845_codec_data),
 	.common_data = sdm845_common_data,
 	.common_data_length =  ARRAY_SIZE(sdm845_common_data),
+	.ubwc_config = 0,
+	.ubwc_config_length = 0,
 	.csc_data.vpe_csc_custom_bias_coeff = vpe_csc_custom_bias_coeff,
 	.csc_data.vpe_csc_custom_matrix_coeff = vpe_csc_custom_matrix_coeff,
 	.csc_data.vpe_csc_custom_limit_coeff = vpe_csc_custom_limit_coeff,
@@ -792,6 +833,8 @@ static struct msm_vidc_platform_data sdm670_data = {
 	.codec_data_length =  ARRAY_SIZE(sdm670_codec_data),
 	.common_data = sdm670_common_data_v0,
 	.common_data_length =  ARRAY_SIZE(sdm670_common_data_v0),
+	.ubwc_config = 0,
+	.ubwc_config_length = 0,
 	.csc_data.vpe_csc_custom_bias_coeff = vpe_csc_custom_bias_coeff,
 	.csc_data.vpe_csc_custom_matrix_coeff = vpe_csc_custom_matrix_coeff,
 	.csc_data.vpe_csc_custom_limit_coeff = vpe_csc_custom_limit_coeff,
@@ -808,6 +851,8 @@ static struct msm_vidc_platform_data msm8956_data = {
 	.codec_data_length =  ARRAY_SIZE(generic_legacy_codec_data),
 	.common_data = msm8956_common_data,
 	.common_data_length =  ARRAY_SIZE(msm8956_common_data),
+	.ubwc_config = 0,
+	.ubwc_config_length = 0,
 	.csc_data.vpe_csc_custom_bias_coeff = vpe_csc_custom_bias_coeff,
 	.csc_data.vpe_csc_custom_matrix_coeff = vpe_csc_custom_matrix_coeff,
 	.csc_data.vpe_csc_custom_limit_coeff = vpe_csc_custom_limit_coeff,
@@ -824,6 +869,8 @@ static struct msm_vidc_platform_data msm8996_data = {
 	.codec_data_length =  ARRAY_SIZE(generic_legacy_codec_data),
 	.common_data = msm8996_common_data,
 	.common_data_length =  ARRAY_SIZE(msm8996_common_data),
+	.ubwc_config = 0,
+	.ubwc_config_length = 0,
 	.csc_data.vpe_csc_custom_bias_coeff = vpe_csc_custom_bias_coeff,
 	.csc_data.vpe_csc_custom_matrix_coeff = vpe_csc_custom_matrix_coeff,
 	.csc_data.vpe_csc_custom_limit_coeff = vpe_csc_custom_limit_coeff,
@@ -840,6 +887,8 @@ static struct msm_vidc_platform_data msm8998_data = {
 	.codec_data_length =  ARRAY_SIZE(sdm845_codec_data),
 	.common_data = msm8998_common_data,
 	.common_data_length =  ARRAY_SIZE(msm8998_common_data),
+	.ubwc_config = 0,
+	.ubwc_config_length = 0,
 	.csc_data.vpe_csc_custom_bias_coeff = vpe_csc_custom_bias_coeff,
 	.csc_data.vpe_csc_custom_matrix_coeff = vpe_csc_custom_matrix_coeff,
 	.csc_data.vpe_csc_custom_limit_coeff = vpe_csc_custom_limit_coeff,
@@ -856,6 +905,8 @@ static struct msm_vidc_platform_data sdm660_data = {
 	.codec_data_length =  ARRAY_SIZE(generic_legacy_codec_data),
 	.common_data = sdm660_common_data,
 	.common_data_length =  ARRAY_SIZE(sdm660_common_data),
+	.ubwc_config = 0,
+	.ubwc_config_length = 0,
 	.csc_data.vpe_csc_custom_bias_coeff = vpe_csc_custom_bias_coeff,
 	.csc_data.vpe_csc_custom_matrix_coeff = vpe_csc_custom_matrix_coeff,
 	.csc_data.vpe_csc_custom_limit_coeff = vpe_csc_custom_limit_coeff,

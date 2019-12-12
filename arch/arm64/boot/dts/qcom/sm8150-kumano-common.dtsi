@@ -18,6 +18,19 @@
 #include <dt-bindings/input/input.h>
 #include <dt-bindings/phy/qcom,sm8150-qmp-usb3.h>
 
+&reserved_memory {
+	ramoops: ramoops@ffc00000 {
+		compatible = "removed-dma-pool", "ramoops";
+		no-map;
+		reg = <0 0xffc00000 0 0x00100000>;
+		record-size = <0x10000>;
+		console-size = <0x60000>;
+		ftrace-size = <0x10000>;
+		pmsg-size = <0x20000>;
+		ecc-size = <16>;
+	};
+};
+
 &qupv3_se4_i2c {
 	nfc@28 {
 		compatible = "nxp,pn553";
@@ -385,7 +398,7 @@
 			     &sm_gpio_85 &sm_gpio_86 &sm_gpio_87 &sm_gpio_88 &sm_gpio_89
 			     &sm_gpio_90 &sm_gpio_91 &sm_gpio_92 &sm_gpio_93 &sm_gpio_94
 			     &sm_gpio_96 &sm_gpio_97 &sm_gpio_98 &sm_gpio_99
-			     &sm_gpio_100 &sm_gpio_101 &sm_gpio_102 &sm_gpio_103 &sm_gpio_104
+			     &sm_gpio_101 &sm_gpio_102 &sm_gpio_103 &sm_gpio_104
 			     &sm_gpio_105 &sm_gpio_106 &sm_gpio_107 &sm_gpio_108 &sm_gpio_109
 			     &sm_gpio_110 &sm_gpio_111 &sm_gpio_113 &sm_gpio_114
 			     &sm_gpio_115 &sm_gpio_116 &sm_gpio_117 &sm_gpio_118 &sm_gpio_119
@@ -458,12 +471,14 @@
 		};
 	};
 
+/*
 	wcd_usbc_analog_en1_gpio: msm_cdc_pinctrl@100 {
 		compatible = "qcom,msm-cdc-pinctrl";
 		pinctrl-names = "aud_active", "aud_sleep";
 		pinctrl-0 = <&wcd_usbc_analog_en1_active>;
 		pinctrl-1 = <&wcd_usbc_analog_en1_idle>;
 	};
+*/
 
 	/* SPI: QUP3 */
 	spi@88c000 {
@@ -917,6 +932,21 @@
 	status = "disabled";
 };
 
+
+/* BOB is at 3.35Vmin on Kumano boards */
+&wcd9360_cdc {
+	cdc-vdd-mic-bias-supply = <&pm8150l_bob>;
+	qcom,cdc-vdd-mic-bias-voltage = <3350000 3350000>;
+
+	cdc-vdd-pa-supply = <&pm8150l_bob>;
+	qcom,cdc-vdd-pa-voltage = <3350000 3350000>;
+};
+
+&wcd934x_cdc {
+	cdc-vdd-3v3-supply = <&pm8150l_bob>;
+	qcom,cdc-vdd-3v3-voltage = <3350000 3350000>;
+};
+
 &usb0 {
 	dwc3@a600000 {
 		maximum-speed = "super-speed";
@@ -966,6 +996,10 @@
 	regulator-min-microvolt = <3350000>;
 	qcom,init-voltage = <3350000>;
 	status = "okay";
+};
+
+&display_panel_avdd_eldo {
+	status = "disabled";
 };
 
 &pm8150_gpios {
@@ -3452,12 +3486,34 @@
 		"SpkrLeft IN", "SPK1 OUT",
 		"SpkrRight IN", "SPK2 OUT";
 
-	qcom,usbc-analog-en1-gpio = <&wcd_usbc_analog_en1_gpio>;
+	//qcom,usbc-analog-en1-gpio = <&wcd_usbc_analog_en1_gpio>;
 	qcom,usbc-analog-en2-gpio = <&tlmm 152 0>;
 	pinctrl-names = "aud_active", "aud_sleep";
 	pinctrl-0 = <&wcd_usbc_analog_en2_active>;
 	pinctrl-1 = <&wcd_usbc_analog_en2_idle>;
 
+	qcom,wsa-devs = <&wsa881x_70213>, <&wsa881x_70214>;
+	qcom,wsa-aux-dev-prefix = "SpkrLeft", "SpkrRight";
+};
+
+&wsa881x_70211 {
+	status = "disabled";
+};
+
+&wsa881x_70212 {
+	status = "disabled";
+};
+
+&pahu_wdsp {
+	status = "disabled";
+};
+
+&wcd9360_cdc {
+	status = "disabled";
+};
+
+&snd_9360 {
+	status = "disabled";
 };
 
 &tlmm {
@@ -3976,4 +4032,16 @@
 
 &pm8150l_lpg {
 	qcom,sync-channel-ids = <1 2 3>;
+};
+
+&usb1 {
+	status = "disabled";
+};
+
+&usb2_phy1 {
+	status = "disabled";
+};
+
+&usb_qmp_phy {
+	status = "disabled";
 };

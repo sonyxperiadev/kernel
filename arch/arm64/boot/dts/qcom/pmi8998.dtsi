@@ -419,7 +419,7 @@
 		};
 
 
-		rgb_leds: qcom,leds@d000 {
+		qcom,leds@d000 {
 			compatible = "qcom,tri-led";
 			reg = <0xd000 0x100>;
 			label = "rgb";
@@ -427,19 +427,19 @@
 
 			red {
 				label = "red";
-				pwms = <&pmi8998_pwms 2 1000000>;
+				pwms = <&pmi8998_pwms 4 1000000>;
 				led-sources = <0>;
 				linux,default-trigger = "timer";
 			};
 			green {
 				label = "green";
-				pwms = <&pmi8998_pwms 1 1000000>;
+				pwms = <&pmi8998_pwms 3 1000000>;
 				led-sources = <1>;
 				linux,default-trigger = "timer";
 			};
 			blue {
 				label = "blue";
-				pwms = <&pmi8998_pwms 0 1000000>;
+				pwms = <&pmi8998_pwms 2 1000000>;
 				led-sources = <2>;
 				linux,default-trigger = "timer";
 			};
@@ -646,21 +646,21 @@
 			pmi8998_switch0: qcom,led_switch_0 {
 				label = "switch";
 				qcom,led-name = "led:switch_0";
-				qcom,led-mask = <3>;
+				qcom,led-mask = <1>;
 				qcom,default-led-trigger = "switch0_trigger";
 			};
 
 			pmi8998_switch1: qcom,led_switch_1 {
 				label = "switch";
 				qcom,led-name = "led:switch_1";
-				qcom,led-mask = <4>;
+				qcom,led-mask = <2>;
 				qcom,default-led-trigger = "switch1_trigger";
 			};
 
 			pmi8998_switch2: qcom,led_switch_2 {
 				label = "switch";
 				qcom,led-name = "led:switch_2";
-				qcom,led-mask = <4>;
+				qcom,led-mask = <3>;
 				qcom,default-led-trigger = "switch2_trigger";
 			};
 

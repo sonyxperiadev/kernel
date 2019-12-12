@@ -638,6 +638,14 @@
 			size = <0 0x1000000>;
 		};
 
+		cdsp_mem: cdsp_region {
+			compatible = "shared-dma-pool";
+			alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
+			reusable;
+			alignment = <0x0 0x400000>;
+			size = <0x0 0x400000>;
+		};
+
 		qseecom_ta_mem: qseecom_ta_region {
 			compatible = "shared-dma-pool";
 			alloc-ranges = <0 0x00000000 0 0xffffffff>;
@@ -1593,17 +1601,17 @@
 		qcom,serial-loading;
 
 		/* Inputs from mss */
-		interrupts-extended = <&pdc 0 266 1>,
-				<&modem_smp2p_in 0 0>,
-				<&modem_smp2p_in 2 0>,
-				<&modem_smp2p_in 1 0>,
-				<&modem_smp2p_in 3 0>,
-				<&modem_smp2p_in 7 0>;
+		interrupts-extended = <&pdc GIC_SPI 266 IRQ_TYPE_EDGE_RISING>,
+				<&modem_smp2p_in 0 IRQ_TYPE_EDGE_RISING>,
+				<&modem_smp2p_in 1 IRQ_TYPE_EDGE_RISING>,
+				<&modem_smp2p_in 2 IRQ_TYPE_EDGE_RISING>,
+				<&modem_smp2p_in 3 IRQ_TYPE_EDGE_RISING>,
+				<&modem_smp2p_in 7 IRQ_TYPE_EDGE_RISING>;
 
 		interrupt-names = "qcom,wdog",
 				"qcom,err-fatal",
-				"qcom,proxy-unvote",
 				"qcom,err-ready",
+				"qcom,proxy-unvote",
 				"qcom,stop-ack",
 				"qcom,shutdown-ack";
 
@@ -2729,7 +2737,7 @@
 			       <&apps_smmu 0x71c 0>,
 			       <&apps_smmu 0x71d 0>,
 			       <&apps_smmu 0x71e 0>;
-			virtual-addr = <0x60200000>;
+			virtual-addr = <0xa0000000>;
 			virtual-size = <0x40000000>;
 			qcom,secure-context-bank;
 		};
