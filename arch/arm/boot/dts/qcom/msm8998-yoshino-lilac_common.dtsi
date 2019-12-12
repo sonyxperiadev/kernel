@@ -344,6 +344,8 @@
 		#include "fg-gen3-batterydata-lilac-send-4380mv-2729mah.dtsi"
 		#include "fg-gen3-batterydata-lilac-send-4357mv-2688mah.dtsi"
 		#include "fg-gen3-batterydata-lilac-send-4335mv-2647mah.dtsi"
+		#include "fg-gen3-batterydata-lilac-send-4297mv-2359mah.dtsi"
+		#include "fg-gen3-batterydata-lilac-send-4245mv-2425mah.dtsi"
 	};
 };
 
