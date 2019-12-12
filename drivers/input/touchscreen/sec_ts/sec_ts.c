@@ -18,8 +18,8 @@ struct sec_ts_data *tsp_info;
 struct class *sec_class;
 struct sec_ts_data *ts_dup;
 
-int portrait_buffer[SEC_TS_GRIP_REJECTION_BORDER_NUM] = {40, 240, 90, 300};
-int landscape_buffer[SEC_TS_GRIP_REJECTION_BORDER_NUM] = {240, 30, 300, 90};
+u32 portrait_buffer[SEC_TS_GRIP_REJECTION_BORDER_NUM] = { 0 };
+u32 landscape_buffer[SEC_TS_GRIP_REJECTION_BORDER_NUM] = { 0 };
 
 #ifdef USE_POWER_RESET_WORK
 static void sec_ts_reset_work(struct work_struct *work);
@@ -733,7 +733,8 @@ static void sec_ts_read_event(struct sec_ts_data *ts)
 					if (ts->coord[t_id].action == SEC_TS_COORDINATE_ACTION_RELEASE) {
 
 						do_gettimeofday(&ts->time_released[t_id]);
-						ts->report_flag[t_id] = false;
+						if (ts->coord[t_id].ttype != SEC_TS_TOUCHTYPE_SIDE)
+							ts->report_flag[t_id] = false;
 
 						if (ts->time_longest < (ts->time_released[t_id].tv_sec - ts->time_pressed[t_id].tv_sec))
 							ts->time_longest = (ts->time_released[t_id].tv_sec - ts->time_pressed[t_id].tv_sec);
@@ -788,18 +789,20 @@ static void sec_ts_read_event(struct sec_ts_data *ts)
 						ts->touch_count++;
 						ts->all_finger_count++;
 
-						if (ts->landscape) {
-							if ((ts->coord[t_id].x < landscape_buffer[0] || ts->coord[t_id].x > ts->plat_data->max_x - landscape_buffer[0]) && (ts->coord[t_id].y < landscape_buffer[1] || ts->coord[t_id].y > ts->plat_data->max_y - landscape_buffer[1])) {
-								if (!ts->report_flag[t_id])
-									goto skip_process;
-							} else
-								ts->report_flag[t_id] = true;
-						} else {
-							if ((ts->coord[t_id].x < portrait_buffer[0] || ts->coord[t_id].x > ts->plat_data->max_x - portrait_buffer[0]) && (ts->coord[t_id].y > ts->plat_data->max_y - portrait_buffer[1])) {
-								if (!ts->report_flag[t_id])
-									goto skip_process;
-							} else
-								ts->report_flag[t_id] = true;
+						if (ts->coord[t_id].ttype != SEC_TS_TOUCHTYPE_SIDE) {
+							if (ts->landscape) {
+								if ((ts->coord[t_id].x < landscape_buffer[0] || ts->coord[t_id].x > ts->plat_data->max_x - landscape_buffer[0]) && (ts->coord[t_id].y < landscape_buffer[1] || ts->coord[t_id].y > ts->plat_data->max_y - landscape_buffer[1])) {
+									if (!ts->report_flag[t_id])
+										goto skip_process;
+								} else
+									ts->report_flag[t_id] = true;
+							} else {
+								if ((ts->coord[t_id].x < portrait_buffer[0] || ts->coord[t_id].x > ts->plat_data->max_x - portrait_buffer[0]) && (ts->coord[t_id].y > ts->plat_data->max_y - portrait_buffer[1])) {
+									if (!ts->report_flag[t_id])
+										goto skip_process;
+								} else
+									ts->report_flag[t_id] = true;
+							}
 						}
 
 						ts->max_z_value = max((unsigned int)ts->coord[t_id].z, ts->max_z_value);
@@ -849,24 +852,26 @@ static void sec_ts_read_event(struct sec_ts_data *ts)
 #endif
 						}
 					} else if (ts->coord[t_id].action == SEC_TS_COORDINATE_ACTION_MOVE) {
-						if (ts->landscape) {
-							if ((ts->coord[t_id].x < landscape_buffer[0] || ts->coord[t_id].x > ts->plat_data->max_x - landscape_buffer[0]) && (ts->coord[t_id].y < landscape_buffer[1] || ts->coord[t_id].y > ts->plat_data->max_y - landscape_buffer[1])) {
-								if (!ts->report_flag[t_id])
-									goto skip_process;
-							} else if ((ts->coord[t_id].x > landscape_buffer[2] && ts->coord[t_id].x < ts->plat_data->max_x - landscape_buffer[2]) || (ts->coord[t_id].y > landscape_buffer[3] && ts->coord[t_id].y < ts->plat_data->max_y - landscape_buffer[3])) {
-								if (!ts->report_flag[t_id])
-									ts->report_flag[t_id] = true;
-							} else if (!ts->report_flag[t_id])
-									goto skip_process;
-						} else {
-							if ((ts->coord[t_id].x < portrait_buffer[0] || ts->coord[t_id].x > ts->plat_data->max_x - portrait_buffer[0]) && (ts->coord[t_id].y > ts->plat_data->max_y - portrait_buffer[1])) {
-								if (!ts->report_flag[t_id])
-									goto skip_process;
-							} else if ((ts->coord[t_id].x > portrait_buffer[2] && ts->coord[t_id].x < ts->plat_data->max_x - portrait_buffer[2]) || (ts->coord[t_id].y < ts->plat_data->max_y - portrait_buffer[3])) {
-								if (!ts->report_flag[t_id])
-									ts->report_flag[t_id] = true;
-							} else if (!ts->report_flag[t_id])
-									goto skip_process;
+						if (ts->coord[t_id].ttype != SEC_TS_TOUCHTYPE_SIDE) {
+							if (ts->landscape) {
+								if ((ts->coord[t_id].x < landscape_buffer[0] || ts->coord[t_id].x > ts->plat_data->max_x - landscape_buffer[0]) && (ts->coord[t_id].y < landscape_buffer[1] || ts->coord[t_id].y > ts->plat_data->max_y - landscape_buffer[1])) {
+									if (!ts->report_flag[t_id])
+										goto skip_process;
+								} else if ((ts->coord[t_id].x > landscape_buffer[2] && ts->coord[t_id].x < ts->plat_data->max_x - landscape_buffer[2]) || (ts->coord[t_id].y > landscape_buffer[3] && ts->coord[t_id].y < ts->plat_data->max_y - landscape_buffer[3])) {
+									if (!ts->report_flag[t_id])
+										ts->report_flag[t_id] = true;
+								} else if (!ts->report_flag[t_id])
+										goto skip_process;
+							} else {
+								if ((ts->coord[t_id].x < portrait_buffer[0] || ts->coord[t_id].x > ts->plat_data->max_x - portrait_buffer[0]) && (ts->coord[t_id].y > ts->plat_data->max_y - portrait_buffer[1])) {
+									if (!ts->report_flag[t_id])
+										goto skip_process;
+								} else if ((ts->coord[t_id].x > portrait_buffer[2] && ts->coord[t_id].x < ts->plat_data->max_x - portrait_buffer[2]) || (ts->coord[t_id].y < ts->plat_data->max_y - portrait_buffer[3])) {
+									if (!ts->report_flag[t_id])
+										ts->report_flag[t_id] = true;
+								} else if (!ts->report_flag[t_id])
+										goto skip_process;
+							}
 						}
 
 						if ((ts->coord[t_id].ttype == SEC_TS_TOUCHTYPE_GLOVE) && !ts->touchkey_glove_mode_status) {
@@ -1208,6 +1213,7 @@ static int sec_ts_parse_dt_feature(struct i2c_client *client)
 	struct sec_ts_plat_data *pdata = dev->platform_data;
 	struct device_node *np = dev->of_node;
 	u32 tmp_value = 0;
+	u32 rejection_buff[SEC_TS_GRIP_REJECTION_BORDER_NUM];
 
 	if (np == NULL)
 		return -ENODEV;
@@ -1287,6 +1293,20 @@ static int sec_ts_parse_dt_feature(struct i2c_client *client)
 		input_info(true, &client->dev, "stamina_mode_supported: %s\n",
 			pdata->stamina_mode.supported ? "true" : "false");
 	}
+
+	if (of_property_read_u32_array(np, "sec,rejection_area_portrait", rejection_buff, SEC_TS_GRIP_REJECTION_BORDER_NUM)) {
+		input_err(true, &client->dev, "%s: Failed to get portrait rejection area data\n", __func__);
+		return 0;
+	}
+
+	memcpy(portrait_buffer, rejection_buff, sizeof(portrait_buffer));
+
+	if (of_property_read_u32_array(np, "sec,rejection_area_landscape", rejection_buff, SEC_TS_GRIP_REJECTION_BORDER_NUM)) {
+		input_err(true, &client->dev, "%s: Failed to get landscape rejection area data\n", __func__);
+		return 0;
+	}
+
+	memcpy(landscape_buffer, rejection_buff, sizeof(landscape_buffer));
 
 	return 0;
 }
