@@ -244,6 +244,8 @@
 	touchscreen@48 {
 		sec,max_coords = <1644 3840>;   /* x y */
 		sec,cover_mode_supported = <1>;
+		sec,rejection_area_portrait = <40 240 90 300>;
+		sec,rejection_area_landscape = <240 30 300 90>;
 	};
 };
 
