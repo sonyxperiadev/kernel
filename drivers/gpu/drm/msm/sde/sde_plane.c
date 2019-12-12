@@ -2236,7 +2236,7 @@ static void _sde_plane_rot_get_fb(struct drm_plane *plane,
 		SDE_DEBUG("cleared fb_id\n");
 		rstate->out_fb = NULL;
 	} else if (!rstate->out_fb) {
-		fb = drm_framebuffer_lookup(plane->dev, fb_id);
+		fb = drm_framebuffer_lookup(plane->dev, NULL, fb_id);
 		if (fb) {
 			SDE_DEBUG("plane%d.%d get fb:%d\n", plane->base.id,
 					rstate->sequence_id, fb_id);
@@ -4528,6 +4528,8 @@ static void _sde_plane_install_properties(struct drm_plane *plane,
 			psde->pipe_sblk->maxvdeciexp);
 	sde_kms_info_add_keyint(info, "max_per_pipe_bw",
 			psde->pipe_sblk->max_per_pipe_bw * 1000LL);
+	sde_kms_info_add_keyint(info, "max_per_pipe_bw_high",
+			psde->pipe_sblk->max_per_pipe_bw_high * 1000LL);
 
 	if ((!master_plane_id &&
 		(psde->features & BIT(SDE_SSPP_INVERSE_PMA))) ||
@@ -5283,7 +5285,7 @@ static int _sde_plane_init_debugfs(struct drm_plane *plane)
 		return -ENOMEM;
 
 	/* don't error check these */
-	debugfs_create_ulong("features", 0600,
+	debugfs_create_ulong("features", 0400,
 			psde->debugfs_root, &psde->features);
 
 	/* add register dump support */
@@ -5460,7 +5462,7 @@ struct drm_plane *sde_plane_init(struct drm_device *dev,
 	psde->pipe = pipe;
 	psde->is_virtual = (master_plane_id != 0);
 	INIT_LIST_HEAD(&psde->mplane_list);
-	master_plane = drm_plane_find(dev, master_plane_id);
+	master_plane = drm_plane_find(dev, NULL, master_plane_id);
 	if (master_plane) {
 		struct sde_plane *mpsde = to_sde_plane(master_plane);
 

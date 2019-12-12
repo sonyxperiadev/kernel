@@ -62,7 +62,7 @@ static u32 dsi_dsc_rc_buf_thresh[] = {0x0e, 0x1c, 0x2a, 0x38, 0x46, 0x54,
  * Rate control - Min QP values for each ratio type in dsi_dsc_ratio_type
  */
 static char dsi_dsc_rc_range_min_qp_1_1[][15] = {
-	{0, 0, 1, 1, 3, 3, 3, 3, 3, 3, 5, 5, 5, 7, 12},
+	{0, 0, 1, 1, 3, 3, 3, 3, 3, 3, 5, 5, 5, 7, 13},
 	{0, 4, 5, 5, 7, 7, 7, 7, 7, 7, 9, 9, 9, 11, 17},
 	{0, 4, 9, 9, 11, 11, 11, 11, 11, 11, 13, 13, 13, 15, 21},
 	};
@@ -3358,9 +3358,11 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 		pr_err("failed to parse power config, rc=%d\n", rc);
 
 	rc = dsi_panel_parse_bl_config(panel);
-	if (rc)
+	if (rc) {
 		pr_err("failed to parse backlight config, rc=%d\n", rc);
-
+		if (rc == -EPROBE_DEFER)
+			goto error;
+	}
 
 	rc = dsi_panel_parse_misc_features(panel);
 	if (rc)
@@ -3390,6 +3392,7 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 		pr_err("failed to parse panel specific, rc=%d\n", rc);
 #endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 
+	panel->power_mode = SDE_MODE_DPMS_OFF;
 	drm_panel_init(&panel->drm_panel);
 	mutex_init(&panel->panel_lock);
 

@@ -3038,13 +3038,14 @@ static irqreturn_t mxt_interrupt(int irq, void *dev_id)
 		return IRQ_HANDLED;
 	}
 
-	mutex_lock(&data->mxt_drv_data->i2c_suspend_lock);
-	if (data->T44_address){
-		ret = mxt_process_messages_t44(data);
-	} else {
-		ret = mxt_process_messages(data);
+	mutex_lock(&data->mxt_drv_data->dev_lock);
+	if (!data->suspended) {
+		if (data->T44_address)
+			ret = mxt_process_messages_t44(data);
+		else
+			ret = mxt_process_messages(data);
 	}
-	mutex_unlock(&data->mxt_drv_data->i2c_suspend_lock);
+	mutex_unlock(&data->mxt_drv_data->dev_lock);
 	return ret;
 }
 

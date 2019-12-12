@@ -1699,7 +1699,12 @@ static int _sde_kms_drm_obj_init(struct sde_kms *sde_kms)
 	if (!_sde_kms_get_displays(sde_kms))
 		(void)_sde_kms_setup_displays(dev, priv, sde_kms);
 
-	max_crtc_count = min(catalog->mixer_count, priv->num_encoders);
+	/* Follow user setting if preferred crtc number is set */
+	if (!of_property_read_u32(dev->dev->of_node,
+			"qcom,sde-crtc-num-pref", &max_crtc_count))
+		max_crtc_count = min(max_crtc_count, MAX_CRTCS);
+	else
+		max_crtc_count = min(catalog->mixer_count, priv->num_encoders);
 
 	/* Create the planes */
 	for (i = 0; i < catalog->sspp_count; i++) {
@@ -3427,6 +3432,13 @@ static int sde_kms_hw_init(struct msm_kms *kms)
 	rc = _sde_kms_get_splash_data(&sde_kms->splash_data);
 	if (rc)
 		SDE_DEBUG("sde splash data fetch failed: %d\n", rc);
+
+	for (i = 0; i < SDE_POWER_HANDLE_DBUS_ID_MAX; i++) {
+		priv->phandle.data_bus_handle[i].ab_rt =
+			SDE_POWER_HANDLE_CONT_SPLASH_BUS_AB_QUOTA;
+		priv->phandle.data_bus_handle[i].ib_rt =
+			SDE_POWER_HANDLE_CONT_SPLASH_BUS_IB_QUOTA;
+	}
 
 	rc = sde_power_resource_enable(&priv->phandle, sde_kms->core_client,
 		true);

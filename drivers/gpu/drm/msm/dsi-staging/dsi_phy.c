@@ -117,20 +117,29 @@ static int dsi_phy_regmap_init(struct platform_device *pdev,
 
 	phy->hw.base = ptr;
 
-	ptr = msm_ioremap(pdev, "dyn_refresh_base", phy->name);
-	phy->hw.dyn_pll_base = ptr;
-
 	pr_debug("[%s] map dsi_phy registers to %pK\n",
 		phy->name, phy->hw.base);
 
 	switch (phy->ver_info->version) {
 	case DSI_PHY_VERSION_2_0:
-	case DSI_PHY_VERSION_3_0:
 		ptr = msm_ioremap(pdev, "phy_clamp_base", phy->name);
 		if (IS_ERR(ptr))
 			phy->hw.phy_clamp_base = NULL;
 		else
 			phy->hw.phy_clamp_base = ptr;
+
+		ptr = msm_ioremap(pdev, "dyn_refresh_base", phy->name);
+		if (IS_ERR(ptr))
+			phy->hw.dyn_pll_base = NULL;
+		else
+			phy->hw.dyn_pll_base = ptr;
+		break;
+	case DSI_PHY_VERSION_3_0:
+		ptr = msm_ioremap(pdev, "dyn_refresh_base", phy->name);
+		if (IS_ERR(ptr))
+			phy->hw.dyn_pll_base = NULL;
+		else
+			phy->hw.dyn_pll_base = ptr;
 		break;
 	default:
 		break;
