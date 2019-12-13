@@ -3728,6 +3728,8 @@ static int _sde_hardware_pre_caps(struct sde_mdss_cfg *sde_cfg, uint32_t hw_rev)
 		sde_cfg->ts_prefill_rev = 1;
 		sde_cfg->vbif_qos_nlvl = 4;
 		sde_cfg->has_decimation = true;
+		clear_bit(MDSS_INTR_AD4_0_INTR, sde_cfg->mdss_irqs);
+		clear_bit(MDSS_INTR_AD4_1_INTR, sde_cfg->mdss_irqs);
 	} else if (IS_MSM8998_TARGET(hw_rev) || IS_SDM630_TARGET(hw_rev) ||
 		   IS_SDM660_TARGET(hw_rev)) {
 		/* update msm8998/sdm630 target here */
@@ -3740,6 +3742,8 @@ static int _sde_hardware_pre_caps(struct sde_mdss_cfg *sde_cfg, uint32_t hw_rev)
 			sde_cfg->ts_prefill_rev = 1;
 		else
 			sde_cfg->ts_prefill_rev = 2;
+		clear_bit(MDSS_INTR_AD4_0_INTR, sde_cfg->mdss_irqs);
+		clear_bit(MDSS_INTR_AD4_1_INTR, sde_cfg->mdss_irqs);
 	} else if (IS_SDM845_TARGET(hw_rev)) {
 		sde_cfg->has_wb_ubwc = true;
 		sde_cfg->has_cwb_support = true;
