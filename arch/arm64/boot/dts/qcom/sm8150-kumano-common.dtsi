@@ -18,6 +18,12 @@
 #include <dt-bindings/input/input.h>
 #include <dt-bindings/phy/qcom,sm8150-qmp-usb3.h>
 
+/*
+ * SoMC Kumano's bootloader has a different memory map compared
+ * to the standard Qualcomm SM8150: the map was put in sm8150.dtsi
+ * because it is nearly impossible to override it in DTBO....
+ */
+
 &reserved_memory {
 	ramoops: ramoops@ffc00000 {
 		compatible = "removed-dma-pool", "ramoops";
