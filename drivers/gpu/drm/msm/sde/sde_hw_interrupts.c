@@ -18,17 +18,6 @@
 #include "sde_hw_util.h"
 #include "sde_hw_mdss.h"
 
-#if !defined(CONFIG_ARCH_MSM8916) && !defined(CONFIG_ARCH_MSM8953) && \
-    !defined(CONFIG_ARCH_MSM8937) && !defined(CONFIG_ARCH_MSM8917) && \
-    !defined(CONFIG_ARCH_MSM8996) && !defined(CONFIG_ARCH_MSM8998) && \
-    !defined(CONFIG_ARCH_SDM630) && !defined(CONFIG_ARCH_SDM660)
-#define BUILD_FOR_AD4_TARGET
-#endif
-
-#if defined(CONFIG_ARCH_SDM845)
-#define TARGET_HAS_TEAR_IRQS_IN_MDP
-#endif
-
 /**
  * Register offsets in MDSS register file for the interrupt registers
  * w.r.t. to the MDSS base
