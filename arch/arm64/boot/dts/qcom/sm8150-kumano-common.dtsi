@@ -37,6 +37,10 @@
 	};
 };
 
+&mem_offline {
+	status = "disabled";
+};
+
 &qupv3_se4_i2c {
 	nfc@28 {
 		compatible = "nxp,pn553";
