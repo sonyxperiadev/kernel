@@ -342,6 +342,7 @@ struct panel_specific_pdata {
 	int touch_vddio_off;
 	int touch_intn_off;
 	int touch_reset_off;
+	int lp11_off;
 
 	struct dsi_reset_cfg on_seq;
 	struct dsi_reset_cfg off_seq;
