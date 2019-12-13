@@ -569,6 +569,10 @@ int dsi_panel_driver_post_power_off(struct dsi_panel *panel)
 	}
 	spec_pdata = panel->spec_pdata;
 
+	if (spec_pdata->lp11_off)
+		usleep_range(spec_pdata->lp11_off * 1000,
+				spec_pdata->lp11_off * 1000 + 100);
+
 	if (!spec_pdata->oled_disp) {
 		rc = somc_panel_vreg_ctrl(
 			&spec_pdata->vspvsn_power_info, "ibb", false);
@@ -1153,6 +1157,9 @@ int dsi_panel_driver_parse_dt(struct dsi_panel *panel,
 	rc = of_property_read_u32(np,
 			"somc,pw-wait-after-off-touch-int-n", &tmp);
 	spec_pdata->touch_intn_off = !rc ? tmp : 0;
+
+	rc = of_property_read_u32(np, "somc,pw-wait-after-off-lp11", &tmp);
+	spec_pdata->lp11_off = !rc ? tmp : 0;
 
 	rc = of_property_read_u32(np,
 			"somc,aod-threshold", &tmp);
