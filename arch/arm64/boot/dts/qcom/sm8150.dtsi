@@ -38,7 +38,7 @@
 	qcom,msm-id = <339 0x10000>;
 	interrupt-parent = <&pdc>;
 
-	mem-offline {
+	mem_offline: mem-offline {
 		compatible = "qcom,mem-offline";
 		offline-sizes = <0x1 0x40000000 0x0 0x40000000>,
 				<0x1 0xc0000000 0x0 0x80000000>;
