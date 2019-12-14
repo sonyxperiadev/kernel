@@ -2938,7 +2938,7 @@ get_res_fail:
 	vfe_dev->vfe_vbif_base_size = 0;
 	vfe_dev->vfe_base_size = 0;
 vfe_irq_fail:
-	msm_camera_put_reg_base(vfe_dev->pdev, vfe_dev->vfe_base,
+	msm_camera_put_reg_base(vfe_dev->pdev, vfe_dev->vfe_vbif_base,
 					"vfe_vbif", 0);
 vbif_base_fail:
 	msm_camera_put_reg_base(vfe_dev->pdev, vfe_dev->vfe_base, "vfe", 0);
