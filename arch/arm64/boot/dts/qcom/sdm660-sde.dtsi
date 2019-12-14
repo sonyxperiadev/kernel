@@ -115,13 +115,13 @@
 		qcom,sde-dsc-off = <0x81000 0x81400>;
 		qcom,sde-dsc-size = <0x140>;
 
-		qcom,sde-sspp-type = "vig", "vig", "dma", "dma", "dma", "cursor";
+		qcom,sde-sspp-type = "vig", "vig", "dma", "dma", "dma";
 
-		qcom,sde-sspp-off = <0x5000 0x7000 0x25000 0x27000 0x29000 0x35000>;
+		qcom,sde-sspp-off = <0x5000 0x7000 0x25000 0x27000 0x29000>;
 		qcom,sde-sspp-src-size = <0x184>;
 
-		qcom,sde-sspp-xin-id = <0 4 1 5 9 2>;
-		qcom,sde-sspp-excl-rect = <1 1 1 1 1 1>;
+		qcom,sde-sspp-xin-id = <0 4 1 5 9>;
+		qcom,sde-sspp-excl-rect = <1 1 1 1 1>;
 
 		qcom,sde-has-dest-scaler;
 		qcom,sde-max-dest-scaler-input-linewidth = <2048>;
