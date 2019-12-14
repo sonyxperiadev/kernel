@@ -721,7 +721,7 @@
 	};
 
 	rpm_bus: qcom,rpm-smd {
-		compatible = "qcom,rpm-glink";
+		compatible = "qcom,rpm-smd";
 		qcom,glink-edge = "rpm";
 		rpm-channel-name = "rpm_requests";
 		interrupts = <GIC_SPI 168 IRQ_TYPE_EDGE_RISING>;
