@@ -44,8 +44,8 @@
 		#interrupt-cells = <1>;
 		iommus = <&mmss_bimc_smmu 0>;
 
-		#address-cells = <1>;
-		#size-cells = <0>;
+		// #address-cells = <1>;
+		// #size-cells = <0>;
 
 		#power-domain-cells = <0>;
 
@@ -132,7 +132,7 @@
 		qcom,sde-dest-scaler-size = <0x88>; //<0x800>;
 
 		/* offsets are relative to "mdp_phys + qcom,sde-off */
-		qcom,sde-sspp-clk-ctrl = <0x2ac 0>, <0x2b4 0>, <0x2ac 8>, 
+		qcom,sde-sspp-clk-ctrl = <0x2ac 0>, <0x2b4 0>, <0x2ac 8>,
 					 <0x2b4 8>, <0x2c4 8>, <0x3a8 16>;
 
 		qcom,sde-sspp-csc-off = <0x1a00>;
