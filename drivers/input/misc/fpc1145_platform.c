@@ -48,11 +48,11 @@
 #include <linux/mutex.h>
 #include <linux/of.h>
 #include <linux/of_gpio.h>
-#include <linux/uaccess.h>
-#include <linux/pm_wakeup.h>
-#include <linux/regulator/consumer.h>
 #include <linux/platform_device.h>
+#include <linux/pm_wakeup.h>
 #include <linux/poll.h>
+#include <linux/regulator/consumer.h>
+#include <linux/uaccess.h>
 
 #define FPC1145_RESET_LOW_US 1000
 #define FPC1145_RESET_HIGH1_US 100
@@ -124,6 +124,7 @@ struct fpc1145_data {
 	bool irq_fired;
 	wait_queue_head_t irq_evt;
 
+	struct mutex intrpoll_lock;
 	struct mutex lock;
 	bool prepared;
 };
@@ -326,6 +327,20 @@ static int fpc1145_device_release(struct inode *inode, struct file *fp)
 	return 0;
 }
 
+static inline void fpc1145_enable_irq_if_disabled(struct fpc1145_data *fpc1145)
+{
+	mutex_lock(&fpc1145->intrpoll_lock);
+
+	/* Enable the irq if not enabled: */
+	if (fpc1145->irq_fired) {
+		fpc1145->irq_fired = false;
+		dev_dbg(fpc1145->dev, "%s: enabling irq\n", __func__);
+		enable_irq(fpc1145->irq);
+	}
+
+	mutex_unlock(&fpc1145->intrpoll_lock);
+}
+
 static long fpc1145_device_ioctl(struct file *fp, unsigned int cmd,
 				 unsigned long arg)
 {
@@ -385,10 +400,7 @@ static long fpc1145_device_ioctl(struct file *fp, unsigned int cmd,
 			return rc;
 		}
 
-		if (fpc1145->irq_fired) {
-			fpc1145->irq_fired = false;
-			enable_irq(fpc1145->irq);
-		}
+		fpc1145_enable_irq_if_disabled(fpc1145);
 
 		rc = wait_event_interruptible_timeout(
 			fpc1145->irq_evt, fpc1145->irq_fired,
@@ -424,26 +436,12 @@ static unsigned int fpc1145_poll_interrupt(struct file *fp,
 	struct fpc1145_data *fpc1145 = to_fpc1145_data(fp);
 	struct device *dev = fpc1145->dev;
 
-	val = gpio_get_value(fpc1145->irq_gpio);
-	if (val) {
-		/* Early out */
-		dev_dbg(dev, "gpio already triggered\n");
-		pm_wakeup_event(dev, FPC_MAX_HAL_PROCESSING_TIME);
-		return POLLIN | POLLRDNORM;
-	}
-
-	/* Add current file to the waiting list  */
+	/* Add current file to the waiting list */
 	poll_wait(fp, &fpc1145->irq_evt, wait);
 
-	/* Enable the irq */
-	if (fpc1145->irq_fired) {
-		fpc1145->irq_fired = false;
-		enable_irq(fpc1145->irq);
-	}
-
 	val = gpio_get_value(fpc1145->irq_gpio);
 	if (val) {
-		dev_dbg(dev, "gpio triggered after poll_wait\n");
+		dev_dbg(dev, "gpio triggered\n");
 		pm_wakeup_event(dev, FPC_MAX_HAL_PROCESSING_TIME);
 		return POLLIN | POLLRDNORM;
 	}
@@ -453,7 +451,7 @@ static unsigned int fpc1145_poll_interrupt(struct file *fp,
 	 * The wakelock can be relaxed preemptively, as no processing has to
 	 * be done until the next wake-enabled IRQ fires.
 	 */
-
+	fpc1145_enable_irq_if_disabled(fpc1145);
 	pm_relax(dev);
 
 	return 0;
@@ -496,15 +494,18 @@ static irqreturn_t fpc1145_irq_handler(int irq, void *handle)
 {
 	struct fpc1145_data *fpc1145 = handle;
 
-	int val = gpio_get_value(fpc1145->irq_gpio);
+	mutex_lock(&fpc1145->intrpoll_lock);
 
-	dev_dbg(fpc1145->dev, "%s: gpio=%d\n", __func__, val);
+	dev_dbg(fpc1145->dev, "%s: gpio=%d\n", __func__,
+			gpio_get_value(fpc1145->irq_gpio));
 
 	fpc1145->irq_fired = true;
 
+	disable_irq_nosync(fpc1145->irq);
 	pm_wakeup_event(fpc1145->dev, FPC_MAX_HAL_PROCESSING_TIME);
 	wake_up_interruptible(&fpc1145->irq_evt);
-	disable_irq_nosync(fpc1145->irq);
+
+	mutex_unlock(&fpc1145->intrpoll_lock);
 
 	return IRQ_HANDLED;
 }
@@ -560,10 +561,10 @@ static int fpc1145_probe(struct platform_device *pdev)
 	int rc = 0;
 	size_t i;
 	int irqf;
+	struct device_node *np = dev->of_node;
 #ifdef CONFIG_ARCH_SONY_NILE
 	int hw_type;
 #endif
-	struct device_node *np = dev->of_node;
 
 	struct fpc1145_data *fpc1145 =
 		devm_kzalloc(dev, sizeof(*fpc1145), GFP_KERNEL);
@@ -598,14 +599,16 @@ static int fpc1145_probe(struct platform_device *pdev)
 		goto exit;
 
 	hw_type = cei_fp_module_detect();
-	dev_info(dev, "Detected hw type %d\n", hw_type);
 
 	(void)vreg_setup(fpc1145, VDD_ANA, false);
 
 	if (hw_type != FP_HW_TYPE_FPC) {
+		dev_info(dev, "FPC sensor not found, bailing out\n");
 		rc = -ENODEV;
 		goto exit;
 	}
+
+	dev_info(dev, "Detected FPC sensor\n");
 #endif
 
 	rc = fpc1145_request_named_gpio(fpc1145, "fpc,gpio_irq",
@@ -654,6 +657,7 @@ static int fpc1145_probe(struct platform_device *pdev)
 
 	irqf = IRQF_TRIGGER_HIGH | IRQF_ONESHOT;
 	mutex_init(&fpc1145->lock);
+	mutex_init(&fpc1145->intrpoll_lock);
 
 	device_init_wakeup(dev, true);
 	init_waitqueue_head(&fpc1145->irq_evt);

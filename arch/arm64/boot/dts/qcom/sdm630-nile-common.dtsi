@@ -120,13 +120,7 @@
 		et51x,gpio_rst    = <&tlmm 20 0>;
 		et51x,gpio_irq    = <&tlmm 72 0>;
 		vdd_ana-supply = <&pm660l_l6>;
-
-		/*
-		 * The device has to stay enabled until the HAL initializes,
-		 * otherwise it'll not send out any IRQ signals even though the
-		 * rest of the initialization runs without errors.
-		 */
-		et51x,enable-on-boot;
+		et51x,check-sensor-type;
 
 		pinctrl-names = "et51x_reset_reset",
 			"et51x_reset_active",
