@@ -527,7 +527,7 @@
 		};
 
 		pmi8998_wled: qcom,leds@d800 {
-			compatible = "qcom,pmi8998-spmi-wled";
+			compatible = "qcom,pmi8998-wled";
 			reg = <0xd800 0x100>, <0xd900 0x100>;
 			reg-names = "wled-ctrl-base", "wled-sink-base";
 			interrupts = <0x3 0xd8 0x1 IRQ_TYPE_EDGE_RISING>,
