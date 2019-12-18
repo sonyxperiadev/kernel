@@ -323,9 +323,9 @@ static int ovl_show_options(struct seq_file *m, struct dentry *dentry)
 	if (ufs->config.index != ovl_index_def)
 		seq_printf(m, ",index=%s",
 			   ufs->config.index ? "on" : "off");
-	if (ofs->config.override_creds != ovl_override_creds_def)
+	if (ufs->config.override_creds != ovl_override_creds_def)
 		seq_show_option(m, "override_creds",
-				ofs->config.override_creds ? "on" : "off");
+				ufs->config.override_creds ? "on" : "off");
 	return 0;
 }
 
