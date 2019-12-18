@@ -129,8 +129,8 @@
 		};
 	};
 
-	s5712 {
-		compatible = "s5712-switch";
+	hall {
+		compatible = "hall-switch";
 		interrupt-parent = <&tlmm>;
 		interrupts = <75 0x3>;
 		//vddio-supply = <&pm660l_l14>;
