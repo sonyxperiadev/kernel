@@ -8886,6 +8886,8 @@ skip_fw:
 
 	complete(&touch_charge_out_comp);
 
+	mxt_patch_event(data, PATCH_EVENT_CODE_AOD_DISABLE);
+
 	/* power unlock */
 	ret = mxt_pw_lock(INCELL_DISPLAY_POWER_UNLOCK);
 	data->after_work = true;
