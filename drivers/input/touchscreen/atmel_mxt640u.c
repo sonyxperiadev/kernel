@@ -9319,7 +9319,7 @@ static int mxt_drm_resume(struct mxt_data *data)
 
 	LOGN("%s\n", __func__);
 
-	if (data->sod_mode.pre_status)
+	if (data->sod_mode.status || data->aod_mode.status)
 		mxt_cancel_sod_mode(data);
 
 	if (data->after_work && data->charge_out) {
