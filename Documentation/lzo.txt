@@ -78,6 +78,10 @@ Description
      is an implementation design choice independent on the algorithm or
      encoding.
 
+For maximum compatibility, both versions are available under different names
+(lzo and lzo-rle). Differences in the encoding are noted in this document with
+e.g.: version 1 only.
+
 Byte sequences
 ==============
 
@@ -140,6 +144,11 @@ Byte sequences
            state = S (copy S literals after this block)
            End of stream is reached if distance == 16384
 
+        In version 1 only, this instruction is also used to encode a run of
+        zeros if distance = 0xbfff, i.e. H = 1 and the D bits are all 1.
+           In this case, it is followed by a fourth byte, X.
+           run length = ((X << 3) | (0 0 0 0 0 L L L)) + 4.
+
       0 0 1 L L L L L  (32..63)
            Copy of small block within 16kB distance (preferably less than 34B)
            length = 2 + (L ?: 31 + (zero_bytes * 255) + non_zero_byte)
@@ -165,7 +174,9 @@ Authors
 =======
 
   This document was written by Willy Tarreau <w@1wt.eu> on 2014/07/19 during an
-  analysis of the decompression code available in Linux 3.16-rc5. The code is
-  tricky, it is possible that this document contains mistakes or that a few
-  corner cases were overlooked. In any case, please report any doubt, fix, or
-  proposed updates to the author(s) so that the document can be updated.
+  analysis of the decompression code available in Linux 3.16-rc5, and updated
+  by Dave Rodgman <dave.rodgman@arm.com> on 2018/10/30 to introduce run-length
+  encoding. The code is tricky, it is possible that this document contains
+  mistakes or that a few corner cases were overlooked. In any case, please
+  report any doubt, fix, or proposed updates to the author(s) so that the
+  document can be updated.
