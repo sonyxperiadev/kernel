@@ -858,8 +858,13 @@ int dsi_display_check_status(struct drm_connector *connector, void *display,
 	if (te_check_override && gpio_is_valid(dsi_display->disp_te_gpio))
 		status_mode = ESD_MODE_PANEL_TE;
 
+	if (status_mode == ESD_MODE_PANEL_TE) {
+		rc = dsi_display_status_check_te(dsi_display);
+		goto exit;
+	}
+
 	dsi_display_clk_ctrl(dsi_display->dsi_clk_handle,
-		DSI_ALL_CLKS, DSI_CLK_ON);
+			     DSI_ALL_CLKS, DSI_CLK_ON);
 
 	/* Mask error interrupts before attempting ESD read */
 	mask = BIT(DSI_FIFO_OVERFLOW) | BIT(DSI_FIFO_UNDERFLOW);
@@ -870,25 +875,24 @@ int dsi_display_check_status(struct drm_connector *connector, void *display,
 		rc = dsi_display_status_reg_read(dsi_display);
 	} else if (status_mode == ESD_MODE_SW_BTA) {
 		rc = dsi_display_status_bta_request(dsi_display);
-	} else if (status_mode == ESD_MODE_PANEL_TE) {
-		rc = dsi_display_status_check_te(dsi_display);
 	} else {
-		pr_warn("unsupported check status mode\n");
+		pr_warn("Unsupported ESD check mode: %d\n", status_mode);
 		panel->esd_config.esd_enabled = false;
 	}
 
-	/* Unmask error interrupts */
+	/* Unmask error interrupts if check passed */
 	if (rc > 0) {
 		dsi_display_set_ctrl_esd_check_flag(dsi_display, false);
-		dsi_display_mask_ctrl_error_interrupts(dsi_display, mask,
-							false);
-	} else {
-		/* Handle Panel failures during display disable sequence */
-		atomic_set(&panel->esd_recovery_pending, 1);
+		dsi_display_mask_ctrl_error_interrupts(dsi_display,
+						       mask, false);
 	}
-
 	dsi_display_clk_ctrl(dsi_display->dsi_clk_handle,
-		DSI_ALL_CLKS, DSI_CLK_OFF);
+			     DSI_ALL_CLKS, DSI_CLK_OFF);
+
+exit:
+	/* Handle Panel failures during display disable sequence */
+	if (rc <= 0)
+		atomic_set(&panel->esd_recovery_pending, 1);
 
 release_panel_lock:
 	dsi_panel_release_panel_lock(panel);
@@ -3668,13 +3672,11 @@ static int dsi_display_parse_dt(struct dsi_display *display)
 	/* Parse TE data */
 	dsi_display_parse_te_data(display);
 
-	/* Parse all external bridges from port 0 */
-	display_for_each_ctrl(i, display) {
+	/* Parse all external bridges config, endpoint0 */
+	for (i = 0; i < MAX_EXT_BRIDGE_PORT_CONFIG; i++) {
 		display->ext_bridge[i].node_of =
 			of_graph_get_remote_node(of_node, 0, i);
-		if (display->ext_bridge[i].node_of)
-			display->ext_bridge_cnt++;
-		else
+		if (!display->ext_bridge[i].node_of)
 			break;
 	}
 
@@ -4981,7 +4983,7 @@ static int dsi_display_bind(struct device *dev,
 	char *client1 = "dsi_clk_client";
 	char *client2 = "mdp_event_client";
 	char dsi_client_name[DSI_CLIENT_NAME_SIZE];
-	int i, rc = 0;
+	int i, j, rc = 0;
 
 	if (!dev || !pdev || !master) {
 		pr_err("invalid param(s), dev %pK, pdev %pK, master %pK\n",
@@ -5000,6 +5002,21 @@ static int dsi_display_bind(struct device *dev,
 
 	if (!display->disp_node)
 		return 0;
+
+	/* defer bind if ext bridge driver is not loaded */
+	for (i = 0; i < display->panel->host_config.ext_bridge_num; i++) {
+		j = display->panel->host_config.ext_bridge_map[i];
+		if (!display->ext_bridge[j].node_of) {
+			pr_err("invalid ext bridge node\n");
+			return -EINVAL;
+		}
+
+		if (!of_drm_find_bridge(display->ext_bridge[j].node_of)) {
+			pr_debug("defer for bridge[%d] %s\n", j,
+				display->ext_bridge[j].node_of->full_name);
+			return -EPROBE_DEFER;
+		}
+	}
 
 	mutex_lock(&display->display_lock);
 
@@ -5677,11 +5694,9 @@ static struct dsi_display_ext_bridge *dsi_display_ext_get_bridge(
 {
 	struct msm_drm_private *priv;
 	struct sde_kms *sde_kms;
-	struct list_head *connector_list;
-	struct drm_connector *conn_iter;
-	struct sde_connector *sde_conn;
 	struct dsi_display *display;
-	int i;
+	int i, j, k;
+	u32 bridge_num;
 
 	if (!bridge || !bridge->encoder) {
 		SDE_ERROR("invalid argument\n");
@@ -5690,16 +5705,14 @@ static struct dsi_display_ext_bridge *dsi_display_ext_get_bridge(
 
 	priv = bridge->dev->dev_private;
 	sde_kms = to_sde_kms(priv->kms);
-	connector_list = &sde_kms->dev->mode_config.connector_list;
 
-	list_for_each_entry(conn_iter, connector_list, head) {
-		sde_conn = to_sde_connector(conn_iter);
-		if (sde_conn->encoder == bridge->encoder) {
-			display = sde_conn->display;
-			display_for_each_ctrl(i, display) {
-				if (display->ext_bridge[i].bridge == bridge)
-					return &display->ext_bridge[i];
-			}
+	for (i = 0; i < sde_kms->dsi_display_count; i++) {
+		display = sde_kms->dsi_displays[i];
+		bridge_num = display->panel->host_config.ext_bridge_num;
+		for (j = 0; j < bridge_num; j++) {
+			k = display->panel->host_config.ext_bridge_map[j];
+			if (display->ext_bridge[k].bridge == bridge)
+				return &display->ext_bridge[k];
 		}
 	}
 
@@ -5863,15 +5876,13 @@ int dsi_display_drm_ext_bridge_init(struct dsi_display *display,
 	struct drm_bridge *prev_bridge = bridge;
 	int rc = 0, i;
 
-	for (i = 0; i < display->ext_bridge_cnt; i++) {
+	for (i = 0; i < display->panel->host_config.ext_bridge_num; i++) {
+		int j = display->panel->host_config.ext_bridge_map[i];
 		struct dsi_display_ext_bridge *ext_bridge_info =
-				&display->ext_bridge[i];
+				&display->ext_bridge[j];
 
 		/* return if ext bridge is already initialized */
 		if (ext_bridge_info->bridge)
-			return 0;
-
-		if (!display->panel->host_config.ext_bridge_mode)
 			return 0;
 
 		ext_bridge = of_drm_find_bridge(ext_bridge_info->node_of);
@@ -5882,7 +5893,7 @@ int dsi_display_drm_ext_bridge_init(struct dsi_display *display,
 		}
 
 		/* override functions for mode adjustment */
-		if (display->ext_bridge_cnt > 1) {
+		if (display->panel->host_config.ext_bridge_num > 1) {
 			ext_bridge_info->bridge_funcs = *ext_bridge->funcs;
 			if (ext_bridge->funcs->mode_fixup)
 				ext_bridge_info->bridge_funcs.mode_fixup =
@@ -5927,7 +5938,7 @@ int dsi_display_drm_ext_bridge_init(struct dsi_display *display,
 		if (!display->ext_conn ||
 		    !display->ext_conn->funcs ||
 		    !display->ext_conn->helper_private ||
-		    display->ext_bridge_cnt > 1) {
+		    display->panel->host_config.ext_bridge_num > 1) {
 			display->ext_conn = NULL;
 			continue;
 		}
@@ -7295,20 +7306,10 @@ int dsi_display_pre_kickoff(struct drm_connector *connector,
 {
 	int rc = 0;
 	int i;
-	bool enable;
 
 	/* check and setup MISR */
 	if (display->misr_enable)
 		_dsi_display_setup_misr(display);
-
-	if (params->qsync_update) {
-		enable = (params->qsync_mode > 0) ? true : false;
-		rc = dsi_display_qsync(display, enable);
-		if (rc)
-			pr_err("%s failed to send qsync commands",
-				__func__);
-		SDE_EVT32(params->qsync_mode, rc);
-	}
 
 	rc = dsi_display_set_roi(display, params->rois);
 
@@ -7387,6 +7388,29 @@ int dsi_display_config_ctrl_for_cont_splash(struct dsi_display *display)
 	}
 
 error_out:
+	return rc;
+}
+
+int dsi_display_pre_commit(void *display,
+		struct msm_display_conn_params *params)
+{
+	bool enable = false;
+	int rc = 0;
+
+	if (!display || !params) {
+		pr_err("Invalid params\n");
+		return -EINVAL;
+	}
+
+	if (params->qsync_update) {
+		enable = (params->qsync_mode > 0) ? true : false;
+		rc = dsi_display_qsync(display, enable);
+		if (rc)
+			pr_err("%s failed to send qsync commands\n",
+				__func__);
+		SDE_EVT32(params->qsync_mode, rc);
+	}
+
 	return rc;
 }
 

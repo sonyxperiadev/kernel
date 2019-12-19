@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -26,6 +26,8 @@
 #include "sde_connector.h"
 #include "sde_hw_dsc.h"
 #include "sde_hw_rot.h"
+#include "sde_crtc.h"
+#include "sde_hw_qdss.h"
 
 #define RESERVED_BY_OTHER(h, r) \
 	((h)->rsvp && ((h)->rsvp->enc_id != (r)->enc_id))
@@ -333,6 +335,9 @@ static void _sde_rm_hw_destroy(enum sde_hw_blk_type type, void *hw)
 	case SDE_HW_BLK_ROT:
 		sde_hw_rot_destroy(hw);
 		break;
+	case SDE_HW_BLK_QDSS:
+		sde_hw_qdss_destroy(hw);
+		break;
 	case SDE_HW_BLK_SSPP:
 		/* SSPPs are not managed by the resource manager */
 	case SDE_HW_BLK_TOP:
@@ -423,6 +428,9 @@ static int _sde_rm_hw_blk_create(
 		break;
 	case SDE_HW_BLK_ROT:
 		hw = sde_hw_rot_init(id, mmio, cat);
+		break;
+	case SDE_HW_BLK_QDSS:
+		hw = sde_hw_qdss_init(id, mmio, cat);
 		break;
 	case SDE_HW_BLK_SSPP:
 		/* SSPPs are not managed by the resource manager */
@@ -605,6 +613,15 @@ int sde_rm_init(struct sde_rm *rm,
 				cat->cdm[i].id, &cat->cdm[i]);
 		if (rc) {
 			SDE_ERROR("failed: cdm hw not available\n");
+			goto fail;
+		}
+	}
+
+	for (i = 0; i < cat->qdss_count; i++) {
+		rc = _sde_rm_hw_blk_create(rm, cat, mmio, SDE_HW_BLK_QDSS,
+				cat->qdss[i].id, &cat->qdss[i]);
+		if (rc) {
+			SDE_ERROR("failed: qdss hw not available\n");
 			goto fail;
 		}
 	}
@@ -816,8 +833,8 @@ static int _sde_rm_reserve_lms(
 	int i, rc = 0;
 
 	if (!reqs->topology->num_lm) {
-		SDE_ERROR("invalid number of lm: %d\n", reqs->topology->num_lm);
-		return -EINVAL;
+		SDE_DEBUG("invalid number of lm: %d\n", reqs->topology->num_lm);
+		return 0;
 	}
 
 	/* Find a primary mixer */
@@ -931,6 +948,11 @@ static int _sde_rm_reserve_ctls(
 	struct sde_rm_hw_iter iter;
 	int i = 0;
 
+	if (!top->num_ctl) {
+		SDE_DEBUG("invalid number of ctl: %d\n", top->num_ctl);
+		return 0;
+	}
+
 	memset(&ctls, 0, sizeof(ctls));
 
 	sde_rm_init_hw_iter(&iter, 0, SDE_HW_BLK_CTL);
@@ -1031,6 +1053,44 @@ static int _sde_rm_reserve_dsc(
 		num_dsc_enc, rsvp->enc_id);
 
 	return -ENAVAIL;
+}
+
+static int _sde_rm_reserve_qdss(
+		struct sde_rm *rm,
+		struct sde_rm_rsvp *rsvp,
+		const struct sde_rm_topology_def *top,
+		u8 *_qdss_ids)
+{
+	struct sde_rm_hw_iter iter;
+	struct msm_drm_private *priv = rm->dev->dev_private;
+	struct sde_kms *sde_kms;
+
+	if (!priv->kms) {
+		SDE_ERROR("invalid kms\n");
+		return -EINVAL;
+	}
+	sde_kms = to_sde_kms(priv->kms);
+
+	sde_rm_init_hw_iter(&iter, 0, SDE_HW_BLK_QDSS);
+
+	while (_sde_rm_get_hw_locked(rm, &iter)) {
+		if (RESERVED_BY_OTHER(iter.blk, rsvp))
+			continue;
+
+		SDE_DEBUG("blk id = %d\n", iter.blk->id);
+
+		iter.blk->rsvp_nxt = rsvp;
+		SDE_EVT32(iter.blk->type, rsvp->enc_id, iter.blk->id);
+		return 0;
+	}
+
+	if (!iter.hw && sde_kms->catalog->qdss_count) {
+		SDE_DEBUG("couldn't reserve qdss for type %d id %d\n",
+						SDE_HW_BLK_QDSS, iter.blk->id);
+		return -ENAVAIL;
+	}
+
+	return 0;
 }
 
 static int _sde_rm_reserve_cdm(
@@ -1202,6 +1262,10 @@ static int _sde_rm_make_next_rsvp(
 		return ret;
 
 	ret = _sde_rm_reserve_dsc(rm, rsvp, reqs->topology, NULL);
+	if (ret)
+		return ret;
+
+	ret = _sde_rm_reserve_qdss(rm, rsvp, reqs->topology, NULL);
 	if (ret)
 		return ret;
 
@@ -1454,6 +1518,10 @@ static int _sde_rm_make_next_rsvp_for_cont_splash(
 	if (ret)
 		return ret;
 
+	ret = _sde_rm_reserve_qdss(rm, rsvp, reqs->topology, NULL);
+	if (ret)
+		return ret;
+
 	return ret;
 }
 
@@ -1503,8 +1571,22 @@ static int _sde_rm_populate_requirements(
 	 * Set the requirement for LM which has CWB support if CWB is
 	 * found enabled.
 	 */
-	if (!RM_RQ_CWB(reqs) && sde_encoder_in_clone_mode(enc))
+	if (!RM_RQ_CWB(reqs) && sde_encoder_in_clone_mode(enc)) {
 		reqs->top_ctrl |= BIT(SDE_RM_TOPCTL_CWB);
+
+		/*
+		 * topology selection based on conn mode is not valid for CWB
+		 * as WB conn populates modes based on max_mixer_width check
+		 * but primary can be using dual LMs. This topology override for
+		 * CWB is to check number of datapath active in primary and
+		 * allocate same number of LM/PP blocks reserved for CWB
+		 */
+		reqs->topology =
+			&rm->topology_tbl[SDE_RM_TOPOLOGY_DUALPIPE_3DMERGE];
+		if (sde_crtc_get_num_datapath(crtc_state->crtc) == 1)
+			reqs->topology =
+				&rm->topology_tbl[SDE_RM_TOPOLOGY_SINGLEPIPE];
+	}
 
 	SDE_DEBUG("top_ctrl: 0x%llX num_h_tiles: %d\n", reqs->top_ctrl,
 			reqs->hw_res.display_num_of_h_tiles);
@@ -1641,10 +1723,8 @@ void sde_rm_release(struct sde_rm *rm, struct drm_encoder *enc)
 	mutex_lock(&rm->rm_lock);
 
 	rsvp = _sde_rm_get_rsvp(rm, enc);
-	if (!rsvp) {
-		SDE_ERROR("failed to find rsvp for enc %d\n", enc->base.id);
+	if (!rsvp)
 		goto end;
-	}
 
 	conn = _sde_rm_get_connector(enc);
 	if (!conn) {
@@ -1831,5 +1911,102 @@ int sde_rm_reserve(
 end:
 	mutex_unlock(&rm->rm_lock);
 
+	return ret;
+}
+
+int sde_rm_ext_blk_create_reserve(struct sde_rm *rm,
+		struct sde_hw_blk *hw, struct drm_encoder *enc)
+{
+	struct sde_rm_hw_blk *blk;
+	struct sde_rm_rsvp *rsvp;
+	int ret = 0;
+
+	if (!rm || !hw || !enc) {
+		SDE_ERROR("invalid parameters\n");
+		return -EINVAL;
+	}
+
+	if (hw->type >= SDE_HW_BLK_MAX) {
+		SDE_ERROR("invalid HW type\n");
+		return -EINVAL;
+	}
+
+	mutex_lock(&rm->rm_lock);
+
+	rsvp = _sde_rm_get_rsvp(rm, enc);
+	if (!rsvp) {
+		rsvp = kzalloc(sizeof(*rsvp), GFP_KERNEL);
+		if (!rsvp) {
+			ret = -ENOMEM;
+			goto end;
+		}
+
+		rsvp->seq = ++rm->rsvp_next_seq;
+		rsvp->enc_id = enc->base.id;
+		list_add_tail(&rsvp->list, &rm->rsvps);
+
+		SDE_DEBUG("create rsvp %d for enc %d\n",
+					rsvp->seq, rsvp->enc_id);
+	}
+
+	blk = kzalloc(sizeof(*blk), GFP_KERNEL);
+	if (!blk) {
+		ret = -ENOMEM;
+		goto end;
+	}
+
+	blk->type = hw->type;
+	blk->id = hw->id;
+	blk->hw = hw;
+	blk->rsvp = rsvp;
+	list_add_tail(&blk->list, &rm->hw_blks[hw->type]);
+
+	SDE_DEBUG("create blk %d %d for rsvp %d enc %d\n", blk->type, blk->id,
+					rsvp->seq, rsvp->enc_id);
+
+end:
+	mutex_unlock(&rm->rm_lock);
+	return ret;
+}
+
+int sde_rm_ext_blk_destroy(struct sde_rm *rm,
+		struct drm_encoder *enc)
+{
+	struct sde_rm_hw_blk *blk = NULL, *p;
+	struct sde_rm_rsvp *rsvp;
+	enum sde_hw_blk_type type;
+	int ret = 0;
+
+	if (!rm || !enc) {
+		SDE_ERROR("invalid parameters\n");
+		return -EINVAL;
+	}
+
+	mutex_lock(&rm->rm_lock);
+
+	rsvp = _sde_rm_get_rsvp(rm, enc);
+	if (!rsvp) {
+		ret = -ENOENT;
+		SDE_ERROR("failed to find rsvp for enc %d\n", enc->base.id);
+		goto end;
+	}
+
+	for (type = 0; type < SDE_HW_BLK_MAX; type++) {
+		list_for_each_entry_safe(blk, p, &rm->hw_blks[type], list) {
+			if (blk->rsvp == rsvp) {
+				list_del(&blk->list);
+				SDE_DEBUG("del blk %d %d from rsvp %d enc %d\n",
+						blk->type, blk->id,
+						rsvp->seq, rsvp->enc_id);
+				kfree(blk);
+			}
+		}
+	}
+
+	SDE_DEBUG("del rsvp %d\n", rsvp->seq);
+	list_del(&rsvp->list);
+	kfree(rsvp);
+end:
+	mutex_unlock(&rm->rm_lock);
 	return ret;
 }

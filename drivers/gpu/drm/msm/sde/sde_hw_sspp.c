@@ -166,11 +166,12 @@ static inline int _sspp_subblk_offset(struct sde_hw_pipe *ctx,
 		u32 *idx)
 {
 	int rc = 0;
-	const struct sde_sspp_sub_blks *sblk = ctx->cap->sblk;
+	const struct sde_sspp_sub_blks *sblk;
 
 	if (!ctx)
 		return -EINVAL;
 
+	sblk = ctx->cap->sblk;
 	switch (s_id) {
 	case SDE_SSPP_SRC:
 		*idx = sblk->src_blk.base;
@@ -1037,6 +1038,17 @@ static void _setup_layer_ops_colorproc(struct sde_hw_pipe *c,
 			else
 				c->ops.setup_vig_gamut = NULL;
 		}
+
+		if (c->cap->sblk->gamut_blk.version ==
+			(SDE_COLOR_PROCESS_VER(0x6, 0x0))) {
+			ret = reg_dmav1_init_sspp_op_v4(SDE_SSPP_VIG_GAMUT,
+							c->idx);
+			if (!ret)
+				c->ops.setup_vig_gamut =
+					reg_dmav1_setup_vig_gamutv6;
+			else
+				c->ops.setup_vig_gamut = NULL;
+		}
 	}
 
 	if (test_bit(SDE_SSPP_VIG_IGC, &features)) {
@@ -1047,6 +1059,17 @@ static void _setup_layer_ops_colorproc(struct sde_hw_pipe *c,
 			if (!ret)
 				c->ops.setup_vig_igc =
 					reg_dmav1_setup_vig_igcv5;
+			else
+				c->ops.setup_vig_igc = NULL;
+		}
+
+		if (c->cap->sblk->igc_blk[0].version ==
+			(SDE_COLOR_PROCESS_VER(0x6, 0x0))) {
+			ret = reg_dmav1_init_sspp_op_v4(SDE_SSPP_VIG_IGC,
+							c->idx);
+			if (!ret)
+				c->ops.setup_vig_igc =
+					reg_dmav1_setup_vig_igcv6;
 			else
 				c->ops.setup_vig_igc = NULL;
 		}
@@ -1318,8 +1341,8 @@ struct sde_hw_pipe *sde_hw_sspp_init(enum sde_sspp idx,
 	_setup_layer_ops(hw_pipe, hw_pipe->cap->features, is_virtual_pipe);
 
 	if (hw_pipe->ops.get_scaler_ver) {
-		hw_pipe->cap->sblk->scaler_blk.version =
-			hw_pipe->ops.get_scaler_ver(hw_pipe);
+		sde_init_scaler_blk(&hw_pipe->cap->sblk->scaler_blk,
+			hw_pipe->ops.get_scaler_ver(hw_pipe));
 	}
 
 	rc = sde_hw_blk_init(&hw_pipe->base, SDE_HW_BLK_SSPP, idx, &sde_hw_ops);

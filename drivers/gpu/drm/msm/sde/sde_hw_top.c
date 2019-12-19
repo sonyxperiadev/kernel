@@ -70,6 +70,10 @@
 
 #define DCE_SEL                           0x450
 
+#define ROT_SID_RD			  0x20
+#define ROT_SID_WR			  0x24
+#define ROT_SID_ID_VAL			  0x1c
+
 static void sde_hw_setup_split_pipe(struct sde_hw_mdp *mdp,
 		struct split_pipe_cfg *cfg)
 {
@@ -442,6 +446,47 @@ static void sde_hw_intf_audio_select(struct sde_hw_mdp *mdp)
 	SDE_REG_WRITE(c, HDMI_DP_CORE_SELECT, 0x1);
 }
 
+static void sde_hw_mdp_events(struct sde_hw_mdp *mdp, bool enable)
+{
+	struct sde_hw_blk_reg_map *c;
+
+	if (!mdp)
+		return;
+
+	c = &mdp->hw;
+
+	SDE_REG_WRITE(c, HW_EVENTS_CTL, enable);
+}
+
+struct sde_hw_sid *sde_hw_sid_init(void __iomem *addr,
+	u32 sid_len, const struct sde_mdss_cfg *m)
+{
+	struct sde_hw_sid *c;
+
+	if (!addr) {
+		SDE_DEBUG("Invalid addr\n");
+		return NULL;
+	}
+
+	c = kzalloc(sizeof(*c), GFP_KERNEL);
+	if (!c)
+		return ERR_PTR(-ENOMEM);
+
+	c->hw.base_off = addr;
+	c->hw.blk_off = 0;
+	c->hw.length = sid_len;
+	c->hw.hwversion = m->hwversion;
+	c->hw.log_mask = SDE_DBG_MASK_SID;
+
+	return c;
+}
+
+void sde_hw_sid_rotator_set(struct sde_hw_sid *sid)
+{
+	SDE_REG_WRITE(&sid->hw, ROT_SID_RD, ROT_SID_ID_VAL);
+	SDE_REG_WRITE(&sid->hw, ROT_SID_WR, ROT_SID_ID_VAL);
+}
+
 static void sde_hw_program_cwb_ppb_ctrl(struct sde_hw_mdp *mdp,
 		bool dual, bool dspp_out)
 {
@@ -469,6 +514,7 @@ static void _setup_mdp_ops(struct sde_hw_mdp_ops *ops,
 	ops->setup_dce = sde_hw_setup_dce;
 	ops->reset_ubwc = sde_hw_reset_ubwc;
 	ops->intf_audio_select = sde_hw_intf_audio_select;
+	ops->set_mdp_hw_events = sde_hw_mdp_events;
 	if (cap & BIT(SDE_MDP_VSYNC_SEL))
 		ops->setup_vsync_source = sde_hw_setup_vsync_source;
 	else

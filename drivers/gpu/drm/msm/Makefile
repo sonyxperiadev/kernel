@@ -84,6 +84,7 @@ msm_drm-$(CONFIG_DRM_MSM_MDP5) += mdp/mdp_format.o \
 
 msm_drm-$(CONFIG_DRM_SDE_RSC) += sde_rsc.o \
 	sde_rsc_hw.o \
+	sde_rsc_hw_v3.o \
 
 # use drm gpu driver only if qcom_kgsl driver not available
 ifneq ($(CONFIG_QCOM_KGSL),y)
@@ -181,7 +182,8 @@ msm_drm-$(CONFIG_DRM_MSM) += \
 	sde/sde_reg_dma.o \
 	sde/sde_hw_reg_dma_v1.o \
 	sde/sde_hw_dsc.o \
-	sde/sde_hw_ds.o
+	sde/sde_hw_ds.o \
+	sde/sde_hw_qdss.o
 
 msm_drm-$(CONFIG_DRM_SDE_WB) += sde/sde_wb.o \
 	sde/sde_encoder_phys_wb.o

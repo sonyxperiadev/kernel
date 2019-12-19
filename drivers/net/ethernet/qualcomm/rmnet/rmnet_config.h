@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2014, 2016-2018 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2014, 2016-2019 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -20,6 +20,7 @@
 #define _RMNET_CONFIG_H_
 
 #define RMNET_MAX_LOGICAL_EP 255
+#define RMNET_MAX_VEID 4
 
 struct rmnet_endpoint {
 	u8 mux_id;
@@ -27,7 +28,15 @@ struct rmnet_endpoint {
 	struct hlist_node hlnode;
 };
 
+struct rmnet_agg_stats {
+	u64 ul_agg_reuse;
+	u64 ul_agg_alloc;
+};
+
 struct rmnet_port_priv_stats {
+	u64 dl_hdr_last_qmap_vers;
+	u64 dl_hdr_last_ep_id;
+	u64 dl_hdr_last_trans_id;
 	u64 dl_hdr_last_seq;
 	u64 dl_hdr_last_bytes;
 	u64 dl_hdr_last_pkts;
@@ -37,6 +46,19 @@ struct rmnet_port_priv_stats {
 	u64 dl_hdr_total_pkts;
 	u64 dl_trl_last_seq;
 	u64 dl_trl_count;
+	struct rmnet_agg_stats agg;
+};
+
+struct rmnet_egress_agg_params {
+	u16 agg_size;
+	u8 agg_count;
+	u8 agg_features;
+	u32 agg_time;
+};
+
+struct rmnet_agg_page {
+	struct list_head list;
+	struct page *page;
 };
 
 /* One instance of this structure is instantiated for each real_dev associated
@@ -51,8 +73,7 @@ struct rmnet_port {
 	struct net_device *bridge_ep;
 	void *rmnet_perf;
 
-	u16 egress_agg_size;
-	u16 egress_agg_count;
+	struct rmnet_egress_agg_params egress_agg_params;
 
 	/* Protect aggregation related elements */
 	spinlock_t agg_lock;
@@ -64,6 +85,9 @@ struct rmnet_port {
 	struct timespec agg_last;
 	struct hrtimer hrtimer;
 	struct work_struct agg_wq;
+	u8 agg_size_order;
+	struct list_head agg_list;
+	struct rmnet_agg_page *agg_head;
 
 	void *qmi_info;
 
@@ -71,6 +95,10 @@ struct rmnet_port {
 	struct list_head dl_list;
 	struct rmnet_port_priv_stats stats;
 	int dl_marker_flush;
+
+	/* Descriptor pool */
+	spinlock_t desc_pool_lock;
+	struct rmnet_frag_descriptor_pool *frag_desc_pool;
 };
 
 extern struct rtnl_link_ops rmnet_link_ops;
@@ -88,6 +116,31 @@ struct rmnet_pcpu_stats {
 	struct u64_stats_sync syncp;
 };
 
+struct rmnet_coal_close_stats {
+	u64 non_coal;
+	u64 ip_miss;
+	u64 trans_miss;
+	u64 hw_nl;
+	u64 hw_pkt;
+	u64 hw_byte;
+	u64 hw_time;
+	u64 hw_evict;
+	u64 coal;
+};
+
+struct rmnet_coal_stats {
+	u64 coal_rx;
+	u64 coal_pkts;
+	u64 coal_hdr_nlo_err;
+	u64 coal_hdr_pkt_err;
+	u64 coal_csum_err;
+	u64 coal_reconstruct;
+	u64 coal_ip_invalid;
+	u64 coal_trans_invalid;
+	struct rmnet_coal_close_stats close;
+	u64 coal_veid[RMNET_MAX_VEID];
+};
+
 struct rmnet_priv_stats {
 	u64 csum_ok;
 	u64 csum_valid_unset;
@@ -99,6 +152,8 @@ struct rmnet_priv_stats {
 	u64 csum_skipped;
 	u64 csum_sw;
 	u64 csum_hw;
+	struct rmnet_coal_stats coal;
+	u64 ul_prio;
 };
 
 struct rmnet_priv {

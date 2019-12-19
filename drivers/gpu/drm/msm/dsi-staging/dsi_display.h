@@ -29,7 +29,6 @@
 #include "dsi_phy.h"
 #include "dsi_panel.h"
 
-#define MAX_DSI_CTRLS_PER_DISPLAY             2
 #define DSI_CLIENT_NAME_SIZE		20
 #define MAX_CMDLINE_PARAM_LEN	 512
 #define MAX_CMD_PAYLOAD_SIZE	256
@@ -160,7 +159,6 @@ struct dsi_display_ext_bridge {
  * @panel:            Handle to DSI panel.
  * @panel_of:         pHandle to DSI panel.
  * @ext_bridge:       External bridge information for DSI display.
- * @ext_bridge_cnt:   Number of external bridges
  * @modes:            Array of probed DSI modes
  * @type:             DSI display type.
  * @clk_master_idx:   The master controller for controlling clocks. This is an
@@ -216,8 +214,7 @@ struct dsi_display {
 	struct device_node *parser_node;
 
 	/* external bridge */
-	struct dsi_display_ext_bridge ext_bridge[MAX_DSI_CTRLS_PER_DISPLAY];
-	u32 ext_bridge_cnt;
+	struct dsi_display_ext_bridge ext_bridge[MAX_EXT_BRIDGE_PORT_CONFIG];
 
 	struct dsi_display_mode *modes;
 
@@ -673,6 +670,15 @@ int dsi_display_set_power(struct drm_connector *connector,
 int dsi_display_pre_kickoff(struct drm_connector *connector,
 		struct dsi_display *display,
 		struct msm_display_kickoff_params *params);
+/*
+ * dsi_display_pre_commit - program pre commit features
+ * @display: Pointer to private display structure
+ * @params: Parameters for pre commit time programming
+ * Returns: Zero on success
+ */
+int dsi_display_pre_commit(void *display,
+		struct msm_display_conn_params *params);
+
 /**
  * dsi_display_get_dst_format() - get dst_format from DSI display
  * @connector:        Pointer to drm connector structure

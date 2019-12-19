@@ -200,9 +200,34 @@ static const char rmnet_gstrings_stats[][ETH_GSTRING_LEN] = {
 	"Checksum skipped",
 	"Checksum computed in software",
 	"Checksum computed in hardware",
+	"Coalescing packets received",
+	"Coalesced packets",
+	"Coalescing header NLO errors",
+	"Coalescing header pcount errors",
+	"Coalescing checksum errors",
+	"Coalescing packet reconstructs",
+	"Coalescing IP version invalid",
+	"Coalescing L4 header invalid",
+	"Coalescing close Non-coalescable",
+	"Coalescing close L3 mismatch",
+	"Coalescing close L4 mismatch",
+	"Coalescing close HW NLO limit",
+	"Coalescing close HW packet limit",
+	"Coalescing close HW byte limit",
+	"Coalescing close HW time limit",
+	"Coalescing close HW eviction",
+	"Coalescing close Coalescable",
+	"Coalescing packets over VEID0",
+	"Coalescing packets over VEID1",
+	"Coalescing packets over VEID2",
+	"Coalescing packets over VEID3",
+	"Uplink priority packets",
 };
 
 static const char rmnet_port_gstrings_stats[][ETH_GSTRING_LEN] = {
+	"MAP Cmd last version",
+	"MAP Cmd last ep id",
+	"MAP Cmd last transaction id",
 	"DL header last seen sequence",
 	"DL header last seen bytes",
 	"DL header last seen packets",
@@ -212,6 +237,8 @@ static const char rmnet_port_gstrings_stats[][ETH_GSTRING_LEN] = {
 	"DL header total pkts received",
 	"DL trailer last seen sequence",
 	"DL trailer pkts received",
+	"UL agg reuse",
+	"UL agg alloc",
 };
 
 static void rmnet_get_strings(struct net_device *dev, u32 stringset, u8 *buf)
@@ -262,6 +289,7 @@ static int rmnet_stats_reset(struct net_device *dev)
 {
 	struct rmnet_priv *priv = netdev_priv(dev);
 	struct rmnet_port_priv_stats *stp;
+	struct rmnet_priv_stats *st;
 	struct rmnet_port *port;
 
 	port = rmnet_get_port(priv->real_dev);
@@ -271,6 +299,11 @@ static int rmnet_stats_reset(struct net_device *dev)
 	stp = &port->stats;
 
 	memset(stp, 0, sizeof(*stp));
+
+	st = &priv->stats;
+
+	memset(st, 0, sizeof(*st));
+
 	return 0;
 }
 
@@ -321,6 +354,7 @@ int rmnet_vnd_newlink(u8 id, struct net_device *rmnet_dev,
 	rmnet_dev->hw_features = NETIF_F_RXCSUM;
 	rmnet_dev->hw_features |= NETIF_F_IP_CSUM | NETIF_F_IPV6_CSUM;
 	rmnet_dev->hw_features |= NETIF_F_SG;
+	rmnet_dev->hw_features |= NETIF_F_GRO_HW;
 
 	priv->real_dev = real_dev;
 
