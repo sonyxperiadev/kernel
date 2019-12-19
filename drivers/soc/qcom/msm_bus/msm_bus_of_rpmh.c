@@ -810,7 +810,7 @@ int msm_bus_of_to_pdata(struct platform_device *pdev,
 node_reg_err:
 	devm_kfree(&pdev->dev, pdata);
 	pdata = NULL;
-	return NULL;
+	return -EINVAL;
 }
 
 static int msm_bus_of_get_ids(struct platform_device *pdev,
