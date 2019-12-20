@@ -1535,6 +1535,8 @@ int somc_panel_set_doze_mode(struct drm_connector *connector,
 			break;
 	}
 
+	panel->power_mode = power_mode;
+
 	mutex_unlock(&display->display_lock);
 
 	return rc;

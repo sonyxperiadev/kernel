@@ -8886,6 +8886,8 @@ skip_fw:
 
 	complete(&touch_charge_out_comp);
 
+	mxt_patch_event(data, PATCH_EVENT_CODE_AOD_DISABLE);
+
 	/* power unlock */
 	ret = mxt_pw_lock(INCELL_DISPLAY_POWER_UNLOCK);
 	data->after_work = true;
@@ -9319,7 +9321,7 @@ static int mxt_drm_resume(struct mxt_data *data)
 
 	LOGN("%s\n", __func__);
 
-	if (data->sod_mode.pre_status)
+	if (data->sod_mode.status || data->aod_mode.status)
 		mxt_cancel_sod_mode(data);
 
 	if (data->after_work && data->charge_out) {
@@ -9417,47 +9419,32 @@ static int drm_notifier_callback(struct notifier_block *self, unsigned long even
 {
 	struct drm_ext_event *evdata = (struct drm_ext_event *)data;
 	struct mxt_data *ts = container_of(self, struct mxt_data, drm_notif);
-	struct timespec tspec;
 	int blank;
 
-	if (evdata && evdata->data) {
-		if (event == DRM_EXT_EVENT_BEFORE_BLANK) {
-			blank = *(int *)evdata->data;
-			LOGN("Before: %s\n",
-				(blank == DRM_BLANK_POWERDOWN) ? "Powerdown" :
-				(blank == DRM_BLANK_UNBLANK) ? "Unblank" :
-				 "???");
-			switch (blank) {
-			case DRM_BLANK_POWERDOWN:
+	if (event != DRM_EXT_EVENT_BEFORE_BLANK &&
+	    event != DRM_EXT_EVENT_AFTER_BLANK)
+		return NOTIFY_DONE;
+
+	if (unlikely(!evdata || !evdata->data)) {
+		LOGN("%s: Bad screen state change notifier call.\n");
+		return NOTIFY_DONE;
+	}
+	blank = *(int *)evdata->data;
+
+	switch (blank) {
+		case DRM_BLANK_POWERDOWN:
+			if (event == DRM_EXT_EVENT_BEFORE_BLANK) {
 				if (!ts->after_work || !ts->charge_out) {
 					LOGN("not already sleep out\n");
 					return 0;
 				}
 
-				get_monotonic_boottime(&tspec);
-				LOGD("start@%ld.%06ld\n",
-					tspec.tv_sec, tspec.tv_nsec);
 				if (mxt_drm_suspend(ts))
 					LOGE("Failed mxt_drm_suspend\n");
-				get_monotonic_boottime(&tspec);
-				LOGD("end@%ld.%06ld\n",
-					tspec.tv_sec, tspec.tv_nsec);
-				break;
-			case DRM_BLANK_UNBLANK:
-				break;
-			default:
 				break;
 			}
-		} else if (event == DRM_EXT_EVENT_AFTER_BLANK) {
-			blank = *(int *)evdata->data;
-			LOGN("After: %s\n",
-				(blank == DRM_BLANK_POWERDOWN) ? "Powerdown" :
-				(blank == DRM_BLANK_UNBLANK) ? "Unblank" :
-				 "???");
-			switch (blank) {
-			case DRM_BLANK_POWERDOWN:
-				break;
-			case DRM_BLANK_UNBLANK:
+		case DRM_BLANK_UNBLANK:
+			if (event == DRM_EXT_EVENT_AFTER_BLANK) {
 				if (!ts->after_work) {
 					if (mxt_init_recover(ts->client, ts))
 						return 0;
@@ -9470,21 +9457,14 @@ static int drm_notifier_callback(struct notifier_block *self, unsigned long even
 					return 0;
 				}
 
-				get_monotonic_boottime(&tspec);
-				LOGD("start@%ld.%06ld\n",
-					tspec.tv_sec, tspec.tv_nsec);
 				if (mxt_drm_resume(ts))
 					LOGE("Failed mxt_drm_resume\n");
-				get_monotonic_boottime(&tspec);
-				LOGD("end@%ld.%06ld\n",
-					tspec.tv_sec, tspec.tv_nsec);
-				break;
-			default:
-				break;
-			}
-		}
-	}
 
+			}
+			break;
+		default:
+			break;
+	}
 	return 0;
 }
 
