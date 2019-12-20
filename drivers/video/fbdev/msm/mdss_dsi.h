@@ -19,7 +19,7 @@
 #include <linux/irqreturn.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/gpio.h>
-#ifdef CONFIG_BACKLIGHT_QCOM_SPMI_WLED
+#ifdef CONFIG_BACKLIGHT_QCOM_WLED
 #include <linux/backlight.h>
 #endif
 
@@ -494,7 +494,7 @@ struct mdss_dsi_ctrl_pdata {
 	struct mdss_rect roi;
 	struct mdss_dsi_dual_pu_roi dual_roi;
 	struct pwm_device *pwm_bl;
-#ifdef CONFIG_BACKLIGHT_QCOM_SPMI_WLED
+#ifdef CONFIG_BACKLIGHT_QCOM_WLED
 	struct backlight_device *raw_bd;
 #endif
 	u32 pclk_rate;
@@ -721,7 +721,7 @@ int mdss_panel_get_dst_fmt(u32 bpp, char mipi_mode, u32 pixel_packing,
 
 int mdss_dsi_register_recovery_handler(struct mdss_dsi_ctrl_pdata *ctrl,
 		struct mdss_intf_recovery *recovery);
-#ifndef CONFIG_BACKLIGHT_QCOM_SPMI_WLED
+#ifndef CONFIG_BACKLIGHT_QCOM_WLED
 void mdss_dsi_unregister_bl_settings(struct mdss_dsi_ctrl_pdata *ctrl_pdata);
 #endif
 void mdss_dsi_panel_dsc_pps_send(struct mdss_dsi_ctrl_pdata *ctrl,
