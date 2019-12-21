@@ -3306,7 +3306,7 @@
 	somc-s1,br-power-save-ua = <800>;
 	somc,bl-scale-enabled;
 	somc,area_count_table_size = <0>;
-	qcom,string-cfg = <7>;
+	qcom,enabled-strings = <0 1 2>;
 };
 
 &flash_led {

@@ -56,7 +56,7 @@
 
 &pmi8998_wled {
 	linux,name = "wled";
-	qcom,string-cfg = <7>;
+	qcom,enabled-strings = <0 1 2>;
 	somc,area_count_table_size = <24>;
 	somc,area_count_table = <0 117 234 351 468 585 702 819
 				936 1053 1170 1404 1638 1872 2106

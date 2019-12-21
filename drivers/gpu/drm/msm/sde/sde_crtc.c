@@ -777,7 +777,7 @@ static ssize_t measured_fps_show(struct device *device,
 {
 	struct drm_crtc *crtc;
 	struct sde_crtc *sde_crtc;
-	unsigned int fps_int, fps_decimal;
+	uint64_t fps_int, fps_decimal;
 	u64 fps = 0, frame_count = 0;
 	ktime_t current_time;
 	int i = 0, current_time_index;
@@ -854,7 +854,7 @@ static ssize_t measured_fps_show(struct device *device,
 		}
 	}
 
-	fps_int = (unsigned int) sde_crtc->fps_info.measured_fps;
+	fps_int = (uint64_t) sde_crtc->fps_info.measured_fps;
 	fps_decimal = do_div(fps_int, 10);
 	return scnprintf(buf, PAGE_SIZE,
 	"fps: %d.%d duration:%d frame_count:%llu\n", fps_int, fps_decimal,
@@ -2126,7 +2126,9 @@ static void _sde_crtc_blend_setup_mixer(struct drm_crtc *crtc,
 		cnt++;
 	}
 
-	sort(pstates, cnt, sizeof(pstates[0]), pstate_cmp, NULL);
+	if (cnt > 0)
+		sort(pstates, cnt, sizeof(pstates[0]), pstate_cmp, NULL);
+
 	_sde_crtc_set_src_split_order(crtc, pstates, cnt);
 
 	if (lm && lm->ops.setup_dim_layer) {
@@ -5340,23 +5342,6 @@ static int sde_crtc_atomic_check(struct drm_crtc *crtc,
 	mixer_width = sde_crtc_get_mixer_width(sde_crtc, cstate, mode);
 	mixer_height = sde_crtc_get_mixer_height(sde_crtc, cstate, mode);
 
-	if (cstate->num_ds_enabled) {
-		if (!state->state)
-			goto end;
-
-		drm_atomic_crtc_state_for_each_plane_state(plane,
-							pstate, state) {
-			if ((pstate->crtc_h > mixer_height) ||
-					(pstate->crtc_w > mixer_width)) {
-				SDE_ERROR("plane w/h:%x*%x > mixer w/h:%x*%x\n",
-					pstate->crtc_w, pstate->crtc_h,
-					mixer_width, mixer_height);
-				//rc = -E2BIG;
-				//goto end;
-			}
-		}
-	}
-
 	_sde_crtc_setup_is_ppsplit(state);
 	_sde_crtc_setup_lm_bounds(crtc, state);
 
@@ -5438,6 +5423,17 @@ static int sde_crtc_atomic_check(struct drm_crtc *crtc,
 			rc = -E2BIG;
 			goto end;
 		}
+
+		if (cstate->num_ds_enabled &&
+			((pstate->crtc_h > mixer_height) ||
+			(pstate->crtc_w >
+			 (mixer_width * cstate->num_ds_enabled)))) {
+			SDE_ERROR("plane w/h:%x*%x > mixer w/h:%x*%x\n",
+				pstate->crtc_w, pstate->crtc_h,
+				mixer_width, mixer_height);
+			//return -E2BIG;
+			//goto end;
+		}
 	}
 
 	for (i = 1; i < SSPP_MAX; i++) {
@@ -5454,7 +5450,8 @@ static int sde_crtc_atomic_check(struct drm_crtc *crtc,
 	}
 
 	/* assign mixer stages based on sorted zpos property */
-	sort(pstates, cnt, sizeof(pstates[0]), pstate_cmp, NULL);
+	if (cnt > 0)
+		sort(pstates, cnt, sizeof(pstates[0]), pstate_cmp, NULL);
 
 	rc = _sde_crtc_excl_dim_layer_check(state, pstates, cnt);
 	if (rc)
@@ -5559,6 +5556,43 @@ end:
 	return rc;
 }
 
+/**
+ * sde_crtc_get_num_datapath - get the number of datapath active
+ *				of primary connector
+ * @crtc: Pointer to DRM crtc object
+ * @connector: Pointer to DRM connector object of WB in CWB case
+ */
+int sde_crtc_get_num_datapath(struct drm_crtc *crtc,
+		struct drm_connector *connector)
+{
+	struct sde_crtc *sde_crtc = to_sde_crtc(crtc);
+	struct sde_connector_state *sde_conn_state = NULL;
+	struct drm_connector *conn;
+	struct drm_connector_list_iter conn_iter;
+
+	if (!sde_crtc || !connector) {
+		SDE_DEBUG("Invalid argument\n");
+		return 0;
+	}
+
+	if (sde_crtc->num_mixers)
+		return sde_crtc->num_mixers;
+
+	drm_connector_list_iter_begin(crtc->dev, &conn_iter);
+	drm_for_each_connector_iter(conn, &conn_iter) {
+		if (conn->state && conn->state->crtc == crtc &&
+				 conn != connector)
+			sde_conn_state = to_sde_connector_state(conn->state);
+	}
+
+	drm_connector_list_iter_end(&conn_iter);
+
+	if (sde_conn_state)
+		return sde_conn_state->mode_info.topology.num_lm;
+
+	return 0;
+}
+
 int sde_crtc_vblank(struct drm_crtc *crtc, bool en)
 {
 	struct sde_crtc *sde_crtc;
@@ -5596,6 +5630,8 @@ static void sde_crtc_install_properties(struct drm_crtc *crtc,
 	struct drm_device *dev;
 	struct sde_kms_info *info;
 	struct sde_kms *sde_kms;
+	int i, j;
+
 	static const struct drm_prop_enum_list e_secure_level[] = {
 		{SDE_DRM_SEC_NON_SEC, "sec_and_non_sec"},
 		{SDE_DRM_SEC_ONLY, "sec_only"},
@@ -5807,6 +5843,37 @@ static void sde_crtc_install_properties(struct drm_crtc *crtc,
 	if (sde_kms->perf.max_core_clk_rate)
 		sde_kms_info_add_keyint(info, "max_mdp_clk",
 				sde_kms->perf.max_core_clk_rate);
+
+	for (i = 0; i < catalog->limit_count; i++) {
+		sde_kms_info_add_keyint(info,
+			catalog->limit_cfg[i].name,
+			catalog->limit_cfg[i].lmt_case_cnt);
+
+		for (j = 0; j < catalog->limit_cfg[i].lmt_case_cnt; j++) {
+			sde_kms_info_add_keyint(info,
+				catalog->limit_cfg[i].vector_cfg[j].usecase,
+				catalog->limit_cfg[i].vector_cfg[j].value);
+		}
+
+		if (!strcmp(catalog->limit_cfg[i].name,
+			"sspp_linewidth_usecases"))
+			sde_kms_info_add_keyint(info,
+				"sspp_linewidth_values",
+				catalog->limit_cfg[i].lmt_vec_cnt);
+		else if (!strcmp(catalog->limit_cfg[i].name,
+				"sde_bwlimit_usecases"))
+			sde_kms_info_add_keyint(info,
+				"sde_bwlimit_values",
+				catalog->limit_cfg[i].lmt_vec_cnt);
+
+		for (j = 0; j < catalog->limit_cfg[i].lmt_vec_cnt; j++) {
+			sde_kms_info_add_keyint(info, "limit_usecase",
+				catalog->limit_cfg[i].value_cfg[j].use_concur);
+			sde_kms_info_add_keyint(info, "limit_value",
+				catalog->limit_cfg[i].value_cfg[j].value);
+		}
+	}
+
 	sde_kms_info_add_keystr(info, "core_ib_ff",
 			catalog->perf.core_ib_ff);
 	sde_kms_info_add_keystr(info, "core_clk_ff",

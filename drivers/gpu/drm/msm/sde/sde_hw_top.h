@@ -126,14 +126,6 @@ struct sde_hw_mdp_ops {
 			struct split_pipe_cfg *cfg);
 
 	/**
-	 * setup_cdm_output() : Setup selection control of the cdm data path
-	 * @mdp  : mdp top context driver
-	 * @cfg  : cdm output configuration
-	 */
-	void (*setup_cdm_output)(struct sde_hw_mdp *mdp,
-			struct cdm_output_cfg *cfg);
-
-	/**
 	 * setup_traffic_shaper() : Setup traffic shaper control
 	 * @mdp  : mdp top context driver
 	 * @cfg  : traffic shaper configuration
@@ -194,6 +186,13 @@ struct sde_hw_mdp_ops {
 	 * @m: pointer to mdss catalog data
 	 */
 	void (*reset_ubwc)(struct sde_hw_mdp *mdp, struct sde_mdss_cfg *m);
+
+	/**
+	 * intf_dp_select - select phy for DP controller
+	 * @mdp: mdp top context driver
+	 * @m: pointer to mdss catalog data
+	 */
+	void (*intf_dp_select)(struct sde_hw_mdp *mdp, struct sde_mdss_cfg *m);
 
 	/**
 	 * intf_audio_select - select the external interface for audio
