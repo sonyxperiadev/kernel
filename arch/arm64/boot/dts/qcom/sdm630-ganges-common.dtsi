@@ -157,8 +157,8 @@
 };
 
 &pm660l_wled {
-	qcom,fs-current-limit = <20000>;
-	qcom,string-cfg = <5>; /* 00 01 */
+	qcom,current-limit-microamp = <20000>;
+	qcom,enabled-strings = <0 1>;
 
 	/* Bootloader only properties */
 	somc,init-br-ua = <10000>;
