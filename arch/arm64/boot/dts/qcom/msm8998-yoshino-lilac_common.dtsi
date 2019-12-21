@@ -135,7 +135,7 @@
 };
 
 &pmi8998_wled {
-	qcom,fs-current-limit = <17500>;
+	qcom,current-limit-microamp = <17500>;
 	somc,area_count_table_size = <21>;
 	somc,area_count_table = <0 137 273 410 546 683 819 956
 				1092 1229 1365 1638 1911 2184 2457

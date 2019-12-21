@@ -301,8 +301,8 @@
 };
 
 &pmi8998_wled {
-	qcom,boost-current-limit = <620>;
-	qcom,fs-current-limit = <20000>;
+	qcom,current-boost-limit = <620>;
+	qcom,current-limit-microamp = <20000>;
 };
 
 &lab_regulator {
