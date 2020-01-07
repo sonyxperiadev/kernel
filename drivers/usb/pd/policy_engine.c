@@ -1178,18 +1178,12 @@ static void phy_shutdown(struct usbpd *pd)
 	if (pd->vbus_enabled) {
 		regulator_disable(pd->vbus);
 		pd->vbus_enabled = false;
-
-	}
-
 #ifdef CONFIG_EXTCON_SOMC_EXTENSION
-	if (regulator_is_enabled(pd->vbus)) {
-		usbpd_info(&pd->dev, "turn off VBUS");
-		regulator_disable(pd->vbus);
 		phy_wait_vbus_settled_down(pd,
 				USB_VBUS_WAIT_VOLT, USB_VBUS_WAIT_ITVL,
 				USB_VBUS_WAIT_TMOUT);
-	}
 #endif
+	}
 }
 
 static enum hrtimer_restart pd_timeout(struct hrtimer *timer)
