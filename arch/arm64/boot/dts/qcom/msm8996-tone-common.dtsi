@@ -385,7 +385,7 @@
 			     &pm8994_gpio_1 &pm8994_gpio_2 &pm8994_gpio_3
 			     &pm8994_gpio_4 &pm8994_gpio_5 &pm8994_gpio_6
 			     &pm8994_gpio_7 &pm8994_gpio_8 &pm8994_gpio_9
-			     &pm8994_gpio_10 &pm8994_gpio_11 &pm8994_gpio_11
+			     &pm8994_gpio_10 &pm8994_gpio_11 &pm8994_gpio_12
 			     &pm8994_gpio_13 &pm8994_gpio_14 &pm8994_gpio_15
 			     &pm8994_gpio_16 &pm8994_gpio_17 &pm8994_gpio_18
 			     &pm8994_gpio_19
