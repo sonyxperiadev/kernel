@@ -1661,9 +1661,9 @@ static int ipa3_wwan_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 		/*  Get driver name  */
 		case RMNET_IOCTL_GET_DRIVER_NAME:
 			if (IPA_NETDEV() != NULL) {
-				memcpy(&ext_ioctl_data.u.if_name,
+				memcpy(&extend_ioctl_data.u.if_name,
 					IPA_NETDEV()->name, IFNAMSIZ);
-				ext_ioctl_data.u.if_name[IFNAMSIZ - 1] = '\0';
+				extend_ioctl_data.u.if_name[IFNAMSIZ - 1] = '\0';
 				if (copy_to_user((u8 *)ifr->ifr_ifru.ifru_data,
 					&extend_ioctl_data,
 					sizeof(struct rmnet_ioctl_extended_s)))
