@@ -150,4 +150,13 @@ static inline int arch_spin_is_contended(arch_spinlock_t *lock)
 /* See include/linux/spinlock.h */
 #define smp_mb__after_spinlock()	smp_mb()
 
+/*
+ * Changing this will break osq_lock() thanks to the call inside
+ * smp_cond_load_relaxed().
+ *
+ * See:
+ * https://lore.kernel.org/lkml/20200110100612.GC2827@hirez.programming.kicks-ass.net
+ */
+#define vcpu_is_preempted(cpu)	false
+
 #endif /* __ASM_SPINLOCK_H */
