@@ -29,6 +29,7 @@
 #include <linux/signal.h>
 
 #include <asm/fpsimd.h>
+#include <asm/cpufeature.h>
 #include <asm/cputype.h>
 #include <asm/app_api.h>
 #include <asm/simd.h>
