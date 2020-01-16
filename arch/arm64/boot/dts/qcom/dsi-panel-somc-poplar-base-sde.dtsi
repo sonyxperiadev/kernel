@@ -22,7 +22,7 @@
 
 &sde_kms {
 	/* JDI ID6 */
-	sde_dsi_6: somc,sde_6_panel {
+	sde_dsi_6: somc,6_panel {
 		qcom,mdss-dsi-panel-name = "6";
 		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
@@ -217,7 +217,7 @@
 	};
 
 	/* Sharp ID9 */
-	sde_dsi_9: somc,sde_9_panel {
+	sde_dsi_9: somc,9_panel {
 		qcom,mdss-dsi-panel-name = "9";
 		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
