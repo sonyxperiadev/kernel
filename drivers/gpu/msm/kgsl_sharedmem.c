@@ -269,7 +269,7 @@ static struct kobj_type process_ktype = {
 static struct mem_entry_stats mem_stats[] = {
 	MEM_ENTRY_STAT(KGSL_MEM_ENTRY_KERNEL, kernel),
 	MEM_ENTRY_STAT(KGSL_MEM_ENTRY_USER, user),
-#ifdef CONFIG_ION
+#if IS_ENABLED(CONFIG_ION)
 	MEM_ENTRY_STAT(KGSL_MEM_ENTRY_ION, ion),
 #endif
 };

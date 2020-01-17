@@ -23,6 +23,7 @@
 #include <linux/miscdevice.h>
 #include <linux/mm.h>
 #include <linux/mm_types.h>
+#include <linux/module.h>
 #include <linux/rbtree.h>
 #include <linux/sched/task.h>
 #include <linux/seq_file.h>
@@ -1399,3 +1400,6 @@ err_reg:
 	return ERR_PTR(ret);
 }
 EXPORT_SYMBOL(ion_device_create);
+
+MODULE_LICENSE("GPL v2");
+MODULE_DESCRIPTION("Ion memory allocator");

@@ -11,7 +11,7 @@
 #include "../uapi/ion.h"
 #include "../uapi/msm_ion.h"
 
-#ifdef CONFIG_ION
+#if IS_ENABLED(CONFIG_ION)
 
 /*
  * Allocates an ion buffer.
