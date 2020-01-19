@@ -99,11 +99,13 @@
 #define REMOTE_SCALARS_MAKE(method, in, out) \
 		REMOTE_SCALARS_MAKEX(0, method, in, out, 0, 0)
 
-
+#define VERIFY_PRINT_ERROR
+#define VERIFY_EPRINTF(format, args) pr_err(format, args)
 #ifndef VERIFY_PRINT_ERROR
 #define VERIFY_EPRINTF(format, args) (void)0
 #endif
 
+#define VERIFY_IPRINTF(args) pr_info(args)
 #ifndef VERIFY_PRINT_INFO
 #define VERIFY_IPRINTF(args) (void)0
 #endif
