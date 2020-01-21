@@ -1708,6 +1708,11 @@ static int alpha_trion_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	u32 l = 0;
 	u64 a = 0;
 
+	/* Check if PLL has lost calibration and eventually reconfigure it */
+	ret = alpha_trion_pll_calibrate(hw);
+	if (ret)
+		return ret;
+
 	rrate = alpha_pll_round_rate(rate, prate, &l, &a,
 						ALPHA_REG_16BIT_WIDTH);
 	/*
