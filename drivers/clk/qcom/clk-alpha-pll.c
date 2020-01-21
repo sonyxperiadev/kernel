@@ -1871,23 +1871,11 @@ int clk_alpha_pll_regera_configure(struct clk_alpha_pll *pll, struct regmap *reg
 	return 0;
 }
 
-static int clk_alpha_pll_regera_enable(struct clk_hw *hw)
+static int clk_alpha_regera_pll_calibrate(struct clk_hw *hw)
 {
-	int ret;
+	int ret = 0;
 	struct clk_alpha_pll *pll = to_clk_alpha_pll(hw);
-	u32 val, l_val;
-
-	ret = regmap_read(pll->clkr.regmap, PLL_MODE(pll), &val);
-	if (ret)
-		return ret;
-
-	/* If in FSM mode, just vote for it */
-	if (val & PLL_VOTE_FSM_ENA) {
-		ret = clk_enable_regmap(hw);
-		if (ret)
-			return ret;
-		return wait_for_pll_enable_active(pll);
-	}
+	u32 l_val;
 
 	ret = regmap_read(pll->clkr.regmap, PLL_L_VAL(pll), &l_val);
 	if (ret)
@@ -1906,6 +1894,33 @@ static int clk_alpha_pll_regera_enable(struct clk_hw *hw)
 		}
 		pr_warn("PLL configuration lost, reconfiguration of PLL done.\n");
 	}
+
+	return ret;
+}
+
+
+static int clk_alpha_pll_regera_enable(struct clk_hw *hw)
+{
+	int ret;
+	struct clk_alpha_pll *pll = to_clk_alpha_pll(hw);
+	u32 val;
+
+	ret = regmap_read(pll->clkr.regmap, PLL_MODE(pll), &val);
+	if (ret)
+		return ret;
+
+	/* If in FSM mode, just vote for it */
+	if (val & PLL_VOTE_FSM_ENA) {
+		ret = clk_enable_regmap(hw);
+		if (ret)
+			return ret;
+		return wait_for_pll_enable_active(pll);
+	}
+
+	/* Check if PLL needs reconfiguration */
+	ret = clk_alpha_regera_pll_calibrate(hw);
+	if (ret)
+		return ret;
 
 	/* Get the PLL out of bypass mode */
 	ret = regmap_update_bits(pll->clkr.regmap, PLL_MODE(pll),
@@ -1993,6 +2008,11 @@ static int clk_alpha_pll_regera_set_rate(struct clk_hw *hw, unsigned long rate,
 	u32 l, regval;
 	u64 a;
 	int ret;
+
+	/* Check if PLL needs reconfiguration */
+	ret = clk_alpha_regera_pll_calibrate(hw);
+	if (ret)
+		return ret;
 
 	rrate = alpha_pll_round_rate(rate, prate, &l, &a,
 						ALPHA_REG_16BIT_WIDTH);
