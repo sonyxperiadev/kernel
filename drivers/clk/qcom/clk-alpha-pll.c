@@ -1539,24 +1539,11 @@ int clk_alpha_pll_trion_configure(struct clk_alpha_pll *pll, struct regmap *regm
 	return ret;
 }
 
-static int alpha_trion_pll_enable(struct clk_hw *hw)
+static int alpha_trion_pll_calibrate(struct clk_hw *hw)
 {
 	int ret = 0;
 	struct clk_alpha_pll *pll = to_clk_alpha_pll(hw);
-	u32 val, l_val, cal_val;
-
-	ret = regmap_read(pll->clkr.regmap, PLL_MODE(pll), &val);
-	if (ret)
-		return ret;
-
-	/* If in FSM mode, just vote for it */
-	if (val & PLL_VOTE_FSM_ENA) {
-		ret = clk_enable_regmap(hw);
-		if (ret)
-			return ret;
-		return wait_for_pll_enable_active(pll);
-	}
-
+	u32 l_val, cal_val;
 
 	ret = regmap_read(pll->clkr.regmap, PLL_L_VAL(pll), &l_val);
 	if (ret)
@@ -1580,6 +1567,32 @@ static int alpha_trion_pll_enable(struct clk_hw *hw)
 		}
 		pr_warn("PLL configuration lost, reconfiguration of PLL done.\n");
 	}
+
+	return ret;
+}
+
+static int alpha_trion_pll_enable(struct clk_hw *hw)
+{
+	int ret = 0;
+	struct clk_alpha_pll *pll = to_clk_alpha_pll(hw);
+	u32 val;
+
+	ret = regmap_read(pll->clkr.regmap, PLL_MODE(pll), &val);
+	if (ret)
+		return ret;
+
+	/* If in FSM mode, just vote for it */
+	if (val & PLL_VOTE_FSM_ENA) {
+		ret = clk_enable_regmap(hw);
+		if (ret)
+			return ret;
+		return wait_for_pll_enable_active(pll);
+	}
+
+	/* Check if PLL has lost calibration and eventually reconfigure it */
+	ret = alpha_trion_pll_calibrate(hw);
+	if (ret)
+		return ret;
 
 	/* Set operation mode to RUN */
 	regmap_write(pll->clkr.regmap, PLL_OPMODE(pll), PLL_RUN);
