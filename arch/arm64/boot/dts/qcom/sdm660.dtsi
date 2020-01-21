@@ -1065,6 +1065,8 @@
 		compatible = "qcom,arm-memlat-mon";
 		qcom,cpulist = <&CPU0 &CPU1 &CPU2 &CPU3>;
 		qcom,target-dev = <&memlat_cpu0>;
+		qcom,cachemiss-ev = <0x17>;
+		qcom,stall-cycle-ev = <0xE7>;
 		qcom,core-dev-table =
 			< 902400 762 >,
 			< 1401600 2086 >,
@@ -1075,6 +1077,8 @@
 		compatible = "qcom,arm-memlat-mon";
 		qcom,cpulist = <&CPU4 &CPU5 &CPU6 &CPU7>;
 		qcom,target-dev = <&memlat_cpu4>;
+		qcom,cachemiss-ev = <0x17>;
+		qcom,stall-cycle-ev = <0x24>;
 		qcom,core-dev-table =
 			< 1113600 762 >,
 			< 1401600 3879 >,
@@ -1415,6 +1419,7 @@
 		reg = <0x85e00000 0x200000>;
 		reg-names = "rmtfs";
 		qcom,client-id = <0x00000001>;
+		qcom,guard-memory;
 	};
 
 	qcom,rmnet-ipa {
@@ -1441,7 +1446,9 @@
 		qcom,fastrpc-glink;
 		qcom,fastrpc-vmid-heap-shared;
 		qcom,adsp-remoteheap-vmid = <33>;
+		qcom,rpc-latency-us = <611>;
 		qcom,fastrpc-adsp-audio-pdr;
+		qcom,fastrpc-adsp-sensors-pdr;
 
 		qcom,msm_fastrpc_compute_cb1 {
 			compatible = "qcom,msm-fastrpc-compute-cb";
@@ -1656,7 +1663,6 @@
 		};
 
 		glink_spi_xprt_wdsp: wdsp {
-			qcom,remote-pid = <15>; /* or is it 10? */
 			transport = "spi";
 			tx-descriptors = <0x12000 0x12004>;
 			rx-descriptors = <0x1200c 0x12010>;
@@ -1682,6 +1688,21 @@
 			qcom,wdsp_data {
 				qcom,glink-channels = "g_glink_audio_data";
 				qcom,intents = <0x1000 2>;
+			};
+
+			qcom,diag_data {
+				qcom,glink-channels = "DIAG_DATA";
+				qcom,intents = <0x4000 2>;
+			};
+
+			qcom,diag_ctrl {
+				qcom,glink-channels = "DIAG_CTRL";
+				qcom,intents = <0x4000 1>;
+			};
+
+			qcom,diag_cmd {
+				qcom,glink-channels = "DIAG_CMD";
+				qcom,intents = <0x4000 1>;
 			};
 		};
 	};
@@ -1846,6 +1867,13 @@
 		qcom,wlan-msa-memory = <0x100000>;
 		qcom,wlan-msa-fixed-region = <&wlan_msa_mem>;
 		qcom,smmu-s1-bypass;
+
+                qcom,smp2p_map_wlan_1_in {
+                        interrupts-extended = <&smp2p_wlan_1_in 0 0>,
+                                              <&smp2p_wlan_1_in 1 0>;
+                        interrupt-names = "qcom,smp2p-force-fatal-error",
+                                          "qcom,smp2p-early-crash-ind";
+                };
 	};
 
 	qcom,lpass@15700000 {
