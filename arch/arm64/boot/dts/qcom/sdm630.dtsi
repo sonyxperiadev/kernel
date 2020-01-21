@@ -1167,6 +1167,8 @@
 		compatible = "qcom,arm-memlat-mon";
 		qcom,cpulist = <&CPU0 &CPU1 &CPU2 &CPU3>;
 		qcom,target-dev = <&memlat_cpu0>;
+		qcom,cachemiss-ev = <0x17>;
+		qcom,stall-cycle-ev = <0xE7>;
 		qcom,core-dev-table =
 			< 1113600 762 >,
 			< 1344000 2086 >,
@@ -1180,6 +1182,8 @@
 		compatible = "qcom,arm-memlat-mon";
 		qcom,cpulist = <&CPU4 &CPU5 &CPU6 &CPU7>;
 		qcom,target-dev = <&memlat_cpu4>;
+		qcom,cachemiss-ev = <0x17>;
+		qcom,stall-cycle-ev = <0x24>;
 		qcom,core-dev-table =
 			< 614400 762 >,
 			< 1536000 2929 >,
