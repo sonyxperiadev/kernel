@@ -339,23 +339,33 @@
 	clock_audio: audio_ext_clk {
 		status = "ok";
 		compatible = "qcom,audio-ref-clk";
+
+		/* AUDIO_EXT_CLK_PMI */
+		qcom,codec-ext-clk-src = <0>;
+
+		/* Reference -- unused in 4.14 drivers */
 		qcom,audio-ref-clk-gpio = <&pm8998_gpios 13 0>;
-		clock-names = "osr_clk";
-		clocks = <&clock_rpmcc RPM_SMD_DIV_CLK1>;
-		qcom,node_has_rpm_clock;
-		#clock-cells = <1>;
-		qcom,use-pinctrl = <1>;
+
+		/* Use RPM div_clk1 as PMI divider clock */
+		pmic-clock-names = "div_clk1";
+
 		pinctrl-names = "sleep", "active";
 		pinctrl-0 = <&spkr_i2s_clk_sleep &pm8998_gpio_13>;
 		pinctrl-1 = <&spkr_i2s_clk_active &pm8998_gpio_13>;
+		qcom,use-pinctrl = <1>;
+
+		#clock-cells = <1>;
 	};
 
 	clock_audio_lnbb: audio_ext_clk_lnbb {
 		status = "ok";
 		compatible = "qcom,audio-ref-clk";
-		clock-names = "osr_clk";
-		clocks = <&clock_rpmcc RPM_SMD_LN_BB_CLK2>;
-		qcom,node_has_rpm_clock;
+
+		qcom,codec-ext-clk-src = <1>;
+
+		/* Use LNBB CLK2 as PMI LNBB clock */
+		pmic-clock-names = "ln_bb_clk2";
+
 		#clock-cells = <1>;
 	};
 
@@ -395,7 +405,7 @@
 */
 
 		clock-names = "wcd_clk";
-		clocks = <&clock_audio AUDIO_PMI_CLK>;
+		clocks = <&clock_audio 0>;
 
 		cdc-vdd-buck-supply = <&pm8998_s4>;
 		qcom,cdc-vdd-buck-voltage = <1800000 1800000>;
