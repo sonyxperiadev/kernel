@@ -55,8 +55,8 @@
 #endif
 
 /* Update version major number in case the HLOS-TA interface is changed*/
-#define TA_IF_VERSION_MAJ	    1
-#define TA_IF_VERSION_MIN	    4
+#define TA_IF_VERSION_MAJ	    2
+#define TA_IF_VERSION_MIN	    1
 
 #undef CDBG
 #ifdef MSM_CAMERA_TZ_UTIL_VERBOSE

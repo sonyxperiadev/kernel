@@ -784,26 +784,32 @@ static int cam_smmu_send_syscall_cpp_intf(int vmid, int idx)
 	int rc = 0;
 	struct scm_desc desc = {0};
 	struct cam_context_bank_info *cb = &iommu_cb_set.cb_info[idx];
-	uint32_t sid_info;
+	uint32_t *sid_info = NULL;
+
+	sid_info = kzalloc(sizeof(uint32_t) * 1, GFP_KERNEL);
+	if (!sid_info)
+		return -ENOMEM;
 
 
-	sid_info = cb->sids[0]; /* CPP SID */
+	sid_info[0] = cb->sids[0]; /* CPP SID */
 
 	desc.arginfo = SCM_ARGS(4, SCM_VAL, SCM_RW, SCM_VAL, SCM_VAL);
 	desc.args[0] = CAMERA_DEVICE_ID;
-	desc.args[1] = SCM_BUFFER_PHYS(&sid_info);
+	desc.args[1] = SCM_BUFFER_PHYS(sid_info);
 	desc.args[2] = sizeof(uint32_t);
 	desc.args[3] = vmid;
 	/*
 	 * Syscall to hypervisor to switch CPP SID's
 	 * between secure and non-secure contexts
 	 */
-	dmac_flush_range(&sid_info, &sid_info + 1);
+	dmac_flush_range(sid_info, sid_info + 1);
 	if (scm_call2(SCM_SIP_FNID(SCM_SVC_MP, SECURE_SYSCALL_ID),
 			&desc)){
 		pr_err("call to hypervisor failed\n");
+		kfree(sid_info);
 		return -EINVAL;
 	}
+	kfree(sid_info);
 	return rc;
 }
 
@@ -2105,7 +2111,7 @@ static int cam_smmu_populate_sids(struct device *dev,
 	/* set the name of the context bank */
 	property = of_get_property(dev->of_node, "iommus", &cnt);
 	cnt /= 4;
-	for (i = 0, j = 0; i < cnt; i = i + 3, j++) {
+	for (i = 0, j = 0; i < cnt; i = i + 2, j++) {
 		rc = of_property_read_u32_index(dev->of_node,
 			"iommus", i + 1, &cb->sids[j]);
 		if (rc < 0)
