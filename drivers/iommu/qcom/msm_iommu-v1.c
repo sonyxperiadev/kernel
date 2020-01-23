@@ -1107,14 +1107,14 @@ static bool msm_iommu_is_iova_coherent(struct iommu_domain *domain,
 					 dma_addr_t va)
 {
 	struct msm_iommu_priv *priv = to_msm_priv(domain);
-	bool ret = 0;
+	bool ret = false;
 	unsigned long flags;
 
 	if (!priv)
-		return -EINVAL;
+		return ret;
 
 	spin_lock_irqsave(&priv->pgtbl_lock, flags);
-	ret = priv->pgtbl_ops->iova_to_phys(priv->pgtbl_ops, va);
+	ret = priv->pgtbl_ops->is_iova_coherent(priv->pgtbl_ops, va);
 	spin_unlock_irqrestore(&priv->pgtbl_lock, flags);
 
 	return ret;
