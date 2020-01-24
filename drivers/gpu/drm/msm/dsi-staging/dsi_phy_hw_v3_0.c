@@ -219,6 +219,10 @@ void dsi_phy_hw_v3_0_clamp_ctrl(struct dsi_phy_hw *phy, bool enable)
 
 	pr_debug("enable=%s\n", enable ? "true" : "false");
 
+	/* PHY FreezeIO is not supported on MSM8998 */
+	if (of_machine_is_compatible("qcom,msm8998"))
+		return;
+
 	/*
 	 * DSI PHY lane clamps, also referred to as PHY FreezeIO is
 	 * enalbed by default as part of the initialization sequnce.
