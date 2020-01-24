@@ -345,6 +345,7 @@
 		clocks = <&clock_mmss MMSS_MDSS_MDP_CLK>,
 			 <&clock_mmss MMSS_MDSS_AHB_CLK>,
 			 <&clock_mmss MMSS_MISC_AHB_CLK>,
+			 <&clock_mmss MMSS_MNOC_AHB_CLK>,
 			 <&clock_mmss MMSS_MDSS_AXI_CLK>,
 			 <&clock_mmss MMSS_MDSS_BYTE0_CLK>,
 			 <&clock_mmss MMSS_MDSS_PCLK0_CLK>,
@@ -354,7 +355,7 @@
 			 <&clock_mmss MMSS_MDSS_BYTE0_INTF_CLK>;
 
 		clock-names = "mdp_core_clk", "iface_clk",
-			"core_mmss_clk", "bus_clk",
+			"core_mmss_clk", "mnoc_clk", "bus_clk",
 			"byte_clk", "pixel_clk", "esc_clk",
 			"byte_clk_rcg", "pixel_clk_rcg",
 			"byte_intf_clk";
@@ -416,6 +417,7 @@
 		clocks = <&clock_mmss MMSS_MDSS_MDP_CLK>,
 			 <&clock_mmss MMSS_MDSS_AHB_CLK>,
 			 <&clock_mmss MMSS_MISC_AHB_CLK>,
+			 <&clock_mmss MMSS_MNOC_AHB_CLK>,
 			 <&clock_mmss MMSS_MDSS_AXI_CLK>,
 			 <&clock_mmss MMSS_MDSS_BYTE1_CLK>,
 			 <&clock_mmss MMSS_MDSS_PCLK1_CLK>,
@@ -425,7 +427,7 @@
 			 <&clock_mmss MMSS_MDSS_BYTE1_INTF_CLK>;
 
 		clock-names = "mdp_core_clk", "iface_clk",
-			"core_mmss_clk", "bus_clk",
+			"core_mmss_clk", "mnoc_clk", "bus_clk",
 			"byte_clk", "pixel_clk", "esc_clk",
 			"byte_clk_rcg", "pixel_clk_rcg",
 			"byte_intf_clk";
