@@ -246,11 +246,11 @@ static void dsi_catalog_phy_3_0_init(struct dsi_phy_hw *phy)
 		dsi_phy_hw_v3_0_dyn_refresh_helper;
 	phy->ops.dyn_refresh_ops.cache_phy_timings =
 		dsi_phy_hw_v3_0_cache_phy_timings;
+	phy->ops.toggle_resync_fifo =
+		dsi_phy_hw_v3_0_toggle_resync_fifo;
 
 	if (!of_machine_is_compatible("qcom,msm8998")) {
 		phy->ops.clamp_ctrl = dsi_phy_hw_v3_0_clamp_ctrl;
-		phy->ops.toggle_resync_fifo =
-			dsi_phy_hw_v3_0_toggle_resync_fifo;
 	}
 }
 
