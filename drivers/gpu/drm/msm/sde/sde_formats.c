@@ -1195,7 +1195,7 @@ int sde_format_check_modified_format(
 	if (bos_total_size < layout.total_size) {
 		DRM_ERROR("buffers total size too small %u expected %u\n",
 				bos_total_size, layout.total_size);
-		return -EINVAL;
+		//return -EINVAL;
 	}
 
 	return 0;
