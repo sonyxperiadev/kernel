@@ -435,6 +435,11 @@
 			reg = <0x0 0x9d600000 0x0 0x02400000>;
 			label = "cont_splash_region";
 		};
+
+		dfps_data_memory: dfps_data_mem@9fa00000 {
+			reg = <0x0 0x9fa00000 0x0 0x1000>;
+			label = "dfps_data_mem";
+		};
 	};
 };
 

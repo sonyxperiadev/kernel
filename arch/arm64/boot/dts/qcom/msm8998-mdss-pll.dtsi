@@ -18,11 +18,14 @@
 		cell-index = <0>;
 		#clock-cells = <1>;
 
-		reg = <0xc994a00 0x1c0>,
-		      <0xc994400 0x7c0>,
-		      <0x0c8c2300 0x8>;
-		reg-names = "pll_base", "phy_base", "gdsc_base";
+		reg = <0x0c994a00 0x1c0>,
+		      <0x0c994400 0x7c0>,
+		      <0x0c8c2300 0x8>,
+		      <0x0c994200 0x100>;
+		reg-names = "pll_base", "phy_base", "gdsc_base",
+			    "dynamic_pll_base";
 
+		memory-region = <&dfps_data_memory>;
 		gdsc-supply = <&gdsc_mdss>;
 
 		clocks = <&clock_mmss MMSS_MDSS_AHB_CLK>;
@@ -56,8 +59,10 @@
 
 		reg = <0x0c996a00 0x1c0>,
 		      <0x0c996400 0x7c0>,
-		      <0x008c2300 0x8>;
-		reg-names = "pll_base", "phy_base", "gdsc_base";
+		      <0x008c2300 0x8>,
+		      <0x0c996200 0x100>;
+		reg-names = "pll_base", "phy_base", "gdsc_base",
+			    "dynamic_pll_base";
 
 		gdsc-supply = <&gdsc_mdss>;
 
