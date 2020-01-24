@@ -167,7 +167,7 @@ static struct clk_fixed_factor bi_tcxo = {
 	.div = 1,
 	.hw.init = &(struct clk_init_data){
 		.name = "bi_tcxo",
-		.parent_names = (const char *[]){ "xo_board" },
+		.parent_names = (const char *[]){ "cxo" },
 		.num_parents = 1,
 		.ops = &clk_fixed_factor_ops,
 	},
