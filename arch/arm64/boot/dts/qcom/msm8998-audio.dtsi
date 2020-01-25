@@ -377,7 +377,7 @@
 		pinctrl-1 = <&cdc_reset_sleep>;
 	};
 
-	qocm,wcd-dsp-glink {
+	qcom,wcd-dsp-glink {
 		compatible = "qcom,wcd-dsp-glink";
 	};
 };
@@ -398,11 +398,6 @@
 			      30>;
 
 		qcom,wcd-rst-gpio-node = <&wcd_rst_gpio>;
-/*
-		clock-names = "wcd_clk", "wcd_native_clk";
-		clocks = <&clock_audio AUDIO_PMI_CLK>,
-			 <&clock_audio AUDIO_AP_CLK2>;
-*/
 
 		clock-names = "wcd_clk";
 		clocks = <&clock_audio 0>;
@@ -457,9 +452,8 @@
 
 		qcom,wcd-rst-gpio-node = <&wcd_rst_gpio>;
 
-		/* Don't care: this codec is not used on MSM8998 */
-		//clock-names = "wcd_clk";
-		//clocks = <&clock_audio_lnbb clk_audio_pmi_lnbb_clk>;
+		clock-names = "wcd_clk";
+		clocks = <&clock_audio_lnbb 0>;
 
 		cdc-vdd-buck-supply = <&pm8998_s4>;
 		qcom,cdc-vdd-buck-voltage = <1800000 1800000>;
