@@ -525,9 +525,21 @@
 		#hwlock-cells = <1>;
 	};
 
+	sp_scsr_block: syscon@1d00000 {
+		compatible = "syscon";
+		reg = <0x1d00000 0x10000>;
+	};
+
 	apcs_glb: mailbox@17911000 {
 		compatible = "qcom,msm8998-apcs-hmss-global";
 		reg = <0x17911000 0x1000>;
+
+		#mbox-cells = <1>;
+	};
+
+	sp_scsr: mailbox@188501c {
+		compatible = "qcom,sm8150-spcs-global";
+		reg = <0x1d0501c 0x4>;
 
 		#mbox-cells = <1>;
 	};
@@ -544,6 +556,31 @@
 		interrupt-parent = <&sleepstate_smp2p_in>;
 		interrupts = <0 0>;
 		interrupt-names = "smp2p-sleepstate-in";
+	};
+
+	intsp: qcom,qsee_irq {
+		compatible = "qcom,sm8150-qsee-irq";
+
+		syscon = <&sp_scsr_block>;
+		interrupts = <0 348 IRQ_TYPE_LEVEL_HIGH>,
+			     <0 349 IRQ_TYPE_LEVEL_HIGH>;
+
+		interrupt-names = "sp_ipc0",
+				  "sp_ipc1";
+
+		interrupt-controller;
+		#interrupt-cells = <3>;
+	};
+
+	qcom,qsee_irq_bridge {
+		compatible = "qcom,qsee-ipc-irq-bridge";
+
+		qcom,qsee-ipc-irq-spss {
+			qcom,dev-name = "qsee_ipc_irq_spss";
+			label = "spss";
+			interrupt-parent = <&intsp>;
+			interrupts = <1 0 IRQ_TYPE_LEVEL_HIGH>;
+		};
 	};
 
 	rpm_bus: qcom,rpm-smd {
@@ -569,7 +606,8 @@
 			qcom,glink-channels = "glink_ssr";
 			qcom,notify-edges = <&glink_modem>,
 					    <&glink_adsp>,
-					    <&glink_slpi>;
+					    <&glink_slpi>,
+					    <&glink_spss>;
 		};
 	};
 
@@ -657,7 +695,8 @@
 			qcom,modem_glink_ssr {
 				qcom,glink-channels = "glink_ssr";
 				qcom,notify-edges = <&glink_adsp>,
-						    <&glink_slpi>;
+						    <&glink_slpi>,
+						    <&glink_spss>;
 			};
 		};
 
@@ -696,17 +735,17 @@
 			};
 		};
 
-		glink_slpi: slpi {
+		glink_slpi: dsps {
 			qcom,remote-pid = <3>;
 			transport = "smem";
 			mboxes = <&apcs_glb 27>;
 			mbox-names = "dsps_smem";
 			interrupts = <GIC_SPI 179 IRQ_TYPE_EDGE_RISING>;
 
-			label = "dsps";
+			label = "slpi";
 			qcom,glink-label = "dsps";
 
-			qcom,cdsp_qrtr {
+			qcom,slpi_qrtr {
 				qcom,glink-channels = "IPCRTR";
 				qcom,intents = <0x800  5
 						0x2000 3
@@ -719,10 +758,32 @@
 				qcom,intents = <0x64 64>;
 			};
 
-			qcom,cdsp_glink_ssr {
+			qcom,slpi_glink_ssr {
 				qcom,glink-channels = "glink_ssr";
 				qcom,notify-edges = <&glink_modem>,
 						    <&glink_adsp>;
+			};
+		};
+
+		glink_spss: spss {
+			qcom,remote-pid = <8>;
+			transport = "spss";
+			mboxes = <&sp_scsr 0>;
+			mbox-names = "spss_spss";
+			interrupt-parent = <&intsp>;
+			interrupts = <0 0 IRQ_TYPE_LEVEL_HIGH>;
+
+			reg = <0x1d05008 0x8>,
+			      <0x1d05010 0x4>;
+			reg-names = "qcom,spss-addr",
+				    "qcom,spss-size";
+
+			label = "spss";
+			qcom,glink-label = "spss";
+
+			qcom,spss_glink_ssr {
+				qcom,glink-channels = "glink_ssr";
+				qcom,notify-edges = <&glink_modem>;
 			};
 		};
 
@@ -3204,18 +3265,6 @@
 		qcom,smmu-mapping = <0x20000000 0xe0000000>;
 		qcom,keep-radio-on-during-sleep;
 		status = "disabled";
-	};
-
-	qcom,qsee_ipc_irq_bridge {
-		compatible = "qcom,qsee-ipc-irq-bridge";
-
-		qcom,qsee-ipc-irq-spss {
-			qcom,rx-irq-clr = <0x1d08008 0x4>;
-			qcom,rx-irq-clr-mask = <0x1>;
-			qcom,dev-name = "qsee_ipc_irq_spss";
-			interrupts = <0 349 4>;
-			label = "spss";
-		};
 	};
 };
 
