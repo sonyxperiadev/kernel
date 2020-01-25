@@ -1590,8 +1590,11 @@
 	};
 
 	qcom,msm_fastrpc {
-		compatible = "qcom,msm-fastrpc-adsp";
+		compatible = "qcom,msm-fastrpc-compute";
+		qcom,adsp-remoteheap-vmid = <33>;
 		qcom,rpc-latency-us = <611>;
+		qcom,fastrpc-adsp-audio-pdr;
+		qcom,fastrpc-adsp-sensors-pdr;
 
 		qcom,msm_fastrpc_cpz_cb1 {
 			compatible = "qcom,msm-fastrpc-compute-cb";
