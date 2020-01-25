@@ -23,10 +23,20 @@
 };
 
 &soc {
+	wcd9xxx_intc: wcd9xxx-irq {
+		status = "ok";
+		compatible = "qcom,wcd9xxx-irq";
+		interrupt-controller;
+		#interrupt-cells = <1>;
+		interrupt-parent = <&tlmm>;
+		qcom,gpio-connect = <&tlmm 54 0>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&wcd_intr_default>;
+	};
+
 	trans_loopback: qcom,msm-transcode-loopback {
 		compatible = "qcom,msm-transcode-loopback";
 	};
-
 
 	qcom,avtimer@170f7000 {
 		compatible = "qcom,avtimer";
@@ -36,6 +46,30 @@
 		qcom,clk-div = <27>;
 	};
 
+	cpe: qcom,msm-cpe-lsm {
+		compatible = "qcom,msm-cpe-lsm";
+		qcom,msm-cpe-lsm-id = <1>;
+	};
+
+	cpe3: qcom,msm-cpe-lsm@3 {
+		compatible = "qcom,msm-cpe-lsm";
+		qcom,msm-cpe-lsm-id = <3>;
+	};
+
+	qcom,wcd-dsp-mgr {
+		compatible = "qcom,wcd-dsp-mgr";
+		qcom,wdsp-components = <&wcd934x_cdc 0>,
+				       <&wcd_spi_0 1>,
+				       <&glink_spi_xprt_wdsp 2>;
+		qcom,img-filename = "cpe_9340";
+	};
+
+	qcom,wcd-dsp-glink {
+		compatible = "qcom,wcd-dsp-glink";
+	};
+};
+
+&q6core {
 	snd_9335: sound-9335 {
 		compatible = "qcom,msm8998-asoc-snd-tasha";
 		qcom,model = "msm8998-tasha-snd-card";
@@ -154,6 +188,7 @@
 
 		hph_en0_gpio: msm_cdc_pinctrl@67 {
 			compatible = "qcom,msm-cdc-pinctrl";
+			#gpio-cells = <0>;
 			pinctrl-names = "aud_active", "aud_sleep";
 			pinctrl-0 = <&hph_en0_active>;
 			pinctrl-1 = <&hph_en0_idle>;
@@ -161,6 +196,7 @@
 
 		hph_en1_gpio: msm_cdc_pinctrl@68 {
 			compatible = "qcom,msm-cdc-pinctrl";
+			#gpio-cells = <0>;
 			pinctrl-names = "aud_active", "aud_sleep";
 			pinctrl-0 = <&hph_en1_active>;
 			pinctrl-1 = <&hph_en1_idle>;
@@ -286,26 +322,9 @@
 					  "SpkrLeft", "SpkrRight";
 	};
 
-	cpe: qcom,msm-cpe-lsm {
-		compatible = "qcom,msm-cpe-lsm";
-		qcom,msm-cpe-lsm-id = <1>;
-	};
-
-	cpe3: qcom,msm-cpe-lsm@3 {
-		compatible = "qcom,msm-cpe-lsm";
-		qcom,msm-cpe-lsm-id = <3>;
-	};
-
-	qcom,wcd-dsp-mgr {
-		compatible = "qcom,wcd-dsp-mgr";
-		qcom,wdsp-components = <&wcd934x_cdc 0>,
-				       <&wcd_spi_0 1>,
-				       <&glink_spi_xprt_wdsp 2>;
-		qcom,img-filename = "cpe_9340";
-	};
-
 	wcd_us_euro_gpio: msm_cdc_pinctrl@75 {
 		compatible = "qcom,msm-cdc-pinctrl";
+		#gpio-cells = <0>;
 		pinctrl-names = "aud_active", "aud_sleep";
 		pinctrl-0 = <&wcd_gnd_mic_swap_active>;
 		pinctrl-1 = <&wcd_gnd_mic_swap_idle>;
@@ -313,6 +332,7 @@
 
 	wcd_usbc_analog_en1_gpio: msm_cdc_pinctrl@59 {
 		compatible = "qcom,msm-cdc-pinctrl";
+		#gpio-cells = <0>;
 		pinctrl-names = "aud_active", "aud_sleep";
 		pinctrl-0 = <&wcd_usbc_analog_en1_active>;
 		pinctrl-1 = <&wcd_usbc_analog_en1_idle>;
@@ -320,20 +340,10 @@
 
 	wcd_usbc_analog_en2n_gpio: msm_cdc_pinctrl@60 {
 		compatible = "qcom,msm-cdc-pinctrl";
+		#gpio-cells = <0>;
 		pinctrl-names = "aud_active", "aud_sleep";
 		pinctrl-0 = <&wcd_usbc_analog_en2n_active>;
 		pinctrl-1 = <&wcd_usbc_analog_en2n_idle>;
-	};
-
-	wcd9xxx_intc: wcd9xxx-irq {
-		status = "ok";
-		compatible = "qcom,wcd9xxx-irq";
-		interrupt-controller;
-		#interrupt-cells = <1>;
-		interrupt-parent = <&tlmm>;
-		qcom,gpio-connect = <&tlmm 54 0>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&wcd_intr_default>;
 	};
 
 	clock_audio: audio_ext_clk {
@@ -371,14 +381,11 @@
 
 	wcd_rst_gpio: msm_cdc_pinctrl@64 {
 		compatible = "qcom,msm-cdc-pinctrl";
+		#gpio-cells = <0>;
 		qcom,cdc-rst-n-gpio = <&tlmm 64 0>;
 		pinctrl-names = "aud_active", "aud_sleep";
 		pinctrl-0 = <&cdc_reset_active>;
 		pinctrl-1 = <&cdc_reset_sleep>;
-	};
-
-	qcom,wcd-dsp-glink {
-		compatible = "qcom,wcd-dsp-glink";
 	};
 };
 
