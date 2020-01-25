@@ -3206,6 +3206,13 @@
 		qcom,vdd-3.3-ch0-config = <3104000 3312000>;
 		qcom,icnss-vadc = <&pm8998_vadc>;
 		qcom,icnss-adc_tm = <&pm8998_adc_tm>;
+
+		qcom,smp2p_map_wlan_1_in {
+			interrupts-extended = <&smp2p_wlan_1_in 0 0>,
+					      <&smp2p_wlan_1_in 1 0>;
+			interrupt-names = "qcom,smp2p-force-fatal-error",
+					  "qcom,smp2p-early-crash-ind";
+		};
 	};
 
 	tspp: msm_tspp@0c1e7000 {
