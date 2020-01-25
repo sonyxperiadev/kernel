@@ -43,8 +43,8 @@
 			"vsync_clk",
 			"lut_clk";
 
-		clock-rate = <0 0 0 412500000 412500000 0 0 0 0 19200000 0>;
-		clock-max-rate = <0 0 0 550000000 550000000 0 0 0 0 19200000 0>;
+		clock-rate = <0 0 0 412500000 412500000 0 0 0 0 19200000 412500000>;
+		clock-max-rate = <0 0 0 550000000 550000000 0 0 0 0 19200000 550000000>;
 
 		/* interrupt config */
 		interrupt-parent = <&intc>;
@@ -476,8 +476,8 @@
 		compatible = "qcom,dsi-phy-v3.0";
 		label = "dsi-phy-0";
 		cell-index = <0>;
-		reg = <0xc994400 0x7c0>;
-		reg-names = "dsi_phy";
+		reg = <0xc994400 0x7c0>, <0xc994200 0x200>;
+		reg-names = "dsi_phy", "dyn_refresh_base";
 
 		gdsc-supply = <&gdsc_mdss>;
 		vdda-0p9-supply = <&pm8998_l1>;
@@ -527,8 +527,8 @@
 		compatible = "qcom,dsi-phy-v3.0";
 		label = "dsi-phy-1";
 		cell-index = <1>;
-		reg = <0xc996400 0x7c0>;
-		reg-names = "dsi_phy";
+		reg = <0xc996400 0x7c0>, <0xc996200 0x200>;
+		reg-names = "dsi_phy", "dyn_refresh_base";
 
 		gdsc-supply = <&gdsc_mdss>;
 		vdda-0p9-supply = <&pm8998_l1>;
