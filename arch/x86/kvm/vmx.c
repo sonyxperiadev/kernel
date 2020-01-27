@@ -591,7 +591,8 @@ struct nested_vmx {
 	 */
 	bool sync_shadow_vmcs;
 
-	bool change_vmcs01_virtual_x2apic_mode;
+	bool change_vmcs01_virtual_apic_mode;
+
 	/* L2 must run next, and mustn't decide to exit to L1. */
 	bool nested_run_pending;
 
@@ -1601,7 +1602,7 @@ static int __find_msr_index(struct vcpu_vmx *vmx, u32 msr)
 	return -1;
 }
 
-static inline void __invvpid(int ext, u16 vpid, gva_t gva)
+static inline void __invvpid(unsigned long ext, u16 vpid, gva_t gva)
 {
     struct {
 	u64 vpid : 16;
@@ -1615,7 +1616,7 @@ static inline void __invvpid(int ext, u16 vpid, gva_t gva)
 		  : : "a"(&operand), "c"(ext) : "cc", "memory");
 }
 
-static inline void __invept(int ext, u64 eptp, gpa_t gpa)
+static inline void __invept(unsigned long ext, u64 eptp, gpa_t gpa)
 {
 	struct {
 		u64 eptp, gpa;
@@ -2258,17 +2259,9 @@ static bool update_transition_efer(struct vcpu_vmx *vmx, int efer_offset)
 	u64 guest_efer = vmx->vcpu.arch.efer;
 	u64 ignore_bits = 0;
 
-	if (!enable_ept) {
-		/*
-		 * NX is needed to handle CR0.WP=1, CR4.SMEP=1.  Testing
-		 * host CPUID is more efficient than testing guest CPUID
-		 * or CR4.  Host SMEP is anyway a requirement for guest SMEP.
-		 */
-		if (boot_cpu_has(X86_FEATURE_SMEP))
-			guest_efer |= EFER_NX;
-		else if (!(guest_efer & EFER_NX))
-			ignore_bits |= EFER_NX;
-	}
+	/* Shadow paging assumes NX to be available.  */
+	if (!enable_ept)
+		guest_efer |= EFER_NX;
 
 	/*
 	 * LMA and LME handled by hardware; SCE meaningless outside long mode.
@@ -2825,9 +2818,6 @@ static void setup_msrs(struct vcpu_vmx *vmx)
 		index = __find_msr_index(vmx, MSR_CSTAR);
 		if (index >= 0)
 			move_msr_up(vmx, index, save_nmsrs++);
-		index = __find_msr_index(vmx, MSR_TSC_AUX);
-		if (index >= 0 && guest_cpuid_has(&vmx->vcpu, X86_FEATURE_RDTSCP))
-			move_msr_up(vmx, index, save_nmsrs++);
 		/*
 		 * MSR_STAR is only needed on long mode guests, and only
 		 * if efer.sce is enabled.
@@ -2839,6 +2829,9 @@ static void setup_msrs(struct vcpu_vmx *vmx)
 #endif
 	index = __find_msr_index(vmx, MSR_EFER);
 	if (index >= 0 && update_transition_efer(vmx, index))
+		move_msr_up(vmx, index, save_nmsrs++);
+	index = __find_msr_index(vmx, MSR_TSC_AUX);
+	if (index >= 0 && guest_cpuid_has(&vmx->vcpu, X86_FEATURE_RDTSCP))
 		move_msr_up(vmx, index, save_nmsrs++);
 
 	vmx->save_nmsrs = save_nmsrs;
@@ -4427,9 +4420,10 @@ static void exit_lmode(struct kvm_vcpu *vcpu)
 
 #endif
 
-static inline void __vmx_flush_tlb(struct kvm_vcpu *vcpu, int vpid)
+static inline void __vmx_flush_tlb(struct kvm_vcpu *vcpu, int vpid,
+				bool invalidate_gpa)
 {
-	if (enable_ept) {
+	if (enable_ept && (invalidate_gpa || !enable_vpid)) {
 		if (!VALID_PAGE(vcpu->arch.mmu.root_hpa))
 			return;
 		ept_sync_context(construct_eptp(vcpu, vcpu->arch.mmu.root_hpa));
@@ -4438,15 +4432,9 @@ static inline void __vmx_flush_tlb(struct kvm_vcpu *vcpu, int vpid)
 	}
 }
 
-static void vmx_flush_tlb(struct kvm_vcpu *vcpu)
+static void vmx_flush_tlb(struct kvm_vcpu *vcpu, bool invalidate_gpa)
 {
-	__vmx_flush_tlb(vcpu, to_vmx(vcpu)->vpid);
-}
-
-static void vmx_flush_tlb_ept_only(struct kvm_vcpu *vcpu)
-{
-	if (enable_ept)
-		vmx_flush_tlb(vcpu);
+	__vmx_flush_tlb(vcpu, to_vmx(vcpu)->vpid, invalidate_gpa);
 }
 
 static void vmx_decache_cr0_guest_bits(struct kvm_vcpu *vcpu)
@@ -4480,7 +4468,7 @@ static void ept_load_pdptrs(struct kvm_vcpu *vcpu)
 		      (unsigned long *)&vcpu->arch.regs_dirty))
 		return;
 
-	if (is_paging(vcpu) && is_pae(vcpu) && !is_long_mode(vcpu)) {
+	if (is_pae_paging(vcpu)) {
 		vmcs_write64(GUEST_PDPTR0, mmu->pdptrs[0]);
 		vmcs_write64(GUEST_PDPTR1, mmu->pdptrs[1]);
 		vmcs_write64(GUEST_PDPTR2, mmu->pdptrs[2]);
@@ -4492,7 +4480,7 @@ static void ept_save_pdptrs(struct kvm_vcpu *vcpu)
 {
 	struct kvm_mmu *mmu = vcpu->arch.walk_mmu;
 
-	if (is_paging(vcpu) && is_pae(vcpu) && !is_long_mode(vcpu)) {
+	if (is_pae_paging(vcpu)) {
 		mmu->pdptrs[0] = vmcs_read64(GUEST_PDPTR0);
 		mmu->pdptrs[1] = vmcs_read64(GUEST_PDPTR1);
 		mmu->pdptrs[2] = vmcs_read64(GUEST_PDPTR2);
@@ -4644,7 +4632,7 @@ static void vmx_set_cr3(struct kvm_vcpu *vcpu, unsigned long cr3)
 		ept_load_pdptrs(vcpu);
 	}
 
-	vmx_flush_tlb(vcpu);
+	vmx_flush_tlb(vcpu, true);
 	vmcs_writel(GUEST_CR3, guest_cr3);
 }
 
@@ -8314,7 +8302,7 @@ static int handle_invvpid(struct kvm_vcpu *vcpu)
 		return kvm_skip_emulated_instruction(vcpu);
 	}
 
-	__vmx_flush_tlb(vcpu, vmx->nested.vpid02);
+	__vmx_flush_tlb(vcpu, vmx->nested.vpid02, true);
 	nested_vmx_succeed(vcpu);
 
 	return kvm_skip_emulated_instruction(vcpu);
@@ -9295,31 +9283,43 @@ static void update_cr8_intercept(struct kvm_vcpu *vcpu, int tpr, int irr)
 	vmcs_write32(TPR_THRESHOLD, irr);
 }
 
-static void vmx_set_virtual_x2apic_mode(struct kvm_vcpu *vcpu, bool set)
+static void vmx_set_virtual_apic_mode(struct kvm_vcpu *vcpu)
 {
 	u32 sec_exec_control;
 
+	if (!lapic_in_kernel(vcpu))
+		return;
+
 	/* Postpone execution until vmcs01 is the current VMCS. */
 	if (is_guest_mode(vcpu)) {
-		to_vmx(vcpu)->nested.change_vmcs01_virtual_x2apic_mode = true;
+		to_vmx(vcpu)->nested.change_vmcs01_virtual_apic_mode = true;
 		return;
 	}
-
-	if (!cpu_has_vmx_virtualize_x2apic_mode())
-		return;
 
 	if (!cpu_need_tpr_shadow(vcpu))
 		return;
 
 	sec_exec_control = vmcs_read32(SECONDARY_VM_EXEC_CONTROL);
+	sec_exec_control &= ~(SECONDARY_EXEC_VIRTUALIZE_APIC_ACCESSES |
+			      SECONDARY_EXEC_VIRTUALIZE_X2APIC_MODE);
 
-	if (set) {
-		sec_exec_control &= ~SECONDARY_EXEC_VIRTUALIZE_APIC_ACCESSES;
-		sec_exec_control |= SECONDARY_EXEC_VIRTUALIZE_X2APIC_MODE;
-	} else {
-		sec_exec_control &= ~SECONDARY_EXEC_VIRTUALIZE_X2APIC_MODE;
-		sec_exec_control |= SECONDARY_EXEC_VIRTUALIZE_APIC_ACCESSES;
-		vmx_flush_tlb_ept_only(vcpu);
+	switch (kvm_get_apic_mode(vcpu)) {
+	case LAPIC_MODE_INVALID:
+		WARN_ONCE(true, "Invalid local APIC state");
+	case LAPIC_MODE_DISABLED:
+		break;
+	case LAPIC_MODE_XAPIC:
+		if (flexpriority_enabled) {
+			sec_exec_control |=
+				SECONDARY_EXEC_VIRTUALIZE_APIC_ACCESSES;
+			vmx_flush_tlb(vcpu, true);
+		}
+		break;
+	case LAPIC_MODE_X2APIC:
+		if (cpu_has_vmx_virtualize_x2apic_mode())
+			sec_exec_control |=
+				SECONDARY_EXEC_VIRTUALIZE_X2APIC_MODE;
+		break;
 	}
 	vmcs_write32(SECONDARY_VM_EXEC_CONTROL, sec_exec_control);
 
@@ -9347,7 +9347,7 @@ static void vmx_set_apic_access_page_addr(struct kvm_vcpu *vcpu, hpa_t hpa)
 	    !nested_cpu_has2(get_vmcs12(&vmx->vcpu),
 			     SECONDARY_EXEC_VIRTUALIZE_APIC_ACCESSES)) {
 		vmcs_write64(APIC_ACCESS_ADDR, hpa);
-		vmx_flush_tlb_ept_only(vcpu);
+		vmx_flush_tlb(vcpu, true);
 	}
 }
 
@@ -10906,8 +10906,7 @@ static int nested_vmx_load_cr3(struct kvm_vcpu *vcpu, unsigned long cr3, bool ne
 		 * If PAE paging and EPT are both on, CR3 is not used by the CPU and
 		 * must not be dereferenced.
 		 */
-		if (!is_long_mode(vcpu) && is_pae(vcpu) && is_paging(vcpu) &&
-		    !nested_ept) {
+		if (is_pae_paging(vcpu) && !nested_ept) {
 			if (!load_pdptrs(vcpu, vcpu->arch.walk_mmu, cr3)) {
 				*entry_failure_code = ENTRY_FAIL_PDPTE;
 				return 1;
@@ -11214,11 +11213,11 @@ static int prepare_vmcs02(struct kvm_vcpu *vcpu, struct vmcs12 *vmcs12,
 			vmcs_write16(VIRTUAL_PROCESSOR_ID, vmx->nested.vpid02);
 			if (vmcs12->virtual_processor_id != vmx->nested.last_vpid) {
 				vmx->nested.last_vpid = vmcs12->virtual_processor_id;
-				__vmx_flush_tlb(vcpu, to_vmx(vcpu)->nested.vpid02);
+				__vmx_flush_tlb(vcpu, to_vmx(vcpu)->nested.vpid02, true);
 			}
 		} else {
 			vmcs_write16(VIRTUAL_PROCESSOR_ID, vmx->vpid);
-			vmx_flush_tlb(vcpu);
+			vmx_flush_tlb(vcpu, true);
 		}
 
 	}
@@ -11242,7 +11241,7 @@ static int prepare_vmcs02(struct kvm_vcpu *vcpu, struct vmcs12 *vmcs12,
 		}
 	} else if (nested_cpu_has2(vmcs12,
 				   SECONDARY_EXEC_VIRTUALIZE_APIC_ACCESSES)) {
-		vmx_flush_tlb_ept_only(vcpu);
+		vmx_flush_tlb(vcpu, true);
 	}
 
 	/*
@@ -11921,7 +11920,7 @@ static void load_vmcs12_host_state(struct kvm_vcpu *vcpu,
 		 * L1's vpid. TODO: move to a more elaborate solution, giving
 		 * each L2 its own vpid and exposing the vpid feature to L1.
 		 */
-		vmx_flush_tlb(vcpu);
+		vmx_flush_tlb(vcpu, true);
 	}
 	/* Restore posted intr vector. */
 	if (nested_cpu_has_posted_intr(vmcs12))
@@ -12190,14 +12189,13 @@ static void nested_vmx_vmexit(struct kvm_vcpu *vcpu, u32 exit_reason,
 	if (kvm_has_tsc_control)
 		decache_tsc_multiplier(vmx);
 
-	if (vmx->nested.change_vmcs01_virtual_x2apic_mode) {
-		vmx->nested.change_vmcs01_virtual_x2apic_mode = false;
-		vmx_set_virtual_x2apic_mode(vcpu,
-				vcpu->arch.apic_base & X2APIC_ENABLE);
+	if (vmx->nested.change_vmcs01_virtual_apic_mode) {
+		vmx->nested.change_vmcs01_virtual_apic_mode = false;
+		vmx_set_virtual_apic_mode(vcpu);
 	} else if (!nested_cpu_has_ept(vmcs12) &&
 		   nested_cpu_has2(vmcs12,
 				   SECONDARY_EXEC_VIRTUALIZE_APIC_ACCESSES)) {
-		vmx_flush_tlb_ept_only(vcpu);
+		vmx_flush_tlb(vcpu, true);
 	}
 
 	/* This is needed for same reason as it was needed in prepare_vmcs02 */
@@ -12754,7 +12752,7 @@ static struct kvm_x86_ops vmx_x86_ops __ro_after_init = {
 	.enable_nmi_window = enable_nmi_window,
 	.enable_irq_window = enable_irq_window,
 	.update_cr8_intercept = update_cr8_intercept,
-	.set_virtual_x2apic_mode = vmx_set_virtual_x2apic_mode,
+	.set_virtual_apic_mode = vmx_set_virtual_apic_mode,
 	.set_apic_access_page_addr = vmx_set_apic_access_page_addr,
 	.get_enable_apicv = vmx_get_enable_apicv,
 	.refresh_apicv_exec_ctrl = vmx_refresh_apicv_exec_ctrl,
