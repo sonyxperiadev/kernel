@@ -1721,6 +1721,12 @@
 		qcom,bus-width = <4>;
 		qcom,cpu-dma-latency-us = <701>;
 
+		/* PM QoS */
+		qcom,pm-qos-irq-type = "affine_irq";
+		qcom,pm-qos-irq-latency = <70 701>;
+		qcom,pm-qos-cpu-groups = <0x0f 0xf0>;
+		qcom,pm-qos-legacy-latency-us = <70 701>, <70 701>;
+
 		qcom,devfreq,freq-table = <52000000 200000000>;
 
 		qcom,msm-bus,name = "sdhc2";
