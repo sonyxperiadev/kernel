@@ -1315,6 +1315,7 @@
 		qcom,rmnet-ipa-ssr;
 		qcom,ipa-platform-type-msm;
 		qcom,ipa-advertise-sg-support;
+		qcom,ipa-napi-enable;
 	};
 
 	ipa_hw: qcom,ipa@01e00000 {
