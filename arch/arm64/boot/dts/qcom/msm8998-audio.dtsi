@@ -63,6 +63,73 @@
 };
 
 &q6core {
+	wcd_us_euro_gpio: msm_cdc_pinctrl@75 {
+		compatible = "qcom,msm-cdc-pinctrl";
+		#gpio-cells = <0>;
+		pinctrl-names = "aud_active", "aud_sleep";
+		pinctrl-0 = <&wcd_gnd_mic_swap_active>;
+		pinctrl-1 = <&wcd_gnd_mic_swap_idle>;
+	};
+
+	wcd_usbc_analog_en1_gpio: msm_cdc_pinctrl@59 {
+		compatible = "qcom,msm-cdc-pinctrl";
+		#gpio-cells = <0>;
+		pinctrl-names = "aud_active", "aud_sleep";
+		pinctrl-0 = <&wcd_usbc_analog_en1_active>;
+		pinctrl-1 = <&wcd_usbc_analog_en1_idle>;
+	};
+
+	wcd_usbc_analog_en2n_gpio: msm_cdc_pinctrl@60 {
+		compatible = "qcom,msm-cdc-pinctrl";
+		#gpio-cells = <0>;
+		pinctrl-names = "aud_active", "aud_sleep";
+		pinctrl-0 = <&wcd_usbc_analog_en2n_active>;
+		pinctrl-1 = <&wcd_usbc_analog_en2n_idle>;
+	};
+
+	wcd_rst_gpio: msm_cdc_pinctrl@64 {
+		compatible = "qcom,msm-cdc-pinctrl";
+		#gpio-cells = <0>;
+		qcom,cdc-rst-n-gpio = <&tlmm 64 0>;
+		pinctrl-names = "aud_active", "aud_sleep";
+		pinctrl-0 = <&cdc_reset_active>;
+		pinctrl-1 = <&cdc_reset_sleep>;
+		status = "ok";
+	};
+
+	clock_audio: audio_ext_clk {
+		status = "ok";
+		compatible = "qcom,audio-ref-clk";
+
+		/* AUDIO_EXT_CLK_PMI */
+		qcom,codec-ext-clk-src = <0>;
+
+		/* Reference -- unused in 4.14 drivers */
+		qcom,audio-ref-clk-gpio = <&pm8998_gpios 13 0>;
+
+		/* Use RPM div_clk1 as PMI divider clock */
+		pmic-clock-names = "div_clk1";
+
+		pinctrl-names = "sleep", "active";
+		pinctrl-0 = <&spkr_i2s_clk_sleep &pm8998_gpio_13>;
+		pinctrl-1 = <&spkr_i2s_clk_active &pm8998_gpio_13>;
+		qcom,use-pinctrl = <1>;
+
+		#clock-cells = <1>;
+	};
+
+	clock_audio_lnbb: audio_ext_clk_lnbb {
+		status = "ok";
+		compatible = "qcom,audio-ref-clk";
+
+		qcom,codec-ext-clk-src = <1>;
+
+		/* Use LNBB CLK2 as PMI LNBB clock */
+		pmic-clock-names = "ln_bb_clk2";
+
+		#clock-cells = <1>;
+	};
+
 	snd_9335: sound-9335 {
 		compatible = "qcom,msm8998-asoc-snd-tasha";
 		qcom,model = "msm8998-tasha-snd-card";
@@ -314,72 +381,6 @@
 		qcom,wsa-aux-dev-prefix = "SpkrLeft", "SpkrRight",
 					  "SpkrLeft", "SpkrRight";
 	};
-
-	wcd_us_euro_gpio: msm_cdc_pinctrl@75 {
-		compatible = "qcom,msm-cdc-pinctrl";
-		#gpio-cells = <0>;
-		pinctrl-names = "aud_active", "aud_sleep";
-		pinctrl-0 = <&wcd_gnd_mic_swap_active>;
-		pinctrl-1 = <&wcd_gnd_mic_swap_idle>;
-	};
-
-	wcd_usbc_analog_en1_gpio: msm_cdc_pinctrl@59 {
-		compatible = "qcom,msm-cdc-pinctrl";
-		#gpio-cells = <0>;
-		pinctrl-names = "aud_active", "aud_sleep";
-		pinctrl-0 = <&wcd_usbc_analog_en1_active>;
-		pinctrl-1 = <&wcd_usbc_analog_en1_idle>;
-	};
-
-	wcd_usbc_analog_en2n_gpio: msm_cdc_pinctrl@60 {
-		compatible = "qcom,msm-cdc-pinctrl";
-		#gpio-cells = <0>;
-		pinctrl-names = "aud_active", "aud_sleep";
-		pinctrl-0 = <&wcd_usbc_analog_en2n_active>;
-		pinctrl-1 = <&wcd_usbc_analog_en2n_idle>;
-	};
-
-	clock_audio: audio_ext_clk {
-		status = "ok";
-		compatible = "qcom,audio-ref-clk";
-
-		/* AUDIO_EXT_CLK_PMI */
-		qcom,codec-ext-clk-src = <0>;
-
-		/* Reference -- unused in 4.14 drivers */
-		qcom,audio-ref-clk-gpio = <&pm8998_gpios 13 0>;
-
-		/* Use RPM div_clk1 as PMI divider clock */
-		pmic-clock-names = "div_clk1";
-
-		pinctrl-names = "sleep", "active";
-		pinctrl-0 = <&spkr_i2s_clk_sleep &pm8998_gpio_13>;
-		pinctrl-1 = <&spkr_i2s_clk_active &pm8998_gpio_13>;
-		qcom,use-pinctrl = <1>;
-
-		#clock-cells = <1>;
-	};
-
-	clock_audio_lnbb: audio_ext_clk_lnbb {
-		status = "ok";
-		compatible = "qcom,audio-ref-clk";
-
-		qcom,codec-ext-clk-src = <1>;
-
-		/* Use LNBB CLK2 as PMI LNBB clock */
-		pmic-clock-names = "ln_bb_clk2";
-
-		#clock-cells = <1>;
-	};
-
-	wcd_rst_gpio: msm_cdc_pinctrl@64 {
-		compatible = "qcom,msm-cdc-pinctrl";
-		#gpio-cells = <0>;
-		qcom,cdc-rst-n-gpio = <&tlmm 64 0>;
-		pinctrl-names = "aud_active", "aud_sleep";
-		pinctrl-0 = <&cdc_reset_active>;
-		pinctrl-1 = <&cdc_reset_sleep>;
-	};
 };
 
 &slim_aud {
@@ -397,6 +398,7 @@
 			      17 18 19 20 21 22 23 24 25 26 27 28 29
 			      30>;
 
+		qcom,wcd-uses-q6core;
 		qcom,wcd-rst-gpio-node = <&wcd_rst_gpio>;
 
 		clock-names = "wcd_clk";
@@ -450,6 +452,7 @@
 			      17 18 19 20 21 22 23 24 25 26 27 28 29
 			      30 31>;
 
+		qcom,wcd-uses-q6core;
 		qcom,wcd-rst-gpio-node = <&wcd_rst_gpio>;
 
 		clock-names = "wcd_clk";
