@@ -935,6 +935,7 @@ static int pmic_arb_read_apid_map_v5(struct spmi_pmic_arb *pmic_arb)
 	 * which has the IRQ owner bit set for a given PPID will receive
 	 * interrupts from the PPID.
 	 */
+	apid = 0;
 	for (i = 0; ; i++, apidd++) {
 		/* Do not keep the reserved channel in the mapping table */
 		if (pmic_arb->reserved_chan >= 0 &&
