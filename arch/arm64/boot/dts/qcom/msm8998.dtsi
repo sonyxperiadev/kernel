@@ -3302,6 +3302,17 @@
 		qcom,keep-radio-on-during-sleep;
 		status = "disabled";
 	};
+
+	wcd9xxx_intc: wcd9xxx-irq {
+		status = "disabled";
+		compatible = "qcom,wcd9xxx-irq";
+		interrupt-controller;
+		#interrupt-cells = <1>;
+		interrupt-parent = <&tlmm>;
+		qcom,gpio-connect = <&tlmm 54 0>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&wcd_intr_default>;
+	};
 };
 
 &clock_cpu {

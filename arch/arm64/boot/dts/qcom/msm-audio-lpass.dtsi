@@ -428,14 +428,6 @@
 		compatible = "qcom,msm-pcm-hostless";
 	};
 
-	wcd9xxx_intc: wcd9xxx-irq {
-		compatible = "qcom,wcd9xxx-irq";
-		interrupt-controller;
-		#interrupt-cells = <1>;
-		interrupt-parent = <&tlmm>;
-		status = "disabled";
-	};
-
 	audio_apr: qcom,msm-audio-apr {
 		compatible = "qcom,msm-audio-apr";
 		qcom,subsys-name = "apr_adsp";

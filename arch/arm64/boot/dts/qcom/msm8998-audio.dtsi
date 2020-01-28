@@ -22,18 +22,11 @@
 	status = "ok";
 };
 
-&soc {
-	wcd9xxx_intc: wcd9xxx-irq {
-		status = "ok";
-		compatible = "qcom,wcd9xxx-irq";
-		interrupt-controller;
-		#interrupt-cells = <1>;
-		interrupt-parent = <&tlmm>;
-		qcom,gpio-connect = <&tlmm 54 0>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&wcd_intr_default>;
-	};
+&wcd9xxx_intc {
+	status = "ok";
+};
 
+&soc {
 	trans_loopback: qcom,msm-transcode-loopback {
 		compatible = "qcom,msm-transcode-loopback";
 	};
