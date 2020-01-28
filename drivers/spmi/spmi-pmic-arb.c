@@ -141,6 +141,7 @@ struct apid_data {
  * @min_apid:		minimum APID (used for bounding IRQ search)
  * @max_apid:		maximum APID
  * @mapping_table:	in-memory copy of PPID -> APID mapping table.
+ * @reserved_chan:	reserved channel (avoid usage of this channel)
  * @domain:		irq domain object for PMIC IRQ domain
  * @spmic:		SPMI controller object
  * @ver_ops:		version dependent operations.
@@ -162,6 +163,7 @@ struct spmi_pmic_arb {
 	u16			min_apid;
 	u16			max_apid;
 	u32			*mapping_table;
+	int			reserved_chan;
 	DECLARE_BITMAP(mapping_table_valid, PMIC_ARB_MAX_PERIPHS);
 	struct irq_domain	*domain;
 	struct spmi_controller	*spmic;
@@ -871,6 +873,10 @@ static u16 pmic_arb_find_apid(struct spmi_pmic_arb *pmic_arb, u16 ppid)
 	u16 id, apid;
 
 	for (apid = pmic_arb->last_apid; ; apid++, apidd++) {
+		/* Do not keep the reserved channel in the mapping table */
+		if (pa->reserved_chan >= 0 && apid == pa->reserved_chan)
+			continue;
+
 		offset = pmic_arb->ver_ops->apid_map_offset(apid);
 		if (offset >= pmic_arb->core_size)
 			break;
@@ -927,6 +933,10 @@ static int pmic_arb_read_apid_map_v5(struct spmi_pmic_arb *pmic_arb)
 	 * interrupts from the PPID.
 	 */
 	for (i = 0; ; i++, apidd++) {
+		/* Do not keep the reserved channel in the mapping table */
+		if (pa->reserved_chan >= 0 && apid == pa->reserved_chan)
+			continue;
+
 		offset = pmic_arb->ver_ops->apid_map_offset(i);
 		if (offset >= pmic_arb->core_size)
 			break;
@@ -1313,6 +1323,9 @@ static int spmi_pmic_arb_probe(struct platform_device *pdev)
 	pmic_arb->ee = ee;
 	pa->ahb_bus_wa = of_property_read_bool(pdev->dev.of_node,
 					"qcom,enable-ahb-bus-workaround");
+	pa->reserved_chan = -EINVAL;
+	of_property_read_u32(pdev->dev.of_node, "qcom,reserved-chan",
+						&pa->reserved_chan);
 
 	mapping_table = devm_kcalloc(&ctrl->dev, PMIC_ARB_MAX_PERIPHS,
 					sizeof(*mapping_table), GFP_KERNEL);
