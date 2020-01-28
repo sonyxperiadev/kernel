@@ -144,7 +144,14 @@
 			      "mmss_bimc_smmu_ahb_clk",
 			      "mmss_bimc_smmu_axi_clk";
 		#clock-cells = <1>;
-		qcom,bus-master-id = <MSM_BUS_MNOC_BIMC_MAS>;
+		qcom,msm-bus,name = "smmu-bus-client-mmss";
+		qcom,msm-bus,num-cases = <2>;
+		qcom,msm-bus,active-only;
+		qcom,msm-bus,num-paths = <2>;
+		/* ahb_clk_src, mmssnoc_axi_clk */
+		qcom,msm-bus,vectors-KBps =
+				<102 722 0 0>, <29 512 0 0>,
+				<102 722 0 1000>, <29 512 0 1000>;
 	};
 
 	kgsl_smmu: arm,smmu-kgsl@5040000 {
