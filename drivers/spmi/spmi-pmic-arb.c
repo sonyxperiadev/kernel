@@ -145,6 +145,8 @@ struct apid_data {
  * @spmic:		SPMI controller object
  * @ver_ops:		version dependent operations.
  * @ppid_to_apid	in-memory copy of PPID -> APID mapping table.
+ * @ahb_bus_wa:		Use AHB bus workaround to avoid write transaction
+ *			corruption on some PMIC arbiter v5 platforms.
  */
 struct spmi_pmic_arb {
 	void __iomem		*rd_base;
@@ -167,6 +169,7 @@ struct spmi_pmic_arb {
 	u16			*ppid_to_apid;
 	u16			last_apid;
 	struct apid_data	apid_data[PMIC_ARB_MAX_PERIPHS];
+	bool			ahb_bus_wa;
 };
 
 /**
@@ -209,6 +212,16 @@ struct pmic_arb_ver_ops {
 static inline void pmic_arb_base_write(struct spmi_pmic_arb *pmic_arb,
 				       u32 offset, u32 val)
 {
+	if (pa->ahb_bus_wa) {
+		/* AHB bus register dummy read for workaround. */
+		readl_relaxed(pa->cnfg + SPMI_PROTOCOL_IRQ_STATUS);
+		/*
+		 * Ensure that the read completes before initiating the
+		 * subsequent register write.
+		 */
+		mb();
+	}
+
 	writel_relaxed(val, pmic_arb->wr_base + offset);
 }
 
@@ -1298,6 +1311,9 @@ static int spmi_pmic_arb_probe(struct platform_device *pdev)
 	}
 
 	pmic_arb->ee = ee;
+	pa->ahb_bus_wa = of_property_read_bool(pdev->dev.of_node,
+					"qcom,enable-ahb-bus-workaround");
+
 	mapping_table = devm_kcalloc(&ctrl->dev, PMIC_ARB_MAX_PERIPHS,
 					sizeof(*mapping_table), GFP_KERNEL);
 	if (!mapping_table) {
