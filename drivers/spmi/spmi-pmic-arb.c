@@ -59,6 +59,8 @@
 #define SPMI_OWNERSHIP_TABLE_REG(N)	(0x0700 + (4 * (N)))
 #define SPMI_OWNERSHIP_PERIPH2OWNER(X)	((X) & 0x7)
 
+#define SPMI_PROTOCOL_IRQ_STATUS	0x6000
+
 /* Channel Status fields */
 enum pmic_arb_chnl_status {
 	PMIC_ARB_STATUS_DONE	= BIT(0),
@@ -214,9 +216,9 @@ struct pmic_arb_ver_ops {
 static inline void pmic_arb_base_write(struct spmi_pmic_arb *pmic_arb,
 				       u32 offset, u32 val)
 {
-	if (pa->ahb_bus_wa) {
+	if (pmic_arb->ahb_bus_wa) {
 		/* AHB bus register dummy read for workaround. */
-		readl_relaxed(pa->cnfg + SPMI_PROTOCOL_IRQ_STATUS);
+		readl_relaxed(pmic_arb->cnfg + SPMI_PROTOCOL_IRQ_STATUS);
 		/*
 		 * Ensure that the read completes before initiating the
 		 * subsequent register write.
@@ -874,7 +876,8 @@ static u16 pmic_arb_find_apid(struct spmi_pmic_arb *pmic_arb, u16 ppid)
 
 	for (apid = pmic_arb->last_apid; ; apid++, apidd++) {
 		/* Do not keep the reserved channel in the mapping table */
-		if (pa->reserved_chan >= 0 && apid == pa->reserved_chan)
+		if (pmic_arb->reserved_chan >= 0 &&
+		    apid == pmic_arb->reserved_chan)
 			continue;
 
 		offset = pmic_arb->ver_ops->apid_map_offset(apid);
@@ -934,7 +937,8 @@ static int pmic_arb_read_apid_map_v5(struct spmi_pmic_arb *pmic_arb)
 	 */
 	for (i = 0; ; i++, apidd++) {
 		/* Do not keep the reserved channel in the mapping table */
-		if (pa->reserved_chan >= 0 && apid == pa->reserved_chan)
+		if (pmic_arb->reserved_chan >= 0 &&
+		    apid == pmic_arb->reserved_chan)
 			continue;
 
 		offset = pmic_arb->ver_ops->apid_map_offset(i);
@@ -1321,11 +1325,11 @@ static int spmi_pmic_arb_probe(struct platform_device *pdev)
 	}
 
 	pmic_arb->ee = ee;
-	pa->ahb_bus_wa = of_property_read_bool(pdev->dev.of_node,
+	pmic_arb->ahb_bus_wa = of_property_read_bool(pdev->dev.of_node,
 					"qcom,enable-ahb-bus-workaround");
-	pa->reserved_chan = -EINVAL;
+	pmic_arb->reserved_chan = -EINVAL;
 	of_property_read_u32(pdev->dev.of_node, "qcom,reserved-chan",
-						&pa->reserved_chan);
+						&pmic_arb->reserved_chan);
 
 	mapping_table = devm_kcalloc(&ctrl->dev, PMIC_ARB_MAX_PERIPHS,
 					sizeof(*mapping_table), GFP_KERNEL);
