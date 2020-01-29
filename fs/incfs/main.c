@@ -12,13 +12,11 @@
 
 #define INCFS_NODE_FEATURES "features"
 
-struct file_system_type incfs_fs_type = {
-	.owner = THIS_MODULE,
-	.name = INCFS_NAME,
-	.mount = incfs_mount_fs,
-	.kill_sb = incfs_kill_sb,
-	.fs_flags = 0
-};
+static struct file_system_type incfs_fs_type = { .owner = THIS_MODULE,
+						 .name = INCFS_NAME,
+						 .mount = incfs_mount_fs,
+						 .kill_sb = incfs_kill_sb,
+						 .fs_flags = 0 };
 
 static struct kobject *sysfs_root, *featurefs_root;
 
