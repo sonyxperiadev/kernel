@@ -41,7 +41,13 @@
 #define VBIF_XIN_HALT_CTRL0		0x0200
 #define VBIF_XIN_HALT_CTRL1		0x0204
 #define VBIF_XINL_QOS_RP_REMAP_000	0x0550
-#define VBIF_XINL_QOS_LVL_REMAP_000	0x0590
+
+#if defined(CONFIG_ARCH_MSM8996) || defined(CONFIG_ARCH_MSM8998) || \
+    defined(CONFIG_ARCH_SDM630) || defined(CONFIG_ARCH_SDM660)
+ #define VBIF_XINL_QOS_LVL_REMAP_000	0x0570
+#else
+ #define VBIF_XINL_QOS_LVL_REMAP_000	0x0590
+#endif
 
 static void sde_hw_clear_errors(struct sde_hw_vbif *vbif,
 		u32 *pnd_errors, u32 *src_errors)

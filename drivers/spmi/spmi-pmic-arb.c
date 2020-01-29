@@ -59,6 +59,8 @@
 #define SPMI_OWNERSHIP_TABLE_REG(N)	(0x0700 + (4 * (N)))
 #define SPMI_OWNERSHIP_PERIPH2OWNER(X)	((X) & 0x7)
 
+#define SPMI_PROTOCOL_IRQ_STATUS	0x6000
+
 /* Channel Status fields */
 enum pmic_arb_chnl_status {
 	PMIC_ARB_STATUS_DONE	= BIT(0),
@@ -141,10 +143,13 @@ struct apid_data {
  * @min_apid:		minimum APID (used for bounding IRQ search)
  * @max_apid:		maximum APID
  * @mapping_table:	in-memory copy of PPID -> APID mapping table.
+ * @reserved_chan:	reserved channel (avoid usage of this channel)
  * @domain:		irq domain object for PMIC IRQ domain
  * @spmic:		SPMI controller object
  * @ver_ops:		version dependent operations.
  * @ppid_to_apid	in-memory copy of PPID -> APID mapping table.
+ * @ahb_bus_wa:		Use AHB bus workaround to avoid write transaction
+ *			corruption on some PMIC arbiter v5 platforms.
  */
 struct spmi_pmic_arb {
 	void __iomem		*rd_base;
@@ -160,6 +165,7 @@ struct spmi_pmic_arb {
 	u16			min_apid;
 	u16			max_apid;
 	u32			*mapping_table;
+	int			reserved_chan;
 	DECLARE_BITMAP(mapping_table_valid, PMIC_ARB_MAX_PERIPHS);
 	struct irq_domain	*domain;
 	struct spmi_controller	*spmic;
@@ -167,6 +173,7 @@ struct spmi_pmic_arb {
 	u16			*ppid_to_apid;
 	u16			last_apid;
 	struct apid_data	apid_data[PMIC_ARB_MAX_PERIPHS];
+	bool			ahb_bus_wa;
 };
 
 /**
@@ -209,6 +216,16 @@ struct pmic_arb_ver_ops {
 static inline void pmic_arb_base_write(struct spmi_pmic_arb *pmic_arb,
 				       u32 offset, u32 val)
 {
+	if (pmic_arb->ahb_bus_wa) {
+		/* AHB bus register dummy read for workaround. */
+		readl_relaxed(pmic_arb->cnfg + SPMI_PROTOCOL_IRQ_STATUS);
+		/*
+		 * Ensure that the read completes before initiating the
+		 * subsequent register write.
+		 */
+		mb();
+	}
+
 	writel_relaxed(val, pmic_arb->wr_base + offset);
 }
 
@@ -858,6 +875,11 @@ static u16 pmic_arb_find_apid(struct spmi_pmic_arb *pmic_arb, u16 ppid)
 	u16 id, apid;
 
 	for (apid = pmic_arb->last_apid; ; apid++, apidd++) {
+		/* Do not keep the reserved channel in the mapping table */
+		if (pmic_arb->reserved_chan >= 0 &&
+		    apid == pmic_arb->reserved_chan)
+			continue;
+
 		offset = pmic_arb->ver_ops->apid_map_offset(apid);
 		if (offset >= pmic_arb->core_size)
 			break;
@@ -913,7 +935,13 @@ static int pmic_arb_read_apid_map_v5(struct spmi_pmic_arb *pmic_arb)
 	 * which has the IRQ owner bit set for a given PPID will receive
 	 * interrupts from the PPID.
 	 */
+	apid = 0;
 	for (i = 0; ; i++, apidd++) {
+		/* Do not keep the reserved channel in the mapping table */
+		if (pmic_arb->reserved_chan >= 0 &&
+		    apid == pmic_arb->reserved_chan)
+			continue;
+
 		offset = pmic_arb->ver_ops->apid_map_offset(i);
 		if (offset >= pmic_arb->core_size)
 			break;
@@ -1298,6 +1326,12 @@ static int spmi_pmic_arb_probe(struct platform_device *pdev)
 	}
 
 	pmic_arb->ee = ee;
+	pmic_arb->ahb_bus_wa = of_property_read_bool(pdev->dev.of_node,
+					"qcom,enable-ahb-bus-workaround");
+	pmic_arb->reserved_chan = -EINVAL;
+	of_property_read_u32(pdev->dev.of_node, "qcom,reserved-chan",
+						&pmic_arb->reserved_chan);
+
 	mapping_table = devm_kcalloc(&ctrl->dev, PMIC_ARB_MAX_PERIPHS,
 					sizeof(*mapping_table), GFP_KERNEL);
 	if (!mapping_table) {

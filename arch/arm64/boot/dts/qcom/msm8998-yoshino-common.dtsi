@@ -3395,6 +3395,7 @@
 			   "charger_temp",
 			   "charger_temp_max";
 	somc,jeita-sw-ctrl-en;
+	somc,jeita-warm-fv-uv = <4147000>;
 	/delete-property/ qcom,auto-recharge-soc;
 	/delete-property/ qcom,suspend-input-on-debug-batt;
 };
