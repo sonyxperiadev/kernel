@@ -22,6 +22,8 @@
 		qcom,use-3-lvl-tables;
 		qcom,register-save;
 		qcom,skip-init;
+		qcom,no-smr-check;
+		qcom,no-actlr-read;
 		#global-interrupts = <0>;
 		interrupts = <GIC_SPI 364 IRQ_TYPE_EDGE_RISING>,
 			   <GIC_SPI 365 IRQ_TYPE_EDGE_RISING>,
@@ -50,6 +52,8 @@
 		qcom,use-3-lvl-tables;
 		qcom,register-save;
 		qcom,skip-init;
+		qcom,no-smr-check;
+		qcom,no-actlr-read;
 		#global-interrupts = <0>;
 		interrupts = <GIC_SPI 373 IRQ_TYPE_EDGE_RISING>,
 			   <GIC_SPI 374 IRQ_TYPE_EDGE_RISING>,
@@ -166,6 +170,7 @@
 		qcom,use-3-lvl-tables;
 		qcom,register-save;
 		qcom,skip-init;
+		qcom,no-actlr-read;
 		#global-interrupts = <0>;
 		interrupts = <GIC_SPI 329 IRQ_TYPE_LEVEL_HIGH>,
 			   <GIC_SPI 330 IRQ_TYPE_LEVEL_HIGH>,
