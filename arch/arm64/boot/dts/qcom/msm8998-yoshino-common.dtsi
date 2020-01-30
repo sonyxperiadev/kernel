@@ -28,7 +28,7 @@
 	};
 
 	reserved-memory {
-		ramoops {
+		ramoops@ffc00000 {
 			compatible = "removed-dma-pool", "ramoops";
 			no-map;
 			reg = <0 0xffc00000 0 0x00100000>;
@@ -76,6 +76,10 @@
 
 &cont_splash_mem {
 	reg = <0x0 0x9d400000 0x0 0x02400000>;
+};
+
+&dfps_data_memory {
+	reg = <0x0 0x9f800000 0x0 0x1000>;
 };
 
 &soc {
