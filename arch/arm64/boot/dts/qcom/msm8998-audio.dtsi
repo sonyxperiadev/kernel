@@ -97,6 +97,22 @@
 		status = "ok";
 	};
 
+	hph_en0_gpio: msm_cdc_pinctrl@67 {
+		compatible = "qcom,msm-cdc-pinctrl";
+		#gpio-cells = <0>;
+		pinctrl-names = "aud_active", "aud_sleep";
+		pinctrl-0 = <&hph_en0_active>;
+		pinctrl-1 = <&hph_en0_idle>;
+	};
+
+	hph_en1_gpio: msm_cdc_pinctrl@68 {
+		compatible = "qcom,msm-cdc-pinctrl";
+		#gpio-cells = <0>;
+		pinctrl-names = "aud_active", "aud_sleep";
+		pinctrl-0 = <&hph_en1_active>;
+		pinctrl-1 = <&hph_en1_idle>;
+	};
+
 	clock_audio: audio_ext_clk {
 		status = "ok";
 		compatible = "qcom,audio-ref-clk";
@@ -245,22 +261,6 @@
 				<&wsa881x_213>, <&wsa881x_214>;
 		qcom,wsa-aux-dev-prefix = "SpkrLeft", "SpkrRight",
 					  "SpkrLeft", "SpkrRight";
-
-		hph_en0_gpio: msm_cdc_pinctrl@67 {
-			compatible = "qcom,msm-cdc-pinctrl";
-			#gpio-cells = <0>;
-			pinctrl-names = "aud_active", "aud_sleep";
-			pinctrl-0 = <&hph_en0_active>;
-			pinctrl-1 = <&hph_en0_idle>;
-		};
-
-		hph_en1_gpio: msm_cdc_pinctrl@68 {
-			compatible = "qcom,msm-cdc-pinctrl";
-			#gpio-cells = <0>;
-			pinctrl-names = "aud_active", "aud_sleep";
-			pinctrl-0 = <&hph_en1_active>;
-			pinctrl-1 = <&hph_en1_idle>;
-		};
 	};
 
 	snd_934x: sound-tavil {
