@@ -27,6 +27,16 @@
 };
 
 &soc {
+	wcd_rst_gpio: msm_cdc_pinctrl@64 {
+		compatible = "qcom,msm-cdc-pinctrl";
+		#gpio-cells = <0>;
+		qcom,cdc-rst-n-gpio = <&tlmm 64 0>;
+		pinctrl-names = "aud_active", "aud_sleep";
+		pinctrl-0 = <&cdc_reset_active>;
+		pinctrl-1 = <&cdc_reset_sleep>;
+		status = "ok";
+	};
+
 	trans_loopback: qcom,msm-transcode-loopback {
 		compatible = "qcom,msm-transcode-loopback";
 	};
@@ -85,16 +95,6 @@
 		pinctrl-names = "aud_active", "aud_sleep";
 		pinctrl-0 = <&wcd_usbc_analog_en2n_active>;
 		pinctrl-1 = <&wcd_usbc_analog_en2n_idle>;
-	};
-
-	wcd_rst_gpio: msm_cdc_pinctrl@64 {
-		compatible = "qcom,msm-cdc-pinctrl";
-		#gpio-cells = <0>;
-		qcom,cdc-rst-n-gpio = <&tlmm 64 0>;
-		pinctrl-names = "aud_active", "aud_sleep";
-		pinctrl-0 = <&cdc_reset_active>;
-		pinctrl-1 = <&cdc_reset_sleep>;
-		status = "ok";
 	};
 
 	hph_en0_gpio: msm_cdc_pinctrl@67 {
@@ -398,7 +398,6 @@
 			      17 18 19 20 21 22 23 24 25 26 27 28 29
 			      30>;
 
-		qcom,wcd-uses-q6core;
 		qcom,wcd-rst-gpio-node = <&wcd_rst_gpio>;
 
 		clock-names = "wcd_clk";
