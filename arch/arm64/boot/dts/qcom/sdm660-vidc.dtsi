@@ -19,18 +19,22 @@
 
 &soc {
 	msm_vidc: qcom,vidc@cc00000 {
-		compatible = "qcom,msm-vidc", "sdm660-vidc";
+		compatible = "qcom,msm-vidc";
 		status = "ok";
 		reg = <0xcc00000 0x100000>;
 		interrupts = <GIC_SPI 287 IRQ_TYPE_LEVEL_HIGH>;
 		qcom,hfi = "venus";
 		qcom,hfi-version = "3xx";
 		qcom,firmware-name = "venus";
+		qcom,never-unload-fw;
+		qcom,sw-power-collapse;
+		qcom,max-secure-instances = <5>;
 		qcom,reg-presets =
 			<0x80010 0x001f001f>,
 			<0x80018 0x00000156>,
 			<0x8001c 0x00000156>;
 
+		qcom,max-hw-load = <1036800>; /* Full 4k @ 30 */
 		qcom,allowed-clock-rates =
 			/* TURBO     NOM+      NOM
 			 *  SVS+      SVS       SVS-
