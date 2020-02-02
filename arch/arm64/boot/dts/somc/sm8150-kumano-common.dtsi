@@ -312,25 +312,6 @@
 		pinctrl-2 = <>;
 	};
 
-	et6xx: et6xx {
-		status = "ok";
-		compatible = "egistec,et580";
-
-		pinctrl-names = "et6xx_reset_reset",
-				"et6xx_reset_active",
-				"et6xx_ldo_low",
-				"et6xx_ldo_high",
-				"et6xx_irq_active",
-				"et6xx_irq_low";
-
-		pinctrl-0 = <&sm_gpio_80>;
-		pinctrl-1 = <&sm_gpio_80_output_high>;
-		pinctrl-2 = <&pm8150l_gpio_8>;
-		pinctrl-3 = <&pm8150l_gpio_8_output_high>;
-		pinctrl-4 = <&sm_gpio_118>;
-		pinctrl-5 = <&sm_gpio_118_pull_low>;
-	};
-
 	somc_pinctrl_pmic: somc_pinctrl_pmic {
 		compatible = "somc-pinctrl-pmic";
 		pinctrl-names = "platform_common_default",
@@ -352,6 +333,30 @@
 		/* If variant specific PMIC default setting is needed,
 		fill pinctrl-2 value in <variant>.dtsi */
 		pinctrl-2 = <>;
+	};
+
+	pm8150l_gpio_8_reg: pm8150l_gpio_8_reg {
+		compatible = "regulator-fixed";
+		regulator-name = "pm8150l_gpio_8_reg";
+		startup-delay-us = <0>;
+		enable-active-high;
+		gpio = <&pm8150l_gpios 8 0>;
+	};
+
+	et6xx {
+		compatible = "etspi,et510";
+		interrupt-parent = <&tlmm>;
+		interrupts = <118 0x0>;
+		et51x,gpio_irq = <&tlmm 118 0>;
+		vdd_ana-supply = <&pm8150l_gpio_8_reg>;
+		et51x,no-low-voltage-probe;
+
+		pinctrl-names = "et51x_reset_reset",
+			"et51x_reset_active",
+			"et51x_irq_active";
+		pinctrl-0 = <&sm_gpio_80>;
+		pinctrl-1 = <&sm_gpio_80_output_high>;
+		pinctrl-2 = <&sm_gpio_118>;
 	};
 
 	sony_ext_uim_ctrl {
@@ -1135,7 +1140,6 @@
 		qcom,drive-strength = <3>;
 		power-source = <1>;
 	};
-
 
 	/* GPIO_9: NC */
 	pm8150l_gpio_9: pm8150l_gpio_9 {
