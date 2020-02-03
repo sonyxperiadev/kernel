@@ -15,7 +15,7 @@
 
 &soc {
 	msm_vidc: qcom,vidc@1d00000 {
-		compatible = "qcom,msm-vidc", "qcom,msm8956-vidc";
+		compatible = "qcom,msm-vidc";
 		reg = <0x01d00000 0xff000>,
 			<0x000a4120 0x4>;
 		reg-names = "vidc", "efuse";
@@ -42,11 +42,14 @@
 					    133333333 228571428 360000000
 					    400000000 466000000>;
 
+		qcom,slave-side-cp;
+		qcom,sw-power-collapse;
 		qcom,reset-clock-control;
 		qcom,regulator-scaling;
-
+		qcom,max-hw-load = <1011840>; /* 3840 x 2176 @ 30 fps + 3840 x 2176 @ 1 fps */
 		qcom,dcvs-min-load = <734400>; /* 1920 x 1088 @ 90fps */
 		qcom,dcvs-min-mbperframe = <32400>; /* 3840 x 2160 */
+		//qcom,max-hw-load = <979200>; /* TURBO, UHD30E */
 
 		qcom,load-freq-tbl =
 			<979200 466000000 0x55555555>, /* TURBO, UHD30E   */
