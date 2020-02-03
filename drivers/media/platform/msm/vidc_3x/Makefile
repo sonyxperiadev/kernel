@@ -15,4 +15,4 @@ obj-$(CONFIG_MSM_VIDC_3X_V4L2) := 	msm_v4l2_vidc.o \
 
 obj-$(CONFIG_MSM_VIDC_3X_V4L2) += governors/
 
-obj-$(CONFIG_MSM_VIDC_VMEM) += vmem/
+obj-$(CONFIG_MSM_VIDC_3X_VMEM) += vmem/

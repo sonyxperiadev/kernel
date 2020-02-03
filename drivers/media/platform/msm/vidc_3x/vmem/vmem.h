@@ -14,7 +14,7 @@
 #ifndef __VMEM_H__
 #define __VMEM_H__
 
-#ifdef CONFIG_MSM_VIDC_VMEM
+#ifdef CONFIG_MSM_VIDC_3X_VMEM
 
 int vmem_allocate(size_t size, phys_addr_t *addr);
 void vmem_free(phys_addr_t to_free);
