@@ -208,23 +208,6 @@ static struct msm_vidc_common_data msm8996_common_data[] = {
 	CMNDATA_ENTRY("qcom,hfi-version", 3),
 };
 
-static struct msm_vidc_common_data msm8998_common_data[] = {
-	CMNDATA_ENTRY("qcom,sw-power-collapse", 1),
-	CMNDATA_ENTRY("qcom,never-unload-fw", 1),
-	CMNDATA_ENTRY("qcom,max-secure-instances", 5),
-
-	/* Full 4k @ 60 + 1080p @ 60 */
-	CMNDATA_ENTRY("qcom,max-hw-load", 2563200),
-
-	CMNDATA_ENTRY("qcom,max-hq-mbs-per-frame", 8160),
-	CMNDATA_ENTRY("qcom,max-hq-frames-per-sec", 60),
-	CMNDATA_ENTRY("qcom,max-b-frame-size", 8160),
-	CMNDATA_ENTRY("qcom,max-b-frames-per-sec", 60),
-	CMNDATA_ENTRY("qcom,power-collapse-delay", 1500),
-	CMNDATA_ENTRY("qcom,hw-resp-timeout", 1000),
-	CMNDATA_ENTRY("qcom,hfi-version", 3),
-};
-
 static struct msm_vidc_common_data sdm660_common_data[] = {
 	CMNDATA_ENTRY("qcom,sw-power-collapse", 1),
 	CMNDATA_ENTRY("qcom,never-unload-fw", 1),
@@ -882,24 +865,6 @@ static struct msm_vidc_platform_data msm8996_data = {
 	.vpu_ver = VPU_VERSION_4,
 };
 
-static struct msm_vidc_platform_data msm8998_data = {
-	.codec_data = sdm845_codec_data,
-	.codec_data_length =  ARRAY_SIZE(sdm845_codec_data),
-	.common_data = msm8998_common_data,
-	.common_data_length =  ARRAY_SIZE(msm8998_common_data),
-	.ubwc_config = 0,
-	.ubwc_config_length = 0,
-	.csc_data.vpe_csc_custom_bias_coeff = vpe_csc_custom_bias_coeff,
-	.csc_data.vpe_csc_custom_matrix_coeff = vpe_csc_custom_matrix_coeff,
-	.csc_data.vpe_csc_custom_limit_coeff = vpe_csc_custom_limit_coeff,
-	.efuse_data = NULL,
-	.efuse_data_length = 0,
-	.sku_version = 0,
-	.gcc_register_base = 0,
-	.gcc_register_size = 0,
-	.vpu_ver = VPU_VERSION_4,
-};
-
 static struct msm_vidc_platform_data sdm660_data = {
 	.codec_data = generic_legacy_codec_data,
 	.codec_data_length =  ARRAY_SIZE(generic_legacy_codec_data),
@@ -946,10 +911,6 @@ static const struct of_device_id msm_vidc_dt_match[] = {
 	{
 		.compatible = "qcom,msm8996-vidc",
 		.data = &msm8996_data,
-	},
-	{
-		.compatible = "qcom,msm8998-vidc",
-		.data = &msm8998_data,
 	},
 	{
 		.compatible = "qcom,sdm660-vidc",
