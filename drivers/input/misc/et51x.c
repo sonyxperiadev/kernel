@@ -136,9 +136,11 @@ static int et51x_vreg_set_voltage(struct device *dev, struct regulator *vreg,
 		dev_warn(dev, "No voltages available");
 	}
 
-	rc = regulator_enable(vreg);
-	if (rc)
-		dev_err(dev, "Unable to enable: %d\n", rc);
+	if (!regulator_is_enabled(vreg)) {
+		rc = regulator_enable(vreg);
+		if (rc)
+			dev_err(dev, "Unable to enable: %d\n", rc);
+	}
 
 	return rc;
 }
