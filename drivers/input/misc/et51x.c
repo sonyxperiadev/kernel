@@ -508,10 +508,13 @@ static int et51x_probe(struct platform_device *pdev)
 
 	et51x->vdd_ana = devm_regulator_get(dev, ET51X_REGULATOR_VDD_ANA);
 	if (IS_ERR_OR_NULL(et51x->vdd_ana)) {
+		dev_err(dev, "CRITICAL: Cannot get %s regulator: %ld\n",
+			ET51X_REGULATOR_VDD_ANA, PTR_ERR(et51x->vdd_ana));
+		if (IS_ERR(et51x->vdd_ana))
+			rc = PTR_ERR(et51x->vdd_ana);
+		else
+			rc = -EINVAL;
 		et51x->vdd_ana = NULL;
-		dev_err(dev, "CRITICAL: Cannot get %s regulator.\n",
-			ET51X_REGULATOR_VDD_ANA);
-		rc = -EINVAL;
 		goto exit;
 	}
 
