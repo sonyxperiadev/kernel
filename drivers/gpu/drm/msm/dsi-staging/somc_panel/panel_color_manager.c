@@ -536,7 +536,18 @@ static int somc_panel_update_merged_pcc_cache(
 		return -EINVAL;
 	}
 
+	if (unlikely(color_mgr->pcc_profile == (unsigned short)-1)) {
+		pr_err("No pcc_profile selected!\n");
+		goto use_system_calibration;
+	}
+
 	table_idx = pcc_data->tbl_idx + color_mgr->pcc_profile;
+
+	if (table_idx >= pcc_data->tbl_size) {
+		pr_err("%d exceeds table size %d\n",
+				table_idx, pcc_data->tbl_size);
+		goto use_system_calibration;
+	}
 
 	pr_debug("%s (%d): Selecting table %d with offset %d\n",
 			__func__, __LINE__,
@@ -635,6 +646,16 @@ static int somc_panel_update_merged_pcc_cache(
 	target->b.c >>= 15;
 
 	return 0;
+
+use_system_calibration:
+	if (color_mgr->system_calibration_valid) {
+		pr_debug("%s (%d): pcc profile unset; "
+				"using system calibration only\n",
+				__func__, __LINE__);
+		memcpy(target, sys_cal, sizeof(*sys_cal));
+		return 0;
+	}
+	return -EINVAL;
 }
 
 static int somc_panel_sde_crtc_set_property_override(struct drm_crtc *crtc,
