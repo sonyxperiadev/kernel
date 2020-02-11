@@ -724,11 +724,11 @@ static int somc_panel_sde_crtc_set_property_override(struct drm_crtc *crtc,
 		pr_debug("Merging system calibration\n");
 		memcpy(&color_mgr->system_calibration_pcc, blob->data,
 				blob->length);
-		color_mgr->system_calibration_valid = true;
 
 		ret = somc_panel_update_merged_pcc_cache(color_mgr);
 		if (ret)
 			return ret;
+		color_mgr->system_calibration_valid = true;
 	}
 
 	// Copy (updated) cache to blob:
@@ -1335,6 +1335,7 @@ static int somc_panel_crtc_send_cached_pcc(struct dsi_display *display)
 static int somc_panel_send_pcc(struct dsi_display *display,
 			       int color_table_offset)
 {
+	int rc;
 	struct somc_panel_color_mgr *color_mgr =
 			display->panel->spec_pdata->color_mgr;
 
@@ -1348,7 +1349,9 @@ static int somc_panel_send_pcc(struct dsi_display *display,
 
 	color_mgr->pcc_profile = color_table_offset;
 
-	somc_panel_update_merged_pcc_cache(color_mgr);
+	rc = somc_panel_update_merged_pcc_cache(color_mgr);
+	if (rc)
+		return rc;
 
 apply_cached_pcc:
 	return somc_panel_crtc_send_cached_pcc(display);
