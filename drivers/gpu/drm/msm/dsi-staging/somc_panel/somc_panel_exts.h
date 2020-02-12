@@ -316,7 +316,7 @@ struct somc_panel_color_mgr {
 	const struct drm_crtc_funcs *original_crtc_funcs;
 	struct drm_msm_pcc system_calibration_pcc;
 	struct drm_msm_pcc cached_pcc;
-	bool system_calibration_valid;
+	bool system_calibration_valid, cached_pcc_valid;
 };
 
 struct panel_specific_pdata {

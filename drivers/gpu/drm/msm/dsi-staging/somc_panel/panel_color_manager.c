@@ -536,7 +536,18 @@ static int somc_panel_update_merged_pcc_cache(
 		return -EINVAL;
 	}
 
+	if (unlikely(color_mgr->pcc_profile == (unsigned short)-1)) {
+		pr_err("No pcc_profile selected!\n");
+		goto use_system_calibration;
+	}
+
 	table_idx = pcc_data->tbl_idx + color_mgr->pcc_profile;
+
+	if (table_idx >= pcc_data->tbl_size) {
+		pr_err("%d exceeds table size %d\n",
+				table_idx, pcc_data->tbl_size);
+		goto use_system_calibration;
+	}
 
 	pr_debug("%s (%d): Selecting table %d with offset %d\n",
 			__func__, __LINE__,
@@ -553,6 +564,7 @@ static int somc_panel_update_merged_pcc_cache(
 				"using kernel calibration only\n",
 				__func__, __LINE__);
 		memcpy(target, &panel_cal, sizeof(panel_cal));
+		color_mgr->cached_pcc_valid = true;
 		return 0;
 	}
 
@@ -634,10 +646,25 @@ static int somc_panel_update_merged_pcc_cache(
 	target->b.b >>= 15;
 	target->b.c >>= 15;
 
+	color_mgr->cached_pcc_valid = true;
+
 	return 0;
+
+use_system_calibration:
+	if (color_mgr->system_calibration_valid) {
+		pr_debug("%s (%d): pcc profile unset; "
+				"using system calibration only\n",
+				__func__, __LINE__);
+		memcpy(target, sys_cal, sizeof(*sys_cal));
+		color_mgr->cached_pcc_valid = true;
+		return 0;
+	}
+	return -EINVAL;
 }
 
-static int somc_panel_sde_crtc_set_property_override(struct drm_crtc *crtc,
+static int somc_panel_sde_crtc_atomic_set_property_override(
+		struct drm_crtc *crtc,
+		struct drm_crtc_state *state,
 		struct drm_property *property,
 		uint64_t value)
 {
@@ -711,11 +738,12 @@ static int somc_panel_sde_crtc_set_property_override(struct drm_crtc *crtc,
 	}
 
 	// Copy (updated) cache to blob:
-	memcpy(blob->data, &color_mgr->cached_pcc, blob->length);
+	if (color_mgr->cached_pcc_valid)
+		memcpy(blob->data, &color_mgr->cached_pcc, blob->length);
 
 default_fn:
-	return color_mgr->original_crtc_funcs->set_property(
-			crtc, property, value);
+	return color_mgr->original_crtc_funcs->atomic_set_property(
+			crtc, state, property, value);
 }
 
 static int somc_panel_inject_crtc_overrides(struct dsi_display *display)
@@ -770,7 +798,7 @@ static int somc_panel_inject_crtc_overrides(struct dsi_display *display)
 	memcpy(new_funcs, crtc->funcs, sizeof(struct drm_crtc_funcs));
 
 	/* Then, override the function: */
-	new_funcs->set_property = somc_panel_sde_crtc_set_property_override;
+	new_funcs->atomic_set_property = somc_panel_sde_crtc_atomic_set_property_override;
 
 	/* Finally, update the funcs buffer with the overridden function: */
 	crtc->funcs = new_funcs;
@@ -836,11 +864,6 @@ static int somc_panel_pcc_setup(struct dsi_display *display)
 		pr_notice("%s (%d): PCC already applied\n", __func__, __LINE__);
 		goto exit;
 	}
-
-	/* Ensure the cached pcc is updated by invalidating
-	 * the current profile
-	 */
-	color_mgr->pcc_profile = -1;
 
 	if (display->tx_cmd_buf == NULL) {
 		ret = dsi_host_alloc_cmd_tx_buffer(display);
@@ -1269,6 +1292,11 @@ static int somc_panel_crtc_send_cached_pcc(struct dsi_display *display)
 	if (!color_mgr)
 		return -EINVAL;
 
+	if (!color_mgr->cached_pcc_valid) {
+		pr_err("Cached pcc is not valid!\n");
+		return -EINVAL;
+	}
+
 	if (!display->drm_conn) {
 		pr_err("The display is not connected!!\n");
 		return -EINVAL;
@@ -1314,12 +1342,13 @@ static int somc_panel_crtc_send_cached_pcc(struct dsi_display *display)
 static int somc_panel_send_pcc(struct dsi_display *display,
 			       int color_table_offset)
 {
+	int rc;
 	struct somc_panel_color_mgr *color_mgr =
 			display->panel->spec_pdata->color_mgr;
 
 	/* Only recompute cache when outdated: */
-	// TODO: Initialize cache to invalid value!!!
-	if (color_table_offset == color_mgr->pcc_profile)
+	if (color_table_offset == color_mgr->pcc_profile
+		&& color_mgr->cached_pcc_valid)
 		goto apply_cached_pcc;
 
 	pr_info("%s Changed from pcc profile %d to %d\n", __func__,
@@ -1327,7 +1356,9 @@ static int somc_panel_send_pcc(struct dsi_display *display,
 
 	color_mgr->pcc_profile = color_table_offset;
 
-	somc_panel_update_merged_pcc_cache(color_mgr);
+	rc = somc_panel_update_merged_pcc_cache(color_mgr);
+	if (rc)
+		return rc;
 
 apply_cached_pcc:
 	return somc_panel_crtc_send_cached_pcc(display);
