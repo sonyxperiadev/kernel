@@ -413,7 +413,7 @@
 		};
 	};
 
-	somc_pinctrl: somc_pinctrl {
+	somc_pinctrl: somc_pinctrl@0 {
 		compatible = "somc-pinctrl";
 		pinctrl-names = "platform_common_default",
 				"product_common_default",
@@ -472,8 +472,8 @@
 
 	};
 
-	somc_pinctrl_pmic: somc_pinctrl_pmic {
-		compatible = "somc-pinctrl-pmic";
+	somc_pinctrl_pmic: somc_pinctrl@1 {
+		compatible = "somc-pinctrl";
 		pinctrl-names = "platform_common_default",
 				"product_common_default",
 				"variant_default";
