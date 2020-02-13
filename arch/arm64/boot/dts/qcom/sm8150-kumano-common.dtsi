@@ -41,6 +41,32 @@
 	status = "disabled";
 };
 
+&icp_iova_mem_map {
+	iova-mem-region-shared {
+		/* 100MB */
+		iova-region-start = <0x7400000>;
+		iova-region-len = <0x6400000>;
+	};
+
+	iova-mem-region-secondary-heap {
+		/* 1MB */
+		iova-region-start = <0xd800000>;
+		iova-region-len = <0x100000>;
+	};
+
+	iova-mem-region-io {
+		/* ~3.3GB */
+		iova-region-start = <0xda00000>;
+		iova-region-len = <0xd2500000>;
+	};
+
+	iova-mem-qdss-region {
+		/* 1MB */
+		iova-region-start = <0xd900000>;
+		iova-region-len = <0x100000>;
+	};
+};
+
 &qupv3_se4_i2c {
 	nfc@28 {
 		compatible = "nxp,pn553";
