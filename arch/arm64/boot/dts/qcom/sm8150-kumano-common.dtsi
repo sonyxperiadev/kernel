@@ -41,6 +41,32 @@
 	status = "disabled";
 };
 
+&icp_iova_mem_map {
+	iova-mem-region-shared {
+		/* 100MB */
+		iova-region-start = <0x7400000>;
+		iova-region-len = <0x6400000>;
+	};
+
+	iova-mem-region-secondary-heap {
+		/* 1MB */
+		iova-region-start = <0xd800000>;
+		iova-region-len = <0x100000>;
+	};
+
+	iova-mem-region-io {
+		/* ~3.3GB */
+		iova-region-start = <0xda00000>;
+		iova-region-len = <0xd2500000>;
+	};
+
+	iova-mem-qdss-region {
+		/* 1MB */
+		iova-region-start = <0xd900000>;
+		iova-region-len = <0x100000>;
+	};
+};
+
 &qupv3_se4_i2c {
 	nfc@28 {
 		compatible = "nxp,pn553";
@@ -387,7 +413,7 @@
 		};
 	};
 
-	somc_pinctrl: somc_pinctrl {
+	somc_pinctrl: somc_pinctrl@0 {
 		compatible = "somc-pinctrl";
 		pinctrl-names = "platform_common_default",
 				"product_common_default",
@@ -452,8 +478,8 @@
 		pinctrl-2 = <&sm_gpio_118>;
 	};
 
-	somc_pinctrl_pmic: somc_pinctrl_pmic {
-		compatible = "somc-pinctrl-pmic";
+	somc_pinctrl_pmic: somc_pinctrl@1 {
+		compatible = "somc-pinctrl";
 		pinctrl-names = "platform_common_default",
 				"product_common_default",
 				"variant_default";
@@ -3655,6 +3681,9 @@
 
 /* Primary USB port related QMP USB DP Combo PHY */
 &usb_qmp_dp_phy {
+	vdd-supply = <&pm8150_l18>;
+	qcom,vdd-voltage-level = <0 912000 912000>;
+
 	qcom,qmp-phy-init-seq =
 		/* <reg_offset, value, delay> */
 		<USB3_DP_QSERDES_COM_SSC_EN_CENTER 0x01 0
