@@ -3650,6 +3650,9 @@
 
 /* Primary USB port related QMP USB DP Combo PHY */
 &usb_qmp_dp_phy {
+	vdd-supply = <&pm8150_l18>;
+	qcom,vdd-voltage-level = <0 912000 912000>;
+
 	qcom,qmp-phy-init-seq =
 		/* <reg_offset, value, delay> */
 		<USB3_DP_QSERDES_COM_SSC_EN_CENTER 0x01 0
