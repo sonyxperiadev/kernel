@@ -378,6 +378,7 @@ config SENSORS_APDS990X
 
 config SIM_DETECT
 	tristate "SIM_DETECT driver support"
+	select SWITCH
 	default n
 	help
 	  Say Y here
