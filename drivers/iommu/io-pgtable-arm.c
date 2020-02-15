@@ -1319,16 +1319,12 @@ arm_64_lpae_alloc_pgtable_s1(struct io_pgtable_cfg *cfg, void *cookie)
 	if (!data->pgd[0])
 		goto out_free_data;
 
-	if (cfg->quirks & IO_PGTABLE_QUIRK_ARM_TTBR1) {
-		data->pgd[1] = __arm_lpae_alloc_pages(data->pgd_size,
+	data->pgd[1] = __arm_lpae_alloc_pages(data->pgd_size,
 			GFP_KERNEL, cfg, cookie);
-		if (!data->pgd[1]) {
-			__arm_lpae_free_pages(data->pgd[0], data->pgd_size, cfg,
-				cookie);
-			goto out_free_data;
-		}
-	} else {
-		data->pgd[1] = NULL;
+	if (!data->pgd[1]) {
+		__arm_lpae_free_pages(data->pgd[0], data->pgd_size, cfg,
+			cookie);
+		goto out_free_data;
 	}
 
 	/* Ensure the empty pgd is visible before any actual TTBR write */
@@ -1336,9 +1332,7 @@ arm_64_lpae_alloc_pgtable_s1(struct io_pgtable_cfg *cfg, void *cookie)
 
 	/* TTBRs */
 	cfg->arm_lpae_s1_cfg.ttbr[0] = virt_to_phys(data->pgd[0]);
-
-	if (data->pgd[1])
-		cfg->arm_lpae_s1_cfg.ttbr[1] = virt_to_phys(data->pgd[1]);
+	cfg->arm_lpae_s1_cfg.ttbr[1] = virt_to_phys(data->pgd[1]);
 
 	return &data->iop;
 
