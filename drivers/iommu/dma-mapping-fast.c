@@ -201,9 +201,7 @@ static dma_addr_t __fast_smmu_alloc_iova(struct dma_fast_smmu_mapping *mapping,
 
 		iommu_tlbiall(mapping->domain);
 		mapping->have_stale_tlbs = false;
-		av8l_fast_clear_stale_ptes(mapping->pgtbl_pmds, mapping->base,
-				mapping->base + mapping->size - 1,
-				skip_sync);
+		av8l_fast_clear_stale_ptes(mapping->pgtbl_pmds, skip_sync);
 	}
 
 	iova =  (bit << FAST_PAGE_SHIFT) + mapping->base;
@@ -399,7 +397,7 @@ static dma_addr_t fast_smmu_map_page(struct device *dev, struct page *page,
 	if (unlikely(iova == DMA_ERROR_CODE))
 		goto fail;
 
-	pmd = iopte_pmd_offset(mapping->pgtbl_pmds, mapping->base, iova);
+	pmd = iopte_pmd_offset(mapping->pgtbl_pmds, iova);
 
 	if (unlikely(av8l_fast_map_public(pmd, phys_to_map, len, prot)))
 		goto fail_free_iova;
@@ -424,8 +422,7 @@ static void fast_smmu_unmap_page(struct device *dev, dma_addr_t iova,
 {
 	struct dma_fast_smmu_mapping *mapping = dev->archdata.mapping->fast;
 	unsigned long flags;
-	av8l_fast_iopte *pmd = iopte_pmd_offset(mapping->pgtbl_pmds,
-					mapping->base, iova);
+	av8l_fast_iopte *pmd = iopte_pmd_offset(mapping->pgtbl_pmds, iova);
 	unsigned long offset = iova & ~FAST_PAGE_MASK;
 	size_t len = ALIGN(size + offset, FAST_PAGE_SIZE);
 	int nptes = len >> FAST_PAGE_SHIFT;
@@ -449,8 +446,7 @@ static void fast_smmu_sync_single_for_cpu(struct device *dev,
 		dma_addr_t iova, size_t size, enum dma_data_direction dir)
 {
 	struct dma_fast_smmu_mapping *mapping = dev->archdata.mapping->fast;
-	av8l_fast_iopte *pmd = iopte_pmd_offset(mapping->pgtbl_pmds,
-					mapping->base, iova);
+	av8l_fast_iopte *pmd = iopte_pmd_offset(mapping->pgtbl_pmds, iova);
 	unsigned long offset = iova & ~FAST_PAGE_MASK;
 	struct page *page = phys_to_page((*pmd & FAST_PTE_ADDR_MASK));
 
@@ -462,8 +458,7 @@ static void fast_smmu_sync_single_for_device(struct device *dev,
 		dma_addr_t iova, size_t size, enum dma_data_direction dir)
 {
 	struct dma_fast_smmu_mapping *mapping = dev->archdata.mapping->fast;
-	av8l_fast_iopte *pmd = iopte_pmd_offset(mapping->pgtbl_pmds,
-					mapping->base, iova);
+	av8l_fast_iopte *pmd = iopte_pmd_offset(mapping->pgtbl_pmds, iova);
 	unsigned long offset = iova & ~FAST_PAGE_MASK;
 	struct page *page = phys_to_page((*pmd & FAST_PTE_ADDR_MASK));
 
@@ -603,8 +598,7 @@ static void *fast_smmu_alloc(struct device *dev, size_t size,
 	while (sg_miter_next(&miter)) {
 		int nptes = miter.length >> FAST_PAGE_SHIFT;
 
-		ptep = iopte_pmd_offset(mapping->pgtbl_pmds, mapping->base,
-					iova_iter);
+		ptep = iopte_pmd_offset(mapping->pgtbl_pmds, iova_iter);
 		if (unlikely(av8l_fast_map_public(
 				     ptep, page_to_phys(miter.page),
 				     miter.length, prot))) {
@@ -632,7 +626,7 @@ static void *fast_smmu_alloc(struct device *dev, size_t size,
 out_unmap:
 	/* need to take the lock again for page tables and iova */
 	spin_lock_irqsave(&mapping->lock, flags);
-	ptep = iopte_pmd_offset(mapping->pgtbl_pmds, mapping->base, dma_addr);
+	ptep = iopte_pmd_offset(mapping->pgtbl_pmds, dma_addr);
 	av8l_fast_unmap_public(ptep, size);
 	fast_dmac_clean_range(mapping, ptep, ptep + count);
 out_free_iova:
@@ -664,7 +658,7 @@ static void fast_smmu_free(struct device *dev, size_t size,
 
 	pages = area->pages;
 	dma_common_free_remap(vaddr, size, VM_USERMAP, false);
-	ptep = iopte_pmd_offset(mapping->pgtbl_pmds, mapping->base, dma_handle);
+	ptep = iopte_pmd_offset(mapping->pgtbl_pmds, dma_handle);
 	spin_lock_irqsave(&mapping->lock, flags);
 	av8l_fast_unmap_public(ptep, size);
 	fast_dmac_clean_range(mapping, ptep, ptep + count);
@@ -957,9 +951,6 @@ int fast_smmu_init_mapping(struct device *dev,
 		return -ENOMEM;
 	mapping->fast->domain = domain;
 	mapping->fast->dev = dev;
-
-	domain->geometry.aperture_start = mapping->base;
-	domain->geometry.aperture_end = mapping->base + size - 1;
 
 	if (fast_smmu_errata_init(mapping))
 		goto release_mapping;
