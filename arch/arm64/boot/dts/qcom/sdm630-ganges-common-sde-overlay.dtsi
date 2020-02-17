@@ -60,6 +60,7 @@
 		qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
 
 		somc,bootloader-panel-detect;
+		qcom,dsi-display-active;
 	};
 
 	/* SDE */
@@ -76,8 +77,6 @@
 		pinctrl-names = "panel_active", "panel_suspend";
 		pinctrl-0 = <&mdss_dsi_active &mdss_te_active>;
 		pinctrl-1 = <&mdss_dsi_suspend &mdss_te_suspend>;
-
-		qcom,dsi-display-active;
 
 		qcom,platform-te-gpio = <&tlmm 59 0>;
 		qcom,panel-te-source = <0>;
