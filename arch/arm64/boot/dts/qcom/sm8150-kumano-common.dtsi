@@ -4089,15 +4089,3 @@
 &usb_qmp_phy {
 	status = "disabled";
 };
-
-&ipa_smmu_ap {
-	qcom,smmu-s1-bypass;
-};
-
-&ipa_smmu_wlan {
-	qcom,smmu-s1-bypass;
-};
-
-&ipa_smmu_uc {
-	qcom,smmu-s1-bypass;
-};

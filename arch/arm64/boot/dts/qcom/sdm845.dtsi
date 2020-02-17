@@ -2304,7 +2304,7 @@
 	};
 
 	system_pm {
-		compatible = "qcom,system-pm";
+		compatible = "qcom,system-pm-sdm845";
 		mboxes = <&apps_rsc 0>;
 	};
 

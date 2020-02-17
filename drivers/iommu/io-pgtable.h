@@ -116,8 +116,6 @@ struct io_pgtable_cfg {
 	int				sep;
 	const struct iommu_gather_ops	*tlb;
 	struct device			*iommu_dev;
-	dma_addr_t			iova_base;
-	dma_addr_t			iova_end;
 
 	/* Low-level data specific to the table format */
 	union {
