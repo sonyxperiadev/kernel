@@ -94,7 +94,7 @@ enum wwan_device_status {
 
 struct ipa_rmnet_plat_drv_res {
 	bool ipa_rmnet_ssr;
-	bool ipa_loaduC;
+	bool is_platform_type_msm;
 	bool ipa_advertise_sg_support;
 	bool ipa_napi_enable;
 	u32 wan_rx_desc_size;
@@ -1955,11 +1955,11 @@ static int get_ipa_rmnet_dts_configuration(struct platform_device *pdev,
 			"qcom,rmnet-ipa-ssr");
 	pr_info("IPA SSR support = %s\n",
 		ipa_rmnet_drv_res->ipa_rmnet_ssr ? "True" : "False");
-	ipa_rmnet_drv_res->ipa_loaduC =
+	ipa_rmnet_drv_res->is_platform_type_msm =
 			of_property_read_bool(pdev->dev.of_node,
-			"qcom,ipa-loaduC");
-	pr_info("IPA ipa-loaduC = %s\n",
-		ipa_rmnet_drv_res->ipa_loaduC ? "True" : "False");
+			"qcom,ipa-platform-type-msm");
+	pr_info("IPA is_platform_type_msm = %s\n",
+		ipa_rmnet_drv_res->is_platform_type_msm ? "True" : "False");
 
 	ipa_rmnet_drv_res->ipa_advertise_sg_support =
 			of_property_read_bool(pdev->dev.of_node,
@@ -2037,7 +2037,7 @@ static int ipa_wwan_probe(struct platform_device *pdev)
 		memset(&mux_channel[i], 0, sizeof(struct rmnet_mux_val));
 
 	/* start A7 QMI service/client */
-	if (ipa_rmnet_res.ipa_loaduC)
+	if (ipa_rmnet_res.is_platform_type_msm)
 		/* Android platform loads uC */
 		ipa_qmi_service_init(QMI_IPA_PLATFORM_TYPE_MSM_ANDROID_V01);
 	else
