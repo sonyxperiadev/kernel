@@ -26,5 +26,5 @@ obj-$(CONFIG_PCIE_HISI_STB) += pcie-histb.o
 # depending on whether ACPI, the DT driver, or both are enabled.
 
 ifdef CONFIG_PCI
-obj-$(CONFIG_ARM64) += pcie-hisi.o
+#obj-$(CONFIG_ARM64) += pcie-hisi.o
 endif
