@@ -47,6 +47,7 @@ static bool qmi_modem_init_fin, qmi_indication_fin;
 static uint32_t ipa_wan_platform;
 struct ipa_qmi_context *ipa_qmi_ctx;
 static bool first_time_handshake;
+static bool send_qmi_init_q6;
 static atomic_t workqueues_stopped;
 static atomic_t ipa_qmi_initialized;
 struct mutex ipa_qmi_lock;
@@ -764,6 +765,9 @@ static void ipa_q6_clnt_svc_arrive(struct work_struct *work)
 		return;
 	}
 
+	if (!send_qmi_init_q6)
+		return;
+
 	IPAWANDBG("Q6 QMI service available now\n");
 	/* Initialize modem IPA-driver */
 	IPAWANDBG("send qmi_init_modem_send_sync_msg to modem\n");
@@ -811,6 +815,8 @@ static void ipa_q6_clnt_svc_arrive(struct work_struct *work)
 		IPAWANERR("not send indication (%d)\n",
 		qmi_indication_fin);
 	}
+
+	send_qmi_init_q6 = false;
 }
 
 
@@ -1029,6 +1035,7 @@ int ipa_qmi_service_init(uint32_t wan_platform_type)
 	ipa_wan_platform = wan_platform_type;
 	qmi_modem_init_fin = false;
 	qmi_indication_fin = false;
+	send_qmi_init_q6 = true;
 	atomic_set(&workqueues_stopped, 0);
 
 	// TODO: Not used on v3; uses !ipa_svc_handle instead
@@ -1072,6 +1079,7 @@ void ipa_qmi_service_exit(void)
 
 	qmi_modem_init_fin = false;
 	qmi_indication_fin = false;
+	send_qmi_init_q6 = true;
 	atomic_set(&ipa_qmi_initialized, 0);
 }
 
