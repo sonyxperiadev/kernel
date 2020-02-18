@@ -429,5 +429,6 @@
 
 #include "sm8150-kumano-common-display.dtsi"
 #include "sm8150-kumano-bahamut-display.dtsi"
+#include "sm8150-kumano-bahamut-camera.dtsi"
 #include "charger-kumano-common.dtsi"
 #include "charger-kumano-bahamut.dtsi"
