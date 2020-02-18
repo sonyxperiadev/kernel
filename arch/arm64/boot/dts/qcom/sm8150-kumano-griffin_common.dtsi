@@ -251,6 +251,7 @@
 
 #include "sm8150-kumano-common-display.dtsi"
 #include "sm8150-kumano-griffin-display.dtsi"
+#include "sm8150-kumano-griffin-camera.dtsi"
 #include "charger-kumano-common.dtsi"
 #include "charger-kumano-griffin.dtsi"
 
