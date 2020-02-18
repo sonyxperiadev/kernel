@@ -500,12 +500,12 @@ static int qcom_pcie_get_resources_2_3_2(struct qcom_pcie *pcie)
 	struct device *dev = pci->dev;
 	int ret;
 
-	res->supplies[0].supply = "vdda";
-	res->supplies[1].supply = "vddpe-3v3";
+	res->supplies[0].supply = "gdsc-smmu";
+	res->supplies[1].supply = "gdsc-vdd";
 	res->supplies[2].supply = "vdda-1p8";
-	res->supplies[3].supply = "vreg-cx";
-	res->supplies[4].supply = "gdsc-smmu";
-	res->supplies[5].supply = "gdsc-vdd";
+	res->supplies[3].supply = "vdda";
+	res->supplies[4].supply = "vreg-cx";
+	res->supplies[5].supply = "vddpe-3v3";
 	ret = devm_regulator_bulk_get(dev, ARRAY_SIZE(res->supplies),
 				      res->supplies);
 	if (ret)
