@@ -496,7 +496,7 @@ int qmi_filter_request_send(struct ipa_install_fltr_rule_req_msg_v01 *req)
 			== false)
 			return -EINVAL;
 		if ((req->filter_spec_list[i].filter_action <=
-			QMI_IPA_FILTER_ACTION_INVALID_V01) &&
+			QMI_IPA_FILTER_ACTION_INVALID_V01) ||
 			(req->filter_spec_list[i].filter_action >
 			QMI_IPA_FILTER_ACTION_EXCEPTION_V01))
 			return -EINVAL;
