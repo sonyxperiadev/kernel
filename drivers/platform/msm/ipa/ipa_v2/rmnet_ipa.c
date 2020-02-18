@@ -1363,7 +1363,7 @@ static int ipa_wwan_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 	int mru = 1000, epid = 1, mux_index, len;
 	struct ipa_msg_meta msg_meta;
 	struct ipa_wan_msg *wan_msg = NULL;
-	struct rmnet_ioctl_extended_s extend_ioctl_data;
+	struct rmnet_ioctl_extended_s ext_ioctl_data;
 	struct rmnet_ioctl_data_s ioctl_data;
 
 	IPAWANDBG("rmnet_ipa got ioctl number 0x%08x", cmd);
@@ -1438,58 +1438,58 @@ static int ipa_wwan_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 		if (!ns_capable(dev_net(dev)->user_ns, CAP_NET_ADMIN))
 			return -EPERM;
 		IPAWANDBG("get ioctl: RMNET_IOCTL_EXTENDED\n");
-		if (copy_from_user(&extend_ioctl_data,
+		if (copy_from_user(&ext_ioctl_data,
 			(u8 *)ifr->ifr_ifru.ifru_data,
 			sizeof(struct rmnet_ioctl_extended_s))) {
 			IPAWANERR("failed to copy extended ioctl data\n");
 			rc = -EFAULT;
 			break;
 		}
-		switch (extend_ioctl_data.extended_ioctl) {
+		switch (ext_ioctl_data.extended_ioctl) {
 		/*  Get features  */
 		case RMNET_IOCTL_GET_SUPPORTED_FEATURES:
 			IPAWANDBG("get RMNET_IOCTL_GET_SUPPORTED_FEATURES\n");
-			extend_ioctl_data.u.data =
+			ext_ioctl_data.u.data =
 				(RMNET_IOCTL_FEAT_NOTIFY_MUX_CHANNEL |
 				RMNET_IOCTL_FEAT_SET_EGRESS_DATA_FORMAT |
 				RMNET_IOCTL_FEAT_SET_INGRESS_DATA_FORMAT);
 			if (copy_to_user((u8 *)ifr->ifr_ifru.ifru_data,
-				&extend_ioctl_data,
+				&ext_ioctl_data,
 				sizeof(struct rmnet_ioctl_extended_s)))
 				rc = -EFAULT;
 			break;
 		/*  Set MRU  */
 		case RMNET_IOCTL_SET_MRU:
-			mru = extend_ioctl_data.u.data;
+			mru = ext_ioctl_data.u.data;
 			IPAWANDBG("get MRU size %d\n",
-				extend_ioctl_data.u.data);
+				ext_ioctl_data.u.data);
 			break;
 		/*  Get MRU  */
 		case RMNET_IOCTL_GET_MRU:
-			extend_ioctl_data.u.data = mru;
+			ext_ioctl_data.u.data = mru;
 			if (copy_to_user((u8 *)ifr->ifr_ifru.ifru_data,
-				&extend_ioctl_data,
+				&ext_ioctl_data,
 				sizeof(struct rmnet_ioctl_extended_s)))
 				rc = -EFAULT;
 			break;
 		/* GET SG support */
 		case RMNET_IOCTL_GET_SG_SUPPORT:
-			extend_ioctl_data.u.data =
+			ext_ioctl_data.u.data =
 				ipa_rmnet_res.ipa_advertise_sg_support;
 			if (copy_to_user((u8 *)ifr->ifr_ifru.ifru_data,
-				&extend_ioctl_data,
+				&ext_ioctl_data,
 				sizeof(struct rmnet_ioctl_extended_s)))
 				rc = -EFAULT;
 			break;
 		/*  Get endpoint ID  */
 		case RMNET_IOCTL_GET_EPID:
 			IPAWANDBG("get ioctl: RMNET_IOCTL_GET_EPID\n");
-			extend_ioctl_data.u.data = epid;
+			ext_ioctl_data.u.data = epid;
 			if (copy_to_user((u8 *)ifr->ifr_ifru.ifru_data,
-				&extend_ioctl_data,
+				&ext_ioctl_data,
 				sizeof(struct rmnet_ioctl_extended_s)))
 				rc = -EFAULT;
-			if (copy_from_user(&extend_ioctl_data,
+			if (copy_from_user(&ext_ioctl_data,
 				(u8 *)ifr->ifr_ifru.ifru_data,
 				sizeof(struct rmnet_ioctl_extended_s))) {
 				IPAWANERR("copy extended ioctl data failed\n");
@@ -1497,20 +1497,20 @@ static int ipa_wwan_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 			break;
 			}
 			IPAWANDBG("RMNET_IOCTL_GET_EPID return %d\n",
-					extend_ioctl_data.u.data);
+					ext_ioctl_data.u.data);
 			break;
 		/*  Endpoint pair  */
 		case RMNET_IOCTL_GET_EP_PAIR:
 			IPAWANDBG("get ioctl: RMNET_IOCTL_GET_EP_PAIR\n");
-			extend_ioctl_data.u.ipa_ep_pair.consumer_pipe_num =
+			ext_ioctl_data.u.ipa_ep_pair.consumer_pipe_num =
 			ipa2_get_ep_mapping(IPA_CLIENT_APPS_LAN_WAN_PROD);
-			extend_ioctl_data.u.ipa_ep_pair.producer_pipe_num =
+			ext_ioctl_data.u.ipa_ep_pair.producer_pipe_num =
 			ipa2_get_ep_mapping(IPA_CLIENT_APPS_WAN_CONS);
 			if (copy_to_user((u8 *)ifr->ifr_ifru.ifru_data,
-				&extend_ioctl_data,
+				&ext_ioctl_data,
 				sizeof(struct rmnet_ioctl_extended_s)))
 				rc = -EFAULT;
-			if (copy_from_user(&extend_ioctl_data,
+			if (copy_from_user(&ext_ioctl_data,
 				(u8 *)ifr->ifr_ifru.ifru_data,
 				sizeof(struct rmnet_ioctl_extended_s))) {
 				IPAWANERR("copy extended ioctl data failed\n");
@@ -1518,26 +1518,26 @@ static int ipa_wwan_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 			break;
 		}
 			IPAWANDBG("RMNET_IOCTL_GET_EP_PAIR c: %d p: %d\n",
-			extend_ioctl_data.u.ipa_ep_pair.consumer_pipe_num,
-			extend_ioctl_data.u.ipa_ep_pair.producer_pipe_num);
+			ext_ioctl_data.u.ipa_ep_pair.consumer_pipe_num,
+			ext_ioctl_data.u.ipa_ep_pair.producer_pipe_num);
 			break;
 		/*  Get driver name  */
 		case RMNET_IOCTL_GET_DRIVER_NAME:
-			memcpy(&extend_ioctl_data.u.if_name,
+			memcpy(&ext_ioctl_data.u.if_name,
 						ipa_netdevs[0]->name, IFNAMSIZ);
-			extend_ioctl_data.u.if_name[IFNAMSIZ - 1] = '\0';
+			ext_ioctl_data.u.if_name[IFNAMSIZ - 1] = '\0';
 			if (copy_to_user((u8 *)ifr->ifr_ifru.ifru_data,
-					&extend_ioctl_data,
+					&ext_ioctl_data,
 					sizeof(struct rmnet_ioctl_extended_s)))
 				rc = -EFAULT;
 			break;
 		/*  Add MUX ID  */
 		case RMNET_IOCTL_ADD_MUX_CHANNEL:
 			mux_index = find_mux_channel_index(
-				extend_ioctl_data.u.rmnet_mux_val.mux_id);
+				ext_ioctl_data.u.rmnet_mux_val.mux_id);
 			if (mux_index < MAX_NUM_OF_MUX_CHANNEL) {
 				IPAWANDBG("already setup mux(%d)\n",
-					extend_ioctl_data.u.
+					ext_ioctl_data.u.
 					rmnet_mux_val.mux_id);
 				return rc;
 			}
@@ -1548,16 +1548,16 @@ static int ipa_wwan_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 				mutex_unlock(&add_mux_channel_lock);
 				return -EFAULT;
 			}
-			extend_ioctl_data.u.rmnet_mux_val.vchannel_name
+			ext_ioctl_data.u.rmnet_mux_val.vchannel_name
 				[IFNAMSIZ-1] = '\0';
 			IPAWANDBG("ADD_MUX_CHANNEL(%d, name: %s)\n",
-			extend_ioctl_data.u.rmnet_mux_val.mux_id,
-			extend_ioctl_data.u.rmnet_mux_val.vchannel_name);
+			ext_ioctl_data.u.rmnet_mux_val.mux_id,
+			ext_ioctl_data.u.rmnet_mux_val.vchannel_name);
 			/* cache the mux name and id */
 			mux_channel[rmnet_index].mux_id =
-				extend_ioctl_data.u.rmnet_mux_val.mux_id;
+				ext_ioctl_data.u.rmnet_mux_val.mux_id;
 			memcpy(mux_channel[rmnet_index].vchannel_name,
-				extend_ioctl_data.u.rmnet_mux_val.vchannel_name,
+				ext_ioctl_data.u.rmnet_mux_val.vchannel_name,
 				sizeof(mux_channel[rmnet_index].vchannel_name));
 			mux_channel[rmnet_index].vchannel_name[
 				IFNAMSIZ - 1] = '\0';
@@ -1569,12 +1569,12 @@ static int ipa_wwan_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 			/* check if UL filter rules coming*/
 			if (num_q6_rule != 0) {
 				IPAWANERR("dev(%s) register to IPA\n",
-					extend_ioctl_data.u.rmnet_mux_val.
+					ext_ioctl_data.u.rmnet_mux_val.
 					vchannel_name);
 				rc = wwan_register_to_ipa(rmnet_index);
 				if (rc < 0) {
 					IPAWANERR("device %s reg IPA failed\n",
-						extend_ioctl_data.u.
+						ext_ioctl_data.u.
 						rmnet_mux_val.vchannel_name);
 					mutex_unlock(&add_mux_channel_lock);
 					return -ENODEV;
@@ -1583,7 +1583,7 @@ static int ipa_wwan_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 				mux_channel[rmnet_index].ul_flt_reg = true;
 			} else {
 				IPAWANDBG("dev(%s) haven't registered to IPA\n",
-					extend_ioctl_data.u.
+					ext_ioctl_data.u.
 					rmnet_mux_val.vchannel_name);
 				mux_channel[rmnet_index].mux_channel_set = true;
 				mux_channel[rmnet_index].ul_flt_reg = false;
@@ -1593,7 +1593,7 @@ static int ipa_wwan_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 			break;
 		case RMNET_IOCTL_SET_EGRESS_DATA_FORMAT:
 			IPAWANDBG("get RMNET_IOCTL_SET_EGRESS_DATA_FORMAT\n");
-			if ((extend_ioctl_data.u.data) &
+			if ((ext_ioctl_data.u.data) &
 					RMNET_IOCTL_EGRESS_FORMAT_CHECKSUM) {
 				apps_to_ipa_ep_cfg.ipa_ep_cfg.hdr.hdr_len = 8;
 				apps_to_ipa_ep_cfg.ipa_ep_cfg.cfg.
@@ -1604,7 +1604,7 @@ static int ipa_wwan_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 			} else {
 				apps_to_ipa_ep_cfg.ipa_ep_cfg.hdr.hdr_len = 4;
 			}
-			if ((extend_ioctl_data.u.data) &
+			if ((ext_ioctl_data.u.data) &
 					RMNET_IOCTL_EGRESS_FORMAT_AGGREGATION)
 				apps_to_ipa_ep_cfg.ipa_ep_cfg.aggr.aggr_en =
 					IPA_ENABLE_AGGR;
@@ -1656,7 +1656,7 @@ static int ipa_wwan_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 			}
 			break;
 		case RMNET_IOCTL_SET_INGRESS_DATA_FORMAT:/*  Set IDF  */
-			rc = handle_ingress_format(dev, &extend_ioctl_data);
+			rc = handle_ingress_format(dev, &ext_ioctl_data);
 			break;
 		case RMNET_IOCTL_SET_XLAT_DEV_INFO:
 			wan_msg = kzalloc(sizeof(struct ipa_wan_msg),
@@ -1665,13 +1665,13 @@ static int ipa_wwan_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 				IPAWANERR("Failed to allocate memory.\n");
 				return -ENOMEM;
 			}
-			extend_ioctl_data.u.if_name[IFNAMSIZ-1] = '\0';
+			ext_ioctl_data.u.if_name[IFNAMSIZ-1] = '\0';
 			len = sizeof(wan_msg->upstream_ifname) >
-			sizeof(extend_ioctl_data.u.if_name) ?
-				sizeof(extend_ioctl_data.u.if_name) :
+			sizeof(ext_ioctl_data.u.if_name) ?
+				sizeof(ext_ioctl_data.u.if_name) :
 				sizeof(wan_msg->upstream_ifname);
 			strlcpy(wan_msg->upstream_ifname,
-				extend_ioctl_data.u.if_name, len);
+				ext_ioctl_data.u.if_name, len);
 			wan_msg->upstream_ifname[len - 1] = '\0';
 			memset(&msg_meta, 0, sizeof(struct ipa_msg_meta));
 			msg_meta.msg_type = WAN_XLAT_CONNECT;
@@ -1710,7 +1710,7 @@ static int ipa_wwan_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 		default:
 			IPAWANERR("[%s] unsupported extended cmd[%d]",
 				dev->name,
-				extend_ioctl_data.extended_ioctl);
+				ext_ioctl_data.extended_ioctl);
 			rc = -EINVAL;
 		}
 		break;
