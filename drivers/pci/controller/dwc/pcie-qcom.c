@@ -102,12 +102,13 @@ struct qcom_pcie_resources_1_0_0 {
 	struct regulator *vdda;
 };
 
-#define QCOM_PCIE_2_3_2_MAX_SUPPLY	2
+#define QCOM_PCIE_2_3_2_MAX_SUPPLY	6
 struct qcom_pcie_resources_2_3_2 {
 	struct clk *aux_clk;
 	struct clk *master_clk;
 	struct clk *slave_clk;
 	struct clk *cfg_clk;
+	struct clk *smmu_clk;
 	struct clk *pipe_clk;
 	struct regulator_bulk_data supplies[QCOM_PCIE_2_3_2_MAX_SUPPLY];
 };
@@ -501,6 +502,10 @@ static int qcom_pcie_get_resources_2_3_2(struct qcom_pcie *pcie)
 
 	res->supplies[0].supply = "vdda";
 	res->supplies[1].supply = "vddpe-3v3";
+	res->supplies[2].supply = "vdda-1p8";
+	res->supplies[3].supply = "vreg-cx";
+	res->supplies[4].supply = "gdsc-smmu";
+	res->supplies[5].supply = "gdsc-vdd";
 	ret = devm_regulator_bulk_get(dev, ARRAY_SIZE(res->supplies),
 				      res->supplies);
 	if (ret)
@@ -522,6 +527,10 @@ static int qcom_pcie_get_resources_2_3_2(struct qcom_pcie *pcie)
 	if (IS_ERR(res->slave_clk))
 		return PTR_ERR(res->slave_clk);
 
+	res->smmu_clk = devm_clk_get(dev, "aggre");
+	if (IS_ERR(res->smmu_clk))
+		return PTR_ERR(res->smmu_clk);
+
 	res->pipe_clk = devm_clk_get(dev, "pipe");
 	return PTR_ERR_OR_ZERO(res->pipe_clk);
 }
@@ -534,6 +543,7 @@ static void qcom_pcie_deinit_2_3_2(struct qcom_pcie *pcie)
 	clk_disable_unprepare(res->master_clk);
 	clk_disable_unprepare(res->cfg_clk);
 	clk_disable_unprepare(res->aux_clk);
+	clk_disable_unprepare(res->smmu_clk);
 
 	regulator_bulk_disable(ARRAY_SIZE(res->supplies), res->supplies);
 }
@@ -557,6 +567,12 @@ static int qcom_pcie_init_2_3_2(struct qcom_pcie *pcie)
 	if (ret < 0) {
 		dev_err(dev, "cannot enable regulators\n");
 		return ret;
+	}
+
+	ret = clk_prepare_enable(res->smmu_clk);
+	if (ret) {
+		dev_err(dev, "cannot prepare/enable smmu clock\n");
+		goto err_aux_clk;
 	}
 
 	ret = clk_prepare_enable(res->aux_clk);
@@ -631,6 +647,8 @@ static int qcom_pcie_post_init_2_3_2(struct qcom_pcie *pcie)
 		dev_err(dev, "cannot prepare/enable pipe clock\n");
 		return ret;
 	}
+
+	clk_set_rate(res->pipe_clk, 1010526);
 
 	return 0;
 }
