@@ -2525,14 +2525,6 @@ static int sde_hw_rotator_swts_map(struct sde_hw_rotator *rot)
 		goto err_unmap;
 	}
 
-	dma_buf_begin_cpu_access(data->srcp_dma_buf, DMA_FROM_DEVICE);
-	rot->swts_buffer = dma_buf_kmap(data->srcp_dma_buf, 0);
-	if (IS_ERR_OR_NULL(rot->swts_buffer)) {
-		SDEROT_ERR("ion kernel memory mapping failed\n");
-		rc = IS_ERR(rot->swts_buffer);
-		goto kmap_err;
-	}
-
 	data->mapped = true;
 	SDEROT_DBG("swts buffer mapped: %pad/%lx va:%p\n", &data->addr,
 			data->len, rot->swts_buffer);
@@ -2559,10 +2551,6 @@ static void sde_hw_rotator_swts_unmap(struct sde_hw_rotator *rot)
 	struct sde_mdp_img_data *data;
 
 	data = &rot->swts_buf;
-
-	dma_buf_end_cpu_access(data->srcp_dma_buf, DMA_FROM_DEVICE);
-	dma_buf_kunmap(data->srcp_dma_buf, 0, rot->swts_buffer);
-	rot->swts_buffer = NULL;
 
 	sde_smmu_unmap_dma_buf(data->srcp_table, SDE_IOMMU_DOMAIN_ROT_UNSECURE,
 			DMA_FROM_DEVICE, data->srcp_dma_buf);
