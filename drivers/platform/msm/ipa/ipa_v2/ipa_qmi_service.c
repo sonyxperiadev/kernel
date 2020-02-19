@@ -48,7 +48,7 @@ static uint32_t ipa_wan_platform;
 struct ipa_qmi_context *ipa_qmi_ctx;
 static bool first_time_handshake;
 static bool send_qmi_init_q6;
-static atomic_t workqueues_stopped;
+static bool workqueues_stopped;
 static atomic_t ipa_qmi_initialized;
 struct mutex ipa_qmi_lock;
 struct ipa_msg_desc {
@@ -852,7 +852,7 @@ static int ipa_q6_clnt_svc_event_notify_svc_new(struct qmi_handle *qmi,
 		ipa_qmi_ctx->server_sq.sq_node = service->node;
 		ipa_qmi_ctx->server_sq.sq_port = service->port;
 	}
-	if (atomic_read(&workqueues_stopped)) {
+	if (!workqueues_stopped) {
 		queue_delayed_work(ipa_clnt_req_workqueue,
 			&work_svc_arrive, 0);
 	}
@@ -861,7 +861,7 @@ static int ipa_q6_clnt_svc_event_notify_svc_new(struct qmi_handle *qmi,
 
 static void ipa_q6_clnt_svc_event_notify_net_reset(struct qmi_handle *qmi)
 {
-	if (atomic_read(&workqueues_stopped))
+	if (!workqueues_stopped)
 		queue_delayed_work(ipa_clnt_req_workqueue,
 			&work_svc_exit, 0);
 }
@@ -872,7 +872,7 @@ static void ipa_q6_clnt_svc_event_notify_svc_exit(struct qmi_handle *qmi,
 	IPAWANDBG("QMI svc:%d vers:%d ins:%d node:%d port:%d\n", svc->service,
 		  svc->version, svc->instance, svc->node, svc->port);
 
-	if (atomic_read(&workqueues_stopped))
+	if (!workqueues_stopped)
 		queue_delayed_work(ipa_clnt_req_workqueue,
 			&work_svc_exit, 0);
 }
@@ -1046,7 +1046,7 @@ int ipa_qmi_service_init(uint32_t wan_platform_type)
 	qmi_modem_init_fin = false;
 	qmi_indication_fin = false;
 	send_qmi_init_q6 = true;
-	atomic_set(&workqueues_stopped, 0);
+	workqueues_stopped = false;
 
 	// TODO: Not used on v3; uses !ipa_svc_handle instead
 	if (atomic_read(&ipa_qmi_initialized) == 0)
@@ -1057,7 +1057,7 @@ int ipa_qmi_service_init(uint32_t wan_platform_type)
 
 void ipa_qmi_service_exit(void)
 {
-	atomic_set(&workqueues_stopped, 1);
+	workqueues_stopped = true;
 
 	/* qmi-service */
 	if (ipa_svc_handle) {
@@ -1098,7 +1098,7 @@ void ipa_qmi_stop_workqueues(void)
 	IPAWANDBG("Stopping all QMI workqueues\n");
 
 	/* Stopping all workqueues so new work won't be scheduled */
-	atomic_set(&workqueues_stopped, 1);
+	workqueues_stopped = true;
 
 	/* Making sure that the current scheduled work won't be executed */
 	cancel_delayed_work(&work_svc_arrive);
