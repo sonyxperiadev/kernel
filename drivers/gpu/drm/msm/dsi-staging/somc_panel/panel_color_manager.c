@@ -520,6 +520,14 @@ static int somc_panel_update_merged_pcc_cache(
 	struct dsi_pcc_data *pcc_data = NULL;
 	int table_idx;
 
+	/**
+	 * Cache update requested: invalidate the cache.
+	 * If any issue occurs, the caller will not use a potentially
+	 * invalidated/outdated cache if merging succeeded earlier.
+	 * Instead it can fall-back on the local transformation.
+	 */
+	color_mgr->cached_pcc_valid = false;
+
 	if (unlikely(!sys_cal || !target)) {
 		pr_debug("Calibrations not (yet?) initialized.\n");
 		return -EINVAL;
@@ -528,12 +536,12 @@ static int somc_panel_update_merged_pcc_cache(
 	pcc_data = &color_mgr->standard_pcc_data;
 	if (unlikely(!pcc_data)) {
 		pr_debug("No PCC data (yet?)\n");
-		return -EINVAL;
+		goto use_system_calibration;
 	}
 
 	if (unlikely(!pcc_data->color_tbl)) {
 		pr_debug("There is no color table.\n");
-		return -EINVAL;
+		goto use_system_calibration;
 	}
 
 	if (unlikely(color_mgr->pcc_profile == (unsigned short)-1)) {
@@ -668,7 +676,6 @@ static int somc_panel_sde_crtc_atomic_set_property_override(
 		struct drm_property *property,
 		uint64_t value)
 {
-	int ret = -EINVAL;
 	struct dsi_display *display = dsi_display_get_main_display();
 	struct somc_panel_color_mgr *color_mgr = NULL;
 	struct drm_property_blob *blob = NULL;
@@ -732,9 +739,8 @@ static int somc_panel_sde_crtc_atomic_set_property_override(
 				blob->length);
 		color_mgr->system_calibration_valid = true;
 
-		ret = somc_panel_update_merged_pcc_cache(color_mgr);
-		if (ret)
-			return ret;
+		/* Ignore result; cache validity is checked below */
+		(void)somc_panel_update_merged_pcc_cache(color_mgr);
 	}
 
 	// Copy (updated) cache to blob:
