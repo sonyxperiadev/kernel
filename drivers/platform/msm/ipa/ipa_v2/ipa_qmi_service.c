@@ -86,6 +86,11 @@ static void handle_indication_req(struct qmi_handle *qmi_handle,
 		ipa_indication_reg_resp_msg_data_v01_ei,
 		&resp);
 
+       if (rc < 0) {
+               IPAWANERR("send response for Indication register failed\n");
+               return;
+       }
+
 	qmi_indication_fin = true;
 
 	/* check if need sending indication to modem */
