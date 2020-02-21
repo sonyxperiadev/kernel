@@ -20,6 +20,7 @@ struct sec_ts_data *ts_dup;
 
 u32 portrait_buffer[SEC_TS_GRIP_REJECTION_BORDER_NUM] = { 0 };
 u32 landscape_buffer[SEC_TS_GRIP_REJECTION_BORDER_NUM] = { 0 };
+static bool is_first_ts_kickstart = true;
 
 #ifdef USE_POWER_RESET_WORK
 static void sec_ts_reset_work(struct work_struct *work);
@@ -1681,8 +1682,9 @@ static int sec_ts_after_init(struct sec_ts_data *ts)
 
 #ifdef SEC_TS_FW_UPDATE_ON_PROBE
 	ret = sec_ts_firmware_update_on_probe(ts, force_update);
-	if (ret < 0)
+	if (ret < 0) {
 		input_err(true, &ts->client->dev, "%s: fail firmware update on probe\n", __func__);
+	}
 #else
 	input_info(true, &ts->client->dev, "%s: fw update on probe disabled!\n", __func__);
 #endif
@@ -1919,7 +1921,7 @@ static int sec_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 	input_log_fix();
 
 	ts->after_work.err = true;
-//	schedule_delayed_work(&ts->after_work.start, 0);
+	schedule_delayed_work(&ts->after_work.start, msecs_to_jiffies(10000));
 
 	return 0;
 
@@ -2246,7 +2248,11 @@ static void sec_ts_after_init_work(struct work_struct *work)
 {
 	struct sec_ts_data *ts = container_of(work, struct sec_ts_data,
 					after_work.start.work);
+#ifdef SEC_TS_FW_UPDATE_ON_PROBE
+	const struct firmware *fw_entry;
+#endif
 	int ret = 0;
+
 
 	if (ts->after_work.done) {
 		input_info(true, &ts->client->dev, "already after_init_work\n");
@@ -2259,6 +2265,20 @@ static void sec_ts_after_init_work(struct work_struct *work)
 		input_info(true, &ts->client->dev, "params update, will update feature on resume\n");
 		goto after_work_fail;
 	}
+
+#ifdef SEC_TS_FW_UPDATE_ON_PROBE
+	if (is_first_ts_kickstart) {
+		if (request_firmware(&fw_entry,
+				     ts->plat_data->firmware_name,
+				     &ts->client->dev) !=  0) {
+			input_info(true, &ts->client->dev,
+			   "Userspace is not ready. Delaying TS init...\n");
+			goto userspace_not_ready;
+		} else {
+			release_firmware(fw_entry);
+		}
+	}
+#endif
 
 	sec_ts_pw_lock(ts, INCELL_DISPLAY_POWER_LOCK);
 	mutex_lock(&ts->lock);
@@ -2273,6 +2293,12 @@ static void sec_ts_after_init_work(struct work_struct *work)
 
 	input_info(true, &ts->client->dev, "after_init_work done\n");
 	ts->after_work.done = true;
+
+	if (is_first_ts_kickstart) {
+		is_first_ts_kickstart = false;
+		sec_ts_start_device(ts);
+	}
+
 	goto out;
 
 after_work_fail:
@@ -2282,6 +2308,7 @@ after_work_fail:
 		ts->after_work.err = true;
 		goto out;
 	}
+userspace_not_ready:
 	input_info(true, &ts->client->dev, "retry after_work [%d]\n", ts->after_work.retry);
 	schedule_delayed_work(&ts->after_work.start, 1 * HZ);
 out:
@@ -2325,7 +2352,8 @@ int sec_ts_resume(struct sec_ts_data *ts)
 	if (ts->plat_data->watchdog.supported)
 		schedule_delayed_work(&ts->work_watchdog, msecs_to_jiffies(ts->plat_data->watchdog.delay_ms));
 
-	ret = sec_ts_start_device(ts);
+	if (!is_first_ts_kickstart)
+		ret = sec_ts_start_device(ts);
 	if (ret < 0)
 		input_err(true, &ts->client->dev, "%s: failed sec_ts_start_device\n", __func__);
 out:
@@ -2758,9 +2786,17 @@ int drm_notifier_callback(struct notifier_block *self, unsigned long event, void
 					input_info(true, &ts->client->dev, "not already sleep out\n");
 					return 0;
 				}
+				if (is_first_ts_kickstart) {
+					input_info(true, &ts->client->dev,
+						   "First TS kickstart, wait "
+						   "for worker sleep-out\n");
+					return 0;
+				}
+
 				get_monotonic_boottime(&time);
 				input_info(true, &ts->client->dev, "start@%ld.%06ld\n",
 					time.tv_sec, time.tv_nsec);
+				
 				sec_ts_resume(ts);
 				get_monotonic_boottime(&time);
 				input_info(true, &ts->client->dev, "end@%ld.%06ld\n",
