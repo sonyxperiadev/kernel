@@ -12,6 +12,8 @@
 #include <linux/pfk.h>
 #include "blk.h"
 
+#define SECTOR_SHIFT		9
+
 static struct bio *blk_bio_discard_split(struct request_queue *q,
 					 struct bio *bio,
 					 struct bio_set *bs,
