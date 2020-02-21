@@ -1469,7 +1469,8 @@ int somc_panel_set_doze_mode(struct drm_connector *connector,
 	switch (power_mode) {
 		case SDE_MODE_DPMS_ON:
 			pr_debug("Requested DPMS ON state.\n");
-			rc = dsi_panel_set_aod_off(panel);
+			if (display_aod_mode != SDE_MODE_DPMS_OFF)
+				rc = dsi_panel_set_aod_off(panel);
 			spec_pdata->aod_mode = power_mode;
 			display_aod_mode = 0;
 			dsi_panel_driver_notify_resume(panel);
