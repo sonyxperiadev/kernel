@@ -233,6 +233,7 @@ struct wled {
 	const int *version;
 	int sc_irq;
 	int ovp_irq;
+	int ovp_count;
 	int flash_irq;
 	int pre_flash_irq;
 	bool prev_state;
@@ -441,7 +442,7 @@ static int wled5_set_brightness(struct wled *wled, u16 brightness)
 static int wled4_set_brightness(struct wled *wled, u16 brightness)
 {
 	int rc, i;
-	u16 low_limit = wled->max_brightness * 4 / 1000;
+	u16 low_limit = wled->max_brightness * 10 / 1000;
 	u8 string_cfg = wled->cfg.string_cfg;
 	u8 v[2];
 
@@ -985,12 +986,16 @@ static void handle_ovp_fault(struct wled *wled)
 
 	mutex_lock(&wled->lock);
 	if (wled->auto_calib_done) {
-		pr_warn("Disabling module since OVP persists\n");
-		rc = regmap_update_bits(wled->regmap,
+		pr_warn("ovp triggered after auto calibration\n");
+		if (wled->ovp_count++ > 5) {
+			pr_warn("Disabling module since OVP persists\n");
+			rc = regmap_update_bits(wled->regmap,
 				wled->ctrl_addr + WLED_CTRL_MOD_ENABLE,
 				WLED_CTRL_MOD_EN_MASK, 0);
-		if (!rc)
-			wled->force_mod_disable = true;
+			if (!rc)
+				wled->force_mod_disable = true;
+			wled->ovp_count = 0;
+		}
 		mutex_unlock(&wled->lock);
 		return;
 	}
