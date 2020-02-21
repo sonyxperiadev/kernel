@@ -95,6 +95,8 @@
 		#include "fg-gen3-batterydata-poplar-tdk-4380mv-2650mah.dtsi"
 		#include "fg-gen3-batterydata-poplar-send-4357mv-2688mah.dtsi"
 		#include "fg-gen3-batterydata-poplar-send-4335mv-2647mah.dtsi"
+		#include "fg-gen3-batterydata-poplar-send-4297mv-2465mah.dtsi"
+		#include "fg-gen3-batterydata-poplar-send-4245mv-2425mah.dtsi"
 	};
 };
 
