@@ -2449,28 +2449,36 @@ static int sde_hw_rotator_swts_create(struct sde_hw_rotator *rot)
 
 	data = &rot->swts_buf;
 	data->len = bufsize;
-	data->srcp_dma_buf = sde_rot_get_dmabuf(data);
+
 	if (!data->srcp_dma_buf) {
-		SDEROT_ERR("Fail dmabuf create\n");
-		return -ENOMEM;
+		data->srcp_dma_buf = sde_rot_get_dmabuf(data);
+		if (!data->srcp_dma_buf) {
+			SDEROT_ERR("Fail dmabuf create\n");
+			return -ENOMEM;
+		}
 	}
 
 	sde_smmu_ctrl(1);
 
-	data->srcp_attachment = sde_smmu_dma_buf_attach(data->srcp_dma_buf,
-			&rot->pdev->dev, SDE_IOMMU_DOMAIN_ROT_UNSECURE);
 	if (IS_ERR_OR_NULL(data->srcp_attachment)) {
-		SDEROT_ERR("sde_smmu_dma_buf_attach error\n");
-		rc = -ENOMEM;
-		goto err_put;
+		data->srcp_attachment = sde_smmu_dma_buf_attach(
+				data->srcp_dma_buf, &rot->pdev->dev,
+				SDE_IOMMU_DOMAIN_ROT_UNSECURE);
+		if (IS_ERR_OR_NULL(data->srcp_attachment)) {
+			SDEROT_ERR("sde_smmu_dma_buf_attach error\n");
+			rc = -ENOMEM;
+			goto err_put;
+		}
 	}
 
-	data->srcp_table = dma_buf_map_attachment(data->srcp_attachment,
-			DMA_BIDIRECTIONAL);
 	if (IS_ERR_OR_NULL(data->srcp_table)) {
-		SDEROT_ERR("dma_buf_map_attachment error\n");
-		rc = -ENOMEM;
-		goto err_detach;
+		data->srcp_table = dma_buf_map_attachment(data->srcp_attachment,
+				DMA_BIDIRECTIONAL);
+		if (IS_ERR_OR_NULL(data->srcp_table)) {
+			SDEROT_ERR("dma_buf_map_attachment error\n");
+			rc = -ENOMEM;
+			goto err_detach;
+		}
 	}
 
 	/* Shared mdp+rot context needs to full map later... */
@@ -2497,8 +2505,10 @@ skip_map:
 err_unmap:
 	dma_buf_unmap_attachment(data->srcp_attachment, data->srcp_table,
 			DMA_FROM_DEVICE);
+	data->srcp_table = NULL;
 err_detach:
 	dma_buf_detach(data->srcp_dma_buf, data->srcp_attachment);
+	data->srcp_attachment = NULL;
 err_put:
 	data->srcp_dma_buf = NULL;
 
@@ -2577,9 +2587,11 @@ static void sde_hw_rotator_swts_destroy(struct sde_hw_rotator *rot)
 			DMA_FROM_DEVICE);
 	dma_buf_detach(data->srcp_dma_buf, data->srcp_attachment);
 	dma_buf_put(data->srcp_dma_buf);
-	data->srcp_dma_buf = NULL;
+	data->srcp_table = NULL;
 	data->srcp_attachment = NULL;
+	data->srcp_dma_buf = NULL;
 	rot->swts_created = false;
+	data->mapped = false;
 }
 
 /*
