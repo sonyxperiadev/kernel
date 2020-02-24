@@ -597,6 +597,6 @@ config PRIME_NUMBERS
 	tristate
 
 config STRING_SELFTEST
-	bool "Test string functions"
+	tristate "Test string functions"
 
 endmenu
