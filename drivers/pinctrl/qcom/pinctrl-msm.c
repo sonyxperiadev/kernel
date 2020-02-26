@@ -934,8 +934,6 @@ static struct irq_chip msm_gpio_irq_chip = {
 	.irq_set_wake   = msm_gpio_irq_set_wake,
 	.irq_request_resources    = msm_gpiochip_irq_reqres,
 	.irq_release_resources	  = msm_gpiochip_irq_relres,
-	.flags                    = IRQCHIP_MASK_ON_SUSPEND |
-					IRQCHIP_SKIP_SET_WAKE,
 };
 
 static void msm_gpio_domain_set_info(struct irq_domain *d, unsigned int irq,
