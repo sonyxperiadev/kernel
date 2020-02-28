@@ -90,6 +90,8 @@ msm_drm.dsi_display0=dsi_panel_somc_tone_cmd:config0";
 		qcom,dsi-ctrl-num = <0>;
 		qcom,dsi-phy-num = <0>;
 		qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+
+		qcom,dsi-display-active;
 	};
 
 	/* SDE */
@@ -109,8 +111,6 @@ msm_drm.dsi_display0=dsi_panel_somc_tone_cmd:config0";
 		pinctrl-2 = <&mdss_touch_active>;
 		pinctrl-3 = <&mdss_touch_suspend>;
 
-		qcom,dsi-display-active;
-
 		qcom,platform-te-gpio = <&tlmm 10 0>;
 		qcom,panel-te-source = <0>;
 
@@ -124,7 +124,7 @@ msm_drm.dsi_display0=dsi_panel_somc_tone_cmd:config0";
 		ibb-supply = <&ibb_regulator>;
 
 		qcom,dsi-display-list = <&sde_dsi_tone_panels>;
-	};	
+	};
 };
 
 &mdss_mdp {
@@ -142,4 +142,3 @@ msm_drm.dsi_display0=dsi_panel_somc_tone_cmd:config0";
 &dfps_data_mem {
 	reg = <0 0x857FF000 0 0x1000>;
 };
-
