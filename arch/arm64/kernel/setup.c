@@ -321,6 +321,24 @@ static int __init sony_param_warmboot(char *p)
 	return 0;
 }
 early_param("warmboot", sony_param_warmboot);
+ 
+/*
+ * HACK: The following function strips off androidboot.mode=cei_charger
+ * from kernel command line so that parameter set by sony_param_warmboot
+ * will be used instead.
+ */
+static int __init androidboot_mode(char *p)
+{
+	char *offset_addr;
+
+	if (strcmp(p, "cei_charger"))
+		return 1;
+
+	if ((offset_addr = strstr(boot_command_line, "androidboot.mode=cei_charger")))
+		memset(offset_addr, ' ', strlen("androidboot.mode=cei_charger"));
+	return 0;
+}
+early_param("androidboot.mode", androidboot_mode);
 
 void __init setup_arch(char **cmdline_p)
 {
