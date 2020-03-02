@@ -152,6 +152,10 @@
 		cci-master = <0>;
 		cam_vdig-supply = <&cam0_vdig_vreg>;
 		regulator-names = "cam_vdig";
+		rgltr-cntrl-support;
+		rgltr-min-voltage = <0>;
+		rgltr-max-voltage = <0>;
+		rgltr-load-current = <0>;
 		status = "ok";
 	};
 
@@ -168,6 +172,10 @@
 		pinctrl-names = "cam_default", "cam_suspend";
 		pinctrl-0 = <&cam_sensor_mclk0_active &sm_gpio_28>;
 		pinctrl-1 = <&cam_sensor_mclk0_suspend &sm_gpio_28>;
+		rgltr-cntrl-support;
+		rgltr-min-voltage = <1800000 0 0>;
+		rgltr-max-voltage = <1800000 0 0>;
+		rgltr-load-current = <105000 0 0>;
 		gpios = <&tlmm 13 0>, <&tlmm 28 0>;
 		gpio-reset = <1>;
 		gpio-req-tbl-num = <0 1>;
@@ -210,6 +218,10 @@
 		cam_vdig-supply = <&cam0_vdig_vreg>;
 		cam_clk-supply = <&titan_top_gdsc>;
 		regulator-names = "cam_vio", "cam_vana", "cam_vdig", "cam_clk";
+		rgltr-cntrl-support;
+		rgltr-min-voltage = <1800000 0 0 0>;
+		rgltr-max-voltage = <1800000 0 0 0>;
+		rgltr-load-current = <105000 0 0 0>;
 		pinctrl-names = "cam_default", "cam_suspend";
 		pinctrl-0 = <&cam_sensor_mclk0_active &sm_gpio_28>;
 		pinctrl-1 = <&cam_sensor_mclk0_suspend &sm_gpio_28>;
@@ -234,6 +246,10 @@
 		cam_vdig-supply = <&cam1_vdig_vreg>;
 		cam_vaf-supply = <&pm8150l_l8>;
 		regulator-names = "cam_vdig", "cam_vaf";
+		rgltr-cntrl-support;
+		rgltr-min-voltage = <0 1800000>;
+		rgltr-max-voltage = <0 1800000>;
+		rgltr-load-current = <0 105000>;
 		status = "ok";
 	};
 
@@ -247,6 +263,10 @@
 		cam_vdig-supply = <&cam1_vdig_vreg>;
 		cam_clk-supply = <&titan_top_gdsc>;
 		regulator-names = "cam_vio", "cam_vdig", "cam_clk";
+		rgltr-cntrl-support;
+		rgltr-min-voltage = <1800000 0 0>;
+		rgltr-max-voltage = <1800000 0 0>;
+		rgltr-load-current = <105000 0 0>;
 		pinctrl-names = "cam_default", "cam_suspend";
 		pinctrl-0 = <&cam_sensor_mclk1_active &sm_gpio_30>;
 		pinctrl-1 = <&cam_sensor_mclk1_suspend &sm_gpio_30>;
@@ -271,6 +291,10 @@
 		cam_vdig-supply = <&cam1_vdig_vreg>;
 		cam_vaf-supply = <&pm8150l_l8>;
 		regulator-names = "cam_vdig", "cam_vaf";
+		rgltr-cntrl-support;
+		rgltr-min-voltage = <0 1800000>;
+		rgltr-max-voltage = <0 1800000>;
+		rgltr-load-current = <0 105000>;
 		status = "ok";
 	};
 
@@ -293,6 +317,10 @@
 		cam_vaf-supply = <&pm8150l_l8>;
 		cam_clk-supply = <&titan_top_gdsc>;
 		regulator-names = "cam_vio", "cam_vana", "cam_vdig", "cam_vaf", "cam_clk";
+		rgltr-cntrl-support;
+		rgltr-min-voltage = <1800000 0 0 1800000 0>;
+		rgltr-max-voltage = <1800000 0 0 1800000 0>;
+		rgltr-load-current = <105000 0 0 105000 0>;
 		pinctrl-names = "cam_default", "cam_suspend";
 		pinctrl-0 = <&cam_sensor_mclk1_active &sm_gpio_30>;
 		pinctrl-1 = <&cam_sensor_mclk1_suspend &sm_gpio_30>;
@@ -318,6 +346,10 @@
 		cam_vdig-supply = <&cam2_vdig_vreg>;
 		cam_clk-supply = <&titan_top_gdsc>;
 		regulator-names = "cam_vio", "cam_vdig", "cam_clk";
+		rgltr-cntrl-support;
+		rgltr-min-voltage = <1800000 0 0>;
+		rgltr-max-voltage = <1800000 0 0>;
+		rgltr-load-current = <105000 0 0>;
 		pinctrl-names = "cam_default", "cam_suspend";
 		pinctrl-0 = <&cam_sensor_mclk2_active &sm_gpio_12>;
 		pinctrl-1 = <&cam_sensor_mclk2_suspend &sm_gpio_12>;
@@ -348,6 +380,10 @@
 		cam_vdig-supply = <&cam2_vdig_vreg>;
 		cam_clk-supply = <&titan_top_gdsc>;
 		regulator-names = "cam_vio", "cam_vdig", "cam_clk";
+		rgltr-cntrl-support;
+		rgltr-min-voltage = <1800000 0 0>;
+		rgltr-max-voltage = <1800000 0 0>;
+		rgltr-load-current = <105000 0 0>;
 		pinctrl-names = "cam_default", "cam_suspend";
 		pinctrl-0 = <&cam_sensor_mclk2_active &sm_gpio_12>;
 		pinctrl-1 = <&cam_sensor_mclk2_suspend &sm_gpio_12>;
@@ -373,6 +409,10 @@
 		cam_vdig-supply = <&cam3_vdig_vreg>;
 		cam_clk-supply = <&titan_top_gdsc>;
 		regulator-names = "cam_vio", "cam_vdig", "cam_clk";
+		rgltr-cntrl-support;
+		rgltr-min-voltage = <1800000 0 0>;
+		rgltr-max-voltage = <1800000 0 0>;
+		rgltr-load-current = <105000 0 0>;
 		pinctrl-names = "cam_default", "cam_suspend";
 		pinctrl-0 = <&cam_sensor_mclk3_active &sm_gpio_23>;
 		pinctrl-1 = <&cam_sensor_mclk3_suspend &sm_gpio_23>;
@@ -403,6 +443,10 @@
 		cam_vdig-supply = <&cam3_vdig_vreg>;
 		cam_clk-supply = <&titan_top_gdsc>;
 		regulator-names = "cam_vio", "cam_vdig", "cam_clk";
+		rgltr-cntrl-support;
+		rgltr-min-voltage = <1800000 0 0>;
+		rgltr-max-voltage = <1800000 0 0>;
+		rgltr-load-current = <105000 0 0>;
 		pinctrl-names = "cam_default", "cam_suspend";
 		pinctrl-0 = <&cam_sensor_mclk3_active &sm_gpio_23>;
 		pinctrl-1 = <&cam_sensor_mclk3_suspend &sm_gpio_23>;
