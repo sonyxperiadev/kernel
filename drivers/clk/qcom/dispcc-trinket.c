@@ -136,13 +136,14 @@ static const struct alpha_pll_config disp_cc_pll0_config = {
 	.vco_mask = 0x3 << 20,
 	.main_output_mask = BIT(0),
 	.config_ctl_val = 0x4001055b,
-	.test_ctl_hi_mask = 0x1,
+	/* .test_ctl_hi_mask = 0x1, */
 };
 
 static struct clk_alpha_pll disp_cc_pll0_out_main = {
 	.offset = 0x0,
 	.vco_table = disp_cc_pll_vco,
 	.num_vco = ARRAY_SIZE(disp_cc_pll_vco),
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.flags = SUPPORTS_DYNAMIC_UPDATE,
 	.clkr = {
 		.hw.init = &(struct clk_init_data){

@@ -304,6 +304,7 @@ static const char * const gcc_parent_names_14[] = {
 
 static struct clk_alpha_pll gpll0_out_early = {
 	.offset = 0x0,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.clkr = {
 		.enable_reg = 0x79000,
 		.enable_mask = BIT(0),
@@ -340,6 +341,7 @@ static struct clk_fixed_factor gpll0_out_main = {
 
 static struct clk_alpha_pll gpll3_out_early = {
 	.offset = 0x3000,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.clkr = {
 		.enable_reg = 0x79000,
 		.enable_mask = BIT(3),
@@ -354,6 +356,7 @@ static struct clk_alpha_pll gpll3_out_early = {
 
 static struct clk_alpha_pll gpll4_out_main = {
 	.offset = 0x4000,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.clkr = {
 		.enable_reg = 0x79000,
 		.enable_mask = BIT(4),
@@ -368,6 +371,7 @@ static struct clk_alpha_pll gpll4_out_main = {
 
 static struct clk_alpha_pll gpll5_out_main = {
 	.offset = 0x5000,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.clkr = {
 		.enable_reg = 0x79000,
 		.enable_mask = BIT(5),
@@ -382,6 +386,7 @@ static struct clk_alpha_pll gpll5_out_main = {
 
 static struct clk_alpha_pll gpll6_out_early = {
 	.offset = 0x6000,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.clkr = {
 		.enable_reg = 0x79000,
 		.enable_mask = BIT(6),
@@ -407,6 +412,7 @@ static struct clk_fixed_factor gpll6_out_main = {
 
 static struct clk_alpha_pll gpll7_out_early = {
 	.offset = 0x7000,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.clkr = {
 		.enable_reg = 0x79000,
 		.enable_mask = BIT(7),
@@ -432,6 +438,7 @@ static struct clk_fixed_factor gpll7_out_main = {
 
 static struct clk_alpha_pll gpll8_out_early = {
 	.offset = 0x8000,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.clkr = {
 		.enable_reg = 0x79000,
 		.enable_mask = BIT(8),
@@ -457,6 +464,7 @@ static struct clk_fixed_factor gpll8_out_main = {
 
 static struct clk_alpha_pll gpll9_out_early = {
 	.offset = 0x9000,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_DEFAULT],
 	.clkr = {
 		.enable_reg = 0x79000,
 		.enable_mask = BIT(9),
