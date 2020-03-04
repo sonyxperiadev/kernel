@@ -2183,21 +2183,25 @@
 &clock_cpu {
 	#address-cells = <1>;
 	#size-cells = <1>;
-	lmh_dcvs0: qcom,limits-dcvs@0 {
+	lmh_dcvs0: qcom,limits-dcvs@179ce800 {
 		compatible = "qcom,msm-hw-limits";
 		interrupts = <GIC_SPI 37 IRQ_TYPE_LEVEL_HIGH>;
 		qcom,affinity = <0>;
-		reg = <0x17D78800 0x1000>,
-			<0x17D43000 0x1000>;
+		reg = <0x179ce800 0x1000>,
+			<0x179c1400 0x1000>;
+		qcom,plat-mitigation-disable;
+		qcom,legacy-lmh-enable;
 		#thermal-sensor-cells = <0>;
 	};
 
-	lmh_dcvs1: qcom,limits-dcvs@1 {
+	lmh_dcvs1: qcom,limits-dcvs@179cc800 {
 		compatible = "qcom,msm-hw-limits";
 		interrupts = <GIC_SPI 38 IRQ_TYPE_LEVEL_HIGH>;
 		qcom,affinity = <1>;
-		reg = <0x17D70800 0x1000>,
-			<0x17D45800 0x1000>;
+		reg = <0x179cc800 0x1000>,
+			<0x179c3400 0x1000>;
+		qcom,plat-mitigation-disable;
+		qcom,legacy-lmh-enable;
 		#thermal-sensor-cells = <0>;
 	};
 };
