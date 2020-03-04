@@ -38,6 +38,18 @@
 
 #define F(f, s, h, m, n) { (f), (s), (2 * (h) - 1), (m), (n) }
 
+static int vdd_mx_corner[] = {
+	RPM_REGULATOR_LEVEL_NONE,		/* VDD_NONE */
+	RPM_REGULATOR_LEVEL_MIN_SVS,		/* VDD_MIN */
+	RPM_REGULATOR_LEVEL_LOW_SVS,		/* VDD_LOWER */
+	RPM_REGULATOR_LEVEL_SVS,		/* VDD_LOW */
+	RPM_REGULATOR_LEVEL_SVS_PLUS,		/* VDD_LOW_L1 */
+	RPM_REGULATOR_LEVEL_NOM,		/* VDD_NOMINAL */
+	RPM_REGULATOR_LEVEL_TURBO,		/* VDD_HIGH */
+	RPM_REGULATOR_LEVEL_TURBO_NO_CPR,	/* VDD_HIGH_L1 */
+	RPM_REGULATOR_LEVEL_MAX
+};
+
 static DEFINE_VDD_REGULATORS(vdd_cx, VDD_NUM, 1, vdd_corner);
 static DEFINE_VDD_REGULATORS(vdd_mx, VDD_MX_NUM, 1, vdd_mx_corner);
 
