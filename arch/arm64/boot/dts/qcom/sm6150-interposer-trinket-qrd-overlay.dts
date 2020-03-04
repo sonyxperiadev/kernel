@@ -13,17 +13,11 @@
 /dts-v1/;
 /plugin/;
 
-#include <dt-bindings/interrupt-controller/arm-gic.h>
-#include <dt-bindings/clock/qcom,camcc-sm6150.h>
-#include "sm6150-interposer-trinket-idp.dtsi"
+#include "sm6150-interposer-trinket-qrd.dtsi"
 
 / {
-	model = "Qualcomm Technologies, Inc. SM6150 Interposer TRINKET IDP";
-	compatible = "qcom,sm6150-idp", "qcom,sm6150", "qcom,idp";
+	model = "Qualcomm Technologies, Inc. SM6150 Interposer TRINKET QRD";
+	compatible = "qcom,sm6150-qrd", "qcom,sm6150", "qcom,qrd";
 	qcom,msm-id = <355 0x0>;
-	qcom,board-id = <34 0>;
-};
-
-&dsi_td4330_truly_vid_display {
-	qcom,dsi-display-active;
+	qcom,board-id = <11 0x80>;
 };

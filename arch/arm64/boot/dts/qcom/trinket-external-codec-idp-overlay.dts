@@ -1,4 +1,4 @@
-/* Copyright (c) 2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -14,16 +14,18 @@
 /plugin/;
 
 #include <dt-bindings/interrupt-controller/arm-gic.h>
-#include <dt-bindings/clock/qcom,camcc-sm6150.h>
-#include "sm6150-interposer-trinket-idp.dtsi"
+
+#include "trinket-idp.dtsi"
+#include "trinket-tasha-codec-audio-overlay.dtsi"
+#include "trinket-tasha-codec.dtsi"
 
 / {
-	model = "Qualcomm Technologies, Inc. SM6150 Interposer TRINKET IDP";
-	compatible = "qcom,sm6150-idp", "qcom,sm6150", "qcom,idp";
-	qcom,msm-id = <355 0x0>;
-	qcom,board-id = <34 0>;
+	model = "Ext Audio Codec IDP";
+	compatible = "qcom,trinket-idp", "qcom,trinket", "qcom,idp";
+	qcom,msm-id = <394 0x10000>;
+	qcom,board-id = <34 1>;
 };
 
-&dsi_td4330_truly_vid_display {
+&dsi_td4330_truly_cmd_display {
 	qcom,dsi-display-active;
 };

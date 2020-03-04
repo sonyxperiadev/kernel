@@ -1,5 +1,4 @@
-/*
- * Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -11,15 +10,10 @@
  * GNU General Public License for more details.
  */
 
-/dts-v1/;
-/plugin/;
+#include "trinket-audio-overlay.dtsi"
 
-#include <dt-bindings/interrupt-controller/arm-gic.h>
-#include "trinket-rumi.dtsi"
-
-/ {
-	model = "Qualcomm Technologies, Inc. TRINKET RUMI";
-	compatible = "qcom,trinket-rumi", "qcom,trinket", "qcom,rumi";
-	qcom,msm-id = <394 0x10000>;
-	qcom,board-id = <15 0>;
+&sm6150_snd {
+	qcom,msm-mbhc-usbc-audio-supported = <1>;
+	qcom,msm-mbhc-hphl-swh = <1>;
+	qcom,msm-mbhc-gnd-swh = <1>;
 };
