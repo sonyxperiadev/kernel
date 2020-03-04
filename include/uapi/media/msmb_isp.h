@@ -1137,6 +1137,10 @@ enum msm_isp_ioctl_cmd_code {
 	_IOWR('V', MSM_ISP_DUAL_SYNC_CFG, \
 	uint32_t *)
 
+#define VIDIOC_MSM_ISP_DUAL_SYNC_CFG_VER2 \
+	_IOWR('V', MSM_ISP_DUAL_SYNC_CFG_VER2, \
+	uint32_t *)
+
 #define VIDIOC_MSM_ISP_NANOSEC_TIMESTAMP \
 	_IOW('V', MSM_ISP_NANOSEC_TIMESTAMP, \
 	struct msm_vfe_nano_sec_timestamp)
