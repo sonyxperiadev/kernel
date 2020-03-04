@@ -472,7 +472,8 @@
 		reg = <0x7781b8 0x1000>, /* MSM_RPM_MPM_BASE 4K */
 		    <0x17911008 0x4>;   /* MSM_APCS_GCC_BASE 4K */
 		reg-names = "vmpm", "ipc";
-		interrupts = <GIC_SPI 171 IRQ_TYPE_EDGE_RISING>;
+		interrupts-extended = <&wakegic GIC_SPI 171
+			IRQ_TYPE_EDGE_RISING>;
 		qcom,num-mpm-irqs = <96>;
 		interrupt-controller;
 		interrupt-parent = <&intc>;
