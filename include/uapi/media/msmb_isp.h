@@ -932,6 +932,10 @@ struct msm_vfe_dual_lpm_mode {
 	uint32_t lpm_mode;
 };
 
+struct msm_vfe_dual_vfe_sync_mode {
+	uint32_t enable;
+};
+
 struct msm_vfe_nano_sec_timestamp {
 	uint32_t enable;
 };
@@ -1141,7 +1145,7 @@ enum msm_isp_ioctl_cmd_code {
 
 #define VIDIOC_MSM_ISP_DUAL_SYNC_CFG_VER2 \
 	_IOWR('V', MSM_ISP_DUAL_SYNC_CFG_VER2, \
-	uint32_t *)
+	struct msm_vfe_dual_vfe_sync_mode)
 
 #define VIDIOC_MSM_ISP_NANOSEC_TIMESTAMP \
 	_IOW('V', MSM_ISP_NANOSEC_TIMESTAMP, \
