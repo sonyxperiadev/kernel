@@ -2225,7 +2225,7 @@ irqreturn_t msm_isp_process_irq(int irq_num, void *data)
 	ping_pong_status = vfe_dev->hw_info->vfe_ops.axi_ops.
 		get_pingpong_status(vfe_dev);
 
-	hw_info = &vfe_dev->hw_info;
+	hw_info = vfe_dev->hw_info;
 
 	/* Get the dual IRQ status in dual mode*/
 

@@ -2511,7 +2511,7 @@ static void msm_isp_input_disable(struct vfe_device *vfe_dev, int cmd_type)
 				update_camif_state(vfe_dev,
 				DISABLE_CAMIF);
 	}
-	hw_info = &vfe_dev->hw_info;
+	hw_info = vfe_dev->hw_info;
 	/*
 	 * halt and reset hardware if all streams are disabled, in this case
 	 * ispif is halted immediately as well

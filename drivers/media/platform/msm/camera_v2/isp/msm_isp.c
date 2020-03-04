@@ -714,7 +714,7 @@ int vfe_hw_probe(struct platform_device *pdev)
 	ISP_DBG("%s: device id = %d\n", __func__, pdev->id);
 
 	vfe_dev->pdev = pdev;
-	hw_info = &vfe_dev->hw_info;
+	hw_info = vfe_dev->hw_info;
 
 	rc = vfe_dev->hw_info->vfe_ops.platform_ops.get_platform_data(vfe_dev);
 	if (rc < 0) {
