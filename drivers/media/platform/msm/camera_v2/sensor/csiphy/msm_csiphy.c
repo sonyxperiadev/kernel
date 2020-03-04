@@ -58,6 +58,7 @@
 #define MBPS                                      1000000
 #define SNPS_INTERPHY_OFFSET                      0x800
 #define SET_THE_BIT(x)                            (0x1 << x)
+#define SNPS_MAX_DATA_RATE_PER_LANE               2500000000ULL
 #define GBPS                                      1000000000
 
 #undef CDBG
@@ -186,6 +187,13 @@ static int msm_csiphy_snps_2_lane_config(
 	void __iomem *csiphybase;
 
 	csiphybase = csiphy_dev->base;
+
+	if (csiphy_params->data_rate >
+		SNPS_MAX_DATA_RATE_PER_LANE * num_lanes) {
+		pr_err("unsupported data rate\n");
+		return -EINVAL;
+	}
+
 	local_data_rate = csiphy_params->data_rate;
 	if (mode == TWO_LANE_PHY_A)
 		offset = 0x0;
