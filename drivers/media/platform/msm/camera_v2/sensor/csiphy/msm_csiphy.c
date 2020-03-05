@@ -2404,8 +2404,11 @@ static int csiphy_probe(struct platform_device *pdev)
 	new_csiphy_dev->ctrl_reg = NULL;
 	new_csiphy_dev->ctrl_reg = kzalloc(sizeof(struct csiphy_ctrl_t),
 		GFP_KERNEL);
-	if (!new_csiphy_dev->ctrl_reg)
+	if (!new_csiphy_dev->ctrl_reg) {
+		kfree(new_csiphy_dev);
 		return -ENOMEM;
+	}
+
 	v4l2_subdev_init(&new_csiphy_dev->msm_sd.sd, &msm_csiphy_subdev_ops);
 	v4l2_set_subdevdata(&new_csiphy_dev->msm_sd.sd, new_csiphy_dev);
 	platform_set_drvdata(pdev, &new_csiphy_dev->msm_sd.sd);
