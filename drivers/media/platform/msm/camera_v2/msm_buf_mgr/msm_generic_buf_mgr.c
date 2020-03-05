@@ -356,7 +356,7 @@ static int msm_buf_mngr_handle_cont_cmd(struct msm_buf_mngr_device *dev,
 {
 	int rc = 0, i = 0;
 	struct dma_buf *dmabuf = NULL;
-	struct msm_camera_user_buf_cont_t *iaddr, *temp_addr;
+	struct msm_camera_user_buf_cont_t *temp_addr, *iaddr = NULL;
 	struct msm_buf_mngr_user_buf_cont_info *new_entry, *bufs, *save;
 	size_t size;
 
@@ -466,8 +466,10 @@ free_list:
 				cont_cmd->stream_id, 0, i);
 		}
 	}
-	// ion_unmap_kernel(dev->ion_client, ion_handle);
-	dma_buf_vunmap(dmabuf, iaddr);
+
+	if (iaddr)
+		dma_buf_vunmap(dmabuf, iaddr);
+
 	rc = dma_buf_end_cpu_access(dmabuf, DMA_BIDIRECTIONAL);
 	if (rc) {
 		pr_err("Failed in end cpu access, dmabuf=%pK", dmabuf);
