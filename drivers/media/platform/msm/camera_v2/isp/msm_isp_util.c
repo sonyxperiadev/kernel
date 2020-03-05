@@ -24,6 +24,9 @@
 #define CREATE_TRACE_POINTS
 #include "trace/events/msm_cam.h"
 
+#ifndef UINT16_MAX
+#define UINT16_MAX             (65535U)
+#endif
 
 #define MAX_ISP_V4l2_EVENTS 100
 #define MAX_ISP_REG_LIST 100
@@ -416,8 +419,12 @@ static int msm_isp_start_fetch_engine_multi_pass(struct vfe_device *vfe_dev,
 			pr_err("%s: Fetch engine config failed\n", __func__);
 			return -EINVAL;
 		}
-		for (i = 0; i < stream_info->num_planes; i++)
+		for (i = 0; i < stream_info->num_planes; i++) {
+			vfe_dev->hw_info->vfe_ops.axi_ops.enable_wm(
+				vfe_dev->vfe_base,
+				stream_info->wm[vfe_idx][i], 1);
 			wm_reload_mask |= (1 << stream_info->wm[vfe_idx][i]);
+		}
 		vfe_dev->hw_info->vfe_ops.core_ops.reg_update(vfe_dev,
 			VFE_SRC_MAX);
 		vfe_dev->hw_info->vfe_ops.axi_ops.reload_wm(vfe_dev,
@@ -1511,26 +1518,29 @@ int msm_isp_proc_cmd(struct vfe_device *vfe_dev, void *arg)
 	struct msm_vfe_reg_cfg_cmd *reg_cfg_cmd;
 	uint32_t *cfg_data = NULL;
 
-	if (!proc_cmd->num_cfg) {
+	if (proc_cmd->num_cfg > 0 &&
+			proc_cmd->num_cfg <= UINT16_MAX) {
+		reg_cfg_cmd = kzalloc(sizeof(struct msm_vfe_reg_cfg_cmd)*
+			proc_cmd->num_cfg, GFP_KERNEL);
+		if (!reg_cfg_cmd) {
+			rc = -ENOMEM;
+			goto reg_cfg_failed;
+		}
+
+		if (copy_from_user(reg_cfg_cmd,
+			(void __user *)(proc_cmd->cfg_cmd),
+			sizeof(struct msm_vfe_reg_cfg_cmd)
+				* proc_cmd->num_cfg)) {
+			rc = -EFAULT;
+			goto copy_cmd_failed;
+		}
+	} else {
 		pr_err("%s: Passed num_cfg as 0\n", __func__);
 		return -EINVAL;
 	}
 
-	reg_cfg_cmd = kzalloc(sizeof(struct msm_vfe_reg_cfg_cmd)*
-		proc_cmd->num_cfg, GFP_KERNEL);
-	if (!reg_cfg_cmd) {
-		rc = -ENOMEM;
-		goto reg_cfg_failed;
-	}
-
-	if (copy_from_user(reg_cfg_cmd,
-		(void __user *)(proc_cmd->cfg_cmd),
-		sizeof(struct msm_vfe_reg_cfg_cmd) * proc_cmd->num_cfg)) {
-		rc = -EFAULT;
-		goto copy_cmd_failed;
-	}
-
-	if (proc_cmd->cmd_len > 0) {
+	if (proc_cmd->cmd_len > 0  &&
+			proc_cmd->cmd_len <= UINT16_MAX) {
 		cfg_data = kzalloc(proc_cmd->cmd_len, GFP_KERNEL);
 		if (!cfg_data) {
 			pr_err("%s: cfg_data alloc failed\n", __func__);
@@ -1544,6 +1554,8 @@ int msm_isp_proc_cmd(struct vfe_device *vfe_dev, void *arg)
 			rc = -EFAULT;
 			goto copy_cmd_failed;
 		}
+	} else {
+		pr_debug("%s: Passed cmd_len as 0\n", __func__);
 	}
 
 	for (i = 0; i < proc_cmd->num_cfg; i++)
