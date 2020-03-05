@@ -1353,8 +1353,11 @@ int msm_isp_request_axi_stream(struct vfe_device *vfe_dev, void *arg)
 	stream_info = msm_isp_get_stream_common_data(vfe_dev,
 					stream_cfg_cmd->stream_src);
 
-	rc = msm_isp_axi_create_stream(vfe_dev,
-		&vfe_dev->axi_data, stream_cfg_cmd, stream_info);
+	if (stream_info->num_isp >= 0) {
+		rc = msm_isp_axi_create_stream(vfe_dev,
+			&vfe_dev->axi_data, stream_cfg_cmd, stream_info);
+	}
+
 	if (rc) {
 		pr_err("%s: create stream failed\n", __func__);
 		return rc;
