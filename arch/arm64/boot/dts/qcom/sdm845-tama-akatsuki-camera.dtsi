@@ -118,6 +118,10 @@
 		cci-master = <0>;
 		cam_vaf-supply = <&pm8998_l19>;
 		regulator-names = "cam_vaf";
+		rgltr-cntrl-support;
+		rgltr-min-voltage = <2700000>;
+		rgltr-max-voltage = <2700000>;
+		rgltr-load-current = <106500>;
 	};
 
 	eeprom0: eeprom@0 {
@@ -177,6 +181,10 @@
 		cci-master = <1>;
 		cam_vaf-supply = <&pm8998_l22>;
 		regulator-names = "cam_vaf";
+		rgltr-cntrl-support;
+		rgltr-min-voltage = <2700000>;
+		rgltr-max-voltage = <2700000>;
+		rgltr-load-current = <105000>;
 	};
 
 	eeprom1: eeprom@1 {
@@ -213,6 +221,10 @@
 		cam_vdig-supply = <&pm8998_s3>;
 		cam_clk-supply = <&titan_top_gdsc>;
 		regulator-names = "cam_vio", "cam_vana", "cam_vdig", "cam_clk";
+		rgltr-cntrl-support;
+		rgltr-min-voltage = <0 0 1352000 0>;
+		rgltr-max-voltage = <0 0 1352000 0>;
+		rgltr-load-current = <0 0 105000 0>;
 		pinctrl-names = "cam_default", "cam_suspend";
 		pinctrl-0 = <&cam_sensor_mclk1_active &sdm_gpio_9>;
 		pinctrl-1 = <&cam_sensor_mclk1_suspend &sdm_gpio_9>;
