@@ -422,6 +422,12 @@ static int piltz_resc_init(struct platform_device *pdev, struct pil_tz_data *d)
 	return 0;
 }
 
+static void piltz_resc_destroy(struct pil_tz_data *d)
+{
+	if (d->bus_client)
+		msm_bus_scale_unregister_client(d->bus_client);
+}
+
 static int enable_regulators(struct pil_tz_data *d, struct device *dev,
 				struct reg_info *regs, int reg_count,
 				bool reg_no_enable)
@@ -1104,7 +1110,7 @@ static int pil_tz_driver_probe(struct platform_device *pdev)
 
 	rc = pil_desc_init(&d->desc);
 	if (rc)
-		return rc;
+		goto err_descinit;
 
 	init_completion(&d->stop_ack);
 
@@ -1232,6 +1238,8 @@ err_minidump:
 err_ramdump:
 	pil_desc_release(&d->desc);
 	platform_set_drvdata(pdev, NULL);
+err_descinit:
+	piltz_resc_destroy(d);
 
 	return rc;
 }

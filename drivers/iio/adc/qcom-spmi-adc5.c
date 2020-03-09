@@ -85,9 +85,10 @@
  * clock rate, fast average samples with no measurement in queue.
  * Set the timeout to a max of 100ms.
  */
-#define ADC_CONV_TIME_MIN_US			263
-#define ADC_CONV_TIME_MAX_US			264
-#define ADC_CONV_TIME_RETRY			400
+#define ADC_POLL_DELAY_MIN_US			10000
+#define ADC_POLL_DELAY_MAX_US			10001
+#define ADC_CONV_TIME_RETRY_POLL		40
+#define ADC_CONV_TIME_RETRY			30
 #define ADC_CONV_TIMEOUT			msecs_to_jiffies(100)
 
 /* CAL peripheral */
@@ -271,13 +272,16 @@ static int adc_read_voltage_data(struct adc_chip *adc, u16 *data)
 	return ret;
 }
 
-static int adc_poll_wait_eoc(struct adc_chip *adc)
+static int adc_poll_wait_eoc(struct adc_chip *adc, bool poll_only)
 {
 	unsigned int count, retry;
 	u8 status1;
 	int ret;
 
-	retry = ADC_CONV_TIME_RETRY;
+	if (poll_only)
+		retry = ADC_CONV_TIME_RETRY_POLL;
+	else
+		retry = ADC_CONV_TIME_RETRY;
 
 	for (count = 0; count < retry; count++) {
 		ret = adc_read(adc, ADC_USR_STATUS1, &status1, 1);
@@ -287,7 +291,7 @@ static int adc_poll_wait_eoc(struct adc_chip *adc)
 		status1 &= ADC_USR_STATUS1_REQ_STS_EOC_MASK;
 		if (status1 == ADC_USR_STATUS1_EOC)
 			return 0;
-		usleep_range(ADC_CONV_TIME_MIN_US, ADC_CONV_TIME_MAX_US);
+		usleep_range(ADC_POLL_DELAY_MIN_US, ADC_POLL_DELAY_MAX_US);
 	}
 
 	return -ETIMEDOUT;
@@ -298,7 +302,7 @@ static int adc_wait_eoc(struct adc_chip *adc)
 	int ret;
 
 	if (adc->poll_eoc) {
-		ret = adc_poll_wait_eoc(adc);
+		ret = adc_poll_wait_eoc(adc, true);
 		if (ret < 0) {
 			pr_err("EOC bit not set\n");
 			return ret;
@@ -308,7 +312,7 @@ static int adc_wait_eoc(struct adc_chip *adc)
 							ADC_CONV_TIMEOUT);
 		if (!ret) {
 			pr_debug("Did not get completion timeout.\n");
-			ret = adc_poll_wait_eoc(adc);
+			ret = adc_poll_wait_eoc(adc, false);
 			if (ret < 0) {
 				pr_err("EOC bit not set\n");
 				return ret;
@@ -497,7 +501,23 @@ static int adc_configure(struct adc_chip *adc,
 	if (!adc->poll_eoc)
 		reinit_completion(&adc->complete);
 
-	ret = adc_write(adc, ADC_USR_DIG_PARAM, buf, ADC5_MULTI_TRANSFER);
+	ret = adc_write(adc, ADC_USR_DIG_PARAM, buf, 1);
+	if (ret)
+		return ret;
+
+	ret = adc_write(adc, ADC_USR_FAST_AVG_CTL, &buf[1], 1);
+	if (ret)
+		return ret;
+
+	ret = adc_write(adc, ADC_USR_CH_SEL_CTL, &buf[2], 1);
+	if (ret)
+		return ret;
+
+	ret = adc_write(adc, ADC_USR_DELAY_CTL, &buf[3], 1);
+	if (ret)
+		return ret;
+
+	ret = adc_write(adc, ADC_USR_EN_CTL1, &buf[4], 1);
 	if (ret)
 		return ret;
 
@@ -540,14 +560,19 @@ static int adc_do_conversion(struct adc_chip *adc,
 	if (ret < 0)
 		goto unlock;
 
-	if ((chan->type == IIO_VOLTAGE) || (chan->type == IIO_TEMP))
+	if ((chan->type == IIO_VOLTAGE) || (chan->type == IIO_TEMP)) {
 		ret = adc_read_voltage_data(adc, data_volt);
+		if (ret)
+			goto unlock;
+	}
 	else if (chan->type == IIO_POWER) {
 		ret = adc_read_voltage_data(adc, data_volt);
 		if (ret)
 			goto unlock;
 
 		ret = adc_read_current_data(adc, data_cur);
+		if (ret)
+			goto unlock;
 	}
 
 	ret = adc_post_configure_usb_in_read(adc, prop);
@@ -762,6 +787,8 @@ static const struct adc_channels adc_chans_rev2[ADC_MAX_CHANNEL] = {
 					SCALE_HW_CALIB_THERM_100K_PULLUP)
 	[ADC_XO_THERM_PU2]	= ADC_CHAN_TEMP("xo_therm", 1,
 					SCALE_HW_CALIB_THERM_100K_PULLUP)
+	[ANA_IN]		= ADC_CHAN_TEMP("drax_temp", 1,
+					SCALE_HW_CALIB_PMIC_THERM)
 };
 
 static int adc_get_dt_channel_data(struct device *dev,
