@@ -2806,11 +2806,12 @@ out:
 	if (opts->discard) {
 		struct request_queue *q = bdev_get_queue(sb->s_bdev);
 
-		if (!blk_queue_discard(q))
+		if (!blk_queue_discard(q)) {
 			exfat_msg(sb, KERN_WARNING,
 				"mounting with \"discard\" option, but "
 				"the device does not support discard");
-		opts->discard = 0;
+			opts->discard = 0;
+		}
 	}
 
 	return 0;
