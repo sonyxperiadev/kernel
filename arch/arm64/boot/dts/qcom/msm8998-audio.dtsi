@@ -69,6 +69,10 @@
 
 	qcom,wcd-dsp-glink {
 		compatible = "qcom,wcd-dsp-glink";
+		qcom,wdsp-channels = "g_glink_ctrl",
+				     "g_glink_persistent_data_nild",
+				     "g_glink_persistent_data_ild",
+				     "g_glink_audio_data";
 	};
 
 	wcd_us_euro_gpio: msm_cdc_pinctrl@75 {
