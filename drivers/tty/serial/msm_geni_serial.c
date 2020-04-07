@@ -1810,7 +1810,6 @@ static int msm_geni_serial_port_setup(struct uart_port *uport)
 	unsigned long cfg0, cfg1;
 	dma_addr_t dma_address;
 	unsigned int rxstale = DEFAULT_BITS_PER_CHAR * STALE_TIMEOUT;
-	struct device *cb_dev = geni_get_iommu_dev(msm_port->wrapper_dev);
 
 	set_rfr_wm(msm_port);
 	geni_write_reg_nolog(rxstale, uport->membase, SE_UART_RX_STALE_CNT);
@@ -1834,8 +1833,9 @@ static int msm_geni_serial_port_setup(struct uart_port *uport)
 			ret = -ENOMEM;
 			goto exit_portsetup;
 		}
-		msm_port->rx_buf = dma_alloc_coherent(cb_dev, DMA_RX_BUF_SIZE,
-				&dma_address, GFP_KERNEL);
+		msm_port->rx_buf =
+			geni_se_iommu_alloc_buf(msm_port->wrapper_dev,
+				&dma_address, DMA_RX_BUF_SIZE);
 		if (!msm_port->rx_buf) {
 			devm_kfree(uport->dev, msm_port->rx_fifo);
 			msm_port->rx_fifo = NULL;
@@ -1881,8 +1881,8 @@ static int msm_geni_serial_port_setup(struct uart_port *uport)
 	return 0;
 free_dma:
 	if (msm_port->rx_dma) {
-		dma_free_coherent(msm_port->wrapper_dev, DMA_RX_BUF_SIZE,
-					msm_port->rx_buf, msm_port->rx_dma);
+		geni_se_iommu_free_buf(msm_port->wrapper_dev,
+			&msm_port->rx_dma, msm_port->rx_buf, DMA_RX_BUF_SIZE);
 		msm_port->rx_dma = (dma_addr_t)NULL;
 	}
 exit_portsetup:
@@ -2895,8 +2895,8 @@ static int msm_geni_serial_remove(struct platform_device *pdev)
 	wakeup_source_trash(&port->geni_wake);
 	uart_remove_one_port(drv, &port->uport);
 	if (port->rx_dma) {
-		dma_free_coherent(port->wrapper_dev, DMA_RX_BUF_SIZE,
-					port->rx_buf, port->rx_dma);
+		geni_se_iommu_free_buf(port->wrapper_dev, &port->rx_dma,
+					port->rx_buf, DMA_RX_BUF_SIZE);
 		port->rx_dma = (dma_addr_t)NULL;
 	}
 	return 0;
