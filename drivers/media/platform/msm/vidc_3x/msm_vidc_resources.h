@@ -199,6 +199,7 @@ struct msm_vidc_platform_resources {
 	uint32_t pm_qos_latency_us;
 	uint32_t max_inst_count;
 	uint32_t max_secure_inst_count;
+	bool cma_status;
 };
 
 static inline bool is_iommu_present(struct msm_vidc_platform_resources *res)
