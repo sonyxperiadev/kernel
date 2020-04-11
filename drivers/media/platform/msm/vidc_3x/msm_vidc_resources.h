@@ -68,6 +68,11 @@ struct addr_set {
 	int count;
 };
 
+struct cma_info {
+	struct addr_range addr_range;
+	bool s1_bypass;
+};
+
 struct context_bank_info {
 	struct list_head list;
 	const char *name;
@@ -78,6 +83,7 @@ struct context_bank_info {
 	struct dma_iommu_mapping *mapping;
 	int sids[VENUS_SID_MAX];
 	int num_sids;
+	struct cma_info cma;
 };
 
 struct buffer_usage_table {
