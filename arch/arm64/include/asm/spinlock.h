@@ -46,7 +46,9 @@ static inline void arch_spin_lock(arch_spinlock_t *lock)
 	/* LSE atomics */
 "	mov	%w2, %w5\n"
 "	ldadda	%w2, %w0, %3\n"
+#ifdef CONFIG_ARM64_LSE_ATOMICS
 	__nops(3)
+#endif
 	)
 
 	/* Did we get the lock? */
@@ -75,7 +77,9 @@ static inline int arch_spin_trylock(arch_spinlock_t *lock)
 
 	asm volatile(ARM64_LSE_ATOMIC_INSN(
 	/* LL/SC */
+#ifdef CONFIG_ARM64_LSE_ATOMICS
 	__nops(1)
+#endif
 	"1:	ldaxr	%w0, %2\n"
 	"	eor	%w1, %w0, %w0, ror #16\n"
 	"	cbnz	%w1, 2f\n"
