@@ -465,7 +465,7 @@
 		redistributor-stride = <0x0 0x20000>;
 		interrupts = <GIC_PPI 9 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-parent = <&intc>;
-		arm,gicv3-plat-qcom-legacy;
+		arm,qgicv3-plat-msm8996-quirks;
 
 		gic-its@0x17a20000{
 			compatible = "arm,gic-v3-its";
