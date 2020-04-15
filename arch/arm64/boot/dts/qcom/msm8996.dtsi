@@ -364,7 +364,7 @@
 		interrupts = <GIC_PPI 9 IRQ_TYPE_LEVEL_HIGH>;
 
 		interrupt-parent = <&intc>;
-		arm,gicv3-plat-qcom-legacy;
+		arm,qgicv3-plat-msm8996-quirks;
 
 		msi_alias0: interrupt-controller@9bd0000 {
 			compatible = "qcom,gic-msi-aliases";
