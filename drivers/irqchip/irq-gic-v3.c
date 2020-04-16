@@ -112,6 +112,11 @@ static struct static_key supports_deactivate = STATIC_KEY_INIT_TRUE;
 
 static struct gic_kvm_info gic_v3_kvm_info;
 
+enum qgic_soc_class {
+	MSM8996_CLASS,
+	SDM660_CLASS
+};
+
 enum gicd_save_restore_reg {
 	SAVED_ICFGR,
 	SAVED_IS_ENABLER,
@@ -1614,17 +1619,26 @@ out_put_node:
 	of_node_put(parts_node);
 }
 
-void gic_plat_init_qcom_quirks(void)
+void gic_plat_init_qcom_quirks(int soc_class)
 {
+	if (soc_class == MSM8996_CLASS) {
 #ifdef CONFIG_PM
-	gic_v3_plat_syscore_ops.suspend = gic_v3_qcom_suspend;
-	gic_v3_plat_syscore_ops.resume = gic_v3_qcom_resume;
+		gic_v3_plat_syscore_ops.suspend = gic_v3_qcom_suspend;
+		gic_v3_plat_syscore_ops.resume = gic_v3_qcom_resume;
 
-	gic_chip.irq_set_wake = gic_v3_qcom_set_wake;
+		gic_chip.irq_set_wake = gic_v3_qcom_set_wake;
 #endif
 
-	gic_chip.irq_disable = gic_v3_qcom_disable_irq;
-	gic_eoimode1_chip.irq_disable = gic_v3_qcom_disable_irq;
+		gic_chip.irq_disable = gic_v3_qcom_disable_irq;
+		gic_eoimode1_chip.irq_disable = gic_v3_qcom_disable_irq;
+	}
+
+	if (soc_class == SDM660_CLASS) {
+		gic_chip.flags |= IRQCHIP_SKIP_SET_WAKE;
+		gic_chip.flags |= IRQCHIP_MASK_ON_SUSPEND;
+		gic_eoimode1_chip.flags	|= IRQCHIP_SKIP_SET_WAKE;
+		gic_eoimode1_chip.flags |= IRQCHIP_MASK_ON_SUSPEND;
+	}
 }
 
 static void __init gic_of_setup_kvm_info(struct device_node *node)
@@ -1699,10 +1713,11 @@ static int __init gic_of_init(struct device_node *node, struct device_node *pare
 	if (of_property_read_u64(node, "redistributor-stride", &redist_stride))
 		redist_stride = 0;
 
-	if (of_property_read_bool(node, "arm,gicv3-plat-qcom-legacy")) {
-		pr_info("Using quirks for legacy QCOM\n");
-		gic_plat_init_qcom_quirks();
-	}
+	if (of_property_read_bool(node, "arm,qgicv3-plat-sdm660-quirks"))
+		gic_plat_init_qcom_quirks(SDM660_CLASS);
+
+	if (of_property_read_bool(node, "arm,qgicv3-plat-msm8996-quirks"))
+		gic_plat_init_qcom_quirks(MSM8996_CLASS);
 
 	err = gic_init_bases(dist_base, rdist_regs, nr_redist_regions,
 			     redist_stride, &node->fwnode);

@@ -477,7 +477,7 @@
 		redistributor-stride = <0x0 0x20000>;
 		interrupts = <1 9 4>;
 		interrupt-parent = <&intc>;
-		arm,gicv3-plat-qcom-legacy;
+		arm,qgicv3-plat-sdm660-quirks;
 	};
 
 	wakegic: qcom,mpm@7781b8 {
