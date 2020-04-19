@@ -621,7 +621,7 @@
 
 &pmi8998_wled {
 	qcom,fs-curr-ua = <20000>;
-	somc,init-br-ua = <10000>;
+	somc,init-br-ua = <1200>;
 	somc-s1,br-power-save-ua = <800>;
 	somc,bl-scale-enabled;
 	somc,area_count_table_size = <0>;
