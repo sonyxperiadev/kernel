@@ -661,7 +661,7 @@
 		qcom,pmic-revid = <&pmi8998_revid>;
 		qcom,loop-auto-gm-en;
 		qcom,auto-calibration-enable;
-		somc,init-br-ua = <10000>;
+		somc,init-br-ua = <1200>;
 		somc-s1,br-power-save-ua = <800>;
 		somc,bl-scale-enabled;
 		somc,area_count_table_size = <0>;
