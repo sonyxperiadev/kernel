@@ -2440,6 +2440,7 @@ static void setup_rotator_ops(struct sde_hw_rotator_ops *ops,
 static int sde_hw_rotator_swts_create(struct sde_hw_rotator *rot)
 {
 	int rc = 0;
+	struct sde_rot_data_type *mdata = sde_rot_get_mdata();
 	struct sde_mdp_img_data *data;
 	u32 bufsize = sizeof(int) * SDE_HW_ROT_REGDMA_TOTAL_CTX * 2;
 
@@ -2472,6 +2473,12 @@ static int sde_hw_rotator_swts_create(struct sde_hw_rotator *rot)
 		goto err_detach;
 	}
 
+	/* Shared mdp+rot context needs to full map later... */
+	if (test_bit(SDE_CAPS_SPLIT_CTX, mdata->sde_caps_map)) {
+		rot->swts_created = true;
+		goto skip_map;
+	}
+
 	rc = sde_smmu_map_dma_buf(data->srcp_dma_buf, data->srcp_table,
 			SDE_IOMMU_DOMAIN_ROT_UNSECURE, &data->addr,
 			&data->len, DMA_BIDIRECTIONAL);
@@ -2483,7 +2490,7 @@ static int sde_hw_rotator_swts_create(struct sde_hw_rotator *rot)
 	data->mapped = true;
 	SDEROT_DBG("swts buffer mapped: %pad/%lx va:%p\n", &data->addr,
 			data->len, rot->swts_buffer);
-
+skip_map:
 	sde_smmu_ctrl(0);
 
 	return rc;
@@ -2584,6 +2591,7 @@ static void sde_hw_rotator_swts_destroy(struct sde_hw_rotator *rot)
 	dma_buf_put(data->srcp_dma_buf);
 	data->srcp_dma_buf = NULL;
 	data->srcp_attachment = NULL;
+	rot->swts_created = false;
 }
 
 /*
@@ -2760,15 +2768,30 @@ static struct sde_rot_hw_resource *sde_hw_rotator_alloc_ext(
 		resinfo->hw.max_active = SDE_HW_ROT_REGDMA_TOTAL_CTX - 1;
 
 		if (!test_bit(SDE_CAPS_HW_TIMESTAMP, mdata->sde_caps_map) &&
-				resinfo->rot->swts_buf.mapped == false)
-			sde_hw_rotator_swts_create(resinfo->rot);
+				resinfo->rot->swts_buf.mapped == false) {
 
-		if (resinfo->rot->swts_buf.mapped == false) {
-			ret = sde_hw_rotator_swts_map(resinfo->rot);
-			if (ret) {
-				SDEROT_ERR("swts buffer map failed\n");
-				devm_kfree(&mgr->pdev->dev, resinfo);
-				return NULL;
+			if (!resinfo->rot->swts_created) {
+				ret = sde_hw_rotator_swts_create(resinfo->rot);
+				if (ret) {
+					SDEROT_ERR("cannot create swts buf\n");
+					devm_kfree(&mgr->pdev->dev, resinfo);
+					return NULL;
+				}
+			}
+
+			/*
+			 * IOMMU MDP CTX split between ROT and MDP needs
+			 * special handling: never free the endire context
+			 * or MDP gets freed as well (and havoc happens)
+			 */
+			if (test_bit(SDE_CAPS_SPLIT_CTX,
+					mdata->sde_caps_map)) {
+				ret = sde_hw_rotator_swts_map(resinfo->rot);
+				if (ret) {
+					SDEROT_ERR("swts buffer map failed\n");
+					devm_kfree(&mgr->pdev->dev, resinfo);
+					return NULL;
+				}
 			}
 		}
 	}
@@ -2811,10 +2834,7 @@ static void sde_hw_rotator_free_ext(struct sde_rot_mgr *mgr,
 	 * rotator session ends, so that it will be mapped again when a fresh
 	 * session starts.
 	 */
-	if ((IS_SDE_MAJOR_MINOR_SAME(mdata->mdss_version,
-			SDE_MDP_HW_REV_320) ||
-	    IS_SDE_MAJOR_MINOR_SAME(mdata->mdss_version,
-			SDE_MDP_HW_REV_330)) &&
+	if (test_bit(SDE_CAPS_SPLIT_CTX, mdata->sde_caps_map) &&
 	    resinfo->rot->swts_buf.mapped) {
 		sde_hw_rotator_swts_unmap(resinfo->rot);
 	}
@@ -3492,6 +3512,14 @@ static int sde_rotator_hw_rev_init(struct sde_hw_rotator *rot)
 		rot->downscale_caps =
 			"LINEAR/1.5/2/4/8/16/32/64 TILE/1.5/2/4 TP10/1.5/2";
 	} else {
+		if (IS_SDE_MAJOR_MINOR_SAME(mdata->mdss_version,
+					    SDE_MDP_HW_REV_320) ||
+		    IS_SDE_MAJOR_MINOR_SAME(mdata->mdss_version,
+					    SDE_MDP_HW_REV_330)) {
+			/* MDP 3.2.0, 3.3.0: shared mdp/rot iommu ctx */
+			set_bit(SDE_CAPS_SPLIT_CTX, mdata->sde_caps_map);
+		}
+
 		rot->inpixfmts[SDE_ROTATOR_MODE_OFFLINE] =
 				sde_hw_rotator_v3_inpixfmts;
 		rot->num_inpixfmt[SDE_ROTATOR_MODE_OFFLINE] =
