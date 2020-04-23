@@ -113,10 +113,6 @@ BINDER_DEBUG_ENTRY(proc);
 #define SZ_1K                               0x400
 #endif
 
-#ifndef SZ_4M
-#define SZ_4M                               0x400000
-#endif
-
 #define FORBIDDEN_MMAP_FLAGS                (VM_WRITE)
 
 enum {
@@ -5156,9 +5152,6 @@ static int binder_mmap(struct file *filp, struct vm_area_struct *vma)
 
 	if (proc->tsk != current->group_leader)
 		return -EINVAL;
-
-	if ((vma->vm_end - vma->vm_start) > SZ_4M)
-		vma->vm_end = vma->vm_start + SZ_4M;
 
 	binder_debug(BINDER_DEBUG_OPEN_CLOSE,
 		     "%s: %d %lx-%lx (%ld K) vma %lx pagep %lx\n",
