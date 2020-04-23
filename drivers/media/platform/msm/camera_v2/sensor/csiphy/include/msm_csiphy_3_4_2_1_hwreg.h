@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2016, 2018-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2016, 2018, 2019 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -10,22 +10,22 @@
  * GNU General Public License for more details.
  */
 
-#ifndef MSM_CSIPHY_3_5_HWREG_H
-#define MSM_CSIPHY_3_5_HWREG_H
+#ifndef MSM_CSIPHY_3_4_2_1_HWREG_H
+#define MSM_CSIPHY_3_4_2_1_HWREG_H
 
 #define ULPM_WAKE_UP_TIMER_MODE                   2
 #define GLITCH_ELIMINATION_NUM                    0x12 /* bit [6:4] */
 
 #include <sensor/csiphy/msm_csiphy.h>
 
-static struct csiphy_reg_parms_t csiphy_v3_5 = {
+static struct csiphy_reg_parms_t csiphy_v3_4_2_1 = {
 	.mipi_csiphy_interrupt_status0_addr = 0x8B0,
 	.mipi_csiphy_interrupt_clear0_addr = 0x858,
 	.mipi_csiphy_glbl_irq_cmd_addr = 0x828,
 	.combo_clk_mask = 0x10,
 };
 
-static struct csiphy_reg_3ph_parms_t csiphy_v3_5_3ph = {
+static struct csiphy_reg_3ph_parms_t csiphy_v3_4_2_1_3ph = {
 	/*MIPI CSI PHY registers*/
 	{0x814, 0x0},
 	{0x818, 0x1},
@@ -51,10 +51,10 @@ static struct csiphy_reg_3ph_parms_t csiphy_v3_5_3ph = {
 	{0x148, 0xFE},
 	{0x14C, 0x1},
 	{0x154, 0x0},
-	{0x15C, 0x23},
+	{0x15C, 0x33},
 	{0x160, ULPM_WAKE_UP_TIMER_MODE},
-	{0x164, 0x50},
-	{0x168, 0x70},
+	{0x164, 0x48},
+	{0x168, 0xA0},
 	{0x16C, 0x17},
 	{0x170, 0x41},
 	{0x174, 0x41},
@@ -76,20 +76,20 @@ static struct csiphy_reg_3ph_parms_t csiphy_v3_5_3ph = {
 	{0x850, 0xFF},
 	{0x854, 0xFF},
 	{0x28, 0x0},
-	{0x800, 0x0},
-	{0x0, 0xD7},
+	{0x800, 0x2},
+	{0x0, 0x88},
 	{0x4, 0x8},
 	{0x8, 0x0},
-	{0xC, 0xA5},
-	{0x10, 0x52},
+	{0xC, 0xFF},
+	{0x10, 0x56},
 	{0x2C, 0x1},
-	{0x30, 0x2},
+	{0x30, 0x0},
 	{0x34, 0x3},
-	{0x38, 0x1},
+	{0x38, 0xfe},
 	{0x3C, 0xB8},
-	{0x1C, 0xA},
+	{0x1C, 0xE7},
 	{0x14, 0x0},
-	{0x0, 0x0},
-	{0x700, 0xC0},
+	{0x14, 0x60},
+	{0x700, 0x80}
 };
 #endif

@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -756,13 +756,13 @@ static void msm_vfe40_process_epoch_irq(struct vfe_device *vfe_dev,
 		return;
 
 	if (irq_status0 & BIT(2)) {
-		msm_isp_notify(vfe_dev, ISP_EVENT_SOF, VFE_PIX_0, ts);
 		ISP_DBG("%s: EPOCH0 IRQ\n", __func__);
 		msm_isp_process_reg_upd_epoch_irq(vfe_dev, VFE_PIX_0,
 					MSM_ISP_COMP_IRQ_EPOCH, ts);
 		msm_isp_process_stats_reg_upd_epoch_irq(vfe_dev,
 					MSM_ISP_COMP_IRQ_EPOCH);
 		msm_isp_update_error_frame_count(vfe_dev);
+		msm_isp_notify(vfe_dev, ISP_EVENT_SOF, VFE_PIX_0, ts);
 		if (vfe_dev->axi_data.src_info[VFE_PIX_0].raw_stream_count > 0
 			&& vfe_dev->axi_data.src_info[VFE_PIX_0].
 			stream_count == 0) {
@@ -2278,6 +2278,9 @@ struct msm_vfe_hardware_info vfe40_hw_info = {
 			.process_epoch_irq = msm_vfe40_process_epoch_irq,
 			.config_irq = msm_vfe40_config_irq,
 			.preprocess_camif_irq = msm_isp47_preprocess_camif_irq,
+			.dual_config_irq = NULL,
+			.clear_dual_irq_status =
+				NULL,
 		},
 		.axi_ops = {
 			.reload_wm = msm_vfe40_axi_reload_wm,
@@ -2370,6 +2373,9 @@ struct msm_vfe_hardware_info vfe40_hw_info = {
 			.init_bw_mgr = msm_vfe47_init_bandwidth_mgr,
 			.deinit_bw_mgr = msm_vfe47_deinit_bandwidth_mgr,
 			.update_bw = msm_vfe47_update_bandwidth,
+			.set_dual_vfe_mode = NULL,
+			.clear_dual_vfe_mode = NULL,
+			.get_dual_sync_platform_data = NULL,
 		}
 	},
 	.dmi_reg_offset = 0x918,

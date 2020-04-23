@@ -1,4 +1,4 @@
-/* Copyright (c) 2016, 2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2016, 2018-2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -22,7 +22,7 @@ enum msm_vfe_clk_rates {
 	MSM_VFE_MAX_CLK_RATES = 3,
 };
 
-#define MSM_VFE48_HW_VERSION 0x8
+#define MSM_VFE48_HW_VERSION 0x9
 #define MSM_VFE48_HW_VERSION_SHIFT 28
 #define MSM_VFE48_HW_VERSION_MASK 0xF
 
@@ -34,6 +34,17 @@ static inline int msm_vfe_is_vfe48(struct vfe_device *vfe_dev)
 
 void msm_vfe48_stats_cfg_ub(struct vfe_device *vfe_dev);
 uint32_t msm_vfe48_get_ub_size(struct vfe_device *vfe_dev);
-
-
+void msm_vfe48_clear_dual_irq_status(struct vfe_device *vfe_dev,
+	uint32_t *dual_irq_status);
+void msm_vfe48_dual_config_irq(struct vfe_device *vfe_dev,
+		uint32_t irq0_mask, uint32_t irq1_mask,
+		enum msm_isp_irq_operation oper);
+void msm_vfe48_set_dual_vfe_mode(struct vfe_device *vfe_dev);
+void msm_vfe48_clear_dual_vfe_mode(struct vfe_device *vfe_dev);
+int msm_vfe48_get_dual_sync_platform_data(struct vfe_device *vfe_dev);
+void msm_vfe48_clear_dual_irq_status(struct vfe_device *vfe_dev,
+	uint32_t *dual_irq_status);
+void msm_vfe48_dual_config_irq(struct vfe_device *vfe_dev,
+		uint32_t irq0_mask, uint32_t irq1_mask,
+		enum msm_isp_irq_operation oper);
 #endif /* __MSM_ISP48_H__ */
