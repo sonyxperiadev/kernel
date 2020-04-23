@@ -35,7 +35,6 @@
 #include <linux/gpio.h>
 #include <linux/miscdevice.h>
 #include <linux/spinlock.h>
-#include <linux/pn547.h>
 #include <linux/pm_wakeup.h>
 #include <linux/of_gpio.h>
 #include <linux/pinctrl/consumer.h>
@@ -47,6 +46,8 @@
 #ifdef CONFIG_NFC_PN547_PMC_CLK_REQ
 #include <linux/clk.h>
 #endif
+
+#include "pn547.h"
 
 #define FRAME_SIZE_COMPAT	(255 + 3)
 #define FRAME_SIZE 		(1023 + 5)
