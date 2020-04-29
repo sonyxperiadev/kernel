@@ -46,7 +46,7 @@
  * PN544_SET_PWR(1): power on
  * PN544_SET_PWR(2): reset and power on with firmware download enabled
  */
-#define PN544_SET_PWR    _IOW(PN544_MAGIC, 0x01, long)
+#define PN544_SET_PWR    _IOW(PN544_MAGIC, 0x01, unsigned int)
 
 /*
  * SPI Request NFCC to enable p61 power, only in param
@@ -54,54 +54,54 @@
  * level 1 = Enable power
  * level 0 = Disable power
  */
-#define P61_SET_SPI_PWR    _IOW(PN544_MAGIC, 0x02, long)
+#define P61_SET_SPI_PWR    _IOW(PN544_MAGIC, 0x02, unsigned int)
 
 /* SPI or DWP can call this ioctl to get the current
  * power state of P61
  *
 */
-#define P61_GET_PWR_STATUS    _IOR(PN544_MAGIC, 0x03, long)
+#define P61_GET_PWR_STATUS    _IOR(PN544_MAGIC, 0x03, unsigned int)
 
 /* DWP side this ioctl will be called
  * level 1 = Wired access is enabled/ongoing
  * level 0 = Wired access is disalbed/stopped
 */
-#define P61_SET_WIRED_ACCESS _IOW(PN544_MAGIC, 0x04, long)
+#define P61_SET_WIRED_ACCESS _IOW(PN544_MAGIC, 0x04, unsigned int)
 
 /*
   NFC Init will call the ioctl to register the PID with the i2c driver
 */
-#define P544_SET_NFC_SERVICE_PID _IOW(PN544_MAGIC, 0x05, long)
+#define P544_SET_NFC_SERVICE_PID _IOW(PN544_MAGIC, 0x05, unsigned int)
 
 /*
   NFC and SPI will call the ioctl to get the i2c/spi bus access
 */
-#define P544_GET_ESE_ACCESS _IOW(PN544_MAGIC, 0x06, long)
+#define P544_GET_ESE_ACCESS _IOW(PN544_MAGIC, 0x06, unsigned int)
 /*
   NFC and SPI will call the ioctl to update the power scheme
 */
-#define P544_SET_POWER_SCHEME _IOW(PN544_MAGIC, 0x07, long)
+#define P544_SET_POWER_SCHEME _IOW(PN544_MAGIC, 0x07, unsigned int)
 
 /*
   NFC will call the ioctl to release the svdd protection
 */
-#define P544_REL_SVDD_WAIT _IOW(PN544_MAGIC, 0x08, long)
+#define P544_REL_SVDD_WAIT _IOW(PN544_MAGIC, 0x08, unsigned int)
 
 /* SPI or DWP can call this ioctl to get the current
  * power state of P61
  *
 */
-#define PN544_SET_DWNLD_STATUS    _IOW(PN544_MAGIC, 0x09, long)
+#define PN544_SET_DWNLD_STATUS    _IOW(PN544_MAGIC, 0x09, unsigned int)
 /*
   NFC will call the ioctl to release the dwp on/off protection
 */
-#define P544_REL_DWPONOFF_WAIT _IOW(PN544_MAGIC, 0x0A, long)
+#define P544_REL_DWPONOFF_WAIT _IOW(PN544_MAGIC, 0x0A, unsigned int)
 
 /*
   NFC will call the ioctl to start Secure Timer
 */
 
-#define P544_SECURE_TIMER_SESSION _IOW(PN544_MAGIC, 0x0B, long)
+#define P544_SECURE_TIMER_SESSION _IOW(PN544_MAGIC, 0x0B, unsigned int)
 
 #define MAX_ESE_ACCESS_TIME_OUT_MS 200 /*100 milliseconds*/
 
