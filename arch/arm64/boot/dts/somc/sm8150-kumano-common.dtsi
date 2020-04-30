@@ -2912,6 +2912,8 @@
 };
 
 &snd_934x {
+	qcom,msm-mbhc-hphl-swh = <0>;
+	qcom,msm-mbhc-gnd-swh = <0>;
 	qcom,msm-mbhc-usbc-audio-supported = <1>;
 	qcom,audio-routing =
 		"AIF4 VI", "MCLK",
@@ -2931,7 +2933,6 @@
 	pinctrl-names = "aud_active", "aud_sleep";
 	pinctrl-0 = <&wcd_usbc_analog_en2_active>;
 	pinctrl-1 = <&wcd_usbc_analog_en2_idle>;
-
 };
 
 &tlmm {
