@@ -53,10 +53,7 @@
 #include <linux/uaccess.h>
 
 
-#define PWR_ON_STEP_SLEEP 100
-#define PWR_ON_STEP_RANGE1 100
-#define PWR_ON_STEP_RANGE2 900
-
+#define ET51X_VDDANA_ON_US 10000
 #define ET51X_RESET_LOW_US 1000
 #define ET51X_RESET_HIGH1_US 100
 
@@ -140,6 +137,7 @@ static int et51x_vreg_set_voltage(struct device *dev, struct regulator *vreg,
 		rc = regulator_enable(vreg);
 		if (rc)
 			dev_err(dev, "Unable to enable: %d\n", rc);
+                usleep_range(ET51X_VDDANA_ON_US, ET51X_VDDANA_ON_US + 1000);
 	}
 
 	return rc;
@@ -218,17 +216,17 @@ static int hw_reset(struct et51x_data *et51x)
 	int rc = select_pin_ctl(et51x, "et51x_reset_active");
 	if (rc)
 		goto exit;
-	usleep_range(ET51X_RESET_HIGH1_US, ET51X_RESET_HIGH1_US + 100);
+	usleep_range(ET51X_RESET_HIGH1_US, ET51X_RESET_HIGH1_US + 1000);
 
 	rc = select_pin_ctl(et51x, "et51x_reset_reset");
 	if (rc)
 		goto exit;
-	usleep_range(ET51X_RESET_LOW_US, ET51X_RESET_LOW_US + 100);
+	usleep_range(ET51X_RESET_LOW_US, ET51X_RESET_LOW_US + 1000);
 
 	rc = select_pin_ctl(et51x, "et51x_reset_active");
 	if (rc)
 		goto exit;
-	usleep_range(ET51X_RESET_HIGH1_US, ET51X_RESET_HIGH1_US + 100);
+	usleep_range(ET51X_RESET_HIGH1_US, ET51X_RESET_HIGH1_US + 1000);
 
 	irq_gpio = et51x_get_gpio_triggered(et51x);
 	dev_dbg(dev, "IRQ after reset %d\n", irq_gpio);
