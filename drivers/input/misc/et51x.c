@@ -54,9 +54,9 @@
 
 
 #define ET51X_VDDANA_ON_US 10000
-#define ET51X_RESET_LOW_US 1000
-#define ET51X_RESET_HIGH1_US 100
-
+#define ET51X_RESET_LOW_US 30000
+#define ET51X_RESET_HIGH1_US 1000
+#define ET51X_RESET_ACTIVE_US 20000
 #define ET51X_IRQPOLL_TIMEOUT_MS 500
 #define ET51X_MAX_HAL_PROCESSING_TIME 400
 
@@ -226,7 +226,7 @@ static int hw_reset(struct et51x_data *et51x)
 	rc = select_pin_ctl(et51x, "et51x_reset_active");
 	if (rc)
 		goto exit;
-	usleep_range(ET51X_RESET_HIGH1_US, ET51X_RESET_HIGH1_US + 1000);
+	usleep_range(ET51X_RESET_ACTIVE_US, ET51X_RESET_ACTIVE_US + 1000);
 
 	irq_gpio = et51x_get_gpio_triggered(et51x);
 	dev_dbg(dev, "IRQ after reset %d\n", irq_gpio);
