@@ -1797,10 +1797,10 @@ const char *cmd_set_prop_map[DSI_CMD_SET_MAX] = {
 	"somc,mdss-dsi-aod-low-command",
 	"somc,mdss-dsi-aod-high-command",
 	"somc,mdss-dsi-aod-off-command",
-	"somc,mdss-dsi-vr-on-command",
-	"somc,mdss-dsi-vr-off-command",
 	"somc,mdss-dsi-hbm-on-command",
 	"somc,mdss-dsi-hbm-off-command",
+	"somc,mdss-dsi-vr-on-command",
+	"somc,mdss-dsi-vr-off-command",
 	"somc,mdss-dsi-display-off-command",
 	"somc,mdss-dsi-display-on-command",
 #endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
