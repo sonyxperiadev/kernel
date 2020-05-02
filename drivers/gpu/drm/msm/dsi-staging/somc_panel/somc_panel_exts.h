@@ -223,6 +223,17 @@ struct dsi_m_plus {
 	m_plus_mode mode;
 };
 
+#define HBM_MAX_COOLDOWNS		3
+#define HBM_OFF_TIMER_MS		(3 * 60 * 1000)		// 3 mins
+#define HBM_ON_TIMER_MS			(10 * 60 * 1000)	// 10 mins
+
+struct dsi_samsung_hbm {
+	bool hbm_supported;
+	bool force_hbm_off;
+	int hbm_mode;
+	int ncooldowns;
+};
+
 /* lab/ibb control default data */
 #define OVR_LAB_VOLTAGE			BIT(0)
 #define OVR_IBB_VOLTAGE			BIT(1)
@@ -358,11 +369,11 @@ struct panel_specific_pdata {
 	int sod_mode;
 	int pre_sod_mode;
 	int vr_mode;
-	int hbm_mode;
 	unsigned int aod_threshold;
 	bool light_state;
 
 	struct dsi_m_plus m_plus;
+	struct dsi_samsung_hbm hbm;
 
 	struct dsi_panel_labibb_data labibb;
 	struct short_detection_ctrl short_det;
@@ -452,6 +463,8 @@ void dsi_panel_driver_oled_short_det_enable(
 void dsi_panel_driver_oled_short_det_disable(
 			struct panel_specific_pdata *spec_pdata);
 int dsi_panel_driver_toggle_light_off(struct dsi_panel *panel, bool state);
+int somc_panel_set_dyn_hbm_backlight(struct dsi_panel *panel,
+				     int prev_bl_lvl, int bl_lvl);
 
 /* For incell driver */
 struct incell_ctrl *incell_get_info(void);

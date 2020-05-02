@@ -1168,6 +1168,9 @@ int dsi_panel_driver_parse_dt(struct dsi_panel *panel,
 	panel->lp11_init = of_property_read_bool(np,
 			"qcom,mdss-dsi-lp11-init");
 
+	spec_pdata->hbm.hbm_supported = of_property_read_bool(np,
+			"somc,set-hbm-usable");
+
 	rc = somc_panel_parse_dt_chgfps_config(panel, np);
 	if (rc) {
 		pr_err("failed to parse Low Fps, rc=%d\n", rc);
@@ -1370,6 +1373,96 @@ int dsi_panel_driver_toggle_light_off(struct dsi_panel *panel, bool bl_on)
 		}
 	}
 	return rc;
+}
+
+
+int somc_panel_set_dyn_hbm_backlight(struct dsi_panel *panel,
+				     int prev_bl_lvl, int bl_lvl)
+{
+	struct panel_specific_pdata *spec_pdata = panel->spec_pdata;
+
+	/*
+	 * HBM is a specific command set for Samsung panels:
+	 * sometimes we want to avoid enabling support for it
+	 * because it may burn the OLED matrix on some specific
+	 * hardware.
+	 * If this display does not support HBM, either by
+	 * choice or because it really doesn't support it at
+	 * all, then just go on without any error.
+	 */
+	if (!spec_pdata->hbm.hbm_supported)
+		return 0;
+
+	/* Handle HBM disablement for lower backlight level */
+	if (bl_lvl < prev_bl_lvl && spec_pdata->hbm.hbm_mode != 0) {
+		spec_pdata->hbm.force_hbm_off = false;
+		return dsi_panel_set_hbm_mode(panel, 0);
+	}
+
+	/*
+	 * This shouldn't happen: the qcom backlight handling
+	 * is not supposed to call this function in this case.
+	 * Better safe than sorry, by the way.
+	 */
+	if (unlikely(bl_lvl == prev_bl_lvl))
+		return 0;
+
+	/*
+	 * If we reach this point, then the only thing that we
+	 * can possibly ever want to do is to enter HBM mode...
+	 */
+	if (bl_lvl == panel->bl_config.brightness_max_level)
+		return dsi_panel_set_hbm_mode(panel, 1);
+
+	return 0;
+}
+
+static void somc_panel_hbm_protect_work(struct work_struct *work)
+{
+	struct delayed_work *dwork = to_delayed_work(work);
+	struct dsi_panel *panel =
+		container_of(dwork, struct dsi_panel, hbm_protect_work);
+	struct panel_specific_pdata *spec_pdata = panel->spec_pdata;
+	int max_bl_lvl;
+
+	/* Shut down HBM to protect the OLED matrix */
+	if (spec_pdata->hbm.hbm_mode > 0) {
+		spec_pdata->hbm.force_hbm_off = true;
+		dsi_panel_set_hbm_mode(panel, -1);
+		return;
+	}
+
+	/*
+	 * IMPORTANT: This branch is reached only when COOLDOWN TIMER
+	 *            fires.
+	 * ********* force_hbm_off == true, hbm_mode == -1 *********
+	 *
+	 * If cooldown time reached and still want HBM, re-enable it,
+	 * but do it only for X times, otherwise assume that the OS
+	 * has locked up in HBM range: in this case, manual intervention
+	 * is required. The OS has to request a non-HBM range brightness
+	 * in order to reset this behavior.
+	 */
+	if (spec_pdata->hbm.force_hbm_off) {
+		max_bl_lvl = panel->bl_config.brightness_max_level;
+
+		if (panel->bl_config.bl_level != max_bl_lvl) {
+			/* HBM is off by userspace intervention. Reset. */
+			spec_pdata->hbm.force_hbm_off = false;
+			return;
+		} else if (spec_pdata->hbm.ncooldowns < HBM_MAX_COOLDOWNS) {
+			/* HBM is still on after cooldown: reenable it */
+			dsi_panel_set_hbm_mode(panel, 1);
+			spec_pdata->hbm.ncooldowns++;
+			return;
+		}
+	}
+
+	/*
+	 * Super Extra Mega Paranoid hardware protection kick-in:
+	 * this point is reached only if something really stupid happens.
+	 */
+	dsi_panel_set_hbm_mode(panel, 0);
 }
 
 static void dsi_panel_driver_notify_resume(struct dsi_panel *panel)
@@ -1712,7 +1805,7 @@ static ssize_t dsi_panel_hbm_mode_store(struct device *dev,
 
 	if (sscanf(buf, "%d", &mode) < 0) {
 		pr_err("sscanf failed to set mode. keep current mode=%d\n",
-			panel->spec_pdata->hbm_mode);
+			panel->spec_pdata->hbm.hbm_mode);
 		goto hbm_error;
 	}
 
@@ -1730,8 +1823,9 @@ static ssize_t dsi_panel_hbm_mode_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
 	struct dsi_display *display = dev_get_drvdata(dev);
+	struct panel_specific_pdata *spec_pdata = display->panel->spec_pdata;
 
-	return scnprintf(buf, PAGE_SIZE, "%u", display->panel->spec_pdata->hbm_mode);
+	return scnprintf(buf, PAGE_SIZE, "%u", spec_pdata->hbm.hbm_mode);
 }
 
 static ssize_t dsi_panel_mplus_mode_store(struct device *dev,
@@ -2458,14 +2552,28 @@ status_passed:
 
 int somc_panel_init(struct dsi_display *display)
 {
+	struct panel_specific_pdata *spec_pdata = NULL;
 	int rc = 0;
+
+	if (display == NULL)
+		return -EINVAL;
+	if (display->panel == NULL)
+		return -EINVAL;
+	if (display->panel->spec_pdata == NULL)
+		return -EINVAL;
+
+	spec_pdata = display->panel->spec_pdata;
 
 	rc = somc_panel_color_manager_init(display);
 	if (rc)
 		goto end;
 
 	rc = somc_panel_fps_manager_init(display);
+	if (rc)
+		goto end;
 
+	INIT_DELAYED_WORK(&display->panel->hbm_protect_work,
+			  somc_panel_hbm_protect_work);
 end:
 	return rc;
 }

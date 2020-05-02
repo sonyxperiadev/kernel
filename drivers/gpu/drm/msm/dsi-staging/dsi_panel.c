@@ -767,6 +767,9 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 {
 	int rc = 0;
 	struct dsi_backlight_config *bl = &panel->bl_config;
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+	static int prev_bl_lvl;
+#endif
 
 	if (panel->host_config.ext_bridge_num)
 		return 0;
@@ -799,9 +802,13 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 			dsi_panel_driver_toggle_light_off(panel,
 				DISPLAY_BL_ON);
 			rc = dsi_panel_update_backlight(panel, bl_lvl);
-			if (rc == 0)
+			if (rc == 0) {
 				somc_panel_colormgr_update_backlight(panel,
 								     bl_lvl);
+				somc_panel_set_dyn_hbm_backlight(panel,
+								 prev_bl_lvl,
+								 bl_lvl);
+			}
 		}
 		break;
 #else
@@ -814,6 +821,10 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 		pr_err("Backlight type(%d) not supported\n", bl->type);
 		rc = -ENOTSUPP;
 	}
+
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+	prev_bl_lvl = bl_lvl;
+#endif
 
 	return rc;
 }
@@ -4058,6 +4069,8 @@ int dsi_panel_set_vr_off(struct dsi_panel *panel)
 
 int dsi_panel_set_hbm_mode(struct dsi_panel *panel, int mode)
 {
+	struct panel_specific_pdata *spec_pdata = NULL;
+	unsigned int hbm_time;
 	int rc = 0;
 
 	if (panel == NULL) {
@@ -4065,24 +4078,40 @@ int dsi_panel_set_hbm_mode(struct dsi_panel *panel, int mode)
 		return -EINVAL;
 	}
 
-	mutex_lock(&panel->panel_lock);
-	if (!panel->spec_pdata->display_onoff_state) {
+	spec_pdata = panel->spec_pdata;
+
+	if (!spec_pdata->display_onoff_state) {
 		pr_err("%s: Display is off, can't set HBM mode\n", __func__);
-		mutex_unlock(&panel->panel_lock);
 		return -EAGAIN;
 	}
 
-	rc = (mode == 0) ? dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_HBM_OFF) :
+	rc = (mode <= 0 || spec_pdata->hbm.force_hbm_off) ?
+			dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_HBM_OFF) :
 			dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_HBM_ON);
 
 	if (rc != 0)
 		pr_err("[%s] failed to send DSI_CMD_SET_HBM_XX(%d) cmd, rc=%d\n",
 			panel->name, mode, rc);
 	else {
-		panel->spec_pdata->hbm_mode = mode;
+		spec_pdata->hbm.hbm_mode = mode;
 		pr_notice("set HBM mode=%d\n", mode);
+
+		/* We are protecting the OLED matrix: set cooldown! */
+		if (spec_pdata->hbm.force_hbm_off)
+			hbm_time = HBM_OFF_TIMER_MS;
+		else
+			hbm_time = HBM_ON_TIMER_MS;
+
+		if (mode == 0) {
+			cancel_delayed_work(&panel->hbm_protect_work);
+			if (!spec_pdata->hbm.force_hbm_off)
+				spec_pdata->hbm.ncooldowns = 0;
+		} else {
+			mod_delayed_work(system_wq,
+					 &panel->hbm_protect_work,
+					 msecs_to_jiffies(hbm_time));
+		}
 	}
-	mutex_unlock(&panel->panel_lock);
 
 	return rc;
 }
