@@ -1015,7 +1015,7 @@
 		function = "normal";
 		output-low;
 		drive-push-pull;
-		qcom,drive-strength = <1>; /* Low */
+		qcom,drive-strength = <3>;
 		power-source = <1>;
 	};
 
