@@ -183,6 +183,7 @@
 				somc,mdss-dsi-flm2-off-command-state = "dsi_lp_mode";
 			};
 			timing@1 {
+				somc,splash-dms-switch-to-this-timing;
 				qcom,mdss-dsi-panel-width = <1644>;
 				qcom,mdss-dsi-panel-height = <3840>;
 				qcom,mdss-dsi-h-back-porch = <8>;
