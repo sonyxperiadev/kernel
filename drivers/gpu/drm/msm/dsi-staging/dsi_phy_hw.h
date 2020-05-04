@@ -320,6 +320,12 @@ struct dsi_phy_hw_ops {
 	 */
 	void (*set_continuous_clk)(struct dsi_phy_hw *phy, bool enable);
 
+	/**
+	 * commit_phy_timing() - Apply PHY timing parameters
+	 */
+	void (*commit_phy_timing)(struct dsi_phy_hw *phy,
+				  struct dsi_phy_per_lane_cfgs *timing);
+
 	void *timing_ops;
 	struct phy_ulps_config_ops ulps_ops;
 	struct phy_dyn_refresh_ops dyn_refresh_ops;

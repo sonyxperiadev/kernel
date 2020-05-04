@@ -1136,6 +1136,33 @@ int dsi_phy_set_timing_params(struct msm_dsi_phy *phy,
 	return rc;
 }
 
+/* TODO: Deduplicate this ASAP */
+int dsi_phy_set_timing_params_commit(struct msm_dsi_phy *phy,
+				     u32 *timing, u32 size)
+{
+	int rc = 0;
+
+	if (!phy || !timing || !size) {
+		pr_err("Invalid params\n");
+		return -EINVAL;
+	};
+
+	mutex_lock(&phy->phy_lock);
+
+	if (phy->hw.ops.phy_timing_val)
+		rc = phy->hw.ops.phy_timing_val(&phy->cfg.timing, timing, size);
+	if (!rc)
+		phy->cfg.is_phy_timing_present = true;
+
+	if (phy->hw.ops.commit_phy_timing)
+		phy->hw.ops.commit_phy_timing(&phy->hw, &phy->cfg.timing);
+	else
+		pr_warn("WARNING: No function to commit PHY timing!!\n");
+
+	mutex_unlock(&phy->phy_lock);
+	return rc;
+}
+
 /**
  * dsi_phy_conv_phy_to_logical_lane() - Convert physical to logical lane
  * @lane_map:     logical lane
