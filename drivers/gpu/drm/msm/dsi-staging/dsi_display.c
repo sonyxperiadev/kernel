@@ -2348,6 +2348,28 @@ error:
 	return rc;
 }
 
+static int dsi_display_phy_idle_pc(struct dsi_display *display,
+				   bool idle_pc_enabled)
+{
+	struct dsi_display_ctrl *ctrl;
+	int i, rc = 0;
+
+	display_for_each_ctrl(i, display) {
+		ctrl = &display->ctrl[i];
+		if (!ctrl->phy)
+			continue;
+
+		rc = dsi_phy_set_idle_pc(ctrl->phy, idle_pc_enabled);
+		if (rc) {
+			pr_err("[%s] Failed to set idle pc, rc=%d\n",
+			       ctrl->ctrl->name, rc);
+			goto error;
+		}
+	}
+error:
+	return rc;
+}
+
 static int dsi_display_set_clk_src(struct dsi_display *display)
 {
 	int rc = 0;
@@ -3473,6 +3495,12 @@ int dsi_pre_clkon_cb(void *priv,
 		}
 
 		pr_debug("%s: Enable DSI core power\n", __func__);
+	}
+
+	if ((clk_type & DSI_LINK_CLK) && (new_state == DSI_CLK_ON) &&
+	    !display->is_cont_splash_enabled) {
+		/* Enabling LINK clocks: disable PHY idle power collapse */
+		dsi_display_phy_idle_pc(display, false);
 	}
 
 	return rc;

@@ -172,6 +172,12 @@ int dsi_phy_validate_mode(struct msm_dsi_phy *dsi_phy,
 int dsi_phy_set_power_state(struct msm_dsi_phy *dsi_phy, bool enable);
 
 /**
+ * dsi_phy_set_idle_pc() - set/unset idle dsi phy idle power collapse
+ *
+ */
+int dsi_phy_set_idle_pc(struct msm_dsi_phy *dsi_phy, bool idle_pc_enabled);
+
+/**
  * dsi_phy_enable() - enable DSI PHY hardware
  * @dsi_phy:            DSI PHY handle.
  * @config:             DSI host configuration.

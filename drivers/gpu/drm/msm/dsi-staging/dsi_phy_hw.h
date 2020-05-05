@@ -262,6 +262,12 @@ struct dsi_phy_hw_ops {
 	void (*phy_idle_off)(struct dsi_phy_hw *phy);
 
 	/**
+	 * set_idle_pc() - Enter/exit PHY idle power collapse
+	 */
+
+	void (*set_idle_pc)(struct dsi_phy_hw *phy, bool idle_pc_enabled);
+
+	/**
 	 * calculate_timing_params() - calculates timing parameters.
 	 * @phy:      Pointer to DSI PHY hardware object.
 	 * @mode:     Mode information for which timing has to be calculated.

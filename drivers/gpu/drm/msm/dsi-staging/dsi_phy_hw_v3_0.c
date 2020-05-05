@@ -242,6 +242,33 @@ void dsi_phy_hw_v3_0_clamp_ctrl(struct dsi_phy_hw *phy, bool enable)
 	wmb(); /* Ensure that the freezeio bit is toggled */
 }
 
+void dsi_phy_hw_v3_0_set_idle_pc(struct dsi_phy_hw *phy, bool idle_pc_enabled)
+{
+	u32 reg;
+
+	pr_debug("PHY: %s idle power collapse\n",
+		 idle_pc_enabled ? "Enabling" : "Disabling");
+
+	/* Does SDM845 support PHY idle power collapse, or just FreezeIO? */
+	if (!of_machine_is_compatible("qcom,msm8998"))
+		return;
+
+	if (idle_pc_enabled) {
+		pr_err("PHY: Enable idlepc not supported\n");
+		return;
+	}
+
+	reg = DSI_R32(phy, DSIPHY_CMN_CTRL_1);
+	DSI_W32(phy, DSIPHY_CMN_CTRL_1, reg | BIT(5));
+	wmb();
+	usleep_range(10, 15);
+
+	reg = DSI_R32(phy, DSIPHY_CMN_CTRL_1);
+	reg &= ~(BIT(5));
+	DSI_W32(phy, DSIPHY_CMN_CTRL_1, reg);
+	wmb();
+}
+
 /**
  * enable() - Enable PHY hardware
  * @phy:      Pointer to DSI PHY hardware object.
