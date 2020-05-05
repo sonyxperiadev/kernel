@@ -756,6 +756,28 @@ error:
 	return rc;
 }
 
+int dsi_phy_set_idle_pc(struct msm_dsi_phy *dsi_phy, bool idle_pc_enabled)
+{
+	int rc = 0;
+
+	if (!dsi_phy) {
+		pr_err("PHY is NULL!!!\n");
+		return -EINVAL;
+	}
+
+	/* If PHY does not require special IdlePC handling, go out early */
+	if (!dsi_phy->hw.ops.set_idle_pc)
+		return 0;
+
+	mutex_lock(&dsi_phy->phy_lock);
+
+	dsi_phy->hw.ops.set_idle_pc(&dsi_phy->hw, idle_pc_enabled);
+
+	mutex_unlock(&dsi_phy->phy_lock);
+
+	return rc;
+}
+
 static int dsi_phy_enable_ulps(struct msm_dsi_phy *phy,
 		struct dsi_host_config *config, bool clamp_enabled)
 {
