@@ -151,10 +151,11 @@
 		pm8998_gpio_13: gp13 {
 			pins = "gpio13";
 			function = "func2";
+			output-enable;
 			output-low;
 			drive-push-pull;
 			bias-disable;
-			qcom,drive-strength = <PMIC_GPIO_STRENGTH_HIGH>;
+			qcom,drive-strength = <1>;
 			power-source = <0>;
 		};
 	};

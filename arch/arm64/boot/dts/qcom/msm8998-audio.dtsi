@@ -70,9 +70,7 @@
 	qcom,wcd-dsp-glink {
 		compatible = "qcom,wcd-dsp-glink";
 	};
-};
 
-&q6core {
 	wcd_us_euro_gpio: msm_cdc_pinctrl@75 {
 		compatible = "qcom,msm-cdc-pinctrl";
 		#gpio-cells = <0>;
@@ -126,9 +124,10 @@
 		/* Use RPM div_clk1 as PMI divider clock */
 		pmic-clock-names = "div_clk1";
 
-		pinctrl-names = "sleep", "active";
+		pinctrl-names = "sleep", "active", "default";
 		pinctrl-0 = <&spkr_i2s_clk_sleep &pm8998_gpio_13>;
 		pinctrl-1 = <&spkr_i2s_clk_active &pm8998_gpio_13>;
+		pinctrl-2 = <&spkr_i2s_clk_active &pm8998_gpio_13>;
 		qcom,use-pinctrl = <1>;
 
 		#clock-cells = <1>;
@@ -145,7 +144,9 @@
 
 		#clock-cells = <1>;
 	};
+};
 
+&q6core {
 	snd_9335: sound-9335 {
 		compatible = "qcom,msm8998-asoc-snd-tasha";
 		qcom,model = "msm8998-tasha-snd-card";
