@@ -511,6 +511,8 @@ void dsi_phy_hw_v3_0_ulps_exit(struct dsi_phy_hw *phy,
 	 * to be in stop state.
 	 */
 	DSI_W32(phy, DSIPHY_CMN_LANE_CTRL3, reg);
+	usleep_range(5, 15);
+
 	DSI_W32(phy, DSIPHY_CMN_LANE_CTRL3, 0);
 	usleep_range(100, 110);
 }
