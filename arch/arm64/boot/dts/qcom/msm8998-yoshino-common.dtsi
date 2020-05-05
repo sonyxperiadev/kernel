@@ -3305,7 +3305,7 @@
 
 &pmi8998_wled {
 	linux,name = "wled";
-	qcom,fs-curr-ua = <24000>;
+	qcom,current-limit-microamp = <25000>;
 	somc,init-br-ua = <10000>;
 	somc-s1,br-power-save-ua = <800>;
 	somc,bl-scale-enabled;
