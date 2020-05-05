@@ -637,6 +637,7 @@ struct dsi_display_mode {
 	struct dsi_display_mode_priv_info *priv_info;
 #ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
 	bool isDefault;
+	bool splash_dms;
 #endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 };
 

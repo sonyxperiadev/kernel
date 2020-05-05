@@ -261,6 +261,10 @@ int dsi_phy_set_clk_freq(struct msm_dsi_phy *phy,
 int dsi_phy_set_timing_params(struct msm_dsi_phy *phy,
 			      u32 *timing, u32 size);
 
+/* TODO: Deduplicate this */
+int dsi_phy_set_timing_params_commit(struct msm_dsi_phy *phy,
+				     u32 *timing, u32 size);
+
 /**
  * dsi_phy_lane_reset() - Reset DSI PHY lanes in case of error
  * @phy:	DSI PHY handle

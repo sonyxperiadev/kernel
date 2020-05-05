@@ -3793,6 +3793,9 @@ int dsi_panel_get_mode(struct dsi_panel *panel,
 #ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
 		mode->isDefault = of_property_read_bool(child_np,
 				"qcom,mdss-dsi-timing-default");
+
+		mode->splash_dms = of_property_read_bool(child_np,
+				"somc,splash-dms-switch-to-this-timing");
 #endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 
 		/*
@@ -4319,12 +4322,14 @@ int dsi_panel_switch(struct dsi_panel *panel)
 		return -EINVAL;
 	}
 
+	pr_info("Sending resolution switch command.\n");
+
 	mutex_lock(&panel->panel_lock);
 
 	rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_TIMING_SWITCH);
 	if (rc)
-		pr_err("[%s] failed to send DSI_CMD_SET_TIMING_SWITCH cmds, rc=%d\n",
-		       panel->name, rc);
+		pr_err("[%s] failed to send DSI_CMD_SET_TIMING_SWITCH cmds,"
+		       " rc=%d\n", panel->name, rc);
 
 	mutex_unlock(&panel->panel_lock);
 	return rc;
