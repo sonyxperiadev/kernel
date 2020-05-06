@@ -1952,7 +1952,11 @@ static int sde_wb_parse_dt(struct device_node *np, struct sde_mdss_cfg *sde_cfg)
 		}
 
 		if (IS_SDE_MAJOR_MINOR_SAME((sde_cfg->hwversion),
-				SDE_HW_VER_170))
+				SDE_HW_VER_170) ||
+		    IS_MSM8996_TARGET(sde_cfg->hwversion) ||
+		    IS_MSM8998_TARGET(sde_cfg->hwversion) ||
+		    IS_SDM630_TARGET(sde_cfg->hwversion) ||
+		    IS_SDM660_TARGET(sde_cfg->hwversion))
 			wb->vbif_idx = VBIF_NRT;
 		else
 			wb->vbif_idx = VBIF_RT;
