@@ -3299,9 +3299,11 @@ static void __dump_venus_debug_registers(struct venus_hfi_device *device)
 	dprintk(VIDC_ERR, "VIDC_CPU_CS_SCIACMDARG0: 0x%x\n", reg);
 }
 
-static void __process_sys_error(struct venus_hfi_device *device)
+static void print_sfr_message(struct venus_hfi_device *device)
 {
 	struct hfi_sfr_struct *vsfr = NULL;
+	u32 vsfr_size = 0;
+	void *p = NULL;
 
 	/* Once SYS_ERROR received from HW, it is safe to halt the AXI.
 	 * With SYS_ERROR, Venus FW may have crashed and HW might be
@@ -3313,13 +3315,11 @@ static void __process_sys_error(struct venus_hfi_device *device)
 
 	vsfr = (struct hfi_sfr_struct *)device->sfr.align_virtual_addr;
 	if (vsfr) {
-		void *p = memchr(vsfr->rg_data, '\0', vsfr->bufSize);
-		/* SFR isn't guaranteed to be NULL terminated
-		 * since SYS_ERROR indicates that Venus is in the
-		 * process of crashing.
-		 */
+		vsfr_size = vsfr->bufSize - sizeof(u32);
+		p = memchr(vsfr->rg_data, '\0', vsfr_size);
+		/* SFR isn't guaranteed to be NULL terminated */
 		if (p == NULL)
-			vsfr->rg_data[vsfr->bufSize - 1] = '\0';
+			vsfr->rg_data[vsfr_size - 1] = '\0';
 
 		dprintk(VIDC_ERR, "SFR Message from FW: %s\n",
 				vsfr->rg_data);
@@ -3433,8 +3433,6 @@ static int __response_handler(struct venus_hfi_device *device)
 	}
 
 	if (device->intr_status & VIDC_WRAPPER_INTR_CLEAR_A2HWD_BMSK) {
-		struct hfi_sfr_struct *vsfr = (struct hfi_sfr_struct *)
-			device->sfr.align_virtual_addr;
 		struct msm_vidc_cb_info info = {
 			.response_type = HAL_SYS_WATCHDOG_TIMEOUT,
 			.response.cmd = {
@@ -3442,9 +3440,7 @@ static int __response_handler(struct venus_hfi_device *device)
 			}
 		};
 
-		if (vsfr)
-			dprintk(VIDC_ERR, "SFR Message from FW: %s\n",
-					vsfr->rg_data);
+		print_sfr_message(device);
 
 		__dump_venus_debug_registers(device);
 		dprintk(VIDC_ERR, "Received watchdog timeout\n");
@@ -3472,7 +3468,7 @@ static int __response_handler(struct venus_hfi_device *device)
 		switch (info->response_type) {
 		case HAL_SYS_ERROR:
 			__dump_venus_debug_registers(device);
-			__process_sys_error(device);
+			print_sfr_message(device);
 			break;
 		case HAL_SYS_RELEASE_RESOURCE_DONE:
 			dprintk(VIDC_DBG, "Received SYS_RELEASE_RESOURCE\n");
@@ -4053,6 +4049,7 @@ static int __protect_cp_mem(struct venus_hfi_device *device)
 	int rc = 0;
 	struct context_bank_info *cb;
 	struct scm_desc desc = {0};
+	bool is_cma_enabled = false;
 
 	if (!device)
 		return -EINVAL;
@@ -4062,9 +4059,11 @@ static int __protect_cp_mem(struct venus_hfi_device *device)
 	memprot.cp_nonpixel_start = 0x0;
 	memprot.cp_nonpixel_size = 0x0;
 
+	is_cma_enabled = device->res->cma_status;
 	list_for_each_entry(cb, &device->res->context_banks, list) {
 		if (!strcmp(cb->name, "venus_ns")) {
 			desc.args[1] = memprot.cp_size =
+				is_cma_enabled ? cb->cma.addr_range.start :
 				cb->addr_range.start;
 			dprintk(VIDC_DBG, "%s memprot.cp_size: %#x\n",
 				__func__, memprot.cp_size);
@@ -4072,8 +4071,10 @@ static int __protect_cp_mem(struct venus_hfi_device *device)
 
 		if (!strcmp(cb->name, "venus_sec_non_pixel")) {
 			desc.args[2] = memprot.cp_nonpixel_start =
+				is_cma_enabled ? cb->cma.addr_range.start :
 				cb->addr_range.start;
 			desc.args[3] = memprot.cp_nonpixel_size =
+				is_cma_enabled ? cb->cma.addr_range.size :
 				cb->addr_range.size;
 			dprintk(VIDC_DBG,
 				"%s memprot.cp_nonpixel_start: %#x size: %#x\n",

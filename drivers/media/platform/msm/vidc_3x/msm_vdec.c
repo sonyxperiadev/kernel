@@ -2023,23 +2023,25 @@ static int try_get_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 		ctrl->val = inst->capability.secure_output2_threshold.max;
 		break;
 	case V4L2_CID_MPEG_VIDEO_H264_ENTROPY_MODE:
-		rc = msm_comm_try_get_prop(inst,
-				HAL_CONFIG_VDEC_ENTROPY, &hprop);
-		if (rc) {
-			dprintk(VIDC_ERR, "%s: Failed getting entropy type: %d",
+		if (inst->fmts[OUTPUT_PORT].fourcc == V4L2_PIX_FMT_H264) {
+			rc = msm_comm_try_get_prop(inst,
+					HAL_CONFIG_VDEC_ENTROPY, &hprop);
+			if (rc) {
+				dprintk(VIDC_ERR, "%s: Failed getting entropy type: %d",
 					__func__, rc);
-			break;
-		}
-		switch (hprop.h264_entropy) {
-		case HAL_H264_ENTROPY_CAVLC:
-			ctrl->val = V4L2_MPEG_VIDEO_H264_ENTROPY_MODE_CAVLC;
-			break;
-		case HAL_H264_ENTROPY_CABAC:
-			ctrl->val = V4L2_MPEG_VIDEO_H264_ENTROPY_MODE_CABAC;
-			break;
-		case HAL_UNUSED_ENTROPY:
-			rc = -ENOTSUPP;
-			break;
+				break;
+			}
+			switch (hprop.h264_entropy) {
+				case HAL_H264_ENTROPY_CAVLC:
+					ctrl->val = V4L2_MPEG_VIDEO_H264_ENTROPY_MODE_CAVLC;
+					break;
+				case HAL_H264_ENTROPY_CABAC:
+					ctrl->val = V4L2_MPEG_VIDEO_H264_ENTROPY_MODE_CABAC;
+					break;
+				case HAL_UNUSED_ENTROPY:
+					rc = -ENOTSUPP;
+					break;
+			}
 		}
 		break;
 	default:
