@@ -1602,7 +1602,10 @@ static int sde_ctl_parse_dt(struct device_node *np,
 
 		of_property_read_string_index(np,
 				ctl_prop[HW_DISP].prop_name, i, &disp_pref);
-		if (disp_pref && !strcmp(disp_pref, "primary"))
+
+		if (disp_pref && (!strcmp(disp_pref, "primary") ||
+				  !strcmp(disp_pref, "primary-nosplit") ||
+				  !strcmp(disp_pref, "primary-split")))
 			set_bit(SDE_CTL_PRIMARY_PREF, &ctl->features);
 		if (i < MAX_SPLIT_DISPLAY_CTL)
 			set_bit(SDE_CTL_SPLIT_DISPLAY, &ctl->features);
@@ -1612,6 +1615,15 @@ static int sde_ctl_parse_dt(struct device_node *np,
 			set_bit(SDE_CTL_SBUF, &ctl->features);
 		if (IS_SDE_CTL_REV_100(sde_cfg->ctl_rev))
 			set_bit(SDE_CTL_ACTIVE_CFG, &ctl->features);
+
+		/* MDP5 split display fixup */
+		if (disp_pref && (!strcmp(disp_pref, "primary-nosplit") ||
+				  !strcmp(disp_pref, "nosplit")))
+			clear_bit(SDE_CTL_SPLIT_DISPLAY, &ctl->features);
+
+		if (disp_pref && (!strcmp(disp_pref, "primary-split") ||
+				  !strcmp(disp_pref, "split")))
+			set_bit(SDE_CTL_SPLIT_DISPLAY, &ctl->features);
 	}
 end:
 	kfree(prop_value);
