@@ -725,7 +725,6 @@ static bool is_debug_batt_id(struct fg_dev *fg)
 }
 
 #define DEBUG_BATT_SOC	67
-#define BATT_MISS_SOC	50
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
 #define	UNKNOWN_BATT_SOC	20
 #endif
