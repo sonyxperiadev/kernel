@@ -41,7 +41,6 @@
 
 #define CEIL(x, y)              (((x) + ((y)-1)) / (y))
 
-#define TICKS_IN_MICRO_SECOND    1000000
 
 struct dsi_ctrl_list_item {
 	struct dsi_ctrl *ctrl;
@@ -828,7 +827,6 @@ static int dsi_ctrl_update_link_freqs(struct dsi_ctrl *dsi_ctrl,
 	int rc = 0;
 	u32 num_of_lanes = 0;
 	u32 bpp;
-	u64 refresh_rate = TICKS_IN_MICRO_SECOND;
 	u64 h_period, v_period, bit_rate, pclk_rate, bit_rate_per_lane,
 	    byte_clk_rate;
 	struct dsi_host_common_cfg *host_cfg = &config->common_config;
