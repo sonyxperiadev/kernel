@@ -105,7 +105,7 @@ static struct clk_branch gpucc_xo = {
 	.clkr.hw.init = &(struct clk_init_data) {
 		.name = "gpucc_xo",
 		.parent_names = (const char*[]) {
-			"cxo_a",
+			"bi_tcxo_ao",
 		},
 		.num_parents = 1,
 		.flags = CLK_ENABLE_HAND_OFF,
