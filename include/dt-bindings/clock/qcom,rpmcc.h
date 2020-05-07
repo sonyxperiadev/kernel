@@ -169,6 +169,8 @@
 #define RPM_SMD_BIMC_GPU_A_CLK                  124
 #define SNOC_WCNSS_A_CLK			125
 #define BIMC_WCNSS_A_CLK			126
+#define CNOC_KEEPALIVE_A_CLK			127
+#define SNOC_KEEPALIVE_A_CLK			128
 
 #define  BIMC_USB_A_CLK				200
 #define  BIMC_USB_CLK				201
