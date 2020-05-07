@@ -62,15 +62,15 @@
 		qcom,sde-ctl-off = <0x2000 0x2200 0x2400
 				     0x2600 0x2800>;
 		qcom,sde-ctl-size = <0x94>;
-		qcom,sde-ctl-display-pref = "primary", "primary", "none",
-					    "none", "none";
+		qcom,sde-ctl-display-pref = "primary", "primary-nosplit",
+					    "primary-split", "none", "none";
 
 		qcom,sde-mixer-off = <0x45000 0x46000 0x47000
-				      0 0 0x4a000>;
+				      0x48000 0x49000 0x4a000>;
 		qcom,sde-mixer-size = <0x2bc>;
-		qcom,sde-mixer-display-pref = "primary", "primary", "none",
+		qcom,sde-mixer-display-pref = "primary", "none", "primary",
 					      "none", "none", "none";
-		qcom,sde-mixer-cwb-pref = "none", "none", "cwb",
+		qcom,sde-mixer-cwb-pref = "none", "cwb", "none",
 					      "none", "none", "cwb";
 
 		qcom,sde-mixer-pair-mask = <2 1 6 0 0 3>;
