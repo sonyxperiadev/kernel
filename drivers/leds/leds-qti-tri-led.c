@@ -406,7 +406,6 @@ static const struct attribute *breath_attrs[] = {
 static int qpnp_tri_led_register(struct qpnp_tri_led_chip *chip)
 {
 	struct qpnp_led_dev *led;
-	enum led_brightness brightness = LED_OFF;
 	int rc, i, j;
 
 	for (i = 0; i < chip->num_leds; i++) {
