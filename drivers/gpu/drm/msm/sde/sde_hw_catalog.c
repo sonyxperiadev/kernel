@@ -134,6 +134,7 @@
 #define DEFAULT_AMORTIZABLE_THRESHOLD		25
 #define DEFAULT_MNOC_PORTS			2
 #define DEFAULT_AXI_BUS_WIDTH			32
+#define DEFAULT_PERF_DEFAULT_MODE		0 // SDE_PERF_MODE_NORMAL
 #define DEFAULT_CPU_MASK			0
 #define DEFAULT_CPU_DMA_LATENCY			PM_QOS_DEFAULT_VALUE
 
@@ -212,6 +213,7 @@ enum {
 	PERF_SAFE_LUT_MACROTILE_QSEED,
 	PERF_NUM_MNOC_PORTS,
 	PERF_AXI_BUS_WIDTH,
+	PERF_DEFAULT_MODE,
 	PERF_PROP_MAX,
 };
 
@@ -534,6 +536,8 @@ static struct sde_prop_type sde_perf_prop[] = {
 	{PERF_NUM_MNOC_PORTS, "qcom,sde-num-mnoc-ports",
 			false, PROP_TYPE_U32},
 	{PERF_AXI_BUS_WIDTH, "qcom,sde-axi-bus-width",
+			false, PROP_TYPE_U32},
+	{PERF_DEFAULT_MODE, "qcom,sde-perf-default-mode",
 			false, PROP_TYPE_U32},
 };
 
@@ -3529,6 +3533,11 @@ static int sde_perf_parse_dt(struct device_node *np, struct sde_mdss_cfg *cfg)
 			PROP_VALUE_ACCESS(prop_value,
 				PERF_AXI_BUS_WIDTH, 0) :
 			DEFAULT_AXI_BUS_WIDTH;
+	cfg->perf.default_perf_mode =
+			prop_exists[PERF_DEFAULT_MODE] ?
+			PROP_VALUE_ACCESS(prop_value,
+				PERF_DEFAULT_MODE, 0) :
+			DEFAULT_PERF_DEFAULT_MODE;
 
 	if (prop_exists[PERF_DANGER_LUT] && prop_count[PERF_DANGER_LUT] <=
 			SDE_QOS_LUT_USAGE_MAX) {
