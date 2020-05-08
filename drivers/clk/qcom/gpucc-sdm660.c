@@ -276,7 +276,7 @@ static struct clk_branch gpucc_cxo_clk = {
 		.hw.init = &(struct clk_init_data){
 			.name = "gpucc_cxo_clk",
 			.parent_names = (const char *[]) {
-				"cxo_a",
+				"bi_tcxo_ao",
 			},
 			.num_parents = 1,
 			.ops = &clk_branch2_ops,

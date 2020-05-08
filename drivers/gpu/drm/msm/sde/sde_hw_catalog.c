@@ -134,6 +134,7 @@
 #define DEFAULT_AMORTIZABLE_THRESHOLD		25
 #define DEFAULT_MNOC_PORTS			2
 #define DEFAULT_AXI_BUS_WIDTH			32
+#define DEFAULT_PERF_DEFAULT_MODE		0 // SDE_PERF_MODE_NORMAL
 #define DEFAULT_CPU_MASK			0
 #define DEFAULT_CPU_DMA_LATENCY			PM_QOS_DEFAULT_VALUE
 
@@ -212,6 +213,7 @@ enum {
 	PERF_SAFE_LUT_MACROTILE_QSEED,
 	PERF_NUM_MNOC_PORTS,
 	PERF_AXI_BUS_WIDTH,
+	PERF_DEFAULT_MODE,
 	PERF_PROP_MAX,
 };
 
@@ -534,6 +536,8 @@ static struct sde_prop_type sde_perf_prop[] = {
 	{PERF_NUM_MNOC_PORTS, "qcom,sde-num-mnoc-ports",
 			false, PROP_TYPE_U32},
 	{PERF_AXI_BUS_WIDTH, "qcom,sde-axi-bus-width",
+			false, PROP_TYPE_U32},
+	{PERF_DEFAULT_MODE, "qcom,sde-perf-default-mode",
 			false, PROP_TYPE_U32},
 };
 
@@ -1602,7 +1606,10 @@ static int sde_ctl_parse_dt(struct device_node *np,
 
 		of_property_read_string_index(np,
 				ctl_prop[HW_DISP].prop_name, i, &disp_pref);
-		if (disp_pref && !strcmp(disp_pref, "primary"))
+
+		if (disp_pref && (!strcmp(disp_pref, "primary") ||
+				  !strcmp(disp_pref, "primary-nosplit") ||
+				  !strcmp(disp_pref, "primary-split")))
 			set_bit(SDE_CTL_PRIMARY_PREF, &ctl->features);
 		if (i < MAX_SPLIT_DISPLAY_CTL)
 			set_bit(SDE_CTL_SPLIT_DISPLAY, &ctl->features);
@@ -1612,6 +1619,15 @@ static int sde_ctl_parse_dt(struct device_node *np,
 			set_bit(SDE_CTL_SBUF, &ctl->features);
 		if (IS_SDE_CTL_REV_100(sde_cfg->ctl_rev))
 			set_bit(SDE_CTL_ACTIVE_CFG, &ctl->features);
+
+		/* MDP5 split display fixup */
+		if (disp_pref && (!strcmp(disp_pref, "primary-nosplit") ||
+				  !strcmp(disp_pref, "nosplit")))
+			clear_bit(SDE_CTL_SPLIT_DISPLAY, &ctl->features);
+
+		if (disp_pref && (!strcmp(disp_pref, "primary-split") ||
+				  !strcmp(disp_pref, "split")))
+			set_bit(SDE_CTL_SPLIT_DISPLAY, &ctl->features);
 	}
 end:
 	kfree(prop_value);
@@ -1940,7 +1956,11 @@ static int sde_wb_parse_dt(struct device_node *np, struct sde_mdss_cfg *sde_cfg)
 		}
 
 		if (IS_SDE_MAJOR_MINOR_SAME((sde_cfg->hwversion),
-				SDE_HW_VER_170))
+				SDE_HW_VER_170) ||
+		    IS_MSM8996_TARGET(sde_cfg->hwversion) ||
+		    IS_MSM8998_TARGET(sde_cfg->hwversion) ||
+		    IS_SDM630_TARGET(sde_cfg->hwversion) ||
+		    IS_SDM660_TARGET(sde_cfg->hwversion))
 			wb->vbif_idx = VBIF_NRT;
 		else
 			wb->vbif_idx = VBIF_RT;
@@ -3513,6 +3533,11 @@ static int sde_perf_parse_dt(struct device_node *np, struct sde_mdss_cfg *cfg)
 			PROP_VALUE_ACCESS(prop_value,
 				PERF_AXI_BUS_WIDTH, 0) :
 			DEFAULT_AXI_BUS_WIDTH;
+	cfg->perf.default_perf_mode =
+			prop_exists[PERF_DEFAULT_MODE] ?
+			PROP_VALUE_ACCESS(prop_value,
+				PERF_DEFAULT_MODE, 0) :
+			DEFAULT_PERF_DEFAULT_MODE;
 
 	if (prop_exists[PERF_DANGER_LUT] && prop_count[PERF_DANGER_LUT] <=
 			SDE_QOS_LUT_USAGE_MAX) {

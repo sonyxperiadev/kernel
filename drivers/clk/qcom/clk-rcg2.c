@@ -415,6 +415,11 @@ static bool clk_rcg2_current_config(struct clk_rcg2 *rcg,
 	u32 cfg, mask, new_cfg;
 	int index;
 
+	if (of_machine_is_compatible("qcom,msm8956") ||
+	    of_machine_is_compatible("qcom,msm8996") ||
+	    of_machine_is_compatible("qcom,msm8998"))
+		return false;
+
 	if (rcg->mnd_width) {
 		mask = BIT(rcg->mnd_width) - 1;
 		regmap_read(rcg->clkr.regmap, rcg->cmd_rcgr + M_REG, &cfg);

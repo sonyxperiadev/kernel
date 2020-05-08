@@ -724,7 +724,7 @@ static struct dsi_pll_vco_clk dsi_pll0_vco_clk = {
 	.lpfr_lut = lpfr_lut_struct,
 	.hw.init = &(struct clk_init_data){
 		.name = "dsi_pll0_vco_clk",
-		.parent_names = (const char *[]){ "xo" },
+		.parent_names = (const char *[]){ "bi_tcxo" },
 		.num_parents = 1,
 		.ops = &clk_ops_dsi_vco,
 	},
@@ -835,7 +835,7 @@ static struct dsi_pll_vco_clk dsi_pll1_vco_clk = {
 	.lpfr_lut = lpfr_lut_struct,
 	.hw.init = &(struct clk_init_data){
 		.name = "dsi_pll1_vco_clk",
-		.parent_names = (const char *[]){ "xo" },
+		.parent_names = (const char *[]){ "bi_tcxo" },
 		.num_parents = 1,
 		.ops = &clk_ops_dsi_vco,
 	},

@@ -41,6 +41,7 @@ enum sde_perf_mode {
 	SDE_PERF_MODE_NORMAL,
 	SDE_PERF_MODE_MINIMUM,
 	SDE_PERF_MODE_FIXED,
+	SDE_PERF_MODE_MAXIMUM,
 	SDE_PERF_MODE_MAX
 };
 
@@ -128,7 +129,8 @@ static void _sde_core_perf_calc_crtc(struct sde_kms *kms,
 	perf->core_clk_rate =
 			sde_crtc_get_property(sde_cstate, CRTC_PROP_CORE_CLK);
 
-	if (!sde_cstate->bw_control) {
+	if (!sde_cstate->bw_control ||
+	    kms->perf.perf_tune.mode == SDE_PERF_MODE_MAXIMUM) {
 		for (i = 0; i < SDE_POWER_HANDLE_DBUS_ID_MAX; i++) {
 			perf->bw_ctl[i] = kms->catalog->perf.max_bw_high *
 					1000ULL;
@@ -663,7 +665,8 @@ static ssize_t _sde_core_perf_mode_write(struct file *file,
 
 	if (perf_mode == SDE_PERF_MODE_FIXED) {
 		DRM_INFO("fix performance mode\n");
-	} else if (perf_mode == SDE_PERF_MODE_MINIMUM) {
+	} else if (perf_mode == SDE_PERF_MODE_MINIMUM ||
+		   perf_mode == SDE_PERF_MODE_MAXIMUM) {
 		/* run the driver with max clk and BW vote */
 		perf->perf_tune.min_core_clk = perf->max_core_clk_rate;
 		perf->perf_tune.min_bus_vote =
@@ -808,6 +811,8 @@ int sde_core_perf_init(struct sde_core_perf *perf,
 		struct sde_power_client *pclient,
 		char *clk_name)
 {
+	struct sde_perf_cfg *cfg = &catalog->perf;
+
 	if (!perf || !dev || !catalog || !phandle || !pclient || !clk_name) {
 		SDE_ERROR("invalid parameters\n");
 		return -EINVAL;
@@ -835,6 +840,14 @@ int sde_core_perf_init(struct sde_core_perf *perf,
 	if (!perf->max_core_clk_rate) {
 		SDE_DEBUG("optional max core clk rate, use default\n");
 		perf->max_core_clk_rate = SDE_PERF_DEFAULT_MAX_CORE_CLK_RATE;
+	}
+
+	if (cfg->default_perf_mode < SDE_PERF_MODE_MAX &&
+	    cfg->default_perf_mode >= 0) {
+		perf->perf_tune.mode = cfg->default_perf_mode;
+		SDE_DEBUG("Set perf mode %d\n", cfg->default_perf_mode);
+	} else {
+		SDE_ERROR("Invalid default SDE perf mode. Ignoring setting\n");
 	}
 
 	return 0;
