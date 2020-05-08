@@ -251,7 +251,7 @@ static const struct parent_map disp_cc_parent_map_0[] = {
 };
 
 static const char * const disp_cc_parent_names_0[] = {
-	"xo",
+	"bi_tcxo",
 	"dsi0_phy_pll_out_byteclk",
 	"dsi1_phy_pll_out_byteclk",
 };
@@ -1248,6 +1248,7 @@ static struct clk_rcg2 esc0_clk_src = {
 	.cmd_rcgr = 0x02160,
 	.hid_width = 5,
 	.parent_map = disp_cc_parent_map_0,
+	.freq_tbl = ftbl_esc_clk_src,
 	.clkr.hw.init = &(struct clk_init_data) {
 		.name = "esc0_clk_src",
 		.parent_names = disp_cc_parent_names_0,
@@ -1261,6 +1262,7 @@ static struct clk_rcg2 esc1_clk_src = {
 	.cmd_rcgr = 0x02180,
 	.hid_width = 5,
 	.parent_map = disp_cc_parent_map_0,
+	.freq_tbl = ftbl_esc_clk_src,
 	.clkr.hw.init = &(struct clk_init_data) {
 		.name = "esc1_clk_src",
 		.parent_names = disp_cc_parent_names_0,
