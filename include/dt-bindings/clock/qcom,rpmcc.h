@@ -40,16 +40,16 @@
 #define RPM_SFPB_A_CLK				21
 
 /* msm8916 and msm8996 */
-#define RPM_SMD_XO_CLK_SRC			1
-#define RPM_SMD_XO_A_CLK_SRC			2
-#define RPM_SMD_PNOC_CLK			3
-#define RPM_SMD_PNOC_A_CLK			4
-#define RPM_SMD_SNOC_CLK			5
-#define RPM_SMD_SNOC_A_CLK			6
-#define RPM_SMD_BIMC_CLK			7
-#define RPM_SMD_BIMC_A_CLK			8
-#define RPM_SMD_QDSS_CLK			9
-#define RPM_SMD_QDSS_A_CLK			10
+#define RPM_SMD_XO_CLK_SRC			0
+#define RPM_SMD_XO_A_CLK_SRC			1
+#define RPM_SMD_PNOC_CLK			2
+#define RPM_SMD_PNOC_A_CLK			3
+#define RPM_SMD_SNOC_CLK			4
+#define RPM_SMD_SNOC_A_CLK			5
+#define RPM_SMD_BIMC_CLK			6
+#define RPM_SMD_BIMC_A_CLK			7
+#define RPM_SMD_QDSS_CLK			8
+#define RPM_SMD_QDSS_A_CLK			9
 #define RPM_SMD_BB_CLK1				11
 #define RPM_SMD_BB_CLK1_A			12
 #define RPM_SMD_BB_CLK1_PIN			13
