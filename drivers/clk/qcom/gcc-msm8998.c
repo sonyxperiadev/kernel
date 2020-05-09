@@ -1430,7 +1430,7 @@ static struct clk_gate2 gpll0_out_msscc = {
 		.hw.init = &(struct clk_init_data) {
 			.name = "gpll0_out_msscc",
 			.parent_names = (const char *[]){
-				"gpll0",
+				"gpll0_ao",
 			},
 			.num_parents = 1,
 			.flags = CLK_ENABLE_HAND_OFF, // | CLK_SET_RATE_PARENT,
