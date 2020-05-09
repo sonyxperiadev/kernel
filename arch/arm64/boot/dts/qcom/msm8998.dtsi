@@ -465,7 +465,7 @@
 		redistributor-stride = <0x0 0x20000>;
 		interrupts = <GIC_PPI 9 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-parent = <&intc>;
-		arm,qgicv3-plat-msm8996-quirks;
+		arm,qgicv3-plat-sdm660-quirks;
 
 		gic-its@0x17a20000{
 			compatible = "arm,gic-v3-its";
@@ -479,7 +479,7 @@
 		reg = <0x7781b8 0x1000>, /* MSM_RPM_MPM_BASE 4K */
 		    <0x17911008 0x4>;   /* MSM_APCS_GCC_BASE 4K */
 		reg-names = "vmpm", "ipc";
-		interrupts = <GIC_SPI 171 IRQ_TYPE_EDGE_RISING>;
+		interrupts-extended = <&wakegic GIC_SPI 171 IRQ_TYPE_EDGE_RISING>;
 		qcom,num-mpm-irqs = <96>;
 		interrupt-controller;
 		interrupt-parent = <&intc>;
