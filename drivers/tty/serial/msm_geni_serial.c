@@ -1284,11 +1284,6 @@ static void stop_rx_sequencer(struct uart_port *uport)
 						SE_GENI_STATUS);
 			geni_s_irq_status = geni_read_reg_nolog(uport->membase,
 						SE_GENI_S_IRQ_STATUS);
-			IPC_LOG_MSG(port->console_log,
-				"%s Cancel fail s_irq_status: 0x%x\n", __func__,
-				geni_s_irq_status);
-			geni_se_dump_dbg_regs(&port->serial_rsc, uport->membase,
-					port->console_log);
 		}
 	}
 
