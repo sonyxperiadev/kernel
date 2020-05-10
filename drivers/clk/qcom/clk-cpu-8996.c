@@ -141,7 +141,7 @@ static struct clk_alpha_pll perfcl_pll = {
 	.flags = SUPPORTS_DYNAMIC_UPDATE | SUPPORTS_FSM_MODE,
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "perfcl_pll",
-		.parent_names = (const char *[]){ "xo" },
+		.parent_names = (const char *[]){ "bi_tcxo" },
 		.num_parents = 1,
 		.ops = &clk_alpha_pll_huayra_ops,
 		VDD_DIG_FMAX_MAP1(LOW, 3000000000),
@@ -154,7 +154,7 @@ static struct clk_alpha_pll pwrcl_pll = {
 	.flags = SUPPORTS_DYNAMIC_UPDATE | SUPPORTS_FSM_MODE,
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "pwrcl_pll",
-		.parent_names = (const char *[]){ "xo" },
+		.parent_names = (const char *[]){ "bi_tcxo" },
 		.num_parents = 1,
 		.ops = &clk_alpha_pll_huayra_ops,
 		VDD_DIG_FMAX_MAP1(LOW, 3000000000),
@@ -187,7 +187,7 @@ static struct clk_alpha_pll perfcl_alt_pll = {
 	.flags = SUPPORTS_OFFLINE_REQ | SUPPORTS_FSM_MODE,
 	.clkr.hw.init = &(struct clk_init_data) {
 		.name = "perfcl_alt_pll",
-		.parent_names = (const char *[]){ "xo" },
+		.parent_names = (const char *[]){ "bi_tcxo" },
 		.num_parents = 1,
 		.ops = &clk_alpha_pll_hwfsm_ops,
 	},
@@ -201,7 +201,7 @@ static struct clk_alpha_pll pwrcl_alt_pll = {
 	.flags = SUPPORTS_OFFLINE_REQ | SUPPORTS_FSM_MODE,
 	.clkr.hw.init = &(struct clk_init_data) {
 		.name = "pwrcl_alt_pll",
-		.parent_names = (const char *[]){ "xo" },
+		.parent_names = (const char *[]){ "bi_tcxo" },
 		.num_parents = 1,
 		.ops = &clk_alpha_pll_hwfsm_ops,
 	},
@@ -477,7 +477,7 @@ static struct clk_cpu_8996_mux pwrcl_smux = {
 	.clkr.hw.init = &(struct clk_init_data) {
 		.name = "pwrcl_smux",
 		.parent_names = (const char *[]){
-			"xo",
+			"bi_tcxo",
 			"pwrcl_pll_main",
 		},
 		.num_parents = 2,
@@ -493,7 +493,7 @@ static struct clk_cpu_8996_mux perfcl_smux = {
 	.clkr.hw.init = &(struct clk_init_data) {
 		.name = "perfcl_smux",
 		.parent_names = (const char *[]){
-			"xo",
+			"bi_tcxo",
 			"perfcl_pll_main",
 		},
 		.num_parents = 2,
@@ -532,7 +532,7 @@ static struct clk_init_data cpu_8996_clk_init_data[NUM_MAX_MUX] = {
 	[CBF_MUX] = {
 		.name = "cbf_mux",
 		.parent_names = (const char *[]){
-			"xo",
+			"bi_tcxo",
 			"cbf_pll",
 			"cbf_pll_main",
 		},
@@ -583,7 +583,7 @@ static struct clk_alpha_pll cbf_pll = {
 	.flags = SUPPORTS_DYNAMIC_UPDATE | SUPPORTS_FSM_MODE,
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "cbf_pll",
-		.parent_names = (const char *[]){ "xo" },
+		.parent_names = (const char *[]){ "bi_tcxo" },
 		.num_parents = 1,
 		.ops = &clk_alpha_pll_huayra_ops,
 		VDD_DIG_FMAX_MAP1(LOW, 3000000000),
