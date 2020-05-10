@@ -2637,7 +2637,8 @@ static int adreno_getproperty(struct kgsl_device *device,
 				break;
 			}
 
-			if (!ADRENO_FEATURE(adreno_dev, ADRENO_GPMU)) {
+			if (!ADRENO_FEATURE(adreno_dev, ADRENO_GPMU) &&
+			    !ADRENO_FEATURE(adreno_dev, ADRENO_A5XX_GPMU)) {
 				status = -EOPNOTSUPP;
 				break;
 			}

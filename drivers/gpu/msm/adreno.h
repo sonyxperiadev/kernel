@@ -131,6 +131,8 @@
  */
 #define ADRENO_ACD BIT(17)
 
+/* Adreno 5XX "simple" GPMU */
+#define ADRENO_A5XX_GPMU BIT(29)
 /* The MMU carveout size is limited to 8MB */
 #define ADRENO_MMU_GLOBAL_MEMSZ_8M BIT(30)
 
