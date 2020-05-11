@@ -783,7 +783,9 @@
 
 			qcom,spss_glink_ssr {
 				qcom,glink-channels = "glink_ssr";
-				qcom,notify-edges = <&glink_modem>;
+				qcom,notify-edges = <&glink_modem>,
+						    <&glink_adsp>,
+						    <&glink_slpi>;
 			};
 		};
 
