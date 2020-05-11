@@ -70,7 +70,6 @@ static const struct of_device_id dsi_display_dt_match[] = {
 };
 
 static struct dsi_display *primary_display;
-static struct dsi_display *secondary_display;
 
 struct dsi_display *dsi_display_get_main_display(void)
 {

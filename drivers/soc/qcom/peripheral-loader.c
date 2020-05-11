@@ -1655,7 +1655,9 @@ static int __init msm_pil_init(void)
 	struct device_node *np;
 	struct resource res;
 	int i;
+#ifndef TARGET_NO_MINIDUMP_SUPPORT
 	size_t size;
+#endif
 
 	np = of_find_compatible_node(NULL, NULL, "qcom,msm-imem-pil");
 	if (!np) {
