@@ -39,10 +39,12 @@
 		clocks = <&clock_gcc GCC_QUPV3_WRAP0_S6_CLK>,
 			<&clock_gcc GCC_QUPV3_WRAP_0_M_AHB_CLK>,
 			<&clock_gcc GCC_QUPV3_WRAP_0_S_AHB_CLK>;
-		pinctrl-names = "default", "sleep";
-		pinctrl-0 = <&qupv3_se6_ctsrx>, <&qupv3_se6_rts>,
-							<&qupv3_se6_tx> ;
+		pinctrl-names = "default", "active", "sleep";
+		pinctrl-0 = <&qupv3_se6_default_ctsrtsrx>,
+			    <&qupv3_se6_default_tx>;
 		pinctrl-1 = <&qupv3_se6_ctsrx>, <&qupv3_se6_rts>,
+							<&qupv3_se6_tx> ;
+		pinctrl-2 = <&qupv3_se6_ctsrx>, <&qupv3_se6_rts>,
 							<&qupv3_se6_tx> ;
 		interrupts-extended = <&pdc GIC_SPI 607 0>,
 				<&tlmm 48 0>;
