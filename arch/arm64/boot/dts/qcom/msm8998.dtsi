@@ -1592,7 +1592,6 @@
 		compatible = "qcom,msm-adsprpc-mem-region";
 		memory-region = <&adsp_mem>;
 		qcom,vmid-ssc-q6 = <38>;
-		restrict-access;
 	};
 
 	qcom,msm_fastrpc {
@@ -1601,6 +1600,7 @@
 		qcom,rpc-latency-us = <611>;
 		qcom,fastrpc-adsp-audio-pdr;
 		qcom,fastrpc-adsp-sensors-pdr;
+		qcom,fastrpc-legacy-remote-heap;
 
 		qcom,msm_fastrpc_cpz_cb1 {
 			compatible = "qcom,msm-fastrpc-compute-cb";
