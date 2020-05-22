@@ -42,7 +42,6 @@
 	qcom,mdss-dsi-display-timings {
 		1080p60 {
 			qcom,esd-check-enabled;
-			somc,splash-dms-switch-to-this-timing;
 			qcom,mdss-dsi-panel-status-command = [06 01 00 01 05 00 01 0A];
 			qcom,mdss-dsi-panel-status-command-state = "dsi_hs_mode";
 			qcom,mdss-dsi-panel-status-check-mode = "reg_read";
@@ -74,11 +73,28 @@
 			qcom,display-topology = <2 2 2>;
 			qcom,default-topology-index = <0>;
 		};
-
+		/delete-node/ 4k60;
 	};
 };
 
-/* Enable continuous splash on the slave DSI ctrl, too */
-&sde_dsi1 {
-	qcom,cont-splash-enabled;
+&sde_dsi0 {
+	/delete-property/ qcom,cont-splash-enabled;
+};
+
+&mdss_mdp {
+	/delete-property/ compatible;
+	/delete-property/ reg;
+	/delete-property/ reg-names;
+};
+
+&mdss_dsi {
+	/delete-property/ compatible;
+};
+
+&mdss_dsi0 {
+	/delete-property/ label;
+};
+
+&mdss_dsi1 {
+	/delete-property/ label;
 };
