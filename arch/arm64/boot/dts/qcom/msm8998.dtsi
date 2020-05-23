@@ -1323,14 +1323,12 @@
 	ipa_hw: qcom,ipa@01e00000 {
 		compatible = "qcom,ipa";
 		reg = <0x01e00000 0x34000>,
-			<0x01e84000 0x31fff>,
 			<0x01e04000 0x2c000>;
-		reg-names = "ipa-base", "bam-base", "gsi-base";
+		reg-names = "ipa-base", "gsi-base";
 		interrupts =
 			<0 333 0>,
-			<0 432 0>,
 			<0 432 0>;
-		interrupt-names = "ipa-irq", "bam-irq", "gsi-irq";
+		interrupt-names = "ipa-irq", "gsi-irq";
 		status = "ok";
 		qcom,ipa-hw-ver = <11>; /* IPA core version = IPAv3.1 */
 		qcom,ipa-hw-mode = <0>; /* IPA hw type = Normal */
