@@ -392,6 +392,7 @@
 		qcom,resource-name = "ldoa";
 		qcom,resource-id = <18>;
 		qcom,regulator-type = <0>;
+		qcom,regulator-hw-type = "pmic4-ldo";
 		status = "okay";
 		pm660_l18: regulator-l18 {
 			compatible = "qcom,rpm-smd-regulator";
