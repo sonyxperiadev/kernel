@@ -1980,6 +1980,8 @@ int __init rpm_smd_regulator_driver_init(void)
 
 	if (initialized)
 		return 0;
+	else
+		initialized = true;
 
 	/* Store parameter string names as integers */
 	for (i = 0; i < RPM_REGULATOR_PARAM_MAX; i++)
@@ -1989,12 +1991,7 @@ int __init rpm_smd_regulator_driver_init(void)
 	if (rc)
 		return rc;
 
-	rc = platform_driver_register(&rpm_vreg_resource_driver);
-	if (rc)
-		return rc;
-
-	initialized = true;
-	return 0;
+	return platform_driver_register(&rpm_vreg_resource_driver);
 }
 EXPORT_SYMBOL(rpm_smd_regulator_driver_init);
 
