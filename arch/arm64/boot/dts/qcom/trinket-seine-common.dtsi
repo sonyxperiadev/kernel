@@ -12,6 +12,41 @@
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/input.h>
 
+&reserved_memory {
+	debug_region: debug_region@ffb00000 {
+		compatible = "removed-dma-pool", "qcom,debug_memory";
+		no-map;
+		reg = <0 0xffb00000 0 0xc0000>;
+		label = "debug_mem";
+	};
+
+	last_log_region: last_log_region@ffbc0000 {
+		compatible = "removed-dma-pool", "qcom,last_log_memory";
+		no-map;
+		reg = <0 0xffbc0000 0 0x80000>;
+		label = "last_log";
+		phandle = "log";
+	};
+
+	ramoops: ramoops@ffc00000 {
+		compatible = "removed-dma-pool", "ramoops";
+		no-map;
+		reg = <0 0xffc40000 0 0x000c0000>;
+		record-size = <0x1000>;
+		console-size = <0x40000>;
+		ftrace-size = <0x0>;
+		msg-size = <0x20000 0x20000>;
+		ecc-size = <16>;
+	};
+
+	cmdline_region: cmdline_region@ffd00000 {
+		compatible = "removed-dma-pool", "cmdline_region";
+		no-map;
+		reg = <0 0xffd40000 0 0x1000>;
+		label = "cmdline_region";
+	};
+};
+
 &soc {
 	restart-reason {
 		none {
