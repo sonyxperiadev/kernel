@@ -204,6 +204,7 @@
 		qcom,resource-name = "rwlc";
 		qcom,resource-id = <0>;
 		qcom,regulator-type = <0>;
+		qcom,regulator-hw-type = "pmic4-ldo";
 		status = "disabled";
 
 		regulator-l9 {
@@ -219,6 +220,7 @@
 		qcom,resource-name = "rwlm";
 		qcom,resource-id = <0>;
 		qcom,regulator-type = <0>;
+		qcom,regulator-hw-type = "pmic4-ldo";
 		status = "disabled";
 
 		regulator-l10 {
