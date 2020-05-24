@@ -433,8 +433,6 @@
 		qcom,subsys-name = "apr_adsp";
 
 		q6core: qcom,q6core-audio {
-			#address-cells = <1>;
-			#size-cells = <1>;
 			compatible = "qcom,q6core-audio";
 		};
 
