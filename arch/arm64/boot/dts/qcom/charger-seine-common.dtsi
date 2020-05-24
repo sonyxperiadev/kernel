@@ -11,6 +11,13 @@
  */
 
 &pmi632_charger {
+	/delete-property/ qcom,battery-data;
+	/delete-property/ qcom,suspend-input-on-debug-batt;
+	/delete-property/ qcom,sw-jeita-enable;
+	/delete-property/ qcom,step-charging-enable;
+	/delete-property/ qcom,hw-die-temp-mitigation;
+	/delete-property/ qcom,hw-connector-mitigation;
+
 	qcom,sec-charger-config = <0>;
 	qcom,auto-recharge-soc = <95>;
 	qcom,hvdcp-disable;
