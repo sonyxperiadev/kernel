@@ -44,5 +44,4 @@
 };
 
 #include "trinket-seine-display.dtsi"
-#include "charger-seine-common.dtsi"
 #include "charger-seine-pdx201.dtsi"

@@ -426,13 +426,51 @@
 		pinctrl-1 = <&dmic23_clk_sleep &dmic23_data_sleep>;
 	};
 
+	nfc,pm-ops {
+		compatible = "sony,pn553-pm-ops";
+	};
 
+	gpio_keys {
+		pinctrl-0 = <&sm_gpio_47>;
+		vol_dn {
+			label = "volume_down";
+			gpios = <&tlmm 47 GPIO_ACTIVE_LOW>;
+			linux,input-type = <1>;
+			linux,code = <KEY_VOLUMEDOWN>;
+			gpio-key,wakeup;
+			debounce-interval = <15>;
+			linux,can-disable;
+		};
+
+		vol_up {
+			status = "disabled";
+		};
+	};
+
+	somc_water_detection {
+		compatible = "somc,water-detection";
+		dvdt_enable_gpio = <&tlmm 129 0>;
+		dvdt_wrt_det_and = <&tlmm 123 0>;
+		dvdt_wrt_det_or = <&tlmm 124 0>;
+	};
 };
 
 &qupv3_se1_i2c {
 	pinctrl-0 = <&sm_gpio_4 &sm_gpio_5>;
 	pinctrl-1 = <&sm_gpio_4_suspend &sm_gpio_5_suspend>;
 	status = "okay";
+
+	/delete-node/ nq@28;
+	nfc@28 {
+		compatible = "nxp,pn553";
+		reg = <0x28>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <85 0x1>;
+		nxp,irq_gpio = <&tlmm 85 0x00>;
+		nxp,dwld_en = <&tlmm 84 0x00>;
+		nxp,ven = <&tlmm 83 0x01>;
+		nxp,ese-pwr = <&tlmm 24 0x00>;
+	};
 };
 
 &sm6150_snd {
@@ -639,9 +677,38 @@
 };
 
 &qupv3_se2_i2c {
-		pinctrl-0 = <&sm_gpio_6 &sm_gpio_7>;
-		pinctrl-1 = <&sm_gpio_6_suspend &sm_gpio_7_suspend>;
-		status = "okay";
+	pinctrl-0 = <&sm_gpio_6 &sm_gpio_7>;
+	pinctrl-1 = <&sm_gpio_6_suspend &sm_gpio_7_suspend>;
+	status = "okay";
+
+	touchscreen@48 {
+		compatible = "sec,sec_ts";
+		reg = <0x48>;
+		sec,irq_gpio = <&tlmm 88 0x2008>;
+		sec,irq_type = <8200>;
+		sec,mis_cal_check = <1>;
+		sec,regulator_dvdd = "tsp_io";
+		sec,regulator_avdd = "tsp_avdd";
+		sec,regulator_boot_on;
+		sec,i2c-burstmax = <32>;
+		sec,project_name = "PJT", "MODEL";
+		sec,max_coords = <1080 2520>;   /* x y */
+		sec,always_lpmode = <0>;
+		sec,bringup = <0>;
+		sec,firmware_name = "touch_module_id_0x82.img";
+
+		/* feature */
+		sec,watchdog_supported = <1>;
+		sec,watchdog_delay_ms = <10000>;
+		sec,side_touch_supported = <0>;
+		sec,glove_mode_supported = <0>;
+		sec,cover_mode_supported = <0>;
+		sec,aod_mode_supported = <0>;
+		sec,sod_mode_supported = <0>;
+		sec,stamina_mode_supported = <1>;
+		sec,rejection_area_portrait = <25 150 60 200>;
+		sec,rejection_area_landscape = <150 20 200 60>;
+	};
 };
 
 &tlmm {
@@ -2120,32 +2187,6 @@
 	};
 };
 
-&soc {
-	gpio_keys {
-		pinctrl-0 = <&sm_gpio_47>;
-		vol_dn {
-			label = "volume_down";
-			gpios = <&tlmm 47 GPIO_ACTIVE_LOW>;
-			linux,input-type = <1>;
-			linux,code = <KEY_VOLUMEDOWN>;
-			gpio-key,wakeup;
-			debounce-interval = <15>;
-			linux,can-disable;
-		};
-
-		vol_up {
-			status = "disabled";
-		};
-	};
-
-	somc_water_detection {
-		compatible = "somc,water-detection";
-		dvdt_enable_gpio = <&tlmm 129 0>;
-		dvdt_wrt_det_and = <&tlmm 123 0>;
-		dvdt_wrt_det_or = <&tlmm 124 0>;
-	};
-};
-
 &sdhc_2 {
 	cd-gpios = <&tlmm 98 GPIO_ACTIVE_HIGH>;
 	uim2-gpios = <&tlmm 101 GPIO_ACTIVE_HIGH>;
@@ -2207,7 +2248,58 @@
 	qcom,sync-channel-ids = <1 2 3>;
 };
 
-#include "trinket-seine-touch.dtsi"
-#include "charger-seine-common.dtsi"
-#include "trinket-seine-nfc_pn557.dtsi"
-#include "trinket-seine-usb.dtsi"
+&pmi632_charger {
+	qcom,sec-charger-config = <0>;
+	qcom,auto-recharge-soc = <95>;
+	qcom,hvdcp-disable;
+	qcom,float-option = <1>;
+	qcom,otg-cl-ua = <1000000>;
+	somc,jeita-hard-thresholds = <0x5314 0x181d>;
+};
+
+&pmi632_qg {
+	io-channels = <&pmi632_vadc ADC_BAT_THERM_PU2>,
+		      <&pmi632_vadc ADC_BAT_ID_PU2>,
+		      <&pmi632_vadc ADC_GPIO2_PU2>;
+	io-channel-names = "batt-therm",
+			   "batt-id",
+			   "aux-temp";
+
+	qcom,hold-soc-while-full;
+	qcom,linearize-soc;
+	qcom,qg-use-s7-ocv;
+	qcom,vbatt-cutoff-mv = <3200>;
+	qcom,vbatt-empty-mv = <3000>;
+	qcom,vbatt-empty-cold-mv = <3000>;
+	/delete-property/ qcom,cl-disable;
+	qcom,cl-feedback-on;
+	qcom,cl-min-start-soc = <0>;
+	qcom,cl-max-start-soc = <40>;
+	qcom,cl-min-temp = <150>;
+	qcom,cl-max-temp = <500>;
+};
+
+&usb0 {
+	dwc3@4e00000 {
+		/delete-property/ snps,has-lpm-erratum;
+		usb-phy = <&qusb_phy0>, <&usb_nop_phy>;
+		maximum-speed = "high-speed";
+	};
+	ssphy@1615000 {
+		status = "disabled";
+	};
+};
+
+&qusb_phy0 {
+	qcom,qusb-phy-init-seq = <0xf8 0x80
+				0xb3 0x84
+				0x81 0x88
+				0xc7 0x8c
+				0x30 0x08
+				0x79 0x0c
+				0x21 0x10
+				0x14 0x9c
+				0x80 0x04
+				0x9f 0x1c
+				0x00 0x18>;
+};
