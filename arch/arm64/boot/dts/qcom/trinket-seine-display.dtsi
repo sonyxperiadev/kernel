@@ -25,49 +25,54 @@
 			qcom,supply-post-on-sleep = <1>;
 		};
 	};
+
+	sde_dsi0: qcom,dsi-display@1012 {
+		compatible = "somc,dsi-display";
+
+		qcom,dsi-ctrl = <&mdss_dsi0>;
+		qcom,dsi-phy = <&mdss_dsi_phy0>;
+
+		clocks = <&mdss_dsi0_pll BYTE0_MUX_CLK>,
+			 <&mdss_dsi0_pll PIX0_MUX_CLK>,
+			 <&mdss_dsi0_pll BYTE0_SRC_CLK>,
+			 <&mdss_dsi0_pll PIX0_SRC_CLK>,
+			 <&mdss_dsi0_pll SHADOW_BYTE0_SRC_CLK>,
+			 <&mdss_dsi0_pll SHADOW_PIX0_SRC_CLK>;
+		clock-names = "mux_byte_clk0", "mux_pixel_clk0",
+			"src_byte_clk0", "src_pixel_clk0",
+			"shadow_byte_clk0", "shadow_pixel_clk0";
+		pinctrl-names = "panel_active", "panel_suspend",
+				"sde_touch_active", "sde_touch_suspend";
+		pinctrl-0 = <&sde_dsi_active &sde_te_active>;
+		pinctrl-1 = <&sde_dsi_suspend &sde_te_suspend>;
+		pinctrl-2 = <&somc_ts_int_active>;
+		pinctrl-3 = <&somc_ts_int_suspend>;
+
+		qcom,platform-te-gpio = <&tlmm 89 0>;
+
+		vddio-supply = <&L12A>;
+		lab-supply = <&lcdb_ldo_vreg>;
+		ibb-supply = <&lcdb_ncp_vreg>;
+	};
 };
 
-&sde_dsi {
-	compatible = "somc,dsi-display";
-	qcom,dsi-ctrl = <&mdss_dsi0>;
-	qcom,dsi-phy = <&mdss_dsi_phy0>;
-	clocks = <&mdss_dsi0_pll BYTE0_MUX_CLK>,
-		 <&mdss_dsi0_pll PIX0_MUX_CLK>,
-		 <&mdss_dsi0_pll BYTE0_SRC_CLK>,
-		 <&mdss_dsi0_pll PIX0_SRC_CLK>,
-		 <&mdss_dsi0_pll SHADOW_BYTE0_SRC_CLK>,
-		 <&mdss_dsi0_pll SHADOW_PIX0_SRC_CLK>;
-	clock-names = "mux_byte_clk0", "mux_pixel_clk0",
-		"src_byte_clk0", "src_pixel_clk0",
-		"shadow_byte_clk0", "shadow_pixel_clk0";
-	pinctrl-names = "panel_active", "panel_suspend",
-			"somc_ts_int_active", "somc_ts_int_suspend";
-	pinctrl-0 = <&sde_dsi_active &sde_te_active>;
-	pinctrl-1 = <&sde_dsi_suspend &sde_te_suspend>;
-	pinctrl-2 = <&somc_ts_int_active>;
-	pinctrl-3 = <&somc_ts_int_suspend>;
+&mdss_mdp {
+	connectors = <&sde_wb &sde_dsi0>;
+};
 
+/* Disable/remove everything default, we use our own */
+&sde_dsi {
+	status = "disabled";
+	/delete-property/ compatible;
+	/delete-property/ qcom,dsi-ctrl;
+	/delete-property/ qcom,dsi-phy;
+	/delete-property/ clocks;
+	/delete-property/ clock-names;
+	/delete-property/ pinctrl-names;
+
+	/*
+	 * But.. let's keep the supply right, in case anything
+	 * goes wrong for any reason, so we don't burn stuff
+	 */
 	vddio-supply = <&L12A>;
 };
-
-&dsi_td4330_truly_vid_display {
-	/delete-property/ qcom,dsi-display-active;
-	status = "disabled";
-};
-&dsi_td4330_truly_cmd_display {
-	/delete-property/ qcom,dsi-display-active;
-	status = "disabled";
-};
-&dsi_sim_vid_display {
-	/delete-property/ qcom,dsi-display-active;
-	status = "disabled";
-};
-&dsi_hx83112a_truly_vid_display {
-	/delete-property/ qcom,dsi-display-active;
-	status = "disabled";
-};
-&dsi_nt36672_truly_vid_display {
-	/delete-property/ qcom,dsi-display-active;
-	status = "disabled";
-};
-
