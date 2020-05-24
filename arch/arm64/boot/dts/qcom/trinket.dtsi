@@ -2813,6 +2813,8 @@
 		pm6125_adc_tm_iio: adc_tm@3400 {
 			compatible = "qcom,adc-tm5-iio";
 			reg = <0x3400 0x100>;
+			#address-cells = <1>;
+			#size-cells = <0>;
 			#thermal-sensor-cells = <1>;
 			io-channels = <&pm6125_vadc ADC_GPIO1_PU2>,
 					<&pm6125_vadc ADC_GPIO3_PU2>;

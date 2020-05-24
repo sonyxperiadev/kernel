@@ -47,9 +47,6 @@
 		#interrupt-cells = <1>;
 		iommus = <&apps_smmu 0x400 0x0>;
 
-		#address-cells = <1>;
-		#size-cells = <0>;
-
 		#power-domain-cells = <0>;
 
 		#list-cells = <1>;

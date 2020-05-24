@@ -608,8 +608,6 @@
 		cell-index = <0>;
 		compatible = "qcom,cci";
 		reg = <0x5c0c000 0x4000>;
-		#address-cells = <1>;
-		#size-cells = <0>;
 		reg-names = "cci";
 		interrupts = <0 207 0>;
 		interrupt-names = "cci";
