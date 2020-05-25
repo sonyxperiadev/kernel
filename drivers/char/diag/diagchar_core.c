@@ -4504,7 +4504,8 @@ static void diagchar_exit(void)
 #if defined(CONFIG_USB_QCOM_DIAG_BRIDGE)
 	diag_unregister_hsic();
 #elif defined(CONFIG_MHI_BUS)
- 	diag_unregister_mhi();
+	// TODO: Not implemented...
+ //	diag_unregister_mhi();
 #endif
 	diag_remote_exit();
 	diag_debugfs_cleanup();
