@@ -20,14 +20,18 @@
 #include <linux/sort.h>
 #include "fg-alg.h"
 
+#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+#define fg_alg_somc_cl_dbg(fmt, ...) pr_info("[SOMC CL]"fmt, ##__VA_ARGS__)
+
+#endif
 #define FULL_SOC_RAW		255
-#define CAPACITY_DELTA_DECIPCT	500
-#define CENTI_FULL_SOC		10000
 
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
-#undef CAPACITY_DELTA_DECIPCT
-#define CAPACITY_DELTA_DECIPCT 400
+ #define CAPACITY_DELTA_DECIPCT 400
+#else
+ #define CAPACITY_DELTA_DECIPCT 500
 #endif
+#define CENTI_FULL_SOC		10000
 
 #define CENTI_ICORRECT_C0	105
 #define CENTI_ICORRECT_C1	20
@@ -42,20 +46,12 @@
 #define DEFAULT_TTF_ITERM_DELTA_MA	200
 
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
-#define fg_alg_somc_cl_dbg(fmt, ...) pr_info("[SOMC CL]"fmt, ##__VA_ARGS__)
-
 #define CL_LOWER_LIMIT_PCT		98 /* 98 percent */
-#define CL_ABORT_BSOC_100PCT		200 /* 2.00 percent */
-#define CL_ABORT_CCSOC_100PCT		50 /* 0.50 percent */
+#define CL_ABORT_BSOC_CP		200 /* 2.00 percent */
+#define CL_ABORT_CCSOC_CP		50 /* 0.50 percent */
 #define CL_ABORT_KEEP_TIMEOUT_MS	(7 * 60 * 60 * 1000)
 #define CL_ABORT_SLOW_TIMEOUT_MS	(10 * 60 * 60 * 1000)
-
-#define BSOC_RANGE	GENMASK(31, 0)
-#define CCSOC_RANGE	GENMASK(29, 0)
-#define BSOC_100P(soc)	(int)(div64_s64((int64_t)soc * 10000, BSOC_RANGE))
-#define CCSOC_100P(soc)	(int)(div64_s64((int64_t)soc * 10000, CCSOC_RANGE))
 #endif
-
 static const struct ttf_pt ttf_ln_table[] = {
 	{ 1000,		0 },
 	{ 2000,		693 },
@@ -323,6 +319,19 @@ int cycle_count_init(struct cycle_counter *counter)
 
 /* Capacity learning algorithm APIs */
 
+#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+static int conv_cc_soc_to_cp(struct cap_learning *cl, int cc_soc)
+{
+	int val;
+
+	if (cl->cc_soc_max)
+		val = (int)(div64_s64((int64_t)cc_soc * 10000, cl->cc_soc_max));
+	else
+		val = cc_soc;
+
+	return val;
+}
+#endif
 /**
  * cap_learning_post_process -
  * @cl: Capacity learning object
@@ -425,6 +434,7 @@ static void cap_learning_post_process(struct cap_learning *cl)
 #endif
 }
 
+#ifndef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
 /**
  * cap_wt_learning_process_full_data -
  * @cl: Capacity learning object
@@ -435,7 +445,6 @@ static void cap_learning_post_process(struct cap_learning *cl)
  * weighted capacity learning is enabled.
  *
  */
-#ifndef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
 static int cap_wt_learning_process_full_data(struct cap_learning *cl,
 					int delta_batt_soc_pct,
 					int batt_soc_cp)
@@ -498,11 +507,10 @@ static int cap_learning_process_full_data(struct cap_learning *cl,
 	}
 
 	cc_delta = cc_soc_sw - cl->init_cc_soc_sw;
-	cc_delta_100pct = CCSOC_100P(cc_delta);
+	cc_delta_100pct = conv_cc_soc_to_cp(cl, cc_delta);
 	cc_delta_uah = div64_s64(cl->learned_cap_uah * cc_delta_100pct, 10000);
 	cl->final_cap_uah = cl->init_cap_uah + cc_delta_uah;
-	fg_alg_somc_cl_dbg("cc_delta_100pct:%lld cc_delta_uah:%lld "
-			   "init_cap_uah:%d final_cap_uah:%d\n",
+	fg_alg_somc_cl_dbg("cc_delta_100pct:%d cc_delta_uah:%d init_cap_uah:%d final_cap_uah:%d\n",
 					cc_delta_100pct, cc_delta_uah,
 					cl->init_cap_uah, cl->final_cap_uah);
 	return 0;
@@ -606,13 +614,12 @@ static int cap_learning_begin(struct cap_learning *cl, u32 batt_soc_cp)
 
 	cl->init_cc_soc_sw = cc_soc_sw;
 	cl->init_batt_soc = batt_soc_pct;
-	cl->init_batt_soc_msb = batt_soc_msb;
 	cl->init_batt_soc_cp = batt_soc_cp;
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
 	cl->learning_trial_counter++;
 #endif
 	pr_debug("Capacity learning started @ battery SOC %d init_cc_soc_sw:%d\n",
-		batt_soc_msb, cl->init_cc_soc_sw);
+		batt_soc_cp, cl->init_cc_soc_sw);
 out:
 	return rc;
 }
@@ -651,6 +658,7 @@ out:
 	return rc;
 }
 
+#ifndef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
 /**
  * cap_wt_learning_update -
  * @cl: Capacity learning object
@@ -660,7 +668,6 @@ out:
  * Called by cap_learning_update when weighted learning is enabled
  *
  */
-#ifndef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
 static void cap_wt_learning_update(struct cap_learning *cl, int batt_soc_cp,
 					bool input_present)
 {
@@ -695,11 +702,10 @@ void cap_learning_update(struct cap_learning *cl, int batt_temp,
 			bool input_present, bool qnovo_en)
 {
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
-	int rc;
-	u32 batt_soc_prime;
+	int rc, batt_soc_prime;
 	int msoc, cc_soc_sw;
-	int bsoc_100p, ccsoc_100p;
-	int bsoc_drop_100p, ccsoc_drop_100p, max_bsoc_100p, max_ccsoc_100p;
+	int ccsoc_cp, init_ccsoc_cp;
+	int ccsoc_drop_cp, max_ccsoc_cp;
 	bool prime_cc = false;
 	bool deactive = false;
 	ktime_t ktime;
@@ -715,6 +721,7 @@ void cap_learning_update(struct cap_learning *cl, int batt_temp,
 	mutex_lock(&cl->lock);
 
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+
 	if (cl->get_monotonic_soc) {
 		rc = cl->get_monotonic_soc(cl->data, &msoc);
 		if (rc < 0) {
@@ -734,19 +741,15 @@ void cap_learning_update(struct cap_learning *cl, int batt_temp,
 	} else {
 		goto out;
 	}
- 
+	ccsoc_cp = conv_cc_soc_to_cp(cl, cc_soc_sw);
+	init_ccsoc_cp = conv_cc_soc_to_cp(cl, cl->init_cc_soc_sw);
+
 	ktime = ktime_get_boottime();
 
 	if (!cl->learned_cap_uah) {
 		pr_err("Error in getting learned_cap_uah, rc=%d\n");
 		goto out;
 	}
-
-	bsoc_100p = BSOC_100P((u32)batt_soc_cp);
-	ccsoc_100p = CCSOC_100P(cc_soc_sw);
-	fg_alg_somc_cl_dbg("[%s] charge_status:%d bsoc:%d\n",
-					cl->active ? "LERANING" : "OFF",
-					charge_status, bsoc_100p);
 
 	if (!cl->active) {
 		if (batt_temp > cl->dt.max_temp ||
@@ -757,20 +760,21 @@ void cap_learning_update(struct cap_learning *cl, int batt_temp,
 		}
 
 		if (charge_status == POWER_SUPPLY_STATUS_CHARGING) {
-			rc = cap_learning_begin(cl, batt_soc);
+			rc = cap_learning_begin(cl, batt_soc_cp);
 			if (rc == 0) {
 				cl->active = true;
-				cl->max_ccsoc_during_active = cc_soc_sw;
-				cl->max_bsoc_during_active = batt_soc;
+				cl->max_ccsoc_during_active =
+							cl->init_cc_soc_sw;
+				cl->max_bsoc_cp_during_active = batt_soc_cp;
 				cl->max_bsoc_time_ms = ktime_to_ms(ktime);
 				cl->start_time_ms = cl->max_bsoc_time_ms;
-				fg_alg_somc_cl_dbg("CL started. bsoc:%d init_cc_soc_sw:%d time:%lld\n",
-						bsoc_100p,
-						CCSOC_100P(cl->init_cc_soc_sw),
+				fg_alg_somc_cl_dbg("CL started. bsoc_cp:%d init_cc_soc_sw:%d time:%lld\n",
+						batt_soc_cp,
+						init_ccsoc_cp,
 						cl->start_time_ms);
 			} else {
-				fg_alg_somc_cl_dbg("CL couldn't start. bsoc:%d\n",
-								bsoc_100p);
+				fg_alg_somc_cl_dbg("[OFF] charge_status:%d bsoc_cp:%d\n",
+						charge_status, batt_soc_cp);
 			}
 		} else {
 			if (charge_status == POWER_SUPPLY_STATUS_DISCHARGING ||
@@ -791,7 +795,7 @@ void cap_learning_update(struct cap_learning *cl, int batt_temp,
 									msoc);
 			} else {
 				fg_alg_somc_cl_dbg("CL done\n");
-				rc = cap_learning_done(cl,(u32)batt_soc >> 24);
+				rc = cap_learning_done(cl, batt_soc_cp);
 				if (rc < 0)
 					pr_err("Error in completing capacity learning, rc=%d\n",
 						rc);
@@ -800,27 +804,29 @@ void cap_learning_update(struct cap_learning *cl, int batt_temp,
 			goto cl_deactive;
 		}
 
-		cl->batt_soc_drop = cl->max_bsoc_during_active - batt_soc;
+		cl->batt_soc_cp_drop = cl->max_bsoc_cp_during_active
+							- batt_soc_cp;
 		cl->cc_soc_drop = cl->max_ccsoc_during_active - cc_soc_sw;
-		bsoc_drop_100p = BSOC_100P(cl->batt_soc_drop);
-		ccsoc_drop_100p = CCSOC_100P(cl->cc_soc_drop);
-		max_bsoc_100p = BSOC_100P((u32)cl->max_bsoc_during_active);
-		max_ccsoc_100p = CCSOC_100P(cl->max_ccsoc_during_active);
+		ccsoc_drop_cp = conv_cc_soc_to_cp(cl, cl->cc_soc_drop);
+		max_ccsoc_cp = conv_cc_soc_to_cp(cl,
+						cl->max_ccsoc_during_active);
 		cl->hold_time = ktime_to_ms(ktime) - cl->max_bsoc_time_ms;
 		cl->total_time = ktime_to_ms(ktime) - cl->start_time_ms;
 
-		fg_alg_somc_cl_dbg("msoc:%d bsoc_drop:%d cc_soc_drop:%d hold_time:%lld total_time:%lld\n",
-					msoc, bsoc_drop_100p, ccsoc_drop_100p,
-					cl->hold_time, cl->total_time);
+		fg_alg_somc_cl_dbg("[LERANING] charge_status:%d msoc:%d bsoc_cp:%d batt_soc_cp_drop:%d cc_soc_drop:%d hold_time:%lld total_time:%lld (cc_soc:%d->%d)\n",
+					charge_status, msoc, batt_soc_cp,
+					cl->batt_soc_cp_drop, ccsoc_drop_cp,
+					cl->hold_time, cl->total_time,
+					cl->init_cc_soc_sw, cc_soc_sw);
 
-		if (ccsoc_drop_100p > CL_ABORT_CCSOC_100PCT) {
+		if (ccsoc_drop_cp > CL_ABORT_CCSOC_CP) {
 			fg_alg_somc_cl_dbg("CL aborted due to cc_soc_sw drop from %d to %d",
-						max_ccsoc_100p, ccsoc_100p);
+						max_ccsoc_cp, ccsoc_cp);
 			deactive = true;
 			goto cl_deactive;
-		} else if (bsoc_drop_100p > CL_ABORT_BSOC_100PCT) {
+		} else if (cl->batt_soc_cp_drop > CL_ABORT_BSOC_CP) {
 			fg_alg_somc_cl_dbg("CL aborted due to bsoc drop from %d to %d",
-						max_bsoc_100p, bsoc_100p);
+				cl->max_bsoc_cp_during_active, batt_soc_cp);
 			deactive = true;
 			goto cl_deactive;
 		} else if (cl->hold_time > CL_ABORT_KEEP_TIMEOUT_MS) {
@@ -834,14 +840,14 @@ void cap_learning_update(struct cap_learning *cl, int batt_temp,
 		}
 
 		/* reset params if increasing */
-		if (cl->batt_soc_drop < 0 || cl->cc_soc_drop < 0) {
+		if (cl->batt_soc_cp_drop < 0 || cl->cc_soc_drop < 0) {
 			cl->max_ccsoc_during_active = cc_soc_sw;
-			cl->max_bsoc_during_active = batt_soc;
+			cl->max_bsoc_cp_during_active = batt_soc_cp;
 			cl->max_bsoc_time_ms = ktime_to_ms(ktime);
 			cl->cc_soc_drop = 0;
-			cl->batt_soc_drop = 0;
-			fg_alg_somc_cl_dbg("max bsoc/ccsoc updated. bsoc:%d ccsoc:%d\n",
-							bsoc_100p, ccsoc_100p);
+			cl->batt_soc_cp_drop = 0;
+			fg_alg_somc_cl_dbg("max bsoc/ccsoc updated. bsoc_cp:%d ccsoc:%d\n",
+						batt_soc_cp, ccsoc_cp);
 		}
 		goto out;
 	}
@@ -913,8 +919,7 @@ cl_deactive:
 			}
 		}
 	}
-#endif /* CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION */
-
+#endif
 	/*
 	 * Prime CC_SOC_SW when the device is not charging or during charge
 	 * termination when the capacity learning is not active.
@@ -963,33 +968,47 @@ void cap_learning_abort(struct cap_learning *cl)
 }
 
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+static void cap_learning_somc_lift_learned_cap(struct cap_learning *cl,
+					int64_t ncap_old, int64_t ncap_new)
+{
+	int64_t ncap_diff, lcap, lcap_lifted;
+
+	if (ncap_old > 0 && ncap_new != ncap_old) {
+		ncap_diff = ncap_new - ncap_old;
+		lcap = cl->learned_cap_uah;
+		lcap_lifted = lcap + div64_s64(lcap * ncap_diff, ncap_old);
+		fg_alg_somc_cl_dbg("nom_cap is %s (%d -> %d). Update learned_cap_uah %lld -> %lld\n",
+				(ncap_diff > 0) ? "Increased" : "Decreased",
+				ncap_old, ncap_new, lcap, lcap_lifted);
+
+		cl->learned_cap_uah = lcap_lifted;
+	} else {
+		fg_alg_somc_cl_dbg("Learned cap lifting is not needed.\n");
+	}
+}
 void cap_learning_somc_limit_learned_cap(struct cap_learning *cl)
 {
 	int64_t pct_nom_cap_uah;
 
 	if (cl->learned_cap_uah > cl->nom_cap_uah) {
-		fg_alg_somc_cl_dbg("learned_cap_uah: %lld is higher than "
-				   "expected, capping it to nom_cap_uah: "
-				   "%lld\n",
-				   cl->learned_cap_uah, cl->nom_cap_uah);
+		fg_alg_somc_cl_dbg("learned_cap_uah: %lld is higher than expected, capping it to nom_cap_uah: %lld\n",
+			cl->learned_cap_uah, cl->nom_cap_uah);
 		cl->learned_cap_uah = cl->nom_cap_uah;
 	} else {
 		pct_nom_cap_uah =
 			div64_s64((int64_t)cl->nom_cap_uah *
 			CAPACITY_DELTA_DECIPCT, 1000);
 		if (cl->learned_cap_uah < pct_nom_cap_uah) {
-			fg_alg_somc_cl_dbg("learned_cap_uah: %lld is lower "
-					   "than expected, capping it to %d%% "
-					   "of nom_cap_uah: %lld\n",
-						cl->learned_cap_uah,
-						CAPACITY_DELTA_DECIPCT / 10,
-						pct_nom_cap_uah);
+			fg_alg_somc_cl_dbg("learned_cap_uah: %lld is lower than expected, capping it to %d%% of nom_cap_uah: %lld\n",
+				cl->learned_cap_uah,
+				CAPACITY_DELTA_DECIPCT / 10,
+				pct_nom_cap_uah);
 			cl->learned_cap_uah = pct_nom_cap_uah;
 		}
 	}
 }
-#endif
 
+#endif
 /**
  * cap_learning_post_profile_init -
  * @cl: Capacity learning object
@@ -1002,9 +1021,45 @@ void cap_learning_somc_limit_learned_cap(struct cap_learning *cl)
  */
 int cap_learning_post_profile_init(struct cap_learning *cl, int64_t nom_cap_uah)
 {
-#ifndef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+	int64_t ncap_tmp;
+	int rc;
+
+	if (!cl || !cl->data)
+		return -EINVAL;
+
+	mutex_lock(&cl->lock);
+
+	ncap_tmp = cl->nom_cap_uah;
+	cl->nom_cap_uah = nom_cap_uah;
+
+	/* load capacity */
+	rc = cl->get_learned_capacity(cl->data, &cl->learned_cap_uah);
+	if (rc < 0) {
+		pr_err("Couldn't get learned capacity, rc=%d\n", rc);
+		goto out;
+	}
+
+	if (cl->learned_cap_uah == 0) {
+		cl->learned_cap_uah = cl->nom_cap_uah;
+		goto out;
+	}
+
+	/* corerct 1) lifting up or down */
+	cap_learning_somc_lift_learned_cap(cl, ncap_tmp, nom_cap_uah);
+
+	/* corerct 2) capping */
+	cap_learning_somc_limit_learned_cap(cl);
+
+	/* save capacity */
+	rc = cl->store_learned_capacity(cl->data, cl->learned_cap_uah);
+	if (rc < 0)
+		pr_err("Error in storing learned_cap_uah, rc=%d\n", rc);
+out:
+	mutex_unlock(&cl->lock);
+	return rc;
+#else
 	int64_t delta_cap_uah, pct_nom_cap_uah;
-#endif
 	int rc;
 
 	if (!cl || !cl->data)
@@ -1021,10 +1076,6 @@ int cap_learning_post_profile_init(struct cap_learning *cl, int64_t nom_cap_uah)
 	if (cl->learned_cap_uah != cl->nom_cap_uah) {
 		if (cl->learned_cap_uah == 0)
 			cl->learned_cap_uah = cl->nom_cap_uah;
-
-#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
-		cap_learning_somc_limit_learned_cap(cl);
-#else
 		delta_cap_uah = abs(cl->learned_cap_uah - cl->nom_cap_uah);
 		pct_nom_cap_uah = div64_s64((int64_t)cl->nom_cap_uah *
 				CAPACITY_DELTA_DECIPCT, 1000);
@@ -1038,7 +1089,7 @@ int cap_learning_post_profile_init(struct cap_learning *cl, int64_t nom_cap_uah)
 				cl->learned_cap_uah, cl->nom_cap_uah);
 			cl->learned_cap_uah = cl->nom_cap_uah;
 		}
-#endif
+
 		rc = cl->store_learned_capacity(cl->data, cl->learned_cap_uah);
 		if (rc < 0)
 			pr_err("Error in storing learned_cap_uah, rc=%d\n", rc);
@@ -1047,6 +1098,7 @@ int cap_learning_post_profile_init(struct cap_learning *cl, int64_t nom_cap_uah)
 out:
 	mutex_unlock(&cl->lock);
 	return rc;
+#endif
 }
 
 /**

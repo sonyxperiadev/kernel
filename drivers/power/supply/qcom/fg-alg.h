@@ -66,8 +66,9 @@ struct cap_learning {
 	int64_t			delta_cap_uah;
 	bool			active;
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
-	int			batt_soc_drop;
+	int			batt_soc_cp_drop;
 	int			cc_soc_drop;
+	int			max_bsoc_cp_during_active;
 	int			max_bsoc_during_active;
 	int			max_ccsoc_during_active;
 	s64			max_bsoc_time_ms;
