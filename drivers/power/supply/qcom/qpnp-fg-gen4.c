@@ -4399,7 +4399,7 @@ static void fg_gen4_somc_jeita_step_charge_work(struct work_struct *work)
 	bool target_is_found = false;
 	int i;
 	int target_idx = -1;
-	bool input_present;
+	bool input_present = false;
 	int msoc, bsoc;
 	int ocv_uv;
 
@@ -6969,7 +6969,7 @@ static ssize_t fg_somc_get_sram_soc_str(struct fg_gen4_chip *chip,
 				enum fg_sram_param_id id, char *buf, int size)
 {
 	int rc = 0;
-	int value, capacity, high_cap, low_cap;
+	int value = 0, capacity = 0, high_cap = 0, low_cap = 0;
 	struct fg_dev *fg = &chip->fg;
 
 	rc = fg_get_sram_prop(fg, id, &value);
