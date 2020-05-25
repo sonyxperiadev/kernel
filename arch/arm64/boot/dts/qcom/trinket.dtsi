@@ -398,7 +398,7 @@
 			fstab {
 				compatible = "android,fstab";
 				vendor {
-					compatble = "android,vendor";
+					compatible = "android,vendor";
 					dev = "/dev/block/platform/soc/4804000.ufshc/by-name/vendor";
 					type = "ext4";
 					mnt_flags = "ro,barrier=1,discard";
