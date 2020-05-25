@@ -467,10 +467,9 @@
 &qupv3_se1_i2c {
 	pinctrl-0 = <&sm_gpio_4 &sm_gpio_5>;
 	pinctrl-1 = <&sm_gpio_4_suspend &sm_gpio_5_suspend>;
+	status = "okay";
 
 	/delete-node/ nq@28;
-
-	status = "okay";
 };
 
 &sm6150_snd {
