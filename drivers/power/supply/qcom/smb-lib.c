@@ -34,6 +34,8 @@
 #include "step-chg-jeita.h"
 #include "storm-watch.h"
 
+#define NUM_MAX_CLIENTS 32
+
 #define smblib_err(chg, fmt, ...)		\
 	pr_err("%s: %s: " fmt, chg->name,	\
 		__func__, ##__VA_ARGS__)	\
