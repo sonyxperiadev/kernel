@@ -12,6 +12,30 @@
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/input.h>
 
+/*
+ *     Seine platform: debug serial at qup_uart@0x4a90000
+ * Define SONY_SEINE_DEBUG_UART in DT to enable the UART output:
+ * for the regular non-debugging case, it is kept disabled in
+ * order to save power and decrease boot times.
+ */
+
+/ {
+	aliases {
+		serial0 = &qupv3_se4_2uart;
+	};
+};
+
+&qupv3_se4_2uart {
+ #ifdef SONY_SEINE_DEBUG_UART
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&qupv3_se4_2uart_active>;
+	pinctrl-1 = <&qupv3_se4_2uart_sleep>;
+	status = "ok";
+ #else
+	status = "disabled";
+ #endif
+}
+
 &reserved_memory {
 	debug_region: debug_region@ffb00000 {
 		compatible = "removed-dma-pool", "qcom,debug_memory";
