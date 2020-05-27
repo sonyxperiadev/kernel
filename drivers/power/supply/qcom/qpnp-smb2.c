@@ -2630,7 +2630,7 @@ static int smb2_chg_config_init(struct smb2 *chip)
 
 	switch (pmic_rev_id->pmic_subtype) {
 	case PMI8998_SUBTYPE:
-		chip->chg.smb_version = PMI8998_SUBTYPE;
+		chip->chg.chg_param.smb_version = PMI8998_SUBTYPE;
 		chip->chg.wa_flags |= BOOST_BACK_WA | QC_AUTH_INTERRUPT_WA_BIT
 				| TYPEC_PBS_WA_BIT;
 		if (pmic_rev_id->rev4 == PMI8998_V1P1_REV4) /* PMI rev 1.1 */
@@ -2646,7 +2646,7 @@ static int smb2_chg_config_init(struct smb2 *chip)
 		chg->chg_freq.freq_above_otg_threshold = 800;
 		break;
 	case PM660_SUBTYPE:
-		chip->chg.smb_version = PM660_SUBTYPE;
+		chip->chg.chg_param.smb_version = PM660_SUBTYPE;
 		chip->chg.wa_flags |= BOOST_BACK_WA | OTG_WA | OV_IRQ_WA_BIT
 				| TYPEC_PBS_WA_BIT;
 		chg->param.freq_buck = pm660_params.freq_buck;
@@ -2664,6 +2664,9 @@ static int smb2_chg_config_init(struct smb2 *chip)
 				pmic_rev_id->pmic_subtype);
 		return -EINVAL;
 	}
+
+	chg->chg_param.fcc_step_delay_ms = 100000;
+	chg->chg_param.fcc_step_size_ua  = 1000;
 
 	return 0;
 }

@@ -1,4 +1,4 @@
-/* Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -79,6 +79,8 @@
 #define FG_PARALLEL_EN_VOTER	"fg_parallel_en"
 #define MEM_ATTN_IRQ_VOTER	"fg_mem_attn_irq"
 
+#define DEBUG_BOARD_VOTER	"fg_debug_board"
+
 #define BUCKET_COUNT			8
 #define BUCKET_SOC_PCT			(256 / BUCKET_COUNT)
 
@@ -117,6 +119,7 @@ enum fg_debug_flag {
 	FG_CAP_LEARN		= BIT(7), /* Show capacity learning */
 	FG_TTF			= BIT(8), /* Show time to full */
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+	FG_TEMP_CORR		= BIT(13),
 	FG_STEP			= BIT(14),
 	FG_SOMC			= BIT(15),
 #endif
@@ -184,6 +187,8 @@ enum fg_sram_param_id {
 	FG_SRAM_MONOTONIC_SOC,
 	FG_SRAM_VOLTAGE_PRED,
 	FG_SRAM_OCV,
+	FG_SRAM_VBAT_FLT,
+	FG_SRAM_VBAT_TAU,
 	FG_SRAM_VBAT_FINAL,
 	FG_SRAM_IBAT_FINAL,
 	FG_SRAM_ESR,
@@ -221,6 +226,7 @@ enum fg_sram_param_id {
 	FG_SRAM_KI_COEFF_MED_CHG,
 	FG_SRAM_KI_COEFF_HI_CHG,
 	FG_SRAM_KI_COEFF_FULL_SOC,
+	FG_SRAM_KI_COEFF_CUTOFF,
 	FG_SRAM_ESR_TIGHT_FILTER,
 	FG_SRAM_ESR_BROAD_FILTER,
 	FG_SRAM_SLOPE_LIMIT,
@@ -234,7 +240,8 @@ enum fg_sram_param_id {
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
 	FG_SRAM_SOC_SYSTEM,
 	FG_SRAM_SOC_MONOTONIC,
-	FG_SRAM_SOC_CUTOFF,
+	FG_SRAM_CUTOFF_SOC,
+	FG_SRAM_SYSTEM_SOC,
 	FG_SRAM_SOC_FULL,
 #endif
 	FG_SRAM_MAX,
@@ -419,6 +426,20 @@ struct fg_step_input {
 	s64	stored_ktime_ms;
 };
 
+#define TEMP_DATA_BUF_NUM	100
+struct fg_temp_sample_data {
+	int	id;
+	int	batt_current_ma;
+	int	batt_temp;
+	ktime_t	ktime_ms;
+};
+struct fg_temp_data {
+	struct fg_temp_sample_data	data[TEMP_DATA_BUF_NUM];
+	int	last_id;
+	int	first_ktime_ms;
+	int	suspended_ktime_ms;
+};
+
 #endif
 
 static const struct fg_pt fg_ln_table[] = {
@@ -550,6 +571,8 @@ struct fg_dev {
 	int			saved_batt_aging_level;
 	int			requested_batt_aging_level;
 	char			org_batt_type_str[ORG_BATT_TYPE_SIZE + 1];
+	int			initial_capacity;
+	int			soc_shift_wa_ccsoc;
 
 	/* FULL/Recharge */
 	bool			charge_full_releasing;
@@ -563,6 +586,17 @@ struct fg_dev {
 	int			msoc_tune_a;
 	int			msoc_tune_b;
 	int			soc_restart_counter;
+
+	/* tempareture correction */
+	struct mutex		temp_corr_lock;
+	bool			cell_temp_avtive;
+	int			cell_temp;
+	int			iavg;
+	struct delayed_work	somc_temp_corr_work;
+	struct fg_temp_data	temp_data;
+	bool			temp_corr_en;
+	int			temp_corr_coef_a;
+	int			temp_corr_avg_sec;
 #endif
 
 	enum fg_version		version;
@@ -602,6 +636,8 @@ struct fg_dbgfs {
 	u32				addr;
 };
 
+extern int fg_decode_voltage_24b(struct fg_sram_param *sp,
+	enum fg_sram_param_id id, int val);
 extern int fg_decode_voltage_15b(struct fg_sram_param *sp,
 	enum fg_sram_param_id id, int val);
 extern int fg_decode_current_16b(struct fg_sram_param *sp,

@@ -2347,6 +2347,28 @@ error:
 	return rc;
 }
 
+static int dsi_display_phy_idle_pc(struct dsi_display *display,
+				   bool idle_pc_enabled)
+{
+	struct dsi_display_ctrl *ctrl;
+	int i, rc = 0;
+
+	display_for_each_ctrl(i, display) {
+		ctrl = &display->ctrl[i];
+		if (!ctrl->phy)
+			continue;
+
+		rc = dsi_phy_set_idle_pc(ctrl->phy, idle_pc_enabled);
+		if (rc) {
+			pr_err("[%s] Failed to set idle pc, rc=%d\n",
+			       ctrl->ctrl->name, rc);
+			goto error;
+		}
+	}
+error:
+	return rc;
+}
+
 static int dsi_display_set_clk_src(struct dsi_display *display)
 {
 	int rc = 0;
@@ -3474,6 +3496,12 @@ int dsi_pre_clkon_cb(void *priv,
 		pr_debug("%s: Enable DSI core power\n", __func__);
 	}
 
+	if ((clk_type & DSI_LINK_CLK) && (new_state == DSI_CLK_ON) &&
+	    !display->is_cont_splash_enabled) {
+		/* Enabling LINK clocks: disable PHY idle power collapse */
+		dsi_display_phy_idle_pc(display, false);
+	}
+
 	return rc;
 }
 
@@ -3917,6 +3945,22 @@ static bool dsi_display_is_seamless_dfps_possible(
 	return true;
 }
 
+void dsi_display_update_byte_intf_div(struct dsi_display *display)
+{
+	struct dsi_host_common_cfg *config;
+	struct dsi_display_ctrl *m_ctrl;
+	int phy_ver;
+
+	m_ctrl = &display->ctrl[display->cmd_master_idx];
+	config = &display->panel->host_config;
+
+	phy_ver = dsi_phy_get_version(m_ctrl->phy);
+	if (phy_ver <= DSI_PHY_VERSION_2_0)
+		config->byte_intf_clk_div = 1;
+	else
+		config->byte_intf_clk_div = 2;
+}
+
 static int dsi_display_update_dsi_bitrate(struct dsi_display *display,
 					  u32 bit_clk_rate)
 {
@@ -3939,8 +3983,9 @@ static int dsi_display_update_dsi_bitrate(struct dsi_display *display,
 	display_for_each_ctrl(i, display) {
 		struct dsi_display_ctrl *dsi_disp_ctrl = &display->ctrl[i];
 		struct dsi_ctrl *ctrl = dsi_disp_ctrl->ctrl;
-		u32 num_of_lanes = 0, bpp;
-		u64 bit_rate, pclk_rate, bit_rate_per_lane, byte_clk_rate;
+		u32 num_of_lanes = 0, bpp, byte_intf_clk_div;
+		u64 bit_rate, pclk_rate, bit_rate_per_lane, byte_clk_rate,
+				byte_intf_clk_rate;
 		struct dsi_host_common_cfg *host_cfg;
 
 		mutex_lock(&ctrl->ctrl_lock);
@@ -3970,12 +4015,17 @@ static int dsi_display_update_dsi_bitrate(struct dsi_display *display,
 		do_div(pclk_rate, bpp);
 		byte_clk_rate = bit_rate_per_lane;
 		do_div(byte_clk_rate, 8);
+		byte_intf_clk_rate = byte_clk_rate;
+		byte_intf_clk_div = host_cfg->byte_intf_clk_div;
+		do_div(byte_intf_clk_rate, byte_intf_clk_div);
+
 		pr_debug("bit_clk_rate = %llu, bit_clk_rate_per_lane = %llu\n",
 			 bit_rate, bit_rate_per_lane);
 		pr_debug("byte_clk_rate = %llu, pclk_rate = %llu\n",
 			  byte_clk_rate, pclk_rate);
 
 		ctrl->clk_freq.byte_clk_rate = byte_clk_rate;
+		ctrl->clk_freq.byte_intf_clk_rate = byte_intf_clk_rate;
 		ctrl->clk_freq.pix_clk_rate = pclk_rate;
 		rc = dsi_clk_set_link_frequencies(display->dsi_clk_handle,
 			ctrl->clk_freq, ctrl->cell_index);
@@ -4069,7 +4119,8 @@ static int _dsi_display_dyn_update_clks(struct dsi_display *display,
 		if (!ctrl->ctrl)
 			continue;
 		rc = dsi_clk_set_byte_clk_rate(display->dsi_clk_handle,
-				   ctrl->ctrl->clk_freq.byte_clk_rate, i);
+				ctrl->ctrl->clk_freq.byte_clk_rate,
+				ctrl->ctrl->clk_freq.byte_intf_clk_rate, i);
 		if (rc) {
 			pr_err("failed to set byte rate for index:%d\n", i);
 			goto recover_byte_clk;
@@ -4132,7 +4183,8 @@ recover_byte_clk:
 		if (!ctrl->ctrl)
 			continue;
 		dsi_clk_set_byte_clk_rate(display->dsi_clk_handle,
-					  bkp_freq->byte_clk_rate, i);
+					bkp_freq->byte_clk_rate,
+					bkp_freq->byte_intf_clk_rate, i);
 	}
 
 exit:
@@ -4168,6 +4220,7 @@ static int dsi_display_dynamic_clk_switch_vid(struct dsi_display *display,
 
 	/* back up existing rates to handle failure case */
 	bkp_freq.byte_clk_rate = m_ctrl->ctrl->clk_freq.byte_clk_rate;
+	bkp_freq.byte_intf_clk_rate = m_ctrl->ctrl->clk_freq.byte_intf_clk_rate;
 	bkp_freq.pix_clk_rate = m_ctrl->ctrl->clk_freq.pix_clk_rate;
 	bkp_freq.esc_clk_rate = m_ctrl->ctrl->clk_freq.esc_clk_rate;
 
@@ -5171,6 +5224,7 @@ static int dsi_display_bind(struct device *dev,
 		}
 	}
 
+	dsi_display_update_byte_intf_div(display);
 	rc = dsi_display_mipi_host_init(display);
 	if (rc) {
 		pr_err("[%s] failed to initialize mipi host, rc=%d\n",

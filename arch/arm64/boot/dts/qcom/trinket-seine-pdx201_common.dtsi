@@ -46,3 +46,7 @@
 #include "trinket-seine-display.dtsi"
 #include "charger-seine-common.dtsi"
 #include "charger-seine-pdx201.dtsi"
+
+&sde_dsi_seine_panels {
+	qcom,dsi-panel = <&dsi_4>;
+};

@@ -103,6 +103,11 @@ static const struct of_device_id msm_dsi_phy_of_match[] = {
 	{}
 };
 
+int dsi_phy_get_version(struct msm_dsi_phy *phy)
+{
+	return phy->ver_info->version;
+}
+
 static int dsi_phy_regmap_init(struct platform_device *pdev,
 			       struct msm_dsi_phy *phy)
 {
@@ -753,6 +758,28 @@ int dsi_phy_set_power_state(struct msm_dsi_phy *dsi_phy, bool enable)
 	dsi_phy->power_state = enable;
 error:
 	mutex_unlock(&dsi_phy->phy_lock);
+	return rc;
+}
+
+int dsi_phy_set_idle_pc(struct msm_dsi_phy *dsi_phy, bool idle_pc_enabled)
+{
+	int rc = 0;
+
+	if (!dsi_phy) {
+		pr_err("PHY is NULL!!!\n");
+		return -EINVAL;
+	}
+
+	/* If PHY does not require special IdlePC handling, go out early */
+	if (!dsi_phy->hw.ops.set_idle_pc)
+		return 0;
+
+	mutex_lock(&dsi_phy->phy_lock);
+
+	dsi_phy->hw.ops.set_idle_pc(&dsi_phy->hw, idle_pc_enabled);
+
+	mutex_unlock(&dsi_phy->phy_lock);
+
 	return rc;
 }
 

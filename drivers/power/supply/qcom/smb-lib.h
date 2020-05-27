@@ -26,6 +26,7 @@
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
 #include <linux/regulator/machine.h>
 #endif
+#include "battery.h"
 #include "storm-watch.h"
 
 enum print_reason {
@@ -309,7 +310,7 @@ struct smb_charger {
 	int			*audio_headset_drp_wait_ms;
 	enum smb_mode		mode;
 	struct smb_chg_freq	chg_freq;
-	int			smb_version;
+	struct charger_param	chg_param;
 	int			otg_delay_ms;
 	int			*weak_chg_icl_ua;
 

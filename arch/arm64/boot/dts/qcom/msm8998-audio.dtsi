@@ -151,6 +151,9 @@
 };
 
 &q6core {
+	#address-cells = <1>;
+	#size-cells = <1>;
+
 	snd_9335: sound-9335 {
 		compatible = "qcom,msm8998-asoc-snd-tasha";
 		qcom,model = "msm8998-tasha-snd-card";

@@ -15,8 +15,8 @@
 
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/clock/qcom,gcc-trinket.h>
-#include "qcom/trinket-idp.dtsi"
-#include "qcom/trinket-audio-overlay.dtsi"
+#include "trinket-idp.dtsi"
+#include "trinket-audio-overlay.dtsi"
 
 #include "trinket-seine-pdx201_generic.dtsi"
 

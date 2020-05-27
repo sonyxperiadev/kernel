@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2008-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -208,6 +208,11 @@
 
 #define DEFAULT_LOW_WM_VAL	15
 #define DEFAULT_HIGH_WM_VAL	85
+
+#define HDLC_CTXT		1
+#define NON_HDLC_CTXT	2
+
+#define PKT_PROCESS_TIMEOUT		200
 
 #define TYPE_DATA		0
 #define TYPE_CNTL		1

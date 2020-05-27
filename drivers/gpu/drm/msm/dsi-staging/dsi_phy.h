@@ -130,6 +130,14 @@ struct msm_dsi_phy *dsi_phy_get(struct device_node *of_node);
 void dsi_phy_put(struct msm_dsi_phy *dsi_phy);
 
 /**
+ * dsi_phy_get_version() - returns dsi phy version
+ * @dsi_phy:              DSI PHY handle.
+ *
+ * Return: phy version
+ */
+int dsi_phy_get_version(struct msm_dsi_phy *phy);
+
+/**
  * dsi_phy_drv_init() - initialize dsi phy driver
  * @dsi_phy:         DSI PHY handle.
  *
@@ -170,6 +178,12 @@ int dsi_phy_validate_mode(struct msm_dsi_phy *dsi_phy,
  * Return: error code.
  */
 int dsi_phy_set_power_state(struct msm_dsi_phy *dsi_phy, bool enable);
+
+/**
+ * dsi_phy_set_idle_pc() - set/unset idle dsi phy idle power collapse
+ *
+ */
+int dsi_phy_set_idle_pc(struct msm_dsi_phy *dsi_phy, bool idle_pc_enabled);
 
 /**
  * dsi_phy_enable() - enable DSI PHY hardware
