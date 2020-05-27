@@ -124,7 +124,7 @@
 					39 01 00 00 11 00 02 53 28
 					];
 				somc,mdss-dsi-hbm-on-command-state = "dsi_lp_mode";
-				somc,mdss-dsi-hbm-low-command-state = "dsi_lp_mode";
+				somc,mdss-dsi-hbm-off-command-state = "dsi_lp_mode";
 
 				somc,mdss-dsi-aod-on-command = [
 					05 01 00 00 00 00 01 28

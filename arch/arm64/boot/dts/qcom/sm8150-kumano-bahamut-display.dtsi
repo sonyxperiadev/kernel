@@ -42,6 +42,9 @@
 	qcom,platform-touch-vddh-en-gpio = <&pm8150b_gpios 7 0>;
 	somc,disp-err-flag-gpio = <&tlmm 101 0>;
 
+	/* Enable protected HBM range */
+	somc,set-hbm-usable;
+
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
 			qcom,display-topology = <1 0 1>;
