@@ -116,13 +116,6 @@ struct bus_set {
 	u32 count;
 };
 
-enum imem_type {
-	IMEM_NONE,
-	IMEM_OCMEM,
-	IMEM_VMEM,
-	IMEM_MAX,
-};
-
 struct allowed_clock_rates_table {
 	u32 clock_rate;
 };
@@ -155,11 +148,6 @@ struct msm_vidc_mem_cdsp {
 	struct device *dev;
 };
 
-struct imem_ab_table {
-	u32 core_freq;
-	u32 imem_ab;
-};
-
 struct msm_vidc_platform_resources {
 	phys_addr_t firmware_base;
 	phys_addr_t register_base;
@@ -175,9 +163,6 @@ struct msm_vidc_platform_resources {
 	struct dcvs_table *dcvs_tbl;
 	uint32_t dcvs_tbl_size;
 	struct dcvs_limit *dcvs_limit;
-	struct imem_ab_table *imem_ab_tbl;
-	u32 imem_ab_tbl_size;
-	enum imem_type imem_type;
 	bool sys_cache_present;
 	bool sys_cache_res_set;
 	struct subcache_set subcache_set;

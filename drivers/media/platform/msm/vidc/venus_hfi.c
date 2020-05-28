@@ -1278,143 +1278,6 @@ err_create_pkt:
 	return rc;
 }
 
-static int __alloc_imem(struct venus_hfi_device *device)
-{
-	struct imem *imem = NULL;
-	int rc = 0;
-
-	if (!device)
-		return -EINVAL;
-
-	imem = &device->resources.imem;
-	if (imem->type) {
-		dprintk(VIDC_ERR, "IMEM of type %d already allocated\n",
-				imem->type);
-		return -ENOMEM;
-	}
-
-	switch (device->res->imem_type) {
-	case IMEM_VMEM:
-	{
-		phys_addr_t vmem_buffer = 0;
-
-		rc = vmem_allocate(524288, &vmem_buffer);
-		if (rc) {
-			if (rc == -ENOTSUPP) {
-				dprintk(VIDC_DBG,
-					"Target does not support vmem\n");
-				rc = 0;
-			}
-			goto imem_alloc_failed;
-		} else if (!vmem_buffer) {
-			rc = -ENOMEM;
-			goto imem_alloc_failed;
-		}
-
-		imem->vmem = vmem_buffer;
-		break;
-	}
-	case IMEM_NONE:
-		rc = 0;
-		break;
-
-	default:
-		rc = -ENOTSUPP;
-		goto imem_alloc_failed;
-	}
-
-	imem->type = device->res->imem_type;
-	dprintk(VIDC_DBG, "Allocated 524288 bytes of IMEM of type %d\n",
-			imem->type);
-	return 0;
-imem_alloc_failed:
-	imem->type = IMEM_NONE;
-	return rc;
-}
-
-static int __free_imem(struct venus_hfi_device *device)
-{
-	struct imem *imem = NULL;
-	int rc = 0;
-
-	if (!device)
-		return -EINVAL;
-
-	imem = &device->resources.imem;
-	switch (imem->type) {
-	case IMEM_NONE:
-		/* Follow the semantics of free(NULL), which is a no-op. */
-		break;
-	case IMEM_VMEM:
-		vmem_free(imem->vmem);
-		break;
-	default:
-		rc = -ENOTSUPP;
-		goto imem_free_failed;
-	}
-
-	imem->type = IMEM_NONE;
-	return 0;
-
-imem_free_failed:
-	return rc;
-}
-
-static int __set_imem(struct venus_hfi_device *device, struct imem *imem)
-{
-	struct vidc_resource_hdr rhdr;
-	phys_addr_t addr = 0;
-	int rc = 0;
-
-	if (!device || !device->res || !imem) {
-		dprintk(VIDC_ERR, "Invalid params, core: %pK, imem: %pK\n",
-			device, imem);
-		return -EINVAL;
-	}
-
-	rhdr.resource_handle = imem; /* cookie */
-	rhdr.size = 524288; /* 512 kB */
-	rhdr.resource_id = VIDC_RESOURCE_NONE;
-
-	switch (imem->type) {
-	case IMEM_VMEM:
-		rhdr.resource_id = VIDC_RESOURCE_VMEM;
-		addr = imem->vmem;
-		break;
-	case IMEM_NONE:
-		dprintk(VIDC_DBG, "%s Target does not support IMEM", __func__);
-		rc = 0;
-		goto imem_set_failed;
-	default:
-		dprintk(VIDC_ERR, "IMEM of type %d unsupported\n", imem->type);
-		rc = -ENOTSUPP;
-		goto imem_set_failed;
-	}
-
-	BUG_ON(!addr);
-
-	rc = __core_set_resource(device, &rhdr, (void *)addr);
-	if (rc) {
-		dprintk(VIDC_ERR, "Failed to set IMEM on driver\n");
-		goto imem_set_failed;
-	}
-
-	dprintk(VIDC_DBG,
-			"Managed to set IMEM buffer of type %d sized %d bytes at %pa\n",
-			rhdr.resource_id, rhdr.size, &addr);
-
-	rc = __vote_buses(device, device->bus_vote.data,
-			device->bus_vote.data_count);
-	if (rc) {
-		dprintk(VIDC_ERR,
-				"Failed to vote for buses after setting imem: %d\n",
-				rc);
-	}
-
-imem_set_failed:
-	return rc;
-}
-
 static int __tzbsp_set_video_state(enum tzbsp_video_state state)
 {
 	struct tzbsp_video_set_state_req cmd = {0};
@@ -1541,49 +1404,6 @@ static enum hal_default_properties venus_hfi_get_default_properties(void *dev)
 
 	mutex_unlock(&device->lock);
 	return prop;
-}
-
-static int __halt_axi(struct venus_hfi_device *device)
-{
-	struct imem *imem = NULL;
-	u32 reg;
-	int rc = 0;
-	if (!device) {
-		dprintk(VIDC_ERR, "Invalid input: %pK\n", device);
-		return -EINVAL;
-	}
-
-	imem = &device->resources.imem;
-	if (imem->type == IMEM_NONE) {
-		dprintk(VIDC_DBG, "No IMEM: will not halt AXI\n");
-		return 0;
-	}
-
-	/*
-	 * Driver needs to make sure that clocks are enabled to read Venus AXI
-	 * registers. If not skip AXI HALT.
-	 */
-	if (!device->power_enabled) {
-		dprintk(VIDC_WARN,
-			"Clocks are OFF, skipping AXI HALT\n");
-		return -EINVAL;
-	}
-
-	/* Halt AXI and AXI IMEM VBIF Access */
-	reg = __read_register(device, VENUS_VBIF_AXI_HALT_CTRL0);
-	reg |= VENUS_VBIF_AXI_HALT_CTRL0_HALT_REQ;
-	__write_register(device, VENUS_VBIF_AXI_HALT_CTRL0, reg);
-
-	/* Request for AXI bus port halt */
-	rc = readl_poll_timeout(device->hal_data->register_base
-			+ VENUS_VBIF_AXI_HALT_CTRL1,
-			reg, reg & VENUS_VBIF_AXI_HALT_CTRL1_HALT_ACK,
-			POLL_INTERVAL_US,
-			VENUS_VBIF_AXI_HALT_ACK_TIMEOUT_US);
-	if (rc)
-		dprintk(VIDC_WARN, "AXI bus port halt timeout\n");
-
-	return rc;
 }
 
 static int __set_clk_rate(struct venus_hfi_device *device,
@@ -3807,12 +3627,7 @@ static int __response_handler(struct venus_hfi_device *device)
 			break;
 		case HAL_SYS_INIT_DONE:
 			dprintk(VIDC_DBG, "Received SYS_INIT_DONE\n");
-			/* Video driver intentionally does not unset
-			 * IMEM on venus to simplify power collapse.
-			 */
-			if (__set_imem(device, &device->resources.imem))
-				dprintk(VIDC_WARN,
-				"Failed to set IMEM. Performance will be impacted\n");
+
 			sys_init_done.capabilities =
 				device->sys_init_capabilities;
 			hfi_process_sys_init_done_prop_read(
@@ -4938,12 +4753,6 @@ static int __venus_power_on(struct venus_hfi_device *device)
 		goto fail_vote_buses;
 	}
 
-	rc = __alloc_imem(device);
-	if (rc) {
-		dprintk(VIDC_ERR, "Failed to allocate IMEM\n");
-		goto fail_alloc_imem;
-	}
-
 	rc = __enable_regulators(device);
 	if (rc) {
 		dprintk(VIDC_ERR, "Failed to enable GDSC, err = %d\n", rc);
@@ -4993,15 +4802,13 @@ static int __venus_power_on(struct venus_hfi_device *device)
 fail_enable_clks:
 	__disable_regulators(device);
 fail_enable_gdsc:
-	__free_imem(device);
-fail_alloc_imem:
 	__unvote_buses(device);
 fail_vote_buses:
 	device->power_enabled = false;
 	return rc;
 }
 
-static void __venus_power_off(struct venus_hfi_device *device, bool halt_axi)
+static void __venus_power_off(struct venus_hfi_device *device)
 {
 	u32 version;
 
@@ -5013,13 +4820,6 @@ static void __venus_power_off(struct venus_hfi_device *device, bool halt_axi)
 
 	version = __read_register(device, VIDC_WRAPPER_HW_VERSION);
 
-	/* Halt the AXI to make sure there are no pending transactions.
-	 * Clocks should be unprepared after making sure axi is halted.
-	 */
-	if (unlikely(halt_axi))
-		if (__halt_axi(device))
-			dprintk(VIDC_WARN, "Failed to halt AXI\n");
-
 	__disable_unprepare_clks(device);
 
 	__unprepare_ahb2axi_bridge(device, version);
@@ -5028,8 +4828,6 @@ static void __venus_power_off(struct venus_hfi_device *device, bool halt_axi)
 
 	if (__disable_regulators(device))
 		dprintk(VIDC_WARN, "Failed to disable regulators\n");
-
-	__free_imem(device);
 
 	if (__unvote_buses(device))
 		dprintk(VIDC_WARN, "Failed to unvote for buses\n");
@@ -5062,7 +4860,7 @@ static inline int __suspend(struct venus_hfi_device *device)
 
 	__disable_subcaches(device);
 
-	__venus_power_off(device, true);
+	__venus_power_off(device);
 	dprintk(VIDC_PROF, "Venus power off\n");
 	return rc;
 
@@ -5137,7 +4935,7 @@ exit:
 err_reset_core:
 	__tzbsp_set_video_state(TZBSP_VIDEO_STATE_SUSPEND);
 err_set_video_state:
-	__venus_power_off(device, true);
+	__venus_power_off(device);
 err_venus_power_on:
 	dprintk(VIDC_ERR, "Failed to resume from power collapse\n");
 	return rc;
@@ -5196,7 +4994,7 @@ fail_protect_mem:
 		subsystem_put(device->resources.fw.cookie);
 	device->resources.fw.cookie = NULL;
 fail_load_fw:
-	__venus_power_off(device, true);
+	__venus_power_off(device);
 fail_venus_power_on:
 fail_init_pkt:
 	__deinit_resources(device);
@@ -5217,7 +5015,7 @@ static void __unload_fw(struct venus_hfi_device *device)
 	__vote_buses(device, NULL, 0);
 	subsystem_put(device->resources.fw.cookie);
 	__interface_queues_release(device);
-	__venus_power_off(device, false);
+	__venus_power_off(device);
 	device->resources.fw.cookie = NULL;
 	__deinit_resources(device);
 

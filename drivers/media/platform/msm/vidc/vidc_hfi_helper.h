@@ -790,7 +790,6 @@ struct hfi_vpe_color_space_conversion {
 #define HFI_FLIP_HORIZONTAL				(HFI_COMMON_BASE + 0x2)
 #define HFI_FLIP_VERTICAL				(HFI_COMMON_BASE + 0x4)
 
-#define HFI_RESOURCE_OCMEM 0x00000001
 #define HFI_RESOURCE_SYSCACHE 0x00000002
 
 struct hfi_resource_subcache_type {
@@ -803,28 +802,10 @@ struct hfi_resource_syscache_info_type {
 	struct hfi_resource_subcache_type rg_subcache_entries[1];
 };
 
-struct hfi_resource_ocmem {
-	u32 size;
-	u32 mem;
-};
-
-struct hfi_resource_ocmem_requirement {
-	u32 session_domain;
-	u32 width;
-	u32 height;
-	u32 size;
-};
-
-struct hfi_resource_ocmem_requirement_info {
-	u32 num_entries;
-	struct hfi_resource_ocmem_requirement rg_requirements[1];
-};
-
 struct hfi_property_sys_image_version_info_type {
 	u32 string_size;
 	u8  str_image_version[1];
 };
-
 
 struct hfi_venc_config_advanced {
 	u8 pipe2d;
