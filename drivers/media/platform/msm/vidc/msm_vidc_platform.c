@@ -201,7 +201,6 @@ static struct msm_vidc_common_data msm8956_common_data[] = {
 	CMNDATA_ENTRY("qcom,max-b-frames-per-sec", 60),
 	CMNDATA_ENTRY("qcom,power-collapse-delay", 1500),
 	CMNDATA_ENTRY("qcom,hw-resp-timeout", 1000),
-	CMNDATA_ENTRY("qcom,hfi-version", 3),
 };
 
 static struct msm_vidc_common_data msm8996_common_data[] = {

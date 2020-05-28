@@ -751,10 +751,9 @@ int read_platform_resources_from_drv_data(
 
 	res->sku_version = platform_data->sku_version;
 
-	res->hfi_version = find_key_value(platform_data,
-			"qcom,hfi-version");
-	if (!res->hfi_version)
-		res->hfi_version = 4;
+	res->fw_name = "venus";
+
+	dprintk(VIDC_DBG, "Firmware filename: %s\n", res->fw_name);
 
 	res->max_load = find_key_value(platform_data,
 			"qcom,max-hw-load");
@@ -891,13 +890,6 @@ int read_platform_resources_from_dt(
 
 	kres = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
 	res->irq = kres ? kres->start : -1;
-
-	rc = of_property_read_string(pdev->dev.of_node, "qcom,firmware-name",
-			&res->fw_name);
-	if (rc)
-		res->fw_name = "venus";
-
-	dprintk(VIDC_DBG, "Firmware filename: %s\n", res->fw_name);
 
 	rc = msm_vidc_load_subcache_info(res);
 	if (rc)

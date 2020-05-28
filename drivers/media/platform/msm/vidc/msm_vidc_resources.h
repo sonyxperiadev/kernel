@@ -156,7 +156,6 @@ struct msm_vidc_platform_resources {
 	uint32_t gcc_register_size;
 	uint32_t irq;
 	uint32_t sku_version;
-	uint8_t hfi_version;
 	struct allowed_clock_rates_table *allowed_clks_tbl;
 	u32 allowed_clks_tbl_size;
 	struct clock_freq_table clock_freq_tbl;
@@ -182,6 +181,7 @@ struct msm_vidc_platform_resources {
 	struct list_head context_banks;
 	bool thermal_mitigable;
 	const char *fw_name;
+	const char *hfi_version;
 	bool never_unload_fw;
 	bool debug_timeout;
 	uint32_t pm_qos_latency_us;
