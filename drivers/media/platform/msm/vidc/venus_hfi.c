@@ -3965,45 +3965,6 @@ static inline int __prepare_ahb2axi_bridge(struct venus_hfi_device *device)
 	return 0;
 }
 
-static inline void __unprepare_ahb2axi_bridge(struct venus_hfi_device *device,
-						u32 version)
-{
-	u32 axi0_cbcr_status = 0, axi1_cbcr_status = 0;
-
-	if (!device)
-		return;
-
-	/* reset axi0 and axi1 as needed only for specific video hardware */
-	version &= ~GENMASK(15, 0);
-	if (version != (0x5 << 28 | 0x10 << 16))
-		return;
-
-	if (!(device->intr_status & VIDC_WRAPPER_INTR_STATUS_A2HWD_BMSK))
-		return;
-
-	dprintk(VIDC_ERR,
-		"reset axi cbcr to recover from hung\n");
-
-	/* read registers */
-	axi0_cbcr_status = __read_gcc_register(device, VIDEO_GCC_AXI0_CBCR);
-	axi1_cbcr_status = __read_gcc_register(device, VIDEO_GCC_AXI1_CBCR);
-
-	/* write enable clk_ares */
-	__write_gcc_register(device, VIDEO_GCC_AXI0_CBCR,
-		axi0_cbcr_status|0x4);
-	__write_gcc_register(device, VIDEO_GCC_AXI1_CBCR,
-		axi1_cbcr_status|0x4);
-
-	/* wait for deassert */
-	usleep_range(150, 250);
-
-	/* write disable clk_ares */
-	axi0_cbcr_status = axi0_cbcr_status & (~0x4);
-	axi1_cbcr_status = axi1_cbcr_status & (~0x4);
-	__write_gcc_register(device, VIDEO_GCC_AXI0_CBCR, axi0_cbcr_status);
-	__write_gcc_register(device, VIDEO_GCC_AXI1_CBCR, axi1_cbcr_status);
-}
-
 static inline int __prepare_enable_clks(struct venus_hfi_device *device)
 {
 	struct clock_info *cl = NULL, *cl_fail = NULL;
@@ -4758,15 +4719,11 @@ static void __venus_power_off(struct venus_hfi_device *device)
 
 	if (!(device->intr_status & VIDC_WRAPPER_INTR_STATUS_A2HWD_BMSK))
 		disable_irq_nosync(device->hal_data->irq);
+	device->intr_status = 0;
 
 	version = __read_register(device, VIDC_WRAPPER_HW_VERSION);
 
 	__disable_unprepare_clks(device);
-
-	__unprepare_ahb2axi_bridge(device, version);
-
-	device->intr_status = 0;
-
 	if (__disable_regulators(device))
 		dprintk(VIDC_WARN, "Failed to disable regulators\n");
 
