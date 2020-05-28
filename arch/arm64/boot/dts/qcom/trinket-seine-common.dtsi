@@ -34,7 +34,7 @@
  #else
 	status = "disabled";
  #endif
-}
+};
 
 &reserved_memory {
 	debug_region: debug_region@ffb00000 {
