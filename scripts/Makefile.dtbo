@@ -7,6 +7,7 @@ __dtbo     := $(addprefix $(obj)/,$(__dtbo))
 dtbo-base	:= $(addprefix $(obj)/,$(dtbo-base))
 dtbo	:= $(addprefix $(obj)/,$(dtbo))
 
+ifeq ($(CONFIG_DTC_OVERLAY_TEST_ENABLED),y)
 DTC_OVERLAY_TEST = scripts/ufdt_apply_overlay.bin
 quiet_cmd_dtbo_verify	= VERIFY  $@
 cmd_dtbo_verify = $(foreach m,\
@@ -15,6 +16,9 @@ cmd_dtbo_verify = $(foreach m,\
 			$(DTC_OVERLAY_TEST) $(m) $@ \
 			$(dot-target).$(patsubst $(obj)/%.dtb,%,$(m)).tmp;))\
 			true
+else
+cmd_dtbo_verify = true
+endif
 
 DTC_FLAGS += -Wno-avoid_default_addr_size -Wno-reg_format \
 	     -Wno-interrupts_property -Wno-gpios_property \

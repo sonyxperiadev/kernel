@@ -2076,6 +2076,26 @@ config DEBUG_RENAME_SKIP_INITRAMFS_BOOTPARAM
 
 	  This is a kernel hack. Definitely say N.
 
+config DTC_OVERLAY_TEST_ENABLED
+	bool "Test Device-Tree Overlay (DTBO) applying"
+	help
+	  Device-Tree Overlay (DTBO) is composed of fragments and gets
+	  applied on top of a standard predefined Device-Tree (DTB) that
+	  is either provided by the bootloader or appended to the Linux
+	  kernel image.
+	  Sometimes, though, this overlay does not really correspond to
+	  the DTB and the DTC compiler cannot really check what is going
+	  on during build because it is meant to be compiled as a
+	  standalone overlay.
+
+	  Sometimes, it happens that applying the DTB Overlay fails,
+	  which makes the target device to not boot in some cases.
+
+	  Enabling this configuration option will temporarily apply the
+	  generated DTBO to the target DTB to check for errors.
+
+	  This is a debugging option. You want to say N for production.
+
 source "block/Kconfig"
 
 config PREEMPT_NOTIFIERS
