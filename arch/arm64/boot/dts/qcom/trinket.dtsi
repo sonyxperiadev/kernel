@@ -838,11 +838,6 @@
 		};
 	};
 
-	clock_rpmcc: qcom,rpmcc {
-		compatible = "qcom,rpmcc-trinket";
-		#clock-cells = <1>;
-	};
-
 	clock_gcc: qcom,gcc@1400000 {
 		compatible = "qcom,gcc-trinket", "syscon";
 		reg = <0x1400000 0x1f0000>;
@@ -1216,6 +1211,11 @@
 		rpm-channel-name = "rpm_requests";
 		interrupts = <GIC_SPI 194 IRQ_TYPE_EDGE_RISING>;
 		rpm-channel-type = <15>; /* SMD_APPS_RPM */
+
+		clock_rpmcc: qcom,rpmcc {
+			compatible = "qcom,rpmcc-trinket";
+			#clock-cells = <1>;
+		};
 	};
 
 	wdog: qcom,wdt@f017000 {
