@@ -779,7 +779,6 @@ static int msm_vidc_pm_suspend(struct device *dev)
 
 static int msm_vidc_pm_resume(struct device *dev)
 {
-	place_marker("vidc resumed");
 	dprintk(VIDC_INFO, "%s\n", __func__);
 	return 0;
 }
@@ -849,11 +848,7 @@ static int msm_vidc_pm_freeze(struct device *dev)
 		return 0;
 
 	if (of_device_is_compatible(dev->of_node, "qcom,msm-vidc")) {
-		place_marker("vidc hibernation start");
-
 		rc = msm_vidc_freeze_core(core);
-
-		place_marker("vidc hibernation end");
 	}
 
 	dprintk(VIDC_INFO, "%s: done\n", __func__);
