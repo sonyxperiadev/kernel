@@ -103,7 +103,7 @@
 };
 
 &mdss_mdp {
-	connectors = <&sde_wb &sde_dsi0 &dsi_panel_cmd_display>;
+	connectors = <&sde_wb &mdss_dsi0 &dsi_panel_cmd_display>;
 };
 
 /* Disable/remove everything default, we use our own */
