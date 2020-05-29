@@ -551,6 +551,10 @@
 	status = "disabled";
 };
 
+&pm8008_9 {
+	status = "disabled";
+};
+
 &fsa4480 {
 	status = "disabled";
 };
