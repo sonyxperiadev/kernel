@@ -60,20 +60,20 @@
 			};
 
 			c0_hot: c0-hot {
-				temperature = <83000>;
+				temperature = <77000>;
 				hysteresis = <4000>;
 				type = "hot";
 			};
 
 			c0_trip1: c0-trip1 {
-				temperature = <78000>;
+				temperature = <74000>;
 				hysteresis = <3000>;
 				type = "passive";
 				
 			};
 
 			c0_trip2: c0-trip2 {
-				temperature = <75000>;
+				temperature = <70000>;
 				hysteresis = <4000>;
 				type = "passive";
 				
@@ -167,34 +167,34 @@
 		thermal-governor = "step_wise";
 		trips {
 			c1_hot: c1-hot {
-				temperature = <86100>;
+				temperature = <80100>;
 				hysteresis = <4000>;
 				type = "hot";
 			};
 
 			c1_trip0: c1-trip0 {
-				temperature = <82100>;
+				temperature = <75400>;
 				hysteresis = <3000>;
 				type = "passive";
 			};
 
 			c1_trip1: c1-trip1 {
-				temperature = <77200>;
-				hysteresis = <3000>;
+				temperature = <73200>;
+				hysteresis = <2000>;
 				type = "passive";
 				
 			};
 
 			c1_trip2: c1-trip2 {
-				temperature = <76300>;
-				hysteresis = <3000>;
+				temperature = <70300>;
+				hysteresis = <2500>;
 				type = "passive";
 				
 			};
 
 			c1_trip3: c1-trip3 {
-				temperature = <70000>;
-				hysteresis = <3000>;
+				temperature = <64000>;
+				hysteresis = <2000>;
 				type = "passive";
 			};
 		};
