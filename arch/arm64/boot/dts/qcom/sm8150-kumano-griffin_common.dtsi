@@ -255,3 +255,4 @@
 #include "charger-kumano-common.dtsi"
 #include "charger-kumano-griffin.dtsi"
 
+#include "sm8150-kumano-common-thermal.dtsi"

@@ -432,3 +432,5 @@
 #include "sm8150-kumano-bahamut-camera.dtsi"
 #include "charger-kumano-common.dtsi"
 #include "charger-kumano-bahamut.dtsi"
+
+#include "sm8150-kumano-common-thermal.dtsi"
