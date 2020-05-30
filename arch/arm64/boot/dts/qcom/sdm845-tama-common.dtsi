@@ -578,8 +578,10 @@
 };
 
 &pmi8998_charger {
+	qcom,fv-max-uv = <4380000>;
 	qcom,otg-cl-ua = <1000000>;
 	qcom,usb-icl-ua = <1500000>;
+	qcom,hvdcp-disable; /* Still allows for USB PD */
 	somc,jeita-sw-ctrl-en;
 	io-channels = <&pmi8998_rradc 2>,
 		      <&pmi8998_rradc 3>,
@@ -596,6 +598,18 @@
 			   "charger_temp",
 			   "charger_temp_max";
 	/delete-property/ qcom,auto-recharge-soc;
+
+	somc,fake-charging-temp-level = <13>;
+	somc,thermal-lo-volt-icl-ua = <2000000 1500000 1500000
+					1500000 1300000 1100000
+					1100000 1000000 900000
+					900000 500000 200000
+					100000 0 0>;
+	somc,thermal-hi-volt-icl-ua = <1700000 1700000 1700000
+					1700000 1500000 1500000
+					1000000 1000000 1000000
+					600000 500000 200000
+					100000 0 0>;
 
 	smb2_vbus: qcom,smb2-vbus {
 		regulator-name = "smb2-vbus";

@@ -412,22 +412,11 @@
 };
 
 &pmi8998_charger {
-	qcom,fv-max-uv = <4380000>;
 	somc,thermal-fcc-ua = <2400000 2200000 2000000
 				1800000 1500000 1400000
 				1300000 1000000 800000
 				700000 500000 200000
 				100000 0 0>;
-	somc,thermal-lo-volt-icl-ua = <2000000 1500000 1500000
-					1500000 1300000 1100000
-					1100000 1000000 900000
-					900000 500000 200000
-					100000 0 0>;
-	somc,thermal-hi-volt-icl-ua = <1700000 1700000 1700000
-					1700000 1500000 1500000
-					1000000 1000000 1000000
-					600000 500000 200000
-					100000 0 0>;
 	somc,thermal-dcin-icl-ua = <1000000 950000 900000
 					850000 800000 750000
 					700000 600000 500000
@@ -438,7 +427,6 @@
 					9000 9000 9000
 					9000 5000 5000
 					5000 5000 5000>;
-	somc,fake-charging-temp-level = <13>;
 	somc,wireless-support;
 	somc,jeita-use-aux-therm;
 	somc,jeita-use-wlc-therm;
@@ -457,7 +445,6 @@
 	somc,dc-l-volt-icl-ua = <1000000>;
 	somc,batt-temp-correction = <0>;
 	somc,wlc-temp-correction = <(-18)>;
-	qcom,hvdcp-disable;
 };
 
 &pmi8998_fg {
