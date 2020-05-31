@@ -3347,9 +3347,9 @@
 };
 
 &lab_regulator {
-	interrupts = <0x3 0xde 0x0 IRQ_TYPE_LEVEL_LOW>,
-			<0x3 0xde 0x1 IRQ_TYPE_EDGE_RISING>;
-	interrupt-names = "lab_vreg_not_ok_interrupt", "lab-vreg-ok";
+//	interrupts = <0x3 0xde 0x0 IRQ_TYPE_LEVEL_LOW>,
+//			<0x3 0xde 0x1 IRQ_TYPE_EDGE_RISING>;
+//	interrupt-names = "lab_vreg_not_ok_interrupt", "lab-vreg-ok";
 
 	/* Set LAB max uV to 5.5V as a safety measure */
 	regulator-max-microvolt = <5500000>;
@@ -3376,11 +3376,20 @@
 
 	/* Precharge time for LAB regulator: 500uS */
 	qcom,qpnp-lab-max-precharge-time = <500>;
+
+	/* Notify when LAB regulator is up */
+	qcom,notify-lab-vreg-ok-sts;
+
+	/*
+	 * Force polling STATUS register for short circuit detection
+	 * when enabling the LAB regulator
+	 */
+	qcom,detect-lab-short-circuit;
 };
 
 &ibb_regulator {
-	interrupts = <0x3 0xdc 0x0 IRQ_TYPE_LEVEL_HIGH>;
-	interrupt-names = "ibb_vreg_not_ok_interrupt";
+//	interrupts = <0x3 0xdc 0x0 IRQ_TYPE_LEVEL_HIGH>;
+//	interrupt-names = "ibb_vreg_not_ok_interrupt";
 
 	/* Set IBB max uV to 5.5V as a safety measure */
 	regulator-max-microvolt = <5500000>;
