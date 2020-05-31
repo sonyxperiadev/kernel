@@ -348,6 +348,7 @@ struct panel_specific_pdata {
 	int reset_touch_gpio;
 	int touch_int_gpio;
 	int disp_vddio_gpio;
+	int disp_oled_vci_gpio;
 	int disp_dcdc_en_gpio;
 	int disp_err_fg_gpio;
 

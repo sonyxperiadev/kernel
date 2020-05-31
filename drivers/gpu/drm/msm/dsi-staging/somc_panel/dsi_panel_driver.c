@@ -180,6 +180,14 @@ int dsi_panel_driver_gpio_request(struct dsi_panel *panel)
 			goto error_release_disp_dcdc_en;
 		}
 	}
+	if (gpio_is_valid(spec_pdata->disp_oled_vci_gpio)) {
+		rc = gpio_request(spec_pdata->disp_oled_vci_gpio,
+							"disp_oled_vci_gpio");
+		if (rc) {
+			pr_err("request for vci_en gpio failed, rc=%d\n", rc);
+			goto error_release_disp_vci_en;
+		}
+	}
 
 	if (gpio_is_valid(spec_pdata->disp_err_fg_gpio)) {
 		rc = gpio_request(spec_pdata->disp_err_fg_gpio,
@@ -195,6 +203,9 @@ int dsi_panel_driver_gpio_request(struct dsi_panel *panel)
 error_release_disp_err_fg:
 	if (gpio_is_valid(spec_pdata->disp_err_fg_gpio))
 		gpio_free(spec_pdata->disp_err_fg_gpio);
+error_release_disp_vci_en:
+	if (gpio_is_valid(spec_pdata->disp_oled_vci_gpio))
+		gpio_free(spec_pdata->disp_oled_vci_gpio);
 error_release_disp_dcdc_en:
 	if (gpio_is_valid(spec_pdata->disp_dcdc_en_gpio))
 		gpio_free(spec_pdata->disp_dcdc_en_gpio);
@@ -230,6 +241,9 @@ int dsi_panel_driver_gpio_release(struct dsi_panel *panel)
 
 	if (gpio_is_valid(spec_pdata->touch_vddh_en_gpio))
 		gpio_free(spec_pdata->touch_vddh_en_gpio);
+
+	if (gpio_is_valid(spec_pdata->disp_oled_vci_gpio))
+		gpio_free(spec_pdata->disp_oled_vci_gpio);
 
 	if (gpio_is_valid(spec_pdata->disp_dcdc_en_gpio))
 		gpio_free(spec_pdata->disp_dcdc_en_gpio);
@@ -613,6 +627,15 @@ int dsi_panel_driver_post_power_off(struct dsi_panel *panel)
 		if (rc)
 			pr_err("%s: failed to disable vci, rc=%d\n",
 			       __func__, rc);
+
+		/* Some devices have got a fixed regulator as Vci... */
+		if (gpio_is_valid(spec_pdata->disp_oled_vci_gpio)) {
+			rc = gpio_direction_output(spec_pdata->disp_oled_vci_gpio, 1);
+			if (rc)
+				pr_err("%s: unable to set dir for vci_en gpio "
+				       " rc=%d\n", __func__, rc);
+			gpio_set_value(spec_pdata->disp_oled_vci_gpio, 0);
+		}
 	}
 
 	rc = somc_panel_vreg_ctrl(&spec_pdata->touch_power_info,
@@ -712,10 +735,22 @@ int dsi_panel_driver_pre_power_on(struct dsi_panel *panel)
 		goto exit;
 	}
 
-	rc = somc_panel_vreg_ctrl(&panel->power_info, "vci", true);
-	if (rc) {
-		pr_err("%s: failed to enable vci, rc=%d\n", __func__, rc);
-		goto exit;
+	if (spec_pdata->oled_disp) {
+		rc = somc_panel_vreg_ctrl(&panel->power_info, "vci", true);
+		if (rc) {
+			pr_err("%s: failed to enable vci, rc=%d\n",
+			       __func__, rc);
+			goto exit;
+		}
+
+		if (gpio_is_valid(spec_pdata->disp_oled_vci_gpio)) {
+			rc = gpio_direction_output(spec_pdata->disp_oled_vci_gpio, 0);
+			if (rc) {
+				pr_err("%s: failed to enable vci GPIO rc=%d\n",
+				       __func__, rc);
+			}
+			gpio_set_value(spec_pdata->disp_oled_vci_gpio, 1);
+		}
 	}
 
 	dsi_panel_driver_touch_pinctrl_set_state(panel, true);
@@ -1269,6 +1304,13 @@ int dsi_panel_driver_parse_gpios(struct dsi_panel *panel,
 						0);
 	if (!gpio_is_valid(spec_pdata->disp_dcdc_en_gpio)) {
 		pr_err("%s: disp dcdc en gpio not specified\n", __func__);
+	}
+
+	spec_pdata->disp_oled_vci_gpio = of_get_named_gpio(panel->panel_of_node,
+					      "somc,disp-vci-en-gpio",
+					      0);
+	if (!gpio_is_valid(spec_pdata->disp_oled_vci_gpio)) {
+		pr_err("%s: failed get vci enable gpio\n", __func__);
 	}
 
 	spec_pdata->disp_err_fg_gpio = of_get_named_gpio(of_node,
