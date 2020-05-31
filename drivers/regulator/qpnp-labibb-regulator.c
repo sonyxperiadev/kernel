@@ -3395,6 +3395,10 @@ static int register_qpnp_lab_regulator(struct qpnp_labibb *labibb,
 
 	labibb->notify_lab_vreg_ok_sts = of_property_read_bool(of_node,
 					"qcom,notify-lab-vreg-ok-sts");
+	if (labibb->pmic_rev_id->pmic_subtype == PMI8998_SUBTYPE &&
+	    labibb->notify_lab_vreg_ok_sts)
+		labibb->detect_lab_sc = of_property_read_bool(of_node,
+					"qcom,detect-lab-short-circuit");
 
 	labibb->lab_vreg.sc_wait_time_ms = -EINVAL;
 	if (labibb->pmic_rev_id->pmic_subtype == PM660L_SUBTYPE &&
