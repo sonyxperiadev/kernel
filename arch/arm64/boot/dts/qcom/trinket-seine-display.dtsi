@@ -26,24 +26,6 @@
 			qcom,supply-disable-load = <80>;
 			qcom,supply-post-on-sleep = <1>;
 		};
-
-		qcom,panel-supply-entry@1 {
-			reg = <1>;
-			qcom,supply-name = "vci";
-			qcom,supply-min-voltage = <3000000>;
-			qcom,supply-max-voltage = <3000000>;
-			qcom,supply-enable-load = <100000>;
-			qcom,supply-disable-load = <100>;
-			qcom,supply-post-on-sleep = <1>;
-		};
-	};
-
-	vci_gpio_vreg: tlmm_vci_vreg_en {
-		compatible = "regulator-fixed";
-		regulator-name = "disp_vci_fixed_vreg";
-		startup-delay-us = <0>;
-		enable-active-high;
-		gpio = <&tlmm 54 0>;
 	};
 
 	sde_dsi_seine_panels: somc,dsi-display@1008 {
@@ -94,7 +76,6 @@
 		qcom,panel-te-source = <0>;
 
 		vddio-supply = <&L12A>;
-		vci-supply   = <&vci_gpio_vreg>;
 		lab-supply = <&lcdb_ldo_vreg>;
 		ibb-supply = <&lcdb_ncp_vreg>;
 
@@ -159,6 +140,8 @@
 	qcom,platform-touch-reset-gpio = <&tlmm 97 0>;
 	qcom,platform-touch-vddio-en-gpio = <&tlmm 59 0>;
 	qcom,platform-touch-vddh-en-gpio  = <&tlmm 58 0>;
+
+	somc,disp-vci-en-gpio = <&tlmm 54 0>;
 	somc,disp-err-flag-gpio = <&tlmm 86 0>;
 
 	qcom,mdss-dsi-display-timings {
