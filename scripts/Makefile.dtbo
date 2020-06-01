@@ -8,7 +8,7 @@ dtbo-base	:= $(addprefix $(obj)/,$(dtbo-base))
 dtbo	:= $(addprefix $(obj)/,$(dtbo))
 
 ifeq ($(CONFIG_DTC_OVERLAY_TEST_ENABLED),y)
-DTC_OVERLAY_TEST = scripts/ufdt_apply_overlay.bin
+DTC_OVERLAY_TEST = $(srctree)/scripts/ufdt_apply_overlay.bin
 quiet_cmd_dtbo_verify	= VERIFY  $@
 cmd_dtbo_verify = $(foreach m,\
 	$(addprefix $(obj)/,$($(@F)-base)),\
