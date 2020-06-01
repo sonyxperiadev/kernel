@@ -24,6 +24,8 @@
 		sec,always_lpmode = <0>;
 		sec,bringup = <0>;
 		sec,firmware_name = "touch_module_id_0x82.img";
+		sec,platform-touch-reset-gpio = <&tlmm 97 0>;
+		sec,device_id = /bits/ 8 <0xAC 0x37 0x61>;
 
 		/* feature */
 		sec,watchdog_supported = <1>;
