@@ -105,6 +105,10 @@
 		sec,aod_mode_supported = <1>;
 		sec,sod_mode_supported = <1>;
 		sec,stamina_mode_supported = <1>;
+
+		/* Open Devices specific */
+		somc,touch-rst-gpio = <&tlmm 54 0>;
+		somc,expected-device-id = <0xAC 0x37 0x71>;
 	};
 };
 
