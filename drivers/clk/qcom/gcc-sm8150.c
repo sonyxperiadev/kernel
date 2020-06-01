@@ -513,8 +513,7 @@ static struct clk_rcg2 gcc_pcie_0_aux_clk_src = {
 		.vdd_class = &vdd_cx,
 		.num_rate_max = VDD_NUM,
 		.rate_max = (unsigned long[VDD_NUM]) {
-			[VDD_MIN] = 9600000,
-			[VDD_LOW] = 19200000},
+			[VDD_MIN] = 19200000},
 	},
 };
 
@@ -533,8 +532,7 @@ static struct clk_rcg2 gcc_pcie_1_aux_clk_src = {
 		.vdd_class = &vdd_cx,
 		.num_rate_max = VDD_NUM,
 		.rate_max = (unsigned long[VDD_NUM]) {
-			[VDD_MIN] = 9600000,
-			[VDD_LOW] = 19200000},
+			[VDD_MIN] = 19200000},
 	},
 };
 
@@ -4161,6 +4159,9 @@ static const struct qcom_reset_map gcc_sm8150_resets[] = {
 	[GCC_USB30_PRIM_BCR] = { 0xf000 },
 	[GCC_USB30_SEC_BCR] = { 0x10000 },
 	[GCC_USB_PHY_CFG_AHB2PHY_BCR] = { 0x6a000 },
+	[GCC_VIDEO_AXIC_CLK_BCR] = { 0xb02c, 2 },
+	[GCC_VIDEO_AXI0_CLK_BCR] = { 0xb024, 2 },
+	[GCC_VIDEO_AXI1_CLK_BCR] = { 0xb028, 2 },
 };
 
 
@@ -4260,7 +4261,6 @@ static int gcc_sm8150_probe(struct platform_device *pdev)
 			dev_err(&pdev->dev, "Unable to get vdd_mm regulator\n");
 		return PTR_ERR(vdd_mm.regulator[0]);
 	}
-	vdd_mm.use_max_uV = true;
 
 	/* register hardware clocks */
 	for (i = 0; i < ARRAY_SIZE(gcc_sm8150_hws); i++) {

@@ -683,11 +683,12 @@ static struct msm_vidc_ctrl msm_venc_ctrls[] = {
 		.name = "Extradata Type",
 		.type = V4L2_CTRL_TYPE_MENU,
 		.minimum = V4L2_MPEG_VIDC_EXTRADATA_NONE,
-		.maximum = V4L2_MPEG_VIDC_EXTRADATA_UBWC_CR_STATS_INFO,
+		.maximum = V4L2_MPEG_VIDC_EXTRADATA_ENC_FRAME_QP,
 		.default_value = V4L2_MPEG_VIDC_EXTRADATA_NONE,
 		.menu_skip_mask = ~(
 			(1 << V4L2_MPEG_VIDC_EXTRADATA_NONE) |
 			(1 << V4L2_MPEG_VIDC_EXTRADATA_INTERLACE_VIDEO) |
+			(1 << V4L2_MPEG_VIDC_EXTRADATA_ENC_DTS) |
 			(1 << V4L2_MPEG_VIDC_EXTRADATA_TIMESTAMP) |
 			(1 << V4L2_MPEG_VIDC_EXTRADATA_S3D_FRAME_PACKING) |
 			(1 << V4L2_MPEG_VIDC_EXTRADATA_FRAME_RATE) |
@@ -697,7 +698,9 @@ static struct msm_vidc_ctrl msm_venc_ctrls[] = {
 			(1 << V4L2_MPEG_VIDC_EXTRADATA_ASPECT_RATIO) |
 			(1 << V4L2_MPEG_VIDC_EXTRADATA_LTR) |
 			(1 << V4L2_MPEG_VIDC_EXTRADATA_ROI_QP) |
-			(1 << V4L2_MPEG_VIDC_EXTRADATA_HDR10PLUS_METADATA)
+			(1 << V4L2_MPEG_VIDC_EXTRADATA_HDR10PLUS_METADATA) |
+			(1 << V4L2_MPEG_VIDC_EXTRADATA_INPUT_CROP) |
+			(1ULL << V4L2_MPEG_VIDC_EXTRADATA_ENC_FRAME_QP)
 			),
 		.qmenu = mpeg_video_vidc_extradata,
 	},
@@ -1320,6 +1323,24 @@ static struct v4l2_ctrl *get_ctrl_from_cluster(int id,
 	return NULL;
 }
 
+static int update_heic_input_buffer_count(struct msm_vidc_inst *inst)
+{
+	struct hal_buffer_requirements *bufreq;
+
+	bufreq = get_buff_req_buffer(inst, HAL_BUFFER_INPUT);
+	if (!bufreq)
+		return -EINVAL;
+
+	bufreq->buffer_count_min = bufreq->buffer_count_min_host =
+		bufreq->buffer_count_actual = MIN_NUM_ENC_OUTPUT_BUFFERS;
+
+	dprintk(VIDC_DBG, "%s: %x : input min %d min_host %d actual %d\n",
+		__func__, hash32_ptr(inst->session),
+		bufreq->buffer_count_min, bufreq->buffer_count_min_host,
+		bufreq->buffer_count_actual);
+	return 0;
+}
+
 int msm_venc_s_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 {
 	int rc = 0;
@@ -1524,6 +1545,19 @@ int msm_venc_s_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 		grid_enable.grid_enable = ctrl->val;
 		inst->grid_enable = ctrl->val;
 		pdata = &grid_enable;
+
+		if (ctrl->val &&
+			inst->state < MSM_VIDC_LOAD_RESOURCES) {
+			dprintk(VIDC_DBG,
+				"Update HEIC input buffer count");
+			rc = update_heic_input_buffer_count(inst);
+			if (rc) {
+				dprintk(VIDC_ERR,
+				"Failed to update HEIC input buffer count: %d\n",
+				rc);
+				break;
+			}
+		}
 		break;
 	}
 	case V4L2_CID_MPEG_VIDEO_BITRATE:
@@ -1609,6 +1643,7 @@ int msm_venc_s_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 				V4L2_CID_MPEG_VIDC_VIDEO_HEVC_TIER_LEVEL,
 				temp_ctrl->val);
 		pdata = &profile_level;
+		inst->profile = profile_level.profile;
 		break;
 	case V4L2_CID_MPEG_VIDC_VIDEO_HEVC_TIER_LEVEL:
 		temp_ctrl = TRY_GET_CTRL(V4L2_CID_MPEG_VIDC_VIDEO_HEVC_PROFILE);
@@ -1838,9 +1873,12 @@ int msm_venc_s_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 		case V4L2_MPEG_VIDC_EXTRADATA_ASPECT_RATIO:
 		case V4L2_MPEG_VIDC_EXTRADATA_ROI_QP:
 		case V4L2_MPEG_VIDC_EXTRADATA_HDR10PLUS_METADATA:
+		case V4L2_MPEG_VIDC_EXTRADATA_INPUT_CROP:
 			inst->bufq[OUTPUT_PORT].num_planes = 2;
 			break;
 		case V4L2_MPEG_VIDC_EXTRADATA_LTR:
+		case V4L2_MPEG_VIDC_EXTRADATA_ENC_FRAME_QP:
+		case V4L2_MPEG_VIDC_EXTRADATA_ENC_DTS:
 			inst->bufq[CAPTURE_PORT].num_planes = 2;
 			break;
 		default:

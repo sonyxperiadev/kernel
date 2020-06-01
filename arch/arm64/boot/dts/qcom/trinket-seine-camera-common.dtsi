@@ -239,8 +239,8 @@
 		qcom,csiphy-sd-index = <0>;
 		qcom,csid-sd-index = <0>;
 		qcom,mount-angle = <90>;
-		qcom,actuator-src = <&actuator0>;
-		qcom,eeprom-src = <&eeprom0>;
+		qcom,actuator-src = <&seine_actuator0>;
+		qcom,eeprom-src = <&seine_eeprom0>;
 		qcom,led-flash-src = <&led_flash0>;
 		cam_vdig-supply = <&S6A>;
 		qcom,cam-vreg-name = "cam_vdig";
@@ -281,8 +281,8 @@
 		qcom,csiphy-sd-index = <1>;
 		qcom,csid-sd-index = <1>;
 		qcom,mount-angle = <90>;
-		qcom,actuator-src = <&actuator1>;
-		qcom,eeprom-src = <&eeprom1>;
+		qcom,actuator-src = <&seine_actuator1>;
+		qcom,eeprom-src = <&seine_eeprom1>;
 		qcom,led-flash-src = <&led_flash0>;
 		cam_vdig-supply = <&S6A>;
 		qcom,cam-vreg-name = "cam_vdig";
@@ -323,7 +323,7 @@
 		qcom,csiphy-sd-index = <2>;
 		qcom,csid-sd-index = <2>;
 		qcom,mount-angle = <90>;
-		qcom,eeprom-src = <&eeprom2>;
+		qcom,eeprom-src = <&seine_eeprom2>;
 		cam_vdig-supply = <&S6A>;
 		qcom,cam-vreg-name = "cam_vdig";
 		qcom,cam-vreg-min-voltage = <1200000>;
@@ -362,7 +362,7 @@
 		qcom,csiphy-sd-index = <2>;
 		qcom,csid-sd-index = <2>;
 		qcom,mount-angle = <90>;
-		qcom,eeprom-src = <&eeprom3>;
+		qcom,eeprom-src = <&seine_eeprom3>;
 		cam_vdig-supply = <&S6A>;
 		qcom,cam-vreg-name = "cam_vdig";
 		qcom,cam-vreg-min-voltage = <1200000>;
@@ -401,7 +401,7 @@
 		qcom,csiphy-sd-index = <2>;
 		qcom,csid-sd-index = <2>;
 		qcom,mount-angle = <90>;
-		qcom,eeprom-src = <&eeprom3>;
+		qcom,eeprom-src = <&seine_eeprom3>;
 		qcom,led-flash-src = <&led_flash0>;
 		cam_vdig-supply = <&S6A>;
 		qcom,cam-vreg-name = "cam_vdig";

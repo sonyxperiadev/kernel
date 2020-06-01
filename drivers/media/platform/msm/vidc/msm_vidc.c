@@ -1636,31 +1636,6 @@ int msm_vidc_private(void *vidc_inst, unsigned int cmd,
 	return rc;
 }
 EXPORT_SYMBOL(msm_vidc_private);
-
-static bool msm_vidc_check_for_inst_overload(struct msm_vidc_core *core)
-{
-	u32 instance_count = 0;
-	u32 secure_instance_count = 0;
-	struct msm_vidc_inst *inst = NULL;
-	bool overload = false;
-
-	mutex_lock(&core->lock);
-	list_for_each_entry(inst, &core->instances, list) {
-		instance_count++;
-		/* This flag is not updated yet for the current instance */
-		if (inst->flags & VIDC_SECURE)
-			secure_instance_count++;
-	}
-	mutex_unlock(&core->lock);
-
-	/* Instance count includes current instance as well. */
-
-	if ((instance_count > core->resources.max_inst_count) ||
-		(secure_instance_count > core->resources.max_secure_inst_count))
-		overload = true;
-	return overload;
-}
-
 static int msm_vidc_try_set_ctrl(void *instance, struct v4l2_ctrl *ctrl)
 {
 	struct msm_vidc_inst *inst = instance;
@@ -1859,6 +1834,16 @@ static const struct v4l2_ctrl_ops msm_vidc_ctrl_ops = {
 	.g_volatile_ctrl = msm_vidc_op_g_volatile_ctrl,
 };
 
+static void batch_timer_callback(unsigned long data)
+{
+	struct msm_vidc_inst *inst = (struct msm_vidc_inst *)data;
+
+	if (!inst->batch.enable)
+		return;
+
+	schedule_work(&inst->batch_work);
+}
+
 void *msm_vidc_open(int core_id, int session_type)
 {
 	struct msm_vidc_inst *inst = NULL;
@@ -1926,7 +1911,7 @@ void *msm_vidc_open(int core_id, int session_type)
 	inst->profile = V4L2_MPEG_VIDEO_H264_PROFILE_BASELINE;
 	inst->level = V4L2_MPEG_VIDEO_H264_LEVEL_1_0;
 	inst->entropy_mode = V4L2_MPEG_VIDEO_H264_ENTROPY_MODE_CAVLC;
-
+	inst->max_filled_length = 0;
 	for (i = SESSION_MSG_INDEX(SESSION_MSG_START);
 		i <= SESSION_MSG_INDEX(SESSION_MSG_END); i++) {
 		init_completion(&inst->completions[i]);
@@ -1976,7 +1961,7 @@ void *msm_vidc_open(int core_id, int session_type)
 	}
 
 	msm_dcvs_try_enable(inst);
-	if (msm_vidc_check_for_inst_overload(core)) {
+	if (msm_comm_check_for_inst_overload(core)) {
 		dprintk(VIDC_ERR,
 			"Instance count reached Max limit, rejecting session");
 		goto fail_init;
@@ -1995,6 +1980,10 @@ void *msm_vidc_open(int core_id, int session_type)
 			goto fail_init;
 		}
 	}
+
+	INIT_WORK(&inst->batch_work, msm_vidc_batch_handler);
+	setup_timer(&inst->batch_timer,
+				batch_timer_callback, (unsigned long)inst);
 
 	return inst;
 fail_init:
@@ -2076,6 +2065,10 @@ static void msm_vidc_cleanup_instance(struct msm_vidc_inst *inst)
 	}
 	mutex_unlock(&inst->registeredbufs.lock);
 
+	del_timer(&inst->batch_timer);
+
+	cancel_work_sync(&inst->batch_work);
+
 	msm_comm_free_freq_table(inst);
 
 	msm_comm_free_input_cr_table(inst);
@@ -2095,6 +2088,8 @@ static void msm_vidc_cleanup_instance(struct msm_vidc_inst *inst)
 	if (msm_comm_release_mark_data(inst))
 		dprintk(VIDC_ERR,
 			"Failed to release mark_data buffers\n");
+
+	msm_comm_free_buffer_tags(inst);
 
 	msm_comm_release_eos_buffers(inst);
 

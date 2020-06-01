@@ -262,9 +262,13 @@ struct dsi_samsung_hbm {
 #define SHORT_WORKER_ACTIVE		true
 #define SHORT_WORKER_PASSIVE		false
 #define SHORT_IRQF_DISABLED		0x00000020
-#define SHORT_IRQF_FLAGS		(SHORT_IRQF_DISABLED | IRQF_ONESHOT | \
-					 IRQF_TRIGGER_HIGH | IRQF_TRIGGER_RISING)
 
+#ifdef CONFIG_ARCH_SONY_SEINE
+ #define SHORT_IRQF_FLAGS		(IRQF_ONESHOT | IRQF_TRIGGER_RISING)
+#else
+ #define SHORT_IRQF_FLAGS		(SHORT_IRQF_DISABLED | IRQF_ONESHOT | \
+					 IRQF_TRIGGER_HIGH | IRQF_TRIGGER_RISING)
+#endif
 struct short_detection_ctrl {
 	struct delayed_work check_work;
 	int current_chatter_cnt;
@@ -344,6 +348,7 @@ struct panel_specific_pdata {
 	int reset_touch_gpio;
 	int touch_int_gpio;
 	int disp_vddio_gpio;
+	int disp_oled_vci_gpio;
 	int disp_dcdc_en_gpio;
 	int disp_err_fg_gpio;
 

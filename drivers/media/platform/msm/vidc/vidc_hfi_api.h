@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -108,7 +108,8 @@ enum hal_extradata_id {
 	HAL_EXTRADATA_ASPECT_RATIO,
 	HAL_EXTRADATA_MPEG2_SEQDISP,
 	HAL_EXTRADATA_STREAM_USERDATA,
-	HAL_EXTRADATA_FRAME_QP,
+	HAL_EXTRADATA_DEC_FRAME_QP,
+	HAL_EXTRADATA_ENC_FRAME_QP,
 	HAL_EXTRADATA_LTR_INFO,
 	HAL_EXTRADATA_ROI_QP,
 	HAL_EXTRADATA_OUTPUT_CROP,
@@ -118,6 +119,8 @@ enum hal_extradata_id {
 	HAL_EXTRADATA_VPX_COLORSPACE,
 	HAL_EXTRADATA_UBWC_CR_STATS_INFO,
 	HAL_EXTRADATA_HDR10PLUS_METADATA,
+	HAL_EXTRADATA_ENC_DTS_METADATA,
+	HAL_EXTRADATA_INPUT_CROP,
 };
 
 enum hal_property {
@@ -661,8 +664,8 @@ struct hal_heic_grid_enable {
 
 enum hal_flip {
 	HAL_FLIP_NONE,
-	HAL_FLIP_HORIZONTAL,
 	HAL_FLIP_VERTICAL,
+	HAL_FLIP_HORIZONTAL,
 	HAL_FLIP_BOTH,
 	HAL_UNUSED_FLIP = 0x10000000,
 };
@@ -911,15 +914,12 @@ enum hal_iframesize_type {
 enum vidc_resource_id {
 	VIDC_RESOURCE_NONE,
 	VIDC_RESOURCE_SYSCACHE,
-	VIDC_RESOURCE_OCMEM,
-	VIDC_RESOURCE_VMEM,
 	VIDC_UNUSED_RESOURCE = 0x10000000,
 };
 
 struct vidc_resource_hdr {
 	enum vidc_resource_id resource_id;
 	void *resource_handle;
-	u32 size;
 };
 
 struct vidc_register_buffer {
@@ -1427,9 +1427,6 @@ struct vidc_bus_vote_data {
 	bool use_dpb_read;
 	unsigned int lcu_size;
 	enum msm_vidc_power_mode power_mode;
-	struct imem_ab_table *imem_ab_tbl;
-	u32 imem_ab_tbl_size;
-	/* unsigned long core_freq; For VMEM+ ONLY */
 	enum hal_work_mode work_mode;
 	bool use_sys_cache;
 	bool b_frames_enabled;

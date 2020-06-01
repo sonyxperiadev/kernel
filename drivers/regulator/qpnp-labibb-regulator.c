@@ -702,6 +702,7 @@ struct lab_regulator {
 
 	int				curr_volt;
 	int				min_volt;
+	int				current_limit_tbl_entry;
 
 	int				step_size;
 	int				slew_rate;
@@ -1960,6 +1961,8 @@ static int qpnp_lab_dt_init(struct qpnp_labibb *labibb,
 		}
 	}
 
+	labibb->lab_vreg.current_limit_tbl_entry = 0;
+
 	if (of_property_read_bool(of_node,
 		"qcom,qpnp-lab-limit-max-current-enable")) {
 		val = LAB_CURRENT_LIMIT_EN_BIT;
@@ -1985,6 +1988,8 @@ static int qpnp_lab_dt_init(struct qpnp_labibb *labibb,
 			pr_err("Invalid value in qcom,qpnp-lab-limit-maximum-current\n");
 			return -EINVAL;
 		}
+
+		labibb->lab_vreg.current_limit_tbl_entry = i;
 
 		val |= i;
 		rc = qpnp_labibb_write(labibb, labibb->lab_base +
@@ -2182,7 +2187,11 @@ static int qpnp_lab_pfm_disable(struct qpnp_labibb *labibb)
 		goto out;
 	}
 
-	val = LAB_CURRENT_MAX_1600MA;
+	if (labibb->lab_vreg.current_limit_tbl_entry > 0)
+		val = labibb->lab_vreg.current_limit_tbl_entry;
+	else
+		val = LAB_CURRENT_MAX_1600MA;
+
 	mask = LAB_OVERRIDE_CURRENT_MAX_BIT | LAB_CURRENT_LIMIT_MASK;
 	rc = qpnp_labibb_masked_write(labibb, labibb->lab_base +
 				REG_LAB_CURRENT_LIMIT, mask, val);
@@ -3386,6 +3395,10 @@ static int register_qpnp_lab_regulator(struct qpnp_labibb *labibb,
 
 	labibb->notify_lab_vreg_ok_sts = of_property_read_bool(of_node,
 					"qcom,notify-lab-vreg-ok-sts");
+	if (labibb->pmic_rev_id->pmic_subtype == PMI8998_SUBTYPE &&
+	    labibb->notify_lab_vreg_ok_sts)
+		labibb->detect_lab_sc = of_property_read_bool(of_node,
+					"qcom,detect-lab-short-circuit");
 
 	labibb->lab_vreg.sc_wait_time_ms = -EINVAL;
 	if (labibb->pmic_rev_id->pmic_subtype == PM660L_SUBTYPE &&
