@@ -248,7 +248,7 @@ static inline void *freelist_ptr(const struct kmem_cache *s, void *ptr,
 				 unsigned long ptr_addr)
 {
 #ifdef CONFIG_SLAB_FREELIST_HARDENED
-	return (void *)((unsigned long)ptr ^ s->random ^ ptr_addr);
+	return (void *)((unsigned long)ptr ^ s->random ^ swab(ptr_addr));
 #else
 	return ptr;
 #endif
@@ -269,8 +269,7 @@ static inline void *get_freepointer(struct kmem_cache *s, void *object)
 
 static void prefetch_freepointer(const struct kmem_cache *s, void *object)
 {
-	if (object)
-		prefetch(freelist_dereference(s, object + s->offset));
+	prefetch(object + s->offset);
 }
 
 static inline void *get_freepointer_safe(struct kmem_cache *s, void *object)

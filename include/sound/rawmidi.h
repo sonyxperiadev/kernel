@@ -76,9 +76,9 @@ struct snd_rawmidi_runtime {
 	size_t avail_min;	/* min avail for wakeup */
 	size_t avail;		/* max used buffer for wakeup */
 	size_t xruns;		/* over/underruns counter */
+	int buffer_ref;		/* buffer reference count */
 	/* misc */
 	spinlock_t lock;
-	struct mutex realloc_mutex;
 	wait_queue_head_t sleep;
 	/* event handler (new bytes, input only) */
 	void (*event)(struct snd_rawmidi_substream *substream);
