@@ -1609,11 +1609,13 @@ static void sec_ts_watchdog_func(struct work_struct *work_watchdog)
 		goto unlock;
 	}
 
-	if (deviceId[0] != DEVICE_ID_0 || deviceId[1] != DEVICE_ID_1 || deviceId[2] != DEVICE_ID_2) {
+	if (deviceId[0] != ts->plat_data->expected_device_id[0] ||
+	    deviceId[1] != ts->plat_data->expected_device_id[1] ||
+	    deviceId[2] != ts->plat_data->expected_device_id[2]) {
 		input_err(true, &ts->client->dev, "improper device id\n");
-		gpio_set_value(RESET_GPIO, 0);
+		gpio_set_value(ts->plat_data->touch_rst_gpio, 0);
 		mdelay(5);
-		gpio_set_value(RESET_GPIO, 1);
+		gpio_set_value(ts->plat_data->touch_rst_gpio, 1);
 		mdelay(200);
 	}
 

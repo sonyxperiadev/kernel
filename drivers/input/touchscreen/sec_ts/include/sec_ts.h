@@ -326,12 +326,6 @@
 #define AOD_MODE_DOUBLE_TAP	2
 #define MAX_PRESSURE	255
 
-/* Watchdog */
-#define DEVICE_ID_0	0xAC
-#define DEVICE_ID_1	0x37
-#define DEVICE_ID_2	0x71
-#define RESET_GPIO	54
-
 /*
  * sec Log
  */
