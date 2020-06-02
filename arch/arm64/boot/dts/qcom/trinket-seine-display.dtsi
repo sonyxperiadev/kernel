@@ -58,7 +58,7 @@
 					 "shadow_byte_clk0", "shadow_pixel_clk0";
 
 		/* Only one possible panel on CDB/PROD SoMC Seine platform */
-		somc,bootloader-panel-select;
+		somc,bootloader-panel-detect;
 
 		/* This is the active display node */
 		qcom,dsi-display-active;
