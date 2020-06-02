@@ -1201,6 +1201,35 @@ static int sec_ts_parse_dt(struct i2c_client *client)
 
 	pdata->support_mt_pressure = true;
 
+	if (of_property_read_u32(np, "somc,touch-rst-gpio",
+				 &pdata->touch_rst_gpio)) {
+		input_err(true, &client->dev, "%s: Reset GPIO not specified. "
+			  "Please specify somc,touch-rst-gpio in your sec_ts "
+			  "DT node (hint: qcom,platform-touch-reset-gpio in "
+			  " display DT!)\n", __func__);
+
+		/*
+		 * It won't work: stop the probe to avoid all sorts of issues.
+		 * Beware! This is done because *at least* Sony Seine likes to
+		 * trigger short circuit protection on the display if anything
+		 * in this driver goes wrong.
+		 *
+		 * If you return 0 here, you may DAMAGE YOUR HARDWARE!!!
+		 */
+		return -EINVAL;
+	}
+
+	if (of_property_read_u32_array(np, "somc,expected-device-id",
+				       pdata->expected_device_id, 3))
+	{
+		input_err(true, &client->dev, "%s: No expected device id "
+			  "specified in DT. Using Kumano defaults.\n",
+			  __func__);
+		pdata->expected_device_id[0] = 0xAC;
+		pdata->expected_device_id[1] = 0x37;
+		pdata->expected_device_id[2] = 0x71;
+	}
+
 	input_info(true, &client->dev, "%s: i2c buffer limit: %d, lcd_id:%06X, bringup:%d, FW:%s(%d), id:%d,%d, mis_cal:%d dex:%d, gesture:%d\n",
 		__func__, pdata->i2c_burstmax, lcdtype, pdata->bringup, pdata->firmware_name,
 			count, pdata->tsp_id, pdata->tsp_icid, pdata->mis_cal_check,
@@ -1580,11 +1609,13 @@ static void sec_ts_watchdog_func(struct work_struct *work_watchdog)
 		goto unlock;
 	}
 
-	if (deviceId[0] != DEVICE_ID_0 || deviceId[1] != DEVICE_ID_1 || deviceId[2] != DEVICE_ID_2) {
+	if (deviceId[0] != ts->plat_data->expected_device_id[0] ||
+	    deviceId[1] != ts->plat_data->expected_device_id[1] ||
+	    deviceId[2] != ts->plat_data->expected_device_id[2]) {
 		input_err(true, &ts->client->dev, "improper device id\n");
-		gpio_set_value(RESET_GPIO, 0);
+		gpio_set_value(ts->plat_data->touch_rst_gpio, 0);
 		mdelay(5);
-		gpio_set_value(RESET_GPIO, 1);
+		gpio_set_value(ts->plat_data->touch_rst_gpio, 1);
 		mdelay(200);
 	}
 

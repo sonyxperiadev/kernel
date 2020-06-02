@@ -39,5 +39,9 @@
 		sec,stamina_mode_supported = <1>;
 		sec,rejection_area_portrait = <25 150 60 200>;
 		sec,rejection_area_landscape = <150 20 200 60>;
+
+		/* Open Devices specific */
+		somc,touch-rst-gpio = <&tlmm 97 0>;
+		somc,expected-device-id = <0xAC 0x37 0x61>;
 	};
 };

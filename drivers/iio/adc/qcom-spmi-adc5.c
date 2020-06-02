@@ -134,6 +134,8 @@ struct adc_channel_prop {
 	unsigned int			prescale;
 	unsigned int			hw_settle_time;
 	unsigned int			avg_samples;
+	/*lut_index is used only for bat_therm LUTs*/
+	unsigned int			lut_index;
 	enum vadc_scale_fn_type		scale_fn_type;
 	const char			*datasheet_name;
 };
@@ -625,7 +627,7 @@ static int adc_read_raw(struct iio_dev *indio_dev,
 		if ((chan->type == IIO_VOLTAGE) || (chan->type == IIO_TEMP))
 			ret = qcom_vadc_hw_scale(prop->scale_fn_type,
 				&adc_prescale_ratios[prop->prescale],
-				adc->data,
+				adc->data, prop->lut_index,
 				adc_code_volt, val);
 		if (ret)
 			break;
@@ -633,14 +635,14 @@ static int adc_read_raw(struct iio_dev *indio_dev,
 		if (chan->type == IIO_POWER) {
 			ret = qcom_vadc_hw_scale(SCALE_HW_CALIB_DEFAULT,
 				&adc_prescale_ratios[VADC_DEF_VBAT_PRESCALING],
-				adc->data,
+				adc->data, prop->lut_index,
 				adc_code_volt, val);
 			if (ret)
 				break;
 
 			ret = qcom_vadc_hw_scale(prop->scale_fn_type,
 				&adc_prescale_ratios[prop->prescale],
-				adc->data,
+				adc->data, prop->lut_index,
 				adc_code_cur, val2);
 			if (ret)
 				break;
@@ -762,6 +764,10 @@ static const struct adc_channels adc_chans_pmic5[ADC_MAX_CHANNEL] = {
 					SCALE_HW_CALIB_PM5_SMB_TEMP)
 	[ADC_GPIO1_PU2]	= ADC_CHAN_TEMP("gpio1_pu2", 1,
 					SCALE_HW_CALIB_THERM_100K_PULLUP)
+	[ADC_GPIO2_PU2]	= ADC_CHAN_TEMP("gpio2_pu2", 1,
+					SCALE_HW_CALIB_THERM_100K_PULLUP)
+	[ADC_GPIO3_PU2]	= ADC_CHAN_TEMP("gpio3_pu2", 1,
+					SCALE_HW_CALIB_THERM_100K_PULLUP)
 	[ADC_GPIO4_PU2]	= ADC_CHAN_TEMP("gpio4_pu2", 1,
 					SCALE_HW_CALIB_THERM_100K_PULLUP)
 };
@@ -871,6 +877,12 @@ static int adc_get_dt_channel_data(struct device *dev,
 	} else {
 		prop->avg_samples = VADC_DEF_AVG_SAMPLES;
 	}
+
+	prop->lut_index = VADC_DEF_LUT_INDEX;
+
+	ret = of_property_read_u32(node, "qcom,lut-index", &value);
+	if (!ret)
+		prop->lut_index = value;
 
 	if (of_property_read_bool(node, "qcom,ratiometric"))
 		prop->cal_method = ADC_RATIOMETRIC_CAL;
@@ -1022,7 +1034,7 @@ static int adc_probe(struct platform_device *pdev)
 	revid_dev_node = of_parse_phandle(node, "qcom,pmic-revid", 0);
 	if (revid_dev_node) {
 		pmic_rev_id = get_revid_data(revid_dev_node);
-		if (!(IS_ERR(pmic_rev_id)))
+		if (!(IS_ERR_OR_NULL(pmic_rev_id)))
 			skip_usb_wa = skip_usb_in_wa(pmic_rev_id);
 		else {
 			pr_err("Unable to get revid\n");
