@@ -156,6 +156,7 @@
 #define SEC_TS_CMD_SET_DOZE_TIMEOUT		0x40
 #define SEC_TS_CMD_ENABLE_STAMINAMODE		0x41
 #define SEC_TS_CMD_ENABLE_SIDETOUCH		0x42
+#define SEC_TS_CMD_ENABLE_DOZE			0x44
 #define SEC_TS_CMD_ERASE_FLASH			0x45
 #define SEC_TS_READ_ID				0x52
 #define SEC_TS_READ_BOOT_STATUS			0x55
@@ -427,6 +428,12 @@ enum side_enable_mode {
 	OFF				= 3,
 };
 
+/* Convert sidetouch status */
+#define CONVERT_SIDE_ENABLE_MODE_FOR_WRITE(w) \
+	(w == OFF ? 0 : (w == BOTH_ON ?  3 : w))
+#define CONVERT_SIDE_ENABLE_MODE_FOR_READ(r) \
+	(r == 0 ? OFF : (r == 3 ? BOTH_ON : r))
+
 typedef enum {
 	SEC_TS_STATE_POWER_OFF = 0,
 	SEC_TS_STATE_LPM,
@@ -498,6 +505,25 @@ enum tsp_hw_parameter {
 	TSP_MODULE_ID		= 6,
 };
 
+enum corners {		/* portrait,		landscape,	seascape     */
+    CORNER_0 = 0,	/* Upper left,		Bottom left,	Upper right  */
+    CORNER_1 = 1,	/* Bottom left,  	Bottom right,	Upper left   */
+    CORNER_2 = 2,	/* Upper right,		Upper left,	Bottom right */
+    CORNER_3 = 3,	/* Bottom right,	Upper right,	Bottom left  */
+};
+
+enum range_changer {
+    TARGET_LANDSCAPE_BOTTOM_LEFT = CORNER_0,
+    TARGET_LANDSCAPE_BOTTOM_RIGHT = CORNER_1,
+    TARGET_LANDSCAPE_UPPER_LEFT = CORNER_2,
+    TARGET_LANDSCAPE_UPPER_RIGHT = CORNER_3,
+    TARGET_PORTRAIT_BOTTOM_LEFT = 4,	/* Bottom left  */
+    TARGET_PORTRAIT_BOTTOM_RIGHT = 5,	/* Bottom right */
+};
+
+#define SEC_TS_GRIP_REJECTION_BORDER_NUM_PORTRAIT	2
+#define SEC_TS_GRIP_REJECTION_BORDER_NUM_LANDSCAPE	SEC_TS_GRIP_REJECTION_BORDER_NUM
+
 #define TEST_MODE_MIN_MAX		false
 #define TEST_MODE_ALL_NODE		true
 #define TEST_MODE_READ_FRAME		false
@@ -554,6 +580,11 @@ struct sec_ts_sod_mode {
 struct sec_ts_stamina_mode {
 	bool supported;
 	int status;
+};
+
+struct sec_ts_wireless_charging {
+	bool supported;
+	bool status;
 };
 
 /*
@@ -807,10 +838,33 @@ struct sec_ts_data {
 	bool landscape;
 	bool report_flag[MAX_SUPPORT_TOUCH_COUNT + MAX_SUPPORT_HOVER_COUNT];
 
+	u16 saved_data_x[10];
+	u16 saved_data_y[10];
+
+	int rejection_mode;
+	int report_rejected_event_flag;
+
+	u32 circle_range_p[SEC_TS_GRIP_REJECTION_BORDER_NUM_PORTRAIT];
+	u32 circle_range_l[SEC_TS_GRIP_REJECTION_BORDER_NUM_LANDSCAPE];
+
 	int (*sec_ts_i2c_write)(struct sec_ts_data *ts, u8 reg, u8 *data, int len);
 	int (*sec_ts_i2c_read)(struct sec_ts_data *ts, u8 reg, u8 *data, int len);
 	int (*sec_ts_i2c_write_burst)(struct sec_ts_data *ts, u8 *data, int len);
 	int (*sec_ts_i2c_read_bulk)(struct sec_ts_data *ts, u8 *data, int len);
+
+	/*
+	 * "aod_mutex" provides atomicity of changes in:
+	 * - power_status
+	 * - aod_pending
+	 * - aod_pending_lowpower_mode
+	 * specifically to solve a race between the following
+	 * top-level driver functions:
+	 * - drm_notifier_callback()
+	 * - set_lowpower_mode()
+	 */
+	struct mutex aod_mutex;
+	bool aod_pending;
+	u8 aod_pending_lowpower_mode;
 };
 
 struct sec_ts_plat_data {
@@ -860,6 +914,7 @@ struct sec_ts_plat_data {
 	struct sec_ts_aod_mode aod_mode;
 	struct sec_ts_sod_mode sod_mode;
 	struct sec_ts_stamina_mode stamina_mode;
+	struct sec_ts_wireless_charging wireless_charging;
 };
 
 typedef struct {
@@ -890,6 +945,7 @@ typedef struct {
 
 int sec_ts_power(void *data, bool on);
 int sec_ts_get_pw_status(void);
+int sec_ts_pw_lock(struct sec_ts_data *ts, incell_pw_lock status);
 int sec_ts_stop_device(struct sec_ts_data *ts);
 int sec_ts_start_device(struct sec_ts_data *ts);
 int sec_ts_set_lowpowermode(struct sec_ts_data *ts, u8 mode);
