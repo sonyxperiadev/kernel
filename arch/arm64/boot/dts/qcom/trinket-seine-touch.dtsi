@@ -12,6 +12,8 @@
 
 &qupv3_se2_i2c {
 	status = "ok";
+	qcom,i2c-touch-active="sec,sec_ts";
+
 	touchscreen@48 {
 		compatible = "sec,sec_ts";
 		reg = <0x48>;
