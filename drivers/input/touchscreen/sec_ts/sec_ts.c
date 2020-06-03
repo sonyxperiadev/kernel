@@ -1776,7 +1776,6 @@ static int sec_ts_after_init(struct sec_ts_data *ts)
 		sec_ts_delay(ts->plat_data->ack_wait_time);
 	}
 
-	input_info(true, &ts->client->dev, "%s: ts = %s SEC_TS_READ_DEVICE_ID = %d deviceID = %d\n", __func__, ts, SEC_TS_READ_DEVICE_ID, deviceID);
 	ret = sec_ts_i2c_read(ts, SEC_TS_READ_DEVICE_ID, deviceID, 5);
 	if (ret < 0)
 		input_err(true, &ts->client->dev, "%s: failed to read device ID(%d)\n", __func__, ret);
