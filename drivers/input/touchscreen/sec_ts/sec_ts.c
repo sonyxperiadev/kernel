@@ -2077,7 +2077,7 @@ static int sec_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 	input_log_fix();
 
 	ts->after_work.err = true;
-	schedule_delayed_work(&ts->after_work.start, msecs_to_jiffies(10000));
+	schedule_delayed_work(&ts->after_work.start, msecs_to_jiffies(12000));
 
 	return 0;
 
@@ -2463,7 +2463,7 @@ after_work_fail:
 	}
 userspace_not_ready:
 	input_info(true, &ts->client->dev, "retry after_work [%d]\n", ts->after_work.retry);
-	schedule_delayed_work(&ts->after_work.start, 1 * HZ);
+	schedule_delayed_work(&ts->after_work.start, 3 * HZ);
 out:
 	return;
 }
