@@ -86,6 +86,9 @@ static void sidetouch_enable(void *device_data);
 static void stamina_enable(void *device_data);
 static void range_changer(void *device_data);
 static void orientation_change(void *device_data);
+static void doze_mode_change(void *device_data);
+static void wireless_charging(void *device_data);
+static void game_enhancer_grip_rejection(void *device_data);
 static void not_support_cmd(void *device_data);
 
 static void sec_ts_print_frame(struct sec_ts_data *ts, short *min, short *max);
@@ -164,6 +167,9 @@ static struct sec_cmd sec_cmds[] = {
 	{SEC_CMD("stamina_enable", stamina_enable),},
 	{SEC_CMD("range_changer", range_changer),},
 	{SEC_CMD("orientation_change", orientation_change),},
+	{SEC_CMD("doze_mode_change", doze_mode_change),},
+	{SEC_CMD("wireless_charging", wireless_charging),},
+	{SEC_CMD("game_enhancer_grip_rejection", game_enhancer_grip_rejection),},
 	{SEC_CMD("not_support_cmd", not_support_cmd),},
 };
 
@@ -3953,8 +3959,10 @@ static void set_lowpower_mode(void *device_data)
 	struct sec_ts_data *ts = container_of(sec, struct sec_ts_data, sec);
 	char buff[SEC_CMD_STR_LEN] = { 0 };
 
+	mutex_lock(&ts->aod_mutex);
 	if (!ts->plat_data->aod_mode.supported) {
 		input_err(true, &ts->client->dev, "aod_mode is not supported.\n");
+		mutex_unlock(&ts->aod_mutex);
 		return;
 	}
 	sec_cmd_set_default_result(sec);
@@ -3969,19 +3977,22 @@ static void set_lowpower_mode(void *device_data)
 	}
 
 	if (sec_ts_get_pw_status() || !ts->after_work.done || (ts->power_status == SEC_TS_STATE_POWER_OFF)) {
-		input_info(true, &ts->client->dev, "%s: update skip\n", __func__);
-		goto update_skip;
+		ts->aod_pending = true;
+		ts->aod_pending_lowpower_mode = sec->cmd_param[0];
+		input_info(true, &ts->client->dev,
+			"Postponing lowpower_mode: %d\n",
+			ts->aod_pending_lowpower_mode);
+	} else {
+		/* set lowpower mode by spay, edge_swipe function. */
+		ts->lowpower_mode = sec->cmd_param[0];
+		sec_ts_set_lowpowermode(ts, ts->lowpower_mode);
 	}
 
-	/* set lowpower mode by spay, edge_swipe function. */
-	ts->lowpower_mode = sec->cmd_param[0];
-	sec_ts_set_lowpowermode(ts, ts->lowpower_mode);
-
 NG:
-update_skip:
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 
 	sec_cmd_set_cmd_exit(sec);
+	mutex_unlock(&ts->aod_mutex);
 	return;
 
 }
@@ -4151,7 +4162,7 @@ static void touch_enable_irq(void *device_data)
 		sec_ts_set_irq(ts, false);
 		input_dbg(ts->debug_flag, &ts->client->dev, "irq disabled\n");
 	} else {
-		if (sec_ts_get_pw_status() || !ts->after_work.done) {
+		if (sec_ts_get_pw_status() || ts->power_status == SEC_TS_STATE_POWER_OFF || !ts->after_work.done) {
 			input_info(true, &ts->client->dev, "%s: update skip\n", __func__);
 			goto NG;
 		}
@@ -4824,13 +4835,80 @@ update_skip:
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 }
 
+static int set_sidetouch(void *device_data, int status)
+{
+	struct sec_cmd_data *sec = (struct sec_cmd_data *)device_data;
+	struct sec_ts_data *ts = container_of(sec, struct sec_ts_data, sec);
+	int ret = 0;
+	u8 side_expected = (u8)status;
+	u8 side_current = 0;
+	u8 doze_mode = 0;
+
+	sec_cmd_set_default_result(sec);
+
+	if (sec_ts_get_pw_status()) {
+		input_err(true, &ts->client->dev, "%s: POWER off!\n", __func__);
+		goto err_out;
+	}
+
+	ret = sec_ts_pw_lock(ts, INCELL_DISPLAY_POWER_LOCK);
+	if (ret != INCELL_OK) {
+		input_err(true, &ts->client->dev, "%s: power lock failed ret:%d\n", __func__, ret);
+		goto err_out;
+	}
+
+	ret = ts->sec_ts_i2c_read(ts, SEC_TS_CMD_ENABLE_DOZE, &doze_mode, 1);
+	if (ret < 0) {
+		input_err(true, &ts->client->dev, "%s: error read doze command\n", __func__);
+		goto err_out;
+	}
+
+	if (doze_mode == 1 || ts->plat_data->wireless_charging.status)
+		side_expected = OFF;
+
+	ret = ts->sec_ts_i2c_read(ts, SEC_TS_CMD_ENABLE_SIDETOUCH, &side_current, 1);
+	if (ret < 0) {
+		input_err(true, &ts->client->dev, "%s: error read side touch command\n", __func__);
+		goto err_out;
+	}
+	side_current = CONVERT_SIDE_ENABLE_MODE_FOR_READ(side_current);
+
+	if (side_current != side_expected) {
+		side_expected = CONVERT_SIDE_ENABLE_MODE_FOR_WRITE(side_expected);
+		ret = ts->sec_ts_i2c_write(ts, SEC_TS_CMD_ENABLE_SIDETOUCH, &side_expected, 1);
+		if (ret < 0) {
+			input_err(true, &ts->client->dev, "%s: error write side touch command\n", __func__);
+			goto err_out;
+		}
+
+		sec_ts_delay(10);
+
+		ret = ts->sec_ts_i2c_read(ts, SEC_TS_CMD_ENABLE_SIDETOUCH, &side_current, 1);
+		if (ret < 0) {
+			input_err(true, &ts->client->dev, "%s: error read side touch command\n", __func__);
+			goto err_out;
+		}
+		side_current = CONVERT_SIDE_ENABLE_MODE_FOR_READ(side_current);
+		input_info(true, &ts->client->dev, "%s: sidetouch is now %s\n", __func__,
+				side_current == 0 ? "BOTH_ON" : (side_current == 1 ? "RIGHT_ON" :
+				(side_current == 2 ? "LEFT_ON" : "OFF")));
+	}
+
+	ret = sec_ts_pw_lock(ts, INCELL_DISPLAY_POWER_UNLOCK);
+	if (ret != INCELL_OK) {
+		input_err(true, &ts->client->dev, "%s: power unlock failed ret:%d\n", __func__, ret);
+		goto err_out;
+	}
+
+err_out:
+	return ret;
+}
+
 static void sidetouch_enable(void *device_data)
 {
 	struct sec_cmd_data *sec = (struct sec_cmd_data *)device_data;
 	struct sec_ts_data *ts = container_of(sec, struct sec_ts_data, sec);
 	char buff[SEC_CMD_STR_LEN] = { 0 };
-	u8 wPara = 0;
-	u8 rPara = 0;
 	int ret = 0;
 
 	if (!ts->plat_data->side_touch.supported) {
@@ -4851,46 +4929,13 @@ static void sidetouch_enable(void *device_data)
 		input_info(true, &ts->client->dev, "%s: sidetouch %d -> %d\n",
 				__func__, ts->side_enable, sec->cmd_param[0]);
 
-		if (ts->side_enable == sec->cmd_param[0])
-			goto err_out;
-
 		ts->side_enable = sec->cmd_param[0];
 
-		if (ts->side_enable == OFF)
-			wPara = 0;
-		else if (ts->side_enable == BOTH_ON)
-			wPara = 3;
-		else
-			wPara = ts->side_enable;
-
-		if (sec_ts_get_pw_status() || !ts->after_work.done) {
-			input_info(true, &ts->client->dev, "%s: update skip\n", __func__);
-			goto update_skip;
-		}
-
-		ret = ts->sec_ts_i2c_write(ts, SEC_TS_CMD_ENABLE_SIDETOUCH, &wPara, 1);
-		if (ret < 0) {
-			input_err(true, &ts->client->dev, "%s: error sending command\n", __func__);
+		ret = set_sidetouch(device_data, ts->side_enable);
+		if (ret < 0)
 			goto err_out;
-		}
-
-		sec_ts_delay(10);
-
-		ret = ts->sec_ts_i2c_read(ts, SEC_TS_CMD_ENABLE_SIDETOUCH, &rPara, 1);
-		if (ret < 0) {
-			input_err(true, &ts->client->dev, "%s: error read command\n", __func__);
-			goto err_out;
-		}
-
-		if (rPara == 0)
-			rPara = OFF;
-		else if (rPara == 3)
-			rPara = BOTH_ON;
-
-		input_info(true, &ts->client->dev, "%s: sidetouch is now %d\n",
-				__func__, rPara);
-
 	}
+
 	snprintf(buff, sizeof(buff), "%s", "OK");
 	sec->cmd_state = SEC_CMD_STATUS_OK;
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
@@ -4898,7 +4943,6 @@ static void sidetouch_enable(void *device_data)
 	return;
 
 err_out:
-update_skip:
 	snprintf(buff, sizeof(buff), "%s", "NG");
 	sec->cmd_state = SEC_CMD_STATUS_FAIL;
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
@@ -4969,23 +5013,49 @@ update_skip:
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
 }
 
+static void update_game_enhancer_grip_rejection_para(struct sec_ts_data *ts, bool portrait, int location, int value)
+{
+	int portrait_offset = TARGET_PORTRAIT_BOTTOM_LEFT;
+	extern u32 radius_portrait[SEC_TS_GRIP_REJECTION_BORDER_NUM_PORTRAIT];
+	extern u32 radius_landscape[SEC_TS_GRIP_REJECTION_BORDER_NUM_LANDSCAPE];
+
+	if (portrait) {
+		radius_portrait[location - portrait_offset] = value;
+		ts->circle_range_p[location - portrait_offset] = value * value;
+	} else {
+		radius_landscape[location] = value;
+		ts->circle_range_l[location] = value * value;
+	}
+}
+
+static void update_grip_rejection_para(struct sec_ts_data *ts, struct sec_cmd_data *sec)
+{
+	extern u32 portrait_buffer[SEC_TS_GRIP_REJECTION_BORDER_NUM];
+	extern u32 landscape_buffer[SEC_TS_GRIP_REJECTION_BORDER_NUM];
+
+	if (sec->cmd_param[0] == 6)
+		memcpy(portrait_buffer, sec->cmd_param + 1, sizeof(portrait_buffer));
+	else
+		memcpy(landscape_buffer, sec->cmd_param + 1, sizeof(landscape_buffer));
+}
+
 static void range_changer(void *device_data)
 {
 	struct sec_cmd_data *sec = (struct sec_cmd_data *)device_data;
 	struct sec_ts_data *ts = container_of(sec, struct sec_ts_data, sec);
 	char buff[SEC_CMD_STR_LEN] = { 0 };
-	extern int portrait_buffer[SEC_TS_GRIP_REJECTION_BORDER_NUM];
-	extern int landscape_buffer[SEC_TS_GRIP_REJECTION_BORDER_NUM];
 
-	if (sec->cmd_param[0] < 0 || sec->cmd_param[0] > 1) {
+	if (sec->cmd_param[0] < 0 || sec->cmd_param[0] > 7) {
 		input_err(true, &ts->client->dev, "%s: param out of range\n", __func__);
 		goto err_out;
 	}
 
-	if (!sec->cmd_param[0])
-		memcpy(portrait_buffer, sec->cmd_param + 1, sizeof(portrait_buffer));
+	if (sec->cmd_param[0] <= TARGET_LANDSCAPE_UPPER_RIGHT)
+		update_game_enhancer_grip_rejection_para(ts, false, sec->cmd_param[0], sec->cmd_param[1]);
+	else if (sec->cmd_param[0] <= TARGET_PORTRAIT_BOTTOM_RIGHT)
+		update_game_enhancer_grip_rejection_para(ts, true, sec->cmd_param[0], sec->cmd_param[1]);
 	else
-		memcpy(landscape_buffer, sec->cmd_param + 1, sizeof(landscape_buffer));
+		update_grip_rejection_para(ts, sec);
 
 	sec_cmd_set_default_result(sec);
 
@@ -5047,6 +5117,150 @@ static void orientation_change(void *device_data)
 	snprintf(buff, sizeof(buff), "%s", "OK");
 	sec->cmd_state = SEC_CMD_STATUS_OK;
 	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
+	return;
+
+err_out:
+	snprintf(buff, sizeof(buff), "%s", "NG");
+	sec->cmd_state = SEC_CMD_STATUS_FAIL;
+	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
+}
+
+static void doze_mode_change(void *device_data)
+{
+	struct sec_cmd_data *sec = (struct sec_cmd_data *)device_data;
+	struct sec_ts_data *ts = container_of(sec, struct sec_ts_data, sec);
+	char buff[SEC_CMD_STR_LEN] = { 0 };
+	u8 doze_mode_on = 0x01;
+	u8 doze_mode_off = 0x00;
+	u8 tRead;
+	int ret = 0;
+
+	sec_cmd_set_default_result(sec);
+
+	if (ts->power_status == SEC_TS_STATE_POWER_OFF) {
+		input_err(true, &ts->client->dev, "%s: POWER off!\n", __func__);
+		goto err_out;
+	}
+	if (sec->cmd_param[0] < 0 || sec->cmd_param[0] > 2) {
+		input_err(true, &ts->client->dev, "%s: param out of range\n", __func__);
+		goto err_out;
+	}
+
+	if (sec->cmd_param[0] == 0)
+		ret = ts->sec_ts_i2c_write(ts, SEC_TS_CMD_ENABLE_DOZE, &doze_mode_off, 1);
+	else if (sec->cmd_param[0] == 2)
+		ret = ts->sec_ts_i2c_write(ts, SEC_TS_CMD_ENABLE_DOZE, &doze_mode_on, 1);
+
+	if (ret < 0) {
+		input_err(true, &ts->client->dev, "%s: error sending doze command\n", __func__);
+		goto err_out;
+	}
+
+	sec_ts_delay(10);
+
+	ret = ts->sec_ts_i2c_read(ts, SEC_TS_CMD_ENABLE_DOZE, &tRead, 1);
+	if (ret < 0) {
+		input_err(true, &ts->client->dev, "%s: error read doze command\n", __func__);
+		goto err_out;
+	}
+
+	input_info(true, &ts->client->dev, "%s: Doze mode is now %d\n",
+			__func__, tRead);
+
+	if (sec->cmd_param[0] == 1) {
+		if (ts->side_enable != OFF)
+			ret = set_sidetouch(device_data, OFF);
+	} else if (sec->cmd_param[0] == 2) {
+		if (ts->side_enable != OFF)
+			ret = set_sidetouch(device_data, OFF);
+	} else {
+		if (ts->side_enable != OFF)
+			ret = set_sidetouch(device_data, ts->side_enable);
+	}
+	if (ret < 0)
+		goto err_out;
+
+	snprintf(buff, sizeof(buff), "%s", "OK");
+	sec->cmd_state = SEC_CMD_STATUS_OK;
+	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
+	return;
+
+err_out:
+	snprintf(buff, sizeof(buff), "%s", "NG");
+	sec->cmd_state = SEC_CMD_STATUS_FAIL;
+	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
+}
+
+static void wireless_charging(void *device_data)
+{
+	struct sec_cmd_data *sec = (struct sec_cmd_data *)device_data;
+	struct sec_ts_data *ts = container_of(sec, struct sec_ts_data, sec);
+	char buff[SEC_CMD_STR_LEN] = { 0 };
+	int ret = 0;
+	u8 side_status = 0;
+
+	if (!ts->plat_data->wireless_charging.supported) {
+		input_err(true, &ts->client->dev, "wireless charging is not supported.\n");
+		return;
+	}
+
+	sec_cmd_set_default_result(sec);
+
+	if (sec->cmd_param[0] < 0 || sec->cmd_param[0] > 1) {
+		input_err(true, &ts->client->dev, "%s: param out of range\n", __func__);
+		goto err_out;
+	}
+	ts->plat_data->wireless_charging.status = sec->cmd_param[0];
+	input_info(true, &ts->client->dev, "%s: wireless charging status: %d\n",
+			__func__, ts->plat_data->wireless_charging.status);
+
+	if (ts->plat_data->wireless_charging.status)
+		side_status = OFF;
+	else
+		side_status = ts->side_enable;
+	ret = set_sidetouch(device_data, side_status);
+	if (ret < 0)
+		goto err_out;
+
+	snprintf(buff, sizeof(buff), "%s", "OK");
+	sec->cmd_state = SEC_CMD_STATUS_OK;
+	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
+	return;
+
+err_out:
+	snprintf(buff, sizeof(buff), "%s", "NG");
+	sec->cmd_state = SEC_CMD_STATUS_FAIL;
+	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
+}
+
+static void game_enhancer_grip_rejection(void *device_data)
+{
+	struct sec_cmd_data *sec = (struct sec_cmd_data *)device_data;
+	struct sec_ts_data *ts = container_of(sec, struct sec_ts_data, sec);
+	char buff[SEC_CMD_STR_LEN] = { 0 };
+
+	if (sec->cmd_param[0] < 0 || sec->cmd_param[0] > 1) {
+		input_err(true, &ts->client->dev, "%s: param out of range\n", __func__);
+		goto err_out;
+	}
+
+	if (ts->rejection_mode != sec->cmd_param[0]) {
+		ts->rejection_mode = sec->cmd_param[0];
+		memset(ts->saved_data_x, 0, sizeof(ts->saved_data_x));
+		memset(ts->saved_data_y, 0, sizeof(ts->saved_data_y));
+
+		if (ts->rejection_mode > 0)
+			ts->report_rejected_event_flag = 0;
+		else
+			ts->report_rejected_event_flag = 1;
+	}
+
+	sec_cmd_set_default_result(sec);
+
+	snprintf(buff, sizeof(buff), "%s", "OK");
+	sec->cmd_state = SEC_CMD_STATUS_OK;
+	sec_cmd_set_cmd_result(sec, buff, strnlen(buff, sizeof(buff)));
+	return;
 
 err_out:
 	snprintf(buff, sizeof(buff), "%s", "NG");

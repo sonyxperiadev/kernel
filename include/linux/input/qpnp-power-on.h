@@ -55,7 +55,7 @@ enum pon_power_off_type {
 
 #if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_NILE) || \
     defined(CONFIG_ARCH_SONY_TAMA) || defined(CONFIG_ARCH_SONY_GANGES) || \
-    defined(CONFIG_ARCH_SONY_KUMANO)
+    defined(CONFIG_ARCH_SONY_KUMANO) || defined(CONFIG_ARCH_SONY_SEINE)
 enum pon_restart_reason {
 	PON_RESTART_REASON_NONE			= 0x00,
 	PON_RESTART_REASON_UNKNOWN		= 0x01,
