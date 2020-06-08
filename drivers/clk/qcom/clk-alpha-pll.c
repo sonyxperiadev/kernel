@@ -1359,7 +1359,73 @@ static int alpha_pll_fabia_set_rate(struct clk_hw *hw, unsigned long rate,
 	return __clk_alpha_pll_update_latch(pll);
 }
 
+/*
+ * Fabia PLL requires power-on self calibration which happen when the PLL comes
+ * out of reset. Calibration frequency is calculated by below relation:
+ *
+ * calibration freq = ((pll_l_valmax + pll_l_valmin) * 0.54)
+ */
+static int alpha_pll_fabia_prepare(struct clk_hw *hw)
+{
+	unsigned long calibration_freq, freq_hz;
+	struct clk_alpha_pll *pll = to_clk_alpha_pll(hw);
+	const struct pll_vco *vco;
+	struct clk_hw *parent;
+	u64 a;
+	u32 cal_l, regval;
+	int ret;
+
+	/* Check if calibration needs to be done i.e. PLL is in reset */
+	ret = regmap_read(pll->clkr.regmap, PLL_MODE(pll), &regval);
+	if (ret)
+		return ret;
+
+	/* Return early if calibration is not needed. */
+	if (regval & PLL_RESET_N)
+		return 0;
+
+	vco = alpha_pll_find_vco(pll, clk_hw_get_rate(hw));
+	if (!vco) {
+		pr_err("alpha pll: not in a valid vco range\n");
+		return -EINVAL;
+	}
+
+	calibration_freq = ((pll->vco_table[0].min_freq +
+				pll->vco_table[0].max_freq) * 54)/100;
+
+	parent = clk_hw_get_parent(hw);
+	if (!parent)
+		return -EINVAL;
+
+	freq_hz = alpha_pll_round_rate(calibration_freq,
+			clk_hw_get_rate(parent), &cal_l, &a,
+			pll_alpha_width(pll));
+	/*
+	 * Due to a limited number of bits for fractional rate programming, the
+	 * rounded up rate could be marginally higher than the requested rate.
+	 */
+	if (freq_hz > (calibration_freq + ALPHA_16_BIT_PLL_RATE_MARGIN) ||
+						freq_hz < calibration_freq) {
+		pr_err("fabia_pll: Call set rate with rounded rates!\n");
+		return -EINVAL;
+	}
+
+	/* Setup PLL for calibration frequency */
+	regmap_write(pll->clkr.regmap, PLL_CAL_L_VAL(pll), cal_l);
+
+	/* Bringup the pll at calibration frequency */
+	ret = alpha_pll_fabia_enable(hw);
+	if (ret) {
+		pr_err("alpha pll calibration failed\n");
+		return ret;
+	}
+
+	alpha_pll_fabia_disable(hw);
+	return 0;
+}
+
 const struct clk_ops clk_alpha_pll_fabia_ops = {
+	.prepare = alpha_pll_fabia_prepare,
 	.enable = alpha_pll_fabia_enable,
 	.disable = alpha_pll_fabia_disable,
 	.is_enabled = clk_alpha_pll_is_enabled,
