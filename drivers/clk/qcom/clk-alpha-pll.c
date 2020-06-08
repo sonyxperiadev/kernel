@@ -73,6 +73,7 @@
 
 #define PLL_CAL_L_VAL(p)	((p)->offset + (p)->regs[PLL_OFF_CAL_L_VAL])
 # define PLL_CAL		0x44
+# define FABIA_PLL_CAL		0x3f
 
 #define PLL_STANDBY	0x0
 #define PLL_RUN	0x1
@@ -110,6 +111,7 @@ const u8 clk_alpha_pll_regs[][PLL_OFF_MAX_REGS] = {
 	},
 	[CLK_ALPHA_PLL_TYPE_FABIA] =  {
 		[PLL_OFF_L_VAL] = 0x04,
+		[PLL_OFF_CAL_L_VAL] = 0x08,
 		[PLL_OFF_USER_CTL] = 0x0c,
 		[PLL_OFF_USER_CTL_U] = 0x10,
 		[PLL_OFF_CONFIG_CTL] = 0x14,
@@ -1142,6 +1144,8 @@ void clk_fabia_pll_configure(struct clk_alpha_pll *pll, struct regmap *regmap,
 	if (config->l)
 		regmap_write(regmap, PLL_L_VAL(pll), config->l);
 
+	regmap_write(regmap, PLL_CAL_L_VAL(pll), FABIA_PLL_CAL);
+
 	if (config->alpha)
 		regmap_write(regmap, PLL_FRAC(pll), config->alpha);
 
@@ -1176,7 +1180,7 @@ static int alpha_pll_fabia_enable(struct clk_hw *hw)
 {
 	int ret;
 	struct clk_alpha_pll *pll = to_clk_alpha_pll(hw);
-	u32 val, opmode_val;
+	u32 val, opmode_val, l_val, cal_val;
 	struct regmap *regmap = pll->clkr.regmap;
 
 	ret = regmap_read(regmap, PLL_MODE(pll), &val);
@@ -1196,9 +1200,6 @@ static int alpha_pll_fabia_enable(struct clk_hw *hw)
 		}
 	}
 
-	if (unlikely(!pll->inited))
-		clk_fabia_pll_configure(pll, pll->clkr.regmap, pll->config);
-
 	ret = regmap_read(regmap, PLL_OPMODE(pll), &opmode_val);
 	if (ret)
 		return ret;
@@ -1206,6 +1207,25 @@ static int alpha_pll_fabia_enable(struct clk_hw *hw)
 	/* Skip If PLL is already running */
 	if ((opmode_val & PLL_RUN) && (val & PLL_OUTCTRL))
 		return 0;
+
+	ret = regmap_read(regmap, PLL_L_VAL(pll), &l_val);
+	if (ret)
+		return ret;
+
+	ret = regmap_read(regmap, PLL_CAL_L_VAL(pll), &cal_val);
+	if (ret)
+		return ret;
+
+	/* PLL has lost its L or CAL value, needs reconfiguration */
+	if (!l_val || !cal_val)
+		pll->inited = false;
+
+	if (unlikely(!pll->inited)) {
+		clk_fabia_pll_configure(pll, pll->clkr.regmap, pll->config);
+
+		pr_warn("%s: PLL configuration lost, reconfiguration of "
+			"PLL done.\n", clk_hw_get_name(hw));
+	}
 
 	ret = regmap_update_bits(regmap, PLL_MODE(pll), PLL_OUTCTRL, 0);
 	if (ret)
@@ -1299,7 +1319,7 @@ static int alpha_pll_fabia_set_rate(struct clk_hw *hw, unsigned long rate,
 						unsigned long prate)
 {
 	struct clk_alpha_pll *pll = to_clk_alpha_pll(hw);
-	u32 val, l, alpha_width = pll_alpha_width(pll);
+	u32 val, l, cal_val, alpha_width = pll_alpha_width(pll);
 	u64 a;
 	unsigned long rrate;
 	int ret = 0;
@@ -1308,12 +1328,26 @@ static int alpha_pll_fabia_set_rate(struct clk_hw *hw, unsigned long rate,
 	if (ret)
 		return ret;
 
+	ret = regmap_read(pll->clkr.regmap, PLL_CAL_L_VAL(pll),
+			&cal_val);
+	if (ret)
+		return ret;
+
+	/* PLL has lost it's CAL value, needs reconfiguration */
+	if (!cal_val)
+		pll->inited = false;
+
+	if (unlikely(!pll->inited)) {
+		clk_fabia_pll_configure(pll, pll->clkr.regmap, pll->config);
+		pr_warn("%s: PLL configuration lost, reconfiguration of "
+			"PLL done.\n", clk_hw_get_name(hw));
+	}
+
 	rrate = alpha_pll_round_rate(rate, prate, &l, &a, alpha_width);
 
 	/*
 	 * Due to limited number of bits for fractional rate programming, the
-	 * rounded up rate could be marginally higher than the requested rate.
-	 */
+	 * rounded up rate could be marginally higher than the requested rate	 */
 	if (rrate > (rate + ALPHA_16_BIT_PLL_RATE_MARGIN) || rrate < rate) {
 		pr_err("Call set rate on the PLL with rounded rates!\n");
 		return -EINVAL;
