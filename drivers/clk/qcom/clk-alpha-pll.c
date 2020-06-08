@@ -562,7 +562,10 @@ static int __clk_alpha_pll_update_latch(struct clk_alpha_pll *pll)
 			return ret;
 	}
 
-	ret = wait_for_pll_update_ack_clear(pll);
+	if (pll->flags & SUPPORTS_DYNAMIC_UPDATE)
+		ret = wait_for_pll_enable_lock(pll);
+	else
+		ret = wait_for_pll_update_ack_clear(pll);
 	if (ret)
 		return ret;
 
@@ -641,10 +644,10 @@ static int __clk_alpha_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	if (alpha_width > ALPHA_BITWIDTH)
 		a <<= alpha_width - ALPHA_BITWIDTH;
 
-	if (alpha_width > 32)
-		regmap_write(pll->clkr.regmap, PLL_ALPHA_VAL_U(pll), a >> 32);
-
 	regmap_write(pll->clkr.regmap, PLL_ALPHA_VAL(pll), a);
+
+	if (alpha_width > ALPHA_BITWIDTH)
+		regmap_write(pll->clkr.regmap, PLL_ALPHA_VAL_U(pll), a >> 32);
 
 	if (vco) {
 		regmap_update_bits(pll->clkr.regmap, PLL_USER_CTL(pll),
