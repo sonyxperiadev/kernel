@@ -246,6 +246,11 @@ void clk_alpha_pll_configure(struct clk_alpha_pll *pll, struct regmap *regmap,
 {
 	u32 val, mask;
 
+	if (!config) {
+		WARN(1, "PLL has no config!");
+		return;
+	}
+
 	regmap_write(regmap, PLL_L_VAL(pll), config->l);
 	regmap_write(regmap, PLL_ALPHA_VAL(pll), config->alpha);
 	regmap_write(regmap, PLL_CONFIG_CTL(pll), config->config_ctl_val);
@@ -367,7 +372,7 @@ static int clk_alpha_pll_enable(struct clk_hw *hw)
 {
 	int ret;
 	struct clk_alpha_pll *pll = to_clk_alpha_pll(hw);
-	u32 val, mask;
+	u32 val, mask, l_val;
 
 	mask = PLL_OUTCTRL | PLL_RESET_N | PLL_BYPASSNL;
 	ret = regmap_read(pll->clkr.regmap, PLL_MODE(pll), &val);
@@ -390,6 +395,14 @@ static int clk_alpha_pll_enable(struct clk_hw *hw)
 	/* Skip if already enabled */
 	if ((val & mask) == mask)
 		return 0;
+
+	ret = regmap_read(pll->clkr.regmap, PLL_L_VAL(pll), &l_val);
+	if (ret)
+		return ret;
+
+	/* PLL has lost L value and needs reconfiguration */
+	if (!l_val)
+		clk_alpha_pll_configure(pll, pll->clkr.regmap, pll->config);
 
 	ret = regmap_update_bits(pll->clkr.regmap, PLL_MODE(pll),
 				 PLL_BYPASSNL, PLL_BYPASSNL);
@@ -465,6 +478,15 @@ alpha_pll_round_rate(unsigned long rate, unsigned long prate, u32 *l, u64 *a,
 {
 	u64 remainder;
 	u64 quotient;
+
+	/*
+	 * The PLLs parent rate is zero probably since the parent hasn't
+	 * registered yet. Return early with the requested rate.
+	 */
+	if (!prate) {
+		pr_warn("PLLs parent rate hasn't been initialized.\n");
+		return rate;
+	}
 
 	quotient = rate;
 	remainder = do_div(quotient, prate);
