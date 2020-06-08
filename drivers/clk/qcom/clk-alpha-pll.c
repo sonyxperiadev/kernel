@@ -682,7 +682,7 @@ static int __clk_alpha_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	regmap_update_bits(pll->clkr.regmap, PLL_USER_CTL(pll),
 			   PLL_ALPHA_EN, PLL_ALPHA_EN);
 
-	if (is_enabled) {
+	if (clk_hw_is_enabled(hw)) {
 		if (!(pll->flags & SUPPORTS_DYNAMIC_UPDATE))
 			rc = hw->init->ops->enable(hw);
 		else
