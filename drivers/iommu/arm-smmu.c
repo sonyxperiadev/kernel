@@ -266,6 +266,7 @@ struct arm_smmu_device {
 #define ARM_SMMU_OPT_NO_SMR_CHECK	(1 << 9)
 #define ARM_SMMU_OPT_NO_ACTLR_READ	(1 << 10)
 #define ARM_SMMU_OPT_MMU500_ERRATA0	(1 << 11)
+#define ARM_SMMU_OPT_NO_DYNAMIC_ASID	(1 << 12)
 	u32				options;
 	enum arm_smmu_arch_version	version;
 	enum arm_smmu_implementation	model;
@@ -411,6 +412,7 @@ static struct arm_smmu_option_prop arm_smmu_options[] = {
 	{ ARM_SMMU_OPT_MIN_IOVA_ALIGN, "qcom,min-iova-align" },
 	{ ARM_SMMU_OPT_NO_SMR_CHECK, "qcom,no-smr-check" },
 	{ ARM_SMMU_OPT_NO_ACTLR_READ, "qcom,no-actlr-read" },
+	{ ARM_SMMU_OPT_NO_DYNAMIC_ASID, "qcom,no-dynamic-asid" },
 	{ 0, NULL},
 };
 
@@ -1858,7 +1860,7 @@ static int arm_smmu_init_asid(struct iommu_domain *domain,
 	bool dynamic = is_dynamic_domain(domain);
 	int ret;
 
-	if (!dynamic) {
+	if (!dynamic || (smmu->options & ARM_SMMU_OPT_NO_DYNAMIC_ASID)) {
 		cfg->asid = cfg->cbndx + 1;
 	} else {
 		mutex_lock(&smmu->idr_mutex);
