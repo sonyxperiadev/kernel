@@ -25,17 +25,6 @@
 	};
 };
 
-&qupv3_se4_2uart {
- #ifdef SONY_SEINE_DEBUG_UART
-	pinctrl-names = "default", "sleep";
-	pinctrl-0 = <&qupv3_se4_2uart_active>;
-	pinctrl-1 = <&qupv3_se4_2uart_sleep>;
-	status = "ok";
- #else
-	status = "disabled";
- #endif
-};
-
 &reserved_memory {
 	debug_region: debug_region@ffb00000 {
 		compatible = "removed-dma-pool", "qcom,debug_memory";
@@ -72,6 +61,26 @@
 };
 
 &soc {
+	qupv3_se4_2uart: qcom,qup_uart@0x4a90000 {
+		compatible = "qcom,msm-geni-console";
+		reg = <0x4a90000 0x4000>;
+		reg-names = "se_phys";
+		clock-names = "se-clk", "m-ahb", "s-ahb";
+		clocks = <&clock_gcc GCC_QUPV3_WRAP0_S4_CLK>,
+			<&clock_gcc GCC_QUPV3_WRAP_0_M_AHB_CLK>,
+			<&clock_gcc GCC_QUPV3_WRAP_0_S_AHB_CLK>;
+		pinctrl-names = "default", "sleep";
+		pinctrl-0 = <&qupv3_se4_2uart_active>;
+		pinctrl-1 = <&qupv3_se4_2uart_sleep>;
+		interrupts = <GIC_SPI 331 0>;
+		qcom,wrapper-core = <&qupv3_0>;
+	    #ifdef SONY_SEINE_DEBUG_UART
+		status = "ok";
+	    #else
+		status = "disabled";
+	    #endif
+	};
+
 	restart-reason {
 		none {
 			cmd = "none";
