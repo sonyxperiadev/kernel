@@ -42,7 +42,7 @@
 #include "msm8998-pinctrl.dtsi"
 
 &soc {
-	dma_blsp1: qcom,sps-dma@0xc144000 { /* BLSP1 */
+	dma_blsp1: qcom,sps-dma@c144000 { /* BLSP1 */
 		#dma-cells = <4>;
 		compatible = "qcom,sps-dma";
 		reg = <0xc144000 0x25000>;
@@ -50,7 +50,7 @@
 		qcom,summing-threshold = <0x10>;
 	};
 
-	dma_blsp2: qcom,sps-dma@0xc184000 { /* BLSP2 */
+	dma_blsp2: qcom,sps-dma@c184000 { /* BLSP2 */
 		#dma-cells = <4>;
 		compatible = "qcom,sps-dma";
 		reg = <0xc184000 0x25000>;

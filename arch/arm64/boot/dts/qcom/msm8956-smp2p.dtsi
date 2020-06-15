@@ -10,7 +10,7 @@
  * GNU General Public License for more details.
  */
 &soc {
-	qcom,smp2p-modem@0x0b011008 {
+	qcom,smp2p-modem@0b011008 {
 		compatible = "qcom,smp2p";
 		qcom,smem = <435>, <428>;
 		qcom,ipc = <&apcs 8 13>;
@@ -30,7 +30,7 @@
 		};
 	};
 
-	qcom,smp2p-wcnss@0x0b011008 {
+	qcom,smp2p-wcnss@0b011008 {
 		compatible = "qcom,smp2p";
 		qcom,smem = <451>, <431>;
 		qcom,ipc = <&apcs 8 17>;
@@ -51,7 +51,7 @@
 		};
 	};
 
-	qcom,smp2p-adsp@0x0b011008 {
+	qcom,smp2p-adsp@0b011008 {
 		compatible = "qcom,smp2p";
 		qcom,smem = <443>, <429>;
 		qcom,ipc = <&apcs 8 10>;

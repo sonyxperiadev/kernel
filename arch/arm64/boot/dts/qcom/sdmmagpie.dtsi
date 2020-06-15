@@ -603,7 +603,7 @@
 			reg = <0 0x9e400000 0 0x1400000>;
 		};
 
-		cdsp_sec_mem: cdsp_sec_regions@0x9f800000 {
+		cdsp_sec_mem: cdsp_sec_regions@9f800000 {
 			compatible = "removed-dma-pool";
 			no-map;
 			reg = <0x0 0x9f800000 0x0 0x1e00000>;
@@ -827,7 +827,7 @@
 		clock-frequency = <19200000>;
 	};
 
-	timer@0x17c20000{
+	timer@17c20000{
 		#address-cells = <1>;
 		#size-cells = <1>;
 		ranges;
@@ -835,7 +835,7 @@
 		reg = <0x17c20000 0x1000>;
 		clock-frequency = <19200000>;
 
-		frame@0x17c21000 {
+		frame@17c21000 {
 			frame-number = <0>;
 			interrupts = <GIC_SPI 8 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 6 IRQ_TYPE_LEVEL_HIGH>;
@@ -1078,7 +1078,7 @@
 		reg-names = "pshold-base", "tcsr-boot-misc-detect";
 	};
 
-	qcom,mpm2-sleep-counter@0xc221000 {
+	qcom,mpm2-sleep-counter@c221000 {
 		compatible = "qcom,mpm2-sleep-counter";
 		reg = <0xc221000 0x1000>;
 		clock-frequency = <32768>;
@@ -1095,7 +1095,7 @@
 		qcom,rtb-size = <0x100000>;
 	};
 
-	gpi_dma0: qcom,gpi-dma@0x800000 {
+	gpi_dma0: qcom,gpi-dma@800000 {
 		#dma-cells = <5>;
 		compatible = "qcom,gpi-dma";
 		reg = <0x800000 0x60000>;
@@ -1111,7 +1111,7 @@
 		status = "ok";
 	};
 
-	gpi_dma1: qcom,gpi-dma@0xa00000 {
+	gpi_dma1: qcom,gpi-dma@a00000 {
 		#dma-cells = <5>;
 		compatible = "qcom,gpi-dma";
 		reg = <0xa00000 0x60000>;
@@ -2693,7 +2693,7 @@
 		memory-region = <&pil_video_mem>;
 	};
 
-	qcom,npu@0x9800000 {
+	qcom,npu@9800000 {
 		compatible = "qcom,pil-tz-generic";
 		reg = <0x9800000 0x800000>;
 

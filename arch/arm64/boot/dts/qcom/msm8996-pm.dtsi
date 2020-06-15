@@ -263,7 +263,7 @@
 		};
 	};
 
-	rpm_code_ram: rpm-memory@0x68000 {
+	rpm_code_ram: rpm-memory@68000 {
 		compatible = "qcom,rpm-code-ram";
 		reg = <0x68000 0x5000>;
 	};

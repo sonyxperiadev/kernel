@@ -494,7 +494,7 @@
 			reg = <0x0 0x98800000 0x0 0x100000>;
 		};
 
-		qseecom_mem: qseecom_region@0x9e400000 {
+		qseecom_mem: qseecom_region@9e400000 {
 			compatible = "shared-dma-pool";
 			no-map;
 			reg = <0x0 0x9e400000 0x0 0x1400000>;
@@ -600,7 +600,7 @@
 		status = "disabled";
 	};
 
-	pdc: interrupt-controller@0xb220000{
+	pdc: interrupt-controller@b220000{
 		compatible = "qcom,pdc-sm8150";
 		reg = <0xb220000 0x400>;
 		#interrupt-cells = <3>;
@@ -617,7 +617,7 @@
 		clock-frequency = <19200000>;
 	};
 
-	timer@0x17c20000{
+	timer@17c20000{
 		#address-cells = <1>;
 		#size-cells = <1>;
 		ranges;
@@ -625,7 +625,7 @@
 		reg = <0x17c20000 0x1000>;
 		clock-frequency = <19200000>;
 
-		frame@0x17c21000 {
+		frame@17c21000 {
 			frame-number = <0>;
 			interrupts = <0 7 0x4>,
 				     <0 6 0x4>;

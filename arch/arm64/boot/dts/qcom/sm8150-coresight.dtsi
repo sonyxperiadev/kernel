@@ -174,7 +174,7 @@
 
 	};
 
-	funnel_swao:funnel@0x6b08000 {
+	funnel_swao:funnel@6b08000 {
 		compatible = "arm,primecell";
 		arm,primecell-periphid = <0x0003b908>;
 
@@ -461,7 +461,7 @@
 
 	};
 
-	hwevent: hwevent@0x091866F0 {
+	hwevent: hwevent@091866F0 {
 		compatible = "qcom,coresight-hwevent";
 		reg = <0x091866F0 0x4>,
 		     <0x91966F0 0x4>,
@@ -483,7 +483,7 @@
 		clock-names = "apb_pclk";
 	};
 
-	csr: csr@0x6001000 {
+	csr: csr@6001000 {
 		compatible = "qcom,coresight-csr";
 		reg = <0x6001000 0x1000>;
 		reg-names = "csr-base";
@@ -510,7 +510,7 @@
 		qcom,blk-size = <1>;
 	};
 
-	funnel_in0: funnel@0x6041000 {
+	funnel_in0: funnel@6041000 {
 		compatible = "arm,primecell";
 		arm,primecell-periphid = <0x0003b908>;
 
@@ -562,7 +562,7 @@
 		};
 	};
 
-	funnel_in1: funnel@0x6042000 {
+	funnel_in1: funnel@6042000 {
 		compatible = "arm,primecell";
 		arm,primecell-periphid = <0x0003b908>;
 
@@ -620,7 +620,7 @@
 		};
 	};
 
-	funnel_in2: funnel@0x6043000 {
+	funnel_in2: funnel@6043000 {
 		compatible = "arm,primecell";
 		arm,primecell-periphid = <0x0003b908>;
 
@@ -669,7 +669,7 @@
 		};
 	};
 
-	funnel_gfx: funnel@0x6943000 {
+	funnel_gfx: funnel@6943000 {
 		compatible = "arm,primecell";
 		arm,primecell-periphid = <0x0003b908>;
 

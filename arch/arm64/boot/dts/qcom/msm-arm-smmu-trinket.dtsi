@@ -14,7 +14,7 @@
 #include <dt-bindings/msm/msm-bus-ids.h>
 
 &soc {
-	kgsl_smmu: kgsl-smmu@0x59a0000 {
+	kgsl_smmu: kgsl-smmu@59a0000 {
 		status = "okay";
 		compatible = "qcom,qsmmu-v500";
 		reg = <0x59a0000 0x10000>,
@@ -50,7 +50,7 @@
 				<GIC_SPI 173 IRQ_TYPE_LEVEL_HIGH>,
 				<GIC_SPI 174 IRQ_TYPE_LEVEL_HIGH>;
 
-		gfx_0_tbu: gfx_0_tbu@0x59c5000 {
+		gfx_0_tbu: gfx_0_tbu@59c5000 {
 			compatible = "qcom,qsmmuv500-tbu";
 			reg = <0x59c5000 0x1000>,
 				<0x59c2200 0x8>;
@@ -60,7 +60,7 @@
 		};
 	};
 
-	apps_smmu: apps-smmu@0xc600000 {
+	apps_smmu: apps-smmu@c600000 {
 		status = "okay";
 		compatible = "qcom,qsmmu-v500";
 		reg = <0xc600000 0x80000>,
@@ -149,7 +149,7 @@
 			<MSM_BUS_MASTER_AMPSS_M0>,
 			<MSM_BUS_SLAVE_TCU>,
 			<0 1000>;
-		anoc_1_tbu: anoc_1_tbu@0xc785000 {
+		anoc_1_tbu: anoc_1_tbu@c785000 {
 			compatible = "qcom,qsmmuv500-tbu";
 			reg = <0xc785000 0x1000>,
 				<0xc782200 0x8>;
@@ -175,7 +175,7 @@
 				<0 1000>;
 		};
 
-		mm_rt_tbu: mm_rt_tbu@0xc789000 {
+		mm_rt_tbu: mm_rt_tbu@c789000 {
 			compatible = "qcom,qsmmuv500-tbu";
 			reg = <0xc789000 0x1000>,
 				<0xc782208 0x8>;
@@ -203,7 +203,7 @@
 				<0 1000>;
 		};
 
-		mm_nrt_tbu: mm_nrt_tbu@0xc78d000 {
+		mm_nrt_tbu: mm_nrt_tbu@c78d000 {
 			compatible = "qcom,qsmmuv500-tbu";
 			reg = <0xc78d000 0x1000>,
 				<0xc782210 0x8>;
@@ -231,7 +231,7 @@
 				<0 1000>;
 		};
 
-		cdsp_tbu: cdsp_tbu@0xc791000 {
+		cdsp_tbu: cdsp_tbu@c791000 {
 			compatible = "qcom,qsmmuv500-tbu";
 			reg = <0xc791000 0x1000>,
 				<0xc782218 0x8>;

@@ -77,7 +77,7 @@
 		status = "ok";
 	};
 
-	qcom,npu@0x9800000 {
+	qcom,npu@9800000 {
 		status = "ok";
 	};
 
