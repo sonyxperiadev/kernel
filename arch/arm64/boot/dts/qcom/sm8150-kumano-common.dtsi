@@ -517,14 +517,12 @@
 		};
 	};
 
-/*
 	wcd_usbc_analog_en1_gpio: msm_cdc_pinctrl@100 {
 		compatible = "qcom,msm-cdc-pinctrl";
 		pinctrl-names = "aud_active", "aud_sleep";
 		pinctrl-0 = <&wcd_usbc_analog_en1_active>;
 		pinctrl-1 = <&wcd_usbc_analog_en1_idle>;
 	};
-*/
 
 	/* SPI: QUP3 */
 	spi@88c000 {
@@ -763,6 +761,17 @@
 
 &display_panel_avdd_eldo {
 	status = "disabled";
+};
+
+&fsa4480 {
+	/*
+	 * Use GPIO100 based on audio state...
+	 * The platform should anyway never go to sleep while
+	 * DisplayPort is connected, so nothing breaks.
+	 *
+	 * P.S.: We cannot /delete-property/ from DTBO....
+	 */
+	pinctrl-names = "nouse";
 };
 
 &pm8150_gpios {
@@ -3248,7 +3257,7 @@
 		"SpkrLeft IN", "SPK1 OUT",
 		"SpkrRight IN", "SPK2 OUT";
 
-	//qcom,usbc-analog-en1-gpio = <&wcd_usbc_analog_en1_gpio>;
+	qcom,usbc-analog-en1-gpio = <&wcd_usbc_analog_en1_gpio>;
 	qcom,usbc-analog-en2-gpio = <&tlmm 152 0>;
 	pinctrl-names = "aud_active", "aud_sleep";
 	pinctrl-0 = <&wcd_usbc_analog_en2_active>;
