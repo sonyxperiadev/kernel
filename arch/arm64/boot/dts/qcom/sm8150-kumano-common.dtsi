@@ -248,15 +248,34 @@
 	status = "disabled";
 };
 
+&pcie0 {
+	status = "disabled";
+};
+&pcie_rc0 {
+	status = "disabled";
+};
+&pcie0_msi {
+	status = "disabled";
+};
+
+&pcie1 {
+	status = "disabled";
+};
+&pcie_rc1 {
+	status = "disabled";
+};
+&pcie1_msi {
+	status = "disabled";
+};
+
+&mhi_0 {
+	status = "disabled";
+};
+&mhi_1 {
+	status = "disabled";
+};
+
 &soc {
-	qcom,pcie@1c00000 {
-		status = "disabled";
-	};
-
-	qcom,pcie@1c08000 {
-		status = "disabled";
-	};
-
 	nfc,pm-ops {
 		compatible = "sony,pn553-pm-ops";
 	};
