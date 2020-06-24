@@ -669,19 +669,6 @@
 	status = "disabled";
 };
 
-&led_flash_triple_rear {
-	status = "disabled";
-};
-
-&led_flash_triple_rear_aux {
-	status = "disabled";
-};
-
-&led_flash_triple_rear_aux2 {
-	status = "disabled";
-};
-
-
 /* BOB is at 3.35Vmin on Kumano boards */
 &wcd9360_cdc {
 	cdc-vdd-mic-bias-supply = <&pm8150l_bob>;
