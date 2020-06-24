@@ -235,28 +235,6 @@
 &actuator_front {
 	status = "disabled";
 };
-&actuator_triple_rear {
-	status = "disabled";
-};
-&actuator_triple_rear_aux {
-	status = "disabled";
-};
-&actuator_triple_rear_aux2 {
-	status = "disabled";
-};
-
-&actuator_triple_rear_regulator {
-	status = "disabled";
-};
-
-&actuator_triple_rear_aux_regulator {
-	status = "disabled";
-};
-
-&actuator_triple_rear_aux2_regulator {
-	status = "disabled";
-};
-
 &ois_rear {
 	status = "disabled";
 };
@@ -267,15 +245,6 @@
 	status = "disabled";
 };
 &eeprom_front {
-	status = "disabled";
-};
-&eeprom_triple_rear {
-	status = "disabled";
-};
-&eeprom_triple_rear_aux {
-	status = "disabled";
-};
-&eeprom_triple_rear_aux2 {
 	status = "disabled";
 };
 
