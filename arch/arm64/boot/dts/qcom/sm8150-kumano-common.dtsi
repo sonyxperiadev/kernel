@@ -235,28 +235,6 @@
 &actuator_front {
 	status = "disabled";
 };
-&actuator_triple_rear {
-	status = "disabled";
-};
-&actuator_triple_rear_aux {
-	status = "disabled";
-};
-&actuator_triple_rear_aux2 {
-	status = "disabled";
-};
-
-&actuator_triple_rear_regulator {
-	status = "disabled";
-};
-
-&actuator_triple_rear_aux_regulator {
-	status = "disabled";
-};
-
-&actuator_triple_rear_aux2_regulator {
-	status = "disabled";
-};
-
 &ois_rear {
 	status = "disabled";
 };
@@ -269,25 +247,35 @@
 &eeprom_front {
 	status = "disabled";
 };
-&eeprom_triple_rear {
+
+&pcie0 {
 	status = "disabled";
 };
-&eeprom_triple_rear_aux {
+&pcie_rc0 {
 	status = "disabled";
 };
-&eeprom_triple_rear_aux2 {
+&pcie0_msi {
+	status = "disabled";
+};
+
+&pcie1 {
+	status = "disabled";
+};
+&pcie_rc1 {
+	status = "disabled";
+};
+&pcie1_msi {
+	status = "disabled";
+};
+
+&mhi_0 {
+	status = "disabled";
+};
+&mhi_1 {
 	status = "disabled";
 };
 
 &soc {
-	qcom,pcie@1c00000 {
-		status = "disabled";
-	};
-
-	qcom,pcie@1c08000 {
-		status = "disabled";
-	};
-
 	nfc,pm-ops {
 		compatible = "sony,pn553-pm-ops";
 	};
@@ -680,19 +668,6 @@
 &led_flash_iris {
 	status = "disabled";
 };
-
-&led_flash_triple_rear {
-	status = "disabled";
-};
-
-&led_flash_triple_rear_aux {
-	status = "disabled";
-};
-
-&led_flash_triple_rear_aux2 {
-	status = "disabled";
-};
-
 
 /* BOB is at 3.35Vmin on Kumano boards */
 &wcd9360_cdc {
