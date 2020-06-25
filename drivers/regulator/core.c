@@ -58,6 +58,7 @@ static LIST_HEAD(regulator_map_list);
 static LIST_HEAD(regulator_ena_gpio_list);
 static LIST_HEAD(regulator_supply_alias_list);
 static bool has_full_constraints;
+static u32 debug_suspend = 0;
 
 static struct dentry *debugfs_root;
 
@@ -4880,6 +4881,28 @@ static int regulator_summary_show(struct seq_file *s, void *data)
 	return 0;
 }
 
+static int regulator_debug_suspend_output(struct device *dev, void *data)
+{
+	struct regulator_dev *rdev = dev_to_rdev(dev);
+
+	if (!rdev->supply && !!rdev->use_count) {
+		pr_info("%s: %s:%u:%u %5dmV %5dmA\n",
+			__func__, rdev_get_name(rdev), rdev->use_count, rdev->open_count,
+			 _regulator_get_voltage(rdev) / 1000, _regulator_get_current_limit(rdev) / 1000);
+	}
+
+	return 0;
+}
+
+void regulator_debug_suspend() {
+	if (!debug_suspend) {
+		return;
+	}
+	pr_info("Enabled regulators:\n");
+	class_for_each_device(&regulator_class, NULL, NULL,
+			      regulator_debug_suspend_output);
+}
+
 static int regulator_summary_open(struct inode *inode, struct file *file)
 {
 	return single_open(file, regulator_summary_show, inode->i_private);
@@ -4910,6 +4933,9 @@ static int __init regulator_init(void)
 
 	debugfs_create_file("regulator_summary", 0444, debugfs_root,
 			    NULL, &regulator_summary_fops);
+			    
+	debugfs_create_u32("debug_suspend", 0644, debugfs_root,
+			   &debug_suspend);
 
 	regulator_dummy_init();
 
