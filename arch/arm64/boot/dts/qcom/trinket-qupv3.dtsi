@@ -46,7 +46,7 @@
 	};
 
 	/* HSUART with 2-wire mode */
-	qupv3_se3_4uart: qcom,qup_uart@0x4a8c000 {
+	qupv3_se3_4uart: qcom,qup_uart@4a8c000 {
 		compatible = "qcom,msm-geni-serial-hs";
 		reg = <0x4a8c000 0x4000>;
 		reg-names = "se_phys";
@@ -65,7 +65,7 @@
 	};
 
 	/* Debug UART Instance for CDP/MTP/RUMI platform */
-	qupv3_se4_2uart: qcom,qup_uart@0x4a90000 {
+	qupv3_se4_2uart: qcom,qup_uart@4a90000 {
 		compatible = "qcom,msm-geni-console";
 		reg = <0x4a90000 0x4000>;
 		reg-names = "se_phys";
@@ -248,7 +248,7 @@
 	 * HS UART instances. HS UART usecases can be supported on these
 	 * instances only.
 	 */
-	qupv3_se9_4uart: qcom,qup_uart@0x4c90000 {
+	qupv3_se9_4uart: qcom,qup_uart@4c90000 {
 		compatible = "qcom,msm-geni-serial-hs";
 		reg = <0x4c90000 0x4000>;
 		reg-names = "se_phys";

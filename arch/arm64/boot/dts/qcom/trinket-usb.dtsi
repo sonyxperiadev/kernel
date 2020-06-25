@@ -99,7 +99,7 @@
 			dr_mode = "otg";
 		};
 
-		qcom,usbbam@0x04f04000 {
+		qcom,usbbam@04f04000 {
 			compatible = "qcom,usb-bam-msm";
 			reg = <0x04f04000 0x17000>;
 			interrupts = <0 253 0>;

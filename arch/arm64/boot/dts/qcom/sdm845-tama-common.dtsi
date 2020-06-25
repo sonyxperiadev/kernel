@@ -115,11 +115,11 @@
 };
 
 &soc {
-	qcom,pcie@0x1c00000 {
+	qcom,pcie@1c00000 {
 		status = "disabled";
 	};
 
-	qcom,pcie@0x1c08000 {
+	qcom,pcie@1c08000 {
 		status = "disabled";
 	};
 
@@ -283,7 +283,7 @@
 	};
 
 	/* UART: QUP6 */
-	qcom,qup_uart@0x898000 {
+	qcom,qup_uart@898000 {
 		clock-frequency = <4000000>;
 		status = "okay";
 	};
@@ -294,7 +294,7 @@
 	};
 
 	/* UART: QUP9 */
-	qcom,qup_uart@0xa84000 {
+	qcom,qup_uart@a84000 {
 		pinctrl-0 = <&sdm_gpio_4 &sdm_gpio_5>;
 		pinctrl-1 = <&sdm_gpio_4 &sdm_gpio_5>;
 		status = "okay";

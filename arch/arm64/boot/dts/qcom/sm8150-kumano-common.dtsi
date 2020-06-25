@@ -569,14 +569,14 @@
 	};
 
 	/* UART: QUP12 */
-	qcom,qup_uart@0xa90000 {
+	qcom,qup_uart@a90000 {
 		pinctrl-0 = <&sm_gpio_85 &sm_gpio_86>;
 		pinctrl-1 = <&sm_gpio_85 &sm_gpio_86>;
 		status = "okay";
 	};
 
 	/* UART: QUP13 */
-	qcom,qup_uart@0xc8c000 {
+	qcom,qup_uart@c8c000 {
 		status = "okay";
 	};
 

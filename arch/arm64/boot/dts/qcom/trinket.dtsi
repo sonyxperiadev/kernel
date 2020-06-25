@@ -1261,7 +1261,7 @@
 		qcom,pipe-attr-ee;
 	};
 
-	gpi_dma0: qcom,gpi-dma@0x04a00000 {
+	gpi_dma0: qcom,gpi-dma@04a00000 {
 		#dma-cells = <5>;
 		compatible = "qcom,gpi-dma";
 		reg = <0x04a00000 0x60000>;
@@ -1277,7 +1277,7 @@
 		status = "ok";
 	};
 
-	gpi_dma1: qcom,gpi-dma@0x04c00000 {
+	gpi_dma1: qcom,gpi-dma@04c00000 {
 		#dma-cells = <5>;
 		compatible = "qcom,gpi-dma";
 		reg = <0x04c00000 0x60000>;

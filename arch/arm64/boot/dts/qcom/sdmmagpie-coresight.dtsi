@@ -225,7 +225,7 @@
 		};
 	};
 
-	funnel_in0: funnel@0x6041000 {
+	funnel_in0: funnel@6041000 {
 		compatible = "arm,primecell";
 		arm,primecell-periphid = <0x0003b908>;
 
@@ -2070,7 +2070,7 @@
 		};
 	};
 
-	hwevent: hwevent@0x014066f0 {
+	hwevent: hwevent@014066f0 {
 		compatible = "qcom,coresight-hwevent";
 		reg = <0x14066f0 0x4>,
 		      <0x14166f0 0x4>,

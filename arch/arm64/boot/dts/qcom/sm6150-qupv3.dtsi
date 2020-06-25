@@ -40,7 +40,7 @@
 	};
 
 	/* Debug UART Instance for CDP/MTP platform */
-	qupv3_se0_2uart: qcom,qup_uart@0x880000 {
+	qupv3_se0_2uart: qcom,qup_uart@880000 {
 		compatible = "qcom,msm-geni-console";
 		reg = <0x880000 0x4000>;
 		reg-names = "se_phys";
@@ -306,7 +306,7 @@
 	 * HS UART instances. HS UART usecases can be supported on these
 	 * instances only.
 	 */
-	qupv3_se7_4uart: qcom,qup_uart@0xa8c000 {
+	qupv3_se7_4uart: qcom,qup_uart@a8c000 {
 		compatible = "qcom,msm-geni-serial-hs";
 		reg = <0xa8c000 0x4000>;
 		reg-names = "se_phys";

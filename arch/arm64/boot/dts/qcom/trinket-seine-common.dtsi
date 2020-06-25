@@ -13,7 +13,7 @@
 #include <dt-bindings/input/input.h>
 
 /*
- *     Seine platform: debug serial at qup_uart@0x4a90000
+ *     Seine platform: debug serial at qup_uart@4a90000
  * Define SONY_SEINE_DEBUG_UART in DT to enable the UART output:
  * for the regular non-debugging case, it is kept disabled in
  * order to save power and decrease boot times.
@@ -61,7 +61,7 @@
 };
 
 &soc {
-	qupv3_se4_2uart: qcom,qup_uart@0x4a90000 {
+	qupv3_se4_2uart: qcom,qup_uart@4a90000 {
 		compatible = "qcom,msm-geni-console";
 		reg = <0x4a90000 0x4000>;
 		reg-names = "se_phys";

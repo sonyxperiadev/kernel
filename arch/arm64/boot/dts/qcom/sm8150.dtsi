@@ -955,7 +955,7 @@
 			     <GIC_SPI 17 IRQ_TYPE_LEVEL_HIGH>;
 	};
 
-	pdc: interrupt-controller@0xb220000{
+	pdc: interrupt-controller@b220000{
 		compatible = "qcom,pdc-sm8150";
 		reg = <0xb220000 0x400>;
 		#interrupt-cells = <3>;
@@ -972,7 +972,7 @@
 		clock-frequency = <19200000>;
 	};
 
-	timer@0x17c20000{
+	timer@17c20000{
 		#address-cells = <1>;
 		#size-cells = <1>;
 		ranges;
@@ -980,7 +980,7 @@
 		reg = <0x17c20000 0x1000>;
 		clock-frequency = <19200000>;
 
-		frame@0x17c21000 {
+		frame@17c21000 {
 			frame-number = <0>;
 			interrupts = <0 8 0x4>,
 				     <0 6 0x4>;
@@ -1384,7 +1384,7 @@
 		mbox-name = "restart-ddr-mbox";
 	};
 
-	qcom,mpm2-sleep-counter@0xc221000 {
+	qcom,mpm2-sleep-counter@c221000 {
 		compatible = "qcom,mpm2-sleep-counter";
 		reg = <0xc221000 0x1000>;
 		clock-frequency = <32768>;
@@ -1859,7 +1859,7 @@
 		0x18100 0x18100 0x18100 0x18100>;
 	};
 
-	qcom,npu@0x9800000 {
+	qcom,npu@9800000 {
 		compatible = "qcom,pil-tz-generic";
 		reg = <0x9800000 0x800000>;
 
@@ -3517,7 +3517,7 @@
 		};
 	};
 
-	gpi_dma0: qcom,gpi-dma@0x800000 {
+	gpi_dma0: qcom,gpi-dma@800000 {
 		#dma-cells = <5>;
 		compatible = "qcom,gpi-dma";
 		reg = <0x800000 0x60000>;
@@ -3535,7 +3535,7 @@
 		status = "ok";
 	};
 
-	gpi_dma1: qcom,gpi-dma@0xa00000 {
+	gpi_dma1: qcom,gpi-dma@a00000 {
 		#dma-cells = <5>;
 		compatible = "qcom,gpi-dma";
 		reg = <0xa00000 0x60000>;
@@ -3553,7 +3553,7 @@
 		status = "ok";
 	};
 
-	gpi_dma2: qcom,gpi-dma@0xc00000 {
+	gpi_dma2: qcom,gpi-dma@c00000 {
 		#dma-cells = <5>;
 		compatible = "qcom,gpi-dma";
 		reg = <0xc00000 0x60000>;
@@ -3870,7 +3870,7 @@
 		status = "disabled";
 	};
 
-	tspp: msm_tspp@0x8880000 {
+	tspp: msm_tspp@8880000 {
 		compatible = "qcom,msm_tspp";
 		reg = <0x088a7000 0x200>, /* MSM_TSIF0_PHYS */
 		      <0x088a8000 0x200>, /* MSM_TSIF1_PHYS */

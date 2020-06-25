@@ -2257,7 +2257,7 @@
 		memory-region = <&reloc_mem>;
 	};
 
-	spi_0: spi@0x78B5000 { /* BLSP1 QUP0 */
+	spi_0: spi@78B5000 { /* BLSP1 QUP0 */
 		compatible = "qcom,spi-qup-v2";
 		reg-names = "spi_physical", "spi_bam_physical";
 		reg = <0x78B5000 0x600>,
