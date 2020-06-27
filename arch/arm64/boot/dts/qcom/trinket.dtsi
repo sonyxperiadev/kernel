@@ -616,7 +616,6 @@
                 redistributor-stride = <0x0 0x20000>;
                 interrupts = <1 9 4>;
                 interrupt-parent = <&intc>;
-                arm,qgicv3-plat-sdm660-quirks;
         };
 
 	jtag_mm0: jtagmm@9040000 {
@@ -718,6 +717,8 @@
 		interrupt-controller;
 		interrupt-parent = <&intc>;
 		#interrupt-cells = <3>;
+		qcom,mpm-skip-set-wake;
+		qcom,mpm-irq-disable-not-supported;
 	};
 
 	wakegpio: wake-gpio {
@@ -725,6 +726,9 @@
 		interrupt-controller;
 		interrupt-parent = <&intc>;
 		#interrupt-cells = <2>;
+		qcom,mpm-gpio-skip-set-wake;
+		qcom,mpm-gpio-mask-on-suspend;
+		qcom,mpm-gpio-irq-enabled-by-firmware;
 	};
 
 	qcom,memshare {
