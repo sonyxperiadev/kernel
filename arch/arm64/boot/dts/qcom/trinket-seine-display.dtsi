@@ -144,6 +144,8 @@
 	somc,disp-vci-en-gpio = <&tlmm 54 0>;
 	somc,disp-err-flag-gpio = <&tlmm 86 0>;
 
+	somc,set-hbm-usable;
+
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
 			qcom,display-topology = <1 0 1>;
