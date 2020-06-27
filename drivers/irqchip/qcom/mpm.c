@@ -752,6 +752,12 @@ static int __init mpm_gic_chip_init(struct device_node *node,
 	if (of_property_read_bool(node, "qcom,mpm-skip-set-wake"))
 		msm_mpm_gic_chip.flags |= IRQCHIP_SKIP_SET_WAKE;
 
+	if (of_property_read_bool(node,
+				  "qcom,mpm-irq-disable-not-supported")) {
+		msm_mpm_gic_chip.irq_enable = NULL;
+		msm_mpm_gic_chip.irq_disable = msm_mpm_gic_chip_mask;
+	}
+
 	msm_mpm_dev_data.gic_chip_domain = irq_domain_add_hierarchy(
 			parent_domain, 0, num_mpm_irqs, node,
 			&msm_mpm_gic_chip_domain_ops, (void *)id->data);
@@ -786,6 +792,13 @@ static int __init mpm_gpio_chip_init(struct device_node *node,
 
 	if (of_property_read_bool(node, "qcom,mpm-gpio-skip-set-wake"))
 		msm_mpm_gpio_chip.flags |= IRQCHIP_SKIP_SET_WAKE;
+
+	if (of_property_read_bool(node, "qcom,mpm-gpio-mask-on-suspend"))
+		msm_mpm_gpio_chip.flags |= IRQCHIP_MASK_ON_SUSPEND;
+
+	if (of_property_read_bool(node,
+				  "qcom,mpm-gpio-irq-enabled-by-firmware"))
+		msm_mpm_gpio_chip.irq_enable = NULL;
 
 	msm_mpm_dev_data.gpio_chip_domain = irq_domain_create_linear(
 			of_node_to_fwnode(node), num_mpm_irqs,
