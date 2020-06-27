@@ -12,8 +12,8 @@
 	qcom,panel-supply-entries = <&dsi_panel_oled_pwr_supply>;
 	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
 	qcom,mdss-dsi-bl-min-level = <1>;
-	qcom,mdss-dsi-bl-max-level = <4095>;
-	qcom,mdss-brightness-max-level = <4095>;
+	qcom,mdss-dsi-bl-max-level = <1023>;
+	qcom,mdss-brightness-max-level = <1023>;
 	qcom,mdss-dsi-panel-peak-brightness = <4200000>;
 	qcom,mdss-dsi-panel-blackness-level = <3230>;
 	qcom,platform-te-gpio = <&tlmm 89 0>;
