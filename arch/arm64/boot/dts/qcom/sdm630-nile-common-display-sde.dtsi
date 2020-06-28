@@ -3,6 +3,7 @@
 &dsi_td4322_innolux_fhd_cmd {
 	qcom,platform-te-gpio = <&tlmm 59 0>;
 	qcom,platform-reset-gpio = <&tlmm 53 0>;
+	qcom,mdss-dsi-reset-sequence = <0 30>, <1 150>;
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_innolux>;
 	qcom,panel-vspvsn-supply-entries = <&dsi_panel_vspvsn_pwr_supply_innolux>;
 	somc,pw-on-rst-seq = "after_power_on";
