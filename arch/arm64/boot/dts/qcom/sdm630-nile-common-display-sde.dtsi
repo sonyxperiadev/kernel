@@ -7,6 +7,7 @@
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_innolux>;
 	qcom,panel-vspvsn-supply-entries = <&dsi_panel_vspvsn_pwr_supply_innolux>;
 	somc,pw-on-rst-seq = "after_power_on";
+	qcom,dss-dsi-te-using-wd;
 
 	qcom,mdss-dsi-display-timings {
 		1080p60 {
@@ -110,6 +111,7 @@
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_truly>;
 	qcom,panel-vspvsn-supply-entries = <&dsi_panel_vspvsn_pwr_supply_truly>;
 	somc,pw-on-rst-seq = "after_power_on";
+	qcom,mdss-dsi-te-using-wd;
 
 	qcom,mdss-dsi-display-timings {
 		1080p60 {
@@ -176,6 +178,7 @@
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_csot>;
 	qcom,panel-vspvsn-supply-entries = <&dsi_panel_vspvsn_pwr_supply_csot>;
 	somc,pw-on-rst-seq = "after_power_on";
+	qcom,mdss-dsi-te-using-wd;
 
 	qcom,mdss-dsi-display-timings {
 		1080p60 {
@@ -239,6 +242,7 @@
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_tianma>;
 	qcom,panel-vspvsn-supply-entries = <&dsi_panel_vspvsn_pwr_supply_tianma>;
 	somc,pw-on-rst-seq = "after_power_on";
+	qcom,mdss-dsi-te-using-wd;
 
 	qcom,mdss-dsi-display-timings {
 		1080p60 {
