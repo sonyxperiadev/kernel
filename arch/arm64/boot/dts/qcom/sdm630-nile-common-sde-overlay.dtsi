@@ -222,6 +222,8 @@
 };
 
 &mdss_mdp {
+	/* Set SDE MAX performance lock, ignoring displayqos */
+	qcom,sde-perf-default-mode = <3>;
 	connectors = <&sde_wb &dsi_panel_cmd_display>;
 };
 
