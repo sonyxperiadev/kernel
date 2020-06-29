@@ -179,8 +179,8 @@ enum log_level_list;
 
 #define LOGE(X, ...) LOGx(pr_err, LEVEL_DEFAULT, X, ## __VA_ARGS__)
 #define LOGW(X, ...) LOGx(pr_warn, LEVEL_DEFAULT, X, ## __VA_ARGS__)
-#define LOGN(X, ...) LOGx(pr_notice, LEVEL_DEFAULT, X, ## __VA_ARGS__)
-#define LOGI(X, ...) LOGx(pr_notice, LEVEL_DEBUG, X, ## __VA_ARGS__)
+#define LOGN(X, ...) LOGx(pr_notice, LEVEL_DEBUG, X, ## __VA_ARGS__)
+#define LOGI(X, ...) LOGx(pr_notice, LEVEL_ALL, X, ## __VA_ARGS__)
 #define LOGD(X, ...) LOGx(pr_notice, LEVEL_ALL, X, ## __VA_ARGS__)
 
 #define TOUCH_PATCH_INFO_MSG(fmt, args...)	pr_info("[Solomon Patch] " fmt, ##args)

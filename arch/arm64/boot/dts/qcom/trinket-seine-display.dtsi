@@ -130,8 +130,8 @@
 	/delete-property/ qcom,panel-vspvsn-supply-entries;
 	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
 	qcom,mdss-dsi-bl-min-level = <1>;
-	qcom,mdss-dsi-bl-max-level = <4095>;
-	qcom,mdss-brightness-max-level = <4095>;
+	qcom,mdss-dsi-bl-max-level = <1023>;
+	qcom,mdss-brightness-max-level = <1023>;
 	qcom,mdss-dsi-panel-peak-brightness = <4200000>;
 	qcom,mdss-dsi-panel-blackness-level = <3230>;
 
@@ -143,6 +143,8 @@
 
 	somc,disp-vci-en-gpio = <&tlmm 54 0>;
 	somc,disp-err-flag-gpio = <&tlmm 86 0>;
+
+	somc,set-hbm-usable;
 
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
