@@ -259,8 +259,8 @@
 		interrupt-parent = <&tlmm>;
 		interrupts = <45 0x2008>;
 		pinctrl-names = "pmx_ts_active", "pmx_ts_suspend";
-		pinctrl-0 = <&ts_int_active &ts_lcd_id_active>;
-		pinctrl-1 = <&ts_nile_int_suspend &ts_lcd_id_suspend>;
+		pinctrl-0 = <&ts_lcd_id_active>;
+		pinctrl-1 = <&ts_lcd_id_suspend>;
 		synaptics,pwr-reg-name = "avdd";
 		synaptics,bus-reg-name = "vdd";
 		synaptics,ub-i2c-addr = <0x20>;

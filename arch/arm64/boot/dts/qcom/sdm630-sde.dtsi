@@ -296,7 +296,7 @@
 	};
 
 	mdss_dsi0: qcom,sde_dsi_ctrl0@c994000 {
-		compatible = "qcom,dsi-ctrl-hw-v1.4";
+		compatible = "qcom,dsi-ctrl-hw-v2.0";
 		label = "dsi-ctrl-0";
 		cell-index = <0>;
 		reg =   <0xc994000 0x400>,
@@ -367,8 +367,8 @@
 		compatible = "qcom,dsi-phy-v2.0";
 		label = "dsi-phy-0";
 		cell-index = <0>;
-		reg = <0xc994400 0x588>, <0xc994200 0x98>;
-		reg-names = "dsi_phy", "dyn_refresh_base";
+		reg = <0xc994400 0x588>, <0xc994200 0x98>, <0xc901400 0x100>;
+		reg-names = "dsi_phy", "dyn_refresh_base", "phy_clamp_base";
 
 		gdsc-supply = <&gdsc_mdss>;
 		vdda-supply = <&pm660l_l1>;
@@ -393,6 +393,7 @@
 					00 00 10 0f
 					00 00 10 0f
 					00 00 10 8f];
+		qcom,panel-allow-phy-poweroff;
 
 		qcom,core-supply-entries {
 			#address-cells = <1>;
