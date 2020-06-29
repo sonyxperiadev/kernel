@@ -1,58 +1,23 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  *  Copyright (C) 2012-2013 Samsung Electronics Co., Ltd.
  *
- *  This program is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU General Public License
- *  as published by the Free Software Foundation; either version 2
- *  of the License, or (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, see <http://www.gnu.org/licenses/>.
+ *  cache.c: exFAT Cache Manager
  */
-
-/************************************************************************/
-/*                                                                      */
-/*  PROJECT : exFAT & FAT12/16/32 File System                           */
-/*  FILE    : cache.c                                                   */
-/*  PURPOSE : sdFAT Cache Manager                                       */
-/*            (FAT Cache & Buffer Cache)                                */
-/*                                                                      */
-/*----------------------------------------------------------------------*/
-/*  NOTES                                                               */
-/*                                                                      */
-/*                                                                      */
-/************************************************************************/
 
 #include <linux/swap.h> /* for mark_page_accessed() */
 #include <asm/unaligned.h>
-
-#include "sdfat.h"
+#include "exfat.h"
 #include "core.h"
 
 #define DEBUG_HASH_LIST
 #define DEBUG_HASH_PREV	(0xAAAA5555)
 #define DEBUG_HASH_NEXT	(0x5555AAAA)
 
-/*----------------------------------------------------------------------*/
-/*  Global Variable Definitions                                         */
-/*----------------------------------------------------------------------*/
-/* All buffer structures are protected w/ fsi->v_sem */
-
-/*----------------------------------------------------------------------*/
-/*  Local Variable Definitions                                          */
-/*----------------------------------------------------------------------*/
 #define LOCKBIT         (0x01)
 #define DIRTYBIT        (0x02)
 #define KEEPBIT         (0x04)
 
-/*----------------------------------------------------------------------*/
-/*  Cache handling function declarations                                */
-/*----------------------------------------------------------------------*/
 static cache_ent_t *__fcache_find(struct super_block *sb, u64 sec);
 static cache_ent_t *__fcache_get(struct super_block *sb);
 static void __fcache_insert_hash(struct super_block *sb, cache_ent_t *bp);
@@ -63,9 +28,6 @@ static cache_ent_t *__dcache_get(struct super_block *sb);
 static void __dcache_insert_hash(struct super_block *sb, cache_ent_t *bp);
 static void __dcache_remove_hash(cache_ent_t *bp);
 
-/*----------------------------------------------------------------------*/
-/*  Static functions                                                    */
-/*----------------------------------------------------------------------*/
 static void push_to_mru(cache_ent_t *bp, cache_ent_t *list)
 {
 	bp->next = list->next;
@@ -122,14 +84,15 @@ static inline void __remove_from_hash(cache_ent_t *bp)
 #endif
 }
 
-/* Do FAT mirroring (don't sync)
+/*
+ * Do FAT mirroring (don't sync)
  * sec: sector No. in FAT1
  * bh:  bh of sec.
  */
 static inline s32 __fat_copy(struct super_block *sb, u64 sec, struct buffer_head *bh, int sync)
 {
-#ifdef CONFIG_SDFAT_FAT_MIRRORING
-	FS_INFO_T *fsi = &(SDFAT_SB(sb)->fsi);
+#ifdef CONFIG_EXFAT_FAT_MIRRORING
+	FS_INFO_T *fsi = &(EXFAT_SB(sb)->fsi);
 	u64 sec2;
 
 	if (fsi->FAT2_start_sector != fsi->FAT1_start_sector) {
@@ -137,14 +100,14 @@ static inline s32 __fat_copy(struct super_block *sb, u64 sec, struct buffer_head
 		BUG_ON(sec2 != (sec + (u64)fsi->num_FAT_sectors));
 
 		MMSG("BD: fat mirroring (%llu in FAT1, %llu in FAT2)\n", sec, sec2);
-		if (write_sect(sb, sec2, bh, sync))
+		if (exfat_write_sect(sb, sec2, bh, sync))
 			return -EIO;
 	}
 #else
 	/* DO NOTHING */
 #endif
 	return 0;
-} /* end of __fat_copy */
+}
 
 /*
  * returns 1, if bp is flushed
@@ -153,16 +116,21 @@ static inline s32 __fat_copy(struct super_block *sb, u64 sec, struct buffer_head
  */
 static s32 __fcache_ent_flush(struct super_block *sb, cache_ent_t *bp, u32 sync)
 {
+	struct exfat_sb_info *sbi;
+
 	if (!(bp->flag & DIRTYBIT))
 		return 0;
-#ifdef CONFIG_SDFAT_DELAYED_META_DIRTY
-	// Make buffer dirty (XXX: Naive impl.)
-	if (write_sect(sb, bp->sec, bp->bh, 0))
-		return -EIO;
 
-	if (__fat_copy(sb, bp->sec, bp->bh, 0))
-		return -EIO;
-#endif
+	sbi = EXFAT_SB(sb);
+	if (sbi->options.delayed_meta) {
+		// Make buffer dirty (XXX: Naive impl.)
+		if (exfat_write_sect(sb, bp->sec, bp->bh, 0))
+			return -EIO;
+
+		if (__fat_copy(sb, bp->sec, bp->bh, 0))
+			return -EIO;
+	}
+
 	bp->flag &= ~(DIRTYBIT);
 
 	if (sync)
@@ -173,7 +141,7 @@ static s32 __fcache_ent_flush(struct super_block *sb, cache_ent_t *bp, u32 sync)
 
 static s32 __fcache_ent_discard(struct super_block *sb, cache_ent_t *bp)
 {
-	FS_INFO_T *fsi = &(SDFAT_SB(sb)->fsi);
+	FS_INFO_T *fsi = &(EXFAT_SB(sb)->fsi);
 
 	__fcache_remove_hash(bp);
 	bp->sec = ~0;
@@ -187,15 +155,15 @@ static s32 __fcache_ent_discard(struct super_block *sb, cache_ent_t *bp)
 	return 0;
 }
 
-u8 *fcache_getblk(struct super_block *sb, u64 sec)
+u8 *exfat_fcache_getblk(struct super_block *sb, u64 sec)
 {
 	cache_ent_t *bp;
-	FS_INFO_T *fsi = &(SDFAT_SB(sb)->fsi);
+	FS_INFO_T *fsi = &(EXFAT_SB(sb)->fsi);
 	u32 page_ra_count = FCACHE_MAX_RA_SIZE >> sb->s_blocksize_bits;
 
 	bp = __fcache_find(sb, sec);
 	if (bp) {
-		if (bdev_check_bdi_valid(sb)) {
+		if (exfat_bdev_check_bdi_valid(sb)) {
 			__fcache_ent_flush(sb, bp, 0);
 			__fcache_ent_discard(sb, bp);
 			return NULL;
@@ -214,15 +182,15 @@ u8 *fcache_getblk(struct super_block *sb, u64 sec)
 
 	/* Naive FAT read-ahead (increase I/O unit to page_ra_count) */
 	if ((sec & (page_ra_count - 1)) == 0)
-		bdev_readahead(sb, sec, (u64)page_ra_count);
+		exfat_bdev_readahead(sb, sec, (u64)page_ra_count);
 
 	/*
 	 * patch 1.2.4 : buffer_head null pointer exception problem.
 	 *
-	 * When read_sect is failed, fcache should be moved to
+	 * When exfat_read_sect is failed, fcache should be moved to
 	 * EMPTY hash_list and the first of lru_list.
 	 */
-	if (read_sect(sb, sec, &(bp->bh), 1)) {
+	if (exfat_read_sect(sb, sec, &(bp->bh), 1)) {
 		__fcache_ent_discard(sb, bp);
 		return NULL;
 	}
@@ -230,37 +198,17 @@ u8 *fcache_getblk(struct super_block *sb, u64 sec)
 	return bp->bh->b_data;
 }
 
-static inline int __mark_delayed_dirty(struct super_block *sb, cache_ent_t *bp)
-{
-#ifdef CONFIG_SDFAT_DELAYED_META_DIRTY
-	FS_INFO_T *fsi = &(SDFAT_SB(sb)->fsi);
-
-	if (fsi->vol_type == EXFAT)
-		return -ENOTSUPP;
-
-	bp->flag |= DIRTYBIT;
-	return 0;
-#else
-	return -ENOTSUPP;
-#endif
-}
-
-
-
-s32 fcache_modify(struct super_block *sb, u64 sec)
+s32 exfat_fcache_modify(struct super_block *sb, u64 sec)
 {
 	cache_ent_t *bp;
 
 	bp = __fcache_find(sb, sec);
 	if (!bp) {
-		sdfat_fs_error(sb, "Can`t find fcache (sec 0x%016llx)", sec);
+		exfat_fs_error(sb, "Can`t find fcache (sec 0x%016llx)", sec);
 		return -EIO;
 	}
 
-	if (!__mark_delayed_dirty(sb, bp))
-		return 0;
-
-	if (write_sect(sb, sec, bp->bh, 0))
+	if (exfat_write_sect(sb, sec, bp->bh, 0))
 		return -EIO;
 
 	if (__fat_copy(sb, sec, bp->bh, 0))
@@ -269,12 +217,9 @@ s32 fcache_modify(struct super_block *sb, u64 sec)
 	return 0;
 }
 
-/*======================================================================*/
-/*  Cache Initialization Functions                                      */
-/*======================================================================*/
-s32 meta_cache_init(struct super_block *sb)
+s32 exfat_meta_cache_init(struct super_block *sb)
 {
-	FS_INFO_T *fsi = &(SDFAT_SB(sb)->fsi);
+	FS_INFO_T *fsi = &(EXFAT_SB(sb)->fsi);
 	s32 i;
 
 	/* LRU list */
@@ -329,19 +274,16 @@ s32 meta_cache_init(struct super_block *sb)
 	return 0;
 }
 
-s32 meta_cache_shutdown(struct super_block *sb)
+s32 exfat_meta_cache_shutdown(struct super_block *sb)
 {
 	return 0;
 }
 
-/*======================================================================*/
-/*  FAT Read/Write Functions                                            */
-/*======================================================================*/
-s32 fcache_release_all(struct super_block *sb)
+s32 exfat_fcache_release_all(struct super_block *sb)
 {
 	s32 ret = 0;
 	cache_ent_t *bp;
-	FS_INFO_T *fsi = &(SDFAT_SB(sb)->fsi);
+	FS_INFO_T *fsi = &(EXFAT_SB(sb)->fsi);
 	s32 dirtycnt = 0;
 
 	bp = fsi->fcache.lru_list.next;
@@ -369,11 +311,11 @@ s32 fcache_release_all(struct super_block *sb)
 
 
 /* internal DIRTYBIT marked => bh dirty */
-s32 fcache_flush(struct super_block *sb, u32 sync)
+s32 exfat_fcache_flush(struct super_block *sb, u32 sync)
 {
 	s32 ret = 0;
 	cache_ent_t *bp;
-	FS_INFO_T *fsi = &(SDFAT_SB(sb)->fsi);
+	FS_INFO_T *fsi = &(EXFAT_SB(sb)->fsi);
 	s32 dirtycnt = 0;
 
 	bp = fsi->fcache.lru_list.next;
@@ -394,7 +336,7 @@ static cache_ent_t *__fcache_find(struct super_block *sb, u64 sec)
 {
 	s32 off;
 	cache_ent_t *bp, *hp;
-	FS_INFO_T *fsi = &(SDFAT_SB(sb)->fsi);
+	FS_INFO_T *fsi = &(EXFAT_SB(sb)->fsi);
 
 	off = (sec + (sec >> fsi->sect_per_clus_bits)) & (FAT_CACHE_HASH_SIZE - 1);
 	hp = &(fsi->fcache.hash_list[off]);
@@ -403,7 +345,7 @@ static cache_ent_t *__fcache_find(struct super_block *sb, u64 sec)
 			/*
 			 * patch 1.2.4 : for debugging
 			 */
-			WARN(!bp->bh, "[SDFAT] fcache has no bh. "
+			WARN(!bp->bh, "exFAT: fcache has no bh. "
 					  "It will make system panic.\n");
 
 			touch_buffer(bp->bh);
@@ -415,22 +357,23 @@ static cache_ent_t *__fcache_find(struct super_block *sb, u64 sec)
 
 static cache_ent_t *__fcache_get(struct super_block *sb)
 {
+	struct exfat_sb_info *sbi = EXFAT_SB(sb);
+	FS_INFO_T *fsi = &(sbi->fsi);
 	cache_ent_t *bp;
-	FS_INFO_T *fsi = &(SDFAT_SB(sb)->fsi);
 
 	bp = fsi->fcache.lru_list.prev;
-#ifdef CONFIG_SDFAT_DELAYED_META_DIRTY
-	while (bp->flag & DIRTYBIT) {
-		cache_ent_t *bp_prev = bp->prev;
+	if (sbi->options.delayed_meta) {
+		while (bp->flag & DIRTYBIT) {
+			cache_ent_t *bp_prev = bp->prev;
 
-		bp = bp_prev;
-		if (bp == &fsi->fcache.lru_list) {
-			DMSG("BD: fat cache flooding\n");
-			fcache_flush(sb, 0);	// flush all dirty FAT caches
-			bp = fsi->fcache.lru_list.prev;
+			bp = bp_prev;
+			if (bp == &fsi->fcache.lru_list) {
+				DMSG("BD: fat cache flooding\n");
+				exfat_fcache_flush(sb, 0);	// flush all dirty FAT caches
+				bp = fsi->fcache.lru_list.prev;
+			}
 		}
 	}
-#endif
 //	if (bp->flag & DIRTYBIT)
 //       sync_dirty_buffer(bp->bh);
 
@@ -444,7 +387,7 @@ static void __fcache_insert_hash(struct super_block *sb, cache_ent_t *bp)
 	cache_ent_t *hp;
 	FS_INFO_T *fsi;
 
-	fsi = &(SDFAT_SB(sb)->fsi);
+	fsi = &(EXFAT_SB(sb)->fsi);
 	off = (bp->sec + (bp->sec >> fsi->sect_per_clus_bits)) & (FAT_CACHE_HASH_SIZE-1);
 
 	hp = &(fsi->fcache.hash_list[off]);
@@ -469,13 +412,10 @@ static void __fcache_remove_hash(cache_ent_t *bp)
 	__remove_from_hash(bp);
 }
 
-/*======================================================================*/
-/*  Buffer Read/Write Functions                                         */
-/*======================================================================*/
 /* Read-ahead a cluster */
-s32 dcache_readahead(struct super_block *sb, u64 sec)
+s32 exfat_dcache_readahead(struct super_block *sb, u64 sec)
 {
-	FS_INFO_T *fsi = &(SDFAT_SB(sb)->fsi);
+	FS_INFO_T *fsi = &(EXFAT_SB(sb)->fsi);
 	struct buffer_head *bh;
 	u32 max_ra_count = DCACHE_MAX_RA_SIZE >> sb->s_blocksize_bits;
 	u32 page_ra_count = PAGE_SIZE >> sb->s_blocksize_bits;
@@ -498,7 +438,7 @@ s32 dcache_readahead(struct super_block *sb, u64 sec)
 
 	bh = sb_find_get_block(sb, sec);
 	if (!bh || !buffer_uptodate(bh))
-		bdev_readahead(sb, sec, (u64)ra_count);
+		exfat_bdev_readahead(sb, sec, (u64)ra_count);
 
 	brelse(bh);
 
@@ -512,13 +452,17 @@ s32 dcache_readahead(struct super_block *sb, u64 sec)
  */
 static s32 __dcache_ent_flush(struct super_block *sb, cache_ent_t *bp, u32 sync)
 {
+	struct exfat_sb_info *sbi;
+
 	if (!(bp->flag & DIRTYBIT))
 		return 0;
-#ifdef CONFIG_SDFAT_DELAYED_META_DIRTY
-	// Make buffer dirty (XXX: Naive impl.)
-	if (write_sect(sb, bp->sec, bp->bh, 0))
-		return -EIO;
-#endif
+
+	sbi = EXFAT_SB(sb);
+	if (sbi->options.delayed_meta) {
+		// Make buffer dirty (XXX: Naive impl.)
+		if (exfat_write_sect(sb, bp->sec, bp->bh, 0))
+			return -EIO;
+	}
 	bp->flag &= ~(DIRTYBIT);
 
 	if (sync)
@@ -529,7 +473,7 @@ static s32 __dcache_ent_flush(struct super_block *sb, cache_ent_t *bp, u32 sync)
 
 static s32 __dcache_ent_discard(struct super_block *sb, cache_ent_t *bp)
 {
-	FS_INFO_T *fsi = &(SDFAT_SB(sb)->fsi);
+	FS_INFO_T *fsi = &(EXFAT_SB(sb)->fsi);
 
 	MMSG("%s : bp[%p] (sec:%016llx flag:%08x bh:%p) list(prev:%p next:%p) "
 		"hash(prev:%p next:%p)\n", __func__,
@@ -549,14 +493,14 @@ static s32 __dcache_ent_discard(struct super_block *sb, cache_ent_t *bp)
 	return 0;
 }
 
-u8 *dcache_getblk(struct super_block *sb, u64 sec)
+u8 *exfat_dcache_getblk(struct super_block *sb, u64 sec)
 {
 	cache_ent_t *bp;
-	FS_INFO_T *fsi = &(SDFAT_SB(sb)->fsi);
+	FS_INFO_T *fsi = &(EXFAT_SB(sb)->fsi);
 
 	bp = __dcache_find(sb, sec);
 	if (bp) {
-		if (bdev_check_bdi_valid(sb)) {
+		if (exfat_bdev_check_bdi_valid(sb)) {
 			MMSG("%s: found cache(%p, sect:%llu). But invalid BDI\n"
 				, __func__, bp, sec);
 			__dcache_ent_flush(sb, bp, 0);
@@ -579,7 +523,7 @@ u8 *dcache_getblk(struct super_block *sb, u64 sec)
 	bp->flag = 0;
 	__dcache_insert_hash(sb, bp);
 
-	if (read_sect(sb, sec, &(bp->bh), 1)) {
+	if (exfat_read_sect(sb, sec, &(bp->bh), 1)) {
 		__dcache_ent_discard(sb, bp);
 		return NULL;
 	}
@@ -588,25 +532,20 @@ u8 *dcache_getblk(struct super_block *sb, u64 sec)
 
 }
 
-s32 dcache_modify(struct super_block *sb, u64 sec)
+s32 exfat_dcache_modify(struct super_block *sb, u64 sec)
 {
 	s32 ret = -EIO;
 	cache_ent_t *bp;
 
-	set_sb_dirty(sb);
+	exfat_set_sb_dirty(sb);
 
 	bp = __dcache_find(sb, sec);
 	if (unlikely(!bp)) {
-		sdfat_fs_error(sb, "Can`t find dcache (sec 0x%016llx)", sec);
+		exfat_fs_error(sb, "Can`t find dcache (sec 0x%016llx)", sec);
 		return -EIO;
 	}
-#ifdef CONFIG_SDFAT_DELAYED_META_DIRTY
-	if (SDFAT_SB(sb)->fsi.vol_type != EXFAT) {
-		bp->flag |= DIRTYBIT;
-		return 0;
-	}
-#endif
-	ret = write_sect(sb, sec, bp->bh, 0);
+
+	ret = exfat_write_sect(sb, sec, bp->bh, 0);
 
 	if (ret) {
 		DMSG("%s : failed to modify buffer(err:%d, sec:%llu, bp:0x%p)\n",
@@ -616,7 +555,7 @@ s32 dcache_modify(struct super_block *sb, u64 sec)
 	return ret;
 }
 
-s32 dcache_lock(struct super_block *sb, u64 sec)
+s32 exfat_dcache_lock(struct super_block *sb, u64 sec)
 {
 	cache_ent_t *bp;
 
@@ -630,7 +569,7 @@ s32 dcache_lock(struct super_block *sb, u64 sec)
 	return -EIO;
 }
 
-s32 dcache_unlock(struct super_block *sb, u64 sec)
+s32 exfat_dcache_unlock(struct super_block *sb, u64 sec)
 {
 	cache_ent_t *bp;
 
@@ -644,21 +583,23 @@ s32 dcache_unlock(struct super_block *sb, u64 sec)
 	return -EIO;
 }
 
-s32 dcache_release(struct super_block *sb, u64 sec)
+s32 exfat_dcache_release(struct super_block *sb, u64 sec)
 {
+	struct exfat_sb_info *sbi = EXFAT_SB(sb);
 	cache_ent_t *bp;
-	FS_INFO_T *fsi = &(SDFAT_SB(sb)->fsi);
+	FS_INFO_T *fsi = &(sbi->fsi);
 
 	bp = __dcache_find(sb, sec);
 	if (unlikely(!bp))
 		return -ENOENT;
 
-#ifdef CONFIG_SDFAT_DELAYED_META_DIRTY
-	if (bp->flag & DIRTYBIT) {
-		if (write_sect(sb, bp->sec, bp->bh, 0))
-			return -EIO;
+	if (sbi->options.delayed_meta) {
+		if (bp->flag & DIRTYBIT) {
+			if (exfat_write_sect(sb, bp->sec, bp->bh, 0))
+				return -EIO;
+		}
 	}
-#endif
+
 	bp->sec = ~0;
 	bp->flag = 0;
 
@@ -671,11 +612,12 @@ s32 dcache_release(struct super_block *sb, u64 sec)
 	return 0;
 }
 
-s32 dcache_release_all(struct super_block *sb)
+s32 exfat_dcache_release_all(struct super_block *sb)
 {
+	struct exfat_sb_info *sbi = EXFAT_SB(sb);
 	s32 ret = 0;
 	cache_ent_t *bp;
-	FS_INFO_T *fsi = &(SDFAT_SB(sb)->fsi);
+	FS_INFO_T *fsi = &(sbi->fsi);
 	s32 dirtycnt = 0;
 
 	/* Connect list elements:
@@ -689,13 +631,14 @@ s32 dcache_release_all(struct super_block *sb)
 
 	bp = fsi->dcache.lru_list.next;
 	while (bp != &fsi->dcache.lru_list) {
-#ifdef CONFIG_SDFAT_DELAYED_META_DIRTY
-		if (bp->flag & DIRTYBIT) {
-			dirtycnt++;
-			if (write_sect(sb, bp->sec, bp->bh, 0))
-				ret = -EIO;
+		if (sbi->options.delayed_meta) {
+			if (bp->flag & DIRTYBIT) {
+				dirtycnt++;
+				if (exfat_write_sect(sb, bp->sec, bp->bh, 0))
+					ret = -EIO;
+			}
 		}
-#endif
+
 		bp->sec = ~0;
 		bp->flag = 0;
 
@@ -711,11 +654,12 @@ s32 dcache_release_all(struct super_block *sb)
 }
 
 
-s32 dcache_flush(struct super_block *sb, u32 sync)
+s32 exfat_dcache_flush(struct super_block *sb, u32 sync)
 {
+	struct exfat_sb_info *sbi = EXFAT_SB(sb);
 	s32 ret = 0;
 	cache_ent_t *bp;
-	FS_INFO_T *fsi = &(SDFAT_SB(sb)->fsi);
+	FS_INFO_T *fsi = &(sbi->fsi);
 	s32 dirtycnt = 0;
 	s32 keepcnt = 0;
 
@@ -733,14 +677,14 @@ s32 dcache_flush(struct super_block *sb, u32 sync)
 	bp = fsi->dcache.lru_list.next;
 	while (bp != &fsi->dcache.lru_list) {
 		if (bp->flag & DIRTYBIT) {
-#ifdef CONFIG_SDFAT_DELAYED_META_DIRTY
-			// Make buffer dirty (XXX: Naive impl.)
-			if (write_sect(sb, bp->sec, bp->bh, 0)) {
-				ret = -EIO;
-				break;
+			if (sbi->options.delayed_meta) {
+				// Make buffer dirty (XXX: Naive impl.)
+				if (exfat_write_sect(sb, bp->sec, bp->bh, 0)) {
+					ret = -EIO;
+					break;
+				}
 			}
 
-#endif
 			bp->flag &= ~(DIRTYBIT);
 			dirtycnt++;
 
@@ -759,7 +703,7 @@ static cache_ent_t *__dcache_find(struct super_block *sb, u64 sec)
 {
 	s32 off;
 	cache_ent_t *bp, *hp;
-	FS_INFO_T *fsi = &(SDFAT_SB(sb)->fsi);
+	FS_INFO_T *fsi = &(EXFAT_SB(sb)->fsi);
 
 	off = (sec + (sec >> fsi->sect_per_clus_bits)) & (BUF_CACHE_HASH_SIZE - 1);
 
@@ -775,32 +719,34 @@ static cache_ent_t *__dcache_find(struct super_block *sb, u64 sec)
 
 static cache_ent_t *__dcache_get(struct super_block *sb)
 {
+	struct exfat_sb_info *sbi = EXFAT_SB(sb);
 	cache_ent_t *bp;
-	FS_INFO_T *fsi = &(SDFAT_SB(sb)->fsi);
+	FS_INFO_T *fsi = &(sbi->fsi);
 
 	bp = fsi->dcache.lru_list.prev;
-#ifdef CONFIG_SDFAT_DELAYED_META_DIRTY
-	while (bp->flag & (DIRTYBIT | LOCKBIT)) {
-		cache_ent_t *bp_prev = bp->prev; // hold prev
 
-		if (bp->flag & DIRTYBIT) {
-			MMSG("BD: Buf cache => Keep list\n");
-			bp->flag |= KEEPBIT;
-			move_to_mru(bp, &fsi->dcache.keep_list);
-		}
-		bp = bp_prev;
+	if (sbi->options.delayed_meta) {
+		while (bp->flag & (DIRTYBIT | LOCKBIT)) {
+			cache_ent_t *bp_prev = bp->prev; // hold prev
 
-		/* If all dcaches are dirty */
-		if (bp == &fsi->dcache.lru_list) {
-			DMSG("BD: buf cache flooding\n");
-			dcache_flush(sb, 0);
-			bp = fsi->dcache.lru_list.prev;
+			if (bp->flag & DIRTYBIT) {
+				MMSG("BD: Buf cache => Keep list\n");
+				bp->flag |= KEEPBIT;
+				move_to_mru(bp, &fsi->dcache.keep_list);
+			}
+			bp = bp_prev;
+
+			/* If all dcaches are dirty */
+			if (bp == &fsi->dcache.lru_list) {
+				DMSG("BD: buf cache flooding\n");
+				exfat_dcache_flush(sb, 0);
+				bp = fsi->dcache.lru_list.prev;
+			}
 		}
+	} else {
+		while (bp->flag & LOCKBIT)
+			bp = bp->prev;
 	}
-#else
-	while (bp->flag & LOCKBIT)
-		bp = bp->prev;
-#endif
 //	if (bp->flag & DIRTYBIT)
 //       sync_dirty_buffer(bp->bh);
 
@@ -814,7 +760,7 @@ static void __dcache_insert_hash(struct super_block *sb, cache_ent_t *bp)
 	cache_ent_t *hp;
 	FS_INFO_T *fsi;
 
-	fsi = &(SDFAT_SB(sb)->fsi);
+	fsi = &(EXFAT_SB(sb)->fsi);
 	off = (bp->sec + (bp->sec >> fsi->sect_per_clus_bits)) & (BUF_CACHE_HASH_SIZE-1);
 
 	hp = &(fsi->dcache.hash_list[off]);
@@ -837,6 +783,3 @@ static void __dcache_remove_hash(cache_ent_t *bp)
 	WARN_ON(bp->flag & DIRTYBIT);
 	__remove_from_hash(bp);
 }
-
-
-/* end of cache.c */

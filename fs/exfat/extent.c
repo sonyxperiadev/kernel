@@ -1,18 +1,8 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  *  Copyright (C) 2012-2013 Samsung Electronics Co., Ltd.
  *
- *  This program is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU General Public License
- *  as published by the Free Software Foundation; either version 2
- *  of the License, or (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, see <http://www.gnu.org/licenses/>.
+ *  extent.c: Improve the performance of traversing fat chain
  */
 
 /*
@@ -25,20 +15,8 @@
  *  May 1999. AV. Fixed the bogosity with FAT32 (read "FAT28"). Fscking lusers.
  */
 
-/************************************************************************/
-/*                                                                      */
-/*  PROJECT : exFAT & FAT12/16/32 File System                           */
-/*  FILE    : extent.c                                                  */
-/*  PURPOSE : Improve the performance of traversing fat chain.          */
-/*                                                                      */
-/*----------------------------------------------------------------------*/
-/*  NOTES                                                               */
-/*                                                                      */
-/*                                                                      */
-/************************************************************************/
-
 #include <linux/slab.h>
-#include "sdfat.h"
+#include "exfat.h"
 #include "core.h"
 
 #define EXTENT_CACHE_VALID	0
@@ -68,9 +46,9 @@ static void init_once(void *c)
 	INIT_LIST_HEAD(&cache->cache_list);
 }
 
-s32 extent_cache_init(void)
+s32 exfat_extent_cache_init(void)
 {
-	extent_cache_cachep = kmem_cache_create("sdfat_extent_cache",
+	extent_cache_cachep = kmem_cache_create("exfat_extent_cache",
 				sizeof(struct extent_cache),
 				0, SLAB_RECLAIM_ACCOUNT|SLAB_MEM_SPREAD,
 				init_once);
@@ -79,16 +57,16 @@ s32 extent_cache_init(void)
 	return 0;
 }
 
-void extent_cache_shutdown(void)
+void exfat_extent_cache_shutdown(void)
 {
 	if (!extent_cache_cachep)
 		return;
 	kmem_cache_destroy(extent_cache_cachep);
 }
 
-void extent_cache_init_inode(struct inode *inode)
+void exfat_extent_cache_init_inode(struct inode *inode)
 {
-	EXTENT_T *extent = &(SDFAT_I(inode)->fid.extent);
+	EXTENT_T *extent = &(EXFAT_I(inode)->fid.extent);
 
 	spin_lock_init(&extent->cache_lru_lock);
 	extent->nr_caches = 0;
@@ -110,7 +88,7 @@ static inline void extent_cache_free(struct extent_cache *cache)
 static inline void extent_cache_update_lru(struct inode *inode,
 					struct extent_cache *cache)
 {
-	EXTENT_T *extent = &(SDFAT_I(inode)->fid.extent);
+	EXTENT_T *extent = &(EXFAT_I(inode)->fid.extent);
 
 	if (extent->cache_lru.next != &cache->cache_list)
 		list_move(&cache->cache_list, &extent->cache_lru);
@@ -120,7 +98,7 @@ static u32 extent_cache_lookup(struct inode *inode, u32 fclus,
 			    struct extent_cache_id *cid,
 			    u32 *cached_fclus, u32 *cached_dclus)
 {
-	EXTENT_T *extent = &(SDFAT_I(inode)->fid.extent);
+	EXTENT_T *extent = &(EXFAT_I(inode)->fid.extent);
 
 	static struct extent_cache nohit = { .fcluster = 0, };
 
@@ -158,7 +136,7 @@ static u32 extent_cache_lookup(struct inode *inode, u32 fclus,
 static struct extent_cache *extent_cache_merge(struct inode *inode,
 					 struct extent_cache_id *new)
 {
-	EXTENT_T *extent = &(SDFAT_I(inode)->fid.extent);
+	EXTENT_T *extent = &(EXFAT_I(inode)->fid.extent);
 
 	struct extent_cache *p;
 
@@ -176,7 +154,7 @@ static struct extent_cache *extent_cache_merge(struct inode *inode,
 
 static void extent_cache_add(struct inode *inode, struct extent_cache_id *new)
 {
-	EXTENT_T *extent = &(SDFAT_I(inode)->fid.extent);
+	EXTENT_T *extent = &(EXFAT_I(inode)->fid.extent);
 
 	struct extent_cache *cache, *tmp;
 
@@ -228,9 +206,9 @@ out:
  * Cache invalidation occurs rarely, thus the LRU chain is not updated. It
  * fixes itself after a while.
  */
-static void __extent_cache_inval_inode(struct inode *inode)
+static void __exfat_extent_cache_inval_inode(struct inode *inode)
 {
-	EXTENT_T *extent = &(SDFAT_I(inode)->fid.extent);
+	EXTENT_T *extent = &(EXFAT_I(inode)->fid.extent);
 	struct extent_cache *cache;
 
 	while (!list_empty(&extent->cache_lru)) {
@@ -246,12 +224,12 @@ static void __extent_cache_inval_inode(struct inode *inode)
 		extent->cache_valid_id++;
 }
 
-void extent_cache_inval_inode(struct inode *inode)
+void exfat_extent_cache_inval_inode(struct inode *inode)
 {
-	EXTENT_T *extent = &(SDFAT_I(inode)->fid.extent);
+	EXTENT_T *extent = &(EXFAT_I(inode)->fid.extent);
 
 	spin_lock(&extent->cache_lru_lock);
-	__extent_cache_inval_inode(inode);
+	__exfat_extent_cache_inval_inode(inode);
 	spin_unlock(&extent->cache_lru_lock);
 }
 
@@ -269,19 +247,19 @@ static inline void cache_init(struct extent_cache_id *cid, u32 fclus, u32 dclus)
 	cid->nr_contig = 0;
 }
 
-s32 extent_get_clus(struct inode *inode, u32 cluster, u32 *fclus,
+s32 exfat_extent_get_clus(struct inode *inode, u32 cluster, u32 *fclus,
 		u32 *dclus, u32 *last_dclus, s32 allow_eof)
 {
 	struct super_block *sb = inode->i_sb;
-	FS_INFO_T *fsi = &(SDFAT_SB(sb)->fsi);
+	FS_INFO_T *fsi = &(EXFAT_SB(sb)->fsi);
 	u32 limit = fsi->num_clusters;
-	FILE_ID_T *fid = &(SDFAT_I(inode)->fid);
+	FILE_ID_T *fid = &(EXFAT_I(inode)->fid);
 	struct extent_cache_id cid;
 	u32 content;
 
 	/* FOR GRACEFUL ERROR HANDLING */
 	if (IS_CLUS_FREE(fid->start_clu)) {
-		sdfat_fs_error(sb, "invalid access to "
+		exfat_fs_error(sb, "invalid access to "
 			"extent cache (entry 0x%08x)", fid->start_clu);
 		ASSERT(0);
 		return -EIO;
@@ -316,14 +294,14 @@ s32 extent_get_clus(struct inode *inode, u32 cluster, u32 *fclus,
 	while (*fclus < cluster) {
 		/* prevent the infinite loop of cluster chain */
 		if (*fclus > limit) {
-			sdfat_fs_error(sb,
+			exfat_fs_error(sb,
 				"%s: detected the cluster chain loop"
 				" (i_pos %u)", __func__,
 				(*fclus));
 			return -EIO;
 		}
 
-		if (fat_ent_get_safe(sb, *dclus, &content))
+		if (exfat_ent_get_safe(sb, *dclus, &content))
 			return -EIO;
 
 		*last_dclus = *dclus;
@@ -332,7 +310,7 @@ s32 extent_get_clus(struct inode *inode, u32 cluster, u32 *fclus,
 
 		if (IS_CLUS_EOF(content)) {
 			if (!allow_eof) {
-				sdfat_fs_error(sb,
+				exfat_fs_error(sb,
 				       "%s: invalid cluster chain (i_pos %u,"
 				       "last_clus 0x%08x is EOF)",
 				       __func__, *fclus, (*last_dclus));

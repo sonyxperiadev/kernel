@@ -1,18 +1,8 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  *  Copyright (C) 2012-2013 Samsung Electronics Co., Ltd.
  *
- *  This program is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU General Public License
- *  as published by the Free Software Foundation; either version 2
- *  of the License, or (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, see <http://www.gnu.org/licenses/>.
+ *  misc.c: Helper function for checksum and handling exFAT errors
  */
 
 /*
@@ -23,42 +13,63 @@
  *		 and date_dos2unix for date==0 by Igor Zhbanov(bsg@uniyar.ac.ru)
  */
 
-/************************************************************************/
-/*                                                                      */
-/*  PROJECT : exFAT & FAT12/16/32 File System                           */
-/*  FILE    : misc.c                                                    */
-/*  PURPOSE : Helper function for checksum and handing sdFAT error      */
-/*                                                                      */
-/*----------------------------------------------------------------------*/
-/*  NOTES                                                               */
-/*                                                                      */
-/*                                                                      */
-/************************************************************************/
-
 #include <linux/module.h>
 #include <linux/fs.h>
 #include <linux/buffer_head.h>
 #include <linux/time.h>
-#include "sdfat.h"
-#include "version.h"
+#include "exfat.h"
 
-#ifdef CONFIG_SDFAT_SUPPORT_STLOG
-#include <linux/stlog.h>
-#else
-#define ST_LOG(fmt, ...)
+#ifdef CONFIG_EXFAT_UEVENT
+static struct kobject exfat_uevent_kobj;
+
+int exfat_uevent_init(struct kset *exfat_kset)
+{
+	int err;
+	struct kobj_type *ktype = get_ktype(&exfat_kset->kobj);
+
+	exfat_uevent_kobj.kset = exfat_kset;
+	err = kobject_init_and_add(&exfat_uevent_kobj, ktype, NULL, "uevent");
+	if (err)
+		pr_err("[EXFAT] Unable to create exfat uevent kobj\n");
+
+	return err;
+}
+
+void exfat_uevent_uninit(void)
+{
+	kobject_del(&exfat_uevent_kobj);
+	memset(&exfat_uevent_kobj, 0, sizeof(struct kobject));
+}
+
+void exfat_uevent_ro_remount(struct super_block *sb)
+{
+	struct block_device *bdev = sb->s_bdev;
+	dev_t bd_dev = bdev ? bdev->bd_dev : 0;
+
+	char major[16], minor[16];
+	char *envp[] = { major, minor, NULL };
+
+	snprintf(major, sizeof(major), "MAJOR=%d", MAJOR(bd_dev));
+	snprintf(minor, sizeof(minor), "MINOR=%d", MINOR(bd_dev));
+
+	kobject_uevent_env(&exfat_uevent_kobj, KOBJ_CHANGE, envp);
+
+	pr_err("[EXFAT](%s[%d:%d]): Uevent triggered\n",
+			sb->s_id, MAJOR(bd_dev), MINOR(bd_dev));
+}
 #endif
 
 /*
- * sdfat_fs_error reports a file system problem that might indicate fa data
+ * exfat_fs_error reports a file system problem that might indicate fa data
  * corruption/inconsistency. Depending on 'errors' mount option the
  * panic() is called, or error message is printed FAT and nothing is done,
  * or filesystem is remounted read-only (default behavior).
  * In case the file system is remounted read-only, it can be made writable
  * again by remounting it.
  */
-void __sdfat_fs_error(struct super_block *sb, int report, const char *fmt, ...)
+void __exfat_fs_error(struct super_block *sb, int report, const char *fmt, ...)
 {
-	struct sdfat_mount_options *opts = &SDFAT_SB(sb)->options;
+	struct exfat_mount_options *opts = &EXFAT_SB(sb)->options;
 	va_list args;
 	struct va_format vaf;
 	struct block_device *bdev = sb->s_bdev;
@@ -68,38 +79,28 @@ void __sdfat_fs_error(struct super_block *sb, int report, const char *fmt, ...)
 		va_start(args, fmt);
 		vaf.fmt = fmt;
 		vaf.va = &args;
-		pr_err("[SDFAT](%s[%d:%d]):ERR: %pV\n",
+		pr_err("exFAT-fs (%s[%d:%d]): ERR: %pV\n",
 			sb->s_id, MAJOR(bd_dev), MINOR(bd_dev), &vaf);
-#ifdef CONFIG_SDFAT_SUPPORT_STLOG
-		if (opts->errors == SDFAT_ERRORS_RO && !(sb->s_flags & MS_RDONLY)) {
-			ST_LOG("[SDFAT](%s[%d:%d]):ERR: %pV\n",
-				sb->s_id, MAJOR(bd_dev), MINOR(bd_dev), &vaf);
-		}
-#endif
 		va_end(args);
 	}
 
-	if (opts->errors == SDFAT_ERRORS_PANIC) {
-		panic("[SDFAT](%s[%d:%d]): fs panic from previous error\n",
+	if (opts->errors == EXFAT_ERRORS_PANIC) {
+		panic("exFAT-fs (%s[%d:%d]): fs panic from previous error\n",
 			sb->s_id, MAJOR(bd_dev), MINOR(bd_dev));
-	} else if (opts->errors == SDFAT_ERRORS_RO && !(sb->s_flags & MS_RDONLY)) {
-		sb->s_flags |= MS_RDONLY;
-		pr_err("[SDFAT](%s[%d:%d]): Filesystem has been set "
+	} else if (opts->errors == EXFAT_ERRORS_RO && !EXFAT_IS_SB_RDONLY(sb)) {
+		sb->s_flags |= SB_RDONLY;
+		pr_err("exFAT-fs (%s[%d:%d]): file-system has been set to "
 			"read-only\n", sb->s_id, MAJOR(bd_dev), MINOR(bd_dev));
-#ifdef CONFIG_SDFAT_SUPPORT_STLOG
-		ST_LOG("[SDFAT](%s[%d:%d]): Filesystem has been set read-only\n",
-			sb->s_id, MAJOR(bd_dev), MINOR(bd_dev));
-#endif
+		exfat_uevent_ro_remount(sb);
 	}
 }
-EXPORT_SYMBOL(__sdfat_fs_error);
+EXPORT_SYMBOL(__exfat_fs_error);
 
 /**
- * __sdfat_msg() - print preformated SDFAT specific messages.
- * All logs except what uses sdfat_fs_error() should be written by __sdfat_msg()
- * If 'st' is set, the log is propagated to ST_LOG.
+ * __exfat_msg() - print preformated EXFAT specific messages.
+ * All logs except what uses exfat_fs_error() should be written by __exfat_msg()
  */
-void __sdfat_msg(struct super_block *sb, const char *level, int st, const char *fmt, ...)
+void __exfat_msg(struct super_block *sb, const char *level, int st, const char *fmt, ...)
 {
 	struct va_format vaf;
 	va_list args;
@@ -110,26 +111,11 @@ void __sdfat_msg(struct super_block *sb, const char *level, int st, const char *
 	vaf.fmt = fmt;
 	vaf.va = &args;
 	/* level means KERN_ pacility level */
-	printk("%s[SDFAT](%s[%d:%d]): %pV\n", level,
+	printk("%sexFAT-fs (%s[%d:%d]): %pV\n", level,
 			sb->s_id, MAJOR(bd_dev), MINOR(bd_dev), &vaf);
-#ifdef CONFIG_SDFAT_SUPPORT_STLOG
-	if (st) {
-		ST_LOG("[SDFAT](%s[%d:%d]): %pV\n",
-				sb->s_id, MAJOR(bd_dev), MINOR(bd_dev), &vaf);
-	}
-#endif
 	va_end(args);
 }
-EXPORT_SYMBOL(__sdfat_msg);
-
-void sdfat_log_version(void)
-{
-	pr_info("[SDFAT] Filesystem version %s\n", SDFAT_VERSION);
-#ifdef CONFIG_SDFAT_SUPPORT_STLOG
-	ST_LOG("[SDFAT] Filesystem version %s\n", SDFAT_VERSION);
-#endif
-}
-EXPORT_SYMBOL(sdfat_log_version);
+EXPORT_SYMBOL(__exfat_msg);
 
 /* <linux/time.h> externs sys_tz
  * extern struct timezone sys_tz;
@@ -166,7 +152,7 @@ static time_t accum_days_in_year[] = {
 };
 
 /* Convert a FAT time/date pair to a UNIX date (seconds since 1 1 70). */
-void sdfat_time_fat2unix(struct sdfat_sb_info *sbi, struct timespec *ts,
+void exfat_time_fat2unix(struct exfat_sb_info *sbi, struct timespec64 *ts,
 		DATE_TIME_T *tp)
 {
 	time_t year = tp->Year;
@@ -189,7 +175,7 @@ void sdfat_time_fat2unix(struct sdfat_sb_info *sbi, struct timespec *ts,
 }
 
 /* Convert linear UNIX date to a FAT time/date pair. */
-void sdfat_time_unix2fat(struct sdfat_sb_info *sbi, struct timespec *ts,
+void exfat_time_unix2fat(struct exfat_sb_info *sbi, struct timespec64 *ts,
 		DATE_TIME_T *tp)
 {
 	time_t second = ts->tv_sec;
@@ -251,12 +237,13 @@ void sdfat_time_unix2fat(struct sdfat_sb_info *sbi, struct timespec *ts,
 	tp->Year = year;
 }
 
-TIMESTAMP_T *tm_now(struct sdfat_sb_info *sbi, TIMESTAMP_T *tp)
+TIMESTAMP_T *exfat_tm_now(struct exfat_sb_info *sbi, TIMESTAMP_T *tp)
 {
-	struct timespec ts = CURRENT_TIME_SEC;
+	struct timespec64 ts;
 	DATE_TIME_T dt;
 
-	sdfat_time_unix2fat(sbi, &ts, &dt);
+	ktime_get_real_ts64(&ts);
+	exfat_time_unix2fat(sbi, &ts, &dt);
 
 	tp->year = dt.Year;
 	tp->mon = dt.Month;
@@ -268,18 +255,7 @@ TIMESTAMP_T *tm_now(struct sdfat_sb_info *sbi, TIMESTAMP_T *tp)
 	return tp;
 }
 
-u8 calc_chksum_1byte(void *data, s32 len, u8 chksum)
-{
-	s32 i;
-	u8 *c = (u8 *) data;
-
-	for (i = 0; i < len; i++, c++)
-		chksum = (((chksum & 1) << 7) | ((chksum & 0xFE) >> 1)) + *c;
-
-	return chksum;
-}
-
-u16 calc_chksum_2byte(void *data, s32 len, u16 chksum, s32 type)
+u16 exfat_calc_chksum_2byte(void *data, s32 len, u16 chksum, s32 type)
 {
 	s32 i;
 	u8 *c = (u8 *) data;
@@ -292,31 +268,31 @@ u16 calc_chksum_2byte(void *data, s32 len, u16 chksum, s32 type)
 	return chksum;
 }
 
-#ifdef CONFIG_SDFAT_TRACE_ELAPSED_TIME
+#ifdef CONFIG_EXFAT_TRACE_ELAPSED_TIME
 struct timeval __t1, __t2;
-u32 sdfat_time_current_usec(struct timeval *tv)
+u32 exfat_time_current_usec(struct timeval *tv)
 {
 	do_gettimeofday(tv);
 	return (u32)(tv->tv_sec*1000000 + tv->tv_usec);
 }
-#endif /* CONFIG_SDFAT_TRACE_ELAPSED_TIME */
+#endif /* CONFIG_EXFAT_TRACE_ELAPSED_TIME */
 
-#ifdef CONFIG_SDFAT_DBG_CAREFUL
+#ifdef CONFIG_EXFAT_DBG_CAREFUL
 /* Check the consistency of i_size_ondisk (FAT32, or flags 0x01 only) */
-void sdfat_debug_check_clusters(struct inode *inode)
+void exfat_debug_check_clusters(struct inode *inode)
 {
 	unsigned int num_clusters;
 	volatile uint32_t tmp_fat_chain[50];
 	volatile int tmp_i = 0;
 	volatile unsigned int num_clusters_org, tmp_i = 0;
 	CHAIN_T clu;
-	FILE_ID_T *fid = &(SDFAT_I(inode)->fid);
-	FS_INFO_T *fsi = &(SDFAT_SB(inode->i_sb)->fsi);
+	FILE_ID_T *fid = &(EXFAT_I(inode)->fid);
+	FS_INFO_T *fsi = &(EXFAT_SB(inode->i_sb)->fsi);
 
-	if (SDFAT_I(inode)->i_size_ondisk == 0)
+	if (EXFAT_I(inode)->i_size_ondisk == 0)
 		num_clusters = 0;
 	else
-		num_clusters = ((SDFAT_I(inode)->i_size_ondisk-1) >> fsi->cluster_size_bits) + 1;
+		num_clusters = ((EXFAT_I(inode)->i_size_ondisk-1) >> fsi->cluster_size_bits) + 1;
 
 	clu.dir = fid->start_clu;
 	clu.size = num_clusters;
@@ -345,17 +321,17 @@ void sdfat_debug_check_clusters(struct inode *inode)
 	BUG_ON(!IS_CLUS_EOF(clu.dir));
 }
 
-#endif /* CONFIG_SDFAT_DBG_CAREFUL */
+#endif /* CONFIG_EXFAT_DBG_CAREFUL */
 
-#ifdef CONFIG_SDFAT_DBG_MSG
-void __sdfat_dmsg(int level, const char *fmt, ...)
+#ifdef CONFIG_EXFAT_DBG_MSG
+void __exfat_dmsg(int level, const char *fmt, ...)
 {
-#ifdef CONFIG_SDFAT_DBG_SHOW_PID
+#ifdef CONFIG_EXFAT_DBG_SHOW_PID
 	struct va_format vaf;
 	va_list args;
 
 	/* should check type */
-	if (level > SDFAT_MSG_LEVEL)
+	if (level > EXFAT_MSG_LEVEL)
 		return;
 
 	va_start(args, fmt);
@@ -368,7 +344,7 @@ void __sdfat_dmsg(int level, const char *fmt, ...)
 	va_list args;
 
 	/* should check type */
-	if (level > SDFAT_MSG_LEVEL)
+	if (level > EXFAT_MSG_LEVEL)
 		return;
 
 	va_start(args, fmt);
@@ -378,4 +354,3 @@ void __sdfat_dmsg(int level, const char *fmt, ...)
 #endif
 }
 #endif
-
