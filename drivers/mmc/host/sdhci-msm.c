@@ -855,12 +855,6 @@ static int msm_init_cm_dll(struct sdhci_host *host,
 	}
 
 	/*
-	 * Clear tuning_done flag before tuning to ensure proper
-	 * HS400 settings.
-	 */
-	msm_host->tuning_done = 0;
-
-	/*
 	 * Update the lower two bytes of DLL_CONFIG only with HSR values.
 	 * Since these are the static settings.
 	 */
