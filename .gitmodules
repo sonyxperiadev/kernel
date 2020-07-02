@@ -7,3 +7,9 @@
 [submodule "drivers/staging/wlan-qc/fw-api"]
 	path = drivers/staging/wlan-qc/fw-api
 	url = https://github.com/sonyxperiadev/vendor-qcom-opensource-wlan-fw-api.git
+[submodule "drivers/staging/wlan-qc/qcacld-3.0"]
+	path = drivers/staging/wlan-qc/qcacld-3.0
+	url = https://github.com/sonyxperiadev/vendor-qcom-opensource-wlan-qcacld-3.0.git
+[submodule "drivers/staging/wlan-qc/qca-wifi-host-cmn"]
+	path = drivers/staging/wlan-qc/qca-wifi-host-cmn
+	url = https://github.com/sonyxperiadev/vendor-qcom-opensource-wlan-qca-wifi-host-cmn.git
