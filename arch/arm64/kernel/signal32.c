@@ -28,42 +28,7 @@
 #include <asm/signal32.h>
 #include <linux/uaccess.h>
 #include <asm/unistd.h>
-
-struct compat_sigcontext {
-	/* We always set these two fields to 0 */
-	compat_ulong_t			trap_no;
-	compat_ulong_t			error_code;
-
-	compat_ulong_t			oldmask;
-	compat_ulong_t			arm_r0;
-	compat_ulong_t			arm_r1;
-	compat_ulong_t			arm_r2;
-	compat_ulong_t			arm_r3;
-	compat_ulong_t			arm_r4;
-	compat_ulong_t			arm_r5;
-	compat_ulong_t			arm_r6;
-	compat_ulong_t			arm_r7;
-	compat_ulong_t			arm_r8;
-	compat_ulong_t			arm_r9;
-	compat_ulong_t			arm_r10;
-	compat_ulong_t			arm_fp;
-	compat_ulong_t			arm_ip;
-	compat_ulong_t			arm_sp;
-	compat_ulong_t			arm_lr;
-	compat_ulong_t			arm_pc;
-	compat_ulong_t			arm_cpsr;
-	compat_ulong_t			fault_address;
-};
-
-struct compat_ucontext {
-	compat_ulong_t			uc_flags;
-	compat_uptr_t			uc_link;
-	compat_stack_t			uc_stack;
-	struct compat_sigcontext	uc_mcontext;
-	compat_sigset_t			uc_sigmask;
-	int		__unused[32 - (sizeof (compat_sigset_t) / sizeof (int))];
-	compat_ulong_t	uc_regspace[128] __attribute__((__aligned__(8)));
-};
+#include <asm/vdso.h>
 
 struct compat_vfp_sigframe {
 	compat_ulong_t	magic;
@@ -90,16 +55,6 @@ struct compat_aux_sigframe {
 	/* Something that isn't a valid magic number for any coprocessor.  */
 	unsigned long			end_magic;
 } __attribute__((__aligned__(8)));
-
-struct compat_sigframe {
-	struct compat_ucontext	uc;
-	compat_ulong_t		retcode[2];
-};
-
-struct compat_rt_sigframe {
-	struct compat_siginfo info;
-	struct compat_sigframe sig;
-};
 
 #define _BLOCKABLE (~(sigmask(SIGKILL) | sigmask(SIGSTOP)))
 
@@ -321,6 +276,7 @@ static int compat_restore_sigframe(struct pt_regs *regs,
 	int err;
 	sigset_t set;
 	struct compat_aux_sigframe __user *aux;
+	unsigned long psr;
 
 	err = get_sigset_t(&set, &sf->uc.uc_sigmask);
 	if (err == 0) {
@@ -344,7 +300,9 @@ static int compat_restore_sigframe(struct pt_regs *regs,
 	__get_user_error(regs->compat_sp, &sf->uc.uc_mcontext.arm_sp, err);
 	__get_user_error(regs->compat_lr, &sf->uc.uc_mcontext.arm_lr, err);
 	__get_user_error(regs->pc, &sf->uc.uc_mcontext.arm_pc, err);
-	__get_user_error(regs->pstate, &sf->uc.uc_mcontext.arm_cpsr, err);
+	__get_user_error(psr, &sf->uc.uc_mcontext.arm_cpsr, err);
+
+	regs->pstate = compat_psr_to_pstate(psr);
 
 	/*
 	 * Avoid compat_sys_sigreturn() restarting.
@@ -479,14 +437,27 @@ static void compat_setup_return(struct pt_regs *regs, struct k_sigaction *ka,
 		retcode = ptr_to_compat(ka->sa.sa_restorer);
 	} else {
 		/* Set up sigreturn pointer */
+#ifdef CONFIG_VDSO32
+               void *vdso_base = current->mm->context.vdso;
+               void *trampoline =
+                       (ka->sa.sa_flags & SA_SIGINFO
+                        ? (thumb
+                           ? VDSO_SYMBOL(vdso_base, compat_rt_sigreturn_thumb)
+                           : VDSO_SYMBOL(vdso_base, compat_rt_sigreturn_arm))
+                        : (thumb
+                           ? VDSO_SYMBOL(vdso_base, compat_sigreturn_thumb)
+                           : VDSO_SYMBOL(vdso_base, compat_sigreturn_arm)));
+
+               retcode = ptr_to_compat(trampoline) + thumb;
+#else
+		void *sigreturn_base = current->mm->context.vdso;
 		unsigned int idx = thumb << 1;
 
 		if (ka->sa.sa_flags & SA_SIGINFO)
 			idx += 3;
 
-		retcode = AARCH32_VECTORS_BASE +
-			  AARCH32_KERN_SIGRET_CODE_OFFSET +
-			  (idx << 2) + thumb;
+		retcode = ptr_to_compat(sigreturn_base) + (idx << 2) + thumb;
+#endif
 	}
 
 	regs->regs[0]	= usig;
@@ -500,6 +471,7 @@ static int compat_setup_sigframe(struct compat_sigframe __user *sf,
 				 struct pt_regs *regs, sigset_t *set)
 {
 	struct compat_aux_sigframe __user *aux;
+	unsigned long psr = pstate_to_compat_psr(regs->pstate);
 	int err = 0;
 
 	__put_user_error(regs->regs[0], &sf->uc.uc_mcontext.arm_r0, err);
@@ -518,7 +490,7 @@ static int compat_setup_sigframe(struct compat_sigframe __user *sf,
 	__put_user_error(regs->compat_sp, &sf->uc.uc_mcontext.arm_sp, err);
 	__put_user_error(regs->compat_lr, &sf->uc.uc_mcontext.arm_lr, err);
 	__put_user_error(regs->pc, &sf->uc.uc_mcontext.arm_pc, err);
-	__put_user_error(regs->pstate, &sf->uc.uc_mcontext.arm_cpsr, err);
+	__put_user_error(psr, &sf->uc.uc_mcontext.arm_cpsr, err);
 
 	__put_user_error((compat_ulong_t)0, &sf->uc.uc_mcontext.trap_no, err);
 	/* set the compat FSR WnR */

@@ -18,5 +18,6 @@
 / {
 	model = "Qualcomm Technologies, Inc. TRINKET SoC";
 	compatible = "qcom,trinket";
-	qcom,board-id = <0 0>;
+	qcom,board-id = <34 0>;
+//	qcom,board-id = <0 0>;
 };

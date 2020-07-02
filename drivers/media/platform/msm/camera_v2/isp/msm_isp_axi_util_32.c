@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -25,12 +25,16 @@ int msm_isp_axi_create_stream(
 	struct msm_vfe_axi_shared_data *axi_data,
 	struct msm_vfe32_axi_stream_request_cmd *stream_cfg_cmd)
 {
-	uint32_t i = stream_cfg_cmd->stream_src;
+	int i, rc = -1;
 
-	if (i >= VFE_AXI_SRC_MAX) {
-		pr_err("%s:%d invalid stream_src %d\n", __func__, __LINE__,
-			stream_cfg_cmd->stream_src);
-		return -EINVAL;
+	for (i = 0; i < MAX_NUM_STREAM; i++) {
+		if (axi_data->stream_info[i].state == AVAILABLE)
+			break;
+	}
+
+	if (i == MAX_NUM_STREAM) {
+		pr_err("%s: No free stream\n", __func__);
+		return rc;
 	}
 
 	if ((axi_data->stream_handle_cnt << 8) == 0)
@@ -1215,7 +1219,7 @@ static void msm_isp_update_rdi_output_count(
 
 	for (i = 0; i < stream_cfg_cmd->num_streams; i++) {
 		if (HANDLE_TO_IDX(stream_cfg_cmd->stream_handle[i])
-			> MAX_NUM_STREAM)
+			>= MAX_NUM_STREAM)
 			return;
 		stream_info =
 			&axi_data->stream_info[

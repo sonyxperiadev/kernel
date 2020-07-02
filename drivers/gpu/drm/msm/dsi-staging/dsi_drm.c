@@ -681,13 +681,111 @@ void dsi_connector_put_modes(struct drm_connector *connector,
 	dsi_display->modes = NULL;
 }
 
-int dsi_connector_get_modes(struct drm_connector *connector,
-		void *display)
+
+static int dsi_drm_update_edid_name(struct edid *edid, const char *name)
 {
-	u32 count = 0;
+	u8 *dtd = (u8 *)&edid->detailed_timings[3];
+	u8 standard_header[] = {0x00, 0x00, 0x00, 0xFE, 0x00};
+	u32 dtd_size = 18;
+	u32 header_size = sizeof(standard_header);
+
+	if (!name)
+		return -EINVAL;
+
+	/* Fill standard header */
+	memcpy(dtd, standard_header, header_size);
+
+	dtd_size -= header_size;
+	dtd_size = min_t(u32, dtd_size, strlen(name));
+
+	memcpy(dtd + header_size, name, dtd_size);
+
+	return 0;
+}
+
+static void dsi_drm_update_dtd(struct edid *edid,
+		struct dsi_display_mode *modes, u32 modes_count)
+{
+	u32 i;
+	u32 count = min_t(u32, modes_count, 3);
+
+	for (i = 0; i < count; i++) {
+		struct detailed_timing *dtd = &edid->detailed_timings[i];
+		struct dsi_display_mode *mode = &modes[i];
+		struct dsi_mode_info *timing = &mode->timing;
+		struct detailed_pixel_timing *pd = &dtd->data.pixel_data;
+		u32 h_blank = timing->h_front_porch + timing->h_sync_width +
+				timing->h_back_porch;
+		u32 v_blank = timing->v_front_porch + timing->v_sync_width +
+				timing->v_back_porch;
+		u32 h_img = 0, v_img = 0;
+
+		dtd->pixel_clock = mode->pixel_clk_khz / 10;
+
+		pd->hactive_lo = timing->h_active & 0xFF;
+		pd->hblank_lo = h_blank & 0xFF;
+		pd->hactive_hblank_hi = ((h_blank >> 8) & 0xF) |
+				((timing->h_active >> 8) & 0xF) << 4;
+
+		pd->vactive_lo = timing->v_active & 0xFF;
+		pd->vblank_lo = v_blank & 0xFF;
+		pd->vactive_vblank_hi = ((v_blank >> 8) & 0xF) |
+				((timing->v_active >> 8) & 0xF) << 4;
+
+		pd->hsync_offset_lo = timing->h_front_porch & 0xFF;
+		pd->hsync_pulse_width_lo = timing->h_sync_width & 0xFF;
+		pd->vsync_offset_pulse_width_lo =
+			((timing->v_front_porch & 0xF) << 4) |
+			(timing->v_sync_width & 0xF);
+
+		pd->hsync_vsync_offset_pulse_width_hi =
+			(((timing->h_front_porch >> 8) & 0x3) << 6) |
+			(((timing->h_sync_width >> 8) & 0x3) << 4) |
+			(((timing->v_front_porch >> 4) & 0x3) << 2) |
+			(((timing->v_sync_width >> 4) & 0x3) << 0);
+
+		pd->width_mm_lo = h_img & 0xFF;
+		pd->height_mm_lo = v_img & 0xFF;
+		pd->width_height_mm_hi = (((h_img >> 8) & 0xF) << 4) |
+			((v_img >> 8) & 0xF);
+
+		pd->hborder = 0;
+		pd->vborder = 0;
+		pd->misc = 0;
+	}
+}
+
+static void dsi_drm_update_checksum(struct edid *edid)
+{
+	u8 *data = (u8 *)edid;
+	u32 i, sum = 0;
+
+	for (i = 0; i < EDID_LENGTH - 1; i++)
+		sum += data[i];
+
+	edid->checksum = 0x100 - (sum & 0xFF);
+}
+
+int dsi_connector_get_modes(struct drm_connector *connector, void *data)
+{
+	int rc, i;
+	u32 count = 0, edid_size;
 	struct dsi_display_mode *modes = NULL;
 	struct drm_display_mode drm_mode;
-	int rc, i;
+	struct dsi_display *display = data;
+	struct edid edid;
+	const u8 edid_buf[EDID_LENGTH] = {
+		0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x44, 0x6D,
+		0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x1B, 0x10, 0x01, 0x03,
+		0x80, 0x50, 0x2D, 0x78, 0x0A, 0x0D, 0xC9, 0xA0, 0x57, 0x47,
+		0x98, 0x27, 0x12, 0x48, 0x4C, 0x00, 0x00, 0x00, 0x01, 0x01,
+		0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
+		0x01, 0x01, 0x01, 0x01,
+	};
+
+	edid_size = min_t(u32, sizeof(edid), EDID_LENGTH);
+
+	memcpy(&edid, edid_buf, edid_size);
 
 	if (sde_connector_get_panel(connector)) {
 		/*
@@ -713,6 +811,11 @@ int dsi_connector_get_modes(struct drm_connector *connector,
 	for (i = 0; i < count; i++) {
 		struct drm_display_mode *m;
 
+#ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
+		if (modes[i].splash_dms)
+			modes[i].dsi_mode_flags |= DSI_MODE_FLAG_DMS;
+#endif
+
 		memset(&drm_mode, 0x0, sizeof(drm_mode));
 		dsi_convert_to_drm_mode(&modes[i], &drm_mode);
 		m = drm_mode_duplicate(connector->dev, &drm_mode);
@@ -728,13 +831,31 @@ int dsi_connector_get_modes(struct drm_connector *connector,
 		/* set the first mode in list as preferred */
 		if (i == 0)
 			m->type |= DRM_MODE_TYPE_PREFERRED;
+
 		drm_mode_probed_add(connector, m);
+
 #ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
-		if (modes[i].isDefault)
+		/*
+		 * Set this mode if it's either the default one OR
+		 * if we want it at the end of continuous splash.
+		 */
+		if (modes[i].isDefault || modes[i].splash_dms)
 			drm_set_preferred_mode(
 				connector, m->hdisplay, m->vdisplay);
 #endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 	}
+
+	rc = dsi_drm_update_edid_name(&edid, display->panel->name);
+	if (rc) {
+		count = 0;
+		goto end;
+	}
+
+	dsi_drm_update_dtd(&edid, modes, count);
+	dsi_drm_update_checksum(&edid);
+	rc = drm_mode_connector_update_edid_property(connector, &edid);
+	if (rc)
+		count = 0;
 end:
 	pr_debug("MODE COUNT =%d\n\n", count);
 	return count;
@@ -776,6 +897,17 @@ int dsi_conn_pre_kickoff(struct drm_connector *connector,
 	return dsi_display_pre_kickoff(connector, display, params);
 }
 
+int dsi_conn_prepare_commit(void *display,
+		struct msm_display_conn_params *params)
+{
+	if (!display || !params) {
+		pr_err("Invalid params\n");
+		return -EINVAL;
+	}
+
+	return dsi_display_pre_commit(display, params);
+}
+
 void dsi_conn_enable_event(struct drm_connector *connector,
 		uint32_t event_idx, bool enable, void *display)
 {
@@ -790,7 +922,8 @@ void dsi_conn_enable_event(struct drm_connector *connector,
 			event_idx, &event_info, enable);
 }
 
-int dsi_conn_post_kickoff(struct drm_connector *connector)
+int dsi_conn_post_kickoff(struct drm_connector *connector,
+	struct msm_display_conn_params *params)
 {
 	struct drm_encoder *encoder;
 	struct dsi_bridge *c_bridge;
@@ -798,6 +931,7 @@ int dsi_conn_post_kickoff(struct drm_connector *connector)
 	struct dsi_display *display;
 	struct dsi_display_ctrl *m_ctrl, *ctrl;
 	int i, rc = 0;
+	bool enable;
 
 	if (!connector || !connector->state) {
 		pr_err("invalid connector or connector state");
@@ -842,6 +976,13 @@ int dsi_conn_post_kickoff(struct drm_connector *connector)
 
 	/* ensure dynamic clk switch flag is reset */
 	c_bridge->dsi_mode.dsi_mode_flags &= ~DSI_MODE_FLAG_DYN_CLK;
+
+	if (params->qsync_update) {
+		enable = (params->qsync_mode > 0) ? true : false;
+		display_for_each_ctrl(i, display) {
+			dsi_ctrl_setup_avr(display->ctrl[i].ctrl, enable);
+		}
+	}
 
 	return 0;
 }

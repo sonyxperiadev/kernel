@@ -24,6 +24,7 @@
 #include "msm_vidc_clocks.h"
 #include "msm_cvp.h"
 
+#define MSM_VIDC_QBUF_BATCH_TIMEOUT 300
 #define IS_ALREADY_IN_STATE(__p, __d) (\
 	(__p >= __d)\
 )
@@ -40,7 +41,7 @@ const char *const mpeg_video_vidc_extradata[] = {
 	"Extradata none",
 	"Extradata MB Quantization",
 	"Extradata Interlace Video",
-	"Reserved",
+	"Extradata enc DTS",
 	"Reserved",
 	"Extradata timestamp",
 	"Extradata S3D Frame Packing",
@@ -69,6 +70,7 @@ const char *const mpeg_video_vidc_extradata[] = {
 	"Extradata display VUI",
 	"Extradata vpx color space",
 	"Extradata UBWC CR stats info",
+	"Extradata enc frame QP",
 };
 
 static void handle_session_error(enum hal_command_response cmd, void *data);
@@ -2245,10 +2247,6 @@ static void handle_sys_error(enum hal_command_response cmd, void *data)
 
 	/* handle the hw error before core released to get full debug info */
 	msm_vidc_handle_hw_error(core);
-	if (response->status == VIDC_ERR_NOC_ERROR) {
-		dprintk(VIDC_WARN, "Got NOC error");
-		MSM_VIDC_ERROR(true);
-	}
 
 	dprintk(VIDC_DBG, "Calling core_release\n");
 	rc = call_hfi_op(hdev, core_release, hdev->hfi_device_data);
@@ -2686,8 +2684,8 @@ static void handle_fbd(enum hal_command_response cmd, void *data)
 			fill_buf_done->mark_data, fill_buf_done->mark_target);
 	}
 	if (inst->session_type == MSM_VIDC_ENCODER) {
-		msm_comm_store_filled_length(&inst->fbd_data, vb->index,
-			fill_buf_done->filled_len1);
+		if (inst->max_filled_length < fill_buf_done->filled_len1)
+			inst->max_filled_length = fill_buf_done->filled_len1;
 	}
 
 	tag_data.index = vb->index;
@@ -4369,6 +4367,41 @@ err_bad_input:
 	return rc;
 }
 
+void msm_vidc_batch_handler(struct work_struct *work)
+{
+	int rc = 0;
+	struct msm_vidc_inst *inst;
+
+	inst = container_of(work, struct msm_vidc_inst, batch_work);
+
+	inst = get_inst(get_vidc_core(MSM_VIDC_CORE_VENUS), inst);
+	if (!inst) {
+		dprintk(VIDC_ERR, "%s: invalid params\n", __func__);
+		return;
+	}
+
+	if (inst->state == MSM_VIDC_CORE_INVALID) {
+		dprintk(VIDC_ERR, "%s: invalid state\n", __func__);
+		goto exit;
+	}
+
+	rc = msm_comm_scale_clocks_and_bus(inst);
+	if (rc)
+		dprintk(VIDC_ERR, "%s: scale clocks failed\n", __func__);
+
+	dprintk(VIDC_INFO,
+		"%s: queing batch pending buffers to firmware\n", __func__);
+
+	rc = msm_comm_qbufs_batch(inst, NULL);
+	if (rc) {
+		dprintk(VIDC_ERR, "%s: Failed batch-qbuf to hfi: %d\n",
+			__func__, rc);
+	}
+
+exit:
+	put_inst(inst);
+}
+
 static int msm_comm_qbuf_in_rbr(struct msm_vidc_inst *inst,
 		struct msm_vidc_buffer *mbuf)
 {
@@ -4466,6 +4499,42 @@ int msm_comm_qbufs(struct msm_vidc_inst *inst)
 	return rc;
 }
 
+int msm_comm_qbufs_batch(struct msm_vidc_inst *inst,
+		struct msm_vidc_buffer *mbuf)
+{
+	int rc = 0;
+	struct msm_vidc_buffer *buf;
+
+	mutex_lock(&inst->registeredbufs.lock);
+	list_for_each_entry(buf, &inst->registeredbufs.list, list) {
+		/* Don't queue if buffer is not CAPTURE_MPLANE */
+		if (buf->vvb.vb2_buf.type !=
+			V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE)
+			goto loop_end;
+		/* Don't queue if buffer is not a deferred buffer */
+		if (!(buf->flags & MSM_VIDC_FLAG_DEFERRED))
+			goto loop_end;
+		/* Don't queue if RBR event is pending on this buffer */
+		if (buf->flags & MSM_VIDC_FLAG_RBR_PENDING)
+			goto loop_end;
+
+		print_vidc_buffer(VIDC_DBG, "batch-qbuf", inst, buf);
+		rc = msm_comm_qbuf_to_hfi(inst, buf);
+		if (rc) {
+			dprintk(VIDC_ERR, "%s: Failed batch qbuf to hfi: %d\n",
+				__func__, rc);
+			break;
+		}
+loop_end:
+		/* Queue pending buffers till the current buffer only */
+		if (buf == mbuf)
+			break;
+	}
+	mutex_unlock(&inst->registeredbufs.lock);
+
+	return rc;
+}
+
 /*
  * msm_comm_qbuf_decode_batch - count the buffers which are not queued to
  *              firmware yet (count includes rbr pending buffers too) and
@@ -4478,7 +4547,6 @@ int msm_comm_qbuf_decode_batch(struct msm_vidc_inst *inst,
 {
 	int rc = 0;
 	u32 count = 0;
-	struct msm_vidc_buffer *buf;
 
 	if (!inst || !mbuf) {
 		dprintk(VIDC_ERR, "%s: Invalid arguments\n", __func__);
@@ -4501,6 +4569,8 @@ int msm_comm_qbuf_decode_batch(struct msm_vidc_inst *inst,
 	 * due to batching
 	*/
 	if (inst->clk_data.buffer_counter > SKIP_BATCH_WINDOW) {
+		mod_timer(&inst->batch_timer, jiffies +
+			msecs_to_jiffies(MSM_VIDC_QBUF_BATCH_TIMEOUT));
 		count = num_pending_qbufs(inst,
 			V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE);
 		if (count < inst->batch.size) {
@@ -4514,32 +4584,11 @@ int msm_comm_qbuf_decode_batch(struct msm_vidc_inst *inst,
 	if (rc)
 		dprintk(VIDC_ERR, "%s: scale clocks failed\n", __func__);
 
-	mutex_lock(&inst->registeredbufs.lock);
-	list_for_each_entry(buf, &inst->registeredbufs.list, list) {
-		/* Don't queue if buffer is not CAPTURE_MPLANE */
-		if (buf->vvb.vb2_buf.type !=
-			V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE)
-			goto loop_end;
-		/* Don't queue if buffer is not a deferred buffer */
-		if (!(buf->flags & MSM_VIDC_FLAG_DEFERRED))
-			goto loop_end;
-		/* Don't queue if RBR event is pending on this buffer */
-		if (buf->flags & MSM_VIDC_FLAG_RBR_PENDING)
-			goto loop_end;
-
-		print_vidc_buffer(VIDC_DBG, "batch-qbuf", inst, buf);
-		rc = msm_comm_qbuf_to_hfi(inst, buf);
-		if (rc) {
-			dprintk(VIDC_ERR, "%s: Failed qbuf to hfi: %d\n",
-				__func__, rc);
-			break;
-		}
-loop_end:
-		/* Queue pending buffers till the current buffer only */
-		if (buf == mbuf)
-			break;
+	rc = msm_comm_qbufs_batch(inst, mbuf);
+	if (rc) {
+		dprintk(VIDC_ERR, "%s: Failed qbuf to hfi: %d\n",
+			__func__, rc);
 	}
-	mutex_unlock(&inst->registeredbufs.lock);
 
 	return rc;
 }
@@ -5373,7 +5422,10 @@ enum hal_extradata_id msm_comm_get_hal_extradata_index(
 		ret = HAL_EXTRADATA_STREAM_USERDATA;
 		break;
 	case V4L2_MPEG_VIDC_EXTRADATA_FRAME_QP:
-		ret = HAL_EXTRADATA_FRAME_QP;
+		ret = HAL_EXTRADATA_DEC_FRAME_QP;
+		break;
+	case V4L2_MPEG_VIDC_EXTRADATA_ENC_FRAME_QP:
+		ret = HAL_EXTRADATA_ENC_FRAME_QP;
 		break;
 	case V4L2_MPEG_VIDC_EXTRADATA_LTR:
 		ret = HAL_EXTRADATA_LTR_INFO;
@@ -5401,6 +5453,12 @@ enum hal_extradata_id msm_comm_get_hal_extradata_index(
 		break;
 	case V4L2_MPEG_VIDC_EXTRADATA_HDR10PLUS_METADATA:
 		ret = HAL_EXTRADATA_HDR10PLUS_METADATA;
+		break;
+	case V4L2_MPEG_VIDC_EXTRADATA_ENC_DTS:
+		ret = HAL_EXTRADATA_ENC_DTS_METADATA;
+		break;
+	case V4L2_MPEG_VIDC_EXTRADATA_INPUT_CROP:
+		ret = HAL_EXTRADATA_INPUT_CROP;
 		break;
 	default:
 		dprintk(VIDC_WARN, "Extradata not found: %d\n", index);
@@ -5588,6 +5646,65 @@ int msm_vidc_check_scaling_supported(struct msm_vidc_inst *inst)
 	return 0;
 }
 
+static bool is_image_session(struct msm_vidc_inst *inst)
+{
+	if (inst->session_type == MSM_VIDC_ENCODER &&
+		get_hal_codec(inst->fmts[CAPTURE_PORT].fourcc) ==
+			HAL_VIDEO_CODEC_HEVC)
+		return (inst->profile == HAL_HEVC_PROFILE_MAIN_STILL_PIC ||
+				inst->grid_enable);
+	else
+		return false;
+}
+
+static int msm_vidc_check_image_session_capabilities(struct msm_vidc_inst *inst)
+{
+	int rc = 0;
+	struct msm_vidc_image_capability *capability = NULL;
+
+	u32 output_height = ALIGN(inst->prop.height[CAPTURE_PORT], 512);
+	u32 output_width = ALIGN(inst->prop.width[CAPTURE_PORT], 512);
+
+	if (inst->grid_enable)
+		capability = inst->core->platform_data->heic_image_capability;
+	else
+		capability = inst->core->platform_data->hevc_image_capability;
+
+	if (!capability)
+		return -EINVAL;
+
+	if (output_width < capability->width.min ||
+		output_height < capability->height.min) {
+		dprintk(VIDC_ERR,
+			"HEIC Unsupported WxH = (%u)x(%u), min supported is - (%u)x(%u)\n",
+			output_width,
+			output_height,
+			capability->width.min,
+			capability->height.min);
+		rc = -ENOTSUPP;
+	}
+	if (!rc && (output_width > capability->width.max ||
+		output_height > capability->height.max)) {
+		dprintk(VIDC_ERR,
+			"HEIC Unsupported WxH = (%u)x(%u), max supported is - (%u)x(%u)\n",
+			output_width,
+			output_height,
+			capability->width.max,
+			capability->height.max);
+		rc = -ENOTSUPP;
+	}
+	if (!rc && output_height * output_width >
+		capability->width.max * capability->height.max) {
+		dprintk(VIDC_ERR,
+		"HEIC Unsupported WxH = (%u)x(%u), max supported is - (%u)x(%u)\n",
+		output_width, output_height,
+		capability->width.max, capability->height.max);
+		rc = -ENOTSUPP;
+	}
+
+	return rc;
+}
+
 int msm_vidc_check_session_supported(struct msm_vidc_inst *inst)
 {
 	struct msm_vidc_capability *capability;
@@ -5631,6 +5748,11 @@ int msm_vidc_check_session_supported(struct msm_vidc_inst *inst)
 			input_width, input_height,
 			output_width, output_height);
 		rc = -ENOTSUPP;
+	}
+
+	if (is_image_session(inst)) {
+		rc = msm_vidc_check_image_session_capabilities(inst);
+		return rc;
 	}
 
 	output_height = ALIGN(inst->prop.height[CAPTURE_PORT], 16);
@@ -5926,6 +6048,7 @@ exit:
 void msm_comm_print_inst_info(struct msm_vidc_inst *inst)
 {
 	struct msm_vidc_buffer *mbuf;
+	struct msm_vidc_cvp_buffer *cbuf;
 	struct internal_buf *buf;
 	bool is_decode = false;
 	enum vidc_ports port;
@@ -5981,6 +6104,14 @@ void msm_comm_print_inst_info(struct msm_vidc_inst *inst)
 				buf->buffer_type, buf->smem.device_addr,
 				buf->smem.size);
 	mutex_unlock(&inst->outputbufs.lock);
+
+	mutex_lock(&inst->cvpbufs.lock);
+	dprintk(VIDC_ERR, "cvp buffer list:\n");
+	list_for_each_entry(cbuf, &inst->cvpbufs.list, list)
+		dprintk(VIDC_ERR, "index: %u fd: %u offset: %u addr: %x\n",
+				cbuf->buf.index, cbuf->buf.fd,
+				cbuf->buf.offset, cbuf->smem.device_addr);
+	mutex_unlock(&inst->cvpbufs.lock);
 }
 
 int msm_comm_session_continue(void *instance)
@@ -6391,14 +6522,11 @@ int msm_comm_qbuf_cache_operations(struct msm_vidc_inst *inst,
 			} else if (vb->type ==
 					V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
 				if (!i) { /* bitstream */
-					u32 size_u32;
 					skip = false;
 					offset = 0;
-					size_u32 = vb->planes[i].length;
-					msm_comm_fetch_filled_length(
-						&inst->fbd_data, vb->index,
-						&size_u32);
-					size = size_u32;
+					size = vb->planes[i].length;
+					if (inst->max_filled_length)
+						size = inst->max_filled_length;
 					cache_op = SMEM_CACHE_INVALIDATE;
 				}
 			}
@@ -6856,63 +6984,6 @@ bool kref_get_mbuf(struct msm_vidc_inst *inst, struct msm_vidc_buffer *mbuf)
 	return ret;
 }
 
-void msm_comm_store_filled_length(struct msm_vidc_list *data_list,
-		u32 index, u32 filled_length)
-{
-	struct msm_vidc_buf_data *pdata = NULL;
-	bool found = false;
-
-	if (!data_list) {
-		dprintk(VIDC_ERR, "%s: invalid params %pK\n",
-			__func__, data_list);
-		return;
-	}
-
-	mutex_lock(&data_list->lock);
-	list_for_each_entry(pdata, &data_list->list, list) {
-		if (pdata->index == index) {
-			pdata->filled_length = filled_length;
-			found = true;
-			break;
-		}
-	}
-
-	if (!found) {
-		pdata = kzalloc(sizeof(*pdata), GFP_KERNEL);
-		if (!pdata)  {
-			dprintk(VIDC_WARN, "%s: malloc failure.\n", __func__);
-			goto exit;
-		}
-		pdata->index = index;
-		pdata->filled_length = filled_length;
-		list_add_tail(&pdata->list, &data_list->list);
-	}
-
-exit:
-	mutex_unlock(&data_list->lock);
-}
-
-void msm_comm_fetch_filled_length(struct msm_vidc_list *data_list,
-		u32 index, u32 *filled_length)
-{
-	struct msm_vidc_buf_data *pdata = NULL;
-
-	if (!data_list || !filled_length) {
-		dprintk(VIDC_ERR, "%s: invalid params %pK %pK\n",
-			__func__, data_list, filled_length);
-		return;
-	}
-
-	mutex_lock(&data_list->lock);
-	list_for_each_entry(pdata, &data_list->list, list) {
-		if (pdata->index == index) {
-			*filled_length = pdata->filled_length;
-			break;
-		}
-	}
-	mutex_unlock(&data_list->lock);
-}
-
 void msm_comm_free_buffer_tags(struct msm_vidc_inst *inst)
 {
 	struct vidc_tag_data *temp, *next;
@@ -7153,7 +7224,30 @@ int msm_comm_set_color_format_constraints(struct msm_vidc_inst *inst,
 		dprintk(VIDC_DBG, "Set color format constraint success\n");
 
 exit:
-	if (!pconstraint)
+	if (pconstraint)
 		kfree(pconstraint);
 	return rc;
+}
+
+bool msm_comm_check_for_inst_overload(struct msm_vidc_core *core)
+{
+	u32 instance_count = 0;
+	u32 secure_instance_count = 0;
+	struct msm_vidc_inst *inst = NULL;
+	bool overload = false;
+
+	mutex_lock(&core->lock);
+	list_for_each_entry(inst, &core->instances, list) {
+		instance_count++;
+		if (inst->flags & VIDC_SECURE)
+			secure_instance_count++;
+	}
+	mutex_unlock(&core->lock);
+
+	/* Instance count includes current instance as well. */
+
+	if ((instance_count > core->resources.max_inst_count) ||
+		(secure_instance_count > core->resources.max_secure_inst_count))
+		overload = true;
+	return overload;
 }

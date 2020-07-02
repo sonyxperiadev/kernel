@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -672,6 +672,10 @@ static const struct of_device_id mpm_gic_chip_data_table[] = {
 		.compatible = "qcom,mpm-gic-qcs405",
 		.data = mpm_qcs405_gic_chip_data,
 	},
+	{
+		.compatible = "qcom,mpm-gic-trinket",
+		.data = mpm_trinket_gic_chip_data,
+	},
 	{}
 };
 MODULE_DEVICE_TABLE(of, mpm_gic_chip_data_table);
@@ -704,6 +708,10 @@ static const struct of_device_id mpm_gpio_chip_data_table[] = {
 	{
 		.compatible = "qcom,mpm-gpio-qcs405",
 		.data = mpm_qcs405_gpio_chip_data,
+	},
+	{
+		.compatible = "qcom,mpm-gpio-trinket",
+		.data = mpm_trinket_gpio_chip_data,
 	},
 	{}
 };
@@ -741,6 +749,15 @@ static int __init mpm_gic_chip_init(struct device_node *node,
 		goto mpm_map_err;
 	}
 
+	if (of_property_read_bool(node, "qcom,mpm-skip-set-wake"))
+		msm_mpm_gic_chip.flags |= IRQCHIP_SKIP_SET_WAKE;
+
+	if (of_property_read_bool(node,
+				  "qcom,mpm-irq-disable-not-supported")) {
+		msm_mpm_gic_chip.irq_enable = NULL;
+		msm_mpm_gic_chip.irq_disable = msm_mpm_gic_chip_mask;
+	}
+
 	msm_mpm_dev_data.gic_chip_domain = irq_domain_add_hierarchy(
 			parent_domain, 0, num_mpm_irqs, node,
 			&msm_mpm_gic_chip_domain_ops, (void *)id->data);
@@ -749,8 +766,6 @@ static int __init mpm_gic_chip_init(struct device_node *node,
 		ret = -ENOMEM;
 		goto mpm_map_err;
 	}
-
-	msm_mpm_dev_data.gic_chip_domain->name = "qcom,mpm-gic";
 
 	ret = msm_mpm_init(node);
 	if (!ret)
@@ -775,14 +790,22 @@ static int __init mpm_gpio_chip_init(struct device_node *node,
 		return -ENODEV;
 	}
 
+	if (of_property_read_bool(node, "qcom,mpm-gpio-skip-set-wake"))
+		msm_mpm_gpio_chip.flags |= IRQCHIP_SKIP_SET_WAKE;
+
+	if (of_property_read_bool(node, "qcom,mpm-gpio-mask-on-suspend"))
+		msm_mpm_gpio_chip.flags |= IRQCHIP_MASK_ON_SUSPEND;
+
+	if (of_property_read_bool(node,
+				  "qcom,mpm-gpio-irq-enabled-by-firmware"))
+		msm_mpm_gpio_chip.irq_enable = NULL;
+
 	msm_mpm_dev_data.gpio_chip_domain = irq_domain_create_linear(
 			of_node_to_fwnode(node), num_mpm_irqs,
 			&msm_mpm_gpio_chip_domain_ops, (void *)id->data);
 
 	if (!msm_mpm_dev_data.gpio_chip_domain)
 		return -ENOMEM;
-
-	msm_mpm_dev_data.gpio_chip_domain->name = "qcom,mpm-gpio";
 
 	return 0;
 }

@@ -99,6 +99,8 @@ msm_drm.dsi_display0=dsi_panel_somc_yoshino_cmd:config0";
 		qcom,dsi-phy-num = <0>;
 
 		qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
+
+		qcom,dsi-display-active;
 	};
 
 	/* SDE */
@@ -109,11 +111,20 @@ msm_drm.dsi_display0=dsi_panel_somc_yoshino_cmd:config0";
 		qcom,dsi-ctrl = <&sde_dsi0>;
 		qcom,dsi-phy = <&mdss_dsi_phy0>;
 		clocks = <&mdss_dsi0_pll BYTECLK_MUX_0_CLK>,
-			<&mdss_dsi0_pll PCLK_MUX_0_CLK>,
-			<&mdss_dsi1_pll BYTECLK_MUX_1_CLK>,
-			<&mdss_dsi1_pll PCLK_MUX_1_CLK>;
+			 <&mdss_dsi0_pll PCLK_MUX_0_CLK>,
+			 <&mdss_dsi0_pll BYTECLK_MUX_0_CLK>,
+			 <&mdss_dsi0_pll PCLK_MUX_0_CLK>,
+			 <&mdss_dsi0_pll BYTECLK_SRC_0_CLK>,
+			 <&mdss_dsi0_pll PCLK_SRC_0_CLK>,
+			 <&mdss_dsi0_pll BYTECLK_SRC_0_CLK>,
+			 <&mdss_dsi0_pll PCLK_SRC_0_CLK>,
+			 <&mdss_dsi0_pll SHADOW_BYTECLK_SRC_0_CLK>,
+			 <&mdss_dsi0_pll SHADOW_PCLK_SRC_0_CLK>;
 		clock-names = "mux_byte_clk0", "mux_pixel_clk0",
-			      "mux_byte_clk1", "mux_pixel_clk1";
+			      "mux_byte_clk1", "mux_pixel_clk1",
+			      "src_byte_clk0", "src_pixel_clk0",
+			      "src_byte_clk1", "src_pixel_clk1",
+			      "shadow_byte_clk0", "shadow_pixel_clk0";
 
 		pinctrl-names = "panel_active", "panel_suspend",
 				"sde_touch_active", "sde_touch_suspend";
@@ -121,8 +132,6 @@ msm_drm.dsi_display0=dsi_panel_somc_yoshino_cmd:config0";
 		pinctrl-1 = <&mdss_dsi_suspend &mdss_te_suspend>;
 		pinctrl-2 = <&mdss_touch_active>;
 		pinctrl-3 = <&mdss_touch_suspend>;
-
-		qcom,dsi-display-active;
 
 		qcom,platform-te-gpio = <&tlmm 10 0>;
 		qcom,panel-te-source = <0>;
@@ -149,5 +158,7 @@ msm_drm.dsi_display0=dsi_panel_somc_yoshino_cmd:config0";
 };
 
 &sde_kms {
+	/* Set SDE MAX performance */
+	qcom,sde-perf-default-mode = <3>;
 	connectors = <&sde_wb &dsi_panel_cmd_display>;
 };

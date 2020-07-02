@@ -323,7 +323,7 @@ int ipa2_disconnect_mhi_pipe(u32 clnt_hdl)
 
 int ipa2_mhi_resume_channels_internal(enum ipa_client_type client,
 		bool LPTransitionRejected, bool brstmode_enabled,
-		union __packed gsi_channel_scratch ch_scratch, u8 index)
+		union gsi_channel_scratch ch_scratch, u8 index)
 {
 	int res;
 

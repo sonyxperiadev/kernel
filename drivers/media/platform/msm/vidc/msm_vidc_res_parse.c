@@ -73,12 +73,6 @@ static inline void msm_vidc_free_cycles_per_mb_table(
 	res->clock_freq_tbl.clk_prof_entries = NULL;
 }
 
-static inline void msm_vidc_free_imem_ab_table(
-		struct msm_vidc_platform_resources *res)
-{
-	res->imem_ab_tbl = NULL;
-}
-
 static inline void msm_vidc_free_reg_table(
 			struct msm_vidc_platform_resources *res)
 {
@@ -700,6 +694,39 @@ err_load_clk_table_fail:
 	return rc;
 }
 
+static int msm_vidc_load_reset_table(
+		struct msm_vidc_platform_resources *res)
+{
+	struct platform_device *pdev = res->pdev;
+	struct reset_set *rst = &res->reset_set;
+	int num_clocks = 0, c = 0;
+
+	num_clocks = of_property_count_strings(pdev->dev.of_node,
+				"reset-names");
+	if (num_clocks <= 0) {
+		dprintk(VIDC_DBG, "No reset clocks found\n");
+		rst->count = 0;
+		return 0;
+	}
+
+	rst->reset_tbl = devm_kcalloc(&pdev->dev, num_clocks,
+			sizeof(*rst->reset_tbl), GFP_KERNEL);
+	if (!rst->reset_tbl)
+		return -ENOMEM;
+
+	rst->count = num_clocks;
+	dprintk(VIDC_DBG, "Found %d reset clocks\n", num_clocks);
+
+	for (c = 0; c < num_clocks; ++c) {
+		struct reset_info *rc = &res->reset_set.reset_tbl[c];
+
+		of_property_read_string_index(pdev->dev.of_node,
+				"reset-names", c, &rc->name);
+	}
+
+	return 0;
+}
+
 static int msm_decide_dt_node(
 		struct msm_vidc_platform_resources *res)
 {
@@ -723,46 +750,6 @@ static int msm_decide_dt_node(
 
 	return 0;
 }
-
-static int msm_vidc_load_imem_ab_table(struct msm_vidc_platform_resources *res)
-{
-	int num_elements = 0;
-	struct platform_device *pdev = res->pdev;
-
-	if (!of_find_property(pdev->dev.of_node, "qcom,imem-ab-tbl", NULL)) {
-		/* optional property */
-		dprintk(VIDC_DBG, "qcom,imem-freq-tbl not found\n");
-		return 0;
-	}
-
-	num_elements = get_u32_array_num_elements(pdev->dev.of_node,
-			"qcom,imem-ab-tbl");
-	num_elements /= (sizeof(*res->imem_ab_tbl) / sizeof(u32));
-	if (!num_elements) {
-		dprintk(VIDC_ERR, "no elements in imem ab table\n");
-		return -EINVAL;
-	}
-
-	res->imem_ab_tbl = devm_kzalloc(&pdev->dev, num_elements *
-			sizeof(*res->imem_ab_tbl), GFP_KERNEL);
-	if (!res->imem_ab_tbl) {
-		dprintk(VIDC_ERR, "Failed to alloc imem_ab_tbl\n");
-		return -ENOMEM;
-	}
-
-	if (of_property_read_u32_array(pdev->dev.of_node,
-		"qcom,imem-ab-tbl", (u32 *)res->imem_ab_tbl,
-		num_elements * sizeof(*res->imem_ab_tbl) / sizeof(u32))) {
-		dprintk(VIDC_ERR, "Failed to read imem_ab_tbl\n");
-		msm_vidc_free_imem_ab_table(res);
-		return -EINVAL;
-	}
-
-	res->imem_ab_tbl_size = num_elements;
-
-	return 0;
-}
-
 
 static int find_key_value(struct msm_vidc_platform_data *platform_data,
 	const char *key)
@@ -797,10 +784,9 @@ int read_platform_resources_from_drv_data(
 
 	res->sku_version = platform_data->sku_version;
 
-	res->hfi_version = find_key_value(platform_data,
-			"qcom,hfi-version");
-	if (!res->hfi_version)
-		res->hfi_version = 4;
+	res->fw_name = "venus";
+
+	dprintk(VIDC_DBG, "Firmware filename: %s\n", res->fw_name);
 
 	res->max_load = find_key_value(platform_data,
 			"qcom,max-hw-load");
@@ -808,8 +794,8 @@ int read_platform_resources_from_drv_data(
 	res->max_hq_mbs_per_frame = find_key_value(platform_data,
 			"qcom,max-hq-mbs-per-frame");
 
-	res->max_hq_fps = find_key_value(platform_data,
-			"qcom,max-hq-frames-per-sec");
+	res->max_hq_mbs_per_sec = find_key_value(platform_data,
+			"qcom,max-hq-mbs-per-sec");
 
 	res->sw_power_collapsible = find_key_value(platform_data,
 			"qcom,sw-power-collapse");
@@ -854,9 +840,6 @@ int read_platform_resources_from_drv_data(
 			"qcom,fw-vpp-cycles");
 
 	res->csc_coeff_data = &platform_data->csc_data;
-
-	res->gcc_register_base = platform_data->gcc_register_base;
-	res->gcc_register_size = platform_data->gcc_register_size;
 
 	res->vpu_ver = platform_data->vpu_ver;
 
@@ -926,9 +909,6 @@ int read_platform_resources_from_dt(
 	if (rc)
 		return rc;
 
-	res->imem_type =
-		!!of_find_compatible_node(NULL, NULL, "qcom,msm-vmem") ?
-						IMEM_VMEM : IMEM_NONE;
 
 	INIT_LIST_HEAD(&res->context_banks);
 
@@ -940,13 +920,6 @@ int read_platform_resources_from_dt(
 
 	kres = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
 	res->irq = kres ? kres->start : -1;
-
-	rc = of_property_read_string(pdev->dev.of_node, "qcom,firmware-name",
-			&res->fw_name);
-	if (rc)
-		res->fw_name = "venus";
-
-	dprintk(VIDC_DBG, "Firmware filename: %s\n", res->fw_name);
 
 	rc = msm_vidc_load_subcache_info(res);
 	if (rc)
@@ -989,9 +962,12 @@ int read_platform_resources_from_dt(
 		goto err_load_allowed_clocks_table;
 	}
 
-	rc = msm_vidc_load_imem_ab_table(res);
-	if (rc)
-		dprintk(VIDC_WARN, "Failed to load IMEM AB table: %d\n", rc);
+	rc = msm_vidc_load_reset_table(res);
+	if (rc) {
+		dprintk(VIDC_ERR,
+			"Failed to load reset table: %d\n", rc);
+		goto err_load_reset_table;
+	}
 
 	rc = msm_vidc_populate_legacy_context_bank(res);
 	if (rc) {
@@ -1020,6 +996,7 @@ int read_platform_resources_from_dt(
 
 return rc;
 
+err_load_reset_table:
 err_register_cx_ipeak:
 err_setup_legacy_cb:
 	msm_vidc_free_allowed_clocks_table(res);

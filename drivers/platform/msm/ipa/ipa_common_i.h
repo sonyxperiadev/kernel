@@ -385,7 +385,7 @@ int ipa_mhi_start_channel_internal(enum ipa_client_type client);
 bool ipa_mhi_sps_channel_empty(enum ipa_client_type client);
 int ipa_mhi_resume_channels_internal(enum ipa_client_type client,
 		bool LPTransitionRejected, bool brstmode_enabled,
-		union __packed gsi_channel_scratch ch_scratch, u8 index);
+		union gsi_channel_scratch ch_scratch, u8 index);
 int ipa_mhi_handle_ipa_config_req(struct ipa_config_req_msg_v01 *config_req);
 int ipa_mhi_query_ch_info(enum ipa_client_type client,
 		struct gsi_chan_info *ch_info);

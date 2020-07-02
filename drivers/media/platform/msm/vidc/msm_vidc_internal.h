@@ -36,6 +36,7 @@
 #include "msm_vidc.h"
 #include <media/msm_media_info.h>
 #include "vidc_hfi_api.h"
+#include <linux/timer.h>
 
 #define MSM_VIDC_DRV_NAME "msm_vidc_driver"
 #define MSM_VIDC_VERSION KERNEL_VERSION(0, 0, 1)
@@ -199,7 +200,6 @@ struct msm_vidc_buf_data {
 	u32 index;
 	u32 mark_data;
 	u32 mark_target;
-	u32 filled_length;
 };
 
 struct msm_vidc_common_data {
@@ -233,6 +233,16 @@ struct msm_vidc_efuse_data {
 	enum efuse_purpose purpose;
 };
 
+struct msm_vidc_capability_range {
+	u32 min;
+	u32 max;
+};
+
+struct msm_vidc_image_capability {
+	struct msm_vidc_capability_range width;
+	struct msm_vidc_capability_range height;
+};
+
 enum vpu_version {
 	VPU_VERSION_4 = 1,
 	VPU_VERSION_5,
@@ -254,9 +264,9 @@ struct msm_vidc_platform_data {
 	unsigned int efuse_data_length;
 	struct msm_vidc_ubwc_config *ubwc_config;
 	unsigned int ubwc_config_length;
+	struct msm_vidc_image_capability *heic_image_capability;
+	struct msm_vidc_image_capability *hevc_image_capability;
 	unsigned int sku_version;
-	phys_addr_t gcc_register_base;
-	uint32_t gcc_register_size;
 	uint32_t vpu_ver;
 };
 
@@ -488,7 +498,10 @@ struct msm_vidc_inst {
 	struct msm_vidc_codec_data *codec_data;
 	struct hal_hdr10_pq_sei hdr10_sei_params;
 	struct batch_mode batch;
+	struct timer_list batch_timer;
+	struct work_struct batch_work;
 	bool decode_batching;
+	u32 max_filled_length;
 };
 
 extern struct msm_vidc_drv *vidc_driver;
@@ -506,7 +519,7 @@ struct msm_vidc_ctrl {
 	s64 maximum;
 	s64 default_value;
 	u32 step;
-	u32 menu_skip_mask;
+	u64 menu_skip_mask;
 	u32 flags;
 	const char * const *qmenu;
 };
@@ -514,6 +527,7 @@ struct msm_vidc_ctrl {
 void handle_cmd_response(enum hal_command_response cmd, void *data);
 int msm_vidc_trigger_ssr(struct msm_vidc_core *core,
 	enum hal_ssr_trigger_type type);
+int msm_vidc_freeze_core(struct msm_vidc_core *core);
 int msm_vidc_noc_error_info(struct msm_vidc_core *core);
 bool heic_encode_session_supported(struct msm_vidc_inst *inst);
 int msm_vidc_check_session_supported(struct msm_vidc_inst *inst);

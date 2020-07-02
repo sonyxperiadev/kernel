@@ -112,7 +112,8 @@ static ssize_t power_supply_show_property(struct device *dev,
 				dev_dbg(dev, "driver has no data for `%s' property\n",
 					attr->attr.name);
 			else if (ret != -ENODEV && ret != -EAGAIN)
-				dev_err(dev, "driver failed to report `%s' property: %zd\n",
+				dev_err_ratelimited(dev,
+					"driver failed to report `%s' property: %zd\n",
 					attr->attr.name, ret);
 			return ret;
 		}
@@ -404,7 +405,14 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(therm_icl_limit),
 	POWER_SUPPLY_ATTR(voltage_max_limit),
 	POWER_SUPPLY_ATTR(dc_reset),
+	POWER_SUPPLY_ATTR(scale_mode_en),
 	POWER_SUPPLY_ATTR(real_capacity),
+	POWER_SUPPLY_ATTR(esr_sw_control),
+	POWER_SUPPLY_ATTR(force_main_icl),
+	POWER_SUPPLY_ATTR(force_main_fcc),
+	POWER_SUPPLY_ATTR(comp_clamp_level),
+	POWER_SUPPLY_ATTR(adapter_cc_mode),
+	POWER_SUPPLY_ATTR(skin_health),
 	/* Charge pump properties */
 	POWER_SUPPLY_ATTR(cp_status1),
 	POWER_SUPPLY_ATTR(cp_status2),
@@ -469,11 +477,14 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(jeita_step_fcc),
 	POWER_SUPPLY_ATTR(jeita_step_fv),
 	POWER_SUPPLY_ATTR(jeita_condition),
+	POWER_SUPPLY_ATTR(profile_fv_rb_en),
 	POWER_SUPPLY_ATTR(chg_pwr_fcc),
 	POWER_SUPPLY_ATTR(chg_pwr_icl),
 	POWER_SUPPLY_ATTR(chg_pwr_indication_control),
 	POWER_SUPPLY_ATTR(cc_reconnection_running),
 	POWER_SUPPLY_ATTR(pd_5v_limit_wa),
+	POWER_SUPPLY_ATTR(real_nom_cap),
+	POWER_SUPPLY_ATTR(battery_raw_soc),
 #endif /* CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION */
 	POWER_SUPPLY_ATTR(parallel_output_mode),
 	/* Local extensions of type int64_t */
@@ -566,14 +577,10 @@ int power_supply_uevent(struct device *dev, struct kobj_uevent_env *env)
 	char *prop_buf;
 	char *attrname;
 
-	dev_dbg(dev, "uevent\n");
-
 	if (!psy || !psy->desc) {
 		dev_dbg(dev, "No power supply yet\n");
 		return ret;
 	}
-
-	dev_dbg(dev, "POWER_SUPPLY_NAME=%s\n", psy->desc->name);
 
 	ret = add_uevent_var(env, "POWER_SUPPLY_NAME=%s", psy->desc->name);
 	if (ret)
@@ -609,8 +616,6 @@ int power_supply_uevent(struct device *dev, struct kobj_uevent_env *env)
 			ret = -ENOMEM;
 			goto out;
 		}
-
-		dev_dbg(dev, "prop %s=%s\n", attrname, prop_buf);
 
 		ret = add_uevent_var(env, "POWER_SUPPLY_%s=%s", attrname, prop_buf);
 		kfree(attrname);

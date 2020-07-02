@@ -46,19 +46,17 @@
 #include <linux/mutex.h>
 #include <linux/of.h>
 #include <linux/of_gpio.h>
-#include <linux/uaccess.h>
-#include <linux/pm_wakeup.h>
-#include <linux/regulator/consumer.h>
 #include <linux/platform_device.h>
+#include <linux/pm_wakeup.h>
 #include <linux/poll.h>
+#include <linux/regulator/consumer.h>
+#include <linux/uaccess.h>
 
-#define PWR_ON_STEP_SLEEP 100
-#define PWR_ON_STEP_RANGE1 100
-#define PWR_ON_STEP_RANGE2 900
 
-#define ET51X_RESET_LOW_US 1000
-#define ET51X_RESET_HIGH1_US 100
-
+#define ET51X_VDDANA_ON_US 10000
+#define ET51X_RESET_LOW_US 30000
+#define ET51X_RESET_HIGH1_US 1000
+#define ET51X_RESET_ACTIVE_US 20000
 #define ET51X_IRQPOLL_TIMEOUT_MS 500
 #define ET51X_MAX_HAL_PROCESSING_TIME 400
 
@@ -95,8 +93,11 @@ struct et51x_data {
 	bool irq_fired;
 	wait_queue_head_t irq_evt;
 
+	struct mutex intrpoll_lock;
 	struct mutex lock;
 	bool prepared;
+	bool check_sensor_type;
+	bool low_voltage_probe;
 };
 
 struct et51x_awake_args {
@@ -111,9 +112,40 @@ struct et51x_data *to_et51x_data(struct file *fp)
 	return container_of(md, struct et51x_data, misc);
 }
 
+static int et51x_vreg_set_voltage(struct device *dev, struct regulator *vreg,
+		int voltage)
+{
+	int rc = 0;
+
+	if (!dev || !vreg)
+		return -EINVAL;
+
+	dev_dbg(dev, "Setting regulator %s to %d volts\n",
+			ET51X_REGULATOR_VDD_ANA,
+			voltage);
+
+	if (regulator_count_voltages(vreg) > 0) {
+		rc = regulator_set_voltage(vreg, voltage, voltage);
+		if (rc)
+			dev_err(dev, "Unable to set voltage to %d: %d\n",
+					voltage, rc);
+	} else {
+		dev_warn(dev, "No voltages available");
+	}
+
+	if (!regulator_is_enabled(vreg)) {
+		rc = regulator_enable(vreg);
+		if (rc)
+			dev_err(dev, "Unable to enable: %d\n", rc);
+                usleep_range(ET51X_VDDANA_ON_US, ET51X_VDDANA_ON_US + 1000);
+	}
+
+	return rc;
+}
+
 static int vreg_setup(struct et51x_data *et51x, bool enable)
 {
-	int rc;
+	int rc = 0;
 	struct regulator *vreg = et51x->vdd_ana;
 	struct device *dev = et51x->dev;
 
@@ -121,28 +153,15 @@ static int vreg_setup(struct et51x_data *et51x, bool enable)
 		return -EINVAL;
 
 	dev_dbg(dev, "%s regulator %s\n", enable ? "enabling" : "disabling",
-		ET51X_REGULATOR_VDD_ANA);
+			ET51X_REGULATOR_VDD_ANA);
 
 	if (enable) {
-		if (regulator_count_voltages(vreg) > 0) {
-			rc = regulator_set_voltage(vreg, 1800000UL, 1800000UL);
-			if (rc) {
-				dev_err(dev, "Unable to set voltage: %d\n", rc);
-				return rc;
-			}
-		} else {
-			dev_warn(dev, "No voltages available");
-		}
-
-		rc = regulator_enable(vreg);
-		if (rc)
-			dev_err(dev, "Unable to enable: %d\n", rc);
+		rc = et51x_vreg_set_voltage(dev, vreg, 3300000);
 	} else {
 		if (regulator_is_enabled(vreg)) {
 			regulator_disable(vreg);
 			dev_dbg(dev, "disabled %s\n", ET51X_REGULATOR_VDD_ANA);
 		}
-		rc = 0;
 	}
 
 	return rc;
@@ -197,17 +216,17 @@ static int hw_reset(struct et51x_data *et51x)
 	int rc = select_pin_ctl(et51x, "et51x_reset_active");
 	if (rc)
 		goto exit;
-	usleep_range(ET51X_RESET_HIGH1_US, ET51X_RESET_HIGH1_US + 100);
+	usleep_range(ET51X_RESET_HIGH1_US, ET51X_RESET_HIGH1_US + 1000);
 
 	rc = select_pin_ctl(et51x, "et51x_reset_reset");
 	if (rc)
 		goto exit;
-	usleep_range(ET51X_RESET_LOW_US, ET51X_RESET_LOW_US + 100);
+	usleep_range(ET51X_RESET_LOW_US, ET51X_RESET_LOW_US + 1000);
 
 	rc = select_pin_ctl(et51x, "et51x_reset_active");
 	if (rc)
 		goto exit;
-	usleep_range(ET51X_RESET_HIGH1_US, ET51X_RESET_HIGH1_US + 100);
+	usleep_range(ET51X_RESET_ACTIVE_US, ET51X_RESET_ACTIVE_US + 1000);
 
 	irq_gpio = et51x_get_gpio_triggered(et51x);
 	dev_dbg(dev, "IRQ after reset %d\n", irq_gpio);
@@ -249,6 +268,20 @@ static int et51x_device_release(struct inode *inode, struct file *fp)
 	struct et51x_data *et51x = to_et51x_data(fp);
 	pm_relax(et51x->dev);
 	return 0;
+}
+
+static inline void et51x_enable_irq_if_disabled(struct et51x_data *et51x)
+{
+	mutex_lock(&et51x->intrpoll_lock);
+
+	/* Enable the irq if not enabled: */
+	if (et51x->irq_fired) {
+		et51x->irq_fired = false;
+		dev_dbg(et51x->dev, "%s: enabling irq\n", __func__);
+		enable_irq(et51x->irq);
+	}
+
+	mutex_unlock(&et51x->intrpoll_lock);
 }
 
 static long et51x_device_ioctl(struct file *fp, unsigned int cmd,
@@ -309,10 +342,7 @@ static long et51x_device_ioctl(struct file *fp, unsigned int cmd,
 			return rc;
 		}
 
-		if (et51x->irq_fired) {
-			et51x->irq_fired = false;
-			enable_irq(et51x->irq);
-		}
+		et51x_enable_irq_if_disabled(et51x);
 
 		rc = wait_event_interruptible_timeout(
 			et51x->irq_evt, et51x->irq_fired,
@@ -327,11 +357,12 @@ static long et51x_device_ioctl(struct file *fp, unsigned int cmd,
 
 		rc = put_user(val, (int *)usr);
 		break;
-#ifdef CONFIG_ARCH_SONY_NILE
 	case ET51X_IOCRHWTYPE:
-		rc = put_user((int)FP_HW_TYPE_EGISTEC, (int *)usr);
+		if (et51x->check_sensor_type)
+			rc = put_user((int)FP_HW_TYPE_EGISTEC, (int *)usr);
+		else
+			rc = -ENOSYS;
 		break;
-#endif
 	default:
 		rc = -ENOIOCTLCMD;
 		dev_err(et51x->dev, "Unknown IOCTL 0x%x.\n", cmd);
@@ -348,26 +379,12 @@ static unsigned int et51x_poll_interrupt(struct file *fp,
 	struct et51x_data *et51x = to_et51x_data(fp);
 	struct device *dev = et51x->dev;
 
-	val = et51x_get_gpio_triggered(et51x);
-	if (val) {
-		/* Early out */
-		dev_dbg(dev, "gpio already triggered\n");
-		pm_wakeup_event(dev, ET51X_MAX_HAL_PROCESSING_TIME);
-		return POLLIN | POLLRDNORM;
-	}
-
-	/* Add current file to the waiting list  */
+	/* Add current file to the waiting list */
 	poll_wait(fp, &et51x->irq_evt, wait);
 
-	/* Enable the irq */
-	if (et51x->irq_fired) {
-		et51x->irq_fired = false;
-		enable_irq(et51x->irq);
-	}
-
 	val = et51x_get_gpio_triggered(et51x);
 	if (val) {
-		dev_dbg(dev, "gpio triggered after poll_wait\n");
+		dev_dbg(dev, "gpio triggered\n");
 		pm_wakeup_event(dev, ET51X_MAX_HAL_PROCESSING_TIME);
 		return POLLIN | POLLRDNORM;
 	}
@@ -377,7 +394,7 @@ static unsigned int et51x_poll_interrupt(struct file *fp,
 	 * The wakelock can be relaxed preemptively, as no processing has to
 	 * be done until the next wake-enabled IRQ fires.
 	 */
-
+	et51x_enable_irq_if_disabled(et51x);
 	pm_relax(dev);
 
 	return 0;
@@ -420,15 +437,18 @@ static irqreturn_t et51x_irq_handler(int irq, void *handle)
 {
 	struct et51x_data *et51x = handle;
 
-	int val = et51x_get_gpio_triggered(et51x);
+	mutex_lock(&et51x->intrpoll_lock);
 
-	dev_dbg(et51x->dev, "%s: gpio=%d\n", __func__, val);
+	dev_dbg(et51x->dev, "%s: gpio=%d\n", __func__,
+			et51x_get_gpio_triggered(et51x));
 
 	et51x->irq_fired = true;
 
+	disable_irq_nosync(et51x->irq);
 	pm_wakeup_event(et51x->dev, ET51X_MAX_HAL_PROCESSING_TIME);
 	wake_up_interruptible(&et51x->irq_evt);
-	disable_irq_nosync(et51x->irq);
+
+	mutex_unlock(&et51x->intrpoll_lock);
 
 	return IRQ_HANDLED;
 }
@@ -461,9 +481,7 @@ static int et51x_probe(struct platform_device *pdev)
 	size_t i;
 	int irqf;
 	struct device_node *np = dev->of_node;
-#ifdef CONFIG_ARCH_SONY_NILE
-	int hw_type;
-#endif
+	int hw_type = 0;
 
 	struct et51x_data *et51x =
 		devm_kzalloc(dev, sizeof(*et51x), GFP_KERNEL);
@@ -490,28 +508,54 @@ static int et51x_probe(struct platform_device *pdev)
 
 	et51x->vdd_ana = devm_regulator_get(dev, ET51X_REGULATOR_VDD_ANA);
 	if (IS_ERR_OR_NULL(et51x->vdd_ana)) {
+		dev_err(dev, "CRITICAL: Cannot get %s regulator: %ld\n",
+			ET51X_REGULATOR_VDD_ANA, PTR_ERR(et51x->vdd_ana));
+		if (IS_ERR(et51x->vdd_ana))
+			rc = PTR_ERR(et51x->vdd_ana);
+		else
+			rc = -EINVAL;
 		et51x->vdd_ana = NULL;
-		dev_err(dev, "CRITICAL: Cannot get %s regulator.\n",
-			ET51X_REGULATOR_VDD_ANA);
-		rc = -EINVAL;
 		goto exit;
 	}
 
-	rc = vreg_setup(et51x, true);
+	et51x->check_sensor_type = of_property_read_bool(dev->of_node,
+			"et51x,check-sensor-type");
+	/* Use low-voltage probe by default to prevent HW damage */
+	et51x->low_voltage_probe = !of_property_read_bool(dev->of_node,
+			"et51x,no-low-voltage-probe");
+
+	dev_dbg(dev, "check_sensor_type: %d, low_voltage_probe: %d\n",
+			et51x->check_sensor_type, et51x->low_voltage_probe);
+
+	if (et51x->low_voltage_probe)
+		/* Start at 1.8v which is the voltage used for FPC,
+		 * to err on the side of caution:
+		 */
+		rc = et51x_vreg_set_voltage(et51x->dev, et51x->vdd_ana,
+				1800000);
+	else
+		rc = vreg_setup(et51x, true);
+
 	if (rc)
-		goto exit;
-
-#ifdef CONFIG_ARCH_SONY_NILE
-	hw_type = cei_fp_module_detect();
-
-	if (hw_type != FP_HW_TYPE_EGISTEC) {
-		dev_info(dev, "Egistec sensor not found, bailing out\n");
-		rc = -ENODEV;
 		goto exit_powerdown;
-	} else {
+
+	if (et51x->check_sensor_type) {
+		hw_type = cei_fp_module_detect();
+
+		if (hw_type != FP_HW_TYPE_EGISTEC) {
+			dev_info(dev,
+				"Egistec sensor not found, bailing out\n");
+			rc = -ENODEV;
+			goto exit_powerdown;
+		}
+
 		dev_info(dev, "Detected Egistec sensor\n");
+
+		/* Scale up to 3.3v */
+		rc = vreg_setup(et51x, true);
+		if (rc)
+			goto exit_powerdown;
 	}
-#endif
 
 	rc = et51x_request_named_gpio(et51x, "et51x,gpio_irq",
 				      &et51x->irq_gpio);
@@ -553,6 +597,7 @@ static int et51x_probe(struct platform_device *pdev)
 
 	irqf = IRQF_TRIGGER_LOW | IRQF_ONESHOT;
 	mutex_init(&et51x->lock);
+	mutex_init(&et51x->intrpoll_lock);
 
 	device_init_wakeup(dev, true);
 	init_waitqueue_head(&et51x->irq_evt);

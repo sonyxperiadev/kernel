@@ -134,12 +134,6 @@ unsigned int blk_mq_get_tag(struct blk_mq_alloc_data *data)
 	ws = bt_wait_ptr(bt, data->hctx);
 	drop_ctx = data->ctx == NULL;
 	do {
-		prepare_to_wait(&ws->wait, &wait, TASK_UNINTERRUPTIBLE);
-
-		tag = __blk_mq_get_tag(data, bt);
-		if (tag != -1)
-			break;
-
 		/*
 		 * We're out of tags on this hardware queue, kick any
 		 * pending IO submits before going to sleep waiting for
@@ -151,6 +145,13 @@ unsigned int blk_mq_get_tag(struct blk_mq_alloc_data *data)
 		 * Retry tag allocation after running the hardware queue,
 		 * as running the queue may also have found completions.
 		 */
+		tag = __blk_mq_get_tag(data, bt);
+		if (tag != -1)
+			break;
+
+		prepare_to_wait_exclusive(&ws->wait, &wait,
+						TASK_UNINTERRUPTIBLE);
+
 		tag = __blk_mq_get_tag(data, bt);
 		if (tag != -1)
 			break;
@@ -334,6 +335,13 @@ void blk_mq_queue_tag_busy_iter(struct request_queue *q, busy_iter_fn *fn,
 	struct blk_mq_hw_ctx *hctx;
 	int i;
 
+	/*
+	 * __blk_mq_update_nr_hw_queues will update the nr_hw_queues and
+	 * queue_hw_ctx after freeze the queue, so we use q_usage_counter
+	 * to avoid race with it.
+	 */
+	if (!percpu_ref_tryget(&q->q_usage_counter))
+		return;
 
 	queue_for_each_hw_ctx(q, hctx, i) {
 		struct blk_mq_tags *tags = hctx->tags;
@@ -349,7 +357,7 @@ void blk_mq_queue_tag_busy_iter(struct request_queue *q, busy_iter_fn *fn,
 			bt_for_each(hctx, &tags->breserved_tags, fn, priv, true);
 		bt_for_each(hctx, &tags->bitmap_tags, fn, priv, false);
 	}
-
+	blk_queue_exit(q);
 }
 
 static int bt_alloc(struct sbitmap_queue *bt, unsigned int depth,

@@ -14,7 +14,7 @@
 
 &soc {
 	/* QUPv3 South instances */
-	qupv3_0: qcom,qupv3_0_geni_se@0x8c0000 {
+	qupv3_0: qcom,qupv3_0_geni_se@8c0000 {
 		compatible = "qcom,qupv3-geni-se";
 		reg = <0x8c0000 0x2000>;
 		qcom,bus-mas-id = <MSM_BUS_MASTER_QUP_0>;
@@ -28,7 +28,7 @@
 	};
 
 	/* I2C */
-	qupv3_se0_i2c: i2c@0x880000 {
+	qupv3_se0_i2c: i2c@880000 {
 		compatible = "qcom,i2c-geni";
 		reg = <0x880000 0x4000>;
 		interrupts = <GIC_SPI 601 0>;
@@ -48,7 +48,7 @@
 		status = "disabled";
 	};
 
-	qupv3_se1_i2c: i2c@0x884000 {
+	qupv3_se1_i2c: i2c@884000 {
 		compatible = "qcom,i2c-geni";
 		reg = <0x884000 0x4000>;
 		interrupts = <GIC_SPI 602 0>;
@@ -68,7 +68,7 @@
 		status = "disabled";
 	};
 
-	qupv3_se2_i2c: i2c@0x888000 {
+	qupv3_se2_i2c: i2c@888000 {
 		compatible = "qcom,i2c-geni";
 		reg = <0x888000 0x4000>;
 		interrupts = <GIC_SPI 603 0>;
@@ -88,7 +88,7 @@
 		status = "disabled";
 	};
 
-	qupv3_se3_i2c: i2c@0x88c000 {
+	qupv3_se3_i2c: i2c@88c000 {
 		compatible = "qcom,i2c-geni";
 		reg = <0x88c000 0x4000>;
 		interrupts = <GIC_SPI 604 0>;
@@ -108,7 +108,7 @@
 		status = "disabled";
 	};
 
-	qupv3_se4_i2c: i2c@0x890000 {
+	qupv3_se4_i2c: i2c@890000 {
 		compatible = "qcom,i2c-geni";
 		reg = <0x890000 0x4000>;
 		interrupts = <GIC_SPI 605 0>;
@@ -129,7 +129,7 @@
 	};
 
 	/*HS UART*/
-	qupv3_se3_4uart: qcom,qup_uart@0x88c000 {
+	qupv3_se3_4uart: qcom,qup_uart@88c000 {
 		compatible = "qcom,msm-geni-serial-hs";
 		reg = <0x88c000 0x4000>;
 		reg-names = "se_phys";
@@ -149,7 +149,7 @@
 		qcom,wrapper-core = <&qupv3_0>;
 	};
 
-	qupv3_se4_4uart: qcom,qup_uart@0x890000 {
+	qupv3_se4_4uart: qcom,qup_uart@890000 {
 		compatible = "qcom,msm-geni-serial-hs";
 		reg = <0x890000 0x4000>;
 		reg-names = "se_phys";
@@ -170,7 +170,7 @@
 	};
 
 	/* SPI */
-	qupv3_se0_spi: spi@0x880000 {
+	qupv3_se0_spi: spi@880000 {
 		compatible = "qcom,spi-geni";
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -192,7 +192,7 @@
 		status = "disabled";
 	};
 
-	qupv3_se1_spi: spi@0x884000 {
+	qupv3_se1_spi: spi@884000 {
 		compatible = "qcom,spi-geni";
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -214,7 +214,7 @@
 		status = "disabled";
 	};
 
-	qupv3_se3_spi: spi@0x88c000 {
+	qupv3_se3_spi: spi@88c000 {
 		compatible = "qcom,spi-geni";
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -236,7 +236,7 @@
 		status = "disabled";
 	};
 
-	qupv3_se4_spi: spi@0x890000 {
+	qupv3_se4_spi: spi@890000 {
 		compatible = "qcom,spi-geni";
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -260,7 +260,7 @@
 
 
 	/* QUPv3 North Instances */
-	qupv3_1: qcom,qupv3_1_geni_se@0xac0000 {
+	qupv3_1: qcom,qupv3_1_geni_se@ac0000 {
 		compatible = "qcom,qupv3-geni-se";
 		reg = <0xac0000 0x2000>;
 		qcom,bus-mas-id = <MSM_BUS_MASTER_QUP_1>;
@@ -274,7 +274,7 @@
 	};
 
 	/* Debug UART Instance for CDP/MTP/RUMI platform */
-	qupv3_se8_2uart: qcom,qup_uart@0xa88000 {
+	qupv3_se8_2uart: qcom,qup_uart@a88000 {
 		compatible = "qcom,msm-geni-console";
 		reg = <0xa88000 0x4000>;
 		reg-names = "se_phys";
@@ -291,7 +291,7 @@
 	};
 
 	/* I2C */
-	qupv3_se6_i2c: i2c@0xa80000 {
+	qupv3_se6_i2c: i2c@a80000 {
 		compatible = "qcom,i2c-geni";
 		reg = <0xa80000 0x4000>;
 		interrupts = <GIC_SPI 353 0>;
@@ -311,7 +311,7 @@
 		status = "disabled";
 	};
 
-	qupv3_se7_i2c: i2c@0xa84000 {
+	qupv3_se7_i2c: i2c@a84000 {
 		compatible = "qcom,i2c-geni";
 		reg = <0xa84000 0x4000>;
 		interrupts = <GIC_SPI 354 0>;
@@ -331,7 +331,7 @@
 		status = "disabled";
 	};
 
-	qupv3_se8_i2c: i2c@0xa88000 {
+	qupv3_se8_i2c: i2c@a88000 {
 		compatible = "qcom,i2c-geni";
 		reg = <0xa88000 0x4000>;
 		interrupts = <GIC_SPI 355 0>;
@@ -351,7 +351,7 @@
 		status = "disabled";
 	};
 
-	qupv3_se9_i2c: i2c@0xa8c000 {
+	qupv3_se9_i2c: i2c@a8c000 {
 		compatible = "qcom,i2c-geni";
 		reg = <0xa8c000 0x4000>;
 		interrupts = <GIC_SPI 356 0>;
@@ -371,7 +371,7 @@
 		status = "disabled";
 	};
 
-	qupv3_se10_i2c: i2c@0xa90000 {
+	qupv3_se10_i2c: i2c@a90000 {
 		compatible = "qcom,i2c-geni";
 		reg = <0xa90000 0x4000>;
 		interrupts = <GIC_SPI 357 0>;
@@ -391,7 +391,7 @@
 		status = "disabled";
 	};
 
-	qupv3_se11_i2c: i2c@0xa94000 {
+	qupv3_se11_i2c: i2c@a94000 {
 		compatible = "qcom,i2c-geni";
 		reg = <0xa94000 0x4000>;
 		interrupts = <GIC_SPI 358 0>;
@@ -412,7 +412,7 @@
 	};
 
 	/*HS UART*/
-	qupv3_se10_4uart: qcom,qup_uart@0xa90000 {
+	qupv3_se10_4uart: qcom,qup_uart@a90000 {
 		compatible = "qcom,msm-geni-serial-hs";
 		reg = <0xa90000 0x4000>;
 		reg-names = "se_phys";
@@ -432,7 +432,7 @@
 		qcom,wrapper-core = <&qupv3_1>;
 	};
 
-	qupv3_se11_4uart: qcom,qup_uart@0xa94000 {
+	qupv3_se11_4uart: qcom,qup_uart@a94000 {
 		compatible = "qcom,msm-geni-serial-hs";
 		reg = <0xa94000 0x4000>;
 		reg-names = "se_phys";
@@ -453,7 +453,7 @@
 	};
 
 	/* SPI */
-	qupv3_se6_spi: spi@0xa80000 {
+	qupv3_se6_spi: spi@a80000 {
 		compatible = "qcom,spi-geni";
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -475,7 +475,7 @@
 		status = "disabled";
 	};
 
-	qupv3_se7_spi: spi@0xa84000 {
+	qupv3_se7_spi: spi@a84000 {
 		compatible = "qcom,spi-geni";
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -497,7 +497,7 @@
 		status = "disabled";
 	};
 
-	qupv3_se8_spi: spi@0xa88000 {
+	qupv3_se8_spi: spi@a88000 {
 		compatible = "qcom,spi-geni";
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -519,7 +519,7 @@
 		status = "disabled";
 	};
 
-	qupv3_se10_spi: spi@0xa90000 {
+	qupv3_se10_spi: spi@a90000 {
 		compatible = "qcom,spi-geni";
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -541,7 +541,7 @@
 		status = "disabled";
 	};
 
-	qupv3_se11_spi: spi@0xa94000 {
+	qupv3_se11_spi: spi@a94000 {
 		compatible = "qcom,spi-geni";
 		#address-cells = <1>;
 		#size-cells = <0>;

@@ -4,3 +4,6 @@
 [submodule "techpack/data-kernel"]
 	path = techpack/data-kernel
 	url = https://github.com/sonyxperiadev/kernel-techpack-data-kernel.git
+[submodule "drivers/staging/wlan-qc/fw-api"]
+	path = drivers/staging/wlan-qc/fw-api
+	url = https://github.com/sonyxperiadev/vendor-qcom-opensource-wlan-fw-api.git

@@ -34,6 +34,8 @@
 #include "step-chg-jeita.h"
 #include "storm-watch.h"
 
+#define NUM_MAX_CLIENTS 32
+
 #define smblib_err(chg, fmt, ...)		\
 	pr_err("%s: %s: " fmt, chg->name,	\
 		__func__, ##__VA_ARGS__)	\
@@ -242,6 +244,24 @@ enum {
 	MAX_TYPES
 };
 
+/*
+ * kholk 04/06/20: disable QC2/3.0 for disconnection issue.
+ *                 at this point, we allow only USB PD 9V.
+ */
+#define QPNP_SMBFG_DISABLE_HVDCP
+
+#ifdef QPNP_SMBFG_DISABLE_HVDCP
+ #define QPNP_SMBFG_HVDCP2_BIT	DCP_CHARGER_BIT
+ #define QPNP_SMBFG_HVDCP2_TYPE	POWER_SUPPLY_TYPE_USB_DCP
+ #define QPNP_SMBFG_HVDCP3_BIT	DCP_CHARGER_BIT
+ #define QPNP_SMBFG_HVDCP3_TYPE	POWER_SUPPLY_TYPE_USB_DCP
+#else
+ #define QPNP_SMBFG_HVDCP2_BIT	(DCP_CHARGER_BIT | QC_2P0_BIT)
+ #define QPNP_SMBFG_HVDCP2_TYPE POWER_SUPPLY_TYPE_USB_HVDCP
+ #define QPNP_SMBFG_HVDCP3_BIT	(DCP_CHARGER_BIT | QC_3P0_BIT)
+ #define QPNP_SMBFG_HVDCP3_TYPE	POWER_SUPPLY_TYPE_USB_HVDCP_3
+#endif
+
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
 static const struct apsd_result smblib_apsd_results[] = {
 	[UNKNOWN] = {
@@ -276,13 +296,13 @@ static const struct apsd_result smblib_apsd_results[] = {
 	},
 	[HVDCP2] = {
 		.name	= "USB_HVDCP_CHARGER",
-		.bit	= DCP_CHARGER_BIT | QC_2P0_BIT,
-		.pst	= POWER_SUPPLY_TYPE_USB_HVDCP
+		.bit	= QPNP_SMBFG_HVDCP2_BIT,
+		.pst	= QPNP_SMBFG_HVDCP2_TYPE,
 	},
 	[HVDCP3] = {
 		.name	= "USB_HVDCP_3_CHARGER",
-		.bit	= DCP_CHARGER_BIT | QC_3P0_BIT,
-		.pst	= POWER_SUPPLY_TYPE_USB_HVDCP_3,
+		.bit	= QPNP_SMBFG_HVDCP3_BIT,
+		.pst	= QPNP_SMBFG_HVDCP3_TYPE,
 	},
 };
 #else
@@ -562,7 +582,7 @@ static int smblib_set_adapter_allowance(struct smb_charger *chg,
 	int rc = 0;
 
 	/* PM660 only support max. 9V */
-	if (chg->smb_version == PM660_SUBTYPE) {
+	if (chg->chg_param.smb_version == PM660_SUBTYPE) {
 		switch (allowed_voltage) {
 		case USBIN_ADAPTER_ALLOW_12V:
 		case USBIN_ADAPTER_ALLOW_9V_TO_12V:
@@ -935,7 +955,7 @@ static int smblib_get_hw_pulse_cnt(struct smb_charger *chg, int *count)
 	int rc;
 	u8 val[2];
 
-	switch (chg->smb_version) {
+	switch (chg->chg_param.smb_version) {
 	case PMI8998_SUBTYPE:
 		rc = smblib_read(chg, QC_PULSE_COUNT_STATUS_REG, val);
 		if (rc) {
@@ -957,7 +977,7 @@ static int smblib_get_hw_pulse_cnt(struct smb_charger *chg, int *count)
 		break;
 	default:
 		smblib_dbg(chg, PR_PARALLEL, "unknown SMB chip %d\n",
-				chg->smb_version);
+				chg->chg_param.smb_version);
 		return -EINVAL;
 	}
 
@@ -3406,9 +3426,37 @@ int smblib_get_prop_usb_voltage_max(struct smb_charger *chg,
 {
 	switch (chg->real_charger_type) {
 	case POWER_SUPPLY_TYPE_USB_HVDCP:
+	case POWER_SUPPLY_TYPE_USB_HVDCP_3:
+#ifndef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+		if (chg->chg_param.smb_version == PM660_SUBTYPE)
+			val->intval = MICRO_9V;
+		else
+			val->intval = MICRO_12V;
+#endif
+#ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
+		val->intval = MICRO_9V;
+#endif
+		break;
+	case POWER_SUPPLY_TYPE_USB_PD:
+		val->intval = chg->voltage_max_uv;
+		break;
+	default:
+		val->intval = MICRO_5V;
+		break;
+	}
+
+	return 0;
+}
+
+int smblib_get_prop_usb_voltage_max_design(struct smb_charger *chg,
+					union power_supply_propval *val)
+{
+	switch (chg->real_charger_type) {
+	case POWER_SUPPLY_TYPE_USB_HVDCP:
+	case POWER_SUPPLY_TYPE_USB_HVDCP_3:
 	case POWER_SUPPLY_TYPE_USB_PD:
 #ifndef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
-		if (chg->smb_version == PM660_SUBTYPE)
+		if (chg->chg_param.smb_version == PM660_SUBTYPE)
 			val->intval = MICRO_9V;
 		else
 			val->intval = MICRO_12V;
@@ -3983,7 +4031,7 @@ int smblib_set_prop_pd_voltage_max(struct smb_charger *chg,
 static int __smblib_set_prop_pd_active(struct smb_charger *chg, bool pd_active)
 {
 	int rc;
-	bool orientation, sink_attached, hvdcp;
+	bool orientation, sink_attached, hvdcp = false;
 	u8 stat;
 
 	chg->pd_active = pd_active;
@@ -4047,7 +4095,9 @@ static int __smblib_set_prop_pd_active(struct smb_charger *chg, bool pd_active)
 			return rc;
 		}
 
+#ifndef QPNP_SMBFG_DISABLE_HVDCP
 		hvdcp = stat & QC_CHARGER_BIT;
+#endif
 		vote(chg->apsd_disable_votable, PD_VOTER, false, 0);
 		vote(chg->pd_allowed_votable, PD_VOTER, true, 0);
 		vote(chg->usb_irq_enable_votable, PD_VOTER, false, 0);
@@ -7363,7 +7413,7 @@ int smblib_init(struct smb_charger *chg)
 
 	switch (chg->mode) {
 	case PARALLEL_MASTER:
-		rc = qcom_batt_init(chg->smb_version);
+		rc = qcom_batt_init(&chg->chg_param);
 		if (rc < 0) {
 			smblib_err(chg, "Couldn't init qcom_batt_init rc=%d\n",
 				rc);

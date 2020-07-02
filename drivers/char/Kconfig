@@ -380,7 +380,7 @@ config XILINX_HWICAP
 
 config R3964
 	tristate "Siemens R3964 line discipline"
-	depends on TTY
+	depends on TTY && BROKEN
 	---help---
 	  This driver allows synchronous communication with devices using the
 	  Siemens R3964 packet protocol. Unless you are dealing with special
@@ -574,6 +574,16 @@ config DEVPORT
 	  device is similar to /dev/mem, but for I/O ports.
 
 source "drivers/s390/char/Kconfig"
+
+config MSM_SMD_PKT
+	bool "Enable device interface for some SMD packet ports"
+	default n
+	depends on RPMSG_QCOM_SMD
+	help
+	 smd_pkt driver provides the interface for the userspace clients
+	 to communicate over smd via device nodes. This enable the
+	 usersapce clients to read and write to some smd packets channel
+	 for MSM chipset.
 
 config TILE_SROM
 	tristate "Character-device access via hypervisor to the Tilera SPI ROM"

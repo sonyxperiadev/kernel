@@ -378,6 +378,7 @@ config SENSORS_APDS990X
 
 config SIM_DETECT
 	tristate "SIM_DETECT driver support"
+	select SWITCH
 	default n
 	help
 	  Say Y here
@@ -580,25 +581,6 @@ config QPNP_MISC
 	  and the driver provides an API to check if this interrupt
 	  is available on the current PMIC chip.
 
-config NFC_PN547
-	bool "NXP PN547 NFC Controller Driver"
-	depends on I2C
-	default n
-	help
-	  NXP PN547 Near Field Communication controller support.
-	  This option enables device driver support for the NFC.
-	  It is used by many services. NFC is fully controlled using I2C
-	  to communicate the AP chip.
-
-config NFC_PN547_PMC_CLK_REQ
-	bool "NXP PN547 NFC Controller Driver"
-	depends on I2C
-	default n
-	help
-	  PM8941 Clock request for NXP PN547 Near Field
-	  Communication controller support.
-	  This option enables d1 clock for NFC.
-
 config SENSORS_TCS3490
         tristate "AMS TCS3490 Sensor Driver"
         depends on I2C
@@ -611,6 +593,8 @@ config SENSORS_TCS3490
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"
+source "drivers/misc/pn547/Kconfig"
+source "drivers/misc/pn553/Kconfig"
 source "drivers/misc/ti-st/Kconfig"
 source "drivers/misc/lis3lv02d/Kconfig"
 source "drivers/misc/altera-stapl/Kconfig"

@@ -185,7 +185,7 @@ int diag_md_write(int id, unsigned char *buf, int len, int ctx)
 {
 	int i, peripheral, pid = 0;
 	uint8_t found = 0;
-	unsigned long flags;
+	unsigned long flags = 0, flags_sec = 0;
 	struct diag_md_info *ch = NULL;
 	struct diag_md_session_t *session_info = NULL;
 
@@ -217,6 +217,16 @@ int diag_md_write(int id, unsigned char *buf, int len, int ctx)
 	}
 
 	spin_lock_irqsave(&ch->lock, flags);
+	if (peripheral == APPS_DATA) {
+		spin_lock_irqsave(&driver->diagmem_lock, flags_sec);
+		if (!hdlc_data.allocated && !non_hdlc_data.allocated) {
+			spin_unlock_irqrestore(&driver->diagmem_lock,
+				flags_sec);
+			spin_unlock_irqrestore(&ch->lock, flags);
+			mutex_unlock(&driver->md_session_lock);
+			return -EINVAL;
+		}
+	}
 	for (i = 0; i < ch->num_tbl_entries && !found; i++) {
 		if (ch->tbl[i].buf != buf)
 			continue;
@@ -228,14 +238,16 @@ int diag_md_write(int id, unsigned char *buf, int len, int ctx)
 		ch->tbl[i].len = 0;
 		ch->tbl[i].ctx = 0;
 	}
-	spin_unlock_irqrestore(&ch->lock, flags);
 
 	if (found) {
+		if (peripheral == APPS_DATA)
+			spin_unlock_irqrestore(&driver->diagmem_lock,
+				flags_sec);
+		spin_unlock_irqrestore(&ch->lock, flags);
 		mutex_unlock(&driver->md_session_lock);
 		return -ENOMEM;
 	}
 
-	spin_lock_irqsave(&ch->lock, flags);
 	for (i = 0; i < ch->num_tbl_entries && !found; i++) {
 		if (ch->tbl[i].len == 0) {
 			ch->tbl[i].buf = buf;
@@ -245,6 +257,8 @@ int diag_md_write(int id, unsigned char *buf, int len, int ctx)
 			diag_ws_on_read(DIAG_WS_MUX, len);
 		}
 	}
+	if (peripheral == APPS_DATA)
+		spin_unlock_irqrestore(&driver->diagmem_lock, flags_sec);
 	spin_unlock_irqrestore(&ch->lock, flags);
 	mutex_unlock(&driver->md_session_lock);
 

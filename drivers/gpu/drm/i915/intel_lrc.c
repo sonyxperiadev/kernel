@@ -343,8 +343,13 @@ static u64 execlists_update_context(struct drm_i915_gem_request *rq)
 	 * may not be visible to the HW prior to the completion of the UC
 	 * register write and that we may begin execution from the context
 	 * before its image is complete leading to invalid PD chasing.
+	 *
+	 * Furthermore, Braswell, at least, wants a full mb to be sure that
+	 * the writes are coherent in memory (visible to the GPU) prior to
+	 * execution, and not just visible to other CPUs (as is the result of
+	 * wmb).
 	 */
-	wmb();
+	mb();
 	return ce->lrc_desc;
 }
 
@@ -1096,17 +1101,14 @@ static u32 *gen9_init_indirectctx_bb(struct intel_engine_cs *engine, u32 *batch)
 
 	*batch++ = MI_NOOP;
 
-	/* WaClearSlmSpaceAtContextSwitch:kbl */
-	/* Actual scratch location is at 128 bytes offset */
-	if (IS_KBL_REVID(engine->i915, 0, KBL_REVID_A0)) {
-		batch = gen8_emit_pipe_control(batch,
-					       PIPE_CONTROL_FLUSH_L3 |
-					       PIPE_CONTROL_GLOBAL_GTT_IVB |
-					       PIPE_CONTROL_CS_STALL |
-					       PIPE_CONTROL_QW_WRITE,
-					       i915_ggtt_offset(engine->scratch)
-					       + 2 * CACHELINE_BYTES);
-	}
+	/* WaClearSlmSpaceAtContextSwitch:skl,bxt,kbl,glk,cfl */
+	batch = gen8_emit_pipe_control(batch,
+				       PIPE_CONTROL_FLUSH_L3 |
+				       PIPE_CONTROL_GLOBAL_GTT_IVB |
+				       PIPE_CONTROL_CS_STALL |
+				       PIPE_CONTROL_QW_WRITE,
+				       i915_ggtt_offset(engine->scratch) +
+				       2 * CACHELINE_BYTES);
 
 	/* WaMediaPoolStateCmdInWABB:bxt,glk */
 	if (HAS_POOLED_EU(engine->i915)) {

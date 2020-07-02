@@ -28,7 +28,7 @@
 	};
 
 	reserved-memory {
-		ramoops {
+		ramoops@ffc00000 {
 			compatible = "removed-dma-pool", "ramoops";
 			no-map;
 			reg = <0 0xffc00000 0 0x00100000>;
@@ -76,6 +76,10 @@
 
 &cont_splash_mem {
 	reg = <0x0 0x9d400000 0x0 0x02400000>;
+};
+
+&dfps_data_memory {
+	reg = <0x0 0x9f800000 0x0 0x1000>;
 };
 
 &soc {
@@ -504,29 +508,6 @@
 		};
 	};
 
-	sound-9335 {
-		qcom,msm-mbhc-hphl-swh = <1>;
-		/delete-property/ qcom,hph-en1-gpio;
-		/delete-property/ qcom,hph-en0-gpio;
-		/delete-property/ qcom,us-euro-gpios;
-		qcom,ear-en-gpios = <&pm8005_gpios 1 0>;
-		qcom,audio-routing =
-			"AIF4 VI", "MCLK",
-			"RX_BIAS", "MCLK",
-			"MADINPUT", "MCLK",
-			"AMIC2", "MIC BIAS2",
-			"MIC BIAS2", "Headset Mic",
-			"MIC BIAS2", "ANCRight Headset Mic",
-			"AMIC3", "MIC BIAS3",
-			"MIC BIAS3", "ANCLeft Headset Mic",
-			"DMIC0", "MIC BIAS1",
-			"MIC BIAS1", "Digital Mic0",
-			"DMIC3", "MIC BIAS4",
-			"MIC BIAS4", "Digital Mic3",
-			"SpkrLeft IN", "SPK1 OUT",
-			"SpkrRight IN", "SPK2 OUT";
-	};
-
 	qcom,wdt@17817000 {
 		qcom,bark-time = <12000>;
 	};
@@ -608,6 +589,29 @@
 		qcom,src-clock-rates = <200000000 384000000
 					576000000 600000000>;
 	};
+};
+
+&snd_9335 {
+	qcom,msm-mbhc-hphl-swh = <1>;
+	/delete-property/ qcom,hph-en1-gpio;
+	/delete-property/ qcom,hph-en0-gpio;
+	/delete-property/ qcom,us-euro-gpios;
+	qcom,ear-en-gpios = <&pm8005_gpios 1 0>;
+	qcom,audio-routing =
+		"AIF4 VI", "MCLK",
+		"RX_BIAS", "MCLK",
+		"MADINPUT", "MCLK",
+		"AMIC2", "MIC BIAS2",
+		"MIC BIAS2", "Headset Mic",
+		"MIC BIAS2", "ANCRight Headset Mic",
+		"AMIC3", "MIC BIAS3",
+		"MIC BIAS3", "ANCLeft Headset Mic",
+		"DMIC0", "MIC BIAS1",
+		"MIC BIAS1", "Digital Mic0",
+		"DMIC3", "MIC BIAS4",
+		"MIC BIAS4", "Digital Mic3",
+		"SpkrLeft IN", "SPK1 OUT",
+		"SpkrRight IN", "SPK2 OUT";
 };
 
 &qusb_phy0 {
@@ -1234,7 +1238,7 @@
 /* pm8998_l10 */
 /* Follow QTI */
 
-/* pm8998_l11 {
+/* pm8998_l11 */
 /* Follow QTI */
 
 /* pm8998_l12 */
@@ -3301,12 +3305,12 @@
 
 &pmi8998_wled {
 	linux,name = "wled";
-	qcom,fs-curr-ua = <24000>;
+	qcom,current-limit-microamp = <25000>;
 	somc,init-br-ua = <10000>;
 	somc-s1,br-power-save-ua = <800>;
 	somc,bl-scale-enabled;
 	somc,area_count_table_size = <0>;
-	qcom,string-cfg = <7>;
+	qcom,enabled-strings = <0 1 2>;
 };
 
 &flash_led {
@@ -3395,6 +3399,7 @@
 			   "charger_temp",
 			   "charger_temp_max";
 	somc,jeita-sw-ctrl-en;
+	somc,jeita-warm-fv-uv = <4147000>;
 	/delete-property/ qcom,auto-recharge-soc;
 	/delete-property/ qcom,suspend-input-on-debug-batt;
 };

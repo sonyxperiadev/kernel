@@ -186,6 +186,7 @@ struct sde_crtc_fps_info {
  * @output_fence  : output release fence context
  * @stage_cfg     : H/w mixer stage configuration
  * @debugfs_root  : Parent of debugfs node
+ * @priv_handle   : Pointer to external private handle, if present
  * @vblank_cb_count : count of vblank callback since last reset
  * @play_count    : frame count between crtc enable and disable
  * @vblank_cb_time  : ktime at vblank count reset
@@ -249,6 +250,7 @@ struct sde_crtc {
 
 	struct sde_hw_stage_cfg stage_cfg;
 	struct dentry *debugfs_root;
+	void *priv_handle;
 
 	u32 vblank_cb_count;
 	u64 play_count;
@@ -847,5 +849,14 @@ void sde_crtc_misr_setup(struct drm_crtc *crtc, bool enable, u32 frame_count);
 int sde_crtc_calc_vpadding_param(struct drm_crtc_state *state,
 		uint32_t crtc_y, uint32_t crtc_h, uint32_t *padding_y,
 		uint32_t *padding_start, uint32_t *padding_height);
+
+/**
+ * sde_crtc_get_num_datapath - get the number of datapath active
+ *				of primary connector
+ * @crtc: Pointer to DRM crtc object
+ * @connector: Pointer to DRM connector object of WB in CWB case
+ */
+int sde_crtc_get_num_datapath(struct drm_crtc *crtc,
+		struct drm_connector *connector);
 
 #endif /* _SDE_CRTC_H_ */

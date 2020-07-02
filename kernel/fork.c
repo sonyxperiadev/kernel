@@ -91,6 +91,7 @@
 #include <linux/livepatch.h>
 #include <linux/thread_info.h>
 #include <linux/cpufreq_times.h>
+#include <linux/scs.h>
 
 #include <linux/oom_score_notifier.h>
 
@@ -164,10 +165,6 @@ static inline void free_task_struct(struct task_struct *tsk)
 	kmem_cache_free(task_struct_cachep, tsk);
 }
 #endif
-
-void __weak arch_release_thread_stack(unsigned long *stack)
-{
-}
 
 #ifndef CONFIG_ARCH_THREAD_STACK_ALLOCATOR
 
@@ -351,7 +348,6 @@ static void release_task_stack(struct task_struct *tsk)
 		return;  /* Better to leak the stack than to free prematurely */
 
 	account_kernel_stack(tsk, -1);
-	arch_release_thread_stack(tsk->stack);
 	free_thread_stack(tsk);
 	tsk->stack = NULL;
 #ifdef CONFIG_VMAP_STACK
@@ -370,6 +366,7 @@ void put_task_stack(struct task_struct *tsk)
 void free_task(struct task_struct *tsk)
 {
 	cpufreq_task_times_exit(tsk);
+	scs_release(tsk);
 
 #ifndef CONFIG_THREAD_INFO_IN_TASK
 	/*
@@ -420,7 +417,7 @@ void __put_task_struct(struct task_struct *tsk)
 	WARN_ON(tsk == current);
 
 	cgroup_free(tsk);
-	task_numa_free(tsk);
+	task_numa_free(tsk, true);
 	security_task_free(tsk);
 	exit_creds(tsk);
 	delayacct_tsk_free(tsk);
@@ -496,6 +493,8 @@ void __init fork_init(void)
 			  NULL, free_vm_stack_cache);
 #endif
 
+	scs_init();
+
 	lockdep_init_task(&init_task);
 }
 
@@ -565,6 +564,7 @@ static struct task_struct *dup_task_struct(struct task_struct *orig, int node)
 	clear_user_return_notifier(tsk);
 	clear_tsk_need_resched(tsk);
 	set_task_stack_end_magic(tsk);
+	scs_task_init(tsk);
 
 #ifdef CONFIG_CC_STACKPROTECTOR
 	tsk->stack_canary = get_random_canary();
@@ -793,6 +793,15 @@ static void mm_init_aio(struct mm_struct *mm)
 #ifdef CONFIG_AIO
 	spin_lock_init(&mm->ioctx_lock);
 	mm->ioctx_table = NULL;
+#endif
+}
+
+static __always_inline void mm_clear_owner(struct mm_struct *mm,
+					   struct task_struct *p)
+{
+#ifdef CONFIG_MEMCG
+	if (mm->owner == p)
+		WRITE_ONCE(mm->owner, NULL);
 #endif
 }
 
@@ -1143,24 +1152,8 @@ static int wait_for_vfork_done(struct task_struct *child,
  * restoring the old one. . .
  * Eric Biederman 10 January 1998
  */
-void mm_release(struct task_struct *tsk, struct mm_struct *mm)
+static void mm_release(struct task_struct *tsk, struct mm_struct *mm)
 {
-	/* Get rid of any futexes when releasing the mm */
-#ifdef CONFIG_FUTEX
-	if (unlikely(tsk->robust_list)) {
-		exit_robust_list(tsk);
-		tsk->robust_list = NULL;
-	}
-#ifdef CONFIG_COMPAT
-	if (unlikely(tsk->compat_robust_list)) {
-		compat_exit_robust_list(tsk);
-		tsk->compat_robust_list = NULL;
-	}
-#endif
-	if (unlikely(!list_empty(&tsk->pi_state_list)))
-		exit_pi_state_list(tsk);
-#endif
-
 	uprobe_free_utask(tsk);
 
 	/* Get rid of any cached register state */
@@ -1191,6 +1184,18 @@ void mm_release(struct task_struct *tsk, struct mm_struct *mm)
 	 */
 	if (tsk->vfork_done)
 		complete_vfork_done(tsk);
+}
+
+void exit_mm_release(struct task_struct *tsk, struct mm_struct *mm)
+{
+	futex_exit_release(tsk);
+	mm_release(tsk, mm);
+}
+
+void exec_mm_release(struct task_struct *tsk, struct mm_struct *mm)
+{
+	futex_exec_release(tsk);
+	mm_release(tsk, mm);
 }
 
 /*
@@ -1226,6 +1231,7 @@ static struct mm_struct *dup_mm(struct task_struct *tsk)
 free_pt:
 	/* don't put binfmt in mmput, we haven't got module yet */
 	mm->binfmt = NULL;
+	mm_init_owner(mm, NULL);
 	mmput(mm);
 
 fail_nomem:
@@ -1543,6 +1549,21 @@ static inline void rcu_copy_process(struct task_struct *p)
 #endif /* #ifdef CONFIG_TASKS_RCU */
 }
 
+static void __delayed_free_task(struct rcu_head *rhp)
+{
+	struct task_struct *tsk = container_of(rhp, struct task_struct, rcu);
+
+	free_task(tsk);
+}
+
+static __always_inline void delayed_free_task(struct task_struct *tsk)
+{
+	if (IS_ENABLED(CONFIG_MEMCG))
+		call_rcu(&tsk->rcu, __delayed_free_task);
+	else
+		free_task(tsk);
+}
+
 /*
  * This creates a new process as a copy of the old one,
  * but does not actually start it yet.
@@ -1684,13 +1705,15 @@ static __latent_entropy struct task_struct *copy_process(
 
 	p->default_timer_slack_ns = current->timer_slack_ns;
 
+#ifdef CONFIG_PSI
+	p->psi_flags = 0;
+#endif
+
 	task_io_accounting_init(&p->ioac);
 	acct_clear_integrals(p);
 
 	posix_cpu_timers_init(p);
 
-	p->start_time = ktime_get_ns();
-	p->real_start_time = ktime_get_boot_ns();
 	p->io_context = NULL;
 	p->audit_context = NULL;
 	cgroup_fork(p);
@@ -1783,6 +1806,9 @@ static __latent_entropy struct task_struct *copy_process(
 	retval = copy_thread_tls(clone_flags, stack_start, stack_size, p, tls);
 	if (retval)
 		goto bad_fork_cleanup_io;
+	retval = scs_prepare(p, node);
+	if (retval)
+		goto bad_fork_cleanup_thread;
 
 	if (pid != &init_struct_pid) {
 		pid = alloc_pid(p->nsproxy->pid_ns_for_children);
@@ -1795,14 +1821,8 @@ static __latent_entropy struct task_struct *copy_process(
 #ifdef CONFIG_BLOCK
 	p->plug = NULL;
 #endif
-#ifdef CONFIG_FUTEX
-	p->robust_list = NULL;
-#ifdef CONFIG_COMPAT
-	p->compat_robust_list = NULL;
-#endif
-	INIT_LIST_HEAD(&p->pi_state_list);
-	p->pi_state_cache = NULL;
-#endif
+	futex_init_task(p);
+
 	/*
 	 * sigaltstack should be cleared when sharing the same VM
 	 */
@@ -1853,6 +1873,17 @@ static __latent_entropy struct task_struct *copy_process(
 	retval = cgroup_can_fork(p);
 	if (retval)
 		goto bad_fork_free_pid;
+
+	/*
+	 * From this point on we must avoid any synchronous user-space
+	 * communication until we take the tasklist-lock. In particular, we do
+	 * not want user-space to be able to predict the process start-time by
+	 * stalling fork(2) after we recorded the start_time but before it is
+	 * visible to the system.
+	 */
+
+	p->start_time = ktime_get_ns();
+	p->real_start_time = ktime_get_boot_ns();
 
 	/*
 	 * Make it visible to the rest of the system, but dont wake it up yet.
@@ -1973,8 +2004,10 @@ bad_fork_cleanup_io:
 bad_fork_cleanup_namespaces:
 	exit_task_namespaces(p);
 bad_fork_cleanup_mm:
-	if (p->mm)
+	if (p->mm) {
+		mm_clear_owner(p->mm, p);
 		mmput(p->mm);
+	}
 bad_fork_cleanup_signal:
 	if (!(clone_flags & CLONE_THREAD))
 		free_signal_struct(p->signal);
@@ -2006,7 +2039,7 @@ bad_fork_cleanup_count:
 bad_fork_free:
 	p->state = TASK_DEAD;
 	put_task_stack(p);
-	free_task(p);
+	delayed_free_task(p);
 fork_out:
 	return ERR_PTR(retval);
 }
@@ -2488,7 +2521,7 @@ int sysctl_max_threads(struct ctl_table *table, int write,
 	struct ctl_table t;
 	int ret;
 	int threads = max_threads;
-	int min = MIN_THREADS;
+	int min = 1;
 	int max = MAX_THREADS;
 
 	t = *table;
@@ -2500,7 +2533,7 @@ int sysctl_max_threads(struct ctl_table *table, int write,
 	if (ret || !write)
 		return ret;
 
-	set_max_threads(threads);
+	max_threads = threads;
 
 	return 0;
 }

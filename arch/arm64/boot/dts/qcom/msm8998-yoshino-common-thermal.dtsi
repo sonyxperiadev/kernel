@@ -138,21 +138,27 @@
 		polling-delay = <500>;
 		thermal-governor = "step_wise";
 		trips {
+			c1_crit: c1-crit {
+				temperature = <75000>;
+				hysteresis = <4000>;
+				type = "passive";
+			};
+
 			c1_hot: c1-hot {
-				temperature = <90000>;
+				temperature = <71000>;
 				hysteresis = <4000>;
 				type = "hot";
 			};
 
 			c1_trip1: c1-trip1 {
-				temperature = <78000>;
+				temperature = <67200>;
 				hysteresis = <3000>;
 				type = "passive";
 				
 			};
 
 			c1_trip2: c1-trip2 {
-				temperature = <75000>;
+				temperature = <63000>;
 				hysteresis = <4000>;
 				type = "passive";
 				
@@ -162,25 +168,25 @@
 		cooling-maps {
 			/* Temperature is critical: Shut down c1 */
 			cpu4_crit_cdev {
-				trip = <&c1_hot>;
+				trip = <&c1_crit>;
 				cooling-device =
 					<&CPU4 THERMAL_MAX_LIMIT
 						THERMAL_MAX_LIMIT>;
 			};
 			cpu5_crit_cdev {
-				trip = <&c1_hot>;
+				trip = <&c1_crit>;
 				cooling-device =
 					<&CPU5 THERMAL_MAX_LIMIT
 						THERMAL_MAX_LIMIT>;
 			};
 			cpu6_crit_cdev {
-				trip = <&c1_hot>;
+				trip = <&c1_crit>;
 				cooling-device =
 					<&CPU6 THERMAL_MAX_LIMIT
 						THERMAL_MAX_LIMIT>;
 			};
 			cpu7_crit_cdev {
-				trip = <&c1_hot>;
+				trip = <&c1_crit>;
 				cooling-device =
 					<&CPU7 THERMAL_MAX_LIMIT
 						THERMAL_MAX_LIMIT>;

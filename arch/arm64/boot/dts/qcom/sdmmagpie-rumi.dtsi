@@ -35,7 +35,7 @@
 		clock-frequency = <1000000>;
 	};
 
-	timer@0x17c00000 {
+	timer@17c00000 {
 		clock-frequency = <1000000>;
 	};
 

@@ -18,6 +18,9 @@
 #include <drm/drm_mipi_dsi.h>
 #include "msm_drv.h"
 
+#define MAX_EXT_BRIDGE_PORT_CONFIG             16
+#define MAX_DSI_CTRLS_PER_DISPLAY             2
+
 #define DSI_H_TOTAL(t) (((t)->h_active) + ((t)->h_back_porch) + \
 			((t)->h_sync_width) + ((t)->h_front_porch))
 
@@ -482,9 +485,12 @@ struct dsi_split_link_config {
  * @ignore_rx_eot:       Ignore Rx EOT packets if set to true.
  * @append_tx_eot:       Append EOT packets for forward transmissions if set to
  *                       true.
- * @ext_bridge_mode:     External bridge is connected.
+ * @ext_bridge_num:      Connected external bridge count.
+ * @ext_bridge_map:      External bridge config reg needs to match with the port
+ *                       reg config.
  * @force_hs_clk_lane:   Send continuous clock to the panel.
  * @dsi_split_link_config:  Split Link Configuration.
+ * @byte_intf_clk_div:   Determines the factor for calculating byte intf clock.
  */
 struct dsi_host_common_cfg {
 	enum dsi_pixel_format dst_format;
@@ -503,9 +509,11 @@ struct dsi_host_common_cfg {
 	u32 t_clk_pre;
 	bool ignore_rx_eot;
 	bool append_tx_eot;
-	bool ext_bridge_mode;
+	u32 ext_bridge_num;
+	u32 ext_bridge_map[MAX_DSI_CTRLS_PER_DISPLAY];
 	bool force_hs_clk_lane;
 	struct dsi_split_link_config split_link;
+	u32 byte_intf_clk_div;
 };
 
 /**
@@ -631,6 +639,7 @@ struct dsi_display_mode {
 	struct dsi_display_mode_priv_info *priv_info;
 #ifdef CONFIG_DRM_SDE_SPECIFIC_PANEL
 	bool isDefault;
+	bool splash_dms;
 #endif /* CONFIG_DRM_SDE_SPECIFIC_PANEL */
 };
 

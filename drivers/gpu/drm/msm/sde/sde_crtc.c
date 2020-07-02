@@ -26,6 +26,7 @@
 #include <drm/drm_crtc_helper.h>
 #include <drm/drm_flip_work.h>
 #include <linux/clk/qcom.h>
+#include <linux/sde_rsc.h>
 
 #include "sde_kms.h"
 #include "sde_hw_lm.h"
@@ -91,8 +92,9 @@ static struct sde_crtc_custom_events custom_events[] = {
 #define MAX_FRAME_COUNT			1000
 #define MILI_TO_MICRO			1000
 
-/* Line padding ratio limit */
-#define MAX_VPADDING_RATIO		3
+/* default line padding ratio limitation */
+#define MAX_VPADDING_RATIO_M		63
+#define MAX_VPADDING_RATIO_N		15
 
 static inline struct sde_kms *_sde_crtc_get_kms(struct drm_crtc *crtc)
 {
@@ -775,7 +777,7 @@ static ssize_t measured_fps_show(struct device *device,
 {
 	struct drm_crtc *crtc;
 	struct sde_crtc *sde_crtc;
-	unsigned int fps_int, fps_decimal;
+	uint64_t fps_int, fps_decimal;
 	u64 fps = 0, frame_count = 0;
 	ktime_t current_time;
 	int i = 0, current_time_index;
@@ -852,7 +854,7 @@ static ssize_t measured_fps_show(struct device *device,
 		}
 	}
 
-	fps_int = (unsigned int) sde_crtc->fps_info.measured_fps;
+	fps_int = (uint64_t) sde_crtc->fps_info.measured_fps;
 	fps_decimal = do_div(fps_int, 10);
 	return scnprintf(buf, PAGE_SIZE,
 	"fps: %d.%d duration:%d frame_count:%llu\n", fps_int, fps_decimal,
@@ -1406,14 +1408,29 @@ static u32 _sde_crtc_get_displays_affected(struct drm_crtc *crtc,
 {
 	struct sde_crtc *sde_crtc;
 	struct sde_crtc_state *crtc_state;
+	struct drm_encoder *encoder;
 	u32 disp_bitmask = 0;
 	int i;
+	bool is_ppsplit = false;
+
+	if (!crtc || !state) {
+		pr_err("Invalid crtc or state\n");
+		return 0;
+	}
 
 	sde_crtc = to_sde_crtc(crtc);
 	crtc_state = to_sde_crtc_state(state);
 
+	list_for_each_entry(encoder,
+			&crtc->dev->mode_config.encoder_list, head) {
+		if (encoder->crtc != state->crtc)
+			continue;
+
+		is_ppsplit |= sde_encoder_is_topology_ppsplit(encoder);
+	}
+
 	/* pingpong split: one ROI, one LM, two physical displays */
-	if (crtc_state->is_ppsplit) {
+	if (is_ppsplit) {
 		u32 lm_split_width = crtc_state->lm_bounds[0].w / 2;
 		struct sde_rect *roi = &crtc_state->lm_roi[0];
 
@@ -1701,7 +1718,7 @@ static int _sde_crtc_check_panel_stacking(struct drm_crtc *crtc,
 	m = state->mode.vdisplay / gcd;
 	n = mode_info.overlap_pixels / gcd - m;
 
-	if (m > MAX_VPADDING_RATIO || n > MAX_VPADDING_RATIO) {
+	if (m > MAX_VPADDING_RATIO_M || n > MAX_VPADDING_RATIO_N) {
 		SDE_ERROR("unsupported panel stacking pattern %d:%d", m, n);
 		return -EINVAL;
 	}
@@ -2109,7 +2126,9 @@ static void _sde_crtc_blend_setup_mixer(struct drm_crtc *crtc,
 		cnt++;
 	}
 
-	sort(pstates, cnt, sizeof(pstates[0]), pstate_cmp, NULL);
+	if (cnt > 0)
+		sort(pstates, cnt, sizeof(pstates[0]), pstate_cmp, NULL);
+
 	_sde_crtc_set_src_split_order(crtc, pstates, cnt);
 
 	if (lm && lm->ops.setup_dim_layer) {
@@ -4766,11 +4785,13 @@ static void sde_crtc_disable(struct drm_crtc *crtc)
 	struct sde_kms *sde_kms;
 	struct sde_crtc *sde_crtc;
 	struct sde_crtc_state *cstate;
-	struct drm_encoder *encoder;
+	struct drm_encoder *encoder = NULL;
 	struct msm_drm_private *priv;
 	unsigned long flags;
 	struct sde_crtc_irq_info *node = NULL;
 	struct drm_event event;
+	wait_queue_head_t *vblank_queue;
+	int primary_crtc_id = -1;
 	u32 power_on;
 	bool in_cont_splash = false;
 	int ret, i;
@@ -4820,6 +4841,17 @@ static void sde_crtc_disable(struct drm_crtc *crtc)
 	SDE_EVT32(DRMID(crtc), sde_crtc->enabled, sde_crtc->suspend,
 			sde_crtc->vblank_requested,
 			crtc->state->active, crtc->state->enable);
+
+	/* check if anyone is waiting for primary vsync */
+	primary_crtc_id = get_sde_rsc_primary_crtc(SDE_RSC_INDEX);
+	if (crtc->base.id == primary_crtc_id) {
+		vblank_queue = drm_crtc_vblank_waitqueue(crtc);
+		if (waitqueue_active(vblank_queue)) {/* check for wait_queue */
+			drm_crtc_handle_vblank(crtc);
+			SDE_EVT32(DRMID(crtc), primary_crtc_id);
+		}
+	}
+
 	if (sde_crtc->enabled && !sde_crtc->suspend &&
 			sde_crtc->vblank_requested) {
 		ret = _sde_crtc_vblank_enable_no_lock(sde_crtc, false);
@@ -5301,8 +5333,8 @@ static int sde_crtc_atomic_check(struct drm_crtc *crtc,
 
 	drm_connector_list_iter_begin(dev, &conn_iter);
 	drm_for_each_connector_iter(conn, &conn_iter)
-		if (conn->state && conn->state->crtc == crtc &&
-				cstate->num_connectors < MAX_CONNECTORS) {
+		if ((state->connector_mask & (1 << drm_connector_index(conn)))
+				&& cstate->num_connectors < MAX_CONNECTORS) {
 			cstate->connectors[cstate->num_connectors++] = conn;
 		}
 	drm_connector_list_iter_end(&conn_iter);
@@ -5380,15 +5412,6 @@ static int sde_crtc_atomic_check(struct drm_crtc *crtc,
 
 		cnt++;
 
-		if ((pstate->crtc_h > mixer_height) ||
-		 (pstate->crtc_w > (mixer_width * sde_crtc->num_mixers))) {
-			SDE_ERROR("plane w/h:%x*%x more than mixer w/h:%x*%x\n",
-			pstate->crtc_w, pstate->crtc_h,
-			sde_crtc->num_mixers * mixer_width, mixer_height);
-			//rc = -E2BIG;
-			//goto end;
-		}
-
 		if (CHECK_LAYER_BOUNDS(pstate->crtc_y, pstate->crtc_h,
 				mode->vdisplay) ||
 		    CHECK_LAYER_BOUNDS(pstate->crtc_x, pstate->crtc_w,
@@ -5399,6 +5422,17 @@ static int sde_crtc_atomic_check(struct drm_crtc *crtc,
 				pstate->crtc_x, pstate->crtc_w, mode->hdisplay);
 			rc = -E2BIG;
 			goto end;
+		}
+
+		if (cstate->num_ds_enabled &&
+			((pstate->crtc_h > mixer_height) ||
+			(pstate->crtc_w >
+			 (mixer_width * cstate->num_ds_enabled)))) {
+			SDE_ERROR("plane w/h:%x*%x > mixer w/h:%x*%x\n",
+				pstate->crtc_w, pstate->crtc_h,
+				mixer_width, mixer_height);
+			//return -E2BIG;
+			//goto end;
 		}
 	}
 
@@ -5416,7 +5450,8 @@ static int sde_crtc_atomic_check(struct drm_crtc *crtc,
 	}
 
 	/* assign mixer stages based on sorted zpos property */
-	sort(pstates, cnt, sizeof(pstates[0]), pstate_cmp, NULL);
+	if (cnt > 0)
+		sort(pstates, cnt, sizeof(pstates[0]), pstate_cmp, NULL);
 
 	rc = _sde_crtc_excl_dim_layer_check(state, pstates, cnt);
 	if (rc)
@@ -5521,6 +5556,43 @@ end:
 	return rc;
 }
 
+/**
+ * sde_crtc_get_num_datapath - get the number of datapath active
+ *				of primary connector
+ * @crtc: Pointer to DRM crtc object
+ * @connector: Pointer to DRM connector object of WB in CWB case
+ */
+int sde_crtc_get_num_datapath(struct drm_crtc *crtc,
+		struct drm_connector *connector)
+{
+	struct sde_crtc *sde_crtc = to_sde_crtc(crtc);
+	struct sde_connector_state *sde_conn_state = NULL;
+	struct drm_connector *conn;
+	struct drm_connector_list_iter conn_iter;
+
+	if (!sde_crtc || !connector) {
+		SDE_DEBUG("Invalid argument\n");
+		return 0;
+	}
+
+	if (sde_crtc->num_mixers)
+		return sde_crtc->num_mixers;
+
+	drm_connector_list_iter_begin(crtc->dev, &conn_iter);
+	drm_for_each_connector_iter(conn, &conn_iter) {
+		if (conn->state && conn->state->crtc == crtc &&
+				 conn != connector)
+			sde_conn_state = to_sde_connector_state(conn->state);
+	}
+
+	drm_connector_list_iter_end(&conn_iter);
+
+	if (sde_conn_state)
+		return sde_conn_state->mode_info.topology.num_lm;
+
+	return 0;
+}
+
 int sde_crtc_vblank(struct drm_crtc *crtc, bool en)
 {
 	struct sde_crtc *sde_crtc;
@@ -5558,6 +5630,8 @@ static void sde_crtc_install_properties(struct drm_crtc *crtc,
 	struct drm_device *dev;
 	struct sde_kms_info *info;
 	struct sde_kms *sde_kms;
+	int i, j;
+
 	static const struct drm_prop_enum_list e_secure_level[] = {
 		{SDE_DRM_SEC_NON_SEC, "sec_and_non_sec"},
 		{SDE_DRM_SEC_ONLY, "sec_only"},
@@ -5693,6 +5767,14 @@ static void sde_crtc_install_properties(struct drm_crtc *crtc,
 	if (catalog->qseed_type == SDE_SSPP_SCALER_QSEED3LITE)
 		sde_kms_info_add_keystr(info, "qseed_type", "qseed3lite");
 
+	sde_kms_info_add_keyint(info, "UBWC version", catalog->ubwc_version);
+	sde_kms_info_add_keyint(info, "UBWC macrotile_mode",
+				catalog->macrotile_mode);
+	sde_kms_info_add_keyint(info, "UBWC highest banking bit",
+				catalog->mdp[0].highest_bank_bit);
+	sde_kms_info_add_keyint(info, "UBWC swizzle",
+				catalog->mdp[0].ubwc_swizzle);
+
 	if (sde_is_custom_client()) {
 		/* No support for SMART_DMA_V1 yet */
 		if (catalog->smart_dma_rev == SDE_SSPP_SMART_DMA_V2)
@@ -5761,6 +5843,37 @@ static void sde_crtc_install_properties(struct drm_crtc *crtc,
 	if (sde_kms->perf.max_core_clk_rate)
 		sde_kms_info_add_keyint(info, "max_mdp_clk",
 				sde_kms->perf.max_core_clk_rate);
+
+	for (i = 0; i < catalog->limit_count; i++) {
+		sde_kms_info_add_keyint(info,
+			catalog->limit_cfg[i].name,
+			catalog->limit_cfg[i].lmt_case_cnt);
+
+		for (j = 0; j < catalog->limit_cfg[i].lmt_case_cnt; j++) {
+			sde_kms_info_add_keyint(info,
+				catalog->limit_cfg[i].vector_cfg[j].usecase,
+				catalog->limit_cfg[i].vector_cfg[j].value);
+		}
+
+		if (!strcmp(catalog->limit_cfg[i].name,
+			"sspp_linewidth_usecases"))
+			sde_kms_info_add_keyint(info,
+				"sspp_linewidth_values",
+				catalog->limit_cfg[i].lmt_vec_cnt);
+		else if (!strcmp(catalog->limit_cfg[i].name,
+				"sde_bwlimit_usecases"))
+			sde_kms_info_add_keyint(info,
+				"sde_bwlimit_values",
+				catalog->limit_cfg[i].lmt_vec_cnt);
+
+		for (j = 0; j < catalog->limit_cfg[i].lmt_vec_cnt; j++) {
+			sde_kms_info_add_keyint(info, "limit_usecase",
+				catalog->limit_cfg[i].value_cfg[j].use_concur);
+			sde_kms_info_add_keyint(info, "limit_value",
+				catalog->limit_cfg[i].value_cfg[j].value);
+		}
+	}
+
 	sde_kms_info_add_keystr(info, "core_ib_ff",
 			catalog->perf.core_ib_ff);
 	sde_kms_info_add_keystr(info, "core_clk_ff",
@@ -6867,6 +6980,7 @@ static int _sde_crtc_event_enable(struct sde_kms *kms,
 			if (!node)
 				return -ENOMEM;
 			INIT_LIST_HEAD(&node->list);
+			INIT_LIST_HEAD(&node->irq.list);
 			node->func = custom_events[i].func;
 			node->event = event;
 			node->state = IRQ_NOINIT;
@@ -6891,8 +7005,6 @@ static int _sde_crtc_event_enable(struct sde_kms *kms,
 			kfree(node);
 			return ret;
 		}
-
-		INIT_LIST_HEAD(&node->irq.list);
 
 		mutex_lock(&crtc->crtc_lock);
 		ret = node->func(crtc_drm, true, &node->irq);
@@ -7050,8 +7162,7 @@ int sde_crtc_calc_vpadding_param(struct drm_crtc_state *state,
 {
 	struct sde_kms *kms;
 	struct sde_crtc_state *cstate = to_sde_crtc_state(state);
-	u32 y_blocks, y_remain, y_start;
-	u32 h_start, h_blocks, h_end, h_total;
+	u32 y_remain, y_start, y_end;
 	u32 m, n;
 
 	kms = _sde_crtc_get_kms(state->crtc);
@@ -7070,19 +7181,14 @@ int sde_crtc_calc_vpadding_param(struct drm_crtc_state *state,
 
 	m = cstate->padding_active;
 	n = m + cstate->padding_dummy;
-	y_blocks = crtc_y / m;
-	y_remain = crtc_y - y_blocks * m;
-	y_start = y_remain + y_blocks * n;
-	h_start = m - y_remain;
-	h_blocks = (crtc_h - h_start) / m;
-	h_end = (crtc_h - h_start) - h_blocks * m;
-	if (h_end)
-		h_end += cstate->padding_dummy;
-	h_total = h_start + h_end + h_blocks * n;
+
+	y_remain = crtc_y % m;
+	y_start = y_remain + crtc_y / m * n;
+	y_end = (crtc_y + crtc_h - 1) / m * n + (crtc_y + crtc_h - 1) % m;
 
 	*padding_y = y_start;
-	*padding_start = h_start;
-	*padding_height = h_total;
+	*padding_start = m - y_remain;
+	*padding_height = y_end - y_start + 1;
 
 	return 0;
 }

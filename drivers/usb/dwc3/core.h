@@ -220,6 +220,7 @@
 #define DWC3_GCTL_DSBLCLKGTNG		BIT(0)
 
 /* Global User Control 1 Register */
+#define DWC3_GUCTL1_PARKMODE_DISABLE_SS	BIT(17)
 #define DWC3_GUCTL1_TX_IPGAP_LINECHECK_DIS	BIT(28)
 #define DWC3_GUCTL1_DEV_L1_EXIT_BY_HW	BIT(24)
 #define DWC3_GUCTL1_IP_GAP_ADD_ON(n)	(n << 21)
@@ -964,12 +965,15 @@ struct dwc3_scratchpad_array {
  *			change quirk.
  * @dis_tx_ipgap_linecheck_quirk: set if we disable u2mac linestate
  *			check during HS transmit.
+ * @parkmode_disable_ss_quirk: set if we need to disable all SuperSpeed
+ *			instances in park mode.
  * @tx_de_emphasis_quirk: set if we enable Tx de-emphasis quirk
  * @tx_de_emphasis: Tx de-emphasis value
  * 	0	- -6dB de-emphasis
  * 	1	- -3.5dB de-emphasis
  * 	2	- No de-emphasis
  * 	3	- Reserved
+ * @dis_metastability_quirk: set to disable metastability quirk.
  * @err_evt_seen: previous event in queue was erratic error
  * @usb3_u1u2_disable: if true, disable U1U2 low power modes in Superspeed mode
  * @in_lpm: indicates if controller is in low power mode (no clocks)
@@ -992,6 +996,7 @@ struct dwc3_scratchpad_array {
  * @bh_completion_time: time taken for taklet completion
  * @bh_handled_evt_cnt: no. of events handled by tasklet per interrupt
  * @bh_dbg_index: index for capturing bh_completion_time and bh_handled_evt_cnt
+ * @last_run_stop: timestamp denoting the last run_stop update
  */
 struct dwc3 {
 	struct work_struct	drd_work;
@@ -1154,6 +1159,7 @@ struct dwc3 {
 	unsigned		dis_u2_freeclk_exists_quirk:1;
 	unsigned		dis_del_phy_power_chg_quirk:1;
 	unsigned		dis_tx_ipgap_linecheck_quirk:1;
+	unsigned		parkmode_disable_ss_quirk:1;
 
 	unsigned		tx_de_emphasis_quirk:1;
 	unsigned		ssp_u3_u0_quirk:1;
@@ -1166,6 +1172,8 @@ struct dwc3 {
 	atomic_t		in_lpm;
 	bool			b_suspend;
 	unsigned int		vbus_draw;
+
+	unsigned		dis_metastability_quirk:1;
 
 	u16			imod_interval;
 	struct workqueue_struct *dwc_wq;
@@ -1206,6 +1214,7 @@ struct dwc3 {
 	 */
 	bool			host_poweroff_in_pm_suspend;
 	int			retries_on_error;
+	ktime_t			last_run_stop;
 };
 
 #define work_to_dwc(w)		(container_of((w), struct dwc3, drd_work))

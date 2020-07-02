@@ -464,7 +464,7 @@ static struct inode *proc_sys_make_inode(struct super_block *sb,
 
 	inode = new_inode(sb);
 	if (!inode)
-		goto out;
+		return ERR_PTR(-ENOMEM);
 
 	inode->i_ino = get_next_ino();
 
@@ -474,8 +474,7 @@ static struct inode *proc_sys_make_inode(struct super_block *sb,
 	if (unlikely(head->unregistering)) {
 		spin_unlock(&sysctl_lock);
 		iput(inode);
-		inode = NULL;
-		goto out;
+		return ERR_PTR(-ENOENT);
 	}
 	ei->sysctl = head;
 	ei->sysctl_entry = table;
@@ -499,8 +498,11 @@ static struct inode *proc_sys_make_inode(struct super_block *sb,
 
 	if (root->set_ownership)
 		root->set_ownership(head, table, &inode->i_uid, &inode->i_gid);
+	else {
+		inode->i_uid = GLOBAL_ROOT_UID;
+		inode->i_gid = GLOBAL_ROOT_GID;
+	}
 
-out:
 	return inode;
 }
 
@@ -549,10 +551,11 @@ static struct dentry *proc_sys_lookup(struct inode *dir, struct dentry *dentry,
 			goto out;
 	}
 
-	err = ERR_PTR(-ENOMEM);
 	inode = proc_sys_make_inode(dir->i_sb, h ? h : head, p);
-	if (!inode)
+	if (IS_ERR(inode)) {
+		err = ERR_CAST(inode);
 		goto out;
+	}
 
 	err = NULL;
 	d_set_d_op(dentry, &proc_sys_dentry_operations);
@@ -685,7 +688,7 @@ static bool proc_sys_fill_cache(struct file *file,
 			return false;
 		if (d_in_lookup(child)) {
 			inode = proc_sys_make_inode(dir->d_sb, head, table);
-			if (!inode) {
+			if (IS_ERR(inode)) {
 				d_lookup_done(child);
 				dput(child);
 				return false;
@@ -1621,8 +1624,11 @@ static void drop_sysctl_table(struct ctl_table_header *header)
 	if (--header->nreg)
 		return;
 
-	put_links(header);
-	start_unregistering(header);
+	if (parent) {
+		put_links(header);
+		start_unregistering(header);
+	}
+
 	if (!--header->count)
 		kfree_rcu(header, rcu);
 

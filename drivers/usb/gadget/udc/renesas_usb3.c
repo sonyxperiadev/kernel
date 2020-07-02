@@ -21,6 +21,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/sizes.h>
 #include <linux/slab.h>
+#include <linux/string.h>
 #include <linux/sys_soc.h>
 #include <linux/uaccess.h>
 #include <linux/usb/ch9.h>
@@ -352,6 +353,7 @@ struct renesas_usb3 {
 	bool extcon_host;		/* check id and set EXTCON_USB_HOST */
 	bool extcon_usb;		/* check vbus and set EXTCON_USB */
 	bool forced_b_device;
+	bool start_to_connect;
 };
 
 #define gadget_to_renesas_usb3(_gadget)	\
@@ -470,7 +472,8 @@ static void usb3_init_axi_bridge(struct renesas_usb3 *usb3)
 static void usb3_init_epc_registers(struct renesas_usb3 *usb3)
 {
 	usb3_write(usb3, ~0, USB3_USB_INT_STA_1);
-	usb3_enable_irq_1(usb3, USB_INT_1_VBUS_CNG);
+	if (!usb3->workaround_for_vbus)
+		usb3_enable_irq_1(usb3, USB_INT_1_VBUS_CNG);
 }
 
 static bool usb3_wakeup_usb2_phy(struct renesas_usb3 *usb3)
@@ -676,8 +679,7 @@ static void usb3_mode_config(struct renesas_usb3 *usb3, bool host, bool a_dev)
 	usb3_set_mode(usb3, host);
 	usb3_vbus_out(usb3, a_dev);
 	/* for A-Peripheral or forced B-device mode */
-	if ((!host && a_dev) ||
-	    (usb3->workaround_for_vbus && usb3->forced_b_device))
+	if ((!host && a_dev) || usb3->start_to_connect)
 		usb3_connect(usb3);
 	spin_unlock_irqrestore(&usb3->lock, flags);
 }
@@ -2314,9 +2316,9 @@ static ssize_t role_store(struct device *dev, struct device_attribute *attr,
 	if (usb3->forced_b_device)
 		return -EBUSY;
 
-	if (!strncmp(buf, "host", strlen("host")))
+	if (sysfs_streq(buf, "host"))
 		new_mode_is_host = true;
-	else if (!strncmp(buf, "peripheral", strlen("peripheral")))
+	else if (sysfs_streq(buf, "peripheral"))
 		new_mode_is_host = false;
 	else
 		return -EINVAL;
@@ -2369,7 +2371,11 @@ static ssize_t renesas_usb3_b_device_write(struct file *file,
 	if (copy_from_user(&buf, ubuf, min_t(size_t, sizeof(buf) - 1, count)))
 		return -EFAULT;
 
-	if (!strncmp(buf, "1", 1))
+	usb3->start_to_connect = false;
+	if (usb3->workaround_for_vbus && usb3->forced_b_device &&
+	    !strncmp(buf, "2", 1))
+		usb3->start_to_connect = true;
+	else if (!strncmp(buf, "1", 1))
 		usb3->forced_b_device = true;
 	else
 		usb3->forced_b_device = false;
@@ -2377,7 +2383,7 @@ static ssize_t renesas_usb3_b_device_write(struct file *file,
 	if (usb3->workaround_for_vbus)
 		usb3_disconnect(usb3);
 
-	/* Let this driver call usb3_connect() anyway */
+	/* Let this driver call usb3_connect() if needed */
 	usb3_check_id(usb3);
 
 	return count;

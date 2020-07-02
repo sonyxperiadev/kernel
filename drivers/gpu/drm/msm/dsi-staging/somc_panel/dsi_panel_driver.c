@@ -180,6 +180,14 @@ int dsi_panel_driver_gpio_request(struct dsi_panel *panel)
 			goto error_release_disp_dcdc_en;
 		}
 	}
+	if (gpio_is_valid(spec_pdata->disp_oled_vci_gpio)) {
+		rc = gpio_request(spec_pdata->disp_oled_vci_gpio,
+							"disp_oled_vci_gpio");
+		if (rc) {
+			pr_err("request for vci_en gpio failed, rc=%d\n", rc);
+			goto error_release_disp_vci_en;
+		}
+	}
 
 	if (gpio_is_valid(spec_pdata->disp_err_fg_gpio)) {
 		rc = gpio_request(spec_pdata->disp_err_fg_gpio,
@@ -195,6 +203,9 @@ int dsi_panel_driver_gpio_request(struct dsi_panel *panel)
 error_release_disp_err_fg:
 	if (gpio_is_valid(spec_pdata->disp_err_fg_gpio))
 		gpio_free(spec_pdata->disp_err_fg_gpio);
+error_release_disp_vci_en:
+	if (gpio_is_valid(spec_pdata->disp_oled_vci_gpio))
+		gpio_free(spec_pdata->disp_oled_vci_gpio);
 error_release_disp_dcdc_en:
 	if (gpio_is_valid(spec_pdata->disp_dcdc_en_gpio))
 		gpio_free(spec_pdata->disp_dcdc_en_gpio);
@@ -230,6 +241,9 @@ int dsi_panel_driver_gpio_release(struct dsi_panel *panel)
 
 	if (gpio_is_valid(spec_pdata->touch_vddh_en_gpio))
 		gpio_free(spec_pdata->touch_vddh_en_gpio);
+
+	if (gpio_is_valid(spec_pdata->disp_oled_vci_gpio))
+		gpio_free(spec_pdata->disp_oled_vci_gpio);
 
 	if (gpio_is_valid(spec_pdata->disp_dcdc_en_gpio))
 		gpio_free(spec_pdata->disp_dcdc_en_gpio);
@@ -569,6 +583,10 @@ int dsi_panel_driver_post_power_off(struct dsi_panel *panel)
 	}
 	spec_pdata = panel->spec_pdata;
 
+	if (spec_pdata->lp11_off)
+		usleep_range(spec_pdata->lp11_off * 1000,
+				spec_pdata->lp11_off * 1000 + 100);
+
 	if (!spec_pdata->oled_disp) {
 		rc = somc_panel_vreg_ctrl(
 			&spec_pdata->vspvsn_power_info, "ibb", false);
@@ -609,6 +627,15 @@ int dsi_panel_driver_post_power_off(struct dsi_panel *panel)
 		if (rc)
 			pr_err("%s: failed to disable vci, rc=%d\n",
 			       __func__, rc);
+
+		/* Some devices have got a fixed regulator as Vci... */
+		if (gpio_is_valid(spec_pdata->disp_oled_vci_gpio)) {
+			rc = gpio_direction_output(spec_pdata->disp_oled_vci_gpio, 1);
+			if (rc)
+				pr_err("%s: unable to set dir for vci_en gpio "
+				       " rc=%d\n", __func__, rc);
+			gpio_set_value(spec_pdata->disp_oled_vci_gpio, 0);
+		}
 	}
 
 	rc = somc_panel_vreg_ctrl(&spec_pdata->touch_power_info,
@@ -708,10 +735,22 @@ int dsi_panel_driver_pre_power_on(struct dsi_panel *panel)
 		goto exit;
 	}
 
-	rc = somc_panel_vreg_ctrl(&panel->power_info, "vci", true);
-	if (rc) {
-		pr_err("%s: failed to enable vci, rc=%d\n", __func__, rc);
-		goto exit;
+	if (spec_pdata->oled_disp) {
+		rc = somc_panel_vreg_ctrl(&panel->power_info, "vci", true);
+		if (rc) {
+			pr_err("%s: failed to enable vci, rc=%d\n",
+			       __func__, rc);
+			goto exit;
+		}
+
+		if (gpio_is_valid(spec_pdata->disp_oled_vci_gpio)) {
+			rc = gpio_direction_output(spec_pdata->disp_oled_vci_gpio, 0);
+			if (rc) {
+				pr_err("%s: failed to enable vci GPIO rc=%d\n",
+				       __func__, rc);
+			}
+			gpio_set_value(spec_pdata->disp_oled_vci_gpio, 1);
+		}
 	}
 
 	dsi_panel_driver_touch_pinctrl_set_state(panel, true);
@@ -1154,12 +1193,18 @@ int dsi_panel_driver_parse_dt(struct dsi_panel *panel,
 			"somc,pw-wait-after-off-touch-int-n", &tmp);
 	spec_pdata->touch_intn_off = !rc ? tmp : 0;
 
+	rc = of_property_read_u32(np, "somc,pw-wait-after-off-lp11", &tmp);
+	spec_pdata->lp11_off = !rc ? tmp : 0;
+
 	rc = of_property_read_u32(np,
 			"somc,aod-threshold", &tmp);
 	spec_pdata->aod_threshold = !rc ? tmp : AOD_MODE_THRESHOLD;
 
 	panel->lp11_init = of_property_read_bool(np,
 			"qcom,mdss-dsi-lp11-init");
+
+	spec_pdata->hbm.hbm_supported = of_property_read_bool(np,
+			"somc,set-hbm-usable");
 
 	rc = somc_panel_parse_dt_chgfps_config(panel, np);
 	if (rc) {
@@ -1259,6 +1304,13 @@ int dsi_panel_driver_parse_gpios(struct dsi_panel *panel,
 						0);
 	if (!gpio_is_valid(spec_pdata->disp_dcdc_en_gpio)) {
 		pr_err("%s: disp dcdc en gpio not specified\n", __func__);
+	}
+
+	spec_pdata->disp_oled_vci_gpio = of_get_named_gpio(panel->panel_of_node,
+					      "somc,disp-vci-en-gpio",
+					      0);
+	if (!gpio_is_valid(spec_pdata->disp_oled_vci_gpio)) {
+		pr_err("%s: failed get vci enable gpio\n", __func__);
 	}
 
 	spec_pdata->disp_err_fg_gpio = of_get_named_gpio(of_node,
@@ -1365,6 +1417,96 @@ int dsi_panel_driver_toggle_light_off(struct dsi_panel *panel, bool bl_on)
 	return rc;
 }
 
+
+int somc_panel_set_dyn_hbm_backlight(struct dsi_panel *panel,
+				     int prev_bl_lvl, int bl_lvl)
+{
+	struct panel_specific_pdata *spec_pdata = panel->spec_pdata;
+
+	/*
+	 * HBM is a specific command set for Samsung panels:
+	 * sometimes we want to avoid enabling support for it
+	 * because it may burn the OLED matrix on some specific
+	 * hardware.
+	 * If this display does not support HBM, either by
+	 * choice or because it really doesn't support it at
+	 * all, then just go on without any error.
+	 */
+	if (!spec_pdata->hbm.hbm_supported)
+		return 0;
+
+	/* Handle HBM disablement for lower backlight level */
+	if (bl_lvl < prev_bl_lvl && spec_pdata->hbm.hbm_mode != 0) {
+		spec_pdata->hbm.force_hbm_off = false;
+		return dsi_panel_set_hbm_mode(panel, 0);
+	}
+
+	/*
+	 * This shouldn't happen: the qcom backlight handling
+	 * is not supposed to call this function in this case.
+	 * Better safe than sorry, by the way.
+	 */
+	if (unlikely(bl_lvl == prev_bl_lvl))
+		return 0;
+
+	/*
+	 * If we reach this point, then the only thing that we
+	 * can possibly ever want to do is to enter HBM mode...
+	 */
+	if (bl_lvl == panel->bl_config.brightness_max_level)
+		return dsi_panel_set_hbm_mode(panel, 1);
+
+	return 0;
+}
+
+static void somc_panel_hbm_protect_work(struct work_struct *work)
+{
+	struct delayed_work *dwork = to_delayed_work(work);
+	struct dsi_panel *panel =
+		container_of(dwork, struct dsi_panel, hbm_protect_work);
+	struct panel_specific_pdata *spec_pdata = panel->spec_pdata;
+	int max_bl_lvl;
+
+	/* Shut down HBM to protect the OLED matrix */
+	if (spec_pdata->hbm.hbm_mode > 0) {
+		spec_pdata->hbm.force_hbm_off = true;
+		dsi_panel_set_hbm_mode(panel, -1);
+		return;
+	}
+
+	/*
+	 * IMPORTANT: This branch is reached only when COOLDOWN TIMER
+	 *            fires.
+	 * ********* force_hbm_off == true, hbm_mode == -1 *********
+	 *
+	 * If cooldown time reached and still want HBM, re-enable it,
+	 * but do it only for X times, otherwise assume that the OS
+	 * has locked up in HBM range: in this case, manual intervention
+	 * is required. The OS has to request a non-HBM range brightness
+	 * in order to reset this behavior.
+	 */
+	if (spec_pdata->hbm.force_hbm_off) {
+		max_bl_lvl = panel->bl_config.brightness_max_level;
+
+		if (panel->bl_config.bl_level != max_bl_lvl) {
+			/* HBM is off by userspace intervention. Reset. */
+			spec_pdata->hbm.force_hbm_off = false;
+			return;
+		} else if (spec_pdata->hbm.ncooldowns < HBM_MAX_COOLDOWNS) {
+			/* HBM is still on after cooldown: reenable it */
+			dsi_panel_set_hbm_mode(panel, 1);
+			spec_pdata->hbm.ncooldowns++;
+			return;
+		}
+	}
+
+	/*
+	 * Super Extra Mega Paranoid hardware protection kick-in:
+	 * this point is reached only if something really stupid happens.
+	 */
+	dsi_panel_set_hbm_mode(panel, 0);
+}
+
 static void dsi_panel_driver_notify_resume(struct dsi_panel *panel)
 {
 	struct drm_ext_event event;
@@ -1462,7 +1604,8 @@ int somc_panel_set_doze_mode(struct drm_connector *connector,
 	switch (power_mode) {
 		case SDE_MODE_DPMS_ON:
 			pr_debug("Requested DPMS ON state.\n");
-			rc = dsi_panel_set_aod_off(panel);
+			if (display_aod_mode != SDE_MODE_DPMS_OFF)
+				rc = dsi_panel_set_aod_off(panel);
 			spec_pdata->aod_mode = power_mode;
 			display_aod_mode = 0;
 			dsi_panel_driver_notify_resume(panel);
@@ -1527,6 +1670,8 @@ int somc_panel_set_doze_mode(struct drm_connector *connector,
 			rc = dsi_panel_set_aod_off(panel);
 			break;
 	}
+
+	panel->power_mode = power_mode;
 
 	mutex_unlock(&display->display_lock);
 
@@ -1702,7 +1847,7 @@ static ssize_t dsi_panel_hbm_mode_store(struct device *dev,
 
 	if (sscanf(buf, "%d", &mode) < 0) {
 		pr_err("sscanf failed to set mode. keep current mode=%d\n",
-			panel->spec_pdata->hbm_mode);
+			panel->spec_pdata->hbm.hbm_mode);
 		goto hbm_error;
 	}
 
@@ -1720,8 +1865,9 @@ static ssize_t dsi_panel_hbm_mode_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
 	struct dsi_display *display = dev_get_drvdata(dev);
+	struct panel_specific_pdata *spec_pdata = display->panel->spec_pdata;
 
-	return scnprintf(buf, PAGE_SIZE, "%u", display->panel->spec_pdata->hbm_mode);
+	return scnprintf(buf, PAGE_SIZE, "%u", spec_pdata->hbm.hbm_mode);
 }
 
 static ssize_t dsi_panel_mplus_mode_store(struct device *dev,
@@ -2448,14 +2594,28 @@ status_passed:
 
 int somc_panel_init(struct dsi_display *display)
 {
+	struct panel_specific_pdata *spec_pdata = NULL;
 	int rc = 0;
+
+	if (display == NULL)
+		return -EINVAL;
+	if (display->panel == NULL)
+		return -EINVAL;
+	if (display->panel->spec_pdata == NULL)
+		return -EINVAL;
+
+	spec_pdata = display->panel->spec_pdata;
 
 	rc = somc_panel_color_manager_init(display);
 	if (rc)
 		goto end;
 
 	rc = somc_panel_fps_manager_init(display);
+	if (rc)
+		goto end;
 
+	INIT_DELAYED_WORK(&display->panel->hbm_protect_work,
+			  somc_panel_hbm_protect_work);
 end:
 	return rc;
 }

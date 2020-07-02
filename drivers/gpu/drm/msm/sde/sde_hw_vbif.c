@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -41,7 +41,13 @@
 #define VBIF_XIN_HALT_CTRL0		0x0200
 #define VBIF_XIN_HALT_CTRL1		0x0204
 #define VBIF_XINL_QOS_RP_REMAP_000	0x0550
-#define VBIF_XINL_QOS_LVL_REMAP_000	0x0590
+
+#if defined(CONFIG_ARCH_MSM8996) || defined(CONFIG_ARCH_MSM8998) || \
+    defined(CONFIG_ARCH_SDM630) || defined(CONFIG_ARCH_SDM660)
+ #define VBIF_XINL_QOS_LVL_REMAP_000	0x0570
+#else
+ #define VBIF_XINL_QOS_LVL_REMAP_000	0x0590
+#endif
 
 static void sde_hw_clear_errors(struct sde_hw_vbif *vbif,
 		u32 *pnd_errors, u32 *src_errors)
@@ -242,7 +248,9 @@ static void _setup_vbif_ops(const struct sde_mdss_cfg *m,
 	if (test_bit(SDE_VBIF_QOS_REMAP, &cap))
 		ops->set_qos_remap = sde_hw_set_qos_remap;
 	if (IS_SM8150_TARGET(m->hwversion) || IS_SM6150_TARGET(m->hwversion) ||
-			IS_SDMMAGPIE_TARGET(m->hwversion))
+			IS_SDMMAGPIE_TARGET(m->hwversion) ||
+			IS_SDMTRINKET_TARGET(m->hwversion) ||
+			IS_ATOLL_TARGET(m->hwversion))
 		ops->set_mem_type = sde_hw_set_mem_type_v1;
 	else
 		ops->set_mem_type = sde_hw_set_mem_type;

@@ -77,8 +77,8 @@
 			linux,name = "wled:backlight";
 			somc,init-br-ua = <10000>;
 			somc-s1,br-power-save-ua = <800>;
-			qcom,led-strings-list = [00 01 02];
-			qcom,ilim-ma = <660>;
+			qcom,enabled-strings = <0 1 2>;
+			qcom,current-boost-limit = <660>;
 		};
 	};
 };

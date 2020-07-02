@@ -41,6 +41,12 @@
 			interrupt-controller;
 			#interrupt-cells = <2>;
 		};
+
+		smp2p_wlan_1_in: qcom,smp2p-wlan-1-in {
+			qcom,entry-name = "wlan";
+			interrupt-controller;
+			#interrupt-cells = <2>;
+		};
 	};
 
 	smp2p-lpass {
@@ -65,17 +71,6 @@
 			interrupt-controller;
 			#interrupt-cells = <2>;
 		};
-
-		sleepstate_smp2p_out: sleepstate-out {
-			qcom,entry-name = "sleepstate";
-			#qcom,smem-state-cells = <1>;
-		};
-
-		sleepstate_smp2p_in: qcom,sleepstate-in {
-			qcom,entry-name = "sleepstate_see";
-			interrupt-controller;
-			#interrupt-cells = <2>;
-		};
 	};
 
 	smp2p-slpi {
@@ -93,6 +88,17 @@
 
 		slpi_smp2p_in: slave-kernel {
 			qcom,entry-name = "slave-kernel";
+			interrupt-controller;
+			#interrupt-cells = <2>;
+		};
+
+		sleepstate_smp2p_out: sleepstate-out {
+			qcom,entry-name = "sleepstate";
+			#qcom,smem-state-cells = <1>;
+		};
+
+		sleepstate_smp2p_in: qcom,sleepstate-in {
+			qcom,entry-name = "sleepstate_see";
 			interrupt-controller;
 			#interrupt-cells = <2>;
 		};

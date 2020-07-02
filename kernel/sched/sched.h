@@ -20,11 +20,13 @@
 #include <linux/sched/task_stack.h>
 #include <linux/sched/cputime.h>
 #include <linux/sched/init.h>
+#include <linux/sched/smt.h>
 
 #include <linux/u64_stats_sync.h>
 #include <linux/kernel_stat.h>
 #include <linux/binfmts.h>
 #include <linux/mutex.h>
+#include <linux/psi.h>
 #include <linux/spinlock.h>
 #include <linux/stop_machine.h>
 #include <linux/irq_work.h>
@@ -157,7 +159,13 @@ static inline void cpu_load_update_active(struct rq *this_rq) { }
 #ifdef CONFIG_64BIT
 # define NICE_0_LOAD_SHIFT	(SCHED_FIXEDPOINT_SHIFT + SCHED_FIXEDPOINT_SHIFT)
 # define scale_load(w)		((w) << SCHED_FIXEDPOINT_SHIFT)
-# define scale_load_down(w)	((w) >> SCHED_FIXEDPOINT_SHIFT)
+# define scale_load_down(w) \
+({ \
+	unsigned long __w = (w); \
+	if (__w) \
+		__w = max(2UL, __w >> SCHED_FIXEDPOINT_SHIFT); \
+	__w; \
+})
 #else
 # define NICE_0_LOAD_SHIFT	(SCHED_FIXEDPOINT_SHIFT)
 # define scale_load(w)		(w)
@@ -336,6 +344,7 @@ extern bool dl_cpu_busy(unsigned int cpu);
 #ifdef CONFIG_CGROUP_SCHED
 
 #include <linux/cgroup.h>
+#include <linux/psi.h>
 
 struct cfs_rq;
 struct rt_rq;
@@ -348,9 +357,8 @@ struct cfs_bandwidth {
 	ktime_t period;
 	u64 quota, runtime;
 	s64 hierarchical_quota;
-	u64 runtime_expires;
 
-	int idle, period_active;
+	short idle, period_active;
 	struct hrtimer period_timer, slack_timer;
 	struct list_head throttled_cfs_rq;
 
@@ -560,7 +568,6 @@ struct cfs_rq {
 
 #ifdef CONFIG_CFS_BANDWIDTH
 	int runtime_enabled;
-	u64 runtime_expires;
 	s64 runtime_remaining;
 
 	u64 throttled_clock, throttled_clock_task;
@@ -963,9 +970,6 @@ static inline int cpu_of(struct rq *rq)
 
 
 #ifdef CONFIG_SCHED_SMT
-
-extern struct static_key_false sched_smt_present;
-
 extern void __update_idle_core(struct rq *rq);
 
 static inline void update_idle_core(struct rq *rq)
@@ -1943,7 +1947,7 @@ u64 sched_ktime_clock(void);
 #else
 static inline u64 sched_ktime_clock(void)
 {
-	return 0;
+	return sched_clock();
 }
 #endif
 
@@ -2496,16 +2500,20 @@ DECLARE_PER_CPU(struct update_util_data *, cpufreq_update_util_data);
 static inline void cpufreq_update_util(struct rq *rq, unsigned int flags)
 {
 	struct update_util_data *data;
+	u64 clock;
 
 #ifdef CONFIG_SCHED_WALT
 	if (!(flags & SCHED_CPUFREQ_WALT))
 		return;
+	clock = sched_ktime_clock();
+#else
+	clock = rq_clock(rq);
 #endif
 
 	data = rcu_dereference_sched(*per_cpu_ptr(&cpufreq_update_util_data,
 					cpu_of(rq)));
 	if (data)
-		data->func(data, sched_ktime_clock(), flags);
+		data->func(data, clock, flags);
 }
 #else
 static inline void cpufreq_update_util(struct rq *rq, unsigned int flags) {}

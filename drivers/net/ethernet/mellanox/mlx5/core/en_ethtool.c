@@ -1400,6 +1400,9 @@ static int mlx5e_set_pauseparam(struct net_device *netdev,
 	struct mlx5_core_dev *mdev = priv->mdev;
 	int err;
 
+	if (!MLX5_CAP_GEN(mdev, vport_group_manager))
+		return -EOPNOTSUPP;
+
 	if (pauseparam->autoneg)
 		return -EINVAL;
 
@@ -1417,21 +1420,15 @@ static int mlx5e_set_pauseparam(struct net_device *netdev,
 int mlx5e_ethtool_get_ts_info(struct mlx5e_priv *priv,
 			      struct ethtool_ts_info *info)
 {
-	int ret;
-
-	ret = ethtool_op_get_ts_info(priv->netdev, info);
-	if (ret)
-		return ret;
-
 	info->phc_index = priv->tstamp.ptp ?
 			  ptp_clock_index(priv->tstamp.ptp) : -1;
 
 	if (!MLX5_CAP_GEN(priv->mdev, device_frequency_khz))
 		return 0;
 
-	info->so_timestamping |= SOF_TIMESTAMPING_TX_HARDWARE |
-				 SOF_TIMESTAMPING_RX_HARDWARE |
-				 SOF_TIMESTAMPING_RAW_HARDWARE;
+	info->so_timestamping = SOF_TIMESTAMPING_TX_HARDWARE |
+				SOF_TIMESTAMPING_RX_HARDWARE |
+				SOF_TIMESTAMPING_RAW_HARDWARE;
 
 	info->tx_types = BIT(HWTSTAMP_TX_OFF) |
 			 BIT(HWTSTAMP_TX_ON);

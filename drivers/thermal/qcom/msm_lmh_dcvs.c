@@ -1,4 +1,4 @@
-/* Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -25,6 +25,7 @@
 #include <linux/interrupt.h>
 #include <linux/timer.h>
 #include <linux/pm_opp.h>
+#include <linux/cpufreq.h>
 #include <linux/cpu_cooling.h>
 #include <linux/atomic.h>
 #include <linux/regulator/consumer.h>
@@ -41,9 +42,16 @@
 #include <trace/events/lmh.h>
 
 #define LIMITS_DCVSH			0x10
+#define LIMITS_PROFILE_CHANGE		0x01
 #define LIMITS_NODE_DCVS		0x44435653
 
 #define LIMITS_SUB_FN_THERMAL		0x54484D4C
+#define LIMITS_SUB_FN_CRNT		0x43524E54
+#define LIMITS_SUB_FN_REL		0x52454C00
+#define LIMITS_SUB_FN_BCL		0x42434C00
+
+#define LIMITS_ALGO_MODE_ENABLE		0x454E424C
+
 #define LIMITS_HI_THRESHOLD		0x48494748
 #define LIMITS_LOW_THRESHOLD		0x4C4F5700
 #define LIMITS_ARM_THRESHOLD		0x41524D00
@@ -96,6 +104,7 @@ struct limits_dcvs_hw {
 	struct device_attribute lmh_freq_attr;
 	struct list_head list;
 	bool is_irq_enabled;
+	bool is_plat_mit_disabled;
 	struct mutex access_lock;
 	struct __limits_cdev_data *cdev_data;
 	uint32_t cdev_registered;
@@ -343,6 +352,23 @@ static struct limits_dcvs_hw *get_dcvsh_hw_from_cpu(int cpu)
 	return NULL;
 }
 
+static int enable_lmh(void)
+{
+	int ret = 0;
+	struct scm_desc desc_arg;
+
+	desc_arg.args[0] = 1;
+	desc_arg.arginfo = SCM_ARGS(1, SCM_VAL);
+	ret = scm_call2(SCM_SIP_FNID(SCM_SVC_LMH, LIMITS_PROFILE_CHANGE),
+			&desc_arg);
+	if (ret) {
+		pr_err("Error switching profile:[1]. err:%d\n", ret);
+		return ret;
+	}
+
+	return ret;
+}
+
 static int lmh_set_max_limit(int cpu, u32 freq)
 {
 	struct limits_dcvs_hw *hw = get_dcvsh_hw_from_cpu(cpu);
@@ -408,6 +434,8 @@ static void register_cooling_device(struct work_struct *work)
 {
 	struct limits_dcvs_hw *hw;
 	unsigned int cpu = 0, idx = 0;
+	struct device_node *cpu_node;
+	struct cpufreq_policy *policy;
 
 	mutex_lock(&lmh_dcvs_list_access);
 	list_for_each_entry(hw, &lmh_dcvs_hw_list, list) {
@@ -424,12 +452,33 @@ static void register_cooling_device(struct work_struct *work)
 				idx++;
 				continue;
 			}
-			cpumask_set_cpu(cpu, &cpu_mask);
 			hw->cdev_data[idx].max_freq = U32_MAX;
 			hw->cdev_data[idx].min_freq = 0;
-			hw->cdev_data[idx].cdev =
+
+			if (!hw->is_plat_mit_disabled) {
+				cpumask_set_cpu(cpu, &cpu_mask);
+				hw->cdev_data[idx].cdev =
 					cpufreq_platform_cooling_register(
 							&cpu_mask, &cd_ops);
+			} else {
+				cpu_node = of_cpu_device_node_get(cpu);
+				if (WARN_ON(!cpu_node)) {
+					hw->cdev_data[idx].cdev = NULL;
+					continue;
+				}
+
+				policy = cpufreq_cpu_get(cpu);
+				if (!policy) {
+					pr_err("No policy for cpu%d\n", cpu);
+					hw->cdev_data[idx].cdev = NULL;
+					of_node_put(cpu_node);
+					continue;
+				}
+				hw->cdev_data[idx].cdev =
+					of_cpufreq_cooling_register(cpu_node,
+						policy);
+				of_node_put(cpu_node);
+			}
 			if (IS_ERR_OR_NULL(hw->cdev_data[idx].cdev)) {
 				pr_err("CPU:%u cdev register error:%ld\n",
 					cpu, PTR_ERR(hw->cdev_data[idx].cdev));
@@ -588,6 +637,49 @@ static int limits_dcvs_probe(struct platform_device *pdev)
 		return -EINVAL;
 	};
 
+	/* Check whether platform mitigation needs to enable or not */
+	hw->is_plat_mit_disabled = of_property_read_bool(dn,
+				"qcom,plat-mitigation-disable");
+
+	/* Check legcay LMH HW enablement is needed or not */
+	if (of_property_read_bool(dn, "qcom,legacy-lmh-enable")) {
+		/* Enable the thermal algorithm early */
+		ret = limits_dcvs_write(hw->affinity, LIMITS_SUB_FN_THERMAL,
+			 LIMITS_ALGO_MODE_ENABLE, 1, 0, 0);
+		if (ret) {
+			pr_err("Unable to enable THERM algo for cluster%d\n",
+				affinity);
+			return ret;
+		}
+		/* Enable the LMH outer loop algorithm */
+		ret = limits_dcvs_write(hw->affinity, LIMITS_SUB_FN_CRNT,
+			 LIMITS_ALGO_MODE_ENABLE, 1, 0, 0);
+		if (ret) {
+			pr_err("Unable to enable CRNT algo for cluster%d\n",
+				affinity);
+			return ret;
+		}
+		/* Enable the Reliability algorithm */
+		ret = limits_dcvs_write(hw->affinity, LIMITS_SUB_FN_REL,
+			 LIMITS_ALGO_MODE_ENABLE, 1, 0, 0);
+		if (ret) {
+			pr_err("Unable to enable REL algo for cluster%d\n",
+				affinity);
+			return ret;
+		}
+		/* Enable the BCL algorithm */
+		ret = limits_dcvs_write(hw->affinity, LIMITS_SUB_FN_BCL,
+			 LIMITS_ALGO_MODE_ENABLE, 1, 0, 0);
+		if (ret) {
+			pr_err("Unable to enable BCL algo for cluster%d\n",
+				affinity);
+			return ret;
+		}
+		ret = enable_lmh();
+		if (ret)
+			return ret;
+	}
+
 	addr = of_get_address(dn, 0, NULL, NULL);
 	if (!addr) {
 		pr_err("Property llm-base-addr not found\n");
@@ -616,14 +708,22 @@ static int limits_dcvs_probe(struct platform_device *pdev)
 			affinity);
 	tzdev = thermal_zone_of_sensor_register(&pdev->dev, 0, hw,
 			&limits_sensor_ops);
-	if (IS_ERR_OR_NULL(tzdev))
-		return PTR_ERR(tzdev);
+	if (IS_ERR_OR_NULL(tzdev)) {
+		/*
+		 * Ignore error in case if thermal zone devicetree node is not
+		 * defined for this lmh hardware.
+		 */
+		if (!tzdev || PTR_ERR(tzdev) != -ENODEV)
+			return PTR_ERR(tzdev);
+	}
 
-	hw->min_freq_reg = devm_ioremap(&pdev->dev, min_reg, 0x4);
-	if (!hw->min_freq_reg) {
-		pr_err("min frequency enable register remap failed\n");
-		ret = -ENOMEM;
-		goto unregister_sensor;
+	if (!hw->is_plat_mit_disabled) {
+		hw->min_freq_reg = devm_ioremap(&pdev->dev, min_reg, 0x4);
+		if (!hw->min_freq_reg) {
+			pr_err("min frequency enable register remap failed\n");
+			ret = -ENOMEM;
+			goto unregister_sensor;
+		}
 	}
 
 	mutex_init(&hw->access_lock);
@@ -648,7 +748,7 @@ static int limits_dcvs_probe(struct platform_device *pdev)
 	hw->is_irq_enabled = true;
 	ret = devm_request_threaded_irq(&pdev->dev, hw->irq_num, NULL,
 		lmh_dcvs_handle_isr, IRQF_TRIGGER_HIGH | IRQF_ONESHOT
-		| IRQF_NO_SUSPEND, hw->sensor_name, hw);
+		| IRQF_NO_SUSPEND | IRQF_SHARED, hw->sensor_name, hw);
 	if (ret) {
 		pr_err("Error registering for irq. err:%d\n", ret);
 		ret = 0;

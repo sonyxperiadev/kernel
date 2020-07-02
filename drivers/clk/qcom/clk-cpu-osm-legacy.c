@@ -832,13 +832,13 @@ static struct clk_fixed_factor sys_apcsaux_clk_gcc = {
 static struct clk_init_data osm_clks_init[] = {
 	[0] = {
 		.name = "pwrcl_clk",
-		.parent_names = (const char *[]){ "cxo_a" },
+		.parent_names = (const char *[]){ "bi_tcxo_ao" },
 		.num_parents = 1,
 		.ops = &clk_ops_cpu_osm,
 	},
 	[1] = {
 		.name = "perfcl_clk",
-		.parent_names = (const char *[]){ "cxo_a" },
+		.parent_names = (const char *[]){ "bi_tcxo_ao" },
 		.num_parents = 1,
 		.ops = &clk_ops_cpu_osm,
 	},

@@ -133,6 +133,19 @@ static struct notifier_block pm_notifier_block;
 /* Either online or unisolated CPUs */
 const struct cpumask *avail_cpus_mask;
 
+/* rqb_start_perf starts the governor in "performance mode",
+ * which means that the CPUs will have a big tendency to be
+ * onlined at boot: this speeds up the boot process, as many
+ * userspaces do spawn few very power hungry threads at boot.
+ * 
+ * This performance mode will be discarded as soon as the
+ * userspace will take control of the parameters for this
+ * driver.
+ */
+static short int rqb_start_perf = 0;
+module_param(rqb_start_perf, short, 0644);
+MODULE_PARM_DESC(rqb_start_perf, "Use performance mode at start");
+
 static void calculate_load_timer(unsigned long data)
 {
 	int i;
@@ -1111,6 +1124,17 @@ static int rqbalance_start(void)
 
 	for_each_possible_cpu(i)
 		max_cpu_id++;
+
+	if (rqb_start_perf) {
+		pr_info("Starting rqbalance in performance mode\n");
+		nr_run_thresholds[0] = 20;
+		nr_down_run_thresholds[1] = 10;
+		for (i = 0; i < max_cpu_id; i++) {
+			nr_run_thresholds[i] = nr_run_thresholds[i - 1] + 10;
+			nr_down_run_thresholds[i] =
+					nr_down_run_thresholds[i - 1] + 7;
+		}
+	}
 
 	/* Set value as target MAX on-line number of CPUs */
 	if (nr_run_thresholds[max_cpu_id] != UINT_MAX)

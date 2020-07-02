@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -121,6 +121,7 @@ struct cam_iommu_cb_set {
 	struct cam_context_bank_info *cb_info;
 	u32 cb_num;
 	u32 cb_init_count;
+	bool camera_secure_sid;
 	struct work_struct smmu_work;
 	struct mutex payload_list_lock;
 	struct list_head payload_list;
@@ -148,6 +149,8 @@ struct cam_dma_buff_info {
 
 struct cam_sec_buff_info {
 	struct dma_buf *dmabuf;
+	struct dma_buf_attachment *attach;
+	struct sg_table *table;
 	enum dma_data_direction dir;
 	int ref_count;
 	dma_addr_t paddr;
@@ -781,26 +784,32 @@ static int cam_smmu_send_syscall_cpp_intf(int vmid, int idx)
 	int rc = 0;
 	struct scm_desc desc = {0};
 	struct cam_context_bank_info *cb = &iommu_cb_set.cb_info[idx];
-	uint32_t sid_info;
+	uint32_t *sid_info = NULL;
+
+	sid_info = kzalloc(sizeof(uint32_t) * 1, GFP_KERNEL);
+	if (!sid_info)
+		return -ENOMEM;
 
 
-	sid_info = cb->sids[0]; /* CPP SID */
+	sid_info[0] = cb->sids[0]; /* CPP SID */
 
 	desc.arginfo = SCM_ARGS(4, SCM_VAL, SCM_RW, SCM_VAL, SCM_VAL);
 	desc.args[0] = CAMERA_DEVICE_ID;
-	desc.args[1] = SCM_BUFFER_PHYS(&sid_info);
+	desc.args[1] = SCM_BUFFER_PHYS(sid_info);
 	desc.args[2] = sizeof(uint32_t);
 	desc.args[3] = vmid;
 	/*
 	 * Syscall to hypervisor to switch CPP SID's
 	 * between secure and non-secure contexts
 	 */
-	dmac_flush_range(&sid_info, &sid_info + 1);
+	dmac_flush_range(sid_info, sid_info + 1);
 	if (scm_call2(SCM_SIP_FNID(SCM_SVC_MP, SECURE_SYSCALL_ID),
 			&desc)){
 		pr_err("call to hypervisor failed\n");
+		kfree(sid_info);
 		return -EINVAL;
 	}
+	kfree(sid_info);
 	return rc;
 }
 
@@ -882,9 +891,7 @@ static int cam_smmu_attach_sec_cpp(int idx)
 		 * entered the secure mode.
 		 */
 	}
-
 	iommu_cb_set.cb_info[idx].state = CAM_SMMU_ATTACH;
-
 	return 0;
 }
 
@@ -921,34 +928,35 @@ static int cam_smmu_attach_sec_vfe_ns_stats(int idx)
 {
 	int32_t rc = 0;
 
-	/*
-	 *When switching to secure, for secure pix and non-secure stats
-	 *localizing scm/attach of non-secure SID's in attach secure
-	 */
-	if (cam_smmu_send_syscall_pix_intf(VMID_CP_CAMERA, idx)) {
-		pr_err("error: syscall failed\n");
-		return -EINVAL;
+	if (iommu_cb_set.camera_secure_sid == false) {
+		/*
+		 *When switching to secure, for secure pix and non-secure stats
+		 *localizing scm/attach of non-secure SID's in attach secure
+		 */
+		if (cam_smmu_send_syscall_pix_intf(VMID_CP_CAMERA, idx)) {
+			pr_err("error: syscall failed\n");
+			return -EINVAL;
+		}
 	}
-
 	if (iommu_cb_set.cb_info[idx].state != CAM_SMMU_ATTACH) {
 		if (cam_smmu_attach(idx)) {
 			pr_err("error: failed to attach\n");
 			return -EINVAL;
 		}
 	}
-
-	rc = msm_camera_tz_set_mode(MSM_CAMERA_TZ_MODE_SECURE,
-		MSM_CAMERA_TZ_HW_BLOCK_ISP);
-	if (rc != 0) {
-		pr_err("secure mode TA notification for vfe unsuccessful, rc %d\n",
-			rc);
-		/*
-		 * Although the TA notification failed, the flow should proceed
-		 * without returning an error as at this point vfe had already
-		 * entered the secure mode
-		 */
+	if (iommu_cb_set.camera_secure_sid == false) {
+		rc = msm_camera_tz_set_mode(MSM_CAMERA_TZ_MODE_SECURE,
+			MSM_CAMERA_TZ_HW_BLOCK_ISP);
+		if (rc != 0) {
+			pr_err("secure mode TA notify vfe unsuccessful rc %d\n",
+				rc);
+			/*
+			 * Although the TA notification failed, the flow should
+			 * proceed without returning an error as at this point
+			 * vfe had already entered the secure mode
+			 */
+		}
 	}
-
 	return 0;
 }
 
@@ -956,18 +964,20 @@ static int cam_smmu_detach_sec_vfe_ns_stats(int idx)
 {
 	int32_t rc = 0;
 
-	rc = msm_camera_tz_set_mode(MSM_CAMERA_TZ_MODE_NON_SECURE,
-		MSM_CAMERA_TZ_HW_BLOCK_ISP);
-	if (rc != 0) {
-		pr_err("secure mode TA notification for vfe unsuccessful, rc %d\n",
-			rc);
-		/*
-		 * Although the TA notification failed, the flow should proceed
-		 * without returning an error, as at this point vfe is in secure
-		 * mode and should be switched to non-secure regardless
-		 */
+	if (iommu_cb_set.camera_secure_sid == false) {
+		rc = msm_camera_tz_set_mode(MSM_CAMERA_TZ_MODE_NON_SECURE,
+			MSM_CAMERA_TZ_HW_BLOCK_ISP);
+		if (rc != 0) {
+			pr_err("secure mode TA notify vfe unsuccessful rc %d\n",
+				rc);
+			/*
+			 * Although the TA notification failed, the flow should
+			 * proceed without returning an error, as at this point
+			 * vfe is in secure mode and should be switched to
+			 * non-secure regardless
+			 */
+		}
 	}
-
 	/*
 	 *While exiting from secure mode for secure pix and non-secure stats,
 	 *localizing detach/scm of non-secure SID's to detach secure
@@ -978,10 +988,11 @@ static int cam_smmu_detach_sec_vfe_ns_stats(int idx)
 			return -ENODEV;
 		}
 	}
-
-	if (cam_smmu_send_syscall_pix_intf(VMID_HLOS, idx)) {
-		pr_err("error: syscall failed\n");
-		return -EINVAL;
+	if (iommu_cb_set.camera_secure_sid == false) {
+		if (cam_smmu_send_syscall_pix_intf(VMID_HLOS, idx)) {
+			pr_err("error: syscall failed\n");
+			return -EINVAL;
+		}
 	}
 	return 0;
 }
@@ -1049,13 +1060,13 @@ static int cam_smmu_map_buffer_and_add_to_list(int idx, int ion_fd,
 	mapping_info->attach = attach;
 	mapping_info->table = table;
 	mapping_info->paddr = sg_dma_address(table->sgl);
-	mapping_info->len = (size_t)sg_dma_len(table->sgl);
+	mapping_info->len = (size_t)buf->size;
 	mapping_info->dir = dma_dir;
 	mapping_info->ref_count = 1;
 
 	/* return paddr and len to client */
 	*paddr_ptr = sg_dma_address(table->sgl);
-	*len_ptr = (size_t)sg_dma_len(table->sgl);
+	*len_ptr = (size_t)buf->size;
 
 	if (!*paddr_ptr || !*len_ptr) {
 		pr_err("Error: Space Allocation failed!\n");
@@ -1222,6 +1233,9 @@ int cam_smmu_ops(int handle, enum cam_smmu_ops_param ops)
 	int ret = 0, idx;
 
 	CDBG("E: ops = %d\n", ops);
+	if (iommu_cb_set.camera_secure_sid)
+		return ret;
+
 	idx = GET_SMMU_TABLE_IDX(handle);
 	if (handle == HANDLE_INIT || idx < 0 || idx >= iommu_cb_set.cb_num) {
 		pr_err("Error: handle or index invalid. idx = %d hdl = %x\n",
@@ -1650,11 +1664,27 @@ static int cam_smmu_secure_unmap_buf_and_remove_from_list(
 		struct cam_sec_buff_info *mapping_info,
 		int idx)
 {
-	if (!mapping_info) {
-		pr_err("Error: List doesn't exist\n");
+	if ((!mapping_info->dmabuf) || (!mapping_info->table) ||
+		(!mapping_info->attach)) {
+		pr_err("Error: Invalid params dev = %pK, table = %pK",
+			(void *)iommu_cb_set.cb_info[idx].dev,
+			(void *)mapping_info->table);
+		pr_err("Error:dma_buf = %pK, attach = %pK\n",
+			(void *)mapping_info->dmabuf,
+			(void *)mapping_info->attach);
 		return -EINVAL;
 	}
+
+	/* skip cache operations */
+	mapping_info->attach->dma_map_attrs |= DMA_ATTR_SKIP_CPU_SYNC;
+
+	/* iommu buffer clean up */
+	dma_buf_unmap_attachment(mapping_info->attach,
+	mapping_info->table, mapping_info->dir);
+	dma_buf_detach(mapping_info->dmabuf, mapping_info->attach);
 	dma_buf_put(mapping_info->dmabuf);
+	mapping_info->dmabuf = NULL;
+
 	list_del_init(&mapping_info->list);
 
 	/* free one buffer */
@@ -1773,6 +1803,9 @@ static int cam_smmu_map_stage2_buffer_and_add_to_list(int idx, int ion_fd,
 	mapping_info->len = *len_ptr;
 	mapping_info->dir = dma_dir;
 	mapping_info->ref_count = 1;
+	mapping_info->dmabuf = dmabuf;
+	mapping_info->attach = attach;
+	mapping_info->table = table;
 
 	CDBG("ion_fd = %d, dev = %pK, paddr= %pK, len = %u\n", ion_fd,
 			(void *)iommu_cb_set.cb_info[idx].dev,
@@ -2078,7 +2111,7 @@ static int cam_smmu_populate_sids(struct device *dev,
 	/* set the name of the context bank */
 	property = of_get_property(dev->of_node, "iommus", &cnt);
 	cnt /= 4;
-	for (i = 0, j = 0; i < cnt; i = i + 3, j++) {
+	for (i = 0, j = 0; i < cnt; i = i + 2, j++) {
 		rc = of_property_read_u32_index(dev->of_node,
 			"iommus", i + 1, &cb->sids[j]);
 		if (rc < 0)
@@ -2199,6 +2232,12 @@ static int cam_populate_smmu_context_banks(struct device *dev,
 			cam_smmu_iommu_fault_handler,
 			(void *)cb->name);
 
+	if (iommu_cb_set.camera_secure_sid) {
+		rc = cam_smmu_attach(iommu_cb_set.cb_init_count);
+		if (rc)
+			pr_err("Error: SMMU attach failed for %s\n", cb->name);
+	}
+
 	/* increment count to next bank */
 	iommu_cb_set.cb_init_count++;
 
@@ -2238,6 +2277,11 @@ static int cam_smmu_probe(struct platform_device *pdev)
 		}
 		return rc;
 	}
+
+	if (of_property_read_bool(dev->of_node, "qcom,camera-secure-sid"))
+		iommu_cb_set.camera_secure_sid = true;
+	else
+		iommu_cb_set.camera_secure_sid = false;
 
 	/* probe thru all the subdevices */
 	rc = of_platform_populate(pdev->dev.of_node, msm_cam_smmu_dt_match,

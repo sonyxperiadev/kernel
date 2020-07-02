@@ -59,6 +59,7 @@ int sbitmap_init_node(struct sbitmap *sb, unsigned int depth, int shift,
 	for (i = 0; i < sb->map_nr; i++) {
 		sb->map[i].depth = min(depth, bits_per_word);
 		depth -= sb->map[i].depth;
+		spin_lock_init(&sb->map[i].swap_lock);
 	}
 	return 0;
 }
@@ -100,13 +101,72 @@ static int __sbitmap_get_word(unsigned long *word, unsigned long depth,
 			return -1;
 		}
 
-		if (!test_and_set_bit(nr, word))
+		if (!test_and_set_bit_lock(nr, word))
 			break;
 
 		hint = nr + 1;
 		if (hint >= depth - 1)
 			hint = 0;
 	}
+
+	return nr;
+}
+
+/*
+ * See if we have deferred clears that we can batch move
+ */
+static inline bool sbitmap_deferred_clear(struct sbitmap *sb, int index)
+{
+	unsigned long mask, val;
+	unsigned long __maybe_unused flags;
+	bool ret = false;
+
+	/* Silence bogus lockdep warning */
+#if defined(CONFIG_LOCKDEP)
+	local_irq_save(flags);
+#endif
+	spin_lock(&sb->map[index].swap_lock);
+
+	if (!sb->map[index].cleared)
+		goto out_unlock;
+
+	/*
+	 * First get a stable cleared mask, setting the old mask to 0.
+	 */
+	do {
+		mask = sb->map[index].cleared;
+	} while (cmpxchg(&sb->map[index].cleared, mask, 0) != mask);
+
+	/*
+	 * Now clear the masked bits in our free word
+	 */
+	do {
+		val = sb->map[index].word;
+	} while (cmpxchg(&sb->map[index].word, val, val & ~mask) != val);
+
+	ret = true;
+out_unlock:
+	spin_unlock(&sb->map[index].swap_lock);
+#if defined(CONFIG_LOCKDEP)
+	local_irq_restore(flags);
+#endif
+	return ret;
+}
+
+static int sbitmap_find_bit_in_index(struct sbitmap *sb, int index,
+				     unsigned int alloc_hint, bool round_robin)
+{
+	int nr;
+
+	do {
+		nr = __sbitmap_get_word(&sb->map[index].word,
+					sb->map[index].depth, alloc_hint,
+					!round_robin);
+		if (nr != -1)
+			break;
+		if (!sbitmap_deferred_clear(sb, index))
+			break;
+	} while (1);
 
 	return nr;
 }
@@ -118,24 +178,28 @@ int sbitmap_get(struct sbitmap *sb, unsigned int alloc_hint, bool round_robin)
 
 	index = SB_NR_TO_INDEX(sb, alloc_hint);
 
+	/*
+	 * Unless we're doing round robin tag allocation, just use the
+	 * alloc_hint to find the right word index. No point in looping
+	 * twice in find_next_zero_bit() for that case.
+	 */
+	if (round_robin)
+		alloc_hint = SB_NR_TO_BIT(sb, alloc_hint);
+	else
+		alloc_hint = 0;
+
 	for (i = 0; i < sb->map_nr; i++) {
-		nr = __sbitmap_get_word(&sb->map[index].word,
-					sb->map[index].depth,
-					SB_NR_TO_BIT(sb, alloc_hint),
-					!round_robin);
+		nr = sbitmap_find_bit_in_index(sb, index, alloc_hint,
+						round_robin);
 		if (nr != -1) {
 			nr += index << sb->shift;
 			break;
 		}
 
 		/* Jump to next index. */
-		index++;
-		alloc_hint = index << sb->shift;
-
-		if (index >= sb->map_nr) {
+		alloc_hint = 0;
+		if (++index >= sb->map_nr)
 			index = 0;
-			alloc_hint = 0;
-		}
 	}
 
 	return nr;
@@ -201,23 +265,36 @@ bool sbitmap_any_bit_clear(const struct sbitmap *sb)
 }
 EXPORT_SYMBOL_GPL(sbitmap_any_bit_clear);
 
-unsigned int sbitmap_weight(const struct sbitmap *sb)
+static unsigned int __sbitmap_weight(const struct sbitmap *sb, bool set)
 {
 	unsigned int i, weight = 0;
 
 	for (i = 0; i < sb->map_nr; i++) {
 		const struct sbitmap_word *word = &sb->map[i];
 
-		weight += bitmap_weight(&word->word, word->depth);
+		if (set)
+			weight += bitmap_weight(&word->word, word->depth);
+		else
+			weight += bitmap_weight(&word->cleared, word->depth);
 	}
 	return weight;
 }
-EXPORT_SYMBOL_GPL(sbitmap_weight);
+
+static unsigned int sbitmap_weight(const struct sbitmap *sb)
+{
+	return __sbitmap_weight(sb, true);
+}
+
+static unsigned int sbitmap_cleared(const struct sbitmap *sb)
+{
+	return __sbitmap_weight(sb, false);
+}
 
 void sbitmap_show(struct sbitmap *sb, struct seq_file *m)
 {
 	seq_printf(m, "depth=%u\n", sb->depth);
-	seq_printf(m, "busy=%u\n", sbitmap_weight(sb));
+	seq_printf(m, "busy=%u\n", sbitmap_weight(sb) - sbitmap_cleared(sb));
+	seq_printf(m, "cleared=%u\n", sbitmap_cleared(sb));
 	seq_printf(m, "bits_per_word=%u\n", 1U << sb->shift);
 	seq_printf(m, "map_nr=%u\n", sb->map_nr);
 }
@@ -270,18 +347,33 @@ void sbitmap_bitmap_show(struct sbitmap *sb, struct seq_file *m)
 }
 EXPORT_SYMBOL_GPL(sbitmap_bitmap_show);
 
-static unsigned int sbq_calc_wake_batch(unsigned int depth)
+static unsigned int sbq_calc_wake_batch(struct sbitmap_queue *sbq,
+					unsigned int depth)
 {
 	unsigned int wake_batch;
+	unsigned int shallow_depth;
 
 	/*
 	 * For each batch, we wake up one queue. We need to make sure that our
-	 * batch size is small enough that the full depth of the bitmap is
-	 * enough to wake up all of the queues.
+	 * batch size is small enough that the full depth of the bitmap,
+	 * potentially limited by a shallow depth, is enough to wake up all of
+	 * the queues.
+	 *
+	 * Each full word of the bitmap has bits_per_word bits, and there might
+	 * be a partial word. There are depth / bits_per_word full words and
+	 * depth % bits_per_word bits left over. In bitwise arithmetic:
+	 *
+	 * bits_per_word = 1 << shift
+	 * depth / bits_per_word = depth >> shift
+	 * depth % bits_per_word = depth & ((1 << shift) - 1)
+	 *
+	 * Each word can be limited to sbq->min_shallow_depth bits.
 	 */
-	wake_batch = SBQ_WAKE_BATCH;
-	if (wake_batch > depth / SBQ_WAIT_QUEUES)
-		wake_batch = max(1U, depth / SBQ_WAIT_QUEUES);
+	shallow_depth = min(1U << sbq->sb.shift, sbq->min_shallow_depth);
+	depth = ((depth >> sbq->sb.shift) * shallow_depth +
+		 min(depth & ((1U << sbq->sb.shift) - 1), shallow_depth));
+	wake_batch = clamp_t(unsigned int, depth / SBQ_WAIT_QUEUES, 1,
+			     SBQ_WAKE_BATCH);
 
 	return wake_batch;
 }
@@ -307,7 +399,8 @@ int sbitmap_queue_init_node(struct sbitmap_queue *sbq, unsigned int depth,
 			*per_cpu_ptr(sbq->alloc_hint, i) = prandom_u32() % depth;
 	}
 
-	sbq->wake_batch = sbq_calc_wake_batch(depth);
+	sbq->min_shallow_depth = UINT_MAX;
+	sbq->wake_batch = sbq_calc_wake_batch(sbq, depth);
 	atomic_set(&sbq->wake_index, 0);
 
 	sbq->ws = kzalloc_node(SBQ_WAIT_QUEUES * sizeof(*sbq->ws), flags, node);
@@ -327,21 +420,28 @@ int sbitmap_queue_init_node(struct sbitmap_queue *sbq, unsigned int depth,
 }
 EXPORT_SYMBOL_GPL(sbitmap_queue_init_node);
 
-void sbitmap_queue_resize(struct sbitmap_queue *sbq, unsigned int depth)
+static void sbitmap_queue_update_wake_batch(struct sbitmap_queue *sbq,
+					    unsigned int depth)
 {
-	unsigned int wake_batch = sbq_calc_wake_batch(depth);
+	unsigned int wake_batch = sbq_calc_wake_batch(sbq, depth);
 	int i;
 
 	if (sbq->wake_batch != wake_batch) {
 		WRITE_ONCE(sbq->wake_batch, wake_batch);
 		/*
-		 * Pairs with the memory barrier in sbq_wake_up() to ensure that
-		 * the batch size is updated before the wait counts.
+		 * Pairs with the memory barrier in sbitmap_queue_wake_up()
+		 * to ensure that the batch size is updated before the wait
+		 * counts.
 		 */
-		smp_mb__before_atomic();
+		smp_mb();
 		for (i = 0; i < SBQ_WAIT_QUEUES; i++)
 			atomic_set(&sbq->ws[i].wait_cnt, 1);
 	}
+}
+
+void sbitmap_queue_resize(struct sbitmap_queue *sbq, unsigned int depth)
+{
+	sbitmap_queue_update_wake_batch(sbq, depth);
 	sbitmap_resize(&sbq->sb, depth);
 }
 EXPORT_SYMBOL_GPL(sbitmap_queue_resize);
@@ -380,6 +480,8 @@ int __sbitmap_queue_get_shallow(struct sbitmap_queue *sbq,
 	unsigned int hint, depth;
 	int nr;
 
+	WARN_ON_ONCE(shallow_depth < sbq->min_shallow_depth);
+
 	hint = this_cpu_read(*sbq->alloc_hint);
 	depth = READ_ONCE(sbq->sb.depth);
 	if (unlikely(hint >= depth)) {
@@ -403,6 +505,14 @@ int __sbitmap_queue_get_shallow(struct sbitmap_queue *sbq,
 }
 EXPORT_SYMBOL_GPL(__sbitmap_queue_get_shallow);
 
+void sbitmap_queue_min_shallow_depth(struct sbitmap_queue *sbq,
+				     unsigned int min_shallow_depth)
+{
+	sbq->min_shallow_depth = min_shallow_depth;
+	sbitmap_queue_update_wake_batch(sbq, sbq->sb.depth);
+}
+EXPORT_SYMBOL_GPL(sbitmap_queue_min_shallow_depth);
+
 static struct sbq_wait_state *sbq_wake_ptr(struct sbitmap_queue *sbq)
 {
 	int i, wake_index;
@@ -425,52 +535,68 @@ static struct sbq_wait_state *sbq_wake_ptr(struct sbitmap_queue *sbq)
 	return NULL;
 }
 
-static void sbq_wake_up(struct sbitmap_queue *sbq)
+static bool __sbq_wake_up(struct sbitmap_queue *sbq)
 {
 	struct sbq_wait_state *ws;
 	unsigned int wake_batch;
 	int wait_cnt;
 
-	/*
-	 * Pairs with the memory barrier in set_current_state() to ensure the
-	 * proper ordering of clear_bit()/waitqueue_active() in the waker and
-	 * test_and_set_bit()/prepare_to_wait()/finish_wait() in the waiter. See
-	 * the comment on waitqueue_active(). This is __after_atomic because we
-	 * just did clear_bit() in the caller.
-	 */
-	smp_mb__after_atomic();
-
 	ws = sbq_wake_ptr(sbq);
 	if (!ws)
-		return;
+		return false;
 
 	wait_cnt = atomic_dec_return(&ws->wait_cnt);
 	if (wait_cnt <= 0) {
+		int ret;
+
 		wake_batch = READ_ONCE(sbq->wake_batch);
+
 		/*
 		 * Pairs with the memory barrier in sbitmap_queue_resize() to
 		 * ensure that we see the batch size update before the wait
 		 * count is reset.
 		 */
 		smp_mb__before_atomic();
+
 		/*
-		 * If there are concurrent callers to sbq_wake_up(), the last
-		 * one to decrement the wait count below zero will bump it back
-		 * up. If there is a concurrent resize, the count reset will
-		 * either cause the cmpxchg to fail or overwrite after the
-		 * cmpxchg.
+		 * For concurrent callers of this, the one that failed the
+		 * atomic_cmpxhcg() race should call this function again
+		 * to wakeup a new batch on a different 'ws'.
 		 */
-		atomic_cmpxchg(&ws->wait_cnt, wait_cnt, wait_cnt + wake_batch);
-		sbq_index_atomic_inc(&sbq->wake_index);
-		wake_up(&ws->wait);
+		ret = atomic_cmpxchg(&ws->wait_cnt, wait_cnt, wake_batch);
+		if (ret == wait_cnt) {
+			sbq_index_atomic_inc(&sbq->wake_index);
+			wake_up_nr(&ws->wait, wake_batch);
+			return false;
+		}
+
+		return true;
 	}
+
+	return false;
 }
+
+void sbitmap_queue_wake_up(struct sbitmap_queue *sbq)
+{
+	while (__sbq_wake_up(sbq))
+		;
+}
+EXPORT_SYMBOL_GPL(sbitmap_queue_wake_up);
 
 void sbitmap_queue_clear(struct sbitmap_queue *sbq, unsigned int nr,
 			 unsigned int cpu)
 {
-	sbitmap_clear_bit(&sbq->sb, nr);
-	sbq_wake_up(sbq);
+	sbitmap_deferred_clear_bit(&sbq->sb, nr);
+
+	/*
+	 * Pairs with the memory barrier in set_current_state() to ensure the
+	 * proper ordering of clear_bit_unlock()/waitqueue_active() in the waker
+	 * and test_and_set_bit_lock()/prepare_to_wait()/finish_wait() in the
+	 * waiter. See the comment on waitqueue_active().
+	 */
+	smp_mb__after_atomic();
+	sbitmap_queue_wake_up(sbq);
+
 	if (likely(!sbq->round_robin && nr < sbq->sb.depth))
 		*per_cpu_ptr(sbq->alloc_hint, cpu) = nr;
 }
@@ -482,7 +608,7 @@ void sbitmap_queue_wake_all(struct sbitmap_queue *sbq)
 
 	/*
 	 * Pairs with the memory barrier in set_current_state() like in
-	 * sbq_wake_up().
+	 * sbitmap_queue_wake_up().
 	 */
 	smp_mb();
 	wake_index = atomic_read(&sbq->wake_index);
@@ -528,5 +654,6 @@ void sbitmap_queue_show(struct sbitmap_queue *sbq, struct seq_file *m)
 	seq_puts(m, "}\n");
 
 	seq_printf(m, "round_robin=%d\n", sbq->round_robin);
+	seq_printf(m, "min_shallow_depth=%u\n", sbq->min_shallow_depth);
 }
 EXPORT_SYMBOL_GPL(sbitmap_queue_show);

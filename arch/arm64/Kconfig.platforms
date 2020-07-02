@@ -644,4 +644,25 @@ config MACH_SONY_BAHAMUT
 	If you enable this config,
 	please use SONY Mobile device tree.
 
+#
+# SoMC Seine platform
+#
+config ARCH_SONY_SEINE
+	bool "Sony Mobile Seine platform"
+	depends on ARCH_TRINKET
+	help
+	Support for the SONY Mobile Seine platform
+	which is based on QCOM TRINKET chipset.
+	If you enable this config,
+	please use SONY Mobile device tree.
+
+config MACH_SONY_PDX201
+	bool "Sony Mobile PDX201"
+	depends on ARCH_SONY_SEINE
+	help
+	Support for the SONY Mobile PDX201 device
+	which is based on SONY Seine platform.
+	If you enable this config,
+	please use SONY Mobile device tree.
+
 endmenu

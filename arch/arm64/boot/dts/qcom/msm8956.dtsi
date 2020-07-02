@@ -297,7 +297,7 @@
 
 		sleep_clk {
 			compatible = "fixed-clock";
-			#clock-cells = <0>;
+			#clock-cells = <1>;
 			clock-frequency = <32764>;
 			clock-output-names = "sleep_clk";
 		};
@@ -368,8 +368,10 @@
 		};
 
 		smem_region: smem@86300000 {
+			compatible = "removed-dma-pool";
 			no-map;
 			reg = <0x0 0x86300000 0x0 0x100000>;
+			label = "smem_region";
 		};
 
 		removed_region2: removed_region@86400000 {
@@ -2029,32 +2031,32 @@
 		compatible = "qcom,smdpkt";
 
 		qcom,smdpkt-data5-cntl {
-			qcom,smdpkt-remote = "modem";
-			qcom,smdpkt-port-name = "DATA5_CNTL";
+			qcom,smdpkt-edge = "modem";
+			qcom,smdpkt-ch-name = "DATA5_CNTL";
 			qcom,smdpkt-dev-name = "smdcntl0";
 		};
 
 		qcom,smdpkt-data22 {
-			qcom,smdpkt-remote = "modem";
-			qcom,smdpkt-port-name = "DATA22";
+			qcom,smdpkt-edge = "modem";
+			qcom,smdpkt-ch-name = "DATA22";
 			qcom,smdpkt-dev-name = "smd22";
 		};
 
 		qcom,smdpkt-data40-cntl {
-			qcom,smdpkt-remote = "modem";
-			qcom,smdpkt-port-name = "DATA40_CNTL";
+			qcom,smdpkt-edge = "modem";
+			qcom,smdpkt-ch-name = "DATA40_CNTL";
 			qcom,smdpkt-dev-name = "smdcntl8";
 		};
 
 		qcom,smdpkt-apr-apps2 {
-			qcom,smdpkt-remote = "adsp";
-			qcom,smdpkt-port-name = "apr_apps2";
+			qcom,smdpkt-edge = "adsp";
+			qcom,smdpkt-ch-name = "apr_apps2";
 			qcom,smdpkt-dev-name = "apr_apps2";
 		};
 
 		qcom,smdpkt-loopback {
-			qcom,smdpkt-remote = "modem";
-			qcom,smdpkt-port-name = "LOOPBACK";
+			qcom,smdpkt-edge = "modem";
+			qcom,smdpkt-ch-name = "LOOPBACK";
 			qcom,smdpkt-dev-name = "smd_pkt_loopback";
 		};
 	};
@@ -2255,7 +2257,7 @@
 		memory-region = <&reloc_mem>;
 	};
 
-	spi_0: spi@0x78B5000 { /* BLSP1 QUP0 */
+	spi_0: spi@78B5000 { /* BLSP1 QUP0 */
 		compatible = "qcom,spi-qup-v2";
 		reg-names = "spi_physical", "spi_bam_physical";
 		reg = <0x78B5000 0x600>,

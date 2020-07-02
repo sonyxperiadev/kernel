@@ -117,16 +117,9 @@
 		compatible = "etspi,et510";
 		interrupt-parent = <&tlmm>;
 		interrupts = <72 0x0>;
-		et51x,gpio_rst    = <&tlmm 20 0>;
 		et51x,gpio_irq    = <&tlmm 72 0>;
 		vdd_ana-supply = <&pm660l_l6>;
-
-		/*
-		 * The device has to stay enabled until the HAL initializes,
-		 * otherwise it'll not send out any IRQ signals even though the
-		 * rest of the initialization runs without errors.
-		 */
-		et51x,enable-on-boot;
+		et51x,check-sensor-type;
 
 		pinctrl-names = "et51x_reset_reset",
 			"et51x_reset_active",
@@ -266,8 +259,8 @@
 		interrupt-parent = <&tlmm>;
 		interrupts = <45 0x2008>;
 		pinctrl-names = "pmx_ts_active", "pmx_ts_suspend";
-		pinctrl-0 = <&ts_int_active &ts_lcd_id_active>;
-		pinctrl-1 = <&ts_nile_int_suspend &ts_lcd_id_suspend>;
+		pinctrl-0 = <&ts_lcd_id_active>;
+		pinctrl-1 = <&ts_lcd_id_suspend>;
 		synaptics,pwr-reg-name = "avdd";
 		synaptics,bus-reg-name = "vdd";
 		synaptics,ub-i2c-addr = <0x20>;
@@ -399,6 +392,7 @@
 		qcom,resource-name = "ldoa";
 		qcom,resource-id = <18>;
 		qcom,regulator-type = <0>;
+		qcom,regulator-hw-type = "pmic4-ldo";
 		status = "okay";
 		pm660_l18: regulator-l18 {
 			compatible = "qcom,rpm-smd-regulator";
@@ -563,8 +557,8 @@
 
 /* PM660L */
 &pm660l_wled {
-	qcom,fs-current-limit = <17500>;
-	qcom,string-cfg = <5>; /* 00 01 */
+	qcom,current-limit-microamp = <17500>;
+	qcom,enabled-strings = <0 1>;
 };
 
 &pm660l_torch0 {

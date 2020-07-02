@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2019 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -57,6 +57,8 @@
 #define SDE_HW_VER_510	SDE_HW_VER(5, 1, 0) /* sdmshrike v1.0 */
 #define SDE_HW_VER_520	SDE_HW_VER(5, 2, 0) /* sdmmagpie v1.0 */
 #define SDE_HW_VER_530	SDE_HW_VER(5, 3, 0) /* sm6150 v1.0 */
+#define SDE_HW_VER_540	SDE_HW_VER(5, 4, 0) /* sdmtrinket v1.0 */
+#define SDE_HW_VER_620	SDE_HW_VER(6, 2, 0) /* atoll*/
 
 #define IS_MSM8996_TARGET(rev) IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_VER_170) || \
 			       IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_VER_171) || \
@@ -71,6 +73,8 @@
 #define IS_SDMSHRIKE_TARGET(rev) IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_VER_510)
 #define IS_SDMMAGPIE_TARGET(rev) IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_VER_520)
 #define IS_SM6150_TARGET(rev) IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_VER_530)
+#define IS_SDMTRINKET_TARGET(rev) IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_VER_540)
+#define IS_ATOLL_TARGET(rev) IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_VER_620)
 
 #define SDE_HW_BLK_NAME_LEN	16
 
@@ -86,6 +90,7 @@
 
 #define MAX_XIN_COUNT 16
 #define SSPP_SUBBLK_COUNT_MAX 2
+#define LIMIT_SUBBLK_COUNT_MAX 10
 
 #define SDE_CTL_CFG_VERSION_1_0_0       0x100
 #define MAX_INTF_PER_CTL_V1                 2
@@ -114,6 +119,27 @@ enum {
 		IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_UBWC_VER_20)
 #define IS_UBWC_30_SUPPORTED(rev) \
 		IS_SDE_MAJOR_MINOR_SAME((rev), SDE_HW_UBWC_VER_30)
+
+/**
+ * SDE INTERRUPTS - maintains the possible hw irq's allowed by HW
+ * The order in this enum must match the order of the irqs defined
+ * by 'sde_irq_map'
+ */
+enum sde_intr_enum {
+	MDSS_INTR_SSPP_TOP0_INTR,
+	MDSS_INTR_SSPP_TOP0_INTR2,
+	MDSS_INTR_SSPP_TOP0_HIST_INTR,
+	MDSS_INTR_INTF_0_INTR,
+	MDSS_INTR_INTF_1_INTR,
+	MDSS_INTR_INTF_2_INTR,
+	MDSS_INTR_INTF_3_INTR,
+	MDSS_INTR_INTF_4_INTR,
+	MDSS_INTR_AD4_0_INTR,
+	MDSS_INTR_AD4_1_INTR,
+	MDSS_INTF_TEAR_1_INTR,
+	MDSS_INTF_TEAR_2_INTR,
+	MDSS_INTR_MAX
+};
 
 /**
  * MDP TOP BLOCK features
@@ -435,10 +461,14 @@ struct sde_src_blk {
  * struct sde_scaler_blk: Scaler information
  * @info:   HW register and features supported by this sub-blk
  * @version: qseed block revision
+ * @h_preload: horizontal preload
+ * @v_preload: vertical preload
  */
 struct sde_scaler_blk {
 	SDE_HW_SUBBLK_INFO;
 	u32 version;
+	u32 h_preload;
+	u32 v_preload;
 };
 
 struct sde_csc_blk {
@@ -508,6 +538,8 @@ struct sde_qos_lut_tbl {
  * @pixel_ram_size: size of latency hiding and de-tiling buffer in bytes
  * @smart_dma_priority: hw priority of rect1 of multirect pipe
  * @max_per_pipe_bw: maximum allowable bandwidth of this pipe in kBps
+ * @max_per_pipe_bw_high: maximum allowable bandwidth of this pipe in kBps
+ *                           in case of no VFE
  * @src_blk:
  * @scaler_blk:
  * @csc_blk:
@@ -535,6 +567,7 @@ struct sde_sspp_sub_blks {
 	u32 maxvdeciexp; /* max decimation is 2^value */
 	u32 smart_dma_priority;
 	u32 max_per_pipe_bw;
+	u32 max_per_pipe_bw_high;
 	struct sde_src_blk src_blk;
 	struct sde_scaler_blk scaler_blk;
 	struct sde_pp_blk csc_blk;
@@ -619,6 +652,7 @@ enum sde_clk_ctrl_type {
 	SDE_CLK_CTRL_WB2,
 	SDE_CLK_CTRL_INLINE_ROT0_SSPP,
 	SDE_CLK_CTRL_INLINE_ROT0_WB,
+	SDE_CLK_CTRL_LUTDMA,
 	SDE_CLK_CTRL_MAX,
 };
 
@@ -842,6 +876,17 @@ struct sde_merge_3d_cfg {
 };
 
 /**
+ * struct sde_qdss_cfg - information of qdss blocks
+ * @id                 enum identifying this block
+ * @base               register offset of this block
+ * @len:               length of hardware block
+ * @features           bit mask identifying sub-blocks/features
+ */
+struct sde_qdss_cfg {
+	SDE_HW_BLK_INFO;
+};
+
+/**
  * struct sde_rot_vbif_cfg - inline rotator vbif configs
  * @xin_id             xin client id
  * @num                enum identifying this block
@@ -911,6 +956,22 @@ struct sde_vbif_qos_tbl {
 };
 
 /**
+ * enum sde_vbif_client_type
+ * @VBIF_RT_CLIENT: real time client
+ * @VBIF_NRT_CLIENT: non-realtime clients like writeback
+ * @VBIF_CWB_CLIENT: concurrent writeback client
+ * @VBIF_LUTDMA_CLIENT: LUTDMA client
+ * @VBIF_MAX_CLIENT: max number of clients
+ */
+enum sde_vbif_client_type {
+	VBIF_RT_CLIENT,
+	VBIF_NRT_CLIENT,
+	VBIF_CWB_CLIENT,
+	VBIF_LUTDMA_CLIENT,
+	VBIF_MAX_CLIENT
+};
+
+/**
  * struct sde_vbif_cfg - information of VBIF blocks
  * @id                 enum identifying this block
  * @base               register offset of this block
@@ -920,8 +981,7 @@ struct sde_vbif_qos_tbl {
  * @xin_halt_timeout   maximum time (in usec) for xin to halt
  * @dynamic_ot_rd_tbl  dynamic OT read configuration table
  * @dynamic_ot_wr_tbl  dynamic OT write configuration table
- * @qos_rt_tbl         real-time QoS priority table
- * @qos_nrt_tbl        non-real-time QoS priority table
+ * @qos_tbl            Array of QoS priority table
  * @memtype_count      number of defined memtypes
  * @memtype            array of xin memtype definitions
  */
@@ -932,8 +992,7 @@ struct sde_vbif_cfg {
 	u32 xin_halt_timeout;
 	struct sde_vbif_dynamic_ot_tbl dynamic_ot_rd_tbl;
 	struct sde_vbif_dynamic_ot_tbl dynamic_ot_wr_tbl;
-	struct sde_vbif_qos_tbl qos_rt_tbl;
-	struct sde_vbif_qos_tbl qos_nrt_tbl;
+	struct sde_vbif_qos_tbl qos_tbl[VBIF_MAX_CLIENT];
 	u32 memtype_count;
 	u32 memtype[MAX_XIN_COUNT];
 };
@@ -944,11 +1003,17 @@ struct sde_vbif_cfg {
  * @features           bit mask identifying sub-blocks/features
  * @version            version of lutdma hw block
  * @trigger_sel_off    offset to trigger select registers of lutdma
+ * @xin_id             VBIF xin client-id for LUTDMA
+ * @vbif_idx           VBIF id (RT/NRT)
+ * @clk_ctrl           VBIF xin client clk-ctrl
  */
 struct sde_reg_dma_cfg {
 	SDE_HW_BLK_INFO;
 	u32 version;
 	u32 trigger_sel_off;
+	u32 xin_id;
+	u32 vbif_idx;
+	enum sde_clk_ctrl_type clk_ctrl;
 };
 
 /**
@@ -1029,6 +1094,43 @@ struct sde_perf_cfg {
 	u32 cpu_dma_latency;
 	u32 axi_bus_width;
 	u32 num_mnoc_ports;
+	u32 default_perf_mode;
+};
+
+/**
+ * struct limit_vector_cfg - information on the usecase for each limit
+ * @usecase: usecase for each limit
+ * @value: id corresponding to each usecase
+ */
+struct limit_vector_cfg {
+	const char *usecase;
+	u32 value;
+};
+
+/**
+ * struct limit_value_cfg - information on the value of usecase
+ * @use_concur: usecase for each limit
+ * @value: value corresponding to usecase for each limit
+ */
+struct limit_value_cfg {
+	u32 use_concur;
+	u32 value;
+};
+
+/**
+ * struct sde_limit_cfg - information om different mdp limits
+ * @name: name of the limit property
+ * @lmt_vec_cnt: number of vector values for each limit
+ * @lmt_case_cnt: number of usecases for each limit
+ * @vector_cfg: pointer to the vector entries containing info on usecase
+ * @value_cfg: pointer to the value of each vector entry
+ */
+struct sde_limit_cfg {
+	const char *name;
+	u32 lmt_vec_cnt;
+	u32 lmt_case_cnt;
+	struct limit_vector_cfg *vector_cfg;
+	struct limit_value_cfg *value_cfg;
 };
 
 /**
@@ -1038,6 +1140,7 @@ struct sde_perf_cfg {
  * register offsets, capabilities of the all MDSS HW sub-blocks.
  *
  * @max_sspp_linewidth max source pipe line width support.
+ * @vig_sspp_linewidth max vig source pipe line width support.
  * @max_mixer_width    max layer mixer line width support.
  * @max_mixer_blendstages max layer mixer blend stages or
  *                       supported z order
@@ -1074,6 +1177,8 @@ struct sde_perf_cfg {
  * @delay_prg_fetch_start indicates if throttling the fetch start is required
  * @has_qsync	       Supports qsync feature
  * @has_3d_merge_reset Supports 3D merge reset
+ * @has_qos_fl_nocalc  flag to indicate QoS fill level needs no calculation
+ * @has_decimation     Supports decimation
  * @sui_misr_supported  indicate if secure-ui-misr is supported
  * @sui_block_xin_mask  mask of all the xin-clients to be blocked during
  *                         secure-ui when secure-ui-misr feature is supported
@@ -1083,11 +1188,14 @@ struct sde_perf_cfg {
  * @sui_ns_allowed      flag to indicate non-secure context banks are allowed
  *                         during secure-ui session
  * @sui_supported_blendstage  secure-ui supported blendstage
+ * @has_sui_blendstage  flag to indicate secure-ui has a blendstage restriction
+ * @mdss_irqs	  bitmap with the irqs supported by the target
  */
 struct sde_mdss_cfg {
 	u32 hwversion;
 
 	u32 max_sspp_linewidth;
+	u32 vig_sspp_linewidth;
 	u32 max_mixer_width;
 	u32 max_mixer_blendstages;
 	u32 max_wb_linewidth;
@@ -1121,6 +1229,8 @@ struct sde_mdss_cfg {
 	bool has_qsync;
 	bool has_3d_merge_reset;
 	bool has_line_insertion;
+	bool has_qos_fl_nocalc;
+	bool has_decimation;
 	bool has_base_layer;
 
 	bool sui_misr_supported;
@@ -1130,6 +1240,7 @@ struct sde_mdss_cfg {
 	u32 sec_sid_mask[MAX_BLOCKS];
 	u32 sui_ns_allowed;
 	u32 sui_supported_blendstage;
+	bool has_sui_blendstage;
 
 	bool has_hdr;
 	u32 mdss_count;
@@ -1184,6 +1295,11 @@ struct sde_mdss_cfg {
 	u32 merge_3d_count;
 	struct sde_merge_3d_cfg merge_3d[MAX_BLOCKS];
 
+	u32 qdss_count;
+	struct sde_qdss_cfg qdss[MAX_BLOCKS];
+
+	u32 limit_count;
+	struct sde_limit_cfg limit_cfg[LIMIT_SUBBLK_COUNT_MAX];
 	/* Add additional block data structures here */
 
 	struct sde_perf_cfg perf;
@@ -1192,6 +1308,8 @@ struct sde_mdss_cfg {
 	struct sde_format_extended *vig_formats;
 	struct sde_format_extended *wb_formats;
 	struct sde_format_extended *virt_vig_formats;
+
+	DECLARE_BITMAP(mdss_irqs, MDSS_INTR_MAX);
 };
 
 struct sde_mdss_hw_cfg_handler {

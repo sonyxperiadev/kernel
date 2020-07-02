@@ -1,0 +1,166 @@
+/* Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+#include "dsi-panel-somc-sec-1080p2520-cmd.dtsi"
+
+&soc {
+	dsi_panel_oled_pwr_supply: dsi_panel_oled_pwr_supply {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		qcom,panel-supply-entry@0 {
+			reg = <0>;
+			qcom,supply-name = "vddio";
+			qcom,supply-min-voltage = <1800000>;
+			qcom,supply-max-voltage = <1800000>;
+			qcom,supply-enable-load = <62000>;
+			qcom,supply-disable-load = <80>;
+			qcom,supply-post-on-sleep = <1>;
+		};
+	};
+
+	sde_dsi_seine_panels: somc,dsi-display@1008 {
+		label = "dsi_panel_somc_seine_cmd";
+		qcom,display-type = "primary";
+
+		qcom,dsi-ctrl-num = <0>;
+		qcom,dsi-phy-num = <0>;
+
+		qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0",
+					 "src_byte_clk0", "src_pixel_clk0",
+					 "shadow_byte_clk0", "shadow_pixel_clk0";
+
+		/* Only one possible panel on CDB/PROD SoMC Seine platform */
+		somc,bootloader-panel-detect;
+
+		/* This is the active display node */
+		qcom,dsi-display-active;
+	};
+
+	dsi_panel_cmd_display: somc,dsi-display@1012 {
+		compatible = "somc,dsi-display";
+		label = "primary";
+
+		qcom,dsi-ctrl = <&mdss_dsi0>;
+		qcom,dsi-phy = <&mdss_dsi_phy0>;
+
+		clocks = <&mdss_dsi0_pll BYTE0_MUX_CLK>,
+			 <&mdss_dsi0_pll PIX0_MUX_CLK>,
+			 <&mdss_dsi0_pll BYTE0_SRC_CLK>,
+			 <&mdss_dsi0_pll PIX0_SRC_CLK>,
+			 <&mdss_dsi0_pll SHADOW_BYTE0_SRC_CLK>,
+			 <&mdss_dsi0_pll SHADOW_PIX0_SRC_CLK>;
+		clock-names = "mux_byte_clk0", "mux_pixel_clk0",
+			      "src_byte_clk0", "src_pixel_clk0",
+			      "shadow_byte_clk0", "shadow_pixel_clk0";
+
+		pinctrl-names = "panel_active", "panel_suspend",
+				"sde_touch_active", "sde_touch_suspend";
+		pinctrl-0 = <&sde_dsi_active &sde_te_active>;
+		pinctrl-1 = <&sde_dsi_suspend &sde_te_suspend>;
+		pinctrl-2 = <&somc_ts_int_active>;
+		pinctrl-3 = <&somc_ts_int_suspend>;
+
+		qcom,platform-te-gpio = <&tlmm 89 0>;
+		qcom,platform-reset-gpio = <&tlmm 90 0>;
+		qcom,platform-touch-reset-gpio = <&tlmm 97 0>;
+		qcom,panel-te-source = <0>;
+
+		vddio-supply = <&L12A>;
+		lab-supply = <&lcdb_ldo_vreg>;
+		ibb-supply = <&lcdb_ncp_vreg>;
+
+		qcom,dsi-display-list = <&sde_dsi_seine_panels>;
+	};
+};
+
+&mdss_mdp {
+	connectors = <&sde_wb &dsi_panel_cmd_display>;
+};
+
+/* Disable/remove everything default, we use our own */
+&sde_dsi {
+	status = "disabled";
+	/delete-property/ compatible;
+	/delete-property/ qcom,dsi-ctrl;
+	/delete-property/ qcom,dsi-phy;
+	/delete-property/ clocks;
+	/delete-property/ clock-names;
+	/delete-property/ pinctrl-names;
+
+	/*
+	 * But.. let's keep the supply right, in case anything
+	 * goes wrong for any reason, so we don't burn stuff
+	 */
+	vddio-supply = <&L12A>;
+};
+
+/*
+ * Originally, this is ID6 for Seine, but it's the same
+ * as the ID4 panel for Kumano Bahamut, both SOFEF01_M-FHD_PLUS
+ */
+&dsi_4 {
+	/* On Seine, this panel's name is 6 (bootloader wants it) */
+	qcom,mdss-dsi-panel-name = "6";
+
+	qcom,mdss-pan-physical-width-dimension = <60>;
+	qcom,mdss-pan-physical-height-dimension = <139>;
+
+	qcom,mdss-dsi-t-clk-post = <0x0F>;
+	qcom,mdss-dsi-t-clk-pre = <0x3A>;
+
+	qcom,esd-check-enabled;
+	qcom,mdss-dsi-panel-status-command = [06 01 00 01 05 00 01 0A];
+	qcom,mdss-dsi-panel-status-command-state = "dsi_lp_mode";
+	qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+	qcom,mdss-dsi-panel-status-read-length = <1>;
+	qcom,mdss-dsi-panel-max-error-count = <3>;
+	qcom,mdss-dsi-panel-status-value = <0x9c>;
+
+	qcom,panel-supply-entries = <&dsi_panel_oled_pwr_supply>;
+	/delete-property/ qcom,panel-vspvsn-supply-entries;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <1023>;
+	qcom,mdss-brightness-max-level = <1023>;
+	qcom,mdss-dsi-panel-peak-brightness = <4200000>;
+	qcom,mdss-dsi-panel-blackness-level = <3230>;
+
+	qcom,platform-te-gpio = <&tlmm 89 0>;
+	qcom,platform-reset-gpio = <&tlmm 90 0>;
+	qcom,platform-touch-reset-gpio = <&tlmm 97 0>;
+	qcom,platform-touch-vddio-en-gpio = <&tlmm 59 0>;
+	qcom,platform-touch-vddh-en-gpio  = <&tlmm 58 0>;
+
+	somc,disp-vci-en-gpio = <&tlmm 54 0>;
+	somc,disp-err-flag-gpio = <&tlmm 86 0>;
+
+	somc,set-hbm-usable;
+
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,display-topology = <1 0 1>;
+			qcom,default-topology-index = <0>;
+			qcom,mdss-dsi-panel-phy-timings = [
+					27 21 0A 0B 07 02 04 A0
+					27 21 0A 0B 07 02 04 A0
+					27 21 0A 0B 07 02 04 A0
+					27 21 0A 0B 07 02 04 A0
+					27 22 0A 0B 07 02 04 A0];
+		};
+	};
+};
+
+&pm6125_l12 {
+	qcom,init-enable = <1>;
+};
+

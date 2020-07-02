@@ -192,13 +192,14 @@ void brcmf_feat_attach(struct brcmf_pub *drvr)
 	if (!err)
 		ifp->drvr->feat_flags |= BIT(BRCMF_FEAT_SCAN_RANDOM_MAC);
 
+	brcmf_feat_iovar_int_get(ifp, BRCMF_FEAT_FWSUP, "sup_wpa");
+
 	if (drvr->settings->feature_disable) {
 		brcmf_dbg(INFO, "Features: 0x%02x, disable: 0x%02x\n",
 			  ifp->drvr->feat_flags,
 			  drvr->settings->feature_disable);
 		ifp->drvr->feat_flags &= ~drvr->settings->feature_disable;
 	}
-	brcmf_feat_iovar_int_get(ifp, BRCMF_FEAT_FWSUP, "sup_wpa");
 
 	/* set chip related quirks */
 	switch (drvr->bus_if->chip) {
@@ -207,6 +208,10 @@ void brcmf_feat_attach(struct brcmf_pub *drvr)
 		break;
 	case BRCM_CC_4329_CHIP_ID:
 		drvr->chip_quirks |= BIT(BRCMF_FEAT_QUIRK_NEED_MPC);
+		break;
+	case BRCM_CC_4345_CHIP_ID:
+		drvr->chip_quirks |= BIT(BRCMF_FEAT_QUIRK_SKIP_ACTION_FRAMES);
+		drvr->chip_quirks |= BIT(BRCMF_FEAT_QUIRK_FAKE_WOWL);
 		break;
 	default:
 		/* no quirks */

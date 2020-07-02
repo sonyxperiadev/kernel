@@ -350,8 +350,13 @@ static int _freq_tbl_determine_rate(struct clk_hw *hw, const struct freq_tbl *f,
 
 	clk_flags = clk_hw_get_flags(hw);
 	p = clk_hw_get_parent_by_index(hw, index);
+	if (!p)
+		return -EINVAL;
+
 	if (clk_flags & CLK_SET_RATE_PARENT) {
 		if (f->pre_div) {
+			if (!rate)
+				rate = req->rate;
 			rate /= 2;
 			rate *= f->pre_div + 1;
 		}
@@ -409,6 +414,11 @@ static bool clk_rcg2_current_config(struct clk_rcg2 *rcg,
 	struct clk_hw *hw = &rcg->clkr.hw;
 	u32 cfg, mask, new_cfg;
 	int index;
+
+	if (of_machine_is_compatible("qcom,msm8956") ||
+	    of_machine_is_compatible("qcom,msm8996") ||
+	    of_machine_is_compatible("qcom,msm8998"))
+		return false;
 
 	if (rcg->mnd_width) {
 		mask = BIT(rcg->mnd_width) - 1;
@@ -733,6 +743,50 @@ static void clk_rcg2_disable(struct clk_hw *hw)
 	clk_rcg2_clear_force_enable(hw);
 }
 
+static int clk_rcg2_set_duty_cycle(struct clk_hw *hw, struct clk_duty *duty)
+{
+	struct clk_rcg2 *rcg = to_clk_rcg2(hw);
+	int ret;
+	u32 notn_m_val, n_val, m_val, d_val, not2d_val, old_cfg;
+	u32 duty_per = (duty->num * 100) / duty->den;
+
+	if (!rcg->mnd_width)
+		return 0;
+
+	regmap_read(rcg->clkr.regmap, rcg->cmd_rcgr + rcg->cfg_off +
+				N_REG, &notn_m_val);
+
+	regmap_read(rcg->clkr.regmap, rcg->cmd_rcgr + rcg->cfg_off +
+				M_REG, &m_val);
+
+	n_val = (~(notn_m_val) + m_val) & GENMASK((rcg->mnd_width - 1), 0);
+
+	/* Calculate 2d value */
+	d_val = DIV_ROUND_CLOSEST((25 + n_val * duty_per), 100);
+
+	 /* Check BIT WIDTHS OF 2d. If D is too big reduce Duty cycle. */
+	if ((d_val * 2) > (BIT(rcg->mnd_width) - 1))
+		d_val = (BIT(rcg->mnd_width) - 1) / 2;
+
+	if (d_val > (n_val - m_val))
+		d_val = n_val - m_val;
+	else if (d_val < (m_val / 2))
+		d_val = m_val / 2;
+
+	not2d_val = ~(2 * d_val) & (GENMASK((rcg->mnd_width - 1), 0));
+
+	ret = regmap_update_bits(rcg->clkr.regmap,
+			rcg->cmd_rcgr + rcg->cfg_off + D_REG,
+			GENMASK((rcg->mnd_width - 1), 0), not2d_val);
+	if (ret)
+		return ret;
+
+	/* Read back the old configuration */
+	regmap_read(rcg->clkr.regmap, rcg->cmd_rcgr + rcg->cfg_off + CFG_REG,
+							&old_cfg);
+	return update_config(rcg, old_cfg);
+}
+
 const struct clk_ops clk_rcg2_ops = {
 	.is_enabled = clk_rcg2_is_enabled,
 	.prepare = clk_rcg2_prepare,
@@ -747,6 +801,7 @@ const struct clk_ops clk_rcg2_ops = {
 	.list_rate = clk_rcg2_list_rate,
 	.list_registers = clk_rcg2_list_registers,
 	.bus_vote = clk_debug_bus_vote,
+	.set_duty_cycle = clk_rcg2_set_duty_cycle,
 };
 EXPORT_SYMBOL_GPL(clk_rcg2_ops);
 
@@ -1531,6 +1586,8 @@ static int clk_gfx3d_src_set_rate_and_parent(struct clk_hw *hw,
 }
 
 const struct clk_ops clk_gfx3d_src_ops = {
+	.enable = clk_rcg2_enable,
+	.disable = clk_rcg2_disable,
 	.is_enabled = clk_rcg2_is_enabled,
 	.get_parent = clk_rcg2_get_parent,
 	.set_parent = clk_rcg2_set_parent,
@@ -1538,6 +1595,8 @@ const struct clk_ops clk_gfx3d_src_ops = {
 	.set_rate = clk_gfx3d_set_rate,
 	.set_rate_and_parent = clk_gfx3d_src_set_rate_and_parent,
 	.determine_rate = clk_gfx3d_src_determine_rate,
+	.list_rate = clk_rcg2_list_rate,
+	.list_registers = clk_rcg2_list_registers,
 };
 EXPORT_SYMBOL_GPL(clk_gfx3d_src_ops);
 

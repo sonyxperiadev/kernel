@@ -14,7 +14,7 @@
 #include <dt-bindings/msm/msm-bus-ids.h>
 
 &soc {
-	apps_smmu: apps-smmu@0x15000000 {
+	apps_smmu: apps-smmu@15000000 {
 		compatible = "qcom,qsmmu-v500";
 		reg = <0x15000000 0x20000>,
 			<0x15022000 0x20>;
@@ -56,7 +56,7 @@
 			<MSM_BUS_SLAVE_OCIMEM>,
 			<0 1000>;
 
-		periph_tbu: periph_tbu@0x15025000 {
+		periph_tbu: periph_tbu@15025000 {
 			compatible = "qcom,qsmmuv500-tbu";
 			reg = <0x15025000 0x1000>,
 				<0x15022200 0x8>;
@@ -74,7 +74,7 @@
 				<MSM_BUS_SLAVE_OCIMEM>,
 				<0 1000>;
 		};
-		ipa_tbu: ipa_tbu@0x15029000 {
+		ipa_tbu: ipa_tbu@15029000 {
 			compatible = "qcom,qsmmuv500-tbu";
 			reg = <0x15029000 0x1000>,
 				<0x15022208 0x8>;

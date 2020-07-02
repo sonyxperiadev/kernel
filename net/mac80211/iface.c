@@ -1032,6 +1032,8 @@ static void ieee80211_do_stop(struct ieee80211_sub_if_data *sdata,
 	if (local->open_count == 0)
 		ieee80211_clear_tx_pending(local);
 
+	sdata->vif.bss_conf.beacon_int = 0;
+
 	/*
 	 * If the interface goes down while suspended, presumably because
 	 * the device was unplugged and that happens before our resume,
@@ -1921,6 +1923,9 @@ void ieee80211_if_remove(struct ieee80211_sub_if_data *sdata)
 	mutex_lock(&sdata->local->iflist_mtx);
 	list_del_rcu(&sdata->list);
 	mutex_unlock(&sdata->local->iflist_mtx);
+
+	if (sdata->vif.txq)
+		ieee80211_txq_purge(sdata->local, to_txq_info(sdata->vif.txq));
 
 	synchronize_rcu();
 

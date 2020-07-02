@@ -20,6 +20,8 @@
 #include <linux/keyctl.h>
 #include <linux/refcount.h>
 #include <linux/compat.h>
+#include <linux/mm.h>
+#include <linux/vmalloc.h>
 
 struct iovec;
 
@@ -188,20 +190,9 @@ static inline int key_permission(const key_ref_t key_ref, unsigned perm)
 	return key_task_permission(key_ref, current_cred(), perm);
 }
 
-/*
- * Authorisation record for request_key().
- */
-struct request_key_auth {
-	struct key		*target_key;
-	struct key		*dest_keyring;
-	const struct cred	*cred;
-	void			*callout_info;
-	size_t			callout_len;
-	pid_t			pid;
-} __randomize_layout;
-
 extern struct key_type key_type_request_key_auth;
 extern struct key *request_key_auth_new(struct key *target,
+					const char *op,
 					const void *callout_info,
 					size_t callout_len,
 					struct key *dest_keyring);
@@ -315,5 +306,4 @@ static inline void key_check(const struct key *key)
 #define key_check(key) do {} while(0)
 
 #endif
-
 #endif /* _INTERNAL_H */

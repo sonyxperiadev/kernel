@@ -175,7 +175,7 @@ config ARCH_USE_BUILTIN_BSWAP
 
 config KRETPROBES
 	def_bool y
-	depends on KPROBES && HAVE_KRETPROBES
+	depends on KPROBES && HAVE_KRETPROBES && ROP_PROTECTION_NONE
 
 config USER_RETURN_NOTIFIER
 	bool
@@ -678,6 +678,43 @@ config CFI_CLANG_SHADOW
 	help
 	  If you select this option, the kernel builds a fast look-up table of
 	  CFI check functions in loaded modules to reduce overhead.
+
+config ARCH_SUPPORTS_SHADOW_CALL_STACK
+	bool
+	help
+	  An architecture should select this if it supports clang's Shadow
+	  Call Stack, has asm/scs.h, and implements runtime support for shadow
+	  stack switching.
+
+config SHADOW_CALL_STACK_VMAP
+	def_bool n
+	depends on VMAP_STACK && SHADOW_CALL_STACK
+	help
+	  Use virtually mapped shadow call stacks.
+
+choice
+	prompt "Return-oriented programming (ROP) protection"
+	default ROP_PROTECTION_NONE
+	help
+	  This option controls kernel protections against return-oriented
+	  programming (ROP) attacks, which involve overwriting function return
+	  addresses.
+
+config ROP_PROTECTION_NONE
+	bool "None"
+
+config SHADOW_CALL_STACK
+	bool "clang Shadow Call Stack (EXPERIMENTAL)"
+	depends on ARCH_SUPPORTS_SHADOW_CALL_STACK
+	help
+	  This option enables clang's Shadow Call Stack, which uses a shadow
+	  stack to protect function return addresses from being overwritten by
+	  an attacker. More information can be found from clang's
+	  documentation:
+
+	    https://clang.llvm.org/docs/ShadowCallStack.html
+
+endchoice
 
 config HAVE_ARCH_WITHIN_STACK_FRAMES
 	bool

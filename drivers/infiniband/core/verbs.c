@@ -766,8 +766,8 @@ struct ib_qp *ib_open_qp(struct ib_xrcd *xrcd,
 }
 EXPORT_SYMBOL(ib_open_qp);
 
-static struct ib_qp *ib_create_xrc_qp(struct ib_qp *qp,
-		struct ib_qp_init_attr *qp_init_attr)
+static struct ib_qp *create_xrc_qp(struct ib_qp *qp,
+				   struct ib_qp_init_attr *qp_init_attr)
 {
 	struct ib_qp *real_qp = qp;
 
@@ -782,10 +782,10 @@ static struct ib_qp *ib_create_xrc_qp(struct ib_qp *qp,
 
 	qp = __ib_open_qp(real_qp, qp_init_attr->event_handler,
 			  qp_init_attr->qp_context);
-	if (!IS_ERR(qp))
-		__ib_insert_xrcd_qp(qp_init_attr->xrcd, real_qp);
-	else
-		real_qp->device->destroy_qp(real_qp);
+	if (IS_ERR(qp))
+		return qp;
+
+	__ib_insert_xrcd_qp(qp_init_attr->xrcd, real_qp);
 	return qp;
 }
 
@@ -816,10 +816,8 @@ struct ib_qp *ib_create_qp(struct ib_pd *pd,
 		return qp;
 
 	ret = ib_create_qp_security(qp, device);
-	if (ret) {
-		ib_destroy_qp(qp);
-		return ERR_PTR(ret);
-	}
+	if (ret)
+		goto err;
 
 	qp->device     = device;
 	qp->real_qp    = qp;
@@ -834,8 +832,15 @@ struct ib_qp *ib_create_qp(struct ib_pd *pd,
 	INIT_LIST_HEAD(&qp->sig_mrs);
 	qp->port = 0;
 
-	if (qp_init_attr->qp_type == IB_QPT_XRC_TGT)
-		return ib_create_xrc_qp(qp, qp_init_attr);
+	if (qp_init_attr->qp_type == IB_QPT_XRC_TGT) {
+		struct ib_qp *xrc_qp = create_xrc_qp(qp, qp_init_attr);
+
+		if (IS_ERR(xrc_qp)) {
+			ret = PTR_ERR(xrc_qp);
+			goto err;
+		}
+		return xrc_qp;
+	}
 
 	qp->event_handler = qp_init_attr->event_handler;
 	qp->qp_context = qp_init_attr->qp_context;
@@ -863,11 +868,8 @@ struct ib_qp *ib_create_qp(struct ib_pd *pd,
 
 	if (qp_init_attr->cap.max_rdma_ctxs) {
 		ret = rdma_rw_init_mrs(qp, qp_init_attr);
-		if (ret) {
-			pr_err("failed to init MR pool ret= %d\n", ret);
-			ib_destroy_qp(qp);
-			return ERR_PTR(ret);
-		}
+		if (ret)
+			goto err;
 	}
 
 	/*
@@ -880,6 +882,11 @@ struct ib_qp *ib_create_qp(struct ib_pd *pd,
 				 device->attrs.max_sge_rd);
 
 	return qp;
+
+err:
+	ib_destroy_qp(qp);
+	return ERR_PTR(ret);
+
 }
 EXPORT_SYMBOL(ib_create_qp);
 
@@ -1285,7 +1292,7 @@ EXPORT_SYMBOL(ib_resolve_eth_dmac);
 
 /**
  * ib_modify_qp_with_udata - Modifies the attributes for the specified QP.
- * @qp: The QP to modify.
+ * @ib_qp: The QP to modify.
  * @attr: On input, specifies the QP attributes to modify.  On output,
  *   the current values of selected QP attributes are returned.
  * @attr_mask: A bit-mask used to specify which attributes of the QP
@@ -1294,9 +1301,10 @@ EXPORT_SYMBOL(ib_resolve_eth_dmac);
  *   are being modified.
  * It returns 0 on success and returns appropriate error code on error.
  */
-int ib_modify_qp_with_udata(struct ib_qp *qp, struct ib_qp_attr *attr,
+int ib_modify_qp_with_udata(struct ib_qp *ib_qp, struct ib_qp_attr *attr,
 			    int attr_mask, struct ib_udata *udata)
 {
+	struct ib_qp *qp = ib_qp->real_qp;
 	int ret;
 
 	if (attr_mask & IB_QP_AV) {

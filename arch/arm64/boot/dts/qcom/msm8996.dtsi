@@ -179,7 +179,7 @@
 		};
                sleep_clk {
                        compatible = "fixed-clock";
-                       #clock-cells = <0>;
+                       #clock-cells = <1>;
                        clock-frequency = <32764>;
                        clock-output-names = "sleep_clk";
 		};
@@ -364,7 +364,7 @@
 		interrupts = <GIC_PPI 9 IRQ_TYPE_LEVEL_HIGH>;
 
 		interrupt-parent = <&intc>;
-		arm,gicv3-plat-qcom-legacy;
+		arm,qgicv3-plat-msm8996-quirks;
 
 		msi_alias0: interrupt-controller@9bd0000 {
 			compatible = "qcom,gic-msi-aliases";
@@ -415,7 +415,7 @@
 		qcom,pipe-attr-ee;
 	};
 
-	rpm_msg_ram: memory@0x200000 {
+	rpm_msg_ram: memory@200000 {
 		compatible = "qcom,rpm-msg-ram";
 		reg = <0x68000 0x6000>;
 	};
@@ -522,7 +522,7 @@
 	};
 
 
-	dma_blsp1: qcom,sps-dma@0x7544000{ /* BLSP1 */
+	dma_blsp1: qcom,sps-dma@7544000{ /* BLSP1 */
 		#dma-cells = <4>;
 		compatible = "qcom,sps-dma";
 		reg = <0x7544000 0x2b000>;
@@ -530,7 +530,7 @@
 		qcom,summing-threshold = <0x10>;
 	};
 
-	dma_blsp2: qcom,sps-dma@0x7584000{ /* BLSP2 */
+	dma_blsp2: qcom,sps-dma@7584000{ /* BLSP2 */
 		#dma-cells = <4>;
 		compatible = "qcom,sps-dma";
 		reg = <0x7584000 0x2b000>;

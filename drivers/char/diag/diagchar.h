@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2008-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -73,6 +73,7 @@
 #define DIAG_CON_SENSORS	(0x0010)	/* Bit mask for Sensors */
 #define DIAG_CON_WDSP		(0x0020)	/* Bit mask for WDSP */
 #define DIAG_CON_CDSP		(0x0040)	/* Bit mask for CDSP */
+#define DIAG_CON_NPU		(0x0080)	/* Bit mask for NPU */
 
 #define DIAG_CON_UPD_WLAN		(0x1000) /*Bit mask for WLAN PD*/
 #define DIAG_CON_UPD_AUDIO		(0x2000) /*Bit mask for AUDIO PD*/
@@ -82,7 +83,7 @@
 #define DIAG_CON_ALL		(DIAG_CON_APSS | DIAG_CON_MPSS \
 				| DIAG_CON_LPASS | DIAG_CON_WCNSS \
 				| DIAG_CON_SENSORS | DIAG_CON_WDSP \
-				| DIAG_CON_CDSP)
+				| DIAG_CON_CDSP | DIAG_CON_NPU)
 #define DIAG_CON_UPD_ALL	(DIAG_CON_UPD_WLAN \
 				| DIAG_CON_UPD_AUDIO \
 				| DIAG_CON_UPD_SENSORS)
@@ -93,6 +94,7 @@
 #define DIAG_STM_APPS	0x08
 #define DIAG_STM_SENSORS 0x10
 #define DIAG_STM_CDSP 0x20
+#define DIAG_STM_NPU 0x40
 
 #define INVALID_PID		-1
 #define DIAG_CMD_FOUND		1
@@ -207,6 +209,11 @@
 #define DEFAULT_LOW_WM_VAL	15
 #define DEFAULT_HIGH_WM_VAL	85
 
+#define HDLC_CTXT		1
+#define NON_HDLC_CTXT	2
+
+#define PKT_PROCESS_TIMEOUT		200
+
 #define TYPE_DATA		0
 #define TYPE_CNTL		1
 #define TYPE_DCI		2
@@ -220,12 +227,13 @@
 #define PERIPHERAL_SENSORS	3
 #define PERIPHERAL_WDSP		4
 #define PERIPHERAL_CDSP		5
-#define NUM_PERIPHERALS		6
+#define PERIPHERAL_NPU		6
+#define NUM_PERIPHERALS		7
 #define APPS_DATA		(NUM_PERIPHERALS)
 
-#define UPD_WLAN		7
-#define UPD_AUDIO		8
-#define UPD_SENSORS		9
+#define UPD_WLAN		8
+#define UPD_AUDIO		9
+#define UPD_SENSORS		10
 #define NUM_UPD			3
 
 #define MAX_PERIPHERAL_UPD			2
@@ -512,6 +520,7 @@ struct diag_query_pid_t {
 struct diag_con_all_param_t {
 	uint32_t diag_con_all;
 	uint32_t num_peripherals;
+	uint32_t upd_map_supported;
 };
 
 struct diag_md_session_t {
@@ -541,6 +550,8 @@ struct diag_mask_info {
 	int mask_len;
 	uint8_t *update_buf;
 	int update_buf_len;
+	uint8_t *update_buf_client;
+	int update_buf_client_len;
 	uint8_t status;
 	struct mutex lock;
 };
@@ -617,7 +628,7 @@ struct diagchar_dev {
 	int dci_tag;
 	int dci_client_id[MAX_DCI_CLIENTS];
 	struct mutex dci_mutex;
-	spinlock_t rpmsginfo_lock[NUM_PERIPHERALS];
+	struct mutex rpmsginfo_mutex[NUM_PERIPHERALS];
 	int num_dci_client;
 	unsigned char *apps_dci_buf;
 	int dci_state;
@@ -634,6 +645,7 @@ struct diagchar_dev {
 	unsigned int poolsize_dci;
 	unsigned int poolsize_user;
 	spinlock_t diagmem_lock;
+	wait_queue_head_t hdlc_wait_q;
 	/* Buffers for masks */
 	struct mutex diag_cntl_mutex;
 	/* Members for Sending response */
@@ -735,6 +747,17 @@ extern struct diagchar_dev *driver;
 
 extern int wrap_enabled;
 extern uint16_t wrap_count;
+
+struct diag_apps_data_t {
+	void *buf;
+	uint32_t len;
+	int ctxt;
+	uint8_t allocated;
+	uint8_t flushed;
+};
+
+extern struct diag_apps_data_t hdlc_data;
+extern struct diag_apps_data_t non_hdlc_data;
 
 void diag_get_timestamp(char *time_str);
 void check_drain_timer(void);

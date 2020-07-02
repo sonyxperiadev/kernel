@@ -44,6 +44,7 @@
 			qcom,display-topology = <1 1 1>;
 			qcom,default-topology-index = <0>;
 			qcom,mdss-dsi-panel-phy-timings = [00 21 08 08 25 23 08 08 06 03 04 00];
+			qcom,mdss-dsi-panel-prefill-lines = <25>;
 		};
 	};
 };
@@ -228,6 +229,7 @@
 			qcom,mdss-dsc-block-prediction-enable;
 
 			qcom,mdss-dsi-panel-clockrate = <964260000>;
+			qcom,mdss-dsi-panel-prefill-lines = <25>;
 		};
 	};
 };

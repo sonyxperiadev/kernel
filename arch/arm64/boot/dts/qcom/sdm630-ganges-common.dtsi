@@ -77,9 +77,9 @@
 		compatible = "etspi,et510";
 		interrupt-parent = <&tlmm>;
 		interrupts = <72 0x0>;
-		et51x,gpio_rst = <&tlmm 20 0>;
 		et51x,gpio_irq = <&tlmm 72 0>;
 		vdd_ana-supply = <&pm660l_l6>;
+		et51x,no-low-voltage-probe;
 
 		spi-max-frequency = <1000000>;
 
@@ -128,8 +128,8 @@
 		};
 	};
 
-	s5712 {
-		compatible = "s5712-switch";
+	hall {
+		compatible = "hall-switch";
 		interrupt-parent = <&tlmm>;
 		interrupts = <75 0x3>;
 		//vddio-supply = <&pm660l_l14>;
@@ -156,8 +156,8 @@
 };
 
 &pm660l_wled {
-	qcom,fs-current-limit = <20000>;
-	qcom,string-cfg = <5>; /* 00 01 */
+	qcom,current-limit-microamp = <20000>;
+	qcom,enabled-strings = <0 1>;
 
 	/* Bootloader only properties */
 	somc,init-br-ua = <10000>;

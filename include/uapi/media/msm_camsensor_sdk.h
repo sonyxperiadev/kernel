@@ -50,6 +50,10 @@
 
 #define MSM_SENSOR_BYPASS_VIDEO_NODE    1
 
+#define SECURE_CAMERA
+
+#define SECURE_CAM_RST_MODULES
+
 enum msm_sensor_camera_id_t {
 	CAMERA_0,
 	CAMERA_1,
@@ -350,6 +354,9 @@ struct msm_camera_csid_params {
 	unsigned int csi_clk;
 	struct msm_camera_csid_lut_params lut_params;
 	unsigned char csi_3p_sel;
+	unsigned char is_secure;
+	uint32_t topology;
+	unsigned char is_streamon;
 };
 
 struct msm_camera_csid_testmode_parms {

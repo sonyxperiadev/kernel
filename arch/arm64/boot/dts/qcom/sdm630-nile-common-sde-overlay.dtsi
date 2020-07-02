@@ -188,6 +188,7 @@
 		qcom,dsi-select-clocks = "mux_byte_clk0", "mux_pixel_clk0";
 
 		somc,bootloader-panel-detect;
+		qcom,dsi-display-active;
 	};
 
 	/* SDE */
@@ -205,8 +206,8 @@
 				"sde_touch_active", "sde_touch_suspend";
 		pinctrl-0 = <&mdss_dsi_active &mdss_te_active>;
 		pinctrl-1 = <&mdss_dsi_suspend &mdss_te_suspend>;
-
-		qcom,dsi-display-active;
+		pinctrl-2 = <&ts_int_active>;
+		pinctrl-3 = <&ts_nile_int_suspend>;
 
 		qcom,platform-te-gpio = <&tlmm 59 0>;
 		qcom,panel-te-source = <0>;
@@ -221,6 +222,8 @@
 };
 
 &mdss_mdp {
+	/* Set SDE MAX performance lock, ignoring displayqos */
+	qcom,sde-perf-default-mode = <3>;
 	connectors = <&sde_wb &dsi_panel_cmd_display>;
 };
 

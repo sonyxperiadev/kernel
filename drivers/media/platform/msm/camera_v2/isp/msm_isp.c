@@ -35,6 +35,7 @@
 #include "msm_isp44.h"
 #include "msm_isp40.h"
 #include "msm_isp32.h"
+#include "msm_cam_cx_ipeak.h"
 
 #if defined(CONFIG_SONY_CAM_V4L2) && defined(CONFIG_MSM_AVTIMER)
 extern int avcs_core_open(void);
@@ -364,26 +365,48 @@ static long msm_isp_dqevent(struct file *file, struct v4l2_fh *vfh, void *arg)
 				file->f_flags & O_NONBLOCK);
 		if (rc)
 			return rc;
-		event_data = (struct msm_isp_event_data *)
-				isp_event.u.data;
-		isp_event_user = (struct v4l2_event *)arg;
-		memcpy(isp_event_user, &isp_event,
+		if (isp_event.type == ISP_EVENT_SOF_UPDATE_NANOSEC) {
+			struct msm_isp_event_data_nanosec *event_data_nanosec;
+			struct msm_isp_event_data_nanosec
+				*event_data_nanosec_user;
+
+			event_data_nanosec =
+				(struct msm_isp_event_data_nanosec *)
+					isp_event.u.data;
+			isp_event_user = (struct v4l2_event *)arg;
+			memcpy(isp_event_user, &isp_event,
 				sizeof(*isp_event_user));
-		event_data32 = (struct msm_isp_event_data32 *)
-			isp_event_user->u.data;
-		memset(event_data32, 0,
-				sizeof(struct msm_isp_event_data32));
-		event_data32->timestamp.tv_sec =
-				event_data->timestamp.tv_sec;
-		event_data32->timestamp.tv_usec =
-				event_data->timestamp.tv_usec;
-		event_data32->mono_timestamp.tv_sec =
-				event_data->mono_timestamp.tv_sec;
-		event_data32->mono_timestamp.tv_usec =
-				event_data->mono_timestamp.tv_usec;
-		event_data32->frame_id = event_data->frame_id;
-		memcpy(&(event_data32->u), &(event_data->u),
-					sizeof(event_data32->u));
+			event_data_nanosec_user =
+				(struct msm_isp_event_data_nanosec *)
+					isp_event_user->u.data;
+			memset(event_data_nanosec_user, 0,
+				sizeof(struct msm_isp_event_data_nanosec));
+			event_data_nanosec_user->nano_timestamp =
+				event_data_nanosec->nano_timestamp;
+			event_data_nanosec_user->frame_id =
+				event_data_nanosec->frame_id;
+		} else {
+			event_data = (struct msm_isp_event_data *)
+					isp_event.u.data;
+			isp_event_user = (struct v4l2_event *)arg;
+			memcpy(isp_event_user, &isp_event,
+					sizeof(*isp_event_user));
+			event_data32 = (struct msm_isp_event_data32 *)
+				isp_event_user->u.data;
+			memset(event_data32, 0,
+					sizeof(struct msm_isp_event_data32));
+			event_data32->timestamp.tv_sec =
+					event_data->timestamp.tv_sec;
+			event_data32->timestamp.tv_usec =
+					event_data->timestamp.tv_usec;
+			event_data32->mono_timestamp.tv_sec =
+					event_data->mono_timestamp.tv_sec;
+			event_data32->mono_timestamp.tv_usec =
+					event_data->mono_timestamp.tv_usec;
+			event_data32->frame_id = event_data->frame_id;
+			memcpy(&(event_data32->u), &(event_data->u),
+						sizeof(event_data32->u));
+		}
 	} else {
 		rc = v4l2_event_dequeue(vfh, arg,
 				file->f_flags & O_NONBLOCK);
@@ -458,7 +481,7 @@ static int isp_vma_fault(struct vm_fault *vmf)
 {
 	struct page *page;
 	struct vfe_device *vfe_dev = vmf->vma->vm_private_data;
-	struct isp_proc *isp_page = NULL;
+	struct isp_kstate *isp_page = NULL;
 
 	isp_page = vfe_dev->isp_page;
 
@@ -635,6 +658,7 @@ int vfe_hw_probe(struct platform_device *pdev)
 	/*struct msm_cam_subdev_info sd_info;*/
 	const struct of_device_id *match_dev;
 	int rc = 0;
+	struct msm_vfe_hardware_info *hw_info;
 
 	vfe_dev = kzalloc(sizeof(struct vfe_device), GFP_KERNEL);
 	if (!vfe_dev) {
@@ -671,6 +695,11 @@ int vfe_hw_probe(struct platform_device *pdev)
 			"qcom,vfe-cx-ipeak", NULL)) {
 			vfe_dev->vfe_cx_ipeak = cx_ipeak_register(
 				pdev->dev.of_node, "qcom,vfe-cx-ipeak");
+			if (vfe_dev->vfe_cx_ipeak)
+				cam_cx_ipeak_register_cx_ipeak(
+				vfe_dev->vfe_cx_ipeak, &vfe_dev->cx_ipeak_bit);
+			pr_debug("%s: register cx_ipeak received bit %d\n",
+				__func__, vfe_dev->cx_ipeak_bit);
 		}
 	} else {
 		vfe_dev->hw_info = (struct msm_vfe_hardware_info *)
@@ -685,12 +714,22 @@ int vfe_hw_probe(struct platform_device *pdev)
 	ISP_DBG("%s: device id = %d\n", __func__, pdev->id);
 
 	vfe_dev->pdev = pdev;
+	hw_info = vfe_dev->hw_info;
 
 	rc = vfe_dev->hw_info->vfe_ops.platform_ops.get_platform_data(vfe_dev);
 	if (rc < 0) {
 		pr_err("%s: failed to get platform resources\n", __func__);
 		rc = -ENOMEM;
 		goto probe_fail3;
+	}
+
+	if (
+	hw_info->vfe_ops.platform_ops.get_dual_sync_platform_data) {
+		rc =
+		hw_info->vfe_ops.platform_ops.get_dual_sync_platform_data(
+			vfe_dev);
+			if (rc < 0)
+				pr_err("%s:fail get dual_sync\n", __func__);
 	}
 
 	v4l2_subdev_init(&vfe_dev->subdev.sd, &msm_vfe_v4l2_subdev_ops);
@@ -745,7 +784,7 @@ int vfe_hw_probe(struct platform_device *pdev)
 	vfe_dev->buf_mgr->init_done = 1;
 	vfe_dev->vfe_open_cnt = 0;
 	/*Allocate a page in kernel and map it to camera user process*/
-	vfe_dev->isp_page = (struct isp_proc *)get_zeroed_page(GFP_KERNEL);
+	vfe_dev->isp_page = (struct isp_kstate *)get_zeroed_page(GFP_KERNEL);
 	if (vfe_dev->isp_page == NULL) {
 		pr_err("%s: no enough memory\n", __func__);
 		rc = -ENOMEM;

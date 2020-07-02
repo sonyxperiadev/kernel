@@ -42,7 +42,7 @@
 
 #define HFI_MAX_POLL_TRY 5
 
-#define HFI_MAX_PC_POLL_TRY 150
+#define HFI_MAX_PC_POLL_TRY 400
 #define HFI_POLL_TRY_SLEEP 1
 
 static struct hfi_info *g_hfi;

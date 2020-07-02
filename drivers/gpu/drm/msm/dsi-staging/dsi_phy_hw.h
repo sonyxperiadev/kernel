@@ -94,6 +94,7 @@ struct dsi_phy_per_lane_cfgs {
  * @regulators:       Regulator settings for lanes.
  * @pll_source:       PLL source.
  * @lane_map:         DSI logical to PHY lane mapping.
+ * @lane_pnswap:      P/N swap status on each lane.
  * @force_clk_lane_hs:Boolean whether to force clock lane in HS mode.
  * @bit_clk_rate_hz: DSI bit clk rate in HZ.
  */
@@ -105,6 +106,7 @@ struct dsi_phy_cfg {
 	struct dsi_phy_per_lane_cfgs regulators;
 	enum dsi_phy_pll_source pll_source;
 	struct dsi_lane_map lane_map;
+	u8 lane_pnswap;
 	bool force_clk_lane_hs;
 	unsigned long bit_clk_rate_hz;
 };
@@ -260,6 +262,12 @@ struct dsi_phy_hw_ops {
 	void (*phy_idle_off)(struct dsi_phy_hw *phy);
 
 	/**
+	 * set_idle_pc() - Enter/exit PHY idle power collapse
+	 */
+
+	void (*set_idle_pc)(struct dsi_phy_hw *phy, bool idle_pc_enabled);
+
+	/**
 	 * calculate_timing_params() - calculates timing parameters.
 	 * @phy:      Pointer to DSI PHY hardware object.
 	 * @mode:     Mode information for which timing has to be calculated.
@@ -317,6 +325,12 @@ struct dsi_phy_hw_ops {
 	 * @enable:	Bool to control continuous clock request.
 	 */
 	void (*set_continuous_clk)(struct dsi_phy_hw *phy, bool enable);
+
+	/**
+	 * commit_phy_timing() - Apply PHY timing parameters
+	 */
+	void (*commit_phy_timing)(struct dsi_phy_hw *phy,
+				  struct dsi_phy_per_lane_cfgs *timing);
 
 	void *timing_ops;
 	struct phy_ulps_config_ops ulps_ops;

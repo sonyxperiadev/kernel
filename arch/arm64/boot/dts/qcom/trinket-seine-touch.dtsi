@@ -1,0 +1,49 @@
+/* arch/arm64/boot/dts/somc/trinket-seine-touch.dtsi
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+&qupv3_se2_i2c {
+	status = "ok";
+	qcom,i2c-touch-active="sec,sec_ts";
+
+	touchscreen@48 {
+		compatible = "sec,sec_ts";
+		reg = <0x48>;
+		sec,irq_gpio = <&tlmm 88 0x2008>;
+		sec,irq_type = <8200>;
+		sec,mis_cal_check = <1>;
+		sec,regulator_dvdd = "tsp_io";
+		sec,regulator_avdd = "tsp_avdd";
+		sec,regulator_boot_on;
+		sec,i2c-burstmax = <32>;
+		sec,project_name = "PJT", "MODEL";
+		sec,max_coords = <1080 2520>;   /* x y */
+		sec,always_lpmode = <0>;
+		sec,bringup = <0>;
+		sec,firmware_name = "touch_module_id_0x82.img";
+
+		/* feature */
+		sec,watchdog_supported = <1>;
+		sec,watchdog_delay_ms = <10000>;
+		sec,side_touch_supported = <0>;
+		sec,glove_mode_supported = <0>;
+		sec,cover_mode_supported = <0>;
+		sec,aod_mode_supported = <0>;
+		sec,sod_mode_supported = <0>;
+		sec,stamina_mode_supported = <1>;
+		sec,rejection_area_portrait = <25 150 60 200>;
+		sec,rejection_area_landscape = <150 20 200 60>;
+
+		/* Open Devices specific */
+		somc,touch-rst-gpio = <&tlmm 97 0>;
+		somc,expected-device-id = <0xAC 0x37 0x61>;
+	};
+};

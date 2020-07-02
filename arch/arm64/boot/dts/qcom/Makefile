@@ -1,4 +1,10 @@
 ifeq ($(CONFIG_BUILD_ARM64_DT_OVERLAY),y)
+# TRINKET - SOMC Seine
+dtbo-$(CONFIG_MACH_SONY_PDX201) += \
+        trinket-seine-pdx201_generic-overlay.dtbo
+
+trinket-seine-pdx201_generic-overlay.dtbo-base := trinket.dtb
+
 # SM8150 - SoMC Kumano
 dtbo-$(CONFIG_MACH_SONY_GRIFFIN) += \
 		sm8150-kumano-griffin_generic-overlay.dtbo

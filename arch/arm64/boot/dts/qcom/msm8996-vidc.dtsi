@@ -14,7 +14,7 @@
 
 &soc {
 	msm_vidc: qcom,vidc@c00000 {
-		compatible = "qcom,msm-vidc", "qcom,msm8996-vidc";
+		compatible = "qcom,msm-vidc";
 		status = "ok";
 		reg = <0xC00000 0xff000>;
 		interrupts = <GIC_SPI 287 IRQ_TYPE_LEVEL_HIGH>;
@@ -31,10 +31,12 @@
 			<0x0818A000 0x2000>,
 			<0x0818C000 0x2000>,
 			<0x0818E000 0x2000>;
+		qcom,max-hw-load = <2563200>; /* Full 4k @ 60 + 1080p @ 60 */
 		qcom,power-conf = <8294400>; /* WxH - 3840*2160 */
 		qcom,firmware-name = "venus";
 		qcom,imem-size = <524288>; /* 512 kB */
 		qcom,never-unload-fw;
+		qcom,sw-power-collapse;
 		qcom,max-secure-instances = <5>;
 		qcom,load-freq-tbl =
 			/* Encoders */
@@ -92,8 +94,6 @@
 		       <&clock_mmss VIDEO_SUBCORE0_CLK>,
 		       <&clock_mmss VIDEO_SUBCORE1_CLK>;
 		qcom,clock-configs = <0x0 0x0 0x0 0x1 0x0 0x0 0x0 0x1 0x1>;
-		qcom,allowed-clock-rates = <75000000 150000000
-					    346666667 520000000>;
 
 		/* Buses */
 		bus_cnoc {
@@ -110,7 +110,7 @@
 			label = "venus-ddr";
 			qcom,bus-master = <MSM_BUS_MASTER_VIDEO_P0>;
 			qcom,bus-slave = <MSM_BUS_SLAVE_EBI_CH0>;
-			qcom,bus-governor = "vidc-ar50-ddr";
+			qcom,bus-governor = "msm-vidc-ddr";
 			qcom,bus-range-kbps = <1000 3388000>;
 		};
 

@@ -312,7 +312,7 @@ enum {
 extern ip_set_id_t ip_set_get_byname(struct net *net,
 				     const char *name, struct ip_set **set);
 extern void ip_set_put_byindex(struct net *net, ip_set_id_t index);
-extern const char *ip_set_name_byindex(struct net *net, ip_set_id_t index);
+extern void ip_set_name_byindex(struct net *net, ip_set_id_t index, char *name);
 extern ip_set_id_t ip_set_nfnl_get_byindex(struct net *net, ip_set_id_t index);
 extern void ip_set_nfnl_put(struct net *net, ip_set_id_t index);
 
@@ -443,13 +443,6 @@ ip6addrptr(const struct sk_buff *skb, bool src, struct in6_addr *addr)
 {
 	memcpy(addr, src ? &ipv6_hdr(skb)->saddr : &ipv6_hdr(skb)->daddr,
 	       sizeof(*addr));
-}
-
-/* Calculate the bytes required to store the inclusive range of a-b */
-static inline int
-bitmap_bytes(u32 a, u32 b)
-{
-	return 4 * ((((b - a + 8) / 8) + 3) / 4);
 }
 
 #include <linux/netfilter/ipset/ip_set_timeout.h>

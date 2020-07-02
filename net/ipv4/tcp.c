@@ -334,7 +334,7 @@ void tcp_enter_memory_pressure(struct sock *sk)
 {
 	unsigned long val;
 
-	if (tcp_memory_pressure)
+	if (READ_ONCE(tcp_memory_pressure))
 		return;
 	val = jiffies;
 
@@ -349,7 +349,7 @@ void tcp_leave_memory_pressure(struct sock *sk)
 {
 	unsigned long val;
 
-	if (!tcp_memory_pressure)
+	if (!READ_ONCE(tcp_memory_pressure))
 		return;
 	val = xchg(&tcp_memory_pressure, 0);
 	if (val)
@@ -580,7 +580,7 @@ unsigned int tcp_poll(struct file *file, struct socket *sock, poll_table *wait)
 	}
 	/* This barrier is coupled with smp_wmb() in tcp_reset() */
 	smp_rmb();
-	if (sk->sk_err || !skb_queue_empty(&sk->sk_error_queue))
+	if (sk->sk_err || !skb_queue_empty_lockless(&sk->sk_error_queue))
 		mask |= POLLERR;
 
 	return mask;
@@ -920,6 +920,22 @@ static int tcp_send_mss(struct sock *sk, int *size_goal, int flags)
 	return mss_now;
 }
 
+/* In some cases, both sendpage() and sendmsg() could have added
+ * an skb to the write queue, but failed adding payload on it.
+ * We need to remove it to consume less memory, but more
+ * importantly be able to generate EPOLLOUT for Edge Trigger epoll()
+ * users.
+ */
+static void tcp_remove_empty_skb(struct sock *sk, struct sk_buff *skb)
+{
+	if (skb && !skb->len &&
+	    TCP_SKB_CB(skb)->end_seq == TCP_SKB_CB(skb)->seq) {
+		tcp_unlink_write_queue(skb, sk);
+		tcp_check_send_head(sk, skb);
+		sk_wmem_free_skb(sk, skb);
+	}
+}
+
 ssize_t do_tcp_sendpages(struct sock *sk, struct page *page, int offset,
 			 size_t size, int flags)
 {
@@ -1040,6 +1056,7 @@ out:
 	return copied;
 
 do_error:
+	tcp_remove_empty_skb(sk, tcp_write_queue_tail(sk));
 	if (copied)
 		goto out;
 out_err:
@@ -1184,7 +1201,7 @@ int tcp_sendmsg_locked(struct sock *sk, struct msghdr *msg, size_t size)
 	flags = msg->msg_flags;
 
 	if (flags & MSG_ZEROCOPY && size && sock_flag(sk, SOCK_ZEROCOPY)) {
-		if (sk->sk_state != TCP_ESTABLISHED) {
+		if ((1 << sk->sk_state) & ~(TCPF_ESTABLISHED | TCPF_CLOSE_WAIT)) {
 			err = -EINVAL;
 			goto out_err;
 		}
@@ -1418,17 +1435,11 @@ out_nopush:
 	sock_zerocopy_put(uarg);
 	return copied + copied_syn;
 
-do_fault:
-	if (!skb->len) {
-		tcp_unlink_write_queue(skb, sk);
-		/* It is the one place in all of TCP, except connection
-		 * reset, where we can be unlinking the send_head.
-		 */
-		tcp_check_send_head(sk, skb);
-		sk_wmem_free_skb(sk, skb);
-	}
-
 do_error:
+	skb = tcp_write_queue_tail(sk);
+do_fault:
+	tcp_remove_empty_skb(sk, skb);
+
 	if (copied + copied_syn)
 		goto out;
 out_err:
@@ -1785,7 +1796,7 @@ int tcp_recvmsg(struct sock *sk, struct msghdr *msg, size_t len, int nonblock,
 	if (unlikely(flags & MSG_ERRQUEUE))
 		return inet_recv_error(sk, msg, len, addr_len);
 
-	if (sk_can_busy_loop(sk) && skb_queue_empty(&sk->sk_receive_queue) &&
+	if (sk_can_busy_loop(sk) && skb_queue_empty_lockless(&sk->sk_receive_queue) &&
 	    (sk->sk_state == TCP_ESTABLISHED))
 		sk_busy_loop(sk, nonblock);
 
@@ -1975,13 +1986,15 @@ skip_copy:
 			tp->urg_data = 0;
 			tcp_fast_path_check(sk);
 		}
-		if (used + offset < skb->len)
-			continue;
 
 		if (TCP_SKB_CB(skb)->has_rxtstamp) {
 			tcp_update_recv_tstamps(skb, &tss);
 			has_tss = true;
 		}
+
+		if (used + offset < skb->len)
+			continue;
+
 		if (TCP_SKB_CB(skb)->tcp_flags & TCPHDR_FIN)
 			goto found_fin_ok;
 		if (!(flags & MSG_PEEK))
@@ -2226,16 +2239,10 @@ adjudge_to_death:
 	sock_hold(sk);
 	sock_orphan(sk);
 
-	/* It is the last release_sock in its life. It will remove backlog. */
-	release_sock(sk);
-
-
-	/* Now socket is owned by kernel and we acquire BH lock
-	 *  to finish close. No need to check for user refs.
-	 */
 	local_bh_disable();
 	bh_lock_sock(sk);
-	WARN_ON(sock_owned_by_user(sk));
+	/* remove backlog if any, without releasing ownership. */
+	__release_sock(sk);
 
 	percpu_counter_inc(sk->sk_prot->orphan_count);
 
@@ -2304,6 +2311,7 @@ adjudge_to_death:
 out:
 	bh_unlock_sock(sk);
 	local_bh_enable();
+	release_sock(sk);
 	sock_put(sk);
 }
 EXPORT_SYMBOL(tcp_close);
@@ -2365,9 +2373,11 @@ int tcp_disconnect(struct sock *sk, int flags)
 	tp->snd_ssthresh = TCP_INFINITE_SSTHRESH;
 	tp->snd_cwnd_cnt = 0;
 	tp->window_clamp = 0;
+	tp->delivered = 0;
 	tcp_set_ca_state(sk, TCP_CA_Open);
 	tp->is_sack_reneg = 0;
 	tcp_clear_retrans(tp);
+	tp->total_retrans = 0;
 	inet_csk_delack_init(sk);
 	/* Initialize rcv_mss to TCP_MIN_MSS to avoid division by 0
 	 * issue in __tcp_select_window()
@@ -2379,6 +2389,12 @@ int tcp_disconnect(struct sock *sk, int flags)
 	dst_release(sk->sk_rx_dst);
 	sk->sk_rx_dst = NULL;
 	tcp_saved_syn_free(tp);
+	tp->segs_in = 0;
+	tp->segs_out = 0;
+	tp->bytes_acked = 0;
+	tp->bytes_received = 0;
+	tp->data_segs_in = 0;
+	tp->data_segs_out = 0;
 
 	/* Clean up fastopen related fields */
 	tcp_free_fastopen_req(tp);
@@ -2513,7 +2529,9 @@ static int do_tcp_setsockopt(struct sock *sk, int level,
 		name[val] = 0;
 
 		lock_sock(sk);
-		err = tcp_set_congestion_control(sk, name, true, true);
+		err = tcp_set_congestion_control(sk, name, true, true,
+						 ns_capable(sock_net(sk)->user_ns,
+							    CAP_NET_ADMIN));
 		release_sock(sk);
 		return err;
 	}
@@ -3493,6 +3511,7 @@ void __init tcp_init(void)
 	unsigned long limit;
 	unsigned int i;
 
+	BUILD_BUG_ON(TCP_MIN_SND_MSS <= MAX_TCP_OPTION_SPACE);
 	BUILD_BUG_ON(sizeof(struct tcp_skb_cb) >
 		     FIELD_SIZEOF(struct sk_buff, cb));
 

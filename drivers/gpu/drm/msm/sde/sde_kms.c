@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
  * Copyright (C) 2013 Red Hat
  * Author: Rob Clark <robdclark@gmail.com>
  *
@@ -19,6 +19,7 @@
 #define pr_fmt(fmt)	"[drm:%s:%d] " fmt, __func__, __LINE__
 
 #include <drm/drm_crtc.h>
+#include <drm/drm_fixed.h>
 #include <linux/debugfs.h>
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
@@ -339,6 +340,10 @@ static int _sde_debugfs_init(struct sde_kms *sde_kms)
 		SDE_ERROR("failed to init perf %d\n", rc);
 		return rc;
 	}
+
+	if (sde_kms->catalog->qdss_count)
+		debugfs_create_u32("qdss", 0600, debugfs_root,
+				(u32 *)&sde_kms->qdss_enabled);
 
 	return 0;
 }
@@ -1117,6 +1122,8 @@ static void sde_kms_complete_commit(struct msm_kms *kms,
 	struct drm_crtc_state *old_crtc_state;
 	struct drm_connector *connector;
 	struct drm_connector_state *old_conn_state;
+	struct msm_display_conn_params params;
+
 	int i, rc = 0;
 
 	if (!kms || !old_state)
@@ -1148,7 +1155,18 @@ static void sde_kms_complete_commit(struct msm_kms *kms,
 		c_conn = to_sde_connector(connector);
 		if (!c_conn->ops.post_kickoff)
 			continue;
-		rc = c_conn->ops.post_kickoff(connector);
+
+		memset(&params, 0, sizeof(params));
+
+		if (c_conn->qsync_updated &&
+			(c_conn->qsync_mode == SDE_RM_QSYNC_ONE_SHOT_MODE)) {
+			/* Reset qsync states if mode is one shot */
+			params.qsync_mode = c_conn->qsync_mode = 0;
+			params.qsync_update = true;
+			SDE_EVT32(connector->base.id, c_conn->qsync_mode);
+		}
+
+		rc = c_conn->ops.post_kickoff(connector, &params);
 		if (rc) {
 			pr_err("Connector Post kickoff failed rc=%d\n",
 					 rc);
@@ -1425,6 +1443,7 @@ static int _sde_kms_setup_displays(struct drm_device *dev,
 		.cmd_transfer = dsi_display_cmd_transfer,
 		.cont_splash_config = dsi_display_cont_splash_config,
 		.get_panel_vfp = dsi_display_get_panel_vfp,
+		.prepare_commit = dsi_conn_prepare_commit,
 	};
 	static const struct sde_connector_ops wb_ops = {
 		.post_init =    sde_wb_connector_post_init,
@@ -1515,6 +1534,17 @@ static int _sde_kms_setup_displays(struct drm_device *dev,
 			SDE_ERROR("dsi %d connector init failed\n", i);
 			dsi_display_drm_bridge_deinit(display);
 			sde_encoder_destroy(encoder);
+			continue;
+		}
+
+		rc = dsi_display_drm_ext_bridge_init(display,
+					encoder,
+					connector);
+		if (rc) {
+			SDE_ERROR("dsi %d ext bridge init failed\n", rc);
+			dsi_display_drm_bridge_deinit(display);
+			sde_encoder_destroy(encoder);
+			sde_connector_destroy(connector);
 		}
 	}
 
@@ -1699,7 +1729,12 @@ static int _sde_kms_drm_obj_init(struct sde_kms *sde_kms)
 	if (!_sde_kms_get_displays(sde_kms))
 		(void)_sde_kms_setup_displays(dev, priv, sde_kms);
 
-	max_crtc_count = min(catalog->mixer_count, priv->num_encoders);
+	/* Follow user setting if preferred crtc number is set */
+	if (!of_property_read_u32(dev->dev->of_node,
+			"qcom,sde-crtc-num-pref", &max_crtc_count))
+		max_crtc_count = min(max_crtc_count, MAX_CRTCS);
+	else
+		max_crtc_count = min(catalog->mixer_count, priv->num_encoders);
 
 	/* Create the planes */
 	for (i = 0; i < catalog->sspp_count; i++) {
@@ -1903,6 +1938,14 @@ static void _sde_kms_hw_destroy(struct sde_kms *sde_kms,
 	if (sde_kms->core_client)
 		sde_power_client_destroy(&priv->phandle, sde_kms->core_client);
 	sde_kms->core_client = NULL;
+
+	if (sde_kms->sid)
+		msm_iounmap(pdev, sde_kms->sid);
+	sde_kms->sid = NULL;
+
+	if (sde_kms->reg_dma)
+		msm_iounmap(pdev, sde_kms->reg_dma);
+	sde_kms->reg_dma = NULL;
 
 	if (sde_kms->vbif[VBIF_NRT])
 		msm_iounmap(pdev, sde_kms->vbif[VBIF_NRT]);
@@ -2407,7 +2450,6 @@ static void _sde_kms_post_open(struct msm_kms *kms, struct drm_file *file)
 	struct drm_connector *connector = NULL;
 	struct drm_connector_list_iter conn_iter;
 	struct sde_connector *sde_conn = NULL;
-	int i;
 
 	if (!kms) {
 		SDE_ERROR("invalid kms\n");
@@ -2424,18 +2466,6 @@ static void _sde_kms_post_open(struct msm_kms *kms, struct drm_file *file)
 
 	if (!dev->mode_config.poll_enabled)
 		return;
-
-	/* init external dsi bridge here to make sure ext bridge is probed*/
-	for (i = 0; i < sde_kms->dsi_display_count; ++i) {
-		struct dsi_display *dsi_display;
-
-		dsi_display = sde_kms->dsi_displays[i];
-		if (dsi_display->bridge) {
-			dsi_display_drm_ext_bridge_init(dsi_display,
-				dsi_display->bridge->base.encoder,
-				dsi_display->drm_conn);
-		}
-	}
 
 	mutex_lock(&dev->mode_config.mutex);
 	drm_connector_list_iter_begin(dev, &conn_iter);
@@ -2669,6 +2699,53 @@ static bool sde_kms_check_for_splash(struct msm_kms *kms)
 	return sde_kms->splash_data.num_splash_displays;
 }
 
+static int sde_kms_get_mixer_count(const struct msm_kms *kms,
+		const struct drm_display_mode *mode,
+		u32 max_mixer_width, u32 *num_lm)
+{
+	struct sde_kms *sde_kms;
+	s64 mode_clock_hz = 0;
+	s64 max_mdp_clock_hz = 0;
+	s64 mdp_fudge_factor = 0;
+	s64 temp = 0;
+	s64 htotal_fp = 0;
+	s64 vtotal_fp = 0;
+	s64 vrefresh_fp = 0;
+
+	if (!num_lm) {
+		SDE_ERROR("invalid num_lm pointer\n");
+		return -EINVAL;
+	}
+	*num_lm = 1;
+
+	if (!kms || !mode || !max_mixer_width) {
+		SDE_ERROR("invlaid input args");
+		return -EINVAL;
+	}
+
+	sde_kms = to_sde_kms(kms);
+
+	max_mdp_clock_hz = drm_fixp_from_fraction(
+			sde_kms->perf.max_core_clk_rate, 1);
+	mdp_fudge_factor = drm_fixp_from_fraction(105, 100);
+	htotal_fp = drm_fixp_from_fraction(mode->htotal, 1);
+	vtotal_fp =  drm_fixp_from_fraction(mode->vtotal, 1);
+	vrefresh_fp =  drm_fixp_from_fraction(mode->vrefresh, 1);
+
+	temp = drm_fixp_mul(htotal_fp, vtotal_fp);
+	temp = drm_fixp_mul(temp, vrefresh_fp);
+	mode_clock_hz = drm_fixp_mul(temp, mdp_fudge_factor);
+
+	if (mode_clock_hz > max_mdp_clock_hz ||
+			mode->hdisplay > max_mixer_width)
+		*num_lm = 2;
+
+	SDE_DEBUG("[%s] h=%d, v=%d, fps%d, max_mdp_pclk_hz=%llu, num_lm=%d\n",
+			mode->name, mode->htotal, mode->vtotal, mode->vrefresh,
+			sde_kms->perf.max_core_clk_rate, *num_lm);
+	return 0;
+}
+
 static void _sde_kms_null_commit(struct drm_device *dev,
 		struct drm_encoder *enc)
 {
@@ -2800,7 +2877,8 @@ retry:
 		uint64_t lp;
 
 		if (!conn->state || !conn->state->crtc ||
-				conn->dpms != DRM_MODE_DPMS_ON)
+				conn->dpms != DRM_MODE_DPMS_ON ||
+				sde_encoder_in_clone_mode(conn->encoder))
 			continue;
 
 		lp = sde_connector_get_lp(conn);
@@ -2856,6 +2934,9 @@ retry:
 
 		lp = sde_connector_get_lp(conn);
 		if (lp != SDE_MODE_DPMS_LP2)
+			continue;
+
+		if (sde_encoder_in_clone_mode(conn->encoder))
 			continue;
 
 		ret = sde_encoder_wait_for_event(conn->encoder,
@@ -2973,6 +3054,7 @@ static const struct msm_kms_funcs kms_funcs = {
 	.get_address_space = _sde_kms_get_address_space,
 	.postopen = _sde_kms_post_open,
 	.check_for_splash = sde_kms_check_for_splash,
+	.get_mixer_count = sde_kms_get_mixer_count,
 };
 
 /* the caller api needs to turn on clock before calling it */
@@ -3092,9 +3174,35 @@ static void sde_kms_init_shared_hw(struct sde_kms *sde_kms)
 	if (!sde_kms || !sde_kms->hw_mdp || !sde_kms->catalog)
 		return;
 
+	if (sde_kms->hw_mdp->ops.intf_dp_select)
+		sde_kms->hw_mdp->ops.intf_dp_select(sde_kms->hw_mdp,
+						sde_kms->catalog);
+
 	if (sde_kms->hw_mdp->ops.reset_ubwc)
 		sde_kms->hw_mdp->ops.reset_ubwc(sde_kms->hw_mdp,
 						sde_kms->catalog);
+
+	if (sde_kms->hw_sid)
+		sde_hw_sid_rotator_set(sde_kms->hw_sid);
+}
+
+static void _sde_kms_set_lutdma_vbif_remap(struct sde_kms *sde_kms)
+{
+	struct sde_vbif_set_qos_params qos_params;
+	struct sde_mdss_cfg *catalog;
+
+	if (!sde_kms->catalog)
+		return;
+
+	catalog = sde_kms->catalog;
+
+	memset(&qos_params, 0, sizeof(qos_params));
+	qos_params.vbif_idx = catalog->dma_cfg.vbif_idx;
+	qos_params.xin_id = catalog->dma_cfg.xin_id;
+	qos_params.clk_ctrl = catalog->dma_cfg.clk_ctrl;
+	qos_params.client_type = VBIF_LUTDMA_CLIENT;
+
+	sde_vbif_set_qos_remap(sde_kms, &qos_params);
 }
 
 static void sde_kms_handle_power_event(u32 event_type, void *usr)
@@ -3113,6 +3221,7 @@ static void sde_kms_handle_power_event(u32 event_type, void *usr)
 		sde_irq_update(msm_kms, true);
 		sde_vbif_init_memtypes(sde_kms);
 		sde_kms_init_shared_hw(sde_kms);
+		_sde_kms_set_lutdma_vbif_remap(sde_kms);
 		sde_kms->first_kickoff = true;
 	} else if (event_type == SDE_POWER_EVENT_PRE_DISABLE) {
 		sde_irq_update(msm_kms, false);
@@ -3414,6 +3523,19 @@ static int sde_kms_hw_init(struct msm_kms *kms)
 					rc);
 	}
 
+	sde_kms->sid = msm_ioremap(platformdev, "sid_phys",
+							"sid_phys");
+	if (IS_ERR(sde_kms->sid)) {
+		sde_kms->sid = NULL;
+		SDE_DEBUG("SID_PHYS is not defined\n");
+	} else {
+		sde_kms->sid_len = msm_iomap_size(platformdev, "sid_phys");
+		rc =  sde_dbg_reg_register_base("sid", sde_kms->sid,
+				sde_kms->sid_len);
+		if (rc)
+			SDE_ERROR("dbg base register sid failed: %d\n", rc);
+	}
+
 	sde_kms->core_client = sde_power_client_create(&priv->phandle, "core");
 	if (IS_ERR_OR_NULL(sde_kms->core_client)) {
 		rc = PTR_ERR(sde_kms->core_client);
@@ -3427,6 +3549,13 @@ static int sde_kms_hw_init(struct msm_kms *kms)
 	rc = _sde_kms_get_splash_data(&sde_kms->splash_data);
 	if (rc)
 		SDE_DEBUG("sde splash data fetch failed: %d\n", rc);
+
+	for (i = 0; i < SDE_POWER_HANDLE_DBUS_ID_MAX; i++) {
+		priv->phandle.data_bus_handle[i].ab_rt =
+			SDE_POWER_HANDLE_CONT_SPLASH_BUS_AB_QUOTA;
+		priv->phandle.data_bus_handle[i].ib_rt =
+			SDE_POWER_HANDLE_CONT_SPLASH_BUS_IB_QUOTA;
+	}
 
 	rc = sde_power_resource_enable(&priv->phandle, sde_kms->core_client,
 		true);
@@ -3558,6 +3687,14 @@ static int sde_kms_hw_init(struct msm_kms *kms)
 			sde_kms->hw_vbif[vbif_idx] = NULL;
 			goto power_error;
 		}
+	}
+
+	sde_kms->hw_sid = sde_hw_sid_init(sde_kms->sid,
+				sde_kms->sid_len, sde_kms->catalog);
+	if (IS_ERR(sde_kms->hw_sid)) {
+		SDE_ERROR("failed to init sid %d\n", PTR_ERR(sde_kms->hw_sid));
+		sde_kms->hw_sid = NULL;
+		goto power_error;
 	}
 
 	rc = sde_core_perf_init(&sde_kms->perf, dev, sde_kms->catalog,

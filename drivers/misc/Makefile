@@ -16,7 +16,8 @@ obj-$(CONFIG_LKDTM)		+= lkdtm.o
 obj-$(CONFIG_TIFM_CORE)       	+= tifm_core.o
 obj-$(CONFIG_TIFM_7XX1)       	+= tifm_7xx1.o
 obj-$(CONFIG_PHANTOM)		+= phantom.o
-obj-$(CONFIG_NFC_PN547)		+= pn547.o
+obj-$(CONFIG_NFC_PN547)		+= pn547/
+obj-$(CONFIG_NFC_PN553_DEVICES)	+= pn553/
 obj-$(CONFIG_QCOM_COINCELL)	+= qcom-coincell.o
 obj-$(CONFIG_SENSORS_BH1770)	+= bh1770glc.o
 obj-$(CONFIG_SENSORS_APDS990X)	+= apds990x.o
@@ -83,8 +84,7 @@ CFLAGS_lkdtm_rodata.o		+= $(DISABLE_LTO)
 
 OBJCOPYFLAGS :=
 OBJCOPYFLAGS_lkdtm_rodata_objcopy.o := \
-			--set-section-flags .text=alloc,readonly \
-			--rename-section .text=.rodata
+	--rename-section .text=.rodata,alloc,readonly,load
 targets += lkdtm_rodata.o lkdtm_rodata_objcopy.o
 $(obj)/lkdtm_rodata_objcopy.o: $(obj)/lkdtm_rodata.o FORCE
 	$(call if_changed,objcopy)

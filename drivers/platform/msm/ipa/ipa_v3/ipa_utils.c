@@ -46,7 +46,7 @@
 #define IPA_V4_0_CLK_RATE_NOMINAL (220 * 1000 * 1000UL)
 #define IPA_V4_0_CLK_RATE_TURBO (250 * 1000 * 1000UL)
 
-#define IPA_V3_0_MAX_HOLB_TMR_VAL (4294967296 - 1)
+#define IPA_MAX_HOLB_TMR_VAL (4294967296 - 1)
 
 #define IPA_V3_0_BW_THRESHOLD_TURBO_MBPS (1000)
 #define IPA_V3_0_BW_THRESHOLD_NOMINAL_MBPS (600)
@@ -5594,6 +5594,7 @@ int ipa3_controller_static_bind(struct ipa3_controller *ctrl,
 	ctrl->ipa_init_sram = _ipa_init_sram_v3;
 	ctrl->ipa_sram_read_settings = _ipa_sram_settings_read_v3_0;
 	ctrl->ipa_init_hdr = _ipa_init_hdr_v3_0;
+	ctrl->max_holb_tmr_val = IPA_MAX_HOLB_TMR_VAL;
 
 	if (ipa3_ctx->ipa_hw_type >= IPA_HW_v4_0)
 		ctrl->ipa3_read_ep_reg = _ipa_read_ep_reg_v4_0;
@@ -6870,15 +6871,10 @@ static int __ipa3_stop_gsi_channel(u32 clnt_hdl)
 	ep = &ipa3_ctx->ep[clnt_hdl];
 	memset(&mem, 0, sizeof(mem));
 
-	if (IPA_CLIENT_IS_PROD(ep->client)) {
-		IPADBG("Calling gsi_stop_channel ch:%lu\n",
-			ep->gsi_chan_hdl);
-		res = gsi_stop_channel(ep->gsi_chan_hdl);
-		IPADBG("gsi_stop_channel ch: %lu returned %d\n",
-			ep->gsi_chan_hdl, res);
-		return res;
-	}
-
+	/*
+	 * Apply the GSI stop retry logic if GSI returns err code to retry.
+	 * Apply the retry logic for ipa_client_prod as well as ipa_client_cons.
+	 */
 	for (i = 0; i < IPA_GSI_CHANNEL_STOP_MAX_RETRY; i++) {
 		IPADBG("Calling gsi_stop_channel ch:%lu\n",
 			ep->gsi_chan_hdl);

@@ -57,7 +57,7 @@ static inline unsigned long int get_ubwc_compression_ratio(
 	struct ubwc_cr_stats_info_type ubwc_stats_info)
 {
 	unsigned long int sum = 0, weighted_sum = 0;
-	unsigned long int compression_ratio = 1 << 16;
+	unsigned long int compression_ratio = 0;
 
 	weighted_sum =
 		32  * ubwc_stats_info.cr_stats_info0 +
@@ -199,7 +199,6 @@ int msm_comm_vote_bus(struct msm_vidc_core *core)
 	struct hfi_device *hdev;
 	struct msm_vidc_inst *inst = NULL;
 	struct vidc_bus_vote_data *vote_data = NULL;
-	struct clock_info *vc;
 	bool is_turbo = false;
 
 	if (!core || !core->device) {
@@ -221,7 +220,6 @@ int msm_comm_vote_bus(struct msm_vidc_core *core)
 			return -EINVAL;
 		}
 	}
-
 
 	mutex_lock(&core->lock);
 	list_for_each_entry(inst, &core->instances, list) {
@@ -343,12 +341,6 @@ int msm_comm_vote_bus(struct msm_vidc_core *core)
 			vote_data[i].ddr_bw = inst->clk_data.ddr_bw;
 			vote_data[i].sys_cache_bw =
 				inst->clk_data.sys_cache_bw;
-		}
-
-		if (i == 0) {
-			vote_data[i].imem_ab_tbl = core->resources.imem_ab_tbl;
-			vote_data[i].imem_ab_tbl_size =
-				core->resources.imem_ab_tbl_size;
 		}
 
 		i++;
@@ -1331,7 +1323,15 @@ static int msm_vidc_decide_work_mode_ar50(struct msm_vidc_inst *inst)
 			break;
 		}
 	} else if (inst->session_type == MSM_VIDC_ENCODER) {
+		u32 rc_mode = 0;
+
 		pdata.video_work_mode = VIDC_WORK_MODE_1;
+		rc_mode =  msm_comm_g_ctrl_for_id(inst,
+				V4L2_CID_MPEG_VIDEO_BITRATE_MODE);
+		if (rc_mode == V4L2_MPEG_VIDEO_BITRATE_MODE_VBR ||
+		    rc_mode == V4L2_MPEG_VIDEO_BITRATE_MODE_MBR ||
+		    rc_mode == V4L2_MPEG_VIDEO_BITRATE_MODE_MBR_VFR)
+			pdata.video_work_mode = VIDC_WORK_MODE_2;
 	} else {
 		return -EINVAL;
 	}
@@ -1444,7 +1444,7 @@ decision_done:
 static inline int msm_vidc_power_save_mode_enable(struct msm_vidc_inst *inst,
 	bool enable)
 {
-	u32 rc = 0, mbs_per_frame;
+	u32 rc = 0, mbs_per_frame, mbs_per_sec;
 	u32 prop_id = 0;
 	void *pdata = NULL;
 	struct hfi_device *hdev = NULL;
@@ -1459,8 +1459,10 @@ static inline int msm_vidc_power_save_mode_enable(struct msm_vidc_inst *inst,
 		return 0;
 	}
 	mbs_per_frame = msm_vidc_get_mbs_per_frame(inst);
+	mbs_per_sec = mbs_per_frame * msm_vidc_get_fps(inst);
+
 	if (mbs_per_frame > inst->core->resources.max_hq_mbs_per_frame ||
-		msm_vidc_get_fps(inst) > inst->core->resources.max_hq_fps) {
+		mbs_per_sec > inst->core->resources.max_hq_mbs_per_sec) {
 		enable = true;
 	}
 	/* Power saving always disabled for CQ RC mode. */

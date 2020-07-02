@@ -2432,7 +2432,7 @@ bool ipa_has_open_aggr_frame(enum ipa_client_type client)
 
 int ipa_mhi_resume_channels_internal(enum ipa_client_type client,
 		bool LPTransitionRejected, bool brstmode_enabled,
-		union __packed gsi_channel_scratch ch_scratch, u8 index)
+		union gsi_channel_scratch ch_scratch, u8 index)
 {
 	int ret;
 

@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
  * Copyright (C) 2006-2007 Adam Belay <abelay@novell.com>
  * Copyright (C) 2009 Intel Corporation
  *
@@ -51,6 +51,7 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/trace_msm_low_power.h>
 #include <linux/arm-smccc.h>
+#include <linux/regulator/machine.h>
 
 #define SCLK_HZ (32768)
 #define PSCI_POWER_STATE(reset) (reset << 30)
@@ -1108,9 +1109,10 @@ static int cluster_configure(struct lpm_cluster *cluster, int idx,
 		 * clocks that are enabled and preventing the system level
 		 * LPMs(XO and Vmin).
 		 */
-		if (!from_idle)
+		if (!from_idle) {
 			clock_debug_print_enabled(true);
-
+			regulator_debug_suspend();
+		}
 		cpu = get_next_online_cpu(from_idle);
 		cpumask_copy(&cpumask, cpumask_of(cpu));
 		clear_predict_history();
@@ -1362,7 +1364,7 @@ static bool psci_enter_sleep(struct lpm_cpu *cpu, int idx, bool from_idle)
 		if (cpu->bias)
 			biastimer_start(cpu->bias);
 		stop_critical_timings();
-		wfi();
+		cpu_do_idle();
 		start_critical_timings();
 		return 1;
 	}

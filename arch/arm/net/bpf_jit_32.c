@@ -25,8 +25,6 @@
 
 #include "bpf_jit_32.h"
 
-int bpf_jit_enable __read_mostly;
-
 /*
  * eBPF prog stack layout:
  *
@@ -798,7 +796,11 @@ static inline void emit_a32_rsh_i64(const u8 dst[], bool dstk,
 	}
 
 	/* Do LSR operation */
-	if (val < 32) {
+	if (val == 0) {
+		/* An immediate value of 0 encodes a shift amount of 32
+		 * for LSR. To shift by 0, don't do anything.
+		 */
+	} else if (val < 32) {
 		emit(ARM_MOV_SI(tmp2[1], rd, SRTYPE_LSR, val), ctx);
 		emit(ARM_ORR_SI(rd, tmp2[1], rm, SRTYPE_ASL, 32 - val), ctx);
 		emit(ARM_MOV_SI(rm, rm, SRTYPE_LSR, val), ctx);
@@ -831,7 +833,11 @@ static inline void emit_a32_arsh_i64(const u8 dst[], bool dstk,
 	}
 
 	/* Do ARSH operation */
-	if (val < 32) {
+	if (val == 0) {
+		/* An immediate value of 0 encodes a shift amount of 32
+		 * for ASR. To shift by 0, don't do anything.
+		 */
+	} else if (val < 32) {
 		emit(ARM_MOV_SI(tmp2[1], rd, SRTYPE_LSR, val), ctx);
 		emit(ARM_ORR_SI(rd, tmp2[1], rm, SRTYPE_ASL, 32 - val), ctx);
 		emit(ARM_MOV_SI(rm, rm, SRTYPE_ASR, val), ctx);
@@ -915,7 +921,7 @@ static inline void emit_str_r(const u8 dst, const u8 src, bool dstk,
 /* dst = *(size*)(src + off) */
 static inline void emit_ldx_r(const u8 dst[], const u8 src, bool dstk,
 			      s32 off, struct jit_ctx *ctx, const u8 sz){
-	const u8 *tmp = bpf2a32[TMP_REG_1];
+	const u8 *tmp = bpf2a32[TMP_REG_2];
 	const u8 *rd = dstk ? tmp : dst;
 	u8 rm = src;
 	s32 off_max;

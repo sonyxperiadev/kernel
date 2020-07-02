@@ -85,9 +85,10 @@
  * clock rate, fast average samples with no measurement in queue.
  * Set the timeout to a max of 100ms.
  */
-#define ADC_CONV_TIME_MIN_US			263
-#define ADC_CONV_TIME_MAX_US			264
-#define ADC_CONV_TIME_RETRY			400
+#define ADC_POLL_DELAY_MIN_US			10000
+#define ADC_POLL_DELAY_MAX_US			10001
+#define ADC_CONV_TIME_RETRY_POLL		40
+#define ADC_CONV_TIME_RETRY			30
 #define ADC_CONV_TIMEOUT			msecs_to_jiffies(100)
 
 /* CAL peripheral */
@@ -133,6 +134,8 @@ struct adc_channel_prop {
 	unsigned int			prescale;
 	unsigned int			hw_settle_time;
 	unsigned int			avg_samples;
+	/*lut_index is used only for bat_therm LUTs*/
+	unsigned int			lut_index;
 	enum vadc_scale_fn_type		scale_fn_type;
 	const char			*datasheet_name;
 };
@@ -271,13 +274,16 @@ static int adc_read_voltage_data(struct adc_chip *adc, u16 *data)
 	return ret;
 }
 
-static int adc_poll_wait_eoc(struct adc_chip *adc)
+static int adc_poll_wait_eoc(struct adc_chip *adc, bool poll_only)
 {
 	unsigned int count, retry;
 	u8 status1;
 	int ret;
 
-	retry = ADC_CONV_TIME_RETRY;
+	if (poll_only)
+		retry = ADC_CONV_TIME_RETRY_POLL;
+	else
+		retry = ADC_CONV_TIME_RETRY;
 
 	for (count = 0; count < retry; count++) {
 		ret = adc_read(adc, ADC_USR_STATUS1, &status1, 1);
@@ -287,7 +293,7 @@ static int adc_poll_wait_eoc(struct adc_chip *adc)
 		status1 &= ADC_USR_STATUS1_REQ_STS_EOC_MASK;
 		if (status1 == ADC_USR_STATUS1_EOC)
 			return 0;
-		usleep_range(ADC_CONV_TIME_MIN_US, ADC_CONV_TIME_MAX_US);
+		usleep_range(ADC_POLL_DELAY_MIN_US, ADC_POLL_DELAY_MAX_US);
 	}
 
 	return -ETIMEDOUT;
@@ -298,7 +304,7 @@ static int adc_wait_eoc(struct adc_chip *adc)
 	int ret;
 
 	if (adc->poll_eoc) {
-		ret = adc_poll_wait_eoc(adc);
+		ret = adc_poll_wait_eoc(adc, true);
 		if (ret < 0) {
 			pr_err("EOC bit not set\n");
 			return ret;
@@ -308,7 +314,7 @@ static int adc_wait_eoc(struct adc_chip *adc)
 							ADC_CONV_TIMEOUT);
 		if (!ret) {
 			pr_debug("Did not get completion timeout.\n");
-			ret = adc_poll_wait_eoc(adc);
+			ret = adc_poll_wait_eoc(adc, false);
 			if (ret < 0) {
 				pr_err("EOC bit not set\n");
 				return ret;
@@ -497,7 +503,23 @@ static int adc_configure(struct adc_chip *adc,
 	if (!adc->poll_eoc)
 		reinit_completion(&adc->complete);
 
-	ret = adc_write(adc, ADC_USR_DIG_PARAM, buf, ADC5_MULTI_TRANSFER);
+	ret = adc_write(adc, ADC_USR_DIG_PARAM, buf, 1);
+	if (ret)
+		return ret;
+
+	ret = adc_write(adc, ADC_USR_FAST_AVG_CTL, &buf[1], 1);
+	if (ret)
+		return ret;
+
+	ret = adc_write(adc, ADC_USR_CH_SEL_CTL, &buf[2], 1);
+	if (ret)
+		return ret;
+
+	ret = adc_write(adc, ADC_USR_DELAY_CTL, &buf[3], 1);
+	if (ret)
+		return ret;
+
+	ret = adc_write(adc, ADC_USR_EN_CTL1, &buf[4], 1);
 	if (ret)
 		return ret;
 
@@ -540,14 +562,19 @@ static int adc_do_conversion(struct adc_chip *adc,
 	if (ret < 0)
 		goto unlock;
 
-	if ((chan->type == IIO_VOLTAGE) || (chan->type == IIO_TEMP))
+	if ((chan->type == IIO_VOLTAGE) || (chan->type == IIO_TEMP)) {
 		ret = adc_read_voltage_data(adc, data_volt);
+		if (ret)
+			goto unlock;
+	}
 	else if (chan->type == IIO_POWER) {
 		ret = adc_read_voltage_data(adc, data_volt);
 		if (ret)
 			goto unlock;
 
 		ret = adc_read_current_data(adc, data_cur);
+		if (ret)
+			goto unlock;
 	}
 
 	ret = adc_post_configure_usb_in_read(adc, prop);
@@ -600,7 +627,7 @@ static int adc_read_raw(struct iio_dev *indio_dev,
 		if ((chan->type == IIO_VOLTAGE) || (chan->type == IIO_TEMP))
 			ret = qcom_vadc_hw_scale(prop->scale_fn_type,
 				&adc_prescale_ratios[prop->prescale],
-				adc->data,
+				adc->data, prop->lut_index,
 				adc_code_volt, val);
 		if (ret)
 			break;
@@ -608,14 +635,14 @@ static int adc_read_raw(struct iio_dev *indio_dev,
 		if (chan->type == IIO_POWER) {
 			ret = qcom_vadc_hw_scale(SCALE_HW_CALIB_DEFAULT,
 				&adc_prescale_ratios[VADC_DEF_VBAT_PRESCALING],
-				adc->data,
+				adc->data, prop->lut_index,
 				adc_code_volt, val);
 			if (ret)
 				break;
 
 			ret = qcom_vadc_hw_scale(prop->scale_fn_type,
 				&adc_prescale_ratios[prop->prescale],
-				adc->data,
+				adc->data, prop->lut_index,
 				adc_code_cur, val2);
 			if (ret)
 				break;
@@ -737,6 +764,10 @@ static const struct adc_channels adc_chans_pmic5[ADC_MAX_CHANNEL] = {
 					SCALE_HW_CALIB_PM5_SMB_TEMP)
 	[ADC_GPIO1_PU2]	= ADC_CHAN_TEMP("gpio1_pu2", 1,
 					SCALE_HW_CALIB_THERM_100K_PULLUP)
+	[ADC_GPIO2_PU2]	= ADC_CHAN_TEMP("gpio2_pu2", 1,
+					SCALE_HW_CALIB_THERM_100K_PULLUP)
+	[ADC_GPIO3_PU2]	= ADC_CHAN_TEMP("gpio3_pu2", 1,
+					SCALE_HW_CALIB_THERM_100K_PULLUP)
 	[ADC_GPIO4_PU2]	= ADC_CHAN_TEMP("gpio4_pu2", 1,
 					SCALE_HW_CALIB_THERM_100K_PULLUP)
 };
@@ -762,6 +793,8 @@ static const struct adc_channels adc_chans_rev2[ADC_MAX_CHANNEL] = {
 					SCALE_HW_CALIB_THERM_100K_PULLUP)
 	[ADC_XO_THERM_PU2]	= ADC_CHAN_TEMP("xo_therm", 1,
 					SCALE_HW_CALIB_THERM_100K_PULLUP)
+	[ANA_IN]		= ADC_CHAN_TEMP("drax_temp", 1,
+					SCALE_HW_CALIB_PMIC_THERM)
 };
 
 static int adc_get_dt_channel_data(struct device *dev,
@@ -844,6 +877,12 @@ static int adc_get_dt_channel_data(struct device *dev,
 	} else {
 		prop->avg_samples = VADC_DEF_AVG_SAMPLES;
 	}
+
+	prop->lut_index = VADC_DEF_LUT_INDEX;
+
+	ret = of_property_read_u32(node, "qcom,lut-index", &value);
+	if (!ret)
+		prop->lut_index = value;
 
 	if (of_property_read_bool(node, "qcom,ratiometric"))
 		prop->cal_method = ADC_RATIOMETRIC_CAL;
@@ -995,7 +1034,7 @@ static int adc_probe(struct platform_device *pdev)
 	revid_dev_node = of_parse_phandle(node, "qcom,pmic-revid", 0);
 	if (revid_dev_node) {
 		pmic_rev_id = get_revid_data(revid_dev_node);
-		if (!(IS_ERR(pmic_rev_id)))
+		if (!(IS_ERR_OR_NULL(pmic_rev_id)))
 			skip_usb_wa = skip_usb_in_wa(pmic_rev_id);
 		else {
 			pr_err("Unable to get revid\n");

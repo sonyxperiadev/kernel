@@ -28,7 +28,9 @@
 #include <linux/rndis_ipa.h>
 #include <linux/workqueue.h>
 #include "../ipa_common_i.h"
+#ifdef CONFIG_IPA3
 #include "../ipa_v3/ipa_pm.h"
+#endif
 
 #define CREATE_TRACE_POINTS
 #include "rndis_ipa_trace.h"
@@ -267,8 +269,10 @@ static void rndis_ipa_rm_notify
 	unsigned long data);
 static int rndis_ipa_create_rm_resource(struct rndis_ipa_dev *rndis_ipa_ctx);
 static int rndis_ipa_destroy_rm_resource(struct rndis_ipa_dev *rndis_ipa_ctx);
+#ifdef CONFIG_IPA3
 static int rndis_ipa_register_pm_client(struct rndis_ipa_dev *rndis_ipa_ctx);
 static int rndis_ipa_deregister_pm_client(struct rndis_ipa_dev *rndis_ipa_ctx);
+#endif
 static bool rx_filter(struct sk_buff *skb);
 static bool tx_filter(struct sk_buff *skb);
 static bool rm_enabled(struct rndis_ipa_dev *rndis_ipa_ctx);
@@ -602,13 +606,15 @@ int rndis_ipa_init(struct ipa_usb_init_params *params)
 		goto fail_set_device_ethernet;
 	}
 	RNDIS_IPA_DEBUG("Device Ethernet address set %pM\n", net->dev_addr);
-
+#ifdef CONFIG_IPA3
 	if (ipa_is_vlan_mode(IPA_VLAN_IF_RNDIS,
 		&rndis_ipa_ctx->is_vlan_mode)) {
 		RNDIS_IPA_ERROR("couldn't acquire vlan mode, is ipa ready?\n");
-		goto fail_get_vlan_mode;
+		goto fail_hdrs_cfg;
 	}
-
+#else
+	rndis_ipa_ctx->is_vlan_mode = 0;
+#endif
 	RNDIS_IPA_DEBUG("is_vlan_mode %d\n", rndis_ipa_ctx->is_vlan_mode);
 
 	result = rndis_ipa_hdrs_cfg
@@ -659,7 +665,6 @@ fail_register_netdev:
 fail_register_tx:
 	rndis_ipa_hdrs_destroy(rndis_ipa_ctx);
 fail_hdrs_cfg:
-fail_get_vlan_mode:
 fail_set_device_ethernet:
 	rndis_ipa_debugfs_destroy(rndis_ipa_ctx);
 fail_netdev_priv:
@@ -755,9 +760,11 @@ int rndis_ipa_pipe_connect_notify(
 		return -EINVAL;
 	}
 
+#ifdef CONFIG_IPA3
 	if (ipa_pm_is_used())
 		result = rndis_ipa_register_pm_client(rndis_ipa_ctx);
 	else
+#endif
 		result = rndis_ipa_create_rm_resource(rndis_ipa_ctx);
 	if (result) {
 		RNDIS_IPA_ERROR("fail on RM create\n");
@@ -841,9 +848,11 @@ int rndis_ipa_pipe_connect_notify(
 	return 0;
 
 fail:
+#ifdef CONFIG_IPA3
 	if (ipa_pm_is_used())
 		rndis_ipa_deregister_pm_client(rndis_ipa_ctx);
 	else
+#endif
 		rndis_ipa_destroy_rm_resource(rndis_ipa_ctx);
 fail_create_rm:
 	return result;
@@ -1338,9 +1347,11 @@ int rndis_ipa_pipe_disconnect_notify(void *private)
 	rndis_ipa_ctx->net->stats.tx_dropped += outstanding_dropped_pkts;
 	atomic_set(&rndis_ipa_ctx->outstanding_pkts, 0);
 
+#ifdef CONFIG_IPA3
 	if (ipa_pm_is_used())
 		retval = rndis_ipa_deregister_pm_client(rndis_ipa_ctx);
 	else
+#endif
 		retval = rndis_ipa_destroy_rm_resource(rndis_ipa_ctx);
 	if (retval) {
 		RNDIS_IPA_ERROR("Fail to clean RM\n");
@@ -1895,6 +1906,7 @@ fail_rm_create:
 	return result;
 }
 
+#ifdef CONFIG_IPA3
 static void rndis_ipa_pm_cb(void *p, enum ipa_pm_cb_event event)
 {
 	struct rndis_ipa_dev *rndis_ipa_ctx = p;
@@ -1917,7 +1929,7 @@ static void rndis_ipa_pm_cb(void *p, enum ipa_pm_cb_event event)
 
 	RNDIS_IPA_LOG_EXIT();
 }
-
+#endif
 /**
  * rndis_ipa_destroy_rm_resource() - delete the dependency and destroy
  * the resource done on rndis_ipa_create_rm_resource()
@@ -1977,6 +1989,7 @@ bail:
 	return result;
 }
 
+#ifdef CONFIG_IPA3
 static int rndis_ipa_register_pm_client(struct rndis_ipa_dev *rndis_ipa_ctx)
 {
 	int result;
@@ -2003,7 +2016,7 @@ static int rndis_ipa_deregister_pm_client(struct rndis_ipa_dev *rndis_ipa_ctx)
 	rndis_ipa_ctx->pm_hdl = ~0;
 	return 0;
 }
-
+#endif
 /**
  * resource_request() - request for the Netdev resource
  * @rndis_ipa_ctx: main driver context
@@ -2024,9 +2037,10 @@ static int resource_request(struct rndis_ipa_dev *rndis_ipa_ctx)
 	if (!rm_enabled(rndis_ipa_ctx))
 		return result;
 
+#ifdef CONFIG_IPA3
 	if (ipa_pm_is_used())
 		return ipa_pm_activate(rndis_ipa_ctx->pm_hdl);
-
+#endif
 	return ipa_rm_inactivity_timer_request_resource(
 			DRV_RESOURCE_ID);
 
@@ -2045,9 +2059,11 @@ static void resource_release(struct rndis_ipa_dev *rndis_ipa_ctx)
 {
 	if (!rm_enabled(rndis_ipa_ctx))
 		return;
+#ifdef CONFIG_IPA3
 	if (ipa_pm_is_used())
 		ipa_pm_deferred_deactivate(rndis_ipa_ctx->pm_hdl);
 	else
+#endif
 		ipa_rm_inactivity_timer_release_resource(DRV_RESOURCE_ID);
 
 	return;

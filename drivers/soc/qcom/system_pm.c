@@ -12,6 +12,7 @@
  */
 
 #include <linux/kernel.h>
+#include <linux/of_device.h>
 #include <linux/platform_device.h>
 #include <soc/qcom/rpmh.h>
 #include <clocksource/arm_arch_timer.h>
@@ -67,7 +68,6 @@ static bool system_sleep_allowed(void)
  */
 static int system_sleep_enter(struct cpumask *mask)
 {
-	gic_v3_dist_save();
 	return rpmh_flush(rpmh_client);
 }
 
@@ -78,8 +78,27 @@ static void system_sleep_exit(bool success)
 {
 	if (success)
 		msm_rpmh_master_stats_update();
+}
+
+/* SoC specific variations */
+static int system_sleep_sdm845_enter(struct cpumask *mask)
+{
+	gic_v3_dist_save();
+	return system_sleep_enter(mask);
+}
+
+static void system_sleep_sdm845_exit(bool success)
+{
+	system_sleep_exit(success);
 	gic_v3_dist_restore();
 }
+
+static struct system_pm_ops pm_ops_sdm845 = {
+	.enter = system_sleep_sdm845_enter,
+	.exit = system_sleep_sdm845_exit,
+	.update_wakeup = system_sleep_update_wakeup,
+	.sleep_allowed = system_sleep_allowed,
+};
 
 static struct system_pm_ops pm_ops = {
 	.enter = system_sleep_enter,
@@ -90,15 +109,23 @@ static struct system_pm_ops pm_ops = {
 
 static int sys_pm_probe(struct platform_device *pdev)
 {
+	struct device *dev = &pdev->dev;
+	struct system_pm_ops *match_pm_ops;
+
 	rpmh_client = rpmh_get_byindex(pdev, 0);
 	if (IS_ERR_OR_NULL(rpmh_client))
 		return PTR_ERR(rpmh_client);
 
-	return register_system_pm_ops(&pm_ops);
+	match_pm_ops = (struct system_pm_ops*)of_device_get_match_data(dev);
+	if (match_pm_ops == NULL)
+		return -EINVAL;
+
+	return register_system_pm_ops(match_pm_ops);;
 }
 
 static const struct of_device_id sys_pm_drv_match[] = {
-	{ .compatible = "qcom,system-pm", },
+	{ .compatible = "qcom,system-pm", .data = &pm_ops },
+	{ .compatible = "qcom,system-pm-sdm845", .data = &pm_ops_sdm845 },
 	{ }
 };
 

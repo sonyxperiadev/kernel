@@ -148,12 +148,16 @@ static bool fuse_block_alloc(struct fuse_conn *fc, bool for_background)
 
 static void fuse_drop_waiting(struct fuse_conn *fc)
 {
-        if (fc->connected) {
-                atomic_dec(&fc->num_waiting);
-        } else if (atomic_dec_and_test(&fc->num_waiting)) {
-                /* wake up aborters */
-                wake_up_all(&fc->blocked_waitq);
-        }
+	/*
+	 * lockess check of fc->connected is okay, because atomic_dec_and_test()
+	 * provides a memory barrier mached with the one in fuse_wait_aborted()
+	 * to ensure no wake-up is missed.
+	 */
+	if (atomic_dec_and_test(&fc->num_waiting) &&
+	    !READ_ONCE(fc->connected)) {
+		/* wake up aborters */
+		wake_up_all(&fc->blocked_waitq);
+	}
 }
 
 static struct fuse_req *__fuse_get_req(struct fuse_conn *fc, unsigned npages,
@@ -1689,72 +1693,72 @@ static void fuse_retrieve_end(struct fuse_conn *fc, struct fuse_req *req)
 static int fuse_retrieve(struct fuse_conn *fc, struct inode *inode,
                          struct fuse_notify_retrieve_out *outarg)
 {
-        int err;
-        struct address_space *mapping = inode->i_mapping;
-        struct fuse_req *req;
-        pgoff_t index;
-        loff_t file_size;
-        unsigned int num;
-        unsigned int offset;
-        size_t total_len = 0;
-        int num_pages;
+	int err;
+	struct address_space *mapping = inode->i_mapping;
+	struct fuse_req *req;
+	pgoff_t index;
+	loff_t file_size;
+	unsigned int num;
+	unsigned int offset;
+	size_t total_len = 0;
+	int num_pages;
 
-        offset = outarg->offset & ~PAGE_MASK;
-        file_size = i_size_read(inode);
+	offset = outarg->offset & ~PAGE_MASK;
+	file_size = i_size_read(inode);
 
-        num = outarg->size;
-        if (outarg->offset > file_size)
-                num = 0;
-        else if (outarg->offset + num > file_size)
-                num = file_size - outarg->offset;
+	num = min(outarg->size, fc->max_write);
+	if (outarg->offset > file_size)
+		num = 0;
+	else if (outarg->offset + num > file_size)
+		num = file_size - outarg->offset;
 
-        num_pages = (num + offset + PAGE_SIZE - 1) >> PAGE_SHIFT;
-        num_pages = min(num_pages, FUSE_MAX_PAGES_PER_REQ);
+	num_pages = (num + offset + PAGE_SIZE - 1) >> PAGE_SHIFT;
+	num_pages = min(num_pages, FUSE_MAX_PAGES_PER_REQ);
 
-        req = fuse_get_req(fc, num_pages);
-        if (IS_ERR(req))
-                return PTR_ERR(req);
+	req = fuse_get_req(fc, num_pages);
+	if (IS_ERR(req))
+		return PTR_ERR(req);
 
-        req->in.h.opcode = FUSE_NOTIFY_REPLY;
-        req->in.h.nodeid = outarg->nodeid;
-        req->in.numargs = 2;
-        req->in.argpages = 1;
-        req->page_descs[0].offset = offset;
-        req->end = fuse_retrieve_end;
+	req->in.h.opcode = FUSE_NOTIFY_REPLY;
+	req->in.h.nodeid = outarg->nodeid;
+	req->in.numargs = 2;
+	req->in.argpages = 1;
+	req->end = fuse_retrieve_end;
 
-        index = outarg->offset >> PAGE_SHIFT;
+	index = outarg->offset >> PAGE_SHIFT;
 
-        while (num && req->num_pages < num_pages) {
-                struct page *page;
-                unsigned int this_num;
+	while (num && req->num_pages < num_pages) {
+		struct page *page;
+		unsigned int this_num;
 
-                page = find_get_page(mapping, index);
-                if (!page)
-                        break;
+		page = find_get_page(mapping, index);
+		if (!page)
+			break;
 
-                this_num = min_t(unsigned, num, PAGE_SIZE - offset);
-                req->pages[req->num_pages] = page;
-                req->page_descs[req->num_pages].length = this_num;
-                req->num_pages++;
+		this_num = min_t(unsigned, num, PAGE_SIZE - offset);
+		req->pages[req->num_pages] = page;
+		req->page_descs[req->num_pages].offset = offset;
+		req->page_descs[req->num_pages].length = this_num;
+		req->num_pages++;
 
-                offset = 0;
-                num -= this_num;
-                total_len += this_num;
-                index++;
-        }
-        req->misc.retrieve_in.offset = outarg->offset;
-        req->misc.retrieve_in.size = total_len;
-        req->in.args[0].size = sizeof(req->misc.retrieve_in);
-        req->in.args[0].value = &req->misc.retrieve_in;
-        req->in.args[1].size = total_len;
+		offset = 0;
+		num -= this_num;
+		total_len += this_num;
+		index++;
+	}
+	req->misc.retrieve_in.offset = outarg->offset;
+	req->misc.retrieve_in.size = total_len;
+	req->in.args[0].size = sizeof(req->misc.retrieve_in);
+	req->in.args[0].value = &req->misc.retrieve_in;
+	req->in.args[1].size = total_len;
 
-        err = fuse_request_send_notify_reply(fc, req, outarg->notify_unique);
-        if (err) {
-                fuse_retrieve_end(fc, req);
-                fuse_put_request(fc, req);
-        }
+	err = fuse_request_send_notify_reply(fc, req, outarg->notify_unique);
+	if (err) {
+		fuse_retrieve_end(fc, req);
+		fuse_put_request(fc, req);
+	}
 
-        return err;
+	return err;
 }
 
 static int fuse_notify_retrieve(struct fuse_conn *fc, unsigned int size,
@@ -1986,84 +1990,86 @@ static ssize_t fuse_dev_write(struct kiocb *iocb, struct iov_iter *from)
 }
 
 static ssize_t fuse_dev_splice_write(struct pipe_inode_info *pipe,
-                                     struct file *out, loff_t *ppos,
-                                     size_t len, unsigned int flags)
+				     struct file *out, loff_t *ppos,
+				     size_t len, unsigned int flags)
 {
-        unsigned nbuf;
-        unsigned idx;
-        struct pipe_buffer *bufs;
-        struct fuse_copy_state cs;
-        struct fuse_dev *fud;
-        size_t rem;
-        ssize_t ret;
+	unsigned nbuf;
+	unsigned idx;
+	struct pipe_buffer *bufs;
+	struct fuse_copy_state cs;
+	struct fuse_dev *fud;
+	size_t rem;
+	ssize_t ret;
 
-        fud = fuse_get_dev(out);
-        if (!fud)
-                return -EPERM;
+	fud = fuse_get_dev(out);
+	if (!fud)
+		return -EPERM;
 
-        pipe_lock(pipe);
+	pipe_lock(pipe);
 
-        bufs = kmalloc(pipe->buffers * sizeof(struct pipe_buffer), GFP_KERNEL);
-        if (!bufs) {
-                pipe_unlock(pipe);
-                return -ENOMEM;
-        }
+	bufs = kmalloc(pipe->buffers * sizeof(struct pipe_buffer), GFP_KERNEL);
+	if (!bufs) {
+		pipe_unlock(pipe);
+		return -ENOMEM;
+	}
 
-        nbuf = 0;
-        rem = 0;
-        for (idx = 0; idx < pipe->nrbufs && rem < len; idx++)
-                rem += pipe->bufs[(pipe->curbuf + idx) & (pipe->buffers - 1)].len;
+	nbuf = 0;
+	rem = 0;
+	for (idx = 0; idx < pipe->nrbufs && rem < len; idx++)
+		rem += pipe->bufs[(pipe->curbuf + idx) & (pipe->buffers - 1)].len;
 
-        ret = -EINVAL;
-        if (rem < len) {
-                pipe_unlock(pipe);
-                goto out;
-        }
+	ret = -EINVAL;
+	if (rem < len)
+		goto out_free;
 
-        rem = len;
-        while (rem) {
-                struct pipe_buffer *ibuf;
-                struct pipe_buffer *obuf;
+	rem = len;
+	while (rem) {
+		struct pipe_buffer *ibuf;
+		struct pipe_buffer *obuf;
 
-                BUG_ON(nbuf >= pipe->buffers);
-                BUG_ON(!pipe->nrbufs);
-                ibuf = &pipe->bufs[pipe->curbuf];
-                obuf = &bufs[nbuf];
+		BUG_ON(nbuf >= pipe->buffers);
+		BUG_ON(!pipe->nrbufs);
+		ibuf = &pipe->bufs[pipe->curbuf];
+		obuf = &bufs[nbuf];
 
-                if (rem >= ibuf->len) {
-                        *obuf = *ibuf;
-                        ibuf->ops = NULL;
-                        pipe->curbuf = (pipe->curbuf + 1) & (pipe->buffers - 1);
-                        pipe->nrbufs--;
-                } else {
-                        pipe_buf_get(pipe, ibuf);
-                        *obuf = *ibuf;
-                        obuf->flags &= ~PIPE_BUF_FLAG_GIFT;
-                        obuf->len = rem;
-                        ibuf->offset += obuf->len;
-                        ibuf->len -= obuf->len;
-                }
-                nbuf++;
-                rem -= obuf->len;
-        }
-        pipe_unlock(pipe);
+		if (rem >= ibuf->len) {
+			*obuf = *ibuf;
+			ibuf->ops = NULL;
+			pipe->curbuf = (pipe->curbuf + 1) & (pipe->buffers - 1);
+			pipe->nrbufs--;
+		} else {
+			if (!pipe_buf_get(pipe, ibuf))
+				goto out_free;
 
-        fuse_copy_init(&cs, 0, NULL);
-        cs.pipebufs = bufs;
-        cs.nr_segs = nbuf;
-        cs.pipe = pipe;
+			*obuf = *ibuf;
+			obuf->flags &= ~PIPE_BUF_FLAG_GIFT;
+			obuf->len = rem;
+			ibuf->offset += obuf->len;
+			ibuf->len -= obuf->len;
+		}
+		nbuf++;
+		rem -= obuf->len;
+	}
+	pipe_unlock(pipe);
 
-        if (flags & SPLICE_F_MOVE)
-                cs.move_pages = 1;
+	fuse_copy_init(&cs, 0, NULL);
+	cs.pipebufs = bufs;
+	cs.nr_segs = nbuf;
+	cs.pipe = pipe;
 
-        ret = fuse_dev_do_write(fud, &cs, len);
+	if (flags & SPLICE_F_MOVE)
+		cs.move_pages = 1;
 
-        for (idx = 0; idx < nbuf; idx++)
-                pipe_buf_release(pipe, &bufs[idx]);
+	ret = fuse_dev_do_write(fud, &cs, len);
 
-out:
-        kfree(bufs);
-        return ret;
+	pipe_lock(pipe);
+out_free:
+	for (idx = 0; idx < nbuf; idx++)
+		pipe_buf_release(pipe, &bufs[idx]);
+	pipe_unlock(pipe);
+
+	kfree(bufs);
+	return ret;
 }
 
 static unsigned fuse_dev_poll(struct file *file, poll_table *wait)
@@ -2202,7 +2208,9 @@ EXPORT_SYMBOL_GPL(fuse_abort_conn);
 
 void fuse_wait_aborted(struct fuse_conn *fc)
 {
-        wait_event(fc->blocked_waitq, atomic_read(&fc->num_waiting) == 0);
+	/* matches implicit memory barrier in fuse_drop_waiting() */
+	smp_mb();
+	wait_event(fc->blocked_waitq, atomic_read(&fc->num_waiting) == 0);
 }
 
 int fuse_dev_release(struct inode *inode, struct file *file)

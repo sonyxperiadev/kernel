@@ -177,8 +177,6 @@ static u32 b_imm(unsigned int tgt, struct jit_ctx *ctx)
 		(ctx->idx * 4) - 4;
 }
 
-int bpf_jit_enable __read_mostly;
-
 enum which_ebpf_reg {
 	src_reg,
 	src_reg_no_fp,
@@ -348,12 +346,15 @@ static int build_int_epilogue(struct jit_ctx *ctx, int dest_reg)
 	const struct bpf_prog *prog = ctx->skf;
 	int stack_adjust = ctx->stack_size;
 	int store_offset = stack_adjust - 8;
+	enum reg_val_type td;
 	int r0 = MIPS_R_V0;
 
-	if (dest_reg == MIPS_R_RA &&
-	    get_reg_val_type(ctx, prog->len, BPF_REG_0) == REG_32BIT_ZERO_EX)
+	if (dest_reg == MIPS_R_RA) {
 		/* Don't let zero extended value escape. */
-		emit_instr(ctx, sll, r0, r0, 0);
+		td = get_reg_val_type(ctx, prog->len, BPF_REG_0);
+		if (td == REG_64BIT || td == REG_32BIT_ZERO_EX)
+			emit_instr(ctx, sll, r0, r0, 0);
+	}
 
 	if (ctx->flags & EBPF_SAVE_RA) {
 		emit_instr(ctx, ld, MIPS_R_RA, store_offset, MIPS_R_SP);
@@ -611,6 +612,7 @@ static void emit_const_to_reg(struct jit_ctx *ctx, int dst, u64 value)
 static int emit_bpf_tail_call(struct jit_ctx *ctx, int this_idx)
 {
 	int off, b_off;
+	int tcc_reg;
 
 	ctx->flags |= EBPF_SEEN_TC;
 	/*
@@ -623,14 +625,14 @@ static int emit_bpf_tail_call(struct jit_ctx *ctx, int this_idx)
 	b_off = b_imm(this_idx + 1, ctx);
 	emit_instr(ctx, bne, MIPS_R_AT, MIPS_R_ZERO, b_off);
 	/*
-	 * if (--TCC < 0)
+	 * if (TCC-- < 0)
 	 *     goto out;
 	 */
 	/* Delay slot */
-	emit_instr(ctx, daddiu, MIPS_R_T5,
-		   (ctx->flags & EBPF_TCC_IN_V1) ? MIPS_R_V1 : MIPS_R_S4, -1);
+	tcc_reg = (ctx->flags & EBPF_TCC_IN_V1) ? MIPS_R_V1 : MIPS_R_S4;
+	emit_instr(ctx, daddiu, MIPS_R_T5, tcc_reg, -1);
 	b_off = b_imm(this_idx + 1, ctx);
-	emit_instr(ctx, bltz, MIPS_R_T5, b_off);
+	emit_instr(ctx, bltz, tcc_reg, b_off);
 	/*
 	 * prog = array->ptrs[index];
 	 * if (prog == NULL)
@@ -1968,7 +1970,7 @@ struct bpf_prog *bpf_int_jit_compile(struct bpf_prog *prog)
 
 	/* Update the icache */
 	flush_icache_range((unsigned long)ctx.target,
-			   (unsigned long)(ctx.target + ctx.idx * sizeof(u32)));
+			   (unsigned long)&ctx.target[ctx.idx]);
 
 	if (bpf_jit_enable > 1)
 		/* Dump JIT code */

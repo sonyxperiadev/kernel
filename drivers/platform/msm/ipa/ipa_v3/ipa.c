@@ -2562,7 +2562,7 @@ static int ipa3_q6_set_ex_path_to_apps(void)
 	/* Set the exception path to AP */
 	for (client_idx = 0; client_idx < IPA_CLIENT_MAX; client_idx++) {
 		ep_idx = ipa3_get_ep_mapping(client_idx);
-		if (ep_idx == -1)
+		if (ep_idx == -1 || (ep_idx >= IPA3_MAX_NUM_PIPES))
 			continue;
 
 		/* disable statuses for all modem controlled prod pipes */
@@ -6329,12 +6329,16 @@ static int ipa_smmu_wlan_cb_probe(struct device *dev)
 		/* assume this failure is because iommu driver is not ready */
 		return -EPROBE_DEFER;
 	}
+
+	cb->is_cache_coherent = of_property_read_bool(dev->of_node,
+							"dma-coherent");
 	cb->valid = true;
 
 	if (of_property_read_bool(dev->of_node, "qcom,smmu-s1-bypass") ||
 		ipa3_ctx->ipa_config_is_mhi) {
 		smmu_info.s1_bypass_arr[IPA_SMMU_CB_WLAN] = true;
 		ipa3_ctx->s1_bypass_arr[IPA_SMMU_CB_WLAN] = true;
+		cb->is_cache_coherent = false;
 
 		if (iommu_domain_set_attr(cb->iommu,
 					DOMAIN_ATTR_S1_BYPASS,
@@ -6466,6 +6470,8 @@ static int ipa_smmu_uc_cb_probe(struct device *dev)
 		/* assume this failure is because iommu driver is not ready */
 		return -EPROBE_DEFER;
 	}
+	cb->is_cache_coherent = of_property_read_bool(dev->of_node,
+							"dma-coherent");
 	IPADBG("SMMU mapping created\n");
 	cb->valid = true;
 
@@ -6475,6 +6481,7 @@ static int ipa_smmu_uc_cb_probe(struct device *dev)
 		ipa3_ctx->ipa_config_is_mhi) {
 		smmu_info.s1_bypass_arr[IPA_SMMU_CB_UC] = true;
 		ipa3_ctx->s1_bypass_arr[IPA_SMMU_CB_UC] = true;
+		cb->is_cache_coherent = false;
 
 		if (iommu_domain_set_attr(cb->mapping->domain,
 			DOMAIN_ATTR_S1_BYPASS,
@@ -6594,6 +6601,8 @@ static int ipa_smmu_ap_cb_probe(struct device *dev)
 		}
 	}
 
+	cb->is_cache_coherent = of_property_read_bool(dev->of_node,
+							"dma-coherent");
 	cb->dev = dev;
 	cb->mapping = arm_iommu_create_mapping(dev->bus,
 					cb->va_start, cb->va_size);
@@ -6609,6 +6618,8 @@ static int ipa_smmu_ap_cb_probe(struct device *dev)
 		"qcom,smmu-s1-bypass") || ipa3_ctx->ipa_config_is_mhi) {
 		smmu_info.s1_bypass_arr[IPA_SMMU_CB_AP] = true;
 		ipa3_ctx->s1_bypass_arr[IPA_SMMU_CB_AP] = true;
+		cb->is_cache_coherent = false;
+
 		if (iommu_domain_set_attr(cb->mapping->domain,
 				DOMAIN_ATTR_S1_BYPASS,
 				&bypass)) {
@@ -7050,6 +7061,7 @@ int ipa3_iommu_map(struct iommu_domain *domain,
 {
 	struct ipa_smmu_cb_ctx *ap_cb = ipa3_get_smmu_ctx(IPA_SMMU_CB_AP);
 	struct ipa_smmu_cb_ctx *uc_cb = ipa3_get_smmu_ctx(IPA_SMMU_CB_UC);
+	struct ipa_smmu_cb_ctx *wlan_cb = ipa3_get_smmu_ctx(IPA_SMMU_CB_WLAN);
 
 	IPADBG("domain =0x%pK iova 0x%lx\n", domain, iova);
 	IPADBG("paddr =0x%pa size 0x%x\n", &paddr, (u32)size);
@@ -7061,20 +7073,29 @@ int ipa3_iommu_map(struct iommu_domain *domain,
 			ipa_assert();
 			return -EFAULT;
 		}
+		if (ap_cb->is_cache_coherent)
+			prot |= IOMMU_CACHE;
 	} else if (domain == ipa3_get_wlan_smmu_domain()) {
 		/* wlan is one time map */
+		if (wlan_cb->is_cache_coherent)
+			prot |= IOMMU_CACHE;
 	} else if (domain == ipa3_get_uc_smmu_domain()) {
 		if (iova >= uc_cb->va_start && iova < uc_cb->va_end) {
 			IPAERR("iommu uC overlap addr 0x%lx\n", iova);
 			ipa_assert();
 			return -EFAULT;
 		}
+		if (uc_cb->is_cache_coherent)
+			prot |= IOMMU_CACHE;
 	} else {
 		IPAERR("Unexpected domain 0x%pK\n", domain);
 		ipa_assert();
 		return -EFAULT;
 	}
-
+	/*
+	 * IOMMU_CACHE is needed in prot to make the entries cachable
+	 * if cache coherency is enabled in dtsi.
+	 */
 	return iommu_map(domain, iova, paddr, size, prot);
 }
 
@@ -7157,12 +7178,14 @@ cleanup:
 /**************************************************************
  *            PCIe Version
  *************************************************************/
-
 int ipa3_pci_drv_probe(
 	struct pci_dev            *pci_dev,
 	struct ipa_api_controller *api_ctrl,
 	const struct of_device_id *pdrv_match)
 {
+#ifndef CONFIG_PCI
+	return -ENXIO;
+#else
 	int result;
 	struct ipa3_plat_drv_res *ipa_drv_res;
 	u32 bar0_offset;
@@ -7316,6 +7339,7 @@ int ipa3_pci_drv_probe(
 	}
 
 	return result;
+#endif
 }
 
 /*

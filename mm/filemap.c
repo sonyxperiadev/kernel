@@ -36,6 +36,8 @@
 #include <linux/memcontrol.h>
 #include <linux/cleancache.h>
 #include <linux/rmap.h>
+#include <linux/delayacct.h>
+#include <linux/psi.h>
 #include "internal.h"
 
 #define CREATE_TRACE_POINTS
@@ -342,7 +344,8 @@ int __filemap_fdatawrite_range(struct address_space *mapping, loff_t start,
 		.range_end = end,
 	};
 
-	if (!mapping_cap_writeback_dirty(mapping))
+	if (!mapping_cap_writeback_dirty(mapping) ||
+	    !mapping_tagged(mapping, PAGECACHE_TAG_DIRTY))
 		return 0;
 
 	wbc_attach_fdatawrite_inode(&wbc, mapping->host);
@@ -466,6 +469,28 @@ int filemap_fdatawait_range(struct address_space *mapping, loff_t start_byte,
 	return filemap_check_errors(mapping);
 }
 EXPORT_SYMBOL(filemap_fdatawait_range);
+
+/**
+ * filemap_fdatawait_range_keep_errors - wait for writeback to complete
+ * @mapping:		address space structure to wait for
+ * @start_byte:		offset in bytes where the range starts
+ * @end_byte:		offset in bytes where the range ends (inclusive)
+ *
+ * Walk the list of under-writeback pages of the given address space in the
+ * given range and wait for all of them.  Unlike filemap_fdatawait_range(),
+ * this function does not clear error status of the address space.
+ *
+ * Use this function if callers don't handle errors themselves.  Expected
+ * call sites are system-wide / filesystem-wide data flushers: e.g. sync(2),
+ * fsfreeze(8)
+ */
+int filemap_fdatawait_range_keep_errors(struct address_space *mapping,
+		loff_t start_byte, loff_t end_byte)
+{
+	__filemap_fdatawait_range(mapping, start_byte, end_byte);
+	return filemap_check_and_keep_errors(mapping);
+}
+EXPORT_SYMBOL(filemap_fdatawait_range_keep_errors);
 
 /**
  * file_fdatawait_range - wait for writeback to complete
@@ -979,7 +1004,17 @@ static inline int wait_on_page_bit_common(wait_queue_head_t *q,
 {
 	struct wait_page_queue wait_page;
 	wait_queue_entry_t *wait = &wait_page.wait;
+	bool thrashing = false;
+	unsigned long pflags;
 	int ret = 0;
+
+	if (bit_nr == PG_locked &&
+	    !PageUptodate(page) && PageWorkingset(page)) {
+		if (!PageSwapBacked(page))
+			delayacct_thrashing_start();
+		psi_memstall_enter(&pflags);
+		thrashing = true;
+	}
 
 	init_wait(wait);
 	wait->flags = lock ? WQ_FLAG_EXCLUSIVE : 0;
@@ -1018,6 +1053,12 @@ static inline int wait_on_page_bit_common(wait_queue_head_t *q,
 	}
 
 	finish_wait(q, wait);
+
+	if (thrashing) {
+		if (!PageSwapBacked(page))
+			delayacct_thrashing_end();
+		psi_memstall_leave(&pflags);
+	}
 
 	/*
 	 * A signal could leave PageWaiters set. Clearing it here if

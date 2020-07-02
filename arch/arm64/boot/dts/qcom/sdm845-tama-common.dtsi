@@ -115,11 +115,11 @@
 };
 
 &soc {
-	qcom,pcie@0x1c00000 {
+	qcom,pcie@1c00000 {
 		status = "disabled";
 	};
 
-	qcom,pcie@0x1c08000 {
+	qcom,pcie@1c08000 {
 		status = "disabled";
 	};
 
@@ -283,7 +283,7 @@
 	};
 
 	/* UART: QUP6 */
-	qcom,qup_uart@0x898000 {
+	qcom,qup_uart@898000 {
 		clock-frequency = <4000000>;
 		status = "okay";
 	};
@@ -294,7 +294,7 @@
 	};
 
 	/* UART: QUP9 */
-	qcom,qup_uart@0xa84000 {
+	qcom,qup_uart@a84000 {
 		pinctrl-0 = <&sdm_gpio_4 &sdm_gpio_5>;
 		pinctrl-1 = <&sdm_gpio_4 &sdm_gpio_5>;
 		status = "okay";
@@ -562,6 +562,9 @@
 
 &pmi8998_pdphy {
 	vbus-supply = <&smb2_vbus>;
+
+	qcom,default-sink-caps = <5000 2000>, /* 5V @ 2A */
+				 <9000 1700>; /* 9V @ 1.7A */
 };
 
 &pmi8998_rradc {
@@ -575,8 +578,10 @@
 };
 
 &pmi8998_charger {
+	qcom,fv-max-uv = <4380000>;
 	qcom,otg-cl-ua = <1000000>;
 	qcom,usb-icl-ua = <1500000>;
+	qcom,hvdcp-disable; /* Still allows for USB PD */
 	somc,jeita-sw-ctrl-en;
 	io-channels = <&pmi8998_rradc 2>,
 		      <&pmi8998_rradc 3>,
@@ -593,6 +598,18 @@
 			   "charger_temp",
 			   "charger_temp_max";
 	/delete-property/ qcom,auto-recharge-soc;
+
+	somc,fake-charging-temp-level = <13>;
+	somc,thermal-lo-volt-icl-ua = <2000000 1500000 1500000
+					1500000 1300000 1100000
+					1100000 1000000 900000
+					900000 500000 200000
+					100000 0 0>;
+	somc,thermal-hi-volt-icl-ua = <1700000 1700000 1700000
+					1700000 1500000 1500000
+					1000000 1000000 1000000
+					600000 500000 200000
+					100000 0 0>;
 
 	smb2_vbus: qcom,smb2-vbus {
 		regulator-name = "smb2-vbus";
@@ -625,7 +642,7 @@
 &pmi8998_wled {
 	linux,name = "wled";
 	qcom,string-cfg = <7>;
-	qcom,fs-current-limit = <20000>;
+	qcom,current-limit-microamp = <20000>;
 };
 
 &pmi8998_lsid1 {
@@ -661,7 +678,7 @@
 		qcom,pmic-revid = <&pmi8998_revid>;
 		qcom,loop-auto-gm-en;
 		qcom,auto-calibration-enable;
-		somc,init-br-ua = <10000>;
+		somc,init-br-ua = <1200>;
 		somc-s1,br-power-save-ua = <800>;
 		somc,bl-scale-enabled;
 		somc,area_count_table_size = <0>;
@@ -3330,9 +3347,9 @@
 };
 
 &lab_regulator {
-	interrupts = <0x3 0xde 0x0 IRQ_TYPE_LEVEL_LOW>,
-			<0x3 0xde 0x1 IRQ_TYPE_EDGE_RISING>;
-	interrupt-names = "lab_vreg_not_ok_interrupt", "lab-vreg-ok";
+//	interrupts = <0x3 0xde 0x0 IRQ_TYPE_LEVEL_LOW>,
+//			<0x3 0xde 0x1 IRQ_TYPE_EDGE_RISING>;
+//	interrupt-names = "lab_vreg_not_ok_interrupt", "lab-vreg-ok";
 
 	/* Set LAB max uV to 5.5V as a safety measure */
 	regulator-max-microvolt = <5500000>;
@@ -3359,11 +3376,20 @@
 
 	/* Precharge time for LAB regulator: 500uS */
 	qcom,qpnp-lab-max-precharge-time = <500>;
+
+	/* Notify when LAB regulator is up */
+	qcom,notify-lab-vreg-ok-sts;
+
+	/*
+	 * Force polling STATUS register for short circuit detection
+	 * when enabling the LAB regulator
+	 */
+	qcom,detect-lab-short-circuit;
 };
 
 &ibb_regulator {
-	interrupts = <0x3 0xdc 0x0 IRQ_TYPE_LEVEL_HIGH>;
-	interrupt-names = "ibb_vreg_not_ok_interrupt";
+//	interrupts = <0x3 0xdc 0x0 IRQ_TYPE_LEVEL_HIGH>;
+//	interrupt-names = "ibb_vreg_not_ok_interrupt";
 
 	/* Set IBB max uV to 5.5V as a safety measure */
 	regulator-max-microvolt = <5500000>;

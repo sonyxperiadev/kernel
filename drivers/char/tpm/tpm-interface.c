@@ -479,13 +479,15 @@ static ssize_t tpm_try_transmit(struct tpm_chip *chip,
 
 	if (need_locality) {
 		rc = tpm_request_locality(chip, flags);
-		if (rc < 0)
-			goto out_no_locality;
+		if (rc < 0) {
+			need_locality = false;
+			goto out_locality;
+		}
 	}
 
 	rc = tpm_cmd_ready(chip, flags);
 	if (rc)
-		goto out;
+		goto out_locality;
 
 	rc = tpm2_prepare_space(chip, space, ordinal, buf);
 	if (rc)
@@ -495,8 +497,17 @@ static ssize_t tpm_try_transmit(struct tpm_chip *chip,
 	if (rc < 0) {
 		if (rc != -EPIPE)
 			dev_err(&chip->dev,
-				"%s: tpm_send: error %d\n", __func__, rc);
+				"%s: send(): error %d\n", __func__, rc);
 		goto out;
+	}
+
+	/* A sanity check. send() should just return zero on success e.g.
+	 * not the command length.
+	 */
+	if (rc > 0) {
+		dev_warn(&chip->dev,
+			 "%s: send(): invalid value %d\n", __func__, rc);
+		rc = 0;
 	}
 
 	if (chip->flags & TPM_CHIP_FLAG_IRQ)
@@ -549,14 +560,13 @@ out_recv:
 		dev_err(&chip->dev, "tpm2_commit_space: error %d\n", rc);
 
 out:
-	rc = tpm_go_idle(chip, flags);
-	if (rc)
-		goto out;
+	/* may fail but do not override previous error value in rc */
+	tpm_go_idle(chip, flags);
 
+out_locality:
 	if (need_locality)
 		tpm_relinquish_locality(chip, flags);
 
-out_no_locality:
 	if (chip->ops->clk_enable != NULL)
 		chip->ops->clk_enable(chip, false);
 

@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -94,11 +94,11 @@ enum sde_format_flags {
 #define SDE_VSYNC_SOURCE_INTF_1		4
 #define SDE_VSYNC_SOURCE_INTF_2		5
 #define SDE_VSYNC_SOURCE_INTF_3		6
-#define SDE_VSYNC_SOURCE_WD_TIMER_4	0x11
-#define SDE_VSYNC_SOURCE_WD_TIMER_3	0x12
-#define SDE_VSYNC_SOURCE_WD_TIMER_2	0x13
-#define SDE_VSYNC_SOURCE_WD_TIMER_1	0x14
-#define SDE_VSYNC_SOURCE_WD_TIMER_0	0x15
+#define SDE_VSYNC_SOURCE_WD_TIMER_4	11
+#define SDE_VSYNC_SOURCE_WD_TIMER_3	12
+#define SDE_VSYNC_SOURCE_WD_TIMER_2	13
+#define SDE_VSYNC_SOURCE_WD_TIMER_1	14
+#define SDE_VSYNC_SOURCE_WD_TIMER_0	15
 
 enum sde_hw_blk_type {
 	SDE_HW_BLK_TOP = 0,
@@ -114,6 +114,7 @@ enum sde_hw_blk_type {
 	SDE_HW_BLK_DSC,
 	SDE_HW_BLK_ROT,
 	SDE_HW_BLK_MERGE_3D,
+	SDE_HW_BLK_QDSS,
 	SDE_HW_BLK_MAX,
 };
 
@@ -328,6 +329,11 @@ enum sde_merge_3d {
 	MERGE_3D_MAX
 };
 
+enum sde_qdss {
+	QDSS_0,
+	QDSS_MAX
+};
+
 /**
  * SDE HW,Component order color map
  */
@@ -516,6 +522,8 @@ struct sde_mdss_color {
 #define SDE_DBG_MASK_ROT      (1 << 12)
 #define SDE_DBG_MASK_DS       (1 << 13)
 #define SDE_DBG_MASK_REGDMA   (1 << 14)
+#define SDE_DBG_MASK_QDSS     (1 << 15)
+#define SDE_DBG_MASK_SID      (1 << 15)
 
 /**
  * struct sde_hw_cp_cfg: hardware dspp/lm feature payload.

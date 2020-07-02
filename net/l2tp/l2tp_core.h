@@ -257,6 +257,9 @@ struct l2tp_session *l2tp_session_create(int priv_size,
 					 struct l2tp_tunnel *tunnel,
 					 u32 session_id, u32 peer_session_id,
 					 struct l2tp_session_cfg *cfg);
+int l2tp_session_register(struct l2tp_session *session,
+			  struct l2tp_tunnel *tunnel);
+
 void __l2tp_session_unhash(struct l2tp_session *session);
 int l2tp_session_delete(struct l2tp_session *session);
 void l2tp_session_free(struct l2tp_session *session);
@@ -319,6 +322,37 @@ do {									\
 #define l2tp_session_inc_refcount(s) l2tp_session_inc_refcount_1(s)
 #define l2tp_session_dec_refcount(s) l2tp_session_dec_refcount_1(s)
 #endif
+
+static inline int l2tp_get_l2specific_len(struct l2tp_session *session)
+{
+	switch (session->l2specific_type) {
+	case L2TP_L2SPECTYPE_DEFAULT:
+		return 4;
+	case L2TP_L2SPECTYPE_NONE:
+	default:
+		return 0;
+	}
+}
+
+static inline int l2tp_v3_ensure_opt_in_linear(struct l2tp_session *session, struct sk_buff *skb,
+					       unsigned char **ptr, unsigned char **optr)
+{
+	int opt_len = session->peer_cookie_len + l2tp_get_l2specific_len(session);
+
+	if (opt_len > 0) {
+		int off = *ptr - *optr;
+
+		if (!pskb_may_pull(skb, off + opt_len))
+			return -1;
+
+		if (skb->data != *optr) {
+			*optr = skb->data;
+			*ptr = skb->data + off;
+		}
+	}
+
+	return 0;
+}
 
 #define l2tp_printk(ptr, type, func, fmt, ...)				\
 do {									\

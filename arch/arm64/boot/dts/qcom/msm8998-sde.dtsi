@@ -43,8 +43,8 @@
 			"vsync_clk",
 			"lut_clk";
 
-		clock-rate = <0 0 0 412500000 412500000 0 0 0 0 19200000 0>;
-		clock-max-rate = <0 0 0 550000000 550000000 0 0 0 0 19200000 0>;
+		clock-rate = <0 0 0 412500000 412500000 0 0 0 0 19200000 412500000>;
+		clock-max-rate = <0 0 0 550000000 550000000 0 0 0 0 19200000 550000000>;
 
 		/* interrupt config */
 		interrupt-parent = <&intc>;
@@ -62,15 +62,15 @@
 		qcom,sde-ctl-off = <0x2000 0x2200 0x2400
 				     0x2600 0x2800>;
 		qcom,sde-ctl-size = <0x94>;
-		qcom,sde-ctl-display-pref = "primary", "primary", "none",
-					    "none", "none";
+		qcom,sde-ctl-display-pref = "primary", "none",
+					    "primary-split", "none", "none";
 
 		qcom,sde-mixer-off = <0x45000 0x46000 0x47000
-				      0 0 0x4a000>;
+				      0x48000 0x49000 0x4a000>;
 		qcom,sde-mixer-size = <0x2bc>;
-		qcom,sde-mixer-display-pref = "primary", "primary", "none",
+		qcom,sde-mixer-display-pref = "primary", "none", "primary",
 					      "none", "none", "none";
-		qcom,sde-mixer-cwb-pref = "none", "none", "cwb",
+		qcom,sde-mixer-cwb-pref = "none", "cwb", "none",
 					      "none", "none", "cwb";
 
 		qcom,sde-mixer-pair-mask = <2 1 6 0 0 3>;
@@ -345,6 +345,7 @@
 		clocks = <&clock_mmss MMSS_MDSS_MDP_CLK>,
 			 <&clock_mmss MMSS_MDSS_AHB_CLK>,
 			 <&clock_mmss MMSS_MISC_AHB_CLK>,
+			 <&clock_mmss MMSS_MNOC_AHB_CLK>,
 			 <&clock_mmss MMSS_MDSS_AXI_CLK>,
 			 <&clock_mmss MMSS_MDSS_BYTE0_CLK>,
 			 <&clock_mmss MMSS_MDSS_PCLK0_CLK>,
@@ -354,7 +355,7 @@
 			 <&clock_mmss MMSS_MDSS_BYTE0_INTF_CLK>;
 
 		clock-names = "mdp_core_clk", "iface_clk",
-			"core_mmss_clk", "bus_clk",
+			"core_mmss_clk", "mnoc_clk", "bus_clk",
 			"byte_clk", "pixel_clk", "esc_clk",
 			"byte_clk_rcg", "pixel_clk_rcg",
 			"byte_intf_clk";
@@ -416,6 +417,7 @@
 		clocks = <&clock_mmss MMSS_MDSS_MDP_CLK>,
 			 <&clock_mmss MMSS_MDSS_AHB_CLK>,
 			 <&clock_mmss MMSS_MISC_AHB_CLK>,
+			 <&clock_mmss MMSS_MNOC_AHB_CLK>,
 			 <&clock_mmss MMSS_MDSS_AXI_CLK>,
 			 <&clock_mmss MMSS_MDSS_BYTE1_CLK>,
 			 <&clock_mmss MMSS_MDSS_PCLK1_CLK>,
@@ -425,7 +427,7 @@
 			 <&clock_mmss MMSS_MDSS_BYTE1_INTF_CLK>;
 
 		clock-names = "mdp_core_clk", "iface_clk",
-			"core_mmss_clk", "bus_clk",
+			"core_mmss_clk", "mnoc_clk", "bus_clk",
 			"byte_clk", "pixel_clk", "esc_clk",
 			"byte_clk_rcg", "pixel_clk_rcg",
 			"byte_intf_clk";
@@ -474,8 +476,8 @@
 		compatible = "qcom,dsi-phy-v3.0";
 		label = "dsi-phy-0";
 		cell-index = <0>;
-		reg = <0xc994400 0x7c0>;
-		reg-names = "dsi_phy";
+		reg = <0xc994400 0x7c0>, <0xc994200 0x200>;
+		reg-names = "dsi_phy", "dyn_refresh_base";
 
 		gdsc-supply = <&gdsc_mdss>;
 		vdda-0p9-supply = <&pm8998_l1>;
@@ -525,8 +527,8 @@
 		compatible = "qcom,dsi-phy-v3.0";
 		label = "dsi-phy-1";
 		cell-index = <1>;
-		reg = <0xc996400 0x7c0>;
-		reg-names = "dsi_phy";
+		reg = <0xc996400 0x7c0>, <0xc996200 0x200>;
+		reg-names = "dsi_phy", "dyn_refresh_base";
 
 		gdsc-supply = <&gdsc_mdss>;
 		vdda-0p9-supply = <&pm8998_l1>;

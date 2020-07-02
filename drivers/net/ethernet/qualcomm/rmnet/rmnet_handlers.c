@@ -25,11 +25,10 @@
 #include "rmnet_vnd.h"
 #include "rmnet_map.h"
 #include "rmnet_handlers.h"
-#ifdef CONFIG_QCOM_QMI_HELPERS
+#include "rmnet_descriptor.h"
+
 #include <soc/qcom/rmnet_qmi.h>
 #include <soc/qcom/qmi_rmnet.h>
-
-#endif
 
 #define RMNET_IP_VERSION_4 0x40
 #define RMNET_IP_VERSION_6 0x60
@@ -48,18 +47,23 @@ EXPORT_TRACEPOINT_SYMBOL(rmnet_perf_err);
 EXPORT_TRACEPOINT_SYMBOL(rmnet_low);
 EXPORT_TRACEPOINT_SYMBOL(rmnet_high);
 EXPORT_TRACEPOINT_SYMBOL(rmnet_err);
+EXPORT_TRACEPOINT_SYMBOL(rmnet_freq_update);
+EXPORT_TRACEPOINT_SYMBOL(rmnet_freq_reset);
+EXPORT_TRACEPOINT_SYMBOL(rmnet_freq_boost);
 
 /* Helper Functions */
 
 static int rmnet_check_skb_can_gro(struct sk_buff *skb)
 {
+	unsigned char *data = rmnet_map_data_ptr(skb);
+
 	switch(skb->protocol) {
 	case htons(ETH_P_IP):
-		if (ip_hdr(skb)->protocol == IPPROTO_TCP)
+		if (((struct iphdr *)data)->protocol == IPPROTO_TCP)
 			return 0;
 		break;
 	case htons(ETH_P_IPV6):
-		if (ipv6_hdr(skb)->nexthdr == IPPROTO_TCP)
+		if (((struct ipv6hdr *)data)->nexthdr == IPPROTO_TCP)
 			return 0;
 		/* Fall through */
 	}
@@ -69,7 +73,7 @@ static int rmnet_check_skb_can_gro(struct sk_buff *skb)
 
 void rmnet_set_skb_proto(struct sk_buff *skb)
 {
-	switch (skb->data[0] & 0xF0) {
+	switch (rmnet_map_data_ptr(skb)[0] & 0xF0) {
 	case RMNET_IP_VERSION_4:
 		skb->protocol = htons(ETH_P_IP);
 		break;
@@ -110,11 +114,14 @@ rmnet_deliver_skb(struct sk_buff *skb, struct rmnet_port *port)
 	skb->pkt_type = PACKET_HOST;
 	skb_set_mac_header(skb, 0);
 
+	rcu_read_lock();
 	rmnet_shs_stamp = rcu_dereference(rmnet_shs_skb_entry);
 	if (rmnet_shs_stamp) {
 		rmnet_shs_stamp(skb, port);
+		rcu_read_unlock();
 		return;
 	}
+	rcu_read_unlock();
 
 	if (port->data_format & RMNET_INGRESS_FORMAT_DL_MARKER) {
 		if (!rmnet_check_skb_can_gro(skb) &&
@@ -155,12 +162,15 @@ rmnet_deliver_skb_wq(struct sk_buff *skb, struct rmnet_port *port,
 	/* packets coming from work queue context due to packet flush timer
 	 * must go through the special workqueue path in SHS driver
 	 */
+	rcu_read_lock();
 	rmnet_shs_stamp = (!ctx) ? rcu_dereference(rmnet_shs_skb_entry) :
 				   rcu_dereference(rmnet_shs_skb_entry_wq);
 	if (rmnet_shs_stamp) {
 		rmnet_shs_stamp(skb, port);
+		rcu_read_unlock();
 		return;
 	}
+	rcu_read_unlock();
 
 	if (ctx == RMNET_NET_RX_CTX) {
 		if (port->data_format & RMNET_INGRESS_FORMAT_DL_MARKER) {
@@ -188,17 +198,35 @@ rmnet_deliver_skb_wq(struct sk_buff *skb, struct rmnet_port *port,
 }
 EXPORT_SYMBOL(rmnet_deliver_skb_wq);
 
+/* Deliver a list of skbs after undoing coalescing */
+static void rmnet_deliver_skb_list(struct sk_buff_head *head,
+				   struct rmnet_port *port)
+{
+	struct sk_buff *skb;
+
+	while ((skb = __skb_dequeue(head))) {
+		rmnet_set_skb_proto(skb);
+		rmnet_deliver_skb(skb, port);
+	}
+}
+
 /* MAP handler */
 
 static void
 __rmnet_map_ingress_handler(struct sk_buff *skb,
 			    struct rmnet_port *port)
 {
+	struct rmnet_map_header *qmap;
 	struct rmnet_endpoint *ep;
+	struct sk_buff_head list;
 	u16 len, pad;
 	u8 mux_id;
 
-	if (RMNET_MAP_GET_CD_BIT(skb)) {
+	/* We don't need the spinlock since only we touch this */
+	__skb_queue_head_init(&list);
+
+	qmap = (struct rmnet_map_header *)rmnet_map_data_ptr(skb);
+	if (qmap->cd_bit) {
 		qmi_rmnet_set_dl_msg_active(port);
 		if (port->data_format & RMNET_INGRESS_FORMAT_DL_MARKER) {
 			if (!rmnet_map_flow_command(skb, port, false))
@@ -211,9 +239,9 @@ __rmnet_map_ingress_handler(struct sk_buff *skb,
 		goto free_skb;
 	}
 
-	mux_id = RMNET_MAP_GET_MUX_ID(skb);
-	pad = RMNET_MAP_GET_PAD(skb);
-	len = RMNET_MAP_GET_LENGTH(skb) - pad;
+	mux_id = qmap->mux_id;
+	pad = qmap->pad_len;
+	len = ntohs(qmap->pkt_len) - pad;
 
 	if (mux_id >= RMNET_MAX_LOGICAL_EP)
 		goto free_skb;
@@ -224,20 +252,33 @@ __rmnet_map_ingress_handler(struct sk_buff *skb,
 
 	skb->dev = ep->egress_dev;
 
-	/* Subtract MAP header */
-	skb_pull(skb, sizeof(struct rmnet_map_header));
-	rmnet_set_skb_proto(skb);
+	/* Handle QMAPv5 packet */
+	if (qmap->next_hdr &&
+	    (port->data_format & (RMNET_FLAGS_INGRESS_COALESCE |
+				  RMNET_FLAGS_INGRESS_MAP_CKSUMV5))) {
+		if (rmnet_map_process_next_hdr_packet(skb, &list, len))
+			goto free_skb;
+	} else {
+		/* We only have the main QMAP header to worry about */
+		pskb_pull(skb, sizeof(*qmap));
 
-	if (port->data_format & RMNET_FLAGS_INGRESS_MAP_CKSUMV4) {
-		if (!rmnet_map_checksum_downlink_packet(skb, len + pad))
-			skb->ip_summed = CHECKSUM_UNNECESSARY;
+		rmnet_set_skb_proto(skb);
+
+		if (port->data_format & RMNET_FLAGS_INGRESS_MAP_CKSUMV4) {
+			if (!rmnet_map_checksum_downlink_packet(skb, len + pad))
+				skb->ip_summed = CHECKSUM_UNNECESSARY;
+		}
+
+		pskb_trim(skb, len);
+
+		/* Push the single packet onto the list */
+		__skb_queue_tail(&list, skb);
 	}
 
 	if (port->data_format & RMNET_INGRESS_FORMAT_PS)
 		qmi_rmnet_work_maybe_restart(port);
 
-	skb_trim(skb, len);
-	rmnet_deliver_skb(skb, port);
+	rmnet_deliver_skb_list(&list, port);
 	return;
 
 free_skb:
@@ -252,6 +293,9 @@ static void
 rmnet_map_ingress_handler(struct sk_buff *skb,
 			  struct rmnet_port *port)
 {
+	struct sk_buff *skbn;
+	int (*rmnet_perf_core_deaggregate)(struct sk_buff *skb,
+					   struct rmnet_port *port);
 
 	if (skb->dev->type == ARPHRD_ETHER) {
 		if (pskb_expand_head(skb, ETH_HLEN, 0, GFP_KERNEL)) {
@@ -262,33 +306,47 @@ rmnet_map_ingress_handler(struct sk_buff *skb,
 		skb_push(skb, ETH_HLEN);
 	}
 
-	if (port->data_format & RMNET_FLAGS_INGRESS_DEAGGREGATION) {
-		int (*rmnet_perf_core_deaggregate)(struct sk_buff *skb,
-						   struct rmnet_port *port);
-		/* Deaggregation and freeing of HW originating
-		 * buffers is done within here
-		 */
-		rmnet_perf_core_deaggregate =
-					rcu_dereference(rmnet_perf_deag_entry);
-		if (rmnet_perf_core_deaggregate) {
-			rmnet_perf_core_deaggregate(skb, port);
-		} else {
-			struct sk_buff *skbn;
-
-			while (skb) {
-				struct sk_buff *skb_frag =
-						skb_shinfo(skb)->frag_list;
-
-				skb_shinfo(skb)->frag_list = NULL;
-				while ((skbn = rmnet_map_deaggregate(skb, port))
-					!= NULL)
-					__rmnet_map_ingress_handler(skbn, port);
-				consume_skb(skb);
-				skb = skb_frag;
-			}
+	if (port->data_format & (RMNET_FLAGS_INGRESS_COALESCE |
+				 RMNET_FLAGS_INGRESS_MAP_CKSUMV5)) {
+		if (skb_is_nonlinear(skb)) {
+			rmnet_frag_ingress_handler(skb, port);
+			return;
 		}
-	} else {
+	}
+
+	/* No aggregation. Pass the frame on as is */
+	if (!(port->data_format & RMNET_FLAGS_INGRESS_DEAGGREGATION)) {
 		__rmnet_map_ingress_handler(skb, port);
+		return;
+	}
+
+	/* Pass off handling to rmnet_perf module, if present */
+	rcu_read_lock();
+	rmnet_perf_core_deaggregate = rcu_dereference(rmnet_perf_deag_entry);
+	if (rmnet_perf_core_deaggregate) {
+		rmnet_perf_core_deaggregate(skb, port);
+		rcu_read_unlock();
+		return;
+	}
+	rcu_read_unlock();
+
+	/* Deaggregation and freeing of HW originating
+	 * buffers is done within here
+	 */
+	while (skb) {
+		struct sk_buff *skb_frag = skb_shinfo(skb)->frag_list;
+
+		skb_shinfo(skb)->frag_list = NULL;
+		while ((skbn = rmnet_map_deaggregate(skb, port)) != NULL) {
+			__rmnet_map_ingress_handler(skbn, port);
+
+			if (skbn == skb)
+				goto next_skb;
+		}
+
+		consume_skb(skb);
+next_skb:
+		skb = skb_frag;
 	}
 }
 
@@ -296,44 +354,43 @@ static int rmnet_map_egress_handler(struct sk_buff *skb,
 				    struct rmnet_port *port, u8 mux_id,
 				    struct net_device *orig_dev)
 {
-	int required_headroom, additional_header_len;
+	int required_headroom, additional_header_len, csum_type;
 	struct rmnet_map_header *map_header;
 
 	additional_header_len = 0;
 	required_headroom = sizeof(struct rmnet_map_header);
+	csum_type = 0;
 
 	if (port->data_format & RMNET_FLAGS_EGRESS_MAP_CKSUMV4) {
 		additional_header_len = sizeof(struct rmnet_map_ul_csum_header);
-		required_headroom += additional_header_len;
+		csum_type = RMNET_FLAGS_EGRESS_MAP_CKSUMV4;
+	} else if ((port->data_format & RMNET_FLAGS_EGRESS_MAP_CKSUMV5) ||
+		   (port->data_format & RMNET_EGRESS_FORMAT_PRIORITY)) {
+		additional_header_len = sizeof(struct rmnet_map_v5_csum_header);
+		csum_type = RMNET_FLAGS_EGRESS_MAP_CKSUMV5;
 	}
+
+	required_headroom += additional_header_len;
 
 	if (skb_headroom(skb) < required_headroom) {
 		if (pskb_expand_head(skb, required_headroom, 0, GFP_ATOMIC))
 			return -ENOMEM;
 	}
 
-	if (port->data_format & RMNET_FLAGS_EGRESS_MAP_CKSUMV4)
-		rmnet_map_checksum_uplink_packet(skb, orig_dev);
+	if (csum_type)
+		rmnet_map_checksum_uplink_packet(skb, port, orig_dev,
+						 csum_type);
 
-	map_header = rmnet_map_add_map_header(skb, additional_header_len, 0);
+	map_header = rmnet_map_add_map_header(skb, additional_header_len, 0,
+					      port);
 	if (!map_header)
 		return -ENOMEM;
 
 	map_header->mux_id = mux_id;
 
 	if (port->data_format & RMNET_EGRESS_FORMAT_AGGREGATION) {
-		int non_linear_skb;
-
 		if (rmnet_map_tx_agg_skip(skb, required_headroom))
 			goto done;
-
-		non_linear_skb = (orig_dev->features & NETIF_F_GSO) &&
-				 skb_is_nonlinear(skb);
-
-		if (non_linear_skb) {
-			if (unlikely(__skb_linearize(skb)))
-				goto done;
-		}
 
 		rmnet_map_tx_aggregate(skb, port);
 		return -EINPROGRESS;

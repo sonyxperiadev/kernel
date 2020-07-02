@@ -1706,7 +1706,7 @@ int ipa2_mhi_suspend_ul_channels(void);
 
 int ipa2_mhi_resume_channels_internal(enum ipa_client_type client,
 		bool LPTransitionRejected, bool brstmode_enabled,
-		union __packed gsi_channel_scratch ch_scratch, u8 index);
+		union gsi_channel_scratch ch_scratch, u8 index);
 
 /*
  * mux id

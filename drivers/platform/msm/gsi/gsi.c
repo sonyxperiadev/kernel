@@ -625,6 +625,7 @@ static void gsi_handle_ieob(int ee)
 	unsigned long flags;
 	unsigned long cntr;
 	uint32_t msk;
+	bool empty;
 
 	ch = gsi_readl(gsi_ctx->base +
 		GSI_EE_n_CNTXT_SRC_IEOB_IRQ_OFFS(ee));
@@ -656,6 +657,7 @@ static void gsi_handle_ieob(int ee)
 			spin_lock_irqsave(&ctx->ring.slock, flags);
 check_again:
 			cntr = 0;
+			empty = true;
 			rp = gsi_readl(gsi_ctx->base +
 				GSI_EE_n_EV_CH_k_CNTXT_4_OFFS(i, ee));
 			rp |= ctx->ring.rp & 0xFFFFFFFF00000000;
@@ -669,8 +671,10 @@ check_again:
 					break;
 				}
 				gsi_process_evt_re(ctx, &notify, true);
+				empty = false;
 			}
-			gsi_ring_evt_doorbell(ctx);
+			if (!empty)
+				gsi_ring_evt_doorbell(ctx);
 			if (cntr != 0)
 				goto check_again;
 			spin_unlock_irqrestore(&ctx->ring.slock, flags);
@@ -2320,7 +2324,8 @@ int gsi_alloc_channel(struct gsi_chan_props *props, unsigned long dev_hdl,
 		GSI_NO_EVT_ERINDEX;
 	if (erindex != GSI_NO_EVT_ERINDEX) {
 		ctx->evtr = &gsi_ctx->evtr[erindex];
-		atomic_inc(&ctx->evtr->chan_ref_cnt);
+		if (props->prot != GSI_CHAN_PROT_GCI)
+			atomic_inc(&ctx->evtr->chan_ref_cnt);
 		if (props->prot != GSI_CHAN_PROT_GCI &&
 		    ctx->evtr->props.exclusive)
 			ctx->evtr->chan = ctx;
@@ -2395,7 +2400,7 @@ static int gsi_alloc_ap_channel(unsigned int chan_hdl)
 }
 
 static void __gsi_write_channel_scratch(unsigned long chan_hdl,
-		union __packed gsi_channel_scratch val)
+		union gsi_channel_scratch val)
 {
 	gsi_writel(val.data.word1, gsi_ctx->base +
 		GSI_EE_n_GSI_CH_k_SCRATCH_0_OFFS(chan_hdl,
@@ -2443,7 +2448,7 @@ int gsi_write_channel_scratch3_reg(unsigned long chan_hdl,
 }
 
 static void __gsi_read_channel_scratch(unsigned long chan_hdl,
-		union __packed gsi_channel_scratch * val)
+		union gsi_channel_scratch *val)
 {
 	val->data.word1 = gsi_readl(gsi_ctx->base +
 		GSI_EE_n_GSI_CH_k_SCRATCH_0_OFFS(chan_hdl,
@@ -2462,10 +2467,10 @@ static void __gsi_read_channel_scratch(unsigned long chan_hdl,
 			gsi_ctx->per.ee));
 }
 
-static union __packed gsi_channel_scratch __gsi_update_mhi_channel_scratch(
+static union gsi_channel_scratch __gsi_update_mhi_channel_scratch(
 	unsigned long chan_hdl, struct __packed gsi_mhi_channel_scratch mscr)
 {
-	union __packed gsi_channel_scratch scr;
+	union gsi_channel_scratch scr;
 
 	/* below sequence is not atomic. assumption is sequencer specific fields
 	 * will remain unchanged across this sequence
@@ -2522,7 +2527,7 @@ static union __packed gsi_channel_scratch __gsi_update_mhi_channel_scratch(
 }
 
 int gsi_write_channel_scratch(unsigned long chan_hdl,
-		union __packed gsi_channel_scratch val)
+		union gsi_channel_scratch val)
 {
 	struct gsi_chan_ctx *ctx;
 
@@ -2555,7 +2560,7 @@ int gsi_write_channel_scratch(unsigned long chan_hdl,
 EXPORT_SYMBOL(gsi_write_channel_scratch);
 
 int gsi_read_channel_scratch(unsigned long chan_hdl,
-		union __packed gsi_channel_scratch *val)
+		union gsi_channel_scratch *val)
 {
 	struct gsi_chan_ctx *ctx;
 
@@ -2790,7 +2795,16 @@ int gsi_stop_channel(unsigned long chan_hdl)
 		ctx->state != GSI_CHAN_STATE_STOP_IN_PROC) {
 		GSIERR("chan=%lu unexpected state=%u\n", chan_hdl, ctx->state);
 		res = -GSI_STATUS_BAD_STATE;
-		BUG();
+
+		if (of_machine_is_compatible("qcom,msm8998") &&
+		    ctx->state == GSI_CHAN_STATE_NOT_ALLOCATED) {
+			GSIERR("MSM8998 workaround for gsi firmware: avoiding "
+			       "kernel panic for already not allocated CH.\n");
+			res = GSI_STATUS_SUCCESS;
+		} else {
+			BUG();
+		}
+
 		goto free_lock;
 	}
 
@@ -2900,6 +2914,14 @@ int gsi_reset_channel(unsigned long chan_hdl)
 
 	if (ctx->state != GSI_CHAN_STATE_STOPPED) {
 		GSIERR("bad state %d\n", ctx->state);
+
+		if (of_machine_is_compatible("qcom,msm8998") &&
+		    ctx->state == GSI_CHAN_STATE_NOT_ALLOCATED) {
+			GSIERR("MSM8998 workaround for gsi firmware: avoiding "
+			       "kernel panic for already not allocated CH.\n");
+			return GSI_STATUS_SUCCESS;
+		}
+
 		return -GSI_STATUS_UNSUPPORTED_OP;
 	}
 
@@ -2987,6 +3009,14 @@ int gsi_dealloc_channel(unsigned long chan_hdl)
 
 	if (ctx->state != GSI_CHAN_STATE_ALLOCATED) {
 		GSIERR("bad state %d\n", ctx->state);
+
+		if (of_machine_is_compatible("qcom,msm8998") &&
+		    ctx->state == GSI_CHAN_STATE_NOT_ALLOCATED) {
+			GSIERR("MSM8998 workaround for gsi firmware: avoiding "
+			       "kernel panic for already not allocated CH.\n");
+			return GSI_STATUS_SUCCESS;
+		}
+
 		return -GSI_STATUS_UNSUPPORTED_OP;
 	}
 
@@ -3027,7 +3057,7 @@ int gsi_dealloc_channel(unsigned long chan_hdl)
 	}
 	devm_kfree(gsi_ctx->dev, ctx->user_data);
 	ctx->allocated = false;
-	if (ctx->evtr)
+	if (ctx->evtr && (ctx->props.prot != GSI_CHAN_PROT_GCI))
 		atomic_dec(&ctx->evtr->chan_ref_cnt);
 	atomic_dec(&gsi_ctx->num_chan);
 
@@ -3327,11 +3357,19 @@ int gsi_queue_xfer(unsigned long chan_hdl, uint16_t num_xfers,
 		return -GSI_STATUS_NODEV;
 	}
 
-	if (chan_hdl >= gsi_ctx->max_ch || !num_xfers || !xfer) {
+	if (chan_hdl >= gsi_ctx->max_ch || (num_xfers && !xfer)) {
 		GSIERR("bad params chan_hdl=%lu num_xfers=%u xfer=%pK\n",
 				chan_hdl, num_xfers, xfer);
 		return -GSI_STATUS_INVALID_PARAMS;
 	}
+
+	if (unlikely(gsi_ctx->chan[chan_hdl].state
+				 == GSI_CHAN_STATE_NOT_ALLOCATED)) {
+		GSIERR("bad state %d\n",
+			   gsi_ctx->chan[chan_hdl].state);
+		return -GSI_STATUS_UNSUPPORTED_OP;
+	}
+
 
 	ctx = &gsi_ctx->chan[chan_hdl];
 
@@ -3347,6 +3385,11 @@ int gsi_queue_xfer(unsigned long chan_hdl, uint16_t num_xfers,
 		slock = &ctx->ring.slock;
 
 	spin_lock_irqsave(slock, flags);
+
+	/* allow only ring doorbell */
+	if (!num_xfers)
+		goto ring_doorbell;
+
 	/*
 	 * for GCI channels the responsibility is on the caller to make sure
 	 * there is enough room in the TRE.
@@ -3382,11 +3425,12 @@ int gsi_queue_xfer(unsigned long chan_hdl, uint16_t num_xfers,
 
 	ctx->stats.queued += num_xfers;
 
-	/* ensure TRE is set before ringing doorbell */
-	wmb();
-
-	if (ring_db)
+ring_doorbell:
+	if (ring_db) {
+		/* ensure TRE is set before ringing doorbell */
+		wmb();
 		gsi_ring_chan_doorbell(ctx);
+	}
 
 	spin_unlock_irqrestore(slock, flags);
 
@@ -3478,19 +3522,31 @@ int gsi_poll_n_channel(unsigned long chan_hdl,
 	spin_lock_irqsave(&ctx->evtr->ring.slock, flags);
 	if (ctx->evtr->ring.rp == ctx->evtr->ring.rp_local) {
 		/* update rp to see of we have anything new to process */
-		gsi_writel(1 << ctx->evtr->id, gsi_ctx->base +
-			GSI_EE_n_CNTXT_SRC_IEOB_IRQ_CLR_OFFS(ee));
 		rp = gsi_readl(gsi_ctx->base +
 			GSI_EE_n_EV_CH_k_CNTXT_4_OFFS(ctx->evtr->id, ee));
-		rp |= ctx->ring.rp & 0xFFFFFFFF00000000;
+		rp |= ctx->ring.rp & 0xFFFFFFFF00000000ULL;
 
 		ctx->evtr->ring.rp = rp;
-	}
-
-	if (ctx->evtr->ring.rp == ctx->evtr->ring.rp_local) {
-		spin_unlock_irqrestore(&ctx->evtr->ring.slock, flags);
-		ctx->stats.poll_empty++;
-		return GSI_STATUS_POLL_EMPTY;
+		/* read gsi event ring rp again if last read is empty */
+		if (rp == ctx->evtr->ring.rp_local) {
+			/* event ring is empty */
+			gsi_writel(1 << ctx->evtr->id, gsi_ctx->base +
+				GSI_EE_n_CNTXT_SRC_IEOB_IRQ_CLR_OFFS(ee));
+			/* do another read to close a small window */
+			__iowmb();
+			rp = gsi_readl(gsi_ctx->base +
+				GSI_EE_n_EV_CH_k_CNTXT_4_OFFS(
+				ctx->evtr->id, ee));
+			rp |= ctx->ring.rp & 0xFFFFFFFF00000000ULL;
+			ctx->evtr->ring.rp = rp;
+			if (rp == ctx->evtr->ring.rp_local) {
+				spin_unlock_irqrestore(
+					&ctx->evtr->ring.slock,
+					flags);
+				ctx->stats.poll_empty++;
+				return GSI_STATUS_POLL_EMPTY;
+			}
+		}
 	}
 
 	*actual_num = gsi_get_complete_num(&ctx->evtr->ring,
@@ -3556,6 +3612,8 @@ int gsi_config_channel_mode(unsigned long chan_hdl, enum gsi_chan_mode mode)
 		gsi_writel(1 << ctx->evtr->id, gsi_ctx->base +
 			GSI_EE_n_CNTXT_SRC_IEOB_IRQ_CLR_OFFS(gsi_ctx->per.ee));
 		atomic_set(&ctx->poll_mode, mode);
+		if (ctx->props.prot == GSI_CHAN_PROT_GCI)
+			atomic_set(&ctx->evtr->chan->poll_mode, mode);
 		GSIDBG("set gsi_ctx evtr_id %d to %d mode\n",
 			ctx->evtr->id, mode);
 		ctx->stats.callback_to_poll++;
@@ -3564,6 +3622,8 @@ int gsi_config_channel_mode(unsigned long chan_hdl, enum gsi_chan_mode mode)
 	if (curr == GSI_CHAN_MODE_POLL &&
 			mode == GSI_CHAN_MODE_CALLBACK) {
 		atomic_set(&ctx->poll_mode, mode);
+		if (ctx->props.prot == GSI_CHAN_PROT_GCI)
+			atomic_set(&ctx->evtr->chan->poll_mode, mode);
 		__gsi_config_ieob_irq(gsi_ctx->per.ee, 1 << ctx->evtr->id, ~0);
 		GSIDBG("set gsi_ctx evtr_id %d to %d mode\n",
 			ctx->evtr->id, mode);

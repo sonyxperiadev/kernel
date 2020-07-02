@@ -26,6 +26,7 @@
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
 #include <linux/regulator/machine.h>
 #endif
+#include "battery.h"
 #include "storm-watch.h"
 
 enum print_reason {
@@ -309,7 +310,7 @@ struct smb_charger {
 	int			*audio_headset_drp_wait_ms;
 	enum smb_mode		mode;
 	struct smb_chg_freq	chg_freq;
-	int			smb_version;
+	struct charger_param	chg_param;
 	int			otg_delay_ms;
 	int			*weak_chg_icl_ua;
 
@@ -702,6 +703,8 @@ int smblib_get_prop_usb_online(struct smb_charger *chg,
 int smblib_get_prop_usb_suspend(struct smb_charger *chg,
 				union power_supply_propval *val);
 int smblib_get_prop_usb_voltage_max(struct smb_charger *chg,
+				union power_supply_propval *val);
+int smblib_get_prop_usb_voltage_max_design(struct smb_charger *chg,
 				union power_supply_propval *val);
 int smblib_get_prop_usb_voltage_now(struct smb_charger *chg,
 				union power_supply_propval *val);

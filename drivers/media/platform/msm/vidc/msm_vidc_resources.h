@@ -116,11 +116,14 @@ struct bus_set {
 	u32 count;
 };
 
-enum imem_type {
-	IMEM_NONE,
-	IMEM_OCMEM,
-	IMEM_VMEM,
-	IMEM_MAX,
+struct reset_info {
+	struct reset_control *rst;
+	const char *name;
+};
+
+struct reset_set {
+	struct reset_info *reset_tbl;
+	u32 count;
 };
 
 struct allowed_clock_rates_table {
@@ -155,29 +158,18 @@ struct msm_vidc_mem_cdsp {
 	struct device *dev;
 };
 
-struct imem_ab_table {
-	u32 core_freq;
-	u32 imem_ab;
-};
-
 struct msm_vidc_platform_resources {
 	phys_addr_t firmware_base;
 	phys_addr_t register_base;
-	phys_addr_t gcc_register_base;
 	uint32_t register_size;
-	uint32_t gcc_register_size;
 	uint32_t irq;
 	uint32_t sku_version;
-	uint8_t hfi_version;
 	struct allowed_clock_rates_table *allowed_clks_tbl;
 	u32 allowed_clks_tbl_size;
 	struct clock_freq_table clock_freq_tbl;
 	struct dcvs_table *dcvs_tbl;
 	uint32_t dcvs_tbl_size;
 	struct dcvs_limit *dcvs_limit;
-	struct imem_ab_table *imem_ab_tbl;
-	u32 imem_ab_tbl_size;
-	enum imem_type imem_type;
 	bool sys_cache_present;
 	bool sys_cache_res_set;
 	struct subcache_set subcache_set;
@@ -186,17 +178,19 @@ struct msm_vidc_platform_resources {
 	struct buffer_usage_set buffer_usage_set;
 	uint32_t max_load;
 	uint32_t max_hq_mbs_per_frame;
-	uint32_t max_hq_fps;
+	uint32_t max_hq_mbs_per_sec;
 	struct platform_device *pdev;
 	struct regulator_set regulator_set;
 	struct clock_set clock_set;
 	struct bus_set bus_set;
+	struct reset_set reset_set;
 	bool use_non_secure_pil;
 	bool sw_power_collapsible;
 	bool slave_side_cp;
 	struct list_head context_banks;
 	bool thermal_mitigable;
 	const char *fw_name;
+	const char *hfi_version;
 	bool never_unload_fw;
 	bool debug_timeout;
 	uint32_t pm_qos_latency_us;

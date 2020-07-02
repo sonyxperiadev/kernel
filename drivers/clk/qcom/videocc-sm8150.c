@@ -300,10 +300,16 @@ static const struct regmap_config video_cc_sm8150_regmap_config = {
 	.fast_io	= true,
 };
 
+static const struct qcom_reset_map video_cc_sm8150_resets[] = {
+	[VIDEO_CC_MVSC_CORE_CLK_BCR] = { 0x850, 2 },
+};
+
 static const struct qcom_cc_desc video_cc_sm8150_desc = {
 	.config = &video_cc_sm8150_regmap_config,
 	.clks = video_cc_sm8150_clocks,
 	.num_clks = ARRAY_SIZE(video_cc_sm8150_clocks),
+	.resets = video_cc_sm8150_resets,
+	.num_resets = ARRAY_SIZE(video_cc_sm8150_resets),
 };
 
 static const struct of_device_id video_cc_sm8150_match_table[] = {
@@ -368,7 +374,6 @@ static int video_cc_sm8150_probe(struct platform_device *pdev)
 			dev_err(&pdev->dev, "Unable to get vdd_mm regulator\n");
 		return PTR_ERR(vdd_mm.regulator[0]);
 	}
-	vdd_mm.use_max_uV = true;
 
 	videocc_bus_id =
 		msm_bus_scale_register_client(&clk_debugfs_scale_table);

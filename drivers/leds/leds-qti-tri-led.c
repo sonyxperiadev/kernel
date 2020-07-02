@@ -437,6 +437,13 @@ static int qpnp_tri_led_register(struct qpnp_tri_led_chip *chip)
 				goto err_out;
 			}
 		}
+
+		/* Make sure to initialize the LEDs to known values */
+		rc = qpnp_tri_led_set(led);
+		if (rc)
+			dev_warn(chip->dev,
+				"Cannot initialize %s LED to OFF value: %d\n",
+				led->label, rc);
 	}
 
 	return 0;

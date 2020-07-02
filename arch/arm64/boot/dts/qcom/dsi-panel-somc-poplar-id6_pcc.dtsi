@@ -18,8 +18,8 @@
  */
 
 /* pcc-table for Poplar JDI */
-&mdss_mdp {
-	dsi_6: somc,6_panel {
+&sde_kms {
+	sde_dsi_6: somc,6_panel {
 		somc,mdss-dsi-pcc-enable;
 		somc,mdss-dsi-uv-command = [
 			06 01 00 00 00 00 01 DA

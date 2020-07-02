@@ -572,6 +572,41 @@ static int amdgpu_pci_probe(struct pci_dev *pdev,
 	if (ret == -EPROBE_DEFER)
 		return ret;
 
+#ifdef CONFIG_DRM_AMDGPU_SI
+	if (!amdgpu_si_support) {
+		switch (flags & AMD_ASIC_MASK) {
+		case CHIP_TAHITI:
+		case CHIP_PITCAIRN:
+		case CHIP_VERDE:
+		case CHIP_OLAND:
+		case CHIP_HAINAN:
+			dev_info(&pdev->dev,
+				 "SI support provided by radeon.\n");
+			dev_info(&pdev->dev,
+				 "Use radeon.si_support=0 amdgpu.si_support=1 to override.\n"
+				);
+			return -ENODEV;
+		}
+	}
+#endif
+#ifdef CONFIG_DRM_AMDGPU_CIK
+	if (!amdgpu_cik_support) {
+		switch (flags & AMD_ASIC_MASK) {
+		case CHIP_KAVERI:
+		case CHIP_BONAIRE:
+		case CHIP_HAWAII:
+		case CHIP_KABINI:
+		case CHIP_MULLINS:
+			dev_info(&pdev->dev,
+				 "CIK support provided by radeon.\n");
+			dev_info(&pdev->dev,
+				 "Use radeon.cik_support=0 amdgpu.cik_support=1 to override.\n"
+				);
+			return -ENODEV;
+		}
+	}
+#endif
+
 	/* Get rid of things like offb */
 	ret = amdgpu_kick_out_firmware_fb(pdev);
 	if (ret)
@@ -693,7 +728,6 @@ static int amdgpu_pmops_runtime_suspend(struct device *dev)
 
 	drm_dev->switch_power_state = DRM_SWITCH_POWER_CHANGING;
 	drm_kms_helper_poll_disable(drm_dev);
-	vga_switcheroo_set_dynamic_switch(pdev, VGA_SWITCHEROO_OFF);
 
 	ret = amdgpu_device_suspend(drm_dev, false, false);
 	pci_save_state(pdev);
@@ -730,7 +764,6 @@ static int amdgpu_pmops_runtime_resume(struct device *dev)
 
 	ret = amdgpu_device_resume(drm_dev, false, false);
 	drm_kms_helper_poll_enable(drm_dev);
-	vga_switcheroo_set_dynamic_switch(pdev, VGA_SWITCHEROO_ON);
 	drm_dev->switch_power_state = DRM_SWITCH_POWER_ON;
 	return 0;
 }

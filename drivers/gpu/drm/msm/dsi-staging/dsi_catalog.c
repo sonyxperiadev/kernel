@@ -112,6 +112,7 @@ static void dsi_catalog_cmn_init(struct dsi_ctrl_hw *ctrl,
 		break;
 	case DSI_CTRL_VERSION_2_2:
 	case DSI_CTRL_VERSION_2_3:
+	case DSI_CTRL_VERSION_2_4:
 		ctrl->ops.phy_reset_config = dsi_ctrl_hw_22_phy_reset_config;
 		ctrl->ops.config_clk_gating = dsi_ctrl_hw_22_config_clk_gating;
 		ctrl->ops.get_cont_splash_status =
@@ -176,6 +177,7 @@ int dsi_catalog_ctrl_setup(struct dsi_ctrl_hw *ctrl,
 	case DSI_CTRL_VERSION_2_0:
 	case DSI_CTRL_VERSION_2_2:
 	case DSI_CTRL_VERSION_2_3:
+	case DSI_CTRL_VERSION_2_4:
 		ctrl->phy_isolation_enabled = phy_isolation_enabled;
 		dsi_catalog_cmn_init(ctrl, version);
 		break;
@@ -211,6 +213,7 @@ static void dsi_catalog_phy_2_0_init(struct dsi_phy_hw *phy)
 		dsi_phy_hw_v2_0_dyn_refresh_helper;
 	phy->ops.dyn_refresh_ops.cache_phy_timings =
 		dsi_phy_hw_v2_0_cache_phy_timings;
+	phy->ops.commit_phy_timing = NULL;
 }
 
 /**
@@ -244,11 +247,13 @@ static void dsi_catalog_phy_3_0_init(struct dsi_phy_hw *phy)
 		dsi_phy_hw_v3_0_dyn_refresh_helper;
 	phy->ops.dyn_refresh_ops.cache_phy_timings =
 		dsi_phy_hw_v3_0_cache_phy_timings;
+	phy->ops.toggle_resync_fifo =
+		dsi_phy_hw_v3_0_toggle_resync_fifo;
+
+	phy->ops.commit_phy_timing = NULL;
 
 	if (!of_machine_is_compatible("qcom,msm8998")) {
 		phy->ops.clamp_ctrl = dsi_phy_hw_v3_0_clamp_ctrl;
-		phy->ops.toggle_resync_fifo =
-			dsi_phy_hw_v3_0_toggle_resync_fifo;
 	}
 }
 
@@ -277,7 +282,17 @@ static void dsi_catalog_phy_4_0_init(struct dsi_phy_hw *phy)
 	phy->ops.phy_lane_reset = dsi_phy_hw_v4_0_lane_reset;
 	phy->ops.toggle_resync_fifo = dsi_phy_hw_v4_0_toggle_resync_fifo;
 	phy->ops.reset_clk_en_sel = dsi_phy_hw_v4_0_reset_clk_en_sel;
+
+	phy->ops.dyn_refresh_ops.dyn_refresh_config =
+		dsi_phy_hw_v4_0_dyn_refresh_config;
+	phy->ops.dyn_refresh_ops.dyn_refresh_pipe_delay =
+		dsi_phy_hw_v4_0_dyn_refresh_pipe_delay;
+	phy->ops.dyn_refresh_ops.dyn_refresh_helper =
+		dsi_phy_hw_v4_0_dyn_refresh_helper;
+	phy->ops.dyn_refresh_ops.cache_phy_timings =
+		dsi_phy_hw_v4_0_cache_phy_timings;
 	phy->ops.set_continuous_clk = dsi_phy_hw_v4_0_set_continuous_clk;
+	phy->ops.commit_phy_timing = dsi_phy_hw_v4_0_commit_phy_timing;
 }
 
 /**

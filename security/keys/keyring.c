@@ -432,7 +432,6 @@ static int keyring_read_iterator(const void *object, void *data)
 {
 	struct keyring_read_iterator_context *ctx = data;
 	const struct key *key = keyring_ptr_to_key(object);
-	int ret;
 
 	kenter("{%s,%d},,{%zu/%zu}",
 	       key->type->name, key->serial, ctx->count, ctx->buflen);
@@ -440,10 +439,7 @@ static int keyring_read_iterator(const void *object, void *data)
 	if (ctx->count >= ctx->buflen)
 		return 1;
 
-	ret = put_user(key->serial, ctx->buffer);
-	if (ret < 0)
-		return ret;
-	ctx->buffer++;
+	*ctx->buffer++ = key->serial;
 	ctx->count += sizeof(key->serial);
 	return 0;
 }
@@ -660,9 +656,6 @@ static bool search_nested_keyrings(struct key *keyring,
 #define STATE_CHECKS (KEYRING_SEARCH_NO_STATE_CHECK | KEYRING_SEARCH_DO_STATE_CHECK)
 	BUG_ON((ctx->flags & STATE_CHECKS) == 0 ||
 	       (ctx->flags & STATE_CHECKS) == STATE_CHECKS);
-
-	if (ctx->index_key.description)
-		ctx->index_key.desc_len = strlen(ctx->index_key.description);
 
 	/* Check to see if this top-level keyring is what we are looking for
 	 * and whether it is valid or not.
@@ -921,6 +914,7 @@ key_ref_t keyring_search(key_ref_t keyring,
 	struct keyring_search_context ctx = {
 		.index_key.type		= type,
 		.index_key.description	= description,
+		.index_key.desc_len	= strlen(description),
 		.cred			= current_cred(),
 		.match_data.cmp		= key_default_cmp,
 		.match_data.raw_data	= description,

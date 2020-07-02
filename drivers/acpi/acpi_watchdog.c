@@ -12,51 +12,71 @@
 #define pr_fmt(fmt) "ACPI: watchdog: " fmt
 
 #include <linux/acpi.h>
-#include <linux/dmi.h>
 #include <linux/ioport.h>
 #include <linux/platform_device.h>
 
 #include "internal.h"
 
-static const struct dmi_system_id acpi_watchdog_skip[] = {
-	{
-		/*
-		 * On Lenovo Z50-70 there are two issues with the WDAT
-		 * table. First some of the instructions use RTC SRAM
-		 * to store persistent information. This does not work well
-		 * with Linux RTC driver. Second, more important thing is
-		 * that the instructions do not actually reset the system.
-		 *
-		 * On this particular system iTCO_wdt seems to work just
-		 * fine so we prefer that over WDAT for now.
-		 *
-		 * See also https://bugzilla.kernel.org/show_bug.cgi?id=199033.
-		 */
-		.ident = "Lenovo Z50-70",
-		.matches = {
-			DMI_MATCH(DMI_SYS_VENDOR, "LENOVO"),
-			DMI_MATCH(DMI_PRODUCT_NAME, "20354"),
-			DMI_MATCH(DMI_PRODUCT_VERSION, "Lenovo Z50-70"),
-		},
-	},
-	{}
-};
+#ifdef CONFIG_RTC_MC146818_LIB
+#include <linux/mc146818rtc.h>
+
+/*
+ * There are several systems where the WDAT table is accessing RTC SRAM to
+ * store persistent information. This does not work well with the Linux RTC
+ * driver so on those systems we skip WDAT driver and prefer iTCO_wdt
+ * instead.
+ *
+ * See also https://bugzilla.kernel.org/show_bug.cgi?id=199033.
+ */
+static bool acpi_watchdog_uses_rtc(const struct acpi_table_wdat *wdat)
+{
+	const struct acpi_wdat_entry *entries;
+	int i;
+
+	entries = (struct acpi_wdat_entry *)(wdat + 1);
+	for (i = 0; i < wdat->entries; i++) {
+		const struct acpi_generic_address *gas;
+
+		gas = &entries[i].register_region;
+		if (gas->space_id == ACPI_ADR_SPACE_SYSTEM_IO) {
+			switch (gas->address) {
+			case RTC_PORT(0):
+			case RTC_PORT(1):
+			case RTC_PORT(2):
+			case RTC_PORT(3):
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+#else
+static bool acpi_watchdog_uses_rtc(const struct acpi_table_wdat *wdat)
+{
+	return false;
+}
+#endif
+
+static bool acpi_no_watchdog;
 
 static const struct acpi_table_wdat *acpi_watchdog_get_wdat(void)
 {
 	const struct acpi_table_wdat *wdat = NULL;
 	acpi_status status;
 
-	if (acpi_disabled)
-		return NULL;
-
-	if (dmi_check_system(acpi_watchdog_skip))
+	if (acpi_disabled || acpi_no_watchdog)
 		return NULL;
 
 	status = acpi_get_table(ACPI_SIG_WDAT, 0,
 				(struct acpi_table_header **)&wdat);
 	if (ACPI_FAILURE(status)) {
 		/* It is fine if there is no WDAT */
+		return NULL;
+	}
+
+	if (acpi_watchdog_uses_rtc(wdat)) {
+		pr_info("Skipping WDAT on this system because it uses RTC SRAM\n");
 		return NULL;
 	}
 
@@ -72,6 +92,14 @@ bool acpi_has_watchdog(void)
 	return !!acpi_watchdog_get_wdat();
 }
 EXPORT_SYMBOL_GPL(acpi_has_watchdog);
+
+/* ACPI watchdog can be disabled on boot command line */
+static int __init disable_acpi_watchdog(char *str)
+{
+	acpi_no_watchdog = true;
+	return 1;
+}
+__setup("acpi_no_watchdog", disable_acpi_watchdog);
 
 void __init acpi_watchdog_init(void)
 {
@@ -111,12 +139,11 @@ void __init acpi_watchdog_init(void)
 		gas = &entries[i].register_region;
 
 		res.start = gas->address;
+		res.end = res.start + ACPI_ACCESS_BYTE_WIDTH(gas->access_width) - 1;
 		if (gas->space_id == ACPI_ADR_SPACE_SYSTEM_MEMORY) {
 			res.flags = IORESOURCE_MEM;
-			res.end = res.start + ALIGN(gas->access_width, 4) - 1;
 		} else if (gas->space_id == ACPI_ADR_SPACE_SYSTEM_IO) {
 			res.flags = IORESOURCE_IO;
-			res.end = res.start + gas->access_width - 1;
 		} else {
 			pr_warn("Unsupported address space: %u\n",
 				gas->space_id);

@@ -703,7 +703,8 @@ static void _perfcounter_enable_vbif_pwr(struct adreno_device *adreno_dev,
 static void _power_counter_enable_alwayson(struct adreno_device *adreno_dev,
 				struct adreno_perfcounters *counters)
 {
-	if (!ADRENO_FEATURE(adreno_dev, ADRENO_GPMU))
+	if (!ADRENO_FEATURE(adreno_dev, ADRENO_GPMU) &&
+	    !ADRENO_FEATURE(adreno_dev, ADRENO_A5XX_GPMU))
 		return;
 
 	kgsl_regwrite(KGSL_DEVICE(adreno_dev),
@@ -745,7 +746,8 @@ static void _power_counter_enable_default(struct adreno_device *adreno_dev,
 	struct kgsl_device *device = KGSL_DEVICE(adreno_dev);
 	struct adreno_perfcount_register *reg;
 
-	if (!ADRENO_FEATURE(adreno_dev, ADRENO_GPMU))
+	if (!ADRENO_FEATURE(adreno_dev, ADRENO_GPMU) &&
+	    !ADRENO_FEATURE(adreno_dev, ADRENO_A5XX_GPMU))
 		return;
 
 	reg = &counters->groups[group].regs[counter];
@@ -1028,7 +1030,8 @@ static uint64_t _perfcounter_read_pwrcntr(struct adreno_device *adreno_dev,
 	struct adreno_perfcount_register *reg;
 	unsigned int lo = 0, hi = 0;
 
-	if (!ADRENO_FEATURE(adreno_dev, ADRENO_GPMU))
+	if (!ADRENO_FEATURE(adreno_dev, ADRENO_GPMU) &&
+	    !ADRENO_FEATURE(adreno_dev, ADRENO_A5XX_GPMU))
 		return 0;
 
 	reg = &group->regs[counter];

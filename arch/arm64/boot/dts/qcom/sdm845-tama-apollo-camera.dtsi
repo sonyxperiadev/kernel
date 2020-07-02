@@ -118,6 +118,10 @@
 		cci-master = <0>;
 		cam_vaf-supply = <&pm8998_l19>;
 		regulator-names = "cam_vaf";
+		rgltr-cntrl-support;
+		rgltr-min-voltage = <2700000>;
+		rgltr-max-voltage = <2700000>;
+		rgltr-load-current = <106500>;
 	};
 
 	eeprom0: eeprom@0 {

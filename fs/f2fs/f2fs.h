@@ -194,7 +194,7 @@ struct cp_control {
 };
 
 /*
- * For CP/NAT/SIT/SSA readahead
+ * indicate meta/data type
  */
 enum {
 	META_CP,
@@ -202,6 +202,8 @@ enum {
 	META_SIT,
 	META_SSA,
 	META_POR,
+	DATA_GENERIC,
+	META_GENERIC,
 };
 
 /* for the list of ino */
@@ -1288,6 +1290,17 @@ static inline bool time_to_inject(struct f2fs_sb_info *sbi, int type)
 }
 #endif
 
+/*
+ * Test if the mounted volume is a multi-device volume.
+ *   - For a single regular disk volume, sbi->s_ndevs is 0.
+ *   - For a single zoned disk volume, sbi->s_ndevs is 1.
+ *   - For a multi-device volume, sbi->s_ndevs is always 2 or more.
+ */
+static inline bool f2fs_is_multi_device(struct f2fs_sb_info *sbi)
+{
+	return sbi->s_ndevs > 1;
+}
+
 /* For write statistics. Suppose sector size is 512 bytes,
  * and the return value is in kbytes. s is of struct f2fs_sb_info.
  */
@@ -1684,6 +1697,7 @@ enospc:
 	return -ENOSPC;
 }
 
+void f2fs_msg(struct super_block *sb, const char *level, const char *fmt, ...);
 static inline void dec_valid_block_count(struct f2fs_sb_info *sbi,
 						struct inode *inode,
 						block_t count)
@@ -1692,13 +1706,21 @@ static inline void dec_valid_block_count(struct f2fs_sb_info *sbi,
 
 	spin_lock(&sbi->stat_lock);
 	f2fs_bug_on(sbi, sbi->total_valid_block_count < (block_t) count);
-	f2fs_bug_on(sbi, inode->i_blocks < sectors);
 	sbi->total_valid_block_count -= (block_t)count;
 	if (sbi->reserved_blocks &&
 		sbi->current_reserved_blocks < sbi->reserved_blocks)
 		sbi->current_reserved_blocks = min(sbi->reserved_blocks,
 					sbi->current_reserved_blocks + count);
 	spin_unlock(&sbi->stat_lock);
+	if (unlikely(inode->i_blocks < sectors)) {
+		f2fs_msg(sbi->sb, KERN_WARNING,
+			"Inconsistent i_blocks, ino:%lu, iblocks:%llu, sectors:%llu",
+			inode->i_ino,
+			(unsigned long long)inode->i_blocks,
+			(unsigned long long)sectors);
+		set_sbi_flag(sbi, SBI_NEED_FSCK);
+		return;
+	}
 	f2fs_i_blocks_write(inode, count, false, true);
 }
 
@@ -2514,8 +2536,17 @@ static inline bool is_dot_dotdot(const struct qstr *str)
 
 static inline bool f2fs_may_extent_tree(struct inode *inode)
 {
-	if (!test_opt(F2FS_I_SB(inode), EXTENT_CACHE) ||
+	struct f2fs_sb_info *sbi = F2FS_I_SB(inode);
+
+	if (!test_opt(sbi, EXTENT_CACHE) ||
 			is_inode_flag_set(inode, FI_NO_EXTENT))
+		return false;
+
+	/*
+	 * for recovered files during mount do not create extents
+	 * if shrinker is not registered.
+	 */
+	if (list_empty(&sbi->s_list))
 		return false;
 
 	return S_ISREG(inode->i_mode);
@@ -2604,6 +2635,38 @@ static inline void f2fs_update_iostat(struct f2fs_sb_info *sbi,
 			sbi->write_iostat[APP_WRITE_IO] -
 			sbi->write_iostat[APP_DIRECT_IO];
 	spin_unlock(&sbi->iostat_lock);
+}
+
+#define __is_meta_io(fio) (PAGE_TYPE_OF_BIO(fio->type) == META &&	\
+				(!is_read_io(fio->op) || fio->is_meta))
+
+bool f2fs_is_valid_blkaddr(struct f2fs_sb_info *sbi,
+					block_t blkaddr, int type);
+static inline void verify_blkaddr(struct f2fs_sb_info *sbi,
+					block_t blkaddr, int type)
+{
+	if (!f2fs_is_valid_blkaddr(sbi, blkaddr, type)) {
+		f2fs_msg(sbi->sb, KERN_ERR,
+			"invalid blkaddr: %u, type: %d, run fsck to fix.",
+			blkaddr, type);
+		f2fs_bug_on(sbi, 1);
+	}
+}
+
+static inline bool __is_valid_data_blkaddr(block_t blkaddr)
+{
+	if (blkaddr == NEW_ADDR || blkaddr == NULL_ADDR)
+		return false;
+	return true;
+}
+
+static inline bool is_valid_data_blkaddr(struct f2fs_sb_info *sbi,
+						block_t blkaddr)
+{
+	if (!__is_valid_data_blkaddr(blkaddr))
+		return false;
+	verify_blkaddr(sbi, blkaddr, DATA_GENERIC);
+	return true;
 }
 
 /*
@@ -2825,7 +2888,8 @@ struct page *grab_meta_page(struct f2fs_sb_info *sbi, pgoff_t index);
 struct page *get_meta_page(struct f2fs_sb_info *sbi, pgoff_t index);
 struct page *f2fs_get_meta_page_nofail(struct f2fs_sb_info *sbi, pgoff_t index);
 struct page *get_tmp_page(struct f2fs_sb_info *sbi, pgoff_t index);
-bool is_valid_blkaddr(struct f2fs_sb_info *sbi, block_t blkaddr, int type);
+bool f2fs_is_valid_blkaddr(struct f2fs_sb_info *sbi,
+					block_t blkaddr, int type);
 int ra_meta_pages(struct f2fs_sb_info *sbi, block_t start, int nrpages,
 			int type, bool sync);
 void ra_meta_pages_cond(struct f2fs_sb_info *sbi, pgoff_t index);
@@ -3296,7 +3360,7 @@ static inline bool f2fs_force_buffered_io(struct inode *inode, int rw)
 	return ((f2fs_encrypted_file(inode) &&
 		!fscrypt_using_hardware_encryption(inode)) ||
 			(rw == WRITE && test_opt(F2FS_I_SB(inode), LFS)) ||
-			F2FS_I_SB(inode)->s_ndevs);
+			f2fs_is_multi_device(F2FS_I_SB(inode)));
 }
 
 static inline bool f2fs_may_encrypt_bio(struct inode *inode,
@@ -3310,3 +3374,7 @@ static inline bool f2fs_may_encrypt_bio(struct inode *inode,
 }
 
 #endif
+
+#define EFSBADCRC	EBADMSG		/* Bad CRC detected */
+#define EFSCORRUPTED	EUCLEAN		/* Filesystem is corrupted */
+

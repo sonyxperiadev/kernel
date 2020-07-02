@@ -216,6 +216,9 @@ static int f2fs_do_sync_file(struct file *file, loff_t start, loff_t end,
 
 	trace_f2fs_sync_file_enter(inode);
 
+	if (S_ISDIR(inode->i_mode))
+		goto go_write;
+
 	/* if fdatasync is triggered, let's do in-place-update */
 	if (datasync || get_dirty_pages(inode) <= SM_I(sbi)->min_fsync_blocks)
 		set_inode_flag(inode, FI_NEED_IPU);
@@ -344,13 +347,13 @@ static pgoff_t __get_first_dirty_index(struct address_space *mapping,
 	return pgofs;
 }
 
-static bool __found_offset(block_t blkaddr, pgoff_t dirty, pgoff_t pgofs,
-							int whence)
+static bool __found_offset(struct f2fs_sb_info *sbi, block_t blkaddr,
+				pgoff_t dirty, pgoff_t pgofs, int whence)
 {
 	switch (whence) {
 	case SEEK_DATA:
 		if ((blkaddr == NEW_ADDR && dirty == pgofs) ||
-			(blkaddr != NEW_ADDR && blkaddr != NULL_ADDR))
+			is_valid_data_blkaddr(sbi, blkaddr))
 			return true;
 		break;
 	case SEEK_HOLE:
@@ -413,7 +416,15 @@ static loff_t f2fs_seek_block(struct file *file, loff_t offset, int whence)
 			blkaddr = datablock_addr(dn.inode,
 					dn.node_page, dn.ofs_in_node);
 
-			if (__found_offset(blkaddr, dirty, pgofs, whence)) {
+			if (__is_valid_data_blkaddr(blkaddr) &&
+				!f2fs_is_valid_blkaddr(F2FS_I_SB(inode),
+						blkaddr, DATA_GENERIC)) {
+				f2fs_put_dnode(&dn);
+				goto fail;
+			}
+
+			if (__found_offset(F2FS_I_SB(inode), blkaddr, dirty,
+							pgofs, whence)) {
 				f2fs_put_dnode(&dn);
 				goto found;
 			}
@@ -505,6 +516,11 @@ void truncate_data_blocks_range(struct dnode_of_data *dn, int count)
 
 		dn->data_blkaddr = NULL_ADDR;
 		set_data_blkaddr(dn);
+
+		if (__is_valid_data_blkaddr(blkaddr) &&
+			!f2fs_is_valid_blkaddr(sbi, blkaddr, DATA_GENERIC))
+			continue;
+
 		invalidate_blocks(sbi, blkaddr);
 		if (dn->ofs_in_node == 0 && IS_INODE(dn->node_page))
 			clear_inode_flag(dn->inode, FI_FIRST_BLOCK_WRITTEN);
@@ -1071,7 +1087,7 @@ static int __clone_blkaddrs(struct inode *src_inode, struct inode *dst_inode,
 				}
 				dn.ofs_in_node++;
 				i++;
-				new_size = (dst + i) << PAGE_SHIFT;
+				new_size = (loff_t)(dst + i) << PAGE_SHIFT;
 				if (dst_inode->i_size < new_size)
 					f2fs_i_size_write(dst_inode, new_size);
 			} while (--ilen && (do_replace[i] || blkaddr[i] == NULL_ADDR));
@@ -1620,7 +1636,7 @@ static int __f2fs_ioc_setflags(struct inode *inode, unsigned int flags)
 
 	inode->i_ctime = current_time(inode);
 	f2fs_set_inode_flags(inode);
-	f2fs_mark_inode_dirty_sync(inode, false);
+	f2fs_mark_inode_dirty_sync(inode, true);
 	return 0;
 }
 
@@ -2082,7 +2098,7 @@ do_more:
 	}
 
 	ret = f2fs_gc(sbi, range.sync, true, GET_SEGNO(sbi, range.start));
-	range.start += sbi->blocks_per_seg;
+	range.start += BLKS_PER_SEC(sbi);
 	if (range.start <= end)
 		goto do_more;
 out:
@@ -2472,7 +2488,7 @@ static int f2fs_ioc_flush_device(struct file *filp, unsigned long arg)
 							sizeof(range)))
 		return -EFAULT;
 
-	if (sbi->s_ndevs <= 1 || sbi->s_ndevs - 1 <= range.dev_num ||
+	if (!f2fs_is_multi_device(sbi) || sbi->s_ndevs - 1 <= range.dev_num ||
 			sbi->segs_per_sec != 1) {
 		f2fs_msg(sbi->sb, KERN_WARNING,
 			"Can't flush %u in %d for segs_per_sec %u != 1\n",

@@ -219,6 +219,10 @@ void dsi_phy_hw_v3_0_clamp_ctrl(struct dsi_phy_hw *phy, bool enable)
 
 	pr_debug("enable=%s\n", enable ? "true" : "false");
 
+	/* PHY FreezeIO is not supported on MSM8998 */
+	if (of_machine_is_compatible("qcom,msm8998"))
+		return;
+
 	/*
 	 * DSI PHY lane clamps, also referred to as PHY FreezeIO is
 	 * enalbed by default as part of the initialization sequnce.
@@ -236,6 +240,33 @@ void dsi_phy_hw_v3_0_clamp_ctrl(struct dsi_phy_hw *phy, bool enable)
 	wmb(); /* Ensure that the freezeio bit is toggled */
 	DSI_W32(phy, DSIPHY_LNX_TX_DCTRL(3), reg & ~BIT(0));
 	wmb(); /* Ensure that the freezeio bit is toggled */
+}
+
+void dsi_phy_hw_v3_0_set_idle_pc(struct dsi_phy_hw *phy, bool idle_pc_enabled)
+{
+	u32 reg;
+
+	pr_debug("PHY: %s idle power collapse\n",
+		 idle_pc_enabled ? "Enabling" : "Disabling");
+
+	/* Does SDM845 support PHY idle power collapse, or just FreezeIO? */
+	if (!of_machine_is_compatible("qcom,msm8998"))
+		return;
+
+	if (idle_pc_enabled) {
+		pr_err("PHY: Enable idlepc not supported\n");
+		return;
+	}
+
+	reg = DSI_R32(phy, DSIPHY_CMN_CTRL_1);
+	DSI_W32(phy, DSIPHY_CMN_CTRL_1, reg | BIT(5));
+	wmb();
+	usleep_range(10, 15);
+
+	reg = DSI_R32(phy, DSIPHY_CMN_CTRL_1);
+	reg &= ~(BIT(5));
+	DSI_W32(phy, DSIPHY_CMN_CTRL_1, reg);
+	wmb();
 }
 
 /**
@@ -480,6 +511,8 @@ void dsi_phy_hw_v3_0_ulps_exit(struct dsi_phy_hw *phy,
 	 * to be in stop state.
 	 */
 	DSI_W32(phy, DSIPHY_CMN_LANE_CTRL3, reg);
+	usleep_range(5, 15);
+
 	DSI_W32(phy, DSIPHY_CMN_LANE_CTRL3, 0);
 	usleep_range(100, 110);
 }

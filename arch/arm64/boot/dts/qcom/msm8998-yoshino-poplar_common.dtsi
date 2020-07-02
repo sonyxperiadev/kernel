@@ -95,6 +95,8 @@
 		#include "fg-gen3-batterydata-poplar-tdk-4380mv-2650mah.dtsi"
 		#include "fg-gen3-batterydata-poplar-send-4357mv-2688mah.dtsi"
 		#include "fg-gen3-batterydata-poplar-send-4335mv-2647mah.dtsi"
+		#include "fg-gen3-batterydata-poplar-send-4297mv-2465mah.dtsi"
+		#include "fg-gen3-batterydata-poplar-send-4245mv-2425mah.dtsi"
 	};
 };
 
@@ -301,8 +303,8 @@
 };
 
 &pmi8998_wled {
-	qcom,boost-current-limit = <620>;
-	qcom,fs-current-limit = <20000>;
+	qcom,current-boost-limit = <620>;
+	qcom,current-limit-microamp = <20000>;
 };
 
 &lab_regulator {

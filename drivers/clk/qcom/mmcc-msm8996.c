@@ -92,7 +92,7 @@ static int vdd_mmpll4_levels[] = {
 static DEFINE_VDD_REGULATORS(vdd_mmpll4, VDD_DIG_NUM, 2, vdd_mmpll4_levels);
 
 enum {
-	P_XO,
+	P_BI_TCXO,
 	P_MMPLL0,
 	P_GPLL0,
 	P_GPLL0_DIV,
@@ -111,67 +111,67 @@ enum {
 };
 
 static const struct parent_map mmss_xo_hdmi_map[] = {
-	{ P_XO, 0 },
+	{ P_BI_TCXO, 0 },
 	{ P_HDMIPLL, 1 }
 };
 
 static const char * const mmss_xo_hdmi[] = {
-	"xo",
+	"bi_tcxo",
 	"hdmipll"
 };
 
 static const struct parent_map mmss_xo_dsi0pll_dsi1pll_map[] = {
-	{ P_XO, 0 },
+	{ P_BI_TCXO, 0 },
 	{ P_DSI0PLL, 1 },
 	{ P_DSI1PLL, 2 }
 };
 
 static const char * const mmss_xo_dsi0pll_dsi1pll[] = {
-	"xo",
+	"bi_tcxo",
 	"dsi0_phy_pll_out_dsiclk",
 	"dsi1_phy_pll_out_dsiclk"
 };
 
 static const struct parent_map mmss_xo_gpll0_gpll0_div_map[] = {
-	{ P_XO, 0 },
+	{ P_BI_TCXO, 0 },
 	{ P_GPLL0, 5 },
 	{ P_GPLL0_DIV, 6 }
 };
 
 static const char * const mmss_xo_gpll0_gpll0_div[] = {
-	"xo",
+	"bi_tcxo",
 	"gpll0",
 	"gpll0_div"
 };
 
 static const struct parent_map mmss_xo_dsibyte_map[] = {
-	{ P_XO, 0 },
+	{ P_BI_TCXO, 0 },
 	{ P_DSI0PLL_BYTE, 1 },
 	{ P_DSI1PLL_BYTE, 2 }
 };
 
 static const char * const mmss_xo_dsibyte[] = {
-	"xo",
+	"bi_tcxo",
 	"dsi0_phy_pll_out_byteclk",
 	"dsi1_phy_pll_out_byteclk"
 };
 
 static const struct parent_map mmss_xo_mmpll0_gpll0_gpll0_div_map[] = {
-	{ P_XO, 0 },
+	{ P_BI_TCXO, 0 },
 	{ P_MMPLL0, 1 },
 	{ P_GPLL0, 5 },
 	{ P_GPLL0_DIV, 6 }
 };
 
 static const char * const mmss_xo_mmpll0_gpll0_gpll0_div[] = {
-	"xo",
+	"bi_tcxo",
 	"mmpll0",
 	"gpll0",
 	"gpll0_div"
 };
 
 static const struct parent_map mmss_xo_mmpll0_mmpll1_gpll0_gpll0_div_map[] = {
-	{ P_XO, 0 },
+	{ P_BI_TCXO, 0 },
 	{ P_MMPLL0, 1 },
 	{ P_MMPLL1, 2 },
 	{ P_GPLL0, 5 },
@@ -179,7 +179,7 @@ static const struct parent_map mmss_xo_mmpll0_mmpll1_gpll0_gpll0_div_map[] = {
 };
 
 static const char * const mmss_xo_mmpll0_mmpll1_gpll0_gpll0_div[] = {
-	"xo",
+	"bi_tcxo",
 	"mmpll0",
 	"mmpll1",
 	"gpll0",
@@ -187,7 +187,7 @@ static const char * const mmss_xo_mmpll0_mmpll1_gpll0_gpll0_div[] = {
 };
 
 static const struct parent_map mmss_xo_mmpll0_mmpll3_gpll0_gpll0_div_map[] = {
-	{ P_XO, 0 },
+	{ P_BI_TCXO, 0 },
 	{ P_MMPLL0, 1 },
 	{ P_MMPLL3, 3 },
 	{ P_GPLL0, 5 },
@@ -195,7 +195,7 @@ static const struct parent_map mmss_xo_mmpll0_mmpll3_gpll0_gpll0_div_map[] = {
 };
 
 static const char * const mmss_xo_mmpll0_mmpll3_gpll0_gpll0_div[] = {
-	"xo",
+	"bi_tcxo",
 	"mmpll0",
 	"mmpll3",
 	"gpll0",
@@ -203,7 +203,7 @@ static const char * const mmss_xo_mmpll0_mmpll3_gpll0_gpll0_div[] = {
 };
 
 static const struct parent_map mmss_xo_mmpll0_mmpll5_gpll0_gpll0_div_map[] = {
-	{ P_XO, 0 },
+	{ P_BI_TCXO, 0 },
 	{ P_MMPLL0, 1 },
 	{ P_MMPLL5, 2 },
 	{ P_GPLL0, 5 },
@@ -211,7 +211,7 @@ static const struct parent_map mmss_xo_mmpll0_mmpll5_gpll0_gpll0_div_map[] = {
 };
 
 static const char * const mmss_xo_mmpll0_mmpll5_gpll0_gpll0_div[] = {
-	"xo",
+	"bi_tcxo",
 	"mmpll0",
 	"mmpll5",
 	"gpll0",
@@ -219,7 +219,7 @@ static const char * const mmss_xo_mmpll0_mmpll5_gpll0_gpll0_div[] = {
 };
 
 static const struct parent_map mmss_xo_mmpll0_mmpll4_gpll0_gpll0_div_map[] = {
-	{ P_XO, 0 },
+	{ P_BI_TCXO, 0 },
 	{ P_MMPLL0, 1 },
 	{ P_MMPLL4, 3 },
 	{ P_GPLL0, 5 },
@@ -227,7 +227,7 @@ static const struct parent_map mmss_xo_mmpll0_mmpll4_gpll0_gpll0_div_map[] = {
 };
 
 static const char * const mmss_xo_mmpll0_mmpll4_gpll0_gpll0_div[] = {
-	"xo",
+	"bi_tcxo",
 	"mmpll0",
 	"mmpll4",
 	"gpll0",
@@ -235,7 +235,7 @@ static const char * const mmss_xo_mmpll0_mmpll4_gpll0_gpll0_div[] = {
 };
 
 static const struct parent_map mmss_xo_mmpll0_mmpll9_mmpll2_mmpll8_gpll0_map[] = {
-	{ P_XO, 0 },
+	{ P_BI_TCXO, 0 },
 	{ P_MMPLL0, 1 },
 	{ P_MMPLL9, 2 },
 	{ P_MMPLL2, 3 },
@@ -244,7 +244,7 @@ static const struct parent_map mmss_xo_mmpll0_mmpll9_mmpll2_mmpll8_gpll0_map[] =
 };
 
 static const char * const mmss_xo_mmpll0_mmpll9_mmpll2_mmpll8_gpll0[] = {
-	"xo",
+	"bi_tcxo",
 	"mmpll0",
 	"mmpll9",
 	"mmpll2",
@@ -253,21 +253,21 @@ static const char * const mmss_xo_mmpll0_mmpll9_mmpll2_mmpll8_gpll0[] = {
 };
 
 static const struct parent_map gpu_parents_0_map[] = {
-	{ P_XO, 0 },
+	{ P_BI_TCXO, 0 },
 	{ P_MMPLL9, 2 },
 	{ P_MMPLL2, 3 },
 	{ P_MMPLL8, 4 },
 };
 
 static const char * const gpu_parents_0[] = {
-	"xo",
+	"bi_tcxo",
 	"mmpll9",
 	"mmpll2",
 	"mmpll8",
 };
 
 static const struct parent_map mmss_xo_mmpll0_mmpll9_mmpll2_mmpll8_gpll0_gpll0_div_map[] = {
-	{ P_XO, 0 },
+	{ P_BI_TCXO, 0 },
 	{ P_MMPLL0, 1 },
 	{ P_MMPLL9, 2 },
 	{ P_MMPLL2, 3 },
@@ -277,7 +277,7 @@ static const struct parent_map mmss_xo_mmpll0_mmpll9_mmpll2_mmpll8_gpll0_gpll0_d
 };
 
 static const char * const mmss_xo_mmpll0_mmpll9_mmpll2_mmpll8_gpll0_gpll0_div[] = {
-	"xo",
+	"bi_tcxo",
 	"mmpll0",
 	"mmpll9",
 	"mmpll2",
@@ -287,7 +287,7 @@ static const char * const mmss_xo_mmpll0_mmpll9_mmpll2_mmpll8_gpll0_gpll0_div[] 
 };
 
 static const struct parent_map mmss_xo_mmpll0_mmpll1_mmpll4_mmpll3_gpll0_gpll0_div_map[] = {
-	{ P_XO, 0 },
+	{ P_BI_TCXO, 0 },
 	{ P_MMPLL0, 1 },
 	{ P_MMPLL1, 2 },
 	{ P_MMPLL4, 3 },
@@ -297,7 +297,7 @@ static const struct parent_map mmss_xo_mmpll0_mmpll1_mmpll4_mmpll3_gpll0_gpll0_d
 };
 
 static const char * const mmss_xo_mmpll0_mmpll1_mmpll4_mmpll3_gpll0_gpll0_div[] = {
-	"xo",
+	"bi_tcxo",
 	"mmpll0",
 	"mmpll1",
 	"mmpll4",
@@ -360,7 +360,7 @@ static struct clk_alpha_pll mmpll0_early = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data){
 			.name = "mmpll0_early",
-			.parent_names = (const char *[]){ "xo" },
+			.parent_names = (const char *[]){ "bi_tcxo" },
 			.num_parents = 1,
 			.ops = &clk_alpha_pll_ops,
 			VDD_DIG_FMAX_MAP2(LOWER, 400000000, NOMINAL, 800000000),
@@ -403,7 +403,7 @@ static struct clk_alpha_pll mmpll1_early = {
 		.enable_mask = BIT(1),
 		.hw.init = &(struct clk_init_data){
 			.name = "mmpll1_early",
-			.parent_names = (const char *[]){ "xo" },
+			.parent_names = (const char *[]){ "bi_tcxo" },
 			.num_parents = 1,
 			.ops = &clk_alpha_pll_ops,
 			VDD_DIG_FMAX_MAP2(LOWER, 405000000, NOMINAL, 810000000),
@@ -443,7 +443,7 @@ static struct clk_alpha_pll mmpll2_early = {
 	.num_vco = ARRAY_SIZE(mmpll_gfx_vco),
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "mmpll2_early",
-		.parent_names = (const char *[]){ "xo" },
+		.parent_names = (const char *[]){ "bi_tcxo" },
 		.num_parents = 1,
 		.ops = &clk_alpha_pll_ops,
 		VDD_DIG_FMAX_MAP1(LOWER, 1000000000),
@@ -482,7 +482,7 @@ static struct clk_alpha_pll mmpll3_early = {
 	.num_vco = ARRAY_SIZE(mmpll_p_vco),
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "mmpll3_early",
-		.parent_names = (const char *[]){ "xo" },
+		.parent_names = (const char *[]){ "bi_tcxo" },
 		.num_parents = 1,
 		.ops = &clk_alpha_pll_ops,
 		VDD_DIG_FMAX_MAP2(LOWER, 520000000, NOMINAL, 1040000000),
@@ -521,7 +521,7 @@ static struct clk_alpha_pll mmpll4_early = {
 	.num_vco = ARRAY_SIZE(mmpll_t_vco),
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "mmpll4_early",
-		.parent_names = (const char *[]){ "xo" },
+		.parent_names = (const char *[]){ "bi_tcxo" },
 		.num_parents = 1,
 		.ops = &clk_alpha_pll_ops,
 		VDD_DIG_FMAX_MAP2(LOWER, 480000000, NOMINAL, 960000000),
@@ -561,7 +561,7 @@ static struct clk_alpha_pll mmpll5_early = {
 	.num_vco = ARRAY_SIZE(mmpll_p_vco),
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "mmpll5_early",
-		.parent_names = (const char *[]){ "xo" },
+		.parent_names = (const char *[]){ "bi_tcxo" },
 		.num_parents = 1,
 		.ops = &clk_alpha_pll_ops,
 		VDD_DIG_FMAX_MAP2(LOWER, 412500000, LOW, 825000000),
@@ -600,7 +600,7 @@ static struct clk_alpha_pll mmpll8_early = {
 	.num_vco = ARRAY_SIZE(mmpll_gfx_vco),
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "mmpll8_early",
-		.parent_names = (const char *[]){ "xo" },
+		.parent_names = (const char *[]){ "bi_tcxo" },
 		.num_parents = 1,
 		.ops = &clk_alpha_pll_ops,
 		VDD_DIG_FMAX_MAP1(LOWER, 1000000000),
@@ -641,7 +641,7 @@ static struct clk_alpha_pll mmpll9_early = {
 	.flags = SUPPORTS_DYNAMIC_UPDATE,
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "mmpll9_early",
-		.parent_names = (const char *[]){ "xo" },
+		.parent_names = (const char *[]){ "bi_tcxo" },
 		.num_parents = 1,
 		.ops = &clk_alpha_pll_ops,
 		VDD_DIG_FMAX_MAP2(LOWER, 652000000, NOMINAL, 1305600000),
@@ -665,7 +665,7 @@ static struct clk_alpha_pll_postdiv mmpll9 = {
 };
 
 static const struct freq_tbl ftbl_ahb_clk_src[] = {
-	F(19200000, P_XO, 1, 0, 0),
+	F(19200000, P_BI_TCXO, 1, 0, 0),
 	F(40000000, P_GPLL0_DIV, 7.5, 0, 0),
 	F(80000000, P_MMPLL0, 10, 0, 0),
 	{ }
@@ -686,7 +686,7 @@ static struct clk_rcg2 ahb_clk_src = {
 };
 
 static const struct freq_tbl ftbl_axi_clk_src[] = {
-	F(19200000, P_XO, 1, 0, 0),
+	F(19200000, P_BI_TCXO, 1, 0, 0),
 	F(75000000, P_GPLL0_DIV, 4, 0, 0),
 	F(100000000, P_GPLL0, 6, 0, 0),
 	F(171430000, P_GPLL0, 3.5, 0, 0),
@@ -712,7 +712,7 @@ static struct clk_rcg2 maxi_clk_src = {
 };
 
 static const struct freq_tbl ftbl_gfx3d_pro_clk_src[] = {
-	F( 19200000, P_XO,      1, 0, 0),
+	F( 19200000, P_BI_TCXO,      1, 0, 0),
 	F(133000000, P_MMPLL0,  6, 0, 0),
 //	F(214000000, P_MMPLL8,  1, 0, 0),
 //	F(315000000, P_MMPLL8,  1, 0, 0),
@@ -725,7 +725,7 @@ static const struct freq_tbl ftbl_gfx3d_pro_clk_src[] = {
 };
 
 static const struct freq_tbl ftbl_gfx3d_clk_src[] = {
-	F( 19200000, P_XO,      1, 0, 0),
+	F( 19200000, P_BI_TCXO,      1, 0, 0),
 	F(133000000, P_MMPLL0,  6, 0, 0),
 	F(214000000, P_MMPLL8,  1, 0, 0),
 	F(315000000, P_MMPLL8,  1, 0, 0),
@@ -760,7 +760,7 @@ static struct clk_rcg2 gfx3d_clk_src = {
 };
 
 static const struct freq_tbl ftbl_rbbmtimer_clk_src[] = {
-	F(19200000, P_XO, 1, 0, 0),
+	F(19200000, P_BI_TCXO, 1, 0, 0),
 	{ }
 };
 
@@ -779,7 +779,7 @@ static struct clk_rcg2 rbbmtimer_clk_src = {
 };
 
 static const struct freq_tbl ftbl_rbcpr_clk_src[] = {
-	F(19200000, P_XO, 1, 0, 0),
+	F(19200000, P_BI_TCXO, 1, 0, 0),
 	F(50000000, P_GPLL0, 12, 0, 0),
 	{ }
 };
@@ -938,7 +938,7 @@ static struct clk_rcg2 extpclk_clk_src = {
 };
 
 static struct freq_tbl ftbl_mdss_vsync_clk[] = {
-	F(19200000, P_XO, 1, 0, 0),
+	F(19200000, P_BI_TCXO, 1, 0, 0),
 	{ }
 };
 
@@ -957,7 +957,7 @@ static struct clk_rcg2 vsync_clk_src = {
 };
 
 static struct freq_tbl ftbl_mdss_hdmi_clk[] = {
-	F(19200000, P_XO, 1, 0, 0),
+	F(19200000, P_BI_TCXO, 1, 0, 0),
 	{ }
 };
 
@@ -1006,7 +1006,7 @@ static struct clk_rcg2 byte1_clk_src = {
 };
 
 static struct freq_tbl ftbl_mdss_esc0_1_clk[] = {
-	F(19200000, P_XO, 1, 0, 0),
+	F(19200000, P_BI_TCXO, 1, 0, 0),
 	{ }
 };
 
@@ -1039,8 +1039,8 @@ static struct clk_rcg2 esc1_clk_src = {
 };
 
 static const struct freq_tbl ftbl_camss_gp0_clk_src[] = {
-	F(10000, P_XO, 16, 1, 120),
-	F(24000, P_XO, 16, 1, 50),
+	F(10000, P_BI_TCXO, 16, 1, 120),
+	F(24000, P_BI_TCXO, 16, 1, 50),
 	F(6000000, P_GPLL0_DIV, 10, 1, 5),
 	F(12000000, P_GPLL0_DIV, 1, 1, 25),
 	F(13000000, P_GPLL0_DIV, 2, 13, 150),
@@ -1081,12 +1081,12 @@ static struct clk_rcg2 camss_gp1_clk_src = {
 };
 
 static const struct freq_tbl ftbl_mclk0_clk_src[] = {
-	F(4800000, P_XO, 4, 0, 0),
+	F(4800000, P_BI_TCXO, 4, 0, 0),
 	F(6000000, P_GPLL0_DIV, 10, 1, 5),
 	F(8000000, P_GPLL0_DIV, 1, 2, 75),
-	F(9600000, P_XO, 2, 0, 0),
+	F(9600000, P_BI_TCXO, 2, 0, 0),
 	F(16666667, P_GPLL0_DIV, 2, 1, 9),
-	F(19200000, P_XO, 1, 0, 0),
+	F(19200000, P_BI_TCXO, 1, 0, 0),
 	F(24000000, P_GPLL0_DIV, 1, 2, 25),
 	F(33333333, P_GPLL0_DIV, 1, 1, 9),
 	F(48000000, P_GPLL0, 1, 2, 25),
@@ -1159,7 +1159,7 @@ static struct clk_rcg2 mclk3_clk_src = {
 };
 
 static const struct freq_tbl ftbl_cci_clk_src[] = {
-	F(19200000, P_XO, 1, 0, 0),
+	F(19200000, P_BI_TCXO, 1, 0, 0),
 	F(37500000, P_GPLL0, 16, 0, 0),
 	F(50000000, P_GPLL0, 12, 0, 0),
 	F(100000000, P_GPLL0, 6, 0, 0),
@@ -1572,7 +1572,7 @@ static struct clk_branch mmss_misc_cxo_clk = {
 		.enable_mask = BIT(0),
 		.hw.init = &(struct clk_init_data){
 			.name = "mmss_misc_cxo_clk",
-			.parent_names = (const char *[]){ "xo" },
+			.parent_names = (const char *[]){ "bi_tcxo" },
 			.num_parents = 1,
 			.flags = CLK_ENABLE_HAND_OFF,
 			.ops = &clk_branch2_ops,

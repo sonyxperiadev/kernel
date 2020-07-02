@@ -1,0 +1,52 @@
+/* Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+#include "trinket-seine-common.dtsi"
+
+&somc_pinctrl_pmic {
+	/* If product common PMIC default setting is needed,
+	fill pinctrl-1 value in <product>.dtsi */
+	pinctrl-1 = <&pm6125_gpio_8 &pm6125_gpio_9>;
+};
+
+&soc {
+};
+
+/* GPIO_8: NC */
+&pm6125_gpio_8 {
+	pins = "gpio8";
+	function = "normal";
+	bias-high-impedance; /* DISABLE GPIO_8 */
+	/delete-property/ output-low;
+	/delete-property/ drive-push-pull;
+	/delete-property/ qcom,drive-strength;
+	/delete-property/ power-source;
+};
+
+/* GPIO_9: NC */
+&pm6125_gpio_9 {
+	pins = "gpio9";
+	function = "normal";
+	bias-high-impedance; /* DISABLE GPIO_9 */
+	/delete-property/ output-high;
+	/delete-property/ drive-push-pull;
+	/delete-property/ qcom,drive-strength;
+	/delete-property/ power-source;
+};
+
+#include "trinket-seine-display.dtsi"
+#include "charger-seine-common.dtsi"
+#include "charger-seine-pdx201.dtsi"
+
+&sde_dsi_seine_panels {
+	qcom,dsi-panel = <&dsi_4>;
+};

@@ -339,6 +339,7 @@ struct sde_hw_rotator {
 
 	bool    dbgmem;
 	bool reset_hw_ts;
+	bool swts_created;
 	u32 last_hwts[ROT_QUEUE_MAX];
 	u32 koff_timeout;
 	u32 vid_trigger;

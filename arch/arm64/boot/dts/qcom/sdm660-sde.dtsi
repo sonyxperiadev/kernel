@@ -44,8 +44,8 @@
 		#interrupt-cells = <1>;
 		iommus = <&mmss_bimc_smmu 0>;
 
-		#address-cells = <1>;
-		#size-cells = <0>;
+		// #address-cells = <1>;
+		// #size-cells = <0>;
 
 		#power-domain-cells = <0>;
 
@@ -115,13 +115,13 @@
 		qcom,sde-dsc-off = <0x81000 0x81400>;
 		qcom,sde-dsc-size = <0x140>;
 
-		qcom,sde-sspp-type = "vig", "vig", "dma", "dma", "dma", "cursor";
+		qcom,sde-sspp-type = "vig", "vig", "dma", "dma", "dma";
 
-		qcom,sde-sspp-off = <0x5000 0x7000 0x25000 0x27000 0x29000 0x35000>;
+		qcom,sde-sspp-off = <0x5000 0x7000 0x25000 0x27000 0x29000>;
 		qcom,sde-sspp-src-size = <0x184>;
 
-		qcom,sde-sspp-xin-id = <0 4 1 5 9 2>;
-		qcom,sde-sspp-excl-rect = <1 1 1 1 1 1>;
+		qcom,sde-sspp-xin-id = <0 4 1 5 9>;
+		qcom,sde-sspp-excl-rect = <1 1 1 1 1>;
 
 		qcom,sde-has-dest-scaler;
 		qcom,sde-max-dest-scaler-input-linewidth = <2048>;
@@ -132,7 +132,7 @@
 		qcom,sde-dest-scaler-size = <0x88>; //<0x800>;
 
 		/* offsets are relative to "mdp_phys + qcom,sde-off */
-		qcom,sde-sspp-clk-ctrl = <0x2ac 0>, <0x2b4 0>, <0x2ac 8>, 
+		qcom,sde-sspp-clk-ctrl = <0x2ac 0>, <0x2b4 0>, <0x2ac 8>,
 					 <0x2b4 8>, <0x2c4 8>, <0x3a8 16>;
 
 		qcom,sde-sspp-csc-off = <0x1a00>;
@@ -386,8 +386,8 @@
 		compatible = "qcom,dsi-phy-v2.0";
 		label = "dsi-phy-0";
 		cell-index = <0>;
-		reg = <0xc994400 0x588>;
-		reg-names = "dsi_phy";
+		reg = <0xc994400 0x588>, <0xc994200 0x98>, <0xc901400 0x100>;
+		reg-names = "dsi_phy", "dyn_refresh_base", "phy_clamp_base";
 
 		gdsc-supply = <&gdsc_mdss>;
 		vdda-supply = <&pm660l_l1>;
@@ -412,6 +412,7 @@
 					00 00 10 0f
 					00 00 10 0f
 					00 00 10 8f];
+		qcom,panel-allow-phy-poweroff;
 
 		qcom,core-supply-entries {
 			#address-cells = <1>;

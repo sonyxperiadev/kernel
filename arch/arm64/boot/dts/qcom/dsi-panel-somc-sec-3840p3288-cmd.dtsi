@@ -119,7 +119,7 @@
 					39 01 00 00 00 00 03 B9 00 60
 					39 01 00 00 00 00 03 F0 A5 A5
 					39 01 00 00 00 00 03 F0 5A 5A
-					39 01 00 00 00 00 03 C5 2E 01
+					39 01 00 00 00 00 03 C5 2E 21
 					39 01 00 00 00 00 03 F0 A5 A5];
 				qcom,mdss-dsi-post-panel-on-command = [
 					05 01 00 00 00 00 01 29];
@@ -158,10 +158,10 @@
 					39 01 00 00 00 00 03 F0 A5 A5
 					05 01 00 00 00 00 01 29];
 				somc,mdss-dsi-hbm-on-command = [
-					39 01 00 00 00 00 02 53 E0
+					39 01 00 00 00 00 02 53 E8
 					];
 				somc,mdss-dsi-hbm-off-command = [
-					39 01 00 00 11 00 02 53 20
+					39 01 00 00 11 00 02 53 28
 					];
 				somc,mdss-dsi-aod-on-command-state = "dsi_lp_mode";
 				somc,mdss-dsi-aod-low-command-state = "dsi_lp_mode";
@@ -169,8 +169,21 @@
 				somc,mdss-dsi-aod-off-command-state = "dsi_lp_mode";
 				somc,mdss-dsi-hbm-on-command-state = "dsi_lp_mode";
 				somc,mdss-dsi-hbm-low-command-state = "dsi_lp_mode";
+				somc,mdss-dsi-flm2-on-command = [
+					39 01 00 00 00 00 03 F0 5A 5A
+					39 01 00 00 00 00 03 C5 2E 21
+					39 01 00 00 00 00 03 F0 A5 A5
+				];
+				somc,mdss-dsi-flm2-off-command = [
+					39 01 00 00 00 00 03 F0 5A 5A
+					39 01 00 00 00 00 03 C5 2E 01
+					39 01 00 00 00 00 03 F0 A5 A5
+				];
+				somc,mdss-dsi-flm2-on-command-state = "dsi_lp_mode";
+				somc,mdss-dsi-flm2-off-command-state = "dsi_lp_mode";
 			};
 			timing@1 {
+				somc,splash-dms-switch-to-this-timing;
 				qcom,mdss-dsi-panel-width = <1644>;
 				qcom,mdss-dsi-panel-height = <3840>;
 				qcom,mdss-dsi-h-back-porch = <8>;
@@ -219,7 +232,7 @@
 					39 01 00 00 00 00 03 B9 00 60
 					39 01 00 00 00 00 03 F0 A5 A5
 					39 01 00 00 00 00 03 F0 5A 5A
-					39 01 00 00 00 00 03 C5 2E 01
+					39 01 00 00 00 00 03 C5 2E 21
 					39 01 00 00 00 00 03 F0 A5 A5];
 				qcom,mdss-dsi-post-panel-on-command = [
 					05 01 00 00 00 00 01 29];
@@ -258,10 +271,10 @@
 					39 01 00 00 00 00 03 F0 A5 A5
 					05 01 00 00 00 00 01 29];
 				somc,mdss-dsi-hbm-on-command = [
-					39 01 00 00 00 00 02 53 E0
+					39 01 00 00 00 00 02 53 E8
 					];
 				somc,mdss-dsi-hbm-off-command = [
-					39 01 00 00 11 00 02 53 20
+					39 01 00 00 11 00 02 53 28
 					];
 				somc,mdss-dsi-aod-on-command-state = "dsi_lp_mode";
 				somc,mdss-dsi-aod-low-command-state = "dsi_lp_mode";
@@ -269,8 +282,19 @@
 				somc,mdss-dsi-aod-off-command-state = "dsi_lp_mode";
 				somc,mdss-dsi-hbm-on-command-state = "dsi_lp_mode";
 				somc,mdss-dsi-hbm-low-command-state = "dsi_lp_mode";
+				somc,mdss-dsi-flm2-on-command = [
+					39 01 00 00 00 00 03 F0 5A 5A
+					39 01 00 00 00 00 03 C5 2E 21
+					39 01 00 00 00 00 03 F0 A5 A5
+				];
+				somc,mdss-dsi-flm2-off-command = [
+					39 01 00 00 00 00 03 F0 5A 5A
+					39 01 00 00 00 00 03 C5 2E 01
+					39 01 00 00 00 00 03 F0 A5 A5
+				];
+				somc,mdss-dsi-flm2-on-command-state = "dsi_lp_mode";
+				somc,mdss-dsi-flm2-off-command-state = "dsi_lp_mode";
 			};
 		};
 	};
 };
-

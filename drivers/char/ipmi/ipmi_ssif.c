@@ -645,8 +645,9 @@ static void msg_done_handler(struct ssif_info *ssif_info, int result,
 
 		/* Remove the multi-part read marker. */
 		len -= 2;
+		data += 2;
 		for (i = 0; i < len; i++)
-			ssif_info->data[i] = data[i+2];
+			ssif_info->data[i] = data[i];
 		ssif_info->multi_len = len;
 		ssif_info->multi_pos = 1;
 
@@ -674,8 +675,19 @@ static void msg_done_handler(struct ssif_info *ssif_info, int result,
 		}
 
 		blocknum = data[0];
+		len--;
+		data++;
 
-		if (ssif_info->multi_len + len - 1 > IPMI_MAX_MSG_LENGTH) {
+		if (blocknum != 0xff && len != 31) {
+		    /* All blocks but the last must have 31 data bytes. */
+			result = -EIO;
+			if (ssif_info->ssif_debug & SSIF_DEBUG_MSG)
+				pr_info("Received middle message <31\n");
+
+			goto continue_op;
+		}
+
+		if (ssif_info->multi_len + len > IPMI_MAX_MSG_LENGTH) {
 			/* Received message too big, abort the operation. */
 			result = -E2BIG;
 			if (ssif_info->ssif_debug & SSIF_DEBUG_MSG)
@@ -684,10 +696,8 @@ static void msg_done_handler(struct ssif_info *ssif_info, int result,
 			goto continue_op;
 		}
 
-		/* Remove the blocknum from the data. */
-		len--;
 		for (i = 0; i < len; i++)
-			ssif_info->data[i + ssif_info->multi_len] = data[i + 1];
+			ssif_info->data[i + ssif_info->multi_len] = data[i];
 		ssif_info->multi_len += len;
 		if (blocknum == 0xff) {
 			/* End of read */
@@ -699,6 +709,10 @@ static void msg_done_handler(struct ssif_info *ssif_info, int result,
 			 * numbers start at zero for the second block,
 			 * but multi_pos starts at one, so the +1.
 			 */
+			if (ssif_info->ssif_debug & SSIF_DEBUG_MSG)
+				dev_dbg(&ssif_info->client->dev,
+					"Received message out of sequence, expected %u, got %u\n",
+					ssif_info->multi_pos - 1, blocknum);
 			result = -EIO;
 		} else {
 			ssif_inc_stat(ssif_info, received_message_parts);
@@ -721,6 +735,7 @@ static void msg_done_handler(struct ssif_info *ssif_info, int result,
 		}
 	}
 
+ continue_op:
 	if (result < 0) {
 		ssif_inc_stat(ssif_info, receive_errors);
 	} else {
@@ -728,8 +743,6 @@ static void msg_done_handler(struct ssif_info *ssif_info, int result,
 		ssif_inc_stat(ssif_info, received_message_parts);
 	}
 
-
- continue_op:
 	if (ssif_info->ssif_debug & SSIF_DEBUG_STATE)
 		pr_info(PFX "DONE 1: state = %d, result=%d.\n",
 			ssif_info->ssif_state, result);
@@ -737,10 +750,14 @@ static void msg_done_handler(struct ssif_info *ssif_info, int result,
 	flags = ipmi_ssif_lock_cond(ssif_info, &oflags);
 	msg = ssif_info->curr_msg;
 	if (msg) {
+		if (data) {
+			if (len > IPMI_MAX_MSG_LENGTH)
+				len = IPMI_MAX_MSG_LENGTH;
+			memcpy(msg->rsp, data, len);
+		} else {
+			len = 0;
+		}
 		msg->rsp_size = len;
-		if (msg->rsp_size > IPMI_MAX_MSG_LENGTH)
-			msg->rsp_size = IPMI_MAX_MSG_LENGTH;
-		memcpy(msg->rsp, data, msg->rsp_size);
 		ssif_info->curr_msg = NULL;
 	}
 
@@ -1714,7 +1731,9 @@ static int ssif_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
  out:
 	if (rv) {
-		addr_info->client = NULL;
+		if (addr_info)
+			addr_info->client = NULL;
+
 		dev_err(&client->dev, "Unable to start IPMI SSIF: %d\n", rv);
 		kfree(ssif_info);
 	}

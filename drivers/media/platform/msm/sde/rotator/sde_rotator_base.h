@@ -138,6 +138,7 @@ enum sde_rot_type {
  * @SDE_CAPS_SBUF_1: stream buffer support for inline rotation
  * @SDE_CAPS_UBWC_2: universal bandwidth compression version 2
  * @SDE_CAPS_PARTIALWR: partial write override
+ * @SDE_CAPS_SPLIT_CTX: quirk: same iommu context for rotator and mdp
  * @SDE_CAPS_HW_TIMESTAMP: rotator has hw timestamp support
  * @SDE_CAPS_UBWC_3: universal bandwidth compression version 3
  */
@@ -149,6 +150,7 @@ enum sde_caps_settings {
 	SDE_CAPS_SBUF_1,
 	SDE_CAPS_UBWC_2,
 	SDE_CAPS_PARTIALWR,
+	SDE_CAPS_SPLIT_CTX,
 	SDE_CAPS_HW_TIMESTAMP,
 	SDE_CAPS_UBWC_3,
 	SDE_CAPS_MAX,

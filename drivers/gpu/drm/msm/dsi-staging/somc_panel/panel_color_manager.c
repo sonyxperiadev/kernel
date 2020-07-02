@@ -120,7 +120,7 @@ static int dsi_parse_dcs_cmds(struct device_node *np,
 
 	data = of_get_property(np, cmd_key, &length);
 	if (!data) {
-		pr_debug("%s :failed to get , key=%s\n", __func__, cmd_key);
+		pr_warn("%s: failed to get property %s\n", __func__, cmd_key);
 		rc = -ENOTSUPP;
 		goto error;
 	}
@@ -384,8 +384,11 @@ int somc_panel_parse_dt_colormgr_config(struct dsi_panel *panel,
 			"somc,mdss-dsi-pcc-force-cal");
 
 	if (color_mgr->standard_pcc_enable) {
-		dsi_parse_dcs_cmds(np, &color_mgr->uv_read_cmds,
+		rc = dsi_parse_dcs_cmds(np, &color_mgr->uv_read_cmds,
 			"somc,mdss-dsi-uv-command", NULL);
+		if (rc)
+			pr_err("%s (%d): Failed to parse dsi-uv-command: %d\n",
+					__func__, __LINE__, rc);
 
 		rc = of_property_read_u32(np,
 			"somc,mdss-dsi-uv-param-type", &tmp);
@@ -517,6 +520,14 @@ static int somc_panel_update_merged_pcc_cache(
 	struct dsi_pcc_data *pcc_data = NULL;
 	int table_idx;
 
+	/**
+	 * Cache update requested: invalidate the cache.
+	 * If any issue occurs, the caller will not use a potentially
+	 * invalidated/outdated cache if merging succeeded earlier.
+	 * Instead it can fall-back on the local transformation.
+	 */
+	color_mgr->cached_pcc_valid = false;
+
 	if (unlikely(!sys_cal || !target)) {
 		pr_debug("Calibrations not (yet?) initialized.\n");
 		return -EINVAL;
@@ -525,15 +536,26 @@ static int somc_panel_update_merged_pcc_cache(
 	pcc_data = &color_mgr->standard_pcc_data;
 	if (unlikely(!pcc_data)) {
 		pr_debug("No PCC data (yet?)\n");
-		return -EINVAL;
+		goto use_system_calibration;
 	}
 
 	if (unlikely(!pcc_data->color_tbl)) {
 		pr_debug("There is no color table.\n");
-		return -EINVAL;
+		goto use_system_calibration;
+	}
+
+	if (unlikely(color_mgr->pcc_profile == (unsigned short)-1)) {
+		pr_err("No pcc_profile selected!\n");
+		goto use_system_calibration;
 	}
 
 	table_idx = pcc_data->tbl_idx + color_mgr->pcc_profile;
+
+	if (table_idx >= pcc_data->tbl_size) {
+		pr_err("%d exceeds table size %d\n",
+				table_idx, pcc_data->tbl_size);
+		goto use_system_calibration;
+	}
 
 	pr_debug("%s (%d): Selecting table %d with offset %d\n",
 			__func__, __LINE__,
@@ -550,6 +572,7 @@ static int somc_panel_update_merged_pcc_cache(
 				"using kernel calibration only\n",
 				__func__, __LINE__);
 		memcpy(target, &panel_cal, sizeof(panel_cal));
+		color_mgr->cached_pcc_valid = true;
 		return 0;
 	}
 
@@ -631,14 +654,28 @@ static int somc_panel_update_merged_pcc_cache(
 	target->b.b >>= 15;
 	target->b.c >>= 15;
 
+	color_mgr->cached_pcc_valid = true;
+
 	return 0;
+
+use_system_calibration:
+	if (color_mgr->system_calibration_valid) {
+		pr_debug("%s (%d): pcc profile unset; "
+				"using system calibration only\n",
+				__func__, __LINE__);
+		memcpy(target, sys_cal, sizeof(*sys_cal));
+		color_mgr->cached_pcc_valid = true;
+		return 0;
+	}
+	return -EINVAL;
 }
 
-static int somc_panel_sde_crtc_set_property_override(struct drm_crtc *crtc,
+static int somc_panel_sde_crtc_atomic_set_property_override(
+		struct drm_crtc *crtc,
+		struct drm_crtc_state *state,
 		struct drm_property *property,
 		uint64_t value)
 {
-	int ret = -EINVAL;
 	struct dsi_display *display = dsi_display_get_main_display();
 	struct somc_panel_color_mgr *color_mgr = NULL;
 	struct drm_property_blob *blob = NULL;
@@ -702,17 +739,17 @@ static int somc_panel_sde_crtc_set_property_override(struct drm_crtc *crtc,
 				blob->length);
 		color_mgr->system_calibration_valid = true;
 
-		ret = somc_panel_update_merged_pcc_cache(color_mgr);
-		if (ret)
-			return ret;
+		/* Ignore result; cache validity is checked below */
+		(void)somc_panel_update_merged_pcc_cache(color_mgr);
 	}
 
 	// Copy (updated) cache to blob:
-	memcpy(blob->data, &color_mgr->cached_pcc, blob->length);
+	if (color_mgr->cached_pcc_valid)
+		memcpy(blob->data, &color_mgr->cached_pcc, blob->length);
 
 default_fn:
-	return color_mgr->original_crtc_funcs->set_property(
-			crtc, property, value);
+	return color_mgr->original_crtc_funcs->atomic_set_property(
+			crtc, state, property, value);
 }
 
 static int somc_panel_inject_crtc_overrides(struct dsi_display *display)
@@ -767,7 +804,7 @@ static int somc_panel_inject_crtc_overrides(struct dsi_display *display)
 	memcpy(new_funcs, crtc->funcs, sizeof(struct drm_crtc_funcs));
 
 	/* Then, override the function: */
-	new_funcs->set_property = somc_panel_sde_crtc_set_property_override;
+	new_funcs->atomic_set_property = somc_panel_sde_crtc_atomic_set_property_override;
 
 	/* Finally, update the funcs buffer with the overridden function: */
 	crtc->funcs = new_funcs;
@@ -834,11 +871,6 @@ static int somc_panel_pcc_setup(struct dsi_display *display)
 		goto exit;
 	}
 
-	/* Ensure the cached pcc is updated by invalidating
-	 * the current profile
-	 */
-	color_mgr->pcc_profile = -1;
-
 	if (display->tx_cmd_buf == NULL) {
 		ret = dsi_host_alloc_cmd_tx_buffer(display);
 		if (ret)
@@ -849,6 +881,9 @@ static int somc_panel_pcc_setup(struct dsi_display *display)
 
 	if (color_mgr->uv_read_cmds.cmds.send_cmd) {
 		get_uv_data(display, &color_mgr->u_data, &color_mgr->v_data);
+	} else {
+		pr_warn("%s (%d): Cannot read uv data: missing command\n",
+				__func__, __LINE__);
 	}
 
 	if (color_mgr->u_data == 0 && color_mgr->v_data == 0) {
@@ -1263,6 +1298,11 @@ static int somc_panel_crtc_send_cached_pcc(struct dsi_display *display)
 	if (!color_mgr)
 		return -EINVAL;
 
+	if (!color_mgr->cached_pcc_valid) {
+		pr_err("Cached pcc is not valid!\n");
+		return -EINVAL;
+	}
+
 	if (!display->drm_conn) {
 		pr_err("The display is not connected!!\n");
 		return -EINVAL;
@@ -1308,12 +1348,13 @@ static int somc_panel_crtc_send_cached_pcc(struct dsi_display *display)
 static int somc_panel_send_pcc(struct dsi_display *display,
 			       int color_table_offset)
 {
+	int rc;
 	struct somc_panel_color_mgr *color_mgr =
 			display->panel->spec_pdata->color_mgr;
 
 	/* Only recompute cache when outdated: */
-	// TODO: Initialize cache to invalid value!!!
-	if (color_table_offset == color_mgr->pcc_profile)
+	if (color_table_offset == color_mgr->pcc_profile
+		&& color_mgr->cached_pcc_valid)
 		goto apply_cached_pcc;
 
 	pr_info("%s Changed from pcc profile %d to %d\n", __func__,
@@ -1321,7 +1362,9 @@ static int somc_panel_send_pcc(struct dsi_display *display,
 
 	color_mgr->pcc_profile = color_table_offset;
 
-	somc_panel_update_merged_pcc_cache(color_mgr);
+	rc = somc_panel_update_merged_pcc_cache(color_mgr);
+	if (rc)
+		return rc;
 
 apply_cached_pcc:
 	return somc_panel_crtc_send_cached_pcc(display);

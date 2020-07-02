@@ -37,9 +37,14 @@
 		qcom,mdss-dsi-underflow-color = <0x0>;
 		qcom,mdss-dsi-border-color = <0>;
 		qcom,mdss-dsi-h-sync-pulse = <1>;
-		qcom,mdss-dsi-traffic-mode = "non_burst_sync_event";
+//		qcom,mdss-dsi-traffic-mode = "non_burst_sync_event";
+		qcom,mdss-dsi-traffic-mode = "burst_mode";
 		qcom,mdss-dsi-bllp-eof-power-mode;
 		qcom,mdss-dsi-bllp-power-mode;
+
+		qcom,cmd-sync-wait-broadcast;
+		qcom,cmd-sync-wait-trigger;
+
 		qcom,mdss-dsi-dma-trigger = "trigger_sw";
 		qcom,mdss-dsi-mdp-trigger = "none";
 		qcom,mdss-dsi-tx-eot-append;

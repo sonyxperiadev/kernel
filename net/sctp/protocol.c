@@ -151,7 +151,6 @@ static void sctp_v4_copy_addrlist(struct list_head *addrlist,
 		addr = kzalloc(sizeof(*addr), GFP_ATOMIC);
 		if (addr) {
 			addr->a.v4.sin_family = AF_INET;
-			addr->a.v4.sin_port = 0;
 			addr->a.v4.sin_addr.s_addr = ifa->ifa_local;
 			addr->valid = 1;
 			INIT_LIST_HEAD(&addr->list);
@@ -254,6 +253,7 @@ static void sctp_v4_from_skb(union sctp_addr *addr, struct sk_buff *skb,
 		sa->sin_port = sh->dest;
 		sa->sin_addr.s_addr = ip_hdr(skb)->daddr;
 	}
+	memset(sa->sin_zero, 0, sizeof(sa->sin_zero));
 }
 
 /* Initialize an sctp_addr from a socket. */
@@ -262,6 +262,7 @@ static void sctp_v4_from_sk(union sctp_addr *addr, struct sock *sk)
 	addr->v4.sin_family = AF_INET;
 	addr->v4.sin_port = 0;
 	addr->v4.sin_addr.s_addr = inet_sk(sk)->inet_rcv_saddr;
+	memset(addr->v4.sin_zero, 0, sizeof(addr->v4.sin_zero));
 }
 
 /* Initialize sk->sk_rcv_saddr from sctp_addr. */
@@ -284,6 +285,7 @@ static void sctp_v4_from_addr_param(union sctp_addr *addr,
 	addr->v4.sin_family = AF_INET;
 	addr->v4.sin_port = port;
 	addr->v4.sin_addr.s_addr = param->v4.addr.s_addr;
+	memset(addr->v4.sin_zero, 0, sizeof(addr->v4.sin_zero));
 }
 
 /* Initialize an address parameter from a sctp_addr and return the length
@@ -308,6 +310,7 @@ static void sctp_v4_dst_saddr(union sctp_addr *saddr, struct flowi4 *fl4,
 	saddr->v4.sin_family = AF_INET;
 	saddr->v4.sin_port = port;
 	saddr->v4.sin_addr.s_addr = fl4->saddr;
+	memset(saddr->v4.sin_zero, 0, sizeof(saddr->v4.sin_zero));
 }
 
 /* Compare two addresses exactly. */
@@ -330,6 +333,7 @@ static void sctp_v4_inaddr_any(union sctp_addr *addr, __be16 port)
 	addr->v4.sin_family = AF_INET;
 	addr->v4.sin_addr.s_addr = htonl(INADDR_ANY);
 	addr->v4.sin_port = port;
+	memset(addr->v4.sin_zero, 0, sizeof(addr->v4.sin_zero));
 }
 
 /* Is this a wildcard address? */
@@ -431,14 +435,15 @@ static void sctp_v4_get_dst(struct sctp_transport *t, union sctp_addr *saddr,
 {
 	struct sctp_association *asoc = t->asoc;
 	struct rtable *rt;
-	struct flowi4 *fl4 = &fl->u.ip4;
+	struct flowi _fl;
+	struct flowi4 *fl4 = &_fl.u.ip4;
 	struct sctp_bind_addr *bp;
 	struct sctp_sockaddr_entry *laddr;
 	struct dst_entry *dst = NULL;
 	union sctp_addr *daddr = &t->ipaddr;
 	union sctp_addr dst_saddr;
 
-	memset(fl4, 0x0, sizeof(struct flowi4));
+	memset(&_fl, 0x0, sizeof(_fl));
 	fl4->daddr  = daddr->v4.sin_addr.s_addr;
 	fl4->fl4_dport = daddr->v4.sin_port;
 	fl4->flowi4_proto = IPPROTO_SCTP;
@@ -456,8 +461,11 @@ static void sctp_v4_get_dst(struct sctp_transport *t, union sctp_addr *saddr,
 		 &fl4->saddr);
 
 	rt = ip_route_output_key(sock_net(sk), fl4);
-	if (!IS_ERR(rt))
+	if (!IS_ERR(rt)) {
 		dst = &rt->dst;
+		t->dst = dst;
+		memcpy(fl, &_fl, sizeof(_fl));
+	}
 
 	/* If there is no association or if a source address is passed, no
 	 * more validation is required.
@@ -520,27 +528,33 @@ static void sctp_v4_get_dst(struct sctp_transport *t, union sctp_addr *saddr,
 		odev = __ip_dev_find(sock_net(sk), laddr->a.v4.sin_addr.s_addr,
 				     false);
 		if (!odev || odev->ifindex != fl4->flowi4_oif) {
-			if (!dst)
+			if (!dst) {
 				dst = &rt->dst;
-			else
+				t->dst = dst;
+				memcpy(fl, &_fl, sizeof(_fl));
+			} else {
 				dst_release(&rt->dst);
+			}
 			continue;
 		}
 
 		dst_release(dst);
 		dst = &rt->dst;
+		t->dst = dst;
+		memcpy(fl, &_fl, sizeof(_fl));
 		break;
 	}
 
 out_unlock:
 	rcu_read_unlock();
 out:
-	t->dst = dst;
-	if (dst)
+	if (dst) {
 		pr_debug("rt_dst:%pI4, rt_src:%pI4\n",
-			 &fl4->daddr, &fl4->saddr);
-	else
+			 &fl->u.ip4.daddr, &fl->u.ip4.saddr);
+	} else {
+		t->dst = NULL;
 		pr_debug("no route\n");
+	}
 }
 
 /* For v4, the source address is cached in the route entry(dst). So no need
@@ -606,6 +620,7 @@ out:
 static int sctp_v4_addr_to_user(struct sctp_sock *sp, union sctp_addr *addr)
 {
 	/* No address mapping for V4 sockets */
+	memset(addr->v4.sin_zero, 0, sizeof(addr->v4.sin_zero));
 	return sizeof(struct sockaddr_in);
 }
 
@@ -782,10 +797,9 @@ static int sctp_inetaddr_event(struct notifier_block *this, unsigned long ev,
 
 	switch (ev) {
 	case NETDEV_UP:
-		addr = kmalloc(sizeof(struct sctp_sockaddr_entry), GFP_ATOMIC);
+		addr = kzalloc(sizeof(*addr), GFP_ATOMIC);
 		if (addr) {
 			addr->a.v4.sin_family = AF_INET;
-			addr->a.v4.sin_port = 0;
 			addr->a.v4.sin_addr.s_addr = ifa->ifa_local;
 			addr->valid = 1;
 			spin_lock_bh(&net->sctp.local_addr_lock);
@@ -1020,7 +1034,7 @@ static const struct proto_ops inet_seqpacket_ops = {
 	.owner		   = THIS_MODULE,
 	.release	   = inet_release,	/* Needs to be wrapped... */
 	.bind		   = inet_bind,
-	.connect	   = inet_dgram_connect,
+	.connect	   = sctp_inet_connect,
 	.socketpair	   = sock_no_socketpair,
 	.accept		   = inet_accept,
 	.getname	   = inet_getname,	/* Semantics are different.  */
@@ -1345,7 +1359,7 @@ static int __net_init sctp_ctrlsock_init(struct net *net)
 	return status;
 }
 
-static void __net_init sctp_ctrlsock_exit(struct net *net)
+static void __net_exit sctp_ctrlsock_exit(struct net *net)
 {
 	/* Free the control endpoint.  */
 	inet_ctl_sock_destroy(net->sctp.ctl_sock);

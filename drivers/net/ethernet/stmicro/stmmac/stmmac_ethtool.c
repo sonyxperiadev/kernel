@@ -392,13 +392,13 @@ stmmac_ethtool_set_link_ksettings(struct net_device *dev,
 			ADVERTISED_10baseT_Half |
 			ADVERTISED_10baseT_Full);
 
-		spin_lock(&priv->lock);
+		mutex_lock(&priv->lock);
 
 		if (priv->hw->mac->pcs_ctrl_ane)
 			priv->hw->mac->pcs_ctrl_ane(priv->ioaddr, 1,
 						    priv->hw->ps, 0);
 
-		spin_unlock(&priv->lock);
+		mutex_unlock(&priv->lock);
 
 		return 0;
 	}
@@ -615,12 +615,12 @@ static void stmmac_get_wol(struct net_device *dev, struct ethtool_wolinfo *wol)
 {
 	struct stmmac_priv *priv = netdev_priv(dev);
 
-	spin_lock_irq(&priv->lock);
+	mutex_lock(&priv->lock);
 	if (device_can_wakeup(priv->device)) {
 		wol->supported = WAKE_MAGIC | WAKE_UCAST;
 		wol->wolopts = priv->wolopts;
 	}
-	spin_unlock_irq(&priv->lock);
+	mutex_unlock(&priv->lock);
 }
 
 static int stmmac_set_wol(struct net_device *dev, struct ethtool_wolinfo *wol)
@@ -649,9 +649,9 @@ static int stmmac_set_wol(struct net_device *dev, struct ethtool_wolinfo *wol)
 		disable_irq_wake(priv->wol_irq);
 	}
 
-	spin_lock_irq(&priv->lock);
+	mutex_lock(&priv->lock);
 	priv->wolopts = wol->wolopts;
-	spin_unlock_irq(&priv->lock);
+	mutex_unlock(&priv->lock);
 
 	return 0;
 }
@@ -675,33 +675,38 @@ static int stmmac_ethtool_op_set_eee(struct net_device *dev,
 				     struct ethtool_eee *edata)
 {
 	struct stmmac_priv *priv = netdev_priv(dev);
+	int ret;
 
-	priv->eee_enabled = edata->eee_enabled;
-
-	if (!priv->eee_enabled)
+	if (!edata->eee_enabled) {
 		stmmac_disable_eee_mode(priv);
-	else {
+	} else {
 		/* We are asking for enabling the EEE but it is safe
 		 * to verify all by invoking the eee_init function.
 		 * In case of failure it will return an error.
 		 */
-		priv->eee_enabled = stmmac_eee_init(priv);
-		if (!priv->eee_enabled)
+		edata->eee_enabled = stmmac_eee_init(priv);
+		if (!edata->eee_enabled)
 			return -EOPNOTSUPP;
-
-		/* Do not change tx_lpi_timer in case of failure */
-		priv->tx_lpi_timer = edata->tx_lpi_timer;
 	}
 
-	return phy_ethtool_set_eee(dev->phydev, edata);
+	ret = phy_ethtool_set_eee(dev->phydev, edata);
+	if (ret)
+		return ret;
+
+	priv->eee_enabled = edata->eee_enabled;
+	priv->tx_lpi_timer = edata->tx_lpi_timer;
+	return 0;
 }
 
 static u32 stmmac_usec2riwt(u32 usec, struct stmmac_priv *priv)
 {
 	unsigned long clk = clk_get_rate(priv->plat->stmmac_clk);
 
-	if (!clk)
-		return 0;
+	if (!clk) {
+		clk = priv->plat->clk_ref_rate;
+		if (!clk)
+			return 0;
+	}
 
 	return (usec * (clk / 1000000)) / 256;
 }
@@ -710,8 +715,11 @@ static u32 stmmac_riwt2usec(u32 riwt, struct stmmac_priv *priv)
 {
 	unsigned long clk = clk_get_rate(priv->plat->stmmac_clk);
 
-	if (!clk)
-		return 0;
+	if (!clk) {
+		clk = priv->plat->clk_ref_rate;
+		if (!clk)
+			return 0;
+	}
 
 	return (riwt * 256) / (clk / 1000000);
 }

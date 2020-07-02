@@ -631,6 +631,7 @@ static struct ib_qp *i40iw_create_qp(struct ib_pd *ibpd,
 		return ERR_PTR(-ENOMEM);
 
 	iwqp = (struct i40iw_qp *)mem;
+	iwqp->allocated_buffer = mem;
 	qp = &iwqp->sc_qp;
 	qp->back_qp = (void *)iwqp;
 	qp->push_idx = I40IW_INVALID_PUSH_PAGE_INDEX;
@@ -659,7 +660,6 @@ static struct ib_qp *i40iw_create_qp(struct ib_pd *ibpd,
 		goto error;
 	}
 
-	iwqp->allocated_buffer = mem;
 	iwqp->iwdev = iwdev;
 	iwqp->iwpd = iwpd;
 	iwqp->ibqp.qp_num = qp_num;
@@ -821,6 +821,8 @@ static int i40iw_query_qp(struct ib_qp *ibqp,
 	struct i40iw_qp *iwqp = to_iwqp(ibqp);
 	struct i40iw_sc_qp *qp = &iwqp->sc_qp;
 
+	attr->qp_state = iwqp->ibqp_state;
+	attr->cur_qp_state = attr->qp_state;
 	attr->qp_access_flags = 0;
 	attr->cap.max_send_wr = qp->qp_uk.sq_size;
 	attr->cap.max_recv_wr = qp->qp_uk.rq_size;

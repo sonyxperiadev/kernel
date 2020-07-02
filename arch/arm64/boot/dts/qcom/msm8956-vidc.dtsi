@@ -15,7 +15,7 @@
 
 &soc {
 	msm_vidc: qcom,vidc@1d00000 {
-		compatible = "qcom,msm-vidc", "qcom,msm8956-vidc";
+		compatible = "qcom,msm-vidc";
 		reg = <0x01d00000 0xff000>,
 			<0x000a4120 0x4>;
 		reg-names = "vidc", "efuse";
@@ -42,11 +42,14 @@
 					    133333333 228571428 360000000
 					    400000000 466000000>;
 
+		qcom,slave-side-cp;
+		qcom,sw-power-collapse;
 		qcom,reset-clock-control;
 		qcom,regulator-scaling;
-
+		qcom,max-hw-load = <1011840>; /* 3840 x 2176 @ 30 fps + 3840 x 2176 @ 1 fps */
 		qcom,dcvs-min-load = <734400>; /* 1920 x 1088 @ 90fps */
 		qcom,dcvs-min-mbperframe = <32400>; /* 3840 x 2160 */
+		//qcom,max-hw-load = <979200>; /* TURBO, UHD30E */
 
 		qcom,load-freq-tbl =
 			<979200 466000000 0x55555555>, /* TURBO, UHD30E   */
@@ -120,7 +123,7 @@
 			label = "venus-ddr";
 			qcom,bus-master = <MSM_BUS_MASTER_VIDEO_P0>;
 			qcom,bus-slave = <MSM_BUS_SLAVE_EBI_CH0>;
-			qcom,bus-governor = "vidc-ar50-ddr";
+			qcom,bus-governor = "msm-vidc-ddr";
 			qcom,bus-range-kbps = <1000 2688000>;
 		};
 
@@ -145,6 +148,58 @@
 				qcom,low-power-mode-factor = <65536>;
 			};
 		};
+
+		/* Bus governor tables */
+		venus-ddr-gov {
+		    compatible = "qcom,msm-vidc,governor,table";
+		    name = "venus-ddr-gov";
+		    status = "ok";
+		    qcom,bus-freq-table {
+			qcom,profile-enc {
+				/* Codec mask for "all encoders" */
+				qcom,codec-mask = <0x55555555>;
+				qcom,load-busfreq-tbl =
+					<979200 1964000>,  /* UHD30E     */
+					<864000 1562000>,  /* 720p240LPE */
+					<489600 1530000>,  /* 1080p60E   */
+					<432000 1148000>,  /* 720p120E   */
+					<244800 775000>,   /* 1080p30E   */
+					<216000 677000>,   /* 720p60E    */
+					<108000 342000>,   /* 720p30E    */
+					<0 0>;
+			};
+
+			qcom,profile-dec {
+				/* Codec mask for "all decoders" */
+				qcom,codec-mask = <0xffffffff>;
+				qcom,load-busfreq-tbl =
+					<979200 2458000>,  /* UHD30D     */
+					<864000 1967000>,  /* 720p240D   */
+					<489600 1148000>,  /* 1080p60D   */
+					<432000 775000>,   /* 720p120D   */
+					<244800 574000>,   /* 1080p30D   */
+					<216000 496000>,   /* 720p60E    */
+					<108000 252000>,   /* 720p30D    */
+					<0 0>;
+			};
+
+			qcom,profile-low-latency-enc {
+				/* Codec mask for "all encoders" */
+				qcom,codec-mask = <0x55555555>;
+				qcom,low-latency-mode;
+				qcom,load-busfreq-tbl =
+					<979200 2688000>,  /* UHD30E     */
+					<864000 2306000>,  /* 720p240LPE */
+					<489600 2276000>,  /* 1080p60E   */
+					<432000 2159000>,  /* 720p120E   */
+					<244800 1149000>,  /* 1080p30E   */
+					<216000 1010000>,  /* 720p60E    */
+					<108000 508000>,   /* 720p30E    */
+					<0 0>;
+			};
+		    };
+		};
+
 
 		/* IOMMU Contexts: Non Secure */
 		/* venus_ns

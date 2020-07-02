@@ -1,1 +1,3 @@
 source techpack/audio/Kconfig
+source techpack/data-kernel/drivers/rmnet/perf/Kconfig
+source techpack/data-kernel/drivers/rmnet/shs/Kconfig

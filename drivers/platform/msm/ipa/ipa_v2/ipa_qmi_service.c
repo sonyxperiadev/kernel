@@ -44,11 +44,12 @@
 static struct qmi_handle *ipa_svc_handle;
 static struct workqueue_struct *ipa_clnt_req_workqueue;
 static bool qmi_modem_init_fin, qmi_indication_fin;
+static struct work_struct ipa_qmi_service_init_work;
 static uint32_t ipa_wan_platform;
 struct ipa_qmi_context *ipa_qmi_ctx;
 static bool first_time_handshake;
-static atomic_t workqueues_stopped;
-static atomic_t ipa_qmi_initialized;
+static bool send_qmi_init_q6;
+static bool workqueues_stopped;
 struct mutex ipa_qmi_lock;
 struct ipa_msg_desc {
 	uint16_t msg_id;
@@ -84,6 +85,11 @@ static void handle_indication_req(struct qmi_handle *qmi_handle,
 		QMI_IPA_INDICATION_REGISTER_RESP_MAX_MSG_LEN_V01,
 		ipa_indication_reg_resp_msg_data_v01_ei,
 		&resp);
+
+       if (rc < 0) {
+               IPAWANERR("send response for Indication register failed\n");
+               return;
+       }
 
 	qmi_indication_fin = true;
 
@@ -495,7 +501,7 @@ int qmi_filter_request_send(struct ipa_install_fltr_rule_req_msg_v01 *req)
 			== false)
 			return -EINVAL;
 		if ((req->filter_spec_list[i].filter_action <=
-			QMI_IPA_FILTER_ACTION_INVALID_V01) &&
+			QMI_IPA_FILTER_ACTION_INVALID_V01) ||
 			(req->filter_spec_list[i].filter_action >
 			QMI_IPA_FILTER_ACTION_EXCEPTION_V01))
 			return -EINVAL;
@@ -764,6 +770,9 @@ static void ipa_q6_clnt_svc_arrive(struct work_struct *work)
 		return;
 	}
 
+	if (!send_qmi_init_q6)
+		return;
+
 	IPAWANDBG("Q6 QMI service available now\n");
 	/* Initialize modem IPA-driver */
 	IPAWANDBG("send qmi_init_modem_send_sync_msg to modem\n");
@@ -799,6 +808,11 @@ static void ipa_q6_clnt_svc_arrive(struct work_struct *work)
 		ind.master_driver_init_status.result =
 			IPA_QMI_RESULT_SUCCESS_V01;
 
+		if (unlikely(!ipa_svc_handle)) {
+			IPAWANERR("Invalid svc handle.Ignore sending ind.");
+			return;
+		}
+
 		rc = qmi_send_indication(ipa_svc_handle,
 			&ipa_qmi_ctx->client_sq,
 			QMI_IPA_MASTER_DRIVER_INIT_COMPLETE_IND_V01,
@@ -811,6 +825,8 @@ static void ipa_q6_clnt_svc_arrive(struct work_struct *work)
 		IPAWANERR("not send indication (%d)\n",
 		qmi_indication_fin);
 	}
+
+	send_qmi_init_q6 = false;
 }
 
 
@@ -836,7 +852,7 @@ static int ipa_q6_clnt_svc_event_notify_svc_new(struct qmi_handle *qmi,
 		ipa_qmi_ctx->server_sq.sq_node = service->node;
 		ipa_qmi_ctx->server_sq.sq_port = service->port;
 	}
-	if (atomic_read(&workqueues_stopped)) {
+	if (!workqueues_stopped) {
 		queue_delayed_work(ipa_clnt_req_workqueue,
 			&work_svc_arrive, 0);
 	}
@@ -845,7 +861,7 @@ static int ipa_q6_clnt_svc_event_notify_svc_new(struct qmi_handle *qmi,
 
 static void ipa_q6_clnt_svc_event_notify_net_reset(struct qmi_handle *qmi)
 {
-	if (atomic_read(&workqueues_stopped))
+	if (!workqueues_stopped)
 		queue_delayed_work(ipa_clnt_req_workqueue,
 			&work_svc_exit, 0);
 }
@@ -856,7 +872,7 @@ static void ipa_q6_clnt_svc_event_notify_svc_exit(struct qmi_handle *qmi,
 	IPAWANDBG("QMI svc:%d vers:%d ins:%d node:%d port:%d\n", svc->service,
 		  svc->version, svc->instance, svc->node, svc->port);
 
-	if (atomic_read(&workqueues_stopped))
+	if (!workqueues_stopped)
 		queue_delayed_work(ipa_clnt_req_workqueue,
 			&work_svc_exit, 0);
 }
@@ -922,7 +938,7 @@ static struct qmi_msg_handler client_handlers[] = {
 	},
 };
 
-static void ipa_qmi_service_init_worker(void)
+static void ipa_qmi_service_init_worker(struct work_struct *work)
 {
 	int rc;
 
@@ -1000,8 +1016,6 @@ static void ipa_qmi_service_init_worker(void)
 		goto deregister_qmi_client;
 	}
 
-	//
-	atomic_set(&ipa_qmi_initialized, 1);
 	/* get Q6 service and start send modem-initial to Q6 */
 	IPAWANDBG("wait service available\n");
 	return;
@@ -1029,18 +1043,21 @@ int ipa_qmi_service_init(uint32_t wan_platform_type)
 	ipa_wan_platform = wan_platform_type;
 	qmi_modem_init_fin = false;
 	qmi_indication_fin = false;
-	atomic_set(&workqueues_stopped, 0);
+	send_qmi_init_q6 = true;
+	workqueues_stopped = false;
 
-	// TODO: Not used on v3; uses !ipa_svc_handle instead
-	if (atomic_read(&ipa_qmi_initialized) == 0)
-		// TODO: Done on a workqueue in v3
-		ipa_qmi_service_init_worker();
+	if (!ipa_svc_handle) {
+		INIT_WORK(&ipa_qmi_service_init_work,
+			ipa_qmi_service_init_worker);
+		schedule_work(&ipa_qmi_service_init_work);
+	}
+
 	return 0;
 }
 
 void ipa_qmi_service_exit(void)
 {
-	atomic_set(&workqueues_stopped, 1);
+	workqueues_stopped = true;
 
 	/* qmi-service */
 	if (ipa_svc_handle) {
@@ -1072,7 +1089,7 @@ void ipa_qmi_service_exit(void)
 
 	qmi_modem_init_fin = false;
 	qmi_indication_fin = false;
-	atomic_set(&ipa_qmi_initialized, 0);
+	send_qmi_init_q6 = true;
 }
 
 void ipa_qmi_stop_workqueues(void)
@@ -1080,7 +1097,7 @@ void ipa_qmi_stop_workqueues(void)
 	IPAWANDBG("Stopping all QMI workqueues\n");
 
 	/* Stopping all workqueues so new work won't be scheduled */
-	atomic_set(&workqueues_stopped, 1);
+	workqueues_stopped = true;
 
 	/* Making sure that the current scheduled work won't be executed */
 	cancel_delayed_work(&work_svc_arrive);

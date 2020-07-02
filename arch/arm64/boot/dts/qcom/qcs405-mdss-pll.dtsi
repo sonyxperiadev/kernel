@@ -84,7 +84,7 @@
 		};
 	};
 
-	mdss_hdmi_pll: qcom,mdss_hdmi_pll@0x1aa0600 {
+	mdss_hdmi_pll: qcom,mdss_hdmi_pll@1aa0600 {
 		compatible = "qcom,mdss_hdmi_pll_28lpm";
 		label = "MDSS HDMI PLL";
 		cell-index = <0>;

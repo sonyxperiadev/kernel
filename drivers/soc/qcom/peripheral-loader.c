@@ -60,6 +60,14 @@
 #define MAX_LEN 96
 #define NUM_OF_ENCRYPTED_KEY	3
 
+/* Sony production phones have minidump disabled */
+#if defined(CONFIG_ARCH_SONY_LOIRE) || defined(CONFIG_ARCH_SONY_TONE) || \
+    defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_NILE) || \
+    defined(CONFIG_ARCH_SONY_GANGES) || defined(CONFIG_ARCH_SONY_TAMA) || \
+    defined(CONFIG_ARCH_SONY_KUMANO)
+ #define TARGET_NO_MINIDUMP_SUPPORT
+#endif
+
 static void __iomem *pil_info_base;
 static struct md_global_toc *g_md_toc;
 
@@ -1647,7 +1655,9 @@ static int __init msm_pil_init(void)
 	struct device_node *np;
 	struct resource res;
 	int i;
+#ifndef TARGET_NO_MINIDUMP_SUPPORT
 	size_t size;
+#endif
 
 	np = of_find_compatible_node(NULL, NULL, "qcom,msm-imem-pil");
 	if (!np) {
@@ -1671,7 +1681,7 @@ static int __init msm_pil_init(void)
 		writel_relaxed(0, pil_info_base + (i * sizeof(u32)));
 
 	/* Get Global minidump ToC*/
-#ifndef CONFIG_ARCH_MSM8916
+#ifndef TARGET_NO_MINIDUMP_SUPPORT
 	g_md_toc = qcom_smem_get(QCOM_SMEM_HOST_ANY, SBL_MINIDUMP_SMEM_ID,
 				 &size);
 	pr_debug("Minidump: g_md_toc is %pa\n", &g_md_toc);

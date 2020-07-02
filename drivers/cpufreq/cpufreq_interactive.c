@@ -1390,17 +1390,7 @@ static int __init cpufreq_interactive_gov_init(void)
 
 	return cpufreq_register_governor(CPU_FREQ_GOV_INTERACTIVE);
 }
-
-#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_INTERACTIVE
-struct cpufreq_governor *cpufreq_default_governor(void)
-{
-	return CPU_FREQ_GOV_INTERACTIVE;
-}
-
 fs_initcall(cpufreq_interactive_gov_init);
-#else
-module_init(cpufreq_interactive_gov_init);
-#endif
 
 static void __exit cpufreq_interactive_gov_exit(void)
 {

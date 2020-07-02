@@ -168,6 +168,7 @@ static const struct adreno_gpu_core adreno_gpulist[] = {
 		.features = ADRENO_SPTP_PC | ADRENO_LM |
 			ADRENO_PREEMPTION | ADRENO_64BIT |
 			ADRENO_CONTENT_PROTECTION |
+			ADRENO_A5XX_GPMU |
 			ADRENO_MMU_GLOBAL_MEMSZ_8M,
 		.pm4fw_name = "a530_pm4.fw",
 		.pfpfw_name = "a530_pfp.fw",
@@ -194,6 +195,7 @@ static const struct adreno_gpu_core adreno_gpulist[] = {
 		.features = ADRENO_SPTP_PC | ADRENO_LM |
 			ADRENO_PREEMPTION | ADRENO_64BIT |
 			ADRENO_CONTENT_PROTECTION |
+			ADRENO_A5XX_GPMU |
 			ADRENO_MMU_GLOBAL_MEMSZ_8M,
 		.pm4fw_name = "a530_pm4.fw",
 		.pfpfw_name = "a530_pfp.fw",
@@ -267,6 +269,7 @@ static const struct adreno_gpu_core adreno_gpulist[] = {
 		.features = ADRENO_PREEMPTION | ADRENO_64BIT |
 			ADRENO_CONTENT_PROTECTION |
 			ADRENO_SPTP_PC |
+			ADRENO_A5XX_GPMU |
 			ADRENO_MMU_GLOBAL_MEMSZ_8M,
 		.pm4fw_name = "a530_pm4.fw",
 		.pfpfw_name = "a530_pfp.fw",
@@ -290,6 +293,7 @@ static const struct adreno_gpu_core adreno_gpulist[] = {
 		.features = ADRENO_PREEMPTION | ADRENO_64BIT |
 			ADRENO_CONTENT_PROTECTION |
 			ADRENO_SPTP_PC |
+			ADRENO_A5XX_GPMU |
 			ADRENO_MMU_GLOBAL_MEMSZ_8M,
 		.pm4fw_name = "a530_pm4.fw",
 		.pfpfw_name = "a530_pfp.fw",
@@ -320,6 +324,7 @@ static const struct adreno_gpu_core adreno_gpulist[] = {
 		.gmem_size = (SZ_256K + SZ_16K),
 		.num_protected_regs = 0x20,
 		.busy_mask = 0xFFFFFFFE,
+		.cx_ipeak_gpu_freq = 700000000,
 	},
 	{
 		.gpurev = ADRENO_REV_A509,
@@ -337,6 +342,7 @@ static const struct adreno_gpu_core adreno_gpulist[] = {
 		.gmem_size = (SZ_256K + SZ_16K),
 		.num_protected_regs = 0x20,
 		.busy_mask = 0xFFFFFFFE,
+		.cx_ipeak_gpu_freq = 700000000,
 	},
 	{
 		.gpurev = ADRENO_REV_A508,
@@ -430,9 +436,9 @@ static const struct adreno_gpu_core adreno_gpulist[] = {
 		.gmem_size = SZ_512K,
 		.num_protected_regs = 0x20,
 		.busy_mask = 0xFFFFFFFE,
-		.gpmufw_name = "a630_gmu.bin",
+		.gpmufw_name = "a618_gmu.bin",
 		.gpmu_major = 0x1,
-		.gpmu_minor = 0x007,
+		.gpmu_minor = 0x008,
 	},
 	{
 		.gpurev = ADRENO_REV_A640,

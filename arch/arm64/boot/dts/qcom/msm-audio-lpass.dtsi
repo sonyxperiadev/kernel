@@ -432,6 +432,10 @@
 		compatible = "qcom,msm-audio-apr";
 		qcom,subsys-name = "apr_adsp";
 
+		q6core: qcom,q6core-audio {
+			compatible = "qcom,q6core-audio";
+		};
+
 		msm_audio_ion: qcom,msm-audio-ion {
 			compatible = "qcom,msm-audio-ion";
 			qcom,smmu-version = <2>;

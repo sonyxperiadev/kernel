@@ -65,11 +65,11 @@ struct msm_gem_address_space;
 struct msm_gem_vma;
 
 #define NUM_DOMAINS    4    /* one for KMS, then one per gpu core (?) */
-#define MAX_CRTCS      8
+#define MAX_CRTCS      16
 #define MAX_PLANES     20
-#define MAX_ENCODERS   8
-#define MAX_BRIDGES    8
-#define MAX_CONNECTORS 8
+#define MAX_ENCODERS   16
+#define MAX_BRIDGES    16
+#define MAX_CONNECTORS 16
 
 #define TEARDOWN_DEADLOCK_RETRY_MAX 5
 
@@ -529,6 +529,14 @@ struct msm_roi_list {
 struct msm_display_kickoff_params {
 	struct msm_roi_list *rois;
 	struct drm_msm_ext_hdr_metadata *hdr_meta;
+};
+
+/**
+ * struct - msm_display_conn_params - info of dpu display features
+ * @qsync_mode: Qsync mode, where 0: disabled 1: continuous mode
+ * @qsync_update: Qsync settings were changed/updated
+ */
+struct msm_display_conn_params {
 	uint32_t qsync_mode;
 	bool qsync_update;
 };
@@ -975,4 +983,7 @@ static inline unsigned long timeout_to_jiffies(const ktime_t *timeout)
 	return remaining_jiffies;
 }
 
+int msm_get_mixer_count(struct msm_drm_private *priv,
+		const struct drm_display_mode *mode,
+		u32 max_mixer_width, u32 *num_lm);
 #endif /* __MSM_DRV_H__ */

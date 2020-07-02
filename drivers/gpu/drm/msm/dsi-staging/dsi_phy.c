@@ -103,6 +103,11 @@ static const struct of_device_id msm_dsi_phy_of_match[] = {
 	{}
 };
 
+int dsi_phy_get_version(struct msm_dsi_phy *phy)
+{
+	return phy->ver_info->version;
+}
+
 static int dsi_phy_regmap_init(struct platform_device *pdev,
 			       struct msm_dsi_phy *phy)
 {
@@ -117,20 +122,29 @@ static int dsi_phy_regmap_init(struct platform_device *pdev,
 
 	phy->hw.base = ptr;
 
-	ptr = msm_ioremap(pdev, "dyn_refresh_base", phy->name);
-	phy->hw.dyn_pll_base = ptr;
-
 	pr_debug("[%s] map dsi_phy registers to %pK\n",
 		phy->name, phy->hw.base);
 
 	switch (phy->ver_info->version) {
 	case DSI_PHY_VERSION_2_0:
-	case DSI_PHY_VERSION_3_0:
 		ptr = msm_ioremap(pdev, "phy_clamp_base", phy->name);
 		if (IS_ERR(ptr))
 			phy->hw.phy_clamp_base = NULL;
 		else
 			phy->hw.phy_clamp_base = ptr;
+
+		ptr = msm_ioremap(pdev, "dyn_refresh_base", phy->name);
+		if (IS_ERR(ptr))
+			phy->hw.dyn_pll_base = NULL;
+		else
+			phy->hw.dyn_pll_base = ptr;
+		break;
+	case DSI_PHY_VERSION_3_0:
+		ptr = msm_ioremap(pdev, "dyn_refresh_base", phy->name);
+		if (IS_ERR(ptr))
+			phy->hw.dyn_pll_base = NULL;
+		else
+			phy->hw.dyn_pll_base = ptr;
 		break;
 	default:
 		break;
@@ -282,6 +296,32 @@ static int dsi_phy_parse_dt_per_lane_cfgs(struct platform_device *pdev,
 	return rc;
 }
 
+static int dsi_phy_parse_dt_per_lane_bits(struct platform_device *pdev,
+					  u8 *bits,
+					  char *property)
+{
+	int rc = 0, i = 0;
+	const u8 *data;
+	u32 len = 0;
+
+	data = of_get_property(pdev->dev.of_node, property, &len);
+	if (!data)
+		return 0;
+
+	if (len != DSI_LANE_MAX) {
+		pr_err("incorrect phy %s settings, exp=%d, act=%d\n",
+		       property, DSI_LANE_MAX, len);
+		return -EINVAL;
+	}
+
+	*bits = 0;
+
+	for (i = DSI_LOGICAL_LANE_0; i < DSI_LANE_MAX; i++)
+		*bits |= (data[i] & 0x01) << i;
+
+	return rc;
+}
+
 static int dsi_phy_settings_init(struct platform_device *pdev,
 				 struct msm_dsi_phy *phy)
 {
@@ -315,6 +355,13 @@ static int dsi_phy_settings_init(struct platform_device *pdev,
 			pr_err("failed to parse lane cfgs, rc=%d\n", rc);
 			goto err;
 		}
+	}
+
+	rc = dsi_phy_parse_dt_per_lane_bits(pdev, &phy->cfg.lane_pnswap,
+					    "qcom,platform-lane-pnswap");
+	if (rc) {
+		pr_err("failed to parse lane P/N swap map, rc=%d\n", rc);
+		goto err;
 	}
 
 	/* Actual timing values are dependent on panel */
@@ -714,6 +761,28 @@ error:
 	return rc;
 }
 
+int dsi_phy_set_idle_pc(struct msm_dsi_phy *dsi_phy, bool idle_pc_enabled)
+{
+	int rc = 0;
+
+	if (!dsi_phy) {
+		pr_err("PHY is NULL!!!\n");
+		return -EINVAL;
+	}
+
+	/* If PHY does not require special IdlePC handling, go out early */
+	if (!dsi_phy->hw.ops.set_idle_pc)
+		return 0;
+
+	mutex_lock(&dsi_phy->phy_lock);
+
+	dsi_phy->hw.ops.set_idle_pc(&dsi_phy->hw, idle_pc_enabled);
+
+	mutex_unlock(&dsi_phy->phy_lock);
+
+	return rc;
+}
+
 static int dsi_phy_enable_ulps(struct msm_dsi_phy *phy,
 		struct dsi_host_config *config, bool clamp_enabled)
 {
@@ -1089,6 +1158,33 @@ int dsi_phy_set_timing_params(struct msm_dsi_phy *phy,
 		rc = phy->hw.ops.phy_timing_val(&phy->cfg.timing, timing, size);
 	if (!rc)
 		phy->cfg.is_phy_timing_present = true;
+
+	mutex_unlock(&phy->phy_lock);
+	return rc;
+}
+
+/* TODO: Deduplicate this ASAP */
+int dsi_phy_set_timing_params_commit(struct msm_dsi_phy *phy,
+				     u32 *timing, u32 size)
+{
+	int rc = 0;
+
+	if (!phy || !timing || !size) {
+		pr_err("Invalid params\n");
+		return -EINVAL;
+	};
+
+	mutex_lock(&phy->phy_lock);
+
+	if (phy->hw.ops.phy_timing_val)
+		rc = phy->hw.ops.phy_timing_val(&phy->cfg.timing, timing, size);
+	if (!rc)
+		phy->cfg.is_phy_timing_present = true;
+
+	if (phy->hw.ops.commit_phy_timing)
+		phy->hw.ops.commit_phy_timing(&phy->hw, &phy->cfg.timing);
+	else
+		pr_warn("WARNING: No function to commit PHY timing!!\n");
 
 	mutex_unlock(&phy->phy_lock);
 	return rc;

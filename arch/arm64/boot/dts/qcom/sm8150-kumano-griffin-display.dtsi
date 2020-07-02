@@ -43,12 +43,19 @@
 	qcom,platform-touch-vddh-en-gpio = <&pm8150b_gpios 7 0>;
 	somc,disp-err-flag-gpio = <&tlmm 101 0>;
 
+	/* Enable HBM protected range */
+	somc,set-hbm-usable;
+
 	qcom,mdss-dsi-display-timings {
 		timing@0 {
 			qcom,display-topology = <2 2 1>;
 			qcom,default-topology-index = <0>;
 			qcom,mdss-dsi-panel-phy-timings = [00 21 08 08 25 22 09 08 06 02 04 00 1B 18];
 		};
+
+		/* For Google Maps crazy resolution switching issue... */
+		/delete-node/ timing@0;
+
 		timing@1 {
 			qcom,display-topology = <2 2 1>;
 			qcom,default-topology-index = <0>;

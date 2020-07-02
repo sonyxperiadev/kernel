@@ -315,12 +315,11 @@
 		qcom,leds@d800 {
 			somc,init-br-ua = <622>;
 			somc-s1,br-power-save-ua = <800>;
-			qcom,led-strings-list = [00];
-			qcom,ilim-ma = <660>;
+			qcom,enabled-strings = <0>;
 			qcom,fdbk-output = "wled1";
-			qcom,ilim-ma = <385>;
+			qcom,current-boost-limit = <385>;
 			qcom,sync-dly-us = <0>;
-			qcom,fs-curr-ua = <10000>;
+			qcom,current-limit-microamp = <10000>;
 		};
 	};
 };

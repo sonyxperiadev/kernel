@@ -592,7 +592,7 @@ config DEBUG_KMEMLEAK_EARLY_LOG_SIZE
 	int "Maximum kmemleak early log entries"
 	depends on DEBUG_KMEMLEAK
 	range 200 40000
-	default 400
+	default 16000
 	help
 	  Kmemleak must track all the memory allocations to avoid
 	  reporting false positives. Since memory may be allocated or
@@ -2006,6 +2006,7 @@ config TEST_KMOD
 	depends on m
 	depends on BLOCK && (64BIT || LBDAF)	  # for XFS, BTRFS
 	depends on NETDEVICES && NET_CORE && INET # for TUN
+	depends on BLOCK
 	select TEST_LKM
 	select XFS_FS
 	select TUN
@@ -2034,6 +2035,14 @@ config TEST_DEBUG_VIRTUAL
 	  Test the kernel's ability to detect incorrect calls to
 	  virt_to_phys() done against the non-linear part of the
 	  kernel's virtual address map.
+
+	  If unsure, say N.
+
+config TEST_MEMCAT_P
+	tristate "Test memcat_p() helper function"
+	help
+	  Test the memcat_p() helper for correctly merging two
+	  pointer arrays together.
 
 	  If unsure, say N.
 

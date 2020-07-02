@@ -54,6 +54,12 @@ static int msm_isp_composite_stats_irq(struct vfe_device *vfe_dev,
 				struct msm_vfe_stats_stream *stream_info,
 				enum msm_isp_comp_irq_types irq)
 {
+	/* for dual vfe mode need not check anything*/
+	if (vfe_dev->dual_vfe_sync_mode) {
+		stream_info->composite_irq[irq] = 0;
+		return 0;
+	}
+
 	/* interrupt recv on same vfe w/o recv on other vfe */
 	if (stream_info->composite_irq[irq] & (1 << vfe_dev->pdev->id)) {
 		pr_err("%s: irq %d out of sync for dual vfe on vfe %d\n",
@@ -306,7 +312,7 @@ static int32_t msm_isp_stats_configure(struct vfe_device *vfe_dev,
 }
 
 void msm_isp_process_stats_irq(struct vfe_device *vfe_dev,
-	uint32_t irq_status0, uint32_t irq_status1,
+	uint32_t irq_status0, uint32_t irq_status1, uint32_t dual_irq_status,
 	uint32_t pingpong_status, struct msm_isp_timestamp *ts)
 {
 	int j, rc;
@@ -316,10 +322,19 @@ void msm_isp_process_stats_irq(struct vfe_device *vfe_dev,
 	uint32_t num_stats_comp_mask =
 		vfe_dev->hw_info->stats_hw_info->num_stats_comp_mask;
 
-	stats_comp_mask = vfe_dev->hw_info->vfe_ops.stats_ops.
-		get_comp_mask(irq_status0, irq_status1);
-	stats_irq_mask = vfe_dev->hw_info->vfe_ops.stats_ops.
-		get_wm_mask(irq_status0, irq_status1);
+	if (vfe_dev->dual_vfe_sync_mode)
+		stats_comp_mask =
+		vfe_dev->hw_info->vfe_ops.stats_ops.get_comp_mask(
+			dual_irq_status, irq_status1);
+	else
+		stats_comp_mask =
+		vfe_dev->hw_info->vfe_ops.stats_ops.get_comp_mask(
+			irq_status0, irq_status1);
+
+	stats_irq_mask =
+		vfe_dev->hw_info->vfe_ops.stats_ops.get_wm_mask(
+			irq_status0, irq_status1);
+
 	if (!(stats_comp_mask || stats_irq_mask))
 		return;
 

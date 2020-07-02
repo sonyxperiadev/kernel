@@ -29,6 +29,10 @@
 static void *ion_page_pool_alloc_pages(struct ion_page_pool *pool)
 {
 	struct page *page = alloc_pages(pool->gfp_mask, pool->order);
+	if (page) {
+		mod_node_page_state(page_pgdat(page), NR_ION_HEAP,
+				    1 << pool->order);
+	}
 
 	return page;
 }
@@ -37,6 +41,7 @@ static void ion_page_pool_free_pages(struct ion_page_pool *pool,
 				     struct page *page)
 {
 	__free_pages(page, pool->order);
+	mod_node_page_state(page_pgdat(page), NR_ION_HEAP, -(1 << pool->order));
 }
 
 static int ion_page_pool_add(struct ion_page_pool *pool, struct page *page)
@@ -50,8 +55,8 @@ static int ion_page_pool_add(struct ion_page_pool *pool, struct page *page)
 		pool->low_count++;
 	}
 
-	mod_node_page_state(page_pgdat(page), NR_INDIRECTLY_RECLAIMABLE_BYTES,
-			    (1 << (PAGE_SHIFT + pool->order)));
+	mod_node_page_state(page_pgdat(page), NR_ION_HEAP_POOL,
+			    (1 << pool->order));
 	mutex_unlock(&pool->mutex);
 	return 0;
 }
@@ -71,8 +76,8 @@ static struct page *ion_page_pool_remove(struct ion_page_pool *pool, bool high)
 	}
 
 	list_del(&page->lru);
-	mod_node_page_state(page_pgdat(page), NR_INDIRECTLY_RECLAIMABLE_BYTES,
-			    -(1 << (PAGE_SHIFT + pool->order)));
+	mod_node_page_state(page_pgdat(page), NR_ION_HEAP_POOL,
+			    -(1 << pool->order));
 	return page;
 }
 

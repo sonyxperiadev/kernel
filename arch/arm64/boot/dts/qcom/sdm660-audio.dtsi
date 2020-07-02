@@ -159,16 +159,16 @@
 		qcom,cdc-vdd-pa-voltage = <2040000 2040000>;
 		qcom,cdc-vdd-pa-current = <260000>;
 
-		cdc-vdd-mic-bias-supply = <&pm660l_l7>;
-		qcom,cdc-vdd-mic-bias-voltage = <3088000 3088000>;
-		qcom,cdc-vdd-mic-bias-current = <5000>;
+		cdc-vdd-mbias-supply = <&pm660l_l7>;
+		qcom,cdc-vdd-mbias-voltage = <3088000 3088000>;
+		qcom,cdc-vdd-mbias-current = <5000>;
 
 		qcom,cdc-mclk-clk-rate = <9600000>;
 
 		qcom,cdc-static-supplies = "cdc-vdda-cp",
 					   "cdc-vdd-pa";
 
-		qcom,cdc-on-demand-supplies = "cdc-vdd-mic-bias";
+		qcom,cdc-on-demand-supplies = "cdc-vdd-mbias";
 
 		/*
 		 * Not marking address @ as driver searches this child

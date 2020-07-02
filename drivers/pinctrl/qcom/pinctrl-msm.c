@@ -934,8 +934,6 @@ static struct irq_chip msm_gpio_irq_chip = {
 	.irq_set_wake   = msm_gpio_irq_set_wake,
 	.irq_request_resources    = msm_gpiochip_irq_reqres,
 	.irq_release_resources	  = msm_gpiochip_irq_relres,
-	.flags                    = IRQCHIP_MASK_ON_SUSPEND |
-					IRQCHIP_SKIP_SET_WAKE,
 };
 
 static void msm_gpio_domain_set_info(struct irq_domain *d, unsigned int irq,
@@ -1640,7 +1638,7 @@ static void msm_gpio_setup_dir_connects(struct msm_pinctrl *pctrl)
 		if (!gpio_in->init)
 			continue;
 
-		irq = irq_find_mapping(pctrl->chip.irqdomain, gpio_in->gpio);
+		irq = irq_create_mapping(pctrl->chip.irqdomain, gpio_in->gpio);
 		d = irq_get_irq_data(irq);
 		if (!d)
 			continue;
@@ -1692,11 +1690,24 @@ static int msm_gpio_init(struct msm_pinctrl *pctrl)
 		return ret;
 	}
 
-	ret = gpiochip_add_pin_range(&pctrl->chip, dev_name(pctrl->dev), 0, 0, chip->ngpio);
-	if (ret) {
-		dev_err(pctrl->dev, "Failed to add pin range\n");
-		gpiochip_remove(&pctrl->chip);
-		return ret;
+	/*
+	 * For DeviceTree-supported systems, the gpio core checks the
+	 * pinctrl's device node for the "gpio-ranges" property.
+	 * If it is present, it takes care of adding the pin ranges
+	 * for the driver. In this case the driver can skip ahead.
+	 *
+	 * In order to remain compatible with older, existing DeviceTree
+	 * files which don't set the "gpio-ranges" property or systems that
+	 * utilize ACPI the driver has to call gpiochip_add_pin_range().
+	 */
+	if (!of_property_read_bool(pctrl->dev->of_node, "gpio-ranges")) {
+		ret = gpiochip_add_pin_range(&pctrl->chip,
+			dev_name(pctrl->dev), 0, 0, chip->ngpio);
+		if (ret) {
+			dev_err(pctrl->dev, "Failed to add pin range\n");
+			gpiochip_remove(&pctrl->chip);
+			return ret;
+		}
 	}
 
 	irq_parent = of_irq_find_parent(chip->of_node);

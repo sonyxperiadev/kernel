@@ -22,6 +22,8 @@
 
 #include <soc/qcom/secure_buffer.h>
 
+#include "sharedmem_qmi.h"
+
 #define CLIENT_ID_PROP "qcom,client-id"
 #define MPSS_RMTS_CLIENT_ID 1
 
@@ -109,6 +111,7 @@ static int msm_sharedmem_probe(struct platform_device *pdev)
 	phys_addr_t shared_mem_pyhsical = 0;
 	bool is_addr_dynamic = false;
 	bool guard_memory = false;
+	struct sharemem_qmi_entry qmi_entry;
 
 	/* Get the addresses from platform-data */
 	if (!pdev->dev.of_node) {
@@ -187,6 +190,13 @@ static int msm_sharedmem_probe(struct platform_device *pdev)
 	}
 	dev_set_drvdata(&pdev->dev, info);
 
+	qmi_entry.client_id = client_id;
+	qmi_entry.client_name = info->name;
+	qmi_entry.address = info->mem[0].addr;
+	qmi_entry.size = info->mem[0].size;
+	qmi_entry.is_addr_dynamic = is_addr_dynamic;
+
+	sharedmem_qmi_add_entry(&qmi_entry);
 	pr_info("Device created for client '%s'\n", clnt_res->name);
 out:
 	return ret;
@@ -222,9 +232,13 @@ static int __init msm_sharedmem_init(void)
 {
 	int result;
 
+	result = sharedmem_qmi_init();
+	if (result < 0)
+		pr_err("%s: Cannot init QMI service\n", __func__);
+
 	result = platform_driver_register(&msm_sharedmem_driver);
 	if (result != 0) {
-		pr_err("Platform driver registration failed\n");
+		pr_err("%s: Platform driver registration failed\n", __func__);
 		return result;
 	}
 	return 0;
@@ -233,6 +247,7 @@ static int __init msm_sharedmem_init(void)
 static void __exit msm_sharedmem_exit(void)
 {
 	platform_driver_unregister(&msm_sharedmem_driver);
+	sharedmem_qmi_exit();
 }
 
 module_init(msm_sharedmem_init);

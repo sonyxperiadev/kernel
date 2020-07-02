@@ -226,7 +226,7 @@ static void * r10buf_pool_alloc(gfp_t gfp_flags, void *data)
 
 out_free_pages:
 	while (--j >= 0)
-		resync_free_pages(&rps[j * 2]);
+		resync_free_pages(&rps[j]);
 
 	j = 0;
 out_free_bio:
@@ -1190,7 +1190,9 @@ static void raid10_read_request(struct mddev *mddev, struct bio *bio,
 		struct bio *split = bio_split(bio, max_sectors,
 					      gfp, conf->bio_split);
 		bio_chain(split, bio);
+		allow_barrier(conf);
 		generic_make_request(bio);
+		wait_barrier(conf);
 		bio = split;
 		r10_bio->master_bio = bio;
 		r10_bio->sectors = max_sectors;
@@ -1479,7 +1481,9 @@ retry_write:
 		struct bio *split = bio_split(bio, r10_bio->sectors,
 					      GFP_NOIO, conf->bio_split);
 		bio_chain(split, bio);
+		allow_barrier(conf);
 		generic_make_request(bio);
+		wait_barrier(conf);
 		bio = split;
 		r10_bio->master_bio = bio;
 	}
@@ -3817,6 +3821,8 @@ static int raid10_run(struct mddev *mddev)
 		set_bit(MD_RECOVERY_RUNNING, &mddev->recovery);
 		mddev->sync_thread = md_register_thread(md_do_sync, mddev,
 							"reshape");
+		if (!mddev->sync_thread)
+			goto out_free_conf;
 	}
 
 	return 0;
@@ -4491,7 +4497,6 @@ read_more:
 	atomic_inc(&r10_bio->remaining);
 	read_bio->bi_next = NULL;
 	generic_make_request(read_bio);
-	sector_nr += nr_sectors;
 	sectors_done += nr_sectors;
 	if (sector_nr <= last)
 		goto read_more;
@@ -4591,14 +4596,17 @@ static int handle_reshape_read_error(struct mddev *mddev,
 	/* Use sync reads to get the blocks from somewhere else */
 	int sectors = r10_bio->sectors;
 	struct r10conf *conf = mddev->private;
-	struct {
-		struct r10bio r10_bio;
-		struct r10dev devs[conf->copies];
-	} on_stack;
-	struct r10bio *r10b = &on_stack.r10_bio;
+	struct r10bio *r10b;
 	int slot = 0;
 	int idx = 0;
 	struct page **pages;
+
+	r10b = kmalloc(sizeof(*r10b) +
+	       sizeof(struct r10dev) * conf->copies, GFP_NOIO);
+	if (!r10b) {
+		set_bit(MD_RECOVERY_INTR, &mddev->recovery);
+		return -ENOMEM;
+	}
 
 	/* reshape IOs share pages from .devs[0].bio */
 	pages = get_resync_pages(r10_bio->devs[0].bio)->pages;
@@ -4648,11 +4656,13 @@ static int handle_reshape_read_error(struct mddev *mddev,
 			/* couldn't read this block, must give up */
 			set_bit(MD_RECOVERY_INTR,
 				&mddev->recovery);
+			kfree(r10b);
 			return -EIO;
 		}
 		sectors -= s;
 		idx++;
 	}
+	kfree(r10b);
 	return 0;
 }
 

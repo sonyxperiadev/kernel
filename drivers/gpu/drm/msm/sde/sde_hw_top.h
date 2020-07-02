@@ -126,14 +126,6 @@ struct sde_hw_mdp_ops {
 			struct split_pipe_cfg *cfg);
 
 	/**
-	 * setup_cdm_output() : Setup selection control of the cdm data path
-	 * @mdp  : mdp top context driver
-	 * @cfg  : cdm output configuration
-	 */
-	void (*setup_cdm_output)(struct sde_hw_mdp *mdp,
-			struct cdm_output_cfg *cfg);
-
-	/**
 	 * setup_traffic_shaper() : Setup traffic shaper control
 	 * @mdp  : mdp top context driver
 	 * @cfg  : traffic shaper configuration
@@ -196,10 +188,24 @@ struct sde_hw_mdp_ops {
 	void (*reset_ubwc)(struct sde_hw_mdp *mdp, struct sde_mdss_cfg *m);
 
 	/**
+	 * intf_dp_select - select phy for DP controller
+	 * @mdp: mdp top context driver
+	 * @m: pointer to mdss catalog data
+	 */
+	void (*intf_dp_select)(struct sde_hw_mdp *mdp, struct sde_mdss_cfg *m);
+
+	/**
 	 * intf_audio_select - select the external interface for audio
 	 * @mdp: mdp top context driver
 	 */
 	void (*intf_audio_select)(struct sde_hw_mdp *mdp);
+
+	/**
+	 * set_mdp_hw_events - enable qdss hardware events for mdp
+	 * @mdp: mdp top context driver
+	 * @enable: enable/disable hw events
+	 */
+	void (*set_mdp_hw_events)(struct sde_hw_mdp *mdp, bool enable);
 
 	/**
 	 * set_cwb_ppb_cntl - select the data point for CWB
@@ -222,6 +228,26 @@ struct sde_hw_mdp {
 	/* ops */
 	struct sde_hw_mdp_ops ops;
 };
+
+struct sde_hw_sid {
+	/* rotator base */
+	struct sde_hw_blk_reg_map hw;
+};
+
+/**
+ * sde_hw_sid_rotator_set - initialize the sid blk reg map
+ * @addr: Mapped register io address
+ * @sid_len: Length of block
+ * @m: Pointer to mdss catalog data
+ */
+struct sde_hw_sid *sde_hw_sid_init(void __iomem *addr,
+		u32 sid_len, const struct sde_mdss_cfg *m);
+
+/**
+ * sde_hw_sid_rotator_set - set sid values for rotator
+ * sid: sde_hw_sid passed from kms
+ */
+void sde_hw_sid_rotator_set(struct sde_hw_sid *sid);
 
 /**
  * to_sde_hw_mdp - convert base object sde_hw_base to container

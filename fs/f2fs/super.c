@@ -1142,20 +1142,23 @@ static int f2fs_statfs_project(struct super_block *sb,
 		return PTR_ERR(dquot);
 	spin_lock(&dq_data_lock);
 
-	limit = (dquot->dq_dqb.dqb_bsoftlimit ?
-		 dquot->dq_dqb.dqb_bsoftlimit :
-		 dquot->dq_dqb.dqb_bhardlimit) >> sb->s_blocksize_bits;
+	limit = min_not_zero(dquot->dq_dqb.dqb_bsoftlimit,
+					dquot->dq_dqb.dqb_bhardlimit);
+	if (limit)
+		limit >>= sb->s_blocksize_bits;
+
 	if (limit && buf->f_blocks > limit) {
-		curblock = dquot->dq_dqb.dqb_curspace >> sb->s_blocksize_bits;
+		curblock = (dquot->dq_dqb.dqb_curspace +
+			    dquot->dq_dqb.dqb_rsvspace) >> sb->s_blocksize_bits;
 		buf->f_blocks = limit;
 		buf->f_bfree = buf->f_bavail =
 			(buf->f_blocks > curblock) ?
 			 (buf->f_blocks - curblock) : 0;
 	}
 
-	limit = dquot->dq_dqb.dqb_isoftlimit ?
-		dquot->dq_dqb.dqb_isoftlimit :
-		dquot->dq_dqb.dqb_ihardlimit;
+	limit = min_not_zero(dquot->dq_dqb.dqb_isoftlimit,
+					dquot->dq_dqb.dqb_ihardlimit);
+
 	if (limit && buf->f_files > limit) {
 		buf->f_files = limit;
 		buf->f_ffree =
@@ -1879,6 +1882,12 @@ void f2fs_quota_off_umount(struct super_block *sb)
 			set_sbi_flag(F2FS_SB(sb), SBI_NEED_FSCK);
 		}
 	}
+	/*
+	 * In case of checkpoint=disable, we must flush quota blocks.
+	 * This can cause NULL exception for node_inode in end_io, since
+	 * put_super already dropped it.
+	 */
+	sync_filesystem(sb);
 }
 
 static void f2fs_truncate_quota_inode_pages(struct super_block *sb)
@@ -2195,16 +2204,18 @@ static inline bool sanity_check_area_boundary(struct f2fs_sb_info *sbi,
 static int sanity_check_raw_super(struct f2fs_sb_info *sbi,
 				struct buffer_head *bh)
 {
+	block_t segment_count, segs_per_sec, secs_per_zone;
+	block_t total_sections, blocks_per_seg;
 	struct f2fs_super_block *raw_super = (struct f2fs_super_block *)
 					(bh->b_data + F2FS_SUPER_OFFSET);
 	struct super_block *sb = sbi->sb;
 	unsigned int blocksize;
 
-	if (F2FS_SUPER_MAGIC != le32_to_cpu(raw_super->magic)) {
+	if (le32_to_cpu(raw_super->magic) != F2FS_SUPER_MAGIC) {
 		f2fs_msg(sb, KERN_INFO,
 			"Magic Mismatch, valid(0x%x) - read(0x%x)",
 			F2FS_SUPER_MAGIC, le32_to_cpu(raw_super->magic));
-		return 1;
+		return -EINVAL;
 	}
 
 	/* Currently, support only 4KB page cache size */
@@ -2212,7 +2223,7 @@ static int sanity_check_raw_super(struct f2fs_sb_info *sbi,
 		f2fs_msg(sb, KERN_INFO,
 			"Invalid page_cache_size (%lu), supports only 4KB\n",
 			PAGE_SIZE);
-		return 1;
+		return -EFSCORRUPTED;
 	}
 
 	/* Currently, support only 4KB block size */
@@ -2221,7 +2232,7 @@ static int sanity_check_raw_super(struct f2fs_sb_info *sbi,
 		f2fs_msg(sb, KERN_INFO,
 			"Invalid blocksize (%u), supports only 4KB\n",
 			blocksize);
-		return 1;
+		return -EFSCORRUPTED;
 	}
 
 	/* check log blocks per segment */
@@ -2229,7 +2240,7 @@ static int sanity_check_raw_super(struct f2fs_sb_info *sbi,
 		f2fs_msg(sb, KERN_INFO,
 			"Invalid log blocks per segment (%u)\n",
 			le32_to_cpu(raw_super->log_blocks_per_seg));
-		return 1;
+		return -EFSCORRUPTED;
 	}
 
 	/* Currently, support 512/1024/2048/4096 bytes sector size */
@@ -2239,7 +2250,7 @@ static int sanity_check_raw_super(struct f2fs_sb_info *sbi,
 				F2FS_MIN_LOG_SECTOR_SIZE) {
 		f2fs_msg(sb, KERN_INFO, "Invalid log sectorsize (%u)",
 			le32_to_cpu(raw_super->log_sectorsize));
-		return 1;
+		return -EFSCORRUPTED;
 	}
 	if (le32_to_cpu(raw_super->log_sectors_per_block) +
 		le32_to_cpu(raw_super->log_sectorsize) !=
@@ -2248,7 +2259,69 @@ static int sanity_check_raw_super(struct f2fs_sb_info *sbi,
 			"Invalid log sectors per block(%u) log sectorsize(%u)",
 			le32_to_cpu(raw_super->log_sectors_per_block),
 			le32_to_cpu(raw_super->log_sectorsize));
-		return 1;
+		return -EFSCORRUPTED;
+	}
+
+	segment_count = le32_to_cpu(raw_super->segment_count);
+	segs_per_sec = le32_to_cpu(raw_super->segs_per_sec);
+	secs_per_zone = le32_to_cpu(raw_super->secs_per_zone);
+	total_sections = le32_to_cpu(raw_super->section_count);
+
+	/* blocks_per_seg should be 512, given the above check */
+	blocks_per_seg = 1 << le32_to_cpu(raw_super->log_blocks_per_seg);
+
+	if (segment_count > F2FS_MAX_SEGMENT ||
+				segment_count < F2FS_MIN_SEGMENTS) {
+		f2fs_msg(sb, KERN_INFO,
+			"Invalid segment count (%u)",
+			segment_count);
+		return -EFSCORRUPTED;
+	}
+
+	if (total_sections > segment_count ||
+			total_sections < F2FS_MIN_SEGMENTS ||
+			segs_per_sec > segment_count || !segs_per_sec) {
+		f2fs_msg(sb, KERN_INFO,
+			"Invalid segment/section count (%u, %u x %u)",
+			segment_count, total_sections, segs_per_sec);
+		return -EFSCORRUPTED;
+	}
+
+	if ((segment_count / segs_per_sec) < total_sections) {
+		f2fs_msg(sb, KERN_INFO,
+			"Small segment_count (%u < %u * %u)",
+			segment_count, segs_per_sec, total_sections);
+		return -EFSCORRUPTED;
+	}
+
+	if (segment_count > (le64_to_cpu(raw_super->block_count) >> 9)) {
+		f2fs_msg(sb, KERN_INFO,
+			"Wrong segment_count / block_count (%u > %llu)",
+			segment_count, le64_to_cpu(raw_super->block_count));
+		return -EFSCORRUPTED;
+	}
+
+	if (secs_per_zone > total_sections || !secs_per_zone) {
+		f2fs_msg(sb, KERN_INFO,
+			"Wrong secs_per_zone / total_sections (%u, %u)",
+			secs_per_zone, total_sections);
+		return -EFSCORRUPTED;
+	}
+	if (le32_to_cpu(raw_super->extension_count) > F2FS_MAX_EXTENSION) {
+		f2fs_msg(sb, KERN_INFO,
+			"Corrupted extension count (%u > %u)",
+			le32_to_cpu(raw_super->extension_count),
+			F2FS_MAX_EXTENSION);
+		return -EFSCORRUPTED;
+	}
+
+	if (le32_to_cpu(raw_super->cp_payload) >
+				(blocks_per_seg - F2FS_CP_PACKS)) {
+		f2fs_msg(sb, KERN_INFO,
+			"Insane cp_payload (%u > %u)",
+			le32_to_cpu(raw_super->cp_payload),
+			blocks_per_seg - F2FS_CP_PACKS);
+		return -EFSCORRUPTED;
 	}
 
 	/* check reserved ino info */
@@ -2260,19 +2333,12 @@ static int sanity_check_raw_super(struct f2fs_sb_info *sbi,
 			le32_to_cpu(raw_super->node_ino),
 			le32_to_cpu(raw_super->meta_ino),
 			le32_to_cpu(raw_super->root_ino));
-		return 1;
-	}
-
-	if (le32_to_cpu(raw_super->segment_count) > F2FS_MAX_SEGMENT) {
-		f2fs_msg(sb, KERN_INFO,
-			"Invalid segment count (%u)",
-			le32_to_cpu(raw_super->segment_count));
-		return 1;
+		return -EFSCORRUPTED;
 	}
 
 	/* check CP/SIT/NAT/SSA/MAIN_AREA area boundary */
 	if (sanity_check_area_boundary(sbi, bh))
-		return 1;
+		return -EFSCORRUPTED;
 
 	return 0;
 }
@@ -2287,7 +2353,10 @@ int sanity_check_ckpt(struct f2fs_sb_info *sbi)
 	unsigned int sit_segs, nat_segs;
 	unsigned int sit_bitmap_size, nat_bitmap_size;
 	unsigned int log_blocks_per_seg;
-	int i;
+	unsigned int segment_count_main;
+	unsigned int cp_pack_start_sum, cp_payload;
+	block_t user_block_count;
+	int i, j;
 
 	total = le32_to_cpu(raw_super->segment_count);
 	fsmeta = le32_to_cpu(raw_super->segment_count_ckpt);
@@ -2311,6 +2380,16 @@ int sanity_check_ckpt(struct f2fs_sb_info *sbi)
 		return 1;
 	}
 
+	user_block_count = le64_to_cpu(ckpt->user_block_count);
+	segment_count_main = le32_to_cpu(raw_super->segment_count_main);
+	log_blocks_per_seg = le32_to_cpu(raw_super->log_blocks_per_seg);
+	if (!user_block_count || user_block_count >=
+			segment_count_main << log_blocks_per_seg) {
+		f2fs_msg(sbi->sb, KERN_ERR,
+			"Wrong user_block_count: %u", user_block_count);
+		return 1;
+	}
+
 	main_segs = le32_to_cpu(raw_super->segment_count_main);
 	blocks_per_seg = sbi->blocks_per_seg;
 
@@ -2318,22 +2397,64 @@ int sanity_check_ckpt(struct f2fs_sb_info *sbi)
 		if (le32_to_cpu(ckpt->cur_node_segno[i]) >= main_segs ||
 			le16_to_cpu(ckpt->cur_node_blkoff[i]) >= blocks_per_seg)
 			return 1;
+		for (j = i + 1; j < NR_CURSEG_NODE_TYPE; j++) {
+			if (le32_to_cpu(ckpt->cur_node_segno[i]) ==
+				le32_to_cpu(ckpt->cur_node_segno[j])) {
+				f2fs_msg(sbi->sb, KERN_ERR,
+					"Node segment (%u, %u) has the same "
+					"segno: %u", i, j,
+					le32_to_cpu(ckpt->cur_node_segno[i]));
+				return 1;
+			}
+		}
 	}
 	for (i = 0; i < NR_CURSEG_DATA_TYPE; i++) {
 		if (le32_to_cpu(ckpt->cur_data_segno[i]) >= main_segs ||
 			le16_to_cpu(ckpt->cur_data_blkoff[i]) >= blocks_per_seg)
 			return 1;
+		for (j = i + 1; j < NR_CURSEG_DATA_TYPE; j++) {
+			if (le32_to_cpu(ckpt->cur_data_segno[i]) ==
+				le32_to_cpu(ckpt->cur_data_segno[j])) {
+				f2fs_msg(sbi->sb, KERN_ERR,
+					"Data segment (%u, %u) has the same "
+					"segno: %u", i, j,
+					le32_to_cpu(ckpt->cur_data_segno[i]));
+				return 1;
+			}
+		}
+	}
+	for (i = 0; i < NR_CURSEG_NODE_TYPE; i++) {
+		for (j = 0; j < NR_CURSEG_DATA_TYPE; j++) {
+			if (le32_to_cpu(ckpt->cur_node_segno[i]) ==
+				le32_to_cpu(ckpt->cur_data_segno[j])) {
+				f2fs_msg(sbi->sb, KERN_ERR,
+					"Node segment (%u) and Data segment (%u)"
+					" has the same segno: %u", i, j,
+					le32_to_cpu(ckpt->cur_node_segno[i]));
+				return 1;
+			}
+		}
 	}
 
 	sit_bitmap_size = le32_to_cpu(ckpt->sit_ver_bitmap_bytesize);
 	nat_bitmap_size = le32_to_cpu(ckpt->nat_ver_bitmap_bytesize);
-	log_blocks_per_seg = le32_to_cpu(raw_super->log_blocks_per_seg);
 
 	if (sit_bitmap_size != ((sit_segs / 2) << log_blocks_per_seg) / 8 ||
 		nat_bitmap_size != ((nat_segs / 2) << log_blocks_per_seg) / 8) {
 		f2fs_msg(sbi->sb, KERN_ERR,
 			"Wrong bitmap size: sit: %u, nat:%u",
 			sit_bitmap_size, nat_bitmap_size);
+		return 1;
+	}
+
+	cp_pack_start_sum = __start_sum_addr(sbi);
+	cp_payload = __cp_payload(sbi);
+	if (cp_pack_start_sum < cp_payload + 1 ||
+		cp_pack_start_sum > blocks_per_seg - 1 -
+			NR_CURSEG_TYPE) {
+		f2fs_msg(sbi->sb, KERN_ERR,
+			"Wrong cp_pack_start_sum: %u",
+			cp_pack_start_sum);
 		return 1;
 	}
 
@@ -2398,8 +2519,12 @@ static int init_percpu_info(struct f2fs_sb_info *sbi)
 	if (err)
 		return err;
 
-	return percpu_counter_init(&sbi->total_valid_inode_count, 0,
+	err = percpu_counter_init(&sbi->total_valid_inode_count, 0,
 								GFP_KERNEL);
+	if (err)
+		percpu_counter_destroy(&sbi->alloc_valid_block_count);
+
+	return err;
 }
 
 #ifdef CONFIG_BLK_DEV_ZONED
@@ -2498,11 +2623,11 @@ static int read_raw_super_block(struct f2fs_sb_info *sbi,
 		}
 
 		/* sanity checking of raw super */
-		if (sanity_check_raw_super(sbi, bh)) {
+		err = sanity_check_raw_super(sbi, bh);
+		if (err) {
 			f2fs_msg(sb, KERN_ERR,
 				"Can't find valid F2FS filesystem in %dth superblock",
 				block + 1);
-			err = -EINVAL;
 			brelse(bh);
 			continue;
 		}

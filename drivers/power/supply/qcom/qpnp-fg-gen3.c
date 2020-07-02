@@ -326,7 +326,7 @@ static struct fg_sram_param pmi8998_v1_sram_params[] = {
 		1, 0, NULL, fg_decode_default),
 	PARAM(SOC_MONOTONIC, MONOTONIC_SOC_WORD, MONOTONIC_SOC_OFFSET, 2, 1,
 		1, 0, NULL, fg_decode_default),
-	PARAM(SOC_CUTOFF, SOC_CUTOFF_WORD, SOC_CUTOFF_OFFSET, 2, 1,
+	PARAM(CUTOFF_SOC, SOC_CUTOFF_WORD, SOC_CUTOFF_OFFSET, 2, 1,
 		1, 0, NULL, fg_decode_default),
 	PARAM(SOC_FULL, FULL_SOC_WORD, FULL_SOC_OFFSET, 2, 1,
 		1, 0, NULL, fg_decode_default),
@@ -430,7 +430,7 @@ static struct fg_sram_param pmi8998_v2_sram_params[] = {
 		1, 0, NULL, fg_decode_default),
 	PARAM(SOC_MONOTONIC, MONOTONIC_SOC_WORD, MONOTONIC_SOC_OFFSET, 2, 1,
 		1, 0, NULL, fg_decode_default),
-	PARAM(SOC_CUTOFF, SOC_CUTOFF_WORD, SOC_CUTOFF_OFFSET, 2, 1,
+	PARAM(CUTOFF_SOC, SOC_CUTOFF_WORD, SOC_CUTOFF_OFFSET, 2, 1,
 		1, 0, NULL, fg_decode_default),
 	PARAM(SOC_FULL, FULL_SOC_WORD, FULL_SOC_OFFSET, 2, 1,
 		1, 0, NULL, fg_decode_default),
@@ -725,7 +725,6 @@ static bool is_debug_batt_id(struct fg_dev *fg)
 }
 
 #define DEBUG_BATT_SOC	67
-#define BATT_MISS_SOC	50
 #ifdef CONFIG_QPNP_SMBFG_NEWGEN_EXTENSION
 #define	UNKNOWN_BATT_SOC	20
 #endif
@@ -5581,7 +5580,7 @@ static ssize_t fg_somc_param_show(struct device *dev,
 					false, buf, PAGE_SIZE);
 		break;
 	case ATTR_SOC_CUTOFF:
-		size = fg_somc_get_sram_soc_str(fg, FG_SRAM_SOC_CUTOFF,
+		size = fg_somc_get_sram_soc_str(fg, FG_SRAM_CUTOFF_SOC,
 					SOC_MAX_RANGE, SOC_LSB,
 					false, buf, PAGE_SIZE);
 		break;

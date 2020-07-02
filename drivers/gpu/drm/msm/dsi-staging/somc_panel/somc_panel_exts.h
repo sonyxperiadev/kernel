@@ -223,6 +223,17 @@ struct dsi_m_plus {
 	m_plus_mode mode;
 };
 
+#define HBM_MAX_COOLDOWNS		3
+#define HBM_OFF_TIMER_MS		(3 * 60 * 1000)		// 3 mins
+#define HBM_ON_TIMER_MS			(10 * 60 * 1000)	// 10 mins
+
+struct dsi_samsung_hbm {
+	bool hbm_supported;
+	bool force_hbm_off;
+	int hbm_mode;
+	int ncooldowns;
+};
+
 /* lab/ibb control default data */
 #define OVR_LAB_VOLTAGE			BIT(0)
 #define OVR_IBB_VOLTAGE			BIT(1)
@@ -251,9 +262,13 @@ struct dsi_m_plus {
 #define SHORT_WORKER_ACTIVE		true
 #define SHORT_WORKER_PASSIVE		false
 #define SHORT_IRQF_DISABLED		0x00000020
-#define SHORT_IRQF_FLAGS		(SHORT_IRQF_DISABLED | IRQF_ONESHOT | \
-					 IRQF_TRIGGER_HIGH | IRQF_TRIGGER_RISING)
 
+#ifdef CONFIG_ARCH_SONY_SEINE
+ #define SHORT_IRQF_FLAGS		(IRQF_ONESHOT | IRQF_TRIGGER_RISING)
+#else
+ #define SHORT_IRQF_FLAGS		(SHORT_IRQF_DISABLED | IRQF_ONESHOT | \
+					 IRQF_TRIGGER_HIGH | IRQF_TRIGGER_RISING)
+#endif
 struct short_detection_ctrl {
 	struct delayed_work check_work;
 	int current_chatter_cnt;
@@ -316,7 +331,7 @@ struct somc_panel_color_mgr {
 	const struct drm_crtc_funcs *original_crtc_funcs;
 	struct drm_msm_pcc system_calibration_pcc;
 	struct drm_msm_pcc cached_pcc;
-	bool system_calibration_valid;
+	bool system_calibration_valid, cached_pcc_valid;
 };
 
 struct panel_specific_pdata {
@@ -333,6 +348,7 @@ struct panel_specific_pdata {
 	int reset_touch_gpio;
 	int touch_int_gpio;
 	int disp_vddio_gpio;
+	int disp_oled_vci_gpio;
 	int disp_dcdc_en_gpio;
 	int disp_err_fg_gpio;
 
@@ -342,6 +358,7 @@ struct panel_specific_pdata {
 	int touch_vddio_off;
 	int touch_intn_off;
 	int touch_reset_off;
+	int lp11_off;
 
 	struct dsi_reset_cfg on_seq;
 	struct dsi_reset_cfg off_seq;
@@ -357,11 +374,11 @@ struct panel_specific_pdata {
 	int sod_mode;
 	int pre_sod_mode;
 	int vr_mode;
-	int hbm_mode;
 	unsigned int aod_threshold;
 	bool light_state;
 
 	struct dsi_m_plus m_plus;
+	struct dsi_samsung_hbm hbm;
 
 	struct dsi_panel_labibb_data labibb;
 	struct short_detection_ctrl short_det;
@@ -451,6 +468,8 @@ void dsi_panel_driver_oled_short_det_enable(
 void dsi_panel_driver_oled_short_det_disable(
 			struct panel_specific_pdata *spec_pdata);
 int dsi_panel_driver_toggle_light_off(struct dsi_panel *panel, bool state);
+int somc_panel_set_dyn_hbm_backlight(struct dsi_panel *panel,
+				     int prev_bl_lvl, int bl_lvl);
 
 /* For incell driver */
 struct incell_ctrl *incell_get_info(void);

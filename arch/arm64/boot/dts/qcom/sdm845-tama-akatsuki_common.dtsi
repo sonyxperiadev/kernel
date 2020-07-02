@@ -341,7 +341,15 @@
 };
 
 &pmi8998_wled {
-	linux,name = "wled";
+	/* OLED panel */
+	status = "disabled";
+};
+
+&pmi8998_lsid1 {
+	qcom,leds-xboot@d800 {
+		/* Xboot splash */
+		somc,init-br-ua = <10000>;
+	};
 };
 
 &synaptics_clearpad {
@@ -411,22 +419,11 @@
 };
 
 &pmi8998_charger {
-	qcom,fv-max-uv = <4380000>;
 	somc,thermal-fcc-ua = <2400000 2200000 2000000
 				1800000 1500000 1400000
 				1300000 1000000 800000
 				700000 500000 200000
 				100000 0 0>;
-	somc,thermal-lo-volt-icl-ua = <2000000 1500000 1500000
-					1500000 1300000 1100000
-					1100000 1000000 900000
-					900000 500000 200000
-					100000 0 0>;
-	somc,thermal-hi-volt-icl-ua = <1700000 1700000 1700000
-					1700000 1500000 1500000
-					1000000 1000000 1000000
-					600000 500000 200000
-					100000 0 0>;
 	somc,thermal-dcin-icl-ua = <1000000 950000 900000
 					850000 800000 750000
 					700000 600000 500000
@@ -437,7 +434,6 @@
 					9000 9000 9000
 					9000 5000 5000
 					5000 5000 5000>;
-	somc,fake-charging-temp-level = <13>;
 	somc,wireless-support;
 	somc,jeita-use-aux-therm;
 	somc,jeita-use-wlc-therm;
@@ -456,18 +452,12 @@
 	somc,dc-l-volt-icl-ua = <1000000>;
 	somc,batt-temp-correction = <0>;
 	somc,wlc-temp-correction = <(-18)>;
-	qcom,hvdcp-disable;
 };
 
 &pmi8998_fg {
 	qcom,battery-data = <&tama_batterydata>;
 	qcom,fg-sys-term-current = <(-185)>;
 	qcom,fg-chg-term-current = <160>;
-};
-
-&pmi8998_pdphy {
-	qcom,default-sink-caps = <5000 2000>, /* 5V @ 2A */
-				 <9000 1700>; /* 9V @ 1.7A */
 };
 
 /* SoMC Akatsuki uses fixed DCDC instead of LAB/IBB for OLED panel */
