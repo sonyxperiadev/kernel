@@ -1526,6 +1526,10 @@ static int qpnp_lcdb_regulator_register(struct qpnp_lcdb *lcdb, u8 type)
 				(type == LDO) ? "LDO" : "NCP", rc);
 			return rc;
 		}
+
+		if (of_get_property(lcdb->dev->of_node,
+				    "vreg-cont-splash-enabled", NULL))
+			rdev->use_count = 1;
 	} else {
 		pr_err("%s_regulator name missing\n",
 				(type == LDO) ? "LDO" : "NCP");
