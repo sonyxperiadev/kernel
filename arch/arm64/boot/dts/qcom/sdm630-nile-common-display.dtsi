@@ -98,7 +98,7 @@
 			qcom,supply-name = "wqhd-vddio";
 			qcom,supply-min-voltage = <1700000>;
 			qcom,supply-max-voltage = <1900000>;
-			qcom,supply-enable-load = <7500>;
+			qcom,supply-enable-load = <32000>;
 			qcom,supply-disable-load = <80>;
 			qcom,supply-post-on-sleep = <10>;
 		};
@@ -108,7 +108,7 @@
 			qcom,supply-name = "lab";
 			qcom,supply-min-voltage = <5400000>;
 			qcom,supply-max-voltage = <5800000>;
-			qcom,supply-enable-load = <9700>;
+			qcom,supply-enable-load = <11000>;
 			qcom,supply-disable-load = <100>;
 			qcom,supply-post-on-sleep = <10>;
 			qcom,supply-post-off-sleep = <10>;
@@ -119,7 +119,7 @@
 			qcom,supply-name = "ibb";
 			qcom,supply-min-voltage = <5400000>;
 			qcom,supply-max-voltage = <5800000>;
-			qcom,supply-enable-load = <5800>;
+			qcom,supply-enable-load = <6000>;
 			qcom,supply-disable-load = <100>;
 			qcom,supply-post-on-sleep = <10>;
 			qcom,supply-post-off-sleep = <10>;
