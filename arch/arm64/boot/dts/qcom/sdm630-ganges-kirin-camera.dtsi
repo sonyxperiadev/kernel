@@ -252,8 +252,8 @@
 		qcom,hw-tsu-sta = <18>;
 		qcom,hw-thd-dat = <16>;
 		qcom,hw-thd-sta = <15>;
-		qcom,hw-tbuf = <19>;
-		qcom,hw-scl-stretch-en = <1>;
+		qcom,hw-tbuf = <24>;
+		qcom,hw-scl-stretch-en = <0>;
 		qcom,hw-trdhld = <3>;
 		qcom,hw-tsp = <3>;
 		qcom,cci-clk-src = <37500000>;
