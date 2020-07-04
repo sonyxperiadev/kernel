@@ -167,11 +167,22 @@
 		pinctrl-names = "cam_default", "cam_suspend";
 		pinctrl-0 = <&cam_sensor_mclk3_active &cam_sensor_rear2_active>;
 		pinctrl-1 = <&cam_sensor_mclk3_suspend &cam_sensor_rear2_suspend>;
-		gpios = <&tlmm 35 0>, <&tlmm 42 0>;
+		gpios = <&tlmm 35 0>,
+			<&tlmm 42 0>,
+			<&tlmm 52 0>,
+			<&tlmm 64 0>,
+			<&tlmm 13 0>;
 		qcom,gpio-reset = <1>;
-		qcom,gpio-req-tbl-num   = <0 1>;
-		qcom,gpio-req-tbl-flags = <1 0>;
-		qcom,gpio-req-tbl-label = "CAMIF_MCLK3", "CAM_RESET1";
+		qcom,gpio-vdig = <2>;
+		qcom,gpio-vana = <3>;
+		qcom,gpio-vio = <4>;
+		qcom,gpio-req-tbl-num = <0 1 2 3 4>;
+		qcom,gpio-req-tbl-flags = <1 0 0 0 0>;
+		qcom,gpio-req-tbl-label = "CAMIF_MCLK3",
+					  "CAM_RESET1",
+					  "CAM_VDIG",
+					  "CAM_VANA",
+					  "CAM_VIO";
 		qcom,sensor-position = <1>;
 		qcom,sensor-mode = <1>;
 		qcom,cci-master = <1>;
