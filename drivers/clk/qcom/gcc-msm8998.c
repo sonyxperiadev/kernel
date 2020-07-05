@@ -158,6 +158,7 @@ static struct pll_vco fabia_vco[] = {
 
 static unsigned int soft_vote_gpll0;
 
+/*
 static const struct alpha_pll_config gpll0_config = {
 	.l = 0x1F,
 	.alpha = 0x4000,
@@ -166,6 +167,7 @@ static const struct alpha_pll_config gpll0_config = {
 	.user_ctl_val = 0x1,
 	.user_ctl_hi_val = 0x00004805,
 };
+*/
 
 static const struct alpha_pll_config gpll4_config = {
 	.l = 0x13,
@@ -183,7 +185,7 @@ static struct clk_alpha_pll gpll0 = {
 	.soft_vote = &soft_vote_gpll0,
 	.soft_vote_mask = PLL_SOFT_VOTE_PRIMARY,
 	.flags = SUPPORTS_FSM_VOTE,
-	.config = &gpll0_config,
+	/* .config = &gpll0_config, */
 	.clkr = {
 		.enable_reg = 0x52000,
 		.enable_mask = BIT(0),
@@ -3286,7 +3288,8 @@ static int gcc_msm8998_probe(struct platform_device *pdev)
 			return ret;
 	}
 
-	clk_fabia_pll_configure(&gpll0, regmap, &gpll0_config);
+	// Do not configure GPLL0, or hypervisor will fault!!
+	//clk_fabia_pll_configure(&gpll0, regmap, &gpll0_config);
 	clk_fabia_pll_configure(&gpll4, regmap, &gpll4_config);
 
 	/*
