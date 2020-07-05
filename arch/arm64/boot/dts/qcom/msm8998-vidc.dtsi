@@ -99,6 +99,13 @@
 		qcom,clock-configs = <0x0 0x0 0x0 0x0 0x0 0x0
 				0x3 0x0 0x2 0x2 0x3 0x3>;
 
+		qcom,allowed-clock-rates =
+			/* TURBO      NOM
+			 *  SVS+      SVS       SVS-
+			 */
+			<533000000 444000000
+			 355200000 269330000 200000000>;
+
 		/* Buses */
 		bus_cnoc {
 			compatible = "qcom,msm-vidc,bus";
