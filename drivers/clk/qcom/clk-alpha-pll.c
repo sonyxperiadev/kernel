@@ -385,11 +385,10 @@ static int clk_alpha_pll_enable(struct clk_hw *hw)
 		if (ret)
 			return ret;
 		ret = wait_for_pll_enable_active(pll);
-		if (ret == 0) {
+		if (ret == 0)
 			if (pll->flags & SUPPORTS_FSM_VOTE)
 				*pll->soft_vote |= (pll->soft_vote_mask);
-			return ret;
-		}
+		return ret;
 	}
 
 	/* Skip if already enabled */
@@ -1218,11 +1217,10 @@ static int alpha_pll_fabia_enable(struct clk_hw *hw)
 		if (ret)
 			return ret;
 		ret = wait_for_pll_enable_active(pll);
-		if (ret == 0) {
+		if (ret == 0)
 			if (pll->flags & SUPPORTS_FSM_VOTE)
 				*pll->soft_vote |= (pll->soft_vote_mask);
-			return ret;
-		}
+		return ret;
 	}
 
 	ret = regmap_read(regmap, PLL_OPMODE(pll), &opmode_val);
