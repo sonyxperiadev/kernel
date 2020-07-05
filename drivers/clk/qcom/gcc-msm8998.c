@@ -160,37 +160,11 @@ static unsigned int soft_vote_gpll0;
 
 static const struct alpha_pll_config gpll0_config = {
 	.l = 0x1F,
-	.frac = 0x4000,
+	.alpha = 0x4000,
 	.config_ctl_val = 0x20485699,
 	.config_ctl_hi_val = 0x00002067,
 	.user_ctl_val = 0x1,
 	.user_ctl_hi_val = 0x00004805,
-};
-
-static const struct alpha_pll_config gpll1_config = {
-	.l = 0x37,
-	.frac = 0x1930,
-	.config_ctl_val = 0x20485699,
-	.config_ctl_hi_val = 0x00002067,
-	.user_ctl_val = 0x1,
-	.user_ctl_hi_val = 0x0000c805,
-};
-
-static const struct alpha_pll_config gpll2_config = {
-	.l = 0x15,
-	.frac = 0x8000,
-	.config_ctl_val = 0x20485699,
-	.config_ctl_hi_val = 0x00002067,
-	.user_ctl_val = 0x1,
-	.user_ctl_hi_val = 0x00004805,
-};
-
-static const struct alpha_pll_config gpll3_config = {
-	.l = 0x51,
-	.config_ctl_val = 0x20485699,
-	.config_ctl_hi_val = 0x00002067,
-	.user_ctl_val = 0x1,
-	.user_ctl_hi_val = 0x0000c805,
 };
 
 static const struct alpha_pll_config gpll4_config = {
@@ -260,102 +234,6 @@ static struct clk_alpha_pll_postdiv gpll0_out_main = {
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "gpll0_out_main",
 		.parent_names = (const char *[]){ "gpll0" },
-		.num_parents = 1,
-		.ops = &clk_alpha_pll_postdiv_fabia_ops,
-	},
-};
-
-static struct clk_alpha_pll gpll1 = {
-	.offset = 0x1000,
-	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
-	.vco_table = fabia_vco,
-	.num_vco = ARRAY_SIZE(fabia_vco),
-	.config = &gpll1_config,
-	.clkr = {
-		.enable_reg = 0x52000,
-		.enable_mask = BIT(1),
-		.hw.init = &(struct clk_init_data){
-			.name = "gpll1",
-			.parent_names = (const char *[]){ "bi_tcxo" },
-			.num_parents = 1,
-			.ops = &clk_alpha_pll_fixed_fabia_ops,
-		}
-	},
-};
-
-static struct clk_alpha_pll_postdiv gpll1_out_main = {
-	.offset = 0x1000,
-	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
-	.post_div_table = clk_alpha_div_table,
-	.post_div_shift = ALPHA_POST_DIV_EVEN_SHIFT,
-	.num_post_div = ARRAY_SIZE(clk_alpha_div_table),
-	.clkr.hw.init = &(struct clk_init_data){
-		.name = "gpll1_out_main",
-		.parent_names = (const char *[]){ "gpll1" },
-		.num_parents = 1,
-		.ops = &clk_alpha_pll_postdiv_fabia_ops,
-	},
-};
-
-static struct clk_alpha_pll gpll2 = {
-	.offset = 0x2000,
-	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
-	.vco_table = fabia_vco,
-	.num_vco = ARRAY_SIZE(fabia_vco),
-	.config = &gpll2_config,
-	.clkr = {
-		.enable_reg = 0x52000,
-		.enable_mask = BIT(2),
-		.hw.init = &(struct clk_init_data){
-			.name = "gpll2",
-			.parent_names = (const char *[]){ "bi_tcxo" },
-			.num_parents = 1,
-			.ops = &clk_alpha_pll_fixed_fabia_ops,
-		}
-	},
-};
-
-static struct clk_alpha_pll_postdiv gpll2_out_main = {
-	.offset = 0x2000,
-	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
-	.post_div_table = clk_alpha_div_table,
-	.post_div_shift = ALPHA_POST_DIV_EVEN_SHIFT,
-	.num_post_div = ARRAY_SIZE(clk_alpha_div_table),
-	.clkr.hw.init = &(struct clk_init_data){
-		.name = "gpll2_out_main",
-		.parent_names = (const char *[]){ "gpll2" },
-		.num_parents = 1,
-		.ops = &clk_alpha_pll_postdiv_fabia_ops,
-	},
-};
-
-static struct clk_alpha_pll gpll3 = {
-	.offset = 0x3000,
-	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
-	.vco_table = fabia_vco,
-	.num_vco = ARRAY_SIZE(fabia_vco),
-	.config = &gpll3_config,
-	.clkr = {
-		.enable_reg = 0x52000,
-		.enable_mask = BIT(3),
-		.hw.init = &(struct clk_init_data){
-			.name = "gpll3",
-			.parent_names = (const char *[]){ "bi_tcxo" },
-			.num_parents = 1,
-			.ops = &clk_alpha_pll_fixed_fabia_ops,
-		}
-	},
-};
-
-static struct clk_alpha_pll_postdiv gpll3_out_main = {
-	.offset = 0x3000,
-	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
-	.post_div_table = clk_alpha_div_table,
-	.post_div_shift = ALPHA_POST_DIV_EVEN_SHIFT,
-	.num_post_div = ARRAY_SIZE(clk_alpha_div_table),
-	.clkr.hw.init = &(struct clk_init_data){
-		.name = "gpll3_out_main",
-		.parent_names = (const char *[]){ "gpll3" },
 		.num_parents = 1,
 		.ops = &clk_alpha_pll_postdiv_fabia_ops,
 	},
@@ -3137,12 +3015,6 @@ static struct clk_regmap *gcc_msm8998_clocks[] = {
 	[GPLL0] = &gpll0.clkr,
 	[GPLL0_AO] = &gpll0_ao.clkr,
 	[GPLL0_OUT_MAIN] = &gpll0_out_main.clkr,
-	[GPLL1] = &gpll1.clkr,
-	[GPLL1_OUT_MAIN] = &gpll1_out_main.clkr,
-	[GPLL2] = &gpll2.clkr,
-	[GPLL2_OUT_MAIN] = &gpll2_out_main.clkr,
-	[GPLL3] = &gpll3.clkr,
-	[GPLL3_OUT_MAIN] = &gpll3_out_main.clkr,
 	[GPLL4] = &gpll4.clkr,
 	[GPLL4_OUT_MAIN] = &gpll4_out_main.clkr,
 	[USB30_MASTER_CLK_SRC] = &usb30_master_clk_src.clkr,
@@ -3415,9 +3287,6 @@ static int gcc_msm8998_probe(struct platform_device *pdev)
 	}
 
 	clk_fabia_pll_configure(&gpll0, regmap, &gpll0_config);
-	clk_fabia_pll_configure(&gpll1, regmap, &gpll1_config);
-	clk_fabia_pll_configure(&gpll2, regmap, &gpll2_config);
-	clk_fabia_pll_configure(&gpll3, regmap, &gpll3_config);
 	clk_fabia_pll_configure(&gpll4, regmap, &gpll4_config);
 
 	/*
