@@ -106,6 +106,22 @@
 			<533000000 444000000
 			 355200000 269330000 200000000>;
 
+		qcom,clock-freq-tbl {
+			qcom,profile-enc {
+				qcom,codec-mask = <0x55555555>;
+				qcom,cycles-per-mb = <906>;
+				qcom,low-power-mode-factor = <33286>;
+			};
+			qcom,profile-dec {
+				qcom,codec-mask = <0xf3ffffff>;
+				qcom,cycles-per-mb = <346>;
+			};
+			qcom,profile-hevcdec {
+				qcom,codec-mask = <0x0c000000>;
+				qcom,cycles-per-mb = <390>;
+			};
+		};
+
 		/* Buses */
 		bus_cnoc {
 			compatible = "qcom,msm-vidc,bus";
