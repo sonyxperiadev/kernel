@@ -122,7 +122,7 @@ static struct pll_vco fabia_vco[] = {
 static const struct alpha_pll_config gpu_pll0_config = {
 	/*.config_ctl_val = 0x20485699 */
 	.l = 0x12,
-	.frac = 0xc00,
+	.alpha = 0xc00,
 };
 
 static struct clk_alpha_pll gpu_pll0_pll = {

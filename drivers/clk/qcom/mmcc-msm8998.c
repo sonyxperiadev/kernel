@@ -319,7 +319,7 @@ static const char * const disp_cc_parent_names_5[] = {
 static const struct alpha_pll_config mmpll0_config = {
 	/*.config_ctl_val = 0x20485699,*/
 	.l = 0x2a,
-	.frac = 0x1556,
+	.alpha = 0x1556,
 };
 
 static struct clk_alpha_pll mmpll0 = {
@@ -343,7 +343,7 @@ static struct clk_alpha_pll mmpll0 = {
 static const struct alpha_pll_config mmpll1_config = {
 	/*.config_ctl_val = 0x20485699,*/
 	.l = 0x2a,
-	.frac = 0x4aab,
+	.alpha = 0x4aab,
 };
 
 static struct clk_alpha_pll mmpll1 = {
@@ -366,7 +366,7 @@ static struct clk_alpha_pll mmpll1 = {
 static const struct alpha_pll_config mmpll3_config = {
 	/*.config_ctl_val = 0x20485699,*/
 	.l = 0x37,
-	.frac = 0x8556,
+	.alpha = 0x8556,
 };
 
 static struct clk_alpha_pll mmpll3 = {
@@ -403,7 +403,7 @@ static struct clk_alpha_pll mmpll4 = {
 static const struct alpha_pll_config mmpll5_config = {
 	/*.config_ctl_val = 0x20485699,*/
 	.l = 0x2a,
-	.frac = 0xf800,
+	.alpha = 0xf800,
 };
 
 static struct clk_alpha_pll mmpll5 = {
@@ -422,7 +422,7 @@ static struct clk_alpha_pll mmpll5 = {
 static const struct alpha_pll_config mmpll6_config = {
 	/*.config_ctl_val = 0x20485699,*/
 	.l = 0x2e,
-	.frac = 0x4000,
+	.alpha = 0x4000,
 };
 
 static struct clk_alpha_pll mmpll6 = {
