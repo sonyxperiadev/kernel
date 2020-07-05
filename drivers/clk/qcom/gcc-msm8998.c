@@ -3420,21 +3420,19 @@ static int gcc_msm8998_probe(struct platform_device *pdev)
 	clk_fabia_pll_configure(&gpll3, regmap, &gpll3_config);
 	clk_fabia_pll_configure(&gpll4, regmap, &gpll4_config);
 
-	ret = qcom_cc_really_probe(pdev, &gcc_msm8998_desc, regmap);
-	if (ret) {
-		dev_err(&pdev->dev, "Failed to register GCC clocks\n");
-		return ret;
-	}
-
-	//clk_set_rate(gpll0_early_div.clkr.hw.clk, 300000000);
-
-	/* 
+	/*
 	 * GCC_MMSS_MISC - GCC_GPU_MISC:
 	 * 1. Disable the GPLL0 active input to MMSS and GPU
 	 * 2. Select clk division 1 (CLK/2)
 	 */
 	regmap_write(regmap, 0x0902C, 0x10003); /* MMSS*/
 	regmap_write(regmap, 0x71028, 0x10003); /* GPU */
+
+	ret = qcom_cc_really_probe(pdev, &gcc_msm8998_desc, regmap);
+	if (ret) {
+		dev_err(&pdev->dev, "Failed to register GCC clocks\n");
+		return ret;
+	}
 
 	/* This clock is used for all MMSSCC register access */
 	clk_prepare_enable(gcc_mmss_noc_cfg_ahb_clk.clkr.hw.clk);
