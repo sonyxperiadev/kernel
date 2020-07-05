@@ -317,14 +317,18 @@ static const char * const disp_cc_parent_names_5[] = {
 
 /* Initial configuration for 808MHz rate */
 static const struct alpha_pll_config mmpll0_config = {
-	/*.config_ctl_val = 0x20485699,*/
 	.l = 0x2a,
-	.alpha = 0x1556,
+	.alpha = 0x1555,
+	.config_ctl_val = 0x20485699,
+	.config_ctl_hi_val = 0x00002067,
+	.user_ctl_val = 0x1007,
+	.user_ctl_hi_val = 0x00004805,
 };
 
 static struct clk_alpha_pll mmpll0 = {
 	.offset = 0xC000,
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
+	.config = &mmpll0_config,
 	.clkr = {
 		.enable_reg = 0x1E0,
 		.enable_mask = BIT(0),
@@ -341,14 +345,18 @@ static struct clk_alpha_pll mmpll0 = {
 
 /* Initial configuration for 812MHz rate */
 static const struct alpha_pll_config mmpll1_config = {
-	/*.config_ctl_val = 0x20485699,*/
 	.l = 0x2a,
 	.alpha = 0x4aab,
+	.config_ctl_val = 0x20485699,
+	.config_ctl_hi_val = 0x00002067,
+	.user_ctl_val = 0x1007,
+	.user_ctl_hi_val = 0x00004805,
 };
 
 static struct clk_alpha_pll mmpll1 = {
 	.offset = 0xC050,
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
+	.config = &mmpll1_config,
 	.clkr = {
 		.enable_reg = 0x1E0,
 		.enable_mask = BIT(1),
@@ -364,14 +372,18 @@ static struct clk_alpha_pll mmpll1 = {
 
 /* Initial configuration for 1066MHz rate */
 static const struct alpha_pll_config mmpll3_config = {
-	/*.config_ctl_val = 0x20485699,*/
 	.l = 0x37,
 	.alpha = 0x8556,
+	.config_ctl_val = 0x20485699,
+	.config_ctl_hi_val = 0x00002067,
+	.user_ctl_val = 0x1003,
+	.user_ctl_hi_val = 0x00004805,
 };
 
 static struct clk_alpha_pll mmpll3 = {
 	.offset = 0x0,
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
+	.config = &mmpll3_config,
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "mmpll3",
 		.parent_names = (const char *[]){ "bi_tcxo" },
@@ -383,13 +395,17 @@ static struct clk_alpha_pll mmpll3 = {
 
 /* Initial configuration for 768MHz rate */
 static const struct alpha_pll_config mmpll4_config = {
-	/*.config_ctl_val = 0x20485699,*/
 	.l = 0x28,
+	.config_ctl_val = 0x20485699,
+	.config_ctl_hi_val = 0x00002067,
+	.user_ctl_val = 0x1000,
+	.user_ctl_hi_val = 0x00004805,
 };
 
 static struct clk_alpha_pll mmpll4 = {
 	.offset = 0x50,
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
+	.config = &mmpll4_config,
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "mmpll4",
 		.parent_names = (const char *[]){ "bi_tcxo" },
@@ -401,14 +417,18 @@ static struct clk_alpha_pll mmpll4 = {
 
 /* Initial configuration for 825MHz rate */
 static const struct alpha_pll_config mmpll5_config = {
-	/*.config_ctl_val = 0x20485699,*/
 	.l = 0x2a,
 	.alpha = 0xf800,
+	.config_ctl_val = 0x20485699,
+	.config_ctl_hi_val = 0x00002067,
+	.user_ctl_val = 0x1000,
+	.user_ctl_hi_val = 0x00004805,
 };
 
 static struct clk_alpha_pll mmpll5 = {
 	.offset = 0xA0,
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
+	.config = &mmpll5_config,
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "mmpll5",
 		.parent_names = (const char *[]){ "bi_tcxo" },
@@ -420,14 +440,18 @@ static struct clk_alpha_pll mmpll5 = {
 
 /* Initial configuration for 888MHz rate */
 static const struct alpha_pll_config mmpll6_config = {
-	/*.config_ctl_val = 0x20485699,*/
 	.l = 0x2e,
 	.alpha = 0x4000,
+	.config_ctl_val = 0x20485699,
+	.config_ctl_hi_val = 0x00002067,
+	.user_ctl_val = 0x1003,
+	.user_ctl_hi_val = 0x00004805,
 };
 
 static struct clk_alpha_pll mmpll6 = {
 	.offset = 0xF0,
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
+	.config = &mmpll6_config,
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "mmpll6",
 		.parent_names = (const char *[]){ "bi_tcxo" },
@@ -439,13 +463,17 @@ static struct clk_alpha_pll mmpll6 = {
 
 /* Initial configuration for 960MHz rate */
 static const struct alpha_pll_config mmpll7_config = {
-	/*.config_ctl_val = 0x20485699,*/
 	.l = 0x32,
+	.config_ctl_val = 0x20485699,
+	.config_ctl_hi_val = 0x00002067,
+	.user_ctl_val = 0x1000,
+	.user_ctl_hi_val = 0x00004805,
 };
 
 static struct clk_alpha_pll mmpll7 = {
 	.offset = 0x140,
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
+	.config = &mmpll7_config,
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "mmpll7",
 		.parent_names = (const char *[]){ "bi_tcxo" },
@@ -457,13 +485,17 @@ static struct clk_alpha_pll mmpll7 = {
 
 /* Initial configuration for 576MHz rate */
 static const struct alpha_pll_config mmpll10_config = {
-	/*.config_ctl_val = 0x20485699,*/
 	.l = 0x1e,
+	.config_ctl_val = 0x20485699,
+	.config_ctl_hi_val = 0x00002067,
+	.user_ctl_val = 0x1003,
+	.user_ctl_hi_val = 0x00004805,
 };
 
 static struct clk_alpha_pll mmpll10 = {
 	.offset = 0x190,
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
+	.config = &mmpll10_config,
 	.clkr.hw.init = &(struct clk_init_data){
 		.name = "mmpll10",
 		.parent_names = (const char *[]){ "bi_tcxo" },
