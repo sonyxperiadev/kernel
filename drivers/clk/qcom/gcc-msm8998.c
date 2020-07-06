@@ -3258,7 +3258,7 @@ static int gcc_msm8998_probe(struct platform_device *pdev)
 	 * Clear the HMSS_AHB_CLK_ENA bit to allow the gcc_hmss_ahb_clk clock
 	 * to be gated by RPM during VDD_MIN.
 	 */
-	ret = regmap_update_bits(regmap, 0x52008, BIT(21), 0); //BIT(21));
+	ret = regmap_update_bits(regmap, 0x52008, BIT(21), BIT(21));
 	if (ret)
 		return ret;
 
