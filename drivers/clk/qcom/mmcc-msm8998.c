@@ -56,14 +56,14 @@ enum {
 	P_BI_TCXO,
 	P_GPLL0,
 	P_GPLL0_DIV,
-	P_MMPLL0,
-	P_MMPLL1,
-	P_MMPLL3,
-	P_MMPLL4,
-	P_MMPLL5,
-	P_MMPLL6,
-	P_MMPLL7,
-	P_MMPLL10,
+	P_MMPLL0_OUT_EVEN,
+	P_MMPLL1_OUT_EVEN,
+	P_MMPLL3_OUT_EVEN,
+	P_MMPLL4_OUT_EVEN,
+	P_MMPLL5_OUT_EVEN,
+	P_MMPLL6_OUT_EVEN,
+	P_MMPLL7_OUT_EVEN,
+	P_MMPLL10_OUT_EVEN,
 	P_HDMI_PLL,
 	P_DP_PHY_PLL_LINK_CLK,
 	P_DP_PHY_PLL_VCO_DIV_CLK,
@@ -98,47 +98,47 @@ static const char * const mmcc_parent_names_gcc_1[] = {
 static const struct parent_map mmcc_parent_map_1[] = {
 	{ P_BI_TCXO, 0},
 	{ P_GPLL0, 5 },
-	{ P_MMPLL0, 1 },
+	{ P_MMPLL0_OUT_EVEN, 1 },
 };
 
 static const char * const mmcc_parent_names_1[] = {
 	"bi_tcxo",
 	"gcc_mmss_gpll0_clk",
-	"mmpll0",
+	"mmpll0_out_even",
 };
 
 static const struct parent_map mmcc_parent_map_2[] = {
 	{ P_BI_TCXO, 0 },
 	{ P_GPLL0, 5},
-	{ P_MMPLL4, 2 },
-	{ P_MMPLL7, 3 },
-	{ P_MMPLL10, 4 },
+	{ P_MMPLL4_OUT_EVEN, 2 },
+	{ P_MMPLL7_OUT_EVEN, 3 },
+	{ P_MMPLL10_OUT_EVEN, 4 },
 };
 
 static const char * const mmcc_parent_names_2[] = {
 	"bi_tcxo",
 	"gcc_mmss_gpll0_clk",
-	"mmpll4",
-	"mmpll7",
-	"mmpll10",
+	"mmpll4_out_even",
+	"mmpll7_out_even",
+	"mmpll10_out_even",
 };
 
 static const struct parent_map mmcc_parent_map_2a[] = {
 	{ P_BI_TCXO, 0 },
 	{ P_GPLL0, 5},
-	{ P_MMPLL0, 1 },
-	{ P_MMPLL4, 2 },
-	{ P_MMPLL7, 3 },
-	{ P_MMPLL10, 4 },
+	{ P_MMPLL0_OUT_EVEN, 1 },
+	{ P_MMPLL4_OUT_EVEN, 2 },
+	{ P_MMPLL7_OUT_EVEN, 3 },
+	{ P_MMPLL10_OUT_EVEN, 4 },
 };
 
 static const char * const mmcc_parent_names_2a[] = {
 	"bi_tcxo",
 	"gcc_mmss_gpll0_clk",
-	"mmpll0",
-	"mmpll4",
-	"mmpll7",
-	"mmpll10",
+	"mmpll0_out_even",
+	"mmpll4_out_even",
+	"mmpll7_out_even",
+	"mmpll10_out_even",
 };
 
 
@@ -146,101 +146,101 @@ static const struct parent_map mmcc_parent_map_3[] = {
 	{ P_BI_TCXO, 0 },
 	{ P_GPLL0, 5 },
 	{ P_GPLL0_DIV, 6 },
-	{ P_MMPLL5, 2 },
+	{ P_MMPLL5_OUT_EVEN, 2 },
 };
 
 static const char * const mmcc_parent_names_3[] = {
 	"bi_tcxo",
 	"gcc_mmss_gpll0_clk",
 	"gcc_mmss_gpll0_div_clk",
-	"mmpll5",
+	"mmpll5_out_even",
 };
 
 static const struct parent_map mmcc_parent_map_4[] = {
 	{ P_BI_TCXO, 0 },
 	{ P_GPLL0, 5 },
 	{ P_GPLL0_DIV, 6 },
-	{ P_MMPLL0, 1 },
-	{ P_MMPLL1, 2 },
+	{ P_MMPLL0_OUT_EVEN, 1 },
+	{ P_MMPLL1_OUT_EVEN, 2 },
 };
 
 static const char * const mmcc_parent_names_4[] = {
 	"bi_tcxo",
 	"gcc_mmss_gpll0_clk",
 	"gcc_mmss_gpll0_div_clk",
-	"mmpll0",
-	"mmpll1",
+	"mmpll0_out_even",
+	"mmpll1_out_even",
 };
 
 static const struct parent_map mmcc_parent_map_5[] = {
 	{ P_BI_TCXO, 0 },
 	{ P_GPLL0, 5 },
-	{ P_MMPLL5, 2 },
+	{ P_MMPLL5_OUT_EVEN, 2 },
 };
 
 static const char * const mmcc_parent_names_5[] = {
 	"bi_tcxo",
 	"gcc_mmss_gpll0_clk",
-	"mmpll5",
+	"mmpll5_out_even",
 };
 
 static const struct parent_map mmcc_parent_map_6[] = {
 	{ P_BI_TCXO, 0 },
 	{ P_GPLL0, 5 },
-	{ P_MMPLL7, 3 },
+	{ P_MMPLL7_OUT_EVEN, 3 },
 };
 
 static const char * const mmcc_parent_names_6[] = {
 	"bi_tcxo",
 	"gcc_mmss_gpll0_clk",
-	"mmpll7",
+	"mmpll7_out_even",
 };
 
 static const struct parent_map mmcc_parent_map_7[] = {
 	{ P_BI_TCXO, 0 },
 	{ P_GPLL0, 5 },
-	{ P_MMPLL3, 3 },
-	{ P_MMPLL6, 4 },
+	{ P_MMPLL3_OUT_EVEN, 3 },
+	{ P_MMPLL6_OUT_EVEN, 4 },
 };
 
 static const char * const mmcc_parent_names_7[] = {
 	"bi_tcxo",
 	"gcc_mmss_gpll0_clk",
-	"mmpll3",
-	"mmpll6",
+	"mmpll3_out_even",
+	"mmpll6_out_even",
 };
 
 static const struct parent_map mmcc_parent_map_7a[] = {
 	{ P_BI_TCXO, 0 },
 	{ P_GPLL0, 5 },
-	{ P_MMPLL0, 1 },
-	{ P_MMPLL3, 3 },
-	{ P_MMPLL6, 4 },
+	{ P_MMPLL0_OUT_EVEN, 1 },
+	{ P_MMPLL3_OUT_EVEN, 3 },
+	{ P_MMPLL6_OUT_EVEN, 4 },
 };
 
 static const char * const mmcc_parent_names_7a[] = {
 	"bi_tcxo",
 	"gcc_mmss_gpll0_clk",
-	"mmpll0",
-	"mmpll3",
-	"mmpll6",
+	"mmpll0_out_even",
+	"mmpll3_out_even",
+	"mmpll6_out_even",
 };
 
 
 static const struct parent_map mmcc_parent_map_8[] = {
 	{ P_BI_TCXO, 0 },
 	{ P_GPLL0, 5 },
-	{ P_MMPLL0, 1 },
-	{ P_MMPLL7, 3 },
-	{ P_MMPLL10, 4 },
+	{ P_MMPLL0_OUT_EVEN, 1 },
+	{ P_MMPLL7_OUT_EVEN, 3 },
+	{ P_MMPLL10_OUT_EVEN, 4 },
 };
 
 static const char * const mmcc_parent_names_8[] = {
 	"bi_tcxo",
 	"gcc_mmss_gpll0_clk",
-	"mmpll0",
-	"mmpll7",
-	"mmpll10",
+	"mmpll0_out_even",
+	"mmpll7_out_even",
+	"mmpll10_out_even",
 };
 
 /* Display Clock Controller (integrated in the MMCC) */
@@ -281,14 +281,14 @@ static const char * const disp_cc_parent_names_2[] = {
 };
 static const struct parent_map disp_cc_parent_map_3[] = {
 	{ P_BI_TCXO, 0 },
-	{ P_MMPLL5, 2 },
+	{ P_MMPLL5_OUT_EVEN, 2 },
 	{ P_GPLL0, 5 },
 	{ P_GPLL0_DIV, 6 },
 };
 
 static const char * const disp_cc_parent_names_3[] = {
 	"bi_tcxo",
-	"mmpll5",
+	"mmpll5_out_even",
 	"gcc_mmss_gpll0_clk",
 	"gcc_mmss_gpll0_div_clk",
 };
@@ -342,6 +342,28 @@ static struct clk_alpha_pll mmpll0 = {
 	},
 };
 
+static const struct clk_div_table post_div_table_fabia_even[] = {
+	{ 0x0, 1 },
+	{ 0x1, 2 },
+	{ 0x3, 4 },
+	{ 0x7, 8 },
+	{ }
+};
+
+static struct clk_alpha_pll_postdiv mmpll0_out_even = {
+	.offset = 0xc000,
+	.post_div_shift = ALPHA_POST_DIV_EVEN_SHIFT,
+	.post_div_table = post_div_table_fabia_even,
+	.num_post_div = ARRAY_SIZE(post_div_table_fabia_even),
+	.width = 4,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
+	.clkr.hw.init = &(struct clk_init_data){
+		.name = "mmpll0_out_even",
+		.parent_names = (const char *[]){ "mmpll0" },
+		.num_parents = 1,
+		.ops = &clk_alpha_pll_postdiv_fabia_ops,
+	},
+};
 
 /* Initial configuration for 812MHz rate */
 static const struct alpha_pll_config mmpll1_config = {
@@ -370,6 +392,22 @@ static struct clk_alpha_pll mmpll1 = {
 	},
 };
 
+static struct clk_alpha_pll_postdiv mmpll1_out_even = {
+	.offset = 0xc050,
+	.post_div_shift = ALPHA_POST_DIV_EVEN_SHIFT,
+	.post_div_table = post_div_table_fabia_even,
+	.num_post_div = ARRAY_SIZE(post_div_table_fabia_even),
+	.width = 4,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
+	.clkr.hw.init = &(struct clk_init_data){
+		.name = "mmpll1_out_even",
+		.parent_names = (const char *[]){ "mmpll1" },
+		.num_parents = 1,
+		.ops = &clk_alpha_pll_postdiv_fabia_ops,
+	},
+};
+
+
 /* Initial configuration for 1066MHz rate */
 static const struct alpha_pll_config mmpll3_config = {
 	.l = 0x37,
@@ -393,6 +431,21 @@ static struct clk_alpha_pll mmpll3 = {
 	},
 };
 
+static struct clk_alpha_pll_postdiv mmpll3_out_even = {
+	.offset = 0x0,
+	.post_div_shift = ALPHA_POST_DIV_EVEN_SHIFT,
+	.post_div_table = post_div_table_fabia_even,
+	.num_post_div = ARRAY_SIZE(post_div_table_fabia_even),
+	.width = 4,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
+	.clkr.hw.init = &(struct clk_init_data){
+		.name = "mmpll3_out_even",
+		.parent_names = (const char *[]){ "mmpll3" },
+		.num_parents = 1,
+		.ops = &clk_alpha_pll_postdiv_fabia_ops,
+	},
+};
+
 /* Initial configuration for 768MHz rate */
 static const struct alpha_pll_config mmpll4_config = {
 	.l = 0x28,
@@ -412,6 +465,21 @@ static struct clk_alpha_pll mmpll4 = {
 		.num_parents = 1,
 		.ops = &clk_alpha_pll_fixed_fabia_ops,
 		VDD_MM_PLL_FMAX_MAP2(LOWER, 384000000, LOW, 768000000),
+	},
+};
+
+static struct clk_alpha_pll_postdiv mmpll4_out_even = {
+	.offset = 0x50,
+	.post_div_shift = ALPHA_POST_DIV_EVEN_SHIFT,
+	.post_div_table = post_div_table_fabia_even,
+	.num_post_div = ARRAY_SIZE(post_div_table_fabia_even),
+	.width = 4,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
+	.clkr.hw.init = &(struct clk_init_data){
+		.name = "mmpll4_out_even",
+		.parent_names = (const char *[]){ "mmpll4" },
+		.num_parents = 1,
+		.ops = &clk_alpha_pll_postdiv_fabia_ops,
 	},
 };
 
@@ -438,6 +506,21 @@ static struct clk_alpha_pll mmpll5 = {
 	},
 };
 
+static struct clk_alpha_pll_postdiv mmpll5_out_even = {
+	.offset = 0xa0,
+	.post_div_shift = ALPHA_POST_DIV_EVEN_SHIFT,
+	.post_div_table = post_div_table_fabia_even,
+	.num_post_div = ARRAY_SIZE(post_div_table_fabia_even),
+	.width = 4,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
+	.clkr.hw.init = &(struct clk_init_data){
+		.name = "mmpll5_out_even",
+		.parent_names = (const char *[]){ "mmpll5" },
+		.num_parents = 1,
+		.ops = &clk_alpha_pll_postdiv_fabia_ops,
+	},
+};
+
 /* Initial configuration for 888MHz rate */
 static const struct alpha_pll_config mmpll6_config = {
 	.l = 0x2e,
@@ -458,6 +541,21 @@ static struct clk_alpha_pll mmpll6 = {
 		.num_parents = 1,
 		.ops = &clk_alpha_pll_fixed_fabia_ops,
 		VDD_MM_PLL_FMAX_MAP2(LOWER, 412500000, LOW, 825000000),
+	},
+};
+
+static struct clk_alpha_pll_postdiv mmpll6_out_even = {
+	.offset = 0xf0,
+	.post_div_shift = ALPHA_POST_DIV_EVEN_SHIFT,
+	.post_div_table = post_div_table_fabia_even,
+	.num_post_div = ARRAY_SIZE(post_div_table_fabia_even),
+	.width = 4,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
+	.clkr.hw.init = &(struct clk_init_data){
+		.name = "mmpll6_out_even",
+		.parent_names = (const char *[]){ "mmpll6" },
+		.num_parents = 1,
+		.ops = &clk_alpha_pll_postdiv_fabia_ops,
 	},
 };
 
@@ -483,6 +581,21 @@ static struct clk_alpha_pll mmpll7 = {
 	},
 };
 
+static struct clk_alpha_pll_postdiv mmpll7_out_even = {
+	.offset = 0x140,
+	.post_div_shift = ALPHA_POST_DIV_EVEN_SHIFT,
+	.post_div_table = post_div_table_fabia_even,
+	.num_post_div = ARRAY_SIZE(post_div_table_fabia_even),
+	.width = 4,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
+	.clkr.hw.init = &(struct clk_init_data){
+		.name = "mmpll7_out_even",
+		.parent_names = (const char *[]){ "mmpll7" },
+		.num_parents = 1,
+		.ops = &clk_alpha_pll_postdiv_fabia_ops,
+	},
+};
+
 /* Initial configuration for 576MHz rate */
 static const struct alpha_pll_config mmpll10_config = {
 	.l = 0x1e,
@@ -505,10 +618,25 @@ static struct clk_alpha_pll mmpll10 = {
 	},
 };
 
+static struct clk_alpha_pll_postdiv mmpll10_out_even = {
+	.offset = 0x190,
+	.post_div_shift = ALPHA_POST_DIV_EVEN_SHIFT,
+	.post_div_table = post_div_table_fabia_even,
+	.num_post_div = ARRAY_SIZE(post_div_table_fabia_even),
+	.width = 4,
+	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
+	.clkr.hw.init = &(struct clk_init_data){
+		.name = "mmpll10_out_even",
+		.parent_names = (const char *[]){ "mmpll10" },
+		.num_parents = 1,
+		.ops = &clk_alpha_pll_postdiv_fabia_ops,
+	},
+};
+
 static struct freq_tbl ftbl_ahb_clk_src[] = {
 	F(  19200000, P_BI_TCXO,         1,    0,     0),
 	F(  40000000, P_GPLL0,     15,    0,     0),
-	F(  80800000, P_MMPLL0,    10,    0,     0),
+	F(  80800000, P_MMPLL0_OUT_EVEN,    10,    0,     0),
 	{ }
 };
 
@@ -530,21 +658,21 @@ static struct clk_rcg2 ahb_clk_src = {
 
 static struct freq_tbl ftbl_csi_clk_src[] = {
 	F(  19200000,  P_BI_TCXO,         1,    0,     0),
-	F( 164571429,  P_MMPLL10,  3.5,    0,     0),
-	F( 256000000,  P_MMPLL4,     3,    0,     0),
-	F( 384000000,  P_MMPLL4,     2,    0,     0),
-	F( 576000000,  P_MMPLL10,    1,    0,     0),
+	F( 164571429,  P_MMPLL10_OUT_EVEN,  3.5,    0,     0),
+	F( 256000000,  P_MMPLL4_OUT_EVEN,     3,    0,     0),
+	F( 384000000,  P_MMPLL4_OUT_EVEN,     2,    0,     0),
+	F( 576000000,  P_MMPLL10_OUT_EVEN,    1,    0,     0),
 	{ }
 };
 
 static struct freq_tbl ftbl_csi_clk_src_vq[] = {
 	F(  19200000,  P_BI_TCXO,         1,    0,     0),
-	F( 164571429,  P_MMPLL10,  3.5,    0,     0),
-	F( 256000000,  P_MMPLL4,     3,    0,     0),
-	F( 274290000,  P_MMPLL7,   3.5,    0,     0),
+	F( 164571429,  P_MMPLL10_OUT_EVEN,  3.5,    0,     0),
+	F( 256000000,  P_MMPLL4_OUT_EVEN,     3,    0,     0),
+	F( 274290000,  P_MMPLL7_OUT_EVEN,   3.5,    0,     0),
 	F( 300000000,  P_GPLL0,      2,    0,     0),
-	F( 384000000,  P_MMPLL4,     2,    0,     0),
-	F( 576000000,  P_MMPLL10,    1,    0,     0),
+	F( 384000000,  P_MMPLL4_OUT_EVEN,     2,    0,     0),
+	F( 576000000,  P_MMPLL10_OUT_EVEN,    1,    0,     0),
 	{ }
 };
 
@@ -568,9 +696,9 @@ static struct freq_tbl ftbl_vfe_clk_src[] = {
 	F(  19200000,  P_BI_TCXO,         1,    0,     0),
 	F( 200000000,  P_GPLL0,      3,    0,     0),
 	F( 300000000,  P_GPLL0,      2,    0,     0),
-	F( 320000000,  P_MMPLL7,     3,    0,     0),
-	F( 384000000,  P_MMPLL4,     2,    0,     0),
-	F( 576000000,  P_MMPLL10,    1,    0,     0),
+	F( 320000000,  P_MMPLL7_OUT_EVEN,     3,    0,     0),
+	F( 384000000,  P_MMPLL4_OUT_EVEN,     2,    0,     0),
+	F( 576000000,  P_MMPLL10_OUT_EVEN,    1,    0,     0),
 	F( 600000000,  P_GPLL0,      1,    0,     0),
 	{ }
 };
@@ -579,11 +707,11 @@ static struct freq_tbl ftbl_vfe_clk_src_vq[] = {
 	F(  19200000,  P_BI_TCXO,         1,    0,     0),
 	F( 200000000,  P_GPLL0,      3,    0,     0),
 	F( 300000000,  P_GPLL0,      2,    0,     0),
-	F( 320000000,  P_MMPLL7,     3,    0,     0),
-	F( 384000000,  P_MMPLL4,     2,    0,     0),
-	F( 404000000,  P_MMPLL0,     2,    0,     0),
-	F( 480000000,  P_MMPLL7,     2,    0,     0),
-	F( 576000000,  P_MMPLL10,    1,    0,     0),
+	F( 320000000,  P_MMPLL7_OUT_EVEN,     3,    0,     0),
+	F( 384000000,  P_MMPLL4_OUT_EVEN,     2,    0,     0),
+	F( 404000000,  P_MMPLL0_OUT_EVEN,     2,    0,     0),
+	F( 480000000,  P_MMPLL7_OUT_EVEN,     2,    0,     0),
+	F( 576000000,  P_MMPLL10_OUT_EVEN,    1,    0,     0),
 	F( 600000000,  P_GPLL0,      1,    0,     0),
 	{ }
 };
@@ -627,11 +755,11 @@ static struct freq_tbl ftbl_mdp_clk_src[] = {
 	F( 150000000, P_GPLL0,      4,    0,     0),
 	F( 171428571, P_GPLL0,    3.5,    0,     0),
 	F( 200000000, P_GPLL0,      3,    0,     0),
-	F( 275000000, P_MMPLL5,     3,    0,     0),
+	F( 275000000, P_MMPLL5_OUT_EVEN,     3,    0,     0),
 	F( 300000000, P_GPLL0,      2,    0,     0),
-	F( 330000000, P_MMPLL5,   2.5,    0,     0),
-	F( 412500000, P_MMPLL5,     2,    0,     0),
-	F( 550000000, P_MMPLL5,   1.5,    0,     0),
+	F( 330000000, P_MMPLL5_OUT_EVEN,   2.5,    0,     0),
+	F( 412500000, P_MMPLL5_OUT_EVEN,     2,    0,     0),
+	F( 550000000, P_MMPLL5_OUT_EVEN,   1.5,    0,     0),
 	{ }
 };
 
@@ -655,8 +783,8 @@ static struct freq_tbl ftbl_maxi_clk_src[] = {
 	F(  19200000,   P_BI_TCXO,         1,    0,     0),
 	F(  75000000,   P_GPLL0_DIV,  4,    0,     0),
 	F( 171428571,   P_GPLL0,    3.5,    0,     0),
-	F( 323200000,   P_MMPLL0,   2.5,    0,     0),
-	F( 406000000,   P_MMPLL1,     2,    0,     0),
+	F( 323200000,   P_MMPLL0_OUT_EVEN,   2.5,    0,     0),
+	F( 406000000,   P_MMPLL1_OUT_EVEN,     2,    0,     0),
 	{ }
 };
 
@@ -680,9 +808,9 @@ static struct freq_tbl ftbl_cpp_clk_src[] = {
 	F( 100000000,  P_GPLL0,      6,    0,     0),
 	F( 200000000,  P_GPLL0,      3,    0,     0),
 #if defined(CONFIG_SONY_CAM_V4L2)
-	F( 384000000,  P_MMPLL4,     2,    0,     0),
+	F( 384000000,  P_MMPLL4_OUT_EVEN,     2,    0,     0),
 #endif
-	F( 576000000,  P_MMPLL10,    1,    0,     0),
+	F( 576000000,  P_MMPLL10_OUT_EVEN,    1,    0,     0),
 	F( 600000000,  P_GPLL0,      1,    0,     0),
 	{ }
 };
@@ -691,10 +819,10 @@ static struct freq_tbl ftbl_cpp_clk_src_vq[] = {
 	F(  19200000,     P_BI_TCXO,      1,    0,     0),
 	F( 100000000,  P_GPLL0,      6,    0,     0),
 	F( 200000000,  P_GPLL0,      3,    0,     0),
-	F( 384000000,  P_MMPLL4,     2,    0,     0),
-	F( 404000000,  P_MMPLL0,     2,    0,     0),
-	F( 480000000,  P_MMPLL7,     2,    0,     0),
-	F( 576000000,  P_MMPLL10,    1,    0,     0),
+	F( 384000000,  P_MMPLL4_OUT_EVEN,     2,    0,     0),
+	F( 404000000,  P_MMPLL0_OUT_EVEN,     2,    0,     0),
+	F( 480000000,  P_MMPLL7_OUT_EVEN,     2,    0,     0),
+	F( 576000000,  P_MMPLL10_OUT_EVEN,    1,    0,     0),
 	F( 600000000,  P_GPLL0,      1,    0,     0),
 	{ }
 };
@@ -719,7 +847,7 @@ static struct freq_tbl ftbl_jpeg0_clk_src[] = {
 	F(  19200000,    P_BI_TCXO,      1,    0,     0),
 	F(  75000000, P_GPLL0,      8,    0,     0),
 	F( 150000000, P_GPLL0,      4,    0,     0),
-	F( 480000000, P_MMPLL7,     2,    0,     0),
+	F( 480000000, P_MMPLL7_OUT_EVEN,     2,    0,     0),
 	{ }
 };
 
@@ -727,8 +855,8 @@ static struct freq_tbl ftbl_jpeg0_clk_src_vq[] = {
 	F(  19200000,    P_BI_TCXO,      1,    0,     0),
 	F(  75000000, P_GPLL0,      8,    0,     0),
 	F( 150000000, P_GPLL0,      4,    0,     0),
-	F( 320000000, P_MMPLL7,     3,    0,     0),
-	F( 480000000, P_MMPLL7,     2,    0,     0),
+	F( 320000000, P_MMPLL7_OUT_EVEN,     3,    0,     0),
+	F( 480000000, P_MMPLL7_OUT_EVEN,     2,    0,     0),
 	{ }
 };
 
@@ -750,11 +878,11 @@ static struct clk_rcg2 jpeg0_clk_src = {
 
 static struct freq_tbl ftbl_rot_clk_src[] = {
 	F( 171428571, P_GPLL0,    3.5,    0,     0),
-	F( 275000000, P_MMPLL5,     3,    0,     0),
+	F( 275000000, P_MMPLL5_OUT_EVEN,     3,    0,     0),
 	F( 300000000, P_GPLL0,      2,    0,     0),
-	F( 330000000, P_MMPLL5,   2.5,    0,     0),
-	F( 412500000, P_MMPLL5,     2,    0,     0),
-	F( 550000000, P_MMPLL5,   1.5,    0,     0),
+	F( 330000000, P_MMPLL5_OUT_EVEN,   2.5,    0,     0),
+	F( 412500000, P_MMPLL5_OUT_EVEN,     2,    0,     0),
+	F( 550000000, P_MMPLL5_OUT_EVEN,   1.5,    0,     0),
 	{ }
 };
 
@@ -780,18 +908,18 @@ static struct clk_rcg2 rot_clk_src = {
 
 static struct freq_tbl ftbl_video_core_clk_src[] = {
 	F( 100000000, P_GPLL0,      6,    0,     0),
-	F( 186000000, P_MMPLL3,     5,    0,     0),
-	F( 360000000, P_MMPLL6,     2,    0,     0),
-	F( 465000000, P_MMPLL3,     2,    0,     0),
+	F( 186000000, P_MMPLL3_OUT_EVEN,     5,    0,     0),
+	F( 360000000, P_MMPLL6_OUT_EVEN,     2,    0,     0),
+	F( 465000000, P_MMPLL3_OUT_EVEN,     2,    0,     0),
 	{ }
 };
 
 static struct freq_tbl ftbl_video_core_clk_src_vq[] = {
 	F( 200000000, P_GPLL0,      3,    0,     0),
-	F( 269330000, P_MMPLL0,     3,    0,     0),
-	F( 355200000, P_MMPLL6,   2.5,    0,     0),
-	F( 444000000, P_MMPLL6,     2,    0,     0),
-	F( 533000000, P_MMPLL3,     2,    0,     0),
+	F( 269330000, P_MMPLL0_OUT_EVEN,     3,    0,     0),
+	F( 355200000, P_MMPLL6_OUT_EVEN,   2.5,    0,     0),
+	F( 444000000, P_MMPLL6_OUT_EVEN,     2,    0,     0),
+	F( 533000000, P_MMPLL3_OUT_EVEN,     2,    0,     0),
 	{ }
 };
 
@@ -813,19 +941,19 @@ static struct clk_rcg2 video_core_clk_src = {
 
 static struct freq_tbl ftbl_csiphy_clk_src[] = {
 	F(  19200000,    P_BI_TCXO,       1,    0,     0),
-	F(  164570000,   P_MMPLL10,  3.5,  0,     0),
-	F(  256000000,   P_MMPLL4,   3,    0,     0),
-	F(  384000000,   P_MMPLL4,   2,    0,     0),
+	F(  164570000,   P_MMPLL10_OUT_EVEN,  3.5,  0,     0),
+	F(  256000000,   P_MMPLL4_OUT_EVEN,   3,    0,     0),
+	F(  384000000,   P_MMPLL4_OUT_EVEN,   2,    0,     0),
 	{ }
 };
 
 static struct freq_tbl ftbl_csiphy_clk_src_vq[] = {
 	F(  19200000,    P_BI_TCXO,       1,    0,     0),
-	F(  164570000,   P_MMPLL10,  3.5,  0,     0),
-	F(  256000000,   P_MMPLL4,   3,    0,     0),
-	F(  274290000,   P_MMPLL7,   3.5,  0,     0),
+	F(  164570000,   P_MMPLL10_OUT_EVEN,  3.5,  0,     0),
+	F(  256000000,   P_MMPLL4_OUT_EVEN,   3,    0,     0),
+	F(  274290000,   P_MMPLL7_OUT_EVEN,   3.5,  0,     0),
 	F(  300000000,   P_GPLL0,    2,    0,     0),
-	F(  384000000,   P_MMPLL4,   2,    0,     0),
+	F(  384000000,   P_MMPLL4_OUT_EVEN,   2,    0,     0),
 	{ }
 };
 
@@ -897,7 +1025,7 @@ static struct freq_tbl ftbl_fd_core_clk_src[] = {
 	F( 19200000,   P_BI_TCXO,         1,    0,     0),
 	F( 100000000,  P_GPLL0,      6,    0,     0),
 	F( 200000000,  P_GPLL0,      3,    0,     0),
-	F( 576000000,  P_MMPLL10,    1,    0,     0),
+	F( 576000000,  P_MMPLL10_OUT_EVEN,    1,    0,     0),
 	{ }
 };
 
@@ -905,9 +1033,9 @@ static struct freq_tbl ftbl_fd_core_clk_src_vq[] = {
 	F( 19200000,   P_BI_TCXO,         1,    0,     0),
 	F( 100000000,  P_GPLL0,      6,    0,     0),
 	F( 200000000,  P_GPLL0,      3,    0,     0),
-	F( 404000000,  P_MMPLL0,     2,    0,     0),
-	F( 480000000,  P_MMPLL7,     2,    0,     0),
-	F( 576000000,  P_MMPLL10,    1,    0,     0),
+	F( 404000000,  P_MMPLL0_OUT_EVEN,     2,    0,     0),
+	F( 480000000,  P_MMPLL7_OUT_EVEN,     2,    0,     0),
+	F( 576000000,  P_MMPLL10_OUT_EVEN,    1,    0,     0),
 	{ }
 };
 
@@ -991,18 +1119,18 @@ static struct clk_rcg2 pclk1_clk_src = {
 
 static struct freq_tbl ftbl_video_subcore_clk_src[] = {
 	F( 100000000, P_GPLL0,      6,    0,     0),
-	F( 186000000, P_MMPLL3,     5,    0,     0),
-	F( 360000000, P_MMPLL6,     2,    0,     0),
-	F( 465000000, P_MMPLL3,     2,    0,     0),
+	F( 186000000, P_MMPLL3_OUT_EVEN,     5,    0,     0),
+	F( 360000000, P_MMPLL6_OUT_EVEN,     2,    0,     0),
+	F( 465000000, P_MMPLL3_OUT_EVEN,     2,    0,     0),
 	{ }
 };
 
 static struct freq_tbl ftbl_video_subcore_clk_src_vq[] = {
 	F( 200000000, P_GPLL0,      3,    0,     0),
-	F( 269330000, P_MMPLL0,     3,    0,     0),
-	F( 355200000, P_MMPLL6,   2.5,    0,     0),
-	F( 444000000, P_MMPLL6,     2,    0,     0),
-	F( 533000000, P_MMPLL3,     2,    0,     0),
+	F( 269330000, P_MMPLL0_OUT_EVEN,     3,    0,     0),
+	F( 355200000, P_MMPLL6_OUT_EVEN,   2.5,    0,     0),
+	F( 444000000, P_MMPLL6_OUT_EVEN,     2,    0,     0),
+	F( 533000000, P_MMPLL3_OUT_EVEN,     2,    0,     0),
 	{ }
 };
 
@@ -1199,7 +1327,7 @@ static struct clk_rcg2 mclk3_clk_src = {
 static struct freq_tbl ftbl_csiphytimer_clk_src[] = {
 	F(  19200000, P_BI_TCXO,         1,    0,     0),
 	F( 200000000, P_GPLL0,      3,    0,     0),
-	F( 269333333, P_MMPLL0,     3,    0,     0),
+	F( 269333333, P_MMPLL0_OUT_EVEN,     3,    0,     0),
 	{ }
 };
 
@@ -3305,6 +3433,14 @@ static struct clk_regmap *mmcc_msm8998_clocks[] = {
 	[MMPLL6_PLL] = &mmpll6.clkr,
 	[MMPLL7_PLL] = &mmpll7.clkr,
 	[MMPLL10_PLL] = &mmpll10.clkr,
+	[MMPLL0_OUT_EVEN] = &mmpll0_out_even.clkr,
+	[MMPLL1_OUT_EVEN] = &mmpll1_out_even.clkr,
+	[MMPLL3_OUT_EVEN] = &mmpll3_out_even.clkr,
+	[MMPLL4_OUT_EVEN] = &mmpll4_out_even.clkr,
+	[MMPLL5_OUT_EVEN] = &mmpll5_out_even.clkr,
+	[MMPLL6_OUT_EVEN] = &mmpll6_out_even.clkr,
+	[MMPLL7_OUT_EVEN] = &mmpll7_out_even.clkr,
+	[MMPLL10_OUT_EVEN] = &mmpll10_out_even.clkr,
 	[AHB_CLK_SRC] = &ahb_clk_src.clkr,
 	[CSI0_CLK_SRC] = &csi0_clk_src.clkr,
 	[VFE0_CLK_SRC] = &vfe0_clk_src.clkr,
@@ -3662,8 +3798,8 @@ static int mmcc_msm8998_probe(struct platform_device *pdev)
 		msm_mmsscc_v2_fixup();
 	}
 
-	clk_fabia_pll_configure(&mmpll0, regmap, &mmpll0_config);
-	clk_fabia_pll_configure(&mmpll1, regmap, &mmpll1_config);
+	//clk_fabia_pll_configure(&mmpll0, regmap, &mmpll0_config);
+	//clk_fabia_pll_configure(&mmpll1, regmap, &mmpll1_config);
 	clk_fabia_pll_configure(&mmpll3, regmap, &mmpll3_config);
 	clk_fabia_pll_configure(&mmpll4, regmap, &mmpll4_config);
 	clk_fabia_pll_configure(&mmpll5, regmap, &mmpll5_config);
