@@ -1462,6 +1462,13 @@ static int rpm_smd_clk_probe(struct platform_device *pdev)
 		 */
 		clk_prepare_enable(msm8998_bi_tcxo_ao.hw.clk);
 
+		pr_warn("*** WARNING: Disallowing XO shutdown as a workaround "
+			"for platform components death on this SoC. Hopefully "
+			"this will get solved in the future. In the meanwhile,"
+			" you WILL experience battery consumption issues."
+			" *** Sorry!");
+		clk_prepare_enable(msm8998_bi_tcxo.hw.clk);
+
 		/* Hold an active set vote for the cnoc_periph resource */
 		clk_set_rate(cnoc_periph_keepalive_a_clk.hw.clk, 19200000);
 		clk_prepare_enable(cnoc_periph_keepalive_a_clk.hw.clk);
