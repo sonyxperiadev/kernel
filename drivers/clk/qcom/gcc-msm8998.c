@@ -158,6 +158,25 @@ static struct pll_vco fabia_vco[] = {
 
 static unsigned int soft_vote_gpll0;
 
+/*
+static const struct alpha_pll_config gpll0_config = {
+	.l = 0x1F,
+	.alpha = 0x4000,
+	.config_ctl_val = 0x20485699,
+	.config_ctl_hi_val = 0x00002067,
+	.user_ctl_val = 0x1,
+	.user_ctl_hi_val = 0x00004805,
+};
+*/
+
+static const struct alpha_pll_config gpll4_config = {
+	.l = 0x13,
+	.config_ctl_val = 0x20485699,
+	.config_ctl_hi_val = 0x00002067,
+	.user_ctl_val = 0x1001,
+	.user_ctl_hi_val = 0x00004805,
+};
+
 static struct clk_alpha_pll gpll0 = {
 	.offset = 0x0,
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
@@ -166,6 +185,7 @@ static struct clk_alpha_pll gpll0 = {
 	.soft_vote = &soft_vote_gpll0,
 	.soft_vote_mask = PLL_SOFT_VOTE_PRIMARY,
 	.flags = SUPPORTS_FSM_VOTE,
+	/* .config = &gpll0_config, */
 	.clkr = {
 		.enable_reg = 0x52000,
 		.enable_mask = BIT(0),
@@ -221,104 +241,12 @@ static struct clk_alpha_pll_postdiv gpll0_out_main = {
 	},
 };
 
-static struct clk_alpha_pll gpll1 = {
-	.offset = 0x1000,
-	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
-	.vco_table = fabia_vco,
-	.num_vco = ARRAY_SIZE(fabia_vco),
-	.clkr = {
-		.enable_reg = 0x52000,
-		.enable_mask = BIT(1),
-		.hw.init = &(struct clk_init_data){
-			.name = "gpll1",
-			.parent_names = (const char *[]){ "bi_tcxo" },
-			.num_parents = 1,
-			.ops = &clk_alpha_pll_fixed_fabia_ops,
-		}
-	},
-};
-
-static struct clk_alpha_pll_postdiv gpll1_out_main = {
-	.offset = 0x1000,
-	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
-	.post_div_table = clk_alpha_div_table,
-	.post_div_shift = ALPHA_POST_DIV_EVEN_SHIFT,
-	.num_post_div = ARRAY_SIZE(clk_alpha_div_table),
-	.clkr.hw.init = &(struct clk_init_data){
-		.name = "gpll1_out_main",
-		.parent_names = (const char *[]){ "gpll1" },
-		.num_parents = 1,
-		.ops = &clk_alpha_pll_postdiv_fabia_ops,
-	},
-};
-
-static struct clk_alpha_pll gpll2 = {
-	.offset = 0x2000,
-	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
-	.vco_table = fabia_vco,
-	.num_vco = ARRAY_SIZE(fabia_vco),
-	.clkr = {
-		.enable_reg = 0x52000,
-		.enable_mask = BIT(2),
-		.hw.init = &(struct clk_init_data){
-			.name = "gpll2",
-			.parent_names = (const char *[]){ "bi_tcxo" },
-			.num_parents = 1,
-			.ops = &clk_alpha_pll_fixed_fabia_ops,
-		}
-	},
-};
-
-static struct clk_alpha_pll_postdiv gpll2_out_main = {
-	.offset = 0x2000,
-	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
-	.post_div_table = clk_alpha_div_table,
-	.post_div_shift = ALPHA_POST_DIV_EVEN_SHIFT,
-	.num_post_div = ARRAY_SIZE(clk_alpha_div_table),
-	.clkr.hw.init = &(struct clk_init_data){
-		.name = "gpll2_out_main",
-		.parent_names = (const char *[]){ "gpll2" },
-		.num_parents = 1,
-		.ops = &clk_alpha_pll_postdiv_fabia_ops,
-	},
-};
-
-static struct clk_alpha_pll gpll3 = {
-	.offset = 0x3000,
-	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
-	.vco_table = fabia_vco,
-	.num_vco = ARRAY_SIZE(fabia_vco),
-	.clkr = {
-		.enable_reg = 0x52000,
-		.enable_mask = BIT(3),
-		.hw.init = &(struct clk_init_data){
-			.name = "gpll3",
-			.parent_names = (const char *[]){ "bi_tcxo" },
-			.num_parents = 1,
-			.ops = &clk_alpha_pll_fixed_fabia_ops,
-		}
-	},
-};
-
-static struct clk_alpha_pll_postdiv gpll3_out_main = {
-	.offset = 0x3000,
-	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
-	.post_div_table = clk_alpha_div_table,
-	.post_div_shift = ALPHA_POST_DIV_EVEN_SHIFT,
-	.num_post_div = ARRAY_SIZE(clk_alpha_div_table),
-	.clkr.hw.init = &(struct clk_init_data){
-		.name = "gpll3_out_main",
-		.parent_names = (const char *[]){ "gpll3" },
-		.num_parents = 1,
-		.ops = &clk_alpha_pll_postdiv_fabia_ops,
-	},
-};
-
 static struct clk_alpha_pll gpll4 = {
 	.offset = 0x77000,
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.vco_table = fabia_vco,
 	.num_vco = ARRAY_SIZE(fabia_vco),
+	.config = &gpll4_config,
 	.clkr = {
 		.enable_reg = 0x52000,
 		.enable_mask = BIT(4),
@@ -3089,12 +3017,6 @@ static struct clk_regmap *gcc_msm8998_clocks[] = {
 	[GPLL0] = &gpll0.clkr,
 	[GPLL0_AO] = &gpll0_ao.clkr,
 	[GPLL0_OUT_MAIN] = &gpll0_out_main.clkr,
-	[GPLL1] = &gpll1.clkr,
-	[GPLL1_OUT_MAIN] = &gpll1_out_main.clkr,
-	[GPLL2] = &gpll2.clkr,
-	[GPLL2_OUT_MAIN] = &gpll2_out_main.clkr,
-	[GPLL3] = &gpll3.clkr,
-	[GPLL3_OUT_MAIN] = &gpll3_out_main.clkr,
 	[GPLL4] = &gpll4.clkr,
 	[GPLL4_OUT_MAIN] = &gpll4_out_main.clkr,
 	[USB30_MASTER_CLK_SRC] = &usb30_master_clk_src.clkr,
@@ -3366,21 +3288,23 @@ static int gcc_msm8998_probe(struct platform_device *pdev)
 			return ret;
 	}
 
-	ret = qcom_cc_really_probe(pdev, &gcc_msm8998_desc, regmap);
-	if (ret) {
-		dev_err(&pdev->dev, "Failed to register GCC clocks\n");
-		return ret;
-	}
+	// Do not configure GPLL0, or hypervisor will fault!!
+	//clk_fabia_pll_configure(&gpll0, regmap, &gpll0_config);
+	clk_fabia_pll_configure(&gpll4, regmap, &gpll4_config);
 
-	//clk_set_rate(gpll0_early_div.clkr.hw.clk, 300000000);
-
-	/* 
+	/*
 	 * GCC_MMSS_MISC - GCC_GPU_MISC:
 	 * 1. Disable the GPLL0 active input to MMSS and GPU
 	 * 2. Select clk division 1 (CLK/2)
 	 */
 	regmap_write(regmap, 0x0902C, 0x10003); /* MMSS*/
 	regmap_write(regmap, 0x71028, 0x10003); /* GPU */
+
+	ret = qcom_cc_really_probe(pdev, &gcc_msm8998_desc, regmap);
+	if (ret) {
+		dev_err(&pdev->dev, "Failed to register GCC clocks\n");
+		return ret;
+	}
 
 	/* This clock is used for all MMSSCC register access */
 	clk_prepare_enable(gcc_mmss_noc_cfg_ahb_clk.clkr.hw.clk);
@@ -3395,6 +3319,9 @@ static int gcc_msm8998_probe(struct platform_device *pdev)
 	clk_set_rate(hmss_gpll0_clk_src.clkr.hw.clk, 300000000);
 
 	clk_set_flags(gcc_gpu_bimc_gfx_clk.clkr.hw.clk, CLKFLAG_RETAIN_MEM);
+
+	/* Set FSM Mode on GPLL0 (write to PLL_MODE register) */
+	qcom_pll_set_fsm_mode(gpll0.clkr.regmap, gpll0.offset, 6, 0);
 
 	dev_info(&pdev->dev, "Registered GCC clocks\n");
 	return 0;

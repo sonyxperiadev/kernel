@@ -385,11 +385,10 @@ static int clk_alpha_pll_enable(struct clk_hw *hw)
 		if (ret)
 			return ret;
 		ret = wait_for_pll_enable_active(pll);
-		if (ret == 0) {
+		if (ret == 0)
 			if (pll->flags & SUPPORTS_FSM_VOTE)
 				*pll->soft_vote |= (pll->soft_vote_mask);
-			return ret;
-		}
+		return ret;
 	}
 
 	/* Skip if already enabled */
@@ -1178,6 +1177,18 @@ void clk_fabia_pll_configure(struct clk_alpha_pll *pll, struct regmap *regmap,
 		regmap_write(regmap, PLL_CONFIG_CTL(pll),
 						config->config_ctl_val);
 
+	if (config->config_ctl_hi_val)
+		regmap_write(regmap, PLL_CONFIG_CTL_U(pll),
+						config->config_ctl_hi_val);
+
+	if (config->user_ctl_val)
+		regmap_write(regmap, PLL_USER_CTL(pll),
+						config->user_ctl_val);
+
+	if (config->user_ctl_hi_val)
+		regmap_write(regmap, PLL_USER_CTL_U(pll),
+						config->user_ctl_hi_val);
+
 	if (config->post_div_mask) {
 		mask = config->post_div_mask;
 		val = config->post_div_val;
@@ -1218,11 +1229,10 @@ static int alpha_pll_fabia_enable(struct clk_hw *hw)
 		if (ret)
 			return ret;
 		ret = wait_for_pll_enable_active(pll);
-		if (ret == 0) {
+		if (ret == 0)
 			if (pll->flags & SUPPORTS_FSM_VOTE)
 				*pll->soft_vote |= (pll->soft_vote_mask);
-			return ret;
-		}
+		return ret;
 	}
 
 	ret = regmap_read(regmap, PLL_OPMODE(pll), &opmode_val);
