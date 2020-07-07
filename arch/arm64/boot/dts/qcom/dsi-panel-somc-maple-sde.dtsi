@@ -76,25 +76,3 @@
 		/delete-node/ 4k60;
 	};
 };
-
-&sde_dsi0 {
-	/delete-property/ qcom,cont-splash-enabled;
-};
-
-&mdss_mdp {
-	/delete-property/ compatible;
-	/delete-property/ reg;
-	/delete-property/ reg-names;
-};
-
-&mdss_dsi {
-	/delete-property/ compatible;
-};
-
-&mdss_dsi0 {
-	/delete-property/ label;
-};
-
-&mdss_dsi1 {
-	/delete-property/ label;
-};
