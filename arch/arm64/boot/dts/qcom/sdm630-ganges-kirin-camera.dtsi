@@ -183,8 +183,8 @@
 					  "CAM_VDIG",
 					  "CAM_VANA",
 					  "CAM_VIO";
-		qcom,sensor-position = <1>;
-		qcom,sensor-mode = <1>;
+		qcom,sensor-position = <0>;
+		qcom,sensor-mode = <0>;
 		qcom,cci-master = <1>;
 		status = "ok";
 		clocks = <&clock_mmss MCLK3_CLK_SRC>,
@@ -252,8 +252,8 @@
 		qcom,hw-tsu-sta = <18>;
 		qcom,hw-thd-dat = <16>;
 		qcom,hw-thd-sta = <15>;
-		qcom,hw-tbuf = <19>;
-		qcom,hw-scl-stretch-en = <1>;
+		qcom,hw-tbuf = <24>;
+		qcom,hw-scl-stretch-en = <0>;
 		qcom,hw-trdhld = <3>;
 		qcom,hw-tsp = <3>;
 		qcom,cci-clk-src = <37500000>;
