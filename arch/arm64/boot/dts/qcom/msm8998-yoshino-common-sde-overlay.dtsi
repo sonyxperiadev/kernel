@@ -153,12 +153,27 @@ msm_drm.dsi_display0=dsi_panel_somc_yoshino_cmd:config0";
 	status = "disabled";
 };
 
-&sde_dsi0 {
-	qcom,cont-splash-enabled;
-};
-
 &sde_kms {
 	/* Set SDE MAX performance */
 	qcom,sde-perf-default-mode = <3>;
 	connectors = <&sde_wb &dsi_panel_cmd_display>;
 };
+
+&mdss_mdp {
+        /delete-property/ compatible;
+        /delete-property/ reg;
+        /delete-property/ reg-names;
+};
+
+&mdss_dsi {
+        /delete-property/ compatible;
+};
+
+&mdss_dsi0 {
+        /delete-property/ label;
+};
+
+&mdss_dsi1 {
+        /delete-property/ label;
+};
+
