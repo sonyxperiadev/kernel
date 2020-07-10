@@ -35,8 +35,6 @@
  * as published by the Free Software Foundation.
  */
 
-#include "cei_fp_detect.h"
-
 #include <linux/delay.h>
 #include <linux/fs.h>
 #include <linux/gpio.h>
