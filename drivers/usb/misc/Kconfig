@@ -271,3 +271,8 @@ config USB_REDRIVER_NB7VPQ904M
 	depends on USB_PHY
 	help
 	  Say Y here if you want to support USB super speed re-driver NB7VPQ904M.
+
+config USB_SOMC_SLG4R41505
+	tristate "Enable driver for water detection by SOMC"
+	help
+	  Say Y here if you want to use water detection driver.
