@@ -4395,6 +4395,7 @@ static int sdhci_msm_probe(struct platform_device *pdev)
  #ifdef CONFIG_MMC_ENABLE_CLK_SCALE
 	msm_host->mmc->caps2 |= MMC_CAP2_CLK_SCALE;
  #endif
+	msm_host->mmc->caps |= MMC_CAP_CD_WAKE;
 #endif
 	sdhci_msm_setup_pm(pdev, msm_host);
 
