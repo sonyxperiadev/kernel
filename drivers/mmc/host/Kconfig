@@ -500,6 +500,14 @@ config MMC_SDHCI_MSM
 
 	  If unsure, say N.
 
+config MMC_ENABLE_CLK_SCALE
+	bool "Clock Scaling of SDHCI support"
+	depends on MMC_SDHCI_MSM
+	default n
+	help
+	  This selects support for the SD/MMC Host Controller on
+	  Clock Scaling.
+
 config MMC_MXC
 	tristate "Freescale i.MX21/27/31 or MPC512x Multimedia Card support"
 	depends on ARCH_MXC || PPC_MPC512x
