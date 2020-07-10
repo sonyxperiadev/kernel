@@ -68,3 +68,4 @@ obj-$(CONFIG_HISI_HIKEY_USB)	+= hisi_hikey_usb.o
 obj-$(CONFIG_LDO_VIBRATOR)	+= ldo_vibrator.o
 obj-$(CONFIG_SENSORS_TCS3490)	+= tcs3490.o
 obj-$(CONFIG_SIM_DETECT)	+= sim_detect.o
+obj-$(CONFIG_SONY_EXT_UIM_CTRL) += sony_ext_uim_ctrl.o
