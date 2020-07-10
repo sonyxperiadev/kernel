@@ -18,4 +18,11 @@ source "drivers/mmc/core/Kconfig"
 
 source "drivers/mmc/host/Kconfig"
 
+config SONY_MMC_EXTENSION
+	bool "Sony MMC drivers extensions"
+	help
+	  This selects MMC drivers extensions from Sony, like
+	  handling for the UIM and optimizations for all the
+	  Sony platforms.
+
 endif # MMC

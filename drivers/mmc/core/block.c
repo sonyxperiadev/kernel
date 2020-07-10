@@ -2995,7 +2995,16 @@ static int mmc_blk_probe(struct mmc_card *card)
 	/* Add two debugfs entries */
 	mmc_blk_add_debugfs(card, md);
 
+#ifndef CONFIG_SONY_MMC_EXTENSION
 	pm_runtime_set_autosuspend_delay(&card->dev, 3000);
+#else
+	if (mmc_card_sd(card))
+		pm_runtime_set_autosuspend_delay(&card->dev,
+			MMC_SDCARD_AUTOSUSPEND_DELAY_MS);
+	else
+		pm_runtime_set_autosuspend_delay(&card->dev, 3000);
+
+#endif
 	pm_runtime_use_autosuspend(&card->dev);
 
 	/*

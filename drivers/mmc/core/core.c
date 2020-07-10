@@ -26,6 +26,9 @@
 #include <linux/pm_runtime.h>
 #include <linux/pm_wakeup.h>
 #include <linux/suspend.h>
+#ifdef CONFIG_SONY_MMC_EXTENSION
+#include <linux/sony_ext_uim_ctrl.h>
+#endif
 #include <linux/fault-inject.h>
 #include <linux/random.h>
 #include <linux/slab.h>
@@ -2483,7 +2486,14 @@ int mmc_set_uhs_voltage(struct mmc_host *host, u32 ocr)
 	}
 
 	/* Wait for at least 1 ms according to spec */
+#ifndef CONFIG_SONY_MMC_EXTENSION
 	mmc_delay(1);
+#else
+	if (host->caps & MMC_CAP_NONREMOVABLE)
+		mmc_delay(1);
+	else
+		mmc_delay(40);
+#endif
 
 	/*
 	 * Failure to switch is indicated by the card holding
@@ -3510,9 +3520,14 @@ static int mmc_rescan_try_freq(struct mmc_host *host, unsigned freq)
 		if (!mmc_attach_sdio(host))
 			return 0;
 
-	if (!(host->caps2 & MMC_CAP2_NO_SD))
+	if (!(host->caps2 & MMC_CAP2_NO_SD)) {
 		if (!mmc_attach_sd(host))
 			return 0;
+#ifdef CONFIG_SONY_EXT_UIM_CTRL
+		else
+			mmc_gpio_tray_close_set_uim2(host, 1);
+#endif /* CONFIG_SONY_EXT_UIM_CTRL */
+	}
 
 	if (!(host->caps2 & MMC_CAP2_NO_MMC))
 		if (!mmc_attach_mmc(host))
@@ -3700,6 +3715,10 @@ void mmc_stop_host(struct mmc_host *host)
 
 	host->rescan_disable = 1;
 	cancel_delayed_work_sync(&host->detect);
+
+#ifdef CONFIG_SONY_EXT_UIM_CTRL
+	sony_ext_uim_ctrl_set_uim2_detect_en(0);
+#endif /* CONFIG_SONY_EXT_UIM_CTRL */
 
 	/* clear pm flags now and let card drivers set them as needed */
 	host->pm_flags = 0;
