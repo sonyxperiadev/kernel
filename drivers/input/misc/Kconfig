@@ -894,10 +894,17 @@ config INPUT_SC27XX_VIBRA
 	  To compile this driver as a module, choose M here. The module will
 	  be called sc27xx_vibra.
 
- config FPC1145_PLATFORM
+config FPC1145_PLATFORM
        tristate "Platform FPC1145 finger print driver"
        default n
        help
          Select this module to enable FPC1145 tee finger print driver
+
+config SENSORS_ET51X
+	tristate "ET51X fingerprint sensor support"
+	default n
+	help
+	  If you say yes here you get support for Egistec's
+	  fingerprint sensor ET51X.
 
 endif

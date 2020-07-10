@@ -88,3 +88,4 @@ obj-$(CONFIG_INPUT_YEALINK)		+= yealink.o
 obj-$(CONFIG_INPUT_IDEAPAD_SLIDEBAR)	+= ideapad_slidebar.o
 
 obj-$(CONFIG_FPC1145_PLATFORM)          += fpc1145_platform.o
+obj-$(CONFIG_SENSORS_ET51X)		+= et51x.o
