@@ -12,6 +12,14 @@
 #ifndef _UNIPRO_H_
 #define _UNIPRO_H_
 
+#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA) || \
+    defined(CONFIG_ARCH_SONY_KUMANO)  || defined(CONFIG_ARCH_SONY_EDO)
+ #ifndef UFS_TARGET_SONY_PLATFORM
+  #define UFS_TARGET_SONY_PLATFORM
+ #endif
+#endif
+
+
 /*
  * M-TX Configuration Attributes
  */
@@ -168,6 +176,12 @@
 #define PA_INITIAL_ADAPT	0x01
 #define PA_NO_ADAPT		0x03
 
+#ifdef UFS_TARGET_SONY_PLATFORM
+#define PA_TxHsG1SyncLength	0x1552
+#define PA_TxHsG2SyncLength	0x1554
+#define PA_TxHsG3SyncLength	0x1556
+
+#endif
 #define PA_TACTIVATE_TIME_UNIT_US	10
 #define PA_HIBERN8_TIME_UNIT_US		100
 

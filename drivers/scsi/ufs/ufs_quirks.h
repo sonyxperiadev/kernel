@@ -15,11 +15,19 @@
 #ifndef _UFS_QUIRKS_H_
 #define _UFS_QUIRKS_H_
 
+#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA) || \
+    defined(CONFIG_ARCH_SONY_KUMANO)  || defined(CONFIG_ARCH_SONY_EDO)
+ #ifndef UFS_TARGET_SONY_PLATFORM
+  #define UFS_TARGET_SONY_PLATFORM
+ #endif
+#endif
+
 /* return true if s1 is a prefix of s2 */
 #define STR_PRFX_EQUAL(s1, s2) !strncmp(s1, s2, strlen(s1))
 
 #define UFS_ANY_VENDOR 0xFFFF
 #define UFS_ANY_MODEL  "ANY_MODEL"
+#define UFS_ANY_VER    "ANY_VER"
 
 #define UFS_VENDOR_TOSHIBA     0x198
 #define UFS_VENDOR_SAMSUNG     0x1CE
@@ -35,17 +43,38 @@
 struct ufs_dev_fix {
 	u16 w_manufacturer_id;
 	char *model;
+#ifdef UFS_TARGET_SONY_PLATFORM
+	char *revision;
+#endif
 	unsigned int quirk;
 };
 
 #define END_FIX { 0 }
 
 /* add specific device quirk */
+#ifndef UFS_TARGET_SONY_PLATFORM
 #define UFS_FIX(_vendor, _model, _quirk) { \
 	.w_manufacturer_id = (_vendor),\
 	.model = (_model),		  \
 	.quirk = (_quirk),		   \
 }
+#else
+#define UFS_FIX(_vendor, _model, _quirk) \
+		{						  \
+				.w_manufacturer_id = (_vendor),\
+				.model = (_model),		  \
+				.revision = (UFS_ANY_VER),		\
+				.quirk = (_quirk),		  \
+		}
+
+#define UFS_FIX_REVISION(_vendor, _model, _revision, _quirk) \
+		{						  \
+				.w_manufacturer_id = (_vendor),\
+				.model = (_model),		\
+				.revision = (_revision),		\
+				.quirk = (_quirk),		\
+		}
+#endif
 
 /*
  * If UFS device is having issue in processing LCC (Line Control
@@ -166,4 +195,10 @@ struct ufs_dev_fix {
 #define UFS_DEVICE_QUIRK_PA_HIBER8TIME   (1 << 12)
 
 
+#ifdef UFS_TARGET_SONY_PLATFORM
+#define UFS_DEVICE_QUIRK_EXTEND_SYNC_LENGTH	(1 << 23)
+
+#define UFS_DEVICE_QUIRK_NO_PURGE	(1 << 24)
+
+#endif
 #endif /* UFS_QUIRKS_H_ */

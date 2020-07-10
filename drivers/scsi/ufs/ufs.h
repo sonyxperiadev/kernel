@@ -40,6 +40,13 @@
 #include <linux/types.h>
 #include <scsi/ufs/ufs.h>
 
+#if defined(CONFIG_ARCH_SONY_YOSHINO) || defined(CONFIG_ARCH_SONY_TAMA) || \
+    defined(CONFIG_ARCH_SONY_KUMANO)  || defined(CONFIG_ARCH_SONY_EDO)
+ #ifndef UFS_TARGET_SONY_PLATFORM
+  #define UFS_TARGET_SONY_PLATFORM
+ #endif
+#endif
+
 #define MAX_CDB_SIZE	16
 #define GENERAL_UPIU_REQUEST_SIZE 32
 #define QUERY_DESC_MAX_SIZE       255
@@ -610,7 +617,9 @@ struct ufs_dev_info {
 	u16	w_spec_version;
 	u32	d_ext_ufs_feature_sup;
 	u8	b_wb_buffer_type;
-
+#ifdef UFS_TARGET_SONY_PLATFORM
+	u8	revision;
+#endif
 	/* query flags */
 	bool f_power_on_wp_en;
 
@@ -628,6 +637,9 @@ struct ufs_dev_info {
 };
 
 #define MAX_MODEL_LEN 16
+#ifdef UFS_TARGET_SONY_PLATFORM
+#define MAX_REVISION_LEN 8
+#endif
 /**
  * ufs_dev_desc - ufs device details from the device descriptor
  *
@@ -638,6 +650,9 @@ struct ufs_dev_desc {
 	u16 wmanufacturerid;
 	char model[MAX_MODEL_LEN + 1];
 	u16 wspecversion;
+#ifdef UFS_TARGET_SONY_PLATFORM
+	char fw_revision[MAX_REVISION_LEN+1];
+#endif
 };
 
 /**
