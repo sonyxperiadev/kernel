@@ -157,6 +157,12 @@ config USB_USS720
 	  To compile this driver as a module, choose M here: the
 	  module will be called uss720.
 
+config SONY_USB_EXTENSIONS
+	bool "Sony extensions for USB drivers"
+	help
+	    This configuration option enables extensional code for
+	    the USB drivers on Sony devices.
+
 source "drivers/usb/serial/Kconfig"
 
 source "drivers/usb/misc/Kconfig"
