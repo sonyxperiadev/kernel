@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -27,6 +27,7 @@
 
 #define NORTH	0x00500000
 #define SOUTH	0x00900000
+#define EAST	0x00100000
 #define REG_SIZE 0x1000
 #define PINGROUP(id, base, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10)	\
 	{						\
@@ -52,8 +53,8 @@
 		.intr_cfg_reg = base + 0x8 + REG_SIZE * id,	\
 		.intr_status_reg = base + 0xc + REG_SIZE * id,	\
 		.intr_target_reg = base + 0x8 + REG_SIZE * id,	\
-		.dir_conn_reg = (base == NORTH) ? base + 0xa5000 :\
-					base + 0xa8000, \
+		.dir_conn_reg = (base == NORTH) ? base + 0xa4000 : \
+			((base == SOUTH) ? base + 0xa8000 : base + 0x9e000), \
 		.mux_bit = 2,			\
 		.pull_bit = 0,			\
 		.drv_bit = 6,			\
@@ -120,7 +121,6 @@
 		.intr_detection_bit = -1,		\
 		.intr_detection_width = -1,		\
 	}
-
 static const struct pinctrl_pin_desc sdm845_pins[] = {
 	PINCTRL_PIN(0, "GPIO_0"),
 	PINCTRL_PIN(1, "GPIO_1"),
@@ -528,6 +528,7 @@ enum sdm845_functions {
 	msm_mux_qup5,
 	msm_mux_tsif1_clk,
 	msm_mux_qup4,
+	msm_mux_qspi_cs,
 	msm_mux_tgu_ch3,
 	msm_mux_phase_flag10,
 	msm_mux_tsif1_en,
@@ -539,18 +540,23 @@ enum sdm845_functions {
 	msm_mux_phase_flag0,
 	msm_mux_tsif1_data,
 	msm_mux_sdc4_cmd,
+	msm_mux_qspi0,
 	msm_mux_tgu_ch1,
 	msm_mux_tsif2_error,
 	msm_mux_sdc43,
+	msm_mux_qspi1,
 	msm_mux_vfr_1,
 	msm_mux_tgu_ch2,
 	msm_mux_tsif2_clk,
 	msm_mux_sdc4_clk,
 	msm_mux_qup7,
+	msm_mux_qspi2,
 	msm_mux_tsif2_en,
 	msm_mux_sdc42,
+	msm_mux_qspi3,
 	msm_mux_tsif2_data,
 	msm_mux_sdc41,
+	msm_mux_qspi_clk,
 	msm_mux_tsif2_sync,
 	msm_mux_sdc40,
 	msm_mux_phase_flag3,
@@ -893,6 +899,9 @@ static const char * const tsif1_clk_groups[] = {
 static const char * const qup4_groups[] = {
 	"gpio89", "gpio90", "gpio91", "gpio92",
 };
+static const char * const qspi_cs_groups[] = {
+	"gpio89", "gpio90",
+};
 static const char * const tgu_ch3_groups[] = {
 	"gpio89",
 };
@@ -926,6 +935,9 @@ static const char * const tsif1_data_groups[] = {
 static const char * const sdc4_cmd_groups[] = {
 	"gpio91",
 };
+static const char * const qspi0_groups[] = {
+	"gpio91",
+};
 static const char * const tgu_ch1_groups[] = {
 	"gpio91",
 };
@@ -933,6 +945,9 @@ static const char * const tsif2_error_groups[] = {
 	"gpio92",
 };
 static const char * const sdc43_groups[] = {
+	"gpio92",
+};
+static const char * const qspi1_groups[] = {
 	"gpio92",
 };
 static const char * const vfr_1_groups[] = {
@@ -950,16 +965,25 @@ static const char * const sdc4_clk_groups[] = {
 static const char * const qup7_groups[] = {
 	"gpio93", "gpio94", "gpio95", "gpio96",
 };
+static const char * const qspi2_groups[] = {
+	"gpio93",
+};
 static const char * const tsif2_en_groups[] = {
 	"gpio94",
 };
 static const char * const sdc42_groups[] = {
 	"gpio94",
 };
+static const char * const qspi3_groups[] = {
+	"gpio94",
+};
 static const char * const tsif2_data_groups[] = {
 	"gpio95",
 };
 static const char * const sdc41_groups[] = {
+	"gpio95",
+};
+static const char * const qspi_clk_groups[] = {
 	"gpio95",
 };
 static const char * const tsif2_sync_groups[] = {
@@ -1277,6 +1301,7 @@ static const struct msm_function sdm845_functions[] = {
 	FUNCTION(qup5),
 	FUNCTION(tsif1_clk),
 	FUNCTION(qup4),
+	FUNCTION(qspi_cs),
 	FUNCTION(tgu_ch3),
 	FUNCTION(phase_flag10),
 	FUNCTION(tsif1_en),
@@ -1288,18 +1313,23 @@ static const struct msm_function sdm845_functions[] = {
 	FUNCTION(phase_flag0),
 	FUNCTION(tsif1_data),
 	FUNCTION(sdc4_cmd),
+	FUNCTION(qspi0),
 	FUNCTION(tgu_ch1),
 	FUNCTION(tsif2_error),
 	FUNCTION(sdc43),
+	FUNCTION(qspi1),
 	FUNCTION(vfr_1),
 	FUNCTION(tgu_ch2),
 	FUNCTION(tsif2_clk),
 	FUNCTION(sdc4_clk),
 	FUNCTION(qup7),
+	FUNCTION(qspi2),
 	FUNCTION(tsif2_en),
 	FUNCTION(sdc42),
+	FUNCTION(qspi3),
 	FUNCTION(tsif2_data),
 	FUNCTION(sdc41),
+	FUNCTION(qspi_clk),
 	FUNCTION(tsif2_sync),
 	FUNCTION(sdc40),
 	FUNCTION(phase_flag3),
@@ -1374,10 +1404,10 @@ static const struct msm_function sdm845_functions[] = {
  * Clients would not be able to request these dummy pin groups.
  */
 static const struct msm_pingroup sdm845_groups[] = {
-	[0] = PINGROUP(0, NORTH, qup0, NA, NA, NA, NA, NA, NA, NA, NA, NA),
-	[1] = PINGROUP(1, NORTH, qup0, NA, NA, NA, NA, NA, NA, NA, NA, NA),
-	[2] = PINGROUP(2, NORTH, qup0, NA, NA, NA, NA, NA, NA, NA, NA, NA),
-	[3] = PINGROUP(3, NORTH, qup0, NA, NA, NA, NA, NA, NA, NA, NA, NA),
+	[0] = PINGROUP(0, EAST, qup0, NA, NA, NA, NA, NA, NA, NA, NA, NA),
+	[1] = PINGROUP(1, EAST, qup0, NA, NA, NA, NA, NA, NA, NA, NA, NA),
+	[2] = PINGROUP(2, EAST, qup0, NA, NA, NA, NA, NA, NA, NA, NA, NA),
+	[3] = PINGROUP(3, EAST, qup0, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	[4] = PINGROUP(4, NORTH, qup9, qdss_cti, NA, NA, NA, NA, NA, NA, NA,
 		       NA),
 	[5] = PINGROUP(5, NORTH, qup9, qdss_cti, NA, NA, NA, NA, NA, NA, NA,
@@ -1386,13 +1416,13 @@ static const struct msm_pingroup sdm845_groups[] = {
 		       NA),
 	[7] = PINGROUP(7, NORTH, qup9, ddr_bist, NA, atest_tsens2,
 		       vsense_trigger, atest_usb1, ddr_pxi0, NA, NA, NA),
-	[8] = PINGROUP(8, NORTH, qup_l4, NA, ddr_bist, NA, NA, wlan1_adc1,
+	[8] = PINGROUP(8, EAST, qup_l4, NA, ddr_bist, NA, NA, wlan1_adc1,
 		       atest_usb13, ddr_pxi1, NA, NA),
-	[9] = PINGROUP(9, NORTH, qup_l5, ddr_bist, NA, wlan1_adc0, atest_usb12,
+	[9] = PINGROUP(9, EAST, qup_l5, ddr_bist, NA, wlan1_adc0, atest_usb12,
 		       ddr_pxi1, NA, NA, NA, NA),
-	[10] = PINGROUP(10, NORTH, mdp_vsync, qup_l6, ddr_bist, wlan2_adc1,
+	[10] = PINGROUP(10, EAST, mdp_vsync, qup_l6, ddr_bist, wlan2_adc1,
 			atest_usb11, ddr_pxi2, NA, NA, NA, NA),
-	[11] = PINGROUP(11, NORTH, mdp_vsync, edp_lcd, dbg_out, wlan2_adc0,
+	[11] = PINGROUP(11, EAST, mdp_vsync, edp_lcd, dbg_out, wlan2_adc0,
 			atest_usb10, ddr_pxi2, NA, NA, NA, NA),
 	[12] = PINGROUP(12, SOUTH, mdp_vsync, m_voc, tsif1_sync, ddr_pxi3, NA,
 			NA, NA, NA, NA, NA),
@@ -1424,14 +1454,14 @@ static const struct msm_pingroup sdm845_groups[] = {
 			NA, NA, NA, NA, NA),
 	[26] = PINGROUP(26, SOUTH, cci_async, qdss_gpio12, NA, NA, NA, NA, NA,
 			NA, NA, NA),
-	[27] = PINGROUP(27, NORTH, qup2, qdss_gpio13, NA, NA, NA, NA, NA, NA,
+	[27] = PINGROUP(27, EAST, qup2, qdss_gpio13, NA, NA, NA, NA, NA, NA,
 			NA, NA),
-	[28] = PINGROUP(28, NORTH, qup2, qdss_gpio14, NA, NA, NA, NA, NA, NA,
+	[28] = PINGROUP(28, EAST, qup2, qdss_gpio14, NA, NA, NA, NA, NA, NA,
 			NA, NA),
-	[29] = PINGROUP(29, NORTH, qup2, NA, phase_flag1, qdss_gpio15, NA, NA,
+	[29] = PINGROUP(29, EAST, qup2, NA, phase_flag1, qdss_gpio15, NA, NA,
 			NA, NA, NA, NA),
-	[30] = PINGROUP(30, NORTH, qup2, phase_flag2, qdss_gpio, NA, NA, NA,
-			NA, NA, NA, NA),
+	[30] = PINGROUP(30, EAST, qup2, phase_flag2, qdss_gpio, NA, NA, NA, NA,
+			NA, NA, NA),
 	[31] = PINGROUP(31, NORTH, qup11, qup14, NA, NA, NA, NA, NA, NA, NA,
 			NA),
 	[32] = PINGROUP(32, NORTH, qup11, qup14, NA, NA, NA, NA, NA, NA, NA,
@@ -1447,22 +1477,22 @@ static const struct msm_pingroup sdm845_groups[] = {
 	[37] = PINGROUP(37, SOUTH, qup_l6, agera_pll, NA, NA, NA, NA, NA, NA,
 			NA, NA),
 	[38] = PINGROUP(38, NORTH, usb_phy, NA, NA, NA, NA, NA, NA, NA, NA, NA),
-	[39] = PINGROUP(39, NORTH, lpass_slimbus, NA, NA, NA, NA, NA, NA, NA,
+	[39] = PINGROUP(39, EAST, lpass_slimbus, NA, NA, NA, NA, NA, NA, NA,
 			NA, NA),
 	[40] = PINGROUP(40, SOUTH, sd_write, tsif1_error, NA, NA, NA, NA, NA,
 			NA, NA, NA),
-	[41] = PINGROUP(41, SOUTH, qup3, NA, qdss_gpio6, NA, NA, NA, NA, NA,
+	[41] = PINGROUP(41, EAST, qup3, NA, qdss_gpio6, NA, NA, NA, NA, NA, NA,
+			NA),
+	[42] = PINGROUP(42, EAST, qup3, NA, qdss_gpio7, NA, NA, NA, NA, NA, NA,
+			NA),
+	[43] = PINGROUP(43, EAST, qup3, NA, qdss_gpio14, NA, NA, NA, NA, NA,
 			NA, NA),
-	[42] = PINGROUP(42, SOUTH, qup3, NA, qdss_gpio7, NA, NA, NA, NA, NA,
+	[44] = PINGROUP(44, EAST, qup3, NA, qdss_gpio15, NA, NA, NA, NA, NA,
 			NA, NA),
-	[43] = PINGROUP(43, SOUTH, qup3, NA, qdss_gpio14, NA, NA, NA, NA, NA,
-			NA, NA),
-	[44] = PINGROUP(44, SOUTH, qup3, NA, qdss_gpio15, NA, NA, NA, NA, NA,
-			NA, NA),
-	[45] = PINGROUP(45, NORTH, qup6, NA, NA, NA, NA, NA, NA, NA, NA, NA),
-	[46] = PINGROUP(46, NORTH, qup6, NA, NA, NA, NA, NA, NA, NA, NA, NA),
-	[47] = PINGROUP(47, NORTH, qup6, NA, NA, NA, NA, NA, NA, NA, NA, NA),
-	[48] = PINGROUP(48, NORTH, qup6, NA, NA, NA, NA, NA, NA, NA, NA, NA),
+	[45] = PINGROUP(45, EAST, qup6, NA, NA, NA, NA, NA, NA, NA, NA, NA),
+	[46] = PINGROUP(46, EAST, qup6, NA, NA, NA, NA, NA, NA, NA, NA, NA),
+	[47] = PINGROUP(47, EAST, qup6, NA, NA, NA, NA, NA, NA, NA, NA, NA),
+	[48] = PINGROUP(48, EAST, qup6, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	[49] = PINGROUP(49, NORTH, qup12, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	[50] = PINGROUP(50, NORTH, qup12, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	[51] = PINGROUP(51, NORTH, qup12, qdss_cti, NA, NA, NA, NA, NA, NA, NA,
@@ -1501,25 +1531,25 @@ static const struct msm_pingroup sdm845_groups[] = {
 			NA),
 	[68] = PINGROUP(68, NORTH, pri_mi2s, qup8, NA, NA, NA, NA, NA, NA, NA,
 			NA),
-	[69] = PINGROUP(69, NORTH, spkr_i2s, audio_ref, NA, NA, NA, NA, NA, NA,
+	[69] = PINGROUP(69, EAST, spkr_i2s, audio_ref, NA, NA, NA, NA, NA, NA,
 			NA, NA),
-	[70] = PINGROUP(70, NORTH, lpass_slimbus, spkr_i2s, NA, NA, NA, NA, NA,
+	[70] = PINGROUP(70, EAST, lpass_slimbus, spkr_i2s, NA, NA, NA, NA, NA,
 			NA, NA, NA),
-	[71] = PINGROUP(71, NORTH, lpass_slimbus, spkr_i2s, tsense_pwm1,
+	[71] = PINGROUP(71, EAST, lpass_slimbus, spkr_i2s, tsense_pwm1,
 			tsense_pwm2, NA, NA, NA, NA, NA, NA),
-	[72] = PINGROUP(72, NORTH, lpass_slimbus, spkr_i2s, NA, NA, NA, NA, NA,
+	[72] = PINGROUP(72, EAST, lpass_slimbus, spkr_i2s, NA, NA, NA, NA, NA,
 			NA, NA, NA),
-	[73] = PINGROUP(73, NORTH, btfm_slimbus, atest_usb2, NA, NA, NA, NA,
-			NA, NA, NA, NA),
-	[74] = PINGROUP(74, NORTH, btfm_slimbus, ter_mi2s, phase_flag7,
+	[73] = PINGROUP(73, EAST, btfm_slimbus, atest_usb2, NA, NA, NA, NA, NA,
+			NA, NA, NA),
+	[74] = PINGROUP(74, EAST, btfm_slimbus, ter_mi2s, phase_flag7,
 			atest_usb23, NA, NA, NA, NA, NA, NA),
-	[75] = PINGROUP(75, NORTH, ter_mi2s, phase_flag8, qdss_gpio8,
+	[75] = PINGROUP(75, EAST, ter_mi2s, phase_flag8, qdss_gpio8,
 			atest_usb22, NA, NA, NA, NA, NA, NA),
-	[76] = PINGROUP(76, NORTH, ter_mi2s, phase_flag9, qdss_gpio9,
+	[76] = PINGROUP(76, EAST, ter_mi2s, phase_flag9, qdss_gpio9,
 			atest_usb21, NA, NA, NA, NA, NA, NA),
-	[77] = PINGROUP(77, NORTH, ter_mi2s, phase_flag4, qdss_gpio10,
+	[77] = PINGROUP(77, EAST, ter_mi2s, phase_flag4, qdss_gpio10,
 			atest_usb20, NA, NA, NA, NA, NA, NA),
-	[78] = PINGROUP(78, NORTH, ter_mi2s, gcc_gp1, NA, NA, NA, NA, NA, NA,
+	[78] = PINGROUP(78, EAST, ter_mi2s, gcc_gp1, NA, NA, NA, NA, NA, NA,
 			NA, NA),
 	[79] = PINGROUP(79, NORTH, sec_mi2s, NA, NA, qdss_gpio11, NA, NA, NA,
 			NA, NA, NA),
@@ -1532,25 +1562,25 @@ static const struct msm_pingroup sdm845_groups[] = {
 	[83] = PINGROUP(83, NORTH, sec_mi2s, qup15, NA, NA, NA, NA, NA, NA, NA,
 			NA),
 	[84] = PINGROUP(84, NORTH, qup15, NA, NA, NA, NA, NA, NA, NA, NA, NA),
-	[85] = PINGROUP(85, SOUTH, qup5, NA, NA, NA, NA, NA, NA, NA, NA, NA),
-	[86] = PINGROUP(86, SOUTH, qup5, NA, NA, NA, NA, NA, NA, NA, NA, NA),
-	[87] = PINGROUP(87, SOUTH, qup5, NA, NA, NA, NA, NA, NA, NA, NA, NA),
-	[88] = PINGROUP(88, SOUTH, qup5, NA, NA, NA, NA, NA, NA, NA, NA, NA),
-	[89] = PINGROUP(89, SOUTH, tsif1_clk, qup4, tgu_ch3, phase_flag10, NA,
-			NA, NA, NA, NA, NA),
-	[90] = PINGROUP(90, SOUTH, tsif1_en, mdp_vsync0, qup4, mdp_vsync1,
-			mdp_vsync2, mdp_vsync3, tgu_ch0, phase_flag0, qdss_cti,
-			NA),
-	[91] = PINGROUP(91, SOUTH, tsif1_data, sdc4_cmd, qup4, tgu_ch1, NA,
-			qdss_cti, NA, NA, NA, NA),
-	[92] = PINGROUP(92, SOUTH, tsif2_error, sdc43, qup4, vfr_1, tgu_ch2,
-			NA, NA, NA, NA, NA),
-	[93] = PINGROUP(93, SOUTH, tsif2_clk, sdc4_clk, qup7, NA, qdss_gpio13,
-			NA, NA, NA, NA, NA),
-	[94] = PINGROUP(94, SOUTH, tsif2_en, sdc42, qup7, NA, NA, NA, NA, NA,
-			NA, NA),
-	[95] = PINGROUP(95, SOUTH, tsif2_data, sdc41, qup7, NA, NA, NA, NA, NA,
-			NA, NA),
+	[85] = PINGROUP(85, EAST, qup5, NA, NA, NA, NA, NA, NA, NA, NA, NA),
+	[86] = PINGROUP(86, EAST, qup5, NA, NA, NA, NA, NA, NA, NA, NA, NA),
+	[87] = PINGROUP(87, EAST, qup5, NA, NA, NA, NA, NA, NA, NA, NA, NA),
+	[88] = PINGROUP(88, EAST, qup5, NA, NA, NA, NA, NA, NA, NA, NA, NA),
+	[89] = PINGROUP(89, SOUTH, tsif1_clk, qup4, qspi_cs, tgu_ch3,
+			phase_flag10, NA, NA, NA, NA, NA),
+	[90] = PINGROUP(90, SOUTH, tsif1_en, mdp_vsync0, qup4, qspi_cs,
+			mdp_vsync1, mdp_vsync2, mdp_vsync3, tgu_ch0,
+			phase_flag0, qdss_cti),
+	[91] = PINGROUP(91, SOUTH, tsif1_data, sdc4_cmd, qup4, qspi0, tgu_ch1,
+			NA, qdss_cti, NA, NA, NA),
+	[92] = PINGROUP(92, SOUTH, tsif2_error, sdc43, qup4, qspi1, vfr_1,
+			tgu_ch2, NA, NA, NA, NA),
+	[93] = PINGROUP(93, SOUTH, tsif2_clk, sdc4_clk, qup7, qspi2, NA,
+			qdss_gpio13, NA, NA, NA, NA),
+	[94] = PINGROUP(94, SOUTH, tsif2_en, sdc42, qup7, qspi3, NA, NA, NA,
+			NA, NA, NA),
+	[95] = PINGROUP(95, SOUTH, tsif2_data, sdc41, qup7, qspi_clk, NA, NA,
+			NA, NA, NA, NA),
 	[96] = PINGROUP(96, SOUTH, tsif2_sync, sdc40, qup7, phase_flag3, NA,
 			NA, NA, NA, NA, NA),
 	[97] = PINGROUP(97, NORTH, NA, NA, mdp_vsync, ldo_en, NA, NA, NA, NA,
@@ -1600,15 +1630,14 @@ static const struct msm_pingroup sdm845_groups[] = {
 			 NA, NA, NA, NA),
 	[121] = PINGROUP(121, NORTH, NA, qdss_gpio4, atest_char0, NA, NA, NA,
 			 NA, NA, NA, NA),
-	[122] = PINGROUP(122, NORTH, NA, qdss_gpio5, NA, NA, NA, NA, NA, NA,
-			 NA, NA),
-	[123] = PINGROUP(123, NORTH, qup_l4, NA, qdss_gpio, NA, NA, NA, NA, NA,
-			 NA, NA),
-	[124] = PINGROUP(124, NORTH, qup_l5, NA, qdss_gpio, NA, NA, NA, NA, NA,
-			 NA, NA),
-	[125] = PINGROUP(125, NORTH, qup_l6, NA, NA, NA, NA, NA, NA, NA, NA,
+	[122] = PINGROUP(122, EAST, NA, qdss_gpio5, NA, NA, NA, NA, NA, NA, NA,
 			 NA),
-	[126] = PINGROUP(126, NORTH, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA),
+	[123] = PINGROUP(123, EAST, qup_l4, NA, qdss_gpio, NA, NA, NA, NA, NA,
+			 NA, NA),
+	[124] = PINGROUP(124, EAST, qup_l5, NA, qdss_gpio, NA, NA, NA, NA, NA,
+			 NA, NA),
+	[125] = PINGROUP(125, EAST, qup_l6, NA, NA, NA, NA, NA, NA, NA, NA, NA),
+	[126] = PINGROUP(126, EAST, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	[127] = PINGROUP(127, NORTH, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA),
 	[128] = PINGROUP(128, NORTH, nav_pps, nav_pps, NA, NA, NA, NA, NA, NA,
 			 NA, NA),
@@ -1676,7 +1705,7 @@ static struct msm_dir_conn sdm845_dir_conn[] = {
 	{44, 530},
 	{46, 531},
 	{48, 532},
-	{49, 633},
+	{49, 633 },
 	{52, 534},
 	{53, 535},
 	{54, 536},
@@ -1709,6 +1738,9 @@ static struct msm_dir_conn sdm845_dir_conn[] = {
 	{97, 563},
 	{101, 564},
 	{103, 565},
+	{108, 567},
+	{112, 568},
+	{113, 569},
 	{104, 566},
 	{115, 570},
 	{116, 571},
@@ -1758,13 +1790,13 @@ static int sdm845_pinctrl_probe(struct platform_device *pdev)
 }
 
 static const struct of_device_id sdm845_pinctrl_of_match[] = {
-	{ .compatible = "qcom,sdm845-pinctrl", },
+	{ .compatible = "qcom,sdm845-pinctrl-v2", },
 	{ },
 };
 
 static struct platform_driver sdm845_pinctrl_driver = {
 	.driver = {
-		.name = "sdm845-pinctrl",
+		.name = "sdm845-v2-pinctrl",
 		.owner = THIS_MODULE,
 		.of_match_table = sdm845_pinctrl_of_match,
 	},
@@ -1784,6 +1816,6 @@ static void __exit sdm845_pinctrl_exit(void)
 }
 module_exit(sdm845_pinctrl_exit);
 
-MODULE_DESCRIPTION("QTI sdm845 pinctrl driver");
+MODULE_DESCRIPTION("QTI sdm845-v2 pinctrl driver");
 MODULE_LICENSE("GPL v2");
 MODULE_DEVICE_TABLE(of, sdm845_pinctrl_of_match);
