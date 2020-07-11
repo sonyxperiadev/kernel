@@ -16,6 +16,16 @@ clk-qcom-y += clk-dummy.o clk-debug.o
 clk-qcom-y += gdsc-regulator.o
 clk-qcom-$(CONFIG_QCOM_GDSC) += gdsc.o
 
+# Ported clock drivers
+obj-$(CONFIG_MSM_GCC_SM8150) += gcc-sm8150.o
+obj-$(CONFIG_MSM_DEBUGCC_SM8150) += debugcc-sm8150.o
+obj-$(CONFIG_MSM_DISPCC_SM8150) += dispcc-sm8150.o
+obj-$(CONFIG_MSM_CAMCC_SM8150) += camcc-sm8150.o
+obj-$(CONFIG_MSM_GPUCC_SM8150) += gpucc-sm8150.o
+obj-$(CONFIG_MSM_NPUCC_SM8150) += npucc-sm8150.o
+obj-$(CONFIG_MSM_SCC_SM8150) += scc-sm8150.o
+obj-$(CONFIG_MSM_VIDEOCC_SM8150) += videocc-sm8150.o
+
 # Keep alphabetically sorted by config
 obj-$(CONFIG_APQ_GCC_8084) += gcc-apq8084.o
 obj-$(CONFIG_APQ_MMCC_8084) += mmcc-apq8084.o
