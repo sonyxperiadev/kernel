@@ -26,6 +26,12 @@ obj-$(CONFIG_MSM_NPUCC_SM8150) += npucc-sm8150.o
 obj-$(CONFIG_MSM_SCC_SM8150) += scc-sm8150.o
 obj-$(CONFIG_MSM_VIDEOCC_SM8150) += videocc-sm8150.o
 
+obj-$(CONFIG_SM_DEBUGCC_TRINKET) += debugcc-trinket.o
+obj-$(CONFIG_SM_DISPCC_TRINKET) += dispcc-trinket.o
+obj-$(CONFIG_SM_GCC_TRINKET) += gcc-trinket.o
+obj-$(CONFIG_SM_GPUCC_TRINKET) += gpucc-trinket.o
+obj-$(CONFIG_SM_VIDEOCC_TRINKET) += videocc-trinket.o
+
 # Keep alphabetically sorted by config
 obj-$(CONFIG_APQ_GCC_8084) += gcc-apq8084.o
 obj-$(CONFIG_APQ_MMCC_8084) += mmcc-apq8084.o
