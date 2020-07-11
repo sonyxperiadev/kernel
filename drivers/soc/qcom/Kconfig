@@ -117,6 +117,14 @@ config QCOM_LLCC
 	  to clients that use the LLCC. Say yes here to enable LLCC slice
 	  driver.
 
+config QCOM_SM8150_LLCC
+	tristate "Qualcomm Technologies, Inc. SM8150 LLCC driver"
+	depends on QCOM_LLCC
+	help
+	  Say yes here to enable the LLCC driver for SM8150. This is provides
+	  data required to configure LLCC so that clients can start using the
+	  LLCC slices.
+
 config QCOM_KONA_LLCC
 	tristate "Qualcomm Technologies, Inc. KONA LLCC driver"
 	depends on QCOM_LLCC
