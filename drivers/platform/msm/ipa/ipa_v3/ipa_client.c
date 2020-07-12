@@ -820,10 +820,10 @@ int ipa3_xdci_start(u32 clnt_hdl, u8 xferrscidx, bool xferrscidx_valid)
 
 		result = ipa3_cfg_ep_ctrl(clnt_hdl, &ep_cfg_ctrl);
 		if (result)
-			IPAERR("client (ep: %d) failed result=%d\n",
+			IPAERR("client (ep: %lu) failed result=%d\n",
 			clnt_hdl, result);
 		else
-			IPADBG("client (ep: %d) success\n", clnt_hdl);
+			IPADBG("client (ep: %lu) success\n", clnt_hdl);
 	} else {
 		ep->ep_delay_set = false;
 	}
@@ -840,10 +840,10 @@ int ipa3_xdci_start(u32 clnt_hdl, u8 xferrscidx, bool xferrscidx_valid)
 		gsi_res = gsi_enable_flow_control_ee(ep->gsi_chan_hdl, 0,
 									&code);
 		if (gsi_res == GSI_STATUS_SUCCESS) {
-			IPADBG("flow control sussess gsi ch %d with code %d\n",
+			IPADBG("flow control sussess gsi ch %u with code %d\n",
 					ep->gsi_chan_hdl, code);
 		} else {
-			IPADBG("failed to flow control gsi ch %d code %d\n",
+			IPADBG("failed to flow control gsi ch %u code %d\n",
 					ep->gsi_chan_hdl, code);
 		}
 	}

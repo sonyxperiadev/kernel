@@ -167,7 +167,7 @@ static int ipa3_nat_ipv6ct_mmap(
 
 	if (nmi == IPA_NAT_MEM_IN_SRAM) {
 		if (dev->phys_mem_size == 0 || dev->phys_mem_size > vsize) {
-			IPAERR_RL("%s err vsize(0x%X) phys_mem_size(0x%X)\n",
+			IPAERR_RL("%s err vsize(0x%lX) phys_mem_size(0x%lX)\n",
 			  dev->name, vsize, dev->phys_mem_size);
 			result = -EINVAL;
 			goto unlock;

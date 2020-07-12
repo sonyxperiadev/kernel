@@ -37,7 +37,7 @@ static int cma_debugfs_get(void *data, u64 *val)
 
 	return ret;
 }
-DEFINE_SIMPLE_ATTRIBUTE(cma_debugfs_fops, cma_debugfs_get, NULL, "0x%lx\n");
+DEFINE_SIMPLE_ATTRIBUTE(cma_debugfs_fops, cma_debugfs_get, NULL, "0x%llx\n");
 
 static int cma_used_get(void *data, u64 *val)
 {

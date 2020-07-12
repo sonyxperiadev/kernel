@@ -432,7 +432,7 @@ static void ipa3_event_ring_hdlr(void)
 
 		if (((struct eventElement_t *) rp_va)->Opcode == BW_NOTIFY) {
 			e_b = ((struct eventElement_t *) rp_va);
-			IPADBG("prot(%d), index (%d) throughput (%lu)\n",
+			IPADBG("prot(%d), index (%d) throughput (%llu)\n",
 			e_b->Protocol,
 			e_b->Value.bw_param.ThresholdIndex,
 			e_b->Value.bw_param.throughput);

@@ -1289,7 +1289,7 @@ static int qseecom_create_bridge_for_secbuf(int ion_fd, struct dma_buf *dmabuf,
 
 	nelems = ion_get_flags_num_vm_elems(dma_buf_flags);
 	if (nelems == 0) {
-		pr_err("failed to get vm num from flag = %x\n", dma_buf_flags);
+		pr_err("failed to get vm num from flag = %lx\n", dma_buf_flags);
 		ret = -EINVAL;
 		goto exit;
 	}

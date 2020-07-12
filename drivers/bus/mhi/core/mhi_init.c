@@ -102,7 +102,7 @@ void mhi_time_async_cb(struct mhi_device *mhi_dev, u32 sequence,
 {
 	struct mhi_controller *mhi_cntrl = mhi_dev->mhi_cntrl;
 
-	MHI_LOG("Time response: seq:%llx local: %llu remote: %llu (ticks)\n",
+	MHI_LOG("Time response: seq:%x local: %llu remote: %llu (ticks)\n",
 		sequence, local_time, remote_time);
 }
 

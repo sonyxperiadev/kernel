@@ -900,7 +900,7 @@ static void geni_i3c_perform_daa(struct geni_i3c_dev *gi3c)
 
 			if (pid == i3cboardinfo->pid) {
 				GENI_SE_DBG(gi3c->ipcl, false, gi3c->se.dev,
-				"PID 0x:%x matched with boardinfo\n", pid);
+				"PID 0x:%llx matched with boardinfo\n", pid);
 				break;
 			}
 		}

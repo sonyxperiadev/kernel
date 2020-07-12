@@ -1773,7 +1773,7 @@ static int npu_parse_dt_clock(struct npu_device *npu_dev)
 		if (npu_clk_need_reset(clock_name)) {
 			reset = devm_reset_control_get(&pdev->dev, clock_name);
 			if (IS_ERR(reset))
-				NPU_WARN("no reset for %s %d\n", clock_name,
+				NPU_WARN("no reset for %s %ld\n", clock_name,
 					PTR_ERR(reset));
 			else
 				core_clks[i].reset = reset;

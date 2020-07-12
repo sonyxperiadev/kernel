@@ -131,7 +131,7 @@ static ssize_t fan_store(struct device *dev, struct device_attribute *attr,
 	}
 
 	kstrtol(buf, 0, &val);
-	pr_debug("%s, count:%d  val:%lx, buf:%s\n",
+	pr_debug("%s, count:%lu  val:%lx, buf:%s\n",
 				 __func__, count, val, buf);
 
 	if (val == 0xff) {
