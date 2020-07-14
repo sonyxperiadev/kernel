@@ -1933,12 +1933,11 @@ static enum power_supply_property wireless_props[] = {
 	POWER_SUPPLY_PROP_DCIN_VALID,
 	POWER_SUPPLY_PROP_USBIN_VALID,
 	POWER_SUPPLY_PROP_WIRELESS_SUSPEND_FOR_DEV1,
-	POWER_SUPPLY_PROP_WIRELESS_THERMAL_V_LIMIT,
-	POWER_SUPPLY_PROP_AUTH,
 	POWER_SUPPLY_PROP_CHARGER_TYPE,
 	POWER_SUPPLY_PROP_WIRELESS_STATUS,
 	POWER_SUPPLY_PROP_TEMP,
 	POWER_SUPPLY_PROP_CHARGER_TYPE_DETERMINED,
+	POWER_SUPPLY_PROP_WLC_VOUT_SET,
 };
 
 static int idtp9221_psy_get_property(struct power_supply *psy,
@@ -1958,11 +1957,8 @@ static int idtp9221_psy_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_WIRELESS_SUSPEND_FOR_DEV1:
 		val->intval = chip->wireless_suspend;
 		break;
-	case POWER_SUPPLY_PROP_WIRELESS_THERMAL_V_LIMIT:
+	case POWER_SUPPLY_PROP_WLC_VOUT_SET:
 		val->intval = chip->thermal_max_voltage;
-		break;
-	case POWER_SUPPLY_PROP_AUTH:
-		val->intval = chip->wireless_auth;
 		break;
 	case POWER_SUPPLY_PROP_CHARGER_TYPE:
 		val->strval = idtp9221_get_wireless_charger_type(chip);
@@ -2029,7 +2025,7 @@ static int idtp9221_psy_set_property(struct power_supply *psy,
 
 		chip->wireless_suspend = val->intval;
 		break;
-	case POWER_SUPPLY_PROP_WIRELESS_THERMAL_V_LIMIT:
+	case POWER_SUPPLY_PROP_WLC_VOUT_SET:
 		idtp9221_dbg(chip, PR_PSY, "WIRELESS_THERMAL_V_LIMIT=%d\n",
 								val->intval);
 		if (val->intval != chip->thermal_max_voltage) {
@@ -2062,7 +2058,7 @@ static int idtp9221_property_is_writeable(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_DCIN_VALID:
 	case POWER_SUPPLY_PROP_USBIN_VALID:
 	case POWER_SUPPLY_PROP_WIRELESS_SUSPEND_FOR_DEV1:
-	case POWER_SUPPLY_PROP_WIRELESS_THERMAL_V_LIMIT:
+	case POWER_SUPPLY_PROP_WLC_VOUT_SET:
 		rc = 1;
 		break;
 	default:
