@@ -137,26 +137,26 @@
 		pinctrl-2 = <>;
 	};
 
-	et6xx: et6xx {
-		status = "ok";
-		compatible = "egistec,et580";
+	tlmm_gpio_100_reg: tlmm_gpio_100_reg {
+		compatible = "regulator-fixed";
+		regulator-name = "tlmm_gpio_100_reg";
+		startup-delay-us = <0>;
+		enable-active-high;
+		gpio = <&tlmm 100 0>;
+	};
 
-		egistec,gpio_irq = <&tlmm 92 0x0>;
+	et6xx {
+		compatible = "etspi,et510";
+		et51x,gpio_irq = <&tlmm 92 0>;
+		vdd_ana-supply = <&tlmm_gpio_100_reg>;
+		et51x,no-low-voltage-probe;
 
-		pinctrl-names = "et6xx_reset_reset",
-				"et6xx_reset_active",
-				"et6xx_ldo_low",
-				"et6xx_ldo_high",
-				"et6xx_irq_low",
-				"et6xx_irq_active";
-
+		pinctrl-names = "et51x_reset_reset",
+				"et51x_reset_active",
+				"et51x_irq_active";
 		pinctrl-0 = <&sm_gpio_93>;
 		pinctrl-1 = <&sm_gpio_93_output_high>;
-		pinctrl-2 = <&sm_gpio_100>;
-		pinctrl-3 = <&sm_gpio_100_output_high>;
-		pinctrl-4 = <&sm_gpio_92>;
-		pinctrl-5 = <&sm_gpio_92_input_no_pull>;
-
+		pinctrl-2 = <&sm_gpio_92_input_no_pull>;
 	};
 
 	somc_pinctrl_pmic: somc_pinctrl_pmic {
