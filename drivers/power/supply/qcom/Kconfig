@@ -150,6 +150,13 @@ config SOMC_CHARGER_EXTENSION
 	help
 	  Say Y here to enable extensional function of charger driver.
 
+config IDTP9221
+        bool "CONFIG_IDTP9221 driver"
+        depends on I2C
+        help
+	  Say Y here to enable the IDT P9221 wireless charging driver.
+	  The driver supports charger enable/disable.
+
 config IDTP9382A
 	bool "CONFIG_IDTP9382A driver"
 	depends on I2C
