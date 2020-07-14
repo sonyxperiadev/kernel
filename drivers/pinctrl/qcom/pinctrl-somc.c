@@ -8,6 +8,7 @@
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/pinctrl/consumer.h>
+#include <linux/mod_devicetable.h>
 
 #define PLATFORM_COMMON_DEFAULT "platform_common_default"
 #define PRODUCT_COMMON_DEFAULT "product_common_default"
