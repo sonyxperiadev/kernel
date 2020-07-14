@@ -1,3 +1,8 @@
+/*
+ * NOTE: This file has been modified by Sony Mobile Communications Inc.
+ * Modifications are Copyright (c) 2018 Sony Mobile Communications Inc,
+ * and licensed under the license of the file.
+ */
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2015-2017, 2019 The Linux Foundation. All rights reserved.
@@ -161,6 +166,14 @@ static int get_client_id(struct votable *votable, const char *client_str)
 			return i;
 		}
 	}
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	pr_err("===========================================================\n");
+	pr_err("[PMIC-VOTER] %s: Couldn't regist new client:%s due to full clients!! \n",
+						votable->name, client_str);
+	for (i = 0; i < votable->num_clients; i++)
+		pr_err("client[%d]=%s\n", i, votable->client_strs[i]);
+	pr_err("===========================================================\n");
+#endif
 	return -EINVAL;
 }
 
@@ -830,3 +843,55 @@ void destroy_votable(struct votable *votable)
 	kfree(votable->name);
 	kfree(votable);
 }
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+
+ssize_t somc_output_voter_param(struct votable *votable,
+						char *buf, size_t size)
+{
+	int i;
+	int stored_size = 0;
+	char *print_format;
+
+	memset(buf, '\0', size);
+	size--;
+	if (votable->type == VOTE_SET_ANY) {
+		for (i = 0; i < votable->num_clients
+					&& votable->client_strs[i]; i++) {
+			if (!votable->votes[i].enabled)
+				continue;
+
+			if (stored_size == 0)
+				print_format = "%s";
+			else
+				print_format = "; %s";
+			stored_size += scnprintf(buf + stored_size,
+					size - stored_size, print_format,
+					votable->client_strs[i]);
+			if (stored_size >= size)
+				break;
+		}
+	} else {
+		for (i = 0; i < votable->num_clients
+					&& votable->client_strs[i]; i++) {
+			if (!votable->votes[i].enabled)
+				continue;
+
+			if (stored_size == 0)
+				print_format = "%s:%d";
+			else
+				print_format = "; %s:%d";
+			stored_size += scnprintf(buf + stored_size,
+					size - stored_size, print_format,
+					votable->client_strs[i],
+					get_client_vote(votable,
+					votable->client_strs[i]));
+			if (stored_size >= size)
+				break;
+		}
+	}
+	if (stored_size < size)
+		stored_size += scnprintf(buf + stored_size,
+						size - stored_size, "\n");
+	return stored_size;
+}
+#endif

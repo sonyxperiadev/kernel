@@ -26,6 +26,9 @@
 #include <linux/types.h>
 #include <linux/uaccess.h>
 #include <linux/pmic-voter.h>
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#include <linux/alarmtimer.h>
+#endif
 
 #define fg_dbg(fg, reason, fmt, ...)			\
 	do {							\
@@ -61,6 +64,9 @@
 #define TTF_PRIMING		"fg_ttf_priming"
 #define ESR_CALIB		"fg_esr_calib"
 #define FG_ESR_VOTER		"fg_esr_voter"
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#define FV_RB_SOC		"fg_fv_rb_soc"
+#endif
 
 /* Delta BSOC irq votable reasons */
 #define DELTA_BSOC_IRQ_VOTER	"fg_delta_bsoc_irq"
@@ -77,6 +83,9 @@
 #define MEM_ATTN_IRQ_VOTER	"fg_mem_attn_irq"
 
 #define DEBUG_BOARD_VOTER	"fg_debug_board"
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#define PSY_CHG_VOTER		"fg_psy_chg"
+#endif
 
 #define BUCKET_COUNT			8
 #define BUCKET_SOC_PCT			(256 / BUCKET_COUNT)
@@ -87,8 +96,16 @@
 #define FULL_SOC_RAW			255
 
 #define DEBUG_BATT_SOC			67
+#if !defined(CONFIG_SOMC_CHARGER_EXTENSION)
 #define BATT_MISS_SOC			50
+#endif
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#define BATT_MISS_SOC			20
+#endif
 #define ESR_SOH_SOC			50
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#define	UNKNOWN_BATT_SOC		20
+#endif
 #define EMPTY_SOC			0
 
 enum prof_load_status {
@@ -110,6 +127,11 @@ enum fg_debug_flag {
 	FG_CAP_LEARN		= BIT(7), /* Show capacity learning */
 	FG_TTF			= BIT(8), /* Show time to full */
 	FG_FVSS			= BIT(9), /* Show FVSS */
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	FG_TEMP_CORR		= BIT(13),
+	FG_STEP			= BIT(14),
+	FG_SOMC			= BIT(15),
+#endif
 };
 
 enum awake_reasons {
@@ -236,6 +258,10 @@ enum fg_sram_param_id {
 	FG_SRAM_ESR_CAL_TEMP_MIN,
 	FG_SRAM_ESR_CAL_TEMP_MAX,
 	FG_SRAM_DELTA_ESR_THR,
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	FG_SRAM_CUTOFF_SOC,
+	FG_SRAM_SYSTEM_SOC,
+#endif
 	FG_SRAM_MAX,
 };
 
@@ -386,6 +412,43 @@ struct fg_ttf {
 	s64			last_ms;
 };
 
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#define STEP_DATA_MAX_CFG_NUM	30
+#define STEP_DATA_RAW		7
+#define STEP_DATA_DT_MAX_NUM	(STEP_DATA_MAX_CFG_NUM * STEP_DATA_RAW)
+struct fg_dt_step_data {
+	int	data_num;
+	int	temp_low[STEP_DATA_MAX_CFG_NUM];
+	int	temp_high[STEP_DATA_MAX_CFG_NUM];
+	int	voltage_low[STEP_DATA_MAX_CFG_NUM];
+	int	voltage_high[STEP_DATA_MAX_CFG_NUM];
+	int	target_current[STEP_DATA_MAX_CFG_NUM];
+	int	target_voltage[STEP_DATA_MAX_CFG_NUM];
+	int	condition[STEP_DATA_MAX_CFG_NUM];
+};
+
+#define STEP_INPUT_BUF_NUM 3
+struct fg_step_input {
+	int	temp;
+	int	current_now;
+	int	voltage_now;
+	s64	stored_ktime_ms;
+};
+
+#define TEMP_DATA_BUF_NUM	100
+struct fg_temp_sample_data {
+	int	id;
+	int	batt_current_ma;
+	int	batt_temp;
+	ktime_t	ktime_ms;
+};
+struct fg_temp_data {
+	struct fg_temp_sample_data	data[TEMP_DATA_BUF_NUM];
+	int	last_id;
+	int	first_ktime_ms;
+	int	suspended_ktime_ms;
+};
+#endif
 static const struct fg_pt fg_ln_table[] = {
 	{ 1000,		0 },
 	{ 2000,		693 },
@@ -422,6 +485,11 @@ struct fg_memif {
 	u8			num_bytes_per_word;
 };
 
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#define NO_REQUESTED_LEVEL      -1
+#define BATT_AGING_LEVEL_NONE   -1
+#define MAX_BATT_NODE_NAME_SIZE 32
+#endif
 struct fg_dev {
 	struct thermal_zone_device	*tz_dev;
 	struct device		*dev;
@@ -497,6 +565,64 @@ struct fg_dev {
 	struct work_struct	esr_filter_work;
 	struct alarm		esr_filter_alarm;
 	ktime_t			last_delta_temp_time;
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	/* Soc Correction */
+	int			soc_restart_counter;
+	/* JEITA/Step charge */
+	struct delayed_work	somc_jeita_step_charge_work;
+	struct wakeup_source	step_ws;
+	struct mutex		step_lock;
+	bool			step_lock_en;
+	bool			step_en;
+	struct fg_dt_step_data	step_data;
+	int			cell_impedance_mohm;
+	int			vcell_max_mv;
+	struct fg_step_input	step_input_data[STEP_INPUT_BUF_NUM];
+	int			target_idx;
+	bool			use_real_temp;
+	bool			real_temp_use_aux;
+	int			batt_temp_correctton;
+	int			aux_temp_correctton;
+	int			real_temp_debug;
+	/* Battery aging */
+	int			requested_batt_aging_level;
+	int			batt_aging_level;
+	int			max_batt_aging_level;
+	int			initial_capacity;
+	struct alarm		somc_fv_rb_alarm_timer;
+	struct work_struct	somc_fv_rb_soc_work;
+	bool			fv_rb_awake;
+	int			fv_rb_full_step_up_soc_raw;
+	int			fv_rb_en;
+	bool			fv_rb_suspened;
+	int			fv_rb_suspened_ktime_ms;
+	bool			slope_limit_suspended;
+	struct alarm		psy_chg_alarm_timer;
+	struct work_struct	psy_chg_work;
+	bool			psy_chg_awake;
+	u32			psy_chg_counter;
+	/* FULL/Recharge */
+	bool			charge_full_releasing;
+	struct delayed_work	somc_charge_full_releasing_work;
+	int			recharge_counter;
+	int			full_counter;
+	/* tempareture correction */
+	struct mutex		temp_corr_lock;
+	bool			cell_temp_avtive;
+	int			cell_temp;
+	int			iavg;
+	struct delayed_work	somc_temp_corr_work;
+	struct fg_temp_data	temp_data;
+	bool			temp_corr_en;
+	int			temp_corr_coef_a;
+	int			temp_corr_avg_sec;
+	/* Soc Correction */
+	int			msoc_tune_a;
+	int			msoc_tune_b;
+	/* etc */
+	s64			last_update_batt_temp_ktime_ms;
+	int			last_update_batt_temp;
+#endif
 };
 
 /* Debugfs data structures are below */

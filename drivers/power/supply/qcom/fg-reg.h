@@ -35,6 +35,9 @@
 #define BATT_THERM_PULL_UP_MASK			GENMASK(1, 0)
 
 #define ADC_RR_BATT_THERM_FREQ(chip)		(chip->rradc_base + 0x82)
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+#define BATT_THERM_FREQ_1S			1
+#endif
 
 #define ADC_RR_BATT_TEMP_LSB(chip)		(chip->rradc_base + 0x88)
 #define ADC_RR_BATT_TEMP_MSB(chip)		(chip->rradc_base + 0x89)

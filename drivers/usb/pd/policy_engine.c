@@ -349,7 +349,14 @@ static void *usbpd_ipc_log;
 
 #define PD_MIN_SINK_CURRENT	900
 
-static const u32 default_src_caps[] = { 0x36019096 };	/* VSafe5V @ 1.5A */
+#if !defined(CONFIG_SOMC_CHARGER_EXTENSION)
+static const u32 default_src_caps[] = { 0x3601905A };	/* VSafe5V @ 0.9A */
+#endif
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+static const u32 somc_default_src_caps[] = { 0x3601905A }; /* 5V @ 0.9A */
+static const u32 somc_minimum_src_caps[] = { 0x3601900A }; /* 5V @ 0.1A */
+static u32 default_src_caps[] = { 0x3601905A };	/* VSafe5V @ 0.9A */
+#endif
 static const u32 default_snk_caps[] = { 0x2601912C };	/* VSafe5V @ 3A */
 
 struct vdm_tx {
@@ -501,6 +508,37 @@ static void handle_state_prs_snk_src_source_on(struct usbpd *pd,
 
 static const struct usbpd_state_handler state_handlers[];
 
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+/*
+ * Set minimum src capability.
+ */
+void usbpd_set_min_src_caps(struct usbpd *pd, const bool set)
+{
+	bool change = false;
+
+	if (set && memcmp(default_src_caps, somc_minimum_src_caps,
+			sizeof(default_src_caps))) {
+		memcpy(default_src_caps, somc_minimum_src_caps,
+			sizeof(default_src_caps));
+		change = true;
+	} else if (!set && memcmp(default_src_caps, somc_default_src_caps,
+			sizeof(default_src_caps))) {
+		memcpy(default_src_caps, somc_default_src_caps,
+			sizeof(default_src_caps));
+		change = true;
+	}
+
+	if (change && pd &&
+		(pd->current_pr == PR_SRC ||
+		(pd->vdm_state == DISCOVERED_SVIDS &&
+						pd->current_dr == DR_DFP))) {
+		usbpd_dbg(&pd->dev, "set ERROR_RECOVERY\n");
+		usbpd_set_state(pd, PE_ERROR_RECOVERY);
+	}
+}
+EXPORT_SYMBOL(usbpd_set_min_src_caps);
+
+#endif
 enum plug_orientation usbpd_get_plug_orientation(struct usbpd *pd)
 {
 	int ret;
@@ -1263,6 +1301,9 @@ static bool in_src_ams(struct usbpd *pd)
 		return false;
 
 	if (pd->spec_rev != USBPD_REV_30)
+		return true;
+
+	if (!pd->in_explicit_contract)
 		return true;
 
 	power_supply_get_property(pd->usb_psy, POWER_SUPPLY_PROP_TYPEC_SRC_RP,
@@ -2155,7 +2196,16 @@ static void enter_state_src_startup(struct usbpd *pd)
 				&pd->partner_desc);
 	}
 
+#if !defined(CONFIG_SOMC_CHARGER_EXTENSION)
 	val.intval = 1; /* Rp-1.5A; SinkTxNG for PD 3.0 */
+#endif
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	if (pd->in_explicit_contract) {
+		val.intval = 1; /* Rp-1.5A; SinkTxNG for PD 3.0 */
+	} else {
+		val.intval = 0; /* Rp-Default; */
+	}
+#endif
 	power_supply_set_property(pd->usb_psy,
 			POWER_SUPPLY_PROP_TYPEC_SRC_RP, &val);
 
@@ -4500,6 +4550,105 @@ static ssize_t get_battery_status_show(struct device *dev,
 }
 static DEVICE_ATTR_RW(get_battery_status);
 
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+static ssize_t pdo_summary_show(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	struct usbpd *pd = dev_get_drvdata(dev);
+	int i;
+	int max_voltage = 0;
+	int min_voltage = 0;
+	int max_current = 0;
+	int max_power = 0;
+	ssize_t cnt = 0;
+
+	for (i = 0; i < ARRAY_SIZE(pd->received_pdos); i++) {
+		u32 pdo = pd->received_pdos[i];
+
+		if (pdo == 0)
+			break;
+
+		if (PD_SRC_PDO_TYPE(pdo) == PD_SRC_PDO_TYPE_FIXED) {
+			max_voltage = PD_SRC_PDO_FIXED_VOLTAGE(pdo) * 50;
+			max_current = PD_SRC_PDO_FIXED_MAX_CURR(pdo) * 10;
+			cnt += scnprintf(&buf[cnt], PAGE_SIZE - cnt,
+					"PDO%d:%dmV/%dmA;",
+					i + 1,
+					max_voltage,
+					max_current);
+		} else if (PD_SRC_PDO_TYPE(pdo) == PD_SRC_PDO_TYPE_BATTERY) {
+			max_voltage = PD_SRC_PDO_VAR_BATT_MAX_VOLT(pdo) * 50;
+			min_voltage = PD_SRC_PDO_VAR_BATT_MIN_VOLT(pdo) * 50;
+			max_power = PD_SRC_PDO_VAR_BATT_MAX(pdo) * 250;
+			cnt += scnprintf(&buf[cnt], PAGE_SIZE - cnt,
+					"PDO%d:Max%dmV/Min%dmV/Max%dmW;",
+					i + 1,
+					max_voltage,
+					min_voltage,
+					max_power);
+		} else if (PD_SRC_PDO_TYPE(pdo) == PD_SRC_PDO_TYPE_VARIABLE) {
+			max_voltage = PD_SRC_PDO_VAR_BATT_MAX_VOLT(pdo) * 50;
+			min_voltage = PD_SRC_PDO_VAR_BATT_MIN_VOLT(pdo) * 50;
+			max_current = PD_SRC_PDO_VAR_BATT_MAX(pdo) * 10;
+			cnt += scnprintf(&buf[cnt], PAGE_SIZE - cnt,
+					"PDO%d:Max%dmV/Min%dmV/Max%dmA;",
+					i + 1,
+					max_voltage,
+					min_voltage,
+					max_current);
+		} else if (PD_SRC_PDO_TYPE(pdo) == PD_SRC_PDO_TYPE_AUGMENTED) {
+			max_voltage = PD_APDO_MAX_VOLT(pdo) * 100;
+			min_voltage = PD_APDO_MIN_VOLT(pdo) * 100;
+			max_current = PD_APDO_MAX_CURR(pdo) * 50;
+			cnt += scnprintf(&buf[cnt], PAGE_SIZE - cnt,
+					"PDO%d:Max%dmV/Min%dmV/Max%dmA;",
+					i + 1,
+					max_voltage,
+					min_voltage,
+					max_current);
+		} else {
+			cnt += scnprintf(&buf[cnt], PAGE_SIZE - cnt,
+					"PDO%d:invalidate;", i + 1);
+		}
+	}
+
+	if (cnt > 0)
+		cnt += scnprintf(&buf[cnt], PAGE_SIZE - cnt, "\n");
+	else
+		cnt = scnprintf(buf, PAGE_SIZE, "<no available pdos>\n");
+
+	return cnt;
+}
+static DEVICE_ATTR_RO(pdo_summary);
+
+static ssize_t pps_current_voltage_show(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	struct usbpd *pd = dev_get_drvdata(dev);
+
+	return snprintf(buf, PAGE_SIZE, "%d\n", pd->current_voltage);
+}
+static DEVICE_ATTR_RO(pps_current_voltage);
+
+static ssize_t pps_requested_voltage_show(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	struct usbpd *pd = dev_get_drvdata(dev);
+
+	return snprintf(buf, PAGE_SIZE, "%d\n", pd->requested_voltage);
+}
+static DEVICE_ATTR_RO(pps_requested_voltage);
+
+static ssize_t pps_requested_current_show(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	struct usbpd *pd = dev_get_drvdata(dev);
+
+	return snprintf(buf, PAGE_SIZE, "%d\n", pd->requested_current);
+}
+static DEVICE_ATTR_RO(pps_requested_current);
+
+#endif
 static struct attribute *usbpd_attrs[] = {
 	&dev_attr_contract.attr,
 	&dev_attr_initial_pr.attr,
@@ -4524,6 +4673,12 @@ static struct attribute *usbpd_attrs[] = {
 	&dev_attr_get_pps_status.attr,
 	&dev_attr_get_battery_cap.attr,
 	&dev_attr_get_battery_status.attr,
+#if defined(CONFIG_SOMC_CHARGER_EXTENSION)
+	&dev_attr_pdo_summary.attr,
+	&dev_attr_pps_current_voltage.attr,
+	&dev_attr_pps_requested_voltage.attr,
+	&dev_attr_pps_requested_current.attr,
+#endif
 	NULL,
 };
 ATTRIBUTE_GROUPS(usbpd);

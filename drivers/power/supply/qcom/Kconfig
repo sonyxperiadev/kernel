@@ -145,4 +145,21 @@ config SMB1398_CHARGER
 	      wireless charger receiver and provide the input for downstream
 	      chargers.
 
+config SOMC_CHARGER_EXTENSION
+	bool "Charger driver extension"
+	help
+	  Say Y here to enable extensional function of charger driver.
+
+config IDTP9382A
+	bool "CONFIG_IDTP9382A driver"
+	depends on I2C
+	help
+	  Say Y here to enable the IDT P9382A wireless charging driver.
+	  The driver supports charger enable/disable.
+
+config SOMC_CHARGER_XFL
+	bool "XFL specific code in charger driver"
+	help
+	  Say Y here to enable specific code for XFL kernel.
+
 endmenu
