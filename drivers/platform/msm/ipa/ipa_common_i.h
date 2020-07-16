@@ -422,6 +422,7 @@ u8 *ipa_write_16(u16 hw, u8 *dest);
 u8 *ipa_write_8(u8 b, u8 *dest);
 u8 *ipa_pad_to_64(u8 *dest);
 u8 *ipa_pad_to_32(u8 *dest);
+u8 *ipa2_pad_to_32(u8 *dest);
 int ipa_ntn_uc_reg_rdyCB(void (*ipauc_ready_cb)(void *user_data),
 			      void *user_data);
 void ipa_ntn_uc_dereg_rdyCB(void);

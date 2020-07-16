@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2018, 2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -120,7 +120,7 @@ enum ipa_hw_wdi_errors {
  * @IPA_HW_WDI_TX_FSM_ERROR : Error in the state machine transition
  * @IPA_HW_WDI_TX_COMP_RE_FETCH_FAIL : Error while calculating num RE to bring
  * @IPA_HW_WDI_CH_ERR_RESERVED : Reserved - Not available for CPU to use
-*/
+ */
 enum ipa_hw_wdi_ch_errors {
 	IPA_HW_WDI_CH_ERR_NONE                 = 0,
 	IPA_HW_WDI_TX_COMP_RING_WP_UPDATE_FAIL = 1,
@@ -214,7 +214,7 @@ struct IpaHwWdi2TxSetUpCmdData_t {
  *
  * Parameters are sent as pointer thus should be reside in address accessible
  * to HW
-*/
+ */
 struct IpaHwWdiRxSetUpCmdData_t {
 	u32 rx_ring_base_pa;
 	u32 rx_ring_size;
@@ -243,7 +243,7 @@ struct IpaHwWdi2RxSetUpCmdData_t {
  * @reserved : Reserved
  *
  * The parameters are passed as immediate params in the shared memory
-*/
+ */
 union IpaHwWdiRxExtCfgCmdData_t {
 	struct IpaHwWdiRxExtCfgCmdParams_t {
 		u32 ipa_pipe_number:8;
@@ -305,19 +305,20 @@ struct IpaHwEventLogInfoData_t *uc_event_top_mmio)
 		return;
 	}
 
-	if (uc_event_top_mmio->statsInfo.featureInfo[IPA_HW_FEATURE_WDI].
-		params.size != sizeof(struct IpaHwStatsWDIInfoData_t)) {
-		IPAERR("wdi stats sz invalid exp=%zu is=%u\n",
-			sizeof(struct IpaHwStatsWDIInfoData_t),
-			uc_event_top_mmio->statsInfo.
-			featureInfo[IPA_HW_FEATURE_WDI].params.size);
+if (uc_event_top_mmio->statsInfo.featureInfo[IPA_HW_FEATURE_WDI].params.size !=
+sizeof(struct IpaHwStatsWDIInfoData_t)) {
+	IPAERR("wdi stats sz invalid exp=%zu is=%u\n",
+	sizeof(struct IpaHwStatsWDIInfoData_t),
+	uc_event_top_mmio->statsInfo.featureInfo[IPA_HW_FEATURE_WDI].params.size
+	);
 		return;
-	}
+}
 
-	ipa_ctx->uc_wdi_ctx.wdi_uc_stats_ofst = uc_event_top_mmio->
-		statsInfo.baseAddrOffset + uc_event_top_mmio->statsInfo.
-		featureInfo[IPA_HW_FEATURE_WDI].params.offset;
-	IPAERR("WDI stats ofst=0x%x\n", ipa_ctx->uc_wdi_ctx.wdi_uc_stats_ofst);
+ipa_ctx->uc_wdi_ctx.wdi_uc_stats_ofst =
+uc_event_top_mmio->statsInfo.baseAddrOffset +
+uc_event_top_mmio->statsInfo.featureInfo[IPA_HW_FEATURE_WDI].params.offset;
+IPAERR("WDI stats ofst=0x%x\n", ipa_ctx->uc_wdi_ctx.wdi_uc_stats_ofst);
+
 	if (ipa_ctx->uc_wdi_ctx.wdi_uc_stats_ofst +
 		sizeof(struct IpaHwStatsWDIInfoData_t) >=
 		ipa_ctx->ctrl->ipa_reg_base_ofst +
@@ -441,7 +442,7 @@ int ipa2_get_wdi_stats(struct IpaHwStatsWDIInfoData_t *stats)
 
 int ipa2_wdi_init(void)
 {
-	struct ipa_uc_hdlrs uc_wdi_cbs = { 0 };
+	struct ipa_uc_hdlrs uc_wdi_cbs = { NULL};
 
 	uc_wdi_cbs.ipa_uc_event_hdlr = ipa_uc_wdi_event_handler;
 	uc_wdi_cbs.ipa_uc_event_log_info_hdlr =
@@ -576,8 +577,10 @@ static void ipa_save_uc_smmu_mapping_pa(int res_idx, phys_addr_t pa,
 			&pa, iova, len);
 	wdi_res[res_idx].res = kzalloc(sizeof(*wdi_res[res_idx].res),
 					GFP_KERNEL);
-	if (!wdi_res[res_idx].res)
-		BUG();
+	if (!wdi_res[res_idx].res) {
+		WARN_ON(1);
+		return;
+	}
 	wdi_res[res_idx].nents = 1;
 	wdi_res[res_idx].valid = true;
 	wdi_res[res_idx].res->pa = rounddown(pa, PAGE_SIZE);
@@ -603,8 +606,10 @@ static void ipa_save_uc_smmu_mapping_sgt(int res_idx, struct sg_table *sgt,
 
 	wdi_res[res_idx].res = kcalloc(sgt->nents,
 		sizeof(*wdi_res[res_idx].res), GFP_KERNEL);
-	if (!wdi_res[res_idx].res)
-		BUG();
+	if (!wdi_res[res_idx].res) {
+		WARN_ON(1);
+		return;
+	}
 	wdi_res[res_idx].nents = sgt->nents;
 	wdi_res[res_idx].valid = true;
 	for_each_sg(sgt->sgl, sg, sgt->nents, i) {
@@ -672,7 +677,7 @@ int ipa2_create_uc_smmu_mapping(int res_idx, bool wlan_smmu_en,
 			ipa_save_uc_smmu_mapping_sgt(res_idx, sgt, *iova);
 			break;
 		default:
-			BUG();
+			WARN_ON(1);
 		}
 	}
 
@@ -1150,7 +1155,7 @@ int ipa2_connect_wdi_pipe(struct ipa_wdi_in_params *in,
 				IPA_CPU_2_HW_CMD_WDI_TX_SET_UP :
 				IPA_CPU_2_HW_CMD_WDI_RX_SET_UP,
 				IPA_HW_2_CPU_WDI_CMD_STATUS_SUCCESS,
-				false, IPA_TIMEOUT(10));
+				false, 10*HZ);
 
 	if (result) {
 		result = -EFAULT;
@@ -1249,7 +1254,7 @@ int ipa2_disconnect_wdi_pipe(u32 clnt_hdl)
 	result = ipa_uc_send_cmd(tear.raw32b,
 				IPA_CPU_2_HW_CMD_WDI_TEAR_DOWN,
 				IPA_HW_2_CPU_WDI_CMD_STATUS_SUCCESS,
-				false, IPA_TIMEOUT(10));
+				false, 10*HZ);
 
 	if (result) {
 		result = -EFAULT;
@@ -1319,7 +1324,7 @@ int ipa2_enable_wdi_pipe(u32 clnt_hdl)
 	result = ipa_uc_send_cmd(enable.raw32b,
 		IPA_CPU_2_HW_CMD_WDI_CH_ENABLE,
 		IPA_HW_2_CPU_WDI_CMD_STATUS_SUCCESS,
-		false, IPA_TIMEOUT(10));
+		false, 10*HZ);
 
 	if (result) {
 		result = -EFAULT;
@@ -1426,7 +1431,7 @@ int ipa2_disable_wdi_pipe(u32 clnt_hdl)
 	result = ipa_uc_send_cmd(disable.raw32b,
 		IPA_CPU_2_HW_CMD_WDI_CH_DISABLE,
 		IPA_HW_2_CPU_WDI_CMD_STATUS_SUCCESS,
-		false, IPA_TIMEOUT(10));
+		false, 10*HZ);
 
 	if (result) {
 		result = -EFAULT;
@@ -1493,7 +1498,7 @@ int ipa2_resume_wdi_pipe(u32 clnt_hdl)
 	result = ipa_uc_send_cmd(resume.raw32b,
 		IPA_CPU_2_HW_CMD_WDI_CH_RESUME,
 		IPA_HW_2_CPU_WDI_CMD_STATUS_SUCCESS,
-		false, IPA_TIMEOUT(10));
+		false, 10*HZ);
 
 	if (result) {
 		result = -EFAULT;
@@ -1590,7 +1595,7 @@ int ipa2_suspend_wdi_pipe(u32 clnt_hdl)
 		result = ipa_uc_send_cmd(suspend.raw32b,
 			IPA_CPU_2_HW_CMD_WDI_CH_SUSPEND,
 			IPA_HW_2_CPU_WDI_CMD_STATUS_SUCCESS,
-			false, IPA_TIMEOUT(10));
+			false, 10*HZ);
 
 		if (result) {
 			result = -EFAULT;
@@ -1621,7 +1626,7 @@ int ipa2_suspend_wdi_pipe(u32 clnt_hdl)
 		result = ipa_uc_send_cmd(suspend.raw32b,
 			IPA_CPU_2_HW_CMD_WDI_CH_SUSPEND,
 			IPA_HW_2_CPU_WDI_CMD_STATUS_SUCCESS,
-			false, IPA_TIMEOUT(10));
+			false, 10*HZ);
 
 		if (result) {
 			result = -EFAULT;
@@ -1690,7 +1695,7 @@ int ipa_write_qmapid_wdi_pipe(u32 clnt_hdl, u8 qmap_id)
 	result = ipa_uc_send_cmd(qmap.raw32b,
 		IPA_CPU_2_HW_CMD_WDI_RX_EXT_CFG,
 		IPA_HW_2_CPU_WDI_CMD_STATUS_SUCCESS,
-		false, IPA_TIMEOUT(10));
+		false, 10*HZ);
 
 	if (result) {
 		result = -EFAULT;

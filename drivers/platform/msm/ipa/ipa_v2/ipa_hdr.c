@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2018, 2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1385,8 +1385,8 @@ int ipa2_reset_hdr(bool user_only)
 					ctx_off_entry);
 			}
 			list_for_each_entry_safe(ctx_off_entry, ctx_off_next,
-				&ipa_ctx->hdr_proc_ctx_tbl.
-				head_free_offset_list[i], link) {
+			&ipa_ctx->hdr_proc_ctx_tbl.head_free_offset_list[i],
+			link) {
 				list_del(&ctx_off_entry->link);
 				kmem_cache_free(
 					ipa_ctx->hdr_proc_ctx_offset_cache,

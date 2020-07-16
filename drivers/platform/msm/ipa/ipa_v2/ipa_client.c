@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2017, 2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -88,7 +88,7 @@ int ipa_disable_data_path(u32 clnt_hdl)
 		if (res) {
 			IPAERR("tag process timeout, client:%d err:%d\n",
 				clnt_hdl, res);
-			BUG();
+			ipa_assert();
 		}
 	}
 
@@ -721,13 +721,13 @@ int ipa2_disconnect(u32 clnt_hdl)
 }
 
 /**
-* ipa2_reset_endpoint() - reset an endpoint from BAM perspective
-* @clnt_hdl: [in] IPA client handle
-*
-* Returns:	0 on success, negative on failure
-*
-* Note:	Should not be called from atomic context
-*/
+ * ipa2_reset_endpoint() - reset an endpoint from BAM perspective
+ * @clnt_hdl: [in] IPA client handle
+ *
+ * Returns:	0 on success, negative on failure
+ *
+ * Note:	Should not be called from atomic context
+ */
 int ipa2_reset_endpoint(u32 clnt_hdl)
 {
 	int res;

@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2017, 2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -11,8 +11,11 @@
  *
  */
 
-#include <linux/soc/qcom/qmi.h>
 #include <linux/ipa_qmi_service_v01.h>
+
+#include <linux/soc/qcom/qmi.h>
+
+#include "ipa_qmi_service.h"
 
 /* Type Definitions  */
 static struct qmi_elem_info ipa_hdr_tbl_info_type_data_v01_ei[] = {

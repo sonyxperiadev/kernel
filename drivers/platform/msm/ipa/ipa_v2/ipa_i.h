@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2018, 2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -76,8 +76,6 @@
 #define IPA_WDI_CE_DB_RES 6
 #define IPA_WDI_TX_DB_RES 7
 #define IPA_WDI_MAX_RES 8
-
-#define IPA_TIMEOUT(value) (msecs_to_jiffies(value * 1000))
 
 #define IPADBG(fmt, args...) \
 	do { \
@@ -1575,11 +1573,11 @@ int ipa2_tx_dp(enum ipa_client_type dst, struct sk_buff *skb,
  * To transfer multiple data packets
  * While passing the data descriptor list, the anchor node
  * should be of type struct ipa_tx_data_desc not list_head
-*/
+ */
 int ipa2_tx_dp_mul(enum ipa_client_type dst,
 			struct ipa_tx_data_desc *data_desc);
 
-void ipa2_free_skb(struct ipa_rx_data *);
+void ipa2_free_skb(struct ipa_rx_data *data);
 
 /*
  * System pipes
@@ -1706,7 +1704,7 @@ int ipa2_mhi_suspend_ul_channels(void);
 
 int ipa2_mhi_resume_channels_internal(enum ipa_client_type client,
 		bool LPTransitionRejected, bool brstmode_enabled,
-		union gsi_channel_scratch ch_scratch, u8 index);
+		union __packed gsi_channel_scratch ch_scratch, u8 index);
 
 /*
  * mux id
@@ -1760,8 +1758,8 @@ int ipa_generate_hw_rule(enum ipa_ip_type ip,
 			 u16 *en_rule);
 int ipa_init_hw(void);
 struct ipa_rt_tbl *__ipa_find_rt_tbl(enum ipa_ip_type ip, const char *name);
-int ipa_set_single_ndp_per_mbim(bool);
-int ipa_set_hw_timer_fix_for_mbim_aggr(bool);
+int ipa_set_single_ndp_per_mbim(bool enable);
+int ipa_set_hw_timer_fix_for_mbim_aggr(bool enable);
 void ipa_debugfs_init(void);
 void ipa_debugfs_remove(void);
 
@@ -1815,19 +1813,22 @@ void _ipa_enable_clks_v1_1(void);
 void _ipa_enable_clks_v2_0(void);
 void _ipa_disable_clks_v1_1(void);
 void _ipa_disable_clks_v2_0(void);
+void ipa_suspend_handler(enum ipa_irq_type interrupt,
+		void *private_data,
+		void *interrupt_data);
 
-static inline u32 ipa_read_reg(void *base, u32 offset)
+static inline u32 ipa_read_reg(void __iomem *base, u32 offset)
 {
 	return ioread32(base + offset);
 }
 
-static inline u32 ipa_read_reg_field(void *base, u32 offset,
+static inline u32 ipa_read_reg_field(void __iomem *base, u32 offset,
 		u32 mask, u32 shift)
 {
 	return (ipa_read_reg(base, offset) & mask) >> shift;
 }
 
-static inline void ipa_write_reg(void *base, u32 offset, u32 val)
+static inline void ipa_write_reg(void __iomem *base, u32 offset, u32 val)
 {
 	iowrite32(val, base + offset);
 }
@@ -1959,6 +1960,7 @@ struct iommu_domain *ipa2_get_wlan_smmu_domain(void);
 int ipa2_ap_suspend(struct device *dev);
 int ipa2_ap_resume(struct device *dev);
 struct iommu_domain *ipa2_get_smmu_domain(void);
+struct iommu_domain *ipa2_get_uc_smmu_domain(void);
 struct device *ipa2_get_dma_dev(void);
 int ipa2_release_wdi_mapping(u32 num_buffers, struct ipa_wdi_buffer_info *info);
 int ipa2_create_wdi_mapping(u32 num_buffers, struct ipa_wdi_buffer_info *info);

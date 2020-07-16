@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2016, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2016, 2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -266,7 +266,7 @@ union IpaHwMhiStopEventUpdateData_t {
  * @channelHandle: The channel identifier
  * @additonalParams: For stop: the number of pending bam descriptors currently
  *	queued
-*/
+ */
 union IpaHwMhiChangeChannelStateResponseData_t {
 	struct IpaHwMhiChangeChannelStateResponseParams_t {
 		u32 state:8;
@@ -538,19 +538,20 @@ static void ipa_uc_mhi_event_log_info_hdlr(
 		return;
 	}
 
-	if (uc_event_top_mmio->statsInfo.featureInfo[IPA_HW_FEATURE_MHI].
-		params.size != sizeof(struct IpaHwStatsMhiInfoData_t)) {
-		IPAERR("mhi stats sz invalid exp=%zu is=%u\n",
-			sizeof(struct IpaHwStatsMhiInfoData_t),
-			uc_event_top_mmio->statsInfo.
-			featureInfo[IPA_HW_FEATURE_MHI].params.size);
+if (uc_event_top_mmio->statsInfo.featureInfo[IPA_HW_FEATURE_MHI].params.size !=
+	sizeof(struct IpaHwStatsMhiInfoData_t)) {
+	IPAERR("mhi stats sz invalid exp=%zu is=%u\n",
+	sizeof(struct IpaHwStatsMhiInfoData_t),
+	uc_event_top_mmio->statsInfo.featureInfo[IPA_HW_FEATURE_MHI].params.size
+	);
 		return;
-	}
+}
 
-	ipa_uc_mhi_ctx->mhi_uc_stats_ofst = uc_event_top_mmio->
-		statsInfo.baseAddrOffset + uc_event_top_mmio->statsInfo.
-		featureInfo[IPA_HW_FEATURE_MHI].params.offset;
-	IPAERR("MHI stats ofst=0x%x\n", ipa_uc_mhi_ctx->mhi_uc_stats_ofst);
+ipa_uc_mhi_ctx->mhi_uc_stats_ofst =
+uc_event_top_mmio->statsInfo.baseAddrOffset +
+uc_event_top_mmio->statsInfo.featureInfo[IPA_HW_FEATURE_MHI].params.offset;
+IPAERR("MHI stats ofst=0x%x\n", ipa_uc_mhi_ctx->mhi_uc_stats_ofst);
+
 	if (ipa_uc_mhi_ctx->mhi_uc_stats_ofst +
 		sizeof(struct IpaHwStatsMhiInfoData_t) >=
 		ipa_ctx->ctrl->ipa_reg_base_ofst +
@@ -602,7 +603,7 @@ int ipa2_uc_mhi_init(void (*ready_cb)(void), void (*wakeup_request_cb)(void))
 
 void ipa2_uc_mhi_cleanup(void)
 {
-	struct ipa_uc_hdlrs null_hdlrs = { 0 };
+	struct ipa_uc_hdlrs null_hdlrs = { NULL };
 
 	IPADBG("Enter\n");
 
@@ -656,7 +657,7 @@ int ipa_uc_mhi_init_engine(struct ipa_mhi_msi_info *msi, u32 mmio_addr,
 	init_cmd_data->firstChannelIndex = first_ch_idx;
 	init_cmd_data->firstEventRingIndex = first_evt_idx;
 	res = ipa_uc_send_cmd((u32)mem.phys_base, IPA_CPU_2_HW_CMD_MHI_INIT, 0,
-		false, IPA_TIMEOUT(1));
+		false, HZ);
 	if (res) {
 		IPAERR("ipa_uc_send_cmd failed %d\n", res);
 		dma_free_coherent(ipa_ctx->pdev, mem.size, mem.base,
@@ -681,7 +682,7 @@ int ipa_uc_mhi_init_engine(struct ipa_mhi_msi_info *msi, u32 mmio_addr,
 	msi_cmd->msiData = msi->data;
 	msi_cmd->msiMask = msi->mask;
 	res = ipa_uc_send_cmd((u32)mem.phys_base,
-		IPA_CPU_2_HW_CMD_MHI_UPDATE_MSI, 0, false, IPA_TIMEOUT(1));
+		IPA_CPU_2_HW_CMD_MHI_UPDATE_MSI, 0, false, HZ);
 	if (res) {
 		IPAERR("ipa_uc_send_cmd failed %d\n", res);
 		dma_free_coherent(ipa_ctx->pdev, mem.size, mem.base,
@@ -733,7 +734,7 @@ int ipa_uc_mhi_init_channel(int ipa_ep_idx, int channelHandle,
 	init_cmd.params.channelDirection = channelDirection;
 
 	res = ipa_uc_send_cmd(init_cmd.raw32b,
-		IPA_CPU_2_HW_CMD_MHI_INIT_CHANNEL, 0, false, IPA_TIMEOUT(1));
+		IPA_CPU_2_HW_CMD_MHI_INIT_CHANNEL, 0, false, HZ);
 	if (res) {
 		IPAERR("ipa_uc_send_cmd failed %d\n", res);
 		goto disable_clks;
@@ -771,7 +772,7 @@ int ipa2_uc_mhi_reset_channel(int channelHandle)
 	cmd.params.requestedState = IPA_HW_MHI_CHANNEL_STATE_DISABLE;
 	cmd.params.channelHandle = channelHandle;
 	res = ipa_uc_send_cmd(cmd.raw32b,
-		IPA_CPU_2_HW_CMD_MHI_CHANGE_CHANNEL_STATE, 0, false, IPA_TIMEOUT(1));
+		IPA_CPU_2_HW_CMD_MHI_CHANGE_CHANNEL_STATE, 0, false, HZ);
 	if (res) {
 		IPAERR("ipa_uc_send_cmd failed %d\n", res);
 		goto disable_clks;
@@ -808,7 +809,7 @@ int ipa2_uc_mhi_suspend_channel(int channelHandle)
 	cmd.params.requestedState = IPA_HW_MHI_CHANNEL_STATE_SUSPEND;
 	cmd.params.channelHandle = channelHandle;
 	res = ipa_uc_send_cmd(cmd.raw32b,
-		IPA_CPU_2_HW_CMD_MHI_CHANGE_CHANNEL_STATE, 0, false, IPA_TIMEOUT(1));
+		IPA_CPU_2_HW_CMD_MHI_CHANGE_CHANNEL_STATE, 0, false, HZ);
 	if (res) {
 		IPAERR("ipa_uc_send_cmd failed %d\n", res);
 		goto disable_clks;
@@ -846,7 +847,7 @@ int ipa_uc_mhi_resume_channel(int channelHandle, bool LPTransitionRejected)
 	cmd.params.channelHandle = channelHandle;
 	cmd.params.LPTransitionRejected = LPTransitionRejected;
 	res = ipa_uc_send_cmd(cmd.raw32b,
-		IPA_CPU_2_HW_CMD_MHI_CHANGE_CHANNEL_STATE, 0, false, IPA_TIMEOUT(1));
+		IPA_CPU_2_HW_CMD_MHI_CHANGE_CHANNEL_STATE, 0, false, HZ);
 	if (res) {
 		IPAERR("ipa_uc_send_cmd failed %d\n", res);
 		goto disable_clks;
@@ -879,7 +880,7 @@ int ipa2_uc_mhi_stop_event_update_channel(int channelHandle)
 	ipa_uc_mhi_ctx->expected_responseParams = cmd.raw32b;
 
 	res = ipa_uc_send_cmd(cmd.raw32b,
-		IPA_CPU_2_HW_CMD_MHI_STOP_EVENT_UPDATE, 0, false, IPA_TIMEOUT(1));
+		IPA_CPU_2_HW_CMD_MHI_STOP_EVENT_UPDATE, 0, false, HZ);
 	if (res) {
 		IPAERR("ipa_uc_send_cmd failed %d\n", res);
 		goto disable_clks;
@@ -909,7 +910,7 @@ int ipa2_uc_mhi_send_dl_ul_sync_info(union IpaHwMhiDlUlSyncCmdData_t *cmd)
 	IPA_ACTIVE_CLIENTS_INC_SIMPLE();
 
 	res = ipa_uc_send_cmd(cmd->raw32b,
-		IPA_CPU_2_HW_CMD_MHI_DL_UL_SYNC_INFO, 0, false, IPA_TIMEOUT(1));
+		IPA_CPU_2_HW_CMD_MHI_DL_UL_SYNC_INFO, 0, false, HZ);
 	if (res) {
 		IPAERR("ipa_uc_send_cmd failed %d\n", res);
 		goto disable_clks;

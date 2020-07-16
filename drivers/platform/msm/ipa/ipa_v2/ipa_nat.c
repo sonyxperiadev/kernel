@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2018, 2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -35,6 +35,13 @@ enum nat_table_type {
 #define NAT_TABLE_ENTRY_SIZE_BYTE 32
 #define NAT_INTEX_TABLE_ENTRY_SIZE_BYTE 4
 
+/*
+ * Max NAT table entries is limited 1000 entries.
+ * Limit the memory size required by user to prevent kernel memory starvation
+ */
+#define IPA_TABLE_MAX_ENTRIES 1000
+#define MAX_ALLOC_NAT_SIZE (IPA_TABLE_MAX_ENTRIES * NAT_TABLE_ENTRY_SIZE_BYTE)
+
 static int ipa_nat_vma_fault_remap(struct vm_fault *vmf)
 {
 	IPADBG("\n");
@@ -44,7 +51,7 @@ static int ipa_nat_vma_fault_remap(struct vm_fault *vmf)
 }
 
 /* VMA related file operations functions */
-static struct vm_operations_struct ipa_nat_remap_vm_ops = {
+static const struct vm_operations_struct ipa_nat_remap_vm_ops = {
 	.fault = ipa_nat_vma_fault_remap,
 };
 
@@ -130,10 +137,10 @@ static const struct file_operations ipa_nat_fops = {
  *
  * Called during nat table delete
  */
-void allocate_temp_nat_memory(void)
+static void allocate_temp_nat_memory(void)
 {
 	struct ipa_nat_mem *nat_ctx = &(ipa_ctx->nat_mem);
-	int gfp_flags = GFP_KERNEL | __GFP_ZERO;
+	gfp_t gfp_flags = GFP_KERNEL | __GFP_ZERO;
 
 	nat_ctx->tmp_vaddr =
 		dma_alloc_coherent(ipa_ctx->pdev, IPA_NAT_TEMP_MEM_SIZE,
@@ -244,7 +251,7 @@ bail:
 int ipa2_allocate_nat_device(struct ipa_ioc_nat_alloc_mem *mem)
 {
 	struct ipa_nat_mem *nat_ctx = &(ipa_ctx->nat_mem);
-	int gfp_flags = GFP_KERNEL | __GFP_ZERO;
+	gfp_t gfp_flags = GFP_KERNEL | __GFP_ZERO;
 	int result;
 
 	IPADBG("passed memory size %zu\n", mem->size);
@@ -266,6 +273,13 @@ int ipa2_allocate_nat_device(struct ipa_ioc_nat_alloc_mem *mem)
 	if (nat_ctx->is_dev_init == true) {
 		IPAERR("Device already init\n");
 		result = 0;
+		goto bail;
+	}
+
+	if (mem->size > MAX_ALLOC_NAT_SIZE) {
+		IPAERR("Trying allocate more size = %zu, Max allowed = %d\n",
+				mem->size, MAX_ALLOC_NAT_SIZE);
+		result = -EPERM;
 		goto bail;
 	}
 
@@ -355,7 +369,7 @@ int ipa2_nat_init_cmd(struct ipa_ioc_v4_nat_init *init)
 		(TBL_ENTRY_SIZE * (init->table_entries + 1));
 	if (tmp > ipa_ctx->nat_mem.size) {
 		IPAERR_RL("Table rules offset not valid\n");
-		IPAERR_RL("offset:%d entrys:%d size:%zu mem_size:%zu\n",
+		IPAERR_RL("offset:%d entries:%d size:%zu mem_size:%zu\n",
 			init->ipv4_rules_offset, (init->table_entries + 1),
 			tmp, ipa_ctx->nat_mem.size);
 		mutex_unlock(&ipa_ctx->nat_mem.lock);
@@ -376,7 +390,7 @@ int ipa2_nat_init_cmd(struct ipa_ioc_v4_nat_init *init)
 		(TBL_ENTRY_SIZE * init->expn_table_entries);
 	if (tmp > ipa_ctx->nat_mem.size) {
 		IPAERR_RL("Expn Table rules offset not valid\n");
-		IPAERR_RL("offset:%d entrys:%d size:%zu mem_size:%zu\n",
+		IPAERR_RL("offset:%d entries:%d size:%zu mem_size:%zu\n",
 			init->expn_rules_offset, init->expn_table_entries,
 			tmp, ipa_ctx->nat_mem.size);
 		mutex_unlock(&ipa_ctx->nat_mem.lock);
@@ -397,7 +411,7 @@ int ipa2_nat_init_cmd(struct ipa_ioc_v4_nat_init *init)
 		(INDX_TBL_ENTRY_SIZE * (init->table_entries + 1));
 	if (tmp > ipa_ctx->nat_mem.size) {
 		IPAERR_RL("Indx Table rules offset not valid\n");
-		IPAERR_RL("offset:%d entrys:%d size:%zu mem_size:%zu\n",
+		IPAERR_RL("offset:%d entries:%d size:%zu mem_size:%zu\n",
 			init->index_offset, (init->table_entries + 1),
 			tmp, ipa_ctx->nat_mem.size);
 		mutex_unlock(&ipa_ctx->nat_mem.lock);
@@ -418,7 +432,7 @@ int ipa2_nat_init_cmd(struct ipa_ioc_v4_nat_init *init)
 		(INDX_TBL_ENTRY_SIZE * init->expn_table_entries);
 	if (tmp > ipa_ctx->nat_mem.size) {
 		IPAERR_RL("Indx Expn Table rules offset not valid\n");
-		IPAERR_RL("offset:%d entrys:%d size:%zu mem_size:%zu\n",
+		IPAERR_RL("offset:%d entries:%d size:%zu mem_size:%zu\n",
 			init->index_expn_offset, init->expn_table_entries,
 			tmp, ipa_ctx->nat_mem.size);
 		mutex_unlock(&ipa_ctx->nat_mem.lock);
@@ -744,7 +758,7 @@ bail:
  *
  * Called by NAT client driver to free the NAT memory and remove the device
  */
-void ipa_nat_free_mem_and_device(struct ipa_nat_mem *nat_ctx)
+static void ipa_nat_free_mem_and_device(struct ipa_nat_mem *nat_ctx)
 {
 	IPADBG("\n");
 	mutex_lock(&nat_ctx->lock);
@@ -856,10 +870,10 @@ int ipa2_nat_del_cmd(struct ipa_ioc_v4_nat_del *del)
 	ipa_ctx->nat_mem.size_base_tables = 0;
 	ipa_ctx->nat_mem.size_expansion_tables = 0;
 	ipa_ctx->nat_mem.public_ip_addr = 0;
-	ipa_ctx->nat_mem.ipv4_rules_addr = 0;
-	ipa_ctx->nat_mem.ipv4_expansion_rules_addr = 0;
-	ipa_ctx->nat_mem.index_table_addr = 0;
-	ipa_ctx->nat_mem.index_table_expansion_addr = 0;
+	ipa_ctx->nat_mem.ipv4_rules_addr = NULL;
+	ipa_ctx->nat_mem.ipv4_expansion_rules_addr = NULL;
+	ipa_ctx->nat_mem.index_table_addr = NULL;
+	ipa_ctx->nat_mem.index_table_expansion_addr = NULL;
 
 	ipa_nat_free_mem_and_device(&ipa_ctx->nat_mem);
 	IPADBG("return\n");
