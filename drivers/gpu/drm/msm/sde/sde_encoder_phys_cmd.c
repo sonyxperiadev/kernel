@@ -1323,6 +1323,19 @@ static void sde_encoder_phys_cmd_disable(struct sde_encoder_phys *phys_enc)
 	phys_enc->enable_state = SDE_ENC_DISABLED;
 }
 
+static void sde_encoder_phys_cmd_post_disable(
+		struct sde_encoder_phys *phys_enc)
+{
+	if (!phys_enc || !phys_enc->hw_ctl) {
+		SDE_ERROR("invalid encoder\n");
+		return;
+	}
+
+	if (!_sde_encoder_phys_is_ppsplit_slave(phys_enc) &&
+			phys_enc->hw_ctl->ops.clear_intf_cfg)
+		phys_enc->hw_ctl->ops.clear_intf_cfg(phys_enc->hw_ctl);
+}
+
 static void sde_encoder_phys_cmd_destroy(struct sde_encoder_phys *phys_enc)
 {
 	struct sde_encoder_phys_cmd *cmd_enc =
@@ -1695,6 +1708,13 @@ static void sde_encoder_phys_cmd_init_ops(struct sde_encoder_phys_ops *ops)
 	ops->get_wr_line_count = sde_encoder_phys_cmd_get_write_line_count;
 	ops->wait_for_active = NULL;
 	ops->setup_vsync_source = sde_encoder_phys_cmd_setup_vsync_source;
+
+	if (of_machine_is_compatible("qcom,msm8998") ||
+	    of_machine_is_compatible("qcom,sdm630")  ||
+	    of_machine_is_compatible("qcom,sdm636")  ||
+	    of_machine_is_compatible("qcom,sdm660")) {
+		ops->post_disable = sde_encoder_phys_cmd_post_disable;
+	}
 }
 
 struct sde_encoder_phys *sde_encoder_phys_cmd_init(
