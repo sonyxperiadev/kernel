@@ -2549,6 +2549,12 @@
 		qcom,qsee-reentrancy-support = <2>;
 	};
 
+	qcom_smcinvoke: smcinvoke@86d00000 {
+		compatible = "qcom,smcinvoke";
+		reg = <0x86600000 0x2200000>;
+		reg-names = "secapp-region";
+	};
+
 	qcom_tzlog: tz-log@146BF720 {
 		compatible = "qcom,tz-log";
 		reg = <0x146BF720 0x3000>;
