@@ -1402,7 +1402,6 @@
 		};
 
 		ipa_smmu_wlan: ipa_smmu_wlan {
-			status = "disabled";
 			compatible = "qcom,ipa-smmu-wlan-cb";
 			iommus = <&anoc2_smmu 0x19C1>;
 		};
