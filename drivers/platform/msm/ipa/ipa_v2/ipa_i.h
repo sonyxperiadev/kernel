@@ -1745,6 +1745,9 @@ enum ipa_rm_resource_name ipa2_get_rm_resource_from_ep(int pipe_idx);
 
 bool ipa2_get_modem_cfg_emb_pipe_flt(void);
 
+int ipa2_get_smmu_params(struct ipa_smmu_in_params *in,
+        struct ipa_smmu_out_params *out);
+
 /* internal functions */
 
 int ipa2_bind_api_controller(enum ipa_hw_type ipa_hw_type,

@@ -26,6 +26,7 @@
 #include <linux/time.h>
 #include <linux/hashtable.h>
 #include <linux/jhash.h>
+#include <linux/ipa.h>
 #include "ipa_i.h"
 #include "../ipa_rm_i.h"
 
@@ -448,6 +449,47 @@ struct ipa_smmu_cb_ctx *ipa2_get_wlan_smmu_ctx(void)
 struct ipa_smmu_cb_ctx *ipa2_get_uc_smmu_ctx(void)
 {
 	return &smmu_cb[IPA_SMMU_CB_UC];
+}
+
+/**
+ * ipa2_get_smmu_params()- Return the ipa2 smmu related params.
+ */
+int ipa2_get_smmu_params(struct ipa_smmu_in_params *in,
+	struct ipa_smmu_out_params *out)
+{
+	bool is_smmu_enable = 0;
+
+	if (out == NULL || in == NULL) {
+		IPAERR("bad parms for Client SMMU out params\n");
+		return -EINVAL;
+	}
+
+	if (!ipa_ctx) {
+		IPAERR("IPA not yet initialized\n");
+		return -EINVAL;
+	}
+
+	/* TODO: Implement per-client s1-bypass check */
+	switch (in->smmu_client) {
+	case IPA_SMMU_WLAN_CLIENT:
+		is_smmu_enable = !ipa_ctx->smmu_s1_bypass;
+		break;
+	default:
+		/*
+		 * When per-client s1-byp check implemented, set this to 0
+		 * and return a not nice -EINVAL.
+		 */
+		is_smmu_enable = !ipa_ctx->smmu_s1_bypass;
+		IPAERR("Trying to get illegal clients SMMU status");
+		//return -EINVAL;
+	}
+
+	IPADBG("IPA: Returning smmu %s\n", is_smmu_enable ?
+					   "enabled" : "disabled");
+
+	out->smmu_enable = is_smmu_enable;
+
+	return 0;
 }
 
 static int ipa_open(struct inode *inode, struct file *filp)
