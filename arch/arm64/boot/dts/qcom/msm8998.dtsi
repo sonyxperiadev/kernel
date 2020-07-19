@@ -2228,11 +2228,12 @@
 		memory-region = <&pil_adsp_mem>;
 
 		/* GPIO inputs from lpass */
-		interrupts-extended = <&wakegic 0 162 1>,
-				<&adsp_smp2p_in 0 0>,
-				<&adsp_smp2p_in 2 0>,
-				<&adsp_smp2p_in 1 0>,
-				<&adsp_smp2p_in 3 0>;
+		interrupts-extended =
+				<&wakegic GIC_SPI 162 IRQ_TYPE_EDGE_RISING>,
+				<&adsp_smp2p_in 0 IRQ_TYPE_EDGE_RISING>,
+				<&adsp_smp2p_in 2 IRQ_TYPE_EDGE_RISING>,
+				<&adsp_smp2p_in 1 IRQ_TYPE_EDGE_RISING>,
+				<&adsp_smp2p_in 3 IRQ_TYPE_EDGE_RISING>;
 
 		interrupt-names = "qcom,wdog",
 				"qcom,err-fatal",
@@ -2313,12 +2314,13 @@
 		qcom,serial-loading;
 
 		/* GPIO inputs from mss */
-		interrupts-extended = <&wakegic 0 448 1>,
-				<&modem_smp2p_in 0 0>,
-				<&modem_smp2p_in 1 0>,
-				<&modem_smp2p_in 2 0>,
-				<&modem_smp2p_in 3 0>,
-				<&modem_smp2p_in 7 0>;
+		interrupts-extended =
+				<&wakegic GIC_SPI 448 IRQ_TYPE_EDGE_RISING>,
+				<&modem_smp2p_in 0 IRQ_TYPE_EDGE_RISING>,
+				<&modem_smp2p_in 1 IRQ_TYPE_EDGE_RISING>,
+				<&modem_smp2p_in 2 IRQ_TYPE_EDGE_RISING>,
+				<&modem_smp2p_in 3 IRQ_TYPE_EDGE_RISING>,
+				<&modem_smp2p_in 7 IRQ_TYPE_EDGE_RISING>;
 
 		interrupt-names = "qcom,wdog",
 				"qcom,err-fatal",
@@ -2913,11 +2915,12 @@
 		memory-region = <&pil_slpi_mem>;
 
 		/* GPIO inputs from ssc */
-		interrupts-extended = <&wakegic 0 390 1>,
-				<&slpi_smp2p_in 0 0>,
-				<&slpi_smp2p_in 2 0>,
-				<&slpi_smp2p_in 1 0>,
-				<&slpi_smp2p_in 3 0>;
+		interrupts-extended =
+				<&wakegic GIC_SPI 390 IRQ_TYPE_EDGE_RISING>,
+				<&slpi_smp2p_in 0 IRQ_TYPE_EDGE_RISING>,
+				<&slpi_smp2p_in 2 IRQ_TYPE_EDGE_RISING>,
+				<&slpi_smp2p_in 1 IRQ_TYPE_EDGE_RISING>,
+				<&slpi_smp2p_in 3 IRQ_TYPE_EDGE_RISING>;
 
 		interrupt-names = "qcom,wdog",
 				"qcom,err-fatal",
