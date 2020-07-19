@@ -63,7 +63,7 @@ msm_drm.dsi_display0=dsi_panel_somc_yoshino_cmd:config0";
 			qcom,supply-name = "lab";
 			qcom,supply-min-voltage = <4600000>;
 			qcom,supply-max-voltage = <6000000>;
-			qcom,supply-enable-load = <100000>;
+			qcom,supply-enable-load = <110000>;
 			qcom,supply-disable-load = <100>;
 		};
 
@@ -72,7 +72,7 @@ msm_drm.dsi_display0=dsi_panel_somc_yoshino_cmd:config0";
 			qcom,supply-name = "ibb";
 			qcom,supply-min-voltage = <4600000>;
 			qcom,supply-max-voltage = <6000000>;
-			qcom,supply-enable-load = <100000>;
+			qcom,supply-enable-load = <110000>;
 			qcom,supply-disable-load = <100>;
 		};
 	};
@@ -88,6 +88,7 @@ msm_drm.dsi_display0=dsi_panel_somc_yoshino_cmd:config0";
 			qcom,supply-max-voltage = <3000000>;
 			qcom,supply-enable-load = <100000>;
 			qcom,supply-disable-load = <100>;
+			qcom,supply-post-on-sleep = <10>;
 		};
 	};
 
