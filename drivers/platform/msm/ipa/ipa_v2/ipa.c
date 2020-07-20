@@ -4413,6 +4413,14 @@ static int ipa_init(const struct ipa_plat_drv_res *resource_p,
 
 	ipa_debugfs_init();
 
+	ipa_ctx->sps_mempool = dma_pool_alloc(ipa_ctx->dma_pool,
+					      (GFP_KERNEL | GFP_DMA),
+					      &ipa_ctx->sps_dma_addr);
+	if (!ipa_ctx->sps_mempool) {
+		IPAERR("fail to alloc dma mem for sps xfr buff\n");
+		goto fail_add_interrupt_handler;
+	}
+
 	result = ipa_uc_interface_init();
 	if (result)
 		IPAERR(":ipa Uc interface init failed (%d)\n", -result);

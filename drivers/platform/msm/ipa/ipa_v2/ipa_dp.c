@@ -114,18 +114,13 @@ static void ipa_wq_write_done_common(struct ipa_sys_context *sys, u32 cnt)
 			tx_pkt_expected->callback(tx_pkt_expected->user1,
 					tx_pkt_expected->user2);
 		if (tx_pkt_expected->cnt > 1 &&
-				tx_pkt_expected->cnt != IPA_LAST_DESC_CNT) {
-			if (tx_pkt_expected->cnt == IPA_NUM_DESC_PER_SW_TX) {
-				dma_pool_free(ipa_ctx->dma_pool,
-					tx_pkt_expected->mult.base,
-					tx_pkt_expected->mult.phys_base);
-			} else {
-				dma_unmap_single(ipa_ctx->pdev,
-					tx_pkt_expected->mult.phys_base,
-					tx_pkt_expected->mult.size,
-					DMA_TO_DEVICE);
-				kfree(tx_pkt_expected->mult.base);
-			}
+		    tx_pkt_expected->cnt != IPA_LAST_DESC_CNT &&
+		    tx_pkt_expected->cnt != IPA_NUM_DESC_PER_SW_TX) {
+			dma_unmap_single(ipa_ctx->pdev,
+				tx_pkt_expected->mult.phys_base,
+				tx_pkt_expected->mult.size,
+				DMA_TO_DEVICE);
+			kfree(tx_pkt_expected->mult.base);
 		}
 		kmem_cache_free(ipa_ctx->tx_pkt_wrapper_cache, tx_pkt_expected);
 	}
@@ -432,10 +427,10 @@ int ipa_send(struct ipa_sys_context *sys, u32 num_desc, struct ipa_desc *desc,
 	flag = mem_flag | (ipa_ctx->use_dma_zone ? GFP_DMA : 0);
 
 	if (num_desc == IPA_NUM_DESC_PER_SW_TX) {
-		transfer.iovec = dma_pool_alloc(ipa_ctx->dma_pool, mem_flag,
-				&dma_addr);
+		transfer.iovec = ipa_ctx->sps_mempool;
+		dma_addr = ipa_ctx->sps_dma_addr;
 		if (!transfer.iovec) {
-			IPAERR("fail to alloc dma mem for sps xfr buff\n");
+			IPAERR("FAULT! dma mem for sps xfr buff unavailable!!\n");
 			return -EFAULT;
 		}
 	} else {
@@ -595,15 +590,10 @@ failure:
 		kmem_cache_free(ipa_ctx->tx_pkt_wrapper_cache, tx_pkt);
 		tx_pkt = next_pkt;
 	}
-	if (transfer.iovec_phys) {
-		if (num_desc == IPA_NUM_DESC_PER_SW_TX) {
-			dma_pool_free(ipa_ctx->dma_pool, transfer.iovec,
-					transfer.iovec_phys);
-		} else {
-			dma_unmap_single(ipa_ctx->pdev, transfer.iovec_phys,
-					size, DMA_TO_DEVICE);
-			kfree(transfer.iovec);
-		}
+	if (transfer.iovec_phys && num_desc != IPA_NUM_DESC_PER_SW_TX) {
+		dma_unmap_single(ipa_ctx->pdev, transfer.iovec_phys,
+				size, DMA_TO_DEVICE);
+		kfree(transfer.iovec);
 	}
 	spin_unlock_bh(&sys->spinlock);
 	return -EFAULT;

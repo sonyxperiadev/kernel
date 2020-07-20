@@ -1230,6 +1230,10 @@ struct ipa_context {
 	int num_ipa_cne_evt_req;
 	struct mutex ipa_cne_evt_lock;
 	bool ipa_uc_monitor_holb;
+
+	/* Must always be the last entries */
+	dma_addr_t sps_dma_addr;
+	void* sps_mempool;
 };
 
 /**
