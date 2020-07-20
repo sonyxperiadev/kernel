@@ -807,18 +807,6 @@ static struct freq_tbl ftbl_cpp_clk_src[] = {
 	F(  19200000,     P_BI_TCXO,      1,    0,     0),
 	F( 100000000,  P_GPLL0,      6,    0,     0),
 	F( 200000000,  P_GPLL0,      3,    0,     0),
-#if defined(CONFIG_SONY_CAM_V4L2)
-	F( 384000000,  P_MMPLL4_OUT_EVEN,     2,    0,     0),
-#endif
-	F( 576000000,  P_MMPLL10_OUT_EVEN,    1,    0,     0),
-	F( 600000000,  P_GPLL0,      1,    0,     0),
-	{ }
-};
-
-static struct freq_tbl ftbl_cpp_clk_src_vq[] = {
-	F(  19200000,     P_BI_TCXO,      1,    0,     0),
-	F( 100000000,  P_GPLL0,      6,    0,     0),
-	F( 200000000,  P_GPLL0,      3,    0,     0),
 	F( 384000000,  P_MMPLL4_OUT_EVEN,     2,    0,     0),
 	F( 404000000,  P_MMPLL0_OUT_EVEN,     2,    0,     0),
 	F( 480000000,  P_MMPLL7_OUT_EVEN,     2,    0,     0),
@@ -830,16 +818,17 @@ static struct freq_tbl ftbl_cpp_clk_src_vq[] = {
 static struct clk_rcg2 cpp_clk_src = {
 	.cmd_rcgr = 0x03640,
 	.hid_width = 5,
-	.parent_map = mmcc_parent_map_2,
+	.parent_map = mmcc_parent_map_2a,
 	.freq_tbl = ftbl_cpp_clk_src,
 	.enable_safe_config = true,
 	.clkr.hw.init = &(struct clk_init_data) {
 		.name = "cpp_clk_src",
-		.parent_names = mmcc_parent_names_2,
-		.num_parents = ARRAY_SIZE(mmcc_parent_names_2),
+		.parent_names = mmcc_parent_names_2a,
+		.num_parents = ARRAY_SIZE(mmcc_parent_names_2a),
 		.ops = &clk_rcg2_ops,
-		VDD_DIG_FMAX_MAP4(LOWER, 100000000, LOW, 200000000,
-					NOMINAL, 576000000, HIGH, 600000000),
+		VDD_DIG_FMAX_MAP5(LOWER, 100000000,  LOW, 384000000,
+				  LOW_L1, 404000000, NOMINAL, 576000000,
+				  HIGH, 600000000),
 	},
 };
 
@@ -3711,9 +3700,6 @@ static void msm_mmsscc_hamster_fixup(void)
 	csi3_clk_src.clkr.hw.init->rate_max[VDD_DIG_LOW] = 274290000;
 	csi3_clk_src.clkr.hw.init->rate_max[VDD_DIG_LOW_L1] = 320000000;
 
-	cpp_clk_src.freq_tbl = ftbl_cpp_clk_src_vq;
-	cpp_clk_src.clkr.hw.init->rate_max[VDD_DIG_LOW] = 384000000;
-	cpp_clk_src.clkr.hw.init->rate_max[VDD_DIG_LOW_L1] = 404000000;
 	jpeg0_clk_src.freq_tbl = ftbl_jpeg0_clk_src_vq;
 	jpeg0_clk_src.clkr.hw.init->rate_max[VDD_DIG_LOW_L1] = 320000000;
 	csiphy_clk_src.freq_tbl = ftbl_csiphy_clk_src_vq;
