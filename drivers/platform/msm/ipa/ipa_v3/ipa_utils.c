@@ -5571,7 +5571,16 @@ int ipa3_controller_static_bind(struct ipa3_controller *ctrl,
 		ctrl->ipa_clk_rate_turbo = IPA_V3_0_CLK_RATE_TURBO;
 		ctrl->ipa_clk_rate_nominal = IPA_V3_0_CLK_RATE_NOMINAL;
 		ctrl->ipa_clk_rate_svs = IPA_V3_0_CLK_RATE_SVS;
-		ctrl->ipa_clk_rate_svs2 = IPA_V3_0_CLK_RATE_SVS2;
+
+		/*
+		 * The 37.5MHz freq is too low for IPAv3.1, leading to higher
+		 * latency and lower responsiveness of the interface,
+		 * making the connection very slow on small data bursts.
+		 */
+		if (hw_type >= IPA_HW_v3_1)
+			ctrl->ipa_clk_rate_svs2 = IPA_V3_0_CLK_RATE_SVS;
+		else
+			ctrl->ipa_clk_rate_svs2 = IPA_V3_0_CLK_RATE_SVS2;
 	}
 
 	ctrl->ipa_init_rt4 = _ipa_init_rt4_v3;
