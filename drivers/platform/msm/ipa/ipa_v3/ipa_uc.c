@@ -498,7 +498,7 @@ static void ipa3_uc_response_hdlr(enum ipa_irq_type interrupt,
 
 		mutex_unlock(&uc_loaded_nb_lock);
 
-		IPADBG("IPA uC loaded\n");
+		IPAERR("IPA uC loaded\n");
 		/*
 		 * The proxy vote is held until uC is loaded to ensure that
 		 * IPA_HW_2_CPU_RESPONSE_INIT_COMPLETED is received.

@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2018, 2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -31,19 +31,19 @@ static int ipa_generate_hw_rule_from_eq(
 
 	if (attrib->tos_eq_present) {
 		*buf = ipa_write_8(attrib->tos_eq, *buf);
-		*buf = ipa_pad_to_32(*buf);
+		*buf = ipa2_pad_to_32(*buf);
 	}
 
 	if (attrib->protocol_eq_present) {
 		*buf = ipa_write_8(attrib->protocol_eq, *buf);
-		*buf = ipa_pad_to_32(*buf);
+		*buf = ipa2_pad_to_32(*buf);
 	}
 
 	if (num_offset_meq_32) {
 		*buf = ipa_write_8(attrib->offset_meq_32[0].offset, *buf);
 		*buf = ipa_write_32(attrib->offset_meq_32[0].mask, *buf);
 		*buf = ipa_write_32(attrib->offset_meq_32[0].value, *buf);
-		*buf = ipa_pad_to_32(*buf);
+		*buf = ipa2_pad_to_32(*buf);
 		num_offset_meq_32--;
 	}
 
@@ -51,7 +51,7 @@ static int ipa_generate_hw_rule_from_eq(
 		*buf = ipa_write_8(attrib->offset_meq_32[1].offset, *buf);
 		*buf = ipa_write_32(attrib->offset_meq_32[1].mask, *buf);
 		*buf = ipa_write_32(attrib->offset_meq_32[1].value, *buf);
-		*buf = ipa_pad_to_32(*buf);
+		*buf = ipa2_pad_to_32(*buf);
 		num_offset_meq_32--;
 	}
 
@@ -61,7 +61,7 @@ static int ipa_generate_hw_rule_from_eq(
 				*buf);
 		*buf = ipa_write_16(attrib->ihl_offset_range_16[0].range_low,
 				*buf);
-		*buf = ipa_pad_to_32(*buf);
+		*buf = ipa2_pad_to_32(*buf);
 		num_ihl_offset_range_16--;
 	}
 
@@ -71,27 +71,27 @@ static int ipa_generate_hw_rule_from_eq(
 				*buf);
 		*buf = ipa_write_16(attrib->ihl_offset_range_16[1].range_low,
 				*buf);
-		*buf = ipa_pad_to_32(*buf);
+		*buf = ipa2_pad_to_32(*buf);
 		num_ihl_offset_range_16--;
 	}
 
 	if (attrib->ihl_offset_eq_16_present) {
 		*buf = ipa_write_8(attrib->ihl_offset_eq_16.offset, *buf);
 		*buf = ipa_write_16(attrib->ihl_offset_eq_16.value, *buf);
-		*buf = ipa_pad_to_32(*buf);
+		*buf = ipa2_pad_to_32(*buf);
 	}
 
 	if (attrib->ihl_offset_eq_32_present) {
 		*buf = ipa_write_8(attrib->ihl_offset_eq_32.offset, *buf);
 		*buf = ipa_write_32(attrib->ihl_offset_eq_32.value, *buf);
-		*buf = ipa_pad_to_32(*buf);
+		*buf = ipa2_pad_to_32(*buf);
 	}
 
 	if (num_ihl_offset_meq_32) {
 		*buf = ipa_write_8(attrib->ihl_offset_meq_32[0].offset, *buf);
 		*buf = ipa_write_32(attrib->ihl_offset_meq_32[0].mask, *buf);
 		*buf = ipa_write_32(attrib->ihl_offset_meq_32[0].value, *buf);
-		*buf = ipa_pad_to_32(*buf);
+		*buf = ipa2_pad_to_32(*buf);
 		num_ihl_offset_meq_32--;
 	}
 
@@ -104,7 +104,7 @@ static int ipa_generate_hw_rule_from_eq(
 		for (i = 0; i < 16; i++)
 			*buf = ipa_write_8(attrib->offset_meq_128[0].value[i],
 					*buf);
-		*buf = ipa_pad_to_32(*buf);
+		*buf = ipa2_pad_to_32(*buf);
 		num_offset_meq_128--;
 	}
 
@@ -116,25 +116,25 @@ static int ipa_generate_hw_rule_from_eq(
 		for (i = 0; i < 16; i++)
 			*buf = ipa_write_8(attrib->offset_meq_128[1].value[i],
 					*buf);
-		*buf = ipa_pad_to_32(*buf);
+		*buf = ipa2_pad_to_32(*buf);
 		num_offset_meq_128--;
 	}
 
 	if (attrib->tc_eq_present) {
 		*buf = ipa_write_8(attrib->tc_eq, *buf);
-		*buf = ipa_pad_to_32(*buf);
+		*buf = ipa2_pad_to_32(*buf);
 	}
 
 	if (attrib->fl_eq_present) {
 		*buf = ipa_write_32(attrib->fl_eq, *buf);
-		*buf = ipa_pad_to_32(*buf);
+		*buf = ipa2_pad_to_32(*buf);
 	}
 
 	if (num_ihl_offset_meq_32) {
 		*buf = ipa_write_8(attrib->ihl_offset_meq_32[1].offset, *buf);
 		*buf = ipa_write_32(attrib->ihl_offset_meq_32[1].mask, *buf);
 		*buf = ipa_write_32(attrib->ihl_offset_meq_32[1].value, *buf);
-		*buf = ipa_pad_to_32(*buf);
+		*buf = ipa2_pad_to_32(*buf);
 		num_ihl_offset_meq_32--;
 	}
 
@@ -142,11 +142,11 @@ static int ipa_generate_hw_rule_from_eq(
 		*buf = ipa_write_8(attrib->metadata_meq32.offset, *buf);
 		*buf = ipa_write_32(attrib->metadata_meq32.mask, *buf);
 		*buf = ipa_write_32(attrib->metadata_meq32.value, *buf);
-		*buf = ipa_pad_to_32(*buf);
+		*buf = ipa2_pad_to_32(*buf);
 	}
 
 	if (attrib->ipv4_frag_eq_present)
-		*buf = ipa_pad_to_32(*buf);
+		*buf = ipa2_pad_to_32(*buf);
 
 	return 0;
 }
@@ -575,7 +575,7 @@ static int ipa_generate_flt_hw_tbl_v1_1(enum ipa_ip_type ip,
 	/* write a dummy header to move cursor */
 	hdr = ipa_write_32(hdr_top, hdr);
 
-	if (ipa_generate_flt_hw_tbl_common(ip, body, hdr, hdr_sz, 0,
+	if (ipa_generate_flt_hw_tbl_common(ip, body, hdr, hdr_sz, NULL,
 				&hdr_top)) {
 		IPAERR("fail to generate FLT HW table\n");
 		goto proc_err;

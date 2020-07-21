@@ -243,6 +243,12 @@ struct sde_hw_ctl_ops {
 		struct sde_hw_intf_cfg *cfg);
 
 	/**
+	 * Clear ctl_path interface config
+	 * @ctx       : ctl path ctx pointer
+	 */
+	void (*clear_intf_cfg)(struct sde_hw_ctl *ctx);
+
+	/**
 	 * Reset ctl_path interface config
 	 * @ctx   : ctl path ctx pointer
 	 * @cfg    : interface config structure pointer

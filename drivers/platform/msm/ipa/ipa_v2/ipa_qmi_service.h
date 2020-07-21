@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2018, 2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -79,17 +79,17 @@ extern struct ipa_qmi_context *ipa_qmi_ctx;
 extern struct mutex ipa_qmi_lock;
 
 struct ipa_qmi_context {
-	struct ipa_ioc_ext_intf_prop q6_ul_filter_rule[MAX_NUM_Q6_RULE];
-	u32 q6_ul_filter_rule_hdl[MAX_NUM_Q6_RULE];
-	int num_ipa_install_fltr_rule_req_msg;
-	struct ipa_install_fltr_rule_req_msg_v01
+struct ipa_ioc_ext_intf_prop q6_ul_filter_rule[MAX_NUM_Q6_RULE];
+u32 q6_ul_filter_rule_hdl[MAX_NUM_Q6_RULE];
+int num_ipa_install_fltr_rule_req_msg;
+struct ipa_install_fltr_rule_req_msg_v01
 		ipa_install_fltr_rule_req_msg_cache[MAX_NUM_QMI_RULE_CACHE];
-	int num_ipa_fltr_installed_notif_req_msg;
-	struct ipa_fltr_installed_notif_req_msg_v01
+int num_ipa_fltr_installed_notif_req_msg;
+struct ipa_fltr_installed_notif_req_msg_v01
 		ipa_fltr_installed_notif_req_msg_cache[MAX_NUM_QMI_RULE_CACHE];
-	bool modem_cfg_emb_pipe_flt;
-	struct sockaddr_qrtr server_sq;
-	struct sockaddr_qrtr client_sq;
+bool modem_cfg_emb_pipe_flt;
+struct sockaddr_qrtr client_sq;
+struct sockaddr_qrtr server_sq;
 };
 
 struct rmnet_mux_val {
@@ -110,10 +110,14 @@ extern struct qmi_elem_info ipa_install_fltr_rule_req_msg_data_v01_ei[];
 extern struct qmi_elem_info ipa_install_fltr_rule_resp_msg_data_v01_ei[];
 extern struct qmi_elem_info ipa_fltr_installed_notif_req_msg_data_v01_ei[];
 extern struct qmi_elem_info ipa_fltr_installed_notif_resp_msg_data_v01_ei[];
-extern struct qmi_elem_info ipa_enable_force_clear_datapath_req_msg_data_v01_ei[];
-extern struct qmi_elem_info ipa_enable_force_clear_datapath_resp_msg_data_v01_ei[];
-extern struct qmi_elem_info ipa_disable_force_clear_datapath_req_msg_data_v01_ei[];
-extern struct qmi_elem_info ipa_disable_force_clear_datapath_resp_msg_data_v01_ei[];
+extern struct
+	qmi_elem_info ipa_enable_force_clear_datapath_req_msg_data_v01_ei[];
+extern struct
+	qmi_elem_info ipa_enable_force_clear_datapath_resp_msg_data_v01_ei[];
+extern struct
+	qmi_elem_info ipa_disable_force_clear_datapath_req_msg_data_v01_ei[];
+extern struct
+	qmi_elem_info ipa_disable_force_clear_datapath_resp_msg_data_v01_ei[];
 extern struct qmi_elem_info ipa_config_req_msg_data_v01_ei[];
 extern struct qmi_elem_info ipa_config_resp_msg_data_v01_ei[];
 extern struct qmi_elem_info ipa_get_data_stats_req_msg_data_v01_ei[];

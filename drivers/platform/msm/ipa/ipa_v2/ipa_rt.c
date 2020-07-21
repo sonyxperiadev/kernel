@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -54,7 +54,7 @@ int __ipa_generate_rt_hw_rule_v2(enum ipa_ip_type ip,
 	struct ipa_hdr_entry *hdr_entry;
 
 	if (buf == NULL) {
-		memset(tmp, 0, sizeof(tmp));
+		memset(tmp, 0, (IPA_RT_FLT_HW_RULE_BUF_SIZE/4));
 		buf = (u8 *)tmp;
 	}
 
@@ -200,14 +200,14 @@ int __ipa_generate_rt_hw_rule_v2_5(enum ipa_ip_type ip,
 
 		proc_ctx = (entry->proc_ctx) ? : entry->hdr->proc_ctx;
 		rule_hdr->u.hdr_v2_5.system = !ipa_ctx->hdr_proc_ctx_tbl_lcl;
-		BUG_ON(proc_ctx->offset_entry->offset & 31);
+		ipa_assert_on(proc_ctx->offset_entry->offset & 31);
 		rule_hdr->u.hdr_v2_5.proc_ctx = 1;
 		rule_hdr->u.hdr_v2_5.hdr_offset =
 			(proc_ctx->offset_entry->offset +
 			ipa_ctx->hdr_proc_ctx_tbl.start_offset) >> 5;
 	} else if (entry->hdr) {
 		rule_hdr->u.hdr_v2_5.system = !ipa_ctx->hdr_tbl_lcl;
-		BUG_ON(entry->hdr->offset_entry->offset & 3);
+		ipa_assert_on(entry->hdr->offset_entry->offset & 3);
 		rule_hdr->u.hdr_v2_5.proc_ctx = 0;
 		rule_hdr->u.hdr_v2_5.hdr_offset =
 				entry->hdr->offset_entry->offset >> 2;
@@ -1405,6 +1405,7 @@ int ipa2_reset_rt(enum ipa_ip_type ip, bool user_only)
 					hdr_entry->cookie != IPA_HDR_COOKIE) {
 						IPAERR_RL(
 						"Header already deleted\n");
+						mutex_unlock(&ipa_ctx->lock);
 						return -EINVAL;
 					}
 				} else if (rule->proc_ctx) {
@@ -1414,8 +1415,9 @@ int ipa2_reset_rt(enum ipa_ip_type ip, bool user_only)
 					if (!hdr_proc_entry ||
 						hdr_proc_entry->cookie !=
 						IPA_PROC_HDR_COOKIE) {
-					IPAERR_RL(
+						IPAERR_RL(
 						"Proc entry already deleted\n");
+						mutex_unlock(&ipa_ctx->lock);
 						return -EINVAL;
 					}
 				}

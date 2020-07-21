@@ -41,9 +41,18 @@
 #include "ipa_trace.h"
 #include "ipa_odl.h"
 
-#define OUTSTANDING_HIGH_DEFAULT 256
-#define OUTSTANDING_HIGH_CTL_DEFAULT (OUTSTANDING_HIGH_DEFAULT + 32)
-#define OUTSTANDING_LOW_DEFAULT 128
+#if defined(CONFIG_ARCH_MSM8998) || defined(CONFIG_ARCH_SDM630) || \
+    defined(CONFIG_ARCH_SDM660)  || defined(CONFIG_ARCH_SDM845)
+ #define OUTSTANDING_HIGH_DEFAULT 128
+ #define OUTSTANDING_HIGH_CTL_DEFAULT (OUTSTANDING_HIGH_DEFAULT + 32)
+ #define OUTSTANDING_LOW_DEFAULT 64
+ #define WWAN_DATA_LEN 2000
+#else
+ #define OUTSTANDING_HIGH_DEFAULT 256
+ #define OUTSTANDING_HIGH_CTL_DEFAULT (OUTSTANDING_HIGH_DEFAULT + 32)
+ #define OUTSTANDING_LOW_DEFAULT 128
+ #define WWAN_DATA_LEN 9216
+#endif
 
 static unsigned int outstanding_high = OUTSTANDING_HIGH_DEFAULT;
 module_param(outstanding_high, uint, 0644);
@@ -59,7 +68,6 @@ MODULE_PARM_DESC(outstanding_low, "Outstanding low");
 
 #define WWAN_METADATA_SHFT 24
 #define WWAN_METADATA_MASK 0xFF000000
-#define WWAN_DATA_LEN 9216
 #define IPA_RM_INACTIVITY_TIMER 100 /* IPA_RM */
 #define HEADROOM_FOR_QMAP   8 /* for mux header */
 #define TAILROOM            0 /* for padding by mux layer */

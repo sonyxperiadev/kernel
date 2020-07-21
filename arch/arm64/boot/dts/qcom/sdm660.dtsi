@@ -1370,7 +1370,6 @@
 		clock-names = "core_clk", "smmu_clk";
 		qcom,arm-smmu;
 		qcom,smmu-disable-htw;
-		qcom,smmu-s1-bypass;
 		qcom,ee = <0>;
 		qcom,use-ipa-tethering-bridge;
 		qcom,modem-cfg-emb-pipe-flt;
@@ -1403,7 +1402,6 @@
 		};
 
 		ipa_smmu_wlan: ipa_smmu_wlan {
-			status = "disabled";
 			compatible = "qcom,ipa-smmu-wlan-cb";
 			iommus = <&anoc2_smmu 0x19C1>;
 		};
@@ -1867,7 +1865,6 @@
 		qcom,vdd-3.3-ch0-config = <3200000 3400000>;
 		qcom,wlan-msa-memory = <0x100000>;
 		qcom,wlan-msa-fixed-region = <&wlan_msa_mem>;
-		qcom,smmu-s1-bypass;
 
                 qcom,smp2p_map_wlan_1_in {
                         interrupts-extended = <&smp2p_wlan_1_in 0 0>,

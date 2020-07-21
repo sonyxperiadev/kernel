@@ -158,6 +158,7 @@ struct sde_encoder_phys_ops {
 			struct drm_display_mode *adjusted_mode);
 	void (*enable)(struct sde_encoder_phys *encoder);
 	void (*disable)(struct sde_encoder_phys *encoder);
+	void (*post_disable)(struct sde_encoder_phys *encoder);
 	int (*atomic_check)(struct sde_encoder_phys *encoder,
 			    struct drm_crtc_state *crtc_state,
 			    struct drm_connector_state *conn_state);

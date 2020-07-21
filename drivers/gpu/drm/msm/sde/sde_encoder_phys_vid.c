@@ -1184,6 +1184,18 @@ exit:
 	phys_enc->enable_state = SDE_ENC_DISABLED;
 }
 
+static void sde_encoder_phys_vid_post_disable(
+		struct sde_encoder_phys *phys_enc)
+{
+	if (!phys_enc || !phys_enc->hw_ctl) {
+		SDE_ERROR("invalid encoder\n");
+		return;
+	}
+
+	if (phys_enc->hw_ctl->ops.clear_intf_cfg)
+		phys_enc->hw_ctl->ops.clear_intf_cfg(phys_enc->hw_ctl);
+}
+
 static void sde_encoder_phys_vid_handle_post_kickoff(
 		struct sde_encoder_phys *phys_enc)
 {
@@ -1395,6 +1407,13 @@ static void sde_encoder_phys_vid_init_ops(struct sde_encoder_phys_ops *ops)
 	ops->wait_dma_trigger = sde_encoder_phys_vid_wait_dma_trigger;
 	ops->wait_for_active = sde_encoder_phys_vid_wait_for_active;
 	ops->prepare_commit = sde_encoder_phys_vid_prepare_for_commit;
+
+	if (of_machine_is_compatible("qcom,msm8998") ||
+	    of_machine_is_compatible("qcom,sdm630")  ||
+	    of_machine_is_compatible("qcom,sdm636")  ||
+	    of_machine_is_compatible("qcom,sdm660")) {
+		ops->post_disable = sde_encoder_phys_vid_post_disable;
+	}
 }
 
 struct sde_encoder_phys *sde_encoder_phys_vid_init(
