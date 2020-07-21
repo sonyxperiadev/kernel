@@ -794,7 +794,7 @@ static const struct parent_map gcc_parent_map_1[] = {
 };
 
 static const char * const gcc_parent_names_1[] = {
-	"xo",
+	"bi_tcxo_ao",
 	"hmss_gpll0_clk_src",
 };
 
