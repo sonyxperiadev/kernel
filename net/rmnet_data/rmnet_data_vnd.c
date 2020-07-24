@@ -564,13 +564,14 @@ int rmnet_vnd_create_dev(int id, struct net_device **new_device,
 		/* Configuring UL checksum offload on rmnet_data interfaces */
 		dev->hw_features |= NETIF_F_IP_CSUM | NETIF_F_IPV6_CSUM;
 		/* Configuring GRO on rmnet_data interfaces */
-		dev->hw_features |= NETIF_F_GRO;
+		dev->hw_features |= NETIF_F_GRO_HW;
 		/* Configuring Scatter-Gather on rmnet_data interfaces */
 		dev->hw_features |= NETIF_F_SG;
 		/* Configuring GSO on rmnet_data interfaces */
-		dev->hw_features |= NETIF_F_GSO;
+/*		dev->hw_features |= NETIF_F_GSO;
 		dev->hw_features |= NETIF_F_GSO_UDP_TUNNEL;
 		dev->hw_features |= NETIF_F_GSO_UDP_TUNNEL_CSUM;
+*/
 	}
 
 	rc = register_netdevice(dev);
