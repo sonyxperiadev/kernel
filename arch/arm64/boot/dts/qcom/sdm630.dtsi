@@ -1324,6 +1324,7 @@
 		qcom,rmnet-ipa-ssr;
 		qcom,ipa-platform-type-msm;
 		qcom,ipa-advertise-sg-support;
+		qcom,ipa-napi-enable;
 	};
 
 	clock_cpu: qcom,clk-cpu-630@179c0000 {

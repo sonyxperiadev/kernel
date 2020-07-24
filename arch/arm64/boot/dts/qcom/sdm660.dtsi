@@ -1427,6 +1427,7 @@
 		qcom,rmnet-ipa-ssr;
 		qcom,ipa-platform-type-msm;
 		qcom,ipa-advertise-sg-support;
+		qcom,ipa-napi-enable;
 	};
 
 	qcom,msm-cdsp-loader {
