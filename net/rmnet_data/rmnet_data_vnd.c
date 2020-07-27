@@ -564,13 +564,14 @@ int rmnet_vnd_create_dev(int id, struct net_device **new_device,
 		/* Configuring UL checksum offload on rmnet_data interfaces */
 		dev->hw_features |= NETIF_F_IP_CSUM | NETIF_F_IPV6_CSUM;
 		/* Configuring GRO on rmnet_data interfaces */
-		dev->hw_features |= NETIF_F_GRO;
+		dev->hw_features |= NETIF_F_GRO_HW;
 		/* Configuring Scatter-Gather on rmnet_data interfaces */
 		dev->hw_features |= NETIF_F_SG;
 		/* Configuring GSO on rmnet_data interfaces */
-		dev->hw_features |= NETIF_F_GSO;
+/*		dev->hw_features |= NETIF_F_GSO;
 		dev->hw_features |= NETIF_F_GSO_UDP_TUNNEL;
 		dev->hw_features |= NETIF_F_GSO_UDP_TUNNEL_CSUM;
+*/
 	}
 
 	rc = register_netdevice(dev);
@@ -578,7 +579,7 @@ int rmnet_vnd_create_dev(int id, struct net_device **new_device,
 		LOGE("Failed to to register netdev [%s]", dev->name);
 		free_netdev(dev);
 		*new_device = 0;
-		rc = RMNET_CONFIG_UNKNOWN_ERROR;
+		return RMNET_CONFIG_UNKNOWN_ERROR;
 	} else {
 		rmnet_devices[id] = dev;
 		*new_device = dev;
