@@ -4774,8 +4774,6 @@ static void __venus_power_off(struct venus_hfi_device *device, bool axi_reset)
 		disable_irq_nosync(device->hal_data->irq);
 	device->intr_status = 0;
 
-	version = __read_register(device, VIDC_WRAPPER_HW_VERSION);
-
 	if (axi_reset)
 		version = __read_register(device, VIDC_WRAPPER_HW_VERSION);
 
