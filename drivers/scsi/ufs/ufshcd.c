@@ -3796,22 +3796,6 @@ static int ufshcd_queuecommand(struct Scsi_Host *host, struct scsi_cmnd *cmd)
 	/* Vote PM QoS for the request */
 	ufshcd_vops_pm_qos_req_start(hba, cmd->request);
 
-#ifdef UFS_TARGET_SONY_PLATFORM
-
-	/* IO svc time latency histogram */
-	if (hba != NULL && cmd->request != NULL) {
-		if (hba->latency_hist_enabled) {
-			switch (req_op(cmd->request)) {
-			case REQ_OP_READ:
-			case REQ_OP_WRITE:
-				cmd->request->lat_hist_io_start = ktime_get();
-				cmd->request->lat_hist_enabled = 1;
-			}
-		} else
-			cmd->request->lat_hist_enabled = 0;
-	}
-
-#endif
 	WARN_ON(hba->clk_gating.state != CLKS_ON);
 
 	lrbp = &hba->lrb[tag];
@@ -6569,25 +6553,6 @@ static void __ufshcd_transfer_req_compl(struct ufs_hba *hba,
 			__ufshcd_release(hba, false);
 			__ufshcd_hibern8_release(hba, false);
 
-#ifdef UFS_TARGET_SONY_PLATFORM
-			req = cmd->request;
-			if (req) {
-				/* Update IO svc time latency histogram */
-				if (req->lat_hist_enabled) {
-					ktime_t completion;
-					u_int64_t delta_us;
-
-					completion = ktime_get();
-					delta_us = ktime_us_delta(completion,
-						  req->lat_hist_io_start);
-					/* rq_data_dir() => true if WRITE */
-					blk_update_latency_hist(&hba->io_lat_s,
-						(rq_data_dir(req) == READ),
-						delta_us);
-				}
-			}
-
-#endif
 			/* Do not touch lrbp after scsi done */
 			cmd->scsi_done(cmd);
 		} else if (lrbp->command_type == UTP_CMD_TYPE_DEV_MANAGE ||
