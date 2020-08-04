@@ -31,6 +31,11 @@
 
 #define GSI_STTS_REG_BITS 32
 
+#ifndef MODULE
+ #undef EXPORT_SYMBOL
+ #define EXPORT_SYMBOL(x)
+#endif
+
 #ifndef CONFIG_DEBUG_FS
 void gsi_debugfs_init(void)
 {
