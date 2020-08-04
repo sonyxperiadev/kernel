@@ -51,6 +51,16 @@
 #include "ufs-debugfs.h"
 #include "ufs-qcom.h"
 
+#ifdef UFS_TARGET_SONY_PLATFORM
+ #define UFS_PURGE_SPEC_VER	0x210
+ #define UFS_IOCTL_WRITE_BUFFER	0x53EF
+
+struct ufs_ioctl_write_buffer_data {
+	__u32 buf_size;
+	__u8 buffer[0];
+};
+#endif
+
 static bool ufshcd_wb_sup(struct ufs_hba *hba);
 static int ufshcd_wb_ctrl(struct ufs_hba *hba, bool enable);
 static int ufshcd_wb_buf_flush_enable(struct ufs_hba *hba);
