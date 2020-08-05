@@ -32,7 +32,7 @@
 #include <media/v4l2-ctrls.h>
 #include <media/videobuf2-core.h>
 #include <media/videobuf2-v4l2.h>
-#include <media/msm_vidc.h>
+#include "msm_vidc.h"
 #include <media/msm_media_info.h>
 
 #include "vidc_hfi_api.h"
