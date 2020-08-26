@@ -48,6 +48,7 @@ obj-$(CONFIG_QCOM_SDXLEMUR_LLCC) += llcc-sdxlemur.o
 obj-$(CONFIG_QCOM_SHIMA_LLCC) += llcc-shima.o
 obj-$(CONFIG_QCOM_YUPIK_LLCC) += llcc-yupik.o
 obj-$(CONFIG_QCOM_SM8150_LLCC) += llcc-sm8150.o
+obj-$(CONFIG_QCOM_SM6150_LLCC) += llcc-sm6150.o
 obj-$(CONFIG_QCOM_KONA_LLCC) += llcc-kona.o
 obj-$(CONFIG_QCOM_LAGOON_LLCC) += llcc-lagoon.o
 obj-$(CONFIG_QCOM_MINIDUMP) += msm_minidump.o minidump_log.o
