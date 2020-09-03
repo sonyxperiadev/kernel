@@ -158,6 +158,10 @@
 		memory-region = "log";
 	};
 
+	nfc,pm-ops {
+		compatible = "sony,pn553-pm-ops";
+	};
+
 	pinctrl@400000 {
 		disabled-pins = <22 23 28 29 30 31 32 33>;
 	};
@@ -272,8 +276,6 @@
 		pinctrl-0 = <&cdc_dmic23_clk_active &cdc_dmic23_data_active>;
 		pinctrl-1 = <&cdc_dmic23_clk_sleep &cdc_dmic23_data_sleep>;
 	};
-
-
 };
 
 &camss_cpp_gdsc {
@@ -286,6 +288,16 @@
 	status = "okay";
 
 	/delete-node/ nq@28;
+	nfc@28 {
+		compatible = "nxp,pn553";
+		reg = <0x28>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <85 0x1>;
+		nxp,irq_gpio = <&tlmm 85 0x00>;
+		nxp,dwld_en = <&tlmm 84 0x00>;
+		nxp,ven = <&tlmm 83 0x01>;
+		nxp,ese-pwr = <&tlmm 24 0x00>;
+	};
 };
 
 /* Disable trinket-audio-overlay unused nodes */
@@ -2353,6 +2365,5 @@
 
 #include "trinket-seine-touch.dtsi"
 #include "charger-seine-common.dtsi"
-#include "trinket-seine-nfc_pn557.dtsi"
 #include "trinket-seine-usb.dtsi"
 #include "trinket-seine-camera-common.dtsi"
