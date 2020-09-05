@@ -287,7 +287,10 @@
 	pinctrl-1 = <&sm_gpio_4_suspend &sm_gpio_5_suspend>;
 	status = "okay";
 
-	/delete-node/ nq@28;
+	nq@28 {
+		status = "disabled";
+	};
+
 	nfc@28 {
 		compatible = "nxp,pn553";
 		reg = <0x28>;
