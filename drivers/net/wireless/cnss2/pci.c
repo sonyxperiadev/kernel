@@ -1956,6 +1956,8 @@ retry:
 			msleep(POWER_ON_RETRY_DELAY_MS * retry);
 			goto retry;
 		}
+		/* Assert when it reaches maximum retries */
+		CNSS_ASSERT(0);
 		goto power_off;
 	}
 
