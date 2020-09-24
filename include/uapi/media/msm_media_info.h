@@ -4,6 +4,7 @@
 
 #define NV12_STRIDE_ALIGNMENT 128
 #define NV12_SCANLINE_ALIGNMENT 32
+#define UBWC_EXTRA_SIZE 4096
 
 /* Width and Height should be multiple of 16 */
 #define INTERLACE_WIDTH_MAX 1920
@@ -1268,6 +1269,7 @@ static inline unsigned int VENUS_BUFFER_SIZE(unsigned int color_fmt,
 			size = (y_ubwc_plane + uv_ubwc_plane + y_meta_plane +
 				uv_meta_plane)+(64 * y_stride);
 		}
+		size += UBWC_EXTRA_SIZE;
 		break;
 	case COLOR_FMT_NV12_BPP10_UBWC:
 		y_ubwc_plane = MSM_MEDIA_ALIGN(y_stride * y_sclines, 4096);
