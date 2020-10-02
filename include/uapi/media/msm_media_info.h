@@ -4,7 +4,7 @@
 
 #define NV12_STRIDE_ALIGNMENT 128
 #define NV12_SCANLINE_ALIGNMENT 32
-#define UBWC_EXTRA_SIZE 4096
+#define UBWC_EXTRA_SIZE 16384 /* 16*1024 extra size */
 
 /* Width and Height should be multiple of 16 */
 #define INTERLACE_WIDTH_MAX 1920
