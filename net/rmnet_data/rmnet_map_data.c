@@ -262,8 +262,10 @@ new_packet:
 		 * sparse, don't aggregate. We will need to tune this later
 		 */
 		diff = timespec_sub(config->agg_last, last);
+		size = config->egress_agg_size - skb->len;
 
-		if ((diff.tv_sec > 0) || (diff.tv_nsec > agg_bypass_time)) {
+		if ((diff.tv_sec > 0) || (diff.tv_nsec > agg_bypass_time) ||
+		    (size <= 0)) {
 			spin_unlock_irqrestore(&config->agg_lock, flags);
 			LOGL("delta t: %ld.%09lu\tcount: bypass", diff.tv_sec,
 			     diff.tv_nsec);
@@ -275,7 +277,6 @@ new_packet:
 			return;
 		}
 
-		size = config->egress_agg_size - skb->len;
 		config->agg_skb = skb_copy_expand(skb, 0, size, GFP_ATOMIC);
 		if (!config->agg_skb) {
 			config->agg_skb = 0;
@@ -293,7 +294,7 @@ new_packet:
 		config->agg_count = 1;
 		getnstimeofday(&config->agg_time);
 		trace_rmnet_start_aggregation(skb);
-		rmnet_kfree_skb(skb, RMNET_STATS_SKBFREE_AGG_CPY_EXPAND);
+		dev_kfree_skb_any(skb);
 		goto schedule;
 	}
 	diff = timespec_sub(config->agg_last, config->agg_time);
@@ -322,7 +323,7 @@ new_packet:
 	dest_buff = skb_put(config->agg_skb, skb->len);
 	memcpy(dest_buff, skb->data, skb->len);
 	config->agg_count++;
-	rmnet_kfree_skb(skb, RMNET_STATS_SKBFREE_AGG_INTO_BUFF);
+	dev_kfree_skb_any(skb);
 
 schedule:
 	if (config->agg_state != RMNET_MAP_TXFER_SCHEDULED) {

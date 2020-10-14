@@ -1942,8 +1942,9 @@ int ipa3_connect_wdi_pipe(struct ipa_wdi_in_params *in,
 		IPADBG("Skipping endpoint configuration.\n");
 	}
 
+#ifndef CONFIG_ARCH_MSM8998
 	ipa3_enable_data_path(ipa_ep_idx);
-
+#endif
 	out->clnt_hdl = ipa_ep_idx;
 
 	if (!ep->skip_ep_cfg && IPA_CLIENT_IS_PROD(in->sys.client))
@@ -2085,6 +2086,7 @@ int ipa3_enable_gsi_wdi_pipe(u32 clnt_hdl)
 	struct ipa3_ep_context *ep;
 	struct ipa_ep_cfg_ctrl ep_cfg_ctrl;
 	int ipa_ep_idx;
+	struct ipa_ep_cfg_holb holb_cfg;
 
 	IPADBG("ep=%d\n", clnt_hdl);
 
@@ -2104,6 +2106,18 @@ int ipa3_enable_gsi_wdi_pipe(u32 clnt_hdl)
 
 	memset(&ep_cfg_ctrl, 0, sizeof(struct ipa_ep_cfg_ctrl));
 	ipa3_cfg_ep_ctrl(ipa_ep_idx, &ep_cfg_ctrl);
+
+	if (IPA_CLIENT_IS_CONS(ep->client)) {
+		memset(&holb_cfg, 0, sizeof(holb_cfg));
+		holb_cfg.en = IPA_HOLB_TMR_EN;
+		if (ipa3_ctx->ipa_hw_type < IPA_HW_v4_5)
+			holb_cfg.tmr_val = IPA_HOLB_TMR_VAL;
+		else
+			holb_cfg.tmr_val = IPA_HOLB_TMR_VAL_4_5;
+
+		result = ipa3_cfg_ep_holb(clnt_hdl, &holb_cfg);
+	}
+
 
 	IPA_ACTIVE_CLIENTS_DEC_EP(ipa3_get_client_mapping(clnt_hdl));
 	ep->gsi_offload_state |= IPA_WDI_ENABLED;
@@ -2189,6 +2203,9 @@ int ipa3_enable_wdi_pipe(u32 clnt_hdl)
 	struct ipa3_ep_context *ep;
 	union IpaHwWdiCommonChCmdData_t enable;
 	struct ipa_ep_cfg_holb holb_cfg;
+#ifdef CONFIG_ARCH_MSM8998
+	struct ipahal_reg_endp_init_rsrc_grp rsrc_grp;
+#endif
 
 	if (clnt_hdl >= ipa3_ctx->ipa_num_pipes ||
 	    ipa3_ctx->ep[clnt_hdl].valid == 0) {
@@ -2223,6 +2240,22 @@ int ipa3_enable_wdi_pipe(u32 clnt_hdl)
 		result = -EFAULT;
 		goto uc_timeout;
 	}
+
+#ifdef CONFIG_ARCH_MSM8998
+	/* Assign the resource group for pipe */
+	memset(&rsrc_grp, 0, sizeof(rsrc_grp));
+	rsrc_grp.rsrc_grp = ipa_get_ep_group(ep->client);
+	if (rsrc_grp.rsrc_grp == -1) {
+		IPAERR("invalid group for client %d\n", ep->client);
+		WARN_ON(1);
+		return -EFAULT;
+	}
+
+	IPADBG("Setting group %d for pipe %d\n",
+		rsrc_grp.rsrc_grp, clnt_hdl);
+	ipahal_write_reg_n_fields(IPA_ENDP_INIT_RSRC_GRP_n, clnt_hdl,
+		&rsrc_grp);
+#endif
 
 	if (IPA_CLIENT_IS_CONS(ep->client)) {
 		memset(&holb_cfg, 0, sizeof(holb_cfg));

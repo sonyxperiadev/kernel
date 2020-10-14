@@ -1627,6 +1627,22 @@ exit:
 }
 
 /**
+ * sde_encoder_phys_wb_post_disable - post disable writeback encoder
+ * @phys_enc:	Pointer to physical encoder
+ */
+static void sde_encoder_phys_wb_post_disable(
+		struct sde_encoder_phys *phys_enc)
+{
+	if (!phys_enc || !phys_enc->hw_ctl) {
+		SDE_ERROR("invalid encoder\n");
+		return;
+	}
+
+	if (phys_enc->hw_ctl->ops.clear_intf_cfg)
+		phys_enc->hw_ctl->ops.clear_intf_cfg(phys_enc->hw_ctl);
+}
+
+/**
  * sde_encoder_phys_wb_get_hw_resources - get hardware resources
  * @phys_enc:	Pointer to physical encoder
  * @hw_res:	Pointer to encoder resources
@@ -1746,6 +1762,13 @@ static void sde_encoder_phys_wb_init_ops(struct sde_encoder_phys_ops *ops)
 	ops->trigger_start = sde_encoder_helper_trigger_start;
 	ops->hw_reset = sde_encoder_helper_hw_reset;
 	ops->irq_control = sde_encoder_phys_wb_irq_ctrl;
+
+	if (of_machine_is_compatible("qcom,msm8998") ||
+	    of_machine_is_compatible("qcom,sdm630")  ||
+	    of_machine_is_compatible("qcom,sdm636")  ||
+	    of_machine_is_compatible("qcom,sdm660")) {
+		ops->post_disable = sde_encoder_phys_wb_post_disable;
+	}
 }
 
 /**

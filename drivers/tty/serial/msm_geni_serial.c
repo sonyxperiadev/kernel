@@ -179,6 +179,7 @@ struct msm_geni_serial_port {
 	struct msm_geni_serial_ver_info ver_info;
 	u32 cur_tx_remaining;
 	bool startup_in_progress;
+	bool pm_auto_suspend_disable;
 };
 
 static const struct uart_ops msm_geni_serial_pops;
@@ -386,7 +387,11 @@ static int vote_clock_off(struct uart_port *uport)
 static int msm_geni_serial_ioctl(struct uart_port *uport, unsigned int cmd,
 						unsigned long arg)
 {
+	struct msm_geni_serial_port *port = GET_DEV_PORT(uport);
 	int ret = -ENOIOCTLCMD;
+
+	if (port->pm_auto_suspend_disable)
+		return ret;
 
 	switch (cmd) {
 	case TIOCPMGET: {
@@ -560,8 +565,11 @@ static void msm_geni_serial_power_off(struct uart_port *uport)
 								__func__);
 		return;
 	}
-	pm_runtime_mark_last_busy(uport->dev);
-	pm_runtime_put_autosuspend(uport->dev);
+
+	if (pm_runtime_enabled(uport->dev)) {
+		pm_runtime_mark_last_busy(uport->dev);
+		pm_runtime_put_autosuspend(uport->dev);
+	}
 }
 
 static int msm_geni_serial_poll_bit(struct uart_port *uport,
@@ -866,8 +874,18 @@ static int handle_rx_console(struct uart_port *uport,
 				tty_insert_flip_char(tport, rx_char[c], flag);
 		}
 	}
-	if (!drop_rx)
+	if (!drop_rx) {
+		/*
+		 * Driver acquiring port->lock in isr function and calling
+		 * tty_flip_buffer_push() which in turn will wait for
+		 * another lock from framework __queue_work function.
+		 * release the port lock before calling tty_flip_buffer_push()
+		 * to avoid deadlock scenarios.
+		 */
+		spin_unlock(&uport->lock);
 		tty_flip_buffer_push(tport);
+		spin_lock(&uport->lock);
+	}
 	return 0;
 }
 #else
@@ -943,7 +961,7 @@ static void msm_geni_serial_start_tx(struct uart_port *uport)
 		goto exit_start_tx;
 	}
 
-	if (!uart_console(uport)) {
+	if (!uart_console(uport) && pm_runtime_enabled(uport->dev)) {
 		IPC_LOG_MSG(msm_port->ipc_log_misc,
 				"%s.Power on.\n", __func__);
 		pm_runtime_get(uport->dev);
@@ -1563,14 +1581,13 @@ static irqreturn_t msm_geni_serial_isr(int isr, void *dev)
 	unsigned int dma_tx_status;
 	unsigned int dma_rx_status;
 	struct uart_port *uport = dev;
-	unsigned long flags;
 	unsigned int m_irq_en;
 	unsigned int geni_status;
 	struct msm_geni_serial_port *msm_port = GET_DEV_PORT(uport);
 	struct tty_port *tport = &uport->state->port;
 	bool drop_rx = false;
 
-	spin_lock_irqsave(&uport->lock, flags);
+	spin_lock(&uport->lock);
 	if (uart_console(uport) && uport->suspended)
 		goto exit_geni_serial_isr;
 	if (!uart_console(uport) && pm_runtime_status_suspended(uport->dev)) {
@@ -1669,7 +1686,7 @@ static irqreturn_t msm_geni_serial_isr(int isr, void *dev)
 	}
 
 exit_geni_serial_isr:
-	spin_unlock_irqrestore(&uport->lock, flags);
+	spin_unlock(&uport->lock);
 	return IRQ_HANDLED;
 }
 
@@ -1778,10 +1795,12 @@ static void msm_geni_serial_shutdown(struct uart_port *uport)
 			msm_port->ioctl_count = 0;
 		}
 
-		ret = pm_runtime_put_sync_suspend(uport->dev);
-		if (ret) {
-			IPC_LOG_MSG(msm_port->ipc_log_pwr,
-			"%s: Failed to suspend:%d\n", __func__, ret);
+		if (pm_runtime_enabled(uport->dev)) {
+			ret = pm_runtime_put_sync_suspend(uport->dev);
+			if (ret) {
+				IPC_LOG_MSG(msm_port->ipc_log_pwr,
+				"%s: Failed to suspend:%d\n", __func__, ret);
+			}
 		}
 
 		if (msm_port->wakeup_irq > 0) {
@@ -1800,7 +1819,6 @@ static int msm_geni_serial_port_setup(struct uart_port *uport)
 	unsigned long cfg0, cfg1;
 	dma_addr_t dma_address;
 	unsigned int rxstale = DEFAULT_BITS_PER_CHAR * STALE_TIMEOUT;
-	struct device *cb_dev = geni_get_iommu_dev(msm_port->wrapper_dev);
 
 	set_rfr_wm(msm_port);
 	geni_write_reg_nolog(rxstale, uport->membase, SE_UART_RX_STALE_CNT);
@@ -1824,8 +1842,9 @@ static int msm_geni_serial_port_setup(struct uart_port *uport)
 			ret = -ENOMEM;
 			goto exit_portsetup;
 		}
-		msm_port->rx_buf = dma_alloc_coherent(cb_dev, DMA_RX_BUF_SIZE,
-				&dma_address, GFP_KERNEL);
+		msm_port->rx_buf =
+			geni_se_iommu_alloc_buf(msm_port->wrapper_dev,
+				&dma_address, DMA_RX_BUF_SIZE);
 		if (!msm_port->rx_buf) {
 			devm_kfree(uport->dev, msm_port->rx_fifo);
 			msm_port->rx_fifo = NULL;
@@ -1871,8 +1890,8 @@ static int msm_geni_serial_port_setup(struct uart_port *uport)
 	return 0;
 free_dma:
 	if (msm_port->rx_dma) {
-		dma_free_coherent(msm_port->wrapper_dev, DMA_RX_BUF_SIZE,
-					msm_port->rx_buf, msm_port->rx_dma);
+		geni_se_iommu_free_buf(msm_port->wrapper_dev,
+			&msm_port->rx_dma, msm_port->rx_buf, DMA_RX_BUF_SIZE);
 		msm_port->rx_dma = (dma_addr_t)NULL;
 	}
 exit_portsetup:
@@ -2023,7 +2042,7 @@ static void msm_geni_serial_set_termios(struct uart_port *uport,
 	unsigned int rx_trans_cfg;
 	unsigned int rx_parity_cfg;
 	unsigned int stop_bit_len;
-	unsigned int clk_div;
+	int clk_div;
 	unsigned long ser_clk_cfg = 0;
 	struct msm_geni_serial_port *port = GET_DEV_PORT(uport);
 	unsigned long clk_rate;
@@ -2344,7 +2363,7 @@ msm_geni_serial_earlycon_setup(struct earlycon_device *dev,
 	u32 bits_per_char = 0;
 	u32 s_clk_cfg = 0;
 	u32 baud = 115200;
-	u32 clk_div;
+	int clk_div;
 	unsigned long clk_rate;
 	unsigned long cfg0, cfg1;
 
@@ -2516,8 +2535,31 @@ static void msm_geni_serial_cons_pm(struct uart_port *uport,
 {
 	struct msm_geni_serial_port *msm_port = GET_DEV_PORT(uport);
 
-	if (unlikely(!uart_console(uport)))
+	if (new_state == UART_PM_STATE_ON && old_state == UART_PM_STATE_OFF)
+		se_geni_resources_on(&msm_port->serial_rsc);
+	else if (new_state == UART_PM_STATE_OFF &&
+			old_state == UART_PM_STATE_ON)
+		se_geni_resources_off(&msm_port->serial_rsc);
+}
+
+static void msm_geni_serial_hs_pm(struct uart_port *uport,
+		unsigned int new_state, unsigned int old_state)
+{
+	struct msm_geni_serial_port *msm_port = GET_DEV_PORT(uport);
+
+	/*
+	 * This will get call for system suspend/resume and
+	 * Applicable for hs-uart without runtime pm framework support.
+	 */
+	if (pm_runtime_enabled(uport->dev))
 		return;
+
+	/*
+	 * Default PM State is UNDEFINED Setting it to OFF State.
+	 * This will allow add one port to do resources on and off during probe
+	 */
+	if (old_state == UART_PM_STATE_UNDEFINED)
+		old_state = UART_PM_STATE_OFF;
 
 	if (new_state == UART_PM_STATE_ON && old_state == UART_PM_STATE_OFF)
 		se_geni_resources_on(&msm_port->serial_rsc);
@@ -2560,6 +2602,8 @@ static const struct uart_ops msm_geni_serial_pops = {
 	.break_ctl = msm_geni_serial_break_ctl,
 	.flush_buffer = NULL,
 	.ioctl = msm_geni_serial_ioctl,
+	/* For HSUART nodes without IOCTL support */
+	.pm = msm_geni_serial_hs_pm,
 };
 
 static const struct of_device_id msm_geni_device_tbl[] = {
@@ -2807,15 +2851,28 @@ static int msm_geni_serial_probe(struct platform_device *pdev)
 
 	uport->private_data = (void *)drv;
 	platform_set_drvdata(pdev, dev_port);
+	/*
+	 * To Disable PM runtime API that will make ioctl based
+	 * vote_clock_on/off optional and rely on system PM
+	 */
+	dev_port->pm_auto_suspend_disable =
+		of_property_read_bool(pdev->dev.of_node,
+		"qcom,auto-suspend-disable");
+
 	if (is_console) {
 		dev_port->handle_rx = handle_rx_console;
 		dev_port->rx_fifo = devm_kzalloc(uport->dev, sizeof(u32),
 								GFP_KERNEL);
 	} else {
-		pm_runtime_set_suspended(&pdev->dev);
-		pm_runtime_set_autosuspend_delay(&pdev->dev, 150);
-		pm_runtime_use_autosuspend(&pdev->dev);
-		pm_runtime_enable(&pdev->dev);
+		if (dev_port->pm_auto_suspend_disable) {
+			pm_runtime_set_active(&pdev->dev);
+			pm_runtime_forbid(&pdev->dev);
+		} else {
+			pm_runtime_set_suspended(&pdev->dev);
+			pm_runtime_set_autosuspend_delay(&pdev->dev, 150);
+			pm_runtime_use_autosuspend(&pdev->dev);
+			pm_runtime_enable(&pdev->dev);
+		}
 	}
 
 	dev_info(&pdev->dev, "Serial port%d added.FifoSize %d is_console%d\n",
@@ -2842,11 +2899,13 @@ static int msm_geni_serial_remove(struct platform_device *pdev)
 	struct uart_driver *drv =
 			(struct uart_driver *)port->uport.private_data;
 
+	if (port->pm_auto_suspend_disable)
+		pm_runtime_allow(&pdev->dev);
 	wakeup_source_trash(&port->geni_wake);
 	uart_remove_one_port(drv, &port->uport);
 	if (port->rx_dma) {
-		dma_free_coherent(port->wrapper_dev, DMA_RX_BUF_SIZE,
-					port->rx_buf, port->rx_dma);
+		geni_se_iommu_free_buf(port->wrapper_dev, &port->rx_dma,
+					port->rx_buf, DMA_RX_BUF_SIZE);
 		port->rx_dma = (dma_addr_t)NULL;
 	}
 	return 0;
@@ -2931,7 +2990,7 @@ static int msm_geni_serial_sys_suspend_noirq(struct device *dev)
 	struct msm_geni_serial_port *port = platform_get_drvdata(pdev);
 	struct uart_port *uport = &port->uport;
 
-	if (uart_console(uport)) {
+	if (uart_console(uport) || !pm_runtime_enabled(uport->dev)) {
 		uart_suspend_port((struct uart_driver *)uport->private_data,
 					uport);
 	} else {
@@ -2960,8 +3019,9 @@ static int msm_geni_serial_sys_resume_noirq(struct device *dev)
 	struct msm_geni_serial_port *port = platform_get_drvdata(pdev);
 	struct uart_port *uport = &port->uport;
 
-	if (uart_console(uport) &&
-	    console_suspend_enabled && uport->suspended) {
+	if ((uart_console(uport) &&
+	    console_suspend_enabled && uport->suspended) ||
+		!pm_runtime_enabled(uport->dev)) {
 		uart_resume_port((struct uart_driver *)uport->private_data,
 									uport);
 		disable_irq(uport->irq);
@@ -2974,19 +3034,24 @@ static int msm_geni_serial_sys_hib_resume_noirq(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct msm_geni_serial_port *port = platform_get_drvdata(pdev);
 	struct uart_port *uport = &port->uport;
-	unsigned long cfg0, cfg1;
 
-	if (uart_console(uport) &&
-	    console_suspend_enabled && uport->suspended) {
+	if (uart_console(uport)) {
 		uart_resume_port((struct uart_driver *)uport->private_data,
 									uport);
-		dev_dbg(dev, "%s\n", __func__);
-		se_get_packing_config(8, 1, false, &cfg0, &cfg1);
-		geni_write_reg_nolog(cfg0, uport->membase,
-					SE_GENI_TX_PACKING_CFG0);
-		geni_write_reg_nolog(cfg1, uport->membase,
-					SE_GENI_TX_PACKING_CFG1);
-		disable_irq(uport->irq);
+		/*
+		 * For hibernation usecase clients for
+		 * console UART won't call port setup during restore.
+		 * Hence call port setup for console uart.
+		 */
+		msm_geni_serial_port_setup(uport);
+	} else {
+		/*
+		 * Peripheral register settings are lost during hibernation.
+		 * Update setup flag such that port setup happens again
+		 * during next session. Clients of HS-UART will close and
+		 * open the port during hibernation.
+		 */
+		port->port_setup = false;
 	}
 	return 0;
 }
@@ -3024,6 +3089,7 @@ static const struct dev_pm_ops msm_geni_serial_pm_ops = {
 	.resume_noirq = msm_geni_serial_sys_resume_noirq,
 	.freeze = msm_geni_serial_sys_suspend_noirq,
 	.restore = msm_geni_serial_sys_hib_resume_noirq,
+	.thaw = msm_geni_serial_sys_hib_resume_noirq,
 };
 
 static struct platform_driver msm_geni_serial_platform_driver = {

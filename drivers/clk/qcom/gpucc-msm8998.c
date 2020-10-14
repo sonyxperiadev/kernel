@@ -108,7 +108,7 @@ static struct clk_branch gpucc_xo = {
 			"bi_tcxo_ao",
 		},
 		.num_parents = 1,
-		.flags = CLK_ENABLE_HAND_OFF,
+		.flags = CLK_IS_CRITICAL,
 		.ops = &clk_branch2_ops,
 	},
 };
@@ -120,9 +120,11 @@ static struct pll_vco fabia_vco[] = {
 
 /* Initial configuration for 360MHz */
 static const struct alpha_pll_config gpu_pll0_config = {
-	/*.config_ctl_val = 0x20485699 */
 	.l = 0x12,
-	.frac = 0xc00,
+	.alpha = 0xc00,
+	.config_ctl_val = 0x20485699,
+	.config_ctl_hi_val = 0x00002067,
+	.user_ctl_hi_val = 0x00004805,
 };
 
 static struct clk_alpha_pll gpu_pll0_pll = {
@@ -130,6 +132,7 @@ static struct clk_alpha_pll gpu_pll0_pll = {
 	.regs = clk_alpha_pll_regs[CLK_ALPHA_PLL_TYPE_FABIA],
 	.vco_table = fabia_vco,
 	.num_vco = ARRAY_SIZE(fabia_vco),
+	.config = &gpu_pll0_config,
 	.clkr.hw.init = &(struct clk_init_data) {
 			.name = "gpu_cc_pll0",
 			.parent_names = (const char *[]){ "gpucc_xo" },

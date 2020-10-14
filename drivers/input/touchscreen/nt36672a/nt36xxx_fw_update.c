@@ -1059,7 +1059,10 @@ void Boot_Update_Firmware(struct work_struct *work)
 	ret = update_firmware_request(firmware_name);
 	if (ret) {
 		pr_err("update_firmware_request failed. (%d)\n", ret);
-			return;
+		nvt_sw_reset_idle();
+		nvt_bootloader_reset();
+		ret = nvt_check_fw_reset_state(RESET_STATE_INIT);
+		return;
 	}
 
 	mutex_lock(&ts->lock);

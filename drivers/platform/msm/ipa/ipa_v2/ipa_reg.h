@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2016, 2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -85,8 +85,8 @@
 #define IPA_COUNTER_CFG_AGGR_GRAN_BMSK 0x1F0
 #define IPA_COUNTER_CFG_AGGR_GRAN_SHFT 0x4
  /*
- * End of IPA 2.5 Registers
- */
+  * End of IPA 2.5 Registers
+  */
 
 /*
  * IPA HW 2.6/2.6L Registers

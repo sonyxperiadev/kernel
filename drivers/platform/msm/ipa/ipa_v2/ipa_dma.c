@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2016, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2016, 2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -467,7 +467,7 @@ int ipa2_dma_sync_memcpy(u64 dest, u64 src, int len)
 		NULL, SPS_IOVEC_FLAG_EOT);
 	if (res) {
 		IPADMA_ERR("Failed: sps_transfer_one on src descr\n");
-		BUG();
+		ipa_assert();
 	}
 	head_descr = list_first_entry(&cons_sys->head_desc_list,
 				struct ipa_dma_xfer_wrapper, link);
@@ -479,7 +479,7 @@ int ipa2_dma_sync_memcpy(u64 dest, u64 src, int len)
 		mutex_lock(&ipa_dma_ctx->sync_lock);
 		head_descr = list_first_entry(&cons_sys->head_desc_list,
 					struct ipa_dma_xfer_wrapper, link);
-		BUG_ON(xfer_descr != head_descr);
+		ipa_assert_on(xfer_descr != head_descr);
 	}
 	mutex_unlock(&ipa_dma_ctx->sync_lock);
 
@@ -507,8 +507,8 @@ int ipa2_dma_sync_memcpy(u64 dest, u64 src, int len)
 	}
 	mutex_unlock(&ipa_dma_ctx->sync_lock);
 
-	BUG_ON(dest != iov.addr);
-	BUG_ON(len != iov.size);
+	ipa_assert_on(dest != iov.addr);
+	ipa_assert_on(len != iov.size);
 	atomic_inc(&ipa_dma_ctx->total_sync_memcpy);
 	atomic_dec(&ipa_dma_ctx->sync_memcpy_pending_cnt);
 	if (ipa_dma_ctx->destroy_pending && !ipa_dma_work_pending())
@@ -634,7 +634,7 @@ int ipa2_dma_async_memcpy(u64 dest, u64 src, int len,
 		NULL, SPS_IOVEC_FLAG_EOT);
 	if (res) {
 		IPADMA_ERR("Failed: sps_transfer_one on src descr\n");
-		BUG();
+		ipa_assert();
 		goto fail_sps_send;
 	}
 	spin_unlock_irqrestore(&ipa_dma_ctx->async_lock, flags);
@@ -784,8 +784,8 @@ void ipa_dma_async_memcpy_notify_cb(void *priv
 	sys->len--;
 	spin_unlock_irqrestore(&ipa_dma_ctx->async_lock, flags);
 
-	BUG_ON(xfer_descr_expected->phys_addr_dest != iov->addr);
-	BUG_ON(xfer_descr_expected->len != iov->size);
+	ipa_assert_on(xfer_descr_expected->phys_addr_dest != iov->addr);
+	ipa_assert_on(xfer_descr_expected->len != iov->size);
 
 	atomic_inc(&ipa_dma_ctx->total_async_memcpy);
 	atomic_dec(&ipa_dma_ctx->async_memcpy_pending_cnt);
@@ -888,17 +888,16 @@ error:
 	return ret < 0 ? ret : count;
 }
 
-const struct file_operations ipadma_stats_ops = {
+static const struct file_operations ipadma_stats_ops = {
 	.read = ipa_dma_debugfs_read,
 	.write = ipa_dma_debugfs_reset_statistics,
 };
 
 static void ipa_dma_debugfs_init(void)
 {
-	const mode_t read_write_mode = S_IRUSR | S_IRGRP | S_IROTH |
-			S_IWUSR | S_IWGRP | S_IWOTH;
+	const mode_t read_write_mode = 0666;
 
-	dent = debugfs_create_dir("ipa_dma", 0);
+	dent = debugfs_create_dir("ipa_dma", NULL);
 	if (IS_ERR(dent)) {
 		IPADMA_ERR("fail to create folder ipa_dma\n");
 		return;
@@ -906,7 +905,7 @@ static void ipa_dma_debugfs_init(void)
 
 	dfile_info =
 		debugfs_create_file("info", read_write_mode, dent,
-				 0, &ipadma_stats_ops);
+				 NULL, &ipadma_stats_ops);
 	if (!dfile_info || IS_ERR(dfile_info)) {
 		IPADMA_ERR("fail to create file stats\n");
 		goto fail;

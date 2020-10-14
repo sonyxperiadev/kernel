@@ -158,6 +158,10 @@
 		memory-region = "log";
 	};
 
+	nfc,pm-ops {
+		compatible = "sony,pn553-pm-ops";
+	};
+
 	pinctrl@400000 {
 		disabled-pins = <22 23 28 29 30 31 32 33>;
 	};
@@ -193,24 +197,28 @@
 		pinctrl-2 = <>;
 	};
 
-	et6xx: et6xx {
-		status = "ok";
-		compatible = "egistec,et580";
+	tlmm_gpio_100_reg: tlmm_gpio_100_reg {
+		compatible = "regulator-fixed";
+		regulator-name = "tlmm_gpio_100_reg";
+		startup-delay-us = <0>;
+		enable-active-high;
+		gpio = <&tlmm 100 0>;
+	};
 
-		egistec,gpio_irq = <&tlmm 92 0x0>;
+	et6xx {
+		compatible = "etspi,et510";
+		interrupt-parent = <&tlmm>;
+		interrupts = <92 0x0>;
+		et51x,gpio_irq = <&tlmm 92 0>;
+		vdd_ana-supply = <&tlmm_gpio_100_reg>;
+		et51x,no-low-voltage-probe;
 
-		pinctrl-names = "et6xx_reset_reset",
-				"et6xx_reset_active",
-				"et6xx_ldo_low",
-				"et6xx_ldo_high",
-				"et6xx_irq_active";
-
+		pinctrl-names = "et51x_reset_reset",
+				"et51x_reset_active",
+				"et51x_irq_active";
 		pinctrl-0 = <&sm_gpio_93>;
 		pinctrl-1 = <&sm_gpio_93_output_high>;
-		pinctrl-2 = <&sm_gpio_100>;
-		pinctrl-3 = <&sm_gpio_100_output_high>;
-		pinctrl-4 = <&sm_gpio_92>;
-
+		pinctrl-2 = <&sm_gpio_92>;
 	};
 
 	somc_pinctrl_pmic: somc_pinctrl@1 {
@@ -268,8 +276,6 @@
 		pinctrl-0 = <&cdc_dmic23_clk_active &cdc_dmic23_data_active>;
 		pinctrl-1 = <&cdc_dmic23_clk_sleep &cdc_dmic23_data_sleep>;
 	};
-
-
 };
 
 &camss_cpp_gdsc {
@@ -281,7 +287,20 @@
 	pinctrl-1 = <&sm_gpio_4_suspend &sm_gpio_5_suspend>;
 	status = "okay";
 
-	/delete-node/ nq@28;
+	nq@28 {
+		status = "disabled";
+	};
+
+	nfc@28 {
+		compatible = "nxp,pn553";
+		reg = <0x28>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <85 0x1>;
+		nxp,irq_gpio = <&tlmm 85 0x00>;
+		nxp,dwld_en = <&tlmm 84 0x00>;
+		nxp,ven = <&tlmm 83 0x01>;
+		nxp,ese-pwr = <&tlmm 24 0x00>;
+	};
 };
 
 /* Disable trinket-audio-overlay unused nodes */
@@ -327,7 +346,6 @@
 		cirrus,boost-peak-milliamp = <4000>;
 		cirrus,boost-ind-nanohenry = <1000>;
 		cirrus,boost-cap-microfarad = <15>;
-		cirrus,hibernate-enable = <1>;
 		cirrus,asp-sdout-hiz = <3>;
 		cirrus,gpio-config2 {
 			cirrus,gpio-src-select = <0x2>;
@@ -2349,6 +2367,5 @@
 
 #include "trinket-seine-touch.dtsi"
 #include "charger-seine-common.dtsi"
-#include "trinket-seine-nfc_pn557.dtsi"
 #include "trinket-seine-usb.dtsi"
 #include "trinket-seine-camera-common.dtsi"

@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -34,7 +34,7 @@
 #define IPA_DUMP_STATUS_FIELD(f) \
 	pr_err(#f "=0x%x\n", status->f)
 
-const char *ipa_excp_name[] = {
+static const char * const ipa_excp_name[] = {
 	__stringify_1(IPA_A5_MUX_HDR_EXCP_RSVD0),
 	__stringify_1(IPA_A5_MUX_HDR_EXCP_RSVD1),
 	__stringify_1(IPA_A5_MUX_HDR_EXCP_FLAG_IHL),
@@ -45,7 +45,7 @@ const char *ipa_excp_name[] = {
 	__stringify_1(IPA_A5_MUX_HDR_EXCP_FLAG_IP),
 };
 
-const char *ipa_status_excp_name[] = {
+static const char * const ipa_status_excp_name[] = {
 	__stringify_1(IPA_EXCP_DEAGGR),
 	__stringify_1(IPA_EXCP_REPLICATION),
 	__stringify_1(IPA_EXCP_IP),
@@ -56,7 +56,7 @@ const char *ipa_status_excp_name[] = {
 	__stringify_1(IPA_EXCP_NONE),
 };
 
-const char *ipa_event_name[] = {
+static const char * const ipa_event_name[] = {
 	__stringify(WLAN_CLIENT_CONNECT),
 	__stringify(WLAN_CLIENT_DISCONNECT),
 	__stringify(WLAN_CLIENT_POWER_SAVE_MODE),
@@ -92,15 +92,17 @@ const char *ipa_event_name[] = {
 	__stringify(ADD_BRIDGE_VLAN_MAPPING),
 	__stringify(DEL_BRIDGE_VLAN_MAPPING),
 	__stringify(WLAN_FWR_SSR_BEFORE_SHUTDOWN),
+	__stringify(IPA_GSB_CONNECT),
+	__stringify(IPA_GSB_DISCONNECT),
 };
 
-const char *ipa_hdr_l2_type_name[] = {
+static const char * const ipa_hdr_l2_type_name[] = {
 	__stringify(IPA_HDR_L2_NONE),
 	__stringify(IPA_HDR_L2_ETHERNET_II),
 	__stringify(IPA_HDR_L2_802_3),
 };
 
-const char *ipa_hdr_proc_type_name[] = {
+static const char *const ipa_hdr_proc_type_name[] = {
 	__stringify(IPA_HDR_PROC_NONE),
 	__stringify(IPA_HDR_PROC_ETHII_TO_ETHII),
 	__stringify(IPA_HDR_PROC_ETHII_TO_802_3),
@@ -480,8 +482,8 @@ static ssize_t ipa_read_hdr(struct file *file, char __user *ubuf, size_t count,
 static int ipa_attrib_dump(struct ipa_rule_attrib *attrib,
 		enum ipa_ip_type ip)
 {
-	uint32_t addr[4];
-	uint32_t mask[4];
+	__be32 addr[4];
+	__be32 mask[4];
 	int i;
 
 	if (attrib->attrib_mask & IPA_FLT_TOS_MASKED)
@@ -1319,8 +1321,7 @@ static ssize_t ipa_read_wdi(struct file *file, char __user *ubuf,
 			stats.tx_ch_stats.num_bam_int_handled,
 			stats.tx_ch_stats.num_bam_int_in_non_running_state,
 			stats.tx_ch_stats.num_qmb_int_handled,
-			stats.tx_ch_stats.
-				num_bam_int_handled_while_wait_for_bam);
+		stats.tx_ch_stats.num_bam_int_handled_while_wait_for_bam);
 		cnt += nbytes;
 		nbytes = scnprintf(dbg_buff + cnt, IPA_MAX_MSG_LEN - cnt,
 			"RX max_outstanding_pkts=%u\n"
@@ -1462,7 +1463,7 @@ static ssize_t ipa_read_msg(struct file *file, char __user *ubuf,
 	int cnt = 0;
 	int i;
 
-	for (i = 0; i < IPA_EVENT_MAX_NUM; i++) {
+	for (i = 0; i < ARRAY_SIZE(ipa_event_name); i++) {
 		nbytes = scnprintf(dbg_buff + cnt, IPA_MAX_MSG_LEN - cnt,
 				"msg[%u:%27s] W:%u R:%u\n", i,
 				ipa_event_name[i],
@@ -1476,7 +1477,8 @@ static ssize_t ipa_read_msg(struct file *file, char __user *ubuf,
 
 static ssize_t ipa_read_nat4(struct file *file,
 		char __user *ubuf, size_t count,
-		loff_t *ppos) {
+		loff_t *ppos)
+{
 
 #define ENTRY_U32_FIELDS 8
 #define NAT_ENTRY_ENABLE 0x8000
@@ -1488,7 +1490,7 @@ static ssize_t ipa_read_nat4(struct file *file,
 	u32 tbl_size, *tmp;
 	u32 value, i, j, rule_id;
 	u16 enable, tbl_entry, flag;
-	u32 no_entrys = 0;
+	u32 no_entries = 0;
 
 	mutex_lock(&ipa_ctx->nat_mem.lock);
 	value = ipa_ctx->nat_mem.public_ip_addr;
@@ -1537,7 +1539,7 @@ static ssize_t ipa_read_nat4(struct file *file,
 				enable = ((value & 0xFFFF0000) >> 16);
 
 				if (enable & NAT_ENTRY_ENABLE) {
-					no_entrys++;
+					no_entries++;
 					pr_err("Rule:%d ", rule_id);
 
 					value = *tmp;
@@ -1651,7 +1653,7 @@ static ssize_t ipa_read_nat4(struct file *file,
 			}
 		}
 	}
-	pr_err("Current No. Nat Entries: %d\n", no_entrys);
+	pr_err("Current No. Nat Entries: %d\n", no_entries);
 	mutex_unlock(&ipa_ctx->nat_mem.lock);
 
 	return 0;
@@ -1917,107 +1919,106 @@ static ssize_t ipa_enable_ipc_low(struct file *file,
 	return count;
 }
 
-const struct file_operations ipa_gen_reg_ops = {
+static const struct file_operations ipa_gen_reg_ops = {
 	.read = ipa_read_gen_reg,
 };
 
-const struct file_operations ipa_ep_reg_ops = {
+static const struct file_operations ipa_ep_reg_ops = {
 	.read = ipa_read_ep_reg,
 	.write = ipa_write_ep_reg,
 };
 
-const struct file_operations ipa_keep_awake_ops = {
+static const struct file_operations ipa_keep_awake_ops = {
 	.read = ipa_read_keep_awake,
 	.write = ipa_write_keep_awake,
 };
 
-const struct file_operations ipa_ep_holb_ops = {
+static const struct file_operations ipa_ep_holb_ops = {
 	.write = ipa_write_ep_holb,
 };
 
-const struct file_operations ipa_hdr_ops = {
+static const struct file_operations ipa_hdr_ops = {
 	.read = ipa_read_hdr,
 };
 
-const struct file_operations ipa_rt_ops = {
+static const struct file_operations ipa_rt_ops = {
 	.read = ipa_read_rt,
 	.open = ipa_open_dbg,
 };
 
-const struct file_operations ipa_proc_ctx_ops = {
+static const struct file_operations ipa_proc_ctx_ops = {
 	.read = ipa_read_proc_ctx,
 };
 
-const struct file_operations ipa_flt_ops = {
+static const struct file_operations ipa_flt_ops = {
 	.read = ipa_read_flt,
 	.open = ipa_open_dbg,
 };
 
-const struct file_operations ipa_stats_ops = {
+static const struct file_operations ipa_stats_ops = {
 	.read = ipa_read_stats,
 };
 
-const struct file_operations ipa_wstats_ops = {
+static const struct file_operations ipa_wstats_ops = {
 	.read = ipa_read_wstats,
 };
 
-const struct file_operations ipa_wdi_ops = {
+static const struct file_operations ipa_wdi_ops = {
 	.read = ipa_read_wdi,
 };
 
-const struct file_operations ipa_ntn_ops = {
+static const struct file_operations ipa_ntn_ops = {
 	.read = ipa_read_ntn,
 };
 
-const struct file_operations ipa_msg_ops = {
+static const struct file_operations ipa_msg_ops = {
 	.read = ipa_read_msg,
 };
 
-const struct file_operations ipa_dbg_cnt_ops = {
+static const struct file_operations ipa_dbg_cnt_ops = {
 	.read = ipa_read_dbg_cnt,
 	.write = ipa_write_dbg_cnt,
 };
 
-const struct file_operations ipa_nat4_ops = {
+static const struct file_operations ipa_nat4_ops = {
 	.read = ipa_read_nat4,
 };
 
-const struct file_operations ipa_rm_stats = {
+static const struct file_operations ipa_rm_stats = {
 	.read = ipa_rm_read_stats,
 };
 
-const struct file_operations ipa_status_stats_ops = {
+static const struct file_operations ipa_status_stats_ops = {
 	.read = ipa_status_stats_read,
 };
 
-const struct file_operations ipa2_active_clients = {
+static const struct file_operations ipa2_active_clients = {
 	.read = ipa2_print_active_clients_log,
 	.write = ipa2_clear_active_clients_log,
 };
 
-const struct file_operations ipa_ipc_low_ops = {
+static const struct file_operations ipa_ipc_low_ops = {
 	.write = ipa_enable_ipc_low,
 };
 
-const struct file_operations ipa_rx_poll_time_ops = {
+static const struct file_operations ipa_rx_poll_time_ops = {
 	.read = ipa_read_rx_polling_timeout,
 	.write = ipa_write_rx_polling_timeout,
 };
 
-const struct file_operations ipa_poll_iteration_ops = {
+static const struct file_operations ipa_poll_iteration_ops = {
 	.read = ipa_read_polling_iteration,
 	.write = ipa_write_polling_iteration,
 };
 
 void ipa_debugfs_init(void)
 {
-	const mode_t read_only_mode = S_IRUSR | S_IRGRP | S_IROTH;
-	const mode_t read_write_mode = S_IRUSR | S_IRGRP | S_IROTH |
-			S_IWUSR | S_IWGRP;
-	const mode_t write_only_mode = S_IWUSR | S_IWGRP;
+	const mode_t read_only_mode = 0444;
+	const mode_t read_write_mode = 0664;
+	const mode_t write_only_mode = 0220;
 	struct dentry *file;
 
-	dent = debugfs_create_dir("ipa", 0);
+	dent = debugfs_create_dir("ipa", NULL);
 	if (IS_ERR(dent)) {
 		IPAERR("fail to create folder in debug_fs.\n");
 		return;
@@ -2035,15 +2036,15 @@ void ipa_debugfs_init(void)
 	}
 
 
-	dfile_gen_reg = debugfs_create_file("gen_reg", read_only_mode, dent, 0,
-			&ipa_gen_reg_ops);
+	dfile_gen_reg = debugfs_create_file("gen_reg", read_only_mode, dent,
+			NULL, &ipa_gen_reg_ops);
 	if (!dfile_gen_reg || IS_ERR(dfile_gen_reg)) {
 		IPAERR("fail to create file for debug_fs gen_reg\n");
 		goto fail;
 	}
 
 	dfile_active_clients = debugfs_create_file("active_clients",
-			read_write_mode, dent, 0, &ipa2_active_clients);
+			read_write_mode, dent, NULL, &ipa2_active_clients);
 	if (!dfile_active_clients || IS_ERR(dfile_active_clients)) {
 		IPAERR("fail to create file for debug_fs active_clients\n");
 		goto fail;
@@ -2055,28 +2056,28 @@ void ipa_debugfs_init(void)
 	if (active_clients_buf == NULL)
 		IPAERR("fail to allocate active clients memory buffer");
 
-	dfile_ep_reg = debugfs_create_file("ep_reg", read_write_mode, dent, 0,
-			&ipa_ep_reg_ops);
+	dfile_ep_reg = debugfs_create_file("ep_reg", read_write_mode, dent,
+			NULL, &ipa_ep_reg_ops);
 	if (!dfile_ep_reg || IS_ERR(dfile_ep_reg)) {
 		IPAERR("fail to create file for debug_fs ep_reg\n");
 		goto fail;
 	}
 
 	dfile_keep_awake = debugfs_create_file("keep_awake", read_write_mode,
-			dent, 0, &ipa_keep_awake_ops);
+			dent, NULL, &ipa_keep_awake_ops);
 	if (!dfile_keep_awake || IS_ERR(dfile_keep_awake)) {
 		IPAERR("fail to create file for debug_fs dfile_keep_awake\n");
 		goto fail;
 	}
 
 	dfile_ep_holb = debugfs_create_file("holb", write_only_mode, dent,
-			0, &ipa_ep_holb_ops);
+			NULL, &ipa_ep_holb_ops);
 	if (!dfile_ep_holb || IS_ERR(dfile_ep_holb)) {
 		IPAERR("fail to create file for debug_fs dfile_ep_hol_en\n");
 		goto fail;
 	}
 
-	dfile_hdr = debugfs_create_file("hdr", read_only_mode, dent, 0,
+	dfile_hdr = debugfs_create_file("hdr", read_only_mode, dent, NULL,
 			&ipa_hdr_ops);
 	if (!dfile_hdr || IS_ERR(dfile_hdr)) {
 		IPAERR("fail to create file for debug_fs hdr\n");
@@ -2084,7 +2085,7 @@ void ipa_debugfs_init(void)
 	}
 
 	dfile_proc_ctx = debugfs_create_file("proc_ctx", read_only_mode, dent,
-		0, &ipa_proc_ctx_ops);
+		NULL, &ipa_proc_ctx_ops);
 	if (!dfile_hdr || IS_ERR(dfile_hdr)) {
 		IPAERR("fail to create file for debug_fs proc_ctx\n");
 		goto fail;
@@ -2118,7 +2119,7 @@ void ipa_debugfs_init(void)
 		goto fail;
 	}
 
-	dfile_stats = debugfs_create_file("stats", read_only_mode, dent, 0,
+	dfile_stats = debugfs_create_file("stats", read_only_mode, dent, NULL,
 			&ipa_stats_ops);
 	if (!dfile_stats || IS_ERR(dfile_stats)) {
 		IPAERR("fail to create file for debug_fs stats\n");
@@ -2126,34 +2127,34 @@ void ipa_debugfs_init(void)
 	}
 
 	dfile_wstats = debugfs_create_file("wstats", read_only_mode,
-			dent, 0, &ipa_wstats_ops);
+			dent, NULL, &ipa_wstats_ops);
 	if (!dfile_wstats || IS_ERR(dfile_wstats)) {
 		IPAERR("fail to create file for debug_fs wstats\n");
 		goto fail;
 	}
 
-	dfile_wdi_stats = debugfs_create_file("wdi", read_only_mode, dent, 0,
-			&ipa_wdi_ops);
+	dfile_wdi_stats = debugfs_create_file("wdi", read_only_mode, dent,
+			NULL, &ipa_wdi_ops);
 	if (!dfile_wdi_stats || IS_ERR(dfile_wdi_stats)) {
 		IPAERR("fail to create file for debug_fs wdi stats\n");
 		goto fail;
 	}
 
-	dfile_ntn_stats = debugfs_create_file("ntn", read_only_mode, dent, 0,
-			&ipa_ntn_ops);
+	dfile_ntn_stats = debugfs_create_file("ntn", read_only_mode, dent,
+			NULL, &ipa_ntn_ops);
 	if (!dfile_ntn_stats || IS_ERR(dfile_ntn_stats)) {
 		IPAERR("fail to create file for debug_fs ntn stats\n");
 		goto fail;
 	}
 
-	dfile_dbg_cnt = debugfs_create_file("dbg_cnt", read_write_mode, dent, 0,
-			&ipa_dbg_cnt_ops);
+	dfile_dbg_cnt = debugfs_create_file("dbg_cnt", read_write_mode, dent,
+			NULL, &ipa_dbg_cnt_ops);
 	if (!dfile_dbg_cnt || IS_ERR(dfile_dbg_cnt)) {
 		IPAERR("fail to create file for debug_fs dbg_cnt\n");
 		goto fail;
 	}
 
-	dfile_msg = debugfs_create_file("msg", read_only_mode, dent, 0,
+	dfile_msg = debugfs_create_file("msg", read_only_mode, dent, NULL,
 			&ipa_msg_ops);
 	if (!dfile_msg || IS_ERR(dfile_msg)) {
 		IPAERR("fail to create file for debug_fs msg\n");
@@ -2161,35 +2162,35 @@ void ipa_debugfs_init(void)
 	}
 
 	dfile_ip4_nat = debugfs_create_file("ip4_nat", read_only_mode, dent,
-			0, &ipa_nat4_ops);
+			NULL, &ipa_nat4_ops);
 	if (!dfile_ip4_nat || IS_ERR(dfile_ip4_nat)) {
 		IPAERR("fail to create file for debug_fs ip4 nat\n");
 		goto fail;
 	}
 
 	dfile_rm_stats = debugfs_create_file("rm_stats",
-			read_only_mode, dent, 0, &ipa_rm_stats);
+			read_only_mode, dent, NULL, &ipa_rm_stats);
 	if (!dfile_rm_stats || IS_ERR(dfile_rm_stats)) {
 		IPAERR("fail to create file for debug_fs rm_stats\n");
 		goto fail;
 	}
 
 	dfile_status_stats = debugfs_create_file("status_stats",
-			read_only_mode, dent, 0, &ipa_status_stats_ops);
+			read_only_mode, dent, NULL, &ipa_status_stats_ops);
 	if (!dfile_status_stats || IS_ERR(dfile_status_stats)) {
 		IPAERR("fail to create file for debug_fs status_stats\n");
 		goto fail;
 	}
 
 	dfile_ipa_rx_poll_timeout = debugfs_create_file("ipa_rx_poll_time",
-			read_write_mode, dent, 0, &ipa_rx_poll_time_ops);
+			read_write_mode, dent, NULL, &ipa_rx_poll_time_ops);
 	if (!dfile_ipa_rx_poll_timeout || IS_ERR(dfile_ipa_rx_poll_timeout)) {
 		IPAERR("fail to create file for debug_fs rx poll timeout\n");
 		goto fail;
 	}
 
 	dfile_ipa_poll_iteration = debugfs_create_file("ipa_poll_iteration",
-			read_write_mode, dent, 0, &ipa_poll_iteration_ops);
+			read_write_mode, dent, NULL, &ipa_poll_iteration_ops);
 	if (!dfile_ipa_poll_iteration || IS_ERR(dfile_ipa_poll_iteration)) {
 		IPAERR("fail to create file for debug_fs poll iteration\n");
 		goto fail;
@@ -2219,7 +2220,7 @@ void ipa_debugfs_init(void)
 	}
 
 	file = debugfs_create_file("enable_low_prio_print", write_only_mode,
-		dent, 0, &ipa_ipc_low_ops);
+		dent, NULL, &ipa_ipc_low_ops);
 	if (!file) {
 		IPAERR("could not create enable_low_prio_print file\n");
 		goto fail;
@@ -2235,7 +2236,7 @@ fail:
 void ipa_debugfs_remove(void)
 {
 	if (IS_ERR(dent)) {
-		IPAERR("ipa_debugfs_remove: folder was not created.\n");
+		IPAERR("Debugfs: folder was not created.\n");
 		return;
 	}
 	if (active_clients_buf != NULL) {

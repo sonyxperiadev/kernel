@@ -46,6 +46,7 @@
  * @flt_parse_hw_rule: Parse flt rule read from H/W
  * @eq_bitfield: Array of the bit fields of the support equations.
  *	0xFF means the equation is not supported
+ * @prefetech_buf_size: Prefetch buf size;
  */
 struct ipahal_fltrt_obj {
 	bool support_hash;
@@ -75,6 +76,7 @@ struct ipahal_fltrt_obj {
 	int (*rt_parse_hw_rule)(u8 *addr, struct ipahal_rt_rule_entry *rule);
 	int (*flt_parse_hw_rule)(u8 *addr, struct ipahal_flt_rule_entry *rule);
 	u8 eq_bitfield[IPA_EQ_MAX];
+	u32 prefetech_buf_size;
 };
 
 
@@ -495,6 +497,7 @@ static struct ipahal_fltrt_obj ipahal_fltrt_objs[IPA_HW_MAX] = {
 			[IPA_IS_FRAG]			= 15,
 			[IPA_IS_PURE_ACK]		= 0xFF,
 		},
+		IPA3_0_HW_RULE_PREFETCH_BUF_SIZE,
 	},
 
 	/* IPAv4 */
@@ -540,6 +543,7 @@ static struct ipahal_fltrt_obj ipahal_fltrt_objs[IPA_HW_MAX] = {
 			[IPA_IS_FRAG]			= 15,
 			[IPA_IS_PURE_ACK]		= 0xFF,
 		},
+		IPA3_0_HW_RULE_PREFETCH_BUF_SIZE,
 	},
 
 	/* IPAv4.2 */
@@ -585,6 +589,7 @@ static struct ipahal_fltrt_obj ipahal_fltrt_objs[IPA_HW_MAX] = {
 			[IPA_IS_FRAG]			= 15,
 			[IPA_IS_PURE_ACK]		= 0xFF,
 		},
+		IPA3_0_HW_RULE_PREFETCH_BUF_SIZE,
 	},
 
 	/* IPAv4.5 */
@@ -630,6 +635,7 @@ static struct ipahal_fltrt_obj ipahal_fltrt_objs[IPA_HW_MAX] = {
 			[IPA_IS_FRAG]			= 15,
 			[IPA_IS_PURE_ACK]		= 0,
 		},
+		IPA3_0_HW_RULE_PREFETCH_BUF_SIZE,
 	},
 };
 
@@ -3367,6 +3373,12 @@ u32 ipahal_get_hw_tbl_hdr_width(void)
 u32 ipahal_get_lcl_tbl_addr_alignment(void)
 {
 	return ipahal_fltrt_objs[ipahal_ctx->hw_type].lcladdr_alignment;
+}
+
+/* Get the H/W (flt/rt) prefetch buf size */
+u32 ipahal_get_hw_prefetch_buf_size(void)
+{
+	return ipahal_fltrt_objs[ipahal_ctx->hw_type].prefetech_buf_size;
 }
 
 /*

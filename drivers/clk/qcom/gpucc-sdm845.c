@@ -139,12 +139,12 @@ static struct pll_vco fabia_vco[] = {
 
 static const struct alpha_pll_config gpu_cc_pll0_config = {
 	.l = 0x1d,
-	.frac = 0x2aaa,
+	.alpha = 0x2aaa,
 };
 
 static const struct alpha_pll_config gpu_cc_pll1_config = {
 	.l = 0x1a,
-	.frac = 0xaaaa,
+	.alpha = 0xaaaa,
 };
 
 static struct clk_alpha_pll gpu_cc_pll0 = {

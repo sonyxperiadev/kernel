@@ -101,3 +101,11 @@
 &mdss_dsi0 {
 	qcom,cont-splash-enabled;
 };
+
+&lcdb_ldo_vreg {
+	vreg-cont-splash-enabled;
+};
+
+&lcdb_ncp_vreg {
+	vreg-cont-splash-enabled;
+};

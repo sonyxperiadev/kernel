@@ -23,6 +23,15 @@
 #define MMPLL7_PLL			6
 #define MMPLL10_PLL			7
 
+#define MMPLL0_OUT_EVEN			8
+#define MMPLL1_OUT_EVEN			9
+#define MMPLL3_OUT_EVEN			10
+#define MMPLL4_OUT_EVEN			11
+#define MMPLL5_OUT_EVEN			12
+#define MMPLL6_OUT_EVEN			13
+#define MMPLL7_OUT_EVEN			14
+#define MMPLL10_OUT_EVEN		15
+
 /* MMCC block clocks */
 #define AHB_CLK_SRC			20
 #define CSI0_CLK_SRC			21

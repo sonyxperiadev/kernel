@@ -1174,6 +1174,12 @@ static int sde_hw_ctl_intf_cfg(struct sde_hw_ctl *ctx,
 	return 0;
 }
 
+static void sde_hw_ctl_clear_intf_cfg_v0(struct sde_hw_ctl *ctx)
+{
+	struct sde_hw_blk_reg_map *c = &ctx->hw;
+	SDE_REG_WRITE(c, CTL_TOP, 0);
+}
+
 static void sde_hw_ctl_update_wb_cfg(struct sde_hw_ctl *ctx,
 		struct sde_hw_intf_cfg *cfg, bool enable)
 {
@@ -1255,6 +1261,15 @@ static int sde_hw_reg_dma_flush(struct sde_hw_ctl *ctx, bool blocking)
 static void _setup_ctl_ops(struct sde_hw_ctl_ops *ops,
 		unsigned long cap)
 {
+	if (of_machine_is_compatible("qcom,msm8998") ||
+	    of_machine_is_compatible("qcom,sdm630")  ||
+	    of_machine_is_compatible("qcom,sdm636")  ||
+	    of_machine_is_compatible("qcom,sdm660")) {
+		ops->clear_intf_cfg = sde_hw_ctl_clear_intf_cfg_v0;
+	} else {
+		ops->clear_intf_cfg = NULL;
+	}
+
 	if (cap & BIT(SDE_CTL_ACTIVE_CFG)) {
 		ops->update_pending_flush =
 			sde_hw_ctl_update_pending_flush_v1;

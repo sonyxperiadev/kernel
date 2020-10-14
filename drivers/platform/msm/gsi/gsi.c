@@ -3014,6 +3014,11 @@ int gsi_dealloc_channel(unsigned long chan_hdl)
 		    ctx->state == GSI_CHAN_STATE_NOT_ALLOCATED) {
 			GSIERR("MSM8998 workaround for gsi firmware: avoiding "
 			       "kernel panic for already not allocated CH.\n");
+			if (ctx->allocated) {
+				devm_kfree(gsi_ctx->dev, ctx->user_data);
+				ctx->allocated = false;
+			}
+			atomic_set(&ctx->evtr->chan_ref_cnt, 0);
 			return GSI_STATUS_SUCCESS;
 		}
 

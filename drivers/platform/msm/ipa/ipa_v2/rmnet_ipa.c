@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014-2018, 2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -79,7 +79,7 @@ static atomic_t is_initialized;
 static atomic_t is_ssr;
 static void *subsys_notify_handle;
 
-u32 apps_to_ipa_hdl, ipa_to_apps_hdl; /* get handler from ipa */
+static u32 apps_to_ipa_hdl, ipa_to_apps_hdl; /* get handler from ipa */
 static struct mutex ipa_to_apps_pipe_handle_guard;
 static struct mutex add_mux_channel_lock;
 static int wwan_add_ul_flt_rule_to_ipa(void);
@@ -137,13 +137,13 @@ struct wwan_private {
 };
 
 /**
-* ipa_setup_a7_qmap_hdr() - Setup default a7 qmap hdr
-*
-* Return codes:
-* 0: success
-* -ENOMEM: failed to allocate memory
-* -EPERM: failed to add the tables
-*/
+ * ipa_setup_a7_qmap_hdr() - Setup default a7 qmap hdr
+ *
+ * Return codes:
+ * 0: success
+ * -ENOMEM: failed to allocate memory
+ * -EPERM: failed to add the tables
+ */
 static int ipa_setup_a7_qmap_hdr(void)
 {
 	struct ipa_ioc_add_hdr *hdr;
@@ -311,13 +311,13 @@ bail:
 }
 
 /**
-* ipa_setup_dflt_wan_rt_tables() - Setup default wan routing tables
-*
-* Return codes:
-* 0: success
-* -ENOMEM: failed to allocate memory
-* -EPERM: failed to add the tables
-*/
+ * ipa_setup_dflt_wan_rt_tables() - Setup default wan routing tables
+ *
+ * Return codes:
+ * 0: success
+ * -ENOMEM: failed to allocate memory
+ * -EPERM: failed to add the tables
+ */
 static int ipa_setup_dflt_wan_rt_tables(void)
 {
 	struct ipa_ioc_add_rt_rule *rt_rule;
@@ -435,150 +435,150 @@ int copy_ul_filter_rule_to_ipa(struct ipa_install_fltr_rule_req_msg_v01
 			goto failure;
 		}
 		/* construct UL_filter_rule handler QMI use-cas */
-		ipa_qmi_ctx->q6_ul_filter_rule[i].filter_hdl =
-			UL_FILTER_RULE_HANDLE_START + i;
-		rule_hdl[i] = ipa_qmi_ctx->q6_ul_filter_rule[i].filter_hdl;
-		ipa_qmi_ctx->q6_ul_filter_rule[i].ip =
-			rule_req->filter_spec_list[i].ip_type;
-		ipa_qmi_ctx->q6_ul_filter_rule[i].action =
-			rule_req->filter_spec_list[i].filter_action;
-		if (rule_req->filter_spec_list[i].is_routing_table_index_valid
-			== true)
-			ipa_qmi_ctx->q6_ul_filter_rule[i].rt_tbl_idx =
-			rule_req->filter_spec_list[i].route_table_index;
-		if (rule_req->filter_spec_list[i].is_mux_id_valid == true)
-			ipa_qmi_ctx->q6_ul_filter_rule[i].mux_id =
-			rule_req->filter_spec_list[i].mux_id;
-		ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.rule_eq_bitmap =
-			rule_req->filter_spec_list[i].filter_rule.
-			rule_eq_bitmap;
-		ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.tos_eq_present =
-			rule_req->filter_spec_list[i].filter_rule.
-			tos_eq_present;
-		ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.tos_eq =
-			rule_req->filter_spec_list[i].filter_rule.tos_eq;
-		ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.
-			protocol_eq_present = rule_req->filter_spec_list[i].
-			filter_rule.protocol_eq_present;
-		ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.protocol_eq =
-			rule_req->filter_spec_list[i].filter_rule.
-			protocol_eq;
+	     ipa_qmi_ctx->q6_ul_filter_rule[i].filter_hdl =
+		     UL_FILTER_RULE_HANDLE_START + i;
+	     rule_hdl[i] = ipa_qmi_ctx->q6_ul_filter_rule[i].filter_hdl;
+		switch (rule_req->filter_spec_list[i].ip_type) {
+		case QMI_IPA_IP_TYPE_V4_V01:
+			ipa_qmi_ctx->q6_ul_filter_rule[i].ip = IPA_IP_v4;
+			break;
 
-		ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.
-			num_ihl_offset_range_16 = rule_req->filter_spec_list[i].
-			filter_rule.num_ihl_offset_range_16;
-		for (j = 0; j < ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.
-			num_ihl_offset_range_16; j++) {
-			ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.
-			ihl_offset_range_16[j].offset = rule_req->
-			filter_spec_list[i].filter_rule.
-			ihl_offset_range_16[j].offset;
-			ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.
-			ihl_offset_range_16[j].range_low = rule_req->
-			filter_spec_list[i].filter_rule.
-			ihl_offset_range_16[j].range_low;
-			ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.
-			ihl_offset_range_16[j].range_high = rule_req->
-			filter_spec_list[i].filter_rule.
-			ihl_offset_range_16[j].range_high;
-		}
-		ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.num_offset_meq_32 =
-			rule_req->filter_spec_list[i].filter_rule.
-			num_offset_meq_32;
-		for (j = 0; j < ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.
-				num_offset_meq_32; j++) {
-			ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.
-			offset_meq_32[j].offset = rule_req->filter_spec_list[i].
-			filter_rule.offset_meq_32[j].offset;
-			ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.
-			offset_meq_32[j].mask = rule_req->filter_spec_list[i].
-			filter_rule.offset_meq_32[j].mask;
-			ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.
-			offset_meq_32[j].value = rule_req->filter_spec_list[i].
-			filter_rule.offset_meq_32[j].value;
+		case QMI_IPA_IP_TYPE_V6_V01:
+			ipa_qmi_ctx->q6_ul_filter_rule[i].ip = IPA_IP_v6;
+			break;
+
+		case QMI_IPA_IP_TYPE_V4V6_V01:
+			/* Fall through */
+		default:
+			ipa_qmi_ctx->q6_ul_filter_rule[i].ip = IPA_IP_MAX;
+			break;
 		}
 
-		ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.tc_eq_present =
-			rule_req->filter_spec_list[i].filter_rule.tc_eq_present;
-		ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.tc_eq =
-			rule_req->filter_spec_list[i].filter_rule.tc_eq;
-		ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.fl_eq_present =
-			rule_req->filter_spec_list[i].filter_rule.
-			flow_eq_present;
-		ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.fl_eq =
-			rule_req->filter_spec_list[i].filter_rule.flow_eq;
-		ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.
-		ihl_offset_eq_16_present = rule_req->filter_spec_list[i].
-		filter_rule.ihl_offset_eq_16_present;
-		ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.
-		ihl_offset_eq_16.offset = rule_req->filter_spec_list[i].
-		filter_rule.ihl_offset_eq_16.offset;
-		ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.
-		ihl_offset_eq_16.value = rule_req->filter_spec_list[i].
-		filter_rule.ihl_offset_eq_16.value;
+		switch (rule_req->filter_spec_list[i].filter_action) {
+		case QMI_IPA_FILTER_ACTION_SRC_NAT_V01:
+			ipa_qmi_ctx->q6_ul_filter_rule[i].action =
+							IPA_PASS_TO_SRC_NAT;
+			break;
+		case QMI_IPA_FILTER_ACTION_DST_NAT_V01:
+			ipa_qmi_ctx->q6_ul_filter_rule[i].action =
+							 IPA_PASS_TO_DST_NAT;
+			break;
 
-		ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.
-		ihl_offset_eq_32_present = rule_req->filter_spec_list[i].
-		filter_rule.ihl_offset_eq_32_present;
-		ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.
-		ihl_offset_eq_32.offset = rule_req->filter_spec_list[i].
-		filter_rule.ihl_offset_eq_32.offset;
-		ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.
-		ihl_offset_eq_32.value = rule_req->filter_spec_list[i].
-		filter_rule.ihl_offset_eq_32.value;
+		case QMI_IPA_FILTER_ACTION_ROUTING_V01:
+			ipa_qmi_ctx->q6_ul_filter_rule[i].action =
+							 IPA_PASS_TO_ROUTING;
+			break;
 
-		ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.
-		num_ihl_offset_meq_32 = rule_req->filter_spec_list[i].
-		filter_rule.num_ihl_offset_meq_32;
-		for (j = 0; j < ipa_qmi_ctx->q6_ul_filter_rule[i].
-			eq_attrib.num_ihl_offset_meq_32; j++) {
-			ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.
-				ihl_offset_meq_32[j].offset = rule_req->
-				filter_spec_list[i].filter_rule.
-				ihl_offset_meq_32[j].offset;
-			ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.
-				ihl_offset_meq_32[j].mask = rule_req->
-				filter_spec_list[i].filter_rule.
-				ihl_offset_meq_32[j].mask;
-			ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.
-				ihl_offset_meq_32[j].value = rule_req->
-				filter_spec_list[i].filter_rule.
-				ihl_offset_meq_32[j].value;
+		case QMI_IPA_FILTER_ACTION_EXCEPTION_V01:
+			/* Fall through */
+		default:
+			ipa_qmi_ctx->q6_ul_filter_rule[i].action =
+							IPA_PASS_TO_EXCEPTION;
+			break;
 		}
-		ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.num_offset_meq_128 =
-			rule_req->filter_spec_list[i].filter_rule.
-			num_offset_meq_128;
-		for (j = 0; j < ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.
-			num_offset_meq_128; j++) {
-			ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.
-				offset_meq_128[j].offset = rule_req->
-				filter_spec_list[i].filter_rule.
-				offset_meq_128[j].offset;
-			memcpy(ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.
-					offset_meq_128[j].mask,
-					rule_req->filter_spec_list[i].
-					filter_rule.offset_meq_128[j].mask, 16);
-			memcpy(ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.
-					offset_meq_128[j].value, rule_req->
-					filter_spec_list[i].filter_rule.
-					offset_meq_128[j].value, 16);
-		}
+	if (rule_req->filter_spec_list[i].is_routing_table_index_valid
+		     == true)
+		ipa_qmi_ctx->q6_ul_filter_rule[i].rt_tbl_idx =
+		rule_req->filter_spec_list[i].route_table_index;
+	if (rule_req->filter_spec_list[i].is_mux_id_valid == true)
+		ipa_qmi_ctx->q6_ul_filter_rule[i].mux_id =
+		 rule_req->filter_spec_list[i].mux_id;
+	ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.rule_eq_bitmap =
+	rule_req->filter_spec_list[i].filter_rule.rule_eq_bitmap;
+	ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.tos_eq_present =
+	rule_req->filter_spec_list[i].filter_rule.tos_eq_present;
+	ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.tos_eq =
+	rule_req->filter_spec_list[i].filter_rule.tos_eq;
+	ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.protocol_eq_present =
+	rule_req->filter_spec_list[i].filter_rule.protocol_eq_present;
+	ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.protocol_eq =
+	rule_req->filter_spec_list[i].filter_rule.protocol_eq;
+	ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.num_ihl_offset_range_16 =
+	rule_req->filter_spec_list[i].filter_rule.num_ihl_offset_range_16;
 
-		ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.
-			metadata_meq32_present = rule_req->filter_spec_list[i].
-				filter_rule.metadata_meq32_present;
-		ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.
-			metadata_meq32.offset = rule_req->filter_spec_list[i].
-			filter_rule.metadata_meq32.offset;
-		ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.
-			metadata_meq32.mask = rule_req->filter_spec_list[i].
-			filter_rule.metadata_meq32.mask;
-		ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.metadata_meq32.
-			value = rule_req->filter_spec_list[i].filter_rule.
-			metadata_meq32.value;
-		ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.
-			ipv4_frag_eq_present = rule_req->filter_spec_list[i].
-			filter_rule.ipv4_frag_eq_present;
+for (j = 0;
+j < ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.num_ihl_offset_range_16; j++) {
+	IPAWANDBG("copy_ul_filter_rule_to_ipa");
+ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.ihl_offset_range_16[j].offset
+= rule_req->filter_spec_list[i].filter_rule.ihl_offset_range_16[j].offset;
+ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.ihl_offset_range_16[j].range_low
+= rule_req->filter_spec_list[i].filter_rule.ihl_offset_range_16[j].range_low;
+ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.ihl_offset_range_16[j].range_high
+= rule_req->filter_spec_list[i].filter_rule.ihl_offset_range_16[j].range_high;
+}
+	ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.num_offset_meq_32 =
+	rule_req->filter_spec_list[i].filter_rule.num_offset_meq_32;
+
+for (j = 0;
+j < ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.num_offset_meq_32; j++) {
+
+	ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.offset_meq_32[j].offset
+= rule_req->filter_spec_list[i].filter_rule.offset_meq_32[j].offset;
+ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.offset_meq_32[j].mask =
+rule_req->filter_spec_list[i].filter_rule.offset_meq_32[j].mask;
+ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.offset_meq_32[j].value =
+rule_req->filter_spec_list[i].filter_rule.offset_meq_32[j].value;
+}
+
+	ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.tc_eq_present =
+	rule_req->filter_spec_list[i].filter_rule.tc_eq_present;
+	ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.tc_eq =
+	rule_req->filter_spec_list[i].filter_rule.tc_eq;
+	ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.fl_eq_present =
+	rule_req->filter_spec_list[i].filter_rule.flow_eq_present;
+	ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.fl_eq =
+	rule_req->filter_spec_list[i].filter_rule.flow_eq;
+	ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.ihl_offset_eq_16_present
+	= rule_req->filter_spec_list[i].filter_rule.ihl_offset_eq_16_present;
+	ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.ihl_offset_eq_16.offset =
+	rule_req->filter_spec_list[i].filter_rule.ihl_offset_eq_16.offset;
+	ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.ihl_offset_eq_16.value =
+	rule_req->filter_spec_list[i].filter_rule.ihl_offset_eq_16.value;
+
+	ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.ihl_offset_eq_32_present =
+	rule_req->filter_spec_list[i].filter_rule.ihl_offset_eq_32_present;
+	ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.ihl_offset_eq_32.offset =
+	rule_req->filter_spec_list[i].filter_rule.ihl_offset_eq_32.offset;
+	ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.ihl_offset_eq_32.value =
+	rule_req->filter_spec_list[i].filter_rule.ihl_offset_eq_32.value;
+
+	ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.num_ihl_offset_meq_32 =
+	rule_req->filter_spec_list[i].filter_rule.num_ihl_offset_meq_32;
+
+for (j = 0;
+j < ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.num_ihl_offset_meq_32; j++) {
+
+	ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.ihl_offset_meq_32[j].offset
+= rule_req->filter_spec_list[i].filter_rule.ihl_offset_meq_32[j].offset;
+ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.ihl_offset_meq_32[j].mask =
+rule_req->filter_spec_list[i].filter_rule.ihl_offset_meq_32[j].mask;
+ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.ihl_offset_meq_32[j].value =
+rule_req->filter_spec_list[i].filter_rule.ihl_offset_meq_32[j].value;
+}
+	ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.num_offset_meq_128 =
+	rule_req->filter_spec_list[i].filter_rule.num_offset_meq_128;
+
+for (j = 0;
+j < ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.num_offset_meq_128; j++) {
+
+	ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.offset_meq_128[j].offset =
+rule_req->filter_spec_list[i].filter_rule.offset_meq_128[j].offset;
+memcpy(ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.offset_meq_128[j].mask,
+rule_req->filter_spec_list[i].filter_rule.offset_meq_128[j].mask, 16);
+memcpy(ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.offset_meq_128[j].value,
+rule_req->filter_spec_list[i].filter_rule.offset_meq_128[j].value, 16);
+}
+
+	ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.metadata_meq32_present =
+	rule_req->filter_spec_list[i].filter_rule.metadata_meq32_present;
+	ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.metadata_meq32.offset =
+	rule_req->filter_spec_list[i].filter_rule.metadata_meq32.offset;
+	ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.metadata_meq32.mask =
+	rule_req->filter_spec_list[i].filter_rule.metadata_meq32.mask;
+	ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.metadata_meq32.value =
+	rule_req->filter_spec_list[i].filter_rule.metadata_meq32.value;
+	ipa_qmi_ctx->q6_ul_filter_rule[i].eq_attrib.ipv4_frag_eq_present =
+	 rule_req->filter_spec_list[i].filter_rule.ipv4_frag_eq_present;
 	}
 
 	if (rule_req->xlat_filter_indices_list_valid) {
@@ -691,7 +691,7 @@ static int wwan_add_ul_flt_rule_to_ipa(void)
 	/* send ipa_fltr_installed_notif_req_msg_v01 to Q6*/
 	req->source_pipe_index =
 		ipa2_get_ep_mapping(IPA_CLIENT_APPS_LAN_WAN_PROD);
-	req->install_status = IPA_QMI_RESULT_SUCCESS_V01;
+	req->install_status = QMI_RESULT_SUCCESS_V01;
 	req->filter_index_list_len = num_q6_rule;
 	mutex_lock(&ipa_qmi_lock);
 	for (i = 0; i < num_q6_rule; i++) {
@@ -881,9 +881,8 @@ static int wwan_register_to_ipa(int index)
 		ext_properties.prop[i].action,
 		ext_properties.prop[i].mux_id);
 	}
-	ret = ipa2_register_intf_ext(mux_channel[index].
-		vchannel_name, &tx_properties,
-		&rx_properties, &ext_properties);
+	ret = ipa2_register_intf_ext(mux_channel[index].vchannel_name,
+		&tx_properties, &rx_properties, &ext_properties);
 	if (ret) {
 		IPAWANERR("[%s]:ipa2_register_intf failed %d\n",
 			mux_channel[index].vchannel_name, ret);
@@ -1015,8 +1014,8 @@ static int __ipa_wwan_close(struct net_device *dev)
 	if (wwan_ptr->device_status == WWAN_DEVICE_ACTIVE) {
 		wwan_ptr->device_status = WWAN_DEVICE_INACTIVE;
 		/* do not close wwan port once up,  this causes
-		* remote side to hang if tried to open again
-		*/
+		 * remote side to hang if tried to open again
+		 */
 		reinit_completion(&wwan_ptr->resource_granted_completion);
 		if (ipa_rmnet_res.ipa_napi_enable)
 			napi_disable(&(wwan_ptr->napi));
@@ -1045,7 +1044,7 @@ static int __ipa_wwan_close(struct net_device *dev)
  */
 static int ipa_wwan_stop(struct net_device *dev)
 {
-	IPAWANDBG("[%s] ipa_wwan_stop()\n", dev->name);
+	IPAWANDBG("[%s]\n", dev->name);
 	__ipa_wwan_close(dev);
 	netif_stop_queue(dev);
 	return 0;
@@ -1097,7 +1096,7 @@ static int ipa_wwan_xmit(struct sk_buff *skb, struct net_device *dev)
 			pr_err("[%s]Queue stop, send ctrl pkts\n", dev->name);
 			goto send;
 		} else {
-			pr_err("[%s]fatal: ipa_wwan_xmit stopped\n", dev->name);
+			pr_err("[%s]fatal: %s stopped\n", __func__, dev->name);
 			return NETDEV_TX_BUSY;
 		}
 	}
@@ -1160,7 +1159,7 @@ out:
 
 static void ipa_wwan_tx_timeout(struct net_device *dev)
 {
-	IPAWANERR("[%s] ipa_wwan_tx_timeout(), data stall in UL\n", dev->name);
+	IPAWANERR("[%s]:[%s] data stall in UL\n", __func__, dev->name);
 }
 
 /**
@@ -1273,7 +1272,6 @@ static int handle_ingress_format(struct net_device *dev,
 			struct rmnet_ioctl_extended_s *in)
 {
 	int ret = 0;
-	struct rmnet_phys_ep_conf_s *ep_cfg;
 
 	IPAWANDBG("Get RMNET_IOCTL_SET_INGRESS_DATA_FORMAT\n");
 	if ((in->u.data) & RMNET_IOCTL_INGRESS_FORMAT_CHECKSUM)
@@ -1294,14 +1292,6 @@ static int handle_ingress_format(struct net_device *dev,
 				in->u.ingress_format.agg_size;
 			ipa_to_apps_ep_cfg.ipa_ep_cfg.aggr.aggr_pkt_limit =
 				in->u.ingress_format.agg_count;
-
-			if (ipa_rmnet_res.ipa_napi_enable) {
-				ipa_to_apps_ep_cfg.recycle_enabled = true;
-				ep_cfg = (struct rmnet_phys_ep_conf_s *)
-				   rcu_dereference(dev->rx_handler_data);
-				ep_cfg->recycle = ipa_recycle_wan_skb;
-				pr_info("Wan Recycle Enabled\n");
-			}
 		}
 	}
 
@@ -1363,7 +1353,7 @@ static int ipa_wwan_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 	int mru = 1000, epid = 1, mux_index, len;
 	struct ipa_msg_meta msg_meta;
 	struct ipa_wan_msg *wan_msg = NULL;
-	struct rmnet_ioctl_extended_s ext_ioctl_data;
+	struct rmnet_ioctl_extended_s extend_ioctl_data;
 	struct rmnet_ioctl_data_s ioctl_data;
 
 	IPAWANDBG("rmnet_ipa got ioctl number 0x%08x", cmd);
@@ -1438,107 +1428,106 @@ static int ipa_wwan_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 		if (!ns_capable(dev_net(dev)->user_ns, CAP_NET_ADMIN))
 			return -EPERM;
 		IPAWANDBG("get ioctl: RMNET_IOCTL_EXTENDED\n");
-		if (copy_from_user(&ext_ioctl_data,
-			(u8 *)ifr->ifr_ifru.ifru_data,
+		if (copy_from_user(&extend_ioctl_data,
+			(const void __user *)ifr->ifr_ifru.ifru_data,
 			sizeof(struct rmnet_ioctl_extended_s))) {
 			IPAWANERR("failed to copy extended ioctl data\n");
 			rc = -EFAULT;
 			break;
 		}
-		switch (ext_ioctl_data.extended_ioctl) {
+		switch (extend_ioctl_data.extended_ioctl) {
 		/*  Get features  */
 		case RMNET_IOCTL_GET_SUPPORTED_FEATURES:
 			IPAWANDBG("get RMNET_IOCTL_GET_SUPPORTED_FEATURES\n");
-			ext_ioctl_data.u.data =
+			extend_ioctl_data.u.data =
 				(RMNET_IOCTL_FEAT_NOTIFY_MUX_CHANNEL |
 				RMNET_IOCTL_FEAT_SET_EGRESS_DATA_FORMAT |
 				RMNET_IOCTL_FEAT_SET_INGRESS_DATA_FORMAT);
-			if (copy_to_user((u8 *)ifr->ifr_ifru.ifru_data,
-				&ext_ioctl_data,
+			if (copy_to_user((void __user *)ifr->ifr_ifru.ifru_data,
+				&extend_ioctl_data,
 				sizeof(struct rmnet_ioctl_extended_s)))
 				rc = -EFAULT;
 			break;
 		/*  Set MRU  */
 		case RMNET_IOCTL_SET_MRU:
-			mru = ext_ioctl_data.u.data;
+			mru = extend_ioctl_data.u.data;
 			IPAWANDBG("get MRU size %d\n",
-				ext_ioctl_data.u.data);
+				extend_ioctl_data.u.data);
 			break;
 		/*  Get MRU  */
 		case RMNET_IOCTL_GET_MRU:
-			ext_ioctl_data.u.data = mru;
-			if (copy_to_user((u8 *)ifr->ifr_ifru.ifru_data,
-				&ext_ioctl_data,
+			extend_ioctl_data.u.data = mru;
+			if (copy_to_user((void __user *)ifr->ifr_ifru.ifru_data,
+				&extend_ioctl_data,
 				sizeof(struct rmnet_ioctl_extended_s)))
 				rc = -EFAULT;
 			break;
 		/* GET SG support */
 		case RMNET_IOCTL_GET_SG_SUPPORT:
-			ext_ioctl_data.u.data =
+			extend_ioctl_data.u.data =
 				ipa_rmnet_res.ipa_advertise_sg_support;
-			if (copy_to_user((u8 *)ifr->ifr_ifru.ifru_data,
-				&ext_ioctl_data,
+			if (copy_to_user((void __user *)ifr->ifr_ifru.ifru_data,
+				&extend_ioctl_data,
 				sizeof(struct rmnet_ioctl_extended_s)))
 				rc = -EFAULT;
 			break;
 		/*  Get endpoint ID  */
 		case RMNET_IOCTL_GET_EPID:
 			IPAWANDBG("get ioctl: RMNET_IOCTL_GET_EPID\n");
-			ext_ioctl_data.u.data = epid;
-			if (copy_to_user((u8 *)ifr->ifr_ifru.ifru_data,
-				&ext_ioctl_data,
+			extend_ioctl_data.u.data = epid;
+			if (copy_to_user((void __user *)ifr->ifr_ifru.ifru_data,
+				&extend_ioctl_data,
 				sizeof(struct rmnet_ioctl_extended_s)))
 				rc = -EFAULT;
-			if (copy_from_user(&ext_ioctl_data,
-				(u8 *)ifr->ifr_ifru.ifru_data,
+			if (copy_from_user(&extend_ioctl_data,
+				(const void __user *)ifr->ifr_ifru.ifru_data,
 				sizeof(struct rmnet_ioctl_extended_s))) {
 				IPAWANERR("copy extended ioctl data failed\n");
 				rc = -EFAULT;
 			break;
 			}
 			IPAWANDBG("RMNET_IOCTL_GET_EPID return %d\n",
-					ext_ioctl_data.u.data);
+					extend_ioctl_data.u.data);
 			break;
 		/*  Endpoint pair  */
 		case RMNET_IOCTL_GET_EP_PAIR:
 			IPAWANDBG("get ioctl: RMNET_IOCTL_GET_EP_PAIR\n");
-			ext_ioctl_data.u.ipa_ep_pair.consumer_pipe_num =
+			extend_ioctl_data.u.ipa_ep_pair.consumer_pipe_num =
 			ipa2_get_ep_mapping(IPA_CLIENT_APPS_LAN_WAN_PROD);
-			ext_ioctl_data.u.ipa_ep_pair.producer_pipe_num =
+			extend_ioctl_data.u.ipa_ep_pair.producer_pipe_num =
 			ipa2_get_ep_mapping(IPA_CLIENT_APPS_WAN_CONS);
-			if (copy_to_user((u8 *)ifr->ifr_ifru.ifru_data,
-				&ext_ioctl_data,
+			if (copy_to_user((void __user *)ifr->ifr_ifru.ifru_data,
+				&extend_ioctl_data,
 				sizeof(struct rmnet_ioctl_extended_s)))
 				rc = -EFAULT;
-			if (copy_from_user(&ext_ioctl_data,
-				(u8 *)ifr->ifr_ifru.ifru_data,
+			if (copy_from_user(&extend_ioctl_data,
+				(const void __user *)ifr->ifr_ifru.ifru_data,
 				sizeof(struct rmnet_ioctl_extended_s))) {
 				IPAWANERR("copy extended ioctl data failed\n");
 				rc = -EFAULT;
 			break;
 		}
 			IPAWANDBG("RMNET_IOCTL_GET_EP_PAIR c: %d p: %d\n",
-			ext_ioctl_data.u.ipa_ep_pair.consumer_pipe_num,
-			ext_ioctl_data.u.ipa_ep_pair.producer_pipe_num);
+			extend_ioctl_data.u.ipa_ep_pair.consumer_pipe_num,
+			extend_ioctl_data.u.ipa_ep_pair.producer_pipe_num);
 			break;
 		/*  Get driver name  */
 		case RMNET_IOCTL_GET_DRIVER_NAME:
-			memcpy(&ext_ioctl_data.u.if_name,
+			memcpy(&extend_ioctl_data.u.if_name,
 						ipa_netdevs[0]->name, IFNAMSIZ);
-			ext_ioctl_data.u.if_name[IFNAMSIZ - 1] = '\0';
-			if (copy_to_user((u8 *)ifr->ifr_ifru.ifru_data,
-					&ext_ioctl_data,
+			extend_ioctl_data.u.if_name[IFNAMSIZ - 1] = '\0';
+			if (copy_to_user((void __user *)ifr->ifr_ifru.ifru_data,
+					&extend_ioctl_data,
 					sizeof(struct rmnet_ioctl_extended_s)))
 				rc = -EFAULT;
 			break;
 		/*  Add MUX ID  */
 		case RMNET_IOCTL_ADD_MUX_CHANNEL:
 			mux_index = find_mux_channel_index(
-				ext_ioctl_data.u.rmnet_mux_val.mux_id);
+				extend_ioctl_data.u.rmnet_mux_val.mux_id);
 			if (mux_index < MAX_NUM_OF_MUX_CHANNEL) {
 				IPAWANDBG("already setup mux(%d)\n",
-					ext_ioctl_data.u.
-					rmnet_mux_val.mux_id);
+				extend_ioctl_data.u.rmnet_mux_val.mux_id);
 				return rc;
 			}
 			mutex_lock(&add_mux_channel_lock);
@@ -1548,16 +1537,16 @@ static int ipa_wwan_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 				mutex_unlock(&add_mux_channel_lock);
 				return -EFAULT;
 			}
-			ext_ioctl_data.u.rmnet_mux_val.vchannel_name
+			extend_ioctl_data.u.rmnet_mux_val.vchannel_name
 				[IFNAMSIZ-1] = '\0';
 			IPAWANDBG("ADD_MUX_CHANNEL(%d, name: %s)\n",
-			ext_ioctl_data.u.rmnet_mux_val.mux_id,
-			ext_ioctl_data.u.rmnet_mux_val.vchannel_name);
+			extend_ioctl_data.u.rmnet_mux_val.mux_id,
+			extend_ioctl_data.u.rmnet_mux_val.vchannel_name);
 			/* cache the mux name and id */
 			mux_channel[rmnet_index].mux_id =
-				ext_ioctl_data.u.rmnet_mux_val.mux_id;
+			extend_ioctl_data.u.rmnet_mux_val.mux_id;
 			memcpy(mux_channel[rmnet_index].vchannel_name,
-				ext_ioctl_data.u.rmnet_mux_val.vchannel_name,
+				extend_ioctl_data.u.rmnet_mux_val.vchannel_name,
 				sizeof(mux_channel[rmnet_index].vchannel_name));
 			mux_channel[rmnet_index].vchannel_name[
 				IFNAMSIZ - 1] = '\0';
@@ -1569,13 +1558,11 @@ static int ipa_wwan_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 			/* check if UL filter rules coming*/
 			if (num_q6_rule != 0) {
 				IPAWANERR("dev(%s) register to IPA\n",
-					ext_ioctl_data.u.rmnet_mux_val.
-					vchannel_name);
+			extend_ioctl_data.u.rmnet_mux_val.vchannel_name);
 				rc = wwan_register_to_ipa(rmnet_index);
 				if (rc < 0) {
 					IPAWANERR("device %s reg IPA failed\n",
-						ext_ioctl_data.u.
-						rmnet_mux_val.vchannel_name);
+			extend_ioctl_data.u.rmnet_mux_val.vchannel_name);
 					mutex_unlock(&add_mux_channel_lock);
 					return -ENODEV;
 				}
@@ -1583,8 +1570,7 @@ static int ipa_wwan_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 				mux_channel[rmnet_index].ul_flt_reg = true;
 			} else {
 				IPAWANDBG("dev(%s) haven't registered to IPA\n",
-					ext_ioctl_data.u.
-					rmnet_mux_val.vchannel_name);
+			extend_ioctl_data.u.rmnet_mux_val.vchannel_name);
 				mux_channel[rmnet_index].mux_channel_set = true;
 				mux_channel[rmnet_index].ul_flt_reg = false;
 			}
@@ -1593,26 +1579,23 @@ static int ipa_wwan_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 			break;
 		case RMNET_IOCTL_SET_EGRESS_DATA_FORMAT:
 			IPAWANDBG("get RMNET_IOCTL_SET_EGRESS_DATA_FORMAT\n");
-			if ((ext_ioctl_data.u.data) &
-					RMNET_IOCTL_EGRESS_FORMAT_CHECKSUM) {
+			if ((extend_ioctl_data.u.data) &
+				RMNET_IOCTL_EGRESS_FORMAT_CHECKSUM) {
 				apps_to_ipa_ep_cfg.ipa_ep_cfg.hdr.hdr_len = 8;
-				apps_to_ipa_ep_cfg.ipa_ep_cfg.cfg.
-					cs_offload_en =
-					IPA_ENABLE_CS_OFFLOAD_UL;
-				apps_to_ipa_ep_cfg.ipa_ep_cfg.cfg.
-					cs_metadata_hdr_offset = 1;
+		apps_to_ipa_ep_cfg.ipa_ep_cfg.cfg.cs_offload_en =
+				IPA_ENABLE_CS_OFFLOAD_UL;
+		apps_to_ipa_ep_cfg.ipa_ep_cfg.cfg.cs_metadata_hdr_offset = 1;
 			} else {
 				apps_to_ipa_ep_cfg.ipa_ep_cfg.hdr.hdr_len = 4;
 			}
-			if ((ext_ioctl_data.u.data) &
+			if ((extend_ioctl_data.u.data) &
 					RMNET_IOCTL_EGRESS_FORMAT_AGGREGATION)
 				apps_to_ipa_ep_cfg.ipa_ep_cfg.aggr.aggr_en =
 					IPA_ENABLE_AGGR;
 			else
 				apps_to_ipa_ep_cfg.ipa_ep_cfg.aggr.aggr_en =
 					IPA_BYPASS_AGGR;
-			apps_to_ipa_ep_cfg.ipa_ep_cfg.hdr.
-				hdr_ofst_metadata_valid = 1;
+		apps_to_ipa_ep_cfg.ipa_ep_cfg.hdr.hdr_ofst_metadata_valid = 1;
 			/* modem want offset at 0! */
 			apps_to_ipa_ep_cfg.ipa_ep_cfg.hdr.hdr_ofst_metadata = 0;
 			apps_to_ipa_ep_cfg.ipa_ep_cfg.mode.dst =
@@ -1656,7 +1639,7 @@ static int ipa_wwan_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 			}
 			break;
 		case RMNET_IOCTL_SET_INGRESS_DATA_FORMAT:/*  Set IDF  */
-			rc = handle_ingress_format(dev, &ext_ioctl_data);
+			rc = handle_ingress_format(dev, &extend_ioctl_data);
 			break;
 		case RMNET_IOCTL_SET_XLAT_DEV_INFO:
 			wan_msg = kzalloc(sizeof(struct ipa_wan_msg),
@@ -1665,13 +1648,13 @@ static int ipa_wwan_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 				IPAWANERR("Failed to allocate memory.\n");
 				return -ENOMEM;
 			}
-			ext_ioctl_data.u.if_name[IFNAMSIZ-1] = '\0';
+			extend_ioctl_data.u.if_name[IFNAMSIZ-1] = '\0';
 			len = sizeof(wan_msg->upstream_ifname) >
-			sizeof(ext_ioctl_data.u.if_name) ?
-				sizeof(ext_ioctl_data.u.if_name) :
+			sizeof(extend_ioctl_data.u.if_name) ?
+				sizeof(extend_ioctl_data.u.if_name) :
 				sizeof(wan_msg->upstream_ifname);
 			strlcpy(wan_msg->upstream_ifname,
-				ext_ioctl_data.u.if_name, len);
+				extend_ioctl_data.u.if_name, len);
 			wan_msg->upstream_ifname[len - 1] = '\0';
 			memset(&msg_meta, 0, sizeof(struct ipa_msg_meta));
 			msg_meta.msg_type = WAN_XLAT_CONNECT;
@@ -1710,7 +1693,7 @@ static int ipa_wwan_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 		default:
 			IPAWANERR("[%s] unsupported extended cmd[%d]",
 				dev->name,
-				ext_ioctl_data.extended_ioctl);
+				extend_ioctl_data.extended_ioctl);
 			rc = -EINVAL;
 		}
 		break;
@@ -1729,8 +1712,8 @@ static const struct net_device_ops ipa_wwan_ops_ip = {
 	.ndo_tx_timeout = ipa_wwan_tx_timeout,
 	.ndo_do_ioctl = ipa_wwan_ioctl,
 	.ndo_change_mtu = ipa_wwan_change_mtu,
-	.ndo_set_mac_address = 0,
-	.ndo_validate_addr = 0,
+	.ndo_set_mac_address = NULL,
+	.ndo_validate_addr = NULL,
 };
 
 /**
@@ -1747,7 +1730,7 @@ static void ipa_wwan_setup(struct net_device *dev)
 	dev->netdev_ops = &ipa_wwan_ops_ip;
 	ether_setup(dev);
 	/* set this after calling ether_setup */
-	dev->header_ops = 0;  /* No header */
+	dev->header_ops = NULL;  /* No header */
 	dev->type = ARPHRD_RAWIP;
 	dev->hard_header_len = 0;
 	dev->mtu = WWAN_DATA_LEN;
@@ -1879,7 +1862,7 @@ create_rsrc_err1:
 	return result;
 }
 
-void q6_deinitialize_rm(void)
+static void q6_deinitialize_rm(void)
 {
 	int ret;
 
@@ -2279,27 +2262,27 @@ static int ipa_wwan_remove(struct platform_device *pdev)
 }
 
 /**
-* rmnet_ipa_ap_suspend() - suspend callback for runtime_pm
-* @dev: pointer to device
-*
-* This callback will be invoked by the runtime_pm framework when an AP suspend
-* operation is invoked, usually by pressing a suspend button.
-*
-* Returns -EAGAIN to runtime_pm framework in case there are pending packets
-* in the Tx queue. This will postpone the suspend operation until all the
-* pending packets will be transmitted.
-*
-* In case there are no packets to send, releases the WWAN0_PROD entity.
-* As an outcome, the number of IPA active clients should be decremented
-* until IPA clocks can be gated.
-*/
+ * rmnet_ipa_ap_suspend() - suspend callback for runtime_pm
+ * @dev: pointer to device
+ *
+ * This callback will be invoked by the runtime_pm framework when an AP suspend
+ * operation is invoked, usually by pressing a suspend button.
+ *
+ * Returns -EAGAIN to runtime_pm framework in case there are pending packets
+ * in the Tx queue. This will postpone the suspend operation until all the
+ * pending packets will be transmitted.
+ *
+ * In case there are no packets to send, releases the WWAN0_PROD entity.
+ * As an outcome, the number of IPA active clients should be decremented
+ * until IPA clocks can be gated.
+ */
 static int rmnet_ipa_ap_suspend(struct device *dev)
 {
 	struct net_device *netdev = ipa_netdevs[0];
 	struct wwan_private *wwan_ptr = netdev_priv(netdev);
 
 	IPAWANDBG_LOW("Enter...\n");
-	/* Do not allow A7 to suspend in case there are oustanding packets */
+	/* Do not allow A7 to suspend in case there are outstanding packets */
 	if (atomic_read(&wwan_ptr->outstanding_pkts) != 0) {
 		IPAWANDBG("Outstanding packets, postponing AP suspend.\n");
 		return -EAGAIN;
@@ -2307,6 +2290,12 @@ static int rmnet_ipa_ap_suspend(struct device *dev)
 
 	/* Make sure that there is no Tx operation ongoing */
 	netif_tx_lock_bh(netdev);
+	netif_stop_queue(netdev);
+
+	/* Stoppig Watch dog timer when pipe was in suspend state */
+	if (del_timer(&netdev->watchdog_timer))
+		dev_put(netdev);
+
 	ipa_rm_release_resource(IPA_RM_RESOURCE_WWAN_0_PROD);
 	netif_tx_unlock_bh(netdev);
 	IPAWANDBG_LOW("Exit\n");
@@ -2315,21 +2304,26 @@ static int rmnet_ipa_ap_suspend(struct device *dev)
 }
 
 /**
-* rmnet_ipa_ap_resume() - resume callback for runtime_pm
-* @dev: pointer to device
-*
-* This callback will be invoked by the runtime_pm framework when an AP resume
-* operation is invoked.
-*
-* Enables the network interface queue and returns success to the
-* runtime_pm framework.
-*/
+ * rmnet_ipa_ap_resume() - resume callback for runtime_pm
+ * @dev: pointer to device
+ *
+ * This callback will be invoked by the runtime_pm framework when an AP resume
+ * operation is invoked.
+ *
+ * Enables the network interface queue and returns success to the
+ * runtime_pm framework.
+ */
 static int rmnet_ipa_ap_resume(struct device *dev)
 {
 	struct net_device *netdev = ipa_netdevs[0];
 
 	IPAWANDBG_LOW("Enter...\n");
-	netif_wake_queue(netdev);
+	if (netdev) {
+		netif_wake_queue(netdev);
+		/* Starting Watch dog timer, pipe was changes to resume state */
+		if (netif_running(netdev) && netdev->watchdog_timeo <= 0)
+			__netdev_watchdog_up(netdev);
+	}
 	IPAWANDBG_LOW("Exit\n");
 
 	return 0;
@@ -2732,17 +2726,17 @@ int rmnet_ipa_set_data_quota(struct wan_ioctl_set_data_quota *data)
 }
 
  /* rmnet_ipa_set_tether_client_pipe() -
- * @data - IOCTL data
- *
- * This function handles WAN_IOC_SET_DATA_QUOTA.
- * It translates the given interface name to the Modem MUX ID and
- * sends the request of the quota to the IPA Modem driver via QMI.
- *
- * Return codes:
- * 0: Success
- * -EFAULT: Invalid src/dst pipes provided
- * other: See ipa_qmi_set_data_quota
- */
+  * @data - IOCTL data
+  *
+  * This function handles WAN_IOC_SET_DATA_QUOTA.
+  * It translates the given interface name to the Modem MUX ID and
+  * sends the request of the quota to the IPA Modem driver via QMI.
+  *
+  * Return codes:
+  * 0: Success
+  * -EFAULT: Invalid src/dst pipes provided
+  * other: See ipa_qmi_set_data_quota
+  */
 int rmnet_ipa_set_tether_client_pipe(
 	struct wan_ioctl_set_tether_client_pipe *data)
 {
@@ -2845,7 +2839,7 @@ static int rmnet_ipa_query_tethering_stats_wifi(
 	return rc;
 }
 
-int rmnet_ipa_query_tethering_stats_modem(
+static int rmnet_ipa_query_tethering_stats_modem(
 	struct wan_ioctl_query_tether_stats *data,
 	bool reset
 )
@@ -2897,41 +2891,32 @@ int rmnet_ipa_query_tethering_stats_modem(
 		for (pipe_len = 0; pipe_len < resp->dl_dst_pipe_stats_list_len;
 			pipe_len++) {
 			IPAWANDBG_LOW("Check entry(%d) dl_dst_pipe(%d)\n",
-				pipe_len, resp->dl_dst_pipe_stats_list
-					[pipe_len].pipe_index);
+			pipe_len,
+			resp->dl_dst_pipe_stats_list[pipe_len].pipe_index);
 			IPAWANDBG_LOW
-				("dl_p_v4(%lu)v6(%lu) dl_b_v4(%lu)v6(%lu)\n",
-				(unsigned long int) resp->
-				dl_dst_pipe_stats_list[pipe_len].
-				num_ipv4_packets,
-				(unsigned long int) resp->
-				dl_dst_pipe_stats_list[pipe_len].
-				num_ipv6_packets,
-				(unsigned long int) resp->
-				dl_dst_pipe_stats_list[pipe_len].
-				num_ipv4_bytes,
-				(unsigned long int) resp->
-				dl_dst_pipe_stats_list[pipe_len].
-				num_ipv6_bytes);
-			if (ipa_get_client_uplink(resp->
-				dl_dst_pipe_stats_list[pipe_len].
-				pipe_index) == false) {
-				if (data->ipa_client == ipa_get_client(resp->
-					dl_dst_pipe_stats_list[pipe_len].
-					pipe_index)) {
-					/* update the DL stats */
-					data->ipv4_rx_packets += resp->
-					dl_dst_pipe_stats_list[pipe_len].
-					num_ipv4_packets;
-					data->ipv6_rx_packets += resp->
-					dl_dst_pipe_stats_list[pipe_len].
-					num_ipv6_packets;
-					data->ipv4_rx_bytes += resp->
-					dl_dst_pipe_stats_list[pipe_len].
-					num_ipv4_bytes;
-					data->ipv6_rx_bytes += resp->
-					dl_dst_pipe_stats_list[pipe_len].
-					num_ipv6_bytes;
+		("dl_p_v4(%lu)v6(%lu) dl_b_v4(%lu)v6(%lu)\n",
+		(unsigned long int)
+		 resp->dl_dst_pipe_stats_list[pipe_len].num_ipv4_packets,
+		(unsigned long int)
+		resp->dl_dst_pipe_stats_list[pipe_len].num_ipv6_packets,
+		(unsigned long int)
+		resp->dl_dst_pipe_stats_list[pipe_len].num_ipv4_bytes,
+		(unsigned long int)
+		resp->dl_dst_pipe_stats_list[pipe_len].num_ipv6_bytes);
+		if (ipa_get_client_uplink(
+			resp->dl_dst_pipe_stats_list[pipe_len].pipe_index)
+			== false) {
+			if (data->ipa_client == ipa_get_client(
+			resp->dl_dst_pipe_stats_list[pipe_len].pipe_index)) {
+			/* update the DL stats */
+				data->ipv4_rx_packets +=
+			resp->dl_dst_pipe_stats_list[pipe_len].num_ipv4_packets;
+				data->ipv6_rx_packets +=
+			resp->dl_dst_pipe_stats_list[pipe_len].num_ipv6_packets;
+				data->ipv4_rx_bytes +=
+			resp->dl_dst_pipe_stats_list[pipe_len].num_ipv4_bytes;
+				data->ipv6_rx_bytes +=
+			resp->dl_dst_pipe_stats_list[pipe_len].num_ipv6_bytes;
 				}
 			}
 		}
@@ -2946,42 +2931,32 @@ int rmnet_ipa_query_tethering_stats_modem(
 		for (pipe_len = 0; pipe_len < resp->ul_src_pipe_stats_list_len;
 			pipe_len++) {
 			IPAWANDBG_LOW("Check entry(%d) ul_dst_pipe(%d)\n",
-				pipe_len,
-				resp->ul_src_pipe_stats_list[pipe_len].
-				pipe_index);
+			pipe_len,
+			resp->ul_src_pipe_stats_list[pipe_len].pipe_index);
 			IPAWANDBG_LOW
-				("ul_p_v4(%lu)v6(%lu)ul_b_v4(%lu)v6(%lu)\n",
-				(unsigned long int) resp->
-				ul_src_pipe_stats_list[pipe_len].
-				num_ipv4_packets,
-				(unsigned long int) resp->
-				ul_src_pipe_stats_list[pipe_len].
-				num_ipv6_packets,
-				(unsigned long int) resp->
-				ul_src_pipe_stats_list[pipe_len].
-				num_ipv4_bytes,
-				(unsigned long int) resp->
-				ul_src_pipe_stats_list[pipe_len].
-				num_ipv6_bytes);
-			if (ipa_get_client_uplink(resp->
-				ul_src_pipe_stats_list[pipe_len].
-				pipe_index) == true) {
-				if (data->ipa_client == ipa_get_client(resp->
-				ul_src_pipe_stats_list[pipe_len].
-				pipe_index)) {
-					/* update the DL stats */
-					data->ipv4_tx_packets += resp->
-					ul_src_pipe_stats_list[pipe_len].
-					num_ipv4_packets;
-					data->ipv6_tx_packets += resp->
-					ul_src_pipe_stats_list[pipe_len].
-					num_ipv6_packets;
-					data->ipv4_tx_bytes += resp->
-					ul_src_pipe_stats_list[pipe_len].
-					num_ipv4_bytes;
-					data->ipv6_tx_bytes += resp->
-					ul_src_pipe_stats_list[pipe_len].
-					num_ipv6_bytes;
+		("ul_p_v4(%lu)v6(%lu)ul_b_v4(%lu)v6(%lu)\n",
+		(unsigned long int)
+		 resp->ul_src_pipe_stats_list[pipe_len].num_ipv4_packets,
+		(unsigned long int)
+		resp->ul_src_pipe_stats_list[pipe_len].num_ipv6_packets,
+		(unsigned long int)
+		resp->ul_src_pipe_stats_list[pipe_len].num_ipv4_bytes,
+		(unsigned long int)
+		resp->ul_src_pipe_stats_list[pipe_len].num_ipv6_bytes);
+		if (ipa_get_client_uplink(
+			resp->ul_src_pipe_stats_list[pipe_len].pipe_index)
+			== true) {
+			if (data->ipa_client == ipa_get_client(
+			resp->ul_src_pipe_stats_list[pipe_len].pipe_index)) {
+			/* update the DL stats */
+				data->ipv4_tx_packets +=
+			resp->ul_src_pipe_stats_list[pipe_len].num_ipv4_packets;
+				data->ipv6_tx_packets +=
+			resp->ul_src_pipe_stats_list[pipe_len].num_ipv6_packets;
+				data->ipv4_tx_bytes +=
+			resp->ul_src_pipe_stats_list[pipe_len].num_ipv4_bytes;
+				data->ipv6_tx_bytes +=
+			resp->ul_src_pipe_stats_list[pipe_len].num_ipv6_bytes;
 				}
 			}
 		}
@@ -3157,8 +3132,8 @@ void ipa_broadcast_quota_reach_ind(u32 mux_id,
 
 	/* posting msg for L-release for CNE */
 	if (upstream_type == IPA_UPSTEAM_MODEM) {
-	res = snprintf(iface_name_l, IPA_QUOTA_REACH_IF_NAME_MAX_SIZE,
-	    "UPSTREAM=%s", mux_channel[index].vchannel_name);
+		res = snprintf(iface_name_l, IPA_QUOTA_REACH_IF_NAME_MAX_SIZE,
+			"UPSTREAM=%s", mux_channel[index].vchannel_name);
 	} else {
 		res = snprintf(iface_name_l, IPA_QUOTA_REACH_IF_NAME_MAX_SIZE,
 			"UPSTREAM=%s", IPA_UPSTEAM_WLAN_IFACE_NAME);
@@ -3170,8 +3145,8 @@ void ipa_broadcast_quota_reach_ind(u32 mux_id,
 
 	/* posting msg for M-release for CNE */
 	if (upstream_type == IPA_UPSTEAM_MODEM) {
-	res = snprintf(iface_name_m, IPA_QUOTA_REACH_IF_NAME_MAX_SIZE,
-	    "INTERFACE=%s", mux_channel[index].vchannel_name);
+		res = snprintf(iface_name_m, IPA_QUOTA_REACH_IF_NAME_MAX_SIZE,
+			"INTERFACE=%s", mux_channel[index].vchannel_name);
 	} else {
 		res = snprintf(iface_name_m, IPA_QUOTA_REACH_IF_NAME_MAX_SIZE,
 			"INTERFACE=%s", IPA_UPSTEAM_WLAN_IFACE_NAME);

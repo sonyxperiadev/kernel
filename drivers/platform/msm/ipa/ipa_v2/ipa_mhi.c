@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2016, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2016, 2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -323,7 +323,7 @@ int ipa2_disconnect_mhi_pipe(u32 clnt_hdl)
 
 int ipa2_mhi_resume_channels_internal(enum ipa_client_type client,
 		bool LPTransitionRejected, bool brstmode_enabled,
-		union gsi_channel_scratch ch_scratch, u8 index)
+		union __packed gsi_channel_scratch ch_scratch, u8 index)
 {
 	int res;
 

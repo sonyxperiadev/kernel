@@ -3371,6 +3371,9 @@ static void sde_encoder_virt_disable(struct drm_encoder *drm_enc)
 
 	for (i = 0; i < sde_enc->num_phys_encs; i++) {
 		if (sde_enc->phys_encs[i]) {
+			if (sde_enc->phys_encs[i]->ops.post_disable)
+				sde_enc->phys_encs[i]->ops.post_disable(
+							sde_enc->phys_encs[i]);
 			sde_enc->phys_encs[i]->cont_splash_enabled = false;
 			sde_enc->phys_encs[i]->cont_splash_single_flush = 0;
 			sde_enc->phys_encs[i]->connector = NULL;

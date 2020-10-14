@@ -1224,6 +1224,11 @@ static void sde_kms_wait_for_commit_done(struct msm_kms *kms,
 		ret = sde_encoder_wait_for_event(encoder, MSM_ENC_COMMIT_DONE);
 		if (ret && ret != -EWOULDBLOCK) {
 			SDE_ERROR("wait for commit done returned %d\n", ret);
+#ifdef CONFIG_ARCH_SONY_GANGES
+			/* For NT36672a video mode panel on Sony Ganges
+			 * platform: hack the first flip to get recovery UI. */
+			sde_crtc_complete_flip(crtc, NULL);
+#endif
 			break;
 		}
 

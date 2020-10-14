@@ -71,7 +71,7 @@ static struct pll_vco fabia_vco[] = {
 
 static const struct alpha_pll_config video_pll0_config = {
 	.l = 0x10,
-	.frac = 0xaaab,
+	.alpha = 0xaaab,
 };
 
 static struct clk_alpha_pll video_pll0 = {

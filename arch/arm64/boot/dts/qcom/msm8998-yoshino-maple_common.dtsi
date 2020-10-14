@@ -300,3 +300,14 @@
 				2340 2574 2808 3042 3276 3510 3744
 				3978 4095>;
 };
+
+/* Disable PLL Spread Spectrum for MSM8998 Maple */
+&mdss_dsi0_pll {
+	/delete-property/ qcom,dsi-pll-ssc-en;
+	/delete-property/ qcom,dsi-pll-ssc-mode;
+};
+
+&mdss_dsi1_pll {
+	/delete-property/ qcom,dsi-pll-ssc-en;
+	/delete-property/ qcom,dsi-pll-ssc-mode;
+};

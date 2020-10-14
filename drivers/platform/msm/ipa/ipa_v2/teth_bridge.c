@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2016, 2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -54,16 +54,16 @@ struct teth_bridge_ctx {
 static struct teth_bridge_ctx *teth_ctx;
 
 /**
-* teth_bridge_ipa_cb() - Callback to handle IPA data path events
-* @priv - private data
-* @evt - event type
-* @data - event specific data (usually skb)
-*
-* This callback is called by IPA driver for exception packets from USB.
-* All exception packets are handled by Q6 and should not reach this function.
-* Packets will arrive to AP exception pipe only in case where packets are
-* sent from USB before Q6 has setup the call.
-*/
+ * teth_bridge_ipa_cb() - Callback to handle IPA data path events
+ * @priv - private data
+ * @evt - event type
+ * @data - event specific data (usually skb)
+ *
+ * This callback is called by IPA driver for exception packets from USB.
+ * All exception packets are handled by Q6 and should not reach this function.
+ * Packets will arrive to AP exception pipe only in case where packets are
+ * sent from USB before Q6 has setup the call.
+ */
 static void teth_bridge_ipa_cb(void *priv, enum ipa_dp_evt_type evt,
 	unsigned long data)
 {
@@ -82,20 +82,20 @@ static void teth_bridge_ipa_cb(void *priv, enum ipa_dp_evt_type evt,
 }
 
 /**
-* ipa2_teth_bridge_init() - Initialize the Tethering bridge driver
-* @params - in/out params for USB initialization API (please look at struct
-*  definition for more info)
-*
-* USB driver gets a pointer to a callback function (usb_notify_cb) and an
-* associated data. USB driver installs this callback function in the call to
-* ipa_connect().
-*
-* Builds IPA resource manager dependency graph.
-*
-* Return codes: 0: success,
-*		-EINVAL - Bad parameter
-*		Other negative value - Failure
-*/
+ * ipa2_teth_bridge_init() - Initialize the Tethering bridge driver
+ * @params - in/out params for USB initialization API (please look at struct
+ *  definition for more info)
+ *
+ * USB driver gets a pointer to a callback function (usb_notify_cb) and an
+ * associated data. USB driver installs this callback function in the call to
+ * ipa_connect().
+ *
+ * Builds IPA resource manager dependency graph.
+ *
+ * Return codes: 0: success,
+ *		-EINVAL - Bad parameter
+ *		Other negative value - Failure
+ */
 int ipa2_teth_bridge_init(struct teth_bridge_init_params *params)
 {
 	int res = 0;
@@ -137,8 +137,8 @@ bail:
 }
 
 /**
-* ipa2_teth_bridge_disconnect() - Disconnect tethering bridge module
-*/
+ * ipa2_teth_bridge_disconnect() - Disconnect tethering bridge module
+ */
 int ipa2_teth_bridge_disconnect(enum ipa_client_type client)
 {
 	TETH_DBG_FUNC_ENTRY();
@@ -152,14 +152,14 @@ int ipa2_teth_bridge_disconnect(enum ipa_client_type client)
 }
 
 /**
-* ipa2_teth_bridge_connect() - Connect bridge for a tethered Rmnet / MBIM call
-* @connect_params:	Connection info
-*
-* Return codes: 0: success
-*		-EINVAL: invalid parameters
-*		-EPERM: Operation not permitted as the bridge is already
-*		connected
-*/
+ * ipa2_teth_bridge_connect() - Connect bridge for a tethered Rmnet / MBIM call
+ * @connect_params:	Connection info
+ *
+ * Return codes: 0: success
+ *		-EINVAL: invalid parameters
+ *		-EPERM: Operation not permitted as the bridge is already
+ *		connected
+ */
 int ipa2_teth_bridge_connect(struct teth_bridge_connect_params *connect_params)
 {
 	return 0;
@@ -179,9 +179,9 @@ static const struct file_operations teth_bridge_drv_fops = {
 };
 
 /**
-* teth_bridge_driver_init() - Initialize tethering bridge driver
-*
-*/
+ * teth_bridge_driver_init() - Initialize tethering bridge driver
+ *
+ */
 int teth_bridge_driver_init(void)
 {
 	int res;
