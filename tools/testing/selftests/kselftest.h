@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
  * kselftest.h:	kselftest framework return codes to include from
  *		selftests.
@@ -5,7 +6,6 @@
  * Copyright (c) 2014 Shuah Khan <shuahkh@osg.samsung.com>
  * Copyright (c) 2014 Samsung Electronics Co., Ltd.
  *
- * This file is released under the GPLv2.
  */
 #ifndef __KSELFTEST_H
 #define __KSELFTEST_H
@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdarg.h>
+#include <stdio.h>
 
 /* define kselftest exit codes */
 #define KSFT_PASS  0
@@ -33,6 +34,14 @@ struct ksft_count {
 };
 
 static struct ksft_count ksft_cnt;
+static unsigned int ksft_plan;
+
+static inline int ksft_test_num(void)
+{
+	return ksft_cnt.ksft_pass + ksft_cnt.ksft_fail +
+		ksft_cnt.ksft_xfail + ksft_cnt.ksft_xpass +
+		ksft_cnt.ksft_xskip + ksft_cnt.ksft_error;
+}
 
 static inline int ksft_test_num(void)
 {
@@ -57,16 +66,25 @@ static inline int ksft_get_error_cnt(void) { return ksft_cnt.ksft_error; }
 
 static inline void ksft_print_header(void)
 {
-	printf("TAP version 13\n");
+	if (!(getenv("KSFT_TAP_LEVEL")))
+		printf("TAP version 13\n");
+}
+
+static inline void ksft_set_plan(unsigned int plan)
+{
+	ksft_plan = plan;
+	printf("1..%d\n", ksft_plan);
 }
 
 static inline void ksft_print_cnts(void)
 {
-	printf("Pass %d Fail %d Xfail %d Xpass %d Skip %d Error %d\n",
+	if (ksft_plan != ksft_test_num())
+		printf("# Planned tests != run tests (%u != %u)\n",
+			ksft_plan, ksft_test_num());
+	printf("# Pass %d Fail %d Xfail %d Xpass %d Skip %d Error %d\n",
 		ksft_cnt.ksft_pass, ksft_cnt.ksft_fail,
 		ksft_cnt.ksft_xfail, ksft_cnt.ksft_xpass,
 		ksft_cnt.ksft_xskip, ksft_cnt.ksft_error);
-	printf("1..%d\n", ksft_test_num());
 }
 
 static inline void ksft_print_msg(const char *msg, ...)
@@ -110,7 +128,7 @@ static inline void ksft_test_result_skip(const char *msg, ...)
 	ksft_cnt.ksft_xskip++;
 
 	va_start(args, msg);
-	printf("ok %d # skip ", ksft_test_num());
+	printf("not ok %d # SKIP ", ksft_test_num());
 	vprintf(msg, args);
 	va_end(args);
 }
@@ -171,7 +189,7 @@ static inline int ksft_exit_skip(const char *msg, ...)
 		va_list args;
 
 		va_start(args, msg);
-		printf("1..%d # Skipped: ", ksft_test_num());
+		printf("not ok %d # SKIP ", 1 + ksft_test_num());
 		vprintf(msg, args);
 		va_end(args);
 	} else {
