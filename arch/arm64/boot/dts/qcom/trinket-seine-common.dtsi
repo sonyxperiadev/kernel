@@ -346,6 +346,7 @@
 		cirrus,boost-peak-milliamp = <4000>;
 		cirrus,boost-ind-nanohenry = <1000>;
 		cirrus,boost-cap-microfarad = <15>;
+		cirrus,hibernate-enable = <1>;
 		cirrus,asp-sdout-hiz = <3>;
 		cirrus,gpio-config2 {
 			cirrus,gpio-src-select = <0x2>;
