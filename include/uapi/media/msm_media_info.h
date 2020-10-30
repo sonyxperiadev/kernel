@@ -785,10 +785,10 @@ static inline unsigned int VENUS_Y_STRIDE(unsigned int color_fmt,
 
 	switch (color_fmt) {
 	case COLOR_FMT_NV12:
+	case COLOR_FMT_NV21:
 		alignment = NV12_STRIDE_ALIGNMENT;
 		stride = MSM_MEDIA_ALIGN(width, alignment);
 		break;
-	case COLOR_FMT_NV21:
 	case COLOR_FMT_NV12_512:
 		alignment = 512;
 		stride = MSM_MEDIA_ALIGN(width, alignment);
@@ -831,10 +831,10 @@ static inline unsigned int VENUS_UV_STRIDE(unsigned int color_fmt,
 
 	switch (color_fmt) {
 	case COLOR_FMT_NV12:
+	case COLOR_FMT_NV21:
 		alignment = NV12_STRIDE_ALIGNMENT;
 		stride = MSM_MEDIA_ALIGN(width, alignment);
 		break;
-	case COLOR_FMT_NV21:
 	case COLOR_FMT_NV12_512:
 		alignment = 512;
 		stride = MSM_MEDIA_ALIGN(width, alignment);
@@ -877,9 +877,9 @@ static inline unsigned int VENUS_Y_SCANLINES(unsigned int color_fmt,
 
 	switch (color_fmt) {
 	case COLOR_FMT_NV12:
+	case COLOR_FMT_NV21:
 		alignment = NV12_SCANLINE_ALIGNMENT;
 		break;
-	case COLOR_FMT_NV21:
 	case COLOR_FMT_NV12_512:
 		alignment = 512;
 		break;
@@ -916,9 +916,9 @@ static inline unsigned int VENUS_UV_SCANLINES(unsigned int color_fmt,
 
 	switch (color_fmt) {
 	case COLOR_FMT_NV12:
+	case COLOR_FMT_NV21:
 		alignment = NV12_SCANLINE_ALIGNMENT/2;
 		break;
-	case COLOR_FMT_NV21:
 	case COLOR_FMT_NV12_512:
 		alignment = 256;
 		break;
