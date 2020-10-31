@@ -2842,6 +2842,7 @@ static void *neigh_stat_seq_start(struct seq_file *seq, loff_t *pos)
 		*pos = cpu+1;
 		return per_cpu_ptr(tbl->stats, cpu);
 	}
+	(*pos)++;
 	return NULL;
 }
 
