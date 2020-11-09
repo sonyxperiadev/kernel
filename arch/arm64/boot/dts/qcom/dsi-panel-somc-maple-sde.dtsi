@@ -11,6 +11,7 @@
  */
 
 #include "dsi-panel-somc-synaptics-sharp-4k-sde-cmd-ID6.dtsi"
+#include "dsi-panel-somc-synaptics-sharp-4k-sde-cmd-ID3.dtsi"
 
 &sde_dsi_dual0_6_panel {
 	qcom,platform-te-gpio = <&tlmm 10 0>;
