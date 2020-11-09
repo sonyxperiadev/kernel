@@ -58,22 +58,6 @@ dtb-$(CONFIG_MACH_SONY_MAPLE)		+= msm8998-v2.1-yoshino-maple-sde_generic.dtb
 dtb-$(CONFIG_MACH_SONY_POPLAR)		+= msm8998-v2-yoshino-poplar-sde_generic.dtb
 dtb-$(CONFIG_MACH_SONY_POPLAR)		+= msm8998-v2.1-yoshino-poplar-sde_generic.dtb
 
-# MSM8996 - SDE
-dtb-$(CONFIG_MACH_SONY_DORA)		+= msm8996-v3.0-pmi8996-tone-dora-sde_generic.dtb
-dtb-$(CONFIG_MACH_SONY_DORA)		+= msm8996-v3-pmi8996-tone-dora-sde_generic.dtb
-dtb-$(CONFIG_MACH_SONY_KAGURA)		+= msm8996-v3.0-pmi8996-tone-kagura-sde_generic.dtb
-dtb-$(CONFIG_MACH_SONY_KAGURA)		+= msm8996-v3-pmi8996-tone-kagura-sde_generic.dtb
-dtb-$(CONFIG_MACH_SONY_KEYAKI)		+= msm8996-v3.0-pmi8996-tone-keyaki-sde_generic.dtb
-dtb-$(CONFIG_MACH_SONY_KEYAKI)		+= msm8996-v3-pmi8996-tone-keyaki-sde_generic.dtb
-
-# MSM8956 - FB
-dtb-$(CONFIG_MACH_SONY_SUZU)            += msm8956-v1.1-loire-suzu_generic.dtb
-dtb-$(CONFIG_MACH_SONY_KUGO)            += msm8956-v1.1-loire-kugo_generic.dtb
-dtb-$(CONFIG_MACH_SONY_BLANC)		+= msm8956-v1.1-loire-blanc_generic.dtb
-dtb-$(CONFIG_MACH_SONY_BLANC)		+= apq8056-v1.1-loire-blanc_windy.dtb
-dtb-$(CONFIG_MACH_SONY_BLANC)           += msm8956-loire-blanc_generic.dtb
-dtb-$(CONFIG_MACH_SONY_BLANC)		+= apq8056-loire-blanc_windy.dtb
-
 ifeq ($(CONFIG_BUILD_QCOM_REFERENCE_PLATFORMS),y)
 # SPDX-License-Identifier: GPL-2.0
 ifeq ($(CONFIG_ARM64),y)
