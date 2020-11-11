@@ -264,22 +264,6 @@
 		gpio = <&pm8009_gpios 3 0>;
 	};
 
-	cam_pmic0_cs: cam_pmic0_cs {
-		compatible = "regulator-fixed";
-		regulator-name = "cam_pmic0_cs";
-		startup-delay-us = <0>;
-		enable-active-high;
-		gpio = <&tlmm 71 0>;
-	};
-
-	cam_pmic1_cs: cam_pmic1_cs {
-		compatible = "regulator-fixed";
-		regulator-name = "cam_pmic1_cs";
-		startup-delay-us = <0>;
-		enable-active-high;
-		gpio = <&tlmm 69 0>;
-	};
-
 	cam4_vdig_vreg: cam4_vdig_vreg {
 		compatible = "regulator-fixed";
 		regulator-name = "camera4_vdig_vreg";
@@ -846,7 +830,6 @@
 		interrupts = <138 0x0>;
 		rgbcir_vio-supply = <&slg51000_0_ldo7>;
 		rgbcir_gpio_vdd-supply = <&rgbcir_vreg>;
-		pmic_cs-supply = <&cam_pmic0_cs>;
 		pinctrl-names = "rgbcir_irq_active", "rgbcir_irq_suspend";
 		pinctrl-0 = <&sm_gpio_138>;
 		pinctrl-1 = <&sm_gpio_138_suspend>;

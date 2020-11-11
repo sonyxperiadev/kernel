@@ -19,7 +19,7 @@
 	slg51000@75 {
 		compatible = "dlg,slg51000";
 		reg = <0x75>;
-		cs-supply = <&cam_pmic0_cs>;
+		dlg,cs-gpios = <&tlmm 71 0>;
 		vin5-supply = <&pm8009_l2>;
 		vin6-supply = <&pm8009_l2>;
 
@@ -78,7 +78,7 @@
 	slg51000@75 {
 		compatible = "dlg,slg51000";
 		reg = <0x75>;
-		cs-supply = <&cam_pmic1_cs>;
+		dlg,cs-gpios = <&tlmm 69 0>;
 		vin5-supply = <&pm8009_s1>;
 		vin6-supply = <&pm8009_s1>;
 
