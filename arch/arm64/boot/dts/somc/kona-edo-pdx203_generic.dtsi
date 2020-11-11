@@ -11,6 +11,7 @@
  */
 
 #include "kona-edo-pdx203_common.dtsi"
+#include "kona-edo-pdx203_camera.dtsi"
 
 &soc {
 };
