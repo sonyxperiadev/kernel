@@ -1399,7 +1399,7 @@ static struct clk_branch gcc_aggre1_ufs_axi_hw_ctl_clk = {
 				"gcc_aggre1_ufs_axi_clk"
 			},
 			.num_parents = 1,
-			.flags = CLK_SET_RATE_PARENT,
+			.flags = CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED,
 			.ops = &clk_branch2_hw_ctl_ops,
 		},
 	},
