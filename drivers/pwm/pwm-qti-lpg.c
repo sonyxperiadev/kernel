@@ -157,7 +157,6 @@ struct lpg_ramp_config {
 	bool			toggle;
 	u32			*pattern;
 	u32			pattern_length;
-	u16			pwm_max_value;
 };
 
 struct lpg_pwm_config {
@@ -205,24 +204,6 @@ struct qpnp_lpg_chip {
 	unsigned long		pbs_en_bitmap;
 	bool			use_sdam;
 };
-
-static struct qpnp_lpg_channel *qpnp_lpg_from_pwm_dev(
-					struct pwm_device *pwm)
-{
-	struct qpnp_lpg_chip *chip;
-	u32 hw_idx;
-
-	chip = container_of(pwm->chip, struct qpnp_lpg_chip, pwm_chip);
-	hw_idx = pwm->hwpwm;
-
-	if (hw_idx >= chip->num_lpgs) {
-		dev_err(chip->dev, "hw index %d out of range [0-%d]\n",
-				hw_idx, chip->num_lpgs - 1);
-		return NULL;
-	}
-
-	return &chip->lpgs[hw_idx];
-}
 
 static int qpnp_lpg_read(struct qpnp_lpg_channel *lpg, u16 addr, u8 *val)
 {
@@ -604,7 +585,7 @@ static int qpnp_lpg_set_lut_pattern(struct qpnp_lpg_channel *lpg,
 		unsigned int *pattern, unsigned int length, u8 base_addr)
 {
 	struct qpnp_lpg_lut *lut = lpg->chip->lut;
-	u16 max_pwm_value, pwm_values[SDAM_LUT_COUNT_MAX + 1] = {0};
+	u16 full_duty_value, pwm_values[SDAM_LUT_COUNT_MAX + 1] = {0};
 	int i, rc = 0;
 	u8 lsb, msb, addr;
 
@@ -620,22 +601,19 @@ static int qpnp_lpg_set_lut_pattern(struct qpnp_lpg_channel *lpg,
 	/* Program LUT pattern */
 	mutex_lock(&lut->lock);
 	addr = base_addr + lpg->ramp_config.lo_idx * 2;
-	max_pwm_value = (1 << lpg->pwm_config.pwm_size) - 1;
-	if ((lpg->ramp_config.pwm_max_value > 0)
-		&& (max_pwm_value > lpg->ramp_config.pwm_max_value))
-		max_pwm_value = lpg->ramp_config.pwm_max_value;
 	for (i = 0; i < length; i++) {
-		pwm_values[i] = pattern[i];
+		full_duty_value = 1 << lpg->pwm_config.pwm_size;
+		pwm_values[i] = pattern[i] * full_duty_value / 100;
 
-		if (unlikely(pwm_values[i] > max_pwm_value)) {
+		if (unlikely(pwm_values[i] > full_duty_value)) {
 			dev_err(lpg->chip->dev, "PWM value %d exceed the max %d\n",
-					pwm_values[i], max_pwm_value);
+					pwm_values[i], full_duty_value);
 			rc = -EINVAL;
 			goto unlock;
 		}
 
-		if (pwm_values[i] > max_pwm_value)
-			pwm_values[i] = max_pwm_value;
+		if (pwm_values[i] >= full_duty_value)
+			pwm_values[i] = full_duty_value - 1;
 
 		lsb = pwm_values[i] & 0xff;
 		msb = pwm_values[i] >> 8;
@@ -1358,152 +1336,6 @@ static void qpnp_lpg_pwm_dbg_show(struct pwm_chip *pwm_chip, struct seq_file *s)
 }
 #endif
 
-static int __pwm_set_lut_pattern(struct qpnp_lpg_channel *lpg,
-		u32 *pattern, u32 length)
-{
-	struct qpnp_lpg_lut *lut;
-
-	if ((lpg == NULL) || (pattern == NULL)) {
-	   pr_err("%s parameter error NULL\n", __func__);
-	   return -EINVAL;
-	}
-
-	lut = lpg->chip->lut;
-
-	if (length > lpg->max_pattern_length) {
-		dev_err(lpg->chip->dev, "new pattern length (%d) larger than predefined (%d)\n",
-				length, lpg->max_pattern_length);
-		return -EINVAL;
-	}
-
-	mutex_lock(&lut->lock);
-	memcpy(lpg->ramp_config.pattern, pattern, (length * sizeof(u32)));
-	lpg->ramp_config.pattern_length = length;
-	mutex_unlock(&lut->lock);
-
-	return 0;
-}
-
-static int __pwm_config_lut(struct pwm_device *pwm,
-		struct ramp_config *pwm_lut)
-{
-	struct qpnp_lpg_channel *lpg;
-	struct lpg_pwm_config *pwm_config;
-	struct lpg_ramp_config *ramp_config;
-	int rc = 0;
-
-	if ((pwm == NULL) || (pwm_lut == NULL)) {
-		pr_err("%s parameter error NULL\n", __func__);
-		return -EINVAL;
-	}
-	lpg = qpnp_lpg_from_pwm_dev(pwm);
-	if (lpg == NULL) {
-		dev_err(lpg->chip->dev, "lpg not found\n");
-		return -EINVAL;
-	}
-	pwm_config = &lpg->pwm_config;
-	ramp_config = &lpg->ramp_config;
-
-	if (pwm_lut->lo_idx > 0)
-		ramp_config->lo_idx = pwm_lut->lo_idx;
-	if (pwm_lut->hi_idx > 0)
-		ramp_config->hi_idx = pwm_lut->hi_idx;
-	ramp_config->pattern_length = ramp_config->hi_idx - ramp_config->lo_idx + 1;
-	if (ramp_config->pattern_length < 0) {
-		pr_err("%s wrong LUT index\n", __func__);
-		return -EINVAL;
-	}
-
-	if (pwm->state.output_type == PWM_OUTPUT_MODULATED) {
-		lpg->src_sel = LUT_PATTERN;
-
-		rc = __pwm_set_lut_pattern(lpg, pwm_lut->pattern, pwm_lut->pattern_length);
-		if (rc) {
-			pr_err("qpnp_lpg_change_table: rc=%d\n", rc);
-			return -EINVAL;
-		}
-
-		if (pwm_lut->pause_lo_count > 0)
-			ramp_config->pause_lo_count = pwm_lut->pause_lo_count;
-		if (pwm_lut->pause_hi_count > 0)
-			ramp_config->pause_hi_count = pwm_lut->pause_hi_count;
-
-		if (pwm_lut->step_ms > 0)
-			ramp_config->step_ms = pwm_lut->step_ms;
-
-		ramp_config->ramp_dir_low_to_hi	= pwm_lut->ramp_dir_low_to_hi;
-		ramp_config->pattern_repeat	= pwm_lut->pattern_repeat;
-		ramp_config->toggle		= pwm_lut->toggle;
-
-		rc = qpnp_lpg_set_ramp_config(lpg);
-		if (rc) {
-			pr_err("qpnp_lpg_set_ramp_config: rc=%d\n", rc);
-			return -EINVAL;
-		}
-	}
-
-	return rc;
-}
-
-/**
- * pwm_config_lut - change LPG LUT device configuration
- * @pwm: the PWM device
- * @pwm_lut: LUT config
- */
-int pwm_config_lut(struct pwm_device *pwm, struct ramp_config *pwm_lut)
-{
-	int rc = 0;
-
-	rc = __pwm_config_lut(pwm, pwm_lut);
-
-	if (rc)
-		pr_err("Failed to configure LUT\n");
-
-	return rc;
-}
-EXPORT_SYMBOL(pwm_config_lut);
-
-int pwm_get_max_pwm_value(struct pwm_device *pwm)
-{
-	struct qpnp_lpg_channel *lpg;
-	int max;
-
-	if (pwm == NULL) {
-		pr_err("%s parameter error NULL\n", __func__);
-		return -EINVAL;
-	}
-
-	lpg = qpnp_lpg_from_pwm_dev(pwm);
-	if (lpg == NULL) {
-		dev_err(lpg->chip->dev, "lpg not found\n");
-		return -EINVAL;
-	}
-
-	max = lpg->ramp_config.pwm_max_value;
-
-	return max;
-}
-EXPORT_SYMBOL(pwm_get_max_pwm_value);
-
-void pwm_set_max_pwm_value(struct pwm_device *pwm, int max)
-{
-	struct qpnp_lpg_channel *lpg;
-
-	if (pwm == NULL) {
-		pr_err("%s parameter error NULL\n", __func__);
-		return;
-	}
-
-	lpg = qpnp_lpg_from_pwm_dev(pwm);
-	if (lpg == NULL) {
-		dev_err(lpg->chip->dev, "lpg not found\n");
-		return;
-	}
-
-	lpg->ramp_config.pwm_max_value = max;
-}
-EXPORT_SYMBOL(pwm_set_max_pwm_value);
-
 static const struct pwm_ops qpnp_lpg_pwm_ops = {
 	.config = qpnp_lpg_pwm_config,
 	.config_extend = qpnp_lpg_pwm_config_extend,
@@ -1788,7 +1620,7 @@ static int qpnp_lpg_parse_dt(struct qpnp_lpg_chip *chip)
 	/*
 	 * The LPG channel in the same group should have the same ramping
 	 * configuration, so force to use the ramping configuration of the
-	 * 1st LPG channel in the group for sychronization.
+	 * 1st LPG channel in the group for synchronization.
 	 */
 	lpg = &chip->lpgs[chip->lpg_group[0] - 1];
 	ramp = &lpg->ramp_config;
