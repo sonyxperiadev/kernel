@@ -1,0 +1,68 @@
+/* Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+&pm8150b_charger {
+	qcom,sec-charger-config = <0>;
+	qcom,auto-recharge-soc = <95>;
+	io-channels = <&pm8150b_vadc ADC_USB_IN_V_16>,
+		      <&pm8150b_vadc ADC_MID_CHG_DIV6>,
+		      <&pm8150b_vadc ADC_USB_IN_I>,
+		      <&pm8150b_vadc ADC_AMUX_THM1_PU2>,
+		      <&pm8150b_vadc ADC_SBUx>,
+		      <&pm8150b_vadc ADC_VPH_PWR>,
+		      <&pm8150b_vadc ADC_CHG_TEMP>;
+	io-channel-names = "usb_in_voltage",
+			   "mid_voltage",
+			   "usb_in_current",
+			   "aux_temp",
+			   "sbux_res",
+			   "vph_voltage",
+			   "chg_temp";
+	/delete-property/ qcom,battery-data;
+	/delete-property/ qcom,step-charging-enable;
+	/delete-property/ qcom,sw-jeita-enable;
+	qcom,hvdcp-disable;
+	qcom,float-option = <1>;
+	qcom,otg-cl-ua = <1500000>;
+	somc,jeita-hard-thresholds = <0x5314 0x181d>;
+	somc,psy-temp-use-real-temp;
+	qcom,lpd-disable;
+	/delete-property/ qcom,fcc-stepping-enable;
+};
+
+&pm8150b_fg {
+	qcom,fg-cutoff-voltage = <3200>;
+	qcom,fg-empty-voltage = <2800>;
+	qcom,fg-force-load-profile;
+	qcom,hold-soc-while-full;
+	qcom,slope-limit-coeffs = <733 733 733 733>;
+	qcom,slope-limit-temp-threshold = <100>;
+	/delete-property/ qcom,linearize-soc;
+	somc,msoc-tune-a = <30800>;
+	qcom,fg-batt-temp-hyst = <0>;
+	qcom,fg-batt-temp-delta = <0>;
+	qcom,fg-batt-therm-freq = <1>;
+	qcom,cl-start-capacity = <40>;
+	qcom,cl-min-temp = <150>;
+	qcom,cl-max-temp = <500>;
+	/delete-property/ qcom,soc-scale-mode-en;
+	#thermal-sensor-cells = <0>;
+	somc,jeita-step-use-real-temp;
+	somc,temp-corr-en;
+	somc,temp-corr-coef-a = <40>;
+	somc,temp-corr-avg-sec = <60>;
+	/delete-property/ qcom,cl-wt-enable;
+};
+
+&pm8150b_pdphy {
+	qcom,default-sink-caps = <5000 500>; /* 5V @ 500mA */
+};
