@@ -1,0 +1,57 @@
+/* arch/arm64/boot/dts/vendor/somc/kona-edo-pdx206_generic.dtsi
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+#include "kona-edo-pdx206_common.dtsi"
+#include "kona-edo-camera.dtsi"
+
+&soc {
+};
+
+&eeprom0 {
+	cam_vio-supply = <&pm8009_l7>;
+};
+
+&eeprom1 {
+	cam_vio-supply = <&pm8009_l7>;
+};
+
+&eeprom2 {
+	cam_vio-supply = <&pm8009_l7>;
+	cam_vana-supply = <&cam2_vana_vreg>;
+	cam_vdig-supply = <&pm8009_l2>;
+};
+
+&sensor0 {
+	cam_vio-supply = <&pm8009_l7>;
+};
+
+&sensor1 {
+	cam_vio-supply = <&pm8009_l7>;
+};
+
+&sensor2 {
+	cam_vio-supply = <&pm8009_l7>;
+	cam_vana-supply = <&cam2_vana_vreg>;
+	cam_vdig-supply = <&pm8009_l2>;
+};
+
+&sensor3 {
+	cam_vio-supply = <&pm8009_l7>;
+};
+
+&sensor4 {
+	status = "disabled";
+};
+
+#include "somc-edo-display.dtsi"
+#include "somc-edo-display-pdx206.dtsi"
+#include "somc-edo-nfc_pn557.dtsi"

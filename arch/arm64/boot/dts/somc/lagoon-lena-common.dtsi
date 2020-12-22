@@ -1,0 +1,137 @@
+&soc {
+	/* Disable extcon_usb1 */
+	extcon_usb1 {
+		status = "disabled";
+	};
+
+	last_logs@ffbc0000 {
+		compatible = "rd_last_logs";
+		label = "last_logs";
+		memory-region = "log";
+	};
+
+	restart-reason {
+		none {
+			cmd = "none";
+			reg-val = <0x00 0x00000000>;
+		};
+
+		unknown {
+			cmd = "unknown";
+			reg-val = <0x01 0x77665501>;
+		};
+
+		recovery {
+			cmd = "recovery";
+			reg-val = <0x02 0x77665500>;
+			reboot-cmd;
+		};
+
+		bootloader {
+			cmd = "bootloader";
+			reg-val = <0x03 0x77665500>;
+			reboot-cmd;
+		};
+
+		rtc {
+			cmd = "rtc";
+			reg-val = <0x04 0x77665500>;
+			reboot-cmd;
+		};
+
+		dm-verity-device-corrupted {
+			cmd = "dm-verity device corrupted";
+			reg-val = <0x05 0x77665508>;
+			reboot-cmd;
+		};
+
+		dm-verity-enforcing {
+			cmd = "dm-verity enforcing";
+			reg-val = <0x06 0x77665509>;
+			reboot-cmd;
+		};
+
+		keys-clear {
+			cmd = "keys clear";
+			reg-val = <0x07 0x7766550A>;
+			reboot-cmd;
+		};
+
+		panic {
+			cmd = "panic";
+			reg-val = <0x40 0xC0DEDEAD>;
+		};
+
+		oem-N {
+			cmd = "oem-4E";
+			reg-val = <0x61 0x6F656D4E>;
+			reboot-cmd;
+		};
+
+		oem-S {
+			cmd = "oem-53";
+			reg-val = <0x60 0x6F656D53>;
+			reboot-cmd;
+		};
+
+		oem-P {
+			cmd = "oem-50";
+			reg-val = <0x51 0x6F656D50>;
+			reboot-cmd;
+		};
+	};
+};
+
+/* Primary USB maximum-speed */
+&usb0 {
+	dwc0{
+		maximum-speed = "super-speed";
+	};
+};
+
+&thermal_zones {
+	soc {
+		trips {
+			low-soc {
+				temperature = <5>;
+				hysteresis = <0>;
+				type = "passive";
+			};
+		};
+	};
+};
+&pm6150l_rgb_led {
+		somc,rgb_sync = <1>;
+		red {
+			linux,default-trigger = "none";
+			somc,color_variation_max_num = <4>;
+			somc,max_current = <
+					126 511 500
+					127 511 500
+					128 511 500
+					129 511 500>;
+		};
+		green {
+			linux,default-trigger = "none";
+			somc,color_variation_max_num = <4>;
+			somc,max_current = <
+					126 20 74
+					127 20 74
+					128 20 74
+					129 20 74>;
+		};
+		blue {
+			linux,default-trigger = "none";
+			somc,color_variation_max_num = <4>;
+			somc,max_current = <
+					126 400 183
+					127 400 183
+					128 400 183
+					129 400 183>;
+		};
+
+};
+&pm6150l_lpg {
+	qcom,sync-channel-ids = <1 2 3>;
+};
+#include "somc-lena-nfc.dtsi"
