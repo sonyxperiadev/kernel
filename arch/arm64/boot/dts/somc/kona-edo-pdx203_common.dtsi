@@ -1,0 +1,305 @@
+/* arch/arm64/boot/dts/vendor/somc/kona-edo-pdx203_common.dtsi
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+#include "kona-edo-common.dtsi"
+
+&soc {
+};
+
+&somc_pinctrl {
+	/* If product common default setting is needed,
+	fill pinctrl-1 value in <product>_common.dtsi */
+	pinctrl-1 = <&sm_gpio_112 &sm_gpio_119 &sm_gpio_120 &sm_gpio_136>;
+};
+
+&somc_pinctrl_pmic {
+	/* If product common PMIC default setting is needed,
+	fill pinctrl-1 value in <product>.dtsi */
+	pinctrl-1 = <&pm8150b_gpio_10>;
+};
+
+&qupv3_se3_i2c {
+	pinctrl-0 = <&sm_gpio_119 &sm_gpio_120>;
+	pinctrl-1 = <&sm_gpio_119_suspend &sm_gpio_120_suspend>;
+	status = "okay";
+};
+
+/* GPIO_10: WLC_EN_N */
+&pm8150b_gpio_10 {
+	pins = "gpio10";
+	function = "normal";
+	/delete-property/ bias-high-impedance;
+	output-low;
+	qcom,drive-strength = <PMIC_GPIO_STRENGTH_LOW>;
+	drive-push-pull;
+	power-source = <0>;
+};
+
+/* GPIO_6: ASSIGN7_THERM */
+/* Follow Edo Common */
+
+/* GPIO_10: ASSIGN1_THERM */
+/* Follow Edo Common */
+
+/* GPIO_112 : XVS */
+&sm_gpio_112 {
+	mux {
+		pins = "gpio112";
+		function = "cci_timer3";
+	};
+
+	config {
+		pins = "gpio112";
+		drive-strength = <2>;
+		/delete-property/ bias-pull-down;
+		bias-disable;
+		/delete-property/ input-enable;
+	};
+};
+
+/* GPIO_119 : WLC_I2C_SDA */
+&sm_gpio_119 {
+	mux {
+		pins = "gpio119";
+		function = "qup3";
+	};
+
+	config {
+		pins = "gpio119";
+		drive-strength = <2>;
+		/delete-property/ bias-pull-down;
+		bias-disable;
+		/delete-property/ input-enable;
+	};
+};
+
+/* GPIO_120 : WLC_I2C_SCL */
+&sm_gpio_120 {
+	mux {
+		pins = "gpio120";
+		function = "qup3";
+	};
+
+	config {
+		pins = "gpio120";
+		drive-strength = <2>;
+		/delete-property/ bias-pull-down;
+		bias-disable;
+		/delete-property/ input-enable;
+	};
+};
+
+&tlmm {
+	/* GPIO_119 : WLC_I2C_SDA (Suspend) */
+	sm_gpio_119_suspend: sm_gpio_119_suspend {
+		mux {
+			pins = "gpio119";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio119";
+			drive-strength = <2>;
+			bias-disable;
+			input-enable;
+		};
+	};
+
+	/* GPIO_120 : WLC_I2C_SCL (Suspend) */
+	sm_gpio_120_suspend: sm_gpio_120_suspend {
+		mux {
+			pins = "gpio120";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio120";
+			drive-strength = <2>;
+			bias-disable;
+			input-enable;
+		};
+	};
+};
+
+/* GPIO_136 : WLC_INT_N */
+&sm_gpio_136 {
+	mux {
+		pins = "gpio136";
+		function = "gpio";
+	};
+
+	config {
+		pins = "gpio136";
+		drive-strength = <2>;
+		/delete-property/ bias-pull-down;
+		bias-pull-up;
+		input-enable;
+	};
+};
+
+&pm8150l_rgb_led {
+	somc,rgb_sync = <1>;
+	red {
+		linux,default-trigger = "none";
+		somc,color_variation_max_num = <3>;
+		somc,max_current = <
+			109 250 160
+			110 250 160
+			111 250 160>;
+	};
+	green {
+		linux,default-trigger = "none";
+		somc,color_variation_max_num = <3>;
+		somc,max_current = <
+			109 90 159
+			110 90 159
+			111 90 159>;
+	};
+	blue {
+		linux,default-trigger = "none";
+		somc,color_variation_max_num = <3>;
+		somc,max_current = <
+			109 438 80
+			110 438 80
+			111 438 80>;
+	};
+};
+
+&thermal_zones {
+	sdm_modem_pa {
+		polling-delay-passive = <0>;
+		polling-delay = <0>;
+		thermal-sensors = <&pm8150l_adc_tm ADC_AMUX_THM2_PU2>;
+		thermal-governor = "step_wise";
+		wake-capable-sensor;
+		trips {
+			sdm_modem_pa_0: sdm_modem_pa_0 {
+				temperature = <53000>;
+				hysteresis = <1000>;
+				type = "passive";
+			};
+		};
+		cooling-maps {
+			sdm_modem_pa_cdev0_0 {
+				trip = <&sdm_modem_pa_0>;
+				cooling-device = <&modem_pa 1 1>;
+			};
+		};
+	};
+	sdm_modem_pa_fr1 {
+		polling-delay-passive = <0>;
+		polling-delay = <0>;
+		thermal-sensors = <&pm8150l_adc_tm ADC_AMUX_THM2_PU2>;
+		thermal-governor = "step_wise";
+		wake-capable-sensor;
+		trips {
+			sdm_modem_pa_fr1_0: sdm_modem_pa_fr1_0 {
+				temperature = <55000>;
+				hysteresis = <3000>;
+				type = "passive";
+			};
+		};
+		cooling-maps {
+			sdm_modem_pa_fr1_cdev0_0 {
+				trip = <&sdm_modem_pa_fr1_0>;
+				cooling-device = <&modem_pa_fr1 1 1>;
+			};
+		};
+	};
+	sdm_modem_skin {
+		polling-delay-passive = <0>;
+		polling-delay = <0>;
+		thermal-sensors = <&pm8150l_adc_tm ADC_AMUX_THM2_PU2>;
+		thermal-governor = "step_wise";
+		wake-capable-sensor;
+		trips {
+			sdm_modem_skin_0: sdm_modem_skin_0 {
+				temperature = <59000>;
+				hysteresis = <10000>;
+				type = "passive";
+			};
+			sdm_modem_skin_1: sdm_modem_skin_1 {
+				temperature = <60000>;
+				hysteresis = <10000>;
+				type = "passive";
+			};
+		};
+		cooling-maps {
+			sdm_modem_skin_cdev0_0 {
+				trip = <&sdm_modem_skin_0>;
+				cooling-device = <&modem_skin 1 1>;
+			};
+			sdm_modem_skin_cdev0_1 {
+				trip = <&sdm_modem_skin_1>;
+				cooling-device = <&modem_skin 2 2>;
+			};
+		};
+	};
+	battery_modem_skin {
+		polling-delay-passive = <1000>;
+		polling-delay = <1000>;
+		thermal-sensors = <&pm8150b_fg>;
+		thermal-governor = "low_limits_cap";
+		tracks-low;
+		wake-capable-sensor;
+		trips {
+			battery_modem_skin_0: battery_modem_skin_0 {
+				temperature = <1000>;
+				hysteresis = <1000>;
+				type = "passive";
+			};
+			battery_modem_skin_1: battery_modem_skin_1 {
+				temperature = <1>;
+				hysteresis = <1000>;
+				type = "passive";
+			};
+		};
+		cooling-maps {
+			battery_modem_skin_cdev0_0 {
+				trip = <&battery_modem_skin_0>;
+				cooling-device = <&modem_skin 1 1>;
+			};
+			battery_modem_skin_cdev0_1 {
+				trip = <&battery_modem_skin_1>;
+				cooling-device = <&modem_skin 2 2>;
+			};
+		};
+	};
+	soc {
+		trips {
+			bcl_soc_0: bcl_soc_0 {
+				temperature = <7>;
+				hysteresis = <1>;
+				type = "passive";
+			};
+			bcl_soc_1: bcl_soc_1 {
+				temperature = <6>;
+				hysteresis = <1>;
+				type = "passive";
+			};
+		};
+		cooling-maps {
+			bcl_soc_cdev0_0 {
+				trip = <&bcl_soc_0>;
+				cooling-device = <&modem_skin 1 1>;
+			};
+			bcl_soc_cdev0_1 {
+				trip = <&bcl_soc_1>;
+				cooling-device = <&modem_skin 2 2>;
+			};
+		};
+	};
+};
+
+#include "charger-edo-common.dtsi"
+#include "charger-edo-pdx203.dtsi"
+#include "usb-dp-edo-pdx203.dtsi"

@@ -1,0 +1,4 @@
+#include "lagoon-lena-pdx213_common.dtsi"
+
+&soc {
+};

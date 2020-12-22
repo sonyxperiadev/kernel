@@ -1,0 +1,39 @@
+/* Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+&pm7250b_charger {
+	qcom,sec-charger-config = <0>;  /* No sub charger smb1396. */
+	qcom,auto-recharge-soc = <95>;  /* SOMC: recharge threshold by 95%. */
+	qcom,hvdcp-disable;
+	qcom,float-option = <1>;
+	qcom,otg-cl-ua = <1000000>;
+	somc,jeita-hard-thresholds = <0x5314 0x181d>;
+};
+
+&pm7250b_qg {
+	io-channels = <&pm7250b_vadc ADC_BAT_THERM_PU2>,
+		      <&pm7250b_vadc ADC_BAT_ID_PU2>;
+	io-channel-names = "batt-therm",
+			   "batt-id";
+
+	qcom,hold-soc-while-full;
+	qcom,linearize-soc;
+	qcom,vbatt-cutoff-mv = <3200>;
+	qcom,vbatt-empty-mv = <3000>;
+	qcom,vbatt-empty-cold-mv = <3000>;
+	/delete-property/ qcom,cl-disable;
+	qcom,cl-feedback-on;
+	qcom,cl-min-start-soc = <0>;
+	qcom,cl-max-start-soc = <40>;
+	qcom,cl-min-temp = <150>;
+	qcom,cl-max-temp = <500>;
+};

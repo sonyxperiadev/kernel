@@ -1,0 +1,158 @@
+/* Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+qcom,pdx203_tdk_4370mv {
+	/* Added or Modified by SOMC */
+	qcom,battery-type = "1319-9997";
+	qcom,fastchg-current-ma = <3850>;
+	qcom,jeita-hard-thresholds = <0x5314 0x181d>;
+	somc,initial-capacity-uah = <3999000>;
+	somc,step-cfg = <
+		(-2550) 50    0 4500    0 4370 1
+		   50  120    0 4500  750 4370 2
+		  120  200    0 4100 2300 4370 3
+		  120  200 4100 4200 1700 4370 3
+		  120  200 4200 4300 1500 4370 3
+		  120  200 4300 4500 1150 4370 3
+		  200  450    0 4150 3450 4370 3
+		  200  450 4150 4200 2700 4370 3
+		  200  450 4200 4300 1900 4370 3
+		  200  450 4300 4500 1150 4370 3
+		  450  550    0 4500 1150 4200 4
+		  550 2550    0 4500    0 4200 5
+	>;
+	somc,step-cell-impedance-mohm = <0>;
+
+	/* Prepared by Qualcomm */
+	qcom,profile-revision = <24>;
+	/* #4167876_SoMC_MyronTDK_3912mAh_averaged_MasterSlave_Oct2nd2019*/
+	qcom,max-voltage-uv = <4370000>;
+	qcom,fg-cc-cv-threshold-mv = <4360>;
+	qcom,nom-batt-capacity-mah = <3912>;
+	qcom,batt-id-kohm = <15>;
+	qcom,battery-beta = <4250>;
+	qcom,therm-room-temp = <100000>;
+	/* qcom,battery-type = "4167876_somc_myrontdk_3912mah_averaged_masterslave_oct2nd2019"; */
+	qcom,therm-coefficients = <0x2318 0xd0c 0xdaf7 0xc556 0x848d>;
+	qcom,therm-center-offset = <0x70>;
+	qcom,therm-pull-up = <100>;
+	qcom,rslow-normal-coeffs = <0xb6 0x01 0x95 0x12>;
+	qcom,rslow-low-coeffs = <0xf1 0x01 0x19 0x13>;
+	qcom,checksum = <0x3F3B>;
+	qcom,gui-version = "PM855GUI - 1.0.0.13";
+	qcom,fg-profile-data = [
+		 09 00 C8 E3
+		 02 D4 32 DB
+		 D8 D4 00 00
+		 F3 BC F1 8A
+		 FB 87 24 8B
+		 2C 9D 72 80
+		 22 00 B6 01
+		 95 12 94 06
+		 47 E2 CE 07
+		 32 00 6F EB
+		 5B ED 0D C4
+		 B6 0B EB E4
+		 CD CD 56 EB
+		 49 01 DB D2
+		 60 00 4D 00
+		 47 00 46 00
+		 2D 00 35 00
+		 3B 00 3D 00
+		 41 00 41 00
+		 40 00 60 00
+		 2C 00 3C 00
+		 46 00 40 00
+		 39 00 88 00
+		 5A 64 49 00
+		 3D 00 39 00
+		 60 F8 4E 00
+		 4B 00 6D 10
+		 58 10 49 00
+		 A6 28 6C 48
+		 57 60 49 0C
+		 47 00 D8 F8
+		 37 1F 12 06
+		 D5 F3 FF 05
+		 7B 1C 7C 0B
+		 64 0D E4 22
+		 02 18 59 42
+		 00 55 A8 02
+		 61 11 CF 1E
+		 2B FD 37 03
+		 CA FC D6 1C
+		 3B FA 1F 05
+		 48 03 B0 18
+		 FC 22 61 45
+		 2E 53 68 11
+		 2C 1F 57 E4
+		 D7 C3 C3 B5
+		 D8 1C 53 BB
+		 DB 04 89 BB
+		 39 18 47 93
+		 17 85 8A 9B
+		 80 98 09 80
+		 A2 EB 8D 04
+		 72 FB 84 F2
+		 00 F8 89 DC
+		 4F E2 F0 FF
+		 84 E2 77 CD
+		 1C 10 19 00
+		 F5 DD E3 03
+		 EB 04 09 03
+		 CE 07 32 00
+		 FB 02 37 02
+		 BE 04 89 02
+		 34 04 59 02
+		 A2 03 99 01
+		 49 05 44 00
+		 3C 00 4D 00
+		 51 64 55 00
+		 52 00 51 00
+		 53 00 51 00
+		 53 00 5E 08
+		 34 08 44 00
+		 56 28 53 48
+		 5E 60 6F 0D
+		 48 00 59 00
+		 61 08 66 00
+		 6F 00 41 00
+		 4A 08 55 08
+		 4E 00 61 28
+		 7A 48 45 60
+		 56 0D 61 00
+		 61 F8 46 08
+		 D8 F8 04 20
+		 BF 05 FD 0B
+		 D9 0E F9 1C
+		 D3 22 58 44
+		 9E 5B 87 18
+		 25 02 76 05
+		 14 02 73 0F
+		 3F 0A 42 20
+		 13 05 B4 02
+		 27 06 D9 1C
+		 B9 02 79 04
+		 A9 03 83 18
+		 17 02 86 05
+		 06 02 74 00
+		 43 1F 31 04
+		 0D 02 69 05
+		 D8 1C 57 02
+		 16 05 39 03
+		 A6 18 65 03
+		 A1 04 50 02
+		 6D 00 03 01
+		 C0 00 FA 00
+		 55 0F 00 00
+	];
+};

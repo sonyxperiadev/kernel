@@ -1,0 +1,47 @@
+/* Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+&soc {
+	lena_batterydata: qcom,battery-data {
+		qcom,batt-id-range-pct = <15>;
+		#include "qg-batterydata-pdx213-tdk-4450mv.dtsi"
+		#include "qg-batterydata-pdx213-tdk-4420mv.dtsi"
+		#include "qg-batterydata-pdx213-tdk-4400mv.dtsi"
+		#include "qg-batterydata-pdx213-tdk-4370mv.dtsi"
+		#include "qg-batterydata-pdx213-tdk-4340mv.dtsi"
+		#include "qg-batterydata-pdx213-tdk-4300mv.dtsi"
+	};
+};
+
+&pm7250b_charger {
+	qcom,fv-max-uv = <4450000>;
+	qcom,chg-term-src = <1>;
+	qcom,chg-term-current-ma = <(-219)>;
+	somc,product-max-icl-ua = <3000000>;
+	qcom,fcc-max-ua = <3500000>;
+	qcom,thermal-mitigation = <
+		3500000 2000000 1500000 1100000 900000 700000 500000 100000
+		1000000 1000000 1000000 1000000 900000 700000 500000 100000
+		>;
+	qcom,thermal-mitigation-sleep = <
+		3500000 3500000 3500000 2000000 1000000 1000000 800000 500000
+		1000000 1000000 1000000 1000000 900000 700000 500000 100000
+		>;
+};
+
+&pm7250b_qg {
+	qcom,battery-data = <&lena_batterydata>;
+	qcom,multi-profile-load;
+	somc,jeita-step-use-real-temp;
+	somc,jeita-batt-temp-correction = <0>;
+	qcom,qg-iterm-ma = <470>;
+};

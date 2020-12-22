@@ -1,0 +1,193 @@
+&soc {
+	dsi_panel_oled_ts_pwr_supply: dsi_panel_oled_ts_pwr_supply {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		qcom,panel-supply-entry@0 {
+			reg = <0>;
+			qcom,supply-name = "vddio";
+			qcom,supply-min-voltage = <1800000>;
+			qcom,supply-max-voltage = <1800000>;
+			qcom,supply-enable-load = <62000>;
+			qcom,supply-disable-load = <80>;
+			qcom,supply-post-on-sleep = <20>;
+		};
+
+		qcom,panel-supply-entry@1 {
+			reg = <1>;
+			qcom,supply-name = "vci";
+			qcom,supply-min-voltage = <3000000>;
+			qcom,supply-max-voltage = <3000000>;
+			qcom,supply-enable-load = <100000>;
+			qcom,supply-disable-load = <100>;
+			qcom,supply-post-on-sleep = <1>;
+		};
+		qcom,panel-supply-entry@2 {
+			reg = <2>;
+			qcom,supply-name = "ts_io";
+			qcom,supply-min-voltage = <1800000>;
+			qcom,supply-max-voltage = <1800000>;
+			qcom,supply-enable-load = <100000>;
+			qcom,supply-disable-load = <100>;
+			qcom,supply-post-on-sleep = <1>;
+		};
+		qcom,panel-supply-entry@3 {
+			reg = <3>;
+			qcom,supply-name = "ts_vddh";
+			qcom,supply-min-voltage = <3296000>;
+			qcom,supply-max-voltage = <3296000>;
+			qcom,supply-enable-load = <100000>;
+			qcom,supply-disable-load = <100>;
+			qcom,supply-post-on-sleep = <1>;
+		};
+	};
+};
+
+&L11C {
+	regulator-min-microvolt = <3000000>;
+	regulator-max-microvolt = <3000000>;
+};
+
+&sde_dsi {
+	compatible = "somc,dsi-display";
+	label = "primary";
+
+	qcom,dsi-ctrl = <&mdss_dsi0 &mdss_dsi1>;
+	qcom,dsi-phy = <&mdss_dsi_phy0 &mdss_dsi_phy1>;
+
+	clocks = <&mdss_dsi0_pll BYTECLK_MUX_0_CLK>,
+		 <&mdss_dsi0_pll PCLK_MUX_0_CLK>,
+		 <&mdss_dsi0_pll BYTECLK_SRC_0_CLK>,
+		 <&mdss_dsi0_pll PCLK_SRC_0_CLK>,
+		 <&mdss_dsi0_pll SHADOW_BYTECLK_SRC_0_CLK>,
+		 <&mdss_dsi0_pll SHADOW_PCLK_SRC_0_CLK>,
+		 <&mdss_dsi1_pll BYTECLK_MUX_1_CLK>,
+		 <&mdss_dsi1_pll PCLK_MUX_1_CLK>,
+		 <&mdss_dsi1_pll BYTECLK_SRC_1_CLK>,
+		 <&mdss_dsi1_pll PCLK_SRC_1_CLK>,
+		 <&mdss_dsi1_pll SHADOW_BYTECLK_SRC_1_CLK>,
+		 <&mdss_dsi1_pll SHADOW_PCLK_SRC_1_CLK>;
+
+	clock-names = "mux_byte_clk0", "mux_pixel_clk0",
+		      "src_byte_clk0", "src_pixel_clk0",
+		      "shadow_byte_clk0", "shadow_pixel_clk0",
+		      "mux_byte_clk1", "mux_pixel_clk1",
+		      "src_byte_clk1", "src_pixel_clk1",
+		      "shadow_byte_clk1", "shadow_pixel_clk1";
+
+	pinctrl-names = "panel_active", "panel_suspend",
+			"somc_ts_int_active", "somc_ts_int_suspend";
+	pinctrl-0 = <&sde_dsi_active &sde_te_active>;
+	pinctrl-1 = <&sde_dsi_suspend &sde_te_suspend>;
+	pinctrl-2 = <&somc_ts_int_active>;
+	pinctrl-3 = <&somc_ts_int_suspend>;
+
+	qcom,platform-te-gpio = <&tlmm 66 0>;
+	qcom,panel-te-source = <0>;
+
+	vddio-supply = <&pm8150_l14>;
+	vci-supply = <&pm8150a_l11>;
+	ts_io-supply = <&pm8150a_l1>;
+	ts_vddh-supply = <&pm8150a_l10>;
+	/delete-property/vdd-supply;
+	/delete-property/avdd-supply;
+
+	qcom,mdp = <&mdss_mdp>;
+};
+
+&sde_dsi_active {
+	mux {
+		pins = "gpio75";
+	};
+
+	config {
+		pins = "gpio75";
+	};
+};
+
+&sde_dsi_suspend {
+	mux {
+		pins = "gpio75";
+	};
+
+	config {
+		pins = "gpio75";
+	};
+};
+
+&sde_dsi1 {
+	status = "disabled";
+};
+
+&mdss_mdp {
+	connectors = <&sde_rscc &sde_wb &sde_dp &sde_dsi>;
+};
+
+&dsi_sw43404_amoled_cmd {
+	status = "disabled";
+};
+
+&dsi_sw43404_amoled_video {
+	status = "disabled";
+};
+
+&dsi_sw43404_amoled_fhd_plus_cmd {
+	status = "disabled";
+};
+
+&dsi_sharp_4k_dsc_cmd {
+	status = "disabled";
+};
+
+&dsi_sharp_4k_dsc_video {
+	status = "disabled";
+};
+
+&dsi_sharp_1080_cmd {
+	status = "disabled";
+};
+
+&dsi_dual_nt35597_truly_cmd {
+	status = "disabled";
+};
+
+&dsi_dual_nt35597_truly_video {
+	status = "disabled";
+};
+
+&dsi_nt35695b_truly_fhd_cmd {
+	status = "disabled";
+};
+
+&dsi_nt35695b_truly_fhd_video {
+	status = "disabled";
+};
+
+&dsi_sim_cmd {
+	status = "disabled";
+};
+
+&dsi_sim_vid {
+	status = "disabled";
+};
+
+&dsi_sim_dsc_375_cmd {
+	status = "disabled";
+};
+
+&dsi_dual_sim_cmd {
+	status = "disabled";
+};
+
+&dsi_dual_sim_vid {
+	status = "disabled";
+};
+
+&dsi_dual_sim_dsc_375_cmd {
+	status = "disabled";
+};
+
+&dsi_sim_sec_hd_cmd {
+	status = "disabled";
+};
+

@@ -1,0 +1,7 @@
+#include "lagoon-lena-common.dtsi"
+
+&soc {
+};
+
+#include "charger-lena-common.dtsi"
+#include "charger-lena-pdx213.dtsi"

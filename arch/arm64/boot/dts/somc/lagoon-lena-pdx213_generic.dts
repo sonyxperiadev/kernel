@@ -1,0 +1,11 @@
+/dts-v1/;
+
+#include "../qcom/lagoon.dtsi"
+#include "../qcom/lagoon-qrd.dtsi"
+#include "lagoon-lena-pdx213_generic.dtsi"
+
+/ {
+	model = "Sony Mobile Communications. PDX213(LAGOON v1)";
+	compatible = "somc,pdx213", "qcom,lagoon", "qcom,qrd";
+	qcom,board-id = <0x1000B 0>;
+};
