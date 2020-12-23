@@ -35,17 +35,6 @@
 #define UFS_VENDOR_WDC         0x145
 #define UFS_VENDOR_MICRON      0x12C
 
-/* UFS SAMSUNG MODELS */
-#define UFS_MODEL_SAMSUNG_64GB "KLUCG4J1"
-#define UFS_REVISION_SAMSUNG   "0101"
-
-/* UFS SK HYNIX MODELS */
-#define UFS_MODEL_HYNIX_32GB   "hB8aL1"
-#define UFS_MODEL_HYNIX_64GB   "hC8aL1"
-#define UFS_REVISION_HYNIX     "D001"
-
-#define UFS_PURGE_SPEC_VER     0x210
-
 /**
  * ufs_dev_fix - ufs device quirk info
  * @card: ufs card details

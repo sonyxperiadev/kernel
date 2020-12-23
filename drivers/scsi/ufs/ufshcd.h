@@ -60,7 +60,6 @@
 #include <linux/reset.h>
 #include <linux/extcon-provider.h>
 #include <linux/devfreq.h>
-#include <linux/blkdev.h>
 #include "unipro.h"
 
 #include <asm/irq.h>
@@ -1107,9 +1106,6 @@ struct ufs_hba {
 	struct ufs_desc_size desc_size;
 	atomic_t scsi_block_reqs_cnt;
 	bool restore_needed;
-
-	int latency_hist_enabled;
-	struct io_latency_state io_lat_s;
 
 	bool phy_init_g4;
 	bool force_g4;
