@@ -7,6 +7,9 @@ dtb-$(CONFIG_ARCH_QCOM)	+= msm8992-bullhead-rev-101.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= msm8994-angler-rev-101.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= msm8996-mtp.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= sdm845-mtp.dtb
+dtb-$(CONFIG_ARCH_QCOM)	+= kona.dtb
+dtb-$(CONFIG_ARCH_QCOM)	+= kona-v2.dtb
+dtb-$(CONFIG_ARCH_QCOM)	+= kona-v2.1.dtb
 
 subdir-y += opendevices/
 
