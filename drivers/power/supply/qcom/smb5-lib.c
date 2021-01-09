@@ -6226,7 +6226,7 @@ void smblib_usb_plugin_locked(struct smb_charger *chg)
 		smblib_update_usb_type(chg);
 #if defined(CONFIG_SOMC_CHARGER_EXTENSION)
 		smblib_somc_lrc_check(chg);
-		__pm_wakeup_event(&chg->unplug_wakelock,
+		__pm_wakeup_event(chg->unplug_wakelock,
 						UNPLUG_WAKE_PERIOD);
 		schedule_delayed_work(&chg->charger_remove_work,
 				msecs_to_jiffies(REMOVE_DELAY_MS));
@@ -7869,7 +7869,7 @@ irqreturn_t dc_plugin_irq_handler(int irq, void *data)
 	}
 
 	if (!dc_present && !usb_present) {
-		__pm_wakeup_event(&chg->unplug_wakelock,
+		__pm_wakeup_event(chg->unplug_wakelock,
 						UNPLUG_WAKE_PERIOD);
 		schedule_delayed_work(&chg->charger_remove_work,
 				msecs_to_jiffies(REMOVE_DELAY_MS));
@@ -9350,7 +9350,7 @@ int smblib_init(struct smb_charger *chg)
 	mutex_init(&chg->smart_charge_lock);
 	mutex_init(&chg->dcusbex_lock);
 	mutex_init(&chg->somc_dcin_aicl_lock);
-	wakeup_source_init(&chg->unplug_wakelock, "unplug_wakelock");
+	chg->unplug_wakelock = wakeup_source_create("unplug_wakelock");
 
 	chg->wake_enabled = true;
 #endif
@@ -9590,7 +9590,8 @@ int smblib_deinit(struct smb_charger *chg)
 		chg->unplug_key = NULL;
 	}
 	if (chg->wake_enabled) {
-		wakeup_source_trash(&chg->unplug_wakelock);
+		wakeup_source_remove(chg->unplug_wakelock);
+		__pm_relax(chg->unplug_wakelock);
 		chg->wake_enabled = false;
 	}
 #endif

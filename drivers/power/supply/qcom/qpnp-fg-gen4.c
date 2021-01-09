@@ -4976,9 +4976,9 @@ static void pl_enable_work(struct work_struct *work)
 static void fg_gen4_somc_jeita_step_wakelock(struct fg_dev *fg, bool en)
 {
 	if (en)
-		__pm_stay_awake(&fg->step_ws);
+		__pm_stay_awake(fg->step_ws);
 	else
-		__pm_relax(&fg->step_ws);
+		__pm_relax(fg->step_ws);
 
 	fg_dbg(fg, FG_STEP, "wake lock for JEITA/Step: %d\n", (int)en);
 	fg->step_lock_en = en;
@@ -8293,7 +8293,8 @@ static int fg_gen4_probe(struct platform_device *pdev)
 	INIT_DELAYED_WORK(&fg->somc_jeita_step_charge_work,
 					fg_gen4_somc_jeita_step_charge_work);
 
-	wakeup_source_init(&fg->step_ws, "somc_jeita_step");
+	fg->step_ws = wakeup_source_create("somc_jeita_step");
+	wakeup_source_add(fg->step_ws);
 	INIT_DELAYED_WORK(&fg->somc_temp_corr_work,
 					fg_gen4_somc_temp_corr_work);
 	INIT_DELAYED_WORK(&fg->somc_charge_full_releasing_work,

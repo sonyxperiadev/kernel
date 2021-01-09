@@ -742,7 +742,7 @@ struct smb_charger {
 	/* charger removal work */
 	struct delayed_work	charger_remove_work;
 	struct input_dev	*unplug_key;
-	struct wakeup_source	unplug_wakelock;
+	struct wakeup_source	*unplug_wakelock;
 	bool			wake_enabled;
 
 	/* somc dc aicl */

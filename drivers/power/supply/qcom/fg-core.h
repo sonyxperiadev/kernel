@@ -570,7 +570,7 @@ struct fg_dev {
 	int			soc_restart_counter;
 	/* JEITA/Step charge */
 	struct delayed_work	somc_jeita_step_charge_work;
-	struct wakeup_source	step_ws;
+	struct wakeup_source	*step_ws;
 	struct mutex		step_lock;
 	bool			step_lock_en;
 	bool			step_en;
