@@ -87,7 +87,7 @@ struct wdet {
 	struct work_struct	check_water_work;
 	struct delayed_work	check_connect_work;
 	struct delayed_work	check_negotiation_work;
-	struct wakeup_source	check_lock;
+	struct wakeup_source	*check_lock;
 
 	/* for debug use */
 	bool			dvdt_polling_unstop;
@@ -430,7 +430,7 @@ static void wdet_check_water_work(struct work_struct *w)
 	} else if (wdet->cable_timer < WDET_CABLE_TIMER_COUNT) {
 		if (!or) {
 			/* Process as dry if dry state or read error */
-			__pm_wakeup_event(&wdet->check_lock,
+			__pm_wakeup_event(wdet->check_lock,
 							WDET_WAKELOCK_TIMEOUT);
 			queue_delayed_work(wdet->dvdt_wq,
 				&wdet->check_connect_work,
@@ -565,7 +565,7 @@ static enum alarmtimer_restart alarm_interrupt(struct alarm *alarm, ktime_t now)
 	struct wdet *wdet = (struct wdet *)alarm->data;
 
 	dev_dbg(wdet->dev, "%s:\n", __func__);
-	__pm_wakeup_event(&wdet->check_lock, WDET_WAKELOCK_TIMEOUT);
+	__pm_wakeup_event(wdet->check_lock, WDET_WAKELOCK_TIMEOUT);
 	queue_work(wdet->dvdt_wq, &wdet->check_water_work);
 	return ALARMTIMER_NORESTART;
 }
@@ -574,7 +574,7 @@ static void wdet_alarm_work(struct work_struct *w)
 {
 	struct wdet *wdet = container_of(w, struct wdet, alarm_work.work);
 
-	__pm_wakeup_event(&wdet->check_lock, WDET_WAKELOCK_TIMEOUT);
+	__pm_wakeup_event(wdet->check_lock, WDET_WAKELOCK_TIMEOUT);
 	queue_work(wdet->dvdt_wq, &wdet->check_water_work);
 }
 #endif
@@ -588,7 +588,7 @@ static irqreturn_t wdet_dvdt_wrt_det_irq(int irq, void *data)
 	dev_dbg(wdet->dev, "%s: dvdt interrupt happen state=%d\n", __func__,
 							wdet->dvdt_det_state);
 
-	__pm_wakeup_event(&wdet->check_lock, WDET_WAKELOCK_TIMEOUT);
+	__pm_wakeup_event(wdet->check_lock, WDET_WAKELOCK_TIMEOUT);
 
 	cancel_delayed_work(&wdet->check_connect_work);
 
@@ -628,7 +628,7 @@ static irqreturn_t wdet_dvdt_wrt_det_irq(int irq, void *data)
 void wdet_check_water(struct wdet *wdet)
 {
 	dev_info(wdet->dev, "%s: check water for polling restart\n", __func__);
-	__pm_wakeup_event(&wdet->check_lock, WDET_WAKELOCK_TIMEOUT);
+	__pm_wakeup_event(wdet->check_lock, WDET_WAKELOCK_TIMEOUT);
 	wdet_set_timer(wdet, WDET_TIMER_STOP);
 	wdet->cable_timer = 0;
 	queue_work(wdet->dvdt_wq, &wdet->check_water_work);
@@ -873,7 +873,7 @@ static int wdet_probe(struct platform_device *pdev)
 
 	wdet->usb_psy = usb_psy;
 	spin_lock_init(&wdet->lock);
-	wakeup_source_init(&wdet->check_lock, "wdet_wakelock");
+	wdet->check_lock = wakeup_source_create("wdet_wakelock");
 	mutex_init(&wdet->wdet_mutex);
 
 	wdet->dvdt_wq = alloc_ordered_workqueue("dvdt_wq", 0);
@@ -971,7 +971,8 @@ del_dvdt:
 	destroy_workqueue(wdet->dvdt_wq);
 del_dev:
 	mutex_destroy(&wdet->wdet_mutex);
-	wakeup_source_trash(&wdet->check_lock);
+	wakeup_source_remove(wdet->check_lock);
+	__pm_relax(wdet->check_lock);
 del_class:
 	class_destroy(wdet->class);
 	devm_kfree(&pdev->dev, wdet);
@@ -997,7 +998,8 @@ static int wdet_remove(struct platform_device *pdev)
 	flush_workqueue(wdet->dvdt_wq);
 	destroy_workqueue(wdet->dvdt_wq);
 	mutex_destroy(&wdet->wdet_mutex);
-	wakeup_source_trash(&wdet->check_lock);
+	wakeup_source_remove(wdet->check_lock);
+	__pm_relax(wdet->check_lock);
 	class_destroy(wdet->class);
 	devm_kfree(&pdev->dev, wdet);
 	return 0;
