@@ -1180,7 +1180,6 @@ config TOUCHSCREEN_RM_TS
 config TOUCHSCREEN_SAMSUNG_INCELL
 	tristate "Samsung Electronics Corporation (SEC) Incell Touchscreen"
 	depends on I2C
-	depends on SOMC_PANEL_INCELL
 	help
 	  Say Y here if you have a Samsung Electronics OLED panel in your
 	  device, which features touch support. You will most likely have
