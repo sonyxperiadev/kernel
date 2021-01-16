@@ -1308,6 +1308,10 @@ static int sec_ts_parse_dt(struct i2c_client *client)
 
 	if (of_property_read_u32(np, "somc,touch-rst-gpio",
 				 &pdata->touch_rst_gpio)) {
+		if (of_property_read_u32(np, "sec,platform-touch-reset-gpio",
+					 &pdata->touch_rst_gpio) == 0)
+			goto ts_rst_found;
+
 		input_err(true, &client->dev, "%s: Reset GPIO not specified. "
 			  "Please specify somc,touch-rst-gpio in your sec_ts "
 			  "DT node (hint: qcom,platform-touch-reset-gpio in "
@@ -1324,9 +1328,13 @@ static int sec_ts_parse_dt(struct i2c_client *client)
 		return -EINVAL;
 	}
 
+ts_rst_found:
 	if (of_property_read_u32_array(np, "somc,expected-device-id",
 				       pdata->expected_device_id, 3))
 	{
+		if (of_property_read_u32_array(np, "sec,device_id",
+					 pdata->expected_device_id, 3) == 0)
+			goto end;
 		input_err(true, &client->dev, "%s: No expected device id "
 			  "specified in DT. Using Kumano defaults.\n",
 			  __func__);
@@ -1335,6 +1343,7 @@ static int sec_ts_parse_dt(struct i2c_client *client)
 		pdata->expected_device_id[2] = 0x71;
 	}
 
+end:
 	input_info(true, &client->dev, "%s: i2c buffer limit: %d, lcd_id:%06X, bringup:%d, FW:%s(%d), id:%d,%d, mis_cal:%d dex:%d, gesture:%d\n",
 		__func__, pdata->i2c_burstmax, lcdtype, pdata->bringup, pdata->firmware_name,
 			count, pdata->tsp_id, pdata->tsp_icid, pdata->mis_cal_check,
