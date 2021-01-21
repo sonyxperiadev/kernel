@@ -25,6 +25,7 @@
 #include <linux/switch.h>
 #include <linux/sysfs.h>
 #include <linux/types.h>
+#include <linux/version.h>
 #include "sim_detect.h"
 
 #define SIM_DETECT_DEV_NAME "sim_detect"
@@ -183,10 +184,17 @@ static irqreturn_t sim_detect_isr(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0)
 static void sim_detect_det_tmr_func(unsigned long func_data)
 {
 	struct sim_detect_event_data *edata =
 		(struct sim_detect_event_data *)func_data;
+#else
+static void sim_detect_det_tmr_func(struct timer_list *t)
+{
+	struct sim_detect_event_data *edata =
+		from_timer(edata, t, det_timer);
+#endif
 
 	schedule_work(&edata->det_work);
 }
@@ -290,8 +298,12 @@ static int sim_detect_setup_event(struct platform_device *pdev,
 
 	INIT_WORK(&edata->det_work, sim_detect_det_work);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0)
 	setup_timer(&edata->det_timer,
 		    sim_detect_det_tmr_func, (unsigned long)edata);
+#else
+	timer_setup(&edata->det_timer, sim_detect_det_tmr_func, 0);
+#endif
 
 	error = request_any_context_irq(edata->irq, isr, irqflags, desc, edata);
 	if (error < 0) {
