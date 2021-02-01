@@ -17,7 +17,8 @@
 #include "sde_kms.h"
 
 #if defined(CONFIG_ARCH_MSM8916) || defined(CONFIG_ARCH_MSM8996) || \
-    defined(CONFIG_ARCH_MSM8998) || defined(CONFIG_ARCH_SDM660)
+    defined(CONFIG_ARCH_MSM8998) || defined(CONFIG_ARCH_SDM660) || \
+    defined(CONFIG_ARCH_SDM630)
  #define RUN_ON_LEGACY_PLATFORM
 #endif
 

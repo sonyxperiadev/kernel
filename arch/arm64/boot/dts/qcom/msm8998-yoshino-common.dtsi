@@ -1075,7 +1075,7 @@
 		qcom,pre-scaling = <1 1>;
 	};
 
-	pa_therm1 {
+	pa_therm2 {
 		label = "pa_therm2";
 		reg = <ADC_AMUX_THM4_PU2>;
 		qcom,ratiometric;
