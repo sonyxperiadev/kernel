@@ -2541,9 +2541,6 @@ static int sde_hw_rotator_swts_map(struct sde_hw_rotator *rot)
 	sde_smmu_ctrl(0);
 	return rc;
 
-kmap_err:
-	sde_smmu_unmap_dma_buf(data->srcp_table, SDE_IOMMU_DOMAIN_ROT_UNSECURE,
-			DMA_FROM_DEVICE, data->srcp_dma_buf);
 err_unmap:
 	dma_buf_unmap_attachment(data->srcp_attachment, data->srcp_table,
 			DMA_FROM_DEVICE);
