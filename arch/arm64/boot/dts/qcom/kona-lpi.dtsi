@@ -1,5 +1,7 @@
 &q6core {
 	lpi_tlmm: lpi_pinctrl@33c0000 {
+		#address-cells = <1>;
+		#size-cells = <1>;
 		compatible = "qcom,lpi-pinctrl";
 		reg = <0x33c0000 0x0>;
 		qcom,slew-reg = <0x355a000 0x0>;

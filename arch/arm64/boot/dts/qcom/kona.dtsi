@@ -683,6 +683,8 @@
 	};
 
 	intc: interrupt-controller@17a00000 {
+		#address-cells = <1>;
+		#size-cells = <1>;
 		compatible = "arm,gic-v3";
 		#interrupt-cells = <3>;
 		interrupt-controller;
@@ -2457,6 +2459,8 @@
 		compatible = "qcom,kona-pdc";
 		reg = <0xb220000 0x30000>, <0x17c000f0 0x60>;
 		qcom,pdc-ranges = <0 480 94>, <94 609 31>, <125 63 1>, <126 716 12>;
+		#address-cells = <1>;
+		#size-cells = <1>;
 		#interrupt-cells = <2>;
 		interrupt-parent = <&intc>;
 		interrupt-controller;
@@ -3264,6 +3268,7 @@
 	};
 
 	ipcc_mproc: qcom,ipcc@408000 {
+		#address-cells = <1>;
 		compatible = "qcom,ipcc";
 		reg = <0x408000 0x1000>;
 		interrupts = <GIC_SPI 229 IRQ_TYPE_LEVEL_HIGH>;
@@ -3366,6 +3371,7 @@
 	};
 
 	intsp: qcom,qsee_irq {
+		#address-cells = <0>;
 		compatible = "qcom,kona-qsee-irq";
 
 		syscon = <&sp_scsr_block>;

@@ -924,6 +924,8 @@
 };
 
 &qupv3_se1_i2c {
+	#address-cells = <1>;
+	#size-cells = <0>;
 	pinctrl-0 = <&sm_gpio_4 &sm_gpio_5>;
 	pinctrl-1 = <&sm_gpio_4_suspend &sm_gpio_5_suspend>;
 	qcom,clk-freq-out = <400000>;
@@ -931,6 +933,8 @@
 };
 
 &qupv3_se2_i2c {
+	#address-cells = <1>;
+	#size-cells = <0>;
 	pinctrl-0 = <&sm_gpio_115 &sm_gpio_116>;
 	pinctrl-1 = <&sm_gpio_115_suspend &sm_gpio_116_suspend>;
 	qcom,clk-freq-out = <1000000>;
@@ -1257,6 +1261,8 @@
 };
 
 &qupv3_se5_i2c {
+	#address-cells = <1>;
+	#size-cells = <0>;
 	pinctrl-0 = <&sm_gpio_12 &sm_gpio_13>;
 	pinctrl-1 = <&sm_gpio_12_suspend &sm_gpio_13_suspend>;
 	qcom,clk-freq-out = <400000>;
@@ -1264,6 +1270,8 @@
 };
 
 &qupv3_se9_i2c {
+	#address-cells = <1>;
+	#size-cells = <0>;
 	pinctrl-0 = <&sm_gpio_125 &sm_gpio_126>;
 	pinctrl-1 = <&sm_gpio_125_suspend &sm_gpio_126_suspend>;
 	qcom,clk-freq-out = <400000>;
@@ -1286,6 +1294,8 @@
 };
 
 &qupv3_se13_i2c {
+	#address-cells = <1>;
+	#size-cells = <0>;
 	pinctrl-0 = <&sm_gpio_36 &sm_gpio_37>;
 	pinctrl-1 = <&sm_gpio_36_suspend &sm_gpio_37_suspend>;
 	qcom,clk-freq-out = <400000>;
@@ -1293,6 +1303,8 @@
 };
 
 &qupv3_se15_i2c {
+	#address-cells = <1>;
+	#size-cells = <0>;
 	pinctrl-0 = <&sm_gpio_44 &sm_gpio_45>;
 	pinctrl-1 = <&sm_gpio_44_suspend &sm_gpio_45_suspend>;
 	qcom,clk-freq-out = <400000>;
