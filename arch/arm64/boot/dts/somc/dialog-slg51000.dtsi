@@ -14,6 +14,8 @@
  * use QUP15 I2C for slg51000_0
  */
 &qupv3_se15_i2c {
+	#address-cells = <1>;
+	#size-cells = <0>;
 	slg51000@75 {
 		compatible = "dlg,slg51000";
 		reg = <0x75>;
@@ -71,6 +73,8 @@
  * use QUP5 I2C for slg51000_1
  */
 &qupv3_se5_i2c {
+	#address-cells = <1>;
+	#size-cells = <0>;
 	slg51000@75 {
 		compatible = "dlg,slg51000";
 		reg = <0x75>;

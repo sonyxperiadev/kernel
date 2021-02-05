@@ -6,6 +6,9 @@
 #include "kona-va-bolero.dtsi"
 
 &bolero {
+	#address-cells = <1>;
+	#size-cells = <1>;
+
 	qcom,num-macros = <4>;
 	bolero-clk-rsc-mngr {
 		compatible = "qcom,bolero-clk-rsc-mngr";
@@ -30,6 +33,9 @@
 			 <&clock_audio_tx_2 0>;
 		qcom,tx-swr-gpios = <&tx_swr_gpios>;
 		qcom,tx-dmic-sample-rate = <2400000>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+
 		swr2: tx_swr_master {
 			compatible = "qcom,swr-mstr";
 			#address-cells = <2>;

@@ -1,5 +1,9 @@
 &bolero {
+	#address-cells = <1>;
+	#size-cells = <1>;
 	va_macro: va-macro@3370000 {
+		#address-cells = <1>;
+		#size-cells = <1>;
 		compatible = "qcom,va-macro";
 		reg = <0x3370000 0x0>;
 		clock-names = "lpass_audio_hw_vote";

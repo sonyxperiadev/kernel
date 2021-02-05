@@ -35,6 +35,9 @@
 		/* interrupt config */
 		interrupts = <GIC_SPI 83 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-controller;
+
+		#address-cells = <1>;
+		#size-cells = <1>;
 		#interrupt-cells = <1>;
 
 		#power-domain-cells = <0>;

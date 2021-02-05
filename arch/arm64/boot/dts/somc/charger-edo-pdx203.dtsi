@@ -81,6 +81,8 @@
 &soc {
 	/* I2C: QUP3 - WLC */
 	i2c@98c000 {
+		#address-cells = <1>;
+		#size-cells = <0>;
 		idtp9382a@3b {
 			compatible = "idtp,idtp9382a";
 			reg = <0x3b>;
