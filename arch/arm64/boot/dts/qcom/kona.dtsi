@@ -478,19 +478,19 @@
 		pil_adsp_mem: pil_adsp_region@8a100000 {
 			compatible = "removed-dma-pool";
 			no-map;
-			reg = <0x0 0x8a100000 0x0 0x1d00000>;
+			reg = <0x0 0x8a100000 0x0 0x2500000>;
 		};
 
-		pil_spss_mem: pil_spss_region@8be00000 {
+		pil_spss_mem: pil_spss_region@8c600000 {
 			compatible = "removed-dma-pool";
 			no-map;
-			reg = <0x0 0x8be00000 0x0 0x100000>;
+			reg = <0x0 0x8c600000 0x0 0x100000>;
 		};
 
-		cdsp_secure_heap: cdsp_secure_heap@8bf00000 {
+		cdsp_secure_heap: cdsp_secure_heap@8c700000 {
 			compatible = "removed-dma-pool";
 			no-map;
-			reg = <0x0 0x8bf00000 0x0 0x4600000>;
+			reg = <0x0 0x8c700000 0x0 0x4600000>;
 		};
 
 		adsp_mem: adsp_region {
