@@ -723,7 +723,7 @@
 			regulator-min-microvolt = <2704000>;
 			regulator-max-microvolt = <2960000>;
 			qcom,init-voltage = <2704000>;
-			qcom,init-mode = <RPMH_REGULATOR_MODE_LPM>;
+			qcom,init-mode = <RPMH_REGULATOR_MODE_HPM>;
 		};
 	};
 
@@ -803,8 +803,8 @@
 			regulator-name = "pm8009_s1";
 			qcom,set = <RPMH_REGULATOR_SET_ALL>;
 			regulator-min-microvolt = <1200000>;
-			regulator-max-microvolt = <1200000>;
-			qcom,init-voltage = <1200000>;
+			regulator-max-microvolt = <1300000>;
+			qcom,init-voltage = <1300000>;
 		};
 	};
 
@@ -849,9 +849,9 @@
 		L2F: pm8009_l2: regulator-pm8009-l2 {
 			regulator-name = "pm8009_l2";
 			qcom,set = <RPMH_REGULATOR_SET_ALL>;
-			regulator-min-microvolt = <1200000>;
+			regulator-min-microvolt = <1056000>;
 			regulator-max-microvolt = <1200000>;
-			qcom,init-voltage = <1200000>;
+			qcom,init-voltage = <1104000>;
 			qcom,init-mode = <RPMH_REGULATOR_MODE_LPM>;
 		};
 	};
@@ -868,8 +868,26 @@
 			regulator-name = "pm8009_l3";
 			qcom,set = <RPMH_REGULATOR_SET_ALL>;
 			regulator-min-microvolt = <1056000>;
-			regulator-max-microvolt = <1056000>;
-			qcom,init-voltage = <1056000>;
+			regulator-max-microvolt = <1200000>;
+			qcom,init-voltage = <1200000>;
+			qcom,init-mode = <RPMH_REGULATOR_MODE_LPM>;
+		};
+	};
+
+	rpmh-regulator-ldof4 {
+		compatible = "qcom,rpmh-vrm-regulator";
+		qcom,resource-name = "ldof4";
+		qcom,regulator-type = "pmic5-ldo";
+		qcom,supported-modes =
+			<RPMH_REGULATOR_MODE_LPM
+			 RPMH_REGULATOR_MODE_HPM>;
+		qcom,mode-threshold-currents = <0 10000>;
+		L4F: pm8009_l4: regulator-pm8009-l4 {
+			regulator-name = "pm8009_l4";
+			qcom,set = <RPMH_REGULATOR_SET_ALL>;
+			regulator-min-microvolt = <1104000>;
+			regulator-max-microvolt = <1104000>;
+			qcom,init-voltage = <1104000>;
 			qcom,init-mode = <RPMH_REGULATOR_MODE_LPM>;
 		};
 	};
