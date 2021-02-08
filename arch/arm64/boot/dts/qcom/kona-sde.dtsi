@@ -208,6 +208,7 @@
 
 		qcom,sde-qos-cpu-mask = <0x3>;
 		qcom,sde-qos-cpu-dma-latency = <300>;
+		qcom,sde-qos-cpu-irq-latency = <300>;
 
 		/* offsets are relative to "mdp_phys + qcom,sde-off */
 
