@@ -1388,10 +1388,6 @@
 	status = "disabled";
 };
 
-&pm8150a_l5 {
-	status = "disabled";
-};
-
 &pm8150a_l10 {
 	regulator-min-microvolt = <3296000>;
 	regulator-max-microvolt = <3296000>;
