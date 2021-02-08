@@ -8293,8 +8293,10 @@ static int fg_gen4_probe(struct platform_device *pdev)
 	INIT_DELAYED_WORK(&fg->somc_jeita_step_charge_work,
 					fg_gen4_somc_jeita_step_charge_work);
 
-	fg->step_ws = wakeup_source_create("somc_jeita_step");
-	wakeup_source_add(fg->step_ws);
+	fg->step_ws = wakeup_source_register(fg->dev, "somc_jeita_step");
+	if (!fg->step_ws)
+		return -EINVAL;
+
 	INIT_DELAYED_WORK(&fg->somc_temp_corr_work,
 					fg_gen4_somc_temp_corr_work);
 	INIT_DELAYED_WORK(&fg->somc_charge_full_releasing_work,

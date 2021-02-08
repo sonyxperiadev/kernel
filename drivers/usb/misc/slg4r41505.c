@@ -873,7 +873,12 @@ static int wdet_probe(struct platform_device *pdev)
 
 	wdet->usb_psy = usb_psy;
 	spin_lock_init(&wdet->lock);
-	wdet->check_lock = wakeup_source_create("wdet_wakelock");
+	wdet->check_lock = wakeup_source_register(&pdev->dev, "wdet_wakelock");
+	if (!wdet->check_lock) {
+		ret = -EINVAL;
+		goto del_class;
+	}
+
 	mutex_init(&wdet->wdet_mutex);
 
 	wdet->dvdt_wq = alloc_ordered_workqueue("dvdt_wq", 0);
@@ -971,7 +976,7 @@ del_dvdt:
 	destroy_workqueue(wdet->dvdt_wq);
 del_dev:
 	mutex_destroy(&wdet->wdet_mutex);
-	wakeup_source_remove(wdet->check_lock);
+	wakeup_source_unregister(wdet->check_lock);
 	__pm_relax(wdet->check_lock);
 del_class:
 	class_destroy(wdet->class);
@@ -998,7 +1003,7 @@ static int wdet_remove(struct platform_device *pdev)
 	flush_workqueue(wdet->dvdt_wq);
 	destroy_workqueue(wdet->dvdt_wq);
 	mutex_destroy(&wdet->wdet_mutex);
-	wakeup_source_remove(wdet->check_lock);
+	wakeup_source_unregister(wdet->check_lock);
 	__pm_relax(wdet->check_lock);
 	class_destroy(wdet->class);
 	devm_kfree(&pdev->dev, wdet);
