@@ -9350,7 +9350,10 @@ int smblib_init(struct smb_charger *chg)
 	mutex_init(&chg->smart_charge_lock);
 	mutex_init(&chg->dcusbex_lock);
 	mutex_init(&chg->somc_dcin_aicl_lock);
-	chg->unplug_wakelock = wakeup_source_create("unplug_wakelock");
+	chg->unplug_wakelock = wakeup_source_register(chg->dev,
+						      "unplug_wakelock");
+	if (!chg->unplug_wakelock)
+		return -EINVAL;
 
 	chg->wake_enabled = true;
 #endif
@@ -9590,7 +9593,7 @@ int smblib_deinit(struct smb_charger *chg)
 		chg->unplug_key = NULL;
 	}
 	if (chg->wake_enabled) {
-		wakeup_source_remove(chg->unplug_wakelock);
+		wakeup_source_unregister(chg->unplug_wakelock);
 		__pm_relax(chg->unplug_wakelock);
 		chg->wake_enabled = false;
 	}
