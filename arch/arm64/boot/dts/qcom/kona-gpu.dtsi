@@ -103,8 +103,8 @@
 		/* GPU OPP data */
 		operating-points-v2 = <&gpu_opp_table>;
 
-		nvmem-cells = <&gpu_lm_efuse>;
-		nvmem-cell-names = "isense_slope";
+		nvmem-cells = <&gpu_lm_efuse>, <&gpu_speed_bin>;
+		nvmem-cell-names = "isense_slope", "speed_bin";
 
 		qcom,bus-accesses-ddr7 = <970>;
 		qcom,bus-accesses-ddr8 = <1162>;
