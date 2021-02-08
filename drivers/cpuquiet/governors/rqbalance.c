@@ -1049,7 +1049,7 @@ static void rqbalance_stop(void)
 	cpufreq_unregister_notifier(&frequency_limits_nb,
 		CPUFREQ_POLICY_NOTIFIER);
 
-	cpuhp_remove_state_nocalls(CPUHP_AP_ONLINE);
+	cpuhp_remove_state_nocalls(CPUHP_AP_ONLINE_IDLE);
 
 	unregister_pm_notifier(&pm_notifier_block);
 
@@ -1072,7 +1072,7 @@ static int rqbalance_cfl_start(void)
 	cpufreq_register_notifier(&frequency_limits_nb,
 		CPUFREQ_POLICY_NOTIFIER);
 	
-	rc = cpuhp_setup_state_nocalls(CPUHP_AP_ONLINE,
+	rc = cpuhp_setup_state_nocalls(CPUHP_AP_ONLINE_IDLE,
 		"rqbalance_cpuhp", cfl_hotplug_notify, NULL);
 	if (rc < 0)
 		goto end;
