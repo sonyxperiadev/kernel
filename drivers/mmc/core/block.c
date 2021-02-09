@@ -2948,6 +2948,9 @@ static void mmc_blk_remove_debugfs(struct mmc_card *card,
 
 #endif /* CONFIG_DEBUG_FS */
 
+#ifdef CONFIG_SONY_MMC_EXTENSION
+ #define MMC_SDCARD_AUTOSUSPEND_DELAY_MS 30000
+#endif
 static int mmc_blk_probe(struct mmc_card *card)
 {
 	struct mmc_blk_data *md, *part_md;
