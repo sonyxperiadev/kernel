@@ -385,6 +385,9 @@
 		"ADC3_IN", "ADC3_OUT";
 };
 
+&icnss {
+	qcom,vdd-cx-mx-config = <848000 848000>;
+};
 
 &rpm_bus {
 	rpm-regulator-ldoa18 {
