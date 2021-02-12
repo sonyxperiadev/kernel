@@ -56,6 +56,10 @@
 	};
 };
 
+&icnss {
+	qcom,vdd-cx-mx-config = <848000 848000>;
+};
+
 &soc {
 	somc_pinctrl: somc_pinctrl {
 		compatible = "somc-pinctrl";
