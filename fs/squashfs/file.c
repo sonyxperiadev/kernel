@@ -451,7 +451,7 @@ static int squashfs_readpage_fragment(struct page *page, int expected)
 	return res;
 }
 
-static int squashfs_readpage_sparse(struct page *page, int index, int file_end)
+static int squashfs_readpage_sparse(struct page *page, int expected)
 {
 	squashfs_copy_cache(page, NULL, expected, 0);
 	return 0;
@@ -484,11 +484,11 @@ static int squashfs_readpage(struct file *file, struct page *page)
 			goto error_out;
 
 		if (bsize == 0)
-			res = squashfs_readpage_sparse(page, index, file_end);
+			res = squashfs_readpage_sparse(page, expected);
 		else
-			res = squashfs_readpage_block(page, block, bsize);
+			res = squashfs_readpage_block(page, block, bsize, expected);
 	} else
-		res = squashfs_readpage_fragment(page);
+		res = squashfs_readpage_fragment(page, expected);
 
 	if (!res)
 		return 0;
