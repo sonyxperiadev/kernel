@@ -839,6 +839,15 @@ config REGULATOR_SKY81452
 	  This driver can also be built as a module. If so, the module
 	  will be called sky81452-regulator.
 
+config REGULATOR_SLG51000
+	tristate "Dialog Semiconductor SLG51000 regulator driver"
+	depends on I2C
+	help
+	  This driver provides support for the Dialog Semiconductor SLG51000
+	  CMIC with high PSRR, low noise multi-output LDOs, designed for high
+	  performance camera modules, advanced sensor systems, and other small
+	  multi-rail applications.
+
 config REGULATOR_STM32_VREFBUF
 	tristate "STMicroelectronics STM32 VREFBUF"
 	depends on ARCH_STM32 || COMPILE_TEST
