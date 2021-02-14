@@ -15,10 +15,6 @@
 &soc {
 };
 
-&sony_camera_module_4 {
-	status = "okay";
-};
-
 &somc_pinctrl {
 	/* If product common default setting is needed,
 	fill pinctrl-1 value in <product>_common.dtsi */
