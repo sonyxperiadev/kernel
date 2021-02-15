@@ -226,26 +226,32 @@
 		};
 	};
 
+	fpc_vana_vreg: fpc_vana_vreg {
+		compatible = "regulator-fixed";
+		regulator-name = "fpc_vana_fixed_reg";
+		regulator-min-microvolt = <3350000>;
+		regulator-max-microvolt = <3350000>;
+		startup-delay-us = <2000>;
+		enable-active-high;
+		gpio = <&pm8150l_gpios 8 0>;
+		vin-supply = <&pm8150a_bob>;
+	};
+
 	et6xx: et6xx {
-		status = "ok";
 		compatible = "egistec,et580";
 
-		egistec,gpio_irq = <&tlmm 23 0x0>;
+		et51x,gpio_irq = <&tlmm 23 0x0>;
+		et51x,no-low-voltage-probe;
+		et51x,vana-voltage = <3350000>;
+		vdd_ana-supply = <&fpc_vana_vreg>;
 
-		pinctrl-names = "et6xx_reset_reset",
-				"et6xx_reset_active",
-				"et6xx_ldo_low",
-				"et6xx_ldo_high",
-				"et6xx_irq_active";
-
+		pinctrl-names = "et51x_reset_reset",
+				"et51x_reset_active",
+				"et51x_irq_active";
 		pinctrl-0 = <&sm_gpio_74>;
 		pinctrl-1 = <&sm_gpio_74_output_high>;
-		pinctrl-2 = <&pm8150l_gpio_8>;
-		pinctrl-3 = <&pm8150l_gpio_8_output_high>;
-		pinctrl-4 = <&sm_gpio_23>;
-		/* Add Vreg-BoB control */
-		regulator-name = "et6xx_vcc_spi_BoB";
-		et6xx_vcc_spi_BoB-supply = <&pm8150a_bob>;
+		pinctrl-2 = <&sm_gpio_23>;
+		status = "ok";
 	};
 
 	rgbcir_vreg: rgbcir_vreg {
@@ -897,6 +903,9 @@
 &pm8150a_bob {
 	regulator-min-microvolt = <3350000>;
 	qcom,init-voltage = <3350000>;
+
+	/* For egis fp.. */
+	regulator-enable-ramp-delay = <10000>; /* 10mS */
 	status = "okay";
 };
 
