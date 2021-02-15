@@ -531,6 +531,10 @@
 	};
 };
 
+&cdc_dmic45_gpios {
+	status = "disabled";
+};
+
 &lpi_tlmm {
 	somc_cdc_dmic01_clk_active: somc_dmic01_clk_active {
 		mux {
