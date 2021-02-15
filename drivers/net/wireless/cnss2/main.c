@@ -1776,6 +1776,9 @@ static void *cnss_create_ramdump_device(struct cnss_plat_data *plat_priv)
 {
 	struct cnss_subsys_info *subsys_info = &plat_priv->subsys_info;
 
+	if (!IS_ENABLED(CONFIG_QCOM_MEMORY_DUMP_V2))
+		return &plat_priv->plat_dev->dev;
+
 	return create_ramdump_device(subsys_info->subsys_desc.name,
 				     subsys_info->subsys_desc.dev);
 }
@@ -1993,6 +1996,9 @@ static void cnss_unregister_ramdump_v2(struct cnss_plat_data *plat_priv)
 int cnss_register_ramdump(struct cnss_plat_data *plat_priv)
 {
 	int ret = 0;
+
+	if (!IS_ENABLED(CONFIG_QCOM_MEMORY_DUMP_V2))
+		return 0;
 
 	switch (plat_priv->device_id) {
 	case QCA6174_DEVICE_ID:
