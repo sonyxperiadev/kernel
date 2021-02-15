@@ -85,6 +85,7 @@ struct et51x_data {
 	struct pinctrl_state *pinctrl_state[ARRAY_SIZE(pctl_names)];
 	struct regulator *vdd_ana;
 
+	u32 vana_voltage;
 	int irq_gpio;
 
 	int irq;
@@ -154,7 +155,7 @@ static int vreg_setup(struct et51x_data *et51x, bool enable)
 			ET51X_REGULATOR_VDD_ANA);
 
 	if (enable) {
-		rc = et51x_vreg_set_voltage(dev, vreg, 3300000);
+		rc = et51x_vreg_set_voltage(dev, vreg, et51x->vana_voltage);
 	} else {
 		if (regulator_is_enabled(vreg)) {
 			regulator_disable(vreg);
@@ -522,6 +523,11 @@ static int et51x_probe(struct platform_device *pdev)
 	et51x->low_voltage_probe = !of_property_read_bool(dev->of_node,
 			"et51x,no-low-voltage-probe");
 
+	rc = of_property_read_u32(dev->of_node, "et51x,vana-voltage",
+				  &et51x->vana_voltage);
+	if (rc)
+		et51x->vana_voltage = 3300000;
+
 	dev_dbg(dev, "check_sensor_type: %d, low_voltage_probe: %d\n",
 			et51x->check_sensor_type, et51x->low_voltage_probe);
 
@@ -646,6 +652,7 @@ static int et51x_remove(struct platform_device *pdev)
 /* clang-format off */
 static struct of_device_id et51x_of_match[] = {
 	{ .compatible = "etspi,et510", },
+	{ .compatible = "egistec,et580", },
 	{}
 };
 /* clang-format on */
