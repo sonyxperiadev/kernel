@@ -104,6 +104,14 @@ struct et51x_awake_args {
 	unsigned int timeout;
 };
 
+
+#ifndef CONFIG_ARCH_SONY_NILE
+#define FP_HW_TYPE_EGISTEC	0
+static inline int fp_module_detect(void) { return FP_HW_TYPE_EGISTEC; }
+#else
+static inline int fp_module_detect(void) { return cei_fp_module_detect(); };
+#endif /* CONFIG_ARCH_SONY_NILE */
+
 struct et51x_data *to_et51x_data(struct file *fp)
 {
 	struct miscdevice *md = (struct miscdevice *)fp->private_data;
@@ -544,7 +552,7 @@ static int et51x_probe(struct platform_device *pdev)
 		goto exit_powerdown;
 
 	if (et51x->check_sensor_type) {
-		hw_type = cei_fp_module_detect();
+		hw_type = fp_module_detect();
 
 		if (hw_type != FP_HW_TYPE_EGISTEC) {
 			dev_info(dev,
