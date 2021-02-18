@@ -29,7 +29,6 @@
 		};
 	};
 
-	/delete-node/ cam_pmic0_cs;
 	cam2_vana_vreg: cam2_vana_vreg {
 		compatible = "regulator-fixed";
 		regulator-name = "cam2_vana_vreg";
