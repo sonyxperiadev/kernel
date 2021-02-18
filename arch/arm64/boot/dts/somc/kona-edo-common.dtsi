@@ -276,6 +276,7 @@
 		startup-delay-us = <0>;
 		enable-active-high;
 		gpio = <&pm8009_gpios 2 0>;
+		vin-supply = <&slg51000_0_ldo5>;
 	};
 
 };
