@@ -11,8 +11,45 @@
  */
 
 #include "kona-edo-pdx206_common.dtsi"
+#include "kona-edo-camera.dtsi"
 
 &soc {
+};
+
+&eeprom0 {
+	cam_vio-supply = <&pm8009_l7>;
+};
+
+&eeprom1 {
+	cam_vio-supply = <&pm8009_l7>;
+};
+
+&eeprom2 {
+	cam_vio-supply = <&pm8009_l7>;
+	cam_vana-supply = <&cam2_vana_vreg>;
+	cam_vdig-supply = <&pm8009_l2>;
+};
+
+&sensor0 {
+	cam_vio-supply = <&pm8009_l7>;
+};
+
+&sensor1 {
+	cam_vio-supply = <&pm8009_l7>;
+};
+
+&sensor2 {
+	cam_vio-supply = <&pm8009_l7>;
+	cam_vana-supply = <&cam2_vana_vreg>;
+	cam_vdig-supply = <&pm8009_l2>;
+};
+
+&sensor3 {
+	cam_vio-supply = <&pm8009_l7>;
+};
+
+&sensor4 {
+	status = "disabled";
 };
 
 #include "somc-edo-display.dtsi"
