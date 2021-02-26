@@ -766,7 +766,7 @@ static ssize_t mm_stat_show(struct device *dev,
 			zram->limit_pages << PAGE_SHIFT,
 			max_used << PAGE_SHIFT,
 			(u64)atomic64_read(&zram->stats.same_pages),
-			pool_stats.pages_compacted,
+			atomic_long_read(&pool_stats.pages_compacted),
 			zram_dedup_dup_size(zram),
 			zram_dedup_meta_size(zram));
 	up_read(&zram->init_lock);
