@@ -42,9 +42,6 @@
 		somc,mdss-dsi-touch-reset-sequence = <1 0>;
 		somc,pw-wait-before-panel-reset = <1>;
 		qcom,mdss-dsi-reset-sequence = <1 10>;
-		qcom,mdss-dsi-panel-mode-switch;
-		qcom,dynamic-mode-switch-enabled;
-		qcom,dynamic-mode-switch-type = "dynamic-resolution-switch-immediate";
 
 		somc,pw-wait-after-off-lp11 = <1>;
 		somc,pw-off-rst-b-seq = <0 0>;
@@ -61,17 +58,16 @@
 		qcom,mdss-dsi-display-timings {
 			timing@0 {
 				qcom,mdss-dsi-timing-default;
-				qcom,mdss-dsi-cmd-mode;
 				qcom,mdss-dsi-panel-width = <1096>;
 				qcom,mdss-dsi-panel-height = <2560>;
 				qcom,mdss-dsi-h-back-porch = <8>;
 				qcom,mdss-dsi-h-pulse-width = <8>;
-				qcom,mdss-dsi-h-front-porch = <40>;
+				qcom,mdss-dsi-h-front-porch = <200>;
 				qcom,mdss-dsi-v-back-porch = <8>;
 				qcom,mdss-dsi-v-pulse-width = <8>;
 				qcom,mdss-dsi-v-front-porch = <8>;
-				qcom,mdss-dsi-panel-framerate = <120>;
-				qcom,mdss-dsi-panel-clockrate = <1438000000>;
+				qcom,mdss-dsi-panel-framerate = <60>;
+				qcom,mdss-dsi-panel-clockrate = <959000000>;
 				qcom,mdss-dsi-panel-jitter = <0x5 0x1>;
 				qcom,mdss-dsi-h-sync-skew = <0>;
 				qcom,mdss-dsi-h-left-border = <0>;
@@ -111,9 +107,6 @@
 					39 01 00 00 00 00 02 53 20
 					39 01 00 00 00 00 03 F0 5A 5A
 					39 01 00 00 00 00 03 C5 2E 21
-					39 01 00 00 6E 00 03 F0 A5 A5
-					39 01 00 00 00 00 03 F0 5A 5A
-					39 01 00 00 00 00 02 60 10
 					39 01 00 00 6E 00 03 F0 A5 A5
 					];
 				qcom,mdss-dsi-post-panel-on-command = [
@@ -191,18 +184,16 @@
 				qcom,mdss-dsi-nolp-command-state = "dsi_lp_mode";
 			};
 			timing@1 {
-				somc,splash-dms-switch-to-this-timing;
-				qcom,mdss-dsi-cmd-mode;
 				qcom,mdss-dsi-panel-width = <1644>;
 				qcom,mdss-dsi-panel-height = <3840>;
 				qcom,mdss-dsi-h-back-porch = <8>;
 				qcom,mdss-dsi-h-pulse-width = <8>;
-				qcom,mdss-dsi-h-front-porch = <58>;
+				qcom,mdss-dsi-h-front-porch = <68>;
 				qcom,mdss-dsi-v-back-porch = <8>;
 				qcom,mdss-dsi-v-pulse-width = <8>;
 				qcom,mdss-dsi-v-front-porch = <8>;
 				qcom,mdss-dsi-panel-framerate = <60>;
-				qcom,mdss-dsi-panel-clockrate = <1438000000>;
+				qcom,mdss-dsi-panel-clockrate = <959000000>;
 				qcom,mdss-dsi-panel-jitter = <0x5 0x1>;
 				qcom,mdss-dsi-h-sync-skew = <0>;
 				qcom,mdss-dsi-h-left-border = <0>;
