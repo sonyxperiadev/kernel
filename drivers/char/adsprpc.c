@@ -248,6 +248,7 @@ struct fastrpc_smmu {
 	int faults;
 	int secure;
 	int coherent;
+	int sharedcb;
 };
 
 struct fastrpc_session_ctx {
@@ -379,6 +380,7 @@ struct fastrpc_file {
 	int pd;
 	char *spdname;
 	int file_close;
+	int sharedcb;
 	int dsp_proc_init;
 	struct fastrpc_apps *apps;
 	struct hlist_head perf;
@@ -2783,15 +2785,17 @@ static int fastrpc_internal_mmap(struct fastrpc_file *fl,
 static void fastrpc_context_list_dtor(struct fastrpc_file *fl);
 
 static int fastrpc_session_alloc_locked(struct fastrpc_channel_ctx *chan,
-			int secure, struct fastrpc_session_ctx **session)
+			int secure, int sharedcb, struct fastrpc_session_ctx **session)
 {
 	struct fastrpc_apps *me = &gfa;
 	int idx = 0, err = 0;
 
 	if (chan->sesscount) {
 		for (idx = 0; idx < chan->sesscount; ++idx) {
-			if (!chan->session[idx].used &&
-				chan->session[idx].smmu.secure == secure) {
+			if ((sharedcb && chan->session[idx].smmu.sharedcb) ||
+					(!chan->session[idx].used &&
+					chan->session[idx].smmu.secure
+					== secure && !sharedcb)) {
 				chan->session[idx].used = 1;
 				break;
 			}
@@ -2924,7 +2928,7 @@ static int fastrpc_session_alloc(struct fastrpc_channel_ctx *chan, int secure,
 
 	mutex_lock(&chan->smd_mutex);
 	if (!*session)
-		err = fastrpc_session_alloc_locked(chan, secure, session);
+		err = fastrpc_session_alloc_locked(chan, secure, 0, session);
 	mutex_unlock(&chan->smd_mutex);
 	return err;
 }
@@ -3401,7 +3405,7 @@ static int fastrpc_get_info(struct fastrpc_file *fl, uint32_t *info)
 		fl->ssrcount = fl->apps->channel[cid].ssrcount;
 		mutex_lock(&fl->apps->channel[cid].smd_mutex);
 		err = fastrpc_session_alloc_locked(&fl->apps->channel[cid],
-				0, &fl->sctx);
+				0, fl->sharedcb, &fl->sctx);
 		mutex_unlock(&fl->apps->channel[cid].smd_mutex);
 		if (err)
 			goto bail;
@@ -3440,6 +3444,9 @@ static int fastrpc_internal_control(struct fastrpc_file *fl,
 			fl->qos_request = 1;
 		} else
 			pm_qos_update_request(&fl->pm_qos_req, latency);
+		break;
+	case FASTRPC_CONTROL_SMMU:
+		fl->sharedcb = cp->smmu.sharedcb;
 		break;
 	case FASTRPC_CONTROL_KALLOC:
 		cp->kalloc.kalloc_support = 1;
@@ -3863,6 +3870,8 @@ static int fastrpc_cb_probe(struct device *dev)
 	sess->used = 0;
 	sess->smmu.coherent = of_property_read_bool(dev->of_node,
 						"dma-coherent");
+	sess->smmu.sharedcb = of_property_read_bool(dev->of_node,
+						"shared-cb");
 	sess->smmu.secure = of_property_read_bool(dev->of_node,
 						"qcom,secure-context-bank");
 
