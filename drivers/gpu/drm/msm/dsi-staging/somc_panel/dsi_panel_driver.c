@@ -101,7 +101,13 @@ static int dsi_panel_driver_touch_pinctrl_set_state(
 	struct panel_specific_pdata *spec_pdata = NULL;
 	struct pinctrl_state *pin_state;
 	int rc = -EFAULT;
-	int wait = 0;
+	int wait = 0, touchgpio1, touchgpio2;
+
+	/* Let's not waste cycles if the GPIO is not present! */
+	touchgpio1 = of_get_named_gpio(panel->panel_of_node, SDE_PINCTRL_STATE_TOUCH_ACTIVE, 0);
+	touchgpio2 = of_get_named_gpio(panel->panel_of_node, SDE_PINCTRL_STATE_TOUCH_SUSPEND, 0);
+		if ((touchgpio1 | touchgpio2) < 0)
+			return 0;
 
 	if (!panel) {
 		pr_err("%s: Invalid input data\n", __func__);
