@@ -53,9 +53,10 @@
 #define UETH__VERSION	"29-May-2008"
 
 /* Experiments show that both Linux and Windows hosts allow up to 16k
- * frame sizes. Set the max size to 15k+52 to prevent allocating 32k
+ * frame sizes. Set the max MTU size to 15k+52 to prevent allocating 32k
  * blocks and still have efficient handling. */
-#define GETHER_MAX_ETH_FRAME_LEN 15412
+#define GETHER_MAX_MTU_SIZE 15412
+#define GETHER_MAX_ETH_FRAME_LEN (GETHER_MAX_MTU_SIZE + ETH_HLEN)
 
 static struct workqueue_struct	*uether_wq;
 
@@ -1367,6 +1368,10 @@ struct eth_dev *gether_setup_name(struct usb_gadget *g,
 	/* set operation mode to eth by default */
 	set_bit(RMNET_MODE_LLP_ETH, &dev->flags);
 
+	/* MTU range: 14 - 15412 */
+	net->min_mtu = ETH_HLEN;
+	net->max_mtu = GETHER_MAX_MTU_SIZE;
+
 	dev->gadget = g;
 	SET_NETDEV_DEV(net, &g->dev);
 	SET_NETDEV_DEVTYPE(net, &gadget_type);
@@ -1430,6 +1435,10 @@ struct net_device *gether_setup_name_default(const char *netname)
 	set_bit(RMNET_MODE_LLP_ETH, &dev->flags);
 
 	SET_NETDEV_DEVTYPE(net, &gadget_type);
+
+	/* MTU range: 14 - 15412 */
+	net->min_mtu = ETH_HLEN;
+	net->max_mtu = GETHER_MAX_MTU_SIZE;
 
 	return net;
 }

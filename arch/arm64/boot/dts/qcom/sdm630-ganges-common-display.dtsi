@@ -12,45 +12,6 @@
 #include "dsi-panel-nt36672a_tianma_fhdplus_video.dtsi"
 #include "dsi-panel-nt36672a_truly_fhdplus_video.dtsi"
 
-&soc {
-	dsi_panel_pwr_supply_full_incell: dsi_panel_pwr_supply_full_incell {
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		qcom,panel-supply-entry@0 {
-			reg = <0>;
-			qcom,supply-name = "vddio";
-			qcom,supply-min-voltage = <1650000>;
-			qcom,supply-max-voltage = <1950000>;
-			qcom,supply-enable-load = <32000>;
-			qcom,supply-disable-load = <80>;
-			qcom,supply-post-on-sleep = <10>;
-		};
-
-		qcom,panel-supply-entry@1 {
-			reg = <1>;
-			qcom,supply-name = "lab";
-			qcom,supply-min-voltage = <5000000>;
-			qcom,supply-max-voltage = <6000000>;
-			qcom,supply-enable-load = <11000>;
-			qcom,supply-disable-load = <100>;
-			qcom,supply-post-on-sleep = <10>;
-			qcom,supply-post-off-sleep = <10>;
-		};
-
-		qcom,panel-supply-entry@2 {
-			reg = <2>;
-			qcom,supply-name = "ibb";
-			qcom,supply-min-voltage = <5000000>;
-			qcom,supply-max-voltage = <6000000>;
-			qcom,supply-enable-load = <6000>;
-			qcom,supply-disable-load = <100>;
-			qcom,supply-post-on-sleep = <10>;
-			qcom,supply-post-off-sleep = <10>;
-		};
-	};
-};
-
 &dsi_nt36672a_truly_fhdplus_video {
 	qcom,mdss-dsi-panel-timings-phy-v2 = [27 21 0A 0B 07 03 04 a0
 	27 21 0A 0B 07 03 04 a0
@@ -73,7 +34,6 @@
 	qcom,mdss-dsi-bl-min-level = <1>;
 	qcom,mdss-dsi-bl-max-level = <4095>;
 	qcom,mdss-brightness-max-level = <4095>;
-	qcom,panel-supply-entries = <&dsi_panel_pwr_supply_full_incell>;
 
 	qcom,esd-check-enabled;
 
