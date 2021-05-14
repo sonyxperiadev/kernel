@@ -2447,14 +2447,14 @@ int cnss_wlan_register_driver(struct cnss_wlan_driver *driver_ops)
 	struct cnss_cal_info *cal_info;
 
 	if (!plat_priv) {
-		cnss_pr_err("plat_priv is NULL\n");
-		return -ENODEV;
+		cnss_pr_info("plat_priv is not ready for register driver\n");
+		return -EAGAIN;
 	}
 
 	pci_priv = plat_priv->bus_priv;
 	if (!pci_priv) {
-		cnss_pr_err("pci_priv is NULL\n");
-		return -ENODEV;
+		cnss_pr_info("pci_priv is not ready for register driver\n");
+		return -EAGAIN;
 	}
 
 	if (pci_priv->driver_ops) {
