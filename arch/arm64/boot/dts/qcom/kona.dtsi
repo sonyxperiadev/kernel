@@ -632,7 +632,7 @@
 			console-size = <0x40000>;
 			ftrace-size = <0x0>;
 			msg-size = <0x20000 0x20000>;
-			cc-size = <0x0>;
+			ecc-size = <16>;
 		};
 
 		cmdline_region: cmdline_region@ffd00000 {
