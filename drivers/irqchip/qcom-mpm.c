@@ -26,7 +26,6 @@
 #include <linux/cpu_pm.h>
 #include <asm/arch_timer.h>
 #include <soc/qcom/rpm-notifier.h>
-#include <soc/qcom/lpm_levels.h>
 #include <soc/qcom/mpm.h>
 #define CREATE_TRACE_POINTS
 #include "trace/events/mpm.h"
@@ -559,6 +558,10 @@ static const struct of_device_id mpm_gic_chip_data_table[] = {
 	{
 		.compatible = "qcom,mpm-gic-holi",
 		.data = mpm_holi_gic_chip_data,
+	},
+	{
+		.compatible = "qcom,mpm-gic-blair",
+		.data = mpm_blair_gic_chip_data,
 	},
 	{}
 };
