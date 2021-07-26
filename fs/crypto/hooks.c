@@ -85,8 +85,8 @@ int __fscrypt_prepare_rename(struct inode *old_dir, struct dentry *old_dentry,
 		return err;
 
 	/* ... in case we looked up ciphertext name(s) before key was added */
-	if ((old_dentry->d_flags | new_dentry->d_flags) &
-	    DCACHE_ENCRYPTED_NAME)
+		if ((old_dentry->d_flags | new_dentry->d_flags) &
+		    DCACHE_ENCRYPTED_NAME)
 		return -ENOKEY;
 
 	if (old_dir != new_dir) {
