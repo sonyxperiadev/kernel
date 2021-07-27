@@ -240,6 +240,48 @@ config MACH_SONY_PDX215
 	  If you enable this config,
 	  please use SONY Mobile device tree.
 
+config ARCH_LITO
+	bool "Enable Support for Qualcomm Technologies, Inc. LITO"
+	depends on ARCH_QCOM
+	select COMMON_CLK_QCOM
+	help
+	  This enables support for the LITO chipset. If you do not
+	  wish to build a kernel that runs on this chipset, say 'N' here.
+
+config ARCH_SONY_LENA
+	bool "Sony Mobile Lena platform"
+	depends on ARCH_LITO
+	help
+	  Support for the SONY Mobile Lena platform
+	  which is based on QCOM LITO chipset.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
+config MACH_SONY_PDX213
+	bool "Sony Mobile PDX213"
+	depends on ARCH_SONY_LENA
+	help
+	  Support for the SONY Mobile PDX213 device
+	  which is based on SONY Lena platform.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
+config ARCH_LAGOON
+	bool "Enable Support for Qualcomm Technologies, Inc. LAGOON"
+	depends on ARCH_QCOM
+	select COMMON_CLK_QCOM
+	help
+	  This enables support for the LAGOON chipset. If you do not
+	  wish to build a kernel that runs on this chipset, say 'N' here.
+
+config ARCH_LAHAINA
+	bool "Enable Support for Qualcomm Technologies, Inc. LAHAINA"
+	depends on ARCH_QCOM
+	help
+	  This enables support for the Qualcomm Technologies, Inc.'s
+	  LAHAINA chipset. If you do not wish to build a kernel that
+	  runs on this chipset or if you are unsure, say 'N' here.
+
 config ARCH_QTI_VM
 	bool "Enable Virtual Machines Support for Qualcomm Technologies, Inc."
 	depends on ARCH_QCOM
