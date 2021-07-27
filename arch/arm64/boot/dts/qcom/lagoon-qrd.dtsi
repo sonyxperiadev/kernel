@@ -46,7 +46,6 @@
 
 	qrd_batterydata: qcom,battery-data {
 		qcom,batt-id-range-pct = <15>;
-		#include "qg-batterydata-4790461_Huaqin_PDX213_ATL_4500mAH.dtsi"
 	};
 
 	bu520x1nvx {
