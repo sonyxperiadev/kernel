@@ -37,3 +37,5 @@ obj-$(CONFIG_PINCTRL_MONACO) += pinctrl-monaco.o
 obj-$(CONFIG_PINCTRL_SLPI) += pinctrl-slpi.o
 obj-$(CONFIG_PINCTRL_DIREWOLF) += pinctrl-direwolf.o
 obj-$(CONFIG_PINCTRL_BLAIR) += pinctrl-blair.o
+obj-$(CONFIG_PINCTRL_KONA) += pinctrl-kona.o
+obj-$(CONFIG_PINCTRL_LAGOON) += pinctrl-lagoon.o

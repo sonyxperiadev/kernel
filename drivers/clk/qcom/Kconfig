@@ -422,6 +422,134 @@ config MSM_CLK_AOP_QMP
 	  Say Y to support the clocks managed by AOP on platforms such as
 	  sdm845.
 
+config MSM_GCC_KONA
+	tristate "KONA Global Clock Controller"
+	depends on COMMON_CLK_QCOM
+	select QCOM_GDSC
+	help
+	  Support for the global clock controller on Qualcomm Technologies, Inc
+	  KONA devices.
+	  Say Y if you want to use peripheral devices such as UART, SPI, I2C,
+	  USB, UFS, SD/eMMC, PCIe, etc.
+
+config MSM_VIDEOCC_KONA
+	tristate "KONA Video Clock Controller"
+	depends on COMMON_CLK_QCOM
+	help
+	  Support for the video clock controller on Qualcomm Technologies, Inc.
+	  KONA devices.
+	  Say Y if you want to support video devices and functionality such as
+	  video encode/decode.
+
+config MSM_DISPCC_KONA
+	tristate "KONA Display Clock Controller"
+	select SDM_GCC_KONA
+	depends on COMMON_CLK_QCOM
+	help
+	  Support for the display clock controller on Qualcomm Technologies, Inc
+	  Kona devices.
+	  Say Y if you want to support display devices and functionality such as
+	  splash screen.
+
+config MSM_CAMCC_KONA
+	tristate "KONA Camera Clock Controller"
+	depends on COMMON_CLK_QCOM
+	help
+	  Support for the camera clock controller on Qualcomm Technologies, Inc.
+	  KONA devices.
+	  Say Y if you want to support camera devices and functionality such as
+	  capturing pictures.
+
+config MSM_GPUCC_KONA
+	tristate "KONA Graphics Clock Controller"
+	depends on COMMON_CLK_QCOM
+	help
+	  Support for the graphics clock controller on Qualcomm Technologies, Inc
+	  KONA devices.
+	  Say Y if you want to support graphics controller devices.
+
+config MSM_DEBUGCC_KONA
+	tristate "KONA Debug Clock Controller"
+	depends on COMMON_CLK_QCOM
+	help
+	  Support for the debug clock controller on Qualcomm Technologies, Inc
+	  KONA devices.
+	  Say Y if you want to support the clock measurement functionality.
+
+config MSM_NPUCC_KONA
+	tristate "KONA NPU Clock Controller"
+	depends on COMMON_CLK_QCOM
+	select MSM_GCC_KONA
+	help
+	  Support for the NPU clock controller on Qualcomm Technologies, Inc.
+	  KONA devices.
+	  Say Y if you want to enable use of the Network Processing Unit in
+	  order to speed up certain types of calculations.
+
+config SDM_CAMCC_LAGOON
+	tristate "LAGOON Camera Clock Controller"
+	select SDM_GCC_LAGOON
+	help
+	  Support for the camera clock controller on Qualcomm Technologies, Inc.
+	  LAGOON devices.
+	  Say Y if you want to support camera devices and functionality such as
+	  capturing pictures.
+
+config SDM_DEBUGCC_LAGOON
+	tristate "LAGOON Debug Clock Controller"
+	select SDM_GCC_LAGOON
+	help
+	  Support for the debug clock controller on Qualcomm Technologies, Inc
+	  LAGOON devices.
+	  Say Y if you want to support the clock measurement functionality
+	  of the clocks.
+
+config SDM_DISPCC_LAGOON
+	tristate "LAGOON Display Clock Controller"
+	select SDM_GCC_LAGOON
+	help
+	  Support for the display clock controller on Qualcomm Technologies, Inc.
+	  LAGOON devices.
+	  Say Y if you want to support display devices and functionality such as
+	  splash screen.
+
+config SDM_GCC_LAGOON
+	tristate "LAGOON Global Clock Controller"
+	depends on COMMON_CLK_QCOM
+	select QCOM_GDSC
+	help
+	  Support for the global clock controller on Qualcomm Technologies, Inc
+	  LAGOON devices.
+	  Say Y if you want to use peripheral devices such as UART, SPI, I2C,
+	  USB, UFS, SD/eMMC, etc.
+
+config SDM_GPUCC_LAGOON
+	tristate "LAGOON Graphics Clock Controller"
+	select SDM_GCC_LAGOON
+	help
+	 Support for the graphics clock controller on Qualcomm Technologies, Inc.
+	 LAGOON devices.
+	 Say Y if you want to support graphics controller devices
+	 and it's functionalities.
+
+config SDM_NPUCC_LAGOON
+	tristate "LAGOON NPU Clock Controller"
+	select SDM_GCC_LAGOON
+	help
+	  Support for the NPU clock controller on Qualcomm Technologies, Inc.
+	  LAGOON devices.
+	  Say Y if you want to enable use of the Network Processing Unit in
+	  order to speed up certain types of calculations.
+
+config SDM_VIDEOCC_LAGOON
+	tristate "LAGOON Video Clock Controller"
+	select SDM_GCC_LAGOON
+	help
+	  Support for the video clock controller on Qualcomm Technologies, Inc.
+	  LAGOON devices.
+	  Say Y if you want to support video devices and functionality such as
+	  video encode/decode.
+
 config MSM_GCC_LAHAINA
 	tristate "LAHAINA Global Clock Controller"
 	depends on COMMON_CLK_QCOM
