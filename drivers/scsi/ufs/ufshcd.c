@@ -36,6 +36,11 @@
  * The Linux Foundation chooses to take subject only to the GPLv2
  * license terms, and distributes only under these terms.
  */
+/*
+ * NOTE: This file has been modified by Sony Corporation.
+ * Modifications are Copyright 2015 Sony Corporation,
+ * and licensed under the license of the file.
+ */
 
 #include <linux/async.h>
 #include <linux/devfreq.h>
@@ -7223,6 +7228,8 @@ static int ufshcd_scsi_add_wlus(struct ufs_hba *hba)
 	int ret = 0;
 	struct scsi_device *sdev_rpmb;
 	struct scsi_device *sdev_boot;
+	struct scsi_device *sdev_ufs;
+	struct ufs_dev_info *dev_info = &hba->dev_info;
 
 	hba->sdev_ufs_device = __scsi_add_device(hba->host, 0, 0,
 		ufshcd_upiu_wlun_to_scsi_wlun(UFS_UPIU_UFS_DEVICE_WLUN), NULL);
@@ -7231,6 +7238,12 @@ static int ufshcd_scsi_add_wlus(struct ufs_hba *hba)
 		hba->sdev_ufs_device = NULL;
 		goto out;
 	}
+
+	sdev_ufs = hba->sdev_ufs_device;
+	dev_info(hba->dev, "%s : vid=%04x, model=%s, spec ver=%04x, "
+		"fw ver=%.4s\n",__func__, hba->dev_info.wmanufacturerid,
+		dev_info->model, hba->dev_info.wspecversion, sdev_ufs->rev);
+
 	ufshcd_blk_pm_runtime_init(hba->sdev_ufs_device);
 	scsi_device_put(hba->sdev_ufs_device);
 
