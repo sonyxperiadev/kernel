@@ -1,0 +1,229 @@
+#include "lahaina-sde-display-common.dtsi"
+
+&tlmm {
+	display_panel_avdd_default: display_panel_avdd_default {
+		mux {
+			pins = "gpio12";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio12";
+			drive-strength = <8>;
+			bias-disable = <0>;
+			output-high;
+		};
+	};
+};
+
+&soc {
+	display_panel_avdd: display_gpio_regulator@1 {
+		compatible = "qti-regulator-fixed";
+		regulator-name = "display_panel_avdd";
+		regulator-min-microvolt = <5500000>;
+		regulator-max-microvolt = <5500000>;
+		regulator-enable-ramp-delay = <233>;
+		gpio = <&tlmm 12 0>;
+		enable-active-high;
+		regulator-boot-on;
+		proxy-supply = <&display_panel_avdd>;
+		qcom,proxy-consumer-enable;
+		pinctrl-names = "default";
+		pinctrl-0 = <&display_panel_avdd_default>;
+	};
+
+	sde_wb: qcom,wb-display@0 {
+		compatible = "qcom,wb-display";
+		cell-index = <0>;
+		label = "wb_display";
+	};
+};
+
+&sde_dsi {
+	clocks = <&mdss_dsi_phy0 BYTECLK_MUX_0_CLK>,
+			 <&mdss_dsi_phy0 PCLK_MUX_0_CLK>,
+			 <&mdss_dsi_phy0 CPHY_BYTECLK_SRC_0_CLK>,
+			 <&mdss_dsi_phy0 CPHY_PCLK_SRC_0_CLK>,
+			 <&mdss_dsi_phy0 BYTECLK_SRC_0_CLK>,
+			 <&mdss_dsi_phy0 PCLK_SRC_0_CLK>,
+			 <&mdss_dsi_phy0 SHADOW_BYTECLK_SRC_0_CLK>,
+			 <&mdss_dsi_phy0 SHADOW_PCLK_SRC_0_CLK>,
+			 <&mdss_dsi_phy0 SHADOW_CPHY_BYTECLK_SRC_0_CLK>,
+			 <&mdss_dsi_phy0 SHADOW_CPHY_PCLK_SRC_0_CLK>,
+			 <&mdss_dsi_phy1 BYTECLK_MUX_1_CLK>,
+			 <&mdss_dsi_phy1 PCLK_MUX_1_CLK>,
+			 <&mdss_dsi_phy1 CPHY_BYTECLK_SRC_1_CLK>,
+			 <&mdss_dsi_phy1 CPHY_PCLK_SRC_1_CLK>,
+			 <&mdss_dsi_phy1 BYTECLK_SRC_1_CLK>,
+			 <&mdss_dsi_phy1 PCLK_SRC_1_CLK>,
+			 <&mdss_dsi_phy1 SHADOW_BYTECLK_SRC_1_CLK>,
+			 <&mdss_dsi_phy1 SHADOW_PCLK_SRC_1_CLK>,
+			 <&mdss_dsi_phy1 SHADOW_CPHY_BYTECLK_SRC_1_CLK>,
+			 <&mdss_dsi_phy1 SHADOW_CPHY_PCLK_SRC_1_CLK>;
+	clock-names = "mux_byte_clk0", "mux_pixel_clk0",
+			"cphy_byte_clk0", "cphy_pixel_clk0",
+			"src_byte_clk0", "src_pixel_clk0",
+			"shadow_byte_clk0", "shadow_pixel_clk0",
+			"shadow_cphybyte_clk0", "shadow_cphypixel_clk0",
+			"mux_byte_clk1", "mux_pixel_clk1",
+			"cphy_byte_clk1", "cphy_pixel_clk1",
+			"src_byte_clk1", "src_pixel_clk1",
+			"shadow_byte_clk1", "shadow_pixel_clk1",
+			"shadow_cphybyte_clk1", "shadow_cphypixel_clk1";
+
+	pinctrl-names = "panel_active", "panel_suspend";
+	pinctrl-0 = <&sde_dsi_active &sde_te_active>;
+	pinctrl-1 = <&sde_dsi_suspend &sde_te_suspend>;
+
+	qcom,platform-te-gpio = <&tlmm 82 0>;
+	qcom,panel-te-source = <0>;
+
+	vddio-supply = <&L12C>;
+	vdd-supply = <&L13C>;
+	avdd-supply = <&display_panel_avdd>;
+	lab-supply = <&ab_vreg>;
+	ibb-supply = <&ibb_vreg>;
+};
+
+&sde_dsi1 {
+	clocks = <&mdss_dsi_phy0 BYTECLK_MUX_0_CLK>,
+		 <&mdss_dsi_phy0 PCLK_MUX_0_CLK>,
+		 <&mdss_dsi_phy0 CPHY_BYTECLK_SRC_0_CLK>,
+		 <&mdss_dsi_phy0 CPHY_PCLK_SRC_0_CLK>,
+		 <&mdss_dsi_phy1 BYTECLK_MUX_1_CLK>,
+		 <&mdss_dsi_phy1 PCLK_MUX_1_CLK>,
+		 <&mdss_dsi_phy1 CPHY_BYTECLK_SRC_1_CLK>,
+		 <&mdss_dsi_phy1 CPHY_PCLK_SRC_1_CLK>;
+	clock-names = "mux_byte_clk0", "mux_pixel_clk0",
+			"cphy_byte_clk0", "cphy_pixel_clk0",
+			"mux_byte_clk1", "mux_pixel_clk1",
+			"cphy_byte_clk1", "cphy_pixel_clk1";
+
+	pinctrl-names = "panel_active", "panel_suspend";
+	pinctrl-0 = <&sde_dsi1_active &sde_te1_active>;
+	pinctrl-1 = <&sde_dsi1_suspend &sde_te1_suspend>;
+
+	qcom,platform-te-gpio = <&tlmm 83 0>;
+	qcom,panel-te-source = <1>;
+
+	vddio-supply = <&L12C>;
+	vdd-supply = <&L13C>;
+	avdd-supply = <&display_panel_avdd>;
+};
+
+&mdss_mdp {
+	connectors = <&smmu_sde_unsec &smmu_sde_sec &sde_dp &sde_wb &sde_dsi
+		&sde_dsi1 &sde_rscc>;
+};
+
+&dsi_sw43404_amoled_cmd {
+	qcom,ulps-enabled;
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,partial-update-enabled = "single_roi";
+			qcom,panel-roi-alignment = <720 180 180 180 1440 180>;
+		};
+	};
+};
+
+&dsi_r66451_amoled_cmd {
+	qcom,ulps-enabled;
+};
+
+&dsi_r66451_amoled_144hz_cmd {
+	qcom,ulps-enabled;
+};
+
+&dsi_sharp_4k_dsc_cmd {
+	qcom,ulps-enabled;
+};
+
+&dsi_sharp_1080_cmd {
+	qcom,ulps-enabled;
+};
+
+&dsi_sharp_qsync_wqhd_cmd {
+	qcom,ulps-enabled;
+	qcom,mdss-dsi-display-timings {
+		timing@0 { /* WQHD 60FPS CMD */
+			qcom,partial-update-enabled = "single_roi";
+			qcom,panel-roi-alignment = <720 8 8 8 1440 8>;
+		};
+		timing@2 { /* FHD 60FPS CMD */
+			qcom,partial-update-enabled = "single_roi";
+			qcom,panel-roi-alignment = <540 8 8 8 1080 8>;
+		};
+		timing@3 { /* WQHD 90FPS CMD */
+			qcom,partial-update-enabled = "single_roi";
+			qcom,panel-roi-alignment = <720 8 8 8 1440 8>;
+		};
+		timing@4 { /* WQHD 120FPS CMD */
+			qcom,partial-update-enabled = "single_roi";
+			qcom,panel-roi-alignment = <720 8 8 8 1440 8>;
+		};
+		timing@6 { /* FHD 120FPS CMD */
+			qcom,partial-update-enabled = "single_roi";
+			qcom,panel-roi-alignment = <540 8 8 8 1080 8>;
+		};
+		timing@7 { /* FHD 90FPS CMD */
+			qcom,partial-update-enabled = "single_roi";
+			qcom,panel-roi-alignment = <540 8 8 8 1080 8>;
+		};
+	};
+};
+
+&dsi_dual_nt35597_truly_cmd {
+	qcom,ulps-enabled;
+};
+
+&dsi_nt35695b_truly_fhd_cmd {
+	qcom,ulps-enabled;
+};
+
+&dsi_sim_cmd {
+	qcom,ulps-enabled;
+	qcom,mdss-dsi-display-timings {
+		timing@0 { /* WQHD 60FPS cmd mode*/
+			qcom,panel-roi-alignment = <720 40 720 40 720 40>;
+			qcom,partial-update-enabled = "single_roi";
+		};
+		timing@2 { /* WQHD 60FPS cmd mode*/
+			qcom,panel-roi-alignment = <720 40 720 40 720 40>;
+			qcom,partial-update-enabled = "single_roi";
+		};
+		timing@3 { /* FHD 60FPS cmd mode*/
+			qcom,panel-roi-alignment = <540 40 540 40 540 40>;
+			qcom,partial-update-enabled = "single_roi";
+		};
+		timing@4 { /* HD 60FPS cmd mode*/
+			qcom,panel-roi-alignment = <360 40 360 40 360 40>;
+			qcom,partial-update-enabled = "single_roi";
+		};
+	};
+};
+
+&dsi_sim_dsc_375_cmd {
+	qcom,ulps-enabled;
+};
+
+&dsi_sim_dsc_10b_cmd {
+	qcom,ulps-enabled;
+};
+
+&dsi_dual_sim_cmd {
+	qcom,ulps-enabled;
+};
+
+&dsi_dual_sim_dsc_375_cmd {
+	qcom,ulps-enabled;
+};
+
+&dsi_sim_sec_hd_cmd {
+	qcom,ulps-enabled;
+	qcom,mdss-dsi-display-timings {
+		timing@0 {
+			qcom,panel-roi-alignment = <720 40 720 40 720 40>;
+			qcom,partial-update-enabled = "single_roi";
+		};
+	};
+};

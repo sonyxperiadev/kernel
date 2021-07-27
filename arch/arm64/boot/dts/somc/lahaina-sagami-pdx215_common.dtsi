@@ -1,0 +1,219 @@
+#include "lahaina-sagami-common.dtsi"
+
+&soc {
+};
+
+&somc_pinctrl {
+	/* If product common default setting is needed,
+	fill pinctrl-1 value in <product>_common.dtsi */
+	pinctrl-1 = <&sm_gpio_7 &sm_gpio_104 &sm_gpio_158 &sm_gpio_162 &sm_gpio_163 &sm_gpio_164>;
+};
+
+&somc_pinctrl_pmic {
+	/* If product common PMIC default setting is needed,
+	fill pinctrl-1 value in <product>.dtsi */
+	pinctrl-1 = <&pm8350b_gpio_1 &pm8350b_gpio_6>;
+};
+
+/* GPIO_1: CAM_PWR_A_CS */
+&pm8350b_gpio_1 {
+	pins = "gpio1";
+	function = "normal";
+	/delete-property/ bias-high-impedance;
+	output-low;
+	qcom,drive-strength = <PMIC_GPIO_STRENGTH_LOW>;
+	drive-push-pull;
+	power-source = <1>;
+};
+
+/* GPIO_6: CAM_PWR_LD_EN */
+&pm8350b_gpio_6 {
+	pins = "gpio6";
+	function = "normal";
+	/delete-property/ bias-high-impedance;
+	output-low;
+	qcom,drive-strength = <PMIC_GPIO_STRENGTH_LOW>;
+	drive-push-pull;
+	power-source = <0>;
+};
+
+/* GPIO_4: WLC_TXPWR_EN */
+/* Don't set here */
+
+/* GPIO_4: WLC_I2C_SDA */
+/* Don't set here */
+
+/* GPIO_5: WLC_I2C_SCL */
+/* Don't set here */
+
+/* GPIO_7:WLC_INT_N  */
+&sm_gpio_7 {
+	mux {
+		pins = "gpio7";
+		function = "gpio";
+	};
+
+	config {
+		pins = "gpio7";
+		drive-strength = <2>;
+		/delete-property/ bias-pull-down;
+		bias-pull-up;
+		input-enable;
+	};
+};
+
+/* GPIO_104 : CAM_MCLK4 */
+&sm_gpio_104 {
+	mux {
+		pins = "gpio104";
+		function = "cam_mclk";
+	};
+
+	config {
+		pins = "gpio104";
+		drive-strength = <2>;
+		/delete-property/ bias-pull-down;
+		bias-disable;
+		/delete-property/ input-enable;
+	};
+};
+
+/* GPIO_158 : TOF_RST_N */
+&sm_gpio_158 {
+	mux {
+		pins = "gpio158";
+		function = "gpio";
+	};
+
+	config {
+		pins = "gpio158";
+		drive-strength = <2>;
+		/delete-property/ bias-pull-down;
+		bias-disable;
+		/delete-property/ input-enable;
+		output-low;
+	};
+};
+
+/* GPIO_162 : QLINK1_REQ(Follow QC) */
+&sm_gpio_162 {
+	mux {
+		pins = "gpio162";
+		/delete-property/ function;
+	};
+
+	config {
+		pins = "gpio162";
+		/delete-property/ drive-strength;
+		/delete-property/ bias-pull-down;
+		/delete-property/ input-enable;
+	};
+};
+
+/* GPIO_163 : QLINK1_EN(Follow QC) */
+&sm_gpio_163 {
+	mux {
+		pins = "gpio163";
+		/delete-property/ function;
+	};
+
+	config {
+		pins = "gpio163";
+		/delete-property/ drive-strength;
+		/delete-property/ bias-pull-down;
+		/delete-property/ input-enable;
+	};
+};
+
+/* GPIO_164 : QLINK1_WMSS_RESET_N(Follow QC) */
+&sm_gpio_164 {
+	mux {
+		pins = "gpio164";
+		/delete-property/ function;
+	};
+
+	config {
+		pins = "gpio164";
+		/delete-property/ drive-strength;
+		/delete-property/ bias-pull-down;
+		/delete-property/ input-enable;
+	};
+};
+
+&pm8350c_rgb {
+	red {
+		somc,color_variation_max_num = <3>;
+		somc,max_current = <
+			109 15 25
+			110 15 25
+			111 15 25>;
+	};
+	green {
+		somc,color_variation_max_num = <3>;
+		somc,max_current = <
+			109 6 27
+			110 6 27
+			111 6 27>;
+	};
+	blue {
+		somc,color_variation_max_num = <3>;
+		somc,max_current = <
+			109 30 18
+			110 30 18
+			111 30 18>;
+	};
+};
+
+&pm8350c_pwm_1 {
+	qcom,lut-patterns = <10 0 0 0 0 0 0 0 0 0 0
+			      0 0 0 0 0 0 0 0 0 0 0
+			      0 0 0 0 0 0 0 0 7 0 0
+			      0 0 0 0 0 0 0 0 0 0 0
+			      0 0 0 0 0 0 0 0 0 0 0
+			      0 0 0 0 0>;
+	lpg@1 {
+		qcom,ramp-step-ms = <200>;
+		qcom,ramp-low-index = <0>;
+		qcom,ramp-high-index = <29>;
+	};
+
+	lpg@2 {
+		qcom,ramp-step-ms = <200>;
+		qcom,ramp-low-index = <0>;
+		qcom,ramp-high-index = <29>;
+	};
+
+	lpg@3 {
+		qcom,ramp-step-ms = <200>;
+		qcom,ramp-low-index = <30>;
+		qcom,ramp-high-index = <59>;
+	};
+};
+
+&cam_pmic0_cs {
+	status = "ok";
+};
+
+&dialog_pmic_1 {
+	status = "ok";
+};
+
+&sony_camera_module_4 {
+	status = "ok";
+};
+
+&cs40l25a {
+	cirrus,f0-default = <1736704>;
+	cirrus,f0-min = <1572864>;
+	cirrus,f0-max = <1966080>;
+	cirrus,redc-default = <290923>;
+	cirrus,redc-min = <261831>;
+	cirrus,redc-max = <320015>;
+};
+
+#include "somc-sagami-display.dtsi"
+#include "somc-sagami-display-pdx215.dtsi"
+#include "charger-sagami-common.dtsi"
+#include "charger-sagami-pdx215.dtsi"
+#include "sec_touchscreen_pdx215.dtsi"
+#include "usb-dp-sagami-pdx215.dtsi"

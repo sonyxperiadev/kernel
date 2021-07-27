@@ -195,6 +195,24 @@ config ARCH_LAHAINA
 	  LAHAINA chipset. If you do not wish to build a kernel that
 	  runs on this chipset or if you are unsure, say 'N' here.
 
+config ARCH_SONY_SAGAMI
+	bool "Sony Mobile Sagami platform"
+	depends on ARCH_LAHAINA
+	help
+	  Support for the SONY Mobile Sagami platform
+	  which is based on QCOM LAHAINA chipset.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
+config MACH_SONY_PDX215
+	bool "Sony Mobile PDX-215"
+	depends on ARCH_SONY_SAGAMI
+	help
+	  Support for the SONY Mobile PDX-215 board
+	  which is based on SONY Sagami platform.
+	  If you enable this config,
+	  please use SONY Mobile device tree.
+
 config ARCH_QTI_VM
 	bool "Enable Virtual Machines Support for Qualcomm Technologies, Inc."
 	depends on ARCH_QCOM

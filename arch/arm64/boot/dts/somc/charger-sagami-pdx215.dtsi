@@ -1,0 +1,28 @@
+&somc_battchg_ext {
+	somc,bcext-product-code = <2>;
+
+	somc,thermal-fcc-ma = <
+		4450 4050 3650 3250 2850 2500 2150
+		1800 1450 1100 750 400 50 0 0>;
+	somc,thermal-usb-pd-icl-ma = <
+		3000 2750 2500 2250 2000 1750 1500
+		1250 1000 750 500 250 100 0 0>;
+	somc,thermal-usb-pd-voltage-mv = <
+		9000 9000 9000 9000 9000 9000 9000
+		9000 9000 9000 9000 9000 9000 9000 9000>;
+	somc,thermal-usb-icl-ma = <
+		3000 2750 2500 2250 2000 1750 1500
+		1250 1000 750 500 250 100 0 0>;
+	somc,thermal-wls-epp-icl-ma = <
+		1250 1200 1100 1000 900 800 700
+		600 500 400 300 200 100 0 0>;
+	somc,thermal-wls-epp-voltage-mv = <
+		12000 12000 12000 12000 12000 12000 12000
+		12000 12000 12000 5000 5000 5000 5000 5000>;
+	somc,thermal-wls-bpp-icl-ma = <
+		1000 1000 1000 1000 900 800 700
+		600 500 400 300 200 100 0 0>;
+	somc,thermal-charging-indication = <0 0 0 0 0 0 0 0 0 0 0 0 0 1 2>;
+
+	somc,wls-irq-gpio = <&tlmm 7 0>;
+};
