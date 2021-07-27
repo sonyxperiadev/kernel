@@ -169,7 +169,7 @@
 	qcom,dsi-default-panel = <&dsi_pdx213_amoled_cmd>;
 };
 
-#include "lito-fingerprint.dtsi"
+#include "lagoon-fingerprint.dtsi"
 
 &pm7250b_charger {
 	status = "ok";
