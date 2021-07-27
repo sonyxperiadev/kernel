@@ -1,18 +1,4 @@
-#include "dsi-panel-rm69299-visionox-fhd-plus-video.dtsi"
-#include "dsi-panel-rm69299-visionox-fhd-plus-cmd.dtsi"
-#include "dsi-panel-r66451-dsc-fhd-plus-60hz-cmd.dtsi"
-#include "dsi-panel-r66451-dsc-fhd-plus-90hz-cmd.dtsi"
-#include "dsi-panel-r66451-dsc-fhd-plus-120hz-cmd.dtsi"
-#include "dsi-panel-r66451-dsc-fhd-plus-60hz-video.dtsi"
-#include "dsi-panel-r66451-dsc-fhd-plus-90hz-video.dtsi"
-#include "dsi-panel-r66451-dsc-fhd-plus-120hz-video.dtsi"
-#include "dsi-panel-sharp-qsync-fhd-video.dtsi"
-#include "dsi-panel-sharp-qsync-fhd-cmd.dtsi"
-#include "dsi-panel-sim-cmd.dtsi"
-#include "dsi-panel-sim-video.dtsi"
 #include "dsi-panel-pdx213-amoled-fhd-cmd.dtsi"
-#include "dsi-panel-r66451-dsc-fhd-plus-144hz-cmd.dtsi"
-
 #include <dt-bindings/clock/mdss-10nm-pll-clk.h>
 
 &pm6150l_gpios {
