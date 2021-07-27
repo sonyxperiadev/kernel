@@ -154,65 +154,6 @@
 	status = "ok";
 };
 
-&dsi_r66451_amoled_60hz_video {
-	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
-	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
-	qcom,mdss-dsi-bl-min-level = <1>;
-	qcom,mdss-dsi-bl-max-level = <255>;
-	qcom,mdss-dsi-bl-max-level = <4095>;
-	qcom,platform-reset-gpio = <&pm6150l_gpios 9 0>;
-};
-
-&dsi_r66451_amoled_90hz_video {
-	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
-	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
-	qcom,mdss-dsi-bl-min-level = <1>;
-	qcom,mdss-dsi-bl-max-level = <255>;
-	qcom,mdss-dsi-bl-max-level = <4095>;
-	qcom,platform-reset-gpio = <&pm6150l_gpios 9 0>;
-};
-
-&dsi_r66451_amoled_120hz_video {
-	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
-	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
-	qcom,mdss-dsi-bl-min-level = <1>;
-	qcom,mdss-dsi-bl-max-level = <255>;
-	qcom,mdss-dsi-bl-inverted-dbv;
-	qcom,mdss-dsi-bl-max-level = <4095>;
-	qcom,platform-reset-gpio = <&pm6150l_gpios 9 0>;
-};
-
-&dsi_r66451_amoled_60hz_cmd {
-	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
-	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
-	qcom,mdss-dsi-bl-min-level = <1>;
-	qcom,mdss-dsi-bl-max-level = <255>;
-	qcom,mdss-dsi-bl-max-level = <4095>;
-	qcom,platform-te-gpio = <&tlmm 23 0>;
-	qcom,platform-reset-gpio = <&pm6150l_gpios 9 0>;
-};
-
-&dsi_r66451_amoled_90hz_cmd {
-	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
-	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
-	qcom,mdss-dsi-bl-min-level = <1>;
-	qcom,mdss-dsi-bl-max-level = <255>;
-	qcom,mdss-dsi-bl-max-level = <4095>;
-	qcom,platform-te-gpio = <&tlmm 23 0>;
-	qcom,platform-reset-gpio = <&pm6150l_gpios 9 0>;
-};
-
-&dsi_r66451_amoled_120hz_cmd {
-	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
-	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
-	qcom,mdss-dsi-bl-min-level = <1>;
-	qcom,mdss-dsi-bl-max-level = <255>;
-	qcom,mdss-dsi-bl-max-level = <4095>;
-	qcom,mdss-dsi-bl-inverted-dbv;
-	qcom,platform-te-gpio = <&tlmm 23 0>;
-	qcom,platform-reset-gpio = <&pm6150l_gpios 9 0>;
-};
-
 &dsi_pdx213_amoled_cmd {
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
 	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
@@ -228,8 +169,7 @@
 	qcom,dsi-default-panel = <&dsi_pdx213_amoled_cmd>;
 };
 
-
-#include "lagoon-fingerprint.dtsi"
+#include "lito-fingerprint.dtsi"
 
 &pm7250b_charger {
 	status = "ok";
@@ -439,8 +379,7 @@
 		sec,bringup = <0>;
 		sec,firmware_name = "s6sy761_p213.bin";
 
-		panel = <&dsi_pdx213_amoled_cmd
-			&dsi_rm69299_visionox_amoled_cmd>;
+		panel = <&dsi_pdx213_amoled_cmd>;
 
 		/* feature */
                 sec,rejection_area_portrait = <25 150 60 200>;
