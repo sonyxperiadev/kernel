@@ -1,0 +1,45 @@
+/* arch/arm64/boot/dts/somc/somc-sagami-nfc.dtsi
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+&qupv3_se15_i2c {
+	/* I2C */
+	nfc@28 {
+		compatible = "nxp,sn1x0-i2c";
+		reg = <0x28>;
+		nxp,ven = <&tlmm 62 GPIO_ACTIVE_HIGH>;
+		nxp,dwld = <&tlmm 86 GPIO_ACTIVE_HIGH>;
+		nxp,irq = <&tlmm 87 GPIO_ACTIVE_HIGH>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <87 IRQ_TYPE_EDGE_RISING>;
+		interrupt-names = "nxp_sn1x0_irq";
+	};
+};
+
+&qupv3_se14_spi {
+	/* sm_gpio_56: SPI MISO */
+	/* sm_gpio_57: SPI MOSI */
+	/* sm_gpio_58: SPI CLK */
+	/* sm_gpio_59: SPI CS/SS */
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&sm_gpio_56 &sm_gpio_57
+			&sm_gpio_58>;
+	pinctrl-1 = <&sm_gpio_56_suspend &sm_gpio_57_suspend
+			&sm_gpio_58_suspend>;
+	status = "okay";
+	/* SPI, The SPI lines must be exclusive by eSE device */
+	dev@0 {
+		compatible = "nxp,sn1x0-spi";
+		reg = <0x00>;
+		spi-max-frequency = <20000000>;
+		nxp,cs = <&tlmm 59 GPIO_ACTIVE_HIGH>;
+	};
+};
