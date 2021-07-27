@@ -1,0 +1,125 @@
+&mdss_mdp {
+	dsi_pdx213_amoled_cmd: qcom,mdss_dsi_pdx213_amoled_fhd_cmd {
+		qcom,mdss-dsi-panel-name =
+		"pdx213 amoled fhd+ command mode dsi SEC panel";
+		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
+		qcom,mdss-dsi-panel-physical-type = "oled";
+		qcom,mdss-pan-physical-width-dimension = <60>;
+		qcom,mdss-pan-physical-height-dimension = <139>;
+		qcom,dsi-ctrl-num = <0>;
+		qcom,dsi-phy-num = <0>;
+
+		qcom,mdss-dsi-virtual-channel-id = <0>;
+		qcom,mdss-dsi-stream = <0>;
+		qcom,mdss-dsi-bpp = <24>;
+		qcom,mdss-dsi-color-order = "rgb_swap_rgb";
+		qcom,mdss-dsi-underflow-color = <0xff>;
+		qcom,mdss-dsi-border-color = <0>;
+		qcom,mdss-dsi-h-sync-pulse = <0>;
+		qcom,mdss-dsi-traffic-mode = "non_burst_sync_event";
+		qcom,mdss-dsi-lane-map = "lane_map_0123";
+		qcom,mdss-dsi-bllp-eof-power-mode;
+		qcom,mdss-dsi-bllp-power-mode;
+		qcom,mdss-dsi-tx-eot-append;
+		qcom,mdss-dsi-lane-0-state;
+		qcom,mdss-dsi-lane-1-state;
+		qcom,mdss-dsi-lane-2-state;
+		qcom,mdss-dsi-lane-3-state;
+		qcom,mdss-dsi-dma-trigger = "trigger_sw";
+		qcom,mdss-dsi-mdp-trigger = "none";
+		qcom,mdss-dsi-lp11-init;
+
+		qcom,mdss-dsi-panel-peak-brightness = <10000000>;
+		qcom,mdss-dsi-panel-blackness-level = <100>;
+		qcom,mdss-dsi-panel-hdr-enabled;
+		qcom,mdss-dsi-panel-hdr-color-primaries = <1534 1590 3411 1589 1246 3521 689 250>;
+
+		qcom,esd-check-enabled;
+		qcom,mdss-dsi-panel-status-command = [06 01 00 01 05 00 01 0A];
+		qcom,mdss-dsi-panel-status-command-state = "dsi_lp_mode";
+		qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+		qcom,mdss-dsi-panel-status-read-length = <1>;
+		qcom,mdss-dsi-panel-max-error-count = <3>;
+		qcom,mdss-dsi-panel-status-value = <0x9c>;
+
+		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
+		qcom,mdss-dsi-reset-sequence = <1 10>, <0 10>, <1 10>;
+		qcom,mdss-dsi-te-pin-select = <1>;
+		qcom,mdss-dsi-wr-mem-start = <0x2c>;
+		qcom,mdss-dsi-wr-mem-continue = <0x3c>;
+		qcom,mdss-dsi-te-dcs-command = <1>;
+		qcom,mdss-dsi-te-check-enable;
+		qcom,mdss-dsi-te-using-te-pin;
+
+		somc,area_count_table_size = <17>;
+		somc,area_count_table = <0 68 136 204 273
+				341 409 477 545 613
+				681 749 818 886 954
+				1022 1023>;
+
+		qcom,mdss-dsi-display-timings {
+			timing@0 {
+				qcom,mdss-dsi-panel-width = <1080>;
+				qcom,mdss-dsi-panel-height = <2520>;
+				qcom,mdss-dsi-h-front-porch = <8>;
+				qcom,mdss-dsi-h-back-porch = <8>;
+				qcom,mdss-dsi-h-pulse-width = <8>;
+				qcom,mdss-dsi-h-sync-skew = <0>;
+				qcom,mdss-dsi-v-back-porch = <8>;
+				qcom,mdss-dsi-v-front-porch = <8>;
+				qcom,mdss-dsi-v-pulse-width = <8>;
+				qcom,mdss-dsi-panel-framerate = <60>;
+				qcom,mdss-dsi-on-command = [
+						05 01 00 00 0B 00 02 11 00
+
+						39 01 00 00 00 00 02 35 00
+						39 01 00 00 00 00 03 F0 5A 5A
+						39 01 00 00 00 00 02 DF 03
+						39 01 00 00 00 00 02 E0 01
+						39 01 00 00 00 00 03 F0 A5 A5
+
+						39 01 00 00 00 00 03 F0 5A 5A
+						39 01 00 00 00 00 03 FC 5A 5A
+						39 01 00 00 00 00 0D E1 00 00 02 00 1C 1C 00 00 20 00 00 01 19
+						39 01 00 00 00 00 03 F0 A5 A5
+						39 01 00 00 00 00 03 FC A5 A5
+
+
+						39 01 00 00 00 00 05 2A 00 00 04 37
+						39 01 00 00 70 00 05 2B 00 00 09 D7
+						39 01 00 00 00 00 03 51 01 19
+						39 01 00 00 00 00 02 53 20
+						39 01 00 00 00 00 02 55 00
+						39 01 00 00 00 00 03 F0 5A 5A
+						39 01 00 00 00 00 03 BE 92 09
+						39 01 00 00 00 00 03 F0 A5 A5
+						39 01 00 00 00 00 03 F0 5A 5A
+						39 01 00 00 00 00 02 B0 06
+						39 01 00 00 00 00 02 B6 90
+						39 01 00 00 00 00 03 F0 A5 A5
+
+						05 01 00 00 32 00 02 29 00];
+				qcom,mdss-dsi-off-command = [
+						05 01 00 00 32 00 02 28 00
+						05 01 00 00 96 00 02 10 00];
+				qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
+				qcom,mdss-dsi-off-command-state = "dsi_lp_mode";
+				qcom,mdss-dsi-lp1-command =
+						[05 01 00 00 00 00 02 39 00];
+				qcom,mdss-dsi-lp1-command-state ="dsi_lp_mode";
+				qcom,mdss-dsi-nolp-command =
+						[05 01 00 00 00 00 02 38 00];
+				qcom,mdss-dsi-nolp-command-state =
+						"dsi_lp_mode";
+				somc,mdss-dsi-hbm-on-command = [
+					39 01 00 00 00 00 02 53 E8
+					];
+				somc,mdss-dsi-hbm-off-command = [
+					39 01 00 00 11 00 02 53 28
+					];
+				somc,mdss-dsi-hbm-on-command-state = "dsi_lp_mode";
+				somc,mdss-dsi-hbm-off-command-state = "dsi_lp_mode";
+			};
+		};
+	};
+};
